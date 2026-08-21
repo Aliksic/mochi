@@ -33,20 +33,20 @@
 .garden-plot.watered { border-color:rgba(76,175,128,.35); }
 
 /* 植物 */
-.garden-plant-emoji { font-size:36px; line-height:1; }
-.garden-plant-name { font-size:11px; color:var(--ink); font-weight:600; margin-top:3px; }
-.garden-plant-stage { font-size:10px; color:var(--muted); margin-top:1px; }
+.garden-plant-emoji { font-size:24px; line-height:1; }
+.garden-plant-name { font-size:10px; color:var(--ink); font-weight:600; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; padding:0 4px; box-sizing:border-box; }
+.garden-plant-stage { font-size:9px; color:var(--muted); margin-top:0; }
 
 /* 空地 */
-.garden-plot-empty-txt { font-size:10px; color:var(--muted); opacity:.5; }
+.garden-plot-empty-txt { font-size:9px; color:var(--muted); opacity:.5; }
 
 /* 水量条 */
 .garden-water-bar {
-  position:absolute; bottom:10px; left:8px; right:8px; height:3px;
-  border-radius:2px; background:rgba(0,0,0,.06); overflow:hidden;
+  position:absolute; bottom:3px; left:6px; right:6px; height:2px;
+  border-radius:1px; background:rgba(0,0,0,.06); overflow:hidden;
 }
 .garden-water-fill {
-  height:100%; border-radius:2px;
+  height:100%; border-radius:1px;
   background:linear-gradient(90deg, #64b5f6, #42a5f5);
   transition:width .4s ease;
 }
@@ -58,8 +58,8 @@
 
 /* 生长进度条 */
 .garden-grow-bar {
-  position:absolute; bottom:4px; left:8px; right:8px; height:4px;
-  border-radius:2px; background:rgba(0,0,0,.06); overflow:hidden;
+  position:absolute; bottom:6px; left:6px; right:6px; height:2px;
+  border-radius:1px; background:rgba(0,0,0,.06); overflow:hidden;
 }
 .garden-grow-fill {
   height:100%; border-radius:2px;

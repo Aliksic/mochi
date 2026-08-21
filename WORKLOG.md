@@ -4,6 +4,18 @@
 
 ## 规则
 
+### 2026-08-21（用户需求「群聊右上角设置里需要美化聊天设置，就和聊天设置里的一样」）
+- [本会话·完成]（**已构建 verify 10/10 + 新回归 22/22 + 旧形象回归 22/22 + 旧群聊冒烟 20/20，未推送**）：`src/js/group-chat.js`（AI-A 域，已包含上一项群聊形象功能；本轮新增群聊美化）+ `src/css/group-chat.css`（AI-A 域，新增美化行样式 + 群聊时间轴作用域规则）+ `src/js/contacts.js`（**AI-B 域代改 1 行**：EXCLUDE 加 `'gc-beauty'`）+ `tools/verify-gc-beauty.mjs`（新回归脚本）。
+  - **入口**：群聊设置面板主视图（我的群聊/成员群聊形象之后）新增「美化聊天」入口行（闪光图标 + 副行说明「气泡颜色、壁纸、字体、时间轴样式等」+ 右 chevron）；点击进入美化子视图（标题切到「美化聊天」，面板头动态切换），首行「‹ 返回群聊设置」回主视图。
+  - **美化行（与聊天设置 cs-* 一一对应）**：壁纸（上传/清空）/ 我的气泡颜色 / 我的消息文字颜色 / 联系人气泡颜色 / 联系人消息文字颜色 / 发送按钮显示·隐藏 / 发送按钮颜色 / 发送文字颜色 / 聊天气泡字体大小（pills）/ 聊天气泡框大小（openTCPanel 预设+自定义）/ 聊天头像形状（pills）/ 时间轴样式（pills）/ 群聊字体（openTCPanel 上传/名字）/ 气泡 CSS（openTCPanel 文本框）；值显示「默认 #色值」/「标准」/「未设置」等与聊天设置一致。
+  - **交互复用**：颜色用 `openModal({colorPicker, color, swatches})` 同 BUBBLE_BG/INK/SEND 色板；pills 用 `openModal({pills, pill, noInput})`；气泡框大小/字体/气泡CSS 用 `openTCPanel`；头像上传/清空/应用按钮与聊天设置按钮同 id 模式。所有 toast 提示中文短句。
+  - **存储**：全局 `xy-home-v2:gc-beauty` = JSON `{out-bg,out-ink,in-bg,in-ink,send-bg,send-ink,send-show,font-size,bubble-size,av-shape,time-style,bg,font,css}`，与上一项 `gc-profiles` 同机制（走 `xyStore(G)` 三写、idbRestore 回填）；`contacts.js` EXCLUDE 加 `'gc-beauty'` 防 migrateLegacy 误迁进 default 桌面（AI-B 域代改 1 行）。只存非默认值，空/默认值删除键保持存储干净。
+  - **作用域隔离**（关键设计）：所有 CSS 变量在 `#page-group-chat` 元素上 `style.setProperty`（局部覆盖），不污染聊天页读 `documentElement` 的同名变量；壁纸/字体/自定义 CSS 同样作用域到 `#page-group-chat`。时间轴样式用 page 级 `cs-time-*` 类（不复用 body 级类，避免与聊天页 cs-time-* 冲突），并对默认 `under-av` 加还原规则，完整隔离聊天页 body 级类对群聊的泄漏。
+  - **气泡 CSS 选择器自动作用域**：用户输入的 `.msg-out{...}` / `.message-sent{...}` / `.bubble-self{...}` 等映射到 `#page-group-chat .msg-out .msg-bubble` 等；无选择器的纯声明自动包装到群聊页双方气泡。
+  - **API**：`window.groupChatBeautyGet(k)` / `window.groupChatBeautySet(k,v)` 暴露给回归测试和未来外部调用；与上一项 `groupChatProfileGet/Set` 同一风格。
+  - **验证**：`tools/verify-gc-beauty.mjs` 22/22 — 美化入口/子视图标题切换/返回行/14 个美化行/5 个分组（壁纸/气泡与文字/发送按钮/气泡外观/字体与样式）/ CSS 变量在 #page-group-chat 而非 root（隔离证据：root 变量保持原值不变）/ 字体大小/气泡框/头像形状/发送按钮隐藏/时间轴 hidden 类已挂/壁纸背景图/气泡 CSS 作用域正确/重置回默认（值+存储 key 同步清理）/ 持久化根命名空间 + 迁移排除/刷新后仍生效/无 JS 异常；旧 `verify-gc-profile-settings.mjs` 22/22（主视图行数变 3，me/member/美化入口，不影响既有断言）；旧 `smoke-group-chat.mjs` 20/20；verify 布局 10/10。
+  - ⚠️ 对方注意：① `contacts.js` EXCLUDE 加了 `'gc-beauty'`（AI-B 域代改 1 行），与上一项 `'gc-profiles'` 同机制；② `#page-group-chat.cs-time-*` 时间轴类始终挂（即使默认 under-av），目的是还原聊天页 body 级类的泄漏——若以后改聊天页时间轴 CSS（如新增样式值），需同步在 `group-chat.css` 的 `#page-group-chat.cs-time-<新值> ...` 块；③ `verify-gc-beauty.mjs` 中壁纸断言用 `.indexOf('data:image') >= 0`（浏览器 CSSOM 序列化 `backgroundImage` 时带 `url(` 前缀，不要用 `=== 0`）；未推送（网络问题），commit 在本地 main，可与上一项的 commit 842fcd5 一起或分开推送。
+
 ### 2026-08-21（用户需求「群聊页右上角三个点 → 群聊设置：联系人/我的群聊头像昵称」）
 - [本会话·完成]（**已构建 verify 10/10 + 新回归 22/22 + 旧群聊冒烟 20/20，已提交**）：`src/js/group-chat.js`（AI-A 域）+ `src/template.html`（AI-A 域）+ `src/css/group-chat.css`（AI-A 域）+ `src/js/contacts.js`（**AI-B 域代改 1 行**）+ `src/js/mobile-adapt.js`（**AI-B 域代改 1 行**）+ `tools/verify-gc-profile-settings.mjs`（新回归）+ `tools/smoke-group-chat.mjs`（适配三点菜单入口）。
   - **入口**：群聊页头部右上角群成员图标按钮 → 三点按钮 `#gc-more-btn`（⋮）；下拉菜单 `#gc-more-menu` 含「群成员」「群聊设置」；点击群名标题仍可开成员面板（保留旧入口）。

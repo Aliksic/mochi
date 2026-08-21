@@ -66,6 +66,151 @@
   }
   gcProfileLoad();
 
+  // ---- 群聊美化设置（v3.9.x，全局 xy-home-v2:gc-beauty，独立于聊天美化） ----
+  // 只作用于群聊页 #page-group-chat：CSS 变量在 page 元素上局部覆盖（不串到聊天页，
+  // 聊天页读的是 documentElement 上的同名变量）；壁纸/字体/自定义 CSS 也作用域到
+  // 群聊页。存储只写非默认值；键名与聊天设置 cs-* 一一对应。
+  const GC_BEAUTY_DEFAULTS = {
+    'out-bg': '#111111', 'out-ink': '#ffffff', 'in-bg': '#ffffff', 'in-ink': '#111111',
+    'send-bg': '#111111', 'send-ink': '#ffffff', 'send-show': 'show',
+    'font-size': '14px', 'bubble-size': '11px 14px',
+    'av-shape': 'circle', 'time-style': 'under-av',
+    'bg': '', 'font': '', 'css': ''
+  };
+  const GC_BEAUTY_STYLES = [
+    { label: '头像下方', value: 'under-av' },
+    { label: '气泡下方', value: 'under-bubble' },
+    { label: '时间气泡', value: 'bubble' },
+    { label: '气泡外侧悬浮', value: 'float' },
+    { label: '消息上方居中', value: 'center' },
+    { label: '隐藏', value: 'hidden' }
+  ];
+  const GC_FONT_SIZES = [
+    { label: '小', value: '13px' },
+    { label: '标准', value: '14px' },
+    { label: '大', value: '16px' },
+    { label: '特大', value: '18px' }
+  ];
+  const GC_BUBBLE_SIZES = [
+    { label: '紧凑', value: '8px 10px' },
+    { label: '标准', value: '11px 14px' },
+    { label: '宽松', value: '14px 18px' }
+  ];
+  // 色板与聊天设置一致（气泡底色 / 文字色 / 发送按钮底）
+  const GC_BUBBLE_BG = [
+    { color: '#111111', label: '默认黑' }, { color: '#ffffff', label: '白色' }, { color: '#3a3a3a', label: '炭灰' },
+    { color: '#ffd6e0', label: '樱花粉' }, { color: '#d6e4ff', label: '雾霭蓝' }, { color: '#d8f5e0', label: '薄荷绿' },
+    { color: '#fff3d6', label: '奶油黄' }, { color: '#e8dcff', label: '淡紫' }, { color: '#ffdcc0', label: '暖橘' }
+  ];
+  const GC_INK_COLORS = [
+    { color: '#111111', label: '默认黑' }, { color: '#ffffff', label: '白色' }, { color: '#444444', label: '深灰' },
+    { color: '#d6336c', label: '玫红' }, { color: '#1a56db', label: '蓝' }, { color: '#1e8e5a', label: '绿' },
+    { color: '#9a6b00', label: '黄褐' }, { color: '#7048e8', label: '紫' }, { color: '#b3540a', label: '橘' }
+  ];
+  const GC_SEND_BG = [
+    { color: '#111111', label: '默认黑' }, { color: '#07c160', label: '微信绿' }, { color: '#fa5151', label: '红包红' },
+    { color: '#3a8ee6', label: '天空蓝' }, { color: '#ff9500', label: '活力橙' }, { color: '#9254de', label: '优雅紫' },
+    { color: '#ffffff', label: '白色' }, { color: '#3a3a3a', label: '炭灰' }
+  ];
+  const gcBeautyStored = {};
+  function gcBeautyStore() { return gcProfileStore(); }
+  function gcBeautyLoad() {
+    try {
+      const v = gcBeautyStore().get('gc-beauty');
+      if (v) { const o = JSON.parse(v); if (o && typeof o === 'object') Object.keys(o).forEach(k => { gcBeautyStored[k] = o[k]; }); }
+    } catch (e) {}
+  }
+  function gcBeautyGet(k) { return gcBeautyStored[k] !== undefined ? gcBeautyStored[k] : GC_BEAUTY_DEFAULTS[k]; }
+  function gcBeautySave() { try { gcBeautyStore().set('gc-beauty', JSON.stringify(gcBeautyStored)); } catch (e) {} }
+  // 设置（空值/默认值 → 删除键）；应用 + 刷新设置面板回显
+  function gcBeautySet(k, v) {
+    const def = GC_BEAUTY_DEFAULTS[k];
+    if (v === undefined || v === null || v === '' || (def !== undefined && v === def)) delete gcBeautyStored[k];
+    else gcBeautyStored[k] = v;
+    gcBeautySave();
+    applyGcBeauty();
+    try { if (settingsPanel && !settingsPanel.hidden) renderSettingsPanel(); } catch (e) {}
+  }
+  // 群聊页局部字体（不污染全局 body/html）
+  function applyGcFont() {
+    const page = document.getElementById('page-group-chat');
+    const old = document.getElementById('gc-font-style');
+    if (old) old.remove();
+    if (page) page.style.fontFamily = '';
+    const v = gcBeautyGet('font');
+    if (!v) return;
+    if (v.indexOf('data:') === 0) {
+      const st = document.createElement('style');
+      st.id = 'gc-font-style';
+      st.textContent = '@font-face{font-family:"gc-custom-font";src:url("' + String(v).replace(/<\/style/gi, '') + '");font-display:swap;}' +
+        '#page-group-chat{font-family:"gc-custom-font",sans-serif !important;}';
+      document.head.appendChild(st);
+    } else {
+      page.style.fontFamily = '"' + v.replace(/"/g, "'") + '",sans-serif';
+    }
+  }
+  // 群聊页局部自定义气泡 CSS（选择器自动加 #page-group-chat 作用域）
+  function applyGcCss() {
+    const old = document.getElementById('gc-bubble-style');
+    if (old) old.remove();
+    const css = gcBeautyGet('css');
+    if (!css) return;
+    let out = css;
+    if (css.indexOf('{') < 0) {
+      out = '#page-group-chat .msg-out .msg-bubble{' + css + '!important;}' +
+            '#page-group-chat .msg-in .msg-bubble{' + css + '!important;}';
+    } else {
+      out = css
+        .replace(/\.msg-out\b/g, '#page-group-chat .msg-out')
+        .replace(/\.msg-in\b/g, '#page-group-chat .msg-in')
+        .replace(/\.message-sent\b/g, '#page-group-chat .msg-out .msg-bubble')
+        .replace(/\.message-received\b/g, '#page-group-chat .msg-in .msg-bubble')
+        .replace(/\.mb\.self\b/g, '#page-group-chat .msg-out .msg-bubble')
+        .replace(/\.mb\.other\b/g, '#page-group-chat .msg-in .msg-bubble')
+        .replace(/\.bubble-self\b/g, '#page-group-chat .msg-out .msg-bubble')
+        .replace(/\.bubble-other\b/g, '#page-group-chat .msg-in .msg-bubble');
+    }
+    const st = document.createElement('style');
+    st.id = 'gc-bubble-style';
+    st.textContent = out;
+    document.head.appendChild(st);
+  }
+  // 应用群聊美化（CSS 变量在 #page-group-chat 上局部覆盖；默认值与聊天页默认一致）
+  function applyGcBeauty() {
+    const page = document.getElementById('page-group-chat');
+    if (!page) return;
+    const g = gcBeautyGet;
+    page.style.setProperty('--msg-in-bg', g('in-bg'));
+    page.style.setProperty('--msg-in-ink', g('in-ink'));
+    page.style.setProperty('--msg-out-bg', g('out-bg'));
+    page.style.setProperty('--msg-out-ink', g('out-ink'));
+    page.style.setProperty('--chat-font-size', g('font-size'));
+    page.style.setProperty('--chat-bubble-pad', g('bubble-size'));
+    page.style.setProperty('--send-bg', g('send-bg'));
+    page.style.setProperty('--send-ink', g('send-ink'));
+    page.style.setProperty('--msg-av-radius', g('av-shape') === 'square' ? '10px' : '50%');
+    const sendBtn = document.getElementById('gc-send');
+    if (sendBtn) sendBtn.style.display = g('send-show') === 'hide' ? 'none' : '';
+    // 时间轴样式：page 级类（始终挂类，含默认 under-av 的还原规则，隔离聊天页 body 级类）
+    GC_BEAUTY_STYLES.forEach(s => page.classList.remove('cs-time-' + s.value));
+    page.classList.add('cs-time-' + g('time-style'));
+    // 壁纸（>6MB 异常存量清掉回默认，同聊天页防护）
+    let bg = g('bg');
+    if (bg && typeof bg === 'string' && bg.length > 6 * 1024 * 1024) {
+      try { gcBeautySet('bg', ''); } catch (e) {}
+      bg = '';
+    }
+    const want = bg ? 'url("' + bg + '")' : '';
+    if (page.style.backgroundImage !== want) {
+      page.style.backgroundImage = want;
+      if (bg) { page.style.backgroundSize = 'cover'; page.style.backgroundPosition = 'center'; }
+    }
+    applyGcFont();
+    applyGcCss();
+  }
+  gcBeautyLoad();
+  applyGcBeauty();
+
   // ---- 成员信息 ----
   function getMembers() {
     try { return window.getContacts() || [{ id: 'default', name: '默认' }]; } catch (e) { return [{ id: 'default', name: '默认' }]; }
@@ -680,10 +825,22 @@
     };
     input.click();
   }
-  // 渲染设置面板：我的群聊（昵称/头像）+ 每个成员一行（群聊昵称 + 桌面原昵称区分）
+  // 渲染设置面板：主视图（我的群聊 + 成员群聊形象 + 美化入口） / 美化视图（同聊天设置的美化行）
+  let gcBeautyView = false;
+  function setPanelTitle(t) {
+    try {
+      const h = settingsPanel && settingsPanel.querySelector('.gc-set-head span');
+      if (h) h.textContent = t || '群聊设置';
+    } catch (e) {}
+  }
   function renderSettingsPanel() {
     if (!settingsBody) return;
     settingsBody.innerHTML = '';
+    if (gcBeautyView) { setPanelTitle('美化聊天'); renderBeautyView(); return; }
+    setPanelTitle('群聊设置');
+    renderMainSettingsView();
+  }
+  function renderMainSettingsView() {
     const esc = escapeHtml;
     const item = (key, curName, curAv, deskName) => {
       const row = document.createElement('div');
@@ -736,11 +893,210 @@
       const p = gcProfileGet(m.id);
       settingsBody.appendChild(item(m.id, p.name || '', p.avatar || '', deskPartnerName(m.id)));
     });
+    // —— 美化聊天入口（v3.9.x） ——
+    const bRow = document.createElement('div');
+    bRow.className = 'gc-set-item gc-set-link';
+    bRow.innerHTML =
+      '<div class="gc-set-av">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 15l.9 2.6L22.5 18.5l-2.6.9L19 22l-.9-2.6-2.6-.9 2.6-.9z"/></svg>' +
+      '</div>' +
+      '<div class="gc-set-info">' +
+        '<div class="gc-set-name">美化聊天</div>' +
+        '<div class="gc-set-desk">气泡颜色、壁纸、字体、时间轴样式等</div>' +
+      '</div>' +
+      '<span class="gc-set-chev">›</span>';
+    bRow.addEventListener('click', () => { gcBeautyView = true; renderSettingsPanel(); });
+    settingsBody.appendChild(bRow);
     // —— 底部说明 ——
     const note = document.createElement('div');
     note.className = 'gc-set-note';
     note.textContent = '群聊昵称/头像只在本群聊页生效；成员回复内容来自该成员桌面自己的字卡库。';
     settingsBody.appendChild(note);
+  }
+
+  // ================= 美化视图（与聊天设置同款行） =================
+  function beautyRow(label, val, fn) {
+    const row = document.createElement('div');
+    row.className = 'gc-set-row';
+    row.innerHTML = '<span class="txt">' + escapeHtml(label) + '</span><span class="val">' + escapeHtml(val) + '</span><span class="chev">›</span>';
+    row.addEventListener('click', fn);
+    return row;
+  }
+  function pickGcColor(key, title, swatches) {
+    if (!window.openModal) return;
+    const cur = gcBeautyGet(key);
+    window.openModal(title, '', (v) => {
+      const color = (typeof v === 'number' && swatches[v]) ? swatches[v].color : v;
+      if (!color) return;
+      gcBeautySet(key, color);
+    }, { colorPicker: true, color: cur, swatches: swatches });
+  }
+  function pickGcPills(key, title, pills, def) {
+    if (!window.openModal) return;
+    window.openModal(title, '', (v) => { if (v) gcBeautySet(key, v); }, {
+      pills: pills, pill: gcBeautyGet(key) || def, noInput: true
+    });
+  }
+  // 群聊壁纸上传（同聊天设置：按物理像素上限压缩）
+  function pickGcWallpaper() {
+    const input = document.createElement('input');
+    input.type = 'file'; input.accept = 'image/*';
+    input.onchange = () => {
+      const f = input.files && input.files[0];
+      if (!f) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          try {
+            const dpr = Math.max(1, window.devicePixelRatio || 1);
+            const screenH = (window.screen && window.screen.height) || 1920;
+            const maxSide = Math.min(4096, Math.max(2160, Math.round(screenH * dpr)));
+            const c = document.createElement('canvas');
+            const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+            c.width = Math.max(1, Math.round(img.width * scale));
+            c.height = Math.max(1, Math.round(img.height * scale));
+            c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+            gcBeautySet('bg', c.toDataURL('image/jpeg', 0.85));
+            toast('群聊壁纸已应用');
+          } catch (e) { toast('壁纸处理失败，请换一张'); }
+        };
+        img.onerror = () => { toast('图片读取失败，请换一张'); };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(f);
+    };
+    input.click();
+  }
+  // 气泡框大小（openTCPanel 预设 + 自定义，同聊天设置）
+  function pickGcBubbleSize() {
+    if (!window.openTCPanel) return;
+    const cur = gcBeautyGet('bubble-size');
+    window.openTCPanel('聊天气泡框大小', '' +
+      '<div class="sm-fld"><label>预设大小</label><select class="tc-input" id="gc-pad-preset">' +
+      '<option value="">自定义</option>' +
+      GC_BUBBLE_SIZES.map(p => '<option value="' + p.value + '"' + (p.value === cur ? ' selected' : '') + '>' + p.label + '</option>').join('') +
+      '</select></div>' +
+      '<div class="sm-fld"><label>自定义（格式：上下 左右，如 <code>8px 10px</code>）</label>' +
+      '<input class="tc-input" id="gc-pad-input" value="' + String(cur).replace(/"/g, '&quot;').replace(/</g, '&lt;') + '"></div>' +
+      '<div class="sm-set-hint">示例：紧凑 8px 10px · 标准 11px 14px · 宽松 14px 18px</div>' +
+      '<div class="mail-actions"><button class="cc-tool" id="gc-pad-cancel">取消</button><button class="cc-tool" id="gc-pad-ok">应用</button></div>');
+    document.getElementById('gc-pad-cancel').addEventListener('click', () => { document.getElementById('tc-mask').hidden = true; });
+    document.getElementById('gc-pad-preset').addEventListener('change', () => {
+      const v = document.getElementById('gc-pad-preset').value;
+      if (v) document.getElementById('gc-pad-input').value = v;
+    });
+    document.getElementById('gc-pad-ok').addEventListener('click', () => {
+      let v = (document.getElementById('gc-pad-input').value || '').trim();
+      if (!v) { toast('请输入气泡框大小'); return; }
+      // 规范化：数字+px 或 纯数字（默认px），已带 px 的 token 不动
+      v = String(v).split(/[,\s]+/).filter(Boolean).map(function (tok) {
+        return /^-?\d+(?:\.\d+)?px$/.test(tok) ? tok : tok.replace(/^(-?\d+(?:\.\d+)?)$/, '$1px');
+      }).join(' ');
+      gcBeautySet('bubble-size', v);
+      document.getElementById('tc-mask').hidden = true;
+      toast('气泡框大小已应用');
+    });
+  }
+  // 群聊字体（上传 / 名字，作用域仅群聊页）
+  function pickGcFont() {
+    if (!window.openTCPanel) return;
+    const cur = gcBeautyGet('font');
+    window.openTCPanel('群聊字体', '' +
+      '<div class="sm-fld"><label>上传本地字体（ttf / otf / woff / woff2），只对群聊页生效</label>' +
+      '<input class="tc-input" id="gc-font-name" placeholder="也可直接输入字体名，如 Microsoft YaHei"' + (cur && cur.indexOf('data:') !== 0 && cur.indexOf('http') !== 0 ? ' value="' + String(cur).replace(/"/g, '&quot;').replace(/</g, '&lt;') + '"' : '') + '></div>' +
+      '<div class="mail-actions"><button class="cc-tool" id="gc-font-upload">上传字体</button><button class="cc-tool" id="gc-font-clear">恢复默认</button><button class="cc-tool" id="gc-font-ok">应用</button></div>');
+    document.getElementById('gc-font-upload').addEventListener('click', () => {
+      const inp = document.createElement('input');
+      inp.type = 'file'; inp.accept = '.ttf,.otf,.woff,.woff2';
+      inp.onchange = () => {
+        const f = inp.files && inp.files[0];
+        if (!f) return;
+        toast('正在读取字体文件…');
+        const reader = new FileReader();
+        reader.onload = () => {
+          gcBeautySet('font', reader.result);
+          document.getElementById('tc-mask').hidden = true;
+          toast('字体已应用（群聊页）');
+        };
+        reader.onerror = () => { toast('字体文件读取失败，请重试'); };
+        reader.readAsDataURL(f);
+      };
+      inp.click();
+    });
+    document.getElementById('gc-font-clear').addEventListener('click', () => {
+      gcBeautySet('font', '');
+      document.getElementById('tc-mask').hidden = true;
+      toast('已恢复默认字体');
+    });
+    document.getElementById('gc-font-ok').addEventListener('click', () => {
+      const name = (document.getElementById('gc-font-name').value || '').trim();
+      if (!name) { toast('请输入字体名'); return; }
+      gcBeautySet('font', name);
+      document.getElementById('tc-mask').hidden = true;
+      toast('字体已应用（群聊页）');
+    });
+  }
+  // 气泡 CSS（openTCPanel 文本框，作用域自动加 #page-group-chat）
+  function pickGcCss() {
+    if (!window.openTCPanel) return;
+    window.openTCPanel('气泡 CSS', '' +
+      '<div class="sm-fld-hint" style="margin-bottom:8px">输入自定义样式，只对群聊页生效，支持两种写法：<br>· 直接写声明，如 <code>border-radius:20px;box-shadow:0 2px 8px rgba(0,0,0,.1)</code>（自动应用到双方气泡）<br>· 或写选择器，如 <code>.msg-out .msg-bubble{...}</code></div>' +
+      '<textarea id="gc-css-input" class="tc-input" rows="6" placeholder="border-radius: 20px;' + '&#10;box-shadow: 0 2px 8px rgba(0,0,0,.12);"></textarea>' +
+      '<div class="mail-actions"><button class="cc-tool" id="gc-css-clear">清空</button><button class="cc-tool" id="gc-css-ok">应用</button></div>');
+    const ta = document.getElementById('gc-css-input');
+    if (ta) ta.value = gcBeautyGet('css');
+    document.getElementById('gc-css-clear').addEventListener('click', () => {
+      gcBeautySet('css', '');
+      document.getElementById('tc-mask').hidden = true;
+      toast('已清空气泡样式');
+    });
+    document.getElementById('gc-css-ok').addEventListener('click', () => {
+      gcBeautySet('css', (document.getElementById('gc-css-input').value || '').trim());
+      document.getElementById('tc-mask').hidden = true;
+      toast('气泡样式已应用');
+    });
+  }
+  function renderBeautyView() {
+    const g = gcBeautyGet;
+    // 返回主设置
+    const back = document.createElement('div');
+    back.className = 'gc-set-back';
+    back.innerHTML = '<span class="arr">‹</span> 返回群聊设置';
+    back.addEventListener('click', () => { gcBeautyView = false; renderSettingsPanel(); });
+    settingsBody.appendChild(back);
+    const gtitle = (t) => { const d = document.createElement('div'); d.className = 'gc-set-title'; d.textContent = t; settingsBody.appendChild(d); };
+    const add = (label, val, fn) => settingsBody.appendChild(beautyRow(label, val, fn));
+    const bgLabel = (v, def) => v === def ? '默认 ' + def : v;
+    // —— 壁纸 ——
+    gtitle('壁纸');
+    add('聊天壁纸', g('bg') ? '已设置' : '未设置', () => pickGcWallpaper());
+    if (g('bg')) add('清空群聊壁纸', '', () => { gcBeautySet('bg', ''); toast('已恢复默认壁纸'); });
+    // —— 气泡与文字 ——
+    gtitle('气泡与文字');
+    add('我的气泡颜色', bgLabel(g('out-bg'), '#111111'), () => pickGcColor('out-bg', '我的气泡颜色', GC_BUBBLE_BG));
+    add('我的消息文字颜色', bgLabel(g('out-ink'), '#ffffff'), () => pickGcColor('out-ink', '我的消息文字颜色', GC_INK_COLORS));
+    add('联系人气泡颜色', bgLabel(g('in-bg'), '#ffffff'), () => pickGcColor('in-bg', '联系人气泡颜色', GC_BUBBLE_BG));
+    add('联系人消息文字颜色', bgLabel(g('in-ink'), '#111111'), () => pickGcColor('in-ink', '联系人消息文字颜色', GC_INK_COLORS));
+    // —— 发送按钮 ——
+    gtitle('发送按钮');
+    add('发送按钮显示/隐藏', g('send-show') === 'hide' ? '隐藏' : '显示', () => pickGcPills('send-show', '显示发送按钮', [
+      { label: '显示', value: 'show' }, { label: '隐藏', value: 'hide' }
+    ], 'show'));
+    add('发送按钮颜色', bgLabel(g('send-bg'), '#111111'), () => pickGcColor('send-bg', '发送按钮颜色', GC_SEND_BG));
+    add('发送文字颜色', bgLabel(g('send-ink'), '#ffffff'), () => pickGcColor('send-ink', '发送文字颜色', GC_INK_COLORS));
+    // —— 气泡外观 ——
+    gtitle('气泡外观');
+    add('聊天气泡字体大小', (GC_FONT_SIZES.find(p => p.value === g('font-size')) || {}).label || g('font-size'), () => pickGcPills('font-size', '聊天气泡字体大小', GC_FONT_SIZES, '14px'));
+    add('聊天气泡框大小', (GC_BUBBLE_SIZES.find(p => p.value === g('bubble-size')) || { label: '自定义' }).label, () => pickGcBubbleSize());
+    add('聊天头像形状', g('av-shape') === 'square' ? '方形' : '圆形', () => pickGcPills('av-shape', '聊天头像形状', [
+      { label: '圆形', value: 'circle' }, { label: '方形', value: 'square' }
+    ], 'circle'));
+    add('时间轴样式', (GC_BEAUTY_STYLES.find(s => s.value === g('time-style')) || {}).label || '头像下方', () => pickGcPills('time-style', '时间轴样式', GC_BEAUTY_STYLES, 'under-av'));
+    // —— 字体与样式 ——
+    gtitle('字体与样式');
+    add('群聊字体', g('font') ? (g('font').indexOf('data:') === 0 ? '已上传' : g('font')) : '默认', () => pickGcFont());
+    add('气泡 CSS', g('css') ? '已设置' : '默认', () => pickGcCss());
   }
   if (settingsClose) settingsClose.addEventListener('click', () => { if (settingsPanel) settingsPanel.hidden = true; });
   if (settingsPanel) settingsPanel.addEventListener('click', (e) => { if (e.target === settingsPanel) settingsPanel.hidden = true; });
@@ -786,4 +1142,7 @@
   window.groupChatProfileGet = function (key) { try { return JSON.parse(JSON.stringify(gcProfileGet(key))); } catch (e) { return {}; } };
   // name/avatar：传 undefined 保持不变，传空串清除该字段
   window.groupChatProfileSet = function (key, name, avatar) { gcProfileSet(key, name, avatar); };
+  window.groupChatBeautyGet = function (k) { return gcBeautyGet(k); };
+  // 设置群聊美化（空值/默认值 = 恢复默认）
+  window.groupChatBeautySet = function (k, v) { gcBeautySet(k, v); };
 })();

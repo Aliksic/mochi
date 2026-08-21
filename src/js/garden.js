@@ -115,6 +115,16 @@ function fmtRemain(sec) {
   return "\u8FD8\u9700 " + (m > 0 ? m : 1) + "\u5206";
 }
 
+function fmtShort(sec) {
+  if (sec <= 0) return "";
+  var d = Math.floor(sec / 86400);
+  var h = Math.floor((sec % 86400) / 3600);
+  if (d > 0) return d + "\u5929";
+  if (h > 0) return h + "\u65F6";
+  var m = Math.floor(sec / 60);
+  return (m > 0 ? m : 1) + "\u5206";
+}
+
 function renderGrid() {
   var grid = document.getElementById("garden-grid");
   if (!grid) return;
@@ -129,9 +139,9 @@ function renderGrid() {
       h += "<span class=\"garden-plant-emoji\">" + si.emoji + "</span>";
       h += "<span class=\"garden-plant-name\">" + si.name + "</span>";
       if (si.bloomed) {
-        h += "<span class=\"garden-plant-stage\">\u5DF2\u6210\u719F\u2714</span>";
+        h += "<span class=\"garden-plant-stage\">\u6210\u719F</span>";
       } else {
-        h += "<span class=\"garden-plant-stage\">" + si.stageName + " \u00b7 " + fmtRemain(si.nextSec) + "</span>";
+        h += "<span class=\"garden-plant-stage\">" + fmtShort(si.nextSec) + "</span>";
         h += "<div class=\"garden-grow-bar\"><div class=\"garden-grow-fill\" style=\"width:" + Math.round(si.progress * 100) + "%\"></div></div>";
       }
       if (wl > 0) h += "<div class=\"garden-water-bar\"><div class=\"garden-water-fill\" style=\"width:" + Math.round(wl * 100) + "%\"></div></div>";
@@ -345,6 +355,8 @@ function renderInv() {
   });
   h += "</div><button class=\"garden-bouquet-btn\" id=\"garden-bouquet-btn\">\uD83D\uDCC1 \u5236\u4F5C\u82B1\u675F\u9001\u7ED9" + pn() + "</button>";
   el.innerHTML = h;
+  var btn = el.querySelector("#garden-bouquet-btn");
+  if (btn) btn.addEventListener("click", makeBouquet);
 }
 
 function renderDecor() {
@@ -365,6 +377,8 @@ function renderDecor() {
   }
   h += "<button class=\"garden-decor-shop-btn\" id=\"garden-decor-shop-btn\">\uD83D\uDED2 \u88C5\u9970\u5546\u5E97\uFF08\u514D\u8D39\uFF09</button>";
   el.innerHTML = h;
+  var btn = el.querySelector("#garden-decor-shop-btn");
+  if (btn) btn.addEventListener("click", buyDecor);
 }
 
 function renderVisitor() {
@@ -627,17 +641,6 @@ if (gridEl) gridEl.addEventListener("click", handlePlotClick);
 var toolbarEl = document.getElementById("garden-toolbar");
 if (toolbarEl) toolbarEl.addEventListener("click", handleTool);
 
-var invEl = document.getElementById("garden-inv");
-if (invEl) invEl.addEventListener("click", function (e) {
-  var btn = e.target.closest("#garden-bouquet-btn");
-  if (btn) makeBouquet();
-});
-
-var decorEl = document.getElementById("garden-decor");
-if (decorEl) decorEl.addEventListener("click", function (e) {
-  var btn = e.target.closest("#garden-decor-shop-btn");
-  if (btn) buyDecor();
-});
 
 document.addEventListener("contact-switched", function () {
   if (!page.hidden) { data = load(); selPlot = -1; renderAll(); }

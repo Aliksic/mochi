@@ -2647,7 +2647,8 @@ function partialRetractMsg(msgEl, side) {
   function tryAutoSend() {
     try {
     const c = cfg();
-    if (cfgn(c, 'as-en', 1) !== 1) return;
+    try { console.log('[mochi-auto] tryAutoSend called as-en=%s as-prob=%s as-min=%s as-max=%s', cfgn(c,'as-en',1), cfgn(c,'as-prob',30), cfgn(c,'as-min',5), cfgn(c,'as-max',10)); } catch(e){}
+    if (cfgn(c, 'as-en', 1) !== 1) { try { console.log('[mochi-auto] as-en OFF, skip'); } catch(e){} return; }
     // v3.5.101：概率为 0/空 时回退默认值——防止旧数据/误操作把概率存成 0 导致 TA 永不主动发送
     // v3.6.x：回退默认与回复设置默认一致（10 → 30）
     let prob = cfgn(c, 'as-prob', 30);
@@ -2682,6 +2683,7 @@ function partialRetractMsg(msgEl, side) {
         const am = autoMsg();
         // v3.6.x：主动发送标识——标记 initiative，渲染时气泡左上角显示小爱心
         const m = addIn(am.text, { type: am.type, initiative: true, silent: i > 0 });
+        try { console.log('[mochi-auto] 主动发送消息: type=%s initiative=true', am.type); const _t = document.getElementById('cc-toast'); if(_t){ _t.textContent='诊断: 主动发送触发! as-en='+cfgn(c,'as-en',1)+' as-prob='+cfgn(c,'as-prob',30); _t.className='cc-toast'; void _t.offsetWidth; _t.className='cc-toast show'; clearTimeout(_t._at); _t._at=setTimeout(function(){_t.className='cc-toast';},6000); } } catch(e){}
         if (hit(c['rc-prob'])) {
           setTimeout(() => {
             retractMsg(m, 'in');
