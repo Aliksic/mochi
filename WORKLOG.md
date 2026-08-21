@@ -4,6 +4,13 @@
 
 ## 规则
 
+### 2026-08-21（用户反馈「iOS 自带浏览器：一个联系人的气泡换了，其他联系人的气泡也跟着变；不同桌面联系人的聊天美化要分开」）
+- [本会话·诊断完成]（**源码与构建产物均已在 HEAD（353d8b4）含修复，本次提交补齐回归脚本 + 推送部署**）：`src/js/chat-settings.js`（修复在 6ec9a16/353d8b4 已入库）+ 新增 `tools/diag-chat-beauty-isolation.mjs`。
+  - **根因**：本地 HEAD 的 chat-settings.js 在 `contact-switched` 时已重应用/清除全部美化（applySettings + applyProfile + applyCss + applyFont）——颜色/自定义气泡 CSS/全局字体均按桌面隔离。但**线上部署版（origin/main，落后本地 6 个提交）只调 applySettings()**：切换联系人时 `cs-bubble-style`（自定义气泡 CSS）与 `cs-font-style`（全局字体）这两个**全局 <style>/body 内联字体不清除也不重应用**——default 桌面设的自定义气泡样式/字体一直盖在其他桌面上，正是用户看到的现象。
+  - **复现**：用 SERVE_DIR 指到 origin/main 的 index.html 跑 diag → 7/9（自定义 CSS 样式标签残留 styleInjected=true、全局字体残留 bodyFont=Arial）；本地 HEAD 构建跑同脚本 → 9/9 全过。
+  - **验证**：diag-chat-beauty-isolation 本地构建 9/9 + verify 布局 10/10；本次提交后推送 origin/main，iOS Safari 需刷新（强刷一次）拿到新构建即恢复按桌面隔离。
+  - ⚠️ 对方注意：`tools/diag-ask-harmony.mjs` 工作区有对方进行中改动（19:00），本提交未包含该文件，请知悉。
+
 ### 2026-08-21（用户需求「桌面第三页加记账矢量图按钮 + 点击打开记账功能页」）
 - [AI-A·完成]（**已构建 verify 10/10 + 记账专项 31/31，未提交**）：`src/template.html` + 新建 `src/js/accounting.js` + `src/css/chat-pages.css`（均 AI-A 域）+ `src/js/tabs.js`（FULL_PAGES 加 page-accounting）+ `build.mjs`（AI-B 域代改 jsFiles 加 accounting.js）+ `src/js/personalize.js`（AI-B 域代改 1 行：导入美化方案 placeholder→textarea，openModal 不支持 placeholder 参数导致输入框无提示，请知悉）+ 新增 `tools/smoke-accounting.mjs`（回归脚本，保留）。
   - **桌面第三页记账图标**：在 p3-grid（template.html 第三页图标组，原仅经期记录）加 `data-app="accounting"` 图标，SVG 为账本+¥ 矢量图。
