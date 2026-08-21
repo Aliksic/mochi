@@ -42,7 +42,7 @@
 
 /* 水量条 */
 .garden-water-bar {
-  position:absolute; bottom:4px; left:8px; right:8px; height:4px;
+  position:absolute; bottom:10px; left:8px; right:8px; height:3px;
   border-radius:2px; background:rgba(0,0,0,.06); overflow:hidden;
 }
 .garden-water-fill {
@@ -55,6 +55,17 @@
 
 /* 点击选中状态 */
 .garden-plot.selected { border-color:#111; box-shadow:0 2px 12px rgba(0,0,0,.12); }
+
+/* 生长进度条 */
+.garden-grow-bar {
+  position:absolute; bottom:4px; left:8px; right:8px; height:4px;
+  border-radius:2px; background:rgba(0,0,0,.06); overflow:hidden;
+}
+.garden-grow-fill {
+  height:100%; border-radius:2px;
+  background:linear-gradient(90deg, #81c784, #4caf50);
+  transition:width .4s ease;
+}
 
 /* 工具条 */
 .garden-toolbar {

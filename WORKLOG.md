@@ -993,3 +993,13 @@
   - **修复**：① mailMergeFromIdb(v, cid) 支持显式 cid，读写/快照绑定该桌面；② contact-switched 捕获 switchedCid，idbGet 回调 + catch + 15s 保险丝均校验归属（已切走则作废，新桌面监听会重新发起权威加载）；保险丝同时避免旧桌面误把新桌面 mailDbReady 置真。
   - 验证：verify-mail-isolation.mjs 修复前 6/8（cX 信箱混入 default 的信，精确复现串桌面）→ 修复后 8/8（cX 信箱只含自己的信、信箱页仅 1 封）；verify 10/10。
   - ⚠️ AI-B 越界代修 AI-A 名下 mail.js（用户直接反馈；改动带 v3.8.x 注释 + 回归脚本）。本提交含 AI-A 未提交累积改动（bg-keep 后台保活全局化 / chatcard 导入增强 / music-player / template / setting.css / diag-mail-default-mix 修复版），请确认。
+
+## 2026-08-21 聊天昵称/头像独立设置（AI-B 构建，f5d90ab 已提交）
+- 需求：桌面联系人昵称/头像、我的昵称/头像 与 聊天内 独立设置。
+- 现状：v3.8.x 已有聊天设置页 cs-lbl-*/cs-avatar-* 独立入口，但聊天页内大量场景仍读桌面键，导致设置不生效/不一致。
+- 本次：聊天域统一读聊天专用键（cs-lbl-*/cs-avatar-*），**未设置回退桌面键**（lbl-*/avatar-*）——平滑升级、未单独设置时与桌面一致。
+  - chat.js：新增 chatPartnerName/chatUserName（cs→桌面→默认）；fillAvatar 加 cs-avatar-* 回退桌面；updateChatPartnerName 加 lbl-partner 回退；替换拍一拍(1490/2811/2875/2986)/红包(1198/3183)/猜拳(3102)/邀请(4003)/搜索(4176)/通话面板(4289)/拨打兜底(4387)/收藏页(4649) 16 处；桌面横幅 1667/1731 保持桌面键。
+  - 延伸（均聊天页内功能）：divination storeName、decision partnerName、pong 对手名、avatar-lib 半框标题与聊天系统消息（头像库仍写桌面键 avatar-*，通知 bgNotifyCheck 保持桌面键）。
+  - chat-settings.js：cs 昵称未设置时 val 显示「跟随桌面（xx）」。
+- 未提交：tools/diag-gc-refresh*.mjs（AI-A 新诊断脚本，未跟踪，留给对方确认）。
+- 构建 verify 10/10。

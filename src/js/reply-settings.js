@@ -49,27 +49,61 @@
     'call-incoming': 15, 'call-pickup': 70, 'call-busy': 15, 'call-reject': 15, 'call-hangup': 2,
     // v3.7.x：让对方继续说——cs-normal(0=理解回复快速回1条, 1=按正常回复时间设置)；
     // cs-trigger-name(顶部昵称触发) / cs-trigger-bar(底部聊天栏按钮触发)，两个独立开关可同时开
-    'cs-normal': 0, 'cs-trigger-name': 1, 'cs-trigger-bar': 0
+    'cs-normal': 0, 'cs-trigger-name': 1, 'cs-trigger-bar': 0,
+    // v3.9.x：群聊回复设置（群聊页全局生效，不随桌面隔离）——键前缀 gc-，
+    // 存储在全局命名空间 xy-home-v2:reply-gc-*（见 getCfg 的全局读取分支），
+    // 默认值：每个联系人回复概率 60%、回复速度 1~40 秒、回复条数 1~2、
+    // 拍一拍 5%、表情包 10%、emoji 5%、图片 5%、语音 10%、颜文字附加 5%、引用 30%、
+    // 撤回 25%、撤回补发 35%；多字卡回复触发概率 50%、最少 2 条、最多 5 条
+    'gc-prob': 60, 'gc-rs-min': 1, 'gc-rs-max': 40,
+    'gc-reply-min': 1, 'gc-reply-max': 2,
+    'gc-touch-prob': 5, 'gc-sticker-prob': 10, 'gc-emoji-prob': 5, 'gc-image-prob': 5, 'gc-voice-prob': 10,
+    'gc-kaomoji-prob': 5, 'gc-quote-prob': 30, 'gc-rc-prob': 25, 'gc-rc-refix': 35,
+    'gc-py-en': 1, 'gc-py-prob': 50, 'gc-py-min': 2, 'gc-py-max': 5
   };
+
+  // v3.9.x：群聊回复设置存全局命名空间（群聊页/群聊回复是全局功能，不随联系人桌面隔离）——
+  // 读写走 xyStore('xy-home-v2')，其余 gc-* 键回退到当前桌面存储读取（兼容旧数据）
+  function gcRead(k) {
+    try {
+      const g = window.xyStore('xy-home-v2').get('reply-gc-' + k);
+      if (g !== null && g !== undefined && g !== '') return g;
+    } catch (e) {}
+    try { return ls.get('reply-gc-' + k); } catch (e) { return null; }
+  }
+  function gcWrite(k, v) {
+    try { window.xyStore('xy-home-v2').set('reply-gc-' + k, String(v)); } catch (e) {}
+  }
 
   function getCfg() {
     const out = {};
     Object.keys(DEFAULTS).forEach(k => {
-      const v = ls.get('reply-' + k);
+      // v3.9.x：群聊设置（gc- 前缀）读全局命名空间，其余按当前桌面读
+      const v = k.indexOf('gc-') === 0 ? gcRead(k) : ls.get('reply-' + k);
       // v3.6.x：对异常/损坏的存储值兜底——某些操作可能把 NaN 或非数字写进本地
       //（如摩托罗拉 Edge 上信箱「最短写信时间」显示 NaN 且 ± 按钮失效），
       // Number() 后 isNaN 一律回退默认值，并顺手修复坏数据，避免 NaN 传染
       let n = (v === null || v === undefined || v === '') ? DEFAULTS[k] : Number(v);
       if (isNaN(n)) {
         n = DEFAULTS[k];
-        try { ls.set('reply-' + k, String(n)); } catch (e) {}
+        try { if (k.indexOf('gc-') === 0) gcWrite(k, String(n)); else ls.set('reply-' + k, String(n)); } catch (e) {}
       }
       out[k] = n;
     });
     return out;
   }
   window.replyCfg = getCfg;
+  // v3.9.x：群聊页/群聊回复逻辑读取群聊回复设置（含默认值）
+  window.groupChatCfg = function () {
+    try {
+      const c = getCfg();
+      const out = {};
+      Object.keys(DEFAULTS).forEach(k => { if (k.indexOf('gc-') === 0) out[k] = c[k]; });
+      return out;
+    } catch (e) { return {}; }
+  };
   window.saveReplyCfg = function (k, v) {
+    if (k.indexOf('gc-') === 0) { gcWrite(k, v); return; }
     ls.set('reply-' + k, String(v));
     // v3.7.x：主动发送相关设置保存后立即重排定时器——原实现挂起的旧定时器
     // 不重排，改了间隔/概率要等下一轮（最长几小时）才生效
@@ -109,7 +143,7 @@
       }
     });
     // 开关
-    ['py-en', 'as-en', 'dnd-en', 'as-badge', 'ml-kaomoji-en', 'ml-emoji-en', 'ml-sticker-en', 'cs-normal', 'cs-trigger-name', 'cs-trigger-bar'].forEach(k => {
+    ['py-en', 'as-en', 'dnd-en', 'as-badge', 'ml-kaomoji-en', 'ml-emoji-en', 'ml-sticker-en', 'cs-normal', 'cs-trigger-name', 'cs-trigger-bar', 'gc-py-en'].forEach(k => {
       const el = document.getElementById(k);
       if (el) el.checked = cfg[k] === 1;
     });
@@ -196,7 +230,7 @@
     });
   });
   // 开关交互
-  ['py-en', 'as-en', 'dnd-en', 'as-badge', 'ml-kaomoji-en', 'ml-emoji-en', 'ml-sticker-en', 'cs-normal', 'cs-trigger-name', 'cs-trigger-bar'].forEach(k => {
+  ['py-en', 'as-en', 'dnd-en', 'as-badge', 'ml-kaomoji-en', 'ml-emoji-en', 'ml-sticker-en', 'cs-normal', 'cs-trigger-name', 'cs-trigger-bar', 'gc-py-en'].forEach(k => {
     const el = document.getElementById(k);
     if (el) {
       el.addEventListener('change', () => {
@@ -248,7 +282,7 @@
             window.saveReplyCfg(k, v);
           }
         });
-        ['py-en', 'as-en', 'dnd-en', 'as-badge', 'ml-kaomoji-en', 'ml-emoji-en', 'ml-sticker-en', 'cs-normal', 'cs-trigger-name', 'cs-trigger-bar'].forEach(k => {
+        ['py-en', 'as-en', 'dnd-en', 'as-badge', 'ml-kaomoji-en', 'ml-emoji-en', 'ml-sticker-en', 'cs-normal', 'cs-trigger-name', 'cs-trigger-bar', 'gc-py-en'].forEach(k => {
           const el = document.getElementById(k);
           if (el) window.saveReplyCfg(k, el.checked ? 1 : 0);
         });

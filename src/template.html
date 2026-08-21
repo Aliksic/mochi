@@ -1236,6 +1236,7 @@
       </div>
       <div class="fav-tabs">
         <button class="fav-tab sel" data-rp="chat">聊天</button>
+        <button class="fav-tab" data-rp="group">群聊</button>
         <button class="fav-tab" data-rp="mail">信箱</button>
         <button class="fav-tab" data-rp="feed">朋友圈</button>
       </div>
@@ -1283,6 +1284,34 @@
             <div class="gs-row"><span>点顶部昵称触发</span><label class="toggle"><input type="checkbox" id="cs-trigger-name"><span class="tk"></span></label></div>
             <div class="gs-row"><span>底部聊天栏按钮触发</span><label class="toggle"><input type="checkbox" id="cs-trigger-bar"><span class="tk"></span></label></div>
           </div>
+        </div>
+        <div class="gs-panel" data-rpanel="group" hidden>
+          <div class="gs-title">被动回复（群聊里每个联系人回你）</div>
+          <div class="gs-sub">发送消息后每个联系人按概率回你；也可在群聊里 @ 指定成员（@ 的成员必定回复）</div>
+          <div class="set-group glass">
+            <div class="gs-row"><span>每个联系人回复概率</span><div class="stepper" data-k="gc-prob" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="gc-prob-val" readonly><button class="stp-max">+</button></div></div>
+            <div class="gs-row"><span>回复速度最短（秒）</span><div class="stepper" data-k="gc-rs-min" data-min="1" data-max="60" data-step="1"><button class="stp-min">−</button><input class="stp-val" id="gc-rs-min-val" readonly><button class="stp-max">+</button></div></div>
+            <div class="gs-row"><span>回复速度最长（秒）</span><div class="stepper" data-k="gc-rs-max" data-min="2" data-step="1"><button class="stp-min">−</button><input class="stp-val" id="gc-rs-max-val" readonly><button class="stp-max">+</button></div></div>
+            <div class="gs-row"><span>回复条数最少</span><div class="stepper" data-k="gc-reply-min" data-min="1" data-max="10" data-step="1"><button class="stp-min">−</button><input class="stp-val" id="gc-reply-min-val" readonly><button class="stp-max">+</button></div></div>
+            <div class="gs-row"><span>回复条数最多</span><div class="stepper" data-k="gc-reply-max" data-min="1" data-max="20" data-step="1"><button class="stp-min">−</button><input class="stp-val" id="gc-reply-max-val" readonly><button class="stp-max">+</button></div></div>
+            <div class="gs-row"><span>拍一拍概率</span><div class="stepper" data-k="gc-touch-prob" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="gc-touch-prob-val" readonly><button class="stp-max">+</button></div></div>
+            <div class="gs-row"><span>表情包概率</span><div class="stepper" data-k="gc-sticker-prob" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="gc-sticker-prob-val" readonly><button class="stp-max">+</button></div></div>
+            <div class="gs-row"><span>emoji 概率</span><div class="stepper" data-k="gc-emoji-prob" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="gc-emoji-prob-val" readonly><button class="stp-max">+</button></div></div>
+            <div class="gs-row"><span>图片概率</span><div class="stepper" data-k="gc-image-prob" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="gc-image-prob-val" readonly><button class="stp-max">+</button></div></div>
+            <div class="gs-row"><span>语音概率</span><div class="stepper" data-k="gc-voice-prob" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="gc-voice-prob-val" readonly><button class="stp-max">+</button></div></div>
+            <div class="gs-row"><span>颜文字附加概率</span><div class="stepper" data-k="gc-kaomoji-prob" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="gc-kaomoji-prob-val" readonly><button class="stp-max">+</button></div></div>
+            <div class="gs-row"><span>引用概率</span><div class="stepper" data-k="gc-quote-prob" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="gc-quote-prob-val" readonly><button class="stp-max">+</button></div></div>
+            <div class="gs-row"><span>撤回概率</span><div class="stepper" data-k="gc-rc-prob" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="gc-rc-prob-val" readonly><button class="stp-max">+</button></div></div>
+            <div class="gs-row"><span>撤回补发概率</span><div class="stepper" data-k="gc-rc-refix" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="gc-rc-refix-val" readonly><button class="stp-max">+</button></div></div>
+          </div>
+          <div class="gs-title">每条消息使用多字卡回复</div>
+          <div class="set-group glass">
+            <div class="gs-row"><span>多字卡回复</span><label class="toggle"><input type="checkbox" id="gc-py-en"><span class="tk"></span></label></div>
+            <div class="gs-row"><span>触发概率</span><div class="stepper" data-k="gc-py-prob" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="gc-py-prob-val" readonly><button class="stp-max">+</button></div></div>
+            <div class="gs-row"><span>最少条数</span><div class="stepper" data-k="gc-py-min" data-min="1" data-max="10" data-step="1"><button class="stp-min">−</button><input class="stp-val" id="gc-py-min-val" readonly><button class="stp-max">+</button></div></div>
+            <div class="gs-row"><span>最多条数</span><div class="stepper" data-k="gc-py-max" data-min="2" data-max="10" data-step="1"><button class="stp-min">−</button><input class="stp-val" id="gc-py-max-val" readonly><button class="stp-max">+</button></div></div>
+          </div>
+          <div class="gs-sub" style="padding:0 14px 14px">群聊设置全局生效（所有桌面/联系人共用），修改后直接生效</div>
         </div>
         <div class="gs-panel" data-rpanel="mail" hidden>
           <div class="gs-title">信件内容</div>

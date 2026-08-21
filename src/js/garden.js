@@ -7,17 +7,17 @@ var G = "garden-data";
 var PLOTS = 6;
 var PI = 1800;
 function pn() { return s.get("lbl-partner") || "TA"; }
-function load() { try { var d = JSON.parse(s.get(G) || "{}"); if (!d.p) d.p = []; while (d.p.length < PLOTS) d.p.push(null); if (!d.l) d.l = []; if (!d.lpc) d.lpc = 0; return d; } catch (e) { return { p: new Array(PLOTS).fill(null), l: [], lpc: 0 }; } }
+function load() { try { var d = JSON.parse(s.get(G) || "{}"); if (!d.p) d.p = []; while (d.p.length < PLOTS) d.p.push(null); if (!d.l) d.l = []; if (!d.lpc) d.lpc = 0; if (!d.dex) d.dex = {}; if (!d.exp) d.exp = 0; if (!d.inv) d.inv = {}; if (!d.st) d.st = { p: 0, w: 0, h: 0, f: 0, mp: 0, mw: 0, mh: 0, mf: 0 }; return d; } catch (e) { return { p: new Array(PLOTS).fill(null), l: [], lpc: 0, dex: {}, exp: 0, inv: {}, st: { p: 0, w: 0, h: 0, f: 0, mp: 0, mw: 0, mh: 0, mf: 0 } }; } }
 function save(d) { try { s.set(G, JSON.stringify(d)); try { if (window.idbSet) window.idbSet(window.activePrefix() + ":" + G, JSON.stringify(d)); } catch (e2) {} } catch (e) {} }
 (function r() { try { if (!window.idbGet) return; var pf = window.activePrefix(); if (!s.get(G)) window.idbGet(pf + ":" + G).then(function (v) { if (window.activePrefix() !== pf || !v) return; try { s.set(G, typeof v === "string" ? v : JSON.stringify(v)); } catch (e) {} }); } catch (e) {} })();
 
 var T = {
-  rose: { n: "\u73AB\u7470", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF39"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [30, 60] },
-  sunflower: { n: "\u5411\u65E5\u8475", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF3B"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [40, 80] },
-  tulip: { n: "\u90C1\u91D1\u9999", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF37"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [35, 70] },
-  cactus: { n: "\u4ED9\u4EBA\u638C", e: ["\uD83C\uDF31", "\uD83C\uDF35"], sn: ["\u5C0F\u82BD", "\u6210\u578B"], g: [50] },
-  lavender: { n: "\u85B0\u8863\u8349", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83D\uDC90"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [25, 50] },
-  daisy: { n: "\u96CF\u83CA", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF3C"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [20, 40] }
+  rose: { n: "\u73AB\u7470", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF39"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [172800, 432000] },
+  sunflower: { n: "\u5411\u65E5\u8475", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF3B"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [172800, 518400] },
+  tulip: { n: "\u90C1\u91D1\u9999", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF37"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [172800, 432000] },
+  cactus: { n: "\u4ED9\u4EBA\u638C", e: ["\uD83C\uDF31", "\uD83C\uDF35"], sn: ["\u5C0F\u82BD", "\u6210\u578B"], g: [432000] },
+  lavender: { n: "\u85B0\u8863\u8349", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83D\uDC90"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [86400, 345600] },
+  daisy: { n: "\u96CF\u83CA", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF3C"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [86400, 259200] }
 };
 var W = [
   { i: "\u2600\uFE0F", t: "\u6674\u6717" },
@@ -49,7 +49,7 @@ function stageInfo(plot) {
 
 function waterLvl(plot) {
   if (!plot || !plot.watered) return 0;
-  return Math.max(0, 1 - (Math.floor(Date.now() / 1000) - plot.watered) / 7200);
+  return Math.max(0, 1 - (Math.floor(Date.now() / 1000) - plot.watered) / 86400);
 }
 
 var curWeather = wx();
@@ -62,6 +62,16 @@ function renderWeather() {
   if (wi) wi.textContent = curWeather.i;
   if (wt) wt.textContent = curWeather.t;
   if (ws) ws.textContent = curSeason;
+}
+
+function fmtRemain(sec) {
+  if (sec <= 0) return "";
+  var d = Math.floor(sec / 86400);
+  var h = Math.floor((sec % 86400) / 3600);
+  if (d > 0) return "\u8FD8\u9700 " + d + "\u5929" + (h > 0 ? " " + h + "\u65F6" : "");
+  if (h > 0) return "\u8FD8\u9700 " + h + "\u65F6";
+  var m = Math.floor(sec / 60);
+  return "\u8FD8\u9700 " + (m > 0 ? m : 1) + "\u5206";
 }
 
 function renderGrid() {
@@ -77,7 +87,12 @@ function renderGrid() {
     if (si) {
       h += "<span class=\"garden-plant-emoji\">" + si.emoji + "</span>";
       h += "<span class=\"garden-plant-name\">" + si.name + "</span>";
-      h += "<span class=\"garden-plant-stage\">" + si.stageName + (si.bloomed ? "\u2714" : "") + "</span>";
+      if (si.bloomed) {
+        h += "<span class=\"garden-plant-stage\">\u5DF2\u6210\u719F\u2714</span>";
+      } else {
+        h += "<span class=\"garden-plant-stage\">" + si.stageName + " \u00b7 " + fmtRemain(si.nextSec) + "</span>";
+        h += "<div class=\"garden-grow-bar\"><div class=\"garden-grow-fill\" style=\"width:" + Math.round(si.progress * 100) + "%\"></div></div>";
+      }
       if (wl > 0) h += "<div class=\"garden-water-bar\"><div class=\"garden-water-fill\" style=\"width:" + Math.round(wl * 100) + "%\"></div></div>";
     } else {
       h += "<span class=\"garden-plant-emoji\">\uD83C\uDF31</span>";
@@ -114,7 +129,7 @@ function waterPlot(idx) {
   if (!plot.watered) plot.watered = Math.floor(Date.now() / 1000);
   else { var sec = Math.floor(Date.now() / 1000) - plot.watered; if (sec < 3600) return; plot.watered = Math.floor(Date.now() / 1000); }
   var si = stageInfo(plot);
-  plot.planted = Math.max(0, plot.planted - 300);
+  plot.planted = Math.max(0, plot.planted - 14400);
   addLog("\u6211", "\u7ED9 " + (si ? si.name : "\u7A7A\u5730") + " \u6D47\u4E86\u6C34");
   save(data); renderAll();
 }
@@ -132,7 +147,7 @@ function fertilizePlot(idx) {
   if (idx < 0 || idx >= PLOTS) return;
   var plot = data.p[idx];
   if (!plot) return;
-  plot.planted = Math.max(0, plot.planted - 900);
+  plot.planted = Math.max(0, plot.planted - 43200);
   var si = stageInfo(plot);
   addLog("\u6211", "\u7ED9 " + (si ? si.name : "\u7A7A\u5730") + " \u65BD\u4E86\u80A5");
   save(data); renderAll();
@@ -179,7 +194,7 @@ function partnerAct(silent) {
     var idx = dryPlots[Math.floor(Math.random() * dryPlots.length)];
     var si = stageInfo(data.p[idx]);
     data.p[idx].watered = Math.floor(Date.now() / 1000);
-    data.p[idx].planted = Math.max(0, data.p[idx].planted - 200);
+    data.p[idx].planted = Math.max(0, data.p[idx].planted - 7200);
     addLog(pName, "\u7ED9 " + (si ? si.name : "\u690D\u7269") + " \u6D47\u4E86\u6C34");
     acted = true;
   } else if (r < 0.75 && bloomedPlots.length > 0) {
@@ -192,7 +207,7 @@ function partnerAct(silent) {
   } else if (r < 0.9 && plantedPlots.length > 0) {
     var idx = plantedPlots[Math.floor(Math.random() * plantedPlots.length)];
     var si = stageInfo(data.p[idx]);
-    data.p[idx].planted = Math.max(0, data.p[idx].planted - 600);
+    data.p[idx].planted = Math.max(0, data.p[idx].planted - 21600);
     addLog(pName, "\u7ED9 " + (si ? si.name : "\u690D\u7269") + " \u65BD\u4E86\u80A5");
     acted = true;
   }
@@ -267,21 +282,13 @@ function handleTool(e) {
     if (data.p[selPlot]) return;
     if (!window.openModal) return;
     var keys = Object.keys(T);
-    var plantHtml = "<div class=\"garden-plant-select\">";
-    keys.forEach(function (k) {
+    var pills = keys.map(function (k) {
       var tp = T[k];
-      plantHtml += "<div class=\"garden-seed\" data-seed=\"" + k + "\"><span class=\"seed-emoji\">" + tp.e[tp.e.length - 1] + "</span><span class=\"seed-name\">" + tp.n + "</span></div>";
+      return { label: tp.e[tp.e.length - 1] + " " + tp.n, value: k };
     });
-    plantHtml += "</div>";
-    window.openModal("\u9009\u62E9\u79CD\u690D", plantHtml, function (result) {
-      if (result && result.target) {
-        var seedEl = result.target.closest ? result.target.closest(".garden-seed") : null;
-        if (seedEl) {
-          var seedType = seedEl.getAttribute("data-seed");
-          if (seedType) plantSeed(selPlot, seedType);
-        }
-      }
-    }, { rawHtml: true, confirmLabel: "\u53D6\u6D88" });
+    window.openModal("\u9009\u62E9\u79CD\u690D", "", function (v) {
+      if (v && T[v]) plantSeed(selPlot, v);
+    }, { pills: pills, noInput: true });
   }
 }
 

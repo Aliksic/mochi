@@ -104,9 +104,9 @@
     if (dayOfCycle > cfg.cycleLen) return { phase: 'safe', inPeriod: false, nextStart: nextStart, dayOfCycle: dayOfCycle, ovulationDay: ovulationDay, title: '经期已推迟 ' + (dayOfCycle - cfg.cycleLen) + ' 天', sub: '点下方按钮标记本次经期开始' };
     if (dayOfCycle >= ovulationDay - 5 && dayOfCycle <= ovulationDay + 1) {
       var toOv = ovulationDay - dayOfCycle;
-      return { phase: 'fertile', inPeriod: false, nextStart: nextStart, dayOfCycle: dayOfCycle, ovulationDay: ovulationDay, title: '易孕期 · 第 ' + dayOfCycle + ' 天', sub: toOv > 0 ? '距排卵约 ' + toOv + ' 天' : (toOv === 0 ? '今天约为排卵日' : '排卵约 ' + (-toOv) + ' 天前') };
+      return { phase: 'fertile', inPeriod: false, nextStart: nextStart, dayOfCycle: dayOfCycle, ovulationDay: ovulationDay, title: '排卵期 · 第 ' + dayOfCycle + ' 天', sub: toOv > 0 ? '距排卵约 ' + toOv + ' 天' : (toOv === 0 ? '今天约为排卵日' : '排卵约 ' + (-toOv) + ' 天前') };
     }
-    return { phase: 'safe', inPeriod: false, nextStart: nextStart, dayOfCycle: dayOfCycle, ovulationDay: ovulationDay, title: '安全期 · 第 ' + dayOfCycle + ' 天', sub: nextStart ? '距下次经期约 ' + diffDays(today, nextStart) + ' 天' : '—' };
+    return { phase: 'safe', inPeriod: false, nextStart: nextStart, dayOfCycle: dayOfCycle, ovulationDay: ovulationDay, title: nextStart ? '距下次经期约 ' + diffDays(today, nextStart) + ' 天' : '周期第 ' + dayOfCycle + ' 天', sub: '周期第 ' + dayOfCycle + ' 天' };
   }
 
   // ---- 给定日期阶段（日历着色）----
@@ -118,7 +118,7 @@
       if (ds >= r.start && ds <= end) return 'period';
     }
     var last = recs[recs.length - 1];
-    if (!last) return 'safe';
+    if (!last) return 'none';
     var today = todayStr();
     var predicts = [];
     var s = last.start, guard = 0;
@@ -129,14 +129,7 @@
     for (var j = 0; j < predicts.length; j++) {
       if (ds >= predicts[j].start && ds <= predicts[j].end) return 'predict';
     }
-    var refStart = null;
-    recs.forEach(function (r) { if (r.start <= ds) refStart = r.start; });
-    predicts.forEach(function (p) { if (p.start <= ds) refStart = p.start; });
-    if (!refStart) return 'safe';
-    var dayOfCycle = diffDays(refStart, ds) + 1;
-    var ovulationDay = cfg.cycleLen - luteal();
-    if (dayOfCycle >= ovulationDay - 5 && dayOfCycle <= ovulationDay + 1) return 'fertile';
-    return 'safe';
+    return 'none';
   }
 
   // ---- 渲染 ----
