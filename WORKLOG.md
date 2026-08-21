@@ -4,6 +4,21 @@
 
 ## 规则
 
+### 2026-08-21（本会话，用户反馈「聊天设置里点击隐藏通话小框无效」）
+- [AI-B·构建者·完成]（**已构建 verify 10/10 + 通话小框专项回归 26/26 + 群聊冒烟 6/6，本次提交推送**）：
+  - **排查结论**：通话小框开关本身在最新构建上全链路正常（点击→store 写入 0→通话接通后大面板常驻、小框不弹→刷新持久化→多桌面隔离，CDP 专项 26/26 全过）。**线上真实问题是「开启群聊」开关**（dbdb8e9 只提交了模板 #cs-group-chat，绑定逻辑未构建）——点击无任何反应、开关弹回，位置紧挨在「隐藏通话小框」下方，最可能被误认为通话小框开关无效。
+  - **本次构建内容**（统一包含工作区全部已保存改动）：①群聊功能全套（group-chat.js/css 新增、build.mjs 加构建条目、chat-settings.js 群聊开关绑定、personalize.js 桌面群聊图标+applyGroupChatMode、tabs.js page-group-chat 全屏、mobile-adapt.js 群聊弹层 FLOAT_SELECTORS）——线上「开启群聊」开关恢复可点；②AI-A 的 chat.js 就地作答草稿保护 + 问问TA半框文字飞出修复；③通话小框功能原样保留。
+  - 验证：`node --check` 全部 src JS 通过 → build（sw 缓存 mochi-mt2fjylu）→ verify 10/10 → diag-call-mini.mjs 12/12（开关读写）→ diag-call-mini2.mjs 7/7（通话行为隐藏/显示）→ diag-call-mini4.mjs 7/7（刷新持久化+多桌面）→ smoke-group-chat.mjs 6/6（群聊开关绑定+页面渲染）。
+  - 保留回归脚本：`tools/diag-call-mini.mjs` `diag-call-mini2.mjs` `diag-call-mini4.mjs` `smoke-group-chat.mjs`。
+  - ⚠️ 请 AI-A 知悉：本次构建后线上群聊功能已生效；若真机上「隐藏通话小框」仍有问题，请用户提供具体现象（点击后是否弹回/通话时是否仍弹小框/哪个联系人桌面）。
+
+### 2026-08-21（本会话，用户反馈「OPPO Reno14 + 雨见浏览器：回答问题时对面发消息输入内容消失；问问TA半框输入文字飞出输入栏」）
+- [本会话·完成]（**已改 src，未构建未提交**，请构建者执行 `node build.mjs`）：`src/js/chat.js`（AI-A 域）。
+  - **Bug1 就地作答输入丢失**：TA 问问题卡片点开就地作答（`.msg-inplace` ip-input）打字时，TA 发消息触发 `renderWindow` 全量重渲染（`body.innerHTML=''`）→ 作答区与输入内容一起销毁。修复：新增 `inplaceDrafts` 草稿机制——`renderWindow` 重建前 `collectInplaceDrafts()` 收集（按 data-idx + type），重建后 `restoreInplaceDrafts()` 重新展开作答区并回填内容（含光标置尾）；`expandCardInPlace` 创建输入框时回填草稿 + input 事件实时保存；发送成功/收起/已作答时清草稿。
+  - **Bug2 问问TA半框文字飞出输入栏**：`.poke-card` fixed 半框在安卓键盘弹出（布局视口收缩、半框上移）时，contenteditable 文本合成层停在旧位置。原修复只在 80ms 后设一次 `translateZ(0)`，未覆盖键盘动画结束后的重合成。修复：新增 `applyAskComposeLayers`（打开面板立即内联 `translateZ(0)`+`will-change:transform`，不等聚焦延迟）+ `startAskKbRefresh`（监听 `visualViewport` resize，动画停止 160ms 后强制移除→reflow→重建合成层）+ `closeChatAskPanel` 统一清理（停止监听、清 transform/will-change）；8 处直接 `askP.hidden=true` 的调用点统一改走 `closeChatAskPanel()`。
+  - 验证：`node --check src/js/chat.js` 通过；未构建，需构建者 build + verify；文字飞出需 OPPO/安卓真机（键盘弹出场景）确认。
+  - ⚠️ 工作区已有 AI-B 未提交改动（build.mjs/chat-settings.js/personalize.js/tabs.js 12:02 前），构建时注意一并包含。
+
 ### 2026-08-21（本会话，用户反馈「iPhone 12 mini + Safari 添加到桌面后底部导航栏下面有灰色图形，没有完全全屏」）
 - [本会话·完成]（**已构建 verify 10/10，本次提交推送**）：`src/css/base.css`（AI-B 域）。
   - **根因**：iOS PWA standalone（添加主屏幕）+ black-translucent 下，部分 iOS 版本 100vh 不含底部 home indicator 安全区（约 34px），`.phone` 底部外露出 `html/body` 灰底（--page-bg #e9e9e9）→「底部导航栏下面有灰色图形」；与顶部全屏按钮无关（点了也一样）。

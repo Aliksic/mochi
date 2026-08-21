@@ -1958,12 +1958,12 @@
   // 组件 id 列表（对应 template.html 中 [data-desk-widget]）；组件节点唯一，
   // 「添加」= 把节点移动到目标页（节点移动不重建，内部事件绑定保留）
   const WIDGET_IDS = ['deco', 'quote-row', 'checkin', 'apps', 'music', 'p2apps', 'memo-row', 'week', 'weekend', 'desk-clock', 'desk-calendar', 'desk-timer', 'desk-anniv',
-    'app-chat', 'app-home', 'app-mail', 'app-feed', 'app-calendar', 'app-memory', 'app-divination', 'app-note', 'app-music', 'app-stats', 'app-interact', 'app-checkin'];
+    'app-chat', 'app-group-chat', 'app-home', 'app-mail', 'app-feed', 'app-calendar', 'app-memory', 'app-divination', 'app-note', 'app-music', 'app-stats', 'app-interact', 'app-checkin'];
   const WIDGET_NAMES = {
     deco: '纪念日卡', 'quote-row': '今日情话 / 已摸鱼', checkin: '打卡横幅', apps: '功能图标(整组)',
     music: '音乐播放器', p2apps: '第二页功能图标(整组)', 'memo-row': '今日备忘 / 心情', week: '本周日常', weekend: '周末倒计时',
     'desk-clock': '时钟', 'desk-calendar': '月历', 'desk-timer': '计时器', 'desk-anniv': '纪念日倒计时',
-    'app-chat': '聊天图标', 'app-home': '主页图标', 'app-mail': '信箱图标', 'app-feed': '朋友圈图标',
+    'app-chat': '聊天图标', 'app-group-chat': '群聊图标', 'app-home': '主页图标', 'app-mail': '信箱图标', 'app-feed': '朋友圈图标',
     'app-calendar': '日历图标', 'app-memory': '纪念图标', 'app-divination': '占卜图标', 'app-note': '收藏图标',
     'app-music': '音乐图标', 'app-stats': '聊天统计图标', 'app-interact': '提问记录图标', 'app-checkin': '查岗图标',
   };
@@ -1998,7 +1998,7 @@
     'desk-calendar': '<span style="display:grid;grid-template-columns:repeat(7,6px);gap:2px">' + Array.from({ length: 21 }, (_, i) => '<span style="width:6px;height:6px;border-radius:2px;' + (i === 10 ? 'background:#111' : 'background:#eee') + '"></span>').join('') + '</span>',
     'desk-timer': '<span style="display:flex;flex-direction:column;align-items:center;gap:3px"><span style="font-size:14px;font-weight:700;color:#222;font-variant-numeric:tabular-nums">00:00.0</span><span style="display:flex;gap:3px"><span style="font-size:5px;color:#666;background:#f0f0f0;padding:1px 4px;border-radius:4px">开始</span><span style="font-size:5px;color:#666;background:#f0f0f0;padding:1px 4px;border-radius:4px">重置</span></span></span>',
     'desk-anniv': '<span style="display:flex;flex-direction:column;align-items:center;gap:1px"><span style="font-size:7px;color:#bbb">距下一个纪念日</span><span style="font-size:15px;font-weight:700;color:#333">30 天</span><span style="font-size:6px;color:#999">生日 · 9 月 18 日</span></span>',
-    'app-chat': _appIcoPrev('聊天'), 'app-home': _appIcoPrev('主页'), 'app-mail': _appIcoPrev('信箱'), 'app-feed': _appIcoPrev('朋友圈'),
+    'app-chat': _appIcoPrev('聊天'), 'app-group-chat': _appIcoPrev('群聊'), 'app-home': _appIcoPrev('主页'), 'app-mail': _appIcoPrev('信箱'), 'app-feed': _appIcoPrev('朋友圈'),
     'app-calendar': _appIcoPrev('日历'), 'app-memory': _appIcoPrev('纪念'), 'app-divination': _appIcoPrev('占卜'), 'app-note': _appIcoPrev('收藏'),
     'app-music': _appIcoPrev('音乐'), 'app-stats': _appIcoPrev('统计'), 'app-interact': _appIcoPrev('提问'), 'app-checkin': _appIcoPrev('查岗'),
   };
@@ -2075,6 +2075,51 @@
   document.addEventListener('contact-switched', applyDeskLayout);
   document.addEventListener('contact-switched', () => { applyDeskFontPct(getDeskFontPct()); applyDeskCardPct(getDeskCardPct()); });
   document.addEventListener('contact-switched', () => { const sp = getBgPresetName(); if (sp) { const p = BG_PRESETS.find(b => b.name === sp); if (p) applyPhoneBgPreset(p.css); else clearPhoneBg(); } syncBgPresetUI(); });
+
+  // v3.8.x：群聊模式——开启后桌面聊天按钮右侧显示「群聊」按钮，占卜按钮隐藏（移到隐藏池，
+  // 可在美化装修模式组件库自由添加到其他页面）；关闭恢复原样。须在 applyDeskLayout 之后执行
+  // （覆盖 desk-layout 对群聊/占卜图标的处置）。每桌面独立（group-chat-enabled，默认关闭）。
+  function applyGroupChatMode() {
+    try {
+      const en = store.get('group-chat-enabled') === '1';
+      const mainGrid = document.querySelector('.app-grid[data-app="main"]');
+      const pool = ensureWidgetPool();
+      const chatBtn = document.querySelector('.app[data-app="chat"]');
+      const gcBtn = document.querySelector('.app[data-app="group-chat"]');
+      const divBtn = document.querySelector('.app[data-app="divination"]');
+      const memBtn = document.querySelector('.app[data-app="memory"]');
+      if (en) {
+        // 群聊按钮：强制移到第一页 app-grid 的 chat 后面并显示
+        if (gcBtn) {
+          if (mainGrid && chatBtn && gcBtn.parentNode !== mainGrid) {
+            mainGrid.insertBefore(gcBtn, chatBtn.nextSibling);
+          } else if (mainGrid && chatBtn && gcBtn.previousElementSibling !== chatBtn) {
+            mainGrid.insertBefore(gcBtn, chatBtn.nextSibling);
+          }
+          gcBtn.hidden = false;
+        }
+        // 占卜按钮：若仍在第一页 app-grid（原位），移到隐藏池；已在池或被用户移到其他页则不动
+        if (divBtn && mainGrid && divBtn.parentNode === mainGrid) {
+          pool.appendChild(divBtn);
+        }
+      } else {
+        // 群聊按钮：移到隐藏池（脱离 app-grid 避免占位）
+        if (gcBtn && gcBtn.parentNode !== pool) {
+          pool.appendChild(gcBtn);
+        }
+        // 占卜按钮：若在隐藏池，移回第一页 app-grid 的 memory 后面（原位）；已被用户添加到其他页则不动
+        if (divBtn && divBtn.parentNode === pool && mainGrid) {
+          if (memBtn) mainGrid.insertBefore(divBtn, memBtn.nextSibling);
+          else mainGrid.appendChild(divBtn);
+        }
+      }
+    } catch (e) {}
+  }
+  applyGroupChatMode();
+  document.addEventListener('contact-switched', applyGroupChatMode);
+  document.addEventListener('group-chat-mode-changed', applyGroupChatMode);
+  // 装修模式退出后重应用（用户可能在装修时移动了群聊/占卜按钮）
+  document.addEventListener('decor-exited', applyGroupChatMode);
 
   // 组件库面板：列出所有组件 + 当前位置，点击「添加到此页」
   function openDeskLib(pageSlide, pageIdx) {
@@ -2645,6 +2690,7 @@
     if (phone) phone.classList.remove('decor-on');
     const bar = document.getElementById('decor-bar');
     if (bar) bar.hidden = true;
+    try { document.dispatchEvent(new Event('decor-exited')); } catch (e) {}
   }
   // v3.5.131：暴露给 tabs.js 返回键（返回时退出编辑态，防止"点了没反应"）
   window.exitDecor = exitDecor;

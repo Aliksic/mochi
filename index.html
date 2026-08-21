@@ -3720,6 +3720,59 @@ border-radius:12px;
 .msg-snake-title { font-size:13px; font-weight:700; color:var(--ink); padding-bottom:8px; border-bottom:1px dashed rgba(0,0,0,.1); margin-bottom:8px; }
 .msg-snake-row { display:flex; gap:10px; justify-content:space-between; font-size:12px; color:var(--ink); padding:3px 0; }
 .msg-snake-side { font-weight:700; min-width:24px; }
+.gc-from-name {
+font-size: 10px; color: #888; margin-bottom: 2px;
+display: block; max-width: 64px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.gc-input:empty:before {
+content: attr(data-ph); color: #aaa; pointer-events: none;
+}
+.gc-members-panel {
+position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%);
+width: 86%; max-width: 340px; max-height: 70vh;
+background: #fff; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,.18);
+z-index: 200; overflow: hidden; display: flex; flex-direction: column;
+}
+.gc-members-panel[hidden] { display: none; }
+.gc-mp-head {
+display: flex; align-items: center; justify-content: space-between;
+padding: 14px 16px; border-bottom: 1px solid rgba(0,0,0,.06); font-weight: 600;
+}
+.gc-mp-close {
+border: none; background: none; font-size: 18px; color: #999; cursor: pointer; padding: 4px 8px;
+}
+.gc-mp-body { overflow-y: auto; padding: 8px 0; }
+.gc-mp-item {
+display: flex; align-items: center; gap: 10px; padding: 8px 16px;
+}
+.gc-mp-av {
+width: 36px; height: 36px; border-radius: 50%; background: #f0f0f0;
+display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;
+}
+.gc-mp-av img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
+.gc-mp-av svg { width: 60%; height: 60%; }
+.gc-mp-name { flex: 1; font-size: 14px; }
+.gc-mp-tag { font-size: 11px; color: #999; background: #f4f4f4; padding: 2px 8px; border-radius: 8px; }
+.gc-at-panel {
+position: fixed; left: 0; right: 0; bottom: 0;
+max-height: 50vh; background: #fff; border-radius: 16px 16px 0 0;
+box-shadow: 0 -4px 20px rgba(0,0,0,.12); z-index: 200; overflow: hidden;
+display: flex; flex-direction: column;
+}
+.gc-at-panel[hidden] { display: none; }
+.gc-at-head { padding: 12px 16px; border-bottom: 1px solid rgba(0,0,0,.06); font-size: 13px; color: #888; }
+.gc-at-body { overflow-y: auto; padding: 4px 0; }
+.gc-at-item {
+display: flex; align-items: center; gap: 10px; padding: 10px 16px; cursor: pointer;
+}
+.gc-at-item:active { background: #f4f4f4; }
+.gc-at-av {
+width: 32px; height: 32px; border-radius: 50%; background: #f0f0f0;
+display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;
+}
+.gc-at-av img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
+.gc-at-av svg { width: 60%; height: 60%; }
+.gc-at-item span { font-size: 14px; }
 .set-title { font-size:22px; font-weight:700; padding:4px 2px 16px; letter-spacing:1px; }
 .set-group { border-radius:20px; overflow:hidden; margin-bottom:12px; }
 .set-group, .gs-title, .set-title { flex-shrink:0; }
@@ -4196,7 +4249,7 @@ color: var(--muted);
       </div>
       <div class="splash-dots"><i></i><i></i><i></i></div>
       <div class="splash-brand">小红书@言序（1842523578）</div>
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787283485466">Mochi 字卡传讯 v3.6.177 · 部署于 2026-08-21 11:38</div>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787285377711">Mochi 字卡传讯 v3.6.179 · 部署于 2026-08-21 12:09</div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
       <div class="splash-loading" id="splash-loading">正在加载数据…</div>
@@ -4969,7 +5022,7 @@ color: var(--muted);
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.6.177</div>
+      <div class="ver">Mochi 字卡传讯 v3.6.179</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -7725,7 +7778,7 @@ pages.forEach(p => p.hidden = true);
 document.getElementById(tab.dataset.page).hidden = false;
 });
 });
-const FULL_PAGES = ['page-chat', 'page-chat-settings', 'page-custom-cards', 'page-default-cards', 'page-mood-cards', 'page-reply-cards', 'page-theme', 'page-fav', 'page-memory', 'page-calendar', 'page-divine', 'page-music', 'page-stats', 'page-interact', 'page-checkin', 'page-ta-ask', 'page-ta-choose', 'page-ta-curious', 'page-ta-roast', 'page-checkin-cards', 'page-quote-cards', 'page-home', 'page-mail', 'page-mail-write', 'page-mail-reply', 'page-feed', 'page-feed-all', 'page-license', 'page-about', 'page-reply-settings', 'page-call-settings', 'page-sfx-settings'];
+const FULL_PAGES = ['page-chat', 'page-group-chat', 'page-chat-settings', 'page-custom-cards', 'page-default-cards', 'page-mood-cards', 'page-reply-cards', 'page-theme', 'page-fav', 'page-memory', 'page-calendar', 'page-divine', 'page-music', 'page-stats', 'page-interact', 'page-checkin', 'page-ta-ask', 'page-ta-choose', 'page-ta-curious', 'page-ta-roast', 'page-checkin-cards', 'page-quote-cards', 'page-home', 'page-mail', 'page-mail-write', 'page-mail-reply', 'page-feed', 'page-feed-all', 'page-license', 'page-about', 'page-reply-settings', 'page-call-settings', 'page-sfx-settings'];
 function syncChrome() {
 const phone = document.querySelector('.phone');
 const tabbar = document.querySelector('.tabbar');
@@ -9921,12 +9974,12 @@ setupDeskCountdownClick();
 document.addEventListener('contact-switched', renderDeskTexts);
 document.addEventListener('contact-switched', renderDeskCountdowns);
 const WIDGET_IDS = ['deco', 'quote-row', 'checkin', 'apps', 'music', 'p2apps', 'memo-row', 'week', 'weekend', 'desk-clock', 'desk-calendar', 'desk-timer', 'desk-anniv',
-'app-chat', 'app-home', 'app-mail', 'app-feed', 'app-calendar', 'app-memory', 'app-divination', 'app-note', 'app-music', 'app-stats', 'app-interact', 'app-checkin'];
+'app-chat', 'app-group-chat', 'app-home', 'app-mail', 'app-feed', 'app-calendar', 'app-memory', 'app-divination', 'app-note', 'app-music', 'app-stats', 'app-interact', 'app-checkin'];
 const WIDGET_NAMES = {
 deco: '纪念日卡', 'quote-row': '今日情话 / 已摸鱼', checkin: '打卡横幅', apps: '功能图标(整组)',
 music: '音乐播放器', p2apps: '第二页功能图标(整组)', 'memo-row': '今日备忘 / 心情', week: '本周日常', weekend: '周末倒计时',
 'desk-clock': '时钟', 'desk-calendar': '月历', 'desk-timer': '计时器', 'desk-anniv': '纪念日倒计时',
-'app-chat': '聊天图标', 'app-home': '主页图标', 'app-mail': '信箱图标', 'app-feed': '朋友圈图标',
+'app-chat': '聊天图标', 'app-group-chat': '群聊图标', 'app-home': '主页图标', 'app-mail': '信箱图标', 'app-feed': '朋友圈图标',
 'app-calendar': '日历图标', 'app-memory': '纪念图标', 'app-divination': '占卜图标', 'app-note': '收藏图标',
 'app-music': '音乐图标', 'app-stats': '聊天统计图标', 'app-interact': '提问记录图标', 'app-checkin': '查岗图标',
 };
@@ -9960,7 +10013,7 @@ weekend: '<span style="display:flex;flex-direction:column;align-items:center;jus
 'desk-calendar': '<span style="display:grid;grid-template-columns:repeat(7,6px);gap:2px">' + Array.from({ length: 21 }, (_, i) => '<span style="width:6px;height:6px;border-radius:2px;' + (i === 10 ? 'background:#111' : 'background:#eee') + '"></span>').join('') + '</span>',
 'desk-timer': '<span style="display:flex;flex-direction:column;align-items:center;gap:3px"><span style="font-size:14px;font-weight:700;color:#222;font-variant-numeric:tabular-nums">00:00.0</span><span style="display:flex;gap:3px"><span style="font-size:5px;color:#666;background:#f0f0f0;padding:1px 4px;border-radius:4px">开始</span><span style="font-size:5px;color:#666;background:#f0f0f0;padding:1px 4px;border-radius:4px">重置</span></span></span>',
 'desk-anniv': '<span style="display:flex;flex-direction:column;align-items:center;gap:1px"><span style="font-size:7px;color:#bbb">距下一个纪念日</span><span style="font-size:15px;font-weight:700;color:#333">30 天</span><span style="font-size:6px;color:#999">生日 · 9 月 18 日</span></span>',
-'app-chat': _appIcoPrev('聊天'), 'app-home': _appIcoPrev('主页'), 'app-mail': _appIcoPrev('信箱'), 'app-feed': _appIcoPrev('朋友圈'),
+'app-chat': _appIcoPrev('聊天'), 'app-group-chat': _appIcoPrev('群聊'), 'app-home': _appIcoPrev('主页'), 'app-mail': _appIcoPrev('信箱'), 'app-feed': _appIcoPrev('朋友圈'),
 'app-calendar': _appIcoPrev('日历'), 'app-memory': _appIcoPrev('纪念'), 'app-divination': _appIcoPrev('占卜'), 'app-note': _appIcoPrev('收藏'),
 'app-music': _appIcoPrev('音乐'), 'app-stats': _appIcoPrev('统计'), 'app-interact': _appIcoPrev('提问'), 'app-checkin': _appIcoPrev('查岗'),
 };
@@ -10022,6 +10075,42 @@ applyDeskLayout();
 document.addEventListener('contact-switched', applyDeskLayout);
 document.addEventListener('contact-switched', () => { applyDeskFontPct(getDeskFontPct()); applyDeskCardPct(getDeskCardPct()); });
 document.addEventListener('contact-switched', () => { const sp = getBgPresetName(); if (sp) { const p = BG_PRESETS.find(b => b.name === sp); if (p) applyPhoneBgPreset(p.css); else clearPhoneBg(); } syncBgPresetUI(); });
+function applyGroupChatMode() {
+try {
+const en = store.get('group-chat-enabled') === '1';
+const mainGrid = document.querySelector('.app-grid[data-app="main"]');
+const pool = ensureWidgetPool();
+const chatBtn = document.querySelector('.app[data-app="chat"]');
+const gcBtn = document.querySelector('.app[data-app="group-chat"]');
+const divBtn = document.querySelector('.app[data-app="divination"]');
+const memBtn = document.querySelector('.app[data-app="memory"]');
+if (en) {
+if (gcBtn) {
+if (mainGrid && chatBtn && gcBtn.parentNode !== mainGrid) {
+mainGrid.insertBefore(gcBtn, chatBtn.nextSibling);
+} else if (mainGrid && chatBtn && gcBtn.previousElementSibling !== chatBtn) {
+mainGrid.insertBefore(gcBtn, chatBtn.nextSibling);
+}
+gcBtn.hidden = false;
+}
+if (divBtn && mainGrid && divBtn.parentNode === mainGrid) {
+pool.appendChild(divBtn);
+}
+} else {
+if (gcBtn && gcBtn.parentNode !== pool) {
+pool.appendChild(gcBtn);
+}
+if (divBtn && divBtn.parentNode === pool && mainGrid) {
+if (memBtn) mainGrid.insertBefore(divBtn, memBtn.nextSibling);
+else mainGrid.appendChild(divBtn);
+}
+}
+} catch (e) {}
+}
+applyGroupChatMode();
+document.addEventListener('contact-switched', applyGroupChatMode);
+document.addEventListener('group-chat-mode-changed', applyGroupChatMode);
+document.addEventListener('decor-exited', applyGroupChatMode);
 function openDeskLib(pageSlide, pageIdx) {
 const lib = document.createElement('div');
 lib.className = 'desk-lib';
@@ -10533,6 +10622,7 @@ const phone = document.getElementById('page-phone');
 if (phone) phone.classList.remove('decor-on');
 const bar = document.getElementById('decor-bar');
 if (bar) bar.hidden = true;
+try { document.dispatchEvent(new Event('decor-exited')); } catch (e) {}
 }
 window.exitDecor = exitDecor;
 const decorDone = document.getElementById('decor-done');
@@ -11801,12 +11891,63 @@ return '<div class="msg-quote"><img class="msg-quote-img" src="' + attrEsc(q) + 
 }
 return '<div class="msg-quote"><span class="msg-quote-text">' + escTxtBr(q) + '</span></div>';
 }
+let inplaceDrafts = {};
+function inplaceTypeOf(rec) {
+if (!rec) return null;
+if (rec.special === 'ask-choose') return 'choose';
+if (rec.special === 'ask-curious') return 'curious';
+if (rec.special === 'ask-roast') return 'roast';
+if (rec.special === 'ask-card') return 'ask';
+return null;
+}
+function collectInplaceDrafts() {
+if (!body) return;
+inplaceDrafts = {};
+body.querySelectorAll('.msg-ask[data-idx] .msg-inplace input.ip-input').forEach(inp => {
+const item = inp.closest('.msg-ask');
+if (!item || item.dataset.idx === undefined) return;
+const idx = Number(item.dataset.idx);
+const t = inplaceTypeOf(msgs[idx]);
+if (t && (inp.value || '').trim()) inplaceDrafts[idx] = { type: t, value: inp.value };
+});
+}
+function restoreInplaceDrafts() {
+if (!body) return;
+Object.keys(inplaceDrafts).forEach(k => {
+const idx = Number(k);
+const d = inplaceDrafts[k];
+if (!d || !d.type || d.type === 'choose') { delete inplaceDrafts[k]; return; } // 单选无输入框，草稿无效
+const item = body.querySelector('.msg-ask[data-idx="' + idx + '"]');
+if (!item || item.querySelector('.msg-inplace')) return;
+const rec = msgs[idx];
+if (!rec || !d.value) { delete inplaceDrafts[k]; return; }
+const done =
+(d.type === 'curious' && rec.curiousStatus === 'answered') ||
+(d.type === 'roast' && rec.roastStatus === 'answered') ||
+(d.type === 'ask' && rec.askStatus === 'answered');
+if (done) { delete inplaceDrafts[k]; return; }
+if (!expandCardInPlace(idx, d.type)) { delete inplaceDrafts[k]; return; }
+const inp = body.querySelector('.msg-ask[data-idx="' + idx + '"] .msg-inplace input.ip-input');
+if (inp) {
+inp.value = d.value;
+try {
+const r = document.createRange();
+const box = inp.__ceBox || inp;
+r.selectNodeContents(box);
+r.collapse(false);
+const s = window.getSelection();
+s.removeAllRanges();
+s.addRange(r);
+} catch (e) {}
+}
+});
+}
 function expandCardInPlace(idx, type) {
 const el = body.querySelector('.msg-ask[data-idx="' + idx + '"]');
 if (!el) return false;
 const rec = msgs[idx];
 if (!rec) return false;
-if (el.querySelector('.msg-inplace')) { el.querySelector('.msg-inplace').remove(); return true; }
+if (el.querySelector('.msg-inplace')) { el.querySelector('.msg-inplace').remove(); delete inplaceDrafts[idx]; return true; }
 const done =
 (type === 'choose' && rec.choiceStatus === 'answered') ||
 (type === 'curious' && rec.curiousStatus === 'answered') ||
@@ -11916,6 +12057,7 @@ const pool = window.getInteractPool ? window.getInteractPool('询问·回应', d
 window.chatAskReply(idx, v, pool[Math.floor(Math.random() * pool.length)]);
 }
 if (window.logFish) window.logFish();
+delete inplaceDrafts[idx];
 };
 send.addEventListener('click', doSend);
 inp.addEventListener('keydown', (e) => {
@@ -11924,6 +12066,13 @@ if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) { e.preventDefault
 row.appendChild(inp);
 row.appendChild(send);
 wrap.appendChild(row);
+const draft = inplaceDrafts[idx];
+if (draft && draft.type === type && draft.value) {
+inp.value = draft.value;
+}
+inp.addEventListener('input', () => {
+inplaceDrafts[idx] = { type: type, value: inp.value || '' };
+});
 }
 card.appendChild(wrap);
 const fi = wrap.querySelector('input.ip-input');
@@ -12059,6 +12208,7 @@ const prevTop = keepScroll ? body.scrollTop : 0;
 const prevHeight = keepScroll ? body.scrollHeight : 0;
 if (clampTop) renderStart = Math.max(0, len - RENDER_MAX);
 const start = Math.min(renderStart, len);
+collectInplaceDrafts();
 body.innerHTML = '';
 batchRendering = true;
 for (let i = start; i < len; i++) {
@@ -12070,6 +12220,7 @@ if (keepScroll && prevHeight > 0) {
 body.scrollTop = prevTop + (body.scrollHeight - prevHeight);
 }
 suppressScrollUntil = Date.now() + 200; // 本轮渲染/滚动结束后 200ms 内不响应 scroll
+restoreInplaceDrafts();
 }
 let bodyScrollTimer = null;
 body.addEventListener('scroll', function () {
@@ -13719,7 +13870,7 @@ function openRpsPanel() {
 if (!rpsPanel) return;
 const pc = document.getElementById('poke-card'); if (pc) pc.hidden = true;
 const ep = document.getElementById('emoji-panel'); if (ep) ep.hidden = true;
-const askP = document.getElementById('chat-ask-panel'); if (askP) askP.hidden = true;
+const askP = document.getElementById('chat-ask-panel'); if (askP) closeChatAskPanel();
 const cs = document.getElementById('chat-search'); if (cs) cs.hidden = true;
 const dv = document.getElementById('chat-divine-panel'); if (dv) dv.hidden = true;
 const dp = document.getElementById('chat-decision-panel'); if (dp) dp.hidden = true;
@@ -13791,7 +13942,7 @@ function openRpPanel() {
 if (!rpPanel) return;
 const pc = document.getElementById('poke-card'); if (pc) pc.hidden = true;
 const ep = document.getElementById('emoji-panel'); if (ep) ep.hidden = true;
-const askP = document.getElementById('chat-ask-panel'); if (askP) askP.hidden = true;
+const askP = document.getElementById('chat-ask-panel'); if (askP) closeChatAskPanel();
 const cs = document.getElementById('chat-search'); if (cs) cs.hidden = true;
 const dv = document.getElementById('chat-divine-panel'); if (dv) dv.hidden = true;
 const dp = document.getElementById('chat-decision-panel'); if (dp) dp.hidden = true;
@@ -14151,7 +14302,7 @@ if (pc) pc.hidden = true;
 const ep = document.getElementById('emoji-panel');
 if (ep) ep.hidden = true;
 const askP = document.getElementById('chat-ask-panel');
-if (askP) askP.hidden = true;
+if (askP) closeChatAskPanel();
 const cs = document.getElementById('chat-search');
 if (cs) cs.hidden = true;
 if (window.closeAvlib) window.closeAvlib();
@@ -14374,7 +14525,7 @@ if (pc) pc.hidden = true;
 const ep = document.getElementById('emoji-panel');
 if (ep) ep.hidden = true;
 const askP = document.getElementById('chat-ask-panel');
-if (askP) askP.hidden = true;
+if (askP) closeChatAskPanel();
 const cs = document.getElementById('chat-search');
 if (cs) cs.hidden = true;
 const dv = document.getElementById('chat-divine-panel');
@@ -14459,6 +14610,49 @@ if (opts.__ceBox) opts.__ceBox.style.display = 'none';
 else if (opts.previousElementSibling && opts.previousElementSibling.classList && opts.previousElementSibling.classList.contains('ce-box')) opts.previousElementSibling.style.display = 'none';
 }
 }
+function askBoxes() {
+const arr = [chatAskInput, document.getElementById('chat-ask-opts')];
+return arr.filter(Boolean).map(el => ({ inp: el, box: el.__ceBox || el }));
+}
+function applyAskComposeLayers() {
+askBoxes().forEach(({ box }) => {
+try { box.style.transform = 'translateZ(0)'; box.style.willChange = 'transform'; } catch (e) {}
+});
+}
+function clearAskComposeLayers() {
+askBoxes().forEach(({ box }) => {
+try { box.style.transform = ''; box.style.willChange = ''; } catch (e) {}
+});
+}
+let askKbRefreshStop = null;
+function startAskKbRefresh() {
+if (askKbRefreshStop) return;
+const vv = window.visualViewport;
+if (!vv) return;
+let t = null;
+const refresh = () => {
+if (t) clearTimeout(t);
+t = setTimeout(() => {
+t = null;
+askBoxes().forEach(({ box }) => {
+try {
+box.style.transform = '';
+void box.offsetHeight; // 强制 reflow，浏览器按新位置重建合成层
+box.style.transform = 'translateZ(0)';
+} catch (e) {}
+});
+}, 160);
+};
+vv.addEventListener('resize', refresh);
+vv.addEventListener('scroll', refresh);
+askKbRefreshStop = () => {
+if (t) clearTimeout(t);
+t = null;
+vv.removeEventListener('resize', refresh);
+vv.removeEventListener('scroll', refresh);
+askKbRefreshStop = null;
+};
+}
 function openChatAskPanel(mode) {
 if (!chatAskPanel) return;
 chatAskMode = mode || 'invite';
@@ -14476,20 +14670,17 @@ if (ep) ep.hidden = true;
 if (window.closeAvlib) window.closeAvlib();
 chatAskPanel.hidden = false;
 closeIme(); // v3.5.116：收起输入法，半框完整不被键盘遮挡
+applyAskComposeLayers();
+startAskKbRefresh();
 setTimeout(() => {
 if (!chatAskInput) return;
 chatAskInput.focus();
-const box = chatAskInput.__ceBox || chatAskInput;
-try { box.style.transform = 'translateZ(0)'; } catch (e) {}
 }, 80);
 }
 function closeChatAskPanel() {
+if (askKbRefreshStop) { try { askKbRefreshStop(); } catch (e) {} }
+clearAskComposeLayers();
 if (chatAskPanel) chatAskPanel.hidden = true;
-[chatAskInput, document.getElementById('chat-ask-opts')].forEach(el => {
-if (!el) return;
-const box = el.__ceBox || el;
-try { box.style.transform = ''; } catch (e) {}
-});
 }
 function submitChatAsk() {
 if (!chatAskInput) return;
@@ -14730,7 +14921,7 @@ if (morePanel) morePanel.hidden = true;
 const pc = document.getElementById('poke-card');
 if (pc) pc.hidden = true;
 const askP = document.getElementById('chat-ask-panel');
-if (askP) askP.hidden = true;
+if (askP) closeChatAskPanel();
 if (window.closeAvlib) window.closeAvlib();
 openChatSearch();
 });
@@ -14794,7 +14985,7 @@ function openChatCall() {
 if (!chatCallPanel) return;
 const pc = document.getElementById('poke-card'); if (pc) pc.hidden = true;
 const ep = document.getElementById('emoji-panel'); if (ep) ep.hidden = true;
-const askP = document.getElementById('chat-ask-panel'); if (askP) askP.hidden = true;
+const askP = document.getElementById('chat-ask-panel'); if (askP) closeChatAskPanel();
 const cs = document.getElementById('chat-search'); if (cs) cs.hidden = true;
 const dv = document.getElementById('chat-divine-panel'); if (dv) dv.hidden = true;
 const rp = document.getElementById('chat-rps-panel'); if (rp) rp.hidden = true;
@@ -14825,7 +15016,7 @@ e.stopPropagation();
 if (morePanel) morePanel.hidden = true;
 const pc = document.getElementById('poke-card'); if (pc) pc.hidden = true;
 const ep = document.getElementById('emoji-panel'); if (ep) ep.hidden = true;
-const askP = document.getElementById('chat-ask-panel'); if (askP) askP.hidden = true;
+const askP = document.getElementById('chat-ask-panel'); if (askP) closeChatAskPanel();
 const cs = document.getElementById('chat-search'); if (cs) cs.hidden = true;
 const dv = document.getElementById('chat-divine-panel'); if (dv) dv.hidden = true;
 const dp = document.getElementById('chat-decision-panel'); if (dp) dp.hidden = true;
@@ -15918,6 +16109,265 @@ if (v && typeof v === 'string' && v.length > 2) store.set('fav-msgs', v);
 }
 } catch (e) {}
 updateChatBadge();
+})();
+} catch (__e) { if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
+(function () { try {
+(function () {
+const body = document.getElementById('gc-body');
+if (!body) return;
+const G = 'xy-home-v2';
+const MSG_KEY = G + ':group-chat-msgs';
+const page = document.getElementById('page-group-chat');
+const input = document.getElementById('gc-input');
+const sendBtn = document.getElementById('gc-send');
+const backBtn = document.getElementById('gc-back');
+const nameEl = document.getElementById('gc-name');
+const typingEl = document.getElementById('gc-typing');
+const membersBtn = document.getElementById('gc-members-btn');
+const membersPanel = document.getElementById('gc-members-panel');
+const membersClose = document.getElementById('gc-mp-close');
+const membersBody = document.getElementById('gc-mp-body');
+const atBtn = document.getElementById('gc-at-btn');
+const atPanel = document.getElementById('gc-at-panel');
+const atBody = document.getElementById('gc-at-body');
+const FALLBACK_REPLIES = ['好的～', '嗯嗯', '收到', '哈哈', '在的', '我知道啦', '是吗', '然后呢', '有意思', '同意', '哈哈哈', '对的', '没错', '我也觉得', '确实', '哇'];
+let msgs = [];
+let saveTimer = null;
+const RENDER_MAX = 200;
+function getMembers() {
+try { return window.getContacts() || [{ id: 'default', name: '默认' }]; } catch (e) { return [{ id: 'default', name: '默认' }]; }
+}
+function memberName(cid) {
+try { const lbl = window.storeFor(cid).get('lbl-partner'); if (lbl) return lbl; } catch (e) {}
+const m = getMembers().find(x => x.id === cid);
+return m ? m.name : '成员';
+}
+function memberAvatar(cid) {
+try { return window.storeFor(cid).get('avatar-partner') || ''; } catch (e) { return ''; }
+}
+function myName() {
+try { const v = window.activeStore().get('lbl-user'); if (v) return v; } catch (e) {}
+return '我';
+}
+function myAvatar() {
+try { return window.activeStore().get('avatar-user') || ''; } catch (e) { return ''; }
+}
+function fillAv(el, dataUrl) {
+if (!el) return;
+el.innerHTML = '';
+if (dataUrl && dataUrl.length > 10 && dataUrl.length < 500 * 1024) {
+const img = document.createElement('img');
+img.src = dataUrl; img.alt = '';
+el.appendChild(img);
+} else {
+el.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.5-6 8-6s8 2 8 6"/></svg>';
+}
+}
+function saveMsgs() {
+const data = JSON.stringify(msgs);
+if (saveTimer) clearTimeout(saveTimer);
+saveTimer = setTimeout(() => {
+saveTimer = null;
+try { localStorage.setItem(MSG_KEY, data); } catch (e) {}
+try { if (window.idbSet) window.idbSet(MSG_KEY, data); } catch (e) {}
+}, 300);
+}
+function saveNow() {
+if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+const data = JSON.stringify(msgs);
+try { localStorage.setItem(MSG_KEY, data); } catch (e) {}
+try { if (window.idbSet) window.idbSet(MSG_KEY, data); } catch (e) {}
+}
+function loadMsgs() {
+try { msgs = JSON.parse(localStorage.getItem(MSG_KEY) || '[]'); } catch (e) { msgs = []; }
+if (!Array.isArray(msgs)) msgs = [];
+try {
+if (window.idbGet) {
+window.idbGet(MSG_KEY).then(v => {
+if (v === undefined || v === null) return;
+try { const a = JSON.parse(v); if (Array.isArray(a) && a.length >= msgs.length) { msgs = a; renderAll(); } } catch (e) {}
+}).catch(() => {});
+}
+} catch (e) {}
+}
+function fmtTime(ts) {
+const d = new Date(ts);
+return d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0');
+}
+function escapeHtml(s) {
+return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+function renderMsg(rec) {
+const m = document.createElement('div');
+m.className = 'msg ' + (rec.side === 'out' ? 'msg-out' : 'msg-in');
+const timeHtml = rec.ts ? '<span class="msg-time">' + fmtTime(rec.ts) + '</span>' : '';
+if (rec.side === 'out') {
+m.innerHTML = '<div class="msg-bubble"></div><div class="msg-side"><div class="msg-av"></div>' + timeHtml + '</div>';
+} else {
+const nameHtml = rec.name ? '<span class="gc-from-name">' + escapeHtml(rec.name) + '</span>' : '';
+m.innerHTML = '<div class="msg-side"><div class="msg-av"></div>' + nameHtml + timeHtml + '</div><div class="msg-bubble"></div>';
+}
+const av = m.querySelector('.msg-av');
+const b = m.querySelector('.msg-bubble');
+if (rec.side === 'out') fillAv(av, myAvatar());
+else fillAv(av, memberAvatar(rec.cid));
+b.textContent = rec.text || '';
+body.appendChild(m);
+return m;
+}
+function renderAll() {
+body.innerHTML = '';
+const n = msgs.length;
+const start = Math.max(0, n - RENDER_MAX);
+for (let i = start; i < n; i++) renderMsg(msgs[i]);
+scrollToBottom();
+}
+function scrollToBottom() { try { body.scrollTop = body.scrollHeight; } catch (e) {} }
+function addMsg(text) {
+const t = (text || '').trim();
+if (!t) return;
+const rec = { side: 'out', text: t, ts: Date.now() };
+msgs.push(rec);
+saveMsgs();
+renderMsg(rec);
+if (window.playSfx) window.playSfx('out');
+if (input) input.textContent = '';
+scheduleReply(t);
+}
+function genReplyText(cid) {
+try {
+const raw = window.storeFor(cid).get('cc-groups');
+if (raw) {
+const groups = JSON.parse(raw);
+const pool = [];
+if (groups && typeof groups === 'object') {
+Object.keys(groups).forEach(key => {
+const g = groups[key];
+if (g && Array.isArray(g.cards)) {
+g.cards.forEach(c => { if (c && c.type === 'text' && c.text) pool.push(c.text); });
+}
+});
+}
+if (pool.length) return pool[Math.floor(Math.random() * pool.length)];
+}
+} catch (e) {}
+return FALLBACK_REPLIES[Math.floor(Math.random() * FALLBACK_REPLIES.length)];
+}
+function showTyping(name) { if (typingEl) { typingEl.textContent = (name || '成员') + ' 正在输入…'; typingEl.hidden = false; } }
+function hideTyping() { if (typingEl) typingEl.hidden = true; }
+function memberReply(cid, quoteText) {
+const name = memberName(cid);
+const delay = 800 + Math.random() * 2000;
+showTyping(name);
+setTimeout(() => {
+hideTyping();
+const text = genReplyText(cid);
+const rec = { side: 'in', cid: cid, name: name, text: text, ts: Date.now() };
+if (quoteText) rec.quote = quoteText;
+msgs.push(rec);
+saveMsgs();
+renderMsg(rec);
+if (window.playSfx) window.playSfx('in');
+}, delay);
+}
+function scheduleReply(userText) {
+const members = getMembers();
+if (!members.length) return;
+const mentioned = [];
+members.forEach(m => {
+const n = memberName(m.id);
+if (userText.indexOf('@' + n) >= 0) mentioned.push(m.id);
+});
+if (mentioned.length) {
+mentioned.forEach((cid, i) => {
+setTimeout(() => memberReply(cid, userText), i * (1000 + Math.random() * 1500));
+});
+return;
+}
+const count = Math.random() < 0.6 ? 1 : 2;
+const avail = members.slice();
+for (let i = 0; i < count && avail.length; i++) {
+const idx = Math.floor(Math.random() * avail.length);
+const cid = avail.splice(idx, 1)[0].id;
+setTimeout(() => memberReply(cid, null), i * (1200 + Math.random() * 1600));
+}
+}
+function updateGroupName() {
+const n = getMembers().length;
+if (nameEl) nameEl.textContent = '群聊(' + n + ')';
+}
+function enterGroupChat() {
+const editing = Array.from(document.querySelectorAll('.app-grid')).some(g => g.classList.contains('editing'));
+if (editing) return;
+document.querySelectorAll('.page').forEach(p => p.hidden = true);
+if (page) page.hidden = false;
+updateGroupName();
+loadMsgs();
+renderAll();
+}
+if (backBtn) backBtn.addEventListener('click', () => {
+saveNow();
+document.querySelectorAll('.page').forEach(p => p.hidden = true);
+const home = document.getElementById('page-phone'); if (home) home.hidden = false;
+});
+const gcApp = document.querySelector('.app[data-app="group-chat"]');
+if (gcApp) gcApp.addEventListener('click', enterGroupChat);
+if (sendBtn) sendBtn.addEventListener('click', () => addMsg(input.innerText));
+if (input) input.addEventListener('keydown', (e) => {
+if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) {
+e.preventDefault();
+addMsg(input.innerText);
+}
+});
+function renderMembersPanel() {
+if (!membersBody) return;
+membersBody.innerHTML = '';
+const meRow = document.createElement('div');
+meRow.className = 'gc-mp-item';
+meRow.innerHTML = '<div class="gc-mp-av"></div><span class="gc-mp-name">' + escapeHtml(myName()) + '</span><span class="gc-mp-tag">我</span>';
+fillAv(meRow.querySelector('.gc-mp-av'), myAvatar());
+membersBody.appendChild(meRow);
+getMembers().forEach(m => {
+const row = document.createElement('div');
+row.className = 'gc-mp-item';
+row.innerHTML = '<div class="gc-mp-av"></div><span class="gc-mp-name">' + escapeHtml(memberName(m.id)) + '</span>';
+fillAv(row.querySelector('.gc-mp-av'), memberAvatar(m.id));
+membersBody.appendChild(row);
+});
+}
+if (membersBtn) membersBtn.addEventListener('click', () => { renderMembersPanel(); if (membersPanel) membersPanel.hidden = false; });
+if (nameEl) nameEl.addEventListener('click', () => { renderMembersPanel(); if (membersPanel) membersPanel.hidden = false; });
+if (membersClose) membersClose.addEventListener('click', () => { if (membersPanel) membersPanel.hidden = true; });
+function renderAtPanel() {
+if (!atBody) return;
+atBody.innerHTML = '';
+getMembers().forEach(m => {
+const row = document.createElement('div');
+row.className = 'gc-at-item';
+const n = memberName(m.id);
+row.innerHTML = '<div class="gc-at-av"></div><span>' + escapeHtml(n) + '</span>';
+fillAv(row.querySelector('.gc-at-av'), memberAvatar(m.id));
+row.addEventListener('click', () => {
+if (input) {
+const cur = input.innerText;
+input.innerText = cur + (cur && !cur.endsWith(' ') ? ' ' : '') + '@' + n + ' ';
+input.focus();
+try { const r = document.createRange(); r.selectNodeContents(input); r.collapse(false); const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r); } catch (e) {}
+}
+if (atPanel) atPanel.hidden = true;
+});
+atBody.appendChild(row);
+});
+}
+if (atBtn) atBtn.addEventListener('click', () => { renderAtPanel(); if (atPanel) atPanel.hidden = false; });
+if (atPanel) atPanel.addEventListener('click', (e) => { if (e.target === atPanel) atPanel.hidden = true; });
+document.addEventListener('contact-switched', function () {
+try { hideTyping(); } catch (e) {}
+updateGroupName();
+renderAll();
+});
+window.groupChatGetMsgs = function () { return msgs.slice(); };
+window.groupChatClear = function () { msgs = []; saveNow(); renderAll(); };
 })();
 } catch (__e) { if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
 (function () { try {
@@ -18000,6 +18450,21 @@ toast(csCmh.checked ? '通话小框已隐藏：接通后保持通话面板，不
 });
 setInterval(syncCsCmh, 500);
 document.addEventListener('contact-switched', syncCsCmh);
+}
+const csGc = document.getElementById('cs-group-chat');
+if (csGc) {
+const gcGet = () => { try { return store.get('group-chat-enabled') === '1'; } catch (e) { return false; } };
+const gcSet = (en) => { try { store.set('group-chat-enabled', en ? '1' : '0'); } catch (e) {} };
+const syncCsGc = () => { const v = gcGet(); if (v !== csGc.checked) csGc.checked = v; };
+syncCsGc();
+csGc.addEventListener('change', () => {
+if (csGc.checked === gcGet()) return;
+gcSet(csGc.checked);
+try { document.dispatchEvent(new Event('group-chat-mode-changed')); } catch (e) {}
+toast(csGc.checked ? '群聊已开启：桌面新增群聊按钮，占卜按钮已隐藏（可在美化装修模式添加到其他页面）' : '群聊已关闭，占卜按钮已恢复');
+});
+setInterval(syncCsGc, 500);
+document.addEventListener('contact-switched', syncCsGc);
 }
 })();
 } catch (__e) { if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
@@ -33001,7 +33466,7 @@ if (_kbActive && !isTextEl(document.activeElement)) restoreKb();
 });
 } catch (e) {}
 }
-const FLOAT_SELECTORS = ['#tc-mask', '#cc-export-mask', '#call-mask', '#feed-notice-panel', '#poke-card', '#emoji-panel', '#chat-ask-panel', '#qa-mask', '#chat-more-panel', '#chat-search', '#chat-decision-panel', '#chat-divine-panel', '#chat-rps-panel', '#chat-call-panel', '#chat-pong-panel', '#chat-snake-panel', '#avlib-card', '#ck-panel', '.mg-mask', '#modal-mask', '#msg-actions', '#desk-image-viewer', '.desk-lib'];
+const FLOAT_SELECTORS = ['#tc-mask', '#cc-export-mask', '#call-mask', '#feed-notice-panel', '#poke-card', '#emoji-panel', '#chat-ask-panel', '#qa-mask', '#chat-more-panel', '#chat-search', '#chat-decision-panel', '#chat-divine-panel', '#chat-rps-panel', '#chat-call-panel', '#chat-pong-panel', '#chat-snake-panel', '#avlib-card', '#ck-panel', '.mg-mask', '#modal-mask', '#msg-actions', '#desk-image-viewer', '.desk-lib', '#gc-members-panel', '#gc-at-panel'];
 let locked = false;
 function applyLock() {
 const anyOpen = FLOAT_SELECTORS.some(function (sel) {

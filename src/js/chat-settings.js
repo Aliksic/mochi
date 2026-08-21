@@ -605,4 +605,23 @@
     setInterval(syncCsCmh, 500);
     document.addEventListener('contact-switched', syncCsCmh);
   }
+
+  // v3.8.x：聊天设置「开启群聊」开关——每桌面独立（group-chat-enabled，默认关闭）。
+  // 开启后桌面聊天按钮右侧显示「群聊」按钮、占卜按钮隐藏（移到隐藏池，可在装修模式添加到其他页）；
+  // 关闭恢复原样。写回后广播 group-chat-mode-changed 事件，personalize.js 响应调整桌面图标。
+  const csGc = document.getElementById('cs-group-chat');
+  if (csGc) {
+    const gcGet = () => { try { return store.get('group-chat-enabled') === '1'; } catch (e) { return false; } };
+    const gcSet = (en) => { try { store.set('group-chat-enabled', en ? '1' : '0'); } catch (e) {} };
+    const syncCsGc = () => { const v = gcGet(); if (v !== csGc.checked) csGc.checked = v; };
+    syncCsGc();
+    csGc.addEventListener('change', () => {
+      if (csGc.checked === gcGet()) return;
+      gcSet(csGc.checked);
+      try { document.dispatchEvent(new Event('group-chat-mode-changed')); } catch (e) {}
+      toast(csGc.checked ? '群聊已开启：桌面新增群聊按钮，占卜按钮已隐藏（可在美化装修模式添加到其他页面）' : '群聊已关闭，占卜按钮已恢复');
+    });
+    setInterval(syncCsGc, 500);
+    document.addEventListener('contact-switched', syncCsGc);
+  }
 })();

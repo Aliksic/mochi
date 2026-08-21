@@ -679,13 +679,69 @@
   // TA 自动触发时的弹窗仍保留（带关闭按钮）；弹窗关闭后点卡片走就地作答。
   // 提交复用 window.chatChooseReply 等（它们会更新记录 + 发消息 + 就地重建卡片）。
   // 返回 true=就地展开成功；false=失败（调用方回退弹窗）
+  // v3.7.x：就地作答输入草稿保护——renderWindow 全量重渲染会销毁 .msg-inplace
+  // 输入框（TA 发消息触发窗口收紧/恢复时），打字中的内容会一起丢。
+  // 渲染前收集、渲染后按 data-idx 恢复，输入过程中实时更新。
+  let inplaceDrafts = {};
+  function inplaceTypeOf(rec) {
+    if (!rec) return null;
+    if (rec.special === 'ask-choose') return 'choose';
+    if (rec.special === 'ask-curious') return 'curious';
+    if (rec.special === 'ask-roast') return 'roast';
+    if (rec.special === 'ask-card') return 'ask';
+    return null;
+  }
+  function collectInplaceDrafts() {
+    if (!body) return;
+    inplaceDrafts = {};
+    body.querySelectorAll('.msg-ask[data-idx] .msg-inplace input.ip-input').forEach(inp => {
+      const item = inp.closest('.msg-ask');
+      if (!item || item.dataset.idx === undefined) return;
+      const idx = Number(item.dataset.idx);
+      const t = inplaceTypeOf(msgs[idx]);
+      if (t && (inp.value || '').trim()) inplaceDrafts[idx] = { type: t, value: inp.value };
+    });
+  }
+  function restoreInplaceDrafts() {
+    if (!body) return;
+    Object.keys(inplaceDrafts).forEach(k => {
+      const idx = Number(k);
+      const d = inplaceDrafts[k];
+      if (!d || !d.type || d.type === 'choose') { delete inplaceDrafts[k]; return; } // 单选无输入框，草稿无效
+      const item = body.querySelector('.msg-ask[data-idx="' + idx + '"]');
+      if (!item || item.querySelector('.msg-inplace')) return;
+      const rec = msgs[idx];
+      if (!rec || !d.value) { delete inplaceDrafts[k]; return; }
+      // 已作答/状态不符 → 不恢复并清草稿
+      const done =
+        (d.type === 'curious' && rec.curiousStatus === 'answered') ||
+        (d.type === 'roast' && rec.roastStatus === 'answered') ||
+        (d.type === 'ask' && rec.askStatus === 'answered');
+      if (done) { delete inplaceDrafts[k]; return; }
+      if (!expandCardInPlace(idx, d.type)) { delete inplaceDrafts[k]; return; }
+      // 回填草稿内容（expandCardInPlace 已重建输入框并聚焦）
+      const inp = body.querySelector('.msg-ask[data-idx="' + idx + '"] .msg-inplace input.ip-input');
+      if (inp) {
+        inp.value = d.value;
+        try {
+          const r = document.createRange();
+          const box = inp.__ceBox || inp;
+          r.selectNodeContents(box);
+          r.collapse(false);
+          const s = window.getSelection();
+          s.removeAllRanges();
+          s.addRange(r);
+        } catch (e) {}
+      }
+    });
+  }
   function expandCardInPlace(idx, type) {
     const el = body.querySelector('.msg-ask[data-idx="' + idx + '"]');
     if (!el) return false;
     const rec = msgs[idx];
     if (!rec) return false;
-    // 已有就地区 → 再点收起
-    if (el.querySelector('.msg-inplace')) { el.querySelector('.msg-inplace').remove(); return true; }
+    // 已有就地区 → 再点收起（清草稿）
+    if (el.querySelector('.msg-inplace')) { el.querySelector('.msg-inplace').remove(); delete inplaceDrafts[idx]; return true; }
     const done =
       (type === 'choose' && rec.choiceStatus === 'answered') ||
       (type === 'curious' && rec.curiousStatus === 'answered') ||
@@ -806,6 +862,8 @@
           window.chatAskReply(idx, v, pool[Math.floor(Math.random() * pool.length)]);
         }
         if (window.logFish) window.logFish();
+        // v3.7.x：发送成功 → 清理该卡片的输入草稿（卡片已变 answered，无需恢复）
+        delete inplaceDrafts[idx];
       };
       send.addEventListener('click', doSend);
       inp.addEventListener('keydown', (e) => {
@@ -814,6 +872,15 @@
       row.appendChild(inp);
       row.appendChild(send);
       wrap.appendChild(row);
+      // v3.7.x：就地作答输入草稿——重渲染恢复（回填）+ 实时保存（TA 发消息触发
+      // renderWindow 时内容不丢）。ip-input 由 mobile-adapt 转 ce-box，value 代理兼容。
+      const draft = inplaceDrafts[idx];
+      if (draft && draft.type === type && draft.value) {
+        inp.value = draft.value;
+      }
+      inp.addEventListener('input', () => {
+        inplaceDrafts[idx] = { type: type, value: inp.value || '' };
+      });
     }
     card.appendChild(wrap);
     // 就地输入框聚焦（安卓 contenteditable 转换后 focus 会代理到 box）
@@ -972,6 +1039,8 @@
     const prevHeight = keepScroll ? body.scrollHeight : 0;
     if (clampTop) renderStart = Math.max(0, len - RENDER_MAX);
     const start = Math.min(renderStart, len);
+    // v3.7.x：重渲染前保存就地作答输入草稿（TA 发消息触发重渲染时输入不丢）
+    collectInplaceDrafts();
     body.innerHTML = '';
     batchRendering = true;
     for (let i = start; i < len; i++) {
@@ -983,6 +1052,8 @@
       body.scrollTop = prevTop + (body.scrollHeight - prevHeight);
     }
     suppressScrollUntil = Date.now() + 200; // 本轮渲染/滚动结束后 200ms 内不响应 scroll
+    // v3.7.x：重建后恢复展开中的就地作答区（含草稿内容）
+    restoreInplaceDrafts();
   }
   // 向上滚动接近顶部 → 加载更早消息（节流 100ms，程序化滚动 200ms 内忽略）
   let bodyScrollTimer = null;
@@ -2995,7 +3066,7 @@ function partialRetractMsg(msgEl, side) {
     if (!rpsPanel) return;
     const pc = document.getElementById('poke-card'); if (pc) pc.hidden = true;
     const ep = document.getElementById('emoji-panel'); if (ep) ep.hidden = true;
-    const askP = document.getElementById('chat-ask-panel'); if (askP) askP.hidden = true;
+    const askP = document.getElementById('chat-ask-panel'); if (askP) closeChatAskPanel();
     const cs = document.getElementById('chat-search'); if (cs) cs.hidden = true;
     const dv = document.getElementById('chat-divine-panel'); if (dv) dv.hidden = true;
     const dp = document.getElementById('chat-decision-panel'); if (dp) dp.hidden = true;
@@ -3075,7 +3146,7 @@ function partialRetractMsg(msgEl, side) {
     if (!rpPanel) return;
     const pc = document.getElementById('poke-card'); if (pc) pc.hidden = true;
     const ep = document.getElementById('emoji-panel'); if (ep) ep.hidden = true;
-    const askP = document.getElementById('chat-ask-panel'); if (askP) askP.hidden = true;
+    const askP = document.getElementById('chat-ask-panel'); if (askP) closeChatAskPanel();
     const cs = document.getElementById('chat-search'); if (cs) cs.hidden = true;
     const dv = document.getElementById('chat-divine-panel'); if (dv) dv.hidden = true;
     const dp = document.getElementById('chat-decision-panel'); if (dp) dp.hidden = true;
@@ -3455,7 +3526,7 @@ function partialRetractMsg(msgEl, side) {
     const ep = document.getElementById('emoji-panel');
     if (ep) ep.hidden = true;
     const askP = document.getElementById('chat-ask-panel');
-    if (askP) askP.hidden = true;
+    if (askP) closeChatAskPanel();
     const cs = document.getElementById('chat-search');
     if (cs) cs.hidden = true;
     if (window.closeAvlib) window.closeAvlib();
@@ -3695,7 +3766,7 @@ function partialRetractMsg(msgEl, side) {
         const ep = document.getElementById('emoji-panel');
         if (ep) ep.hidden = true;
         const askP = document.getElementById('chat-ask-panel');
-        if (askP) askP.hidden = true;
+        if (askP) closeChatAskPanel();
         const cs = document.getElementById('chat-search');
         if (cs) cs.hidden = true;
         const dv = document.getElementById('chat-divine-panel');
@@ -3792,6 +3863,56 @@ function partialRetractMsg(msgEl, side) {
       else if (opts.previousElementSibling && opts.previousElementSibling.classList && opts.previousElementSibling.classList.contains('ce-box')) opts.previousElementSibling.style.display = 'none';
     }
   }
+  // v3.7.x：半框输入框合成层修复（防安卓键盘弹出时 fixed 半框上移、文字停在
+  // 旧位置"飞出输入栏"）——三管齐下：
+  //  1. 面板打开立即内联 translateZ(0)+will-change（不等聚焦延迟，合成层先建好）
+  //  2. 键盘弹出/收起动画由 visualViewport resize 驱动，动画结束后强制移除→reflow→
+  //     重建合成层，浏览器按动画后的新布局位置重新合成，文本不再错位
+  //  3. CSS :focus 同名规则兜底（部分 IME/焦点状态下 :focus 不匹配时靠内联样式）
+  function askBoxes() {
+    const arr = [chatAskInput, document.getElementById('chat-ask-opts')];
+    return arr.filter(Boolean).map(el => ({ inp: el, box: el.__ceBox || el }));
+  }
+  function applyAskComposeLayers() {
+    askBoxes().forEach(({ box }) => {
+      try { box.style.transform = 'translateZ(0)'; box.style.willChange = 'transform'; } catch (e) {}
+    });
+  }
+  function clearAskComposeLayers() {
+    askBoxes().forEach(({ box }) => {
+      try { box.style.transform = ''; box.style.willChange = ''; } catch (e) {}
+    });
+  }
+  let askKbRefreshStop = null;
+  function startAskKbRefresh() {
+    if (askKbRefreshStop) return;
+    const vv = window.visualViewport;
+    if (!vv) return;
+    let t = null;
+    const refresh = () => {
+      if (t) clearTimeout(t);
+      t = setTimeout(() => {
+        t = null;
+        // 键盘动画结束（resize 停止 160ms）→ 按当前布局位置重建合成层
+        askBoxes().forEach(({ box }) => {
+          try {
+            box.style.transform = '';
+            void box.offsetHeight; // 强制 reflow，浏览器按新位置重建合成层
+            box.style.transform = 'translateZ(0)';
+          } catch (e) {}
+        });
+      }, 160);
+    };
+    vv.addEventListener('resize', refresh);
+    vv.addEventListener('scroll', refresh);
+    askKbRefreshStop = () => {
+      if (t) clearTimeout(t);
+      t = null;
+      vv.removeEventListener('resize', refresh);
+      vv.removeEventListener('scroll', refresh);
+      askKbRefreshStop = null;
+    };
+  }
   function openChatAskPanel(mode) {
     if (!chatAskPanel) return;
     chatAskMode = mode || 'invite';
@@ -3810,26 +3931,19 @@ function partialRetractMsg(msgEl, side) {
     if (window.closeAvlib) window.closeAvlib();
     chatAskPanel.hidden = false;
     closeIme(); // v3.5.116：收起输入法，半框完整不被键盘遮挡
+    // v3.7.x：立即建合成层 + 监听键盘动画刷新（不等聚焦延迟，防文字停在旧位置）
+    applyAskComposeLayers();
+    startAskKbRefresh();
     setTimeout(() => {
       if (!chatAskInput) return;
       chatAskInput.focus();
-      // v3.7.x：安卓 Chrome 键盘弹出动画把 fixed 半框整体上移时，聚焦的
-      // contenteditable（ce-box）文本层偶发停在旧位置，表现=输入的文字显示在
-      // 输入框外面。面板打开期间给输入框内联 translateZ(0)（独立合成层，逐帧
-      // 按当前布局位置合成，文本不再错位），关闭面板时清除；CSS :focus 同名
-      // 规则兜底（部分 IME/焦点状态下 :focus 不匹配时靠这里的内联样式生效）。
-      const box = chatAskInput.__ceBox || chatAskInput;
-      try { box.style.transform = 'translateZ(0)'; } catch (e) {}
     }, 80);
   }
   function closeChatAskPanel() {
+    // v3.7.x：停止键盘监听、清除合成层标记（防下次打开残留）
+    if (askKbRefreshStop) { try { askKbRefreshStop(); } catch (e) {} }
+    clearAskComposeLayers();
     if (chatAskPanel) chatAskPanel.hidden = true;
-    // 清除半框输入框的合成层标记（v3.7.x：openChatAskPanel 设置，防安卓键盘弹出时文字错位）
-    [chatAskInput, document.getElementById('chat-ask-opts')].forEach(el => {
-      if (!el) return;
-      const box = el.__ceBox || el;
-      try { box.style.transform = ''; } catch (e) {}
-    });
   }
   function submitChatAsk() {
     if (!chatAskInput) return;
@@ -4098,7 +4212,7 @@ function partialRetractMsg(msgEl, side) {
       const pc = document.getElementById('poke-card');
       if (pc) pc.hidden = true;
       const askP = document.getElementById('chat-ask-panel');
-      if (askP) askP.hidden = true;
+      if (askP) closeChatAskPanel();
       if (window.closeAvlib) window.closeAvlib();
       openChatSearch();
     });
@@ -4170,7 +4284,7 @@ function partialRetractMsg(msgEl, side) {
     // 关闭其他底部半框（与 openChatDivine 同步维护）
     const pc = document.getElementById('poke-card'); if (pc) pc.hidden = true;
     const ep = document.getElementById('emoji-panel'); if (ep) ep.hidden = true;
-    const askP = document.getElementById('chat-ask-panel'); if (askP) askP.hidden = true;
+    const askP = document.getElementById('chat-ask-panel'); if (askP) closeChatAskPanel();
     const cs = document.getElementById('chat-search'); if (cs) cs.hidden = true;
     const dv = document.getElementById('chat-divine-panel'); if (dv) dv.hidden = true;
     const rp = document.getElementById('chat-rps-panel'); if (rp) rp.hidden = true;
@@ -4204,7 +4318,7 @@ function partialRetractMsg(msgEl, side) {
       // 关闭其他底部半框
       const pc = document.getElementById('poke-card'); if (pc) pc.hidden = true;
       const ep = document.getElementById('emoji-panel'); if (ep) ep.hidden = true;
-      const askP = document.getElementById('chat-ask-panel'); if (askP) askP.hidden = true;
+      const askP = document.getElementById('chat-ask-panel'); if (askP) closeChatAskPanel();
       const cs = document.getElementById('chat-search'); if (cs) cs.hidden = true;
       const dv = document.getElementById('chat-divine-panel'); if (dv) dv.hidden = true;
       const dp = document.getElementById('chat-decision-panel'); if (dp) dp.hidden = true;
