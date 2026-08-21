@@ -4,6 +4,13 @@
 
 ## 规则
 
+### 2026-08-21（续：每日摸鱼值/工作值也迁日历按天查看）
+- [本会话·完成]（**已构建 verify 10/10 + verify-cal-notes 19/19，待提交**）：`src/js/calendar.js`（AI-A 域）+ `src/template.html`（AI-B 域，日历卡片）+ `tools/verify-cal-notes.mjs`（补 4 条用例）。
+  - **日历页新增第 4 张每日卡片「摸鱼值 · 工作值」**（#cal-stats，我的心情卡之后）：按选中日期显示双方当天摸鱼/工作值。
+  - **读取逻辑**：今天读实时键 `day-fish-<key>`/`day-fish-ta-<key>`/`day-work-<key>`/`day-work-ta-<key>`（与桌面周末面板一致）；历史日期读 `fish-day-add`/`work-day-add` 按天记录。⚠️ **fishDayKey 日期格式是 `YYYY-M-D` 无补零**（与日历 selDate 的 `YYYY-MM-DD` 不同），匹配前先归一化（padStart 补零）。
+  - **主页「每日摸鱼值/每日打工值」两个 tab 保留**（用户确认——它们有历史累计统计，日历按天看替代不了）；本轮不动 records.js。
+  - ⚠️ 构建已含工作区 AI-A 未提交累积改动，提交时确认对方已保存完整。
+
 ### 2026-08-22（用户反馈「苹果14 默认浏览器聊天输入栏每打一个字屏幕闪一下」）
 - [AI-B·完成]（**已构建 verify 10/10，已提交 db91f6b 并推送上线**）：`src/js/mobile-adapt.js`。
   - 根因：iOS Safari 上 #chat-input 是 contenteditable div，打字时每字触发 visualViewport resize/scroll → syncIosKb 无条件 pinScrollTop() → scrollTo(0,0) 与系统让 caret 可见的微滚打架，每打一字整页跳一次 = 闪屏。

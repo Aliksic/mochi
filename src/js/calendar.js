@@ -237,6 +237,49 @@
     if (memoEl) memoEl.textContent = isFuture ? futureTip : (memo || '这一天没有备忘');
     const moodEl = document.getElementById('cal-mood');
     if (moodEl) moodEl.textContent = isFuture ? futureTip : (mood || '这一天没有记录心情');
+    // 摸鱼值 / 工作值（双方当天值）：fish-day-add / work-day-add 按天记录。
+    // 注意 fishDayKey 的日期格式是 YYYY-M-D（无补零），需归一化后与 selDate（YYYY-MM-DD）匹配；
+    // 今天读实时 day-fish-*/day-work-* 键（与桌面周末面板一致），历史日期读按天记录。
+    const statsEl = document.getElementById('cal-stats');
+    if (statsEl) {
+      statsEl.style.whiteSpace = 'pre-line';
+      if (isFuture) {
+        statsEl.textContent = futureTip;
+      } else {
+        const norm = (s) => {
+          const p = String(s).split('-');
+          if (p.length !== 3) return String(s);
+          return p[0] + '-' + String(+p[1]).padStart(2, '0') + '-' + String(+p[2]).padStart(2, '0');
+        };
+        const myName = store.get('lbl-user') || '我';
+        const taName = store.get('lbl-partner') || 'TA';
+        const isToday = selDate === todayStr();
+        const dayKey = (d) => d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
+        const pickDay = (logKey) => {
+          try {
+            const list = JSON.parse(store.get(logKey) || '[]');
+            return list.find(x => x && norm(x.date) === selDate) || null;
+          } catch (e) { return null; }
+        };
+        let fm = 0, ft = 0, wm = 0, wt = 0;
+        if (isToday) {
+          const k = dayKey(dd);
+          fm = parseInt(store.get('day-fish-' + k) || '0', 10) || 0;
+          ft = parseInt(store.get('day-fish-ta-' + k) || '0', 10) || 0;
+          wm = parseInt(store.get('day-work-' + k) || '0', 10) || 0;
+          wt = parseInt(store.get('day-work-ta-' + k) || '0', 10) || 0;
+        } else {
+          const f = pickDay('fish-day-add');
+          const w = pickDay('work-day-add');
+          if (f) { fm = f.mine || 0; ft = f.ta || 0; }
+          if (w) { wm = w.mine || 0; wt = w.ta || 0; }
+        }
+        const lines = [];
+        if (fm || ft || isToday) lines.push('摸鱼值　' + myName + ' +' + fm + ' · ' + taName + ' +' + ft);
+        if (wm || wt || isToday) lines.push('工作值　' + myName + ' +' + wm + ' · ' + taName + ' +' + wt);
+        statsEl.textContent = lines.length ? lines.join('\n') : '这一天没有摸鱼 / 工作记录';
+      }
+    }
   }
 
   function render() {

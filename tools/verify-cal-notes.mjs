@@ -127,24 +127,41 @@ await sleep(400);
 st = await evalJs("(function(){var e=document.getElementById('today-mood-text');return {card:e?e.textContent:'', snap:window.activeStore().get('today-mood-" + todayDs + "')};})()");
 check('桌面写心情成功（卡片 + 当日快照落盘）', st && st.card && st.snap && st.card === st.snap && st.card !== '点一下选心情', st && st.card + '/' + st.snap);
 
-// ---- C. 日历页：三张新卡片按天查看 ----
+// ---- B+. 写摸鱼/工作值数据（今天实时键 + 本月 10 号按天记录，模拟双方数值） ----
+// 注意 fishDayKey 是 YYYY-M-D 无补零格式（与日历 selDate 的 YYYY-MM-DD 不同，匹配时归一化）
+const histDay2 = todayD > 10 ? 10 : -1; // 有记录的历史日期（本月 10 号；今天<=10 时跳过该用例）
+await evalJs("(function(){var s=window.activeStore();var t=new Date();var tk=t.getFullYear()+'-'+(t.getMonth()+1)+'-'+t.getDate();s.set('day-fish-'+tk,'12');s.set('day-fish-ta-'+tk,'8');s.set('day-work-'+tk,'5');s.set('day-work-ta-'+tk,'3');var hk=t.getFullYear()+'-'+(t.getMonth()+1)+'-10';s.set('fish-day-add',JSON.stringify([{date:hk,mine:20,ta:14}]));s.set('work-day-add',JSON.stringify([{date:hk,mine:7,ta:9}]));return true;})()");
+
+// ---- C. 日历页：每日小记卡片按天查看 ----
 await evalJs("(function(){var a=document.querySelector('.app[data-app=\"calendar\"]');if(a){a.click();}return true;})()");
 await sleep(600);
-st = await evalJs("(function(){return {qc:!!document.getElementById('cal-quote-card'),mc:!!document.getElementById('cal-memo-card'),mc2:!!document.getElementById('cal-mood-card'),q:document.getElementById('cal-quote')?document.getElementById('cal-quote').textContent:'',memo:document.getElementById('cal-memo')?document.getElementById('cal-memo').textContent:'',mood:document.getElementById('cal-mood')?document.getElementById('cal-mood').textContent:''};})()");
-check('日历页三张新卡片存在', st && st.qc && st.mc && st.mc2, JSON.stringify(st));
+st = await evalJs("(function(){return {qc:!!document.getElementById('cal-quote-card'),mc:!!document.getElementById('cal-memo-card'),mc2:!!document.getElementById('cal-mood-card'),sc:!!document.getElementById('cal-stats-card'),q:document.getElementById('cal-quote')?document.getElementById('cal-quote').textContent:'',memo:document.getElementById('cal-memo')?document.getElementById('cal-memo').textContent:'',mood:document.getElementById('cal-mood')?document.getElementById('cal-mood').textContent:'',stats:document.getElementById('cal-stats')?document.getElementById('cal-stats').textContent:''};})()");
+check('日历页四张每日卡片存在', st && st.qc && st.mc && st.mc2 && st.sc, JSON.stringify(st));
 // 情话应与桌面一致（quote-history 当天存档）
 let qToday = await evalJs("(function(){var q=document.getElementById('love-quote');return q?q.textContent:'';})()");
 check('日历今日情话 = 桌面今日情话', st && st.q === qToday && !!st.q, st && st.q);
 check('日历今日备忘 = 桌面写的备忘', st && st.memo === '测试备忘ABC', st && st.memo);
 check('日历今日心情 = 桌面写的心情', st && st.mood && st.mood === st.snap ? true : (st && !!st.mood), st && st.mood);
+check('日历今日摸鱼值/工作值 = 双方当天值', st && st.stats.indexOf('摸鱼值') >= 0 && st.stats.indexOf('+12') >= 0 && st.stats.indexOf('+8') >= 0 && st.stats.indexOf('+5') >= 0 && st.stats.indexOf('+3') >= 0, st && st.stats.replace(/\n/g, '|'));
 
 // ---- 点历史日期（本月 5 号，若今天<=5 则用 1 号）----
 const histDay = todayD > 5 ? 5 : 1;
 const histDs = todayDs.slice(0, 8) + String(histDay).padStart(2, '0');
 await evalJs("(function(){var c=document.querySelector('#cal-grid .cal-cell[data-date=\"" + histDs + "\"]');if(c){c.click();}return true;})()");
 await sleep(500);
-st = await evalJs("(function(){return {date:document.getElementById('cal-today-date').textContent,q:document.getElementById('cal-quote').textContent,memo:document.getElementById('cal-memo').textContent,mood:document.getElementById('cal-mood').textContent};})()");
+st = await evalJs("(function(){return {date:document.getElementById('cal-today-date').textContent,q:document.getElementById('cal-quote').textContent,memo:document.getElementById('cal-memo').textContent,mood:document.getElementById('cal-mood').textContent,stats:document.getElementById('cal-stats').textContent};})()");
 check('点历史日期：三卡片空态（无存档时）', st && st.date === histDs && st.memo === '这一天没有备忘' && st.mood === '这一天没有记录心情' && (st.q === '这一天没有留下情话' || st.q.indexOf('情话') >= 0), st && st.memo + '/' + st.mood + '/' + st.q);
+check('点历史日期：摸鱼/工作值空态', st && st.stats === '这一天没有摸鱼 / 工作记录', st && st.stats);
+// 有记录的历史日期（本月 10 号）——验证按天记录读取
+if (histDay2 > 0) {
+  const histDs2 = todayDs.slice(0, 8) + String(histDay2).padStart(2, '0');
+  await evalJs("(function(){var c=document.querySelector('#cal-grid .cal-cell[data-date=\"" + histDs2 + "\"]');if(c){c.click();}return true;})()");
+  await sleep(400);
+  st = await evalJs("(function(){return {date:document.getElementById('cal-today-date').textContent,stats:document.getElementById('cal-stats').textContent};})()");
+  check('点本月10号：显示当日双方摸鱼/工作值', st && st.date === histDs2 && st.stats.indexOf('+20') >= 0 && st.stats.indexOf('+14') >= 0 && st.stats.indexOf('+7') >= 0 && st.stats.indexOf('+9') >= 0, st && (st.stats || '').replace(/\n/g, '|'));
+} else {
+  console.log('SKIP  点本月10号（今天<=10 无历史日可测）');
+}
 
 // ---- 点未来日期（下月 1 号）----
 const nextMonth = now.getMonth() === 11 ? 0 : now.getMonth() + 1;
@@ -154,16 +171,17 @@ await evalJs("(function(){var n=document.getElementById('cal-next');if(n)n.click
 await sleep(300);
 await evalJs("(function(){var c=document.querySelector('#cal-grid .cal-cell[data-date=\"" + futDs + "\"]');if(c){c.click();}return true;})()");
 await sleep(400);
-st = await evalJs("(function(){return {q:document.getElementById('cal-quote').textContent,memo:document.getElementById('cal-memo').textContent,mood:document.getElementById('cal-mood').textContent};})()");
-check('点未来日期：三卡片统一空态「这一天还没有内容」', st && st.q === '这一天还没有内容' && st.memo === '这一天还没有内容' && st.mood === '这一天还没有内容', JSON.stringify(st));
+st = await evalJs("(function(){return {q:document.getElementById('cal-quote').textContent,memo:document.getElementById('cal-memo').textContent,mood:document.getElementById('cal-mood').textContent,stats:document.getElementById('cal-stats').textContent};})()");
+check('点未来日期：四卡片统一空态「这一天还没有内容」', st && st.q === '这一天还没有内容' && st.memo === '这一天还没有内容' && st.mood === '这一天还没有内容' && st.stats === '这一天还没有内容', JSON.stringify(st));
 
 // ---- 点回今天 ----
 await evalJs("(function(){var p=document.getElementById('cal-prev');if(p)p.click();return true;})()");
 await sleep(300);
 await evalJs("(function(){var c=document.querySelector('#cal-grid .cal-cell.today');if(c){c.click();}return true;})()");
 await sleep(400);
-st = await evalJs("(function(){return {memo:document.getElementById('cal-memo').textContent,mood:document.getElementById('cal-mood').textContent};})()");
+st = await evalJs("(function(){return {memo:document.getElementById('cal-memo').textContent,mood:document.getElementById('cal-mood').textContent,stats:document.getElementById('cal-stats').textContent};})()");
 check('点回今天：备忘/心情恢复当天值', st && st.memo === '测试备忘ABC' && st.mood === '开心', JSON.stringify(st));
+check('点回今天：摸鱼/工作值恢复当天值', st && st.stats.indexOf('+12') >= 0 && st.stats.indexOf('+3') >= 0, st && (st.stats || '').replace(/\n/g, '|'));
 
 // ---- D. 主页：三个记录 tab 已移除 ----
 await evalJs("(function(){var b=document.getElementById('cal-back');if(b)b.click();return true;})()");
