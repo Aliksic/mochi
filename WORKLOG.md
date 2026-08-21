@@ -1019,3 +1019,12 @@
   - chat-settings.js：cs 昵称未设置时 val 显示「跟随桌面（xx）」。
 - 未提交：tools/diag-gc-refresh*.mjs（AI-A 新诊断脚本，未跟踪，留给对方确认）。
 - 构建 verify 10/10。
+
+### 2026-08-21（用户反馈「聊天设置里想新增时间轴样式，现在只有头像下一种」）
+- [AI-B·完成]（**已构建 verify 10/10 + 专项 9/9，已提交 65ca475**）：`src/js/chat.js` + `src/js/chat-settings.js` + `src/css/chat-main.css` + 新脚本 `tools/verify-time-divider.mjs`。
+  - **背景**：时间轴样式（6 种：头像下方/气泡下方/时间气泡/气泡外侧悬浮/消息上方居中/隐藏）在本地工作区已实现但未提交未部署，用户线上看到的是旧版（只有头像下方）——本次提交一并让线上拥有全部样式。
+  - **新增第 7 种「时间分隔线」（divider，微信式）**：消息间隔 ≥5 分钟或跨天时，在消息流中插入居中时间胶囊（「下午 3:24 / 昨天 下午 3:24 / 8月20日 / 2025年8月20日」），首条消息必插（时间不被隐藏）；聊天页 #chat-body 的 .msg-time 隐藏，**收藏页 #fav-list / 群聊 #gc-body 不含插入逻辑、msg-time 保留不受影响**（CSS 作用域限定 #chat-body）。
+  - **实现要点**：divider 是唯一有 DOM 插入的样式，不能纯 CSS 即时生效——chat.js 暴露 `window.chatReRenderTime`（重渲染补插），chat-settings.js 弹窗回调切到 divider 时调用；.msg-time-divider 默认 display:none（切走样式自动隐藏不占布局），批量渲染（renderWindow 循环）与增量追加（addRec）两个路径都接 maybeInsertDivider。
+  - 验证：verify-time-divider.mjs 9/9（分隔条数量/首条日期文案/msg-time 隐藏/增量补插/切回 CSS 隐藏/即时重渲染/收藏群聊隔离）+ verify 10/10。
+  - ⚠️ 本提交含 AI-A 累积改动（聊天批量渲染发送贴底 pendingOutScroll / 字卡池分类开关 catOn / IDB 切换挂起 / verify-chat-scroll-bottom、verify-chat-switch-idb-hang、verify-invite-settings、verify-mail-send-reply），已一并构建验证，请确认。
+  - ⚠️ 编辑期间 chat.js 有并发修改（21:57 AI-A 的 pendingOutScroll 等），我按 21:59 快照编辑，构建前全量 node --check 通过；若对方 21:59 后还有新改动未提交，请自行 commit。
