@@ -209,12 +209,14 @@
     });
     // v3.7.x：默认字卡补池——TA 发动态/评论素材不足时用系统默认字卡补，
     //   受「朋友圈使用」场景开关控制（聊天默认字卡-设置页可关闭）
+    // v3.8.x：分类开关——已关闭的默认字卡分类不参与补池
     try {
       if (window.defaultCardUse && window.defaultCardUse('feed') && window.getDefaultCardGroups) {
         const gd = window.getDefaultCardGroups;
-        if (!text.length) (gd('main') || []).forEach(g => (g[1] || []).forEach(c => { if (typeof c === 'string' && c) text.push(c); }));
-        if (!kaomoji.length) (gd('kaomoji') || []).forEach(g => (g[1] || []).forEach(c => { if (typeof c === 'string' && c) kaomoji.push(c); }));
-        if (!emoji.length) (gd('emoji') || []).forEach(g => (g[1] || []).forEach(c => { if (typeof c === 'string' && c) emoji.push(c); }));
+        const catOn = window.defaultCardCat || (() => true);
+        if (catOn('main') && !text.length) (gd('main') || []).forEach(g => (g[1] || []).forEach(c => { if (typeof c === 'string' && c) text.push(c); }));
+        if (catOn('kaomoji') && !kaomoji.length) (gd('kaomoji') || []).forEach(g => (g[1] || []).forEach(c => { if (typeof c === 'string' && c) kaomoji.push(c); }));
+        if (catOn('emoji') && !emoji.length) (gd('emoji') || []).forEach(g => (g[1] || []).forEach(c => { if (typeof c === 'string' && c) emoji.push(c); }));
       }
     } catch (e) {}
     return { text: text, kaomoji: kaomoji, emoji: emoji, sticker: mediaSticker, image: mediaImage };

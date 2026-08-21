@@ -2032,27 +2032,57 @@
   // 空页恢复为空（由 CSS 决定：仅装修模式显示，退出装修后空白页保持干净）。
   // 注：syncPageHint 声明在 IIFE 顶部（启动阶段 applyDeskLayout 会调用）
   // 按布局重建：把组件节点移动到对应页（默认布局保持 DOM 原状，不写布局）
+  // v3.8.x：顺序修复——原实现只移动「不在本页」的节点，已在页内的节点即使
+  // 顺序与布局不一致也不重排（刷新后用户排的顺序被 template 默认顺序覆盖）；
+  // 且第 0/1 页没有 .desk-page-add，移入节点被 append 到页尾，顺序必然错乱。
+  // 现在分两步：先移入不在本页的节点，再按布局数组顺序校正本页 widget 顺序
+  //（顺序已一致则跳过，避免无谓 DOM 抖动；图片/文字组件有自己的排序存储，
+  // 不在 desk-layout 内，重排时保持其节点不动）。
   const applyDeskLayout = () => {
     const lay = deskLayout();
     if (!lay) return;
     const slides = Array.prototype.slice.call(pagesBox.querySelectorAll('.page-slide'));
+    // v3.7.x：单个功能图标仍在 app-grid 内（未被移出作独立组件）时跳过——
+    // 它由 app-grid 容器管理（grid 4 列横排），移到 slide 会脱离 grid 布局
+    // 变成竖向排列（刷新后图标从横变竖）。与池逻辑的保护一致。
+    const inGrid = (wid) => {
+      if (wid.indexOf('app-') === 0) {
+        const n = document.querySelector('[data-desk-widget="' + wid + '"]');
+        return !!(n && n.closest('.app-grid'));
+      }
+      return false;
+    };
     lay.forEach((pageWidgets, pi) => {
       const slide = slides[pi];
       if (!slide) return;
-      (pageWidgets || []).forEach(wid => {
+      const wids = pageWidgets || [];
+      // 1) 移入不在本页的节点（插入到「+ 添加卡片」按钮之前）
+      wids.forEach(wid => {
+        if (inGrid(wid)) return;
         const node = document.querySelector('[data-desk-widget="' + wid + '"]');
-        if (!node) return;
-        // v3.7.x：单个功能图标仍在 app-grid 内（未被移出作独立组件）时跳过——
-        // 它由 app-grid 容器管理（grid 4 列横排），移到 slide 会脱离 grid 布局
-        // 变成竖向排列（刷新后图标从横变竖）。与下方池逻辑的保护一致。
-        if (wid.indexOf('app-') === 0 && node.closest('.app-grid')) return;
-        if (node.parentNode !== slide) {
-          // 插入到「+ 添加卡片」按钮之前
-          const addBtn = slide.querySelector('.desk-page-add');
+        if (!node || node.parentNode === slide) return;
+        const addBtn = slide.querySelector('.desk-page-add');
+        if (addBtn) slide.insertBefore(node, addBtn);
+        else slide.appendChild(node);
+      });
+      // 2) 顺序校正：比对当前 DOM 顺序与布局数组顺序，不一致才重排
+      const want = wids.filter(wid => {
+        if (inGrid(wid)) return false;
+        const n = document.querySelector('[data-desk-widget="' + wid + '"]');
+        return !!(n && n.parentNode === slide);
+      });
+      const cur = Array.prototype.slice.call(slide.querySelectorAll('[data-desk-widget]'))
+        .map(n => n.getAttribute('data-desk-widget'))
+        .filter(w => want.indexOf(w) >= 0);
+      if (cur.join('|') !== want.join('|') && want.length) {
+        const addBtn = slide.querySelector('.desk-page-add');
+        want.forEach(wid => {
+          const node = document.querySelector('[data-desk-widget="' + wid + '"]');
+          if (!node) return;
           if (addBtn) slide.insertBefore(node, addBtn);
           else slide.appendChild(node);
-        }
-      });
+        });
+      }
       syncPageHint(slide);
     });
     // 布局外的组件 → 隐藏池

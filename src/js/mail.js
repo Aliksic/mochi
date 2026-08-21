@@ -449,23 +449,29 @@
   // v3.6.x：用户未添加自定义字卡时（内置预设已移除）用系统默认字卡补池——
   //   否则信件只能从 5 条固定文案里抽，内容单一且条数上限超过池子时爆重复
   // v3.7.x：补池受「信箱使用」场景开关控制（默认字卡-设置页可关闭）
+  // v3.8.x：默认字卡不再只当「空池兜底」——即使有自定义字卡，写信时每张卡也会按
+  //   「整体概率 + 分类占比」（聊天默认字卡-设置页）混入默认字卡，与聊天回复一致
   function mailCardPool(cid) {
     const custom = cid ? (window.getCustomCardsFor ? window.getCustomCardsFor(cid) : []) : ((window.getCustomCards && window.getCustomCards()) || []);
     const text = [], kaomoji = [], emoji = [];
+    // 默认字卡独立子池（与自定义分开放，供按概率混入；不做合并）
+    const defText = [], defKaomoji = [], defEmoji = [];
     const pushDefault = () => {
       try {
         if (window.defaultCardUse && !window.defaultCardUse('mail')) return;
-        if (!text.length) {
+        const isOff = window.isDefaultCardOff || null;
+        const catOn = window.defaultCardCat || (() => true);
+        if (catOn('main') && !defText.length) {
           const dg = (window.getDefaultCardGroups && window.getDefaultCardGroups('main')) || [];
-          dg.forEach(g => (g[1] || []).forEach(c => { if (typeof c === 'string' && c) text.push(c); }));
+          dg.forEach(g => (g[1] || []).forEach(c => { if (isOff && isOff('main', c)) return; if (typeof c === 'string' && c) defText.push(c); }));
         }
-        if (!kaomoji.length) {
+        if (catOn('kaomoji') && !defKaomoji.length) {
           const kg = (window.getDefaultCardGroups && window.getDefaultCardGroups('kaomoji')) || [];
-          kg.forEach(g => (g[1] || []).forEach(c => { if (typeof c === 'string' && c) kaomoji.push(c); }));
+          kg.forEach(g => (g[1] || []).forEach(c => { if (isOff && isOff('kaomoji', c)) return; if (typeof c === 'string' && c) defKaomoji.push(c); }));
         }
-        if (!emoji.length) {
+        if (catOn('emoji') && !defEmoji.length) {
           const eg = (window.getDefaultCardGroups && window.getDefaultCardGroups('emoji')) || [];
-          eg.forEach(g => (g[1] || []).forEach(c => { if (typeof c === 'string' && c) emoji.push(c); }));
+          eg.forEach(g => (g[1] || []).forEach(c => { if (isOff && isOff('emoji', c)) return; if (typeof c === 'string' && c) defEmoji.push(c); }));
         }
       } catch (e) {}
     };
@@ -489,14 +495,45 @@
       text: text,
       kaomoji: kaomoji,
       emoji: emoji,
+      defText: defText,
+      defKaomoji: defKaomoji,
+      defEmoji: defEmoji,
       sticker: cid ? (window.getMediaCardsFor ? window.getMediaCardsFor(cid, 'sticker') : []) : ((window.getMediaCards && window.getMediaCards('sticker')) || []),
       image: cid ? (window.getMediaCardsFor ? window.getMediaCardsFor(cid, 'image') : []) : ((window.getMediaCards && window.getMediaCards('image')) || [])
     };
   }
+  // 按「整体概率 + 分类占比」从默认字卡池抽一张（main/kaomoji/emoji；拍一拍不进信件）；
+  // 未命中/池空返回 ''——与聊天 getDefaultCards 同语义，不含拍一拍分类
+  function pickDefaultMailCard(pool) {
+    try {
+      const dcfg = (window.defaultCardCfg && window.defaultCardCfg()) || {};
+      if (dcfg.enabled === false) return '';
+      const overall = (dcfg.overall === undefined || dcfg.overall === null) ? 30 : dcfg.overall;
+      if (Math.random() * 100 >= overall) return '';
+      const keys = ['main', 'kaomoji', 'emoji'];
+      const pools = { main: pool.defText, kaomoji: pool.defKaomoji, emoji: pool.defEmoji };
+      const catOn = window.defaultCardCat || (() => true);
+      const weights = keys.map(k => (catOn(k) ? Math.max(0, (dcfg.probs && dcfg.probs[k]) || 0) : 0));
+      const total = weights.reduce((a, b) => a + b, 0);
+      if (total <= 0) return '';
+      let roll = Math.random() * total;
+      for (let i = 0; i < keys.length; i++) {
+        roll -= weights[i];
+        if (roll < 0) {
+          const p = pools[keys[i]] || [];
+          if (p.length) return p[Math.floor(Math.random() * p.length)];
+          return '';
+        }
+      }
+    } catch (e) {}
+    return '';
+  }
   // TA 写信内容：多个字卡（空格分隔）+ 概率加颜文字/emoji/表情包
   function taLetterContent(cfg, cid) {
     const pool = mailCardPool(cid);
-    const words = pool.text.length ? pool.text : TA_LETTERS;
+    const hasCustom = pool.text.length > 0;
+    // 有自定义字卡 → 正文主体用自定义；无自定义 → 整体回退默认字卡池（再空才用固定文案）
+    const words = hasCustom ? pool.text : (pool.defText.length ? pool.defText : TA_LETTERS);
     // v3.6.x：条数在「最少/最多字卡条数」之间随机；上限不超过池子大小——
     // 移除自定义字卡内置预设后用户没添加字卡时 words 回退为固定文案，
     // 条数超过池子会从同几段里反复抽 → 内容复制粘贴很多次（已修）。
@@ -505,10 +542,21 @@
     const wantMax = Math.min(Math.max(wantMin, cfg.maxCards || wantMin), maxN);
     const n = wantMin + Math.floor(Math.random() * (wantMax - wantMin + 1));
     const parts = [];
-    for (let i = 0; i < n; i++) parts.push(words[Math.floor(Math.random() * words.length)]);
+    for (let i = 0; i < n; i++) {
+      // v3.8.x：有自定义字卡时，每张卡按 dc-overall 概率混入默认字卡（自定义+默认一起用）；
+      //   无自定义时正文整体已是默认字卡池，不再重复混入
+      if (hasCustom) {
+        const d = pickDefaultMailCard(pool);
+        if (d) { parts.push(d); continue; }
+      }
+      parts.push(words[Math.floor(Math.random() * words.length)]);
+    }
     let t = parts.join(' ');
-    if (cfg.kaomojiEn && pool.kaomoji.length && Math.random() * 100 < 30) t += ' ' + pool.kaomoji[Math.floor(Math.random() * pool.kaomoji.length)];
-    if (cfg.emojiEn && pool.emoji.length && Math.random() * 100 < 15) t += ' ' + pool.emoji[Math.floor(Math.random() * pool.emoji.length)];
+    // 颜文字/emoji 附加：自定义对应分类为空时回退默认池（保持原补池行为）
+    const kp = pool.kaomoji.length ? pool.kaomoji : pool.defKaomoji;
+    const ep = pool.emoji.length ? pool.emoji : pool.defEmoji;
+    if (cfg.kaomojiEn && kp.length && Math.random() * 100 < 30) t += ' ' + kp[Math.floor(Math.random() * kp.length)];
+    if (cfg.emojiEn && ep.length && Math.random() * 100 < 15) t += ' ' + ep[Math.floor(Math.random() * ep.length)];
     const st = pool.sticker.concat(pool.image);
     if (cfg.stickerEn && st.length && Math.random() * 100 < 20) t += ' ' + st[Math.floor(Math.random() * st.length)];
     return t;

@@ -405,12 +405,20 @@
       return !!(window.matchMedia && window.matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches);
     } catch (e) { return false; }
   }
+  // v3.8.x：切后台标记——系统切后台（Android 自动退出 Fullscreen API）时，
+  // visibilitychange(hidden) 先于 fullscreenchange 触发。用此标记区分
+  // 「系统退出」（保留用户全屏意图）与「用户主动退出」（Esc/下滑提示条，
+  // 浏览器标签模式应尊重并清标记，避免反复重入弹条）。
+  let _wentBg = false;
   function handleFsExit() {
     stopFsMonitor();
     // 浏览器标签模式下，用户通过系统 UI（下滑/提示条/Esc）退出全屏 = 主动放弃全屏：
     // 清掉持久化标记，切后台回来 / 重新聚焦不再强制重入（原设计「不覆盖用户意图」
-    // 只适用于 PWA 安装态，浏览器标签态会造成全屏退出后又被拉回的死循环）
-    if (!fsInPwa()) {
+    // 只适用于 PWA 安装态，浏览器标签态会造成全屏退出后又被拉回的死循环）。
+    // v3.8.x：切后台导致的系统退出（_wentBg）不属于主动放弃——保留标记，
+    // 切回后由 reenterFs 恢复（修复 OPPO Chrome 等把快捷方式态误报为非 PWA
+    // display-mode 时，切后台退出全屏后永不恢复的问题）。
+    if (!fsInPwa() && !_wentBg) {
       try { store.set(FS_KEY, '0'); } catch (e) {}
       try { store.set(FB_KEY, '0'); } catch (e) {}
       try { document.documentElement.classList.remove('fs-css-active'); } catch (e) {}
@@ -461,36 +469,37 @@
   function doRetry() {
     disarmRetry();
     if (store.get(FS_KEY) !== '1' || isFullscreen()) return; // 用户已关闭/已全屏 → 放弃
-    // v3.7.x：浏览器标签模式不自动重入（retry 路径同 reenterFs）
-    if (!fsInPwa()) { try { store.set(FS_KEY, '0'); } catch (e) {} return; }
+    // v3.8.x：非 PWA（浏览器标签）也允许恢复——FS_KEY=1 即用户明确开启过全屏
+    // 且未主动关闭（主动退出会在 handleFsExit 清掉标记），切后台系统退出后
+    // 恢复符合用户意图，不会造成「退出后被拉回」的死循环
     enterFs();
+  }
+  // v3.8.x：立即武装手势重试（原实现延迟 600ms 才装监听）——用户切后台回来
+  // 若在窗口期内触摸/点击，重试会被错过，之后无交互则全屏永不恢复
+  //（OPPO Find X9 Chrome PWA 切后台退出全屏复现）
+  function armRetry() {
+    disarmRetry();
+    _retryArmed = true;
+    document.addEventListener('click', retryClick);
+    document.addEventListener('touchstart', retryTouch);
   }
   function reenterFs() {
     // v3.7.x：浏览器标签模式不自动重入全屏——每次打开页面就弹「退出全屏」提示条，
-    // 用户无法正常使用；仅 PWA 安装态（standalone/fullscreen 直启）才自动恢复。
-    // 注意：浏览器模式下用户正在全屏时切后台（切回来仍应保持）——只在「已退出全屏」
-    // 时清标记，否则切后台回来把用户主动开启的全屏静默取消掉
-    if (!fsInPwa()) {
-      if (!isFullscreen()) {
-        try { store.set(FS_KEY, '0'); } catch (e) {}
-      }
-      return;
-    }
+    // 用户无法正常使用；用户主动退出（Esc/提示条）会经 handleFsExit 清掉标记，
+    // 此处 FS_KEY !== '1' 即视为已放弃，直接返回（仅 PWA 安装态 / 仍在全屏中保持）。
+    // v3.8.x：FS_KEY=1（用户明确开过且未主动关闭）时一律尝试恢复——
+    // 含浏览器标签模式切后台系统退出全屏的场景（切回后恢复，符合用户意图）。
+    if (store.get(FS_KEY) !== '1') return;
+    if (isFullscreen()) return;
     // v3.6.x：上次走的是 CSS 兜底（浏览器转横屏）→ 直接恢复兜底，不再请求原生全屏
     if (store.get(FB_KEY) === '1') { applyFsCss(true); return; }
     // v3.6.x：Via / 无锁 API 的浏览器原生全屏必横屏，恢复时同样直接走兜底
     if (isVia || !orientLockable()) { applyFsCss(true); return; }
-    if (store.get(FS_KEY) !== '1' || !fsSupported() || isFullscreen()) return;
+    if (!fsSupported()) return;
     // Fullscreen API 需要用户手势；自动调用会被浏览器拦截——先试一次，
     // 被拦则等用户首次触摸/点击时再试（手势时刻的请求浏览器允许）
     enterFs();
-    setTimeout(() => {
-      if (isFullscreen()) return;
-      disarmRetry();
-      _retryArmed = true;
-      document.addEventListener('click', retryClick);
-      document.addEventListener('touchstart', retryTouch);
-    }, 600);
+    armRetry();
   }
   // 启动时恢复
   // v3.6.x：iOS standalone 用 CSS 类恢复（无需用户手势、无 Fullscreen API 可调）
@@ -501,8 +510,11 @@
     }
   } catch (e) {}
   // 切后台回来（Android/iOS 切走再切回会退出全屏）→ 自动恢复
+  // v3.8.x：hidden 时置 _wentBg（区分「切后台系统退出」与「前台主动退出」，
+  // 供 handleFsExit 判断是否保留全屏意图）
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState !== 'visible') return;
+    if (document.visibilityState !== 'visible') { _wentBg = true; return; }
+    _wentBg = false;
     if (isIOS && inIosStandalone) { if (store.get(FS_KEY) === '1') applyIosFs(true); }
     else reenterFs();
   });

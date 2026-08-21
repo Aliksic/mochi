@@ -61,13 +61,13 @@
     }
   }
 
-  // ---- 消息存储 ----
+  // ---- 消息存储（LS 立即写保证持久化可见，IDB 防抖写减少异步开销） ----
   function saveMsgs() {
     const data = JSON.stringify(msgs);
+    try { localStorage.setItem(MSG_KEY, data); } catch (e) {}
     if (saveTimer) clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
       saveTimer = null;
-      try { localStorage.setItem(MSG_KEY, data); } catch (e) {}
       try { if (window.idbSet) window.idbSet(MSG_KEY, data); } catch (e) {}
     }, 300);
   }

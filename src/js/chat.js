@@ -598,23 +598,27 @@
       const isOff = window.isDefaultCardOff || null;
       // v3.7.x：聊天场景开关——关闭后聊天字卡池兜底不注入默认字卡
       const useChat = window.defaultCardUse ? window.defaultCardUse('chat') : true;
+      // v3.8.x：分类开关——已关闭的默认字卡分类不参与兜底注入
+      const catOn = window.defaultCardCat || (() => true);
       if (dcfg.enabled !== false && useChat && (!text.length || !kaomoji.length || !emoji.length)) {
-        const defGrps = (window.getDefaultCardGroups && window.getDefaultCardGroups('main')) || [];
-        defGrps.forEach(g => {
-          const arr = g[1] || [];
-          arr.forEach(c => {
-            if (isOff && isOff('main', c)) return;
-            if (typeof c !== 'string' || !c) return;
-            if (/[\uD800-\uDBFF]/.test(c)) emoji.push(c);
-            else if (/[\(（｡◕(◕)(づ｡(¬)]/.test(c) && /[\)）】)]/.test(c)) kaomoji.push(c);
-            else text.push(c);
+        if (catOn('main')) {
+          const defGrps = (window.getDefaultCardGroups && window.getDefaultCardGroups('main')) || [];
+          defGrps.forEach(g => {
+            const arr = g[1] || [];
+            arr.forEach(c => {
+              if (isOff && isOff('main', c)) return;
+              if (typeof c !== 'string' || !c) return;
+              if (/[\uD800-\uDBFF]/.test(c)) emoji.push(c);
+              else if (/[\(（｡◕(◕)(づ｡(¬)]/.test(c) && /[\)）】)]/.test(c)) kaomoji.push(c);
+              else text.push(c);
+            });
           });
-        });
-        if (!kaomoji.length) {
+        }
+        if (catOn('kaomoji') && !kaomoji.length) {
           const kg = (window.getDefaultCardGroups && window.getDefaultCardGroups('kaomoji')) || [];
           kg.forEach(g => (g[1] || []).forEach(c => { if (isOff && isOff('kaomoji', c)) return; if (typeof c === 'string' && c) kaomoji.push(c); }));
         }
-        if (!emoji.length) {
+        if (catOn('emoji') && !emoji.length) {
           const eg = (window.getDefaultCardGroups && window.getDefaultCardGroups('emoji')) || [];
           eg.forEach(g => (g[1] || []).forEach(c => { if (isOff && isOff('emoji', c)) return; if (typeof c === 'string' && c) emoji.push(c); }));
         }
@@ -1458,7 +1462,9 @@
     const dcfg = (window.defaultCardCfg && window.defaultCardCfg()) || {};
     // v3.7.x：聊天场景开关——关闭后拍一拍回退到自定义拍一拍
     const useChat = window.defaultCardUse ? window.defaultCardUse('chat') : true;
-    if (dcfg.enabled && useChat && dcfg.probs && (dcfg.probs.touch || 0) > 0) {
+    // v3.8.x：分类开关——「拍一拍」分类被关闭时回退到自定义拍一拍
+    const touchOn = window.defaultCardCat ? window.defaultCardCat('touch') : true;
+    if (dcfg.enabled && useChat && touchOn && dcfg.probs && (dcfg.probs.touch || 0) > 0) {
       const d = (window.getDefaultCards && window.getDefaultCards()) || null;
       if (d && d.type === 'poke') action = d.text;
     }

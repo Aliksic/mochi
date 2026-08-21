@@ -31,6 +31,12 @@
   function getUse(k) { const v = ls.get('dc-use-' + k); return v === null ? true : v === '1'; }
   function setUse(k, on) { ls.set('dc-use-' + k, on ? '1' : '0'); }
   window.defaultCardUse = function (k) { return getUse(k); };
+  // v3.8.x：分类开关——主字卡 / 颜文字 / emoji / 拍一拍 可分别开启/关闭（默认全开）
+  //   存 localStorage 键：dc-cat-<k>（'1' 开启）；关闭后该分类不参与聊天混入/信箱混入/
+  //   朋友圈补池/拍一拍抽取
+  function getCat(k) { const v = ls.get('dc-cat-' + k); return v === null ? true : v === '1'; }
+  function setCat(k, on) { ls.set('dc-cat-' + k, on ? '1' : '0'); }
+  window.defaultCardCat = function (k) { return getCat(k); };
   window.defaultCardCfg = function () {
     return { enabled: getEnabled(), overall: getOverall(), probs: { main: getProb('main'), kaomoji: getProb('kaomoji'), emoji: getProb('emoji'), touch: getProb('touch') } };
   };
@@ -62,6 +68,16 @@
     el.checked = getUse(k);
     el.addEventListener('change', () => {
       setUse(k, el.checked);
+      toast((el.checked ? '已开启' : '已关闭') + '：默认字卡' + label + '使用');
+    });
+  });
+  // v3.8.x：分类开关绑定——主字卡 / 颜文字 / emoji / 拍一拍 分别控制默认字卡分类使用
+  [['main', '主字卡'], ['kaomoji', '颜文字'], ['emoji', 'emoji'], ['touch', '拍一拍']].forEach(([k, label]) => {
+    const el = document.getElementById('dc-cat-' + k);
+    if (!el) return;
+    el.checked = getCat(k);
+    el.addEventListener('change', () => {
+      setCat(k, el.checked);
       toast((el.checked ? '已开启' : '已关闭') + '：默认字卡' + label + '使用');
     });
   });
@@ -236,9 +252,9 @@
     const cfg = window.defaultCardCfg();
     if (!cfg.enabled) return [];
     if (Math.random() * 100 >= cfg.overall) return [];
-    // 按 probs 加权选分类
+    // 按 probs 加权选分类（v3.8.x：已关闭的分类权重按 0 处理，不参与抽取）
     const keys = ['main', 'kaomoji', 'emoji', 'touch'];
-    const weights = keys.map(k => Math.max(0, cfg.probs[k] || 0));
+    const weights = keys.map(k => (getCat(k) ? Math.max(0, cfg.probs[k] || 0) : 0));
     const total = weights.reduce((a, b) => a + b, 0);
     if (total <= 0) return [];
     let roll = Math.random() * total;

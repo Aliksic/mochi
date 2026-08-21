@@ -925,3 +925,10 @@
   - **修复**：① 引用源改为调度时快照 quoteSrc（每轮引用触发它的那条消息：句1 的回复轮引句1，句3 的引句3）；② 新增 lastQuotedText 记录上次实际引用文本，发送时再核对（并发轮交错也能挡住），同内容不连续引用；③ 切联系人时随 lastMineText 一并清空 lastQuotedText。
   - 验证：CDP 专项 5/5——连发 3 条各引各的（句3/句1/句2 无重复）、连发 2 条相同内容只引一次、无引用源不产生引用；verify 10/10。新回归脚本 tools/verify-quote-target.mjs。
   - 注意：提交包含此前未提交的对方改动（base.css iOS 灰带修复 + template.html 群聊占位锚点 + sw.js 白屏兜底 + 对应构建产物）；另遗留未跟踪调试脚本 diag-realclick/diag-scan2/poke-dbg/smoke-*/verify-quote-image.mjs 未提交，请确认是否清理或入库。
+
+### 2026-08-21（用户反馈「桌面小组件排好顺序刷新会乱」+「添加到桌面的快捷方式切后台退出全屏」OPPO Find X9 Chrome）
+- [AI-B·完成]（**已构建 verify 10/10 + 专项 4/4 + 3/3，待提交**）：`src/js/personalize.js` + `src/js/fullscreen.js` + 新脚本 `tools/verify-desk-layout.mjs`、`tools/verify-fs-reenter.mjs`。
+  - **桌面小组件顺序乱根因**（personalize.js applyDeskLayout）：原实现只移动「不在本页」的节点，已在页内的节点即使顺序与 desk-layout 不一致也不重排；且第 0/1 页没有 `.desk-page-add`，移入节点被 append 到页尾 → 用户排好的顺序刷新后被 template 默认顺序覆盖。修复：分两步——先移入不在本页节点，再按布局数组顺序校正本页 widget（顺序一致跳过避免 DOM 抖动；app-* 仍在 app-grid 内的跳过逻辑保留；图片/文字组件不在 layout 内，重排不动它们）。
+  - **切后台退出全屏不恢复根因**（fullscreen.js）：① handleFsExit 在非 PWA 判定（OPPO Chrome 快捷方式态 display-mode 可能报 browser）下无条件清掉 fullscreen-enabled 标记 → 切回后 reenterFs 直接放弃；② reenterFs 原 600ms 延迟才装手势重试监听，用户切回立刻触摸会落在窗口外。修复：`_wentBg` 标记区分「切后台系统退出」（保留意图）vs「前台主动退出」（非 PWA 清标记不回归）；reenterFs 重构为 FS_KEY=1 一律尝试恢复 + `armRetry()` 立即武装（去掉 600ms 延迟）；doRetry 去掉非 PWA 拦截。
+  - 验证：verify-desk-layout 4/4（music 跨页移入+重排、二次刷新保持、第二页移除、默认布局不受影响）、verify-fs-reenter 3/3（非 PWA 下 FS_KEY 意图保留、前台退出清标记不回归）、布局 verify 10/10。
+  - ⚠️ 本提交含 AI-A 此前保存的累积改动（calendar/chat/default-cards/feed/mail/group-chat/template/smoke-group-chat.mjs），已一并构建验证，请确认无遗漏。

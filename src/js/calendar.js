@@ -68,7 +68,12 @@
       if (typeof c === 'string' && c.indexOf('data:') !== 0 && c.indexOf('|||') < 0) cards.push(c);
     });
     const defs = (window.getDefaultCardGroups && window.getDefaultCardGroups('main')) || [];
-    defs.forEach(([g, arr]) => { if (Array.isArray(arr)) arr.forEach(c => cards.push(c)); });
+    // v3.8.x：默认字卡总开关 + 分类开关——关闭后每日留言不混入系统默认主字卡
+    const dcfg = (window.defaultCardCfg && window.defaultCardCfg()) || {};
+    const catOn = window.defaultCardCat ? window.defaultCardCat('main') : true;
+    if (dcfg.enabled !== false && catOn) {
+      defs.forEach(([g, arr]) => { if (Array.isArray(arr)) arr.forEach(c => cards.push(c)); });
+    }
     if (!cards.length) return '今天也想对你说点什么...';
     const maxCount = Math.min(8, cards.length);
     const minCount = Math.min(3, maxCount);
