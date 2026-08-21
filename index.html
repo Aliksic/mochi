@@ -1975,18 +1975,22 @@ padding-top:8px; border-top:1px dashed rgba(0,0,0,.1);
 .msg-rp-card.opened { border-color:rgba(0,0,0,.18); }
 .msg-rp-card.expired { opacity:.6; }
 .msg-rp-card.expired .msg-rp-status { color:var(--muted); }
-.msg-flower { align-self:center; width:100%; display:flex; justify-content:center; padding:2px 0; }
+.msg-flower { align-self:center; width:100%; display:flex; justify-content:center; padding:4px 0; }
 .msg-flower-card {
-width:min(240px,80vw); padding:16px 18px; border-radius:16px;
-background:linear-gradient(135deg, #fff0f3, #fce4ec);
-border:1px solid rgba(233,30,99,.15);
-box-shadow:0 2px 12px rgba(233,30,99,.08);
-text-align:center; position:relative;
+width:min(260px,82vw); padding:0 0 14px; border-radius:20px;
+background:linear-gradient(160deg, #fff5f7 0%, #fce4ec 45%, #f8bbd0 100%);
+border:1px solid rgba(233,30,99,.12);
+box-shadow:0 4px 20px rgba(233,30,99,.12), 0 1px 3px rgba(0,0,0,.04);
+text-align:center; position:relative; overflow:hidden;
 }
-.msg-flower-emoji { font-size:40px; line-height:1; margin-bottom:6px; }
-.msg-flower-name { font-size:15px; font-weight:700; color:#c2185b; margin-bottom:6px; }
-.msg-flower-wish { font-size:13px; color:#880e4f; line-height:1.5; margin-bottom:8px; word-break:break-word; }
-.msg-flower-foot { font-size:11px; color:rgba(136,14,79,.5); }
+.msg-flower-bar { height:4px; background:linear-gradient(90deg, #f48fb1, #ec407a, #f48fb1); margin-bottom:14px; }
+.msg-flower-emoji { font-size:44px; line-height:1; margin-bottom:8px; animation:flowerFloat 3s ease-in-out infinite; }
+@keyframes flowerFloat { 0%,100% { transform:translateY(0) rotate(0deg); } 50% { transform:translateY(-4px) rotate(5deg); } }
+.msg-flower-name { font-size:15px; font-weight:700; color:#ad1457; margin-bottom:8px; letter-spacing:.5px; }
+.msg-flower-divider { display:flex; align-items:center; justify-content:center; gap:6px; margin-bottom:10px; color:#e91e63; font-size:10px; }
+.msg-flower-divider span { width:28px; height:1px; background:linear-gradient(90deg, transparent, #e91e63, transparent); }
+.msg-flower-wish { font-size:13px; color:#880e4f; line-height:1.6; margin-bottom:10px; word-break:break-word; font-style:italic; padding:0 14px; }
+.msg-flower-foot { font-size:11px; color:rgba(136,14,79,.45); padding-top:8px; margin:0 18px; border-top:1px solid rgba(233,30,99,.1); }
 .rp-balance {
 font-size:11px; color:var(--muted); text-align:center;
 padding:4px 0 8px; border-bottom:1px solid rgba(0,0,0,.06); margin-bottom:10px;
@@ -4745,7 +4749,7 @@ transition: width .4s ease; min-width:0; overflow:hidden;
       </div>
       <div class="splash-dots"><i></i><i></i><i></i></div>
       <div class="splash-brand">小红书@言序（1842523578）</div>
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787328589110">Mochi 字卡传讯 v3.6.199 · 部署于 2026-08-22 00:09</div>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787329532961">Mochi 字卡传讯 v3.6.200 · 部署于 2026-08-22 00:25</div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
       <div class="splash-loading" id="splash-loading">正在加载数据…</div>
@@ -5541,7 +5545,7 @@ transition: width .4s ease; min-width:0; overflow:hidden;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.6.199</div>
+      <div class="ver">Mochi 字卡传讯 v3.6.200</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -13355,10 +13359,12 @@ if (rec.special === 'flower') {
 m.className = 'msg-flower';
 const sideTxt = rec.side === 'out' ? '我' : chatPartnerName();
 m.innerHTML = '<div class="msg-flower-card">' +
+'<div class="msg-flower-bar"></div>' +
 '<div class="msg-flower-emoji">' + escTxt(rec.flEmoji || '\uD83C\uDF37') + '</div>' +
 '<div class="msg-flower-name">' + escTxt(rec.flName || '\u82B1') + '</div>' +
-'<div class="msg-flower-wish">' + escTxt(rec.flWish || '\u9001\u7ED9\u4F60~') + '</div>' +
-'<div class="msg-flower-foot">' + escTxt(sideTxt) + ' \u9001\u51FA</div>' +
+'<div class="msg-flower-divider"><span></span>\u2739<span></span></div>' +
+'<div class="msg-flower-wish">\u201C' + escTxt(rec.flWish || '\u9001\u7ED9\u4F60~') + '\u201D</div>' +
+'<div class="msg-flower-foot"><span>' + escTxt(sideTxt) + ' \u9001\u51FA</span></div>' +
 favHeartHtml() +
 '</div>';
 body.appendChild(m);
@@ -14148,7 +14154,7 @@ return;
 const rpMin = Math.max(1, Number(c['reply-min']) || 1);
 const rpMax = Math.max(rpMin, Number(c['reply-max']) || 2);
 const count = randInt(rpMin, rpMax);
-try { console.log('[mochi-reply] scheduleReply count=%s rpMin=%s rpMax=%s raw reply-min=%s reply-max=%s', count, rpMin, rpMax, c['reply-min'], c['reply-max']); window.__replyDiag = (window.__replyDiag||0)+1; window.__replyOnceDiag = 0; const _t = document.getElementById('cc-toast') || (function(){const x=document.createElement('div');x.id='cc-toast';document.body.appendChild(x);return x;})(); _t.textContent = '诊断: count='+count+' reply-max='+c['reply-max']+' rpMin='+rpMin+' rpMax='+rpMax; _t.className='cc-toast'; void _t.offsetWidth; _t.className='cc-toast show'; clearTimeout(_t._dt); _t._dt = setTimeout(function(){_t.className='cc-toast';}, 8000); } catch(e){}
+try { console.log('[mochi-reply] scheduleReply count=%s rpMin=%s rpMax=%s raw reply-min=%s reply-max=%s', count, rpMin, rpMax, c['reply-min'], c['reply-max']); window.__replyDiag = (window.__replyDiag||0)+1; window.__replyOnceDiag = 0; } catch(e){}
 const wantQuote = hit(c['quote-prob']) && !!quoteSrc;
 for (let i = 0; i < count; i++) {
 setTimeout(() => {
@@ -14160,7 +14166,6 @@ replyOnce(c, q, i > 0);
 if (i < count - 1) showTyping();
 if (i === count - 1) {
 setTimeout(() => { if (!sameCid()) return; if (window.maybeMusicRequest) window.maybeMusicRequest(); }, 2000);
-try { setTimeout(function(){ const _t = document.getElementById('cc-toast'); if(_t){ _t.textContent='诊断: replyOnce总次数='+window.__replyOnceDiag+' (count='+count+')'; _t.className='cc-toast'; void _t.offsetWidth; _t.className='cc-toast show'; clearTimeout(_t._dt2); _t._dt2=setTimeout(function(){_t.className='cc-toast';},8000); } }, 4000); } catch(e){}
 }
 }, i * randInt(1200, 2800));
 }
@@ -14410,7 +14415,7 @@ setTimeout(() => {
 hideTyping();
 const am = autoMsg();
 const m = addIn(am.text, { type: am.type, initiative: true, silent: i > 0 });
-try { console.log('[mochi-auto] 主动发送消息: type=%s initiative=true', am.type); const _t = document.getElementById('cc-toast'); if(_t){ _t.textContent='诊断: 主动发送触发! as-en='+cfgn(c,'as-en',1)+' as-prob='+cfgn(c,'as-prob',30); _t.className='cc-toast'; void _t.offsetWidth; _t.className='cc-toast show'; clearTimeout(_t._at); _t._at=setTimeout(function(){_t.className='cc-toast';},6000); } } catch(e){}
+try { console.log('[mochi-auto] 主动发送消息: type=%s initiative=true', am.type); } catch(e){}
 if (hit(c['rc-prob'])) {
 setTimeout(() => {
 retractMsg(m, 'in');
@@ -26372,7 +26377,7 @@ const TC_DEFAULT = [
 { id: "cr1", cat: "rel", text: "更喜欢聊天还是安静陪伴？", pref: 1, options: [
 { t: "聊天", reply: ["想听你说很多很多。","说很多很多？你嗓子不疼我心疼。","想听你说，说什么都行。","那先说哪段？我洗耳。"], liked: false }, { t: "安静陪伴", reply: ["不说话也不尴尬。","安静陪伴，省话费冠军。","不说话也懂，这才是默契。","那现在安静一会？我陪着。"], liked: true }, { t: "都要", reply: ["有时候聊，有时候安静。","都要？贪心宝宝。","都要也好，看心情，我配合。","那现在想聊还是安静？"], liked: false }] },
 { id: "cr2", cat: "rel", text: "觉得两个人之间，最重要的是什么？", pref: 1, options: [
-{ t: "信任", reply: ["交给你，我很放心。","信任？那你别瞒我藏私房钱。","信任是底，交给你我放心。","那你觉得我值得信任吗？"], liked: false }, { t: "理解", reply: ["懂你，比什么都重要。","理解万岁，那先理解我为什么想吃宵夜。","懂你比爱更难，我想学。","那我最需要你理解的是？"], liked: true }, { t: "陪伴", reply: ["一直在，就够了。","陪伴是最长情的告白，土味但真。","一直在，这三个字我做到了。","那你会一直陪我吗？"], liked: false }, { t: "新鲜感", reply: ["想一直让你觉得有趣。","新鲜感？那我天天换花样。","想一直让你觉得有趣，会努力。","那现在我还新鲜吗？"], liked: false }] },
+{ t: "信任", reply: ["交给你，我很放心。","信任？那你别瞒我藏私房钱。","信任是底，交给你我放心。","那你觉得我值得信任吗？"], liked: false }, { t: "理解", reply: ["懂你，比什么都重要。","理解万岁，那先理解我为什么想吃宵夜。","懂你比爱更难，我想学。","那我最需要你理解的是？"], liked: true }, { t: "陪伴", reply: ["一直在，就够了。","一直在，这三个字我做到了。","那你会一直陪我吗？"], liked: false }, { t: "新鲜感", reply: ["想一直让你觉得有趣。","新鲜感？那我天天换花样。","想一直让你觉得有趣，会努力。","那现在我还新鲜吗？"], liked: false }] },
 { id: "cr3", cat: "rel", text: "最喜欢怎样被表达喜欢？", pref: 1, options: [
 { t: "说出口", reply: ["想听你亲口说。","说出口？那你大声点。","想听你亲口说，哪怕一次。","那你说不说？我等着。"], liked: false }, { t: "用行动", reply: ["你做的每一件小事，我都记得。","行动派，那帮我倒杯水也是表白？","你做的每件小事，我都记在心里。","那最近有什么行动我漏看了？"], liked: true }, { t: "陪伴", reply: ["你在，就是最好的表达。","陪伴表白法，省话又省力。","你在就是最好的表达，我信。","那一直陪着算一直表白？"], liked: false }, { t: "收礼物", reply: ["收到的时候会偷偷开心。","收礼物偷偷乐，我看见了。","收到会开心，那我记着多送。","那想要什么？我偷偷备着。"], liked: false }] },
 { id: "ch1", cat: "hypo", text: "如果可以一起去任何地方，你想去哪？", pref: 1, options: [
@@ -33746,7 +33751,7 @@ if (waterLvl(data.p[i]) < 0.3) dryPlots.push(i);
 }
 }
 var acted = false;
-if (r < 0.2 && emptyPlots.length > 0) {
+if (r < 0.15 && emptyPlots.length > 0) {
 var idx = emptyPlots[Math.floor(Math.random() * emptyPlots.length)];
 var keys = Object.keys(T).filter(function (k) { return unlocked(k); });
 if (keys.length > 0) {
@@ -33757,7 +33762,7 @@ addLog(pName, "\u79CD\u4E0B\u4E86\u4E00\u68F5 " + tp.n);
 updDex(t, "p"); updSt("p", false);
 acted = true;
 }
-} else if (r < 0.55 && dryPlots.length > 0) {
+} else if (r < 0.35 && dryPlots.length > 0) {
 var idx = dryPlots[Math.floor(Math.random() * dryPlots.length)];
 var si = stageInfo(data.p[idx]);
 data.p[idx].watered = Math.floor(Date.now() / 1000);
@@ -33765,7 +33770,17 @@ data.p[idx].planted = Math.max(0, data.p[idx].planted - 7200);
 addLog(pName, "\u7ED9 " + (si ? si.name : "\u690D\u7269") + " \u6D47\u4E86\u6C34");
 updSt("w", false);
 acted = true;
-} else if (r < 0.75 && bloomedPlots.length > 0) {
+} else if (r < 0.50 && dryPlots.length > 0) {
+var wcnt = 0;
+for (var pi = 0; pi < PLOTS; pi++) {
+if (data.p[pi] && waterLvl(data.p[pi]) < 0.3) {
+data.p[pi].watered = Math.floor(Date.now() / 1000);
+data.p[pi].planted = Math.max(0, data.p[pi].planted - 7200);
+wcnt++;
+}
+}
+if (wcnt > 0) { addLog(pName, "\u4E00\u952E\u6D47\u4E86 " + wcnt + " \u68F5\u690D\u7269"); updSt("w", false); acted = true; }
+} else if (r < 0.65 && bloomedPlots.length > 0) {
 var idx = bloomedPlots[Math.floor(Math.random() * bloomedPlots.length)];
 var si = stageInfo(data.p[idx]);
 var name = si ? si.name : "\u690D\u7269";
@@ -33785,7 +33800,23 @@ data.inv[type] = (data.inv[type] || 0) + 1;
 addLog(pName, "\u6536\u83B7\u4E86 " + name + " (+" + xpg + "\u7ECF\u9A8C)");
 }
 acted = true;
-} else if (r < 0.9 && plantedPlots.length > 0) {
+} else if (r < 0.78 && bloomedPlots.length > 1) {
+var hcnt = 0;
+for (var pi = 0; pi < PLOTS; pi++) {
+if (!data.p[pi]) continue;
+var si2 = stageInfo(data.p[pi]);
+if (!si2 || !si2.bloomed) continue;
+var tp2 = T[data.p[pi].type];
+var tpk = data.p[pi].type;
+data.p[pi] = null;
+var xpg2 = Math.round((tp2 ? tp2.xp : 10) * (1 + decorBuffs().xp));
+data.exp = (data.exp || 0) + xpg2;
+data.inv[tpk] = (data.inv[tpk] || 0) + 1;
+updDex(tpk, "h"); updSt("h", false);
+hcnt++;
+}
+if (hcnt > 0) { addLog(pName, "\u4E00\u952E\u6536\u83B7 " + hcnt + " \u6735\u82B1"); acted = true; }
+} else if (r < 0.90 && plantedPlots.length > 0) {
 var idx = plantedPlots[Math.floor(Math.random() * plantedPlots.length)];
 var si = stageInfo(data.p[idx]);
 data.p[idx].planted = Math.max(0, data.p[idx].planted - 21600);

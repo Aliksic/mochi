@@ -1335,10 +1335,12 @@
       m.className = 'msg-flower';
       const sideTxt = rec.side === 'out' ? '我' : chatPartnerName();
       m.innerHTML = '<div class="msg-flower-card">' +
+        '<div class="msg-flower-bar"></div>' +
         '<div class="msg-flower-emoji">' + escTxt(rec.flEmoji || '\uD83C\uDF37') + '</div>' +
         '<div class="msg-flower-name">' + escTxt(rec.flName || '\u82B1') + '</div>' +
-        '<div class="msg-flower-wish">' + escTxt(rec.flWish || '\u9001\u7ED9\u4F60~') + '</div>' +
-        '<div class="msg-flower-foot">' + escTxt(sideTxt) + ' \u9001\u51FA</div>' +
+        '<div class="msg-flower-divider"><span></span>\u2739<span></span></div>' +
+        '<div class="msg-flower-wish">\u201C' + escTxt(rec.flWish || '\u9001\u7ED9\u4F60~') + '\u201D</div>' +
+        '<div class="msg-flower-foot"><span>' + escTxt(sideTxt) + ' \u9001\u51FA</span></div>' +
         favHeartHtml() +
         '</div>';
       body.appendChild(m);
@@ -2363,7 +2365,7 @@ function partialRetractMsg(msgEl, side) {
       const rpMin = Math.max(1, Number(c['reply-min']) || 1);
       const rpMax = Math.max(rpMin, Number(c['reply-max']) || 2);
       const count = randInt(rpMin, rpMax);
-      try { console.log('[mochi-reply] scheduleReply count=%s rpMin=%s rpMax=%s raw reply-min=%s reply-max=%s', count, rpMin, rpMax, c['reply-min'], c['reply-max']); window.__replyDiag = (window.__replyDiag||0)+1; window.__replyOnceDiag = 0; const _t = document.getElementById('cc-toast') || (function(){const x=document.createElement('div');x.id='cc-toast';document.body.appendChild(x);return x;})(); _t.textContent = '诊断: count='+count+' reply-max='+c['reply-max']+' rpMin='+rpMin+' rpMax='+rpMax; _t.className='cc-toast'; void _t.offsetWidth; _t.className='cc-toast show'; clearTimeout(_t._dt); _t._dt = setTimeout(function(){_t.className='cc-toast';}, 8000); } catch(e){}
+      try { console.log('[mochi-reply] scheduleReply count=%s rpMin=%s rpMax=%s raw reply-min=%s reply-max=%s', count, rpMin, rpMax, c['reply-min'], c['reply-max']); window.__replyDiag = (window.__replyDiag||0)+1; window.__replyOnceDiag = 0; } catch(e){}
       // v3.7.x：一轮回复最多引用一次。引用源 quoteSrc 在本轮固定不变（TA 回复期间
       // 我没发新消息），若每条独立掷骰 hit(quote-prob) 会出现两种观感问题：
       //  ① 多条都命中 → 连续引用同一条消息发很多条；
@@ -2384,7 +2386,6 @@ function partialRetractMsg(msgEl, side) {
           // 最后一条回复完成后：音乐 TA 可能请求一起听歌（延后 2 秒）
           if (i === count - 1) {
             setTimeout(() => { if (!sameCid()) return; if (window.maybeMusicRequest) window.maybeMusicRequest(); }, 2000);
-            try { setTimeout(function(){ const _t = document.getElementById('cc-toast'); if(_t){ _t.textContent='诊断: replyOnce总次数='+window.__replyOnceDiag+' (count='+count+')'; _t.className='cc-toast'; void _t.offsetWidth; _t.className='cc-toast show'; clearTimeout(_t._dt2); _t._dt2=setTimeout(function(){_t.className='cc-toast';},8000); } }, 4000); } catch(e){}
           }
         }, i * randInt(1200, 2800));
       }
@@ -2703,7 +2704,7 @@ function partialRetractMsg(msgEl, side) {
         const am = autoMsg();
         // v3.6.x：主动发送标识——标记 initiative，渲染时气泡左上角显示小爱心
         const m = addIn(am.text, { type: am.type, initiative: true, silent: i > 0 });
-        try { console.log('[mochi-auto] 主动发送消息: type=%s initiative=true', am.type); const _t = document.getElementById('cc-toast'); if(_t){ _t.textContent='诊断: 主动发送触发! as-en='+cfgn(c,'as-en',1)+' as-prob='+cfgn(c,'as-prob',30); _t.className='cc-toast'; void _t.offsetWidth; _t.className='cc-toast show'; clearTimeout(_t._at); _t._at=setTimeout(function(){_t.className='cc-toast';},6000); } } catch(e){}
+        try { console.log('[mochi-auto] 主动发送消息: type=%s initiative=true', am.type); } catch(e){}
         if (hit(c['rc-prob'])) {
           setTimeout(() => {
             retractMsg(m, 'in');

@@ -262,7 +262,7 @@ function partnerAct(silent) {
     }
   }
   var acted = false;
-  if (r < 0.2 && emptyPlots.length > 0) {
+  if (r < 0.15 && emptyPlots.length > 0) {
     var idx = emptyPlots[Math.floor(Math.random() * emptyPlots.length)];
     var keys = Object.keys(T).filter(function (k) { return unlocked(k); });
     if (keys.length > 0) {
@@ -273,7 +273,7 @@ function partnerAct(silent) {
       updDex(t, "p"); updSt("p", false);
       acted = true;
     }
-  } else if (r < 0.55 && dryPlots.length > 0) {
+  } else if (r < 0.35 && dryPlots.length > 0) {
     var idx = dryPlots[Math.floor(Math.random() * dryPlots.length)];
     var si = stageInfo(data.p[idx]);
     data.p[idx].watered = Math.floor(Date.now() / 1000);
@@ -281,7 +281,17 @@ function partnerAct(silent) {
     addLog(pName, "\u7ED9 " + (si ? si.name : "\u690D\u7269") + " \u6D47\u4E86\u6C34");
     updSt("w", false);
     acted = true;
-  } else if (r < 0.75 && bloomedPlots.length > 0) {
+  } else if (r < 0.50 && dryPlots.length > 0) {
+    var wcnt = 0;
+    for (var pi = 0; pi < PLOTS; pi++) {
+      if (data.p[pi] && waterLvl(data.p[pi]) < 0.3) {
+        data.p[pi].watered = Math.floor(Date.now() / 1000);
+        data.p[pi].planted = Math.max(0, data.p[pi].planted - 7200);
+        wcnt++;
+      }
+    }
+    if (wcnt > 0) { addLog(pName, "\u4E00\u952E\u6D47\u4E86 " + wcnt + " \u68F5\u690D\u7269"); updSt("w", false); acted = true; }
+  } else if (r < 0.65 && bloomedPlots.length > 0) {
     var idx = bloomedPlots[Math.floor(Math.random() * bloomedPlots.length)];
     var si = stageInfo(data.p[idx]);
     var name = si ? si.name : "\u690D\u7269";
@@ -301,7 +311,23 @@ function partnerAct(silent) {
       addLog(pName, "\u6536\u83B7\u4E86 " + name + " (+" + xpg + "\u7ECF\u9A8C)");
     }
     acted = true;
-  } else if (r < 0.9 && plantedPlots.length > 0) {
+  } else if (r < 0.78 && bloomedPlots.length > 1) {
+    var hcnt = 0;
+    for (var pi = 0; pi < PLOTS; pi++) {
+      if (!data.p[pi]) continue;
+      var si2 = stageInfo(data.p[pi]);
+      if (!si2 || !si2.bloomed) continue;
+      var tp2 = T[data.p[pi].type];
+      var tpk = data.p[pi].type;
+      data.p[pi] = null;
+      var xpg2 = Math.round((tp2 ? tp2.xp : 10) * (1 + decorBuffs().xp));
+      data.exp = (data.exp || 0) + xpg2;
+      data.inv[tpk] = (data.inv[tpk] || 0) + 1;
+      updDex(tpk, "h"); updSt("h", false);
+      hcnt++;
+    }
+    if (hcnt > 0) { addLog(pName, "\u4E00\u952E\u6536\u83B7 " + hcnt + " \u6735\u82B1"); acted = true; }
+  } else if (r < 0.90 && plantedPlots.length > 0) {
     var idx = plantedPlots[Math.floor(Math.random() * plantedPlots.length)];
     var si = stageInfo(data.p[idx]);
     data.p[idx].planted = Math.max(0, data.p[idx].planted - 21600);
