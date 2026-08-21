@@ -4,6 +4,18 @@
 
 ## 规则
 
+### 2026-08-21（用户需求「桌面小组件每日内容（今日情话/备忘/心情）迁到日历按天查看，主页记录 tab 删掉」）
+- [本会话·完成]（**已构建 verify 10/10 + 新冒烟 verify-cal-notes 15/15 + 旧日历回归 smoke-cal-select 15/15，待提交**）：`src/js/calendar.js`（AI-A 域）+ `src/js/records.js`（AI-A 域）+ `src/template.html`（AI-B 域，日历卡片 + 主页 tab + licence 说明）+ `tools/verify-cal-notes.mjs`（新冒烟脚本）。
+  - **日历页新增三张只读卡片**（「我的留言」卡之后）：TA 的情话 / 我的备忘 / 我的心情，按选中日期切换查看：
+    - 情话读 `quote-history` 按 `date` 字段匹配（桌面 personalize.js renderQuoteOfDay 每天存档），当天无存档时兜底 `getQuoteOfDay()`；
+    - 备忘读 `memo-YYYY-MM-DD`、心情读 `today-mood-YYYY-MM-DD` 快照，老数据回退历史列表按 ts 当天过滤（与 p2-features 本周日常同逻辑）；
+    - 未来日期统一空态「这一天还没有内容」；无记录空态「这一天没有留下情话/没有备忘/没有记录心情」。
+  - **主页移除三个记录 tab**：`联系人今日情话 / 我的今日备忘 / 我的今天的心情`（fav-tab + data-hpanel + records.js 渲染分支 + htab 默认改 av），主页剩换头像/通话/摸鱼/打工 4 个 tab；「本周日常」弹窗保留（用户确认）。
+  - **桌面小组件保留**（用户确认）：编辑仍走桌面卡片；历史查看统一以日历按天切换为入口。
+  - licence 说明同步：主页统计去掉三项、日历区块补充按天查看说明。
+  - ⚠️ 注意：**calendar.js 新增的 renderDayNotes(dd, isFuture) 必须接收 render() 的局部变量作参数**（dd/isFuture 是 render 局部，闭包在 IIFE 顶层引用不到，否则 ReferenceError 中断渲染——首版踩坑）。
+  - ⚠️ 本次构建包含工作区 AI-A 未提交累积改动（chatcard/feed/mail/chat + 产物），提交时确认对方已保存完整。
+
 ### 2026-08-21（用户需求「回复设置里查岗概率设置：设成真的情侣查岗问题，不是拿已有卡片互动」）
 - [本会话·完成]（**已构建 verify 10/10 + 查岗专项 18/18，待提交**）：`src/js/ck-question.js`（完成上一轮遗留的半成品：题库重写 + 接线）+ `src/js/chat.js`（AI-A 域透传 + 挂载）+ `build.mjs`（AI-B 域 jsFiles）+ `tools/verify-ck-question.mjs`（新回归脚本）+ 构建产物。
   - **题库重写（按用户世界观：字卡网站随机出卡 / 梦角灵体两世界 / 甜蜜安稳亲密，不写危机纠错）**：10 道单选（你在干嘛/在哪里/和谁在一起/吃饭没/想我没/睡了没/手机电量/有没有感觉到我(两世界体感)/穿什么颜色/是不是偷偷难过，各 3~5 个选项 + TA 预设回应多条随机）+ 7 道文字题（今天过得怎么样/发一句看到的/十秒内回表情/猜我在干什么/最想做什么/开心小事/如果我在你身边你想做什么）。题目句子简短自然，像字卡网站会出的卡。

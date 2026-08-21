@@ -657,9 +657,9 @@
       else if (/[\(（｡◕(◕)(づ｡(¬)]/.test(c) && /[\)）】)]/.test(c)) kaomoji.push(c);
       else text.push(c);
     });
-    // v3.6.x：字卡池空兜底——用户没在「自定义聊天字卡」里添加文字/颜文字/emoji 字卡时
-    // （内置预设已移除），用系统默认字卡（3260 张）补池，否则联系人回复永远只能
-    // 回兜底文案「收到～」，体验像"不管发什么都只回收到"
+    // v3.6.x：默认字卡混入——「系统预设字卡」开启时，始终把默认主字卡混入 pool.text，
+    // 保证回复多样性（原"三类任一为空才补"会导致用户添加少量自定义字卡后 pool.text 只剩
+    // 自定义几十张，4621 张默认字卡不参与回复，联系人回复总在某个范围内）
     // v3.6.x：兜底必须与「系统预设字卡」开关一致——dc-enabled 关闭时整个兜底不注入
     //   系统字卡；单卡「关闭使用」的字卡也不进池（isDefaultCardOff）
     try {
@@ -669,7 +669,7 @@
       const useChat = window.defaultCardUse ? window.defaultCardUse('chat') : true;
       // v3.8.x：分类开关——已关闭的默认字卡分类不参与兜底注入
       const catOn = window.defaultCardCat || (() => true);
-      if (dcfg.enabled !== false && useChat && (!text.length || !kaomoji.length || !emoji.length)) {
+      if (dcfg.enabled !== false && useChat) {
         if (catOn('main')) {
           const defGrps = (window.getDefaultCardGroups && window.getDefaultCardGroups('main')) || [];
           defGrps.forEach(g => {

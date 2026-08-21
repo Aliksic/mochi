@@ -34,7 +34,8 @@
   };
   // ---- 渲染主页记录 ----
   function histList(key) { try { return JSON.parse(store.get(key) || '[]'); } catch (e) { return []; } }
-  let htab = 'quotes';
+  // v3.9.x：联系人今日情话 / 我的备忘 / 我的心情记录已迁移到日历页按天查看，主页不再保留
+  let htab = 'av';
   // 每日摸鱼值记录
   window.renderFishHistory = function () {
     const el = document.getElementById('home-fish');
@@ -84,36 +85,6 @@
     // 每日摸鱼值记录
     if (showOnly === 'fish') {
       window.renderFishHistory();
-    }
-    // 联系人今日情话记录
-    if (showOnly === 'quotes') {
-      const qEl = document.getElementById('home-quotes');
-      if (qEl) {
-        const list = histList('quote-history');
-        qEl.innerHTML = list.length
-          ? list.map(x => '<div class="tc-listitem"><div class="tc-li-q">' + String(x.text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;') + '</div><div class="tc-li-time">' + x.date + '</div></div>').join('')
-          : '<div class="ta-empty">暂无情话记录</div>';
-      }
-    }
-    // 我的今日备忘记录
-    if (showOnly === 'memos') {
-      const mEl = document.getElementById('home-memos');
-      if (mEl) {
-        const list = histList('memo-history');
-        mEl.innerHTML = list.length
-          ? list.map(x => '<div class="tc-listitem"><div class="tc-li-q">' + String(x.text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;') + '</div><div class="tc-li-time">' + fmtDT(x.ts) + '</div></div>').join('')
-          : '<div class="ta-empty">暂无备忘记录</div>';
-      }
-    }
-    // 我的今天的心情记录
-    if (showOnly === 'moods') {
-      const wEl = document.getElementById('home-moods');
-      if (wEl) {
-        const list = histList('mood-history');
-        wEl.innerHTML = list.length
-          ? list.map(x => '<div class="tc-listitem"><div class="tc-li-q">' + String(x.text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;') + '</div><div class="tc-li-time">' + fmtDT(x.ts) + '</div></div>').join('')
-          : '<div class="ta-empty">暂无心情记录</div>';
-      }
     }
     // 换头像记录（全部事件：直接换 / 邀请同意 / 邀请拒绝 / 我手动更换）
     if (showOnly === 'av') {

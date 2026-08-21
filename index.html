@@ -4745,7 +4745,7 @@ transition: width .4s ease; min-width:0; overflow:hidden;
       </div>
       <div class="splash-dots"><i></i><i></i><i></i></div>
       <div class="splash-brand">小红书@言序（1842523578）</div>
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787326685368">Mochi 字卡传讯 v3.6.195 · 部署于 2026-08-21 23:38</div>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787327824602">Mochi 字卡传讯 v3.6.196 · 部署于 2026-08-21 23:57</div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
       <div class="splash-loading" id="splash-loading">正在加载数据…</div>
@@ -5541,7 +5541,7 @@ transition: width .4s ease; min-width:0; overflow:hidden;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.6.195</div>
+      <div class="ver">Mochi 字卡传讯 v3.6.196</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -5786,6 +5786,7 @@ transition: width .4s ease; min-width:0; overflow:hidden;
           <div class="lic-li">每日首次打开，联系人会在日历留言并触发弹窗</div>
           <div class="lic-li">日历里除了联系人留言，我也可以简单留言</div>
           <div class="lic-li">日历可切换月份查看</div>
+          <div class="lic-li">日历可按天切换查看：联系人当日情话、我的备忘、我的心情（记录来源桌面组件）</div>
           <div class="lic-li">今日心情卡片（心情图标 + 分类标签）</div>
           <div class="lic-li">TA 正在做什么、TA 的留言卡片、我的留言卡片（可编辑留言）</div>
         </div>
@@ -5798,7 +5799,8 @@ transition: width .4s ease; min-width:0; overflow:hidden;
         <div class="cal-card glass">
           <div class="lic-h">记录统计</div>
           <div class="lic-li">桌面【提问记录】统计历史：提问记录、TA 的询问、TA 的小问题、TA 的好奇、TA 的吐槽、我的邀请 / 问问</div>
-          <div class="lic-li">桌面【主页】统计以下历史：联系人今日情话、联系人换头像、通话记录、每日摸鱼值、我的今日备忘、我的今天的心情</div>
+          <div class="lic-li">桌面【主页】统计以下历史：联系人换头像、通话记录、每日摸鱼值、每日打工值</div>
+          <div class="lic-li">联系人今日情话、我的备忘、我的心情的历史可在【日历】里按天切换查看</div>
           <div class="lic-li">桌面【聊天统计】统计：相处记录（第一次聊天时间、最近聊天时间、聊天消息条数、文字数量、收藏记录）、聊天记录（消息比例、最常聊天时间段、最常聊天日期、平均每日消息、最长连续聊天、单日最高消息）、情绪表达（文字字卡 / 情绪 / 心意 / 交流意图使用次数排行）</div>
           <div class="lic-li">占卜记录、帮我决定记录</div>
         </div>
@@ -6362,6 +6364,20 @@ transition: width .4s ease; min-width:0; overflow:hidden;
           </button>
         </div>
 
+        <!-- v3.9.x：每日小记（按天只读查看：联系人今日情话 / 我的备忘 / 我的心情，编辑仍在桌面小组件） -->
+        <div class="cal-card glass" id="cal-quote-card">
+          <div class="cal-card-title">TA 的情话</div>
+          <div class="cal-message" id="cal-quote"></div>
+        </div>
+        <div class="cal-card glass" id="cal-memo-card">
+          <div class="cal-card-title">我的备忘</div>
+          <div class="cal-message cal-mine" id="cal-memo"></div>
+        </div>
+        <div class="cal-card glass" id="cal-mood-card">
+          <div class="cal-card-title">我的心情</div>
+          <div class="cal-message cal-mine" id="cal-mood"></div>
+        </div>
+
         <!-- 月历（可切换月份） -->
         <div class="cal-card glass">
           <div class="cal-month-head">
@@ -6744,20 +6760,13 @@ transition: width .4s ease; min-width:0; overflow:hidden;
         <span class="ch-name">主页</span>
       </div>
       <div class="fav-tabs">
-        <button class="fav-tab sel" data-htab="quotes">联系人今日情话</button>
-        <button class="fav-tab" data-htab="av">换头像记录</button>
+        <button class="fav-tab sel" data-htab="av">换头像记录</button>
         <button class="fav-tab" data-htab="call">通话记录</button>
         <button class="fav-tab" data-htab="fish">每日摸鱼值</button>
         <button class="fav-tab" data-htab="work">每日打工值</button>
-        <button class="fav-tab" data-htab="memos">我的今日备忘</button>
-        <button class="fav-tab" data-htab="moods">我的今天的心情</button>
       </div>
       <div class="cal-scroll">
-        <div class="cal-card glass" data-hpanel="quotes">
-          <div class="cal-card-title">联系人今日情话记录</div>
-          <div id="home-quotes"></div>
-        </div>
-        <div class="cal-card glass" data-hpanel="av" hidden>
+        <div class="cal-card glass" data-hpanel="av">
           <div class="cal-card-title">换头像记录</div>
           <div id="home-av"></div>
         </div>
@@ -6772,14 +6781,6 @@ transition: width .4s ease; min-width:0; overflow:hidden;
         <div class="cal-card glass" data-hpanel="work" hidden>
           <div class="cal-card-title">每日打工值记录</div>
           <div id="home-work"></div>
-        </div>
-        <div class="cal-card glass" data-hpanel="memos" hidden>
-          <div class="cal-card-title">我的今日备忘记录</div>
-          <div id="home-memos"></div>
-        </div>
-        <div class="cal-card glass" data-hpanel="moods" hidden>
-          <div class="cal-card-title">我的今天的心情记录</div>
-          <div id="home-moods"></div>
         </div>
       </div>
     </div>
@@ -12772,7 +12773,7 @@ const dcfg = (window.defaultCardCfg && window.defaultCardCfg()) || {};
 const isOff = window.isDefaultCardOff || null;
 const useChat = window.defaultCardUse ? window.defaultCardUse('chat') : true;
 const catOn = window.defaultCardCat || (() => true);
-if (dcfg.enabled !== false && useChat && (!text.length || !kaomoji.length || !emoji.length)) {
+if (dcfg.enabled !== false && useChat) {
 if (catOn('main')) {
 const defGrps = (window.getDefaultCardGroups && window.getDefaultCardGroups('main')) || [];
 defGrps.forEach(g => {
@@ -19815,6 +19816,13 @@ const out = [];
 Object.keys(g).forEach(t => (g[t] || []).forEach(([name, arr]) => (arr || []).forEach(c => out.push(c))));
 return out;
 };
+window.getPokeCardsFor = function (cid) {
+const raw = (window.storeFor && window.storeFor(cid) || window.xyStore('xy-home-v2:' + cid)).get('cc-groups');
+const g = buildGroupsFrom(raw);
+const out = [];
+(g['poke'] || []).forEach(([name, arr]) => (arr || []).forEach(c => out.push(c)));
+return out;
+};
 window.getMediaCardsFor = function (cid, type) {
 const raw = (window.storeFor && window.storeFor(cid) || window.xyStore('xy-home-v2:' + cid)).get('cc-groups');
 const g = buildGroupsFrom(raw);
@@ -24282,6 +24290,39 @@ el.textContent = msg || (selDate === todayStr() ? '今天想说点什么...' : '
 const btn = document.getElementById('cal-edit-btn');
 if (btn) btn.hidden = selDate !== todayStr();
 }
+function renderDayNotes(dd, isFuture) {
+const futureTip = '这一天还没有内容';
+const histOnDay = function (histKey) {
+try {
+const list = JSON.parse(store.get(histKey) || '[]');
+return list.filter(x => x && x.ts && new Date(x.ts).toDateString() === dd.toDateString())
+.map(x => x.text).filter(Boolean);
+} catch (e) { return []; }
+};
+const qEl = document.getElementById('cal-quote');
+if (qEl) {
+if (isFuture) {
+qEl.textContent = futureTip;
+} else {
+let qt = '';
+try {
+const ql = JSON.parse(store.get('quote-history') || '[]');
+const hit = ql.find(x => x && x.date === selDate);
+qt = hit ? hit.text : '';
+} catch (e) {}
+if (!qt && selDate === todayStr()) {
+try { qt = (window.getQuoteOfDay && window.getQuoteOfDay()) || ''; } catch (e) {}
+}
+qEl.textContent = qt || (selDate === todayStr() ? '今天还没有情话' : '这一天没有留下情话');
+}
+}
+const memo = isFuture ? '' : (store.get('memo-' + selDate) || histOnDay('memo-history').join('；'));
+const mood = isFuture ? '' : (store.get('today-mood-' + selDate) || histOnDay('mood-history').join('；'));
+const memoEl = document.getElementById('cal-memo');
+if (memoEl) memoEl.textContent = isFuture ? futureTip : (memo || '这一天没有备忘');
+const moodEl = document.getElementById('cal-mood');
+if (moodEl) moodEl.textContent = isFuture ? futureTip : (mood || '这一天没有记录心情');
+}
 function render() {
 const parts = selDate.split('-');
 const dd = new Date(+parts[0], +parts[1] - 1, +parts[2]);
@@ -24303,6 +24344,7 @@ if (actEl) actEl.textContent = e ? e.activity : '—';
 const msgEl = document.getElementById('cal-message');
 if (msgEl) msgEl.textContent = e ? e.message : '这一天还没有留言';
 renderMyMessage();
+renderDayNotes(dd, isFuture);
 renderGrid();
 }
 const calApp = document.querySelector('.app[data-app="calendar"]');
@@ -28887,7 +28929,7 @@ callsSave(list);
 if (!document.getElementById('page-home').hidden) render();
 };
 function histList(key) { try { return JSON.parse(store.get(key) || '[]'); } catch (e) { return []; } }
-let htab = 'quotes';
+let htab = 'av';
 window.renderFishHistory = function () {
 const el = document.getElementById('home-fish');
 if (!el) return;
@@ -28931,33 +28973,6 @@ window.renderWorkHistory();
 }
 if (showOnly === 'fish') {
 window.renderFishHistory();
-}
-if (showOnly === 'quotes') {
-const qEl = document.getElementById('home-quotes');
-if (qEl) {
-const list = histList('quote-history');
-qEl.innerHTML = list.length
-? list.map(x => '<div class="tc-listitem"><div class="tc-li-q">' + String(x.text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;') + '</div><div class="tc-li-time">' + x.date + '</div></div>').join('')
-: '<div class="ta-empty">暂无情话记录</div>';
-}
-}
-if (showOnly === 'memos') {
-const mEl = document.getElementById('home-memos');
-if (mEl) {
-const list = histList('memo-history');
-mEl.innerHTML = list.length
-? list.map(x => '<div class="tc-listitem"><div class="tc-li-q">' + String(x.text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;') + '</div><div class="tc-li-time">' + fmtDT(x.ts) + '</div></div>').join('')
-: '<div class="ta-empty">暂无备忘记录</div>';
-}
-}
-if (showOnly === 'moods') {
-const wEl = document.getElementById('home-moods');
-if (wEl) {
-const list = histList('mood-history');
-wEl.innerHTML = list.length
-? list.map(x => '<div class="tc-listitem"><div class="tc-li-q">' + String(x.text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;') + '</div><div class="tc-li-time">' + fmtDT(x.ts) + '</div></div>').join('')
-: '<div class="ta-empty">暂无心情记录</div>';
-}
 }
 if (showOnly === 'av') {
 const avEl = document.getElementById('home-av');
@@ -29912,6 +29927,10 @@ stickerEn: c['ml-sticker-en'] !== undefined ? c['ml-sticker-en'] : 1
 }
 function mailCardPool(cid) {
 const custom = cid ? (window.getCustomCardsFor ? window.getCustomCardsFor(cid) : []) : ((window.getCustomCards && window.getCustomCards()) || []);
+const pokeSet = (function () {
+const pk = cid ? (window.getPokeCardsFor ? window.getPokeCardsFor(cid) : []) : ((window.getPokeCards && window.getPokeCards()) || []);
+return pk.length ? new Set(pk) : null;
+})();
 const text = [], kaomoji = [], emoji = [];
 const defText = [], defKaomoji = [], defEmoji = [];
 const pushDefault = () => {
@@ -29935,6 +29954,7 @@ eg.forEach(g => (g[1] || []).forEach(c => { if (isOff && isOff('emoji', c)) retu
 };
 custom.forEach(s => {
 if (!s || typeof s !== 'string') return;
+if (pokeSet && pokeSet.has(s)) return;
 if (/^data:/.test(s)) return;
 if (s.indexOf('|||') >= 0) return;
 let isEmoji = false;
@@ -30539,10 +30559,15 @@ return data
 const TA_COMMENT_POOL = ['收到啦~', '我看到了！', '这条动态好可爱', '记住啦', '我也是这么想的', '嗯嗯，说得对'];
 function cardPool(cid) {
 const cards = cid ? (window.getCustomCardsFor ? window.getCustomCardsFor(cid) : []) : ((window.getCustomCards && window.getCustomCards()) || []);
+const pokeSet = (function () {
+const pk = cid ? (window.getPokeCardsFor ? window.getPokeCardsFor(cid) : []) : ((window.getPokeCards && window.getPokeCards()) || []);
+return pk.length ? new Set(pk) : null;
+})();
 const text = [], kaomoji = [], emoji = [];
 const mediaSticker = cid ? (window.getMediaCardsFor ? window.getMediaCardsFor(cid, 'sticker') : []) : ((window.getMediaCards && window.getMediaCards('sticker')) || []);
 const mediaImage = cid ? (window.getMediaCardsFor ? window.getMediaCardsFor(cid, 'image') : []) : ((window.getMediaCards && window.getMediaCards('image')) || []);
 cards.forEach(c => {
+if (pokeSet && pokeSet.has(c)) return;
 if (typeof c === 'string' && c.indexOf('data:') === 0) return; // dataURL 已按媒体分类
 if (typeof c === 'string' && c.indexOf('|||') >= 0) return;
 if (/[\uD800-\uDBFF]/.test(c) || /^[😀-🙏🌀-🫿]/u.test(c)) emoji.push(c);

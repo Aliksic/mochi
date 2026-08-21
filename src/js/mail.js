@@ -468,6 +468,10 @@
   //   「整体概率 + 分类占比」（聊天默认字卡-设置页）混入默认字卡，与聊天回复一致
   function mailCardPool(cid) {
     const custom = cid ? (window.getCustomCardsFor ? window.getCustomCardsFor(cid) : []) : ((window.getCustomCards && window.getCustomCards()) || []);
+    const pokeSet = (function () {
+      const pk = cid ? (window.getPokeCardsFor ? window.getPokeCardsFor(cid) : []) : ((window.getPokeCards && window.getPokeCards()) || []);
+      return pk.length ? new Set(pk) : null;
+    })();
     const text = [], kaomoji = [], emoji = [];
     // 默认字卡独立子池（与自定义分开放，供按概率混入；不做合并）
     const defText = [], defKaomoji = [], defEmoji = [];
@@ -492,6 +496,7 @@
     };
     custom.forEach(s => {
       if (!s || typeof s !== 'string') return;
+      if (pokeSet && pokeSet.has(s)) return;
       if (/^data:/.test(s)) return;
       // v3.6.x：语音字卡（文件名|||audio;base64）不以 data: 开头，需单独丢弃——
       //   否则整段音频 base64 会被当文字写进信件

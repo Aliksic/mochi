@@ -1095,6 +1095,7 @@
           <div class="lic-li">每日首次打开，联系人会在日历留言并触发弹窗</div>
           <div class="lic-li">日历里除了联系人留言，我也可以简单留言</div>
           <div class="lic-li">日历可切换月份查看</div>
+          <div class="lic-li">日历可按天切换查看：联系人当日情话、我的备忘、我的心情（记录来源桌面组件）</div>
           <div class="lic-li">今日心情卡片（心情图标 + 分类标签）</div>
           <div class="lic-li">TA 正在做什么、TA 的留言卡片、我的留言卡片（可编辑留言）</div>
         </div>
@@ -1107,7 +1108,8 @@
         <div class="cal-card glass">
           <div class="lic-h">记录统计</div>
           <div class="lic-li">桌面【提问记录】统计历史：提问记录、TA 的询问、TA 的小问题、TA 的好奇、TA 的吐槽、我的邀请 / 问问</div>
-          <div class="lic-li">桌面【主页】统计以下历史：联系人今日情话、联系人换头像、通话记录、每日摸鱼值、我的今日备忘、我的今天的心情</div>
+          <div class="lic-li">桌面【主页】统计以下历史：联系人换头像、通话记录、每日摸鱼值、每日打工值</div>
+          <div class="lic-li">联系人今日情话、我的备忘、我的心情的历史可在【日历】里按天切换查看</div>
           <div class="lic-li">桌面【聊天统计】统计：相处记录（第一次聊天时间、最近聊天时间、聊天消息条数、文字数量、收藏记录）、聊天记录（消息比例、最常聊天时间段、最常聊天日期、平均每日消息、最长连续聊天、单日最高消息）、情绪表达（文字字卡 / 情绪 / 心意 / 交流意图使用次数排行）</div>
           <div class="lic-li">占卜记录、帮我决定记录</div>
         </div>
@@ -1671,6 +1673,20 @@
           </button>
         </div>
 
+        <!-- v3.9.x：每日小记（按天只读查看：联系人今日情话 / 我的备忘 / 我的心情，编辑仍在桌面小组件） -->
+        <div class="cal-card glass" id="cal-quote-card">
+          <div class="cal-card-title">TA 的情话</div>
+          <div class="cal-message" id="cal-quote"></div>
+        </div>
+        <div class="cal-card glass" id="cal-memo-card">
+          <div class="cal-card-title">我的备忘</div>
+          <div class="cal-message cal-mine" id="cal-memo"></div>
+        </div>
+        <div class="cal-card glass" id="cal-mood-card">
+          <div class="cal-card-title">我的心情</div>
+          <div class="cal-message cal-mine" id="cal-mood"></div>
+        </div>
+
         <!-- 月历（可切换月份） -->
         <div class="cal-card glass">
           <div class="cal-month-head">
@@ -2053,20 +2069,13 @@
         <span class="ch-name">主页</span>
       </div>
       <div class="fav-tabs">
-        <button class="fav-tab sel" data-htab="quotes">联系人今日情话</button>
-        <button class="fav-tab" data-htab="av">换头像记录</button>
+        <button class="fav-tab sel" data-htab="av">换头像记录</button>
         <button class="fav-tab" data-htab="call">通话记录</button>
         <button class="fav-tab" data-htab="fish">每日摸鱼值</button>
         <button class="fav-tab" data-htab="work">每日打工值</button>
-        <button class="fav-tab" data-htab="memos">我的今日备忘</button>
-        <button class="fav-tab" data-htab="moods">我的今天的心情</button>
       </div>
       <div class="cal-scroll">
-        <div class="cal-card glass" data-hpanel="quotes">
-          <div class="cal-card-title">联系人今日情话记录</div>
-          <div id="home-quotes"></div>
-        </div>
-        <div class="cal-card glass" data-hpanel="av" hidden>
+        <div class="cal-card glass" data-hpanel="av">
           <div class="cal-card-title">换头像记录</div>
           <div id="home-av"></div>
         </div>
@@ -2081,14 +2090,6 @@
         <div class="cal-card glass" data-hpanel="work" hidden>
           <div class="cal-card-title">每日打工值记录</div>
           <div id="home-work"></div>
-        </div>
-        <div class="cal-card glass" data-hpanel="memos" hidden>
-          <div class="cal-card-title">我的今日备忘记录</div>
-          <div id="home-memos"></div>
-        </div>
-        <div class="cal-card glass" data-hpanel="moods" hidden>
-          <div class="cal-card-title">我的今天的心情记录</div>
-          <div id="home-moods"></div>
         </div>
       </div>
     </div>

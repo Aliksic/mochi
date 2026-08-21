@@ -198,6 +198,47 @@
     if (btn) btn.hidden = selDate !== todayStr();
   }
 
+  // v3.9.x：每日小记（TA 的情话 / 我的备忘 / 我的心情）——按选中日期只读查看。
+  // 编辑仍在桌面小组件（今日情话系统生成；备忘/心情点桌面卡片改）；主页记录 tab 已移除，
+  // 历史查看统一以日历按天切换为入口。未来日期只显示空态提示（与 getDayEntry 一致）。
+  function renderDayNotes(dd, isFuture) {
+    const futureTip = '这一天还没有内容';
+    // 老版本没有按日快照（memo-YYYY-MM-DD / today-mood-YYYY-MM-DD），用历史列表按 ts 匹配当天
+    const histOnDay = function (histKey) {
+      try {
+        const list = JSON.parse(store.get(histKey) || '[]');
+        return list.filter(x => x && x.ts && new Date(x.ts).toDateString() === dd.toDateString())
+          .map(x => x.text).filter(Boolean);
+      } catch (e) { return []; }
+    };
+    // TA 的情话：quote-history 每天一条，按 date 字段匹配
+    const qEl = document.getElementById('cal-quote');
+    if (qEl) {
+      if (isFuture) {
+        qEl.textContent = futureTip;
+      } else {
+        let qt = '';
+        try {
+          const ql = JSON.parse(store.get('quote-history') || '[]');
+          const hit = ql.find(x => x && x.date === selDate);
+          qt = hit ? hit.text : '';
+        } catch (e) {}
+        // 当天还没存档（极端情况）：按当天种子现取一句
+        if (!qt && selDate === todayStr()) {
+          try { qt = (window.getQuoteOfDay && window.getQuoteOfDay()) || ''; } catch (e) {}
+        }
+        qEl.textContent = qt || (selDate === todayStr() ? '今天还没有情话' : '这一天没有留下情话');
+      }
+    }
+    // 我的备忘 / 我的心情：按日快照优先，回退当天历史（多天多条用；连接）
+    const memo = isFuture ? '' : (store.get('memo-' + selDate) || histOnDay('memo-history').join('；'));
+    const mood = isFuture ? '' : (store.get('today-mood-' + selDate) || histOnDay('mood-history').join('；'));
+    const memoEl = document.getElementById('cal-memo');
+    if (memoEl) memoEl.textContent = isFuture ? futureTip : (memo || '这一天没有备忘');
+    const moodEl = document.getElementById('cal-mood');
+    if (moodEl) moodEl.textContent = isFuture ? futureTip : (mood || '这一天没有记录心情');
+  }
+
   function render() {
     const parts = selDate.split('-');
     const dd = new Date(+parts[0], +parts[1] - 1, +parts[2]);
@@ -220,6 +261,7 @@
     const msgEl = document.getElementById('cal-message');
     if (msgEl) msgEl.textContent = e ? e.message : '这一天还没有留言';
     renderMyMessage();
+    renderDayNotes(dd, isFuture);
     renderGrid();
   }
 

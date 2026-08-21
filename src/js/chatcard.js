@@ -1766,6 +1766,13 @@
     Object.keys(g).forEach(t => (g[t] || []).forEach(([name, arr]) => (arr || []).forEach(c => out.push(c))));
     return out;
   };
+  window.getPokeCardsFor = function (cid) {
+    const raw = (window.storeFor && window.storeFor(cid) || window.xyStore('xy-home-v2:' + cid)).get('cc-groups');
+    const g = buildGroupsFrom(raw);
+    const out = [];
+    (g['poke'] || []).forEach(([name, arr]) => (arr || []).forEach(c => out.push(c)));
+    return out;
+  };
   window.getMediaCardsFor = function (cid, type) {
     const raw = (window.storeFor && window.storeFor(cid) || window.xyStore('xy-home-v2:' + cid)).get('cc-groups');
     const g = buildGroupsFrom(raw);

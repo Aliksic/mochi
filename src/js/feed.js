@@ -195,10 +195,15 @@
   // ---- TA 内容素材池：调用聊天字卡库（主字卡/颜文字/emoji/表情包/图片），缺省用内置池 ----
   function cardPool(cid) {
     const cards = cid ? (window.getCustomCardsFor ? window.getCustomCardsFor(cid) : []) : ((window.getCustomCards && window.getCustomCards()) || []);
+    const pokeSet = (function () {
+      const pk = cid ? (window.getPokeCardsFor ? window.getPokeCardsFor(cid) : []) : ((window.getPokeCards && window.getPokeCards()) || []);
+      return pk.length ? new Set(pk) : null;
+    })();
     const text = [], kaomoji = [], emoji = [];
     const mediaSticker = cid ? (window.getMediaCardsFor ? window.getMediaCardsFor(cid, 'sticker') : []) : ((window.getMediaCards && window.getMediaCards('sticker')) || []);
     const mediaImage = cid ? (window.getMediaCardsFor ? window.getMediaCardsFor(cid, 'image') : []) : ((window.getMediaCards && window.getMediaCards('image')) || []);
     cards.forEach(c => {
+      if (pokeSet && pokeSet.has(c)) return;
       if (typeof c === 'string' && c.indexOf('data:') === 0) return; // dataURL 已按媒体分类
       // v3.6.x：语音字卡（文件名|||audio;base64）不以 data: 开头，需单独丢弃——
       //   否则整段音频 base64 会被当文字拼进朋友圈正文/评论
