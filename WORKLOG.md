@@ -4,6 +4,12 @@
 
 ## 规则
 
+### 2026-08-22（用户反馈「苹果14 默认浏览器聊天输入栏每打一个字屏幕闪一下」）
+- [AI-B·完成]（**已构建 verify 10/10，已提交 db91f6b 并推送上线**）：`src/js/mobile-adapt.js`。
+  - 根因：iOS Safari 上 #chat-input 是 contenteditable div，打字时每字触发 visualViewport resize/scroll → syncIosKb 无条件 pinScrollTop() → scrollTo(0,0) 与系统让 caret 可见的微滚打架，每打一字整页跳一次 = 闪屏。
+  - 修复：pinScrollTop 限键盘开合动画窗口（500ms）内执行（_pinUntil 时间戳），稳态打字不再 pin；.phone height 更新保留（值不变不重排）。键盘动画期防灰底露出逻辑不变。
+  - 注：mobile-adapt.js 源改动随 6c3e45e 入库，本次 db91f6b 为构建产物上线 + data-backup.js 备份导入前缀检测/确认弹窗增强；本地原领先 origin 9 提交，push 后线上获得修复。
+
 ### 2026-08-21（用户需求「桌面小组件每日内容（今日情话/备忘/心情）迁到日历按天查看，主页记录 tab 删掉」）
 - [本会话·完成]（**已构建 verify 10/10 + 新冒烟 verify-cal-notes 15/15 + 旧日历回归 smoke-cal-select 15/15，待提交**）：`src/js/calendar.js`（AI-A 域）+ `src/js/records.js`（AI-A 域）+ `src/template.html`（AI-B 域，日历卡片 + 主页 tab + licence 说明）+ `tools/verify-cal-notes.mjs`（新冒烟脚本）。
   - **日历页新增三张只读卡片**（「我的留言」卡之后）：TA 的情话 / 我的备忘 / 我的心情，按选中日期切换查看：
