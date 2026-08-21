@@ -1140,3 +1140,5 @@
   - ⚠️ 遗留：`tools/.probe-chat-layout.mjs`、`tools/diag-ta-ask-single-input.mjs` 未跟踪未提交，建议加 .gitignore 或删除。
 
 - 2026-08-22 00:58: 修复真我手机Edge导出/导入完全无反应（7caf65f 已构建提交）——导出改三级降级(navigator.share→showSaveFilePicker→a[download]挂DOM)，导入input挂DOM再click；涉及 src/js/data-backup.js
+
+- 2026-08-22 01:05: 用户反馈「导入提示 备份文件里没有 mochi数据（键前缀不匹配）」——该文案是 db91f6b 之前的旧版硬校验；db91f6b 已改前缀兼容（探测→键尾匹配→重写导入）。本会话再修兼容分支三处残留缺陷（**已随 6dde750 提交**，并行会话 git add -A 带入，verify 10/10 + 前缀单测 10/10）：① mochiKeyTails 从 v3.6 初期 13 键扩充到 v3.6~v3.9 全量（群聊 gc-*/占卜 divine-*/每日小记 quote-history/memo-*/摸鱼工作 day-fish-*/work-day-add 等新键缺位会误拒）；② 新增多桌面命名空间结构判定 deskHit（键去掉前缀后第一段是 default: 或 c<数字>:，mochi 独有，覆盖"备份只有新功能键"场景）；③ app 标识不匹配但键前缀 xy-home-v2:（mochi 独有前缀）时放行导入（原实现直接拒绝 fork/手改 app 字段的备份）。
