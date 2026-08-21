@@ -9,6 +9,10 @@
 //      - 修复后：我发送的消息一律贴底 → scrollTop === scrollHeight - clientHeight。
 //   4. 翻旧消息（把 scrollTop 拉回中部）时 TA 消息进来 → 不打断阅读位置（守卫仍生效）。
 //   5. 表情包面板打开 → 贴底保持最新可见。
+//   6. 带图消息（图片延迟 400ms 加载）→ 图片解码后 scrollHeight 变化，onload 补滚贴底。
+//   7. 翻旧消息时带图消息图片加载完成 → 仍不打断（in 消息贴底守卫 + 时间窗过滤）。
+//   前置：禁用自动回复（rs-min/max=9999s、rn-prob=0、as-en=0）——否则 scheduleReply 的
+//   「正在输入」行在 1~40s 内随机占位/消失（hideTyping 滚底）会与断言产生时间竞态。
 // 需要：Node 21+ + 本机 Chrome/Edge（CHROME_PATH 可指定）
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:http';
