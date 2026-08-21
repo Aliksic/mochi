@@ -132,12 +132,8 @@
     }
     const json = JSON.stringify(data);
     const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'mochi数据备份_' + new Date().toISOString().slice(0, 10) + '.json';
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    const fname = 'mochi数据备份_' + new Date().toISOString().slice(0, 10) + '.json';
+    const sizeKB = Math.round(json.length / 1024);
     // v3.6.x：记录最近一次成功导出时间——备份提醒条（pwa.js）据此判断是否该提醒
     try { localStorage.setItem('xy-home-v2:__last-backup', String(Date.now())); } catch (e) {}
     // v3.7.0：同步把导出 JSON 写入 IndexedDB 副本键——启动时若检测到数据丢失，
@@ -145,7 +141,49 @@
     if (window.idbSet) {
       try { window.idbSet(SNAPSHOT_KEY, json); } catch (e) {}
     }
-    toast('数据已导出（' + Math.round(json.length / 1024) + ' KB，全部数据完整）');
+    // v3.9.x：修复真我手机 Edge（Android Chromium）导出完全没反应——
+    // 直接合成 a.click() 下载在该环境下会被浏览器静默拦截（需用户激活且下载行为受限）。
+    // 改为三级降级保存：
+    // ① 系统分享面板 navigator.share（Android 上可存到文件管理 / 发微信、QQ，最直观）
+    // ② 系统保存框 showSaveFilePicker（File System Access API，Android Chrome/Edge 86+ 支持）
+    // ③ 传统 a[download] 下载（必须先挂载 DOM 再 click，未挂载时部分浏览器不触发）
+    let saved = false;
+    const file = new File([blob], fname, { type: 'application/json;charset=utf-8' });
+    if (!saved && navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], title: 'mochi 数据备份' });
+        saved = true;
+      } catch (e) {
+        // 用户取消（AbortError）→ 提示；无激活/不支持/失败 → 静默降级到下一级
+        if (e && e.name === 'AbortError') { toast('已取消分享'); }
+      }
+    }
+    if (!saved && window.showSaveFilePicker) {
+      try {
+        const handle = await window.showSaveFilePicker({
+          suggestedName: fname,
+          types: [{ description: 'JSON 备份', accept: { 'application/json': ['.json'] } }]
+        });
+        const w = await handle.createWritable();
+        await w.write(blob);
+        await w.close();
+        saved = true;
+      } catch (e) {
+        if (e && e.name === 'AbortError') { toast('已取消保存'); }
+      }
+    }
+    if (!saved) {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = fname;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+      // 下载仍可能被浏览器拦截——备份已自动存入本机缓存副本，可从「导入数据」恢复
+      toast('已尝试下载（' + sizeKB + ' KB）。若未出现下载，备份已自动存到本机缓存，可稍后从「导入数据」恢复');
+      return;
+    }
+    toast('数据已导出（' + sizeKB + ' KB，全部数据完整）');
   }
 
   // v3.5.101：导入前预览备份摘要——显示导出时间/键数/聊天条数/头像/摸鱼累计，
@@ -545,14 +583,21 @@
   const importRow = document.getElementById('row-import');
   if (importRow) {
     importRow.addEventListener('click', () => {
+      // v3.9.x：修复真我手机 Edge 文件选择器不弹出——动态创建的 file input 必须
+      // 先挂载到 DOM 再 click()，未挂载时部分 Android 浏览器会静默忽略合成点击
       const input = document.createElement('input');
       input.type = 'file';
       input.accept = '.json,application/json';
+      input.style.display = 'none';
+      document.body.appendChild(input);
       input.onchange = () => {
         const f = input.files && input.files[0];
+        try { input.remove(); } catch (e) {}
         if (f) doImport(f);
       };
       input.click();
+      // 兜底：用户一直不选文件时清理隐藏 input（onchange 触发后已 remove，仅防泄漏）
+      setTimeout(() => { try { if (input.parentNode) input.remove(); } catch (e) {} }, 120000);
     });
   }
 })();

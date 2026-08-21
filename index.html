@@ -4749,7 +4749,7 @@ transition: width .4s ease; min-width:0; overflow:hidden;
       </div>
       <div class="splash-dots"><i></i><i></i><i></i></div>
       <div class="splash-brand">小红书@言序（1842523578）</div>
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787329532961">Mochi 字卡传讯 v3.6.200 · 部署于 2026-08-22 00:25</div>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787331496363">Mochi 字卡传讯 v3.6.202 · 部署于 2026-08-22 00:58</div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
       <div class="splash-loading" id="splash-loading">正在加载数据…</div>
@@ -5545,7 +5545,7 @@ transition: width .4s ease; min-width:0; overflow:hidden;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.6.200</div>
+      <div class="ver">Mochi 字卡传讯 v3.6.202</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -36499,17 +36499,47 @@ add(k, v);
 }
 const json = JSON.stringify(data);
 const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
-const a = document.createElement('a');
-a.href = URL.createObjectURL(blob);
-a.download = 'mochi数据备份_' + new Date().toISOString().slice(0, 10) + '.json';
-document.body.appendChild(a);
-a.click();
-setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+const fname = 'mochi数据备份_' + new Date().toISOString().slice(0, 10) + '.json';
+const sizeKB = Math.round(json.length / 1024);
 try { localStorage.setItem('xy-home-v2:__last-backup', String(Date.now())); } catch (e) {}
 if (window.idbSet) {
 try { window.idbSet(SNAPSHOT_KEY, json); } catch (e) {}
 }
-toast('数据已导出（' + Math.round(json.length / 1024) + ' KB，全部数据完整）');
+let saved = false;
+const file = new File([blob], fname, { type: 'application/json;charset=utf-8' });
+if (!saved && navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+try {
+await navigator.share({ files: [file], title: 'mochi 数据备份' });
+saved = true;
+} catch (e) {
+if (e && e.name === 'AbortError') { toast('已取消分享'); }
+}
+}
+if (!saved && window.showSaveFilePicker) {
+try {
+const handle = await window.showSaveFilePicker({
+suggestedName: fname,
+types: [{ description: 'JSON 备份', accept: { 'application/json': ['.json'] } }]
+});
+const w = await handle.createWritable();
+await w.write(blob);
+await w.close();
+saved = true;
+} catch (e) {
+if (e && e.name === 'AbortError') { toast('已取消保存'); }
+}
+}
+if (!saved) {
+const a = document.createElement('a');
+a.href = URL.createObjectURL(blob);
+a.download = fname;
+document.body.appendChild(a);
+a.click();
+setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+toast('已尝试下载（' + sizeKB + ' KB）。若未出现下载，备份已自动存到本机缓存，可稍后从「导入数据」恢复');
+return;
+}
+toast('数据已导出（' + sizeKB + ' KB，全部数据完整）');
 }
 function backupSummary(data) {
 const fmtMB = (n) => (n / 1048576).toFixed(1) + ' MB';
@@ -36846,11 +36876,15 @@ importRow.addEventListener('click', () => {
 const input = document.createElement('input');
 input.type = 'file';
 input.accept = '.json,application/json';
+input.style.display = 'none';
+document.body.appendChild(input);
 input.onchange = () => {
 const f = input.files && input.files[0];
+try { input.remove(); } catch (e) {}
 if (f) doImport(f);
 };
 input.click();
+setTimeout(() => { try { if (input.parentNode) input.remove(); } catch (e) {} }, 120000);
 });
 }
 })();
