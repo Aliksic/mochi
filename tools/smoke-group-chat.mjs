@@ -115,8 +115,8 @@ await sleep(500);
 check('聊天设置页已进入', await evalJs("(function(){var p=document.getElementById('page-chat-settings');return !!p&&!p.hidden;})()"));
 
 // ---- 用例 2：开启群聊开关 ----
-check('聊天设置页有「开启群聊」开关', await evalJs("!!document.getElementById('cs-group-chat')"));
-await evalJs("(function(){var cb=document.getElementById('cs-group-chat');cb.checked=true;cb.dispatchEvent(new Event('change',{bubbles:true}));return true;})()");
+check('聊天设置页有「开启群聊」开关', await evalJs("!!document.getElementById('sf-group-chat')"));
+await evalJs("(function(){var cb=document.getElementById('sf-group-chat');cb.checked=true;cb.dispatchEvent(new Event('change',{bubbles:true}));return true;})()");
 await sleep(500);
 await evalJs("(function(){var b=document.getElementById('cs-back');if(b)b.click();return true;})()");
 await sleep(400);
@@ -153,9 +153,9 @@ for (let i = 0; i < 30; i++) {
 }
 check('成员有回复消息', inCount >= 1, 'inCount=' + inCount);
 
-// ---- 用例 7：回复消息带成员昵称 ----
+// ---- 用例 7：回复消息不显示成员昵称（与普通聊天页一致） ----
 const hasName = await evalJs("(function(){var n=document.querySelector('#gc-body .msg-in .gc-from-name');return !!n&&n.textContent.length>0;})()");
-check('回复消息显示成员昵称', hasName === true);
+check('回复消息不显示成员昵称', hasName === false);
 
 // ---- 用例 8：消息已持久化 ----
 const stored = await evalJs("(function(){try{var v=localStorage.getItem('xy-home-v2:group-chat-msgs');if(!v)return false;var a=JSON.parse(v);return Array.isArray(a)&&a.length>=2;}catch(e){return false;}})()");
@@ -187,7 +187,7 @@ await evalJs("(function(){var a=document.querySelector('.app[data-app=\"chat\"]'
 await sleep(700);
 await evalJs("(function(){var b=document.getElementById('chat-settings-btn');if(b)b.click();return true;})()");
 await sleep(500);
-await evalJs("(function(){var cb=document.getElementById('cs-group-chat');cb.checked=false;cb.dispatchEvent(new Event('change',{bubbles:true}));return true;})()");
+await evalJs("(function(){var cb=document.getElementById('sf-group-chat');cb.checked=false;cb.dispatchEvent(new Event('change',{bubbles:true}));return true;})()");
 await sleep(500);
 await evalJs("(function(){var b=document.getElementById('cs-back');if(b)b.click();return true;})()");
 await sleep(400);

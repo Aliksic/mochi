@@ -159,6 +159,131 @@
       });
     });
   }
+  // ================= 聊天专用昵称/头像（与桌面独立） =================
+  // v3.8.x：聊天设置里编辑的昵称/头像只存 cs-lbl-*/cs-avatar-* 键，聊天页只读这套键；
+  // 桌面 deco-widget 的 lbl-*/avatar-* 完全独立。未设时聊天页显示默认占位（TA/我 + 人形图标）。
+  // 头像压缩与桌面 bindAvatar 一致（256px JPEG 0.85），内联实现避免依赖 personalize.js 导出。
+  function compressHead(dataUrl, maxSide) {
+    return new Promise((resolve) => {
+      if (typeof dataUrl === 'string' && dataUrl.length > 8 * 1024 * 1024) { resolve(null); return; }
+      const img = new Image();
+      img.onload = () => {
+        try {
+          if (img.width * img.height > 26000000) { resolve(null); return; }
+          const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+          const w = Math.max(1, Math.round(img.width * scale));
+          const h = Math.max(1, Math.round(img.height * scale));
+          const c = document.createElement('canvas');
+          c.width = w; c.height = h;
+          c.getContext('2d').drawImage(img, 0, 0, w, h);
+          resolve(c.toDataURL('image/jpeg', 0.85));
+        } catch (e) { resolve(null); }
+      };
+      img.onerror = () => resolve(null);
+      img.src = dataUrl;
+    });
+  }
+  function applyProfile() {
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    const lp = store.get('cs-lbl-partner');
+    set('cs-lbl-partner-val', lp || '');
+    const lu = store.get('cs-lbl-user');
+    set('cs-lbl-user-val', lu || '');
+    const ap = store.get('cs-avatar-partner');
+    set('cs-avatar-partner-val', ap ? '已设置' : '');
+    const ar = document.getElementById('cs-avatar-partner-remove');
+    if (ar) ar.hidden = !ap;
+    const au = store.get('cs-avatar-user');
+    set('cs-avatar-user-val', au ? '已设置' : '');
+    const aur = document.getElementById('cs-avatar-user-remove');
+    if (aur) aur.hidden = !au;
+  }
+  applyProfile();
+  const csLp = row('cs-lbl-partner');
+  if (csLp) {
+    csLp.addEventListener('click', () => {
+      if (!window.openModal) return;
+      const cur = store.get('cs-lbl-partner') || '';
+      window.openModal('联系人昵称', cur, (v) => {
+        const val = (v || '').trim();
+        if (val) store.set('cs-lbl-partner', val); else store.remove('cs-lbl-partner');
+        applyProfile();
+        try { if (window.renderChatHeader) window.renderChatHeader(); } catch (e) {}
+      }, { maxlength: 30 });
+    });
+  }
+  const csLu = row('cs-lbl-user');
+  if (csLu) {
+    csLu.addEventListener('click', () => {
+      if (!window.openModal) return;
+      const cur = store.get('cs-lbl-user') || '';
+      window.openModal('我的昵称', cur, (v) => {
+        const val = (v || '').trim();
+        if (val) store.set('cs-lbl-user', val); else store.remove('cs-lbl-user');
+        applyProfile();
+      }, { maxlength: 30 });
+    });
+  }
+  const csAp = row('cs-avatar-partner');
+  if (csAp) {
+    csAp.addEventListener('click', () => {
+      const input = document.createElement('input');
+      input.type = 'file'; input.accept = 'image/*';
+      input.onchange = () => {
+        const f = input.files && input.files[0];
+        if (!f) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          compressHead(reader.result, 256).then(data => {
+            if (!data) { toast('图片过大或格式不支持，请换一张小图'); return; }
+            store.set('cs-avatar-partner', data);
+            applyProfile();
+            try { if (window.refreshChatAvatars) window.refreshChatAvatars(); } catch (e) {}
+          });
+        };
+        reader.readAsDataURL(f);
+      };
+      input.click();
+    });
+  }
+  const csApRm = row('cs-avatar-partner-remove');
+  if (csApRm) {
+    csApRm.addEventListener('click', () => {
+      store.remove('cs-avatar-partner');
+      applyProfile();
+      try { if (window.refreshChatAvatars) window.refreshChatAvatars(); } catch (e) {}
+    });
+  }
+  const csAu = row('cs-avatar-user');
+  if (csAu) {
+    csAu.addEventListener('click', () => {
+      const input = document.createElement('input');
+      input.type = 'file'; input.accept = 'image/*';
+      input.onchange = () => {
+        const f = input.files && input.files[0];
+        if (!f) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          compressHead(reader.result, 256).then(data => {
+            if (!data) { toast('图片过大或格式不支持，请换一张小图'); return; }
+            store.set('cs-avatar-user', data);
+            applyProfile();
+            try { if (window.refreshChatAvatars) window.refreshChatAvatars(); } catch (e) {}
+          });
+        };
+        reader.readAsDataURL(f);
+      };
+      input.click();
+    });
+  }
+  const csAuRm = row('cs-avatar-user-remove');
+  if (csAuRm) {
+    csAuRm.addEventListener('click', () => {
+      store.remove('cs-avatar-user');
+      applyProfile();
+      try { if (window.refreshChatAvatars) window.refreshChatAvatars(); } catch (e) {}
+    });
+  }
   // ================= 双方气泡颜色 / 文字颜色 =================
   // 色板：气泡底色与文字色（v3.6.x：新增颜色设置入口，走 openModal 色板）
   const BUBBLE_BG_COLORS = [
@@ -525,10 +650,18 @@
   //   字体刷新后不应用。数据就绪后兜底再应用一次（applyFont 幂等，重复调用安全）
   document.addEventListener('mochi-restore-done', function () {
     try { applyFont(); } catch (e) {}
+    try { applyProfile(); } catch (e) {}
   });
   // v3.6.x：多桌面——切换联系人后重新应用聊天美化（壁纸/气泡颜色/字号/形状按新桌面）
+  // v3.9.x 修复：气泡 CSS / 全局字体也是按联系人存储（cs-bubble-css / cs-font），
+  // 但注入的 <style>（cs-bubble-style / cs-font-style）是全局标签，切换联系人后必须
+  // 一并重应用/清除，否则 A 桌面的自定义气泡样式/字体会一直盖在 B 桌面上（改一个
+  // 联系人所有联系人的气泡都跟着变）。
   document.addEventListener('contact-switched', function () {
     try { applySettings(); } catch (e) {}
+    try { applyProfile(); } catch (e) {}
+    try { applyCss(); } catch (e) {}
+    try { applyFont(); } catch (e) {}
   });
 
   // v3.7.x：聊天设置顶部的「全屏模式」开关——镜像设置页 #sf-fullscreen（同一状态）。
@@ -606,22 +739,22 @@
     document.addEventListener('contact-switched', syncCsCmh);
   }
 
-  // v3.8.x：聊天设置「开启群聊」开关——每桌面独立（group-chat-enabled，默认关闭）。
+  // v3.8.x：主设置页「开启群聊」开关——每桌面独立（group-chat-enabled，默认关闭）。
   // 开启后桌面聊天按钮右侧显示「群聊」按钮、占卜按钮隐藏（移到隐藏池，可在装修模式添加到其他页）；
   // 关闭恢复原样。写回后广播 group-chat-mode-changed 事件，personalize.js 响应调整桌面图标。
-  const csGc = document.getElementById('cs-group-chat');
-  if (csGc) {
+  const sfGc = document.getElementById('sf-group-chat');
+  if (sfGc) {
     const gcGet = () => { try { return store.get('group-chat-enabled') === '1'; } catch (e) { return false; } };
     const gcSet = (en) => { try { store.set('group-chat-enabled', en ? '1' : '0'); } catch (e) {} };
-    const syncCsGc = () => { const v = gcGet(); if (v !== csGc.checked) csGc.checked = v; };
-    syncCsGc();
-    csGc.addEventListener('change', () => {
-      if (csGc.checked === gcGet()) return;
-      gcSet(csGc.checked);
+    const syncGc = () => { const v = gcGet(); if (v !== sfGc.checked) sfGc.checked = v; };
+    syncGc();
+    sfGc.addEventListener('change', () => {
+      if (sfGc.checked === gcGet()) return;
+      gcSet(sfGc.checked);
       try { document.dispatchEvent(new Event('group-chat-mode-changed')); } catch (e) {}
-      toast(csGc.checked ? '群聊已开启：桌面新增群聊按钮，占卜按钮已隐藏（可在美化装修模式添加到其他页面）' : '群聊已关闭，占卜按钮已恢复');
+      toast(sfGc.checked ? '群聊已开启：桌面新增群聊按钮，占卜按钮已隐藏（可在美化装修模式添加到其他页面）' : '群聊已关闭，占卜按钮已恢复');
     });
-    setInterval(syncCsGc, 500);
-    document.addEventListener('contact-switched', syncCsGc);
+    setInterval(syncGc, 500);
+    document.addEventListener('contact-switched', syncGc);
   }
 })();

@@ -156,8 +156,8 @@
     // 聊天页头像（chat.js 暴露的 fillAvatar）
     try {
       if (window.fillAvatar) {
-        window.fillAvatar('chat-user-av', 'avatar-user');
-        window.fillAvatar('chat-partner-av', 'avatar-partner');
+        window.fillAvatar('chat-user-av', 'cs-avatar-user');
+        window.fillAvatar('chat-partner-av', 'cs-avatar-partner');
       }
     } catch (e) {}
   };
@@ -1371,7 +1371,7 @@
           toast('已导入，刷新生效');
           setTimeout(() => location.reload(), 800);
         } catch (e) { toast('解析失败，请检查文本'); }
-      }, { placeholder: '粘贴对方导出的美化方案文本' });
+      }, { textarea: true, textareaPlaceholder: '粘贴对方导出的美化方案文本' });
     });
   }
 
@@ -1776,8 +1776,18 @@
       const s = slides.pop();
       if (s && s.parentNode) {
         // 该页上的组件移回隐藏池（不随页面删除丢失）
+        // 只移动顶层组件——嵌套子组件（如 p3apps 内的 app-period/app-accounting）
+        // 随父组件整体移动，避免拆散导致空壳
         const pool = ensureWidgetPool();
-        s.querySelectorAll('[data-desk-widget]').forEach(node => pool.appendChild(node));
+        const widgetNodes = Array.prototype.slice.call(s.querySelectorAll('[data-desk-widget]'));
+        widgetNodes.forEach(node => {
+          let parent = node.parentElement, nested = false;
+          while (parent && parent !== s) {
+            if (parent.hasAttribute && parent.hasAttribute('data-desk-widget')) { nested = true; break; }
+            parent = parent.parentElement;
+          }
+          if (!nested) pool.appendChild(node);
+        });
         // 该页上的图片组件直接删除（图片不跨页保留，避免索引错位）
         removeDeskImagesOnPage(delIdx);
         removeDeskTextsOnPage(delIdx);
@@ -1828,6 +1838,7 @@
     }
     if (window.deskRebuild) window.deskRebuild();
     syncPagesUI();
+    setTimeout(function () { if (window.ensureP3) window.ensureP3(); }, 50);
   };
   // 同步页面管理 UI（页数显示 + 每页背景行列表 + 删除按钮显隐）
   const syncPagesUI = () => {
@@ -1923,6 +1934,20 @@
       }
     });
   }
+  const resetDeskRow = document.getElementById('row-desk-reset');
+  if (resetDeskRow) {
+    resetDeskRow.addEventListener('click', () => {
+      window.openModal('恢复默认桌面', '将清除桌面页数、所有页背景图及自定义布局，恢复为默认桌面。确定继续？', (v) => {
+        if (v !== '1') return;
+        try { store.remove('desk-page-count'); } catch (e) {}
+        for (var ri = 0; ri < 5; ri++) { try { store.remove('page-bg-' + ri); } catch (e) {} }
+        try { store.remove('desk-layout'); } catch (e) {}
+        buildDeskPages();
+        setTimeout(function () { if (window.ensureP3) window.ensureP3(); }, 100);
+        toast('已恢复默认桌面');
+      }, { noInput: true, pills: [{ label: '确定恢复默认', value: '1' }] });
+    });
+  }
   buildDeskPages();
   document.addEventListener('contact-switched', buildDeskPages);
   // v3.6.x 修复（刷新后桌面页数消失）：IndexedDB 回填完成前，desk-page-count 若只存于
@@ -1958,7 +1983,7 @@
   // 组件 id 列表（对应 template.html 中 [data-desk-widget]）；组件节点唯一，
   // 「添加」= 把节点移动到目标页（节点移动不重建，内部事件绑定保留）
   const WIDGET_IDS = ['deco', 'quote-row', 'checkin', 'apps', 'music', 'p2apps', 'memo-row', 'week', 'weekend', 'desk-clock', 'desk-calendar', 'desk-timer', 'desk-anniv',
-    'app-chat', 'app-group-chat', 'app-home', 'app-mail', 'app-feed', 'app-calendar', 'app-memory', 'app-divination', 'app-note', 'app-music', 'app-stats', 'app-interact', 'app-checkin'];
+    'app-chat', 'app-group-chat', 'app-home', 'app-mail', 'app-feed', 'app-calendar', 'app-memory', 'app-divination', 'app-note', 'app-music', 'app-stats', 'app-interact', 'app-checkin', 'p3apps', 'app-period', 'app-accounting', 'app-garden'];
   const WIDGET_NAMES = {
     deco: '纪念日卡', 'quote-row': '今日情话 / 已摸鱼', checkin: '打卡横幅', apps: '功能图标(整组)',
     music: '音乐播放器', p2apps: '第二页功能图标(整组)', 'memo-row': '今日备忘 / 心情', week: '本周日常', weekend: '周末倒计时',
@@ -1966,6 +1991,7 @@
     'app-chat': '聊天图标', 'app-group-chat': '群聊图标', 'app-home': '主页图标', 'app-mail': '信箱图标', 'app-feed': '朋友圈图标',
     'app-calendar': '日历图标', 'app-memory': '纪念图标', 'app-divination': '占卜图标', 'app-note': '收藏图标',
     'app-music': '音乐图标', 'app-stats': '聊天统计图标', 'app-interact': '提问记录图标', 'app-checkin': '查岗图标',
+    'p3apps': '第三页功能图标(整组)', 'app-period': '经期记录图标', 'app-accounting': '记账图标', 'app-garden': '花园图标',
   };
   // v3.7.x：装修模式组件库静态预览缩略图（glass 质感 + 真实 SVG 图标，不依赖真实数据/事件）
   const PREV_BOX = 'display:flex;align-items:center;justify-content:center;width:78px;height:58px;border-radius:10px;background:linear-gradient(135deg,#fff,#f6f6f6);border:1px solid rgba(0,0,0,.07);box-shadow:0 1px 3px rgba(0,0,0,.06);flex-shrink:0;overflow:hidden;padding:4px;box-sizing:border-box';
@@ -2001,6 +2027,7 @@
     'app-chat': _appIcoPrev('聊天'), 'app-group-chat': _appIcoPrev('群聊'), 'app-home': _appIcoPrev('主页'), 'app-mail': _appIcoPrev('信箱'), 'app-feed': _appIcoPrev('朋友圈'),
     'app-calendar': _appIcoPrev('日历'), 'app-memory': _appIcoPrev('纪念'), 'app-divination': _appIcoPrev('占卜'), 'app-note': _appIcoPrev('收藏'),
     'app-music': _appIcoPrev('音乐'), 'app-stats': _appIcoPrev('统计'), 'app-interact': _appIcoPrev('提问'), 'app-checkin': _appIcoPrev('查岗'),
+    'app-period': _appIcoPrev('经期'), 'app-accounting': _appIcoPrev('记账'), 'app-garden': _appIcoPrev('花园'), 'p3apps': _appIcoPrev('经期'),
   };
   // 隐藏池：被移除的组件暂存（display:none），可从组件库重新添加
   function ensureWidgetPool() {

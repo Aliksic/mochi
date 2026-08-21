@@ -98,6 +98,15 @@
   function escapeHtml(s) {
     return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
+  // v3.8.x：与 chat.js 的 escTxt/escTxtBr 对齐——全量转义 + 换行转 <br>。
+  // 群聊气泡渲染与普通聊天页完全一致（此前用 textContent 设纯文本，多行消息不换行、
+  // 且与普通聊天页的 span 包裹方式有差异）。
+  function escTxt(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+  function escTxtBr(s) { return escTxt(s).replace(/\n/g, '<br>'); }
   function renderMsg(rec) {
     const m = document.createElement('div');
     m.className = 'msg ' + (rec.side === 'out' ? 'msg-out' : 'msg-in');
@@ -105,14 +114,15 @@
     if (rec.side === 'out') {
       m.innerHTML = '<div class="msg-bubble"></div><div class="msg-side"><div class="msg-av"></div>' + timeHtml + '</div>';
     } else {
-      const nameHtml = rec.name ? '<span class="gc-from-name">' + escapeHtml(rec.name) + '</span>' : '';
-      m.innerHTML = '<div class="msg-side"><div class="msg-av"></div>' + nameHtml + timeHtml + '</div><div class="msg-bubble"></div>';
+      // v3.8.x：群聊不显示成员昵称（与普通聊天页一致——头像 + 气泡，无名字）
+      m.innerHTML = '<div class="msg-side"><div class="msg-av"></div>' + timeHtml + '</div><div class="msg-bubble"></div>';
     }
     const av = m.querySelector('.msg-av');
     const b = m.querySelector('.msg-bubble');
     if (rec.side === 'out') fillAv(av, myAvatar());
     else fillAv(av, memberAvatar(rec.cid));
-    b.textContent = rec.text || '';
+    // v3.8.x：与 chat.js 一致——span 包裹 + 全量转义 + 换行转 <br>
+    b.innerHTML = '<span style="opacity:.85">' + escTxtBr(rec.text || '') + '</span>';
     body.appendChild(m);
     return m;
   }

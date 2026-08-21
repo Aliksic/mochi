@@ -4,6 +4,33 @@
 
 ## 规则
 
+### 2026-08-21（用户需求「桌面第三页加记账矢量图按钮 + 点击打开记账功能页」）
+- [AI-A·完成]（**已构建 verify 10/10 + 记账专项 31/31，未提交**）：`src/template.html` + 新建 `src/js/accounting.js` + `src/css/chat-pages.css`（均 AI-A 域）+ `src/js/tabs.js`（FULL_PAGES 加 page-accounting）+ `build.mjs`（AI-B 域代改 jsFiles 加 accounting.js）+ `src/js/personalize.js`（AI-B 域代改 1 行：导入美化方案 placeholder→textarea，openModal 不支持 placeholder 参数导致输入框无提示，请知悉）+ 新增 `tools/smoke-accounting.mjs`（回归脚本，保留）。
+  - **桌面第三页记账图标**：在 p3-grid（template.html 第三页图标组，原仅经期记录）加 `data-app="accounting"` 图标，SVG 为账本+¥ 矢量图。
+  - **自动确保第三页**：ensureP3 每次启动/切联系人检查——若 p3-grid 不在任何 page-slide 里，自动设 desk-page-count=3 并移 p3-grid 到第三页 slide（清理空白页 hint/addBtn）；无标记依赖、不残留状态。（★ v2 修复：原版用 acc-p3-ensured 标记 + 仅首次确保，测试残留标记后第三页永远空白）
+  - **记账功能页 page-accounting**：概览卡 + 记一笔表单 + 筛选 + 按日分组列表 + 分类管理，localStorage+IDB 双写按联系人隔离。
+  - 验证：无头 Chrome 31/31 + verify 10/10。
+  - ⚠️ **请 AI-B 知悉**：① build.mjs jsFiles 已加 accounting.js；② personalize.js 的 WIDGET_IDS/WIDGET_NAMES 未改，装修组件库暂无单独"记账图标"条目，建议后续把 `app-accounting` 加进 WIDGET_IDS/WIDGET_NAMES；③ personalize.js:1374 导入美化方案的 `{ placeholder: '…' }` 改为了 `{ textarea: true, textareaPlaceholder: '…' }`——原 openModal 不支持 placeholder，到使用者那里文字输入框里没有任何提示
+
+### 2026-08-21（用户反馈「切换后台后返回浏览器，手机后台弹窗突然弹几分钟前的联系人播放音乐的系统消息」）
+- [本会话·完成]（**已改 src，`node --check` 双文件通过，未构建未提交**，请构建者执行 `node build.mjs` 后随下次统一提交）：`src/js/chat.js` + `src/js/music-player.js`（均 AI-A 域）。
+  - **根因**：① `maybeMusicRequest` 在页面隐藏时照常触发——tc-mask 听歌请求弹窗在后台打开（用户看不见），其 6 秒自动隐藏 setTimeout 在后台被浏览器节流/冻结，回前台时突然弹出几分钟前的「想和你一起听《...》」旧请求；② `showDeskPopup` 在 hidden 状态下仍设置/显示应用内顶部横幅（desk-msg），同原因导致回前台横幅还挂着几分钟前的系统消息。
+  - **修复**：
+    1. `music-player.js` `maybeMusicRequest`：入口加 `if (document.hidden) return`（保活期间后台回复完成后不再发起听歌请求，避免回前台弹旧请求弹窗；冷却不消耗，回前台后下轮回复可再触发）。
+    2. `chat.js` `showDeskPopup`：`visibilityState==='hidden'` 时只发系统通知（bgNotifyCheck），不再设置/显示应用内横幅，直接 return。
+    3. `chat.js` visibilitychange：回前台（visible）时若横幅残留（切后台前刚弹出、自动隐藏定时器被冻结）调用 `hideDeskMsg()` 清掉；bg-keep 回前台汇总「你不在的时候收到 N 条新消息」仍会正常弹新横幅。
+  - 验证：`node --check src/js/chat.js` + `node --check src/js/music-player.js` 通过；未构建未验证，需构建后 verify + 真机确认（后台挂几分钟回前台不再弹旧音乐请求/旧横幅）。
+  - ⚠️ 构建前请确认工作区无对方进行中改动；本次构建请统一包含工作区已保存改动（chat.js/divination.js/template.html 等已有未提交改动）。
+
+### 2026-08-21（用户反馈「浏览器挂几个小时关了手机睡觉，夜里系统通知不弹；通知栏『后台保活』媒体条消失；设置里保活开关自己变关了」）
+- [本会话·完成]（**已改 src，`node --check` 通过，未构建未提交**，请构建者执行 `node build.mjs` 后随下次统一提交）：`src/js/bg-keep.js`（AI-B 域，本会话代改）。
+  - **排查结论**：①「开关自己关了」代码里不存在自动关闭路径——真实根因是 `bg-keepalive`/`bg-notify` 本属**全局设置页**（#page-setting 所有桌面共用），却按**当前联系人桌面**存储（activeStore）——切换桌面或系统恢复页面时 active-contact 指向别的桌面，开关就显示「关」；②「夜里不弹/媒体条消失」= 锁屏几小时后 Chrome/系统挂起保活音频、丢弃媒体条 → 页面再次被后台冻结 → 定时器停摆 → 无消息无弹窗（平台硬限制：灭屏几小时无法真后台运行，但可回来自愈）。
+  - **修复**：
+    1. **保活/通知改全局存储**：新增 `gGet/gSet`（写 `xy-home-v2:` 全局命名空间），读时回退旧版每桌面值并写全局做迁移（bg-keepalive 与 bg-notify 的 init、toggle、自动联动、测试诊断、回前台汇总全部改走 gGet/gSet）；开关不再随桌面/active-contact 变化而「自己关掉」。
+    2. **回前台完整自愈**：新增 `healKeepAlive()`——visibilitychange→visible / window focus / pageshow(persisted bfcache) 时，恢复被挂起的 AudioContext（0/600/1800ms 三次重试）+ 重设「Mochi 后台保活」媒体会话条 + 重新请求 wakeLock；原逻辑只补 wakeLock，音频/媒体条不恢复。
+  - 验证：`node --check src/js/bg-keep.js` 通过；未构建未验证，需构建后 verify + 无头/真机确认（保活媒体条恢复、多桌面切换开关保持开启）。
+  - ⚠️ 请在构建前确认工作区无对方进行中改动；本次构建请统一包含工作区已保存改动。
+
 ### 2026-08-21（用户要求「回复设置·聊天·让对方继续说·按正常回复时间 后面加小字说明」）
 - [本会话·完成]（**已构建 verify 10/10，未提交**）：`src/template.html` + `src/css/setting.css`（setting.css 为 AI-A 域，代改新增 `.gs-sub` 样式，请知悉）。
   - 「让对方继续说」分组内「按正常回复时间」开关下方新增小字说明「（未开启设置时间的情况下是点击后联系人立即回复）」，与 cs-normal=0 理解回复（快速回 1 条）语义一致；`.gs-sub` 11px 灰色小字样式（var(--muted)，深浅色通吃）。

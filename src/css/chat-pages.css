@@ -577,6 +577,150 @@
 .cal-edit-btn svg { width:14px; height:14px; }
 .cal-edit-btn[hidden] { display:none; }
 
+/* 经期记录页 */
+.period-scroll { flex:1; overflow-y:auto; scrollbar-width:none; -ms-overflow-style:none; padding:0 18px; }
+.period-scroll::-webkit-scrollbar { display:none; }
+.period-card {
+  border-radius:20px; padding:18px; margin-bottom:14px;
+  background:rgba(255,255,255,.92);
+  border:1px solid rgba(0,0,0,.1);
+  box-shadow:0 2px 8px rgba(0,0,0,.04);
+}
+.period-cog { margin-left:auto; width:30px; height:30px; display:flex; align-items:center; justify-content:center; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+.period-cog svg { width:18px; height:18px; }
+.period-status-head { display:flex; align-items:center; gap:14px; margin-bottom:14px; }
+.period-status-ico {
+  width:52px; height:52px; border-radius:16px; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center; color:#fff;
+  background:#bbb;
+}
+.period-status-ico.phase-period { background:#e85a8f; }
+.period-status-ico.phase-fertile { background:#f5a623; }
+.period-status-ico.phase-safe { background:#7ec69e; }
+.period-status-ico.phase-unknown { background:#ccc; }
+.period-status-ico svg { width:26px; height:26px; }
+.period-status-title { font-size:18px; font-weight:800; color:var(--ink); }
+.period-status-sub { font-size:12px; color:var(--muted); margin-top:3px; }
+.period-phase-bar { display:flex; gap:6px; margin-bottom:14px; }
+.period-phase-bar .seg {
+  flex:1; text-align:center; font-size:11px; font-weight:600; color:#999;
+  padding:6px 0; border-radius:10px; background:rgba(0,0,0,.05);
+}
+.period-phase-bar .seg-0 { background:#fde2ee; color:#e85a8f; }
+.period-phase-bar .seg-2 { background:#fff3da; color:#f5a623; }
+.period-phase-bar .seg.active { box-shadow:0 0 0 2px var(--ink) inset; font-weight:800; }
+.period-action-row { display:flex; gap:10px; }
+.period-btn {
+  flex:1; padding:12px; font-size:13px; font-weight:600; border-radius:14px;
+  border:1px solid rgba(0,0,0,.12); background:rgba(255,255,255,.92); color:var(--ink);
+  cursor:pointer; font-family:inherit; -webkit-tap-highlight-color:transparent;
+}
+.period-btn.primary { background:#e85a8f; color:#fff; border-color:#e85a8f; }
+.period-btn:active { opacity:.8; }
+.period-btn[hidden] { display:none; }
+.period-month-head { display:flex; align-items:center; justify-content:center; gap:16px; margin-bottom:10px; }
+.period-month-txt { font-size:14px; font-weight:700; color:var(--ink); min-width:96px; text-align:center; }
+.period-month-btn {
+  width:30px; height:30px; border:1px solid rgba(0,0,0,.12); border-radius:50%;
+  background:#fff; color:#111; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0;
+}
+.period-month-btn svg { width:15px; height:15px; }
+.period-month-btn:active { background:rgba(0,0,0,.06); }
+.period-legend { display:flex; gap:10px; margin-bottom:10px; flex-wrap:wrap; }
+.period-legend .lg { font-size:11px; color:#777; display:flex; align-items:center; gap:5px; }
+.period-legend .lg::before { content:''; width:10px; height:10px; border-radius:3px; display:inline-block; }
+.period-legend .lg-period::before { background:#e85a8f; }
+.period-legend .lg-fertile::before { background:#f5a623; }
+.period-legend .lg-safe::before { background:#eaf4ee; border:1px solid #cfe6d8; }
+.period-legend .lg-predict::before { background:#fde2ee; border:1px dashed #e85a8f; }
+.period-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
+.period-grid .pc-wd { font-size:10px; color:var(--muted); text-align:center; padding:4px 0; }
+.period-grid .pc-cell {
+  aspect-ratio:1; border-radius:10px; display:flex; align-items:center; justify-content:center;
+  font-size:12px; color:#777; background:rgba(255,255,255,.92); border:1px solid rgba(0,0,0,.1);
+  cursor:pointer; position:relative;
+}
+.period-grid .pc-cell.blank { background:transparent; border:none; cursor:default; }
+.period-grid .pc-cell.today { outline:2px solid var(--ink); outline-offset:-2px; }
+.period-grid .pc-cell.ph-period { background:#e85a8f; color:#fff; font-weight:700; border-color:#e85a8f; }
+.period-grid .pc-cell.ph-fertile { background:#fff3da; color:#b8791a; border-color:#f5d68a; }
+.period-grid .pc-cell.ph-predict { background:#fde2ee; color:#c44a78; border:1px dashed #e85a8f; }
+.period-grid .pc-cell.ph-safe { background:#eaf4ee; border-color:#cfe6d8; }
+.period-grid .pc-cell:not(.blank):active { opacity:.7; }
+.period-card-title { font-size:14px; font-weight:700; letter-spacing:.5px; margin-bottom:10px; }
+.period-history { display:flex; flex-direction:column; gap:8px; }
+.period-hist-row {
+  display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:12px;
+  background:rgba(255,255,255,.92); border:1px solid rgba(0,0,0,.08);
+}
+.period-hist-row .ph-date { font-size:13px; font-weight:600; color:var(--ink); flex:1; }
+.period-hist-row .ph-meta { font-size:11px; color:var(--muted); }
+.period-hist-row .ph-del {
+  width:26px; height:26px; border:none; background:transparent; color:#bbb; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; padding:0; -webkit-tap-highlight-color:transparent;
+}
+.period-hist-row .ph-del svg { width:15px; height:15px; }
+.period-hist-row .ph-del:active { color:#e85a8f; }
+.period-empty { font-size:13px; color:var(--muted); text-align:center; padding:18px 0; }
+
+/* 记账页 */
+.acc-scroll { flex:1; overflow-y:auto; scrollbar-width:none; -ms-overflow-style:none; padding:0 18px; }
+.acc-scroll::-webkit-scrollbar { display:none; }
+.acc-cog { margin-left:auto; width:30px; height:30px; display:flex; align-items:center; justify-content:center; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+.acc-cog svg { width:18px; height:18px; }
+.acc-overview { border-radius:20px; padding:16px 18px; margin:14px 0; }
+.acc-month-head { display:flex; align-items:center; justify-content:center; gap:16px; margin-bottom:14px; }
+.acc-month-txt { font-size:15px; font-weight:700; color:var(--ink); min-width:110px; text-align:center; }
+.acc-month-btn { width:30px; height:30px; border-radius:8px; border:none; background:transparent; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--ink); -webkit-tap-highlight-color:transparent; }
+.acc-month-btn svg { width:15px; height:15px; }
+.acc-month-btn:active { background:rgba(0,0,0,.06); }
+.acc-ov-row { display:flex; gap:8px; }
+.acc-ov-item { flex:1; text-align:center; }
+.acc-ov-label { font-size:11px; color:var(--muted); margin-bottom:4px; }
+.acc-ov-val { font-size:16px; font-weight:800; color:var(--ink); }
+.acc-ov-val.expense { color:#e85a5a; }
+.acc-ov-val.income { color:#3aa86c; }
+.acc-form-card { border-radius:20px; padding:16px 18px; margin-bottom:14px; }
+.acc-type-tabs { display:flex; gap:8px; margin-bottom:12px; }
+.acc-type-tab { flex:1; padding:8px 0; border-radius:10px; border:1px solid var(--card-border); background:transparent; font-size:14px; font-weight:600; color:var(--muted); cursor:pointer; -webkit-tap-highlight-color:transparent; }
+.acc-type-tab.sel { background:var(--ink); color:var(--btn-ink); border-color:var(--ink); }
+.acc-type-tab:active { opacity:.8; }
+.acc-amount { width:100%; box-sizing:border-box; border:1px solid var(--input-border); border-radius:10px; padding:10px 12px; font-size:18px; font-weight:700; color:var(--ink); background:var(--input-bg); margin-bottom:12px; outline:none; }
+.acc-amount:focus { border-color:var(--input-focus-border); }
+.acc-cat-grid { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
+.acc-cat { padding:6px 14px; border-radius:16px; border:1px solid var(--pill-border); background:transparent; font-size:13px; color:var(--soft-ink); cursor:pointer; -webkit-tap-highlight-color:transparent; }
+.acc-cat.sel { background:var(--ink); color:var(--btn-ink); border-color:var(--ink); }
+.acc-cat:active { opacity:.8; }
+.acc-note { width:100%; box-sizing:border-box; border:1px solid var(--input-border); border-radius:10px; padding:10px 12px; font-size:14px; color:var(--ink); background:var(--input-bg); margin-bottom:12px; outline:none; }
+.acc-note:focus { border-color:var(--input-focus-border); }
+.acc-form-row { display:flex; gap:10px; align-items:center; }
+.acc-date { flex:1; box-sizing:border-box; border:1px solid var(--input-border); border-radius:10px; padding:9px 12px; font-size:13px; color:var(--ink); background:var(--input-bg); outline:none; }
+.acc-save { padding:10px 22px; border-radius:10px; border:none; background:var(--btn-bg); color:var(--btn-ink); font-size:14px; font-weight:700; cursor:pointer; -webkit-tap-highlight-color:transparent; white-space:nowrap; }
+.acc-save:active { opacity:.8; }
+.acc-filter-card { border-radius:20px; padding:12px 18px; margin-bottom:14px; }
+.acc-filter-tabs { display:flex; gap:8px; }
+.acc-filter-tab { flex:1; padding:7px 0; border-radius:10px; border:1px solid var(--card-border); background:transparent; font-size:13px; font-weight:600; color:var(--muted); cursor:pointer; -webkit-tap-highlight-color:transparent; }
+.acc-filter-tab.sel { background:var(--ink); color:var(--btn-ink); border-color:var(--ink); }
+.acc-filter-tab:active { opacity:.8; }
+.acc-list-card { border-radius:20px; padding:16px 18px; margin-bottom:20px; }
+.acc-list { display:flex; flex-direction:column; gap:16px; }
+.acc-day-head { display:flex; align-items:center; gap:8px; padding-bottom:8px; border-bottom:1px solid var(--line); margin-bottom:8px; }
+.acc-day-date { font-size:12px; font-weight:600; color:var(--muted); flex:1; }
+.acc-day-sum { font-size:12px; font-weight:700; }
+.acc-day-sum.expense { color:#e85a5a; }
+.acc-day-sum.income { color:#3aa86c; }
+.acc-row { display:flex; align-items:center; gap:10px; padding:8px 0; }
+.acc-row-info { flex:1; min-width:0; }
+.acc-row-cat { display:inline-block; font-size:12px; font-weight:600; color:var(--ink); padding:2px 10px; border-radius:8px; background:var(--static-bg); margin-bottom:3px; }
+.acc-row-note { font-size:11px; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.acc-row-amount { font-size:15px; font-weight:800; white-space:nowrap; }
+.acc-row-amount.expense { color:#e85a5a; }
+.acc-row-amount.income { color:#3aa86c; }
+.acc-row-del { width:26px; height:26px; border:none; background:transparent; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--muted); -webkit-tap-highlight-color:transparent; flex-shrink:0; }
+.acc-row-del svg { width:15px; height:15px; }
+.acc-row-del:active { color:#e85a5a; }
+.acc-empty { font-size:13px; color:var(--muted); text-align:center; padding:24px 0; }
+
 /* 占卜页 */
 .div-scroll { flex:1; overflow-y:auto; scrollbar-width:none; -ms-overflow-style:none; padding:0 18px; }
 .div-scroll::-webkit-scrollbar { display:none; }

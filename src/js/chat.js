@@ -76,7 +76,7 @@
       try { if (input) input.textContent = ''; } catch (e) {}
       // v3.7.x：切换联系人后刷新顶部栏名字 + 双方头像（原实现从不刷新，顶部栏停留在旧联系人名字）
       try { updateChatPartnerName(); } catch (e) {}
-      try { fillAvatar('chat-user-av', 'avatar-user'); fillAvatar('chat-partner-av', 'avatar-partner'); } catch (e) {}
+      try { fillAvatar('chat-user-av', 'cs-avatar-user'); fillAvatar('chat-partner-av', 'cs-avatar-partner'); } catch (e) {}
       // v3.7.x：切联系人后刷新"让对方继续说"入口（昵称 title / 底部按钮显隐）
       try { if (window.applyContinueSayUI) window.applyContinueSayUI(); } catch (e) {}
     } catch (e) {}
@@ -179,7 +179,13 @@
   window.chatFlushSave = flushSave;
   try {
     window.addEventListener('beforeunload', flushSave);
-    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flushSave(); });
+    // v3.9.x：回前台时清掉残留横幅——切后台前刚弹出的横幅，其 6 秒自动隐藏
+    // setTimeout 在后台被浏览器节流/冻结，回前台时还挂着几分钟前的旧消息；
+    // （bg-keep 回前台汇总「你不在的时候收到 N 条新消息」会重新弹新横幅）
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') flushSave();
+      else if (deskMsgEl && !deskMsgEl.hidden) hideDeskMsg();
+    });
   } catch (e) {}
   // v3.5.127：暴露聊天记录内存数组（ta-ask/p2-features 等模块不要再 JSON.parse
   // 整条历史——几十 MB 的 stringify 结果每次解析几百毫秒，低端机点卡片即卡顿）
@@ -456,8 +462,17 @@
   }
   // v3.5.113：供 personalize.js 在 IndexedDB 回填完成后重绘聊天头像
   window.fillAvatar = fillAvatar;
-  fillAvatar('chat-user-av', 'avatar-user');
-  fillAvatar('chat-partner-av', 'avatar-partner');
+  // v3.8.x：重绘聊天页全部头像（顶部栏 + 已渲染消息气泡），用聊天专用键 cs-avatar-*。
+  // 供 chat-settings.js 改完头像后调用，刷新当前可见的消息气泡头像。
+  function refreshChatAvatars() {
+    fillAvatar('chat-user-av', 'cs-avatar-user');
+    fillAvatar('chat-partner-av', 'cs-avatar-partner');
+    document.querySelectorAll('.msg-in .msg-av').forEach(av => fillAvatar(av, 'cs-avatar-partner'));
+    document.querySelectorAll('.msg-out .msg-av').forEach(av => fillAvatar(av, 'cs-avatar-user'));
+  }
+  window.refreshChatAvatars = refreshChatAvatars;
+  fillAvatar('chat-user-av', 'cs-avatar-user');
+  fillAvatar('chat-partner-av', 'cs-avatar-partner');
   // v3.5.113：IndexedDB 回填完成后（mochi-restore-done）轻量重绘——
   // 导入/配额异常恢复后聊天记录已在内存，聊天页可见时重新渲染一遍
   // v3.6.x：加贴底判断——数据恢复期间用户可能已在翻旧消息，全量重渲染
@@ -470,8 +485,8 @@
           renderWindow(false, true);
           scrollChatBottom();
         }
-        fillAvatar('chat-user-av', 'avatar-user');
-        fillAvatar('chat-partner-av', 'avatar-partner');
+        fillAvatar('chat-user-av', 'cs-avatar-user');
+        fillAvatar('chat-partner-av', 'cs-avatar-partner');
       } catch (e) {}
     });
   } catch (e) {}
@@ -486,7 +501,7 @@
   const pname = document.getElementById('chat-partner-name');
   function updateChatPartnerName() {
     if (!pname) return;
-    const saved = store.get('lbl-partner');
+    const saved = store.get('cs-lbl-partner');
     if (saved) { pname.textContent = saved; return; }
     try {
       if (window.getContacts) {
@@ -1426,7 +1441,7 @@
         });
       }
     }
-    fillAvatar(av, rec.side === 'out' ? 'avatar-user' : 'avatar-partner');
+    fillAvatar(av, rec.side === 'out' ? 'cs-avatar-user' : 'cs-avatar-partner');
     // 点击联系人消息左侧头像 → 打开拍一拍半框，对 TA 使用拍一拍
     if (rec.side === 'in') {
       av.style.cursor = 'pointer';
@@ -1617,10 +1632,16 @@
     // 通知），页面不在前台时同步发系统通知；放在 desk-msg-en 判断之前，桌面弹窗开关
     // 与后台通知开关互不影响（bgNotifyCheck 内部按 bg-notify 开关/权限/可见性判断）
     // v3.5.142：附上图片 dataURL（通知 image 字段显示缩略图 + 文字）
-    if (document.visibilityState === 'hidden' && window.bgNotifyCheck) {
-      // v3.7.x：跨桌面——av 字段透传发布者头像（朋友圈通知来自其它联系人桌面时，
-      // 系统通知右侧大图标用发布者头像而非当前桌面 TA 头像）
-      window.bgNotifyCheck(notifyT, Date.now(), { name: opts.name, img: opts.img, av: opts.av });
+    // v3.9.x：页面在后台时只发系统通知、不弹应用内横幅——横幅的 6 秒自动隐藏
+    // setTimeout 在后台会被浏览器节流/冻结，回前台时横幅还挂着几分钟前的旧消息
+    // （用户反馈：切换后台后返回浏览器，后台弹窗突然弹几分钟前的播放音乐系统消息）
+    if (document.visibilityState === 'hidden') {
+      if (window.bgNotifyCheck) {
+        // v3.7.x：跨桌面——av 字段透传发布者头像（朋友圈通知来自其它联系人桌面时，
+        // 系统通知右侧大图标用发布者头像而非当前桌面 TA 头像）
+        window.bgNotifyCheck(notifyT, Date.now(), { name: opts.name, img: opts.img, av: opts.av });
+      }
+      return;
     }
     if (!deskMsgEl || !deskMsgEnabled()) return;
     if (deskMsgText) deskMsgText.textContent = notifyT;
@@ -2529,8 +2550,8 @@ function partialRetractMsg(msgEl, side) {
     if (phoneTab) phoneTab.classList.add('active');
     document.querySelectorAll('.page').forEach(p => p.hidden = true);
     chatPage.hidden = false;
-    fillAvatar('chat-user-av', 'avatar-user');
-    fillAvatar('chat-partner-av', 'avatar-partner');
+    fillAvatar('chat-user-av', 'cs-avatar-user');
+    fillAvatar('chat-partner-av', 'cs-avatar-partner');
     if (window.applyChatSettings) window.applyChatSettings();
     // v3.5.100：打开聊天页即清零未读提醒（微信式）
     clearChatUnread();
@@ -3691,12 +3712,11 @@ function partialRetractMsg(msgEl, side) {
         e.stopPropagation();
         const r = document.getElementById('div-chat-result');
         if (!r) return;
-        // v3.8.x：重新抽牌状态（上轮结果已展示）→ 先清空问题输入与结果区，回到
-        // 待抽牌状态，让用户重新输入问题后再点一次开始抽牌；不再直接带旧问题开抽
+        // v3.8.x：重新抽牌状态（上轮结果已展示）→ 只清空结果区、恢复「抽牌」按钮，
+        // 回到待抽牌状态；保留用户已输入的问题（不擅自清空输入框），用户可自行修改
+        // 后再点一次开始抽牌；不再直接带旧问题开抽
         if (divDraw.textContent.indexOf('重新抽牌') !== -1) {
           if (chatDrawCancel) { try { chatDrawCancel(); } catch (err) {} chatDrawCancel = null; }
-          const qEl = document.getElementById('div-chat-question');
-          if (qEl) qEl.value = '';
           r.innerHTML = '<div class="div-result-empty">点击上方按钮开始抽牌</div>';
           divDraw.innerHTML = divDrawIdleHTML;
           return;
@@ -4707,7 +4727,7 @@ function partialRetractMsg(msgEl, side) {
         if (!f.mine && !f.ta) html += '<div class="fav-item-tip">等待回应…</div>';
         html += '</div>';
         m.innerHTML = html + side;
-        fillAvatar(m.querySelector('.msg-av'), 'avatar-user');
+        fillAvatar(m.querySelector('.msg-av'), 'cs-avatar-user');
       } else if (kind === 'mail') {
         // 信箱回信收藏
         let html = '<div class="fav-item-card">' +
@@ -4715,7 +4735,7 @@ function partialRetractMsg(msgEl, side) {
           '<div class="fav-item-body">' + favTextHtml(f.text) + '</div>' +
           '</div>';
         m.innerHTML = html + side;
-        fillAvatar(m.querySelector('.msg-av'), 'avatar-user');
+        fillAvatar(m.querySelector('.msg-av'), 'cs-avatar-user');
       } else if (kind === 'feed') {
         // 朋友圈动态收藏
         let html = '<div class="fav-item-card">' +
@@ -4724,7 +4744,7 @@ function partialRetractMsg(msgEl, side) {
           ((f.imgs && f.imgs.length) ? '<div class="fav-item-imgs">' + f.imgs.map(u => '<img src="' + attrEsc(u) + '" alt="图片">').join('') + '</div>' : '') +
           '</div>';
         m.innerHTML = html + side;
-        fillAvatar(m.querySelector('.msg-av'), 'avatar-user');
+        fillAvatar(m.querySelector('.msg-av'), 'cs-avatar-user');
       } else {
         // 聊天消息收藏（原逻辑）
         m.innerHTML = f.side === 'out'
@@ -4749,7 +4769,7 @@ function partialRetractMsg(msgEl, side) {
             }
           });
         }
-        fillAvatar(m.querySelector('.msg-av'), f.side === 'out' ? 'avatar-user' : 'avatar-partner');
+        fillAvatar(m.querySelector('.msg-av'), f.side === 'out' ? 'cs-avatar-user' : 'cs-avatar-partner');
       }
       // 朋友圈收藏的图片点击放大
       if (kind === 'feed') {

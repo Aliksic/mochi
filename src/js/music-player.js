@@ -2397,6 +2397,10 @@
   // 聊天回复完成后由 chat.js 调用（延后 2 秒，仿星言）
   window.maybeMusicRequest = function () {
     try {
+      // v3.9.x：页面在后台时不发起听歌请求——否则 tc-mask 请求弹窗会在后台打开，
+      // 回前台时突然弹出几分钟前的"想和你一起听《...》"旧请求（用户反馈：
+      // 切换后台后返回浏览器，后台弹窗突然弹几分钟前的联系人播放音乐系统消息）
+      if (document.hidden) { console.log('[music-req] return: page hidden'); return; }
       const prob = (typeof settings.reqProb === 'number' ? settings.reqProb : 5);
       console.log('[music-req] called', { libLen: library.length, cooldownAt: cooldownAt, cooldownMs: settings.cooldownMs, reqProb: settings.reqProb, prob: prob, now: Date.now() });
       if (!library.length) { console.log('[music-req] return: library empty'); return; }

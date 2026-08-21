@@ -114,7 +114,22 @@
   window.getCallMiniEnabled = function () { return callMiniEnabled(); };
   window.setCallMiniEnabled = function (v) {
     try { store.set(CALL_MINI_KEY, v ? '1' : '0'); } catch (e) {}
+    applyCallMiniNow(!!v);
   };
+  // v3.8.x：设置里切「隐藏通话小框」立即生效——通话中已显示的悬浮小框马上收起
+  // （通话转后台，仍可经通话半框挂断）；切回开启时若大面板已收起则恢复显示小框
+  function applyCallMiniNow(enabled) {
+    if (!currentCall || !mini) return;
+    if (enabled) {
+      if (currentCall.status === 'connected' && mask && mask.hidden) {
+        if (miniName) miniName.textContent = currentCall.name || partnerName();
+        syncCallAv();
+        mini.hidden = false;
+      }
+    } else {
+      mini.hidden = true;
+    }
+  }
 
   // ---- 来电 / 去电 / 通话中 ----
   let currentCall = null; // { direction, status, startTime, connectedTime, timer }

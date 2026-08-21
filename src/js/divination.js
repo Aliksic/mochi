@@ -549,12 +549,11 @@
     drawBtn.addEventListener('click', () => {
       const r = document.getElementById('div-result');
       if (!r) return;
-      // v3.8.x：重新抽牌状态（上轮结果已展示）→ 先清空问题输入与结果区，回到
-      // 待抽牌状态，让用户重新输入问题后再点一次开始抽牌；不再直接带旧问题开抽
+      // v3.8.x：重新抽牌状态（上轮结果已展示）→ 只清空结果区、恢复「抽牌」按钮，
+      // 回到待抽牌状态；保留用户已输入的问题（不擅自清空输入框），用户可自行修改
+      // 后再点一次开始抽牌；不再直接带旧问题开抽
       if (drawBtn.textContent.indexOf('重新抽牌') !== -1) {
         if (window.__divActiveDraw) { try { window.__divActiveDraw(); } catch (e) {} window.__divActiveDraw = null; }
-        const qEl = document.getElementById('div-question');
-        if (qEl) qEl.value = '';
         clearResult();
         drawBtn.innerHTML = drawBtnIdleHTML;
         return;

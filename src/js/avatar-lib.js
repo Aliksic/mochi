@@ -267,6 +267,11 @@
   bindPoolClear(avClear, saveLib, () => { renderGrid(); syncVal(); }, '清空头像池？', '已清空头像池');
   bindPoolClear(avMeClear, saveMeLib, () => { renderMeGrid(); syncVal(); }, '清空我的头像池？', '已清空我的头像池');
 
+  // v3.8.x：头像互动半框切换头像时同时写桌面键和聊天专用键，保持桌面与聊天显示同步。
+  // 桌面 deco-widget / 聊天设置各自独立上传时只写自己那套；半框是"互动"场景，两边都换。
+  function setAvatarBoth(key, data) { store.set(key, data); store.set('cs-' + key, data); }
+  function removeAvatarBoth(key) { store.remove(key); store.remove('cs-' + key); }
+
   // 头像实时生效：聊天页顶部头像 + 桌面纪念日卡头像 + 已渲染的消息气泡头像
   // out=false 换联系人头像（.msg-in .msg-av 是"对方消息"旁的头像）；
   // out=true 换我的头像（.msg-out .msg-av 是我的消息旁的头像）
@@ -324,7 +329,7 @@
     const lib = getLib();
     if (!data || lib.indexOf(data) === -1) return;
     const before = store.get('avatar-partner');
-    store.set('avatar-partner', data);
+    setAvatarBoth('avatar-partner', data);
     applyAvatarImg(data);
     // 手动更换后重置随机计时：1-8 小时后才可能再随机换（与星言一致）
     store.set('avatar-lib-last', String(Date.now()));
@@ -336,8 +341,8 @@
         replyInvite(true, data); // 同意：头像保持新换的，消息带新头像图
       } else {
         // 拒绝：头像换回原来那张（原本没自定义过头像则恢复默认图标）
-        if (before) store.set('avatar-partner', before);
-        else { store.remove('avatar-partner'); }
+        if (before) setAvatarBoth('avatar-partner', before);
+        else { removeAvatarBoth('avatar-partner'); }
         applyAvatarImg(before);
         renderGrid();
         replyInvite(false, before || null); // 消息带换回的头像图
@@ -355,7 +360,7 @@
   function switchMyAvatarFromLib(data) {
     const lib = getMeLib();
     if (!data || lib.indexOf(data) === -1) return;
-    store.set('avatar-user', data);
+    setAvatarBoth('avatar-user', data);
     applyAvatarImg(data, true);
     renderMeGrid();
     toast('头像已更换');
@@ -378,7 +383,7 @@
     const name = store.get('lbl-partner') || 'TA';
     window.openModal(name + ' 的换头像邀请', '', (v) => {
       if (v === '1') {
-        store.set('avatar-user', data);
+        setAvatarBoth('avatar-user', data);
         applyAvatarImg(data, true);
         renderMeGrid();
         replyMeInvite(true, data);
@@ -446,7 +451,7 @@
         }
       } else {
         // 直接换：换上 + 聊天显示"昵称 更换了你的头像" + 新头像图片
-        store.set('avatar-user', data);
+        setAvatarBoth('avatar-user', data);
         applyAvatarImg(data, true);
         renderMeGrid();
         const name = store.get('lbl-partner') || 'TA';
@@ -483,7 +488,7 @@
       if (!data) return;
       // 随机到当前头像：跳过不换，也不推进计时（60 秒后再随机一次，与星言一致）
       if (data === store.get('avatar-partner')) return;
-      store.set('avatar-partner', data);
+      setAvatarBoth('avatar-partner', data);
       applyAvatarImg(data);
       renderGrid();
       // 聊天里显示"昵称 更换了头像" + 新头像图片
