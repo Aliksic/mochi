@@ -38,6 +38,19 @@
   function saveMeLib(list) { store.set('avatar-me-lib', JSON.stringify(list)); }
   function getMeEnabled() { const v = store.get('avatar-me-lib-enabled'); return v === null ? true : v === '1'; }
 
+  // v3.9.x：头像库半框是聊天页内功能（聊天域）——昵称优先读聊天专用键 cs-lbl-*，
+  // 未设置回退桌面键 lbl-*。头像存储仍写桌面键（avatar-*），聊天头像在未单独设置时
+  // 由 chat.js fillAvatar 回退桌面头像，换头像后两边一致。
+  function chatName(chatKey, deskKey, fb) {
+    let v = null;
+    try { v = store.get(chatKey); } catch (e) {}
+    if (v) return v;
+    try { v = store.get(deskKey); } catch (e) {}
+    return v || fb;
+  }
+  function cPartnerName() { return chatName('cs-lbl-partner', 'lbl-partner', 'TA'); }
+  function cUserName() { return chatName('cs-lbl-user', 'lbl-user', '我'); }
+
   // ===== 功能：头像互动（原联系人头像库，改为聊天页内底部半框） =====
   // 半框展示头像池：上传多张 + 删除单张 + 清空 + 开关 + 点击切换（半框露出聊天消息，方便边看边玩）
   // 定时随机更换联系人聊天头像（1-8 小时）；更换时聊天显示"昵称 更换了头像"
@@ -66,10 +79,10 @@
   function syncVal() {
     if (avEnabled) avEnabled.checked = getEnabled();
     if (avMeEnabled) avMeEnabled.checked = getMeEnabled();
-    if (avName) avName.textContent = store.get('lbl-partner') || 'TA';
-    if (avPoolName) avPoolName.textContent = (store.get('lbl-partner') || 'TA') + ' 的头像库';
+    if (avName) avName.textContent = cPartnerName();
+    if (avPoolName) avPoolName.textContent = cPartnerName() + ' 的头像库';
     if (avMeTabName) {
-      const myName = store.get('lbl-user');
+      const myName = cUserName();
       avMeTabName.textContent = myName ? myName + ' 的头像库' : '我的头像库';
     }
   }
@@ -315,8 +328,8 @@
   // v3.6.x：不再弹白底可输入的 modal 弹窗——与头像互动其它通知一致，
   // 用 toast（黑色小字、发完自动关闭）
   function replyInvite(accepted, img) {
-    const name = store.get('lbl-partner') || 'TA';
-    const myName = store.get('lbl-user') || '我';
+    const name = cPartnerName();
+    const myName = cUserName();
     const text = accepted
       ? name + ' 同意了' + myName + '的换头像邀请'
       : name + ' 拒绝了' + myName + '的换头像邀请';
@@ -350,8 +363,8 @@
     } else {
       // 直接切换成功：轻提示 + 聊天里显示"我的昵称 更换了 联系人昵称 的头像"+ 新头像图片
       toast('头像已切换');
-      const name = store.get('lbl-partner') || 'TA';
-      const myName = store.get('lbl-user') || '我';
+      const name = cPartnerName();
+      const myName = cUserName();
       chatSystem(myName + ' 更换了 ' + name + ' 的头像', data);
     }
   }
@@ -364,14 +377,14 @@
     applyAvatarImg(data, true);
     renderMeGrid();
     toast('头像已更换');
-    const myName = store.get('lbl-user') || '我';
+    const myName = cUserName();
     chatSystem(myName + ' 更换了头像', data);
   }
 
   // TA 主动给我换头像：邀请回应文案（聊天消息 + toast）
   function replyMeInvite(accepted, data) {
-    const name = store.get('lbl-partner') || 'TA';
-    const myName = store.get('lbl-user') || '我';
+    const name = cPartnerName();
+    const myName = cUserName();
     const text = accepted
       ? myName + ' 同意了' + name + '的换头像邀请'
       : myName + ' 拒绝了' + name + '的换头像邀请';
@@ -380,7 +393,7 @@
   }
   // 弹窗邀请：带新头像预览，我同意则直接换上 / 拒绝则保持原样
   function showMeAvatarInvite(data) {
-    const name = store.get('lbl-partner') || 'TA';
+    const name = cPartnerName();
     window.openModal(name + ' 的换头像邀请', '', (v) => {
       if (v === '1') {
         setAvatarBoth('avatar-user', data);
@@ -454,7 +467,7 @@
         setAvatarBoth('avatar-user', data);
         applyAvatarImg(data, true);
         renderMeGrid();
-        const name = store.get('lbl-partner') || 'TA';
+        const name = cPartnerName();
         const text = name + ' 更换了你的头像';
         chatSystem(text, data);
         toast(text);
@@ -492,7 +505,7 @@
       applyAvatarImg(data);
       renderGrid();
       // 聊天里显示"昵称 更换了头像" + 新头像图片
-      chatSystem((store.get('lbl-partner') || 'TA') + ' 更换了头像', data);
+      chatSystem(cPartnerName() + ' 更换了头像', data);
       // v3.5.153：换头像后补发后台通知——确保后台收到的通知右侧是新头像
       //（头像数据在 avatar-partner 已更新，通知由 bgNotifyCheck 读它；这里显式
       //  触发一条，避免只有聊天系统消息、后台用户没感知到换头像）

@@ -17,7 +17,8 @@
     clearTimeout(t._timer);
     t._timer = setTimeout(() => { t.className = 'cc-toast'; }, 2000);
   }
-  function partnerName() { return store.get('lbl-partner') || 'TA'; }
+  // v3.9.x：帮我决定从聊天页进入（聊天域）——优先读聊天专用昵称，未设置回退桌面昵称
+  function partnerName() { return store.get('cs-lbl-partner') || store.get('lbl-partner') || 'TA'; }
   function fmtDT(ts) {
     const d = new Date(ts);
     const p = (n) => (n < 10 ? '0' + n : '' + n);

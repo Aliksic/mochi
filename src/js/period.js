@@ -159,9 +159,8 @@
     if (bar) {
       var activeSeg = -1;
       if (st.phase === 'period') activeSeg = 0;
-      else if (st.phase === 'fertile') activeSeg = 2;
-      else if (st.phase === 'safe') activeSeg = (st.dayOfCycle > 0 && st.ovulationDay > 0 && st.dayOfCycle > st.ovulationDay + 1) ? 3 : 1;
-      var segs = ['经期', '安全', '易孕', '安全'];
+      else if (st.phase === 'fertile') activeSeg = 1;
+      var segs = ['经期', '排卵期'];
       bar.innerHTML = segs.map(function (n, i) { return '<span class="seg seg-' + i + (i === activeSeg ? ' active' : '') + '">' + n + '</span>'; }).join('');
     }
     var startBtn = document.getElementById('period-mark-start');

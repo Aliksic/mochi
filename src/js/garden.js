@@ -1,8 +1,8 @@
 // ===== garden =====
 (function () {
 var s = window.activeStore();
-var p = document.getElementById("page-garden");
-if (!s || !p) return;
+var page = document.getElementById("page-garden");
+if (!s || !page) return;
 var G = "garden-data";
 var PLOTS = 6;
 var PI = 1800;

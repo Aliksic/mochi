@@ -93,13 +93,49 @@ const scan = await evalJs(`(function(){
 })()`);
 console.log('① localStorage 含 harmony/型号 的键值：\n' + JSON.stringify(JSON.parse(scan || '{}'), null, 2));
 
-// ② 打开「问问TA」面板，确认选项框初始为空
+// ② 打开聊天页 → 打开「问问TA」面板，确认选项框初始为空
+const appInfo = await evalJs(`(function(){
+  var app = document.querySelector('.app[data-app="chat"]');
+  var chatPage = document.getElementById('page-chat');
+  return JSON.stringify({ appExists: !!app, chatPageHidden: chatPage ? chatPage.hidden : null });
+})()`);
+console.log('②-a 聊天入口：' + appInfo);
+await evalJs(`(function(){
+  var app = document.querySelector('.app[data-app="chat"]');
+  if (app) app.click();
+  return true;
+})()`);
+await sleep(800);
+const afterChat = await evalJs(`(function(){
+  var chatPage = document.getElementById('page-chat');
+  var more = document.getElementById('more-ask');
+  return JSON.stringify({ chatPageHidden: chatPage ? chatPage.hidden : null, moreExists: !!more });
+})()`);
+console.log('②-b 点击聊天后：' + afterChat);
 await evalJs(`(function(){
   var more = document.getElementById('more-ask');
   if (more) more.click();
   return true;
 })()`);
 await sleep(500);
+// 最小验证：填值后同一 eval 内立即读回（排除定时器清空/时序干扰）
+const miniTest = await evalJs(`(function(){
+  var panel = document.getElementById('chat-ask-panel');
+  var btn = panel.querySelector('.chat-ask-type-btn[data-atype="single"]');
+  var clicked = false;
+  if (btn) { btn.click(); clicked = true; }
+  var input = document.getElementById('chat-ask-input');
+  var opts = document.getElementById('chat-ask-opts');
+  var setInp = false, setOpts = false, readInp = null, readOpts = null;
+  try { input.value = '今天想喝什么？'; setInp = true; } catch (e) { setInp = 'ERR:' + e.message; }
+  try { readInp = input.value; } catch (e) { readInp = 'ERR:' + e.message; }
+  try { opts.value = '选项A~回应A\\n选项B~回应B\\n选项C~回应C\\n选项D~回应D'; setOpts = true; } catch (e) { setOpts = 'ERR:' + e.message; }
+  try { readOpts = opts.value; } catch (e) { readOpts = 'ERR:' + e.message; }
+  return JSON.stringify({ clicked: clicked, setInp: setInp, readInp: readInp, setOpts: setOpts, readOpts: readOpts,
+    optsHiddenAfter: opts ? opts.hidden : null, singleSelAfter: btn ? btn.classList.contains('sel') : null,
+    inputBoxTxt: input.__ceBox ? input.__ceBox.textContent : null, optsBoxTxt: opts.__ceBox ? opts.__ceBox.textContent : null });
+})()`);
+console.log('②-c 最小验证（同 eval 赋值+读回）：' + miniTest);
 const panelCheck = await evalJs(`(function(){
   var panel = document.getElementById('chat-ask-panel');
   var title = document.getElementById('chat-ask-title');
@@ -111,6 +147,18 @@ const panelCheck = await evalJs(`(function(){
 console.log('② 「问问TA」面板初始状态：\n' + JSON.stringify(JSON.parse(panelCheck || '{}'), null, 2));
 
 // ③ 切单选题，填 4 个选项，多次提交验证 TA 是否随机选（不固定第一个）
+// 聊天记录键：命名空间 xy-home-v2:default:chat-msgs（或旧顶层键）——动态找
+function readChatMsgsExpr() {
+  return `(function(){
+    var k = null;
+    for (var i = 0; i < localStorage.length; i++) {
+      var kk = localStorage.key(i);
+      if (/chat-msgs$/.test(kk)) { k = kk; }
+    }
+    if (!k) return null;
+    try { return JSON.parse(localStorage.getItem(k) || '[]'); } catch (e) { return null; }
+  })()`;
+}
 const picks = [];
 for (let round = 0; round < 8; round++) {
   await evalJs(`(function(){
@@ -120,34 +168,86 @@ for (let round = 0; round < 8; round++) {
     return true;
   })()`);
   await sleep(300);
-  await evalJs(`(function(){
+  const typeInfo = await evalJs(`(function(){
     var panel = document.getElementById('chat-ask-panel');
-    var btn = panel.querySelector('.chat-ask-type-btn[data-atype="single"]');
-    if (btn) btn.click();
-    var input = document.getElementById('chat-ask-input');
-    input.value = '今天想喝什么？';
-    var opts = document.getElementById('chat-ask-opts');
-    opts.value = '选项A~回应A\n选项B~回应B\n选项C~回应C\n选项D~回应D';
-    return true;
+    var btn = panel ? panel.querySelector('.chat-ask-type-btn[data-atype="single"]') : null;
+    var typeRow = panel ? panel.querySelector('.chat-ask-type') : null;
+    return JSON.stringify({ panelHidden: panel ? panel.hidden : null, typeRowHidden: typeRow ? typeRow.hidden : null, btnExists: !!btn });
   })()`);
+  if (round === 0) console.log('③ round0 类型行状态：' + typeInfo);
+  const clickInfo = await evalJs(`(function(){
+    var panel = document.getElementById('chat-ask-panel');
+    var btn = panel ? panel.querySelector('.chat-ask-type-btn[data-atype="single"]') : null;
+    var before = btn ? btn.classList.contains('sel') : null;
+    if (btn) btn.click();
+    var after = btn ? btn.classList.contains('sel') : null;
+    var opts = document.getElementById('chat-ask-opts');
+    var input = document.getElementById('chat-ask-input');
+    var inputBox = input ? (input.__ceBox || null) : null;
+    var optsBox = opts ? (opts.__ceBox || null) : null;
+    return JSON.stringify({ btnExists: !!btn, selBefore: before, selAfter: after,
+      optsHidden: opts ? opts.hidden : null, optsConnected: opts ? opts.isConnected : null,
+      inputConnected: input ? input.isConnected : null, inputBoxConnected: inputBox ? inputBox.isConnected : null,
+      optsBoxConnected: optsBox ? optsBox.isConnected : null });
+  })()`);
+  if (round === 0) console.log('③ round0 点击单选后：' + clickInfo);
+  const assignInfo = await evalJs(`(function(){
+    var input = document.getElementById('chat-ask-input');
+    var opts = document.getElementById('chat-ask-opts');
+    var out = {};
+    try { out.in0 = input.value; } catch (e) { out.in0 = 'ERR:' + e.message; }
+    try { input.value = '今天想喝什么？'; out.setInp = 'ok'; } catch (e) { out.setInp = 'ERR:' + e.message; }
+    try { out.in1 = input.value; } catch (e) { out.in1 = 'ERR:' + e.message; }
+    try { out.box1 = input.__ceBox ? input.__ceBox.textContent : null; } catch (e) { out.box1 = 'ERR:' + e.message; }
+    try { opts.value = '选项A~回应A\n选项B~回应B\n选项C~回应C\n选项D~回应D'; out.setOpts = 'ok'; } catch (e) { out.setOpts = 'ERR:' + e.message; }
+    try { out.op1 = opts.value; } catch (e) { out.op1 = 'ERR:' + e.message; }
+    try { out.in2 = input.value; } catch (e) { out.in2 = 'ERR:' + e.message; }
+    try { out.box2 = input.__ceBox ? input.__ceBox.textContent : null; } catch (e) { out.box2 = 'ERR:' + e.message; }
+    return out;
+  })()`);
+  if (round === 0) console.log('③ round0 同eval赋值+读回：' + JSON.stringify(assignInfo));
   await sleep(300);
+  const valInfo = await evalJs(`(function(){
+    var input = document.getElementById('chat-ask-input');
+    var opts = document.getElementById('chat-ask-opts');
+    var btn = document.getElementById('chat-ask-panel').querySelector('.chat-ask-type-btn[data-atype="single"]');
+    return JSON.stringify({
+      inputVal: input ? input.value : null, optsVal: opts ? opts.value : null, optsHidden: opts ? opts.hidden : null,
+      singleSel: btn ? btn.classList.contains('sel') : null,
+      inputBoxTxt: input.__ceBox ? input.__ceBox.textContent : null,
+      optsBoxTxt: opts.__ceBox ? opts.__ceBox.textContent : null
+    });
+  })()`);
+  if (round === 0) console.log('③ round0 300ms后：' + valInfo);
   await evalJs(`(function(){
     var ok = document.getElementById('chat-ask-ok'); if (ok) ok.click();
     return true;
   })()`);
-  await sleep(2800);
-  const r = await evalJs(`(function(){
-    try {
-      var msgs = JSON.parse(localStorage.getItem('xy-home-v2:chat-msgs') || '[]');
-      for (var i = msgs.length - 1; i >= 0; i--) {
-        var m = msgs[i];
+  // 轮询等待 TA 回答（最长 6 秒）
+  let r = null;
+  for (let w = 0; w < 30; w++) {
+    await sleep(200);
+    r = await evalJs(`(function(){
+      var arr = ${readChatMsgsExpr().replace(/^\(function/, '(function')};
+      if (!arr || !arr.length) return null;
+      for (var i = arr.length - 1; i >= 0; i--) {
+        var m = arr[i];
         if (m && m.special === 'ask' && m.askStatus === 'answered' && m.askQuestion === '今天想喝什么？') {
           return JSON.stringify({ pick: m.askAnswer });
         }
       }
-      return JSON.stringify({ pick: null });
-    } catch (e) { return JSON.stringify({ err: String(e) }); }
-  })()`);
+      return null;
+    })()`);
+    if (r) break;
+  }
+  if (round === 0 && !r) {
+    const debugInfo = await evalJs(`(function(){
+      var arr = ${readChatMsgsExpr().replace(/^\(function/, '(function')};
+      var last = arr && arr.length ? arr[arr.length - 1] : null;
+      return JSON.stringify({ total: arr ? arr.length : -1, last: last ? { side: last.side, special: last.special, text: (last.text||'').slice(0,30) } : null });
+    })()`);
+    console.log('③ round0 未等到回答，最近消息：' + debugInfo);
+  }
   picks.push(JSON.parse(r || '{}'));
 }
 const pickSet = new Set(picks.map(p => p.pick).filter(Boolean));

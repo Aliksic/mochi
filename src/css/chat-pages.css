@@ -607,7 +607,7 @@
   padding:6px 0; border-radius:10px; background:rgba(0,0,0,.05);
 }
 .period-phase-bar .seg-0 { background:#fde2ee; color:#e85a8f; }
-.period-phase-bar .seg-2 { background:#fff3da; color:#f5a623; }
+.period-phase-bar .seg-1 { background:#fff3da; color:#f5a623; }
 .period-phase-bar .seg.active { box-shadow:0 0 0 2px var(--ink) inset; font-weight:800; }
 .period-action-row { display:flex; gap:10px; }
 .period-btn {

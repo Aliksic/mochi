@@ -162,6 +162,8 @@
   // ================= 聊天专用昵称/头像（与桌面独立） =================
   // v3.8.x：聊天设置里编辑的昵称/头像只存 cs-lbl-*/cs-avatar-* 键，聊天页只读这套键；
   // 桌面 deco-widget 的 lbl-*/avatar-* 完全独立。未设时聊天页显示默认占位（TA/我 + 人形图标）。
+  // v3.9.x：聊天昵称/头像未单独设置时**跟随桌面**（聊天页回退读桌面键）——设置后聊天域
+  // 全部显示聊天专用值；设置页未设时右侧提示「跟随桌面（xx）」，明确当前生效来源。
   // 头像压缩与桌面 bindAvatar 一致（256px JPEG 0.85），内联实现避免依赖 personalize.js 导出。
   function compressHead(dataUrl, maxSide) {
     return new Promise((resolve) => {
@@ -185,10 +187,15 @@
   }
   function applyProfile() {
     const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    // v3.9.x：聊天昵称未设置时显示「跟随桌面（xx）」，明确当前聊天页使用的昵称来源
+    const follow = (chatKey, deskKey, fb) => {
+      let d = null; try { d = store.get(deskKey); } catch (e) {}
+      return d ? '跟随桌面（' + d + '）' : fb;
+    };
     const lp = store.get('cs-lbl-partner');
-    set('cs-lbl-partner-val', lp || '');
+    set('cs-lbl-partner-val', lp || follow('cs-lbl-partner', 'lbl-partner', ''));
     const lu = store.get('cs-lbl-user');
-    set('cs-lbl-user-val', lu || '');
+    set('cs-lbl-user-val', lu || follow('cs-lbl-user', 'lbl-user', ''));
     const ap = store.get('cs-avatar-partner');
     set('cs-avatar-partner-val', ap ? '已设置' : '');
     const ar = document.getElementById('cs-avatar-partner-remove');

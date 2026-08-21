@@ -441,11 +441,25 @@
     });
     return escMigrated;
   }
+  // v3.9.x：聊天域昵称——聊天专用键（cs-lbl-*）优先，未设置回退桌面键（lbl-*）。
+  // 桌面/聊天昵称可独立设置：单独设置后聊天域显示聊天昵称，未设置则与桌面一致。
+  function chatLabel(ck, dk, fb) {
+    let v = null;
+    try { v = store.get(ck); } catch (e) {}
+    if (v) return v;
+    try { v = store.get(dk); } catch (e) {}
+    return v || fb;
+  }
+  function chatPartnerName() { return chatLabel('cs-lbl-partner', 'lbl-partner', 'TA'); }
+  function chatUserName() { return chatLabel('cs-lbl-user', 'lbl-user', '我'); }
   // 头像回填（接受元素或 id）
   function fillAvatar(el, key) {
     if (typeof el === 'string') el = document.getElementById(el);
     if (!el) return;
     let data = store.get(key);
+    // v3.9.x：聊天专用头像未设置时回退桌面头像（独立设置语义——未单独设置则与桌面一致）
+    if (!data && key === 'cs-avatar-partner') data = store.get('avatar-partner');
+    if (!data && key === 'cs-avatar-user') data = store.get('avatar-user');
     // v3.6.x：渲染前防护——超大 dataURL 不渲染（personalize 启动时已清除存量坏数据，
     // 这里兜底防止清理前渲染触发 iOS Safari 解码崩溃：画面正常但点击无响应）
     if (data && data.length > 500 * 1024) data = null;
@@ -498,10 +512,15 @@
   //   从未被定义（空检查永远跳过）。改为抽 updateChatPartnerName()，读 lbl-partner，
   //   缺失回退当前联系人的注册名（联系人管理里设的名字，如"Z"），再回退 'TA'；
   //   contact-switched 时调用，并挂 window.renderChatHeader 供 contacts.js 切换后刷新。
+  // v3.9.x：聊天昵称可独立设置——优先读 cs-lbl-partner，未设置回退桌面 lbl-partner，
+  //   再回退联系人注册名，最后 'TA'。
   const pname = document.getElementById('chat-partner-name');
   function updateChatPartnerName() {
     if (!pname) return;
-    const saved = store.get('cs-lbl-partner');
+    let saved = null;
+    try { saved = store.get('cs-lbl-partner'); } catch (e) {}
+    if (saved) { pname.textContent = saved; return; }
+    try { saved = store.get('lbl-partner'); } catch (e) {}
     if (saved) { pname.textContent = saved; return; }
     try {
       if (window.getContacts) {
@@ -1195,7 +1214,7 @@
     if (rec.special === 'redpacket') {
       m.className = 'msg-rp';
       m.dataset.idx = msgs.length - 1;
-      const sideTxt = rec.side === 'out' ? '我' : (store.get('lbl-partner') || 'TA');
+      const sideTxt = rec.side === 'out' ? '我' : chatPartnerName();
       const cls = rpStatusCls(rec);
       const rpIco = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9c3 2 6 3 9 3s6-1 9-3"/><circle cx="12" cy="9" r="1.4"/></svg>';
       m.innerHTML = '<div class="msg-rp-card' + (cls ? ' ' + cls : '') + '">' +
@@ -1487,8 +1506,8 @@
       const cards = pokeAllCards();
       action = cards.length ? pick(cards) : '拍了拍你';
     }
-    const name = store.get('lbl-partner') || 'TA';
-    const myName = store.get('lbl-user') || '我';
+    const name = chatPartnerName();
+    const myName = chatUserName();
     // 显示：联系人昵称 + 字卡（v3.7.x 全格式处理）
     // 含"你"：如"拍了拍你"→"拍了拍我"；若卡面以"你/我"作主语（如"你拍了拍我的头"/
     //   "我拍了拍你的头"），主语=联系人，去掉后其余"你"换我的称呼
@@ -2808,7 +2827,7 @@ function partialRetractMsg(msgEl, side) {
   }
   // 发送一次拍一拍（触发联系人回复）（v3.7.x 全格式处理）
   function sendPoke(action) {
-    const name = store.get('lbl-partner') || 'TA';
+    const name = chatPartnerName();
     let text;
     if (action.indexOf('你') >= 0) {
       if (action.charAt(0) === '你') {
@@ -2872,10 +2891,10 @@ function partialRetractMsg(msgEl, side) {
   })();
   function pokeTabLabel(kind) {
     if (kind === 'ta') {
-      const n = store.get('lbl-partner') || 'TA';
+      const n = chatPartnerName();
       return n + ' 的拍一拍';
     }
-    const n = store.get('lbl-user') || '我';
+    const n = chatUserName();
     return (n === '我' ? '我的' : n + ' 的') + '拍一拍';
   }
   // 当前 tab 的分组列表 → [{key,label,cards}]
@@ -2983,7 +3002,7 @@ function partialRetractMsg(msgEl, side) {
     });
   }
   function renderPokeCard() {
-    const name = store.get('lbl-partner') || 'TA';
+    const name = chatPartnerName();
     if (pokeName) pokeName.textContent = name;
     pokeTabTa.textContent = pokeTabLabel('ta');
     pokeTabMine.textContent = pokeTabLabel('mine');
@@ -3099,7 +3118,7 @@ function partialRetractMsg(msgEl, side) {
     const dp = document.getElementById('chat-decision-panel'); if (dp) dp.hidden = true;
     if (window.closeAvlib) window.closeAvlib();
     if (morePanel) morePanel.hidden = true;
-    if (rpsNameEl) rpsNameEl.textContent = store.get('lbl-partner') || 'TA';
+    if (rpsNameEl) rpsNameEl.textContent = chatPartnerName();
     if (rpsHintEl) rpsHintEl.textContent = '选择你要出的拳';
     rpsRenderScore();
     rpsPanel.hidden = false;
@@ -3180,7 +3199,7 @@ function partialRetractMsg(msgEl, side) {
     const rpsP = document.getElementById('chat-rps-panel'); if (rpsP) rpsP.hidden = true;
     if (window.closeAvlib) window.closeAvlib();
     if (morePanel) morePanel.hidden = true;
-    if (rpNameEl) rpNameEl.textContent = store.get('lbl-partner') || 'TA';
+    if (rpNameEl) rpNameEl.textContent = chatPartnerName();
     if (isQixiToday()) {
       if (rpQixiTag) rpQixiTag.hidden = false;
       if (rpQixiSection) { rpQixiSection.hidden = false; rpQixiSection.classList.add('qixi-today'); }
@@ -4000,7 +4019,7 @@ function partialRetractMsg(msgEl, side) {
       setTimeout(() => {
         if (!sameCid()) return;
         const roll = Math.random();
-        const name = store.get('lbl-partner') || 'TA';
+        const name = chatPartnerName();
         let status, answer, reply = null;
         if (roll < 0.6) {
           status = '接受';
@@ -4173,8 +4192,8 @@ function partialRetractMsg(msgEl, side) {
       return;
     }
     loadMsgs();
-    const partnerName = store.get('lbl-partner') || 'TA';
-    const myName = store.get('lbl-user') || '我';
+    const partnerName = chatPartnerName();
+    const myName = chatUserName();
     const results = [];
     msgs.forEach((m, i) => {
       if (!m || m.special) return;
@@ -4286,7 +4305,7 @@ function partialRetractMsg(msgEl, side) {
   }
   function updateCallPanel() {
     if (!chatCallPanel || chatCallPanel.hidden) return;
-    const pName = store.get('lbl-partner') || 'TA';
+    const pName = chatPartnerName();
     if (callPanelName) callPanelName.textContent = pName;
     let st = null;
     try { st = (window.getCallState && window.getCallState()) || null; } catch (err) { st = null; }
@@ -4384,7 +4403,7 @@ function partialRetractMsg(msgEl, side) {
     e.stopPropagation();
     if (window.placeCall) window.placeCall();
     else {
-      const name = store.get('lbl-partner') || 'TA';
+      const name = chatPartnerName();
       addRec({ side: 'out', text: '拨打 ' + name + ' 语音通话', special: 'call' });
       if (window.logFish) window.logFish();
     }
@@ -4646,8 +4665,8 @@ function partialRetractMsg(msgEl, side) {
   function renderFav() {    if (!favList) return;
     const fav = getFav();
     favList.innerHTML = '';
-    const partnerName = store.get('lbl-partner') || 'TA';
-    const myName = store.get('lbl-user') || '我';
+    const partnerName = chatPartnerName();
+    const myName = chatUserName();
     // 按"谁收藏"分组：TA 收藏夹自动收藏（by==='ta'）归 TA；手动收藏（含旧数据）归我
     const myFav = fav.filter(f => f.by !== 'ta');
     const taFav = fav.filter(f => f.by === 'ta');

@@ -695,7 +695,11 @@
   window.openPongPanel = function () {
     if (!panel) return;
     if (partnerNameEl) {
-      try { partnerNameEl.textContent = (window.activeStore && window.activeStore().get('lbl-partner')) || 'TA'; } catch (e) { partnerNameEl.textContent = 'TA'; }
+      // v3.9.x：双人乒乓从聊天页进入（聊天域）——优先读聊天专用昵称，未设置回退桌面昵称
+      try {
+        const s = window.activeStore && window.activeStore();
+        partnerNameEl.textContent = (s && (s.get('cs-lbl-partner') || s.get('lbl-partner'))) || 'TA';
+      } catch (e) { partnerNameEl.textContent = 'TA'; }
     }
     if (isFs) toggleFs();   // 防上次全屏残留
     panel.hidden = false;
