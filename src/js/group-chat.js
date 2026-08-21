@@ -131,6 +131,44 @@
     applyGcBeauty();
     try { if (settingsPanel && !settingsPanel.hidden) renderSettingsPanel(); } catch (e) {}
   }
+  // ---- 颜色对比度保护（v3.9.x 修复：黑底黑字消息看不见） ----
+  // 用户在美化里把文字颜色设成与气泡同色（色板第一个「默认黑」很易误选）时，
+  // 消息会完全不可见。这里按 WCAG 亮度算对比度：应用后 < 阈值则回滚并提示；
+  // 设置面板里对存量低对比度组合显示警告行。
+  const GC_MIN_CONTRAST = 2.2;
+  const GC_COLOR_PAIRS = {
+    'out-ink': ['out-bg', 'out-ink'],
+    'out-bg': ['out-bg', 'out-ink'],
+    'in-ink': ['in-bg', 'in-ink'],
+    'in-bg': ['in-bg', 'in-ink']
+  };
+  function gcColorLum(hex) {
+    const m = String(hex || '').match(/^#?([0-9a-f]{6})$/i);
+    if (!m) return null;
+    const n = parseInt(m[1], 16);
+    const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+    const lin = (c) => { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
+    return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+  }
+  function gcContrast(a, b) {
+    const la = gcColorLum(a), lb = gcColorLum(b);
+    if (la === null || lb === null) return null;
+    const hi = Math.max(la, lb), lo = Math.min(la, lb);
+    return (hi + 0.05) / (lo + 0.05);
+  }
+  // key（四个颜色键之一）当前组合对比度是否过低的布尔
+  function gcColorPairBad(key) {
+    const p = GC_COLOR_PAIRS[key];
+    if (!p) return false;
+    const ratio = gcContrast(gcBeautyGet(p[0]), gcBeautyGet(p[1]));
+    return ratio !== null && ratio < GC_MIN_CONTRAST;
+  }
+  // 设置面板里警告行文案（供 renderBeautyView 用）
+  function gcColorWarnText(key) {
+    const names = { 'out-bg': '我的气泡', 'in-bg': '联系人气泡' };
+    const n = names[key] || '';
+    return n + '：文字与气泡颜色太接近，消息可能看不清，建议改深/改浅';
+  }
   // 群聊页局部字体（不污染全局 body/html）
   function applyGcFont() {
     const page = document.getElementById('page-group-chat');
@@ -922,13 +960,24 @@
     row.addEventListener('click', fn);
     return row;
   }
+  // 文字颜色色板里「默认黑」易被误认为默认选项（文字色默认其实是白色），
+  // 在群聊美化里把第一格改标「黑色」，避免用户选成黑字黑底看不见
+  function gcInkSwatches() {
+    return GC_INK_COLORS.map(s => s.color === '#111111' ? { color: '#111111', label: '黑色' } : s);
+  }
   function pickGcColor(key, title, swatches) {
     if (!window.openModal) return;
     const cur = gcBeautyGet(key);
     window.openModal(title, '', (v) => {
       const color = (typeof v === 'number' && swatches[v]) ? swatches[v].color : v;
       if (!color) return;
+      const prev = gcBeautyGet(key);
       gcBeautySet(key, color);
+      // 对比度保护：文字/气泡同色系 → 回滚并提示（防黑底黑字）
+      if (gcColorPairBad(key)) {
+        gcBeautySet(key, prev);
+        toast('已恢复：该颜色与气泡太接近，消息会看不清');
+      }
     }, { colorPicker: true, color: cur, swatches: swatches });
   }
   function pickGcPills(key, title, pills, def) {
@@ -1075,9 +1124,19 @@
     // —— 气泡与文字 ——
     gtitle('气泡与文字');
     add('我的气泡颜色', bgLabel(g('out-bg'), '#111111'), () => pickGcColor('out-bg', '我的气泡颜色', GC_BUBBLE_BG));
-    add('我的消息文字颜色', bgLabel(g('out-ink'), '#ffffff'), () => pickGcColor('out-ink', '我的消息文字颜色', GC_INK_COLORS));
+    add('我的消息文字颜色', bgLabel(g('out-ink'), '#ffffff'), () => pickGcColor('out-ink', '我的消息文字颜色', gcInkSwatches()));
     add('联系人气泡颜色', bgLabel(g('in-bg'), '#ffffff'), () => pickGcColor('in-bg', '联系人气泡颜色', GC_BUBBLE_BG));
-    add('联系人消息文字颜色', bgLabel(g('in-ink'), '#111111'), () => pickGcColor('in-ink', '联系人消息文字颜色', GC_INK_COLORS));
+    add('联系人消息文字颜色', bgLabel(g('in-ink'), '#111111'), () => pickGcColor('in-ink', '联系人消息文字颜色', gcInkSwatches()));
+    // 存量低对比度警告（我的/联系人气泡与文字同色系时提示）
+    const warnRow = (key) => {
+      if (!gcColorPairBad(key)) return;
+      const w = document.createElement('div');
+      w.className = 'gc-set-warn';
+      w.textContent = '⚠️ ' + gcColorWarnText(key);
+      settingsBody.appendChild(w);
+    };
+    warnRow('out-bg');
+    warnRow('in-bg');
     // —— 发送按钮 ——
     gtitle('发送按钮');
     add('发送按钮显示/隐藏', g('send-show') === 'hide' ? '隐藏' : '显示', () => pickGcPills('send-show', '显示发送按钮', [

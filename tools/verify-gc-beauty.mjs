@@ -179,6 +179,45 @@ check('重置后头像形状回圆形', reset.av === '50%', 'av=' + reset.av);
 check('重置后时间轴类已移除', reset.timeHidden === false);
 check('重置后默认值不再写入存储', reset.storedOutBg === false && reset.storedAv === false);
 
+// ---- 用例 8.5：对比度保护——UI 选「黑色」文字（黑底黑字）自动回滚 + 提示 ----
+await evalJs("(function(){var p=document.getElementById('gc-settings-panel');if(p&&p.hidden===false){p.hidden=true;}return true;})()");
+await sleep(300);
+await evalJs("(function(){var b=document.getElementById('gc-more-btn');if(b)b.click();return true;})()");
+await sleep(250);
+await evalJs("(function(){var b=document.getElementById('gc-more-settings');if(b)b.click();return true;})()");
+await sleep(400);
+await evalJs("(function(){var items=document.querySelectorAll('#gc-set-body .gc-set-item');var link=null;items.forEach(function(r){var n=r.querySelector('.gc-set-name');if(n&&n.textContent.indexOf('美化聊天')===0)link=r;});if(link)link.click();return true;})()");
+await sleep(400);
+// 点击「我的消息文字颜色」行 → 弹色板
+await evalJs("(function(){var rows=document.querySelectorAll('#gc-set-body .gc-set-row');var hit=null;rows.forEach(function(r){var t=r.querySelector('.txt');if(t&&t.textContent.indexOf('我的消息文字颜色')===0)hit=r;});if(hit)hit.click();return true;})()");
+await sleep(400);
+const modalOpen = await evalJs("(function(){var m=document.getElementById('modal-mask');return !!m&&!m.hidden;})()");
+check('文字颜色色板弹窗已打开', modalOpen === true);
+// 点第一格色板（#111111 黑）→ 确定
+await evalJs("(function(){var sws=document.querySelectorAll('#modal-swatches .sw');if(sws.length)sws[0].click();return true;})()");
+await sleep(200);
+await evalJs("(function(){var ok=document.getElementById('modal-ok');if(ok)ok.click();return true;})()");
+await sleep(400);
+const guard = JSON.parse(await evalJs("(function(){var gc=document.getElementById('page-group-chat');var toast=document.getElementById('cc-toast');return JSON.stringify({ink:gc?gc.style.getPropertyValue('--msg-out-ink'):'',toast:toast?toast.textContent:''});})()") || '{}');
+check('选黑色文字后自动回滚为白色（黑底不黑字）', guard.ink === '#ffffff', JSON.stringify(guard));
+check('回滚时给出提示 toast', (guard.toast || '').indexOf('已恢复') >= 0, String(guard.toast));
+
+// ---- 用例 8.6：存量低对比度组合 → 设置面板显示警告行 ----
+await evalJs("(function(){window.groupChatBeautySet('out-ink','#111111');return true;})()");
+await sleep(300);
+await evalJs("(function(){var p=document.getElementById('gc-settings-panel');if(p&&!p.hidden){var c=document.getElementById('gc-set-close');if(c)c.click();}return true;})()");
+await sleep(300);
+await evalJs("(function(){var b=document.getElementById('gc-more-btn');if(b)b.click();return true;})()");
+await sleep(250);
+await evalJs("(function(){var b=document.getElementById('gc-more-settings');if(b)b.click();return true;})()");
+await sleep(400);
+await evalJs("(function(){var items=document.querySelectorAll('#gc-set-body .gc-set-item');var link=null;items.forEach(function(r){var n=r.querySelector('.gc-set-name');if(n&&n.textContent.indexOf('美化聊天')===0)link=r;});if(link)link.click();return true;})()");
+await sleep(400);
+const warnRow = await evalJs("(function(){var w=document.querySelector('#gc-set-body .gc-set-warn');return w?w.textContent:'';})()");
+check('低对比度组合显示警告行', (warnRow || '').indexOf('我的气泡') >= 0 && (warnRow || '').indexOf('看不清') >= 0, String(warnRow));
+await evalJs("(function(){window.groupChatBeautySet('out-ink','#ffffff');return true;})()");
+await sleep(200);
+
 // ---- 用例 9：持久化 + 迁移排除 + 刷新后仍生效 ----
 await evalJs("(function(){window.groupChatBeautySet('font-size','16px');return true;})()");
 await sleep(200);

@@ -24,6 +24,9 @@
     // 猜拳/游戏邀请（游戏在 Pong/贪吃蛇中随机），命中后打开对应半框取代普通消息；
     // 概率默认低于普通主动消息（15%/10%），避免邀请过于频繁
     'ai-rps-en': 1, 'ai-rps-prob': 15, 'ai-game-en': 1, 'ai-game-prob': 10,
+    // v3.9.x：TA 主动查岗——主动发送轮里 TA 按概率来查你的岗（查岗问题卡进聊天，
+    // 概率自动弹回答弹窗，作答后 TA 回应）；冷却默认 30 分钟防高概率连查
+    'ckq-en': 1, 'ckq-prob': 15, 'ckq-popup-prob': 70, 'ckq-cool': 30,
     // 信箱（星言信箱设置）
     // v3.5.99：最长写信/回信时间默认 480 分钟（8 小时）太久，容易让用户误以为 TA 不写信，改为 120 分钟
     // v3.6.x：默认最多字卡条数 100 → 50（信太长反而像刷屏）；新增最少字卡条数默认 20
@@ -147,7 +150,7 @@
       }
     });
     // 开关
-    ['py-en', 'as-en', 'dnd-en', 'as-badge', 'ml-kaomoji-en', 'ml-emoji-en', 'ml-sticker-en', 'cs-normal', 'cs-trigger-name', 'cs-trigger-bar', 'gc-py-en', 'ai-rps-en', 'ai-game-en'].forEach(k => {
+    ['py-en', 'as-en', 'dnd-en', 'as-badge', 'ml-kaomoji-en', 'ml-emoji-en', 'ml-sticker-en', 'cs-normal', 'cs-trigger-name', 'cs-trigger-bar', 'gc-py-en', 'ai-rps-en', 'ai-game-en', 'ckq-en'].forEach(k => {
       const el = document.getElementById(k);
       if (el) el.checked = cfg[k] === 1;
     });
@@ -234,7 +237,7 @@
     });
   });
   // 开关交互
-  ['py-en', 'as-en', 'dnd-en', 'as-badge', 'ml-kaomoji-en', 'ml-emoji-en', 'ml-sticker-en', 'cs-normal', 'cs-trigger-name', 'cs-trigger-bar', 'gc-py-en', 'ai-rps-en', 'ai-game-en'].forEach(k => {
+  ['py-en', 'as-en', 'dnd-en', 'as-badge', 'ml-kaomoji-en', 'ml-emoji-en', 'ml-sticker-en', 'cs-normal', 'cs-trigger-name', 'cs-trigger-bar', 'gc-py-en', 'ai-rps-en', 'ai-game-en', 'ckq-en'].forEach(k => {
     const el = document.getElementById(k);
     if (el) {
       el.addEventListener('change', () => {
@@ -286,7 +289,7 @@
             window.saveReplyCfg(k, v);
           }
         });
-        ['py-en', 'as-en', 'dnd-en', 'as-badge', 'ml-kaomoji-en', 'ml-emoji-en', 'ml-sticker-en', 'cs-normal', 'cs-trigger-name', 'cs-trigger-bar', 'gc-py-en', 'ai-rps-en', 'ai-game-en'].forEach(k => {
+        ['py-en', 'as-en', 'dnd-en', 'as-badge', 'ml-kaomoji-en', 'ml-emoji-en', 'ml-sticker-en', 'cs-normal', 'cs-trigger-name', 'cs-trigger-bar', 'gc-py-en', 'ai-rps-en', 'ai-game-en', 'ckq-en'].forEach(k => {
           const el = document.getElementById(k);
           if (el) window.saveReplyCfg(k, el.checked ? 1 : 0);
         });

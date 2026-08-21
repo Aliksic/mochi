@@ -4,6 +4,16 @@
 
 ## 规则
 
+### 2026-08-21（用户反馈「群聊里我的气泡和文字都是黑色，发送的消息看不见」）
+- [本会话·完成]（**已构建 verify 10/10 + 美化回归 26/26 + 形象回归 22/22 + 群聊冒烟 20/20，待推送**）：`src/js/group-chat.js`（AI-A 域）+ `src/css/group-chat.css`（AI-A 域）+ `tools/verify-gc-beauty.mjs`（补 4 条保护用例）+ 构建产物。
+  - **排查结论**：无头 Chrome 实测本地新构建在浅色/深色/默认/自定义聊天色等场景下群聊 out 气泡均为黑底**白字**（`--msg-out-ink: #ffffff`）；旧版线上（origin/main）聊天设置默认也是白字（`cs-out-ink || '#ffffff'`）。默认状态下群聊不可能黑底黑字。黑底黑字只可能来自两条路径：① 用户在**群聊美化**里把「我的消息文字颜色」选成色板第一格「默认黑 #111111」（默认黑气泡 + 默认黑文字 = 完全看不见；群聊颜色已独立，聊天不受影响，正符合用户描述）；② 旧版群聊继承聊天页根变量（用户若在聊天设置自定义过文字颜色会连带），本地新版已用 page 级变量隔离修复。
+  - **修复**：
+    1. **颜色对比度保护**（防黑底黑字）：`gcColorLum/gcContrast` 按 WCAG 亮度算对比度（`GC_MIN_CONTRAST=2.2`）；`pickGcColor` 应用颜色后若文字/气泡对对比度过低 → **自动回滚到原色 + toast「已恢复：该颜色与气泡太接近，消息会看不清」**。仅 UI 路径保护（API `groupChatBeautySet` 不受影响，供测试/旧数据）。
+    2. **存量低对比度警告行**：`renderBeautyView` 气泡与文字分组下，若我的/联系人气泡与文字同色系（`gcColorPairBad`），显示红字警告「⚠️ 我的气泡：文字与气泡颜色太接近，消息可能看不清，建议改深/改浅」（`.gc-set-warn` 样式）。
+    3. **色板标签修正**：文字颜色色板第一格「默认黑」改为「黑色」（`gcInkSwatches()`），避免「默认」二字误导（文字色默认其实是白色）。
+  - **验证**：`tools/verify-gc-beauty.mjs` 26/26（新增：色板弹窗打开 → 点第一格黑色 → 确定 → out-ink 自动回滚 #ffffff + toast 含「已恢复」；API 设黑字 → 警告行出现）。回归全绿：形象 22/22、冒烟 20/20、verify 10/10。
+  - ⚠️ 对方注意：① 保护只做在群聊美化 UI 路径（pickGcColor），聊天设置的 `bindBubbleColorRow`（chat-settings.js，AI-A 域）存在同样的「默认黑」误导，如需同样保护请在聊天设置侧同步；② 本次构建包含对方累积改动（base.css/chat-main.css/chat.js/garden/mail/reply-settings/mobile-adapt/template/verify-mail-send-reply 等）与产物；`src/js/ck-question.js` 未跟踪未加入构建（jsFiles 未含），若为进行中功能请知悉；`tools/diag-ta-ask-single-input.mjs` 仍未跟踪待确认。
+
 ### 2026-08-21（用户需求「群聊右上角设置里需要美化聊天设置，就和聊天设置里的一样」）
 - [本会话·完成]（**已构建 verify 10/10 + 新回归 22/22 + 旧形象回归 22/22 + 旧群聊冒烟 20/20，未推送**）：`src/js/group-chat.js`（AI-A 域，已包含上一项群聊形象功能；本轮新增群聊美化）+ `src/css/group-chat.css`（AI-A 域，新增美化行样式 + 群聊时间轴作用域规则）+ `src/js/contacts.js`（**AI-B 域代改 1 行**：EXCLUDE 加 `'gc-beauty'`）+ `tools/verify-gc-beauty.mjs`（新回归脚本）。
   - **入口**：群聊设置面板主视图（我的群聊/成员群聊形象之后）新增「美化聊天」入口行（闪光图标 + 副行说明「气泡颜色、壁纸、字体、时间轴样式等」+ 右 chevron）；点击进入美化子视图（标题切到「美化聊天」，面板头动态切换），首行「‹ 返回群聊设置」回主视图。

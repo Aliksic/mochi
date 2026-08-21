@@ -282,7 +282,9 @@
             //   不含旧消息 → 丢消息。改为按指纹取并集：localNew = 本地中 IDB 没有的
             //   （按 ts+text+side+img 指纹去重），不限 ts；merged 按 ts 排序。
             //   聊天消息只增不改（撤回/编辑打标记不删数组），取并集不会把已删消息加回。
-            const sigOf = (m) => { try { return JSON.stringify({ t: m && m.text, s: m && m.side, ts: m && m.ts, i: m && m.img ? m.img.length : 0 }); } catch (e) { return ''; } };
+            // v3.9.x：指纹 img 用前 32 字符而非 length——同秒发送两张等长但内容不同
+            //   的图片，原 length 指纹相同导致 localNew 误去重丢一条
+            const sigOf = (m) => { try { return JSON.stringify({ t: m && m.text, s: m && m.side, ts: m && m.ts, i: m && m.img ? (typeof m.img === 'string' ? m.img.slice(0, 32) : String(m.img.length)) : 0 }); } catch (e) { return ''; } };
             const idbSigs = new Set();
             idbArr.forEach(x => { if (x) idbSigs.add(sigOf(x)); });
             const localNew = (pendingLocal || msgs || []).filter(m => m && !idbSigs.has(sigOf(m)));
@@ -1324,6 +1326,21 @@
           }
         }
       }
+      body.appendChild(m);
+      maybeScrollChatBottom(rec.side);
+      return m;
+    }
+    // 花朵卡片：居中粉底卡片，花朵emoji + 花名 + 留言
+    if (rec.special === 'flower') {
+      m.className = 'msg-flower';
+      const sideTxt = rec.side === 'out' ? '我' : chatPartnerName();
+      m.innerHTML = '<div class="msg-flower-card">' +
+        '<div class="msg-flower-emoji">' + escTxt(rec.flEmoji || '\uD83C\uDF37') + '</div>' +
+        '<div class="msg-flower-name">' + escTxt(rec.flName || '\u82B1') + '</div>' +
+        '<div class="msg-flower-wish">' + escTxt(rec.flWish || '\u9001\u7ED9\u4F60~') + '</div>' +
+        '<div class="msg-flower-foot">' + escTxt(sideTxt) + ' \u9001\u51FA</div>' +
+        favHeartHtml() +
+        '</div>';
       body.appendChild(m);
       maybeScrollChatBottom(rec.side);
       return m;
@@ -5813,6 +5830,10 @@ function partialRetractMsg(msgEl, side) {
   } catch (e) {}
   // 对外发送消息接口（占卜结果发送给 TA 等复用）
   window.chatSendMsg = (text) => { if (typeof text === 'string' && text.trim()) addMsg(text.trim()); };
+  // 花园送花卡片接口（garden.js 复用）：fromTA=true 时显示为对方送的花
+  window.chatSendFlower = (emoji, name, wish, fromTA) => {
+    return addRec({ side: fromTA ? 'in' : 'out', special: 'flower', flEmoji: emoji, flName: name, flWish: wish || '' });
+  };
   // v3.5.94：收藏消息含图片，可能只存在 IndexedDB → 启动补读（收藏页打开时才渲染，届时读到）
   try {
     if (window.idbGet) {

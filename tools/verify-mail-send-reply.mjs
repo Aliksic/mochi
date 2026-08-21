@@ -185,7 +185,7 @@ const landed = JSON.parse(await evalJs(`(function(){
   try {
     const ls = JSON.parse(window.storeFor('default').get('mail-letters') || '[]');
     const lsp = JSON.parse(window.storeFor('default').get('mail-reply-pending') || '[]');
-    const l = ls[0] || {};
+    const l = ls.find(function(x){return x && x.type === 'sent';}) || ls[0] || {};
     return JSON.stringify({
       ok: true,
       lsPartnerReply: !!(l.partnerReply && l.partnerReply.content),
@@ -217,7 +217,7 @@ await openApp(); // 重载
 const persisted = JSON.parse(await evalJs(`(function(){
   try {
     const ls = JSON.parse(window.storeFor('default').get('mail-letters') || '[]');
-    const l = ls[0] || {};
+    const l = ls.find(function(x){return x && x.type === 'sent';}) || ls[0] || {};
     return JSON.stringify({ ok: true, partnerReply: !!(l.partnerReply && l.partnerReply.content) });
   } catch(e) { return JSON.stringify({ ok: false, err: e.message }); }
 })()`) || '{}');

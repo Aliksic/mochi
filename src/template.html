@@ -1239,6 +1239,7 @@
         <button class="fav-tab" data-rp="group">群聊</button>
         <button class="fav-tab" data-rp="mail">信箱</button>
         <button class="fav-tab" data-rp="feed">朋友圈</button>
+        <button class="fav-tab" data-rp="ck">查岗</button>
         <button class="fav-tab" data-rp="other">其他</button>
       </div>
       <div class="gs-scroll">
@@ -1384,6 +1385,17 @@
               <div class="txt">清除所有朋友圈数据</div>
             </div>
           </div>
+        </div>
+        <!-- v3.9.x：查岗——TA 主动查你的岗：随主动发送按概率发查岗问题卡（聊天互动卡 + 概率弹窗，作答后 TA 回应） -->
+        <div class="gs-panel" data-rpanel="ck" hidden>
+          <div class="gs-title">TA 主动查岗</div>
+          <div class="set-group glass">
+            <div class="gs-row"><span>TA 主动查岗</span><label class="toggle"><input type="checkbox" id="ckq-en"><span class="tk"></span></label></div>
+            <div class="gs-row"><span>查岗概率</span><div class="stepper" data-k="ckq-prob" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="ckq-prob-val" readonly><button class="stp-max">+</button></div></div>
+            <div class="gs-row"><span>自动弹窗概率</span><div class="stepper" data-k="ckq-popup-prob" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="ckq-popup-prob-val" readonly><button class="stp-max">+</button></div></div>
+            <div class="gs-row"><span>查岗冷却（分钟）</span><div class="stepper" data-k="ckq-cool" data-min="0" data-max="240" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="ckq-cool-val" readonly><button class="stp-max">+</button></div></div>
+          </div>
+          <div class="gs-sub" style="padding:0 14px 14px">TA 主动找你时按概率来查你的岗：聊天里出现查岗问题卡（单选点击作答、文字题输入作答），作答后 TA 会回应；概率命中时直接弹出回答弹窗。冷却内不重复查岗，需开启「主动发送」，各联系人独立保存</div>
         </div>
         <!-- v3.9.x：其他——联系人主动邀请（猜拳/玩游戏），随 TA 主动找你的消息按概率触发 -->
         <div class="gs-panel" data-rpanel="other" hidden>

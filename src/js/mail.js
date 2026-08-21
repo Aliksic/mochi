@@ -153,13 +153,15 @@
     return html;
   }
   // 信箱列表摘要：剔除图片/表情包 dataURL（含标记前缀），避免显示超长 base64 乱码
+  // v3.9.x：补 HTML 转义——shortDesc 结果直接拼 innerHTML（render 列表项），未转义
+  //   可被含 < > 的信件内容注入 HTML（导入恶意备份 XSS）
   function shortDesc(s) {
     const str = String(s || '');
     const cleaned = str
       .replace(/(?:sticker|image):data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+/g, '')
       .replace(/data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+/g, '')
       .replace(/\s+/g, ' ').trim();
-    return (cleaned || '（图片）').slice(0, 30);
+    return escHtml((cleaned || '（图片）').slice(0, 30));
   }
   function letterPaper(title, content, date, author) {
     return '<div class="mail-paper">' +

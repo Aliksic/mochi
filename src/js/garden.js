@@ -276,8 +276,8 @@ function partnerAct(silent) {
     updDex(type, "h"); updSt("h", false);
     if (Math.random() < 0.3) {
       addLog(pName, "\u9001\u4F60\u4E00\u6735 " + name + " \uD83D\uDC95");
-      var gmsg = emoji + " \u521A\u6458\u7684" + name + "\u9001\u7ED9\u4F60\uFF0C\u6536\u597D\u54E6~";
-      if (window.chatSendMsg) { try { window.chatSendMsg(gmsg); } catch (e) {} }
+      var gmsg = "\u521A\u6458\u7684" + name + "\u9001\u7ED9\u4F60\uFF0C\u6536\u597D\u54E6~";
+      if (window.chatSendFlower) { try { window.chatSendFlower(emoji, name, gmsg, true); } catch (e) {} }
     } else {
       data.inv[type] = (data.inv[type] || 0) + 1;
       addLog(pName, "\u6536\u83B7\u4E86 " + name + " (+" + (tp ? tp.xp : 10) + "\u7ECF\u9A8C)");
@@ -557,13 +557,15 @@ function makeBouquet() {
   window.openModal("\u9009\u4E00\u6735\u82B1\u5236\u4F5C\u82B1\u675F", "", function (v) {
     if (!v || !T[v] || !data.inv[v]) return;
     var tp = T[v];
-    data.inv[v]--;
     var emoji = tp.e[tp.e.length - 1];
-    var msg = emoji + " \u9001\u7ED9\u4F60\u4E00\u675F" + tp.n + "\u82B1\uFF0C\u662F\u6211\u4EEC\u4E00\u8D77\u79CD\u7684\u54E6~";
-    addLog("\u6211", "\u5236\u4F5C\u4E86\u4E00\u675F " + tp.n + "\u82B1\u9001\u7ED9" + pn());
-    save(data);
-    if (window.chatSendMsg) { try { window.chatSendMsg(msg); } catch (e) {} }
-    renderAll();
+    window.openModal("\u9001\u82B1\u7559\u8A00", "", function (wish) {
+      data.inv[v]--;
+      var msg = wish || ("\u9001\u7ED9\u4F60\u4E00\u675F" + tp.n + "\uFF0C\u662F\u6211\u4EEC\u4E00\u8D77\u79CD\u7684\u54E6~");
+      addLog("\u6211", "\u5236\u4F5C\u4E86\u4E00\u675F " + tp.n + "\u82B1\u9001\u7ED9" + pn());
+      save(data);
+      if (window.chatSendFlower) { try { window.chatSendFlower(emoji, tp.n, msg); } catch (e) {} }
+      renderAll();
+    }, { });
   }, { pills: pills, noInput: true });
 }
 

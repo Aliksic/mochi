@@ -358,7 +358,7 @@ html.ios-pwa-standalone body { background: var(--bg-b); }
    开启后隐藏它，内容顶到系统状态栏下方；系统状态栏由 iOS 接管安全区。
    只影响真实手机窄屏，桌面模拟器外壳不受影响 */
 @media (max-width: 900px) {
-  .ios-fs-active .phone { padding-top: env(safe-area-inset-top, 0px); }
+  .ios-fs-active .phone { padding-top: max(env(safe-area-inset-top, 0px), 12px); }
   .ios-fs-active .phone .statusbar { display: none; }
 }
 

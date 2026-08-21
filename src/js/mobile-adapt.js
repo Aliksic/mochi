@@ -225,6 +225,17 @@
                   lastWasMedia = false;
                   return;
                 }
+                // v3.9.x：粘贴富文本的 <p> 段落标签——块级元素，前后补换行 +
+                //   输出其文字（childNodes 扁平遍历不递归子节点，需用 textContent
+                //   取段内文字，否则多段粘贴粘连成一行）
+                if (n.tagName === 'P') {
+                  const inner = n.textContent || '';
+                  if (out && !out.endsWith('\n')) out += '\n';
+                  if (inner) out += inner;
+                  out += '\n';
+                  lastWasMedia = false;
+                  return;
+                }
                 // v3.6.x：其它内联元素（粘贴富文本产生的 <span>/<b>/<i> 等）——
                 // 补充其文字，否则插入过图片后粘贴带格式文本，这些文字在保存时
                 // 会静默丢失（信寄出去正文缺字）
@@ -469,7 +480,7 @@
   // v3.6.x：去掉 #desk-msg——新消息横幅只是顶部 fixed 小提示条（6 秒自动隐藏，
   //   不遮挡滚动区域），把它当浮层锁滚动会让整个页面在横幅弹出的 6 秒内滑不动，
   //   用户感知为「页面卡住/滑动失效」（iPad 夸克反馈）。横幅自身交互由 chat.js 处理。
-  const FLOAT_SELECTORS = ['#tc-mask', '#cc-export-mask', '#call-mask', '#feed-notice-panel', '#poke-card', '#emoji-panel', '#chat-ask-panel', '#qa-mask', '#chat-more-panel', '#chat-search', '#chat-decision-panel', '#chat-divine-panel', '#chat-rps-panel', '#chat-call-panel', '#chat-pong-panel', '#chat-snake-panel', '#avlib-card', '#ck-panel', '.mg-mask', '#modal-mask', '#msg-actions', '#desk-image-viewer', '.desk-lib', '#gc-members-panel', '#gc-at-panel', '#gc-settings-panel'];
+  const FLOAT_SELECTORS = ['#tc-mask', '#cc-export-mask', '#call-mask', '#feed-notice-panel', '#feed-comment-panel', '#poke-card', '#emoji-panel', '#chat-ask-panel', '#qa-mask', '#chat-more-panel', '#chat-search', '#chat-decision-panel', '#chat-divine-panel', '#chat-rps-panel', '#chat-call-panel', '#chat-pong-panel', '#chat-snake-panel', '#avlib-card', '#ck-panel', '.mg-mask', '#modal-mask', '#msg-actions', '#desk-image-viewer', '.desk-lib', '#gc-members-panel', '#gc-at-panel', '#gc-settings-panel'];
   let locked = false;
   function applyLock() {
     const anyOpen = FLOAT_SELECTORS.some(function (sel) {

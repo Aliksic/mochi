@@ -103,6 +103,12 @@
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .gc-set-row .chev { color: #d0d0d0; font-size: 16px; flex-shrink: 0; }
+/* 低对比度警告（文字与气泡同色系时提示，v3.9.x） */
+.gc-set-warn {
+  margin: 2px 16px 8px; padding: 7px 10px; border-radius: 8px;
+  font-size: 12px; line-height: 1.5; color: #a32;
+  background: #fff5f5; border: 1px solid #f3c0c0;
+}
 
 /* ---- 群聊时间轴样式（gc-beauty 独立；page 级类，始终挂类含默认还原，
    隔离聊天页 body 级 cs-time-* 对群聊的泄漏，规则与聊天页一致） ---- */

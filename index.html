@@ -1975,6 +1975,18 @@ padding-top:8px; border-top:1px dashed rgba(0,0,0,.1);
 .msg-rp-card.opened { border-color:rgba(0,0,0,.18); }
 .msg-rp-card.expired { opacity:.6; }
 .msg-rp-card.expired .msg-rp-status { color:var(--muted); }
+.msg-flower { align-self:center; width:100%; display:flex; justify-content:center; padding:2px 0; }
+.msg-flower-card {
+width:min(240px,80vw); padding:16px 18px; border-radius:16px;
+background:linear-gradient(135deg, #fff0f3, #fce4ec);
+border:1px solid rgba(233,30,99,.15);
+box-shadow:0 2px 12px rgba(233,30,99,.08);
+text-align:center; position:relative;
+}
+.msg-flower-emoji { font-size:40px; line-height:1; margin-bottom:6px; }
+.msg-flower-name { font-size:15px; font-weight:700; color:#c2185b; margin-bottom:6px; }
+.msg-flower-wish { font-size:13px; color:#880e4f; line-height:1.5; margin-bottom:8px; word-break:break-word; }
+.msg-flower-foot { font-size:11px; color:rgba(136,14,79,.5); }
 .rp-balance {
 font-size:11px; color:var(--muted); text-align:center;
 padding:4px 0 8px; border-bottom:1px solid rgba(0,0,0,.06); margin-bottom:10px;
@@ -3983,6 +3995,11 @@ font-size: 12px; color: #999; max-width: 46%;
 overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .gc-set-row .chev { color: #d0d0d0; font-size: 16px; flex-shrink: 0; }
+.gc-set-warn {
+margin: 2px 16px 8px; padding: 7px 10px; border-radius: 8px;
+font-size: 12px; line-height: 1.5; color: #a32;
+background: #fff5f5; border: 1px solid #f3c0c0;
+}
 #page-group-chat.cs-time-under-av .msg-side { flex-direction: column; align-items: center; gap: 3px; }
 #page-group-chat.cs-time-under-av .msg-side .msg-time {
 position: static; display: inline-block; top: auto; right: auto; left: auto;
@@ -4525,8 +4542,8 @@ min-height:360px;
 }
 .garden-plot {
 aspect-ratio:1;
-border-radius:18px; background:rgba(255,255,255,.94);
-border:2px solid rgba(0,0,0,.06);
+border-radius:14px; background:rgba(255,255,255,.94);
+border:1.5px solid rgba(0,0,0,.06);
 display:flex; flex-direction:column; align-items:center; justify-content:center;
 cursor:pointer; position:relative; overflow:hidden;
 transition:border-color .2s ease, box-shadow .2s ease;
@@ -4536,16 +4553,16 @@ user-select:none;
 .garden-plot:active { border-color:rgba(0,0,0,.18); box-shadow:0 2px 10px rgba(0,0,0,.08); }
 .garden-plot.empty { border-style:dashed; border-color:rgba(0,0,0,.12); background:rgba(255,255,255,.7); }
 .garden-plot.watered { border-color:rgba(76,175,128,.35); }
-.garden-plant-emoji { font-size:36px; line-height:1; }
-.garden-plant-name { font-size:11px; color:var(--ink); font-weight:600; margin-top:3px; }
-.garden-plant-stage { font-size:10px; color:var(--muted); margin-top:1px; }
-.garden-plot-empty-txt { font-size:10px; color:var(--muted); opacity:.5; }
+.garden-plant-emoji { font-size:24px; line-height:1; }
+.garden-plant-name { font-size:10px; color:var(--ink); font-weight:600; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; padding:0 4px; box-sizing:border-box; }
+.garden-plant-stage { font-size:9px; color:var(--muted); margin-top:0; }
+.garden-plot-empty-txt { font-size:9px; color:var(--muted); opacity:.5; }
 .garden-water-bar {
-position:absolute; bottom:10px; left:8px; right:8px; height:3px;
-border-radius:2px; background:rgba(0,0,0,.06); overflow:hidden;
+position:absolute; bottom:3px; left:6px; right:6px; height:2px;
+border-radius:1px; background:rgba(0,0,0,.06); overflow:hidden;
 }
 .garden-water-fill {
-height:100%; border-radius:2px;
+height:100%; border-radius:1px;
 background:linear-gradient(90deg, #64b5f6, #42a5f5);
 transition:width .4s ease;
 }
@@ -4553,8 +4570,8 @@ transition:width .4s ease;
 .garden-water-fill.ok { background:linear-gradient(90deg, #a5d6a7, #66bb6a); }
 .garden-plot.selected { border-color:#111; box-shadow:0 2px 12px rgba(0,0,0,.12); }
 .garden-grow-bar {
-position:absolute; bottom:4px; left:8px; right:8px; height:4px;
-border-radius:2px; background:rgba(0,0,0,.06); overflow:hidden;
+position:absolute; bottom:6px; left:6px; right:6px; height:2px;
+border-radius:1px; background:rgba(0,0,0,.06); overflow:hidden;
 }
 .garden-grow-fill {
 height:100%; border-radius:2px;
@@ -4727,7 +4744,7 @@ transition: width .4s ease; min-width:0; overflow:hidden;
       </div>
       <div class="splash-dots"><i></i><i></i><i></i></div>
       <div class="splash-brand">小红书@言序（1842523578）</div>
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787323150012">Mochi 字卡传讯 v3.6.193 · 部署于 2026-08-21 22:39</div>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787324075143">Mochi 字卡传讯 v3.6.194 · 部署于 2026-08-21 22:54</div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
       <div class="splash-loading" id="splash-loading">正在加载数据…</div>
@@ -5523,7 +5540,7 @@ transition: width .4s ease; min-width:0; overflow:hidden;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.6.193</div>
+      <div class="ver">Mochi 字卡传讯 v3.6.194</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -5912,6 +5929,7 @@ transition: width .4s ease; min-width:0; overflow:hidden;
         <button class="fav-tab" data-rp="group">群聊</button>
         <button class="fav-tab" data-rp="mail">信箱</button>
         <button class="fav-tab" data-rp="feed">朋友圈</button>
+        <button class="fav-tab" data-rp="ck">查岗</button>
         <button class="fav-tab" data-rp="other">其他</button>
       </div>
       <div class="gs-scroll">
@@ -6057,6 +6075,17 @@ transition: width .4s ease; min-width:0; overflow:hidden;
               <div class="txt">清除所有朋友圈数据</div>
             </div>
           </div>
+        </div>
+        <!-- v3.9.x：查岗——TA 主动查你的岗：随主动发送按概率发查岗问题卡（聊天互动卡 + 概率弹窗，作答后 TA 回应） -->
+        <div class="gs-panel" data-rpanel="ck" hidden>
+          <div class="gs-title">TA 主动查岗</div>
+          <div class="set-group glass">
+            <div class="gs-row"><span>TA 主动查岗</span><label class="toggle"><input type="checkbox" id="ckq-en"><span class="tk"></span></label></div>
+            <div class="gs-row"><span>查岗概率</span><div class="stepper" data-k="ckq-prob" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="ckq-prob-val" readonly><button class="stp-max">+</button></div></div>
+            <div class="gs-row"><span>自动弹窗概率</span><div class="stepper" data-k="ckq-popup-prob" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="ckq-popup-prob-val" readonly><button class="stp-max">+</button></div></div>
+            <div class="gs-row"><span>查岗冷却（分钟）</span><div class="stepper" data-k="ckq-cool" data-min="0" data-max="240" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="ckq-cool-val" readonly><button class="stp-max">+</button></div></div>
+          </div>
+          <div class="gs-sub" style="padding:0 14px 14px">TA 主动找你时按概率来查你的岗：聊天里出现查岗问题卡（单选点击作答、文字题输入作答），作答后 TA 会回应；概率命中时直接弹出回答弹窗。冷却内不重复查岗，需开启「主动发送」，各联系人独立保存</div>
         </div>
         <!-- v3.9.x：其他——联系人主动邀请（猜拳/玩游戏），随 TA 主动找你的消息按概率触发 -->
         <div class="gs-panel" data-rpanel="other" hidden>
@@ -13315,6 +13344,20 @@ body.appendChild(m);
 maybeScrollChatBottom(rec.side);
 return m;
 }
+if (rec.special === 'flower') {
+m.className = 'msg-flower';
+const sideTxt = rec.side === 'out' ? '我' : chatPartnerName();
+m.innerHTML = '<div class="msg-flower-card">' +
+'<div class="msg-flower-emoji">' + escTxt(rec.flEmoji || '\uD83C\uDF37') + '</div>' +
+'<div class="msg-flower-name">' + escTxt(rec.flName || '\u82B1') + '</div>' +
+'<div class="msg-flower-wish">' + escTxt(rec.flWish || '\u9001\u7ED9\u4F60~') + '</div>' +
+'<div class="msg-flower-foot">' + escTxt(sideTxt) + ' \u9001\u51FA</div>' +
+favHeartHtml() +
+'</div>';
+body.appendChild(m);
+maybeScrollChatBottom(rec.side);
+return m;
+}
 if (rec.special === 'ask-choose') {
 m.className = 'msg-ask';
 m.dataset.idx = msgs.length - 1;
@@ -14334,7 +14377,8 @@ window.tryActiveInvite = tryActiveInvite;
 function tryAutoSend() {
 try {
 const c = cfg();
-if (cfgn(c, 'as-en', 1) !== 1) return;
+try { console.log('[mochi-auto] tryAutoSend called as-en=%s as-prob=%s as-min=%s as-max=%s', cfgn(c,'as-en',1), cfgn(c,'as-prob',30), cfgn(c,'as-min',5), cfgn(c,'as-max',10)); } catch(e){}
+if (cfgn(c, 'as-en', 1) !== 1) { try { console.log('[mochi-auto] as-en OFF, skip'); } catch(e){} return; }
 let prob = cfgn(c, 'as-prob', 30);
 if (!(prob > 0)) prob = 30;
 if (cfgn(c, 'dnd-en', 0) === 1) prob = 10;
@@ -14358,6 +14402,7 @@ setTimeout(() => {
 hideTyping();
 const am = autoMsg();
 const m = addIn(am.text, { type: am.type, initiative: true, silent: i > 0 });
+try { console.log('[mochi-auto] 主动发送消息: type=%s initiative=true', am.type); const _t = document.getElementById('cc-toast'); if(_t){ _t.textContent='诊断: 主动发送触发! as-en='+cfgn(c,'as-en',1)+' as-prob='+cfgn(c,'as-prob',30); _t.className='cc-toast'; void _t.offsetWidth; _t.className='cc-toast show'; clearTimeout(_t._at); _t._at=setTimeout(function(){_t.className='cc-toast';},6000); } } catch(e){}
 if (hit(c['rc-prob'])) {
 setTimeout(() => {
 retractMsg(m, 'in');
@@ -17139,6 +17184,9 @@ if (v && typeof v === 'string' && v.length > 2) store.set(RP_COVER_KEY, v);
 }
 } catch (e) {}
 window.chatSendMsg = (text) => { if (typeof text === 'string' && text.trim()) addMsg(text.trim()); };
+window.chatSendFlower = (emoji, name, wish, fromTA) => {
+return addRec({ side: fromTA ? 'in' : 'out', special: 'flower', flEmoji: emoji, flName: name, flWish: wish || '' });
+};
 try {
 if (window.idbGet) {
 const myPrefix = window.activePrefix();
@@ -17263,6 +17311,38 @@ else gcBeautyStored[k] = v;
 gcBeautySave();
 applyGcBeauty();
 try { if (settingsPanel && !settingsPanel.hidden) renderSettingsPanel(); } catch (e) {}
+}
+const GC_MIN_CONTRAST = 2.2;
+const GC_COLOR_PAIRS = {
+'out-ink': ['out-bg', 'out-ink'],
+'out-bg': ['out-bg', 'out-ink'],
+'in-ink': ['in-bg', 'in-ink'],
+'in-bg': ['in-bg', 'in-ink']
+};
+function gcColorLum(hex) {
+const m = String(hex || '').match(/^#?([0-9a-f]{6})$/i);
+if (!m) return null;
+const n = parseInt(m[1], 16);
+const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+const lin = (c) => { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
+return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+}
+function gcContrast(a, b) {
+const la = gcColorLum(a), lb = gcColorLum(b);
+if (la === null || lb === null) return null;
+const hi = Math.max(la, lb), lo = Math.min(la, lb);
+return (hi + 0.05) / (lo + 0.05);
+}
+function gcColorPairBad(key) {
+const p = GC_COLOR_PAIRS[key];
+if (!p) return false;
+const ratio = gcContrast(gcBeautyGet(p[0]), gcBeautyGet(p[1]));
+return ratio !== null && ratio < GC_MIN_CONTRAST;
+}
+function gcColorWarnText(key) {
+const names = { 'out-bg': '我的气泡', 'in-bg': '联系人气泡' };
+const n = names[key] || '';
+return n + '：文字与气泡颜色太接近，消息可能看不清，建议改深/改浅';
 }
 function applyGcFont() {
 const page = document.getElementById('page-group-chat');
@@ -17985,13 +18065,21 @@ row.innerHTML = '<span class="txt">' + escapeHtml(label) + '</span><span class="
 row.addEventListener('click', fn);
 return row;
 }
+function gcInkSwatches() {
+return GC_INK_COLORS.map(s => s.color === '#111111' ? { color: '#111111', label: '黑色' } : s);
+}
 function pickGcColor(key, title, swatches) {
 if (!window.openModal) return;
 const cur = gcBeautyGet(key);
 window.openModal(title, '', (v) => {
 const color = (typeof v === 'number' && swatches[v]) ? swatches[v].color : v;
 if (!color) return;
+const prev = gcBeautyGet(key);
 gcBeautySet(key, color);
+if (gcColorPairBad(key)) {
+gcBeautySet(key, prev);
+toast('已恢复：该颜色与气泡太接近，消息会看不清');
+}
 }, { colorPicker: true, color: cur, swatches: swatches });
 }
 function pickGcPills(key, title, pills, def) {
@@ -18130,9 +18218,18 @@ add('聊天壁纸', g('bg') ? '已设置' : '未设置', () => pickGcWallpaper()
 if (g('bg')) add('清空群聊壁纸', '', () => { gcBeautySet('bg', ''); toast('已恢复默认壁纸'); });
 gtitle('气泡与文字');
 add('我的气泡颜色', bgLabel(g('out-bg'), '#111111'), () => pickGcColor('out-bg', '我的气泡颜色', GC_BUBBLE_BG));
-add('我的消息文字颜色', bgLabel(g('out-ink'), '#ffffff'), () => pickGcColor('out-ink', '我的消息文字颜色', GC_INK_COLORS));
+add('我的消息文字颜色', bgLabel(g('out-ink'), '#ffffff'), () => pickGcColor('out-ink', '我的消息文字颜色', gcInkSwatches()));
 add('联系人气泡颜色', bgLabel(g('in-bg'), '#ffffff'), () => pickGcColor('in-bg', '联系人气泡颜色', GC_BUBBLE_BG));
-add('联系人消息文字颜色', bgLabel(g('in-ink'), '#111111'), () => pickGcColor('in-ink', '联系人消息文字颜色', GC_INK_COLORS));
+add('联系人消息文字颜色', bgLabel(g('in-ink'), '#111111'), () => pickGcColor('in-ink', '联系人消息文字颜色', gcInkSwatches()));
+const warnRow = (key) => {
+if (!gcColorPairBad(key)) return;
+const w = document.createElement('div');
+w.className = 'gc-set-warn';
+w.textContent = '⚠️ ' + gcColorWarnText(key);
+settingsBody.appendChild(w);
+};
+warnRow('out-bg');
+warnRow('in-bg');
 gtitle('发送按钮');
 add('发送按钮显示/隐藏', g('send-show') === 'hide' ? '隐藏' : '显示', () => pickGcPills('send-show', '显示发送按钮', [
 { label: '显示', value: 'show' }, { label: '隐藏', value: 'hide' }
@@ -20518,6 +20615,7 @@ const DEFAULTS = {
 'as-count-min': 1, 'as-count-max': 2, 'dnd-en': 0,
 'as-badge': 1,
 'ai-rps-en': 1, 'ai-rps-prob': 15, 'ai-game-en': 1, 'ai-game-prob': 10,
+'ckq-en': 1, 'ckq-prob': 15, 'ckq-popup-prob': 70, 'ckq-cool': 30,
 'ml-min-cards': 20, 'ml-max-cards': 50,
 'ml-write-prob': 30, 'ml-write-min': 1, 'ml-write-max': 120,
 'ml-write-daily-max': 3,
@@ -20598,7 +20696,7 @@ val.value = str;
 val.setAttribute('value', str);
 }
 });
-['py-en', 'as-en', 'dnd-en', 'as-badge', 'ml-kaomoji-en', 'ml-emoji-en', 'ml-sticker-en', 'cs-normal', 'cs-trigger-name', 'cs-trigger-bar', 'gc-py-en', 'ai-rps-en', 'ai-game-en'].forEach(k => {
+['py-en', 'as-en', 'dnd-en', 'as-badge', 'ml-kaomoji-en', 'ml-emoji-en', 'ml-sticker-en', 'cs-normal', 'cs-trigger-name', 'cs-trigger-bar', 'gc-py-en', 'ai-rps-en', 'ai-game-en', 'ckq-en'].forEach(k => {
 const el = document.getElementById(k);
 if (el) el.checked = cfg[k] === 1;
 });
@@ -20670,7 +20768,7 @@ try { val.blur(); } catch (err) {}
 }
 });
 });
-['py-en', 'as-en', 'dnd-en', 'as-badge', 'ml-kaomoji-en', 'ml-emoji-en', 'ml-sticker-en', 'cs-normal', 'cs-trigger-name', 'cs-trigger-bar', 'gc-py-en', 'ai-rps-en', 'ai-game-en'].forEach(k => {
+['py-en', 'as-en', 'dnd-en', 'as-badge', 'ml-kaomoji-en', 'ml-emoji-en', 'ml-sticker-en', 'cs-normal', 'cs-trigger-name', 'cs-trigger-bar', 'gc-py-en', 'ai-rps-en', 'ai-game-en', 'ckq-en'].forEach(k => {
 const el = document.getElementById(k);
 if (el) {
 el.addEventListener('change', () => {
@@ -20716,7 +20814,7 @@ v = Math.min(max, Math.max(min, v));
 window.saveReplyCfg(k, v);
 }
 });
-['py-en', 'as-en', 'dnd-en', 'as-badge', 'ml-kaomoji-en', 'ml-emoji-en', 'ml-sticker-en', 'cs-normal', 'cs-trigger-name', 'cs-trigger-bar', 'gc-py-en', 'ai-rps-en', 'ai-game-en'].forEach(k => {
+['py-en', 'as-en', 'dnd-en', 'as-badge', 'ml-kaomoji-en', 'ml-emoji-en', 'ml-sticker-en', 'cs-normal', 'cs-trigger-name', 'cs-trigger-bar', 'gc-py-en', 'ai-rps-en', 'ai-game-en', 'ckq-en'].forEach(k => {
 const el = document.getElementById(k);
 if (el) window.saveReplyCfg(k, el.checked ? 1 : 0);
 });
@@ -33280,6 +33378,15 @@ if (h > 0) return "\u8FD8\u9700 " + h + "\u65F6";
 var m = Math.floor(sec / 60);
 return "\u8FD8\u9700 " + (m > 0 ? m : 1) + "\u5206";
 }
+function fmtShort(sec) {
+if (sec <= 0) return "";
+var d = Math.floor(sec / 86400);
+var h = Math.floor((sec % 86400) / 3600);
+if (d > 0) return d + "\u5929";
+if (h > 0) return h + "\u65F6";
+var m = Math.floor(sec / 60);
+return (m > 0 ? m : 1) + "\u5206";
+}
 function renderGrid() {
 var grid = document.getElementById("garden-grid");
 if (!grid) return;
@@ -33294,9 +33401,9 @@ if (si) {
 h += "<span class=\"garden-plant-emoji\">" + si.emoji + "</span>";
 h += "<span class=\"garden-plant-name\">" + si.name + "</span>";
 if (si.bloomed) {
-h += "<span class=\"garden-plant-stage\">\u5DF2\u6210\u719F\u2714</span>";
+h += "<span class=\"garden-plant-stage\">\u6210\u719F</span>";
 } else {
-h += "<span class=\"garden-plant-stage\">" + si.stageName + " \u00b7 " + fmtRemain(si.nextSec) + "</span>";
+h += "<span class=\"garden-plant-stage\">" + fmtShort(si.nextSec) + "</span>";
 h += "<div class=\"garden-grow-bar\"><div class=\"garden-grow-fill\" style=\"width:" + Math.round(si.progress * 100) + "%\"></div></div>";
 }
 if (wl > 0) h += "<div class=\"garden-water-bar\"><div class=\"garden-water-fill\" style=\"width:" + Math.round(wl * 100) + "%\"></div></div>";
@@ -33423,8 +33530,8 @@ data.exp = (data.exp || 0) + (tp ? tp.xp : 10);
 updDex(type, "h"); updSt("h", false);
 if (Math.random() < 0.3) {
 addLog(pName, "\u9001\u4F60\u4E00\u6735 " + name + " \uD83D\uDC95");
-var gmsg = emoji + " \u521A\u6458\u7684" + name + "\u9001\u7ED9\u4F60\uFF0C\u6536\u597D\u54E6~";
-if (window.chatSendMsg) { try { window.chatSendMsg(gmsg); } catch (e) {} }
+var gmsg = "\u521A\u6458\u7684" + name + "\u9001\u7ED9\u4F60\uFF0C\u6536\u597D\u54E6~";
+if (window.chatSendFlower) { try { window.chatSendFlower(emoji, name, gmsg, true); } catch (e) {} }
 } else {
 data.inv[type] = (data.inv[type] || 0) + 1;
 addLog(pName, "\u6536\u83B7\u4E86 " + name + " (+" + (tp ? tp.xp : 10) + "\u7ECF\u9A8C)");
@@ -33498,6 +33605,8 @@ h += "<span class=\"garden-inv-item\" data-flower=\"" + k + "\">" + tp.e[tp.e.le
 });
 h += "</div><button class=\"garden-bouquet-btn\" id=\"garden-bouquet-btn\">\uD83D\uDCC1 \u5236\u4F5C\u82B1\u675F\u9001\u7ED9" + pn() + "</button>";
 el.innerHTML = h;
+var btn = el.querySelector("#garden-bouquet-btn");
+if (btn) btn.addEventListener("click", makeBouquet);
 }
 function renderDecor() {
 var el = document.getElementById("garden-decor");
@@ -33517,6 +33626,8 @@ h += "<div class=\"garden-decor-empty\">\u8FD8\u6CA1\u6709\u88C5\u9970\uFF0C\u53
 }
 h += "<button class=\"garden-decor-shop-btn\" id=\"garden-decor-shop-btn\">\uD83D\uDED2 \u88C5\u9970\u5546\u5E97\uFF08\u514D\u8D39\uFF09</button>";
 el.innerHTML = h;
+var btn = el.querySelector("#garden-decor-shop-btn");
+if (btn) btn.addEventListener("click", buyDecor);
 }
 function renderVisitor() {
 var el = document.getElementById("garden-visitor");
@@ -33686,13 +33797,15 @@ return { label: tp.e[tp.e.length - 1] + " " + tp.n + " \u00d7" + data.inv[k], va
 window.openModal("\u9009\u4E00\u6735\u82B1\u5236\u4F5C\u82B1\u675F", "", function (v) {
 if (!v || !T[v] || !data.inv[v]) return;
 var tp = T[v];
-data.inv[v]--;
 var emoji = tp.e[tp.e.length - 1];
-var msg = emoji + " \u9001\u7ED9\u4F60\u4E00\u675F" + tp.n + "\u82B1\uFF0C\u662F\u6211\u4EEC\u4E00\u8D77\u79CD\u7684\u54E6~";
+window.openModal("\u9001\u82B1\u7559\u8A00", "", function (wish) {
+data.inv[v]--;
+var msg = wish || ("\u9001\u7ED9\u4F60\u4E00\u675F" + tp.n + "\uFF0C\u662F\u6211\u4EEC\u4E00\u8D77\u79CD\u7684\u54E6~");
 addLog("\u6211", "\u5236\u4F5C\u4E86\u4E00\u675F " + tp.n + "\u82B1\u9001\u7ED9" + pn());
 save(data);
-if (window.chatSendMsg) { try { window.chatSendMsg(msg); } catch (e) {} }
+if (window.chatSendFlower) { try { window.chatSendFlower(emoji, tp.n, msg); } catch (e) {} }
 renderAll();
+}, { });
 }, { pills: pills, noInput: true });
 }
 function buyDecor() {
@@ -33762,16 +33875,6 @@ var gridEl = document.getElementById("garden-grid");
 if (gridEl) gridEl.addEventListener("click", handlePlotClick);
 var toolbarEl = document.getElementById("garden-toolbar");
 if (toolbarEl) toolbarEl.addEventListener("click", handleTool);
-var invEl = document.getElementById("garden-inv");
-if (invEl) invEl.addEventListener("click", function (e) {
-var btn = e.target.closest("#garden-bouquet-btn");
-if (btn) makeBouquet();
-});
-var decorEl = document.getElementById("garden-decor");
-if (decorEl) decorEl.addEventListener("click", function (e) {
-var btn = e.target.closest("#garden-decor-shop-btn");
-if (btn) buyDecor();
-});
 document.addEventListener("contact-switched", function () {
 if (!page.hidden) { data = load(); selPlot = -1; renderAll(); }
 });

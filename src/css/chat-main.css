@@ -1212,6 +1212,19 @@ body.cs-time-divider .msg-time-divider { display:flex; }
 .msg-rp-card.opened { border-color:rgba(0,0,0,.18); }
 .msg-rp-card.expired { opacity:.6; }
 .msg-rp-card.expired .msg-rp-status { color:var(--muted); }
+/* 花朵卡片 */
+.msg-flower { align-self:center; width:100%; display:flex; justify-content:center; padding:2px 0; }
+.msg-flower-card {
+  width:min(240px,80vw); padding:16px 18px; border-radius:16px;
+  background:linear-gradient(135deg, #fff0f3, #fce4ec);
+  border:1px solid rgba(233,30,99,.15);
+  box-shadow:0 2px 12px rgba(233,30,99,.08);
+  text-align:center; position:relative;
+}
+.msg-flower-emoji { font-size:40px; line-height:1; margin-bottom:6px; }
+.msg-flower-name { font-size:15px; font-weight:700; color:#c2185b; margin-bottom:6px; }
+.msg-flower-wish { font-size:13px; color:#880e4f; line-height:1.5; margin-bottom:8px; word-break:break-word; }
+.msg-flower-foot { font-size:11px; color:rgba(136,14,79,.5); }
 .rp-balance {
   font-size:11px; color:var(--muted); text-align:center;
   padding:4px 0 8px; border-bottom:1px solid rgba(0,0,0,.06); margin-bottom:10px;
