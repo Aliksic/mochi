@@ -4,6 +4,20 @@
 
 ## 规则
 
+### 2026-08-21（用户反馈「有时候发送聊天消息，没有自动把位置到最底最新」）
+- [本会话·完成]（**滚动修复随 65ca475 入库，回归脚本完善在 d04a5eb 独立提交，均含构建产物**）：`src/js/chat.js`（AI-A 域，代改 3 处）+ `tools/verify-chat-scroll-bottom.mjs`。
+  - **根因 1（上翻后发送不滚）**：maybeScrollChatBottom 贴底守卫阈值 120px < 图片消息高度上限 260px，用户轻微上翻后守卫永久 false。修复：side:out（我发送）一律贴底，side:in 才看守卫。
+  - **根因 2（图片/表情/长文本"有时候"差一截）**：图片 lazy+async 解码、emoji 字体、长文本 reflow 都在同步滚动后把 scrollHeight 撑大。修复：out 消息同步滚后补 rAF+120ms 延时；renderMsg 统一出口给消息内 img 绑 onload（6s 时间窗内才补滚，防上翻时历史图打断阅读）；批量渲染期间 out 消息记 pendingOutScroll，renderWindow 结束统一贴底。
+  - **验证**：verify-chat-scroll-bottom 7/7（新增图片延迟 400ms 加载用例；前置禁用自动回复消除 typing 行竞态）+ verify 布局 10/10。
+  - ⚠️ 对方注意：verify-chat-scroll-bottom.mjs 前置禁用自动回复（reply-rs-min/max=9999、rn-prob=0、as-en=0），否则 scheduleReply 的「正在输入」行会让断言不稳定，勿删。
+
+### 2026-08-21（用户需求「回复设置新增其他 tab：联系人主动邀请猜拳/玩游戏概率」）
+- [AI-B·完成]（**已构建 verify 10/10 + 专项 21/21 + 群聊回归 21/21，待提交**）：src/js/reply-settings.js + src/js/chat.js + src/template.html + 新回归 	ools/verify-invite-settings.mjs。
+  - 回复设置页新增第 5 个 tab「其他」（聊天/群聊/信箱/朋友圈/其他）：「联系人主动邀请」分组——猜拳邀请开关+概率（ai-rps-en/ai-rps-prob，默认开/15%）、游戏邀请开关+概率（ai-game-en/ai-game-prob，默认开/10%），stepper 0-100 步进 5。
+  - chat.js 新增 tryActiveInvite：TA 主动发送轮（tryAutoSend 内、拍一拍之后）按概率把主动消息替换成邀请——发一条带主动爱心标识的居中提示卡（special: poke）→ 模拟 typing 0.7-1.4s → 自动打开对应半框（猜拳 / Pong / 贪吃蛇随机）；仅聊天页可见时触发（半框需用户交互）；概率独立于 as-prob（命中后二次掷），默认低于普通主动消息避免频繁打扰。邀请消息文案用 chatPartnerName()。
+  - 回归 verify-invite-settings 21/21：5 tab 结构/面板切换/控件与默认值/replyCfg 默认值/开关落库（当前联系人命名空间 xy-home-v2:<cid>:reply-ai-game-en）/关闭后不触发/猜拳与游戏邀请消息+半框自动打开/全关返回 false/无 JS 异常。修脚本三处断言：LS 键名带联系人前缀、邀请消息查 .msg-poke（special: poke 渲染为居中卡而非 .msg-in 气泡）。
+  - ⚠️ 工作区另含 AI-A 累积改动（chat-settings 时间轴样式/发送按钮、chat.js 发送后滚底 maybeScrollChatBottom(side)、emoji 面板展开贴底、garden visitor/decor/lb、mail/music/idb/css 等）与未跟踪 verify-chat-scroll-bottom/verify-mail-send-reply 脚本，已一并构建，提交时请确认。
+
 ### 2026-08-21（用户反馈 OPPO Chrome「表情包丢失」「头像互动里上传的头像丢失」「还会自动关闭后台保活和后台弹窗」）
 - [AI-B·完成]（**已构建 verify 10/10 + 专项 11/11，本提交含修复 + 新回归 `tools/verify-data-loss.mjs`**）：`src/js/contacts.js` + `src/js/avatar-lib.js` + `src/js/chat.js` + `src/js/chatcard.js`。
   - **根因 1（后台保活/弹窗自动关）**：v3.9.x 把 bg-keepalive/bg-notify 改存全局命名空间（bg-keep.js gSet 用 xyStore(GNS)），但 `contacts.js` 的 `migrateLegacy` 不认识这些新全局键——`isExcluded` 未排除，每次刷新把它们当旧顶层业务键迁移进 default 桌面并删根键，非 default 桌面刷新后开关读不到全局值自动变关。同批受害：`reply-gc-*`（群聊全局设置）、`__*` 内部标记。修复：`isExcluded` 增加全局系统键排除；`migrateLegacy` 开头增加存量坏数据反向恢复（default 桌面的 bg-keepalive/bg-notify/reply-gc-* 副本写回根命名空间并删 default 副本，幂等）。
