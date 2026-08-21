@@ -1235,15 +1235,18 @@
   // 文件先完整解析、确认含有效字卡后才写入：格式错误/空文件不会改动现有字卡库
   const ccImportData = document.getElementById('cc-import-data');
   if (ccImportData) {
+    const CAT_NAMES = { text: '主字卡', kaomoji: '颜文字', emoji: 'emoji', sticker: '表情包', image: '图片', poke: '拍一拍', voice: '语音' };
     ccImportData.addEventListener('click', () => {
       if (window.openModal) {
+        const curName = CAT_NAMES[cur] || '当前分类';
         window.openModal('导入字卡数据', '', (mode) => {
           pickImportFile(mode);
         }, {
           noInput: true,
-          staticText: '选择导入方式：\n· 追加字卡：保留现有字卡，按分组并入，重复内容自动去除\n· 替换字卡：清空当前字卡库，完全使用文件内容',
+          staticText: '选择导入方式：\n· 追加字卡：保留现有字卡，按分组并入，重复内容自动去除\n· 导入到「' + curName + '」：文件里全部字卡都并入当前分类\n· 替换字卡：清空当前字卡库，完全使用文件内容',
           pills: [
             { label: '追加字卡（自动去重）', value: 'merge' },
+            { label: '导入到「' + curName + '」', value: 'current' },
             { label: '替换字卡', value: 'replace' }
           ],
           pill: 'merge'
@@ -1270,8 +1273,8 @@
       };
       input.click();
     }
-    // 按模式写入：merge 分组内去重合并；replace 先清空再按文件填充；返回 {added, dup}
-    function writeImport(byCat, mode) {
+    // 按模式写入：merge 分组内去重合并；replace 先清空再按文件填充；current 全部并入目标分类；返回 {added, dup}
+    function writeImport(byCat, mode, targetCat) {
       let added = 0, dup = 0;
       if (mode === 'replace') {
         groups = { text: [], kaomoji: [], emoji: [], sticker: [], image: [], poke: [], voice: [] };
@@ -1279,6 +1282,21 @@
           const pairs = byCat[cat];
           groups[cat] = pairs.map(([n, cs]) => [n, cs.slice()]);
           pairs.forEach(([, cs]) => { added += cs.length; });
+        });
+      } else if (mode === 'current' && targetCat) {
+        // v3.8.x：把文件里全部字卡都并入用户当前所在的分类（如颜文字），
+        // 解决「颜文字当初加到主字卡、导出后在 text 键、导入回来仍在主字卡」的归属问题
+        if (!groups[targetCat]) groups[targetCat] = [];
+        Object.keys(byCat).forEach(cat => {
+          byCat[cat].forEach(([name, cards]) => {
+            const exist = groups[targetCat].find(x => x[0] === name);
+            if (!exist) { groups[targetCat].push([name, cards.slice()]); added += cards.length; return; }
+            const seen = new Set(exist[1]);
+            cards.forEach(c => {
+              if (seen.has(c)) { dup++; return; }
+              seen.add(c); exist[1].push(c); added++;
+            });
+          });
         });
       } else {
         Object.keys(byCat).forEach(cat => {
@@ -1431,11 +1449,12 @@
         byCat.voice = byCat.voice.filter(pair => pair[1].length);
       }
       if (!imported) { toast('文件里没有可导入的字卡'); return; }
-      const res = writeImport(byCat, mode);
+      const res = writeImport(byCat, mode, cur);
       saveGroups(groups);
       renderGroupsBar();
       render();
       if (mode === 'replace') toast('已替换字卡库 · 共 ' + res.added + ' 张字卡' + fmt + (dropped ? '，丢弃 ' + dropped + ' 条非法媒体' : ''));
+      else if (mode === 'current') toast('已导入 ' + res.added + ' 张字卡到「' + (CAT_NAMES[cur] || '当前分类') + '」' + fmt + (res.dup ? '，自动去重 ' + res.dup + ' 条' : '') + (dropped ? '，丢弃 ' + dropped + ' 条非法媒体' : ''));
       else toast('已导入 ' + res.added + ' 张字卡' + fmt + (res.dup ? '，自动去重 ' + res.dup + ' 条' : '') + (dropped ? '，丢弃 ' + dropped + ' 条非法媒体' : ''));
     }
   }

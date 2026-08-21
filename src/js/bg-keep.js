@@ -6,6 +6,18 @@
 (function () {
   const uid = window.activePrefix();
   const store = window.activeStore();
+  // v3.9.x：后台保活 / 后台通知是【系统级】设置（位于全局设置页 #page-setting），
+  // 但原先按当前联系人桌面存储（activeStore）——切换桌面或系统恢复页面时 active-contact
+  // 指向别的桌面，开关就会显示成「关」（用户自述：挂机几小时后回来看「后台保活自己关了」，
+  // 导致夜里系统通知不弹）。改为存全局命名空间，读时回退旧版每桌面值完成迁移。
+  const GNS = 'xy-home-v2';
+  function gGet(k) {
+    try { const v = window.xyStore ? window.xyStore(GNS).get(k) : null; if (v !== null && v !== undefined) return v; } catch (e) {}
+    try { return store.get(k); } catch (e) { return null; }
+  }
+  function gSet(k, v) {
+    try { if (window.xyStore) window.xyStore(GNS).set(k, v); } catch (e) {}
+  }
   function toast(msg) {
     let t = document.getElementById('cc-toast');
     if (!t) {
@@ -143,21 +155,51 @@
     if (showToast) toast('后台保活已关闭');
   }
   // v3.5.132：模块顶层注册一次（防反复开关保活累积监听器）
-  document.addEventListener('visibilitychange', function () {
-    if (document.visibilityState === 'visible' && keepEnabled) {
-      try {
-        if (navigator.wakeLock) {
-          navigator.wakeLock.request('screen').then(function (sentinel) {
-            wakeSentinel = sentinel;
-            if (wakeSentinel) {
-              wakeSentinel.addEventListener('release', function () {
-                setTimeout(function () { if (keepEnabled) requestWakeLockTop(); }, 1000);
-              });
-            }
-          }).catch(function () {});
-        }
-      } catch (e) {}
+  // v3.9.x：回前台完整自愈——原逻辑回前台只补 wakeLock；Chrome/系统在后台/锁屏
+  // 几小时后会挂起保活音频、丢弃媒体条，不恢复的话通知栏「Mochi 后台保活」条消失、
+  // 静音音频停播 → 页面再次被后台冻结，TA 消息/弹窗停摆。现在回前台把音频/媒体条/
+  // wakeLock 一并恢复，保证下一次后台会话依旧保活。
+  function healKeepAlive() {
+    if (!keepEnabled) return;
+    // 1) 恢复被挂起的保活音频（回前台瞬间可能仍被浏览器阻塞，延迟再试几次）
+    if (keepAudio && keepAudio.ctx && keepAudio.ctx.state === 'suspended') {
+      keepAudio.ctx.resume().catch(function () {});
     }
+    [0, 600, 1800].forEach(function (d) {
+      setTimeout(function () {
+        if (!keepEnabled) return;
+        if (keepAudio && keepAudio.ctx && keepAudio.ctx.state === 'suspended') {
+          keepAudio.ctx.resume().catch(function () {});
+        }
+      }, d);
+    });
+    // 2) 媒体条可能已被丢弃——重设「Mochi 后台保活」媒体会话（音乐在播时自动让位）
+    setKeepMediaSession();
+    // 3) 重新请求屏幕常亮
+    try {
+      if (navigator.wakeLock && document.visibilityState === 'visible') {
+        navigator.wakeLock.request('screen').then(function (sentinel) {
+          wakeSentinel = sentinel;
+          if (wakeSentinel) {
+            wakeSentinel.addEventListener('release', function () {
+              setTimeout(function () { if (keepEnabled) requestWakeLockTop(); }, 1000);
+            });
+          }
+        }).catch(function () {});
+      }
+    } catch (e) {}
+  }
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible') healKeepAlive();
+  });
+  // v3.9.x：窗口重新聚焦 / bfcache 恢复（pageshow persisted）同样自愈——
+  // 有些浏览器从后台切回只触发 focus 不触发 visibilitychange；bfcache 恢复时
+  // 定时器已暂停，恢复后保活音频也一并拉回
+  document.addEventListener('focus', function () {
+    if (document.visibilityState === 'visible') healKeepAlive();
+  });
+  window.addEventListener('pageshow', function (e) {
+    if (e.persisted || document.visibilityState === 'visible') healKeepAlive();
   });
   function requestWakeLockTop() {
     try {
@@ -178,13 +220,19 @@
   if (kaBtn) {
     kaBtn.addEventListener('change', function () {
       keepEnabled = kaBtn.checked;
-      store.set('bg-keepalive', keepEnabled ? '1' : '0');
+      gSet('bg-keepalive', keepEnabled ? '1' : '0');
       if (keepEnabled) startKeepAlive(true);
       else stopKeepAlive(true);
     });
   }
   (function () {
-    const saved = store.get('bg-keepalive');
+    // v3.9.x：全局化迁移——旧版按桌面存（activeStore），读时回退旧值并写全局，
+    // 之后开关不再随桌面/active-contact 变化而"自己关掉"
+    let saved = gGet('bg-keepalive');
+    if (saved === null) {
+      const old = store.get('bg-keepalive');
+      if (old !== null) { gSet('bg-keepalive', old); saved = old; }
+    }
     keepEnabled = saved === null ? false : saved === '1';
     syncKeepUI();
     if (keepEnabled) startKeepAlive(false);
@@ -297,7 +345,7 @@
       if (nbBtn.checked) {
         requestNotifyPermission(function () {
           notifyEnabled = true;
-          store.set('bg-notify', '1');
+          gSet('bg-notify', '1');
           syncNotifyUI();
           showSysNotification('通知已开启', { body: '后台消息提醒将正常弹窗' });
           // v3.5.132：开启通知时自动联动开启后台保活——后台消息要"到达"必须
@@ -305,11 +353,11 @@
           //   消息根本不产生，通知永远不会弹（旧版只 toast 提醒，用户容易漏开）
           setTimeout(function () {
             const keep = document.getElementById('bg-keepalive');
-            const keepOn = keep ? keep.checked : store.get('bg-keepalive') === '1';
+            const keepOn = keepEnabled;
             if (!keepOn) {
               if (keep) keep.checked = true;
               keepEnabled = true;
-              store.set('bg-keepalive', '1');
+              gSet('bg-keepalive', '1');
               startKeepAlive(false);
               syncKeepUI();
               toast('已自动开启后台保活（后台消息必需）');
@@ -321,22 +369,27 @@
         }, function () {
           // 失败：弹回开关
           notifyEnabled = false;
-          store.set('bg-notify', '0');
+          gSet('bg-notify', '0');
           syncNotifyUI();
         });
       } else {
         notifyEnabled = false;
-        store.set('bg-notify', '0');
+        gSet('bg-notify', '0');
         syncNotifyUI();
       }
     });
   }
   (function () {
-    const saved = store.get('bg-notify');
+    // v3.9.x：全局化迁移（同 bg-keepalive）
+    let saved = gGet('bg-notify');
+    if (saved === null) {
+      const old = store.get('bg-notify');
+      if (old !== null) { gSet('bg-notify', old); saved = old; }
+    }
     // v3.5.131：恢复时校验权限——浏览器/系统回收权限后开关仍显示"开"但通知静默失效
     notifyEnabled = saved === '1' && 'Notification' in window && Notification.permission === 'granted';
     if (saved === '1' && !notifyEnabled) {
-      try { store.set('bg-notify', '0'); } catch (e) {}
+      try { gSet('bg-notify', '0'); } catch (e) {}
       toast('通知权限已被回收，已自动关闭通知');
     }
     syncNotifyUI();
@@ -384,7 +437,7 @@
       if (Notification.permission === 'granted') env.push('✓ 通知权限：已允许');
       else env.push('✗ 通知权限：被拒绝（去浏览器站点设置开启）');
       const keep = document.getElementById('bg-keepalive');
-      const keepOn = keep ? keep.checked : store.get('bg-keepalive') === '1';
+      const keepOn = keepEnabled;
       env.push(keepOn ? '✓ 后台保活：已开启' : '✗ 后台保活：未开启（TA 消息后台到不了，通知不会弹）');
       const isHttps = location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
       env.push(isHttps ? '✓ 访问协议：HTTPS 或本地' : '✗ 访问协议：' + location.protocol + '//（安卓 Chrome 需 HTTPS 才弹通知，GitHub Pages 部署后即是 HTTPS）');
@@ -436,10 +489,10 @@
   //   在屏幕上方补一条横幅（点击默认进聊天），实现「切回即见新消息」的体验
   document.addEventListener('visibilitychange', function () {
     if (document.visibilityState !== 'visible') return;
-    const saved = store.get('bg-notify');
+    const saved = gGet('bg-notify');
     if (saved === '1') {
       const keep = document.getElementById('bg-keepalive');
-      const keepOn = keep ? keep.checked : store.get('bg-keepalive') === '1';
+      const keepOn = keepEnabled;
       if (!keepOn) {
         toast('提醒：后台保活已关闭，后台消息到不了，通知不会弹（设置里开启）');
       }

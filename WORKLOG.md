@@ -4,6 +4,11 @@
 
 ## 规则
 
+### 2026-08-21（用户要求「回复设置·聊天·让对方继续说·按正常回复时间 后面加小字说明」）
+- [本会话·完成]（**已构建 verify 10/10，未提交**）：`src/template.html` + `src/css/setting.css`（setting.css 为 AI-A 域，代改新增 `.gs-sub` 样式，请知悉）。
+  - 「让对方继续说」分组内「按正常回复时间」开关下方新增小字说明「（未开启设置时间的情况下是点击后联系人立即回复）」，与 cs-normal=0 理解回复（快速回 1 条）语义一致；`.gs-sub` 11px 灰色小字样式（var(--muted)，深浅色通吃）。
+  - 本次构建统一包含工作区已保存改动（bg-keep.js/chatcard.js/music-player.js 等），verify 10/10，产物已更新（sw 缓存 mochi-mt2h7tzd）。
+
 ### 2026-08-21（本会话，用户反馈「聊天设置里点击隐藏通话小框无效」）
 - [AI-B·构建者·完成]（**已构建 verify 10/10 + 通话小框专项回归 26/26 + 群聊冒烟 6/6，本次提交推送**）：
   - **排查结论**：通话小框开关本身在最新构建上全链路正常（点击→store 写入 0→通话接通后大面板常驻、小框不弹→刷新持久化→多桌面隔离，CDP 专项 26/26 全过）。**线上真实问题是「开启群聊」开关**（dbdb8e9 只提交了模板 #cs-group-chat，绑定逻辑未构建）——点击无任何反应、开关弹回，位置紧挨在「隐藏通话小框」下方，最可能被误认为通话小框开关无效。
@@ -11,6 +16,14 @@
   - 验证：`node --check` 全部 src JS 通过 → build（sw 缓存 mochi-mt2fjylu）→ verify 10/10 → diag-call-mini.mjs 12/12（开关读写）→ diag-call-mini2.mjs 7/7（通话行为隐藏/显示）→ diag-call-mini4.mjs 7/7（刷新持久化+多桌面）→ smoke-group-chat.mjs 6/6（群聊开关绑定+页面渲染）。
   - 保留回归脚本：`tools/diag-call-mini.mjs` `diag-call-mini2.mjs` `diag-call-mini4.mjs` `smoke-group-chat.mjs`。
   - ⚠️ 请 AI-A 知悉：本次构建后线上群聊功能已生效；若真机上「隐藏通话小框」仍有问题，请用户提供具体现象（点击后是否弹回/通话时是否仍弹小框/哪个联系人桌面）。
+
+### 2026-08-21（用户反馈「QQ浏览器：导入的歌曲点击播放显示被浏览器拦截，点击屏幕也没用」）
+- [AI-A·完成]（**已构建 verify 10/10 + 自动播放专项 3/3，未提交**）：`src/js/music-player.js`（AI-A 域）。
+  - 根因：QQ浏览器 X5 内核对 `new Audio()` 创建的未 attached 元素播放限制严格——即使用户手势内 `play()` 也被拒（NotAllowedError），muted 静音解锁也被拒，`armAutoResume` 手势续播时对同一 audio 元素的 `play()` 仍被拒（X5 缓存了 rejection 状态），导致"点击屏幕也没用"死循环。
+  - 修复1：新增 `createAudio()` helper——`new Audio()` 后 `appendChild` 到 DOM（`display:none`），X5 内核对 DOM 内 audio 元素的手势播放放行。所有 4 处 `new Audio()` 替换为 `createAudio()`。
+  - 修复2：`teardownAudio` 从 DOM 移除 audio 元素（`removeChild`），避免泄漏。
+  - 修复3：`armAutoResume` retry 改为在用户手势内**重新创建 audio 元素** + 设置 src + `play()`——绕过 X5 内核对已 rejected 元素的 rejection 缓存。原 retry 只对同一元素 `play()`，X5 拒绝后 `armAuto8Resume()` 重新挂载，下次点击还是同一元素还是被拒。
+  - 验证：无头 Chrome（劫持 play 前 2 次返回 NotAllowedError）3/3（audio attached 到 DOM / play 被调用 / 恢复播放成功）；verify 10/10。临时脚本已删&删。
 
 ### 2026-08-21（本会话，用户反馈「OPPO Reno14 + 雨见浏览器：回答问题时对面发消息输入内容消失；问问TA半框输入文字飞出输入栏」）
 - [本会话·完成]（**已改 src，未构建未提交**，请构建者执行 `node build.mjs`）：`src/js/chat.js`（AI-A 域）。
@@ -932,3 +945,17 @@
   - **切后台退出全屏不恢复根因**（fullscreen.js）：① handleFsExit 在非 PWA 判定（OPPO Chrome 快捷方式态 display-mode 可能报 browser）下无条件清掉 fullscreen-enabled 标记 → 切回后 reenterFs 直接放弃；② reenterFs 原 600ms 延迟才装手势重试监听，用户切回立刻触摸会落在窗口外。修复：`_wentBg` 标记区分「切后台系统退出」（保留意图）vs「前台主动退出」（非 PWA 清标记不回归）；reenterFs 重构为 FS_KEY=1 一律尝试恢复 + `armRetry()` 立即武装（去掉 600ms 延迟）；doRetry 去掉非 PWA 拦截。
   - 验证：verify-desk-layout 4/4（music 跨页移入+重排、二次刷新保持、第二页移除、默认布局不受影响）、verify-fs-reenter 3/3（非 PWA 下 FS_KEY 意图保留、前台退出清标记不回归）、布局 verify 10/10。
   - ⚠️ 本提交含 AI-A 此前保存的累积改动（calendar/chat/default-cards/feed/mail/group-chat/template/smoke-group-chat.mjs），已一并构建验证，请确认无遗漏。
+
+### 2026-08-21（用户反馈 iOS Safari「加了自定义聊天字卡后，信箱联系人主动写信全用自定义、不用默认字卡」+「默认字卡设置页缺少主字卡/颜文字/emoji/拍一拍单独开关」）
+- [AI-A·完成]（源码随 9dc9557 已入库并构建，**本会话自建 diag-mail-default-mix.mjs 10/10 + verify 10/10**）：`src/js/mail.js` + `src/js/default-cards.js` + `src/js/chat.js` + `src/js/feed.js` + `src/js/calendar.js` + `src/template.html`。
+  - **信箱只发自定义字卡根因**（mail.js mailCardPool）：默认字卡只在「分类为空」时补池（`if(!text.length)` 等）——用户加了自定义文字卡后 text 非空，默认字卡永不进池 → 来信 100% 自定义。修复：默认字卡改独立子池（defText/defKaomoji/defEmoji），写信时**每张卡按 dc-overall（默认30%）+ dc-prob-* 分类占比混入默认字卡**（与聊天 getDefaultCards 同语义；拍一拍分类不进信件）；无自定义字卡时保持整体回退默认池的原行为；颜文字/emoji 尾部附加在自定义空时回退默认池。
+  - **分类开关新增**（template.html + default-cards.js）：默认字卡设置页「使用默认字卡」下新增「分类使用」组——主字卡/颜文字/emoji/拍一拍 4 个独立开关（dc-cat-<k>，默认开）。关闭分类后：聊天混入（getDefaultCards 权重置 0）、信箱混入/补池、朋友圈补池、聊天字卡池兜底、performPoke 拍一拍抽取、日历每日留言 全部跳过该分类。
+  - 验证：diag-mail-default-mix.mjs 10/10——场景A（有自定义卡+全开）信件 20 卡=12 自定义+8 默认（3 主+4 颜+1 emoji）混用；场景B（关 dc-cat-main）默认主字卡归零、颜/emoji 仍混；场景C（关 dc-use-mail）无任何默认卡；UI 4 开关存在/默认开/点击翻转 defaultCardCat+落库；verify 10/10。
+  - ⚠️ **tools/diag-mail-default-mix.mjs 工作区有修复版未提交**（已提交版是中间稿：自定义卡仅 3 张 + 分类正则 `\s` 在模板串中被转义成 `/s+/` 导致中文不切分）。修复版：20 张卡 + 正则改 `/\\s+/`，即本会话 10/10 通过版本——下次提交请带上。
+
+### 2026-08-21（用户反馈 iOS Safari「多个桌面联系人时，信箱在哪个角色页面就显示全部是这个角色来信，分不清谁是谁」）
+- [AI-B·完成]（**已构建 verify 10/10 + 专项 8/8，待提交**）：`src/js/mail.js` + 新脚本 `tools/verify-mail-isolation.mjs`。
+  - **根因**：mail.js contact-switched 权威加载的 idbGet 回调没有桌面归属校验（启动路径有 activePrefix 校验、切换路径漏了）。iOS Safari IndexedDB 慢时，旧桌面的 idbGet 在用户已切到新桌面后迟到返回，mailMergeFromIdb 用动态 store（当前桌面）把旧桌面的信合并写进新桌面 → 串桌面，信箱列表全显示成当前角色名。
+  - **修复**：① mailMergeFromIdb(v, cid) 支持显式 cid，读写/快照绑定该桌面；② contact-switched 捕获 switchedCid，idbGet 回调 + catch + 15s 保险丝均校验归属（已切走则作废，新桌面监听会重新发起权威加载）；保险丝同时避免旧桌面误把新桌面 mailDbReady 置真。
+  - 验证：verify-mail-isolation.mjs 修复前 6/8（cX 信箱混入 default 的信，精确复现串桌面）→ 修复后 8/8（cX 信箱只含自己的信、信箱页仅 1 封）；verify 10/10。
+  - ⚠️ AI-B 越界代修 AI-A 名下 mail.js（用户直接反馈；改动带 v3.8.x 注释 + 回归脚本）。本提交含 AI-A 未提交累积改动（bg-keep 后台保活全局化 / chatcard 导入增强 / music-player / template / setting.css / diag-mail-default-mix 修复版），请确认。

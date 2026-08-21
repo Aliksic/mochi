@@ -1490,7 +1490,7 @@
     function startWithSrc(src, isBlob) {
       if (currentId !== m.id) return;
       if (isBlob) { revokeObjectUrl(); curObjectUrl = src; }
-      audio = new Audio();
+      audio = createAudio();;
       audio.src = src;
       startPlayback(m);
       let wd = setTimeout(() => {
@@ -1533,9 +1533,18 @@
       startWithSrc(v, false);
     }
   }
+  // v3.9.x：创建 audio 元素并 attached 到 DOM（display:none）——
+  // QQ浏览器 X5 内核对未 attached 的 new Audio() 元素播放限制更严格
+  //（即使用户手势内 play() 也被拒），attached 后手势续播能放行。
+  function createAudio() {
+    const a = new Audio();
+    try { a.style.display = 'none'; document.body.appendChild(a); } catch (e) {}
+    return a;
+  }
   function teardownAudio() {
     if (audio) {
       try { audio.pause(); audio.onended = null; audio.onerror = null; audio.onloadedmetadata = null; audio.onplay = null; audio.onpause = null; audio.removeAttribute('src'); audio.load(); } catch(e) {}
+      try { if (audio.parentNode) audio.parentNode.removeChild(audio); } catch (e) {}
       audio = null;
     }
     revokeObjectUrl();
@@ -1615,16 +1624,26 @@
     updateMediaSession(true);
   }
   // v3.6.x：自动播放被拒后的手势恢复——移动端 play() 被拒（异步链丢手势）后，
-  // 挂一次性手势监听，用户下一次触摸/点击（任意位置）时 audio.play()，
-  // 此时处于真实用户手势内，浏览器必放行；恢复成功后自动移除监听。
+  // 挂一次性手势监听，用户下一次触摸/点击（任意位置）时恢复播放。
+  // v3.9.x：QQ浏览器 X5 内核对已 rejected 的 audio 元素缓存 rejection 状态，
+  // 后续同一元素的 play() 都被拒（即使用户手势内）。retry 里重新创建 audio
+  // 元素 + 设置 src + play()，在用户手势内完整重建播放链路，绕过缓存。
   let autoResumeArmed = false;
   function armAutoResume() {
     if (autoResumeArmed) return;
     autoResumeArmed = true;
     const retry = function () {
       disarmAutoResume();
-      if (!audio || !currentId || !audio.paused) return;
-      try { if (audio) audio.muted = false; } catch (e) {}
+      if (!currentId) return;
+      const m = findTrack(currentId);
+      if (!m) return;
+      // v3.9.x：重新创建 audio 元素（X5 内核缓存 rejection 的兜底）
+      try { if (audio) { audio.pause(); audio.onended = null; audio.onerror = null; audio.onloadedmetadata = null; audio.onplay = null; audio.onpause = null; if (audio.parentNode) audio.parentNode.removeChild(audio); } } catch (e) {}
+      audio = createAudio();
+      try { audio.referrerPolicy = 'no-referrer'; } catch (e) {}
+      audio.preload = 'auto';
+      setupHandlers(m);
+      audio.src = m.url;
       const p2 = audio.play();
       if (p2 && p2.catch) p2.catch(function () { armAutoResume(); });
     };
@@ -1748,7 +1767,7 @@
       if (directUrl) {
         httpsRetrying = false;
         if (currentId !== m.id) { demoFallbackOrError(m); return; }
-        audio = new Audio();
+        audio = createAudio();;
         try { audio.referrerPolicy = 'no-referrer'; } catch (e) {}
         audio.src = directUrl;
         startPlayback(m);
@@ -1757,7 +1776,7 @@
       // meting API 失败 → 尝试网易云官方外链（<audio> 直接跟随 302 播放）
       httpsRetrying = false;
       if (currentId !== m.id) { demoFallbackOrError(m); return; }
-      audio = new Audio();
+      audio = createAudio();;
       try { audio.referrerPolicy = 'no-referrer'; } catch (e) {}
       audio.src = neteaseOuterUrl(m.neteaseId);
       startPlayback(m);
@@ -1936,7 +1955,7 @@
       }
       return;
     }
-    audio = new Audio();
+    audio = createAudio();;
     // v3.5.118：网易云外链防盗链（带 Referer 时返回 403 无法播放）——
     // 设置 referrerPolicy=no-referrer 让请求不带 Referer，原曲可直接播放
     try { audio.referrerPolicy = 'no-referrer'; } catch (e) {}

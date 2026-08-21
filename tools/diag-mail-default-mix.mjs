@@ -95,8 +95,8 @@ function check(desc, ok, detail) {
   console.log((ok ? 'PASS' : 'FAIL') + '  ' + desc + (detail ? '  [' + detail + ']' : ''));
 }
 
-// ---- 种子：自定义字卡（3 张独特卡）+ 信箱概率拉满 ----
-const customCards = ['【自定义卡甲乙丙】', '【自定义卡丁戊己】', '【自定义卡庚辛壬】'];
+// ---- 种子：自定义字卡（20 张独特卡，保证 30% 混入的统计显著性）+ 信箱概率拉满 ----
+const customCards = Array.from({ length: 20 }, (_, i) => '【自定义卡第' + (i + 1) + '号】');
 const seedOk = await evalJs(`(function(){
   try {
     const g = { text: [['测试组', ${JSON.stringify(customCards)}]], kaomoji: [], emoji: [], sticker: [], image: [], poke: [], voice: [] };
@@ -142,16 +142,16 @@ function classifyLetter(content) {
     const mainSet = new Set(); (D.main||[]).forEach(g=>(g[1]||[]).forEach(x=>mainSet.add(x)));
     const kaoSet = new Set(); (D.kaomoji||[]).forEach(g=>(g[1]||[]).forEach(x=>kaoSet.add(x)));
     const emoSet = new Set(); (D.emoji||[]).forEach(g=>(g[1]||[]).forEach(x=>emoSet.add(x)));
-    const words = String(c||'').split(/\s+/).filter(Boolean);
+    const words = String(c||'').split(/\\s+/).filter(Boolean);
     let defMain=0, defKao=0, defEmo=0, custom=0, other=0;
     words.forEach(w=>{
       if (mainSet.has(w)) defMain++;
       else if (kaoSet.has(w)) defKao++;
       else if (emoSet.has(w)) defEmo++;
-      else if (w.indexOf('【自定义卡')===0) custom++;
+      else if (String(w).indexOf('【自定义卡')===0) custom++;
       else other++;
     });
-    return JSON.stringify({total:words.length, defMain, defKao, defEmo, custom, other});
+    return JSON.stringify({total:words.length, defMain, defKao, defEmo, custom, other, cLen: String(c||'').length});
   })()`);
 }
 

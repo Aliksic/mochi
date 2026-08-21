@@ -909,7 +909,12 @@
   // v3.6.x：① 合并基准扩展——原实现只在「IDB 有信件」时合并 mailPending，IDB 空时
   // 暂存被静默丢弃；改为：基准 = IDB 信件（备份导入语义），否则当前 localStorage，
   // 暂存按 id 覆盖合并后落盘。② 保险丝后 IDB 迟到返回时取并集，不覆盖已落盘信件。
-  function mailMergeFromIdb(v) {
+  // v3.8.x：mailMergeFromIdb 增加显式 cid——原实现固定用动态 store（当前激活桌面），
+  // contact-switched 的 idbGet 迟到返回时若用户已切到别的桌面，会把【旧桌面的信】
+  // 合并写进【当前桌面】→ 串桌面（iOS Safari IDB 慢时信箱显示全是当前角色来信，
+  // 分不清谁是谁）。cid 传入后读写/快照全部绑定该桌面；cid 不传（启动路径）保持
+  // 原动态行为（启动无切换，动态 = 当前桌面，等价）。
+  function mailMergeFromIdb(v, cid) {
     try {
       const pending = mailPending || [];
       mailPending = null;
@@ -921,10 +926,10 @@
       let cur = null;
       if (mailDbReady || !base.length) {
         // 保险丝已就绪：store 里已含暂存信件，并集保留；IDB 空：保留本地旧信
-        try { cur = JSON.parse(store.get(KEY) || '[]'); } catch (e) { cur = []; }
+        try { cur = JSON.parse(csFor(cid).get(KEY) || '[]'); } catch (e) { cur = []; }
       }
       const merged = mergeLists(base, mergeLists(cur || [], pending));
-      if (merged.length) { store.set(KEY, JSON.stringify(merged)); writeSnap(merged); }
+      if (merged.length) { csFor(cid).set(KEY, JSON.stringify(merged)); writeSnap(merged, cid); }
     } catch (e) { /* 解析失败：仍置就绪，避免下次启动重复合并 */ }
   }
   try {
@@ -963,19 +968,29 @@
   // 让 save() 直接把新桌面数据写进 store（正确），但旧桌面暂存仍残留。
   document.addEventListener('contact-switched', function () {
     try {
+      // v3.8.x：绑定本次切换的桌面 id——idbGet/保险丝都是异步的，回调执行时用户
+      // 可能已切到别的桌面：原实现用动态 store（当前桌面）合并写回，旧桌面的
+      // idbGet 迟到时把旧桌面的信写进新桌面 → 串桌面（iOS Safari 慢 IDB 实测：
+      // 信箱在哪个角色页面就显示全部是这个角色来信，分不清谁是谁）。
+      // 与启动权威加载（mailMergeFromIdb 调用前的 activePrefix 校验）同模式：
+      // 回调先校验归属，已切走则作废——新桌面的切换监听会重新发起权威加载。
+      const switchedCid = window.__activeCid || 'default';
       mailDbReady = false;
       mailPending = null;
       // v3.7.x：补 15s 保险丝（与启动 line 798 同理）——切换联系人后 idbGet 在
       // 个别手机（华为/edge/OPPO 后台挂起）可能不返回，mailDbReady 永远 false →
       // 之后 save() 只暂存内存不落盘，新来信刷新即丢。chat.js 切换时调了
       // armReadyFuse()，mail 缺这步。到期强制就绪并把暂存信件落盘。
+      // v3.8.x：保险丝绑定 switchedCid——已切走时作废（新桌面有自己的保险丝），
+      // 避免旧桌面的保险丝误把新桌面的 mailDbReady 置真（新桌面权威加载还在飞）。
       let fuseFired = false;
       const fuse = setTimeout(function () {
         if (fuseFired || mailDbReady) return;
+        if ((window.__activeCid || 'default') !== switchedCid) return; // 已切走：本保险丝作废
         fuseFired = true;
         try {
-          const all = load();
-          if (all.length) store.set(KEY, JSON.stringify(all));
+          const all = load(switchedCid);
+          if (all.length) csFor(switchedCid).set(KEY, JSON.stringify(all));
         } catch (e) {}
         mailDbReady = true;
         render();
@@ -984,13 +999,15 @@
       if (window.idbGet) {
         window.idbGet(window.activePrefix() + ':' + KEY).then(v => {
           if (fuseFired) return; // 保险丝已先就绪，idbGet 迟到则跳过（load 已含暂存）
+          if ((window.__activeCid || 'default') !== switchedCid) return; // 已切走：作废，不合并不置就绪
           clearTimeout(fuse);
-          mailMergeFromIdb(v);
+          mailMergeFromIdb(v, switchedCid);
           mailDbReady = true;
           render();
           updateBadge();
         }).catch(() => {
           if (fuseFired) return;
+          if ((window.__activeCid || 'default') !== switchedCid) return;
           clearTimeout(fuse);
           mailDbReady = true; render(); updateBadge();
         });
