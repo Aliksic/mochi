@@ -1131,3 +1131,10 @@
   - **诊断工具** `tools/diag-ta-ask-single-input.mjs`：注入一条自定义问题 + 选单选 + 输入文字，比对 boxRect/textRect。修复前 w:25 h:156（窄条）/textRect w:13 h:134（竖排）；修复后 w:251 h:39（正常）/textRect w:91 h:17（横排），optsBox top 953 > inpBox top 906 换行到第二行 ✓。
   - 验证：verify 10/10 + diag-ta-ask-single-input 实测 ✓。未提交。
   - ⚠️ AI-B 越界代修 AI-A 域 chat-pages.css（用户直接反馈 + 与 ta-ask.js askAddFormHtml 强相关）。本提交如一并提交将含 AI-A 上一轮未提交改动（music-player.js 的网易云代理更换 + mobile-adapt.js 上一轮未提交键盘 pinUntil 修复），请确认。
+
+### 2026-08-22（用户反馈：开屏加载时间变长、一直卡在加载进不去）
+- [AI-B·完成]（**已构建 verify 10/10 + 已提交 596dedc**）：`src/js/garden.js`（AI-A 域，AI-B 越界代修）。
+  - **根因**：`partnerAct()` 插入新分支（浇水/一键浇/摘花/一键收/施肥）时，分支链中残留一个孤立右括号 `}`，导致后续旧分支 `} else if` 悬空 → `SyntaxError: Unexpected token 'else'`。整包 JS 合并进单文件后一个语法错误=全部脚本不执行 → `__mochiDataReady` 永 false → 开屏永久卡加载（AGENTS.md 已知坑复现）。
+  - **修复**：删除孤立 `}` 让分支链连通；顺手清理被新分支完全覆盖（r<0.55/0.75/0.9 已被 r<0.35/0.50/0.65/0.78/0.90 全覆盖）的 3 段不可达旧分支死代码。
+  - 提交 596dedc 同时含：chat.js 花朵卡片美化（msg-flower-bar/divider 新 DOM + 诊断 toast 清理）、ta-ask.js 题库微调、chat-main.css 花卡样式 + 构建产物。
+  - ⚠️ 遗留：`tools/.probe-chat-layout.mjs`、`tools/diag-ta-ask-single-input.mjs` 未跟踪未提交，建议加 .gitignore 或删除。
