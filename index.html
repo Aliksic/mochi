@@ -4453,6 +4453,44 @@ transition:border-color .15s ease, background .15s ease;
 .garden-seed:active { background:rgba(0,0,0,.04); border-color:#111; }
 .garden-seed .seed-emoji { font-size:28px; }
 .garden-seed .seed-name { font-size:11px; }
+.garden-level-bar {
+display:flex; align-items:center; gap:8px;
+padding:0 18px 10px; font-size:12px;
+}
+.garden-lv-num { font-weight:700; color:var(--ink); flex-shrink:0; }
+.garden-lv-track { flex:1; height:6px; border-radius:3px; background:rgba(0,0,0,.06); overflow:hidden; }
+.garden-lv-fill { height:100%; border-radius:3px; background:linear-gradient(90deg,#ffd54f,#ffb300); transition:width .4s ease; }
+.garden-lv-exp { color:var(--muted); flex-shrink:0; font-size:11px; }
+.garden-stats {
+display:flex; justify-content:center; gap:20px;
+padding:0 18px 12px; font-size:13px; color:var(--muted);
+}
+.gs-item b { color:var(--ink); font-size:16px; font-weight:700; margin-right:2px; }
+.garden-dex { margin:0 18px 14px; padding:14px 16px; border-radius:18px; }
+.garden-dex-title { font-size:14px; font-weight:700; margin-bottom:10px; }
+.garden-dex-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+.garden-dex-item {
+display:flex; align-items:center; gap:6px; padding:8px 6px;
+border-radius:12px; background:rgba(0,0,0,.03); font-size:11px;
+}
+.garden-dex-item.locked, .garden-dex-item.unknown { opacity:.4; justify-content:center; }
+.garden-dex-item .dex-emoji { font-size:18px; }
+.garden-dex-item .dex-name { color:var(--ink); font-weight:600; flex:1; }
+.garden-dex-item .dex-cnt { color:var(--muted); font-size:10px; }
+.garden-inv { margin:0 18px 18px; padding:14px 16px; border-radius:18px; }
+.garden-inv-title { font-size:14px; font-weight:700; margin-bottom:10px; }
+.garden-inv-list { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
+.garden-inv-item {
+font-size:12px; padding:4px 10px; border-radius:99px;
+background:rgba(0,0,0,.04); color:var(--ink);
+}
+.garden-inv-empty { font-size:12px; color:var(--muted); text-align:center; padding:8px 0; }
+.garden-bouquet-btn {
+display:block; width:100%; padding:10px; border-radius:14px;
+border:none; background:#e85a8f; color:#fff; font-size:13px; font-weight:600;
+cursor:pointer; font-family:inherit;
+}
+.garden-bouquet-btn:active { opacity:.8; }
 </style>
 </head>
 <body>
@@ -4484,7 +4522,7 @@ transition:border-color .15s ease, background .15s ease;
       </div>
       <div class="splash-dots"><i></i><i></i><i></i></div>
       <div class="splash-brand">小红书@言序（1842523578）</div>
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787314541336">Mochi 字卡传讯 v3.6.186 · 部署于 2026-08-21 20:15</div>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787315231547">Mochi 字卡传讯 v3.6.187 · 部署于 2026-08-21 20:27</div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
       <div class="splash-loading" id="splash-loading">正在加载数据…</div>
@@ -5280,7 +5318,7 @@ transition:border-color .15s ease, background .15s ease;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.6.186</div>
+      <div class="ver">Mochi 字卡传讯 v3.6.187</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -6212,8 +6250,9 @@ transition:border-color .15s ease, background .15s ease;
           <span class="garden-weather-txt" id="garden-weather-txt">晴朗 · 适合浇水</span>
           <span class="garden-season" id="garden-season">🌸 春季</span>
         </div>
-        <!-- 花园格: 6格, 2行×3列 -->
+        <div class="garden-level-bar" id="garden-level-bar"></div>
         <div class="garden-grid" id="garden-grid"></div>
+        <div class="garden-stats" id="garden-stats"></div>
         <!-- 工具条 -->
         <div class="garden-toolbar" id="garden-toolbar">
           <button class="garden-tool" data-tool="water" title="浇水">
@@ -6238,6 +6277,8 @@ transition:border-color .15s ease, background .15s ease;
           <div class="garden-log-title">花园日志</div>
           <div class="garden-log-list" id="garden-log-list"></div>
         </div>
+        <div class="garden-dex glass" id="garden-dex"></div>
+        <div class="garden-inv glass" id="garden-inv"></div>
       </div>
     </div>
 
@@ -32325,41 +32366,111 @@ if (waterLvl(data.p[i]) < 0.3) dryPlots.push(i);
 var acted = false;
 if (r < 0.2 && emptyPlots.length > 0) {
 var idx = emptyPlots[Math.floor(Math.random() * emptyPlots.length)];
-var keys = Object.keys(T);
+var keys = Object.keys(T).filter(function (k) { return unlocked(k); });
+if (keys.length > 0) {
 var t = keys[Math.floor(Math.random() * keys.length)];
 var tp = T[t];
 data.p[idx] = { type: t, planted: Math.floor(Date.now() / 1000), by: pName };
 addLog(pName, "\u79CD\u4E0B\u4E86\u4E00\u68F5 " + tp.n);
+updDex(t, "p"); updSt("p", false);
 acted = true;
+}
 } else if (r < 0.55 && dryPlots.length > 0) {
 var idx = dryPlots[Math.floor(Math.random() * dryPlots.length)];
 var si = stageInfo(data.p[idx]);
 data.p[idx].watered = Math.floor(Date.now() / 1000);
 data.p[idx].planted = Math.max(0, data.p[idx].planted - 7200);
 addLog(pName, "\u7ED9 " + (si ? si.name : "\u690D\u7269") + " \u6D47\u4E86\u6C34");
+updSt("w", false);
 acted = true;
 } else if (r < 0.75 && bloomedPlots.length > 0) {
 var idx = bloomedPlots[Math.floor(Math.random() * bloomedPlots.length)];
 var si = stageInfo(data.p[idx]);
 var name = si ? si.name : "\u690D\u7269";
+var type = data.p[idx].type;
+var tp = T[type];
 data.p[idx] = null;
-addLog(pName, "\u6536\u83B7\u4E86 " + name);
+data.exp = (data.exp || 0) + (tp ? tp.xp : 10);
+data.inv[type] = (data.inv[type] || 0) + 1;
+updDex(type, "h"); updSt("h", false);
+addLog(pName, "\u6536\u83B7\u4E86 " + name + " (+" + (tp ? tp.xp : 10) + "\u7ECF\u9A8C)");
 acted = true;
 } else if (r < 0.9 && plantedPlots.length > 0) {
 var idx = plantedPlots[Math.floor(Math.random() * plantedPlots.length)];
 var si = stageInfo(data.p[idx]);
 data.p[idx].planted = Math.max(0, data.p[idx].planted - 21600);
 addLog(pName, "\u7ED9 " + (si ? si.name : "\u690D\u7269") + " \u65BD\u4E86\u80A5");
+updSt("f", false);
 acted = true;
+}
+if (acted && Math.random() < 0.4) {
+var msg = WM[Math.floor(Math.random() * WM.length)];
+addLog(pName, "\uD83D\uDC95 " + msg);
 }
 data.lpc = Math.floor(Date.now() / 1000);
 save(data);
 if (!silent) renderAll();
 return acted;
 }
+function renderLevel() {
+var el = document.getElementById("garden-level-bar");
+if (!el) return;
+var lp = gLvProg();
+var pct = Math.round(lp.cur / lp.max * 100);
+el.innerHTML = "<span class=\"garden-lv-num\">Lv." + lp.lv + "</span><div class=\"garden-lv-track\"><div class=\"garden-lv-fill\" style=\"width:" + pct + "%\"></div></div><span class=\"garden-lv-exp\">" + data.exp + " EXP</span>";
+}
+function renderStats() {
+var el = document.getElementById("garden-stats");
+if (!el) return;
+var st = data.st || {};
+var total = (st.p || 0) + (st.mp || 0);
+var water = (st.w || 0) + (st.mw || 0);
+var harvest = (st.h || 0) + (st.mh || 0);
+el.innerHTML = "<span class=\"gs-item\"><b>" + total + "</b>\u79CD</span><span class=\"gs-item\"><b>" + water + "</b>\u6D47</span><span class=\"gs-item\"><b>" + harvest + "</b>\u6536</span>";
+}
+function renderDex() {
+var el = document.getElementById("garden-dex");
+if (!el) return;
+var keys = Object.keys(T);
+var collected = 0;
+var h = "";
+keys.forEach(function (k) {
+var tp = T[k];
+var dx = data.dex[k] || { p: 0, h: 0 };
+var has = dx.p > 0 || dx.h > 0;
+if (has) collected++;
+var lock = !unlocked(k);
+if (has) {
+h += "<div class=\"garden-dex-item\" title=\"" + tp.n + " \u79CD" + dx.p + "\u6536" + dx.h + "\"><span class=\"dex-emoji\">" + tp.e[tp.e.length - 1] + "</span><span class=\"dex-name\">" + tp.n + "</span><span class=\"dex-cnt\">\u00d7" + dx.h + "</span></div>";
+} else if (lock) {
+h += "<div class=\"garden-dex-item locked\"><span class=\"dex-emoji\">\uD83D\uDD12</span><span class=\"dex-name\">Lv." + tp.lv + "</span></div>";
+} else {
+h += "<div class=\"garden-dex-item unknown\"><span class=\"dex-emoji\">\u2753</span><span class=\"dex-name\">???</span></div>";
+}
+});
+el.innerHTML = "<div class=\"garden-dex-title\">\u690D\u7269\u56FE\u9274 " + collected + "/" + keys.length + "</div><div class=\"garden-dex-grid\">" + h + "</div>";
+}
+function renderInv() {
+var el = document.getElementById("garden-inv");
+if (!el) return;
+var keys = Object.keys(data.inv || {}).filter(function (k) { return data.inv[k] > 0; });
+if (!keys.length) { el.innerHTML = "<div class=\"garden-inv-empty\">\u5E93\u5B58\u7A7A\u7A7A\uFF0C\u6536\u83B7\u82B1\u6735\u540E\u53EF\u5236\u4F5C\u82B1\u675F\u9001\u7ED9" + pn() + "</div>"; return; }
+var h = "<div class=\"garden-inv-title\">\u82B1\u6735\u5E93\u5B58</div><div class=\"garden-inv-list\">";
+keys.forEach(function (k) {
+var tp = T[k];
+if (!tp) return;
+h += "<span class=\"garden-inv-item\" data-flower=\"" + k + "\">" + tp.e[tp.e.length - 1] + " " + tp.n + " \u00d7" + data.inv[k] + "</span>";
+});
+h += "</div><button class=\"garden-bouquet-btn\" id=\"garden-bouquet-btn\">\uD83D\uDCC1 \u5236\u4F5C\u82B1\u675F\u9001\u7ED9" + pn() + "</button>";
+el.innerHTML = h;
+}
 function renderAll() {
 renderWeather();
+renderLevel();
 renderGrid();
+renderStats();
+renderDex();
+renderInv();
 renderLog();
 }
 function checkPartnerPassive() {
@@ -32418,7 +32529,8 @@ harvestPlot(selPlot);
 if (selPlot < 0) return;
 if (data.p[selPlot]) return;
 if (!window.openModal) return;
-var keys = Object.keys(T);
+var keys = Object.keys(T).filter(function (k) { return unlocked(k); });
+if (!keys.length) return;
 var pills = keys.map(function (k) {
 var tp = T[k];
 return { label: tp.e[tp.e.length - 1] + " " + tp.n, value: k };
@@ -32427,6 +32539,26 @@ window.openModal("\u9009\u62E9\u79CD\u690D", "", function (v) {
 if (v && T[v]) plantSeed(selPlot, v);
 }, { pills: pills, noInput: true });
 }
+}
+function makeBouquet() {
+var keys = Object.keys(data.inv || {}).filter(function (k) { return data.inv[k] > 0 && T[k]; });
+if (!keys.length) return;
+if (!window.openModal) return;
+var pills = keys.map(function (k) {
+var tp = T[k];
+return { label: tp.e[tp.e.length - 1] + " " + tp.n + " \u00d7" + data.inv[k], value: k };
+});
+window.openModal("\u9009\u4E00\u6735\u82B1\u5236\u4F5C\u82B1\u675F", "", function (v) {
+if (!v || !T[v] || !data.inv[v]) return;
+var tp = T[v];
+data.inv[v]--;
+var emoji = tp.e[tp.e.length - 1];
+var msg = emoji + " \u9001\u7ED9\u4F60\u4E00\u675F" + tp.n + "\u82B1\uFF0C\u662F\u6211\u4EEC\u4E00\u8D77\u79CD\u7684\u54E6~";
+addLog("\u6211", "\u5236\u4F5C\u4E86\u4E00\u675F " + tp.n + "\u82B1\u9001\u7ED9" + pn());
+save(data);
+if (window.chatSendMsg) { try { window.chatSendMsg(msg); } catch (e) {} }
+renderAll();
+}, { pills: pills, noInput: true });
 }
 function openGarden() {
 var editing = Array.from(document.querySelectorAll(".app-grid")).some(function (g) { return g.classList.contains("editing"); });
@@ -32453,6 +32585,11 @@ var gridEl = document.getElementById("garden-grid");
 if (gridEl) gridEl.addEventListener("click", handlePlotClick);
 var toolbarEl = document.getElementById("garden-toolbar");
 if (toolbarEl) toolbarEl.addEventListener("click", handleTool);
+var invEl = document.getElementById("garden-inv");
+if (invEl) invEl.addEventListener("click", function (e) {
+var btn = e.target.closest("#garden-bouquet-btn");
+if (btn) makeBouquet();
+});
 document.addEventListener("contact-switched", function () {
 if (!page.hidden) { data = load(); selPlot = -1; renderAll(); }
 });

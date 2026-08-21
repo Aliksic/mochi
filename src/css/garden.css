@@ -116,3 +116,49 @@
 .garden-seed:active { background:rgba(0,0,0,.04); border-color:#111; }
 .garden-seed .seed-emoji { font-size:28px; }
 .garden-seed .seed-name { font-size:11px; }
+
+/* 等级条 */
+.garden-level-bar {
+  display:flex; align-items:center; gap:8px;
+  padding:0 18px 10px; font-size:12px;
+}
+.garden-lv-num { font-weight:700; color:var(--ink); flex-shrink:0; }
+.garden-lv-track { flex:1; height:6px; border-radius:3px; background:rgba(0,0,0,.06); overflow:hidden; }
+.garden-lv-fill { height:100%; border-radius:3px; background:linear-gradient(90deg,#ffd54f,#ffb300); transition:width .4s ease; }
+.garden-lv-exp { color:var(--muted); flex-shrink:0; font-size:11px; }
+
+/* 统计 */
+.garden-stats {
+  display:flex; justify-content:center; gap:20px;
+  padding:0 18px 12px; font-size:13px; color:var(--muted);
+}
+.gs-item b { color:var(--ink); font-size:16px; font-weight:700; margin-right:2px; }
+
+/* 图鉴 */
+.garden-dex { margin:0 18px 14px; padding:14px 16px; border-radius:18px; }
+.garden-dex-title { font-size:14px; font-weight:700; margin-bottom:10px; }
+.garden-dex-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+.garden-dex-item {
+  display:flex; align-items:center; gap:6px; padding:8px 6px;
+  border-radius:12px; background:rgba(0,0,0,.03); font-size:11px;
+}
+.garden-dex-item.locked, .garden-dex-item.unknown { opacity:.4; justify-content:center; }
+.garden-dex-item .dex-emoji { font-size:18px; }
+.garden-dex-item .dex-name { color:var(--ink); font-weight:600; flex:1; }
+.garden-dex-item .dex-cnt { color:var(--muted); font-size:10px; }
+
+/* 库存 + 花束 */
+.garden-inv { margin:0 18px 18px; padding:14px 16px; border-radius:18px; }
+.garden-inv-title { font-size:14px; font-weight:700; margin-bottom:10px; }
+.garden-inv-list { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
+.garden-inv-item {
+  font-size:12px; padding:4px 10px; border-radius:99px;
+  background:rgba(0,0,0,.04); color:var(--ink);
+}
+.garden-inv-empty { font-size:12px; color:var(--muted); text-align:center; padding:8px 0; }
+.garden-bouquet-btn {
+  display:block; width:100%; padding:10px; border-radius:14px;
+  border:none; background:#e85a8f; color:#fff; font-size:13px; font-weight:600;
+  cursor:pointer; font-family:inherit;
+}
+.garden-bouquet-btn:active { opacity:.8; }

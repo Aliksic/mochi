@@ -258,9 +258,69 @@ function partnerAct(silent) {
   return acted;
 }
 
+function renderLevel() {
+  var el = document.getElementById("garden-level-bar");
+  if (!el) return;
+  var lp = gLvProg();
+  var pct = Math.round(lp.cur / lp.max * 100);
+  el.innerHTML = "<span class=\"garden-lv-num\">Lv." + lp.lv + "</span><div class=\"garden-lv-track\"><div class=\"garden-lv-fill\" style=\"width:" + pct + "%\"></div></div><span class=\"garden-lv-exp\">" + data.exp + " EXP</span>";
+}
+
+function renderStats() {
+  var el = document.getElementById("garden-stats");
+  if (!el) return;
+  var st = data.st || {};
+  var total = (st.p || 0) + (st.mp || 0);
+  var water = (st.w || 0) + (st.mw || 0);
+  var harvest = (st.h || 0) + (st.mh || 0);
+  el.innerHTML = "<span class=\"gs-item\"><b>" + total + "</b>\u79CD</span><span class=\"gs-item\"><b>" + water + "</b>\u6D47</span><span class=\"gs-item\"><b>" + harvest + "</b>\u6536</span>";
+}
+
+function renderDex() {
+  var el = document.getElementById("garden-dex");
+  if (!el) return;
+  var keys = Object.keys(T);
+  var collected = 0;
+  var h = "";
+  keys.forEach(function (k) {
+    var tp = T[k];
+    var dx = data.dex[k] || { p: 0, h: 0 };
+    var has = dx.p > 0 || dx.h > 0;
+    if (has) collected++;
+    var lock = !unlocked(k);
+    if (has) {
+      h += "<div class=\"garden-dex-item\" title=\"" + tp.n + " \u79CD" + dx.p + "\u6536" + dx.h + "\"><span class=\"dex-emoji\">" + tp.e[tp.e.length - 1] + "</span><span class=\"dex-name\">" + tp.n + "</span><span class=\"dex-cnt\">\u00d7" + dx.h + "</span></div>";
+    } else if (lock) {
+      h += "<div class=\"garden-dex-item locked\"><span class=\"dex-emoji\">\uD83D\uDD12</span><span class=\"dex-name\">Lv." + tp.lv + "</span></div>";
+    } else {
+      h += "<div class=\"garden-dex-item unknown\"><span class=\"dex-emoji\">\u2753</span><span class=\"dex-name\">???</span></div>";
+    }
+  });
+  el.innerHTML = "<div class=\"garden-dex-title\">\u690D\u7269\u56FE\u9274 " + collected + "/" + keys.length + "</div><div class=\"garden-dex-grid\">" + h + "</div>";
+}
+
+function renderInv() {
+  var el = document.getElementById("garden-inv");
+  if (!el) return;
+  var keys = Object.keys(data.inv || {}).filter(function (k) { return data.inv[k] > 0; });
+  if (!keys.length) { el.innerHTML = "<div class=\"garden-inv-empty\">\u5E93\u5B58\u7A7A\u7A7A\uFF0C\u6536\u83B7\u82B1\u6735\u540E\u53EF\u5236\u4F5C\u82B1\u675F\u9001\u7ED9" + pn() + "</div>"; return; }
+  var h = "<div class=\"garden-inv-title\">\u82B1\u6735\u5E93\u5B58</div><div class=\"garden-inv-list\">";
+  keys.forEach(function (k) {
+    var tp = T[k];
+    if (!tp) return;
+    h += "<span class=\"garden-inv-item\" data-flower=\"" + k + "\">" + tp.e[tp.e.length - 1] + " " + tp.n + " \u00d7" + data.inv[k] + "</span>";
+  });
+  h += "</div><button class=\"garden-bouquet-btn\" id=\"garden-bouquet-btn\">\uD83D\uDCC1 \u5236\u4F5C\u82B1\u675F\u9001\u7ED9" + pn() + "</button>";
+  el.innerHTML = h;
+}
+
 function renderAll() {
   renderWeather();
+  renderLevel();
   renderGrid();
+  renderStats();
+  renderDex();
+  renderInv();
   renderLog();
 }
 
@@ -322,7 +382,8 @@ function handleTool(e) {
     if (selPlot < 0) return;
     if (data.p[selPlot]) return;
     if (!window.openModal) return;
-    var keys = Object.keys(T);
+    var keys = Object.keys(T).filter(function (k) { return unlocked(k); });
+    if (!keys.length) return;
     var pills = keys.map(function (k) {
       var tp = T[k];
       return { label: tp.e[tp.e.length - 1] + " " + tp.n, value: k };
@@ -331,6 +392,27 @@ function handleTool(e) {
       if (v && T[v]) plantSeed(selPlot, v);
     }, { pills: pills, noInput: true });
   }
+}
+
+function makeBouquet() {
+  var keys = Object.keys(data.inv || {}).filter(function (k) { return data.inv[k] > 0 && T[k]; });
+  if (!keys.length) return;
+  if (!window.openModal) return;
+  var pills = keys.map(function (k) {
+    var tp = T[k];
+    return { label: tp.e[tp.e.length - 1] + " " + tp.n + " \u00d7" + data.inv[k], value: k };
+  });
+  window.openModal("\u9009\u4E00\u6735\u82B1\u5236\u4F5C\u82B1\u675F", "", function (v) {
+    if (!v || !T[v] || !data.inv[v]) return;
+    var tp = T[v];
+    data.inv[v]--;
+    var emoji = tp.e[tp.e.length - 1];
+    var msg = emoji + " \u9001\u7ED9\u4F60\u4E00\u675F" + tp.n + "\u82B1\uFF0C\u662F\u6211\u4EEC\u4E00\u8D77\u79CD\u7684\u54E6~";
+    addLog("\u6211", "\u5236\u4F5C\u4E86\u4E00\u675F " + tp.n + "\u82B1\u9001\u7ED9" + pn());
+    save(data);
+    if (window.chatSendMsg) { try { window.chatSendMsg(msg); } catch (e) {} }
+    renderAll();
+  }, { pills: pills, noInput: true });
 }
 
 function openGarden() {
@@ -362,6 +444,12 @@ if (gridEl) gridEl.addEventListener("click", handlePlotClick);
 
 var toolbarEl = document.getElementById("garden-toolbar");
 if (toolbarEl) toolbarEl.addEventListener("click", handleTool);
+
+var invEl = document.getElementById("garden-inv");
+if (invEl) invEl.addEventListener("click", function (e) {
+  var btn = e.target.closest("#garden-bouquet-btn");
+  if (btn) makeBouquet();
+});
 
 document.addEventListener("contact-switched", function () {
   if (!page.hidden) { data = load(); selPlot = -1; renderAll(); }
