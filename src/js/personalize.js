@@ -2177,6 +2177,14 @@
   document.addEventListener('group-chat-mode-changed', applyGroupChatMode);
   // 装修模式退出后重应用（用户可能在装修时移动了群聊/占卜按钮）
   document.addEventListener('decor-exited', applyGroupChatMode);
+  // v3.9.x：idbRestore 异步回填完成后再应用一次——group-chat-enabled 是小键，
+  // 正常情况同步写 localStorage，启动时即可读到。但 localStorage 配额紧张/被浏览器
+  // 清理时该键只在 IndexedDB，applyGroupChatMode 同步首次调用读到 null→群聊按钮移入
+  // 隐藏池；idbRestore 回填后 store.get 能读到 '1'，但此前不会重新触发 applyGroupChatMode
+  //（contact-switched/group-chat-mode-changed 均不派发），群聊按钮留在池中"自己关闭"。
+  // 监听 mochi-restore-done 在回填后重应用，与 buildDeskPages 的 rebuildDeskWhenReady 同模式。
+  if (window.__mochiDataReady) applyGroupChatMode();
+  else document.addEventListener('mochi-restore-done', applyGroupChatMode);
 
   // 组件库面板：列出所有组件 + 当前位置，点击「添加到此页」
   function openDeskLib(pageSlide, pageIdx) {

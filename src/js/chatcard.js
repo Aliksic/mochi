@@ -89,11 +89,21 @@
   // 避免新增的表情包分组/内容因 localStorage 配额问题"消失"。
   // （不采用"不一致即覆盖"：若 idbSet 偶尔失败而 localStorage 已写入最新，覆盖会反向丢数据）
   (function () {
-    if (window.idbGet) {
-      const myPrefix = window.activePrefix();
+    if (!window.idbGet) return;
+    const myPrefix = window.activePrefix();
+    // v3.9.x：OPPO Chrome 等慢 IDB 浏览器首次打开可能失败/超时，原实现读到
+    // undefined 直接放弃且永不重试——大键字卡库（表情包/图片 dataURL 只进 IDB）
+    // 启动时读不到就显示空库（用户反馈「表情包丢失」）。改为失败后延迟重试，
+    // 直到读到数据或 3 次用尽；读到后按「IDB 内容更多才覆盖」恢复。
+    let retry = 0;
+    const MAX_RETRY = 3;
+    function tryRestore() {
       window.idbGet(myPrefix + ':cc-groups').then(v => {
         if (window.activePrefix() !== myPrefix) return;
-        if (v === undefined || v === null) return;
+        if (v === undefined || v === null) {
+          if (retry < MAX_RETRY) { retry++; setTimeout(tryRestore, 800 * retry); }
+          return;
+        }
         try {
           const data = typeof v === 'string' ? JSON.parse(v) : v;
           if (!data || !data.text) return;
@@ -116,6 +126,7 @@
         } catch (e) {}
       });
     }
+    tryRestore();
   })();
   function saveGroups(groups) {
     // 统一走适配层：localStorage 快照 + IndexedDB 权威（配额满也不丢，启动自动恢复）

@@ -12,13 +12,22 @@ function save(d) { try { s.set(G, JSON.stringify(d)); try { if (window.idbSet) w
 (function r() { try { if (!window.idbGet) return; var pf = window.activePrefix(); if (!s.get(G)) window.idbGet(pf + ":" + G).then(function (v) { if (window.activePrefix() !== pf || !v) return; try { s.set(G, typeof v === "string" ? v : JSON.stringify(v)); } catch (e) {} }); } catch (e) {} })();
 
 var T = {
-  rose: { n: "\u73AB\u7470", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF39"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [172800, 432000] },
-  sunflower: { n: "\u5411\u65E5\u8475", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF3B"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [172800, 518400] },
-  tulip: { n: "\u90C1\u91D1\u9999", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF37"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [172800, 432000] },
-  cactus: { n: "\u4ED9\u4EBA\u638C", e: ["\uD83C\uDF31", "\uD83C\uDF35"], sn: ["\u5C0F\u82BD", "\u6210\u578B"], g: [432000] },
-  lavender: { n: "\u85B0\u8863\u8349", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83D\uDC90"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [86400, 345600] },
-  daisy: { n: "\u96CF\u83CA", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF3C"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [86400, 259200] }
+  rose: { n: "\u73AB\u7470", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF39"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [172800, 432000], xp: 30, lv: 1 },
+  sunflower: { n: "\u5411\u65E5\u8475", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF3B"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [172800, 518400], xp: 40, lv: 2 },
+  tulip: { n: "\u90C1\u91D1\u9999", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF37"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [172800, 432000], xp: 30, lv: 1 },
+  cactus: { n: "\u4ED9\u4EBA\u638C", e: ["\uD83C\uDF31", "\uD83C\uDF35"], sn: ["\u5C0F\u82BD", "\u6210\u578B"], g: [432000], xp: 50, lv: 4 },
+  lavender: { n: "\u85B0\u8863\u8349", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83D\uDC90"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [86400, 345600], xp: 25, lv: 3 },
+  daisy: { n: "\u96CF\u83CA", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF3C"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [86400, 259200], xp: 20, lv: 1 }
 };
+var WM = [
+  "\u4ECA\u5929\u4E5F\u8F9B\u82E6\u5566\uFF0C\u82B1\u82B1\u4EEC\u4E5F\u5728\u52AA\u529B\u957F\u5927\u54E6",
+  "\u7ED9\u4F60\u7684\u5C0F\u82B1\u6D47\u4E86\u70B9\u6C34\uFF0C\u8981\u5FEB\u5FEB\u957F\u5927\u54E6",
+  "\u770B\u7740\u82B1\u56ED\u91CC\u7684\u82B1\u82B1\uFF0C\u5C31\u60F3\u5230\u4F60\u4E86",
+  "\u4ECA\u5929\u5FC3\u60C5\u4E0D\u9519\uFF0C\u987A\u4FBF\u7167\u987E\u4E86\u4E0B\u82B1\u56ED",
+  "\u8FD9\u6735\u82B1\u5FEB\u5F00\u4E86\uFF0C\u7B49\u4F60\u6765\u770B",
+  "\u6D47\u5B8C\u6C34\u4E86\uFF0C\u8BB0\u5F97\u591A\u4F11\u606F\u54E6",
+  "\u82B1\u56ED\u91CC\u90FD\u662F\u6211\u4EEC\u4E00\u8D77\u79CD\u4E0B\u7684\uFF0C\u8981\u4E00\u76F4\u7167\u987E\u4E0B\u53BB"
+];
 var W = [
   { i: "\u2600\uFE0F", t: "\u6674\u6717" },
   { i: "\u26C5", t: "\u591A\u4E91" },
@@ -51,6 +60,12 @@ function waterLvl(plot) {
   if (!plot || !plot.watered) return 0;
   return Math.max(0, 1 - (Math.floor(Date.now() / 1000) - plot.watered) / 86400);
 }
+
+function gLv() { return Math.floor(Math.sqrt((data.exp || 0) / 10)) + 1; }
+function gLvProg() { var lv = gLv(); var cur = (lv - 1) * (lv - 1) * 10; var nxt = lv * lv * 10; return { cur: data.exp - cur, max: nxt - cur, lv: lv }; }
+function unlocked(type) { var tp = T[type]; if (!tp) return false; return gLv() >= (tp.lv || 1); }
+function updDex(type, act) { if (!data.dex[type]) data.dex[type] = { p: 0, h: 0 }; if (act === "p") data.dex[type].p++; if (act === "h") data.dex[type].h++; }
+function updSt(act, me) { var k = act; if (me) data.st[k] = (data.st[k] || 0) + 1; else data.st["m" + k] = (data.st["m" + k] || 0) + 1; }
 
 var curWeather = wx();
 var curSeason = sea();
@@ -131,15 +146,19 @@ function waterPlot(idx) {
   var si = stageInfo(plot);
   plot.planted = Math.max(0, plot.planted - 14400);
   addLog("\u6211", "\u7ED9 " + (si ? si.name : "\u7A7A\u5730") + " \u6D47\u4E86\u6C34");
+  updSt("w", true);
   save(data); renderAll();
 }
 
 function plantSeed(idx, type) {
   if (idx < 0 || idx >= PLOTS) return;
   if (data.p[idx]) return;
+  if (!unlocked(type)) return;
   var tp = T[type]; if (!tp) return;
   data.p[idx] = { type: type, planted: Math.floor(Date.now() / 1000), by: "\u6211" };
   addLog("\u6211", "\u79CD\u4E0B\u4E86\u4E00\u68F5 " + tp.n);
+  updDex(type, "p");
+  updSt("p", true);
   save(data); renderAll();
 }
 
@@ -150,6 +169,7 @@ function fertilizePlot(idx) {
   plot.planted = Math.max(0, plot.planted - 43200);
   var si = stageInfo(plot);
   addLog("\u6211", "\u7ED9 " + (si ? si.name : "\u7A7A\u5730") + " \u65BD\u4E86\u80A5");
+  updSt("f", true);
   save(data); renderAll();
 }
 
@@ -160,10 +180,17 @@ function harvestPlot(idx) {
   var si = stageInfo(plot);
   if (!si || !si.bloomed) return;
   var name = si.name;
+  var type = plot.type;
+  var tp = T[type];
   data.p[idx] = null;
-  addLog("\u6211", "\u6536\u83B7\u4E86 " + name);
+  data.exp = (data.exp || 0) + (tp ? tp.xp : 10);
+  data.inv[type] = (data.inv[type] || 0) + 1;
+  updDex(type, "h");
+  updSt("h", true);
+  addLog("\u6211", "\u6536\u83B7\u4E86 " + name + " (+" + (tp ? tp.xp : 10) + "\u7ECF\u9A8C)");
   save(data); renderAll();
 }
+
 
 function partnerAct(silent) {
   var pName = pn();
@@ -184,32 +211,46 @@ function partnerAct(silent) {
   var acted = false;
   if (r < 0.2 && emptyPlots.length > 0) {
     var idx = emptyPlots[Math.floor(Math.random() * emptyPlots.length)];
-    var keys = Object.keys(T);
-    var t = keys[Math.floor(Math.random() * keys.length)];
-    var tp = T[t];
-    data.p[idx] = { type: t, planted: Math.floor(Date.now() / 1000), by: pName };
-    addLog(pName, "\u79CD\u4E0B\u4E86\u4E00\u68F5 " + tp.n);
-    acted = true;
+    var keys = Object.keys(T).filter(function (k) { return unlocked(k); });
+    if (keys.length > 0) {
+      var t = keys[Math.floor(Math.random() * keys.length)];
+      var tp = T[t];
+      data.p[idx] = { type: t, planted: Math.floor(Date.now() / 1000), by: pName };
+      addLog(pName, "\u79CD\u4E0B\u4E86\u4E00\u68F5 " + tp.n);
+      updDex(t, "p"); updSt("p", false);
+      acted = true;
+    }
   } else if (r < 0.55 && dryPlots.length > 0) {
     var idx = dryPlots[Math.floor(Math.random() * dryPlots.length)];
     var si = stageInfo(data.p[idx]);
     data.p[idx].watered = Math.floor(Date.now() / 1000);
     data.p[idx].planted = Math.max(0, data.p[idx].planted - 7200);
     addLog(pName, "\u7ED9 " + (si ? si.name : "\u690D\u7269") + " \u6D47\u4E86\u6C34");
+    updSt("w", false);
     acted = true;
   } else if (r < 0.75 && bloomedPlots.length > 0) {
     var idx = bloomedPlots[Math.floor(Math.random() * bloomedPlots.length)];
     var si = stageInfo(data.p[idx]);
     var name = si ? si.name : "\u690D\u7269";
+    var type = data.p[idx].type;
+    var tp = T[type];
     data.p[idx] = null;
-    addLog(pName, "\u6536\u83B7\u4E86 " + name);
+    data.exp = (data.exp || 0) + (tp ? tp.xp : 10);
+    data.inv[type] = (data.inv[type] || 0) + 1;
+    updDex(type, "h"); updSt("h", false);
+    addLog(pName, "\u6536\u83B7\u4E86 " + name + " (+" + (tp ? tp.xp : 10) + "\u7ECF\u9A8C)");
     acted = true;
   } else if (r < 0.9 && plantedPlots.length > 0) {
     var idx = plantedPlots[Math.floor(Math.random() * plantedPlots.length)];
     var si = stageInfo(data.p[idx]);
     data.p[idx].planted = Math.max(0, data.p[idx].planted - 21600);
     addLog(pName, "\u7ED9 " + (si ? si.name : "\u690D\u7269") + " \u65BD\u4E86\u80A5");
+    updSt("f", false);
     acted = true;
+  }
+  if (acted && Math.random() < 0.4) {
+    var msg = WM[Math.floor(Math.random() * WM.length)];
+    addLog(pName, "\uD83D\uDC95 " + msg);
   }
   data.lpc = Math.floor(Date.now() / 1000);
   save(data);

@@ -2505,8 +2505,6 @@ background:#fff; color:#111; cursor:pointer; display:flex; align-items:center; j
 .period-legend .lg { font-size:11px; color:#777; display:flex; align-items:center; gap:5px; }
 .period-legend .lg::before { content:''; width:10px; height:10px; border-radius:3px; display:inline-block; }
 .period-legend .lg-period::before { background:#e85a8f; }
-.period-legend .lg-fertile::before { background:#f5a623; }
-.period-legend .lg-safe::before { background:#eaf4ee; border:1px solid #cfe6d8; }
 .period-legend .lg-predict::before { background:#fde2ee; border:1px dashed #e85a8f; }
 .period-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
 .period-grid .pc-wd { font-size:10px; color:var(--muted); text-align:center; padding:4px 0; }
@@ -4486,7 +4484,7 @@ transition:border-color .15s ease, background .15s ease;
       </div>
       <div class="splash-dots"><i></i><i></i><i></i></div>
       <div class="splash-brand">小红书@言序（1842523578）</div>
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787311808758">Mochi 字卡传讯 v3.6.185 · 部署于 2026-08-21 19:30</div>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787314541336">Mochi 字卡传讯 v3.6.186 · 部署于 2026-08-21 20:15</div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
       <div class="splash-loading" id="splash-loading">正在加载数据…</div>
@@ -5282,7 +5280,7 @@ transition:border-color .15s ease, background .15s ease;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.6.185</div>
+      <div class="ver">Mochi 字卡传讯 v3.6.186</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -6130,8 +6128,7 @@ transition:border-color .15s ease, background .15s ease;
           </div>
           <div class="period-legend">
             <span class="lg lg-period">经期</span>
-            <span class="lg lg-fertile">易孕期</span>
-            <span class="lg lg-safe">安全期</span>
+
             <span class="lg lg-predict">预测</span>
           </div>
           <div class="period-grid" id="period-grid"></div>
@@ -7829,10 +7826,13 @@ if (moved > 0) { try { sessionStorage.setItem('xy-ls-big-migrated', '1'); } catc
 (function () { try {
 (function () {
 const G = 'xy-home-v2';
-const EXCLUDE = ['contacts', 'active-contact', 'feed-posts', 'migrated-v1', 'js-errors', 'theme-mode', 'accent-color'];
+const EXCLUDE = ['contacts', 'active-contact', 'feed-posts', 'migrated-v1', 'js-errors', 'theme-mode', 'accent-color',
+'bg-keepalive', 'bg-notify',
+'__last-backup', '__last-backup-remind', '__onboard-done', '__edge-backup-hint-done', '__auto-backup-snapshot'];
 function isExcluded(k) {
 const r = k.slice(G.length + 1);
 if (EXCLUDE.indexOf(r) >= 0) return true;
+if (r.indexOf('reply-gc-') === 0) return true;
 if (r.indexOf('music-file:') === 0) return true;
 const m = r.match(/^([^:]+):/);
 if (m) {
@@ -7947,6 +7947,29 @@ try { if (window.applyAvatars) window.applyAvatars(); } catch (e) {}
 try { if (window.renderChatHeader) window.renderChatHeader(); } catch (e) {}
 };
 function migrateLegacy() {
+try {
+const def = window.xyStore(G + ':default');
+const root = window.xyStore(G);
+['bg-keepalive', 'bg-notify'].forEach(function (k) {
+const v = def.get(k);
+if (v !== null && v !== undefined && v !== '') {
+try { if (root.get(k) === null || root.get(k) === undefined) root.set(k, v); } catch (e) {}
+try { def.remove(k); } catch (e) {}
+}
+});
+const gcKeys = [];
+for (let i = 0; i < localStorage.length; i++) {
+const k = localStorage.key(i);
+if (k && k.indexOf(G + ':default:reply-gc-') === 0) gcKeys.push(k.slice((G + ':default:').length));
+}
+gcKeys.forEach(function (k) {
+const v = def.get(k);
+if (v !== null && v !== undefined && v !== '') {
+try { if (root.get(k) === null || root.get(k) === undefined) root.set(k, v); } catch (e) {}
+try { def.remove(k); } catch (e) {}
+}
+});
+} catch (e) {}
 const old = [];
 const garbage = [];
 for (let i = 0; i < localStorage.length; i++) {
@@ -10634,6 +10657,8 @@ applyGroupChatMode();
 document.addEventListener('contact-switched', applyGroupChatMode);
 document.addEventListener('group-chat-mode-changed', applyGroupChatMode);
 document.addEventListener('decor-exited', applyGroupChatMode);
+if (window.__mochiDataReady) applyGroupChatMode();
+else document.addEventListener('mochi-restore-done', applyGroupChatMode);
 function openDeskLib(pageSlide, pageIdx) {
 const lib = document.createElement('div');
 lib.className = 'desk-lib';
@@ -16056,8 +16081,12 @@ return true;
 }
 (function () {
 if (!window.idbGet) return;
+const myPrefix = window.activePrefix();
+let retry = 0;
+function tryRestore() {
 window.idbGet(MYE_KEY()).then(v => {
-if (!v) return;
+if (window.activePrefix() !== myPrefix) return; // 已切桌面，作废
+if (!v) { if (retry < 3) { retry++; setTimeout(tryRestore, 800 * retry); } return; }
 try {
 const data = typeof v === 'string' ? JSON.parse(v) : v;
 if (!Array.isArray(data)) return;
@@ -16071,6 +16100,8 @@ if (!emojiPanel.hidden) renderEmojiPanel();
 }
 } catch (e) {}
 });
+}
+tryRestore();
 })();
 function quoteValue(q) {
 if (!q) return null;
@@ -16226,6 +16257,7 @@ updateBatchCount();
 }
 function openEmojiPanel() {
 if (!emojiPanel) return;
+reloadMyEmojiFromIdb();
 const pc = document.getElementById('poke-card');
 if (pc) pc.hidden = true;
 if (window.closeAvlib) window.closeAvlib();
@@ -16241,6 +16273,31 @@ function closeEmojiPanel() {
 if (emojiPanel) emojiPanel.hidden = true;
 emojiInsertCb = null;
 }
+function reloadMyEmojiFromIdb() {
+if (!window.idbGet) return;
+const myPrefix = window.activePrefix();
+window.idbGet(MYE_KEY()).then(v => {
+if (window.activePrefix() !== myPrefix) return;
+if (!v) return;
+try {
+const data = typeof v === 'string' ? JSON.parse(v) : v;
+if (!Array.isArray(data)) return;
+const cnt = (g) => { let n = 0; g.forEach(x => n += (Array.isArray(x[1]) ? x[1].length : 0)); return n; };
+let local = null;
+try { local = JSON.parse(store.get('my-emoji-groups') || 'null'); } catch (e) {}
+const lc = Array.isArray(local) ? cnt(local) : -1;
+if (lc < 0 || cnt(data) > lc) {
+myGroups = data;
+if (!emojiPanel.hidden) renderEmojiPanel();
+}
+} catch (e) {}
+});
+}
+document.addEventListener('contact-switched', function () {
+myGroups = myEmojiLoad(); // 先读新桌面快照（内存/LS 已就绪时立即生效）
+if (!emojiPanel.hidden) renderEmojiPanel();
+reloadMyEmojiFromIdb();   // 再补读新桌面 IDB 权威（大键场景）
+});
 window.openEmojiPanelForInsert = function (cb) {
 emojiInsertCb = cb || null;
 openEmojiPanel();
@@ -17256,11 +17313,17 @@ return saved;
 return { text: [], kaomoji: [], emoji: [], sticker: [], image: [], poke: [], voice: [] };
 }
 (function () {
-if (window.idbGet) {
+if (!window.idbGet) return;
 const myPrefix = window.activePrefix();
+let retry = 0;
+const MAX_RETRY = 3;
+function tryRestore() {
 window.idbGet(myPrefix + ':cc-groups').then(v => {
 if (window.activePrefix() !== myPrefix) return;
-if (v === undefined || v === null) return;
+if (v === undefined || v === null) {
+if (retry < MAX_RETRY) { retry++; setTimeout(tryRestore, 800 * retry); }
+return;
+}
 try {
 const data = typeof v === 'string' ? JSON.parse(v) : v;
 if (!data || !data.text) return;
@@ -17282,6 +17345,7 @@ render();
 } catch (e) {}
 });
 }
+tryRestore();
 })();
 function saveGroups(groups) {
 store.set('cc-groups', JSON.stringify(groups));
@@ -23946,6 +24010,7 @@ avMeGrid.appendChild(d);
 }
 function openAvlib() {
 if (!avPage) return;
+try { restoreLib('avatar-lib'); restoreLib('avatar-me-lib'); } catch (e) {}
 const pc = document.getElementById('poke-card');
 if (pc) pc.hidden = true;
 const ep = document.getElementById('emoji-panel');
@@ -23955,6 +24020,9 @@ renderMeGrid();
 syncVal();
 avPage.hidden = false;
 }
+document.addEventListener('contact-switched', function () {
+try { restoreLib('avatar-lib'); restoreLib('avatar-me-lib'); } catch (e) {}
+});
 function closeAvlib() {
 if (avPage) avPage.hidden = true;
 }
@@ -24238,24 +24306,32 @@ checkAvatarLibRefresh();
 try { setInterval(checkMeAvatarRefresh, 60000); } catch (e) {}
 checkMeAvatarRefresh();
 syncVal();
-try {
-if (window.idbGet) {
-window.idbGet(window.activePrefix() + ':avatar-lib').then(v => {
-if (v && typeof v === 'string' && v.length > 2) {
-store.set('avatar-lib', v);
+function restoreLib(key) {
+if (!window.idbGet) return;
+const myPrefix = window.activePrefix();
+let retry = 0;
+function tryOnce() {
+window.idbGet(myPrefix + ':' + key).then(v => {
+if (window.activePrefix() !== myPrefix) return; // 已切桌面，作废
+if (!v || typeof v !== 'string' || v.length <= 2) {
+if (retry < 3) { retry++; setTimeout(tryOnce, 800 * retry); }
+return;
 }
+try {
+const idbArr = JSON.parse(v);
+let localArr = null;
+try { localArr = JSON.parse(store.get(key) || 'null'); } catch (e) {}
+const localLen = Array.isArray(localArr) ? localArr.length : -1;
+if (localLen < 0 || (Array.isArray(idbArr) && idbArr.length > localLen)) {
+store.set(key, v);
+}
+} catch (e) { store.set(key, v); }
 });
 }
-} catch (e) {}
-try {
-if (window.idbGet) {
-window.idbGet(window.activePrefix() + ':avatar-me-lib').then(v => {
-if (v && typeof v === 'string' && v.length > 2) {
-store.set('avatar-me-lib', v);
+tryOnce();
 }
-});
-}
-} catch (e) {}
+try { restoreLib('avatar-lib'); } catch (e) {}
+try { restoreLib('avatar-me-lib'); } catch (e) {}
 })();
 } catch (__e) { if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
 (function () { try {
@@ -32063,17 +32139,26 @@ var G = "garden-data";
 var PLOTS = 6;
 var PI = 1800;
 function pn() { return s.get("lbl-partner") || "TA"; }
-function load() { try { var d = JSON.parse(s.get(G) || "{}"); if (!d.p) d.p = []; while (d.p.length < PLOTS) d.p.push(null); if (!d.l) d.l = []; if (!d.lpc) d.lpc = 0; return d; } catch (e) { return { p: new Array(PLOTS).fill(null), l: [], lpc: 0 }; } }
+function load() { try { var d = JSON.parse(s.get(G) || "{}"); if (!d.p) d.p = []; while (d.p.length < PLOTS) d.p.push(null); if (!d.l) d.l = []; if (!d.lpc) d.lpc = 0; if (!d.dex) d.dex = {}; if (!d.exp) d.exp = 0; if (!d.inv) d.inv = {}; if (!d.st) d.st = { p: 0, w: 0, h: 0, f: 0, mp: 0, mw: 0, mh: 0, mf: 0 }; return d; } catch (e) { return { p: new Array(PLOTS).fill(null), l: [], lpc: 0, dex: {}, exp: 0, inv: {}, st: { p: 0, w: 0, h: 0, f: 0, mp: 0, mw: 0, mh: 0, mf: 0 } }; } }
 function save(d) { try { s.set(G, JSON.stringify(d)); try { if (window.idbSet) window.idbSet(window.activePrefix() + ":" + G, JSON.stringify(d)); } catch (e2) {} } catch (e) {} }
 (function r() { try { if (!window.idbGet) return; var pf = window.activePrefix(); if (!s.get(G)) window.idbGet(pf + ":" + G).then(function (v) { if (window.activePrefix() !== pf || !v) return; try { s.set(G, typeof v === "string" ? v : JSON.stringify(v)); } catch (e) {} }); } catch (e) {} })();
 var T = {
-rose: { n: "\u73AB\u7470", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF39"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [172800, 432000] },
-sunflower: { n: "\u5411\u65E5\u8475", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF3B"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [172800, 518400] },
-tulip: { n: "\u90C1\u91D1\u9999", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF37"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [172800, 432000] },
-cactus: { n: "\u4ED9\u4EBA\u638C", e: ["\uD83C\uDF31", "\uD83C\uDF35"], sn: ["\u5C0F\u82BD", "\u6210\u578B"], g: [432000] },
-lavender: { n: "\u85B0\u8863\u8349", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83D\uDC90"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [86400, 345600] },
-daisy: { n: "\u96CF\u83CA", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF3C"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [86400, 259200] }
+rose: { n: "\u73AB\u7470", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF39"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [172800, 432000], xp: 30, lv: 1 },
+sunflower: { n: "\u5411\u65E5\u8475", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF3B"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [172800, 518400], xp: 40, lv: 2 },
+tulip: { n: "\u90C1\u91D1\u9999", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF37"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [172800, 432000], xp: 30, lv: 1 },
+cactus: { n: "\u4ED9\u4EBA\u638C", e: ["\uD83C\uDF31", "\uD83C\uDF35"], sn: ["\u5C0F\u82BD", "\u6210\u578B"], g: [432000], xp: 50, lv: 4 },
+lavender: { n: "\u85B0\u8863\u8349", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83D\uDC90"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [86400, 345600], xp: 25, lv: 3 },
+daisy: { n: "\u96CF\u83CA", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF3C"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [86400, 259200], xp: 20, lv: 1 }
 };
+var WM = [
+"\u4ECA\u5929\u4E5F\u8F9B\u82E6\u5566\uFF0C\u82B1\u82B1\u4EEC\u4E5F\u5728\u52AA\u529B\u957F\u5927\u54E6",
+"\u7ED9\u4F60\u7684\u5C0F\u82B1\u6D47\u4E86\u70B9\u6C34\uFF0C\u8981\u5FEB\u5FEB\u957F\u5927\u54E6",
+"\u770B\u7740\u82B1\u56ED\u91CC\u7684\u82B1\u82B1\uFF0C\u5C31\u60F3\u5230\u4F60\u4E86",
+"\u4ECA\u5929\u5FC3\u60C5\u4E0D\u9519\uFF0C\u987A\u4FBF\u7167\u987E\u4E86\u4E0B\u82B1\u56ED",
+"\u8FD9\u6735\u82B1\u5FEB\u5F00\u4E86\uFF0C\u7B49\u4F60\u6765\u770B",
+"\u6D47\u5B8C\u6C34\u4E86\uFF0C\u8BB0\u5F97\u591A\u4F11\u606F\u54E6",
+"\u82B1\u56ED\u91CC\u90FD\u662F\u6211\u4EEC\u4E00\u8D77\u79CD\u4E0B\u7684\uFF0C\u8981\u4E00\u76F4\u7167\u987E\u4E0B\u53BB"
+];
 var W = [
 { i: "\u2600\uFE0F", t: "\u6674\u6717" },
 { i: "\u26C5", t: "\u591A\u4E91" },
@@ -32102,6 +32187,11 @@ function waterLvl(plot) {
 if (!plot || !plot.watered) return 0;
 return Math.max(0, 1 - (Math.floor(Date.now() / 1000) - plot.watered) / 86400);
 }
+function gLv() { return Math.floor(Math.sqrt((data.exp || 0) / 10)) + 1; }
+function gLvProg() { var lv = gLv(); var cur = (lv - 1) * (lv - 1) * 10; var nxt = lv * lv * 10; return { cur: data.exp - cur, max: nxt - cur, lv: lv }; }
+function unlocked(type) { var tp = T[type]; if (!tp) return false; return gLv() >= (tp.lv || 1); }
+function updDex(type, act) { if (!data.dex[type]) data.dex[type] = { p: 0, h: 0 }; if (act === "p") data.dex[type].p++; if (act === "h") data.dex[type].h++; }
+function updSt(act, me) { var k = act; if (me) data.st[k] = (data.st[k] || 0) + 1; else data.st["m" + k] = (data.st["m" + k] || 0) + 1; }
 var curWeather = wx();
 var curSeason = sea();
 function renderWeather() {
@@ -32175,14 +32265,18 @@ else { var sec = Math.floor(Date.now() / 1000) - plot.watered; if (sec < 3600) r
 var si = stageInfo(plot);
 plot.planted = Math.max(0, plot.planted - 14400);
 addLog("\u6211", "\u7ED9 " + (si ? si.name : "\u7A7A\u5730") + " \u6D47\u4E86\u6C34");
+updSt("w", true);
 save(data); renderAll();
 }
 function plantSeed(idx, type) {
 if (idx < 0 || idx >= PLOTS) return;
 if (data.p[idx]) return;
+if (!unlocked(type)) return;
 var tp = T[type]; if (!tp) return;
 data.p[idx] = { type: type, planted: Math.floor(Date.now() / 1000), by: "\u6211" };
 addLog("\u6211", "\u79CD\u4E0B\u4E86\u4E00\u68F5 " + tp.n);
+updDex(type, "p");
+updSt("p", true);
 save(data); renderAll();
 }
 function fertilizePlot(idx) {
@@ -32192,6 +32286,7 @@ if (!plot) return;
 plot.planted = Math.max(0, plot.planted - 43200);
 var si = stageInfo(plot);
 addLog("\u6211", "\u7ED9 " + (si ? si.name : "\u7A7A\u5730") + " \u65BD\u4E86\u80A5");
+updSt("f", true);
 save(data); renderAll();
 }
 function harvestPlot(idx) {
@@ -32201,8 +32296,14 @@ if (!plot) return;
 var si = stageInfo(plot);
 if (!si || !si.bloomed) return;
 var name = si.name;
+var type = plot.type;
+var tp = T[type];
 data.p[idx] = null;
-addLog("\u6211", "\u6536\u83B7\u4E86 " + name);
+data.exp = (data.exp || 0) + (tp ? tp.xp : 10);
+data.inv[type] = (data.inv[type] || 0) + 1;
+updDex(type, "h");
+updSt("h", true);
+addLog("\u6211", "\u6536\u83B7\u4E86 " + name + " (+" + (tp ? tp.xp : 10) + "\u7ECF\u9A8C)");
 save(data); renderAll();
 }
 function partnerAct(silent) {

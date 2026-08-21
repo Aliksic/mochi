@@ -163,6 +163,9 @@
   // 打开/关闭半框
   function openAvlib() {
     if (!avPage) return;
+    // v3.9.x：打开前补读新桌面 IDB 权威数据（头像池大键切桌面后可能只在 IDB，
+    // 慢 IDB 下 memoryCache 未回填 → store.get 读空显示「暂无头像」）
+    try { restoreLib('avatar-lib'); restoreLib('avatar-me-lib'); } catch (e) {}
     // 关闭其他底部半框（拍一拍/表情包）
     const pc = document.getElementById('poke-card');
     if (pc) pc.hidden = true;
@@ -173,6 +176,10 @@
     syncVal();
     avPage.hidden = false;
   }
+  // v3.9.x：切桌面后同样补读新桌面头像池（restoreLib 内部校验桌面归属 + 内容更多才覆盖）
+  document.addEventListener('contact-switched', function () {
+    try { restoreLib('avatar-lib'); restoreLib('avatar-me-lib'); } catch (e) {}
+  });
   function closeAvlib() {
     if (avPage) avPage.hidden = true;
   }
@@ -528,22 +535,35 @@
   syncVal();
   // v3.5.93：头像池大键（图片 dataURL）可能只存在 IndexedDB（导入兜底写入/运行时大键策略），
   // localStorage 读不到 → 启动时从 IDB 补读进内存缓存；半框是打开时才渲染的，届时自然读到
-  try {
-    if (window.idbGet) {
-      window.idbGet(window.activePrefix() + ':avatar-lib').then(v => {
-        if (v && typeof v === 'string' && v.length > 2) {
-          store.set('avatar-lib', v);
+  // v3.9.x：① 发起时捕获 myPrefix，回调校验桌面归属——否则慢 IDB（OPPO Chrome）迟到回调
+  // 会用动态 store 把旧桌面头像池写进新桌面（同 mail.js 3c6196a 串桌面修复）；
+  // ② 仅当本地缺失或 IDB 内容更多才覆盖——否则用户刚上传的新头像会被启动时读到的
+  // 旧 IDB 值覆盖，表现为「头像互动里上传的头像丢失」；
+  // ③ 慢 IDB 首次读到空值延迟重试（防头像池整组消失）。
+  function restoreLib(key) {
+    if (!window.idbGet) return;
+    const myPrefix = window.activePrefix();
+    let retry = 0;
+    function tryOnce() {
+      window.idbGet(myPrefix + ':' + key).then(v => {
+        if (window.activePrefix() !== myPrefix) return; // 已切桌面，作废
+        if (!v || typeof v !== 'string' || v.length <= 2) {
+          if (retry < 3) { retry++; setTimeout(tryOnce, 800 * retry); }
+          return;
         }
+        try {
+          const idbArr = JSON.parse(v);
+          let localArr = null;
+          try { localArr = JSON.parse(store.get(key) || 'null'); } catch (e) {}
+          const localLen = Array.isArray(localArr) ? localArr.length : -1;
+          if (localLen < 0 || (Array.isArray(idbArr) && idbArr.length > localLen)) {
+            store.set(key, v);
+          }
+        } catch (e) { store.set(key, v); }
       });
     }
-  } catch (e) {}
-  try {
-    if (window.idbGet) {
-      window.idbGet(window.activePrefix() + ':avatar-me-lib').then(v => {
-        if (v && typeof v === 'string' && v.length > 2) {
-          store.set('avatar-me-lib', v);
-        }
-      });
-    }
-  } catch (e) {}
+    tryOnce();
+  }
+  try { restoreLib('avatar-lib'); } catch (e) {}
+  try { restoreLib('avatar-me-lib'); } catch (e) {}
 })();

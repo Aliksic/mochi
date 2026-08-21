@@ -630,8 +630,7 @@
 .period-legend .lg { font-size:11px; color:#777; display:flex; align-items:center; gap:5px; }
 .period-legend .lg::before { content:''; width:10px; height:10px; border-radius:3px; display:inline-block; }
 .period-legend .lg-period::before { background:#e85a8f; }
-.period-legend .lg-fertile::before { background:#f5a623; }
-.period-legend .lg-safe::before { background:#eaf4ee; border:1px solid #cfe6d8; }
+
 .period-legend .lg-predict::before { background:#fde2ee; border:1px dashed #e85a8f; }
 .period-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
 .period-grid .pc-wd { font-size:10px; color:var(--muted); text-align:center; padding:4px 0; }

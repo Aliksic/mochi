@@ -4,10 +4,20 @@
 // 归属：系统/全局（AI-B 域），须最先于功能模块加载（build.mjs 中放在 idb.js 之后）。
 (function () {
   const G = 'xy-home-v2';
-  const EXCLUDE = ['contacts', 'active-contact', 'feed-posts', 'migrated-v1', 'js-errors', 'theme-mode', 'accent-color'];
+  const EXCLUDE = ['contacts', 'active-contact', 'feed-posts', 'migrated-v1', 'js-errors', 'theme-mode', 'accent-color',
+    // v3.9.x：全局系统键——后台保活/通知（bg-*）、群聊回复设置（reply-gc-*）、
+    // 备份/引导内部标记（__*）。这些键本就存 xy-home-v2 根命名空间（bg-keep.js
+    // gSet 用 xyStore(GNS)、reply-settings.js gcWrite 用 xyStore('xy-home-v2')），
+    // 不是旧顶层业务键，绝不能迁移进 default 桌面。此前漏排除导致每次刷新
+    // migrateLegacy 把 bg-keepalive/bg-notify 迁进 default 并删全局键，非 default
+    // 桌面刷新后开关读不到全局值自动变关（用户反馈「后台保活/后台弹窗自己关了」）。
+    'bg-keepalive', 'bg-notify',
+    '__last-backup', '__last-backup-remind', '__onboard-done', '__edge-backup-hint-done', '__auto-backup-snapshot'];
   function isExcluded(k) {
     const r = k.slice(G.length + 1);
     if (EXCLUDE.indexOf(r) >= 0) return true;
+    // v3.9.x：reply-gc-* 群聊全局设置键同样不能迁移（无冒号，原逻辑会误判为旧业务键）
+    if (r.indexOf('reply-gc-') === 0) return true;
     if (r.indexOf('music-file:') === 0) return true;
     // v3.6.x：命名空间键（default:* / <cid>:*）不是"旧顶层键"，绝不能迁移——
     // 否则会把 xy-home-v2:default:avatar-user 再迁成 xy-home-v2:default:default:avatar-user
@@ -182,6 +192,36 @@
   //   保留旧键导致每次刷新重新迁移覆盖新聊天记录（v3.6.x 修复刷新丢聊天记录）。
   //   幂等检查同时查 IDB 新键（不只 LS/memoryCache），防 idbRestore 未回填时误判为空。
   function migrateLegacy() {
+    // v3.9.x：修复被旧版 migrateLegacy 误迁移的全局系统键——早期版本把
+    // bg-keepalive/bg-notify（后台保活/通知开关）与 reply-gc-*（群聊回复设置）
+    // 当旧顶层业务键迁进 default 桌面并删根键（cleanupOld 只删 LS、IDB 旧根键保留，
+    // 每刷新 idbRestore 回填根键 → migrateLegacy 再次迁移，循环破坏），导致非 default
+    // 桌面刷新后开关读不到全局值自动变关。这里检测 default 桌面的这些键，写回根
+    // 命名空间并删除 default 副本，一次性修复存量坏数据（幂等：根键已有则不覆盖）。
+    try {
+      const def = window.xyStore(G + ':default');
+      const root = window.xyStore(G);
+      ['bg-keepalive', 'bg-notify'].forEach(function (k) {
+        const v = def.get(k);
+        if (v !== null && v !== undefined && v !== '') {
+          try { if (root.get(k) === null || root.get(k) === undefined) root.set(k, v); } catch (e) {}
+          try { def.remove(k); } catch (e) {}
+        }
+      });
+      // reply-gc-* 前缀键（群聊全局设置）
+      const gcKeys = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.indexOf(G + ':default:reply-gc-') === 0) gcKeys.push(k.slice((G + ':default:').length));
+      }
+      gcKeys.forEach(function (k) {
+        const v = def.get(k);
+        if (v !== null && v !== undefined && v !== '') {
+          try { if (root.get(k) === null || root.get(k) === undefined) root.set(k, v); } catch (e) {}
+          try { def.remove(k); } catch (e) {}
+        }
+      });
+    } catch (e) {}
     const old = [];
     // v3.6.x：顺带清理存量双重前缀垃圾键（default:default:*）——旧版迁移误把命名空间键
     // 再迁一层产生，读取不命中但占存储，安全删除

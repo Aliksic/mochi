@@ -139,6 +139,11 @@ check('群聊页已进入', await evalJs("(function(){var p=document.getElementB
 check('群聊页标题显示群聊(N)', await evalJs("(function(){var n=document.getElementById('gc-name');return !!n&&/群聊\\(/.test(n.textContent);})()"));
 
 // ---- 用例 5：发送消息 ----
+// v3.9.x：群聊回复改走群聊回复设置（默认每个联系人回复概率 60%、速度 1~40 秒），
+// 为保证旧用例确定性（成员必有回复、等待窗口内到达），发送前临时设
+// gc-prob=100 + gc-rs-min/max=1（1 秒内回复）
+await evalJs("(function(){if(window.saveReplyCfg){window.saveReplyCfg('gc-prob',100);window.saveReplyCfg('gc-rs-min',1);window.saveReplyCfg('gc-rs-max',1);}return true;})()");
+await sleep(200);
 await evalJs("(function(){var i=document.getElementById('gc-input');i.innerText='大家好，这是群聊测试';var b=document.getElementById('gc-send');b.click();return true;})()");
 await sleep(500);
 const outCount = await evalJs("(function(){var bs=document.querySelectorAll('#gc-body .msg-out');return bs.length;})()");

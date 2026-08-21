@@ -4,6 +4,22 @@
 
 ## 规则
 
+### 2026-08-21（用户反馈 OPPO Chrome「表情包丢失」「头像互动里上传的头像丢失」「还会自动关闭后台保活和后台弹窗」）
+- [AI-B·完成]（**已构建 verify 10/10 + 专项 11/11，本提交含修复 + 新回归 `tools/verify-data-loss.mjs`**）：`src/js/contacts.js` + `src/js/avatar-lib.js` + `src/js/chat.js` + `src/js/chatcard.js`。
+  - **根因 1（后台保活/弹窗自动关）**：v3.9.x 把 bg-keepalive/bg-notify 改存全局命名空间（bg-keep.js gSet 用 xyStore(GNS)），但 `contacts.js` 的 `migrateLegacy` 不认识这些新全局键——`isExcluded` 未排除，每次刷新把它们当旧顶层业务键迁移进 default 桌面并删根键，非 default 桌面刷新后开关读不到全局值自动变关。同批受害：`reply-gc-*`（群聊全局设置）、`__*` 内部标记。修复：`isExcluded` 增加全局系统键排除；`migrateLegacy` 开头增加存量坏数据反向恢复（default 桌面的 bg-keepalive/bg-notify/reply-gc-* 副本写回根命名空间并删 default 副本，幂等）。
+  - **根因 2（头像互动上传的头像丢失）**：`avatar-lib.js` 启动恢复块无条件用 IDB 值覆盖当前值且无桌面归属校验——OPPO 慢 IDB 下启动的 idbGet 迟到返回旧值，覆盖用户刚上传的新头像（还串桌面）。修复：发起时捕获 myPrefix + 回调校验桌面归属（同 mail.js 3c6196a 模式）；仅当本地缺失或 IDB 内容更多才覆盖；慢 IDB 读空延迟重试；打开半框/切桌面时补读新桌面 IDB。
+  - **根因 3（表情包丢失）**：`chat.js` my-emoji-groups 恢复块无桌面归属校验（迟到回调串写）+ 慢 IDB 首读空不重试；`chatcard.js` cc-groups 恢复块有归属校验但首读空直接放弃不重试。修复：两处都加归属校验 + 失败重试（800ms×1/2/3 三次）；chat.js 表情包模块加 contact-switched 重载 + 打开面板/写信插入时补读新桌面 IDB。
+  - 验证：verify-data-loss 11/11——A 全局键不再误迁（bg/reply-gc/__*）+ 业务键仍迁移；B 存量坏数据反向恢复；C 头像池 IDB 旧值内容更少不覆盖新上传 + 本地空恢复；D 恢复块慢 IDB 重试分支 + 覆盖判定 + 模块加载；E reload 后真实 migrateLegacy 反向恢复全局键；verify 10/10。
+  - ⚠️ 本提交含 AI-A 已保存的累积改动（period 图例 chat-pages.css/personalize.js/template.html + garden.js 时长参数 + diag-gc-idb.mjs + smoke-gc-reply-settings/smoke-group-chat 回归脚本），已一并构建验证。tools/diag-ask-harmony.mjs 未跟踪未提交，请确认。
+
+### 2026-08-21（用户需求「回复设置里新增群聊设置，默认数据 + 应用到群聊」）
+- [AI-A·完成]（**源码+构建产物已在 HEAD 08c6966 含本功能；新增回归 `tools/smoke-gc-reply-settings.mjs` 21/21 + 旧群聊冒烟 20/20 + verify 10/10**）：`src/js/reply-settings.js` + `src/js/group-chat.js` + `src/template.html`（均 AI-A 域）+ 更新 `tools/smoke-group-chat.mjs`（适配新默认概率）。
+  - **回复设置页新增「群聊」tab**（聊天/群聊/信箱/朋友圈 4 tab）：被动回复分组——每个联系人回复概率 60%、回复速度最短 1 秒/最长 40 秒、回复条数最少 1/最多 2、拍一拍 5%、表情包 10%、emoji 5%、图片 5%、语音 10%、颜文字附加 5%、引用 30%、撤回 25%、撤回补发 35%；多字卡回复分组——开关默认开、触发概率 50%、最少 2 条/最多 5 条。
+  - **存储**：`gc-*` 键存**全局命名空间** `xy-home-v2:reply-gc-*`（群聊是全局功能，不随桌面/联系人隔离，切换桌面设置不变）；`window.groupChatCfg()` 暴露读取（含默认值兜底）。
+  - **群聊页接入**：发送后按「每个联系人回复概率」独立掷骰决定该成员回不回（**@ 的成员必定回复**）；回复内容按概率生成表情包/emoji/图片/语音/多字卡（空格拼接）+ 颜文字附加 + 引用（一轮最多一次）+ 撤回/撤回补发 + 拍一拍（居中样式）；回复速度/条数、撤回等全按群聊设置。群聊消息渲染补齐图片大图/表情包小图/语音播放/撤回样式（复用聊天页 CSS 类）。
+  - 验证：无头 Chrome 专项 21/21（tab/默认值/全局存储/跨桌面/gc-prob=0 静默/@必定回/多字卡）+ 旧群聊冒烟 20/20 + verify 10/10。
+  - ⚠️ 对方注意：本次功能源码已随 08c6966 入库（该提交由对方构建包含）；工作区当前剩余未提交为对方 period 图例改动（chat-pages.css/personalize.js/template.html period-legend + diag-gc-idb.mjs），以及本会话两个回归脚本（smoke-gc-reply-settings.mjs 新增、smoke-group-chat.mjs 适配）；`index.html`/`sw.js`/`version.json` 为对方 19:59 构建产物（v3.6.186，sw 缓存 mochi-mt2wd1g4，含本功能）。
+
 ### 2026-08-21（用户反馈「iOS 自带浏览器：一个联系人的气泡换了，其他联系人的气泡也跟着变；不同桌面联系人的聊天美化要分开」）
 - [本会话·诊断完成]（**源码与构建产物均已在 HEAD（353d8b4）含修复，本次提交补齐回归脚本 + 推送部署**）：`src/js/chat-settings.js`（修复在 6ec9a16/353d8b4 已入库）+ 新增 `tools/diag-chat-beauty-isolation.mjs`。
   - **根因**：本地 HEAD 的 chat-settings.js 在 `contact-switched` 时已重应用/清除全部美化（applySettings + applyProfile + applyCss + applyFont）——颜色/自定义气泡 CSS/全局字体均按桌面隔离。但**线上部署版（origin/main，落后本地 6 个提交）只调 applySettings()**：切换联系人时 `cs-bubble-style`（自定义气泡 CSS）与 `cs-font-style`（全局字体）这两个**全局 <style>/body 内联字体不清除也不重应用**——default 桌面设的自定义气泡样式/字体一直盖在其他桌面上，正是用户看到的现象。

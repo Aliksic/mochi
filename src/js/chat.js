@@ -4933,23 +4933,32 @@ function partialRetractMsg(msgEl, side) {
     return true;
   }
   // 启动恢复：IDB 内容更多优先（与字卡库一致，防配额丢数据）
+  // v3.9.x：发起时捕获 myPrefix，回调校验桌面归属——否则慢 IDB（OPPO Chrome）下
+  // 启动的 idbGet 迟到返回，用动态 store 把旧桌面表情包写进新桌面（串桌面/丢失）。
+  // v3.9.x：读到 undefined（慢 IDB 首次失败）延迟重试，防「我的表情包」整组消失。
   (function () {
     if (!window.idbGet) return;
-    window.idbGet(MYE_KEY()).then(v => {
-      if (!v) return;
-      try {
-        const data = typeof v === 'string' ? JSON.parse(v) : v;
-        if (!Array.isArray(data)) return;
-        const cnt = (g) => { let n = 0; g.forEach(x => n += (Array.isArray(x[1]) ? x[1].length : 0)); return n; };
-        let local = null;
-        try { local = JSON.parse(store.get('my-emoji-groups') || 'null'); } catch (e) {}
-        const lc = Array.isArray(local) ? cnt(local) : -1;
-        if (lc < 0 || cnt(data) > lc) {
-          myGroups = data;
-          if (!emojiPanel.hidden) renderEmojiPanel();
-        }
-      } catch (e) {}
-    });
+    const myPrefix = window.activePrefix();
+    let retry = 0;
+    function tryRestore() {
+      window.idbGet(MYE_KEY()).then(v => {
+        if (window.activePrefix() !== myPrefix) return; // 已切桌面，作废
+        if (!v) { if (retry < 3) { retry++; setTimeout(tryRestore, 800 * retry); } return; }
+        try {
+          const data = typeof v === 'string' ? JSON.parse(v) : v;
+          if (!Array.isArray(data)) return;
+          const cnt = (g) => { let n = 0; g.forEach(x => n += (Array.isArray(x[1]) ? x[1].length : 0)); return n; };
+          let local = null;
+          try { local = JSON.parse(store.get('my-emoji-groups') || 'null'); } catch (e) {}
+          const lc = Array.isArray(local) ? cnt(local) : -1;
+          if (lc < 0 || cnt(data) > lc) {
+            myGroups = data;
+            if (!emojiPanel.hidden) renderEmojiPanel();
+          }
+        } catch (e) {}
+      });
+    }
+    tryRestore();
   })();
 
     // 待引用 → 引用块数据：有图片则对象 {t, imgs}（组合消息），否则字符串
@@ -5131,6 +5140,8 @@ function partialRetractMsg(msgEl, side) {
 
   function openEmojiPanel() {
     if (!emojiPanel) return;
+    // v3.9.x：打开前补读新桌面 IDB 权威数据（我的表情包大键切桌面后可能只在 IDB）
+    reloadMyEmojiFromIdb();
     // 关闭其他底部半框（拍一拍/头像互动）
     const pc = document.getElementById('poke-card');
     if (pc) pc.hidden = true;
@@ -5150,6 +5161,37 @@ function partialRetractMsg(msgEl, side) {
     // v3.6.x：关闭面板即放弃「插入信纸」模式，回到聊天发消息语义
     emojiInsertCb = null;
   }
+  // v3.9.x：切桌面后重载我的表情包 + 打开面板时补读新桌面 IDB 权威数据——
+  // 我的表情包大键（图片 dataURL）只进 IDB+内存缓存，慢 IDB（OPPO Chrome）下
+  // 切桌面时 memoryCache 尚未回填新桌面数据，myEmojiLoad() 从 store 读到空 →
+  // 「我的表情包整组消失」。重载逻辑与启动恢复一致：IDB 内容更多才覆盖。
+  function reloadMyEmojiFromIdb() {
+    if (!window.idbGet) return;
+    const myPrefix = window.activePrefix();
+    window.idbGet(MYE_KEY()).then(v => {
+      if (window.activePrefix() !== myPrefix) return;
+      if (!v) return;
+      try {
+        const data = typeof v === 'string' ? JSON.parse(v) : v;
+        if (!Array.isArray(data)) return;
+        const cnt = (g) => { let n = 0; g.forEach(x => n += (Array.isArray(x[1]) ? x[1].length : 0)); return n; };
+        let local = null;
+        try { local = JSON.parse(store.get('my-emoji-groups') || 'null'); } catch (e) {}
+        const lc = Array.isArray(local) ? cnt(local) : -1;
+        if (lc < 0 || cnt(data) > lc) {
+          myGroups = data;
+          if (!emojiPanel.hidden) renderEmojiPanel();
+        }
+      } catch (e) {}
+    });
+  }
+  document.addEventListener('contact-switched', function () {
+    myGroups = myEmojiLoad(); // 先读新桌面快照（内存/LS 已就绪时立即生效）
+    if (!emojiPanel.hidden) renderEmojiPanel();
+    reloadMyEmojiFromIdb();   // 再补读新桌面 IDB 权威（大键场景）
+  });
+  // 邮件写信/回信插入表情也走 openEmojiPanelForInsert → 内部 openEmojiPanel（见下），
+  // openEmojiPanel 内已补读新桌面 IDB，避免显示旧桌面残留
   // v3.6.x：写信/回信以「插入模式」打开同一个表情包面板——点击表情回调 cb（插入信纸）
   window.openEmojiPanelForInsert = function (cb) {
     emojiInsertCb = cb || null;

@@ -66,7 +66,7 @@ function cdp(method, params = {}) {
 }
 async function evalJs(expr) {
   try {
-    const r = await cdp('Runtime.evaluate', { expression: expr, returnByValue: true });
+    const r = await cdp('Runtime.evaluate', { expression: expr, returnByValue: true, awaitPromise: true });
     if (r && r.exceptionDetails) return null;
     return r && r.result ? r.result.value : null;
   } catch (e) { return null; }
