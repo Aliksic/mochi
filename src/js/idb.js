@@ -91,8 +91,8 @@
   // v3.9.x 修复（真我 Edge 切联系人后聊天记录消失）：IDB 事务在部分安卓内核
   //（真我 Edge 等）可能挂起——既不触发 onsuccess 也不触发 onerror，Promise 永不
   // resolve，上层 loadMsgs 回调永不执行，聊天记录渲染空后无法补回。加超时保护：
-  // 8s 未返回则重试一次（新事务，偶发挂起可自愈），再 8s 仍未返回则 resolve(undefined)
-  // 让上层走 LS 兜底/保险丝，避免永久卡死。
+  // 4s 未返回则重试一次（新事务，偶发挂起可自愈），再 4s 仍未返回则 resolve(undefined)
+  // 让上层走 LS 兜底/保险丝，避免永久卡死。总上限 8s（原 8+8=16s 进聊天页空白太久）。
   window.idbGet = function (key) {
     return open().then(db => new Promise((resolve) => {
       let done = false;
@@ -109,9 +109,9 @@
       let retried = false;
       timer = setTimeout(function () {
         if (done) return;
-        if (!retried) { retried = true; run(); timer = setTimeout(function () { finish(undefined); }, 8000); return; }
+        if (!retried) { retried = true; run(); timer = setTimeout(function () { finish(undefined); }, 4000); return; }
         finish(undefined);
-      }, 8000);
+      }, 4000);
       run();
     })).catch(() => undefined);
   };

@@ -188,6 +188,7 @@
   font-size:12px; padding:4px 10px; border-radius:99px;
   background:rgba(0,0,0,.04); color:var(--ink);
 }
+.garden-decor-buff { font-size:10px; color:#4caf50; font-weight:600; margin-left:2px; }
 .garden-decor-empty { font-size:12px; color:var(--muted); text-align:center; padding:8px 0; }
 .garden-decor-shop-btn {
   display:block; width:100%; padding:10px; border-radius:14px;

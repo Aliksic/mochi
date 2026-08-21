@@ -42,12 +42,12 @@ var W = [
 var S = ["\uD83C\uDF38 \u6625\u5B63", "\u2600\uFE0F \u590F\u5B63", "\uD83C\uDF42 \u79CB\u5B63", "\u2744\uFE0F \u51AC\u5B63"];
 
 var DECOR = {
-  fence: { n: "\u6728\u680F\u6746", e: "\uD83D\uDEE1\uFE0F", price: 50, max: 4 },
-  light: { n: "\u5C0F\u8DEF\u706F", e: "\uD83D\uDCA1", price: 80, max: 2 },
-  bench: { n: "\u957F\u6905", e: "\uD83E\uDD91", price: 120, max: 1 },
-  gnome: { n: "\u56ED\u4E11", e: "\uD83E\uDDD9", price: 100, max: 2 },
-  windmill: { n: "\u98CE\u8F66", e: "\uD83C\uDF00", price: 150, max: 1 },
-  fountain: { n: "\u55B7\u6CC9", e: "\u26F7\uFE0F", price: 200, max: 1 }
+  fence: { n: "\u6728\u680F\u6746", e: "\uD83D\uDEE1\uFE0F", price: 50, max: 4, buff: { growth: 0.05, label: "\u751F\u957F+5%" } },
+  light: { n: "\u5C0F\u8DEF\u706F", e: "\uD83D\uDCA1", price: 80, max: 2, buff: { growth: 0.08, label: "\u751F\u957F+8%" } },
+  bench: { n: "\u957F\u6905", e: "\uD83E\uDD91", price: 120, max: 1, buff: { partner: 0.15, label: "\u68A6\u89D2\u5E38\u6765+15%" } },
+  gnome: { n: "\u56ED\u4E11", e: "\uD83E\uDDD9", price: 100, max: 2, buff: { xp: 0.15, label: "\u7ECF\u9A8C+15%" } },
+  windmill: { n: "\u98CE\u8F66", e: "\uD83C\uDF00", price: 150, max: 1, buff: { growth: 0.12, label: "\u751F\u957F+12%" } },
+  fountain: { n: "\u55B7\u6CC9", e: "\u26F7\uFE0F", price: 200, max: 1, buff: { water: 0.5, label: "\u81EA\u52A8\u4FDD\u6C34" } }
 };
 var VISITORS = [
   { type: "butterfly", e: "\uD83E\uDE9B", n: "\u8774\u8776" },
@@ -71,7 +71,7 @@ function stageInfo(plot) {
   var seaBoost = (tp.ss === seaIdx) ? 1.3 : 0.85;
   var w = wx();
   var wBoost = (w.t === "\u6674\u6717") ? 1.1 : (w.t === "\u5C0F\u96E8") ? 0.9 : 1.0;
-  var boost = seaBoost * wBoost;
+  var boost = seaBoost * wBoost * (1 + decorBuffs().growth);
   var eff = Math.floor(elapsed * boost);
   var stage = 0;
   for (var i = 0; i < tp.g.length; i++) { if (eff >= tp.g[i]) stage = i + 1; else break; }
@@ -90,6 +90,22 @@ function waterLvl(plot) {
 function gLv() { return Math.floor(Math.sqrt((data.exp || 0) / 10)) + 1; }
 function gLvProg() { var lv = gLv(); var cur = (lv - 1) * (lv - 1) * 10; var nxt = lv * lv * 10; return { cur: data.exp - cur, max: nxt - cur, lv: lv }; }
 function unlocked(type) { return !!T[type]; }
+function decorBuffs() {
+  var b = { growth: 0, xp: 0, partner: 0, water: 0 };
+  var keys = Object.keys(DECOR);
+  for (var i = 0; i < keys.length; i++) {
+    var k = keys[i];
+    var cnt = data.decor[k] || 0;
+    if (cnt <= 0) continue;
+    var bf = DECOR[k].buff;
+    if (!bf) continue;
+    if (bf.growth) b.growth += bf.growth * cnt;
+    if (bf.xp) b.xp += bf.xp * cnt;
+    if (bf.partner) b.partner += bf.partner * cnt;
+    if (bf.water) b.water += bf.water * cnt;
+  }
+  return b;
+}
 function updDex(type, act) { if (!data.dex[type]) data.dex[type] = { p: 0, h: 0 }; if (act === "p") data.dex[type].p++; if (act === "h") data.dex[type].h++; }
 function updSt(act, me) { var k = act; if (me) data.st[k] = (data.st[k] || 0) + 1; else data.st["m" + k] = (data.st["m" + k] || 0) + 1; }
 
@@ -219,11 +235,12 @@ function harvestPlot(idx) {
   var type = plot.type;
   var tp = T[type];
   data.p[idx] = null;
-  data.exp = (data.exp || 0) + (tp ? tp.xp : 10);
+  var xpg = Math.round((tp ? tp.xp : 10) * (1 + decorBuffs().xp));
+  data.exp = (data.exp || 0) + xpg;
   data.inv[type] = (data.inv[type] || 0) + 1;
   updDex(type, "h");
   updSt("h", true);
-  addLog("\u6211", "\u6536\u83B7\u4E86 " + name + " (+" + (tp ? tp.xp : 10) + "\u7ECF\u9A8C)");
+  addLog("\u6211", "\u6536\u83B7\u4E86 " + name + " (+" + xpg + "\u7ECF\u9A8C)");
   save(data); renderAll();
 }
 
@@ -272,7 +289,8 @@ function partnerAct(silent) {
     var tp = T[type];
     var emoji = tp ? tp.e[tp.e.length - 1] : "\uD83C\uDF37";
     data.p[idx] = null;
-    data.exp = (data.exp || 0) + (tp ? tp.xp : 10);
+    var xpg = Math.round((tp ? tp.xp : 10) * (1 + decorBuffs().xp));
+    data.exp = (data.exp || 0) + xpg;
     updDex(type, "h"); updSt("h", false);
     if (Math.random() < 0.3) {
       addLog(pName, "\u9001\u4F60\u4E00\u6735 " + name + " \uD83D\uDC95");
@@ -280,7 +298,7 @@ function partnerAct(silent) {
       if (window.chatSendFlower) { try { window.chatSendFlower(emoji, name, gmsg, true); } catch (e) {} }
     } else {
       data.inv[type] = (data.inv[type] || 0) + 1;
-      addLog(pName, "\u6536\u83B7\u4E86 " + name + " (+" + (tp ? tp.xp : 10) + "\u7ECF\u9A8C)");
+      addLog(pName, "\u6536\u83B7\u4E86 " + name + " (+" + xpg + "\u7ECF\u9A8C)");
     }
     acted = true;
   } else if (r < 0.9 && plantedPlots.length > 0) {
@@ -369,7 +387,8 @@ function renderDecor() {
     h += "<div class=\"garden-decor-list\">";
     owned.forEach(function (k) {
       var dp = DECOR[k];
-      h += "<span class=\"garden-decor-item\">" + dp.e + " " + dp.n + " \u00d7" + data.decor[k] + "</span>";
+      var bf = dp.buff ? " <span class=\"garden-decor-buff\">" + dp.buff.label + "</span>" : "";
+      h += "<span class=\"garden-decor-item\">" + dp.e + " " + dp.n + " \u00d7" + data.decor[k] + bf + "</span>";
     });
     h += "</div>";
   } else {
@@ -527,17 +546,19 @@ function waterAll() {
 function harvestAll() {
   var cnt = 0;
   var totalXp = 0;
+  var xpb = 1 + decorBuffs().xp;
   for (var i = 0; i < PLOTS; i++) {
     var plot = data.p[i];
     if (!plot) continue;
     var si = stageInfo(plot);
     if (!si || !si.bloomed) continue;
     var tp = T[plot.type];
+    var xpg = Math.round((tp ? tp.xp : 10) * xpb);
     data.p[i] = null;
-    data.exp = (data.exp || 0) + (tp ? tp.xp : 10);
+    data.exp = (data.exp || 0) + xpg;
     data.inv[plot.type] = (data.inv[plot.type] || 0) + 1;
     updDex(plot.type, "h"); updSt("h", true);
-    totalXp += (tp ? tp.xp : 10);
+    totalXp += xpg;
     cnt++;
   }
   if (cnt > 0) {
@@ -558,14 +579,20 @@ function makeBouquet() {
     if (!v || !T[v] || !data.inv[v]) return;
     var tp = T[v];
     var emoji = tp.e[tp.e.length - 1];
-    window.openModal("\u9001\u82B1\u7559\u8A00", "", function (wish) {
-      data.inv[v]--;
-      var msg = wish || ("\u9001\u7ED9\u4F60\u4E00\u675F" + tp.n + "\uFF0C\u662F\u6211\u4EEC\u4E00\u8D77\u79CD\u7684\u54E6~");
-      addLog("\u6211", "\u5236\u4F5C\u4E86\u4E00\u675F " + tp.n + "\u82B1\u9001\u7ED9" + pn());
-      save(data);
-      if (window.chatSendFlower) { try { window.chatSendFlower(emoji, tp.n, msg); } catch (e) {} }
-      renderAll();
-    }, { });
+    var defWish = "\u9001\u7ED9\u4F60\u4E00\u675F" + tp.n + "\uFF0C\u662F\u6211\u4EEC\u4E00\u8D77\u79CD\u7684\u54E6~";
+    var mask = document.getElementById("modal-mask");
+    if (mask) mask.hidden = true;
+    setTimeout(function () {
+      if (!window.openModal) return;
+      window.openModal("\u9001\u82B1\u7559\u8A00\uFF08\u53EF\u4FEE\u6539\uFF09", defWish, function (wish) {
+        data.inv[v]--;
+        var msg = (wish && wish.trim()) ? wish.trim() : defWish;
+        addLog("\u6211", "\u5236\u4F5C\u4E86\u4E00\u675F " + tp.n + "\u82B1\u9001\u7ED9" + pn());
+        save(data);
+        if (window.chatSendFlower) { try { window.chatSendFlower(emoji, tp.n, msg); } catch (e) {} }
+        renderAll();
+      }, {});
+    }, 150);
   }, { pills: pills, noInput: true });
 }
 
@@ -576,7 +603,7 @@ function buyDecor() {
     var dp = DECOR[k];
     var cnt = data.decor[k] || 0;
     var lock = cnt >= dp.max;
-    var lbl = dp.e + " " + dp.n + " " + (lock ? "\u5DF2\u6EE1" : "\u514D\u8D39");
+    var lbl = dp.e + " " + dp.n + " " + (lock ? "\u5DF2\u6EE1" : "\u514D\u8D39") + (dp.buff ? " " + dp.buff.label : "");
     return { label: lbl, value: k };
   });
   window.openModal("\u88C5\u9970\u5546\u5E97\uFF08\u514D\u8D39\uFF09", "", function (v) {
@@ -622,8 +649,17 @@ function openGarden() {
     }
     save(data);
   }
+  var dbf = decorBuffs();
+  if (dbf.water > 0) {
+    for (var wi = 0; wi < PLOTS; wi++) {
+      if (data.p[wi] && waterLvl(data.p[wi]) < dbf.water) {
+        data.p[wi].watered = Math.floor(Date.now() / 1000) - 86400 + Math.floor(86400 * dbf.water);
+      }
+    }
+    save(data);
+  }
   spawnVisitor();
-  if (Math.random() < 0.3) partnerAct();
+  if (Math.random() < 0.3 + dbf.partner) partnerAct();
   renderAll();
 }
 
