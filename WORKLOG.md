@@ -4,6 +4,12 @@
 
 ## 规则
 
+### 2026-08-21（本会话，用户反馈「iPhone 12 mini + Safari 添加到桌面后底部导航栏下面有灰色图形，没有完全全屏」）
+- [本会话·完成]（**已构建 verify 10/10，本次提交推送**）：`src/css/base.css`（AI-B 域）。
+  - **根因**：iOS PWA standalone（添加主屏幕）+ black-translucent 下，部分 iOS 版本 100vh 不含底部 home indicator 安全区（约 34px），`.phone` 底部外露出 `html/body` 灰底（--page-bg #e9e9e9）→「底部导航栏下面有灰色图形」；与顶部全屏按钮无关（点了也一样）。
+  - **修复**：① `.ios-pwa-standalone .phone` 补 `min-height:100vh`；② `html.ios-pwa-standalone, html.ios-pwa-standalone body { background: var(--bg-b) }`（浅色白/深色深，与 .phone 底部同色，露出即不可见）；③ `@media (display-mode: standalone)` 媒体查询兜底（不依赖 JS 加类，只改底色不动 .phone 高度——安卓 standalone 靠 100dvh 键盘自动收缩，锁 100vh 会盖输入栏）；④ 补 `.app[hidden]{display:none!important}` 兜底（.app 是 display:flex 会覆盖 hidden，防半成品图标意外显示）。
+  - ⚠️ **对方注意**：工作区 `src/template.html`（群聊锚点 page-group-chat，hidden 占位）与 `src/js/chat.js`（TA 引用 lastQuotedText 逻辑）为 AI-A 侧已保存改动，已随本次构建进产物一并提交；群聊锚点暂为纯 HTML、JS 逻辑未见（grep group-chat 无匹配），因 hidden + [hidden] 兜底不影响线上显示，请 AI-A 完成后继续提交。
+
 - 开工：追加一行「开工」；完工：追加一行「完成」。
 - 每行写清：AI、时间、任务、涉及文件、是否已构建。
 - 开工前先读这个文件 + `git status` + 相关文件 `LastWriteTime`。
