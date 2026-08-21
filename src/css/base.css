@@ -244,7 +244,24 @@ html { margin:0; padding:0; }
   （下方第 363 行）特异性 (0,2,1) 会压过单写 .ios-pwa-standalone .phone (0,2,0)，
    iPad PWA standalone 仍白边；补一条覆盖 iPad */
 .ios-pwa-standalone .phone,
-html.tablet.ios-pwa-standalone .phone { height:100vh; }
+html.tablet.ios-pwa-standalone .phone { height:100vh; min-height:100vh; }
+/* v3.7.x：iPhone 12 mini 实测反馈「桌面底部导航栏下面有灰色图形」——iOS 部分版本
+   standalone + black-translucent 下 100vh 不含底部 home indicator 安全区（约 34px），
+   .phone 底部外露出 html/body 灰底（--page-bg #e9e9e9）形成灰色带；且与顶部
+   全屏按钮无关（点了也一样）。把 iOS PWA standalone 下页面底色改为与 .phone
+   底部同色（浅色白 / 深色深），任何像素级露出都与手机屏幕融为一体，灰带消失 */
+html.ios-pwa-standalone,
+html.ios-pwa-standalone body { background: var(--bg-b); }
+/* v3.7.x：display-mode: standalone 媒体查询底色兜底（不依赖 fullscreen.js 加类）——
+   iOS/安卓从主屏幕打开 PWA 时该媒体查询恒为真；若 JS 层 inIosStandalone 检测
+   （navigator.standalone / matchMedia standalone）因任何原因失败、ios-pwa-standalone
+   类未加上，这里仍保证页面底色与 .phone 底部同色，灰带不露出。
+   注意：只改 html/body 底色、不动 .phone 高度——安卓 standalone 靠 100dvh 在
+   键盘弹起时自动收缩（interactive-widget=resizes-content），锁 100vh 会盖输入栏；
+   高度差异留给 .ios-pwa-standalone 类（iOS 专属）处理 */
+@media (display-mode: standalone) {
+  html, body { background: var(--bg-b); }
+}
 
 /* ===== v3.5.105：手机端（安卓 / iOS）适配 =====
    只影响真实手机窄屏，桌面模拟器外壳不受影响 */
@@ -513,6 +530,11 @@ input.ce-ghost, textarea.ce-ghost {
 /* 页面容器 */
 .page { flex:1; display:flex; flex-direction:column; overflow-y:auto; z-index:2; padding-bottom:4px; }
 .page[hidden] { display:none; }
+/* v3.7.x：.app 默认 display:flex 会覆盖 HTML hidden 属性——正在开发的功能
+   （如群聊锚点 data-app="group-chat" 先占位 hidden）若不加兜底会在桌面意外显示，
+   点击又无逻辑（桌面 app 各自绑事件，无统一分发）。补 [hidden] 兜底（同
+   .poke-tools[hidden] 的教训） */
+.app[hidden] { display:none !important; }
 
 /* 通用弹层（替代 prompt/confirm，IAB 不支持原生弹窗）
    层级最高，确保任何面板/浮层之上都能弹出

@@ -68,6 +68,7 @@
       armReadyFuse();
       try { lastQuote = null; } catch (e) {}
       try { lastMineText = ''; } catch (e) {}
+      try { lastQuotedText = ''; } catch (e) {}
       try {
         draftImgs = [];
         renderDraft();
@@ -2095,6 +2096,11 @@ function partialRetractMsg(msgEl, side) {
     // 的 msgs/存储（scheduleReply 用匿名 setTimeout，contact-switched 无法 clearTimeout）
     const myCid = window.__activeCid || 'default';
     const sameCid = () => (window.__activeCid || 'default') === myCid;
+    // v3.7.x：引用源在「调度时」快照，而非回调执行时再读 lastMineText——用户连发
+    // 句1/句2/句3 会排多个回复轮，若执行时才读，各轮拿到的都是最后一条（引用永远
+    // 指向最后一句），且多轮都命中 quote-prob 会连续引用同一条消息。改为每轮引用
+    // 触发它的那条消息（句1 的回复轮引用句1，句3 的回复轮引用句3）。
+    const quoteSrc = lastMineText;
     const c = cfg();
     if (hit(c['rn-prob'])) {
       setTimeout(() => { if (!sameCid()) return; addIn('', { special: 'read' }); }, randInt(1000, 4000));
@@ -2116,17 +2122,20 @@ function partialRetractMsg(msgEl, side) {
       const rpMin = Math.max(1, Number(c['reply-min']) || 1);
       const rpMax = Math.max(rpMin, Number(c['reply-max']) || 2);
       const count = randInt(rpMin, rpMax);
-      // v3.7.x：一轮回复最多引用一次。引用源 lastMineText 在本轮固定不变（TA 回复期间
+      // v3.7.x：一轮回复最多引用一次。引用源 quoteSrc 在本轮固定不变（TA 回复期间
       // 我没发新消息），若每条独立掷骰 hit(quote-prob) 会出现两种观感问题：
       //  ① 多条都命中 → 连续引用同一条消息发很多条；
       //  ② 全没命中 → 这一轮一条引用都没有。
       // 改为本轮整体掷骰一次：命中则只给第一条带引用（先引用再回复，更像真人），其余普通回复。
-      const wantQuote = hit(c['quote-prob']) && !!lastMineText;
+      // v3.7.x：同一内容不连续引用——lastQuotedText 记录上次实际引用过的文本，
+      // 发送时再核对一次（并发回复轮交错时也能挡住），杜绝「一连引用两次句3」。
+      const wantQuote = hit(c['quote-prob']) && !!quoteSrc;
       for (let i = 0; i < count; i++) {
         setTimeout(() => {
           if (!sameCid()) return;
           hideTyping();
-          const q = (wantQuote && i === 0) ? lastMineText : null;
+          const q = (wantQuote && i === 0 && quoteSrc !== lastQuotedText) ? quoteSrc : null;
+          if (q) lastQuotedText = q;
           replyOnce(c, q, i > 0);
           // 还有下一条时继续显示「正在输入」
           if (i < count - 1) showTyping();
@@ -2274,6 +2283,8 @@ function partialRetractMsg(msgEl, side) {
     });
   }
   let lastMineText = '';
+  // v3.7.x：TA 上次实际引用过的文本——同内容不连续引用（防并发回复轮连续引用同一句）
+  let lastQuotedText = '';
   // v3.6.x：撤回/编辑我的消息后重新扫描最后一条可见的"我"的消息，
   // 避免 TA 引用/收藏到已撤回或已编辑的旧内容
   function syncLastMineText() {

@@ -149,6 +149,10 @@
           <div class="app-badge-box"><div class="app-ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></div><span class="app-badge" id="chat-badge" hidden></span></div>
           <div class="app-name">聊天</div>
         </div>
+        <div class="app" data-app="group-chat" data-desk-widget="app-group-chat" hidden>
+          <div class="app-ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/><circle cx="9" cy="11" r="1.2" fill="#111111"/><circle cx="13" cy="11" r="1.2" fill="#111111"/><circle cx="17" cy="11" r="1.2" fill="#111111"/></svg></div>
+          <div class="app-name">群聊</div>
+        </div>
         <div class="app" data-app="home" data-desk-widget="app-home">
           <div class="app-ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 11.5L12 4l8.5 7.5"/><path d="M5.5 10v10h13V10"/><path d="M9.5 20v-5.5h5V20"/></svg></div>
           <div class="app-name">主页</div>
@@ -2624,6 +2628,41 @@
       </div>
     </div>
 
+    <!-- 群聊页（桌面点「群聊」进入；所有桌面成员在一个窗口里聊天） -->
+    <div class="page" id="page-group-chat" hidden>
+      <div class="chat-head gc-head">
+        <span class="ch-back" id="gc-back">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        </span>
+        <span class="ch-name gc-name" id="gc-name" title="点击查看群成员">群聊</span>
+        <span class="ch-settings gc-members-btn" id="gc-members-btn" title="群成员">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><circle cx="17" cy="8" r="3.2"/><path d="M3 19c0-3 2.7-5 6-5s6 2 6 5"/><path d="M14 19c0-3 2.7-5 6-5"/></svg>
+        </span>
+      </div>
+      <div class="chat-body gc-body" id="gc-body"></div>
+      <div class="chat-typing gc-typing" id="gc-typing" hidden></div>
+      <div class="chat-input-row gc-input-row">
+        <button class="ch-input-btn" id="gc-at-btn" title="@群成员">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 006 0v-1a10 10 0 10-20 0v1a10 10 0 0010 10"/></svg>
+        </button>
+        <div class="chat-input gc-input" id="gc-input" contenteditable="true" data-ph="说点什么…" spellcheck="false" role="textbox" aria-label="说点什么…"></div>
+        <button class="chat-send gc-send" id="gc-send">发送</button>
+      </div>
+      <!-- 群成员列表面板 -->
+      <div class="gc-members-panel" id="gc-members-panel" hidden>
+        <div class="gc-mp-head">
+          <span>群成员</span>
+          <button class="gc-mp-close" id="gc-mp-close">✕</button>
+        </div>
+        <div class="gc-mp-body" id="gc-mp-body"></div>
+      </div>
+      <!-- @提及成员选择面板 -->
+      <div class="gc-at-panel" id="gc-at-panel" hidden>
+        <div class="gc-at-head">选择要@的成员</div>
+        <div class="gc-at-body" id="gc-at-body"></div>
+      </div>
+    </div>
+
     <!-- 聊天设置（独立页面） -->
     <div class="page" id="page-chat-settings" hidden>
       <div class="chat-head">
@@ -2651,6 +2690,14 @@
           <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg></div>
           <div class="txt">隐藏通话小框</div>
           <label class="toggle"><input type="checkbox" id="cs-call-mini-hide"><span class="tk"></span></label>
+        </div>
+        <!-- v3.8.x：开启群聊开关（每桌面独立，默认关闭）。开启后桌面聊天按钮右侧新增「群聊」按钮，
+             占卜按钮隐藏（挪位给群聊，一行仍 4 个）；隐藏的占卜按钮可在美化装修模式组件库自由添加到其他页面。
+             关闭则恢复原样。群聊=所有桌面成员在一个窗口里聊天，成员各自回复。 -->
+        <div class="set-row" id="cs-group-chat-row">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/><circle cx="9" cy="11" r="1.2" fill="#111111"/><circle cx="13" cy="11" r="1.2" fill="#111111"/><circle cx="17" cy="11" r="1.2" fill="#111111"/></svg></div>
+          <div class="txt">开启群聊</div>
+          <label class="toggle"><input type="checkbox" id="cs-group-chat"><span class="tk"></span></label>
         </div>
       </div>
       <div class="gs-title" style="padding-top:2px">壁纸</div>
