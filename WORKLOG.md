@@ -1138,3 +1138,5 @@
   - **修复**：删除孤立 `}` 让分支链连通；顺手清理被新分支完全覆盖（r<0.55/0.75/0.9 已被 r<0.35/0.50/0.65/0.78/0.90 全覆盖）的 3 段不可达旧分支死代码。
   - 提交 596dedc 同时含：chat.js 花朵卡片美化（msg-flower-bar/divider 新 DOM + 诊断 toast 清理）、ta-ask.js 题库微调、chat-main.css 花卡样式 + 构建产物。
   - ⚠️ 遗留：`tools/.probe-chat-layout.mjs`、`tools/diag-ta-ask-single-input.mjs` 未跟踪未提交，建议加 .gitignore 或删除。
+
+- 2026-08-22 00:58: 修复真我手机Edge导出/导入完全无反应（7caf65f 已构建提交）——导出改三级降级(navigator.share→showSaveFilePicker→a[download]挂DOM)，导入input挂DOM再click；涉及 src/js/data-backup.js

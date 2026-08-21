@@ -8,7 +8,6 @@
 //  - IndexedDB 改为逐条顺序写入（不再用 Promise.all 一拥而上，手机内存压力大时容易失败）
 //  - 兼容旧 iOS 的 <input type=file> 读取（File.text() 老版本不支持时改用 FileReader）
 (function () {
-  const uid = window.activePrefix();
   // 容量余量：给正在运行的其他功能留一点（手机 localStorage 约 5MB，桌面 10MB）
   const LS_HEADROOM = 512 * 1024;
   // v3.7.0：自动备份副本键——每次手动导出时同步把 JSON 写入 IndexedDB 此键。
@@ -143,22 +142,43 @@
     }
     // v3.9.x：修复真我手机 Edge（Android Chromium）导出完全没反应——
     // 直接合成 a.click() 下载在该环境下会被浏览器静默拦截（需用户激活且下载行为受限）。
-    // 改为三级降级保存：
+    // 三级降级保存 + 被拦截时给一次「带新用户手势」的重试：
     // ① 系统分享面板 navigator.share（Android 上可存到文件管理 / 发微信、QQ，最直观）
     // ② 系统保存框 showSaveFilePicker（File System Access API，Android Chrome/Edge 86+ 支持）
     // ③ 传统 a[download] 下载（必须先挂载 DOM 再 click，未挂载时部分浏览器不触发）
-    let saved = false;
+    const saveRes = await saveBackupFile(blob, fname);
+    if (saveRes === 'ok') { toast('数据已导出（' + sizeKB + ' KB，全部数据完整）'); return; }
+    if (saveRes === 'cancel') { toast('已取消保存'); return; }
+    // 被拦截 / 无法确认：数据已打包好，给用户一次新鲜手势的重试机会
+    if (window.openModal) {
+      window.openModal('备份已打包完成（' + sizeKB + ' KB）', '', async () => {
+        const retry = await saveBackupFile(blob, fname);
+        if (retry === 'ok') toast('数据已导出（' + sizeKB + ' KB，全部数据完整）');
+        else if (retry === 'cancel') toast('已取消保存');
+        else toast('仍未弹出保存面板。备份已自动存到本机缓存，可稍后从「导入数据」恢复');
+      }, { noInput: true, staticText: '系统没有自动弹出分享/保存面板，通常是浏览器下载限制或系统权限导致。\n点「确定」再试一次（数据已打包好，无需重新等待）。\n若仍不行：\n· 检查系统设置-应用-浏览器，打开「后台弹出界面」权限\n· 或从「导入数据」用本机缓存副本恢复（备份已自动存好）' });
+    } else {
+      toast('备份已存到本机缓存（' + sizeKB + ' KB），可从「导入数据」恢复');
+    }
+  }
+
+  // v3.9.x：保存备份文件——返回 'ok'（已分享/已保存）/ 'cancel'（用户取消）/ 其他（被拦截或无法确认）。
+  // 必须在用户手势（点击）触发链上调用：navigator.share / showSaveFilePicker 都要求用户激活，
+  // async 数据收集超过激活窗口后第一次可能被拒，所以调用方失败后会给用户弹窗再点一次重试。
+  async function saveBackupFile(blob, fname) {
     const file = new File([blob], fname, { type: 'application/json;charset=utf-8' });
-    if (!saved && navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+    // ① 系统分享面板
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
       try {
         await navigator.share({ files: [file], title: 'mochi 数据备份' });
-        saved = true;
+        return 'ok';
       } catch (e) {
-        // 用户取消（AbortError）→ 提示；无激活/不支持/失败 → 静默降级到下一级
-        if (e && e.name === 'AbortError') { toast('已取消分享'); }
+        if (e && e.name === 'AbortError') return 'cancel';
+        // NotAllowedError（无激活）/ SecurityError / 分享失败 → 继续降级
       }
     }
-    if (!saved && window.showSaveFilePicker) {
+    // ② 系统保存框
+    if (window.showSaveFilePicker) {
       try {
         const handle = await window.showSaveFilePicker({
           suggestedName: fname,
@@ -167,23 +187,22 @@
         const w = await handle.createWritable();
         await w.write(blob);
         await w.close();
-        saved = true;
+        return 'ok';
       } catch (e) {
-        if (e && e.name === 'AbortError') { toast('已取消保存'); }
+        if (e && e.name === 'AbortError') return 'cancel';
       }
     }
-    if (!saved) {
+    // ③ 传统下载（挂 DOM 再 click）
+    try {
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
       a.download = fname;
       document.body.appendChild(a);
       a.click();
       setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
-      // 下载仍可能被浏览器拦截——备份已自动存入本机缓存副本，可从「导入数据」恢复
-      toast('已尝试下载（' + sizeKB + ' KB）。若未出现下载，备份已自动存到本机缓存，可稍后从「导入数据」恢复');
-      return;
-    }
-    toast('数据已导出（' + sizeKB + ' KB，全部数据完整）');
+    } catch (e) {}
+    // 无法确认是否真触发了下载（被拦截会静默失败）→ 交给调用方提示重试/兜底
+    return 'blocked';
   }
 
   // v3.5.101：导入前预览备份摘要——显示导出时间/键数/聊天条数/头像/摸鱼累计，
@@ -247,14 +266,18 @@
     // v3.6.x：备份结构强校验——① app 标识不匹配直接拒绝（防误导其他应用的 json）；
     // ② 键前缀完全不匹配 mochi（xy-home-v2:）视为无效文件——原实现 {ls:{},idb:{}}
     // 空结构也能通过校验，配合先清空再写入，会把用户数据全清掉
-    if (data.app && data.app !== 'mochi-zika') {
+    const MOCHI_PREFIX = 'xy-home-v2:';
+    const lsLooksMochi =
+      Object.keys(data.ls).some(k => k.indexOf(MOCHI_PREFIX) === 0) ||
+      !!(data.idb && typeof data.idb === 'object' && Object.keys(data.idb).some(k => k.indexOf(MOCHI_PREFIX) === 0));
+    // v3.9.x：app 标识不匹配但键前缀是 xy-home-v2:（mochi 独有前缀）时仍允许导入——
+    // 覆盖 fork 版/手改 app 字段的 mochi 备份（数据本身是 mochi 结构）；只有 app 与键
+    // 都不像 mochi 才拒绝（防别的应用 json 误导入）
+    if (data.app && data.app !== 'mochi-zika' && !lsLooksMochi) {
       toast('不是 mochi 导出的数据文件');
       return;
     }
-    const MOCHI_PREFIX = 'xy-home-v2:';
-    const hasMochiKeys =
-      Object.keys(data.ls).some(k => k.indexOf(MOCHI_PREFIX) === 0) ||
-      !!(data.idb && typeof data.idb === 'object' && Object.keys(data.idb).some(k => k.indexOf(MOCHI_PREFIX) === 0));
+    const hasMochiKeys = lsLooksMochi;
     // v3.5.101：导入前先预览该备份的内容摘要，确认无误再覆盖（正常分支与兼容分支共用）
     function confirmAndImport(d) {
       if (!window.openModal) return;
@@ -280,17 +303,44 @@
       const detectedPrefix = allKeys[0].slice(0, firstColon + 1);
       const allSamePrefix = allKeys.every(k => k.indexOf(detectedPrefix) === 0);
       if (!allSamePrefix) {
-        toast('备份文件键前缀混乱（多种前缀），无法自动迁移。样例：' + allKeys.slice(0, 3).join('、'));
+        toast('备份文件键前缀混乱（多种前缀），无法自动迁移。样例：' + allKeys.slice(0, 5).join('、'));
         return;
       }
-      // 键尾是否像 mochi（命中已知键尾任一即认为像）
-      const mochiKeyTails = ['chat-msgs', 'avatar-user', 'avatar-partner', 'fish-total',
-        'contacts', 'theme-mode', 'accent-color', 'active-contact', 'cc-groups',
-        'reply-settings', 'chat-settings', 'desk-image-src', 'music-file:'];
+      // v3.9.x：键尾识别列表扩充到 v3.6~v3.9 全部功能——旧列表只有 v3.6 初期的
+      // 13 个键，群聊(gc-*)/占卜(divine-*)/每日小记(quote-history/memo-*)/摸鱼工作值
+      // (day-fish-*/work-day-add)等新键缺位，真实 mochi 备份被改过前缀后仍会误拒。
+      const mochiKeyTails = [
+        // 强特征（mochi 独有，命中即视为 mochi）
+        'chat-msgs', 'cc-groups', 'active-contact', 'contacts', 'fish-total',
+        'avatar-user', 'avatar-partner', 'desk-image-src', 'music-file:',
+        // v3.6 桌面/外观/设置
+        'theme-mode', 'accent-color', 'reply-settings', 'chat-settings',
+        'cs-', 'lbl-', 'avatar-', 'desk-', 'app-icon-', 'widget-',
+        'phone-bg', 'page-bg-', 'card-bg-', 'hidden-icons', 'ico-radius',
+        // v3.7 占卜/通话/记录
+        'divine-history', 'divine-send-auto', 'call-mini-', 'records-',
+        'fav-msgs', 'invite-ask-history',
+        // v3.8 群聊/字卡/信箱/朋友圈/音乐
+        'gc-profiles', 'gc-beauty', 'checkin-', 'my-emoji-groups', 'poke-',
+        'reply-', 'feed-', 'music-', 'emoji-last', 'group-chat-enabled',
+        // v3.9 每日小记/摸鱼工作值
+        'quote-history', 'memo-', 'mood-history', 'today-mood-',
+        'day-fish-', 'day-work-', 'fish-day-add', 'work-day-add',
+        'work-total', 'love-start', 'avatar-lib', 'avatar-me-lib',
+        'ck-', 'ckq-', 'rps-score', 'desk-countdowns', 'desk-texts',
+        'desk-images', 'desk-layout', 'more-tab', 'cal-my-', 'mem-extras',
+        'fish-log', 'fish-migrated', 'music-global', 'music-favs', 'music-float-pos',
+        'phone-bg-preset', 'bg-blur', 'bg-mask-op', 'sf-', 'gc-'
+      ];
       const tails = allKeys.map(k => k.slice(detectedPrefix.length));
-      const looksMochi = tails.some(t => mochiKeyTails.some(p => t.indexOf(p) >= 0));
+      // v3.9.x：判定增强——① 键尾命中任一已知键尾；② 多桌面结构命中：键去掉前缀后
+      // 第一个冒号段是 default 或 c<数字>（联系人桌面命名空间，mochi 独有结构），
+      // 覆盖"备份里只有新功能键"（如 quote-history/memo-*）且前缀被改的情况。
+      const tailHit = tails.filter(t => mochiKeyTails.some(p => t.indexOf(p) >= 0)).length;
+      const deskHit = tails.filter(t => /^(default|c\d+):.+/.test(t)).length;
+      const looksMochi = tailHit >= 1 || deskHit >= 1;
       if (!looksMochi) {
-        toast('备份文件不像 mochi 数据（键尾不匹配）。前缀：' + detectedPrefix + '，样例：' + allKeys.slice(0, 2).join('、'));
+        toast('备份文件不像 mochi 数据（键尾不匹配）。前缀：' + detectedPrefix + '，样例：' + allKeys.slice(0, 5).join('、'));
         return;
       }
       if (!window.openModal) return;
@@ -573,7 +623,8 @@
   window.runBackupExport = function () {
     toast('正在导出，请稍候…');
     // v3.5.134：导出前强制落盘——聊天记录有 400ms 防抖，不刷的话备份缺最后几条消息
-    if (window.chatFlushSave) window.chatFlushSave();
+    // v3.9.x：chatFlushSave 抛错会中断 doExport（表现为点了导出没反应），必须兜住
+    try { if (window.chatFlushSave) window.chatFlushSave(); } catch (e) {}
     doExport();
   };
   const exportRow = document.getElementById('row-export');
@@ -584,11 +635,16 @@
   if (importRow) {
     importRow.addEventListener('click', () => {
       // v3.9.x：修复真我手机 Edge 文件选择器不弹出——动态创建的 file input 必须
-      // 先挂载到 DOM 再 click()，未挂载时部分 Android 浏览器会静默忽略合成点击
+      // 先挂载到 DOM 再 click()（未挂载 / display:none 时部分 Android 浏览器会静默忽略
+      // 合成点击，改 position:fixed 移出屏幕而非 display:none 最稳）；
+      // 不设 accept 过滤——部分国产 ROM 文件选择器对 accept 过滤有兼容 bug，
+      // 选错文件会在导入时被校验提示「不是 mochi 导出的数据文件」
       const input = document.createElement('input');
       input.type = 'file';
-      input.accept = '.json,application/json';
-      input.style.display = 'none';
+      input.style.position = 'fixed';
+      input.style.left = '-9999px';
+      input.style.top = '0';
+      input.style.opacity = '0';
       document.body.appendChild(input);
       input.onchange = () => {
         const f = input.files && input.files[0];

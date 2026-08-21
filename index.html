@@ -4749,7 +4749,7 @@ transition: width .4s ease; min-width:0; overflow:hidden;
       </div>
       <div class="splash-dots"><i></i><i></i><i></i></div>
       <div class="splash-brand">小红书@言序（1842523578）</div>
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787331496363">Mochi 字卡传讯 v3.6.202 · 部署于 2026-08-22 00:58</div>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787331765486">Mochi 字卡传讯 v3.6.203 · 部署于 2026-08-22 01:02</div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
       <div class="splash-loading" id="splash-loading">正在加载数据…</div>
@@ -5545,7 +5545,7 @@ transition: width .4s ease; min-width:0; overflow:hidden;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.6.202</div>
+      <div class="ver">Mochi 字卡传讯 v3.6.203</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -36396,7 +36396,6 @@ if (el0) { obs.observe(el0, { attributes: true, attributeFilter: ['checked'] });
 } catch (__e) { if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
 (function () { try {
 (function () {
-const uid = window.activePrefix();
 const LS_HEADROOM = 512 * 1024;
 const SNAPSHOT_KEY = 'xy-home-v2:__auto-backup-snapshot';
 function toast(msg) {
@@ -36505,17 +36504,31 @@ try { localStorage.setItem('xy-home-v2:__last-backup', String(Date.now())); } ca
 if (window.idbSet) {
 try { window.idbSet(SNAPSHOT_KEY, json); } catch (e) {}
 }
-let saved = false;
+const saveRes = await saveBackupFile(blob, fname);
+if (saveRes === 'ok') { toast('数据已导出（' + sizeKB + ' KB，全部数据完整）'); return; }
+if (saveRes === 'cancel') { toast('已取消保存'); return; }
+if (window.openModal) {
+window.openModal('备份已打包完成（' + sizeKB + ' KB）', '', async () => {
+const retry = await saveBackupFile(blob, fname);
+if (retry === 'ok') toast('数据已导出（' + sizeKB + ' KB，全部数据完整）');
+else if (retry === 'cancel') toast('已取消保存');
+else toast('仍未弹出保存面板。备份已自动存到本机缓存，可稍后从「导入数据」恢复');
+}, { noInput: true, staticText: '系统没有自动弹出分享/保存面板，通常是浏览器下载限制或系统权限导致。\n点「确定」再试一次（数据已打包好，无需重新等待）。\n若仍不行：\n· 检查系统设置-应用-浏览器，打开「后台弹出界面」权限\n· 或从「导入数据」用本机缓存副本恢复（备份已自动存好）' });
+} else {
+toast('备份已存到本机缓存（' + sizeKB + ' KB），可从「导入数据」恢复');
+}
+}
+async function saveBackupFile(blob, fname) {
 const file = new File([blob], fname, { type: 'application/json;charset=utf-8' });
-if (!saved && navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
 try {
 await navigator.share({ files: [file], title: 'mochi 数据备份' });
-saved = true;
+return 'ok';
 } catch (e) {
-if (e && e.name === 'AbortError') { toast('已取消分享'); }
+if (e && e.name === 'AbortError') return 'cancel';
 }
 }
-if (!saved && window.showSaveFilePicker) {
+if (window.showSaveFilePicker) {
 try {
 const handle = await window.showSaveFilePicker({
 suggestedName: fname,
@@ -36524,22 +36537,20 @@ types: [{ description: 'JSON 备份', accept: { 'application/json': ['.json'] } 
 const w = await handle.createWritable();
 await w.write(blob);
 await w.close();
-saved = true;
+return 'ok';
 } catch (e) {
-if (e && e.name === 'AbortError') { toast('已取消保存'); }
+if (e && e.name === 'AbortError') return 'cancel';
 }
 }
-if (!saved) {
+try {
 const a = document.createElement('a');
 a.href = URL.createObjectURL(blob);
 a.download = fname;
 document.body.appendChild(a);
 a.click();
 setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
-toast('已尝试下载（' + sizeKB + ' KB）。若未出现下载，备份已自动存到本机缓存，可稍后从「导入数据」恢复');
-return;
-}
-toast('数据已导出（' + sizeKB + ' KB，全部数据完整）');
+} catch (e) {}
+return 'blocked';
 }
 function backupSummary(data) {
 const fmtMB = (n) => (n / 1048576).toFixed(1) + ' MB';
@@ -36592,14 +36603,15 @@ if (!data || typeof data !== 'object' || !data.ls || typeof data.ls !== 'object'
 toast('不是 mochi 导出的数据文件');
 return;
 }
-if (data.app && data.app !== 'mochi-zika') {
+const MOCHI_PREFIX = 'xy-home-v2:';
+const lsLooksMochi =
+Object.keys(data.ls).some(k => k.indexOf(MOCHI_PREFIX) === 0) ||
+!!(data.idb && typeof data.idb === 'object' && Object.keys(data.idb).some(k => k.indexOf(MOCHI_PREFIX) === 0));
+if (data.app && data.app !== 'mochi-zika' && !lsLooksMochi) {
 toast('不是 mochi 导出的数据文件');
 return;
 }
-const MOCHI_PREFIX = 'xy-home-v2:';
-const hasMochiKeys =
-Object.keys(data.ls).some(k => k.indexOf(MOCHI_PREFIX) === 0) ||
-!!(data.idb && typeof data.idb === 'object' && Object.keys(data.idb).some(k => k.indexOf(MOCHI_PREFIX) === 0));
+const hasMochiKeys = lsLooksMochi;
 function confirmAndImport(d) {
 if (!window.openModal) return;
 const summary = backupSummary(d);
@@ -36621,16 +36633,33 @@ return;
 const detectedPrefix = allKeys[0].slice(0, firstColon + 1);
 const allSamePrefix = allKeys.every(k => k.indexOf(detectedPrefix) === 0);
 if (!allSamePrefix) {
-toast('备份文件键前缀混乱（多种前缀），无法自动迁移。样例：' + allKeys.slice(0, 3).join('、'));
+toast('备份文件键前缀混乱（多种前缀），无法自动迁移。样例：' + allKeys.slice(0, 5).join('、'));
 return;
 }
-const mochiKeyTails = ['chat-msgs', 'avatar-user', 'avatar-partner', 'fish-total',
-'contacts', 'theme-mode', 'accent-color', 'active-contact', 'cc-groups',
-'reply-settings', 'chat-settings', 'desk-image-src', 'music-file:'];
+const mochiKeyTails = [
+'chat-msgs', 'cc-groups', 'active-contact', 'contacts', 'fish-total',
+'avatar-user', 'avatar-partner', 'desk-image-src', 'music-file:',
+'theme-mode', 'accent-color', 'reply-settings', 'chat-settings',
+'cs-', 'lbl-', 'avatar-', 'desk-', 'app-icon-', 'widget-',
+'phone-bg', 'page-bg-', 'card-bg-', 'hidden-icons', 'ico-radius',
+'divine-history', 'divine-send-auto', 'call-mini-', 'records-',
+'fav-msgs', 'invite-ask-history',
+'gc-profiles', 'gc-beauty', 'checkin-', 'my-emoji-groups', 'poke-',
+'reply-', 'feed-', 'music-', 'emoji-last', 'group-chat-enabled',
+'quote-history', 'memo-', 'mood-history', 'today-mood-',
+'day-fish-', 'day-work-', 'fish-day-add', 'work-day-add',
+'work-total', 'love-start', 'avatar-lib', 'avatar-me-lib',
+'ck-', 'ckq-', 'rps-score', 'desk-countdowns', 'desk-texts',
+'desk-images', 'desk-layout', 'more-tab', 'cal-my-', 'mem-extras',
+'fish-log', 'fish-migrated', 'music-global', 'music-favs', 'music-float-pos',
+'phone-bg-preset', 'bg-blur', 'bg-mask-op', 'sf-', 'gc-'
+];
 const tails = allKeys.map(k => k.slice(detectedPrefix.length));
-const looksMochi = tails.some(t => mochiKeyTails.some(p => t.indexOf(p) >= 0));
+const tailHit = tails.filter(t => mochiKeyTails.some(p => t.indexOf(p) >= 0)).length;
+const deskHit = tails.filter(t => /^(default|c\d+):.+/.test(t)).length;
+const looksMochi = tailHit >= 1 || deskHit >= 1;
 if (!looksMochi) {
-toast('备份文件不像 mochi 数据（键尾不匹配）。前缀：' + detectedPrefix + '，样例：' + allKeys.slice(0, 2).join('、'));
+toast('备份文件不像 mochi 数据（键尾不匹配）。前缀：' + detectedPrefix + '，样例：' + allKeys.slice(0, 5).join('、'));
 return;
 }
 if (!window.openModal) return;
@@ -36863,7 +36892,7 @@ setTimeout(checkLostAndOfferRestore, 800);
 }
 window.runBackupExport = function () {
 toast('正在导出，请稍候…');
-if (window.chatFlushSave) window.chatFlushSave();
+try { if (window.chatFlushSave) window.chatFlushSave(); } catch (e) {}
 doExport();
 };
 const exportRow = document.getElementById('row-export');
@@ -36875,8 +36904,10 @@ if (importRow) {
 importRow.addEventListener('click', () => {
 const input = document.createElement('input');
 input.type = 'file';
-input.accept = '.json,application/json';
-input.style.display = 'none';
+input.style.position = 'fixed';
+input.style.left = '-9999px';
+input.style.top = '0';
+input.style.opacity = '0';
 document.body.appendChild(input);
 input.onchange = () => {
 const f = input.files && input.files[0];
