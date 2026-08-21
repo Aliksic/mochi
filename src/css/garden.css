@@ -162,3 +162,60 @@
   cursor:pointer; font-family:inherit;
 }
 .garden-bouquet-btn:active { opacity:.8; }
+
+/* 访客 */
+.garden-visitor {
+  display:none; align-items:center; gap:8px;
+  margin:0 18px 10px; padding:10px 14px; border-radius:14px;
+  background:linear-gradient(90deg, rgba(255,215,0,.12), rgba(255,149,0,.08));
+  font-size:12px; color:var(--ink);
+  animation: gardenVisitorPulse 2s ease-in-out infinite;
+}
+.garden-visitor-emoji { font-size:20px; }
+.garden-visitor-txt { flex:1; }
+@keyframes gardenVisitorPulse {
+  0%,100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+
+/* 装饰 */
+.garden-decor { margin:0 18px 14px; padding:14px 16px; border-radius:18px; }
+.garden-decor-title { font-size:14px; font-weight:700; margin-bottom:10px; }
+.garden-decor-list { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
+.garden-decor-item {
+  font-size:12px; padding:4px 10px; border-radius:99px;
+  background:rgba(0,0,0,.04); color:var(--ink);
+}
+.garden-decor-empty { font-size:12px; color:var(--muted); text-align:center; padding:8px 0; }
+.garden-decor-shop-btn {
+  display:block; width:100%; padding:10px; border-radius:14px;
+  border:none; background:#7cb342; color:#fff; font-size:13px; font-weight:600;
+  cursor:pointer; font-family:inherit;
+}
+.garden-decor-shop-btn:active { opacity:.8; }
+
+/* 排行榜 */
+.garden-lb { margin:0 18px 18px; padding:14px 16px; border-radius:18px; }
+.garden-lb-title { font-size:14px; font-weight:700; margin-bottom:10px; }
+.garden-lb-head {
+  display:flex; justify-content:space-between;
+  font-size:11px; color:var(--muted); margin-bottom:6px; padding:0 4px;
+}
+.garden-lb-row {
+  display:flex; align-items:center; gap:8px; margin-bottom:8px;
+}
+.lb-label { font-size:11px; color:var(--muted); width:32px; flex-shrink:0; }
+.lb-bar {
+  flex:1; height:20px; border-radius:10px; overflow:hidden;
+  display:flex; font-size:10px; color:#fff; font-weight:600;
+}
+.lb-me {
+  height:100%; display:flex; align-items:center; justify-content:center;
+  background:linear-gradient(90deg, #42a5f5, #1e88e5);
+  transition: width .4s ease; min-width:0; overflow:hidden;
+}
+.lb-ta {
+  height:100%; display:flex; align-items:center; justify-content:center;
+  background:linear-gradient(90deg, #ef5350, #e53935);
+  transition: width .4s ease; min-width:0; overflow:hidden;
+}

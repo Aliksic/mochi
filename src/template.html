@@ -1239,6 +1239,7 @@
         <button class="fav-tab" data-rp="group">群聊</button>
         <button class="fav-tab" data-rp="mail">信箱</button>
         <button class="fav-tab" data-rp="feed">朋友圈</button>
+        <button class="fav-tab" data-rp="other">其他</button>
       </div>
       <div class="gs-scroll">
         <div class="gs-panel" data-rpanel="chat">
@@ -1383,6 +1384,17 @@
               <div class="txt">清除所有朋友圈数据</div>
             </div>
           </div>
+        </div>
+        <!-- v3.9.x：其他——联系人主动邀请（猜拳/玩游戏），随 TA 主动找你的消息按概率触发 -->
+        <div class="gs-panel" data-rpanel="other" hidden>
+          <div class="gs-title">联系人主动邀请</div>
+          <div class="set-group glass">
+            <div class="gs-row"><span>主动邀请猜拳</span><label class="toggle"><input type="checkbox" id="ai-rps-en"><span class="tk"></span></label></div>
+            <div class="gs-row"><span>猜拳邀请概率</span><div class="stepper" data-k="ai-rps-prob" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="ai-rps-prob-val" readonly><button class="stp-max">+</button></div></div>
+            <div class="gs-row"><span>主动邀请玩游戏</span><label class="toggle"><input type="checkbox" id="ai-game-en"><span class="tk"></span></label></div>
+            <div class="gs-row"><span>游戏邀请概率</span><div class="stepper" data-k="ai-game-prob" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="ai-game-prob-val" readonly><button class="stp-max">+</button></div></div>
+          </div>
+          <div class="gs-sub" style="padding:0 14px 14px">TA 主动找你的消息会按概率变成猜拳/游戏邀请（Pong、贪吃蛇随机），自动打开对应半框，不想玩直接关掉即可；仅在你在聊天页时触发，需开启「主动发送」</div>
         </div>
         <!-- v3.6.x：保存设置按钮——点击把当前所有概率/开关写入本地并提示 -->
         <button class="ta-add-btn gs-save-btn" id="reply-save-btn" style="width:100%;margin:6px 0 18px">
@@ -1785,6 +1797,7 @@
         <div class="garden-level-bar" id="garden-level-bar"></div>
         <div class="garden-grid" id="garden-grid"></div>
         <div class="garden-stats" id="garden-stats"></div>
+        <div class="garden-visitor" id="garden-visitor"></div>
         <!-- 工具条 -->
         <div class="garden-toolbar" id="garden-toolbar">
           <button class="garden-tool" data-tool="water" title="浇水">
@@ -1811,6 +1824,8 @@
         </div>
         <div class="garden-dex glass" id="garden-dex"></div>
         <div class="garden-inv glass" id="garden-inv"></div>
+        <div class="garden-decor glass" id="garden-decor"></div>
+        <div class="garden-lb glass" id="garden-lb"></div>
       </div>
     </div>
 
@@ -2969,6 +2984,11 @@
           <div class="txt">聊天头像形状</div>
           <div class="val" id="cs-av-shape-val">圆形</div>
         </div>
+        <div class="set-row" id="cs-time-style">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+          <div class="txt">时间轴样式</div>
+          <div class="val" id="cs-time-style-val">头像下方</div>
+        </div>
       </div>
       <div class="gs-title">气泡颜色</div>
       <div class="set-group glass">
@@ -2991,6 +3011,24 @@
           <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20L10 6h4l5 14"/><path d="M7.5 14.5h9"/></svg></div>
           <div class="txt">联系人消息文字颜色</div>
           <div class="val" id="cs-in-ink-val">默认 #111111</div>
+        </div>
+      </div>
+      <div class="gs-title">发送按钮</div>
+      <div class="set-group glass">
+        <div class="set-row" id="cs-send-show">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></div>
+          <div class="txt">显示发送按钮</div>
+          <div class="val" id="cs-send-show-val">显示</div>
+        </div>
+        <div class="set-row" id="cs-send-bg">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="9" width="18" height="6" rx="3"/></svg></div>
+          <div class="txt">发送按钮颜色</div>
+          <div class="val" id="cs-send-bg-val">默认 #111111</div>
+        </div>
+        <div class="set-row" id="cs-send-ink">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20L10 6h4l5 14"/><path d="M7.5 14.5h9"/></svg></div>
+          <div class="txt">发送文字颜色</div>
+          <div class="val" id="cs-send-ink-val">默认 #ffffff</div>
         </div>
       </div>
       <div class="gs-title">字体</div>

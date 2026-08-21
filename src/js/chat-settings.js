@@ -28,6 +28,18 @@
     { label: '标准', value: '11px 14px' },
     { label: '宽松', value: '14px 18px' }
   ];
+  // v3.9.x：时间轴样式（默认头像下方，与原实现一致）
+  // under-av=头像下方  under-bubble=气泡下方  bubble=时间气泡  float=气泡外侧悬浮
+  // center=消息上方居中  divider=时间分隔线（微信式，消息间隔大时插居中胶囊）  hidden=隐藏
+  const TIME_STYLES = [
+    { label: '头像下方', value: 'under-av' },
+    { label: '气泡下方', value: 'under-bubble' },
+    { label: '时间气泡', value: 'bubble' },
+    { label: '气泡外侧悬浮', value: 'float' },
+    { label: '消息上方居中', value: 'center' },
+    { label: '时间分隔线', value: 'divider' },
+    { label: '隐藏', value: 'hidden' }
+  ];
 
   function applySettings() {
     // 设置页值写入（定义在最前，避免暂时性死区）
@@ -56,6 +68,13 @@
     // 发送按钮文字颜色（默认白）
     const sendInk = store.get('cs-send-ink') || '#ffffff';
     root.style.setProperty('--send-ink', sendInk);
+    // 发送按钮显示/隐藏（默认显示；隐藏后仍可按 Enter 发送）
+    const sendShow = store.get('cs-send-show') || 'show';
+    const sendBtn = document.getElementById('chat-send');
+    if (sendBtn) sendBtn.style.display = sendShow === 'hide' ? 'none' : '';
+    set('cs-send-show-val', sendShow === 'hide' ? '隐藏' : '显示');
+    set('cs-send-bg-val', sendBg === '#111111' ? '默认 #111111' : sendBg);
+    set('cs-send-ink-val', sendInk === '#ffffff' ? '默认 #ffffff' : sendInk);
     // 双方气泡颜色/文字颜色当前值回显（默认值显示「默认 #色值」，让用户知道默认颜色）
     set('cs-out-bg-val', outBg === '#111111' ? '默认 #111111' : outBg);
     set('cs-out-ink-val', outInk === '#ffffff' ? '默认 #ffffff' : outInk);
@@ -65,6 +84,13 @@
     const avShape = store.get('cs-av-shape') || 'circle';
     root.style.setProperty('--msg-av-radius', avShape === 'square' ? '10px' : '50%');
     set('cs-av-shape-val', avShape === 'square' ? '方形' : '圆形');
+    // 时间轴样式：body 上挂 cs-time-* 类（CSS 控制布局，消息结构不变），
+    // 移除旧类后挂新类——覆盖收藏页（#page-fav 是 body 后代），收藏项无需改动
+    const ts = store.get('cs-time-style') || 'under-av';
+    const tsLabel = (TIME_STYLES.find(s => s.value === ts) || {}).label || '头像下方';
+    TIME_STYLES.forEach(s => document.body.classList.remove('cs-time-' + s.value));
+    if (ts !== 'under-av') document.body.classList.add('cs-time-' + ts);
+    set('cs-time-style-val', tsLabel);
     // 聊天壁纸：铺满整个聊天页
     // v3.6.x：值没变时不重写 style——applySettings 在每次进入聊天页时调用，
     // 反复重设 background-image（大图 dataURL）会让浏览器重新解码、触发重绘
@@ -155,6 +181,25 @@
           { label: '方形', value: 'square' }
         ],
         pill: store.get('cs-av-shape') || 'circle',
+        noInput: true
+      });
+    });
+  }
+  // v3.9.x：时间轴样式（胶囊选择，即时生效——body 上的类驱动布局，无消息重渲染）
+  const csTimeStyle = row('cs-time-style');
+  if (csTimeStyle) {
+    csTimeStyle.addEventListener('click', () => {
+      if (!window.openModal) return;
+      const cur = store.get('cs-time-style') || 'under-av';
+      window.openModal('时间轴样式', '', (v) => {
+        store.set('cs-time-style', v);
+        applySettings();
+        // v3.9.x：divider（时间分隔线）需要重渲染补插分隔条，其余样式纯 CSS 即时生效
+        //（divider 有 DOM 插入逻辑，不能像其它样式那样只切 body 类；聊天页已渲染时立即重渲染）
+        if (v === 'divider' && window.chatReRenderTime) { try { window.chatReRenderTime(); } catch (e) {} }
+      }, {
+        pills: TIME_STYLES,
+        pill: cur,
         noInput: true
       });
     });
@@ -315,6 +360,17 @@
     { color: '#7048e8', label: '紫' },
     { color: '#b3540a', label: '橘' }
   ];
+  // 发送按钮背景色板（含微信绿/红包红等鲜艳色，适配按钮场景）
+  const SEND_BG_COLORS = [
+    { color: '#111111', label: '默认黑' },
+    { color: '#07c160', label: '微信绿' },
+    { color: '#fa5151', label: '红包红' },
+    { color: '#3a8ee6', label: '天空蓝' },
+    { color: '#ff9500', label: '活力橙' },
+    { color: '#9254de', label: '优雅紫' },
+    { color: '#ffffff', label: '白色' },
+    { color: '#3a3a3a', label: '炭灰' }
+  ];
   // 气泡颜色行统一处理：openModal 色板 → 存 cs-* 键 → applySettings 生效
   function bindBubbleColorRow(rowId, key, def, title, swatches) {
     const el = row(rowId);
@@ -342,6 +398,24 @@
   bindBubbleColorRow('cs-out-ink', 'cs-out-ink', '#ffffff', '我的消息文字颜色', BUBBLE_INK_COLORS);
   bindBubbleColorRow('cs-in-bg', 'cs-in-bg', '#ffffff', '联系人气泡颜色', BUBBLE_BG_COLORS);
   bindBubbleColorRow('cs-in-ink', 'cs-in-ink', '#111111', '联系人消息文字颜色', BUBBLE_INK_COLORS);
+  // 发送按钮颜色 / 发送文字颜色
+  bindBubbleColorRow('cs-send-bg', 'cs-send-bg', '#111111', '发送按钮颜色', SEND_BG_COLORS);
+  bindBubbleColorRow('cs-send-ink', 'cs-send-ink', '#ffffff', '发送文字颜色', BUBBLE_INK_COLORS);
+  // 发送按钮显示/隐藏（pills；隐藏后仍可按 Enter 键发送）
+  const csSendShow = row('cs-send-show');
+  if (csSendShow) {
+    csSendShow.addEventListener('click', () => {
+      if (!window.openModal) return;
+      window.openModal('显示发送按钮', '', (v) => { store.set('cs-send-show', v); applySettings(); }, {
+        pills: [
+          { label: '显示', value: 'show' },
+          { label: '隐藏', value: 'hide' }
+        ],
+        pill: store.get('cs-send-show') || 'show',
+        noInput: true
+      });
+    });
+  }
 
   const csFont = row('cs-font-size');
   if (csFont) {

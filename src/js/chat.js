@@ -129,6 +129,15 @@
       if (fuseMsgs && fuseMsgs.length) {
         try { writeLsSnapshot(JSON.stringify(fuseMsgs), fusePrefix); } catch (e) {}
       }
+      // v3.9.x 修复（真我 Edge 切联系人后聊天记录消失）：IDB 读取挂起时保险丝兜底
+      //   就绪，若聊天页可见且有消息但画面空白（同步渲染空 + IDB 回调未执行），
+      //   强制重渲染补回，避免永久空白
+      try {
+        if (chatVisible() && msgs.length && !body.children.length) {
+          renderWindow(false, true);
+          scrollChatBottom();
+        }
+      } catch (e) {}
     }, 15000);
   }
   // v3.7.x：防抖期间切联系人 → contact-switched 清 saveTimer 会让待写消息丢失，
@@ -557,9 +566,27 @@
   // v3.6.x：追加消息后滚动——批量渲染（进入聊天/恢复历史）或聊天页未打开时跳过；
   // 原实现 renderMsg 每条消息都执行 scrollTop=scrollHeight（同步布局，强制整页 reflow），
   // TA 连发多条（间隔 1-3s）时每条都卡一下 = 收消息卡顿的主因之一
-  function maybeScrollChatBottom() {
-    if (batchRendering || !chatVisible() || !chatNearBottom()) return;
-    body.scrollTop = body.scrollHeight;
+  // v3.9.x：追加消息分为「我发送」与「TA 消息」两类——
+  //   我发送（side:out）：用户主动发消息必然意图看最新，一律滚到底；
+  //   TA 消息：仅贴近底部时滚（贴底守卫仍在，翻旧消息时不被新消息打断阅读位置）。
+  //   此前两类共用近底守卫：贴底阈值 120px 小于图片消息高度（CSS 上限 260px），
+  //   且用户轻微上翻后守卫永久 false——导致「发送消息后不自动滚到最新」。
+  // v3.9.x+：我发送的消息同步滚后异步补偿（rAF + 短延时）——emoji 字体加载、
+  //   长文本换行 reflow、图片解码都会让 scrollHeight 在滚动后才变大，
+  //   只同步滚一次会停在差几十像素处（「有时候没滚到底」）；补到高度稳定。
+  function maybeScrollChatBottom(side) {
+    if (batchRendering) {
+      if (side === 'out') pendingOutScroll = true;
+      return;
+    }
+    if (!chatVisible()) return;
+    const out = side === 'out';
+    if (!out && !chatNearBottom()) return;
+    scrollChatBottom();
+    if (out) {
+      requestAnimationFrame(scrollChatBottom);
+      setTimeout(scrollChatBottom, 120);
+    }
   }
   function showTyping() {
     if (!typingEl) return;
@@ -668,6 +695,22 @@
     const d = new Date(ts);
     const p = (n) => (n < 10 ? '0' + n : '' + n);
     return p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+  }
+
+  // v3.9.x：时间分隔线文案（微信式：「下午 3:24 / 昨天 下午 3:24 / 8月20日 下午 3:24 / 2025年8月20日」）
+  function timeDividerText(ts) {
+    if (!ts) return '';
+    const d = new Date(ts);
+    const now = new Date();
+    const p = (n) => (n < 10 ? '0' + n : '' + n);
+    const h12 = d.getHours() % 12 === 0 ? 12 : d.getHours() % 12;
+    const hm = (d.getHours() < 12 ? '上午 ' : '下午 ') + h12 + ':' + p(d.getMinutes());
+    const dayOf = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+    const dayGap = Math.round((dayOf(now) - dayOf(d)) / 86400000);
+    if (dayGap <= 0) return hm;
+    if (dayGap === 1) return '昨天 ' + hm;
+    if (d.getFullYear() === now.getFullYear()) return (d.getMonth() + 1) + '月' + d.getDate() + '日 ' + hm;
+    return d.getFullYear() + '年' + (d.getMonth() + 1) + '月' + d.getDate() + '日';
   }
 
   // 聊天内语音播放：同一时间只播一条，播放中按钮高亮 + 波形动画
@@ -1058,6 +1101,10 @@
   // 每条渲染后的强制滚动（scrollTop=scrollHeight）会触发同步布局，手机上
   // 大量消息时进入聊天页卡顿数秒；批量期间跳过滚动，结束后统一滚到底一次
   let batchRendering = false;
+  // v3.9.x：批量渲染期间用户发送了消息（side:out）→ 渲染结束后强制贴底。
+  // 批量中 renderMsg 里的 maybeScrollChatBottom 会被 batchRendering 跳过，
+  // 若没有补偿，发送的消息渲染出来却停在视口外（「发送后不自动滚到最新」）。
+  let pendingOutScroll = false;
 
   // v3.6.x：聊天记录分页渲染——首屏只渲染最近 RENDER_MAX 条，向上滚动加载更早。
   // 数据不变（msgs 全量在内存，getChatMsgs/统计/搜索遍历不受影响），只分 DOM 渲染层：
@@ -1067,6 +1114,26 @@
   const TOP_THRESHOLD = 150;// scrollTop 小于此值触发向上加载（px）
   const JUMP_VIEW = 30;     // 搜索跳转时目标索引上方预留的余量
   let renderStart = 0;      // 渲染窗口起点（msgs 下标）；0 = 全量
+  // v3.9.x：时间分隔线（聊天设置「时间轴样式-时间分隔线」）——消息间隔 ≥ TIME_DIVIDER_GAP
+  // 时在消息流中插入一条居中时间胶囊（微信式）。插入逻辑只作用于聊天页 #chat-body：
+  // 收藏页（#fav-list）/群聊（#gc-body）不含此逻辑，msg-time 保留原样式不受影响。
+  const TIME_DIVIDER_GAP = 5 * 60 * 1000;
+  function maybeInsertDivider(idx) {
+    if (store.get('cs-time-style') !== 'divider') return;
+    if (idx < 0 || idx >= msgs.length) return;
+    const cur = msgs[idx];
+    if (!cur || !cur.ts) return;
+    if (idx > 0) {
+      const prev = msgs[idx - 1];
+      if (!prev || !prev.ts) return;
+      if (cur.ts - prev.ts < TIME_DIVIDER_GAP) return;
+    }
+    // idx===0（全局第一条消息）无条件插入——第一条消息的时间不能被隐藏
+    const d = document.createElement('div');
+    d.className = 'msg-time-divider';
+    d.innerHTML = '<span>' + timeDividerText(cur.ts) + '</span>';
+    body.appendChild(d);
+  }
   let suppressScrollUntil = 0; // 程序化滚动后短暂忽略 scroll 事件（防渲染本身触发向上加载）
   // 渲染 [renderStart, msgs.length) 窗口。
   // keepScroll=true：保持视觉位置（向上加载时新内容补在顶部，scrollTop 需下移对应高度）
@@ -1082,6 +1149,8 @@
     body.innerHTML = '';
     batchRendering = true;
     for (let i = start; i < len; i++) {
+      // v3.9.x：时间分隔线样式下，间隔足够大的消息前补插居中时间胶囊
+      maybeInsertDivider(i);
       const m = renderMsg(msgs[i]);
       m.dataset.idx = i; // 覆盖 renderMsg 内的 msgs.length-1（批量渲染时必须为真实下标）
     }
@@ -1089,10 +1158,22 @@
     if (keepScroll && prevHeight > 0) {
       body.scrollTop = prevTop + (body.scrollHeight - prevHeight);
     }
+    // v3.9.x：批量渲染期间发送的消息（side:out）补一次贴底——批量中滚动被跳过，
+    // 渲染结束后新消息必须可见（发送即意图看最新）
+    if (pendingOutScroll) {
+      pendingOutScroll = false;
+      scrollChatBottom();
+    }
     suppressScrollUntil = Date.now() + 200; // 本轮渲染/滚动结束后 200ms 内不响应 scroll
     // v3.7.x：重建后恢复展开中的就地作答区（含草稿内容）
     restoreInplaceDrafts();
   }
+  // v3.9.x：切换时间轴样式为「时间分隔线」时，已渲染的聊天消息需重渲染补插分隔条
+  // （其余样式纯 CSS 即时生效无需重渲染；进入聊天页/恢复历史自带 renderWindow 补插，无需调用）
+  window.chatReRenderTime = function () {
+    if (chatPage.hidden || !body.children.length) return;
+    renderWindow(true, false);
+  };
   // 向上滚动接近顶部 → 加载更早消息（节流 100ms，程序化滚动 200ms 内忽略）
   let bodyScrollTimer = null;
   body.addEventListener('scroll', function () {
@@ -1122,7 +1203,7 @@
         favHeartHtml() +
         '</div>';
       body.appendChild(m);
-      maybeScrollChatBottom();
+      maybeScrollChatBottom(rec.side);
       return m;
     }
     // 问问TA：居中完整卡片（问题 + TA 的回答）
@@ -1139,7 +1220,7 @@
         favHeartHtml() +
         '</div>';
       body.appendChild(m);
-      maybeScrollChatBottom();
+      maybeScrollChatBottom(rec.side);
       return m;
     }
     // 通话：居中卡片
@@ -1147,7 +1228,7 @@
       m.className = 'msg-center';
       m.innerHTML = '<div class="msg-center-card">' + escTxt(rec.text) + '</div>';
       body.appendChild(m);
-      maybeScrollChatBottom();
+      maybeScrollChatBottom(rec.side);
       return m;
     }
     // 拍一拍 / 换头像 / 互动卡片提示语：居中灰字小卡片，可选附带一张头像图
@@ -1158,7 +1239,7 @@
       m.innerHTML = '<span>' + pokeIconHtml(rec.text) + '</span>' +
         (rec.img ? '<img class="msg-poke-img" src="' + attrEsc(rec.img) + '" alt="新头像">' : '');
       body.appendChild(m);
-      maybeScrollChatBottom();
+      maybeScrollChatBottom(rec.side);
       return m;
     }
     // 猜拳：居中白底卡片，显示双方出拳（灰色手势图标 + 名字）+ 结果文字，简约无彩色
@@ -1181,7 +1262,7 @@
         '<div class="msg-rps-result">' + escTxt(resTxt) + '</div>' +
       '</div>';
       body.appendChild(m);
-      maybeScrollChatBottom();
+      maybeScrollChatBottom(rec.side);
       return m;
     }
     // Pong：居中白底卡片，显示比分与结果
@@ -1192,7 +1273,7 @@
         '<div class="msg-pong-result">' + escTxt(rec.text || '') + '</div>' +
       '</div>';
       body.appendChild(m);
-      maybeScrollChatBottom();
+      maybeScrollChatBottom(rec.side);
       return m;
     }
     // 双人贪吃蛇：居中白底卡片，双方长度/食物/得分 + 结果
@@ -1207,7 +1288,7 @@
         '<div class="msg-rps-result" style="color:' + snkClr + '">存活 ' + rec.snkTime + 's · ' + escTxt(snkResTxt) + '</div>' +
       '</div>';
       body.appendChild(m);
-      maybeScrollChatBottom();
+      maybeScrollChatBottom(rec.side);
       return m;
     }
     // 红包：居中白底卡片，红包图标 + 金额 + 留言 + 领取状态（简约白灰风格）
@@ -1238,7 +1319,7 @@
         }
       }
       body.appendChild(m);
-      maybeScrollChatBottom();
+      maybeScrollChatBottom(rec.side);
       return m;
     }
     // TA 的小问题：居中选择题卡片，未作答点击弹出选项
@@ -1254,7 +1335,7 @@
         favHeartHtml() +
         '</div>';
       body.appendChild(m);
-      maybeScrollChatBottom();
+      maybeScrollChatBottom(rec.side);
       return m;
     }
     // TA 的好奇：居中白卡显示问题，未回答可点击回答
@@ -1270,7 +1351,7 @@
         favHeartHtml() +
         '</div>';
       body.appendChild(m);
-      maybeScrollChatBottom();
+      maybeScrollChatBottom(rec.side);
       return m;
     }
     // TA 的吐槽：居中白卡显示吐槽，未回应可点击回一句
@@ -1286,7 +1367,7 @@
         favHeartHtml() +
         '</div>';
       body.appendChild(m);
-      maybeScrollChatBottom();
+      maybeScrollChatBottom(rec.side);
       return m;
     }
     // TA 的询问卡片：居中白卡显示问题，未回答可点击回答（星言 ta 的询问）
@@ -1304,7 +1385,7 @@
         favHeartHtml() +
         '</div>';
       body.appendChild(m);
-      maybeScrollChatBottom();
+      maybeScrollChatBottom(rec.side);
       return m;
     }
     m.className = 'msg ' + (rec.side === 'out' ? 'msg-out' : 'msg-in');
@@ -1484,8 +1565,23 @@
       } catch (e) {}
     }
     if (rec.side === 'in' || rec.side === 'out') m.dataset.idx = msgs.length - 1;
+    // v3.9.x：图片/表情/引用图解码后消息高度才稳定（img 是 lazy + async 解码），
+    // 同步滚动在图片撑开高度前执行会停在中间——加载完成瞬间补滚一次。
+    // 只响应「刚插入（6s 内）」的图片，向上翻旧消息时历史图片迟加载不打断阅读位置
+    // （in 消息仍受贴底守卫保护；out 消息是发送方意图看最新，无条件滚）。
+    try {
+      const ts = rec.ts || Date.now();
+      m.querySelectorAll('img').forEach(img => {
+        if (img.complete) return;
+        img.addEventListener('load', () => {
+          if (Date.now() - ts < 6000 && chatVisible()) maybeScrollChatBottom(rec.side);
+        });
+      });
+    } catch (e) {}
     body.appendChild(m);
-    maybeScrollChatBottom();
+    // v3.9.x：side 透传——我发送的消息（side:out）一律滚到底（发送即意图看最新），
+    // TA 消息贴近底部才滚（翻旧消息时不打断阅读位置）。修复「发送消息后不自动滚到最新」
+    maybeScrollChatBottom(rec.side);
     return m;
   }
 
@@ -1890,11 +1986,16 @@
     // v3.6.x+：加贴底守卫——用户翻旧消息（renderStart>0、窗口已扩）时新消息
     // 进来不打断阅读位置，走增量追加（窗口暂时超 RENDER_MAX 无害，
     // 下次 enterChat / restore-done 合并会收紧）
-    if (renderStart > 0 && msgs.length - renderStart > RENDER_MAX && chatNearBottom()) {
+    // v3.9.x：窗口收紧后强制贴底的条件与 maybeScrollChatBottom 对齐——
+    // 我发送的消息（side:out）一律贴底（发送即意图看最新），TA 消息才看贴底守卫
+    if (renderStart > 0 && msgs.length - renderStart > RENDER_MAX &&
+        (rec.side === 'out' || chatNearBottom())) {
       renderWindow(false, true);
       scrollChatBottom();
       return body.lastElementChild;
     }
+    // v3.9.x：时间分隔线样式下，新消息与上一条间隔足够大 → 插入居中时间胶囊
+    maybeInsertDivider(msgs.length - 1);
     return renderMsg(rec);
   }
   function addIn(text, opts) {
@@ -2495,6 +2596,45 @@ function partialRetractMsg(msgEl, side) {
   document.addEventListener('contact-switched', function () {
     try { if (window.replyCfg) scheduleAutoSend(); } catch (e) {}
   });
+  // ---- v3.9.x：联系人主动邀请（猜拳/游戏） ----
+  // 命中后发一条邀请提示并打开对应半框，取代普通主动消息；返回 true 表示本次主动发送
+  // 已被邀请占用。游戏邀请在 Pong / 贪吃蛇之间随机。仅聊天页可见时触发。
+  function tryActiveInvite(c) {
+    if (!chatVisible()) return false;
+    const name = chatPartnerName();
+    // 猜拳邀请
+    if (cfgn(c, 'ai-rps-en', 1) === 1 && hit(cfgn(c, 'ai-rps-prob', 15))) {
+      addIn(name + ' 想和你猜拳，来一局？', { special: 'poke', initiative: true });
+      showTyping();
+      setTimeout(() => {
+        hideTyping();
+        openRpsPanel();
+      }, randInt(700, 1400));
+      return true;
+    }
+    // 游戏邀请（Pong / 贪吃蛇随机）
+    if (cfgn(c, 'ai-game-en', 1) === 1 && hit(cfgn(c, 'ai-game-prob', 10))) {
+      const isPong = Math.random() < 0.5;
+      addIn(name + (isPong ? ' 想和你玩一局 Pong，来吗？' : ' 想和你玩双人贪吃蛇，来吗？'), { special: 'poke', initiative: true });
+      showTyping();
+      setTimeout(() => {
+        hideTyping();
+        if (isPong) {
+          // Pong 面板打开前关闭其他半框（openPongPanel 自身不清，参照 more-pong 的清理列表）
+          const ids = ['poke-card', 'emoji-panel', 'chat-ask-panel', 'chat-search', 'chat-divine-panel', 'chat-decision-panel', 'chat-rps-panel', 'chat-rp-panel', 'chat-call-panel'];
+          ids.forEach(id => { const el = document.getElementById(id); if (el) el.hidden = true; });
+          if (window.closeAvlib) window.closeAvlib();
+          if (window.openPongPanel) window.openPongPanel();
+        } else if (window.openSnakePanel) {
+          window.openSnakePanel();
+        }
+      }, randInt(700, 1400));
+      return true;
+    }
+    return false;
+  }
+  // 暴露给主动发送链路（tryAutoSend）调用；同文件内其余模块/回归测试也可直接触发
+  window.tryActiveInvite = tryActiveInvite;
   function tryAutoSend() {
     try {
     const c = cfg();
@@ -2506,6 +2646,11 @@ function partialRetractMsg(msgEl, side) {
     if (cfgn(c, 'dnd-en', 0) === 1) prob = 10;
     if (!hit(prob)) return;
     if (hit(cfgn(c, 'touch-prob', 5))) { performPoke(); return; }
+    // v3.9.x：联系人主动邀请（猜拳/玩游戏）——TA 主动找你的消息按概率变成邀请：
+    // 发一条邀请提示（带主动爱心标识）并打开对应半框（猜拳 / Pong / 贪吃蛇随机），
+    // 取代普通主动消息；仅聊天页可见时触发（半框需要用户交互，后台触发会盖住别的页面）。
+    // 概率独立于主动发送概率（as-prob 命中后再次按邀请概率掷），默认 15%/10%。
+    if (tryActiveInvite(c)) return;
     const pool = getPool();
     // 每条消息内容：主字卡/颜文字/emoji/表情包/图片 全 5 类混排（与回复一致）
     // v3.6.x：autoMsg 返回 {text, type}——之前直接返回 dataURL 字符串且 addIn 不传 type，
@@ -5154,6 +5299,8 @@ function partialRetractMsg(msgEl, side) {
     closeIme(); // v3.5.116：收起输入法，面板完整不被键盘遮挡
     renderEmojiPanel();
     emojiPanel.hidden = false;
+    // v3.9.x：面板展开挤矮可视区——最底部那条消息会被面板盖住，贴底保持最新可见
+    scrollChatBottom();
     if (morePanel) morePanel.hidden = true;
   }
   function closeEmojiPanel() {

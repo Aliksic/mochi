@@ -408,6 +408,19 @@
     const list = load();
     list.unshift(letter);
     save(list);
+    // v3.9.x：寄出的信也可收到 TA 回信——原实现回信机制只在「提笔回信」
+    //   (submitReply) 里按 ml-reply-prob 安排回信计划，寄信(sendLetter) 从不安排
+    //   → 用户设了「回信概率」寄信也永远收不到回信。寄信与回信共用同一概率/
+    //   时间设置（回复设置-信箱-联系人回信），命中后写入回信计划，由
+    //   checkPendingReplyFor 到期落地为 partnerReply（刷新/重开不丢）。
+    const cfg = mailCfg();
+    if (Math.random() * 100 < cfg.replyProb) {
+      const replyMsg = taLetterContent(cfg);
+      const delayMs = (cfg.replyMin + Math.random() * Math.max(1, cfg.replyMax - cfg.replyMin)) * 60000;
+      const pending = replyPendingLoad();
+      pending.push({ id: letter.id, due: Date.now() + delayMs, content: replyMsg });
+      replyPendingSave(pending);
+    }
     if (input) input.value = '';
     if (window.chatAddSystem) window.chatAddSystem('你给 ' + name + ' 写了一封信');
     toast('信件已寄出');

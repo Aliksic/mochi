@@ -642,9 +642,7 @@
 .period-grid .pc-cell.blank { background:transparent; border:none; cursor:default; }
 .period-grid .pc-cell.today { outline:2px solid var(--ink); outline-offset:-2px; }
 .period-grid .pc-cell.ph-period { background:#e85a8f; color:#fff; font-weight:700; border-color:#e85a8f; }
-.period-grid .pc-cell.ph-fertile { background:#fff3da; color:#b8791a; border-color:#f5d68a; }
 .period-grid .pc-cell.ph-predict { background:#fde2ee; color:#c44a78; border:1px dashed #e85a8f; }
-.period-grid .pc-cell.ph-safe { background:#eaf4ee; border-color:#cfe6d8; }
 .period-grid .pc-cell:not(.blank):active { opacity:.7; }
 .period-card-title { font-size:14px; font-weight:700; letter-spacing:.5px; margin-bottom:10px; }
 .period-history { display:flex; flex-direction:column; gap:8px; }

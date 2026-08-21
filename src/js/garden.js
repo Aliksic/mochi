@@ -7,7 +7,7 @@ var G = "garden-data";
 var PLOTS = 6;
 var PI = 1800;
 function pn() { return s.get("lbl-partner") || "TA"; }
-function load() { try { var d = JSON.parse(s.get(G) || "{}"); if (!d.p) d.p = []; while (d.p.length < PLOTS) d.p.push(null); if (!d.l) d.l = []; if (!d.lpc) d.lpc = 0; if (!d.dex) d.dex = {}; if (!d.exp) d.exp = 0; if (!d.inv) d.inv = {}; if (!d.st) d.st = { p: 0, w: 0, h: 0, f: 0, mp: 0, mw: 0, mh: 0, mf: 0 }; return d; } catch (e) { return { p: new Array(PLOTS).fill(null), l: [], lpc: 0, dex: {}, exp: 0, inv: {}, st: { p: 0, w: 0, h: 0, f: 0, mp: 0, mw: 0, mh: 0, mf: 0 } }; } }
+function load() { try { var d = JSON.parse(s.get(G) || "{}"); if (!d.p) d.p = []; while (d.p.length < PLOTS) d.p.push(null); if (!d.l) d.l = []; if (!d.lpc) d.lpc = 0; if (!d.dex) d.dex = {}; if (!d.exp) d.exp = 0; if (!d.inv) d.inv = {}; if (!d.st) d.st = { p: 0, w: 0, h: 0, f: 0, mp: 0, mw: 0, mh: 0, mf: 0 }; if (!d.decor) d.decor = {}; if (!d.visitor) d.visitor = null; return d; } catch (e) { return { p: new Array(PLOTS).fill(null), l: [], lpc: 0, dex: {}, exp: 0, inv: {}, st: { p: 0, w: 0, h: 0, f: 0, mp: 0, mw: 0, mh: 0, mf: 0 }, decor: {}, visitor: null }; } }
 function save(d) { try { s.set(G, JSON.stringify(d)); try { if (window.idbSet) window.idbSet(window.activePrefix() + ":" + G, JSON.stringify(d)); } catch (e2) {} } catch (e) {} }
 (function r() { try { if (!window.idbGet) return; var pf = window.activePrefix(); if (!s.get(G)) window.idbGet(pf + ":" + G).then(function (v) { if (window.activePrefix() !== pf || !v) return; try { s.set(G, typeof v === "string" ? v : JSON.stringify(v)); } catch (e) {} }); } catch (e) {} })();
 
@@ -17,7 +17,12 @@ var T = {
   tulip: { n: "\u90C1\u91D1\u9999", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF37"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [172800, 432000], xp: 30, lv: 1 },
   cactus: { n: "\u4ED9\u4EBA\u638C", e: ["\uD83C\uDF31", "\uD83C\uDF35"], sn: ["\u5C0F\u82BD", "\u6210\u578B"], g: [432000], xp: 50, lv: 4 },
   lavender: { n: "\u85B0\u8863\u8349", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83D\uDC90"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [86400, 345600], xp: 25, lv: 3 },
-  daisy: { n: "\u96CF\u83CA", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF3C"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [86400, 259200], xp: 20, lv: 1 }
+  daisy: { n: "\u96CF\u83CA", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF3C"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [86400, 259200], xp: 20, lv: 1 },
+  sakura: { n: "\u6A31\u82B1", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF38"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [86400, 259200], xp: 25, lv: 1 },
+  hibiscus: { n: "\u8299\u84C9", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF3A"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [172800, 345600], xp: 35, lv: 1 },
+  lotus: { n: "\u8377\u82B1", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83E\uDEB7"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [259200, 432000], xp: 45, lv: 1 },
+  clover: { n: "\u5E78\u8FD0\u8349", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF40"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u6210\u578B"], g: [43200, 129600], xp: 15, lv: 1 },
+  camellia: { n: "\u5C71\u8336\u82B1", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83D\uDCAE"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [172800, 259200], xp: 30, lv: 1 }
 };
 var WM = [
   "\u4ECA\u5929\u4E5F\u8F9B\u82E6\u5566\uFF0C\u82B1\u82B1\u4EEC\u4E5F\u5728\u52AA\u529B\u957F\u5927\u54E6",
@@ -35,6 +40,21 @@ var W = [
   { i: "\uD83C\uDF08", t: "\u653E\u6674" }
 ];
 var S = ["\uD83C\uDF38 \u6625\u5B63", "\u2600\uFE0F \u590F\u5B63", "\uD83C\uDF42 \u79CB\u5B63", "\u2744\uFE0F \u51AC\u5B63"];
+
+var DECOR = {
+  fence: { n: "\u6728\u680F\u6746", e: "\uD83D\uDEE1\uFE0F", price: 50, max: 4 },
+  light: { n: "\u5C0F\u8DEF\u706F", e: "\uD83D\uDCA1", price: 80, max: 2 },
+  bench: { n: "\u957F\u6905", e: "\uD83E\uDD91", price: 120, max: 1 },
+  gnome: { n: "\u56ED\u4E11", e: "\uD83E\uDDD9", price: 100, max: 2 },
+  windmill: { n: "\u98CE\u8F66", e: "\uD83C\uDF00", price: 150, max: 1 },
+  fountain: { n: "\u55B7\u6CC9", e: "\u26F7\uFE0F", price: 200, max: 1 }
+};
+var VISITORS = [
+  { type: "butterfly", e: "\uD83E\uDE9B", n: "\u8774\u8776" },
+  { type: "bee", e: "\uD83D\uDC1D", n: "\u871C\u8702" },
+  { type: "bird", e: "\uD83D\uDC26", n: "\u5C0F\u9E1F" },
+  { type: "ladybug", e: "\uD83D\uDC1E", n: "\u74E2\u866B" }
+];
 
 function wx() { var d = new Date(); return W[(d.getDate() + d.getMonth() + d.getHours()) % 4]; }
 function sea() { return S[Math.floor(new Date().getMonth() / 3) % 4]; }
@@ -63,7 +83,7 @@ function waterLvl(plot) {
 
 function gLv() { return Math.floor(Math.sqrt((data.exp || 0) / 10)) + 1; }
 function gLvProg() { var lv = gLv(); var cur = (lv - 1) * (lv - 1) * 10; var nxt = lv * lv * 10; return { cur: data.exp - cur, max: nxt - cur, lv: lv }; }
-function unlocked(type) { var tp = T[type]; if (!tp) return false; return gLv() >= (tp.lv || 1); }
+function unlocked(type) { return !!T[type]; }
 function updDex(type, act) { if (!data.dex[type]) data.dex[type] = { p: 0, h: 0 }; if (act === "p") data.dex[type].p++; if (act === "h") data.dex[type].h++; }
 function updSt(act, me) { var k = act; if (me) data.st[k] = (data.st[k] || 0) + 1; else data.st["m" + k] = (data.st["m" + k] || 0) + 1; }
 
@@ -314,13 +334,75 @@ function renderInv() {
   el.innerHTML = h;
 }
 
+function renderDecor() {
+  var el = document.getElementById("garden-decor");
+  if (!el) return;
+  var keys = Object.keys(DECOR);
+  var owned = keys.filter(function (k) { return (data.decor[k] || 0) > 0; });
+  var h = "<div class=\"garden-decor-title\">\uD83C\uDFE0 \u82B1\u56ED\u88C5\u9970</div>";
+  if (owned.length) {
+    h += "<div class=\"garden-decor-list\">";
+    owned.forEach(function (k) {
+      var dp = DECOR[k];
+      h += "<span class=\"garden-decor-item\">" + dp.e + " " + dp.n + " \u00d7" + data.decor[k] + "</span>";
+    });
+    h += "</div>";
+  } else {
+    h += "<div class=\"garden-decor-empty\">\u8FD8\u6CA1\u6709\u88C5\u9970\uFF0C\u53BB\u5546\u5E97\u770B\u770B\u5427</div>";
+  }
+  h += "<button class=\"garden-decor-shop-btn\" id=\"garden-decor-shop-btn\">\uD83D\uDED2 \u88C5\u9970\u5546\u5E97\uFF08" + data.exp + "EXP\uFF09</button>";
+  el.innerHTML = h;
+}
+
+function renderVisitor() {
+  var el = document.getElementById("garden-visitor");
+  if (!el) return;
+  var v = data.visitor;
+  if (!v) { el.innerHTML = ""; el.style.display = "none"; return; }
+  var now = Math.floor(Date.now() / 1000);
+  if (v.start + v.dur < now) { data.visitor = null; save(data); el.innerHTML = ""; el.style.display = "none"; return; }
+  var vi = null;
+  for (var i = 0; i < VISITORS.length; i++) { if (VISITORS[i].type === v.type) { vi = VISITORS[i]; break; } }
+  if (!vi) { el.innerHTML = ""; el.style.display = "none"; return; }
+  var remain = v.start + v.dur - now;
+  var rmTxt = remain > 3600 ? Math.floor(remain / 3600) + "\u5C0F\u65F6" : Math.ceil(remain / 60) + "\u5206\u949F";
+  el.style.display = "";
+  el.innerHTML = "<span class=\"garden-visitor-emoji\">" + vi.e + "</span><span class=\"garden-visitor-txt\">" + vi.n + "\u6765\u8BBF\u4E86\u82B1\u56ED\uFF0C\u8FD8\u4F1A\u5F85 " + rmTxt + "</span>";
+}
+
+function renderLeaderboard() {
+  var el = document.getElementById("garden-lb");
+  if (!el) return;
+  var st = data.st || {};
+  var rows = [
+    { label: "\u79CD\u690D", me: st.p || 0, ta: st.mp || 0 },
+    { label: "\u6D47\u6C34", me: st.w || 0, ta: st.mw || 0 },
+    { label: "\u65BD\u80A5", me: st.f || 0, ta: st.mf || 0 },
+    { label: "\u6536\u83B7", me: st.h || 0, ta: st.mh || 0 }
+  ];
+  var h = "<div class=\"garden-lb-title\">\uD83C\uDFC6 \u7167\u6599\u6392\u884C\u699C</div>";
+  h += "<div class=\"garden-lb-head\"><span>\u6211</span><span>" + pn() + "</span></div>";
+  rows.forEach(function (r) {
+    var total = r.me + r.ta;
+    var mp = total > 0 ? Math.round(r.me / total * 100) : 50;
+    var tp = 100 - mp;
+    h += "<div class=\"garden-lb-row\"><span class=\"lb-label\">" + r.label + "</span>";
+    h += "<div class=\"lb-bar\"><div class=\"lb-me\" style=\"width:" + mp + "%\">" + (r.me > 0 ? r.me : "") + "</div><div class=\"lb-ta\" style=\"width:" + tp + "%\">" + (r.ta > 0 ? r.ta : "") + "</div></div>";
+    h += "</div>";
+  });
+  el.innerHTML = h;
+}
+
 function renderAll() {
   renderWeather();
   renderLevel();
   renderGrid();
   renderStats();
+  renderVisitor();
   renderDex();
   renderInv();
+  renderDecor();
+  renderLeaderboard();
   renderLog();
 }
 
@@ -415,6 +497,44 @@ function makeBouquet() {
   }, { pills: pills, noInput: true });
 }
 
+function buyDecor() {
+  if (!window.openModal) return;
+  var keys = Object.keys(DECOR);
+  var pills = keys.map(function (k) {
+    var dp = DECOR[k];
+    var cnt = data.decor[k] || 0;
+    var lock = cnt >= dp.max;
+    var can = data.exp >= dp.price && !lock;
+    var lbl = dp.e + " " + dp.n + " " + (lock ? "\u5DF2\u6EE1" : can ? dp.price + "EXP" : "\u4E0D\u8DB3");
+    return { label: lbl, value: k };
+  });
+  window.openModal("\u88C5\u9970\u5546\u5E97\uFF08" + data.exp + "EXP\uFF09", "", function (v) {
+    if (!v || !DECOR[v]) return;
+    var dp = DECOR[v];
+    var cnt = data.decor[v] || 0;
+    if (cnt >= dp.max) return;
+    if (data.exp < dp.price) return;
+    data.exp -= dp.price;
+    data.decor[v] = cnt + 1;
+    addLog("\u6211", "\u8D2D\u4E70\u4E86 " + dp.n);
+    save(data); renderAll();
+  }, { pills: pills, noInput: true });
+}
+
+function spawnVisitor() {
+  if (data.visitor) {
+    var now = Math.floor(Date.now() / 1000);
+    if (data.visitor.start + data.visitor.dur < now) data.visitor = null;
+  }
+  if (data.visitor) return;
+  if (Math.random() > 0.25) return;
+  var vi = VISITORS[Math.floor(Math.random() * VISITORS.length)];
+  var dur = 3600 + Math.floor(Math.random() * 10800);
+  data.visitor = { type: vi.type, start: Math.floor(Date.now() / 1000), dur: dur };
+  addLog(vi.n, "\uD83C\uDF49 \u6765\u8BBF\u4E86\u82B1\u56ED");
+  save(data);
+}
+
 function openGarden() {
   var editing = Array.from(document.querySelectorAll(".app-grid")).some(function (g) { return g.classList.contains("editing"); });
   if (editing) return;
@@ -425,6 +545,7 @@ function openGarden() {
   selPlot = -1;
   curWeather = wx();
   curSeason = sea();
+  spawnVisitor();
   if (Math.random() < 0.3) partnerAct();
   renderAll();
 }
@@ -449,6 +570,12 @@ var invEl = document.getElementById("garden-inv");
 if (invEl) invEl.addEventListener("click", function (e) {
   var btn = e.target.closest("#garden-bouquet-btn");
   if (btn) makeBouquet();
+});
+
+var decorEl = document.getElementById("garden-decor");
+if (decorEl) decorEl.addEventListener("click", function (e) {
+  var btn = e.target.closest("#garden-decor-shop-btn");
+  if (btn) buyDecor();
 });
 
 document.addEventListener("contact-switched", function () {

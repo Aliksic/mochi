@@ -439,6 +439,21 @@
           }).filter(t => t.url);
         } },
       // 兜底：网易云官方 v6 歌单详情 API（无 Cookie 返回全部曲目）经 CORS 代理
+      // v3.9.x：corsproxy.io(403)/codetabs(超时)已失效，改用 proxy.cors.sh（Cloudflare
+      // Workers 代理，CORS 头正确、稳定可用）；allorigins/corsproxy 保留作低优先级兜底
+      { url: 'https://proxy.cors.sh/' + apiUrl, parse(txt) {
+          let j; try { j = JSON.parse(txt); } catch (e) { return null; }
+          const pl = j && j.playlist;
+          if (!pl || !Array.isArray(pl.tracks) || !pl.tracks.length) return null;
+          return pl.tracks.map(s => ({
+            neteaseId: String(s.id || ''),
+            name: s.name || '',
+            artist: ((s.ar || []).map(a => a.name).filter(Boolean).join('/')),
+            cover: String((s.al && s.al.picUrl) || '').replace(/^http:\/\//i, 'https://'),
+            url: s.id ? neteaseMetingUrl(s.id) : '',
+            duration: s.dt ? Math.round(s.dt / 1000) : 0
+          })).filter(t => t.url);
+        } },
       { url: 'https://api.allorigins.win/raw?url=' + encodeURIComponent(apiUrl), parse(txt) {
           let j; try { j = JSON.parse(txt); } catch (e) { return null; }
           const pl = j && j.playlist;
@@ -464,25 +479,13 @@
             url: s.id ? neteaseMetingUrl(s.id) : '',
             duration: s.dt ? Math.round(s.dt / 1000) : 0
           })).filter(t => t.url);
-        } },
-      { url: 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(apiUrl), parse(txt) {
-          let j; try { j = JSON.parse(txt); } catch (e) { return null; }
-          const pl = j && j.playlist;
-          if (!pl || !Array.isArray(pl.tracks) || !pl.tracks.length) return null;
-          return pl.tracks.map(s => ({
-            neteaseId: String(s.id || ''),
-            name: s.name || '',
-            artist: ((s.ar || []).map(a => a.name).filter(Boolean).join('/')),
-            cover: String((s.al && s.al.picUrl) || '').replace(/^http:\/\//i, 'https://'),
-            url: s.id ? neteaseMetingUrl(s.id) : '',
-            duration: s.dt ? Math.round(s.dt / 1000) : 0
-          })).filter(t => t.url);
         } }
     ];
     let idx = 0;
     function tryNext() {
       if (idx >= sources.length) { cb(null); return; }
       const src = sources[idx++];
+      const srcLabel = src.url.substring(0, 60);
       let controller;
       try { controller = new AbortController(); } catch (e) { controller = null; }
       const timer = setTimeout(() => { try { controller && controller.abort(); } catch (e) {} }, 7000);
@@ -495,7 +498,7 @@
             if (res && res.length) cb(res); else tryNext();
           } catch (e) { tryNext(); }
         })
-        .catch(() => { clearTimeout(timer); tryNext(); });
+        .catch((err) => { clearTimeout(timer); tryNext(); });
     }
     tryNext();
   }
@@ -1587,6 +1590,9 @@
     if (!audio) return;
     audio.preload = 'auto';
     setupHandlers(m);
+    // v3.x：来电 hold 期间音频异步加载完成 → 不播放（避免通话中音乐响起），
+    // 通话结束由 musicHoldForCall(false) 统一恢复播放与悬浮窗
+    if (callHoldPending) { try { syncPlayIcons(false); } catch (e) {} return; }
     const p = audio.play();
     if (p && p.catch) {
       p.catch(() => {
@@ -2003,16 +2009,30 @@
   }
   // v3.5.129：来电联动——暂停音乐 + 隐藏悬浮小框（否则铃声和音乐同时响、
   // 悬浮小框 z-index 9999 会盖在通话面板上遮挡接听按钮）；通话结束恢复
+  // v3.x：修复"邀请听歌后来电，通话结束悬浮窗/播放不恢复"——
+  //   1) hold 时若有 currentId 但 audio 未创建（本地文件异步加载中），标记 callHoldPending，
+  //      startPlayback 检查该标志 → 不播放，避免通话期间音频加载完自动响起；
+  //   2) release 时用 updatePlayerBar()（内含 renderFloat）恢复悬浮窗，按当前
+  //      currentId/audio/floatEn 状态决定显示，不再依赖 dataset.callHold 字符串
+  //      （hold 期间若 audio 被 teardown 会导致字符串状态错乱）；
+  //   3) callHoldPending 场景下 release 也尝试恢复播放。
   let callHoldPlaying = false;
+  let callHoldFloatShown = false;
+  let callHoldPending = false;
   window.musicHoldForCall = function (hold) {
     try {
       const el = document.getElementById('sm-float');
       if (hold) {
         callHoldPlaying = !!(audio && !audio.paused);
+        callHoldFloatShown = !!(el && !el.hidden);
+        // 有当前曲目但 audio 还没创建（本地文件异步从 IDB 读取中）→ 标记，
+        // startPlayback 时检查并跳过播放，避免通话期间音频加载完自动响起
+        callHoldPending = !audio && !!currentId;
         if (audio && !audio.paused) audio.pause();
-        if (el) { el.dataset.callHold = el.hidden ? '1' : '0'; el.hidden = true; }
+        if (el) el.hidden = true;
       } else {
-        if (callHoldPlaying && audio && currentId) {
+        // 恢复播放：hold 前在播，或 hold 期间异步加载被挂起 → 尝试恢复
+        if (audio && currentId && (callHoldPlaying || callHoldPending)) {
           const p = audio.play();
           if (p && p.catch) p.catch(() => {
             // v3.6.x：通话结束恢复也是非手势播放，被拒时 muted 静音解锁
@@ -2026,8 +2046,12 @@
           });
         }
         callHoldPlaying = false;
-        if (el && el.dataset.callHold === '0') { el.hidden = false; delete el.dataset.callHold; }
-        else if (el) delete el.dataset.callHold;
+        callHoldPending = false;
+        // 恢复悬浮窗 + 播放栏：hold 前显示过，或当前有曲目在播 → 按当前状态重新渲染
+        if (callHoldFloatShown || (audio && currentId)) {
+          updatePlayerBar();
+        }
+        callHoldFloatShown = false;
       }
     } catch (e) {}
   };

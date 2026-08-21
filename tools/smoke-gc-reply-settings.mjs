@@ -134,7 +134,7 @@ async function lastInText() {
 await enterReplySettings();
 check('回复设置页已进入', await evalJs("(function(){var p=document.getElementById('page-reply-settings');return !!p&&!p.hidden;})()"));
 const tabInfo = JSON.parse(await evalJs("(function(){var tabs=[].slice.call(document.querySelectorAll('#page-reply-settings .fav-tab')).map(function(t){return t.dataset.rp;});var groupTab=document.querySelector('#page-reply-settings .fav-tab[data-rp=\"group\"]');var panel=document.querySelector('#page-reply-settings .gs-panel[data-rpanel=\"group\"]');return JSON.stringify({tabs:tabs,hasTab:!!groupTab,panelHidden:panel?panel.hidden:null});})()") || '{}');
-check('回复设置页有 4 个 tab（聊天/群聊/信箱/朋友圈）', tabInfo.tabs && tabInfo.tabs.length === 4 && tabInfo.tabs.indexOf('group') === 1, JSON.stringify(tabInfo.tabs));
+check('回复设置页有 5 个 tab（聊天/群聊/信箱/朋友圈/其他）', tabInfo.tabs && tabInfo.tabs.length === 5 && tabInfo.tabs.indexOf('group') === 1 && tabInfo.tabs.indexOf('other') === 4, JSON.stringify(tabInfo.tabs));
 check('群聊 tab 存在且面板默认隐藏', tabInfo.hasTab === true && tabInfo.panelHidden === true, JSON.stringify({ hasTab: tabInfo.hasTab, panelHidden: tabInfo.panelHidden }));
 
 await evalJs("(function(){var t=document.querySelector('#page-reply-settings .fav-tab[data-rp=\"group\"]');if(t)t.click();return true;})()");

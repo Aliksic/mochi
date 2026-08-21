@@ -105,6 +105,56 @@
   font-weight:400; white-space:nowrap;
   opacity:.5;
 }
+/* 时间轴样式（v3.9.x，聊天设置「时间轴样式」，body 上挂 cs-time-* 类驱动）
+   默认「头像下方」即上方原样式，无需额外规则。消息结构不变，CSS 类即时生效
+   （收藏页 #page-fav 与群聊复用 .msg-side/.msg-time，同样受这些类影响，全局一致）。 */
+/* 气泡下方：时间从头像列移到气泡下沿（绝对定位相对消息行，行内只留头像） */
+body.cs-time-under-bubble .msg { position:relative; }
+body.cs-time-under-bubble .msg-side .msg-time {
+  position:absolute; top:calc(100% + 3px); padding:2px 8px; border-radius:10px;
+  background:rgba(0,0,0,.05); opacity:.6; letter-spacing:.3px; z-index:2;
+}
+body.cs-time-under-bubble .msg-in .msg-side .msg-time { right:0; }
+body.cs-time-under-bubble .msg-out .msg-side .msg-time { left:0; }
+/* 时间气泡：头像与时间并排，时间胶囊在头像外侧（贴近屏幕边一侧），纵向居中 */
+body.cs-time-bubble .msg-side { display:flex; flex-direction:row; align-items:center; gap:8px; }
+body.cs-time-bubble .msg-side .msg-time {
+  padding:3px 8px; border-radius:10px; background:rgba(0,0,0,.05);
+  opacity:.6; letter-spacing:.3px;
+}
+/* 气泡外侧悬浮：小胶囊浮在气泡外侧上角（贴近屏幕边那一角） */
+body.cs-time-float .msg { position:relative; }
+body.cs-time-float .msg-side .msg-time {
+  position:absolute; top:-4px; padding:2px 8px; border-radius:10px;
+  background:rgba(0,0,0,.06); opacity:.65; letter-spacing:.3px; z-index:2;
+}
+body.cs-time-float .msg-in .msg-side .msg-time { right:-4px; }
+body.cs-time-float .msg-out .msg-side .msg-time { left:-4px; }
+/* 消息上方居中：整行拉满，时间胶囊居中悬浮在消息上方（类似系统时间分隔条） */
+body.cs-time-center .msg { position:relative; padding-top:18px; width:100%; max-width:100%; }
+body.cs-time-center .msg-in { justify-content:flex-start; }
+body.cs-time-center .msg-out { justify-content:flex-end; }
+body.cs-time-center .msg-side .msg-time {
+  position:absolute; top:0; left:50%; transform:translateX(-50%);
+  padding:2px 10px; border-radius:10px; background:rgba(0,0,0,.05);
+  opacity:.6; letter-spacing:.3px;
+}
+/* 隐藏：不显示时间 */
+body.cs-time-hidden .msg-time { display:none; }
+/* 时间分隔线（v3.9.x，聊天设置「时间轴样式-时间分隔线」）：微信式居中时间胶囊。
+   插入逻辑在 chat.js（renderWindow 批量 + addRec 增量 + 切换样式即时重渲染），CSS 只管样式：
+   聊天页（#chat-body）每条消息的 .msg-time 隐藏，改由分隔条替代显示时间。
+   收藏页（#fav-list）/群聊（#gc-body）不含插入逻辑，msg-time 保留原样式不受影响。
+   .msg-time-divider 默认 display:none——从 divider 切到其它样式时已插入的 DOM 元素自动隐藏，
+   不占布局；下次 renderWindow 重建会清空。 */
+body.cs-time-divider #chat-body .msg-time { display:none; }
+.msg-time-divider { display:none; justify-content:center; margin:14px 0 10px; }
+body.cs-time-divider .msg-time-divider { display:flex; }
+.msg-time-divider span {
+  padding:3px 10px; border-radius:999px; background:rgba(0,0,0,.05);
+  font-size:10px; line-height:1; color:var(--msg-time-ink, #111111);
+  letter-spacing:.3px; opacity:.6; white-space:nowrap;
+}
 /* 联系人正在输入：正常流占位，无需额外留白补偿（此前浮层方案已移除） */
 
 /* 联系人「正在输入」状态：消息区与输入栏之间的内嵌条（正常流，不遮挡任何消息）
