@@ -4745,7 +4745,7 @@ transition: width .4s ease; min-width:0; overflow:hidden;
       </div>
       <div class="splash-dots"><i></i><i></i><i></i></div>
       <div class="splash-brand">小红书@言序（1842523578）</div>
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787327824602">Mochi 字卡传讯 v3.6.196 · 部署于 2026-08-21 23:57</div>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787328088481">Mochi 字卡传讯 v3.6.197 · 部署于 2026-08-22 00:01</div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
       <div class="splash-loading" id="splash-loading">正在加载数据…</div>
@@ -5541,7 +5541,7 @@ transition: width .4s ease; min-width:0; overflow:hidden;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.6.196</div>
+      <div class="ver">Mochi 字卡传讯 v3.6.197</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -36490,18 +36490,68 @@ if (data.app && data.app !== 'mochi-zika') {
 toast('不是 mochi 导出的数据文件');
 return;
 }
+const MOCHI_PREFIX = 'xy-home-v2:';
 const hasMochiKeys =
-Object.keys(data.ls).some(k => k.indexOf('xy-home-v2:') === 0) ||
-!!(data.idb && typeof data.idb === 'object' && Object.keys(data.idb).some(k => k.indexOf('xy-home-v2:') === 0));
+Object.keys(data.ls).some(k => k.indexOf(MOCHI_PREFIX) === 0) ||
+!!(data.idb && typeof data.idb === 'object' && Object.keys(data.idb).some(k => k.indexOf(MOCHI_PREFIX) === 0));
+function confirmAndImport(d) {
+if (!window.openModal) return;
+const summary = backupSummary(d);
+window.openModal('确定导入数据？将覆盖当前所有数据，且无法恢复。', '', () => {
+doImportGo(d);
+}, { noInput: true, staticText: summary });
+}
 if (!hasMochiKeys) {
-toast('备份文件里没有 mochi 数据（键前缀不匹配）');
+const allKeys = Object.keys(data.ls || {}).concat(Object.keys(data.idb || {}));
+if (!allKeys.length) {
+toast('备份文件是空的（无任何数据键），没有可导入的数据');
+return;
+}
+const firstColon = allKeys[0].indexOf(':');
+if (firstColon < 0) {
+toast('备份文件键格式异常（无冒号分隔），无法导入');
+return;
+}
+const detectedPrefix = allKeys[0].slice(0, firstColon + 1);
+const allSamePrefix = allKeys.every(k => k.indexOf(detectedPrefix) === 0);
+if (!allSamePrefix) {
+toast('备份文件键前缀混乱（多种前缀），无法自动迁移。样例：' + allKeys.slice(0, 3).join('、'));
+return;
+}
+const mochiKeyTails = ['chat-msgs', 'avatar-user', 'avatar-partner', 'fish-total',
+'contacts', 'theme-mode', 'accent-color', 'active-contact', 'cc-groups',
+'reply-settings', 'chat-settings', 'desk-image-src', 'music-file:'];
+const tails = allKeys.map(k => k.slice(detectedPrefix.length));
+const looksMochi = tails.some(t => mochiKeyTails.some(p => t.indexOf(p) >= 0));
+if (!looksMochi) {
+toast('备份文件不像 mochi 数据（键尾不匹配）。前缀：' + detectedPrefix + '，样例：' + allKeys.slice(0, 2).join('、'));
 return;
 }
 if (!window.openModal) return;
-const summary = backupSummary(data);
-window.openModal('确定导入数据？将覆盖当前所有数据，且无法恢复。', '', () => {
-doImportGo(data);
-}, { noInput: true, staticText: summary });
+const sample = allKeys.slice(0, 3)
+.map(k => k + '  →  ' + MOCHI_PREFIX + k.slice(detectedPrefix.length)).join('\n');
+window.openModal(
+'检测到备份键前缀为「' + detectedPrefix + '」\n疑似 mochi 备份（键尾匹配），是否重写为「' + MOCHI_PREFIX + '」后导入？',
+'',
+() => {
+const rewrite = (obj) => {
+if (!obj || typeof obj !== 'object') return obj;
+const out = {};
+Object.keys(obj).forEach(k => {
+if (k.indexOf(detectedPrefix) === 0) out[MOCHI_PREFIX + k.slice(detectedPrefix.length)] = obj[k];
+else out[k] = obj[k];
+});
+return out;
+};
+data.ls = rewrite(data.ls);
+data.idb = rewrite(data.idb);
+confirmAndImport(data);
+},
+{ noInput: true, staticText: '键映射样例：\n' + sample + '\n\n点确定重写前缀并导入，点取消放弃。' }
+);
+return;
+}
+confirmAndImport(data);
 }
 function doImportGo(data) {
 impShow('正在导入…', '准备中', 2);
