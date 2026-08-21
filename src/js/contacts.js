@@ -12,6 +12,10 @@
     // migrateLegacy 把 bg-keepalive/bg-notify 迁进 default 并删全局键，非 default
     // 桌面刷新后开关读不到全局值自动变关（用户反馈「后台保活/后台弹窗自己关了」）。
     'bg-keepalive', 'bg-notify',
+    // v3.9.x：群聊全局设置——回复设置（reply-gc-*）与成员群聊形象（gc-profiles）
+    // 都是群聊（全局功能）的根命名空间键，绝不能迁移进 default 桌面（否则切换
+    // 桌面后设置读不到全局值、仿佛"丢失"）
+    'gc-profiles',
     '__last-backup', '__last-backup-remind', '__onboard-done', '__edge-backup-hint-done', '__auto-backup-snapshot'];
   function isExcluded(k) {
     const r = k.slice(G.length + 1);

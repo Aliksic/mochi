@@ -28,24 +28,77 @@
   let saveTimer = null;
   const RENDER_MAX = 200;
 
+  // ---- 群聊形象设置（v3.9.x，全局 xy-home-v2:gc-profiles，不随桌面隔离） ----
+  // { me: {name, avatar}, <cid>: {name, avatar} }——设置了群聊昵称/头像的成员/我，
+  // 在群聊页统一显示群聊形象；未设的字段回退该联系人桌面昵称/头像（lbl-*/avatar-*）。
+  // 群聊是全局功能（消息/回复设置均全局），成员形象也全局存储，切换桌面不丢。
+  const gcProfiles = {};
+  function gcProfileStore() { try { return window.xyStore(G); } catch (e) { return null; } }
+  function gcProfileLoad() {
+    try {
+      const v = gcProfileStore().get('gc-profiles');
+      if (v) {
+        const o = JSON.parse(v);
+        if (o && typeof o === 'object') Object.keys(o).forEach(k => { gcProfiles[k] = o[k]; });
+      }
+    } catch (e) {}
+  }
+  function gcProfileSave() {
+    try { gcProfileStore().set('gc-profiles', JSON.stringify(gcProfiles)); } catch (e) {}
+  }
+  function gcProfileGet(key) { return gcProfiles[key] || {}; }
+  // name/avatar 传空串或 undefined = 清除该字段；两个都空则删除整条记录
+  function gcProfileSet(key, name, avatar) {
+    const p = gcProfiles[key] || (gcProfiles[key] = {});
+    if (name === undefined) delete p.name; else if (name) p.name = name; else delete p.name;
+    if (avatar === undefined) delete p.avatar; else if (avatar) p.avatar = avatar; else delete p.avatar;
+    if (!p.name && !p.avatar) delete gcProfiles[key];
+    gcProfileSave();
+    refreshGroupViews();
+  }
+  // 群聊形象/成员变动后统一刷新（消息、成员面板、@面板、设置面板、标题）
+  function refreshGroupViews() {
+    try { renderAll(); } catch (e) {}
+    try { if (membersPanel && !membersPanel.hidden) renderMembersPanel(); } catch (e) {}
+    try { if (atPanel && !atPanel.hidden) renderAtPanel(); } catch (e) {}
+    try { if (settingsPanel && !settingsPanel.hidden) renderSettingsPanel(); } catch (e) {}
+    try { updateGroupName(); } catch (e) {}
+  }
+  gcProfileLoad();
+
   // ---- 成员信息 ----
   function getMembers() {
     try { return window.getContacts() || [{ id: 'default', name: '默认' }]; } catch (e) { return [{ id: 'default', name: '默认' }]; }
   }
   function memberName(cid) {
+    // v3.9.x：群聊昵称覆盖优先，未设置回退该联系人桌面昵称（lbl-partner）
+    try { const p = gcProfileGet(cid); if (p.name) return p.name; } catch (e) {}
     try { const lbl = window.storeFor(cid).get('lbl-partner'); if (lbl) return lbl; } catch (e) {}
     const m = getMembers().find(x => x.id === cid);
     return m ? m.name : '成员';
   }
   function memberAvatar(cid) {
+    try { const p = gcProfileGet(cid); if (p.avatar) return p.avatar; } catch (e) {}
     try { return window.storeFor(cid).get('avatar-partner') || ''; } catch (e) { return ''; }
   }
   function myName() {
+    // v3.9.x：我的群聊昵称覆盖优先（群聊里"我"不再随切换桌面变化），未设置回退当前桌面
+    try { const p = gcProfileGet('me'); if (p.name) return p.name; } catch (e) {}
     try { const v = window.activeStore().get('lbl-user'); if (v) return v; } catch (e) {}
     return '我';
   }
   function myAvatar() {
+    try { const p = gcProfileGet('me'); if (p.avatar) return p.avatar; } catch (e) {}
     try { return window.activeStore().get('avatar-user') || ''; } catch (e) { return ''; }
+  }
+  // 桌面原本昵称（设置面板里"原昵称"区分用；我的取当前桌面）
+  function deskPartnerName(cid) {
+    try { const lbl = window.storeFor(cid).get('lbl-partner'); if (lbl) return lbl; } catch (e) {}
+    const m = getMembers().find(x => x.id === cid);
+    return m ? m.name : '';
+  }
+  function deskMeName() {
+    try { return window.activeStore().get('lbl-user') || ''; } catch (e) { return ''; }
   }
 
   // ---- 头像渲染 ----
@@ -528,20 +581,169 @@
     membersBody.innerHTML = '';
     const meRow = document.createElement('div');
     meRow.className = 'gc-mp-item';
-    meRow.innerHTML = '<div class="gc-mp-av"></div><span class="gc-mp-name">' + escapeHtml(myName()) + '</span><span class="gc-mp-tag">我</span>';
+    // v3.9.x：显示群聊昵称（主）+ 桌面原昵称（副，区分用）
+    const meDesk = deskMeName();
+    meRow.innerHTML = '<div class="gc-mp-av"></div><span class="gc-mp-name">' + escapeHtml(myName()) +
+      '<span class="gc-mp-sub">' + (meDesk ? '桌面昵称：' + escapeHtml(meDesk) : '') + '</span></span><span class="gc-mp-tag">我</span>';
     fillAv(meRow.querySelector('.gc-mp-av'), myAvatar());
     membersBody.appendChild(meRow);
     getMembers().forEach(m => {
       const row = document.createElement('div');
       row.className = 'gc-mp-item';
-      row.innerHTML = '<div class="gc-mp-av"></div><span class="gc-mp-name">' + escapeHtml(memberName(m.id)) + '</span>';
+      const desk = deskPartnerName(m.id);
+      row.innerHTML = '<div class="gc-mp-av"></div><span class="gc-mp-name">' + escapeHtml(memberName(m.id)) +
+        '<span class="gc-mp-sub">' + (desk ? '桌面昵称：' + escapeHtml(desk) : '') + '</span></span>';
       fillAv(row.querySelector('.gc-mp-av'), memberAvatar(m.id));
       membersBody.appendChild(row);
     });
   }
-  if (membersBtn) membersBtn.addEventListener('click', () => { renderMembersPanel(); if (membersPanel) membersPanel.hidden = false; });
+  // 点击群名标题 → 打开成员面板（右上角三点菜单里也有「群成员」入口）
   if (nameEl) nameEl.addEventListener('click', () => { renderMembersPanel(); if (membersPanel) membersPanel.hidden = false; });
   if (membersClose) membersClose.addEventListener('click', () => { if (membersPanel) membersPanel.hidden = true; });
+
+  // ---- 右上角三点菜单（v3.9.x：群成员 + 群聊设置） ----
+  const moreBtn = document.getElementById('gc-more-btn');
+  const moreMenu = document.getElementById('gc-more-menu');
+  function showMoreMenu(v) { if (moreMenu) moreMenu.hidden = !v; }
+  if (moreBtn) moreBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    showMoreMenu(moreMenu.hidden);
+  });
+  document.addEventListener('click', () => showMoreMenu(false));
+  const moreMembers = document.getElementById('gc-more-members');
+  if (moreMembers) moreMembers.addEventListener('click', () => {
+    showMoreMenu(false);
+    renderMembersPanel();
+    if (membersPanel) membersPanel.hidden = false;
+  });
+  const moreSettings = document.getElementById('gc-more-settings');
+  if (moreSettings) moreSettings.addEventListener('click', () => {
+    showMoreMenu(false);
+    renderSettingsPanel();
+    if (settingsPanel) settingsPanel.hidden = false;
+  });
+
+  // ---- 群聊设置面板（v3.9.x：我的群聊形象 + 成员群聊形象） ----
+  const settingsPanel = document.getElementById('gc-settings-panel');
+  const settingsBody = document.getElementById('gc-set-body');
+  const settingsClose = document.getElementById('gc-set-close');
+  // 轻提示（与全站一致）
+  function toast(msg) {
+    let t = document.getElementById('cc-toast');
+    if (!t) {
+      t = document.createElement('div');
+      t.id = 'cc-toast';
+      document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    t.className = 'cc-toast'; void t.offsetWidth; t.className = 'cc-toast show';
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => { t.className = 'cc-toast'; }, 2000);
+  }
+  // 头像压缩（与聊天设置一致：最长边 256、JPEG 0.85）
+  function compressHead(dataUrl, maxSide) {
+    return new Promise((resolve) => {
+      try {
+        if (typeof dataUrl !== 'string' || !dataUrl || dataUrl.length > 8 * 1024 * 1024) { resolve(null); return; }
+        const img = new Image();
+        img.onload = () => {
+          try {
+            if (img.width * img.height > 26000000) { resolve(null); return; }
+            const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+            const w = Math.max(1, Math.round(img.width * scale));
+            const h = Math.max(1, Math.round(img.height * scale));
+            const c = document.createElement('canvas');
+            c.width = w; c.height = h;
+            c.getContext('2d').drawImage(img, 0, 0, w, h);
+            resolve(c.toDataURL('image/jpeg', 0.85));
+          } catch (e) { resolve(null); }
+        };
+        img.onerror = () => resolve(null);
+        img.src = dataUrl;
+      } catch (e) { resolve(null); }
+    });
+  }
+  function pickAvatarFile(cb) {
+    const input = document.createElement('input');
+    input.type = 'file'; input.accept = 'image/*';
+    input.onchange = () => {
+      const f = input.files && input.files[0];
+      if (!f) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        compressHead(reader.result, 256).then(data => {
+          if (!data) { toast('图片过大或格式不支持，请换一张小图'); return; }
+          cb(data);
+        });
+      };
+      reader.readAsDataURL(f);
+    };
+    input.click();
+  }
+  // 渲染设置面板：我的群聊（昵称/头像）+ 每个成员一行（群聊昵称 + 桌面原昵称区分）
+  function renderSettingsPanel() {
+    if (!settingsBody) return;
+    settingsBody.innerHTML = '';
+    const esc = escapeHtml;
+    const item = (key, curName, curAv, deskName) => {
+      const row = document.createElement('div');
+      row.className = 'gc-set-item';
+      const hasOverride = !!(curName || curAv);
+      row.innerHTML =
+        '<div class="gc-set-av"></div>' +
+        '<div class="gc-set-info">' +
+          '<div class="gc-set-name">' + esc(curName || '跟随桌面') + (key === 'me' ? '<span class="gc-set-tag">我</span>' : '') + '</div>' +
+          '<div class="gc-set-desk">' + (deskName ? '桌面昵称：' + esc(deskName) : '') + '</div>' +
+        '</div>' +
+        '<div class="gc-set-ops">' +
+          '<button class="gc-set-btn" data-op="av">' + (curAv ? '换头像' : '设头像') + '</button>' +
+          '<button class="gc-set-btn" data-op="name">' + (curName ? '改昵称' : '设昵称') + '</button>' +
+          (hasOverride ? '<button class="gc-set-btn ghost" data-op="reset">重置</button>' : '') +
+        '</div>';
+      // 预览：群聊当前生效头像（覆盖优先，回退桌面头像）
+      let effAv = curAv;
+      if (!effAv) { try { effAv = key === 'me' ? myAvatar() : memberAvatar(key); } catch (e) {} }
+      fillAv(row.querySelector('.gc-set-av'), effAv || '');
+      row.querySelector('[data-op="av"]').addEventListener('click', () => {
+        pickAvatarFile(data => gcProfileSet(key, undefined, data));
+      });
+      row.querySelector('[data-op="name"]').addEventListener('click', () => {
+        if (!window.openModal) return;
+        window.openModal(key === 'me' ? '我的群聊昵称' : '成员群聊昵称', curName, (v) => {
+          gcProfileSet(key, (v || '').trim(), undefined);
+        }, { maxlength: 30 });
+      });
+      if (hasOverride) {
+        row.querySelector('[data-op="reset"]').addEventListener('click', () => {
+          gcProfileSet(key, '', '');
+        });
+      }
+      return row;
+    };
+    // —— 我的群聊 ——
+    const t1 = document.createElement('div');
+    t1.className = 'gc-set-title';
+    t1.textContent = '我的群聊';
+    settingsBody.appendChild(t1);
+    const meP = gcProfileGet('me');
+    settingsBody.appendChild(item('me', meP.name || '', meP.avatar || '', deskMeName()));
+    // —— 成员群聊形象 ——
+    const t2 = document.createElement('div');
+    t2.className = 'gc-set-title';
+    t2.textContent = '成员群聊形象';
+    settingsBody.appendChild(t2);
+    getMembers().forEach(m => {
+      const p = gcProfileGet(m.id);
+      settingsBody.appendChild(item(m.id, p.name || '', p.avatar || '', deskPartnerName(m.id)));
+    });
+    // —— 底部说明 ——
+    const note = document.createElement('div');
+    note.className = 'gc-set-note';
+    note.textContent = '群聊昵称/头像只在本群聊页生效；成员回复内容来自该成员桌面自己的字卡库。';
+    settingsBody.appendChild(note);
+  }
+  if (settingsClose) settingsClose.addEventListener('click', () => { if (settingsPanel) settingsPanel.hidden = true; });
+  if (settingsPanel) settingsPanel.addEventListener('click', (e) => { if (e.target === settingsPanel) settingsPanel.hidden = true; });
 
   // ---- @提及面板 ----
   function renderAtPanel() {
@@ -575,9 +777,13 @@
     try { hideTyping(); } catch (e) {}
     updateGroupName();
     renderAll();
+    try { if (settingsPanel && !settingsPanel.hidden) renderSettingsPanel(); } catch (e) {}
   });
 
-  // 暴露（供数据备份等用）
+  // 暴露（供数据备份/回归测试用）
   window.groupChatGetMsgs = function () { return msgs.slice(); };
   window.groupChatClear = function () { msgs = []; saveNow(); renderAll(); };
+  window.groupChatProfileGet = function (key) { try { return JSON.parse(JSON.stringify(gcProfileGet(key))); } catch (e) { return {}; } };
+  // name/avatar：传 undefined 保持不变，传空串清除该字段
+  window.groupChatProfileSet = function (key, name, avatar) { gcProfileSet(key, name, avatar); };
 })();

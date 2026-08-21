@@ -341,6 +341,12 @@
             // v3.6.x：IDB 合并产生新数据才写回（避免每次 loadMsgs 全量重写）
             if (changed) {
               try { if (window.idbSet) window.idbSet(myPrefix + ':chat-msgs', JSON.stringify(msgs)); } catch (e) {}
+              // v3.9.x 修复（真我 Edge 切联系人后聊天记录消失）：IDB 权威合并后同步写
+              //   LS 快照，确保曾在 IDB 读取成功过的联系人有 LS 兜底——下次切回即使
+              //   IDB 事务挂起，loadMsgs 同步阶段也能从 LS 快照渲染，不消失。原实现
+              //   只写 IDB 不写 LS，"只在 IDB、从未发消息"的联系人查看后 LS 仍空，
+              //   切走再切回时 IDB 挂起 + LS 空 → 永久消失
+              try { writeLsSnapshot(JSON.stringify(msgs), myPrefix); } catch (e) {}
               // 聊天页当前可见且贴近底部 → 重新渲染窗口，让恢复出的历史立即显示
               // v3.6.x：改用分页渲染（原全量 forEach 渲染几千条会卡顿）
               if (chatVisible() && chatNearBottom()) {
@@ -2340,6 +2346,7 @@ function partialRetractMsg(msgEl, side) {
       const rpMin = Math.max(1, Number(c['reply-min']) || 1);
       const rpMax = Math.max(rpMin, Number(c['reply-max']) || 2);
       const count = randInt(rpMin, rpMax);
+      try { console.log('[mochi-reply] scheduleReply count=%s rpMin=%s rpMax=%s raw reply-min=%s reply-max=%s', count, rpMin, rpMax, c['reply-min'], c['reply-max']); window.__replyDiag = (window.__replyDiag||0)+1; window.__replyOnceDiag = 0; const _t = document.getElementById('cc-toast') || (function(){const x=document.createElement('div');x.id='cc-toast';document.body.appendChild(x);return x;})(); _t.textContent = '诊断: count='+count+' reply-max='+c['reply-max']+' rpMin='+rpMin+' rpMax='+rpMax; _t.className='cc-toast'; void _t.offsetWidth; _t.className='cc-toast show'; clearTimeout(_t._dt); _t._dt = setTimeout(function(){_t.className='cc-toast';}, 8000); } catch(e){}
       // v3.7.x：一轮回复最多引用一次。引用源 quoteSrc 在本轮固定不变（TA 回复期间
       // 我没发新消息），若每条独立掷骰 hit(quote-prob) 会出现两种观感问题：
       //  ① 多条都命中 → 连续引用同一条消息发很多条；
@@ -2360,6 +2367,7 @@ function partialRetractMsg(msgEl, side) {
           // 最后一条回复完成后：音乐 TA 可能请求一起听歌（延后 2 秒）
           if (i === count - 1) {
             setTimeout(() => { if (!sameCid()) return; if (window.maybeMusicRequest) window.maybeMusicRequest(); }, 2000);
+            try { setTimeout(function(){ const _t = document.getElementById('cc-toast'); if(_t){ _t.textContent='诊断: replyOnce总次数='+window.__replyOnceDiag+' (count='+count+')'; _t.className='cc-toast'; void _t.offsetWidth; _t.className='cc-toast show'; clearTimeout(_t._dt2); _t._dt2=setTimeout(function(){_t.className='cc-toast';},8000); } }, 4000); } catch(e){}
           }
         }, i * randInt(1200, 2800));
       }
@@ -2368,6 +2376,7 @@ function partialRetractMsg(msgEl, side) {
   // 单条回复：生成内容 + 发送 + 收藏/情绪/撤回 附带逻辑（供普通回复与「让对方继续说」共用）
   // v3.7.x：silent——一轮多条回复时第 2+ 条不响音效（每轮只响一次）
   function replyOnce(c, quote, silent) {
+    try { console.log('[mochi-reply] replyOnce #%s quote=%s silent=%s', (window.__replyOnceDiag=(window.__replyOnceDiag||0)+1), !!quote, !!silent); } catch(e){}
     // v3.7.x：同 scheduleReply，回调执行时若已切联系人则放弃（防串桌面）
     const myCid = window.__activeCid || 'default';
     const sameCid = () => (window.__activeCid || 'default') === myCid;
@@ -5761,6 +5770,7 @@ function partialRetractMsg(msgEl, side) {
     draftImgs = [];
     renderDraft();
     if (window.logFish) window.logFish();
+    try { window.__replyOnceDiag = 0; console.log('[mochi-reply] addMsg 发送, 重置 replyOnce 计数'); } catch(e){}
     scheduleReply();
   };
   if (send) send.addEventListener('click', () => addMsg(input.innerText));

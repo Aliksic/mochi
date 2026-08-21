@@ -1816,6 +1816,14 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6l3 4h12l3-4"/><path d="M6 10v8a2 2 0 002 2h8a2 2 0 002-2v-8"/><path d="M12 10v10"/><path d="M9 14h6"/></svg>
             <span class="garden-tool-label">收获</span>
           </button>
+          <button class="garden-tool batch" data-tool="waterall" title="一键浇水">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3S4 7 4 9.5a3 3 0 006 0C10 7 7 3 7 3z"/><path d="M17 3S14 7 14 9.5a3 3 0 006 0C20 7 17 3 17 3z"/><path d="M12 11S9 15 9 17.5a3 3 0 006 0C15 15 12 11 12 11z"/></svg>
+            <span class="garden-tool-label">全浇</span>
+          </button>
+          <button class="garden-tool batch" data-tool="harvestall" title="一键收获">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h18l-2 12H5z"/><path d="M8 8V5a4 4 0 018 0v3"/><path d="M12 12v4"/></svg>
+            <span class="garden-tool-label">全收</span>
+          </button>
         </div>
         <!-- 花园日志 -->
         <div class="garden-log glass" id="garden-log">
@@ -2865,9 +2873,21 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
         </span>
         <span class="ch-name gc-name" id="gc-name" title="点击查看群成员">群聊</span>
-        <span class="ch-settings gc-members-btn" id="gc-members-btn" title="群成员">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><circle cx="17" cy="8" r="3.2"/><path d="M3 19c0-3 2.7-5 6-5s6 2 6 5"/><path d="M14 19c0-3 2.7-5 6-5"/></svg>
+        <!-- v3.9.x：右上角三点菜单（群成员 / 群聊设置） -->
+        <span class="ch-settings gc-more-btn" id="gc-more-btn" title="更多">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>
         </span>
+      </div>
+      <!-- 三点下拉菜单 -->
+      <div class="gc-more-menu" id="gc-more-menu" hidden>
+        <div class="gc-more-item" id="gc-more-members">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><circle cx="17" cy="8" r="3.2"/><path d="M3 19c0-3 2.7-5 6-5s6 2 6 5"/><path d="M14 19c0-3 2.7-5 6-5"/></svg>
+          <span>群成员</span>
+        </div>
+        <div class="gc-more-item" id="gc-more-settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33h.01a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51h.01a1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82v.01a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+          <span>群聊设置</span>
+        </div>
       </div>
       <div class="chat-body gc-body" id="gc-body"></div>
       <div class="chat-typing gc-typing" id="gc-typing" hidden></div>
@@ -2890,6 +2910,14 @@
       <div class="gc-at-panel" id="gc-at-panel" hidden>
         <div class="gc-at-head">选择要@的成员</div>
         <div class="gc-at-body" id="gc-at-body"></div>
+      </div>
+      <!-- 群聊设置面板（v3.9.x：我的群聊形象 + 成员群聊形象，内容 JS 渲染） -->
+      <div class="gc-settings-panel" id="gc-settings-panel" hidden>
+        <div class="gc-set-head">
+          <span>群聊设置</span>
+          <button class="gc-mp-close" id="gc-set-close">✕</button>
+        </div>
+        <div class="gc-set-body" id="gc-set-body"></div>
       </div>
     </div>
 

@@ -365,6 +365,7 @@
       if (_cb) _cb.style.transform = 'none'; // iOS 豁免合成层，避免滚动卡顿
       var _vv = window.visualViewport;
       var _kbActive = false;
+      var _pinUntil = 0; // v3.7.x：键盘开合动画窗口，窗口内才 pinScrollTop
       var _noKbH = _vv ? _vv.height : window.innerHeight;
       // v3.6.x：键盘弹出期间把页面滚动钉在顶部——iOS Safari 键盘弹出时会自动把页面
       // 滚动到聚焦的输入框（聊天输入栏在 .phone 底部），而 .phone 已按 visualViewport
@@ -404,13 +405,18 @@
           _phone.style.alignSelf = 'flex-start';
           // 键盘弹出瞬间浏览器可能已滚动页面，立即归零，防止灰底露出
           pinScrollTop();
+          // v3.7.x：键盘弹出动画期（约 500ms）内持续钉顶防灰底露出；
+          //   之后稳态打字不再 pinScrollTop——iOS Safari 在 contenteditable 里
+          //   打字时系统会微滚布局视口让 caret 可见，每次强制归零会与系统滚动
+          //   打架，表现就是「每打一个字屏幕闪一下」（iPhone 14 Safari 复现）
+          _pinUntil = Date.now() + 500;
           startKbWatch();
         }
         if (_kbActive) {
           var _hs = _h + 'px';
           if (_phone.style.height !== _hs) _phone.style.height = _hs; // 值不变不重排
-          // 键盘动画/滚动期间持续钉在顶部（visualViewport 高频变化也不会漏）
-          pinScrollTop();
+          // 仅在键盘开合动画窗口内钉顶；稳态打字期不 pin，避免 caret 微滚↔归零闪屏
+          if (Date.now() < _pinUntil) pinScrollTop();
         }
         if (!_open && _kbActive) restoreKb();
       }
@@ -463,7 +469,7 @@
   // v3.6.x：去掉 #desk-msg——新消息横幅只是顶部 fixed 小提示条（6 秒自动隐藏，
   //   不遮挡滚动区域），把它当浮层锁滚动会让整个页面在横幅弹出的 6 秒内滑不动，
   //   用户感知为「页面卡住/滑动失效」（iPad 夸克反馈）。横幅自身交互由 chat.js 处理。
-  const FLOAT_SELECTORS = ['#tc-mask', '#cc-export-mask', '#call-mask', '#feed-notice-panel', '#poke-card', '#emoji-panel', '#chat-ask-panel', '#qa-mask', '#chat-more-panel', '#chat-search', '#chat-decision-panel', '#chat-divine-panel', '#chat-rps-panel', '#chat-call-panel', '#chat-pong-panel', '#chat-snake-panel', '#avlib-card', '#ck-panel', '.mg-mask', '#modal-mask', '#msg-actions', '#desk-image-viewer', '.desk-lib', '#gc-members-panel', '#gc-at-panel'];
+  const FLOAT_SELECTORS = ['#tc-mask', '#cc-export-mask', '#call-mask', '#feed-notice-panel', '#poke-card', '#emoji-panel', '#chat-ask-panel', '#qa-mask', '#chat-more-panel', '#chat-search', '#chat-decision-panel', '#chat-divine-panel', '#chat-rps-panel', '#chat-call-panel', '#chat-pong-panel', '#chat-snake-panel', '#avlib-card', '#ck-panel', '.mg-mask', '#modal-mask', '#msg-actions', '#desk-image-viewer', '.desk-lib', '#gc-members-panel', '#gc-at-panel', '#gc-settings-panel'];
   let locked = false;
   function applyLock() {
     const anyOpen = FLOAT_SELECTORS.some(function (sel) {

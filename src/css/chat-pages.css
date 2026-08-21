@@ -1234,7 +1234,11 @@
 .tc-qtext[data-edit] { cursor:pointer; }
 .tc-qtext[data-edit]:hover { color:var(--muted); }
 .mg-block.mg-dragging { opacity:.4; }
-.ta-add { display:flex; gap:8px; margin-top:8px; }
+/* v3.9.x：flex-wrap 修复——之前缺 wrap 且 .ta-opts 是 flex:1 0 100% + shrink:0，
+   单选切换 textarea 显示时（nowrap 不换行）把同行的问题输入框挤成 ~25px 窄条，
+   文字在窄条内竖排溢出，表现=「文字飞出输入栏」（安卓 ce-box / iOS 原生均复现；
+   旧 translateZ 修复只治合成层位置表象，未治挤压根因，故保留 translateZ 防合成层错位） */
+.ta-add { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
 .ta-add input {
   flex:1; min-width:0; border:1px solid rgba(0,0,0,.1); border-radius:10px;
   padding:9px 12px; font-size:13px; font-family:inherit; outline:none; background:#fff; color:var(--ink);
@@ -1256,7 +1260,7 @@
 /* v3.6.x：问问TA 添加区类型切换——单选下拉 + 选项输入框 */
 .ta-type { flex:0 0 auto; width:92px; font-size:12px; padding:0 6px; }
 .ta-add .ta-opts {
-  flex:1 0 100%; box-sizing:border-box; margin-top:8px;
+  flex:1 0 100%; box-sizing:border-box;
   border:1px solid rgba(0,0,0,.1); border-radius:10px;
   padding:9px 12px; font-size:13px; font-family:inherit; outline:none; background:#fff; color:var(--ink);
   resize:vertical; line-height:1.5;

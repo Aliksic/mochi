@@ -4,6 +4,32 @@
 
 ## 规则
 
+### 2026-08-21（用户需求「群聊页右上角三个点 → 群聊设置：联系人/我的群聊头像昵称」）
+- [本会话·完成]（**已构建 verify 10/10 + 新回归 22/22 + 旧群聊冒烟 20/20，已提交**）：`src/js/group-chat.js`（AI-A 域）+ `src/template.html`（AI-A 域）+ `src/css/group-chat.css`（AI-A 域）+ `src/js/contacts.js`（**AI-B 域代改 1 行**）+ `src/js/mobile-adapt.js`（**AI-B 域代改 1 行**）+ `tools/verify-gc-profile-settings.mjs`（新回归）+ `tools/smoke-group-chat.mjs`（适配三点菜单入口）。
+  - **入口**：群聊页头部右上角群成员图标按钮 → 三点按钮 `#gc-more-btn`（⋮）；下拉菜单 `#gc-more-menu` 含「群成员」「群聊设置」；点击群名标题仍可开成员面板（保留旧入口）。
+  - **群聊设置面板** `#gc-settings-panel`（底部弹层，类 gc-at-panel 样式）：
+    - 「我的群聊」section：我的群聊头像（点击设头像/换头像，文件上传 → 256px JPEG 0.85 压缩 + toast 提示）+ 我的群聊昵称（openModal 弹窗，maxlength 30，空值/清除即回退跟随桌面）+ 显示当前桌面昵称作为副行区分。
+    - 「成员群聊形象」section：每个联系人一列，行为头像预览 + 群聊昵称（主）+ 「桌面昵称：xxx」副行（原桌面昵称作为区分）+ 设头像/改昵称/重置（红色，仅有覆盖时显示）按钮。
+    - 底部说明：「群聊昵称/头像只在本群聊页生效；成员回复内容来自该成员桌面自己的字卡库。」
+  - **存储**：全局 `xy-home-v2:gc-profiles`（不随桌面隔离，跨桌面/刷新都有效），结构 `{ me: {name, avatar}, <cid>: {name, avatar} }`，走 `xyStore(G).get/set('gc-profiles')` 三写（内存+LS+IDB，自动随 idbRestore 回填）。
+  - **覆盖生效路径**：`memberName(cid)`/`memberAvatar(cid)`/`myName()`/`myAvatar()` 先读群聊覆盖、再回退桌面值（lbl-*/avatar-*）；影响：消息渲染（@提及检测、撤回文案、拍一拍文本、我的头像）、成员面板（主+副行）、@提及面板（成员显示群聊昵称），全部走覆盖 → 一次设置全场景生效。
+  - **群聊回复内容按桌面**：成员回复字卡池 `gcPool(cid)` 读 `storeFor(cid).get('cc-groups')` + `getMediaCardsFor(cid, ...)`（v3.9.x 既有行为），不同桌面联系人用各自桌面的字卡库，无需改动。
+  - **持久化与迁移**：`contacts.js` isExcluded 新增 `'gc-profiles'`（防 migrateLegacy 误迁进 default 桌面）+ 注释说明；mobile-adapt.js FLOAT_SELECTORS 新增 `'#gc-settings-panel'`（背景滚动锁）。两文件均 AI-B 域，请知悉。
+  - **渲染刷新**：`gcProfileSet(key,name,avatar)` 写盘后统一调 `refreshGroupViews()`（renderAll + 成员面板/设置面板/标题），切联系人/开群聊时也按需刷新（contact-switched 监听中加 settingsPanel 可见时重新渲染）。
+  - **回归**：`tools/verify-gc-profile-settings.mjs` 22/22 — 三点菜单/设置面板/我的+成员行/桌面原昵称副行/成员群聊昵称+头像生效/重置回退/@触发回复/持久化+迁移排除（refresh 后 gc-profiles 仍在根键、未进 default 命名空间）/无 JS 异常；`tools/smoke-group-chat.mjs` 20/20（更新用例 9 入口到三点菜单→群成员）；verify 布局 10/10。
+  - ⚠️ 对方注意：① contacts.js / mobile-adapt.js 各 1 行业务无关改动（全局键保护 + 滚动锁），属于本功能必需；② 旧的 `#gc-members-btn` 已移除，旧回归脚本里若还有引用需改为「gc-more-btn → gc-more-members」；③ `tools/diag-ta-ask-single-input.mjs` 工作区未跟踪的临时脚本（19:00 起），本次构建未包含，按你的安排处理。
+
+### 2026-08-21（用户反馈「iOS QQ浏览器、夸克浏览器：使用音乐功能，无法导入网易云歌单」）
+- [AI-A·完成]（**已构建 verify 10/10，未提交**）：`src/js/music-player.js`（AI-A 域）。
+  - **排查结论**：① 主源 `api.injahow.cn` 和备用源 `api.i-meto.com` 的 CORS 头正确（`Access-Control-Allow-Origin: *`）、返回 200，从服务端看无问题；② 兜底的 3 个 CORS 代理**全部失效**——`api.allorigins.win` 返回 520、`corsproxy.io` 返回 403、`api.codetabs.com` 超时，导致 iOS QQ/夸克浏览器即使主源被内容过滤拦截、兜底也全挂；③ 找到可用新代理 `proxy.cors.sh`（Cloudflare Workers，CORS 头正确、返回完整 v6 歌单数据 200 首）。
+  - **修复**：
+    1. `fetchNeteasePlaylist`：用 `proxy.cors.sh` 替换已失效的 `codetabs`（保留 allorigins/corsproxy 作低优先级兜底，未来可能恢复）；`proxy.cors.sh` 放在 CORS 代理首位。
+    2. `fetchV6Durations`：同样用 `proxy.cors.sh` 替换 `codetabs`（时长补全兜底链恢复可用）。
+    3. `fetchNeteaseInfo`：在源列表开头加 `proxy.cors.sh`（单曲歌名/歌手识别也走新代理）。
+    4. 导入失败提示增强：检测到 QQ/夸克浏览器（UA 含 `QQBrowser`/`Quark`）时提示「当前浏览器可能拦截了音乐 API，可换用 Safari 重试」，其他浏览器保持原提示。
+  - 验证：`node --check` 通过 → build（sw 缓存 mochi-mt30v2rj）→ verify 10/10。
+  - ⚠️ 构建前已确认工作区无对方进行中改动；本次构建统一包含工作区已保存改动。**注意**：`proxy.cors.sh` 的 URL 格式是 `https://proxy.cors.sh/<未encode的目标URL>`（path+query 拼接），与 allorigins/corsproxy 的 `?url=encode(目标)` 格式不同，已在代码里分别处理。
+
 ### 2026-08-21（用户反馈「有时候发送聊天消息，没有自动把位置到最底最新」）
 - [本会话·完成]（**滚动修复随 65ca475 入库，回归脚本完善在 d04a5eb 独立提交，均含构建产物**）：`src/js/chat.js`（AI-A 域，代改 3 处）+ `tools/verify-chat-scroll-bottom.mjs`。
   - **根因 1（上翻后发送不滚）**：maybeScrollChatBottom 贴底守卫阈值 120px < 图片消息高度上限 260px，用户轻微上翻后守卫永久 false。修复：side:out（我发送）一律贴底，side:in 才看守卫。
@@ -1042,3 +1068,12 @@
   - 验证：verify-time-divider.mjs 9/9（分隔条数量/首条日期文案/msg-time 隐藏/增量补插/切回 CSS 隐藏/即时重渲染/收藏群聊隔离）+ verify 10/10。
   - ⚠️ 本提交含 AI-A 累积改动（聊天批量渲染发送贴底 pendingOutScroll / 字卡池分类开关 catOn / IDB 切换挂起 / verify-chat-scroll-bottom、verify-chat-switch-idb-hang、verify-invite-settings、verify-mail-send-reply），已一并构建验证，请确认。
   - ⚠️ 编辑期间 chat.js 有并发修改（21:57 AI-A 的 pendingOutScroll 等），我按 21:59 快照编辑，构建前全量 node --check 通过；若对方 21:59 后还有新改动未提交，请自行 commit。
+
+### 2026-08-21（用户反馈：聊天更多功能「问问ta」点击单选题后，问题输入栏输入文字飞出输入栏）
+- [AI-B·完成]（**已构建 verify 10/10 + 专项诊断通过，未提交**）：`src/css/chat-pages.css`（AI-A 域，AI-B 越界代修）。
+  - **根因**：`src/css/chat-pages.css` 的 `.ta-add { display:flex; gap:8px; }` 缺 `flex-wrap:wrap`；`.ta-add .ta-opts` 是 `flex:1 0 100%`（grow 1, **shrink 0**, basis 100%）。单选切换 textarea 从 hidden 变显示时，flex 容器默认 nowrap，textarea ce-box 占据整行宽度且不允许压缩，同行问题输入框 ce-box（`flex:1`）被挤成 **25px 宽窄条**，文字在窄条内竖排溢出——视觉即"文字飞出输入栏"。
+  - **旧修复（v3.7.x `.ta-add .ce-box:focus { transform:translateZ(0); }`）治标不治本**：只动合成层位置表象，未治挤压根因，对窄框场景无效；且 iOS 不转 ce-box（原生 input 同样被挤窄）——旧修复漏了 iOS。
+  - **修复**：① `.ta-add` 加 `flex-wrap:wrap`；② `.ta-add .ta-opts` 去掉 `margin-top:8px`（gap 已提供行间距，避免 16px 双间距）。`askAddFormHtml` DOM 结构未动。
+  - **诊断工具** `tools/diag-ta-ask-single-input.mjs`：注入一条自定义问题 + 选单选 + 输入文字，比对 boxRect/textRect。修复前 w:25 h:156（窄条）/textRect w:13 h:134（竖排）；修复后 w:251 h:39（正常）/textRect w:91 h:17（横排），optsBox top 953 > inpBox top 906 换行到第二行 ✓。
+  - 验证：verify 10/10 + diag-ta-ask-single-input 实测 ✓。未提交。
+  - ⚠️ AI-B 越界代修 AI-A 域 chat-pages.css（用户直接反馈 + 与 ta-ask.js askAddFormHtml 强相关）。本提交如一并提交将含 AI-A 上一轮未提交改动（music-player.js 的网易云代理更换 + mobile-adapt.js 上一轮未提交键盘 pinUntil 修复），请确认。

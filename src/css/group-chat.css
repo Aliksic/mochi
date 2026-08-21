@@ -1,7 +1,7 @@
 /* ===== 群聊页样式 =====
    复用 chat-main.css 的 .chat-head/.chat-body/.chat-input-row/.msg/.msg-in/.msg-out/
    .msg-bubble/.msg-av/.msg-side/.msg-time/.chat-typing/.chat-send/.ch-input-btn/.ch-back/.ch-name
-   本文件仅补充群聊特有样式（成员昵称、成员面板、@提及面板、placeholder）。 */
+   本文件仅补充群聊特有样式（成员昵称、成员面板、@提及面板、三点菜单、群聊设置面板、placeholder）。 */
 
 /* 成员消息昵称（头像下方小字） */
 .gc-from-name {
@@ -13,6 +13,69 @@
 .gc-input:empty:before {
   content: attr(data-ph); color: #aaa; pointer-events: none;
 }
+
+/* ---- 右上角三点下拉菜单（v3.9.x） ---- */
+.gc-head { position: relative; }
+.gc-more-menu {
+  position: absolute; top: 42px; right: 2px; z-index: 60;
+  min-width: 148px; padding: 4px;
+  background: #fff; border: 1px solid rgba(0,0,0,.07); border-radius: 12px;
+  box-shadow: 0 6px 24px rgba(0,0,0,.14);
+}
+.gc-more-menu[hidden] { display: none; }
+.gc-more-item {
+  display: flex; align-items: center; gap: 9px;
+  padding: 10px 14px; font-size: 14px; border-radius: 8px; cursor: pointer;
+  color: #222;
+}
+.gc-more-item:active { background: #f4f4f4; }
+.gc-more-item svg { width: 17px; height: 17px; color: #555; flex-shrink: 0; }
+
+/* ---- 群聊设置面板（底部弹层，v3.9.x） ---- */
+.gc-settings-panel {
+  position: fixed; left: 0; right: 0; bottom: 0;
+  max-height: 78vh; background: #fff; border-radius: 16px 16px 0 0;
+  box-shadow: 0 -4px 20px rgba(0,0,0,.12); z-index: 210; overflow: hidden;
+  display: flex; flex-direction: column;
+}
+.gc-settings-panel[hidden] { display: none; }
+.gc-set-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px; border-bottom: 1px solid rgba(0,0,0,.06); font-weight: 600;
+}
+.gc-set-body { overflow-y: auto; padding: 4px 0 16px; }
+.gc-set-title { padding: 12px 16px 4px; font-size: 13px; color: #888; }
+.gc-set-item {
+  display: flex; align-items: center; gap: 10px; padding: 10px 16px;
+}
+.gc-set-av {
+  width: 40px; height: 40px; border-radius: 50%; background: #f0f0f0;
+  display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;
+}
+.gc-set-av img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
+.gc-set-av svg { width: 60%; height: 60%; }
+.gc-set-info { flex: 1; min-width: 0; }
+.gc-set-name {
+  font-size: 14px; font-weight: 500; color: #222;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  display: flex; align-items: center; gap: 6px;
+}
+.gc-set-tag {
+  font-size: 11px; color: #999; background: #f4f4f4;
+  padding: 1px 7px; border-radius: 8px; flex-shrink: 0;
+}
+.gc-set-desk {
+  font-size: 11px; color: #999; margin-top: 2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.gc-set-ops { display: flex; gap: 6px; flex-shrink: 0; }
+.gc-set-btn {
+  font-size: 12px; padding: 5px 11px; border: 1px solid #ddd; border-radius: 8px;
+  background: #fafafa; color: #333; cursor: pointer; white-space: nowrap;
+}
+.gc-set-btn:active { background: #eee; }
+.gc-set-btn.ghost { color: #a32; border-color: #f3c0c0; background: #fff5f5; }
+.gc-set-note { padding: 12px 16px 0; font-size: 11px; color: #aaa; line-height: 1.6; }
 
 /* ---- 成员列表面板（居中弹层） ---- */
 .gc-members-panel {
@@ -40,6 +103,8 @@
 .gc-mp-av img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
 .gc-mp-av svg { width: 60%; height: 60%; }
 .gc-mp-name { flex: 1; font-size: 14px; }
+/* v3.9.x：成员面板副行——桌面原昵称（区分同名/群聊昵称来源） */
+.gc-mp-sub { display: block; font-size: 11px; color: #999; margin-top: 2px; }
 .gc-mp-tag { font-size: 11px; color: #999; background: #f4f4f4; padding: 2px 8px; border-radius: 8px; }
 
 /* ---- @提及面板（底部弹出） ---- */

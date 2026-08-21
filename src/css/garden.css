@@ -12,11 +12,11 @@
 .garden-scroll { flex:1; overflow-y:auto; scrollbar-width:none; -ms-overflow-style:none; }
 .garden-scroll::-webkit-scrollbar { display:none; }
 
-/* 花园网格：2行×3列，每格圆角卡片 */
+/* 花园网格：3行×4列，每格圆角卡片 */
 .garden-grid {
-  display:grid; grid-template-columns:repeat(3, 1fr); grid-template-rows:repeat(2, 1fr);
-  gap:10px; padding:0 18px 14px;
-  min-height:260px;
+  display:grid; grid-template-columns:repeat(4, 1fr); grid-template-rows:repeat(3, 1fr);
+  gap:8px; padding:0 18px 14px;
+  min-height:360px;
 }
 .garden-plot {
   aspect-ratio:1;
@@ -85,6 +85,8 @@
 .garden-tool:active svg { stroke:#fff; }
 .garden-tool svg { width:22px; height:22px; }
 .garden-tool-label { font-size:11px; font-weight:600; }
+.garden-tool.batch { background:rgba(76,175,80,.12); border-color:rgba(76,175,80,.3); }
+.garden-tool.batch:active { background:#4caf50; }
 
 /* 日志 */
 .garden-log {

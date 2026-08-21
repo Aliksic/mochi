@@ -166,8 +166,10 @@ check('回复消息不显示成员昵称', hasName === false);
 const stored = await evalJs("(function(){try{var v=localStorage.getItem('xy-home-v2:group-chat-msgs');if(!v)return false;var a=JSON.parse(v);return Array.isArray(a)&&a.length>=2;}catch(e){return false;}})()");
 check('群聊消息已持久化到 localStorage', stored === true);
 
-// ---- 用例 9：成员列表面板 ----
-await evalJs("(function(){var b=document.getElementById('gc-members-btn');if(b)b.click();return true;})()");
+// ---- 用例 9：成员列表面板（v3.9.x：入口改到右上角三点菜单 → 群成员） ----
+await evalJs("(function(){var b=document.getElementById('gc-more-btn');if(b)b.click();return true;})()");
+await sleep(300);
+await evalJs("(function(){var b=document.getElementById('gc-more-members');if(b)b.click();return true;})()");
 await sleep(400);
 const mpOk = await evalJs("(function(){var p=document.getElementById('gc-members-panel');var items=document.querySelectorAll('#gc-mp-body .gc-mp-item');return !!p&&!p.hidden&&items.length>=1;})()");
 check('成员列表面板可打开且列出成员', mpOk === true);

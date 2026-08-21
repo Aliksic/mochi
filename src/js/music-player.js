@@ -307,6 +307,9 @@
     //（页面标题格式："歌曲名 - 歌手名 - 单曲 - 网易云音乐"），多 CORS 代理兜底
     const songPageUrl = 'https://music.163.com/song?id=' + id;
     const apis = [
+      // v3.9.x：proxy.cors.sh（Cloudflare Workers，稳定可用）放首位；allorigins/corsproxy 兜底
+      { url: 'https://proxy.cors.sh/' + songPageUrl, isText: true, parse(t) {
+          return parseNeteasePageTitle(t); } },
       // 1-2：CORS 代理抓歌曲页面 HTML，解析 <title>
       { url: 'https://api.allorigins.win/raw?url=' + encodeURIComponent(songPageUrl), isText: true, parse(t) {
           return parseNeteasePageTitle(t); } },
@@ -543,19 +546,20 @@
   // 并刷新界面，实现「导入后一次性把时长加载出来」；探测失败（如 VIP 歌）保持 00:00。
   function fetchV6Durations(id, cb) {
     const apiUrl = 'https://music.163.com/api/v6/playlist/detail?id=' + encodeURIComponent(String(id)) + '&n=1000&s=8';
+    // v3.9.x：codetabs 已失效（超时），改用 proxy.cors.sh（Cloudflare Workers，稳定）
     const prox = [
-      'https://api.allorigins.win/raw?url=',
-      'https://corsproxy.io/?url=',
-      'https://api.codetabs.com/v1/proxy?quest='
+      { p: 'https://proxy.cors.sh/', enc: false },
+      { p: 'https://api.allorigins.win/raw?url=', enc: true },
+      { p: 'https://corsproxy.io/?url=', enc: true }
     ];
     const out = {};
     let settled = false;
     const finish = () => { if (settled) return; settled = true; cb(out); };
-    prox.forEach(p => {
+    prox.forEach(pr => {
       let controller;
       try { controller = new AbortController(); } catch (e) { controller = null; }
       const timer = setTimeout(() => { try { controller && controller.abort(); } catch (e) {} }, 6000);
-      fetch(p + encodeURIComponent(apiUrl), controller ? { signal: controller.signal } : undefined)
+      fetch(pr.p + (pr.enc ? encodeURIComponent(apiUrl) : apiUrl), controller ? { signal: controller.signal } : undefined)
         .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
         .then(txt => {
           clearTimeout(timer);
@@ -967,7 +971,16 @@
             let msg = res.total
               ? '已导入 ' + res.plOk + ' 个歌单 / ' + res.total + ' 首' + (res.skipped ? '（跳过已有 ' + res.skipped + ' 首）' : '')
               : '歌单导入失败';
-            if (res.plFail) msg += res.total ? '；' + res.plFail + ' 个失败（可能私密/已失效/被浏览器拦截）' : '：可能为私密歌单、已失效或被浏览器拦截，可稍后重试';
+            if (res.plFail) {
+              if (!res.total) {
+                const ua = navigator.userAgent || '';
+                msg += '：可能为私密歌单、已失效或被浏览器拦截';
+                if (/QQBrowser/i.test(ua) || /Quark/i.test(ua)) msg += '（当前浏览器可能拦截了音乐 API，可换用 Safari 重试）';
+                else msg += '，可稍后重试';
+              } else {
+                msg += '；' + res.plFail + ' 个失败（可能私密/已失效/被浏览器拦截）';
+              }
+            }
             toast(msg);
           }, targetPl);
           return;
@@ -1073,7 +1086,15 @@
             document.getElementById('tc-mask').hidden = true;
             renderPage();
             let msg = (added ? '已导入 ' + added + ' 首音乐 + ' : '已导入 ');
-            msg += res.total ? res.plOk + ' 个歌单 / ' + res.total + ' 首' : '0 首歌单（可能私密/已失效/被浏览器拦截，可稍后重试）';
+            if (res.total) {
+              msg += res.plOk + ' 个歌单 / ' + res.total + ' 首';
+            } else {
+              msg += '0 首歌单（可能私密/已失效/被浏览器拦截';
+              const ua = navigator.userAgent || '';
+              if (/QQBrowser/i.test(ua) || /Quark/i.test(ua)) msg += '，当前浏览器可能拦截了音乐 API，可换用 Safari 重试';
+              else msg += '，可稍后重试';
+              msg += '）';
+            }
             if (res.skipped) msg += '（跳过已有 ' + res.skipped + ' 首）';
             if (res.plFail && res.total) msg += '；' + res.plFail + ' 个歌单失败（可能私密/已失效/被拦截）';
             toast(msg);

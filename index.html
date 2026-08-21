@@ -3091,7 +3091,7 @@ display:flex; align-items:center; justify-content:center;
 .tc-qtext[data-edit] { cursor:pointer; }
 .tc-qtext[data-edit]:hover { color:var(--muted); }
 .mg-block.mg-dragging { opacity:.4; }
-.ta-add { display:flex; gap:8px; margin-top:8px; }
+.ta-add { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
 .ta-add input {
 flex:1; min-width:0; border:1px solid rgba(0,0,0,.1); border-radius:10px;
 padding:9px 12px; font-size:13px; font-family:inherit; outline:none; background:#fff; color:var(--ink);
@@ -3108,7 +3108,7 @@ background:var(--ink); color:#fff; font-size:13px; font-weight:600; cursor:point
 .ta-add-btn:active { opacity:.85; }
 .ta-type { flex:0 0 auto; width:92px; font-size:12px; padding:0 6px; }
 .ta-add .ta-opts {
-flex:1 0 100%; box-sizing:border-box; margin-top:8px;
+flex:1 0 100%; box-sizing:border-box;
 border:1px solid rgba(0,0,0,.1); border-radius:10px;
 padding:9px 12px; font-size:13px; font-family:inherit; outline:none; background:#fff; color:var(--ink);
 resize:vertical; line-height:1.5;
@@ -3899,6 +3899,65 @@ display: block; max-width: 64px; overflow: hidden; text-overflow: ellipsis; whit
 .gc-input:empty:before {
 content: attr(data-ph); color: #aaa; pointer-events: none;
 }
+.gc-head { position: relative; }
+.gc-more-menu {
+position: absolute; top: 42px; right: 2px; z-index: 60;
+min-width: 148px; padding: 4px;
+background: #fff; border: 1px solid rgba(0,0,0,.07); border-radius: 12px;
+box-shadow: 0 6px 24px rgba(0,0,0,.14);
+}
+.gc-more-menu[hidden] { display: none; }
+.gc-more-item {
+display: flex; align-items: center; gap: 9px;
+padding: 10px 14px; font-size: 14px; border-radius: 8px; cursor: pointer;
+color: #222;
+}
+.gc-more-item:active { background: #f4f4f4; }
+.gc-more-item svg { width: 17px; height: 17px; color: #555; flex-shrink: 0; }
+.gc-settings-panel {
+position: fixed; left: 0; right: 0; bottom: 0;
+max-height: 78vh; background: #fff; border-radius: 16px 16px 0 0;
+box-shadow: 0 -4px 20px rgba(0,0,0,.12); z-index: 210; overflow: hidden;
+display: flex; flex-direction: column;
+}
+.gc-settings-panel[hidden] { display: none; }
+.gc-set-head {
+display: flex; align-items: center; justify-content: space-between;
+padding: 14px 16px; border-bottom: 1px solid rgba(0,0,0,.06); font-weight: 600;
+}
+.gc-set-body { overflow-y: auto; padding: 4px 0 16px; }
+.gc-set-title { padding: 12px 16px 4px; font-size: 13px; color: #888; }
+.gc-set-item {
+display: flex; align-items: center; gap: 10px; padding: 10px 16px;
+}
+.gc-set-av {
+width: 40px; height: 40px; border-radius: 50%; background: #f0f0f0;
+display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;
+}
+.gc-set-av img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
+.gc-set-av svg { width: 60%; height: 60%; }
+.gc-set-info { flex: 1; min-width: 0; }
+.gc-set-name {
+font-size: 14px; font-weight: 500; color: #222;
+white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+display: flex; align-items: center; gap: 6px;
+}
+.gc-set-tag {
+font-size: 11px; color: #999; background: #f4f4f4;
+padding: 1px 7px; border-radius: 8px; flex-shrink: 0;
+}
+.gc-set-desk {
+font-size: 11px; color: #999; margin-top: 2px;
+white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.gc-set-ops { display: flex; gap: 6px; flex-shrink: 0; }
+.gc-set-btn {
+font-size: 12px; padding: 5px 11px; border: 1px solid #ddd; border-radius: 8px;
+background: #fafafa; color: #333; cursor: pointer; white-space: nowrap;
+}
+.gc-set-btn:active { background: #eee; }
+.gc-set-btn.ghost { color: #a32; border-color: #f3c0c0; background: #fff5f5; }
+.gc-set-note { padding: 12px 16px 0; font-size: 11px; color: #aaa; line-height: 1.6; }
 .gc-members-panel {
 position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%);
 width: 86%; max-width: 340px; max-height: 70vh;
@@ -3924,6 +3983,7 @@ display: flex; align-items: center; justify-content: center; overflow: hidden; f
 .gc-mp-av img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
 .gc-mp-av svg { width: 60%; height: 60%; }
 .gc-mp-name { flex: 1; font-size: 14px; }
+.gc-mp-sub { display: block; font-size: 11px; color: #999; margin-top: 2px; }
 .gc-mp-tag { font-size: 11px; color: #999; background: #f4f4f4; padding: 2px 8px; border-radius: 8px; }
 .gc-at-panel {
 position: fixed; left: 0; right: 0; bottom: 0;
@@ -4401,9 +4461,9 @@ padding:10px 18px; font-size:13px; color:var(--muted);
 .garden-scroll { flex:1; overflow-y:auto; scrollbar-width:none; -ms-overflow-style:none; }
 .garden-scroll::-webkit-scrollbar { display:none; }
 .garden-grid {
-display:grid; grid-template-columns:repeat(3, 1fr); grid-template-rows:repeat(2, 1fr);
-gap:10px; padding:0 18px 14px;
-min-height:260px;
+display:grid; grid-template-columns:repeat(4, 1fr); grid-template-rows:repeat(3, 1fr);
+gap:8px; padding:0 18px 14px;
+min-height:360px;
 }
 .garden-plot {
 aspect-ratio:1;
@@ -4460,6 +4520,8 @@ transition:background .15s ease, border-color .15s ease;
 .garden-tool:active svg { stroke:#fff; }
 .garden-tool svg { width:22px; height:22px; }
 .garden-tool-label { font-size:11px; font-weight:600; }
+.garden-tool.batch { background:rgba(76,175,80,.12); border-color:rgba(76,175,80,.3); }
+.garden-tool.batch:active { background:#4caf50; }
 .garden-log {
 margin:0 18px 18px; padding:14px 16px;
 border-radius:18px;
@@ -4607,7 +4669,7 @@ transition: width .4s ease; min-width:0; overflow:hidden;
       </div>
       <div class="splash-dots"><i></i><i></i><i></i></div>
       <div class="splash-brand">小红书@言序（1842523578）</div>
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787320888499">Mochi 字卡传讯 v3.6.188 · 部署于 2026-08-21 22:01</div>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787322623846">Mochi 字卡传讯 v3.6.192 · 部署于 2026-08-21 22:30</div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
       <div class="splash-loading" id="splash-loading">正在加载数据…</div>
@@ -5403,7 +5465,7 @@ transition: width .4s ease; min-width:0; overflow:hidden;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.6.188</div>
+      <div class="ver">Mochi 字卡传讯 v3.6.192</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -6368,6 +6430,14 @@ transition: width .4s ease; min-width:0; overflow:hidden;
           <button class="garden-tool" data-tool="harvest" title="收获">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6l3 4h12l3-4"/><path d="M6 10v8a2 2 0 002 2h8a2 2 0 002-2v-8"/><path d="M12 10v10"/><path d="M9 14h6"/></svg>
             <span class="garden-tool-label">收获</span>
+          </button>
+          <button class="garden-tool batch" data-tool="waterall" title="一键浇水">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3S4 7 4 9.5a3 3 0 006 0C10 7 7 3 7 3z"/><path d="M17 3S14 7 14 9.5a3 3 0 006 0C20 7 17 3 17 3z"/><path d="M12 11S9 15 9 17.5a3 3 0 006 0C15 15 12 11 12 11z"/></svg>
+            <span class="garden-tool-label">全浇</span>
+          </button>
+          <button class="garden-tool batch" data-tool="harvestall" title="一键收获">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h18l-2 12H5z"/><path d="M8 8V5a4 4 0 018 0v3"/><path d="M12 12v4"/></svg>
+            <span class="garden-tool-label">全收</span>
           </button>
         </div>
         <!-- 花园日志 -->
@@ -7418,9 +7488,21 @@ transition: width .4s ease; min-width:0; overflow:hidden;
           <svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
         </span>
         <span class="ch-name gc-name" id="gc-name" title="点击查看群成员">群聊</span>
-        <span class="ch-settings gc-members-btn" id="gc-members-btn" title="群成员">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><circle cx="17" cy="8" r="3.2"/><path d="M3 19c0-3 2.7-5 6-5s6 2 6 5"/><path d="M14 19c0-3 2.7-5 6-5"/></svg>
+        <!-- v3.9.x：右上角三点菜单（群成员 / 群聊设置） -->
+        <span class="ch-settings gc-more-btn" id="gc-more-btn" title="更多">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>
         </span>
+      </div>
+      <!-- 三点下拉菜单 -->
+      <div class="gc-more-menu" id="gc-more-menu" hidden>
+        <div class="gc-more-item" id="gc-more-members">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><circle cx="17" cy="8" r="3.2"/><path d="M3 19c0-3 2.7-5 6-5s6 2 6 5"/><path d="M14 19c0-3 2.7-5 6-5"/></svg>
+          <span>群成员</span>
+        </div>
+        <div class="gc-more-item" id="gc-more-settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33h.01a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51h.01a1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82v.01a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+          <span>群聊设置</span>
+        </div>
       </div>
       <div class="chat-body gc-body" id="gc-body"></div>
       <div class="chat-typing gc-typing" id="gc-typing" hidden></div>
@@ -7443,6 +7525,14 @@ transition: width .4s ease; min-width:0; overflow:hidden;
       <div class="gc-at-panel" id="gc-at-panel" hidden>
         <div class="gc-at-head">选择要@的成员</div>
         <div class="gc-at-body" id="gc-at-body"></div>
+      </div>
+      <!-- 群聊设置面板（v3.9.x：我的群聊形象 + 成员群聊形象，内容 JS 渲染） -->
+      <div class="gc-settings-panel" id="gc-settings-panel" hidden>
+        <div class="gc-set-head">
+          <span>群聊设置</span>
+          <button class="gc-mp-close" id="gc-set-close">✕</button>
+        </div>
+        <div class="gc-set-body" id="gc-set-body"></div>
       </div>
     </div>
 
@@ -8004,6 +8094,7 @@ if (moved > 0) { try { sessionStorage.setItem('xy-ls-big-migrated', '1'); } catc
 const G = 'xy-home-v2';
 const EXCLUDE = ['contacts', 'active-contact', 'feed-posts', 'migrated-v1', 'js-errors', 'theme-mode', 'accent-color',
 'bg-keepalive', 'bg-notify',
+'gc-profiles',
 '__last-backup', '__last-backup-remind', '__onboard-done', '__edge-backup-hint-done', '__auto-backup-snapshot'];
 function isExcluded(k) {
 const r = k.slice(G.length + 1);
@@ -12359,6 +12450,7 @@ chatDbReady = true;
 try { localStorage.removeItem('xy-home-v2:chat-msgs'); } catch (e) {}
 if (changed) {
 try { if (window.idbSet) window.idbSet(myPrefix + ':chat-msgs', JSON.stringify(msgs)); } catch (e) {}
+try { writeLsSnapshot(JSON.stringify(msgs), myPrefix); } catch (e) {}
 if (chatVisible() && chatNearBottom()) {
 renderWindow(false, true);
 scrollChatBottom();
@@ -13948,6 +14040,7 @@ return;
 const rpMin = Math.max(1, Number(c['reply-min']) || 1);
 const rpMax = Math.max(rpMin, Number(c['reply-max']) || 2);
 const count = randInt(rpMin, rpMax);
+try { console.log('[mochi-reply] scheduleReply count=%s rpMin=%s rpMax=%s raw reply-min=%s reply-max=%s', count, rpMin, rpMax, c['reply-min'], c['reply-max']); window.__replyDiag = (window.__replyDiag||0)+1; window.__replyOnceDiag = 0; const _t = document.getElementById('cc-toast') || (function(){const x=document.createElement('div');x.id='cc-toast';document.body.appendChild(x);return x;})(); _t.textContent = '诊断: count='+count+' reply-max='+c['reply-max']+' rpMin='+rpMin+' rpMax='+rpMax; _t.className='cc-toast'; void _t.offsetWidth; _t.className='cc-toast show'; clearTimeout(_t._dt); _t._dt = setTimeout(function(){_t.className='cc-toast';}, 8000); } catch(e){}
 const wantQuote = hit(c['quote-prob']) && !!quoteSrc;
 for (let i = 0; i < count; i++) {
 setTimeout(() => {
@@ -13959,12 +14052,14 @@ replyOnce(c, q, i > 0);
 if (i < count - 1) showTyping();
 if (i === count - 1) {
 setTimeout(() => { if (!sameCid()) return; if (window.maybeMusicRequest) window.maybeMusicRequest(); }, 2000);
+try { setTimeout(function(){ const _t = document.getElementById('cc-toast'); if(_t){ _t.textContent='诊断: replyOnce总次数='+window.__replyOnceDiag+' (count='+count+')'; _t.className='cc-toast'; void _t.offsetWidth; _t.className='cc-toast show'; clearTimeout(_t._dt2); _t._dt2=setTimeout(function(){_t.className='cc-toast';},8000); } }, 4000); } catch(e){}
 }
 }, i * randInt(1200, 2800));
 }
 }, delay);
 }
 function replyOnce(c, quote, silent) {
+try { console.log('[mochi-reply] replyOnce #%s quote=%s silent=%s', (window.__replyOnceDiag=(window.__replyOnceDiag||0)+1), !!quote, !!silent); } catch(e){}
 const myCid = window.__activeCid || 'default';
 const sameCid = () => (window.__activeCid || 'default') === myCid;
 const rep = genOneReply(c);
@@ -16956,6 +17051,7 @@ input.textContent = '';
 draftImgs = [];
 renderDraft();
 if (window.logFish) window.logFish();
+try { window.__replyOnceDiag = 0; console.log('[mochi-reply] addMsg 发送, 重置 replyOnce 计数'); } catch(e){}
 scheduleReply();
 };
 if (send) send.addEventListener('click', () => addMsg(input.innerText));
@@ -17020,23 +17116,66 @@ const FALLBACK_REPLIES = ['好的～', '嗯嗯', '收到', '哈哈', '在的', '
 let msgs = [];
 let saveTimer = null;
 const RENDER_MAX = 200;
+const gcProfiles = {};
+function gcProfileStore() { try { return window.xyStore(G); } catch (e) { return null; } }
+function gcProfileLoad() {
+try {
+const v = gcProfileStore().get('gc-profiles');
+if (v) {
+const o = JSON.parse(v);
+if (o && typeof o === 'object') Object.keys(o).forEach(k => { gcProfiles[k] = o[k]; });
+}
+} catch (e) {}
+}
+function gcProfileSave() {
+try { gcProfileStore().set('gc-profiles', JSON.stringify(gcProfiles)); } catch (e) {}
+}
+function gcProfileGet(key) { return gcProfiles[key] || {}; }
+function gcProfileSet(key, name, avatar) {
+const p = gcProfiles[key] || (gcProfiles[key] = {});
+if (name === undefined) delete p.name; else if (name) p.name = name; else delete p.name;
+if (avatar === undefined) delete p.avatar; else if (avatar) p.avatar = avatar; else delete p.avatar;
+if (!p.name && !p.avatar) delete gcProfiles[key];
+gcProfileSave();
+refreshGroupViews();
+}
+function refreshGroupViews() {
+try { renderAll(); } catch (e) {}
+try { if (membersPanel && !membersPanel.hidden) renderMembersPanel(); } catch (e) {}
+try { if (atPanel && !atPanel.hidden) renderAtPanel(); } catch (e) {}
+try { if (settingsPanel && !settingsPanel.hidden) renderSettingsPanel(); } catch (e) {}
+try { updateGroupName(); } catch (e) {}
+}
+gcProfileLoad();
 function getMembers() {
 try { return window.getContacts() || [{ id: 'default', name: '默认' }]; } catch (e) { return [{ id: 'default', name: '默认' }]; }
 }
 function memberName(cid) {
+try { const p = gcProfileGet(cid); if (p.name) return p.name; } catch (e) {}
 try { const lbl = window.storeFor(cid).get('lbl-partner'); if (lbl) return lbl; } catch (e) {}
 const m = getMembers().find(x => x.id === cid);
 return m ? m.name : '成员';
 }
 function memberAvatar(cid) {
+try { const p = gcProfileGet(cid); if (p.avatar) return p.avatar; } catch (e) {}
 try { return window.storeFor(cid).get('avatar-partner') || ''; } catch (e) { return ''; }
 }
 function myName() {
+try { const p = gcProfileGet('me'); if (p.name) return p.name; } catch (e) {}
 try { const v = window.activeStore().get('lbl-user'); if (v) return v; } catch (e) {}
 return '我';
 }
 function myAvatar() {
+try { const p = gcProfileGet('me'); if (p.avatar) return p.avatar; } catch (e) {}
 try { return window.activeStore().get('avatar-user') || ''; } catch (e) { return ''; }
+}
+function deskPartnerName(cid) {
+try { const lbl = window.storeFor(cid).get('lbl-partner'); if (lbl) return lbl; } catch (e) {}
+const m = getMembers().find(x => x.id === cid);
+return m ? m.name : '';
+}
+function deskMeName() {
+try { return window.activeStore().get('lbl-user') || ''; } catch (e) { return ''; }
 }
 function fillAv(el, dataUrl) {
 if (!el) return;
@@ -17475,20 +17614,156 @@ if (!membersBody) return;
 membersBody.innerHTML = '';
 const meRow = document.createElement('div');
 meRow.className = 'gc-mp-item';
-meRow.innerHTML = '<div class="gc-mp-av"></div><span class="gc-mp-name">' + escapeHtml(myName()) + '</span><span class="gc-mp-tag">我</span>';
+const meDesk = deskMeName();
+meRow.innerHTML = '<div class="gc-mp-av"></div><span class="gc-mp-name">' + escapeHtml(myName()) +
+'<span class="gc-mp-sub">' + (meDesk ? '桌面昵称：' + escapeHtml(meDesk) : '') + '</span></span><span class="gc-mp-tag">我</span>';
 fillAv(meRow.querySelector('.gc-mp-av'), myAvatar());
 membersBody.appendChild(meRow);
 getMembers().forEach(m => {
 const row = document.createElement('div');
 row.className = 'gc-mp-item';
-row.innerHTML = '<div class="gc-mp-av"></div><span class="gc-mp-name">' + escapeHtml(memberName(m.id)) + '</span>';
+const desk = deskPartnerName(m.id);
+row.innerHTML = '<div class="gc-mp-av"></div><span class="gc-mp-name">' + escapeHtml(memberName(m.id)) +
+'<span class="gc-mp-sub">' + (desk ? '桌面昵称：' + escapeHtml(desk) : '') + '</span></span>';
 fillAv(row.querySelector('.gc-mp-av'), memberAvatar(m.id));
 membersBody.appendChild(row);
 });
 }
-if (membersBtn) membersBtn.addEventListener('click', () => { renderMembersPanel(); if (membersPanel) membersPanel.hidden = false; });
 if (nameEl) nameEl.addEventListener('click', () => { renderMembersPanel(); if (membersPanel) membersPanel.hidden = false; });
 if (membersClose) membersClose.addEventListener('click', () => { if (membersPanel) membersPanel.hidden = true; });
+const moreBtn = document.getElementById('gc-more-btn');
+const moreMenu = document.getElementById('gc-more-menu');
+function showMoreMenu(v) { if (moreMenu) moreMenu.hidden = !v; }
+if (moreBtn) moreBtn.addEventListener('click', (e) => {
+e.stopPropagation();
+showMoreMenu(moreMenu.hidden);
+});
+document.addEventListener('click', () => showMoreMenu(false));
+const moreMembers = document.getElementById('gc-more-members');
+if (moreMembers) moreMembers.addEventListener('click', () => {
+showMoreMenu(false);
+renderMembersPanel();
+if (membersPanel) membersPanel.hidden = false;
+});
+const moreSettings = document.getElementById('gc-more-settings');
+if (moreSettings) moreSettings.addEventListener('click', () => {
+showMoreMenu(false);
+renderSettingsPanel();
+if (settingsPanel) settingsPanel.hidden = false;
+});
+const settingsPanel = document.getElementById('gc-settings-panel');
+const settingsBody = document.getElementById('gc-set-body');
+const settingsClose = document.getElementById('gc-set-close');
+function toast(msg) {
+let t = document.getElementById('cc-toast');
+if (!t) {
+t = document.createElement('div');
+t.id = 'cc-toast';
+document.body.appendChild(t);
+}
+t.textContent = msg;
+t.className = 'cc-toast'; void t.offsetWidth; t.className = 'cc-toast show';
+clearTimeout(t._timer);
+t._timer = setTimeout(() => { t.className = 'cc-toast'; }, 2000);
+}
+function compressHead(dataUrl, maxSide) {
+return new Promise((resolve) => {
+try {
+if (typeof dataUrl !== 'string' || !dataUrl || dataUrl.length > 8 * 1024 * 1024) { resolve(null); return; }
+const img = new Image();
+img.onload = () => {
+try {
+if (img.width * img.height > 26000000) { resolve(null); return; }
+const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+const w = Math.max(1, Math.round(img.width * scale));
+const h = Math.max(1, Math.round(img.height * scale));
+const c = document.createElement('canvas');
+c.width = w; c.height = h;
+c.getContext('2d').drawImage(img, 0, 0, w, h);
+resolve(c.toDataURL('image/jpeg', 0.85));
+} catch (e) { resolve(null); }
+};
+img.onerror = () => resolve(null);
+img.src = dataUrl;
+} catch (e) { resolve(null); }
+});
+}
+function pickAvatarFile(cb) {
+const input = document.createElement('input');
+input.type = 'file'; input.accept = 'image/*';
+input.onchange = () => {
+const f = input.files && input.files[0];
+if (!f) return;
+const reader = new FileReader();
+reader.onload = () => {
+compressHead(reader.result, 256).then(data => {
+if (!data) { toast('图片过大或格式不支持，请换一张小图'); return; }
+cb(data);
+});
+};
+reader.readAsDataURL(f);
+};
+input.click();
+}
+function renderSettingsPanel() {
+if (!settingsBody) return;
+settingsBody.innerHTML = '';
+const esc = escapeHtml;
+const item = (key, curName, curAv, deskName) => {
+const row = document.createElement('div');
+row.className = 'gc-set-item';
+const hasOverride = !!(curName || curAv);
+row.innerHTML =
+'<div class="gc-set-av"></div>' +
+'<div class="gc-set-info">' +
+'<div class="gc-set-name">' + esc(curName || '跟随桌面') + (key === 'me' ? '<span class="gc-set-tag">我</span>' : '') + '</div>' +
+'<div class="gc-set-desk">' + (deskName ? '桌面昵称：' + esc(deskName) : '') + '</div>' +
+'</div>' +
+'<div class="gc-set-ops">' +
+'<button class="gc-set-btn" data-op="av">' + (curAv ? '换头像' : '设头像') + '</button>' +
+'<button class="gc-set-btn" data-op="name">' + (curName ? '改昵称' : '设昵称') + '</button>' +
+(hasOverride ? '<button class="gc-set-btn ghost" data-op="reset">重置</button>' : '') +
+'</div>';
+let effAv = curAv;
+if (!effAv) { try { effAv = key === 'me' ? myAvatar() : memberAvatar(key); } catch (e) {} }
+fillAv(row.querySelector('.gc-set-av'), effAv || '');
+row.querySelector('[data-op="av"]').addEventListener('click', () => {
+pickAvatarFile(data => gcProfileSet(key, undefined, data));
+});
+row.querySelector('[data-op="name"]').addEventListener('click', () => {
+if (!window.openModal) return;
+window.openModal(key === 'me' ? '我的群聊昵称' : '成员群聊昵称', curName, (v) => {
+gcProfileSet(key, (v || '').trim(), undefined);
+}, { maxlength: 30 });
+});
+if (hasOverride) {
+row.querySelector('[data-op="reset"]').addEventListener('click', () => {
+gcProfileSet(key, '', '');
+});
+}
+return row;
+};
+const t1 = document.createElement('div');
+t1.className = 'gc-set-title';
+t1.textContent = '我的群聊';
+settingsBody.appendChild(t1);
+const meP = gcProfileGet('me');
+settingsBody.appendChild(item('me', meP.name || '', meP.avatar || '', deskMeName()));
+const t2 = document.createElement('div');
+t2.className = 'gc-set-title';
+t2.textContent = '成员群聊形象';
+settingsBody.appendChild(t2);
+getMembers().forEach(m => {
+const p = gcProfileGet(m.id);
+settingsBody.appendChild(item(m.id, p.name || '', p.avatar || '', deskPartnerName(m.id)));
+});
+const note = document.createElement('div');
+note.className = 'gc-set-note';
+note.textContent = '群聊昵称/头像只在本群聊页生效；成员回复内容来自该成员桌面自己的字卡库。';
+settingsBody.appendChild(note);
+}
+if (settingsClose) settingsClose.addEventListener('click', () => { if (settingsPanel) settingsPanel.hidden = true; });
+if (settingsPanel) settingsPanel.addEventListener('click', (e) => { if (e.target === settingsPanel) settingsPanel.hidden = true; });
 function renderAtPanel() {
 if (!atBody) return;
 atBody.innerHTML = '';
@@ -17516,9 +17791,12 @@ document.addEventListener('contact-switched', function () {
 try { hideTyping(); } catch (e) {}
 updateGroupName();
 renderAll();
+try { if (settingsPanel && !settingsPanel.hidden) renderSettingsPanel(); } catch (e) {}
 });
 window.groupChatGetMsgs = function () { return msgs.slice(); };
 window.groupChatClear = function () { msgs = []; saveNow(); renderAll(); };
+window.groupChatProfileGet = function (key) { try { return JSON.parse(JSON.stringify(gcProfileGet(key))); } catch (e) { return {}; } };
+window.groupChatProfileSet = function (key, name, avatar) { gcProfileSet(key, name, avatar); };
 })();
 } catch (__e) { if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
 (function () { try {
@@ -21069,6 +21347,8 @@ const known = KNOWN_NETEASE[String(id)];
 if (known) { cb({ name: known.name, artist: known.artist, pic: '' }); return; }
 const songPageUrl = 'https://music.163.com/song?id=' + id;
 const apis = [
+{ url: 'https://proxy.cors.sh/' + songPageUrl, isText: true, parse(t) {
+return parseNeteasePageTitle(t); } },
 { url: 'https://api.allorigins.win/raw?url=' + encodeURIComponent(songPageUrl), isText: true, parse(t) {
 return parseNeteasePageTitle(t); } },
 { url: 'https://corsproxy.io/?url=' + encodeURIComponent(songPageUrl), isText: true, parse(t) {
@@ -21178,6 +21458,19 @@ duration: 0
 };
 }).filter(t => t.url);
 } },
+{ url: 'https://proxy.cors.sh/' + apiUrl, parse(txt) {
+let j; try { j = JSON.parse(txt); } catch (e) { return null; }
+const pl = j && j.playlist;
+if (!pl || !Array.isArray(pl.tracks) || !pl.tracks.length) return null;
+return pl.tracks.map(s => ({
+neteaseId: String(s.id || ''),
+name: s.name || '',
+artist: ((s.ar || []).map(a => a.name).filter(Boolean).join('/')),
+cover: String((s.al && s.al.picUrl) || '').replace(/^http:\/\//i, 'https://'),
+url: s.id ? neteaseMetingUrl(s.id) : '',
+duration: s.dt ? Math.round(s.dt / 1000) : 0
+})).filter(t => t.url);
+} },
 { url: 'https://api.allorigins.win/raw?url=' + encodeURIComponent(apiUrl), parse(txt) {
 let j; try { j = JSON.parse(txt); } catch (e) { return null; }
 const pl = j && j.playlist;
@@ -21203,25 +21496,13 @@ cover: String((s.al && s.al.picUrl) || '').replace(/^http:\/\//i, 'https://'),
 url: s.id ? neteaseMetingUrl(s.id) : '',
 duration: s.dt ? Math.round(s.dt / 1000) : 0
 })).filter(t => t.url);
-} },
-{ url: 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(apiUrl), parse(txt) {
-let j; try { j = JSON.parse(txt); } catch (e) { return null; }
-const pl = j && j.playlist;
-if (!pl || !Array.isArray(pl.tracks) || !pl.tracks.length) return null;
-return pl.tracks.map(s => ({
-neteaseId: String(s.id || ''),
-name: s.name || '',
-artist: ((s.ar || []).map(a => a.name).filter(Boolean).join('/')),
-cover: String((s.al && s.al.picUrl) || '').replace(/^http:\/\//i, 'https://'),
-url: s.id ? neteaseMetingUrl(s.id) : '',
-duration: s.dt ? Math.round(s.dt / 1000) : 0
-})).filter(t => t.url);
 } }
 ];
 let idx = 0;
 function tryNext() {
 if (idx >= sources.length) { cb(null); return; }
 const src = sources[idx++];
+const srcLabel = src.url.substring(0, 60);
 let controller;
 try { controller = new AbortController(); } catch (e) { controller = null; }
 const timer = setTimeout(() => { try { controller && controller.abort(); } catch (e) {} }, 7000);
@@ -21234,7 +21515,7 @@ const res = src.parse(txt);
 if (res && res.length) cb(res); else tryNext();
 } catch (e) { tryNext(); }
 })
-.catch(() => { clearTimeout(timer); tryNext(); });
+.catch((err) => { clearTimeout(timer); tryNext(); });
 }
 tryNext();
 }
@@ -21271,18 +21552,18 @@ missing.forEach(m => { if (!m.duration) enqueueDurProbe(m); });
 function fetchV6Durations(id, cb) {
 const apiUrl = 'https://music.163.com/api/v6/playlist/detail?id=' + encodeURIComponent(String(id)) + '&n=1000&s=8';
 const prox = [
-'https://api.allorigins.win/raw?url=',
-'https://corsproxy.io/?url=',
-'https://api.codetabs.com/v1/proxy?quest='
+{ p: 'https://proxy.cors.sh/', enc: false },
+{ p: 'https://api.allorigins.win/raw?url=', enc: true },
+{ p: 'https://corsproxy.io/?url=', enc: true }
 ];
 const out = {};
 let settled = false;
 const finish = () => { if (settled) return; settled = true; cb(out); };
-prox.forEach(p => {
+prox.forEach(pr => {
 let controller;
 try { controller = new AbortController(); } catch (e) { controller = null; }
 const timer = setTimeout(() => { try { controller && controller.abort(); } catch (e) {} }, 6000);
-fetch(p + encodeURIComponent(apiUrl), controller ? { signal: controller.signal } : undefined)
+fetch(pr.p + (pr.enc ? encodeURIComponent(apiUrl) : apiUrl), controller ? { signal: controller.signal } : undefined)
 .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
 .then(txt => {
 clearTimeout(timer);
@@ -21640,7 +21921,16 @@ else { saveLibrary(); document.getElementById('tc-mask').hidden = true; renderPa
 let msg = res.total
 ? '已导入 ' + res.plOk + ' 个歌单 / ' + res.total + ' 首' + (res.skipped ? '（跳过已有 ' + res.skipped + ' 首）' : '')
 : '歌单导入失败';
-if (res.plFail) msg += res.total ? '；' + res.plFail + ' 个失败（可能私密/已失效/被浏览器拦截）' : '：可能为私密歌单、已失效或被浏览器拦截，可稍后重试';
+if (res.plFail) {
+if (!res.total) {
+const ua = navigator.userAgent || '';
+msg += '：可能为私密歌单、已失效或被浏览器拦截';
+if (/QQBrowser/i.test(ua) || /Quark/i.test(ua)) msg += '（当前浏览器可能拦截了音乐 API，可换用 Safari 重试）';
+else msg += '，可稍后重试';
+} else {
+msg += '；' + res.plFail + ' 个失败（可能私密/已失效/被浏览器拦截）';
+}
+}
 toast(msg);
 }, targetPl);
 return;
@@ -21731,7 +22021,15 @@ saveLibrary();
 document.getElementById('tc-mask').hidden = true;
 renderPage();
 let msg = (added ? '已导入 ' + added + ' 首音乐 + ' : '已导入 ');
-msg += res.total ? res.plOk + ' 个歌单 / ' + res.total + ' 首' : '0 首歌单（可能私密/已失效/被浏览器拦截，可稍后重试）';
+if (res.total) {
+msg += res.plOk + ' 个歌单 / ' + res.total + ' 首';
+} else {
+msg += '0 首歌单（可能私密/已失效/被浏览器拦截';
+const ua = navigator.userAgent || '';
+if (/QQBrowser/i.test(ua) || /Quark/i.test(ua)) msg += '，当前浏览器可能拦截了音乐 API，可换用 Safari 重试';
+else msg += '，可稍后重试';
+msg += '）';
+}
 if (res.skipped) msg += '（跳过已有 ' + res.skipped + ' 首）';
 if (res.plFail && res.total) msg += '；' + res.plFail + ' 个歌单失败（可能私密/已失效/被拦截）';
 toast(msg);
@@ -32492,24 +32790,24 @@ var s = window.activeStore();
 var page = document.getElementById("page-garden");
 if (!s || !page) return;
 var G = "garden-data";
-var PLOTS = 6;
+var PLOTS = 12;
 var PI = 1800;
 function pn() { return s.get("lbl-partner") || "TA"; }
 function load() { try { var d = JSON.parse(s.get(G) || "{}"); if (!d.p) d.p = []; while (d.p.length < PLOTS) d.p.push(null); if (!d.l) d.l = []; if (!d.lpc) d.lpc = 0; if (!d.dex) d.dex = {}; if (!d.exp) d.exp = 0; if (!d.inv) d.inv = {}; if (!d.st) d.st = { p: 0, w: 0, h: 0, f: 0, mp: 0, mw: 0, mh: 0, mf: 0 }; if (!d.decor) d.decor = {}; if (!d.visitor) d.visitor = null; return d; } catch (e) { return { p: new Array(PLOTS).fill(null), l: [], lpc: 0, dex: {}, exp: 0, inv: {}, st: { p: 0, w: 0, h: 0, f: 0, mp: 0, mw: 0, mh: 0, mf: 0 }, decor: {}, visitor: null }; } }
 function save(d) { try { s.set(G, JSON.stringify(d)); try { if (window.idbSet) window.idbSet(window.activePrefix() + ":" + G, JSON.stringify(d)); } catch (e2) {} } catch (e) {} }
 (function r() { try { if (!window.idbGet) return; var pf = window.activePrefix(); if (!s.get(G)) window.idbGet(pf + ":" + G).then(function (v) { if (window.activePrefix() !== pf || !v) return; try { s.set(G, typeof v === "string" ? v : JSON.stringify(v)); } catch (e) {} }); } catch (e) {} })();
 var T = {
-rose: { n: "\u73AB\u7470", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF39"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [172800, 432000], xp: 30, lv: 1 },
-sunflower: { n: "\u5411\u65E5\u8475", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF3B"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [172800, 518400], xp: 40, lv: 2 },
-tulip: { n: "\u90C1\u91D1\u9999", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF37"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [172800, 432000], xp: 30, lv: 1 },
-cactus: { n: "\u4ED9\u4EBA\u638C", e: ["\uD83C\uDF31", "\uD83C\uDF35"], sn: ["\u5C0F\u82BD", "\u6210\u578B"], g: [432000], xp: 50, lv: 4 },
-lavender: { n: "\u85B0\u8863\u8349", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83D\uDC90"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [86400, 345600], xp: 25, lv: 3 },
-daisy: { n: "\u96CF\u83CA", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF3C"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [86400, 259200], xp: 20, lv: 1 },
-sakura: { n: "\u6A31\u82B1", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF38"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [86400, 259200], xp: 25, lv: 1 },
-hibiscus: { n: "\u8299\u84C9", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF3A"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [172800, 345600], xp: 35, lv: 1 },
-lotus: { n: "\u8377\u82B1", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83E\uDEB7"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [259200, 432000], xp: 45, lv: 1 },
-clover: { n: "\u5E78\u8FD0\u8349", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF40"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u6210\u578B"], g: [43200, 129600], xp: 15, lv: 1 },
-camellia: { n: "\u5C71\u8336\u82B1", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83D\uDCAE"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [172800, 259200], xp: 30, lv: 1 }
+rose: { n: "\u73AB\u7470", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF39"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [172800, 432000], xp: 30, lv: 1, ss: 3 },
+sunflower: { n: "\u5411\u65E5\u8475", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF3B"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [172800, 518400], xp: 40, lv: 2, ss: 1 },
+tulip: { n: "\u90C1\u91D1\u9999", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF37"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [172800, 432000], xp: 30, lv: 1, ss: 0 },
+cactus: { n: "\u4ED9\u4EBA\u638C", e: ["\uD83C\uDF31", "\uD83C\uDF35"], sn: ["\u5C0F\u82BD", "\u6210\u578B"], g: [432000], xp: 50, lv: 4, ss: 1 },
+lavender: { n: "\u85B0\u8863\u8349", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83D\uDC90"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [86400, 345600], xp: 25, lv: 3, ss: 2 },
+daisy: { n: "\u96CF\u83CA", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF3C"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [86400, 259200], xp: 20, lv: 1, ss: 0 },
+sakura: { n: "\u6A31\u82B1", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF38"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [86400, 259200], xp: 25, lv: 1, ss: 0 },
+hibiscus: { n: "\u8299\u84C9", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF3A"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [172800, 345600], xp: 35, lv: 1, ss: 1 },
+lotus: { n: "\u8377\u82B1", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83E\uDEB7"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [259200, 432000], xp: 45, lv: 1, ss: 1 },
+clover: { n: "\u5E78\u8FD0\u8349", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF40"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u6210\u578B"], g: [43200, 129600], xp: 15, lv: 1, ss: 2 },
+camellia: { n: "\u5C71\u8336\u82B1", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83D\uDCAE"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [172800, 259200], xp: 30, lv: 1, ss: 3 }
 };
 var WM = [
 "\u4ECA\u5929\u4E5F\u8F9B\u82E6\u5566\uFF0C\u82B1\u82B1\u4EEC\u4E5F\u5728\u52AA\u529B\u957F\u5927\u54E6",
@@ -32550,12 +32848,18 @@ if (!plot) return null;
 var tp = T[plot.type]; if (!tp) return null;
 var now = Math.floor(Date.now() / 1000);
 var elapsed = now - plot.planted;
+var seaIdx = Math.floor(new Date().getMonth() / 3) % 4;
+var seaBoost = (tp.ss === seaIdx) ? 1.3 : 0.85;
+var w = wx();
+var wBoost = (w.t === "\u6674\u6717") ? 1.1 : (w.t === "\u5C0F\u96E8") ? 0.9 : 1.0;
+var boost = seaBoost * wBoost;
+var eff = Math.floor(elapsed * boost);
 var stage = 0;
-for (var i = 0; i < tp.g.length; i++) { if (elapsed >= tp.g[i]) stage = i + 1; else break; }
+for (var i = 0; i < tp.g.length; i++) { if (eff >= tp.g[i]) stage = i + 1; else break; }
 var stageMax = tp.g.length;
 var bloomed = stage >= stageMax;
-var progress = bloomed ? 1 : (elapsed - (stage > 0 ? tp.g.slice(0, stage).reduce(function (a, b) { return a + b; }, 0) : 0)) / (tp.g[stage] || 1);
-var nextSec = bloomed ? 0 : (tp.g.slice(0, stage + 1).reduce(function (a, b) { return a + b; }, 0) - elapsed);
+var progress = bloomed ? 1 : (eff - (stage > 0 ? tp.g.slice(0, stage).reduce(function (a, b) { return a + b; }, 0) : 0)) / (tp.g[stage] || 1);
+var nextSec = bloomed ? 0 : Math.ceil((tp.g.slice(0, stage + 1).reduce(function (a, b) { return a + b; }, 0) - eff) / boost);
 return { key: plot.type, name: tp.n, stage: stage, stageMax: stageMax, stageName: tp.sn[Math.min(stage, tp.sn.length - 1)], emoji: tp.e[Math.min(stage, tp.e.length - 1)], bloomed: bloomed, progress: progress, nextSec: nextSec, plantedBy: plot.by || "\u6211" };
 }
 function waterLvl(plot) {
@@ -32723,11 +33027,18 @@ var si = stageInfo(data.p[idx]);
 var name = si ? si.name : "\u690D\u7269";
 var type = data.p[idx].type;
 var tp = T[type];
+var emoji = tp ? tp.e[tp.e.length - 1] : "\uD83C\uDF37";
 data.p[idx] = null;
 data.exp = (data.exp || 0) + (tp ? tp.xp : 10);
-data.inv[type] = (data.inv[type] || 0) + 1;
 updDex(type, "h"); updSt("h", false);
+if (Math.random() < 0.3) {
+addLog(pName, "\u9001\u4F60\u4E00\u6735 " + name + " \uD83D\uDC95");
+var gmsg = emoji + " \u521A\u6458\u7684" + name + "\u9001\u7ED9\u4F60\uFF0C\u6536\u597D\u54E6~";
+if (window.chatSendMsg) { try { window.chatSendMsg(gmsg); } catch (e) {} }
+} else {
+data.inv[type] = (data.inv[type] || 0) + 1;
 addLog(pName, "\u6536\u83B7\u4E86 " + name + " (+" + (tp ? tp.xp : 10) + "\u7ECF\u9A8C)");
+}
 acted = true;
 } else if (r < 0.9 && plantedPlots.length > 0) {
 var idx = plantedPlots[Math.floor(Math.random() * plantedPlots.length)];
@@ -32814,7 +33125,7 @@ h += "</div>";
 } else {
 h += "<div class=\"garden-decor-empty\">\u8FD8\u6CA1\u6709\u88C5\u9970\uFF0C\u53BB\u5546\u5E97\u770B\u770B\u5427</div>";
 }
-h += "<button class=\"garden-decor-shop-btn\" id=\"garden-decor-shop-btn\">\uD83D\uDED2 \u88C5\u9970\u5546\u5E97\uFF08" + data.exp + "EXP\uFF09</button>";
+h += "<button class=\"garden-decor-shop-btn\" id=\"garden-decor-shop-btn\">\uD83D\uDED2 \u88C5\u9970\u5546\u5E97\uFF08\u514D\u8D39\uFF09</button>";
 el.innerHTML = h;
 }
 function renderVisitor() {
@@ -32931,6 +33242,47 @@ return { label: tp.e[tp.e.length - 1] + " " + tp.n, value: k };
 window.openModal("\u9009\u62E9\u79CD\u690D", "", function (v) {
 if (v && T[v]) plantSeed(selPlot, v);
 }, { pills: pills, noInput: true });
+} else if (tool === "waterall") {
+waterAll();
+} else if (tool === "harvestall") {
+harvestAll();
+}
+}
+function waterAll() {
+var cnt = 0;
+for (var i = 0; i < PLOTS; i++) {
+var plot = data.p[i];
+if (!plot) continue;
+if (waterLvl(plot) > 0.5) continue;
+plot.watered = Math.floor(Date.now() / 1000);
+plot.planted = Math.max(0, plot.planted - 14400);
+cnt++;
+}
+if (cnt > 0) {
+addLog("\u6211", "\u4E00\u952E\u6D47\u4E86 " + cnt + " \u68F5\u690D\u7269");
+updSt("w", true);
+save(data); renderAll();
+}
+}
+function harvestAll() {
+var cnt = 0;
+var totalXp = 0;
+for (var i = 0; i < PLOTS; i++) {
+var plot = data.p[i];
+if (!plot) continue;
+var si = stageInfo(plot);
+if (!si || !si.bloomed) continue;
+var tp = T[plot.type];
+data.p[i] = null;
+data.exp = (data.exp || 0) + (tp ? tp.xp : 10);
+data.inv[plot.type] = (data.inv[plot.type] || 0) + 1;
+updDex(plot.type, "h"); updSt("h", true);
+totalXp += (tp ? tp.xp : 10);
+cnt++;
+}
+if (cnt > 0) {
+addLog("\u6211", "\u4E00\u952E\u6536\u83B7 " + cnt + " \u6735\u82B1 (+" + totalXp + "\u7ECF\u9A8C)");
+save(data); renderAll();
 }
 }
 function makeBouquet() {
@@ -32960,17 +33312,14 @@ var pills = keys.map(function (k) {
 var dp = DECOR[k];
 var cnt = data.decor[k] || 0;
 var lock = cnt >= dp.max;
-var can = data.exp >= dp.price && !lock;
-var lbl = dp.e + " " + dp.n + " " + (lock ? "\u5DF2\u6EE1" : can ? dp.price + "EXP" : "\u4E0D\u8DB3");
+var lbl = dp.e + " " + dp.n + " " + (lock ? "\u5DF2\u6EE1" : "\u514D\u8D39");
 return { label: lbl, value: k };
 });
-window.openModal("\u88C5\u9970\u5546\u5E97\uFF08" + data.exp + "EXP\uFF09", "", function (v) {
+window.openModal("\u88C5\u9970\u5546\u5E97\uFF08\u514D\u8D39\uFF09", "", function (v) {
 if (!v || !DECOR[v]) return;
 var dp = DECOR[v];
 var cnt = data.decor[v] || 0;
 if (cnt >= dp.max) return;
-if (data.exp < dp.price) return;
-data.exp -= dp.price;
 data.decor[v] = cnt + 1;
 addLog("\u6211", "\u8D2D\u4E70\u4E86 " + dp.n);
 save(data); renderAll();
@@ -32999,6 +33348,14 @@ data = load();
 selPlot = -1;
 curWeather = wx();
 curSeason = sea();
+if (curWeather.t === "\u5C0F\u96E8") {
+for (var i = 0; i < PLOTS; i++) {
+if (data.p[i] && waterLvl(data.p[i]) < 0.3) {
+data.p[i].watered = Math.floor(Date.now() / 1000);
+}
+}
+save(data);
+}
 spawnVisitor();
 if (Math.random() < 0.3) partnerAct();
 renderAll();
@@ -36154,6 +36511,7 @@ var _cb = document.getElementById('chat-body');
 if (_cb) _cb.style.transform = 'none'; // iOS 豁免合成层，避免滚动卡顿
 var _vv = window.visualViewport;
 var _kbActive = false;
+var _pinUntil = 0; // v3.7.x：键盘开合动画窗口，窗口内才 pinScrollTop
 var _noKbH = _vv ? _vv.height : window.innerHeight;
 function pinScrollTop() {
 try {
@@ -36182,12 +36540,13 @@ if (_open && !_kbActive) {
 _kbActive = true;
 _phone.style.alignSelf = 'flex-start';
 pinScrollTop();
+_pinUntil = Date.now() + 500;
 startKbWatch();
 }
 if (_kbActive) {
 var _hs = _h + 'px';
 if (_phone.style.height !== _hs) _phone.style.height = _hs; // 值不变不重排
-pinScrollTop();
+if (Date.now() < _pinUntil) pinScrollTop();
 }
 if (!_open && _kbActive) restoreKb();
 }
@@ -36223,7 +36582,7 @@ if (_kbActive && !isTextEl(document.activeElement)) restoreKb();
 });
 } catch (e) {}
 }
-const FLOAT_SELECTORS = ['#tc-mask', '#cc-export-mask', '#call-mask', '#feed-notice-panel', '#poke-card', '#emoji-panel', '#chat-ask-panel', '#qa-mask', '#chat-more-panel', '#chat-search', '#chat-decision-panel', '#chat-divine-panel', '#chat-rps-panel', '#chat-call-panel', '#chat-pong-panel', '#chat-snake-panel', '#avlib-card', '#ck-panel', '.mg-mask', '#modal-mask', '#msg-actions', '#desk-image-viewer', '.desk-lib', '#gc-members-panel', '#gc-at-panel'];
+const FLOAT_SELECTORS = ['#tc-mask', '#cc-export-mask', '#call-mask', '#feed-notice-panel', '#poke-card', '#emoji-panel', '#chat-ask-panel', '#qa-mask', '#chat-more-panel', '#chat-search', '#chat-decision-panel', '#chat-divine-panel', '#chat-rps-panel', '#chat-call-panel', '#chat-pong-panel', '#chat-snake-panel', '#avlib-card', '#ck-panel', '.mg-mask', '#modal-mask', '#msg-actions', '#desk-image-viewer', '.desk-lib', '#gc-members-panel', '#gc-at-panel', '#gc-settings-panel'];
 let locked = false;
 function applyLock() {
 const anyOpen = FLOAT_SELECTORS.some(function (sel) {
