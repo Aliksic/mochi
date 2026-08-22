@@ -128,6 +128,21 @@
       const fuseMsgs = (pendingLocal && pendingLocal.length) ? pendingLocal : msgs;
       if (fuseMsgs && fuseMsgs.length) {
         try { writeLsSnapshot(JSON.stringify(fuseMsgs), fusePrefix); } catch (e) {}
+      } else {
+        // v3.9.x 修复（切联系人后聊天记录丢失）：IDB 读取挂起且内存为空时，
+        //   从 LS 兜底快照恢复。否则 chatDbReady=true 后 loadMsgs 的 LS 预载条件
+        //   （!chatDbReady）为 false 被跳过，画面永久空白；进聊天页 renderWindow
+        //   渲染空 msgs，用户感知为"聊天记录丢失"
+        try {
+          const lsRaw = store.get('chat-msgs');
+          if (lsRaw) {
+            const lsArr = JSON.parse(lsRaw);
+            if (Array.isArray(lsArr) && lsArr.length) {
+              msgs = lsArr;
+              try { syncLastMineText(); } catch (e) {}
+            }
+          }
+        } catch (e) {}
       }
       // v3.9.x 修复（真我 Edge 切联系人后聊天记录消失）：IDB 读取挂起时保险丝兜底
       //   就绪，若聊天页可见且有消息但画面空白（同步渲染空 + IDB 回调未执行），
@@ -1735,7 +1750,7 @@
     return v === null || v === undefined || v === '' ? true : v === '1';
   }
   // v3.5.107：通用前台桌面弹窗——聊天新消息、信箱来信/回信、朋友圈通知共用顶部横幅
-  // opts：{ name: 标题（默认 TA 昵称）, text: 内容, type: 消息类型（图片/表情包等）, img: 图片 dataURL（缩略图）, onClick: 点击回调 }
+  // opts：{ name: 标题（默认 TA 昵称）, text: 内容, type: 消息类型（图片/表情包等）, img: 图片 dataURL（缩略图）, onClick: 点击回调, isHidden: 可见性状态 }
   function showDeskPopup(opts) {
     opts = opts || {};
     let t = String(opts.text || '');
@@ -1775,7 +1790,9 @@
     // v3.9.x：页面在后台时只发系统通知、不弹应用内横幅——横幅的 6 秒自动隐藏
     // setTimeout 在后台会被浏览器节流/冻结，回前台时横幅还挂着几分钟前的旧消息
     // （用户反馈：切换后台后返回浏览器，后台弹窗突然弹几分钟前的播放音乐系统消息）
-    if (document.visibilityState === 'hidden') {
+    // v3.9.x 修复：使用调用时捕获的 isHidden 状态，避免二次检查时可见性已变导致错判
+    const isHidden = opts.isHidden === true;
+    if (isHidden) {
       if (window.bgNotifyCheck) {
         // v3.7.x：跨桌面——av 字段透传发布者头像（朋友圈通知来自其它联系人桌面时，
         // 系统通知右侧大图标用发布者头像而非当前桌面 TA 头像）
@@ -1853,13 +1870,15 @@
     // v3.5.145：页面在后台 → 无论是否在聊天页都发系统通知（聊天页切后台，
     // TA 回复到达也要提醒）；showDeskPopup 内部 hidden 分支发通知
     // v3.5.157：imgSub 传给 showDeskPopup，后台通知正文据此补 [表情包]/[图片] 占位
-    if (document.visibilityState === 'hidden') {
-      showDeskPopup({ name: name, text: info.text, type: rec.type, img: info.img, imgSub: info.imgSub });
+    // v3.9.x 修复：捕获调用时的可见性状态，避免在 showDeskPopup 内部二次检查时状态已变
+    const isHidden = document.visibilityState === 'hidden';
+    if (isHidden) {
+      showDeskPopup({ name: name, text: info.text, type: rec.type, img: info.img, imgSub: info.imgSub, isHidden: true });
       return;
     }
     // 前台：非聊天页才弹横幅（点击进聊天）；聊天页内消息已直接渲染，不弹
     if (chatVisible()) return;
-    showDeskPopup({ name: name, text: info.text, type: rec.type, img: info.img, imgSub: info.imgSub, onClick: () => { if (!chatVisible()) enterChat(); } });
+    showDeskPopup({ name: name, text: info.text, type: rec.type, img: info.img, imgSub: info.imgSub, onClick: () => { if (!chatVisible()) enterChat(); }, isHidden: false });
   }
   function hideDeskMsg() {
     clearTimeout(deskMsgTimer);
@@ -2624,8 +2643,23 @@ function partialRetractMsg(msgEl, side) {
     try { if (window.replyCfg) scheduleAutoSend(); } catch (e) {}
   });
   // ---- v3.9.x：联系人主动邀请（猜拳/游戏） ----
-  // 命中后发一条邀请提示并打开对应半框，取代普通主动消息；返回 true 表示本次主动发送
-  // 已被邀请占用。游戏邀请在 Pong / 贪吃蛇之间随机。仅聊天页可见时触发。
+  // 命中后发一条邀请提示，typing 结束后弹窗让我同意/拒绝，同意才打开对应半框；
+  // 拒绝则发一条拒绝消息。返回 true 表示本次主动发送已被邀请占用。
+  // 游戏邀请在 Pong / 贪吃蛇之间随机。仅聊天页可见时触发。
+  const INVITE_DECLINE = ['下次吧，现在不太想玩~', '等会儿再陪我玩好不好', '先不玩啦，待会儿再说', '现在没状态，下次一定'];
+  function openInviteConfirm(title, staticText, onAccept) {
+    const mask = document.getElementById('modal-mask');
+    if ((mask && !mask.hidden) || !window.openModal) { onAccept(); return; }
+    window.openModal(title, '', (v) => {
+      if (v === '1') onAccept();
+      else addOut(pick(INVITE_DECLINE));
+    }, {
+      noInput: true,
+      lock: true,
+      pills: [{ label: '同意', value: '1' }, { label: '拒绝', value: '0' }],
+      staticText: staticText
+    });
+  }
   function tryActiveInvite(c) {
     if (!chatVisible()) return false;
     const name = chatPartnerName();
@@ -2635,26 +2669,29 @@ function partialRetractMsg(msgEl, side) {
       showTyping();
       setTimeout(() => {
         hideTyping();
-        openRpsPanel();
+        openInviteConfirm(name + ' 的猜拳邀请', name + ' 邀请你猜拳，来一局？', () => openRpsPanel());
       }, randInt(700, 1400));
       return true;
     }
     // 游戏邀请（Pong / 贪吃蛇随机）
     if (cfgn(c, 'ai-game-en', 1) === 1 && hit(cfgn(c, 'ai-game-prob', 10))) {
       const isPong = Math.random() < 0.5;
+      const gameName = isPong ? 'Pong' : '双人贪吃蛇';
       addIn(name + (isPong ? ' 想和你玩一局 Pong，来吗？' : ' 想和你玩双人贪吃蛇，来吗？'), { special: 'poke', initiative: true });
       showTyping();
       setTimeout(() => {
         hideTyping();
-        if (isPong) {
-          // Pong 面板打开前关闭其他半框（openPongPanel 自身不清，参照 more-pong 的清理列表）
-          const ids = ['poke-card', 'emoji-panel', 'chat-ask-panel', 'chat-search', 'chat-divine-panel', 'chat-decision-panel', 'chat-rps-panel', 'chat-rp-panel', 'chat-call-panel'];
-          ids.forEach(id => { const el = document.getElementById(id); if (el) el.hidden = true; });
-          if (window.closeAvlib) window.closeAvlib();
-          if (window.openPongPanel) window.openPongPanel();
-        } else if (window.openSnakePanel) {
-          window.openSnakePanel();
-        }
+        openInviteConfirm(name + ' 的游戏邀请', name + ' 邀请你玩' + gameName + '，来吗？', () => {
+          if (isPong) {
+            // Pong 面板打开前关闭其他半框（openPongPanel 自身不清，参照 more-pong 的清理列表）
+            const ids = ['poke-card', 'emoji-panel', 'chat-ask-panel', 'chat-search', 'chat-divine-panel', 'chat-decision-panel', 'chat-rps-panel', 'chat-rp-panel', 'chat-call-panel'];
+            ids.forEach(id => { const el = document.getElementById(id); if (el) el.hidden = true; });
+            if (window.closeAvlib) window.closeAvlib();
+            if (window.openPongPanel) window.openPongPanel();
+          } else if (window.openSnakePanel) {
+            window.openSnakePanel();
+          }
+        });
       }, randInt(700, 1400));
       return true;
     }
@@ -3505,7 +3542,7 @@ function partialRetractMsg(msgEl, side) {
       }
     } else {
       amtFen = genRpAmount(wallet.systemBalance);
-      wish = pick(['心意', '给你花', '小礼物', '辛苦啦', '开心一下', '七夕快乐']);
+      wish = pick(['心意', '给你花', '小礼物', '辛苦啦', '开心一下']);
     }
     if (amtFen < 1) return;
     wallet.systemBalance -= amtFen;
@@ -4068,6 +4105,17 @@ function partialRetractMsg(msgEl, side) {
         chatAskType = btn.dataset.atype === 'single' ? 'single' : 'text';
         typeRow.querySelectorAll('.chat-ask-type-btn').forEach(b => b.classList.toggle('sel', b === btn));
         syncOptsHidden();
+        // v3.7.x：切换类型后选项框显隐使 fixed 半框高度变化，主输入框合成层
+        // 仍锁在旧视口位置 → 输入文字停在旧位置、显示在输入栏外。此处重建
+        // 合成层（移除 transform → reflow → 重新 translateZ(0)），与键盘动画
+        // 结束时的 refresh 同款处理，浏览器按新布局位置重新合成
+        askBoxes().forEach(({ box }) => {
+          try {
+            box.style.transform = '';
+            void box.offsetHeight;
+            box.style.transform = 'translateZ(0)';
+          } catch (e) {}
+        });
       });
     });
   }
@@ -4760,6 +4808,15 @@ function partialRetractMsg(msgEl, side) {
         // v3.7.x：设置后立即刷新引用预览条（输入栏上方显示引用了什么，可 ✕ 删除）
         if (rec) {
           const qimgs = (rec.parts || []).filter(p => p.k === 'img').map(p => p.v).slice(0, 3);
+          // v3.9.x 修复（引用 TA 表情包/纯图片消息时图片消失）：TA 主动发表情包
+          //   （addIn 不传 parts）和 TA 回复表情包（genOneReply 返回 {text,type} 无 parts）
+          //   的消息 rec.parts 为 undefined → qimgs 空 → quoteValue 退化为字符串"表情包"
+          //   → quoteHtml 只显示占位文字，图片缩略图丢失。兜底：无 parts 但 rec.text
+          //   本身是 dataURL 时，用 rec.text 作为缩略图来源
+          if (!qimgs.length && (rec.type === 'sticker' || rec.type === 'image')
+              && typeof rec.text === 'string' && rec.text.indexOf('data:') === 0) {
+            qimgs.push(rec.text);
+          }
           // v3.5.131：语音消息引用存占位文案（rec.text 是「文件名|||base64」，
           // 直接引用会在气泡里显示整段 base64 乱码）
           // v3.7.x：表情包/纯图片消息的 rec.text 本身就是整段 base64 dataURL——

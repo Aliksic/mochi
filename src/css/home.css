@@ -94,7 +94,7 @@
 
 /* 小卡片行：今日情话 / 纪念日倒计时 */
 .mini-row { display:flex; gap:12px; margin-bottom:14px; flex-shrink:0; }
-.mini-card { flex:1; border-radius:20px; padding:14px; box-shadow:0 6px 16px rgba(0,0,0,.06); background:var(--widget-bg); opacity:var(--widget-opacity); }
+.mini-card { flex:1; border-radius:20px; padding:14px; box-shadow:0 6px 16px rgba(0,0,0,.06); background:var(--widget-bg); opacity:var(--widget-opacity); border:1px solid var(--widget-border); }
 .mc-top { font-size:11px; color:var(--muted); letter-spacing:1px; }
 .mc-b { font-size:13px; font-weight:600; color:var(--ink); margin-top:6px; line-height:1.45; }
 .mc-b b { font-size:16px; }
@@ -106,6 +106,7 @@
   background:var(--widget-bg);
   box-shadow:0 4px 14px rgba(0,0,0,.05);
   opacity:var(--widget-opacity);
+  border:1px solid var(--widget-border);
 }
 .ck-heart {
   width:30px; height:30px; border-radius:50%; flex-shrink:0;
@@ -132,6 +133,7 @@
   background:var(--widget-bg);
   box-shadow:0 4px 14px rgba(0,0,0,.05);
   opacity:var(--widget-opacity);
+  border:1px solid var(--widget-border);
 }
 .we-left { display:flex; flex-direction:column; gap:1px; }
 .we-days { font-size:13px; font-weight:700; color:var(--ink); letter-spacing:.5px; }
@@ -378,6 +380,7 @@
   box-shadow:0 8px 20px rgba(0,0,0,.07);
   background:var(--widget-bg);
   opacity:var(--widget-opacity);
+  border:1px solid var(--widget-border);
 }
 .mw-head {
   display:flex; align-items:center; justify-content:space-between; margin-bottom:9px;

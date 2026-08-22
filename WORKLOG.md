@@ -11,6 +11,20 @@
   - **主页「每日摸鱼值/每日打工值」两个 tab 保留**（用户确认——它们有历史累计统计，日历按天看替代不了）；本轮不动 records.js。
   - ⚠️ 构建已含工作区 AI-A 未提交累积改动，提交时确认对方已保存完整。
 
+### 2026-08-22（用户反馈「苹果15pro Safari 加桌面后打字一直闪屏、点一下闪一下；调字卡卡住」）
+- [AI-B·完成]（**已构建 verify 8/10，未提交**）：`src/js/mobile-adapt.js`。在 db91f6b（限 pinScrollTop 500ms 窗口）基础上进一步堵三条 PWA standalone 闪屏路径：
+  - 根因：① `vv.scroll` 事件打字时高频触发 syncIosKb（caret 微滚），稳态期反复读高度/比较/DOM 写入 → 打字卡顿 + reflow 闪屏；② `focusout` 点击字卡/按钮时焦点短暂离开输入框但键盘未必收，syncIosKb 靠 `_focused` 判定误 restore → _phone 收缩↔回落 reflow → "点一下闪一下"（standalone 下 .phone 100vh 与 vv.height 差整个键盘高度，跳最剧烈）；③ `_kbWatch` 自愈用 `innerHeight - vv.height <= 80`，standalone 下 innerHeight 含系统状态栏，无键盘时差值可能 > 80 误判 → 周期 restore 闪。
+  - 修复：① `vv.scroll` 独立走 `onIosKbScroll`——只在 `_pinUntil` 窗口内 pinScrollTop，稳态打字完全 no-op；键盘开合判定只交给 `vv.resize`。② syncIosKb 稳态早退：`_kbActive && _focused && _kbStill && 过 _pinUntil` 时只保 height 直接 return。③ 键盘是否仍开改用 `_kbStill = _h < _noKbH - 60`（按可视高度不靠焦点），restore 条件改 `!_kbStill`。④ `_kbWatch` 自愈改用 `_vv.height >= _noKbH - 60`，不依赖 innerHeight/焦点。⑤ `focusout` 400ms 兜底改按 `vv.height` 判定。
+  - 注：仅改 iOS 块（isIOS 内），非 iOS/无头 verify 不受影响（stash 本改动后 verify 仍 8/10，确认 360x640 FAIL 是对方 fullscreen.js 改动导致）。verify 8/10 的两个"聊天输入栏贴底"失败需 AI-A 排查 chat.js 域。iOS 真机需用户在 15pro Safari + 加桌面实测确认。
+
+### 2026-08-22（用户反馈「红米K90ProMax 雨见浏览器全屏后上下滑动变成音量/亮度调节」）
+- [AI-B·完成]（**已构建 verify 8/10，待提交**）：`src/js/fullscreen.js`（AI-B 域）+ `src/template.html`（AI-B 域，设置页+聊天设置页开关）+ `src/js/chat-settings.js`（**AI-A 域越界**，加 cs-edge-guard 镜像同步，照抄 cs-fullscreen 模式，请 AI-A 知悉）+ 构建产物。
+  - 根因：雨见浏览器（及 UC/QQ/百度等）全屏下自带"边缘手势"——左右边缘上下滑调音量/亮度，是浏览器应用层手势，网页 `preventDefault` 拦不住。小米自带浏览器无此功能故正常。非本项目代码 bug。
+  - 方案（用户选 D 纯手动开关，不做 UA 检测）：设置页 + 聊天设置页各加「全屏边缘防误触」开关 `sf-edge-guard`/`cs-edge-guard`（镜像同步）。开启后全屏激活时挂左右边缘 24px 透明拦截层（`touch-action:none` 吃掉边缘触摸）+ touchstart capture 兜底 preventDefault；退出全屏或关开关时移除。开关开启弹一次性说明（明示对系统级手势可能无效，最可靠是浏览器设置关闭）。
+  - 持久化键 `fs-edge-guard`；拦截层 z-index 99999，仅边缘 24px 不影响中央交互。MutationObserver 监听 documentElement class 变化（fs-active/fs-css-active/ios-fs-active）同步启停。
+  - ⚠️ verify 8/10 的两个 FAIL（聊天输入栏贴底 748vs844 / 544vs640）是工作区既有问题（stash 本次改动后仍 8/10），与本次无关，**需 AI-A 排查 chat.js 域**。
+  - ⚠️ 构建含工作区累积改动（chat/feed/mail/contacts/personalize 等 17 文件），提交时确认对方已保存完整。
+
 ### 2026-08-22（用户反馈「苹果14 默认浏览器聊天输入栏每打一个字屏幕闪一下」）
 - [AI-B·完成]（**已构建 verify 10/10，已提交 db91f6b 并推送上线**）：`src/js/mobile-adapt.js`。
   - 根因：iOS Safari 上 #chat-input 是 contenteditable div，打字时每字触发 visualViewport resize/scroll → syncIosKb 无条件 pinScrollTop() → scrollTo(0,0) 与系统让 caret 可见的微滚打架，每打一字整页跳一次 = 闪屏。
@@ -730,6 +744,7 @@
 - [本会话] 完成（用户要求「桌面图标位置也可自定义」，已构建 verify 10/10 + 无头浏览器端到端 8/8，**未提交**）：装修模式点图标弹出的菜单**增加「上移/下移」**，可在图标网格内调整单个图标位置（之前只能整网格移动）。实现 `src/js/personalize.js`：① 图标点击菜单统一为「图标设置」——上传/更换图片 + 清除图片（有自定义图时）+ 上移 + 下移；② `moveApp(dir)` 移动节点（insertBefore，节点移动不重建、事件绑定保留）并持久化 `app-icon-order-<grid.app>`（data-app 数组 JSON）；③ `restoreAppIconOrder()` 启动时按存储顺序重排（移动节点恢复）；④ `src/template.html` 给两个图标网格加 `data-app="main"`（首页）/`data-app="p2"`（第二页）标记。无头浏览器验证 8/8：进装修模式/点图标弹「图标设置」菜单（含更换+清除+上移+下移）/chat 图标下移变第 1 位/顺序持久化 app-icon-order-main/刷新后顺序保持/上移回第 0 位。涉及 `src/template.html`、`src/js/personalize.js`。已 `node build.mjs` + `npm run verify` 10/10。临时脚本已删。**未提交**，等待统一提交/部署。
 - [本会话] 完成（用户要求「自定义手机桌面图标行下方加说明」，已构建 verify 10/10 + 无头浏览器端到端 3/3，**未提交**）：`src/template.html` 该行 `.txt` 内加 `<span class="sub">自定义图标图片 · 桌面组件卡片位置 · 卡片背景图片</span>`；`src/css/setting.css` 新增 `.set-row .txt .sub` 样式（block 灰色 11.5px 小字）。无头浏览器验证 3/3：副标题文字/样式生效/入口仍正常进装修。涉及 `src/template.html`、`src/css/setting.css`。已构建 verify 10/10。**未提交**。
 - [本会话] 完成（用户反馈「桌面美化的小组件颜色恢复默认，没有保存」，已构建 verify 10/10 + 无头浏览器复现 6/6，**未提交**）：根因——`src/js/contacts.js` `defaultStore().remove(k)` 删 default 命名空间键后，只手动 `localStorage.removeItem` + `idbDelete` 清旧顶层键，**漏了 memoryCache**；而 `defaultStore().get(k)` 有回退逻辑（default 命名空间读不到 → 回退读旧顶层键 `xy-home-v2:widget-bg-color`），memoryCache 里的残留旧值被读到 → 点「恢复默认」后 `store.remove('widget-bg-color')` 已执行、LS/IDB 已删，但 get 仍返回旧色（切桌面/重进设置时 CSS 变量又变回旧色，刷新后才正常——用户感知"恢复默认没保存"）。修复：defaultStore 的 `set/remove` 清旧顶层键改走 `window.xyStore(G).remove(k)`（memoryCache + LS + IDB 三处彻底清）；`deleteContact` 删联系人数据同样改走 `xyStore(prefix).remove`（原来裸 removeItem/idbDelete 漏 memoryCache）。无头浏览器复现：老用户升级（旧顶层键 widget-bg-color）→ 恢复默认 → `store.get` 由残留 `#f5f0eb` 变为 `null`（修复前）→ 修复后立即 null、刷新后仍默认白 6/6。涉及 `src/js/contacts.js`。已 `node build.mjs` + `npm run verify` 10/10。临时脚本已删。**未提交**，等待统一提交/部署。
+- [本会话] 完成（用户反馈「联系人邀请玩游戏没有弹窗让我同意或拒绝，直接就打开了」，已构建 verify 10/10 + 邀请专项 27/27，**未提交**）：根因——v3.9.x `tryActiveInvite`（chat.js）命中邀请概率后发邀请消息 + typing → **直接自动打开游戏半框**，没有确认环节。修复：新增 `openInviteConfirm(title, staticText, onAccept)`——typing 结束后改弹 `openModal` 锁定弹窗（lock:true + pills 同意/拒绝 + staticText，复用 showMeAvatarInvite 同款模式），同意才打开对应半框（猜拳 openRpsPanel / Pong openPongPanel / 贪吃蛇 openSnakePanel），拒绝则 `addOut(pick(INVITE_DECLINE))` 发一条拒绝消息（4 句随机：下次吧/等会儿/先不玩啦/没状态），半框不打开；弹窗被占用或 openModal 未就绪时退回直接打开（避免邀请消息没下文）。同步更新 `tools/verify-invite-settings.mjs` 第 5/6 断言：由"半框自动打开"改为"弹窗弹出 + 含同意/拒绝 + 半框未开 + 点同意+确定后打开 / 点拒绝+确定后发拒绝消息(.msg-out +1)且半框不打开"。27/27 全过。涉及 `src/js/chat.js`（AI-A 域，用户直接反馈故本会话处理）、`tools/verify-invite-settings.mjs`。已 `node build.mjs` + `node tools/verify.mjs` 10/10 + `node tools/verify-invite-settings.mjs` 27/27。⚠️ 本次构建同时包含工作区已保存的对方改动（call.js/contacts.js），未提交，待统一提交/部署。
 
 ## 记录
 
@@ -1142,3 +1157,11 @@
 - 2026-08-22 00:58: 修复真我手机Edge导出/导入完全无反应（7caf65f 已构建提交）——导出改三级降级(navigator.share→showSaveFilePicker→a[download]挂DOM)，导入input挂DOM再click；涉及 src/js/data-backup.js
 
 - 2026-08-22 01:05: 用户反馈「导入提示 备份文件里没有 mochi数据（键前缀不匹配）」——该文案是 db91f6b 之前的旧版硬校验；db91f6b 已改前缀兼容（探测→键尾匹配→重写导入）。本会话再修兼容分支三处残留缺陷（**已随 6dde750 提交**，并行会话 git add -A 带入，verify 10/10 + 前缀单测 10/10）：① mochiKeyTails 从 v3.6 初期 13 键扩充到 v3.6~v3.9 全量（群聊 gc-*/占卜 divine-*/每日小记 quote-history/memo-*/摸鱼工作 day-fish-*/work-day-add 等新键缺位会误拒）；② 新增多桌面命名空间结构判定 deskHit（键去掉前缀后第一段是 default: 或 c<数字>:，mochi 独有，覆盖"备份只有新功能键"场景）；③ app 标识不匹配但键前缀 xy-home-v2:（mochi 独有前缀）时放行导入（原实现直接拒绝 fork/手改 app 字段的备份）。
+
+### 2026-08-22 20:30（用户反馈：华为 Mate 60 Pro 夸克浏览器·自定义字卡批量导入多行变 1 卡）
+- [AI-B·完成]（**已构建 verify 10/10 + verify-cc-batch-import 13/13 + verify-ck-question 18/18，未提交→本次提交**）：src/js/mobile-adapt.js（AI-B 域）。
+  - **根因**：安卓下批量导入弹窗 #modal-textarea 被转成 ce-box（white-space:pre-wrap，Enter 插入的是**字面 \n 文本节点**，屏幕可见分行）；多行取值原依赖 box.innerText——夸克内核的 innerText 实现会丢掉文本节点里的字面 \n（读回一行）→ 批量导入「一行一个」全部并成 1 张卡。
+  - **修复**：① 新增 ceMultiText(box)——按 DOM 结构还原换行（text 节点保留字面 \n、<br> 一次换行、div/p/li/pre/blockquote 前后补换行）；② value getter 多行分支 = innerText 与 DOM 遍历版**取换行更多者**（标准内核两者一致，夸克走遍历版）；③ value setter 回填改 textContent 直写（pre-wrap 字面 \n 即换行显示，不再依赖 innerText setter 的 \n→<br> 转换）。受益面：所有多行 ce-box（批量导入、帮我决定选项、聊天题库选项、美化方案粘贴等）。
+  - **验证**：tools/verify-cc-batch-import.mjs——字面\n / div 分行 / br 分行 / 夸克模拟（覆写 innerText 丢换行）/ setter 回填往返，5 组用例全部导入为独立字卡。
+- [AI-B·代修]（AI-A 域，随本次提交）：src/js/ta-ask.js——tc/tcu/tr 三段 TabsWrap 绑定代码各被重复粘贴第二份（const 重复声明 SyntaxError → **整包 JS 不执行、开屏卡死、verify 全挂**），已删除重复块（纯机械去重，无逻辑改动）。
+- 本次提交同时包含上一轮未提交改动（ta-ask 单选切换 textarea 挤压修复 chat-pages.css、mobile-adapt 键盘 pinUntil 闪屏修复）与 AI-A 累积未提交 src 改动（chat.js/feed.js/mail.js/contacts.js/chat-settings.js/default-cards-data.js/bg-keep.js/call.js/fullscreen.js/ta-ask.js/home.css/template.html 及 tools/fix-kaomoji-chars.mjs），构建产物一并入库。

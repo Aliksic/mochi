@@ -617,13 +617,13 @@
   // 渲染单个分类的问题列表（presetOnly=true 只渲染系统预设，false 只渲染用户添加）
   // v3.7.x：系统预设分类切换——顶部标签栏点击切换，避免全部分类堆叠导致页面过长
   let askSysCat = null;
-  function renderAskCatsInto(container, presetOnly) {
+  function renderAskCatsInto(container, presetOnly, search) {
     if (!container) return;
     const d = taAskLoad();
     const useDefault = (d.settings || {}).useDefault !== false;
     if (presetOnly) {
       const counts = {};
-      CATS.forEach(([k]) => { counts[k] = d.questions.filter(q => q.cat === k && q.isPreset === true).length; });
+      CATS.forEach(([k]) => { counts[k] = d.questions.filter(q => q.cat === k && q.isPreset === true && (search === '' || q.text.indexOf(search) >= 0)).length; });
       const hasCats = CATS.filter(([k]) => counts[k] > 0);
       if (!hasCats.length) { container.innerHTML = '<div class="ta-empty" style="padding:14px">暂无系统预设问题</div>'; return; }
       if (!askSysCat || !hasCats.some(([k]) => k === askSysCat)) askSysCat = hasCats[0][0];
@@ -632,7 +632,7 @@
         html += '<button class="cc-tab' + (k === askSysCat ? ' sel' : '') + '" data-cat="' + k + '">' + escG(label) + '<em class="cc-tab-n">' + counts[k] + '</em></button>';
       });
       html += '</div>';
-      const arr = d.questions.filter(q => q.cat === askSysCat && q.isPreset === true);
+      const arr = d.questions.filter(q => q.cat === askSysCat && q.isPreset === true && (search === '' || q.text.indexOf(search) >= 0));
       arr.forEach(q => {
         const idx = d.questions.indexOf(q);
         html += '<div class="ta-row' + (!useDefault ? ' off' : '') + '">' +
@@ -643,7 +643,7 @@
       });
       container.innerHTML = html;
       container.querySelectorAll('.cc-tab[data-cat]').forEach(t => {
-        t.addEventListener('click', () => { askSysCat = t.dataset.cat; renderAskCatsInto(container, true); });
+        t.addEventListener('click', () => { askSysCat = t.dataset.cat; renderAskCatsInto(container, true, search); });
       });
       container.querySelectorAll('input[data-idx]').forEach(cb => {
         cb.addEventListener('change', () => {
@@ -657,7 +657,7 @@
     }
     let html = '';
     CATS.forEach(([k, label]) => {
-      const arr = d.questions.filter(q => q.cat === k && (q.isPreset === true) === presetOnly);
+      const arr = d.questions.filter(q => q.cat === k && (q.isPreset === true) === presetOnly && (search === '' || q.text.indexOf(search) >= 0));
       if (!arr.length) return;
       html += '<div class="cal-card glass"><div class="cal-card-title">' + label + ' <span style="font-size:11px;color:var(--muted);font-weight:400">(' + arr.length + ')</span></div>';
       arr.forEach(q => {
@@ -691,7 +691,7 @@
         if (q && q.isPreset === true) { toast('系统预设问题不可删除，可关闭使用'); return; }
         d2.questions.splice(Number(b.dataset.idx), 1);
         taAskSave(d2);
-        renderAskCatsInto(container, false);
+        renderAskCatsInto(container, false, search);
       });
     });
 
@@ -717,11 +717,11 @@
       '<textarea id="ta-opts-' + blockKey + '" class="ta-opts tc-input" rows="3" placeholder="每行一个选项。可写 选项~TA回应；多条回应用 ; 分隔，如 听我说说话~好，我在听。;嗯，你慢慢说。" hidden></textarea>' +
       '</div>';
   }
-  function renderAskMineWithForms() {
+  function renderAskMineWithForms(search) {
     if (!mineCatsEl) return;
     const d = taAskLoad();
     const groups = Array.isArray(d.groups) ? d.groups : [];
-    const mineQs = d.questions.filter(q => q.isPreset !== true);
+    const mineQs = d.questions.filter(q => q.isPreset !== true && (search === '' || q.text.indexOf(search) >= 0));
     let html = '';
     html += '<div class="mg-grp-row"><button class="cc-tool" id="ask-grp-add"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;vertical-align:-2px;margin-right:4px"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>新建分组</button></div>';
     if (!mineQs.length && !groups.length) {
@@ -746,7 +746,7 @@
     html += '<div class="cal-card glass mg-block mg-ungrouped"><div class="cal-card-title mg-title"><span class="mg-name">未分组 · 按系统分类</span><span class="mg-cnt">(' + ungrouped.length + ')</span></div>';
     if (!ungrouped.length) html += '<div class="ta-empty">暂无未分组内容，可在上方批量导入（选择系统分类）</div>';
     CATS.forEach(([k, label]) => {
-      const arr = ungrouped.filter(q => q.cat === k);
+      const arr = ungrouped.filter(q => q.cat === k && (search === '' || q.text.indexOf(search) >= 0));
       if (!arr.length) return;
       html += '<div class="mg-subcat">' + label + ' <span style="font-size:11px;color:var(--muted);font-weight:400">(' + arr.length + ')</span></div>';
       arr.forEach(q => { html += askItemHtml(q, d.questions.indexOf(q)); });
@@ -769,7 +769,7 @@
         if (q && q.isPreset === true) { toast('系统预设问题不可删除'); return; }
         d2.questions.splice(Number(b.dataset.idx), 1);
         taAskSave(d2);
-        renderAskMineWithForms();
+        renderAskMineWithForms(search);
       });
     });
     mineCatsEl.querySelectorAll('.ta-type').forEach(sel => {
@@ -809,7 +809,7 @@
         }
         d2.questions.push(q);
         taAskSave(d2);
-        renderAskMineWithForms();
+        renderAskMineWithForms(search);
       });
     });
     bindAskGroupOps();
@@ -871,12 +871,25 @@
     const minePanel = document.getElementById('ta-ask-mine-panel');
     if (sysPanel) sysPanel.hidden = tab !== 'sys';
     if (minePanel) minePanel.hidden = tab !== 'mine';
-    if (tab === 'sys') renderAskCatsInto(catsEl, true); else renderAskMineWithForms();
+    askSearch = '';
+    const searchInput = document.getElementById('ta-ask-search');
+    if (searchInput) searchInput.value = '';
+    if (tab === 'sys') renderAskCatsInto(catsEl, true, ''); else renderAskMineWithForms('');
   }
   const askTabsWrap = document.getElementById('ta-ask-tabs');
   if (askTabsWrap) {
     askTabsWrap.querySelectorAll('.cc-tab').forEach(tab => {
       tab.addEventListener('click', () => switchAskTab(tab.dataset.tab));
+    });
+  }
+  // 搜索
+  let askSearch = '';
+  const askSearchInput = document.getElementById('ta-ask-search');
+  if (askSearchInput) {
+    askSearchInput.addEventListener('input', () => {
+      askSearch = askSearchInput.value.trim();
+      if (askTab === 'sys') renderAskCatsInto(catsEl, true, askSearch);
+      else renderAskMineWithForms(askSearch);
     });
   }
 
@@ -1385,13 +1398,13 @@ window.openTCPanel = openTCPanel;
   }
   // v3.7.x：系统预设分类切换——顶部标签栏点击切换，避免全部分类堆叠导致页面过长
   let tcSysCat = null;
-  function renderTCCatsInto(container, presetOnly) {
+  function renderTCCatsInto(container, presetOnly, search) {
     if (!container) return;
     const d = tcLoad();
     const useDefault = (d.settings || {}).useDefault !== false;
     if (presetOnly) {
       const counts = {};
-      TC_CAT_ORDER.forEach(k => { counts[k] = d.questions.filter(q => q.cat === k && q.isPreset === true).length; });
+      TC_CAT_ORDER.forEach(k => { counts[k] = d.questions.filter(q => q.cat === k && q.isPreset === true && (search === '' || q.text.indexOf(search) >= 0)).length; });
       const hasCats = TC_CAT_ORDER.filter(k => counts[k] > 0);
       if (!hasCats.length) { container.innerHTML = '<div class="ta-empty">暂无系统预设问题</div>'; return; }
       if (!tcSysCat || !hasCats.includes(tcSysCat)) tcSysCat = hasCats[0];
@@ -1400,7 +1413,7 @@ window.openTCPanel = openTCPanel;
         html += '<button class="cc-tab' + (k === tcSysCat ? ' sel' : '') + '" data-cat="' + k + '">' + escT(TC_CAT_LABEL[k] || k) + '<em class="cc-tab-n">' + counts[k] + '</em></button>';
       });
       html += '</div>';
-      const arr = d.questions.filter(q => q.cat === tcSysCat && q.isPreset === true);
+      const arr = d.questions.filter(q => q.cat === tcSysCat && q.isPreset === true && (search === '' || q.text.indexOf(search) >= 0));
       arr.forEach(q => {
         const idx = d.questions.indexOf(q);
         html += '<div class="tc-qrow' + (q.enabled === false || !useDefault ? ' off' : '') + '">' +
@@ -1411,7 +1424,7 @@ window.openTCPanel = openTCPanel;
       });
       container.innerHTML = html;
       container.querySelectorAll('.cc-tab[data-cat]').forEach(t => {
-        t.addEventListener('click', () => { tcSysCat = t.dataset.cat; renderTCCatsInto(container, true); });
+        t.addEventListener('click', () => { tcSysCat = t.dataset.cat; renderTCCatsInto(container, true, search); });
       });
       container.querySelectorAll('input[data-idx]').forEach(cb => {
         cb.addEventListener('change', () => {
@@ -1425,7 +1438,7 @@ window.openTCPanel = openTCPanel;
     }
     let html = '';
     TC_CAT_ORDER.forEach(k => {
-      const arr = d.questions.filter(q => q.cat === k && (q.isPreset === true) === presetOnly);
+      const arr = d.questions.filter(q => q.cat === k && (q.isPreset === true) === presetOnly && (search === '' || q.text.indexOf(search) >= 0));
       if (!arr.length) return;
       html += '<div class="tc-cat-t">' + (TC_CAT_LABEL[k] || k) + ' <span style="font-size:11px;color:var(--muted);font-weight:400">(' + arr.length + ')</span></div>';
       arr.forEach(q => {
@@ -1458,7 +1471,7 @@ window.openTCPanel = openTCPanel;
         if (q && q.isPreset === true) { toast('系统预设问题不可删除'); return; }
         d2.questions.splice(Number(b.dataset.idx), 1);
         tcSave(d2);
-        renderTCCatsInto(container, false);
+        renderTCCatsInto(container, false, search);
       });
     });
 
@@ -1466,11 +1479,11 @@ window.openTCPanel = openTCPanel;
   // ===== v3.7.x 通用：我的添加 tab 分组模式渲染（tc/tcu/tr 共用） =====
   // opt: { load, save, order, label, emptyTip, rowHtml(q,idx) }
   // 自定义分组区块置顶（与系统预设分类隔开），未分组内容按系统分类放在下方
-  function renderMineGroupsInto(container, opt) {
+  function renderMineGroupsInto(container, opt, search) {
     if (!container) return;
     const d = opt.load();
     const groups = Array.isArray(d.groups) ? d.groups : [];
-    const items = d.questions.filter(q => q.isPreset !== true);
+    const items = d.questions.filter(q => q.isPreset !== true && (search === '' || q.text.indexOf(search) >= 0));
     let html = '';
     html += '<div class="mg-grp-row"><button class="cc-tool mg-grp-add"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;vertical-align:-2px;margin-right:4px"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>新建分组</button></div>';
     if (!items.length && !groups.length) {
@@ -1491,7 +1504,7 @@ window.openTCPanel = openTCPanel;
     html += '<div class="cal-card glass mg-block mg-ungrouped"><div class="cal-card-title mg-title"><span class="mg-name">未分组 · 按系统分类</span><span class="mg-cnt">(' + ungrouped.length + ')</span></div>';
     if (!ungrouped.length) html += '<div class="ta-empty">暂无未分组内容，可在上方添加（选择系统分类）</div>';
     opt.order.forEach(k => {
-      const arr = ungrouped.filter(q => q.cat === k);
+      const arr = ungrouped.filter(q => q.cat === k && (search === '' || q.text.indexOf(search) >= 0));
       if (!arr.length) return;
       html += '<div class="mg-subcat">' + escG(opt.label[k] || k) + ' <span style="font-size:11px;color:var(--muted);font-weight:400">(' + arr.length + ')</span></div>';
       html += arr.map(q => opt.rowHtml(q, d.questions.indexOf(q))).join('');
@@ -1513,7 +1526,7 @@ window.openTCPanel = openTCPanel;
         if (q && q.isPreset === true) { toast('系统预设问题不可删除'); return; }
         d2.questions.splice(Number(b.dataset.idx), 1);
         opt.save(d2);
-        renderMineGroupsInto(container, opt);
+        renderMineGroupsInto(container, opt, search);
       });
     });
     bindMineGroups(container, opt);
@@ -1582,8 +1595,11 @@ window.openTCPanel = openTCPanel;
     const minePanel = document.getElementById('tc-mine-panel');
     if (sysPanel) sysPanel.hidden = tab !== 'sys';
     if (minePanel) minePanel.hidden = tab !== 'mine';
-    if (tab === 'sys') renderTCCatsInto(document.getElementById('tc-sys-cats'), true);
-    else renderMineGroupsInto(document.getElementById('tc-mine-cats'), tcMineOpt);
+    tcSearch = '';
+    const searchInput = document.getElementById('tc-search');
+    if (searchInput) searchInput.value = '';
+    if (tab === 'sys') renderTCCatsInto(document.getElementById('tc-sys-cats'), true, '');
+    else renderMineGroupsInto(document.getElementById('tc-mine-cats'), tcMineOpt, '');
   }
   const tcTabsWrap = document.getElementById('tc-tabs');
   if (tcTabsWrap) {
@@ -1591,6 +1607,18 @@ window.openTCPanel = openTCPanel;
       tab.addEventListener('click', () => switchTCTab(tab.dataset.tab));
     });
   }
+  // 搜索
+  let tcSearch = '';
+  const tcSearchInput = document.getElementById('tc-search');
+  if (tcSearchInput) {
+    tcSearchInput.addEventListener('input', () => {
+      tcSearch = tcSearchInput.value.trim();
+      if (tcTab === 'sys') renderTCCatsInto(document.getElementById('tc-sys-cats'), true, tcSearch);
+      else renderMineGroupsInto(document.getElementById('tc-mine-cats'), tcMineOpt, tcSearch);
+    });
+  }
+  // AI-B 代修（2026-08-22）：此处原有一段与上方完全相同的 tcTabsWrap 绑定代码被
+  // 重复粘贴（const 重复声明 → SyntaxError → 整包 JS 不执行、开屏卡死），已删除第二份
   const tcEn = document.getElementById('tc-enable');
   if (tcEn) {
     tcEn.addEventListener('change', () => {
@@ -2110,14 +2138,14 @@ window.openTCPanel = openTCPanel;
   }
   // v3.7.x：系统预设分类切换——顶部标签栏点击切换，避免 8 个分类全部堆叠导致页面过长
   let tcuSysCat = null;
-  function renderTCUCatsInto(container, presetOnly) {
+  function renderTCUCatsInto(container, presetOnly, search) {
     if (!container) return;
     const d = tcuLoad();
     const useDefault = (d.settings || {}).useDefault !== false;
     // 系统预设：顶部分类标签栏 + 只渲染当前选中分类（不再全部分组堆叠）
     if (presetOnly) {
       const counts = {};
-      TCU_CAT_ORDER.forEach(k => { counts[k] = d.questions.filter(q => q.cat === k && q.isPreset === true).length; });
+      TCU_CAT_ORDER.forEach(k => { counts[k] = d.questions.filter(q => q.cat === k && q.isPreset === true && (search === '' || q.text.indexOf(search) >= 0)).length; });
       const hasCats = TCU_CAT_ORDER.filter(k => counts[k] > 0);
       if (!hasCats.length) { container.innerHTML = '<div class="ta-empty">暂无系统预设问题</div>'; return; }
       if (!tcuSysCat || !hasCats.includes(tcuSysCat)) tcuSysCat = hasCats[0];
@@ -2126,7 +2154,7 @@ window.openTCPanel = openTCPanel;
         html += '<button class="cc-tab' + (k === tcuSysCat ? ' sel' : '') + '" data-cat="' + k + '">' + escT(TCU_CAT_LABEL[k] || k) + '<em class="cc-tab-n">' + counts[k] + '</em></button>';
       });
       html += '</div>';
-      const arr = d.questions.filter(q => q.cat === tcuSysCat && q.isPreset === true);
+      const arr = d.questions.filter(q => q.cat === tcuSysCat && q.isPreset === true && (search === '' || q.text.indexOf(search) >= 0));
       arr.forEach(q => {
         const idx = d.questions.indexOf(q);
         const known = q.id && d.known[q.id];
@@ -2139,7 +2167,7 @@ window.openTCPanel = openTCPanel;
       });
       container.innerHTML = html;
       container.querySelectorAll('.cc-tab[data-cat]').forEach(t => {
-        t.addEventListener('click', () => { tcuSysCat = t.dataset.cat; renderTCUCatsInto(container, true); });
+        t.addEventListener('click', () => { tcuSysCat = t.dataset.cat; renderTCUCatsInto(container, true, search); });
       });
       container.querySelectorAll('input[data-idx]').forEach(cb => {
         cb.addEventListener('change', () => {
@@ -2154,7 +2182,7 @@ window.openTCPanel = openTCPanel;
     // 自定义问题（保留原堆叠渲染，供其他调用路径）
     let html = '';
     TCU_CAT_ORDER.forEach(k => {
-      const arr = d.questions.filter(q => q.cat === k && (q.isPreset === true) === presetOnly);
+      const arr = d.questions.filter(q => q.cat === k && (q.isPreset === true) === presetOnly && (search === '' || q.text.indexOf(search) >= 0));
       if (!arr.length) return;
       html += '<div class="tc-cat-t">' + (TCU_CAT_LABEL[k] || k) + ' <span style="font-size:11px;color:var(--muted);font-weight:400">(' + arr.length + ')</span></div>';
       arr.forEach(q => {
@@ -2188,7 +2216,7 @@ window.openTCPanel = openTCPanel;
         if (q && q.isPreset === true) { toast('系统预设问题不可删除'); return; }
         d2.questions.splice(Number(b.dataset.idx), 1);
         tcuSave(d2);
-        renderTCUCatsInto(container, false);
+        renderTCUCatsInto(container, false, search);
       });
     });
 
@@ -2216,8 +2244,11 @@ window.openTCPanel = openTCPanel;
     const minePanel = document.getElementById('tcu-mine-panel');
     if (sysPanel) sysPanel.hidden = tab !== 'sys';
     if (minePanel) minePanel.hidden = tab !== 'mine';
-    if (tab === 'sys') renderTCUCatsInto(document.getElementById('tcu-sys-cats'), true);
-    else renderMineGroupsInto(document.getElementById('tcu-mine-cats'), tcuMineOpt);
+    tcuSearch = '';
+    const searchInput = document.getElementById('tcu-search');
+    if (searchInput) searchInput.value = '';
+    if (tab === 'sys') renderTCUCatsInto(document.getElementById('tcu-sys-cats'), true, '');
+    else renderMineGroupsInto(document.getElementById('tcu-mine-cats'), tcuMineOpt, '');
   }
   const tcuTabsWrap = document.getElementById('tcu-tabs');
   if (tcuTabsWrap) {
@@ -2225,6 +2256,17 @@ window.openTCPanel = openTCPanel;
       tab.addEventListener('click', () => switchTCUTab(tab.dataset.tab));
     });
   }
+  // 搜索
+  let tcuSearch = '';
+  const tcuSearchInput = document.getElementById('tcu-search');
+  if (tcuSearchInput) {
+    tcuSearchInput.addEventListener('input', () => {
+      tcuSearch = tcuSearchInput.value.trim();
+      if (tcuTab === 'sys') renderTCUCatsInto(document.getElementById('tcu-sys-cats'), true, tcuSearch);
+      else renderMineGroupsInto(document.getElementById('tcu-mine-cats'), tcuMineOpt, tcuSearch);
+    });
+  }
+  // AI-B 代修（2026-08-22）：同上——tcuTabsWrap 绑定代码重复粘贴第二份已删除
   // 好奇入口
   const liTCU = document.getElementById('li-ta-curious');
   const tcuPage = document.getElementById('page-ta-curious');
@@ -2656,13 +2698,13 @@ window.openTCPanel = openTCPanel;
   }
   // v3.7.x：系统预设分类切换——顶部标签栏点击切换，避免全部分类堆叠导致页面过长
   let trSysCat = null;
-  function renderTRCatsInto(container, presetOnly) {
+  function renderTRCatsInto(container, presetOnly, search) {
     if (!container) return;
     const d = trLoad();
     const useDefault = (d.settings || {}).useDefault !== false;
     if (presetOnly) {
       const counts = {};
-      TR_CAT_ORDER.forEach(k => { counts[k] = d.questions.filter(q => q.cat === k && q.isPreset === true).length; });
+      TR_CAT_ORDER.forEach(k => { counts[k] = d.questions.filter(q => q.cat === k && q.isPreset === true && (search === '' || q.text.indexOf(search) >= 0)).length; });
       const hasCats = TR_CAT_ORDER.filter(k => counts[k] > 0);
       if (!hasCats.length) { container.innerHTML = '<div class="ta-empty">暂无系统预设字卡</div>'; return; }
       if (!trSysCat || !hasCats.includes(trSysCat)) trSysCat = hasCats[0];
@@ -2671,7 +2713,7 @@ window.openTCPanel = openTCPanel;
         html += '<button class="cc-tab' + (k === trSysCat ? ' sel' : '') + '" data-cat="' + k + '">' + escT(TR_CAT_LABEL[k] || k) + '<em class="cc-tab-n">' + counts[k] + '</em></button>';
       });
       html += '</div>';
-      const arr = d.questions.filter(q => q.cat === trSysCat && q.isPreset === true);
+      const arr = d.questions.filter(q => q.cat === trSysCat && q.isPreset === true && (search === '' || q.text.indexOf(search) >= 0));
       arr.forEach(q => {
         const idx = d.questions.indexOf(q);
         html += '<div class="tc-qrow' + (q.enabled === false || !useDefault ? ' off' : '') + '">' +
@@ -2683,7 +2725,7 @@ window.openTCPanel = openTCPanel;
       });
       container.innerHTML = html;
       container.querySelectorAll('.cc-tab[data-cat]').forEach(t => {
-        t.addEventListener('click', () => { trSysCat = t.dataset.cat; renderTRCatsInto(container, true); });
+        t.addEventListener('click', () => { trSysCat = t.dataset.cat; renderTRCatsInto(container, true, search); });
       });
       container.querySelectorAll('input[data-idx]').forEach(cb => {
         cb.addEventListener('change', () => {
@@ -2697,7 +2739,7 @@ window.openTCPanel = openTCPanel;
     }
     let html = '';
     TR_CAT_ORDER.forEach(k => {
-      const arr = d.questions.filter(q => q.cat === k && (q.isPreset === true) === presetOnly);
+      const arr = d.questions.filter(q => q.cat === k && (q.isPreset === true) === presetOnly && (search === '' || q.text.indexOf(search) >= 0));
       if (!arr.length) return;
       html += '<div class="tc-cat-t">' + (TR_CAT_LABEL[k] || k) + ' <span style="font-size:11px;color:var(--muted);font-weight:400">(' + arr.length + ')</span></div>';
       arr.forEach(q => {
@@ -2730,7 +2772,7 @@ window.openTCPanel = openTCPanel;
         if (q && q.isPreset === true) { toast('系统预设字卡不可删除'); return; }
         d2.questions.splice(Number(b.dataset.idx), 1);
         trSave(d2);
-        renderTRCatsInto(container, false);
+        renderTRCatsInto(container, false, search);
       });
     });
 
@@ -2757,8 +2799,11 @@ window.openTCPanel = openTCPanel;
     const minePanel = document.getElementById('tr-mine-panel');
     if (sysPanel) sysPanel.hidden = tab !== 'sys';
     if (minePanel) minePanel.hidden = tab !== 'mine';
-    if (tab === 'sys') renderTRCatsInto(document.getElementById('tr-sys-cats'), true);
-    else renderMineGroupsInto(document.getElementById('tr-mine-cats'), trMineOpt);
+    trSearch = '';
+    const searchInput = document.getElementById('tr-search');
+    if (searchInput) searchInput.value = '';
+    if (tab === 'sys') renderTRCatsInto(document.getElementById('tr-sys-cats'), true, '');
+    else renderMineGroupsInto(document.getElementById('tr-mine-cats'), trMineOpt, '');
   }
   const trTabsWrap = document.getElementById('tr-tabs');
   if (trTabsWrap) {
@@ -2766,6 +2811,17 @@ window.openTCPanel = openTCPanel;
       tab.addEventListener('click', () => switchTRTab(tab.dataset.tab));
     });
   }
+  // 搜索
+  let trSearch = '';
+  const trSearchInput = document.getElementById('tr-search');
+  if (trSearchInput) {
+    trSearchInput.addEventListener('input', () => {
+      trSearch = trSearchInput.value.trim();
+      if (trTab === 'sys') renderTRCatsInto(document.getElementById('tr-sys-cats'), true, trSearch);
+      else renderMineGroupsInto(document.getElementById('tr-mine-cats'), trMineOpt, trSearch);
+    });
+  }
+  // AI-B 代修（2026-08-22）：同上——trTabsWrap 绑定代码重复粘贴第二份已删除
   // 吐槽入口
   const liTR = document.getElementById('li-ta-roast');
   const trPage = document.getElementById('page-ta-roast');

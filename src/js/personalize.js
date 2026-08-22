@@ -161,16 +161,17 @@
       }
     } catch (e) {}
   };
-  try {
-    document.addEventListener('mochi-restore-done', function () {
-      window.applyAvatars();
-      try { syncFishUI(); } catch (e) {}
-      // v3.5.116：回填完成后一并重绘桌面图标 + 壁纸——
-      //   自定义图标/壁纸大键可能只存 IDB，回填完成前桌面显示的是默认/空白
-      try { restoreAppIcons(); } catch (e) {}
-      try { applyBgVisibility(); } catch (e) {}
-    });
-  } catch (e) {}
+try {
+      document.addEventListener('mochi-restore-done', function () {
+        window.applyAvatars();
+        try { syncFishUI(); } catch (e) {}
+        try { updateFishDays(); } catch (e) {}
+        // v3.5.116：回填完成后一并重绘桌面图标 + 壁纸——
+        //   自定义图标/壁纸大键可能只存 IDB，回填完成前桌面显示的是默认/空白
+        try { restoreAppIcons(); } catch (e) {}
+        try { applyBgVisibility(); } catch (e) {}
+      });
+    } catch (e) {}
 
   // 通用弹层：IAB 不支持 prompt/confirm，用页面内模态框替代；支持输入 / 色板
   (function () {

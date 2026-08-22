@@ -122,7 +122,7 @@
     if (!currentCall || !mini) return;
     if (enabled) {
       if (currentCall.status === 'connected' && mask && mask.hidden) {
-        if (miniName) miniName.textContent = currentCall.name || partnerName();
+        syncCallName();
         syncCallAv();
         mini.hidden = false;
       }
@@ -202,6 +202,7 @@
   // v3.7.x：通话中头像实时跟随——联系人换头像（头像库手动/自动/设置页）后，
   // 通话大面板与小框同步刷新；按归属桌面读 avatar-partner（跨桌面通话仍显示正确的 TA）
   let shownAv = null;
+  let shownName = null;
   function syncCallAv() {
     if (!currentCall) return;
     let av = '';
@@ -213,6 +214,18 @@
     shownAv = av;
     fillAv(avEl, av);
     fillAv(miniAv, av);
+  }
+  function syncCallName() {
+    if (!currentCall) return;
+    let name = '';
+    try {
+      const s = (window.storeFor && window.storeFor(currentCall.cid)) || store;
+      name = s.get('lbl-partner') || '';
+    } catch (e) { name = currentCall.name || partnerName(); }
+    if (name === shownName) return;
+    shownName = name;
+    if (nameEl) nameEl.textContent = name;
+    if (miniName) miniName.textContent = name;
   }
   function fmtDur(sec) {
     if (isNaN(sec) || sec < 0) return '00:00';
@@ -234,7 +247,7 @@
     if (cdEl) cdEl.hidden = true;
     if (mini) {
       if (callMiniEnabled()) {
-        if (miniName) miniName.textContent = currentCall.name || partnerName();
+        syncCallName();
         syncCallAv();
         mini.hidden = false;
       } else {
@@ -259,6 +272,7 @@
     durationTimer = setInterval(() => {
       updateDur();
       syncCallAv();
+      syncCallName();
       // 对方挂断概率：接通 3 分钟保护期后，每 60 秒检查一次
       // v3.6.x：放宽——原实现 10 秒保护后每 30 秒掷一次，默认 5% 实际效果远超设置字面值
       //（约 3 分钟累计 ~23% 被挂断、10 分钟内累计 ~62%），用户反馈「3 分钟左右自动挂断、
@@ -342,7 +356,14 @@
     }
     currentCall = null;
     shownAv = null;
+    shownName = null;
   }
+  // 监听联系人重命名事件，实时同步通话昵称
+  document.addEventListener('contact-renamed', (e) => {
+    if (currentCall && e.detail && e.detail.id === currentCall.cid) {
+      syncCallName();
+    }
+  });
   // v3.5.129：响铃中切后台（锁屏/切走）→ 停铃声并结束来电——
   // 后台无法接听，30 秒干响没有意义（安卓后台音频还会常驻媒体通知）
   document.addEventListener('visibilitychange', () => {
@@ -371,7 +392,9 @@
     const name = partnerName();
     currentCall = bindCall({ direction: 'in', status: 'ringing', startTime: Date.now(), durationSec: 0 });
     shownAv = null;
+    shownName = null;
     syncCallAv();
+    syncCallName();
     if (nameEl) nameEl.textContent = name;
     if (statusEl) statusEl.textContent = '对方来电...';
     if (durEl) durEl.textContent = '00:00';
@@ -413,7 +436,7 @@
         if (callMiniEnabled()) {
           if (mask) mask.hidden = true;
           if (mini) {
-            if (miniName) miniName.textContent = currentCall.name || partnerName();
+            syncCallName();
             syncCallAv();
             mini.hidden = false;
           }
@@ -448,7 +471,9 @@
     // v3.6.x：去电同样暂停音乐 + 隐藏悬浮小框（与来电一致），挂断后才能自动恢复播放
     if (window.musicHoldForCall) window.musicHoldForCall(true);
     shownAv = null;
+    shownName = null;
     syncCallAv();
+    syncCallName();
     if (nameEl) nameEl.textContent = name;
     if (statusEl) statusEl.textContent = '正在呼叫...';
     if (durEl) durEl.textContent = '00:00';
@@ -473,7 +498,7 @@
           if (currentCall === callRef && callRef.status === 'connected') {
             if (callMiniEnabled()) {
               if (mask) mask.hidden = true;
-              if (mini) { if (miniName) miniName.textContent = callRef.name || partnerName(); syncCallAv(); mini.hidden = false; }
+              if (mini) { syncCallName(); syncCallAv(); mini.hidden = false; }
             }
           }
         }, 2000);

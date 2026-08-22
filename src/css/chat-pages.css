@@ -172,6 +172,12 @@
    打开卡顿白屏。本页字卡去掉阴影与缩放反馈（右侧 toggle 开关已是交互反馈，视觉无损） */
 #dc-list .cc-item { box-shadow: none; transition: none; }
 #dc-list .cc-item:active { transform: none; }
+/* v3.9.x：默认字卡页滚动修复——main 分类 4621 张字卡时，.card-list 的 flex:1 在
+   .page(overflow-y:auto) 内因 min-height:auto 被内容撑开，列表自身 overflow 不触发，
+   改由 .page 整体滚动，触摸滑动困难且头部跟着滚走。改为 .page 锁死不滚（头部固定）+
+   #dc-list 加 min-height:0 让 flex:1 限制高度、列表内部滚动，字卡可顺畅上下滑 */
+#page-default-cards { overflow:hidden; }
+#dc-list { min-height:0; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; }
 .dc-toggle {
   display:flex; align-items:center; justify-content:space-between; gap:10px;
   border-radius:18px; padding:14px 16px; margin-bottom:14px; flex-shrink:0;

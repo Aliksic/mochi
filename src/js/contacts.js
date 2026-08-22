@@ -131,6 +131,8 @@
         const cur = s.get('lbl-partner');
         if (!cur || cur === oldName) s.set('lbl-partner', c.name);
       } catch (e) {}
+      // 广播联系人重命名事件，通知通话模块等实时同步昵称
+      try { document.dispatchEvent(new CustomEvent('contact-renamed', { detail: { id, name: c.name, oldName } })); } catch (e) {}
     }
   };
   window.deleteContact = function (id) {
@@ -358,9 +360,9 @@
     const m = ensureModal();
     m.innerHTML = '';
     const box = el('div');
-    box.style.cssText = 'width:min(92vw,420px);max-height:80vh;overflow:auto;background:#fff;border-radius:16px;padding:18px;box-shadow:0 8px 30px rgba(0,0,0,.2)';
+    box.style.cssText = 'width:min(92vw,420px);max-height:80vh;display:flex;flex-direction:column;background:#fff;border-radius:16px;padding:18px;box-shadow:0 8px 30px rgba(0,0,0,.2)';
     box.appendChild(el('div', '', '<div style="font-size:16px;font-weight:600;margin-bottom:4px">联系人 / 桌面</div><div style="font-size:12px;color:#888;margin-bottom:12px">每个联系人数据独立；仅朋友圈互通</div>'));
-    const list = el('div'); list.style.cssText = 'display:flex;flex-direction:column;gap:8px;margin-bottom:12px';
+    const list = el('div'); list.style.cssText = 'display:flex;flex-direction:column;gap:8px;margin-bottom:12px;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;flex:1;min-height:0';
     getContacts().forEach(c => {
       const row = el('div');
       row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px;border:1px solid #eee;border-radius:10px';

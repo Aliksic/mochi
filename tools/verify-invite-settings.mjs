@@ -2,7 +2,8 @@
 // 链路：设置页「回复设置」有 5 个 tab（聊天/群聊/信箱/朋友圈/其他）→
 //       其他面板含 猜拳/游戏 邀请开关+概率（默认开，15%/10%）→
 //       replyCfg 默认值正确 → 开关关闭后落库并生效 → 聊天页可见时
-//       tryActiveInvite 按概率发邀请消息并打开对应半框（猜拳 / Pong / 贪吃蛇）→
+//       tryActiveInvite 按概率发邀请消息并弹窗让我同意/拒绝，同意才打开对应半框（猜拳 / Pong / 贪吃蛇）、
+//       拒绝则发一条拒绝消息；半框不再自动打开 →
 //       开关全关时不发邀请（走普通主动消息）→ 全程无 JS 异常。
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:http';
@@ -168,7 +169,7 @@ check('游戏邀请开关已写入 localStorage（当前联系人命名空间）
 await setCfg('ai-game-en', 1);
 check('重新开启游戏邀请后回复默认', (await cfgVal('ai-game-en')) === 1);
 
-// ==================== 5. 聊天页触发：猜拳邀请 ====================
+// ==================== 5. 聊天页触发：猜拳邀请 → 弹窗同意/拒绝 ====================
 await evalJs("(function(){var b=document.getElementById('reply-back');if(b)b.click();return true;})()");
 await sleep(300);
 await evalJs("(function(){var b=document.getElementById('cs-back');if(b)b.click();return true;})()");
@@ -180,7 +181,6 @@ check('聊天页可见（邀请需要聊天页可见才触发）', chatShown ===
 // 确定性：固定随机 + 猜拳概率 100、游戏概率 0
 await setCfg('ai-rps-en', 1); await setCfg('ai-rps-prob', 100); await setCfg('ai-game-prob', 0);
 await freezeRandom();
-const beforeCount = await evalJs("(function(){return document.querySelectorAll('#chat-body .msg-in').length;})()") || 0;
 const rpsRet = await evalJs("(function(){return window.tryActiveInvite(window.replyCfg());})()");
 check('猜拳邀请触发（tryActiveInvite 返回 true）', rpsRet === true, String(rpsRet));
 let rpsMsg = '';
@@ -190,17 +190,25 @@ for (let i = 0; i < 20; i++) {
   await sleep(200);
 }
 check('猜拳邀请消息已发送（.msg-poke 居中卡片，含「猜拳」）', rpsMsg.indexOf('猜拳') >= 0, rpsMsg);
-let rpsPanelOpen = false;
+let maskVisible = false, pillsOk = false, rpsPanelClosed = true;
 for (let i = 0; i < 20; i++) {
-  rpsPanelOpen = await evalJs("(function(){var p=document.getElementById('chat-rps-panel');return !!p&&!p.hidden;})()") || false;
-  if (rpsPanelOpen) break;
+  const st = JSON.parse(await evalJs("(function(){var m=document.getElementById('modal-mask');var pills=document.querySelectorAll('#modal-pills button');var labels=[].slice.call(pills).map(function(b){return b.textContent;});var rp=document.getElementById('chat-rps-panel');return JSON.stringify({mask:m?!m.hidden:false,pills:labels,rpHidden:rp?rp.hidden:true});})()") || '{}');
+  maskVisible = st.mask; pillsOk = st.pills.indexOf('同意') >= 0 && st.pills.indexOf('拒绝') >= 0; rpsPanelClosed = st.rpHidden;
+  if (maskVisible) break;
   await sleep(200);
 }
-check('猜拳半框已自动打开', rpsPanelOpen === true);
+check('邀请弹窗已弹出（modal-mask 可见）', maskVisible === true);
+check('弹窗含「同意」「拒绝」两个选项', pillsOk === true);
+check('弹窗弹出时半框未自动打开（需先同意）', rpsPanelClosed === true);
+// 点同意 → 点确定 → 半框打开
+await evalJs("(function(){var pills=document.querySelectorAll('#modal-pills button');for(var i=0;i<pills.length;i++){if(pills[i].textContent.indexOf('同意')>=0){pills[i].click();break;}}var ok=document.getElementById('modal-ok');if(ok)ok.click();return true;})()");
+await sleep(400);
+let rpsPanelOpen = await evalJs("(function(){var p=document.getElementById('chat-rps-panel');return !!p&&!p.hidden;})()") || false;
+check('点「同意」+确定后猜拳半框打开', rpsPanelOpen === true);
 await evalJs("(function(){var b=document.getElementById('chat-rps-close');if(b)b.click();return true;})()");
 await sleep(300);
 
-// ==================== 6. 聊天页触发：游戏邀请（Pong/贪吃蛇随机） ====================
+// ==================== 6. 聊天页触发：游戏邀请 → 点拒绝 ====================
 await setCfg('ai-rps-en', 0); await setCfg('ai-game-en', 1); await setCfg('ai-game-prob', 100);
 const gameRet = await evalJs("(function(){return window.tryActiveInvite(window.replyCfg());})()");
 check('游戏邀请触发（tryActiveInvite 返回 true）', gameRet === true, String(gameRet));
@@ -211,15 +219,23 @@ for (let i = 0; i < 20; i++) {
   await sleep(200);
 }
 check('游戏邀请消息已发送（.msg-poke 居中卡片，Pong 或 贪吃蛇）', gameMsg.indexOf('Pong') >= 0 || gameMsg.indexOf('贪吃蛇') >= 0, gameMsg);
-let gamePanelOpen = false;
+let gMaskVisible = false;
 for (let i = 0; i < 20; i++) {
-  gamePanelOpen = await evalJs("(function(){var p=document.getElementById('chat-pong-panel');var s=document.getElementById('chat-snake-panel');return (!!p&&!p.hidden)||(!!s&&!s.hidden);})()") || false;
-  if (gamePanelOpen) break;
+  gMaskVisible = await evalJs("(function(){var m=document.getElementById('modal-mask');return m?!m.hidden:false;})()") || false;
+  if (gMaskVisible) break;
   await sleep(200);
 }
-check('游戏半框已自动打开（Pong 或 贪吃蛇）', gamePanelOpen === true);
-await evalJs("(function(){if(window.closePongPanel)window.closePongPanel();if(window.closeSnakePanel)window.closeSnakePanel();return true;})()");
-await sleep(300);
+check('游戏邀请弹窗已弹出', gMaskVisible === true);
+const outBefore = await evalJs("(function(){return document.querySelectorAll('#chat-body .msg-out').length;})()") || 0;
+// 点拒绝 → 点确定 → 发拒绝消息 + 半框不打开
+await evalJs("(function(){var pills=document.querySelectorAll('#modal-pills button');for(var i=0;i<pills.length;i++){if(pills[i].textContent.indexOf('拒绝')>=0){pills[i].click();break;}}var ok=document.getElementById('modal-ok');if(ok)ok.click();return true;})()");
+await sleep(400);
+const maskAfterReject = await evalJs("(function(){var m=document.getElementById('modal-mask');return m?!m.hidden:false;})()") || false;
+const outAfter = await evalJs("(function(){return document.querySelectorAll('#chat-body .msg-out').length;})()") || 0;
+const gamePanelClosed = await evalJs("(function(){var p=document.getElementById('chat-pong-panel');var s=document.getElementById('chat-snake-panel');return (!p||p.hidden)&&(!s||s.hidden);})()") || false;
+check('点「拒绝」+确定后弹窗关闭', maskAfterReject === false);
+check('点「拒绝」+确定后发出一条拒绝消息（.msg-out +1）', outAfter === outBefore + 1, outBefore + '->' + outAfter);
+check('点「拒绝」+确定后半框未打开', gamePanelClosed === true);
 
 // ==================== 7. 全部关闭 → 不触发邀请 ====================
 await setCfg('ai-rps-en', 0); await setCfg('ai-game-en', 0);

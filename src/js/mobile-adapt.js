@@ -53,6 +53,38 @@
   // iOS 保留原生 input/textarea（聚焦弹键盘正常）。聊天输入框是模板原生
   // contenteditable div，不受此转换器影响，iOS Safari 原生支持 contenteditable。
   var ceInited = false;
+  // v3.9.x：多行 ce-box 取值兜底——按 DOM 结构还原换行的纯文本提取器。
+  // 背景：ce-box 是 white-space:pre-wrap 的 contenteditable，安卓标准内核按 Enter
+  // 插入的是「字面 \n 文本节点」（渲染上可见分行），innerText 能还原；但夸克等
+  // 内核的 innerText 实现会丢掉文本节点里的字面 \n（屏幕上明明分了行，读回却是
+  // 一行）——批量导入「一行一个」全部并成 1 张卡的直接根因（华为 Mate 60 Pro
+  // 夸克浏览器用户实测反馈）。这里不依赖内核 innerText 实现：
+  //   · text 节点 → 原样保留（含字面 \n）
+  //   · <br> → 一次换行
+  //   · 块级元素（div/p/li/pre/blockquote）→ 前后补换行（粘贴富文本常见结构）
+  function ceMultiText(box) {
+    var out = '';
+    function endNl() { return out.slice(-1) === '\n'; }
+    function walk(node) {
+      for (var i = 0; i < node.childNodes.length; i++) {
+        var n = node.childNodes[i];
+        if (n.nodeType === 3) { out += n.nodeValue || ''; continue; }
+        if (n.nodeType !== 1) continue;
+        var tag = n.tagName;
+        if (tag === 'BR') { out += '\n'; continue; }
+        var block = tag === 'DIV' || tag === 'P' || tag === 'LI' || tag === 'PRE' || tag === 'BLOCKQUOTE';
+        if (block) {
+          if (out && !endNl()) out += '\n';
+          walk(n);
+          if (out && !endNl()) out += '\n';
+        } else {
+          walk(n);
+        }
+      }
+    }
+    walk(box);
+    return out;
+  }
   function initCeAll() {
     // 全量扫描可重复执行（ceConvert 内 dataset.ceDone 保证幂等），
     // 供 MutationObserver 处理动态新增的输入框（弹层/半框）
@@ -173,10 +205,11 @@
     // 兼容原代码：input.value / input.focus / input.blur / input.addEventListener
     Object.defineProperty(inp, 'value', {
       get: function () {
-        // v3.6.x：多行输入框（textarea）必须用 innerText——contenteditable 里按 Enter
-        // 产生的是块级 <div> 结构，textContent 不保留换行（返回「选项1选项2」），
-        // 依赖换行分割的业务（帮我决定选项、批量输入等按行读取）会拿到 1 行 → 误报
-        // 「至少需要 2 个选项」。innerText 会把 div/br 还原为 \n，与原生 textarea 一致。
+        // v3.6.x：多行输入框（textarea）必须还原换行——contenteditable 里按 Enter
+        // 产生的是块级 <div> 结构或字面 \n 文本，textContent 不保留块级换行（返回
+        // 「选项1选项2」），依赖换行分割的业务（帮我决定选项、批量导入等按行读取）
+        // 会拿到 1 行。v3.9.x：innerText 在夸克等内核会丢字面 \n，见下方 isMulti
+        // 分支与 ceMultiText——多行取值 = innerText 与 DOM 遍历版取换行更多者。
         // v3.5.135：邮件媒体标记（隐藏 span.mail-media-mark 存 sticker:/image: 文本）
         // display:none 时 innerText 读不到——按 DOM 顺序重组保证图片与文字顺序一致；
         // 仅对含标记的 box 生效（其他输入框保持原 innerText/textContent 逻辑不变）
@@ -251,15 +284,29 @@
           }
         } catch (e) {}
         if (isMulti) {
-          try { return (box.innerText || box.textContent || ''); } catch (e) {}
+          // v3.9.x：多行取值内核兜底——innerText 与 DOM 遍历版（ceMultiText）都算，
+          // 取换行更多的那个。标准内核两者一致；夸克等 innerText 丢字面 \n 的内核
+          // 走遍历版（屏幕上分了 N 行就能读回 N 行，所见即所得）；遍历版也漏掉
+          // 的极端结构（罕见块级标签）仍保底 innerText
+          try {
+            var itTxt = '';
+            try { itTxt = box.innerText || ''; } catch (e2) {}
+            var walkTxt = ceMultiText(box);
+            var itN = (itTxt.match(/\n/g) || []).length;
+            var wkN = (walkTxt.match(/\n/g) || []).length;
+            if (wkN > itN) return walkTxt;
+            return itTxt || walkTxt || box.textContent || '';
+          } catch (e) {}
         }
         return box.textContent || '';
       },
       set: function (v) {
         const s = (v == null ? '' : String(v));
         if (isMulti) {
-          // 编辑回填多行内容时同样保留换行（innerText 支持设置含换行的文本）
-          try { box.innerText = s; return; } catch (e) {}
+          // v3.9.x：回填改 textContent 直写——ce-box 是 pre-wrap，字面 \n 即换行显示，
+          // 全内核行为一致；innerText setter 的 \n→<br> 转换在部分内核（夸克等）
+          // 不可靠，可能把多行回填写成一行
+          try { box.textContent = s; return; } catch (e) {}
         }
         box.textContent = s;
       },
@@ -406,9 +453,20 @@
         if (!_vv || !_phone) return;
         var _focused = isTextEl(document.activeElement);
         var _h = _vv.height;
+        // 键盘是否仍开——按可视高度判定，不依赖焦点。
+        //   点击字卡/按钮时焦点短暂离开输入框但键盘未必收，靠焦点判断会误 restore
+        //   → _phone 高度收缩↔回落反复 reflow → 每点一下闪一下（iOS 15 PWA 复现）
+        var _kbStill = _h < _noKbH - 60;
+        // 稳态早退：键盘已开 + 仍在输入框 + 已过开合动画窗口 → height 已设对，
+        //   不做开合判定/pin。打字时 vv resize 偶发触发，早退防任何 reflow 闪屏
+        if (_kbActive && _focused && _kbStill && Date.now() > _pinUntil) {
+          var _hs0 = _h + 'px';
+          if (_phone.style.height !== _hs0) _phone.style.height = _hs0;
+          return;
+        }
         // 无键盘时跟随可视高度更新基准（地址栏显隐变化不误判）
         if (!_kbActive && _h > _noKbH) _noKbH = _h;
-        var _open = _focused && _h < _noKbH - 60;
+        var _open = _focused && _kbStill;
         if (_open && !_kbActive) {
           _kbActive = true;
           // 顶对齐（替代 position:fixed）——避免 iOS contenteditable 在 fixed
@@ -429,7 +487,8 @@
           // 仅在键盘开合动画窗口内钉顶；稳态打字期不 pin，避免 caret 微滚↔归零闪屏
           if (Date.now() < _pinUntil) pinScrollTop();
         }
-        if (!_open && _kbActive) restoreKb();
+        // 键盘真的收了（可视高度回升）才 restore——不看焦点，防点击字卡误 restore 闪屏
+        if (!_kbStill && _kbActive) restoreKb();
       }
       // v3.6.x：键盘状态自愈——iOS Safari 键盘收起时**偶发不派发 visualViewport
       // resize**（程序化 blur / 键盘下滑收起 / 完成键收起等路径，聊天发送时
@@ -443,18 +502,29 @@
         _kbWatch = setInterval(function () {
           try {
             if (!_kbActive) { stopKbWatch(); return; }
-            var noKb = _vv && (window.innerHeight - _vv.height <= 80);
-            var noFocus = !isTextEl(document.activeElement);
-            if (noKb || noFocus) restoreKb();
+            // 用无键盘基准 _noKbH 判定键盘是否收起，不依赖 innerHeight/焦点——
+            //   iOS PWA standalone 下 innerHeight 含系统状态栏，无键盘时
+            //   innerHeight - vv.height 可能 > 80 误判键盘收；点击字卡时焦点离开
+            //   输入框但键盘未必收，靠焦点会误 restore → 周期 reflow 闪屏。
+            //   焦点离开的兜底交给 focusout 400ms 检查（同样按 vv.height 判定）
+            var noKb = _vv && (_vv.height >= _noKbH - 60);
+            if (noKb) restoreKb();
           } catch (e) {}
         }, 600);
       }
       function stopKbWatch() {
         if (_kbWatch) { clearInterval(_kbWatch); _kbWatch = null; }
       }
+      // v3.7.x：vv scroll 独立处理——打字时系统微滚 caret 触发高频 vv scroll，
+      //   若走 syncIosKb 会在稳态期反复读 vv.height/比较字符串（JS 开销→打字卡顿），
+      //   且任何 DOM 写入都会 reflow 闪屏。scroll 只在键盘开合动画窗口内钉顶防灰底，
+      //   稳态打字完全 no-op。键盘开合判定交给 resize（高度真正变化才触发）
+      function onIosKbScroll() {
+        if (_kbActive && Date.now() < _pinUntil) pinScrollTop();
+      }
       if (_vv) {
         _vv.addEventListener('resize', syncIosKb);
-        _vv.addEventListener('scroll', syncIosKb);
+        _vv.addEventListener('scroll', onIosKbScroll);
       }
       document.addEventListener('focusin', function () {
         setTimeout(syncIosKb, 250);
@@ -464,9 +534,10 @@
         setTimeout(syncIosKb, 250);
         setTimeout(syncIosKb, 450);
         // 输入框失焦即键盘收起：不依赖 vv resize（iOS 程序化失焦/滑动收起常漏事件），
-        // 400ms 后焦点仍不在输入框上就直接恢复，防止 .phone 卡在收缩高度
+        // 400ms 后若可视高度已回升（键盘真的收了）才恢复——不靠焦点判断，
+        //   防点击字卡/按钮时焦点短暂离开但键盘未收就误 restore→reflow 闪屏
         setTimeout(function () {
-          if (_kbActive && !isTextEl(document.activeElement)) restoreKb();
+          if (_kbActive && _vv && _vv.height >= _noKbH - 60) restoreKb();
         }, 400);
       });
     } catch (e) {}

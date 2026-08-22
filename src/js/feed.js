@@ -911,7 +911,7 @@ if (comInput) comInput.addEventListener('keydown', (e) => { if (e.key === 'Enter
     if (window.showDeskPopup && !feedPageVisible()) {
       // v3.7.x：弹窗头像带发布者 TA 头像（跨桌面动态弹窗不显示当前桌面 TA 头像）
       const av = owner ? taAvFor(owner) : '';
-      window.showDeskPopup({ name: '朋友圈', text: noticeTextClean(text), av: av, onClick: openFeedPage });
+      window.showDeskPopup({ name: '朋友圈', text: noticeTextClean(text), av: av, onClick: openFeedPage, isHidden: document.visibilityState === 'hidden' });
     }
   }
   function unreadCount() { return notices().filter(n => !n.read).length; }

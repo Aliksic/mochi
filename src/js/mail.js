@@ -128,6 +128,9 @@
   }
   // 打开信箱页（渲染 + 清角标），供信箱图标点击与弹窗点击共用
   function openMailPage() {
+    // v3.9.x：打开信箱立即补查到期回信/来信——iOS 短会话里 60s 定时器往往没机会跑，
+    // 用户「点开信箱」这一刻正是最该看到 TA 回信的时刻
+    try { checkPendingReply(); } catch (e) {}
     render();
     updateBadge();
     document.querySelectorAll('.page').forEach(p => p.hidden = true);
@@ -328,6 +331,10 @@
   //   checkPendingReplyFor(cid)，用 csFor(cid) 读写各自命名空间。
   function checkPendingReplyFor(cid) {
     try {
+      // v3.9.x：当前桌面权威加载（mailDbReady）完成前不落地——此时 load(cid) 可能
+      // 读到剥图快照（大信件只存 IDB 时 LS 主键为空），落地写回会把带图信件覆盖成
+      // [图片] 剥图版；等权威加载回调/保险丝置真后补查（那里会再调 checkPendingReply）。
+      if (cid === (window.__activeCid || 'default') && !mailDbReady) return;
       const now = Date.now();
       const pending = replyPendingLoad(cid);
       if (!pending.length) return;
@@ -347,7 +354,7 @@
         notifyMailToChat(cid, name + ' 给你回了信');
         // v3.5.107：TA 回信且不在信箱页 → 前台桌面弹窗（仅当前激活桌面才弹，用户能看到）
         if (cid === (window.__activeCid || 'default') && window.showDeskPopup && !mailPageVisible()) {
-          window.showDeskPopup({ name: '信箱', text: '给你回了一封信：' + p.content, onClick: openMailPage });
+          window.showDeskPopup({ name: '信箱', text: '给你回了一封信：' + p.content, onClick: openMailPage, isHidden: document.visibilityState === 'hidden' });
         }
         changed = true;
       });
@@ -607,6 +614,9 @@
   //   notifyMailToChat 写该桌面聊天系统消息（下次切到该桌面可见）。
   function maybeIncomingLetterFor(cid) {
     try {
+      // v3.9.x：当前桌面权威加载完成前不写来信（同 checkPendingReplyFor 的守卫——
+      // load(cid) 此时可能来自剥图快照，unshift 后直接落盘会覆盖 IDB 带图信件）
+      if (cid === (window.__activeCid || 'default') && !mailDbReady) return;
       const cs = csFor(cid);
       const now = Date.now();
       const cfg = mailCfg();
@@ -635,7 +645,7 @@
         updateBadge();
         render();
         if (window.showDeskPopup && !mailPageVisible()) {
-          window.showDeskPopup({ name: '信箱', text: '给你寄来了一封信：' + content, onClick: openMailPage });
+          window.showDeskPopup({ name: '信箱', text: '给你寄来了一封信：' + content, onClick: openMailPage, isHidden: document.visibilityState === 'hidden' });
         }
       }
     } catch (e) {}
@@ -644,11 +654,36 @@
     const list = (window.getContacts && window.getContacts()) || [{ id: 'default' }];
     list.forEach(c => maybeIncomingLetterFor(c.id));
   }
+  // v3.9.x 修复（iOS 信箱 TA 回信永不触发）：原实现 checkPendingReply 只在
+  //   「启动后 20~60s 随机延迟 + 每 60s 定时器」里跑。iOS 后台/锁屏会冻结全部
+  //   页面定时器、主屏独立 PWA 很快被系统回收，用户会话经常短于 20~60s 首查延迟
+  //   （开 App 看一眼信箱就切走）→ 到期回信计划永远等不到落地时机，表现为
+  //   「回了信/寄了信，联系人回信一直不触发」。修复：补查不再依赖唯一定时器——
+  //   ① 启动立即补查；② 前台可见性恢复（visibilitychange/pageshow/focus，节流 5s）
+  //   立即补查（iOS 从后台切回/解锁即落地）；③ 权威加载完成回调里补查；
+  //   ④ 打开信箱页时补查。来信（maybeIncomingLetter）有 last/next 时间窗 +
+  //   每日上限守卫，跟随补查只会更及时不会刷屏。
+  checkPendingReply(); // 启动立即补查（当前桌面未就绪由内部守卫跳过，就绪后回调再补）
   setTimeout(() => {
     setInterval(() => { maybeIncomingLetter(); checkPendingReply(); }, 60000);
     maybeIncomingLetter();
-    checkPendingReply(); // v3.6.x：启动立即补上「刷新期间已到期」的 TA 回信
   }, (20 + Math.random() * 40) * 1000);
+  // 前台恢复补查（节流 5s）：visibilitychange 覆盖 iOS 切后台/锁屏回前台；
+  // pageshow(persisted) 覆盖 bfcache 恢复（期间定时器被冻结）；focus 覆盖
+  // 只触发 focus 不触发 visibilitychange 的浏览器
+  let lastEagerCheck = 0;
+  function eagerCheck() {
+    const now = Date.now();
+    if (now - lastEagerCheck < 5000) return;
+    lastEagerCheck = now;
+    maybeIncomingLetter();
+    checkPendingReply();
+  }
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible') eagerCheck();
+  });
+  window.addEventListener('pageshow', function (e) { if (e.persisted) eagerCheck(); });
+  window.addEventListener('focus', eagerCheck);
 
   // ================= 入口与交互 =================
   const mailApp = document.querySelector('.app[data-app="mail"]');
@@ -959,6 +994,7 @@
         if (window.activePrefix() !== myPrefix) return;
         mailMergeFromIdb(v);
         mailDbReady = true;
+        checkPendingReply(); // v3.9.x：权威就绪立即补查到期回信（启动即到的回信不再等 20~60s）
         render();
         updateBadge();
       });
@@ -978,6 +1014,7 @@
       if (all.length) store.set(KEY, JSON.stringify(all));
     } catch (e) {}
     mailDbReady = true;
+    checkPendingReply(); // v3.9.x：保险丝就绪同样补查（权威加载挂起场景）
     render();
     updateBadge();
   }, 15000);
@@ -1013,6 +1050,7 @@
           if (all.length) csFor(switchedCid).set(KEY, JSON.stringify(all));
         } catch (e) {}
         mailDbReady = true;
+        checkPendingReply(); // v3.9.x：切桌面权威就绪补查（新桌面到期的回信立即落地）
         render();
         updateBadge();
       }, 15000);
@@ -1023,6 +1061,7 @@
           clearTimeout(fuse);
           mailMergeFromIdb(v, switchedCid);
           mailDbReady = true;
+          checkPendingReply(); // v3.9.x：切桌面权威就绪补查
           render();
           updateBadge();
         }).catch(() => {

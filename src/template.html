@@ -414,6 +414,9 @@
       <button class="cc-tab sel" data-tab="sys">系统预设</button>
       <button class="cc-tab" data-tab="mine">我的添加</button>
     </div>
+    <div class="tc-search-wrap" style="padding:0 12px 8px">
+      <input type="text" id="ta-ask-search" class="tc-input" placeholder="搜索问题…" style="width:100%">
+    </div>
     <div id="ta-ask-sys-panel">
       <div id="ta-ask-sys-cats"></div>
     </div>
@@ -458,6 +461,9 @@
     <div class="card-tabs" id="tc-tabs" style="padding:6px 12px 8px">
       <button class="cc-tab sel" data-tab="sys">系统预设</button>
       <button class="cc-tab" data-tab="mine">我的添加</button>
+    </div>
+    <div class="tc-search-wrap" style="padding:0 12px 8px">
+      <input type="text" id="tc-search" class="tc-input" placeholder="搜索问题…" style="width:100%">
     </div>
     <div id="tc-sys-panel">
       <div class="set-group glass">
@@ -518,6 +524,9 @@
       <button class="cc-tab sel" data-tab="sys">系统预设</button>
       <button class="cc-tab" data-tab="mine">我的添加</button>
     </div>
+    <div class="tc-search-wrap" style="padding:0 12px 8px">
+      <input type="text" id="tcu-search" class="tc-input" placeholder="搜索问题…" style="width:100%">
+    </div>
     <div id="tcu-sys-panel">
       <div class="set-group glass">
         <div class="cal-card-title" style="padding:14px 14px 0">系统预设题库（可逐句开关，不可删除）</div>
@@ -575,6 +584,9 @@
     <div class="card-tabs" id="tr-tabs" style="padding:6px 12px 8px">
       <button class="cc-tab sel" data-tab="sys">系统预设</button>
       <button class="cc-tab" data-tab="mine">我的添加</button>
+    </div>
+    <div class="tc-search-wrap" style="padding:0 12px 8px">
+      <input type="text" id="tr-search" class="tc-input" placeholder="搜索吐槽…" style="width:100%">
     </div>
     <div id="tr-sys-panel">
       <div class="set-group glass">
@@ -829,6 +841,10 @@
         <div class="gs-row"><span>后台保活</span><label class="toggle"><input type="checkbox" id="bg-keepalive"><span class="tk"></span></label></div>
         <div class="gs-row"><span>后台通知</span><label class="toggle"><input type="checkbox" id="bg-notify"><span class="tk"></span></label><button class="bg-notify-test" id="bg-notify-test">测试</button></div>
         <div class="gs-row"><span>全屏模式（隐藏手机状态栏）</span><label class="toggle"><input type="checkbox" id="sf-fullscreen"><span class="tk"></span></label></div>
+        <!-- v3.9.x：全屏边缘防误触——部分国产浏览器（雨见/UC/QQ 等）全屏下左右边缘上下滑
+             会调节音量/亮度（浏览器自带手势，网页拦不住）。开启后用边缘拦截层+touchstart
+             兜底尝试阻挡；对系统级手势可能无效，最可靠仍是浏览器设置关闭边缘滑动调节。 -->
+        <div class="gs-row"><span>全屏边缘防误触</span><label class="toggle"><input type="checkbox" id="sf-edge-guard"><span class="tk"></span></label></div>
         <!-- v3.5.104：桌面消息弹窗开关（独立设置项）——非聊天页时 TA 新消息在桌面顶部弹横幅 -->
         <div class="gs-row"><span>桌面消息弹窗</span><label class="toggle"><input type="checkbox" id="desk-msg-en"><span class="tk"></span></label></div>
       </div>
@@ -2954,6 +2970,12 @@
           <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 00-2 2v3M16 3h3a2 2 0 012 2v3M8 21H5a2 2 0 01-2-2v-3M16 21h3a2 2 0 002-2v-3"/></svg></div>
           <div class="txt">全屏模式（隐藏手机状态栏）</div>
           <label class="toggle"><input type="checkbox" id="cs-fullscreen"><span class="tk"></span></label>
+        </div>
+        <!-- v3.9.x：全屏边缘防误触（镜像设置页 #sf-edge-guard，同一状态双向同步） -->
+        <div class="set-row" id="cs-edge-guard-row">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M3 12h18"/></svg></div>
+          <div class="txt">全屏边缘防误触</div>
+          <label class="toggle"><input type="checkbox" id="cs-edge-guard"><span class="tk"></span></label>
         </div>
         <!-- v3.7.x：音乐悬浮小窗开关（镜像音乐页 #music-float-en / 音乐设置 #sm-set-float，同一 floatEn 状态，每桌面独立） -->
         <div class="set-row" id="cs-music-float-row">

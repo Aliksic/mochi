@@ -763,6 +763,22 @@
     setInterval(syncCsFs, 500);
   }
 
+  // v3.9.x：聊天设置「全屏边缘防误触」开关——镜像设置页 #sf-edge-guard（同一状态双向同步）。
+  // 仿 cs-fullscreen 模式：本页切换代理到设置页开关并派发 change（走 fullscreen.js
+  // 边缘拦截层启停流程）；设置页变化 500ms 轮询同步回本页。
+  const csEg = document.getElementById('cs-edge-guard');
+  const sfEg = document.getElementById('sf-edge-guard');
+  if (csEg && sfEg) {
+    const syncCsEg = () => { if (sfEg.checked !== csEg.checked) csEg.checked = sfEg.checked; };
+    syncCsEg();
+    csEg.addEventListener('change', () => {
+      if (csEg.checked === sfEg.checked) return;
+      sfEg.checked = csEg.checked;
+      sfEg.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    setInterval(syncCsEg, 500);
+  }
+
   // v3.7.x：聊天设置「音乐悬浮小窗」开关——与音乐页 #music-float-en / 音乐设置
   // #sm-set-float 同源（music-global.floatEn，每桌面独立）。本文件先于 music-player.js
   // 加载，故优先走 window.musicFloatGet/Set 钩子（完整走保存+悬浮框渲染流程）；

@@ -527,4 +527,67 @@
   });
   const el0 = document.getElementById('sf-fullscreen');
   if (el0) { obs.observe(el0, { attributes: true, attributeFilter: ['checked'] }); }
+
+  // v3.9.x：全屏边缘防误触——部分国产浏览器（雨见/UC/QQ 等）全屏下左右边缘上下滑
+  // 会调节音量/亮度（浏览器自带手势，网页拦不住）。用户开启后用边缘透明拦截层
+  //（touch-action:none 吃掉边缘触摸，浏览器看不到边缘手势触发）+ touchstart 兜底
+  // 尝试阻挡。对系统级手势可能无效，最可靠仍是浏览器设置关闭边缘滑动调节。
+  const EG_KEY = 'fs-edge-guard';
+  let _egLayers = null;
+  let _egTouchHandler = null;
+  function edgeGuardEnabled() { return store.get(EG_KEY) === '1'; }
+  function fsAnyActive() {
+    const d = document.documentElement;
+    return isFullscreen() || d.classList.contains('fs-active')
+      || d.classList.contains('fs-css-active') || d.classList.contains('ios-fs-active');
+  }
+  function enableEdgeGuard() {
+    if (_egLayers) return;
+    const css = 'position:fixed;top:0;width:24px;height:100vh;z-index:99999;background:transparent;touch-action:none;pointer-events:auto;';
+    const left = document.createElement('div');
+    left.setAttribute('style', css + 'left:0;');
+    const right = document.createElement('div');
+    right.setAttribute('style', css + 'right:0;');
+    document.body.appendChild(left);
+    document.body.appendChild(right);
+    _egLayers = [left, right];
+    _egTouchHandler = (e) => {
+      const t = e.touches && e.touches[0];
+      if (!t) return;
+      if (t.clientX <= 24 || t.clientX >= window.innerWidth - 24) {
+        try { e.preventDefault(); e.stopPropagation(); } catch (err) {}
+      }
+    };
+    document.addEventListener('touchstart', _egTouchHandler, { passive: false, capture: true });
+  }
+  function disableEdgeGuard() {
+    if (_egLayers) { _egLayers.forEach(l => { try { l.remove(); } catch (err) {} }); _egLayers = null; }
+    if (_egTouchHandler) { document.removeEventListener('touchstart', _egTouchHandler, true); _egTouchHandler = null; }
+  }
+  function applyEdgeGuard() {
+    if (edgeGuardEnabled() && fsAnyActive()) enableEdgeGuard();
+    else disableEdgeGuard();
+  }
+  let _egTipShown = false;
+  function showEdgeGuardTip() {
+    if (_egTipShown) return;
+    _egTipShown = true;
+    const msg = '已开启全屏边缘防误触。屏幕左右边缘 24px 内的触摸将被拦截，避免触发部分浏览器的音量/亮度边缘手势。\n\n若仍无效（雨见等浏览器的边缘手势是系统级，网页可能拦不住），最可靠的方法是在浏览器设置 → 手势/全屏中关闭「边缘滑动调节音量/亮度」。';
+    if (window.openModal) {
+      window.openModal('全屏边缘防误触', '', () => {}, { noInput: true, staticText: msg });
+    }
+  }
+  const egToggle = document.getElementById('sf-edge-guard');
+  if (egToggle) {
+    egToggle.checked = edgeGuardEnabled();
+    egToggle.addEventListener('change', () => {
+      store.set(EG_KEY, egToggle.checked ? '1' : '0');
+      applyEdgeGuard();
+      if (egToggle.checked) showEdgeGuardTip();
+    });
+  }
+  // 全屏态变化（fs-active/fs-css-active/ios-fs-active class 切换）时同步启用/停用
+  const _egObs = new MutationObserver(() => applyEdgeGuard());
+  _egObs.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+  applyEdgeGuard();
 })();

@@ -507,7 +507,8 @@
       const unread = parseInt(store.get('chat-unread'), 10) || 0;
       const name = store.get('lbl-partner') || 'TA';
       if (!inChat && unread > 0 && window.showDeskPopup) {
-        window.showDeskPopup({ name: name, text: '你不在的时候收到 ' + unread + ' 条新消息' });
+        // visibilitychange 为 visible 时触发，isHidden=false 显示应用内横幅
+        window.showDeskPopup({ name: name, text: '你不在的时候收到 ' + unread + ' 条新消息', isHidden: false });
         const now = Date.now();
         if (saved === '1' && 'Notification' in window && Notification.permission === 'granted' &&
             (!lastResumeNotifyAt || now - lastResumeNotifyAt > 30000)) {
@@ -576,8 +577,28 @@
         sendNotify(iconUrl, previewImg);
       }
     };
+    // v3.9.x 修复：头像裁剪为正方形，防止安卓通知拉伸变形
+    // 通知的 icon 字段在安卓上会被强制拉伸填充，需预先裁剪为 1:1
+    const cropAvatarToSquare = function (dataUrl, cb) {
+      try {
+        const img = new Image();
+        img.onload = function () {
+          try {
+            const size = Math.min(img.width, img.height);
+            const sx = (img.width - size) / 2;
+            const sy = (img.height - size) / 2;
+            const c = document.createElement('canvas');
+            c.width = size; c.height = size;
+            c.getContext('2d').drawImage(img, sx, sy, size, size, 0, 0, size, size);
+            cb(c.toDataURL('image/jpeg', 0.85));
+          } catch (e) { cb(''); }
+        };
+        img.onerror = function () { cb(''); };
+        img.src = dataUrl;
+      } catch (e) { cb(''); }
+    };
     if (bigIcon && bigIcon.indexOf('data:') === 0) {
-      toBlob(bigIcon, function (u) { doSend(u || ''); });
+      cropAvatarToSquare(bigIcon, function (u) { doSend(u || ''); });
     } else {
       doSend(bigIcon);
     }
