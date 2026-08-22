@@ -1165,3 +1165,11 @@
   - **验证**：tools/verify-cc-batch-import.mjs——字面\n / div 分行 / br 分行 / 夸克模拟（覆写 innerText 丢换行）/ setter 回填往返，5 组用例全部导入为独立字卡。
 - [AI-B·代修]（AI-A 域，随本次提交）：src/js/ta-ask.js——tc/tcu/tr 三段 TabsWrap 绑定代码各被重复粘贴第二份（const 重复声明 SyntaxError → **整包 JS 不执行、开屏卡死、verify 全挂**），已删除重复块（纯机械去重，无逻辑改动）。
 - 本次提交同时包含上一轮未提交改动（ta-ask 单选切换 textarea 挤压修复 chat-pages.css、mobile-adapt 键盘 pinUntil 闪屏修复）与 AI-A 累积未提交 src 改动（chat.js/feed.js/mail.js/contacts.js/chat-settings.js/default-cards-data.js/bg-keep.js/call.js/fullscreen.js/ta-ask.js/home.css/template.html 及 tools/fix-kaomoji-chars.mjs），构建产物一并入库。
+
+### 2026-08-22（用户反馈：iOS 信箱里联系人回信一直不触发）
+- [AI-B·完成]（**已构建未提交**，mail.js 为 AI-A 域、用户直接反馈故越界代修，改动仅 mail.js）：
+  - **根因**：TA 回信计划（mail-reply-pending）只由「启动后 20~60s 随机延迟 + 每 60s 定时器」的 checkPendingReply 落地。iOS 后台/锁屏冻结全部页面定时器、主屏 PWA 很快被杀，会话经常短于 20~60s 首查延迟 → 到期回信永远等不到落地时机，表现为「回了信/寄了信，联系人回信一直不触发」。逻辑本身无 bug（verify-mail-send-reply 8/8 一直通过），是触发时机对 iOS 不友好。
+  - **修复**：补查不再依赖唯一定时器——①启动立即 checkPendingReply；②mailDbReady 权威加载完成回调/15s 保险丝/切桌面回调+保险丝共 4 处置真后补查；③visibilitychange(可见)/pageshow(bfcache)/focus 节流 5s 补查（含 maybeIncomingLetter，其自身 last/next 时间窗+每日上限守卫防刷屏）；④openMailPage 打开信箱即补查。
+  - **防护**：checkPendingReplyFor/maybeIncomingLetterFor 对当前桌面加 mailDbReady 守卫——权威加载前 load(cid) 可能来自剥图快照，落地/来信写回会把 IDB 带图信件覆盖成 [图片] 版（顺带消除 60s 定时器在启动 0~15s 窗口的同款隐患）。
+  - **回归**：新增 tools/verify-mail-ios-reply.mjs（6/6：重载 5s 内落地 / visibilitychange 1.5s 内落地 / 开信箱即落地+标签）；verify-mail-send-reply 8/8、verify-mail-isolation 8/8、verify 10/10 全通过。
+  - ✅ mail.js 修复与构建产物已随 8fd0699 入库；本次追加提交：verify-mail-ios-reply.mjs 回归脚本入库 + 删除临时探针 tools/diag-mail-load.mjs。
