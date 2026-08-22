@@ -222,3 +222,36 @@
   background:linear-gradient(90deg, #ef5350, #e53935);
   transition: width .4s ease; min-width:0; overflow:hidden;
 }
+
+/* ===== 全球园（真合并所有联系人，可继续操作） ===== */
+.garden-ov-btn {
+  margin-left:auto; padding:4px 12px; border-radius:99px;
+  background:rgba(0,0,0,.06); font-size:12px; font-weight:600; color:var(--ink);
+  cursor:pointer; align-self:center; -webkit-tap-highlight-color:transparent;
+  transition:background .15s ease; white-space:nowrap;
+}
+.garden-ov-btn:active { background:rgba(0,0,0,.12); }
+.garden-ov-btn[hidden] { display:none; }
+.garden-remerge-btn {
+  margin-left:6px; background:rgba(76,175,80,.14); color:#2e7d32;
+}
+.garden-remerge-btn:active { background:rgba(76,175,80,.28); }
+
+.garden-merge-tip {
+  margin:0 18px 12px; padding:14px 16px; border-radius:14px;
+  background:linear-gradient(90deg, rgba(123,179,66,.14), rgba(255,193,7,.1));
+  font-size:13px; color:var(--ink); text-align:center; font-weight:600;
+  animation: gardenMergePulse 1.2s ease-in-out infinite;
+}
+@keyframes gardenMergePulse {
+  0%,100% { opacity:.7; }
+  50% { opacity:1; }
+}
+
+/* 全球园模式：地块来源标注 */
+.garden-plot .garden-plant-src {
+  position:absolute; top:2px; right:3px; font-size:8px;
+  color:#7cb342; font-weight:600; max-width:50%;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  opacity:.85;
+}

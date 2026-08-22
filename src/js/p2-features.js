@@ -798,13 +798,15 @@ if (ckRefresh) {
   }
   function updateCkCount() {
     const useDefault = getCkDefault();
-    let total = 0;
+    let sysTotal = 0, mineTotal = 0;
     CK_DEFS.forEach(([k, def]) => {
-      total += ckCustomList(k).length;
-      if (useDefault) total += def.filter(x => !isCkCardOff(k, x)).length;
+      mineTotal += ckCustomList(k).length;
+      if (useDefault) sysTotal += def.filter(x => !isCkCardOff(k, x)).length;
     });
     const cnt = document.getElementById('cc-checkin-count');
-    if (cnt) cnt.textContent = total;
+    if (cnt) cnt.textContent = sysTotal;
+    const cntM = document.getElementById('cc-checkin-count-mine');
+    if (cntM) cntM.textContent = mineTotal;
   }
   function switchCkTab2(tab) {
     ckTab2 = tab;
@@ -897,6 +899,19 @@ if (ckRefresh) {
     liCK.addEventListener('click', () => {
       document.querySelectorAll('.page').forEach(p => p.hidden = true);
       ckCardsPage.hidden = false;
+      ckTab2 = 'sys';
+      const tw = document.getElementById('ck-tabs'); if (tw) tw.style.display = 'none';
+      renderCheckinCards();
+    });
+  }
+  // v3.9.x：「查岗日常·我的添加」入口——只看自定义
+  const liCKMine = document.getElementById('li-checkin-cards-mine');
+  if (liCKMine && ckCardsPage) {
+    liCKMine.addEventListener('click', () => {
+      document.querySelectorAll('.page').forEach(p => p.hidden = true);
+      ckCardsPage.hidden = false;
+      ckTab2 = 'mine';
+      const tw = document.getElementById('ck-tabs'); if (tw) tw.style.display = 'none';
       renderCheckinCards();
     });
   }
@@ -909,6 +924,19 @@ if (ckRefresh) {
     });
   }
   renderCheckinCards();
+  // v3.9.x：注册查岗日常字卡跨分类搜索
+  window.__cardSearchFns = window.__cardSearchFns || [];
+  window.__cardSearchFns.push({ name: '查岗日常字卡', fn: function (kw) {
+    const out = [];
+    try {
+      CK_DEFS.forEach(function (pair) {
+        const k = pair[0]; const def = pair[1]; const label = CK_LABEL[k] || k;
+        (def || []).forEach(function (x) { if (x && String(x).toLowerCase().indexOf(kw) >= 0) out.push({ t: String(x), cat: label + '·系统' }); });
+        (ckCustomList(k) || []).forEach(function (item) { const txt = item && item.t ? item.t : ''; if (txt && txt.toLowerCase().indexOf(kw) >= 0) out.push({ t: txt, cat: label + '·我的' }); });
+      });
+    } catch (e) {}
+    return out;
+  } });
 
   // ================= 桌面第二页补充：今日备忘 / 今天的心情 / 本周日常 =================
   // 备忘/心情保存时写入历史（主页展示全部记录）

@@ -100,13 +100,13 @@
   function isDefaultQuote(q) { return DEFAULT_QUOTES.indexOf(q) >= 0; }
   // 入口处计数：可用情话总数（系统开启的 + 用户添加的）
   function updateEntryCount() {
-    const cnt = document.getElementById('cc-quote-count');
-    if (!cnt) return;
     const useDefault = getUseDefault();
     const custom = getCustom();
-    let n = custom.length;
-    if (useDefault) n += DEFAULT_QUOTES.filter(q => !isQuoteOff(q)).length;
-    cnt.textContent = n;
+    const sysN = useDefault ? DEFAULT_QUOTES.filter(q => !isQuoteOff(q)).length : 0;
+    const cnt = document.getElementById('cc-quote-count');
+    if (cnt) cnt.textContent = sysN;
+    const cntM = document.getElementById('cc-quote-count-mine');
+    if (cntM) cntM.textContent = custom.length;
   }
   // 渲染【系统预设】tab：每句带单卡开关，不可删除；关闭总开关时灰化提示
   function renderSysList() {
@@ -321,7 +321,18 @@
     liQuote.addEventListener('click', () => {
       document.querySelectorAll('.page').forEach(p => p.hidden = true);
       quotePage.hidden = false;
-      switchTab(curTab);
+      const tw = document.getElementById('cq-tabs'); if (tw) tw.style.display = 'none';
+      switchTab('sys');
+    });
+  }
+  // v3.9.x：「今日情话·我的添加」入口——只看自定义
+  const liQuoteMine = document.getElementById('li-quote-cards-mine');
+  if (liQuoteMine && quotePage) {
+    liQuoteMine.addEventListener('click', () => {
+      document.querySelectorAll('.page').forEach(p => p.hidden = true);
+      quotePage.hidden = false;
+      const tw = document.getElementById('cq-tabs'); if (tw) tw.style.display = 'none';
+      switchTab('mine');
     });
   }
   const quoteBack = document.getElementById('quote-cards-back');
@@ -334,4 +345,14 @@
   }
   switchTab('sys');
   updateEntryCount();
+  // v3.9.x：注册桌面今日情话跨分类搜索
+  window.__cardSearchFns = window.__cardSearchFns || [];
+  window.__cardSearchFns.push({ name: '桌面今日情话', fn: function (kw) {
+    const out = [];
+    try {
+      (DEFAULT_QUOTES || []).forEach(function (q) { if (q && String(q).toLowerCase().indexOf(kw) >= 0) out.push({ t: String(q), cat: '系统预设' }); });
+      (getCustom() || []).forEach(function (x) { const txt = x && x.t ? x.t : ''; if (txt && txt.toLowerCase().indexOf(kw) >= 0) out.push({ t: txt, cat: '我的添加' }); });
+    } catch (e) {}
+    return out;
+  } });
 })();

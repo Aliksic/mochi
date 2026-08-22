@@ -854,4 +854,20 @@
     setInterval(syncGc, 500);
     document.addEventListener('contact-switched', syncGc);
   }
+
+  // v3.10.x：「允许删除联系人消息」开关——默认关闭，每联系人独立。开启后点击 TA 消息
+  // 弹出的操作菜单里多出「删除」按钮，可永久移除该条 TA 消息（真删除，不可恢复）。
+  const csDtm = document.getElementById('cs-del-ta-msg');
+  if (csDtm) {
+    const dtmGet = () => { try { return store.get('cs-del-ta-msg') === '1'; } catch (e) { return false; } };
+    const dtmSet = (en) => { try { store.set('cs-del-ta-msg', en ? '1' : '0'); } catch (e) {} };
+    const syncDtm = () => { const v = dtmGet(); if (v !== csDtm.checked) csDtm.checked = v; };
+    syncDtm();
+    csDtm.addEventListener('change', () => {
+      if (csDtm.checked === dtmGet()) return;
+      dtmSet(csDtm.checked);
+      toast(csDtm.checked ? '已开启：点击联系人消息可在操作菜单里删除该条消息' : '已关闭删除联系人消息功能');
+    });
+    document.addEventListener('contact-switched', syncDtm);
+  }
 })();

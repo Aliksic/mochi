@@ -4,11 +4,18 @@ var s = window.activeStore();
 var page = document.getElementById("page-garden");
 if (!s || !page) return;
 var G = "garden-data";
+var G_GLOBAL = "garden-data-global";
+var gs = null;
+try { gs = window.xyStore("xy-home-v2"); } catch (e) {}
+var isGlobal = false;
+function curStore() { return isGlobal ? gs : s; }
+function curKey() { return isGlobal ? G_GLOBAL : G; }
+function curIdbKey() { return isGlobal ? ("xy-home-v2:" + G_GLOBAL) : (window.activePrefix() + ":" + G); }
 var PLOTS = 12;
 var PI = 1800;
 function pn() { return s.get("lbl-partner") || "TA"; }
-function load() { try { var d = JSON.parse(s.get(G) || "{}"); if (!d.p) d.p = []; while (d.p.length < PLOTS) d.p.push(null); if (!d.l) d.l = []; if (!d.lpc) d.lpc = 0; if (!d.dex) d.dex = {}; if (!d.exp) d.exp = 0; if (!d.inv) d.inv = {}; if (!d.st) d.st = { p: 0, w: 0, h: 0, f: 0, mp: 0, mw: 0, mh: 0, mf: 0 }; if (!d.decor) d.decor = {}; if (!d.visitor) d.visitor = null; return d; } catch (e) { return { p: new Array(PLOTS).fill(null), l: [], lpc: 0, dex: {}, exp: 0, inv: {}, st: { p: 0, w: 0, h: 0, f: 0, mp: 0, mw: 0, mh: 0, mf: 0 }, decor: {}, visitor: null }; } }
-function save(d) { try { s.set(G, JSON.stringify(d)); try { if (window.idbSet) window.idbSet(window.activePrefix() + ":" + G, JSON.stringify(d)); } catch (e2) {} } catch (e) {} }
+function load() { try { var d = JSON.parse(curStore().get(curKey()) || "{}"); if (!d.p) d.p = []; while (d.p.length < PLOTS) d.p.push(null); if (!d.l) d.l = []; if (!d.lpc) d.lpc = 0; if (!d.dex) d.dex = {}; if (!d.exp) d.exp = 0; if (!d.inv) d.inv = {}; if (!d.st) d.st = { p: 0, w: 0, h: 0, f: 0, mp: 0, mw: 0, mh: 0, mf: 0 }; if (!d.decor) d.decor = {}; if (!d.visitor) d.visitor = null; return d; } catch (e) { return { p: new Array(PLOTS).fill(null), l: [], lpc: 0, dex: {}, exp: 0, inv: {}, st: { p: 0, w: 0, h: 0, f: 0, mp: 0, mw: 0, mh: 0, mf: 0 }, decor: {}, visitor: null }; } }
+function save(d) { try { curStore().set(curKey(), JSON.stringify(d)); try { if (window.idbSet) window.idbSet(curIdbKey(), JSON.stringify(d)); } catch (e2) {} } catch (e) {} }
 (function r() { try { if (!window.idbGet) return; var pf = window.activePrefix(); if (!s.get(G)) window.idbGet(pf + ":" + G).then(function (v) { if (window.activePrefix() !== pf || !v) return; try { s.set(G, typeof v === "string" ? v : JSON.stringify(v)); } catch (e) {} }); } catch (e) {} })();
 
 var T = {
@@ -145,13 +152,16 @@ function renderGrid() {
   var grid = document.getElementById("garden-grid");
   if (!grid) return;
   var h = "";
-  for (var i = 0; i < PLOTS; i++) {
+  for (var i = 0; i < data.p.length; i++) {
     var plot = data.p[i];
     var si = stageInfo(plot);
     var wl = waterLvl(plot);
     var cls = "garden-plot" + (si ? "" : " empty") + (wl > 0 ? " watered" : "") + (selPlot === i ? " selected" : "");
     h += "<div class=\"" + cls + "\" data-idx=\"" + i + "\">";
     if (si) {
+      if (isGlobal && plot.by && plot.by.indexOf("@") >= 0) {
+        h += "<span class=\"garden-plant-src\">" + plot.by.split("@")[1] + "</span>";
+      }
       h += "<span class=\"garden-plant-emoji\">" + si.emoji + "</span>";
       h += "<span class=\"garden-plant-name\">" + si.name + "</span>";
       if (si.bloomed) {
@@ -190,7 +200,7 @@ function addLog(who, act) {
 }
 
 function waterPlot(idx) {
-  if (idx < 0 || idx >= PLOTS) return;
+  if (idx < 0 || idx >= data.p.length) return;
   var plot = data.p[idx];
   if (!plot) return;
   if (!plot.watered) plot.watered = Math.floor(Date.now() / 1000);
@@ -203,7 +213,7 @@ function waterPlot(idx) {
 }
 
 function plantSeed(idx, type) {
-  if (idx < 0 || idx >= PLOTS) return;
+  if (idx < 0 || idx >= data.p.length) return;
   if (data.p[idx]) return;
   if (!unlocked(type)) return;
   var tp = T[type]; if (!tp) return;
@@ -215,7 +225,7 @@ function plantSeed(idx, type) {
 }
 
 function fertilizePlot(idx) {
-  if (idx < 0 || idx >= PLOTS) return;
+  if (idx < 0 || idx >= data.p.length) return;
   var plot = data.p[idx];
   if (!plot) return;
   plot.planted = Math.max(0, plot.planted - 43200);
@@ -226,7 +236,7 @@ function fertilizePlot(idx) {
 }
 
 function harvestPlot(idx) {
-  if (idx < 0 || idx >= PLOTS) return;
+  if (idx < 0 || idx >= data.p.length) return;
   var plot = data.p[idx];
   if (!plot) return;
   var si = stageInfo(plot);
@@ -252,7 +262,7 @@ function partnerAct(silent) {
   var plantedPlots = [];
   var bloomedPlots = [];
   var dryPlots = [];
-  for (var i = 0; i < PLOTS; i++) {
+  for (var i = 0; i < data.p.length; i++) {
     if (!data.p[i]) emptyPlots.push(i);
     else {
       plantedPlots.push(i);
@@ -283,7 +293,7 @@ function partnerAct(silent) {
     acted = true;
   } else if (r < 0.50 && dryPlots.length > 0) {
     var wcnt = 0;
-    for (var pi = 0; pi < PLOTS; pi++) {
+    for (var pi = 0; pi < data.p.length; pi++) {
       if (data.p[pi] && waterLvl(data.p[pi]) < 0.3) {
         data.p[pi].watered = Math.floor(Date.now() / 1000);
         data.p[pi].planted = Math.max(0, data.p[pi].planted - 7200);
@@ -313,7 +323,7 @@ function partnerAct(silent) {
     acted = true;
   } else if (r < 0.78 && bloomedPlots.length > 1) {
     var hcnt = 0;
-    for (var pi = 0; pi < PLOTS; pi++) {
+    for (var pi = 0; pi < data.p.length; pi++) {
       if (!data.p[pi]) continue;
       var si2 = stageInfo(data.p[pi]);
       if (!si2 || !si2.bloomed) continue;
@@ -554,7 +564,7 @@ function handleTool(e) {
 
 function waterAll() {
   var cnt = 0;
-  for (var i = 0; i < PLOTS; i++) {
+  for (var i = 0; i < data.p.length; i++) {
     var plot = data.p[i];
     if (!plot) continue;
     if (waterLvl(plot) > 0.5) continue;
@@ -573,7 +583,7 @@ function harvestAll() {
   var cnt = 0;
   var totalXp = 0;
   var xpb = 1 + decorBuffs().xp;
-  for (var i = 0; i < PLOTS; i++) {
+  for (var i = 0; i < data.p.length; i++) {
     var plot = data.p[i];
     if (!plot) continue;
     var si = stageInfo(plot);
@@ -658,6 +668,7 @@ function spawnVisitor() {
 }
 
 function openGarden() {
+  if (isGlobal) toggleGlobal();
   var editing = Array.from(document.querySelectorAll(".app-grid")).some(function (g) { return g.classList.contains("editing"); });
   if (editing) return;
   document.querySelectorAll(".page").forEach(function (pg) { pg.hidden = true; });
@@ -668,7 +679,7 @@ function openGarden() {
   curWeather = wx();
   curSeason = sea();
   if (curWeather.t === "\u5C0F\u96E8") {
-    for (var i = 0; i < PLOTS; i++) {
+    for (var i = 0; i < data.p.length; i++) {
       if (data.p[i] && waterLvl(data.p[i]) < 0.3) {
         data.p[i].watered = Math.floor(Date.now() / 1000);
       }
@@ -677,7 +688,7 @@ function openGarden() {
   }
   var dbf = decorBuffs();
   if (dbf.water > 0) {
-    for (var wi = 0; wi < PLOTS; wi++) {
+    for (var wi = 0; wi < data.p.length; wi++) {
       if (data.p[wi] && waterLvl(data.p[wi]) < dbf.water) {
         data.p[wi].watered = Math.floor(Date.now() / 1000) - 86400 + Math.floor(86400 * dbf.water);
       }
@@ -707,7 +718,10 @@ if (toolbarEl) toolbarEl.addEventListener("click", handleTool);
 
 
 document.addEventListener("contact-switched", function () {
-  if (!page.hidden) { data = load(); selPlot = -1; renderAll(); }
+  if (!page.hidden) {
+    if (isGlobal) toggleGlobal();
+    else { data = load(); selPlot = -1; renderAll(); }
+  }
 });
 
 (function watchHome() {
@@ -723,5 +737,147 @@ document.addEventListener("contact-switched", function () {
     try { checkPartnerPassive(); } catch (e) {}
   }
 })();
+
+// ===== 全球园：真合并所有联系人花园数据，可继续种植/收获（原各联系人数据保留不动） =====
+var globalBtn = null;
+var remergeBtn = null;
+function ensureGlobalUI() {
+  if (globalBtn) return;
+  var header = page.querySelector("header") || page.children[0];
+  if (header) {
+    globalBtn = document.createElement("span");
+    globalBtn.className = "garden-ov-btn";
+    globalBtn.textContent = "\uD83C\uDF10 \u5168\u90E8";
+    globalBtn.addEventListener("click", toggleGlobal);
+    header.appendChild(globalBtn);
+    remergeBtn = document.createElement("span");
+    remergeBtn.className = "garden-ov-btn garden-remerge-btn";
+    remergeBtn.textContent = "\uD83D\uDD04 \u91CD\u65B0\u5408\u5E76";
+    remergeBtn.hidden = true;
+    remergeBtn.addEventListener("click", remergeGlobal);
+    header.appendChild(remergeBtn);
+  }
+}
+function loadGardenAsync(cid) {
+  return new Promise(function (resolve) {
+    var raw = null;
+    try { raw = window.storeFor(cid).get("garden-data"); } catch (e) {}
+    if (raw) { try { resolve(JSON.parse(raw)); return; } catch (e) {} }
+    if (!window.idbGet) { resolve(null); return; }
+    window.idbGet("xy-home-v2:" + cid + ":garden-data").then(function (v) {
+      if (!v) { resolve(null); return; }
+      try { resolve(typeof v === "string" ? JSON.parse(v) : v); } catch (e) { resolve(null); }
+    }).catch(function () { resolve(null); });
+  });
+}
+function loadAllGardensAsync() {
+  var list = [];
+  try { if (window.getContacts) list = window.getContacts() || []; } catch (e) {}
+  if (!list.length) list = [{ id: "default", name: "\u9ED8\u8BA4" }];
+  return Promise.all(list.map(function (c) {
+    return loadGardenAsync(c.id).then(function (d) {
+      if (!d) return null;
+      var name = c.name || c.id;
+      try { var pnn = window.storeFor(c.id).get("lbl-partner"); if (pnn) name = pnn; } catch (e) {}
+      return { cid: c.id, name: name, data: d };
+    });
+  })).then(function (arr) { return arr.filter(function (x) { return !!x; }); });
+}
+function mergeAllToGlobal() {
+  return loadAllGardensAsync().then(function (gardens) {
+    var g = { p: [], l: [], lpc: Math.floor(Date.now() / 1000), dex: {}, exp: 0, inv: {}, st: { p: 0, w: 0, h: 0, f: 0, mp: 0, mw: 0, mh: 0, mf: 0 }, decor: {}, visitor: null };
+    gardens.forEach(function (gd) {
+      var d = gd.data || {};
+      if (d.p) d.p.forEach(function (plot) {
+        if (plot) {
+          var np = { type: plot.type, planted: plot.planted, by: (plot.by || "\u6211") + "@" + gd.name };
+          if (plot.watered) np.watered = plot.watered;
+          if (plot.coOp) np.coOp = plot.coOp;
+          g.p.push(np);
+        }
+      });
+      g.exp += (d.exp || 0);
+      if (d.st) Object.keys(d.st).forEach(function (k) { g.st[k] = (g.st[k] || 0) + (d.st[k] || 0); });
+      if (d.dex) Object.keys(d.dex).forEach(function (t) {
+        if (!g.dex[t]) g.dex[t] = { p: 0, h: 0 };
+        g.dex[t].p += d.dex[t].p || 0;
+        g.dex[t].h += d.dex[t].h || 0;
+      });
+      if (d.inv) Object.keys(d.inv).forEach(function (t) { g.inv[t] = (g.inv[t] || 0) + (d.inv[t] || 0); });
+      if (d.decor) Object.keys(d.decor).forEach(function (t) { g.decor[t] = (g.decor[t] || 0) + (d.decor[t] || 0); });
+      if (d.l) d.l.forEach(function (e) { g.l.push({ who: e.who, act: (e.act || "") + " @" + gd.name, tm: e.tm }); });
+      if (d.visitor) {
+        var now = Math.floor(Date.now() / 1000);
+        if (d.visitor.start + d.visitor.dur > now) {
+          if (!g.visitor || d.visitor.start > g.visitor.start) g.visitor = d.visitor;
+        }
+      }
+    });
+    while (g.p.length < 12) g.p.push(null);
+    if (g.p.length > 36) {
+      var extra = g.p.splice(36);
+      extra.forEach(function (plot) { if (plot && T[plot.type]) g.inv[plot.type] = (g.inv[plot.type] || 0) + 1; });
+      while (g.p.length < 12) g.p.push(null);
+    }
+    g.l.sort(function (a, b) { return (a.tm || 0) - (b.tm || 0); });
+    g.l = g.l.slice(-100);
+    return g;
+  });
+}
+function toggleGlobal() {
+  ensureGlobalUI();
+  if (isGlobal) {
+    isGlobal = false;
+    data = load();
+    selPlot = -1;
+    if (globalBtn) globalBtn.textContent = "\uD83C\uDF10 \u5168\u90E8";
+    if (remergeBtn) remergeBtn.hidden = true;
+    renderAll();
+  } else {
+    isGlobal = true;
+    var existing = null;
+    try { existing = gs.get(G_GLOBAL); } catch (e) {}
+    if (existing) {
+      data = load();
+      selPlot = -1;
+      if (globalBtn) globalBtn.textContent = "\u2190 \u8FD4\u56DE\u672C\u684C";
+      if (remergeBtn) remergeBtn.hidden = false;
+      renderAll();
+    } else {
+      var scroll = page.querySelector(".garden-scroll");
+      var tip = null;
+      if (scroll) {
+        tip = document.createElement("div");
+        tip.className = "garden-merge-tip";
+        tip.textContent = "\u9996\u6B21\u5408\u5E76\u6240\u6709\u8054\u7CFB\u4EBA\u82B1\u56ED\u2026";
+        scroll.insertBefore(tip, scroll.firstChild);
+      }
+      mergeAllToGlobal().then(function (g) {
+        save(g);
+        data = load();
+        selPlot = -1;
+        if (globalBtn) globalBtn.textContent = "\u2190 \u8FD4\u56DE\u672C\u684C";
+        if (remergeBtn) remergeBtn.hidden = false;
+        if (tip) tip.remove();
+        renderAll();
+      });
+    }
+  }
+}
+function remergeGlobal() {
+  if (!window.openModal) { doRemerge(); return; }
+  window.openModal("\u91CD\u65B0\u5408\u5E76", "", function (v) {
+    if (v === "ok") doRemerge();
+  }, { pills: [{ label: "\u786E\u8BA4\u5408\u5E76\uFF08\u8986\u76D6\u5F53\u524D\u5168\u7403\u56ED\uFF09", value: "ok" }, { label: "\u53D6\u6D88", value: "cancel" }], noInput: true });
+}
+function doRemerge() {
+  mergeAllToGlobal().then(function (g) {
+    save(g);
+    data = load();
+    selPlot = -1;
+    renderAll();
+  });
+}
+ensureGlobalUI();
 
 })();

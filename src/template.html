@@ -335,11 +335,61 @@
         <button class="cc-tab sel" data-ccsect="custom">可自定义字卡</button>
         <button class="cc-tab" data-ccsect="preset">系统预设字卡</button>
       </div>
+      <div class="tc-search-wrap" style="padding:0 12px 8px">
+        <input type="text" id="chatcard-search" class="tc-input" placeholder="搜索字卡内容…" style="width:100%">
+      </div>
       <div class="cc-sect-body" id="cc-sect-custom">
       <div class="chat-item glass" id="li-custom-cards">
         <div class="av"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg></div>
         <div class="ci"><div class="n">自定义聊天字卡</div><div class="m" id="cc-sub-count">共收录 0 张字卡</div></div>
         <div class="t" id="cc-list-count">0</div>
+      </div>
+      <div class="chat-item glass" id="li-checkin-cards-mine">
+        <div class="av"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/><path d="M12 3a9 9 0 000 18"/></svg></div>
+        <div class="ci"><div class="n">查岗日常·我的添加</div><div class="m">你添加的地点/做的事/说的话</div></div>
+        <div class="t" id="cc-checkin-count-mine">0</div>
+      </div>
+      <div class="chat-item glass" id="li-quote-cards-mine">
+        <div class="av"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 3.5h11a1 1 0 011 1v16l-6.5-4-6.5 4v-16a1 1 0 011-1z"/></svg></div>
+        <div class="ci"><div class="n">今日情话·我的添加</div><div class="m">你添加的桌面每日情话</div></div>
+        <div class="t" id="cc-quote-count-mine">0</div>
+      </div>
+      <div class="chat-item glass" id="li-ta-ask-mine">
+        <div class="av"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+        <div class="ci"><div class="n">TA的询问·我的添加</div><div class="m">你添加的开放式提问</div></div>
+        <div class="t" id="cc-ta-ask-count-mine">0</div>
+      </div>
+      <div class="chat-item glass" id="li-ta-choose-mine">
+        <div class="av"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
+        <div class="ci"><div class="n">TA的小问题·我的添加</div><div class="m">你添加的选择题</div></div>
+        <div class="t" id="cc-ta-choose-count-mine">0</div>
+      </div>
+      <div class="chat-item glass" id="li-ta-curious-mine">
+        <div class="av"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 000 18"/><circle cx="12" cy="12" r="2"/></svg></div>
+        <div class="ci"><div class="n">TA的好奇·我的添加</div><div class="m">你添加的好奇提问</div></div>
+        <div class="t" id="cc-ta-curious-count-mine">0</div>
+      </div>
+      <div class="chat-item glass" id="li-ta-roast-mine">
+        <div class="av"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 5.4 5.7.3-4.4 3.6 1.5 5.5-4.6-3.3-4.6 3.3 1.5-5.5-4.4-3.6 5.7-.3z"/></svg></div>
+        <div class="ci"><div class="n">TA的吐槽·我的添加</div><div class="m">你添加的吐槽字卡</div></div>
+        <div class="t" id="cc-ta-roast-count-mine">0</div>
+      </div>
+      </div>
+      <div class="cc-sect-body" id="cc-sect-preset" hidden>
+      <div class="chat-item glass" id="li-default-cards">
+        <div class="av"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1L3.2 9.4l6.1-.9z"/></svg></div>
+        <div class="ci"><div class="n">默认聊天字卡</div><div class="m">日常默认回复字卡</div></div>
+        <div class="t">3260</div>
+      </div>
+      <div class="chat-item glass" id="li-mood-cards">
+        <div class="av"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7.5-4.7-9.3-9A5.3 5.3 0 0112 6.4 5.3 5.3 0 0121.3 12c-1.8 4.3-9.3 9-9.3 9z"/></svg></div>
+        <div class="ci"><div class="n">聊天情绪字卡</div><div class="m">按情绪分类的字卡</div></div>
+        <div class="t">209</div>
+      </div>
+      <div class="chat-item glass" id="li-reply-cards">
+        <div class="av"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg></div>
+        <div class="ci"><div class="n">聊天回应字卡</div><div class="m">逻辑连接词字卡</div></div>
+        <div class="t">102</div>
       </div>
       <div class="chat-item glass" id="li-checkin-cards">
         <div class="av"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/><path d="M12 3a9 9 0 000 18"/></svg></div>
@@ -370,23 +420,6 @@
         <div class="av"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 5.4 5.7.3-4.4 3.6 1.5 5.5-4.6-3.3-4.6 3.3 1.5-5.5-4.4-3.6 5.7-.3z"/></svg></div>
         <div class="ci"><div class="n">TA的吐槽</div><div class="m">突然吐槽你一句 · 情侣式调侃</div><div class="note">回应：90% 系统预设 + 10% 字卡库</div></div>
         <div class="t">46</div>
-      </div>
-      </div>
-      <div class="cc-sect-body" id="cc-sect-preset" hidden>
-      <div class="chat-item glass" id="li-default-cards">
-        <div class="av"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1L3.2 9.4l6.1-.9z"/></svg></div>
-        <div class="ci"><div class="n">聊天默认字卡</div><div class="m">日常默认回复字卡</div></div>
-        <div class="t">3260</div>
-      </div>
-      <div class="chat-item glass" id="li-mood-cards">
-        <div class="av"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7.5-4.7-9.3-9A5.3 5.3 0 0112 6.4 5.3 5.3 0 0121.3 12c-1.8 4.3-9.3 9-9.3 9z"/></svg></div>
-        <div class="ci"><div class="n">聊天情绪字卡</div><div class="m">按情绪分类的字卡</div></div>
-        <div class="t">209</div>
-      </div>
-      <div class="chat-item glass" id="li-reply-cards">
-        <div class="av"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg></div>
-        <div class="ci"><div class="n">聊天回应字卡</div><div class="m">逻辑连接词字卡</div></div>
-        <div class="t">102</div>
       </div>
       </div>
     </div>
@@ -1783,8 +1816,13 @@
         <span class="acc-cog" id="acc-cog" title="分类管理"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
       </div>
       <div class="acc-scroll">
-        <!-- 月份切换 + 概览 -->
+        <!-- 视图模式 + 月份切换 + 概览 -->
         <div class="acc-overview glass">
+          <div class="acc-view-tabs" id="acc-view-tabs">
+            <button class="acc-view-tab sel" data-view="month">月</button>
+            <button class="acc-view-tab" data-view="week">周</button>
+            <button class="acc-view-tab" data-view="year">年</button>
+          </div>
           <div class="acc-month-head">
             <button class="acc-month-btn" id="acc-prev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
             <span class="acc-month-txt" id="acc-month-txt">—</span>
@@ -1795,10 +1833,33 @@
             <div class="acc-ov-item"><div class="acc-ov-label">收入</div><div class="acc-ov-val income" id="acc-ov-income">¥0</div></div>
             <div class="acc-ov-item"><div class="acc-ov-label">结余</div><div class="acc-ov-val" id="acc-ov-balance">¥0</div></div>
           </div>
+          <div class="acc-budget-wrap" id="acc-budget-wrap" hidden>
+            <div class="acc-budget-head"><span id="acc-budget-txt">本月预算 ¥0 / 已支 ¥0</span><button class="acc-budget-set" id="acc-budget-set">设置</button></div>
+            <div class="acc-budget-track"><div class="acc-budget-bar" id="acc-budget-bar"></div></div>
+          </div>
         </div>
 
-        <!-- 记一笔表单 -->
+        <!-- 图表：月度柱状图 + 分类环形图 -->
+        <div class="acc-chart-card glass" id="acc-chart-card">
+          <div class="acc-chart-title">收支分布</div>
+          <div class="acc-chart-body">
+            <div class="acc-chart-bar-wrap"><svg id="acc-chart-bar" viewBox="0 0 300 120" preserveAspectRatio="none"></svg></div>
+            <div class="acc-chart-ring-wrap"><svg id="acc-chart-ring" viewBox="0 0 120 120"></svg><div class="acc-chart-ring-center" id="acc-chart-ring-center"></div></div>
+          </div>
+        </div>
+
+        <!-- 分类排行 -->
+        <div class="acc-rank-card glass" id="acc-rank-card">
+          <div class="acc-rank-title">分类排行（本月支出）</div>
+          <div class="acc-rank-list" id="acc-rank-list"></div>
+        </div>
+
+        <!-- 记一笔 / 编辑表单 -->
         <div class="acc-form-card glass" id="acc-form-card">
+          <div class="acc-form-head">
+            <span class="acc-form-title" id="acc-form-title">记一笔</span>
+            <button class="acc-cancel" id="acc-cancel" hidden>取消</button>
+          </div>
           <div class="acc-type-tabs" id="acc-type-tabs">
             <button class="acc-type-tab sel" data-type="expense">支出</button>
             <button class="acc-type-tab" data-type="income">收入</button>
@@ -1812,8 +1873,9 @@
           </div>
         </div>
 
-        <!-- 筛选 -->
+        <!-- 搜索 + 筛选 -->
         <div class="acc-filter-card glass">
+          <input class="acc-search" id="acc-search" type="search" placeholder="搜索备注/分类/金额">
           <div class="acc-filter-tabs" id="acc-filter-tabs">
             <button class="acc-filter-tab sel" data-filter="all">全部</button>
             <button class="acc-filter-tab" data-filter="expense">支出</button>
@@ -2771,6 +2833,10 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>
           <span>编辑</span>
         </button>
+        <button class="ma-btn ma-del-ta" data-act="del" title="删除" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2"/><path d="M6 6l1 14a2 2 0 002 2h6a2 2 0 002-2l1-14"/></svg>
+          <span>删除</span>
+        </button>
       </div>
       <div class="more-panel" id="chat-more-panel" hidden>
         <div class="more-tabs">
@@ -2976,6 +3042,12 @@
           <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M3 12h18"/></svg></div>
           <div class="txt">全屏边缘防误触</div>
           <label class="toggle"><input type="checkbox" id="cs-edge-guard"><span class="tk"></span></label>
+        </div>
+        <!-- v3.10.x：允许删除联系人消息（默认关闭，每联系人独立）。开启后点击 TA 消息弹出的操作菜单里多出「删除」按钮，可永久移除该条 TA 消息 -->
+        <div class="set-row" id="cs-del-ta-msg-row">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2"/><path d="M6 6l1 14a2 2 0 002 2h6a2 2 0 002-2l1-14"/></svg></div>
+          <div class="txt">允许删除联系人消息</div>
+          <label class="toggle"><input type="checkbox" id="cs-del-ta-msg"><span class="tk"></span></label>
         </div>
         <!-- v3.7.x：音乐悬浮小窗开关（镜像音乐页 #music-float-en / 音乐设置 #sm-set-float，同一 floatEn 状态，每桌面独立） -->
         <div class="set-row" id="cs-music-float-row">

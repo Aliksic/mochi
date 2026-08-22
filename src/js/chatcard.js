@@ -704,6 +704,11 @@
       cur = tab.dataset.type;
       q = '';
       curGroup = '';
+      // 清空两个搜索框
+      const s1 = document.getElementById('cc-search-input');
+      const s2 = document.getElementById('chatcard-search');
+      if (s1) s1.value = '';
+      if (s2) s2.value = '';
       renderGroupsBar();
       render();
     });
@@ -711,32 +716,108 @@
 
   // 搜索：页内输入框直接过滤（v3.6.x：不再弹窗，输入即筛，清空即恢复）
   const searchInput = document.getElementById('cc-search-input');
-  if (searchInput) {
+  const searchInput2 = document.getElementById('chatcard-search');
+  function setupSearchInput(input) {
+    if (!input) return;
     // v3.5.138：不再标记 ceDone 跳过 contenteditable 转换——之前为兼容
     // 雨见浏览器特意保留原生 input，但这手机 Chrome 对原生 input 聚焦仍弹
     // 「自动填充」白条。ce-box 已兼容 input 事件转发 + value 代理 + Escape
     // keydown 转发（见 mobile-adapt.js），转接后输入即筛/清空恢复照常工作。
     // v3.6.x：120ms 防抖——字卡多时每敲一个字全量渲染会卡，输入停顿后再筛
     let searchTimer = null;
-    searchInput.addEventListener('input', () => {
+    input.addEventListener('input', () => {
       // v3.7.x：管理模式放开搜索——搜索过滤已保留原始索引（{c,oi}），
       // 勾选删除/移动按原始索引匹配不会错位（v3.5.130 禁用的误删风险已消除）；
       // 过滤视图变化时清空已选并刷新计数，避免残留选中屏幕外的卡
-      q = searchInput.value.trim();
+      q = input.value.trim();
       if (manageMode) { selected.clear(); updateCount(); }
       clearTimeout(searchTimer);
       searchTimer = setTimeout(render, 120);
     });
-    searchInput.addEventListener('keydown', (e) => {
+    input.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
-        searchInput.value = ''; q = '';
+        input.value = ''; q = '';
         if (manageMode) { selected.clear(); updateCount(); }
         clearTimeout(searchTimer);
         render();
-        searchInput.blur();
+        input.blur();
       }
     });
   }
+  setupSearchInput(searchInput);
+  // v3.9.x：字卡库列表页搜索——跨所有分类搜字卡内容
+  const searchResultEl = document.createElement('div');
+  searchResultEl.className = 'cc-search-result';
+  searchResultEl.style.cssText = 'padding:0 12px';
+  searchResultEl.hidden = true;
+  (function () { const w = document.querySelector('#page-chatcard .tc-search-wrap'); if (w && w.parentNode) w.parentNode.insertBefore(searchResultEl, w.nextSibling); })();
+  function renderSearchResult(kw) {
+    if (!kw) { searchResultEl.hidden = true; searchResultEl.innerHTML = ''; return; }
+    searchResultEl.hidden = false;
+    const fns = window.__cardSearchFns || [];
+    let all = [];
+    fns.forEach(function (reg) { try { (reg.fn(kw) || []).forEach(function (r) { all.push({ t: r.t, cat: r.cat, mod: reg.name }); }); } catch (e) {} });
+    if (!all.length) { searchResultEl.innerHTML = '<div class="ta-empty" style="padding:20px 12px">没有找到含「' + esc(kw) + '」的字卡</div>'; return; }
+    let html = '<div class="cal-card-title" style="padding:10px 2px">找到 ' + all.length + ' 张含「' + esc(kw) + '」的字卡</div>';
+    all.forEach(function (r) {
+      html += '<div class="tc-qrow"><div class="tc-qmain"><div class="tc-qtext">' + esc(r.t) + '</div><div class="tc-qmeta" style="font-size:11px;color:var(--muted)">' + esc(r.mod) + (r.cat ? ' · ' + esc(r.cat) : '') + '</div></div></div>';
+    });
+    searchResultEl.innerHTML = html;
+  }
+  if (searchInput2) {
+    const filterEntries = function () {
+      const kw = String(searchInput2.value || '').trim().toLowerCase();
+      const customEl = document.getElementById('cc-sect-custom');
+      const presetEl = document.getElementById('cc-sect-preset');
+      if (kw) {
+        if (customEl) customEl.hidden = true;
+        if (presetEl) presetEl.hidden = true;
+        renderSearchResult(kw);
+      } else {
+        renderSearchResult('');
+        const cur = document.querySelector('.cc-top-tabs .cc-tab.sel');
+        const k = cur ? cur.getAttribute('data-ccsect') : 'custom';
+        if (customEl) customEl.hidden = (k !== 'custom');
+        if (presetEl) presetEl.hidden = (k !== 'preset');
+      }
+    };
+    searchInput2.addEventListener('input', filterEntries);
+    searchInput2.addEventListener('keydown', function (e) { if (e.key === 'Escape') { searchInput2.value = ''; filterEntries(); searchInput2.blur(); } });
+    const ccPage = document.getElementById('page-chatcard');
+    if (ccPage) { new MutationObserver(function () { if (!ccPage.hidden && searchInput2.value) { searchInput2.value = ''; filterEntries(); } }).observe(ccPage, { attributes: true, attributeFilter: ['hidden'] }); }
+  }
+  // 跨分类搜索注册：自定义聊天字卡 / 默认聊天字卡 / 情绪·回应
+  window.__cardSearchFns = window.__cardSearchFns || [];
+  window.__cardSearchFns.push({ name: '自定义聊天字卡', fn: function (kw) {
+    const out = [];
+    try {
+      const groups = loadGroups();
+      Object.keys(groups).forEach(function (type) {
+        (groups[type] || []).forEach(function (grp) {
+          const gname = grp[0]; const cards = grp[1] || [];
+          cards.forEach(function (c) { const txt = typeof c === 'string' ? c : (c && c.t) || ''; if (txt && txt.toLowerCase().indexOf(kw) >= 0) out.push({ t: txt, cat: gname }); });
+        });
+      });
+    } catch (e) {}
+    return out;
+  } });
+  window.__cardSearchFns.push({ name: '默认聊天字卡', fn: function (kw) {
+    const out = [];
+    try {
+      const d = window.DEFAULT_CARD_DATA || {};
+      Object.keys(d).forEach(function (k) { (d[k] || []).forEach(function (grp) { const gname = grp[0]; const cards = grp[1] || []; cards.forEach(function (c) { if (c && String(c).toLowerCase().indexOf(kw) >= 0) out.push({ t: String(c), cat: gname }); }); }); });
+    } catch (e) {}
+    return out;
+  } });
+  window.__cardSearchFns.push({ name: '聊天情绪/回应', fn: function (kw) {
+    const out = [];
+    try {
+      const d = window.MOOD_FOLLOWUP_DATA || {};
+      (d.mood || []).forEach(function (g) { (g.cards || []).forEach(function (c) { const txt = c && c.content ? c.content : ''; if (txt && txt.toLowerCase().indexOf(kw) >= 0) out.push({ t: txt, cat: '情绪·' + (g.group || '') }); }); });
+      (d.followup || []).forEach(function (g) { const grp = g.group || g.cat || ''; (g.cards || []).forEach(function (c) { const txt = typeof c === 'string' ? c : (c && c.content) || ''; if (txt && txt.toLowerCase().indexOf(kw) >= 0) out.push({ t: txt, cat: '回应·' + grp }); }); });
+    } catch (e) {}
+    return out;
+  } });
 
   // 管理分组：列出当前分类的分组，可新建 / 删除（内置分组不可删除）
   const ngBtn = document.getElementById('cc-new-group');
@@ -1825,6 +1906,8 @@
     btn.addEventListener('click', () => {
       const k = btn.getAttribute('data-ccsect');
       ccSectBtns.forEach(b => b.classList.toggle('sel', b === btn));
+      if (searchInput2) searchInput2.value = '';
+      if (searchResultEl) searchResultEl.hidden = true;
       Object.keys(ccSectBodies).forEach(key => {
         const el = ccSectBodies[key];
         if (el) el.hidden = (key !== k);

@@ -2,8 +2,12 @@
 // 仿星言简约版【星音陪伴】：本地音频上传、网易云链接添加、批量导入、
 // 歌单、听歌记录、TA 按概率请求一起听歌、歌曲结束 TA 可能接动作、悬浮小框可拖动
 (function () {
-  const uid = window.activePrefix();
-  const store = window.activeStore();
+  // v3.9.x：音乐数据全局共享——所有桌面共用同一份音乐库/歌单/历史/收藏/设置，
+  // 固定读写 default 桌面命名空间（xy-home-v2:default:music-*）。各桌面原先独立
+  // 的音乐数据由 mergeDesksMusic() 一次性合并迁移到 default（不删除原桌面数据，
+  // 作冗余备份，已上传的本地音频文件也不会丢）。本地音频文件 IDB 键固定用 default 前缀。
+  const MUSIC_PREFIX = 'xy-home-v2:default';
+  const store = window.storeFor('default');
   function toast(msg) {
     let t = document.getElementById('cc-toast');
     if (!t) { t = document.createElement('div'); t.id = 'cc-toast'; document.body.appendChild(t); }
@@ -24,7 +28,9 @@
   // ================= 数据 =================
   let library = [];          // {id,name,artist,url,source,duration,playlistId,addedAt}
   let playlists = [];        // {id,name,createdAt}
-  let history = [];          // {id,trackId,trackName,triggerType,ts}
+  let history = [];          // {id,trackId,trackName,triggerType,ts} —— TA 邀请听歌记录
+  let myHistory = [];        // {id,trackId,trackName,ts} —— 我的听歌记录（自己点击播放）
+  let hisSubTab = 'ta';      // 听歌记录二级子 tab：ta（TA 邀请）/ mine（我的）；默认 ta 与原 tab 语义一致
   let settings = { floatEn: true, reqProb: 5, cooldownMs: 600000, widgetCoverMode: 'song' };
   let currentId = null;
   let mode = 'list';         // list / shuffle / single
@@ -38,7 +44,7 @@
 
   function loadArr(k) { try { const v = JSON.parse(store.get(k) || 'null'); return Array.isArray(v) ? v : []; } catch(e){ return []; } }
   function saveArr(k, a) { store.set(k, JSON.stringify(a)); }
-  function partnerName() { return store.get('lbl-partner') || 'TA'; }
+  function partnerName() { return window.activeStore().get('lbl-partner') || 'TA'; }
   function findTrack(id) { return library.find(m => m.id === id) || null; }
   function fmtDur(sec) {
     if (isNaN(sec) || sec < 0) return '00:00';
@@ -94,11 +100,32 @@
   function saveLibrary() { saveArr('music-library', library); }
   function savePlaylists() { saveArr('music-playlists', playlists); }
   function saveHistory() { saveArr('music-history', history); }
+  function saveMyHistory() { saveArr('music-my-history', myHistory); }
   function saveSettings() { store.set('music-global', JSON.stringify(settings)); }
   function loadAll() {
     library = loadArr('music-library');
     playlists = loadArr('music-playlists');
     history = loadArr('music-history');
+    myHistory = loadArr('music-my-history');
+    // v3.9.x：旧版本把"我自己点击听歌"也写进了 music-history（triggerType==='' 且非 mode/rejected），
+    // 与 TA 邀请听歌记录混在一起。这里一次性迁移到 music-my-history 并从 music-history 删除，
+    // 老用户的历史不丢且自动分开。迁移幂等：已迁移过的记录在 myHistory 里，music-history 里不再有。
+    {
+      let migrated = false;
+      const mine = [];
+      history = history.filter(h => {
+        if (h && !h.mode && !h.rejected && !h.triggerType) {
+          mine.push(h); migrated = true; return false;
+        }
+        return true;
+      });
+      if (mine.length) {
+        const existIds = new Set(myHistory.map(h => h && h.id));
+        mine.forEach(h => { if (!existIds.has(h.id)) { myHistory.push(h); existIds.add(h.id); } });
+        if (myHistory.length > 500) myHistory = myHistory.slice(-500);
+      }
+      if (migrated) { saveHistory(); saveMyHistory(); }
+    }
     try { settings = Object.assign({ floatEn: true, reqProb: 5, cooldownMs: 600000, widgetCoverMode: 'song' }, JSON.parse(store.get('music-global') || '{}')); } catch(e) {}
     // 旧字段兼容：url 歌曲标记 source
     library.forEach(m => { if (!m.source) m.source = m.url ? 'url' : 'local'; });
@@ -134,7 +161,7 @@
         m.url = target;
         m.source = 'url';
         saveLibrary();
-        if (isSeed) { try { if (window.idbDelete) window.idbDelete(window.activePrefix() + ':music-file:' + m.id); } catch (e) {} }
+        if (isSeed) { try { if (window.idbDelete) window.idbDelete(MUSIC_PREFIX + ':music-file:' + m.id); } catch (e) {} }
       }
     });
     // v3.9.x：移除内置种子歌——旧版本自动放入的默认歌曲（id 以 sm_seed_ 开头）在
@@ -148,14 +175,74 @@
         try {
           if (window.idbGetAllKeys) {
             window.idbGetAllKeys().then(keys => {
-              keys.filter(k => k.indexOf(window.activePrefix() + ':music-file:sm_seed_') === 0)
+              keys.filter(k => k.indexOf(MUSIC_PREFIX + ':music-file:sm_seed_') === 0)
                 .forEach(k => { if (window.idbDelete) window.idbDelete(k); });
             });
           }
         } catch (e) {}
       }
     }
+    mergeDesksMusic();
   }
+
+  // v3.9.x：多桌面音乐合并——把所有非 default 桌面的音乐库/歌单/历史合并到 default
+  // 共享库（按 id 去重），本地音频文件从各桌面 IDB 拷贝到 default IDB（已存在则跳过）。
+  // 不删除原桌面数据（冗余备份，已上传的歌不会丢）。幂等：每次 loadAll 跑一遍，已有则跳过。
+  function loadArrFrom(s, k) { try { const v = JSON.parse(s.get(k) || 'null'); return Array.isArray(v) ? v : []; } catch (e) { return []; } }
+  function mergeDesksMusic() {
+    let contacts = [];
+    try { contacts = window.getContacts() || []; } catch (e) {}
+    const otherCids = contacts.map(c => c.id).filter(id => id && id !== 'default');
+    if (!otherCids.length) return;
+    const libIds = new Set(library.map(m => m && m.id));
+    const plIds = new Set(playlists.map(p => p && p.id));
+    const histIds = new Set(history.map(h => h && h.id));
+    const myHistIds = new Set(myHistory.map(h => h && h.id));
+    let changed = false;
+    let myChanged = false;
+    otherCids.forEach(cid => {
+      let s; try { s = window.storeFor(cid); } catch (e) { return; }
+      loadArrFrom(s, 'music-library').forEach(m => {
+        if (!m || !m.id || libIds.has(m.id)) return;
+        library.push(m); libIds.add(m.id); changed = true;
+      });
+      loadArrFrom(s, 'music-playlists').forEach(p => {
+        if (!p || !p.id || plIds.has(p.id)) return;
+        playlists.push(p); plIds.add(p.id); changed = true;
+      });
+      loadArrFrom(s, 'music-history').forEach(h => {
+        if (!h || !h.id || histIds.has(h.id)) return;
+        history.push(h); histIds.add(h.id); changed = true;
+      });
+      loadArrFrom(s, 'music-my-history').forEach(h => {
+        if (!h || !h.id || myHistIds.has(h.id)) return;
+        myHistory.push(h); myHistIds.add(h.id); myChanged = true;
+      });
+    });
+    if (changed) { saveLibrary(); savePlaylists(); saveHistory(); }
+    if (myChanged) { saveMyHistory(); }
+    // 拷贝本地音频文件 IDB（异步，不阻塞 UI）：各桌面 music-file:<id> → default music-file:<id>
+    if (window.idbGet && window.idbSet && window.idbGetAllKeys) {
+      const localIds = library.filter(m => m && (m.source === 'local' || (!m.url && m.source !== 'url'))).map(m => m.id);
+      if (!localIds.length) return;
+      window.idbGetAllKeys().then(keys => {
+        const have = new Set(keys || []);
+        otherCids.forEach(cid => {
+          const srcPrefix = 'xy-home-v2:' + cid + ':music-file:';
+          localIds.forEach(id => {
+            const srcKey = srcPrefix + id;
+            const dstKey = MUSIC_PREFIX + ':music-file:' + id;
+            if (have.has(srcKey) && !have.has(dstKey)) {
+              window.idbGet(srcKey).then(v => {
+                if (v !== undefined && v !== null) window.idbSet(dstKey, v).catch(() => {});
+              }).catch(() => {});
+            }
+          });
+        });
+      }).catch(() => {});
+    }
+  }
+
 
   // ================= 内置示例旋律：本地合成（无版权、不联网、永不失效） =================
   // 主路径用 Web Audio 离线渲染一小段钢琴音色旋律（22050Hz），编码为 WAV dataURL；
@@ -754,7 +841,7 @@
     const storePayload = (id, file, buf) => {
       // 优先 Blob（紧凑）；ArrayBuffer 成功 → Blob；否则原样（dataURL 字符串）
       const payload = buf instanceof ArrayBuffer ? new Blob([buf], { type: file.type || 'audio/mpeg' }) : buf;
-      const key = window.activePrefix() + ':music-file:' + id;
+      const key = MUSIC_PREFIX + ':music-file:' + id;
       const toDataUrl = (cb) => {
         const fr = new FileReader();
         fr.onload = () => cb(fr.result);
@@ -1385,7 +1472,7 @@
             if (window.idbGetAllKeys) {
               window.idbGetAllKeys().then(keys => {
                 // v3.5.123：全等匹配（前缀匹配在 id 互为前缀时会误删）
-                keys.filter(k => { for (const id of batchSel) if (k === window.activePrefix() + ':music-file:' + id) return true; return false; })
+                keys.filter(k => { for (const id of batchSel) if (k === MUSIC_PREFIX + ':music-file:' + id) return true; return false; })
                   .forEach(k => { if (window.idbDelete) window.idbDelete(k); });
               });
             }
@@ -1438,26 +1525,49 @@
     const el = document.getElementById('music-batch-count');
     if (el) el.textContent = '已选 ' + batchSel.size + ' 首';
   }
+  // 渲染单条听歌记录（我的 / TA 邀请共用）
+  function renderHistoryItem(x) {
+    // v3.9.x：听歌记录显示歌曲封面——优先取记录里冗余存的 cover，
+    // 没有（旧记录/歌曲删了）再按 trackId 回查当前音乐库；都拿不到保留原图标
+    const t = (!x.mode && x.trackId) ? findTrack(x.trackId) : null;
+    const cov = (!x.mode && (x.cover || (t && t.cover))) || '';
+    const ico = cov
+      ? '<span class="sm-his-ico has-cov" style="background-image:url(\'' + esc(cov) + '\')"></span>'
+      : '<span class="sm-his-ico">' + (x.mode
+          ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 014-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>'
+          : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>') + '</span>';
+    return '<div class="sm-his">' + ico +
+      '<div class="sm-his-info"><div class="sm-his-name">' + (x.mode ? esc(x.triggerType || '播放模式') : esc(x.trackName || '未知歌曲')) + '</div>' +
+      '<div class="sm-his-sub">' + fmtDT(x.ts) + (x.mode ? '' : (x.triggerType ? ' · ' + esc(x.triggerType) : '')) + '</div></div></div>';
+  }
   function renderHistory() {
     const el = document.getElementById('music-his-list');
     if (!el) return;
-    const h = history.slice().reverse();
-    el.innerHTML = h.length
-      ? h.map(x => {
-          // v3.9.x：听歌记录显示歌曲封面——优先取记录里冗余存的 cover，
-          // 没有（旧记录/歌曲删了）再按 trackId 回查当前音乐库；都拿不到保留原图标
-          const t = (!x.mode && x.trackId) ? findTrack(x.trackId) : null;
-          const cov = (!x.mode && (x.cover || (t && t.cover))) || '';
-          const ico = cov
-            ? '<span class="sm-his-ico has-cov" style="background-image:url(\'' + esc(cov) + '\')"></span>'
-            : '<span class="sm-his-ico">' + (x.mode
-                ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 014-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>'
-                : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>') + '</span>';
-          return '<div class="sm-his">' + ico +
-            '<div class="sm-his-info"><div class="sm-his-name">' + (x.mode ? esc(x.triggerType || '播放模式') : esc(x.trackName || '未知歌曲')) + '</div>' +
-            '<div class="sm-his-sub">' + fmtDT(x.ts) + (x.mode ? '' : (x.triggerType ? ' · ' + esc(x.triggerType) : '')) + '</div></div></div>';
-        }).join('')
-      : '<div class="ta-empty">还没有梦角邀请听歌记录，TA 邀请你一起听歌的记录会出现在这里</div>';
+    // v3.9.x：二级子 tab——「我的听歌」/「TA 邀请听歌」分开记，避免自己点歌和 TA 邀请混在一起
+    const subBar = '<div class="sm-his-subtabs">' +
+      '<button class="sm-his-subtab' + (hisSubTab === 'mine' ? ' sel' : '') + '" data-hissub="mine">我的听歌</button>' +
+      '<button class="sm-his-subtab' + (hisSubTab === 'ta' ? ' sel' : '') + '" data-hissub="ta">TA 邀请听歌</button>' +
+      '</div>';
+    if (hisSubTab === 'mine') {
+      const h = myHistory.slice().reverse();
+      el.innerHTML = subBar + (h.length
+        ? h.map(renderHistoryItem).join('')
+        : '<div class="ta-empty">还没有听歌记录，你播放过的歌会记在这里</div>');
+    } else {
+      const h = history.slice().reverse();
+      el.innerHTML = subBar + (h.length
+        ? h.map(renderHistoryItem).join('')
+        : '<div class="ta-empty">还没有梦角邀请听歌记录，TA 邀请你一起听歌的记录会出现在这里</div>');
+    }
+    // 子 tab 点击：切换并重渲染
+    el.querySelectorAll('.sm-his-subtab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const v = btn.dataset.hissub;
+        if (v === hisSubTab) return;
+        hisSubTab = v;
+        renderHistory();
+      });
+    });
   }
   function renderPage() {
     renderLibFilter();
@@ -1598,7 +1708,7 @@
   function playDemoFor(m, seedIdx) {
     genDemoAudio(seedIdx).then(d => {
       if (!d) { toast('播放失败：网络链接可能已失效，或该歌曲为VIP付费歌曲'); demoFallbackBusy = false; return; }
-      try { window.idbSet(window.activePrefix() + ':music-file:' + m.id, d); } catch (e) {}
+      try { window.idbSet(MUSIC_PREFIX + ':music-file:' + m.id, d); } catch (e) {}
       demoFallbackBusy = false;
       if (currentId !== m.id) return;
       teardownAudio();
@@ -1647,7 +1757,7 @@
     updatePlayerBar();
     renderLibrary();
     startProgress();
-    addRecord(m.id, '');
+    addMyRecord(m.id);
     updateMediaSession(true);
   }
   // v3.6.x：自动播放被拒后的手势恢复——移动端 play() 被拒（异步链丢手势）后，
@@ -1927,7 +2037,7 @@
     if (progressTimer) { clearInterval(progressTimer); progressTimer = null; }
     if (m.source === 'local' || (!m.url && m.source !== 'url')) {
       // 本地文件：从 IndexedDB 读取 Blob（新版）或 dataURL 字符串（旧版数据）
-      const key = window.activePrefix() + ':music-file:' + m.id;
+      const key = MUSIC_PREFIX + ':music-file:' + m.id;
       const loadLocal = (v) => {
         // v3.5.129：守卫——异步加载期间用户已切到别的歌（currentId 变了）→ 丢弃本次结果，
         // 否则旧歌的 audio 会继续创建播放，出现两首歌同时响
@@ -1962,7 +2072,7 @@
             const failLocal = () => { toast('音乐文件加载失败，可能已被清理'); currentId = null; updatePlayerBar(); renderLibrary(); };
             const oldLs = localStorage.getItem(legacyKey);
             if (oldLs) { legacyFallback(oldLs); return; }
-            if (window.activePrefix() !== 'xy-home-v2') {
+            if (MUSIC_PREFIX !== 'xy-home-v2') {
               window.idbGet(legacyKey).then(legacyFallback).catch(() => legacyFallback(null));
               return;
             }
@@ -2352,6 +2462,16 @@
     saveHistory();
     renderHistory();
   }
+  // ================= 我的听歌记录 =================
+  // 用户主动点击播放（含从歌单/收藏/悬浮框点播），与 TA 邀请听歌记录分开存
+  function addMyRecord(trackId) {
+    const m = findTrack(trackId);
+    myHistory.push({ id: 'smymh_' + Date.now(), trackId: trackId, trackName: m ? (m.name || '未知歌曲') : '未知歌曲', cover: m ? (m.cover || '') : '', ts: Date.now() });
+    if (myHistory.length > 500) myHistory = myHistory.slice(-500);
+    saveMyHistory();
+    if (curTab === 'his' && hisSubTab === 'mine') renderHistory();
+  }
+
 
   // ================= 音乐管理（编辑/删除） =================
   function openSongMenu(id) {
@@ -2423,7 +2543,7 @@
           if (window.idbGetAllKeys) {
             window.idbGetAllKeys().then(keys => {
               // v3.5.123：全等匹配（前缀匹配在 id 互为前缀时会误删）
-              keys.filter(k => k === window.activePrefix() + ':music-file:' + id).forEach(k => {
+              keys.filter(k => k === MUSIC_PREFIX + ':music-file:' + id).forEach(k => {
                 if (window.idbDelete) window.idbDelete(k);
               });
             });
@@ -2543,7 +2663,7 @@
   // ================= 星音设置 =================
   // v3.6.x：音乐本地缓存统计与清理——音频文件本体存 IndexedDB（music-file:<id>），
   // 这里按 IDB 键名统计占用、提供一键清理（删本地音频 + 移出歌单，外链/种子歌保留）
-  function MUSIC_FILE_PREFIX() { return window.activePrefix() + ':music-file:'; }
+  function MUSIC_FILE_PREFIX() { return MUSIC_PREFIX + ':music-file:'; }
   // 统计本地音频缓存字节数（分批读，读完即弃，内存峰值=单批；失败返回 -1）
   function calcStorageBytes() {
     if (!window.idbGetAllKeys) return Promise.resolve(-1);
@@ -2886,8 +3006,8 @@
     });
   }
 
-  // v3.6.x：多桌面——切换联系人后重新加载歌单/播放列表/历史（store 动态绑定，
-  // loadAll 会读新桌面的 music-* 键），并停止正在播放的旧桌面歌曲（防止串桌面继续放）
+  // v3.9.x：音乐数据全局共享 default 桌面，切联系人无需 loadAll（数据不变）；
+  // 仅停止正在播放的旧桌面歌曲（防止串桌面继续放）+ 重置 TA 互动状态
   document.addEventListener('contact-switched', function () {
     try {
       if (audio) { try { audio.pause(); } catch (e) {} audio = null; }
@@ -2897,8 +3017,6 @@
       cooldownAt = 0;
       reqData = null;
       libFilter = 'all';
-      loadAll();
-      try { renderPage(); } catch (e) {}
       try { renderFloat(); } catch (e) {}
     } catch (e) {}
   });

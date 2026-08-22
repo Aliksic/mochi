@@ -3,6 +3,7 @@
 (function () {
   const uid = window.activePrefix();
   const store = window.activeStore();
+  const gStore = window.xyStore('xy-home-v2'); // v3.9.x：fish-log 全局累计（跨所有联系人按自然日去重）
   // v3.6.x：桌面图片组件尺寸档位（宽度百分比：小/中/大）——const 声明必须放顶部，
   // renderDeskImages 在启动阶段（声明位置之前）就会被调用，放下面会触发 TDZ 报错
   const DESK_IMG_SIZES = { s: 40, m: 70, l: 100 };
@@ -165,6 +166,7 @@ try {
       document.addEventListener('mochi-restore-done', function () {
         window.applyAvatars();
         try { syncFishUI(); } catch (e) {}
+        try { if (!gStore.get('fish-log-global-migrated')) migrateFishLogGlobal(true); } catch (e) {}
         try { updateFishDays(); } catch (e) {}
         // v3.5.116：回填完成后一并重绘桌面图标 + 壁纸——
         //   自定义图标/壁纸大键可能只存 IDB，回填完成前桌面显示的是默认/空白
@@ -2813,19 +2815,20 @@ try {
   }
 
   // 已摸鱼天数：按和 TA 打卡或聊天的自然日统计
+  // v3.9.x：改为全局累计（跨所有联系人按自然日去重），避免多联系人下每个桌面只显示各自天数
   function fishToday() {
     const d = new Date();
     return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
   }
   function getFishLog() {
-    try { return JSON.parse(store.get('fish-log') || '[]'); } catch (e) { return []; }
+    try { return JSON.parse(gStore.get('fish-log') || '[]'); } catch (e) { return []; }
   }
   function logFish() {
     const list = getFishLog();
     const t = fishToday();
     if (list.indexOf(t) === -1) {
       list.push(t);
-      store.set('fish-log', JSON.stringify(list));
+      gStore.set('fish-log', JSON.stringify(list));
     }
     updateFishDays();
   }
@@ -2834,6 +2837,23 @@ try {
     if (el) el.textContent = getFishLog().length || 0;
   }
   window.logFish = logFish; // 供聊天页调用
+  // v3.9.x：一次性迁移——把各联系人命名空间下的旧 fish-log 合并到全局 fish-log（按自然日去重）
+  function migrateFishLogGlobal(setMark) {
+    try {
+      const all = new Set();
+      try { JSON.parse(gStore.get('fish-log') || '[]').forEach(d => all.add(d)); } catch (e) {}
+      const contacts = window.getContacts ? window.getContacts() : [{ id: 'default' }];
+      contacts.forEach(c => {
+        try {
+          const s = window.xyStore('xy-home-v2:' + c.id);
+          JSON.parse(s.get('fish-log') || '[]').forEach(d => all.add(d));
+        } catch (e) {}
+      });
+      if (all.size) gStore.set('fish-log', JSON.stringify(Array.from(all).sort()));
+      if (setMark) gStore.set('fish-log-global-migrated', '1');
+    } catch (e) {}
+  }
+  migrateFishLogGlobal(false); // 模块加载时先合并 LS 已有的
   updateFishDays();
 
   // 兼容旧数据：以前打过卡但未计入摸鱼天数的，自动补记（旧标记视为今天打卡）
@@ -2844,7 +2864,7 @@ try {
       const list = getFishLog();
       if (list.indexOf(d) === -1) {
         list.push(d);
-        store.set('fish-log', JSON.stringify(list));
+        gStore.set('fish-log', JSON.stringify(list));
         updateFishDays();
       }
     }

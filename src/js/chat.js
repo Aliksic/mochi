@@ -4173,13 +4173,15 @@ function partialRetractMsg(msgEl, side) {
         });
       }, 160);
     };
+    // v3.9.x：只监听 resize（键盘开合高度变化）——vv.scroll 是打字时 caret 微滚触发，
+    //   高频调用 refresh 会每 160ms 强制 reflow（void offsetHeight）→ 半框输入打字
+    //   周期性闪屏/卡顿（iOS Safari 复现，与主输入栏 mobile-adapt syncIosKb 同病）。
+    //   合成层错位只发生在键盘弹出/收起位置突变时，由 resize 驱动，scroll 无需处理。
     vv.addEventListener('resize', refresh);
-    vv.addEventListener('scroll', refresh);
     askKbRefreshStop = () => {
       if (t) clearTimeout(t);
       t = null;
       vv.removeEventListener('resize', refresh);
-      vv.removeEventListener('scroll', refresh);
       askKbRefreshStop = null;
     };
   }
@@ -4768,6 +4770,13 @@ function partialRetractMsg(msgEl, side) {
       // 显示对应按钮：我的消息多 撤回/编辑
       if (msgActions) {
         msgActions.querySelectorAll('.ma-mine').forEach(b2 => b2.hidden = activeSide !== 'out');
+        // v3.10.x：删除联系人消息按钮——仅当开关开启且消息方向为 TA(in) 时显示
+        const delBtn = msgActions.querySelector('.ma-del-ta');
+        if (delBtn) {
+          let delEn = false;
+          try { delEn = store.get('cs-del-ta-msg') === '1'; } catch (e) {}
+          delBtn.hidden = !(delEn && activeSide === 'in');
+        }
         msgActions.hidden = false;
         // 定位到气泡旁边：优先气泡上方，空间不足放下方
         // v3.5.116：手机端输入法弹出时可视高度按 visualViewport 计算，
@@ -4868,6 +4877,16 @@ function partialRetractMsg(msgEl, side) {
             const b = editEl && editEl.querySelector('.msg-bubble');
             if (b) b.innerHTML = '<span style="opacity:.85">' + escTxt(val) + '</span>';
           });
+        }
+        closeMsgActions();
+      } else if (act === 'del') {
+        // v3.10.x：删除联系人消息（真删除，不可恢复）。仅对 TA 消息生效，开关 cs-del-ta-msg 开启时可用。
+        if (activeMsgEl && idx >= 0 && msgs[idx] && msgs[idx].side === 'in') {
+          msgs.splice(idx, 1);
+          sessionChangedIdx.clear();
+          saveMsgs();
+          renderWindow(true);
+          toast('已删除该消息');
         }
         closeMsgActions();
       }

@@ -4,6 +4,61 @@
 
 ## 规则
 
+### 2026-08-22（用户要求「排查避免再出现 iOS 闪屏」——全面排查高频事件 DOM 写入路径）
+- [AI-B·完成]（**已构建，未提交**）：`src/js/chat.js`（**AI-A 域越界代修 1 处**，请 AI-A 知悉）+ 构建产物。在 8fd0699（mobile-adapt 主输入栏三条闪屏路径已修）基础上排查其余高频事件 DOM 写入路径：
+  - **排查结论**（仅 1 处需修，其余无风险）：
+    1. `chat.js startAskKbRefresh`（半框输入合成层重建，4176-4184）——**有闪屏风险，已修**：`vv.scroll` 监听 refresh，打字时 caret 微滚高频触发 → 160ms 防抖强制 reflow（`void box.offsetHeight`）→ 半框输入（问问TA/邀请/查岗）打字周期性闪屏/卡顿，与主输入栏 syncIosKb 同病。合成层错位只由键盘开合（resize）驱动，scroll 无需处理 → **去掉 `vv.scroll` 监听，只保留 `vv.resize`**。
+    2. `chat.js:985` 就地作答 input handler — 只写 `inplaceDrafts[idx]`（JS 对象不写 DOM），无风险。
+    3. `chat.js:1202` body scroll — passive，只读 scrollTop 加载更多消息，无风险。
+    4. 主输入栏 `#chat-input` keydown — 只处理 Enter 发送，打字每字不触发，无风险；且未绑 input 事件，打字时无 JS DOM 写入。
+    5. `mobile-adapt.js:179` compositionend — 安卓 ce-box 专用，iOS 不进转换器（isIOS 时跳过），无风险。
+    6. `desktop-slider/pong/calendar` 等 scroll/resize — 非聊天输入场景，无风险。
+  - 注：chat.js 改动仅删 `vv.addEventListener('scroll', refresh)` 及对应 removeEventListener，逻辑等价于"半框输入合成层重建只由键盘 resize 驱动"。iOS 真机需用户在 15pro 半框输入（问问TA）打字实测确认。
+
+### 2026-08-22（已摸鱼天数改全局累计：跨所有联系人按自然日去重）
+- [AI-B·完成]（**已改 src + 构建产物，verify 10/10 通过，未提交**）：`src/js/personalize.js`（AI-B 域）+ 构建产物。
+  - 需求：用户反馈"桌面组件已摸鱼天数一直是第一天"（OPPO Edge）。fish-log 原按联系人命名空间隔离（xy-home-v2:<cid>:fish-log），多联系人下每个桌面只显示各自天数，与"用了多少天"心智不符。
+  - 改动：fish-log 改为全局键 xy-home-v2:fish-log（gStore=xyStore('xy-home-v2')），所有联系人共享。getFishLog/logFish/兼容旧数据补记均改用 gStore。
+  - 迁移 migrateFishLogGlobal：遍历 getContacts() 把各联系人命名空间下旧 fish-log 合并到全局（Set 去重+sort）。模块加载时跑一次（合并 LS 已有，不设标记），mochi-restore-done 后跑一次（设 fish-log-global-migrated 标记，合并 IDB 回填）。旧联系人命名空间 fish-log 保留不删。
+  - 影响范围：仅"已摸鱼天数"显示（#fish-days）+ 打卡 toast。摸鱼值/工作值（fish-total/day-fish-*）仍按联系人隔离。
+  - ⚠️ 若改完仍"一直是 1"，根因是写入持久化问题，需导出备份看 fish-log 实际值进一步排查。
+
+### 2026-08-22（音乐听歌记录：我的听歌 / TA 邀请听歌 分开记）
+- [本会话·完成]（**已构建 verify 10/10 + 听歌分离 14/14 + 封面 8/8 + 无种子 5/5 + 过滤 15/15，未提交**）：`src/js/music-player.js` + `src/css/chat-pages.css`（均 AI-A 域）+ `tools/verify-music-history-split.mjs`（新冒烟）+ 构建产物。未改 template.html/sw.js/build.mjs。
+  - 需求：原"梦角邀请听歌记录"把用户自己点击听歌也记进去了（`playTrack()` 末尾 `addRecord(m.id, '')` 写入同一 `music-history`），和 TA 邀请/切歌/换模式混在一起。要求分开记。
+  - **数据分离**：新增 `myHistory` 数组 + 键 `music-my-history`（我的听歌，自己点击播放）；`history`（`music-history`）保留为 TA 邀请听歌记录（邀请接受/拒绝/切歌/随机/换模式）。`playTrack` 里 `addRecord(m.id,'')` → 新增 `addMyRecord(m.id)` 写 myHistory。
+  - **旧数据迁移**（loadAll 内联，幂等）：`music-history` 里 `triggerType==='' && !mode && !rejected` 的记录是旧版残留的"我的点歌"，一次性迁到 `music-my-history` 并从 `music-history` 删除，老用户历史不丢且自动分开。迁移后双键各 save 一次。
+  - **UI 二级子 tab**（不动 template.html，JS 注入到 `#music-his-list` 顶部）：「我的听歌」/「TA 邀请听歌」，默认 `ta`（与原 tab 名"梦角邀请听歌记录"语义一致，分开后该列表只剩 TA 邀请相关，不再被自己的点歌污染）；点子 tab 切 `hisSubTab` 并重渲染。空态分别「还没有听歌记录，你播放过的歌会记在这里」/「还没有梦角邀请听歌记录，TA 邀请你一起听歌的记录会出现在这里」。
+  - **跨桌面合并**：`mergeDesksMusic` 同步加 `music-my-history` 按 id 去重合并（与 music-history 同模式）。
+  - **渲染重构**：原 `renderHistory` 内联的逐条渲染抽成 `renderHistoryItem(x)`（我的/TA 共用，封面回查/冗余 cover/mode 图标逻辑不变），`renderHistory` 改为按 `hisSubTab` 选数据源 + 顶部注入子 tab 条 + 绑子 tab 点击。
+  - CSS：`.sm-his-subtabs`/`.sm-his-subtab`/`.sm-his-subtab.sel`（复用 `.fav-tab.sel` 配色风格）。
+  - ⚠️ 不依赖对方文件，AI-A 自闭环。构建含工作区累积改动，提交时确认对方已保存完整。
+
+### 2026-08-22（花园全球园：真合并所有联系人花园数据，可继续种植/收获）
+- [AI-A·完成]（**已改 src，`node --check` 通过，未构建未提交**，请构建者执行 `node build.mjs` 后随下次统一提交）：`src/js/garden.js` + `src/css/garden.css`（均 AI-A 域，garden.css 为花园专属样式）。未改 template.html/sw.js/build.mjs。
+  - 需求：用户要把所有联系人（桌面）的花园数据真合并保存成一份，可在合并花园里继续种植/收获/送花。原各联系人花园数据保留不动。
+  - 实现：花园页 header 注入「🌐 全部」按钮（`garden-ov-btn`），点击切到全球园模式（`isGlobal=true`）；再点「← 返回本桌」切回。全球园模式时显示「🔄 重新合并」按钮（绿色，`garden-remerge-btn`），点击弹确认后从所有联系人当前数据重新合并覆盖全球园。
+  - 数据存储：全局 store `gs = window.xyStore('xy-home-v2')`，键 `garden-data-global`（根命名空间，不随联系人切换）。`curStore()/curKey()/curIdbKey()` 按 isGlobal 切换本桌/全球园数据源。`save/load` 统一走这组函数，本桌逻辑不变。
+  - 首次合并：`toggleGlobal` 切到全球园时若 `garden-data-global` 不存在，调 `mergeAllToGlobal()`（遍历 `getContacts()`，每个 cid 用 `storeFor(cid).get('garden-data')` 读 LS，空则 `idbGet` 兜底）合并生成：地块收集所有联系人非空地块（`by` 字段标注 `原种植者@联系人名`，上限36块，超出转库存）、经验/统计/图鉴/库存/装饰求和、日志合并标注 `@联系人名`（保留最近100条）、访客取最近有效。合并后 `save` 写入 `garden-data-global`。
+  - 地块动态扩容：所有 `PLOTS` 引用（除 load 补齐和声明）改成 `data.p.length`，本桌仍 12 块，全球园按合并后地块数（12~36）。
+  - 可操作：全球园模式下种植/浇水/施肥/收获/花束/装饰商店全正常工作，写入 `garden-data-global`。地块来源标注（`.garden-plant-src`）显示该花来自哪个联系人。
+  - 切换处理：`openGarden` 进页时若 isGlobal 自动切回本桌；`contact-switched` 时若在全球园模式自动切回本桌（全球园是跨联系人的，切联系人应回本桌）。
+  - ⚠️ 不动 template.html（AI-B 域），新 DOM（按钮）全 JS 注入到现有 header。不依赖对方文件。原各联系人 `garden-data` 永不修改，安全可逆。
+
+### 2026-08-22（经期功能增强：动态周期/置信区间/每日属性/症状统计/通知/趋势图/倒计时）
+- [AI-A·完成]（**已改 src，`node --check` 通过，未构建未提交**，请构建者执行 `node build.mjs` 后随下次统一提交）：`src/js/period.js` + `src/css/chat-pages.css`（均 AI-A 域）。未改 template.html/sw.js/build.mjs。
+  - **方案1 动态周期**：`cycleStats()` 取最近 6 次实际周期中位数+标准差σ+CV；`effCycleLen()` n≥3 用中位数否则回退 cfg.cycleLen；`effLuteal()` 若 daily 标记排卵症状则反推黄体期；`regularity()` CV<0.1 很规律/0.1-0.2 较规律/>0.2 不规律，状态卡显示徽章；预测标题带「（±σ 天）」。
+  - **方案3 置信区间**：`predictConfidence(ds)` 高斯衰减 exp(-offset²/2σ²)；renderGrid 预测日格加 `.band` + `--conf` CSS 变量，背景透明度按置信度渐变（中心深边缘浅）；数据不足（n<3 或 σ<0.5）回退原虚线框。
+  - **方案10 倒计时卡**：状态卡顶部插入圆环 SVG（stroke-dasharray 按 dayOfCycle/cycleLen 进度）+ 大数字（经期中显示「第N天」/非经期显示「N天后」）。
+  - **方案4 每日属性**：新增 KEY_DAILY 存 `{date:{flow,symptoms,mood,note,temp}}`，localStorage+IDB 双写；日格长按 500ms / 右键打开底部浮层（经量4档/症状11项多选/体温/情绪滑块/备注）；浮层手动加 `body.scroll-lock`（复用 mobile-adapt 类名，未改 mobile-adapt）；日格右下角标记点（经量色点/症状橙点/备注绿点）。
+  - **方案5 症状统计**：历史卡后插入统计卡，TOP3 文字 + 频次柱状图（前8项，渐变填充条）。
+  - **方案9 趋势图**：近12次周期长度 SVG 折线 + 均值虚线 + 均值标注。
+  - **方案6 本地通知**：新增 KEY_NOTIFY 存 `{enabled,advanceDays,hour,fired}`；cog 旁加铃铛按钮（JS 创建不改 template）打开设置浮层（开关/提前天数多选/小时）；`checkNotify()` 在进页面/标记开始/启动3s后检查，经期预测前3/1/当天 + 延迟≥5天预警；通知走 `reg.showNotification` 优先 SW、回退 `new Notification`（未改 sw.js，后台通知依赖现有 SW）；**无任何孕期/备孕/排卵提醒**（按用户要求）。
+  - **数据回填**：restore 块扩展 KEY_DAILY/KEY_NOTIFY 的 IDB 回填。
+  - 验证：`node --check src/js/period.js` 通过；未构建未 verify，需构建后 `npm run verify` + 真机确认（长按日格弹浮层、置信带渐变、倒计时环、通知设置）。
+  - **续修（用户反馈「不能自己设定天数 + 设定完无法预测」）**：① cog 设置从 `28,5,14` 逗号输入改为可视化 stepper 浮层（周期/经期/黄体期分别 ± 设定，含排卵日实时预览 + 说明文案）；② 浮层加「上次经期开始日」日期输入——填了即生成一条记录作为预测起点（解决只设参数没起点导致「暂无记录」无法预测）；③ `dayPhase` 增加排卵期着色（浅橙 .ph-fertile，排卵日前5天到后1天），日历可看到预测排卵期；④ JS 动态补「排卵期」图例项（未改 template）。`node --check` 通过。
+  - ⚠️ 构建前请确认工作区无对方进行中改动；本次构建请统一包含工作区已保存改动。template.html 有对方未提交改动，本次未碰。
+
 ### 2026-08-21（续：每日摸鱼值/工作值也迁日历按天查看）
 - [本会话·完成]（**已构建 verify 10/10 + verify-cal-notes 19/19，待提交**）：`src/js/calendar.js`（AI-A 域）+ `src/template.html`（AI-B 域，日历卡片）+ `tools/verify-cal-notes.mjs`（补 4 条用例）。
   - **日历页新增第 4 张每日卡片「摸鱼值 · 工作值」**（#cal-stats，我的心情卡之后）：按选中日期显示双方当天摸鱼/工作值。

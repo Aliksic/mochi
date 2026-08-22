@@ -899,7 +899,8 @@
     li.addEventListener('click', () => {
       document.querySelectorAll('.page').forEach(p => p.hidden = true);
       page.hidden = false;
-      switchAskTab(askTab);
+      const tw = document.getElementById('ta-ask-tabs'); if (tw) tw.style.display = 'none';
+      switchAskTab('sys');
     });
   }
   // 入口：字卡库页点「TA的小问题」（选择题）进入独立页面
@@ -909,7 +910,8 @@
     liTC.addEventListener('click', () => {
       document.querySelectorAll('.page').forEach(p => p.hidden = true);
       tcPage.hidden = false;
-      switchTCTab(tcTab);
+      const tw = document.getElementById('tc-tabs'); if (tw) tw.style.display = 'none';
+      switchTCTab('sys');
     });
   }
   const tcBackBtn = document.getElementById('tc-choose-back');
@@ -2274,7 +2276,8 @@ window.openTCPanel = openTCPanel;
     liTCU.addEventListener('click', () => {
       document.querySelectorAll('.page').forEach(p => p.hidden = true);
       tcuPage.hidden = false;
-      switchTCUTab(tcuTab);
+      const tw = document.getElementById('tcu-tabs'); if (tw) tw.style.display = 'none';
+      switchTCUTab('sys');
     });
   }
   const tcuBackBtn = document.getElementById('tc-curious-back');
@@ -2829,7 +2832,8 @@ window.openTCPanel = openTCPanel;
     liTR.addEventListener('click', () => {
       document.querySelectorAll('.page').forEach(p => p.hidden = true);
       trPage.hidden = false;
-      switchTRTab(trTab);
+      const tw = document.getElementById('tr-tabs'); if (tw) tw.style.display = 'none';
+      switchTRTab('sys');
     });
   }
   const trBackBtn = document.getElementById('tc-roast-back');
@@ -3019,15 +3023,49 @@ window.openTCPanel = openTCPanel;
 
   // ================= 字卡库入口数字（动态显示各题库实际数量） =================
   window.refreshTaCardCounts = function () {
-    const set = (id, n) => {
-      const el = document.querySelector('#' + id + ' .t');
-      if (el) el.textContent = n;
+    const setSys = (id, n) => { const el = document.querySelector('#' + id + ' .t'); if (el) el.textContent = n; };
+    const setMine = (id, n) => { const el = document.querySelector('#' + id + '-mine .t'); if (el) el.textContent = n; };
+    const split = (id, qs) => {
+      setSys(id, qs.filter(q => q && q.isPreset === true).length);
+      setMine(id, qs.filter(q => q && q.isPreset !== true).length);
     };
-    try { set('li-ta-ask', taAskLoad().questions.length); } catch (e) {}
-    try { set('li-ta-choose', tcLoad().questions.length); } catch (e) {}
-    try { set('li-ta-curious', tcuLoad().questions.length); } catch (e) {}
-    try { set('li-ta-roast', trLoad().questions.length); } catch (e) {}
+    try { split('li-ta-ask', taAskLoad().questions); } catch (e) {}
+    try { split('li-ta-choose', tcLoad().questions); } catch (e) {}
+    try { split('li-ta-curious', tcuLoad().questions); } catch (e) {}
+    try { split('li-ta-roast', trLoad().questions); } catch (e) {}
   };
+  // v3.9.x：字卡库拆双入口——「·我的添加」入口进入管理页只看自定义（隐藏系统预设 tab）
+  (function () {
+    const openMine = (liId, pageId, tabsId, switchFn) => {
+      const liEl = document.getElementById(liId);
+      const pgEl = document.getElementById(pageId);
+      if (!liEl || !pgEl) return;
+      liEl.addEventListener('click', () => {
+        document.querySelectorAll('.page').forEach(p => p.hidden = true);
+        pgEl.hidden = false;
+        const tw = document.getElementById(tabsId); if (tw) tw.style.display = 'none';
+        switchFn('mine');
+      });
+    };
+    openMine('li-ta-ask-mine', 'page-ta-ask', 'ta-ask-tabs', switchAskTab);
+    openMine('li-ta-choose-mine', 'page-ta-choose', 'tc-tabs', switchTCTab);
+    openMine('li-ta-curious-mine', 'page-ta-curious', 'tcu-tabs', switchTCUTab);
+    openMine('li-ta-roast-mine', 'page-ta-roast', 'tr-tabs', switchTRTab);
+  })();
+  // v3.9.x：注册 TA 询问/小问题/好奇/吐槽跨分类搜索
+  window.__cardSearchFns = window.__cardSearchFns || [];
+  [
+    { name: 'TA的询问', load: taAskLoad },
+    { name: 'TA的小问题', load: tcLoad },
+    { name: 'TA的好奇', load: tcuLoad },
+    { name: 'TA的吐槽', load: trLoad }
+  ].forEach(function (it) {
+    window.__cardSearchFns.push({ name: it.name, fn: function (kw) {
+      const out = [];
+      try { (it.load().questions || []).forEach(function (q) { const txt = q && q.text ? q.text : ''; if (txt && txt.toLowerCase().indexOf(kw) >= 0) out.push({ t: txt, cat: q.isPreset === true ? '系统预设' : '我的添加' }); }); } catch (e) {}
+      return out;
+    } });
+  });
   // 字卡库页可见时刷新（初始加载、从管理页返回、增删题库后都会更新）
   const ccPageEl = document.getElementById('page-chatcard');
   if (ccPageEl) {

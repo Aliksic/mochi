@@ -666,6 +666,97 @@
 .period-hist-row .ph-del:active { color:#e85a8f; }
 .period-empty { font-size:13px; color:var(--muted); text-align:center; padding:18px 0; }
 
+/* ===== 经期 v3.10.x 增强：倒计时环 / 规律徽章 / 置信带 / 每日浮层 / 统计图 ===== */
+.period-countdown { display:flex; flex-direction:column; align-items:center; margin-bottom:12px; }
+.pd-ring-wrap { position:relative; width:64px; height:64px; }
+.pd-ring { width:64px; height:64px; display:block; }
+.pd-num { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:20px; font-weight:800; color:var(--ink); }
+.pd-sub { font-size:11px; color:var(--muted); margin-top:4px; }
+.reg-badge { margin-left:auto; font-size:10px; font-weight:700; padding:2px 8px; border-radius:10px; white-space:nowrap; align-self:flex-start; }
+.reg-badge.reg-good { background:#e3f6ec; color:#3a9b5a; }
+.reg-badge.reg-mid { background:#fff3da; color:#c47d12; }
+.reg-badge.reg-bad { background:#fde2ee; color:#c44a78; }
+/* 置信区间带：高斯衰减着色（中心深、边缘浅） */
+.period-grid .pc-cell.band { --conf:1; }
+.period-grid .pc-cell.band.ph-predict {
+  background:rgba(232,90,143,calc(0.18 + 0.42 * var(--conf)));
+  color:#c44a78; border:1px dashed rgba(232,90,143,calc(0.4 + 0.4 * var(--conf)));
+}
+/* 日格标记点（经量/症状/备注） */
+.period-grid .pc-cell { position:relative; }
+.period-grid .pc-cell .dm-flow, .period-grid .pc-cell .dm-sym, .period-grid .pc-cell .dm-note {
+  position:absolute; bottom:1px; width:4px; height:4px; border-radius:50%; display:block;
+}
+.period-grid .pc-cell .dm-flow { left:2px; background:#e85a8f; }
+.period-grid .pc-cell .dm-flow.f-spot { background:#f6b6cf; }
+.period-grid .pc-cell .dm-flow.f-light { background:#f08bb0; }
+.period-grid .pc-cell .dm-flow.f-medium { background:#e85a8f; }
+.period-grid .pc-cell .dm-flow.f-heavy { background:#c43c6e; }
+.period-grid .pc-cell .dm-sym { left:7px; background:#f5a623; }
+.period-grid .pc-cell .dm-note { right:2px; background:#7ec69e; }
+/* 每日详情浮层（复用于通知设置） */
+.period-day-pop { position:fixed; inset:0; z-index:9999; }
+.period-day-pop .dp-mask { position:absolute; inset:0; background:rgba(0,0,0,.4); }
+.period-day-pop .dp-sheet {
+  position:absolute; left:0; right:0; bottom:0; max-height:80vh; overflow-y:auto;
+  background:#fff; border-radius:18px 18px 0 0; padding:16px 18px 24px;
+  box-shadow:0 -4px 24px rgba(0,0,0,.12); animation:dpSlideUp .22s ease;
+}
+@keyframes dpSlideUp { from { transform:translateY(100%); } to { transform:translateY(0); } }
+.period-day-pop .dp-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+.period-day-pop .dp-date { font-size:16px; font-weight:800; color:var(--ink); }
+.period-day-pop .dp-close { width:30px; height:30px; font-size:22px; line-height:1; border:none; background:rgba(0,0,0,.05); border-radius:50%; color:var(--muted); cursor:pointer; }
+.period-day-pop .dp-section { margin-bottom:14px; }
+.period-day-pop .dp-label { font-size:12px; color:var(--muted); margin-bottom:6px; }
+.period-day-pop .dp-flow-row { display:flex; gap:8px; }
+.period-day-pop .dp-flow {
+  flex:1; padding:8px 0; border:1px solid #eee; border-radius:10px; background:#fff;
+  font-size:13px; color:var(--ink); cursor:pointer; -webkit-tap-highlight-color:transparent;
+}
+.period-day-pop .dp-flow.on { background:#fde2ee; border-color:#e85a8f; color:#c44a78; font-weight:700; }
+.period-day-pop .dp-sym-grid { display:flex; flex-wrap:wrap; gap:7px; }
+.period-day-pop .dp-sym {
+  padding:6px 12px; border:1px solid #eee; border-radius:14px; background:#fff;
+  font-size:12px; color:var(--ink); cursor:pointer; -webkit-tap-highlight-color:transparent;
+}
+.period-day-pop .dp-sym.on { background:#fff3da; border-color:#f5a623; color:#c47d12; font-weight:700; }
+.period-day-pop .dp-temp, .period-day-pop .dp-hour {
+  width:100%; padding:9px 10px; border:1px solid #eee; border-radius:10px; font-size:14px; box-sizing:border-box;
+}
+.period-day-pop .dp-mood-row { display:flex; align-items:center; gap:10px; }
+.period-day-pop .dp-mood { flex:1; }
+.period-day-pop .dp-mood-val { font-size:14px; font-weight:700; color:#e85a8f; min-width:18px; text-align:center; }
+.period-day-pop .dp-note { width:100%; min-height:60px; padding:9px 10px; border:1px solid #eee; border-radius:10px; font-size:13px; resize:vertical; box-sizing:border-box; font-family:inherit; }
+.period-day-pop .dp-toggle {
+  padding:8px 18px; border-radius:14px; border:1px solid #eee; background:#fff; font-size:13px; cursor:pointer;
+}
+.period-day-pop .dp-toggle.on { background:#e3f6ec; border-color:#3a9b5a; color:#3a9b5a; font-weight:700; }
+.period-day-pop .dp-tip { font-size:11px; color:var(--muted); margin:8px 0; line-height:1.5; }
+.period-day-pop .dp-actions { display:flex; gap:10px; margin-top:6px; }
+.period-day-pop .dp-del { flex:1; padding:9px; border:1px solid #ddd; border-radius:10px; background:#fff; font-size:13px; color:#999; cursor:pointer; }
+.period-day-pop .dp-save { flex:2; }
+/* 统计卡 */
+.ps-title { font-size:12px; font-weight:700; color:var(--ink); margin:6px 0 8px; }
+.ps-empty { font-size:12px; color:var(--muted); padding:8px 0; }
+.ps-bars { display:flex; flex-direction:column; gap:5px; margin-bottom:14px; }
+.ps-bar { display:flex; align-items:center; gap:8px; font-size:11px; }
+.ps-bar .ps-name { width:56px; color:var(--ink); flex-shrink:0; }
+.ps-bar .ps-track { flex:1; height:8px; background:#f0f0f0; border-radius:4px; overflow:hidden; }
+.ps-bar .ps-fill { display:block; height:100%; background:linear-gradient(90deg,#f5a623,#e85a8f); border-radius:4px; }
+.ps-bar .ps-num { min-width:16px; text-align:right; color:var(--muted); }
+.ps-trend { width:100%; max-width:280px; height:auto; display:block; margin:4px 0 8px; }
+/* 排卵期日历着色 */
+.period-grid .pc-cell.ph-fertile { background:#fff3da; color:#c47d12; border:1px solid #f5a623; }
+.period-legend .lg-fertile::before { background:#fff3da; border:1px solid #f5a623; }
+/* 设置浮层 stepper */
+.period-day-pop .dp-stepper { display:flex; align-items:center; gap:12px; }
+.period-day-pop .st-btn { width:34px; height:34px; border:1px solid #ddd; border-radius:10px; background:#fff; font-size:20px; line-height:1; color:var(--ink); cursor:pointer; -webkit-tap-highlight-color:transparent; }
+.period-day-pop .st-btn:active { background:#f5f5f5; }
+.period-day-pop .st-val { font-size:18px; font-weight:800; color:var(--ink); min-width:28px; text-align:center; }
+.period-day-pop .st-unit { font-size:12px; color:var(--muted); }
+.period-day-pop .dp-ovu-preview { font-size:15px; font-weight:700; color:#f5a623; }
+.period-day-pop .dp-date-input { width:100%; padding:9px 10px; border:1px solid #eee; border-radius:10px; font-size:14px; box-sizing:border-box; }
+
 /* 记账页 */
 .acc-scroll { flex:1; overflow-y:auto; scrollbar-width:none; -ms-overflow-style:none; padding:0 18px; }
 .acc-scroll::-webkit-scrollbar { display:none; }
@@ -723,6 +814,47 @@
 .acc-row-del svg { width:15px; height:15px; }
 .acc-row-del:active { color:#e85a5a; }
 .acc-empty { font-size:13px; color:var(--muted); text-align:center; padding:24px 0; }
+.acc-view-tabs { display:flex; gap:6px; margin-bottom:12px; }
+.acc-view-tab { flex:1; padding:6px 0; border-radius:8px; border:1px solid var(--card-border); background:transparent; font-size:12px; font-weight:600; color:var(--muted); cursor:pointer; -webkit-tap-highlight-color:transparent; }
+.acc-view-tab.sel { background:var(--ink); color:var(--btn-ink); border-color:var(--ink); }
+.acc-view-tab:active { opacity:.8; }
+.acc-budget-wrap { margin-top:12px; }
+.acc-budget-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+.acc-budget-head > span { font-size:11px; color:var(--muted); flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.acc-budget-set { border:none; background:transparent; font-size:11px; color:var(--ink); cursor:pointer; padding:2px 8px; -webkit-tap-highlight-color:transparent; flex-shrink:0; }
+.acc-budget-set:active { opacity:.6; }
+.acc-budget-track { height:6px; border-radius:3px; background:var(--static-bg); overflow:hidden; }
+.acc-budget-bar { height:100%; border-radius:3px; background:#3aa86c; transition:width .3s; }
+.acc-budget-bar.over { background:#e85a5a; }
+.acc-chart-card { border-radius:20px; padding:14px 18px; margin-bottom:14px; }
+.acc-chart-title { font-size:13px; font-weight:700; color:var(--ink); margin-bottom:10px; }
+.acc-chart-body { display:flex; gap:14px; align-items:center; }
+.acc-chart-bar-wrap { flex:1; min-width:0; }
+.acc-chart-bar-wrap svg { width:100%; height:110px; display:block; }
+.acc-chart-ring-wrap { position:relative; width:110px; height:110px; flex-shrink:0; }
+.acc-chart-ring-wrap svg { width:110px; height:110px; display:block; }
+.acc-chart-ring-center { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; pointer-events:none; }
+.acc-ring-val { font-size:13px; font-weight:800; color:var(--ink); }
+.acc-ring-lbl { font-size:10px; color:var(--muted); margin-top:2px; }
+.acc-rank-card { border-radius:20px; padding:14px 18px; margin-bottom:14px; }
+.acc-rank-title { font-size:13px; font-weight:700; color:var(--ink); margin-bottom:10px; }
+.acc-rank-list { display:flex; flex-direction:column; gap:8px; }
+.acc-rank-item { padding:6px 4px; cursor:pointer; -webkit-tap-highlight-color:transparent; border-radius:8px; }
+.acc-rank-item.sel { background:var(--static-bg); }
+.acc-rank-info { display:flex; align-items:center; justify-content:space-between; margin-bottom:5px; }
+.acc-rank-cat { font-size:12px; font-weight:600; color:var(--ink); }
+.acc-rank-amt { font-size:13px; font-weight:700; color:#e85a5a; }
+.acc-rank-bar-wrap { height:4px; border-radius:2px; background:var(--static-bg); overflow:hidden; margin-bottom:3px; }
+.acc-rank-bar { height:100%; border-radius:2px; background:#e85a5a; }
+.acc-rank-pct { font-size:10px; color:var(--muted); }
+.acc-form-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+.acc-form-title { font-size:14px; font-weight:700; color:var(--ink); }
+.acc-cancel { padding:4px 12px; border-radius:8px; border:1px solid var(--card-border); background:transparent; font-size:12px; color:var(--muted); cursor:pointer; -webkit-tap-highlight-color:transparent; }
+.acc-cancel:active { opacity:.6; }
+.acc-search { width:100%; box-sizing:border-box; border:1px solid var(--input-border); border-radius:10px; padding:9px 12px; font-size:13px; color:var(--ink); background:var(--input-bg); margin-bottom:10px; outline:none; }
+.acc-search:focus { border-color:var(--input-focus-border); }
+.acc-row.editing { background:var(--static-bg); border-radius:8px; padding:8px 6px; }
+.acc-row.editing .acc-row-cat { background:var(--ink); color:var(--btn-ink); }
 
 /* 占卜页 */
 .div-scroll { flex:1; overflow-y:auto; scrollbar-width:none; -ms-overflow-style:none; padding:0 18px; }
@@ -1737,6 +1869,16 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + env(safe-area-inset-bott
 .sm-his-info { flex:1; min-width:0; }
 .sm-his-name { font-size:13px; font-weight:600; color:var(--ink); }
 .sm-his-sub { font-size:11px; color:var(--muted); margin-top:2px; }
+/* 听歌记录二级子 tab（我的听歌 / TA 邀请听歌） */
+.sm-his-subtabs {
+  display:flex; gap:8px; padding:0 8px 10px; border-bottom:1px solid rgba(0,0,0,.06); margin-bottom:6px;
+}
+.sm-his-subtab {
+  flex:1; padding:7px 0; font-size:12px; font-weight:600; color:var(--muted);
+  background:transparent; border:1px solid rgba(0,0,0,.1); border-radius:8px; cursor:pointer;
+  transition:background .15s, color .15s, border-color .15s;
+}
+.sm-his-subtab.sel { background:var(--ink); color:#fff; border-color:var(--ink); }
 /* 底部播放条 */
 .sm-player-bar {
   position:absolute; left:0; right:0; bottom:0; z-index:5;
