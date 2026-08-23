@@ -1553,13 +1553,15 @@ if (ckRefresh) {
   }
   const tpApp = makeApp('tongpin', '同频', '<svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h3l2-6 4 14 3-9 2 5h6"/></svg>');
   const ssApp = makeApp('shenshou', '伸手', '<svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 11V5.5a1.5 1.5 0 013 0V11"/><path d="M10 11V4a1.5 1.5 0 013 0v7"/><path d="M13 11V5.5a1.5 1.5 0 013 0V11"/><path d="M16 11V7a1.5 1.5 0 013 0v6c0 4-2 7-6 7s-6-2-6-6v-3z"/></svg>');
+  const waterApp = makeApp('water', '喝水', '<svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5C8 7 5.5 11 5.5 14.5a6.5 6.5 0 0013 0C18.5 11 16 7 12 2.5z"/></svg>');
+  const eatApp = makeApp('eat', '吃什么', '<svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v8a3 3 0 003 3v7"/><path d="M8 3v8"/><path d="M17 3c-1.5 0-2.5 2-2.5 5s1 5 2.5 5v8"/></svg>');
   // 默认放第三页；若用户已装修（desk-layout 存在）且布局未含本图标 → 放新的一页，避免破坏自定义布局。
   const pagesBox = document.getElementById('desktop-pages');
   const st0 = curStore();
   let layArr = null;
   try { if (st0) layArr = JSON.parse(st0.get('desk-layout') || 'null'); } catch (e) {}
   const hasLayout = Array.isArray(layArr);
-  const alreadyInLay = hasLayout && layArr.some(p => (p || []).indexOf('app-tongpin') >= 0);
+  const alreadyInLay = hasLayout && layArr.some(p => (p || []).some(w => w === 'app-tongpin' || w === 'app-shenshou' || w === 'app-water' || w === 'app-eat'));
   let placed = false;
   if (hasLayout && !alreadyInLay && pagesBox) {
     const curCnt = pagesBox.querySelectorAll('.page-slide').length;
@@ -1570,12 +1572,12 @@ if (ckRefresh) {
       const grid = document.createElement('div');
       grid.className = 'app-grid';
       grid.setAttribute('data-app', 'tp-page');
-      grid.appendChild(tpApp); grid.appendChild(ssApp);
+      grid.appendChild(tpApp); grid.appendChild(ssApp); grid.appendChild(waterApp); grid.appendChild(eatApp);
       slide.appendChild(grid);
       pagesBox.appendChild(slide);
       try {
         st0.set('desk-page-count', String(curCnt + 1));
-        layArr.push(['app-tongpin', 'app-shenshou']);
+        layArr.push(['app-tongpin', 'app-shenshou', 'app-water', 'app-eat']);
         st0.set('desk-layout', JSON.stringify(layArr));
       } catch (e) {}
       try { if (window.deskRebuild) window.deskRebuild(); } catch (e) {}
@@ -1584,7 +1586,7 @@ if (ckRefresh) {
   }
   if (!placed) {
     const p3 = document.querySelector('.app-grid.p3-grid');
-    if (p3) { p3.appendChild(tpApp); p3.appendChild(ssApp); }
+    if (p3) { p3.appendChild(tpApp); p3.appendChild(ssApp); p3.appendChild(waterApp); p3.appendChild(eatApp); }
     // 重应用布局：personalize.js 的 applyDeskLayout 在本文件之前执行过一次，那时图标未注入被跳过；
     // 此处图标已在 DOM，重应用可把图标按 desk-layout 移到用户装修过的目标页（alreadyInLay 时生效）。
     try { if (window.applyDeskLayout) window.applyDeskLayout(); } catch (e) {}
@@ -1730,9 +1732,94 @@ if (ckRefresh) {
   const ssSendBtn = document.getElementById('ss-send');
   if (ssSendBtn) { ssSendBtn.textContent = '发到聊天：' + (ssSendOn() ? '开' : '关'); ssSendBtn.addEventListener('click', () => { const s = curStore(); const on = !ssSendOn(); if (s) try { s.set('shenshou-send-chat', on ? '1' : '0'); } catch (e) {} ssSendBtn.textContent = '发到聊天：' + (on ? '开' : '关'); }); }
 
+  // ---- 喝水页 ----
+  const DEF_WATER_MSGS = ['该喝水了', '别忘了喝水', '喝口水吧', '你今天水喝够了吗'];
+  const DEF_WATER_PRAISE = ['今天喝够啦', '真棒', '完成了', '好乖'];
+  const DEF_WATER_ENCOURAGE = ['再来一杯', '继续', '嗯', '快了'];
+  const waterPage = document.createElement('div');
+  waterPage.className = 'page'; waterPage.id = 'page-water'; waterPage.hidden = true;
+  waterPage.innerHTML =
+    '<div class="chat-head"><span class="ch-back" id="water-back"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><span class="ch-name">喝水</span></div>' +
+    '<div class="water-body">' +
+      '<div class="water-card glass"><div class="water-num" id="water-num">0</div><div class="water-unit">杯 / <span id="water-goal-text">8</span> 杯</div><div class="water-bar"><div class="water-fill" id="water-fill"></div></div></div>' +
+      '<div class="water-btns"><button class="water-minus" id="water-minus">−1</button><button class="water-plus" id="water-plus">+1</button></div>' +
+      '<div class="water-msg glass" id="water-msg">点 +1 记一杯</div>' +
+      '<div class="water-manage"><button class="water-set-goal" id="water-set-goal">设目标</button><button class="water-add-msg" id="water-add-msg">+ 提醒字卡</button></div>' +
+    '</div>';
+  host.appendChild(waterPage);
+
+  function waterToday() { const s = curStore(); if (!s) return { date: '', count: 0 }; try { const o = JSON.parse(s.get('water-today') || '{}'); const d = new Date(); const today = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); if (o.date !== today) return { date: today, count: 0 }; return { date: today, count: o.count || 0 }; } catch (e) { return { date: '', count: 0 }; } }
+  function waterSave(count) { const s = curStore(); if (!s) return; const d = new Date(); const today = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); try { s.set('water-today', JSON.stringify({ date: today, count: count })); } catch (e) {} }
+  function waterGoal() { const s = curStore(); try { return parseInt(s.get('water-goal') || '8', 10) || 8; } catch (e) { return 8; } }
+  function waterSetGoal(n) { const s = curStore(); if (s) try { s.set('water-goal', '' + n); } catch (e) {} }
+  function waterMsgs() { const s = curStore(); if (!s) return DEF_WATER_MSGS.slice(); try { const a = JSON.parse(s.get('water-msgs') || '[]'); return a.length ? a : DEF_WATER_MSGS.slice(); } catch (e) { return DEF_WATER_MSGS.slice(); } }
+  function waterSaveMsgs(a) { const s = curStore(); if (s) try { s.set('water-msgs', JSON.stringify(a)); } catch (e) {} }
+  function waterRender() {
+    const t = waterToday(); const g = waterGoal(); const el = document.getElementById('water-num'); if (el) el.textContent = t.count;
+    const gt = document.getElementById('water-goal-text'); if (gt) gt.textContent = g;
+    const fill = document.getElementById('water-fill'); if (fill) fill.style.width = Math.min(100, t.count / g * 100) + '%';
+    waterSave(t.count);
+  }
+  function waterShowMsg(txt) { const el = document.getElementById('water-msg'); if (el) { el.classList.add('fade'); setTimeout(() => { el.textContent = '\u201c' + txt + '\u201d'; el.classList.remove('fade'); }, 200); } }
+  function waterMaybeRemind() {
+    const s = curStore(); if (!s) return;
+    let last = 0; try { last = parseInt(s.get('water-last-visit') || '0', 10) || 0; } catch (e) {}
+    try { s.set('water-last-visit', '' + Date.now()); } catch (e) {}
+    const t = waterToday(); const g = waterGoal();
+    if (t.count < g && Date.now() - last > 2 * 3600000) {
+      const msgs = waterMsgs(); waterShowMsg(msgs[Math.floor(Math.random() * msgs.length)]);
+    }
+  }
+  if (waterApp) waterApp.addEventListener('click', () => { if (editingNow()) return; openPage(waterPage); waterRender(); waterMaybeRemind(); });
+  document.getElementById('water-back').addEventListener('click', () => backHome(waterPage));
+  document.getElementById('water-plus').addEventListener('click', () => {
+    if (editingNow()) return;
+    const t = waterToday(); const g = waterGoal(); const n = t.count + 1; waterSave(n); waterRender();
+    if (n >= g) { vibrate([60, 40, 60]); const p = DEF_WATER_PRAISE; waterShowMsg(p[Math.floor(Math.random() * p.length)]); }
+    else if (Math.random() < 0.2) { const e = DEF_WATER_ENCOURAGE; waterShowMsg(e[Math.floor(Math.random() * e.length)]); }
+  });
+  document.getElementById('water-minus').addEventListener('click', () => {
+    if (editingNow()) return;
+    const t = waterToday(); if (t.count <= 0) return; waterSave(t.count - 1); waterRender();
+  });
+  document.getElementById('water-set-goal').addEventListener('click', () => { if (!window.openModal) return; window.openModal('设目标（杯）', String(waterGoal()), (v) => { if (v) { const n = parseInt(v, 10); if (n > 0 && n < 100) { waterSetGoal(n); waterRender(); toast('已设置'); } } }); });
+  document.getElementById('water-add-msg').addEventListener('click', () => { if (!window.openModal) return; window.openModal('添加提醒字卡', '', (v) => { if (v) { const a = waterMsgs(); a.push(v); waterSaveMsgs(a); toast('已添加'); } }); });
+
+  // ---- 吃什么页 ----
+  const DEF_EAT_DISHES = ['番茄炒蛋', '红烧肉', '清蒸鱼', '麻婆豆腐', '宫保鸡丁', '酸辣土豆丝', '蛋炒饭', '牛肉面', '饺子', '馄饨', '皮蛋瘦肉粥', '可乐鸡翅', '糖醋排骨', '清炒时蔬', '蛋花汤', '凉拌黄瓜', '回锅肉', '水煮肉片', '鱼香肉丝', '葱油拌面'];
+  const DEF_EAT_COMMENTS = ['就吃这个吧', '听起来不错', '我想吃这个', '可以', '这个好吃', '嗯，就这个', '想吃'];
+  const eatPage = document.createElement('div');
+  eatPage.className = 'page'; eatPage.id = 'page-eat'; eatPage.hidden = true;
+  eatPage.innerHTML =
+    '<div class="chat-head"><span class="ch-back" id="eat-back"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><span class="ch-name">吃什么</span></div>' +
+    '<div class="eat-body">' +
+      '<div class="eat-card glass"><div class="eat-label">今天吃</div><div class="eat-dish" id="eat-dish">…</div><div class="eat-comment" id="eat-comment">…</div></div>' +
+      '<div class="eat-btns"><button class="eat-change" id="eat-change">换一个</button><button class="eat-send" id="eat-send">发到聊天</button></div>' +
+      '<button class="eat-add" id="eat-add">+ 添加菜名</button>' +
+    '</div>';
+  host.appendChild(eatPage);
+
+  function eatDishes() { const s = curStore(); let pool = DEF_EAT_DISHES.slice(); try { const a = JSON.parse((s && s.get('eat-cards')) || '[]'); if (Array.isArray(a)) a.forEach(d => { if (d && pool.indexOf(d) < 0) pool.push(d); }); } catch (e) {} return pool; }
+  function eatSaveDishes(a) { const s = curStore(); if (s) try { s.set('eat-cards', JSON.stringify(a)); } catch (e) {} }
+  function eatPick() {
+    const dishes = eatDishes(); const dish = dishes[Math.floor(Math.random() * dishes.length)];
+    const comments = DEF_EAT_COMMENTS; const comment = comments[Math.floor(Math.random() * comments.length)];
+    const de = document.getElementById('eat-dish'); const ce = document.getElementById('eat-comment');
+    if (de) { de.classList.add('fade'); setTimeout(() => { de.textContent = dish; de.classList.remove('fade'); }, 200); }
+    if (ce) { ce.classList.add('fade'); setTimeout(() => { ce.textContent = '\u201c' + comment + '\u201d'; ce.classList.remove('fade'); }, 200); }
+    return dish + ' · ' + comment;
+  }
+  let eatLastPick = '';
+  if (eatApp) eatApp.addEventListener('click', () => { if (editingNow()) return; openPage(eatPage); eatLastPick = eatPick(); });
+  document.getElementById('eat-back').addEventListener('click', () => backHome(eatPage));
+  document.getElementById('eat-change').addEventListener('click', () => { if (editingNow()) return; eatLastPick = eatPick(); });
+  document.getElementById('eat-send').addEventListener('click', () => { if (editingNow()) return; if (eatLastPick && window.chatAddIn) { try { window.chatAddIn(eatLastPick); } catch (e) {} toast('已发送'); } });
+  document.getElementById('eat-add').addEventListener('click', () => { if (!window.openModal) return; window.openModal('添加菜名', '', (v) => { if (v) { const a = eatDishes(); a.push(v); eatSaveDishes(a.filter(d => d)); toast('已添加'); } }); });
+
   document.addEventListener('contact-switched', () => {
     tpStopFlow();
     if (!tpPage.hidden) tpPick();
     if (!ssPage.hidden) ssRenderCount();
+    if (!waterPage.hidden) waterRender();
   });
 })();

@@ -2546,3 +2546,30 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + env(safe-area-inset-bott
 .ss-trace { position:absolute; inset:0; pointer-events:none; overflow:hidden; }
 .ss-trace::after { content:''; position:absolute; top:-50%; left:-60%; width:60%; height:200%; background:linear-gradient(90deg, transparent, rgba(255,200,160,.55), transparent); transform:rotate(18deg); animation: ssTrace 1.5s ease-out; }
 @keyframes ssTrace { 0%{ left:-60%; opacity:0; } 30%{ opacity:1; } 100%{ left:120%; opacity:0; } }
+
+/* ===== 喝水 / 吃什么 页（桌面第三页动态注入） ===== */
+.water-body, .eat-body { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; box-sizing:border-box; padding:14px 14px 40px; }
+.water-card { padding:24px 18px; border-radius:14px; text-align:center; margin-bottom:16px; }
+.water-num { font-size:48px; font-weight:700; color:var(--ink,#222); line-height:1; }
+.water-unit { font-size:14px; color:var(--ink-soft,#999); margin:6px 0 14px; }
+.water-bar { height:8px; border-radius:4px; background:rgba(0,0,0,.08); overflow:hidden; }
+.water-fill { height:100%; border-radius:4px; background:linear-gradient(90deg,#7ec8e3,#4a9fd4); transition:width .4s; width:0; }
+.water-btns { display:flex; gap:14px; justify-content:center; margin-bottom:16px; }
+.water-minus, .water-plus { font-size:18px; font-weight:600; border:none; border-radius:14px; padding:14px 32px; min-width:90px; }
+.water-plus { background:#4a9fd4; color:#fff; }
+.water-minus { background:rgba(0,0,0,.08); color:var(--ink,#333); }
+.water-msg { padding:14px; border-radius:14px; text-align:center; font-size:16px; color:var(--ink,#444); min-height:24px; transition:opacity .2s; }
+.water-msg.fade { opacity:0; }
+.water-manage { text-align:center; margin-top:14px; }
+.water-set-goal, .water-add-msg { font-size:13px; color:var(--ink-soft,#888); background:none; border:1px dashed rgba(0,0,0,.15); border-radius:10px; padding:8px 14px; margin:0 4px; }
+.eat-card { padding:28px 18px; border-radius:14px; text-align:center; margin-bottom:16px; }
+.eat-label { font-size:13px; color:var(--ink-soft,#999); margin-bottom:8px; }
+.eat-dish { font-size:28px; font-weight:700; color:var(--ink,#222); min-height:36px; transition:opacity .2s; }
+.eat-dish.fade { opacity:0; }
+.eat-comment { font-size:16px; color:var(--ink-soft,#888); margin-top:10px; min-height:22px; transition:opacity .2s; }
+.eat-comment.fade { opacity:0; }
+.eat-btns { display:flex; gap:12px; justify-content:center; margin-bottom:14px; }
+.eat-change, .eat-send { font-size:14px; border:none; border-radius:20px; padding:10px 20px; }
+.eat-change { background:rgba(0,0,0,.08); color:var(--ink,#333); }
+.eat-send { background:#111; color:#fff; }
+.eat-add { display:block; margin:0 auto; font-size:13px; color:var(--ink-soft,#888); background:none; border:1px dashed rgba(0,0,0,.15); border-radius:10px; padding:8px 14px; }

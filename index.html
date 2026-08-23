@@ -4398,6 +4398,31 @@ border-radius:12px;
 .ss-trace { position:absolute; inset:0; pointer-events:none; overflow:hidden; }
 .ss-trace::after { content:''; position:absolute; top:-50%; left:-60%; width:60%; height:200%; background:linear-gradient(90deg, transparent, rgba(255,200,160,.55), transparent); transform:rotate(18deg); animation: ssTrace 1.5s ease-out; }
 @keyframes ssTrace { 0%{ left:-60%; opacity:0; } 30%{ opacity:1; } 100%{ left:120%; opacity:0; } }
+.water-body, .eat-body { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; box-sizing:border-box; padding:14px 14px 40px; }
+.water-card { padding:24px 18px; border-radius:14px; text-align:center; margin-bottom:16px; }
+.water-num { font-size:48px; font-weight:700; color:var(--ink,#222); line-height:1; }
+.water-unit { font-size:14px; color:var(--ink-soft,#999); margin:6px 0 14px; }
+.water-bar { height:8px; border-radius:4px; background:rgba(0,0,0,.08); overflow:hidden; }
+.water-fill { height:100%; border-radius:4px; background:linear-gradient(90deg,#7ec8e3,#4a9fd4); transition:width .4s; width:0; }
+.water-btns { display:flex; gap:14px; justify-content:center; margin-bottom:16px; }
+.water-minus, .water-plus { font-size:18px; font-weight:600; border:none; border-radius:14px; padding:14px 32px; min-width:90px; }
+.water-plus { background:#4a9fd4; color:#fff; }
+.water-minus { background:rgba(0,0,0,.08); color:var(--ink,#333); }
+.water-msg { padding:14px; border-radius:14px; text-align:center; font-size:16px; color:var(--ink,#444); min-height:24px; transition:opacity .2s; }
+.water-msg.fade { opacity:0; }
+.water-manage { text-align:center; margin-top:14px; }
+.water-set-goal, .water-add-msg { font-size:13px; color:var(--ink-soft,#888); background:none; border:1px dashed rgba(0,0,0,.15); border-radius:10px; padding:8px 14px; margin:0 4px; }
+.eat-card { padding:28px 18px; border-radius:14px; text-align:center; margin-bottom:16px; }
+.eat-label { font-size:13px; color:var(--ink-soft,#999); margin-bottom:8px; }
+.eat-dish { font-size:28px; font-weight:700; color:var(--ink,#222); min-height:36px; transition:opacity .2s; }
+.eat-dish.fade { opacity:0; }
+.eat-comment { font-size:16px; color:var(--ink-soft,#888); margin-top:10px; min-height:22px; transition:opacity .2s; }
+.eat-comment.fade { opacity:0; }
+.eat-btns { display:flex; gap:12px; justify-content:center; margin-bottom:14px; }
+.eat-change, .eat-send { font-size:14px; border:none; border-radius:20px; padding:10px 20px; }
+.eat-change { background:rgba(0,0,0,.08); color:var(--ink,#333); }
+.eat-send { background:#111; color:#fff; }
+.eat-add { display:block; margin:0 auto; font-size:13px; color:var(--ink-soft,#888); background:none; border:1px dashed rgba(0,0,0,.15); border-radius:10px; padding:8px 14px; }
 .msg-gift { align-self: center; width: 100%; display: flex; justify-content: center; margin: 6px 0; }
 .msg-gift-card {
 width: min(280px, 84vw); padding: 0 0 14px; border-radius: 22px;
@@ -5554,7 +5579,7 @@ color: #c67800;
       </div>
       <div class="splash-dots"><i></i><i></i><i></i></div>
       <div class="splash-brand">小红书@言序（1842523578）</div>
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787498622246">Mochi 字卡传讯 v3.6.219 · 部署于 2026-08-23 23:23</div>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787500048454">Mochi 字卡传讯 v3.6.220 · 部署于 2026-08-23 23:47</div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
       <div class="splash-loading" id="splash-loading">正在加载数据…</div>
@@ -6406,7 +6431,7 @@ color: #c67800;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.6.219</div>
+      <div class="ver">Mochi 字卡传讯 v3.6.220</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -11901,7 +11926,7 @@ setupDeskCountdownClick();
 document.addEventListener('contact-switched', renderDeskTexts);
 document.addEventListener('contact-switched', renderDeskCountdowns);
 const WIDGET_IDS = ['deco', 'quote-row', 'checkin', 'apps', 'music', 'p2apps', 'memo-row', 'week', 'weekend', 'desk-clock', 'desk-calendar', 'desk-timer', 'desk-anniv', 'desk-period',
-'app-chat', 'app-group-chat', 'app-home', 'app-mail', 'app-feed', 'app-calendar', 'app-memory', 'app-divination', 'app-note', 'app-music', 'app-stats', 'app-interact', 'app-checkin', 'p3apps', 'app-period', 'app-accounting', 'app-garden', 'app-tongpin', 'app-shenshou'];
+'app-chat', 'app-group-chat', 'app-home', 'app-mail', 'app-feed', 'app-calendar', 'app-memory', 'app-divination', 'app-note', 'app-music', 'app-stats', 'app-interact', 'app-checkin', 'p3apps', 'app-period', 'app-accounting', 'app-garden',     'app-tongpin', 'app-shenshou', 'app-water', 'app-eat'];
 const WIDGET_NAMES = {
 deco: '纪念日卡', 'quote-row': '今日情话 / 已摸鱼', checkin: '打卡横幅', apps: '功能图标(整组)',
 music: '音乐播放器', p2apps: '第二页功能图标(整组)', 'memo-row': '今日备忘 / 心情', week: '本周日常', weekend: '周末倒计时',
@@ -11909,7 +11934,7 @@ music: '音乐播放器', p2apps: '第二页功能图标(整组)', 'memo-row': '
 'app-chat': '聊天图标', 'app-group-chat': '群聊图标', 'app-home': '主页图标', 'app-mail': '信箱图标', 'app-feed': '朋友圈图标',
 'app-calendar': '日历图标', 'app-memory': '纪念图标', 'app-divination': '占卜图标', 'app-note': '收藏图标',
 'app-music': '音乐图标', 'app-stats': '聊天统计图标', 'app-interact': '提问记录图标', 'app-checkin': '查岗图标',
-'p3apps': '第三页功能图标(整组)', 'app-period': '经期记录图标', 'app-accounting': '记账图标', 'app-garden': '花园图标', 'app-tongpin': '同频图标', 'app-shenshou': '伸手图标',
+'p3apps': '第三页功能图标(整组)', 'app-period': '经期记录图标', 'app-accounting': '记账图标', 'app-garden': '花园图标',     'app-tongpin': '同频图标', 'app-shenshou': '伸手图标', 'app-water': '喝水图标', 'app-eat': '吃什么图标',
 };
 const PREV_BOX = 'display:flex;align-items:center;justify-content:center;width:78px;height:58px;border-radius:10px;background:linear-gradient(135deg,#fff,#f6f6f6);border:1px solid rgba(0,0,0,.07);box-shadow:0 1px 3px rgba(0,0,0,.06);flex-shrink:0;overflow:hidden;padding:4px;box-sizing:border-box';
 const _av = '<span style="width:15px;height:15px;border-radius:50%;background:#f2f2f2;display:flex;align-items:center;justify-content:center"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#bbb" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.5-6 8-6s8 2 8 6"/></svg></span>';
@@ -11945,7 +11970,7 @@ weekend: '<span style="display:flex;flex-direction:column;align-items:center;jus
 'app-chat': _appIcoPrev('聊天'), 'app-group-chat': _appIcoPrev('群聊'), 'app-home': _appIcoPrev('主页'), 'app-mail': _appIcoPrev('信箱'), 'app-feed': _appIcoPrev('朋友圈'),
 'app-calendar': _appIcoPrev('日历'), 'app-memory': _appIcoPrev('纪念'), 'app-divination': _appIcoPrev('占卜'), 'app-note': _appIcoPrev('收藏'),
 'app-music': _appIcoPrev('音乐'), 'app-stats': _appIcoPrev('统计'), 'app-interact': _appIcoPrev('提问'), 'app-checkin': _appIcoPrev('查岗'),
-'app-period': _appIcoPrev('经期'), 'app-accounting': _appIcoPrev('记账'), 'app-garden': _appIcoPrev('花园'), 'app-tongpin': _appIcoPrev('同频'), 'app-shenshou': _appIcoPrev('伸手'), 'p3apps': _appIcoPrev('经期'),
+'app-period': _appIcoPrev('经期'), 'app-accounting': _appIcoPrev('记账'), 'app-garden': _appIcoPrev('花园'),     'app-tongpin': _appIcoPrev('同频'), 'app-shenshou': _appIcoPrev('伸手'), 'app-water': _appIcoPrev('喝水'), 'app-eat': _appIcoPrev('吃什么'), 'p3apps': _appIcoPrev('经期'),
 };
 function ensureWidgetPool() {
 let pool = document.getElementById('desk-widget-pool');
@@ -35637,12 +35662,14 @@ return a;
 }
 const tpApp = makeApp('tongpin', '同频', '<svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h3l2-6 4 14 3-9 2 5h6"/></svg>');
 const ssApp = makeApp('shenshou', '伸手', '<svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 11V5.5a1.5 1.5 0 013 0V11"/><path d="M10 11V4a1.5 1.5 0 013 0v7"/><path d="M13 11V5.5a1.5 1.5 0 013 0V11"/><path d="M16 11V7a1.5 1.5 0 013 0v6c0 4-2 7-6 7s-6-2-6-6v-3z"/></svg>');
+const waterApp = makeApp('water', '喝水', '<svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5C8 7 5.5 11 5.5 14.5a6.5 6.5 0 0013 0C18.5 11 16 7 12 2.5z"/></svg>');
+const eatApp = makeApp('eat', '吃什么', '<svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v8a3 3 0 003 3v7"/><path d="M8 3v8"/><path d="M17 3c-1.5 0-2.5 2-2.5 5s1 5 2.5 5v8"/></svg>');
 const pagesBox = document.getElementById('desktop-pages');
 const st0 = curStore();
 let layArr = null;
 try { if (st0) layArr = JSON.parse(st0.get('desk-layout') || 'null'); } catch (e) {}
 const hasLayout = Array.isArray(layArr);
-const alreadyInLay = hasLayout && layArr.some(p => (p || []).indexOf('app-tongpin') >= 0);
+const alreadyInLay = hasLayout && layArr.some(p => (p || []).some(w => w === 'app-tongpin' || w === 'app-shenshou' || w === 'app-water' || w === 'app-eat'));
 let placed = false;
 if (hasLayout && !alreadyInLay && pagesBox) {
 const curCnt = pagesBox.querySelectorAll('.page-slide').length;
@@ -35653,12 +35680,12 @@ slide.dataset.desk = String(curCnt);
 const grid = document.createElement('div');
 grid.className = 'app-grid';
 grid.setAttribute('data-app', 'tp-page');
-grid.appendChild(tpApp); grid.appendChild(ssApp);
+grid.appendChild(tpApp); grid.appendChild(ssApp); grid.appendChild(waterApp); grid.appendChild(eatApp);
 slide.appendChild(grid);
 pagesBox.appendChild(slide);
 try {
 st0.set('desk-page-count', String(curCnt + 1));
-layArr.push(['app-tongpin', 'app-shenshou']);
+layArr.push(['app-tongpin', 'app-shenshou', 'app-water', 'app-eat']);
 st0.set('desk-layout', JSON.stringify(layArr));
 } catch (e) {}
 try { if (window.deskRebuild) window.deskRebuild(); } catch (e) {}
@@ -35667,7 +35694,7 @@ placed = true;
 }
 if (!placed) {
 const p3 = document.querySelector('.app-grid.p3-grid');
-if (p3) { p3.appendChild(tpApp); p3.appendChild(ssApp); }
+if (p3) { p3.appendChild(tpApp); p3.appendChild(ssApp); p3.appendChild(waterApp); p3.appendChild(eatApp); }
 try { if (window.applyDeskLayout) window.applyDeskLayout(); } catch (e) {}
 }
 const DEF_STATUS = ['在听雨', '在看你写东西', '没睡，在发呆', '刚路过你身边', '在想你', '在发呆', '在看你', '在等你看我'];
@@ -35801,10 +35828,89 @@ onLongPress(document.getElementById('ss-area'), ssTry, 500);
 document.getElementById('ss-add').addEventListener('click', () => { if (!window.openModal) return; window.openModal('添加悄悄话字卡', '', (v) => { if (v) { const a = ssCards(); a.push(v); ssSave(a); toast('已添加'); } }); });
 const ssSendBtn = document.getElementById('ss-send');
 if (ssSendBtn) { ssSendBtn.textContent = '发到聊天：' + (ssSendOn() ? '开' : '关'); ssSendBtn.addEventListener('click', () => { const s = curStore(); const on = !ssSendOn(); if (s) try { s.set('shenshou-send-chat', on ? '1' : '0'); } catch (e) {} ssSendBtn.textContent = '发到聊天：' + (on ? '开' : '关'); }); }
+const DEF_WATER_MSGS = ['该喝水了', '别忘了喝水', '喝口水吧', '你今天水喝够了吗'];
+const DEF_WATER_PRAISE = ['今天喝够啦', '真棒', '完成了', '好乖'];
+const DEF_WATER_ENCOURAGE = ['再来一杯', '继续', '嗯', '快了'];
+const waterPage = document.createElement('div');
+waterPage.className = 'page'; waterPage.id = 'page-water'; waterPage.hidden = true;
+waterPage.innerHTML =
+'<div class="chat-head"><span class="ch-back" id="water-back"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><span class="ch-name">喝水</span></div>' +
+'<div class="water-body">' +
+'<div class="water-card glass"><div class="water-num" id="water-num">0</div><div class="water-unit">杯 / <span id="water-goal-text">8</span> 杯</div><div class="water-bar"><div class="water-fill" id="water-fill"></div></div></div>' +
+'<div class="water-btns"><button class="water-minus" id="water-minus">−1</button><button class="water-plus" id="water-plus">+1</button></div>' +
+'<div class="water-msg glass" id="water-msg">点 +1 记一杯</div>' +
+'<div class="water-manage"><button class="water-set-goal" id="water-set-goal">设目标</button><button class="water-add-msg" id="water-add-msg">+ 提醒字卡</button></div>' +
+'</div>';
+host.appendChild(waterPage);
+function waterToday() { const s = curStore(); if (!s) return { date: '', count: 0 }; try { const o = JSON.parse(s.get('water-today') || '{}'); const d = new Date(); const today = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); if (o.date !== today) return { date: today, count: 0 }; return { date: today, count: o.count || 0 }; } catch (e) { return { date: '', count: 0 }; } }
+function waterSave(count) { const s = curStore(); if (!s) return; const d = new Date(); const today = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); try { s.set('water-today', JSON.stringify({ date: today, count: count })); } catch (e) {} }
+function waterGoal() { const s = curStore(); try { return parseInt(s.get('water-goal') || '8', 10) || 8; } catch (e) { return 8; } }
+function waterSetGoal(n) { const s = curStore(); if (s) try { s.set('water-goal', '' + n); } catch (e) {} }
+function waterMsgs() { const s = curStore(); if (!s) return DEF_WATER_MSGS.slice(); try { const a = JSON.parse(s.get('water-msgs') || '[]'); return a.length ? a : DEF_WATER_MSGS.slice(); } catch (e) { return DEF_WATER_MSGS.slice(); } }
+function waterSaveMsgs(a) { const s = curStore(); if (s) try { s.set('water-msgs', JSON.stringify(a)); } catch (e) {} }
+function waterRender() {
+const t = waterToday(); const g = waterGoal(); const el = document.getElementById('water-num'); if (el) el.textContent = t.count;
+const gt = document.getElementById('water-goal-text'); if (gt) gt.textContent = g;
+const fill = document.getElementById('water-fill'); if (fill) fill.style.width = Math.min(100, t.count / g * 100) + '%';
+waterSave(t.count);
+}
+function waterShowMsg(txt) { const el = document.getElementById('water-msg'); if (el) { el.classList.add('fade'); setTimeout(() => { el.textContent = '\u201c' + txt + '\u201d'; el.classList.remove('fade'); }, 200); } }
+function waterMaybeRemind() {
+const s = curStore(); if (!s) return;
+let last = 0; try { last = parseInt(s.get('water-last-visit') || '0', 10) || 0; } catch (e) {}
+try { s.set('water-last-visit', '' + Date.now()); } catch (e) {}
+const t = waterToday(); const g = waterGoal();
+if (t.count < g && Date.now() - last > 2 * 3600000) {
+const msgs = waterMsgs(); waterShowMsg(msgs[Math.floor(Math.random() * msgs.length)]);
+}
+}
+if (waterApp) waterApp.addEventListener('click', () => { if (editingNow()) return; openPage(waterPage); waterRender(); waterMaybeRemind(); });
+document.getElementById('water-back').addEventListener('click', () => backHome(waterPage));
+document.getElementById('water-plus').addEventListener('click', () => {
+if (editingNow()) return;
+const t = waterToday(); const g = waterGoal(); const n = t.count + 1; waterSave(n); waterRender();
+if (n >= g) { vibrate([60, 40, 60]); const p = DEF_WATER_PRAISE; waterShowMsg(p[Math.floor(Math.random() * p.length)]); }
+else if (Math.random() < 0.2) { const e = DEF_WATER_ENCOURAGE; waterShowMsg(e[Math.floor(Math.random() * e.length)]); }
+});
+document.getElementById('water-minus').addEventListener('click', () => {
+if (editingNow()) return;
+const t = waterToday(); if (t.count <= 0) return; waterSave(t.count - 1); waterRender();
+});
+document.getElementById('water-set-goal').addEventListener('click', () => { if (!window.openModal) return; window.openModal('设目标（杯）', String(waterGoal()), (v) => { if (v) { const n = parseInt(v, 10); if (n > 0 && n < 100) { waterSetGoal(n); waterRender(); toast('已设置'); } } }); });
+document.getElementById('water-add-msg').addEventListener('click', () => { if (!window.openModal) return; window.openModal('添加提醒字卡', '', (v) => { if (v) { const a = waterMsgs(); a.push(v); waterSaveMsgs(a); toast('已添加'); } }); });
+const DEF_EAT_DISHES = ['番茄炒蛋', '红烧肉', '清蒸鱼', '麻婆豆腐', '宫保鸡丁', '酸辣土豆丝', '蛋炒饭', '牛肉面', '饺子', '馄饨', '皮蛋瘦肉粥', '可乐鸡翅', '糖醋排骨', '清炒时蔬', '蛋花汤', '凉拌黄瓜', '回锅肉', '水煮肉片', '鱼香肉丝', '葱油拌面'];
+const DEF_EAT_COMMENTS = ['就吃这个吧', '听起来不错', '我想吃这个', '可以', '这个好吃', '嗯，就这个', '想吃'];
+const eatPage = document.createElement('div');
+eatPage.className = 'page'; eatPage.id = 'page-eat'; eatPage.hidden = true;
+eatPage.innerHTML =
+'<div class="chat-head"><span class="ch-back" id="eat-back"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><span class="ch-name">吃什么</span></div>' +
+'<div class="eat-body">' +
+'<div class="eat-card glass"><div class="eat-label">今天吃</div><div class="eat-dish" id="eat-dish">…</div><div class="eat-comment" id="eat-comment">…</div></div>' +
+'<div class="eat-btns"><button class="eat-change" id="eat-change">换一个</button><button class="eat-send" id="eat-send">发到聊天</button></div>' +
+'<button class="eat-add" id="eat-add">+ 添加菜名</button>' +
+'</div>';
+host.appendChild(eatPage);
+function eatDishes() { const s = curStore(); let pool = DEF_EAT_DISHES.slice(); try { const a = JSON.parse((s && s.get('eat-cards')) || '[]'); if (Array.isArray(a)) a.forEach(d => { if (d && pool.indexOf(d) < 0) pool.push(d); }); } catch (e) {} return pool; }
+function eatSaveDishes(a) { const s = curStore(); if (s) try { s.set('eat-cards', JSON.stringify(a)); } catch (e) {} }
+function eatPick() {
+const dishes = eatDishes(); const dish = dishes[Math.floor(Math.random() * dishes.length)];
+const comments = DEF_EAT_COMMENTS; const comment = comments[Math.floor(Math.random() * comments.length)];
+const de = document.getElementById('eat-dish'); const ce = document.getElementById('eat-comment');
+if (de) { de.classList.add('fade'); setTimeout(() => { de.textContent = dish; de.classList.remove('fade'); }, 200); }
+if (ce) { ce.classList.add('fade'); setTimeout(() => { ce.textContent = '\u201c' + comment + '\u201d'; ce.classList.remove('fade'); }, 200); }
+return dish + ' · ' + comment;
+}
+let eatLastPick = '';
+if (eatApp) eatApp.addEventListener('click', () => { if (editingNow()) return; openPage(eatPage); eatLastPick = eatPick(); });
+document.getElementById('eat-back').addEventListener('click', () => backHome(eatPage));
+document.getElementById('eat-change').addEventListener('click', () => { if (editingNow()) return; eatLastPick = eatPick(); });
+document.getElementById('eat-send').addEventListener('click', () => { if (editingNow()) return; if (eatLastPick && window.chatAddIn) { try { window.chatAddIn(eatLastPick); } catch (e) {} toast('已发送'); } });
+document.getElementById('eat-add').addEventListener('click', () => { if (!window.openModal) return; window.openModal('添加菜名', '', (v) => { if (v) { const a = eatDishes(); a.push(v); eatSaveDishes(a.filter(d => d)); toast('已添加'); } }); });
 document.addEventListener('contact-switched', () => {
 tpStopFlow();
 if (!tpPage.hidden) tpPick();
 if (!ssPage.hidden) ssRenderCount();
+if (!waterPage.hidden) waterRender();
 });
 })();
 } catch (__e) { try { console.error("[JS] p2-features.js", __e && __e.message || __e); } catch (x) {} if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
