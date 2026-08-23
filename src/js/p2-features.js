@@ -1137,7 +1137,7 @@ if (ckRefresh) {
   function saveResident(v) { store.set('loc-resident', v ? JSON.stringify(v) : ''); }
   function loadHist() { try { return JSON.parse(store.get('loc-history') || '[]'); } catch (e) { return []; } }
   function saveHist(list) {
-    const s = JSON.stringify(list.slice(0, 50));
+    const s = JSON.stringify(list);
     store.set('loc-history', s);
     try { if (window.idbSet) window.idbSet(window.activePrefix() + ':loc-history', s); } catch (e) {}
   }
@@ -1180,6 +1180,42 @@ if (ckRefresh) {
     saveHist(hist);
     if (type === 'egg') store.set('loc-egg-last', String(ts));
     playLocFx(text);
+    locViewDate = dayStr(new Date());
+    renderLocPanel();
+    refreshResidentDot();
+  }
+
+  // ---- 日期辅助（按日切换时间线） ----
+  function dayStr(d) { const p = (n) => (n < 10 ? '0' + n : '' + n); return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()); }
+  function dayLabel(s) {
+    const today = dayStr(new Date());
+    const y = new Date(); y.setDate(y.getDate() - 1);
+    if (s === today) return '今天';
+    if (s === dayStr(y)) return '昨天';
+    const parts = s.split('-');
+    return parts[1] + '月' + parts[2] + '日';
+  }
+  function uniqueDays(hist) {
+    const set = new Set();
+    hist.forEach(h => { try { set.add(dayStr(new Date(h.ts))); } catch (e) {} });
+    return Array.from(set).sort().reverse();
+  }
+  let locViewDate = '';
+
+  // ---- 组合发送（方位 + 距离） ----
+  let comboMode = false;
+  let pendingDir = null;
+  function sendComboCard(dirText, distText) {
+    const ts = Date.now();
+    const text = dirText + ' ' + distText;
+    if (window.chatAddIn) window.chatAddIn(text);
+    saveCur({ text: text, type: 'combo', ts: ts });
+    const hist = loadHist();
+    hist.unshift({ text: text, type: 'combo', ts: ts });
+    saveHist(hist);
+    playLocFx(dirText);
+    pendingDir = null;
+    locViewDate = dayStr(new Date());
     renderLocPanel();
     refreshResidentDot();
   }
@@ -1193,9 +1229,9 @@ if (ckRefresh) {
     toast('已问 TA 一声，等 TA 回位置…');
     setTimeout(() => {
       asking = false;
-      const dirs = LOC.dir;
-      const text = dirs[Math.floor(Math.random() * dirs.length)];
-      sendLocCard(text, 'dir');
+      const d = LOC.dir[Math.floor(Math.random() * LOC.dir.length)];
+      const t = LOC.dist[Math.floor(Math.random() * LOC.dist.length)];
+      sendComboCard(d, t);
     }, 2000 + Math.random() * 2000);
   }
 
@@ -1226,14 +1262,20 @@ if (ckRefresh) {
     if (!body) return;
     const cur = loadCur();
     const resident = loadResident();
-    const hist = loadHist().slice(0, 5);
+    const allHist = loadHist();
     const used = eggUsed();
+
+    // 按日切换：默认今天（或有记录的最近一天）
+    const days = uniqueDays(allHist);
+    if (!locViewDate || days.indexOf(locViewDate) < 0) locViewDate = days[0] || dayStr(new Date());
+    const dayHist = allHist.filter(h => { try { return dayStr(new Date(h.ts)) === locViewDate; } catch (e) { return false; } });
+    const dayIdx = days.indexOf(locViewDate);
 
     let html = '';
     // 此刻位置
     html += '<div class="loc-section"><div class="loc-sec-title">TA 此刻的位置</div>';
     html += '<div class="loc-sec-value">' + (cur
-      ? esc(cur.text) + '<span class="loc-sec-sub">' + (LOC_LABEL[cur.type] || '') + ' · ' + fmtT(cur.ts) + '</span>'
+      ? esc(cur.text) + '<span class="loc-sec-sub">' + (LOC_LABEL[cur.type] || (cur.type === 'combo' ? '组合' : '')) + ' · ' + fmtT(cur.ts) + '</span>'
       : '— 还没有位置卡') + '</div></div>';
     // 常驻
     html += '<div class="loc-section"><div class="loc-sec-title">常驻位置</div>';
@@ -1243,24 +1285,35 @@ if (ckRefresh) {
       html += '<div class="loc-sec-value loc-empty">未设置（长按方位卡可设常驻）</div>';
     }
     html += '</div>';
-    // 时间线
-    html += '<div class="loc-section"><div class="loc-sec-title">位置时间线</div>';
-    if (hist.length) {
-      html += '<div class="loc-timeline">' + hist.map(h =>
+    // 时间线（按日切换）
+    html += '<div class="loc-section"><div class="loc-sec-title">位置时间线（按日查看）</div>';
+    html += '<div class="loc-day-switch"><button class="loc-day-btn" id="loc-day-prev"' + (dayIdx >= days.length - 1 ? ' disabled' : '') + '>‹</button><span class="loc-day-label">' + dayLabel(locViewDate) + '</span><button class="loc-day-btn" id="loc-day-next"' + (dayIdx <= 0 ? ' disabled' : '') + '>›</button></div>';
+    if (dayHist.length) {
+      html += '<div class="loc-timeline">' + dayHist.map(h =>
         '<div class="loc-tl-item"><span class="loc-tl-time">' + fmtT(h.ts) + '</span><span class="loc-tl-text">' + esc(h.text) + '</span></div>'
       ).join('') + '</div>';
+      html += '<div class="loc-day-count">共 ' + dayHist.length + ' 条</div>';
     } else {
-      html += '<div class="loc-sec-value loc-empty">暂无位置记录</div>';
+      html += '<div class="loc-sec-value loc-empty">这天没有位置记录</div>';
     }
     html += '</div>';
     // 问 TA 一声
     html += '<button class="loc-ask-btn" id="loc-ask-btn">问 TA 一声「你在哪？」</button>';
     // TA 发位置卡词库
     html += '<div class="loc-send-area"><div class="loc-send-tip">代 TA 发一张位置卡（更新 TA 的位置 · 收到时有光点动效）</div>';
+    // 组合开关
+    html += '<div class="loc-combo-toggle"><label class="loc-switch"><input type="checkbox" id="loc-combo-chk"' + (comboMode ? ' checked' : '') + '><span class="loc-switch-tk"></span></label><span class="loc-combo-label">组合发送（方位 + 距离）</span></div>';
+    if (comboMode && pendingDir) {
+      html += '<div class="loc-combo-pending">已选方位：<b>' + esc(pendingDir) + '</b>，再点距离卡组合发送 <span class="loc-combo-clear" id="loc-combo-clear">取消</span></div>';
+    } else if (comboMode) {
+      html += '<div class="loc-combo-pending loc-empty">组合模式：先点一张方位卡选中，再点距离卡组合发送</div>';
+    }
     function groupHtml(key, label, arr) {
-      return '<div class="loc-grp"><div class="loc-grp-label">' + label + '</div><div class="loc-grp-cards">' +
-        arr.map(t => '<button class="loc-card" data-text="' + esc(t) + '" data-type="' + key + '">' + esc(t) + '</button>').join('') +
-        '</div></div>';
+      const cards = arr.map(t => {
+        const sel = (key === 'dir' && comboMode && pendingDir === t) ? ' loc-card-sel' : '';
+        return '<button class="loc-card' + sel + '" data-text="' + esc(t) + '" data-type="' + key + '">' + esc(t) + '</button>';
+      }).join('');
+      return '<div class="loc-grp"><div class="loc-grp-label">' + label + '</div><div class="loc-grp-cards">' + cards + '</div></div>';
     }
     html += groupHtml('dir', '方位卡（长按设常驻）', LOC.dir);
     html += groupHtml('dist', '距离卡', LOC.dist);
@@ -1275,6 +1328,17 @@ if (ckRefresh) {
     if (askBtn) askBtn.addEventListener('click', askWhere);
     const clrBtn = document.getElementById('loc-resident-clear');
     if (clrBtn) clrBtn.addEventListener('click', clearResident);
+    // 日期切换
+    const prevBtn = document.getElementById('loc-day-prev');
+    if (prevBtn) prevBtn.addEventListener('click', () => { if (dayIdx < days.length - 1) { locViewDate = days[dayIdx + 1]; renderLocPanel(); } });
+    const nextBtn = document.getElementById('loc-day-next');
+    if (nextBtn) nextBtn.addEventListener('click', () => { if (dayIdx > 0) { locViewDate = days[dayIdx - 1]; renderLocPanel(); } });
+    // 组合开关
+    const comboChk = document.getElementById('loc-combo-chk');
+    if (comboChk) comboChk.addEventListener('change', () => { comboMode = comboChk.checked; pendingDir = null; renderLocPanel(); });
+    const comboClear = document.getElementById('loc-combo-clear');
+    if (comboClear) comboClear.addEventListener('click', () => { pendingDir = null; renderLocPanel(); });
+    // 字卡点击/长按
     body.querySelectorAll('.loc-card').forEach(btn => {
       const text = btn.dataset.text;
       const type = btn.dataset.type;
@@ -1297,6 +1361,13 @@ if (ckRefresh) {
       btn.addEventListener('click', () => {
         if (longPressed) { longPressed = false; return; }
         if (btn.classList.contains('disabled')) return;
+        if (comboMode) {
+          if (type === 'dir') { pendingDir = (pendingDir === text) ? null : text; renderLocPanel(); return; }
+          if (type === 'dist') { if (pendingDir) { sendComboCard(pendingDir, text); return; } toast('组合模式：请先点一张方位卡'); return; }
+          pendingDir = null;
+          sendLocCard(text, type);
+          return;
+        }
         sendLocCard(text, type);
       });
     });

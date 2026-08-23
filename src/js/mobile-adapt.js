@@ -45,7 +45,7 @@
         // 模式浏览器可能忽略 meta，下方加 force-mobile 类作 CSS 保底。
         try {
           document.querySelectorAll('meta[name="viewport"]').forEach(function (m) {
-            m.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=overlays-content');
+            m.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-visual');
           });
         } catch (e) {}
         // 等一帧看媒体查询是否命中，未命中则加 force-mobile 类
@@ -608,13 +608,17 @@
     } catch (e) {}
   }
 
-  // ================= 安卓专用：键盘（IME）悬浮适配（v3.10.x） =================
+  // ================= 安卓专用：键盘（IME）适配（v3.10.x） =================
   // 背景：安卓 Chrome/Edge 收键盘时「整屏白一下」——根因是 viewport 用了
   // interactive-widget=resizes-content：收键盘时布局视口被系统撑回全高，.phone
   // 的 100dvh 跟着整屏重算重绘，露底色的那帧就是白闪（红米 K80 复现，每次都这样）。
-  // 修法：改走 interactive-widget=overlays-content，键盘只做悬浮 overlay、布局视口
-  // 不再整屏重算 → 无 dvh 重绘白闪。代价是.input 栏不会自动被顶起，需手动把
-  // .phone 收缩到键盘上方可视高度（visualViewport）。
+  // 修法：改走 interactive-widget=resizes-visual（W3C 默认值）——键盘只收缩
+  // visualViewport、不收缩 layout viewport（initial viewport），.phone 的 100dvh
+  // 基于 layout viewport 不重算 → 无 dvh 重绘白闪；同时 visualViewport.height 随
+  // 键盘收缩，syncAndroidKb 据此把 .phone 收到可视高度，输入栏停靠键盘上方。
+  // ⚠️ 曾试 overlays-content：键盘不收缩任何 viewport → visualViewport.height 不变
+  //    → syncAndroidKb 检测不到键盘 → .phone 永不收缩 → 输入栏被键盘完全盖住
+  //    （红米 K80 Chrome 复现）。resizes-visual 是唯一兼顾「无白闪 + 可检测键盘」的值。
   // 约定：与 iOS 分支互斥（iOS Safari 忽略 interactive-widget，保持原机制）。
   if (!isIOS) {
     try {

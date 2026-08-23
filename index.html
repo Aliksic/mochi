@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=overlays-content">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-visual">
 <title>Mochi 字卡传讯</title>
 <meta name="description" content="情侣专属的摸鱼字卡聊天模拟器">
 <meta name="theme-color" content="#111111">
@@ -5256,7 +5256,7 @@ color: #c67800;
       </div>
       <div class="splash-dots"><i></i><i></i><i></i></div>
       <div class="splash-brand">小红书@言序（1842523578）</div>
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787479435395">Mochi 字卡传讯 v3.6.210 · 部署于 2026-08-23 18:03</div>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787480169283">Mochi 字卡传讯 v3.6.211 · 部署于 2026-08-23 18:16</div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
       <div class="splash-loading" id="splash-loading">正在加载数据…</div>
@@ -6102,7 +6102,7 @@ color: #c67800;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.6.210</div>
+      <div class="ver">Mochi 字卡传讯 v3.6.211</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -34531,7 +34531,7 @@ function loadResident() { try { return JSON.parse(store.get('loc-resident') || '
 function saveResident(v) { store.set('loc-resident', v ? JSON.stringify(v) : ''); }
 function loadHist() { try { return JSON.parse(store.get('loc-history') || '[]'); } catch (e) { return []; } }
 function saveHist(list) {
-const s = JSON.stringify(list.slice(0, 50));
+const s = JSON.stringify(list);
 store.set('loc-history', s);
 try { if (window.idbSet) window.idbSet(window.activePrefix() + ':loc-history', s); } catch (e) {}
 }
@@ -34569,6 +34569,38 @@ hist.unshift({ text: text, type: type, ts: ts });
 saveHist(hist);
 if (type === 'egg') store.set('loc-egg-last', String(ts));
 playLocFx(text);
+locViewDate = dayStr(new Date());
+renderLocPanel();
+refreshResidentDot();
+}
+function dayStr(d) { const p = (n) => (n < 10 ? '0' + n : '' + n); return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()); }
+function dayLabel(s) {
+const today = dayStr(new Date());
+const y = new Date(); y.setDate(y.getDate() - 1);
+if (s === today) return '今天';
+if (s === dayStr(y)) return '昨天';
+const parts = s.split('-');
+return parts[1] + '月' + parts[2] + '日';
+}
+function uniqueDays(hist) {
+const set = new Set();
+hist.forEach(h => { try { set.add(dayStr(new Date(h.ts))); } catch (e) {} });
+return Array.from(set).sort().reverse();
+}
+let locViewDate = '';
+let comboMode = false;
+let pendingDir = null;
+function sendComboCard(dirText, distText) {
+const ts = Date.now();
+const text = dirText + ' ' + distText;
+if (window.chatAddIn) window.chatAddIn(text);
+saveCur({ text: text, type: 'combo', ts: ts });
+const hist = loadHist();
+hist.unshift({ text: text, type: 'combo', ts: ts });
+saveHist(hist);
+playLocFx(dirText);
+pendingDir = null;
+locViewDate = dayStr(new Date());
 renderLocPanel();
 refreshResidentDot();
 }
@@ -34580,9 +34612,9 @@ if (window.chatSendMsg) window.chatSendMsg('你在哪？');
 toast('已问 TA 一声，等 TA 回位置…');
 setTimeout(() => {
 asking = false;
-const dirs = LOC.dir;
-const text = dirs[Math.floor(Math.random() * dirs.length)];
-sendLocCard(text, 'dir');
+const d = LOC.dir[Math.floor(Math.random() * LOC.dir.length)];
+const t = LOC.dist[Math.floor(Math.random() * LOC.dist.length)];
+sendComboCard(d, t);
 }, 2000 + Math.random() * 2000);
 }
 function setResident(text) {
@@ -41012,7 +41044,7 @@ if (sw > 0 && sw < 900 && touch) {
 isMobile = true;
 try {
 document.querySelectorAll('meta[name="viewport"]').forEach(function (m) {
-m.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=overlays-content');
+m.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-visual');
 });
 } catch (e) {}
 try {
