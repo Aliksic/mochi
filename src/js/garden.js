@@ -13,23 +13,29 @@ function curKey() { return isGlobal ? G_GLOBAL : G; }
 function curIdbKey() { return isGlobal ? ("xy-home-v2:" + G_GLOBAL) : (window.activePrefix() + ":" + G); }
 var PLOTS = 12;
 var PI = 1800;
+var WILT_SEC = 172800;
 function pn() { return s.get("lbl-partner") || "TA"; }
 function load() { try { var d = JSON.parse(curStore().get(curKey()) || "{}"); if (!d.p) d.p = []; while (d.p.length < PLOTS) d.p.push(null); if (!d.l) d.l = []; if (!d.lpc) d.lpc = 0; if (!d.dex) d.dex = {}; if (!d.exp) d.exp = 0; if (!d.inv) d.inv = {}; if (!d.st) d.st = { p: 0, w: 0, h: 0, f: 0, mp: 0, mw: 0, mh: 0, mf: 0 }; if (!d.decor) d.decor = {}; if (!d.visitor) d.visitor = null; return d; } catch (e) { return { p: new Array(PLOTS).fill(null), l: [], lpc: 0, dex: {}, exp: 0, inv: {}, st: { p: 0, w: 0, h: 0, f: 0, mp: 0, mw: 0, mh: 0, mf: 0 }, decor: {}, visitor: null }; } }
 function save(d) { try { curStore().set(curKey(), JSON.stringify(d)); try { if (window.idbSet) window.idbSet(curIdbKey(), JSON.stringify(d)); } catch (e2) {} } catch (e) {} }
 (function r() { try { if (!window.idbGet) return; var pf = window.activePrefix(); if (!s.get(G)) window.idbGet(pf + ":" + G).then(function (v) { if (window.activePrefix() !== pf || !v) return; try { s.set(G, typeof v === "string" ? v : JSON.stringify(v)); } catch (e) {} }); } catch (e) {} })();
 
 var T = {
-  rose: { n: "\u73AB\u7470", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF39"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [172800, 432000], xp: 30, lv: 1, ss: 3 },
-  sunflower: { n: "\u5411\u65E5\u8475", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF3B"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [172800, 518400], xp: 40, lv: 2, ss: 1 },
-  tulip: { n: "\u90C1\u91D1\u9999", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF37"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [172800, 432000], xp: 30, lv: 1, ss: 0 },
-  cactus: { n: "\u4ED9\u4EBA\u638C", e: ["\uD83C\uDF31", "\uD83C\uDF35"], sn: ["\u5C0F\u82BD", "\u6210\u578B"], g: [432000], xp: 50, lv: 4, ss: 1 },
-  lavender: { n: "\u85B0\u8863\u8349", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83D\uDC90"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [86400, 345600], xp: 25, lv: 3, ss: 2 },
-  daisy: { n: "\u96CF\u83CA", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF3C"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [86400, 259200], xp: 20, lv: 1, ss: 0 },
-  sakura: { n: "\u6A31\u82B1", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF38"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [86400, 259200], xp: 25, lv: 1, ss: 0 },
-  hibiscus: { n: "\u8299\u84C9", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF3A"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [172800, 345600], xp: 35, lv: 1, ss: 1 },
-  lotus: { n: "\u8377\u82B1", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83E\uDEB7"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [259200, 432000], xp: 45, lv: 1, ss: 1 },
-  clover: { n: "\u5E78\u8FD0\u8349", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF40"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u6210\u578B"], g: [43200, 129600], xp: 15, lv: 1, ss: 2 },
-  camellia: { n: "\u5C71\u8336\u82B1", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83D\uDCAE"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [172800, 259200], xp: 30, lv: 1, ss: 3 }
+  rose: { n: "\u73AB\u7470", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF39"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [172800, 432000], xp: 30, lv: 1, ss: 3, m: "\u70ED\u70C8\u7684\u7231" },
+  sunflower: { n: "\u5411\u65E5\u8475", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF3B"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [172800, 518400], xp: 40, lv: 2, ss: 1, m: "\u6C89\u9ED8\u7684\u7231" },
+  tulip: { n: "\u90C1\u91D1\u9999", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF37"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [172800, 432000], xp: 30, lv: 1, ss: 0, m: "\u6C38\u6052\u7684\u795D\u798F" },
+  cactus: { n: "\u4ED9\u4EBA\u638C", e: ["\uD83C\uDF31", "\uD83C\uDF35"], sn: ["\u5C0F\u82BD", "\u6210\u578B"], g: [432000], xp: 50, lv: 4, ss: 1, m: "\u575A\u97F7\uFF0C\u5916\u521A\u5185\u67D4" },
+  lavender: { n: "\u85B0\u8863\u8349", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83D\uDC90"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [86400, 345600], xp: 25, lv: 3, ss: 2, m: "\u7B49\u5F85\u7231\u60C5" },
+  daisy: { n: "\u96CF\u83CA", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF3C"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [86400, 259200], xp: 20, lv: 1, ss: 0, m: "\u7EAF\u771F\uFF0C\u6DF1\u85CF\u5FC3\u5E95\u7684\u7231" },
+  sakura: { n: "\u6A31\u82B1", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF38"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [86400, 259200], xp: 25, lv: 1, ss: 0, m: "\u4E00\u751F\u5E78\u798F" },
+  hibiscus: { n: "\u8299\u84C9", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF3A"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [172800, 345600], xp: 35, lv: 1, ss: 1, m: "\u7EA4\u7EC6\u4E4B\u7F8E" },
+  lotus: { n: "\u8377\u82B1", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83E\uDEB7"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [259200, 432000], xp: 45, lv: 1, ss: 1, m: "\u6E05\u96C5\u575A\u8D1E" },
+  clover: { n: "\u5E78\u8FD0\u8349", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF40"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u6210\u578B"], g: [43200, 129600], xp: 15, lv: 1, ss: 2, m: "\u5E78\u8FD0\u4E0E\u5E0C\u671B" },
+  camellia: { n: "\u5C71\u8336\u82B1", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83D\uDCAE"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [172800, 259200], xp: 30, lv: 1, ss: 3, m: "\u7406\u60F3\u7684\u7231" },
+  flameRose: { n: "\u7EDE\u6A31\u73AB\u7470", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF39"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [432000, 864000], xp: 120, lv: 5, ss: 0, rare: true, m: "\u70BD\u70ED\u6C38\u6052\u7684\u7231" },
+  blueRose: { n: "\u84DD\u73AB\u7470", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF39"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [432000, 864000], xp: 150, lv: 6, ss: 1, rare: true, m: "\u5947\u8FF9\u4E0E\u4E0D\u53EF\u80FD\u7684\u7231" },
+  goldSun: { n: "\u91D1\u5411\u65E5\u8475", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF3B"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [432000, 777600], xp: 130, lv: 5, ss: 1, rare: true, m: "\u5FE0\u8BDA\u7684\u4FE1\u4EF0" },
+  nightLotus: { n: "\u591C\u83B2", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83E\uDEB7"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [604800, 1036800], xp: 180, lv: 7, ss: 2, rare: true, m: "\u6697\u591C\u91CC\u7684\u575A\u5B88" },
+  rainbowClover: { n: "\u5F69\u8679\u8349", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF40"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u6210\u578B"], g: [259200, 518400], xp: 100, lv: 5, ss: 3, rare: true, m: "\u5E78\u8FD0\u964D\u4E34" }
 };
 var WM = [
   "\u4ECA\u5929\u4E5F\u8F9B\u82E6\u5566\uFF0C\u82B1\u82B1\u4EEC\u4E5F\u5728\u52AA\u529B\u957F\u5927\u54E6",
@@ -84,9 +90,21 @@ function stageInfo(plot) {
   for (var i = 0; i < tp.g.length; i++) { if (eff >= tp.g[i]) stage = i + 1; else break; }
   var stageMax = tp.g.length;
   var bloomed = stage >= stageMax;
+  var wilted = bloomed && plot.bloomedAt && (now - plot.bloomedAt > WILT_SEC);
   var progress = bloomed ? 1 : (eff - (stage > 0 ? tp.g.slice(0, stage).reduce(function (a, b) { return a + b; }, 0) : 0)) / (tp.g[stage] || 1);
   var nextSec = bloomed ? 0 : Math.ceil((tp.g.slice(0, stage + 1).reduce(function (a, b) { return a + b; }, 0) - eff) / boost);
-  return { key: plot.type, name: tp.n, stage: stage, stageMax: stageMax, stageName: tp.sn[Math.min(stage, tp.sn.length - 1)], emoji: tp.e[Math.min(stage, tp.e.length - 1)], bloomed: bloomed, progress: progress, nextSec: nextSec, plantedBy: plot.by || "\u6211" };
+  return { key: plot.type, name: tp.n, stage: stage, stageMax: stageMax, stageName: tp.sn[Math.min(stage, tp.sn.length - 1)], emoji: tp.e[Math.min(stage, tp.e.length - 1)], bloomed: bloomed, wilted: !!wilted, progress: progress, nextSec: nextSec, plantedBy: plot.by || "\u6211" };
+}
+function markBloomed() {
+  var changed = false;
+  var now = Math.floor(Date.now() / 1000);
+  for (var i = 0; i < data.p.length; i++) {
+    var plot = data.p[i];
+    if (!plot) continue;
+    var si = stageInfo(plot);
+    if (si && si.bloomed && !plot.bloomedAt) { plot.bloomedAt = now; changed = true; }
+  }
+  if (changed) save(data);
 }
 
 function waterLvl(plot) {
@@ -96,7 +114,7 @@ function waterLvl(plot) {
 
 function gLv() { return Math.floor(Math.sqrt((data.exp || 0) / 10)) + 1; }
 function gLvProg() { var lv = gLv(); var cur = (lv - 1) * (lv - 1) * 10; var nxt = lv * lv * 10; return { cur: data.exp - cur, max: nxt - cur, lv: lv }; }
-function unlocked(type) { return !!T[type]; }
+function unlocked(type) { var tp = T[type]; if (!tp) return false; if (tp.rare) return false; return true; }
 function decorBuffs() {
   var b = { growth: 0, xp: 0, partner: 0, water: 0 };
   var keys = Object.keys(DECOR);
@@ -115,6 +133,19 @@ function decorBuffs() {
 }
 function updDex(type, act) { if (!data.dex[type]) data.dex[type] = { p: 0, h: 0 }; if (act === "p") data.dex[type].p++; if (act === "h") data.dex[type].h++; }
 function updSt(act, me) { var k = act; if (me) data.st[k] = (data.st[k] || 0) + 1; else data.st["m" + k] = (data.st["m" + k] || 0) + 1; }
+function todayStr() { var d = new Date(); return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate(); }
+function updDaily(act) {
+  var t = todayStr();
+  if (!data.daily || data.daily.day !== t) data.daily = { day: t, w: 0, h: 0, f: 0, done: false, buffed: false };
+  if (act === "w") data.daily.w++;
+  else if (act === "h") data.daily.h++;
+  else if (act === "f") data.daily.f++;
+  if (!data.daily.done && data.daily.w >= 5 && data.daily.h >= 3 && data.daily.f >= 1) {
+    data.daily.done = true;
+    data.exp = (data.exp || 0) + 50;
+    addLog("\u2605", "\u4ECA\u65E5\u4EFB\u52A1\u5B8C\u6210\uFF0C\u5956\u52B150\u7ECF\u9A8C");
+  }
+}
 
 var curWeather = wx();
 var curSeason = sea();
@@ -126,6 +157,10 @@ function renderWeather() {
   if (wi) wi.textContent = curWeather.i;
   if (wt) wt.textContent = curWeather.t;
   if (ws) ws.textContent = curSeason;
+
+  var hr = new Date().getHours();
+  page.dataset.night = (hr >= 19 || hr < 6) ? "1" : "0";
+  page.dataset.season = String(Math.floor(new Date().getMonth() / 3) % 4);
 }
 
 function fmtRemain(sec) {
@@ -156,15 +191,18 @@ function renderGrid() {
     var plot = data.p[i];
     var si = stageInfo(plot);
     var wl = waterLvl(plot);
-    var cls = "garden-plot" + (si ? "" : " empty") + (wl > 0 ? " watered" : "") + (selPlot === i ? " selected" : "");
+    var cls = "garden-plot" + (si ? "" : " empty") + (wl > 0 ? " watered" : "") + (selPlot === i ? " selected" : "") + (si && si.bloomed ? " bloomed" : "") + (si && si.wilted ? " wilted" : "") + (plot && T[plot.type] && T[plot.type].rare ? " rare" : "");
     h += "<div class=\"" + cls + "\" data-idx=\"" + i + "\">";
     if (si) {
       if (isGlobal && plot.by && plot.by.indexOf("@") >= 0) {
         h += "<span class=\"garden-plant-src\">" + plot.by.split("@")[1] + "</span>";
       }
-      h += "<span class=\"garden-plant-emoji\">" + si.emoji + "</span>";
+      var emoji = si.wilted ? "\uD83E\uDD40" : si.emoji;
+      h += "<span class=\"garden-plant-emoji\">" + emoji + "</span>";
       h += "<span class=\"garden-plant-name\">" + si.name + "</span>";
-      if (si.bloomed) {
+      if (si.wilted) {
+        h += "<span class=\"garden-plant-stage wilted-stage\">\u5DF2\u51CB\u8C22</span>";
+      } else if (si.bloomed) {
         h += "<span class=\"garden-plant-stage\">\u6210\u719F</span>";
       } else {
         h += "<span class=\"garden-plant-stage\">" + fmtShort(si.nextSec) + "</span>";
@@ -199,6 +237,15 @@ function addLog(who, act) {
   if (data.l.length > 100) data.l = data.l.slice(-100);
 }
 
+function updWaterStreak() {
+  var t = todayStr();
+  if (data.lastWaterDay === t) return;
+  var d = new Date(); d.setDate(d.getDate() - 1);
+  var y = d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate();
+  if (data.lastWaterDay === y) data.waterStreak = (data.waterStreak || 0) + 1;
+  else data.waterStreak = 1;
+  data.lastWaterDay = t;
+}
 function waterPlot(idx) {
   if (idx < 0 || idx >= data.p.length) return;
   var plot = data.p[idx];
@@ -209,19 +256,29 @@ function waterPlot(idx) {
   plot.planted = Math.max(0, plot.planted - 14400);
   addLog("\u6211", "\u7ED9 " + (si ? si.name : "\u7A7A\u5730") + " \u6D47\u4E86\u6C34");
   updSt("w", true);
+  updDaily("w");
+  updWaterStreak();
   save(data); renderAll();
 }
 
 function plantSeed(idx, type) {
   if (idx < 0 || idx >= data.p.length) return;
   if (data.p[idx]) return;
-  if (!unlocked(type)) return;
   var tp = T[type]; if (!tp) return;
   data.p[idx] = { type: type, planted: Math.floor(Date.now() / 1000), by: "\u6211" };
-  addLog("\u6211", "\u79CD\u4E0B\u4E86\u4E00\u68F5 " + tp.n);
+  addLog("\u6211", "\u79CD\u4E0B\u4E86\u4E00\u68F5 " + tp.n + (tp.rare ? " \u2728" : ""));
   updDex(type, "p");
   updSt("p", true);
   save(data); renderAll();
+}
+function dropRareSeed() {
+  if (Math.random() > 0.05) return null;
+  var rareKeys = Object.keys(T).filter(function (k) { return T[k].rare; });
+  if (!rareKeys.length) return null;
+  var k = rareKeys[Math.floor(Math.random() * rareKeys.length)];
+  if (!data.rareInv) data.rareInv = {};
+  data.rareInv[k] = (data.rareInv[k] || 0) + 1;
+  return k;
 }
 
 function fertilizePlot(idx) {
@@ -232,6 +289,7 @@ function fertilizePlot(idx) {
   var si = stageInfo(plot);
   addLog("\u6211", "\u7ED9 " + (si ? si.name : "\u7A7A\u5730") + " \u65BD\u4E86\u80A5");
   updSt("f", true);
+  updDaily("f");
   save(data); renderAll();
 }
 
@@ -244,13 +302,17 @@ function harvestPlot(idx) {
   var name = si.name;
   var type = plot.type;
   var tp = T[type];
+  var wilted = si.wilted;
   data.p[idx] = null;
-  var xpg = Math.round((tp ? tp.xp : 10) * (1 + decorBuffs().xp));
+  var xpg = Math.round((tp ? tp.xp : 10) * (1 + decorBuffs().xp) * (wilted ? 0.5 : 1));
   data.exp = (data.exp || 0) + xpg;
   data.inv[type] = (data.inv[type] || 0) + 1;
+  if (wilted) data.wiltedSeen = true;
   updDex(type, "h");
   updSt("h", true);
-  addLog("\u6211", "\u6536\u83B7\u4E86 " + name + " (+" + xpg + "\u7ECF\u9A8C)");
+  updDaily("h");
+  var dropped = dropRareSeed();
+  addLog("\u6211", "\u6536\u83B7\u4E86 " + name + (wilted ? "\uFF08\u5DF2\u51CB\u8C22\uFF09" : "") + " (+" + xpg + "\u7ECF\u9A8C)" + (dropped ? " \u2728\u83B7\u5F97\u7A00\u6709\u79CD\u5B50" + T[dropped].n : ""));
   save(data); renderAll();
 }
 
@@ -271,6 +333,11 @@ function partnerAct(silent) {
       if (waterLvl(data.p[i]) < 0.3) dryPlots.push(i);
     }
   }
+  bloomedPlots.sort(function (a, b) {
+    var ba = (data.p[a] && data.p[a].bloomedAt) || 0;
+    var bb = (data.p[b] && data.p[b].bloomedAt) || 0;
+    return ba - bb;
+  });
   var acted = false;
   if (r < 0.15 && emptyPlots.length > 0) {
     var idx = emptyPlots[Math.floor(Math.random() * emptyPlots.length)];
@@ -302,23 +369,24 @@ function partnerAct(silent) {
     }
     if (wcnt > 0) { addLog(pName, "\u4E00\u952E\u6D47\u4E86 " + wcnt + " \u68F5\u690D\u7269"); updSt("w", false); acted = true; }
   } else if (r < 0.65 && bloomedPlots.length > 0) {
-    var idx = bloomedPlots[Math.floor(Math.random() * bloomedPlots.length)];
+    var idx = bloomedPlots[0];
     var si = stageInfo(data.p[idx]);
     var name = si ? si.name : "\u690D\u7269";
     var type = data.p[idx].type;
     var tp = T[type];
-    var emoji = tp ? tp.e[tp.e.length - 1] : "\uD83C\uDF37";
+    var wilted = si ? si.wilted : false;
+    var emoji = wilted ? "\uD83E\uDD40" : (tp ? tp.e[tp.e.length - 1] : "\uD83C\uDF37");
     data.p[idx] = null;
-    var xpg = Math.round((tp ? tp.xp : 10) * (1 + decorBuffs().xp));
+    var xpg = Math.round((tp ? tp.xp : 10) * (1 + decorBuffs().xp) * (wilted ? 0.5 : 1));
     data.exp = (data.exp || 0) + xpg;
     updDex(type, "h"); updSt("h", false);
     if (Math.random() < 0.3) {
-      addLog(pName, "\u9001\u4F60\u4E00\u6735 " + name + " \uD83D\uDC95");
-      var gmsg = "\u521A\u6458\u7684" + name + "\u9001\u7ED9\u4F60\uFF0C\u6536\u597D\u54E6~";
+      addLog(pName, "\u9001\u4F60\u4E00\u6735 " + name + (wilted ? "\uFF08\u5E72\u82B1\uFF09" : "") + " \uD83D\uDC95");
+      var gmsg = wilted ? "\u8FD9\u6735" + name + "\u5FEB\u51CB\u4E86\uFF0C\u8D76\u7D27\u9001\u4F60~" : "\u521A\u6458\u7684" + name + "\u9001\u7ED9\u4F60\uFF0C\u6536\u597D\u54E6~";
       if (window.chatSendFlower) { try { window.chatSendFlower(emoji, name, gmsg, true); } catch (e) {} }
     } else {
       data.inv[type] = (data.inv[type] || 0) + 1;
-      addLog(pName, "\u6536\u83B7\u4E86 " + name + " (+" + xpg + "\u7ECF\u9A8C)");
+      addLog(pName, "\u6536\u83B7\u4E86 " + name + (wilted ? "\uFF08\u5DF2\u51CB\u8C22\uFF09" : "") + " (+" + xpg + "\u7ECF\u9A8C)");
     }
     acted = true;
   } else if (r < 0.78 && bloomedPlots.length > 1) {
@@ -329,8 +397,9 @@ function partnerAct(silent) {
       if (!si2 || !si2.bloomed) continue;
       var tp2 = T[data.p[pi].type];
       var tpk = data.p[pi].type;
+      var wilted2 = si2.wilted;
       data.p[pi] = null;
-      var xpg2 = Math.round((tp2 ? tp2.xp : 10) * (1 + decorBuffs().xp));
+      var xpg2 = Math.round((tp2 ? tp2.xp : 10) * (1 + decorBuffs().xp) * (wilted2 ? 0.5 : 1));
       data.exp = (data.exp || 0) + xpg2;
       data.inv[tpk] = (data.inv[tpk] || 0) + 1;
       updDex(tpk, "h"); updSt("h", false);
@@ -377,23 +446,28 @@ function renderDex() {
   var el = document.getElementById("garden-dex");
   if (!el) return;
   var keys = Object.keys(T);
-  var collected = 0;
-  var h = "";
-  keys.forEach(function (k) {
-    var tp = T[k];
-    var dx = data.dex[k] || { p: 0, h: 0 };
-    var has = dx.p > 0 || dx.h > 0;
-    if (has) collected++;
-    var lock = !unlocked(k);
-    if (has) {
-      h += "<div class=\"garden-dex-item\" title=\"" + tp.n + " \u79CD" + dx.p + "\u6536" + dx.h + "\"><span class=\"dex-emoji\">" + tp.e[tp.e.length - 1] + "</span><span class=\"dex-name\">" + tp.n + "</span><span class=\"dex-cnt\">\u00d7" + dx.h + "</span></div>";
-    } else if (lock) {
-      h += "<div class=\"garden-dex-item locked\"><span class=\"dex-emoji\">\uD83D\uDD12</span><span class=\"dex-name\">Lv." + tp.lv + "</span></div>";
-    } else {
-      h += "<div class=\"garden-dex-item unknown\"><span class=\"dex-emoji\">\u2753</span><span class=\"dex-name\">???</span></div>";
-    }
-  });
-  el.innerHTML = "<div class=\"garden-dex-title\">\u690D\u7269\u56FE\u9274 " + collected + "/" + keys.length + "</div><div class=\"garden-dex-grid\">" + h + "</div>";
+  var normal = keys.filter(function (k) { return !T[k].rare; });
+  var rare = keys.filter(function (k) { return !!T[k].rare; });
+  function renderItems(list) {
+    var h = "";
+    list.forEach(function (k) {
+      var tp = T[k];
+      var dx = data.dex[k] || { p: 0, h: 0 };
+      var has = dx.p > 0 || dx.h > 0;
+      var lock = tp.rare ? !has : (tp.lv > gLv());
+      if (has) {
+        h += "<div class=\"garden-dex-item" + (tp.rare ? " rare" : "") + "\" title=\"" + tp.n + " \u79CD" + dx.p + "\u6536" + dx.h + "\"><span class=\"dex-emoji\">" + tp.e[tp.e.length - 1] + "</span><span class=\"dex-name\">" + tp.n + "</span><span class=\"dex-cnt\">\u00d7" + dx.h + "</span></div>";
+      } else if (lock) {
+        h += "<div class=\"garden-dex-item locked\"><span class=\"dex-emoji\">\uD83D\uDD12</span><span class=\"dex-name\">" + (tp.rare ? "\u7A00\u6709" : "Lv." + tp.lv) + "</span></div>";
+      } else {
+        h += "<div class=\"garden-dex-item unknown\"><span class=\"dex-emoji\">\u2753</span><span class=\"dex-name\">???</span></div>";
+      }
+    });
+    return h;
+  }
+  var nC = normal.filter(function (k) { var dx = data.dex[k] || { p: 0, h: 0 }; return dx.p > 0 || dx.h > 0; }).length;
+  var rC = rare.filter(function (k) { var dx = data.dex[k] || { p: 0, h: 0 }; return dx.p > 0 || dx.h > 0; }).length;
+  el.innerHTML = "<div class=\"garden-dex-title\">\u690D\u7269\u56FE\u9274 " + nC + "/" + normal.length + " \u00B7 \u7A00\u6709 " + rC + "/" + rare.length + "</div><div class=\"garden-dex-grid\">" + renderItems(normal) + "</div>" + (rare.length ? "<div class=\"garden-dex-sub\">\u2728 \u7A00\u6709\u54C1\u79CD</div><div class=\"garden-dex-grid rare-grid\">" + renderItems(rare) + "</div>" : "");
 }
 
 function renderInv() {
@@ -475,8 +549,279 @@ function renderLeaderboard() {
   el.innerHTML = h;
 }
 
+var ACHV = [
+  { id: "firstBloom", n: "首次开花", e: "\uD83C\uDF38", d: "收获第一朵花", check: function () { return (data.st.h || 0) + (data.st.mh || 0) >= 1; } },
+  { id: "greenThumb", n: "满级园丁", e: "\uD83C\uDF3E", d: "花园达 Lv.10", check: function () { return gLv() >= 10; } },
+  { id: "collector", n: "全图鉴", e: "\uD83D\uDCD6", d: "收集全部普通花并", check: function () { var n = Object.keys(T).filter(function (k) { return !T[k].rare; }); return n.every(function (k) { var dx = data.dex[k] || {}; return dx.p > 0 || dx.h > 0; }); } },
+  { id: "rareColl", n: "稀有收藏家", e: "\u2728", d: "收获任一稀有花", check: function () { return Object.keys(T).some(function (k) { return T[k].rare && data.dex[k] && data.dex[k].h > 0; }); } },
+  { id: "water7", n: "坚持浇水", e: "\uD83D\uDCA7", d: "连续浇水 7 天", check: function () { return (data.waterStreak || 0) >= 7; } },
+  { id: "harvest10", n: "丰收一日", e: "\uD83E\uDD4B", d: "单日收获 10 朵", check: function () { return (data.daily && data.daily.h >= 10) || (data.st.h || 0) >= 10; } },
+  { id: "planter10", n: "勤劳园丁", e: "\uD83C\uDF31", d: "种下 10 棵花", check: function () { return (data.st.p || 0) + (data.st.mp || 0) >= 10; } },
+  { id: "waterer50", n: "浇水达人", e: "\uD83C\uDF26", d: "浇水 50 次", check: function () { return (data.st.w || 0) + (data.st.mw || 0) >= 50; } },
+  { id: "harv50", n: "花海", e: "\uD83C\uDF3C", d: "收获 50 朵花", check: function () { return (data.st.h || 0) + (data.st.mh || 0) >= 50; } },
+  { id: "decorAll", n: "尽善尽美", e: "\uD83C\uDFE0", d: "买齐全部装饰", check: function () { return Object.keys(DECOR).every(function (k) { return (data.decor[k] || 0) >= DECOR[k].max; }); } },
+  { id: "visitor", n: "生机勃勃", e: "\uD83E\uDE9B", d: "招待过访客", check: function () { return !!data.visitor; } },
+  { id: "bouquet3", n: "花束使者", e: "\uD83D\uDCC1", d: "制作 3 束花", check: function () { return (data.bouquetCnt || 0) >= 3; } },
+  { id: "partnerCare", n: "同育之情", e: "\uD83D\uDC95", d: "梦角打理 10 次", check: function () { return (data.st.mp || 0) + (data.st.mw || 0) + (data.st.mh || 0) + (data.st.mf || 0) >= 10; } },
+  { id: "rich", n: "花山花海", e: "\uD83D\uDCB0", d: "库存 20 朵花", check: function () { var t = 0; Object.keys(data.inv || {}).forEach(function (k) { t += data.inv[k] || 0; }); return t >= 20; } },
+  { id: "wiltedSee", n: "封存时光", e: "\uD83E\uDD40", d: "见证花朵凋谢", check: function () { return !!data.wiltedSeen; } }
+];
+function ensureDailyUI() {
+  if (document.getElementById("garden-daily")) return;
+  var el = document.createElement("div");
+  el.id = "garden-daily";
+  el.className = "garden-daily";
+  var pg = document.getElementById("garden-panel-garden");
+  if (pg) pg.insertBefore(el, pg.firstChild);
+  else { var bar = page.querySelector(".garden-level-bar"); if (bar) bar.parentNode.insertBefore(el, bar.nextSibling); }
+}
+function renderDaily() {
+  ensureDailyUI();
+  var el = document.getElementById("garden-daily");
+  if (!el) return;
+  var t = todayStr();
+  if (!data.daily || data.daily.day !== t) data.daily = { day: t, w: 0, h: 0, f: 0, done: false };
+  var d = data.daily;
+  var tasks = [
+    { n: "\u6D47\u6C34", cur: d.w, goal: 5, e: "\uD83D\uDCA7" },
+    { n: "\u6536\u83B7", cur: d.h, goal: 3, e: "\uD83C\uDF3C" },
+    { n: "\u65BD\u80A5", cur: d.f, goal: 1, e: "\uD83D\uDC9A" }
+  ];
+  var h = "<div class=\"garden-daily-title\">\u4ECA\u65E5\u4EFB\u52A1" + (d.done ? " \u2728\u5DF2\u5B8C\u6210" : "") + "</div><div class=\"garden-daily-tasks\">";
+  tasks.forEach(function (tk) {
+    var ok = tk.cur >= tk.goal;
+    h += "<div class=\"garden-daily-task" + (ok ? " done" : "") + "\"><span class=\"dt-emoji\">" + tk.e + "</span><span class=\"dt-name\">" + tk.n + " " + Math.min(tk.cur, tk.goal) + "/" + tk.goal + "</span></div>";
+  });
+  h += "</div>";
+  el.innerHTML = h;
+}
+function ensureAchvUI() {
+  if (document.getElementById("garden-achv")) return;
+  var el = document.createElement("div");
+  el.id = "garden-achv";
+  el.className = "garden-achv";
+  var pa = document.getElementById("garden-panel-achv");
+  if (pa) pa.appendChild(el);
+  else { var scroll = page.querySelector(".garden-scroll"); if (scroll) scroll.appendChild(el); }
+}
+function renderAchv() {
+  ensureAchvUI();
+  var el = document.getElementById("garden-achv");
+  if (!el) return;
+  if (!data.achv) data.achv = {};
+  var got = 0;
+  var h = "";
+  ACHV.forEach(function (a) {
+    var ok = !!data.achv[a.id];
+    if (ok) got++;
+    h += "<div class=\"garden-achv-item" + (ok ? " done" : "") + "\" title=\"" + a.d + "\"><span class=\"achv-emoji\">" + (ok ? a.e : "\uD83D\uDD12") + "</span><span class=\"achv-name\">" + a.n + "</span></div>";
+  });
+  el.innerHTML = "<div class=\"garden-achv-title\">\uD83C\uDFC6 \u6210\u5C31\u5899 " + got + "/" + ACHV.length + "</div><div class=\"garden-achv-grid\">" + h + "</div>";
+}
+function checkAchv() {
+  if (!data.achv) data.achv = {};
+  var newly = [];
+  ACHV.forEach(function (a) {
+    if (data.achv[a.id]) return;
+    try { if (a.check()) { data.achv[a.id] = Math.floor(Date.now() / 1000); newly.push(a); } } catch (e) {}
+  });
+  if (newly.length) {
+    save(data);
+    newly.forEach(function (a) { addLog("\u2605", "\u89E3\u9501\u6210\u5C31\u300C" + a.n + "\u300D " + a.e); });
+    if (window.openModal) {
+      var a0 = newly[0];
+      window.openModal(a0.e + " \u89E3\u9501\u6210\u5C31", a0.n + "\n" + a0.d + (newly.length > 1 ? "\n\uFF08\u672C\u6B21\u5171\u89E3\u9501 " + newly.length + " \u4E2A\uFF09" : ""), function () {}, { pills: [{ label: "\u597D\u7684", value: "ok" }], noInput: true });
+    }
+  }
+}
+var curTab = "garden";
+var TABS = [
+  { id: "garden", n: "\u82B1\u56ED", e: "\uD83C\uDF31" },
+  { id: "dex", n: "\u56FE\u9274", e: "\uD83D\uDCD6" },
+  { id: "craft", n: "\u5DE5\u574A", e: "\uD83D\uDC83" },
+  { id: "shop", n: "\u88C5\u9970", e: "\uD83C\uDFE1" },
+  { id: "achv", n: "\u6210\u5C31", e: "\uD83C\uDFC6" },
+  { id: "report", n: "\u5E74\u62A5", e: "\uD83D\uDCCA" }
+];
+function ensureTabUI() {
+  if (document.getElementById("garden-tabs")) return;
+  var scroll = page.querySelector(".garden-scroll");
+  if (!scroll) return;
+  var tabs = document.createElement("div");
+  tabs.id = "garden-tabs";
+  tabs.className = "garden-tabs";
+  TABS.forEach(function (t) {
+    var b = document.createElement("button");
+    b.className = "garden-tab" + (t.id === curTab ? " active" : "");
+    b.dataset.tab = t.id;
+    b.innerHTML = '<span class="gt-emoji">' + t.e + '</span><span class="gt-name">' + t.n + '</span>';
+    tabs.appendChild(b);
+  });
+  var lvl = document.getElementById("garden-level-bar");
+  lvl.parentNode.insertBefore(tabs, lvl.nextSibling);
+  TABS.forEach(function (t) {
+    var p = document.createElement("div");
+    p.id = "garden-panel-" + t.id;
+    p.className = "garden-panel" + (t.id === curTab ? " active" : "");
+    scroll.appendChild(p);
+  });
+  var move = function (id, pid) {
+    var el = document.getElementById(id);
+    var p = document.getElementById("garden-panel-" + pid);
+    if (el && p) p.appendChild(el);
+  };
+  move("garden-grid", "garden");
+  move("garden-stats", "garden");
+  move("garden-visitor", "garden");
+  move("garden-toolbar", "garden");
+  move("garden-log", "garden");
+  move("garden-dex", "dex");
+  move("garden-inv", "craft");
+  move("garden-decor", "shop");
+  move("garden-lb", "shop");
+  tabs.addEventListener("click", function (e) {
+    var b = e.target.closest(".garden-tab");
+    if (!b) return;
+    curTab = b.dataset.tab;
+    page.querySelectorAll(".garden-tab").forEach(function (x) { x.classList.toggle("active", x.dataset.tab === curTab); });
+    page.querySelectorAll(".garden-panel").forEach(function (p) { p.classList.toggle("active", p.id === "garden-panel-" + curTab); });
+  });
+}
+var RECIPES = [
+  { id: "firstLove", n: "\u521D\u604B", e: "\uD83D\uDC90", need: { rose: 3, daisy: 2 }, wish: "\u4E09\u6735\u73AB\u7470\u4E24\u6735\u96CF\u83CA\uFF0C\u50CF\u521D\u604B\u822C\u70ED\u70C8\u53C8\u7EAF\u771F" },
+  { id: "passion", n: "\u70ED\u604B", e: "\uD83D\uDC9D", need: { rose: 2, sunflower: 1 }, wish: "\u73AB\u7470\u4E0E\u5411\u65E5\u8475\uFF0C\u70ED\u70C8\u5730\u671D\u5411\u4F60" },
+  { id: "miss", n: "\u601D\u5FF5", e: "\uD83C\uDF19", need: { lavender: 3, sakura: 1 }, wish: "\u85B0\u8863\u8349\u7684\u7B49\u5F85\uFF0C\u6A31\u82B1\u7684\u77ED\u6682\uFF0C\u90FD\u662F\u601D\u5FF5" },
+  { id: "eternal", n: "\u6C38\u6052", e: "\u221E", need: { tulip: 2, camellia: 1 }, wish: "\u90C1\u91D1\u9999\u7684\u795D\u798F\uFF0C\u5C71\u8336\u82B1\u7684\u7406\u60F3\uFF0C\u613F\u6C38\u6052" },
+  { id: "lucky", n: "\u5E78\u8FD0", e: "\uD83C\uDF40", need: { clover: 3, daisy: 1 }, wish: "\u56DB\u53F6\u8349\u52A0\u96CF\u83CA\uFF0C\u5E78\u8FD0\u4F34\u7EAF\u771F" },
+  { id: "miracle", n: "\u5947\u8FF9", e: "\u2728", need: { flameRose: 1, blueRose: 1 }, wish: "\u7EDE\u6A31\u4E0E\u84DD\u73AB\u7470\uFF0C\u4E0D\u53EF\u80FD\u7684\u5947\u8FF9" }
+];
+function ensureCraftUI() {
+  if (document.getElementById("garden-craft")) return;
+  var p = document.getElementById("garden-panel-craft");
+  if (!p) return;
+  var el = document.createElement("div");
+  el.id = "garden-craft";
+  el.className = "garden-craft";
+  p.appendChild(el);
+}
+function renderCraft() {
+  ensureCraftUI();
+  var el = document.getElementById("garden-craft");
+  if (!el) return;
+  if (!data.recipes) data.recipes = {};
+  var h = '<div class="garden-craft-title">\uD83D\uDC83 \u82B1\u827A\u914D\u65B9</div><div class="garden-craft-list">';
+  RECIPES.forEach(function (r) {
+    var canMake = true;
+    var needTxt = [];
+    Object.keys(r.need).forEach(function (k) {
+      var have = data.inv[k] || 0;
+      if (have < r.need[k]) canMake = false;
+      var tp = T[k];
+      needTxt.push((tp ? tp.e[tp.e.length - 1] : "") + "\u00d7" + r.need[k]);
+    });
+    var made = !!data.recipes[r.id];
+    h += '<div class="garden-recipe' + (canMake ? " can" : "") + (made ? " made" : "") + '">';
+    h += '<div class="recipe-head"><span class="recipe-emoji">' + r.e + '</span><span class="recipe-name">' + r.n + '</span>' + (made ? '<span class="recipe-made">\u2713\u5DF2\u5408\u6210</span>' : "") + '</div>';
+    h += '<div class="recipe-need">' + needTxt.join(" ") + '</div>';
+    h += '<div class="recipe-wish">' + r.wish + '</div>';
+    if (canMake) h += '<button class="recipe-btn" data-recipe="' + r.id + '">\u5408\u6210\u82B1\u675F</button>';
+    h += '</div>';
+  });
+  h += '</div>';
+  el.innerHTML = h;
+  el.querySelectorAll(".recipe-btn").forEach(function (b) { b.addEventListener("click", function () { craftRecipe(b.dataset.recipe); }); });
+}
+function craftRecipe(id) {
+  var r = null;
+  for (var i = 0; i < RECIPES.length; i++) if (RECIPES[i].id === id) { r = RECIPES[i]; break; }
+  if (!r) return;
+  for (var k in r.need) { if ((data.inv[k] || 0) < r.need[k]) return; }
+  for (var k2 in r.need) { data.inv[k2] = (data.inv[k2] || 0) - r.need[k2]; if (data.inv[k2] < 0) data.inv[k2] = 0; }
+  if (!data.recipes) data.recipes = {};
+  data.recipes[id] = Math.floor(Date.now() / 1000);
+  data.bouquetCnt = (data.bouquetCnt || 0) + 1;
+  addLog("\u6211", "\u5408\u6210\u300C" + r.n + "\u300D\u82B1\u675F " + r.e);
+  save(data);
+  if (window.chatSendFlower) { try { window.chatSendFlower(r.e, r.n + "\u82B1\u675F", r.wish); } catch (e) {} }
+  renderAll();
+}
+function ensureReportUI() {
+  if (document.getElementById("garden-report")) return;
+  var p = document.getElementById("garden-panel-report");
+  if (!p) return;
+  var el = document.createElement("div");
+  el.id = "garden-report";
+  el.className = "garden-report";
+  p.appendChild(el);
+}
+function renderReport() {
+  ensureReportUI();
+  var el = document.getElementById("garden-report");
+  if (!el) return;
+  var st = data.st || {};
+  var year = new Date().getFullYear();
+  var totalPlant = (st.p || 0) + (st.mp || 0);
+  var totalWater = (st.w || 0) + (st.mw || 0);
+  var totalHarv = (st.h || 0) + (st.mh || 0);
+  var totalFert = (st.f || 0) + (st.mf || 0);
+  var topFlower = null, topCnt = 0;
+  Object.keys(data.dex || {}).forEach(function (k) { var c = (data.dex[k].p || 0) + (data.dex[k].h || 0); if (c > topCnt && T[k]) { topCnt = c; topFlower = T[k]; } });
+  var invTotal = 0; Object.keys(data.inv || {}).forEach(function (k) { invTotal += data.inv[k] || 0; });
+  var achvCnt = Object.keys(data.achv || {}).length;
+  var bouquet = data.bouquetCnt || 0;
+  var streak = data.waterStreak || 0;
+  var dexGot = Object.keys(data.dex || {}).filter(function (k) { var d = data.dex[k]; return d.p > 0 || d.h > 0; }).length;
+  var partnerCare = (st.mp || 0) + (st.mw || 0) + (st.mh || 0) + (st.mf || 0);
+  var h = '<div class="garden-report-card">';
+  h += '<div class="report-year">' + year + ' \u82B1\u56ED\u5E74\u62A5</div>';
+  h += '<div class="report-lv">Lv.' + gLv() + ' \u00B7 ' + (data.exp || 0) + ' EXP</div>';
+  h += '<div class="report-stats"><div class="rs-item"><b>' + totalPlant + '</b>\u79CD\u690D</div><div class="rs-item"><b>' + totalWater + '</b>\u6D47\u6C34</div><div class="rs-item"><b>' + totalHarv + '</b>\u6536\u83B7</div><div class="rs-item"><b>' + totalFert + '</b>\u65BD\u80A5</div></div>';
+  h += '<div class="report-row"><span>\u6700\u5E38\u79CD</span><b>' + (topFlower ? topFlower.e[topFlower.e.length - 1] + " " + topFlower.n : "\u2014") + '</b></div>';
+  h += '<div class="report-row"><span>\u5E93\u5B58\u82B1\u6735</span><b>' + invTotal + ' \u6735</b></div>';
+  h += '<div class="report-row"><span>\u5236\u4F5C\u82B1\u675F</span><b>' + bouquet + ' \u675F</b></div>';
+  h += '<div class="report-row"><span>\u89E3\u9501\u6210\u5C31</span><b>' + achvCnt + '/' + ACHV.length + '</b></div>';
+  h += '<div class="report-row"><span>\u8FDE\u7EED\u6D47\u6C34</span><b>' + streak + ' \u5929</b></div>';
+  h += '<div class="report-row"><span>\u56FE\u9274\u6536\u96C6</span><b>' + dexGot + '/' + Object.keys(T).length + '</b></div>';
+  h += '<div class="report-row"><span>\u68A6\u89D2\u6253\u7406</span><b>' + partnerCare + ' \u6B21</b></div>';
+  h += '</div>';
+  h += '<button class="report-share-btn" id="garden-report-share">\uD83D\uDCF8 \u5206\u4EAB\u5230\u670B\u53CB\u5708</button>';
+  el.innerHTML = h;
+  var sb = el.querySelector("#garden-report-share");
+  if (sb) sb.addEventListener("click", function () {
+    var lines = [
+      year + " \u82B1\u56ED\u5E74\u62A5 \uD83C\uDF3F",
+      "Lv." + gLv() + " \u00B7 " + (data.exp || 0) + " EXP",
+      "\u79CD\u690D" + totalPlant + " \u6D47\u6C34" + totalWater + " \u6536\u83B7" + totalHarv + " \u65BD\u80A5" + totalFert,
+      "\u6700\u5E38\u79CD\uFF1A" + (topFlower ? topFlower.n : "\u2014"),
+      "\u5236\u4F5C\u82B1\u675F" + bouquet + " \u89E3\u9501\u6210\u5C31" + achvCnt + "/" + ACHV.length,
+      "\u8FDE\u7EED\u6D47\u6C34" + streak + "\u5929 \u68A6\u89D2\u6253\u7406" + partnerCare + "\u6B21",
+      "\uD83C\uDF38 \u613F\u6211\u4EEC\u7684\u82B1\u56ED\u4E00\u76F4\u7E41\u76DB"
+    ];
+    var text = lines.join("\n");
+    var ok = false;
+    try {
+      var st = window.xyStore ? window.xyStore("xy-home-v2") : null;
+      if (st) {
+        var FK = "feed-posts";
+        var arr = []; try { arr = JSON.parse(st.get(FK) || "[]"); } catch (e2) {}
+        var owner = "default"; try { if (window.__activeCid) owner = window.__activeCid; } catch (e2) {}
+        var an = "\u6211"; try { var as = window.activeStore ? window.activeStore() : null; if (as) { var nn = as.get("feed-user-name") || as.get("lbl-user"); if (nn) an = nn; } } catch (e2) {}
+        arr.unshift({ id: "f_" + Date.now(), role: "me", owner: owner, authorName: an, authorAv: "", taName: "", taAv: "", content: text, imgs: [], ts: Date.now(), likes: [], comments: [] });
+        var raw = JSON.stringify(arr);
+        st.set(FK, raw);
+        if (window.idbSet) window.idbSet("xy-home-v2:" + FK, raw);
+        ok = true;
+      }
+    } catch (e3) {}
+    try { document.dispatchEvent(new CustomEvent("garden-share-report", { detail: { ok: ok } })); } catch (e4) {}
+    if (window.openModal) window.openModal(ok ? "\u2705 \u5DF2\u53D1\u5E03\u5230\u670B\u53CB\u5708" : "\u53D1\u5E03\u5931\u8D25", ok ? "\u82B1\u56ED\u5E74\u62A5\u5DF2\u53D1\u5230\u670B\u53CB\u5708\uFF0C\u53BB\u670B\u53CB\u5708\u770B\u770B\u5427~" : "\u8BF7\u7A0D\u540E\u518D\u8BD5", function () {}, { pills: [{ label: "\u597D\u7684", value: "ok" }], noInput: true });
+  });
+}
 function renderAll() {
+  markBloomed();
+  ensureTabUI();
   renderWeather();
+  renderDaily();
   renderLevel();
   renderGrid();
   renderStats();
@@ -485,7 +830,11 @@ function renderAll() {
   renderInv();
   renderDecor();
   renderLeaderboard();
+  renderAchv();
+  renderCraft();
+  renderReport();
   renderLog();
+  checkAchv();
 }
 
 function checkPartnerPassive() {
@@ -526,7 +875,10 @@ function handlePlotClick(e) {
   } else {
     selPlot = idx;
   }
-  renderGrid();
+  page.querySelectorAll(".garden-plot").forEach(function (p) {
+    var i = parseInt(p.getAttribute("data-idx"));
+    p.classList.toggle("selected", i === selPlot);
+  });
 }
 
 function handleTool(e) {
@@ -546,14 +898,23 @@ function handleTool(e) {
     if (selPlot < 0) return;
     if (data.p[selPlot]) return;
     if (!window.openModal) return;
-    var keys = Object.keys(T).filter(function (k) { return unlocked(k); });
-    if (!keys.length) return;
-    var pills = keys.map(function (k) {
+    var normalKeys = Object.keys(T).filter(function (k) { return unlocked(k); });
+    var rareKeys = Object.keys(data.rareInv || {}).filter(function (k) { return data.rareInv[k] > 0 && T[k] && T[k].rare; });
+    var pills = normalKeys.map(function (k) {
       var tp = T[k];
       return { label: tp.e[tp.e.length - 1] + " " + tp.n, value: k };
     });
+    rareKeys.forEach(function (k) {
+      var tp = T[k];
+      pills.push({ label: "\u2728 " + tp.e[tp.e.length - 1] + " " + tp.n + " \u00d7" + data.rareInv[k], value: "rare:" + k });
+    });
+    if (!pills.length) return;
     window.openModal("\u9009\u62E9\u79CD\u690D", "", function (v) {
-      if (v && T[v]) plantSeed(selPlot, v);
+      if (!v) return;
+      if (v.indexOf("rare:") === 0) {
+        var rk = v.slice(5);
+        if (data.rareInv && data.rareInv[rk] > 0) { data.rareInv[rk]--; plantSeed(selPlot, rk); }
+      } else if (T[v]) { plantSeed(selPlot, v); }
     }, { pills: pills, noInput: true });
   } else if (tool === "waterall") {
     waterAll();
@@ -583,22 +944,26 @@ function harvestAll() {
   var cnt = 0;
   var totalXp = 0;
   var xpb = 1 + decorBuffs().xp;
+  var dropped = [];
   for (var i = 0; i < data.p.length; i++) {
     var plot = data.p[i];
     if (!plot) continue;
     var si = stageInfo(plot);
     if (!si || !si.bloomed) continue;
     var tp = T[plot.type];
-    var xpg = Math.round((tp ? tp.xp : 10) * xpb);
+    var wilted = si.wilted;
+    var xpg = Math.round((tp ? tp.xp : 10) * xpb * (wilted ? 0.5 : 1));
     data.p[i] = null;
     data.exp = (data.exp || 0) + xpg;
     data.inv[plot.type] = (data.inv[plot.type] || 0) + 1;
-    updDex(plot.type, "h"); updSt("h", true);
+    if (wilted) data.wiltedSeen = true;
+    updDex(plot.type, "h"); updSt("h", true); updDaily("h");
+    var dr = dropRareSeed(); if (dr) dropped.push(dr);
     totalXp += xpg;
     cnt++;
   }
   if (cnt > 0) {
-    addLog("\u6211", "\u4E00\u952E\u6536\u83B7 " + cnt + " \u6735\u82B1 (+" + totalXp + "\u7ECF\u9A8C)");
+    addLog("\u6211", "\u4E00\u952E\u6536\u83B7 " + cnt + " \u6735\u82B1 (+" + totalXp + "\u7ECF\u9A8C)" + (dropped.length ? " \u2728\u83B7\u5F97" + dropped.length + "\u9897\u7A00\u6709\u79CD\u5B50" : ""));
     save(data); renderAll();
   }
 }
@@ -609,21 +974,23 @@ function makeBouquet() {
   if (!window.openModal) return;
   var pills = keys.map(function (k) {
     var tp = T[k];
-    return { label: tp.e[tp.e.length - 1] + " " + tp.n + " \u00d7" + data.inv[k], value: k };
+    return { label: tp.e[tp.e.length - 1] + " " + tp.n + " \u00d7" + data.inv[k] + (tp.m ? " \u00B7 " + tp.m : ""), value: k };
   });
   window.openModal("\u9009\u4E00\u6735\u82B1\u5236\u4F5C\u82B1\u675F", "", function (v) {
     if (!v || !T[v] || !data.inv[v]) return;
     var tp = T[v];
     var emoji = tp.e[tp.e.length - 1];
-    var defWish = "\u9001\u7ED9\u4F60\u4E00\u675F" + tp.n + "\uFF0C\u662F\u6211\u4EEC\u4E00\u8D77\u79CD\u7684\u54E6~";
+    var meaning = tp.m || "";
+    var defWish = "\u9001\u7ED9\u4F60\u4E00\u675F" + tp.n + "\uFF0C\u662F\u6211\u4EEC\u4E00\u8D77\u79CD\u7684\u54E6~" + (meaning ? "\n\u82B1\u8BED\uFF1A" + meaning : "");
     var mask = document.getElementById("modal-mask");
     if (mask) mask.hidden = true;
     setTimeout(function () {
       if (!window.openModal) return;
       window.openModal("\u9001\u82B1\u7559\u8A00\uFF08\u53EF\u4FEE\u6539\uFF09", defWish, function (wish) {
         data.inv[v]--;
+        data.bouquetCnt = (data.bouquetCnt || 0) + 1;
         var msg = (wish && wish.trim()) ? wish.trim() : defWish;
-        addLog("\u6211", "\u5236\u4F5C\u4E86\u4E00\u675F " + tp.n + "\u82B1\u9001\u7ED9" + pn());
+        addLog("\u6211", "\u5236\u4F5C\u4E86\u4E00\u675F " + tp.n + "\u82B1\u9001\u7ED9" + pn() + (meaning ? "\uFF08\u82B1\u8BED\uFF1A" + meaning + "\uFF09" : ""));
         save(data);
         if (window.chatSendFlower) { try { window.chatSendFlower(emoji, tp.n, msg); } catch (e) {} }
         renderAll();
@@ -698,6 +1065,7 @@ function openGarden() {
   spawnVisitor();
   if (Math.random() < 0.3 + dbf.partner) partnerAct();
   renderAll();
+  try { document.dispatchEvent(new CustomEvent("garden-enter")); } catch (e) {}
 }
 
 var appBtn = document.querySelector('.app[data-app="garden"]');
@@ -708,6 +1076,7 @@ if (backBtn) backBtn.addEventListener("click", function () {
   document.querySelectorAll(".page").forEach(function (pg) { pg.hidden = true; });
   var home = document.getElementById("page-phone");
   if (home) home.hidden = false;
+  try { document.dispatchEvent(new CustomEvent("garden-leave")); } catch (e) {}
 });
 
 var gridEl = document.getElementById("garden-grid");
@@ -788,14 +1157,15 @@ function mergeAllToGlobal() {
     var g = { p: [], l: [], lpc: Math.floor(Date.now() / 1000), dex: {}, exp: 0, inv: {}, st: { p: 0, w: 0, h: 0, f: 0, mp: 0, mw: 0, mh: 0, mf: 0 }, decor: {}, visitor: null };
     gardens.forEach(function (gd) {
       var d = gd.data || {};
-      if (d.p) d.p.forEach(function (plot) {
-        if (plot) {
-          var np = { type: plot.type, planted: plot.planted, by: (plot.by || "\u6211") + "@" + gd.name };
-          if (plot.watered) np.watered = plot.watered;
-          if (plot.coOp) np.coOp = plot.coOp;
-          g.p.push(np);
-        }
-      });
+        if (d.p) d.p.forEach(function (plot) {
+          if (plot) {
+            var np = { type: plot.type, planted: plot.planted, by: (plot.by || "\u6211") + "@" + gd.name };
+            if (plot.watered) np.watered = plot.watered;
+            if (plot.bloomedAt) np.bloomedAt = plot.bloomedAt;
+            if (plot.coOp) np.coOp = plot.coOp;
+            g.p.push(np);
+          }
+        });
       g.exp += (d.exp || 0);
       if (d.st) Object.keys(d.st).forEach(function (k) { g.st[k] = (g.st[k] || 0) + (d.st[k] || 0); });
       if (d.dex) Object.keys(d.dex).forEach(function (t) {
@@ -879,5 +1249,30 @@ function doRemerge() {
   });
 }
 ensureGlobalUI();
+
+window.gardenBloomDates = function () {
+  var list = [];
+  try {
+    var contacts = window.getContacts ? (window.getContacts() || []) : [{ id: "default", name: "\u9ED8\u8BA4" }];
+    contacts.forEach(function (c) {
+      var st = window.storeFor ? window.storeFor(c.id) : null;
+      if (!st) return;
+      var raw = st.get("garden-data");
+      if (!raw) return;
+      var d; try { d = JSON.parse(raw); } catch (e) { return; }
+      if (!d || !d.p) return;
+      var name = c.name || c.id;
+      try { var pnn = st.get("lbl-partner"); if (pnn) name = pnn; } catch (e) {}
+      d.p.forEach(function (plot, i) {
+        if (!plot || !T[plot.type]) return;
+        var tp = T[plot.type];
+        var totalSec = tp.g.reduce(function (a, b) { return a + b; }, 0);
+        var bloomAt = (plot.planted || 0) + Math.ceil(totalSec / 1.1);
+        list.push({ cid: c.id, name: name, type: plot.type, flower: tp.n, emoji: tp.e[tp.e.length - 1], bloomAt: bloomAt, idx: i });
+      });
+    });
+  } catch (e) {}
+  return list;
+};
 
 })();

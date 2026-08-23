@@ -35,6 +35,30 @@
     voice: []
   };
   const MEDIA_TYPES = { sticker: '表情包', image: '图片', voice: '语音' };
+  // v3.8.x：补正音频 dataURL 的 MIME。安卓部分浏览器/文件管理器（如雨见）返回的音频
+  // File.type 为空，readAsDataURL 会产出 data:;base64,（空 MIME）——空 MIME 既无法被
+  // new Audio() 播放，也不满足全站 data:audio 判定，会被整段 base64 当文字存下发进聊天
+  // 变成乱码。这里统一按文件名扩展名推导音频 MIME 归一化。
+  function audioMimeFromName(name) {
+    const ext = (name || '').split('.').pop().toLowerCase();
+    const map = {
+      mp3: 'audio/mpeg', wav: 'audio/wav', m4a: 'audio/mp4', mp4: 'audio/mp4',
+      ogg: 'audio/ogg', ogx: 'application/ogg', aac: 'audio/aac', amr: 'audio/amr',
+      flac: 'audio/flac', webm: 'audio/webm', opus: 'audio/ogg'
+    };
+    return map[ext] || '';
+  }
+  function normalizeAudioDataURL(dataURL, file) {
+    if (!dataURL) return dataURL;
+    const m = /^data:([^;,]*);/.exec(dataURL);
+    const mime = m ? m[1] : '';
+    if (mime && mime.indexOf('audio/') === 0) return dataURL; // 已是有效音频 MIME
+    // MIME 缺失或非音频（如 data:;base64,）：剥掉前缀取 base64 载荷，用扩展名 MIME 重拼
+    const comma = dataURL.indexOf(',');
+    const payload = comma >= 0 ? dataURL.slice(comma + 1) : dataURL;
+    const extMime = audioMimeFromName(file && file.name) || (file && file.type) || 'audio/mpeg';
+    return 'data:' + extMime + ';base64,' + payload;
+  }
   const IMG_TYPES = MEDIA_TYPES;
 
   // v3.8.x：iOS Safari 下未挂到 DOM 的 <input type=file>.click() 不会弹出选择器，
@@ -1681,7 +1705,9 @@
                 done++;
                 if (done === files.length) finishUpload(done - skipped, skipped);
               };
-              if (cur === 'voice') process(reader.result);
+              // v3.8.x：语音先归一化 MIME（安卓/雨见下 File.type 为空时 dataURL 无 audio/ 前缀，
+              // 会触发乱码+无法播放），再存文件
+              if (cur === 'voice') process(normalizeAudioDataURL(reader.result, f));
               else {
                 // v3.7.x：GIF 动图跳过 canvas 压缩——canvas 只能画出第一帧，
                 // 重绘成 PNG/JPEG 会把动图压成静态图，这里直存原图保留动画

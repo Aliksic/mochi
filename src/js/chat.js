@@ -2434,7 +2434,13 @@ function partialRetractMsg(msgEl, side) {
       if (!fav.some(f => f.side === 'out' && f.text === lastMineText)) {
         // 图片/表情按 dataURL 识别类型，避免收藏时按文本存导致显示超长乱码
         const favType = lastMineText.indexOf('data:') === 0 ? 'image' : 'text';
-        fav.push({ side: 'out', text: lastMineText, type: favType, ts: Date.now(), by: 'ta' });
+        // v3.10.x：组合消息一起收藏——找到对应消息的 parts（文字+图片+表情同一条气泡）
+        let favParts = undefined;
+        for (let i = msgs.length - 1; i >= 0; i--) {
+          const mm = msgs[i];
+          if (mm && mm.side === 'out' && mm.text === lastMineText && mm.parts && mm.parts.length) { favParts = mm.parts.map(p => ({ k: p.k, v: p.v, sub: p.sub })); break; }
+        }
+        fav.push({ side: 'out', text: lastMineText, type: favType, ts: Date.now(), by: 'ta', parts: favParts });
         saveFav(fav);
         setTimeout(() => { if (!sameCid()) return; toast('TA 收藏了你的一条消息'); }, 1200);
       }
@@ -2669,7 +2675,7 @@ function partialRetractMsg(msgEl, side) {
     if (!chatVisible()) return false;
     const name = chatPartnerName();
     // 猜拳邀请
-    if (cfgn(c, 'ai-rps-en', 1) === 1 && hit(cfgn(c, 'ai-rps-prob', 15))) {
+    if (cfgn(c, 'ai-rps-en', 1) === 1 && hit(cfgn(c, 'ai-rps-prob', 8))) {
       addIn(name + ' 想和你猜拳，来一局？', { special: 'poke', initiative: true });
       showTyping();
       setTimeout(() => {
@@ -2679,7 +2685,7 @@ function partialRetractMsg(msgEl, side) {
       return true;
     }
     // 游戏邀请（Pong / 贪吃蛇随机）
-    if (cfgn(c, 'ai-game-en', 1) === 1 && hit(cfgn(c, 'ai-game-prob', 10))) {
+    if (cfgn(c, 'ai-game-en', 1) === 1 && hit(cfgn(c, 'ai-game-prob', 5))) {
       const isPong = Math.random() < 0.5;
       const gameName = isPong ? 'Pong' : '双人贪吃蛇';
       addIn(name + (isPong ? ' 想和你玩一局 Pong，来吗？' : ' 想和你玩双人贪吃蛇，来吗？'), { special: 'poke', initiative: true });
@@ -2719,7 +2725,7 @@ function partialRetractMsg(msgEl, side) {
     // v3.9.x：联系人主动邀请（猜拳/玩游戏）——TA 主动找你的消息按概率变成邀请：
     // 发一条邀请提示（带主动爱心标识）并打开对应半框（猜拳 / Pong / 贪吃蛇随机），
     // 取代普通主动消息；仅聊天页可见时触发（半框需要用户交互，后台触发会盖住别的页面）。
-    // 概率独立于主动发送概率（as-prob 命中后再次按邀请概率掷），默认 15%/10%。
+    // 概率独立于主动发送概率（as-prob 命中后再次按邀请概率掷），默认 8%/5%。
     if (tryActiveInvite(c)) return;
     // v3.9.x：TA 主动查岗——按概率发一张查岗问题卡（占用本轮主动消息，回 true 直接返回；
     // 概率/冷却/开关由 ck-question.js 判定，需开启「主动发送」与「TA 主动查岗」）
@@ -3876,7 +3882,7 @@ function partialRetractMsg(msgEl, side) {
         const h = cur[parseInt(b2.dataset.hi, 10)];
         if (h && Array.isArray(h.cards)) {
           const sr = document.getElementById('div-chat-result');
-          if (sr) sr.innerHTML = chatDivineResultHtml(h.cards, h.mode, h.question, h.summary || '');
+          if (sr) { sr.innerHTML = chatDivineResultHtml(h.cards, h.mode, h.question, h.summary || ''); bindChatCopy(sr, h.cards, h.mode, h.question, h.summary || ''); }
         }
       }));
       listEl.querySelectorAll('.div-chat-hist-del').forEach(b2 => b2.addEventListener('click', (e) => {
@@ -3907,7 +3913,20 @@ function partialRetractMsg(msgEl, side) {
       html += '</div>';
       if (summary) html += '<div class="div-summary">' + esc(summary) + '</div>';
       if (question) html += '<div class="div-card-meaning" style="opacity:.6;text-align:center;margin-top:8px">问：' + esc(question) + '</div>';
+      // v3.9.x：聊天半框结果下方「点击复制文字」——复制完整结果文字
+      html += '<div class="div-result-actions"><button class="div-copy-btn" id="div-chat-copy-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-3px;margin-right:6px"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>点击复制文字</button></div>';
       return html;
+    }
+    // v3.9.x：给聊天半框结果区绑定「点击复制文字」（复用 divination.js 复制的完整结果文字）
+    function bindChatCopy(el, cards, mode, question, summary) {
+      const b = el && el.querySelector && el.querySelector('#div-chat-copy-btn');
+      if (!b) return;
+      b.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (window.divineCopyResultText && window.divineBuildResultText) {
+          window.divineCopyResultText(window.divineBuildResultText(mode, cards, summary, question));
+        }
+      });
     }
     // v3.7.x：自动发送开关（每个联系人独立）
     const chatAuto = document.getElementById('div-chat-auto-send');
@@ -3916,6 +3935,19 @@ function partialRetractMsg(msgEl, side) {
         if (window.divineAutoSet) window.divineAutoSet(chatAuto.checked);
       });
     }
+    // v3.9.x：问题输入框右侧「✕ 一键清空」（contenteditable ghost 兼容，与桌面页一致）
+    chatDivineBody.querySelectorAll('.dec-inp-clear').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const ta = document.getElementById(btn.dataset.clear);
+        if (!ta) return;
+        const box = ta.__ceBox;
+        if (box) box.textContent = '';
+        else ta.value = '';
+        ta.focus();
+        toast('已清空');
+      });
+    });
     // v3.7.x：历史记录展开/收起 + 清空
     const histToggle = document.getElementById('div-chat-hist-toggle');
     if (histToggle) {
@@ -3976,6 +4008,7 @@ function partialRetractMsg(msgEl, side) {
             divDraw.textContent = '重新抽牌';
             const summary = (window.divineBuildSummary && window.divineBuildSummary(cards, snapMode, question)) || '';
             r.innerHTML = chatDivineResultHtml(cards, snapMode, question, summary);
+            bindChatCopy(r, cards, snapMode, question, summary);
             // v3.7.x：自动发送开关——开启后抽牌完成自动把结果发到聊天
             // 置于历史保存之前执行：发送不依赖历史渲染结果，互不阻塞
             if (window.divineAutoGet && window.divineAutoGet() && window.divineSendResult) {
@@ -4854,7 +4887,9 @@ function partialRetractMsg(msgEl, side) {
           if (fav.some(f => f.side === rec.side && f.text === rec.text)) {
             toast('已收藏过这条消息');
           } else {
-            fav.push({ side: rec.side, text: rec.text, type: rec.type || 'text', ts: rec.ts || Date.now(), by: 'me', mood: (rec.mood || []).slice() });
+            // v3.10.x：组合消息（文字+图片+表情包同一条气泡）一起收藏——保存 parts，
+            //   渲染时按组合消息还原整条气泡，不再只显示 text 或单张图
+            fav.push({ side: rec.side, text: rec.text, type: rec.type || 'text', ts: rec.ts || Date.now(), by: 'me', mood: (rec.mood || []).slice(), parts: rec.parts && rec.parts.length ? rec.parts.map(p => ({ k: p.k, v: p.v, sub: p.sub })) : undefined });
             saveFav(fav);
             toast('已收藏到我的收藏');
           }
@@ -4917,8 +4952,11 @@ function partialRetractMsg(msgEl, side) {
   let favTab = 'mine'; // mine=我的收藏 ta=联系人的收藏
   let favKind = 'all'; // 收藏分类筛选：all=全部 msg=聊天消息 card=互动卡片 mail=信件 feed=朋友圈
   const FAV_KINDS = [
-    { k: 'all', label: '全部' }, { k: 'msg', label: '聊天消息' },
-    { k: 'card', label: '互动卡片' }, { k: 'mail', label: '信件' }, { k: 'feed', label: '朋友圈' }
+    { k: 'all', label: '全部', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>' },
+    { k: 'msg', label: '聊天', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>' },
+    { k: 'card', label: '互动', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/><path d="M7 14h4"/></svg>' },
+    { k: 'mail', label: '信件', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>' },
+    { k: 'feed', label: '朋友圈', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3 19c0-3 3-5 6-5s6 2 6 5"/><circle cx="17" cy="9.5" r="2.2"/><path d="M14.5 19c0-2 2-3.5 4-3.5s2.5 1.5 2.5 3.5"/></svg>' }
   ];
   function renderFav() {    if (!favList) return;
     const fav = getFav();
@@ -4942,9 +4980,9 @@ function partialRetractMsg(msgEl, side) {
       kindTabsEl.querySelectorAll('.fav-tab').forEach(t => {
         const k = t.dataset.kind;
         t.classList.toggle('sel', k === favKind);
-        const o = FAV_KINDS.find(x => x.k === k);
         const n = counts[k] || 0;
-        t.textContent = o ? (o.label + (n ? ' ' + n : '')) : '';
+        const cnt = t.querySelector('.fav-tab-cnt');
+        if (cnt) cnt.textContent = n > 0 ? String(n) : '';
       });
     }
     // 按分类过滤
@@ -5006,9 +5044,10 @@ function partialRetractMsg(msgEl, side) {
         m.innerHTML = html + side;
         fillAvatar(m.querySelector('.msg-av'), 'cs-avatar-user');
       } else if (kind === 'mail') {
-        // 信箱回信收藏
+        // 信箱收藏：来信 / 回信（mailType 区分；旧数据无 mailType 视为回信）
+        const tag = f.mailType === 'received' ? '信箱来信' : '信箱回信';
         let html = '<div class="fav-item-card">' +
-          '<span class="fav-item-tag">信箱回信' + (f.title ? ' · 来信《' + escTxt(f.title) + '》' : '') + '</span>' +
+          '<span class="fav-item-tag">' + tag + (f.title ? ' · 《' + escTxt(f.title) + '》' : '') + '</span>' +
           '<div class="fav-item-body">' + favTextHtml(f.text) + '</div>' +
           '</div>';
         m.innerHTML = html + side;
@@ -5028,13 +5067,35 @@ function partialRetractMsg(msgEl, side) {
           ? '<div class="msg-bubble"></div>' + side
           : side + '<div class="msg-bubble"></div>';
         const b = m.querySelector('.msg-bubble');
-        // 图片/表情：按类型或按 dataURL 内容识别（兼容旧数据收藏时 type 误存为 text 的乱码）
-        const isImg = f.type === 'sticker' || f.type === 'image' || (typeof f.text === 'string' && f.text.indexOf('data:') === 0);
-        if (isImg) {
-          b.style.padding = '6px';
-          b.innerHTML = '<img class="msg-img" src="' + f.text + '" alt="表情">';
+        if (f.parts && f.parts.length) {
+          // v3.10.x：组合消息收藏——文字 + 图片/表情同一气泡内一起显示（与聊天气泡渲染一致）
+          const imgs = f.parts.filter(p => p.k === 'img');
+          const textPart = f.parts.filter(p => p.k === 'text').map(p => p.v).join(' ');
+          let inner = '';
+          if (imgs.length) {
+            inner += '<div class="msg-parts-imgs' + (imgs.length > 1 ? ' multi' : '') + '">' +
+              imgs.map(p => {
+                const isSticker = p.sub === 'sticker';
+                return '<img class="msg-img' + (isSticker ? ' msg-img-sm' : ' msg-img-big') + '" src="' + attrEsc(p.v) + '" alt="' + (isSticker ? '表情' : '图片') + '" loading="lazy" decoding="async">';
+              }).join('') + '</div>';
+          }
+          if (textPart) inner += '<span style="opacity:.85;word-break:break-word">' + escTxtBr(textPart) + '</span>';
+          b.innerHTML = inner;
+          b.querySelectorAll('.msg-img-big').forEach(img => {
+            img.addEventListener('click', (e) => {
+              e.stopPropagation();
+              if (window.viewChatImage) window.viewChatImage(img.src);
+            });
+          });
         } else {
-          b.innerHTML = '<span style="opacity:.85">' + f.text + '</span>';
+          // 图片/表情：按类型或按 dataURL 内容识别（兼容旧数据收藏时 type 误存为 text 的乱码）
+          const isImg = f.type === 'sticker' || f.type === 'image' || (typeof f.text === 'string' && f.text.indexOf('data:') === 0);
+          if (isImg) {
+            b.style.padding = '6px';
+            b.innerHTML = '<img class="msg-img" src="' + f.text + '" alt="表情">';
+          } else {
+            b.innerHTML = '<span style="opacity:.85">' + escTxtBr(f.text) + '</span>';
+          }
         }
         // 收藏消息的情绪字卡
         if (f.mood && f.mood.length) {
@@ -5109,7 +5170,7 @@ function partialRetractMsg(msgEl, side) {
   const favKindTabs = document.createElement('div');
   favKindTabs.className = 'fav-tabs fav-kind-row';
   favKindTabs.id = 'fav-kind-tabs';
-  favKindTabs.innerHTML = FAV_KINDS.map(o => '<button class="fav-tab" data-kind="' + o.k + '">' + o.label + '</button>').join('');
+  favKindTabs.innerHTML = FAV_KINDS.map(o => '<button class="fav-tab" data-kind="' + o.k + '">' + o.icon + '<span class="fav-tab-label">' + o.label + '</span><span class="fav-tab-cnt"></span></button>').join('');
   if (favTabs && favTabs.parentNode) favTabs.parentNode.insertBefore(favKindTabs, favTabs.nextSibling);
   favKindTabs.addEventListener('click', (e) => {
     const tb = e.target.closest('.fav-tab');

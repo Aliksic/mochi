@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=overlays-content">
 <title>Mochi 字卡传讯</title>
 <meta name="description" content="情侣专属的摸鱼字卡聊天模拟器">
 <meta name="theme-color" content="#111111">
@@ -1003,17 +1003,10 @@ touch-action:pan-y;
 .desk-msg-name { font-size:12px; font-weight:700; color:var(--ink); }
 .desk-msg-text { font-size:12px; color:var(--muted); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .desk-msg[hidden] { display:none; }
-@keyframes desk-jiggle {
-0%,100% { transform: rotate(-2.2deg); }
-50% { transform: rotate(2.2deg); }
-}
-.desk-move-mode.decor-on .app:not(.desk-dragging),
-.desk-move-mode.decor-on [data-desk-widget]:not(.app-grid):not(.desk-dragging) {
-animation: desk-jiggle .3s ease-in-out infinite;
-will-change: transform;
-}
 .desk-move-mode #desktop-pages,
 .desk-move-mode .page-slide { touch-action: pan-y; -webkit-touch-callout: none; }
+.desk-move-mode .app,
+.desk-move-mode [data-desk-widget]:not(.app-grid) { touch-action: none; cursor: grab; }
 .desk-dragging { opacity: .22 !important; animation: none !important; }
 .desk-drag-clone {
 position: fixed; z-index: 9999; pointer-events: none;
@@ -2473,19 +2466,23 @@ cursor:pointer; font-family:inherit; -webkit-tap-highlight-color:transparent;
 .mem-add-cancel { border:1px solid rgba(0,0,0,.12); background:rgba(255,255,255,.92); color:#666; }
 .mem-add-ok { border:none; background:var(--ink); color:#fff; }
 .fav-tabs {
-display:flex; gap:8px; padding:4px 18px 12px; flex-shrink:0;
+display:flex; gap:7px; padding:4px 18px 8px; flex-shrink:0;
 overflow-x:auto; scrollbar-width:none; -ms-overflow-style:none;
 -webkit-overflow-scrolling:touch;
 }
 .fav-tabs::-webkit-scrollbar { display:none; }
 .fav-tab {
-flex:0 0 auto; white-space:nowrap; padding:12px 14px; font-size:13px; font-weight:600;
+display:inline-flex; align-items:center; gap:4px;
+flex:0 0 auto; white-space:nowrap; padding:8px 11px; font-size:13px; font-weight:600;
 border:1px solid rgba(0,0,0,.1); background:rgba(255,255,255,.92);
 color:#666; border-radius:12px; cursor:pointer; font-family:inherit;
 -webkit-tap-highlight-color:transparent;
 }
+.fav-tab svg { width:14px; height:14px; flex-shrink:0; }
+.fav-tab-cnt { font-size:11px; font-weight:600; opacity:.55; }
 .fav-tab.sel { background:var(--ink); color:#fff; border-color:var(--ink); }
-.fav-tabs.fav-kind-row { padding-top:0; padding-bottom:12px; }
+.fav-tab.sel .fav-tab-cnt { opacity:.9; }
+.fav-tabs.fav-kind-row { padding-top:0; padding-bottom:8px; }
 .fav-body { padding:6px 18px; }
 .fs-stat-box { padding:4px 14px; }
 .fs-stat-head {
@@ -3845,6 +3842,7 @@ cursor:pointer; padding:0; font-family:inherit;
 -webkit-tap-highlight-color:transparent;
 }
 .dec-inp-clear:active { background:rgba(0,0,0,.14); color:var(--ink); }
+.dec-inp-wrap .div-input { padding-right:38px; }
 .dec-inp-wrap .ce-box { padding-right:38px; }
 .dc-result {
 margin-top:12px; padding:14px; border-radius:12px;
@@ -3976,7 +3974,7 @@ margin-top:4px; object-fit:cover;
 .feed-comment-input {
 flex:1; min-width:0; border:1px solid rgba(0,0,0,.1); border-radius:99px;
 padding:9px 14px; font-size:13px; font-family:inherit; outline:none; background:#f6f6f6;
-}
+resize:none; }
 .feed-comment-input:focus { border-color:var(--ink); background:#fff; }
 .feed-comment-send {
 flex-shrink:0; border:none; border-radius:99px; padding:0 18px;
@@ -4118,23 +4116,27 @@ border-radius:12px;
 #chat-snake-panel { height:auto; max-height:86%; }
 #chat-snake-panel .poke-card-scroll { min-height:0; max-height:none; }
 #chat-snake-panel .poke-card-head { display:flex; align-items:center; justify-content:space-between; gap:8px; }
-.snake-head-actions { display:flex; align-items:center; gap:6px; }
+.snake-head-actions { display:flex; align-items:center; gap:5px; }
+.snake-toggle { font-size:12px; font-weight:700; }
+.snake-toggle.on { background:var(--ink); color:#fff; }
 .snake-diff { font-size:13px; padding:4px 8px; border-radius:8px; border:1px solid rgba(0,0,0,.12); background:rgba(255,255,255,.6); color:var(--ink); outline:none; font-family:inherit; }
 .snake-icon-btn { width:32px; height:32px; border-radius:50%; border:none; background:rgba(0,0,0,.06); font-size:15px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; line-height:1; color:var(--ink); }
 .snake-icon-btn:active { transform:scale(.92); }
-.snake-score { text-align:center; font-size:13px; font-weight:700; color:var(--ink); padding:4px 0 8px; letter-spacing:.5px; }
+.snake-score { text-align:center; font-size:13px; font-weight:700; color:var(--ink); padding:4px 0 2px; letter-spacing:.5px; }
+.snake-best { text-align:center; font-size:11px; color:var(--muted); padding:0 0 6px; }
 .snake-canvas { display:block; width:min(300px,86vw); height:min(300px,86vw); margin:0 auto; background:#f6f6f8; border-radius:12px; touch-action:none; }
 .snake-hint { text-align:center; font-size:12px; color:var(--muted); padding:8px 0 4px; }
 .snake-result { text-align:center; padding:8px 0 4px; }
+.snake-res-icon { font-size:34px; line-height:1; margin-bottom:4px; }
 .snake-res-title { font-size:16px; font-weight:700; color:var(--ink); margin-bottom:8px; }
 .snake-res-row { display:flex; justify-content:space-between; font-size:12px; color:var(--ink); padding:3px 12px; }
 .snake-res-time { font-size:11px; color:var(--muted); margin-top:6px; }
 .snake-controls { display:flex; gap:10px; justify-content:center; padding:10px 0 4px; }
 .snake-btn { flex:1; max-width:140px; padding:10px; border:none; border-radius:12px; background:var(--ink); color:#fff; font-size:14px; font-weight:700; cursor:pointer; font-family:inherit; -webkit-tap-highlight-color:transparent; }
 .snake-btn:active { opacity:.85; }
-.snake-dpad { display:grid; grid-template-columns:repeat(3,64px); grid-template-rows:repeat(2,56px); gap:6px; justify-content:center; padding:6px 0 2px; }
-.snake-dp { border:1px solid rgba(0,0,0,.12); border-radius:12px; background:rgba(255,255,255,.92); color:var(--ink); font-size:20px; cursor:pointer; font-family:inherit; -webkit-tap-highlight-color:transparent; }
-.snake-dp:active { background:rgba(0,0,0,.06); }
+.snake-dpad { display:grid; grid-template-columns:repeat(3,72px); grid-template-rows:repeat(2,64px); gap:8px; justify-content:center; padding:8px 0 2px; }
+.snake-dp { border:1px solid rgba(0,0,0,.12); border-radius:14px; background:rgba(255,255,255,.92); color:var(--ink); font-size:22px; cursor:pointer; font-family:inherit; -webkit-tap-highlight-color:transparent; transition:transform .08s, background .08s; }
+.snake-dp:active { background:rgba(0,0,0,.1); transform:scale(.9); }
 .snake-dp[data-dir="up"] { grid-column:2; grid-row:1; }
 .snake-dp[data-dir="left"] { grid-column:1; grid-row:2; }
 .snake-dp[data-dir="down"] { grid-column:2; grid-row:2; }
@@ -4142,9 +4144,11 @@ border-radius:12px;
 #chat-snake-panel.snake-fs { position:fixed; inset:0; z-index:9999; border-radius:0; max-height:none; height:100vh; background:#fff; }
 #chat-snake-panel.snake-fs .poke-card-head { border-bottom-color:rgba(0,0,0,.08); }
 #chat-snake-panel.snake-fs .poke-card-scroll { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:0 16px; }
-#chat-snake-panel.snake-fs .snake-canvas { width:min(440px,92vw); height:min(440px,92vw); }
-#chat-snake-panel.snake-fs .snake-dpad { grid-template-columns:repeat(3,76px); grid-template-rows:repeat(2,68px); }
-#chat-snake-panel.snake-fs .snake-dp { font-size:24px; }
+#chat-snake-panel.snake-fs .snake-canvas { width:min(480px,92vw); height:min(480px,92vw); }
+#chat-snake-panel.snake-fs .snake-dpad { grid-template-columns:repeat(3,86px); grid-template-rows:repeat(2,78px); }
+#chat-snake-panel.snake-fs .snake-dp { font-size:28px; }
+.snake-res-pop { animation: snakeResPop .32s cubic-bezier(.2,.9,.3,1.2) both; }
+@keyframes snakeResPop { from { opacity:0; transform:scale(.7); } to { opacity:1; transform:scale(1); } }
 .msg-snake-card { min-width:220px; }
 .msg-snake-title { font-size:13px; font-weight:700; color:var(--ink); padding-bottom:8px; border-bottom:1px dashed rgba(0,0,0,.1); margin-bottom:8px; }
 .msg-snake-row { display:flex; gap:10px; justify-content:space-between; font-size:12px; color:var(--ink); padding:3px 0; }
@@ -4798,7 +4802,15 @@ user-select:none;
 .garden-plot:active { border-color:rgba(0,0,0,.18); box-shadow:0 2px 10px rgba(0,0,0,.08); }
 .garden-plot.empty { border-style:dashed; border-color:rgba(0,0,0,.12); background:rgba(255,255,255,.7); }
 .garden-plot.watered { border-color:rgba(76,175,128,.35); }
-.garden-plant-emoji { font-size:24px; line-height:1; }
+.garden-plant-emoji { font-size:24px; line-height:1; transform-origin: 50% 80%; }
+.garden-plot.bloomed .garden-plant-emoji { animation: gardenSway 3.2s ease-in-out infinite; }
+.garden-plot.wilted .garden-plant-emoji { filter: grayscale(.55) brightness(.9); }
+.garden-plot.wilted { border-color: rgba(139,90,43,.45); background: rgba(245,235,220,.6); }
+.garden-plant-stage.wilted-stage { color:#a1887f; font-weight:600; }
+@keyframes gardenPop { 0% { transform: scale(.6); opacity:0; } 60% { transform: scale(1.12); opacity:1; } 100% { transform: scale(1); opacity:1; } }
+@keyframes gardenBloom { 0% { transform: scale(.7) rotate(-12deg); opacity:0; } 50% { transform: scale(1.25) rotate(8deg); opacity:1; } 100% { transform: scale(1) rotate(0); opacity:1; } }
+@keyframes gardenSway { 0%,100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
+@keyframes gardenWilt { 0% { transform: scale(1.1) rotate(0); } 100% { transform: scale(.95) rotate(-6deg); } }
 .garden-plant-name { font-size:10px; color:var(--ink); font-weight:600; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; padding:0 4px; box-sizing:border-box; }
 .garden-plant-stage { font-size:9px; color:var(--muted); margin-top:0; }
 .garden-plot-empty-txt { font-size:9px; color:var(--muted); opacity:.5; }
@@ -4987,6 +4999,116 @@ color:#7cb342; font-weight:600; max-width:50%;
 white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 opacity:.85;
 }
+.garden-scroll { position: relative; }
+[data-night="1"] .garden-scroll { background: linear-gradient(180deg, rgba(20,28,50,.88), rgba(40,30,70,.72)); }
+[data-night="1"] .garden-plot { background: rgba(50,55,80,.6); border-color: rgba(180,190,220,.22); }
+[data-night="1"] .garden-plant-name { color: #c5cae9; }
+[data-night="1"] .garden-plant-stage { color: #9fa8da; }
+[data-night="1"] .garden-scroll::after {
+content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 0;
+background: radial-gradient(circle at 15% 20%, rgba(255,235,150,.75) 0 2px, transparent 3px),
+radial-gradient(circle at 82% 38%, rgba(255,235,150,.65) 0 2px, transparent 3px),
+radial-gradient(circle at 48% 72%, rgba(255,235,150,.55) 0 1px, transparent 2px),
+radial-gradient(circle at 30% 85%, rgba(255,235,150,.5) 0 1px, transparent 2px);
+animation: gardenFirefly 4s ease-in-out infinite;
+}
+@keyframes gardenFirefly { 0%,100% { opacity: .25; } 50% { opacity: 1; } }
+[data-season="0"] .garden-plot { border-color: rgba(129,199,132,.32); }
+[data-season="1"] .garden-plot { border-color: rgba(100,181,246,.32); }
+[data-season="2"] .garden-plot { border-color: rgba(255,183,77,.32); }
+[data-season="3"] .garden-plot { border-color: rgba(189,223,253,.45); }
+.garden-plot.rare { box-shadow: 0 0 14px rgba(255,215,0,.45), inset 0 0 8px rgba(255,235,150,.2); }
+.garden-plot.rare .garden-plant-emoji { filter: drop-shadow(0 0 6px rgba(255,215,0,.7)); }
+.garden-plot.rare.bloomed .garden-plant-emoji { animation: gardenSway 3.2s ease-in-out infinite, gardenRareGlow 2s ease-in-out infinite; }
+@keyframes gardenRareGlow { 0%,100% { filter: drop-shadow(0 0 5px rgba(255,215,0,.5)); } 50% { filter: drop-shadow(0 0 10px rgba(255,215,0,.9)); } }
+.garden-dex-sub { font-size: 12px; font-weight: 700; margin: 10px 0 6px; color: #f9a825; }
+.garden-dex-grid.rare-grid .garden-dex-item.rare { background: linear-gradient(90deg, rgba(255,215,0,.12), rgba(255,149,0,.08)); border: 1px solid rgba(255,215,0,.3); }
+.garden-dex-item.rare .dex-emoji { filter: drop-shadow(0 0 3px rgba(255,215,0,.6)); }
+.garden-daily {
+margin: 0 18px 10px; padding: 10px 14px; border-radius: 14px;
+background: linear-gradient(90deg, rgba(255,193,7,.12), rgba(255,152,0,.08));
+}
+.garden-daily-title { font-size: 12px; font-weight: 700; color: var(--ink); margin-bottom: 6px; }
+.garden-daily-tasks { display: flex; gap: 8px; }
+.garden-daily-task {
+flex: 1; display: flex; align-items: center; gap: 4px; justify-content: center;
+padding: 5px 4px; border-radius: 10px; background: rgba(255,255,255,.6);
+font-size: 11px; color: var(--muted);
+}
+.garden-daily-task.done { background: rgba(76,175,80,.2); color: #2e7d32; font-weight: 600; }
+.dt-emoji { font-size: 14px; }
+.garden-achv { margin: 0 18px 18px; padding: 14px 16px; border-radius: 18px; background: rgba(255,255,255,.6); }
+.garden-achv-title { font-size: 14px; font-weight: 700; margin-bottom: 10px; }
+.garden-achv-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.garden-achv-item {
+display: flex; align-items: center; gap: 6px; padding: 8px 6px;
+border-radius: 12px; background: rgba(0,0,0,.03); font-size: 11px;
+opacity: .5;
+}
+.garden-achv-item.done { opacity: 1; background: linear-gradient(90deg, rgba(255,215,0,.14), rgba(255,149,0,.08)); }
+.achv-emoji { font-size: 18px; }
+.achv-name { color: var(--ink); font-weight: 600; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.garden-tabs {
+display: flex; gap: 4px; padding: 0 18px 10px;
+overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none;
+}
+.garden-tabs::-webkit-scrollbar { display: none; }
+.garden-tab {
+flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 2px;
+padding: 6px 2px; border-radius: 12px; border: none;
+background: rgba(0,0,0,.04); cursor: pointer; font-family: inherit; color: var(--ink);
+transition: background .15s ease, color .15s ease; -webkit-tap-highlight-color: transparent;
+}
+.garden-tab.active { background: linear-gradient(90deg, #66bb6a, #43a047); color: #fff; }
+.gt-emoji { font-size: 15px; }
+.gt-name { font-size: 10px; font-weight: 600; }
+.garden-panel { display: none; }
+.garden-panel.active { display: block; }
+.garden-craft { margin: 0 18px 18px; padding: 14px 16px; border-radius: 18px; background: rgba(255,255,255,.6); }
+.garden-craft-title { font-size: 14px; font-weight: 700; margin-bottom: 10px; }
+.garden-craft-list { display: flex; flex-direction: column; gap: 10px; }
+.garden-recipe {
+padding: 12px; border-radius: 14px; background: rgba(0,0,0,.03);
+border: 1px solid transparent;
+}
+.garden-recipe.can { background: linear-gradient(90deg, rgba(232,90,143,.08), rgba(255,193,7,.06)); border-color: rgba(232,90,143,.25); }
+.garden-recipe.made { border-color: rgba(76,175,80,.3); }
+.recipe-head { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+.recipe-emoji { font-size: 18px; }
+.recipe-name { font-size: 13px; font-weight: 700; color: var(--ink); }
+.recipe-made { font-size: 10px; color: #4caf50; margin-left: auto; }
+.recipe-need { font-size: 11px; color: var(--muted); margin-bottom: 4px; letter-spacing: 1px; }
+.recipe-wish { font-size: 11px; color: var(--ink); opacity: .8; line-height: 1.5; margin-bottom: 8px; }
+.recipe-btn {
+display: block; width: 100%; padding: 7px; border-radius: 10px;
+border: none; background: #e85a8f; color: #fff; font-size: 12px; font-weight: 600;
+cursor: pointer; font-family: inherit;
+}
+.recipe-btn:active { opacity: .8; }
+.garden-report { margin: 0 18px 18px; }
+.garden-report-card {
+padding: 18px 16px; border-radius: 18px;
+background: linear-gradient(135deg, rgba(102,187,67,.12), rgba(255,193,7,.1));
+text-align: center;
+}
+.report-year { font-size: 18px; font-weight: 700; color: var(--ink); margin-bottom: 4px; }
+.report-lv { font-size: 12px; color: var(--muted); margin-bottom: 14px; }
+.report-stats { display: flex; justify-content: space-around; margin-bottom: 14px; }
+.rs-item { font-size: 11px; color: var(--muted); }
+.rs-item b { display: block; font-size: 20px; color: var(--ink); font-weight: 700; }
+.report-row {
+display: flex; justify-content: space-between; align-items: center;
+padding: 8px 12px; margin-bottom: 4px; border-radius: 10px;
+background: rgba(255,255,255,.5); font-size: 12px;
+}
+.report-row span { color: var(--muted); }
+.report-row b { color: var(--ink); font-weight: 600; }
+.report-share-btn {
+display: block; width: 100%; margin-top: 12px; padding: 10px; border-radius: 14px;
+border: none; background: #43a047; color: #fff; font-size: 13px; font-weight: 600;
+cursor: pointer; font-family: inherit;
+}
+.report-share-btn:active { opacity: .8; }
 </style>
 </head>
 <body>
@@ -5018,7 +5140,7 @@ opacity:.85;
       </div>
       <div class="splash-dots"><i></i><i></i><i></i></div>
       <div class="splash-brand">小红书@言序（1842523578）</div>
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787469936827">Mochi 字卡传讯 v3.6.208 · 部署于 2026-08-23 15:25</div>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787476754999">Mochi 字卡传讯 v3.6.209 · 部署于 2026-08-23 17:19</div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
       <div class="splash-loading" id="splash-loading">正在加载数据…</div>
@@ -5069,6 +5191,7 @@ opacity:.85;
     <div class="page" id="page-phone">
       <div class="decor-bar" id="decor-bar" hidden>
         <span>装修模式 · 点图标换图 · 点卡片设背景</span>
+        <button class="decor-add" id="decor-edit-layout">编辑布局</button>
         <button class="decor-add" id="decor-add-widget">+ 添加卡片</button>
         <button class="decor-add" id="decor-restore-icon">恢复图标</button>
         <button class="decor-done" id="decor-done">完成</button>
@@ -5863,7 +5986,7 @@ opacity:.85;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.6.208</div>
+      <div class="ver">Mochi 字卡传讯 v3.6.209</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -6933,7 +7056,7 @@ opacity:.85;
         </div>
 
         <div class="div-card glass">
-          <input type="text" class="div-input" id="div-question" placeholder="写下你的问题（可选）">
+          <div class="dec-inp-wrap"><input type="text" class="div-input" id="div-question" placeholder="写下你的问题（可选）"><button class="dec-inp-clear" data-clear="div-question" aria-label="清空" title="清空">✕</button></div>
           <label class="div-switch-row">
             <span class="div-switch-t">抽完自动发到聊天</span>
             <span class="div-switch"><input type="checkbox" id="div-auto-send"><span class="div-switch-knob"></span></span>
@@ -7565,7 +7688,7 @@ opacity:.85;
             <span class="div-mode sel" data-chatcount="3">3 张</span>
             <span class="div-mode" data-chatcount="1">1 张</span>
           </div>
-          <input type="text" class="tc-input" id="div-chat-question" placeholder="心中默念的问题（可选）" style="margin:8px 0" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+          <div class="dec-inp-wrap"><input type="text" class="tc-input" id="div-chat-question" placeholder="心中默念的问题（可选）" style="margin:8px 0" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"><button class="dec-inp-clear" data-clear="div-chat-question" aria-label="清空" title="清空">✕</button></div>
           <label class="div-switch-row div-chat-switch">
             <span class="div-switch-t">自动发送到聊天</span>
             <span class="div-switch"><input type="checkbox" id="div-chat-auto-send"><span class="div-switch-knob"></span></span>
@@ -7638,6 +7761,8 @@ opacity:.85;
               <option value="normal" selected>普通</option>
               <option value="hard">快</option>
             </select>
+            <button class="snake-icon-btn snake-toggle" id="snake-wall" title="穿墙：撞墙从对面出来">墙</button>
+            <button class="snake-icon-btn snake-toggle" id="snake-safe" title="安全：碰自己身不死">安</button>
             <button class="snake-icon-btn" id="snake-pause" title="暂停/继续">⏸</button>
             <button class="snake-icon-btn" id="snake-fs" title="全屏">⛶</button>
             <button class="poke-card-close" id="chat-snake-close">✕</button>
@@ -7645,6 +7770,7 @@ opacity:.85;
         </div>
         <div class="poke-card-scroll">
           <div class="snake-score" id="snake-score">胜 0 · 负 0 · 平 0</div>
+          <div class="snake-best" id="snake-best" hidden></div>
           <canvas class="snake-canvas" id="snake-canvas" width="300" height="300"></canvas>
           <div class="snake-hint" id="snake-hint">点开始 · 滑动控制方向</div>
           <div class="snake-result" id="snake-result" hidden></div>
@@ -7672,11 +7798,12 @@ opacity:.85;
             <div class="pong-bar">
               <div class="pong-bar-left">
                 <select class="pong-diff" id="pong-diff">
-                  <option value="easy">简单</option>
-                  <option value="normal" selected>普通</option>
+                  <option value="casual">休闲</option>
+                  <option value="easy" selected>简单</option>
+                  <option value="normal">普通</option>
                   <option value="hard">困难</option>
                 </select>
-                <span>先得 5 分获胜</span>
+                <span id="pong-win-tip">先得 5 分获胜</span>
               </div>
               <div class="pong-bar-right">
                 <button class="pong-icon-btn" id="pong-pause" title="暂停/继续">⏸</button>
@@ -12012,9 +12139,11 @@ inMoveMode = true;
 enterDecor();
 if (phone) phone.classList.add('desk-move-mode');
 const span = document.querySelector('#decor-bar span');
-if (span) span.textContent = '移动模式 · 拖动换位 · 点图标换图 · 点卡片设背景 · 完成退出';
+if (span) span.textContent = '移动模式 · 短按图标拖动换位 · 完成退出';
 if (navigator.vibrate) try { navigator.vibrate(20); } catch (e) {}
 };
+const editLayoutBtn = document.getElementById('decor-edit-layout');
+if (editLayoutBtn) editLayoutBtn.addEventListener('click', enterMoveMode);
 const resetMoveMode = () => {
 inMoveMode = false;
 dragging = false;
@@ -12025,6 +12154,11 @@ document.querySelectorAll('.desk-dragging').forEach(n => n.classList.remove('des
 document.addEventListener('decor-exited', resetMoveMode);
 const _tabbar = document.querySelector('.tabbar');
 if (_tabbar) _tabbar.addEventListener('click', resetMoveMode);
+pagesBox.addEventListener('touchstart', (e) => {
+if (e.target.closest('.desk-lib, .desk-page-add, .decor-bar')) return;
+if (!e.target.closest('[data-desk-widget], .app')) return;
+e.preventDefault();
+}, { capture: true, passive: false });
 pagesBox.addEventListener('pointerdown', (e) => {
 if (e.button !== 0 && e.pointerType === 'mouse') return;
 if (e.target.closest('.desk-lib, .desk-page-add, .decor-bar')) return;
@@ -12032,9 +12166,10 @@ const target = e.target.closest('[data-desk-widget], .app');
 if (!target) return;
 startX = e.clientX; startY = e.clientY;
 const t = target;
+if (inMoveMode) { startDeskDrag(e, t); return; }
 pressTimer = setTimeout(() => {
 pressTimer = null;
-if (!inMoveMode) enterMoveMode();
+enterMoveMode();
 startDeskDrag(e, t);
 }, MOVE_DELAY);
 });
@@ -14833,7 +14968,12 @@ if (lastMineText && Math.random() * 100 < _favProbMsg) {
 const fav = getFav();
 if (!fav.some(f => f.side === 'out' && f.text === lastMineText)) {
 const favType = lastMineText.indexOf('data:') === 0 ? 'image' : 'text';
-fav.push({ side: 'out', text: lastMineText, type: favType, ts: Date.now(), by: 'ta' });
+let favParts = undefined;
+for (let i = msgs.length - 1; i >= 0; i--) {
+const mm = msgs[i];
+if (mm && mm.side === 'out' && mm.text === lastMineText && mm.parts && mm.parts.length) { favParts = mm.parts.map(p => ({ k: p.k, v: p.v, sub: p.sub })); break; }
+}
+fav.push({ side: 'out', text: lastMineText, type: favType, ts: Date.now(), by: 'ta', parts: favParts });
 saveFav(fav);
 setTimeout(() => { if (!sameCid()) return; toast('TA 收藏了你的一条消息'); }, 1200);
 }
@@ -15022,7 +15162,7 @@ staticText: staticText
 function tryActiveInvite(c) {
 if (!chatVisible()) return false;
 const name = chatPartnerName();
-if (cfgn(c, 'ai-rps-en', 1) === 1 && hit(cfgn(c, 'ai-rps-prob', 15))) {
+if (cfgn(c, 'ai-rps-en', 1) === 1 && hit(cfgn(c, 'ai-rps-prob', 8))) {
 addIn(name + ' 想和你猜拳，来一局？', { special: 'poke', initiative: true });
 showTyping();
 setTimeout(() => {
@@ -15031,7 +15171,7 @@ openInviteConfirm(name + ' 的猜拳邀请', name + ' 邀请你猜拳，来一�
 }, randInt(700, 1400));
 return true;
 }
-if (cfgn(c, 'ai-game-en', 1) === 1 && hit(cfgn(c, 'ai-game-prob', 10))) {
+if (cfgn(c, 'ai-game-en', 1) === 1 && hit(cfgn(c, 'ai-game-prob', 5))) {
 const isPong = Math.random() < 0.5;
 const gameName = isPong ? 'Pong' : '双人贪吃蛇';
 addIn(name + (isPong ? ' 想和你玩一局 Pong，来吗？' : ' 想和你玩双人贪吃蛇，来吗？'), { special: 'poke', initiative: true });
@@ -16118,7 +16258,7 @@ try { cur = (window.divineHistLoad && window.divineHistLoad()) || []; } catch (e
 const h = cur[parseInt(b2.dataset.hi, 10)];
 if (h && Array.isArray(h.cards)) {
 const sr = document.getElementById('div-chat-result');
-if (sr) sr.innerHTML = chatDivineResultHtml(h.cards, h.mode, h.question, h.summary || '');
+if (sr) { sr.innerHTML = chatDivineResultHtml(h.cards, h.mode, h.question, h.summary || ''); bindChatCopy(sr, h.cards, h.mode, h.question, h.summary || ''); }
 }
 }));
 listEl.querySelectorAll('.div-chat-hist-del').forEach(b2 => b2.addEventListener('click', (e) => {
@@ -16148,7 +16288,18 @@ html += '<div class="div-mini">' +
 html += '</div>';
 if (summary) html += '<div class="div-summary">' + esc(summary) + '</div>';
 if (question) html += '<div class="div-card-meaning" style="opacity:.6;text-align:center;margin-top:8px">问：' + esc(question) + '</div>';
+html += '<div class="div-result-actions"><button class="div-copy-btn" id="div-chat-copy-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-3px;margin-right:6px"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>点击复制文字</button></div>';
 return html;
+}
+function bindChatCopy(el, cards, mode, question, summary) {
+const b = el && el.querySelector && el.querySelector('#div-chat-copy-btn');
+if (!b) return;
+b.addEventListener('click', (e) => {
+e.stopPropagation();
+if (window.divineCopyResultText && window.divineBuildResultText) {
+window.divineCopyResultText(window.divineBuildResultText(mode, cards, summary, question));
+}
+});
 }
 const chatAuto = document.getElementById('div-chat-auto-send');
 if (chatAuto) {
@@ -16156,6 +16307,18 @@ chatAuto.addEventListener('change', () => {
 if (window.divineAutoSet) window.divineAutoSet(chatAuto.checked);
 });
 }
+chatDivineBody.querySelectorAll('.dec-inp-clear').forEach(btn => {
+btn.addEventListener('click', (e) => {
+e.stopPropagation();
+const ta = document.getElementById(btn.dataset.clear);
+if (!ta) return;
+const box = ta.__ceBox;
+if (box) box.textContent = '';
+else ta.value = '';
+ta.focus();
+toast('已清空');
+});
+});
 const histToggle = document.getElementById('div-chat-hist-toggle');
 if (histToggle) {
 histToggle.addEventListener('click', (e) => {
@@ -16211,6 +16374,7 @@ chatDrawCancel = null;
 divDraw.textContent = '重新抽牌';
 const summary = (window.divineBuildSummary && window.divineBuildSummary(cards, snapMode, question)) || '';
 r.innerHTML = chatDivineResultHtml(cards, snapMode, question, summary);
+bindChatCopy(r, cards, snapMode, question, summary);
 if (window.divineAutoGet && window.divineAutoGet() && window.divineSendResult) {
 setTimeout(() => { try { window.divineSendResult(snapMode, cards, summary, question); } catch (err) {} }, 600);
 }
@@ -16966,7 +17130,7 @@ const fav = getFav();
 if (fav.some(f => f.side === rec.side && f.text === rec.text)) {
 toast('已收藏过这条消息');
 } else {
-fav.push({ side: rec.side, text: rec.text, type: rec.type || 'text', ts: rec.ts || Date.now(), by: 'me', mood: (rec.mood || []).slice() });
+fav.push({ side: rec.side, text: rec.text, type: rec.type || 'text', ts: rec.ts || Date.now(), by: 'me', mood: (rec.mood || []).slice(), parts: rec.parts && rec.parts.length ? rec.parts.map(p => ({ k: p.k, v: p.v, sub: p.sub })) : undefined });
 saveFav(fav);
 toast('已收藏到我的收藏');
 }
@@ -17022,8 +17186,11 @@ const favList = document.getElementById('fav-list');
 let favTab = 'mine'; // mine=我的收藏 ta=联系人的收藏
 let favKind = 'all'; // 收藏分类筛选：all=全部 msg=聊天消息 card=互动卡片 mail=信件 feed=朋友圈
 const FAV_KINDS = [
-{ k: 'all', label: '全部' }, { k: 'msg', label: '聊天消息' },
-{ k: 'card', label: '互动卡片' }, { k: 'mail', label: '信件' }, { k: 'feed', label: '朋友圈' }
+{ k: 'all', label: '全部', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>' },
+{ k: 'msg', label: '聊天', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>' },
+{ k: 'card', label: '互动', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/><path d="M7 14h4"/></svg>' },
+{ k: 'mail', label: '信件', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>' },
+{ k: 'feed', label: '朋友圈', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3 19c0-3 3-5 6-5s6 2 6 5"/><circle cx="17" cy="9.5" r="2.2"/><path d="M14.5 19c0-2 2-3.5 4-3.5s2.5 1.5 2.5 3.5"/></svg>' }
 ];
 function renderFav() {    if (!favList) return;
 const fav = getFav();
@@ -17044,9 +17211,9 @@ list.forEach(f => { const k = f.kind || 'msg'; if (k in counts) counts[k]++; });
 kindTabsEl.querySelectorAll('.fav-tab').forEach(t => {
 const k = t.dataset.kind;
 t.classList.toggle('sel', k === favKind);
-const o = FAV_KINDS.find(x => x.k === k);
 const n = counts[k] || 0;
-t.textContent = o ? (o.label + (n ? ' ' + n : '')) : '';
+const cnt = t.querySelector('.fav-tab-cnt');
+if (cnt) cnt.textContent = n > 0 ? String(n) : '';
 });
 }
 const list2 = favKind === 'all' ? list : list.filter(f => (f.kind || 'msg') === favKind);
@@ -17101,8 +17268,9 @@ html += '</div>';
 m.innerHTML = html + side;
 fillAvatar(m.querySelector('.msg-av'), 'cs-avatar-user');
 } else if (kind === 'mail') {
+const tag = f.mailType === 'received' ? '信箱来信' : '信箱回信';
 let html = '<div class="fav-item-card">' +
-'<span class="fav-item-tag">信箱回信' + (f.title ? ' · 来信《' + escTxt(f.title) + '》' : '') + '</span>' +
+'<span class="fav-item-tag">' + tag + (f.title ? ' · 《' + escTxt(f.title) + '》' : '') + '</span>' +
 '<div class="fav-item-body">' + favTextHtml(f.text) + '</div>' +
 '</div>';
 m.innerHTML = html + side;
@@ -17120,12 +17288,33 @@ m.innerHTML = f.side === 'out'
 ? '<div class="msg-bubble"></div>' + side
 : side + '<div class="msg-bubble"></div>';
 const b = m.querySelector('.msg-bubble');
+if (f.parts && f.parts.length) {
+const imgs = f.parts.filter(p => p.k === 'img');
+const textPart = f.parts.filter(p => p.k === 'text').map(p => p.v).join(' ');
+let inner = '';
+if (imgs.length) {
+inner += '<div class="msg-parts-imgs' + (imgs.length > 1 ? ' multi' : '') + '">' +
+imgs.map(p => {
+const isSticker = p.sub === 'sticker';
+return '<img class="msg-img' + (isSticker ? ' msg-img-sm' : ' msg-img-big') + '" src="' + attrEsc(p.v) + '" alt="' + (isSticker ? '表情' : '图片') + '" loading="lazy" decoding="async">';
+}).join('') + '</div>';
+}
+if (textPart) inner += '<span style="opacity:.85;word-break:break-word">' + escTxtBr(textPart) + '</span>';
+b.innerHTML = inner;
+b.querySelectorAll('.msg-img-big').forEach(img => {
+img.addEventListener('click', (e) => {
+e.stopPropagation();
+if (window.viewChatImage) window.viewChatImage(img.src);
+});
+});
+} else {
 const isImg = f.type === 'sticker' || f.type === 'image' || (typeof f.text === 'string' && f.text.indexOf('data:') === 0);
 if (isImg) {
 b.style.padding = '6px';
 b.innerHTML = '<img class="msg-img" src="' + f.text + '" alt="表情">';
 } else {
-b.innerHTML = '<span style="opacity:.85">' + f.text + '</span>';
+b.innerHTML = '<span style="opacity:.85">' + escTxtBr(f.text) + '</span>';
+}
 }
 if (f.mood && f.mood.length) {
 f.mood.forEach(md => {
@@ -17193,7 +17382,7 @@ renderFav();
 const favKindTabs = document.createElement('div');
 favKindTabs.className = 'fav-tabs fav-kind-row';
 favKindTabs.id = 'fav-kind-tabs';
-favKindTabs.innerHTML = FAV_KINDS.map(o => '<button class="fav-tab" data-kind="' + o.k + '">' + o.label + '</button>').join('');
+favKindTabs.innerHTML = FAV_KINDS.map(o => '<button class="fav-tab" data-kind="' + o.k + '">' + o.icon + '<span class="fav-tab-label">' + o.label + '</span><span class="fav-tab-cnt"></span></button>').join('');
 if (favTabs && favTabs.parentNode) favTabs.parentNode.insertBefore(favKindTabs, favTabs.nextSibling);
 favKindTabs.addEventListener('click', (e) => {
 const tb = e.target.closest('.fav-tab');
@@ -18143,6 +18332,7 @@ return '我';
 }
 function myAvatar() {
 try { const p = gcProfileGet('me'); if (p.avatar) return p.avatar; } catch (e) {}
+try { const cs = window.activeStore().get('cs-avatar-user'); if (cs) return cs; } catch (e) {}
 try { return window.activeStore().get('avatar-user') || ''; } catch (e) { return ''; }
 }
 function deskPartnerName(cid) {
@@ -19031,6 +19221,25 @@ poke: [
 voice: []
 };
 const MEDIA_TYPES = { sticker: '表情包', image: '图片', voice: '语音' };
+function audioMimeFromName(name) {
+const ext = (name || '').split('.').pop().toLowerCase();
+const map = {
+mp3: 'audio/mpeg', wav: 'audio/wav', m4a: 'audio/mp4', mp4: 'audio/mp4',
+ogg: 'audio/ogg', ogx: 'application/ogg', aac: 'audio/aac', amr: 'audio/amr',
+flac: 'audio/flac', webm: 'audio/webm', opus: 'audio/ogg'
+};
+return map[ext] || '';
+}
+function normalizeAudioDataURL(dataURL, file) {
+if (!dataURL) return dataURL;
+const m = /^data:([^;,]*);/.exec(dataURL);
+const mime = m ? m[1] : '';
+if (mime && mime.indexOf('audio/') === 0) return dataURL; // 已是有效音频 MIME
+const comma = dataURL.indexOf(',');
+const payload = comma >= 0 ? dataURL.slice(comma + 1) : dataURL;
+const extMime = audioMimeFromName(file && file.name) || (file && file.type) || 'audio/mpeg';
+return 'data:' + extMime + ';base64,' + payload;
+}
 const IMG_TYPES = MEDIA_TYPES;
 function pickFiles(accept, multiple, onFiles) {
 const input = document.createElement('input');
@@ -20466,7 +20675,7 @@ g[1].push(val);
 done++;
 if (done === files.length) finishUpload(done - skipped, skipped);
 };
-if (cur === 'voice') process(reader.result);
+if (cur === 'voice') process(normalizeAudioDataURL(reader.result, f));
 else {
 const isGif = /image\/gif/i.test(f.type || '') || /\.gif$/i.test(f.name || '');
 if (isGif) { process(reader.result); return; }
@@ -21456,7 +21665,7 @@ const DEFAULTS = {
 'as-en': 1, 'as-prob': 30, 'as-min': 5, 'as-max': 10,
 'as-count-min': 1, 'as-count-max': 2, 'dnd-en': 0,
 'as-badge': 1,
-'ai-rps-en': 1, 'ai-rps-prob': 15, 'ai-game-en': 1, 'ai-game-prob': 10,
+'ai-rps-en': 1, 'ai-rps-prob': 8, 'ai-game-en': 1, 'ai-game-prob': 5,
 'ckq-en': 1, 'ckq-prob': 15, 'ckq-popup-prob': 70, 'ckq-cool': 30,
 'ml-min-cards': 20, 'ml-max-cards': 50,
 'ml-write-prob': 30, 'ml-write-min': 1, 'ml-write-max': 120,
@@ -25890,7 +26099,7 @@ html += '<div class="div-summary">' + summary + '</div>';
 if (question) html += '<div class="div-question-q">问：' + String(question).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;') + '</div>';
 html += '<div class="div-result-actions">';
 html += '<button class="div-send-btn" id="div-send-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-3px;margin-right:6px"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>发给 ' + (partnerName2() || 'TA') + '</button>';
-html += '<button class="div-copy-btn" id="div-copy-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-3px;margin-right:6px"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>复制结果</button>';
+html += '<button class="div-copy-btn" id="div-copy-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-3px;margin-right:6px"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>点击复制文字</button>';
 html += '</div>';
 r.innerHTML = html;
 const sendBtn = document.getElementById('div-send-btn');
@@ -26017,12 +26226,25 @@ renderHistOnOpen();
 document.addEventListener('contact-switched', renderHistOnOpen);
 const autoEl = document.getElementById('div-auto-send');
 if (autoEl) autoEl.addEventListener('change', () => { autoSendSet(autoEl.checked); });
+document.querySelectorAll('#page-divine .dec-inp-clear').forEach(btn => {
+btn.addEventListener('click', () => {
+const ta = document.getElementById(btn.dataset.clear);
+if (!ta) return;
+const box = ta.__ceBox;
+if (box) box.textContent = '';
+else ta.value = '';
+ta.focus();
+toast('已清空');
+});
+});
 window.startDivineDraw = startDivineDraw;
 window.divineHistLoad = histLoad;
 window.divineHistSave = histSave;
 window.divineAutoGet = autoSendGet;
 window.divineAutoSet = autoSendSet;
 window.divineBuildSummary = buildSummary;
+window.divineBuildResultText = buildResultText;
+window.divineCopyResultText = copyResultText;
 window.divineSendResult = function (m, cards, summary, question) { sendToChat(m, cards, summary, question); };
 })();
 } catch (__e) { if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
@@ -30827,9 +31049,19 @@ html += letterPaper(l.tt || '寄出的信', l.content, fmtDT(l.tm), myName);
 }
 if (l.myReply && l.type !== 'sent') html += letterPaper('我的回信', l.myReply.content, fmtDT(l.myReply.tm), myName);
 if (l.partnerReply) html += letterPaper('对方的回信', l.partnerReply.content, fmtDT(l.partnerReply.tm), name);
+const canFav = l.type === 'received';
+let favAlready = false;
+if (canFav) {
+try {
+const favArr = JSON.parse(store.get('fav-msgs') || '[]');
+favAlready = favArr.some(x => (x.kind || 'msg') === 'mail' && x.mailType === 'received' && (x.text || '') === (l.content || '') && x.ts === l.tm);
+} catch (e) {}
+}
 let footer = '';
-if (l.type === 'received' && !l.myReply) {
-footer = '<div class="mail-actions"><button class="cc-tool" id="mail-reply-btn">提笔回信</button><button class="cc-tool cc-tool-danger" id="mail-del-btn">删除</button><button class="cc-tool" id="mail-close2">关闭</button></div>';
+if (canFav && !l.myReply) {
+footer = '<div class="mail-actions"><button class="cc-tool" id="mail-fav-btn">' + (favAlready ? '已收藏' : '收藏来信') + '</button><button class="cc-tool" id="mail-reply-btn">提笔回信</button><button class="cc-tool cc-tool-danger" id="mail-del-btn">删除</button><button class="cc-tool" id="mail-close2">关闭</button></div>';
+} else if (canFav) {
+footer = '<div class="mail-actions"><button class="cc-tool" id="mail-fav-btn">' + (favAlready ? '已收藏' : '收藏来信') + '</button><button class="cc-tool cc-tool-danger" id="mail-del-btn">删除</button><button class="cc-tool" id="mail-close2">关闭</button></div>';
 } else {
 footer = '<div class="mail-actions"><button class="cc-tool cc-tool-danger" id="mail-del-btn">删除</button><button class="cc-tool" id="mail-close2">关闭</button></div>';
 }
@@ -30841,6 +31073,14 @@ const replyBtn = document.getElementById('mail-reply-btn');
 if (replyBtn) replyBtn.addEventListener('click', () => openReply(l));
 const delBtn = document.getElementById('mail-del-btn');
 if (delBtn) delBtn.addEventListener('click', () => deleteLetter(l));
+const favBtn = document.getElementById('mail-fav-btn');
+if (favBtn) favBtn.addEventListener('click', () => {
+if (window.addMyFavItem) {
+const ok = window.addMyFavItem({ kind: 'mail', mailType: 'received', title: l.tt || '', text: l.content || '', ts: l.tm || Date.now() });
+toast(ok ? '已收藏到我的收藏' : '这封来信已收藏过');
+if (ok) favBtn.textContent = '已收藏';
+}
+});
 }
 function showPage(id) {
 document.querySelectorAll('.page').forEach(p => p.hidden = true);
@@ -35633,22 +35873,28 @@ function curKey() { return isGlobal ? G_GLOBAL : G; }
 function curIdbKey() { return isGlobal ? ("xy-home-v2:" + G_GLOBAL) : (window.activePrefix() + ":" + G); }
 var PLOTS = 12;
 var PI = 1800;
+var WILT_SEC = 172800;
 function pn() { return s.get("lbl-partner") || "TA"; }
 function load() { try { var d = JSON.parse(curStore().get(curKey()) || "{}"); if (!d.p) d.p = []; while (d.p.length < PLOTS) d.p.push(null); if (!d.l) d.l = []; if (!d.lpc) d.lpc = 0; if (!d.dex) d.dex = {}; if (!d.exp) d.exp = 0; if (!d.inv) d.inv = {}; if (!d.st) d.st = { p: 0, w: 0, h: 0, f: 0, mp: 0, mw: 0, mh: 0, mf: 0 }; if (!d.decor) d.decor = {}; if (!d.visitor) d.visitor = null; return d; } catch (e) { return { p: new Array(PLOTS).fill(null), l: [], lpc: 0, dex: {}, exp: 0, inv: {}, st: { p: 0, w: 0, h: 0, f: 0, mp: 0, mw: 0, mh: 0, mf: 0 }, decor: {}, visitor: null }; } }
 function save(d) { try { curStore().set(curKey(), JSON.stringify(d)); try { if (window.idbSet) window.idbSet(curIdbKey(), JSON.stringify(d)); } catch (e2) {} } catch (e) {} }
 (function r() { try { if (!window.idbGet) return; var pf = window.activePrefix(); if (!s.get(G)) window.idbGet(pf + ":" + G).then(function (v) { if (window.activePrefix() !== pf || !v) return; try { s.set(G, typeof v === "string" ? v : JSON.stringify(v)); } catch (e) {} }); } catch (e) {} })();
 var T = {
-rose: { n: "\u73AB\u7470", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF39"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [172800, 432000], xp: 30, lv: 1, ss: 3 },
-sunflower: { n: "\u5411\u65E5\u8475", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF3B"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [172800, 518400], xp: 40, lv: 2, ss: 1 },
-tulip: { n: "\u90C1\u91D1\u9999", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF37"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [172800, 432000], xp: 30, lv: 1, ss: 0 },
-cactus: { n: "\u4ED9\u4EBA\u638C", e: ["\uD83C\uDF31", "\uD83C\uDF35"], sn: ["\u5C0F\u82BD", "\u6210\u578B"], g: [432000], xp: 50, lv: 4, ss: 1 },
-lavender: { n: "\u85B0\u8863\u8349", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83D\uDC90"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [86400, 345600], xp: 25, lv: 3, ss: 2 },
-daisy: { n: "\u96CF\u83CA", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF3C"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [86400, 259200], xp: 20, lv: 1, ss: 0 },
-sakura: { n: "\u6A31\u82B1", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF38"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [86400, 259200], xp: 25, lv: 1, ss: 0 },
-hibiscus: { n: "\u8299\u84C9", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF3A"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [172800, 345600], xp: 35, lv: 1, ss: 1 },
-lotus: { n: "\u8377\u82B1", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83E\uDEB7"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [259200, 432000], xp: 45, lv: 1, ss: 1 },
-clover: { n: "\u5E78\u8FD0\u8349", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF40"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u6210\u578B"], g: [43200, 129600], xp: 15, lv: 1, ss: 2 },
-camellia: { n: "\u5C71\u8336\u82B1", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83D\uDCAE"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [172800, 259200], xp: 30, lv: 1, ss: 3 }
+rose: { n: "\u73AB\u7470", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF39"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [172800, 432000], xp: 30, lv: 1, ss: 3, m: "\u70ED\u70C8\u7684\u7231" },
+sunflower: { n: "\u5411\u65E5\u8475", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF3B"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [172800, 518400], xp: 40, lv: 2, ss: 1, m: "\u6C89\u9ED8\u7684\u7231" },
+tulip: { n: "\u90C1\u91D1\u9999", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF37"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [172800, 432000], xp: 30, lv: 1, ss: 0, m: "\u6C38\u6052\u7684\u795D\u798F" },
+cactus: { n: "\u4ED9\u4EBA\u638C", e: ["\uD83C\uDF31", "\uD83C\uDF35"], sn: ["\u5C0F\u82BD", "\u6210\u578B"], g: [432000], xp: 50, lv: 4, ss: 1, m: "\u575A\u97F7\uFF0C\u5916\u521A\u5185\u67D4" },
+lavender: { n: "\u85B0\u8863\u8349", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83D\uDC90"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [86400, 345600], xp: 25, lv: 3, ss: 2, m: "\u7B49\u5F85\u7231\u60C5" },
+daisy: { n: "\u96CF\u83CA", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF3C"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [86400, 259200], xp: 20, lv: 1, ss: 0, m: "\u7EAF\u771F\uFF0C\u6DF1\u85CF\u5FC3\u5E95\u7684\u7231" },
+sakura: { n: "\u6A31\u82B1", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF38"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [86400, 259200], xp: 25, lv: 1, ss: 0, m: "\u4E00\u751F\u5E78\u798F" },
+hibiscus: { n: "\u8299\u84C9", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF3A"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [172800, 345600], xp: 35, lv: 1, ss: 1, m: "\u7EA4\u7EC6\u4E4B\u7F8E" },
+lotus: { n: "\u8377\u82B1", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83E\uDEB7"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [259200, 432000], xp: 45, lv: 1, ss: 1, m: "\u6E05\u96C5\u575A\u8D1E" },
+clover: { n: "\u5E78\u8FD0\u8349", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF40"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u6210\u578B"], g: [43200, 129600], xp: 15, lv: 1, ss: 2, m: "\u5E78\u8FD0\u4E0E\u5E0C\u671B" },
+camellia: { n: "\u5C71\u8336\u82B1", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83D\uDCAE"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [172800, 259200], xp: 30, lv: 1, ss: 3, m: "\u7406\u60F3\u7684\u7231" },
+flameRose: { n: "\u7EDE\u6A31\u73AB\u7470", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF39"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [432000, 864000], xp: 120, lv: 5, ss: 0, rare: true, m: "\u70BD\u70ED\u6C38\u6052\u7684\u7231" },
+blueRose: { n: "\u84DD\u73AB\u7470", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF39"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [432000, 864000], xp: 150, lv: 6, ss: 1, rare: true, m: "\u5947\u8FF9\u4E0E\u4E0D\u53EF\u80FD\u7684\u7231" },
+goldSun: { n: "\u91D1\u5411\u65E5\u8475", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF3B"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [432000, 777600], xp: 130, lv: 5, ss: 1, rare: true, m: "\u5FE0\u8BDA\u7684\u4FE1\u4EF0" },
+nightLotus: { n: "\u591C\u83B2", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83E\uDEB7"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [604800, 1036800], xp: 180, lv: 7, ss: 2, rare: true, m: "\u6697\u591C\u91CC\u7684\u575A\u5B88" },
+rainbowClover: { n: "\u5F69\u8679\u8349", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF40"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u6210\u578B"], g: [259200, 518400], xp: 100, lv: 5, ss: 3, rare: true, m: "\u5E78\u8FD0\u964D\u4E34" }
 };
 var WM = [
 "\u4ECA\u5929\u4E5F\u8F9B\u82E6\u5566\uFF0C\u82B1\u82B1\u4EEC\u4E5F\u5728\u52AA\u529B\u957F\u5927\u54E6",
@@ -35699,9 +35945,21 @@ var stage = 0;
 for (var i = 0; i < tp.g.length; i++) { if (eff >= tp.g[i]) stage = i + 1; else break; }
 var stageMax = tp.g.length;
 var bloomed = stage >= stageMax;
+var wilted = bloomed && plot.bloomedAt && (now - plot.bloomedAt > WILT_SEC);
 var progress = bloomed ? 1 : (eff - (stage > 0 ? tp.g.slice(0, stage).reduce(function (a, b) { return a + b; }, 0) : 0)) / (tp.g[stage] || 1);
 var nextSec = bloomed ? 0 : Math.ceil((tp.g.slice(0, stage + 1).reduce(function (a, b) { return a + b; }, 0) - eff) / boost);
-return { key: plot.type, name: tp.n, stage: stage, stageMax: stageMax, stageName: tp.sn[Math.min(stage, tp.sn.length - 1)], emoji: tp.e[Math.min(stage, tp.e.length - 1)], bloomed: bloomed, progress: progress, nextSec: nextSec, plantedBy: plot.by || "\u6211" };
+return { key: plot.type, name: tp.n, stage: stage, stageMax: stageMax, stageName: tp.sn[Math.min(stage, tp.sn.length - 1)], emoji: tp.e[Math.min(stage, tp.e.length - 1)], bloomed: bloomed, wilted: !!wilted, progress: progress, nextSec: nextSec, plantedBy: plot.by || "\u6211" };
+}
+function markBloomed() {
+var changed = false;
+var now = Math.floor(Date.now() / 1000);
+for (var i = 0; i < data.p.length; i++) {
+var plot = data.p[i];
+if (!plot) continue;
+var si = stageInfo(plot);
+if (si && si.bloomed && !plot.bloomedAt) { plot.bloomedAt = now; changed = true; }
+}
+if (changed) save(data);
 }
 function waterLvl(plot) {
 if (!plot || !plot.watered) return 0;
@@ -35709,7 +35967,7 @@ return Math.max(0, 1 - (Math.floor(Date.now() / 1000) - plot.watered) / 86400);
 }
 function gLv() { return Math.floor(Math.sqrt((data.exp || 0) / 10)) + 1; }
 function gLvProg() { var lv = gLv(); var cur = (lv - 1) * (lv - 1) * 10; var nxt = lv * lv * 10; return { cur: data.exp - cur, max: nxt - cur, lv: lv }; }
-function unlocked(type) { return !!T[type]; }
+function unlocked(type) { var tp = T[type]; if (!tp) return false; if (tp.rare) return false; return true; }
 function decorBuffs() {
 var b = { growth: 0, xp: 0, partner: 0, water: 0 };
 var keys = Object.keys(DECOR);
@@ -35728,6 +35986,19 @@ return b;
 }
 function updDex(type, act) { if (!data.dex[type]) data.dex[type] = { p: 0, h: 0 }; if (act === "p") data.dex[type].p++; if (act === "h") data.dex[type].h++; }
 function updSt(act, me) { var k = act; if (me) data.st[k] = (data.st[k] || 0) + 1; else data.st["m" + k] = (data.st["m" + k] || 0) + 1; }
+function todayStr() { var d = new Date(); return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate(); }
+function updDaily(act) {
+var t = todayStr();
+if (!data.daily || data.daily.day !== t) data.daily = { day: t, w: 0, h: 0, f: 0, done: false, buffed: false };
+if (act === "w") data.daily.w++;
+else if (act === "h") data.daily.h++;
+else if (act === "f") data.daily.f++;
+if (!data.daily.done && data.daily.w >= 5 && data.daily.h >= 3 && data.daily.f >= 1) {
+data.daily.done = true;
+data.exp = (data.exp || 0) + 50;
+addLog("\u2605", "\u4ECA\u65E5\u4EFB\u52A1\u5B8C\u6210\uFF0C\u5956\u52B150\u7ECF\u9A8C");
+}
+}
 var curWeather = wx();
 var curSeason = sea();
 function renderWeather() {
@@ -35737,6 +36008,9 @@ var ws = document.getElementById("garden-season");
 if (wi) wi.textContent = curWeather.i;
 if (wt) wt.textContent = curWeather.t;
 if (ws) ws.textContent = curSeason;
+var hr = new Date().getHours();
+page.dataset.night = (hr >= 19 || hr < 6) ? "1" : "0";
+page.dataset.season = String(Math.floor(new Date().getMonth() / 3) % 4);
 }
 function fmtRemain(sec) {
 if (sec <= 0) return "";
@@ -35764,15 +36038,18 @@ for (var i = 0; i < data.p.length; i++) {
 var plot = data.p[i];
 var si = stageInfo(plot);
 var wl = waterLvl(plot);
-var cls = "garden-plot" + (si ? "" : " empty") + (wl > 0 ? " watered" : "") + (selPlot === i ? " selected" : "");
+var cls = "garden-plot" + (si ? "" : " empty") + (wl > 0 ? " watered" : "") + (selPlot === i ? " selected" : "") + (si && si.bloomed ? " bloomed" : "") + (si && si.wilted ? " wilted" : "") + (plot && T[plot.type] && T[plot.type].rare ? " rare" : "");
 h += "<div class=\"" + cls + "\" data-idx=\"" + i + "\">";
 if (si) {
 if (isGlobal && plot.by && plot.by.indexOf("@") >= 0) {
 h += "<span class=\"garden-plant-src\">" + plot.by.split("@")[1] + "</span>";
 }
-h += "<span class=\"garden-plant-emoji\">" + si.emoji + "</span>";
+var emoji = si.wilted ? "\uD83E\uDD40" : si.emoji;
+h += "<span class=\"garden-plant-emoji\">" + emoji + "</span>";
 h += "<span class=\"garden-plant-name\">" + si.name + "</span>";
-if (si.bloomed) {
+if (si.wilted) {
+h += "<span class=\"garden-plant-stage wilted-stage\">\u5DF2\u51CB\u8C22</span>";
+} else if (si.bloomed) {
 h += "<span class=\"garden-plant-stage\">\u6210\u719F</span>";
 } else {
 h += "<span class=\"garden-plant-stage\">" + fmtShort(si.nextSec) + "</span>";
@@ -35804,6 +36081,15 @@ function addLog(who, act) {
 data.l.push({ who: who, act: act, tm: Math.floor(Date.now() / 1000) });
 if (data.l.length > 100) data.l = data.l.slice(-100);
 }
+function updWaterStreak() {
+var t = todayStr();
+if (data.lastWaterDay === t) return;
+var d = new Date(); d.setDate(d.getDate() - 1);
+var y = d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate();
+if (data.lastWaterDay === y) data.waterStreak = (data.waterStreak || 0) + 1;
+else data.waterStreak = 1;
+data.lastWaterDay = t;
+}
 function waterPlot(idx) {
 if (idx < 0 || idx >= data.p.length) return;
 var plot = data.p[idx];
@@ -35814,18 +36100,28 @@ var si = stageInfo(plot);
 plot.planted = Math.max(0, plot.planted - 14400);
 addLog("\u6211", "\u7ED9 " + (si ? si.name : "\u7A7A\u5730") + " \u6D47\u4E86\u6C34");
 updSt("w", true);
+updDaily("w");
+updWaterStreak();
 save(data); renderAll();
 }
 function plantSeed(idx, type) {
 if (idx < 0 || idx >= data.p.length) return;
 if (data.p[idx]) return;
-if (!unlocked(type)) return;
 var tp = T[type]; if (!tp) return;
 data.p[idx] = { type: type, planted: Math.floor(Date.now() / 1000), by: "\u6211" };
-addLog("\u6211", "\u79CD\u4E0B\u4E86\u4E00\u68F5 " + tp.n);
+addLog("\u6211", "\u79CD\u4E0B\u4E86\u4E00\u68F5 " + tp.n + (tp.rare ? " \u2728" : ""));
 updDex(type, "p");
 updSt("p", true);
 save(data); renderAll();
+}
+function dropRareSeed() {
+if (Math.random() > 0.05) return null;
+var rareKeys = Object.keys(T).filter(function (k) { return T[k].rare; });
+if (!rareKeys.length) return null;
+var k = rareKeys[Math.floor(Math.random() * rareKeys.length)];
+if (!data.rareInv) data.rareInv = {};
+data.rareInv[k] = (data.rareInv[k] || 0) + 1;
+return k;
 }
 function fertilizePlot(idx) {
 if (idx < 0 || idx >= data.p.length) return;
@@ -35835,6 +36131,7 @@ plot.planted = Math.max(0, plot.planted - 43200);
 var si = stageInfo(plot);
 addLog("\u6211", "\u7ED9 " + (si ? si.name : "\u7A7A\u5730") + " \u65BD\u4E86\u80A5");
 updSt("f", true);
+updDaily("f");
 save(data); renderAll();
 }
 function harvestPlot(idx) {
@@ -35846,13 +36143,17 @@ if (!si || !si.bloomed) return;
 var name = si.name;
 var type = plot.type;
 var tp = T[type];
+var wilted = si.wilted;
 data.p[idx] = null;
-var xpg = Math.round((tp ? tp.xp : 10) * (1 + decorBuffs().xp));
+var xpg = Math.round((tp ? tp.xp : 10) * (1 + decorBuffs().xp) * (wilted ? 0.5 : 1));
 data.exp = (data.exp || 0) + xpg;
 data.inv[type] = (data.inv[type] || 0) + 1;
+if (wilted) data.wiltedSeen = true;
 updDex(type, "h");
 updSt("h", true);
-addLog("\u6211", "\u6536\u83B7\u4E86 " + name + " (+" + xpg + "\u7ECF\u9A8C)");
+updDaily("h");
+var dropped = dropRareSeed();
+addLog("\u6211", "\u6536\u83B7\u4E86 " + name + (wilted ? "\uFF08\u5DF2\u51CB\u8C22\uFF09" : "") + " (+" + xpg + "\u7ECF\u9A8C)" + (dropped ? " \u2728\u83B7\u5F97\u7A00\u6709\u79CD\u5B50" + T[dropped].n : ""));
 save(data); renderAll();
 }
 function partnerAct(silent) {
@@ -35871,6 +36172,11 @@ if (si && si.bloomed) bloomedPlots.push(i);
 if (waterLvl(data.p[i]) < 0.3) dryPlots.push(i);
 }
 }
+bloomedPlots.sort(function (a, b) {
+var ba = (data.p[a] && data.p[a].bloomedAt) || 0;
+var bb = (data.p[b] && data.p[b].bloomedAt) || 0;
+return ba - bb;
+});
 var acted = false;
 if (r < 0.15 && emptyPlots.length > 0) {
 var idx = emptyPlots[Math.floor(Math.random() * emptyPlots.length)];
@@ -35902,23 +36208,24 @@ wcnt++;
 }
 if (wcnt > 0) { addLog(pName, "\u4E00\u952E\u6D47\u4E86 " + wcnt + " \u68F5\u690D\u7269"); updSt("w", false); acted = true; }
 } else if (r < 0.65 && bloomedPlots.length > 0) {
-var idx = bloomedPlots[Math.floor(Math.random() * bloomedPlots.length)];
+var idx = bloomedPlots[0];
 var si = stageInfo(data.p[idx]);
 var name = si ? si.name : "\u690D\u7269";
 var type = data.p[idx].type;
 var tp = T[type];
-var emoji = tp ? tp.e[tp.e.length - 1] : "\uD83C\uDF37";
+var wilted = si ? si.wilted : false;
+var emoji = wilted ? "\uD83E\uDD40" : (tp ? tp.e[tp.e.length - 1] : "\uD83C\uDF37");
 data.p[idx] = null;
-var xpg = Math.round((tp ? tp.xp : 10) * (1 + decorBuffs().xp));
+var xpg = Math.round((tp ? tp.xp : 10) * (1 + decorBuffs().xp) * (wilted ? 0.5 : 1));
 data.exp = (data.exp || 0) + xpg;
 updDex(type, "h"); updSt("h", false);
 if (Math.random() < 0.3) {
-addLog(pName, "\u9001\u4F60\u4E00\u6735 " + name + " \uD83D\uDC95");
-var gmsg = "\u521A\u6458\u7684" + name + "\u9001\u7ED9\u4F60\uFF0C\u6536\u597D\u54E6~";
+addLog(pName, "\u9001\u4F60\u4E00\u6735 " + name + (wilted ? "\uFF08\u5E72\u82B1\uFF09" : "") + " \uD83D\uDC95");
+var gmsg = wilted ? "\u8FD9\u6735" + name + "\u5FEB\u51CB\u4E86\uFF0C\u8D76\u7D27\u9001\u4F60~" : "\u521A\u6458\u7684" + name + "\u9001\u7ED9\u4F60\uFF0C\u6536\u597D\u54E6~";
 if (window.chatSendFlower) { try { window.chatSendFlower(emoji, name, gmsg, true); } catch (e) {} }
 } else {
 data.inv[type] = (data.inv[type] || 0) + 1;
-addLog(pName, "\u6536\u83B7\u4E86 " + name + " (+" + xpg + "\u7ECF\u9A8C)");
+addLog(pName, "\u6536\u83B7\u4E86 " + name + (wilted ? "\uFF08\u5DF2\u51CB\u8C22\uFF09" : "") + " (+" + xpg + "\u7ECF\u9A8C)");
 }
 acted = true;
 } else if (r < 0.78 && bloomedPlots.length > 1) {
@@ -35929,8 +36236,9 @@ var si2 = stageInfo(data.p[pi]);
 if (!si2 || !si2.bloomed) continue;
 var tp2 = T[data.p[pi].type];
 var tpk = data.p[pi].type;
+var wilted2 = si2.wilted;
 data.p[pi] = null;
-var xpg2 = Math.round((tp2 ? tp2.xp : 10) * (1 + decorBuffs().xp));
+var xpg2 = Math.round((tp2 ? tp2.xp : 10) * (1 + decorBuffs().xp) * (wilted2 ? 0.5 : 1));
 data.exp = (data.exp || 0) + xpg2;
 data.inv[tpk] = (data.inv[tpk] || 0) + 1;
 updDex(tpk, "h"); updSt("h", false);
@@ -35974,23 +36282,28 @@ function renderDex() {
 var el = document.getElementById("garden-dex");
 if (!el) return;
 var keys = Object.keys(T);
-var collected = 0;
+var normal = keys.filter(function (k) { return !T[k].rare; });
+var rare = keys.filter(function (k) { return !!T[k].rare; });
+function renderItems(list) {
 var h = "";
-keys.forEach(function (k) {
+list.forEach(function (k) {
 var tp = T[k];
 var dx = data.dex[k] || { p: 0, h: 0 };
 var has = dx.p > 0 || dx.h > 0;
-if (has) collected++;
-var lock = !unlocked(k);
+var lock = tp.rare ? !has : (tp.lv > gLv());
 if (has) {
-h += "<div class=\"garden-dex-item\" title=\"" + tp.n + " \u79CD" + dx.p + "\u6536" + dx.h + "\"><span class=\"dex-emoji\">" + tp.e[tp.e.length - 1] + "</span><span class=\"dex-name\">" + tp.n + "</span><span class=\"dex-cnt\">\u00d7" + dx.h + "</span></div>";
+h += "<div class=\"garden-dex-item" + (tp.rare ? " rare" : "") + "\" title=\"" + tp.n + " \u79CD" + dx.p + "\u6536" + dx.h + "\"><span class=\"dex-emoji\">" + tp.e[tp.e.length - 1] + "</span><span class=\"dex-name\">" + tp.n + "</span><span class=\"dex-cnt\">\u00d7" + dx.h + "</span></div>";
 } else if (lock) {
-h += "<div class=\"garden-dex-item locked\"><span class=\"dex-emoji\">\uD83D\uDD12</span><span class=\"dex-name\">Lv." + tp.lv + "</span></div>";
+h += "<div class=\"garden-dex-item locked\"><span class=\"dex-emoji\">\uD83D\uDD12</span><span class=\"dex-name\">" + (tp.rare ? "\u7A00\u6709" : "Lv." + tp.lv) + "</span></div>";
 } else {
 h += "<div class=\"garden-dex-item unknown\"><span class=\"dex-emoji\">\u2753</span><span class=\"dex-name\">???</span></div>";
 }
 });
-el.innerHTML = "<div class=\"garden-dex-title\">\u690D\u7269\u56FE\u9274 " + collected + "/" + keys.length + "</div><div class=\"garden-dex-grid\">" + h + "</div>";
+return h;
+}
+var nC = normal.filter(function (k) { var dx = data.dex[k] || { p: 0, h: 0 }; return dx.p > 0 || dx.h > 0; }).length;
+var rC = rare.filter(function (k) { var dx = data.dex[k] || { p: 0, h: 0 }; return dx.p > 0 || dx.h > 0; }).length;
+el.innerHTML = "<div class=\"garden-dex-title\">\u690D\u7269\u56FE\u9274 " + nC + "/" + normal.length + " \u00B7 \u7A00\u6709 " + rC + "/" + rare.length + "</div><div class=\"garden-dex-grid\">" + renderItems(normal) + "</div>" + (rare.length ? "<div class=\"garden-dex-sub\">\u2728 \u7A00\u6709\u54C1\u79CD</div><div class=\"garden-dex-grid rare-grid\">" + renderItems(rare) + "</div>" : "");
 }
 function renderInv() {
 var el = document.getElementById("garden-inv");
@@ -36067,8 +36380,279 @@ h += "</div>";
 });
 el.innerHTML = h;
 }
+var ACHV = [
+{ id: "firstBloom", n: "首次开花", e: "\uD83C\uDF38", d: "收获第一朵花", check: function () { return (data.st.h || 0) + (data.st.mh || 0) >= 1; } },
+{ id: "greenThumb", n: "满级园丁", e: "\uD83C\uDF3E", d: "花园达 Lv.10", check: function () { return gLv() >= 10; } },
+{ id: "collector", n: "全图鉴", e: "\uD83D\uDCD6", d: "收集全部普通花并", check: function () { var n = Object.keys(T).filter(function (k) { return !T[k].rare; }); return n.every(function (k) { var dx = data.dex[k] || {}; return dx.p > 0 || dx.h > 0; }); } },
+{ id: "rareColl", n: "稀有收藏家", e: "\u2728", d: "收获任一稀有花", check: function () { return Object.keys(T).some(function (k) { return T[k].rare && data.dex[k] && data.dex[k].h > 0; }); } },
+{ id: "water7", n: "坚持浇水", e: "\uD83D\uDCA7", d: "连续浇水 7 天", check: function () { return (data.waterStreak || 0) >= 7; } },
+{ id: "harvest10", n: "丰收一日", e: "\uD83E\uDD4B", d: "单日收获 10 朵", check: function () { return (data.daily && data.daily.h >= 10) || (data.st.h || 0) >= 10; } },
+{ id: "planter10", n: "勤劳园丁", e: "\uD83C\uDF31", d: "种下 10 棵花", check: function () { return (data.st.p || 0) + (data.st.mp || 0) >= 10; } },
+{ id: "waterer50", n: "浇水达人", e: "\uD83C\uDF26", d: "浇水 50 次", check: function () { return (data.st.w || 0) + (data.st.mw || 0) >= 50; } },
+{ id: "harv50", n: "花海", e: "\uD83C\uDF3C", d: "收获 50 朵花", check: function () { return (data.st.h || 0) + (data.st.mh || 0) >= 50; } },
+{ id: "decorAll", n: "尽善尽美", e: "\uD83C\uDFE0", d: "买齐全部装饰", check: function () { return Object.keys(DECOR).every(function (k) { return (data.decor[k] || 0) >= DECOR[k].max; }); } },
+{ id: "visitor", n: "生机勃勃", e: "\uD83E\uDE9B", d: "招待过访客", check: function () { return !!data.visitor; } },
+{ id: "bouquet3", n: "花束使者", e: "\uD83D\uDCC1", d: "制作 3 束花", check: function () { return (data.bouquetCnt || 0) >= 3; } },
+{ id: "partnerCare", n: "同育之情", e: "\uD83D\uDC95", d: "梦角打理 10 次", check: function () { return (data.st.mp || 0) + (data.st.mw || 0) + (data.st.mh || 0) + (data.st.mf || 0) >= 10; } },
+{ id: "rich", n: "花山花海", e: "\uD83D\uDCB0", d: "库存 20 朵花", check: function () { var t = 0; Object.keys(data.inv || {}).forEach(function (k) { t += data.inv[k] || 0; }); return t >= 20; } },
+{ id: "wiltedSee", n: "封存时光", e: "\uD83E\uDD40", d: "见证花朵凋谢", check: function () { return !!data.wiltedSeen; } }
+];
+function ensureDailyUI() {
+if (document.getElementById("garden-daily")) return;
+var el = document.createElement("div");
+el.id = "garden-daily";
+el.className = "garden-daily";
+var pg = document.getElementById("garden-panel-garden");
+if (pg) pg.insertBefore(el, pg.firstChild);
+else { var bar = page.querySelector(".garden-level-bar"); if (bar) bar.parentNode.insertBefore(el, bar.nextSibling); }
+}
+function renderDaily() {
+ensureDailyUI();
+var el = document.getElementById("garden-daily");
+if (!el) return;
+var t = todayStr();
+if (!data.daily || data.daily.day !== t) data.daily = { day: t, w: 0, h: 0, f: 0, done: false };
+var d = data.daily;
+var tasks = [
+{ n: "\u6D47\u6C34", cur: d.w, goal: 5, e: "\uD83D\uDCA7" },
+{ n: "\u6536\u83B7", cur: d.h, goal: 3, e: "\uD83C\uDF3C" },
+{ n: "\u65BD\u80A5", cur: d.f, goal: 1, e: "\uD83D\uDC9A" }
+];
+var h = "<div class=\"garden-daily-title\">\u4ECA\u65E5\u4EFB\u52A1" + (d.done ? " \u2728\u5DF2\u5B8C\u6210" : "") + "</div><div class=\"garden-daily-tasks\">";
+tasks.forEach(function (tk) {
+var ok = tk.cur >= tk.goal;
+h += "<div class=\"garden-daily-task" + (ok ? " done" : "") + "\"><span class=\"dt-emoji\">" + tk.e + "</span><span class=\"dt-name\">" + tk.n + " " + Math.min(tk.cur, tk.goal) + "/" + tk.goal + "</span></div>";
+});
+h += "</div>";
+el.innerHTML = h;
+}
+function ensureAchvUI() {
+if (document.getElementById("garden-achv")) return;
+var el = document.createElement("div");
+el.id = "garden-achv";
+el.className = "garden-achv";
+var pa = document.getElementById("garden-panel-achv");
+if (pa) pa.appendChild(el);
+else { var scroll = page.querySelector(".garden-scroll"); if (scroll) scroll.appendChild(el); }
+}
+function renderAchv() {
+ensureAchvUI();
+var el = document.getElementById("garden-achv");
+if (!el) return;
+if (!data.achv) data.achv = {};
+var got = 0;
+var h = "";
+ACHV.forEach(function (a) {
+var ok = !!data.achv[a.id];
+if (ok) got++;
+h += "<div class=\"garden-achv-item" + (ok ? " done" : "") + "\" title=\"" + a.d + "\"><span class=\"achv-emoji\">" + (ok ? a.e : "\uD83D\uDD12") + "</span><span class=\"achv-name\">" + a.n + "</span></div>";
+});
+el.innerHTML = "<div class=\"garden-achv-title\">\uD83C\uDFC6 \u6210\u5C31\u5899 " + got + "/" + ACHV.length + "</div><div class=\"garden-achv-grid\">" + h + "</div>";
+}
+function checkAchv() {
+if (!data.achv) data.achv = {};
+var newly = [];
+ACHV.forEach(function (a) {
+if (data.achv[a.id]) return;
+try { if (a.check()) { data.achv[a.id] = Math.floor(Date.now() / 1000); newly.push(a); } } catch (e) {}
+});
+if (newly.length) {
+save(data);
+newly.forEach(function (a) { addLog("\u2605", "\u89E3\u9501\u6210\u5C31\u300C" + a.n + "\u300D " + a.e); });
+if (window.openModal) {
+var a0 = newly[0];
+window.openModal(a0.e + " \u89E3\u9501\u6210\u5C31", a0.n + "\n" + a0.d + (newly.length > 1 ? "\n\uFF08\u672C\u6B21\u5171\u89E3\u9501 " + newly.length + " \u4E2A\uFF09" : ""), function () {}, { pills: [{ label: "\u597D\u7684", value: "ok" }], noInput: true });
+}
+}
+}
+var curTab = "garden";
+var TABS = [
+{ id: "garden", n: "\u82B1\u56ED", e: "\uD83C\uDF31" },
+{ id: "dex", n: "\u56FE\u9274", e: "\uD83D\uDCD6" },
+{ id: "craft", n: "\u5DE5\u574A", e: "\uD83D\uDC83" },
+{ id: "shop", n: "\u88C5\u9970", e: "\uD83C\uDFE1" },
+{ id: "achv", n: "\u6210\u5C31", e: "\uD83C\uDFC6" },
+{ id: "report", n: "\u5E74\u62A5", e: "\uD83D\uDCCA" }
+];
+function ensureTabUI() {
+if (document.getElementById("garden-tabs")) return;
+var scroll = page.querySelector(".garden-scroll");
+if (!scroll) return;
+var tabs = document.createElement("div");
+tabs.id = "garden-tabs";
+tabs.className = "garden-tabs";
+TABS.forEach(function (t) {
+var b = document.createElement("button");
+b.className = "garden-tab" + (t.id === curTab ? " active" : "");
+b.dataset.tab = t.id;
+b.innerHTML = '<span class="gt-emoji">' + t.e + '</span><span class="gt-name">' + t.n + '</span>';
+tabs.appendChild(b);
+});
+var lvl = document.getElementById("garden-level-bar");
+lvl.parentNode.insertBefore(tabs, lvl.nextSibling);
+TABS.forEach(function (t) {
+var p = document.createElement("div");
+p.id = "garden-panel-" + t.id;
+p.className = "garden-panel" + (t.id === curTab ? " active" : "");
+scroll.appendChild(p);
+});
+var move = function (id, pid) {
+var el = document.getElementById(id);
+var p = document.getElementById("garden-panel-" + pid);
+if (el && p) p.appendChild(el);
+};
+move("garden-grid", "garden");
+move("garden-stats", "garden");
+move("garden-visitor", "garden");
+move("garden-toolbar", "garden");
+move("garden-log", "garden");
+move("garden-dex", "dex");
+move("garden-inv", "craft");
+move("garden-decor", "shop");
+move("garden-lb", "shop");
+tabs.addEventListener("click", function (e) {
+var b = e.target.closest(".garden-tab");
+if (!b) return;
+curTab = b.dataset.tab;
+page.querySelectorAll(".garden-tab").forEach(function (x) { x.classList.toggle("active", x.dataset.tab === curTab); });
+page.querySelectorAll(".garden-panel").forEach(function (p) { p.classList.toggle("active", p.id === "garden-panel-" + curTab); });
+});
+}
+var RECIPES = [
+{ id: "firstLove", n: "\u521D\u604B", e: "\uD83D\uDC90", need: { rose: 3, daisy: 2 }, wish: "\u4E09\u6735\u73AB\u7470\u4E24\u6735\u96CF\u83CA\uFF0C\u50CF\u521D\u604B\u822C\u70ED\u70C8\u53C8\u7EAF\u771F" },
+{ id: "passion", n: "\u70ED\u604B", e: "\uD83D\uDC9D", need: { rose: 2, sunflower: 1 }, wish: "\u73AB\u7470\u4E0E\u5411\u65E5\u8475\uFF0C\u70ED\u70C8\u5730\u671D\u5411\u4F60" },
+{ id: "miss", n: "\u601D\u5FF5", e: "\uD83C\uDF19", need: { lavender: 3, sakura: 1 }, wish: "\u85B0\u8863\u8349\u7684\u7B49\u5F85\uFF0C\u6A31\u82B1\u7684\u77ED\u6682\uFF0C\u90FD\u662F\u601D\u5FF5" },
+{ id: "eternal", n: "\u6C38\u6052", e: "\u221E", need: { tulip: 2, camellia: 1 }, wish: "\u90C1\u91D1\u9999\u7684\u795D\u798F\uFF0C\u5C71\u8336\u82B1\u7684\u7406\u60F3\uFF0C\u613F\u6C38\u6052" },
+{ id: "lucky", n: "\u5E78\u8FD0", e: "\uD83C\uDF40", need: { clover: 3, daisy: 1 }, wish: "\u56DB\u53F6\u8349\u52A0\u96CF\u83CA\uFF0C\u5E78\u8FD0\u4F34\u7EAF\u771F" },
+{ id: "miracle", n: "\u5947\u8FF9", e: "\u2728", need: { flameRose: 1, blueRose: 1 }, wish: "\u7EDE\u6A31\u4E0E\u84DD\u73AB\u7470\uFF0C\u4E0D\u53EF\u80FD\u7684\u5947\u8FF9" }
+];
+function ensureCraftUI() {
+if (document.getElementById("garden-craft")) return;
+var p = document.getElementById("garden-panel-craft");
+if (!p) return;
+var el = document.createElement("div");
+el.id = "garden-craft";
+el.className = "garden-craft";
+p.appendChild(el);
+}
+function renderCraft() {
+ensureCraftUI();
+var el = document.getElementById("garden-craft");
+if (!el) return;
+if (!data.recipes) data.recipes = {};
+var h = '<div class="garden-craft-title">\uD83D\uDC83 \u82B1\u827A\u914D\u65B9</div><div class="garden-craft-list">';
+RECIPES.forEach(function (r) {
+var canMake = true;
+var needTxt = [];
+Object.keys(r.need).forEach(function (k) {
+var have = data.inv[k] || 0;
+if (have < r.need[k]) canMake = false;
+var tp = T[k];
+needTxt.push((tp ? tp.e[tp.e.length - 1] : "") + "\u00d7" + r.need[k]);
+});
+var made = !!data.recipes[r.id];
+h += '<div class="garden-recipe' + (canMake ? " can" : "") + (made ? " made" : "") + '">';
+h += '<div class="recipe-head"><span class="recipe-emoji">' + r.e + '</span><span class="recipe-name">' + r.n + '</span>' + (made ? '<span class="recipe-made">\u2713\u5DF2\u5408\u6210</span>' : "") + '</div>';
+h += '<div class="recipe-need">' + needTxt.join(" ") + '</div>';
+h += '<div class="recipe-wish">' + r.wish + '</div>';
+if (canMake) h += '<button class="recipe-btn" data-recipe="' + r.id + '">\u5408\u6210\u82B1\u675F</button>';
+h += '</div>';
+});
+h += '</div>';
+el.innerHTML = h;
+el.querySelectorAll(".recipe-btn").forEach(function (b) { b.addEventListener("click", function () { craftRecipe(b.dataset.recipe); }); });
+}
+function craftRecipe(id) {
+var r = null;
+for (var i = 0; i < RECIPES.length; i++) if (RECIPES[i].id === id) { r = RECIPES[i]; break; }
+if (!r) return;
+for (var k in r.need) { if ((data.inv[k] || 0) < r.need[k]) return; }
+for (var k2 in r.need) { data.inv[k2] = (data.inv[k2] || 0) - r.need[k2]; if (data.inv[k2] < 0) data.inv[k2] = 0; }
+if (!data.recipes) data.recipes = {};
+data.recipes[id] = Math.floor(Date.now() / 1000);
+data.bouquetCnt = (data.bouquetCnt || 0) + 1;
+addLog("\u6211", "\u5408\u6210\u300C" + r.n + "\u300D\u82B1\u675F " + r.e);
+save(data);
+if (window.chatSendFlower) { try { window.chatSendFlower(r.e, r.n + "\u82B1\u675F", r.wish); } catch (e) {} }
+renderAll();
+}
+function ensureReportUI() {
+if (document.getElementById("garden-report")) return;
+var p = document.getElementById("garden-panel-report");
+if (!p) return;
+var el = document.createElement("div");
+el.id = "garden-report";
+el.className = "garden-report";
+p.appendChild(el);
+}
+function renderReport() {
+ensureReportUI();
+var el = document.getElementById("garden-report");
+if (!el) return;
+var st = data.st || {};
+var year = new Date().getFullYear();
+var totalPlant = (st.p || 0) + (st.mp || 0);
+var totalWater = (st.w || 0) + (st.mw || 0);
+var totalHarv = (st.h || 0) + (st.mh || 0);
+var totalFert = (st.f || 0) + (st.mf || 0);
+var topFlower = null, topCnt = 0;
+Object.keys(data.dex || {}).forEach(function (k) { var c = (data.dex[k].p || 0) + (data.dex[k].h || 0); if (c > topCnt && T[k]) { topCnt = c; topFlower = T[k]; } });
+var invTotal = 0; Object.keys(data.inv || {}).forEach(function (k) { invTotal += data.inv[k] || 0; });
+var achvCnt = Object.keys(data.achv || {}).length;
+var bouquet = data.bouquetCnt || 0;
+var streak = data.waterStreak || 0;
+var dexGot = Object.keys(data.dex || {}).filter(function (k) { var d = data.dex[k]; return d.p > 0 || d.h > 0; }).length;
+var partnerCare = (st.mp || 0) + (st.mw || 0) + (st.mh || 0) + (st.mf || 0);
+var h = '<div class="garden-report-card">';
+h += '<div class="report-year">' + year + ' \u82B1\u56ED\u5E74\u62A5</div>';
+h += '<div class="report-lv">Lv.' + gLv() + ' \u00B7 ' + (data.exp || 0) + ' EXP</div>';
+h += '<div class="report-stats"><div class="rs-item"><b>' + totalPlant + '</b>\u79CD\u690D</div><div class="rs-item"><b>' + totalWater + '</b>\u6D47\u6C34</div><div class="rs-item"><b>' + totalHarv + '</b>\u6536\u83B7</div><div class="rs-item"><b>' + totalFert + '</b>\u65BD\u80A5</div></div>';
+h += '<div class="report-row"><span>\u6700\u5E38\u79CD</span><b>' + (topFlower ? topFlower.e[topFlower.e.length - 1] + " " + topFlower.n : "\u2014") + '</b></div>';
+h += '<div class="report-row"><span>\u5E93\u5B58\u82B1\u6735</span><b>' + invTotal + ' \u6735</b></div>';
+h += '<div class="report-row"><span>\u5236\u4F5C\u82B1\u675F</span><b>' + bouquet + ' \u675F</b></div>';
+h += '<div class="report-row"><span>\u89E3\u9501\u6210\u5C31</span><b>' + achvCnt + '/' + ACHV.length + '</b></div>';
+h += '<div class="report-row"><span>\u8FDE\u7EED\u6D47\u6C34</span><b>' + streak + ' \u5929</b></div>';
+h += '<div class="report-row"><span>\u56FE\u9274\u6536\u96C6</span><b>' + dexGot + '/' + Object.keys(T).length + '</b></div>';
+h += '<div class="report-row"><span>\u68A6\u89D2\u6253\u7406</span><b>' + partnerCare + ' \u6B21</b></div>';
+h += '</div>';
+h += '<button class="report-share-btn" id="garden-report-share">\uD83D\uDCF8 \u5206\u4EAB\u5230\u670B\u53CB\u5708</button>';
+el.innerHTML = h;
+var sb = el.querySelector("#garden-report-share");
+if (sb) sb.addEventListener("click", function () {
+var lines = [
+year + " \u82B1\u56ED\u5E74\u62A5 \uD83C\uDF3F",
+"Lv." + gLv() + " \u00B7 " + (data.exp || 0) + " EXP",
+"\u79CD\u690D" + totalPlant + " \u6D47\u6C34" + totalWater + " \u6536\u83B7" + totalHarv + " \u65BD\u80A5" + totalFert,
+"\u6700\u5E38\u79CD\uFF1A" + (topFlower ? topFlower.n : "\u2014"),
+"\u5236\u4F5C\u82B1\u675F" + bouquet + " \u89E3\u9501\u6210\u5C31" + achvCnt + "/" + ACHV.length,
+"\u8FDE\u7EED\u6D47\u6C34" + streak + "\u5929 \u68A6\u89D2\u6253\u7406" + partnerCare + "\u6B21",
+"\uD83C\uDF38 \u613F\u6211\u4EEC\u7684\u82B1\u56ED\u4E00\u76F4\u7E41\u76DB"
+];
+var text = lines.join("\n");
+var ok = false;
+try {
+var st = window.xyStore ? window.xyStore("xy-home-v2") : null;
+if (st) {
+var FK = "feed-posts";
+var arr = []; try { arr = JSON.parse(st.get(FK) || "[]"); } catch (e2) {}
+var owner = "default"; try { if (window.__activeCid) owner = window.__activeCid; } catch (e2) {}
+var an = "\u6211"; try { var as = window.activeStore ? window.activeStore() : null; if (as) { var nn = as.get("feed-user-name") || as.get("lbl-user"); if (nn) an = nn; } } catch (e2) {}
+arr.unshift({ id: "f_" + Date.now(), role: "me", owner: owner, authorName: an, authorAv: "", taName: "", taAv: "", content: text, imgs: [], ts: Date.now(), likes: [], comments: [] });
+var raw = JSON.stringify(arr);
+st.set(FK, raw);
+if (window.idbSet) window.idbSet("xy-home-v2:" + FK, raw);
+ok = true;
+}
+} catch (e3) {}
+try { document.dispatchEvent(new CustomEvent("garden-share-report", { detail: { ok: ok } })); } catch (e4) {}
+if (window.openModal) window.openModal(ok ? "\u2705 \u5DF2\u53D1\u5E03\u5230\u670B\u53CB\u5708" : "\u53D1\u5E03\u5931\u8D25", ok ? "\u82B1\u56ED\u5E74\u62A5\u5DF2\u53D1\u5230\u670B\u53CB\u5708\uFF0C\u53BB\u670B\u53CB\u5708\u770B\u770B\u5427~" : "\u8BF7\u7A0D\u540E\u518D\u8BD5", function () {}, { pills: [{ label: "\u597D\u7684", value: "ok" }], noInput: true });
+});
+}
 function renderAll() {
+markBloomed();
+ensureTabUI();
 renderWeather();
+renderDaily();
 renderLevel();
 renderGrid();
 renderStats();
@@ -36077,7 +36661,11 @@ renderDex();
 renderInv();
 renderDecor();
 renderLeaderboard();
+renderAchv();
+renderCraft();
+renderReport();
 renderLog();
+checkAchv();
 }
 function checkPartnerPassive() {
 try {
@@ -36116,7 +36704,10 @@ selPlot = selPlot === idx ? -1 : idx;
 } else {
 selPlot = idx;
 }
-renderGrid();
+page.querySelectorAll(".garden-plot").forEach(function (p) {
+var i = parseInt(p.getAttribute("data-idx"));
+p.classList.toggle("selected", i === selPlot);
+});
 }
 function handleTool(e) {
 var btn = e.target.closest(".garden-tool");
@@ -36135,14 +36726,23 @@ harvestPlot(selPlot);
 if (selPlot < 0) return;
 if (data.p[selPlot]) return;
 if (!window.openModal) return;
-var keys = Object.keys(T).filter(function (k) { return unlocked(k); });
-if (!keys.length) return;
-var pills = keys.map(function (k) {
+var normalKeys = Object.keys(T).filter(function (k) { return unlocked(k); });
+var rareKeys = Object.keys(data.rareInv || {}).filter(function (k) { return data.rareInv[k] > 0 && T[k] && T[k].rare; });
+var pills = normalKeys.map(function (k) {
 var tp = T[k];
 return { label: tp.e[tp.e.length - 1] + " " + tp.n, value: k };
 });
+rareKeys.forEach(function (k) {
+var tp = T[k];
+pills.push({ label: "\u2728 " + tp.e[tp.e.length - 1] + " " + tp.n + " \u00d7" + data.rareInv[k], value: "rare:" + k });
+});
+if (!pills.length) return;
 window.openModal("\u9009\u62E9\u79CD\u690D", "", function (v) {
-if (v && T[v]) plantSeed(selPlot, v);
+if (!v) return;
+if (v.indexOf("rare:") === 0) {
+var rk = v.slice(5);
+if (data.rareInv && data.rareInv[rk] > 0) { data.rareInv[rk]--; plantSeed(selPlot, rk); }
+} else if (T[v]) { plantSeed(selPlot, v); }
 }, { pills: pills, noInput: true });
 } else if (tool === "waterall") {
 waterAll();
@@ -36170,22 +36770,26 @@ function harvestAll() {
 var cnt = 0;
 var totalXp = 0;
 var xpb = 1 + decorBuffs().xp;
+var dropped = [];
 for (var i = 0; i < data.p.length; i++) {
 var plot = data.p[i];
 if (!plot) continue;
 var si = stageInfo(plot);
 if (!si || !si.bloomed) continue;
 var tp = T[plot.type];
-var xpg = Math.round((tp ? tp.xp : 10) * xpb);
+var wilted = si.wilted;
+var xpg = Math.round((tp ? tp.xp : 10) * xpb * (wilted ? 0.5 : 1));
 data.p[i] = null;
 data.exp = (data.exp || 0) + xpg;
 data.inv[plot.type] = (data.inv[plot.type] || 0) + 1;
-updDex(plot.type, "h"); updSt("h", true);
+if (wilted) data.wiltedSeen = true;
+updDex(plot.type, "h"); updSt("h", true); updDaily("h");
+var dr = dropRareSeed(); if (dr) dropped.push(dr);
 totalXp += xpg;
 cnt++;
 }
 if (cnt > 0) {
-addLog("\u6211", "\u4E00\u952E\u6536\u83B7 " + cnt + " \u6735\u82B1 (+" + totalXp + "\u7ECF\u9A8C)");
+addLog("\u6211", "\u4E00\u952E\u6536\u83B7 " + cnt + " \u6735\u82B1 (+" + totalXp + "\u7ECF\u9A8C)" + (dropped.length ? " \u2728\u83B7\u5F97" + dropped.length + "\u9897\u7A00\u6709\u79CD\u5B50" : ""));
 save(data); renderAll();
 }
 }
@@ -36195,21 +36799,23 @@ if (!keys.length) return;
 if (!window.openModal) return;
 var pills = keys.map(function (k) {
 var tp = T[k];
-return { label: tp.e[tp.e.length - 1] + " " + tp.n + " \u00d7" + data.inv[k], value: k };
+return { label: tp.e[tp.e.length - 1] + " " + tp.n + " \u00d7" + data.inv[k] + (tp.m ? " \u00B7 " + tp.m : ""), value: k };
 });
 window.openModal("\u9009\u4E00\u6735\u82B1\u5236\u4F5C\u82B1\u675F", "", function (v) {
 if (!v || !T[v] || !data.inv[v]) return;
 var tp = T[v];
 var emoji = tp.e[tp.e.length - 1];
-var defWish = "\u9001\u7ED9\u4F60\u4E00\u675F" + tp.n + "\uFF0C\u662F\u6211\u4EEC\u4E00\u8D77\u79CD\u7684\u54E6~";
+var meaning = tp.m || "";
+var defWish = "\u9001\u7ED9\u4F60\u4E00\u675F" + tp.n + "\uFF0C\u662F\u6211\u4EEC\u4E00\u8D77\u79CD\u7684\u54E6~" + (meaning ? "\n\u82B1\u8BED\uFF1A" + meaning : "");
 var mask = document.getElementById("modal-mask");
 if (mask) mask.hidden = true;
 setTimeout(function () {
 if (!window.openModal) return;
 window.openModal("\u9001\u82B1\u7559\u8A00\uFF08\u53EF\u4FEE\u6539\uFF09", defWish, function (wish) {
 data.inv[v]--;
+data.bouquetCnt = (data.bouquetCnt || 0) + 1;
 var msg = (wish && wish.trim()) ? wish.trim() : defWish;
-addLog("\u6211", "\u5236\u4F5C\u4E86\u4E00\u675F " + tp.n + "\u82B1\u9001\u7ED9" + pn());
+addLog("\u6211", "\u5236\u4F5C\u4E86\u4E00\u675F " + tp.n + "\u82B1\u9001\u7ED9" + pn() + (meaning ? "\uFF08\u82B1\u8BED\uFF1A" + meaning + "\uFF09" : ""));
 save(data);
 if (window.chatSendFlower) { try { window.chatSendFlower(emoji, tp.n, msg); } catch (e) {} }
 renderAll();
@@ -36281,6 +36887,7 @@ save(data);
 spawnVisitor();
 if (Math.random() < 0.3 + dbf.partner) partnerAct();
 renderAll();
+try { document.dispatchEvent(new CustomEvent("garden-enter")); } catch (e) {}
 }
 var appBtn = document.querySelector('.app[data-app="garden"]');
 if (appBtn && page) appBtn.addEventListener("click", openGarden);
@@ -36289,6 +36896,7 @@ if (backBtn) backBtn.addEventListener("click", function () {
 document.querySelectorAll(".page").forEach(function (pg) { pg.hidden = true; });
 var home = document.getElementById("page-phone");
 if (home) home.hidden = false;
+try { document.dispatchEvent(new CustomEvent("garden-leave")); } catch (e) {}
 });
 var gridEl = document.getElementById("garden-grid");
 if (gridEl) gridEl.addEventListener("click", handlePlotClick);
@@ -36366,6 +36974,7 @@ if (d.p) d.p.forEach(function (plot) {
 if (plot) {
 var np = { type: plot.type, planted: plot.planted, by: (plot.by || "\u6211") + "@" + gd.name };
 if (plot.watered) np.watered = plot.watered;
+if (plot.bloomedAt) np.bloomedAt = plot.bloomedAt;
 if (plot.coOp) np.coOp = plot.coOp;
 g.p.push(np);
 }
@@ -36453,6 +37062,30 @@ renderAll();
 });
 }
 ensureGlobalUI();
+window.gardenBloomDates = function () {
+var list = [];
+try {
+var contacts = window.getContacts ? (window.getContacts() || []) : [{ id: "default", name: "\u9ED8\u8BA4" }];
+contacts.forEach(function (c) {
+var st = window.storeFor ? window.storeFor(c.id) : null;
+if (!st) return;
+var raw = st.get("garden-data");
+if (!raw) return;
+var d; try { d = JSON.parse(raw); } catch (e) { return; }
+if (!d || !d.p) return;
+var name = c.name || c.id;
+try { var pnn = st.get("lbl-partner"); if (pnn) name = pnn; } catch (e) {}
+d.p.forEach(function (plot, i) {
+if (!plot || !T[plot.type]) return;
+var tp = T[plot.type];
+var totalSec = tp.g.reduce(function (a, b) { return a + b; }, 0);
+var bloomAt = (plot.planted || 0) + Math.ceil(totalSec / 1.1);
+list.push({ cid: c.id, name: name, type: plot.type, flower: tp.n, emoji: tp.e[tp.e.length - 1], bloomAt: bloomAt, idx: i });
+});
+});
+} catch (e) {}
+return list;
+};
 })();
 } catch (__e) { if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
 (function () { try {
@@ -36725,28 +37358,51 @@ const partnerNameEl = document.getElementById('pong-partner-name');
 const pauseBtn = document.getElementById('pong-pause');
 const fsBtn = document.getElementById('pong-fs');
 const overlayBtn2El = document.getElementById('pong-overlay-btn2');
+const winTipEl = document.getElementById('pong-win-tip');
 const W = 400, H = 240;
-const PADDLE_W = 8, PADDLE_H = 72;
+const PADDLE_W = 8;
 const PADDLE_GAP = 14;            // 挡板距边界
-const BALL_R = 6;
-const WIN_SCORE = 5;
 const INIT_SPEED = 4;
 const SPEED_INC = 0.2;
-const MAX_SPEED = 8;
-const PLAYER_MAX_SPEED = 7;       // 玩家挡板最大速度（px/tick）
+const MAX_SPEED = 6.5;
+const PLAYER_MAX_SPEED = 8.5;      // 玩家挡板最大速度（px/tick，提高让玩家更容易接快球）
 const FPS = 60;
 const DIFFS = {
-easy:   { reactDelay: [0.32, 0.5], maxSpeed: 3.2, predictErr: 20, missRate: 0.07,
-beh: { early: 0.04, slow: 0.07, drift: 0.06, shift: 0.05, miss: 0.05, risky: 0.05 } },
-normal: { reactDelay: [0.2, 0.4],  maxSpeed: 4.3, predictErr: 11, missRate: 0.04,
+casual: { reactDelay: [0.5, 0.8],  maxSpeed: 2.4, predictErr: 34, missRate: 0.14, paddleH: 92, ballR: 8, winScore: 3, fumble: 0.14,
+beh: { early: 0.03, slow: 0.12, drift: 0.12, shift: 0.04, miss: 0.12, risky: 0.02 } },
+easy:   { reactDelay: [0.38, 0.6], maxSpeed: 2.8, predictErr: 26, missRate: 0.10, paddleH: 84, ballR: 7, winScore: 4, fumble: 0.08,
+beh: { early: 0.04, slow: 0.09, drift: 0.08, shift: 0.05, miss: 0.08, risky: 0.03 } },
+normal: { reactDelay: [0.2, 0.4],  maxSpeed: 4.3, predictErr: 11, missRate: 0.04, paddleH: 72, ballR: 6, winScore: 5, fumble: 0,
 beh: { early: 0.06, slow: 0.05, drift: 0.05, shift: 0.04, miss: 0.03, risky: 0.08 } },
-hard:   { reactDelay: [0.12, 0.28], maxSpeed: 5.5, predictErr: 5,  missRate: 0.02,
+hard:   { reactDelay: [0.12, 0.28], maxSpeed: 5.5, predictErr: 5,  missRate: 0.02, paddleH: 72, ballR: 6, winScore: 5, fumble: 0,
 beh: { early: 0.07, slow: 0.03, drift: 0.03, shift: 0.03, miss: 0.02, risky: 0.1 } }
 };
 const POOLS = {
+casual: {
+player_win: ['让你赢啦~', '再来陪你玩', '你厉害呀', '哼，下次赢回来', '好棒好棒'],
+opponent_win: ['没事，再来一局', '让着你还没赢呀', '下次让你先', '别气馁嘛', '哎呀我赢了'],
+draw: ['平手啦', '再来再来', '默契嘛', '一起的']
+},
+easy: {
+player_win: ['你赢了~', '再来一局', '这次你厉害', '差点接住', '你反应挺快'],
+opponent_win: ['我赢了，再来吗', '下次让你', '你差点接住', '加油呀', '还玩吗'],
+draw: ['平局，再来', '一起撞上了', '再来一次', '默契默契']
+},
+normal: {
 player_win: ['赢了？', '再来一局。', '这次你赢。', '还要继续吗？', '你反应挺快。', '差点接住。'],
 opponent_win: ['我赢了。', '还玩吗？', '这次是我赢。', '再来。', '你差点接住。', '下一局加油。'],
 draw: ['一起撞上的。', '算平手。', '再来一次。', '平局，再来。']
+},
+hard: {
+player_win: ['你赢了。', '再来。', '这次你反应快。', '继续？'],
+opponent_win: ['我赢了。', '再来。', '你差点接住。', '下一局。'],
+draw: ['平局。', '再来。']
+}
+};
+const SAY_POOLS = {
+catch: ['接得好', '嘿', '看我的', '嘿咻'],
+miss: ['哎呀', '差点', '哼', '没接住'],
+score: ['哈', '接到啦', '嘿嘿', '得分']
 };
 let audioCtx = null, soundOn = true;
 function beep(freq, dur, vol) {
@@ -36771,13 +37427,14 @@ let state = null;
 let rafId = null, lastTs = 0, acc = 0;
 let running = false;
 function newState(diff) {
-const d = DIFFS[diff] || DIFFS.normal;
+const d = DIFFS[diff] || DIFFS.easy;
+const pH = d.paddleH, bR = d.ballR;
 return {
 diff: diff,
 playerScore: 0, opponentScore: 0,
 ball: { x: W / 2, y: H / 2, vx: 0, vy: 0, speed: INIT_SPEED },
-player: { y: H / 2 - PADDLE_H / 2, vy: 0, targetY: H / 2 - PADDLE_H / 2 },
-opponent: { y: H / 2 - PADDLE_H / 2, vy: 0, targetY: H / 2 - PADDLE_H / 2, reactUntil: 0, aiNextAt: 0 },
+player: { y: H / 2 - pH / 2, vy: 0, targetY: H / 2 - pH / 2 },
+opponent: { y: H / 2 - pH / 2, vy: 0, targetY: H / 2 - pH / 2, reactUntil: 0, aiNextAt: 0 },
 status: 'countdown',          // countdown | rally | scored | ended
 countdown: 3, countdownAt: 0,
 scorePauseUntil: 0,
@@ -36792,11 +37449,16 @@ cooldown: {},               // {type: ts}
 consecCatch: 0              // TA 连续接球数
 },
 flashPaddle: 0, flashWall: 0, flashScore: 0,
+lastHit: 0,                   // 上次击球点（-1~1，用于挡板闪光颜色教学）
+taBubble: null,               // {emoji, text, until} TA 表情/说话泡泡
+sayCooldown: 0,               // TA 说话冷却时间戳
+serveDir: Math.random() < 0.5 ? -1 : 1,  // 预决定的发球方向（用于发球前预警箭头）
+playerRallyHits: 0,           // 玩家本回合连续接球数（连击奖励用）
 params: d
 };
 }
 function serve(s) {
-const dir = Math.random() < 0.5 ? -1 : 1;
+const dir = s.serveDir || (Math.random() < 0.5 ? -1 : 1);
 const ang = (Math.random() * 30 - 15) * Math.PI / 180;   // -15°~+15°
 const sp = INIT_SPEED;
 s.ball.x = W / 2; s.ball.y = H / 2;
@@ -36804,11 +37466,14 @@ s.ball.vx = Math.cos(ang) * sp * dir;
 s.ball.vy = Math.sin(ang) * sp;
 s.ball.speed = sp;
 s.rallyHits = 0;
+s.playerRallyHits = 0;
 s.status = 'rally';
 s.roundStartTs = s.gameTime;
+s.serveDir = Math.random() < 0.5 ? -1 : 1;   // 预决定下次发球方向（供预警箭头）
 }
 function predictY(s, targetX) {
 const b = s.ball;
+const bR = s.params.ballR;
 if (b.vx === 0) return b.y;
 const dir = Math.sign(b.vx);
 if ((targetX - b.x) * dir <= 0) return b.y;   // 球不会到达
@@ -36818,14 +37483,14 @@ while ((targetX - x) * dir > 0 && guard < 64) {
 guard++;
 const dt = (targetX - x) / vx;     // 直达时间
 let nextY = y + vy * dt;
-if (nextY < BALL_R) {
-const tHit = (BALL_R - y) / vy;
-x += vx * tHit; y = BALL_R; vy = -vy;
+if (nextY < bR) {
+const tHit = (bR - y) / vy;
+x += vx * tHit; y = bR; vy = -vy;
 continue;
 }
-if (nextY > H - BALL_R) {
-const tHit = (H - BALL_R - y) / vy;
-x += vx * tHit; y = H - BALL_R; vy = -vy;
+if (nextY > H - bR) {
+const tHit = (H - bR - y) / vy;
+x += vx * tHit; y = H - bR; vy = -vy;
 continue;
 }
 return nextY;
@@ -36850,6 +37515,7 @@ return s.beh.active;
 }
 function opponentAI(s, now) {
 const b = s.ball, o = s.opponent, p = s.params;
+const pH = p.paddleH;
 const taX = PADDLE_GAP + PADDLE_W;
 const ballToTa = b.vx < 0;   // 球正在向 TA（左）移动
 let targetY = o.y;           // 默认保持
@@ -36858,17 +37524,23 @@ const act = behActive(s, now);
 if (act && act.type === 'shift') {
 targetY = o.targetY;     // 保持上次选的站位
 } else {
-targetY = H / 2 - PADDLE_H / 2 + (Math.random() * 20 - 10);
+targetY = H / 2 - pH / 2 + (Math.random() * 20 - 10);
 }
 } else {
 let predY = predictY(s, taX);
-const predCenter = predY - PADDLE_H / 2;
+const predCenter = predY - pH / 2;
 const act = behActive(s, now);
 if (!act) {
 const r = Math.random();
 const beh = p.beh;
 const dist = b.x - taX;
-if (dist > 180 && behCanTrigger(s, 'early', now) && r < beh.early) {
+if (dist < 130 && dist > 30 && p.fumble > 0 && behCanTrigger(s, 'fumble', now) && r < p.fumble) {
+behTrigger(s, 'fumble', now, 260 + Math.random() * 200);
+const away = pH * (0.6 + Math.random() * 0.3);
+predY += (predY > H / 2 ? -1 : 1) * away;
+if (Math.random() < 0.5) predY = Math.max(p.ballR + 2, Math.min(H - p.ballR - 2, predY));
+}
+else if (dist > 180 && behCanTrigger(s, 'early', now) && r < beh.early) {
 behTrigger(s, 'early', now, 600 + Math.random() * 400);
 }
 else if (behCanTrigger(s, 'slow', now) && r < beh.slow) {
@@ -36881,7 +37553,7 @@ predY += (Math.random() < 0.5 ? -1 : 1) * (12 + Math.random() * 10);
 }
 else if (dist > 200 && behCanTrigger(s, 'shift', now) && r < beh.shift) {
 behTrigger(s, 'shift', now, 1000 + Math.random() * 1000);
-o.targetY = Math.max(0, Math.min(H - PADDLE_H, predCenter + (Math.random() * 80 - 40)));
+o.targetY = Math.max(0, Math.min(H - pH, predCenter + (Math.random() * 80 - 40)));
 targetY = o.targetY;
 return;   // 本帧直接用新站位
 }
@@ -36894,7 +37566,7 @@ behTrigger(s, 'risky', now, 800 + Math.random() * 600);
 predY += (Math.random() < 0.5 ? -1 : 1) * (8 + Math.random() * 8);
 }
 } else {
-if (act.type === 'drift' || act.type === 'miss' || act.type === 'risky') {
+if (act.type === 'drift' || act.type === 'miss' || act.type === 'risky' || act.type === 'fumble') {
 }
 if (act.type === 'slow') {
 if (now < o.reactUntil) { targetY = o.targetY; return; }
@@ -36902,46 +37574,64 @@ if (now < o.reactUntil) { targetY = o.targetY; return; }
 }
 predY += (Math.random() * 2 - 1) * p.predictErr * 0.3;
 if (Math.random() < p.missRate * 0.3) predY += (Math.random() < 0.5 ? -1 : 1) * 18;
-targetY = predY - PADDLE_H / 2;
+targetY = predY - pH / 2;
 }
-o.targetY = Math.max(0, Math.min(H - PADDLE_H, targetY));
+o.targetY = Math.max(0, Math.min(H - pH, targetY));
 }
-function movePaddle(paddle, targetY, maxSpeed) {
+function movePaddle(paddle, targetY, maxSpeed, paddleH) {
 const diff = targetY - paddle.y;
 const step = Math.max(-maxSpeed, Math.min(maxSpeed, diff));
 paddle.y += step;
 paddle.vy = step;
-paddle.y = Math.max(0, Math.min(H - PADDLE_H, paddle.y));
+paddle.y = Math.max(0, Math.min(H - paddleH, paddle.y));
 }
 function checkPaddle(s) {
 const b = s.ball;
+const bR = s.params.ballR, pH = s.params.paddleH;
 const tx = PADDLE_GAP + PADDLE_W;
-if (b.vx < 0 && b.x - BALL_R <= tx && b.x - BALL_R >= PADDLE_GAP - 4 && b.y >= s.opponent.y && b.y <= s.opponent.y + PADDLE_H) {
-b.x = tx + BALL_R;
+if (b.vx < 0 && b.x - bR <= tx && b.x - bR >= PADDLE_GAP - 4 && b.y >= s.opponent.y && b.y <= s.opponent.y + pH) {
+b.x = tx + bR;
 bouncePaddle(s, s.opponent, false);
 }
 const px = W - PADDLE_GAP - PADDLE_W;
-if (b.vx > 0 && b.x + BALL_R >= px && b.x + BALL_R <= W - PADDLE_GAP + 4 && b.y >= s.player.y && b.y <= s.player.y + PADDLE_H) {
-b.x = px - BALL_R;
+if (b.vx > 0 && b.x + bR >= px && b.x + bR <= W - PADDLE_GAP + 4 && b.y >= s.player.y && b.y <= s.player.y + pH) {
+b.x = px - bR;
 bouncePaddle(s, s.player, true);
 }
 }
 function bouncePaddle(s, paddle, isPlayer) {
 const b = s.ball;
-const hit = (b.y - (paddle.y + PADDLE_H / 2)) / (PADDLE_H / 2);   // -1~1
+const pH = s.params.paddleH;
+const hit = (b.y - (paddle.y + pH / 2)) / (pH / 2);   // -1~1
+s.lastHit = hit;                                       // 记录击球点用于挡板闪光颜色教学
 s.rallyHits++;
-const newSpeed = Math.min(MAX_SPEED, INIT_SPEED + s.rallyHits * SPEED_INC);
+const comboBonus = (s.diff === 'casual' || s.diff === 'easy') && isPlayer && s.playerRallyHits >= 3;
+const newSpeed = comboBonus ? b.speed : Math.min(MAX_SPEED, INIT_SPEED + s.rallyHits * SPEED_INC);
 b.speed = newSpeed;
 const ang = hit * (Math.PI / 3.2);   // 最大约 56°
 b.vx = (isPlayer ? -1 : 1) * Math.cos(ang) * newSpeed;
 b.vy = Math.sin(ang) * newSpeed;
 s.flashPaddle = 1;
 sfxPaddle();
+if (soundOn && s.diff !== 'hard' && navigator.vibrate) { try { navigator.vibrate(8); } catch (e) {} }
 if (!isPlayer) {
 s.beh.consecCatch++;
+const cc = s.beh.consecCatch;
+const emoji = cc >= 5 ? '🤩' : cc >= 3 ? '😎' : '😊';
+tryTaSay(s, SAY_POOLS.catch, emoji);
 } else {
 s.beh.consecCatch = 0;
+s.playerRallyHits++;
 }
+}
+function tryTaSay(s, sayPool, emoji) {
+const now = performance.now();
+let text = null;
+if (now > s.sayCooldown && Math.random() < 0.18) {
+text = sayPool[Math.floor(Math.random() * sayPool.length)];
+s.sayCooldown = now + 3000;
+}
+s.taBubble = { emoji: emoji, text: text, until: now + 1200 };
 }
 function step(s, now) {
 if (s.status === 'ended') return;
@@ -36959,7 +37649,7 @@ if (now >= s.scorePauseUntil) serve(s);
 return;
 }
 if (s.status !== 'rally') return;
-movePaddle(s.player, s.player.targetY, PLAYER_MAX_SPEED);
+movePaddle(s.player, s.player.targetY, PLAYER_MAX_SPEED, s.params.paddleH);
 const b = s.ball;
 const danger = b.vx < 0 && (b.x - PADDLE_GAP - PADDLE_W) < 220;
 const aiInterval = danger ? 50 : 110;
@@ -36967,24 +37657,29 @@ if (now >= s.opponent.aiNextAt) {
 opponentAI(s, now);
 s.opponent.aiNextAt = now + aiInterval;
 }
-movePaddle(s.opponent, s.opponent.targetY, s.params.maxSpeed);
+movePaddle(s.opponent, s.opponent.targetY, s.params.maxSpeed, s.params.paddleH);
 b.x += b.vx; b.y += b.vy;
-if (b.y - BALL_R < 0) { b.y = BALL_R; b.vy = -b.vy; s.flashWall = 1; sfxWall(); }
-if (b.y + BALL_R > H) { b.y = H - BALL_R; b.vy = -b.vy; s.flashWall = 1; sfxWall(); }
+const bR = s.params.ballR;
+if (b.y - bR < 0) { b.y = bR; b.vy = -b.vy; s.flashWall = 1; sfxWall(); }
+if (b.y + bR > H) { b.y = H - bR; b.vy = -b.vy; s.flashWall = 1; sfxWall(); }
 checkPaddle(s);
-if (b.x - BALL_R > W) {
+if (b.x - bR > W) {
 s.opponentScore++;
 s.opponentStreak++; s.playerStreak = 0;
 s.maxOpponentStreak = Math.max(s.maxOpponentStreak, s.opponentStreak);
 s.totalRounds++;
 s.beh.consecCatch = 0;
+s.playerRallyHits = 0;
+tryTaSay(s, SAY_POOLS.score, '😤');
 onScore(s, now, 'opponent');
-} else if (b.x + BALL_R < 0) {
+} else if (b.x + bR < 0) {
 s.playerScore++;
 s.playerStreak++; s.opponentStreak = 0;
 s.maxPlayerStreak = Math.max(s.maxPlayerStreak, s.playerStreak);
 s.totalRounds++;
 s.beh.consecCatch = 0;
+s.playerRallyHits = 0;
+tryTaSay(s, SAY_POOLS.miss, '😅');
 onScore(s, now, 'player');
 }
 if (s.flashPaddle > 0) s.flashPaddle = Math.max(0, s.flashPaddle - 0.08);
@@ -36994,7 +37689,7 @@ if (s.flashScore > 0) s.flashScore = Math.max(0, s.flashScore - 0.05);
 function onScore(s, now, who) {
 sfxScore();
 s.flashScore = 1;
-if (s.playerScore >= WIN_SCORE || s.opponentScore >= WIN_SCORE) {
+if (s.playerScore >= s.params.winScore || s.opponentScore >= s.params.winScore) {
 endGame(s, now);
 } else {
 s.status = 'scored';
@@ -37009,17 +37704,29 @@ const playerWin = s.playerScore > s.opponentScore;
 const draw = s.playerScore === s.opponentScore;
 const sec = Math.round((s.gameTime - 0) / 1000);
 const fmt = (n) => String(Math.floor(n / 60)).padStart(2, '0') + ':' + String(n % 60).padStart(2, '0');
+const statsKey = (window.activePrefix && window.activePrefix() || 'xy-home-v2') + ':pong-stats';
+let stats = { win: 0, lose: 0, draw: 0, maxStreak: 0, total: 0 };
+try {
+const raw = localStorage.getItem(statsKey);
+if (raw) stats = Object.assign(stats, JSON.parse(raw));
+if (draw) stats.draw++; else if (playerWin) stats.win++; else stats.lose++;
+stats.maxStreak = Math.max(stats.maxStreak, s.maxPlayerStreak);
+stats.total++;
+localStorage.setItem(statsKey, JSON.stringify(stats));
+} catch (e) {}
 const title = draw ? '平局' : (playerWin ? '🏆 你赢了' : 'TA 赢了');
 const body =
 '<div class="pong-end-score">你 ' + s.playerScore + ' : ' + s.opponentScore + ' TA</div>' +
 '<div class="pong-end-stat">总回合 ' + s.totalRounds + ' · 用时 ' + fmt(sec) + '</div>' +
-'<div class="pong-end-stat">你的最高连得 ' + s.maxPlayerStreak + ' · TA 最高连得 ' + s.maxOpponentStreak + '</div>';
+'<div class="pong-end-stat">你的最高连得 ' + s.maxPlayerStreak + ' · TA 最高连得 ' + s.maxOpponentStreak + '</div>' +
+'<div class="pong-end-stat">累计 ' + stats.win + '胜 ' + stats.lose + '负 ' + stats.draw + '平 · 历史最高连得 ' + stats.maxStreak + '</div>';
 showOverlay(title, body, '再玩一次');
 try {
 if (window.chatAddSystem) {
 window.chatAddSystem('Pong · 你 ' + s.playerScore + ' : ' + s.opponentScore + ' TA' + (draw ? ' · 平局' : playerWin ? ' · 你赢' : ' · TA赢'), { special: 'pong' });
 }
-const pool = draw ? POOLS.draw : (playerWin ? POOLS.player_win : POOLS.opponent_win);
+const dp = POOLS[s.diff] || POOLS.easy;
+const pool = draw ? dp.draw : (playerWin ? dp.player_win : dp.opponent_win);
 const reply = pool[Math.floor(Math.random() * pool.length)];
 setTimeout(() => {
 try {
@@ -37029,7 +37736,15 @@ else if (window.chatSendMsg) window.chatSendMsg(reply);
 }, 700);
 } catch (e) {}
 }
-function render(s) {
+function hitColor(hit) {
+const a = Math.abs(hit);
+if (a < 0.25) return '#4ade80';   // 绿
+if (a < 0.5)  return '#facc15';   // 黄
+if (a < 0.75) return '#fb923c';   // 橙
+return '#f87171';                  // 红
+}
+function render(s, now) {
+const pH = s.params.paddleH, bR = s.params.ballR;
 ctx.save();
 ctx.clearRect(0, 0, W, H);
 ctx.fillStyle = '#0f1420';
@@ -37039,13 +37754,50 @@ ctx.lineWidth = 2;
 ctx.setLineDash([6, 8]);
 ctx.beginPath(); ctx.moveTo(W / 2, 0); ctx.lineTo(W / 2, H); ctx.stroke();
 ctx.setLineDash([]);
-ctx.fillStyle = s.flashPaddle > 0 ? '#ffb38a' : '#e8eefc';
-ctx.fillRect(PADDLE_GAP, s.opponent.y, PADDLE_W, PADDLE_H);
-ctx.fillStyle = s.flashPaddle > 0 ? '#7fd1ff' : '#e8eefc';
-ctx.fillRect(W - PADDLE_GAP - PADDLE_W, s.player.y, PADDLE_W, PADDLE_H);
+const flashC = s.flashPaddle > 0 ? hitColor(s.lastHit) : '#e8eefc';
+ctx.fillStyle = flashC;
+ctx.fillRect(PADDLE_GAP, s.opponent.y, PADDLE_W, pH);
+ctx.fillStyle = flashC;
+ctx.fillRect(W - PADDLE_GAP - PADDLE_W, s.player.y, PADDLE_W, pH);
 const b = s.ball;
 ctx.fillStyle = s.flashWall > 0 ? '#ffe08a' : '#ffffff';
-ctx.beginPath(); ctx.arc(b.x, b.y, BALL_R, 0, Math.PI * 2); ctx.fill();
+ctx.beginPath(); ctx.arc(b.x, b.y, bR, 0, Math.PI * 2); ctx.fill();
+if ((s.diff === 'casual' || s.diff === 'easy') && now != null) {
+let showArrow = false;
+if (s.status === 'countdown' && s.countdown <= 1 && now > s.countdownAt - 500) showArrow = true;
+if (s.status === 'scored' && now > s.scorePauseUntil - 500) showArrow = true;
+if (showArrow) {
+ctx.save();
+ctx.fillStyle = 'rgba(255,255,255,0.85)';
+ctx.font = 'bold 26px sans-serif';
+ctx.textAlign = 'center';
+ctx.textBaseline = 'middle';
+ctx.fillText(s.serveDir < 0 ? '←' : '→', W / 2, H / 2);
+ctx.restore();
+}
+}
+if (s.taBubble) {
+if (now != null && now < s.taBubble.until) {
+const left = (s.taBubble.until - now) / 1200;
+ctx.save();
+ctx.globalAlpha = Math.min(1, left * 1.5);
+ctx.textAlign = 'center';
+const bx = PADDLE_GAP + PADDLE_W / 2;
+ctx.font = '18px sans-serif';
+ctx.textBaseline = 'bottom';
+const by = Math.max(22, s.opponent.y - 6);
+ctx.fillText(s.taBubble.emoji, bx, by);
+if (s.taBubble.text) {
+ctx.font = '11px sans-serif';
+ctx.textBaseline = 'bottom';
+ctx.fillStyle = 'rgba(255,255,255,0.9)';
+ctx.fillText(s.taBubble.text, bx, by - 18);
+}
+ctx.restore();
+} else if (now != null) {
+s.taBubble = null;
+}
+}
 ctx.restore();
 }
 function renderScore(s) {
@@ -37079,7 +37831,7 @@ step(state, ts);
 acc -= frame;
 guard++;
 }
-render(state);
+render(state, ts);
 renderScore(state);
 renderHint(state, ts);
 rafId = requestAnimationFrame(loop);
@@ -37116,7 +37868,7 @@ overlayEl.hidden = false;
 }
 function hideOverlay() { if (overlayEl) overlayEl.hidden = true; }
 function startGame(diff) {
-state = newState(diff || 'normal');
+state = newState(diff || 'easy');
 state.status = 'countdown';
 state.countdown = 3;
 state.countdownAt = performance.now() + 400;
@@ -37167,7 +37919,7 @@ if (!s) return false;
 s.status = 'rally';
 s.countdownAt = 0; s.scorePauseUntil = 0;
 s.opponent.aiNextAt = 0; s.opponent.reactUntil = 0;
-s.params = DIFFS[s.diff] || DIFFS.normal;
+s.params = DIFFS[s.diff] || DIFFS.easy;
 state = s;
 hideOverlay();
 fitCanvas();
@@ -37207,7 +37959,8 @@ function inputY(clientY) {
 if (!state || state.status === 'ended') return;
 const rect = canvas.getBoundingClientRect();
 const y = (clientY - rect.top) / rect.height * H;
-state.player.targetY = Math.max(0, Math.min(H - PADDLE_H, y - PADDLE_H / 2));
+const pH = state.params.paddleH;
+state.player.targetY = Math.max(0, Math.min(H - pH, y - pH / 2));
 }
 let touching = false;
 canvas.addEventListener('touchstart', (e) => {
@@ -37245,10 +37998,20 @@ if (!running || !state) return;
 let dy = 0;
 if (keys['arrowup'] || keys['w']) dy -= PLAYER_MAX_SPEED;
 if (keys['arrowdown'] || keys['s']) dy += PLAYER_MAX_SPEED;
-if (dy !== 0) state.player.targetY = Math.max(0, Math.min(H - PADDLE_H, state.player.targetY + dy));
+if (dy !== 0) {
+const pH = state.params.paddleH;
+state.player.targetY = Math.max(0, Math.min(H - pH, state.player.targetY + dy));
+}
 }, 1000 / FPS);
+function updateWinTip() {
+if (!winTipEl) return;
+const d = (diffSel && diffSel.value) || 'easy';
+const ws = (DIFFS[d] || DIFFS.easy).winScore;
+winTipEl.textContent = '先得 ' + ws + ' 分获胜';
+}
 if (diffSel) {
 diffSel.addEventListener('change', () => {
+updateWinTip();
 if (state && state.status === 'countdown') {
 startGame(diffSel.value);
 }
@@ -37264,7 +38027,7 @@ soundBtn.classList.toggle('pong-sound-off', !soundOn);
 if (closeBtn) closeBtn.addEventListener('click', (e) => { e.stopPropagation(); closePongPanel(); });
 if (overlayBtnEl) overlayBtnEl.addEventListener('click', (e) => {
 e.stopPropagation();
-const diff = (diffSel && diffSel.value) || 'normal';
+const diff = (diffSel && diffSel.value) || 'easy';
 startGame(diff);
 });
 if (pauseBtn) pauseBtn.addEventListener('click', (e) => { e.stopPropagation(); togglePause(); });
@@ -37286,6 +38049,7 @@ panel.hidden = false;
 fitCanvas();
 paused = false;
 if (pauseBtn) pauseBtn.textContent = '⏸';
+updateWinTip();   // 按当前难度更新获胜分提示
 if (canSave(state)) {
 state.status = 'rally';
 state.opponent.aiNextAt = 0; state.opponent.reactUntil = 0;
@@ -37300,7 +38064,9 @@ if (saved) {
 showOverlay('双人 Pong', '<div class="pong-start-tip">有未完成的对局<br>你 ' + saved.playerScore + ' : ' + saved.opponentScore + ' TA</div><div class="pong-start-ctrl">手机：左半边上下拖动<br>电脑：↑↓ 或 W S</div>', '重新开始');
 if (overlayBtn2El) overlayBtn2El.hidden = false;
 } else {
-showOverlay('双人 Pong', '<div class="pong-start-tip">你控制左侧挡板<br>先得 ' + WIN_SCORE + ' 分获胜</div><div class="pong-start-ctrl">手机：左半边上下拖动<br>电脑：↑↓ 或 W S</div>', '开始');
+const curDiff = (diffSel && diffSel.value) || 'easy';
+const ws = (DIFFS[curDiff] || DIFFS.easy).winScore;
+showOverlay('双人 Pong', '<div class="pong-start-tip">你控制左侧挡板<br>先得 ' + ws + ' 分获胜</div><div class="pong-start-ctrl">手机：左半边上下拖动<br>电脑：↑↓ 或 W S</div>', '开始');
 if (overlayBtn2El) overlayBtn2El.hidden = true;
 }
 stopGame();
@@ -37326,9 +38092,9 @@ const KEY = PREFIX + ':snake-score';
 const SAVE_KEY = PREFIX + ':snake-saved';
 const PARTNER_KEY = PREFIX + ':lbl-partner';
 const DIFFS = {
-easy:   { ticks: [280, 260, 240, 220] },
-normal: { ticks: [220, 200, 180, 160] },
-hard:   { ticks: [160, 140, 120, 100] }
+easy:   { ticks: [200, 180, 160, 140] },
+normal: { ticks: [150, 130, 115, 100] },
+hard:   { ticks: [105, 90, 80, 70] }
 };
 const BEHAVIORS = {
 randomTurn:    { prob: 0.08, cd: 6000 },
@@ -37341,15 +38107,22 @@ speedUp:       { prob: 0.03, cd: 10000 },
 pause:         { prob: 0.02, cd: 12000 },
 detour:        { prob: 0.07, cd: 7000 }
 };
-let panel, canvas, ctx, scoreEl, hintEl, startBtn, restartBtn, resumeBtn, resultEl, dpadEl, diffSel, pauseBtn, fsBtn;
+let panel, canvas, ctx, scoreEl, hintEl, startBtn, restartBtn, resumeBtn, resultEl, dpadEl, diffSel, pauseBtn, fsBtn, wallBtn, safeBtn, bestEl;
 let state = null;
 let behavior = null;
 let loopTimer = null, countdownTimer = null;
-let touchStart = null;
+let rafId = null;
+let lastFrameTime = 0, acc = 0;
+let prevPlayerBody = null, prevOppBody = null;
+let touchBase = null, lastTouchDir = null, lockAxis = null;
 let audioCtx = null;
 let paused = false;
 let isFs = false;
 let pauseAt = 0;
+let logicSize = 300, dpr = 1;
+let particles = [], floaters = [], renderLastTime = 0;
+const BEST_KEY = PREFIX + ':snake-best';
+function vib(pattern) { try { if (navigator.vibrate) navigator.vibrate(pattern); } catch (e) {} }
 function $(id) { return document.getElementById(id); }
 function beep(freq, dur) {
 try {
@@ -37374,11 +38147,53 @@ if (!scoreEl) return;
 const s = readScore();
 scoreEl.textContent = '胜 ' + s.w + ' · 负 ' + s.l + ' · 平 ' + s.d;
 }
+function readBest() { try { return JSON.parse(localStorage.getItem(BEST_KEY) || '{}'); } catch (e) { return {}; } }
+function writeBest(b) { try { localStorage.setItem(BEST_KEY, JSON.stringify(b)); } catch (e) {} }
+function renderBest() {
+if (!bestEl) return;
+const b = readBest();
+const diff = (state && state.diff) || (diffSel && diffSel.value) || 'normal';
+const cur = b[diff];
+if (!cur) { bestEl.hidden = true; return; }
+bestEl.textContent = '🏆 ' + (diff === 'easy' ? '慢' : diff === 'hard' ? '快' : '普通') + '档：最高 ' + cur.score + ' 分 · 最长 ' + cur.len;
+bestEl.hidden = false;
+}
+function updateBest(result) {
+try {
+const b = readBest();
+const diff = state.diff || 'normal';
+const cur = b[diff] || { score: 0, len: 0 };
+const ps = Math.floor(state.player.score);
+const pl = state.player.body.length;
+let changed = false;
+if (result === 'win' && ps > cur.score) { cur.score = ps; changed = true; }
+if (pl > cur.len) { cur.len = pl; changed = true; }
+if (changed) { b[diff] = cur; writeBest(b); }
+} catch (e) {}
+}
+function toggleFlag(name) {
+if (!state) return;
+if (!state.flags) state.flags = { wall: false, safe: false };
+state.flags[name] = !state.flags[name];
+const btn = name === 'wall' ? wallBtn : safeBtn;
+if (btn) btn.classList.toggle('on', state.flags[name]);
+if (name === 'wall' && hintEl && state.status === 'idle') hintEl.textContent = state.flags.wall ? '穿墙已开 · 点开始' : '点开始 · 滑动控制方向';
+if (name === 'safe' && hintEl && state.status === 'idle') hintEl.textContent = state.flags.safe ? '安全模式 · 点开始' : '点开始 · 滑动控制方向';
+}
+function setupCanvas() {
+if (!canvas) return;
+logicSize = isFs ? 480 : 300;
+dpr = Math.min(window.devicePixelRatio || 1, 3);
+canvas.width = logicSize * dpr;
+canvas.height = logicSize * dpr;
+ctx = canvas.getContext('2d');
+ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
 function initEls() {
 panel = $('chat-snake-panel');
 if (!panel) return;
 canvas = $('snake-canvas');
-ctx = canvas && canvas.getContext('2d');
+setupCanvas();
 scoreEl = $('snake-score');
 hintEl = $('snake-hint');
 startBtn = $('snake-start');
@@ -37389,11 +38204,16 @@ dpadEl = $('snake-dpad');
 diffSel = $('snake-diff');
 pauseBtn = $('snake-pause');
 fsBtn = $('snake-fs');
+wallBtn = $('snake-wall');
+safeBtn = $('snake-safe');
+bestEl = $('snake-best');
 if (startBtn) startBtn.addEventListener('click', function (e) { e.stopPropagation(); startGame(diffSel ? diffSel.value : 'normal'); });
 if (restartBtn) restartBtn.addEventListener('click', function (e) { e.stopPropagation(); startGame(diffSel ? diffSel.value : 'normal'); });
 if (resumeBtn) resumeBtn.addEventListener('click', function (e) { e.stopPropagation(); resumeGame(); });
 if (pauseBtn) pauseBtn.addEventListener('click', function (e) { e.stopPropagation(); togglePause(); });
 if (fsBtn) fsBtn.addEventListener('click', function (e) { e.stopPropagation(); toggleFs(); });
+if (wallBtn) wallBtn.addEventListener('click', function (e) { e.stopPropagation(); toggleFlag('wall'); });
+if (safeBtn) safeBtn.addEventListener('click', function (e) { e.stopPropagation(); toggleFlag('safe'); });
 const closeBtn = $('chat-snake-close');
 if (closeBtn) closeBtn.addEventListener('click', function (e) { e.stopPropagation(); closeSnakePanel(); });
 setupInput();
@@ -37401,18 +38221,40 @@ document.addEventListener('contact-switched', function () { try { closeSnakePane
 }
 function setupInput() {
 if (!canvas) return;
+const TH = 12; // 转向触发阈值(px)
 canvas.addEventListener('touchstart', function (e) {
 const t = e.touches[0];
-touchStart = { x: t.clientX, y: t.clientY };
+touchBase = { x: t.clientX, y: t.clientY };
+lastTouchDir = null;
+lockAxis = null;
 }, { passive: true });
-canvas.addEventListener('touchend', function (e) {
-if (!touchStart) return;
-const t = e.changedTouches[0];
-const dx = t.clientX - touchStart.x, dy = t.clientY - touchStart.y;
-touchStart = null;
-if (Math.abs(dx) < 18 && Math.abs(dy) < 18) return;
-if (Math.abs(dx) > Math.abs(dy)) setPlayerDir(dx > 0 ? 1 : -1, 0);
-else setPlayerDir(0, dy > 0 ? 1 : -1);
+canvas.addEventListener('touchmove', function (e) {
+if (!touchBase) return;
+const t = e.touches[0];
+const dx = t.clientX - touchBase.x, dy = t.clientY - touchBase.y;
+if (Math.abs(dx) < TH && Math.abs(dy) < TH) return;
+if (!lockAxis) lockAxis = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v';
+let dir;
+if (lockAxis === 'h') {
+if (Math.abs(dx) < TH) return;
+dir = dx > 0 ? 'r' : 'l';
+} else {
+if (Math.abs(dy) < TH) return;
+dir = dy > 0 ? 'd' : 'u';
+}
+if (dir === lastTouchDir) return;
+if (dir === 'u') setPlayerDir(0, -1);
+else if (dir === 'd') setPlayerDir(0, 1);
+else if (dir === 'l') setPlayerDir(-1, 0);
+else setPlayerDir(1, 0);
+lastTouchDir = dir;
+touchBase = { x: t.clientX, y: t.clientY };
+}, { passive: true });
+canvas.addEventListener('touchend', function () {
+touchBase = null; lastTouchDir = null; lockAxis = null;
+}, { passive: true });
+canvas.addEventListener('touchcancel', function () {
+touchBase = null; lastTouchDir = null; lockAxis = null;
 }, { passive: true });
 if (dpadEl) {
 dpadEl.addEventListener('click', function (e) {
@@ -37444,7 +38286,9 @@ if (!state || state.status !== 'playing') return;
 const p = state.player;
 if (!p.alive) return;
 if (x === -p.dir.x && y === -p.dir.y) return;
+if (p.nextDir && p.nextDir.x === x && p.nextDir.y === y) return;
 p.nextDir = { x: x, y: y };
+vib(8);
 }
 function newGame(diff) {
 const py = Math.floor(GRID / 2);
@@ -37452,6 +38296,7 @@ const playerBody = [];
 for (let i = 0; i < INIT_LEN; i++) playerBody.push({ x: 4 - i, y: py });
 const oppBody = [];
 for (let i = 0; i < INIT_LEN; i++) oppBody.push({ x: (GRID - 5) + i, y: py });
+const prevFlags = state && state.flags || { wall: false, safe: false };
 state = {
 diff: diff || 'normal',
 player: { body: playerBody, dir: { x: 1, y: 0 }, nextDir: { x: 1, y: 0 }, alive: true, score: 0, foodCount: 0 },
@@ -37459,9 +38304,13 @@ opp:    { body: oppBody,    dir: { x: -1, y: 0 }, nextDir: { x: -1, y: 0 }, aliv
 foods: [],
 status: 'idle',
 startTime: 0,
-elapsed: 0
+elapsed: 0,
+flags: { wall: prevFlags.wall, safe: prevFlags.safe }
 };
+if (wallBtn) wallBtn.classList.toggle('on', state.flags.wall);
+if (safeBtn) safeBtn.classList.toggle('on', state.flags.safe);
 behavior = { current: null, until: 0, stepLeft: 0, cooldowns: {}, targetFood: null, speedUp: false, speedUpUntil: 0 };
+particles = []; floaters = [];
 maintainFood();
 }
 function startGame(diff) {
@@ -37474,23 +38323,64 @@ if (restartBtn) restartBtn.hidden = true;
 if (resumeBtn) resumeBtn.hidden = true;
 if (resultEl) { resultEl.hidden = true; resultEl.innerHTML = ''; }
 newGame(diff);
-render();
+render(0);
 let n = 3;
 state.status = 'countdown';
-const step = function () {
+const countdownStep = function () {
 if (!state || state.status !== 'countdown') return;
 if (n > 0) {
 if (hintEl) hintEl.textContent = '准备 · ' + n;
 n--;
-countdownTimer = setTimeout(step, 700);
+countdownTimer = setTimeout(countdownStep, 700);
 } else {
 if (hintEl) hintEl.textContent = '滑动 / 方向键控制 · 别撞墙';
 state.status = 'playing';
 state.startTime = Date.now();
-loopTimer = setTimeout(tick, currentTickInterval());
+startFrame();
 }
 };
+countdownStep();
+}
+function startFrame() {
+stopFrame();
+lastFrameTime = 0;
+acc = 0;
+prevPlayerBody = cloneBody(state.player.body);
+prevOppBody = cloneBody(state.opp.body);
+rafId = requestAnimationFrame(frame);
+}
+function stopFrame() {
+if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+}
+function cloneBody(b) {
+const out = [];
+for (let i = 0; i < b.length; i++) out.push({ x: b[i].x, y: b[i].y });
+return out;
+}
+function frame(now) {
+if (!state || state.status !== 'playing') { rafId = null; return; }
+if (!lastFrameTime) lastFrameTime = now;
+const dt = now - lastFrameTime;
+lastFrameTime = now;
+acc += dt;
+const ti = currentTickInterval();
+let guard = 3;
+while (acc >= ti && guard > 0) {
+acc -= ti;
+prevPlayerBody = cloneBody(state.player.body);
+prevOppBody = cloneBody(state.opp.body);
 step();
+guard--;
+if (state.status !== 'playing') break;
+}
+if (state.status === 'playing') {
+const curTi = currentTickInterval();
+const alpha = Math.min(1, acc / curTi);
+render(alpha);
+rafId = requestAnimationFrame(frame);
+} else {
+rafId = null;
+}
 }
 function currentTickInterval() {
 const t = state.elapsed;
@@ -37503,7 +38393,15 @@ else base = ticks[3];
 if (behavior && behavior.speedUp) base = Math.max(60, base - 35);
 return base;
 }
-function tick() {
+function spawnParticles(pos, color) {
+for (let i = 0; i < 8; i++) {
+const a = (i / 8) * Math.PI * 2 + Math.random() * 0.4;
+const sp = 0.03 + Math.random() * 0.03;
+particles.push({ x: pos.x + 0.5, y: pos.y + 0.5, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 380, maxLife: 380, color: color });
+}
+floaters.push({ x: pos.x + 0.5, y: pos.y + 0.3, text: '+10', life: 700, maxLife: 700 });
+}
+function step() {
 if (!state || state.status !== 'playing') return;
 state.elapsed = Date.now() - state.startTime;
 applyDir(state.player);
@@ -37512,20 +38410,18 @@ applyDir(state.opp);
 const r = resolveCollisions();
 if (!r.pDie) {
 state.player.body.unshift(r.pNew);
-if (r.pEat) { eatFood(r.pNew); state.player.score += 10; state.player.foodCount++; SFX.eat(); }
+if (r.pEat) { eatFood(r.pNew); state.player.score += 10; state.player.foodCount++; SFX.eat(); spawnParticles(r.pNew, '#34c759'); vib(12); }
 else state.player.body.pop();
-} else { state.player.alive = false; SFX.hit(); }
+} else { state.player.alive = false; SFX.hit(); vib([20, 40, 20]); }
 if (!r.oDie) {
 state.opp.body.unshift(r.oNew);
-if (r.oEat) { eatFood(r.oNew); state.opp.score += 10; state.opp.foodCount++; }
+if (r.oEat) { eatFood(r.oNew); state.opp.score += 10; state.opp.foodCount++; spawnParticles(r.oNew, '#5ac8fa'); }
 else state.opp.body.pop();
 } else { state.opp.alive = false; }
 const ti = currentTickInterval();
 if (state.player.alive) state.player.score += ti / 1000;
 if (state.opp.alive) state.opp.score += ti / 1000;
-render();
-if (checkEnd()) return;
-loopTimer = setTimeout(tick, ti);
+checkEnd();
 }
 function applyDir(snake) {
 const nd = snake.nextDir;
@@ -37540,18 +38436,26 @@ return s;
 function resolveCollisions() {
 const p = state.player, o = state.opp;
 const ph = p.body[0], oh = o.body[0];
-const pNew = { x: ph.x + p.dir.x, y: ph.y + p.dir.y };
-const oNew = { x: oh.x + o.dir.x, y: oh.y + o.dir.y };
+const wall = state.flags && state.flags.wall;
+const safe = state.flags && state.flags.safe;
+let pNew = { x: ph.x + p.dir.x, y: ph.y + p.dir.y };
+let oNew = { x: oh.x + o.dir.x, y: oh.y + o.dir.y };
+if (wall) {
+pNew.x = (pNew.x + GRID) % GRID; pNew.y = (pNew.y + GRID) % GRID;
+oNew.x = (oNew.x + GRID) % GRID; oNew.y = (oNew.y + GRID) % GRID;
+}
 const pEat = state.foods.some(function (f) { return f.x === pNew.x && f.y === pNew.y; });
 const oEat = state.foods.some(function (f) { return f.x === oNew.x && f.y === oNew.y; });
 const pSelf = bodySet(p.body, !pEat);
 const oSelf = bodySet(o.body, !oEat);
 let pDie = false, oDie = false;
+if (!wall) {
 if (pNew.x < 0 || pNew.x >= GRID || pNew.y < 0 || pNew.y >= GRID) pDie = true;
 if (oNew.x < 0 || oNew.x >= GRID || oNew.y < 0 || oNew.y >= GRID) oDie = true;
-if (!pDie && pSelf[pNew.x + ',' + pNew.y]) pDie = true;
-if (!oDie && oSelf[oNew.x + ',' + oNew.y]) oDie = true;
-if (!pDie && oSelf[pNew.x + ',' + pNew.y]) pDie = true;
+}
+if (!pDie && !safe && pSelf[pNew.x + ',' + pNew.y]) pDie = true; // 碰自己身（安全模式跳过）
+if (!oDie && !safe && oSelf[oNew.x + ',' + oNew.y]) oDie = true;
+if (!pDie && oSelf[pNew.x + ',' + pNew.y]) pDie = true; // 碰对方身
 if (!oDie && pSelf[oNew.x + ',' + oNew.y]) oDie = true;
 if (pNew.x === oNew.x && pNew.y === oNew.y) { pDie = true; oDie = true; }
 return { pNew: pNew, oNew: oNew, pEat: pEat, oEat: oEat, pDie: pDie, oDie: oDie };
@@ -37586,12 +38490,15 @@ behaviorTick();
 const head = o.body[0];
 const dirs = [{ x: 0, y: -1 }, { x: 0, y: 1 }, { x: -1, y: 0 }, { x: 1, y: 0 }];
 const pHead = state.player.body[0];
+const wall = state.flags && state.flags.wall;
 const pNew = { x: pHead.x + state.player.dir.x, y: pHead.y + state.player.dir.y };
+if (wall) { pNew.x = (pNew.x + GRID) % GRID; pNew.y = (pNew.y + GRID) % GRID; }
 const candidates = [];
 dirs.forEach(function (d) {
 if (d.x === -o.dir.x && d.y === -o.dir.y) return;
-const nx = head.x + d.x, ny = head.y + d.y;
-if (nx < 0 || nx >= GRID || ny < 0 || ny >= GRID) return;
+let nx = head.x + d.x, ny = head.y + d.y;
+if (wall) { nx = (nx + GRID) % GRID; ny = (ny + GRID) % GRID; }
+else if (nx < 0 || nx >= GRID || ny < 0 || ny >= GRID) return;
 const eat = state.foods.some(function (f) { return f.x === nx && f.y === ny; });
 for (let i = 0; i < o.body.length - (eat ? 0 : 1); i++) if (o.body[i].x === nx && o.body[i].y === ny) return;
 for (let i = 0; i < state.player.body.length - 1; i++) if (state.player.body[i].x === nx && state.player.body[i].y === ny) return;
@@ -37753,6 +38660,7 @@ return false;
 function endGame(result) {
 if (!state) return;
 state.status = 'over';
+stopFrame();
 if (loopTimer) { clearTimeout(loopTimer); loopTimer = null; }
 clearSaved();
 if (result === 'win') SFX.win();
@@ -37769,74 +38677,146 @@ time: Math.floor(state.elapsed / 1000)
 const s = readScore();
 if (result === 'win') s.w++; else if (result === 'lose') s.l++; else s.d++;
 writeScore(s);
+updateBest(result);
 renderScore();
+renderBest();
 showResult(d);
 if (window.sendSnakeResult) window.sendSnakeResult(d);
 }
 function showResult(d) {
 if (!resultEl) return;
-const resTxt = d.result === 'win' ? '你赢了 🎉' : d.result === 'lose' ? 'TA 赢了' : '平局';
-resultEl.innerHTML = '<div class="snake-res-title">' + resTxt + '</div>' +
+const icon = d.result === 'win' ? '🏆' : d.result === 'lose' ? '💔' : '🤝';
+const resTxt = d.result === 'win' ? '你赢了' : d.result === 'lose' ? 'TA 赢了' : '平局';
+resultEl.innerHTML = '<div class="snake-res-icon">' + icon + '</div>' +
+'<div class="snake-res-title">' + resTxt + '</div>' +
 '<div class="snake-res-row"><span>🐍 你</span><span>长度 ' + d.pLen + ' · 食物 ' + d.pFood + ' · ' + d.pScore + '分</span></div>' +
-'<div class="snake-res-row"><span>🐍 TA</span><span>长度 ' + d.oLen + ' · 食物 ' + d.oFood + ' · ' + d.oScore + '分</span></div>' +
-'<div class="snake-res-time">存活 ' + d.time + ' 秒</div>';
+'<div class="snake-res-row"><span>🤖 TA</span><span>长度 ' + d.oLen + ' · 食物 ' + d.oFood + ' · ' + d.oScore + '分</span></div>' +
+'<div class="snake-res-time">存活 ' + d.time + ' 秒 · 已分享到聊天 ✓</div>';
 resultEl.hidden = false;
+resultEl.classList.remove('snake-res-pop');
+void resultEl.offsetWidth;
+resultEl.classList.add('snake-res-pop');
 if (restartBtn) restartBtn.hidden = false;
 if (hintEl) hintEl.textContent = '再来一局？';
 }
-function render() {
+function render(alpha) {
 if (!ctx || !state) return;
-const W = canvas.width, H = canvas.height;
+if (alpha == null) alpha = 0;
+const W = logicSize, H = logicSize;
 const cell = W / GRID;
+const now = performance.now();
+const dt = renderLastTime ? Math.min(50, now - renderLastTime) : 16;
+renderLastTime = now;
 ctx.clearRect(0, 0, W, H);
 ctx.fillStyle = '#f6f6f8';
 ctx.fillRect(0, 0, W, H);
-ctx.strokeStyle = 'rgba(0,0,0,0.05)';
+ctx.strokeStyle = 'rgba(0,0,0,0.04)';
 ctx.lineWidth = 1;
 for (let i = 1; i < GRID; i++) {
 ctx.beginPath(); ctx.moveTo(i * cell, 0); ctx.lineTo(i * cell, H); ctx.stroke();
 ctx.beginPath(); ctx.moveTo(0, i * cell); ctx.lineTo(W, i * cell); ctx.stroke();
 }
+const pulse = 1 + 0.12 * Math.sin(now / 220);
 state.foods.forEach(function (f) {
 ctx.fillStyle = '#ff6b6b';
 ctx.beginPath();
-ctx.arc(f.x * cell + cell / 2, f.y * cell + cell / 2, cell * 0.32, 0, Math.PI * 2);
+ctx.arc(f.x * cell + cell / 2, f.y * cell + cell / 2, cell * 0.32 * pulse, 0, Math.PI * 2);
 ctx.fill();
 });
-drawSnake(state.player, '#34c759', '#28a745');
-drawSnake(state.opp, '#5ac8fa', '#3a9fd6');
+drawSnake(state.player, prevPlayerBody, alpha, '#34c759', '#28a745');
+drawSnake(state.opp, prevOppBody, alpha, '#5ac8fa', '#3a9fd6');
+for (let i = particles.length - 1; i >= 0; i--) {
+const p = particles[i];
+p.life -= dt;
+if (p.life <= 0) { particles.splice(i, 1); continue; }
+p.x += p.vx * dt / 16; p.y += p.vy * dt / 16;
+ctx.globalAlpha = p.life / p.maxLife;
+ctx.fillStyle = p.color;
+ctx.beginPath();
+ctx.arc(p.x * cell, p.y * cell, cell * 0.12, 0, Math.PI * 2);
+ctx.fill();
 }
-function drawSnake(snake, headColor, bodyColor) {
-const cell = canvas.width / GRID;
-const pad = 1.5;
-snake.body.forEach(function (s, i) {
-ctx.fillStyle = snake.alive ? (i === 0 ? headColor : bodyColor) : '#cfcfd4';
-ctx.fillRect(s.x * cell + pad, s.y * cell + pad, cell - pad * 2, cell - pad * 2);
-});
+ctx.globalAlpha = 1;
+for (let i = floaters.length - 1; i >= 0; i--) {
+const f = floaters[i];
+f.life -= dt;
+if (f.life <= 0) { floaters.splice(i, 1); continue; }
+f.y -= dt / 280;
+ctx.globalAlpha = Math.min(1, f.life / 300);
+ctx.fillStyle = '#ff6b6b';
+ctx.font = 'bold ' + Math.floor(cell * 0.72) + 'px sans-serif';
+ctx.textAlign = 'center';
+ctx.textBaseline = 'middle';
+ctx.fillText(f.text, f.x * cell, f.y * cell);
+}
+ctx.globalAlpha = 1;
+}
+function drawSnake(snake, prevBody, alpha, headColor, bodyColor) {
+if (!snake.body.length) return;
+const cell = logicSize / GRID;
+const dead = !snake.alive;
+const bodyC = dead ? '#cfcfd4' : bodyColor;
+const headC = dead ? '#cfcfd4' : headColor;
+const interp = !dead && prevBody && alpha > 0 && alpha < 1;
+const pts = [];
+for (let i = 0; i < snake.body.length; i++) {
+const s = snake.body[i];
+let x = s.x, y = s.y;
+if (interp && prevBody[i]) {
+x = prevBody[i].x + (s.x - prevBody[i].x) * alpha;
+y = prevBody[i].y + (s.y - prevBody[i].y) * alpha;
+}
+pts.push({ x: x * cell + cell / 2, y: y * cell + cell / 2 });
+}
+if (pts.length >= 2) {
+ctx.strokeStyle = bodyC;
+ctx.lineWidth = cell * 0.82;
+ctx.lineCap = 'round';
+ctx.lineJoin = 'round';
+ctx.beginPath();
+ctx.moveTo(pts[1].x, pts[1].y);
+for (let i = 2; i < pts.length; i++) {
+const ddx = pts[i].x - pts[i - 1].x, ddy = pts[i].y - pts[i - 1].y;
+if (Math.abs(ddx) > cell * 2 || Math.abs(ddy) > cell * 2) {
+ctx.stroke(); ctx.beginPath(); ctx.moveTo(pts[i].x, pts[i].y);
+} else ctx.lineTo(pts[i].x, pts[i].y);
+}
+ctx.stroke();
+}
+ctx.fillStyle = headC;
+ctx.beginPath();
+ctx.arc(pts[0].x, pts[0].y, cell * 0.46, 0, Math.PI * 2);
+ctx.fill();
+if (!dead) {
+ctx.fillStyle = 'rgba(255,255,255,0.45)';
+ctx.beginPath();
+ctx.arc(pts[0].x - cell * 0.13, pts[0].y - cell * 0.13, cell * 0.15, 0, Math.PI * 2);
+ctx.fill();
+}
 }
 function togglePause() {
 if (!state) return;
 if (state.status === 'playing') {
 state.status = 'paused';
-if (loopTimer) { clearTimeout(loopTimer); loopTimer = null; }
+stopFrame();
 pauseAt = Date.now();
 if (pauseBtn) pauseBtn.textContent = '▶';
 if (hintEl) hintEl.textContent = '已暂停 · 点 ▶ 继续';
+render(0); // 暂停时对齐到整格位置
 } else if (state.status === 'paused') {
 state.status = 'playing';
 state.startTime += Date.now() - pauseAt;
 if (pauseBtn) pauseBtn.textContent = '⏸';
 if (hintEl) hintEl.textContent = '滑动 / 方向键控制 · 别撞墙';
-loopTimer = setTimeout(tick, currentTickInterval());
+startFrame();
 }
 }
 function toggleFs() {
 isFs = !isFs;
 if (panel) panel.classList.toggle('snake-fs', isFs);
 if (fsBtn) fsBtn.textContent = isFs ? '⤢' : '⛶';
-if (canvas) { canvas.width = canvas.height = isFs ? 440 : 300; }
-if (canvas) ctx = canvas.getContext('2d');
-render();
+setupCanvas();
+render(0);
 }
 function canSave(s) { return s && s.status === 'playing'; }
 function saveGame() {
@@ -37859,6 +38839,9 @@ function resumeGame() {
 const s = loadSaved();
 if (!s) return false;
 state = s;
+if (!state.flags) state.flags = { wall: false, safe: false };
+if (wallBtn) wallBtn.classList.toggle('on', state.flags.wall);
+if (safeBtn) safeBtn.classList.toggle('on', state.flags.safe);
 behavior = { current: null, until: 0, stepLeft: 0, cooldowns: {}, targetFood: null, speedUp: false, speedUpUntil: 0 };
 state.status = 'playing';
 state.startTime = Date.now() - state.elapsed;
@@ -37869,8 +38852,8 @@ if (resultEl) { resultEl.hidden = true; resultEl.innerHTML = ''; }
 if (hintEl) hintEl.textContent = '滑动 / 方向键控制 · 别撞墙';
 paused = false;
 if (pauseBtn) pauseBtn.textContent = '⏸';
-render();
-loopTimer = setTimeout(tick, currentTickInterval());
+render(0);
+startFrame();
 return true;
 }
 function openSnakePanel() {
@@ -37885,6 +38868,7 @@ panel.hidden = false;
 paused = false;
 if (pauseBtn) pauseBtn.textContent = '⏸';
 renderScore();
+renderBest();
 if (canSave(state)) {
 state.status = 'playing';
 state.startTime = Date.now() - state.elapsed;
@@ -37893,8 +38877,8 @@ if (restartBtn) restartBtn.hidden = true;
 if (resumeBtn) resumeBtn.hidden = true;
 if (resultEl) { resultEl.hidden = true; resultEl.innerHTML = ''; }
 if (hintEl) hintEl.textContent = '滑动 / 方向键控制 · 别撞墙';
-render();
-loopTimer = setTimeout(tick, currentTickInterval());
+render(0);
+startFrame();
 return;
 }
 const saved = loadSaved();
@@ -37916,11 +38900,12 @@ if (restartBtn) restartBtn.hidden = true;
 if (resumeBtn) resumeBtn.hidden = true;
 if (resultEl) { resultEl.hidden = true; resultEl.innerHTML = ''; }
 if (hintEl) hintEl.textContent = '点开始 · 滑动控制方向';
-render();
+render(0);
 }
 function stopLoop() {
 if (loopTimer) { clearTimeout(loopTimer); loopTimer = null; }
 if (countdownTimer) { clearTimeout(countdownTimer); countdownTimer = null; }
+stopFrame();
 }
 function closeSnakePanel() {
 if (canSave(state)) saveGame(); else clearSaved();
@@ -39524,7 +40509,7 @@ if (sw > 0 && sw < 900 && touch) {
 isMobile = true;
 try {
 document.querySelectorAll('meta[name="viewport"]').forEach(function (m) {
-m.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content');
+m.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=overlays-content');
 });
 } catch (e) {}
 try {
@@ -39851,11 +40836,17 @@ function startKbWatch() {
 if (_kbWatch) return;
 _kbWatch = setInterval(function () {
 try {
-if (!_kbActive) { stopKbWatch(); return; }
-var noKb = _vv && (_vv.height >= _noKbH - 60);
-if (noKb) restoreKb();
+var _foc = isTextEl(_textFocused) || isTextEl(document.activeElement);
+if (_foc) {
+syncIosKb();
+nudgeInputVisible();
+} else if (_kbActive) {
+if (_vv && _vv.height >= _noKbH - 60) restoreKb();
+} else {
+stopKbWatch();
+}
 } catch (e) {}
-}, 600);
+}, 250);
 }
 function stopKbWatch() {
 if (_kbWatch) { clearInterval(_kbWatch); _kbWatch = null; }
@@ -39872,6 +40863,7 @@ try { if (isTextEl(e.target)) _textFocused = e.target; } catch (e2) {}
 try { syncIosKb(); } catch (e3) {}
 setTimeout(syncIosKb, 250);
 setTimeout(syncIosKb, 450);
+if (isTextEl(e.target)) { try { startKbWatch(); } catch (e4) {} }
 });
 document.addEventListener('focusout', function (e) {
 try { if (e.target === _textFocused) _textFocused = null; } catch (e2) {}
@@ -39881,6 +40873,44 @@ setTimeout(function () {
 if (_kbActive && _vv && _vv.height >= _noKbH - 60) restoreKb();
 }, 400);
 });
+} catch (e) {}
+}
+if (!isIOS) {
+try {
+var _aPhone = document.querySelector('.phone');
+var _aVV = window.visualViewport;
+if (_aVV && _aPhone) {
+var _aH = _aVV.height; // 无键盘基准（跟随地址栏显隐更新）
+var _aKb = false;
+function syncAndroidKb() {
+if (!_aVV || !_aPhone) return;
+var h = _aVV.height;
+var open = h < _aH - 60; // 可视高度明显变小 = 键盘弹出
+if (!open && h > _aH) _aH = h; // 无键盘时更新基准，地址栏变化不误判
+if (open && !_aKb) { _aKb = true; _aPhone.style.alignSelf = 'flex-start'; }
+if (!open && _aKb) {
+_aKb = false;
+_aPhone.style.height = '';
+_aPhone.style.alignSelf = '';
+return;
+}
+if (_aKb) {
+var hs = h + 'px';
+if (_aPhone.style.height !== hs) _aPhone.style.height = hs;
+}
+}
+_aVV.addEventListener('resize', syncAndroidKb);
+document.addEventListener('focusin', function (e) {
+try {
+if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable)) {
+setTimeout(syncAndroidKb, 120);
+}
+} catch (e2) {}
+});
+document.addEventListener('focusout', function () {
+setTimeout(syncAndroidKb, 120);
+});
+}
 } catch (e) {}
 }
 const FLOAT_SELECTORS = ['#tc-mask', '#cc-export-mask', '#call-mask', '#feed-notice-panel', '#feed-comment-panel', '#poke-card', '#emoji-panel', '#chat-ask-panel', '#qa-mask', '#chat-more-panel', '#chat-search', '#chat-decision-panel', '#chat-divine-panel', '#chat-rps-panel', '#chat-call-panel', '#chat-pong-panel', '#chat-snake-panel', '#avlib-card', '#ck-panel', '.mg-mask', '#modal-mask', '#msg-actions', '#desk-image-viewer', '.desk-lib', '#gc-members-panel', '#gc-at-panel', '#gc-settings-panel'];

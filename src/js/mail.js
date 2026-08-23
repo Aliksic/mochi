@@ -208,9 +208,20 @@
     if (l.myReply && l.type !== 'sent') html += letterPaper('我的回信', l.myReply.content, fmtDT(l.myReply.tm), myName);
     if (l.partnerReply) html += letterPaper('对方的回信', l.partnerReply.content, fmtDT(l.partnerReply.tm), name);
     // 底部按钮：收到的信且未回信 → 提笔回信（打开独立回信页）；任意信可删除
+    // v3.10.x：收到的来信可收藏到【我的收藏】→ 信件分类
+    const canFav = l.type === 'received';
+    let favAlready = false;
+    if (canFav) {
+      try {
+        const favArr = JSON.parse(store.get('fav-msgs') || '[]');
+        favAlready = favArr.some(x => (x.kind || 'msg') === 'mail' && x.mailType === 'received' && (x.text || '') === (l.content || '') && x.ts === l.tm);
+      } catch (e) {}
+    }
     let footer = '';
-    if (l.type === 'received' && !l.myReply) {
-      footer = '<div class="mail-actions"><button class="cc-tool" id="mail-reply-btn">提笔回信</button><button class="cc-tool cc-tool-danger" id="mail-del-btn">删除</button><button class="cc-tool" id="mail-close2">关闭</button></div>';
+    if (canFav && !l.myReply) {
+      footer = '<div class="mail-actions"><button class="cc-tool" id="mail-fav-btn">' + (favAlready ? '已收藏' : '收藏来信') + '</button><button class="cc-tool" id="mail-reply-btn">提笔回信</button><button class="cc-tool cc-tool-danger" id="mail-del-btn">删除</button><button class="cc-tool" id="mail-close2">关闭</button></div>';
+    } else if (canFav) {
+      footer = '<div class="mail-actions"><button class="cc-tool" id="mail-fav-btn">' + (favAlready ? '已收藏' : '收藏来信') + '</button><button class="cc-tool cc-tool-danger" id="mail-del-btn">删除</button><button class="cc-tool" id="mail-close2">关闭</button></div>';
     } else {
       footer = '<div class="mail-actions"><button class="cc-tool cc-tool-danger" id="mail-del-btn">删除</button><button class="cc-tool" id="mail-close2">关闭</button></div>';
     }
@@ -222,6 +233,14 @@
     if (replyBtn) replyBtn.addEventListener('click', () => openReply(l));
     const delBtn = document.getElementById('mail-del-btn');
     if (delBtn) delBtn.addEventListener('click', () => deleteLetter(l));
+    const favBtn = document.getElementById('mail-fav-btn');
+    if (favBtn) favBtn.addEventListener('click', () => {
+      if (window.addMyFavItem) {
+        const ok = window.addMyFavItem({ kind: 'mail', mailType: 'received', title: l.tt || '', text: l.content || '', ts: l.tm || Date.now() });
+        toast(ok ? '已收藏到我的收藏' : '这封来信已收藏过');
+        if (ok) favBtn.textContent = '已收藏';
+      }
+    });
   }
   function showPage(id) {
     document.querySelectorAll('.page').forEach(p => p.hidden = true);

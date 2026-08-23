@@ -22,34 +22,62 @@
   const pauseBtn = document.getElementById('pong-pause');
   const fsBtn = document.getElementById('pong-fs');
   const overlayBtn2El = document.getElementById('pong-overlay-btn2');
+  const winTipEl = document.getElementById('pong-win-tip');
 
   // ---- 逻辑尺寸（物理计算用；Canvas 实际像素按 DPR 缩放，CSS 拉伸到容器宽度） ----
+  // 挡板高度/球半径/获胜分按难度变化（见 DIFFS），这里只放固定尺寸。
   const W = 400, H = 240;
-  const PADDLE_W = 8, PADDLE_H = 72;
+  const PADDLE_W = 8;
   const PADDLE_GAP = 14;            // 挡板距边界
-  const BALL_R = 6;
-  const WIN_SCORE = 5;
   const INIT_SPEED = 4;
   const SPEED_INC = 0.2;
-  const MAX_SPEED = 8;
-  const PLAYER_MAX_SPEED = 7;       // 玩家挡板最大速度（px/tick）
+  const MAX_SPEED = 6.5;
+  const PLAYER_MAX_SPEED = 8.5;      // 玩家挡板最大速度（px/tick，提高让玩家更容易接快球）
   const FPS = 60;
 
-  // ---- 难度参数（反应延迟/移动速度/预测误差/失误率/行为概率） ----
+  // ---- 难度参数（反应延迟/移动速度/预测误差/失误率/行为概率/物理尺寸/让分） ----
+  // v3.9.x：整体降难度——新增休闲档，easy 大幅放宽，默认 easy。球速上限 6.5 + 玩家挡板 8.5 让真人跟得上。
+  // 低难度加长玩家挡板 + 加大球 + 降低获胜分，物理上更易接、对局更短不累。fumble=AI 偶尔放水概率。
   const DIFFS = {
-    easy:   { reactDelay: [0.32, 0.5], maxSpeed: 3.2, predictErr: 20, missRate: 0.07,
-              beh: { early: 0.04, slow: 0.07, drift: 0.06, shift: 0.05, miss: 0.05, risky: 0.05 } },
-    normal: { reactDelay: [0.2, 0.4],  maxSpeed: 4.3, predictErr: 11, missRate: 0.04,
+    casual: { reactDelay: [0.5, 0.8],  maxSpeed: 2.4, predictErr: 34, missRate: 0.14, paddleH: 92, ballR: 8, winScore: 3, fumble: 0.14,
+              beh: { early: 0.03, slow: 0.12, drift: 0.12, shift: 0.04, miss: 0.12, risky: 0.02 } },
+    easy:   { reactDelay: [0.38, 0.6], maxSpeed: 2.8, predictErr: 26, missRate: 0.10, paddleH: 84, ballR: 7, winScore: 4, fumble: 0.08,
+              beh: { early: 0.04, slow: 0.09, drift: 0.08, shift: 0.05, miss: 0.08, risky: 0.03 } },
+    normal: { reactDelay: [0.2, 0.4],  maxSpeed: 4.3, predictErr: 11, missRate: 0.04, paddleH: 72, ballR: 6, winScore: 5, fumble: 0,
               beh: { early: 0.06, slow: 0.05, drift: 0.05, shift: 0.04, miss: 0.03, risky: 0.08 } },
-    hard:   { reactDelay: [0.12, 0.28], maxSpeed: 5.5, predictErr: 5,  missRate: 0.02,
+    hard:   { reactDelay: [0.12, 0.28], maxSpeed: 5.5, predictErr: 5,  missRate: 0.02, paddleH: 72, ballR: 6, winScore: 5, fumble: 0,
               beh: { early: 0.07, slow: 0.03, drift: 0.03, shift: 0.03, miss: 0.02, risky: 0.1 } }
   };
 
-  // ---- TA 游戏结束回应字卡池（内置，不依赖聊天 AI / 用户字卡库） ----
+  // ---- TA 游戏结束回应字卡池（内置，按难度分语气，不依赖聊天 AI / 用户字卡库） ----
+  // 休闲/简单：TA 更宠溺温柔；普通/困难：TA 更认真。
   const POOLS = {
-    player_win: ['赢了？', '再来一局。', '这次你赢。', '还要继续吗？', '你反应挺快。', '差点接住。'],
-    opponent_win: ['我赢了。', '还玩吗？', '这次是我赢。', '再来。', '你差点接住。', '下一局加油。'],
-    draw: ['一起撞上的。', '算平手。', '再来一次。', '平局，再来。']
+    casual: {
+      player_win: ['让你赢啦~', '再来陪你玩', '你厉害呀', '哼，下次赢回来', '好棒好棒'],
+      opponent_win: ['没事，再来一局', '让着你还没赢呀', '下次让你先', '别气馁嘛', '哎呀我赢了'],
+      draw: ['平手啦', '再来再来', '默契嘛', '一起的']
+    },
+    easy: {
+      player_win: ['你赢了~', '再来一局', '这次你厉害', '差点接住', '你反应挺快'],
+      opponent_win: ['我赢了，再来吗', '下次让你', '你差点接住', '加油呀', '还玩吗'],
+      draw: ['平局，再来', '一起撞上了', '再来一次', '默契默契']
+    },
+    normal: {
+      player_win: ['赢了？', '再来一局。', '这次你赢。', '还要继续吗？', '你反应挺快。', '差点接住。'],
+      opponent_win: ['我赢了。', '还玩吗？', '这次是我赢。', '再来。', '你差点接住。', '下一局加油。'],
+      draw: ['一起撞上的。', '算平手。', '再来一次。', '平局，再来。']
+    },
+    hard: {
+      player_win: ['你赢了。', '再来。', '这次你反应快。', '继续？'],
+      opponent_win: ['我赢了。', '再来。', '你差点接住。', '下一局。'],
+      draw: ['平局。', '再来。']
+    }
+  };
+  // 对局中 TA 偶尔说话泡泡（接球/失误/得分时按概率触发，与表情泡泡叠加）
+  const SAY_POOLS = {
+    catch: ['接得好', '嘿', '看我的', '嘿咻'],
+    miss: ['哎呀', '差点', '哼', '没接住'],
+    score: ['哈', '接到啦', '嘿嘿', '得分']
   };
 
   // ---- 音效（Web Audio 短促 beep，静音开关默认开） ----
@@ -79,13 +107,14 @@
   let running = false;
 
   function newState(diff) {
-    const d = DIFFS[diff] || DIFFS.normal;
+    const d = DIFFS[diff] || DIFFS.easy;
+    const pH = d.paddleH, bR = d.ballR;
     return {
       diff: diff,
       playerScore: 0, opponentScore: 0,
       ball: { x: W / 2, y: H / 2, vx: 0, vy: 0, speed: INIT_SPEED },
-      player: { y: H / 2 - PADDLE_H / 2, vy: 0, targetY: H / 2 - PADDLE_H / 2 },
-      opponent: { y: H / 2 - PADDLE_H / 2, vy: 0, targetY: H / 2 - PADDLE_H / 2, reactUntil: 0, aiNextAt: 0 },
+      player: { y: H / 2 - pH / 2, vy: 0, targetY: H / 2 - pH / 2 },
+      opponent: { y: H / 2 - pH / 2, vy: 0, targetY: H / 2 - pH / 2, reactUntil: 0, aiNextAt: 0 },
       status: 'countdown',          // countdown | rally | scored | ended
       countdown: 3, countdownAt: 0,
       scorePauseUntil: 0,
@@ -102,13 +131,18 @@
       },
       // 视觉反馈
       flashPaddle: 0, flashWall: 0, flashScore: 0,
+      lastHit: 0,                   // 上次击球点（-1~1，用于挡板闪光颜色教学）
+      taBubble: null,               // {emoji, text, until} TA 表情/说话泡泡
+      sayCooldown: 0,               // TA 说话冷却时间戳
+      serveDir: Math.random() < 0.5 ? -1 : 1,  // 预决定的发球方向（用于发球前预警箭头）
+      playerRallyHits: 0,           // 玩家本回合连续接球数（连击奖励用）
       params: d
     };
   }
 
-  // ---- 发球：随机方向 + ±15° 上下角度 ----
+  // ---- 发球：用预决定方向（serveDir）+ ±15° 上下角度，发球后预决定下次方向 ----
   function serve(s) {
-    const dir = Math.random() < 0.5 ? -1 : 1;
+    const dir = s.serveDir || (Math.random() < 0.5 ? -1 : 1);
     const ang = (Math.random() * 30 - 15) * Math.PI / 180;   // -15°~+15°
     const sp = INIT_SPEED;
     s.ball.x = W / 2; s.ball.y = H / 2;
@@ -116,13 +150,16 @@
     s.ball.vy = Math.sin(ang) * sp;
     s.ball.speed = sp;
     s.rallyHits = 0;
+    s.playerRallyHits = 0;
     s.status = 'rally';
     s.roundStartTs = s.gameTime;
+    s.serveDir = Math.random() < 0.5 ? -1 : 1;   // 预决定下次发球方向（供预警箭头）
   }
 
   // ---- 球轨迹预测：从当前状态推演到 x==targetX 处的 Y（含上下边界反弹） ----
   function predictY(s, targetX) {
     const b = s.ball;
+    const bR = s.params.ballR;
     if (b.vx === 0) return b.y;
     const dir = Math.sign(b.vx);
     if ((targetX - b.x) * dir <= 0) return b.y;   // 球不会到达
@@ -133,15 +170,15 @@
       const dt = (targetX - x) / vx;     // 直达时间
       // 上下边界反弹推演：y + vy*dt 是否越界
       let nextY = y + vy * dt;
-      if (nextY < BALL_R) {
+      if (nextY < bR) {
         // 先撞上边界再继续
-        const tHit = (BALL_R - y) / vy;
-        x += vx * tHit; y = BALL_R; vy = -vy;
+        const tHit = (bR - y) / vy;
+        x += vx * tHit; y = bR; vy = -vy;
         continue;
       }
-      if (nextY > H - BALL_R) {
-        const tHit = (H - BALL_R - y) / vy;
-        x += vx * tHit; y = H - BALL_R; vy = -vy;
+      if (nextY > H - bR) {
+        const tHit = (H - bR - y) / vy;
+        x += vx * tHit; y = H - bR; vy = -vy;
         continue;
       }
       return nextY;
@@ -171,6 +208,7 @@
   // ---- TA AI 决策（每次 AI 更新调用） ----
   function opponentAI(s, now) {
     const b = s.ball, o = s.opponent, p = s.params;
+    const pH = p.paddleH;
     const taX = PADDLE_GAP + PADDLE_W;
     const ballToTa = b.vx < 0;   // 球正在向 TA（左）移动
 
@@ -183,12 +221,12 @@
       if (act && act.type === 'shift') {
         targetY = o.targetY;     // 保持上次选的站位
       } else {
-        targetY = H / 2 - PADDLE_H / 2 + (Math.random() * 20 - 10);
+        targetY = H / 2 - pH / 2 + (Math.random() * 20 - 10);
       }
     } else {
       // 球向 TA 移动：预测落点
       let predY = predictY(s, taX);
-      const predCenter = predY - PADDLE_H / 2;
+      const predCenter = predY - pH / 2;
 
       // 概率行为判定（仅当当前无激活行为）
       const act = behActive(s, now);
@@ -197,7 +235,15 @@
         const beh = p.beh;
         // ① 提前移动：球较远 + 轨迹明确
         const dist = b.x - taX;
-        if (dist > 180 && behCanTrigger(s, 'early', now) && r < beh.early) {
+        // ⓪ 放水（低难度专属）：球较近 + 概率命中 → 故意偏离接不到，让玩家得分自然
+        if (dist < 130 && dist > 30 && p.fumble > 0 && behCanTrigger(s, 'fumble', now) && r < p.fumble) {
+          behTrigger(s, 'fumble', now, 260 + Math.random() * 200);
+          // 偏离挡板长度 60%~90%，确保接不到
+          const away = pH * (0.6 + Math.random() * 0.3);
+          predY += (predY > H / 2 ? -1 : 1) * away;
+          if (Math.random() < 0.5) predY = Math.max(p.ballR + 2, Math.min(H - p.ballR - 2, predY));
+        }
+        else if (dist > 180 && behCanTrigger(s, 'early', now) && r < beh.early) {
           behTrigger(s, 'early', now, 600 + Math.random() * 400);
         }
         // ② 反应慢一点
@@ -213,7 +259,7 @@
         // ④ 提前改变站位（球远时）
         else if (dist > 200 && behCanTrigger(s, 'shift', now) && r < beh.shift) {
           behTrigger(s, 'shift', now, 1000 + Math.random() * 1000);
-          o.targetY = Math.max(0, Math.min(H - PADDLE_H, predCenter + (Math.random() * 80 - 40)));
+          o.targetY = Math.max(0, Math.min(H - pH, predCenter + (Math.random() * 80 - 40)));
           targetY = o.targetY;
           return;   // 本帧直接用新站位
         }
@@ -230,7 +276,7 @@
         }
       } else {
         // 当前有激活行为：应用持续效果
-        if (act.type === 'drift' || act.type === 'miss' || act.type === 'risky') {
+        if (act.type === 'drift' || act.type === 'miss' || act.type === 'risky' || act.type === 'fumble') {
           // 偏离已在触发时写入 predY，这里不重复加；保持自然追踪
         }
         if (act.type === 'slow') {
@@ -244,34 +290,35 @@
       // 随机失误概率（独立于行为池的小概率明显误差）
       if (Math.random() < p.missRate * 0.3) predY += (Math.random() < 0.5 ? -1 : 1) * 18;
 
-      targetY = predY - PADDLE_H / 2;
+      targetY = predY - pH / 2;
     }
 
-    o.targetY = Math.max(0, Math.min(H - PADDLE_H, targetY));
+    o.targetY = Math.max(0, Math.min(H - pH, targetY));
   }
 
   // ---- 挡板移动（受最大速度限制） ----
-  function movePaddle(paddle, targetY, maxSpeed) {
+  function movePaddle(paddle, targetY, maxSpeed, paddleH) {
     const diff = targetY - paddle.y;
     const step = Math.max(-maxSpeed, Math.min(maxSpeed, diff));
     paddle.y += step;
     paddle.vy = step;
-    paddle.y = Math.max(0, Math.min(H - PADDLE_H, paddle.y));
+    paddle.y = Math.max(0, Math.min(H - paddleH, paddle.y));
   }
 
   // ---- 球与挡板碰撞 ----
   function checkPaddle(s) {
     const b = s.ball;
+    const bR = s.params.ballR, pH = s.params.paddleH;
     // TA 挡板（左）
     const tx = PADDLE_GAP + PADDLE_W;
-    if (b.vx < 0 && b.x - BALL_R <= tx && b.x - BALL_R >= PADDLE_GAP - 4 && b.y >= s.opponent.y && b.y <= s.opponent.y + PADDLE_H) {
-      b.x = tx + BALL_R;
+    if (b.vx < 0 && b.x - bR <= tx && b.x - bR >= PADDLE_GAP - 4 && b.y >= s.opponent.y && b.y <= s.opponent.y + pH) {
+      b.x = tx + bR;
       bouncePaddle(s, s.opponent, false);
     }
     // 玩家挡板（右）
     const px = W - PADDLE_GAP - PADDLE_W;
-    if (b.vx > 0 && b.x + BALL_R >= px && b.x + BALL_R <= W - PADDLE_GAP + 4 && b.y >= s.player.y && b.y <= s.player.y + PADDLE_H) {
-      b.x = px - BALL_R;
+    if (b.vx > 0 && b.x + bR >= px && b.x + bR <= W - PADDLE_GAP + 4 && b.y >= s.player.y && b.y <= s.player.y + pH) {
+      b.x = px - bR;
       bouncePaddle(s, s.player, true);
     }
   }
@@ -279,23 +326,44 @@
   // ---- 反弹角度：根据击球点相对挡板中心位置改变 Y 速度 ----
   function bouncePaddle(s, paddle, isPlayer) {
     const b = s.ball;
-    const hit = (b.y - (paddle.y + PADDLE_H / 2)) / (PADDLE_H / 2);   // -1~1
-    // 球速递增（每次碰挡板 +0.2，上限 8）
+    const pH = s.params.paddleH;
+    const hit = (b.y - (paddle.y + pH / 2)) / (pH / 2);   // -1~1
+    s.lastHit = hit;                                       // 记录击球点用于挡板闪光颜色教学
+    // 球速递增（每次碰挡板 +0.2，上限 6.5）
     s.rallyHits++;
-    const newSpeed = Math.min(MAX_SPEED, INIT_SPEED + s.rallyHits * SPEED_INC);
+    // 连击奖励：休闲/简单档玩家连续接球 >=3 次后球速暂停递增，鼓励长回合
+    const comboBonus = (s.diff === 'casual' || s.diff === 'easy') && isPlayer && s.playerRallyHits >= 3;
+    const newSpeed = comboBonus ? b.speed : Math.min(MAX_SPEED, INIT_SPEED + s.rallyHits * SPEED_INC);
     b.speed = newSpeed;
     const ang = hit * (Math.PI / 3.2);   // 最大约 56°
     b.vx = (isPlayer ? -1 : 1) * Math.cos(ang) * newSpeed;
     b.vy = Math.sin(ang) * newSpeed;
     s.flashPaddle = 1;
     sfxPaddle();
+    // 接球振动反馈（随音效开关，困难关关闭）
+    if (soundOn && s.diff !== 'hard' && navigator.vibrate) { try { navigator.vibrate(8); } catch (e) {} }
     if (!isPlayer) {
-      // TA 接球成功：连续计数 + 概率行为冒险触发条件
+      // TA 接球成功：连续计数 + 概率行为冒险触发条件 + 表情泡泡 + 偶尔说话
       s.beh.consecCatch++;
+      const cc = s.beh.consecCatch;
+      const emoji = cc >= 5 ? '🤩' : cc >= 3 ? '😎' : '😊';
+      tryTaSay(s, SAY_POOLS.catch, emoji);
     } else {
-      // 玩家接球成功：重置 TA 连续计数（玩家打断连击）
+      // 玩家接球成功：重置 TA 连续计数（玩家打断连击）+ 玩家连击数 +1
       s.beh.consecCatch = 0;
+      s.playerRallyHits++;
     }
+  }
+
+  // TA 说话泡泡：按概率触发，与表情泡泡叠加（emoji + text），冷却 3 秒避免太吵
+  function tryTaSay(s, sayPool, emoji) {
+    const now = performance.now();
+    let text = null;
+    if (now > s.sayCooldown && Math.random() < 0.18) {
+      text = sayPool[Math.floor(Math.random() * sayPool.length)];
+      s.sayCooldown = now + 3000;
+    }
+    s.taBubble = { emoji: emoji, text: text, until: now + 1200 };
   }
 
   // ---- 一步物理更新 ----
@@ -320,7 +388,7 @@
     if (s.status !== 'rally') return;
 
     // 玩家挡板：朝 targetY 移动（受最大速度限制）
-    movePaddle(s.player, s.player.targetY, PLAYER_MAX_SPEED);
+    movePaddle(s.player, s.player.targetY, PLAYER_MAX_SPEED, s.params.paddleH);
 
     // TA AI 更新频率：危险状态（球向 TA 且较近）提高频率
     const b = s.ball;
@@ -331,34 +399,39 @@
       s.opponent.aiNextAt = now + aiInterval;
     }
     // TA 挡板移动（受最大速度限制 + 反应延迟由 aiInterval 体现）
-    movePaddle(s.opponent, s.opponent.targetY, s.params.maxSpeed);
+    movePaddle(s.opponent, s.opponent.targetY, s.params.maxSpeed, s.params.paddleH);
 
     // 球移动
     b.x += b.vx; b.y += b.vy;
 
     // 上下边界反弹
-    if (b.y - BALL_R < 0) { b.y = BALL_R; b.vy = -b.vy; s.flashWall = 1; sfxWall(); }
-    if (b.y + BALL_R > H) { b.y = H - BALL_R; b.vy = -b.vy; s.flashWall = 1; sfxWall(); }
+    const bR = s.params.ballR;
+    if (b.y - bR < 0) { b.y = bR; b.vy = -b.vy; s.flashWall = 1; sfxWall(); }
+    if (b.y + bR > H) { b.y = H - bR; b.vy = -b.vy; s.flashWall = 1; sfxWall(); }
 
     // 挡板碰撞
     checkPaddle(s);
 
     // 得分判定
-    if (b.x - BALL_R > W) {
+    if (b.x - bR > W) {
       // 球越过右边界 → TA 得分
       s.opponentScore++;
       s.opponentStreak++; s.playerStreak = 0;
       s.maxOpponentStreak = Math.max(s.maxOpponentStreak, s.opponentStreak);
       s.totalRounds++;
       s.beh.consecCatch = 0;
+      s.playerRallyHits = 0;
+      tryTaSay(s, SAY_POOLS.score, '😤');
       onScore(s, now, 'opponent');
-    } else if (b.x + BALL_R < 0) {
-      // 球越过左边界 → 玩家得分
+    } else if (b.x + bR < 0) {
+      // 球越过左边界 → 玩家得分（TA 失误）
       s.playerScore++;
       s.playerStreak++; s.opponentStreak = 0;
       s.maxPlayerStreak = Math.max(s.maxPlayerStreak, s.playerStreak);
       s.totalRounds++;
       s.beh.consecCatch = 0;
+      s.playerRallyHits = 0;
+      tryTaSay(s, SAY_POOLS.miss, '😅');
       onScore(s, now, 'player');
     }
 
@@ -371,7 +444,7 @@
   function onScore(s, now, who) {
     sfxScore();
     s.flashScore = 1;
-    if (s.playerScore >= WIN_SCORE || s.opponentScore >= WIN_SCORE) {
+    if (s.playerScore >= s.params.winScore || s.opponentScore >= s.params.winScore) {
       endGame(s, now);
     } else {
       s.status = 'scored';
@@ -388,19 +461,32 @@
     const draw = s.playerScore === s.opponentScore;
     const sec = Math.round((s.gameTime - 0) / 1000);
     const fmt = (n) => String(Math.floor(n / 60)).padStart(2, '0') + ':' + String(n % 60).padStart(2, '0');
+    // 战绩记录（每联系人独立，存 localStorage）
+    const statsKey = (window.activePrefix && window.activePrefix() || 'xy-home-v2') + ':pong-stats';
+    let stats = { win: 0, lose: 0, draw: 0, maxStreak: 0, total: 0 };
+    try {
+      const raw = localStorage.getItem(statsKey);
+      if (raw) stats = Object.assign(stats, JSON.parse(raw));
+      if (draw) stats.draw++; else if (playerWin) stats.win++; else stats.lose++;
+      stats.maxStreak = Math.max(stats.maxStreak, s.maxPlayerStreak);
+      stats.total++;
+      localStorage.setItem(statsKey, JSON.stringify(stats));
+    } catch (e) {}
     const title = draw ? '平局' : (playerWin ? '🏆 你赢了' : 'TA 赢了');
     const body =
       '<div class="pong-end-score">你 ' + s.playerScore + ' : ' + s.opponentScore + ' TA</div>' +
       '<div class="pong-end-stat">总回合 ' + s.totalRounds + ' · 用时 ' + fmt(sec) + '</div>' +
-      '<div class="pong-end-stat">你的最高连得 ' + s.maxPlayerStreak + ' · TA 最高连得 ' + s.maxOpponentStreak + '</div>';
+      '<div class="pong-end-stat">你的最高连得 ' + s.maxPlayerStreak + ' · TA 最高连得 ' + s.maxOpponentStreak + '</div>' +
+      '<div class="pong-end-stat">累计 ' + stats.win + '胜 ' + stats.lose + '负 ' + stats.draw + '平 · 历史最高连得 ' + stats.maxStreak + '</div>';
     showOverlay(title, body, '再玩一次');
     // 写入聊天记录 + TA 回应
     try {
       if (window.chatAddSystem) {
         window.chatAddSystem('Pong · 你 ' + s.playerScore + ' : ' + s.opponentScore + ' TA' + (draw ? ' · 平局' : playerWin ? ' · 你赢' : ' · TA赢'), { special: 'pong' });
       }
-      // TA 随机回应
-      const pool = draw ? POOLS.draw : (playerWin ? POOLS.player_win : POOLS.opponent_win);
+      // TA 随机回应（按难度分语气）
+      const dp = POOLS[s.diff] || POOLS.easy;
+      const pool = draw ? dp.draw : (playerWin ? dp.player_win : dp.opponent_win);
       const reply = pool[Math.floor(Math.random() * pool.length)];
       setTimeout(() => {
         try {
@@ -411,8 +497,18 @@
     } catch (e) {}
   }
 
+  // 击球点颜色教学：|hit| 越小（越靠中心）越绿，越大（越靠边角）越红
+  function hitColor(hit) {
+    const a = Math.abs(hit);
+    if (a < 0.25) return '#4ade80';   // 绿
+    if (a < 0.5)  return '#facc15';   // 黄
+    if (a < 0.75) return '#fb923c';   // 橙
+    return '#f87171';                  // 红
+  }
+
   // ---- 渲染 ----
-  function render(s) {
+  function render(s, now) {
+    const pH = s.params.paddleH, bR = s.params.ballR;
     ctx.save();
     ctx.clearRect(0, 0, W, H);
     // 背景
@@ -424,15 +520,56 @@
     ctx.setLineDash([6, 8]);
     ctx.beginPath(); ctx.moveTo(W / 2, 0); ctx.lineTo(W / 2, H); ctx.stroke();
     ctx.setLineDash([]);
-    // 挡板：TA 在左（橙色），玩家在右（蓝色）
-    ctx.fillStyle = s.flashPaddle > 0 ? '#ffb38a' : '#e8eefc';
-    ctx.fillRect(PADDLE_GAP, s.opponent.y, PADDLE_W, PADDLE_H);
-    ctx.fillStyle = s.flashPaddle > 0 ? '#7fd1ff' : '#e8eefc';
-    ctx.fillRect(W - PADDLE_GAP - PADDLE_W, s.player.y, PADDLE_W, PADDLE_H);
+    // 挡板：TA 在左，玩家在右。闪光时按击球点位置变色（中心绿/中段黄/边缘橙/边角红）教学
+    const flashC = s.flashPaddle > 0 ? hitColor(s.lastHit) : '#e8eefc';
+    ctx.fillStyle = flashC;
+    ctx.fillRect(PADDLE_GAP, s.opponent.y, PADDLE_W, pH);
+    ctx.fillStyle = flashC;
+    ctx.fillRect(W - PADDLE_GAP - PADDLE_W, s.player.y, PADDLE_W, pH);
     // 球（碰墙时轻微闪烁）
     const b = s.ball;
     ctx.fillStyle = s.flashWall > 0 ? '#ffe08a' : '#ffffff';
-    ctx.beginPath(); ctx.arc(b.x, b.y, BALL_R, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(b.x, b.y, bR, 0, Math.PI * 2); ctx.fill();
+    // 发球前方向预警箭头（休闲/简单档，发球前 500ms 在球起点显示 ←/→）
+    if ((s.diff === 'casual' || s.diff === 'easy') && now != null) {
+      let showArrow = false;
+      if (s.status === 'countdown' && s.countdown <= 1 && now > s.countdownAt - 500) showArrow = true;
+      if (s.status === 'scored' && now > s.scorePauseUntil - 500) showArrow = true;
+      if (showArrow) {
+        ctx.save();
+        ctx.fillStyle = 'rgba(255,255,255,0.85)';
+        ctx.font = 'bold 26px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(s.serveDir < 0 ? '←' : '→', W / 2, H / 2);
+        ctx.restore();
+      }
+    }
+    // TA 表情/说话泡泡（挡板上方，1.2 秒消散，不挡视线）
+    if (s.taBubble) {
+      if (now != null && now < s.taBubble.until) {
+        const left = (s.taBubble.until - now) / 1200;
+        ctx.save();
+        ctx.globalAlpha = Math.min(1, left * 1.5);
+        ctx.textAlign = 'center';
+        const bx = PADDLE_GAP + PADDLE_W / 2;
+        // 表情 emoji
+        ctx.font = '18px sans-serif';
+        ctx.textBaseline = 'bottom';
+        const by = Math.max(22, s.opponent.y - 6);
+        ctx.fillText(s.taBubble.emoji, bx, by);
+        // 说话文字（若有，在 emoji 上方）
+        if (s.taBubble.text) {
+          ctx.font = '11px sans-serif';
+          ctx.textBaseline = 'bottom';
+          ctx.fillStyle = 'rgba(255,255,255,0.9)';
+          ctx.fillText(s.taBubble.text, bx, by - 18);
+        }
+        ctx.restore();
+      } else if (now != null) {
+        s.taBubble = null;
+      }
+    }
     // 倒计时 / 得分暂停提示
     ctx.restore();
   }
@@ -471,7 +608,7 @@
       acc -= frame;
       guard++;
     }
-    render(state);
+    render(state, ts);
     renderScore(state);
     renderHint(state, ts);
     rafId = requestAnimationFrame(loop);
@@ -515,7 +652,7 @@
 
   // ---- 开始 / 停止 ----
   function startGame(diff) {
-    state = newState(diff || 'normal');
+    state = newState(diff || 'easy');
     state.status = 'countdown';
     state.countdown = 3;
     state.countdownAt = performance.now() + 400;
@@ -571,7 +708,7 @@
     s.status = 'rally';
     s.countdownAt = 0; s.scorePauseUntil = 0;
     s.opponent.aiNextAt = 0; s.opponent.reactUntil = 0;
-    s.params = DIFFS[s.diff] || DIFFS.normal;
+    s.params = DIFFS[s.diff] || DIFFS.easy;
     state = s;
     hideOverlay();
     fitCanvas();
@@ -618,7 +755,8 @@
     if (!state || state.status === 'ended') return;
     const rect = canvas.getBoundingClientRect();
     const y = (clientY - rect.top) / rect.height * H;
-    state.player.targetY = Math.max(0, Math.min(H - PADDLE_H, y - PADDLE_H / 2));
+    const pH = state.params.paddleH;
+    state.player.targetY = Math.max(0, Math.min(H - pH, y - pH / 2));
   }
   let touching = false;
   canvas.addEventListener('touchstart', (e) => {
@@ -659,12 +797,22 @@
     let dy = 0;
     if (keys['arrowup'] || keys['w']) dy -= PLAYER_MAX_SPEED;
     if (keys['arrowdown'] || keys['s']) dy += PLAYER_MAX_SPEED;
-    if (dy !== 0) state.player.targetY = Math.max(0, Math.min(H - PADDLE_H, state.player.targetY + dy));
+    if (dy !== 0) {
+      const pH = state.params.paddleH;
+      state.player.targetY = Math.max(0, Math.min(H - pH, state.player.targetY + dy));
+    }
   }, 1000 / FPS);
 
   // ---- 难度选择 / 静音 / 关闭 ----
+  function updateWinTip() {
+    if (!winTipEl) return;
+    const d = (diffSel && diffSel.value) || 'easy';
+    const ws = (DIFFS[d] || DIFFS.easy).winScore;
+    winTipEl.textContent = '先得 ' + ws + ' 分获胜';
+  }
   if (diffSel) {
     diffSel.addEventListener('change', () => {
+      updateWinTip();
       if (state && state.status === 'countdown') {
         // 倒计时阶段可改难度
         startGame(diffSel.value);
@@ -681,7 +829,7 @@
   if (closeBtn) closeBtn.addEventListener('click', (e) => { e.stopPropagation(); closePongPanel(); });
   if (overlayBtnEl) overlayBtnEl.addEventListener('click', (e) => {
     e.stopPropagation();
-    const diff = (diffSel && diffSel.value) || 'normal';
+    const diff = (diffSel && diffSel.value) || 'easy';
     startGame(diff);
   });
   if (pauseBtn) pauseBtn.addEventListener('click', (e) => { e.stopPropagation(); togglePause(); });
@@ -706,6 +854,7 @@
     fitCanvas();
     paused = false;
     if (pauseBtn) pauseBtn.textContent = '⏸';
+    updateWinTip();   // 按当前难度更新获胜分提示
     // 内存里还有进行中的对局（同会话关闭后重开）→ 直接继续
     if (canSave(state)) {
       state.status = 'rally';
@@ -722,7 +871,9 @@
       showOverlay('双人 Pong', '<div class="pong-start-tip">有未完成的对局<br>你 ' + saved.playerScore + ' : ' + saved.opponentScore + ' TA</div><div class="pong-start-ctrl">手机：左半边上下拖动<br>电脑：↑↓ 或 W S</div>', '重新开始');
       if (overlayBtn2El) overlayBtn2El.hidden = false;
     } else {
-      showOverlay('双人 Pong', '<div class="pong-start-tip">你控制左侧挡板<br>先得 ' + WIN_SCORE + ' 分获胜</div><div class="pong-start-ctrl">手机：左半边上下拖动<br>电脑：↑↓ 或 W S</div>', '开始');
+      const curDiff = (diffSel && diffSel.value) || 'easy';
+      const ws = (DIFFS[curDiff] || DIFFS.easy).winScore;
+      showOverlay('双人 Pong', '<div class="pong-start-tip">你控制左侧挡板<br>先得 ' + ws + ' 分获胜</div><div class="pong-start-ctrl">手机：左半边上下拖动<br>电脑：↑↓ 或 W S</div>', '开始');
       if (overlayBtn2El) overlayBtn2El.hidden = true;
     }
     stopGame();

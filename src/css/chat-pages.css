@@ -471,22 +471,26 @@
 .mem-add-cancel { border:1px solid rgba(0,0,0,.12); background:rgba(255,255,255,.92); color:#666; }
 .mem-add-ok { border:none; background:var(--ink); color:#fff; }
 
-/* 收藏页分类 tab —— v3.5.138：横向滚动（7 个 tab 在 393px 内 flex:1 均分会换行挤压） */
+/* 收藏页分类 tab —— v3.5.138：横向滚动；v3.10.x：图标+紧凑（行高压缩给列表腾空间） */
 .fav-tabs {
-  display:flex; gap:8px; padding:4px 18px 12px; flex-shrink:0;
+  display:flex; gap:7px; padding:4px 18px 8px; flex-shrink:0;
   overflow-x:auto; scrollbar-width:none; -ms-overflow-style:none;
   -webkit-overflow-scrolling:touch;
 }
 .fav-tabs::-webkit-scrollbar { display:none; }
 .fav-tab {
-  flex:0 0 auto; white-space:nowrap; padding:12px 14px; font-size:13px; font-weight:600;
+  display:inline-flex; align-items:center; gap:4px;
+  flex:0 0 auto; white-space:nowrap; padding:8px 11px; font-size:13px; font-weight:600;
   border:1px solid rgba(0,0,0,.1); background:rgba(255,255,255,.92);
   color:#666; border-radius:12px; cursor:pointer; font-family:inherit;
   -webkit-tap-highlight-color:transparent;
 }
+.fav-tab svg { width:14px; height:14px; flex-shrink:0; }
+.fav-tab-cnt { font-size:11px; font-weight:600; opacity:.55; }
 .fav-tab.sel { background:var(--ink); color:#fff; border-color:var(--ink); }
-/* 收藏页分类 tab 第二行（全部/聊天消息/互动卡片/信件/朋友圈）：不重复顶部留白 */
-.fav-tabs.fav-kind-row { padding-top:0; padding-bottom:12px; }
+.fav-tab.sel .fav-tab-cnt { opacity:.9; }
+/* 收藏页分类 tab 第二行（全部/聊天/互动/信件/朋友圈）：不重复顶部留白 */
+.fav-tabs.fav-kind-row { padding-top:0; padding-bottom:8px; }
 .fav-body { padding:6px 18px; }
 
 /* ===== 收藏设置页 ===== */
@@ -1983,6 +1987,8 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + env(safe-area-inset-bott
   -webkit-tap-highlight-color:transparent;
 }
 .dec-inp-clear:active { background:rgba(0,0,0,.14); color:var(--ink); }
+/* v3.9.x：占卜页问题输入框复用同款「一键清空」×（桌面 .div-input 的右侧留白） */
+.dec-inp-wrap .div-input { padding-right:38px; }
 /* contenteditable 转换版（mobile-adapt）：box 相对容器定位，按钮垂直居中 */
 .dec-inp-wrap .ce-box { padding-right:38px; }
 .dc-result {
@@ -2124,6 +2130,7 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + env(safe-area-inset-bott
 .feed-comment-input {
   flex:1; min-width:0; border:1px solid rgba(0,0,0,.1); border-radius:99px;
   padding:9px 14px; font-size:13px; font-family:inherit; outline:none; background:#f6f6f6;
+  resize:none; /* 去掉右下角原生 textarea 调整大小的黑点 */
 }
 .feed-comment-input:focus { border-color:var(--ink); background:#fff; }
 .feed-comment-send {
@@ -2286,23 +2293,27 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + env(safe-area-inset-bott
 #chat-snake-panel { height:auto; max-height:86%; }
 #chat-snake-panel .poke-card-scroll { min-height:0; max-height:none; }
 #chat-snake-panel .poke-card-head { display:flex; align-items:center; justify-content:space-between; gap:8px; }
-.snake-head-actions { display:flex; align-items:center; gap:6px; }
+.snake-head-actions { display:flex; align-items:center; gap:5px; }
+.snake-toggle { font-size:12px; font-weight:700; }
+.snake-toggle.on { background:var(--ink); color:#fff; }
 .snake-diff { font-size:13px; padding:4px 8px; border-radius:8px; border:1px solid rgba(0,0,0,.12); background:rgba(255,255,255,.6); color:var(--ink); outline:none; font-family:inherit; }
 .snake-icon-btn { width:32px; height:32px; border-radius:50%; border:none; background:rgba(0,0,0,.06); font-size:15px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; line-height:1; color:var(--ink); }
 .snake-icon-btn:active { transform:scale(.92); }
-.snake-score { text-align:center; font-size:13px; font-weight:700; color:var(--ink); padding:4px 0 8px; letter-spacing:.5px; }
+.snake-score { text-align:center; font-size:13px; font-weight:700; color:var(--ink); padding:4px 0 2px; letter-spacing:.5px; }
+.snake-best { text-align:center; font-size:11px; color:var(--muted); padding:0 0 6px; }
 .snake-canvas { display:block; width:min(300px,86vw); height:min(300px,86vw); margin:0 auto; background:#f6f6f8; border-radius:12px; touch-action:none; }
 .snake-hint { text-align:center; font-size:12px; color:var(--muted); padding:8px 0 4px; }
 .snake-result { text-align:center; padding:8px 0 4px; }
+.snake-res-icon { font-size:34px; line-height:1; margin-bottom:4px; }
 .snake-res-title { font-size:16px; font-weight:700; color:var(--ink); margin-bottom:8px; }
 .snake-res-row { display:flex; justify-content:space-between; font-size:12px; color:var(--ink); padding:3px 12px; }
 .snake-res-time { font-size:11px; color:var(--muted); margin-top:6px; }
 .snake-controls { display:flex; gap:10px; justify-content:center; padding:10px 0 4px; }
 .snake-btn { flex:1; max-width:140px; padding:10px; border:none; border-radius:12px; background:var(--ink); color:#fff; font-size:14px; font-weight:700; cursor:pointer; font-family:inherit; -webkit-tap-highlight-color:transparent; }
 .snake-btn:active { opacity:.85; }
-.snake-dpad { display:grid; grid-template-columns:repeat(3,64px); grid-template-rows:repeat(2,56px); gap:6px; justify-content:center; padding:6px 0 2px; }
-.snake-dp { border:1px solid rgba(0,0,0,.12); border-radius:12px; background:rgba(255,255,255,.92); color:var(--ink); font-size:20px; cursor:pointer; font-family:inherit; -webkit-tap-highlight-color:transparent; }
-.snake-dp:active { background:rgba(0,0,0,.06); }
+.snake-dpad { display:grid; grid-template-columns:repeat(3,72px); grid-template-rows:repeat(2,64px); gap:8px; justify-content:center; padding:8px 0 2px; }
+.snake-dp { border:1px solid rgba(0,0,0,.12); border-radius:14px; background:rgba(255,255,255,.92); color:var(--ink); font-size:22px; cursor:pointer; font-family:inherit; -webkit-tap-highlight-color:transparent; transition:transform .08s, background .08s; }
+.snake-dp:active { background:rgba(0,0,0,.1); transform:scale(.9); }
 .snake-dp[data-dir="up"] { grid-column:2; grid-row:1; }
 .snake-dp[data-dir="left"] { grid-column:1; grid-row:2; }
 .snake-dp[data-dir="down"] { grid-column:2; grid-row:2; }
@@ -2311,9 +2322,11 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + env(safe-area-inset-bott
 #chat-snake-panel.snake-fs { position:fixed; inset:0; z-index:9999; border-radius:0; max-height:none; height:100vh; background:#fff; }
 #chat-snake-panel.snake-fs .poke-card-head { border-bottom-color:rgba(0,0,0,.08); }
 #chat-snake-panel.snake-fs .poke-card-scroll { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:0 16px; }
-#chat-snake-panel.snake-fs .snake-canvas { width:min(440px,92vw); height:min(440px,92vw); }
-#chat-snake-panel.snake-fs .snake-dpad { grid-template-columns:repeat(3,76px); grid-template-rows:repeat(2,68px); }
-#chat-snake-panel.snake-fs .snake-dp { font-size:24px; }
+#chat-snake-panel.snake-fs .snake-canvas { width:min(480px,92vw); height:min(480px,92vw); }
+#chat-snake-panel.snake-fs .snake-dpad { grid-template-columns:repeat(3,86px); grid-template-rows:repeat(2,78px); }
+#chat-snake-panel.snake-fs .snake-dp { font-size:28px; }
+.snake-res-pop { animation: snakeResPop .32s cubic-bezier(.2,.9,.3,1.2) both; }
+@keyframes snakeResPop { from { opacity:0; transform:scale(.7); } to { opacity:1; transform:scale(1); } }
 /* 聊天记录里的贪吃蛇结果卡片（居中白底） */
 .msg-snake-card { min-width:220px; }
 .msg-snake-title { font-size:13px; font-weight:700; color:var(--ink); padding-bottom:8px; border-bottom:1px dashed rgba(0,0,0,.1); margin-bottom:8px; }

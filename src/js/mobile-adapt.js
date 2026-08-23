@@ -45,7 +45,7 @@
         // 模式浏览器可能忽略 meta，下方加 force-mobile 类作 CSS 保底。
         try {
           document.querySelectorAll('meta[name="viewport"]').forEach(function (m) {
-            m.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content');
+            m.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=overlays-content');
           });
         } catch (e) {}
         // 等一帧看媒体查询是否命中，未命中则加 force-mobile 类
@@ -537,23 +537,37 @@
       // resize**（程序化 blur / 键盘下滑收起 / 完成键收起等路径，聊天发送时
       // input.textContent='' 清空聚焦的 contenteditable 最易触发）。此时 .phone
       // 会卡在收缩高度：页面下方露出 body 灰色背景、页面位置与比例错乱，只有
-      // 下一次完整键盘开合（如改昵称弹窗）才复位。每 600ms 复核一次：键盘实际
-      // 已收起（vv 高度≈布局高度）或焦点已离开输入框 → 立即恢复，不依赖漏事件。
+      // 下一次完整键盘开合（如改昵称弹窗）才复位。
+      // v3.10.x：升级为「聚焦期间主动轮询」——不再只做"恢复"。iOS 键盘弹出时
+      // visualViewport resize 存在漏触发（尤其 contenteditable / 全屏聊天页），
+      // focusin 的 250/450ms 一次性补偿也可能与键盘动画错开 → .phone 不收缩 →
+      // 输入栏被键盘彻底盖住（用户反复反馈的"输入法挡住输入栏"）。改成：只要
+      // 聚焦了文本输入框（或键盘仍开着），每 250ms 复审一次，调用 syncIosKb
+      // 让它按可视高度主动收缩；未聚焦且键盘已收则停表。syncIosKb 稳态期
+      // 高度值不变不写 DOM（字符串比对早退），打字时不重排、无闪屏。
       var _kbWatch = null;
       function startKbWatch() {
         if (_kbWatch) return;
         _kbWatch = setInterval(function () {
           try {
-            if (!_kbActive) { stopKbWatch(); return; }
-            // 用无键盘基准 _noKbH 判定键盘是否收起，不依赖 innerHeight/焦点——
-            //   iOS PWA standalone 下 innerHeight 含系统状态栏，无键盘时
-            //   innerHeight - vv.height 可能 > 80 误判键盘收；点击字卡时焦点离开
-            //   输入框但键盘未必收，靠焦点会误 restore → 周期 reflow 闪屏。
-            //   焦点离开的兜底交给 focusout 400ms 检查（同样按 vv.height 判定）
-            var noKb = _vv && (_vv.height >= _noKbH - 60);
-            if (noKb) restoreKb();
+            var _foc = isTextEl(_textFocused) || isTextEl(document.activeElement);
+            if (_foc) {
+              // 聚焦中：主动按可视高度收缩 .phone（防 iOS vv resize 漏触发盖住输入栏）
+              syncIosKb();
+              // 收缩后内层滚动容器里的输入框（问问ta 问题栏等）高度随之变化，
+              // 补一次可见性对齐，确保它停在键盘上方
+              nudgeInputVisible();
+            } else if (_kbActive) {
+              // 失焦但键盘仍开着（含收起动画窗口 / vv resize 漏触发的收起）：
+              // 只做「键盘真的收了吗」复原，不调 syncIosKb——它会在键盘收起动画
+              // 期间每 250ms 反复写 .phone 高度（跟随 vv 爬升）+ 重排，
+              // 每个键盘收起都闪屏（用户反馈），改回一次性复原判断
+              if (_vv && _vv.height >= _noKbH - 60) restoreKb();
+            } else {
+              stopKbWatch();
+            }
           } catch (e) {}
-        }, 600);
+        }, 250);
       }
       function stopKbWatch() {
         if (_kbWatch) { clearInterval(_kbWatch); _kbWatch = null; }
@@ -576,6 +590,9 @@
         try { syncIosKb(); } catch (e3) {}
         setTimeout(syncIosKb, 250);
         setTimeout(syncIosKb, 450);
+        // v3.10.x：聚焦文本输入框即启动主动轮询兜底——即使 vv resize 漏触发，
+        // 250ms 内也会按可视高度收缩 .phone，输入栏不会被键盘盖住
+        if (isTextEl(e.target)) { try { startKbWatch(); } catch (e4) {} }
       });
       document.addEventListener('focusout', function (e) {
         try { if (e.target === _textFocused) _textFocused = null; } catch (e2) {}
@@ -588,6 +605,56 @@
           if (_kbActive && _vv && _vv.height >= _noKbH - 60) restoreKb();
         }, 400);
       });
+    } catch (e) {}
+  }
+
+  // ================= 安卓专用：键盘（IME）悬浮适配（v3.10.x） =================
+  // 背景：安卓 Chrome/Edge 收键盘时「整屏白一下」——根因是 viewport 用了
+  // interactive-widget=resizes-content：收键盘时布局视口被系统撑回全高，.phone
+  // 的 100dvh 跟着整屏重算重绘，露底色的那帧就是白闪（红米 K80 复现，每次都这样）。
+  // 修法：改走 interactive-widget=overlays-content，键盘只做悬浮 overlay、布局视口
+  // 不再整屏重算 → 无 dvh 重绘白闪。代价是.input 栏不会自动被顶起，需手动把
+  // .phone 收缩到键盘上方可视高度（visualViewport）。
+  // 约定：与 iOS 分支互斥（iOS Safari 忽略 interactive-widget，保持原机制）。
+  if (!isIOS) {
+    try {
+      var _aPhone = document.querySelector('.phone');
+      var _aVV = window.visualViewport;
+      if (_aVV && _aPhone) {
+        var _aH = _aVV.height; // 无键盘基准（跟随地址栏显隐更新）
+        var _aKb = false;
+        function syncAndroidKb() {
+          if (!_aVV || !_aPhone) return;
+          var h = _aVV.height;
+          var open = h < _aH - 60; // 可视高度明显变小 = 键盘弹出
+          if (!open && h > _aH) _aH = h; // 无键盘时更新基准，地址栏变化不误判
+          if (open && !_aKb) { _aKb = true; _aPhone.style.alignSelf = 'flex-start'; }
+          if (!open && _aKb) {
+            _aKb = false;
+            _aPhone.style.height = '';
+            _aPhone.style.alignSelf = '';
+            return;
+          }
+          if (_aKb) {
+            var hs = h + 'px';
+            // 值不变不写 DOM（字符串比对早退），打字/滚动时不重排
+            if (_aPhone.style.height !== hs) _aPhone.style.height = hs;
+          }
+        }
+        _aVV.addEventListener('resize', syncAndroidKb);
+        // 首次聚焦兜底：键盘弹出的 resize 偶发前置/漏触发，紧跟一次判定
+        document.addEventListener('focusin', function (e) {
+          try {
+            if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable)) {
+              setTimeout(syncAndroidKb, 120);
+            }
+          } catch (e2) {}
+        });
+        // 失焦兜底：键盘收起偶发漏 resize，稍作延迟按可视高度复原
+        document.addEventListener('focusout', function () {
+          setTimeout(syncAndroidKb, 120);
+        });
+      }
     } catch (e) {}
   }
 

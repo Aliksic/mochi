@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=overlays-content">
 <title>Mochi 字卡传讯</title>
 <meta name="description" content="情侣专属的摸鱼字卡聊天模拟器">
 <meta name="theme-color" content="#111111">
@@ -105,6 +105,7 @@
     <div class="page" id="page-phone">
       <div class="decor-bar" id="decor-bar" hidden>
         <span>装修模式 · 点图标换图 · 点卡片设背景</span>
+        <button class="decor-add" id="decor-edit-layout">编辑布局</button>
         <button class="decor-add" id="decor-add-widget">+ 添加卡片</button>
         <button class="decor-add" id="decor-restore-icon">恢复图标</button>
         <button class="decor-done" id="decor-done">完成</button>
@@ -1969,7 +1970,7 @@
         </div>
 
         <div class="div-card glass">
-          <input type="text" class="div-input" id="div-question" placeholder="写下你的问题（可选）">
+          <div class="dec-inp-wrap"><input type="text" class="div-input" id="div-question" placeholder="写下你的问题（可选）"><button class="dec-inp-clear" data-clear="div-question" aria-label="清空" title="清空">✕</button></div>
           <label class="div-switch-row">
             <span class="div-switch-t">抽完自动发到聊天</span>
             <span class="div-switch"><input type="checkbox" id="div-auto-send"><span class="div-switch-knob"></span></span>
@@ -2601,7 +2602,7 @@
             <span class="div-mode sel" data-chatcount="3">3 张</span>
             <span class="div-mode" data-chatcount="1">1 张</span>
           </div>
-          <input type="text" class="tc-input" id="div-chat-question" placeholder="心中默念的问题（可选）" style="margin:8px 0" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+          <div class="dec-inp-wrap"><input type="text" class="tc-input" id="div-chat-question" placeholder="心中默念的问题（可选）" style="margin:8px 0" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"><button class="dec-inp-clear" data-clear="div-chat-question" aria-label="清空" title="清空">✕</button></div>
           <label class="div-switch-row div-chat-switch">
             <span class="div-switch-t">自动发送到聊天</span>
             <span class="div-switch"><input type="checkbox" id="div-chat-auto-send"><span class="div-switch-knob"></span></span>
@@ -2674,6 +2675,8 @@
               <option value="normal" selected>普通</option>
               <option value="hard">快</option>
             </select>
+            <button class="snake-icon-btn snake-toggle" id="snake-wall" title="穿墙：撞墙从对面出来">墙</button>
+            <button class="snake-icon-btn snake-toggle" id="snake-safe" title="安全：碰自己身不死">安</button>
             <button class="snake-icon-btn" id="snake-pause" title="暂停/继续">⏸</button>
             <button class="snake-icon-btn" id="snake-fs" title="全屏">⛶</button>
             <button class="poke-card-close" id="chat-snake-close">✕</button>
@@ -2681,6 +2684,7 @@
         </div>
         <div class="poke-card-scroll">
           <div class="snake-score" id="snake-score">胜 0 · 负 0 · 平 0</div>
+          <div class="snake-best" id="snake-best" hidden></div>
           <canvas class="snake-canvas" id="snake-canvas" width="300" height="300"></canvas>
           <div class="snake-hint" id="snake-hint">点开始 · 滑动控制方向</div>
           <div class="snake-result" id="snake-result" hidden></div>
@@ -2708,11 +2712,12 @@
             <div class="pong-bar">
               <div class="pong-bar-left">
                 <select class="pong-diff" id="pong-diff">
-                  <option value="easy">简单</option>
-                  <option value="normal" selected>普通</option>
+                  <option value="casual">休闲</option>
+                  <option value="easy" selected>简单</option>
+                  <option value="normal">普通</option>
                   <option value="hard">困难</option>
                 </select>
-                <span>先得 5 分获胜</span>
+                <span id="pong-win-tip">先得 5 分获胜</span>
               </div>
               <div class="pong-bar-right">
                 <button class="pong-icon-btn" id="pong-pause" title="暂停/继续">⏸</button>

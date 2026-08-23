@@ -33,7 +33,15 @@
 .garden-plot.watered { border-color:rgba(76,175,128,.35); }
 
 /* 植物 */
-.garden-plant-emoji { font-size:24px; line-height:1; }
+.garden-plant-emoji { font-size:24px; line-height:1; transform-origin: 50% 80%; }
+.garden-plot.bloomed .garden-plant-emoji { animation: gardenSway 3.2s ease-in-out infinite; }
+.garden-plot.wilted .garden-plant-emoji { filter: grayscale(.55) brightness(.9); }
+.garden-plot.wilted { border-color: rgba(139,90,43,.45); background: rgba(245,235,220,.6); }
+.garden-plant-stage.wilted-stage { color:#a1887f; font-weight:600; }
+@keyframes gardenPop { 0% { transform: scale(.6); opacity:0; } 60% { transform: scale(1.12); opacity:1; } 100% { transform: scale(1); opacity:1; } }
+@keyframes gardenBloom { 0% { transform: scale(.7) rotate(-12deg); opacity:0; } 50% { transform: scale(1.25) rotate(8deg); opacity:1; } 100% { transform: scale(1) rotate(0); opacity:1; } }
+@keyframes gardenSway { 0%,100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
+@keyframes gardenWilt { 0% { transform: scale(1.1) rotate(0); } 100% { transform: scale(.95) rotate(-6deg); } }
 .garden-plant-name { font-size:10px; color:var(--ink); font-weight:600; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; padding:0 4px; box-sizing:border-box; }
 .garden-plant-stage { font-size:9px; color:var(--muted); margin-top:0; }
 
@@ -255,3 +263,131 @@
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   opacity:.85;
 }
+
+.garden-scroll { position: relative; }
+
+/* ===== 夜晚 / 季节主题 ===== */
+[data-night="1"] .garden-scroll { background: linear-gradient(180deg, rgba(20,28,50,.88), rgba(40,30,70,.72)); }
+[data-night="1"] .garden-plot { background: rgba(50,55,80,.6); border-color: rgba(180,190,220,.22); }
+[data-night="1"] .garden-plant-name { color: #c5cae9; }
+[data-night="1"] .garden-plant-stage { color: #9fa8da; }
+[data-night="1"] .garden-scroll::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 0;
+  background: radial-gradient(circle at 15% 20%, rgba(255,235,150,.75) 0 2px, transparent 3px),
+              radial-gradient(circle at 82% 38%, rgba(255,235,150,.65) 0 2px, transparent 3px),
+              radial-gradient(circle at 48% 72%, rgba(255,235,150,.55) 0 1px, transparent 2px),
+              radial-gradient(circle at 30% 85%, rgba(255,235,150,.5) 0 1px, transparent 2px);
+  animation: gardenFirefly 4s ease-in-out infinite;
+}
+@keyframes gardenFirefly { 0%,100% { opacity: .25; } 50% { opacity: 1; } }
+
+[data-season="0"] .garden-plot { border-color: rgba(129,199,132,.32); }
+[data-season="1"] .garden-plot { border-color: rgba(100,181,246,.32); }
+[data-season="2"] .garden-plot { border-color: rgba(255,183,77,.32); }
+[data-season="3"] .garden-plot { border-color: rgba(189,223,253,.45); }
+
+/* ===== 稀有花发光 ===== */
+.garden-plot.rare { box-shadow: 0 0 14px rgba(255,215,0,.45), inset 0 0 8px rgba(255,235,150,.2); }
+.garden-plot.rare .garden-plant-emoji { filter: drop-shadow(0 0 6px rgba(255,215,0,.7)); }
+.garden-plot.rare.bloomed .garden-plant-emoji { animation: gardenSway 3.2s ease-in-out infinite, gardenRareGlow 2s ease-in-out infinite; }
+@keyframes gardenRareGlow { 0%,100% { filter: drop-shadow(0 0 5px rgba(255,215,0,.5)); } 50% { filter: drop-shadow(0 0 10px rgba(255,215,0,.9)); } }
+
+/* ===== 图鉴稀有页 ===== */
+.garden-dex-sub { font-size: 12px; font-weight: 700; margin: 10px 0 6px; color: #f9a825; }
+.garden-dex-grid.rare-grid .garden-dex-item.rare { background: linear-gradient(90deg, rgba(255,215,0,.12), rgba(255,149,0,.08)); border: 1px solid rgba(255,215,0,.3); }
+.garden-dex-item.rare .dex-emoji { filter: drop-shadow(0 0 3px rgba(255,215,0,.6)); }
+
+/* ===== 每日任务条 ===== */
+.garden-daily {
+  margin: 0 18px 10px; padding: 10px 14px; border-radius: 14px;
+  background: linear-gradient(90deg, rgba(255,193,7,.12), rgba(255,152,0,.08));
+}
+.garden-daily-title { font-size: 12px; font-weight: 700; color: var(--ink); margin-bottom: 6px; }
+.garden-daily-tasks { display: flex; gap: 8px; }
+.garden-daily-task {
+  flex: 1; display: flex; align-items: center; gap: 4px; justify-content: center;
+  padding: 5px 4px; border-radius: 10px; background: rgba(255,255,255,.6);
+  font-size: 11px; color: var(--muted);
+}
+.garden-daily-task.done { background: rgba(76,175,80,.2); color: #2e7d32; font-weight: 600; }
+.dt-emoji { font-size: 14px; }
+
+/* ===== 成就墙 ===== */
+.garden-achv { margin: 0 18px 18px; padding: 14px 16px; border-radius: 18px; background: rgba(255,255,255,.6); }
+.garden-achv-title { font-size: 14px; font-weight: 700; margin-bottom: 10px; }
+.garden-achv-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.garden-achv-item {
+  display: flex; align-items: center; gap: 6px; padding: 8px 6px;
+  border-radius: 12px; background: rgba(0,0,0,.03); font-size: 11px;
+  opacity: .5;
+}
+.garden-achv-item.done { opacity: 1; background: linear-gradient(90deg, rgba(255,215,0,.14), rgba(255,149,0,.08)); }
+.achv-emoji { font-size: 18px; }
+.achv-name { color: var(--ink); font-weight: 600; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ===== Tab 分区 ===== */
+.garden-tabs {
+  display: flex; gap: 4px; padding: 0 18px 10px;
+  overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none;
+}
+.garden-tabs::-webkit-scrollbar { display: none; }
+.garden-tab {
+  flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 6px 2px; border-radius: 12px; border: none;
+  background: rgba(0,0,0,.04); cursor: pointer; font-family: inherit; color: var(--ink);
+  transition: background .15s ease, color .15s ease; -webkit-tap-highlight-color: transparent;
+}
+.garden-tab.active { background: linear-gradient(90deg, #66bb6a, #43a047); color: #fff; }
+.gt-emoji { font-size: 15px; }
+.gt-name { font-size: 10px; font-weight: 600; }
+.garden-panel { display: none; }
+.garden-panel.active { display: block; }
+
+/* ===== 花艺工坊 ===== */
+.garden-craft { margin: 0 18px 18px; padding: 14px 16px; border-radius: 18px; background: rgba(255,255,255,.6); }
+.garden-craft-title { font-size: 14px; font-weight: 700; margin-bottom: 10px; }
+.garden-craft-list { display: flex; flex-direction: column; gap: 10px; }
+.garden-recipe {
+  padding: 12px; border-radius: 14px; background: rgba(0,0,0,.03);
+  border: 1px solid transparent;
+}
+.garden-recipe.can { background: linear-gradient(90deg, rgba(232,90,143,.08), rgba(255,193,7,.06)); border-color: rgba(232,90,143,.25); }
+.garden-recipe.made { border-color: rgba(76,175,80,.3); }
+.recipe-head { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+.recipe-emoji { font-size: 18px; }
+.recipe-name { font-size: 13px; font-weight: 700; color: var(--ink); }
+.recipe-made { font-size: 10px; color: #4caf50; margin-left: auto; }
+.recipe-need { font-size: 11px; color: var(--muted); margin-bottom: 4px; letter-spacing: 1px; }
+.recipe-wish { font-size: 11px; color: var(--ink); opacity: .8; line-height: 1.5; margin-bottom: 8px; }
+.recipe-btn {
+  display: block; width: 100%; padding: 7px; border-radius: 10px;
+  border: none; background: #e85a8f; color: #fff; font-size: 12px; font-weight: 600;
+  cursor: pointer; font-family: inherit;
+}
+.recipe-btn:active { opacity: .8; }
+
+/* ===== 花园年报 ===== */
+.garden-report { margin: 0 18px 18px; }
+.garden-report-card {
+  padding: 18px 16px; border-radius: 18px;
+  background: linear-gradient(135deg, rgba(102,187,67,.12), rgba(255,193,7,.1));
+  text-align: center;
+}
+.report-year { font-size: 18px; font-weight: 700; color: var(--ink); margin-bottom: 4px; }
+.report-lv { font-size: 12px; color: var(--muted); margin-bottom: 14px; }
+.report-stats { display: flex; justify-content: space-around; margin-bottom: 14px; }
+.rs-item { font-size: 11px; color: var(--muted); }
+.rs-item b { display: block; font-size: 20px; color: var(--ink); font-weight: 700; }
+.report-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 12px; margin-bottom: 4px; border-radius: 10px;
+  background: rgba(255,255,255,.5); font-size: 12px;
+}
+.report-row span { color: var(--muted); }
+.report-row b { color: var(--ink); font-weight: 600; }
+.report-share-btn {
+  display: block; width: 100%; margin-top: 12px; padding: 10px; border-radius: 14px;
+  border: none; background: #43a047; color: #fff; font-size: 13px; font-weight: 600;
+  cursor: pointer; font-family: inherit;
+}
+.report-share-btn:active { opacity: .8; }

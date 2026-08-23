@@ -272,6 +272,8 @@
   }
   function myAvatar() {
     try { const p = gcProfileGet('me'); if (p.avatar) return p.avatar; } catch (e) {}
+    // v3.10.x：与聊天页一致——TA 换我头像只写聊天专用键 cs-avatar-user，未设回退桌面 avatar-user
+    try { const cs = window.activeStore().get('cs-avatar-user'); if (cs) return cs; } catch (e) {}
     try { return window.activeStore().get('avatar-user') || ''; } catch (e) { return ''; }
   }
   // 桌面原本昵称（设置面板里"原昵称"区分用；我的取当前桌面）

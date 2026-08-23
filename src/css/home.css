@@ -533,19 +533,13 @@
 .desk-msg[hidden] { display:none; }
 
 /* ===== v3.x：桌面移动模式（长按拖拽重排，复用装修模式 decor-on） ===== */
-/* 抖动：仅移动模式 + 非拖拽中项；rotate 不影响布局，退出即移除 */
-@keyframes desk-jiggle {
-  0%,100% { transform: rotate(-2.2deg); }
-  50% { transform: rotate(2.2deg); }
-}
-.desk-move-mode.decor-on .app:not(.desk-dragging),
-.desk-move-mode.decor-on [data-desk-widget]:not(.app-grid):not(.desk-dragging) {
-  animation: desk-jiggle .3s ease-in-out infinite;
-  will-change: transform;
-}
-/* 移动模式：允许纵向滚动查看超屏组件（pan-y），禁横滑误翻页；禁 iOS 长按系统菜单 */
+/* v3.x：抖动已移除（用户反馈不需要）。如需恢复，加回 @keyframes desk-jiggle + .desk-move-mode.decor-on 应用规则 */
+/* 移动模式：可拖拽元素 touch-action:none，让 pointer 完全接管拖拽（pan-y 会抢占 pointermove→拖不动）；
+   容器仍 pan-y 允许短按滑动查看超屏组件，长按时 touchstart preventDefault 兜底阻止浏览器抢手势 */
 .desk-move-mode #desktop-pages,
 .desk-move-mode .page-slide { touch-action: pan-y; -webkit-touch-callout: none; }
+.desk-move-mode .app,
+.desk-move-mode [data-desk-widget]:not(.app-grid) { touch-action: none; cursor: grab; }
 /* 拖拽中源项半透明占位 */
 .desk-dragging { opacity: .22 !important; animation: none !important; }
 /* 拖拽跟手 clone */

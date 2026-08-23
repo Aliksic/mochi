@@ -4,11 +4,54 @@
 
 ## 规则
 
+### 2026-08-23（用户要求：降低联系人邀请玩游戏的概率）
+- [AI-A·完成]（**已构建 verify 10/10，未提交**）：`src/js/reply-settings.js` + `src/js/chat.js`（均 AI-A 域）+ 构建产物。
+  - 改动：邀请概率默认值降低一半——猜拳邀请 `ai-rps-prob` 15%→8%、游戏邀请 `ai-game-prob` 10%→5%。reply-settings.js DEFAULTS + chat.js tryActiveInvite 里 cfgn fallback + 注释同步更新。
+  - 生效范围：未手动调过这两个滑块的用户立即生效（getCfg 对存储 null 的键回退 DEFAULTS）；已手动调过的用户保持其设置不受影响。
+  - 验证：`node --check` + verify 10/10。
+
+### 2026-08-23（贪吃蛇二轮优化：dpr/圆角蛇身/粒子/穿墙安全/最高分/结果页/震动/方向锁定）
+- [AI-A·完成]（**已构建 verify 10/10 + snake 冒烟 11/11 + snake 功能 8/8，未提交**）：`src/js/snake-game.js` + `src/css/chat-pages.css` + `src/template.html`（贪吃蛇面板锚点，AI-A 业务域）+ 构建产物 + `tools/verify-snake-features.mjs`（新增）。
+  - 8 项优化：① **dpr 适配**：canvas 内部分辨率=逻辑尺寸×dpr（限 3），ctx.setTransform，retina 屏蛇身锐利；② **圆角蛇身连续绘制**：粗线段(lineCap/lineJoin=round)连接各节中心消除插值缝隙，头稍大圆+高光，穿墙跨边界断开线段；③ **食物脉动+吃食物粒子+10飘字**：食物呼吸脉动，吃到爆 8 粒子+「+10」上浮淡出；④ **滑动方向锁定**：touchmove 首次超阈值锁定主轴(横/竖)，防斜滑抖动误触；⑤ **触觉震动**：转向 vib(8)/吃食物 vib(12)/死亡 vib([20,40,20])；⑥ **穿墙/安全模式**：顶栏加「墙」「安」toggle 按钮，穿墙撞墙从对面出(wrap 坐标)，安全碰自己身不死(只怕对方身/墙/头碰头)，AI 候选方向适配穿墙，flags 跨局保留；⑦ **最高分+最长蛇记录**：按难度分档存 localStorage，结果页顶显示「🏆 X档：最高 Y 分 · 最长 Z」；⑧ **结果页丰富**：胜负图标(🏆/💔/🤝)+ scale 入场动画 + 「已分享到聊天 ✓」提示。
+  - 验证：`node --check` + `node build.mjs` + verify 10/10 + verify-snake-smooth 11/11 + verify-snake-features 8/8（穿墙蛇不死/安全开关/结果图标/分享提示/动画类/最高分元素）。无头 Chrome 无法验证震动/真机手感，需真机确认。
+  - ⚠️ 构建时工作区有大量未提交的对方改动（chat.js/chatcard.js/garden.js/mail.js/mobile-adapt.js/personalize.js 等），构建产物可能含对方半成品，提交前请确认对方已保存完整。
+
+### 2026-08-23（用户反馈：贪吃蛇页面不好操作，蛇也不流畅）
+- [AI-A·完成]（**已构建 verify 10/10 + snake 冒烟 11/11，未提交**）：`src/js/snake-game.js` + `src/css/chat-pages.css`（均 AI-A 域）+ 构建产物 + `tools/verify-snake-smooth.mjs`（新增）。
+  - 根因：① 操作笨——`touchend` 才转向一次，手指必须抬起再滑才能转第二次，无法连续转向；② 不流畅——`setTimeout` 调度 + 逻辑/渲染耦合，setTimeout 抖动 → 蛇一顿一顿，normal 起步 220ms（4.5fps）且无插值，格子跳跃感强。
+  - 修复①输入：`touchmove` 实时识别方向，阈值 12px，一次滑动可连续多次转向（沿 Z 路径灵敏转向），同方向不重复触发；保留 touchstart/touchend/cancel 清基准；虚拟方向键加大（64→72px 宽、56→64px 高、font 20→22）+ `:active` scale(.9) 触感反馈。
+  - 修复②渲染：`requestAnimationFrame` 主循环 + 累积时间步进（最多补 3 步防卡顿追赶）+ 蛇身位置插值（step 前保存 prevBody，render 用 alpha=acc/ti 在 prevBody→body 间线性插值），蛇视觉连续滑动；吃食物时 body 增长、prevBody[i] 缺失则该节不插值（尾巴原地不动，符合吃食物不 pop 语义）；死亡/暂停 alpha=0 对齐整格。
+  - 速度调整：easy 280-220→200-140，normal 220-160→150-100，hard 160-100→105-70（配合插值，normal 150ms 视觉非常顺滑）。
+  - 全屏 canvas 440→480；`tick` 拆为纯逻辑 `step` + `frame`(rAF) + `render(alpha)`；`startGame`/`resumeGame`/`openSnakePanel`/`togglePause` 启动 rAF 改用 `startFrame()`；`stopLoop`/`endGame` 加 `stopFrame()`；倒计时局部函数改名 `countdownStep` 避免与全局 `step` 同名混淆。
+  - 验证：`node --check` + `node build.mjs` + `node tools/verify.mjs` 10/10 + `node tools/verify-snake-smooth.mjs` 11/11（面板打开/倒计时/rAF 跑动/撞墙结束/再来一局/暂停静止/继续恢复）。无头 Chrome 无法验证触摸真机手感，需真机确认：滑动连续转向灵敏、蛇身顺滑无顿挫。
+  - ⚠️ 构建时工作区有未提交的对方改动（pong.js/template.html 等），构建产物可能含对方半成品，提交前请确认对方已保存完整。
+
+### 2026-08-23（用户反馈：双人 Pong 难度太高赢不了）
+- [AI-A·完成]（**已构建 verify 10/10，未提交**）：`src/js/pong.js` + `src/template.html`（均 AI-A 域）+ 构建产物。
+  - **第一轮降难度**：①新增「休闲」档（casual，AI maxSpeed 2.4/预测误差 34/失误率 0.14，比 easy 更松）；②easy 大幅放宽（maxSpeed 3.2→2.8、预测误差 20→26、失误率 0.07→0.10、反应延迟 0.32-0.5→0.38-0.6）；③球速上限 8→6.5；④玩家挡板最大速度 7→8.5（快球也追得上）；⑤默认难度 normal→easy（select 默认选 easy，startGame/resume/newState 回退都改 easy）。
+  - **第二轮优化（用户选 4 项）**：
+    - ①**低难度加长挡板+大球+3分即胜**：DIFFS 加 paddleH/ballR/winScore 字段，casual 挡板 92/球 8/3 分即胜，easy 84/7/4 分，normal/hard 72/6/5 分。PADDLE_H/BALL_R/WIN_SCORE 常量改从 state.params 读，影响 newState/predictY/opponentAI/movePaddle/checkPaddle/bouncePaddle/step/render/inputY/键盘控制/onScore 全部改用难度专属尺寸。template.html 获胜分提示加 id=pong-win-tip 由 JS 按难度更新。
+    - ②**AI 偶尔放水**：DIFFS 加 fumble 字段（casual 0.14/easy 0.08/normal/hard 0），opponentAI 球向 TA 且 30<dist<130 时按概率触发 fumble 行为，故意把 predY 偏离挡板长度 60%-90% 确保接不到，让玩家得分自然不像施舍。复用 behTrigger 冷却系统。
+    - ③**击球点颜色教学**：bouncePaddle 存 s.lastHit（-1~1），render 挡板闪光颜色按 |hit| 分级：<0.25 绿/<0.5 黄/<0.75 橙/else 红，教玩家「打中心球更直、打边角角度大」。新增 hitColor() 辅助函数。
+    - ④**TA 表情泡泡**：state 加 taBubble={emoji,until}，TA 接球 😊（连击3 😎/连击5 🤩）、TA 得分 😤、玩家得分（TA 失误）😅，render 在 TA 挡板上方画 emoji 18px，1200ms 淡出消散，不挡视线。
+  - **第三轮优化（用户选 6 项）**：
+    - ⑤**发球前方向预警**：state 加 serveDir 预决定发球方向，serve 用它发球后预决定下次；render 在休闲/简单档 countdown 最后 500ms 或 scored 最后 500ms 在球起点显示 ←/→ 箭头，让玩家有反应时间。loop 改 render(state, ts) 传时间戳。
+    - ⑥**战绩记录与展示**：endGame 读写 localStorage `:pong-stats`（每联系人独立），结构 {win,lose,draw,maxStreak,total}，结束面板加「累计 X胜 X负 X平 · 历史最高连得 N」行。
+    - ⑦**连击奖励（球速暂停递增）**：state 加 playerRallyHits，bouncePaddle 玩家接球 +1，休闲/简单档玩家连击 >=3 时球速不递增（保持当前速度），鼓励长回合，连击中断（得分）重置。
+    - ⑧**接球振动反馈**：bouncePaddle 球碰挡板时 navigator.vibrate(8)，随音效开关联动，困难档关闭。
+    - ⑨**结束回应按难度分语气**：POOLS 改按难度分（casual/easy/normal/hard 各一组 player_win/opponent_win/draw），休闲/简单 TA 更宠溺温柔（「让你赢啦」「没事再来一局」），困难 TA 更认真。endGame 按 s.diff 选 pool。
+    - ⑩**对局中 TA 偶尔说话**：新增 SAY_POOLS（接球/失误/得分三组）+ tryTaSay() 辅助，TA 接球/失误/得分时 18% 概率冒说话泡泡（与表情 emoji 叠加显示，文字在 emoji 上方），冷却 3 秒避免太吵。taBubble 扩展为 {emoji,text,until}。
+  - 效果：休闲档 AI 又慢又蠢常放水+挡板长球大3分即胜+发球预警+连击奖励，新手轻松赢；easy 档真人正常发挥能赢；normal/hard 不变留给挑战。战绩给成就感，TA 说话/表情+按难度语气增加情侣感。
+  - 验证：`node --check` + verify 10/10。无头 Chrome 无法验证游戏手感/振动/说话泡泡，需真机试玩确认。
+  - ⚠️ 构建时工作区有多个未提交改动（chat.js/chatcard.js/divination.js/mobile-adapt.js/snake-game.js/chat-pages.css/garden.js/mail.js/group-chat.js/personalize.js 等，非本会话所改，疑对方进行中），构建产物已带上，提交前请确认对方已保存完整。
+
 ### 2026-08-23（用户反馈：iOS 聊天页点击输入栏，输入法弹窗完全遮住输入栏，无法输入）
 - [AI-B·完成]（**已构建 verify 10/10，未提交**）：`src/js/mobile-adapt.js`（AI-B 域）+ 构建产物，含工作区其余未提交改动。
   - 根因：iOS 键盘弹出适配（`syncIosKb`）判定「键盘已开」要 `_open = _focused && _kbStill`，其中 `_focused` 只查 `document.activeElement`。iOS Safari 对 contenteditable（聊天输入栏就是 `#chat-input` contenteditable div）聚焦/编辑时常返回 `activeElement === <body>`，`isTextEl` 判不出 → `_open` 恒为 false → `.phone` 从不收缩 → 键盘（iOS 是 overlay 模式，不收缩布局视口）直接盖住输入栏 =「完全遮住，无法输入」。
   - 修复：新增 `_textFocused` 由 focusin/focusout 可靠上报（focusin 聚焦上报稳定），`syncIosKb` 用 `isTextEl(_textFocused) || isTextEl(document.activeElement)` 复合判断；focusin 时立即同步一次，让 `.phone` 尽早收缩到 vv 高度（输入栏停靠键盘上沿）。
-  - 验证：`node build.mjs` 后 verify 10/10。无头 Chrome 无法模拟 iOS 键盘 overlay，需 iOS Safari 真机确认：聊天页点输入栏打字，输入栏应在键盘上方可见、正常输入；键盘收起后 `.phone` 恢复全高。
+  - **v3.10.x 加强**（用户实测仍被挡住，含问问ta 页面）：iOS 键盘弹出时 visualViewport `resize` 存在漏触发（contenteditable/全屏聊天页），focusin 的一次性补偿也可能与键盘动画错开 → 加**聚焦期间主动轮询**：`startKbWatch` 升级为每 250ms 调用 `syncIosKb`（聚焦文本输入框或键盘未收则续跑），不依赖任何事件，键盘一开就收缩 `.phone`；轮询里顺带 `nudgeInputVisible()` 让内层滚动容器里的输入框（问问ta 问题栏）也停在键盘上方。稳态打字因高度值不变不写 DOM（字符串比对早退），无重排闪屏。
+  - 验证：`node --check` + `node build.mjs` + verify 10/10。SW 缓存版本变 `mochi-mt5j4msg`。无头 Chrome 无法模拟 iOS 键盘 overlay，需 iOS Safari 真机确认（**若仍显示旧版请强刷/重开应用**，见下方缓存提示）：聊天输入栏、问问ta 问题栏点开打字，应在键盘上方正常输入，键盘收起后 `.phone` 恢复全高。
+  - ⚠️ **缓存提示**：本次 SW 版本已更新，但 iOS Safari 有时需完全关闭网页/应用或强刷一次才加载新 JS；若真机仍是旧表现，请确认已拿到 `mochi-mt5j4msg` 包。
 
 ### 2026-08-23（用户反馈：vivo Y35 Edge 刷新/重开/熄屏后界面变小，需手动开全屏才恢复；且手机端被当成 PC 端布局）
 - [AI-B·完成]（**已构建 verify 10/10，未提交**）：`src/js/mobile-adapt.js` + `src/css/base.css`（均 AI-B 域）+ 构建产物。

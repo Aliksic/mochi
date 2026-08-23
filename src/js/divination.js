@@ -486,7 +486,7 @@
     if (question) html += '<div class="div-question-q">问：' + String(question).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;') + '</div>';
     html += '<div class="div-result-actions">';
     html += '<button class="div-send-btn" id="div-send-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-3px;margin-right:6px"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>发给 ' + (partnerName2() || 'TA') + '</button>';
-    html += '<button class="div-copy-btn" id="div-copy-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-3px;margin-right:6px"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>复制结果</button>';
+    html += '<button class="div-copy-btn" id="div-copy-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-3px;margin-right:6px"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>点击复制文字</button>';
     html += '</div>';
     r.innerHTML = html;
     const sendBtn = document.getElementById('div-send-btn');
@@ -631,6 +631,21 @@
   const autoEl = document.getElementById('div-auto-send');
   if (autoEl) autoEl.addEventListener('change', () => { autoSendSet(autoEl.checked); });
 
+  // ---- v3.9.x：问题输入框右侧「✕ 一键清空」按钮 ------
+  // contenteditable 转换器（mobile-adapt）下原 input 退场为 ghost，value 代理到 box，
+  // 读 value 再置空即可；box 用 textContent 清空（与「帮我决定」清空逻辑一致）
+  document.querySelectorAll('#page-divine .dec-inp-clear').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const ta = document.getElementById(btn.dataset.clear);
+      if (!ta) return;
+      const box = ta.__ceBox;
+      if (box) box.textContent = '';
+      else ta.value = '';
+      ta.focus();
+      toast('已清空');
+    });
+  });
+
   // ---- v3.7.x：暴露给聊天页占卜半框共用（chat.js 在 divination.js 之前加载，
   // 半框只在点击时调用这些 API，运行时均已就绪） ----
   window.startDivineDraw = startDivineDraw;
@@ -639,5 +654,7 @@
   window.divineAutoGet = autoSendGet;
   window.divineAutoSet = autoSendSet;
   window.divineBuildSummary = buildSummary;
+  window.divineBuildResultText = buildResultText;
+  window.divineCopyResultText = copyResultText;
   window.divineSendResult = function (m, cards, summary, question) { sendToChat(m, cards, summary, question); };
 })();

@@ -2852,9 +2852,12 @@ try {
       enterDecor();
       if (phone) phone.classList.add('desk-move-mode');
       const span = document.querySelector('#decor-bar span');
-      if (span) span.textContent = '移动模式 · 拖动换位 · 点图标换图 · 点卡片设背景 · 完成退出';
+      if (span) span.textContent = '移动模式 · 短按图标拖动换位 · 完成退出';
       if (navigator.vibrate) try { navigator.vibrate(20); } catch (e) {}
     };
+    // 装修栏「编辑布局」按钮：点击进入移动模式（短按即拖，绕开长按 + 浏览器手势抢占）
+    const editLayoutBtn = document.getElementById('decor-edit-layout');
+    if (editLayoutBtn) editLayoutBtn.addEventListener('click', enterMoveMode);
     const resetMoveMode = () => {
       inMoveMode = false;
       dragging = false;
@@ -2867,6 +2870,16 @@ try {
     const _tabbar = document.querySelector('.tabbar');
     if (_tabbar) _tabbar.addEventListener('click', resetMoveMode);
 
+    // touchstart capture 兜底：长按 350ms 期间浏览器已按 pan-x pan-y 接管当前触摸序列，
+    // 350ms 后才加 .desk-move-mode 改 touch-action 对当前序列无效→pointermove 被抢占/翻页→拖不动。
+    // 在 touchstart capture 阶段 preventDefault，阻止浏览器启动 pan-x/pan-y 手势，让 pointer 完整派发。
+    // 副作用：按住图标横滑无法翻页（用户通常在空白处横滑）；短按打开功能不受影响（不阻止 click）。
+    pagesBox.addEventListener('touchstart', (e) => {
+      if (e.target.closest('.desk-lib, .desk-page-add, .decor-bar')) return;
+      if (!e.target.closest('[data-desk-widget], .app')) return;
+      e.preventDefault();
+    }, { capture: true, passive: false });
+
     // 长按检测（事件委托在 pagesBox）
     pagesBox.addEventListener('pointerdown', (e) => {
       if (e.button !== 0 && e.pointerType === 'mouse') return;
@@ -2875,9 +2888,12 @@ try {
       if (!target) return;
       startX = e.clientX; startY = e.clientY;
       const t = target;
+      // 移动模式已开启：短按即拖，零延迟（绕开长按 + 浏览器手势抢占）
+      if (inMoveMode) { startDeskDrag(e, t); return; }
+      // 非移动模式：长按 350ms 进入移动模式 + 开始拖拽（兼容旧入口）
       pressTimer = setTimeout(() => {
         pressTimer = null;
-        if (!inMoveMode) enterMoveMode();
+        enterMoveMode();
         startDeskDrag(e, t);
       }, MOVE_DELAY);
     });

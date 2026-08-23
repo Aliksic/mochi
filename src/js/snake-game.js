@@ -12,10 +12,11 @@
   const PARTNER_KEY = PREFIX + ':lbl-partner';
 
   // 难度：tick 间隔(ms)按时间段 [0-30s, 30-60s, 60-90s, 90s+]
+  // 配合 rAF 插值渲染，蛇身视觉连续滑动；逻辑步进间隔可适当放慢以保持可操作性
   const DIFFS = {
-    easy:   { ticks: [280, 260, 240, 220] },
-    normal: { ticks: [220, 200, 180, 160] },
-    hard:   { ticks: [160, 140, 120, 100] }
+    easy:   { ticks: [200, 180, 160, 140] },
+    normal: { ticks: [150, 130, 115, 100] },
+    hard:   { ticks: [105, 90, 80, 70] }
   };
 
   const BEHAVIORS = {
@@ -30,15 +31,23 @@
     detour:        { prob: 0.07, cd: 7000 }
   };
 
-  let panel, canvas, ctx, scoreEl, hintEl, startBtn, restartBtn, resumeBtn, resultEl, dpadEl, diffSel, pauseBtn, fsBtn;
+  let panel, canvas, ctx, scoreEl, hintEl, startBtn, restartBtn, resumeBtn, resultEl, dpadEl, diffSel, pauseBtn, fsBtn, wallBtn, safeBtn, bestEl;
   let state = null;
   let behavior = null;
   let loopTimer = null, countdownTimer = null;
-  let touchStart = null;
+  let rafId = null;
+  let lastFrameTime = 0, acc = 0;
+  let prevPlayerBody = null, prevOppBody = null;
+  let touchBase = null, lastTouchDir = null, lockAxis = null;
   let audioCtx = null;
   let paused = false;
   let isFs = false;
   let pauseAt = 0;
+  let logicSize = 300, dpr = 1;
+  let particles = [], floaters = [], renderLastTime = 0;
+  const BEST_KEY = PREFIX + ':snake-best';
+
+  function vib(pattern) { try { if (navigator.vibrate) navigator.vibrate(pattern); } catch (e) {} }
 
   function $(id) { return document.getElementById(id); }
 
@@ -66,12 +75,55 @@
     const s = readScore();
     scoreEl.textContent = '胜 ' + s.w + ' · 负 ' + s.l + ' · 平 ' + s.d;
   }
+  function readBest() { try { return JSON.parse(localStorage.getItem(BEST_KEY) || '{}'); } catch (e) { return {}; } }
+  function writeBest(b) { try { localStorage.setItem(BEST_KEY, JSON.stringify(b)); } catch (e) {} }
+  function renderBest() {
+    if (!bestEl) return;
+    const b = readBest();
+    const diff = (state && state.diff) || (diffSel && diffSel.value) || 'normal';
+    const cur = b[diff];
+    if (!cur) { bestEl.hidden = true; return; }
+    bestEl.textContent = '🏆 ' + (diff === 'easy' ? '慢' : diff === 'hard' ? '快' : '普通') + '档：最高 ' + cur.score + ' 分 · 最长 ' + cur.len;
+    bestEl.hidden = false;
+  }
+  function updateBest(result) {
+    try {
+      const b = readBest();
+      const diff = state.diff || 'normal';
+      const cur = b[diff] || { score: 0, len: 0 };
+      const ps = Math.floor(state.player.score);
+      const pl = state.player.body.length;
+      let changed = false;
+      if (result === 'win' && ps > cur.score) { cur.score = ps; changed = true; }
+      if (pl > cur.len) { cur.len = pl; changed = true; }
+      if (changed) { b[diff] = cur; writeBest(b); }
+    } catch (e) {}
+  }
+  function toggleFlag(name) {
+    if (!state) return;
+    if (!state.flags) state.flags = { wall: false, safe: false };
+    state.flags[name] = !state.flags[name];
+    const btn = name === 'wall' ? wallBtn : safeBtn;
+    if (btn) btn.classList.toggle('on', state.flags[name]);
+    if (name === 'wall' && hintEl && state.status === 'idle') hintEl.textContent = state.flags.wall ? '穿墙已开 · 点开始' : '点开始 · 滑动控制方向';
+    if (name === 'safe' && hintEl && state.status === 'idle') hintEl.textContent = state.flags.safe ? '安全模式 · 点开始' : '点开始 · 滑动控制方向';
+  }
+
+  function setupCanvas() {
+    if (!canvas) return;
+    logicSize = isFs ? 480 : 300;
+    dpr = Math.min(window.devicePixelRatio || 1, 3);
+    canvas.width = logicSize * dpr;
+    canvas.height = logicSize * dpr;
+    ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
 
   function initEls() {
     panel = $('chat-snake-panel');
     if (!panel) return;
     canvas = $('snake-canvas');
-    ctx = canvas && canvas.getContext('2d');
+    setupCanvas();
     scoreEl = $('snake-score');
     hintEl = $('snake-hint');
     startBtn = $('snake-start');
@@ -82,11 +134,16 @@
     diffSel = $('snake-diff');
     pauseBtn = $('snake-pause');
     fsBtn = $('snake-fs');
+    wallBtn = $('snake-wall');
+    safeBtn = $('snake-safe');
+    bestEl = $('snake-best');
     if (startBtn) startBtn.addEventListener('click', function (e) { e.stopPropagation(); startGame(diffSel ? diffSel.value : 'normal'); });
     if (restartBtn) restartBtn.addEventListener('click', function (e) { e.stopPropagation(); startGame(diffSel ? diffSel.value : 'normal'); });
     if (resumeBtn) resumeBtn.addEventListener('click', function (e) { e.stopPropagation(); resumeGame(); });
     if (pauseBtn) pauseBtn.addEventListener('click', function (e) { e.stopPropagation(); togglePause(); });
     if (fsBtn) fsBtn.addEventListener('click', function (e) { e.stopPropagation(); toggleFs(); });
+    if (wallBtn) wallBtn.addEventListener('click', function (e) { e.stopPropagation(); toggleFlag('wall'); });
+    if (safeBtn) safeBtn.addEventListener('click', function (e) { e.stopPropagation(); toggleFlag('safe'); });
     const closeBtn = $('chat-snake-close');
     if (closeBtn) closeBtn.addEventListener('click', function (e) { e.stopPropagation(); closeSnakePanel(); });
     setupInput();
@@ -95,18 +152,42 @@
 
   function setupInput() {
     if (!canvas) return;
+    // 滑动控制：touchmove 实时识别方向 + 主轴锁定防误触，一次滑动可连续多次转向
+    const TH = 12; // 转向触发阈值(px)
     canvas.addEventListener('touchstart', function (e) {
       const t = e.touches[0];
-      touchStart = { x: t.clientX, y: t.clientY };
+      touchBase = { x: t.clientX, y: t.clientY };
+      lastTouchDir = null;
+      lockAxis = null;
     }, { passive: true });
-    canvas.addEventListener('touchend', function (e) {
-      if (!touchStart) return;
-      const t = e.changedTouches[0];
-      const dx = t.clientX - touchStart.x, dy = t.clientY - touchStart.y;
-      touchStart = null;
-      if (Math.abs(dx) < 18 && Math.abs(dy) < 18) return;
-      if (Math.abs(dx) > Math.abs(dy)) setPlayerDir(dx > 0 ? 1 : -1, 0);
-      else setPlayerDir(0, dy > 0 ? 1 : -1);
+    canvas.addEventListener('touchmove', function (e) {
+      if (!touchBase) return;
+      const t = e.touches[0];
+      const dx = t.clientX - touchBase.x, dy = t.clientY - touchBase.y;
+      if (Math.abs(dx) < TH && Math.abs(dy) < TH) return;
+      // 首次超过阈值锁定主轴，之后只响应该轴（防斜滑抖动误触）
+      if (!lockAxis) lockAxis = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v';
+      let dir;
+      if (lockAxis === 'h') {
+        if (Math.abs(dx) < TH) return;
+        dir = dx > 0 ? 'r' : 'l';
+      } else {
+        if (Math.abs(dy) < TH) return;
+        dir = dy > 0 ? 'd' : 'u';
+      }
+      if (dir === lastTouchDir) return;
+      if (dir === 'u') setPlayerDir(0, -1);
+      else if (dir === 'd') setPlayerDir(0, 1);
+      else if (dir === 'l') setPlayerDir(-1, 0);
+      else setPlayerDir(1, 0);
+      lastTouchDir = dir;
+      touchBase = { x: t.clientX, y: t.clientY };
+    }, { passive: true });
+    canvas.addEventListener('touchend', function () {
+      touchBase = null; lastTouchDir = null; lockAxis = null;
+    }, { passive: true });
+    canvas.addEventListener('touchcancel', function () {
+      touchBase = null; lastTouchDir = null; lockAxis = null;
     }, { passive: true });
     if (dpadEl) {
       dpadEl.addEventListener('click', function (e) {
@@ -139,7 +220,9 @@
     const p = state.player;
     if (!p.alive) return;
     if (x === -p.dir.x && y === -p.dir.y) return;
+    if (p.nextDir && p.nextDir.x === x && p.nextDir.y === y) return;
     p.nextDir = { x: x, y: y };
+    vib(8);
   }
 
   function newGame(diff) {
@@ -148,6 +231,7 @@
     for (let i = 0; i < INIT_LEN; i++) playerBody.push({ x: 4 - i, y: py });
     const oppBody = [];
     for (let i = 0; i < INIT_LEN; i++) oppBody.push({ x: (GRID - 5) + i, y: py });
+    const prevFlags = state && state.flags || { wall: false, safe: false };
     state = {
       diff: diff || 'normal',
       player: { body: playerBody, dir: { x: 1, y: 0 }, nextDir: { x: 1, y: 0 }, alive: true, score: 0, foodCount: 0 },
@@ -155,9 +239,13 @@
       foods: [],
       status: 'idle',
       startTime: 0,
-      elapsed: 0
+      elapsed: 0,
+      flags: { wall: prevFlags.wall, safe: prevFlags.safe }
     };
+    if (wallBtn) wallBtn.classList.toggle('on', state.flags.wall);
+    if (safeBtn) safeBtn.classList.toggle('on', state.flags.safe);
     behavior = { current: null, until: 0, stepLeft: 0, cooldowns: {}, targetFood: null, speedUp: false, speedUpUntil: 0 };
+    particles = []; floaters = [];
     maintainFood();
   }
 
@@ -171,23 +259,68 @@
     if (resumeBtn) resumeBtn.hidden = true;
     if (resultEl) { resultEl.hidden = true; resultEl.innerHTML = ''; }
     newGame(diff);
-    render();
+    render(0);
     let n = 3;
     state.status = 'countdown';
-    const step = function () {
+    const countdownStep = function () {
       if (!state || state.status !== 'countdown') return;
       if (n > 0) {
         if (hintEl) hintEl.textContent = '准备 · ' + n;
         n--;
-        countdownTimer = setTimeout(step, 700);
+        countdownTimer = setTimeout(countdownStep, 700);
       } else {
         if (hintEl) hintEl.textContent = '滑动 / 方向键控制 · 别撞墙';
         state.status = 'playing';
         state.startTime = Date.now();
-        loopTimer = setTimeout(tick, currentTickInterval());
+        startFrame();
       }
     };
-    step();
+    countdownStep();
+  }
+
+  // ---- rAF 主循环：累积时间步进 + 插值渲染 ----
+  function startFrame() {
+    stopFrame();
+    lastFrameTime = 0;
+    acc = 0;
+    prevPlayerBody = cloneBody(state.player.body);
+    prevOppBody = cloneBody(state.opp.body);
+    rafId = requestAnimationFrame(frame);
+  }
+  function stopFrame() {
+    if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+  }
+  function cloneBody(b) {
+    const out = [];
+    for (let i = 0; i < b.length; i++) out.push({ x: b[i].x, y: b[i].y });
+    return out;
+  }
+  function frame(now) {
+    if (!state || state.status !== 'playing') { rafId = null; return; }
+    if (!lastFrameTime) lastFrameTime = now;
+    const dt = now - lastFrameTime;
+    lastFrameTime = now;
+    acc += dt;
+    const ti = currentTickInterval();
+    // 防止卡顿后追赶过多（如切后台回来），最多补 3 步
+    let guard = 3;
+    while (acc >= ti && guard > 0) {
+      acc -= ti;
+      // 保存 step 前位置作为本步插值起点
+      prevPlayerBody = cloneBody(state.player.body);
+      prevOppBody = cloneBody(state.opp.body);
+      step();
+      guard--;
+      if (state.status !== 'playing') break;
+    }
+    if (state.status === 'playing') {
+      const curTi = currentTickInterval();
+      const alpha = Math.min(1, acc / curTi);
+      render(alpha);
+      rafId = requestAnimationFrame(frame);
+    } else {
+      rafId = null;
+    }
   }
 
   function currentTickInterval() {
@@ -202,7 +335,16 @@
     return base;
   }
 
-  function tick() {
+  function spawnParticles(pos, color) {
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2 + Math.random() * 0.4;
+      const sp = 0.03 + Math.random() * 0.03;
+      particles.push({ x: pos.x + 0.5, y: pos.y + 0.5, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 380, maxLife: 380, color: color });
+    }
+    floaters.push({ x: pos.x + 0.5, y: pos.y + 0.3, text: '+10', life: 700, maxLife: 700 });
+  }
+
+  function step() {
     if (!state || state.status !== 'playing') return;
     state.elapsed = Date.now() - state.startTime;
     applyDir(state.player);
@@ -211,20 +353,18 @@
     const r = resolveCollisions();
     if (!r.pDie) {
       state.player.body.unshift(r.pNew);
-      if (r.pEat) { eatFood(r.pNew); state.player.score += 10; state.player.foodCount++; SFX.eat(); }
+      if (r.pEat) { eatFood(r.pNew); state.player.score += 10; state.player.foodCount++; SFX.eat(); spawnParticles(r.pNew, '#34c759'); vib(12); }
       else state.player.body.pop();
-    } else { state.player.alive = false; SFX.hit(); }
+    } else { state.player.alive = false; SFX.hit(); vib([20, 40, 20]); }
     if (!r.oDie) {
       state.opp.body.unshift(r.oNew);
-      if (r.oEat) { eatFood(r.oNew); state.opp.score += 10; state.opp.foodCount++; }
+      if (r.oEat) { eatFood(r.oNew); state.opp.score += 10; state.opp.foodCount++; spawnParticles(r.oNew, '#5ac8fa'); }
       else state.opp.body.pop();
     } else { state.opp.alive = false; }
     const ti = currentTickInterval();
     if (state.player.alive) state.player.score += ti / 1000;
     if (state.opp.alive) state.opp.score += ti / 1000;
-    render();
-    if (checkEnd()) return;
-    loopTimer = setTimeout(tick, ti);
+    checkEnd();
   }
 
   function applyDir(snake) {
@@ -242,18 +382,26 @@
   function resolveCollisions() {
     const p = state.player, o = state.opp;
     const ph = p.body[0], oh = o.body[0];
-    const pNew = { x: ph.x + p.dir.x, y: ph.y + p.dir.y };
-    const oNew = { x: oh.x + o.dir.x, y: oh.y + o.dir.y };
+    const wall = state.flags && state.flags.wall;
+    const safe = state.flags && state.flags.safe;
+    let pNew = { x: ph.x + p.dir.x, y: ph.y + p.dir.y };
+    let oNew = { x: oh.x + o.dir.x, y: oh.y + o.dir.y };
+    if (wall) {
+      pNew.x = (pNew.x + GRID) % GRID; pNew.y = (pNew.y + GRID) % GRID;
+      oNew.x = (oNew.x + GRID) % GRID; oNew.y = (oNew.y + GRID) % GRID;
+    }
     const pEat = state.foods.some(function (f) { return f.x === pNew.x && f.y === pNew.y; });
     const oEat = state.foods.some(function (f) { return f.x === oNew.x && f.y === oNew.y; });
     const pSelf = bodySet(p.body, !pEat);
     const oSelf = bodySet(o.body, !oEat);
     let pDie = false, oDie = false;
-    if (pNew.x < 0 || pNew.x >= GRID || pNew.y < 0 || pNew.y >= GRID) pDie = true;
-    if (oNew.x < 0 || oNew.x >= GRID || oNew.y < 0 || oNew.y >= GRID) oDie = true;
-    if (!pDie && pSelf[pNew.x + ',' + pNew.y]) pDie = true;
-    if (!oDie && oSelf[oNew.x + ',' + oNew.y]) oDie = true;
-    if (!pDie && oSelf[pNew.x + ',' + pNew.y]) pDie = true;
+    if (!wall) {
+      if (pNew.x < 0 || pNew.x >= GRID || pNew.y < 0 || pNew.y >= GRID) pDie = true;
+      if (oNew.x < 0 || oNew.x >= GRID || oNew.y < 0 || oNew.y >= GRID) oDie = true;
+    }
+    if (!pDie && !safe && pSelf[pNew.x + ',' + pNew.y]) pDie = true; // 碰自己身（安全模式跳过）
+    if (!oDie && !safe && oSelf[oNew.x + ',' + oNew.y]) oDie = true;
+    if (!pDie && oSelf[pNew.x + ',' + pNew.y]) pDie = true; // 碰对方身
     if (!oDie && pSelf[oNew.x + ',' + oNew.y]) oDie = true;
     if (pNew.x === oNew.x && pNew.y === oNew.y) { pDie = true; oDie = true; }
     return { pNew: pNew, oNew: oNew, pEat: pEat, oEat: oEat, pDie: pDie, oDie: oDie };
@@ -290,12 +438,15 @@
     const head = o.body[0];
     const dirs = [{ x: 0, y: -1 }, { x: 0, y: 1 }, { x: -1, y: 0 }, { x: 1, y: 0 }];
     const pHead = state.player.body[0];
+    const wall = state.flags && state.flags.wall;
     const pNew = { x: pHead.x + state.player.dir.x, y: pHead.y + state.player.dir.y };
+    if (wall) { pNew.x = (pNew.x + GRID) % GRID; pNew.y = (pNew.y + GRID) % GRID; }
     const candidates = [];
     dirs.forEach(function (d) {
       if (d.x === -o.dir.x && d.y === -o.dir.y) return;
-      const nx = head.x + d.x, ny = head.y + d.y;
-      if (nx < 0 || nx >= GRID || ny < 0 || ny >= GRID) return;
+      let nx = head.x + d.x, ny = head.y + d.y;
+      if (wall) { nx = (nx + GRID) % GRID; ny = (ny + GRID) % GRID; }
+      else if (nx < 0 || nx >= GRID || ny < 0 || ny >= GRID) return;
       const eat = state.foods.some(function (f) { return f.x === nx && f.y === ny; });
       for (let i = 0; i < o.body.length - (eat ? 0 : 1); i++) if (o.body[i].x === nx && o.body[i].y === ny) return;
       for (let i = 0; i < state.player.body.length - 1; i++) if (state.player.body[i].x === nx && state.player.body[i].y === ny) return;
@@ -468,6 +619,7 @@
   function endGame(result) {
     if (!state) return;
     state.status = 'over';
+    stopFrame();
     if (loopTimer) { clearTimeout(loopTimer); loopTimer = null; }
     clearSaved();
     if (result === 'win') SFX.win();
@@ -484,52 +636,129 @@
     const s = readScore();
     if (result === 'win') s.w++; else if (result === 'lose') s.l++; else s.d++;
     writeScore(s);
+    updateBest(result);
     renderScore();
+    renderBest();
     showResult(d);
     if (window.sendSnakeResult) window.sendSnakeResult(d);
   }
 
   function showResult(d) {
     if (!resultEl) return;
-    const resTxt = d.result === 'win' ? '你赢了 🎉' : d.result === 'lose' ? 'TA 赢了' : '平局';
-    resultEl.innerHTML = '<div class="snake-res-title">' + resTxt + '</div>' +
+    const icon = d.result === 'win' ? '🏆' : d.result === 'lose' ? '💔' : '🤝';
+    const resTxt = d.result === 'win' ? '你赢了' : d.result === 'lose' ? 'TA 赢了' : '平局';
+    resultEl.innerHTML = '<div class="snake-res-icon">' + icon + '</div>' +
+      '<div class="snake-res-title">' + resTxt + '</div>' +
       '<div class="snake-res-row"><span>🐍 你</span><span>长度 ' + d.pLen + ' · 食物 ' + d.pFood + ' · ' + d.pScore + '分</span></div>' +
-      '<div class="snake-res-row"><span>🐍 TA</span><span>长度 ' + d.oLen + ' · 食物 ' + d.oFood + ' · ' + d.oScore + '分</span></div>' +
-      '<div class="snake-res-time">存活 ' + d.time + ' 秒</div>';
+      '<div class="snake-res-row"><span>🤖 TA</span><span>长度 ' + d.oLen + ' · 食物 ' + d.oFood + ' · ' + d.oScore + '分</span></div>' +
+      '<div class="snake-res-time">存活 ' + d.time + ' 秒 · 已分享到聊天 ✓</div>';
     resultEl.hidden = false;
+    resultEl.classList.remove('snake-res-pop');
+    void resultEl.offsetWidth;
+    resultEl.classList.add('snake-res-pop');
     if (restartBtn) restartBtn.hidden = false;
     if (hintEl) hintEl.textContent = '再来一局？';
   }
 
-  function render() {
+  function render(alpha) {
     if (!ctx || !state) return;
-    const W = canvas.width, H = canvas.height;
+    if (alpha == null) alpha = 0;
+    const W = logicSize, H = logicSize;
     const cell = W / GRID;
+    const now = performance.now();
+    const dt = renderLastTime ? Math.min(50, now - renderLastTime) : 16;
+    renderLastTime = now;
     ctx.clearRect(0, 0, W, H);
     ctx.fillStyle = '#f6f6f8';
     ctx.fillRect(0, 0, W, H);
-    ctx.strokeStyle = 'rgba(0,0,0,0.05)';
+    ctx.strokeStyle = 'rgba(0,0,0,0.04)';
     ctx.lineWidth = 1;
     for (let i = 1; i < GRID; i++) {
       ctx.beginPath(); ctx.moveTo(i * cell, 0); ctx.lineTo(i * cell, H); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(0, i * cell); ctx.lineTo(W, i * cell); ctx.stroke();
     }
+    // 食物：呼吸脉动
+    const pulse = 1 + 0.12 * Math.sin(now / 220);
     state.foods.forEach(function (f) {
       ctx.fillStyle = '#ff6b6b';
       ctx.beginPath();
-      ctx.arc(f.x * cell + cell / 2, f.y * cell + cell / 2, cell * 0.32, 0, Math.PI * 2);
+      ctx.arc(f.x * cell + cell / 2, f.y * cell + cell / 2, cell * 0.32 * pulse, 0, Math.PI * 2);
       ctx.fill();
     });
-    drawSnake(state.player, '#34c759', '#28a745');
-    drawSnake(state.opp, '#5ac8fa', '#3a9fd6');
+    drawSnake(state.player, prevPlayerBody, alpha, '#34c759', '#28a745');
+    drawSnake(state.opp, prevOppBody, alpha, '#5ac8fa', '#3a9fd6');
+    // 粒子
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.life -= dt;
+      if (p.life <= 0) { particles.splice(i, 1); continue; }
+      p.x += p.vx * dt / 16; p.y += p.vy * dt / 16;
+      ctx.globalAlpha = p.life / p.maxLife;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x * cell, p.y * cell, cell * 0.12, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    // 飘字 +10
+    for (let i = floaters.length - 1; i >= 0; i--) {
+      const f = floaters[i];
+      f.life -= dt;
+      if (f.life <= 0) { floaters.splice(i, 1); continue; }
+      f.y -= dt / 280;
+      ctx.globalAlpha = Math.min(1, f.life / 300);
+      ctx.fillStyle = '#ff6b6b';
+      ctx.font = 'bold ' + Math.floor(cell * 0.72) + 'px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(f.text, f.x * cell, f.y * cell);
+    }
+    ctx.globalAlpha = 1;
   }
-  function drawSnake(snake, headColor, bodyColor) {
-    const cell = canvas.width / GRID;
-    const pad = 1.5;
-    snake.body.forEach(function (s, i) {
-      ctx.fillStyle = snake.alive ? (i === 0 ? headColor : bodyColor) : '#cfcfd4';
-      ctx.fillRect(s.x * cell + pad, s.y * cell + pad, cell - pad * 2, cell - pad * 2);
-    });
+  function drawSnake(snake, prevBody, alpha, headColor, bodyColor) {
+    if (!snake.body.length) return;
+    const cell = logicSize / GRID;
+    const dead = !snake.alive;
+    const bodyC = dead ? '#cfcfd4' : bodyColor;
+    const headC = dead ? '#cfcfd4' : headColor;
+    const interp = !dead && prevBody && alpha > 0 && alpha < 1;
+    const pts = [];
+    for (let i = 0; i < snake.body.length; i++) {
+      const s = snake.body[i];
+      let x = s.x, y = s.y;
+      if (interp && prevBody[i]) {
+        x = prevBody[i].x + (s.x - prevBody[i].x) * alpha;
+        y = prevBody[i].y + (s.y - prevBody[i].y) * alpha;
+      }
+      pts.push({ x: x * cell + cell / 2, y: y * cell + cell / 2 });
+    }
+    // 身体：粗线段连续绘制（圆角端），穿墙跨边界时断开
+    if (pts.length >= 2) {
+      ctx.strokeStyle = bodyC;
+      ctx.lineWidth = cell * 0.82;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.moveTo(pts[1].x, pts[1].y);
+      for (let i = 2; i < pts.length; i++) {
+        const ddx = pts[i].x - pts[i - 1].x, ddy = pts[i].y - pts[i - 1].y;
+        if (Math.abs(ddx) > cell * 2 || Math.abs(ddy) > cell * 2) {
+          ctx.stroke(); ctx.beginPath(); ctx.moveTo(pts[i].x, pts[i].y);
+        } else ctx.lineTo(pts[i].x, pts[i].y);
+      }
+      ctx.stroke();
+    }
+    // 头：稍大圆 + 高光
+    ctx.fillStyle = headC;
+    ctx.beginPath();
+    ctx.arc(pts[0].x, pts[0].y, cell * 0.46, 0, Math.PI * 2);
+    ctx.fill();
+    if (!dead) {
+      ctx.fillStyle = 'rgba(255,255,255,0.45)';
+      ctx.beginPath();
+      ctx.arc(pts[0].x - cell * 0.13, pts[0].y - cell * 0.13, cell * 0.15, 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
 
   // ---- 暂停 / 继续 ----
@@ -537,16 +766,17 @@
     if (!state) return;
     if (state.status === 'playing') {
       state.status = 'paused';
-      if (loopTimer) { clearTimeout(loopTimer); loopTimer = null; }
+      stopFrame();
       pauseAt = Date.now();
       if (pauseBtn) pauseBtn.textContent = '▶';
       if (hintEl) hintEl.textContent = '已暂停 · 点 ▶ 继续';
+      render(0); // 暂停时对齐到整格位置
     } else if (state.status === 'paused') {
       state.status = 'playing';
       state.startTime += Date.now() - pauseAt;
       if (pauseBtn) pauseBtn.textContent = '⏸';
       if (hintEl) hintEl.textContent = '滑动 / 方向键控制 · 别撞墙';
-      loopTimer = setTimeout(tick, currentTickInterval());
+      startFrame();
     }
   }
 
@@ -555,9 +785,8 @@
     isFs = !isFs;
     if (panel) panel.classList.toggle('snake-fs', isFs);
     if (fsBtn) fsBtn.textContent = isFs ? '⤢' : '⛶';
-    if (canvas) { canvas.width = canvas.height = isFs ? 440 : 300; }
-    if (canvas) ctx = canvas.getContext('2d');
-    render();
+    setupCanvas();
+    render(0);
   }
 
   // ---- 保存 / 恢复对局 ----
@@ -582,6 +811,9 @@
     const s = loadSaved();
     if (!s) return false;
     state = s;
+    if (!state.flags) state.flags = { wall: false, safe: false };
+    if (wallBtn) wallBtn.classList.toggle('on', state.flags.wall);
+    if (safeBtn) safeBtn.classList.toggle('on', state.flags.safe);
     behavior = { current: null, until: 0, stepLeft: 0, cooldowns: {}, targetFood: null, speedUp: false, speedUpUntil: 0 };
     state.status = 'playing';
     state.startTime = Date.now() - state.elapsed;
@@ -592,8 +824,8 @@
     if (hintEl) hintEl.textContent = '滑动 / 方向键控制 · 别撞墙';
     paused = false;
     if (pauseBtn) pauseBtn.textContent = '⏸';
-    render();
-    loopTimer = setTimeout(tick, currentTickInterval());
+    render(0);
+    startFrame();
     return true;
   }
 
@@ -610,6 +842,7 @@
     paused = false;
     if (pauseBtn) pauseBtn.textContent = '⏸';
     renderScore();
+    renderBest();
     if (canSave(state)) {
       state.status = 'playing';
       state.startTime = Date.now() - state.elapsed;
@@ -618,8 +851,8 @@
       if (resumeBtn) resumeBtn.hidden = true;
       if (resultEl) { resultEl.hidden = true; resultEl.innerHTML = ''; }
       if (hintEl) hintEl.textContent = '滑动 / 方向键控制 · 别撞墙';
-      render();
-      loopTimer = setTimeout(tick, currentTickInterval());
+      render(0);
+      startFrame();
       return;
     }
     const saved = loadSaved();
@@ -641,11 +874,12 @@
     if (resumeBtn) resumeBtn.hidden = true;
     if (resultEl) { resultEl.hidden = true; resultEl.innerHTML = ''; }
     if (hintEl) hintEl.textContent = '点开始 · 滑动控制方向';
-    render();
+    render(0);
   }
   function stopLoop() {
     if (loopTimer) { clearTimeout(loopTimer); loopTimer = null; }
     if (countdownTimer) { clearTimeout(countdownTimer); countdownTimer = null; }
+    stopFrame();
   }
   function closeSnakePanel() {
     if (canSave(state)) saveGame(); else clearSaved();
