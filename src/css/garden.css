@@ -268,21 +268,7 @@
 
 .garden-scroll { position: relative; }
 
-/* ===== 夜晚 / 季节主题 ===== */
-[data-night="1"] .garden-scroll { background: linear-gradient(180deg, rgba(20,28,50,.88), rgba(40,30,70,.72)); }
-[data-night="1"] .garden-plot { background: rgba(50,55,80,.6); border-color: rgba(180,190,220,.22); }
-[data-night="1"] .garden-plant-name { color: #c5cae9; }
-[data-night="1"] .garden-plant-stage { color: #9fa8da; }
-[data-night="1"] .garden-scroll::after {
-  content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 0;
-  background: radial-gradient(circle at 15% 20%, rgba(255,235,150,.75) 0 2px, transparent 3px),
-              radial-gradient(circle at 82% 38%, rgba(255,235,150,.65) 0 2px, transparent 3px),
-              radial-gradient(circle at 48% 72%, rgba(255,235,150,.55) 0 1px, transparent 2px),
-              radial-gradient(circle at 30% 85%, rgba(255,235,150,.5) 0 1px, transparent 2px);
-  animation: gardenFirefly 4s ease-in-out infinite;
-}
-@keyframes gardenFirefly { 0%,100% { opacity: .25; } 50% { opacity: 1; } }
-
+/* ===== 季节主题 ===== */
 [data-season="0"] .garden-plot { border-color: rgba(129,199,132,.32); }
 [data-season="1"] .garden-plot { border-color: rgba(100,181,246,.32); }
 [data-season="2"] .garden-plot { border-color: rgba(255,183,77,.32); }

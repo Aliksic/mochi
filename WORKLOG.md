@@ -4,6 +4,31 @@
 
 ## 规则
 
+### 2026-08-23（用户反馈：Pong 全屏没铺满 + UI 没放大）
+- [AI-A·完成]（**已构建 verify 10/10，未提交**）：`src/js/pong.js` + `src/css/chat-pages.css`（均 AI-A 域）+ 构建产物。
+  - 全屏 UI 全部放大：顶栏标题 20px、score 34px、难度 select 18px+padding、按钮 48px、foot 16px、倒计时 52px、overlay 标题/按钮放大。canvas 去圆角铺满。
+  - fitCanvas 全屏 availW -24→-16 贴边、availH 170→230（UI 放大后预留增加，防 canvas 和 UI 重叠）。
+  - 验证：`node --check` + verify 10/10。需真机确认全屏铺满 + UI 放大。
+
+### 2026-08-23（用户反馈：Pong 页面太小不好操作）
+- [AI-A·完成]（**已构建 verify 10/10，未提交**）：`src/js/pong.js` + `src/css/chat-pages.css`（均 AI-A 域）+ 构建产物。
+  - canvas 逻辑高度 H 240→300（比例 5:3→4:3），显示高度增大约 25%，手机触摸区更大好操作。fitCanvas 按新比例自动算高度，全屏也自动适配。
+  - 低难度挡板同步加长补偿画布变高：casual paddleH 92→104、easy 84→94（normal/hard 72 不变）。
+  - canvas-box max-width 480→560px（平板/桌面更宽，手机已撑满不受限）。
+  - 验证：`node --check` + verify 10/10。需真机确认 canvas 更大、操作更顺手。
+
+### 2026-08-23（用户反馈：Pong 休闲档还是赢不了 + 接球表情每次都触发不说话）
+- [AI-A·完成]（**已构建 verify 10/10，未提交**）：`src/js/pong.js`（AI-A 域）+ 构建产物。
+  - **进一步降难度**：休闲档 AI maxSpeed 2.4→1.7、预测误差 34→48、失误率 0.14→0.24、反应延迟 0.5-0.8→0.8-1.2、放水 0.14→0.24、beh slow/drift/miss 0.12→0.18；简单档 maxSpeed 2.8→2.2、预测误差 26→36、失误率 0.10→0.16、反应延迟 0.38-0.6→0.55-0.85、放水 0.08→0.15。normal/hard 不变。
+  - **修表情/说话概率**（用户反馈"每次都触发表情、没有说话"）：原接球表情 100% 每次都冒 + 说话 18% 太低。改：接球表情 40% 概率 + 1.5s 冷却（防高频每次都冒）；得分/失误表情 75% 无冷却（关键事件保留反馈）；说话概率 18%→30%（在表情触发前提下）。tryTaSay 加 emojiProb/cooldownMs 参数，state 加 emojiCooldown 字段。
+  - 验证：`node --check` + verify 10/10。需真机试玩确认休闲档能赢、表情不再每次冒、说话能见到。
+
+### 2026-08-23（贪吃蛇三轮：格子放大 20→15 格 + canvas 360px）
+- [AI-A·完成]（**已构建 verify 10/10 + snake 冒烟 11/11 + snake 功能 8/8，未提交**）：`src/js/snake-game.js` + `src/css/chat-pages.css`（均 AI-A 域）+ 构建产物。
+  - 用户反馈格子太小手机端不好玩。改 GRID 20→15，canvas 非全屏 300→360px（每格 24px，原 15px），全屏 480 不变（每格 32px）。
+  - 旧存档兼容：20 格旧存档坐标在 15 格下越界，新增 `validCoord/validState` 检查，`loadSaved` 越界则清存档丢弃，`openSnakePanel` 恢复内存 state 也加 `validState` 守卫。初始位置 player x=4 / opp x=GRID-5=10 在 15 格下间距 6 合理。
+  - 验证：verify 10/10 + verify-snake-smooth 11/11 + verify-snake-features 8/8。需真机确认格子大小合适。
+
 ### 2026-08-23（用户要求：降低联系人邀请玩游戏的概率）
 - [AI-A·完成]（**已构建 verify 10/10，未提交**）：`src/js/reply-settings.js` + `src/js/chat.js`（均 AI-A 域）+ 构建产物。
   - 改动：邀请概率默认值降低一半——猜拳邀请 `ai-rps-prob` 15%→8%、游戏邀请 `ai-game-prob` 10%→5%。reply-settings.js DEFAULTS + chat.js tryActiveInvite 里 cfgn fallback + 注释同步更新。

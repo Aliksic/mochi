@@ -1216,11 +1216,7 @@
 .loc-sec-value { font-size:16px; font-weight:700; color:var(--ink); margin-top:5px; line-height:1.6; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
 .loc-sec-sub { font-size:11px; font-weight:400; color:var(--muted); margin-left:4px; }
 .loc-empty { color:var(--muted); font-weight:400; font-size:13px; }
-.loc-resident-clear {
-  border:1px solid rgba(224,85,85,.4); border-radius:8px; padding:4px 10px;
-  background:transparent; color:#e05555; font-size:11px; font-weight:600; cursor:pointer; font-family:inherit;
-}
-.loc-resident-clear:active { background:rgba(224,85,85,.1); }
+
 .loc-timeline { margin-top:6px; }
 .loc-tl-item { display:flex; gap:10px; padding:5px 0; font-size:13px; align-items:baseline; }
 .loc-tl-time { color:var(--muted); font-size:11px; flex-shrink:0; min-width:38px; }
@@ -1246,16 +1242,7 @@
 .loc-card.disabled { opacity:.4; cursor:not-allowed; }
 .loc-card-egg { border-color:rgba(255,180,80,.6); background:rgba(255,240,210,.9); color:#b8742a; }
 .loc-card-egg:active { background:rgba(255,220,160,.9); }
-/* 常驻位置小光点 */
-.loc-resident-dot {
-  position:fixed; top:68px; right:16px; z-index:60;
-  width:12px; height:12px; border-radius:50%;
-  background:radial-gradient(circle, rgba(255,225,160,.95), rgba(255,180,80,.7));
-  box-shadow:0 0 12px rgba(255,200,120,.8);
-  cursor:pointer; animation:locDotPulse 2.4s ease-in-out infinite;
-}
-.loc-resident-dot[hidden] { display:none; }
-@keyframes locDotPulse { 0%,100% { transform:scale(1); opacity:.85; } 50% { transform:scale(1.3); opacity:1; } }
+
 /* 位置卡光点动效 */
 .loc-fx {
   position:fixed; z-index:95; width:28px; height:28px; border-radius:50%;
@@ -2371,7 +2358,7 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + env(safe-area-inset-bott
 .pong-s-you { color:#3a7fd5; }
 .pong-s-ta { color:#d5763a; }
 .pong-s-sep { color:var(--muted); margin:0 8px; font-weight:400; }
-.pong-canvas-box { position:relative; width:100%; max-width:480px; }
+.pong-canvas-box { position:relative; width:100%; max-width:560px; }
 #pong-canvas { display:block; width:100%; height:auto; border-radius:10px; background:#0f1420; touch-action:none; user-select:none; }
 .pong-hint { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:30px; font-weight:700; color:#fff; text-shadow:0 2px 8px rgba(0,0,0,.5); pointer-events:none; min-height:30px; text-align:center; }
 .pong-overlay { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; background:rgba(15,20,32,.88); border-radius:10px; z-index:2; overflow:hidden; padding:4px 8px; }
@@ -2398,19 +2385,28 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + env(safe-area-inset-bott
 .pong-icon-btn:active { transform:scale(.92); }
 .pong-overlay-btns { display:flex; gap:10px; }
 .pong-overlay-btn2 { background:rgba(255,255,255,.16); }
-/* Pong 全屏模式：面板占满视口，游戏区域放大（fitCanvas 按视口算 canvas 尺寸） */
+/* Pong 全屏模式：面板占满视口，游戏区域 + UI 全部放大（fitCanvas 按视口算 canvas 尺寸） */
 #chat-pong-panel.pong-fs { position:fixed; inset:0; z-index:9999; border-radius:0; max-height:none; height:100vh; background:#0f1420; }
-#chat-pong-panel.pong-fs .poke-card-head { background:transparent; color:#fff; border-bottom-color:rgba(255,255,255,.12); }
-#chat-pong-panel.pong-fs .poke-card-head b { color:#fff; }
-#chat-pong-panel.pong-fs .poke-card-close { color:#fff; }
-#chat-pong-panel.pong-fs .pong-wrap { max-width:none; }
+#chat-pong-panel.pong-fs .poke-card-head { background:transparent; color:#fff; border-bottom-color:rgba(255,255,255,.12); padding:14px 18px; }
+#chat-pong-panel.pong-fs .poke-card-head b { color:#fff; font-size:20px; }
+#chat-pong-panel.pong-fs .poke-card-close { color:#fff; font-size:24px; }
+#chat-pong-panel.pong-fs .pong-wrap { max-width:none; gap:14px; padding:10px 6px 8px; }
 #chat-pong-panel.pong-fs .pong-canvas-box { max-width:none; }
-#chat-pong-panel.pong-fs .pong-bar-left { color:rgba(255,255,255,.7); }
-#chat-pong-panel.pong-fs .pong-diff { background:rgba(255,255,255,.1); color:#fff; border-color:rgba(255,255,255,.2); }
-#chat-pong-panel.pong-fs .pong-icon-btn { background:rgba(255,255,255,.12); color:#fff; }
-#chat-pong-panel.pong-fs .pong-sound { background:rgba(255,255,255,.12); }
-#chat-pong-panel.pong-fs .pong-score { color:#fff; }
-#chat-pong-panel.pong-fs .pong-foot { color:rgba(255,255,255,.5); }
+#chat-pong-panel.pong-fs #pong-canvas { border-radius:0; }
+#chat-pong-panel.pong-fs .pong-bar-left { color:rgba(255,255,255,.7); font-size:18px; }
+#chat-pong-panel.pong-fs .pong-diff { background:rgba(255,255,255,.1); color:#fff; border-color:rgba(255,255,255,.2); font-size:18px; padding:8px 14px; border-radius:10px; }
+#chat-pong-panel.pong-fs .pong-icon-btn { background:rgba(255,255,255,.12); color:#fff; width:48px; height:48px; font-size:24px; }
+#chat-pong-panel.pong-fs .pong-sound { background:rgba(255,255,255,.12); width:48px; height:48px; font-size:26px; }
+#chat-pong-panel.pong-fs .pong-score { color:#fff; font-size:34px; }
+#chat-pong-panel.pong-fs .pong-foot { color:rgba(255,255,255,.5); font-size:16px; }
+#chat-pong-panel.pong-fs .pong-hint { font-size:52px; }
+#chat-pong-panel.pong-fs .pong-overlay-title { font-size:28px; }
+#chat-pong-panel.pong-fs .pong-overlay-body { font-size:16px; }
+#chat-pong-panel.pong-fs .pong-start-tip { font-size:20px; }
+#chat-pong-panel.pong-fs .pong-start-ctrl { font-size:15px; }
+#chat-pong-panel.pong-fs .pong-end-score { font-size:30px; }
+#chat-pong-panel.pong-fs .pong-end-stat { font-size:15px; }
+#chat-pong-panel.pong-fs .pong-overlay-btn { padding:12px 36px; font-size:20px; border-radius:24px; }
 
 /* 双人贪吃蛇半框（复用 .poke-card 容器） */
 #chat-snake-panel { height:auto; max-height:86%; }
@@ -2424,7 +2420,7 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + env(safe-area-inset-bott
 .snake-icon-btn:active { transform:scale(.92); }
 .snake-score { text-align:center; font-size:13px; font-weight:700; color:var(--ink); padding:4px 0 2px; letter-spacing:.5px; }
 .snake-best { text-align:center; font-size:11px; color:var(--muted); padding:0 0 6px; }
-.snake-canvas { display:block; width:min(300px,86vw); height:min(300px,86vw); margin:0 auto; background:#f6f6f8; border-radius:12px; touch-action:none; }
+.snake-canvas { display:block; width:min(360px,90vw); height:min(360px,90vw); margin:0 auto; background:#f6f6f8; border-radius:12px; touch-action:none; }
 .snake-hint { text-align:center; font-size:12px; color:var(--muted); padding:8px 0 4px; }
 .snake-result { text-align:center; padding:8px 0 4px; }
 .snake-res-icon { font-size:34px; line-height:1; margin-bottom:4px; }
@@ -2441,13 +2437,23 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + env(safe-area-inset-bott
 .snake-dp[data-dir="left"] { grid-column:1; grid-row:2; }
 .snake-dp[data-dir="down"] { grid-column:2; grid-row:2; }
 .snake-dp[data-dir="right"] { grid-column:3; grid-row:2; }
-/* 全屏：面板占满视口，canvas + 方向键放大，保持浅色背景 */
+/* 全屏：面板占满视口，canvas + UI 按视口等比放大铺满 */
 #chat-snake-panel.snake-fs { position:fixed; inset:0; z-index:9999; border-radius:0; max-height:none; height:100vh; background:#fff; }
-#chat-snake-panel.snake-fs .poke-card-head { border-bottom-color:rgba(0,0,0,.08); }
-#chat-snake-panel.snake-fs .poke-card-scroll { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:0 16px; }
-#chat-snake-panel.snake-fs .snake-canvas { width:min(480px,92vw); height:min(480px,92vw); }
-#chat-snake-panel.snake-fs .snake-dpad { grid-template-columns:repeat(3,86px); grid-template-rows:repeat(2,78px); }
-#chat-snake-panel.snake-fs .snake-dp { font-size:28px; }
+#chat-snake-panel.snake-fs .poke-card-head { border-bottom-color:rgba(0,0,0,.08); padding:8px 14px; }
+#chat-snake-panel.snake-fs .poke-card-head span { font-size:min(4.5vw, 3.6vh); }
+#chat-snake-panel.snake-fs .snake-icon-btn { width:min(9vw, 7vh); height:min(9vw, 7vh); font-size:min(4vw, 3.2vh); }
+#chat-snake-panel.snake-fs .snake-diff { font-size:min(3.6vw, 3vh); padding:min(1vw,.8vh) min(2.4vw,2vh); }
+#chat-snake-panel.snake-fs .poke-card-scroll { display:flex; flex-direction:column; align-items:center; justify-content:space-between; gap:min(2vh,2vw); padding:min(2vh,2vw) min(3vw,3vh); flex:1; }
+#chat-snake-panel.snake-fs .snake-score { font-size:min(3.6vw, 3vh); padding:2px 0; }
+#chat-snake-panel.snake-fs .snake-best { font-size:min(3vw, 2.5vh); }
+#chat-snake-panel.snake-fs .snake-canvas { width:min(94vw, 94vh); height:min(94vw, 94vh); }
+#chat-snake-panel.snake-fs .snake-hint { font-size:min(3.2vw, 2.6vh); }
+#chat-snake-panel.snake-fs .snake-result { font-size:min(3.4vw, 2.8vh); }
+#chat-snake-panel.snake-fs .snake-res-icon { font-size:min(9vw, 7vh); }
+#chat-snake-panel.snake-fs .snake-res-title { font-size:min(4.4vw, 3.6vh); }
+#chat-snake-panel.snake-fs .snake-btn { font-size:min(3.8vw, 3.2vh); padding:min(2.2vw, 1.8vh) min(4vw, 3.4vh); max-width:min(46vw, 38vh); }
+#chat-snake-panel.snake-fs .snake-dpad { grid-template-columns:repeat(3, min(24vw, 19vh)); grid-template-rows:repeat(2, min(18vw, 14vh)); gap:min(2vw, 1.6vh); }
+#chat-snake-panel.snake-fs .snake-dp { font-size:min(7vw, 5.6vh); border-radius:min(3vw, 2.4vh); }
 .snake-res-pop { animation: snakeResPop .32s cubic-bezier(.2,.9,.3,1.2) both; }
 @keyframes snakeResPop { from { opacity:0; transform:scale(.7); } to { opacity:1; transform:scale(1); } }
 /* 聊天记录里的贪吃蛇结果卡片（居中白底） */

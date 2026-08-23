@@ -26,7 +26,8 @@
 
   // ---- 逻辑尺寸（物理计算用；Canvas 实际像素按 DPR 缩放，CSS 拉伸到容器宽度） ----
   // 挡板高度/球半径/获胜分按难度变化（见 DIFFS），这里只放固定尺寸。
-  const W = 400, H = 240;
+  // v3.9.x：H 240→300 让 canvas 更高（显示增大 25%），手机触摸区更大好操作；低难度挡板同步加长补偿。
+  const W = 400, H = 300;
   const PADDLE_W = 8;
   const PADDLE_GAP = 14;            // 挡板距边界
   const INIT_SPEED = 4;
@@ -39,10 +40,10 @@
   // v3.9.x：整体降难度——新增休闲档，easy 大幅放宽，默认 easy。球速上限 6.5 + 玩家挡板 8.5 让真人跟得上。
   // 低难度加长玩家挡板 + 加大球 + 降低获胜分，物理上更易接、对局更短不累。fumble=AI 偶尔放水概率。
   const DIFFS = {
-    casual: { reactDelay: [0.5, 0.8],  maxSpeed: 2.4, predictErr: 34, missRate: 0.14, paddleH: 92, ballR: 8, winScore: 3, fumble: 0.14,
-              beh: { early: 0.03, slow: 0.12, drift: 0.12, shift: 0.04, miss: 0.12, risky: 0.02 } },
-    easy:   { reactDelay: [0.38, 0.6], maxSpeed: 2.8, predictErr: 26, missRate: 0.10, paddleH: 84, ballR: 7, winScore: 4, fumble: 0.08,
-              beh: { early: 0.04, slow: 0.09, drift: 0.08, shift: 0.05, miss: 0.08, risky: 0.03 } },
+    casual: { reactDelay: [0.8, 1.2],  maxSpeed: 1.7, predictErr: 48, missRate: 0.24, paddleH: 104, ballR: 8, winScore: 3, fumble: 0.24,
+              beh: { early: 0.02, slow: 0.18, drift: 0.18, shift: 0.03, miss: 0.18, risky: 0.01 } },
+    easy:   { reactDelay: [0.55, 0.85], maxSpeed: 2.2, predictErr: 36, missRate: 0.16, paddleH: 94, ballR: 7, winScore: 4, fumble: 0.15,
+              beh: { early: 0.03, slow: 0.13, drift: 0.12, shift: 0.04, miss: 0.12, risky: 0.02 } },
     normal: { reactDelay: [0.2, 0.4],  maxSpeed: 4.3, predictErr: 11, missRate: 0.04, paddleH: 72, ballR: 6, winScore: 5, fumble: 0,
               beh: { early: 0.06, slow: 0.05, drift: 0.05, shift: 0.04, miss: 0.03, risky: 0.08 } },
     hard:   { reactDelay: [0.12, 0.28], maxSpeed: 5.5, predictErr: 5,  missRate: 0.02, paddleH: 72, ballR: 6, winScore: 5, fumble: 0,
@@ -134,6 +135,7 @@
       lastHit: 0,                   // 上次击球点（-1~1，用于挡板闪光颜色教学）
       taBubble: null,               // {emoji, text, until} TA 表情/说话泡泡
       sayCooldown: 0,               // TA 说话冷却时间戳
+      emojiCooldown: 0,             // TA 表情冷却时间戳（接球高频事件防每次都冒）
       serveDir: Math.random() < 0.5 ? -1 : 1,  // 预决定的发球方向（用于发球前预警箭头）
       playerRallyHits: 0,           // 玩家本回合连续接球数（连击奖励用）
       params: d
@@ -347,7 +349,7 @@
       s.beh.consecCatch++;
       const cc = s.beh.consecCatch;
       const emoji = cc >= 5 ? '🤩' : cc >= 3 ? '😎' : '😊';
-      tryTaSay(s, SAY_POOLS.catch, emoji);
+      tryTaSay(s, SAY_POOLS.catch, emoji, 0.4, 1500);   // 接球：40% 表情 + 1.5s 冷却（防每次都冒）
     } else {
       // 玩家接球成功：重置 TA 连续计数（玩家打断连击）+ 玩家连击数 +1
       s.beh.consecCatch = 0;
@@ -355,13 +357,16 @@
     }
   }
 
-  // TA 说话泡泡：按概率触发，与表情泡泡叠加（emoji + text），冷却 3 秒避免太吵
-  function tryTaSay(s, sayPool, emoji) {
+  // TA 表情/说话泡泡：emojiProb 控制表情触发概率，cooldownMs>0 时启用表情冷却（接球高频事件防每次都冒）。
+  // 说话在表情触发前提下再按概率掷，说话概率 30%（原 18% 太低用户反馈"没有说话"）。
+  function tryTaSay(s, sayPool, emoji, emojiProb, cooldownMs) {
     const now = performance.now();
+    if (cooldownMs > 0 && now < s.emojiCooldown) return;   // 表情冷却中，不触发
+    if (Math.random() > emojiProb) return;                  // 未命中表情概率
+    if (cooldownMs > 0) s.emojiCooldown = now + cooldownMs;
     let text = null;
-    if (now > s.sayCooldown && Math.random() < 0.18) {
+    if (Math.random() < 0.3) {
       text = sayPool[Math.floor(Math.random() * sayPool.length)];
-      s.sayCooldown = now + 3000;
     }
     s.taBubble = { emoji: emoji, text: text, until: now + 1200 };
   }
@@ -421,7 +426,7 @@
       s.totalRounds++;
       s.beh.consecCatch = 0;
       s.playerRallyHits = 0;
-      tryTaSay(s, SAY_POOLS.score, '😤');
+      tryTaSay(s, SAY_POOLS.score, '😤', 0.75, 0);   // TA 得分：75% 表情，无冷却（关键事件）
       onScore(s, now, 'opponent');
     } else if (b.x + bR < 0) {
       // 球越过左边界 → 玩家得分（TA 失误）
@@ -431,7 +436,7 @@
       s.totalRounds++;
       s.beh.consecCatch = 0;
       s.playerRallyHits = 0;
-      tryTaSay(s, SAY_POOLS.miss, '😅');
+      tryTaSay(s, SAY_POOLS.miss, '😅', 0.75, 0);   // TA 失误：75% 表情，无冷却（关键事件）
       onScore(s, now, 'player');
     }
 
@@ -622,9 +627,9 @@
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     const box = canvas.parentElement;   // .pong-canvas-box
     if (isFs) {
-      // 全屏：按视口计算 canvas 最大尺寸（保持 5:3 比例），显式设置 canvas + canvas-box
-      const availW = window.innerWidth - 24;
-      const availH = window.innerHeight - 170;   // head+bar+score+foot+padding
+      // 全屏：按视口计算 canvas 最大尺寸（保持 4:3 比例），显式设置 canvas + canvas-box
+      const availW = window.innerWidth - 16;
+      const availH = window.innerHeight - 230;   // head+bar+score+foot+padding（全屏 UI 放大后预留增加）
       let cw = availW;
       let ch = Math.round(cw * H / W);
       if (ch > availH) { ch = availH; cw = Math.round(ch * W / H); }

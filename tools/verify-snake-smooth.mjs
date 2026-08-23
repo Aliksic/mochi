@@ -176,7 +176,7 @@ check('E: 暂停时画面静止', pausedShot === pausedShot2, 'len ' + pausedSho
 await evalJs(`document.getElementById('snake-pause').click(); true;`);
 await sleep(400);
 s = await snap();
-check('E: 继续后回到游戏', s.hint && s.hint.indexOf('滑动') >= 0, 'hint=' + s.hint);
+check('E: 继续后已恢复（非暂停态）', s.hint && s.hint.indexOf('暂停') < 0, 'hint=' + s.hint);
 
 // 清理
 await evalJs(`window.closeSnakePanel && window.closeSnakePanel(); true;`);

@@ -3,7 +3,7 @@
 // 难度（速度）+ 暂停 + 全屏 + 保存/继续对局（localStorage）
 (function () {
   'use strict';
-  const GRID = 20;
+  const GRID = 15;
   const INIT_LEN = 3;
   const FOOD_TARGET = 2;
   const PREFIX = (window.activePrefix && window.activePrefix()) || 'xy-home-v2';
@@ -111,7 +111,12 @@
 
   function setupCanvas() {
     if (!canvas) return;
-    logicSize = isFs ? 480 : 300;
+    if (isFs) {
+      // 全屏：跟随视口（匹配 CSS min(94vw,94vh)），PC 大屏也铺满
+      logicSize = Math.round(Math.min(window.innerWidth, window.innerHeight) * 0.94);
+    } else {
+      logicSize = 360;
+    }
     dpr = Math.min(window.devicePixelRatio || 1, 3);
     canvas.width = logicSize * dpr;
     canvas.height = logicSize * dpr;
@@ -148,6 +153,10 @@
     if (closeBtn) closeBtn.addEventListener('click', function (e) { e.stopPropagation(); closeSnakePanel(); });
     setupInput();
     document.addEventListener('contact-switched', function () { try { closeSnakePanel(); state = null; behavior = null; } catch (e) {} });
+    window.addEventListener('resize', function () {
+      if (!panel || panel.hidden) return;
+      if (isFs) { setupCanvas(); render(0); }
+    });
   }
 
   function setupInput() {
@@ -797,12 +806,20 @@
       localStorage.setItem(SAVE_KEY, JSON.stringify(state));
     } catch (e) {}
   }
+  function validCoord(p) { return p && p.x >= 0 && p.x < GRID && p.y >= 0 && p.y < GRID; }
+  function validState(s) {
+    if (!s || !s.player || !s.opp) return false;
+    if (!s.player.body.every(validCoord) || !s.opp.body.every(validCoord)) return false;
+    if (s.foods && !s.foods.every(validCoord)) return false;
+    return true;
+  }
   function loadSaved() {
     try {
       const raw = localStorage.getItem(SAVE_KEY);
       if (!raw) return null;
       const s = JSON.parse(raw);
       if (!s || s.status !== 'playing') return null;
+      if (!validState(s)) { clearSaved(); return null; }
       return s;
     } catch (e) { return null; }
   }
@@ -837,13 +854,16 @@
     const mp = $('chat-more-panel'); if (mp) mp.hidden = true;
     const nameEl = $('snake-partner-name');
     if (nameEl) nameEl.textContent = (typeof localStorage !== 'undefined' && localStorage.getItem(PARTNER_KEY)) || 'TA';
-    if (isFs) toggleFs();
+    // 手机端默认全屏（占满视口，格子更大好操作）；桌面端重置全屏
+    const mobile = window.innerWidth < 900;
+    if (mobile) { if (!isFs) toggleFs(); }
+    else { if (isFs) toggleFs(); }
     panel.hidden = false;
     paused = false;
     if (pauseBtn) pauseBtn.textContent = '⏸';
     renderScore();
     renderBest();
-    if (canSave(state)) {
+    if (canSave(state) && validState(state)) {
       state.status = 'playing';
       state.startTime = Date.now() - state.elapsed;
       if (startBtn) { startBtn.hidden = true; startBtn.textContent = '开始'; }

@@ -1100,8 +1100,8 @@ if (ckRefresh) {
 })();
 
 // ===== 功能：TA在身边·位置（查岗半框内入口，位置面板独立词库） =====
-// 位置卡 = 普通聊天消息（TA 发的 side=in），位置面板单独维护当前位置/常驻/时间线
-// 收到位置卡时屏幕光点动效；TA 设常驻后页面角落小光点
+// 位置卡 = 普通聊天消息（TA 发的 side=in），位置面板单独维护当前位置/时间线
+// 收到位置卡时屏幕光点动效
 (function () {
   const store = window.activeStore();
   // ---- 位置词库（内置，独立于聊天字卡库） ----
@@ -1160,8 +1160,7 @@ if (ckRefresh) {
   // ---- 存储 ----
   function loadCur() { try { return JSON.parse(store.get('loc-current') || 'null'); } catch (e) { return null; } }
   function saveCur(v) { store.set('loc-current', v ? JSON.stringify(v) : ''); }
-  function loadResident() { try { return JSON.parse(store.get('loc-resident') || 'null'); } catch (e) { return null; } }
-  function saveResident(v) { store.set('loc-resident', v ? JSON.stringify(v) : ''); }
+
   function loadHist() { try { return JSON.parse(store.get('loc-history') || '[]'); } catch (e) { return []; } }
   function saveHist(list) {
     const s = JSON.stringify(list);
@@ -1235,7 +1234,7 @@ if (ckRefresh) {
     playLocFx(text, type);
     locViewDate = dayStr(new Date());
     renderLocPanel();
-    refreshResidentDot();
+
   }
 
   // ---- 日期辅助（按日切换时间线） ----
@@ -1256,7 +1255,7 @@ if (ckRefresh) {
   let locViewDate = '';
 
   // ---- 组合发送（方位 + 距离） ----
-  let comboMode = false;
+  let comboMode = store.get('loc-combo') !== '0'; // 默认开，记住选择
   let pendingDir = null;
   function sendComboCard(dirText, distText) {
     const ts = Date.now();
@@ -1270,7 +1269,7 @@ if (ckRefresh) {
     pendingDir = null;
     locViewDate = dayStr(new Date());
     renderLocPanel();
-    refreshResidentDot();
+
   }
 
   // ---- 问 TA 一声 ----
@@ -1288,26 +1287,6 @@ if (ckRefresh) {
     }, 2000 + Math.random() * 2000);
   }
 
-  // ---- 常驻 ----
-  function setResident(text) {
-    saveResident({ text: text, ts: Date.now() });
-    toast('已设为常驻位置：' + text);
-    refreshResidentDot();
-    renderLocPanel();
-  }
-  function clearResident() {
-    saveResident(null);
-    toast('已取消常驻位置');
-    refreshResidentDot();
-    renderLocPanel();
-  }
-  function refreshResidentDot() {
-    const dot = document.getElementById('loc-resident-dot');
-    if (!dot) return;
-    const r = loadResident();
-    dot.hidden = !r;
-    if (r) dot.title = 'TA 常驻：' + r.text + '（点击查看位置）';
-  }
 
   // ---- 位置变化提醒气泡（TA 主动换位置时顶部轻提示） ----
   function showLocChangeBubble(text) {
@@ -1329,7 +1308,7 @@ if (ckRefresh) {
     const body = document.getElementById('loc-body');
     if (!body) return;
     const cur = loadCur();
-    const resident = loadResident();
+
     const allHist = loadHist();
     const used = eggUsed();
 
@@ -1347,14 +1326,7 @@ if (ckRefresh) {
     html += '<div class="loc-sec-value">' + (cur
       ? esc(cur.text) + '<span class="loc-sec-sub">' + (LOC_LABEL[cur.type] || (cur.type === 'combo' ? '组合' : '')) + ' · ' + fmtT(cur.ts) + '</span>'
       : '— 还没有位置卡') + '</div></div>';
-    // 常驻
-    html += '<div class="loc-section"><div class="loc-sec-title">常驻位置</div>';
-    if (resident) {
-      html += '<div class="loc-sec-value">' + esc(resident.text) + '<button class="loc-resident-clear" id="loc-resident-clear">取消常驻</button></div>';
-    } else {
-      html += '<div class="loc-sec-value loc-empty">未设置（长按方位卡可设常驻）</div>';
-    }
-    html += '</div>';
+
     // 时间线（按日切换）
     html += '<div class="loc-section"><div class="loc-sec-title">位置时间线（按日查看）</div>';
     html += '<div class="loc-day-switch"><button class="loc-day-btn" id="loc-day-prev"' + (dayIdx >= days.length - 1 ? ' disabled' : '') + '>‹</button><span class="loc-day-label">' + dayLabel(locViewDate) + '</span><button class="loc-day-btn" id="loc-day-next"' + (dayIdx <= 0 ? ' disabled' : '') + '>›</button></div>';
@@ -1372,7 +1344,7 @@ if (ckRefresh) {
     // 问 TA 一声
     html += '<button class="loc-ask-btn" id="loc-ask-btn">问 TA 一声「你在哪？」</button>';
     // TA 发位置卡词库
-    html += '<div class="loc-send-area"><div class="loc-send-tip">TA 想告诉你 TA 在哪（发出后有光点动效 · 长按方位卡设常驻）</div>';
+    html += '<div class="loc-send-area"><div class="loc-send-tip">TA 想告诉你 TA 在哪（发出后有光点动效）</div>';
     // 组合开关
     html += '<div class="loc-combo-toggle"><label class="loc-switch"><input type="checkbox" id="loc-combo-chk"' + (comboMode ? ' checked' : '') + '><span class="loc-switch-tk"></span></label><span class="loc-combo-label">组合发送（方位 + 距离）</span></div>';
     if (comboMode && pendingDir) {
@@ -1387,7 +1359,7 @@ if (ckRefresh) {
       }).join('');
       return '<div class="loc-grp"><div class="loc-grp-label">' + label + '</div><div class="loc-grp-cards">' + cards + '</div></div>';
     }
-    html += groupHtml('dir', '方位卡（长按设常驻）', LOC.dir);
+    html += groupHtml('dir', '方位卡', LOC.dir);
     html += groupHtml('dist', '距离卡', LOC.dist);
     html += groupHtml('state', '状态卡', LOC.state);
     html += groupHtml('sense', '感知卡', LOC.sense);
@@ -1405,8 +1377,7 @@ if (ckRefresh) {
 
     const askBtn = document.getElementById('loc-ask-btn');
     if (askBtn) askBtn.addEventListener('click', askWhere);
-    const clrBtn = document.getElementById('loc-resident-clear');
-    if (clrBtn) clrBtn.addEventListener('click', clearResident);
+
     // 日期切换
     const prevBtn = document.getElementById('loc-day-prev');
     if (prevBtn) prevBtn.addEventListener('click', () => { if (dayIdx < days.length - 1) { locViewDate = days[dayIdx + 1]; renderLocPanel(); } });
@@ -1414,7 +1385,7 @@ if (ckRefresh) {
     if (nextBtn) nextBtn.addEventListener('click', () => { if (dayIdx > 0) { locViewDate = days[dayIdx - 1]; renderLocPanel(); } });
     // 组合开关
     const comboChk = document.getElementById('loc-combo-chk');
-    if (comboChk) comboChk.addEventListener('change', () => { comboMode = comboChk.checked; pendingDir = null; renderLocPanel(); });
+    if (comboChk) comboChk.addEventListener('change', () => { comboMode = comboChk.checked; store.set('loc-combo', comboMode ? '1' : '0'); pendingDir = null; renderLocPanel(); });
     const comboClear = document.getElementById('loc-combo-clear');
     if (comboClear) comboClear.addEventListener('click', () => { pendingDir = null; renderLocPanel(); });
     // 自定义卡添加
@@ -1432,24 +1403,7 @@ if (ckRefresh) {
     body.querySelectorAll('.loc-card').forEach(btn => {
       const text = btn.dataset.text;
       const type = btn.dataset.type;
-      let pressTimer = null, longPressed = false;
-      btn.addEventListener('pointerdown', () => {
-        longPressed = false;
-        if (type === 'dir') {
-          pressTimer = setTimeout(() => {
-            pressTimer = null;
-            longPressed = true;
-            setResident(text);
-            if (navigator.vibrate) try { navigator.vibrate(20); } catch (e) {}
-          }, 500);
-        }
-      });
-      const cancel = () => { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } };
-      btn.addEventListener('pointerup', cancel);
-      btn.addEventListener('pointerleave', cancel);
-      btn.addEventListener('pointercancel', cancel);
       btn.addEventListener('click', () => {
-        if (longPressed) { longPressed = false; return; }
         if (btn.classList.contains('disabled')) return;
         if (comboMode) {
           if (type === 'dir') { pendingDir = (pendingDir === text) ? null : text; renderLocPanel(); return; }
@@ -1482,10 +1436,7 @@ if (ckRefresh) {
   if (entry) entry.addEventListener('click', openLocPanel);
   const closeBtn = document.getElementById('loc-close');
   if (closeBtn) closeBtn.addEventListener('click', closeLocPanel);
-  const dot = document.getElementById('loc-resident-dot');
-  if (dot) dot.addEventListener('click', openLocPanel);
 
-  refreshResidentDot();
   try {
     if (window.idbGet && !store.get('loc-history')) {
       const myPrefix = window.activePrefix();
@@ -1527,7 +1478,7 @@ if (ckRefresh) {
     hist.unshift({ text: text, type: type, ts: ts, auto: true });
     saveHist(hist);
     playLocFx(text, type);
-    refreshResidentDot();
+
     if (oldCur && oldCur.text !== text) showLocChangeBubble(text);
   }
   function scheduleLocAuto() {
@@ -1540,7 +1491,7 @@ if (ckRefresh) {
   setTimeout(bootLocAuto, 3000);
 
   document.addEventListener('contact-switched', () => {
-    try { closeLocPanel(); refreshResidentDot(); locViewDate = ''; } catch (e) {}
+    try { closeLocPanel(); locViewDate = ''; } catch (e) {}
   });
 
   window.playLocFx = playLocFx;

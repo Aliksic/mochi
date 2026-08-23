@@ -3157,11 +3157,6 @@ font-size:15px; font-weight:700; color:var(--ink); flex-shrink:0;
 .loc-sec-value { font-size:16px; font-weight:700; color:var(--ink); margin-top:5px; line-height:1.6; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
 .loc-sec-sub { font-size:11px; font-weight:400; color:var(--muted); margin-left:4px; }
 .loc-empty { color:var(--muted); font-weight:400; font-size:13px; }
-.loc-resident-clear {
-border:1px solid rgba(224,85,85,.4); border-radius:8px; padding:4px 10px;
-background:transparent; color:#e05555; font-size:11px; font-weight:600; cursor:pointer; font-family:inherit;
-}
-.loc-resident-clear:active { background:rgba(224,85,85,.1); }
 .loc-timeline { margin-top:6px; }
 .loc-tl-item { display:flex; gap:10px; padding:5px 0; font-size:13px; align-items:baseline; }
 .loc-tl-time { color:var(--muted); font-size:11px; flex-shrink:0; min-width:38px; }
@@ -3187,15 +3182,6 @@ transition:background .15s, transform .1s;
 .loc-card.disabled { opacity:.4; cursor:not-allowed; }
 .loc-card-egg { border-color:rgba(255,180,80,.6); background:rgba(255,240,210,.9); color:#b8742a; }
 .loc-card-egg:active { background:rgba(255,220,160,.9); }
-.loc-resident-dot {
-position:fixed; top:68px; right:16px; z-index:60;
-width:12px; height:12px; border-radius:50%;
-background:radial-gradient(circle, rgba(255,225,160,.95), rgba(255,180,80,.7));
-box-shadow:0 0 12px rgba(255,200,120,.8);
-cursor:pointer; animation:locDotPulse 2.4s ease-in-out infinite;
-}
-.loc-resident-dot[hidden] { display:none; }
-@keyframes locDotPulse { 0%,100% { transform:scale(1); opacity:.85; } 50% { transform:scale(1.3); opacity:1; } }
 .loc-fx {
 position:fixed; z-index:95; width:28px; height:28px; border-radius:50%;
 background:radial-gradient(circle, rgba(255,225,160,.95) 0%, rgba(255,180,80,.6) 55%, rgba(255,180,80,0) 72%);
@@ -4191,7 +4177,7 @@ border-radius:12px;
 .pong-s-you { color:#3a7fd5; }
 .pong-s-ta { color:#d5763a; }
 .pong-s-sep { color:var(--muted); margin:0 8px; font-weight:400; }
-.pong-canvas-box { position:relative; width:100%; max-width:480px; }
+.pong-canvas-box { position:relative; width:100%; max-width:560px; }
 #pong-canvas { display:block; width:100%; height:auto; border-radius:10px; background:#0f1420; touch-action:none; user-select:none; }
 .pong-hint { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:30px; font-weight:700; color:#fff; text-shadow:0 2px 8px rgba(0,0,0,.5); pointer-events:none; min-height:30px; text-align:center; }
 .pong-overlay { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; background:rgba(15,20,32,.88); border-radius:10px; z-index:2; overflow:hidden; padding:4px 8px; }
@@ -4215,17 +4201,26 @@ border-radius:12px;
 .pong-overlay-btns { display:flex; gap:10px; }
 .pong-overlay-btn2 { background:rgba(255,255,255,.16); }
 #chat-pong-panel.pong-fs { position:fixed; inset:0; z-index:9999; border-radius:0; max-height:none; height:100vh; background:#0f1420; }
-#chat-pong-panel.pong-fs .poke-card-head { background:transparent; color:#fff; border-bottom-color:rgba(255,255,255,.12); }
-#chat-pong-panel.pong-fs .poke-card-head b { color:#fff; }
-#chat-pong-panel.pong-fs .poke-card-close { color:#fff; }
-#chat-pong-panel.pong-fs .pong-wrap { max-width:none; }
+#chat-pong-panel.pong-fs .poke-card-head { background:transparent; color:#fff; border-bottom-color:rgba(255,255,255,.12); padding:14px 18px; }
+#chat-pong-panel.pong-fs .poke-card-head b { color:#fff; font-size:20px; }
+#chat-pong-panel.pong-fs .poke-card-close { color:#fff; font-size:24px; }
+#chat-pong-panel.pong-fs .pong-wrap { max-width:none; gap:14px; padding:10px 6px 8px; }
 #chat-pong-panel.pong-fs .pong-canvas-box { max-width:none; }
-#chat-pong-panel.pong-fs .pong-bar-left { color:rgba(255,255,255,.7); }
-#chat-pong-panel.pong-fs .pong-diff { background:rgba(255,255,255,.1); color:#fff; border-color:rgba(255,255,255,.2); }
-#chat-pong-panel.pong-fs .pong-icon-btn { background:rgba(255,255,255,.12); color:#fff; }
-#chat-pong-panel.pong-fs .pong-sound { background:rgba(255,255,255,.12); }
-#chat-pong-panel.pong-fs .pong-score { color:#fff; }
-#chat-pong-panel.pong-fs .pong-foot { color:rgba(255,255,255,.5); }
+#chat-pong-panel.pong-fs #pong-canvas { border-radius:0; }
+#chat-pong-panel.pong-fs .pong-bar-left { color:rgba(255,255,255,.7); font-size:18px; }
+#chat-pong-panel.pong-fs .pong-diff { background:rgba(255,255,255,.1); color:#fff; border-color:rgba(255,255,255,.2); font-size:18px; padding:8px 14px; border-radius:10px; }
+#chat-pong-panel.pong-fs .pong-icon-btn { background:rgba(255,255,255,.12); color:#fff; width:48px; height:48px; font-size:24px; }
+#chat-pong-panel.pong-fs .pong-sound { background:rgba(255,255,255,.12); width:48px; height:48px; font-size:26px; }
+#chat-pong-panel.pong-fs .pong-score { color:#fff; font-size:34px; }
+#chat-pong-panel.pong-fs .pong-foot { color:rgba(255,255,255,.5); font-size:16px; }
+#chat-pong-panel.pong-fs .pong-hint { font-size:52px; }
+#chat-pong-panel.pong-fs .pong-overlay-title { font-size:28px; }
+#chat-pong-panel.pong-fs .pong-overlay-body { font-size:16px; }
+#chat-pong-panel.pong-fs .pong-start-tip { font-size:20px; }
+#chat-pong-panel.pong-fs .pong-start-ctrl { font-size:15px; }
+#chat-pong-panel.pong-fs .pong-end-score { font-size:30px; }
+#chat-pong-panel.pong-fs .pong-end-stat { font-size:15px; }
+#chat-pong-panel.pong-fs .pong-overlay-btn { padding:12px 36px; font-size:20px; border-radius:24px; }
 #chat-snake-panel { height:auto; max-height:86%; }
 #chat-snake-panel .poke-card-scroll { min-height:0; max-height:none; }
 #chat-snake-panel .poke-card-head { display:flex; align-items:center; justify-content:space-between; gap:8px; }
@@ -4237,7 +4232,7 @@ border-radius:12px;
 .snake-icon-btn:active { transform:scale(.92); }
 .snake-score { text-align:center; font-size:13px; font-weight:700; color:var(--ink); padding:4px 0 2px; letter-spacing:.5px; }
 .snake-best { text-align:center; font-size:11px; color:var(--muted); padding:0 0 6px; }
-.snake-canvas { display:block; width:min(300px,86vw); height:min(300px,86vw); margin:0 auto; background:#f6f6f8; border-radius:12px; touch-action:none; }
+.snake-canvas { display:block; width:min(360px,90vw); height:min(360px,90vw); margin:0 auto; background:#f6f6f8; border-radius:12px; touch-action:none; }
 .snake-hint { text-align:center; font-size:12px; color:var(--muted); padding:8px 0 4px; }
 .snake-result { text-align:center; padding:8px 0 4px; }
 .snake-res-icon { font-size:34px; line-height:1; margin-bottom:4px; }
@@ -4255,11 +4250,21 @@ border-radius:12px;
 .snake-dp[data-dir="down"] { grid-column:2; grid-row:2; }
 .snake-dp[data-dir="right"] { grid-column:3; grid-row:2; }
 #chat-snake-panel.snake-fs { position:fixed; inset:0; z-index:9999; border-radius:0; max-height:none; height:100vh; background:#fff; }
-#chat-snake-panel.snake-fs .poke-card-head { border-bottom-color:rgba(0,0,0,.08); }
-#chat-snake-panel.snake-fs .poke-card-scroll { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:0 16px; }
-#chat-snake-panel.snake-fs .snake-canvas { width:min(480px,92vw); height:min(480px,92vw); }
-#chat-snake-panel.snake-fs .snake-dpad { grid-template-columns:repeat(3,86px); grid-template-rows:repeat(2,78px); }
-#chat-snake-panel.snake-fs .snake-dp { font-size:28px; }
+#chat-snake-panel.snake-fs .poke-card-head { border-bottom-color:rgba(0,0,0,.08); padding:8px 14px; }
+#chat-snake-panel.snake-fs .poke-card-head span { font-size:min(4.5vw, 3.6vh); }
+#chat-snake-panel.snake-fs .snake-icon-btn { width:min(9vw, 7vh); height:min(9vw, 7vh); font-size:min(4vw, 3.2vh); }
+#chat-snake-panel.snake-fs .snake-diff { font-size:min(3.6vw, 3vh); padding:min(1vw,.8vh) min(2.4vw,2vh); }
+#chat-snake-panel.snake-fs .poke-card-scroll { display:flex; flex-direction:column; align-items:center; justify-content:space-between; gap:min(2vh,2vw); padding:min(2vh,2vw) min(3vw,3vh); flex:1; }
+#chat-snake-panel.snake-fs .snake-score { font-size:min(3.6vw, 3vh); padding:2px 0; }
+#chat-snake-panel.snake-fs .snake-best { font-size:min(3vw, 2.5vh); }
+#chat-snake-panel.snake-fs .snake-canvas { width:min(94vw, 94vh); height:min(94vw, 94vh); }
+#chat-snake-panel.snake-fs .snake-hint { font-size:min(3.2vw, 2.6vh); }
+#chat-snake-panel.snake-fs .snake-result { font-size:min(3.4vw, 2.8vh); }
+#chat-snake-panel.snake-fs .snake-res-icon { font-size:min(9vw, 7vh); }
+#chat-snake-panel.snake-fs .snake-res-title { font-size:min(4.4vw, 3.6vh); }
+#chat-snake-panel.snake-fs .snake-btn { font-size:min(3.8vw, 3.2vh); padding:min(2.2vw, 1.8vh) min(4vw, 3.4vh); max-width:min(46vw, 38vh); }
+#chat-snake-panel.snake-fs .snake-dpad { grid-template-columns:repeat(3, min(24vw, 19vh)); grid-template-rows:repeat(2, min(18vw, 14vh)); gap:min(2vw, 1.6vh); }
+#chat-snake-panel.snake-fs .snake-dp { font-size:min(7vw, 5.6vh); border-radius:min(3vw, 2.4vh); }
 .snake-res-pop { animation: snakeResPop .32s cubic-bezier(.2,.9,.3,1.2) both; }
 @keyframes snakeResPop { from { opacity:0; transform:scale(.7); } to { opacity:1; transform:scale(1); } }
 .msg-snake-card { min-width:220px; }
@@ -5115,19 +5120,6 @@ white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 opacity:.85;
 }
 .garden-scroll { position: relative; }
-[data-night="1"] .garden-scroll { background: linear-gradient(180deg, rgba(20,28,50,.88), rgba(40,30,70,.72)); }
-[data-night="1"] .garden-plot { background: rgba(50,55,80,.6); border-color: rgba(180,190,220,.22); }
-[data-night="1"] .garden-plant-name { color: #c5cae9; }
-[data-night="1"] .garden-plant-stage { color: #9fa8da; }
-[data-night="1"] .garden-scroll::after {
-content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 0;
-background: radial-gradient(circle at 15% 20%, rgba(255,235,150,.75) 0 2px, transparent 3px),
-radial-gradient(circle at 82% 38%, rgba(255,235,150,.65) 0 2px, transparent 3px),
-radial-gradient(circle at 48% 72%, rgba(255,235,150,.55) 0 1px, transparent 2px),
-radial-gradient(circle at 30% 85%, rgba(255,235,150,.5) 0 1px, transparent 2px);
-animation: gardenFirefly 4s ease-in-out infinite;
-}
-@keyframes gardenFirefly { 0%,100% { opacity: .25; } 50% { opacity: 1; } }
 [data-season="0"] .garden-plot { border-color: rgba(129,199,132,.32); }
 [data-season="1"] .garden-plot { border-color: rgba(100,181,246,.32); }
 [data-season="2"] .garden-plot { border-color: rgba(255,183,77,.32); }
@@ -5300,7 +5292,7 @@ color: #c67800;
       </div>
       <div class="splash-dots"><i></i><i></i><i></i></div>
       <div class="splash-brand">小红书@言序（1842523578）</div>
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787484687952">Mochi 字卡传讯 v3.6.214 · 部署于 2026-08-23 19:31</div>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787486762190">Mochi 字卡传讯 v3.6.215 · 部署于 2026-08-23 20:06</div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
       <div class="splash-loading" id="splash-loading">正在加载数据…</div>
@@ -6146,7 +6138,7 @@ color: #c67800;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.6.214</div>
+      <div class="ver">Mochi 字卡传讯 v3.6.215</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -8081,8 +8073,7 @@ color: #c67800;
         </div>
         <div class="loc-body" id="loc-body"></div>
       </div>
-      <!-- 常驻位置小光点（TA 设常驻后出现，点击直达位置面板） -->
-      <div class="loc-resident-dot" id="loc-resident-dot" hidden></div>
+
       <!-- 位置卡光点动效层 -->
       <div class="loc-fx" id="loc-fx" hidden></div>
       <!-- 拍一拍浮层卡片（聊天页内） -->
@@ -34605,8 +34596,6 @@ return base;
 const EGG_COOLDOWN = 7 * 24 * 3600 * 1000;
 function loadCur() { try { return JSON.parse(store.get('loc-current') || 'null'); } catch (e) { return null; } }
 function saveCur(v) { store.set('loc-current', v ? JSON.stringify(v) : ''); }
-function loadResident() { try { return JSON.parse(store.get('loc-resident') || 'null'); } catch (e) { return null; } }
-function saveResident(v) { store.set('loc-resident', v ? JSON.stringify(v) : ''); }
 function loadHist() { try { return JSON.parse(store.get('loc-history') || '[]'); } catch (e) { return []; } }
 function saveHist(list) {
 const s = JSON.stringify(list);
@@ -34673,7 +34662,6 @@ if (type === 'egg') store.set('loc-egg-last', String(ts));
 playLocFx(text, type);
 locViewDate = dayStr(new Date());
 renderLocPanel();
-refreshResidentDot();
 }
 function dayStr(d) { const p = (n) => (n < 10 ? '0' + n : '' + n); return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()); }
 function dayLabel(s) {
@@ -34690,7 +34678,7 @@ hist.forEach(h => { try { set.add(dayStr(new Date(h.ts))); } catch (e) {} });
 return Array.from(set).sort().reverse();
 }
 let locViewDate = '';
-let comboMode = false;
+let comboMode = store.get('loc-combo') !== '0'; // 默认开，记住选择
 let pendingDir = null;
 function sendComboCard(dirText, distText) {
 const ts = Date.now();
@@ -34704,7 +34692,6 @@ playLocFx(dirText, 'dir');
 pendingDir = null;
 locViewDate = dayStr(new Date());
 renderLocPanel();
-refreshResidentDot();
 }
 let asking = false;
 function askWhere() {
@@ -34718,25 +34705,6 @@ const d = LOC.dir[Math.floor(Math.random() * LOC.dir.length)];
 const t = LOC.dist[Math.floor(Math.random() * LOC.dist.length)];
 sendComboCard(d, t);
 }, 2000 + Math.random() * 2000);
-}
-function setResident(text) {
-saveResident({ text: text, ts: Date.now() });
-toast('已设为常驻位置：' + text);
-refreshResidentDot();
-renderLocPanel();
-}
-function clearResident() {
-saveResident(null);
-toast('已取消常驻位置');
-refreshResidentDot();
-renderLocPanel();
-}
-function refreshResidentDot() {
-const dot = document.getElementById('loc-resident-dot');
-if (!dot) return;
-const r = loadResident();
-dot.hidden = !r;
-if (r) dot.title = 'TA 常驻：' + r.text + '（点击查看位置）';
 }
 function showLocChangeBubble(text) {
 let bub = document.getElementById('loc-change-bubble');
@@ -34755,7 +34723,6 @@ function renderLocPanel() {
 const body = document.getElementById('loc-body');
 if (!body) return;
 const cur = loadCur();
-const resident = loadResident();
 const allHist = loadHist();
 const used = eggUsed();
 const days = uniqueDays(allHist);
@@ -34768,13 +34735,6 @@ html += '<div class="loc-section"><div class="loc-sec-title">TA 此刻的位置<
 html += '<div class="loc-sec-value">' + (cur
 ? esc(cur.text) + '<span class="loc-sec-sub">' + (LOC_LABEL[cur.type] || (cur.type === 'combo' ? '组合' : '')) + ' · ' + fmtT(cur.ts) + '</span>'
 : '— 还没有位置卡') + '</div></div>';
-html += '<div class="loc-section"><div class="loc-sec-title">常驻位置</div>';
-if (resident) {
-html += '<div class="loc-sec-value">' + esc(resident.text) + '<button class="loc-resident-clear" id="loc-resident-clear">取消常驻</button></div>';
-} else {
-html += '<div class="loc-sec-value loc-empty">未设置（长按方位卡可设常驻）</div>';
-}
-html += '</div>';
 html += '<div class="loc-section"><div class="loc-sec-title">位置时间线（按日查看）</div>';
 html += '<div class="loc-day-switch"><button class="loc-day-btn" id="loc-day-prev"' + (dayIdx >= days.length - 1 ? ' disabled' : '') + '>‹</button><span class="loc-day-label">' + dayLabel(locViewDate) + '</span><button class="loc-day-btn" id="loc-day-next"' + (dayIdx <= 0 ? ' disabled' : '') + '>›</button></div>';
 if (dayHist.length) {
@@ -34789,7 +34749,7 @@ html += '<div class="loc-sec-value loc-empty">这天没有位置记录</div>';
 }
 html += '</div>';
 html += '<button class="loc-ask-btn" id="loc-ask-btn">问 TA 一声「你在哪？」</button>';
-html += '<div class="loc-send-area"><div class="loc-send-tip">TA 想告诉你 TA 在哪（发出后有光点动效 · 长按方位卡设常驻）</div>';
+html += '<div class="loc-send-area"><div class="loc-send-tip">TA 想告诉你 TA 在哪（发出后有光点动效）</div>';
 html += '<div class="loc-combo-toggle"><label class="loc-switch"><input type="checkbox" id="loc-combo-chk"' + (comboMode ? ' checked' : '') + '><span class="loc-switch-tk"></span></label><span class="loc-combo-label">组合发送（方位 + 距离）</span></div>';
 if (comboMode && pendingDir) {
 html += '<div class="loc-combo-pending">已选方位：<b>' + esc(pendingDir) + '</b>，再点距离卡组合发送 <span class="loc-combo-clear" id="loc-combo-clear">取消</span></div>';
@@ -34803,7 +34763,7 @@ return '<button class="loc-card' + sel + '" data-text="' + esc(t) + '" data-type
 }).join('');
 return '<div class="loc-grp"><div class="loc-grp-label">' + label + '</div><div class="loc-grp-cards">' + cards + '</div></div>';
 }
-html += groupHtml('dir', '方位卡（长按设常驻）', LOC.dir);
+html += groupHtml('dir', '方位卡', LOC.dir);
 html += groupHtml('dist', '距离卡', LOC.dist);
 html += groupHtml('state', '状态卡', LOC.state);
 html += groupHtml('sense', '感知卡', LOC.sense);
@@ -34819,14 +34779,12 @@ html += '</div>';
 body.innerHTML = html;
 const askBtn = document.getElementById('loc-ask-btn');
 if (askBtn) askBtn.addEventListener('click', askWhere);
-const clrBtn = document.getElementById('loc-resident-clear');
-if (clrBtn) clrBtn.addEventListener('click', clearResident);
 const prevBtn = document.getElementById('loc-day-prev');
 if (prevBtn) prevBtn.addEventListener('click', () => { if (dayIdx < days.length - 1) { locViewDate = days[dayIdx + 1]; renderLocPanel(); } });
 const nextBtn = document.getElementById('loc-day-next');
 if (nextBtn) nextBtn.addEventListener('click', () => { if (dayIdx > 0) { locViewDate = days[dayIdx - 1]; renderLocPanel(); } });
 const comboChk = document.getElementById('loc-combo-chk');
-if (comboChk) comboChk.addEventListener('change', () => { comboMode = comboChk.checked; pendingDir = null; renderLocPanel(); });
+if (comboChk) comboChk.addEventListener('change', () => { comboMode = comboChk.checked; store.set('loc-combo', comboMode ? '1' : '0'); pendingDir = null; renderLocPanel(); });
 const comboClear = document.getElementById('loc-combo-clear');
 if (comboClear) comboClear.addEventListener('click', () => { pendingDir = null; renderLocPanel(); });
 const addCustom = document.getElementById('loc-add-custom');
@@ -34841,24 +34799,7 @@ del.addEventListener('click', (e) => { e.stopPropagation(); const idx = parseInt
 body.querySelectorAll('.loc-card').forEach(btn => {
 const text = btn.dataset.text;
 const type = btn.dataset.type;
-let pressTimer = null, longPressed = false;
-btn.addEventListener('pointerdown', () => {
-longPressed = false;
-if (type === 'dir') {
-pressTimer = setTimeout(() => {
-pressTimer = null;
-longPressed = true;
-setResident(text);
-if (navigator.vibrate) try { navigator.vibrate(20); } catch (e) {}
-}, 500);
-}
-});
-const cancel = () => { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } };
-btn.addEventListener('pointerup', cancel);
-btn.addEventListener('pointerleave', cancel);
-btn.addEventListener('pointercancel', cancel);
 btn.addEventListener('click', () => {
-if (longPressed) { longPressed = false; return; }
 if (btn.classList.contains('disabled')) return;
 if (comboMode) {
 if (type === 'dir') { pendingDir = (pendingDir === text) ? null : text; renderLocPanel(); return; }
@@ -34888,9 +34829,6 @@ const entry = document.getElementById('ck-loc-entry');
 if (entry) entry.addEventListener('click', openLocPanel);
 const closeBtn = document.getElementById('loc-close');
 if (closeBtn) closeBtn.addEventListener('click', closeLocPanel);
-const dot = document.getElementById('loc-resident-dot');
-if (dot) dot.addEventListener('click', openLocPanel);
-refreshResidentDot();
 try {
 if (window.idbGet && !store.get('loc-history')) {
 const myPrefix = window.activePrefix();
@@ -34929,7 +34867,6 @@ const hist = loadHist();
 hist.unshift({ text: text, type: type, ts: ts, auto: true });
 saveHist(hist);
 playLocFx(text, type);
-refreshResidentDot();
 if (oldCur && oldCur.text !== text) showLocChangeBubble(text);
 }
 function scheduleLocAuto() {
@@ -34941,7 +34878,7 @@ function bootLocAuto() { if (!window.__mochiDataReady) { setTimeout(bootLocAuto,
 document.addEventListener('mochi-restore-done', bootLocAuto);
 setTimeout(bootLocAuto, 3000);
 document.addEventListener('contact-switched', () => {
-try { closeLocPanel(); refreshResidentDot(); locViewDate = ''; } catch (e) {}
+try { closeLocPanel(); locViewDate = ''; } catch (e) {}
 });
 window.playLocFx = playLocFx;
 })();
@@ -38129,7 +38066,7 @@ const pauseBtn = document.getElementById('pong-pause');
 const fsBtn = document.getElementById('pong-fs');
 const overlayBtn2El = document.getElementById('pong-overlay-btn2');
 const winTipEl = document.getElementById('pong-win-tip');
-const W = 400, H = 240;
+const W = 400, H = 300;
 const PADDLE_W = 8;
 const PADDLE_GAP = 14;            // 挡板距边界
 const INIT_SPEED = 4;
@@ -38138,10 +38075,10 @@ const MAX_SPEED = 6.5;
 const PLAYER_MAX_SPEED = 8.5;      // 玩家挡板最大速度（px/tick，提高让玩家更容易接快球）
 const FPS = 60;
 const DIFFS = {
-casual: { reactDelay: [0.5, 0.8],  maxSpeed: 2.4, predictErr: 34, missRate: 0.14, paddleH: 92, ballR: 8, winScore: 3, fumble: 0.14,
-beh: { early: 0.03, slow: 0.12, drift: 0.12, shift: 0.04, miss: 0.12, risky: 0.02 } },
-easy:   { reactDelay: [0.38, 0.6], maxSpeed: 2.8, predictErr: 26, missRate: 0.10, paddleH: 84, ballR: 7, winScore: 4, fumble: 0.08,
-beh: { early: 0.04, slow: 0.09, drift: 0.08, shift: 0.05, miss: 0.08, risky: 0.03 } },
+casual: { reactDelay: [0.8, 1.2],  maxSpeed: 1.7, predictErr: 48, missRate: 0.24, paddleH: 104, ballR: 8, winScore: 3, fumble: 0.24,
+beh: { early: 0.02, slow: 0.18, drift: 0.18, shift: 0.03, miss: 0.18, risky: 0.01 } },
+easy:   { reactDelay: [0.55, 0.85], maxSpeed: 2.2, predictErr: 36, missRate: 0.16, paddleH: 94, ballR: 7, winScore: 4, fumble: 0.15,
+beh: { early: 0.03, slow: 0.13, drift: 0.12, shift: 0.04, miss: 0.12, risky: 0.02 } },
 normal: { reactDelay: [0.2, 0.4],  maxSpeed: 4.3, predictErr: 11, missRate: 0.04, paddleH: 72, ballR: 6, winScore: 5, fumble: 0,
 beh: { early: 0.06, slow: 0.05, drift: 0.05, shift: 0.04, miss: 0.03, risky: 0.08 } },
 hard:   { reactDelay: [0.12, 0.28], maxSpeed: 5.5, predictErr: 5,  missRate: 0.02, paddleH: 72, ballR: 6, winScore: 5, fumble: 0,
@@ -38222,6 +38159,7 @@ flashPaddle: 0, flashWall: 0, flashScore: 0,
 lastHit: 0,                   // 上次击球点（-1~1，用于挡板闪光颜色教学）
 taBubble: null,               // {emoji, text, until} TA 表情/说话泡泡
 sayCooldown: 0,               // TA 说话冷却时间戳
+emojiCooldown: 0,             // TA 表情冷却时间戳（接球高频事件防每次都冒）
 serveDir: Math.random() < 0.5 ? -1 : 1,  // 预决定的发球方向（用于发球前预警箭头）
 playerRallyHits: 0,           // 玩家本回合连续接球数（连击奖励用）
 params: d
@@ -38388,18 +38326,20 @@ if (!isPlayer) {
 s.beh.consecCatch++;
 const cc = s.beh.consecCatch;
 const emoji = cc >= 5 ? '🤩' : cc >= 3 ? '😎' : '😊';
-tryTaSay(s, SAY_POOLS.catch, emoji);
+tryTaSay(s, SAY_POOLS.catch, emoji, 0.4, 1500);   // 接球：40% 表情 + 1.5s 冷却（防每次都冒）
 } else {
 s.beh.consecCatch = 0;
 s.playerRallyHits++;
 }
 }
-function tryTaSay(s, sayPool, emoji) {
+function tryTaSay(s, sayPool, emoji, emojiProb, cooldownMs) {
 const now = performance.now();
+if (cooldownMs > 0 && now < s.emojiCooldown) return;   // 表情冷却中，不触发
+if (Math.random() > emojiProb) return;                  // 未命中表情概率
+if (cooldownMs > 0) s.emojiCooldown = now + cooldownMs;
 let text = null;
-if (now > s.sayCooldown && Math.random() < 0.18) {
+if (Math.random() < 0.3) {
 text = sayPool[Math.floor(Math.random() * sayPool.length)];
-s.sayCooldown = now + 3000;
 }
 s.taBubble = { emoji: emoji, text: text, until: now + 1200 };
 }
@@ -38440,7 +38380,7 @@ s.maxOpponentStreak = Math.max(s.maxOpponentStreak, s.opponentStreak);
 s.totalRounds++;
 s.beh.consecCatch = 0;
 s.playerRallyHits = 0;
-tryTaSay(s, SAY_POOLS.score, '😤');
+tryTaSay(s, SAY_POOLS.score, '😤', 0.75, 0);   // TA 得分：75% 表情，无冷却（关键事件）
 onScore(s, now, 'opponent');
 } else if (b.x + bR < 0) {
 s.playerScore++;
@@ -38449,7 +38389,7 @@ s.maxPlayerStreak = Math.max(s.maxPlayerStreak, s.playerStreak);
 s.totalRounds++;
 s.beh.consecCatch = 0;
 s.playerRallyHits = 0;
-tryTaSay(s, SAY_POOLS.miss, '😅');
+tryTaSay(s, SAY_POOLS.miss, '😅', 0.75, 0);   // TA 失误：75% 表情，无冷却（关键事件）
 onScore(s, now, 'player');
 }
 if (s.flashPaddle > 0) s.flashPaddle = Math.max(0, s.flashPaddle - 0.08);
@@ -38613,8 +38553,8 @@ canvas.height = H * dpr;
 ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 const box = canvas.parentElement;   // .pong-canvas-box
 if (isFs) {
-const availW = window.innerWidth - 24;
-const availH = window.innerHeight - 170;   // head+bar+score+foot+padding
+const availW = window.innerWidth - 16;
+const availH = window.innerHeight - 230;   // head+bar+score+foot+padding（全屏 UI 放大后预留增加）
 let cw = availW;
 let ch = Math.round(cw * H / W);
 if (ch > availH) { ch = availH; cw = Math.round(ch * W / H); }
@@ -38854,7 +38794,7 @@ window.addEventListener('resize', () => { if (panel && !panel.hidden) fitCanvas(
 (function () { try {
 (function () {
 'use strict';
-const GRID = 20;
+const GRID = 15;
 const INIT_LEN = 3;
 const FOOD_TARGET = 2;
 const PREFIX = (window.activePrefix && window.activePrefix()) || 'xy-home-v2';
@@ -38952,7 +38892,11 @@ if (name === 'safe' && hintEl && state.status === 'idle') hintEl.textContent = s
 }
 function setupCanvas() {
 if (!canvas) return;
-logicSize = isFs ? 480 : 300;
+if (isFs) {
+logicSize = Math.round(Math.min(window.innerWidth, window.innerHeight) * 0.94);
+} else {
+logicSize = 360;
+}
 dpr = Math.min(window.devicePixelRatio || 1, 3);
 canvas.width = logicSize * dpr;
 canvas.height = logicSize * dpr;
@@ -38988,6 +38932,10 @@ const closeBtn = $('chat-snake-close');
 if (closeBtn) closeBtn.addEventListener('click', function (e) { e.stopPropagation(); closeSnakePanel(); });
 setupInput();
 document.addEventListener('contact-switched', function () { try { closeSnakePanel(); state = null; behavior = null; } catch (e) {} });
+window.addEventListener('resize', function () {
+if (!panel || panel.hidden) return;
+if (isFs) { setupCanvas(); render(0); }
+});
 }
 function setupInput() {
 if (!canvas) return;
@@ -39595,12 +39543,20 @@ if (!canSave(state)) { localStorage.removeItem(SAVE_KEY); return; }
 localStorage.setItem(SAVE_KEY, JSON.stringify(state));
 } catch (e) {}
 }
+function validCoord(p) { return p && p.x >= 0 && p.x < GRID && p.y >= 0 && p.y < GRID; }
+function validState(s) {
+if (!s || !s.player || !s.opp) return false;
+if (!s.player.body.every(validCoord) || !s.opp.body.every(validCoord)) return false;
+if (s.foods && !s.foods.every(validCoord)) return false;
+return true;
+}
 function loadSaved() {
 try {
 const raw = localStorage.getItem(SAVE_KEY);
 if (!raw) return null;
 const s = JSON.parse(raw);
 if (!s || s.status !== 'playing') return null;
+if (!validState(s)) { clearSaved(); return null; }
 return s;
 } catch (e) { return null; }
 }
@@ -39633,13 +39589,15 @@ if (window.closeAvlib) window.closeAvlib();
 const mp = $('chat-more-panel'); if (mp) mp.hidden = true;
 const nameEl = $('snake-partner-name');
 if (nameEl) nameEl.textContent = (typeof localStorage !== 'undefined' && localStorage.getItem(PARTNER_KEY)) || 'TA';
-if (isFs) toggleFs();
+const mobile = window.innerWidth < 900;
+if (mobile) { if (!isFs) toggleFs(); }
+else { if (isFs) toggleFs(); }
 panel.hidden = false;
 paused = false;
 if (pauseBtn) pauseBtn.textContent = '⏸';
 renderScore();
 renderBest();
-if (canSave(state)) {
+if (canSave(state) && validState(state)) {
 state.status = 'playing';
 state.startTime = Date.now() - state.elapsed;
 if (startBtn) { startBtn.hidden = true; startBtn.textContent = '开始'; }
