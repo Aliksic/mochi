@@ -4393,13 +4393,18 @@ border-radius:12px;
 .ss-glow.cold { background:radial-gradient(circle, rgba(150,200,255,.85), rgba(120,170,255,0) 70%); }
 .ss-glow.soft { background:radial-gradient(circle, rgba(220,200,255,.7), rgba(200,180,255,0) 70%); }
 .tp-send-btn, .ss-send-btn { display:block; margin:10px auto 0; font-size:12px; color:var(--ink-soft,#888); background:none; border:1px solid rgba(0,0,0,.12); border-radius:20px; padding:4px 12px; }
+.tp-status { transition: opacity .4s; }
+.tp-status.fade { opacity: 0; }
+.ss-trace { position:absolute; inset:0; pointer-events:none; overflow:hidden; }
+.ss-trace::after { content:''; position:absolute; top:-50%; left:-60%; width:60%; height:200%; background:linear-gradient(90deg, transparent, rgba(255,200,160,.55), transparent); transform:rotate(18deg); animation: ssTrace 1.5s ease-out; }
+@keyframes ssTrace { 0%{ left:-60%; opacity:0; } 30%{ opacity:1; } 100%{ left:120%; opacity:0; } }
 .msg-gift { align-self: center; width: 100%; display: flex; justify-content: center; margin: 6px 0; }
 .msg-gift-card {
 width: min(280px, 84vw); padding: 0 0 14px; border-radius: 22px;
 background: linear-gradient(160deg, #faf9fc 0%, #f2eef9 50%, #e4dcf2 100%);
 border: 1px solid rgba(139, 122, 200, 0.2);
 box-shadow: 0 6px 24px rgba(109, 91, 176, 0.12), 0 1px 3px rgba(0, 0, 0, 0.03);
-text-align: center; overflow: hidden;
+text-align: center; overflow: hidden; position: relative;
 }
 .msg-gift-bar { height: 4px; background: linear-gradient(90deg, #b8a4e0, #8b7ac8, #b8a4e0); }
 .msg-gift-emoji { font-size: 46px; line-height: 1; margin: 16px 0 6px; }
@@ -4409,52 +4414,81 @@ text-align: center; overflow: hidden;
 .msg-gift-divider span { flex: 1; height: 1px; background: linear-gradient(90deg, transparent, rgba(139, 122, 200, 0.35), transparent); }
 .msg-gift-wish { font-size: 13px; color: #6d5bb0; padding: 0 18px; line-height: 1.55; word-break: break-word; }
 .msg-gift-foot { font-size: 11px; color: #9d8ec7; margin-top: 12px; letter-spacing: 0.3px; }
+.market-body { padding: 0 0 90px; max-width: 560px; margin: 0 auto; }
+.market-hero {
+margin: 14px 14px 4px; padding: 24px 22px; border-radius: 22px;
+background: linear-gradient(135deg, #6d5bb0 0%, #8b7ac8 55%, #b8a4e0 100%);
+color: #fff; position: relative; overflow: hidden;
+box-shadow: 0 10px 30px rgba(109, 91, 176, 0.3);
+}
+.market-hero::before {
+content: ''; position: absolute; inset: 0;
+background-image: radial-gradient(circle, rgba(255, 255, 255, 0.18) 1px, transparent 1.5px);
+background-size: 22px 22px; opacity: 0.7; pointer-events: none;
+}
+.market-hero-title { font-size: 23px; font-weight: 700; letter-spacing: 1.5px; position: relative; }
+.market-hero-sub { font-size: 13px; opacity: 0.88; margin-top: 5px; position: relative; letter-spacing: 0.3px; }
+.market-balance { font-size: 12px; opacity: 0.92; margin-top: 14px; position: relative; font-weight: 500; }
+.market-cats { display: flex; gap: 14px; padding: 18px 14px 10px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.market-cats::-webkit-scrollbar { display: none; }
+.market-cat { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 7px; background: none; border: none; cursor: pointer; padding: 2px; transition: transform 0.15s; }
+.market-cat-ico { width: 54px; height: 54px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 25px; transition: all 0.18s; box-shadow: 0 2px 6px rgba(109, 91, 176, 0.08); }
+.market-cat.sel .market-cat-ico { background: linear-gradient(135deg, #8b7ac8, #6d5bb0) !important; box-shadow: 0 5px 14px rgba(109, 91, 176, 0.35); transform: scale(1.06); }
+.market-cat.sel .market-cat-ico::after { content: ''; }
+.market-cat-name { font-size: 11.5px; color: #8a82a8; white-space: nowrap; }
+.market-cat.sel .market-cat-name { color: #4a3d6b; font-weight: 600; }
+.market-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 8px 14px 16px; }
+.gift-item { position: relative; background: #fff; border: none; border-radius: 18px; overflow: hidden; cursor: pointer; transition: transform 0.18s, box-shadow 0.18s; box-shadow: 0 2px 8px rgba(109, 91, 176, 0.06); padding: 0; }
+.gift-item:hover { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(109, 91, 176, 0.15); }
+.gift-item:active { transform: scale(0.97); }
+.gift-item-top { padding: 20px 0 14px; text-align: center; }
+.gift-item-emoji { font-size: 42px; line-height: 1; }
+.gift-item-body { padding: 10px 14px 14px; text-align: center; }
+.gift-item-name { font-size: 14px; font-weight: 600; color: #4a3d6b; }
+.gift-item-price { font-size: 13px; color: #8b7ac8; margin-top: 3px; font-weight: 600; }
+.gift-item.manage { box-shadow: 0 0 0 2px rgba(139, 122, 200, 0.3); }
+.gift-item-del { position: absolute; top: 8px; right: 8px; width: 20px; height: 20px; line-height: 20px; border-radius: 50%; background: rgba(139, 122, 200, 0.9); color: #fff; font-size: 11px; cursor: pointer; z-index: 2; border: none; }
+.gift-empty { grid-column: 1 / -1; text-align: center; color: #b0a8c8; padding: 44px 24px; font-size: 13px; line-height: 1.8; }
+.gift-balance { text-align: center; font-size: 12px; color: #8b7ac8; padding: 10px 16px 0; font-weight: 600; }
 .gift-cats { display: flex; gap: 7px; padding: 10px 14px 6px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .gift-cats::-webkit-scrollbar { display: none; }
 .gift-cat { flex-shrink: 0; padding: 6px 14px; border-radius: 99px; background: rgba(139, 122, 200, 0.08); color: #6d5bb0; font-size: 13px; border: none; cursor: pointer; transition: all 0.15s; }
 .gift-cat.sel { background: linear-gradient(135deg, #8b7ac8, #6d5bb0); color: #fff; box-shadow: 0 2px 8px rgba(109, 91, 176, 0.25); }
 .gift-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; padding: 6px 14px 16px; }
-.gift-item { position: relative; background: #fff; border: 1px solid rgba(139, 122, 200, 0.12); border-radius: 16px; padding: 12px 4px 10px; text-align: center; cursor: pointer; transition: transform 0.14s, box-shadow 0.14s; box-shadow: 0 1px 3px rgba(109, 91, 176, 0.05); }
-.gift-item:hover { box-shadow: 0 4px 14px rgba(109, 91, 176, 0.12); }
-.gift-item:active { transform: scale(0.95); }
-.gift-item-emoji { font-size: 30px; line-height: 1; }
-.gift-item-name { font-size: 12.5px; color: #4a3d6b; margin-top: 5px; font-weight: 500; }
-.gift-item-price { font-size: 11px; color: #8b7ac8; margin-top: 2px; font-weight: 600; }
-.gift-item.manage { background: #faf9fc; }
-.gift-item-del { position: absolute; top: 5px; right: 6px; width: 18px; height: 18px; line-height: 18px; border-radius: 50%; background: rgba(139, 122, 200, 0.85); color: #fff; font-size: 11px; cursor: pointer; }
-.gift-empty { grid-column: 1 / -1; text-align: center; color: #b0a8c8; padding: 40px 20px; font-size: 13px; line-height: 1.7; }
-.gift-balance { text-align: center; font-size: 12px; color: #8b7ac8; padding: 10px 16px 0; font-weight: 600; }
-.market-body { padding: 0 0 80px; max-width: 560px; margin: 0 auto; }
-.market-balance { margin: 14px 14px 4px; padding: 14px 18px; border-radius: 16px; background: linear-gradient(135deg, #8b7ac8, #6d5bb0); color: #fff; font-size: 13px; font-weight: 600; text-align: center; box-shadow: 0 4px 16px rgba(109, 91, 176, 0.22); letter-spacing: 0.3px; }
-.market-cats { padding: 12px 14px 6px; }
-.market-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 6px 14px 16px; }
-.market-grid .gift-item { padding: 14px 4px 12px; }
-.market-grid .gift-item-emoji { font-size: 34px; }
-.market-foot { display: flex; gap: 10px; justify-content: center; margin-top: 8px; padding: 0 14px; }
-.market-tool { padding: 10px 22px; border-radius: 99px; background: #fff; border: 1px solid rgba(139, 122, 200, 0.3); color: #6d5bb0; font-size: 13px; cursor: pointer; transition: all 0.15s; }
+.gift-grid .gift-item { border-radius: 14px; }
+.gift-grid .gift-item-top { padding: 12px 0 8px; }
+.gift-grid .gift-item-emoji { font-size: 30px; }
+.gift-grid .gift-item-body { padding: 7px 6px 10px; }
+.gift-grid .gift-item-name { font-size: 12px; }
+.gift-grid .gift-item-price { font-size: 11px; }
+.market-foot { display: flex; gap: 10px; justify-content: center; margin-top: 10px; padding: 0 14px; }
+.market-tool { padding: 10px 24px; border-radius: 99px; background: #fff; border: 1px solid rgba(139, 122, 200, 0.3); color: #6d5bb0; font-size: 13px; cursor: pointer; transition: all 0.15s; }
 .market-tool:active { background: #f5f3fa; transform: scale(0.97); }
-.giftbox-tabs { display: flex; gap: 8px; padding: 14px 14px 4px; max-width: 560px; margin: 0 auto; }
-.gb-tab { flex: 1; padding: 9px 0; border-radius: 99px; background: rgba(139, 122, 200, 0.08); color: #6d5bb0; border: none; font-size: 14px; cursor: pointer; transition: all 0.15s; font-weight: 500; }
+.giftbox-hero { margin: 14px; padding: 22px 20px; border-radius: 20px; background: linear-gradient(135deg, #6d5bb0, #8b7ac8); color: #fff; text-align: center; box-shadow: 0 8px 24px rgba(109, 91, 176, 0.28); position: relative; overflow: hidden; }
+.giftbox-hero::before { content: ''; position: absolute; inset: 0; background-image: radial-gradient(circle, rgba(255, 255, 255, 0.15) 1px, transparent 1.5px); background-size: 20px 20px; opacity: 0.6; pointer-events: none; }
+.giftbox-hero-title { font-size: 21px; font-weight: 700; letter-spacing: 1.5px; position: relative; }
+.giftbox-stat { font-size: 13px; opacity: 0.92; margin-top: 9px; position: relative; }
+.giftbox-tabs { display: flex; gap: 8px; padding: 0 14px 4px; max-width: 560px; margin: 0 auto; }
+.gb-tab { flex: 1; padding: 9px 0; border-radius: 99px; background: rgba(139, 122, 200, 0.08); color: #6d5bb0; border: none; font-size: 13.5px; cursor: pointer; transition: all 0.15s; font-weight: 500; }
 .gb-tab.sel { background: linear-gradient(135deg, #8b7ac8, #6d5bb0); color: #fff; box-shadow: 0 2px 8px rgba(109, 91, 176, 0.25); }
-.giftbox-stat { text-align: center; font-size: 12px; color: #9d8ec7; padding: 6px 14px 8px; }
-.giftbox-scroll { padding: 0 14px 80px; max-width: 560px; margin: 0 auto; }
-.giftbox-card { display: flex; align-items: center; gap: 13px; background: #fff; border: 1px solid rgba(139, 122, 200, 0.12); border-radius: 16px; padding: 13px; margin-bottom: 10px; cursor: pointer; transition: transform 0.14s, box-shadow 0.14s; box-shadow: 0 1px 3px rgba(109, 91, 176, 0.05); }
-.giftbox-card:hover { box-shadow: 0 4px 14px rgba(109, 91, 176, 0.12); }
+.giftbox-scroll { padding: 10px 14px 80px; max-width: 560px; margin: 0 auto; }
+.giftbox-card { display: flex; align-items: center; gap: 14px; background: #fff; border: none; border-radius: 16px; padding: 14px; margin-bottom: 11px; cursor: pointer; transition: transform 0.16s, box-shadow 0.16s; box-shadow: 0 2px 8px rgba(109, 91, 176, 0.06); }
+.giftbox-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(109, 91, 176, 0.13); }
 .giftbox-card:active { transform: scale(0.98); }
-.giftbox-emoji { font-size: 32px; flex-shrink: 0; width: 52px; height: 52px; line-height: 52px; text-align: center; border-radius: 14px; background: linear-gradient(135deg, #f5f3fa, #ede8f5); }
+.giftbox-emoji { font-size: 30px; flex-shrink: 0; width: 56px; height: 56px; line-height: 56px; text-align: center; border-radius: 16px; }
 .giftbox-info { flex: 1; min-width: 0; }
 .giftbox-name { font-size: 15px; font-weight: 600; color: #4a3d6b; }
 .giftbox-price { font-size: 12px; color: #8b7ac8; font-weight: 600; margin-left: 7px; }
 .giftbox-wish { font-size: 12.5px; color: #7a6f9a; margin-top: 4px; line-height: 1.45; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 .giftbox-meta { font-size: 11px; color: #b0a8c8; margin-top: 5px; }
-.gb-preview { text-align: center; padding: 10px 0 16px; }
-.gb-emoji { font-size: 52px; line-height: 1; }
-.gb-name { font-size: 19px; font-weight: 700; color: #4a3d6b; margin-top: 8px; letter-spacing: 0.5px; }
-.gb-price { font-size: 14px; color: #8b7ac8; margin-top: 3px; font-weight: 600; }
-.gb-desc { font-size: 13px; color: #9d8ec7; margin-top: 10px; padding: 0 8px; line-height: 1.55; }
-.gb-wish-row { margin: 16px 0; }
+.gb-preview { text-align: center; padding: 18px 0 18px; border-radius: 16px; margin-bottom: 16px; }
+.gb-emoji { font-size: 56px; line-height: 1; }
+.gb-name { font-size: 19px; font-weight: 700; color: #4a3d6b; margin-top: 10px; letter-spacing: 0.5px; }
+.gb-price { font-size: 15px; color: #8b7ac8; margin-top: 4px; font-weight: 600; }
+.gb-desc { font-size: 13px; color: #7a6f9a; margin-top: 12px; padding: 0 12px; line-height: 1.6; }
+.gb-wish-row { margin: 0 0 16px; }
 .gb-wish-label { font-size: 13px; color: #6d5bb0; margin-bottom: 7px; font-weight: 500; }
-.gb-wish { width: 100%; min-height: 64px; padding: 10px 13px; border-radius: 13px; border: 1px solid rgba(139, 122, 200, 0.2); background: #faf9fc; font-size: 14px; resize: none; box-sizing: border-box; font-family: inherit; color: #4a3d6b; transition: border 0.15s; }
+.gb-wish { width: 100%; min-height: 66px; padding: 11px 14px; border-radius: 13px; border: 1px solid rgba(139, 122, 200, 0.2); background: #faf9fc; font-size: 14px; resize: none; box-sizing: border-box; font-family: inherit; color: #4a3d6b; transition: border 0.15s; }
 .gb-wish:focus { border-color: #8b7ac8; outline: none; }
 .gb-actions { display: flex; gap: 10px; }
 .gb-cancel, .gb-ok { flex: 1; padding: 12px 0; border-radius: 13px; border: none; font-size: 15px; cursor: pointer; transition: all 0.15s; font-weight: 500; }
@@ -4467,24 +4501,24 @@ text-align: center; overflow: hidden;
 .gm-input { width: 100%; padding: 10px 13px; border-radius: 11px; border: 1px solid rgba(139, 122, 200, 0.2); background: #faf9fc; font-size: 14px; box-sizing: border-box; font-family: inherit; color: #4a3d6b; }
 .gm-input:focus { border-color: #8b7ac8; outline: none; }
 textarea.gm-input { min-height: 52px; resize: none; }
-.gb-detail { text-align: center; padding: 18px 0; }
-.gb-detail-emoji { font-size: 60px; line-height: 1; }
-.gb-detail-name { font-size: 20px; font-weight: 700; color: #4a3d6b; margin-top: 10px; letter-spacing: 0.5px; }
+.gb-detail { text-align: center; padding: 22px 0 20px; border-radius: 16px; }
+.gb-detail-emoji { font-size: 64px; line-height: 1; }
+.gb-detail-name { font-size: 20px; font-weight: 700; color: #4a3d6b; margin-top: 12px; letter-spacing: 0.5px; }
 .gb-detail-price { font-size: 15px; color: #8b7ac8; margin-top: 4px; font-weight: 600; }
-.gb-detail-wish { font-size: 14px; color: #6d5bb0; margin: 14px 18px 0; line-height: 1.65; }
-.gb-detail-meta { font-size: 12px; color: #b0a8c8; margin-top: 12px; }
+.gb-detail-wish { font-size: 14px; color: #6d5bb0; margin: 16px 20px 0; line-height: 1.7; }
+.gb-detail-meta { font-size: 12px; color: #b0a8c8; margin-top: 14px; }
 @media (prefers-color-scheme: dark) {
 .msg-gift-card { background: linear-gradient(160deg, #2a2438 0%, #332b45 50%, #3d3352 100%); border-color: rgba(139, 122, 200, 0.3); }
 .msg-gift-name, .gb-name, .gb-detail-name, .giftbox-name { color: #e0d8f0; }
 .msg-gift-wish, .gb-detail-wish { color: #c9b8e8; }
 .msg-gift-foot, .giftbox-meta, .gb-detail-meta { color: #8a7fa8; }
-.gift-item, .giftbox-card { background: #2a2638; border-color: rgba(255, 255, 255, 0.08); }
+.gift-item, .giftbox-card { background: #2a2638; }
 .gift-item-name, .giftbox-wish, .gb-desc, .gb-wish-label, .gm-row label { color: #c9c0d8; }
 .gift-cat, .gb-tab, .gb-cancel { background: rgba(255, 255, 255, 0.08); color: #c9b8e8; }
 .gm-input, .gb-wish { background: #2a2638; border-color: rgba(255, 255, 255, 0.12); color: #e0d8f0; }
 .market-tool { background: #2a2638; }
-.giftbox-emoji { background: linear-gradient(135deg, #2a2438, #332b45); }
 .gift-empty { color: #6a6280; }
+.market-cat-name { color: #8a7fa8; }
 }
 .gc-from-name {
 font-size: 10px; color: #888; margin-bottom: 2px;
@@ -5518,7 +5552,7 @@ color: #c67800;
       </div>
       <div class="splash-dots"><i></i><i></i><i></i></div>
       <div class="splash-brand">小红书@言序（1842523578）</div>
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787496862164">Mochi 字卡传讯 v3.6.217 · 部署于 2026-08-23 22:54</div>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787497552594">Mochi 字卡传讯 v3.6.218 · 部署于 2026-08-23 23:05</div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
       <div class="splash-loading" id="splash-loading">正在加载数据…</div>
@@ -6370,7 +6404,7 @@ color: #c67800;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.6.217</div>
+      <div class="ver">Mochi 字卡传讯 v3.6.218</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -35683,8 +35717,13 @@ if (hint) hint.textContent = '没接住 · 过会儿再敲';
 }
 knockTimer = setTimeout(tpResetKnock, 1400);
 }
-if (tpApp) tpApp.addEventListener('click', () => { if (editingNow()) return; openPage(tpPage); tpPick(); });
+if (tpApp) tpApp.addEventListener('click', () => { if (editingNow()) return; openPage(tpPage); });
 document.getElementById('tp-back').addEventListener('click', () => backHome(tpPage));
+let tpFlowTimer = null;
+function tpPickFade() { const el = document.getElementById('tp-status'); if (!el) { tpPick(); return; } el.classList.add('fade'); setTimeout(() => { tpPick(); el.classList.remove('fade'); }, 400); }
+function tpStartFlow() { clearTimeout(tpFlowTimer); const tick = () => { tpPickFade(); tpFlowTimer = setTimeout(tick, 20000 + Math.random() * 20000); }; tpFlowTimer = setTimeout(tick, 20000 + Math.random() * 20000); }
+function tpStopFlow() { clearTimeout(tpFlowTimer); tpFlowTimer = null; }
+new MutationObserver(() => { if (tpPage.hidden) tpStopFlow(); else { tpPick(); tpStartFlow(); } }).observe(tpPage, { attributes: true, attributeFilter: ['hidden'] });
 document.getElementById('tp-refresh').addEventListener('click', () => { if (editingNow()) return; tpPick(); });
 onLongPress(document.getElementById('tp-knock-area'), tpKnock, 350);
 document.getElementById('tp-add').addEventListener('click', () => { if (!window.openModal) return; window.openModal('添加状态字卡', '', (v) => { if (v) { const a = tpCards(); a.push(v); tpSave(a); toast('已添加'); } }); });
@@ -35739,13 +35778,29 @@ setTimeout(() => { if (glow) glow.classList.remove('dim'); }, 1200);
 }
 }, 700);
 }
-if (ssApp) ssApp.addEventListener('click', () => { if (editingNow()) return; openPage(ssPage); ssRenderCount(); });
+function ssMaybePassive() {
+const s = curStore(); if (!s) return;
+let last = 0; try { last = parseInt(s.get('shenshou-last-visit') || '0', 10) || 0; } catch (e) {}
+const gap = Date.now() - last;
+try { s.set('shenshou-last-visit', '' + Date.now()); } catch (e) {}
+const prob = gap > 6 * 3600000 ? 0.7 : 0.25;
+if (Math.random() >= prob) return;
+const cards = ssCards();
+const txt = cards[Math.floor(Math.random() * cards.length)];
+vibrate(30);
+const area = document.getElementById('ss-area');
+if (area) { const tr = document.createElement('div'); tr.className = 'ss-trace'; area.appendChild(tr); setTimeout(() => { try { tr.remove(); } catch (e) {} }, 1600); }
+const hint = document.getElementById('ss-hint'); if (hint) hint.textContent = '他刚才碰了你一下';
+const res = document.getElementById('ss-result'); if (res) { res.textContent = '\u201c' + txt + '\u201d'; res.className = 'ss-result reach'; }
+}
+if (ssApp) ssApp.addEventListener('click', () => { if (editingNow()) return; openPage(ssPage); ssRenderCount(); ssMaybePassive(); });
 document.getElementById('ss-back').addEventListener('click', () => backHome(ssPage));
 onLongPress(document.getElementById('ss-area'), ssTry, 500);
 document.getElementById('ss-add').addEventListener('click', () => { if (!window.openModal) return; window.openModal('添加悄悄话字卡', '', (v) => { if (v) { const a = ssCards(); a.push(v); ssSave(a); toast('已添加'); } }); });
 const ssSendBtn = document.getElementById('ss-send');
 if (ssSendBtn) { ssSendBtn.textContent = '发到聊天：' + (ssSendOn() ? '开' : '关'); ssSendBtn.addEventListener('click', () => { const s = curStore(); const on = !ssSendOn(); if (s) try { s.set('shenshou-send-chat', on ? '1' : '0'); } catch (e) {} ssSendBtn.textContent = '发到聊天：' + (on ? '开' : '关'); }); }
 document.addEventListener('contact-switched', () => {
+tpStopFlow();
 if (!tpPage.hidden) tpPick();
 if (!ssPage.hidden) ssRenderCount();
 });
@@ -35778,7 +35833,9 @@ return { myBalance: 99999999, systemBalance: 99999999 };
 }
 function walletSet(w) { const s = store(); if (s) s.set(WALLET_KEY, JSON.stringify(w)); }
 function walletText() { const w = walletGet(); return '心意币 · 我 ¥' + fenToYuan(w.myBalance) + ' · ' + esc(partnerName()) + ' ¥' + fenToYuan(w.systemBalance); }
-const CATS = ['花束', '甜品', '饰品', '星空', '关怀'];
+const CATS = ['花束', '甜品', '饰品', '星空', '关怀', '情侣用品', '日常用品'];
+const CAT_ICON = { '花束': '🌸', '甜品': '🍰', '饰品': '💍', '星空': '⭐', '关怀': '🤗', '情侣用品': '💑', '日常用品': '🧴' };
+const CAT_COLOR = { '花束': '#fce4ec', '甜品': '#fff3e0', '饰品': '#f3e5f5', '星空': '#e8eaf6', '关怀': '#e0f2f1', '情侣用品': '#fce4ec', '日常用品': '#f1f8e9' };
 const DEF_GIFTS = [
 { id: 'g_rose', name: '玫瑰', emoji: '🌹', price: 52.00, cat: '花束', wish: '送你一束玫瑰，像见你那天的风' },
 { id: 'g_sun', name: '向日葵', emoji: '🌻', price: 18.00, cat: '花束', wish: '向日葵朝着光，我朝着你' },
@@ -35804,7 +35861,25 @@ const DEF_GIFTS = [
 { id: 'g_kiss', name: '亲亲', emoji: '😘', price: 0.00, cat: '关怀', wish: '亲一下，不许躲' },
 { id: 'g_night', name: '晚安', emoji: '🛌', price: 0.00, cat: '关怀', wish: '替你盖好被子了' },
 { id: 'g_soup', name: '一碗热汤', emoji: '🍲', price: 22.00, cat: '关怀', wish: '天冷，先喝口热的' },
-{ id: 'g_letter', name: '一封信', emoji: '✉️', price: 0.00, cat: '关怀', wish: '话放信里了，慢慢看' }
+{ id: 'g_letter', name: '一封信', emoji: '✉️', price: 0.00, cat: '关怀', wish: '话放信里了，慢慢看' },
+{ id: 'g_couplecup', name: '情侣杯', emoji: '☕', price: 39.00, cat: '情侣用品', wish: '一对杯子，早上的第一杯给你' },
+{ id: 'g_couplewear', name: '情侣装', emoji: '👕', price: 188.00, cat: '情侣用品', wish: '穿一样的出门，别人就知道你是我的' },
+{ id: 'g_lock', name: '同心锁', emoji: '🔒', price: 66.00, cat: '情侣用品', wish: '锁在一起，钥匙我扔了' },
+{ id: 'g_couavatar', name: '情侣头像', emoji: '🖼️', price: 0.00, cat: '情侣用品', wish: '换上，让所有人都知道' },
+{ id: 'g_coudiary', name: '情侣日记', emoji: '📓', price: 28.00, cat: '情侣用品', wish: '一本日记，两个人一起写' },
+{ id: 'g_couframe', name: '情侣相框', emoji: '🏞️', price: 18.00, cat: '情侣用品', wish: '把我们的合照放进去' },
+{ id: 'g_cousong', name: '情侣歌单', emoji: '🎵', price: 0.00, cat: '情侣用品', wish: '我们一起听的歌，都在这里' },
+{ id: 'g_coucoin', name: '纪念币', emoji: '🪙', price: 88.00, cat: '情侣用品', wish: '只属于我们两个的' },
+{ id: 'g_towel', name: '毛巾', emoji: '🧖', price: 25.00, cat: '日常用品', wish: '擦干头发，别着凉' },
+{ id: 'g_mug', name: '马克杯', emoji: '🥤', price: 35.00, cat: '日常用品', wish: '每天用这个喝水，像我在旁边' },
+{ id: 'g_umbrella', name: '雨伞', emoji: '☂️', price: 45.00, cat: '日常用品', wish: '下雨天，我替你撑' },
+{ id: 'g_pillow', name: '抱枕', emoji: '🛏️', price: 68.00, cat: '日常用品', wish: '抱着它，像抱着我' },
+{ id: 'g_warmer', name: '暖手宝', emoji: '🔥', price: 49.00, cat: '日常用品', wish: '手冷就捂一下' },
+{ id: 'g_earphone', name: '耳机', emoji: '🎧', price: 159.00, cat: '日常用品', wish: '一人一只，听同一首歌' },
+{ id: 'g_notebook', name: '笔记本', emoji: '📔', price: 22.00, cat: '日常用品', wish: '记下想跟你说的话' },
+{ id: 'g_keychain', name: '钥匙扣', emoji: '🗝️', price: 12.00, cat: '日常用品', wish: '开门的时候想到我' },
+{ id: 'g_lamp', name: '小夜灯', emoji: '💡', price: 89.00, cat: '日常用品', wish: '给你留一盏灯' },
+{ id: 'g_candle', name: '香薰', emoji: '🕯️', price: 39.00, cat: '日常用品', wish: '闻着它，放松一下' }
 ];
 const DEF_IDS = {};
 DEF_GIFTS.forEach(function (g) { DEF_IDS[g.id] = 1; });
@@ -35868,8 +35943,9 @@ if (window.logFish) window.logFish();
 };
 function openBuyDialog(gift) {
 if (!window.openTCPanel) { toast('稍后再试'); return; }
+const catColor = CAT_COLOR[gift.cat] || '#f5f3fa';
 const html =
-'<div class="gb-preview">' +
+'<div class="gb-preview" style="background:linear-gradient(160deg,' + catColor + ',#fff);">' +
 '<div class="gb-emoji">' + esc(gift.emoji) + '</div>' +
 '<div class="gb-name">' + esc(gift.name) + '</div>' +
 '<div class="gb-price">¥' + Number(gift.price || 0).toFixed(2) + '</div>' +
@@ -35895,24 +35971,41 @@ if (cancelBtn) cancelBtn.addEventListener('click', closeTc);
 }
 let giftPanel = null;
 let panelCat = '全部';
-function renderGiftCats(containerId, onPick) {
+function renderGiftCats(containerId, mode, onPick) {
 const el = document.getElementById(containerId); if (!el) return;
 const cats = ['全部'].concat(CATS);
+if (mode === 'icon') {
+el.innerHTML = cats.map(function (c) {
+const ico = c === '全部' ? '🎁' : (CAT_ICON[c] || '🎁');
+const col = c === '全部' ? '#f3e5f5' : (CAT_COLOR[c] || '#f5f3fa');
+return '<button class="market-cat' + (c === panelCat ? ' sel' : '') + '" data-cat="' + esc(c) + '">' +
+'<div class="market-cat-ico" style="background:' + col + ';">' + ico + '</div>' +
+'<div class="market-cat-name">' + esc(c) + '</div>' +
+'</button>';
+}).join('');
+} else {
 el.innerHTML = cats.map(function (c) { return '<button class="gift-cat' + (c === panelCat ? ' sel' : '') + '" data-cat="' + esc(c) + '">' + esc(c) + '</button>'; }).join('');
-el.querySelectorAll('.gift-cat').forEach(function (b) { b.addEventListener('click', function () { panelCat = b.dataset.cat; onPick(); }); });
+}
+el.querySelectorAll('[data-cat]').forEach(function (b) { b.addEventListener('click', function () { panelCat = b.dataset.cat; onPick(); }); });
 }
 function giftsByCat(gifts) { return (panelCat === '全部') ? gifts : gifts.filter(function (g) { return g.cat === panelCat; }); }
+function giftItemHtml(g, manage) {
+const col = CAT_COLOR[g.cat] || '#f5f3fa';
+return '<button class="gift-item' + (manage ? ' manage' : '') + '" data-id="' + esc(g.id) + '">' +
+'<div class="gift-item-top" style="background:linear-gradient(160deg,' + col + ',#fff);">' +
+'<div class="gift-item-emoji">' + esc(g.emoji) + '</div>' +
+'</div>' +
+'<div class="gift-item-body">' +
+'<div class="gift-item-name">' + esc(g.name) + '</div>' +
+'<div class="gift-item-price">¥' + Number(g.price || 0).toFixed(2) + '</div>' +
+'</div>' +
+(manage ? '<span class="gift-item-del" data-del="' + esc(g.id) + '">✕</span>' : '') +
+'</button>';
+}
 function renderGiftGrid(containerId, gifts, onPick, manage) {
 const el = document.getElementById(containerId); if (!el) return;
 const list = giftsByCat(gifts);
-el.innerHTML = list.map(function (g) {
-return '<button class="gift-item' + (manage ? ' manage' : '') + '" data-id="' + esc(g.id) + '">' +
-'<div class="gift-item-emoji">' + esc(g.emoji) + '</div>' +
-'<div class="gift-item-name">' + esc(g.name) + '</div>' +
-'<div class="gift-item-price">¥' + Number(g.price || 0).toFixed(2) + '</div>' +
-(manage ? '<span class="gift-item-del" data-del="' + esc(g.id) + '">✕</span>' : '') +
-'</button>';
-}).join('') || '<div class="gift-empty">还没有商品，点下方添加</div>';
+el.innerHTML = list.map(function (g) { return giftItemHtml(g, manage); }).join('') || '<div class="gift-empty">还没有商品，点下方添加</div>';
 el.querySelectorAll('.gift-item').forEach(function (b) {
 b.addEventListener('click', function (e) {
 if (manage) return;
@@ -35941,7 +36034,7 @@ const mp = document.getElementById('chat-more-panel'); if (mp) mp.hidden = true;
 const nm = document.getElementById('gift-partner-name'); if (nm) nm.textContent = partnerName();
 const bal = document.getElementById('gift-balance'); if (bal) bal.textContent = walletText();
 panelCat = '全部';
-renderGiftCats('gift-cats', function () { renderGiftGrid('gift-grid', giftsLoad(), function (g) { closeGiftPanel(); openBuyDialog(g); }, false); });
+renderGiftCats('gift-cats', 'pill', function () { renderGiftGrid('gift-grid', giftsLoad(), function (g) { closeGiftPanel(); openBuyDialog(g); }, false); });
 renderGiftGrid('gift-grid', giftsLoad(), function (g) { closeGiftPanel(); openBuyDialog(g); }, false);
 if (window.closeIme) try { window.closeIme(); } catch (e) {}
 giftPanel.hidden = false;
@@ -35953,7 +36046,7 @@ function renderMarket() {
 const bal = document.getElementById('market-balance'); if (bal) bal.textContent = walletText();
 const addBtn = document.getElementById('market-add'); if (addBtn) addBtn.textContent = marketManage ? '完成' : '+ 添加商品';
 const mgBtn = document.getElementById('market-manage'); if (mgBtn) mgBtn.textContent = marketManage ? '完成' : '管理';
-renderGiftCats('market-cats', renderMarket);
+renderGiftCats('market-cats', 'icon', renderMarket);
 renderGiftGrid('market-grid', giftsLoad(), function (g) { openBuyDialog(g); }, marketManage);
 }
 function openAddGiftForm(editGift) {
@@ -35999,7 +36092,7 @@ const list = boxLoad();
 const inList = list.filter(function (x) { return x.side === 'in'; });
 const outList = list.filter(function (x) { return x.side === 'out'; });
 const stat = document.getElementById('giftbox-stat');
-if (stat) stat.textContent = '共收到 ' + inList.length + ' 件 · 送出 ' + outList.length + ' 件';
+if (stat) stat.textContent = '收到 ' + inList.length + ' 件 · 送出 ' + outList.length + ' 件';
 const tabs = document.querySelectorAll('.gb-tab');
 tabs.forEach(function (t) {
 t.classList.toggle('sel', t.dataset.btab === boxTab);
@@ -36009,8 +36102,9 @@ const show = (boxTab === 'in' ? inList : outList).slice().sort(function (a, b) {
 const el = document.getElementById('giftbox-list'); if (!el) return;
 el.innerHTML = show.map(function (it) {
 const from = it.side === 'in' ? esc(partnerName()) + ' 送我' : '我 送 ' + esc(partnerName());
+const col = CAT_COLOR[it.cat] || '#f5f3fa';
 return '<div class="giftbox-card" data-id="' + esc(it.id) + '">' +
-'<div class="giftbox-emoji">' + esc(it.emoji) + '</div>' +
+'<div class="giftbox-emoji" style="background:linear-gradient(135deg,' + col + ',' + col + ');">' + esc(it.emoji) + '</div>' +
 '<div class="giftbox-info">' +
 '<div class="giftbox-name">' + esc(it.name) + ' <span class="giftbox-price">¥' + Number(it.price || 0).toFixed(2) + '</span></div>' +
 '<div class="giftbox-wish">"' + esc(it.wish || '心意') + '"</div>' +
@@ -36023,8 +36117,9 @@ c.addEventListener('click', function () {
 const it = list.find(function (x) { return x.id === c.dataset.id; });
 if (!it || !window.openTCPanel) return;
 const from = it.side === 'in' ? esc(partnerName()) + ' 送我' : '我 送 ' + esc(partnerName());
+const col = CAT_COLOR[it.cat] || '#f5f3fa';
 const html =
-'<div class="gb-detail">' +
+'<div class="gb-detail" style="background:linear-gradient(160deg,' + col + ',#fff);">' +
 '<div class="gb-detail-emoji">' + esc(it.emoji) + '</div>' +
 '<div class="gb-detail-name">' + esc(it.name) + '</div>' +
 '<div class="gb-detail-price">¥' + Number(it.price || 0).toFixed(2) + '</div>' +
@@ -36096,7 +36191,11 @@ marketPage.className = 'page'; marketPage.id = 'page-market'; marketPage.hidden 
 marketPage.innerHTML =
 '<div class="chat-head"><span class="ch-back" id="market-back">' + BACK_SVG + '</span><span class="ch-name">心意市集</span></div>' +
 '<div class="market-body">' +
+'<div class="market-hero">' +
+'<div class="market-hero-title">心意市集</div>' +
+'<div class="market-hero-sub">挑一份心意，跨越两个世界送给你</div>' +
 '<div class="market-balance" id="market-balance"></div>' +
+'</div>' +
 '<div class="market-cats" id="market-cats"></div>' +
 '<div class="market-grid" id="market-grid"></div>' +
 '<div class="market-foot">' +
@@ -36114,11 +36213,14 @@ giftboxPage = document.createElement('div');
 giftboxPage.className = 'page'; giftboxPage.id = 'page-giftbox'; giftboxPage.hidden = true;
 giftboxPage.innerHTML =
 '<div class="chat-head"><span class="ch-back" id="giftbox-back">' + BACK_SVG + '</span><span class="ch-name">心意柜</span></div>' +
+'<div class="giftbox-hero">' +
+'<div class="giftbox-hero-title">心意柜</div>' +
+'<div class="giftbox-stat" id="giftbox-stat"></div>' +
+'</div>' +
 '<div class="giftbox-tabs">' +
 '<button class="gb-tab sel" data-btab="in" type="button">收到的</button>' +
 '<button class="gb-tab" data-btab="out" type="button">送出的</button>' +
 '</div>' +
-'<div class="giftbox-stat" id="giftbox-stat"></div>' +
 '<div class="giftbox-scroll"><div class="giftbox-list" id="giftbox-list"></div></div>';
 host.appendChild(giftboxPage);
 document.getElementById('giftbox-back').addEventListener('click', backHome);
@@ -36691,7 +36793,7 @@ if (histCardEl) histCardEl = histCardEl.closest('.period-card');
 if (histCardEl && histCardEl.nextSibling) histCardEl.parentNode.insertBefore(card, histCardEl.nextSibling);
 else scroll.appendChild(card);
 }
-function render() { renderStatus(); renderGrid(); renderHistory(); renderStats(); try { renderDeskWidget(); } catch (e) {} }
+function render() { try { renderStatus(); } catch (e) {} try { renderGrid(); } catch (e) {} try { renderHistory(); } catch (e) {} try { renderStats(); } catch (e) {} try { renderDeskWidget(); } catch (e) {} }
 function markStart() {
 recs = normalize(recs);
 var today = todayStr();
@@ -37260,20 +37362,20 @@ grid.addEventListener('click', function (e) {
 if (longPressed) { longPressed = false; return; }
 var cell = e.target.closest('.pc-cell');
 if (!cell || cell.classList.contains('blank')) return;
-toggleDay(cell.getAttribute('data-date'));
+openDayPop(cell.getAttribute('data-date'));
 });
 grid.addEventListener('contextmenu', function (e) {
 var cell = e.target.closest('.pc-cell');
 if (!cell || cell.classList.contains('blank')) return;
 e.preventDefault();
-openDayPop(cell.getAttribute('data-date'));
+toggleDay(cell.getAttribute('data-date'));
 });
 grid.addEventListener('touchstart', function (e) {
 var cell = e.target.closest('.pc-cell');
 if (!cell || cell.classList.contains('blank')) return;
 var ds = cell.getAttribute('data-date');
 longPressed = false;
-pressTimer = setTimeout(function () { pressTimer = null; longPressed = true; openDayPop(ds); }, 500);
+pressTimer = setTimeout(function () { pressTimer = null; longPressed = true; toggleDay(ds); }, 500);
 }, { passive: true });
 grid.addEventListener('touchmove', function () { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } }, { passive: true });
 grid.addEventListener('touchend', function () { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } }, { passive: true });
@@ -37329,6 +37431,9 @@ if (app) app.click();
 setTimeout(checkNotify, 3000);
 setTimeout(checkCare, 5000);
 setTimeout(renderDeskWidget, 2500);
+setTimeout(renderDeskWidget, 6000);
+document.addEventListener('contact-switched', function () { setTimeout(renderDeskWidget, 200); });
+document.addEventListener('mochi-restore-done', function () { setTimeout(renderDeskWidget, 200); });
 })();
 } catch (__e) { try { console.error("[JS] period.js", __e && __e.message || __e); } catch (x) {} if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
 (function () { try {

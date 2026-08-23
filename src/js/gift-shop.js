@@ -27,7 +27,9 @@
   function walletSet(w) { const s = store(); if (s) s.set(WALLET_KEY, JSON.stringify(w)); }
   function walletText() { const w = walletGet(); return '心意币 · 我 ¥' + fenToYuan(w.myBalance) + ' · ' + esc(partnerName()) + ' ¥' + fenToYuan(w.systemBalance); }
 
-  const CATS = ['花束', '甜品', '饰品', '星空', '关怀'];
+  const CATS = ['花束', '甜品', '饰品', '星空', '关怀', '情侣用品', '日常用品'];
+  const CAT_ICON = { '花束': '🌸', '甜品': '🍰', '饰品': '💍', '星空': '⭐', '关怀': '🤗', '情侣用品': '💑', '日常用品': '🧴' };
+  const CAT_COLOR = { '花束': '#fce4ec', '甜品': '#fff3e0', '饰品': '#f3e5f5', '星空': '#e8eaf6', '关怀': '#e0f2f1', '情侣用品': '#fce4ec', '日常用品': '#f1f8e9' };
   const DEF_GIFTS = [
     { id: 'g_rose', name: '玫瑰', emoji: '🌹', price: 52.00, cat: '花束', wish: '送你一束玫瑰，像见你那天的风' },
     { id: 'g_sun', name: '向日葵', emoji: '🌻', price: 18.00, cat: '花束', wish: '向日葵朝着光，我朝着你' },
@@ -53,7 +55,25 @@
     { id: 'g_kiss', name: '亲亲', emoji: '😘', price: 0.00, cat: '关怀', wish: '亲一下，不许躲' },
     { id: 'g_night', name: '晚安', emoji: '🛌', price: 0.00, cat: '关怀', wish: '替你盖好被子了' },
     { id: 'g_soup', name: '一碗热汤', emoji: '🍲', price: 22.00, cat: '关怀', wish: '天冷，先喝口热的' },
-    { id: 'g_letter', name: '一封信', emoji: '✉️', price: 0.00, cat: '关怀', wish: '话放信里了，慢慢看' }
+    { id: 'g_letter', name: '一封信', emoji: '✉️', price: 0.00, cat: '关怀', wish: '话放信里了，慢慢看' },
+    { id: 'g_couplecup', name: '情侣杯', emoji: '☕', price: 39.00, cat: '情侣用品', wish: '一对杯子，早上的第一杯给你' },
+    { id: 'g_couplewear', name: '情侣装', emoji: '👕', price: 188.00, cat: '情侣用品', wish: '穿一样的出门，别人就知道你是我的' },
+    { id: 'g_lock', name: '同心锁', emoji: '🔒', price: 66.00, cat: '情侣用品', wish: '锁在一起，钥匙我扔了' },
+    { id: 'g_couavatar', name: '情侣头像', emoji: '🖼️', price: 0.00, cat: '情侣用品', wish: '换上，让所有人都知道' },
+    { id: 'g_coudiary', name: '情侣日记', emoji: '📓', price: 28.00, cat: '情侣用品', wish: '一本日记，两个人一起写' },
+    { id: 'g_couframe', name: '情侣相框', emoji: '🏞️', price: 18.00, cat: '情侣用品', wish: '把我们的合照放进去' },
+    { id: 'g_cousong', name: '情侣歌单', emoji: '🎵', price: 0.00, cat: '情侣用品', wish: '我们一起听的歌，都在这里' },
+    { id: 'g_coucoin', name: '纪念币', emoji: '🪙', price: 88.00, cat: '情侣用品', wish: '只属于我们两个的' },
+    { id: 'g_towel', name: '毛巾', emoji: '🧖', price: 25.00, cat: '日常用品', wish: '擦干头发，别着凉' },
+    { id: 'g_mug', name: '马克杯', emoji: '🥤', price: 35.00, cat: '日常用品', wish: '每天用这个喝水，像我在旁边' },
+    { id: 'g_umbrella', name: '雨伞', emoji: '☂️', price: 45.00, cat: '日常用品', wish: '下雨天，我替你撑' },
+    { id: 'g_pillow', name: '抱枕', emoji: '🛏️', price: 68.00, cat: '日常用品', wish: '抱着它，像抱着我' },
+    { id: 'g_warmer', name: '暖手宝', emoji: '🔥', price: 49.00, cat: '日常用品', wish: '手冷就捂一下' },
+    { id: 'g_earphone', name: '耳机', emoji: '🎧', price: 159.00, cat: '日常用品', wish: '一人一只，听同一首歌' },
+    { id: 'g_notebook', name: '笔记本', emoji: '📔', price: 22.00, cat: '日常用品', wish: '记下想跟你说的话' },
+    { id: 'g_keychain', name: '钥匙扣', emoji: '🗝️', price: 12.00, cat: '日常用品', wish: '开门的时候想到我' },
+    { id: 'g_lamp', name: '小夜灯', emoji: '💡', price: 89.00, cat: '日常用品', wish: '给你留一盏灯' },
+    { id: 'g_candle', name: '香薰', emoji: '🕯️', price: 39.00, cat: '日常用品', wish: '闻着它，放松一下' }
   ];
   const DEF_IDS = {};
   DEF_GIFTS.forEach(function (g) { DEF_IDS[g.id] = 1; });
@@ -124,8 +144,9 @@
 
   function openBuyDialog(gift) {
     if (!window.openTCPanel) { toast('稍后再试'); return; }
+    const catColor = CAT_COLOR[gift.cat] || '#f5f3fa';
     const html =
-      '<div class="gb-preview">' +
+      '<div class="gb-preview" style="background:linear-gradient(160deg,' + catColor + ',#fff);">' +
         '<div class="gb-emoji">' + esc(gift.emoji) + '</div>' +
         '<div class="gb-name">' + esc(gift.name) + '</div>' +
         '<div class="gb-price">¥' + Number(gift.price || 0).toFixed(2) + '</div>' +
@@ -152,24 +173,41 @@
 
   let giftPanel = null;
   let panelCat = '全部';
-  function renderGiftCats(containerId, onPick) {
+  function renderGiftCats(containerId, mode, onPick) {
     const el = document.getElementById(containerId); if (!el) return;
     const cats = ['全部'].concat(CATS);
-    el.innerHTML = cats.map(function (c) { return '<button class="gift-cat' + (c === panelCat ? ' sel' : '') + '" data-cat="' + esc(c) + '">' + esc(c) + '</button>'; }).join('');
-    el.querySelectorAll('.gift-cat').forEach(function (b) { b.addEventListener('click', function () { panelCat = b.dataset.cat; onPick(); }); });
+    if (mode === 'icon') {
+      el.innerHTML = cats.map(function (c) {
+        const ico = c === '全部' ? '🎁' : (CAT_ICON[c] || '🎁');
+        const col = c === '全部' ? '#f3e5f5' : (CAT_COLOR[c] || '#f5f3fa');
+        return '<button class="market-cat' + (c === panelCat ? ' sel' : '') + '" data-cat="' + esc(c) + '">' +
+          '<div class="market-cat-ico" style="background:' + col + ';">' + ico + '</div>' +
+          '<div class="market-cat-name">' + esc(c) + '</div>' +
+        '</button>';
+      }).join('');
+    } else {
+      el.innerHTML = cats.map(function (c) { return '<button class="gift-cat' + (c === panelCat ? ' sel' : '') + '" data-cat="' + esc(c) + '">' + esc(c) + '</button>'; }).join('');
+    }
+    el.querySelectorAll('[data-cat]').forEach(function (b) { b.addEventListener('click', function () { panelCat = b.dataset.cat; onPick(); }); });
   }
   function giftsByCat(gifts) { return (panelCat === '全部') ? gifts : gifts.filter(function (g) { return g.cat === panelCat; }); }
+  function giftItemHtml(g, manage) {
+    const col = CAT_COLOR[g.cat] || '#f5f3fa';
+    return '<button class="gift-item' + (manage ? ' manage' : '') + '" data-id="' + esc(g.id) + '">' +
+      '<div class="gift-item-top" style="background:linear-gradient(160deg,' + col + ',#fff);">' +
+        '<div class="gift-item-emoji">' + esc(g.emoji) + '</div>' +
+      '</div>' +
+      '<div class="gift-item-body">' +
+        '<div class="gift-item-name">' + esc(g.name) + '</div>' +
+        '<div class="gift-item-price">¥' + Number(g.price || 0).toFixed(2) + '</div>' +
+      '</div>' +
+      (manage ? '<span class="gift-item-del" data-del="' + esc(g.id) + '">✕</span>' : '') +
+    '</button>';
+  }
   function renderGiftGrid(containerId, gifts, onPick, manage) {
     const el = document.getElementById(containerId); if (!el) return;
     const list = giftsByCat(gifts);
-    el.innerHTML = list.map(function (g) {
-      return '<button class="gift-item' + (manage ? ' manage' : '') + '" data-id="' + esc(g.id) + '">' +
-        '<div class="gift-item-emoji">' + esc(g.emoji) + '</div>' +
-        '<div class="gift-item-name">' + esc(g.name) + '</div>' +
-        '<div class="gift-item-price">¥' + Number(g.price || 0).toFixed(2) + '</div>' +
-        (manage ? '<span class="gift-item-del" data-del="' + esc(g.id) + '">✕</span>' : '') +
-      '</button>';
-    }).join('') || '<div class="gift-empty">还没有商品，点下方添加</div>';
+    el.innerHTML = list.map(function (g) { return giftItemHtml(g, manage); }).join('') || '<div class="gift-empty">还没有商品，点下方添加</div>';
     el.querySelectorAll('.gift-item').forEach(function (b) {
       b.addEventListener('click', function (e) {
         if (manage) return;
@@ -199,7 +237,7 @@
     const nm = document.getElementById('gift-partner-name'); if (nm) nm.textContent = partnerName();
     const bal = document.getElementById('gift-balance'); if (bal) bal.textContent = walletText();
     panelCat = '全部';
-    renderGiftCats('gift-cats', function () { renderGiftGrid('gift-grid', giftsLoad(), function (g) { closeGiftPanel(); openBuyDialog(g); }, false); });
+    renderGiftCats('gift-cats', 'pill', function () { renderGiftGrid('gift-grid', giftsLoad(), function (g) { closeGiftPanel(); openBuyDialog(g); }, false); });
     renderGiftGrid('gift-grid', giftsLoad(), function (g) { closeGiftPanel(); openBuyDialog(g); }, false);
     if (window.closeIme) try { window.closeIme(); } catch (e) {}
     giftPanel.hidden = false;
@@ -212,7 +250,7 @@
     const bal = document.getElementById('market-balance'); if (bal) bal.textContent = walletText();
     const addBtn = document.getElementById('market-add'); if (addBtn) addBtn.textContent = marketManage ? '完成' : '+ 添加商品';
     const mgBtn = document.getElementById('market-manage'); if (mgBtn) mgBtn.textContent = marketManage ? '完成' : '管理';
-    renderGiftCats('market-cats', renderMarket);
+    renderGiftCats('market-cats', 'icon', renderMarket);
     renderGiftGrid('market-grid', giftsLoad(), function (g) { openBuyDialog(g); }, marketManage);
   }
   function openAddGiftForm(editGift) {
@@ -259,7 +297,7 @@
     const inList = list.filter(function (x) { return x.side === 'in'; });
     const outList = list.filter(function (x) { return x.side === 'out'; });
     const stat = document.getElementById('giftbox-stat');
-    if (stat) stat.textContent = '共收到 ' + inList.length + ' 件 · 送出 ' + outList.length + ' 件';
+    if (stat) stat.textContent = '收到 ' + inList.length + ' 件 · 送出 ' + outList.length + ' 件';
     const tabs = document.querySelectorAll('.gb-tab');
     tabs.forEach(function (t) {
       t.classList.toggle('sel', t.dataset.btab === boxTab);
@@ -269,8 +307,9 @@
     const el = document.getElementById('giftbox-list'); if (!el) return;
     el.innerHTML = show.map(function (it) {
       const from = it.side === 'in' ? esc(partnerName()) + ' 送我' : '我 送 ' + esc(partnerName());
+      const col = CAT_COLOR[it.cat] || '#f5f3fa';
       return '<div class="giftbox-card" data-id="' + esc(it.id) + '">' +
-        '<div class="giftbox-emoji">' + esc(it.emoji) + '</div>' +
+        '<div class="giftbox-emoji" style="background:linear-gradient(135deg,' + col + ',' + col + ');">' + esc(it.emoji) + '</div>' +
         '<div class="giftbox-info">' +
           '<div class="giftbox-name">' + esc(it.name) + ' <span class="giftbox-price">¥' + Number(it.price || 0).toFixed(2) + '</span></div>' +
           '<div class="giftbox-wish">"' + esc(it.wish || '心意') + '"</div>' +
@@ -283,8 +322,9 @@
         const it = list.find(function (x) { return x.id === c.dataset.id; });
         if (!it || !window.openTCPanel) return;
         const from = it.side === 'in' ? esc(partnerName()) + ' 送我' : '我 送 ' + esc(partnerName());
+        const col = CAT_COLOR[it.cat] || '#f5f3fa';
         const html =
-          '<div class="gb-detail">' +
+          '<div class="gb-detail" style="background:linear-gradient(160deg,' + col + ',#fff);">' +
             '<div class="gb-detail-emoji">' + esc(it.emoji) + '</div>' +
             '<div class="gb-detail-name">' + esc(it.name) + '</div>' +
             '<div class="gb-detail-price">¥' + Number(it.price || 0).toFixed(2) + '</div>' +
@@ -361,7 +401,11 @@
     marketPage.innerHTML =
       '<div class="chat-head"><span class="ch-back" id="market-back">' + BACK_SVG + '</span><span class="ch-name">心意市集</span></div>' +
       '<div class="market-body">' +
-        '<div class="market-balance" id="market-balance"></div>' +
+        '<div class="market-hero">' +
+          '<div class="market-hero-title">心意市集</div>' +
+          '<div class="market-hero-sub">挑一份心意，跨越两个世界送给你</div>' +
+          '<div class="market-balance" id="market-balance"></div>' +
+        '</div>' +
         '<div class="market-cats" id="market-cats"></div>' +
         '<div class="market-grid" id="market-grid"></div>' +
         '<div class="market-foot">' +
@@ -380,11 +424,14 @@
     giftboxPage.className = 'page'; giftboxPage.id = 'page-giftbox'; giftboxPage.hidden = true;
     giftboxPage.innerHTML =
       '<div class="chat-head"><span class="ch-back" id="giftbox-back">' + BACK_SVG + '</span><span class="ch-name">心意柜</span></div>' +
+      '<div class="giftbox-hero">' +
+        '<div class="giftbox-hero-title">心意柜</div>' +
+        '<div class="giftbox-stat" id="giftbox-stat"></div>' +
+      '</div>' +
       '<div class="giftbox-tabs">' +
         '<button class="gb-tab sel" data-btab="in" type="button">收到的</button>' +
         '<button class="gb-tab" data-btab="out" type="button">送出的</button>' +
       '</div>' +
-      '<div class="giftbox-stat" id="giftbox-stat"></div>' +
       '<div class="giftbox-scroll"><div class="giftbox-list" id="giftbox-list"></div></div>';
     host.appendChild(giftboxPage);
     document.getElementById('giftbox-back').addEventListener('click', backHome);

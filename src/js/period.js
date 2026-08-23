@@ -602,7 +602,7 @@
     else scroll.appendChild(card);
   }
 
-  function render() { renderStatus(); renderGrid(); renderHistory(); renderStats(); try { renderDeskWidget(); } catch (e) {} }
+  function render() { try { renderStatus(); } catch (e) {} try { renderGrid(); } catch (e) {} try { renderHistory(); } catch (e) {} try { renderStats(); } catch (e) {} try { renderDeskWidget(); } catch (e) {} }
 
   // ---- 操作 ----
   function markStart() {
@@ -1188,7 +1188,7 @@
   if (me) me.addEventListener('click', markEnd);
   var rt = document.getElementById('period-record-today');
   if (rt) rt.addEventListener('click', function () { openDayPop(todayStr()); });
-  // 日历日格：短按切换经期标记，长按打开每日详情浮层
+  // 日历日格：短按打开每日详情浮层（记录经量/症状/情绪），长按切换经期标记
   var grid = document.getElementById('period-grid');
   if (grid) {
     var pressTimer = null, longPressed = false;
@@ -1196,20 +1196,20 @@
       if (longPressed) { longPressed = false; return; }
       var cell = e.target.closest('.pc-cell');
       if (!cell || cell.classList.contains('blank')) return;
-      toggleDay(cell.getAttribute('data-date'));
+      openDayPop(cell.getAttribute('data-date'));
     });
     grid.addEventListener('contextmenu', function (e) {
       var cell = e.target.closest('.pc-cell');
       if (!cell || cell.classList.contains('blank')) return;
       e.preventDefault();
-      openDayPop(cell.getAttribute('data-date'));
+      toggleDay(cell.getAttribute('data-date'));
     });
     grid.addEventListener('touchstart', function (e) {
       var cell = e.target.closest('.pc-cell');
       if (!cell || cell.classList.contains('blank')) return;
       var ds = cell.getAttribute('data-date');
       longPressed = false;
-      pressTimer = setTimeout(function () { pressTimer = null; longPressed = true; openDayPop(ds); }, 500);
+      pressTimer = setTimeout(function () { pressTimer = null; longPressed = true; toggleDay(ds); }, 500);
     }, { passive: true });
     grid.addEventListener('touchmove', function () { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } }, { passive: true });
     grid.addEventListener('touchend', function () { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } }, { passive: true });
@@ -1274,4 +1274,7 @@
   setTimeout(checkNotify, 3000);
   setTimeout(checkCare, 5000);
   setTimeout(renderDeskWidget, 2500);
+  setTimeout(renderDeskWidget, 6000);
+  document.addEventListener('contact-switched', function () { setTimeout(renderDeskWidget, 200); });
+  document.addEventListener('mochi-restore-done', function () { setTimeout(renderDeskWidget, 200); });
 })();

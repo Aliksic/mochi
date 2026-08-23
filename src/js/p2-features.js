@@ -1642,8 +1642,14 @@ if (ckRefresh) {
     }
     knockTimer = setTimeout(tpResetKnock, 1400);
   }
-  if (tpApp) tpApp.addEventListener('click', () => { if (editingNow()) return; openPage(tpPage); tpPick(); });
+  if (tpApp) tpApp.addEventListener('click', () => { if (editingNow()) return; openPage(tpPage); });
   document.getElementById('tp-back').addEventListener('click', () => backHome(tpPage));
+  // 状态自动流动：页面可见时每 20-40s 淡入淡出换一句；离开停
+  let tpFlowTimer = null;
+  function tpPickFade() { const el = document.getElementById('tp-status'); if (!el) { tpPick(); return; } el.classList.add('fade'); setTimeout(() => { tpPick(); el.classList.remove('fade'); }, 400); }
+  function tpStartFlow() { clearTimeout(tpFlowTimer); const tick = () => { tpPickFade(); tpFlowTimer = setTimeout(tick, 20000 + Math.random() * 20000); }; tpFlowTimer = setTimeout(tick, 20000 + Math.random() * 20000); }
+  function tpStopFlow() { clearTimeout(tpFlowTimer); tpFlowTimer = null; }
+  new MutationObserver(() => { if (tpPage.hidden) tpStopFlow(); else { tpPick(); tpStartFlow(); } }).observe(tpPage, { attributes: true, attributeFilter: ['hidden'] });
   document.getElementById('tp-refresh').addEventListener('click', () => { if (editingNow()) return; tpPick(); });
   onLongPress(document.getElementById('tp-knock-area'), tpKnock, 350);
   document.getElementById('tp-add').addEventListener('click', () => { if (!window.openModal) return; window.openModal('添加状态字卡', '', (v) => { if (v) { const a = tpCards(); a.push(v); tpSave(a); toast('已添加'); } }); });
@@ -1701,7 +1707,23 @@ if (ckRefresh) {
       }
     }, 700);
   }
-  if (ssApp) ssApp.addEventListener('click', () => { if (editingNow()) return; openPage(ssPage); ssRenderCount(); });
+  // 他主动碰你：进页面时按概率 / 久未进去后高概率，留一道光痕 + 一句悄悄话
+  function ssMaybePassive() {
+    const s = curStore(); if (!s) return;
+    let last = 0; try { last = parseInt(s.get('shenshou-last-visit') || '0', 10) || 0; } catch (e) {}
+    const gap = Date.now() - last;
+    try { s.set('shenshou-last-visit', '' + Date.now()); } catch (e) {}
+    const prob = gap > 6 * 3600000 ? 0.7 : 0.25;
+    if (Math.random() >= prob) return;
+    const cards = ssCards();
+    const txt = cards[Math.floor(Math.random() * cards.length)];
+    vibrate(30);
+    const area = document.getElementById('ss-area');
+    if (area) { const tr = document.createElement('div'); tr.className = 'ss-trace'; area.appendChild(tr); setTimeout(() => { try { tr.remove(); } catch (e) {} }, 1600); }
+    const hint = document.getElementById('ss-hint'); if (hint) hint.textContent = '他刚才碰了你一下';
+    const res = document.getElementById('ss-result'); if (res) { res.textContent = '\u201c' + txt + '\u201d'; res.className = 'ss-result reach'; }
+  }
+  if (ssApp) ssApp.addEventListener('click', () => { if (editingNow()) return; openPage(ssPage); ssRenderCount(); ssMaybePassive(); });
   document.getElementById('ss-back').addEventListener('click', () => backHome(ssPage));
   onLongPress(document.getElementById('ss-area'), ssTry, 500);
   document.getElementById('ss-add').addEventListener('click', () => { if (!window.openModal) return; window.openModal('添加悄悄话字卡', '', (v) => { if (v) { const a = ssCards(); a.push(v); ssSave(a); toast('已添加'); } }); });
@@ -1709,6 +1731,7 @@ if (ckRefresh) {
   if (ssSendBtn) { ssSendBtn.textContent = '发到聊天：' + (ssSendOn() ? '开' : '关'); ssSendBtn.addEventListener('click', () => { const s = curStore(); const on = !ssSendOn(); if (s) try { s.set('shenshou-send-chat', on ? '1' : '0'); } catch (e) {} ssSendBtn.textContent = '发到聊天：' + (on ? '开' : '关'); }); }
 
   document.addEventListener('contact-switched', () => {
+    tpStopFlow();
     if (!tpPage.hidden) tpPick();
     if (!ssPage.hidden) ssRenderCount();
   });
