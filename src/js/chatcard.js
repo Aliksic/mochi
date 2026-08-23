@@ -37,6 +37,28 @@
   const MEDIA_TYPES = { sticker: '表情包', image: '图片', voice: '语音' };
   const IMG_TYPES = MEDIA_TYPES;
 
+  // v3.8.x：iOS Safari 下未挂到 DOM 的 <input type=file>.click() 不会弹出选择器，
+  // 必须先 appendChild 到 body。这里统一封装：建隐藏 input → 挂 body → 点击 → 回调后清理。
+  function pickFiles(accept, multiple, onFiles) {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = accept;
+    input.multiple = !!multiple;
+    input.style.cssText = 'position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0;';
+    document.body.appendChild(input);
+    input.onchange = () => {
+      const files = Array.prototype.slice.call(input.files || []);
+      input.value = ''; // 允许重选同一文件
+      try { input.remove(); } catch (e) {}
+      if (onFiles) onFiles(files);
+    };
+    // 取消选择（change 不触发）时也清理，避免残留
+    input.onblur = () => {
+      setTimeout(() => { try { if (input.parentNode) input.remove(); } catch (e) {} }, 1500);
+    };
+    try { input.click(); } catch (e) { try { input.remove(); } catch (e2) {} }
+  }
+
   // v3.6.x：剔除系统内置预设字卡（BUILTIN 同分组同内容）与空分组，只保留用户添加的字卡；
   // 返回是否发生了删除（供调用方决定是否写回）
   function stripBuiltins(groups) {
@@ -1346,10 +1368,8 @@
       }
     });
     function pickImportFile(mode) {
-      const input = document.createElement('input');
-      input.type = 'file'; input.accept = '.json,application/json';
-      input.onchange = () => {
-        const f = input.files && input.files[0];
+      pickFiles('.json,application/json', false, (files) => {
+        const f = files && files[0];
         if (!f) return;
         const reader = new FileReader();
         reader.onload = () => {
@@ -1362,8 +1382,7 @@
           }
         };
         reader.readAsText(f);
-      };
-      input.click();
+      });
     }
     // 按模式写入：merge 分组内去重合并；replace 先清空再按文件填充；current 全部并入目标分类；返回 {added, dup}
     function writeImport(byCat, mode, targetCat) {
@@ -1626,12 +1645,7 @@
     impBtn.addEventListener('click', () => {
       // 媒体分类：表情包/图片上传图片，语音上传音频
       if (IMG_TYPES[cur]) {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = cur === 'voice' ? 'audio/*' : 'image/*';
-        input.multiple = true;
-        input.onchange = () => {
-          const files = Array.prototype.slice.call(input.files || []);
+        pickFiles(cur === 'voice' ? 'audio/*' : 'image/*', true, (files) => {
           if (!files.length) return;
           if (!groups[cur]) groups[cur] = [];
           // 目标分组：当前选中分组，否则默认分组（表情包/图片），再否则新建
@@ -1692,8 +1706,7 @@
             if (skip > 0) toast('已上传 ' + ok + ' 个，跳过 ' + skip + ' 个超大文件（' + (cur === 'voice' ? '音频>10MB' : '图片>20MB') + '）');
             else toast('已上传 ' + ok + ' 个' + (cur === 'voice' ? '音频' : '图片'));
           }
-        };
-        input.click();
+        });
         return;
       }
       // 文字分类：批量导入（一行一个；按【组名】识别分组 / txt 文件）

@@ -94,4 +94,8 @@
   };
 
   sync();
+
+  // v3.x：暴露给桌面长按拖拽（跨页翻页 + 当前页索引）
+  window.deskGo = go;
+  window.deskIdx = function () { return idx; };
 })();

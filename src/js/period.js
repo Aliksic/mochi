@@ -1,6 +1,11 @@
 // ===== 功能：经期记录（桌面第三页） =====
 // 记录经期开始/结束、预测下次经期、判断周期阶段（经期/排卵期/安全期）
 // 数据 localStorage + IndexedDB 双写（键前缀 xy-home-v2:），纯本地无后端
+// v3.10.x 全局共享：经期记录属"本人生理数据"，所有联系人桌面共用一份
+//   全局键 xy-home-v2:period-*（参照 fish-log / garden-data-global 先例）。
+//   首次启动 migrateToGlobal 遍历各联系人旧键合并去重写入全局并清理旧键
+//   （period-migrated 标记幂等）。contacts.js EXCLUDE 已加 period-* 防
+//   migrateLegacy 误迁全局键进 default 桌面。
 // v3.10.x 增强：
 //   1. 动态周期——取最近 6 次实际周期中位数 + 标准差 σ + CV 规律性徽章 + 黄体期反推
 //   2. 置信区间渲染——预测日按高斯衰减着色（中心深边缘浅）
@@ -10,7 +15,8 @@
 //   6. 趋势图——近 12 次周期长度折线 + 均值线
 //   7. 倒计时卡——大数字 + 圆环进度
 (function () {
-  var store = window.activeStore();
+  var G = 'xy-home-v2';
+  var store = window.xyStore(G);
   var page = document.getElementById('page-period');
   if (!store || !page) return;
 
@@ -23,7 +29,7 @@
   function saveRecs(list) {
     try {
       store.set(KEY_REC, JSON.stringify(list));
-      try { if (window.idbSet) window.idbSet(window.activePrefix() + ':' + KEY_REC, JSON.stringify(list)); } catch (e2) {}
+      try { if (window.idbSet) window.idbSet(G + ':' + KEY_REC, JSON.stringify(list)); } catch (e2) {}
     } catch (e) {}
   }
   function loadCfg() {
@@ -33,14 +39,14 @@
   function saveCfg(c) {
     try {
       store.set(KEY_CFG, JSON.stringify(c));
-      try { if (window.idbSet) window.idbSet(window.activePrefix() + ':' + KEY_CFG, JSON.stringify(c)); } catch (e2) {}
+      try { if (window.idbSet) window.idbSet(G + ':' + KEY_CFG, JSON.stringify(c)); } catch (e2) {}
     } catch (e) {}
   }
   function loadDaily() { try { return JSON.parse(store.get(KEY_DAILY) || '{}'); } catch (e) { return {}; } }
   function saveDaily(obj) {
     try {
       store.set(KEY_DAILY, JSON.stringify(obj));
-      try { if (window.idbSet) window.idbSet(window.activePrefix() + ':' + KEY_DAILY, JSON.stringify(obj)); } catch (e2) {}
+      try { if (window.idbSet) window.idbSet(G + ':' + KEY_DAILY, JSON.stringify(obj)); } catch (e2) {}
     } catch (e) {}
   }
   function loadNotify() {
@@ -50,23 +56,71 @@
   function saveNotify(n) {
     try {
       store.set(KEY_NOTIFY, JSON.stringify(n));
-      try { if (window.idbSet) window.idbSet(window.activePrefix() + ':' + KEY_NOTIFY, JSON.stringify(n)); } catch (e2) {}
+      try { if (window.idbSet) window.idbSet(G + ':' + KEY_NOTIFY, JSON.stringify(n)); } catch (e2) {}
     } catch (e) {}
   }
   // 启动时从 IDB 回填缺失键（导入备份/清空后不丢记录）
   (function restore() {
     try {
       if (!window.idbGet) return;
-      var myPrefix = window.activePrefix();
       var keys = [KEY_REC, KEY_CFG, KEY_DAILY, KEY_NOTIFY];
       keys.forEach(function (k) {
-        if (!store.get(k)) window.idbGet(myPrefix + ':' + k).then(function (v) {
-          if (window.activePrefix() !== myPrefix || !v) return;
+        if (!store.get(k)) window.idbGet(G + ':' + k).then(function (v) {
+          if (!v) return;
           try { store.set(k, typeof v === 'string' ? v : JSON.stringify(v)); } catch (e) {}
         });
       });
     } catch (e) {}
   })();
+
+  // ---- v3.10.x 全局共享迁移：各联系人桌面旧 period-* 合并到全局键 ----
+  // 等 mochi-restore-done（IDB 回填完）后跑，遍历所有联系人，把各桌面旧键
+  // 合并去重写入全局 xy-home-v2:period-*，然后清理旧键，设 period-migrated 标记（幂等）。
+  // records 用 normalize 合并重叠区间；daily 按日期并集合并属性；cfg/notify 取首个有效。
+  function migrateToGlobal() {
+    try {
+      if (store.get('period-migrated')) return;
+      if (!window.getContacts || !window.storeFor) return;
+      var contacts = window.getContacts();
+      var allRecs = [], allDaily = {}, mergedCfg = null, mergedNotify = null, hasAny = false;
+      contacts.forEach(function (c) {
+        try {
+          var s = window.storeFor(c.id);
+          var rRaw = s.get(KEY_REC);
+          if (rRaw) { var r = JSON.parse(rRaw); if (Array.isArray(r) && r.length) { allRecs = allRecs.concat(r); hasAny = true; } }
+          var dRaw = s.get(KEY_DAILY);
+          if (dRaw) { var d = JSON.parse(dRaw); if (d && typeof d === 'object') { Object.keys(d).forEach(function (k) { if (!allDaily[k]) allDaily[k] = {}; Object.assign(allDaily[k], d[k]); }); hasAny = true; } }
+          var cfRaw = s.get(KEY_CFG);
+          if (cfRaw && !mergedCfg) { var cf = JSON.parse(cfRaw); if (cf && cf.cycleLen) { mergedCfg = cf; hasAny = true; } }
+          var nfRaw = s.get(KEY_NOTIFY);
+          if (nfRaw && !mergedNotify) { var nf = JSON.parse(nfRaw); if (nf) { mergedNotify = nf; hasAny = true; } }
+        } catch (e) {}
+      });
+      if (hasAny) {
+        if (allRecs.length) store.set(KEY_REC, JSON.stringify(normalize(allRecs)));
+        if (Object.keys(allDaily).length) store.set(KEY_DAILY, JSON.stringify(allDaily));
+        if (mergedCfg) store.set(KEY_CFG, JSON.stringify(mergedCfg));
+        if (mergedNotify) store.set(KEY_NOTIFY, JSON.stringify(mergedNotify));
+      }
+      // 清理各桌面旧键（LS + IDB，storeFor 返回的 xyStore 三处同步）
+      contacts.forEach(function (c) {
+        try { var s = window.storeFor(c.id); s.remove(KEY_REC); s.remove(KEY_CFG); s.remove(KEY_DAILY); s.remove(KEY_NOTIFY); } catch (e) {}
+      });
+      store.set('period-migrated', '1');
+      // 重载内存变量 + 刷新视图
+      cfg = loadCfg(); recs = loadRecs(); daily = loadDaily(); notifyCfg = loadNotify();
+      if (!page.hidden) { try { render(); checkNotify(); } catch (e) {} }
+    } catch (e) {}
+  }
+  if (window.__mochiDataReady) { migrateToGlobal(); }
+  else {
+    try {
+      document.addEventListener('mochi-restore-done', function h() {
+        document.removeEventListener('mochi-restore-done', h);
+        migrateToGlobal();
+      });
+    } catch (e) { migrateToGlobal(); }
+  }
 
   var cfg = loadCfg();
   var recs = loadRecs();
@@ -842,10 +896,8 @@
     cogEl.parentNode.insertBefore(nb, cogEl);
   }
 
-  // 切换联系人：重载本桌面数据
-  document.addEventListener('contact-switched', function () {
-    try { cfg = loadCfg(); recs = loadRecs(); daily = loadDaily(); notifyCfg = loadNotify(); viewM = -1; if (!page.hidden) { render(); checkNotify(); } } catch (e) {}
-  });
+  // v3.10.x 全局共享：经期数据不随联系人切换重载（所有桌面共用全局键）。
+  // contact-switched 无需处理；进页面时 app click handler 已重读全局同一份数据。
 
   // 启动后稍延迟检查通知（经期预测/延迟预警）
   setTimeout(checkNotify, 3000);

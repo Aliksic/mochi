@@ -97,7 +97,8 @@
   // ===== 多联系人：发布者身份快照（owner=联系人cid，role=me/ta） =====
   function activeMe() {
     const s = window.activeStore();
-    return { role: 'me', owner: window.__activeCid || 'default', authorName: s.get('lbl-user') || '我', authorAv: s.get('avatar-user') || '' };
+    // v3.8.x：发布动态的身份 = 朋友圈独立身份（feed-user-name/feed-user-avatar），回退聊天身份
+    return { role: 'me', owner: window.__activeCid || 'default', authorName: s.get('feed-user-name') || s.get('lbl-user') || '我', authorAv: s.get('feed-user-avatar') || s.get('avatar-user') || '' };
   }
   function taAuthorOf(p) {
     // v3.7.x：旧数据缺 taName 快照时，回退按动态所属桌面取 TA 昵称/头像
@@ -110,6 +111,31 @@
     return { role: 'ta', owner: o, authorName: taFeedNameFor(o), authorAv: taAvFor(o) };
   }
   function stampAuthor(obj, a) { obj.role = a.role; obj.owner = a.owner; obj.authorName = a.authorName; obj.authorAv = a.authorAv; return obj; }
+  // v3.8.x：我在朋友圈的独立身份（可独立于聊天设置），按桌面独立存储，回退聊天身份
+  // feed-user-name / feed-user-avatar：朋友圈昵称/头像，未设置时回退该桌面聊天昵称/头像
+  function feedUserAvFor(owner) {
+    try {
+      const o = owner || 'default';
+      const st = window.storeFor(o);
+      let v = st.get('feed-user-avatar') || st.get('avatar-user') || '';
+      if (v && typeof v === 'string' && v.length > 500 * 1024) return '';
+      return v || '';
+    } catch (e) { return ''; }
+  }
+  function feedUserNameFor(owner) {
+    try {
+      const o = owner || 'default';
+      const st = window.storeFor(o);
+      return st.get('feed-user-name') || st.get('lbl-user') || '我';
+    } catch (e) { return '我'; }
+  }
+  function feedUserName() { return window.activeStore().get('feed-user-name') || store.get('feed-user-name') || myName(); }
+  function feedUserAv() {
+    const s = window.activeStore();
+    let v = s.get('feed-user-avatar') || store.get('feed-user-avatar') || myAv();
+    if (v && typeof v === 'string' && v.length > 500 * 1024) return '';
+    return v || '';
+  }
   function toast(msg) {
     let t = document.getElementById('cc-toast');
     if (!t) { t = document.createElement('div'); t.id = 'cc-toast'; document.body.appendChild(t); }
@@ -165,24 +191,41 @@
     }
     return list;
   }
+  // v3.8.x：写剥图快照（原实现仅主键 >200KB 时写）——Edge 丢 IDB 后，主键若也写 LS
+  //   失败（配额满/被清），剥图快照（更小，剥掉图片/头像 dataURL 只保文本）是最后兜底。
+  //   快照限制 ≤200KB，防被 idb.js 大键迁移搬走（迁移只认 LS 键不认命名空间）。
+  //   抽成独立函数：预就绪落盘时也复用，保证评论/动态在任何阶段都有持久兜底。
+  function persistSnap(arr) {
+    try {
+      const snap = JSON.stringify(arr.map(stripPostImg));
+      if (snap.length <= LS_BIG_LIMIT) localStorage.setItem('xy-home-v2:default:' + SNAP_KEY, snap);
+    } catch (e) {}
+  }
   function save(list) {
+    const arr = list || [];
+    const raw = JSON.stringify(arr);
     // v3.7.x：门槛——权威未从 IDB 读回前只暂存内存，绝不落盘（防 save([]) 覆盖 IDB 旧动态）
-    if (!feedDbReady) { try { feedPending = (list || []).slice(); } catch (e) {} return; }
-    const raw = JSON.stringify(list);
+    if (!feedDbReady) {
+      try { feedPending = arr.slice(); } catch (e) {}
+      // v3.8.x：权威未就绪（iOS/Edge 上 IndexedDB 打开读取慢或挂起时该窗口可达 15s）
+      //   刚发的评论/动态若只暂存内存 feedPending，一旦本应稍后落盘的异步合并或
+      //   保险丝失败，或用户在期间刷新页面/被系统回收，评论就永久丢了（用户反馈：
+      //   评论先显示后消失、刷新后也回不来）。这里对【非空】数据也立即走 store.set(LS/
+      //   IDB 大键分流 + 内存) 与快照落盘。只写非空，不会重演旧的「save([]) 用空值
+      //   覆盖 IDB 旧动态」问题；IDB 合并是并集，稍后回填也不会丢。
+      if (arr.length) {
+        try { store.set(KEY, raw); } catch (e) {}
+        persistSnap(arr);
+      }
+      return;
+    }
     store.set(KEY, raw);
     // 清空时同步清掉旧快照（防清空后又被陈旧快照"恢复"出已删除的动态）
-    if (!list.length) {
+    if (!arr.length) {
       try { localStorage.removeItem('xy-home-v2:default:' + SNAP_KEY); } catch (e) {}
       return;
     }
-    // v3.7.x：总是写剥图快照（原实现仅主键 >200KB 时写）——Edge 丢 IDB 后，主键若也写 LS
-    //   失败（配额满/被清），剥图快照（更小，剥掉图片/头像 dataURL 只保文本）是最后兜底。
-    //   快照限制 ≤200KB，防被 idb.js 大键迁移搬走（迁移只认 LS 键不认命名空间）。
-    //   主键 ≤200KB 时快照与主键近似（重复存一份换兜底机会，LS 5MB 配额下可接受）。
-    try {
-      const snap = JSON.stringify(list.map(stripPostImg));
-      if (snap.length <= LS_BIG_LIMIT) localStorage.setItem('xy-home-v2:default:' + SNAP_KEY, snap);
-    } catch (e) {}
+    persistSnap(arr);
   }
   function avHtml(data, cls) {
     const c = cls || 'feed-av';
@@ -346,12 +389,12 @@
   function commentsHtmlFor(p, name) {
     if (!p.comments || !p.comments.length) return '';
     return '<div class="feed-comments">' + p.comments.map((c, ci) => {
-      const cName = esc(c.authorName || ((c.role || c.by) === 'me' ? myName() : (name || taFeedName())));
+      const cName = esc(c.authorName || ((c.role || c.by) === 'me' ? feedUserName() : (name || taFeedName())));
       const cBody = inlineBody(c.content);
       let repliesHtml = '';
       if (c.replies && c.replies.length) {
         repliesHtml = '<div class="feed-replies">' + c.replies.map(r => {
-          const rName = esc(r.authorName || ((r.role || r.by) === 'me' ? myName() : (name || taFeedName())));
+          const rName = esc(r.authorName || ((r.role || r.by) === 'me' ? feedUserName() : (name || taFeedName())));
           const rBody = inlineBody(r.content);
           return '<div class="feed-reply"><b>' + rName + '</b> 回复 <b>' + cName + '</b>：' + rBody + '</div>';
         }).join('') + '</div>';
@@ -392,11 +435,11 @@
     return safeBg(store.get('feed-cover-bg'), 'feed-cover-bg', store);
   }
   function renderCover() {
-    const as = window.activeStore();
     const myAvEl = document.getElementById('feed-my-av');
     const myNameEl = document.getElementById('feed-my-name');
-    const myAvStr = as.get('avatar-user') || '';
-    const myNameStr = as.get('lbl-user') || '我';
+    // v3.8.x：封面显示我在朋友圈的独立身份（feed-user-*），回退聊天身份
+    const myAvStr = feedUserAv();
+    const myNameStr = feedUserName();
     if (myAvEl) myAvEl.innerHTML = myAvStr ? '<img src="' + attrEsc(myAvStr) + '" alt="">' : '';
     if (myNameEl) myNameEl.textContent = myNameStr;
     const cover = document.getElementById('feed-cover');
@@ -454,16 +497,17 @@
       ? posts.map(p => {
           const isMine = (p.role || p.by) === 'me';
           // v3.7.x：旧数据缺 authorName 快照时，昵称回退按动态所属桌面取
-          const author = p.authorName || (isMine ? myName() : taFeedNameFor(p.owner || 'default'));
+          // v3.8.x：'me' 动态作者/头像也读朋友圈独立身份（按动态所属桌面）
+          const author = p.authorName || (isMine ? feedUserNameFor(p.owner || 'default') : taFeedNameFor(p.owner || 'default'));
           // v3.7.x：跨桌面——TA 动态头像按动态所属桌面取，不再显示当前桌面的 TA 头像
-          const av = p.authorAv || (isMine ? myAv() : taAvFor(p.owner || 'default'));
+          const av = p.authorAv || (isMine ? feedUserAvFor(p.owner || 'default') : taAvFor(p.owner || 'default'));
           // 头像可点击 → 打开该联系人的全部朋友圈
           const avWrap = '<div class="feed-head-av" data-owner="' + esc(p.owner || '') + '" title="查看' + esc(author) + '的全部朋友圈">' + avHtml(av) + '</div>';
           // 点赞列表：显示"XX、XX 觉得很赞"
           const likes = p.likes && p.likes.length
             ? '<div class="feed-likes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;vertical-align:-2px;margin-right:5px"><path d="M12 21s-7.5-4.7-9.3-9A5.3 5.3 0 0112 6.4a5.3 5.3 0 019.3 5.6c-1.8 4.3-9.3 9-9.3 9z"/></svg>' + esc(p.likes.join('、')) + ' 觉得很赞</div>'
             : '';
-          const liked = p.likes && p.likes.some(l => l === myName());
+          const liked = p.likes && p.likes.some(l => l === feedUserName());
           return '<div class="feed-post" id="feed-post-' + p.id + '"><div class="feed-head">' + avWrap +
             '<div class="feed-who"><div class="feed-name">' + esc(author) + '</div><div class="feed-time">' + fmtDT(p.ts) + '</div></div>' +
             '<button class="feed-del" data-id="' + p.id + '" title="删除"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2"/><path d="M6 6l1 14a2 2 0 002 2h6a2 2 0 002-2l1-14"/></svg></button>' + '</div>' +
@@ -520,7 +564,8 @@
       if (!p) return;
       p.likes = p.likes || [];
       // 我的点赞存我的昵称（"我的昵称 觉得很赞"），TA 的点赞存 TA 昵称
-      const nm = myName();
+      // v3.8.x：用朋友圈独立昵称
+      const nm = feedUserName();
       const i = p.likes.indexOf(nm);
       const wasMe = i >= 0;
       if (wasMe) p.likes.splice(i, 1); else p.likes.push(nm);
@@ -1053,7 +1098,7 @@ if (comInput) comInput.addEventListener('keydown', (e) => { if (e.key === 'Enter
       coverFile.value = '';
     });
   }
-  // 点头像 → 更换（压缩 256，与桌面「我」头像一致，按当前桌面生效）
+  // 点头像 → 更换朋友圈头像（独立于聊天头像 v3.8.x，按当前桌面生效）
   if (coverAvEl) {
     coverAvEl.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -1072,9 +1117,9 @@ if (comInput) comInput.addEventListener('keydown', (e) => { if (e.key === 'Enter
               c.width = Math.max(1, Math.round(img.width * scale));
               c.height = Math.max(1, Math.round(img.height * scale));
               c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-              window.activeStore().set('avatar-user', c.toDataURL('image/jpeg', 0.85));
+              window.activeStore().set('feed-user-avatar', c.toDataURL('image/jpeg', 0.85));
               renderCover();
-              toast('头像已更新');
+              toast('朋友圈头像已更新');
             } catch (err) { toast('图片处理失败'); }
           };
           img.onerror = () => toast('图片读取失败');
@@ -1085,17 +1130,17 @@ if (comInput) comInput.addEventListener('keydown', (e) => { if (e.key === 'Enter
       input.click();
     });
   }
-  // 点昵称 → 修改（与桌面昵称一致，按当前桌面生效）
+  // 点昵称 → 修改朋友圈昵称（独立于聊天昵称 v3.8.x，按当前桌面生效）
   if (coverNameEl) {
     coverNameEl.addEventListener('click', (e) => {
       e.stopPropagation();
       if (window.openModal) {
-        window.openModal('修改昵称', window.activeStore().get('lbl-user') || '我', (v) => {
+        window.openModal('修改朋友圈昵称', window.activeStore().get('feed-user-name') || window.activeStore().get('lbl-user') || '我', (v) => {
           const val = (v || '').trim();
           if (val) {
-            window.activeStore().set('lbl-user', val);
+            window.activeStore().set('feed-user-name', val);
             renderCover();
-            toast('昵称已更新');
+            toast('朋友圈昵称已更新');
           }
         }, { maxlength: 12 });
       }
@@ -1343,13 +1388,14 @@ if (comInput) comInput.addEventListener('keydown', (e) => { if (e.key === 'Enter
     listEl.innerHTML = posts.length
       ? posts.map(p => {
           const isMine = (p.role || p.by) === 'me';
-          const author = p.authorName || (isMine ? myName() : taFeedNameFor(feedAllCid));
+          // v3.8.x：'me' 动态作者/头像也读朋友圈独立身份
+          const author = p.authorName || (isMine ? feedUserNameFor(feedAllCid) : taFeedNameFor(feedAllCid));
           // v3.7.x：头像按动态所属桌面取（该页动态 owner===feedAllCid，直接取该桌面）
-          const av = p.authorAv || (isMine ? myAv() : taAvFor(feedAllCid));
+          const av = p.authorAv || (isMine ? feedUserAvFor(feedAllCid) : taAvFor(feedAllCid));
           const likes = p.likes && p.likes.length
             ? '<div class="feed-likes" style="font-size:11px;color:var(--muted);padding:6px 2px">' + esc(p.likes.join('、')) + ' 觉得很赞</div>'
             : '';
-          const liked = p.likes && p.likes.some(l => l === myName());
+          const liked = p.likes && p.likes.some(l => l === feedUserName());
           // v3.7.x：与主列表一致的点赞/评论入口（原全部朋友圈页缺这两个按钮）
           return '<div class="feed-post" id="feed-post-' + p.id + '"><div class="feed-head">' + avHtml(av) +
             '<div class="feed-who"><div class="feed-name">' + esc(author) + '</div><div class="feed-time">' + fmtDT(p.ts) + '</div></div>' +
@@ -1466,6 +1512,136 @@ if (comInput) comInput.addEventListener('keydown', (e) => { if (e.key === 'Enter
             feedAllStore().set(key, val);
             renderFeedAllCover();
             toast('昵称已更新');
+          }
+        }, { maxlength: 12 });
+      }
+    });
+  }
+
+  // ================= 朋友圈好友列表（v3.8.x，每行设朋友圈昵称/头像，独立于聊天） =================
+  function safeAvStr(v) { if (v && typeof v === 'string' && v.length > 500 * 1024) return ''; return v || ''; }
+  function avatarIconSvg() {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20a8 8 0 0116 0"/></svg>';
+  }
+  // 选择并压缩头像（256），写入指定 key，成功后刷新好友列表
+  function pickAvatarAndSet(st, key) {
+    const input = document.createElement('input');
+    input.type = 'file'; input.accept = 'image/*';
+    input.onchange = () => {
+      const f = input.files && input.files[0];
+      if (!f) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          try {
+            const scale = Math.min(1, 256 / Math.max(img.width, img.height));
+            const c = document.createElement('canvas');
+            c.width = Math.max(1, Math.round(img.width * scale));
+            c.height = Math.max(1, Math.round(img.height * scale));
+            c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+            st.set(key, c.toDataURL('image/jpeg', 0.85));
+            renderFeedFriends();
+            toast('朋友圈头像已更新');
+          } catch (err) { toast('图片处理失败'); }
+        };
+        img.onerror = () => toast('图片读取失败');
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(f);
+    };
+    input.click();
+  }
+  // 好友列表单行：person = {id,isMe,deskName,deskAv,feedName,feedAv,nameKey,avKey}
+  function ffRow(person) {
+    const avHtml = person.deskAv ? '<img src="' + attrEsc(person.deskAv) + '" alt="">' : avatarIconSvg();
+    const who = person.isMe ? '我（当前桌面）' : ('桌面：' + person.id);
+    return '<div class="ff-row" data-id="' + esc(person.id) + '" data-is-me="' + (person.isMe ? '1' : '0') + '">' +
+      '<div class="ff-row-top">' +
+        '<div class="ff-desktop-av">' + avHtml + '</div>' +
+        '<div class="ff-id"><div class="ff-desktop-name">' + esc(person.deskName) + '</div><div class="ff-tag">' + esc(who) + '</div></div>' +
+      '</div>' +
+      '<div class="ff-edit">' +
+        '<button class="ff-pill" data-act="avatar" data-key="' + person.avKey + '">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>' +
+          '<span class="ff-cur">朋友圈头像：' + esc(person.feedAv ? '已设置' : '未设置') + '</span>' +
+        '</button>' +
+        '<button class="ff-pill" data-act="name" data-key="' + person.nameKey + '">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.1 2.1 0 013 3L12 15l-4 1 1-4z"/></svg>' +
+          '<span class="ff-cur">朋友圈昵称：' + esc(person.feedName || '未设置') + '</span>' +
+        '</button>' +
+      '</div>' +
+    '</div>';
+  }
+  function renderFeedFriends() {
+    const el = document.getElementById('feed-friends-list');
+    if (!el) return;
+    const contacts = (window.getContacts && window.getContacts()) || [{ id: 'default' }];
+    const as = window.activeStore();
+    const activeCid = window.__activeCid || 'default';
+    // 我（当前桌面）
+    let html = '<div class="ff-sec">我</div>' + ffRow({
+      id: activeCid, isMe: true,
+      deskName: as.get('lbl-user') || '我',
+      deskAv: as.get('avatar-user') || '',
+      feedName: as.get('feed-user-name'),
+      feedAv: safeAvStr(as.get('feed-user-avatar')),
+      nameKey: 'feed-user-name', avKey: 'feed-user-avatar'
+    });
+    // 联系人（每个联系人一个桌面，各桌面的 TA 朋友圈身份独立）
+    html += '<div class="ff-sec">联系人</div>';
+    contacts.forEach(ct => {
+      const cid = ct && ct.id ? ct.id : 'default';
+      const st = window.storeFor(cid);
+      html += ffRow({
+        id: cid, isMe: false,
+        deskName: st.get('lbl-partner') || (ct.name || cid),
+        deskAv: st.get('avatar-partner') || '',
+        feedName: st.get('feed-ta-name'),
+        feedAv: safeAvStr(st.get('feed-ta-avatar')),
+        nameKey: 'feed-ta-name', avKey: 'feed-ta-avatar'
+      });
+    });
+    el.innerHTML = html;
+  }
+  function openFeedFriends() {
+    const np = document.getElementById('feed-notice-panel'); if (np) np.hidden = true;
+    renderFeedFriends();
+    document.querySelectorAll('.page').forEach(p => p.hidden = true);
+    const fp = document.getElementById('page-feed-friends');
+    if (fp) fp.hidden = false;
+  }
+  const feedFriendsBtn = document.getElementById('feed-friends-btn');
+  if (feedFriendsBtn) feedFriendsBtn.addEventListener('click', (e) => { e.stopPropagation(); openFeedFriends(); });
+  const feedFriendsBack = document.getElementById('feed-friends-back');
+  if (feedFriendsBack) feedFriendsBack.addEventListener('click', () => {
+    document.querySelectorAll('.page').forEach(p => p.hidden = true);
+    const pageFeed = document.getElementById('page-feed');
+    if (pageFeed) pageFeed.hidden = false;
+    render();
+  });
+  const ffList = document.getElementById('feed-friends-list');
+  if (ffList) {
+    ffList.addEventListener('click', (e) => {
+      const pill = e.target.closest('.ff-pill');
+      if (!pill) return;
+      const row = pill.closest('.ff-row');
+      if (!row) return;
+      const cid = row.dataset.id;
+      const isMe = row.dataset.isMe === '1';
+      const st = isMe ? window.activeStore() : window.storeFor(cid);
+      const key = pill.dataset.key;
+      if (pill.dataset.act === 'avatar') {
+        pickAvatarAndSet(st, key);
+      } else if (window.openModal) {
+        const def = isMe ? (st.get('lbl-user') || '我') : (st.get('lbl-partner') || 'TA');
+        const cur = st.get(key) || def;
+        window.openModal('修改朋友圈昵称', cur, (v) => {
+          const val = (v || '').trim();
+          if (val) {
+            st.set(key, val);
+            renderFeedFriends();
+            toast('朋友圈昵称已更新');
           }
         }, { maxlength: 12 });
       }

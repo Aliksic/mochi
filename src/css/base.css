@@ -216,6 +216,50 @@ html { margin:0; padding:0; }
   }
 }
 
+/* v3.9.x：UA 桌面伪装兜底——mobile-adapt.js 检测触摸屏 + 窄 screen.width 判定
+   手机伪装桌面（Edge/Via「桌面站点」模式 UA 改桌面、layout viewport 980px，
+   @media(max-width:900px) 不命中）。改 viewport meta 后仍无法拉回 layout
+   viewport 时加 html.force-mobile 类，复刻上方 @media(max-width:900px) 块的
+   关键规则（.phone 满屏 + body padding + statusbar + 输入框 16px + touch-action
+   + 聊天贴底 + tap-highlight），保证手机物理屏上不显示桌面模拟器外壳。
+   选择器 html.force-mobile 前缀特异性高于 .phone 等，优先于桌面外壳样式生效。 */
+html.force-mobile, html.force-mobile body { padding:0; min-height:100vh; min-height:100svh; min-height:100dvh; }
+html.force-mobile .phone {
+  box-sizing:border-box;
+  width:100vw; height:100vh; height:100svh; height:100dvh;
+  border-radius:0; box-shadow:none;
+  padding:0 18px 18px;
+}
+html.force-mobile .statusbar {
+  padding-top:max(calc(14px + env(safe-area-inset-top, 0px)), 14px);
+  padding-bottom:10px;
+}
+html.force-mobile .phone input:not([readonly]):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]):not([type="hidden"]):not([type="date"]):not([type="time"]):not([type="datetime-local"]):not([type="month"]):not([type="week"]):not([type="button"]):not([type="submit"]):not([type="reset"]),
+html.force-mobile .phone textarea:not([readonly]),
+html.force-mobile .phone select,
+html.force-mobile .phone [contenteditable="true"] { font-size:16px; }
+html.force-mobile, html.force-mobile body, html.force-mobile * { touch-action: manipulation; }
+html.force-mobile, html.force-mobile body, html.force-mobile .phone, html.force-mobile img { -webkit-touch-callout:none; }
+html.force-mobile .tabbar { margin-bottom:env(safe-area-inset-bottom, 0px); }
+html.force-mobile .phone .page.full .chat-input-row {
+  margin: 0; border-radius: 0;
+  border-left: none; border-right: none; border-bottom: none;
+  padding-left: 12px; padding-right: 12px; padding-top: 10px;
+  padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+}
+html.force-mobile .phone .page.full .chat-head { padding-top: calc(10px + env(safe-area-inset-top, 0px)); }
+html.force-mobile .phone .page.full { padding-bottom: 0; }
+html.force-mobile #page-chat { background: var(--page-bg-grad); }
+html.force-mobile button, html.force-mobile .app, html.force-mobile .set-row,
+html.force-mobile .tab, html.force-mobile .msg, html.force-mobile .feed-post,
+html.force-mobile .mail-item { -webkit-tap-highlight-color:transparent; }
+/* v3.9.x：桌面卡片缩放在手机端禁用（同 home.css @media(max-width:900px) 块，
+   force-mobile 下该媒体查询不命中，此处兜底；选择器跨域引用 home.css 类名但不改其逻辑） */
+html.force-mobile .page-slide.desk-page,
+html.force-mobile .deco-widget, html.force-mobile .mini-card, html.force-mobile .checkin,
+html.force-mobile .weekend-box, html.force-mobile .music-widget,
+html.force-mobile .memo-card, html.force-mobile .mood-card, html.force-mobile .week-card { zoom:1; }
+
 /* v3.5.139：真全屏（Fullscreen API / PWA display_override 直启）时 .phone 铺满整个窗口——
    桌面 F11 等全屏由 fullscreen.js 加 .fs-active 类触发；PWA 安装直启走 display-mode 媒体查询。
    作用：壁纸（.phone 背景图）随之盖满全屏（电脑上包括模拟器两侧灰底），

@@ -336,7 +336,16 @@ try {
         else if (input) input.focus();
       }, 60);
     };
-    customBtn.addEventListener('click', () => colorInput.click());
+    // iOS Safari：<input type="color"> 处于 display:none（hidden）时 .click() 不会弹取色器，
+    // 点击【自定义颜色】前先临时取消隐藏并改成离屏（不占布局不挡触摸），
+    // 再在本帧内点击触发原生取色器；取完色/取消后恢复隐藏。
+    customBtn.addEventListener('click', function () {
+      if (!colorInput) return;
+      colorInput.hidden = false;
+      colorInput.style.cssText = 'position:fixed;left:-9999px;top:0;width:40px;height:30px;opacity:0;pointer-events:none;z-index:-1;';
+      void colorInput.offsetWidth; // 强制回流，确保 iOS 判定该元素已渲染
+      try { colorInput.click(); } catch (e) { try { colorInput.hidden = true; colorInput.style.cssText = ''; } catch (e2) {} }
+    });
     // v3.6.x：滑块拖动——实时更新值/预览块/onChange（图标圆角所见即所得）
     if (sliderRange) {
       sliderRange.addEventListener('input', () => {
@@ -352,6 +361,8 @@ try {
       Array.prototype.forEach.call(swatches.children, c => c.classList.remove('on'));
       customBtn.classList.add('on');
       picked = -2;
+      // 取完色后把离屏状态恢复隐藏（值已进 customVal，不影响后续）
+      try { colorInput.hidden = true; colorInput.style.cssText = ''; } catch (e) {}
     });
     function close() { mask.hidden = true; cb = null; }
     function fire() {
@@ -453,9 +464,16 @@ try {
   // v3.5.139：壁纸同时铺到 body——电脑桌面下 .phone 只是 390px 模拟器框，
   // 只设 .phone 的话两侧灰底还是默认背景，视觉上"壁纸没铺满页面"。
   // body 背景铺满整个窗口（桌面含两侧灰底；手机端 body 即全屏，与 .phone 同图无缝）。
+  // v3.10.x：手机端不再把壁纸铺到 body——窄屏下 .phone 已撑满整个视口，
+  // body 份被完全遮挡看不见，但 iOS Safari 仍会解码一份完整位图，壁纸内存翻倍，
+  // 正是"进入后卡顿 / 用一会儿灰屏回开屏"（WebContent 内存被杀重载）的主要诱因。
+  // 该 body 副本只对桌面模拟器窄框（.phone 只是 390px 小框、两侧露出褐色底）有意义，
+  // 与 base.css 的 @media (max-width:900px) 全屏切换保持一致：宽屏才铺 body。
+  const isDesktopFrame = () => !!(window.matchMedia && window.matchMedia('(min-width: 901px)').matches);
   const applyBodyBg = (data) => {
     try {
       const b = document.body;
+      if (!isDesktopFrame()) { b.style.backgroundImage = ''; return; }
       if (data) {
         b.style.backgroundImage = 'url("' + data + '")';
         b.style.backgroundSize = 'cover';
@@ -517,9 +535,13 @@ try {
     phoneEl.style.backgroundImage = css;
     phoneEl.style.backgroundSize = 'cover';
     phoneEl.style.backgroundPosition = 'center';
-    document.body.style.backgroundImage = css;
-    document.body.style.backgroundSize = 'cover';
-    document.body.style.backgroundPosition = 'center';
+    // v3.10.x：body 仅桌面窄框需要（铺两侧底色）；手机端 .phone 已全屏，body 版被遮挡，
+    // 跳过避免 iOS 冗余解码/存留
+    if (isDesktopFrame()) {
+      document.body.style.backgroundImage = css;
+      document.body.style.backgroundSize = 'cover';
+      document.body.style.backgroundPosition = 'center';
+    }
     if (bgHome) { bgHome.classList.add('has-bg'); bgHome.style.backgroundImage = 'none'; }
   };
   const getBgPresetName = () => store.get('phone-bg-preset') || '';
@@ -2141,7 +2163,9 @@ try {
   // （覆盖 desk-layout 对群聊/占卜图标的处置）。每桌面独立（group-chat-enabled，默认关闭）。
   function applyGroupChatMode() {
     try {
-      const en = store.get('group-chat-enabled') === '1';
+      // v3.10.x：group-chat-enabled 改全局存储（群聊是全局功能），读时回退旧版每桌面值完成迁移
+      let en = false;
+      try { const v = window.xyStore ? window.xyStore('xy-home-v2').get('group-chat-enabled') : null; if (v !== null && v !== undefined) en = v === '1'; else en = store.get('group-chat-enabled') === '1'; } catch (e) {}
       const mainGrid = document.querySelector('.app-grid[data-app="main"]');
       const pool = ensureWidgetPool();
       const chatBtn = document.querySelector('.app[data-app="chat"]');
@@ -2812,6 +2836,224 @@ try {
       const bar = document.getElementById('decor-bar');
       if (bar) bar.hidden = true;
     });
+  }
+
+  // ===== v3.x：桌面长按拖拽重排（移动模式，复用 decor-on + desk-layout/app-icon-order） =====
+  // 长按图标/组件 350ms → 进入移动模式（抖动可拖拽）→ 拖动跟手 → 释放重排 + 持久化
+  // 参考 chatcard.js pointer 拖拽；跨页拖到边缘 300ms 自动翻页（window.deskGo）
+  // 图标限本 app-grid 内换位（持久化 app-icon-order）；独立组件可跨页（持久化 desk-layout）
+  {
+    const phone = document.getElementById('page-phone');
+    const MOVE_DELAY = 350, EDGE = 44, EDGE_DELAY = 300;
+    let pressTimer = null, startX = 0, startY = 0, inMoveMode = false, dragging = false;
+    const enterMoveMode = () => {
+      if (inMoveMode) return;
+      inMoveMode = true;
+      enterDecor();
+      if (phone) phone.classList.add('desk-move-mode');
+      const span = document.querySelector('#decor-bar span');
+      if (span) span.textContent = '移动模式 · 拖动换位 · 点图标换图 · 点卡片设背景 · 完成退出';
+      if (navigator.vibrate) try { navigator.vibrate(20); } catch (e) {}
+    };
+    const resetMoveMode = () => {
+      inMoveMode = false;
+      dragging = false;
+      if (phone) phone.classList.remove('desk-move-mode');
+      // 退出时清理拖拽残留（拖拽中按返回键/点完成/切 tab）
+      document.querySelectorAll('.desk-drag-clone, .desk-edge-hint, .desk-drop-line').forEach(n => n.remove());
+      document.querySelectorAll('.desk-dragging').forEach(n => n.classList.remove('desk-dragging'));
+    };
+    document.addEventListener('decor-exited', resetMoveMode);
+    const _tabbar = document.querySelector('.tabbar');
+    if (_tabbar) _tabbar.addEventListener('click', resetMoveMode);
+
+    // 长按检测（事件委托在 pagesBox）
+    pagesBox.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0 && e.pointerType === 'mouse') return;
+      if (e.target.closest('.desk-lib, .desk-page-add, .decor-bar')) return;
+      const target = e.target.closest('[data-desk-widget], .app');
+      if (!target) return;
+      startX = e.clientX; startY = e.clientY;
+      const t = target;
+      pressTimer = setTimeout(() => {
+        pressTimer = null;
+        if (!inMoveMode) enterMoveMode();
+        startDeskDrag(e, t);
+      }, MOVE_DELAY);
+    });
+    pagesBox.addEventListener('pointermove', (e) => {
+      if (pressTimer && (Math.abs(e.clientX - startX) > 10 || Math.abs(e.clientY - startY) > 10)) {
+        clearTimeout(pressTimer); pressTimer = null;
+      }
+    });
+    const cancelPress = () => { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } };
+    pagesBox.addEventListener('pointerup', cancelPress);
+    pagesBox.addEventListener('pointercancel', cancelPress);
+
+    let dropLine = null;
+    const clearDropLine = () => { if (dropLine) { dropLine.remove(); dropLine = null; } };
+
+    function startDeskDrag(e, el) {
+      if (dragging) return; // 多指触摸守卫：拖拽中忽略第二指
+      dragging = true;
+      const rect = el.getBoundingClientRect();
+      const offsetX = e.clientX - rect.left, offsetY = e.clientY - rect.top;
+      const clone = el.cloneNode(true);
+      clone.classList.add('desk-drag-clone');
+      clone.classList.remove('desk-dragging');
+      clone.style.left = rect.left + 'px';
+      clone.style.top = rect.top + 'px';
+      clone.style.width = rect.width + 'px';
+      clone.style.height = rect.height + 'px';
+      document.body.appendChild(clone);
+      el.classList.add('desk-dragging');
+      // 捕获指针：长按后才加 touch-action:none 对当前触摸序列无效，浏览器仍会按 pan-x/pan-y
+      // 接管触摸→pointermove 被抢占/pointercancel→"一直抖动拖不动"。setPointerCapture 夺回
+      // 控制权，后续 pointermove 持续派发到 el 不被抢占。
+      let captured = false;
+      if (e.pointerId !== undefined && el.setPointerCapture) {
+        try { el.setPointerCapture(e.pointerId); captured = true; } catch (er) {}
+      }
+      if (navigator.vibrate) try { navigator.vibrate(12); } catch (er) {}
+      let dropInfo = null, edgeTimer = null, edgeDir = 0;
+      const edgeL = document.createElement('div'); edgeL.className = 'desk-edge-hint left';
+      const edgeR = document.createElement('div'); edgeR.className = 'desk-edge-hint right';
+      document.body.appendChild(edgeL); document.body.appendChild(edgeR);
+      const clearEdge = () => {
+        if (edgeTimer) { clearTimeout(edgeTimer); edgeTimer = null; }
+        edgeL.classList.remove('show'); edgeR.classList.remove('show'); edgeDir = 0;
+      };
+      const inGrid = !!el.closest('.app-grid');
+      const onMove = (ev) => {
+        ev.preventDefault();
+        clone.style.left = (ev.clientX - offsetX) + 'px';
+        clone.style.top = (ev.clientY - offsetY) + 'px';
+        if (!inGrid) {
+          const w = window.innerWidth;
+          const slides = pagesBox.querySelectorAll('.page-slide').length;
+          const cur = window.deskIdx ? window.deskIdx() : 0;
+          if (ev.clientX < EDGE && cur > 0) {
+            edgeL.classList.add('show');
+            if (edgeDir !== -1) { edgeDir = -1; if (edgeTimer) clearTimeout(edgeTimer); edgeTimer = setTimeout(() => { if (window.deskGo) window.deskGo(cur - 1); }, EDGE_DELAY); }
+          } else if (ev.clientX > w - EDGE && cur < slides - 1) {
+            edgeR.classList.add('show');
+            if (edgeDir !== 1) { edgeDir = 1; if (edgeTimer) clearTimeout(edgeTimer); edgeTimer = setTimeout(() => { if (window.deskGo) window.deskGo(cur + 1); }, EDGE_DELAY); }
+          } else { clearEdge(); }
+        }
+        dropInfo = computeDrop(el, ev.clientX, ev.clientY);
+        updateDropLine(dropInfo);
+      };
+      const onUp = () => {
+        document.removeEventListener('pointermove', onMove);
+        document.removeEventListener('pointerup', onUp);
+        document.removeEventListener('pointercancel', onUp);
+        if (captured && el.releasePointerCapture) { try { el.releasePointerCapture(e.pointerId); } catch (er) {} }
+        dragging = false;
+        clone.remove();
+        el.classList.remove('desk-dragging');
+        clearDropLine();
+        clearEdge();
+        edgeL.remove(); edgeR.remove();
+        if (dropInfo) doDrop(el, dropInfo);
+      };
+      document.addEventListener('pointermove', onMove, { passive: false });
+      document.addEventListener('pointerup', onUp);
+      document.addEventListener('pointercancel', onUp);
+    }
+
+    function computeDrop(dragged, clientX, clientY) {
+      const inGrid = !!dragged.closest('.app-grid');
+      if (inGrid) {
+        const grid = dragged.closest('.app-grid');
+        const apps = Array.prototype.slice.call(grid.querySelectorAll('.app'))
+          .filter(a => a !== dragged && a.style.display !== 'none' && !a.hidden);
+        for (const a of apps) {
+          const r = a.getBoundingClientRect();
+          if (clientX < r.left + r.width / 2 && clientY < r.top + r.height / 2) {
+            return { type: 'grid', grid: grid, ref: a, before: true };
+          }
+        }
+        for (const a of apps) {
+          const r = a.getBoundingClientRect();
+          if (clientY < r.bottom) return { type: 'grid', grid: grid, ref: a, before: false };
+        }
+        if (apps.length) return { type: 'grid', grid: grid, ref: apps[apps.length - 1], before: false };
+        return null;
+      }
+      const slides = Array.prototype.slice.call(pagesBox.querySelectorAll('.page-slide'));
+      // 用 deskIdx()（go() 立即更新）而非 scrollLeft——翻页中途 scrollLeft 在两页之间会算错页
+      let curIdx = window.deskIdx ? window.deskIdx() : 0;
+      curIdx = Math.max(0, Math.min(slides.length - 1, curIdx));
+      const slide = slides[curIdx];
+      if (!slide) return null;
+      const items = Array.prototype.slice.call(slide.querySelectorAll('[data-desk-widget]')).filter(n => {
+        if (n === dragged) return false;
+        const p = n.parentElement;
+        if (p === slide) return true;
+        if (p && p.closest('[data-desk-widget]')) return false;
+        return true;
+      });
+      for (const n of items) {
+        const r = n.getBoundingClientRect();
+        if (clientY < r.top + r.height / 2) return { type: 'slide', slide: slide, ref: n, before: true };
+      }
+      if (items.length) return { type: 'slide', slide: slide, ref: items[items.length - 1], before: false };
+      return { type: 'slide', slide: slide, ref: null, before: false };
+    }
+
+    function updateDropLine(info) {
+      if (!info || !info.ref) { clearDropLine(); return; }
+      const r = info.ref.getBoundingClientRect();
+      const cls = 'desk-drop-line ' + (info.type === 'grid' ? 'vert' : 'horiz');
+      if (!dropLine) { dropLine = document.createElement('div'); document.body.appendChild(dropLine); }
+      if (dropLine.className !== cls) dropLine.className = cls;
+      if (info.type === 'grid') {
+        dropLine.style.width = '';
+        dropLine.style.height = r.height + 'px';
+        dropLine.style.top = r.top + 'px';
+        dropLine.style.left = (info.before ? r.left : r.right) + 'px';
+      } else {
+        dropLine.style.height = '';
+        dropLine.style.width = r.width + 'px';
+        dropLine.style.left = r.left + 'px';
+        dropLine.style.top = (info.before ? r.top : r.bottom) + 'px';
+      }
+    }
+
+    function doDrop(dragged, info) {
+      if (info.type === 'grid') {
+        if (info.ref && dragged !== info.ref) {
+          if (info.before) info.grid.insertBefore(dragged, info.ref);
+          else info.grid.insertBefore(dragged, info.ref.nextSibling);
+        }
+        const order = Array.prototype.slice.call(info.grid.querySelectorAll('.app')).map(a => a.dataset.app);
+        store.set('app-icon-order-' + info.grid.dataset.app, JSON.stringify(order));
+      } else {
+        const slides = Array.prototype.slice.call(pagesBox.querySelectorAll('.page-slide'));
+        const targetIdx = slides.indexOf(info.slide);
+        if (dragged.parentNode !== info.slide) {
+          const addBtn = info.slide.querySelector('.desk-page-add');
+          if (addBtn) info.slide.insertBefore(dragged, addBtn);
+          else info.slide.appendChild(dragged);
+        }
+        if (info.ref && dragged !== info.ref) {
+          if (info.before) info.slide.insertBefore(dragged, info.ref);
+          else info.slide.insertBefore(dragged, info.ref.nextSibling);
+        }
+        try { saveDeskLayout(); } catch (e) {}
+        Array.prototype.slice.call(pagesBox.querySelectorAll('.page-slide')).forEach(s => { try { syncPageHint(s); } catch (e) {} });
+        if (targetIdx >= 0 && window.deskGo) window.deskGo(targetIdx); // 跨页后停在目标页
+      }
+      if (window.deskRebuild) window.deskRebuild();
+      if (navigator.vibrate) try { navigator.vibrate(10); } catch (e) {}
+    }
+
+    // 点空白退出移动模式
+    pagesBox.addEventListener('click', (e) => {
+      if (!inMoveMode) return;
+      if (e.target.closest('[data-desk-widget], .app, .desk-page-add, .desk-lib, .decor-bar')) return;
+      if (window.exitDecor) window.exitDecor();
+    }, true);
   }
 
   // 已摸鱼天数：按和 TA 打卡或聊天的自然日统计

@@ -3104,6 +3104,29 @@ window.openTCPanel = openTCPanel;
   attachIdbRestore(KEY2, tcLoad, tcMerge);
   attachIdbRestore(KEY3, tcuLoad, tcuMerge);
   attachIdbRestore(KEY4, trLoad, trMerge);
+  // v3.9.x：安卓键盘弹起（viewport interactive-widget=resizes-content）时 layout viewport
+  // 收缩 → page-ta-ask 重排 → .ta-add 内 ce-box 文字合成层停在旧位置，表现=输入文字与
+  // 输入框边框分离（框移新位、文字留旧位）。mobile-adapt.js 安卓未监听键盘做合成层同步，
+  // 此处补：监听 visualViewport.resize/window.resize，防抖后对可见 .ta-add 的 ce-box 强制
+  // reflow + toggle transform 触发合成层重新提交位置。仅 page-ta-ask 可见时生效，开销可控。
+  var _askCeReflowT = null;
+  function _reflowAskCeBoxes() {
+    var page = document.getElementById('page-ta-ask');
+    if (!page || page.hidden) return;
+    page.querySelectorAll('.ta-add .ce-box').forEach(function (b) {
+      if (b.offsetParent === null) return;
+      var prev = b.style.transform;
+      b.style.transform = 'translateZ(0)';
+      void b.offsetHeight;
+      b.style.transform = prev;
+    });
+  }
+  function _schedAskCeReflow() {
+    clearTimeout(_askCeReflowT);
+    _askCeReflowT = setTimeout(_reflowAskCeBoxes, 120);
+  }
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', _schedAskCeReflow);
+  window.addEventListener('resize', _schedAskCeReflow);
   // v3.7.x：多桌面——会话级触发/已问题目/链计数是模块级，残留会让新桌面继承旧桌面的状态
   document.addEventListener('contact-switched', function () {
     _tcSessionTriggered = false;

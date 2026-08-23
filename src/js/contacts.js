@@ -13,10 +13,14 @@
     // 桌面刷新后开关读不到全局值自动变关（用户反馈「后台保活/后台弹窗自己关了」）。
     'bg-keepalive', 'bg-notify',
     // v3.9.x：群聊全局设置——回复设置（reply-gc-*）与成员群聊形象（gc-profiles）、
-    // 群聊美化（gc-beauty）都是群聊（全局功能）的根命名空间键，绝不能迁移进
-    // default 桌面（否则切换桌面后设置读不到全局值、仿佛"丢失"）
-    'gc-profiles', 'gc-beauty',
-    '__last-backup', '__last-backup-remind', '__onboard-done', '__edge-backup-hint-done', '__auto-backup-snapshot'];
+    // 群聊美化（gc-beauty）、开启开关（group-chat-enabled）都是群聊（全局功能）的
+    // 根命名空间键，绝不能迁移进 default 桌面（否则切换桌面后设置读不到全局值、仿佛"丢失"）
+    'gc-profiles', 'gc-beauty', 'group-chat-enabled',
+    '__last-backup', '__last-backup-remind', '__onboard-done', '__edge-backup-hint-done', '__auto-backup-snapshot',
+    // v3.10.x：经期记录改全局共享（本人生理数据，所有联系人桌面共用一份），
+    // 键 xy-home-v2:period-* 走根命名空间，绝不能被 migrateLegacy 迁进 default 桌面
+    // （否则非 default 桌面读全局键读不到，经期记录"消失"）。period-migrated 为迁移幂等标记。
+    'period-records', 'period-cfg', 'period-daily', 'period-notify', 'period-migrated'];
   function isExcluded(k) {
     const r = k.slice(G.length + 1);
     if (EXCLUDE.indexOf(r) >= 0) return true;
@@ -207,7 +211,7 @@
     try {
       const def = window.xyStore(G + ':default');
       const root = window.xyStore(G);
-      ['bg-keepalive', 'bg-notify'].forEach(function (k) {
+      ['bg-keepalive', 'bg-notify', 'group-chat-enabled'].forEach(function (k) {
         const v = def.get(k);
         if (v !== null && v !== undefined && v !== '') {
           try { if (root.get(k) === null || root.get(k) === undefined) root.set(k, v); } catch (e) {}

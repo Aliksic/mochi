@@ -39,8 +39,9 @@
   function getMeEnabled() { const v = store.get('avatar-me-lib-enabled'); return v === null ? true : v === '1'; }
 
   // v3.9.x：头像库半框是聊天页内功能（聊天域）——昵称优先读聊天专用键 cs-lbl-*，
-  // 未设置回退桌面键 lbl-*。头像存储仍写桌面键（avatar-*），聊天头像在未单独设置时
-  // 由 chat.js fillAvatar 回退桌面头像，换头像后两边一致。
+  // 未设置回退桌面键 lbl-*。联系人头像换头像仍同时写桌面键 + 聊天键（setAvatarBoth）；
+  // "我的头像"换头像（TA 主动给我换 / 我手动点池图片）只写聊天专用键 cs-avatar-user，
+  // 桌面 deco-widget 的「我」头像（avatar-user）独立、不被头像互动改动。
   function chatName(chatKey, deskKey, fb) {
     let v = null;
     try { v = store.get(chatKey); } catch (e) {}
@@ -131,7 +132,8 @@
   function renderMeGrid() {
     if (!avMeGrid) return;
     const lib = getMeLib();
-    const current = store.get('avatar-user');
+    // v3.9.x：高亮当前生效的聊天头像（cs-avatar-user 未设时回退桌面头像 avatar-user）
+    const current = store.get('cs-avatar-user') || store.get('avatar-user');
     avMeGrid.innerHTML = '';
     if (avMeCount) avMeCount.textContent = lib.length;
     if (avMeEmpty) avMeEmpty.hidden = lib.length > 0;
@@ -287,8 +289,8 @@
   bindPoolClear(avClear, saveLib, () => { renderGrid(); syncVal(); }, '清空头像池？', '已清空头像池');
   bindPoolClear(avMeClear, saveMeLib, () => { renderMeGrid(); syncVal(); }, '清空我的头像池？', '已清空我的头像池');
 
-  // v3.8.x：头像互动半框切换头像时同时写桌面键和聊天专用键，保持桌面与聊天显示同步。
-  // 桌面 deco-widget / 聊天设置各自独立上传时只写自己那套；半框是"互动"场景，两边都换。
+  // v3.8.x：头像互动半框切换【联系人头像】时同时写桌面键和聊天专用键，保持桌面与聊天显示同步。
+  // v3.9.x：【我的头像】不再用此函数——TA 给我换 / 我手动换只写聊天键 cs-avatar-user，桌面头像独立。
   function setAvatarBoth(key, data) { store.set(key, data); store.set('cs-' + key, data); }
   function removeAvatarBoth(key) { store.remove(key); store.remove('cs-' + key); }
 
@@ -297,9 +299,11 @@
   // out=true 换我的头像（.msg-out .msg-av 是我的消息旁的头像）
   // data 为空时恢复默认人物图标
   // v3.6.x：img 用属性赋值（dataURL 含引号时拼 innerHTML 会逃逸注入 HTML）
-  function applyAvatarImg(data, out) {
+  function applyAvatarImg(data, out, chatOnly) {
     const chatAv = document.getElementById(out ? 'chat-user-av' : 'chat-partner-av');
-    const deskRing = document.querySelector(out ? '#avatar-user .ring' : '#avatar-partner .ring');
+    // v3.9.x：chatOnly=true 时只更新聊天域（顶部栏 + 消息气泡），不动桌面 deco-widget 头像——
+    // TA 主动给我换头像 / 我在头像互动半框手动换"我的头像"都属聊天域，桌面头像独立
+    const deskRing = chatOnly ? null : document.querySelector(out ? '#avatar-user .ring' : '#avatar-partner .ring');
     const applyTo = (el) => {
       if (!el) return;
       el.innerHTML = '';
@@ -376,12 +380,13 @@
     }
   }
 
-  // 手动点击我的头像库的图片：立即换成我的头像（聊天系统消息 + 主页记录）
+  // 手动点击我的头像库的图片：立即换成我的聊天头像（聊天系统消息 + 主页记录）
+  // v3.9.x：头像互动半框是聊天域功能，只换聊天专用头像 cs-avatar-user，桌面 deco-widget 头像不变
   function switchMyAvatarFromLib(data) {
     const lib = getMeLib();
     if (!data || lib.indexOf(data) === -1) return;
-    setAvatarBoth('avatar-user', data);
-    applyAvatarImg(data, true);
+    store.set('cs-avatar-user', data);
+    applyAvatarImg(data, true, true);
     renderMeGrid();
     toast('头像已更换');
     const myName = cUserName();
@@ -403,8 +408,9 @@
     const name = cPartnerName();
     window.openModal(name + ' 的换头像邀请', '', (v) => {
       if (v === '1') {
-        setAvatarBoth('avatar-user', data);
-        applyAvatarImg(data, true);
+        // v3.9.x：TA 给我换头像只换聊天专用头像 cs-avatar-user，桌面头像不变
+        store.set('cs-avatar-user', data);
+        applyAvatarImg(data, true, true);
         renderMeGrid();
         replyMeInvite(true, data);
       } else {
@@ -452,7 +458,8 @@
       const data = lib[idx];
       if (!data) return;
       // 随机到当前头像：跳过不换，也不推进计时（60 秒后再随机一次）
-      if (data === store.get('avatar-user')) return;
+      // v3.9.x：当前生效的是聊天专用头像 cs-avatar-user（未设时回退桌面头像 avatar-user）
+      if (data === (store.get('cs-avatar-user') || store.get('avatar-user'))) return;
       const invite = Math.random() * 100 < INVITE_PROB;
       if (invite) {
         // 已有其他弹窗打开时本次跳过（不推进计时，60 秒后再触发）
@@ -471,8 +478,9 @@
         }
       } else {
         // 直接换：换上 + 聊天显示"昵称 更换了你的头像" + 新头像图片
-        setAvatarBoth('avatar-user', data);
-        applyAvatarImg(data, true);
+        // v3.9.x：TA 给我换头像只换聊天专用头像 cs-avatar-user，桌面 deco-widget 头像不变
+        store.set('cs-avatar-user', data);
+        applyAvatarImg(data, true, true);
         renderMeGrid();
         const name = cPartnerName();
         const text = name + ' 更换了你的头像';

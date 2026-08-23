@@ -37,6 +37,7 @@
   .deco-widget, .mini-card, .checkin, .weekend-box, .music-widget,
   .memo-card, .mood-card, .week-card { zoom:1; }
 }
+
 /* 纪念日卡片（纯装饰：头像 + 爱心 + 纪念日；已禁止上传背景图）
    纯白纸底 + 虚线描边 + 上下装饰点，细节更精致 */
 .deco-widget {
@@ -530,3 +531,42 @@
 .desk-msg-name { font-size:12px; font-weight:700; color:var(--ink); }
 .desk-msg-text { font-size:12px; color:var(--muted); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .desk-msg[hidden] { display:none; }
+
+/* ===== v3.x：桌面移动模式（长按拖拽重排，复用装修模式 decor-on） ===== */
+/* 抖动：仅移动模式 + 非拖拽中项；rotate 不影响布局，退出即移除 */
+@keyframes desk-jiggle {
+  0%,100% { transform: rotate(-2.2deg); }
+  50% { transform: rotate(2.2deg); }
+}
+.desk-move-mode.decor-on .app:not(.desk-dragging),
+.desk-move-mode.decor-on [data-desk-widget]:not(.app-grid):not(.desk-dragging) {
+  animation: desk-jiggle .3s ease-in-out infinite;
+  will-change: transform;
+}
+/* 移动模式：允许纵向滚动查看超屏组件（pan-y），禁横滑误翻页；禁 iOS 长按系统菜单 */
+.desk-move-mode #desktop-pages,
+.desk-move-mode .page-slide { touch-action: pan-y; -webkit-touch-callout: none; }
+/* 拖拽中源项半透明占位 */
+.desk-dragging { opacity: .22 !important; animation: none !important; }
+/* 拖拽跟手 clone */
+.desk-drag-clone {
+  position: fixed; z-index: 9999; pointer-events: none;
+  box-shadow: 0 18px 44px rgba(0,0,0,.3); opacity: .97;
+  transform: scale(1.06); border-radius: inherit;
+}
+/* 落点指示线（纵向排列→水平线 / grid 内→竖线） */
+.desk-drop-line {
+  position: fixed; z-index: 9998; pointer-events: none;
+  background: #2b7fff; border-radius: 2px;
+  box-shadow: 0 0 10px rgba(43,127,255,.6);
+}
+.desk-drop-line.horiz { height: 3px; }
+.desk-drop-line.vert { width: 3px; }
+/* 跨页拖到边缘提示 */
+.desk-edge-hint {
+  position: fixed; top: 0; bottom: 0; width: 44px; z-index: 50;
+  pointer-events: none; opacity: 0; transition: opacity .2s;
+}
+.desk-edge-hint.show { opacity: 1; }
+.desk-edge-hint.left { left: 0; background: linear-gradient(90deg, rgba(43,127,255,.28), transparent); }
+.desk-edge-hint.right { right: 0; background: linear-gradient(270deg, rgba(43,127,255,.28), transparent); }

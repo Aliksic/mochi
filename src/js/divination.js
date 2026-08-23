@@ -428,6 +428,10 @@
       histReady = true;
       migrateLegacyHist();
       flushPendingHist();
+      // v3.9.x：IDB 回填完成后补渲染历史区——文件加载时 renderHistOnOpen 可能在
+      // idbRestore 完成前调用，此时 store.get('divine-history') 读到空（LS/memoryCache
+      // 均无），历史区渲染空白；恢复完成后必须补渲染一次，否则已有历史记录显示不出来
+      try { renderHistory(); } catch (e) {}
     });
   } catch (e) {}
   function fmtDT(ts) {

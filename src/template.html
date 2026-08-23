@@ -1483,7 +1483,7 @@
           <div class="gs-row"><span>拒接概率</span><div class="stepper" data-k="call-reject" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="call-reject-val" readonly><button class="stp-max">+</button></div></div>
           <div class="gs-row"><span>通话中挂断概率</span><div class="stepper" data-k="call-hangup" data-min="0" data-max="100" data-step="0.01"><button class="stp-min">−</button><input class="stp-val" id="call-hangup-val" readonly><button class="stp-max">+</button></div></div>
         </div>
-        <div class="sm-set-hint" style="padding:0 16px 8px">来电概率：对方回复消息和主动发消息时，触发打电话的概率。接听/忙线/拒接：我方呼出时对方的结果概率。挂断概率：通话中对方主动挂断（每 30 秒检查一次）。</div>
+        <div class="sm-set-hint" style="padding:0 16px 8px">来电概率：TA 主动来电的命中概率。TA 回复或主动发消息后、以及后台每 1-2 分钟定时检查时各掷一次，两次来电至少间隔 5 分钟（冷却）；设为 0 则从不主动来电。接听/忙线/拒接概率：我方呼出时按三者比例互斥分配对方结果（忙线先判，其次拒接，最后接听）。挂断概率：通话接通满 3 分钟后每 60 秒检查一次，命中则对方主动挂断。</div>
         <div class="gs-title">通话背景</div>
         <div class="set-group glass">
           <div class="set-row" id="call-bg-row">
@@ -2305,6 +2305,9 @@
         </span>
         <span class="ch-name">朋友圈</span>
         <span class="feed-head-actions">
+          <button class="ch-settings feed-head-btn" id="feed-friends-btn" title="朋友圈好友列表">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px"><circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0112 0"/><path d="M16 4.5a3 3 0 010 6"/><path d="M17 14a5 5 0 014 6"/></svg>
+          </button>
           <button class="ch-settings feed-head-btn" id="feed-notice-btn" title="通知提醒">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
             <span class="feed-badge" id="feed-badge" hidden></span>
@@ -2379,6 +2382,20 @@
           <div class="feed-cover-name" id="feed-all-name"></div>
         </div>
         <div id="feed-all-list"></div>
+      </div>
+    </div>
+
+    <!-- 朋友圈好友列表（v3.8.x：每行显示桌面昵称/桌面头像，可独立设置该人的朋友圈昵称/头像） -->
+    <div class="page" id="page-feed-friends" hidden>
+      <div class="chat-head">
+        <span class="ch-back" id="feed-friends-back">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        </span>
+        <span class="ch-name">朋友圈好友列表</span>
+      </div>
+      <div class="cal-scroll">
+        <div class="ff-help">在这里设置每个人在朋友圈里展示的头像与昵称，不影响聊天里的头像昵称。未设置时默认沿用聊天。</div>
+        <div id="feed-friends-list"></div>
       </div>
     </div>
 

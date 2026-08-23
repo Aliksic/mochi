@@ -174,10 +174,14 @@
 #dc-list .cc-item:active { transform: none; }
 /* v3.9.x：默认字卡页滚动修复——main 分类 4621 张字卡时，.card-list 的 flex:1 在
    .page(overflow-y:auto) 内因 min-height:auto 被内容撑开，列表自身 overflow 不触发，
-   改由 .page 整体滚动，触摸滑动困难且头部跟着滚走。改为 .page 锁死不滚（头部固定）+
-   #dc-list 加 min-height:0 让 flex:1 限制高度、列表内部滚动，字卡可顺畅上下滑 */
-#page-default-cards { overflow:hidden; }
-#dc-list { min-height:0; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; }
+   改由 .page 整体滚动，触摸滑动困难且头部跟着滚走。因此给列表加 min-height:0 让
+   flex:1 能限制高度、列表内部滚动。
+   v3.x 二次修复：顶部设置区（开关+两组设置+标签+搜索）本身很高，把 #dc-list 挤到
+   只有一两张卡、且 .page 被锁定 overflow:hidden 后更没法下滑。改为 .page 恢复整页
+   滚动（设置区过高时可滚下去）+ #dc-list 保底 min-height:40vh，确保列表始终有足够
+   高度顺畅下滑浏览字卡，而不会因头部占用被裁没/挤到一行。 */
+#page-default-cards { overflow-y:auto; }
+#dc-list { min-height:40vh; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; }
 .dc-toggle {
   display:flex; align-items:center; justify-content:space-between; gap:10px;
   border-radius:18px; padding:14px 16px; margin-bottom:14px; flex-shrink:0;
@@ -1385,6 +1389,10 @@
 .ta-add .ce-box {
   flex:1; min-width:0; border:1px solid rgba(0,0,0,.1); border-radius:10px;
   padding:9px 12px; font-size:13px; font-family:inherit; outline:none; background:#fff; color:var(--ink);
+  /* v3.9.x：键盘弹起 viewport resizes-content 收缩页面 → .ta-add 重排 → ce-box 文字合成层
+     停旧位（框移新位/文字留旧位）。will-change 提前提示合成层优化，配合 ta-ask.js resize
+     reflow 强制重新提交合成层位置，消除文字与边框分离 */
+  will-change: transform;
 }
 /* v3.7.x：安卓 Chrome 键盘弹出/单选题切换 textarea 显隐引发布局重排时，聚焦的
    ce-box 文本层偶发停在旧位置，表现=输入的文字显示在输入框下面（框向上移动了，
@@ -1992,6 +2000,42 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + env(safe-area-inset-bott
 .dc-h-time { font-size:10px; color:var(--muted); margin-top:3px; }
 
 /* ===== 朋友圈 ===== */
+/* v3.8.x：朋友圈好友列表（每行：桌面头像+桌面昵称，下两行改朋友圈昵称/头像） */
+.ff-help {
+  font-size:11px; color:var(--muted); line-height:1.6; padding:4px 2px 10px;
+}
+.ff-sec {
+  margin:2px 0 8px; padding:10px 14px; font-size:13px; font-weight:700; color:var(--ink);
+  background:rgba(255,255,255,.92); border:1px solid rgba(0,0,0,.08); border-radius:12px;
+}
+.ff-row {
+  background:rgba(255,255,255,.92); border:1px solid rgba(0,0,0,.08);
+  border-radius:14px; padding:12px 14px; margin-bottom:10px;
+}
+.ff-row-top { display:flex; align-items:center; gap:10px; }
+.ff-desktop-av {
+  width:46px; height:46px; border-radius:10px; overflow:hidden; flex-shrink:0;
+  background:#e9e9e9; display:flex; align-items:center; justify-content:center;
+}
+.ff-desktop-av img { width:100%; height:100%; object-fit:cover; display:block; }
+.ff-desktop-av svg { width:20px; height:20px; }
+.ff-id { flex:1; min-width:0; }
+.ff-desktop-name { font-size:14px; font-weight:700; color:var(--ink); }
+.ff-tag { font-size:10px; color:var(--muted); margin-top:2px; }
+.ff-edit { display:flex; gap:8px; margin-top:10px; }
+.ff-pill {
+  flex:1; display:flex; align-items:center; justify-content:center; gap:5px;
+  border:1px solid rgba(0,0,0,.12); border-radius:99px; padding:7px 6px;
+  font-size:11px; font-weight:600; color:var(--ink); background:#fff;
+  cursor:pointer; -webkit-tap-highlight-color:transparent; overflow:hidden; white-space:nowrap;
+}
+.ff-pill:active { background:rgba(0,0,0,.05); }
+.ff-pill svg { width:13px; height:13px; flex-shrink:0; }
+.ff-pill .ff-cur {
+  flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  font-weight:400; color:#666; font-size:11px;
+}
+.ff-mine-flag { color:var(--muted); font-size:10px; font-weight:400; }
 .feed-cover {
   position:relative; height:230px; border-radius:18px; margin-bottom:14px; flex-shrink:0;
   background:linear-gradient(135deg, #3a3a3a 0%, #1a1a1a 100%);

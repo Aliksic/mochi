@@ -230,6 +230,33 @@
       img.src = dataUrl;
     });
   }
+  // v3.9.x：修复红米/真我等 Android Edge 文件选择器不弹出——动态创建的 file input
+  // 必须先挂载到 DOM 再 click()（未挂载时部分 Android 浏览器会静默忽略合成点击）；
+  // 用 position:fixed 移出屏幕而非 display:none 最稳。参考 data-backup.js 导入修复。
+  function pickHead(cb) {
+    const input = document.createElement('input');
+    input.type = 'file'; input.accept = 'image/*';
+    input.style.position = 'fixed';
+    input.style.left = '-9999px';
+    input.style.top = '0';
+    input.style.opacity = '0';
+    document.body.appendChild(input);
+    input.onchange = () => {
+      const f = input.files && input.files[0];
+      try { input.remove(); } catch (e) {}
+      if (!f) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        compressHead(reader.result, 256).then(data => {
+          if (!data) { toast('图片过大或格式不支持，请换一张小图'); return; }
+          cb(data);
+        });
+      };
+      reader.readAsDataURL(f);
+    };
+    input.click();
+    setTimeout(() => { try { if (input.parentNode) input.remove(); } catch (e) {} }, 120000);
+  }
   function applyProfile() {
     const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
     // v3.9.x：聊天昵称未设置时显示「跟随桌面（xx）」，明确当前聊天页使用的昵称来源
@@ -279,23 +306,11 @@
   const csAp = row('cs-avatar-partner');
   if (csAp) {
     csAp.addEventListener('click', () => {
-      const input = document.createElement('input');
-      input.type = 'file'; input.accept = 'image/*';
-      input.onchange = () => {
-        const f = input.files && input.files[0];
-        if (!f) return;
-        const reader = new FileReader();
-        reader.onload = () => {
-          compressHead(reader.result, 256).then(data => {
-            if (!data) { toast('图片过大或格式不支持，请换一张小图'); return; }
-            store.set('cs-avatar-partner', data);
-            applyProfile();
-            try { if (window.refreshChatAvatars) window.refreshChatAvatars(); } catch (e) {}
-          });
-        };
-        reader.readAsDataURL(f);
-      };
-      input.click();
+      pickHead(data => {
+        store.set('cs-avatar-partner', data);
+        applyProfile();
+        try { if (window.refreshChatAvatars) window.refreshChatAvatars(); } catch (e) {}
+      });
     });
   }
   const csApRm = row('cs-avatar-partner-remove');
@@ -309,23 +324,11 @@
   const csAu = row('cs-avatar-user');
   if (csAu) {
     csAu.addEventListener('click', () => {
-      const input = document.createElement('input');
-      input.type = 'file'; input.accept = 'image/*';
-      input.onchange = () => {
-        const f = input.files && input.files[0];
-        if (!f) return;
-        const reader = new FileReader();
-        reader.onload = () => {
-          compressHead(reader.result, 256).then(data => {
-            if (!data) { toast('图片过大或格式不支持，请换一张小图'); return; }
-            store.set('cs-avatar-user', data);
-            applyProfile();
-            try { if (window.refreshChatAvatars) window.refreshChatAvatars(); } catch (e) {}
-          });
-        };
-        reader.readAsDataURL(f);
-      };
-      input.click();
+      pickHead(data => {
+        store.set('cs-avatar-user', data);
+        applyProfile();
+        try { if (window.refreshChatAvatars) window.refreshChatAvatars(); } catch (e) {}
+      });
     });
   }
   const csAuRm = row('cs-avatar-user-remove');
@@ -841,8 +844,15 @@
   // 关闭恢复原样。写回后广播 group-chat-mode-changed 事件，personalize.js 响应调整桌面图标。
   const sfGc = document.getElementById('sf-group-chat');
   if (sfGc) {
-    const gcGet = () => { try { return store.get('group-chat-enabled') === '1'; } catch (e) { return false; } };
-    const gcSet = (en) => { try { store.set('group-chat-enabled', en ? '1' : '0'); } catch (e) {} };
+    // v3.10.x：群聊是全局功能（消息/形象/回复设置均全局存根命名空间），开关也改为
+    // 全局存储——原按每桌面隔离（activeStore），切换到新桌面读不到该键→群聊按钮自己
+    // 消失（用户反馈"开启群聊后切换桌面没保存"）。读时回退旧版每桌面值完成迁移。
+    const GNS = 'xy-home-v2';
+    const gcGet = () => {
+      try { const v = window.xyStore ? window.xyStore(GNS).get('group-chat-enabled') : null; if (v !== null && v !== undefined) return v === '1'; } catch (e) {}
+      try { return store.get('group-chat-enabled') === '1'; } catch (e) { return false; }
+    };
+    const gcSet = (en) => { try { if (window.xyStore) window.xyStore(GNS).set('group-chat-enabled', en ? '1' : '0'); } catch (e) {} };
     const syncGc = () => { const v = gcGet(); if (v !== sfGc.checked) sfGc.checked = v; };
     syncGc();
     sfGc.addEventListener('change', () => {

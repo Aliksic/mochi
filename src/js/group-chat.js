@@ -395,7 +395,21 @@
     const quoteStr = rec.quote ? gcQuoteHtml(rec.quote) : '';
     // v3.9.x：按消息类型渲染（与聊天页 renderMsg 对齐：表情包小图/图片大图/语音可播放）
     if (rec.retracted) {
-      b.innerHTML = '<span style="opacity:.6;font-size:12px">' + (rec.side === 'out' ? '我' : memberName(rec.cid)) + '撤回了一条消息</span>';
+      // v3.10.x：补齐点击查看原消息（与聊天页 bindToggle 一致）——原仅显示提示文本，
+      // 无 cursor:pointer 且未绑 onclick，用户反馈"群聊无法点击查看撤回的消息"。
+      b.dataset.orig = rec.orig || rec.text;
+      const who = rec.side === 'out' ? '我' : memberName(rec.cid);
+      b.innerHTML = '<span style="opacity:.6;font-size:12px;cursor:pointer">' + who + '撤回了一条消息</span>';
+      b.style.cursor = 'pointer';
+      b.onclick = function () {
+        if (b.dataset.showing === '1') {
+          b.innerHTML = '<span style="opacity:.6;font-size:12px;cursor:pointer">' + who + '撤回了一条消息</span>';
+          b.dataset.showing = '0';
+        } else {
+          b.innerHTML = b.dataset.orig;
+          b.dataset.showing = '1';
+        }
+      };
     } else if (rec.type === 'sticker' || rec.type === 'image') {
       b.style.padding = '6px';
       b.style.background = '';

@@ -93,6 +93,8 @@
   width:9px; height:9px;
   color:#ff4d6a;
   pointer-events:none;
+  z-index:5;
+  display:block;
 }
 
 /* 头像列：头像 + 时间轴（时间在头像底下） */

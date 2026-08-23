@@ -1,8 +1,55 @@
-﻿# WORKLOG — 双方交接日志（AI-A / AI-B 共用）
+# WORKLOG — 双方交接日志（AI-A / AI-B 共用）
 
 两个 AI 不能直接对话，开工/完工时在这里各写一行，让对方打开仓库就知道当前状态。
 
 ## 规则
+
+### 2026-08-23（用户反馈：iOS 聊天页点击输入栏，输入法弹窗完全遮住输入栏，无法输入）
+- [AI-B·完成]（**已构建 verify 10/10，未提交**）：`src/js/mobile-adapt.js`（AI-B 域）+ 构建产物，含工作区其余未提交改动。
+  - 根因：iOS 键盘弹出适配（`syncIosKb`）判定「键盘已开」要 `_open = _focused && _kbStill`，其中 `_focused` 只查 `document.activeElement`。iOS Safari 对 contenteditable（聊天输入栏就是 `#chat-input` contenteditable div）聚焦/编辑时常返回 `activeElement === <body>`，`isTextEl` 判不出 → `_open` 恒为 false → `.phone` 从不收缩 → 键盘（iOS 是 overlay 模式，不收缩布局视口）直接盖住输入栏 =「完全遮住，无法输入」。
+  - 修复：新增 `_textFocused` 由 focusin/focusout 可靠上报（focusin 聚焦上报稳定），`syncIosKb` 用 `isTextEl(_textFocused) || isTextEl(document.activeElement)` 复合判断；focusin 时立即同步一次，让 `.phone` 尽早收缩到 vv 高度（输入栏停靠键盘上沿）。
+  - 验证：`node build.mjs` 后 verify 10/10。无头 Chrome 无法模拟 iOS 键盘 overlay，需 iOS Safari 真机确认：聊天页点输入栏打字，输入栏应在键盘上方可见、正常输入；键盘收起后 `.phone` 恢复全高。
+
+### 2026-08-23（用户反馈：vivo Y35 Edge 刷新/重开/熄屏后界面变小，需手动开全屏才恢复；且手机端被当成 PC 端布局）
+- [AI-B·完成]（**已构建 verify 10/10，未提交**）：`src/js/mobile-adapt.js` + `src/css/base.css`（均 AI-B 域）+ 构建产物。
+  - 根因：Edge 安卓「桌面站点」模式（或默认请求桌面 UA）把 UA 改成 Windows 桌面、layout viewport 拉到 980px → `matchMedia('(max-width:900px)')` 和 `@media(max-width:900px)` 都不命中 → mobile-adapt.js 直接 return 不启用手机适配，base.css 走桌面模拟器外壳（390px 小框居中 + 两侧灰底）= 用户看到的「变小 / PC 端布局」。手动开全屏加 `fs-css-active` 类让 `.phone` 满屏 → 恢复正常；熄屏/重开类没了 → 又变小。
+  - 修复：mobile-adapt.js 顶部加物理特征兜底——触摸屏（maxTouchPoints>0 或 ontouchstart）+ 窄 `screen.width`（<900，设备物理 CSS 宽度，不随 UA/layout viewport 变）→ 判定「手机伪装桌面」，强制 `isMobile=true`。命中后①改 viewport meta 把 layout viewport 拉回 device-width（让 CSS 媒体查询自然命中）；②rAF 后复查媒体查询仍未命中则给 html 加 `force-mobile` 类（meta 被忽略时的 CSS 保底）。base.css 复刻 `@media(max-width:900px)` 块1-6 关键规则到 `html.force-mobile` 选择器（.phone 满屏 + body padding + statusbar + 输入框 16px + touch-action + 聊天贴底 + tap-highlight + 桌面卡片 zoom:1），特异性高于桌面外壳样式。
+  - 效果：vivo Y35 永远走手机满屏布局，不需要手动开全屏才恢复正常大小，熄屏/重开也不再变小。全屏开关回归纯「隐藏状态栏」功能。真桌面 PC 无触摸屏不命中；平板 screen.width≥900 或走 isTablet 分支不命中。
+  - 验证：`node --check` + verify 10/10。无头 Chrome 无法模拟 Edge 桌面站点 UA 伪装，需 vivo Y35 Edge 真机确认：刷新/重开/熄屏后界面应直接满屏正常，无需手动开全屏。
+  - ⚠️ 构建时工作区有 AI-A 进行中改动（period.js/contacts.js 等），构建产物可能含对方半成品，提交前请 AI-A 确认已保存完整。
+
+### 2026-08-23（用户要求：经期记录每个桌面数据互通）
+- [AI-A·进行中]（**只改 src，未构建未提交，待构建者统一 build**）。涉及 `src/js/period.js`（AI-A 域）+ `src/js/contacts.js`（AI-B 域，仅 EXCLUDE 加 5 键，请 AI-B 知悉）。
+  - 需求：经期记录原按联系人命名空间隔离（`xy-home-v2:<cid>:period-*`），多桌面各自一份。改为所有联系人桌面共用一份全局数据（本人生理数据语义，参照 fish-log / garden-data-global 先例）。
+  - **period.js 改动**：① store 由 `activeStore()` 改为 `xyStore('xy-home-v2')` 全局根命名空间；② 4 处 IDB 双写前缀 `window.activePrefix()` 改为固定 `G='xy-home-v2'`；③ restore 块去掉 myPrefix 联系人切换守卫（前缀固定后不会变）；④ 新增 `migrateToGlobal()`：等 `mochi-restore-done`（IDB 回填完）后遍历 `getContacts()`，把各桌面旧 `period-records/cfg/daily/notify` 合并去重写入全局键（records 用 normalize 合并重叠区间、daily 按日期并集合并属性、cfg/notify 取首个有效），清理各桌面旧键，设 `period-migrated` 幂等标记；⑤ 删除 `contact-switched` 重载监听（全局共享后切换联系人无需重载）。
+  - **contacts.js 改动**（AI-B 域，仅 EXCLUDE 列表加 5 个字符串）：`period-records`/`period-cfg`/`period-daily`/`period-notify`/`period-migrated`。防 `migrateLegacy` 把全局根键误迁进 default 桌面导致非 default 桌面读到空。这是让全局共享正确工作的必要配套（fish-log 未加 EXCLUDE 靠迁移函数对抗误迁，但经期记录对数据可见性敏感，误迁后读到空会恐慌，故选加 EXCLUDE 彻底避免）。
+  - 数据迁移：旧各桌面 `xy-home-v2:<cid>:period-*` 在首次启动 `migrateToGlobal` 时合并到全局 `xy-home-v2:period-*` 并清理旧键，老用户历史不丢。备份导出/导入按 `xy-home-v2:` 前缀遍历，全局键正常包含。
+  - 验证：`node --check` 通过。待构建后 `npm run verify` + 多桌面真机确认（桌面A标记经期→切桌面B→经期记录可见且一致）。
+
+### 2026-08-23（用户反馈：iOS Safari 自定义聊天字卡里上传【表情包】/【图片】无反应）
+- [AI-B·完成]（**只改 src，未构建未提交，待构建者统一 build**）：`src/js/chatcard.js`（AI-A 域，仅此一次代修，请 AI-A 知悉）。
+  - 根因：iOS Safari 下**未挂到 DOM** 的 `<input type=file>.click()` 不弹选择器。chatcard.js 里两处文件选择（①批量导入弹窗中媒体分类上传表情包/图片/语音；②菜单「导入字卡」的 `pickImportFile` JSON 导入）都是 `createElement('input')` 后直接 `input.click()`，input 是 detached，iOS 无反应。
+  - 修复：新增公共函数 `pickFiles(accept, multiple, onFiles)`（挂到 body 再 click、onchange 回调、选中/取消后清理、允许重选同一文件），两处改用它。与已正常工作的 avatar-lib.js 头像上传（body.appendChild 后再点）同套路。
+  - 验证：`node --check src/js/chatcard.js` 通过。无头 Chrome 无法真机触发 iOS 文件选择器，需 iOS Safari 真机确认：自定义字卡 → 表情包/图片分类 → 右上按钮上传图片应正常弹选择器。
+
+### 2026-08-23（用户反馈：问问TA 管理页选单选题后输入问题/选项，键盘弹起时文字与输入框边框分离）
+- [AI-A·完成]（**已构建 verify 10/10，未提交**）：`src/js/ta-ask.js` + `src/css/chat-pages.css`（均 AI-A 域）+ 构建产物。
+  - 现象：安卓键盘弹起（viewport interactive-widget=resizes-content 收缩 layout viewport）→ page-ta-ask 重排 → .ta-add 内 ce-box 文字合成层停旧位，框移新位/文字留旧位，表现=「文字不在输入栏里」（问题框、选项框均复现，键盘弹起时才出现）。与 chat-pages.css:1393 注释 v3.7.x 曾修的 translateZ(0):focus 同类，但 :focus 合成层在键盘弹起重排瞬间仍错位。
+  - 修复（AI-A 域缓解）：① chat-pages.css `.ta-add .ce-box` 加 `will-change:transform` 常态提示合成层优化；② ta-ask.js IIFE 内监听 visualViewport.resize + window.resize，防抖 120ms，仅 page-ta-ask 可见时对 .ta-add .ce-box 强制 reflow（`void b.offsetHeight`）+ toggle `transform:translateZ(0)` 触发合成层重新提交位置。
+  - 无头 Chrome（390×844 mobile）验证：ce-box 创建/文字进入/布局均正常，未破坏；verify 10/10。安卓真机需用户在问问TA管理页→我的添加→单选题→输入实测确认。
+  - ⚠️ **需要 AI-B 处理（根因在 mobile-adapt.js 域）**：ce-box 键盘弹起合成层错位是**通用问题**（所有 ce-box 在安卓键盘弹起重排时都可能文字与框分离，不只 .ta-add）。本次只在 AI-A 域缓解了问问TA 的 .ta-add ce-box。建议 AI-B 在 mobile-adapt.js 的 ceConvert 里统一处理：安卓监听 visualViewport.resize/window.resize，键盘弹起后对所有可见 ce-box 强制 reflow + toggle transform 重新合成（可复用本次 ta-ask.js 的 _reflowAskCeBoxes 思路，提到 ceConvert 通用化）。另外 ceConvert 112 行 `box.className='ce-box '+(inp.className||'')` 会把 ce-ghost 类也复制到 ce-box（box 变 `ce-box ce-ghost`），当前因 `input.ce-ghost,textarea.ce-ghost` 选择器不匹配 div 无视觉副作用，但属代码异味，建议 AI-B 顺手修为 `box.className='ce-box '+((inp.className||'').replace(/(^|\s)ce-ghost(\s|$)/g,'$1').trim())`。
+
+### 2026-08-23（用户反馈：聊天默认字卡页无法下滑，一次只能看一张字卡）
+- [AI-A·完成]（**只改 src，未构建未提交，待构建者统一 build**）：`src/css/chat-pages.css`（AI-A 域）。
+  - 定位：`#page-default-cards` 顶部设置区（dc-toggle + 两组 set-group + 标签 + dc-tabs + dc-groups-bar + card-search）占用极高，把 `#dc-list` 挤到只够 1 张卡；且该页被 v3.9 的 `#page-default-cards{overflow:hidden}` 锁定，头部溢出即无法下滑。
+  - 修复：`#page-default-cards{overflow-y:auto}`（恢复整页滚动，头部过高时可滚下去）+ `#dc-list{min-height:40vh}`（列表保底高度，始终有足够空间内部下滑浏览字卡）。仅动本页专属选择器，不影响自定义字卡/情绪字卡等其他页面。
+
+### 2026-08-23（用户要求：朋友圈头像/昵称可独立于聊天设置 + 新增朋友圈好友列表）
+- [AI-A·完成]（**只改 src，未构建未提交，待 AI-B 统一 build**）。涉及 `src/js/feed.js`（AI-A 域）、`src/template.html`（feed 页+新增页）、`src/css/chat-pages.css`（好友列表样式）。
+  - 新增我的朋友圈独立身份键（按桌面存于桌面 store）：`feed-user-name` / `feed-user-avatar`，未设置时回退聊天昵称/头像（`lbl-user`/`avatar-user`）。主朋友圈封面/动态列表/点赞/发布/全部朋友圈页已统一改用该身份（含回退）。
+  - 联系人TA朋友圈身份沿用已有 `feed-ta-name` / `feed-ta-avatar`（按桌面独立）。
+  - 新增页面 `page-feed-friends`（朋友圈好友列表）：朋友圈顶部加好友按钮进入；列出「我（当前桌面）」+ 各联系人，每行显示**桌面头像+桌面昵称**，并有「朋友圈头像/朋友圈昵称」两个按钮可独立设置（me 写 activeStore 的 feed-user-*，联系人写 storeFor(cid) 的 feed-ta-*）。返回后刷新列表。
+  - 说明：沿用 `window.getContacts` / `window.storeFor` / `window.activeStore` / `window.openModal`；未新增构建顺序配置（仅改已有文件）。
 
 ### 2026-08-22（用户要求「排查避免再出现 iOS 闪屏」——全面排查高频事件 DOM 写入路径）
 - [AI-B·完成]（**已构建，未提交**）：`src/js/chat.js`（**AI-A 域越界代修 1 处**，请 AI-A 知悉）+ 构建产物。在 8fd0699（mobile-adapt 主输入栏三条闪屏路径已修）基础上排查其余高频事件 DOM 写入路径：

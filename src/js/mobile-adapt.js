@@ -27,6 +27,41 @@
   } catch (e) {}
   if (isTablet) { try { document.documentElement.classList.add('tablet'); } catch (e) {} }
 
+  // v3.9.x：UA 桌面伪装兜底——Edge/Via 等浏览器「桌面站点」模式把 UA 改成
+  // Windows 桌面、layout viewport 拉到 980px，上面 matchMedia('(max-width:900px)')
+  // 误判为桌面，走桌面模拟器外壳（390px 小框 + 两侧灰底），手机上显示「变小/
+  // PC 端布局」，且全屏开关成了「恢复正常大小」的开关（熄屏/重开又变小）。
+  // 物理特征兜底：触摸屏 + 窄 screen.width（设备物理 CSS 宽度，不随 UA/layout
+  // viewport 变）→ 实为手机伪装桌面，强制走手机布局。真桌面 PC 无触摸屏不命中；
+  // 平板 screen.width≥900 或已走 isTablet 分支不命中。
+  if (!isMobile && !isTablet) {
+    try {
+      const sw = screen.width || screen.availWidth || 0;
+      const touch = (navigator.maxTouchPoints || 0) > 0 || 'ontouchstart' in window;
+      if (sw > 0 && sw < 900 && touch) {
+        isMobile = true;
+        // 改 viewport meta 把 layout viewport 拉回设备宽度——让 CSS
+        // @media(max-width:900px) 自然命中，所有手机端规则生效。桌面站点
+        // 模式浏览器可能忽略 meta，下方加 force-mobile 类作 CSS 保底。
+        try {
+          document.querySelectorAll('meta[name="viewport"]').forEach(function (m) {
+            m.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content');
+          });
+        } catch (e) {}
+        // 等一帧看媒体查询是否命中，未命中则加 force-mobile 类
+        //（base.css 复刻 @media(max-width:900px) 关键规则作保底）
+        try {
+          requestAnimationFrame(function () {
+            try {
+              if (!(window.matchMedia && window.matchMedia('(max-width: 900px)').matches)) {
+                document.documentElement.classList.add('force-mobile');
+              }
+            } catch (e) {}
+          });
+        } catch (e) {}
+      }
+    } catch (e) {}
+  }
   // 手机窄屏或平板都启用本文件适配（桌面模拟器外壳不受影响）
   if (!isMobile && !isTablet) return;
 
@@ -425,6 +460,12 @@
       var _kbActive = false;
       var _pinUntil = 0; // v3.7.x：键盘开合动画窗口，窗口内才 pinScrollTop
       var _noKbH = _vv ? _vv.height : window.innerHeight;
+      // v3.10.x：当前聚焦的文本元素（focusin/focusout 可靠上报）。iOS Safari 在
+      // contenteditable（聊天输入栏就是 contenteditable div）聚焦/编辑时常返回
+      // document.activeElement === <body>，isTextEl 判不出来 → 下方 _open 恒为 false
+      // → .phone 永不收缩 → 键盘盖住输入栏完全无法输入。focusin 事件聚焦上报可靠，
+      // 用它记录目标元素；用 activeElement 复合判断兜底。
+      var _textFocused = null;
       // v3.6.x：键盘弹出期间把页面滚动钉在顶部——iOS Safari 键盘弹出时会自动把页面
       // 滚动到聚焦的输入框（聊天输入栏在 .phone 底部），而 .phone 已按 visualViewport
       // 收缩到键盘上沿，此时 window 再滚动会把 .phone 整体上移，其下方露出 body 灰色
@@ -451,7 +492,9 @@
       }
       function syncIosKb() {
         if (!_vv || !_phone) return;
-        var _focused = isTextEl(document.activeElement);
+        // activeElement + focusin 记录的 _textFocused 复合判断——iOS contenteditable
+        // 聚焦时 activeElement 常是 <body>，只看它会把键盘误判为「未聚焦」→ 不收缩
+        var _focused = isTextEl(_textFocused) || isTextEl(document.activeElement);
         var _h = _vv.height;
         // 键盘是否仍开——按可视高度判定，不依赖焦点。
         //   点击字卡/按钮时焦点短暂离开输入框但键盘未必收，靠焦点判断会误 restore
@@ -526,11 +569,16 @@
         _vv.addEventListener('resize', syncIosKb);
         _vv.addEventListener('scroll', onIosKbScroll);
       }
-      document.addEventListener('focusin', function () {
+      document.addEventListener('focusin', function (e) {
+        try { if (isTextEl(e.target)) _textFocused = e.target; } catch (e2) {}
+        // v3.10.x：立即同步一次——键盘弹出动画期间 vv.height 开始明显收缩，
+        // 尽早收缩 .phone，避免头 300ms 输入栏还在键盘下面（视觉"被盖住"）
+        try { syncIosKb(); } catch (e3) {}
         setTimeout(syncIosKb, 250);
         setTimeout(syncIosKb, 450);
       });
-      document.addEventListener('focusout', function () {
+      document.addEventListener('focusout', function (e) {
+        try { if (e.target === _textFocused) _textFocused = null; } catch (e2) {}
         setTimeout(syncIosKb, 250);
         setTimeout(syncIosKb, 450);
         // 输入框失焦即键盘收起：不依赖 vv resize（iOS 程序化失焦/滑动收起常漏事件），
