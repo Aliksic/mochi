@@ -827,10 +827,10 @@ background:#111; color:#fff; cursor:pointer; font-family:inherit; flex-shrink:0;
 .desk-anniv .da-label { font-size:11px; color:var(--muted,#888); }
 .desk-anniv .da-days { font-size:26px; font-weight:700; color:var(--ink,#111); margin:2px 0; }
 .desk-anniv .da-name { font-size:12px; color:var(--muted,#666); }
-.desk-period { padding:14px 16px; text-align:center; cursor:pointer; }
-.desk-period .dpd-label { font-size:11px; color:#e85a8f; }
-.desk-period .dpd-days { font-size:26px; font-weight:700; color:#e85a8f; margin:2px 0; }
-.desk-period .dpd-sub { font-size:12px; color:var(--muted,#666); }
+.desk-period { padding:18px 18px; text-align:center; cursor:pointer; white-space:nowrap; }
+.desk-period .dpd-label { font-size:13px; color:#e85a8f; }
+.desk-period .dpd-days { font-size:34px; font-weight:700; color:#e85a8f; margin:4px 0; line-height:1.1; }
+.desk-period .dpd-sub { font-size:13px; color:var(--muted,#666); }
 .desk-image-widget {
 position:relative; margin:10px 0; border-radius:var(--desk-card-radius,20px);
 overflow:hidden; cursor:pointer; background:rgba(0,0,0,.04);
@@ -2775,9 +2775,12 @@ font-size:12px; color:var(--ink); cursor:pointer; -webkit-tap-highlight-color:tr
 .period-day-pop .dp-temp, .period-day-pop .dp-hour {
 width:100%; padding:9px 10px; border:1px solid #eee; border-radius:10px; font-size:14px; box-sizing:border-box;
 }
-.period-day-pop .dp-mood-row { display:flex; align-items:center; gap:10px; }
-.period-day-pop .dp-mood { flex:1; }
-.period-day-pop .dp-mood-val { font-size:14px; font-weight:700; color:#e85a8f; min-width:18px; text-align:center; }
+.period-day-pop .dp-mood-row { display:flex; gap:7px; }
+.period-day-pop .dp-mood {
+flex:1; padding:8px 0; border:1px solid #eee; border-radius:10px; background:#fff;
+font-size:13px; color:var(--ink); cursor:pointer; -webkit-tap-highlight-color:transparent;
+}
+.period-day-pop .dp-mood.on { background:#e8f5e9; border-color:#4caf50; color:#2e7d32; font-weight:700; }
 .period-day-pop .dp-note { width:100%; min-height:60px; padding:9px 10px; border:1px solid #eee; border-radius:10px; font-size:13px; resize:vertical; box-sizing:border-box; font-family:inherit; }
 .period-day-pop .dp-toggle {
 padding:8px 18px; border-radius:14px; border:1px solid #eee; background:#fff; font-size:13px; cursor:pointer;
@@ -4392,92 +4395,96 @@ border-radius:12px;
 .tp-send-btn, .ss-send-btn { display:block; margin:10px auto 0; font-size:12px; color:var(--ink-soft,#888); background:none; border:1px solid rgba(0,0,0,.12); border-radius:20px; padding:4px 12px; }
 .msg-gift { align-self: center; width: 100%; display: flex; justify-content: center; margin: 6px 0; }
 .msg-gift-card {
-width: min(280px, 84vw); padding: 0 0 14px; border-radius: 20px;
-background: linear-gradient(160deg, #fff0f0 0%, #ffe0e0 45%, #fccfcf 100%);
-border: 1px solid rgba(250, 81, 81, 0.18);
-box-shadow: 0 4px 20px rgba(250, 81, 81, 0.14), 0 1px 3px rgba(0, 0, 0, 0.04);
+width: min(280px, 84vw); padding: 0 0 14px; border-radius: 22px;
+background: linear-gradient(160deg, #faf9fc 0%, #f2eef9 50%, #e4dcf2 100%);
+border: 1px solid rgba(139, 122, 200, 0.2);
+box-shadow: 0 6px 24px rgba(109, 91, 176, 0.12), 0 1px 3px rgba(0, 0, 0, 0.03);
 text-align: center; overflow: hidden;
 }
-.msg-gift-bar { height: 4px; background: linear-gradient(90deg, #ff8a8a, #fa5151, #ff8a8a); }
-.msg-gift-emoji { font-size: 44px; line-height: 1; margin: 14px 0 6px; }
-.msg-gift-name { font-size: 16px; font-weight: 700; color: #b03030; }
-.msg-gift-price { font-size: 12px; color: #c06060; margin-top: 2px; }
-.msg-gift-divider { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 8px 14px; color: #d88; }
-.msg-gift-divider span { flex: 1; height: 1px; background: linear-gradient(90deg, transparent, rgba(250, 81, 81, 0.3), transparent); }
-.msg-gift-wish { font-size: 13px; color: #9a4040; padding: 0 16px; line-height: 1.5; word-break: break-word; }
-.msg-gift-foot { font-size: 11px; color: #b06060; margin-top: 10px; }
-.gift-balance { text-align: center; font-size: 12px; color: #888; padding: 8px 16px 0; }
-.gift-cats { display: flex; gap: 6px; padding: 10px 14px 6px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-.gift-cat { flex-shrink: 0; padding: 5px 12px; border-radius: 99px; background: rgba(0, 0, 0, 0.05); color: #666; font-size: 13px; border: none; cursor: pointer; }
-.gift-cat.sel { background: #fa5151; color: #fff; }
-.gift-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 6px 14px 16px; }
-.gift-item { position: relative; background: #fff; border: 1px solid rgba(0, 0, 0, 0.08); border-radius: 14px; padding: 10px 4px 8px; text-align: center; cursor: pointer; transition: transform 0.12s; }
-.gift-item:active { transform: scale(0.96); }
-.gift-item-emoji { font-size: 28px; line-height: 1; }
-.gift-item-name { font-size: 12px; color: #333; margin-top: 4px; }
-.gift-item-price { font-size: 11px; color: #fa5151; margin-top: 2px; }
-.gift-item.manage { background: #fff5f5; }
-.gift-item-del { position: absolute; top: 4px; right: 6px; width: 18px; height: 18px; line-height: 18px; border-radius: 50%; background: rgba(250, 81, 81, 0.85); color: #fff; font-size: 11px; cursor: pointer; }
-.gift-empty { grid-column: 1 / -1; text-align: center; color: #aaa; padding: 30px 0; font-size: 13px; }
-.market-body { padding: 14px 14px 80px; max-width: 540px; margin: 0 auto; }
-.market-balance { text-align: center; font-size: 13px; color: #fa5151; padding: 6px 0 10px; font-weight: 600; }
-.market-cats { display: flex; gap: 6px; padding: 4px 0 10px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-.market-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-.market-grid .gift-item { padding: 12px 4px 10px; }
-.market-grid .gift-item-emoji { font-size: 32px; }
-.market-foot { display: flex; gap: 10px; justify-content: center; margin-top: 18px; }
-.market-tool { padding: 9px 20px; border-radius: 99px; background: #fff; border: 1px solid rgba(250, 81, 81, 0.3); color: #fa5151; font-size: 13px; cursor: pointer; }
-.market-tool:active { background: #fff0f0; }
-.giftbox-tabs { display: flex; gap: 8px; padding: 12px 14px 4px; max-width: 540px; margin: 0 auto; }
-.gb-tab { flex: 1; padding: 8px 0; border-radius: 99px; background: rgba(0, 0, 0, 0.05); color: #666; border: none; font-size: 14px; cursor: pointer; }
-.gb-tab.sel { background: #fa5151; color: #fff; }
-.giftbox-stat { text-align: center; font-size: 12px; color: #999; padding: 4px 14px 8px; }
-.giftbox-scroll { padding: 0 14px 80px; max-width: 540px; margin: 0 auto; }
-.giftbox-card { display: flex; align-items: center; gap: 12px; background: #fff; border: 1px solid rgba(0, 0, 0, 0.07); border-radius: 14px; padding: 12px; margin-bottom: 10px; cursor: pointer; transition: transform 0.12s; }
+.msg-gift-bar { height: 4px; background: linear-gradient(90deg, #b8a4e0, #8b7ac8, #b8a4e0); }
+.msg-gift-emoji { font-size: 46px; line-height: 1; margin: 16px 0 6px; }
+.msg-gift-name { font-size: 16px; font-weight: 700; color: #4a3d6b; letter-spacing: 0.5px; }
+.msg-gift-price { font-size: 12px; color: #8b7ac8; margin-top: 3px; font-weight: 600; }
+.msg-gift-divider { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 10px 16px; color: #c9b8e8; }
+.msg-gift-divider span { flex: 1; height: 1px; background: linear-gradient(90deg, transparent, rgba(139, 122, 200, 0.35), transparent); }
+.msg-gift-wish { font-size: 13px; color: #6d5bb0; padding: 0 18px; line-height: 1.55; word-break: break-word; }
+.msg-gift-foot { font-size: 11px; color: #9d8ec7; margin-top: 12px; letter-spacing: 0.3px; }
+.gift-cats { display: flex; gap: 7px; padding: 10px 14px 6px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.gift-cats::-webkit-scrollbar { display: none; }
+.gift-cat { flex-shrink: 0; padding: 6px 14px; border-radius: 99px; background: rgba(139, 122, 200, 0.08); color: #6d5bb0; font-size: 13px; border: none; cursor: pointer; transition: all 0.15s; }
+.gift-cat.sel { background: linear-gradient(135deg, #8b7ac8, #6d5bb0); color: #fff; box-shadow: 0 2px 8px rgba(109, 91, 176, 0.25); }
+.gift-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; padding: 6px 14px 16px; }
+.gift-item { position: relative; background: #fff; border: 1px solid rgba(139, 122, 200, 0.12); border-radius: 16px; padding: 12px 4px 10px; text-align: center; cursor: pointer; transition: transform 0.14s, box-shadow 0.14s; box-shadow: 0 1px 3px rgba(109, 91, 176, 0.05); }
+.gift-item:hover { box-shadow: 0 4px 14px rgba(109, 91, 176, 0.12); }
+.gift-item:active { transform: scale(0.95); }
+.gift-item-emoji { font-size: 30px; line-height: 1; }
+.gift-item-name { font-size: 12.5px; color: #4a3d6b; margin-top: 5px; font-weight: 500; }
+.gift-item-price { font-size: 11px; color: #8b7ac8; margin-top: 2px; font-weight: 600; }
+.gift-item.manage { background: #faf9fc; }
+.gift-item-del { position: absolute; top: 5px; right: 6px; width: 18px; height: 18px; line-height: 18px; border-radius: 50%; background: rgba(139, 122, 200, 0.85); color: #fff; font-size: 11px; cursor: pointer; }
+.gift-empty { grid-column: 1 / -1; text-align: center; color: #b0a8c8; padding: 40px 20px; font-size: 13px; line-height: 1.7; }
+.gift-balance { text-align: center; font-size: 12px; color: #8b7ac8; padding: 10px 16px 0; font-weight: 600; }
+.market-body { padding: 0 0 80px; max-width: 560px; margin: 0 auto; }
+.market-balance { margin: 14px 14px 4px; padding: 14px 18px; border-radius: 16px; background: linear-gradient(135deg, #8b7ac8, #6d5bb0); color: #fff; font-size: 13px; font-weight: 600; text-align: center; box-shadow: 0 4px 16px rgba(109, 91, 176, 0.22); letter-spacing: 0.3px; }
+.market-cats { padding: 12px 14px 6px; }
+.market-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 6px 14px 16px; }
+.market-grid .gift-item { padding: 14px 4px 12px; }
+.market-grid .gift-item-emoji { font-size: 34px; }
+.market-foot { display: flex; gap: 10px; justify-content: center; margin-top: 8px; padding: 0 14px; }
+.market-tool { padding: 10px 22px; border-radius: 99px; background: #fff; border: 1px solid rgba(139, 122, 200, 0.3); color: #6d5bb0; font-size: 13px; cursor: pointer; transition: all 0.15s; }
+.market-tool:active { background: #f5f3fa; transform: scale(0.97); }
+.giftbox-tabs { display: flex; gap: 8px; padding: 14px 14px 4px; max-width: 560px; margin: 0 auto; }
+.gb-tab { flex: 1; padding: 9px 0; border-radius: 99px; background: rgba(139, 122, 200, 0.08); color: #6d5bb0; border: none; font-size: 14px; cursor: pointer; transition: all 0.15s; font-weight: 500; }
+.gb-tab.sel { background: linear-gradient(135deg, #8b7ac8, #6d5bb0); color: #fff; box-shadow: 0 2px 8px rgba(109, 91, 176, 0.25); }
+.giftbox-stat { text-align: center; font-size: 12px; color: #9d8ec7; padding: 6px 14px 8px; }
+.giftbox-scroll { padding: 0 14px 80px; max-width: 560px; margin: 0 auto; }
+.giftbox-card { display: flex; align-items: center; gap: 13px; background: #fff; border: 1px solid rgba(139, 122, 200, 0.12); border-radius: 16px; padding: 13px; margin-bottom: 10px; cursor: pointer; transition: transform 0.14s, box-shadow 0.14s; box-shadow: 0 1px 3px rgba(109, 91, 176, 0.05); }
+.giftbox-card:hover { box-shadow: 0 4px 14px rgba(109, 91, 176, 0.12); }
 .giftbox-card:active { transform: scale(0.98); }
-.giftbox-emoji { font-size: 34px; flex-shrink: 0; width: 48px; text-align: center; }
+.giftbox-emoji { font-size: 32px; flex-shrink: 0; width: 52px; height: 52px; line-height: 52px; text-align: center; border-radius: 14px; background: linear-gradient(135deg, #f5f3fa, #ede8f5); }
 .giftbox-info { flex: 1; min-width: 0; }
-.giftbox-name { font-size: 15px; font-weight: 600; color: #333; }
-.giftbox-price { font-size: 12px; color: #fa5151; font-weight: 400; margin-left: 6px; }
-.giftbox-wish { font-size: 12px; color: #777; margin-top: 3px; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-.giftbox-meta { font-size: 11px; color: #aaa; margin-top: 4px; }
-.gb-preview { text-align: center; padding: 8px 0 14px; }
-.gb-emoji { font-size: 48px; line-height: 1; }
-.gb-name { font-size: 18px; font-weight: 700; color: #333; margin-top: 6px; }
-.gb-price { font-size: 14px; color: #fa5151; margin-top: 2px; }
-.gb-desc { font-size: 13px; color: #888; margin-top: 8px; padding: 0 8px; line-height: 1.5; }
-.gb-side-row { display: flex; gap: 8px; margin: 14px 0; }
-.gb-side { flex: 1; padding: 9px 0; border-radius: 99px; background: rgba(0, 0, 0, 0.05); color: #666; border: 1px solid transparent; font-size: 14px; cursor: pointer; }
-.gb-side.sel { background: #fa5151; color: #fff; border-color: #fa5151; }
-.gb-wish-row { margin-bottom: 14px; }
-.gb-wish-label { font-size: 13px; color: #666; margin-bottom: 6px; }
-.gb-wish { width: 100%; min-height: 60px; padding: 9px 12px; border-radius: 12px; border: 1px solid rgba(0, 0, 0, 0.12); background: #fff; font-size: 14px; resize: none; box-sizing: border-box; font-family: inherit; }
-.gb-wish[readonly] { background: #fff8f8; color: #9a4040; }
-.gb-wish-hint { font-size: 11px; color: #b08080; margin-top: 5px; }
+.giftbox-name { font-size: 15px; font-weight: 600; color: #4a3d6b; }
+.giftbox-price { font-size: 12px; color: #8b7ac8; font-weight: 600; margin-left: 7px; }
+.giftbox-wish { font-size: 12.5px; color: #7a6f9a; margin-top: 4px; line-height: 1.45; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.giftbox-meta { font-size: 11px; color: #b0a8c8; margin-top: 5px; }
+.gb-preview { text-align: center; padding: 10px 0 16px; }
+.gb-emoji { font-size: 52px; line-height: 1; }
+.gb-name { font-size: 19px; font-weight: 700; color: #4a3d6b; margin-top: 8px; letter-spacing: 0.5px; }
+.gb-price { font-size: 14px; color: #8b7ac8; margin-top: 3px; font-weight: 600; }
+.gb-desc { font-size: 13px; color: #9d8ec7; margin-top: 10px; padding: 0 8px; line-height: 1.55; }
+.gb-wish-row { margin: 16px 0; }
+.gb-wish-label { font-size: 13px; color: #6d5bb0; margin-bottom: 7px; font-weight: 500; }
+.gb-wish { width: 100%; min-height: 64px; padding: 10px 13px; border-radius: 13px; border: 1px solid rgba(139, 122, 200, 0.2); background: #faf9fc; font-size: 14px; resize: none; box-sizing: border-box; font-family: inherit; color: #4a3d6b; transition: border 0.15s; }
+.gb-wish:focus { border-color: #8b7ac8; outline: none; }
 .gb-actions { display: flex; gap: 10px; }
-.gb-cancel, .gb-ok { flex: 1; padding: 11px 0; border-radius: 12px; border: none; font-size: 15px; cursor: pointer; }
-.gb-cancel { background: rgba(0, 0, 0, 0.06); color: #666; }
-.gb-ok { background: #fa5151; color: #fff; }
+.gb-cancel, .gb-ok { flex: 1; padding: 12px 0; border-radius: 13px; border: none; font-size: 15px; cursor: pointer; transition: all 0.15s; font-weight: 500; }
+.gb-cancel { background: rgba(139, 122, 200, 0.1); color: #6d5bb0; }
+.gb-ok { background: linear-gradient(135deg, #8b7ac8, #6d5bb0); color: #fff; box-shadow: 0 3px 12px rgba(109, 91, 176, 0.25); }
+.gb-ok:active { transform: scale(0.97); }
 .gm-form { padding: 4px 0; }
-.gm-row { margin-bottom: 12px; }
-.gm-row label { display: block; font-size: 13px; color: #666; margin-bottom: 5px; }
-.gm-input { width: 100%; padding: 9px 12px; border-radius: 10px; border: 1px solid rgba(0, 0, 0, 0.12); background: #fff; font-size: 14px; box-sizing: border-box; font-family: inherit; }
-.gm-input[minheight], textarea.gm-input { min-height: 50px; resize: none; }
-.gb-detail { text-align: center; padding: 16px 0; }
-.gb-detail-emoji { font-size: 56px; line-height: 1; }
-.gb-detail-name { font-size: 20px; font-weight: 700; color: #333; margin-top: 8px; }
-.gb-detail-price { font-size: 15px; color: #fa5151; margin-top: 3px; }
-.gb-detail-wish { font-size: 14px; color: #777; margin: 12px 16px 0; line-height: 1.6; }
-.gb-detail-meta { font-size: 12px; color: #aaa; margin-top: 10px; }
+.gm-row { margin-bottom: 13px; }
+.gm-row label { display: block; font-size: 13px; color: #6d5bb0; margin-bottom: 6px; font-weight: 500; }
+.gm-input { width: 100%; padding: 10px 13px; border-radius: 11px; border: 1px solid rgba(139, 122, 200, 0.2); background: #faf9fc; font-size: 14px; box-sizing: border-box; font-family: inherit; color: #4a3d6b; }
+.gm-input:focus { border-color: #8b7ac8; outline: none; }
+textarea.gm-input { min-height: 52px; resize: none; }
+.gb-detail { text-align: center; padding: 18px 0; }
+.gb-detail-emoji { font-size: 60px; line-height: 1; }
+.gb-detail-name { font-size: 20px; font-weight: 700; color: #4a3d6b; margin-top: 10px; letter-spacing: 0.5px; }
+.gb-detail-price { font-size: 15px; color: #8b7ac8; margin-top: 4px; font-weight: 600; }
+.gb-detail-wish { font-size: 14px; color: #6d5bb0; margin: 14px 18px 0; line-height: 1.65; }
+.gb-detail-meta { font-size: 12px; color: #b0a8c8; margin-top: 12px; }
 @media (prefers-color-scheme: dark) {
-.msg-gift-card { background: linear-gradient(160deg, #3a2222 0%, #4a2828 45%, #5a3030 100%); border-color: rgba(250, 81, 81, 0.3); }
-.msg-gift-name, .gb-name, .gb-detail-name, .giftbox-name { color: #f0d8d8; }
-.msg-gift-wish, .gb-wish[readonly] { color: #d8a8a8; }
-.gift-item, .giftbox-card { background: #2a2a2a; border-color: rgba(255, 255, 255, 0.08); }
-.gift-item-name, .giftbox-wish, .gb-desc, .gb-wish-label, .gm-row label { color: #ccc; }
-.gift-cat, .gb-tab, .gb-side, .gb-cancel { background: rgba(255, 255, 255, 0.08); color: #ccc; }
-.gm-input, .gb-wish { background: #2a2a2a; border-color: rgba(255, 255, 255, 0.12); color: #eee; }
-.market-tool { background: #2a2a2a; }
+.msg-gift-card { background: linear-gradient(160deg, #2a2438 0%, #332b45 50%, #3d3352 100%); border-color: rgba(139, 122, 200, 0.3); }
+.msg-gift-name, .gb-name, .gb-detail-name, .giftbox-name { color: #e0d8f0; }
+.msg-gift-wish, .gb-detail-wish { color: #c9b8e8; }
+.msg-gift-foot, .giftbox-meta, .gb-detail-meta { color: #8a7fa8; }
+.gift-item, .giftbox-card { background: #2a2638; border-color: rgba(255, 255, 255, 0.08); }
+.gift-item-name, .giftbox-wish, .gb-desc, .gb-wish-label, .gm-row label { color: #c9c0d8; }
+.gift-cat, .gb-tab, .gb-cancel { background: rgba(255, 255, 255, 0.08); color: #c9b8e8; }
+.gm-input, .gb-wish { background: #2a2638; border-color: rgba(255, 255, 255, 0.12); color: #e0d8f0; }
+.market-tool { background: #2a2638; }
+.giftbox-emoji { background: linear-gradient(135deg, #2a2438, #332b45); }
+.gift-empty { color: #6a6280; }
 }
 .gc-from-name {
 font-size: 10px; color: #888; margin-bottom: 2px;
@@ -5511,7 +5518,7 @@ color: #c67800;
       </div>
       <div class="splash-dots"><i></i><i></i><i></i></div>
       <div class="splash-brand">小红书@言序（1842523578）</div>
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787496086532">Mochi 字卡传讯 v3.6.216 · 部署于 2026-08-23 22:41</div>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787496862164">Mochi 字卡传讯 v3.6.217 · 部署于 2026-08-23 22:54</div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
       <div class="splash-loading" id="splash-loading">正在加载数据…</div>
@@ -6363,7 +6370,7 @@ color: #c67800;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.6.216</div>
+      <div class="ver">Mochi 字卡传讯 v3.6.217</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -35861,8 +35868,6 @@ if (window.logFish) window.logFish();
 };
 function openBuyDialog(gift) {
 if (!window.openTCPanel) { toast('稍后再试'); return; }
-let side = 'out';
-let lastInWish = '';
 const html =
 '<div class="gb-preview">' +
 '<div class="gb-emoji">' + esc(gift.emoji) + '</div>' +
@@ -35870,37 +35875,21 @@ const html =
 '<div class="gb-price">¥' + Number(gift.price || 0).toFixed(2) + '</div>' +
 '<div class="gb-desc">' + esc(gift.wish || '送给你') + '</div>' +
 '</div>' +
-'<div class="gb-side-row">' +
-'<button class="gb-side sel" data-side="out" type="button">我送' + esc(partnerName()) + '</button>' +
-'<button class="gb-side" data-side="in" type="button">' + esc(partnerName()) + ' 送我</button>' +
-'</div>' +
 '<div class="gb-wish-row">' +
-'<div class="gb-wish-label">留言</div>' +
+'<div class="gb-wish-label">写给 ' + esc(partnerName()) + ' 的话</div>' +
 '<textarea class="gb-wish" id="gb-wish" placeholder="写一句心意" maxlength="60">' + esc(gift.wish || '') + '</textarea>' +
-'<div class="gb-wish-hint" id="gb-wish-hint"></div>' +
 '</div>' +
 '<div class="gb-actions">' +
 '<button class="gb-cancel" id="gb-cancel" type="button">取消</button>' +
-'<button class="gb-ok" id="gb-ok" type="button">送出</button>' +
+'<button class="gb-ok" id="gb-ok" type="button">送给 ' + esc(partnerName()) + '</button>' +
 '</div>';
 window.openTCPanel(esc(gift.emoji) + ' ' + esc(gift.name), html);
 const wishEl = document.getElementById('gb-wish');
-const hintEl = document.getElementById('gb-wish-hint');
-function setSide(s) {
-side = s;
-const btns = document.querySelectorAll('.gb-side');
-btns.forEach(function (b) { b.classList.toggle('sel', b.dataset.side === s); });
-if (wishEl) {
-if (s === 'in') { lastInWish = taWish(gift); wishEl.value = lastInWish; wishEl.readOnly = true; wishEl.placeholder = ''; if (hintEl) hintEl.textContent = partnerName() + ' 用字卡说的，意思不一定准'; }
-else { wishEl.readOnly = false; wishEl.placeholder = '写一句心意'; if (!wishEl.value || wishEl.value === lastInWish) wishEl.value = gift.wish || ''; if (hintEl) hintEl.textContent = ''; }
-}
-}
-document.querySelectorAll('.gb-side').forEach(function (b) { b.addEventListener('click', function () { setSide(b.dataset.side); }); });
 const okBtn = document.getElementById('gb-ok');
 const cancelBtn = document.getElementById('gb-cancel');
 if (okBtn) okBtn.addEventListener('click', function () {
 const wish = (wishEl && wishEl.value || '').trim() || (gift.wish || '心意');
-if (buyAndSend(gift, side, wish)) { closeTc(); toast(side === 'out' ? '已送出 ❤' : partnerName() + ' 已送出'); }
+if (buyAndSend(gift, 'out', wish)) { closeTc(); toast('已送出'); }
 });
 if (cancelBtn) cancelBtn.addEventListener('click', closeTc);
 }
@@ -36012,7 +36001,10 @@ const outList = list.filter(function (x) { return x.side === 'out'; });
 const stat = document.getElementById('giftbox-stat');
 if (stat) stat.textContent = '共收到 ' + inList.length + ' 件 · 送出 ' + outList.length + ' 件';
 const tabs = document.querySelectorAll('.gb-tab');
-tabs.forEach(function (t) { t.classList.toggle('sel', t.dataset.btab === boxTab); });
+tabs.forEach(function (t) {
+t.classList.toggle('sel', t.dataset.btab === boxTab);
+t.textContent = t.dataset.btab === 'in' ? (partnerName() + ' 送我的') : ('我送 ' + partnerName() + ' 的');
+});
 const show = (boxTab === 'in' ? inList : outList).slice().sort(function (a, b) { return b.tm - a.tm; });
 const el = document.getElementById('giftbox-list'); if (!el) return;
 el.innerHTML = show.map(function (it) {
@@ -36025,7 +36017,7 @@ return '<div class="giftbox-card" data-id="' + esc(it.id) + '">' +
 '<div class="giftbox-meta">' + esc(from) + ' · ' + esc(fmtTime(it.tm)) + '</div>' +
 '</div>' +
 '</div>';
-}).join('') || '<div class="gift-empty">' + (boxTab === 'in' ? '还没收到礼物' : '还没送出礼物') + '</div>';
+}).join('') || '<div class="gift-empty">' + (boxTab === 'in' ? (esc(partnerName()) + ' 还没送你礼物<br>他偶尔会主动从市集挑一份给你，耐心等等') : ('你还没送出礼物<br>去心意市集挑一份送给 ' + esc(partnerName()) + ' 吧')) + '</div>';
 el.querySelectorAll('.giftbox-card').forEach(function (c) {
 c.addEventListener('click', function () {
 const it = list.find(function (x) { return x.id === c.dataset.id; });
@@ -36602,6 +36594,9 @@ var SYMPTOMS = [
 var FLOWS = [
 { k: 'spot', label: '点滴' }, { k: 'light', label: '轻' }, { k: 'medium', label: '中' }, { k: 'heavy', label: '重' }
 ];
+var MOODS = [
+{ k: 1, label: '很差' }, { k: 2, label: '低落' }, { k: 3, label: '一般' }, { k: 4, label: '不错' }, { k: 5, label: '很好' }
+];
 var SYM_MAP = {}; SYMPTOMS.forEach(function (s) { SYM_MAP[s.k] = s.label; });
 function renderStats() {
 var scroll = document.querySelector('#page-period .period-scroll');
@@ -36778,6 +36773,9 @@ var symHtml = SYMPTOMS.map(function (s) {
 var on = info.symptoms && info.symptoms.indexOf(s.k) >= 0;
 return '<button class="dp-sym' + (on ? ' on' : '') + '" data-sym="' + s.k + '">' + s.label + '</button>';
 }).join('');
+var moodHtml = MOODS.map(function (m) {
+return '<button class="dp-mood' + (info.mood === m.k ? ' on' : '') + '" data-mood="' + m.k + '">' + m.label + '</button>';
+}).join('');
 pop.innerHTML =
 '<div class="dp-mask"></div>' +
 '<div class="dp-sheet">' +
@@ -36785,7 +36783,7 @@ pop.innerHTML =
 '<div class="dp-section"><div class="dp-label">经量</div><div class="dp-flow-row">' + flowHtml + '</div></div>' +
 '<div class="dp-section"><div class="dp-label">症状</div><div class="dp-sym-grid">' + symHtml + '</div></div>' +
 '<div class="dp-section"><div class="dp-label">基础体温（℃）</div><input class="dp-temp" type="number" step="0.1" min="35" max="38" value="' + (info.temp || '') + '" placeholder="36.5"/></div>' +
-'<div class="dp-section"><div class="dp-label">情绪（1-5）</div><div class="dp-mood-row"><input class="dp-mood" type="range" min="1" max="5" value="' + (info.mood || 3) + '"/><span class="dp-mood-val">' + (info.mood || 3) + '</span></div></div>' +
+'<div class="dp-section"><div class="dp-label">情绪</div><div class="dp-mood-row">' + moodHtml + '</div></div>' +
 '<div class="dp-section"><div class="dp-label">备注</div><textarea class="dp-note" placeholder="今天的感觉…">' + (info.note || '') + '</textarea></div>' +
 '<div class="dp-actions"><button class="dp-del">删除</button><button class="dp-save period-btn primary">保存</button></div>' +
 '</div>';
@@ -36793,9 +36791,6 @@ document.body.appendChild(pop);
 document.body.classList.add('scroll-lock');
 pop.querySelector('.dp-mask').addEventListener('click', closeDayPop);
 pop.querySelector('.dp-close').addEventListener('click', closeDayPop);
-var moodEl = pop.querySelector('.dp-mood');
-var moodVal = pop.querySelector('.dp-mood-val');
-moodEl.addEventListener('input', function () { moodVal.textContent = moodEl.value; });
 pop.querySelectorAll('.dp-flow').forEach(function (b) {
 b.addEventListener('click', function () {
 pop.querySelectorAll('.dp-flow').forEach(function (x) { x.classList.remove('on'); });
@@ -36805,12 +36800,19 @@ b.classList.add('on');
 pop.querySelectorAll('.dp-sym').forEach(function (b) {
 b.addEventListener('click', function () { b.classList.toggle('on'); });
 });
+pop.querySelectorAll('.dp-mood').forEach(function (b) {
+b.addEventListener('click', function () {
+pop.querySelectorAll('.dp-mood').forEach(function (x) { x.classList.remove('on'); });
+b.classList.add('on');
+});
+});
 pop.querySelector('.dp-save').addEventListener('click', function () {
 var flowBtn = pop.querySelector('.dp-flow.on');
+var moodBtn = pop.querySelector('.dp-mood.on');
 var syms = [];
 pop.querySelectorAll('.dp-sym.on').forEach(function (b) { syms.push(b.getAttribute('data-sym')); });
 var temp = parseFloat(pop.querySelector('.dp-temp').value);
-var mood = parseInt(pop.querySelector('.dp-mood').value, 10);
+var mood = moodBtn ? parseInt(moodBtn.getAttribute('data-mood'), 10) : 0;
 var note = pop.querySelector('.dp-note').value.trim();
 var obj = {};
 if (flowBtn) obj.flow = flowBtn.getAttribute('data-flow');

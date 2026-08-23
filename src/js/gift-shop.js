@@ -124,8 +124,6 @@
 
   function openBuyDialog(gift) {
     if (!window.openTCPanel) { toast('稍后再试'); return; }
-    let side = 'out';
-    let lastInWish = '';
     const html =
       '<div class="gb-preview">' +
         '<div class="gb-emoji">' + esc(gift.emoji) + '</div>' +
@@ -133,37 +131,21 @@
         '<div class="gb-price">¥' + Number(gift.price || 0).toFixed(2) + '</div>' +
         '<div class="gb-desc">' + esc(gift.wish || '送给你') + '</div>' +
       '</div>' +
-      '<div class="gb-side-row">' +
-        '<button class="gb-side sel" data-side="out" type="button">我送' + esc(partnerName()) + '</button>' +
-        '<button class="gb-side" data-side="in" type="button">' + esc(partnerName()) + ' 送我</button>' +
-      '</div>' +
       '<div class="gb-wish-row">' +
-        '<div class="gb-wish-label">留言</div>' +
+        '<div class="gb-wish-label">写给 ' + esc(partnerName()) + ' 的话</div>' +
         '<textarea class="gb-wish" id="gb-wish" placeholder="写一句心意" maxlength="60">' + esc(gift.wish || '') + '</textarea>' +
-        '<div class="gb-wish-hint" id="gb-wish-hint"></div>' +
       '</div>' +
       '<div class="gb-actions">' +
         '<button class="gb-cancel" id="gb-cancel" type="button">取消</button>' +
-        '<button class="gb-ok" id="gb-ok" type="button">送出</button>' +
+        '<button class="gb-ok" id="gb-ok" type="button">送给 ' + esc(partnerName()) + '</button>' +
       '</div>';
     window.openTCPanel(esc(gift.emoji) + ' ' + esc(gift.name), html);
     const wishEl = document.getElementById('gb-wish');
-    const hintEl = document.getElementById('gb-wish-hint');
-    function setSide(s) {
-      side = s;
-      const btns = document.querySelectorAll('.gb-side');
-      btns.forEach(function (b) { b.classList.toggle('sel', b.dataset.side === s); });
-      if (wishEl) {
-        if (s === 'in') { lastInWish = taWish(gift); wishEl.value = lastInWish; wishEl.readOnly = true; wishEl.placeholder = ''; if (hintEl) hintEl.textContent = partnerName() + ' 用字卡说的，意思不一定准'; }
-        else { wishEl.readOnly = false; wishEl.placeholder = '写一句心意'; if (!wishEl.value || wishEl.value === lastInWish) wishEl.value = gift.wish || ''; if (hintEl) hintEl.textContent = ''; }
-      }
-    }
-    document.querySelectorAll('.gb-side').forEach(function (b) { b.addEventListener('click', function () { setSide(b.dataset.side); }); });
     const okBtn = document.getElementById('gb-ok');
     const cancelBtn = document.getElementById('gb-cancel');
     if (okBtn) okBtn.addEventListener('click', function () {
       const wish = (wishEl && wishEl.value || '').trim() || (gift.wish || '心意');
-      if (buyAndSend(gift, side, wish)) { closeTc(); toast(side === 'out' ? '已送出 ❤' : partnerName() + ' 已送出'); }
+      if (buyAndSend(gift, 'out', wish)) { closeTc(); toast('已送出'); }
     });
     if (cancelBtn) cancelBtn.addEventListener('click', closeTc);
   }
@@ -279,7 +261,10 @@
     const stat = document.getElementById('giftbox-stat');
     if (stat) stat.textContent = '共收到 ' + inList.length + ' 件 · 送出 ' + outList.length + ' 件';
     const tabs = document.querySelectorAll('.gb-tab');
-    tabs.forEach(function (t) { t.classList.toggle('sel', t.dataset.btab === boxTab); });
+    tabs.forEach(function (t) {
+      t.classList.toggle('sel', t.dataset.btab === boxTab);
+      t.textContent = t.dataset.btab === 'in' ? (partnerName() + ' 送我的') : ('我送 ' + partnerName() + ' 的');
+    });
     const show = (boxTab === 'in' ? inList : outList).slice().sort(function (a, b) { return b.tm - a.tm; });
     const el = document.getElementById('giftbox-list'); if (!el) return;
     el.innerHTML = show.map(function (it) {
@@ -292,7 +277,7 @@
           '<div class="giftbox-meta">' + esc(from) + ' · ' + esc(fmtTime(it.tm)) + '</div>' +
         '</div>' +
       '</div>';
-    }).join('') || '<div class="gift-empty">' + (boxTab === 'in' ? '还没收到礼物' : '还没送出礼物') + '</div>';
+    }).join('') || '<div class="gift-empty">' + (boxTab === 'in' ? (esc(partnerName()) + ' 还没送你礼物<br>他偶尔会主动从市集挑一份给你，耐心等等') : ('你还没送出礼物<br>去心意市集挑一份送给 ' + esc(partnerName()) + ' 吧')) + '</div>';
     el.querySelectorAll('.giftbox-card').forEach(function (c) {
       c.addEventListener('click', function () {
         const it = list.find(function (x) { return x.id === c.dataset.id; });

@@ -753,9 +753,12 @@
 .period-day-pop .dp-temp, .period-day-pop .dp-hour {
   width:100%; padding:9px 10px; border:1px solid #eee; border-radius:10px; font-size:14px; box-sizing:border-box;
 }
-.period-day-pop .dp-mood-row { display:flex; align-items:center; gap:10px; }
-.period-day-pop .dp-mood { flex:1; }
-.period-day-pop .dp-mood-val { font-size:14px; font-weight:700; color:#e85a8f; min-width:18px; text-align:center; }
+.period-day-pop .dp-mood-row { display:flex; gap:7px; }
+.period-day-pop .dp-mood {
+  flex:1; padding:8px 0; border:1px solid #eee; border-radius:10px; background:#fff;
+  font-size:13px; color:var(--ink); cursor:pointer; -webkit-tap-highlight-color:transparent;
+}
+.period-day-pop .dp-mood.on { background:#e8f5e9; border-color:#4caf50; color:#2e7d32; font-weight:700; }
 .period-day-pop .dp-note { width:100%; min-height:60px; padding:9px 10px; border:1px solid #eee; border-radius:10px; font-size:13px; resize:vertical; box-sizing:border-box; font-family:inherit; }
 .period-day-pop .dp-toggle {
   padding:8px 18px; border-radius:14px; border:1px solid #eee; background:#fff; font-size:13px; cursor:pointer;

@@ -500,6 +500,9 @@
   var FLOWS = [
     { k: 'spot', label: '点滴' }, { k: 'light', label: '轻' }, { k: 'medium', label: '中' }, { k: 'heavy', label: '重' }
   ];
+  var MOODS = [
+    { k: 1, label: '很差' }, { k: 2, label: '低落' }, { k: 3, label: '一般' }, { k: 4, label: '不错' }, { k: 5, label: '很好' }
+  ];
   var SYM_MAP = {}; SYMPTOMS.forEach(function (s) { SYM_MAP[s.k] = s.label; });
 
   function renderStats() {
@@ -686,6 +689,9 @@
       var on = info.symptoms && info.symptoms.indexOf(s.k) >= 0;
       return '<button class="dp-sym' + (on ? ' on' : '') + '" data-sym="' + s.k + '">' + s.label + '</button>';
     }).join('');
+    var moodHtml = MOODS.map(function (m) {
+      return '<button class="dp-mood' + (info.mood === m.k ? ' on' : '') + '" data-mood="' + m.k + '">' + m.label + '</button>';
+    }).join('');
     pop.innerHTML =
       '<div class="dp-mask"></div>' +
       '<div class="dp-sheet">' +
@@ -693,7 +699,7 @@
         '<div class="dp-section"><div class="dp-label">经量</div><div class="dp-flow-row">' + flowHtml + '</div></div>' +
         '<div class="dp-section"><div class="dp-label">症状</div><div class="dp-sym-grid">' + symHtml + '</div></div>' +
         '<div class="dp-section"><div class="dp-label">基础体温（℃）</div><input class="dp-temp" type="number" step="0.1" min="35" max="38" value="' + (info.temp || '') + '" placeholder="36.5"/></div>' +
-        '<div class="dp-section"><div class="dp-label">情绪（1-5）</div><div class="dp-mood-row"><input class="dp-mood" type="range" min="1" max="5" value="' + (info.mood || 3) + '"/><span class="dp-mood-val">' + (info.mood || 3) + '</span></div></div>' +
+        '<div class="dp-section"><div class="dp-label">情绪</div><div class="dp-mood-row">' + moodHtml + '</div></div>' +
         '<div class="dp-section"><div class="dp-label">备注</div><textarea class="dp-note" placeholder="今天的感觉…">' + (info.note || '') + '</textarea></div>' +
         '<div class="dp-actions"><button class="dp-del">删除</button><button class="dp-save period-btn primary">保存</button></div>' +
       '</div>';
@@ -701,9 +707,6 @@
     document.body.classList.add('scroll-lock');
     pop.querySelector('.dp-mask').addEventListener('click', closeDayPop);
     pop.querySelector('.dp-close').addEventListener('click', closeDayPop);
-    var moodEl = pop.querySelector('.dp-mood');
-    var moodVal = pop.querySelector('.dp-mood-val');
-    moodEl.addEventListener('input', function () { moodVal.textContent = moodEl.value; });
     pop.querySelectorAll('.dp-flow').forEach(function (b) {
       b.addEventListener('click', function () {
         pop.querySelectorAll('.dp-flow').forEach(function (x) { x.classList.remove('on'); });
@@ -713,12 +716,19 @@
     pop.querySelectorAll('.dp-sym').forEach(function (b) {
       b.addEventListener('click', function () { b.classList.toggle('on'); });
     });
+    pop.querySelectorAll('.dp-mood').forEach(function (b) {
+      b.addEventListener('click', function () {
+        pop.querySelectorAll('.dp-mood').forEach(function (x) { x.classList.remove('on'); });
+        b.classList.add('on');
+      });
+    });
     pop.querySelector('.dp-save').addEventListener('click', function () {
       var flowBtn = pop.querySelector('.dp-flow.on');
+      var moodBtn = pop.querySelector('.dp-mood.on');
       var syms = [];
       pop.querySelectorAll('.dp-sym.on').forEach(function (b) { syms.push(b.getAttribute('data-sym')); });
       var temp = parseFloat(pop.querySelector('.dp-temp').value);
-      var mood = parseInt(pop.querySelector('.dp-mood').value, 10);
+      var mood = moodBtn ? parseInt(moodBtn.getAttribute('data-mood'), 10) : 0;
       var note = pop.querySelector('.dp-note').value.trim();
       var obj = {};
       if (flowBtn) obj.flow = flowBtn.getAttribute('data-flow');
