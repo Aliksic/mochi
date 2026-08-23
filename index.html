@@ -4889,6 +4889,7 @@ padding:10px 18px; font-size:13px; color:var(--muted);
 .garden-grid {
 display:grid; grid-template-columns:repeat(4, 1fr);
 gap:8px; padding:0 18px 14px;
+min-height:360px;
 }
 .garden-plot {
 aspect-ratio:1;
@@ -5288,7 +5289,7 @@ color: #c67800;
       </div>
       <div class="splash-dots"><i></i><i></i><i></i></div>
       <div class="splash-brand">小红书@言序（1842523578）</div>
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787482578735">Mochi 字卡传讯 v3.6.212 · 部署于 2026-08-23 18:56</div>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787483361478">Mochi 字卡传讯 v3.6.213 · 部署于 2026-08-23 19:09</div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
       <div class="splash-loading" id="splash-loading">正在加载数据…</div>
@@ -6134,7 +6135,7 @@ color: #c67800;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.6.212</div>
+      <div class="ver">Mochi 字卡传讯 v3.6.213</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -41259,6 +41260,13 @@ document.documentElement.classList.add('force-mobile');
 if (!isMobile && !isTablet) return;
 const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent)
 && !/android/i.test(navigator.userAgent) && !window.MSStream;
+if (isIOS) {
+try {
+document.querySelectorAll('meta[name="viewport"]').forEach(function (m) {
+m.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content');
+});
+} catch (e) {}
+}
 document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
 document.addEventListener('dblclick', function (e) { e.preventDefault(); });
 var ceInited = false;
@@ -41542,11 +41550,6 @@ if (!_vv || !_phone) return;
 var _focused = isTextEl(_textFocused) || isTextEl(document.activeElement);
 var _h = _vv.height;
 var _safeH = (_h > _noKbH * 0.3) ? _h : Math.round(_noKbH * 0.5);
-try {
-var _diag = document.getElementById('__iosKbDiag');
-if (!_diag) { _diag = document.createElement('div'); _diag.id = '__iosKbDiag'; _diag.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#fff;color:#f00;font:11px monospace;padding:2px 4px;pointer-events:none;white-space:pre;'; document.body.appendChild(_diag); }
-_diag.textContent = 'vv.h=' + Math.round(_h) + ' noKb=' + Math.round(_noKbH) + ' off=' + Math.round(_vv.offsetTop||0) + ' phone=' + (_phone.style.height||'') + ' foc=' + (_focused?1:0);
-} catch (e) {}
 var _kbStill = _h < _noKbH - 60;
 if (_kbActive && _focused && _kbStill && Date.now() > _pinUntil) {
 var _hs0 = _safeH + 'px';

@@ -70,6 +70,20 @@
   const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent)
     && !/android/i.test(navigator.userAgent) && !window.MSStream;
 
+  // v3.10.x：iOS 用 interactive-widget=resizes-content，安卓用 resizes-visual。
+  // template.html 默认 resizes-visual（安卓：visualViewport 收缩可检测键盘 + layout
+  // viewport 不变无白闪）。但 iOS Safari 在 resizes-visual 下 syncIosKb 收缩 .phone
+  // 异常（挤压不见），而 resizes-content 下 layout viewport 自动收缩、.phone 100dvh
+  // 跟着收缩、输入栏天然停靠键盘上方（0ab2c49 之前一直正常）。iOS Safari 收键盘
+  // 无安卓红米 K80 那种白闪，resizes-content 安全。此处 iOS 改写 viewport meta。
+  if (isIOS) {
+    try {
+      document.querySelectorAll('meta[name="viewport"]').forEach(function (m) {
+        m.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content');
+      });
+    } catch (e) {}
+  }
+
   // iOS Safari：禁止双指/捏合手势缩放（配合 viewport 锁定，双保险）
   document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
 
@@ -502,12 +516,7 @@
         // "所有页面挤压不见、输入栏跑到顶部、其他页面灰底露出"。_h 低于无键盘基准
         // 30% 时视为异常，用 50% 基准兜底（至少能显示内容、输入栏在键盘上方附近）。
         var _safeH = (_h > _noKbH * 0.3) ? _h : Math.round(_noKbH * 0.5);
-        // 临时诊断（确认 iOS visualViewport 实际值后删除）
-        try {
-          var _diag = document.getElementById('__iosKbDiag');
-          if (!_diag) { _diag = document.createElement('div'); _diag.id = '__iosKbDiag'; _diag.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#fff;color:#f00;font:11px monospace;padding:2px 4px;pointer-events:none;white-space:pre;'; document.body.appendChild(_diag); }
-          _diag.textContent = 'vv.h=' + Math.round(_h) + ' noKb=' + Math.round(_noKbH) + ' off=' + Math.round(_vv.offsetTop||0) + ' phone=' + (_phone.style.height||'') + ' foc=' + (_focused?1:0);
-        } catch (e) {}
+
         // 键盘是否仍开——按可视高度判定，不依赖焦点。
         //   点击字卡/按钮时焦点短暂离开输入框但键盘未必收，靠焦点判断会误 restore
         //   → _phone 高度收缩↔回落反复 reflow → 每点一下闪一下（iOS 15 PWA 复现）
