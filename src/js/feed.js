@@ -110,7 +110,11 @@
     const o = cid || 'default';
     return { role: 'ta', owner: o, authorName: taFeedNameFor(o), authorAv: taAvFor(o) };
   }
-  function stampAuthor(obj, a) { obj.role = a.role; obj.owner = a.owner; obj.authorName = a.authorName; obj.authorAv = a.authorAv; return obj; }
+  // v3.10.x：评论/回复不存 authorAv（头像 dataURL）——与 publish() 同策略。
+  //   commentsHtmlFor 只用 authorName+content 渲染，authorAv 从不被读取；
+  //   存了会把主键撑到 >200KB → 只进 IDB 不进 LS → Edge 丢 IDB 后评论丢失
+  //   （OPPO Edge 修改头像/背景后评论发不显示的根因）。
+  function stampAuthor(obj, a) { obj.role = a.role; obj.owner = a.owner; obj.authorName = a.authorName; obj.authorAv = ''; return obj; }
   // v3.8.x：我在朋友圈的独立身份（可独立于聊天设置），按桌面独立存储，回退聊天身份
   // feed-user-name / feed-user-avatar：朋友圈昵称/头像，未设置时回退该桌面聊天昵称/头像
   function feedUserAvFor(owner) {
@@ -203,6 +207,17 @@
   }
   function save(list) {
     const arr = list || [];
+    // v3.10.x：清理存量评论/回复的 authorAv（旧数据存了头像 dataURL，撑大主键 >200KB
+    //   → 只进 IDB 不进 LS → Edge 丢 IDB 后评论丢失）。新评论经 stampAuthor 已不存。
+    for (let i = 0; i < arr.length; i++) {
+      const p = arr[i];
+      if (!p || !Array.isArray(p.comments)) continue;
+      for (let j = 0; j < p.comments.length; j++) {
+        const c = p.comments[j];
+        if (c && c.authorAv) c.authorAv = '';
+        if (c && Array.isArray(c.replies)) for (let k = 0; k < c.replies.length; k++) { if (c.replies[k] && c.replies[k].authorAv) c.replies[k].authorAv = ''; }
+      }
+    }
     const raw = JSON.stringify(arr);
     // v3.7.x：门槛——权威未从 IDB 读回前只暂存内存，绝不落盘（防 save([]) 覆盖 IDB 旧动态）
     if (!feedDbReady) {

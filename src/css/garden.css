@@ -16,7 +16,7 @@
 .garden-grid {
   display:grid; grid-template-columns:repeat(4, 1fr);
   gap:8px; padding:0 18px 14px;
-  min-height:360px;
+  min-height:360px; align-content:start;
 }
 .garden-plot {
   aspect-ratio:1;
@@ -77,15 +77,15 @@
 
 /* 工具条 */
 .garden-toolbar {
-  display:flex; gap:8px; padding:0 18px 14px;
-  justify-content:center;
+  display:flex; gap:4px; padding:0 12px 14px;
+  justify-content:center; flex-wrap:wrap;
 }
 .garden-tool {
-  display:flex; flex-direction:column; align-items:center; gap:3px;
-  padding:10px 14px; border-radius:14px;
+  display:flex; flex-direction:column; align-items:center; gap:2px;
+  padding:8px 6px; border-radius:12px;
   border:1px solid rgba(0,0,0,.1); background:rgba(255,255,255,.94);
-  cursor:pointer; font-family:inherit; font-size:12px; color:var(--ink);
-  min-width:56px;
+  cursor:pointer; font-family:inherit; font-size:11px; color:var(--ink);
+  min-width:42px; flex:1 1 auto;
   transition:background .15s ease, border-color .15s ease;
   -webkit-tap-highlight-color:transparent;
 }

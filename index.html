@@ -3231,6 +3231,17 @@ transition:opacity .5s ease, transform .5s ease; box-shadow:0 0 24px rgba(255,20
 .loc-card-del:active { background:rgba(224,85,85,1); }
 .loc-add-custom { display:block; width:100%; padding:8px; border:1px dashed rgba(0,0,0,.2); border-radius:10px; background:transparent; color:var(--muted); font-size:12px; font-weight:600; cursor:pointer; font-family:inherit; margin-bottom:12px; }
 .loc-add-custom:active { background:rgba(0,0,0,.04); }
+.loc-tl-tag { font-size:10px; color:var(--muted); background:rgba(0,0,0,.05); border-radius:6px; padding:1px 6px; flex-shrink:0; }
+.loc-tl-auto { font-size:10px; font-weight:700; color:#b8742a; background:rgba(255,240,210,.7); border-radius:6px; padding:1px 5px; flex-shrink:0; }
+.loc-change-bubble {
+position:fixed; top:72px; left:50%; transform:translateX(-50%) translateY(-20px);
+z-index:200; max-width:88vw; padding:10px 18px;
+background:rgba(17,17,17,.92); color:#fff; border-radius:20px;
+font-size:13px; font-weight:600; text-align:center; line-height:1.5;
+box-shadow:0 4px 18px rgba(0,0,0,.25); pointer-events:none;
+opacity:0; transition:opacity .3s ease, transform .3s ease;
+}
+.loc-change-bubble.loc-bubble-show { opacity:1; transform:translateX(-50%) translateY(0); }
 .decor-bar {
 display:flex; align-items:center; justify-content:space-between;
 padding:8px 14px; margin-bottom:10px; flex-shrink:0;
@@ -4889,7 +4900,7 @@ padding:10px 18px; font-size:13px; color:var(--muted);
 .garden-grid {
 display:grid; grid-template-columns:repeat(4, 1fr);
 gap:8px; padding:0 18px 14px;
-min-height:360px;
+min-height:360px; align-content:start;
 }
 .garden-plot {
 aspect-ratio:1;
@@ -4938,15 +4949,15 @@ background:linear-gradient(90deg, #81c784, #4caf50);
 transition:width .4s ease;
 }
 .garden-toolbar {
-display:flex; gap:8px; padding:0 18px 14px;
-justify-content:center;
+display:flex; gap:4px; padding:0 12px 14px;
+justify-content:center; flex-wrap:wrap;
 }
 .garden-tool {
-display:flex; flex-direction:column; align-items:center; gap:3px;
-padding:10px 14px; border-radius:14px;
+display:flex; flex-direction:column; align-items:center; gap:2px;
+padding:8px 6px; border-radius:12px;
 border:1px solid rgba(0,0,0,.1); background:rgba(255,255,255,.94);
-cursor:pointer; font-family:inherit; font-size:12px; color:var(--ink);
-min-width:56px;
+cursor:pointer; font-family:inherit; font-size:11px; color:var(--ink);
+min-width:42px; flex:1 1 auto;
 transition:background .15s ease, border-color .15s ease;
 -webkit-tap-highlight-color:transparent;
 }
@@ -5289,7 +5300,7 @@ color: #c67800;
       </div>
       <div class="splash-dots"><i></i><i></i><i></i></div>
       <div class="splash-brand">小红书@言序（1842523578）</div>
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787483361478">Mochi 字卡传讯 v3.6.213 · 部署于 2026-08-23 19:09</div>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787484687952">Mochi 字卡传讯 v3.6.214 · 部署于 2026-08-23 19:31</div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
       <div class="splash-loading" id="splash-loading">正在加载数据…</div>
@@ -6135,7 +6146,7 @@ color: #c67800;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.6.213</div>
+      <div class="ver">Mochi 字卡传讯 v3.6.214</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -32036,7 +32047,7 @@ function taAuthorOfCid(cid) {
 const o = cid || 'default';
 return { role: 'ta', owner: o, authorName: taFeedNameFor(o), authorAv: taAvFor(o) };
 }
-function stampAuthor(obj, a) { obj.role = a.role; obj.owner = a.owner; obj.authorName = a.authorName; obj.authorAv = a.authorAv; return obj; }
+function stampAuthor(obj, a) { obj.role = a.role; obj.owner = a.owner; obj.authorName = a.authorName; obj.authorAv = ''; return obj; }
 function feedUserAvFor(owner) {
 try {
 const o = owner || 'default';
@@ -32110,6 +32121,15 @@ if (snap.length <= LS_BIG_LIMIT) localStorage.setItem('xy-home-v2:default:' + SN
 }
 function save(list) {
 const arr = list || [];
+for (let i = 0; i < arr.length; i++) {
+const p = arr[i];
+if (!p || !Array.isArray(p.comments)) continue;
+for (let j = 0; j < p.comments.length; j++) {
+const c = p.comments[j];
+if (c && c.authorAv) c.authorAv = '';
+if (c && Array.isArray(c.replies)) for (let k = 0; k < c.replies.length; k++) { if (c.replies[k] && c.replies[k].authorAv) c.replies[k].authorAv = ''; }
+}
+}
 const raw = JSON.stringify(arr);
 if (!feedDbReady) {
 try { feedPending = arr.slice(); } catch (e) {}
@@ -34718,6 +34738,19 @@ const r = loadResident();
 dot.hidden = !r;
 if (r) dot.title = 'TA 常驻：' + r.text + '（点击查看位置）';
 }
+function showLocChangeBubble(text) {
+let bub = document.getElementById('loc-change-bubble');
+if (!bub) {
+bub = document.createElement('div');
+bub.id = 'loc-change-bubble';
+bub.className = 'loc-change-bubble';
+document.body.appendChild(bub);
+}
+bub.textContent = '你感觉到 TA 换了位置：' + text;
+bub.classList.add('loc-bubble-show');
+clearTimeout(bub._t);
+bub._t = setTimeout(() => { bub.classList.remove('loc-bubble-show'); }, 3000);
+}
 function renderLocPanel() {
 const body = document.getElementById('loc-body');
 if (!body) return;
@@ -34745,9 +34778,11 @@ html += '</div>';
 html += '<div class="loc-section"><div class="loc-sec-title">位置时间线（按日查看）</div>';
 html += '<div class="loc-day-switch"><button class="loc-day-btn" id="loc-day-prev"' + (dayIdx >= days.length - 1 ? ' disabled' : '') + '>‹</button><span class="loc-day-label">' + dayLabel(locViewDate) + '</span><button class="loc-day-btn" id="loc-day-next"' + (dayIdx <= 0 ? ' disabled' : '') + '>›</button></div>';
 if (dayHist.length) {
-html += '<div class="loc-timeline">' + dayHist.map(h =>
-'<div class="loc-tl-item"><span class="loc-tl-time">' + fmtT(h.ts) + '</span><span class="loc-tl-text">' + esc(h.text) + '</span></div>'
-).join('') + '</div>';
+html += '<div class="loc-timeline">' + dayHist.map(h => {
+const tag = LOC_LABEL[h.type] || '';
+const auto = h.auto ? '<span class="loc-tl-auto">TA</span>' : '';
+return '<div class="loc-tl-item"><span class="loc-tl-time">' + fmtT(h.ts) + '</span><span class="loc-tl-text">' + esc(h.text) + '</span><span class="loc-tl-tag">' + esc(tag) + '</span>' + auto + '</div>';
+}).join('') + '</div>';
 html += '<div class="loc-day-count">共 ' + dayHist.length + ' 条</div>';
 } else {
 html += '<div class="loc-sec-value loc-empty">这天没有位置记录</div>';
@@ -34887,6 +34922,7 @@ text = all[Math.floor(Math.random() * all.length)];
 if (!text) return;
 const type = locTypeOf(text);
 const ts = Date.now();
+const oldCur = loadCur();
 if (window.chatAddIn) window.chatAddIn(text);
 saveCur({ text: text, type: type, ts: ts, auto: true });
 const hist = loadHist();
@@ -34894,6 +34930,7 @@ hist.unshift({ text: text, type: type, ts: ts, auto: true });
 saveHist(hist);
 playLocFx(text, type);
 refreshResidentDot();
+if (oldCur && oldCur.text !== text) showLocChangeBubble(text);
 }
 function scheduleLocAuto() {
 clearTimeout(locAutoTimer);

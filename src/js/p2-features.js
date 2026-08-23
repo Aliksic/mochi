@@ -1309,6 +1309,21 @@ if (ckRefresh) {
     if (r) dot.title = 'TA 常驻：' + r.text + '（点击查看位置）';
   }
 
+  // ---- 位置变化提醒气泡（TA 主动换位置时顶部轻提示） ----
+  function showLocChangeBubble(text) {
+    let bub = document.getElementById('loc-change-bubble');
+    if (!bub) {
+      bub = document.createElement('div');
+      bub.id = 'loc-change-bubble';
+      bub.className = 'loc-change-bubble';
+      document.body.appendChild(bub);
+    }
+    bub.textContent = '你感觉到 TA 换了位置：' + text;
+    bub.classList.add('loc-bubble-show');
+    clearTimeout(bub._t);
+    bub._t = setTimeout(() => { bub.classList.remove('loc-bubble-show'); }, 3000);
+  }
+
   // ---- 渲染位置面板 ----
   function renderLocPanel() {
     const body = document.getElementById('loc-body');
@@ -1344,9 +1359,11 @@ if (ckRefresh) {
     html += '<div class="loc-section"><div class="loc-sec-title">位置时间线（按日查看）</div>';
     html += '<div class="loc-day-switch"><button class="loc-day-btn" id="loc-day-prev"' + (dayIdx >= days.length - 1 ? ' disabled' : '') + '>‹</button><span class="loc-day-label">' + dayLabel(locViewDate) + '</span><button class="loc-day-btn" id="loc-day-next"' + (dayIdx <= 0 ? ' disabled' : '') + '>›</button></div>';
     if (dayHist.length) {
-      html += '<div class="loc-timeline">' + dayHist.map(h =>
-        '<div class="loc-tl-item"><span class="loc-tl-time">' + fmtT(h.ts) + '</span><span class="loc-tl-text">' + esc(h.text) + '</span></div>'
-      ).join('') + '</div>';
+      html += '<div class="loc-timeline">' + dayHist.map(h => {
+        const tag = LOC_LABEL[h.type] || '';
+        const auto = h.auto ? '<span class="loc-tl-auto">TA</span>' : '';
+        return '<div class="loc-tl-item"><span class="loc-tl-time">' + fmtT(h.ts) + '</span><span class="loc-tl-text">' + esc(h.text) + '</span><span class="loc-tl-tag">' + esc(tag) + '</span>' + auto + '</div>';
+      }).join('') + '</div>';
       html += '<div class="loc-day-count">共 ' + dayHist.length + ' 条</div>';
     } else {
       html += '<div class="loc-sec-value loc-empty">这天没有位置记录</div>';
@@ -1503,6 +1520,7 @@ if (ckRefresh) {
     if (!text) return;
     const type = locTypeOf(text);
     const ts = Date.now();
+    const oldCur = loadCur();
     if (window.chatAddIn) window.chatAddIn(text);
     saveCur({ text: text, type: type, ts: ts, auto: true });
     const hist = loadHist();
@@ -1510,6 +1528,7 @@ if (ckRefresh) {
     saveHist(hist);
     playLocFx(text, type);
     refreshResidentDot();
+    if (oldCur && oldCur.text !== text) showLocChangeBubble(text);
   }
   function scheduleLocAuto() {
     clearTimeout(locAutoTimer);
