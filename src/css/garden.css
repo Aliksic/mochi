@@ -14,7 +14,7 @@
 
 /* 花园网格：3行×4列，每格圆角卡片 */
 .garden-grid {
-  display:grid; grid-template-columns:repeat(4, 1fr); grid-template-rows:repeat(3, 1fr);
+  display:grid; grid-template-columns:repeat(4, 1fr); grid-auto-rows:1fr;
   gap:8px; padding:0 18px 14px;
   min-height:360px;
 }
@@ -391,3 +391,51 @@
   cursor: pointer; font-family: inherit;
 }
 .report-share-btn:active { opacity: .8; }
+
+/* ===== 地块特效（浇水/施肥/收获） ===== */
+.garden-fx {
+  position: absolute; left: 0; top: 0; width: 100%; height: 100%;
+  pointer-events: none; z-index: 5; border-radius: 14px; overflow: hidden;
+}
+.garden-fx.fx-water::before {
+  content: ""; position: absolute; left: 50%; top: -10px;
+  width: 8px; height: 8px; margin-left: -4px; border-radius: 50%;
+  background: radial-gradient(circle, #4fc3f7, #0288d1);
+  box-shadow: -10px 0 0 #4fc3f7, 10px 0 0 #29b6f6;
+  animation: fxDrop .9s ease-in forwards;
+}
+.garden-fx.fx-fert::before {
+  content: ""; position: absolute; left: 50%; top: 50%;
+  width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%;
+  border: 2px solid #ffb300; opacity: .8;
+  animation: fxRing .8s ease-out forwards;
+}
+.garden-fx.fx-harvest::before,
+.garden-fx.fx-harvest::after {
+  content: ""; position: absolute; width: 6px; height: 6px; border-radius: 50%;
+  background: #ff80ab; box-shadow: 0 0 6px #ff80ab;
+}
+.garden-fx.fx-harvest::before { left: 20%; top: 50%; animation: fxFly1 1s ease-out forwards; }
+.garden-fx.fx-harvest::after { right: 20%; top: 50%; animation: fxFly2 1s ease-out forwards; }
+@keyframes fxDrop { to { top: 110%; } }
+@keyframes fxRing { to { width: 80px; height: 80px; margin: -40px 0 0 -40px; opacity: 0; } }
+@keyframes fxFly1 { to { transform: translate(-30px, -40px); opacity: 0; } }
+@keyframes fxFly2 { to { transform: translate(30px, -40px); opacity: 0; } }
+
+/* ===== 品质标记 ===== */
+.garden-qual-tag {
+  display: inline-block; margin-left: 4px; padding: 1px 5px;
+  border-radius: 8px; font-size: 9px; font-weight: 700; letter-spacing: .5px;
+  background: linear-gradient(90deg, rgba(255,193,7,.18), rgba(255,111,0,.14));
+  color: #c67800;
+}
+
+/* ===== 杂交按钮 ===== */
+.garden-tool.hybrid { background: rgba(156,39,176,.1); border-color: rgba(156,39,176,.3); }
+.garden-tool.hybrid:active { background: #9c27b0; }
+
+/* ===== 杂交配方列表 ===== */
+.garden-craft-sub { font-size: 13px; font-weight: 700; margin: 14px 0 8px; }
+.hybrid-list .garden-recipe.hybrid { background: rgba(156,39,176,.05); }
+.hybrid-list .garden-recipe.hybrid.made { border-color: rgba(156,39,176,.3); background: rgba(156,39,176,.08); }
+.recipe-locked { font-size: 10px; color: var(--muted); margin-left: auto; }

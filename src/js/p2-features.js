@@ -1098,3 +1098,246 @@ if (ckRefresh) {
     }, 30000);
   })();
 })();
+
+// ===== 功能：TA在身边·位置（查岗半框内入口，位置面板独立词库） =====
+// 位置卡 = 普通聊天消息（TA 发的 side=in），位置面板单独维护当前位置/常驻/时间线
+// 收到位置卡时屏幕光点动效；TA 设常驻后页面角落小光点
+(function () {
+  const store = window.activeStore();
+  // ---- 位置词库（内置，独立于聊天字卡库） ----
+  const LOC = {
+    dir: ['在你左边', '在你右边', '在你身后', '在你前面', '离你两步', '抬头就能看到', '在你看不到的地方偷看你'],
+    dist: ['再近一点', '再远一点', '就停这儿', '马上到你身边', '一直在原地等你'],
+    state: ['跟在你后面', '陪你走着', '停下来等你', '绕着你转圈', '在你身边'],
+    egg: '在你心里'
+  };
+  const LOC_LABEL = { dir: '方位', dist: '距离', state: '状态', egg: '彩蛋' };
+  // 方位/彩蛋 → 光点落点（相对视口 0~1）
+  const DIR_POS = {
+    '在你左边': { x: 0.08, y: 0.5 },
+    '在你右边': { x: 0.92, y: 0.5 },
+    '在你身后': { x: 0.5, y: 0.08 },
+    '在你前面': { x: 0.5, y: 0.92 },
+    '离你两步': { x: 0.5, y: 0.38 },
+    '抬头就能看到': { x: 0.5, y: 0.12 },
+    '在你看不到的地方偷看你': { x: 0.86, y: 0.16 },
+    '在你心里': { x: 0.5, y: 0.5, center: true }
+  };
+  // 非方位卡也给个落点（取当前方位或默认中心偏上）
+  function fxPos(text) {
+    if (DIR_POS[text]) return DIR_POS[text];
+    return { x: 0.5, y: 0.3 };
+  }
+  const EGG_COOLDOWN = 7 * 24 * 3600 * 1000;
+
+  // ---- 存储 ----
+  function loadCur() { try { return JSON.parse(store.get('loc-current') || 'null'); } catch (e) { return null; } }
+  function saveCur(v) { store.set('loc-current', v ? JSON.stringify(v) : ''); }
+  function loadResident() { try { return JSON.parse(store.get('loc-resident') || 'null'); } catch (e) { return null; } }
+  function saveResident(v) { store.set('loc-resident', v ? JSON.stringify(v) : ''); }
+  function loadHist() { try { return JSON.parse(store.get('loc-history') || '[]'); } catch (e) { return []; } }
+  function saveHist(list) {
+    const s = JSON.stringify(list.slice(0, 50));
+    store.set('loc-history', s);
+    try { if (window.idbSet) window.idbSet(window.activePrefix() + ':loc-history', s); } catch (e) {}
+  }
+  function eggLastTs() { return parseInt(store.get('loc-egg-last') || '0', 10) || 0; }
+  function eggUsed() { return Date.now() - eggLastTs() < EGG_COOLDOWN; }
+
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+  function fmtT(ts) { if (!ts) return ''; const d = new Date(ts); const p = (n) => (n < 10 ? '0' + n : '' + n); return p(d.getHours()) + ':' + p(d.getMinutes()); }
+  function toast(s) { try { if (typeof window.toast === 'function') window.toast(s); } catch (e) {} }
+
+  // ---- 光点动效 ----
+  function playLocFx(text) {
+    const fx = document.getElementById('loc-fx');
+    if (!fx) return;
+    const pos = fxPos(text);
+    fx.hidden = false;
+    fx.className = 'loc-fx' + (pos.center ? ' loc-fx-center' : '');
+    fx.style.left = (pos.x * 100) + '%';
+    fx.style.top = (pos.y * 100) + '%';
+    void fx.offsetWidth;
+    fx.classList.add('loc-fx-show');
+    clearTimeout(fx._t);
+    fx._t = setTimeout(() => {
+      fx.classList.remove('loc-fx-show');
+      fx._t = setTimeout(() => { fx.hidden = true; }, 500);
+    }, 2000);
+  }
+
+  // ---- 发位置卡（代 TA 发） ----
+  function sendLocCard(text, type) {
+    const ts = Date.now();
+    if (type === 'egg' && eggUsed()) {
+      toast('彩蛋「在你心里」一周只能用一次');
+      return;
+    }
+    if (window.chatAddIn) window.chatAddIn(text);
+    saveCur({ text: text, type: type, ts: ts });
+    const hist = loadHist();
+    hist.unshift({ text: text, type: type, ts: ts });
+    saveHist(hist);
+    if (type === 'egg') store.set('loc-egg-last', String(ts));
+    playLocFx(text);
+    renderLocPanel();
+    refreshResidentDot();
+  }
+
+  // ---- 问 TA 一声 ----
+  let asking = false;
+  function askWhere() {
+    if (asking) return;
+    asking = true;
+    if (window.chatSendMsg) window.chatSendMsg('你在哪？');
+    toast('已问 TA 一声，等 TA 回位置…');
+    setTimeout(() => {
+      asking = false;
+      const dirs = LOC.dir;
+      const text = dirs[Math.floor(Math.random() * dirs.length)];
+      sendLocCard(text, 'dir');
+    }, 2000 + Math.random() * 2000);
+  }
+
+  // ---- 常驻 ----
+  function setResident(text) {
+    saveResident({ text: text, ts: Date.now() });
+    toast('已设为常驻位置：' + text);
+    refreshResidentDot();
+    renderLocPanel();
+  }
+  function clearResident() {
+    saveResident(null);
+    toast('已取消常驻位置');
+    refreshResidentDot();
+    renderLocPanel();
+  }
+  function refreshResidentDot() {
+    const dot = document.getElementById('loc-resident-dot');
+    if (!dot) return;
+    const r = loadResident();
+    dot.hidden = !r;
+    if (r) dot.title = 'TA 常驻：' + r.text + '（点击查看位置）';
+  }
+
+  // ---- 渲染位置面板 ----
+  function renderLocPanel() {
+    const body = document.getElementById('loc-body');
+    if (!body) return;
+    const cur = loadCur();
+    const resident = loadResident();
+    const hist = loadHist().slice(0, 5);
+    const used = eggUsed();
+
+    let html = '';
+    // 此刻位置
+    html += '<div class="loc-section"><div class="loc-sec-title">TA 此刻的位置</div>';
+    html += '<div class="loc-sec-value">' + (cur
+      ? esc(cur.text) + '<span class="loc-sec-sub">' + (LOC_LABEL[cur.type] || '') + ' · ' + fmtT(cur.ts) + '</span>'
+      : '— 还没有位置卡') + '</div></div>';
+    // 常驻
+    html += '<div class="loc-section"><div class="loc-sec-title">常驻位置</div>';
+    if (resident) {
+      html += '<div class="loc-sec-value">' + esc(resident.text) + '<button class="loc-resident-clear" id="loc-resident-clear">取消常驻</button></div>';
+    } else {
+      html += '<div class="loc-sec-value loc-empty">未设置（长按方位卡可设常驻）</div>';
+    }
+    html += '</div>';
+    // 时间线
+    html += '<div class="loc-section"><div class="loc-sec-title">位置时间线</div>';
+    if (hist.length) {
+      html += '<div class="loc-timeline">' + hist.map(h =>
+        '<div class="loc-tl-item"><span class="loc-tl-time">' + fmtT(h.ts) + '</span><span class="loc-tl-text">' + esc(h.text) + '</span></div>'
+      ).join('') + '</div>';
+    } else {
+      html += '<div class="loc-sec-value loc-empty">暂无位置记录</div>';
+    }
+    html += '</div>';
+    // 问 TA 一声
+    html += '<button class="loc-ask-btn" id="loc-ask-btn">问 TA 一声「你在哪？」</button>';
+    // TA 发位置卡词库
+    html += '<div class="loc-send-area"><div class="loc-send-tip">代 TA 发一张位置卡（更新 TA 的位置 · 收到时有光点动效）</div>';
+    function groupHtml(key, label, arr) {
+      return '<div class="loc-grp"><div class="loc-grp-label">' + label + '</div><div class="loc-grp-cards">' +
+        arr.map(t => '<button class="loc-card" data-text="' + esc(t) + '" data-type="' + key + '">' + esc(t) + '</button>').join('') +
+        '</div></div>';
+    }
+    html += groupHtml('dir', '方位卡（长按设常驻）', LOC.dir);
+    html += groupHtml('dist', '距离卡', LOC.dist);
+    html += groupHtml('state', '状态卡', LOC.state);
+    html += '<div class="loc-grp"><div class="loc-grp-label">彩蛋' + (used ? '（本周已用）' : '（一周一次 · 特殊动效）') + '</div><div class="loc-grp-cards">' +
+      '<button class="loc-card loc-card-egg' + (used ? ' disabled' : '') + '" data-text="' + esc(LOC.egg) + '" data-type="egg"' + (used ? ' disabled' : '') + '>' + esc(LOC.egg) + '</button></div></div>';
+    html += '</div>';
+
+    body.innerHTML = html;
+
+    const askBtn = document.getElementById('loc-ask-btn');
+    if (askBtn) askBtn.addEventListener('click', askWhere);
+    const clrBtn = document.getElementById('loc-resident-clear');
+    if (clrBtn) clrBtn.addEventListener('click', clearResident);
+    body.querySelectorAll('.loc-card').forEach(btn => {
+      const text = btn.dataset.text;
+      const type = btn.dataset.type;
+      let pressTimer = null, longPressed = false;
+      btn.addEventListener('pointerdown', () => {
+        longPressed = false;
+        if (type === 'dir') {
+          pressTimer = setTimeout(() => {
+            pressTimer = null;
+            longPressed = true;
+            setResident(text);
+            if (navigator.vibrate) try { navigator.vibrate(20); } catch (e) {}
+          }, 500);
+        }
+      });
+      const cancel = () => { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } };
+      btn.addEventListener('pointerup', cancel);
+      btn.addEventListener('pointerleave', cancel);
+      btn.addEventListener('pointercancel', cancel);
+      btn.addEventListener('click', () => {
+        if (longPressed) { longPressed = false; return; }
+        if (btn.classList.contains('disabled')) return;
+        sendLocCard(text, type);
+      });
+    });
+  }
+
+  // ---- 打开/关闭 ----
+  function openLocPanel() {
+    const panel = document.getElementById('loc-panel');
+    const nameEl = document.getElementById('loc-name');
+    if (nameEl) nameEl.textContent = store.get('lbl-partner') || 'TA';
+    renderLocPanel();
+    if (panel) panel.hidden = false;
+    const ck = document.getElementById('ck-panel');
+    if (ck) ck.hidden = true;
+  }
+  function closeLocPanel() {
+    const panel = document.getElementById('loc-panel');
+    if (panel) panel.hidden = true;
+  }
+
+  const entry = document.getElementById('ck-loc-entry');
+  if (entry) entry.addEventListener('click', openLocPanel);
+  const closeBtn = document.getElementById('loc-close');
+  if (closeBtn) closeBtn.addEventListener('click', closeLocPanel);
+  const dot = document.getElementById('loc-resident-dot');
+  if (dot) dot.addEventListener('click', openLocPanel);
+
+  refreshResidentDot();
+  try {
+    if (window.idbGet && !store.get('loc-history')) {
+      const myPrefix = window.activePrefix();
+      window.idbGet(myPrefix + ':loc-history').then(v => {
+        if (window.activePrefix() !== myPrefix) return;
+        if (v) { try { store.set('loc-history', typeof v === 'string' ? v : JSON.stringify(v)); } catch (e) {} }
+      });
+    }
+  } catch (e) {}
+
+  document.addEventListener('contact-switched', () => {
+    try { closeLocPanel(); refreshResidentDot(); } catch (e) {}
+  });
+
+  window.playLocFx = playLocFx;
+})();

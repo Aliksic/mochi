@@ -2824,8 +2824,21 @@
           <div class="ck-location"><span class="ck-label">TA 在做什么</span><div class="ck-value" id="ck-p-action">—</div></div>
           <div class="ck-location"><span class="ck-label">TA 想对你说</span><div class="ck-value" id="ck-p-msg">—</div></div>
           <div class="ck-updated" id="ck-p-updated"></div>
+          <button class="ck-loc-entry" id="ck-loc-entry">TA在身边 · 看看 TA 在哪</button>
         </div>
       </div>
+      <!-- TA在身边·位置面板（查岗半框「TA在身边」入口打开） -->
+      <div class="loc-panel" id="loc-panel" hidden>
+        <div class="loc-head">
+          <span>TA在身边 · <b id="loc-name">TA</b> 的位置</span>
+          <button class="loc-close" id="loc-close">✕</button>
+        </div>
+        <div class="loc-body" id="loc-body"></div>
+      </div>
+      <!-- 常驻位置小光点（TA 设常驻后出现，点击直达位置面板） -->
+      <div class="loc-resident-dot" id="loc-resident-dot" hidden></div>
+      <!-- 位置卡光点动效层 -->
+      <div class="loc-fx" id="loc-fx" hidden></div>
       <!-- 拍一拍浮层卡片（聊天页内） -->
       <div class="poke-card" id="poke-card" hidden>
         <div class="poke-card-head">

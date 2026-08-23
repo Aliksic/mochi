@@ -623,6 +623,14 @@
       if (_aVV && _aPhone) {
         var _aH = _aVV.height; // 无键盘基准（跟随地址栏显隐更新）
         var _aKb = false;
+        // v3.10.x：当前聚焦的文本元素（focusin 可靠上报，部分安卓浏览器
+        // activeElement 在 contenteditable 上返回 <body>，单看它会漏判聚焦）
+        var _aTextFocused = null;
+        function _aIsText(el) {
+          return el && ((el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')
+            ? (el.type !== 'checkbox' && el.type !== 'range' && el.type !== 'file' && el.type !== 'color' && !el.readOnly)
+            : el.isContentEditable === true);
+        }
         function syncAndroidKb() {
           if (!_aVV || !_aPhone) return;
           var h = _aVV.height;
@@ -641,18 +649,64 @@
             if (_aPhone.style.height !== hs) _aPhone.style.height = hs;
           }
         }
+        // v3.10.x：聚焦期间主动轮询兜底——安卓 visualViewport.resize 在键盘弹出时
+        // 偶发漏触发（尤其 contenteditable / 全屏聊天页 / 部分国产 ROM），focusin 的
+        // 120ms 一次性补偿也可能早于键盘动画完成（h 还没降）→ syncAndroidKb 判 open=false
+        // 不收缩 → .phone 永不收缩 → 输入栏被键盘完全盖住。改成：只要聚焦文本输入框
+        // （或键盘仍开着），每 250ms 复审一次调 syncAndroidKb 按可视高度主动收缩；
+        // 未聚焦且键盘已收则停表。syncAndroidKb 稳态期高度值不变不写 DOM（字符串比对
+        // 早退），打字时不重排、无白闪。
+        var _aWatch = null;
+        function startAWatch() {
+          if (_aWatch) return;
+          _aWatch = setInterval(function () {
+            try {
+              var foc = _aIsText(_aTextFocused) || _aIsText(document.activeElement);
+              if (foc) {
+                syncAndroidKb();
+                nudgeInputVisible();
+              } else if (_aKb) {
+                if (_aVV.height >= _aH - 60) {
+                  _aKb = false;
+                  _aPhone.style.height = '';
+                  _aPhone.style.alignSelf = '';
+                }
+              } else {
+                stopAWatch();
+              }
+            } catch (e) {}
+          }, 250);
+        }
+        function stopAWatch() {
+          if (_aWatch) { clearInterval(_aWatch); _aWatch = null; }
+        }
         _aVV.addEventListener('resize', syncAndroidKb);
         // 首次聚焦兜底：键盘弹出的 resize 偶发前置/漏触发，紧跟一次判定
         document.addEventListener('focusin', function (e) {
           try {
+            if (_aIsText(e.target)) _aTextFocused = e.target;
             if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable)) {
+              try { syncAndroidKb(); } catch (e3) {}
               setTimeout(syncAndroidKb, 120);
+              setTimeout(syncAndroidKb, 350);
+              try { startAWatch(); } catch (e4) {}
             }
           } catch (e2) {}
         });
         // 失焦兜底：键盘收起偶发漏 resize，稍作延迟按可视高度复原
-        document.addEventListener('focusout', function () {
+        document.addEventListener('focusout', function (e) {
+          try { if (e.target === _aTextFocused) _aTextFocused = null; } catch (e2) {}
           setTimeout(syncAndroidKb, 120);
+          setTimeout(syncAndroidKb, 350);
+          // 失焦即键盘收起：不依赖 resize（安卓程序化失焦/滑动收起常漏事件），
+          // 400ms 后若可视高度已回升（键盘真的收了）才恢复
+          setTimeout(function () {
+            if (_aKb && _aVV.height >= _aH - 60) {
+              _aKb = false;
+              _aPhone.style.height = '';
+              _aPhone.style.alignSelf = '';
+            }
+          }, 400);
         });
       }
     } catch (e) {}
@@ -666,7 +720,7 @@
   // v3.6.x：去掉 #desk-msg——新消息横幅只是顶部 fixed 小提示条（6 秒自动隐藏，
   //   不遮挡滚动区域），把它当浮层锁滚动会让整个页面在横幅弹出的 6 秒内滑不动，
   //   用户感知为「页面卡住/滑动失效」（iPad 夸克反馈）。横幅自身交互由 chat.js 处理。
-  const FLOAT_SELECTORS = ['#tc-mask', '#cc-export-mask', '#call-mask', '#feed-notice-panel', '#feed-comment-panel', '#poke-card', '#emoji-panel', '#chat-ask-panel', '#qa-mask', '#chat-more-panel', '#chat-search', '#chat-decision-panel', '#chat-divine-panel', '#chat-rps-panel', '#chat-call-panel', '#chat-pong-panel', '#chat-snake-panel', '#avlib-card', '#ck-panel', '.mg-mask', '#modal-mask', '#msg-actions', '#desk-image-viewer', '.desk-lib', '#gc-members-panel', '#gc-at-panel', '#gc-settings-panel'];
+  const FLOAT_SELECTORS = ['#tc-mask', '#cc-export-mask', '#call-mask', '#feed-notice-panel', '#feed-comment-panel', '#poke-card', '#emoji-panel', '#chat-ask-panel', '#qa-mask', '#chat-more-panel', '#chat-search', '#chat-decision-panel', '#chat-divine-panel', '#chat-rps-panel', '#chat-call-panel', '#chat-pong-panel', '#chat-snake-panel', '#avlib-card', '#ck-panel', '#loc-panel', '.mg-mask', '#modal-mask', '#msg-actions', '#desk-image-viewer', '.desk-lib', '#gc-members-panel', '#gc-at-panel', '#gc-settings-panel'];
   let locked = false;
   function applyLock() {
     const anyOpen = FLOAT_SELECTORS.some(function (sel) {

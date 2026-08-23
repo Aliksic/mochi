@@ -3129,6 +3129,82 @@ cursor:pointer; font-family:inherit;
 .ck-location:last-of-type { border-bottom:none; }
 .ck-label { font-size:11px; color:var(--muted); letter-spacing:1px; }
 .ck-value { font-size:16px; font-weight:700; color:var(--ink); margin-top:5px; line-height:1.6; }
+.ck-loc-entry {
+display:block; width:100%; margin-top:14px; padding:11px 14px;
+border:1px dashed rgba(0,0,0,.18); border-radius:12px;
+background:rgba(255,255,255,.6); color:var(--ink);
+font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; text-align:center;
+}
+.ck-loc-entry:active { background:rgba(0,0,0,.06); }
+.loc-panel {
+position:fixed; left:0; right:0; bottom:0; z-index:78;
+max-height:90vh; display:flex; flex-direction:column;
+background:rgba(255,255,255,.98); border-radius:18px 18px 0 0;
+box-shadow:0 -6px 28px rgba(0,0,0,.18); animation:locSlideUp .25s ease;
+}
+.loc-panel[hidden] { display:none; }
+@keyframes locSlideUp { from { transform:translateY(100%); } to { transform:translateY(0); } }
+.loc-head {
+display:flex; align-items:center; justify-content:space-between;
+padding:14px 16px; border-bottom:1px solid rgba(0,0,0,.06);
+font-size:15px; font-weight:700; color:var(--ink); flex-shrink:0;
+}
+.loc-close { border:none; background:transparent; font-size:16px; color:var(--muted); cursor:pointer; padding:4px 8px; font-family:inherit; }
+.loc-body { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:12px 16px 20px; }
+.loc-section { padding:8px 0; border-bottom:1px solid rgba(0,0,0,.05); }
+.loc-section:last-of-type { border-bottom:none; }
+.loc-sec-title { font-size:11px; color:var(--muted); letter-spacing:1px; }
+.loc-sec-value { font-size:16px; font-weight:700; color:var(--ink); margin-top:5px; line-height:1.6; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.loc-sec-sub { font-size:11px; font-weight:400; color:var(--muted); margin-left:4px; }
+.loc-empty { color:var(--muted); font-weight:400; font-size:13px; }
+.loc-resident-clear {
+border:1px solid rgba(224,85,85,.4); border-radius:8px; padding:4px 10px;
+background:transparent; color:#e05555; font-size:11px; font-weight:600; cursor:pointer; font-family:inherit;
+}
+.loc-resident-clear:active { background:rgba(224,85,85,.1); }
+.loc-timeline { margin-top:6px; }
+.loc-tl-item { display:flex; gap:10px; padding:5px 0; font-size:13px; align-items:baseline; }
+.loc-tl-time { color:var(--muted); font-size:11px; flex-shrink:0; min-width:38px; }
+.loc-tl-text { color:var(--ink); font-weight:600; }
+.loc-ask-btn {
+display:block; width:100%; margin:14px 0 10px; padding:12px;
+border:none; border-radius:12px; background:var(--ink); color:#fff;
+font-size:14px; font-weight:700; cursor:pointer; font-family:inherit;
+}
+.loc-ask-btn:active { opacity:.85; }
+.loc-send-area { margin-top:10px; padding-top:12px; border-top:1px solid rgba(0,0,0,.06); }
+.loc-send-tip { font-size:11px; color:var(--muted); line-height:1.6; margin-bottom:10px; }
+.loc-grp { margin-bottom:12px; }
+.loc-grp-label { font-size:12px; font-weight:700; color:var(--ink); margin-bottom:7px; }
+.loc-grp-cards { display:flex; flex-wrap:wrap; gap:7px; }
+.loc-card {
+border:1px solid rgba(0,0,0,.12); border-radius:10px; padding:7px 11px;
+background:rgba(255,255,255,.9); color:var(--ink);
+font-size:13px; font-weight:600; cursor:pointer; font-family:inherit;
+transition:background .15s, transform .1s;
+}
+.loc-card:active { background:rgba(0,0,0,.06); transform:scale(.96); }
+.loc-card.disabled { opacity:.4; cursor:not-allowed; }
+.loc-card-egg { border-color:rgba(255,180,80,.6); background:rgba(255,240,210,.9); color:#b8742a; }
+.loc-card-egg:active { background:rgba(255,220,160,.9); }
+.loc-resident-dot {
+position:fixed; top:68px; right:16px; z-index:60;
+width:12px; height:12px; border-radius:50%;
+background:radial-gradient(circle, rgba(255,225,160,.95), rgba(255,180,80,.7));
+box-shadow:0 0 12px rgba(255,200,120,.8);
+cursor:pointer; animation:locDotPulse 2.4s ease-in-out infinite;
+}
+.loc-resident-dot[hidden] { display:none; }
+@keyframes locDotPulse { 0%,100% { transform:scale(1); opacity:.85; } 50% { transform:scale(1.3); opacity:1; } }
+.loc-fx {
+position:fixed; z-index:95; width:28px; height:28px; border-radius:50%;
+background:radial-gradient(circle, rgba(255,225,160,.95) 0%, rgba(255,180,80,.6) 55%, rgba(255,180,80,0) 72%);
+pointer-events:none; opacity:0; transform:translate(-50%,-50%) scale(.3);
+transition:opacity .5s ease, transform .5s ease; box-shadow:0 0 24px rgba(255,200,120,.7);
+}
+.loc-fx[hidden] { display:none; }
+.loc-fx.loc-fx-show { opacity:1; transform:translate(-50%,-50%) scale(1); }
+.loc-fx.loc-fx-center { width:90px; height:90px; box-shadow:0 0 60px rgba(255,200,120,.9); }
 .decor-bar {
 display:flex; align-items:center; justify-content:space-between;
 padding:8px 14px; margin-bottom:10px; flex-shrink:0;
@@ -4785,7 +4861,7 @@ padding:10px 18px; font-size:13px; color:var(--muted);
 .garden-scroll { flex:1; overflow-y:auto; scrollbar-width:none; -ms-overflow-style:none; }
 .garden-scroll::-webkit-scrollbar { display:none; }
 .garden-grid {
-display:grid; grid-template-columns:repeat(4, 1fr); grid-template-rows:repeat(3, 1fr);
+display:grid; grid-template-columns:repeat(4, 1fr); grid-auto-rows:1fr;
 gap:8px; padding:0 18px 14px;
 min-height:360px;
 }
@@ -5109,6 +5185,46 @@ border: none; background: #43a047; color: #fff; font-size: 13px; font-weight: 60
 cursor: pointer; font-family: inherit;
 }
 .report-share-btn:active { opacity: .8; }
+.garden-fx {
+position: absolute; left: 0; top: 0; width: 100%; height: 100%;
+pointer-events: none; z-index: 5; border-radius: 14px; overflow: hidden;
+}
+.garden-fx.fx-water::before {
+content: ""; position: absolute; left: 50%; top: -10px;
+width: 8px; height: 8px; margin-left: -4px; border-radius: 50%;
+background: radial-gradient(circle, #4fc3f7, #0288d1);
+box-shadow: -10px 0 0 #4fc3f7, 10px 0 0 #29b6f6;
+animation: fxDrop .9s ease-in forwards;
+}
+.garden-fx.fx-fert::before {
+content: ""; position: absolute; left: 50%; top: 50%;
+width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%;
+border: 2px solid #ffb300; opacity: .8;
+animation: fxRing .8s ease-out forwards;
+}
+.garden-fx.fx-harvest::before,
+.garden-fx.fx-harvest::after {
+content: ""; position: absolute; width: 6px; height: 6px; border-radius: 50%;
+background: #ff80ab; box-shadow: 0 0 6px #ff80ab;
+}
+.garden-fx.fx-harvest::before { left: 20%; top: 50%; animation: fxFly1 1s ease-out forwards; }
+.garden-fx.fx-harvest::after { right: 20%; top: 50%; animation: fxFly2 1s ease-out forwards; }
+@keyframes fxDrop { to { top: 110%; } }
+@keyframes fxRing { to { width: 80px; height: 80px; margin: -40px 0 0 -40px; opacity: 0; } }
+@keyframes fxFly1 { to { transform: translate(-30px, -40px); opacity: 0; } }
+@keyframes fxFly2 { to { transform: translate(30px, -40px); opacity: 0; } }
+.garden-qual-tag {
+display: inline-block; margin-left: 4px; padding: 1px 5px;
+border-radius: 8px; font-size: 9px; font-weight: 700; letter-spacing: .5px;
+background: linear-gradient(90deg, rgba(255,193,7,.18), rgba(255,111,0,.14));
+color: #c67800;
+}
+.garden-tool.hybrid { background: rgba(156,39,176,.1); border-color: rgba(156,39,176,.3); }
+.garden-tool.hybrid:active { background: #9c27b0; }
+.garden-craft-sub { font-size: 13px; font-weight: 700; margin: 14px 0 8px; }
+.hybrid-list .garden-recipe.hybrid { background: rgba(156,39,176,.05); }
+.hybrid-list .garden-recipe.hybrid.made { border-color: rgba(156,39,176,.3); background: rgba(156,39,176,.08); }
+.recipe-locked { font-size: 10px; color: var(--muted); margin-left: auto; }
 </style>
 </head>
 <body>
@@ -5140,7 +5256,7 @@ cursor: pointer; font-family: inherit;
       </div>
       <div class="splash-dots"><i></i><i></i><i></i></div>
       <div class="splash-brand">小红书@言序（1842523578）</div>
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787476754999">Mochi 字卡传讯 v3.6.209 · 部署于 2026-08-23 17:19</div>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787479435395">Mochi 字卡传讯 v3.6.210 · 部署于 2026-08-23 18:03</div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
       <div class="splash-loading" id="splash-loading">正在加载数据…</div>
@@ -5986,7 +6102,7 @@ cursor: pointer; font-family: inherit;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.6.209</div>
+      <div class="ver">Mochi 字卡传讯 v3.6.210</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -7910,8 +8026,21 @@ cursor: pointer; font-family: inherit;
           <div class="ck-location"><span class="ck-label">TA 在做什么</span><div class="ck-value" id="ck-p-action">—</div></div>
           <div class="ck-location"><span class="ck-label">TA 想对你说</span><div class="ck-value" id="ck-p-msg">—</div></div>
           <div class="ck-updated" id="ck-p-updated"></div>
+          <button class="ck-loc-entry" id="ck-loc-entry">TA在身边 · 看看 TA 在哪</button>
         </div>
       </div>
+      <!-- TA在身边·位置面板（查岗半框「TA在身边」入口打开） -->
+      <div class="loc-panel" id="loc-panel" hidden>
+        <div class="loc-head">
+          <span>TA在身边 · <b id="loc-name">TA</b> 的位置</span>
+          <button class="loc-close" id="loc-close">✕</button>
+        </div>
+        <div class="loc-body" id="loc-body"></div>
+      </div>
+      <!-- 常驻位置小光点（TA 设常驻后出现，点击直达位置面板） -->
+      <div class="loc-resident-dot" id="loc-resident-dot" hidden></div>
+      <!-- 位置卡光点动效层 -->
+      <div class="loc-fx" id="loc-fx" hidden></div>
       <!-- 拍一拍浮层卡片（聊天页内） -->
       <div class="poke-card" id="poke-card" hidden>
         <div class="poke-card-head">
@@ -12155,6 +12284,7 @@ document.addEventListener('decor-exited', resetMoveMode);
 const _tabbar = document.querySelector('.tabbar');
 if (_tabbar) _tabbar.addEventListener('click', resetMoveMode);
 pagesBox.addEventListener('touchstart', (e) => {
+if (!inMoveMode) return;
 if (e.target.closest('.desk-lib, .desk-page-add, .decor-bar')) return;
 if (!e.target.closest('[data-desk-widget], .app')) return;
 e.preventDefault();
@@ -34371,6 +34501,215 @@ if (md) md.textContent = todayMoodText() || '点一下选心情';
 }, 30000);
 })();
 })();
+(function () {
+const store = window.activeStore();
+const LOC = {
+dir: ['在你左边', '在你右边', '在你身后', '在你前面', '离你两步', '抬头就能看到', '在你看不到的地方偷看你'],
+dist: ['再近一点', '再远一点', '就停这儿', '马上到你身边', '一直在原地等你'],
+state: ['跟在你后面', '陪你走着', '停下来等你', '绕着你转圈', '在你身边'],
+egg: '在你心里'
+};
+const LOC_LABEL = { dir: '方位', dist: '距离', state: '状态', egg: '彩蛋' };
+const DIR_POS = {
+'在你左边': { x: 0.08, y: 0.5 },
+'在你右边': { x: 0.92, y: 0.5 },
+'在你身后': { x: 0.5, y: 0.08 },
+'在你前面': { x: 0.5, y: 0.92 },
+'离你两步': { x: 0.5, y: 0.38 },
+'抬头就能看到': { x: 0.5, y: 0.12 },
+'在你看不到的地方偷看你': { x: 0.86, y: 0.16 },
+'在你心里': { x: 0.5, y: 0.5, center: true }
+};
+function fxPos(text) {
+if (DIR_POS[text]) return DIR_POS[text];
+return { x: 0.5, y: 0.3 };
+}
+const EGG_COOLDOWN = 7 * 24 * 3600 * 1000;
+function loadCur() { try { return JSON.parse(store.get('loc-current') || 'null'); } catch (e) { return null; } }
+function saveCur(v) { store.set('loc-current', v ? JSON.stringify(v) : ''); }
+function loadResident() { try { return JSON.parse(store.get('loc-resident') || 'null'); } catch (e) { return null; } }
+function saveResident(v) { store.set('loc-resident', v ? JSON.stringify(v) : ''); }
+function loadHist() { try { return JSON.parse(store.get('loc-history') || '[]'); } catch (e) { return []; } }
+function saveHist(list) {
+const s = JSON.stringify(list.slice(0, 50));
+store.set('loc-history', s);
+try { if (window.idbSet) window.idbSet(window.activePrefix() + ':loc-history', s); } catch (e) {}
+}
+function eggLastTs() { return parseInt(store.get('loc-egg-last') || '0', 10) || 0; }
+function eggUsed() { return Date.now() - eggLastTs() < EGG_COOLDOWN; }
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+function fmtT(ts) { if (!ts) return ''; const d = new Date(ts); const p = (n) => (n < 10 ? '0' + n : '' + n); return p(d.getHours()) + ':' + p(d.getMinutes()); }
+function toast(s) { try { if (typeof window.toast === 'function') window.toast(s); } catch (e) {} }
+function playLocFx(text) {
+const fx = document.getElementById('loc-fx');
+if (!fx) return;
+const pos = fxPos(text);
+fx.hidden = false;
+fx.className = 'loc-fx' + (pos.center ? ' loc-fx-center' : '');
+fx.style.left = (pos.x * 100) + '%';
+fx.style.top = (pos.y * 100) + '%';
+void fx.offsetWidth;
+fx.classList.add('loc-fx-show');
+clearTimeout(fx._t);
+fx._t = setTimeout(() => {
+fx.classList.remove('loc-fx-show');
+fx._t = setTimeout(() => { fx.hidden = true; }, 500);
+}, 2000);
+}
+function sendLocCard(text, type) {
+const ts = Date.now();
+if (type === 'egg' && eggUsed()) {
+toast('彩蛋「在你心里」一周只能用一次');
+return;
+}
+if (window.chatAddIn) window.chatAddIn(text);
+saveCur({ text: text, type: type, ts: ts });
+const hist = loadHist();
+hist.unshift({ text: text, type: type, ts: ts });
+saveHist(hist);
+if (type === 'egg') store.set('loc-egg-last', String(ts));
+playLocFx(text);
+renderLocPanel();
+refreshResidentDot();
+}
+let asking = false;
+function askWhere() {
+if (asking) return;
+asking = true;
+if (window.chatSendMsg) window.chatSendMsg('你在哪？');
+toast('已问 TA 一声，等 TA 回位置…');
+setTimeout(() => {
+asking = false;
+const dirs = LOC.dir;
+const text = dirs[Math.floor(Math.random() * dirs.length)];
+sendLocCard(text, 'dir');
+}, 2000 + Math.random() * 2000);
+}
+function setResident(text) {
+saveResident({ text: text, ts: Date.now() });
+toast('已设为常驻位置：' + text);
+refreshResidentDot();
+renderLocPanel();
+}
+function clearResident() {
+saveResident(null);
+toast('已取消常驻位置');
+refreshResidentDot();
+renderLocPanel();
+}
+function refreshResidentDot() {
+const dot = document.getElementById('loc-resident-dot');
+if (!dot) return;
+const r = loadResident();
+dot.hidden = !r;
+if (r) dot.title = 'TA 常驻：' + r.text + '（点击查看位置）';
+}
+function renderLocPanel() {
+const body = document.getElementById('loc-body');
+if (!body) return;
+const cur = loadCur();
+const resident = loadResident();
+const hist = loadHist().slice(0, 5);
+const used = eggUsed();
+let html = '';
+html += '<div class="loc-section"><div class="loc-sec-title">TA 此刻的位置</div>';
+html += '<div class="loc-sec-value">' + (cur
+? esc(cur.text) + '<span class="loc-sec-sub">' + (LOC_LABEL[cur.type] || '') + ' · ' + fmtT(cur.ts) + '</span>'
+: '— 还没有位置卡') + '</div></div>';
+html += '<div class="loc-section"><div class="loc-sec-title">常驻位置</div>';
+if (resident) {
+html += '<div class="loc-sec-value">' + esc(resident.text) + '<button class="loc-resident-clear" id="loc-resident-clear">取消常驻</button></div>';
+} else {
+html += '<div class="loc-sec-value loc-empty">未设置（长按方位卡可设常驻）</div>';
+}
+html += '</div>';
+html += '<div class="loc-section"><div class="loc-sec-title">位置时间线</div>';
+if (hist.length) {
+html += '<div class="loc-timeline">' + hist.map(h =>
+'<div class="loc-tl-item"><span class="loc-tl-time">' + fmtT(h.ts) + '</span><span class="loc-tl-text">' + esc(h.text) + '</span></div>'
+).join('') + '</div>';
+} else {
+html += '<div class="loc-sec-value loc-empty">暂无位置记录</div>';
+}
+html += '</div>';
+html += '<button class="loc-ask-btn" id="loc-ask-btn">问 TA 一声「你在哪？」</button>';
+html += '<div class="loc-send-area"><div class="loc-send-tip">代 TA 发一张位置卡（更新 TA 的位置 · 收到时有光点动效）</div>';
+function groupHtml(key, label, arr) {
+return '<div class="loc-grp"><div class="loc-grp-label">' + label + '</div><div class="loc-grp-cards">' +
+arr.map(t => '<button class="loc-card" data-text="' + esc(t) + '" data-type="' + key + '">' + esc(t) + '</button>').join('') +
+'</div></div>';
+}
+html += groupHtml('dir', '方位卡（长按设常驻）', LOC.dir);
+html += groupHtml('dist', '距离卡', LOC.dist);
+html += groupHtml('state', '状态卡', LOC.state);
+html += '<div class="loc-grp"><div class="loc-grp-label">彩蛋' + (used ? '（本周已用）' : '（一周一次 · 特殊动效）') + '</div><div class="loc-grp-cards">' +
+'<button class="loc-card loc-card-egg' + (used ? ' disabled' : '') + '" data-text="' + esc(LOC.egg) + '" data-type="egg"' + (used ? ' disabled' : '') + '>' + esc(LOC.egg) + '</button></div></div>';
+html += '</div>';
+body.innerHTML = html;
+const askBtn = document.getElementById('loc-ask-btn');
+if (askBtn) askBtn.addEventListener('click', askWhere);
+const clrBtn = document.getElementById('loc-resident-clear');
+if (clrBtn) clrBtn.addEventListener('click', clearResident);
+body.querySelectorAll('.loc-card').forEach(btn => {
+const text = btn.dataset.text;
+const type = btn.dataset.type;
+let pressTimer = null, longPressed = false;
+btn.addEventListener('pointerdown', () => {
+longPressed = false;
+if (type === 'dir') {
+pressTimer = setTimeout(() => {
+pressTimer = null;
+longPressed = true;
+setResident(text);
+if (navigator.vibrate) try { navigator.vibrate(20); } catch (e) {}
+}, 500);
+}
+});
+const cancel = () => { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } };
+btn.addEventListener('pointerup', cancel);
+btn.addEventListener('pointerleave', cancel);
+btn.addEventListener('pointercancel', cancel);
+btn.addEventListener('click', () => {
+if (longPressed) { longPressed = false; return; }
+if (btn.classList.contains('disabled')) return;
+sendLocCard(text, type);
+});
+});
+}
+function openLocPanel() {
+const panel = document.getElementById('loc-panel');
+const nameEl = document.getElementById('loc-name');
+if (nameEl) nameEl.textContent = store.get('lbl-partner') || 'TA';
+renderLocPanel();
+if (panel) panel.hidden = false;
+const ck = document.getElementById('ck-panel');
+if (ck) ck.hidden = true;
+}
+function closeLocPanel() {
+const panel = document.getElementById('loc-panel');
+if (panel) panel.hidden = true;
+}
+const entry = document.getElementById('ck-loc-entry');
+if (entry) entry.addEventListener('click', openLocPanel);
+const closeBtn = document.getElementById('loc-close');
+if (closeBtn) closeBtn.addEventListener('click', closeLocPanel);
+const dot = document.getElementById('loc-resident-dot');
+if (dot) dot.addEventListener('click', openLocPanel);
+refreshResidentDot();
+try {
+if (window.idbGet && !store.get('loc-history')) {
+const myPrefix = window.activePrefix();
+window.idbGet(myPrefix + ':loc-history').then(v => {
+if (window.activePrefix() !== myPrefix) return;
+if (v) { try { store.set('loc-history', typeof v === 'string' ? v : JSON.stringify(v)); } catch (e) {} }
+});
+}
+} catch (e) {}
+document.addEventListener('contact-switched', () => {
+try { closeLocPanel(); refreshResidentDot(); } catch (e) {}
+});
+window.playLocFx = playLocFx;
+})();
 } catch (__e) { if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
 (function () { try {
 (function () {
@@ -36102,6 +36441,7 @@ addLog("\u6211", "\u7ED9 " + (si ? si.name : "\u7A7A\u5730") + " \u6D47\u4E86\u6
 updSt("w", true);
 updDaily("w");
 updWaterStreak();
+fxAtPlot(idx, "fx-water", 900);
 save(data); renderAll();
 }
 function plantSeed(idx, type) {
@@ -36123,6 +36463,136 @@ if (!data.rareInv) data.rareInv = {};
 data.rareInv[k] = (data.rareInv[k] || 0) + 1;
 return k;
 }
+function fxAtPlot(idx, cls, dur) {
+var plot = page.querySelector('.garden-plot[data-idx="' + idx + '"]');
+if (!plot) return;
+var fx = document.createElement("div");
+fx.className = "garden-fx " + cls;
+plot.appendChild(fx);
+setTimeout(function () { if (fx.parentNode) fx.remove(); }, dur || 900);
+}
+function plotCount() {
+var lv = gLv();
+return 12 + (lv >= 3 ? 4 : 0) + (lv >= 5 ? 4 : 0) + (lv >= 8 ? 4 : 0) + (lv >= 12 ? 6 : 0);
+}
+function syncPlots() {
+var n = plotCount();
+while (data.p.length < n) data.p.push(null);
+if (data.p.length > n) data.p = data.p.slice(0, n);
+}
+function checkLevelUp() {
+var lv = gLv();
+if (!data.lvSeen) data.lvSeen = 1;
+if (data.lvSeen < lv) {
+var old = data.lvSeen;
+data.lvSeen = lv;
+save(data);
+var msgs = [];
+if (old < 3 && lv >= 3) msgs.push("Lv.3 \u89E3\u9501 4 \u4E2A\u65B0\u5730\u5757");
+if (old < 5 && lv >= 5) msgs.push("Lv.5 \u89E3\u9501 4 \u4E2A\u65B0\u5730\u5757");
+if (old < 8 && lv >= 8) msgs.push("Lv.8 \u89E3\u9501 4 \u4E2A\u65B0\u5730\u5757");
+if (old < 12 && lv >= 12) msgs.push("Lv.12 \u89E3\u9501 6 \u4E2A\u65B0\u5730\u5757");
+if (msgs.length) {
+msgs.forEach(function (m) { addLog("\u2605", m); });
+if (window.openModal) window.openModal("\uD83C\uDF89 \u5347\u7EA7\u89E3\u9501", msgs.join("\n"), function () {}, { pills: [{ label: "\u597D\u7684", value: "ok" }], noInput: true });
+}
+}
+}
+function checkLoginReward() {
+var t = todayStr();
+if (data.lastLoginDay === t) return;
+var d = new Date(); d.setDate(d.getDate() - 1);
+var y = d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate();
+if (data.lastLoginDay === y) data.loginStreak = (data.loginStreak || 0) + 1;
+else data.loginStreak = 1;
+data.lastLoginDay = t;
+var expGain = 10 + data.loginStreak;
+data.exp = (data.exp || 0) + expGain;
+var msg = "\u6BCF\u65E5\u6253\u7406 +" + expGain + "\u7ECF\u9A8C\uFF08\u8FDE\u7EED " + data.loginStreak + " \u5929\uFF09";
+var gotRare = null;
+if (data.loginStreak % 7 === 0) {
+var rareKeys = Object.keys(T).filter(function (k) { return T[k].rare; });
+if (rareKeys.length) {
+gotRare = rareKeys[Math.floor(Math.random() * rareKeys.length)];
+if (!data.rareInv) data.rareInv = {};
+data.rareInv[gotRare] = (data.rareInv[gotRare] || 0) + 1;
+}
+}
+addLog("\u2605", msg + (gotRare ? " \u2728\u4FDD\u5E95\u7A00\u6709\u79CD\u5B50" + T[gotRare].n : ""));
+save(data);
+if (gotRare && window.openModal) window.openModal("\u2728 \u8FDE\u7EED\u767B\u5F55\u5956\u52B1", "\u8FDE\u7EED\u6253\u7406 " + data.loginStreak + " \u5929\n\u83B7\u5F97\u7A00\u6709\u79CD\u5B50\uFF1A" + T[gotRare].n, function () {}, { pills: [{ label: "\u597D\u7684", value: "ok" }], noInput: true });
+}
+function rollQuality() {
+var r = Math.random();
+if (r < 0.05) return "p";
+if (r < 0.30) return "f";
+return "n";
+}
+function addInvQual(type, q) {
+data.inv[type] = (data.inv[type] || 0) + 1;
+if (!data.qual) data.qual = {};
+if (!data.qual[type]) data.qual[type] = { n: 0, f: 0, p: 0 };
+data.qual[type][q] = (data.qual[type][q] || 0) + 1;
+}
+function qualMul(q) { return q === "p" ? 2 : q === "f" ? 1.5 : 1; }
+function qualLabel(q) { return q === "p" ? "\u3010\u5B8C\u7F8E\u3011" : q === "f" ? "\u3010\u4F18\u8D28\u3011" : ""; }
+var HYBRIDS = [
+{ a: "rose", b: "sakura", r: "flameRose" },
+{ a: "rose", b: "clover", r: "blueRose" },
+{ a: "sunflower", b: "daisy", r: "goldSun" },
+{ a: "lotus", b: "lavender", r: "nightLotus" },
+{ a: "clover", b: "camellia", r: "rainbowClover" }
+];
+function ensureHybridBtn() {
+if (document.getElementById("garden-tool-hybrid")) return;
+var tb = document.getElementById("garden-toolbar");
+if (!tb) return;
+var btn = document.createElement("button");
+btn.id = "garden-tool-hybrid";
+btn.className = "garden-tool hybrid";
+btn.dataset.tool = "hybrid";
+btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 21h10l-1.5-5h-7z"/><path d="M12 16v-4"/><circle cx="8" cy="8" r="3"/><circle cx="16" cy="8" r="3"/></svg><span class="garden-tool-label">\u6742\u4EA4</span>';
+tb.appendChild(btn);
+}
+function hybridPlot(idx) {
+var plot = data.p[idx];
+if (!plot) return;
+var si = stageInfo(plot);
+if (!si) return;
+var neighbors = [idx - 1, idx + 1, idx - 4, idx + 4];
+var target = -1;
+for (var i = 0; i < neighbors.length; i++) {
+var ni = neighbors[i];
+if (ni < 0 || ni >= data.p.length) continue;
+if (!data.p[ni]) continue;
+var nsi = stageInfo(data.p[ni]);
+if (nsi && nsi.stage === si.stage && data.p[ni].type !== plot.type) { target = ni; break; }
+}
+if (target < 0) {
+if (window.openModal) window.openModal("\u6742\u4EA4", "\u9700\u8981\u76F8\u90BB\u4E14\u540C\u9636\u6BB5\u7684\u4E0D\u540C\u82B1\u6735", function () {}, { pills: [{ label: "\u597D\u7684", value: "ok" }], noInput: true });
+return;
+}
+var recipe = null;
+for (var j = 0; j < HYBRIDS.length; j++) {
+var h = HYBRIDS[j];
+if ((h.a === plot.type && h.b === data.p[target].type) || (h.b === plot.type && h.a === data.p[target].type)) { recipe = h; break; }
+}
+var n1 = si.name, n2 = stageInfo(data.p[target]).name;
+fxAtPlot(idx, "fx-harvest", 1000); fxAtPlot(target, "fx-harvest", 1000);
+data.p[idx] = null; data.p[target] = null;
+if (recipe && Math.random() < 0.6) {
+if (!data.rareInv) data.rareInv = {};
+data.rareInv[recipe.r] = (data.rareInv[recipe.r] || 0) + 1;
+if (!data.hybridFound) data.hybridFound = {};
+data.hybridFound[recipe.a + "+" + recipe.b] = true;
+addLog("\u2605", n1 + " \u00d7 " + n2 + " \u6742\u4EA4\u6210\u529F\uFF0C\u83B7\u5F97 " + T[recipe.r].n + " \u79CD\u5B50 \u2728");
+if (window.openModal) window.openModal("\u2728 \u6742\u4EA4\u6210\u529F", n1 + " \u00d7 " + n2 + "\n\u83B7\u5F97\u7A00\u6709\u79CD\u5B50\uFF1A" + T[recipe.r].n, function () {}, { pills: [{ label: "\u597D\u7684", value: "ok" }], noInput: true });
+} else {
+addLog("\u6211", n1 + " \u00d7 " + n2 + " \u6742\u4EA4\u5931\u8D25");
+if (window.openModal) window.openModal("\u6742\u4EA4\u5931\u8D25", n1 + " \u00d7 " + n2 + "\n\u4E24\u682A\u82B1\u90FD\u6D88\u8017\u4E86\uFF0C\u518D\u8BD5\u8BD5\u5427", function () {}, { pills: [{ label: "\u597D\u7684", value: "ok" }], noInput: true });
+}
+save(data); renderAll();
+}
 function fertilizePlot(idx) {
 if (idx < 0 || idx >= data.p.length) return;
 var plot = data.p[idx];
@@ -36132,6 +36602,7 @@ var si = stageInfo(plot);
 addLog("\u6211", "\u7ED9 " + (si ? si.name : "\u7A7A\u5730") + " \u65BD\u4E86\u80A5");
 updSt("f", true);
 updDaily("f");
+fxAtPlot(idx, "fx-fert", 800);
 save(data); renderAll();
 }
 function harvestPlot(idx) {
@@ -36144,16 +36615,18 @@ var name = si.name;
 var type = plot.type;
 var tp = T[type];
 var wilted = si.wilted;
+var q = rollQuality();
 data.p[idx] = null;
-var xpg = Math.round((tp ? tp.xp : 10) * (1 + decorBuffs().xp) * (wilted ? 0.5 : 1));
+var xpg = Math.round((tp ? tp.xp : 10) * (1 + decorBuffs().xp) * (wilted ? 0.5 : 1) * qualMul(q));
 data.exp = (data.exp || 0) + xpg;
-data.inv[type] = (data.inv[type] || 0) + 1;
+addInvQual(type, q);
 if (wilted) data.wiltedSeen = true;
 updDex(type, "h");
 updSt("h", true);
 updDaily("h");
 var dropped = dropRareSeed();
-addLog("\u6211", "\u6536\u83B7\u4E86 " + name + (wilted ? "\uFF08\u5DF2\u51CB\u8C22\uFF09" : "") + " (+" + xpg + "\u7ECF\u9A8C)" + (dropped ? " \u2728\u83B7\u5F97\u7A00\u6709\u79CD\u5B50" + T[dropped].n : ""));
+fxAtPlot(idx, "fx-harvest", 1000);
+addLog("\u6211", "\u6536\u83B7\u4E86 " + name + qualLabel(q) + (wilted ? "\uFF08\u5DF2\u51CB\u8C22\uFF09" : "") + " (+" + xpg + "\u7ECF\u9A8C)" + (dropped ? " \u2728\u83B7\u5F97\u7A00\u6709\u79CD\u5B50" + T[dropped].n : ""));
 save(data); renderAll();
 }
 function partnerAct(silent) {
@@ -36215,17 +36688,18 @@ var type = data.p[idx].type;
 var tp = T[type];
 var wilted = si ? si.wilted : false;
 var emoji = wilted ? "\uD83E\uDD40" : (tp ? tp.e[tp.e.length - 1] : "\uD83C\uDF37");
+var pq = rollQuality();
 data.p[idx] = null;
-var xpg = Math.round((tp ? tp.xp : 10) * (1 + decorBuffs().xp) * (wilted ? 0.5 : 1));
+var xpg = Math.round((tp ? tp.xp : 10) * (1 + decorBuffs().xp) * (wilted ? 0.5 : 1) * qualMul(pq));
 data.exp = (data.exp || 0) + xpg;
 updDex(type, "h"); updSt("h", false);
 if (Math.random() < 0.3) {
-addLog(pName, "\u9001\u4F60\u4E00\u6735 " + name + (wilted ? "\uFF08\u5E72\u82B1\uFF09" : "") + " \uD83D\uDC95");
+addLog(pName, "\u9001\u4F60\u4E00\u6735 " + name + qualLabel(pq) + (wilted ? "\uFF08\u5E72\u82B1\uFF09" : "") + " \uD83D\uDC95");
 var gmsg = wilted ? "\u8FD9\u6735" + name + "\u5FEB\u51CB\u4E86\uFF0C\u8D76\u7D27\u9001\u4F60~" : "\u521A\u6458\u7684" + name + "\u9001\u7ED9\u4F60\uFF0C\u6536\u597D\u54E6~";
 if (window.chatSendFlower) { try { window.chatSendFlower(emoji, name, gmsg, true); } catch (e) {} }
 } else {
-data.inv[type] = (data.inv[type] || 0) + 1;
-addLog(pName, "\u6536\u83B7\u4E86 " + name + (wilted ? "\uFF08\u5DF2\u51CB\u8C22\uFF09" : "") + " (+" + xpg + "\u7ECF\u9A8C)");
+addInvQual(type, pq);
+addLog(pName, "\u6536\u83B7\u4E86 " + name + qualLabel(pq) + (wilted ? "\uFF08\u5DF2\u51CB\u8C22\uFF09" : "") + " (+" + xpg + "\u7ECF\u9A8C)");
 }
 acted = true;
 } else if (r < 0.78 && bloomedPlots.length > 1) {
@@ -36237,10 +36711,11 @@ if (!si2 || !si2.bloomed) continue;
 var tp2 = T[data.p[pi].type];
 var tpk = data.p[pi].type;
 var wilted2 = si2.wilted;
+var pq2 = rollQuality();
 data.p[pi] = null;
-var xpg2 = Math.round((tp2 ? tp2.xp : 10) * (1 + decorBuffs().xp) * (wilted2 ? 0.5 : 1));
+var xpg2 = Math.round((tp2 ? tp2.xp : 10) * (1 + decorBuffs().xp) * (wilted2 ? 0.5 : 1) * qualMul(pq2));
 data.exp = (data.exp || 0) + xpg2;
-data.inv[tpk] = (data.inv[tpk] || 0) + 1;
+addInvQual(tpk, pq2);
 updDex(tpk, "h"); updSt("h", false);
 hcnt++;
 }
@@ -36314,7 +36789,15 @@ var h = "<div class=\"garden-inv-title\">\u82B1\u6735\u5E93\u5B58</div><div clas
 keys.forEach(function (k) {
 var tp = T[k];
 if (!tp) return;
-h += "<span class=\"garden-inv-item\" data-flower=\"" + k + "\">" + tp.e[tp.e.length - 1] + " " + tp.n + " \u00d7" + data.inv[k] + "</span>";
+var q = (data.qual && data.qual[k]) || { n: 0, f: 0, p: 0 };
+var qTxt = "";
+if (q.f || q.p) {
+var parts = [];
+if (q.f) parts.push("\u4F18" + q.f);
+if (q.p) parts.push("\u5B8C" + q.p);
+qTxt = " <span class=\"garden-qual-tag\">" + parts.join(" ") + "</span>";
+}
+h += "<span class=\"garden-inv-item\" data-flower=\"" + k + "\">" + tp.e[tp.e.length - 1] + " " + tp.n + " \u00d7" + data.inv[k] + qTxt + "</span>";
 });
 h += "</div><button class=\"garden-bouquet-btn\" id=\"garden-bouquet-btn\">\uD83D\uDCC1 \u5236\u4F5C\u82B1\u675F\u9001\u7ED9" + pn() + "</button>";
 el.innerHTML = h;
@@ -36559,6 +37042,17 @@ if (canMake) h += '<button class="recipe-btn" data-recipe="' + r.id + '">\u5408\
 h += '</div>';
 });
 h += '</div>';
+h += '<div class="garden-craft-sub">\uD83E\uDD7C \u6742\u4EA4\u914D\u65B9</div><div class="garden-craft-list hybrid-list">';
+HYBRIDS.forEach(function (hb) {
+var found = data.hybridFound && data.hybridFound[hb.a + "+" + hb.b];
+var ta = T[hb.a], tb = T[hb.b], tr = T[hb.r];
+if (!ta || !tb || !tr) return;
+h += '<div class="garden-recipe hybrid' + (found ? " made" : "") + '">';
+h += '<div class="recipe-head"><span class="recipe-emoji">' + tr.e[tr.e.length - 1] + '</span><span class="recipe-name">' + tr.n + '</span>' + (found ? '<span class="recipe-made">\u2713\u5DF2\u53D1\u73B0</span>' : '<span class="recipe-locked">\u672A\u53D1\u73B0</span>') + '</div>';
+h += '<div class="recipe-need">' + ta.e[ta.e.length - 1] + ta.n + ' + ' + tb.e[tb.e.length - 1] + tb.n + '</div>';
+h += '</div>';
+});
+h += '</div>';
 el.innerHTML = h;
 el.querySelectorAll(".recipe-btn").forEach(function (b) { b.addEventListener("click", function () { craftRecipe(b.dataset.recipe); }); });
 }
@@ -36649,8 +37143,11 @@ if (window.openModal) window.openModal(ok ? "\u2705 \u5DF2\u53D1\u5E03\u5230\u67
 });
 }
 function renderAll() {
+syncPlots();
 markBloomed();
+checkLevelUp();
 ensureTabUI();
+ensureHybridBtn();
 renderWeather();
 renderDaily();
 renderLevel();
@@ -36748,6 +37245,9 @@ if (data.rareInv && data.rareInv[rk] > 0) { data.rareInv[rk]--; plantSeed(selPlo
 waterAll();
 } else if (tool === "harvestall") {
 harvestAll();
+} else if (tool === "hybrid") {
+if (selPlot < 0) return;
+hybridPlot(selPlot);
 }
 }
 function waterAll() {
@@ -36778,13 +37278,15 @@ var si = stageInfo(plot);
 if (!si || !si.bloomed) continue;
 var tp = T[plot.type];
 var wilted = si.wilted;
-var xpg = Math.round((tp ? tp.xp : 10) * xpb * (wilted ? 0.5 : 1));
+var q = rollQuality();
+var xpg = Math.round((tp ? tp.xp : 10) * xpb * (wilted ? 0.5 : 1) * qualMul(q));
 data.p[i] = null;
 data.exp = (data.exp || 0) + xpg;
-data.inv[plot.type] = (data.inv[plot.type] || 0) + 1;
+addInvQual(plot.type, q);
 if (wilted) data.wiltedSeen = true;
 updDex(plot.type, "h"); updSt("h", true); updDaily("h");
 var dr = dropRareSeed(); if (dr) dropped.push(dr);
+fxAtPlot(i, "fx-harvest", 1000);
 totalXp += xpg;
 cnt++;
 }
@@ -36864,6 +37366,7 @@ document.querySelectorAll(".page").forEach(function (pg) { pg.hidden = true; });
 page.hidden = false;
 checkPartnerPassive();
 data = load();
+checkLoginReward();
 selPlot = -1;
 curWeather = wx();
 curSeason = sea();
@@ -40882,6 +41385,12 @@ var _aVV = window.visualViewport;
 if (_aVV && _aPhone) {
 var _aH = _aVV.height; // 无键盘基准（跟随地址栏显隐更新）
 var _aKb = false;
+var _aTextFocused = null;
+function _aIsText(el) {
+return el && ((el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')
+? (el.type !== 'checkbox' && el.type !== 'range' && el.type !== 'file' && el.type !== 'color' && !el.readOnly)
+: el.isContentEditable === true);
+}
 function syncAndroidKb() {
 if (!_aVV || !_aPhone) return;
 var h = _aVV.height;
@@ -40899,21 +41408,58 @@ var hs = h + 'px';
 if (_aPhone.style.height !== hs) _aPhone.style.height = hs;
 }
 }
+var _aWatch = null;
+function startAWatch() {
+if (_aWatch) return;
+_aWatch = setInterval(function () {
+try {
+var foc = _aIsText(_aTextFocused) || _aIsText(document.activeElement);
+if (foc) {
+syncAndroidKb();
+nudgeInputVisible();
+} else if (_aKb) {
+if (_aVV.height >= _aH - 60) {
+_aKb = false;
+_aPhone.style.height = '';
+_aPhone.style.alignSelf = '';
+}
+} else {
+stopAWatch();
+}
+} catch (e) {}
+}, 250);
+}
+function stopAWatch() {
+if (_aWatch) { clearInterval(_aWatch); _aWatch = null; }
+}
 _aVV.addEventListener('resize', syncAndroidKb);
 document.addEventListener('focusin', function (e) {
 try {
+if (_aIsText(e.target)) _aTextFocused = e.target;
 if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable)) {
+try { syncAndroidKb(); } catch (e3) {}
 setTimeout(syncAndroidKb, 120);
+setTimeout(syncAndroidKb, 350);
+try { startAWatch(); } catch (e4) {}
 }
 } catch (e2) {}
 });
-document.addEventListener('focusout', function () {
+document.addEventListener('focusout', function (e) {
+try { if (e.target === _aTextFocused) _aTextFocused = null; } catch (e2) {}
 setTimeout(syncAndroidKb, 120);
+setTimeout(syncAndroidKb, 350);
+setTimeout(function () {
+if (_aKb && _aVV.height >= _aH - 60) {
+_aKb = false;
+_aPhone.style.height = '';
+_aPhone.style.alignSelf = '';
+}
+}, 400);
 });
 }
 } catch (e) {}
 }
-const FLOAT_SELECTORS = ['#tc-mask', '#cc-export-mask', '#call-mask', '#feed-notice-panel', '#feed-comment-panel', '#poke-card', '#emoji-panel', '#chat-ask-panel', '#qa-mask', '#chat-more-panel', '#chat-search', '#chat-decision-panel', '#chat-divine-panel', '#chat-rps-panel', '#chat-call-panel', '#chat-pong-panel', '#chat-snake-panel', '#avlib-card', '#ck-panel', '.mg-mask', '#modal-mask', '#msg-actions', '#desk-image-viewer', '.desk-lib', '#gc-members-panel', '#gc-at-panel', '#gc-settings-panel'];
+const FLOAT_SELECTORS = ['#tc-mask', '#cc-export-mask', '#call-mask', '#feed-notice-panel', '#feed-comment-panel', '#poke-card', '#emoji-panel', '#chat-ask-panel', '#qa-mask', '#chat-more-panel', '#chat-search', '#chat-decision-panel', '#chat-divine-panel', '#chat-rps-panel', '#chat-call-panel', '#chat-pong-panel', '#chat-snake-panel', '#avlib-card', '#ck-panel', '#loc-panel', '.mg-mask', '#modal-mask', '#msg-actions', '#desk-image-viewer', '.desk-lib', '#gc-members-panel', '#gc-at-panel', '#gc-settings-panel'];
 let locked = false;
 function applyLock() {
 const anyOpen = FLOAT_SELECTORS.some(function (sel) {

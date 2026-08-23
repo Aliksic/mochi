@@ -258,6 +258,7 @@ function waterPlot(idx) {
   updSt("w", true);
   updDaily("w");
   updWaterStreak();
+  fxAtPlot(idx, "fx-water", 900);
   save(data); renderAll();
 }
 
@@ -280,6 +281,136 @@ function dropRareSeed() {
   data.rareInv[k] = (data.rareInv[k] || 0) + 1;
   return k;
 }
+function fxAtPlot(idx, cls, dur) {
+  var plot = page.querySelector('.garden-plot[data-idx="' + idx + '"]');
+  if (!plot) return;
+  var fx = document.createElement("div");
+  fx.className = "garden-fx " + cls;
+  plot.appendChild(fx);
+  setTimeout(function () { if (fx.parentNode) fx.remove(); }, dur || 900);
+}
+function plotCount() {
+  var lv = gLv();
+  return 12 + (lv >= 3 ? 4 : 0) + (lv >= 5 ? 4 : 0) + (lv >= 8 ? 4 : 0) + (lv >= 12 ? 6 : 0);
+}
+function syncPlots() {
+  var n = plotCount();
+  while (data.p.length < n) data.p.push(null);
+  if (data.p.length > n) data.p = data.p.slice(0, n);
+}
+function checkLevelUp() {
+  var lv = gLv();
+  if (!data.lvSeen) data.lvSeen = 1;
+  if (data.lvSeen < lv) {
+    var old = data.lvSeen;
+    data.lvSeen = lv;
+    save(data);
+    var msgs = [];
+    if (old < 3 && lv >= 3) msgs.push("Lv.3 \u89E3\u9501 4 \u4E2A\u65B0\u5730\u5757");
+    if (old < 5 && lv >= 5) msgs.push("Lv.5 \u89E3\u9501 4 \u4E2A\u65B0\u5730\u5757");
+    if (old < 8 && lv >= 8) msgs.push("Lv.8 \u89E3\u9501 4 \u4E2A\u65B0\u5730\u5757");
+    if (old < 12 && lv >= 12) msgs.push("Lv.12 \u89E3\u9501 6 \u4E2A\u65B0\u5730\u5757");
+    if (msgs.length) {
+      msgs.forEach(function (m) { addLog("\u2605", m); });
+      if (window.openModal) window.openModal("\uD83C\uDF89 \u5347\u7EA7\u89E3\u9501", msgs.join("\n"), function () {}, { pills: [{ label: "\u597D\u7684", value: "ok" }], noInput: true });
+    }
+  }
+}
+function checkLoginReward() {
+  var t = todayStr();
+  if (data.lastLoginDay === t) return;
+  var d = new Date(); d.setDate(d.getDate() - 1);
+  var y = d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate();
+  if (data.lastLoginDay === y) data.loginStreak = (data.loginStreak || 0) + 1;
+  else data.loginStreak = 1;
+  data.lastLoginDay = t;
+  var expGain = 10 + data.loginStreak;
+  data.exp = (data.exp || 0) + expGain;
+  var msg = "\u6BCF\u65E5\u6253\u7406 +" + expGain + "\u7ECF\u9A8C\uFF08\u8FDE\u7EED " + data.loginStreak + " \u5929\uFF09";
+  var gotRare = null;
+  if (data.loginStreak % 7 === 0) {
+    var rareKeys = Object.keys(T).filter(function (k) { return T[k].rare; });
+    if (rareKeys.length) {
+      gotRare = rareKeys[Math.floor(Math.random() * rareKeys.length)];
+      if (!data.rareInv) data.rareInv = {};
+      data.rareInv[gotRare] = (data.rareInv[gotRare] || 0) + 1;
+    }
+  }
+  addLog("\u2605", msg + (gotRare ? " \u2728\u4FDD\u5E95\u7A00\u6709\u79CD\u5B50" + T[gotRare].n : ""));
+  save(data);
+  if (gotRare && window.openModal) window.openModal("\u2728 \u8FDE\u7EED\u767B\u5F55\u5956\u52B1", "\u8FDE\u7EED\u6253\u7406 " + data.loginStreak + " \u5929\n\u83B7\u5F97\u7A00\u6709\u79CD\u5B50\uFF1A" + T[gotRare].n, function () {}, { pills: [{ label: "\u597D\u7684", value: "ok" }], noInput: true });
+}
+function rollQuality() {
+  var r = Math.random();
+  if (r < 0.05) return "p";
+  if (r < 0.30) return "f";
+  return "n";
+}
+function addInvQual(type, q) {
+  data.inv[type] = (data.inv[type] || 0) + 1;
+  if (!data.qual) data.qual = {};
+  if (!data.qual[type]) data.qual[type] = { n: 0, f: 0, p: 0 };
+  data.qual[type][q] = (data.qual[type][q] || 0) + 1;
+}
+function qualMul(q) { return q === "p" ? 2 : q === "f" ? 1.5 : 1; }
+function qualLabel(q) { return q === "p" ? "\u3010\u5B8C\u7F8E\u3011" : q === "f" ? "\u3010\u4F18\u8D28\u3011" : ""; }
+var HYBRIDS = [
+  { a: "rose", b: "sakura", r: "flameRose" },
+  { a: "rose", b: "clover", r: "blueRose" },
+  { a: "sunflower", b: "daisy", r: "goldSun" },
+  { a: "lotus", b: "lavender", r: "nightLotus" },
+  { a: "clover", b: "camellia", r: "rainbowClover" }
+];
+function ensureHybridBtn() {
+  if (document.getElementById("garden-tool-hybrid")) return;
+  var tb = document.getElementById("garden-toolbar");
+  if (!tb) return;
+  var btn = document.createElement("button");
+  btn.id = "garden-tool-hybrid";
+  btn.className = "garden-tool hybrid";
+  btn.dataset.tool = "hybrid";
+  btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 21h10l-1.5-5h-7z"/><path d="M12 16v-4"/><circle cx="8" cy="8" r="3"/><circle cx="16" cy="8" r="3"/></svg><span class="garden-tool-label">\u6742\u4EA4</span>';
+  tb.appendChild(btn);
+}
+function hybridPlot(idx) {
+  var plot = data.p[idx];
+  if (!plot) return;
+  var si = stageInfo(plot);
+  if (!si) return;
+  var neighbors = [idx - 1, idx + 1, idx - 4, idx + 4];
+  var target = -1;
+  for (var i = 0; i < neighbors.length; i++) {
+    var ni = neighbors[i];
+    if (ni < 0 || ni >= data.p.length) continue;
+    if (!data.p[ni]) continue;
+    var nsi = stageInfo(data.p[ni]);
+    if (nsi && nsi.stage === si.stage && data.p[ni].type !== plot.type) { target = ni; break; }
+  }
+  if (target < 0) {
+    if (window.openModal) window.openModal("\u6742\u4EA4", "\u9700\u8981\u76F8\u90BB\u4E14\u540C\u9636\u6BB5\u7684\u4E0D\u540C\u82B1\u6735", function () {}, { pills: [{ label: "\u597D\u7684", value: "ok" }], noInput: true });
+    return;
+  }
+  var recipe = null;
+  for (var j = 0; j < HYBRIDS.length; j++) {
+    var h = HYBRIDS[j];
+    if ((h.a === plot.type && h.b === data.p[target].type) || (h.b === plot.type && h.a === data.p[target].type)) { recipe = h; break; }
+  }
+  var n1 = si.name, n2 = stageInfo(data.p[target]).name;
+  fxAtPlot(idx, "fx-harvest", 1000); fxAtPlot(target, "fx-harvest", 1000);
+  data.p[idx] = null; data.p[target] = null;
+  if (recipe && Math.random() < 0.6) {
+    if (!data.rareInv) data.rareInv = {};
+    data.rareInv[recipe.r] = (data.rareInv[recipe.r] || 0) + 1;
+    if (!data.hybridFound) data.hybridFound = {};
+    data.hybridFound[recipe.a + "+" + recipe.b] = true;
+    addLog("\u2605", n1 + " \u00d7 " + n2 + " \u6742\u4EA4\u6210\u529F\uFF0C\u83B7\u5F97 " + T[recipe.r].n + " \u79CD\u5B50 \u2728");
+    if (window.openModal) window.openModal("\u2728 \u6742\u4EA4\u6210\u529F", n1 + " \u00d7 " + n2 + "\n\u83B7\u5F97\u7A00\u6709\u79CD\u5B50\uFF1A" + T[recipe.r].n, function () {}, { pills: [{ label: "\u597D\u7684", value: "ok" }], noInput: true });
+  } else {
+    addLog("\u6211", n1 + " \u00d7 " + n2 + " \u6742\u4EA4\u5931\u8D25");
+    if (window.openModal) window.openModal("\u6742\u4EA4\u5931\u8D25", n1 + " \u00d7 " + n2 + "\n\u4E24\u682A\u82B1\u90FD\u6D88\u8017\u4E86\uFF0C\u518D\u8BD5\u8BD5\u5427", function () {}, { pills: [{ label: "\u597D\u7684", value: "ok" }], noInput: true });
+  }
+  save(data); renderAll();
+}
 
 function fertilizePlot(idx) {
   if (idx < 0 || idx >= data.p.length) return;
@@ -290,6 +421,7 @@ function fertilizePlot(idx) {
   addLog("\u6211", "\u7ED9 " + (si ? si.name : "\u7A7A\u5730") + " \u65BD\u4E86\u80A5");
   updSt("f", true);
   updDaily("f");
+  fxAtPlot(idx, "fx-fert", 800);
   save(data); renderAll();
 }
 
@@ -303,16 +435,18 @@ function harvestPlot(idx) {
   var type = plot.type;
   var tp = T[type];
   var wilted = si.wilted;
+  var q = rollQuality();
   data.p[idx] = null;
-  var xpg = Math.round((tp ? tp.xp : 10) * (1 + decorBuffs().xp) * (wilted ? 0.5 : 1));
+  var xpg = Math.round((tp ? tp.xp : 10) * (1 + decorBuffs().xp) * (wilted ? 0.5 : 1) * qualMul(q));
   data.exp = (data.exp || 0) + xpg;
-  data.inv[type] = (data.inv[type] || 0) + 1;
+  addInvQual(type, q);
   if (wilted) data.wiltedSeen = true;
   updDex(type, "h");
   updSt("h", true);
   updDaily("h");
   var dropped = dropRareSeed();
-  addLog("\u6211", "\u6536\u83B7\u4E86 " + name + (wilted ? "\uFF08\u5DF2\u51CB\u8C22\uFF09" : "") + " (+" + xpg + "\u7ECF\u9A8C)" + (dropped ? " \u2728\u83B7\u5F97\u7A00\u6709\u79CD\u5B50" + T[dropped].n : ""));
+  fxAtPlot(idx, "fx-harvest", 1000);
+  addLog("\u6211", "\u6536\u83B7\u4E86 " + name + qualLabel(q) + (wilted ? "\uFF08\u5DF2\u51CB\u8C22\uFF09" : "") + " (+" + xpg + "\u7ECF\u9A8C)" + (dropped ? " \u2728\u83B7\u5F97\u7A00\u6709\u79CD\u5B50" + T[dropped].n : ""));
   save(data); renderAll();
 }
 
@@ -376,17 +510,18 @@ function partnerAct(silent) {
     var tp = T[type];
     var wilted = si ? si.wilted : false;
     var emoji = wilted ? "\uD83E\uDD40" : (tp ? tp.e[tp.e.length - 1] : "\uD83C\uDF37");
+    var pq = rollQuality();
     data.p[idx] = null;
-    var xpg = Math.round((tp ? tp.xp : 10) * (1 + decorBuffs().xp) * (wilted ? 0.5 : 1));
+    var xpg = Math.round((tp ? tp.xp : 10) * (1 + decorBuffs().xp) * (wilted ? 0.5 : 1) * qualMul(pq));
     data.exp = (data.exp || 0) + xpg;
     updDex(type, "h"); updSt("h", false);
     if (Math.random() < 0.3) {
-      addLog(pName, "\u9001\u4F60\u4E00\u6735 " + name + (wilted ? "\uFF08\u5E72\u82B1\uFF09" : "") + " \uD83D\uDC95");
+      addLog(pName, "\u9001\u4F60\u4E00\u6735 " + name + qualLabel(pq) + (wilted ? "\uFF08\u5E72\u82B1\uFF09" : "") + " \uD83D\uDC95");
       var gmsg = wilted ? "\u8FD9\u6735" + name + "\u5FEB\u51CB\u4E86\uFF0C\u8D76\u7D27\u9001\u4F60~" : "\u521A\u6458\u7684" + name + "\u9001\u7ED9\u4F60\uFF0C\u6536\u597D\u54E6~";
       if (window.chatSendFlower) { try { window.chatSendFlower(emoji, name, gmsg, true); } catch (e) {} }
     } else {
-      data.inv[type] = (data.inv[type] || 0) + 1;
-      addLog(pName, "\u6536\u83B7\u4E86 " + name + (wilted ? "\uFF08\u5DF2\u51CB\u8C22\uFF09" : "") + " (+" + xpg + "\u7ECF\u9A8C)");
+      addInvQual(type, pq);
+      addLog(pName, "\u6536\u83B7\u4E86 " + name + qualLabel(pq) + (wilted ? "\uFF08\u5DF2\u51CB\u8C22\uFF09" : "") + " (+" + xpg + "\u7ECF\u9A8C)");
     }
     acted = true;
   } else if (r < 0.78 && bloomedPlots.length > 1) {
@@ -398,10 +533,11 @@ function partnerAct(silent) {
       var tp2 = T[data.p[pi].type];
       var tpk = data.p[pi].type;
       var wilted2 = si2.wilted;
+      var pq2 = rollQuality();
       data.p[pi] = null;
-      var xpg2 = Math.round((tp2 ? tp2.xp : 10) * (1 + decorBuffs().xp) * (wilted2 ? 0.5 : 1));
+      var xpg2 = Math.round((tp2 ? tp2.xp : 10) * (1 + decorBuffs().xp) * (wilted2 ? 0.5 : 1) * qualMul(pq2));
       data.exp = (data.exp || 0) + xpg2;
-      data.inv[tpk] = (data.inv[tpk] || 0) + 1;
+      addInvQual(tpk, pq2);
       updDex(tpk, "h"); updSt("h", false);
       hcnt++;
     }
@@ -479,7 +615,15 @@ function renderInv() {
   keys.forEach(function (k) {
     var tp = T[k];
     if (!tp) return;
-    h += "<span class=\"garden-inv-item\" data-flower=\"" + k + "\">" + tp.e[tp.e.length - 1] + " " + tp.n + " \u00d7" + data.inv[k] + "</span>";
+    var q = (data.qual && data.qual[k]) || { n: 0, f: 0, p: 0 };
+    var qTxt = "";
+    if (q.f || q.p) {
+      var parts = [];
+      if (q.f) parts.push("\u4F18" + q.f);
+      if (q.p) parts.push("\u5B8C" + q.p);
+      qTxt = " <span class=\"garden-qual-tag\">" + parts.join(" ") + "</span>";
+    }
+    h += "<span class=\"garden-inv-item\" data-flower=\"" + k + "\">" + tp.e[tp.e.length - 1] + " " + tp.n + " \u00d7" + data.inv[k] + qTxt + "</span>";
   });
   h += "</div><button class=\"garden-bouquet-btn\" id=\"garden-bouquet-btn\">\uD83D\uDCC1 \u5236\u4F5C\u82B1\u675F\u9001\u7ED9" + pn() + "</button>";
   el.innerHTML = h;
@@ -728,6 +872,17 @@ function renderCraft() {
     h += '</div>';
   });
   h += '</div>';
+  h += '<div class="garden-craft-sub">\uD83E\uDD7C \u6742\u4EA4\u914D\u65B9</div><div class="garden-craft-list hybrid-list">';
+  HYBRIDS.forEach(function (hb) {
+    var found = data.hybridFound && data.hybridFound[hb.a + "+" + hb.b];
+    var ta = T[hb.a], tb = T[hb.b], tr = T[hb.r];
+    if (!ta || !tb || !tr) return;
+    h += '<div class="garden-recipe hybrid' + (found ? " made" : "") + '">';
+    h += '<div class="recipe-head"><span class="recipe-emoji">' + tr.e[tr.e.length - 1] + '</span><span class="recipe-name">' + tr.n + '</span>' + (found ? '<span class="recipe-made">\u2713\u5DF2\u53D1\u73B0</span>' : '<span class="recipe-locked">\u672A\u53D1\u73B0</span>') + '</div>';
+    h += '<div class="recipe-need">' + ta.e[ta.e.length - 1] + ta.n + ' + ' + tb.e[tb.e.length - 1] + tb.n + '</div>';
+    h += '</div>';
+  });
+  h += '</div>';
   el.innerHTML = h;
   el.querySelectorAll(".recipe-btn").forEach(function (b) { b.addEventListener("click", function () { craftRecipe(b.dataset.recipe); }); });
 }
@@ -818,8 +973,11 @@ function renderReport() {
   });
 }
 function renderAll() {
+  syncPlots();
   markBloomed();
+  checkLevelUp();
   ensureTabUI();
+  ensureHybridBtn();
   renderWeather();
   renderDaily();
   renderLevel();
@@ -920,6 +1078,9 @@ function handleTool(e) {
     waterAll();
   } else if (tool === "harvestall") {
     harvestAll();
+  } else if (tool === "hybrid") {
+    if (selPlot < 0) return;
+    hybridPlot(selPlot);
   }
 }
 
@@ -952,13 +1113,15 @@ function harvestAll() {
     if (!si || !si.bloomed) continue;
     var tp = T[plot.type];
     var wilted = si.wilted;
-    var xpg = Math.round((tp ? tp.xp : 10) * xpb * (wilted ? 0.5 : 1));
+    var q = rollQuality();
+    var xpg = Math.round((tp ? tp.xp : 10) * xpb * (wilted ? 0.5 : 1) * qualMul(q));
     data.p[i] = null;
     data.exp = (data.exp || 0) + xpg;
-    data.inv[plot.type] = (data.inv[plot.type] || 0) + 1;
+    addInvQual(plot.type, q);
     if (wilted) data.wiltedSeen = true;
     updDex(plot.type, "h"); updSt("h", true); updDaily("h");
     var dr = dropRareSeed(); if (dr) dropped.push(dr);
+    fxAtPlot(i, "fx-harvest", 1000);
     totalXp += xpg;
     cnt++;
   }
@@ -1042,6 +1205,7 @@ function openGarden() {
   page.hidden = false;
   checkPartnerPassive();
   data = load();
+  checkLoginReward();
   selPlot = -1;
   curWeather = wx();
   curSeason = sea();

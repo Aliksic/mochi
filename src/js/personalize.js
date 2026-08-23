@@ -2870,11 +2870,14 @@ try {
     const _tabbar = document.querySelector('.tabbar');
     if (_tabbar) _tabbar.addEventListener('click', resetMoveMode);
 
-    // touchstart capture 兜底：长按 350ms 期间浏览器已按 pan-x pan-y 接管当前触摸序列，
-    // 350ms 后才加 .desk-move-mode 改 touch-action 对当前序列无效→pointermove 被抢占/翻页→拖不动。
-    // 在 touchstart capture 阶段 preventDefault，阻止浏览器启动 pan-x/pan-y 手势，让 pointer 完整派发。
-    // 副作用：按住图标横滑无法翻页（用户通常在空白处横滑）；短按打开功能不受影响（不阻止 click）。
+    // touchstart capture 兜底：移动模式下短按即拖，浏览器会按 pan-x pan-y 接管触摸序列→
+    // pointermove 被抢占/翻页→拖不动。在 touchstart capture 阶段 preventDefault，阻止浏览器
+    // 启动 pan-x/pan-y 手势，让 pointer 完整派发。
+    // ⚠️ 必须限 inMoveMode：touchstart 的 preventDefault 会阻止浏览器合成 click 事件，
+    //    非移动模式下若也无条件 preventDefault，桌面所有功能按钮（.app）/卡片点击全部失效
+    //    （v3.10.x 回归：开屏进入后桌面按钮全点不动）。仅在移动模式（编辑布局后短按即拖）才需要。
     pagesBox.addEventListener('touchstart', (e) => {
+      if (!inMoveMode) return;
       if (e.target.closest('.desk-lib, .desk-page-add, .decor-bar')) return;
       if (!e.target.closest('[data-desk-widget], .app')) return;
       e.preventDefault();
