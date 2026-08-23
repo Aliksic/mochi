@@ -162,14 +162,27 @@
     for (let d = 1; d <= days; d++) {
       const isToday = d === now.getDate() && y === now.getFullYear() && m === now.getMonth();
       const ds = y + '-' + String(m + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
-      html += '<span class="cal-cell' + (isToday ? ' today' : '') + (ds === selDate ? ' sel' : '') + '" data-date="' + ds + '">' + d + '</span>';
+      // 经期日着色（period 实际 / predict 预测 / fertile 排卵期）
+      let phCls = '';
+      try {
+        const ph = window.periodDayPhase && window.periodDayPhase(ds);
+        if (ph && ph !== 'none') phCls = ' cal-period-' + ph;
+      } catch (e) {}
+      html += '<span class="cal-cell' + phCls + (isToday ? ' today' : '') + (ds === selDate ? ' sel' : '') + '" data-date="' + ds + '">' + d + '</span>';
     }
     grid.innerHTML = html;
   }
   // v3.7.x：点击日期自选 → 显示该日内容（当日心情 / TA 正在 / TA 留言 / 我的留言）
   const calGridEl = document.getElementById('cal-grid');
   if (calGridEl) {
+    let pressTimer = null, longPressed = false;
+    const goPeriodPage = () => {
+      const app = document.querySelector('.app[data-app="period"]');
+      const periodPage = document.getElementById('page-period');
+      if (app && periodPage) app.click();
+    };
     calGridEl.addEventListener('click', (ev) => {
+      if (longPressed) { longPressed = false; return; }
       const cell = ev.target.closest('.cal-cell');
       if (!cell || cell.classList.contains('blank')) return;
       const ds = cell.getAttribute('data-date');
@@ -177,6 +190,28 @@
       selDate = ds;
       render();
     });
+    // 长按经期日格 500ms 跳经期页（短按仍切换查看当日内容）
+    calGridEl.addEventListener('contextmenu', (ev) => {
+      const cell = ev.target.closest('.cal-cell');
+      if (!cell || cell.classList.contains('blank')) return;
+      const ds = cell.getAttribute('data-date');
+      let ph = 'none';
+      try { ph = (window.periodDayPhase && window.periodDayPhase(ds)) || 'none'; } catch (e) {}
+      if (ph !== 'none') { ev.preventDefault(); goPeriodPage(); }
+    });
+    calGridEl.addEventListener('touchstart', (ev) => {
+      const cell = ev.target.closest('.cal-cell');
+      if (!cell || cell.classList.contains('blank')) return;
+      const ds = cell.getAttribute('data-date');
+      let ph = 'none';
+      try { ph = (window.periodDayPhase && window.periodDayPhase(ds)) || 'none'; } catch (e) {}
+      longPressed = false;
+      if (ph === 'none') return;
+      pressTimer = setTimeout(() => { pressTimer = null; longPressed = true; goPeriodPage(); }, 500);
+    }, { passive: true });
+    calGridEl.addEventListener('touchmove', () => { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } }, { passive: true });
+    calGridEl.addEventListener('touchend', () => { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } }, { passive: true });
+    calGridEl.addEventListener('touchcancel', () => { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } }, { passive: true });
   }
   // 月份前进/后退
   const calPrev = document.getElementById('cal-prev');
@@ -289,6 +324,22 @@
     // v3.7.x：未来日期不生成不读取内容，只显示空态提示（与本周日常一致），避免"超前显示"
     const isFuture = dd > new Date(n2.getFullYear(), n2.getMonth(), n2.getDate());
     const e = isFuture ? null : getDayEntry(selDate);
+    // v3.10.x：UI 精简——未来日期隐藏 TA/我卡，只显示一个空态卡（不再 6 张卡各说一遍）
+    const taCard = document.getElementById('cal-ta-card');
+    const meCard = document.getElementById('cal-me-card');
+    const emptyCard = document.getElementById('cal-empty-card');
+    const emptyTxt = document.getElementById('cal-empty-txt');
+    if (isFuture) {
+      if (taCard) taCard.hidden = true;
+      if (meCard) meCard.hidden = true;
+      if (emptyCard) emptyCard.hidden = false;
+      if (emptyTxt) emptyTxt.textContent = '这一天还没有内容，等到了那一天再来看看吧';
+      renderGrid();
+      return;
+    }
+    if (taCard) taCard.hidden = false;
+    if (meCard) meCard.hidden = false;
+    if (emptyCard) emptyCard.hidden = true;
     const dateEl = document.getElementById('cal-today-date');
     if (dateEl) dateEl.textContent = e ? e.date : selDate;
     const catEl = document.getElementById('cal-mood-cat');
@@ -298,7 +349,7 @@
     const nameEl = document.getElementById('cal-mood-name');
     if (nameEl) nameEl.textContent = e ? e.mood : '未来';
     const descEl = document.getElementById('cal-mood-desc');
-    if (descEl) descEl.textContent = e ? e.desc : '这一天还没有内容，等到了那一天再来看吧';
+    if (descEl) descEl.textContent = e ? e.desc : '这一天还没有内容';
     const actEl = document.getElementById('cal-activity');
     if (actEl) actEl.textContent = e ? e.activity : '—';
     const msgEl = document.getElementById('cal-message');

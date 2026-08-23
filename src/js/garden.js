@@ -36,7 +36,20 @@ var T = {
   blueRose: { n: "\u84DD\u73AB\u7470", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF39"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [432000, 864000], xp: 150, lv: 6, ss: 1, rare: true, m: "\u5947\u8FF9\u4E0E\u4E0D\u53EF\u80FD\u7684\u7231" },
   goldSun: { n: "\u91D1\u5411\u65E5\u8475", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF3B"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [432000, 777600], xp: 130, lv: 5, ss: 1, rare: true, m: "\u5FE0\u8BDA\u7684\u4FE1\u4EF0" },
   nightLotus: { n: "\u591C\u83B2", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83E\uDEB7"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [604800, 1036800], xp: 180, lv: 7, ss: 2, rare: true, m: "\u6697\u591C\u91CC\u7684\u575A\u5B88" },
-  rainbowClover: { n: "\u5F69\u8679\u8349", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF40"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u6210\u578B"], g: [259200, 518400], xp: 100, lv: 5, ss: 3, rare: true, m: "\u5E78\u8FD0\u964D\u4E34" }
+  rainbowClover: { n: "\u5F69\u8679\u8349", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF40"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u6210\u578B"], g: [259200, 518400], xp: 100, lv: 5, ss: 3, rare: true, m: "\u5E78\u8FD0\u964D\u4E34" },
+  lily: { n: "\u767E\u5408", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF38"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [172800, 432000], xp: 35, lv: 2, ss: 0, m: "\u7EAF\u6D01\u7684\u7231" },
+  peony: { n: "\u7261\u4E39", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF3A"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [259200, 518400], xp: 45, lv: 3, ss: 1, m: "\u5BCC\u8D35\u5409\u7965" },
+  orchid: { n: "\u5170\u82B1", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDFAD"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [345600, 691200], xp: 55, lv: 4, ss: 2, m: "\u9AD8\u6D01\u5178\u96C5" },
+  maple: { n: "\u67AB\u53F6", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF41"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u6210\u578B"], g: [86400, 259200], xp: 25, lv: 2, ss: 2, m: "\u7F8E\u597D\u7684\u56DE\u5FC6" },
+  wheat: { n: "\u9EA6\u7A57", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF3E"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u6210\u719F"], g: [172800, 345600], xp: 35, lv: 3, ss: 2, m: "\u4E30\u6536\u4E0E\u5E0C\u671B" },
+  jasmine: { n: "\u8309\u8389", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF3C"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [86400, 172800], xp: 20, lv: 2, ss: 1, m: "\u6E05\u65B0\u6DE1\u96C5" },
+  iris: { n: "\u9CF3\u5C3E", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83D\uDCAC"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [172800, 345600], xp: 30, lv: 3, ss: 0, m: "\u7231\u7684\u4F7F\u8005" },
+  bamboo: { n: "\u7AF9", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF8B"], sn: ["\u7B20", "\u53D1\u82BD", "\u6210\u7AF9"], g: [432000, 864000], xp: 60, lv: 4, ss: 3, m: "\u575A\u97F6\u4E0D\u62D4" },
+  iceRose: { n: "\u51B0\u73AB\u7470", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\u2744\uFE0F"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [432000, 864000], xp: 140, lv: 6, ss: 3, rare: true, m: "\u5BD2\u51B7\u4E2D\u7684\u6E29\u67D4" },
+  starLily: { n: "\u661F\u5149\u767E\u5408", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\u2728"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [604800, 1036800], xp: 170, lv: 7, ss: 0, rare: true, m: "\u95EA\u8000\u6C38\u6052" },
+  moonFlower: { n: "\u6708\u5149\u82B1", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF19"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [518400, 864000], xp: 150, lv: 6, ss: 1, rare: true, m: "\u591C\u665A\u7684\u5B88\u5019" },
+  crystalOrchid: { n: "\u6C34\u6676\u5170", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83D\uDC8E"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [691200, 1209600], xp: 200, lv: 8, ss: 2, rare: true, m: "\u7A00\u4E16\u4E4B\u7F8E" },
+  phoenix: { n: "\u51F0\u51F0\u82B1", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83D\uDD25"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [691200, 1209600], xp: 220, lv: 8, ss: 1, rare: true, m: "\u6D85\u69C8\u91CD\u751F" }
 };
 var WM = [
   "\u4ECA\u5929\u4E5F\u8F9B\u82E6\u5566\uFF0C\u82B1\u82B1\u4EEC\u4E5F\u5728\u52AA\u529B\u957F\u5927\u54E6",
@@ -61,7 +74,11 @@ var DECOR = {
   bench: { n: "\u957F\u6905", e: "\uD83E\uDD91", price: 120, max: 1, buff: { partner: 0.15, label: "\u68A6\u89D2\u5E38\u6765+15%" } },
   gnome: { n: "\u56ED\u4E11", e: "\uD83E\uDDD9", price: 100, max: 2, buff: { xp: 0.15, label: "\u7ECF\u9A8C+15%" } },
   windmill: { n: "\u98CE\u8F66", e: "\uD83C\uDF00", price: 150, max: 1, buff: { growth: 0.12, label: "\u751F\u957F+12%" } },
-  fountain: { n: "\u55B7\u6CC9", e: "\u26F7\uFE0F", price: 200, max: 1, buff: { water: 0.5, label: "\u81EA\u52A8\u4FDD\u6C34" } }
+  fountain: { n: "\u55B7\u6CC9", e: "\u26F7\uFE0F", price: 200, max: 1, buff: { water: 0.5, label: "\u81EA\u52A8\u4FDD\u6C34" } },
+  flowerPot: { n: "\u82B1\u67B6", e: "\uD83E\uDEB4", price: 120, max: 2, buff: { growth: 0.1, label: "\u751F\u957F+10%" } },
+  birdNest: { n: "\u9E1F\u5DE2", e: "\uD83D\uDC26", price: 150, max: 1, buff: { partner: 0.2, label: "\u68A6\u89D2\u5E38\u6765+20%" } },
+  windBell: { n: "\u98CE\u94C3", e: "\uD83C\uDF90", price: 130, max: 2, buff: { xp: 0.2, label: "\u7ECF\u9A8C+20%" } },
+  lantern: { n: "\u5F69\u706F", e: "\uD83C\uDF8F", price: 80, max: 3, buff: { growth: 0.06, label: "\u751F\u957F+6%" } }
 };
 var VISITORS = [
   { type: "butterfly", e: "\uD83E\uDE9B", n: "\u8774\u8776" },
@@ -85,7 +102,7 @@ function stageInfo(plot) {
   var seaBoost = (tp.ss === seaIdx) ? 1.3 : 0.85;
   var w = wx();
   var wBoost = (w.t === "\u6674\u6717") ? 1.1 : (w.t === "\u5C0F\u96E8") ? 0.9 : 1.0;
-  var boost = seaBoost * wBoost * (1 + decorBuffs().growth);
+  var boost = seaBoost * wBoost * (1 + decorBuffs().growth) * (plot.pot === 3 ? 1.6 : plot.pot === 2 ? 1.3 : 1);
   var eff = Math.floor(elapsed * boost);
   var stage = 0;
   for (var i = 0; i < tp.g.length; i++) { if (eff >= tp.g[i]) stage = i + 1; else break; }
@@ -186,6 +203,7 @@ function fmtShort(sec) {
 
 function buildPlotInner(plot, si, wl) {
   var h = "";
+  if (plot && plot.pot && plot.pot > 1) h += "<span class=\"garden-pot-mark\">" + (plot.pot === 3 ? "\u8C6A\u534E" : "\u9AD8\u7EA7") + "</span>";
   if (si) {
     if (isGlobal && plot.by && plot.by.indexOf("@") >= 0) {
       h += "<span class=\"garden-plant-src\">" + plot.by.split("@")[1] + "</span>";
@@ -233,7 +251,7 @@ function renderGrid() {
     var pg = s && !s.bloomed && !s.wilted ? Math.floor(s.progress * 10) : -1;
     var wp = w > 0 ? Math.floor(w * 10) : 0;
     var sr = (isGlobal && p && p.by && p.by.indexOf("@") >= 0) ? p.by.split("@")[1] : "";
-    var sig = c + "|" + em + "|" + st + "|" + pg + "|" + wp + "|" + sr;
+    var sig = c + "|" + em + "|" + st + "|" + pg + "|" + wp + "|" + sr + "|" + (p && p.pot || 1);
     var el = grid.children[j];
     if (el.getAttribute("data-sig") === sig) continue;
     el.setAttribute("data-sig", sig);
@@ -384,7 +402,12 @@ var HYBRIDS = [
   { a: "rose", b: "clover", r: "blueRose" },
   { a: "sunflower", b: "daisy", r: "goldSun" },
   { a: "lotus", b: "lavender", r: "nightLotus" },
-  { a: "clover", b: "camellia", r: "rainbowClover" }
+  { a: "clover", b: "camellia", r: "rainbowClover" },
+  { a: "lily", b: "orchid", r: "crystalOrchid" },
+  { a: "peony", b: "jasmine", r: "starLily" },
+  { a: "maple", b: "wheat", r: "phoenix" },
+  { a: "iris", b: "lavender", r: "moonFlower" },
+  { a: "lily", b: "clover", r: "iceRose" }
 ];
 function ensureHybridBtn() {
   if (document.getElementById("garden-tool-hybrid")) return;
@@ -395,6 +418,17 @@ function ensureHybridBtn() {
   btn.className = "garden-tool hybrid";
   btn.dataset.tool = "hybrid";
   btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 21h10l-1.5-5h-7z"/><path d="M12 16v-4"/><circle cx="8" cy="8" r="3"/><circle cx="16" cy="8" r="3"/></svg><span class="garden-tool-label">\u6742\u4EA4</span>';
+  tb.appendChild(btn);
+}
+function ensureUpgradeBtn() {
+  if (document.getElementById("garden-tool-upgrade")) return;
+  var tb = document.getElementById("garden-toolbar");
+  if (!tb) return;
+  var btn = document.createElement("button");
+  btn.id = "garden-tool-upgrade";
+  btn.className = "garden-tool upgrade";
+  btn.dataset.tool = "upgrade";
+  btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.5 7h7.5l-6 4.5 2.5 7.5-6.5-4.5-6.5 4.5 2.5-7.5-6-4.5h7.5z"/></svg><span class="garden-tool-label">\u5347\u7EA7</span>';
   tb.appendChild(btn);
 }
 function hybridPlot(idx) {
@@ -420,20 +454,36 @@ function hybridPlot(idx) {
     var h = HYBRIDS[j];
     if ((h.a === plot.type && h.b === data.p[target].type) || (h.b === plot.type && h.a === data.p[target].type)) { recipe = h; break; }
   }
+  if (!recipe) {
+    if (window.openModal) window.openModal("\u6742\u4EA4", "", function () {}, { pills: [{ label: "\u597D\u7684", value: "ok" }], noInput: true, staticText: si.name + " \u548C " + stageInfo(data.p[target]).name + " \u6682\u65E0\u6742\u4EA4\u914D\u65B9\uFF0C\u8BD5\u8BD5\u5176\u4ED6\u7EC4\u5408\u5427" });
+    return;
+  }
   var n1 = si.name, n2 = stageInfo(data.p[target]).name;
   fxAtPlot(idx, "fx-harvest", 1000); fxAtPlot(target, "fx-harvest", 1000);
   data.p[idx] = null; data.p[target] = null;
-  if (recipe && Math.random() < 0.6) {
-    if (!data.rareInv) data.rareInv = {};
-    data.rareInv[recipe.r] = (data.rareInv[recipe.r] || 0) + 1;
-    if (!data.hybridFound) data.hybridFound = {};
-    data.hybridFound[recipe.a + "+" + recipe.b] = true;
-    addLog("\u2605", n1 + " \u00d7 " + n2 + " \u6742\u4EA4\u6210\u529F\uFF0C\u83B7\u5F97 " + T[recipe.r].n + " \u79CD\u5B50 \u2728");
-    if (window.openModal) window.openModal("\u2728 \u6742\u4EA4\u6210\u529F", "", function () {}, { pills: [{ label: "\u597D\u7684", value: "ok" }], noInput: true, staticText: n1 + " \u00d7 " + n2 + "\n\u83B7\u5F97\u7A00\u6709\u79CD\u5B50\uFF1A" + T[recipe.r].n });
-  } else {
-    addLog("\u6211", n1 + " \u00d7 " + n2 + " \u6742\u4EA4\u5931\u8D25");
-    if (window.openModal) window.openModal("\u6742\u4EA4\u5931\u8D25", "", function () {}, { pills: [{ label: "\u597D\u7684", value: "ok" }], noInput: true, staticText: n1 + " \u00d7 " + n2 + "\n\u4E24\u682A\u82B1\u90FD\u6D88\u8017\u4E86\uFF0C\u518D\u8BD5\u8BD5\u5427" });
-  }
+  if (!data.rareInv) data.rareInv = {};
+  data.rareInv[recipe.r] = (data.rareInv[recipe.r] || 0) + 1;
+  if (!data.hybridFound) data.hybridFound = {};
+  data.hybridFound[recipe.a + "+" + recipe.b] = true;
+  addLog("\u2605", n1 + " \u00d7 " + n2 + " \u6742\u4EA4\u6210\u529F\uFF0C\u83B7\u5F97 " + T[recipe.r].n + " \u79CD\u5B50 \u2728");
+  if (window.openModal) window.openModal("\u2728 \u6742\u4EA4\u6210\u529F", "", function () {}, { pills: [{ label: "\u597D\u7684", value: "ok" }], noInput: true, staticText: n1 + " \u00d7 " + n2 + "\n\u83B7\u5F97\u7A00\u6709\u79CD\u5B50\uFF1A" + T[recipe.r].n });
+  save(data); renderAll();
+}
+
+function upgradePlot(idx) {
+  if (idx < 0 || idx >= data.p.length) return;
+  var plot = data.p[idx];
+  if (!plot) { if (window.openModal) window.openModal("\u5347\u7EA7\u82B1\u76C6", "", function () {}, { pills: [{ label: "\u597D\u7684", value: "ok" }], noInput: true, staticText: "\u8BF7\u5148\u5728\u8BE5\u5730\u5757\u79CD\u690D\u82B1\u6735\uFF0C\u518D\u5347\u7EA7\u82B1\u76C6" }); return; }
+  var cur = plot.pot || 1;
+  if (cur >= 3) { if (window.openModal) window.openModal("\u5347\u7EA7\u82B1\u76C6", "", function () {}, { pills: [{ label: "\u597D\u7684", value: "ok" }], noInput: true, staticText: "\u82B1\u76C6\u5DF2\u6EE1\u7EA7\uFF08\u8C6A\u534E\uFF09\uFF0C\u65E0\u6CD5\u518D\u5347\u7EA7" }); return; }
+  var cost = cur === 1 ? 100 : 300;
+  var exp = data.exp || 0;
+  if (exp < cost) { if (window.openModal) window.openModal("\u5347\u7EA7\u82B1\u76C6", "", function () {}, { pills: [{ label: "\u597D\u7684", value: "ok" }], noInput: true, staticText: "\u7ECF\u9A8C\u4E0D\u8DB3\uFF0C\u5347\u7EA7\u82B1\u76C6\u9700\u8981 " + cost + " \u7ECF\u9A8C\uFF08\u5F53\u524D " + exp + "\uFF09" }); return; }
+  data.exp = exp - cost;
+  plot.pot = cur + 1;
+  var nm = stageInfo(plot) ? stageInfo(plot).name : "\u82B1\u76C6";
+  addLog("\u2605", nm + " \u82B1\u76C6\u5347\u7EA7\u4E3A " + (cur + 1 === 3 ? "\u8C6A\u534E" : "\u9AD8\u7EA7") + "\uFF08-" + cost + "\u7ECF\u9A8C\uFF09");
+  fxAtPlot(idx, "fx-fert", 800);
   save(data); renderAll();
 }
 
@@ -606,9 +656,33 @@ function renderStats() {
 function renderDex() {
   var el = document.getElementById("garden-dex");
   if (!el) return;
+  if (!document.getElementById("garden-dex-search")) {
+    var sh = '<div class="garden-dex-bar"><input id="garden-dex-search" class="garden-dex-search" placeholder="\u{1F50D} \u641C\u7D22\u82B1\u540D..." /><div class="garden-dex-seasons">';
+    sh += '<button class="garden-dex-season' + (dexSeason === -1 ? " active" : "") + '" data-season="-1">\u5168\u90E8</button>';
+    S.forEach(function (s, i) { sh += '<button class="garden-dex-season' + (dexSeason === i ? " active" : "") + '" data-season="' + i + '">' + s.split(" ")[1] + '</button>'; });
+    sh += '</div></div><div id="garden-dex-list"></div>';
+    el.innerHTML = sh;
+    var search = document.getElementById("garden-dex-search");
+    if (search) search.addEventListener("input", function () { dexSearch = this.value; renderDexList(); });
+    el.querySelectorAll(".garden-dex-season").forEach(function (b) { b.addEventListener("click", function () { dexSeason = parseInt(this.dataset.season); el.querySelectorAll(".garden-dex-season").forEach(function (x) { x.classList.toggle("active", parseInt(x.dataset.season) === dexSeason); }); renderDexList(); }); });
+  }
+  var search = document.getElementById("garden-dex-search");
+  if (search && search.value !== dexSearch) search.value = dexSearch;
+  renderDexList();
+}
+function renderDexList() {
+  var el = document.getElementById("garden-dex-list");
+  if (!el) return;
   var keys = Object.keys(T);
-  var normal = keys.filter(function (k) { return !T[k].rare; });
-  var rare = keys.filter(function (k) { return !!T[k].rare; });
+  function filter(list) {
+    return list.filter(function (k) {
+      if (dexSearch && T[k].n.indexOf(dexSearch) < 0) return false;
+      if (dexSeason >= 0 && T[k].ss !== dexSeason) return false;
+      return true;
+    });
+  }
+  var normal = filter(keys.filter(function (k) { return !T[k].rare; }));
+  var rare = filter(keys.filter(function (k) { return !!T[k].rare; }));
   function renderItems(list) {
     var h = "";
     list.forEach(function (k) {
@@ -626,9 +700,12 @@ function renderDex() {
     });
     return h;
   }
-  var nC = normal.filter(function (k) { var dx = data.dex[k] || { p: 0, h: 0 }; return dx.p > 0 || dx.h > 0; }).length;
-  var rC = rare.filter(function (k) { var dx = data.dex[k] || { p: 0, h: 0 }; return dx.p > 0 || dx.h > 0; }).length;
-  el.innerHTML = "<div class=\"garden-dex-title\">\u690D\u7269\u56FE\u9274 " + nC + "/" + normal.length + " \u00B7 \u7A00\u6709 " + rC + "/" + rare.length + "</div><div class=\"garden-dex-grid\">" + renderItems(normal) + "</div>" + (rare.length ? "<div class=\"garden-dex-sub\">\u2728 \u7A00\u6709\u54C1\u79CD</div><div class=\"garden-dex-grid rare-grid\">" + renderItems(rare) + "</div>" : "");
+  var allNormal = keys.filter(function (k) { return !T[k].rare; });
+  var allRare = keys.filter(function (k) { return !!T[k].rare; });
+  var nC = allNormal.filter(function (k) { var dx = data.dex[k] || { p: 0, h: 0 }; return dx.p > 0 || dx.h > 0; }).length;
+  var rC = allRare.filter(function (k) { var dx = data.dex[k] || { p: 0, h: 0 }; return dx.p > 0 || dx.h > 0; }).length;
+  if (!normal.length && !rare.length) { el.innerHTML = "<div class=\"garden-dex-empty\">\u6CA1\u6709\u7B26\u5408\u6761\u4EF6\u7684\u82B1</div>"; return; }
+  el.innerHTML = "<div class=\"garden-dex-title\">\u690D\u7269\u56FE\u9274 " + nC + "/" + allNormal.length + " \u00B7 \u7A00\u6709 " + rC + "/" + allRare.length + "</div><div class=\"garden-dex-grid\">" + renderItems(normal) + "</div>" + (rare.length ? "<div class=\"garden-dex-sub\">\u2728 \u7A00\u6709\u54C1\u79CD</div><div class=\"garden-dex-grid rare-grid\">" + renderItems(rare) + "</div>" : "");
 }
 
 function renderInv() {
@@ -733,7 +810,13 @@ var ACHV = [
   { id: "bouquet3", n: "花束使者", e: "\uD83D\uDCC1", d: "制作 3 束花", check: function () { return (data.bouquetCnt || 0) >= 3; } },
   { id: "partnerCare", n: "同育之情", e: "\uD83D\uDC95", d: "梦角打理 10 次", check: function () { return (data.st.mp || 0) + (data.st.mw || 0) + (data.st.mh || 0) + (data.st.mf || 0) >= 10; } },
   { id: "rich", n: "花山花海", e: "\uD83D\uDCB0", d: "库存 20 朵花", check: function () { var t = 0; Object.keys(data.inv || {}).forEach(function (k) { t += data.inv[k] || 0; }); return t >= 20; } },
-  { id: "wiltedSee", n: "封存时光", e: "\uD83E\uDD40", d: "见证花朵凋谢", check: function () { return !!data.wiltedSeen; } }
+  { id: "wiltedSee", n: "封存时光", e: "\uD83E\uDD40", d: "见证花朵凋谢", check: function () { return !!data.wiltedSeen; } },
+  { id: "hybridMaster", n: "杂交大师", e: "\uD83E\uDD7C", d: "发现 5 个杂交配方", check: function () { return Object.keys(data.hybridFound || {}).length >= 5; } },
+  { id: "craftMaster", n: "花艺师", e: "\uD83D\uDC83", d: "制作 10 束花", check: function () { return (data.bouquetCnt || 0) >= 10; } },
+  { id: "collector15", n: "收藏家", e: "\uD83D\uDCBC", d: "收集 15 种花", check: function () { return Object.keys(data.dex || {}).filter(function (k) { var d = data.dex[k]; return d && (d.p > 0 || d.h > 0); }).length >= 15; } },
+  { id: "rareHunter", n: "稀有猎人", e: "\uD83D\uDD25", d: "收获 3 种稀有花", check: function () { return Object.keys(T).filter(function (k) { return T[k].rare && data.dex[k] && data.dex[k].h > 0; }).length >= 3; } },
+  { id: "allFlowers", n: "万紫千红", e: "\uD83C\uDF08", d: "收集 20 种花", check: function () { return Object.keys(data.dex || {}).filter(function (k) { var d = data.dex[k]; return d && (d.p > 0 || d.h > 0); }).length >= 20; } },
+  { id: "perfect", n: "完美主义", e: "\uD83D\uDC8E", d: "收获完美品质花", check: function () { return Object.keys(data.qual || {}).some(function (k) { return data.qual[k] && data.qual[k].p > 0; }); } }
 ];
 function ensureDailyUI() {
   if (document.getElementById("garden-daily")) return;
@@ -804,11 +887,12 @@ function checkAchv() {
   }
 }
 var curTab = "garden";
+var dexSearch = "", dexSeason = -1;
 var TABS = [
   { id: "garden", n: "\u82B1\u56ED", e: "\uD83C\uDF31" },
   { id: "dex", n: "\u56FE\u9274", e: "\uD83D\uDCD6" },
   { id: "craft", n: "\u5DE5\u574A", e: "\uD83D\uDC83" },
-  { id: "shop", n: "\u88C5\u9970", e: "\uD83C\uDFE1" },
+  { id: "shop", n: "\u88C5\u9970", e: "\uD83C\uDFE0" },
   { id: "achv", n: "\u6210\u5C31", e: "\uD83C\uDFC6" },
   { id: "report", n: "\u5E74\u62A5", e: "\uD83D\uDCCA" }
 ];
@@ -864,7 +948,15 @@ var RECIPES = [
   { id: "miss", n: "\u601D\u5FF5", e: "\uD83C\uDF19", need: { lavender: 3, sakura: 1 }, wish: "\u85B0\u8863\u8349\u7684\u7B49\u5F85\uFF0C\u6A31\u82B1\u7684\u77ED\u6682\uFF0C\u90FD\u662F\u601D\u5FF5" },
   { id: "eternal", n: "\u6C38\u6052", e: "\u221E", need: { tulip: 2, camellia: 1 }, wish: "\u90C1\u91D1\u9999\u7684\u795D\u798F\uFF0C\u5C71\u8336\u82B1\u7684\u7406\u60F3\uFF0C\u613F\u6C38\u6052" },
   { id: "lucky", n: "\u5E78\u8FD0", e: "\uD83C\uDF40", need: { clover: 3, daisy: 1 }, wish: "\u56DB\u53F6\u8349\u52A0\u96CF\u83CA\uFF0C\u5E78\u8FD0\u4F34\u7EAF\u771F" },
-  { id: "miracle", n: "\u5947\u8FF9", e: "\u2728", need: { flameRose: 1, blueRose: 1 }, wish: "\u7EDE\u6A31\u4E0E\u84DD\u73AB\u7470\uFF0C\u4E0D\u53EF\u80FD\u7684\u5947\u8FF9" }
+  { id: "miracle", n: "\u5947\u8FF9", e: "\u2728", need: { flameRose: 1, blueRose: 1 }, wish: "\u7EDE\u6A31\u4E0E\u84DD\u73AB\u7470\uFF0C\u4E0D\u53EF\u80FD\u7684\u5947\u8FF9" },
+  { id: "pure", n: "\u6E05\u65B0", e: "\uD83C\uDF38", need: { lily: 2, jasmine: 2 }, wish: "\u767E\u5408\u7684\u7EAF\u6D01\uFF0C\u8309\u8389\u7684\u6DE1\u96C5\uFF0C\u6E05\u65B0\u5982\u521D" },
+  { id: "noble", n: "\u5BCC\u8D35", e: "\uD83C\uDF3A", need: { peony: 2, camellia: 1 }, wish: "\u7261\u4E39\u7684\u56FD\u8272\uFF0C\u5C71\u8336\u7684\u7406\u60F3\uFF0C\u5BCC\u8D35\u5409\u7965" },
+  { id: "elegant", n: "\u9AD8\u96C5", e: "\uD83C\uDFAD", need: { orchid: 1, lavender: 2 }, wish: "\u5170\u82B1\u7684\u9AD8\u6D01\uFF0C\u85B0\u8863\u8349\u7684\u7B49\u5F85\uFF0C\u4F18\u96C5\u4ECE\u5BB9" },
+  { id: "memory", n: "\u56DE\u5FC6", e: "\uD83C\uDF41", need: { maple: 2, sakura: 1 }, wish: "\u67AB\u53F6\u7684\u56DE\u5FC6\uFF0C\u6A31\u82B1\u7684\u5E78\u798F\uFF0C\u65F6\u5149\u7F8E\u597D" },
+  { id: "harvest", n: "\u4E30\u6536", e: "\uD83C\uDF3E", need: { wheat: 2, sunflower: 1 }, wish: "\u9EA6\u7A57\u7684\u5E0C\u671B\uFF0C\u5411\u65E5\u8475\u7684\u6C89\u9ED8\uFF0C\u4E30\u6536\u559C\u60A6" },
+  { id: "messenger", n: "\u4F7F\u8005", e: "\uD83D\uDCAC", need: { iris: 2, lily: 1 }, wish: "\u51E4\u5C3E\u4F20\u9012\u7231\uFF0C\u767E\u5408\u5B88\u62A4\u7EAF\uFF0C\u7231\u7684\u4F7F\u8005" },
+  { id: "zen", n: "\u7AF9\u610F", e: "\uD83C\uDF8B", need: { bamboo: 1, lotus: 1 }, wish: "\u7AF9\u7684\u575A\u97F6\uFF0C\u83B2\u7684\u6E05\u96C5\uFF0C\u5FC3\u5982\u6B62\u6C34" },
+  { id: "phoenixWish", n: "\u6D85\u69C8", e: "\uD83D\uDD25", need: { phoenix: 1, flameRose: 1 }, wish: "\u51F0\u51F0\u82B1\u4E0E\u7EDE\u73AB\u7470\uFF0C\u6D85\u69C8\u91CD\u751F\u7684\u7231" }
 ];
 function ensureCraftUI() {
   if (document.getElementById("garden-craft")) return;
@@ -1006,6 +1098,7 @@ function renderAll() {
   checkLevelUp();
   ensureTabUI();
   ensureHybridBtn();
+  ensureUpgradeBtn();
   renderWeather();
   renderDaily();
   renderLevel();
@@ -1113,6 +1206,9 @@ function handleTool(e) {
   } else if (tool === "hybrid") {
     if (selPlot < 0) return;
     hybridPlot(selPlot);
+  } else if (tool === "upgrade") {
+    if (selPlot < 0) return;
+    upgradePlot(selPlot);
   }
 }
 

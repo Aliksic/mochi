@@ -76,7 +76,22 @@
     const groups = (DATA.mood || [])
       .map(g => ({ ...g, cards: g.cards.filter(c => !isCardOff('mc-off-mood', c.content)) }))
       .filter(g => g.cards && g.cards.length);
-    const g = weightedPick(groups.map(x => [x, x.weight || 1]));
+    // 经期中：负面情绪组权重 ×3（悲伤/愤怒/不安/克制），正向组权重 ×0.6
+    let moodGroups = groups;
+    try {
+      const ps = window.periodStatus && window.periodStatus();
+      if (ps && ps.inPeriod) {
+        const downGroups = { '悲伤与低落': 1, '愤怒与不满': 1, '不安与恐惧': 1, '克制与隐藏': 1 };
+        const upGroups = { '喜悦与正向': 1, '亲近与爱意': 1 };
+        moodGroups = groups.map(g => {
+          let w = g.weight || 1;
+          if (downGroups[g.group]) w *= 3;
+          else if (upGroups[g.group]) w *= 0.6;
+          return { ...g, weight: w };
+        });
+      }
+    } catch (e) {}
+    const g = weightedPick(moodGroups.map(x => [x, x.weight || 1]));
     if (!g) return null;
     const cards = g.cards;
     // 稀有度加权

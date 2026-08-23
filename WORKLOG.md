@@ -4,6 +4,22 @@
 
 ## 规则
 
+### 2026-08-23（用户要求：聊天输入栏新增「批量发送消息」）
+- [AI-A·完成]（**已构建 verify 10/10，未提交**）：`src/js/chat.js` + `src/js/chat-settings.js` + `src/css/chat-main.css` + `src/template.html`（均 AI-A 业务域）+ 构建产物。
+  - 聊天设置新增「批量发送消息」开关（默认关闭，每联系人独立，存 `cs-batch-send`）。开启后聊天输入栏右侧（图片按钮与发送之间）显示「批量发送」按钮。
+  - 面板：可输入文字点「添加」（Enter 也可）成为一条消息；「表情包」复用表情包面板插入模式逐张加入；「图片」多选图片压缩（720px / JPEG .85）每张一条；列表显示序号/缩略图/类型，可单条 ✕ 删除或「清空」；「发送全部」按加入顺序用 addRec 逐条发送（文字/图片/表情包各为一条独立消息）。
+  - 交互：切联系人清空队列并同步按钮显隐（开关按联系人独立）；设置开关变化即时刷新按钮（`batch-send-changed` 事件）；点面板外关闭；复用 .poke-card 半框样式，dark.css 自动适配。
+  - 验证：`node --check`（chat.js / chat-settings.js 通过）+ verify 10/10。需真机确认：按钮显示、插入文字/表情包/图片、按顺序批量发送。
+  - **修复（用户反馈）**：① 点「插入图片」选图后批量面板被误关——部分浏览器（安卓系统文件选择器）选完/取消后向 document 派发 click，触发「点面板外关闭」；加 `batchPicking` 标志，文件选择器打开期间忽略面板外点击关闭（onchange/onblur 恢复）。② 点「插入表情包」表情包面板被遮挡——`emoji-panel` 与 `batch-panel` 同为 `.poke-card` 底部半框（z-index 相同），DOM 靠后的批量面板盖住表情包面板；改为点表情包先收起批量面板再弹表情包面板，选中后自动重新打开批量面板。
+  - ⚠️ 构建时工作区有大量未提交的对方改动（garden/period/personalize/calendar/call/ta-ask 等），构建产物可能含对方半成品，提交前请确认对方已保存完整。
+
+### 2026-08-23（用户反馈：Pong 全屏能滑动 + 下方空白 + 没铺满）
+- [AI-A·完成]（**已构建 verify 10/10，未提交**）：`src/js/pong.js` + `src/css/chat-pages.css`（均 AI-A 域）+ 构建产物。
+  - 根因：`.poke-card-scroll` 默认 `max-height:40vh + overflow-y:auto`，全屏时没覆盖 → scroll 只占 40vh 可滚动 + 下方 60vh 空白。
+  - 修复：全屏改 flex 撑满布局——panel `padding:0`；scroll `max-height:none; flex:1; overflow:hidden; display:flex`；pong-wrap `flex:1`；canvas-box `flex:1 + flex center`（canvas 居中占满剩余）；bar/score/foot `flex-shrink:0`。不再滚动、无空白。
+  - canvas 更大：availH 预留 230→200（UI 紧凑 gap 14→10/padding 减小），canvas 占更多空间。
+  - 验证：`node --check` + verify 10/10。需真机确认全屏无滚动无空白、canvas 铺满。
+
 ### 2026-08-23（用户反馈：Pong 全屏没铺满 + UI 没放大）
 - [AI-A·完成]（**已构建 verify 10/10，未提交**）：`src/js/pong.js` + `src/css/chat-pages.css`（均 AI-A 域）+ 构建产物。
   - 全屏 UI 全部放大：顶栏标题 20px、score 34px、难度 select 18px+padding、按钮 48px、foot 16px、倒计时 52px、overlay 标题/按钮放大。canvas 去圆角铺满。
@@ -1343,3 +1359,11 @@
   - **防护**：checkPendingReplyFor/maybeIncomingLetterFor 对当前桌面加 mailDbReady 守卫——权威加载前 load(cid) 可能来自剥图快照，落地/来信写回会把 IDB 带图信件覆盖成 [图片] 版（顺带消除 60s 定时器在启动 0~15s 窗口的同款隐患）。
   - **回归**：新增 tools/verify-mail-ios-reply.mjs（6/6：重载 5s 内落地 / visibilitychange 1.5s 内落地 / 开信箱即落地+标签）；verify-mail-send-reply 8/8、verify-mail-isolation 8/8、verify 10/10 全通过。
   - ✅ mail.js 修复与构建产物已随 8fd0699 入库；本次追加提交：verify-mail-ios-reply.mjs 回归脚本入库 + 删除临时探针 tools/diag-mail-load.mjs。
+
+### 2026-08-23（用户反馈：帮我决定完成后黑色弹窗不消失，很多黑色提醒弹窗不会自己消失）
+- [本会话·完成]（**已构建，待提交**）：src/js/music-player.js + src/js/chat.js（均 AI-A 域）。
+  - **根因**：全站 20+ 个模块各自定义 	oast() 共用同一个 #cc-toast DOM 元素。music-player.js 与 chat.js 的 toast 额外设了内联 	.style.opacity='1'（v3.6.x 为 QQ 浏览器 X5 内核 CSS 动画不执行加的兜底），但其余模块（decision.js/ta-ask.js/feed.js/mail.js 等）的 toast **不清内联 opacity**。当 music-player/chat 的 toast 设了内联 opacity=1 后，2s 回调未触发前被其他模块 toast 打断（clearTimeout(t._timer) 清掉回调），其他模块的 timer 回调只 	.className='cc-toast' 移除 show class、不清内联 → 残留的 style.opacity='1' 优先级高于 CSS #cc-toast{opacity:0}，toast 永久可见。「帮我决定已完成」是 decision.js 的 toast，恰是受害者。
+  - **修复**：music-player.js 与 chat.js 的 toast 不再设内联 	.style.opacity，开头先 	.style.opacity='' 清残留，timer 回调只 	.className='cc-toast'。统一只操作 className，靠 CSS 动画 ccToastAutoHide 2.6s forwards + JS timer 双兜底自动消失。其余模块无需改动（本就不操作内联 opacity）。
+  - **验证**：新增 	ools/verify-toast-cross-module.mjs 5/5——A 修复后跨模块 toast 最终 opacity=0 不可见；B 反向用例（模拟旧版肇事 toast 设内联 opacity=1 不清 + decision toast 打断）opacity=1 残留可见，证明根因诊断正确；C 单次 toast 显示 opacity=1 / 2.6s 后 opacity=0。
+pm run verify 10/10。
+  - ⚠️ 未提交：工作区有 26 个文件未提交改动（含 AI-A 累积改动与 AI-B 累积改动），本次只改了 music-player.js / chat.js 两个文件的 toast 函数 + 新增 verify 脚本。构建已执行（index.html/sw.js/version.json 已更新），待用户确认后统一提交。

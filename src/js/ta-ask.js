@@ -239,6 +239,8 @@
     ['interact', '互动询问'],
     ['world', '两个世界']
   ];
+  // 暴露 care 题库给 period.js 梦角关心触发用
+  window.MOCHI_TA_ASK_CARE = DEFAULT_QUESTIONS.filter(function (q) { return q.cat === 'care'; });
 
   // 轻提示
   function toast(msg) {

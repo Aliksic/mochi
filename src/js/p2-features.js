@@ -1496,3 +1496,220 @@ if (ckRefresh) {
 
   window.playLocFx = playLocFx;
 })();
+
+// ===== v3.x：同频 / 伸手（桌面第三页图标，纯动态注入；不依赖 template.html / tabs.js 白名单） =====
+// 世界观：梦角是灵体，常在身边但看不见，偶尔能感觉到、能摸到有体感；字卡表达有限。
+// 同频：TA 此刻状态（字卡拼）+ 敲三下暗号（跨世界弱连接，甜蜜安稳，不往危机写）。
+// 伸手：长按伸手，有概率摸到（震动+暖光+悄悄话字卡），有概率什么都没有——贴合"偶尔能感觉到"。
+(function () {
+  function curStore() { try { return window.storeFor(window.__activeCid || 'default'); } catch (e) { return null; } }
+  function vibrate(p) { try { if (navigator.vibrate) navigator.vibrate(p); } catch (e) {} }
+  function editingNow() { return Array.from(document.querySelectorAll('.app-grid')).some(g => g.classList.contains('editing')); }
+  function toast(msg) {
+    let t = document.getElementById('tp-ss-toast');
+    if (!t) { t = document.createElement('div'); t.id = 'tp-ss-toast'; document.body.appendChild(t); }
+    t.textContent = msg; t.className = 'cc-toast'; void t.offsetWidth; t.className = 'cc-toast show';
+    clearTimeout(t._tm); t._tm = setTimeout(() => { t.className = 'cc-toast'; }, 1800);
+  }
+  function openPage(pg) {
+    document.querySelectorAll('.page').forEach(p => p.hidden = true);
+    pg.hidden = false;
+    // tabs.js 的 syncChrome 在初始 .page hidden 变化时触发，本页不在 FULL_PAGES 会显示 tabbar；
+    // rAF 在该 microtask 之后手动恢复全屏 chrome（隐藏 tabbar/状态栏、加 .full）。
+    requestAnimationFrame(() => {
+      const tabbar = document.querySelector('.tabbar');
+      const phone = document.querySelector('.phone');
+      if (tabbar) tabbar.hidden = true;
+      if (phone) phone.classList.add('no-statusbar');
+      pg.classList.add('full');
+    });
+  }
+  function backHome(pg) {
+    if (pg) pg.classList.remove('full');
+    document.querySelectorAll('.page').forEach(p => p.hidden = true);
+    const home = document.getElementById('page-phone');
+    if (home) home.hidden = false;
+  }
+  function onLongPress(el, cb, duration) {
+    duration = duration || 450;
+    let timer = null;
+    function start() { clearTimeout(timer); timer = setTimeout(cb, duration); }
+    function cancel() { clearTimeout(timer); }
+    el.addEventListener('touchstart', start, { passive: true });
+    el.addEventListener('touchend', cancel);
+    el.addEventListener('touchcancel', cancel);
+    el.addEventListener('mousedown', (e) => { if (e.button === 0) start(); });
+    el.addEventListener('mouseup', cancel);
+    el.addEventListener('mouseleave', cancel);
+  }
+  const host = (document.getElementById('page-phone') || {}).parentNode || document.body;
+
+  // ---- 图标注入第三页 ----
+  function makeApp(app, name, svg) {
+    const a = document.createElement('div');
+    a.className = 'app'; a.setAttribute('data-app', app); a.setAttribute('data-desk-widget', 'app-' + app);
+    a.innerHTML = '<div class="app-ico">' + svg + '</div><div class="app-name">' + name + '</div>';
+    return a;
+  }
+  const tpApp = makeApp('tongpin', '同频', '<svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h3l2-6 4 14 3-9 2 5h6"/></svg>');
+  const ssApp = makeApp('shenshou', '伸手', '<svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 11V5.5a1.5 1.5 0 013 0V11"/><path d="M10 11V4a1.5 1.5 0 013 0v7"/><path d="M13 11V5.5a1.5 1.5 0 013 0V11"/><path d="M16 11V7a1.5 1.5 0 013 0v6c0 4-2 7-6 7s-6-2-6-6v-3z"/></svg>');
+  // 默认放第三页；若用户已装修（desk-layout 存在）且布局未含本图标 → 放新的一页，避免破坏自定义布局。
+  const pagesBox = document.getElementById('desktop-pages');
+  const st0 = curStore();
+  let layArr = null;
+  try { if (st0) layArr = JSON.parse(st0.get('desk-layout') || 'null'); } catch (e) {}
+  const hasLayout = Array.isArray(layArr);
+  const alreadyInLay = hasLayout && layArr.some(p => (p || []).indexOf('app-tongpin') >= 0);
+  let placed = false;
+  if (hasLayout && !alreadyInLay && pagesBox) {
+    const curCnt = pagesBox.querySelectorAll('.page-slide').length;
+    if (curCnt < 5) {
+      const slide = document.createElement('div');
+      slide.className = 'page-slide desk-page';
+      slide.dataset.desk = String(curCnt);
+      const grid = document.createElement('div');
+      grid.className = 'app-grid';
+      grid.setAttribute('data-app', 'tp-page');
+      grid.appendChild(tpApp); grid.appendChild(ssApp);
+      slide.appendChild(grid);
+      pagesBox.appendChild(slide);
+      try {
+        st0.set('desk-page-count', String(curCnt + 1));
+        layArr.push(['app-tongpin', 'app-shenshou']);
+        st0.set('desk-layout', JSON.stringify(layArr));
+      } catch (e) {}
+      try { if (window.deskRebuild) window.deskRebuild(); } catch (e) {}
+      placed = true;
+    }
+  }
+  if (!placed) {
+    const p3 = document.querySelector('.app-grid.p3-grid');
+    if (p3) { p3.appendChild(tpApp); p3.appendChild(ssApp); }
+    // 重应用布局：personalize.js 的 applyDeskLayout 在本文件之前执行过一次，那时图标未注入被跳过；
+    // 此处图标已在 DOM，重应用可把图标按 desk-layout 移到用户装修过的目标页（alreadyInLay 时生效）。
+    try { if (window.applyDeskLayout) window.applyDeskLayout(); } catch (e) {}
+  }
+
+  // ---- 同频页 ----
+  const DEF_STATUS = ['在听雨', '在看你写东西', '没睡，在发呆', '刚路过你身边', '在想你', '在发呆', '在看你', '在等你看我'];
+  const tpPage = document.createElement('div');
+  tpPage.className = 'page'; tpPage.id = 'page-tongpin'; tpPage.hidden = true;
+  tpPage.innerHTML =
+    '<div class="chat-head"><span class="ch-back" id="tp-back"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><span class="ch-name">同频</span></div>' +
+    '<div class="tp-body">' +
+      '<div class="tp-card glass"><div class="tp-label">TA 此刻</div><div class="tp-status" id="tp-status">…</div><button class="tp-refresh" id="tp-refresh">换一个</button></div>' +
+      '<div class="tp-card glass"><div class="tp-label">敲三下 · 看他回不回</div><div class="tp-knock" id="tp-knock"><span class="tp-dot"></span><span class="tp-dot"></span><span class="tp-dot"></span></div><div class="tp-hint" id="tp-hint">长按下方 · 凑三下敲桌面</div><div class="tp-knock-area" id="tp-knock-area">长按这里</div></div>' +
+      '<div class="tp-manage"><button class="tp-add" id="tp-add">+ 添加状态字卡</button><button class="tp-send-btn" id="tp-send">发到聊天：开</button></div>' +
+    '</div>';
+  host.appendChild(tpPage);
+
+  function tpCards() { const s = curStore(); if (!s) return DEF_STATUS.slice(); try { const a = JSON.parse(s.get('tongpin-status') || '[]'); return a.length ? a : DEF_STATUS.slice(); } catch (e) { return DEF_STATUS.slice(); } }
+  function tpSave(a) { const s = curStore(); if (s) try { s.set('tongpin-status', JSON.stringify(a)); } catch (e) {} }
+  // 状态池：用户自定义 + TA 日常 action 字卡（在做什么）合并去重，接入字卡库
+  function tpPool() {
+    const s = curStore(); let pool = DEF_STATUS.slice();
+    try { const a = JSON.parse((s && s.get('tongpin-status')) || '[]'); if (Array.isArray(a) && a.length) pool = a.slice(); } catch (e) {}
+    try { const a = JSON.parse((s && s.get('checkin-cards-action')) || '[]'); if (Array.isArray(a)) a.forEach(x => { const t = typeof x === 'string' ? x : (x && x.t); if (t && pool.indexOf(t) < 0) pool.push(t); }); } catch (e) {}
+    return pool.length ? pool : DEF_STATUS.slice();
+  }
+  function tpPick() { const a = tpPool(); const el = document.getElementById('tp-status'); if (el) el.textContent = a[Math.floor(Math.random() * a.length)]; }
+  let knock = 0, knockTimer = null;
+  function tpResetKnock() { knock = 0; document.querySelectorAll('#tp-knock .tp-dot').forEach(d => d.classList.remove('on')); }
+  function tpKnock() {
+    if (editingNow()) return;
+    const dots = document.querySelectorAll('#tp-knock .tp-dot');
+    if (knock < dots.length) dots[knock].classList.add('on');
+    knock++;
+    clearTimeout(knockTimer);
+    const hint = document.getElementById('tp-hint');
+    if (knock < 3) { if (hint) hint.textContent = '再敲 ' + (3 - knock) + ' 下'; knockTimer = setTimeout(tpResetKnock, 5000); return; }
+    const area = document.getElementById('tp-knock-area');
+    const pool = tpPool();
+    if (Math.random() < 0.6) {
+      vibrate([40, 60, 40, 60, 40]);
+      if (area) area.classList.add('flash');
+      setTimeout(() => { if (area) area.classList.remove('flash'); }, 700);
+      const r = pool[Math.floor(Math.random() * pool.length)];
+      if (hint) hint.textContent = '他回你了 · ' + r;
+      if (tpSendOn() && window.chatAddIn) { try { window.chatAddIn(r); } catch (e) {} }
+    } else {
+      if (Math.random() < 0.4) {
+        const miss = ['…没听到', '没接住', '好像走开了'];
+        if (hint) hint.textContent = miss[Math.floor(Math.random() * miss.length)];
+      } else {
+        if (hint) hint.textContent = '没接住 · 过会儿再敲';
+      }
+    }
+    knockTimer = setTimeout(tpResetKnock, 1400);
+  }
+  if (tpApp) tpApp.addEventListener('click', () => { if (editingNow()) return; openPage(tpPage); tpPick(); });
+  document.getElementById('tp-back').addEventListener('click', () => backHome(tpPage));
+  document.getElementById('tp-refresh').addEventListener('click', () => { if (editingNow()) return; tpPick(); });
+  onLongPress(document.getElementById('tp-knock-area'), tpKnock, 350);
+  document.getElementById('tp-add').addEventListener('click', () => { if (!window.openModal) return; window.openModal('添加状态字卡', '', (v) => { if (v) { const a = tpCards(); a.push(v); tpSave(a); toast('已添加'); } }); });
+  function tpSendOn() { const s = curStore(); try { return s.get('tongpin-send-chat') !== '0'; } catch (e) { return true; } }
+  const tpSendBtn = document.getElementById('tp-send');
+  if (tpSendBtn) { tpSendBtn.textContent = '发到聊天：' + (tpSendOn() ? '开' : '关'); tpSendBtn.addEventListener('click', () => { const s = curStore(); const on = !tpSendOn(); if (s) try { s.set('tongpin-send-chat', on ? '1' : '0'); } catch (e) {} tpSendBtn.textContent = '发到聊天：' + (on ? '开' : '关'); }); }
+
+  // ---- 伸手页 ----
+  const DEF_WHISPER = ['被你抓到了', '嗯，在', '刚路过你', '我在', '摸到了吧', '没走远'];
+  const ssPage = document.createElement('div');
+  ssPage.className = 'page'; ssPage.id = 'page-shenshou'; ssPage.hidden = true;
+  ssPage.innerHTML =
+    '<div class="chat-head"><span class="ch-back" id="ss-back"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><span class="ch-name">伸手</span></div>' +
+    '<div class="ss-body">' +
+      '<div class="ss-area" id="ss-area"><div class="ss-glow" id="ss-glow"></div><div class="ss-hint" id="ss-hint">长按 · 伸手去摸身边</div></div>' +
+      '<div class="ss-result" id="ss-result"></div>' +
+      '<div class="ss-count" id="ss-count">摸到 0 次</div>' +
+      '<button class="ss-add" id="ss-add">+ 添加悄悄话字卡</button><button class="ss-send-btn" id="ss-send">发到聊天：开</button>' +
+    '</div>';
+  host.appendChild(ssPage);
+
+  function ssCards() { const s = curStore(); if (!s) return DEF_WHISPER.slice(); try { const a = JSON.parse(s.get('shenshou-cards') || '[]'); return a.length ? a : DEF_WHISPER.slice(); } catch (e) { return DEF_WHISPER.slice(); } }
+  function ssSave(a) { const s = curStore(); if (s) try { s.set('shenshou-cards', JSON.stringify(a)); } catch (e) {} }
+  function ssCount() { const s = curStore(); if (!s) return 0; try { return parseInt(s.get('shenshou-count') || '0', 10) || 0; } catch (e) { return 0; } }
+  function ssSetCount(n) { const s = curStore(); if (s) try { s.set('shenshou-count', '' + n); } catch (e) {} }
+  function ssRenderCount() { const el = document.getElementById('ss-count'); if (el) el.textContent = '摸到 ' + ssCount() + ' 次'; }
+  const SS_FEEL = [
+    { label: '温热', vib: [80], cls: 'hot', cards: ['好暖', '嗯，在', '靠着你', '体温'] },
+    { label: '微凉', vib: [30], cls: 'cold', cards: ['有点凉', '刚吹过风', '指尖凉'] },
+    { label: '发丝', vib: [10, 20, 10], cls: 'soft', cards: ['痒痒的', '发丝擦过', '轻轻的'] }
+  ];
+  function ssSendOn() { const s = curStore(); try { return s.get('shenshou-send-chat') !== '0'; } catch (e) { return true; } }
+  function ssTry() {
+    if (editingNow()) return;
+    const hint = document.getElementById('ss-hint'); if (hint) hint.textContent = '正在伸手…';
+    const glow = document.getElementById('ss-glow'); if (glow) glow.classList.add('reach');
+    setTimeout(() => {
+      if (glow) glow.classList.remove('reach');
+      if (Math.random() < 0.55) {
+        const feel = SS_FEEL[Math.floor(Math.random() * SS_FEEL.length)];
+        const cards = feel.cards.concat(ssCards());
+        const txt = cards[Math.floor(Math.random() * cards.length)];
+        vibrate(feel.vib);
+        if (glow) { glow.classList.add('on'); glow.classList.add(feel.cls); }
+        if (hint) hint.textContent = '摸到了 · ' + feel.label;
+        const res = document.getElementById('ss-result'); if (res) { res.textContent = feel.label + ' · \u201c' + txt + '\u201d'; res.className = 'ss-result reach'; }
+        ssSetCount(ssCount() + 1); ssRenderCount();
+        if (ssSendOn() && window.chatAddIn) { try { window.chatAddIn(txt); } catch (e) {} }
+        setTimeout(() => { if (glow) { glow.classList.remove('on'); glow.classList.remove(feel.cls); } }, 1400);
+      } else {
+        if (glow) glow.classList.add('dim');
+        if (hint) hint.textContent = '什么都没有';
+        const res = document.getElementById('ss-result'); if (res) { res.textContent = '…'; res.className = 'ss-result miss'; }
+        setTimeout(() => { if (glow) glow.classList.remove('dim'); }, 1200);
+      }
+    }, 700);
+  }
+  if (ssApp) ssApp.addEventListener('click', () => { if (editingNow()) return; openPage(ssPage); ssRenderCount(); });
+  document.getElementById('ss-back').addEventListener('click', () => backHome(ssPage));
+  onLongPress(document.getElementById('ss-area'), ssTry, 500);
+  document.getElementById('ss-add').addEventListener('click', () => { if (!window.openModal) return; window.openModal('添加悄悄话字卡', '', (v) => { if (v) { const a = ssCards(); a.push(v); ssSave(a); toast('已添加'); } }); });
+  const ssSendBtn = document.getElementById('ss-send');
+  if (ssSendBtn) { ssSendBtn.textContent = '发到聊天：' + (ssSendOn() ? '开' : '关'); ssSendBtn.addEventListener('click', () => { const s = curStore(); const on = !ssSendOn(); if (s) try { s.set('shenshou-send-chat', on ? '1' : '0'); } catch (e) {} ssSendBtn.textContent = '发到聊天：' + (on ? '开' : '关'); }); }
+
+  document.addEventListener('contact-switched', () => {
+    if (!tpPage.hidden) tpPick();
+    if (!ssPage.hidden) ssRenderCount();
+  });
+})();

@@ -483,6 +483,7 @@
     return v || fb;
   }
   function chatPartnerName() { return chatLabel('cs-lbl-partner', 'lbl-partner', 'TA'); }
+  window.chatPartnerName = chatPartnerName;
   function chatUserName() { return chatLabel('cs-lbl-user', 'lbl-user', '我'); }
   // 头像回填（接受元素或 id）
   function fillAvatar(el, key) {
@@ -1362,6 +1363,24 @@
       maybeScrollChatBottom(rec.side);
       return m;
     }
+    // 礼物卡片：居中红色渐变卡片，emoji + 名字 + 价格 + 留言
+    if (rec.special === 'gift') {
+      m.className = 'msg-gift';
+      const sideTxt = rec.side === 'out' ? '我' : chatPartnerName();
+      m.innerHTML = '<div class="msg-gift-card">' +
+        '<div class="msg-gift-bar"></div>' +
+        '<div class="msg-gift-emoji">' + escTxt(rec.giftEmoji || '\uD83C\uDF81') + '</div>' +
+        '<div class="msg-gift-name">' + escTxt(rec.giftName || '礼物') + '</div>' +
+        '<div class="msg-gift-price">\u00A5' + escTxt(Number(rec.giftPrice || 0).toFixed(2)) + '</div>' +
+        '<div class="msg-gift-divider"><span></span>\u2764<span></span></div>' +
+        '<div class="msg-gift-wish">\u201C' + escTxt(rec.giftWish || '心意') + '\u201D</div>' +
+        '<div class="msg-gift-foot">' + escTxt(sideTxt) + ' \u9001\u51FA</div>' +
+        favHeartHtml() +
+        '</div>';
+      body.appendChild(m);
+      maybeScrollChatBottom(rec.side);
+      return m;
+    }
     // TA 的小问题：居中选择题卡片，未作答点击弹出选项
     if (rec.special === 'ask-choose') {
       m.className = 'msg-ask';
@@ -2021,7 +2040,7 @@
     // v3.5.100：TA 新消息进来且聊天页未打开 → 桌面「聊天」图标未读数 +1
     // v3.6.x：换头像/拍一拍等「系统提示」也计入提醒——手机端联系人主动换头像时
     //   不在聊天页也能看到角标/横幅，而不是静默写进聊天记录
-    const notable = rec.side === 'in' && (!rec.special || rec.special === 'poke');
+    const notable = rec.side === 'in' && (!rec.special || rec.special === 'poke' || rec.special === 'gift');
     // v3.5.145：hidden 时聊天页打开也走 showDeskMsg（其内部按可见性发系统通知）——
     // 修复「聊天页切后台后 TA 回复不弹通知」；未读计数仍只在非聊天页时 +1
     if (notable && (!chatVisible() || document.visibilityState === 'hidden')) {
@@ -2081,6 +2100,7 @@
     if (opts && opts.enter && !chatVisible()) enterChat();
     return r;
   };
+  window.chatAddGift = function (rec) { if (!rec.ts) rec.ts = Date.now(); return addRec(rec); };
   // v3.6.x：提交互动答案后立即同步写盘（不等防抖）——
   // chatChooseReply 等函数开头的 loadMsgs() 是异步读 IDB，其合并回调会在
   // 同步代码执行完后才跑，若此时 IDB 里还是旧的「未作答」数据，会触发
@@ -2480,6 +2500,10 @@ function partialRetractMsg(msgEl, side) {
           }
         }, 500);
       }
+      // 经期梦角关心：20% 概率门控防刷屏，checkCare 内部还有同日冷却+概率衰减
+      if (Math.random() * 100 < 20) {
+        try { window.periodCheckCare && window.periodCheckCare(); } catch (e) {}
+      }
     }
     if (hit(c['rc-prob'])) {
       setTimeout(() => {
@@ -2496,7 +2520,7 @@ function partialRetractMsg(msgEl, side) {
     // （call.js 提供 window.callMaybeTrigger，与 maybeMusicRequest 同模式；延迟几秒更自然）
     setTimeout(() => { if (!sameCid()) return; if (window.callMaybeTrigger) window.callMaybeTrigger(); }, 3500);
     // 红包模拟器：回复完成后触发系统自动发红包（TA→我）+ pending 红包收取
-    setTimeout(() => { if (!sameCid()) return; trySystemAutoSend(); tryCollectPending(); }, 2500);
+    setTimeout(() => { if (!sameCid()) return; trySystemAutoSend(); tryCollectPending(); if (window.maybeAutoGift) window.maybeAutoGift(); }, 2500);
   }
   // 「让对方继续说」：cs-normal=0 理解回复（快速 0.3~1s 回 1 条）；=1 按正常回复时间（rs/reply 设置）
   // 跳过已读不回/拍一拍分支——这是"让对方继续说"，必须真说
@@ -2770,7 +2794,7 @@ function partialRetractMsg(msgEl, side) {
     // （等整批发完再加几秒缓冲，避免来电弹窗盖住刚发出去的消息）
     setTimeout(() => { if (window.callMaybeTrigger) window.callMaybeTrigger(); }, count * 2600 + 3500);
     // 红包模拟器：TA 主动发完后也触发系统红包 + pending 收取
-    setTimeout(() => { trySystemAutoSend(); tryCollectPending(); }, count * 2600 + 2500);
+    setTimeout(() => { trySystemAutoSend(); tryCollectPending(); if (window.maybeAutoGift) window.maybeAutoGift(); }, count * 2600 + 2500);
     } catch (e) {
       // v3.6.x：异常不杀链——原实现 tryAutoSend 抛错会阻止 scheduleAutoSend() 执行，
       // 一次异常（真机 DOM/媒体差异、字卡数据损坏等）后 TA 永久不再主动发送；
@@ -4942,6 +4966,8 @@ function partialRetractMsg(msgEl, side) {
     }
     t.textContent = msg;
     t.className = 'cc-toast'; void t.offsetWidth; t.className = 'cc-toast show';
+    // v3.10.x：不设内联 opacity（会污染其他模块 toast 残留 opacity:1 致不消失）
+    t.style.opacity = '';
     clearTimeout(t._timer);
     t._timer = setTimeout(() => { t.className = 'cc-toast'; }, 2000);
   }
@@ -5530,6 +5556,221 @@ function partialRetractMsg(msgEl, side) {
   document.addEventListener('click', (e) => {
     if (emojiPanel && !emojiPanel.hidden && !emojiPanel.contains(e.target) && !emojiBtn.contains(e.target)) closeEmojiPanel();
   });
+
+  // ---- v3.11.x：批量发送（聊天设置「批量发送消息」开启后，输入栏右侧显示按钮）----
+  // 可插入文字 / 表情包 / 图片，每个项目作为一条消息，按顺序批量发送到聊天框
+  const batchPanel = document.getElementById('batch-panel');
+  const batchList = document.getElementById('batch-list');
+  const batchCount = document.getElementById('batch-count');
+  const batchText = document.getElementById('batch-text');
+  const batchBtn = document.getElementById('chat-batch-btn');
+  let batchItems = []; // [{type:'text'|'img'|'sticker', text?, src?}]
+  let batchPicking = false; // 文件选择器打开期间忽略「点击面板外关闭」，防选图后批量面板被误关
+  function batchEnabled() {
+    try { return store.get('cs-batch-send') === '1'; } catch (e) { return false; }
+  }
+  function closeBatchPanel() {
+    if (batchPanel) batchPanel.hidden = true;
+    try { if (batchText && document.activeElement === batchText) batchText.blur(); } catch (e) {}
+  }
+  function openBatchPanel() {
+    if (!batchPanel) return;
+    // 关闭其他底部半框，避免叠加
+    const pc = document.getElementById('poke-card');
+    if (pc) pc.hidden = true;
+    closeEmojiPanel();
+    if (window.closeAvlib) window.closeAvlib();
+    closeIme(); // 收起输入法，面板完整不被键盘遮挡
+    renderBatchList();
+    batchPanel.hidden = false;
+    scrollChatBottom();
+    const morePanel = document.getElementById('chat-more-panel');
+    if (morePanel) morePanel.hidden = true;
+  }
+  function renderBatchList() {
+    if (!batchList) return;
+    if (batchCount) batchCount.textContent = batchItems.length + ' 条';
+    batchList.innerHTML = '';
+    if (!batchItems.length) {
+      batchList.innerHTML = '<div class="batch-empty">还没有要发送的消息<br>可添加文字 / 表情包 / 图片</div>';
+      return;
+    }
+    batchItems.forEach((it, i) => {
+      const row = document.createElement('div');
+      row.className = 'batch-item';
+      const idx = document.createElement('span');
+      idx.className = 'batch-item-idx';
+      idx.textContent = i + 1;
+      row.appendChild(idx);
+      if (it.type === 'text') {
+        const t = document.createElement('span');
+        t.className = 'batch-item-text';
+        t.textContent = it.text;
+        row.appendChild(t);
+      } else {
+        const img = document.createElement('img');
+        img.className = 'batch-item-media';
+        img.src = it.src;
+        img.alt = it.type === 'sticker' ? '表情包' : '图片';
+        row.appendChild(img);
+      }
+      const ty = document.createElement('span');
+      ty.className = 'batch-item-type';
+      ty.textContent = it.type === 'text' ? '文字' : (it.type === 'sticker' ? '表情包' : '图片');
+      row.appendChild(ty);
+      const x = document.createElement('button');
+      x.className = 'batch-item-x';
+      x.textContent = '✕';
+      x.addEventListener('click', () => { batchItems.splice(i, 1); renderBatchList(); });
+      row.appendChild(x);
+      batchList.appendChild(row);
+    });
+  }
+  function batchAddText() {
+    if (!batchText) return;
+    const v = (batchText.value || '').trim();
+    if (!v) { toast('请输入文字'); return; }
+    batchItems.push({ type: 'text', text: v });
+    batchText.value = '';
+    renderBatchList();
+  }
+  // 批量插入图片：多选 → 压缩（同输入栏图片按钮逻辑，720px / JPEG .85）→ 每张一条
+  function batchAddImages(files) {
+    files.forEach(f => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          try {
+            const c = document.createElement('canvas');
+            const scale = Math.min(1, 720 / Math.max(img.width, img.height));
+            c.width = Math.max(1, Math.round(img.width * scale));
+            c.height = Math.max(1, Math.round(img.height * scale));
+            c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+            batchItems.push({ type: 'img', src: c.toDataURL('image/jpeg', 0.85) });
+          } catch (err) {
+            batchItems.push({ type: 'img', src: reader.result });
+          }
+          renderBatchList();
+        };
+        img.onerror = () => {
+          batchItems.push({ type: 'img', src: reader.result });
+          renderBatchList();
+          toast('部分图片无法压缩，已按原图添加');
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(f);
+    });
+  }
+  // 每个项目作为一条独立消息发送（按顺序）
+  function sendBatchItem(it) {
+    if (it.type === 'text') {
+      lastMineText = it.text;
+      addRec({ side: 'out', text: it.text, parts: [{ k: 'text', v: it.text }] });
+    } else if (it.type === 'img') {
+      lastMineText = it.src;
+      addRec({ side: 'out', text: it.src, parts: [{ k: 'img', v: it.src, sub: 'image' }] });
+    } else {
+      lastMineText = it.src;
+      addRec({ side: 'out', text: it.src, type: 'sticker', parts: [{ k: 'img', v: it.src }] });
+    }
+  }
+  function sendBatchAll() {
+    if (!batchItems.length) { toast('还没有要发送的消息'); return; }
+    const items = batchItems.slice();
+    batchItems = [];
+    renderBatchList();
+    closeBatchPanel();
+    if (window.playSfx) window.playSfx('out');
+    items.forEach(sendBatchItem);
+    if (window.logFish) window.logFish();
+    scheduleReply();
+    toast('已批量发送 ' + items.length + ' 条消息');
+  }
+  function syncBatchBtn() {
+    if (!batchBtn) return;
+    batchBtn.style.display = batchEnabled() ? '' : 'none';
+    if (!batchEnabled()) closeBatchPanel();
+  }
+  if (batchBtn) {
+    batchBtn.addEventListener('click', (e) => { e.stopPropagation(); openBatchPanel(); });
+  }
+  const batchClose = document.getElementById('batch-close');
+  if (batchClose) batchClose.addEventListener('click', (e) => { e.stopPropagation(); closeBatchPanel(); });
+  const batchAdd = document.getElementById('batch-text-add');
+  if (batchAdd) batchAdd.addEventListener('click', (e) => { e.stopPropagation(); batchAddText(); });
+  if (batchText) {
+    batchText.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); batchAddText(); }
+    });
+  }
+  const batchEmoji = document.getElementById('batch-emoji');
+  if (batchEmoji) {
+    batchEmoji.addEventListener('click', (e) => {
+      e.stopPropagation();
+      // 先收起批量面板，再弹表情包面板——两者同为 .poke-card 底部半框（z-index 相同），
+      // 不收起会叠在一起：DOM 靠后的批量面板盖在表情包面板上，导致表情包面板无法使用
+      closeBatchPanel();
+      // 复用表情包面板「插入模式」：点表情加入批量队列（不直接发送），选完自动回到批量面板
+      if (window.openEmojiPanelForInsert) {
+        window.openEmojiPanelForInsert((src) => {
+          batchItems.push({ type: 'sticker', src: src });
+          renderBatchList();
+          openBatchPanel(); // 重新打开批量面板，方便继续添加 / 发送
+        });
+      } else {
+        toast('表情包面板暂不可用');
+      }
+    });
+  }
+  const batchImg = document.getElementById('batch-img');
+  if (batchImg) {
+    batchImg.addEventListener('click', (e) => {
+      e.stopPropagation();
+      // iOS Safari：input 必须先挂到 body 再 click（同 chatcard.pickFiles 套路）
+      // 部分浏览器（安卓系统文件选择器）选完/取消后会向 document 派发 click，会触发
+      // 「点击面板外关闭」把批量面板误关——打开选择器期间用 batchPicking 屏蔽
+      batchPicking = true;
+      const fi = document.createElement('input');
+      fi.type = 'file'; fi.accept = 'image/*'; fi.multiple = true;
+      fi.style.cssText = 'position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0;';
+      document.body.appendChild(fi);
+      fi.onchange = () => {
+        batchPicking = false;
+        const files = Array.prototype.slice.call(fi.files || []);
+        fi.value = '';
+        try { fi.remove(); } catch (err2) {}
+        if (files.length) batchAddImages(files);
+      };
+      fi.onblur = () => {
+        // 选择器关闭（选中或取消）后恢复；延迟等系统对话框彻底退场
+        setTimeout(() => {
+          batchPicking = false;
+          try { if (fi.parentNode) fi.remove(); } catch (err2) {}
+        }, 800);
+      };
+      try { fi.click(); } catch (err2) { batchPicking = false; try { fi.remove(); } catch (err3) {} }
+    });
+  }
+  const batchClear = document.getElementById('batch-clear');
+  if (batchClear) batchClear.addEventListener('click', (e) => { e.stopPropagation(); batchItems = []; renderBatchList(); });
+  const batchSendAll = document.getElementById('batch-send-all');
+  if (batchSendAll) batchSendAll.addEventListener('click', (e) => { e.stopPropagation(); sendBatchAll(); });
+  // 点击面板外关闭（文件选择器打开期间忽略，避免选图后误关批量面板）
+  document.addEventListener('click', (e) => {
+    if (batchPicking) return;
+    if (batchPanel && !batchPanel.hidden && !batchPanel.contains(e.target) && batchBtn && !batchBtn.contains(e.target)) closeBatchPanel();
+  });
+  // 切联系人：清空队列 + 同步按钮显隐 + 关闭面板（开关按联系人独立）
+  document.addEventListener('contact-switched', () => {
+    batchItems = [];
+    renderBatchList();
+    syncBatchBtn();
+  });
+  // 聊天设置开关变化：即时刷新按钮显隐
+  document.addEventListener('batch-send-changed', syncBatchBtn);
+  syncBatchBtn();
 
   // ---- 我的表情包：tab 切换 + 工具 ----
   document.querySelectorAll('.emoji-tab').forEach(t => t.addEventListener('click', (e) => {

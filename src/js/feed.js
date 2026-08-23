@@ -1244,6 +1244,23 @@ if (comInput) comInput.addEventListener('keydown', (e) => { if (e.key === 'Enter
       }, (cfg.likeSpeedMin + Math.random() * Math.max(1, cfg.likeSpeedMax - cfg.likeSpeedMin)) * 1000);
     }
   }
+  // 暴露给外部模块发帖（period.js 月度报告分享等）
+  window.feedAddPost = function (text, imgs) {
+    try {
+      const content = String(text || '').trim();
+      if (!content && !(imgs && imgs.length)) return null;
+      const list = load();
+      const id = 'f_' + Date.now();
+      const me = activeMe();
+      const cs = window.activeStore();
+      const taName = cs.get('lbl-partner') || 'TA';
+      const post = { id: id, role: 'me', owner: me.owner, authorName: me.authorName, authorAv: '', taName: taName, taAv: '', content: content, imgs: (imgs || []).slice(), ts: Date.now(), likes: [], comments: [] };
+      list.unshift(post);
+      save(list);
+      renderVisible();
+      return id;
+    } catch (e) { return null; }
+  };
   // ================= TA 自动发布（定时机制，概率在回复设置-朋友圈调整，星言朋友圈机制） =================
   // v3.7.x：按「指定联系人桌面」读朋友圈回复设置（fd-*）——多桌面下各联系人
   // TA 用各自桌面的设置回应我的动态/回复；feedCfg() = 当前桌面

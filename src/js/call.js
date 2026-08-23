@@ -424,6 +424,9 @@
     // v3.5.127：接听即停铃声（不走 endCall 路径）
     if (window.stopSfx) window.stopSfx('ring');
     currentCall.status = 'connected';
+    // 接通即恢复音乐播放（模拟通话不再占用音乐，响铃时暂停、接通后立即续播，
+    // 同时恢复悬浮小框）；挂断路径照常由 endCall 兜底）
+    if (window.musicHoldForCall) window.musicHoldForCall(false);
     if (cdEl) cdEl.hidden = true;
     if (nameEl) nameEl.textContent = partnerName();
     if (statusEl) statusEl.textContent = '正在通话...';
@@ -491,6 +494,8 @@
         callRef.status = 'ended'; endCall('对方已拒绝');
       } else if (r < cc.busy + cc.reject + cc.pickup) {
         callRef.status = 'connected';
+        // 对方接通即恢复音乐播放（与来电接听一致）
+        if (window.musicHoldForCall) window.musicHoldForCall(false);
         if (statusEl) statusEl.textContent = '正在通话...';
         startCallDuration();
         // v3.7.x：小框开关隐藏时接通后保持大面板常驻（不自动最小化）

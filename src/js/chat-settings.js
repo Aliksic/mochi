@@ -72,7 +72,6 @@
     const sendShow = store.get('cs-send-show') || 'show';
     const sendBtn = document.getElementById('chat-send');
     if (sendBtn) sendBtn.style.display = sendShow === 'hide' ? 'none' : '';
-    set('cs-send-show-val', sendShow === 'hide' ? '隐藏' : '显示');
     set('cs-send-bg-val', sendBg === '#111111' ? '默认 #111111' : sendBg);
     set('cs-send-ink-val', sendInk === '#ffffff' ? '默认 #ffffff' : sendInk);
     // 双方气泡颜色/文字颜色当前值回显（默认值显示「默认 #色值」，让用户知道默认颜色）
@@ -404,20 +403,20 @@
   // 发送按钮颜色 / 发送文字颜色
   bindBubbleColorRow('cs-send-bg', 'cs-send-bg', '#111111', '发送按钮颜色', SEND_BG_COLORS);
   bindBubbleColorRow('cs-send-ink', 'cs-send-ink', '#ffffff', '发送文字颜色', BUBBLE_INK_COLORS);
-  // 发送按钮显示/隐藏（pills；隐藏后仍可按 Enter 键发送）
-  const csSendShow = row('cs-send-show');
+  // 发送按钮显示/隐藏（勾选=隐藏，默认显示；隐藏后仍可按回车键发送）。每联系人独立。
+  const csSendShow = document.getElementById('cs-send-show');
   if (csSendShow) {
-    csSendShow.addEventListener('click', () => {
-      if (!window.openModal) return;
-      window.openModal('显示发送按钮', '', (v) => { store.set('cs-send-show', v); applySettings(); }, {
-        pills: [
-          { label: '显示', value: 'show' },
-          { label: '隐藏', value: 'hide' }
-        ],
-        pill: store.get('cs-send-show') || 'show',
-        noInput: true
-      });
+    const showGet = () => { try { return store.get('cs-send-show') === 'hide'; } catch (e) { return false; } };
+    const showSet = (hide) => { try { store.set('cs-send-show', hide ? 'hide' : 'show'); } catch (e) {} };
+    const syncCsSendShow = () => { const v = showGet(); if (v !== csSendShow.checked) csSendShow.checked = v; };
+    syncCsSendShow();
+    csSendShow.addEventListener('change', () => {
+      if (csSendShow.checked === showGet()) return;
+      showSet(csSendShow.checked);
+      applySettings();
+      toast(csSendShow.checked ? '发送按钮已隐藏：仍可按回车键发送消息' : '发送按钮已显示');
     });
+    document.addEventListener('contact-switched', syncCsSendShow);
   }
 
   const csFont = row('cs-font-size');
@@ -879,5 +878,24 @@
       toast(csDtm.checked ? '已开启：点击联系人消息可在操作菜单里删除该条消息' : '已关闭删除联系人消息功能');
     });
     document.addEventListener('contact-switched', syncDtm);
+  }
+
+  // v3.11.x：「批量发送消息」开关——默认关闭，每联系人独立。开启后聊天输入栏右侧显示
+  // 「批量发送」按钮：可插入表情包/图片/文字，每个项目一条消息，多条按顺序批量发送。
+  // 存 cs-batch-send，chat.js 读同一键控制按钮显隐。
+  const csBs = document.getElementById('cs-batch-send');
+  if (csBs) {
+    const bsGet = () => { try { return store.get('cs-batch-send') === '1'; } catch (e) { return false; } };
+    const bsSet = (en) => { try { store.set('cs-batch-send', en ? '1' : '0'); } catch (e) {} };
+    const syncBs = () => { const v = bsGet(); if (v !== csBs.checked) csBs.checked = v; };
+    syncBs();
+    csBs.addEventListener('change', () => {
+      if (csBs.checked === bsGet()) return;
+      bsSet(csBs.checked);
+      // 通知聊天页即时刷新「批量发送」按钮显隐（不依赖切联系人）
+      try { document.dispatchEvent(new Event('batch-send-changed')); } catch (e) {}
+      toast(csBs.checked ? '已开启：聊天输入栏右侧显示「批量发送」按钮，可插入表情包/图片/文字批量发送' : '已关闭：聊天输入栏「批量发送」按钮已隐藏');
+    });
+    document.addEventListener('contact-switched', syncBs);
   }
 })();

@@ -1,0 +1,103 @@
+/* ===== 聊天礼物卡片（红色渐变，微信红包风） ===== */
+.msg-gift { align-self: center; width: 100%; display: flex; justify-content: center; margin: 6px 0; }
+.msg-gift-card {
+  width: min(280px, 84vw); padding: 0 0 14px; border-radius: 20px;
+  background: linear-gradient(160deg, #fff0f0 0%, #ffe0e0 45%, #fccfcf 100%);
+  border: 1px solid rgba(250, 81, 81, 0.18);
+  box-shadow: 0 4px 20px rgba(250, 81, 81, 0.14), 0 1px 3px rgba(0, 0, 0, 0.04);
+  text-align: center; overflow: hidden;
+}
+.msg-gift-bar { height: 4px; background: linear-gradient(90deg, #ff8a8a, #fa5151, #ff8a8a); }
+.msg-gift-emoji { font-size: 44px; line-height: 1; margin: 14px 0 6px; }
+.msg-gift-name { font-size: 16px; font-weight: 700; color: #b03030; }
+.msg-gift-price { font-size: 12px; color: #c06060; margin-top: 2px; }
+.msg-gift-divider { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 8px 14px; color: #d88; }
+.msg-gift-divider span { flex: 1; height: 1px; background: linear-gradient(90deg, transparent, rgba(250, 81, 81, 0.3), transparent); }
+.msg-gift-wish { font-size: 13px; color: #9a4040; padding: 0 16px; line-height: 1.5; word-break: break-word; }
+.msg-gift-foot { font-size: 11px; color: #b06060; margin-top: 10px; }
+
+/* ===== 聊天送礼面板（底部半框） ===== */
+.gift-balance { text-align: center; font-size: 12px; color: #888; padding: 8px 16px 0; }
+.gift-cats { display: flex; gap: 6px; padding: 10px 14px 6px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.gift-cat { flex-shrink: 0; padding: 5px 12px; border-radius: 99px; background: rgba(0, 0, 0, 0.05); color: #666; font-size: 13px; border: none; cursor: pointer; }
+.gift-cat.sel { background: #fa5151; color: #fff; }
+.gift-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 6px 14px 16px; }
+.gift-item { position: relative; background: #fff; border: 1px solid rgba(0, 0, 0, 0.08); border-radius: 14px; padding: 10px 4px 8px; text-align: center; cursor: pointer; transition: transform 0.12s; }
+.gift-item:active { transform: scale(0.96); }
+.gift-item-emoji { font-size: 28px; line-height: 1; }
+.gift-item-name { font-size: 12px; color: #333; margin-top: 4px; }
+.gift-item-price { font-size: 11px; color: #fa5151; margin-top: 2px; }
+.gift-item.manage { background: #fff5f5; }
+.gift-item-del { position: absolute; top: 4px; right: 6px; width: 18px; height: 18px; line-height: 18px; border-radius: 50%; background: rgba(250, 81, 81, 0.85); color: #fff; font-size: 11px; cursor: pointer; }
+.gift-empty { grid-column: 1 / -1; text-align: center; color: #aaa; padding: 30px 0; font-size: 13px; }
+
+/* ===== 心意市集页 ===== */
+.market-body { padding: 14px 14px 80px; max-width: 540px; margin: 0 auto; }
+.market-balance { text-align: center; font-size: 13px; color: #fa5151; padding: 6px 0 10px; font-weight: 600; }
+.market-cats { display: flex; gap: 6px; padding: 4px 0 10px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.market-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.market-grid .gift-item { padding: 12px 4px 10px; }
+.market-grid .gift-item-emoji { font-size: 32px; }
+.market-foot { display: flex; gap: 10px; justify-content: center; margin-top: 18px; }
+.market-tool { padding: 9px 20px; border-radius: 99px; background: #fff; border: 1px solid rgba(250, 81, 81, 0.3); color: #fa5151; font-size: 13px; cursor: pointer; }
+.market-tool:active { background: #fff0f0; }
+
+/* ===== 心意柜页 ===== */
+.giftbox-tabs { display: flex; gap: 8px; padding: 12px 14px 4px; max-width: 540px; margin: 0 auto; }
+.gb-tab { flex: 1; padding: 8px 0; border-radius: 99px; background: rgba(0, 0, 0, 0.05); color: #666; border: none; font-size: 14px; cursor: pointer; }
+.gb-tab.sel { background: #fa5151; color: #fff; }
+.giftbox-stat { text-align: center; font-size: 12px; color: #999; padding: 4px 14px 8px; }
+.giftbox-scroll { padding: 0 14px 80px; max-width: 540px; margin: 0 auto; }
+.giftbox-card { display: flex; align-items: center; gap: 12px; background: #fff; border: 1px solid rgba(0, 0, 0, 0.07); border-radius: 14px; padding: 12px; margin-bottom: 10px; cursor: pointer; transition: transform 0.12s; }
+.giftbox-card:active { transform: scale(0.98); }
+.giftbox-emoji { font-size: 34px; flex-shrink: 0; width: 48px; text-align: center; }
+.giftbox-info { flex: 1; min-width: 0; }
+.giftbox-name { font-size: 15px; font-weight: 600; color: #333; }
+.giftbox-price { font-size: 12px; color: #fa5151; font-weight: 400; margin-left: 6px; }
+.giftbox-wish { font-size: 12px; color: #777; margin-top: 3px; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.giftbox-meta { font-size: 11px; color: #aaa; margin-top: 4px; }
+
+/* ===== 购买弹窗（openTCPanel 内） ===== */
+.gb-preview { text-align: center; padding: 8px 0 14px; }
+.gb-emoji { font-size: 48px; line-height: 1; }
+.gb-name { font-size: 18px; font-weight: 700; color: #333; margin-top: 6px; }
+.gb-price { font-size: 14px; color: #fa5151; margin-top: 2px; }
+.gb-desc { font-size: 13px; color: #888; margin-top: 8px; padding: 0 8px; line-height: 1.5; }
+.gb-side-row { display: flex; gap: 8px; margin: 14px 0; }
+.gb-side { flex: 1; padding: 9px 0; border-radius: 99px; background: rgba(0, 0, 0, 0.05); color: #666; border: 1px solid transparent; font-size: 14px; cursor: pointer; }
+.gb-side.sel { background: #fa5151; color: #fff; border-color: #fa5151; }
+.gb-wish-row { margin-bottom: 14px; }
+.gb-wish-label { font-size: 13px; color: #666; margin-bottom: 6px; }
+.gb-wish { width: 100%; min-height: 60px; padding: 9px 12px; border-radius: 12px; border: 1px solid rgba(0, 0, 0, 0.12); background: #fff; font-size: 14px; resize: none; box-sizing: border-box; font-family: inherit; }
+.gb-wish[readonly] { background: #fff8f8; color: #9a4040; }
+.gb-wish-hint { font-size: 11px; color: #b08080; margin-top: 5px; }
+.gb-actions { display: flex; gap: 10px; }
+.gb-cancel, .gb-ok { flex: 1; padding: 11px 0; border-radius: 12px; border: none; font-size: 15px; cursor: pointer; }
+.gb-cancel { background: rgba(0, 0, 0, 0.06); color: #666; }
+.gb-ok { background: #fa5151; color: #fff; }
+
+/* ===== 添加商品表单 ===== */
+.gm-form { padding: 4px 0; }
+.gm-row { margin-bottom: 12px; }
+.gm-row label { display: block; font-size: 13px; color: #666; margin-bottom: 5px; }
+.gm-input { width: 100%; padding: 9px 12px; border-radius: 10px; border: 1px solid rgba(0, 0, 0, 0.12); background: #fff; font-size: 14px; box-sizing: border-box; font-family: inherit; }
+.gm-input[minheight], textarea.gm-input { min-height: 50px; resize: none; }
+
+/* ===== 礼物详情弹窗 ===== */
+.gb-detail { text-align: center; padding: 16px 0; }
+.gb-detail-emoji { font-size: 56px; line-height: 1; }
+.gb-detail-name { font-size: 20px; font-weight: 700; color: #333; margin-top: 8px; }
+.gb-detail-price { font-size: 15px; color: #fa5151; margin-top: 3px; }
+.gb-detail-wish { font-size: 14px; color: #777; margin: 12px 16px 0; line-height: 1.6; }
+.gb-detail-meta { font-size: 12px; color: #aaa; margin-top: 10px; }
+
+@media (prefers-color-scheme: dark) {
+  .msg-gift-card { background: linear-gradient(160deg, #3a2222 0%, #4a2828 45%, #5a3030 100%); border-color: rgba(250, 81, 81, 0.3); }
+  .msg-gift-name, .gb-name, .gb-detail-name, .giftbox-name { color: #f0d8d8; }
+  .msg-gift-wish, .gb-wish[readonly] { color: #d8a8a8; }
+  .gift-item, .giftbox-card { background: #2a2a2a; border-color: rgba(255, 255, 255, 0.08); }
+  .gift-item-name, .giftbox-wish, .gb-desc, .gb-wish-label, .gm-row label { color: #ccc; }
+  .gift-cat, .gb-tab, .gb-side, .gb-cancel { background: rgba(255, 255, 255, 0.08); color: #ccc; }
+  .gm-input, .gb-wish { background: #2a2a2a; border-color: rgba(255, 255, 255, 0.12); color: #eee; }
+  .market-tool { background: #2a2a2a; }
+}

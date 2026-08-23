@@ -78,14 +78,15 @@
 /* 工具条 */
 .garden-toolbar {
   display:flex; gap:4px; padding:0 12px 14px;
-  justify-content:center; flex-wrap:wrap;
+  overflow-x:auto; scrollbar-width:none; -ms-overflow-style:none;
 }
+.garden-toolbar::-webkit-scrollbar { display:none; }
 .garden-tool {
   display:flex; flex-direction:column; align-items:center; gap:2px;
   padding:8px 6px; border-radius:12px;
   border:1px solid rgba(0,0,0,.1); background:rgba(255,255,255,.94);
   cursor:pointer; font-family:inherit; font-size:11px; color:var(--ink);
-  min-width:42px; flex:1 1 auto;
+  min-width:42px; flex:0 0 auto;
   transition:background .15s ease, border-color .15s ease;
   -webkit-tap-highlight-color:transparent;
 }
@@ -327,6 +328,7 @@
 }
 .garden-tab.active { background: linear-gradient(90deg, #66bb6a, #43a047); color: #fff; }
 .gt-emoji { font-size: 15px; }
+.garden-tab.active .gt-emoji { filter: drop-shadow(0 1px 1px rgba(0,0,0,.35)); }
 .gt-name { font-size: 10px; font-weight: 600; }
 .garden-panel { display: none; }
 .garden-panel.active { display: block; }
@@ -434,3 +436,18 @@
   .garden-plot.rare.bloomed .garden-plant-emoji { animation: none !important; }
   .garden-fx { display: none !important; }
 }
+
+/* ===== 图鉴搜索+季节筛选 ===== */
+.garden-dex-bar { margin-bottom: 10px; }
+.garden-dex-search { width: 100%; padding: 8px 12px; border-radius: 12px; border: 1px solid rgba(0,0,0,.1); background: rgba(255,255,255,.8); font-size: 13px; margin-bottom: 8px; box-sizing: border-box; font-family: inherit; color: var(--ink); }
+.garden-dex-seasons { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 8px; }
+.garden-dex-season { padding: 4px 10px; border-radius: 99px; border: none; background: rgba(0,0,0,.05); font-size: 11px; cursor: pointer; font-family: inherit; color: var(--ink); -webkit-tap-highlight-color: transparent; }
+.garden-dex-season.active { background: linear-gradient(90deg, #66bb6a, #43a047); color: #fff; }
+.garden-dex-empty { text-align: center; padding: 20px; color: var(--muted); font-size: 13px; }
+
+/* ===== 花盆等级标记 ===== */
+.garden-pot-mark { position: absolute; top: 2px; left: 3px; font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 6px; background: linear-gradient(90deg, rgba(255,193,7,.3), rgba(255,111,0,.2)); color: #c67800; z-index: 4; }
+
+/* ===== 升级按钮 ===== */
+.garden-tool.upgrade { background: rgba(255,193,7,.1); border-color: rgba(255,193,7,.3); }
+.garden-tool.upgrade:active { background: #ffb300; }

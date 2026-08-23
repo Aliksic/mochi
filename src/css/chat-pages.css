@@ -539,11 +539,10 @@
 .cal-mood-ico svg { width:26px; height:26px; }
 .cal-mood-name { font-size:18px; font-weight:800; color:var(--ink); }
 .cal-mood-desc { font-size:12px; color:var(--muted); margin-top:3px; }
+/* v3.10.x：去套娃——TA 正在 改成轻量一行，不再嵌白底小卡 */
 .cal-activity {
   display:flex; align-items:center; gap:8px;
-  font-size:13px; color:var(--ink);
-  background:rgba(255,255,255,.92); border:1px solid rgba(0,0,0,.1);
-  border-radius:12px; padding:10px 14px;
+  font-size:13px; color:var(--ink); padding:6px 0; margin-bottom:4px;
 }
 .cal-act-label { font-size:11px; color:var(--muted); letter-spacing:1px; }
 .cal-card-title { font-size:14px; font-weight:700; letter-spacing:.5px; margin-bottom:10px; }
@@ -552,6 +551,15 @@
   background:rgba(255,255,255,.92); border-radius:14px; padding:14px;
   border:1px solid rgba(0,0,0,.1);
 }
+/* v3.10.x：合并卡内的分段样式（替代独立小卡，标题轻量化：小字号弱色 + 左短色条） */
+.cal-sec { padding-top:12px; margin-top:12px; border-top:1px solid rgba(0,0,0,.06); }
+.cal-sec:first-of-type { padding-top:0; margin-top:0; border-top:0; }
+.cal-sec-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+.cal-sec-title {
+  font-size:11px; font-weight:600; color:var(--muted); letter-spacing:1px;
+  padding-left:8px; border-left:3px solid var(--ink); line-height:1.4;
+}
+.cal-sec-body { font-size:14px; line-height:1.7; color:var(--ink); white-space:pre-line; }
 /* 月历格子 */
 .cal-month-head {
   display:flex; align-items:center; justify-content:center; gap:16px;
@@ -567,11 +575,15 @@
 .cal-month-btn:active { background:rgba(0,0,0,.06); }
 .cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
 .cal-grid .cal-wd { font-size:10px; color:var(--muted); text-align:center; padding:4px 0; }
+/* v3.10.x：格子去 border，靠 gap 留白 + 背景色区分状态（参考 iOS 系统日历） */
 .cal-grid .cal-cell {
   aspect-ratio:1; border-radius:10px; display:flex; align-items:center; justify-content:center;
-  font-size:12px; color:#777; background:rgba(255,255,255,.92);
-  border:1px solid rgba(0,0,0,.1);
+  font-size:12px; color:#777;
 }
+/* 经期日标记（与 period.js 联动，长按跳经期页）*/
+.cal-grid .cal-cell.cal-period-period { background:#e84a5f; color:#fff; font-weight:700; }
+.cal-grid .cal-cell.cal-period-predict { background:rgba(232,74,95,.28); color:#c0392b; }
+.cal-grid .cal-cell.cal-period-fertile { background:rgba(241,130,170,.3); color:#d63384; }
 .cal-grid .cal-cell.today { background:var(--ink); color:#fff; font-weight:700; }
 .cal-grid .cal-cell.blank { background:transparent; }
 /* v3.7.x：日期可点击自选——非今天日期选中后填充高亮，点击有反馈 */
@@ -581,15 +593,20 @@
 
 /* 我的留言 */
 .cal-mine { font-style:normal; }
+/* v3.10.x：编辑按钮挪到 sec-head 右侧，缩小成药丸 */
 .cal-edit-btn {
-  display:inline-flex; align-items:center; gap:6px; margin-top:10px;
-  padding:10px 16px; border:1px solid rgba(0,0,0,.1); border-radius:12px;
-  background:rgba(255,255,255,.92); color:var(--ink); font-size:13px; font-weight:600;
+  display:inline-flex; align-items:center; gap:4px;
+  padding:4px 10px; border:1px solid rgba(0,0,0,.12); border-radius:99px;
+  background:transparent; color:var(--ink); font-size:11px; font-weight:600;
   cursor:pointer; font-family:inherit;
 }
-.cal-edit-btn:active { background:rgba(255,255,255,.6); }
-.cal-edit-btn svg { width:14px; height:14px; }
+.cal-edit-btn:active { background:rgba(0,0,0,.06); }
+.cal-edit-btn svg { width:12px; height:12px; }
 .cal-edit-btn[hidden] { display:none; }
+
+/* v3.10.x：空态卡（未来日期统一提示） */
+.cal-empty { text-align:center; }
+.cal-empty-txt { font-size:13px; color:var(--muted); line-height:1.7; padding:24px 0; }
 
 /* 经期记录页 */
 .period-scroll { flex:1; overflow-y:auto; scrollbar-width:none; -ms-overflow-style:none; padding:0 18px; }
@@ -623,6 +640,7 @@
 .period-phase-bar .seg-0 { background:#fde2ee; color:#e85a8f; }
 .period-phase-bar .seg-1 { background:#fff3da; color:#f5a623; }
 .period-phase-bar .seg.active { box-shadow:0 0 0 2px var(--ink) inset; font-weight:800; }
+.period-ovu-line { font-size:12px; color:#f5a623; margin-bottom:10px; font-weight:600; }
 .period-action-row { display:flex; gap:10px; }
 .period-btn {
   flex:1; padding:12px; font-size:13px; font-weight:600; border-radius:14px;
@@ -656,6 +674,10 @@
 .period-grid .pc-cell.blank { background:transparent; border:none; cursor:default; }
 .period-grid .pc-cell.today { outline:2px solid var(--ink); outline-offset:-2px; }
 .period-grid .pc-cell.ph-period { background:#e85a8f; color:#fff; font-weight:700; border-color:#e85a8f; }
+/* 经量热力图：经期日按经量深浅着色（medium 用默认 ph-period 色）*/
+.period-grid .pc-cell.ph-period.pc-flow-spot { background:#f8b0c4; }
+.period-grid .pc-cell.ph-period.pc-flow-light { background:#f48aa8; }
+.period-grid .pc-cell.ph-period.pc-flow-heavy { background:#d6336c; }
 .period-grid .pc-cell.ph-predict { background:#fde2ee; color:#c44a78; border:1px dashed #e85a8f; }
 .period-grid .pc-cell:not(.blank):active { opacity:.7; }
 .period-card-title { font-size:14px; font-weight:700; letter-spacing:.5px; margin-bottom:10px; }
@@ -739,6 +761,20 @@
   padding:8px 18px; border-radius:14px; border:1px solid #eee; background:#fff; font-size:13px; cursor:pointer;
 }
 .period-day-pop .dp-toggle.on { background:#e3f6ec; border-color:#3a9b5a; color:#3a9b5a; font-weight:700; }
+/* 关心语管理浮层 */
+.period-day-pop .dp-care-ctrl { display:flex; gap:8px; align-items:center; }
+.period-day-pop .dp-care-mgr { padding:8px 14px; border-radius:14px; border:1px solid #e85a8f; background:#fff; color:#e85a8f; font-size:12px; cursor:pointer; white-space:nowrap; }
+.period-day-pop .dp-add-row { display:flex; gap:8px; }
+.period-day-pop .dp-add-row .dp-care-input { flex:1; padding:8px 10px; border:1px solid #eee; border-radius:10px; font-size:13px; box-sizing:border-box; font-family:inherit; }
+.period-day-pop .dp-add-btn { padding:8px 16px; font-size:12px; white-space:nowrap; }
+.period-day-pop .care-list { display:flex; flex-direction:column; gap:6px; max-height:240px; overflow-y:auto; }
+.period-day-pop .care-row { display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:10px; background:rgba(255,255,255,.7); border:1px solid rgba(0,0,0,.06); }
+.period-day-pop .care-txt { flex:1; font-size:12px; line-height:1.4; }
+.period-day-pop .care-txt.off { color:#ccc; text-decoration:line-through; }
+.period-day-pop .care-toggle { padding:3px 10px; border-radius:10px; border:1px solid #eee; background:#fff; font-size:11px; cursor:pointer; }
+.period-day-pop .care-toggle.on { background:#e3f6ec; border-color:#3a9b5a; color:#3a9b5a; }
+.period-day-pop .care-del { width:24px; height:24px; border:none; background:transparent; color:#999; font-size:16px; cursor:pointer; border-radius:6px; }
+.period-day-pop .care-del:active { background:rgba(0,0,0,.08); }
 .period-day-pop .dp-tip { font-size:11px; color:var(--muted); margin:8px 0; line-height:1.5; }
 .period-day-pop .dp-actions { display:flex; gap:10px; margin-top:6px; }
 .period-day-pop .dp-del { flex:1; padding:9px; border:1px solid #ddd; border-radius:10px; background:#fff; font-size:13px; color:#999; cursor:pointer; }
@@ -753,6 +789,15 @@
 .ps-bar .ps-fill { display:block; height:100%; background:linear-gradient(90deg,#f5a623,#e85a8f); border-radius:4px; }
 .ps-bar .ps-num { min-width:16px; text-align:right; color:var(--muted); }
 .ps-trend { width:100%; max-width:280px; height:auto; display:block; margin:4px 0 8px; }
+/* 症状↔周期天分布 */
+.ps-phase { display:flex; flex-direction:column; gap:8px; margin-bottom:10px; }
+.ps-phase-row { display:flex; align-items:center; gap:8px; }
+.ps-phase-name { width:56px; font-size:11px; color:var(--ink); flex-shrink:0; }
+.ps-phase-bars { flex:1; display:flex; align-items:flex-end; gap:2px; height:32px; }
+.ps-phase-bar { position:relative; flex:1; min-width:6px; background:linear-gradient(180deg,#e85a8f,#f5a623); border-radius:2px 2px 0 0; }
+.ps-phase-bar i { position:absolute; bottom:-13px; left:0; right:0; text-align:center; font-size:8px; color:var(--muted); font-style:normal; }
+.period-report-btn { float:right; padding:3px 10px; font-size:11px; border:1px solid #e85a8f; border-radius:10px; background:#fff; color:#e85a8f; cursor:pointer; }
+.period-day-pop .dp-val { font-size:14px; font-weight:700; color:var(--ink); }
 /* 排卵期日历着色 */
 .period-grid .pc-cell.ph-fertile { background:#fff3da; color:#c47d12; border:1px solid #f5a623; }
 .period-legend .lg-fertile::before { background:#fff3da; border:1px solid #f5a623; }
@@ -2385,20 +2430,22 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + env(safe-area-inset-bott
 .pong-icon-btn:active { transform:scale(.92); }
 .pong-overlay-btns { display:flex; gap:10px; }
 .pong-overlay-btn2 { background:rgba(255,255,255,.16); }
-/* Pong 全屏模式：面板占满视口，游戏区域 + UI 全部放大（fitCanvas 按视口算 canvas 尺寸） */
-#chat-pong-panel.pong-fs { position:fixed; inset:0; z-index:9999; border-radius:0; max-height:none; height:100vh; background:#0f1420; }
-#chat-pong-panel.pong-fs .poke-card-head { background:transparent; color:#fff; border-bottom-color:rgba(255,255,255,.12); padding:14px 18px; }
+/* Pong 全屏模式：面板占满视口，游戏区域 + UI 全部放大，flex 撑满无滚动无空白 */
+#chat-pong-panel.pong-fs { position:fixed; inset:0; z-index:9999; border-radius:0; max-height:none; height:100vh; background:#0f1420; padding:0; }
+#chat-pong-panel.pong-fs .poke-card-scroll { max-height:none; flex:1; overflow:hidden; display:flex; flex-direction:column; padding:0; }
+#chat-pong-panel.pong-fs .poke-card-head { background:transparent; color:#fff; border-bottom-color:rgba(255,255,255,.12); padding:12px 18px; flex-shrink:0; }
 #chat-pong-panel.pong-fs .poke-card-head b { color:#fff; font-size:20px; }
 #chat-pong-panel.pong-fs .poke-card-close { color:#fff; font-size:24px; }
-#chat-pong-panel.pong-fs .pong-wrap { max-width:none; gap:14px; padding:10px 6px 8px; }
-#chat-pong-panel.pong-fs .pong-canvas-box { max-width:none; }
+#chat-pong-panel.pong-fs .pong-wrap { max-width:none; gap:10px; padding:8px 6px; flex:1; display:flex; flex-direction:column; }
+#chat-pong-panel.pong-fs .pong-bar { flex-shrink:0; }
+#chat-pong-panel.pong-fs .pong-score { color:#fff; font-size:34px; flex-shrink:0; }
+#chat-pong-panel.pong-fs .pong-canvas-box { max-width:none; flex:1; display:flex; align-items:center; justify-content:center; min-height:0; }
 #chat-pong-panel.pong-fs #pong-canvas { border-radius:0; }
+#chat-pong-panel.pong-fs .pong-foot { color:rgba(255,255,255,.5); font-size:16px; flex-shrink:0; }
 #chat-pong-panel.pong-fs .pong-bar-left { color:rgba(255,255,255,.7); font-size:18px; }
 #chat-pong-panel.pong-fs .pong-diff { background:rgba(255,255,255,.1); color:#fff; border-color:rgba(255,255,255,.2); font-size:18px; padding:8px 14px; border-radius:10px; }
 #chat-pong-panel.pong-fs .pong-icon-btn { background:rgba(255,255,255,.12); color:#fff; width:48px; height:48px; font-size:24px; }
 #chat-pong-panel.pong-fs .pong-sound { background:rgba(255,255,255,.12); width:48px; height:48px; font-size:26px; }
-#chat-pong-panel.pong-fs .pong-score { color:#fff; font-size:34px; }
-#chat-pong-panel.pong-fs .pong-foot { color:rgba(255,255,255,.5); font-size:16px; }
 #chat-pong-panel.pong-fs .pong-hint { font-size:52px; }
 #chat-pong-panel.pong-fs .pong-overlay-title { font-size:28px; }
 #chat-pong-panel.pong-fs .pong-overlay-body { font-size:16px; }
@@ -2461,3 +2508,33 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + env(safe-area-inset-bott
 .msg-snake-title { font-size:13px; font-weight:700; color:var(--ink); padding-bottom:8px; border-bottom:1px dashed rgba(0,0,0,.1); margin-bottom:8px; }
 .msg-snake-row { display:flex; gap:10px; justify-content:space-between; font-size:12px; color:var(--ink); padding:3px 0; }
 .msg-snake-side { font-weight:700; min-width:24px; }
+
+/* ===== v3.x：同频 / 伸手 页（桌面第三页动态注入） ===== */
+.tp-body, .ss-body { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; box-sizing:border-box; padding:14px 14px 40px; }
+.tp-card { padding:16px 14px; margin-bottom:14px; border-radius:14px; }
+.tp-label { font-size:13px; color:var(--ink-soft,#888); margin-bottom:8px; }
+.tp-status { font-size:20px; font-weight:600; min-height:28px; }
+.tp-refresh { margin-top:10px; font-size:12px; color:var(--ink-soft,#888); background:none; border:1px solid rgba(0,0,0,.12); border-radius:20px; padding:4px 12px; }
+.tp-knock { display:flex; gap:14px; justify-content:center; margin:10px 0; }
+.tp-dot { width:14px; height:14px; border-radius:50%; background:rgba(0,0,0,.12); transition:background .2s, box-shadow .2s; }
+.tp-dot.on { background:#e88; box-shadow:0 0 10px rgba(238,136,136,.7); }
+.tp-hint { font-size:12px; color:var(--ink-soft,#999); text-align:center; margin:6px 0 10px; min-height:16px; }
+.tp-knock-area { text-align:center; padding:18px; border-radius:12px; background:rgba(0,0,0,.05); font-size:14px; color:var(--ink-soft,#777); user-select:none; touch-action:none; }
+.tp-knock-area.flash { animation:tpFlash .7s; }
+@keyframes tpFlash { 0%,100%{background:rgba(0,0,0,.05);} 30%,70%{background:rgba(238,136,136,.35);} }
+.tp-manage { text-align:center; }
+.tp-add, .ss-add { font-size:13px; color:var(--ink-soft,#888); background:none; border:1px dashed rgba(0,0,0,.15); border-radius:10px; padding:8px 14px; }
+.ss-area { position:relative; height:220px; border-radius:18px; background:linear-gradient(160deg,#1a1c22,#2a2230); display:flex; align-items:center; justify-content:center; overflow:hidden; user-select:none; touch-action:none; }
+.ss-glow { position:absolute; width:160px; height:160px; border-radius:50%; background:radial-gradient(circle, rgba(255,196,140,.85), rgba(255,160,90,0) 70%); opacity:0; transform:scale(.6); transition:opacity .5s, transform .5s; pointer-events:none; }
+.ss-glow.reach { opacity:.35; transform:scale(.8); }
+.ss-glow.on { opacity:1; transform:scale(1.1); }
+.ss-glow.dim { opacity:.12; transform:scale(.7); }
+.ss-hint { position:relative; color:rgba(255,255,255,.7); font-size:15px; z-index:1; }
+.ss-result { text-align:center; font-size:18px; min-height:28px; margin:18px 0 8px; }
+.ss-result.reach { color:#e88; }
+.ss-result.miss { color:var(--ink-soft,#aaa); }
+.ss-count { text-align:center; font-size:12px; color:var(--ink-soft,#aaa); margin-bottom:16px; }
+.ss-glow.hot { background:radial-gradient(circle, rgba(255,180,120,.9), rgba(255,140,80,0) 70%); }
+.ss-glow.cold { background:radial-gradient(circle, rgba(150,200,255,.85), rgba(120,170,255,0) 70%); }
+.ss-glow.soft { background:radial-gradient(circle, rgba(220,200,255,.7), rgba(200,180,255,0) 70%); }
+.tp-send-btn, .ss-send-btn { display:block; margin:10px auto 0; font-size:12px; color:var(--ink-soft,#888); background:none; border:1px solid rgba(0,0,0,.12); border-radius:20px; padding:4px 12px; }

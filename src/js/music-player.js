@@ -13,16 +13,14 @@
     if (!t) { t = document.createElement('div'); t.id = 'cc-toast'; document.body.appendChild(t); }
     t.textContent = msg;
     t.className = 'cc-toast'; void t.offsetWidth; t.className = 'cc-toast show';
-    // v3.6.x：内联 opacity 双保险——QQ浏览器 X5 内核下 CSS 动画兜底
-    //（#cc-toast.show 的 ccToastAutoHide）可能不执行，且主线程被大文件读写
-    // 阻塞时 2s 的 setTimeout 隐藏回调会被严重延迟；内联样式优先级最高，
-    // 动画与 JS 定时器任一生效都能自动消失，互不依赖
-    t.style.opacity = '1';
+    // v3.10.x：不设内联 opacity——内联 style.opacity 优先级高于 CSS 规则，
+    // 本模块 toast 设 '1' 后若被其他模块 toast 打断（clearTimeout 清掉本
+    // 回调），其他模块的 timer 回调只移除 show class、不清内联，残留的
+    // opacity:1 会让 #cc-toast 永久可见（用户反馈"黑色弹窗不消失"）。
+    // 统一只操作 className，靠 CSS 动画 ccToastAutoHide + JS timer 双兜底。
+    t.style.opacity = '';
     clearTimeout(t._timer);
-    t._timer = setTimeout(() => {
-      t.className = 'cc-toast';
-      t.style.opacity = '0';
-    }, 2000);
+    t._timer = setTimeout(() => { t.className = 'cc-toast'; }, 2000);
   }
 
   // ================= 数据 =================

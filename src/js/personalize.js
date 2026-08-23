@@ -2007,16 +2007,16 @@ try {
   // ===== v3.6.x：卡片自由摆放（装修模式：上移/下移/移除；新增页可添加卡片） =====
   // 组件 id 列表（对应 template.html 中 [data-desk-widget]）；组件节点唯一，
   // 「添加」= 把节点移动到目标页（节点移动不重建，内部事件绑定保留）
-  const WIDGET_IDS = ['deco', 'quote-row', 'checkin', 'apps', 'music', 'p2apps', 'memo-row', 'week', 'weekend', 'desk-clock', 'desk-calendar', 'desk-timer', 'desk-anniv',
-    'app-chat', 'app-group-chat', 'app-home', 'app-mail', 'app-feed', 'app-calendar', 'app-memory', 'app-divination', 'app-note', 'app-music', 'app-stats', 'app-interact', 'app-checkin', 'p3apps', 'app-period', 'app-accounting', 'app-garden'];
+  const WIDGET_IDS = ['deco', 'quote-row', 'checkin', 'apps', 'music', 'p2apps', 'memo-row', 'week', 'weekend', 'desk-clock', 'desk-calendar', 'desk-timer', 'desk-anniv', 'desk-period',
+    'app-chat', 'app-group-chat', 'app-home', 'app-mail', 'app-feed', 'app-calendar', 'app-memory', 'app-divination', 'app-note', 'app-music', 'app-stats', 'app-interact', 'app-checkin', 'p3apps', 'app-period', 'app-accounting', 'app-garden', 'app-tongpin', 'app-shenshou'];
   const WIDGET_NAMES = {
     deco: '纪念日卡', 'quote-row': '今日情话 / 已摸鱼', checkin: '打卡横幅', apps: '功能图标(整组)',
     music: '音乐播放器', p2apps: '第二页功能图标(整组)', 'memo-row': '今日备忘 / 心情', week: '本周日常', weekend: '周末倒计时',
-    'desk-clock': '时钟', 'desk-calendar': '月历', 'desk-timer': '计时器', 'desk-anniv': '纪念日倒计时',
+    'desk-clock': '时钟', 'desk-calendar': '月历', 'desk-timer': '计时器', 'desk-anniv': '纪念日倒计时', 'desk-period': '经期倒计时',
     'app-chat': '聊天图标', 'app-group-chat': '群聊图标', 'app-home': '主页图标', 'app-mail': '信箱图标', 'app-feed': '朋友圈图标',
     'app-calendar': '日历图标', 'app-memory': '纪念图标', 'app-divination': '占卜图标', 'app-note': '收藏图标',
     'app-music': '音乐图标', 'app-stats': '聊天统计图标', 'app-interact': '提问记录图标', 'app-checkin': '查岗图标',
-    'p3apps': '第三页功能图标(整组)', 'app-period': '经期记录图标', 'app-accounting': '记账图标', 'app-garden': '花园图标',
+    'p3apps': '第三页功能图标(整组)', 'app-period': '经期记录图标', 'app-accounting': '记账图标', 'app-garden': '花园图标', 'app-tongpin': '同频图标', 'app-shenshou': '伸手图标',
   };
   // v3.7.x：装修模式组件库静态预览缩略图（glass 质感 + 真实 SVG 图标，不依赖真实数据/事件）
   const PREV_BOX = 'display:flex;align-items:center;justify-content:center;width:78px;height:58px;border-radius:10px;background:linear-gradient(135deg,#fff,#f6f6f6);border:1px solid rgba(0,0,0,.07);box-shadow:0 1px 3px rgba(0,0,0,.06);flex-shrink:0;overflow:hidden;padding:4px;box-sizing:border-box';
@@ -2049,10 +2049,11 @@ try {
     'desk-calendar': '<span style="display:grid;grid-template-columns:repeat(7,6px);gap:2px">' + Array.from({ length: 21 }, (_, i) => '<span style="width:6px;height:6px;border-radius:2px;' + (i === 10 ? 'background:#111' : 'background:#eee') + '"></span>').join('') + '</span>',
     'desk-timer': '<span style="display:flex;flex-direction:column;align-items:center;gap:3px"><span style="font-size:14px;font-weight:700;color:#222;font-variant-numeric:tabular-nums">00:00.0</span><span style="display:flex;gap:3px"><span style="font-size:5px;color:#666;background:#f0f0f0;padding:1px 4px;border-radius:4px">开始</span><span style="font-size:5px;color:#666;background:#f0f0f0;padding:1px 4px;border-radius:4px">重置</span></span></span>',
     'desk-anniv': '<span style="display:flex;flex-direction:column;align-items:center;gap:1px"><span style="font-size:7px;color:#bbb">距下一个纪念日</span><span style="font-size:15px;font-weight:700;color:#333">30 天</span><span style="font-size:6px;color:#999">生日 · 9 月 18 日</span></span>',
+    'desk-period': '<span style="display:flex;flex-direction:column;align-items:center;gap:1px"><span style="font-size:7px;color:#e85a8f">距下次经期</span><span style="font-size:15px;font-weight:700;color:#e85a8f">5 天</span><span style="font-size:6px;color:#999">周期第 23 天</span></span>',
     'app-chat': _appIcoPrev('聊天'), 'app-group-chat': _appIcoPrev('群聊'), 'app-home': _appIcoPrev('主页'), 'app-mail': _appIcoPrev('信箱'), 'app-feed': _appIcoPrev('朋友圈'),
     'app-calendar': _appIcoPrev('日历'), 'app-memory': _appIcoPrev('纪念'), 'app-divination': _appIcoPrev('占卜'), 'app-note': _appIcoPrev('收藏'),
     'app-music': _appIcoPrev('音乐'), 'app-stats': _appIcoPrev('统计'), 'app-interact': _appIcoPrev('提问'), 'app-checkin': _appIcoPrev('查岗'),
-    'app-period': _appIcoPrev('经期'), 'app-accounting': _appIcoPrev('记账'), 'app-garden': _appIcoPrev('花园'), 'p3apps': _appIcoPrev('经期'),
+    'app-period': _appIcoPrev('经期'), 'app-accounting': _appIcoPrev('记账'), 'app-garden': _appIcoPrev('花园'), 'app-tongpin': _appIcoPrev('同频'), 'app-shenshou': _appIcoPrev('伸手'), 'p3apps': _appIcoPrev('经期'),
   };
   // 隐藏池：被移除的组件暂存（display:none），可从组件库重新添加
   function ensureWidgetPool() {
@@ -2154,7 +2155,45 @@ try {
     try { renderDeskWidgets(); } catch (e) {}
   };
   applyDeskLayout();
+  window.applyDeskLayout = applyDeskLayout;
   document.addEventListener('contact-switched', applyDeskLayout);
+  // v3.10.x：经期倒计时组件默认放第三页顶部（template 已置）。
+  // 已装修过的用户（desk-layout 存在且不含 desk-period）自动加新页放 desk-period，不破坏现有布局。
+  function ensureDeskPeriod() {
+    const lay = deskLayout();
+    const node = document.querySelector('[data-desk-widget="desk-period"]');
+    if (!node) return;
+    if (!lay) {
+      // 新用户：desk-period 应在第三页顶部（template 默认），被其他联系人移走则移回
+      const slides = pagesBox.querySelectorAll('.page-slide');
+      const p3 = slides[2];
+      if (p3 && node.parentNode !== p3) {
+        const p3apps = p3.querySelector('[data-desk-widget="p3apps"]');
+        if (p3apps) p3.insertBefore(node, p3apps);
+        else p3.appendChild(node);
+        try { renderDeskWidgets(); } catch (e) {}
+      }
+      return;
+    }
+    if (lay.some(page => (page || []).indexOf('desk-period') >= 0)) return; // 已含
+    if (deskPageCount() >= DESK_PAGE_MAX) return; // 达上限不加页
+    store.set('desk-page-count', String(deskPageCount() + 1));
+    buildDeskPages();
+    const slides = pagesBox.querySelectorAll('.page-slide');
+    const newSlide = slides[slides.length - 1];
+    if (!newSlide) return;
+    const addBtn = newSlide.querySelector('.desk-page-add');
+    if (addBtn) newSlide.insertBefore(node, addBtn);
+    else newSlide.appendChild(node);
+    const newLay = lay.slice();
+    while (newLay.length < slides.length - 1) newLay.push([]);
+    newLay.push(['desk-period']);
+    store.set('desk-layout', JSON.stringify(newLay));
+    if (window.deskRebuild) window.deskRebuild();
+    try { renderDeskWidgets(); } catch (e) {}
+  }
+  ensureDeskPeriod();
+  document.addEventListener('contact-switched', ensureDeskPeriod);
   document.addEventListener('contact-switched', () => { applyDeskFontPct(getDeskFontPct()); applyDeskCardPct(getDeskCardPct()); });
   document.addEventListener('contact-switched', () => { const sp = getBgPresetName(); if (sp) { const p = BG_PRESETS.find(b => b.name === sp); if (p) applyPhoneBgPreset(p.css); else clearPhoneBg(); } syncBgPresetUI(); });
 
@@ -2908,6 +2947,37 @@ try {
     const cancelPress = () => { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } };
     pagesBox.addEventListener('pointerup', cancelPress);
     pagesBox.addEventListener('pointercancel', cancelPress);
+
+    // v3.10.x：tap→click 兜底——部分国产浏览器（X5 内核/夸克/UC 等）触摸不合成 click
+    // 事件，桌面所有 .app 按钮触摸点击无响应（直接 .click() 正常，证明监听器已绑定）。
+    // 在 touchend 判定 tap（单指、未移动、短按）后，等 120ms 看 click 是否触发，
+    // 未触发则手动 click()。正常浏览器 click 在 touchend 后即时合成（<10ms），
+    // 120ms 内检测到即跳过，零影响；不合成的浏览器才兜底，最多 120ms 延迟。
+    // 守卫：移动模式/拖拽中不兜底（短按即拖，不应切页）；target 非 .app 不兜底。
+    let _tapStart = null;
+    pagesBox.addEventListener('touchstart', (e) => {
+      if (inMoveMode || dragging) { _tapStart = null; return; }
+      if (e.touches.length !== 1) { _tapStart = null; return; }
+      const t = e.touches[0];
+      _tapStart = { x: t.clientX, y: t.clientY, time: Date.now() };
+    }, { capture: true, passive: true });
+    pagesBox.addEventListener('touchend', (e) => {
+      const s = _tapStart; _tapStart = null;
+      if (!s || inMoveMode || dragging) return;
+      if (e.changedTouches.length !== 1) return;
+      const c = e.changedTouches[0];
+      if (Math.abs(c.clientX - s.x) > 10 || Math.abs(c.clientY - s.y) > 10) return;
+      if (Date.now() - s.time > 500) return;
+      const btn = e.target.closest && e.target.closest('.app');
+      if (!btn) return;
+      let clicked = false;
+      const once = () => { clicked = true; btn.removeEventListener('click', once, true); };
+      btn.addEventListener('click', once, true);
+      setTimeout(() => {
+        btn.removeEventListener('click', once, true);
+        if (!clicked) { try { btn.click(); } catch (e2) {} }
+      }, 120);
+    }, { capture: true, passive: true });
 
     let dropLine = null;
     const clearDropLine = () => { if (dropLine) { dropLine.remove(); dropLine = null; } };
@@ -3892,6 +3962,7 @@ try {
     try { renderDeskCalendar(); } catch (e) {}
     try { initDeskTimer(); } catch (e) {}
     try { renderDeskAnniv(); } catch (e) {}
+    try { window.periodRenderDeskWidget && window.periodRenderDeskWidget(); } catch (e) {}
   }
   renderDeskWidgets();
 

@@ -24,6 +24,43 @@
   var KEY_CFG = 'period-cfg';
   var KEY_DAILY = 'period-daily';
   var KEY_NOTIFY = 'period-notify';
+  var KEY_CARE = 'period-care-lines';
+
+  // ---- 经期专属关心语（梦角触发，配合 ta-ask care 题库）----
+  var PERIOD_CARE_LINES = [
+    '今天经期第几天了？肚子还痛不痛，要不要帮你揉揉',
+    '记得喝点红糖水，别碰凉的，听话',
+    '经期别太累了，早点躺下休息，我陪你',
+    '肚子还难受吗？抱抱你，暖暖的',
+    '今天经量多不多？记得勤换，别着凉',
+    '经期情绪低落是正常的，不是你的错，我在',
+    '别碰凉水，别吃辣的，乖，听话',
+    '要不要给你捂个热水袋？隔着衣服贴肚子上',
+    '经期别熬夜，早点睡，明天会舒服一点',
+    '今天有没有好好吃饭？经期要吃热乎的',
+    '腰酸不酸？帮你捶捶背好不好',
+    '经期别太拼了，今天的事明天再做，先休息',
+    '心情不好就发出来，别憋着，我接着',
+    '今天经痛厉害吗？厉害就吃颗布洛芬，别硬扛',
+    '经期第几天了？快过去了吧，再忍忍',
+    '别喝冰的！听话，喝温的，肚子会舒服',
+    '今天有没有为自己留点时间？经期要对自己好一点',
+    '肚子凉不凉？多穿点，别让肚子受风',
+    '经期情绪起伏大是激素的事，不是你矫情',
+    '抱抱，今天什么都不做也行，就躺着'
+  ];
+  function loadCareLines() {
+    try { var a = JSON.parse(store.get(KEY_CARE) || 'null'); if (Array.isArray(a)) return a; } catch (e) {}
+    return PERIOD_CARE_LINES.slice();
+  }
+  function saveCareLines(a) {
+    try {
+      store.set(KEY_CARE, JSON.stringify(a));
+      try { if (window.idbSet) window.idbSet(G + ':' + KEY_CARE, JSON.stringify(a)); } catch (e2) {}
+    } catch (e) {}
+  }
+  function isCareOff(line) { return store.get('period-care-off:' + line) === '1'; }
+  function setCareOff(line, off) { store.set('period-care-off:' + line, off ? '1' : '0'); }
 
   function loadRecs() { try { return JSON.parse(store.get(KEY_REC) || '[]'); } catch (e) { return []; } }
   function saveRecs(list) {
@@ -51,7 +88,7 @@
   }
   function loadNotify() {
     try { var n = JSON.parse(store.get(KEY_NOTIFY) || 'null'); if (n) return n; } catch (e) {}
-    return { enabled: false, advanceDays: [3, 1, 0], hour: 9, fired: {} };
+    return { enabled: false, advanceDays: [3, 1, 0], hour: 9, careEnabled: true, fired: {} };
   }
   function saveNotify(n) {
     try {
@@ -278,6 +315,10 @@
     return 'none';
   }
 
+  // ---- 暴露给外部模块（mood-reply-cards 经期情绪联动 / calendar 经期着色）----
+  window.periodStatus = status;
+  window.periodDayPhase = dayPhase;
+
   // ---- 预测置信度（方案 3）：距预测开始日越近越深，高斯衰减 ----
   function predictConfidence(ds) {
     var stats = cycleStats();
@@ -357,6 +398,25 @@
       var segs = ['经期', '排卵期'];
       bar.innerHTML = segs.map(function (n, i) { return '<span class="seg seg-' + i + (i === activeSeg ? ' active' : '') + '">' + n + '</span>'; }).join('');
     }
+    // 排卵倒计时行（经期中不显示）
+    var ovuLine = document.getElementById('period-ovu-line');
+    if (!ovuLine) {
+      ovuLine = document.createElement('div');
+      ovuLine.id = 'period-ovu-line';
+      ovuLine.className = 'period-ovu-line';
+      if (bar && bar.parentNode) bar.parentNode.insertBefore(ovuLine, bar.nextSibling);
+    }
+    if (ovuLine) {
+      if (st.inPeriod || !st.dayOfCycle || !st.ovulationDay) {
+        ovuLine.hidden = true;
+      } else {
+        ovuLine.hidden = false;
+        var toOvu = st.ovulationDay - st.dayOfCycle;
+        if (toOvu > 0) ovuLine.textContent = '距排卵约 ' + toOvu + ' 天';
+        else if (toOvu === 0) ovuLine.textContent = '今天约为排卵日';
+        else ovuLine.textContent = '距下次排卵约 ' + (st.cycleLen - st.dayOfCycle + st.ovulationDay) + ' 天';
+      }
+    }
     var startBtn = document.getElementById('period-mark-start');
     var endBtn = document.getElementById('period-mark-end');
     if (startBtn) startBtn.hidden = st.inPeriod;
@@ -403,7 +463,7 @@
       var dayInfo = daily[ds];
       var mark = '';
       if (dayInfo) {
-        if (dayInfo.flow) mark += '<i class="dm-flow f-' + dayInfo.flow + '"></i>';
+        if (dayInfo.flow) { cls += ' pc-flow-' + dayInfo.flow; mark += '<i class="dm-flow f-' + dayInfo.flow + '"></i>'; }
         if (dayInfo.symptoms && dayInfo.symptoms.length) mark += '<i class="dm-sym"></i>';
         if (dayInfo.note) mark += '<i class="dm-note"></i>';
       }
@@ -493,14 +553,53 @@
           diffs.map(function (v, i) { return '<circle cx="' + (pl + i * xStep).toFixed(1) + '" cy="' + yOf(v).toFixed(1) + '" r="2.5" fill="#e85a8f"/>'; }).join('') +
         '</svg>';
     }
-    card.innerHTML = '<div class="period-card-title">统计</div>' + symHtml + trendHtml;
+    // 症状↔周期相位分布（找规律：痛经总在第1天、排卵期出血等）
+    var phaseHtml = '';
+    if (sorted.length) {
+      recs = normalize(recs);
+      var symPhase = {};
+      for (var ds2 in daily) {
+        var info2 = daily[ds2];
+        if (!info2 || !info2.symptoms) continue;
+        var start2 = null;
+        for (var ri = 0; ri < recs.length; ri++) {
+          if (recs[ri].start <= ds2) start2 = recs[ri].start;
+          else break;
+        }
+        if (!start2) continue;
+        var doc2 = diffDays(start2, ds2) + 1;
+        if (doc2 > effCycleLen()) continue;
+        info2.symptoms.forEach(function (s) {
+          symPhase[s] = symPhase[s] || {};
+          symPhase[s][doc2] = (symPhase[s][doc2] || 0) + 1;
+        });
+      }
+      var top3syms = sorted.slice(0, 3);
+      var phaseRows = '';
+      top3syms.forEach(function (x) {
+        var dist = symPhase[x.k] || {};
+        var days = Object.keys(dist).map(Number).sort(function (a, b) { return a - b; });
+        if (!days.length) return;
+        var maxN = Math.max.apply(null, days.map(function (d) { return dist[d]; }));
+        phaseRows += '<div class="ps-phase-row"><span class="ps-phase-name">' + (SYM_MAP[x.k] || x.k) + '</span><span class="ps-phase-bars">';
+        days.forEach(function (d) {
+          var pct = Math.round(dist[d] / maxN * 100);
+          phaseRows += '<span class="ps-phase-bar" style="height:' + pct + '%" title="第' + d + '天 ' + dist[d] + '次"><i>' + d + '</i></span>';
+        });
+        phaseRows += '</span></div>';
+      });
+      if (phaseRows) phaseHtml = '<div class="ps-title">症状↔周期天分布</div><div class="ps-phase">' + phaseRows + '</div>';
+    }
+    card.innerHTML = '<div class="period-card-title">统计<button class="period-report-btn">月度报告</button></div>' + symHtml + trendHtml + phaseHtml;
+    var reportBtn = card.querySelector('.period-report-btn');
+    if (reportBtn) reportBtn.addEventListener('click', openReportPop);
     var histCardEl = scroll.querySelector('#period-history');
     if (histCardEl) histCardEl = histCardEl.closest('.period-card');
     if (histCardEl && histCardEl.nextSibling) histCardEl.parentNode.insertBefore(card, histCardEl.nextSibling);
     else scroll.appendChild(card);
   }
 
-  function render() { renderStatus(); renderGrid(); renderHistory(); renderStats(); }
+  function render() { renderStatus(); renderGrid(); renderHistory(); renderStats(); try { renderDeskWidget(); } catch (e) {} }
 
   // ---- 操作 ----
   function markStart() {
@@ -679,6 +778,12 @@
         }
       });
     }
+    // 经期中每天提醒
+    if (st.inPeriod && !notifyCfg.fired[today + '_inperiod']) {
+      notifyAssist('经期提醒', '经期第 ' + st.dayOfCycle + ' 天 · 注意保暖休息');
+      notifyCfg.fired[today + '_inperiod'] = 1;
+      fired = true;
+    }
     if (st.phase === 'safe' && /推迟/.test(st.title)) {
       var m = st.title.match(/推迟 (\d+) 天/);
       var delayDays = m ? parseInt(m[1], 10) : 0;
@@ -692,6 +797,217 @@
     Object.keys(notifyCfg.fired).forEach(function (k) { if (k < cut) delete notifyCfg.fired[k]; });
     if (fired) saveNotify(notifyCfg);
   }
+
+  // ---- 梦角关心触发（经期专属，概率连续衰减 + 同日冷却）----
+  // 触发时机：经期前 advanceDays + 当天 + 经期中每天 + 延迟≥5天
+  // 概率：首日 70% → 连发 4+ 降到 20%（参考 mood-reply-cards emotionStreak 衰减）
+  // 内容：80% 经期专属语 + 20% ta-ask care 题库；入口 window.chatAddIn
+  var careStreak = 0;
+  var careLastTs = 0;
+  function pickCareLine() {
+    var lines = loadCareLines().filter(function (l) { return l && !isCareOff(l); });
+    if (!lines.length) lines = PERIOD_CARE_LINES.slice();
+    if (Math.random() * 100 < 80) {
+      return lines[Math.floor(Math.random() * lines.length)];
+    }
+    var pool = window.MOCHI_TA_ASK_CARE;
+    if (pool && pool.length) {
+      var usable = pool.filter(function (q) { return q.enabled !== false; });
+      if (!usable.length) usable = pool;
+      return usable[Math.floor(Math.random() * usable.length)].text;
+    }
+    return lines[Math.floor(Math.random() * lines.length)];
+  }
+  function checkCare() {
+    if (!notifyCfg.careEnabled) return;
+    if (!window.chatAddIn) return;
+    var st = status();
+    var today = todayStr();
+    var shouldCare = false, ctx = '';
+    if (st.inPeriod) { shouldCare = true; ctx = 'inPeriod'; }
+    else if (st.nextStart) {
+      var d = diffDays(today, st.nextStart);
+      if (notifyCfg.advanceDays.indexOf(d) >= 0) { shouldCare = true; ctx = 'adv' + d; }
+    }
+    if (st.phase === 'safe' && /推迟/.test(st.title)) {
+      var m = st.title.match(/推迟 (\d+) 天/);
+      var delayDays = m ? parseInt(m[1], 10) : 0;
+      if (delayDays >= 5) { shouldCare = true; ctx = 'delay'; }
+    }
+    if (!shouldCare) return;
+    notifyCfg.fired = notifyCfg.fired || {};
+    var careKey = today + '_care_' + ctx;
+    if (notifyCfg.fired[careKey]) return;
+    // 6 小时间隔重置 streak（避免会话内永久低概率）
+    if (careLastTs && Date.now() - careLastTs > 6 * 3600000) careStreak = 0;
+    // 经期中按天数差异化：第1-2天 85%、第3-4天 60%、第5+天 35%；非经期 70%
+    var baseProb = 70;
+    if (st.inPeriod) {
+      var doc = st.dayOfCycle || 1;
+      if (doc <= 2) baseProb = 85;
+      else if (doc <= 4) baseProb = 60;
+      else baseProb = 35;
+    }
+    var prob = baseProb;
+    if (careStreak >= 4) prob = Math.min(prob, 20);
+    else if (careStreak >= 3) prob = Math.min(prob, 30);
+    else if (careStreak >= 2) prob = Math.min(prob, 45);
+    else if (careStreak >= 1) prob = Math.min(prob, 60);
+    if (Math.random() * 100 > prob) return;
+    var line = pickCareLine();
+    if (!line) return;
+    try { window.chatAddIn(line); } catch (e) {}
+    careStreak++;
+    careLastTs = Date.now();
+    notifyCfg.fired[careKey] = 1;
+    var cut = addDays(today, -30);
+    Object.keys(notifyCfg.fired).forEach(function (k) { if (k < cut) delete notifyCfg.fired[k]; });
+    saveNotify(notifyCfg);
+  }
+  window.periodCheckCare = checkCare;
+
+  // ---- 关心语管理浮层（增删/单卡开关）----
+  function openCarePop() {
+    var existing = document.getElementById('period-care-pop');
+    if (existing) existing.remove();
+    var lines = loadCareLines();
+    var pop = document.createElement('div');
+    pop.id = 'period-care-pop';
+    pop.className = 'period-day-pop';
+    function renderList() {
+      if (!lines.length) return '<div class="period-empty">还没有关心语，加一条吧</div>';
+      return lines.map(function (l, i) {
+        var off = isCareOff(l);
+        return '<div class="care-row" data-idx="' + i + '">' +
+          '<span class="care-txt' + (off ? ' off' : '') + '">' + l + '</span>' +
+          '<button class="care-toggle' + (off ? '' : ' on') + '">' + (off ? '关' : '开') + '</button>' +
+          '<button class="care-del">×</button>' +
+        '</div>';
+      }).join('');
+    }
+    pop.innerHTML =
+      '<div class="dp-mask"></div>' +
+      '<div class="dp-sheet">' +
+        '<div class="dp-head"><span class="dp-date">梦角关心语</span><button class="dp-close">×</button></div>' +
+        '<div class="dp-section"><div class="dp-label">新增关心语</div><div class="dp-add-row"><input class="dp-care-input" type="text" placeholder="输入关心语"/><button class="dp-add-btn period-btn primary">添加</button></div></div>' +
+        '<div class="dp-section"><div class="dp-label">已有关心语（点开关启停，×删除）</div><div class="care-list">' + renderList() + '</div></div>' +
+        '<div class="dp-tip">经期触发时从开启的关心语里随机抽一条推到聊天。关闭的不会被抽中。</div>' +
+      '</div>';
+    document.body.appendChild(pop);
+    document.body.classList.add('scroll-lock');
+    pop.querySelector('.dp-mask').addEventListener('click', closeCarePop);
+    pop.querySelector('.dp-close').addEventListener('click', closeCarePop);
+    var input = pop.querySelector('.dp-care-input');
+    var listEl = pop.querySelector('.care-list');
+    function addLine() {
+      var v = (input.value || '').trim();
+      if (v && lines.indexOf(v) < 0) {
+        lines.push(v); saveCareLines(lines);
+        input.value = '';
+        listEl.innerHTML = renderList();
+      }
+    }
+    pop.querySelector('.dp-add-btn').addEventListener('click', addLine);
+    input.addEventListener('keydown', function (e) { if (e.key === 'Enter') addLine(); });
+    listEl.addEventListener('click', function (e) {
+      var row = e.target.closest('.care-row');
+      if (!row) return;
+      var idx = parseInt(row.getAttribute('data-idx'), 10);
+      var line = lines[idx];
+      if (!line) return;
+      if (e.target.closest('.care-toggle')) {
+        var off = isCareOff(line);
+        setCareOff(line, !off);
+        row.querySelector('.care-txt').classList.toggle('off', !off);
+        var btn = row.querySelector('.care-toggle');
+        btn.classList.toggle('on', off);
+        btn.textContent = off ? '开' : '关';
+      } else if (e.target.closest('.care-del')) {
+        lines.splice(idx, 1); saveCareLines(lines);
+        listEl.innerHTML = renderList();
+      }
+    });
+  }
+  function closeCarePop() {
+    var pop = document.getElementById('period-care-pop');
+    if (pop) pop.remove();
+    document.body.classList.remove('scroll-lock');
+  }
+
+  // ---- 月度报告卡（本月经期总结，可分享到朋友圈）----
+  var FLOW_MAP = {}; FLOWS.forEach(function (f) { FLOW_MAP[f.k] = f.label; });
+  function openReportPop() {
+    var existing = document.getElementById('period-report-pop');
+    if (existing) existing.remove();
+    var now = new Date();
+    var y = now.getFullYear(), m = now.getMonth();
+    var monthStr = y + '年' + (m + 1) + '月';
+    var mStart = y + '-' + pad2(m + 1) + '-01';
+    var mEnd = y + '-' + pad2(m + 1) + '-' + pad2(new Date(y, m + 1, 0).getDate());
+    recs = normalize(recs);
+    var monthRecs = recs.filter(function (r) {
+      var end = r.end || addDays(r.start, cfg.periodLen - 1);
+      return r.start <= mEnd && end >= mStart;
+    });
+    var monthDaily = {};
+    for (var ds in daily) { if (ds >= mStart && ds <= mEnd) monthDaily[ds] = daily[ds]; }
+    var periodDays = 0;
+    monthRecs.forEach(function (r) {
+      var end = r.end || addDays(r.start, cfg.periodLen - 1);
+      var s = r.start < mStart ? mStart : r.start;
+      var e = end > mEnd ? mEnd : end;
+      periodDays += diffDays(s, e) + 1;
+    });
+    var flowCount = { spot: 0, light: 0, medium: 0, heavy: 0 };
+    for (var ds2 in monthDaily) { if (monthDaily[ds2].flow) flowCount[monthDaily[ds2].flow]++; }
+    var flowTxt = Object.keys(flowCount).filter(function (k) { return flowCount[k]; }).map(function (k) {
+      return (FLOW_MAP[k] || k) + ' ' + flowCount[k] + '天';
+    }).join('、');
+    var freq = {};
+    for (var ds3 in monthDaily) { if (monthDaily[ds3].symptoms) monthDaily[ds3].symptoms.forEach(function (s) { freq[s] = (freq[s] || 0) + 1; }); }
+    var sortedSym = Object.keys(freq).map(function (k) { return { k: k, n: freq[k] }; }).sort(function (a, b) { return b.n - a.n; });
+    var symTxt = sortedSym.slice(0, 3).map(function (x) { return (SYM_MAP[x.k] || x.k) + ' ' + x.n + '次'; }).join('、') || '无';
+    var stats = cycleStats();
+    var cycleTxt = stats.n >= 1 ? stats.median + ' 天（中位数）' : '数据不足';
+    var recordDays = Object.keys(monthDaily).length;
+    var reportText = '📊 ' + monthStr + ' 经期报告\n' +
+      '周期长度：' + cycleTxt + '\n' +
+      '经期天数：' + periodDays + ' 天\n' +
+      '经量分布：' + (flowTxt || '未记录') + '\n' +
+      '常见症状：' + symTxt + '\n' +
+      '记录天数：' + recordDays + ' 天';
+    var pop = document.createElement('div');
+    pop.id = 'period-report-pop';
+    pop.className = 'period-day-pop';
+    pop.innerHTML =
+      '<div class="dp-mask"></div>' +
+      '<div class="dp-sheet">' +
+        '<div class="dp-head"><span class="dp-date">' + monthStr + ' 经期报告</span><button class="dp-close">×</button></div>' +
+        '<div class="dp-section"><div class="dp-label">周期长度</div><div class="dp-val">' + cycleTxt + '</div></div>' +
+        '<div class="dp-section"><div class="dp-label">经期天数</div><div class="dp-val">' + periodDays + ' 天</div></div>' +
+        '<div class="dp-section"><div class="dp-label">经量分布</div><div class="dp-val">' + (flowTxt || '未记录') + '</div></div>' +
+        '<div class="dp-section"><div class="dp-label">常见症状</div><div class="dp-val">' + symTxt + '</div></div>' +
+        '<div class="dp-section"><div class="dp-label">记录天数</div><div class="dp-val">' + recordDays + ' 天</div></div>' +
+        '<div class="dp-actions"><button class="dp-save period-btn primary" id="period-report-share">分享到朋友圈</button></div>' +
+      '</div>';
+    document.body.appendChild(pop);
+    document.body.classList.add('scroll-lock');
+    pop.querySelector('.dp-mask').addEventListener('click', closeReportPop);
+    pop.querySelector('.dp-close').addEventListener('click', closeReportPop);
+    pop.querySelector('#period-report-share').addEventListener('click', function () {
+      if (window.feedAddPost) {
+        var id = window.feedAddPost(reportText);
+        if (id) { closeReportPop(); toast('已分享到朋友圈'); }
+        else toast('分享失败');
+      } else { toast('朋友圈功能未就绪'); }
+    });
+  }
+  function closeReportPop() {
+    var pop = document.getElementById('period-report-pop');
+    if (pop) pop.remove();
+    document.body.classList.remove('scroll-lock');
+  }
+
   // ---- 周期设置浮层（stepper 分别设定 + 上次开始日 + 排卵日预览）----
   function openSettingsPop() {
     var existing = document.getElementById('period-settings-pop');
@@ -781,6 +1097,7 @@
       '<div class="dp-sheet">' +
         '<div class="dp-head"><span class="dp-date">经期提醒设置</span><button class="dp-close">×</button></div>' +
         '<div class="dp-section"><div class="dp-label">启用提醒</div><button class="dp-toggle' + (notifyCfg.enabled ? ' on' : '') + '">' + (notifyCfg.enabled ? '已开启' : '已关闭') + '</button></div>' +
+        '<div class="dp-section"><div class="dp-label">梦角关心（经期自动发关心语）</div><div class="dp-care-ctrl"><button class="dp-toggle care-toggle' + (notifyCfg.careEnabled ? ' on' : '') + '">' + (notifyCfg.careEnabled ? '已开启' : '已关闭') + '</button><button class="dp-care-mgr period-btn">管理关心语</button></div></div>' +
         '<div class="dp-section"><div class="dp-label">提醒提前天数</div><div class="dp-sym-grid">' + advHtml + '</div></div>' +
         '<div class="dp-section"><div class="dp-label">提醒时间（小时 0-23）</div><input class="dp-hour" type="number" min="0" max="23" value="' + (notifyCfg.hour || 9) + '"/></div>' +
         '<div class="dp-tip">提醒在打开应用时检查并推送；后台通知需浏览器支持。</div>' +
@@ -799,6 +1116,14 @@
         try { Notification.requestPermission(); } catch (e) {}
       }
     });
+    var careBtn = pop.querySelector('.care-toggle');
+    if (careBtn) careBtn.addEventListener('click', function () {
+      notifyCfg.careEnabled = !notifyCfg.careEnabled;
+      careBtn.textContent = notifyCfg.careEnabled ? '已开启' : '已关闭';
+      careBtn.classList.toggle('on', notifyCfg.careEnabled);
+    });
+    var careMgr = pop.querySelector('.dp-care-mgr');
+    if (careMgr) careMgr.addEventListener('click', openCarePop);
     pop.querySelectorAll('.adv').forEach(function (b) {
       b.addEventListener('click', function () { b.classList.toggle('on'); });
     });
@@ -813,6 +1138,7 @@
       closeNotifyPop();
       toast('已保存');
       checkNotify();
+      checkCare();
     });
   }
   function closeNotifyPop() {
@@ -833,6 +1159,7 @@
       viewM = -1;
       render();
       checkNotify();
+      checkCare();
     });
   }
   var back = document.getElementById('period-back');
@@ -849,6 +1176,8 @@
   if (ms) ms.addEventListener('click', markStart);
   var me = document.getElementById('period-mark-end');
   if (me) me.addEventListener('click', markEnd);
+  var rt = document.getElementById('period-record-today');
+  if (rt) rt.addEventListener('click', function () { openDayPop(todayStr()); });
   // 日历日格：短按切换经期标记，长按打开每日详情浮层
   var grid = document.getElementById('period-grid');
   if (grid) {
@@ -899,6 +1228,40 @@
   // v3.10.x 全局共享：经期数据不随联系人切换重载（所有桌面共用全局键）。
   // contact-switched 无需处理；进页面时 app click handler 已重读全局同一份数据。
 
-  // 启动后稍延迟检查通知（经期预测/延迟预警）
+  // ---- 桌面经期倒计时小组件 ----
+  function renderDeskWidget() {
+    var labelEl = document.getElementById('dpd-label');
+    var daysEl = document.getElementById('dpd-days');
+    var subEl = document.getElementById('dpd-sub');
+    if (!labelEl || !daysEl || !subEl) return;
+    var st = status();
+    if (st.inPeriod) {
+      labelEl.textContent = '经期第 ' + st.dayOfCycle + ' 天';
+      daysEl.textContent = st.dayOfCycle;
+      subEl.textContent = '注意保暖休息';
+    } else if (st.nextStart) {
+      var d = diffDays(todayStr(), st.nextStart);
+      labelEl.textContent = '距下次经期';
+      daysEl.textContent = d + ' 天';
+      subEl.textContent = st.dayOfCycle ? '周期第 ' + st.dayOfCycle + ' 天' : '即将开始';
+    } else {
+      labelEl.textContent = '经期';
+      daysEl.textContent = '—';
+      subEl.textContent = '未记录';
+    }
+  }
+  window.periodRenderDeskWidget = renderDeskWidget;
+  // 桌面组件点击跳经期页
+  (function bindDeskWidget() {
+    var w = document.querySelector('[data-desk-widget="desk-period"]');
+    if (w) w.addEventListener('click', function () {
+      var app = document.querySelector('.app[data-app="period"]');
+      if (app) app.click();
+    });
+  })();
+
+  // 启动后稍延迟检查通知（经期预测/延迟预警）+ 梦角关心触发
   setTimeout(checkNotify, 3000);
+  setTimeout(checkCare, 5000);
+  setTimeout(renderDeskWidget, 2500);
 })();

@@ -68,6 +68,22 @@
     return n;
   }
 
+  // v3.9.x：本地时间格式化——toISOString() 是 UTC，直接 slice 显示会比本地时区早/晚数小时
+  //（中国 UTC+8 显示时间早 8 小时），用户反馈"导入时显示的时间不对"。
+  // 统一用此函数把 ISO 字符串转成本地时间 "YYYY-MM-DD HH:MM" 显示。
+  function fmtLocalTime(iso) {
+    if (!iso) return '未知';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '未知';
+    const p = (n) => String(n).padStart(2, '0');
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+  }
+  // 本地日期字符串（用于导出文件名，凌晨导出不会变成前一天日期）
+  function localDateStr(d) {
+    const p = (n) => String(n).padStart(2, '0');
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  }
+
   // 兼容旧 iOS：读取文件文本（File.text() 不支持时退回 FileReader）
   function readFileText(file) {
     return new Promise((resolve) => {
@@ -102,10 +118,14 @@
       }
     } catch (e) {}
     // IndexedDB：音乐文件、字卡、聊天记录等全部权威数据
+    // v3.9.x：修复"无法导出当前的所有数据"——原实现整个 for 循环包在一个 try-catch 里，
+    // 某个键的 idbGet/arrayBuffer/btoa 抛错会终止整个循环，后续键全部丢失（导出文件缺数据）。
+    // 改为每个键单独 try-catch：一个键失败只跳过该键，不影响其余键导出。
     if (window.idbGetAllKeys) {
-      try {
-        const keys = await window.idbGetAllKeys();
-        for (const k of keys || []) {
+      let idbKeys = [];
+      try { idbKeys = await window.idbGetAllKeys() || []; } catch (e) {}
+      for (const k of idbKeys) {
+        try {
           if (k.indexOf('xy-home-v2:') !== 0) continue;
           if (k === SNAPSHOT_KEY) continue; // v3.7.0：副本键不进导出文件
           if (k in data.ls || k in data.idb) continue; // 已在上面收录
@@ -126,12 +146,13 @@
               add(k, v);
             }
           }
-        }
-      } catch (e) {}
+        } catch (e) {} // 单键失败跳过，继续导出其余键
+      }
     }
     const json = JSON.stringify(data);
     const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
-    const fname = 'mochi数据备份_' + new Date().toISOString().slice(0, 10) + '.json';
+    // v3.9.x：文件名用本地日期（原 toISOString 是 UTC，凌晨导出文件名会是前一天）
+    const fname = 'mochi数据备份_' + localDateStr(new Date()) + '.json';
     const sizeKB = Math.round(json.length / 1024);
     // v3.6.x：记录最近一次成功导出时间——备份提醒条（pwa.js）据此判断是否该提醒
     try { localStorage.setItem('xy-home-v2:__last-backup', String(Date.now())); } catch (e) {}
@@ -236,7 +257,7 @@
     if (fishK) fish = (data.ls && data.ls[fishK]) !== undefined ? data.ls[fishK] : (data.idb && data.idb[fishK]);
     const lines = [];
     lines.push('备份内容（请确认是对的文件）：');
-    lines.push('· 导出时间：' + (data.exportTime ? String(data.exportTime).slice(0, 16).replace('T', ' ') : '未知'));
+    lines.push('· 导出时间：' + fmtLocalTime(data.exportTime));
     lines.push('· 小存储 ' + cnt(data.ls) + ' 项（' + fmtMB(lsB) + '）+ 大文件 ' + cnt(data.idb) + ' 项（' + fmtMB(idbB) + '）');
     lines.push('· 聊天记录：' + chatN);
     lines.push('· 头像：我 ' + (avMe ? '✓有' : '✗无') + '，TA ' + (avTa ? '✓有' : '✗无'));
@@ -598,7 +619,7 @@
       if (snapBiz.length < 3) return;
       if (!window.openModal) return;
       try { sessionStorage.setItem('xy-snapshot-offer-done', '1'); } catch (e) {}
-      const tm = data.exportTime ? String(data.exportTime).slice(0, 16).replace('T', ' ') : '未知时间';
+      const tm = fmtLocalTime(data.exportTime);
       const cnt = (o) => (o && typeof o === 'object' ? Object.keys(o).length : 0);
       const summary = '当前几乎没有数据，但发现一份自动备份副本：\n' +
         '· 导出时间：' + tm + '\n' +

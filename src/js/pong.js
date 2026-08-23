@@ -629,7 +629,7 @@
     if (isFs) {
       // 全屏：按视口计算 canvas 最大尺寸（保持 4:3 比例），显式设置 canvas + canvas-box
       const availW = window.innerWidth - 16;
-      const availH = window.innerHeight - 230;   // head+bar+score+foot+padding（全屏 UI 放大后预留增加）
+      const availH = window.innerHeight - 200;   // head+bar+score+foot+padding（全屏 UI 放大后紧凑布局）
       let cw = availW;
       let ch = Math.round(cw * H / W);
       if (ch > availH) { ch = availH; cw = Math.round(ch * W / H); }
