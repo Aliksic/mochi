@@ -17,7 +17,7 @@
   }
   function closeTc() { const m = document.getElementById('tc-mask'); if (m) m.hidden = true; }
   function fmtTime(tm) { const d = new Date(tm); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0') + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
-  function fenToYuan(fen) { return (fen / 100).toFixed(2); }
+  function fenToYuan(fen) { const y = fen / 100; if (y >= 100000) return (y / 10000).toFixed(1) + '万'; if (y >= 1000) return y.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ','); return y.toFixed(2); }
 
   const WALLET_KEY = 'rp-wallet';
   function walletGet() {
@@ -25,7 +25,7 @@
     return { myBalance: 99999999, systemBalance: 99999999 };
   }
   function walletSet(w) { const s = store(); if (s) s.set(WALLET_KEY, JSON.stringify(w)); }
-  function walletText() { const w = walletGet(); return '心意币 · 我 ¥' + fenToYuan(w.myBalance) + ' · ' + esc(partnerName()) + ' ¥' + fenToYuan(w.systemBalance); }
+  function walletText() { const w = walletGet(); return '心意币 ¥' + fenToYuan(w.myBalance); }
 
   const CATS = ['花束', '甜品', '饰品', '星空', '关怀', '情侣用品', '日常用品'];
   const CAT_ICON = { '花束': '🌸', '甜品': '🍰', '饰品': '💍', '星空': '⭐', '关怀': '🤗', '情侣用品': '💑', '日常用品': '🧴' };

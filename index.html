@@ -4449,18 +4449,20 @@ background-size: 22px 22px; opacity: 0.7; pointer-events: none;
 .gift-item.manage { box-shadow: 0 0 0 2px rgba(139, 122, 200, 0.3); }
 .gift-item-del { position: absolute; top: 8px; right: 8px; width: 20px; height: 20px; line-height: 20px; border-radius: 50%; background: rgba(139, 122, 200, 0.9); color: #fff; font-size: 11px; cursor: pointer; z-index: 2; border: none; }
 .gift-empty { grid-column: 1 / -1; text-align: center; color: #b0a8c8; padding: 44px 24px; font-size: 13px; line-height: 1.8; }
-.gift-balance { text-align: center; font-size: 12px; color: #8b7ac8; padding: 10px 16px 0; font-weight: 600; }
-.gift-cats { display: flex; gap: 7px; padding: 10px 14px 6px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+#chat-gift-panel { max-height: 78%; }
+#chat-gift-panel .poke-card-scroll { max-height: none; }
+.gift-balance { text-align: center; font-size: 12px; color: #8b7ac8; padding: 6px 16px 2px; font-weight: 600; }
+.gift-cats { display: flex; gap: 7px; padding: 8px 14px 4px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .gift-cats::-webkit-scrollbar { display: none; }
 .gift-cat { flex-shrink: 0; padding: 6px 14px; border-radius: 99px; background: rgba(139, 122, 200, 0.08); color: #6d5bb0; font-size: 13px; border: none; cursor: pointer; transition: all 0.15s; }
 .gift-cat.sel { background: linear-gradient(135deg, #8b7ac8, #6d5bb0); color: #fff; box-shadow: 0 2px 8px rgba(109, 91, 176, 0.25); }
-.gift-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; padding: 6px 14px 16px; }
+.gift-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; padding: 6px 14px 24px; }
 .gift-grid .gift-item { border-radius: 14px; }
-.gift-grid .gift-item-top { padding: 12px 0 8px; }
-.gift-grid .gift-item-emoji { font-size: 30px; }
-.gift-grid .gift-item-body { padding: 7px 6px 10px; }
-.gift-grid .gift-item-name { font-size: 12px; }
-.gift-grid .gift-item-price { font-size: 11px; }
+.gift-grid .gift-item-top { padding: 14px 0 8px; }
+.gift-grid .gift-item-emoji { font-size: 34px; }
+.gift-grid .gift-item-body { padding: 8px 6px 12px; }
+.gift-grid .gift-item-name { font-size: 13px; }
+.gift-grid .gift-item-price { font-size: 12px; }
 .market-foot { display: flex; gap: 10px; justify-content: center; margin-top: 10px; padding: 0 14px; }
 .market-tool { padding: 10px 24px; border-radius: 99px; background: #fff; border: 1px solid rgba(139, 122, 200, 0.3); color: #6d5bb0; font-size: 13px; cursor: pointer; transition: all 0.15s; }
 .market-tool:active { background: #f5f3fa; transform: scale(0.97); }
@@ -5552,7 +5554,7 @@ color: #c67800;
       </div>
       <div class="splash-dots"><i></i><i></i><i></i></div>
       <div class="splash-brand">小红书@言序（1842523578）</div>
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787497552594">Mochi 字卡传讯 v3.6.218 · 部署于 2026-08-23 23:05</div>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787498622246">Mochi 字卡传讯 v3.6.219 · 部署于 2026-08-23 23:23</div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
       <div class="splash-loading" id="splash-loading">正在加载数据…</div>
@@ -6404,7 +6406,7 @@ color: #c67800;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.6.218</div>
+      <div class="ver">Mochi 字卡传讯 v3.6.219</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -35825,14 +35827,14 @@ clearTimeout(t._timer); t._timer = setTimeout(function () { t.className = 'cc-to
 }
 function closeTc() { const m = document.getElementById('tc-mask'); if (m) m.hidden = true; }
 function fmtTime(tm) { const d = new Date(tm); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0') + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
-function fenToYuan(fen) { return (fen / 100).toFixed(2); }
+function fenToYuan(fen) { const y = fen / 100; if (y >= 100000) return (y / 10000).toFixed(1) + '万'; if (y >= 1000) return y.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ','); return y.toFixed(2); }
 const WALLET_KEY = 'rp-wallet';
 function walletGet() {
 try { const s = store(); if (!s) return { myBalance: 99999999, systemBalance: 99999999 }; const w = JSON.parse(s.get(WALLET_KEY) || ''); if (typeof w.myBalance === 'number' && typeof w.systemBalance === 'number') return w; } catch (e) {}
 return { myBalance: 99999999, systemBalance: 99999999 };
 }
 function walletSet(w) { const s = store(); if (s) s.set(WALLET_KEY, JSON.stringify(w)); }
-function walletText() { const w = walletGet(); return '心意币 · 我 ¥' + fenToYuan(w.myBalance) + ' · ' + esc(partnerName()) + ' ¥' + fenToYuan(w.systemBalance); }
+function walletText() { const w = walletGet(); return '心意币 ¥' + fenToYuan(w.myBalance); }
 const CATS = ['花束', '甜品', '饰品', '星空', '关怀', '情侣用品', '日常用品'];
 const CAT_ICON = { '花束': '🌸', '甜品': '🍰', '饰品': '💍', '星空': '⭐', '关怀': '🤗', '情侣用品': '💑', '日常用品': '🧴' };
 const CAT_COLOR = { '花束': '#fce4ec', '甜品': '#fff3e0', '饰品': '#f3e5f5', '星空': '#e8eaf6', '关怀': '#e0f2f1', '情侣用品': '#fce4ec', '日常用品': '#f1f8e9' };
