@@ -496,6 +496,18 @@
         // 聚焦时 activeElement 常是 <body>，只看它会把键盘误判为「未聚焦」→ 不收缩
         var _focused = isTextEl(_textFocused) || isTextEl(document.activeElement);
         var _h = _vv.height;
+        // v3.10.x：下限保护——iOS Safari 在 interactive-widget=resizes-visual 下，
+        // 键盘弹出 transition 中间态 visualViewport.height 可能瞬时异常小（或 layout
+        // viewport 双重收缩），直接设 .phone.height=该值会把 .phone 压成一条缝→
+        // "所有页面挤压不见、输入栏跑到顶部、其他页面灰底露出"。_h 低于无键盘基准
+        // 30% 时视为异常，用 50% 基准兜底（至少能显示内容、输入栏在键盘上方附近）。
+        var _safeH = (_h > _noKbH * 0.3) ? _h : Math.round(_noKbH * 0.5);
+        // 临时诊断（确认 iOS visualViewport 实际值后删除）
+        try {
+          var _diag = document.getElementById('__iosKbDiag');
+          if (!_diag) { _diag = document.createElement('div'); _diag.id = '__iosKbDiag'; _diag.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#fff;color:#f00;font:11px monospace;padding:2px 4px;pointer-events:none;white-space:pre;'; document.body.appendChild(_diag); }
+          _diag.textContent = 'vv.h=' + Math.round(_h) + ' noKb=' + Math.round(_noKbH) + ' off=' + Math.round(_vv.offsetTop||0) + ' phone=' + (_phone.style.height||'') + ' foc=' + (_focused?1:0);
+        } catch (e) {}
         // 键盘是否仍开——按可视高度判定，不依赖焦点。
         //   点击字卡/按钮时焦点短暂离开输入框但键盘未必收，靠焦点判断会误 restore
         //   → _phone 高度收缩↔回落反复 reflow → 每点一下闪一下（iOS 15 PWA 复现）
@@ -503,7 +515,7 @@
         // 稳态早退：键盘已开 + 仍在输入框 + 已过开合动画窗口 → height 已设对，
         //   不做开合判定/pin。打字时 vv resize 偶发触发，早退防任何 reflow 闪屏
         if (_kbActive && _focused && _kbStill && Date.now() > _pinUntil) {
-          var _hs0 = _h + 'px';
+          var _hs0 = _safeH + 'px';
           if (_phone.style.height !== _hs0) _phone.style.height = _hs0;
           return;
         }
@@ -525,7 +537,7 @@
           startKbWatch();
         }
         if (_kbActive) {
-          var _hs = _h + 'px';
+          var _hs = _safeH + 'px';
           if (_phone.style.height !== _hs) _phone.style.height = _hs; // 值不变不重排
           // 仅在键盘开合动画窗口内钉顶；稳态打字期不 pin，避免 caret 微滚↔归零闪屏
           if (Date.now() < _pinUntil) pinScrollTop();

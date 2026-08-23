@@ -16,7 +16,8 @@ var PI = 1800;
 var WILT_SEC = 172800;
 function pn() { return s.get("lbl-partner") || "TA"; }
 function load() { try { var d = JSON.parse(curStore().get(curKey()) || "{}"); if (!d.p) d.p = []; while (d.p.length < PLOTS) d.p.push(null); if (!d.l) d.l = []; if (!d.lpc) d.lpc = 0; if (!d.dex) d.dex = {}; if (!d.exp) d.exp = 0; if (!d.inv) d.inv = {}; if (!d.st) d.st = { p: 0, w: 0, h: 0, f: 0, mp: 0, mw: 0, mh: 0, mf: 0 }; if (!d.decor) d.decor = {}; if (!d.visitor) d.visitor = null; return d; } catch (e) { return { p: new Array(PLOTS).fill(null), l: [], lpc: 0, dex: {}, exp: 0, inv: {}, st: { p: 0, w: 0, h: 0, f: 0, mp: 0, mw: 0, mh: 0, mf: 0 }, decor: {}, visitor: null }; } }
-function save(d) { try { curStore().set(curKey(), JSON.stringify(d)); try { if (window.idbSet) window.idbSet(curIdbKey(), JSON.stringify(d)); } catch (e2) {} } catch (e) {} }
+function save(d) { try { if (batchSave) { saveDirty = true; return; } curStore().set(curKey(), JSON.stringify(d)); try { if (window.idbSet) window.idbSet(curIdbKey(), JSON.stringify(d)); } catch (e2) {} } catch (e) {} }
+var batchSave = false, saveDirty = false;
 (function r() { try { if (!window.idbGet) return; var pf = window.activePrefix(); if (!s.get(G)) window.idbGet(pf + ":" + G).then(function (v) { if (window.activePrefix() !== pf || !v) return; try { s.set(G, typeof v === "string" ? v : JSON.stringify(v)); } catch (e) {} }); } catch (e) {} })();
 
 var T = {
@@ -183,39 +184,63 @@ function fmtShort(sec) {
   return (m > 0 ? m : 1) + "\u5206";
 }
 
+function buildPlotInner(plot, si, wl) {
+  var h = "";
+  if (si) {
+    if (isGlobal && plot.by && plot.by.indexOf("@") >= 0) {
+      h += "<span class=\"garden-plant-src\">" + plot.by.split("@")[1] + "</span>";
+    }
+    var emoji = si.wilted ? "\uD83E\uDD40" : si.emoji;
+    h += "<span class=\"garden-plant-emoji\">" + emoji + "</span>";
+    h += "<span class=\"garden-plant-name\">" + si.name + "</span>";
+    if (si.wilted) {
+      h += "<span class=\"garden-plant-stage wilted-stage\">\u5DF2\u51CB\u8C22</span>";
+    } else if (si.bloomed) {
+      h += "<span class=\"garden-plant-stage\">\u6210\u719F</span>";
+    } else {
+      h += "<span class=\"garden-plant-stage\">" + fmtShort(si.nextSec) + "</span>";
+      h += "<div class=\"garden-grow-bar\"><div class=\"garden-grow-fill\" style=\"width:" + Math.round(si.progress * 100) + "%\"></div></div>";
+    }
+    if (wl > 0) h += "<div class=\"garden-water-bar\"><div class=\"garden-water-fill\" style=\"width:" + Math.round(wl * 100) + "%\"></div></div>";
+  } else {
+    h += "<span class=\"garden-plant-emoji\">\uD83C\uDF31</span>";
+    h += "<span class=\"garden-plot-empty-txt\">\u7A7A\u5730</span>";
+  }
+  return h;
+}
 function renderGrid() {
   var grid = document.getElementById("garden-grid");
   if (!grid) return;
-  var h = "";
-  for (var i = 0; i < data.p.length; i++) {
-    var plot = data.p[i];
-    var si = stageInfo(plot);
-    var wl = waterLvl(plot);
-    var cls = "garden-plot" + (si ? "" : " empty") + (wl > 0 ? " watered" : "") + (selPlot === i ? " selected" : "") + (si && si.bloomed ? " bloomed" : "") + (si && si.wilted ? " wilted" : "") + (plot && T[plot.type] && T[plot.type].rare ? " rare" : "");
-    h += "<div class=\"" + cls + "\" data-idx=\"" + i + "\">";
-    if (si) {
-      if (isGlobal && plot.by && plot.by.indexOf("@") >= 0) {
-        h += "<span class=\"garden-plant-src\">" + plot.by.split("@")[1] + "</span>";
-      }
-      var emoji = si.wilted ? "\uD83E\uDD40" : si.emoji;
-      h += "<span class=\"garden-plant-emoji\">" + emoji + "</span>";
-      h += "<span class=\"garden-plant-name\">" + si.name + "</span>";
-      if (si.wilted) {
-        h += "<span class=\"garden-plant-stage wilted-stage\">\u5DF2\u51CB\u8C22</span>";
-      } else if (si.bloomed) {
-        h += "<span class=\"garden-plant-stage\">\u6210\u719F</span>";
-      } else {
-        h += "<span class=\"garden-plant-stage\">" + fmtShort(si.nextSec) + "</span>";
-        h += "<div class=\"garden-grow-bar\"><div class=\"garden-grow-fill\" style=\"width:" + Math.round(si.progress * 100) + "%\"></div></div>";
-      }
-      if (wl > 0) h += "<div class=\"garden-water-bar\"><div class=\"garden-water-fill\" style=\"width:" + Math.round(wl * 100) + "%\"></div></div>";
-    } else {
-      h += "<span class=\"garden-plant-emoji\">\uD83C\uDF31</span>";
-      h += "<span class=\"garden-plot-empty-txt\">\u7A7A\u5730</span>";
+  if (grid.children.length !== data.p.length) {
+    var hf = "";
+    for (var i = 0; i < data.p.length; i++) {
+      var plot = data.p[i];
+      var si = stageInfo(plot);
+      var wl = waterLvl(plot);
+      var cls = "garden-plot" + (si ? "" : " empty") + (wl > 0 ? " watered" : "") + (selPlot === i ? " selected" : "") + (si && si.bloomed ? " bloomed" : "") + (si && si.wilted ? " wilted" : "") + (plot && T[plot.type] && T[plot.type].rare ? " rare" : "");
+      hf += "<div class=\"" + cls + "\" data-idx=\"" + i + "\">" + buildPlotInner(plot, si, wl) + "</div>";
     }
-    h += "</div>";
+    grid.innerHTML = hf;
+    return;
   }
-  grid.innerHTML = h;
+  for (var j = 0; j < data.p.length; j++) {
+    var p = data.p[j];
+    var s = stageInfo(p);
+    var w = waterLvl(p);
+    var c = "garden-plot" + (s ? "" : " empty") + (w > 0 ? " watered" : "") + (selPlot === j ? " selected" : "") + (s && s.bloomed ? " bloomed" : "") + (s && s.wilted ? " wilted" : "") + (p && T[p.type] && T[p.type].rare ? " rare" : "");
+    var em = s ? (s.wilted ? "\uD83E\uDD40" : s.emoji) : "\uD83C\uDF31";
+    var st = s ? (s.wilted ? "\u5DF2\u51CB\u8C22" : s.bloomed ? "\u6210\u719F" : fmtShort(s.nextSec)) : "\u7A7A\u5730";
+    var pg = s && !s.bloomed && !s.wilted ? Math.floor(s.progress * 10) : -1;
+    var wp = w > 0 ? Math.floor(w * 10) : 0;
+    var sr = (isGlobal && p && p.by && p.by.indexOf("@") >= 0) ? p.by.split("@")[1] : "";
+    var sig = c + "|" + em + "|" + st + "|" + pg + "|" + wp + "|" + sr;
+    var el = grid.children[j];
+    if (el.getAttribute("data-sig") === sig) continue;
+    el.setAttribute("data-sig", sig);
+    el.setAttribute("data-idx", j);
+    el.className = c;
+    el.innerHTML = buildPlotInner(p, s, w);
+  }
 }
 
 function renderLog() {
@@ -312,7 +337,7 @@ function checkLevelUp() {
     if (old < 12 && lv >= 12) msgs.push("Lv.12 \u89E3\u9501 6 \u4E2A\u65B0\u5730\u5757");
     if (msgs.length) {
       msgs.forEach(function (m) { addLog("\u2605", m); });
-      if (window.openModal) window.openModal("\uD83C\uDF89 \u5347\u7EA7\u89E3\u9501", msgs.join("\n"), function () {}, { pills: [{ label: "\u597D\u7684", value: "ok" }], noInput: true });
+      if (window.openModal) window.openModal("\uD83C\uDF89 \u5347\u7EA7\u89E3\u9501", "", function () {}, { pills: [{ label: "\u597D\u7684", value: "ok" }], noInput: true, staticText: msgs.join("\n") });
     }
   }
 }
@@ -338,7 +363,7 @@ function checkLoginReward() {
   }
   addLog("\u2605", msg + (gotRare ? " \u2728\u4FDD\u5E95\u7A00\u6709\u79CD\u5B50" + T[gotRare].n : ""));
   save(data);
-  if (gotRare && window.openModal) window.openModal("\u2728 \u8FDE\u7EED\u767B\u5F55\u5956\u52B1", "\u8FDE\u7EED\u6253\u7406 " + data.loginStreak + " \u5929\n\u83B7\u5F97\u7A00\u6709\u79CD\u5B50\uFF1A" + T[gotRare].n, function () {}, { pills: [{ label: "\u597D\u7684", value: "ok" }], noInput: true });
+  if (gotRare && window.openModal) window.openModal("\u2728 \u8FDE\u7EED\u767B\u5F55\u5956\u52B1", "", function () {}, { pills: [{ label: "\u597D\u7684", value: "ok" }], noInput: true, staticText: "\u8FDE\u7EED\u6253\u7406 " + data.loginStreak + " \u5929\n\u83B7\u5F97\u7A00\u6709\u79CD\u5B50\uFF1A" + T[gotRare].n });
 }
 function rollQuality() {
   var r = Math.random();
@@ -387,7 +412,7 @@ function hybridPlot(idx) {
     if (nsi && nsi.stage === si.stage && data.p[ni].type !== plot.type) { target = ni; break; }
   }
   if (target < 0) {
-    if (window.openModal) window.openModal("\u6742\u4EA4", "\u9700\u8981\u76F8\u90BB\u4E14\u540C\u9636\u6BB5\u7684\u4E0D\u540C\u82B1\u6735", function () {}, { pills: [{ label: "\u597D\u7684", value: "ok" }], noInput: true });
+    if (window.openModal) window.openModal("\u6742\u4EA4", "", function () {}, { pills: [{ label: "\u597D\u7684", value: "ok" }], noInput: true, staticText: "\u9700\u8981\u76F8\u90BB\u4E14\u540C\u9636\u6BB5\u7684\u4E0D\u540C\u82B1\u6735" });
     return;
   }
   var recipe = null;
@@ -404,10 +429,10 @@ function hybridPlot(idx) {
     if (!data.hybridFound) data.hybridFound = {};
     data.hybridFound[recipe.a + "+" + recipe.b] = true;
     addLog("\u2605", n1 + " \u00d7 " + n2 + " \u6742\u4EA4\u6210\u529F\uFF0C\u83B7\u5F97 " + T[recipe.r].n + " \u79CD\u5B50 \u2728");
-    if (window.openModal) window.openModal("\u2728 \u6742\u4EA4\u6210\u529F", n1 + " \u00d7 " + n2 + "\n\u83B7\u5F97\u7A00\u6709\u79CD\u5B50\uFF1A" + T[recipe.r].n, function () {}, { pills: [{ label: "\u597D\u7684", value: "ok" }], noInput: true });
+    if (window.openModal) window.openModal("\u2728 \u6742\u4EA4\u6210\u529F", "", function () {}, { pills: [{ label: "\u597D\u7684", value: "ok" }], noInput: true, staticText: n1 + " \u00d7 " + n2 + "\n\u83B7\u5F97\u7A00\u6709\u79CD\u5B50\uFF1A" + T[recipe.r].n });
   } else {
     addLog("\u6211", n1 + " \u00d7 " + n2 + " \u6742\u4EA4\u5931\u8D25");
-    if (window.openModal) window.openModal("\u6742\u4EA4\u5931\u8D25", n1 + " \u00d7 " + n2 + "\n\u4E24\u682A\u82B1\u90FD\u6D88\u8017\u4E86\uFF0C\u518D\u8BD5\u8BD5\u5427", function () {}, { pills: [{ label: "\u597D\u7684", value: "ok" }], noInput: true });
+    if (window.openModal) window.openModal("\u6742\u4EA4\u5931\u8D25", "", function () {}, { pills: [{ label: "\u597D\u7684", value: "ok" }], noInput: true, staticText: n1 + " \u00d7 " + n2 + "\n\u4E24\u682A\u82B1\u90FD\u6D88\u8017\u4E86\uFF0C\u518D\u8BD5\u8BD5\u5427" });
   }
   save(data); renderAll();
 }
@@ -724,7 +749,7 @@ function renderDaily() {
   var el = document.getElementById("garden-daily");
   if (!el) return;
   var t = todayStr();
-  if (!data.daily || data.daily.day !== t) data.daily = { day: t, w: 0, h: 0, f: 0, done: false };
+  if (!data.daily || data.daily.day !== t) data.daily = { day: t, w: 0, h: 0, f: 0, done: false, buffed: false };
   var d = data.daily;
   var tasks = [
     { n: "\u6D47\u6C34", cur: d.w, goal: 5, e: "\uD83D\uDCA7" },
@@ -774,7 +799,7 @@ function checkAchv() {
     newly.forEach(function (a) { addLog("\u2605", "\u89E3\u9501\u6210\u5C31\u300C" + a.n + "\u300D " + a.e); });
     if (window.openModal) {
       var a0 = newly[0];
-      window.openModal(a0.e + " \u89E3\u9501\u6210\u5C31", a0.n + "\n" + a0.d + (newly.length > 1 ? "\n\uFF08\u672C\u6B21\u5171\u89E3\u9501 " + newly.length + " \u4E2A\uFF09" : ""), function () {}, { pills: [{ label: "\u597D\u7684", value: "ok" }], noInput: true });
+      window.openModal(a0.e + " \u89E3\u9501\u6210\u5C31", "", function () {}, { pills: [{ label: "\u597D\u7684", value: "ok" }], noInput: true, staticText: a0.n + "\n" + a0.d + (newly.length > 1 ? "\n\uFF08\u672C\u6B21\u5171\u89E3\u9501 " + newly.length + " \u4E2A\uFF09" : "") });
     }
   }
 }
@@ -802,7 +827,8 @@ function ensureTabUI() {
     tabs.appendChild(b);
   });
   var lvl = document.getElementById("garden-level-bar");
-  lvl.parentNode.insertBefore(tabs, lvl.nextSibling);
+  if (lvl) lvl.parentNode.insertBefore(tabs, lvl.nextSibling);
+  else scroll.appendChild(tabs);
   TABS.forEach(function (t) {
     var p = document.createElement("div");
     p.id = "garden-panel-" + t.id;
@@ -829,6 +855,7 @@ function ensureTabUI() {
     curTab = b.dataset.tab;
     page.querySelectorAll(".garden-tab").forEach(function (x) { x.classList.toggle("active", x.dataset.tab === curTab); });
     page.querySelectorAll(".garden-panel").forEach(function (p) { p.classList.toggle("active", p.id === "garden-panel-" + curTab); });
+    renderAll();
   });
 }
 var RECIPES = [
@@ -920,12 +947,12 @@ function renderReport() {
   var totalHarv = (st.h || 0) + (st.mh || 0);
   var totalFert = (st.f || 0) + (st.mf || 0);
   var topFlower = null, topCnt = 0;
-  Object.keys(data.dex || {}).forEach(function (k) { var c = (data.dex[k].p || 0) + (data.dex[k].h || 0); if (c > topCnt && T[k]) { topCnt = c; topFlower = T[k]; } });
+  Object.keys(data.dex || {}).forEach(function (k) { var dx = data.dex[k]; if (!dx) return; var c = (dx.p || 0) + (dx.h || 0); if (c > topCnt && T[k]) { topCnt = c; topFlower = T[k]; } });
   var invTotal = 0; Object.keys(data.inv || {}).forEach(function (k) { invTotal += data.inv[k] || 0; });
   var achvCnt = Object.keys(data.achv || {}).length;
   var bouquet = data.bouquetCnt || 0;
   var streak = data.waterStreak || 0;
-  var dexGot = Object.keys(data.dex || {}).filter(function (k) { var d = data.dex[k]; return d.p > 0 || d.h > 0; }).length;
+  var dexGot = Object.keys(data.dex || {}).filter(function (k) { var d = data.dex[k]; return d && (d.p > 0 || d.h > 0); }).length;
   var partnerCare = (st.mp || 0) + (st.mw || 0) + (st.mh || 0) + (st.mf || 0);
   var h = '<div class="garden-report-card">';
   h += '<div class="report-year">' + year + ' \u82B1\u56ED\u5E74\u62A5</div>';
@@ -969,10 +996,11 @@ function renderReport() {
       }
     } catch (e3) {}
     try { document.dispatchEvent(new CustomEvent("garden-share-report", { detail: { ok: ok } })); } catch (e4) {}
-    if (window.openModal) window.openModal(ok ? "\u2705 \u5DF2\u53D1\u5E03\u5230\u670B\u53CB\u5708" : "\u53D1\u5E03\u5931\u8D25", ok ? "\u82B1\u56ED\u5E74\u62A5\u5DF2\u53D1\u5230\u670B\u53CB\u5708\uFF0C\u53BB\u670B\u53CB\u5708\u770B\u770B\u5427~" : "\u8BF7\u7A0D\u540E\u518D\u8BD5", function () {}, { pills: [{ label: "\u597D\u7684", value: "ok" }], noInput: true });
+    if (window.openModal) window.openModal(ok ? "\u2705 \u5DF2\u53D1\u5E03\u5230\u670B\u53CB\u5708" : "\u53D1\u5E03\u5931\u8D25", "", function () {}, { pills: [{ label: "\u597D\u7684", value: "ok" }], noInput: true, staticText: ok ? "\u82B1\u56ED\u5E74\u62A5\u5DF2\u53D1\u5230\u670B\u53CB\u5708\uFF0C\u53BB\u670B\u53CB\u5708\u770B\u770B\u5427~" : "\u8BF7\u7A0D\u540E\u518D\u8BD5" });
   });
 }
 function renderAll() {
+  batchSave = true; saveDirty = false;
   syncPlots();
   markBloomed();
   checkLevelUp();
@@ -981,18 +1009,22 @@ function renderAll() {
   renderWeather();
   renderDaily();
   renderLevel();
-  renderGrid();
-  renderStats();
-  renderVisitor();
-  renderDex();
-  renderInv();
-  renderDecor();
-  renderLeaderboard();
-  renderAchv();
-  renderCraft();
-  renderReport();
-  renderLog();
+  if (curTab === "garden") {
+    renderGrid(); renderStats(); renderVisitor(); renderLog();
+  } else if (curTab === "dex") {
+    renderDex();
+  } else if (curTab === "craft") {
+    renderInv(); renderCraft();
+  } else if (curTab === "shop") {
+    renderDecor(); renderLeaderboard();
+  } else if (curTab === "achv") {
+    renderAchv();
+  } else if (curTab === "report") {
+    renderReport();
+  }
   checkAchv();
+  batchSave = false;
+  if (saveDirty) save(data);
 }
 
 function checkPartnerPassive() {
@@ -1333,9 +1365,10 @@ function mergeAllToGlobal() {
       g.exp += (d.exp || 0);
       if (d.st) Object.keys(d.st).forEach(function (k) { g.st[k] = (g.st[k] || 0) + (d.st[k] || 0); });
       if (d.dex) Object.keys(d.dex).forEach(function (t) {
+        var src = d.dex[t]; if (!src || typeof src !== "object") return;
         if (!g.dex[t]) g.dex[t] = { p: 0, h: 0 };
-        g.dex[t].p += d.dex[t].p || 0;
-        g.dex[t].h += d.dex[t].h || 0;
+        g.dex[t].p += src.p || 0;
+        g.dex[t].h += src.h || 0;
       });
       if (d.inv) Object.keys(d.inv).forEach(function (t) { g.inv[t] = (g.inv[t] || 0) + (d.inv[t] || 0); });
       if (d.decor) Object.keys(d.decor).forEach(function (t) { g.decor[t] = (g.decor[t] || 0) + (d.decor[t] || 0); });
@@ -1351,7 +1384,7 @@ function mergeAllToGlobal() {
     if (g.p.length > 36) {
       var extra = g.p.splice(36);
       extra.forEach(function (plot) { if (plot && T[plot.type]) g.inv[plot.type] = (g.inv[plot.type] || 0) + 1; });
-      while (g.p.length < 12) g.p.push(null);
+
     }
     g.l.sort(function (a, b) { return (a.tm || 0) - (b.tm || 0); });
     g.l = g.l.slice(-100);

@@ -3205,6 +3205,32 @@ transition:opacity .5s ease, transform .5s ease; box-shadow:0 0 24px rgba(255,20
 .loc-fx[hidden] { display:none; }
 .loc-fx.loc-fx-show { opacity:1; transform:translate(-50%,-50%) scale(1); }
 .loc-fx.loc-fx-center { width:90px; height:90px; box-shadow:0 0 60px rgba(255,200,120,.9); }
+.loc-day-switch { display:flex; align-items:center; justify-content:center; gap:14px; margin:8px 0 4px; }
+.loc-day-btn { border:1px solid rgba(0,0,0,.12); border-radius:8px; width:30px; height:30px; background:rgba(255,255,255,.9); color:var(--ink); font-size:15px; font-weight:700; cursor:pointer; font-family:inherit; display:flex; align-items:center; justify-content:center; }
+.loc-day-btn:active { background:rgba(0,0,0,.06); }
+.loc-day-btn:disabled { opacity:.35; cursor:default; }
+.loc-day-label { font-size:14px; font-weight:700; color:var(--ink); min-width:56px; text-align:center; }
+.loc-day-count { font-size:11px; color:var(--muted); text-align:center; margin-top:6px; }
+.loc-combo-toggle { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+.loc-combo-label { font-size:12px; font-weight:600; color:var(--ink); }
+.loc-switch { position:relative; display:inline-block; width:38px; height:22px; flex-shrink:0; }
+.loc-switch input { opacity:0; width:0; height:0; }
+.loc-switch-tk { position:absolute; inset:0; background:rgba(0,0,0,.15); border-radius:11px; transition:background .2s; }
+.loc-switch-tk:before { content:''; position:absolute; left:2px; top:2px; width:18px; height:18px; border-radius:50%; background:#fff; transition:transform .2s; box-shadow:0 1px 3px rgba(0,0,0,.2); }
+.loc-switch input:checked + .loc-switch-tk { background:var(--ink); }
+.loc-switch input:checked + .loc-switch-tk:before { transform:translateX(16px); }
+.loc-combo-pending { font-size:12px; color:var(--ink); background:rgba(255,240,210,.7); border:1px solid rgba(255,180,80,.3); border-radius:8px; padding:7px 10px; margin-bottom:10px; }
+.loc-combo-pending b { color:#b8742a; }
+.loc-combo-clear { color:#e05555; cursor:pointer; margin-left:6px; font-weight:600; }
+.loc-card-sel { outline:2px solid var(--ink); outline-offset:-2px; border-color:transparent; background:rgba(0,0,0,.04); }
+.loc-sense-box { background:linear-gradient(135deg, rgba(255,240,210,.6), rgba(255,225,180,.4)); border-radius:12px; padding:10px 14px; margin-bottom:12px; }
+.loc-sense-title { font-size:11px; color:#b8742a; letter-spacing:1px; }
+.loc-sense-text { font-size:15px; font-weight:700; color:var(--ink); margin-top:4px; line-height:1.6; }
+.loc-card-custom { position:relative; }
+.loc-card-del { position:absolute; top:-5px; right:-5px; width:17px; height:17px; border-radius:50%; background:rgba(224,85,85,.85); color:#fff; font-size:9px; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+.loc-card-del:active { background:rgba(224,85,85,1); }
+.loc-add-custom { display:block; width:100%; padding:8px; border:1px dashed rgba(0,0,0,.2); border-radius:10px; background:transparent; color:var(--muted); font-size:12px; font-weight:600; cursor:pointer; font-family:inherit; margin-bottom:12px; }
+.loc-add-custom:active { background:rgba(0,0,0,.04); }
 .decor-bar {
 display:flex; align-items:center; justify-content:space-between;
 padding:8px 14px; margin-bottom:10px; flex-shrink:0;
@@ -4861,9 +4887,8 @@ padding:10px 18px; font-size:13px; color:var(--muted);
 .garden-scroll { flex:1; overflow-y:auto; scrollbar-width:none; -ms-overflow-style:none; }
 .garden-scroll::-webkit-scrollbar { display:none; }
 .garden-grid {
-display:grid; grid-template-columns:repeat(4, 1fr); grid-auto-rows:1fr;
+display:grid; grid-template-columns:repeat(4, 1fr);
 gap:8px; padding:0 18px 14px;
-min-height:360px;
 }
 .garden-plot {
 aspect-ratio:1;
@@ -4878,7 +4903,7 @@ user-select:none;
 .garden-plot:active { border-color:rgba(0,0,0,.18); box-shadow:0 2px 10px rgba(0,0,0,.08); }
 .garden-plot.empty { border-style:dashed; border-color:rgba(0,0,0,.12); background:rgba(255,255,255,.7); }
 .garden-plot.watered { border-color:rgba(76,175,128,.35); }
-.garden-plant-emoji { font-size:24px; line-height:1; transform-origin: 50% 80%; }
+.garden-plant-emoji { font-size:24px; line-height:1; transform-origin: 50% 80%; will-change: transform; }
 .garden-plot.bloomed .garden-plant-emoji { animation: gardenSway 3.2s ease-in-out infinite; }
 .garden-plot.wilted .garden-plant-emoji { filter: grayscale(.55) brightness(.9); }
 .garden-plot.wilted { border-color: rgba(139,90,43,.45); background: rgba(245,235,220,.6); }
@@ -4987,6 +5012,7 @@ border-radius:12px; background:rgba(0,0,0,.03); font-size:11px;
 .garden-inv-item {
 font-size:12px; padding:4px 10px; border-radius:99px;
 background:rgba(0,0,0,.04); color:var(--ink);
+white-space:nowrap; max-width:100%; overflow:hidden; text-overflow:ellipsis;
 }
 .garden-inv-empty { font-size:12px; color:var(--muted); text-align:center; padding:8px 0; }
 .garden-bouquet-btn {
@@ -5014,6 +5040,7 @@ animation: gardenVisitorPulse 2s ease-in-out infinite;
 .garden-decor-item {
 font-size:12px; padding:4px 10px; border-radius:99px;
 background:rgba(0,0,0,.04); color:var(--ink);
+white-space:nowrap; max-width:100%; overflow:hidden; text-overflow:ellipsis;
 }
 .garden-decor-buff { font-size:10px; color:#4caf50; font-weight:600; margin-left:2px; }
 .garden-decor-empty { font-size:12px; color:var(--muted); text-align:center; padding:8px 0; }
@@ -5070,7 +5097,7 @@ animation: gardenMergePulse 1.2s ease-in-out infinite;
 50% { opacity:1; }
 }
 .garden-plot .garden-plant-src {
-position:absolute; top:2px; right:3px; font-size:8px;
+position:absolute; top:2px; right:3px; font-size:9px;
 color:#7cb342; font-weight:600; max-width:50%;
 white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 opacity:.85;
@@ -5131,7 +5158,7 @@ overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none;
 .garden-tabs::-webkit-scrollbar { display: none; }
 .garden-tab {
 flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 2px;
-padding: 6px 2px; border-radius: 12px; border: none;
+padding: 10px 4px; border-radius: 12px; border: none;
 background: rgba(0,0,0,.04); cursor: pointer; font-family: inherit; color: var(--ink);
 transition: background .15s ease, color .15s ease; -webkit-tap-highlight-color: transparent;
 }
@@ -5154,7 +5181,7 @@ border: 1px solid transparent;
 .recipe-name { font-size: 13px; font-weight: 700; color: var(--ink); }
 .recipe-made { font-size: 10px; color: #4caf50; margin-left: auto; }
 .recipe-need { font-size: 11px; color: var(--muted); margin-bottom: 4px; letter-spacing: 1px; }
-.recipe-wish { font-size: 11px; color: var(--ink); opacity: .8; line-height: 1.5; margin-bottom: 8px; }
+.recipe-wish { font-size: 11px; color: var(--ink); opacity: .8; line-height: 1.5; margin-bottom: 8px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
 .recipe-btn {
 display: block; width: 100%; padding: 7px; border-radius: 10px;
 border: none; background: #e85a8f; color: #fff; font-size: 12px; font-weight: 600;
@@ -5169,9 +5196,9 @@ text-align: center;
 }
 .report-year { font-size: 18px; font-weight: 700; color: var(--ink); margin-bottom: 4px; }
 .report-lv { font-size: 12px; color: var(--muted); margin-bottom: 14px; }
-.report-stats { display: flex; justify-content: space-around; margin-bottom: 14px; }
-.rs-item { font-size: 11px; color: var(--muted); }
-.rs-item b { display: block; font-size: 20px; color: var(--ink); font-weight: 700; }
+.report-stats { display: flex; flex-wrap: wrap; justify-content: space-around; gap: 8px; margin-bottom: 14px; }
+.rs-item { font-size: 11px; color: var(--muted); min-width: 0; }
+.rs-item b { display: block; font-size: 18px; color: var(--ink); font-weight: 700; }
 .report-row {
 display: flex; justify-content: space-between; align-items: center;
 padding: 8px 12px; margin-bottom: 4px; border-radius: 10px;
@@ -5225,6 +5252,11 @@ color: #c67800;
 .hybrid-list .garden-recipe.hybrid { background: rgba(156,39,176,.05); }
 .hybrid-list .garden-recipe.hybrid.made { border-color: rgba(156,39,176,.3); background: rgba(156,39,176,.08); }
 .recipe-locked { font-size: 10px; color: var(--muted); margin-left: auto; }
+@media (prefers-reduced-motion: reduce) {
+.garden-plot.bloomed .garden-plant-emoji,
+.garden-plot.rare.bloomed .garden-plant-emoji { animation: none !important; }
+.garden-fx { display: none !important; }
+}
 </style>
 </head>
 <body>
@@ -5256,7 +5288,7 @@ color: #c67800;
       </div>
       <div class="splash-dots"><i></i><i></i><i></i></div>
       <div class="splash-brand">小红书@言序（1842523578）</div>
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787480169283">Mochi 字卡传讯 v3.6.211 · 部署于 2026-08-23 18:16</div>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787482578735">Mochi 字卡传讯 v3.6.212 · 部署于 2026-08-23 18:56</div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
       <div class="splash-loading" id="splash-loading">正在加载数据…</div>
@@ -6102,7 +6134,7 @@ color: #c67800;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.6.211</div>
+      <div class="ver">Mochi 字卡传讯 v3.6.212</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -34507,9 +34539,10 @@ const LOC = {
 dir: ['在你左边', '在你右边', '在你身后', '在你前面', '离你两步', '抬头就能看到', '在你看不到的地方偷看你'],
 dist: ['再近一点', '再远一点', '就停这儿', '马上到你身边', '一直在原地等你'],
 state: ['跟在你后面', '陪你走着', '停下来等你', '绕着你转圈', '在你身边'],
+sense: ['在你看不到的地方', '隔着世界在你身边', '感觉到了吗', '能摸到我吗', '一直没走远', '隐约在你身旁'],
 egg: '在你心里'
 };
-const LOC_LABEL = { dir: '方位', dist: '距离', state: '状态', egg: '彩蛋' };
+const LOC_LABEL = { dir: '方位', dist: '距离', state: '状态', sense: '感知', egg: '彩蛋', custom: '自定义', combo: '组合' };
 const DIR_POS = {
 '在你左边': { x: 0.08, y: 0.5 },
 '在你右边': { x: 0.92, y: 0.5 },
@@ -34518,11 +34551,35 @@ const DIR_POS = {
 '离你两步': { x: 0.5, y: 0.38 },
 '抬头就能看到': { x: 0.5, y: 0.12 },
 '在你看不到的地方偷看你': { x: 0.86, y: 0.16 },
+'在你看不到的地方': { x: 0.72, y: 0.28 },
+'隔着世界在你身边': { x: 0.5, y: 0.5, center: true },
+'感觉到了吗': { x: 0.5, y: 0.5, center: true },
+'能摸到我吗': { x: 0.5, y: 0.5, center: true },
+'一直没走远': { x: 0.5, y: 0.45 },
+'隐约在你身旁': { x: 0.55, y: 0.5 },
 '在你心里': { x: 0.5, y: 0.5, center: true }
 };
-function fxPos(text) {
+const DIST_ADJUST = { '再近一点': 0.15, '再远一点': -0.15, '就停这儿': 0, '马上到你身边': 0.3, '一直在原地等你': 0 };
+function adjustTowardCenter(pos, amount) {
+return { x: pos.x + (0.5 - pos.x) * amount, y: pos.y + (0.5 - pos.y) * amount, center: pos.center };
+}
+function lastDirText() {
+const hist = loadHist();
+for (const h of hist) {
+if (h.type === 'dir') return h.text;
+if (h.type === 'combo') return h.text.split(' ')[0];
+}
+return null;
+}
+function fxPos(text, type) {
 if (DIR_POS[text]) return DIR_POS[text];
-return { x: 0.5, y: 0.3 };
+const dirText = lastDirText();
+const base = dirText ? (DIR_POS[dirText] || { x: 0.5, y: 0.3 }) : { x: 0.5, y: 0.3 };
+if (type === 'dist') {
+const adj = DIST_ADJUST[text] || 0;
+if (adj) return adjustTowardCenter(base, adj);
+}
+return base;
 }
 const EGG_COOLDOWN = 7 * 24 * 3600 * 1000;
 function loadCur() { try { return JSON.parse(store.get('loc-current') || 'null'); } catch (e) { return null; } }
@@ -34537,13 +34594,37 @@ try { if (window.idbSet) window.idbSet(window.activePrefix() + ':loc-history', s
 }
 function eggLastTs() { return parseInt(store.get('loc-egg-last') || '0', 10) || 0; }
 function eggUsed() { return Date.now() - eggLastTs() < EGG_COOLDOWN; }
+function loadCustom() { try { return JSON.parse(store.get('loc-custom') || '[]'); } catch (e) { return []; } }
+function saveCustom(list) {
+const s = JSON.stringify(list);
+store.set('loc-custom', s);
+try { if (window.idbSet) window.idbSet(window.activePrefix() + ':loc-custom', s); } catch (e) {}
+}
+function senseDesc(cur) {
+if (!cur) return '还没感觉到 TA…';
+const t = cur.text;
+if (t.indexOf('看不到') >= 0 && t.indexOf('偷看') < 0) return 'TA 在你看不到的地方，但没走远';
+if (t.indexOf('隔着世界') >= 0) return 'TA 隔着世界，隐约在你身旁';
+if (t.indexOf('感觉到') >= 0) return '你感觉到了 TA，就在附近';
+if (t.indexOf('能摸到') >= 0) return '你能摸到 TA，很近很安心';
+if (t.indexOf('没走远') >= 0) return 'TA 一直没走远，就在身边';
+if (t.indexOf('隐约') >= 0) return 'TA 隐约在你身旁，感觉到了吗';
+if (t.indexOf('心里') >= 0) return 'TA 在你心里，最近的距离';
+if (t.indexOf('身后') >= 0) return '你感觉到 TA 在你身后，很近';
+if (t.indexOf('左边') >= 0) return '你感觉到 TA 在你左边';
+if (t.indexOf('右边') >= 0) return '你感觉到 TA 在你右边';
+if (t.indexOf('前面') >= 0) return '你感觉到 TA 在你前面';
+if (t.indexOf('身边') >= 0) return 'TA 就在你身边，很安心';
+if (t.indexOf('跟着') >= 0 || t.indexOf('陪你') >= 0) return 'TA 在陪你，感觉到了吗';
+return '你感觉到 TA 在附近：' + t;
+}
 function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
 function fmtT(ts) { if (!ts) return ''; const d = new Date(ts); const p = (n) => (n < 10 ? '0' + n : '' + n); return p(d.getHours()) + ':' + p(d.getMinutes()); }
 function toast(s) { try { if (typeof window.toast === 'function') window.toast(s); } catch (e) {} }
-function playLocFx(text) {
+function playLocFx(text, type) {
 const fx = document.getElementById('loc-fx');
 if (!fx) return;
-const pos = fxPos(text);
+const pos = fxPos(text, type);
 fx.hidden = false;
 fx.className = 'loc-fx' + (pos.center ? ' loc-fx-center' : '');
 fx.style.left = (pos.x * 100) + '%';
@@ -34568,7 +34649,7 @@ const hist = loadHist();
 hist.unshift({ text: text, type: type, ts: ts });
 saveHist(hist);
 if (type === 'egg') store.set('loc-egg-last', String(ts));
-playLocFx(text);
+playLocFx(text, type);
 locViewDate = dayStr(new Date());
 renderLocPanel();
 refreshResidentDot();
@@ -34598,7 +34679,7 @@ saveCur({ text: text, type: 'combo', ts: ts });
 const hist = loadHist();
 hist.unshift({ text: text, type: 'combo', ts: ts });
 saveHist(hist);
-playLocFx(dirText);
+playLocFx(dirText, 'dir');
 pendingDir = null;
 locViewDate = dayStr(new Date());
 renderLocPanel();
@@ -34641,12 +34722,17 @@ const body = document.getElementById('loc-body');
 if (!body) return;
 const cur = loadCur();
 const resident = loadResident();
-const hist = loadHist().slice(0, 5);
+const allHist = loadHist();
 const used = eggUsed();
+const days = uniqueDays(allHist);
+if (!locViewDate || days.indexOf(locViewDate) < 0) locViewDate = days[0] || dayStr(new Date());
+const dayHist = allHist.filter(h => { try { return dayStr(new Date(h.ts)) === locViewDate; } catch (e) { return false; } });
+const dayIdx = days.indexOf(locViewDate);
 let html = '';
+html += '<div class="loc-sense-box"><div class="loc-sense-title">你感觉到的</div><div class="loc-sense-text">' + esc(senseDesc(cur)) + '</div></div>';
 html += '<div class="loc-section"><div class="loc-sec-title">TA 此刻的位置</div>';
 html += '<div class="loc-sec-value">' + (cur
-? esc(cur.text) + '<span class="loc-sec-sub">' + (LOC_LABEL[cur.type] || '') + ' · ' + fmtT(cur.ts) + '</span>'
+? esc(cur.text) + '<span class="loc-sec-sub">' + (LOC_LABEL[cur.type] || (cur.type === 'combo' ? '组合' : '')) + ' · ' + fmtT(cur.ts) + '</span>'
 : '— 还没有位置卡') + '</div></div>';
 html += '<div class="loc-section"><div class="loc-sec-title">常驻位置</div>';
 if (resident) {
@@ -34655,25 +34741,42 @@ html += '<div class="loc-sec-value">' + esc(resident.text) + '<button class="loc
 html += '<div class="loc-sec-value loc-empty">未设置（长按方位卡可设常驻）</div>';
 }
 html += '</div>';
-html += '<div class="loc-section"><div class="loc-sec-title">位置时间线</div>';
-if (hist.length) {
-html += '<div class="loc-timeline">' + hist.map(h =>
+html += '<div class="loc-section"><div class="loc-sec-title">位置时间线（按日查看）</div>';
+html += '<div class="loc-day-switch"><button class="loc-day-btn" id="loc-day-prev"' + (dayIdx >= days.length - 1 ? ' disabled' : '') + '>‹</button><span class="loc-day-label">' + dayLabel(locViewDate) + '</span><button class="loc-day-btn" id="loc-day-next"' + (dayIdx <= 0 ? ' disabled' : '') + '>›</button></div>';
+if (dayHist.length) {
+html += '<div class="loc-timeline">' + dayHist.map(h =>
 '<div class="loc-tl-item"><span class="loc-tl-time">' + fmtT(h.ts) + '</span><span class="loc-tl-text">' + esc(h.text) + '</span></div>'
 ).join('') + '</div>';
+html += '<div class="loc-day-count">共 ' + dayHist.length + ' 条</div>';
 } else {
-html += '<div class="loc-sec-value loc-empty">暂无位置记录</div>';
+html += '<div class="loc-sec-value loc-empty">这天没有位置记录</div>';
 }
 html += '</div>';
 html += '<button class="loc-ask-btn" id="loc-ask-btn">问 TA 一声「你在哪？」</button>';
-html += '<div class="loc-send-area"><div class="loc-send-tip">代 TA 发一张位置卡（更新 TA 的位置 · 收到时有光点动效）</div>';
+html += '<div class="loc-send-area"><div class="loc-send-tip">TA 想告诉你 TA 在哪（发出后有光点动效 · 长按方位卡设常驻）</div>';
+html += '<div class="loc-combo-toggle"><label class="loc-switch"><input type="checkbox" id="loc-combo-chk"' + (comboMode ? ' checked' : '') + '><span class="loc-switch-tk"></span></label><span class="loc-combo-label">组合发送（方位 + 距离）</span></div>';
+if (comboMode && pendingDir) {
+html += '<div class="loc-combo-pending">已选方位：<b>' + esc(pendingDir) + '</b>，再点距离卡组合发送 <span class="loc-combo-clear" id="loc-combo-clear">取消</span></div>';
+} else if (comboMode) {
+html += '<div class="loc-combo-pending loc-empty">组合模式：先点一张方位卡选中，再点距离卡组合发送</div>';
+}
 function groupHtml(key, label, arr) {
-return '<div class="loc-grp"><div class="loc-grp-label">' + label + '</div><div class="loc-grp-cards">' +
-arr.map(t => '<button class="loc-card" data-text="' + esc(t) + '" data-type="' + key + '">' + esc(t) + '</button>').join('') +
-'</div></div>';
+const cards = arr.map(t => {
+const sel = (key === 'dir' && comboMode && pendingDir === t) ? ' loc-card-sel' : '';
+return '<button class="loc-card' + sel + '" data-text="' + esc(t) + '" data-type="' + key + '">' + esc(t) + '</button>';
+}).join('');
+return '<div class="loc-grp"><div class="loc-grp-label">' + label + '</div><div class="loc-grp-cards">' + cards + '</div></div>';
 }
 html += groupHtml('dir', '方位卡（长按设常驻）', LOC.dir);
 html += groupHtml('dist', '距离卡', LOC.dist);
 html += groupHtml('state', '状态卡', LOC.state);
+html += groupHtml('sense', '感知卡', LOC.sense);
+const custom = loadCustom();
+if (custom.length) {
+const ccards = custom.map((t, i) => '<button class="loc-card loc-card-custom" data-text="' + esc(t) + '" data-type="custom">' + esc(t) + '<span class="loc-card-del" data-del="' + i + '">✕</span></button>').join('');
+html += '<div class="loc-grp"><div class="loc-grp-label">我的自定义</div><div class="loc-grp-cards">' + ccards + '</div></div>';
+}
+html += '<button class="loc-add-custom" id="loc-add-custom">+ 添加自定义位置卡</button>';
 html += '<div class="loc-grp"><div class="loc-grp-label">彩蛋' + (used ? '（本周已用）' : '（一周一次 · 特殊动效）') + '</div><div class="loc-grp-cards">' +
 '<button class="loc-card loc-card-egg' + (used ? ' disabled' : '') + '" data-text="' + esc(LOC.egg) + '" data-type="egg"' + (used ? ' disabled' : '') + '>' + esc(LOC.egg) + '</button></div></div>';
 html += '</div>';
@@ -34682,6 +34785,23 @@ const askBtn = document.getElementById('loc-ask-btn');
 if (askBtn) askBtn.addEventListener('click', askWhere);
 const clrBtn = document.getElementById('loc-resident-clear');
 if (clrBtn) clrBtn.addEventListener('click', clearResident);
+const prevBtn = document.getElementById('loc-day-prev');
+if (prevBtn) prevBtn.addEventListener('click', () => { if (dayIdx < days.length - 1) { locViewDate = days[dayIdx + 1]; renderLocPanel(); } });
+const nextBtn = document.getElementById('loc-day-next');
+if (nextBtn) nextBtn.addEventListener('click', () => { if (dayIdx > 0) { locViewDate = days[dayIdx - 1]; renderLocPanel(); } });
+const comboChk = document.getElementById('loc-combo-chk');
+if (comboChk) comboChk.addEventListener('change', () => { comboMode = comboChk.checked; pendingDir = null; renderLocPanel(); });
+const comboClear = document.getElementById('loc-combo-clear');
+if (comboClear) comboClear.addEventListener('click', () => { pendingDir = null; renderLocPanel(); });
+const addCustom = document.getElementById('loc-add-custom');
+if (addCustom) addCustom.addEventListener('click', () => {
+if (window.openModal) window.openModal('添加自定义位置卡', '', (val) => {
+if (val && val.trim()) { const list = loadCustom(); list.push(val.trim()); saveCustom(list); renderLocPanel(); toast('已添加：' + val.trim()); }
+});
+});
+body.querySelectorAll('.loc-card-del').forEach(del => {
+del.addEventListener('click', (e) => { e.stopPropagation(); const idx = parseInt(del.dataset.del, 10); const list = loadCustom(); list.splice(idx, 1); saveCustom(list); renderLocPanel(); });
+});
 body.querySelectorAll('.loc-card').forEach(btn => {
 const text = btn.dataset.text;
 const type = btn.dataset.type;
@@ -34704,6 +34824,13 @@ btn.addEventListener('pointercancel', cancel);
 btn.addEventListener('click', () => {
 if (longPressed) { longPressed = false; return; }
 if (btn.classList.contains('disabled')) return;
+if (comboMode) {
+if (type === 'dir') { pendingDir = (pendingDir === text) ? null : text; renderLocPanel(); return; }
+if (type === 'dist') { if (pendingDir) { sendComboCard(pendingDir, text); return; } toast('组合模式：请先点一张方位卡'); return; }
+pendingDir = null;
+sendLocCard(text, type);
+return;
+}
 sendLocCard(text, type);
 });
 });
@@ -34737,8 +34864,46 @@ if (v) { try { store.set('loc-history', typeof v === 'string' ? v : JSON.stringi
 });
 }
 } catch (e) {}
+let locAutoTimer = null, locWakeAt = 0;
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') locWakeAt = Date.now() + 60000; });
+function locTypeOf(text) {
+if (LOC.dir.indexOf(text) >= 0) return 'dir';
+if (LOC.dist.indexOf(text) >= 0) return 'dist';
+if (LOC.state.indexOf(text) >= 0) return 'state';
+if (LOC.sense.indexOf(text) >= 0) return 'sense';
+return 'custom';
+}
+function doLocAuto() {
+if (document.hidden || Date.now() < locWakeAt || !window.__mochiDataReady) return;
+const companion = ['在你身边', '一直没走远', '隔着世界在你身边', '隐约在你身旁', '在你看不到的地方'];
+let text;
+if (Math.random() < 0.7) {
+text = companion[Math.floor(Math.random() * companion.length)];
+} else {
+const all = [].concat(LOC.dir, LOC.dist, LOC.state, LOC.sense, loadCustom());
+text = all[Math.floor(Math.random() * all.length)];
+}
+if (!text) return;
+const type = locTypeOf(text);
+const ts = Date.now();
+if (window.chatAddIn) window.chatAddIn(text);
+saveCur({ text: text, type: type, ts: ts, auto: true });
+const hist = loadHist();
+hist.unshift({ text: text, type: type, ts: ts, auto: true });
+saveHist(hist);
+playLocFx(text, type);
+refreshResidentDot();
+}
+function scheduleLocAuto() {
+clearTimeout(locAutoTimer);
+if (store.get('loc-auto') === '0') { locAutoTimer = setTimeout(scheduleLocAuto, 60000); return; }
+locAutoTimer = setTimeout(() => { doLocAuto(); scheduleLocAuto(); }, (2 + Math.random() * 4) * 3600000);
+}
+function bootLocAuto() { if (!window.__mochiDataReady) { setTimeout(bootLocAuto, 500); return; } scheduleLocAuto(); }
+document.addEventListener('mochi-restore-done', bootLocAuto);
+setTimeout(bootLocAuto, 3000);
 document.addEventListener('contact-switched', () => {
-try { closeLocPanel(); refreshResidentDot(); } catch (e) {}
+try { closeLocPanel(); refreshResidentDot(); locViewDate = ''; } catch (e) {}
 });
 window.playLocFx = playLocFx;
 })();
@@ -36247,7 +36412,8 @@ var PI = 1800;
 var WILT_SEC = 172800;
 function pn() { return s.get("lbl-partner") || "TA"; }
 function load() { try { var d = JSON.parse(curStore().get(curKey()) || "{}"); if (!d.p) d.p = []; while (d.p.length < PLOTS) d.p.push(null); if (!d.l) d.l = []; if (!d.lpc) d.lpc = 0; if (!d.dex) d.dex = {}; if (!d.exp) d.exp = 0; if (!d.inv) d.inv = {}; if (!d.st) d.st = { p: 0, w: 0, h: 0, f: 0, mp: 0, mw: 0, mh: 0, mf: 0 }; if (!d.decor) d.decor = {}; if (!d.visitor) d.visitor = null; return d; } catch (e) { return { p: new Array(PLOTS).fill(null), l: [], lpc: 0, dex: {}, exp: 0, inv: {}, st: { p: 0, w: 0, h: 0, f: 0, mp: 0, mw: 0, mh: 0, mf: 0 }, decor: {}, visitor: null }; } }
-function save(d) { try { curStore().set(curKey(), JSON.stringify(d)); try { if (window.idbSet) window.idbSet(curIdbKey(), JSON.stringify(d)); } catch (e2) {} } catch (e) {} }
+function save(d) { try { if (batchSave) { saveDirty = true; return; } curStore().set(curKey(), JSON.stringify(d)); try { if (window.idbSet) window.idbSet(curIdbKey(), JSON.stringify(d)); } catch (e2) {} } catch (e) {} }
+var batchSave = false, saveDirty = false;
 (function r() { try { if (!window.idbGet) return; var pf = window.activePrefix(); if (!s.get(G)) window.idbGet(pf + ":" + G).then(function (v) { if (window.activePrefix() !== pf || !v) return; try { s.set(G, typeof v === "string" ? v : JSON.stringify(v)); } catch (e) {} }); } catch (e) {} })();
 var T = {
 rose: { n: "\u73AB\u7470", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF39"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [172800, 432000], xp: 30, lv: 1, ss: 3, m: "\u70ED\u70C8\u7684\u7231" },
@@ -36401,16 +36567,8 @@ if (h > 0) return h + "\u65F6";
 var m = Math.floor(sec / 60);
 return (m > 0 ? m : 1) + "\u5206";
 }
-function renderGrid() {
-var grid = document.getElementById("garden-grid");
-if (!grid) return;
+function buildPlotInner(plot, si, wl) {
 var h = "";
-for (var i = 0; i < data.p.length; i++) {
-var plot = data.p[i];
-var si = stageInfo(plot);
-var wl = waterLvl(plot);
-var cls = "garden-plot" + (si ? "" : " empty") + (wl > 0 ? " watered" : "") + (selPlot === i ? " selected" : "") + (si && si.bloomed ? " bloomed" : "") + (si && si.wilted ? " wilted" : "") + (plot && T[plot.type] && T[plot.type].rare ? " rare" : "");
-h += "<div class=\"" + cls + "\" data-idx=\"" + i + "\">";
 if (si) {
 if (isGlobal && plot.by && plot.by.indexOf("@") >= 0) {
 h += "<span class=\"garden-plant-src\">" + plot.by.split("@")[1] + "</span>";
@@ -36431,9 +36589,41 @@ if (wl > 0) h += "<div class=\"garden-water-bar\"><div class=\"garden-water-fill
 h += "<span class=\"garden-plant-emoji\">\uD83C\uDF31</span>";
 h += "<span class=\"garden-plot-empty-txt\">\u7A7A\u5730</span>";
 }
-h += "</div>";
+return h;
 }
-grid.innerHTML = h;
+function renderGrid() {
+var grid = document.getElementById("garden-grid");
+if (!grid) return;
+if (grid.children.length !== data.p.length) {
+var hf = "";
+for (var i = 0; i < data.p.length; i++) {
+var plot = data.p[i];
+var si = stageInfo(plot);
+var wl = waterLvl(plot);
+var cls = "garden-plot" + (si ? "" : " empty") + (wl > 0 ? " watered" : "") + (selPlot === i ? " selected" : "") + (si && si.bloomed ? " bloomed" : "") + (si && si.wilted ? " wilted" : "") + (plot && T[plot.type] && T[plot.type].rare ? " rare" : "");
+hf += "<div class=\"" + cls + "\" data-idx=\"" + i + "\">" + buildPlotInner(plot, si, wl) + "</div>";
+}
+grid.innerHTML = hf;
+return;
+}
+for (var j = 0; j < data.p.length; j++) {
+var p = data.p[j];
+var s = stageInfo(p);
+var w = waterLvl(p);
+var c = "garden-plot" + (s ? "" : " empty") + (w > 0 ? " watered" : "") + (selPlot === j ? " selected" : "") + (s && s.bloomed ? " bloomed" : "") + (s && s.wilted ? " wilted" : "") + (p && T[p.type] && T[p.type].rare ? " rare" : "");
+var em = s ? (s.wilted ? "\uD83E\uDD40" : s.emoji) : "\uD83C\uDF31";
+var st = s ? (s.wilted ? "\u5DF2\u51CB\u8C22" : s.bloomed ? "\u6210\u719F" : fmtShort(s.nextSec)) : "\u7A7A\u5730";
+var pg = s && !s.bloomed && !s.wilted ? Math.floor(s.progress * 10) : -1;
+var wp = w > 0 ? Math.floor(w * 10) : 0;
+var sr = (isGlobal && p && p.by && p.by.indexOf("@") >= 0) ? p.by.split("@")[1] : "";
+var sig = c + "|" + em + "|" + st + "|" + pg + "|" + wp + "|" + sr;
+var el = grid.children[j];
+if (el.getAttribute("data-sig") === sig) continue;
+el.setAttribute("data-sig", sig);
+el.setAttribute("data-idx", j);
+el.className = c;
+el.innerHTML = buildPlotInner(p, s, w);
+}
 }
 function renderLog() {
 var el = document.getElementById("garden-log-list");
@@ -36526,7 +36716,7 @@ if (old < 8 && lv >= 8) msgs.push("Lv.8 \u89E3\u9501 4 \u4E2A\u65B0\u5730\u5757"
 if (old < 12 && lv >= 12) msgs.push("Lv.12 \u89E3\u9501 6 \u4E2A\u65B0\u5730\u5757");
 if (msgs.length) {
 msgs.forEach(function (m) { addLog("\u2605", m); });
-if (window.openModal) window.openModal("\uD83C\uDF89 \u5347\u7EA7\u89E3\u9501", msgs.join("\n"), function () {}, { pills: [{ label: "\u597D\u7684", value: "ok" }], noInput: true });
+if (window.openModal) window.openModal("\uD83C\uDF89 \u5347\u7EA7\u89E3\u9501", "", function () {}, { pills: [{ label: "\u597D\u7684", value: "ok" }], noInput: true, staticText: msgs.join("\n") });
 }
 }
 }
@@ -36552,7 +36742,7 @@ data.rareInv[gotRare] = (data.rareInv[gotRare] || 0) + 1;
 }
 addLog("\u2605", msg + (gotRare ? " \u2728\u4FDD\u5E95\u7A00\u6709\u79CD\u5B50" + T[gotRare].n : ""));
 save(data);
-if (gotRare && window.openModal) window.openModal("\u2728 \u8FDE\u7EED\u767B\u5F55\u5956\u52B1", "\u8FDE\u7EED\u6253\u7406 " + data.loginStreak + " \u5929\n\u83B7\u5F97\u7A00\u6709\u79CD\u5B50\uFF1A" + T[gotRare].n, function () {}, { pills: [{ label: "\u597D\u7684", value: "ok" }], noInput: true });
+if (gotRare && window.openModal) window.openModal("\u2728 \u8FDE\u7EED\u767B\u5F55\u5956\u52B1", "", function () {}, { pills: [{ label: "\u597D\u7684", value: "ok" }], noInput: true, staticText: "\u8FDE\u7EED\u6253\u7406 " + data.loginStreak + " \u5929\n\u83B7\u5F97\u7A00\u6709\u79CD\u5B50\uFF1A" + T[gotRare].n });
 }
 function rollQuality() {
 var r = Math.random();
@@ -36601,7 +36791,7 @@ var nsi = stageInfo(data.p[ni]);
 if (nsi && nsi.stage === si.stage && data.p[ni].type !== plot.type) { target = ni; break; }
 }
 if (target < 0) {
-if (window.openModal) window.openModal("\u6742\u4EA4", "\u9700\u8981\u76F8\u90BB\u4E14\u540C\u9636\u6BB5\u7684\u4E0D\u540C\u82B1\u6735", function () {}, { pills: [{ label: "\u597D\u7684", value: "ok" }], noInput: true });
+if (window.openModal) window.openModal("\u6742\u4EA4", "", function () {}, { pills: [{ label: "\u597D\u7684", value: "ok" }], noInput: true, staticText: "\u9700\u8981\u76F8\u90BB\u4E14\u540C\u9636\u6BB5\u7684\u4E0D\u540C\u82B1\u6735" });
 return;
 }
 var recipe = null;
@@ -36618,10 +36808,10 @@ data.rareInv[recipe.r] = (data.rareInv[recipe.r] || 0) + 1;
 if (!data.hybridFound) data.hybridFound = {};
 data.hybridFound[recipe.a + "+" + recipe.b] = true;
 addLog("\u2605", n1 + " \u00d7 " + n2 + " \u6742\u4EA4\u6210\u529F\uFF0C\u83B7\u5F97 " + T[recipe.r].n + " \u79CD\u5B50 \u2728");
-if (window.openModal) window.openModal("\u2728 \u6742\u4EA4\u6210\u529F", n1 + " \u00d7 " + n2 + "\n\u83B7\u5F97\u7A00\u6709\u79CD\u5B50\uFF1A" + T[recipe.r].n, function () {}, { pills: [{ label: "\u597D\u7684", value: "ok" }], noInput: true });
+if (window.openModal) window.openModal("\u2728 \u6742\u4EA4\u6210\u529F", "", function () {}, { pills: [{ label: "\u597D\u7684", value: "ok" }], noInput: true, staticText: n1 + " \u00d7 " + n2 + "\n\u83B7\u5F97\u7A00\u6709\u79CD\u5B50\uFF1A" + T[recipe.r].n });
 } else {
 addLog("\u6211", n1 + " \u00d7 " + n2 + " \u6742\u4EA4\u5931\u8D25");
-if (window.openModal) window.openModal("\u6742\u4EA4\u5931\u8D25", n1 + " \u00d7 " + n2 + "\n\u4E24\u682A\u82B1\u90FD\u6D88\u8017\u4E86\uFF0C\u518D\u8BD5\u8BD5\u5427", function () {}, { pills: [{ label: "\u597D\u7684", value: "ok" }], noInput: true });
+if (window.openModal) window.openModal("\u6742\u4EA4\u5931\u8D25", "", function () {}, { pills: [{ label: "\u597D\u7684", value: "ok" }], noInput: true, staticText: n1 + " \u00d7 " + n2 + "\n\u4E24\u682A\u82B1\u90FD\u6D88\u8017\u4E86\uFF0C\u518D\u8BD5\u8BD5\u5427" });
 }
 save(data); renderAll();
 }
@@ -36926,7 +37116,7 @@ ensureDailyUI();
 var el = document.getElementById("garden-daily");
 if (!el) return;
 var t = todayStr();
-if (!data.daily || data.daily.day !== t) data.daily = { day: t, w: 0, h: 0, f: 0, done: false };
+if (!data.daily || data.daily.day !== t) data.daily = { day: t, w: 0, h: 0, f: 0, done: false, buffed: false };
 var d = data.daily;
 var tasks = [
 { n: "\u6D47\u6C34", cur: d.w, goal: 5, e: "\uD83D\uDCA7" },
@@ -36976,7 +37166,7 @@ save(data);
 newly.forEach(function (a) { addLog("\u2605", "\u89E3\u9501\u6210\u5C31\u300C" + a.n + "\u300D " + a.e); });
 if (window.openModal) {
 var a0 = newly[0];
-window.openModal(a0.e + " \u89E3\u9501\u6210\u5C31", a0.n + "\n" + a0.d + (newly.length > 1 ? "\n\uFF08\u672C\u6B21\u5171\u89E3\u9501 " + newly.length + " \u4E2A\uFF09" : ""), function () {}, { pills: [{ label: "\u597D\u7684", value: "ok" }], noInput: true });
+window.openModal(a0.e + " \u89E3\u9501\u6210\u5C31", "", function () {}, { pills: [{ label: "\u597D\u7684", value: "ok" }], noInput: true, staticText: a0.n + "\n" + a0.d + (newly.length > 1 ? "\n\uFF08\u672C\u6B21\u5171\u89E3\u9501 " + newly.length + " \u4E2A\uFF09" : "") });
 }
 }
 }
@@ -37004,7 +37194,8 @@ b.innerHTML = '<span class="gt-emoji">' + t.e + '</span><span class="gt-name">' 
 tabs.appendChild(b);
 });
 var lvl = document.getElementById("garden-level-bar");
-lvl.parentNode.insertBefore(tabs, lvl.nextSibling);
+if (lvl) lvl.parentNode.insertBefore(tabs, lvl.nextSibling);
+else scroll.appendChild(tabs);
 TABS.forEach(function (t) {
 var p = document.createElement("div");
 p.id = "garden-panel-" + t.id;
@@ -37031,6 +37222,7 @@ if (!b) return;
 curTab = b.dataset.tab;
 page.querySelectorAll(".garden-tab").forEach(function (x) { x.classList.toggle("active", x.dataset.tab === curTab); });
 page.querySelectorAll(".garden-panel").forEach(function (p) { p.classList.toggle("active", p.id === "garden-panel-" + curTab); });
+renderAll();
 });
 }
 var RECIPES = [
@@ -37122,12 +37314,12 @@ var totalWater = (st.w || 0) + (st.mw || 0);
 var totalHarv = (st.h || 0) + (st.mh || 0);
 var totalFert = (st.f || 0) + (st.mf || 0);
 var topFlower = null, topCnt = 0;
-Object.keys(data.dex || {}).forEach(function (k) { var c = (data.dex[k].p || 0) + (data.dex[k].h || 0); if (c > topCnt && T[k]) { topCnt = c; topFlower = T[k]; } });
+Object.keys(data.dex || {}).forEach(function (k) { var dx = data.dex[k]; if (!dx) return; var c = (dx.p || 0) + (dx.h || 0); if (c > topCnt && T[k]) { topCnt = c; topFlower = T[k]; } });
 var invTotal = 0; Object.keys(data.inv || {}).forEach(function (k) { invTotal += data.inv[k] || 0; });
 var achvCnt = Object.keys(data.achv || {}).length;
 var bouquet = data.bouquetCnt || 0;
 var streak = data.waterStreak || 0;
-var dexGot = Object.keys(data.dex || {}).filter(function (k) { var d = data.dex[k]; return d.p > 0 || d.h > 0; }).length;
+var dexGot = Object.keys(data.dex || {}).filter(function (k) { var d = data.dex[k]; return d && (d.p > 0 || d.h > 0); }).length;
 var partnerCare = (st.mp || 0) + (st.mw || 0) + (st.mh || 0) + (st.mf || 0);
 var h = '<div class="garden-report-card">';
 h += '<div class="report-year">' + year + ' \u82B1\u56ED\u5E74\u62A5</div>';
@@ -37171,10 +37363,11 @@ ok = true;
 }
 } catch (e3) {}
 try { document.dispatchEvent(new CustomEvent("garden-share-report", { detail: { ok: ok } })); } catch (e4) {}
-if (window.openModal) window.openModal(ok ? "\u2705 \u5DF2\u53D1\u5E03\u5230\u670B\u53CB\u5708" : "\u53D1\u5E03\u5931\u8D25", ok ? "\u82B1\u56ED\u5E74\u62A5\u5DF2\u53D1\u5230\u670B\u53CB\u5708\uFF0C\u53BB\u670B\u53CB\u5708\u770B\u770B\u5427~" : "\u8BF7\u7A0D\u540E\u518D\u8BD5", function () {}, { pills: [{ label: "\u597D\u7684", value: "ok" }], noInput: true });
+if (window.openModal) window.openModal(ok ? "\u2705 \u5DF2\u53D1\u5E03\u5230\u670B\u53CB\u5708" : "\u53D1\u5E03\u5931\u8D25", "", function () {}, { pills: [{ label: "\u597D\u7684", value: "ok" }], noInput: true, staticText: ok ? "\u82B1\u56ED\u5E74\u62A5\u5DF2\u53D1\u5230\u670B\u53CB\u5708\uFF0C\u53BB\u670B\u53CB\u5708\u770B\u770B\u5427~" : "\u8BF7\u7A0D\u540E\u518D\u8BD5" });
 });
 }
 function renderAll() {
+batchSave = true; saveDirty = false;
 syncPlots();
 markBloomed();
 checkLevelUp();
@@ -37183,18 +37376,22 @@ ensureHybridBtn();
 renderWeather();
 renderDaily();
 renderLevel();
-renderGrid();
-renderStats();
-renderVisitor();
+if (curTab === "garden") {
+renderGrid(); renderStats(); renderVisitor(); renderLog();
+} else if (curTab === "dex") {
 renderDex();
-renderInv();
-renderDecor();
-renderLeaderboard();
+} else if (curTab === "craft") {
+renderInv(); renderCraft();
+} else if (curTab === "shop") {
+renderDecor(); renderLeaderboard();
+} else if (curTab === "achv") {
 renderAchv();
-renderCraft();
+} else if (curTab === "report") {
 renderReport();
-renderLog();
+}
 checkAchv();
+batchSave = false;
+if (saveDirty) save(data);
 }
 function checkPartnerPassive() {
 try {
@@ -37517,9 +37714,10 @@ g.p.push(np);
 g.exp += (d.exp || 0);
 if (d.st) Object.keys(d.st).forEach(function (k) { g.st[k] = (g.st[k] || 0) + (d.st[k] || 0); });
 if (d.dex) Object.keys(d.dex).forEach(function (t) {
+var src = d.dex[t]; if (!src || typeof src !== "object") return;
 if (!g.dex[t]) g.dex[t] = { p: 0, h: 0 };
-g.dex[t].p += d.dex[t].p || 0;
-g.dex[t].h += d.dex[t].h || 0;
+g.dex[t].p += src.p || 0;
+g.dex[t].h += src.h || 0;
 });
 if (d.inv) Object.keys(d.inv).forEach(function (t) { g.inv[t] = (g.inv[t] || 0) + (d.inv[t] || 0); });
 if (d.decor) Object.keys(d.decor).forEach(function (t) { g.decor[t] = (g.decor[t] || 0) + (d.decor[t] || 0); });
@@ -37535,7 +37733,6 @@ while (g.p.length < 12) g.p.push(null);
 if (g.p.length > 36) {
 var extra = g.p.splice(36);
 extra.forEach(function (plot) { if (plot && T[plot.type]) g.inv[plot.type] = (g.inv[plot.type] || 0) + 1; });
-while (g.p.length < 12) g.p.push(null);
 }
 g.l.sort(function (a, b) { return (a.tm || 0) - (b.tm || 0); });
 g.l = g.l.slice(-100);
@@ -41344,9 +41541,15 @@ function syncIosKb() {
 if (!_vv || !_phone) return;
 var _focused = isTextEl(_textFocused) || isTextEl(document.activeElement);
 var _h = _vv.height;
+var _safeH = (_h > _noKbH * 0.3) ? _h : Math.round(_noKbH * 0.5);
+try {
+var _diag = document.getElementById('__iosKbDiag');
+if (!_diag) { _diag = document.createElement('div'); _diag.id = '__iosKbDiag'; _diag.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#fff;color:#f00;font:11px monospace;padding:2px 4px;pointer-events:none;white-space:pre;'; document.body.appendChild(_diag); }
+_diag.textContent = 'vv.h=' + Math.round(_h) + ' noKb=' + Math.round(_noKbH) + ' off=' + Math.round(_vv.offsetTop||0) + ' phone=' + (_phone.style.height||'') + ' foc=' + (_focused?1:0);
+} catch (e) {}
 var _kbStill = _h < _noKbH - 60;
 if (_kbActive && _focused && _kbStill && Date.now() > _pinUntil) {
-var _hs0 = _h + 'px';
+var _hs0 = _safeH + 'px';
 if (_phone.style.height !== _hs0) _phone.style.height = _hs0;
 return;
 }
@@ -41360,7 +41563,7 @@ _pinUntil = Date.now() + 500;
 startKbWatch();
 }
 if (_kbActive) {
-var _hs = _h + 'px';
+var _hs = _safeH + 'px';
 if (_phone.style.height !== _hs) _phone.style.height = _hs; // 值不变不重排
 if (Date.now() < _pinUntil) pinScrollTop();
 }

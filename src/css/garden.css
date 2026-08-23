@@ -12,11 +12,10 @@
 .garden-scroll { flex:1; overflow-y:auto; scrollbar-width:none; -ms-overflow-style:none; }
 .garden-scroll::-webkit-scrollbar { display:none; }
 
-/* 花园网格：3行×4列，每格圆角卡片 */
+/* 花园网格：4列自适应行数，每格正方形 */
 .garden-grid {
-  display:grid; grid-template-columns:repeat(4, 1fr); grid-auto-rows:1fr;
+  display:grid; grid-template-columns:repeat(4, 1fr);
   gap:8px; padding:0 18px 14px;
-  min-height:360px;
 }
 .garden-plot {
   aspect-ratio:1;
@@ -33,7 +32,7 @@
 .garden-plot.watered { border-color:rgba(76,175,128,.35); }
 
 /* 植物 */
-.garden-plant-emoji { font-size:24px; line-height:1; transform-origin: 50% 80%; }
+.garden-plant-emoji { font-size:24px; line-height:1; transform-origin: 50% 80%; will-change: transform; }
 .garden-plot.bloomed .garden-plant-emoji { animation: gardenSway 3.2s ease-in-out infinite; }
 .garden-plot.wilted .garden-plant-emoji { filter: grayscale(.55) brightness(.9); }
 .garden-plot.wilted { border-color: rgba(139,90,43,.45); background: rgba(245,235,220,.6); }
@@ -164,6 +163,7 @@
 .garden-inv-item {
   font-size:12px; padding:4px 10px; border-radius:99px;
   background:rgba(0,0,0,.04); color:var(--ink);
+  white-space:nowrap; max-width:100%; overflow:hidden; text-overflow:ellipsis;
 }
 .garden-inv-empty { font-size:12px; color:var(--muted); text-align:center; padding:8px 0; }
 .garden-bouquet-btn {
@@ -195,6 +195,7 @@
 .garden-decor-item {
   font-size:12px; padding:4px 10px; border-radius:99px;
   background:rgba(0,0,0,.04); color:var(--ink);
+  white-space:nowrap; max-width:100%; overflow:hidden; text-overflow:ellipsis;
 }
 .garden-decor-buff { font-size:10px; color:#4caf50; font-weight:600; margin-left:2px; }
 .garden-decor-empty { font-size:12px; color:var(--muted); text-align:center; padding:8px 0; }
@@ -258,7 +259,7 @@
 
 /* 全球园模式：地块来源标注 */
 .garden-plot .garden-plant-src {
-  position:absolute; top:2px; right:3px; font-size:8px;
+  position:absolute; top:2px; right:3px; font-size:9px;
   color:#7cb342; font-weight:600; max-width:50%;
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   opacity:.85;
@@ -333,7 +334,7 @@
 .garden-tabs::-webkit-scrollbar { display: none; }
 .garden-tab {
   flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 2px;
-  padding: 6px 2px; border-radius: 12px; border: none;
+  padding: 10px 4px; border-radius: 12px; border: none;
   background: rgba(0,0,0,.04); cursor: pointer; font-family: inherit; color: var(--ink);
   transition: background .15s ease, color .15s ease; -webkit-tap-highlight-color: transparent;
 }
@@ -358,7 +359,7 @@
 .recipe-name { font-size: 13px; font-weight: 700; color: var(--ink); }
 .recipe-made { font-size: 10px; color: #4caf50; margin-left: auto; }
 .recipe-need { font-size: 11px; color: var(--muted); margin-bottom: 4px; letter-spacing: 1px; }
-.recipe-wish { font-size: 11px; color: var(--ink); opacity: .8; line-height: 1.5; margin-bottom: 8px; }
+.recipe-wish { font-size: 11px; color: var(--ink); opacity: .8; line-height: 1.5; margin-bottom: 8px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
 .recipe-btn {
   display: block; width: 100%; padding: 7px; border-radius: 10px;
   border: none; background: #e85a8f; color: #fff; font-size: 12px; font-weight: 600;
@@ -375,9 +376,9 @@
 }
 .report-year { font-size: 18px; font-weight: 700; color: var(--ink); margin-bottom: 4px; }
 .report-lv { font-size: 12px; color: var(--muted); margin-bottom: 14px; }
-.report-stats { display: flex; justify-content: space-around; margin-bottom: 14px; }
-.rs-item { font-size: 11px; color: var(--muted); }
-.rs-item b { display: block; font-size: 20px; color: var(--ink); font-weight: 700; }
+.report-stats { display: flex; flex-wrap: wrap; justify-content: space-around; gap: 8px; margin-bottom: 14px; }
+.rs-item { font-size: 11px; color: var(--muted); min-width: 0; }
+.rs-item b { display: block; font-size: 18px; color: var(--ink); font-weight: 700; }
 .report-row {
   display: flex; justify-content: space-between; align-items: center;
   padding: 8px 12px; margin-bottom: 4px; border-radius: 10px;
@@ -439,3 +440,10 @@
 .hybrid-list .garden-recipe.hybrid { background: rgba(156,39,176,.05); }
 .hybrid-list .garden-recipe.hybrid.made { border-color: rgba(156,39,176,.3); background: rgba(156,39,176,.08); }
 .recipe-locked { font-size: 10px; color: var(--muted); margin-left: auto; }
+
+/* ===== 无障碍：减少动画 ===== */
+@media (prefers-reduced-motion: reduce) {
+  .garden-plot.bloomed .garden-plant-emoji,
+  .garden-plot.rare.bloomed .garden-plant-emoji { animation: none !important; }
+  .garden-fx { display: none !important; }
+}

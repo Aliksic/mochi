@@ -1109,10 +1109,11 @@ if (ckRefresh) {
     dir: ['在你左边', '在你右边', '在你身后', '在你前面', '离你两步', '抬头就能看到', '在你看不到的地方偷看你'],
     dist: ['再近一点', '再远一点', '就停这儿', '马上到你身边', '一直在原地等你'],
     state: ['跟在你后面', '陪你走着', '停下来等你', '绕着你转圈', '在你身边'],
+    sense: ['在你看不到的地方', '隔着世界在你身边', '感觉到了吗', '能摸到我吗', '一直没走远', '隐约在你身旁'],
     egg: '在你心里'
   };
-  const LOC_LABEL = { dir: '方位', dist: '距离', state: '状态', egg: '彩蛋' };
-  // 方位/彩蛋 → 光点落点（相对视口 0~1）
+  const LOC_LABEL = { dir: '方位', dist: '距离', state: '状态', sense: '感知', egg: '彩蛋', custom: '自定义', combo: '组合' };
+  // 方位/感知/彩蛋 → 光点落点（相对视口 0~1）
   const DIR_POS = {
     '在你左边': { x: 0.08, y: 0.5 },
     '在你右边': { x: 0.92, y: 0.5 },
@@ -1121,12 +1122,38 @@ if (ckRefresh) {
     '离你两步': { x: 0.5, y: 0.38 },
     '抬头就能看到': { x: 0.5, y: 0.12 },
     '在你看不到的地方偷看你': { x: 0.86, y: 0.16 },
+    '在你看不到的地方': { x: 0.72, y: 0.28 },
+    '隔着世界在你身边': { x: 0.5, y: 0.5, center: true },
+    '感觉到了吗': { x: 0.5, y: 0.5, center: true },
+    '能摸到我吗': { x: 0.5, y: 0.5, center: true },
+    '一直没走远': { x: 0.5, y: 0.45 },
+    '隐约在你身旁': { x: 0.55, y: 0.5 },
     '在你心里': { x: 0.5, y: 0.5, center: true }
   };
-  // 非方位卡也给个落点（取当前方位或默认中心偏上）
-  function fxPos(text) {
+  // 距离卡微调：往中心靠（正）/ 往边缘退（负）
+  const DIST_ADJUST = { '再近一点': 0.15, '再远一点': -0.15, '就停这儿': 0, '马上到你身边': 0.3, '一直在原地等你': 0 };
+  function adjustTowardCenter(pos, amount) {
+    return { x: pos.x + (0.5 - pos.x) * amount, y: pos.y + (0.5 - pos.y) * amount, center: pos.center };
+  }
+  // 最近一张方位卡文本（距离/状态卡落点基准）
+  function lastDirText() {
+    const hist = loadHist();
+    for (const h of hist) {
+      if (h.type === 'dir') return h.text;
+      if (h.type === 'combo') return h.text.split(' ')[0];
+    }
+    return null;
+  }
+  // 落点：方位/彩蛋取映射；距离卡取最近方位+微调；状态卡取最近方位
+  function fxPos(text, type) {
     if (DIR_POS[text]) return DIR_POS[text];
-    return { x: 0.5, y: 0.3 };
+    const dirText = lastDirText();
+    const base = dirText ? (DIR_POS[dirText] || { x: 0.5, y: 0.3 }) : { x: 0.5, y: 0.3 };
+    if (type === 'dist') {
+      const adj = DIST_ADJUST[text] || 0;
+      if (adj) return adjustTowardCenter(base, adj);
+    }
+    return base;
   }
   const EGG_COOLDOWN = 7 * 24 * 3600 * 1000;
 
@@ -1143,16 +1170,42 @@ if (ckRefresh) {
   }
   function eggLastTs() { return parseInt(store.get('loc-egg-last') || '0', 10) || 0; }
   function eggUsed() { return Date.now() - eggLastTs() < EGG_COOLDOWN; }
+  // ---- 自定义位置卡 ----
+  function loadCustom() { try { return JSON.parse(store.get('loc-custom') || '[]'); } catch (e) { return []; } }
+  function saveCustom(list) {
+    const s = JSON.stringify(list);
+    store.set('loc-custom', s);
+    try { if (window.idbSet) window.idbSet(window.activePrefix() + ':loc-custom', s); } catch (e) {}
+  }
+  // ---- 感知描述（基于最近位置卡 · 体现"偶尔能感觉到"） ----
+  function senseDesc(cur) {
+    if (!cur) return '还没感觉到 TA…';
+    const t = cur.text;
+    if (t.indexOf('看不到') >= 0 && t.indexOf('偷看') < 0) return 'TA 在你看不到的地方，但没走远';
+    if (t.indexOf('隔着世界') >= 0) return 'TA 隔着世界，隐约在你身旁';
+    if (t.indexOf('感觉到') >= 0) return '你感觉到了 TA，就在附近';
+    if (t.indexOf('能摸到') >= 0) return '你能摸到 TA，很近很安心';
+    if (t.indexOf('没走远') >= 0) return 'TA 一直没走远，就在身边';
+    if (t.indexOf('隐约') >= 0) return 'TA 隐约在你身旁，感觉到了吗';
+    if (t.indexOf('心里') >= 0) return 'TA 在你心里，最近的距离';
+    if (t.indexOf('身后') >= 0) return '你感觉到 TA 在你身后，很近';
+    if (t.indexOf('左边') >= 0) return '你感觉到 TA 在你左边';
+    if (t.indexOf('右边') >= 0) return '你感觉到 TA 在你右边';
+    if (t.indexOf('前面') >= 0) return '你感觉到 TA 在你前面';
+    if (t.indexOf('身边') >= 0) return 'TA 就在你身边，很安心';
+    if (t.indexOf('跟着') >= 0 || t.indexOf('陪你') >= 0) return 'TA 在陪你，感觉到了吗';
+    return '你感觉到 TA 在附近：' + t;
+  }
 
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
   function fmtT(ts) { if (!ts) return ''; const d = new Date(ts); const p = (n) => (n < 10 ? '0' + n : '' + n); return p(d.getHours()) + ':' + p(d.getMinutes()); }
   function toast(s) { try { if (typeof window.toast === 'function') window.toast(s); } catch (e) {} }
 
   // ---- 光点动效 ----
-  function playLocFx(text) {
+  function playLocFx(text, type) {
     const fx = document.getElementById('loc-fx');
     if (!fx) return;
-    const pos = fxPos(text);
+    const pos = fxPos(text, type);
     fx.hidden = false;
     fx.className = 'loc-fx' + (pos.center ? ' loc-fx-center' : '');
     fx.style.left = (pos.x * 100) + '%';
@@ -1179,7 +1232,7 @@ if (ckRefresh) {
     hist.unshift({ text: text, type: type, ts: ts });
     saveHist(hist);
     if (type === 'egg') store.set('loc-egg-last', String(ts));
-    playLocFx(text);
+    playLocFx(text, type);
     locViewDate = dayStr(new Date());
     renderLocPanel();
     refreshResidentDot();
@@ -1213,7 +1266,7 @@ if (ckRefresh) {
     const hist = loadHist();
     hist.unshift({ text: text, type: 'combo', ts: ts });
     saveHist(hist);
-    playLocFx(dirText);
+    playLocFx(dirText, 'dir');
     pendingDir = null;
     locViewDate = dayStr(new Date());
     renderLocPanel();
@@ -1272,6 +1325,8 @@ if (ckRefresh) {
     const dayIdx = days.indexOf(locViewDate);
 
     let html = '';
+    // 感知描述
+    html += '<div class="loc-sense-box"><div class="loc-sense-title">你感觉到的</div><div class="loc-sense-text">' + esc(senseDesc(cur)) + '</div></div>';
     // 此刻位置
     html += '<div class="loc-section"><div class="loc-sec-title">TA 此刻的位置</div>';
     html += '<div class="loc-sec-value">' + (cur
@@ -1300,7 +1355,7 @@ if (ckRefresh) {
     // 问 TA 一声
     html += '<button class="loc-ask-btn" id="loc-ask-btn">问 TA 一声「你在哪？」</button>';
     // TA 发位置卡词库
-    html += '<div class="loc-send-area"><div class="loc-send-tip">代 TA 发一张位置卡（更新 TA 的位置 · 收到时有光点动效）</div>';
+    html += '<div class="loc-send-area"><div class="loc-send-tip">TA 想告诉你 TA 在哪（发出后有光点动效 · 长按方位卡设常驻）</div>';
     // 组合开关
     html += '<div class="loc-combo-toggle"><label class="loc-switch"><input type="checkbox" id="loc-combo-chk"' + (comboMode ? ' checked' : '') + '><span class="loc-switch-tk"></span></label><span class="loc-combo-label">组合发送（方位 + 距离）</span></div>';
     if (comboMode && pendingDir) {
@@ -1318,6 +1373,13 @@ if (ckRefresh) {
     html += groupHtml('dir', '方位卡（长按设常驻）', LOC.dir);
     html += groupHtml('dist', '距离卡', LOC.dist);
     html += groupHtml('state', '状态卡', LOC.state);
+    html += groupHtml('sense', '感知卡', LOC.sense);
+    const custom = loadCustom();
+    if (custom.length) {
+      const ccards = custom.map((t, i) => '<button class="loc-card loc-card-custom" data-text="' + esc(t) + '" data-type="custom">' + esc(t) + '<span class="loc-card-del" data-del="' + i + '">✕</span></button>').join('');
+      html += '<div class="loc-grp"><div class="loc-grp-label">我的自定义</div><div class="loc-grp-cards">' + ccards + '</div></div>';
+    }
+    html += '<button class="loc-add-custom" id="loc-add-custom">+ 添加自定义位置卡</button>';
     html += '<div class="loc-grp"><div class="loc-grp-label">彩蛋' + (used ? '（本周已用）' : '（一周一次 · 特殊动效）') + '</div><div class="loc-grp-cards">' +
       '<button class="loc-card loc-card-egg' + (used ? ' disabled' : '') + '" data-text="' + esc(LOC.egg) + '" data-type="egg"' + (used ? ' disabled' : '') + '>' + esc(LOC.egg) + '</button></div></div>';
     html += '</div>';
@@ -1338,6 +1400,17 @@ if (ckRefresh) {
     if (comboChk) comboChk.addEventListener('change', () => { comboMode = comboChk.checked; pendingDir = null; renderLocPanel(); });
     const comboClear = document.getElementById('loc-combo-clear');
     if (comboClear) comboClear.addEventListener('click', () => { pendingDir = null; renderLocPanel(); });
+    // 自定义卡添加
+    const addCustom = document.getElementById('loc-add-custom');
+    if (addCustom) addCustom.addEventListener('click', () => {
+      if (window.openModal) window.openModal('添加自定义位置卡', '', (val) => {
+        if (val && val.trim()) { const list = loadCustom(); list.push(val.trim()); saveCustom(list); renderLocPanel(); toast('已添加：' + val.trim()); }
+      });
+    });
+    // 自定义卡删除
+    body.querySelectorAll('.loc-card-del').forEach(del => {
+      del.addEventListener('click', (e) => { e.stopPropagation(); const idx = parseInt(del.dataset.del, 10); const list = loadCustom(); list.splice(idx, 1); saveCustom(list); renderLocPanel(); });
+    });
     // 字卡点击/长按
     body.querySelectorAll('.loc-card').forEach(btn => {
       const text = btn.dataset.text;
@@ -1406,8 +1479,49 @@ if (ckRefresh) {
     }
   } catch (e) {}
 
+  // ---- TA 主动发位置卡（自动机制：梦角经常待在身边没走远） ----
+  // 每隔 2-6 小时自动发一张：70% 发陪伴卡（表达陪伴），30% 系统随机出（TA 控制不住，符合设定）
+  let locAutoTimer = null, locWakeAt = 0;
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') locWakeAt = Date.now() + 60000; });
+  function locTypeOf(text) {
+    if (LOC.dir.indexOf(text) >= 0) return 'dir';
+    if (LOC.dist.indexOf(text) >= 0) return 'dist';
+    if (LOC.state.indexOf(text) >= 0) return 'state';
+    if (LOC.sense.indexOf(text) >= 0) return 'sense';
+    return 'custom';
+  }
+  function doLocAuto() {
+    if (document.hidden || Date.now() < locWakeAt || !window.__mochiDataReady) return;
+    const companion = ['在你身边', '一直没走远', '隔着世界在你身边', '隐约在你身旁', '在你看不到的地方'];
+    let text;
+    if (Math.random() < 0.7) {
+      text = companion[Math.floor(Math.random() * companion.length)];
+    } else {
+      const all = [].concat(LOC.dir, LOC.dist, LOC.state, LOC.sense, loadCustom());
+      text = all[Math.floor(Math.random() * all.length)];
+    }
+    if (!text) return;
+    const type = locTypeOf(text);
+    const ts = Date.now();
+    if (window.chatAddIn) window.chatAddIn(text);
+    saveCur({ text: text, type: type, ts: ts, auto: true });
+    const hist = loadHist();
+    hist.unshift({ text: text, type: type, ts: ts, auto: true });
+    saveHist(hist);
+    playLocFx(text, type);
+    refreshResidentDot();
+  }
+  function scheduleLocAuto() {
+    clearTimeout(locAutoTimer);
+    if (store.get('loc-auto') === '0') { locAutoTimer = setTimeout(scheduleLocAuto, 60000); return; }
+    locAutoTimer = setTimeout(() => { doLocAuto(); scheduleLocAuto(); }, (2 + Math.random() * 4) * 3600000);
+  }
+  function bootLocAuto() { if (!window.__mochiDataReady) { setTimeout(bootLocAuto, 500); return; } scheduleLocAuto(); }
+  document.addEventListener('mochi-restore-done', bootLocAuto);
+  setTimeout(bootLocAuto, 3000);
+
   document.addEventListener('contact-switched', () => {
-    try { closeLocPanel(); refreshResidentDot(); } catch (e) {}
+    try { closeLocPanel(); refreshResidentDot(); locViewDate = ''; } catch (e) {}
   });
 
   window.playLocFx = playLocFx;
