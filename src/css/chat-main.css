@@ -1155,6 +1155,22 @@ body.cs-time-divider .msg-time-divider { display:flex; }
 }
 .call-mini:active { cursor:grabbing; }
 .call-mini[hidden] { display:none; }
+/* ===== 宽屏（PC 浏览器预览，>900px）：聊天浮层收进 .phone 模拟框 =====
+   手机端（≤900px）.phone 本就满屏，fixed 与 absolute 等价；宽屏下 .phone 是居中
+   模拟框，上面这些 position:fixed 会锚定【浏览器窗口】——更多功能面板 / 各功能
+   半框（帮我决定/搜索/通话/占卜/拍一拍/猜拳/红包/礼物/问问TA/头像互动/表情包/
+   Pong/贪吃蛇，全部复用 .poke-card/.more-panel）整体掉到手机框外的窗口底部
+   灰底区。改 position:absolute 锚定 .phone（position:relative，面板的各祖先
+   .page 等均未定位），left/right/bottom 声明沿用原值，视觉与手机端一致。
+   html:not(.force-mobile) 排除「手机伪装桌面 UA」场景（仍走 fixed 原路径，
+   不动真机行为）；Pong/贪吃蛇 -fs 全屏变体（#id.pong-fs 特异性更高）不受影响。 */
+@media (min-width: 901px) {
+  html:not(.force-mobile) .more-panel,
+  html:not(.force-mobile) .poke-card,
+  html:not(.force-mobile) .call-mini {
+    position:absolute;
+  }
+}
 .call-mini-av {
   width:38px; height:38px; border-radius:50%; overflow:hidden; flex-shrink:0;
   background:#e9e9e9; display:flex; align-items:center; justify-content:center;

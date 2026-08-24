@@ -119,25 +119,47 @@
   // v3.5.117：批量读取（单事务内多个 get，替代 N 次独立事务）——
   //   启动回填头像/图标/壁纸等几十个键时，从"几十次事务排队"降到"1 次事务"，
   //   手机端明显提速（每张图一个独立事务是桌面图片加载慢的主因之一）
+  // v3.10.x：超时保护（与 idbGet 同款 4s+4s）——部分安卓内核（真我/荣耀 Edge 等）
+  //   批量事务可能挂起（既不 onsuccess 也不 onerror），idbRestore 分批恢复链会整条
+  //   卡死：12s 保险丝放行开屏后剩余键永远不回填，桌面头像/卡片背景/页面背景全部
+  //   "丢失"。现在 4s 未完成对未返回的键重试一次（新事务），再 4s 放弃并返回已收到
+  //   的部分结果，批次链继续走完。
   window.idbGetMany = function (keys) {
     const list = (keys || []).filter(Boolean);
     if (!list.length) return Promise.resolve({});
     return open().then(db => new Promise((resolve) => {
-      try {
-        const tx = db.transaction(STORE, 'readonly');
-        const os = tx.objectStore(STORE);
-        const out = {};
-        let pending = list.length;
-        let done = false;
-        const finish = () => { if (!done) { done = true; resolve(out); } };
-        list.forEach(k => {
-          const req = os.get(k);
-          req.onsuccess = () => { out[k] = req.result; if (--pending <= 0) finish(); };
-          req.onerror = () => { out[k] = undefined; if (--pending <= 0) finish(); };
-        });
-        tx.onerror = finish;
-        tx.onabort = finish;
-      } catch (e) { resolve({}); }
+      const out = {};
+      let done = false;
+      let timer = null;
+      let retried = false;
+      const finish = () => { if (!done) { done = true; if (timer) clearTimeout(timer); resolve(out); } };
+      function run(ks) {
+        try {
+          const tx = db.transaction(STORE, 'readonly');
+          const os = tx.objectStore(STORE);
+          let pending = ks.length;
+          ks.forEach(k => {
+            const req = os.get(k);
+            req.onsuccess = () => { out[k] = req.result; if (--pending <= 0) finish(); };
+            req.onerror = () => { if (--pending <= 0) finish(); };
+          });
+          tx.onerror = finish;
+          tx.onabort = finish;
+        } catch (e) { finish(); }
+      }
+      timer = setTimeout(function () {
+        if (done) return;
+        if (!retried) {
+          retried = true;
+          const miss = list.filter(k => !(k in out));
+          if (!miss.length) { finish(); return; }
+          run(miss);
+          timer = setTimeout(finish, 4000);
+          return;
+        }
+        finish();
+      }, 4000);
+      run(list);
     })).catch(() => ({}));
   };
 

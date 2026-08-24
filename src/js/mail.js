@@ -603,7 +603,9 @@
     const ep = pool.emoji.length ? pool.emoji : pool.defEmoji;
     if (cfg.kaomojiEn && kp.length && Math.random() * 100 < 30) t += ' ' + kp[Math.floor(Math.random() * kp.length)];
     if (cfg.emojiEn && ep.length && Math.random() * 100 < 15) t += ' ' + ep[Math.floor(Math.random() * ep.length)];
-    const st = pool.sticker.concat(pool.image);
+    // v3.11.x：只收 dataURL 媒体——信件正文按 sticker:/data:image 正则识别内联图片，
+    // 链接导入的 http(s) 字卡拼进信纸只会显示成一段 URL 文字，先过滤掉
+    const st = pool.sticker.concat(pool.image).filter(s => typeof s === 'string' && s.indexOf('data:') === 0);
     if (cfg.stickerEn && st.length && Math.random() * 100 < 20) t += ' ' + st[Math.floor(Math.random() * st.length)];
     return t;
   }

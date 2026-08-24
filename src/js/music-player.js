@@ -96,6 +96,13 @@
 
   // ================= 存储 =================
   function saveLibrary() { saveArr('music-library', library); }
+  // v3.10.x：批量补时长/封面时逐条 saveLibrary 是 O(n) 次全量序列化（大歌单卡顿），
+  // 1.5s 内合并为一次；中途退出最多丢最后一批，下次打开对仍缺时长的歌会重新探测
+  let _saveLibTimer = null;
+  function saveLibrarySoon() {
+    if (_saveLibTimer) return;
+    _saveLibTimer = setTimeout(function () { _saveLibTimer = null; saveLibrary(); }, 1500);
+  }
   function savePlaylists() { saveArr('music-playlists', playlists); }
   function saveHistory() { saveArr('music-history', history); }
   function saveMyHistory() { saveArr('music-my-history', myHistory); }
@@ -539,7 +546,8 @@
             artist: ((s.ar || []).map(a => a.name).filter(Boolean).join('/')),
             cover: String((s.al && s.al.picUrl) || '').replace(/^http:\/\//i, 'https://'),
             url: s.id ? neteaseMetingUrl(s.id) : '',
-            duration: s.dt ? Math.round(s.dt / 1000) : 0
+            duration: s.dt ? Math.round(s.dt / 1000) : 0,
+            fee: s.fee // v3.10.x：1=VIP 专属 4=购买专辑——导入时过滤
           })).filter(t => t.url);
         } },
       { url: 'https://api.allorigins.win/raw?url=' + encodeURIComponent(apiUrl), parse(txt) {
@@ -552,7 +560,8 @@
             artist: ((s.ar || []).map(a => a.name).filter(Boolean).join('/')),
             cover: String((s.al && s.al.picUrl) || '').replace(/^http:\/\//i, 'https://'),
             url: s.id ? neteaseMetingUrl(s.id) : '',
-            duration: s.dt ? Math.round(s.dt / 1000) : 0
+            duration: s.dt ? Math.round(s.dt / 1000) : 0,
+            fee: s.fee
           })).filter(t => t.url);
         } },
       { url: 'https://corsproxy.io/?url=' + encodeURIComponent(apiUrl), parse(txt) {
@@ -565,7 +574,8 @@
             artist: ((s.ar || []).map(a => a.name).filter(Boolean).join('/')),
             cover: String((s.al && s.al.picUrl) || '').replace(/^http:\/\//i, 'https://'),
             url: s.id ? neteaseMetingUrl(s.id) : '',
-            duration: s.dt ? Math.round(s.dt / 1000) : 0
+            duration: s.dt ? Math.round(s.dt / 1000) : 0,
+            fee: s.fee
           })).filter(t => t.url);
         } }
     ];
@@ -591,35 +601,52 @@
     tryNext();
   }
   // 导入单个歌单：去重（网易云 ID 已存在则跳过），只入内存，由调用方统一 saveLibrary
+  // v3.10.x：VIP/付费歌曲前置过滤——数据源自带 fee 时（官方 v6 源）直接不入库；
+  // meting 源不带 fee，由 enrichImportedDurations 拿到 v6 详情后再移除本批 VIP
   function importNeteasePlaylist(id, done, targetPl) {
     fetchNeteasePlaylist(id, function (tracks) {
       if (!tracks || !tracks.length) { done({ ok: false }); return; }
-      let added = 0, skipped = 0;
+      let added = 0, skipped = 0, vip = 0;
       const now = Date.now();
       const addedIds = [];
       const plId = targetPl || 'default';
       tracks.forEach((t, i) => {
         if (t.neteaseId && library.some(m => m.neteaseId === t.neteaseId)) { skipped++; return; }
+        if (t.fee === 1 || t.fee === 4) { vip++; return; } // VIP 专属/需购买专辑：网页外链播不了
         const nid = 'sm_pl_' + now + '_' + i + '_' + Math.random().toString(36).substr(2, 4);
         library.push({ id: nid, neteaseId: t.neteaseId, name: t.name || '网易云音乐-' + (t.neteaseId || i), artist: t.artist || '', cover: t.cover || '', url: t.url, source: 'url', duration: t.duration || 0, playlistId: plId, addedAt: now });
         addedIds.push(nid);
         added++;
       });
-      done({ ok: true, added: added, skipped: skipped });
+      done({ ok: true, added: added, skipped: skipped, vip: vip });
       // v3.9.x：导入后一次性补时长（meting 不带 duration）——v6 全量快路径 + 音频探测兜底
+      // v3.10.x：同一趟 v6 详情顺带识别 VIP 并移除本批 VIP 曲目
       if (addedIds.length) enrichImportedDurations(id, addedIds);
     });
   }
   // 歌单导入后的时长补全：先试官方 v6 歌单详情（含每曲 dt，经 CORS 代理，代理可用则
   // 一次全量补齐并刷新列表）；代理全挂则对剩余歌曲逐个 <audio> 探测（见 enqueueDurProbe）
+  // v3.10.x：同一趟 v6 详情顺带识别 VIP/付费曲（fee=1/4）——meting 导入源不带 fee，
+  // 拿到 v6 后把「本次新导入」的 VIP 从库里移除并提示；只动本批 addedIds，不碰已有歌曲
   function enrichImportedDurations(id, trackIds) {
     const missing = trackIds.map(findTrack).filter(m => m && m.neteaseId && !m.duration);
     if (!missing.length) return;
-    fetchV6Durations(id, function (durMap) {
+    fetchV6Durations(id, function (durMap, feeMap) {
       if (durMap && Object.keys(durMap).length) {
         let any = false;
         missing.forEach(m => { if (durMap[m.neteaseId] && !m.duration) { m.duration = durMap[m.neteaseId]; any = true; } });
         if (any) { saveLibrary(); renderPage(); }
+      }
+      if (feeMap && Object.keys(feeMap).length) {
+        const vipTracks = trackIds.map(findTrack).filter(m => m && m.neteaseId && (feeMap[m.neteaseId] === 1 || feeMap[m.neteaseId] === 4));
+        if (vipTracks.length) {
+          const vipIds = vipTracks.map(m => m.id);
+          library = library.filter(x => vipIds.indexOf(x.id) < 0);
+          if (currentId && vipIds.indexOf(currentId) >= 0) { teardownAudio(); currentId = null; updatePlayerBar(); renderLibrary(); }
+          saveLibrary();
+          renderPage();
+          toast('已自动移除 ' + vipTracks.length + ' 首 VIP/付费歌曲（网页外链无法播放）');
+        }
       }
       missing.forEach(m => { if (!m.duration) enqueueDurProbe(m); });
     });
@@ -638,8 +665,9 @@
       { p: 'https://corsproxy.io/?url=', enc: true }
     ];
     const out = {};
+    const fees = {}; // v3.10.x：顺带收集 fee（1=VIP 4=购买专辑）供导入后移除本批 VIP
     let settled = false;
-    const finish = () => { if (settled) return; settled = true; cb(out); };
+    const finish = () => { if (settled) return; settled = true; cb(out, fees); };
     prox.forEach(pr => {
       let controller;
       try { controller = new AbortController(); } catch (e) { controller = null; }
@@ -652,7 +680,11 @@
             const j = JSON.parse(txt);
             const pl = j && j.playlist;
             if (pl && Array.isArray(pl.tracks) && pl.tracks.length) {
-              pl.tracks.forEach(s => { if (s && s.id && s.dt) out[String(s.id)] = Math.round(s.dt / 1000); });
+              pl.tracks.forEach(s => {
+                if (!s || !s.id) return;
+                if (s.dt) out[String(s.id)] = Math.round(s.dt / 1000);
+                fees[String(s.id)] = s.fee;
+              });
               finish();
             }
           } catch (e) {}
@@ -672,24 +704,25 @@
       }
     });
   }
-  let durProbeRunning = false;
   const durProbeQueue = [];
   const DUR_PROBE_CONCURRENCY = 4;
+  let durProbeActive = 0;
+  // v3.10.x：旧实现用 running 标志 + 固定 4 次 next() 起池，但 enqueue 是同步循环，
+  // 队列被 next() 同步排空后 running 被提前清掉，后续每首歌都各自再起一批——
+  // 大歌单几百首同时探测，12s 超时内大多拿不到连接 → 时长全 00:00。
+  // 改为真正的 worker pool：active 计数 + 泵，任意时刻最多 4 条在探。
   function enqueueDurProbe(m) {
     if (!m || !m.neteaseId || m.duration > 0) return;
     if (durProbeQueue.some(x => x.id === m.id)) return;
     durProbeQueue.push(m);
-    if (durProbeQueue.length <= DUR_PROBE_CONCURRENCY) runDurProbe();
+    pumpDurProbe();
   }
-  function runDurProbe() {
-    if (durProbeRunning) return;
-    durProbeRunning = true;
-    const next = () => {
-      if (!durProbeQueue.length) { durProbeRunning = false; return; }
+  function pumpDurProbe() {
+    while (durProbeActive < DUR_PROBE_CONCURRENCY && durProbeQueue.length) {
       const m = durProbeQueue.shift();
-      probeOneDuration(m, next);
-    };
-    for (let i = 0; i < DUR_PROBE_CONCURRENCY; i++) next();
+      durProbeActive++;
+      probeOneDuration(m, function () { durProbeActive--; pumpDurProbe(); });
+    }
   }
   function probeOneDuration(m, done) {
     let tmp = null;
@@ -704,7 +737,7 @@
         const mm = findTrack(m.id);
         if (mm && !mm.duration) {
           mm.duration = dur;
-          saveLibrary();
+          saveLibrarySoon();
           updateDurUI(m.id, dur);
         }
       }
@@ -750,7 +783,7 @@
           mm._coverLoading = false;
           if (pic && !mm.cover) {
             mm.cover = pic;
-            saveLibrary();
+            saveLibrarySoon();
             updateCoverUI(m.id);
             if (mm.id === currentId) setWidgetCover(mm);
           }
@@ -781,11 +814,11 @@
   }
   // 串行导入多个歌单（避免并发刷爆网络）
   function importPlaylistIds(ids, cb, targetPl) {
-    let total = 0, plOk = 0, plFail = 0, skipped = 0;
+    let total = 0, plOk = 0, plFail = 0, skipped = 0, vip = 0;
     const next = (i) => {
-      if (i >= ids.length) { cb({ total: total, plOk: plOk, plFail: plFail, skipped: skipped }); return; }
+      if (i >= ids.length) { cb({ total: total, plOk: plOk, plFail: plFail, skipped: skipped, vip: vip }); return; }
       importNeteasePlaylist(ids[i], (res) => {
-        if (res.ok) { plOk++; total += res.added; skipped += res.skipped; }
+        if (res.ok) { plOk++; total += res.added; skipped += res.skipped; vip += res.vip || 0; }
         else plFail++;
         next(i + 1);
       }, targetPl);
@@ -1056,6 +1089,7 @@
             let msg = res.total
               ? '已导入 ' + res.plOk + ' 个歌单 / ' + res.total + ' 首' + (res.skipped ? '（跳过已有 ' + res.skipped + ' 首）' : '')
               : '歌单导入失败';
+            if (res.vip) msg += '（VIP 歌曲 ' + res.vip + ' 首未导入）';
             if (res.plFail) {
               if (!res.total) {
                 const ua = navigator.userAgent || '';
@@ -1080,7 +1114,7 @@
   function openBatch() {
     if (!window.openTCPanel) return;
     window.openTCPanel('批量导入音乐', '' +
-      '<div class="sm-fld-hint" style="margin-bottom:8px"><b>支持 3 种导入方式：</b><br>① <b>网易云歌单</b>：直接粘贴歌单分享链接（music.163.com/playlist?id=xxx 或 #/playlist?id=xxx），自动导入整个歌单；<br>② <b>网易云单曲</b>：每行一个歌曲数字 ID（如 2064961530），或<b>直接粘贴完整网易云链接</b>（如 music.163.com/#/song?id=xxx、song/media/outer/url?id=xxx.mp3），自动识别导入，不用手动填 ID；<br>③ <b>本地/直链</b>：按「歌曲名称 / 歌手 / 音乐直链URL」格式粘贴，每首歌空一行分隔（URL 栏同样支持直接贴网易云链接）。<br><br><span style="opacity:.75">⚠ 链接上传的 VIP/付费歌曲无法播放（仅免费歌曲可播）；歌单导入受网络环境影响（部分手机浏览器可能拦截），失败可稍后重试</span></div>' +
+      '<div class="sm-fld-hint" style="margin-bottom:8px"><b>支持 3 种导入方式：</b><br>① <b>网易云歌单</b>：直接粘贴歌单分享链接（music.163.com/playlist?id=xxx 或 #/playlist?id=xxx），自动导入整个歌单；<br>② <b>网易云单曲</b>：每行一个歌曲数字 ID（如 2064961530），或<b>直接粘贴完整网易云链接</b>（如 music.163.com/#/song?id=xxx、song/media/outer/url?id=xxx.mp3），自动识别导入，不用手动填 ID；<br>③ <b>本地/直链</b>：按「歌曲名称 / 歌手 / 音乐直链URL」格式粘贴，每首歌空一行分隔（URL 栏同样支持直接贴网易云链接）。<br><br><span style="opacity:.75">⚠ 链接上传的 VIP/付费歌曲无法播放（仅免费歌曲可播）；歌单导入会自动移除 VIP/付费歌曲；歌单导入受网络环境影响（部分手机浏览器可能拦截），失败可稍后重试</span></div>' +
       '<textarea id="sm-batch-input" class="tc-input" rows="8" placeholder="网易云歌单链接：https://music.163.com/playlist?id=3778678&#10;网易云单曲链接：https://music.163.com/#/song?id=27538343&#10;或纯数字 ID：27538343&#10;&#10;歌曲名称：Baby&#10;歌手：EXO-K&#10;音乐直链URL：http://music.163.com/song/media/outer/url?id=27538343.mp3"></textarea>' +
       '<div class="sm-fld"><label>导入到歌单</label><select class="tc-input" id="sm-target-pl">' + targetPlOptions() + '</select></div>' +
       '<div class="mail-actions"><button class="cc-tool" id="sm-batch-cancel">取消</button><button class="cc-tool" id="sm-batch-ok">开始导入</button></div>');
@@ -1181,6 +1215,7 @@
               msg += '）';
             }
             if (res.skipped) msg += '（跳过已有 ' + res.skipped + ' 首）';
+            if (res.vip) msg += '（VIP 歌曲 ' + res.vip + ' 首未导入）';
             if (res.plFail && res.total) msg += '；' + res.plFail + ' 个歌单失败（可能私密/已失效/被拦截）';
             toast(msg);
           }, targetPl);
@@ -1683,6 +1718,7 @@
     playRejected = false;
     endedHandled = false;
     disarmAutoResume();
+    clearBgResume();
     clearStallGuard();
     if (progressTimer) { clearInterval(progressTimer); progressTimer = null; }
     // v3.9.x：真正停止（非切歌）后让 bg-keep 恢复"后台保活"媒体会话条；
@@ -1705,7 +1741,7 @@
   // 现场合成内置示例旋律并直接播放（不改歌曲数据，外链/本地数据都保留）
   function playDemoFor(m, seedIdx) {
     genDemoAudio(seedIdx).then(d => {
-      if (!d) { toast('播放失败：网络链接可能已失效，或该歌曲为VIP付费歌曲'); demoFallbackBusy = false; return; }
+      if (!d) { toast('播放失败：网络链接可能已失效，或该歌曲为VIP付费歌曲'); demoFallbackBusy = false; wantPlay = false; clearBgResume(); return; }
       try { window.idbSet(MUSIC_PREFIX + ':music-file:' + m.id, d); } catch (e) {}
       demoFallbackBusy = false;
       if (currentId !== m.id) return;
@@ -1722,6 +1758,7 @@
     // v3.x：来电 hold 期间音频异步加载完成 → 不播放（避免通话中音乐响起），
     // 通话结束由 musicHoldForCall(false) 统一恢复播放与悬浮窗
     if (callHoldPending) { try { syncPlayIcons(false); } catch (e) {} return; }
+    wantPlay = true; // v3.10.x：用户点播/切歌＝意图播放（外部打断时自动续播的依据）
     const p = audio.play();
     if (p && p.catch) {
       p.catch(() => {
@@ -1730,7 +1767,6 @@
         // muted 静音解锁（Chromium/国产 WebView 的 autoplay 策略对静音媒体放行）：
         // 静音 play() → 成功后再恢复音量。这比「提示用户再点一下屏幕」在
         // Via/OPPO 自带等国产浏览器上更可靠（实测其手势续播仍被拒）。
-        playRejected = true;
         try { audio.muted = true; } catch (e) {}
         const p2 = audio.play();
         if (p2 && p2.then) {
@@ -1741,13 +1777,13 @@
             disarmAutoResume();
             try { syncPlayIcons(true); } catch (e) {}
           }).catch(() => {
-            // muted 也被拒（极端策略/设置关闭自动播放）→ 明确提示 + 手势续播兜底
-            toast('点击播放被浏览器拦截，请再点一下屏幕继续播放');
-            armAutoResume();
+            // v3.10.x：muted 也被拒——手势内才弹提示，自动切歌/断链重试等
+            // 非手势场景静默走补播反击（聊天中听歌突然中断弹"被拦截"即此）
+            if (audio) { try { audio.muted = false; } catch (e) {} }
+            handlePlayReject();
           });
         } else {
-          toast('点击播放被浏览器拦截，请再点一下屏幕继续播放');
-          armAutoResume();
+          handlePlayReject();
         }
       });
     }
@@ -1796,6 +1832,96 @@
     document.removeEventListener('touchend', retry, true);
     document.removeEventListener('click', retry, true);
   }
+  // v3.10.x：后台被暂停自动续播——手机浏览器/系统在页面切后台后可能因省电、音频焦点
+  // 抢占、渲染进程冻结等暂停 <audio>（用户没点暂停），表现为「挂后台音乐突然停了，
+  // 切回前台才恢复」。旧逻辑只有 armAutoResume（等手势）兜底，后台完全无反击。
+  // 引入「意图播放」标记 wantPlay：只有用户主动暂停、真正停止、来电 hold 才清除；
+  // 其余 pause 一律视为外部打断 → 后台按 300ms~12s 退避定时补播；回前台（visible/
+  // focus/pageshow）立即补播；另加 10s 看门狗兜住漏网场景。补播先试原元素（保留进度），
+  // 被拒再 muted 静音解锁降级（同 startPlayback 思路），仍失败重建元素（X5 缓存
+  // rejection 兜底，同 armAutoResume.retry）；全程静默不弹 toast。
+  let wantPlay = false;
+  let bgResumeTimers = [];
+  let bgResumeFails = 0; // 连续补播失败计数（死链/持续拦截时封顶，防止看门狗无限拉取）
+  function clearBgResume() {
+    bgResumeTimers.forEach(clearTimeout);
+    bgResumeTimers = [];
+  }
+  function scheduleBgResume() {
+    clearBgResume();
+    [300, 1500, 5000, 12000].forEach(function (d) {
+      bgResumeTimers.push(setTimeout(function () { tryResumePlayback(); }, d));
+    });
+  }
+  function tryResumePlayback() {
+    if (!wantPlay || callHoldPending || bgResumeFails >= 6) return;
+    const m = findTrack(currentId);
+    if (!m) { wantPlay = false; return; }
+    if (!audio || audio.ended) {
+      // 元素已丢失/已自然结束（冻结期间 ended 未及时处理）→ 只对外链歌重建链路
+      rebuildAndPlay(m);
+      return;
+    }
+    if (!audio.paused) return;
+    const p = audio.play();
+    if (p && p.then) {
+      p.then(function () { bgResumeFails = 0; }).catch(function () {
+        try { audio.muted = true; } catch (e) {}
+        const p2 = audio.play();
+        if (p2 && p2.then) {
+          p2.then(function () { try { if (audio) audio.muted = false; } catch (e) {} bgResumeFails = 0; })
+            .catch(function () { bgResumeFails++; rebuildAndPlay(m); });
+        } else { bgResumeFails++; rebuildAndPlay(m); }
+      });
+    }
+  }
+  function rebuildAndPlay(m) {
+    if (!wantPlay || !currentId || currentId !== m.id) return;
+    if (!(m.source === 'url' && m.url)) return; // 本地 Blob 歌只走原元素续播
+    try { if (audio) { audio.onended = null; audio.onerror = null; audio.onloadedmetadata = null; audio.onplay = null; audio.onpause = null; audio.pause(); if (audio.parentNode) audio.parentNode.removeChild(audio); } } catch (e) {}
+    audio = createAudio();
+    try { audio.referrerPolicy = 'no-referrer'; } catch (e) {}
+    audio.preload = 'auto';
+    setupHandlers(m);
+    audio.src = m.url;
+    const p = audio.play();
+    if (p && p.catch) p.catch(function () { bgResumeFails++; });
+  }
+  // 回前台兜底：冻结解除/中断结束后立刻补播（不等用户点屏幕）
+  ['visibilitychange', 'focus'].forEach(function (ev) {
+    document.addEventListener(ev, function () {
+      if (document.visibilityState !== 'visible') return;
+      setTimeout(function () { try { tryResumePlayback(); } catch (e) {} }, 200);
+    });
+  });
+  window.addEventListener('pageshow', function () {
+    setTimeout(function () { try { tryResumePlayback(); } catch (e) {} }, 200);
+  });
+  // 后台看门狗：hidden 下若有「想播却被暂停」的元素，周期性尝试拉起
+  //（页面未被完全冻结时生效；完全冻结时定时器停摆，由回前台兜底接管）
+  setInterval(function () {
+    try { if (document.hidden) tryResumePlayback(); } catch (e) {}
+  }, 10000);
+  // v3.10.x：最近用户手势时间戳——区分「用户刚点了播放」与「自动切歌 / 断链重试 /
+  // 后台补播」等非手势上下文。后者 play() 被拒是常态（浏览器对无手势播放收紧），
+  // 不该弹"点击播放被浏览器拦截"吓用户（聊天中听歌自动下一首就中断弹提示的来源），
+  // 静默交给补播反击 + 手势兜底；只有真·用户点击后 4s 内被拒才提示。
+  let lastGestureAt = 0;
+  ['pointerdown', 'touchend', 'keydown', 'mousedown'].forEach(function (ev) {
+    document.addEventListener(ev, function () { lastGestureAt = Date.now(); }, { capture: true, passive: true });
+  });
+  function recentUserGesture() { return Date.now() - lastGestureAt < 4000; }
+  // startPlayback / toggle 共用的拒绝处理：手势内提示用户，非手势静默反击
+  function handlePlayReject() {
+    playRejected = true;
+    if (recentUserGesture()) {
+      toast('点击播放被浏览器拦截，请再点一下屏幕继续播放');
+      armAutoResume();
+    } else {
+      armAutoResume();        // 用户下次任意触摸即恢复（不弹提示）
+      scheduleBgResume();     // 定时补播先试，多数自动切歌场景直接救回
+    }
+  }
   // v3.6.x：播放停滞守卫——外链被拦截/302 跳转挂起时 audio 不触发 error 也不出声
   //（图标转但永远无声，Edge 等浏览器实测）。启动 12 秒后 currentTime 仍为 0：
   // 种子歌自动切内置示例旋律，其余歌曲提示并停止；有进度/暂停/切歌/播放事件都会取消守卫。
@@ -1837,6 +1963,7 @@
           playDemoFor(m, idx);
         } else if (idx < 0) {
           toast('播放失败：网络链接可能已失效，或该歌曲为VIP付费歌曲');
+          wantPlay = false; clearBgResume(); // v3.10.x：真失败＝停止意图，不再自动续播
           try { audio.pause(); } catch (e) {}
           try { syncPlayIcons(false); } catch (e) {}
         }
@@ -1929,6 +2056,7 @@
     }
     if (idx >= 0) return; // 兜底合成/播放进行中，静默等待结果
     toast('播放失败：网络链接可能已失效，或该歌曲为VIP付费歌曲');
+    wantPlay = false; clearBgResume(); // v3.10.x：真失败＝停止意图，不再自动续播
   }
   // v3.9.x：onended 兜底——网易云 meting 外链某些流不触发 ended 事件（duration=Infinity
   // 或 chunked 流无 Content-Length），导致自动下一首/循环/随机全失效，只能手动切歌。
@@ -2017,8 +2145,9 @@
         } else { armAutoResume(); }
       }
     };
-    audio.onplay = function () { playRejected = false; clearStallGuard(); disarmAutoResume(); syncPlayIcons(true); try { if (navigator.mediaSession) navigator.mediaSession.playbackState = 'playing'; } catch (e) {} try { window.__musicPlaying = true; } catch (e) {} };
-    audio.onpause = function () { syncPlayIcons(false); try { if (navigator.mediaSession) navigator.mediaSession.playbackState = 'paused'; } catch (e) {} try { window.__musicPlaying = false; } catch (e) {} };
+    audio.onplay = function () { playRejected = false; bgResumeFails = 0; clearStallGuard(); disarmAutoResume(); clearBgResume(); wantPlay = true; syncPlayIcons(true); try { if (navigator.mediaSession) navigator.mediaSession.playbackState = 'playing'; } catch (e) {} try { window.__musicPlaying = true; } catch (e) {} };
+    audio.onpause = function () { syncPlayIcons(false); try { if (navigator.mediaSession) navigator.mediaSession.playbackState = 'paused'; } catch (e) {} try { window.__musicPlaying = false; } catch (e) {} // v3.10.x：非用户暂停（后台省电/音频焦点抢占/系统打断）→ 定时补播反击
+      if (wantPlay && !callHoldPending) scheduleBgResume(); };
   }
   function playTrack(id) {
     const m = findTrack(id);
@@ -2047,7 +2176,7 @@
             playDemoFor(m, idx);
             return;
           }
-          toast('音乐文件加载失败，可能已被清理'); currentId = null; updatePlayerBar(); renderLibrary(); return;
+          toast('音乐文件加载失败，可能已被清理'); wantPlay = false; clearBgResume(); currentId = null; updatePlayerBar(); renderLibrary(); return;
         }
         // v3.6.x：统一转 Blob + 对象 URL 播放（兼容旧 dataURL 字符串 / 新 Blob 存储）
         playLocal(m, v);
@@ -2067,7 +2196,7 @@
               if (v2 !== undefined && v2 !== null && v2 !== '') loadLocal(v2);
               else failLocal();
             };
-            const failLocal = () => { toast('音乐文件加载失败，可能已被清理'); currentId = null; updatePlayerBar(); renderLibrary(); };
+            const failLocal = () => { toast('音乐文件加载失败，可能已被清理'); wantPlay = false; clearBgResume(); currentId = null; updatePlayerBar(); renderLibrary(); };
             const oldLs = localStorage.getItem(legacyKey);
             if (oldLs) { legacyFallback(oldLs); return; }
             if (MUSIC_PREFIX !== 'xy-home-v2') {
@@ -2134,7 +2263,7 @@
         } else { armAutoResume(); }
       });
     }
-    else audio.pause();
+    else { wantPlay = false; clearBgResume(); audio.pause(); } // v3.10.x：用户主动暂停＝清除意图，后台补播不得打扰
   }
   // v3.5.129：来电联动——暂停音乐 + 隐藏悬浮小框（否则铃声和音乐同时响、
   // 悬浮小框 z-index 9999 会盖在通话面板上遮挡接听按钮）；通话结束恢复
@@ -2157,7 +2286,7 @@
         // 有当前曲目但 audio 还没创建（本地文件异步从 IDB 读取中）→ 标记，
         // startPlayback 时检查并跳过播放，避免通话期间音频加载完自动响起
         callHoldPending = !audio && !!currentId;
-        if (audio && !audio.paused) audio.pause();
+        if (audio && !audio.paused) { wantPlay = false; clearBgResume(); audio.pause(); } // v3.10.x：来电 hold＝清除意图，通话期间不自动续播
         if (el) el.hidden = true;
       } else {
         // 恢复播放：hold 前在播，或 hold 期间异步加载被挂起 → 尝试恢复

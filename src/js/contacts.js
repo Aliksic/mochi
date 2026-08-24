@@ -20,7 +20,23 @@
     // v3.10.x：经期记录改全局共享（本人生理数据，所有联系人桌面共用一份），
     // 键 xy-home-v2:period-* 走根命名空间，绝不能被 migrateLegacy 迁进 default 桌面
     // （否则非 default 桌面读全局键读不到，经期记录"消失"）。period-migrated 为迁移幂等标记。
-    'period-records', 'period-cfg', 'period-daily', 'period-notify', 'period-migrated'];
+    'period-records', 'period-cfg', 'period-daily', 'period-notify', 'period-migrated',
+    // v3.11.x：字卡库公用字卡改全局共享——xy-home-v2:cc-groups-public 存所有桌面联系人
+    // 共用的自定义字卡（chatcard.js），cc-scope-migrated 为存量归属迁移幂等标记。
+    // 都是根命名空间键，绝不能被 migrateLegacy 迁进 default 桌面（否则公用字卡"消失"）
+    'cc-groups-public', 'cc-scope-migrated',
+    // v3.11.x：字卡库公用/专属变动一次性提醒的已读标记（chatcard.js 弹窗），同为全局根键
+    'cc-scope-notice-done',
+    // v3.11.x：存钱罐改全局共享（两人共同金库，p2-features.js）——键 xy-home-v2:piggy-*
+    // 走根命名空间，绝不能被 migrateLegacy 迁进 default 桌面（否则非 default 桌面余额读空）
+    'piggy-log', 'piggy-goal-name', 'piggy-goal-amt', 'piggy-cards', 'piggy-last-visit',
+    'piggy-goals', 'piggy-goal-cur',
+    // v3.10.x：心意市集自定义商品改全局共享（所有桌面互通一份商品库，gift-shop.js）——
+    // 键 xy-home-v2:market-custom 走根命名空间，绝不能被 migrateLegacy 迁进 default 桌面
+    // （否则非 default 桌面读不到全局商品库，自定义商品"消失"）。market-migrated 为迁移幂等标记
+    'market-custom', 'market-migrated',
+    // v3.10.x：扩库救援标记（gift-shop.js rescueNewDefaults，v2 新默认商品误删恢复），同为全局根键
+    'market-migrated-v2'];
   function isExcluded(k) {
     const r = k.slice(G.length + 1);
     if (EXCLUDE.indexOf(r) >= 0) return true;

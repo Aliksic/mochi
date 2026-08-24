@@ -168,7 +168,10 @@
         const ph = window.periodDayPhase && window.periodDayPhase(ds);
         if (ph && ph !== 'none') phCls = ' cal-period-' + ph;
       } catch (e) {}
-      html += '<span class="cal-cell' + phCls + (isToday ? ' today' : '') + (ds === selDate ? ' sel' : '') + '" data-date="' + ds + '">' + d + '</span>';
+      // v3.11.x：喝水记录日打点（p2-features.js 暴露 waterDayHas）
+      let wCls = '';
+      try { if (window.waterDayHas && window.waterDayHas(ds)) wCls = ' cal-water'; } catch (e) {}
+      html += '<span class="cal-cell' + phCls + wCls + (isToday ? ' today' : '') + (ds === selDate ? ' sel' : '') + '" data-date="' + ds + '">' + d + '</span>';
     }
     grid.innerHTML = html;
   }

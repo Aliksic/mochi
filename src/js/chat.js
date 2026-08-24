@@ -1134,10 +1134,12 @@
   // 数据不变（msgs 全量在内存，getChatMsgs/统计/搜索遍历不受影响），只分 DOM 渲染层：
   // 几千条历史不再一次性建几千个消息节点，进入聊天页与历史恢复大幅提速。
   const RENDER_MAX = 200;   // 渲染窗口条数上限
+  const WINDOW_MAX = 400;   // v3.10.x：增量渲染窗口硬上限（含上下缓冲，防 DOM 无限膨胀）
   const LOAD_STEP = 100;    // 向上滚动每次加载的条数
   const TOP_THRESHOLD = 150;// scrollTop 小于此值触发向上加载（px）
   const JUMP_VIEW = 30;     // 搜索跳转时目标索引上方预留的余量
   let renderStart = 0;      // 渲染窗口起点（msgs 下标）；0 = 全量
+  let renderEnd = 0;        // v3.10.x：渲染窗口终点（msgs 下标，开区间）；增量裁剪/恢复用
   // v3.9.x：时间分隔线（聊天设置「时间轴样式-时间分隔线」）——消息间隔 ≥ TIME_DIVIDER_GAP
   // 时在消息流中插入一条居中时间胶囊（微信式）。插入逻辑只作用于聊天页 #chat-body：
   // 收藏页（#fav-list）/群聊（#gc-body）不含此逻辑，msg-time 保留原样式不受影响。
@@ -1168,6 +1170,7 @@
     const prevHeight = keepScroll ? body.scrollHeight : 0;
     if (clampTop) renderStart = Math.max(0, len - RENDER_MAX);
     const start = Math.min(renderStart, len);
+    renderEnd = len; // 整窗重建渲染到最新，窗口终点复位（裁剪状态随之清空）
     // v3.7.x：重渲染前保存就地作答输入草稿（TA 发消息触发重渲染时输入不丢）
     collectInplaceDrafts();
     body.innerHTML = '';
@@ -1198,17 +1201,93 @@
     if (chatPage.hidden || !body.children.length) return;
     renderWindow(true, false);
   };
-  // 向上滚动接近顶部 → 加载更早消息（节流 100ms，程序化滚动 200ms 内忽略）
+  // v3.10.x：向上滚动加载更早消息——增量插顶 + 裁剪，不再整窗重建。
+  // 锚点 = 原窗口第一条消息，插入后用其 offsetTop 增量校正 scrollTop，保持视觉不动。
+  // 窗口条数超 WINDOW_MAX 时，裁掉远离视口的节点，防 DOM 随历史无限膨胀。
+  function loadOlderIncremental() {
+    const len = msgs.length;
+    if (renderStart <= 0 || renderStart >= len) return;
+    const newStart = Math.max(0, renderStart - LOAD_STEP);
+    if (newStart === renderStart) return;
+    const beforeTop = body.scrollTop;
+    const preNum = body.children.length;
+    const anchor = body.children[0] || null;
+    batchRendering = true;
+    // 新批渲染到 body 尾部（renderMsg 只会 append）
+    for (let i = newStart; i < renderStart; i++) {
+      maybeInsertDivider(i); // 时间分隔线：新批首条与前一条间距大时补胶囊
+      const m = renderMsg(msgs[i]);
+      m.dataset.idx = i;
+    }
+    batchRendering = false;
+    renderStart = newStart;
+    if (preNum > 0 && anchor) {
+      // 把新批节点移到顶部，保持时间顺序；用锚点 offsetTop 校正滚动位置
+      const newNodes = Array.prototype.slice.call(body.children, preNum);
+      for (let k = newNodes.length - 1; k >= 0; k--) body.insertBefore(newNodes[k], anchor);
+      body.scrollTop = beforeTop + anchor.offsetTop;
+    } else {
+      body.scrollTop = body.scrollHeight; // 原窗口为空，直接滚到底
+    }
+    // 窗口超上限 → 从远离视口的底部（最新端）裁剪
+    if (renderEnd - renderStart > WINDOW_MAX) pruneWindowBottom();
+    suppressScrollUntil = Date.now() + 200;
+  }
+  // 向下滚动接近底部 → 加载被裁剪掉的最新端，保证能回到最新（从历史夹缝回来）
+  function loadNewerIncremental() {
+    const len = msgs.length;
+    if (renderEnd >= len) return;
+    const newEnd = Math.min(len, renderEnd + LOAD_STEP);
+    if (newEnd === renderEnd) return;
+    batchRendering = true;
+    for (let i = renderEnd; i < newEnd; i++) {
+      maybeInsertDivider(i);
+      const m = renderMsg(msgs[i]);
+      m.dataset.idx = i;
+    }
+    batchRendering = false;
+    renderEnd = newEnd;
+    // 窗口超上限 → 从远离视口的顶部（最早端）裁剪
+    if (newEnd - renderStart > WINDOW_MAX) pruneWindowTop();
+    suppressScrollUntil = Date.now() + 200;
+  }
+  // 移除 DOM 末尾 idx >= renderStart+WINDOW_MAX 的节点（最新端），同步 renderEnd
+  function pruneWindowBottom() {
+    const targetEnd = renderStart + WINDOW_MAX;
+    if (renderEnd <= targetEnd) return;
+    while (body.lastChild) {
+      const last = body.lastChild;
+      const idx = last.dataset.idx;
+      if (idx !== undefined && parseInt(idx, 10) < targetEnd) break; // 已到应保留区
+      body.removeChild(last);
+    }
+    renderEnd = targetEnd;
+  }
+  // 移除 DOM 顶部 idx < renderEnd-WINDOW_MAX 的节点（最早端），同步 renderStart
+  function pruneWindowTop() {
+    const targetStart = renderEnd - WINDOW_MAX;
+    if (renderStart >= targetStart) return;
+    while (body.firstChild) {
+      const f = body.firstChild;
+      const idx = f.dataset.idx;
+      if (idx !== undefined && parseInt(idx, 10) >= targetStart) break; // 已到应保留区
+      body.removeChild(f);
+    }
+    renderStart = targetStart;
+  }
+  // 向上滚动接近顶部 → 加载更早；向下接近底部 → 恢复被裁剪的最新端
+  // （节流 100ms，程序化滚动 200ms 内忽略）
   let bodyScrollTimer = null;
   body.addEventListener('scroll', function () {
     if (Date.now() < suppressScrollUntil) return;
     if (bodyScrollTimer) return;
     bodyScrollTimer = setTimeout(function () {
       bodyScrollTimer = null;
-      if (renderStart <= 0 || !chatVisible()) return;
+      if (!chatVisible()) return;
       if (body.scrollTop < TOP_THRESHOLD) {
-        renderStart = Math.max(0, renderStart - LOAD_STEP);
-        renderWindow(true, false);
+        loadOlderIncremental();
+      } else if (renderEnd < msgs.length && body.scrollHeight - body.scrollTop - body.clientHeight < TOP_THRESHOLD) {
+        loadNewerIncremental();
       }
     }, 100);
   }, { passive: true });
@@ -1363,18 +1442,18 @@
       maybeScrollChatBottom(rec.side);
       return m;
     }
-    // 礼物卡片：居中红色渐变卡片，emoji + 名字 + 价格 + 留言
+    // 礼物卡片：简约黑白风 + 分类色圆底（emoji 底衬用市集分类色，其余黑白灰）
     if (rec.special === 'gift') {
       m.className = 'msg-gift';
-      const sideTxt = rec.side === 'out' ? '我' : chatPartnerName();
+      const sideTxt = rec.side === 'out' ? '我 送出' : (chatPartnerName() + ' 送来');
+      const gc = ((window.GIFT_CAT_COLOR || {})[rec.giftCat]) || '#f2f2f5';
       m.innerHTML = '<div class="msg-gift-card">' +
-        '<div class="msg-gift-bar"></div>' +
-        '<div class="msg-gift-emoji">' + escTxt(rec.giftEmoji || '\uD83C\uDF81') + '</div>' +
+        '<div class="msg-gift-emoji" style="background:' + escTxt(gc) + '">' + (rec.giftImg ? '<img class="msg-gift-img" src="' + escTxt(rec.giftImg) + '" alt="">' : escTxt(rec.giftEmoji || '\uD83C\uDF81')) + '</div>' +
         '<div class="msg-gift-name">' + escTxt(rec.giftName || '礼物') + '</div>' +
-        '<div class="msg-gift-price">\u00A5' + escTxt(Number(rec.giftPrice || 0).toFixed(2)) + '</div>' +
-        '<div class="msg-gift-divider"><span></span>\u2764<span></span></div>' +
+        '<div class="msg-gift-divider"></div>' +
         '<div class="msg-gift-wish">\u201C' + escTxt(rec.giftWish || '心意') + '\u201D</div>' +
-        '<div class="msg-gift-foot">' + escTxt(sideTxt) + ' \u9001\u51FA</div>' +
+        '<div class="msg-gift-foot"><span class="mg-side">' + escTxt(sideTxt) + '</span>' +
+          '<span class="msg-gift-price">\u00A5' + escTxt(Number(rec.giftPrice || 0).toFixed(2)) + '</span></div>' +
         favHeartHtml() +
         '</div>';
       body.appendChild(m);
@@ -1873,9 +1952,12 @@
       }
       const tp = rec.parts.filter(p => p.k === 'text').map(p => p.v).join(' ');
       if (tp) text = tp;
-    } else if (text.indexOf('data:image/') === 0) {
+    } else if (text.indexOf('data:image/') === 0 ||
+               ((rec.type === 'sticker' || rec.type === 'image') && /^https?:\/\//i.test(text))) {
       // v3.5.143：纯图片/表情包消息按内容识别（data: 前缀即图片），不依赖 type——
       // 旧数据 type 缺失时也能提取缩略图
+      // v3.11.x：链接导入的表情包（http(s) 链接 + sticker/image 类型）同样按图处理，
+      // 后台通知显示缩略图/[表情包] 占位而不是整段 URL；纯文字消息发链接不受影响
       img = text;
       text = '';
       imgSub = rec.type === 'sticker' ? 'sticker' : (rec.type === 'image' ? 'image' : '');
@@ -2443,6 +2525,10 @@ function partialRetractMsg(msgEl, side) {
     const myCid = window.__activeCid || 'default';
     const sameCid = () => (window.__activeCid || 'default') === myCid;
     const rep = genOneReply(c);
+    // v3.11.x：经期中 TA 的文字回复更温柔（梦角语态——period.js periodWarmText）
+    if (rep && rep.type === 'text' && typeof rep.text === 'string' && window.periodWarmText) {
+      try { const _w = window.periodWarmText(rep.text); if (_w) rep.text = _w; } catch (e) {}
+    }
     // 引用我的消息：quote 是我发的文本，qside='out'（我发）
     const m = addIn(rep.text, { quote: quote, qside: 'out', type: rep.type, parts: rep.parts, silent: silent });
     // TA 收藏夹：联系人有概率收藏我发的最新一条消息（独立于情绪系统，任何回复后判定）
@@ -3267,14 +3353,14 @@ function partialRetractMsg(msgEl, side) {
     pokeList.innerHTML = '';
     if (!groups.length) {
       pokeList.innerHTML = pokeMode === 'ta'
-        ? '<div class="cc-empty">暂无拍一拍字卡<br>请到 自定义聊天字卡 → 拍一拍 添加</div>'
+        ? '<div class="cc-empty">暂无拍一拍字卡<br>请到 字卡库 → 公用/专属字卡 → 拍一拍 添加</div>'
         : '<div class="cc-empty">暂无拍一拍字卡<br>点击「＋ 新增拍一拍」添加，或直接输入拍一拍文字</div>';
       return;
     }
     const cur = groups.find(g => g.key === pokeCurGroup) || groups[0];
     if (!cur.cards.length) {
       pokeList.innerHTML = pokeMode === 'ta'
-        ? '<div class="cc-empty">该分组暂无拍一拍字卡<br>请到 自定义聊天字卡 → 拍一拍 添加</div>'
+        ? '<div class="cc-empty">该分组暂无拍一拍字卡<br>请到 字卡库 → 公用/专属字卡 → 拍一拍 添加</div>'
         : '<div class="cc-empty">该分组暂无拍一拍<br>点击「＋ 新增拍一拍」添加到该分组</div>';
       return;
     }
@@ -4884,12 +4970,14 @@ function partialRetractMsg(msgEl, side) {
           //   的消息 rec.parts 为 undefined → qimgs 空 → quoteValue 退化为字符串"表情包"
           //   → quoteHtml 只显示占位文字，图片缩略图丢失。兜底：无 parts 但 rec.text
           //   本身是 dataURL 时，用 rec.text 作为缩略图来源
+          // v3.11.x：链接导入的表情包（rec.text 为 http(s) 链接）同样兜底
           if (!qimgs.length && (rec.type === 'sticker' || rec.type === 'image')
-              && typeof rec.text === 'string' && rec.text.indexOf('data:') === 0) {
+              && typeof rec.text === 'string'
+              && (rec.text.indexOf('data:') === 0 || /^https?:\/\//i.test(rec.text))) {
             qimgs.push(rec.text);
           }
           // v3.5.131：语音消息引用存占位文案（rec.text 是「文件名|||base64」，
-          // 直接引用会在气泡里显示整段 base64 乱码）
+          // 直接引用会在预览条和气泡引用块里显示整段 base64 乱码）
           // v3.7.x：表情包/纯图片消息的 rec.text 本身就是整段 base64 dataURL——
           // 直接引用会在预览条和气泡引用块里显示乱码，统一换成占位文案
           let qtext = rec.text;
@@ -4897,7 +4985,7 @@ function partialRetractMsg(msgEl, side) {
             qtext = '[语音] ' + String(rec.text || '').split('|||')[0];
           } else if (rec.type === 'sticker') {
             qtext = '表情包';
-          } else if (qimgs.length && String(qtext || '').indexOf('data:') === 0) {
+          } else if (qimgs.length && (String(qtext || '').indexOf('data:') === 0 || /^https?:\/\//i.test(String(qtext || '')))) {
             qtext = '图片';
           }
           lastQuote = { side: rec.side, text: qtext, type: rec.type, imgs: qimgs };
@@ -5245,6 +5333,8 @@ function partialRetractMsg(msgEl, side) {
   let myGroups = [];           // 我的表情包 [[分组名, [dataURL...]], ...]
   let mySel = new Set();       // 批量勾选：分组名\u0001索引
   let emojiInsertCb = null;    // v3.6.x：写信/回信「插入模式」回调（点击表情插入信纸）
+  // v3.11.x：插入模式放行链接表情（非 data:）——群聊发送用（信纸场景仍只支持 data: 内联图）
+  let emojiInsertAllowUrl = false;
   function MYE_KEY() { return window.activePrefix() + ':my-emoji-groups'; }
   // v3.7.x：启动即从 localStorage 加载我的表情包——原实现只靠「IDB 内容更多才覆盖」
   // 的恢复块，LS 与 IDB 一致时（正常双写后刷新）myGroups 永远是空数组，
@@ -5419,8 +5509,13 @@ function partialRetractMsg(msgEl, side) {
           // v3.6.x：写信/回信场景通过 openEmojiPanelForInsert 打开面板 →
           // 点击表情插入信纸而不是发消息（与聊天发消息共用同一个面板）
           if (emojiInsertCb) {
+            // 链接导入的表情（原始 URL）不支持插入信纸——信件正文按 data:image 正则
+            // 识别内联图片，插 URL 只会显示一长串链接文字；
+            // v3.11.x：allowUrl 场景（群聊发送）放行，直接当消息发出去
+            if (!/^data:/i.test(src) && !emojiInsertAllowUrl) { toast('链接保存的表情暂不支持插入信纸，请发送消息使用'); return; }
             const cb = emojiInsertCb;
             emojiInsertCb = null;
+            emojiInsertAllowUrl = false;
             cb(src);
             closeEmojiPanel();
           } else {
@@ -5450,7 +5545,7 @@ function partialRetractMsg(msgEl, side) {
       // ---- TA 的表情包（sticker 字卡池）：点分组才显示内容 ----
       const groups = (window.getMediaGroups && window.getMediaGroups('sticker')) || [];
       if (!groups.length) {
-        emojiList.innerHTML = '<div class="emoji-empty">暂无表情包<br>请到 自定义聊天字卡 → 表情包 上传</div>';
+        emojiList.innerHTML = '<div class="emoji-empty">暂无表情包<br>请到 字卡库 → 公用/专属字卡 → 表情包 上传</div>';
         return;
       }
       if (!emojiCurGroup) {
@@ -5459,7 +5554,7 @@ function partialRetractMsg(msgEl, side) {
       }
       const g = groups.find(x => x[0] === emojiCurGroup);
       if (!g || !g[1].length) {
-        emojiList.innerHTML = '<div class="emoji-empty">该分组暂无表情包<br>请到 自定义聊天字卡 → 表情包 上传</div>';
+        emojiList.innerHTML = '<div class="emoji-empty">该分组暂无表情包<br>请到 字卡库 → 公用/专属字卡 → 表情包 上传</div>';
         return;
       }
       renderEmojiGroup(g[0], g[1], 'ta');
@@ -5507,6 +5602,7 @@ function partialRetractMsg(msgEl, side) {
     if (emojiPanel) emojiPanel.hidden = true;
     // v3.6.x：关闭面板即放弃「插入信纸」模式，回到聊天发消息语义
     emojiInsertCb = null;
+    emojiInsertAllowUrl = false;
   }
   // v3.9.x：切桌面后重载我的表情包 + 打开面板时补读新桌面 IDB 权威数据——
   // 我的表情包大键（图片 dataURL）只进 IDB+内存缓存，慢 IDB（OPPO Chrome）下
@@ -5540,15 +5636,20 @@ function partialRetractMsg(msgEl, side) {
   // 邮件写信/回信插入表情也走 openEmojiPanelForInsert → 内部 openEmojiPanel（见下），
   // openEmojiPanel 内已补读新桌面 IDB，避免显示旧桌面残留
   // v3.6.x：写信/回信以「插入模式」打开同一个表情包面板——点击表情回调 cb（插入信纸）
-  window.openEmojiPanelForInsert = function (cb) {
+  // v3.11.x：opts.allowUrl=true 时链接保存的表情也走回调（群聊页复用本面板直接发送）
+  window.openEmojiPanelForInsert = function (cb, opts) {
     emojiInsertCb = cb || null;
+    emojiInsertAllowUrl = !!(opts && opts.allowUrl);
     openEmojiPanel();
     document.body.classList.add('mail-emoji-mode');
   };
+  // v3.11.x：群聊页「更多功能」面板打开前收起输入法（closeIme 在本闭包内，暴露只读入口）
+  window.closeIme = function () { try { closeIme(); } catch (e) {} };
   if (emojiBtn) {
     emojiBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       emojiInsertCb = null; // 聊天入口始终是发消息
+      emojiInsertAllowUrl = false;
       openEmojiPanel();
     });
   }
@@ -5900,6 +6001,130 @@ function partialRetractMsg(msgEl, side) {
     });
   }
 
+  // 链接导入表情（v3.11.x，单链接/批量链接通用）：粘贴图片 URL 一行一个。
+  // 优先 fetch 抓取 → compressMyEmoji 转存（与上传同一压缩口径，离线可用）；
+  // 图床不允许跨域读取（CORS）/网络失败时回退存原始 http(s) 链接（需联网显示，
+  // 表情面板/聊天气泡按 <img src> 渲染对远程链接天然兼容）；响应不是图片则判失败不存。
+  // 拆行 + 清洗粘贴带上的尖括号/引号包裹，只放行 http(s) 地址；
+  // 支持行首【组名】前缀指定落点分组（与字卡库/文字批量导入同一写法）
+  function splitUrlItems(raw) {
+    return String(raw || '').split(/\r\n|\r|\n/)
+      .map(l => l.trim()).filter(Boolean)
+      .map(line => {
+        const m = line.match(/^[【\[](.*?)[】\]]\s*(.*)$/);
+        const rest = m ? (m[2] || '') : line;
+        const url = rest.trim().replace(/^[<("'\u300a\u201c]+|[>)"'\u300b\u201d]+$/g, '');
+        return { g: m && m[1].trim() ? m[1].trim() : '', url: url };
+      })
+      .filter(x => /^https?:\/\//i.test(x.url));
+  }
+  function fetchLinkImage(url, processData) {
+    const once = (u) => new Promise((resolve) => {
+      let settled = false;
+      const finish = (r) => { if (!settled) { settled = true; clearTimeout(timer); resolve(r); } };
+      const timer = setTimeout(() => finish({ st: 'url', v: u }), 12000);
+      fetch(u, { mode: 'cors' }).then(res => {
+        if (!res.ok) throw new Error('http' + (res.status || ''));
+        return res.blob();
+      }).then(blob => {
+        if (!/^image\//i.test(blob.type || '')) throw new Error('notimage');
+        const fr = new FileReader();
+        fr.onload = () => {
+          const raw = String(fr.result || '');
+          if (/image\/gif/i.test(blob.type)) {
+            finish(raw.length > 8 * 1024 * 1024 ? { st: 'url', v: u } : { st: 'data', v: raw });
+            return;
+          }
+          processData(raw).then(d => finish(d ? { st: 'data', v: d } : { st: 'url', v: u }));
+        };
+        fr.onerror = () => finish({ st: 'fail', v: u });
+        fr.readAsDataURL(blob);
+      }).catch(err => {
+        const msg = (err && err.message) || '';
+        finish(/^notimage|^http/.test(msg) ? { st: 'fail', v: u } : { st: 'url', v: u });
+      });
+    });
+    // v3.11.x：https 站点下 http 图链会被浏览器按混合内容拦截——先自动升级 https
+    // 试抓（多数图床 http/https 同源同图），失败再按用户粘贴的原始链接兜底保存
+    if (location.protocol === 'https:' && /^http:\/\//i.test(url)) {
+      return once(url.replace(/^http:\/\//i, 'https://')).then(r => r.st === 'data' ? r : once(url));
+    }
+    return once(url);
+  }
+  // 简易并发池（并发 4，与 chatcard.js 字卡库导入同一套；结果按原始下标回填）
+  function runLinkPool(urls, worker) {
+    const out = new Array(urls.length);
+    let i = 0;
+    function next() {
+      if (i >= urls.length) return Promise.resolve();
+      const idx = i++;
+      return worker(urls[idx]).then((res) => { out[idx] = res; return next(); });
+    }
+    return Promise.all([0, 1, 2, 3].map(() => next())).then(() => out);
+  }
+  let myeLinkBusy = false; // 防重复提交：上一批还在抓取时不允许叠开第二批
+  const myeAddLink = document.getElementById('mye-add-link');
+  if (myeAddLink) {
+    myeAddLink.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (myeLinkBusy) { toast('上一批链接还在导入中，请稍等'); return; }
+      if (!window.openModal) return;
+      window.openModal('链接导入表情（一行一个链接）', '', (raw, targetGroup) => {
+        const items = splitUrlItems(raw);
+        if (!items.length) { toast('没有可导入的图片链接（需以 http(s):// 开头）'); return; }
+        myeLinkBusy = true;
+        // 落点分组优先级：行首【组名】> 弹窗「目标分组」下拉 > 当前选中分组 > 「默认」
+        let newGroups = 0;
+        const buckets = {};
+        const resolveBucket = (name) => {
+          if (!buckets[name]) {
+            let g = myGroups.find(x => x[0] === name);
+            if (!g) { g = [name, []]; myGroups.unshift(g); newGroups++; }
+            buckets[name] = { g: g, seen: new Set(g[1]) }; // 分组内去重：已有表情 + 本次已导入都算重复
+          }
+          return buckets[name];
+        };
+        const jobs = items.map(it => ({ url: it.url, bucket: resolveBucket(it.g || targetGroup || myCurGroup || '默认') }));
+        let okData = 0, okUrl = 0, dup = 0, fail = 0, httpSaved = 0;
+        toast('开始导入 ' + jobs.length + ' 个链接…');
+        runLinkPool(jobs, (job) => fetchLinkImage(job.url, (d) => compressMyEmoji(d, 260))).then(results => {
+          results.forEach((res, i) => {
+            const b = jobs[i].bucket;
+            if (res.st === 'fail') fail++;
+            else if (b.seen.has(res.v)) dup++;
+            else {
+              b.seen.add(res.v);
+              b.g[1].push(res.v);
+              if (res.st === 'data') okData++;
+              else {
+                okUrl++;
+                if (/^http:\/\//i.test(jobs[i].url)) httpSaved++; // 升级 https 抓取也失败才落到这里
+              }
+            }
+          });
+          const ok = myEmojiSave();
+          myCurGroup = jobs[0].bucket.g[0];
+          renderEmojiPanel();
+          myeLinkBusy = false;
+          const got = okData + okUrl;
+          if (!ok && got) toast('存储空间不足：表情已用备用存储，刷新后恢复。请清理不用的表情');
+          else toast('已导入 ' + got + ' 个表情' +
+            (okUrl ? '（其中 ' + okUrl + ' 个按链接保存，需联网显示' + (httpSaved ? '；含 ' + httpSaved + ' 个 http 链接，本站可能拦截不显示' : '') + '）' : '') +
+            (dup ? '，跳过重复 ' + dup + ' 个' : '') +
+            (fail ? '，失败 ' + fail + ' 个（非图片地址）' : '') +
+            (newGroups ? '，新建 ' + newGroups + ' 个分组' : ''));
+        }, () => {
+          myeLinkBusy = false;
+          toast('导入出错，请重试');
+        });
+      }, {
+        textarea: true,
+        textareaPlaceholder: 'https://example.com/sticker.png\n一行一个链接，可粘贴多个批量导入\n可用【分组名】前缀指定分组，如：【日常】https://…\n\n提示：优先尝试转存为本地图片；图床不允许跨域时按链接保存',
+        groups: myGroups.map(g => g[0])
+      });
+    });
+  }
+
   // 批量管理：进入 / 全选 / 删除 / 退出
   const myeBatch = document.getElementById('mye-batch');
   if (myeBatch) {
@@ -6198,6 +6423,8 @@ function partialRetractMsg(msgEl, side) {
     if (window.replyCfg) scheduleAutoSend();
     else setTimeout(bootAutoSend, 500);
   }
+  // v3.11.x：暴露给番茄钟陪伴模式——从番茄钟页一键进入聊天页
+  window.enterChat = enterChat;
   bootAutoSend();
   // v3.5.128：启动即加载聊天记录到内存——统计页/TA问答等模块通过 getChatMsgs
   // 读取时不再拿到空数组（原先只有进聊天页才 loadMsgs）

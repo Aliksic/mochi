@@ -27,9 +27,10 @@
   function walletSet(w) { const s = store(); if (s) s.set(WALLET_KEY, JSON.stringify(w)); }
   function walletText() { const w = walletGet(); return '心意币 ¥' + fenToYuan(w.myBalance); }
 
-  const CATS = ['花束', '甜品', '饰品', '星空', '关怀', '情侣用品', '日常用品'];
-  const CAT_ICON = { '花束': '🌸', '甜品': '🍰', '饰品': '💍', '星空': '⭐', '关怀': '🤗', '情侣用品': '💑', '日常用品': '🧴' };
-  const CAT_COLOR = { '花束': '#fce4ec', '甜品': '#fff3e0', '饰品': '#f3e5f5', '星空': '#e8eaf6', '关怀': '#e0f2f1', '情侣用品': '#fce4ec', '日常用品': '#f1f8e9' };
+  const CATS = ['花束', '甜品', '美食', '饰品', '星空', '出行', '娱乐', '关怀', '情侣用品', '日常用品'];
+  const CAT_ICON = { '花束': '🌸', '甜品': '🍰', '美食': '🍜', '饰品': '💍', '星空': '⭐', '出行': '✈️', '娱乐': '🎟️', '关怀': '🤗', '情侣用品': '💑', '日常用品': '🧴' };
+  const CAT_COLOR = { '花束': '#fce4ec', '甜品': '#fff3e0', '美食': '#fff9c4', '饰品': '#f3e5f5', '星空': '#e8eaf6', '出行': '#e1f5fe', '娱乐': '#e1bee7', '关怀': '#e0f2f1', '情侣用品': '#fce4ec', '日常用品': '#f1f8e9' };
+  window.GIFT_CAT_COLOR = CAT_COLOR;
   const DEF_GIFTS = [
     { id: 'g_rose', name: '玫瑰', emoji: '🌹', price: 52.00, cat: '花束', wish: '送你一束玫瑰，像见你那天的风' },
     { id: 'g_sun', name: '向日葵', emoji: '🌻', price: 18.00, cat: '花束', wish: '向日葵朝着光，我朝着你' },
@@ -73,14 +74,138 @@
     { id: 'g_notebook', name: '笔记本', emoji: '📔', price: 22.00, cat: '日常用品', wish: '记下想跟你说的话' },
     { id: 'g_keychain', name: '钥匙扣', emoji: '🗝️', price: 12.00, cat: '日常用品', wish: '开门的时候想到我' },
     { id: 'g_lamp', name: '小夜灯', emoji: '💡', price: 89.00, cat: '日常用品', wish: '给你留一盏灯' },
-    { id: 'g_candle', name: '香薰', emoji: '🕯️', price: 39.00, cat: '日常用品', wish: '闻着它，放松一下' }
+    { id: 'g_candle', name: '香薰', emoji: '🕯️', price: 39.00, cat: '日常用品', wish: '闻着它，放松一下' },
+    { id: 'g_hotpot', name: '小火锅', emoji: '🥘', price: 128.00, cat: '美食', wish: '围着一口锅，把冬天涮热' },
+    { id: 'g_sushi', name: '寿司', emoji: '🍣', price: 66.00, cat: '美食', wish: '一口一个，都是想你的形状' },
+    { id: 'g_noodle', name: '长寿面', emoji: '🍜', price: 13.14, cat: '美食', wish: '一根面到底，长长久久' },
+    { id: 'g_bbq', name: '烧烤', emoji: '🍢', price: 88.00, cat: '美食', wish: '烟火气里，坐我旁边' },
+    { id: 'g_bfast', name: '元气早餐', emoji: '🍳', price: 15.00, cat: '美食', wish: '煎蛋圆圆的，像我的心' },
+    { id: 'g_juice', name: '果汁', emoji: '🧃', price: 9.90, cat: '美食', wish: '维C给你，甜我尝一口就好' },
+    { id: 'g_chestnut', name: '糖炒栗子', emoji: '🌰', price: 16.80, cat: '美食', wish: '剥好的，第一颗给你' },
+    { id: 'g_potato', name: '烤红薯', emoji: '🍠', price: 8.80, cat: '美食', wish: '冬天手里的第一口暖' },
+    { id: 'g_popcorn', name: '爆米花', emoji: '🍿', price: 12.00, cat: '美食', wish: '看电影的标配，配你更好' },
+    { id: 'g_train', name: '车票', emoji: '🚄', price: 66.60, cat: '出行', wish: '下一站，去见你' },
+    { id: 'g_plane', name: '机票', emoji: '✈️', price: 520.00, cat: '出行', wish: '攒够思念，就飞过去' },
+    { id: 'g_camp', name: '露营', emoji: '⛺', price: 199.00, cat: '出行', wish: '星星当被子，你当枕头' },
+    { id: 'g_beach', name: '海边', emoji: '🏖️', price: 299.00, cat: '出行', wish: '浪打过来的时候，我先想到你' },
+    { id: 'g_spring', name: '温泉', emoji: '♨️', price: 158.00, cat: '出行', wish: '泡走疲惫，只剩想你' },
+    { id: 'g_route', name: '旅行攻略', emoji: '🗺️', price: 0.00, cat: '出行', wish: '路线排好了，你人到场就行' },
+    { id: 'g_movie', name: '电影票', emoji: '🎬', price: 39.90, cat: '娱乐', wish: '靠肩膀的位置，我买好了' },
+    { id: 'g_concert', name: '演唱会', emoji: '🎤', price: 520.00, cat: '娱乐', wish: '合唱那首歌时，你要看我' },
+    { id: 'g_ferris', name: '游乐园', emoji: '🎡', price: 131.40, cat: '娱乐', wish: '摩天轮到最高点，我要亲你' },
+    { id: 'g_claw', name: '抓娃娃', emoji: '🕹️', price: 20.00, cat: '娱乐', wish: '抓不到你，抓个替身也行' },
+    { id: 'g_ktv', name: 'K歌', emoji: '🎙️', price: 66.60, cat: '娱乐', wish: '情歌都唱给你，跑调也归你' },
+    { id: 'g_icecream', name: '冰淇淋', emoji: '🍦', price: 9.90, cat: '甜品', wish: '甜筒分你一半，第一口给你' },
+    { id: 'g_pudding', name: '布丁', emoji: '🍮', price: 12.90, cat: '甜品', wish: 'Duang 一下，甜到心里' },
+    { id: 'g_crown', name: '王冠', emoji: '👑', price: 999.99, cat: '饰品', wish: '你是我一个人的女王' },
+    { id: 'g_snow', name: '初雪', emoji: '🌨️', price: 0.00, cat: '星空', wish: '落下的时候，第一个告诉你' },
+    { id: 'g_sunset', name: '晚霞', emoji: '🌇', price: 0.00, cat: '星空', wish: '下班路上拍的，全部送你' },
+    { id: 'g_breeze', name: '春风', emoji: '🍃', price: 0.00, cat: '星空', wish: '路过你窗前，替我抱抱你' },
+    { id: 'g_wave', name: '海浪', emoji: '🌊', price: 6.66, cat: '星空', wish: '把海的声音装瓶寄给你' },
+    { id: 'g_milk', name: '热牛奶', emoji: '🥛', price: 5.00, cat: '关怀', wish: '睡前喝掉，梦里也是暖的' },
+    { id: 'g_massage', name: '揉揉肩', emoji: '💆', price: 0.00, cat: '关怀', wish: '今天辛苦了，肩膀交给我' },
+    { id: 'g_wakeup', name: '叫早服务', emoji: '⏰', price: 0.00, cat: '关怀', wish: '明天七点，用声音叫你起床' },
+    { id: 'g_watchtogether', name: '陪你看剧', emoji: '📺', price: 0.00, cat: '关怀', wish: '剧我追好了，就差你' },
+    { id: 'g_couplewatch', name: '情侣表', emoji: '⌚', price: 520.00, cat: '情侣用品', wish: '时间对齐，分秒都在想你' },
+    { id: 'g_coupleshoes', name: '情侣鞋', emoji: '👟', price: 219.00, cat: '情侣用品', wish: '走一样的步伐，别人就知道' },
+    { id: 'g_scarf', name: '围巾', emoji: '🧣', price: 79.00, cat: '日常用品', wish: '绕两圈，把冬天挡在外面' },
+    { id: 'g_socks', name: '袜子', emoji: '🧦', price: 19.90, cat: '日常用品', wish: '脚暖了，全身都是暖的' },
+    { id: 'g_slipper', name: '棉拖鞋', emoji: '🩴', price: 29.90, cat: '日常用品', wish: '进家门第一步，像踩在云上' }
   ];
   const DEF_IDS = {};
   DEF_GIFTS.forEach(function (g) { DEF_IDS[g.id] = 1; });
+  // v1 默认商品 id（2026-08-24 扩库前的 43 个）：全局迁移时只有它们才允许记「删除标记」，
+  // 否则旧桌面快照里没有的新默认商品会被误判成「用户删过的」而被隐藏
+  const DEF_V1_IDS = { g_rose: 1, g_sun: 1, g_stars: 1, g_tulip: 1, g_peach: 1, g_cake: 1, g_choc: 1, g_tea: 1, g_candy: 1, g_berry: 1, g_ring: 1, g_neck: 1, g_brace: 1, g_bow: 1, g_star1: 1, g_moon: 1, g_cloud: 1, g_rainbow: 1, g_meteor: 1, g_galaxy: 1, g_hug: 1, g_kiss: 1, g_night: 1, g_soup: 1, g_letter: 1, g_couplecup: 1, g_couplewear: 1, g_lock: 1, g_couavatar: 1, g_coudiary: 1, g_couframe: 1, g_cousong: 1, g_coucoin: 1, g_towel: 1, g_mug: 1, g_umbrella: 1, g_pillow: 1, g_warmer: 1, g_earphone: 1, g_notebook: 1, g_keychain: 1, g_lamp: 1, g_candle: 1 };
+  // v2 新增默认商品 id：若迁移在扩库前已跑过（误标 del），幂等救援清一次
+  const DEF_V2_IDS = { g_hotpot: 1, g_sushi: 1, g_noodle: 1, g_bbq: 1, g_bfast: 1, g_juice: 1, g_chestnut: 1, g_potato: 1, g_popcorn: 1, g_train: 1, g_plane: 1, g_camp: 1, g_beach: 1, g_spring: 1, g_route: 1, g_movie: 1, g_concert: 1, g_ferris: 1, g_claw: 1, g_ktv: 1, g_icecream: 1, g_pudding: 1, g_crown: 1, g_snow: 1, g_sunset: 1, g_breeze: 1, g_wave: 1, g_milk: 1, g_massage: 1, g_wakeup: 1, g_watchtogether: 1, g_couplewatch: 1, g_coupleshoes: 1, g_scarf: 1, g_socks: 1, g_slipper: 1 };
 
-  const GIFTS_KEY = 'market-gifts';
-  function giftsLoad() { try { const s = store(); if (!s) return DEF_GIFTS.slice(); const a = JSON.parse(s.get(GIFTS_KEY) || '[]'); return a.length ? a : DEF_GIFTS.slice(); } catch (e) { return DEF_GIFTS.slice(); } }
-  function giftsSave(a) { const s = store(); if (s) s.set(GIFTS_KEY, JSON.stringify(a)); }
+  // v3.10.x：自定义商品改全局共享（所有桌面互通）——存 xy-home-v2 根命名空间 market-custom，
+  // 不再按联系人命名空间隔离。数组元素三种形态：
+  //   自定义商品 {id:'g_custom_*', name, emoji, img, price, cat, wish}
+  //   默认商品覆盖 {id:<默认id>, base:1, ...改过的完整字段}（管理模式编辑默认商品生成）
+  //   默认商品删除标记 {id:<默认id>, del:1}（管理模式删除默认商品生成，防全局化后"复活"）
+  const GSTORE = (function () { try { return window.xyStore('xy-home-v2'); } catch (e) { return null; } })();
+  const CUSTOM_KEY = 'market-custom';
+  const MIGRATE_KEY = 'market-migrated';
+  const GIFTS_KEY = 'market-gifts'; // 旧各桌面商品库键（仅迁移读取用）
+  function customLoad() { try { const a = JSON.parse((GSTORE && GSTORE.get(CUSTOM_KEY)) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
+  function customSave(a) { if (GSTORE) GSTORE.set(CUSTOM_KEY, JSON.stringify(a)); }
+  function giftsLoad() {
+    const dead = {}, ov = {}, customs = [];
+    customLoad().forEach(function (c) {
+      if (!c || !c.id) return;
+      if (c.del) { dead[c.id] = 1; return; }
+      if (c.base) { ov[c.id] = c; return; }
+      customs.push(c);
+    });
+    const out = [];
+    DEF_GIFTS.forEach(function (g) {
+      if (dead[g.id]) return;
+      if (ov[g.id]) { const m = Object.assign({}, g, ov[g.id]); delete m.base; delete m.del; out.push(m); }
+      else out.push(g);
+    });
+    return out.concat(customs);
+  }
+  function deleteGift(id) {
+    const customs = customLoad();
+    const idx = customs.findIndex(function (x) { return x && x.id === id; });
+    if (DEF_IDS[id]) {
+      const mark = { id: id, del: 1 };
+      if (idx >= 0) customs[idx] = mark; else customs.push(mark);
+    } else {
+      if (idx >= 0) customs.splice(idx, 1);
+    }
+    customSave(customs);
+  }
+  // 一次性迁移：把各桌面旧的 market-gifts（整库快照）里的自定义商品并入全局库，
+  // 桌面上删过的默认商品记删除标记。幂等（market-migrated 标记 + id 去重），
+  // 模块加载跑一次合并 LS；mochi-restore-done（IDB 回填完）后未打标记再跑一次
+  function migrateMarketGlobal(setMark) {
+    if (!GSTORE || GSTORE.get(MIGRATE_KEY)) return;
+    const customs = customLoad();
+    const seen = {};
+    customs.forEach(function (c) { if (c && c.id) { seen[c.id] = 1; if (c.del) seen['del:' + c.id] = 1; } });
+    let changed = false;
+    const contacts = (window.getContacts && window.getContacts()) || [{ id: 'default' }];
+    contacts.forEach(function (c) {
+      let raw = null;
+      try { raw = window.storeFor(c.id).get(GIFTS_KEY); } catch (e) {}
+      if (raw == null || raw === '') return;
+      let arr = null;
+      try { arr = JSON.parse(raw); } catch (e) { return; }
+      if (!Array.isArray(arr) || !arr.length) return;
+      const ids = {};
+      arr.forEach(function (g) { if (g && g.id) ids[g.id] = 1; });
+      arr.forEach(function (g) {
+        if (!g || !g.id || String(g.id).indexOf('g_custom_') !== 0 || seen[g.id]) return;
+        seen[g.id] = 1;
+        customs.push({ id: g.id, name: g.name, emoji: g.emoji, img: g.img || '', price: g.price, cat: g.cat, wish: g.wish });
+        changed = true;
+      });
+      DEF_GIFTS.forEach(function (d) {
+        if (!DEF_V1_IDS[d.id]) return;
+        if (ids[d.id] || seen['del:' + d.id]) return;
+        seen['del:' + d.id] = 1;
+        customs.push({ id: d.id, del: 1 });
+        changed = true;
+      });
+    });
+    if (changed || setMark) customSave(customs);
+    if (setMark) GSTORE.set(MIGRATE_KEY, '1');
+  }
+  // 救援：迁移若在扩库前跑过，v2 新默认商品被误标 del → 幂等清一次（market-migrated-v2 标记）
+  function rescueNewDefaults() {
+    if (!GSTORE || GSTORE.get('market-migrated-v2')) return;
+    const customs = customLoad();
+    let changed = false;
+    for (let i = customs.length - 1; i >= 0; i--) {
+      const c = customs[i];
+      if (c && c.del && DEF_V2_IDS[c.id]) { customs.splice(i, 1); changed = true; }
+    }
+    if (changed) customSave(customs);
+    GSTORE.set('market-migrated-v2', '1');
+  }
 
   const BOX_KEY = 'giftbox-items';
   function boxLoad() { try { const s = store(); if (!s) return []; return JSON.parse(s.get(BOX_KEY) || '[]'); } catch (e) { return []; } }
@@ -101,7 +226,7 @@
 
   function recordBox(gift, side, wish) {
     const box = boxLoad();
-    box.unshift({ id: 'gb_' + Date.now() + '_' + Math.floor(Math.random() * 1000), giftId: gift.id, name: gift.name, emoji: gift.emoji, price: gift.price, cat: gift.cat, wish: wish, side: side, tm: Date.now() });
+    box.unshift({ id: 'gb_' + Date.now() + '_' + Math.floor(Math.random() * 1000), giftId: gift.id, name: gift.name, emoji: gift.emoji, img: gift.img || '', price: gift.price, cat: gift.cat, wish: wish, side: side, tm: Date.now() });
     boxSave(box);
   }
 
@@ -111,7 +236,7 @@
     if (side === 'out') { if (priceFen > w.myBalance) { toast('我的心意币不足'); return false; } w.myBalance -= priceFen; }
     else { if (priceFen > w.systemBalance) { toast(partnerName() + ' 的心意币不足'); return false; } w.systemBalance -= priceFen; }
     walletSet(w);
-    const rec = { side: side, special: 'gift', giftId: gift.id, giftName: gift.name, giftEmoji: gift.emoji, giftPrice: gift.price, giftWish: wish, giftCat: gift.cat, ts: Date.now() };
+    const rec = { side: side, special: 'gift', giftId: gift.id, giftName: gift.name, giftEmoji: gift.emoji, giftImg: gift.img || '', giftPrice: gift.price, giftWish: wish, giftCat: gift.cat, ts: Date.now() };
     if (window.chatAddGift) window.chatAddGift(rec); else if (window.chatAddIn) window.chatAddIn('', { special: 'gift' });
     recordBox(gift, side, wish);
     if (window.logFish) window.logFish();
@@ -135,7 +260,7 @@
     const myCid = window.__activeCid || 'default';
     setTimeout(function () {
       if ((window.__activeCid || 'default') !== myCid) return;
-      const rec = { side: 'in', special: 'gift', giftId: gift.id, giftName: gift.name, giftEmoji: gift.emoji, giftPrice: gift.price, giftWish: wish, giftCat: gift.cat, ts: Date.now() };
+      const rec = { side: 'in', special: 'gift', giftId: gift.id, giftName: gift.name, giftEmoji: gift.emoji, giftImg: gift.img || '', giftPrice: gift.price, giftWish: wish, giftCat: gift.cat, ts: Date.now() };
       if (window.chatAddGift) window.chatAddGift(rec);
       recordBox(gift, 'in', wish);
       if (window.logFish) window.logFish();
@@ -147,7 +272,7 @@
     const catColor = CAT_COLOR[gift.cat] || '#f5f3fa';
     const html =
       '<div class="gb-preview" style="background:linear-gradient(160deg,' + catColor + ',#fff);">' +
-        '<div class="gb-emoji">' + esc(gift.emoji) + '</div>' +
+        '<div class="gb-emoji">' + giftMedia(gift, 'gb-emoji-img') + '</div>' +
         '<div class="gb-name">' + esc(gift.name) + '</div>' +
         '<div class="gb-price">¥' + Number(gift.price || 0).toFixed(2) + '</div>' +
         '<div class="gb-desc">' + esc(gift.wish || '送给你') + '</div>' +
@@ -191,17 +316,22 @@
     el.querySelectorAll('[data-cat]').forEach(function (b) { b.addEventListener('click', function () { panelCat = b.dataset.cat; onPick(); }); });
   }
   function giftsByCat(gifts) { return (panelCat === '全部') ? gifts : gifts.filter(function (g) { return g.cat === panelCat; }); }
+  // 商品展示媒体：有自定义图片用图片，否则回退 emoji
+  function giftMedia(g, cls) {
+    if (g && g.img) return '<img class="' + cls + '" src="' + esc(g.img) + '" alt="">';
+    return esc((g && g.emoji) || '🎁');
+  }
   function giftItemHtml(g, manage) {
     const col = CAT_COLOR[g.cat] || '#f5f3fa';
     return '<button class="gift-item' + (manage ? ' manage' : '') + '" data-id="' + esc(g.id) + '">' +
       '<div class="gift-item-top" style="background:linear-gradient(160deg,' + col + ',#fff);">' +
-        '<div class="gift-item-emoji">' + esc(g.emoji) + '</div>' +
+        '<div class="gift-item-emoji">' + giftMedia(g, 'gift-item-img') + '</div>' +
       '</div>' +
       '<div class="gift-item-body">' +
         '<div class="gift-item-name">' + esc(g.name) + '</div>' +
         '<div class="gift-item-price">¥' + Number(g.price || 0).toFixed(2) + '</div>' +
       '</div>' +
-      (manage ? '<span class="gift-item-del" data-del="' + esc(g.id) + '">✕</span>' : '') +
+      (manage ? '<span class="gift-item-edit" data-edit="' + esc(g.id) + '">✎</span><span class="gift-item-del" data-del="' + esc(g.id) + '">✕</span>' : '') +
     '</button>';
   }
   function renderGiftGrid(containerId, gifts, onPick, manage) {
@@ -210,7 +340,7 @@
     el.innerHTML = list.map(function (g) { return giftItemHtml(g, manage); }).join('') || '<div class="gift-empty">还没有商品，点下方添加</div>';
     el.querySelectorAll('.gift-item').forEach(function (b) {
       b.addEventListener('click', function (e) {
-        if (manage) return;
+        if (manage) { const g0 = gifts.find(function (x) { return x.id === b.dataset.id; }); if (g0) openAddGiftForm(g0); return; }
         const g = gifts.find(function (x) { return x.id === b.dataset.id; });
         if (g) onPick(g);
       });
@@ -221,7 +351,14 @@
           e.stopPropagation();
           const id = d.dataset.del;
           if (!window.openModal) return;
-          window.openModal('删除这个商品？', '', function () { giftsSave(giftsLoad().filter(function (x) { return x.id !== id; })); renderMarket(); }, { noInput: true });
+          window.openModal(DEF_IDS[id] ? '删除默认商品？（可稍后恢复默认）' : '删除这个商品？', '', function () { deleteGift(id); renderMarket(); }, { noInput: true });
+        });
+      });
+      el.querySelectorAll('.gift-item-edit').forEach(function (d) {
+        d.addEventListener('click', function (e) {
+          e.stopPropagation();
+          const g = gifts.find(function (x) { return x.id === d.dataset.edit; });
+          if (g) openAddGiftForm(g);
         });
       });
     }
@@ -250,15 +387,88 @@
     const bal = document.getElementById('market-balance'); if (bal) bal.textContent = walletText();
     const addBtn = document.getElementById('market-add'); if (addBtn) addBtn.textContent = marketManage ? '完成' : '+ 添加商品';
     const mgBtn = document.getElementById('market-manage'); if (mgBtn) mgBtn.textContent = marketManage ? '完成' : '管理';
+    const resetBtn = document.getElementById('market-reset');
+    if (resetBtn) resetBtn.hidden = !(marketManage && customLoad().some(function (c) { return c && (c.del || c.base); }));
     renderGiftCats('market-cats', 'icon', renderMarket);
     renderGiftGrid('market-grid', giftsLoad(), function (g) { openBuyDialog(g); }, marketManage);
   }
+
+  // ---- 商品图片上传（自定义商品可传实拍图，未传回退 emoji）----
+  // 持久化隐藏 file input（初始化创建一次、永久挂 body）——安卓 Edge 等对
+  // 「点击时动态创建 input + 立即 click()」会静默忽略合成点击（同头像上传修复结论）
+  let gmImg = '';
+  const gmImgInput = document.createElement('input');
+  gmImgInput.id = 'gm-img-input';
+  gmImgInput.type = 'file'; gmImgInput.accept = 'image/*';
+  gmImgInput.style.cssText = 'position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0;';
+  // 初始化即挂 body（同 chat-settings headInput：创建一次、永久挂载、每次复用）
+  try { document.body.appendChild(gmImgInput); } catch (e) {}
+  gmImgInput.onchange = function () {
+    const f = gmImgInput.files && gmImgInput.files[0];
+    gmImgInput.value = '';
+    if (!f) return;
+    if (!/^image\//.test(f.type || '')) { toast('请选择图片文件'); return; }
+    const reader = new FileReader();
+    reader.onload = function () {
+      compressGiftImg(String(reader.result || '')).then(function (data) {
+        if (!data) { toast('图片处理失败，换一张试试'); return; }
+        gmImg = data;
+        renderGmImgRow();
+      });
+    };
+    reader.onerror = function () { toast('图片读取失败'); };
+    reader.readAsDataURL(f);
+  };
+  // 压缩到 480px JPEG（白底防透明变黑），失败返回 null（同字卡库口径：不回退存原图）
+  function compressGiftImg(dataUrl) {
+    return new Promise(function (resolve) {
+      if (typeof dataUrl !== 'string' || dataUrl.length > 8 * 1024 * 1024) { resolve(null); return; }
+      const img = new Image();
+      img.onload = function () {
+        try {
+          if (img.width * img.height > 26000000) { resolve(null); return; }
+          const scale = Math.min(1, 480 / Math.max(img.width, img.height));
+          const w = Math.max(1, Math.round(img.width * scale));
+          const h = Math.max(1, Math.round(img.height * scale));
+          const c = document.createElement('canvas');
+          c.width = w; c.height = h;
+          const ctx = c.getContext('2d');
+          ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, w, h);
+          ctx.drawImage(img, 0, 0, w, h);
+          resolve(c.toDataURL('image/jpeg', 0.85));
+        } catch (e) { resolve(null); }
+      };
+      img.onerror = function () { resolve(null); };
+      img.src = dataUrl;
+    });
+  }
+  function gmImgRowHtml() {
+    return '<div class="gm-img-row">' +
+      '<div class="gm-img-prev" id="gm-img-prev">' + (gmImg ? '<img src="' + esc(gmImg) + '" alt="">' : '🖼️') + '</div>' +
+      '<button class="gm-img-btn" id="gm-img-pick" type="button">' + (gmImg ? '换一张' : '上传图片') + '</button>' +
+      (gmImg ? '<button class="gm-img-btn gm-img-clear" id="gm-img-clear" type="button">清除</button>' : '') +
+      '</div>';
+  }
+  function renderGmImgRow() {
+    const row = document.getElementById('gm-img-row');
+    if (row) row.innerHTML = gmImgRowHtml();
+    bindGmImgRow();
+  }
+  function bindGmImgRow() {
+    const pick = document.getElementById('gm-img-pick');
+    if (pick) pick.addEventListener('click', function () { try { gmImgInput.click(); } catch (e) { toast('无法打开相册，请重试'); } });
+    const clr = document.getElementById('gm-img-clear');
+    if (clr) clr.addEventListener('click', function () { gmImg = ''; renderGmImgRow(); });
+  }
+
   function openAddGiftForm(editGift) {
     if (!window.openTCPanel) { toast('稍后再试'); return; }
     const g = editGift || {};
+    gmImg = g.img || '';
     const catOpts = CATS.map(function (c) { return '<option value="' + esc(c) + '"' + (c === g.cat ? ' selected' : '') + '>' + esc(c) + '</option>'; }).join('');
     const html =
       '<div class="gm-form">' +
+        '<div class="gm-row"><label>商品图片（可选，不传用 emoji）</label><div id="gm-img-row">' + gmImgRowHtml() + '</div></div>' +
         '<div class="gm-row"><label>名字</label><input class="gm-input" id="gm-name" type="text" maxlength="10" value="' + esc(g.name || '') + '" placeholder="礼物名"></div>' +
         '<div class="gm-row"><label>emoji</label><input class="gm-input" id="gm-emoji" type="text" maxlength="6" value="' + esc(g.emoji || '') + '" placeholder="🎁"></div>' +
         '<div class="gm-row"><label>价格</label><input class="gm-input" id="gm-price" type="number" min="0" step="0.01" value="' + (g.price != null ? g.price : '') + '" placeholder="0"></div>' +
@@ -269,7 +479,8 @@
         '<button class="gb-cancel" id="gm-cancel" type="button">取消</button>' +
         '<button class="gb-ok" id="gm-ok" type="button">保存</button>' +
       '</div>';
-    window.openTCPanel(editGift ? '编辑商品' : '添加商品', html);
+    window.openTCPanel(editGift ? (DEF_IDS[g.id] ? '编辑默认商品' : '编辑商品') : '添加商品', html);
+    bindGmImgRow();
     const okBtn = document.getElementById('gm-ok');
     const cancelBtn = document.getElementById('gm-cancel');
     if (okBtn) okBtn.addEventListener('click', function () {
@@ -279,14 +490,20 @@
       const cat = document.getElementById('gm-cat').value || '关怀';
       const wish = (document.getElementById('gm-wish').value || '').trim() || '送给你';
       if (!name) { toast('先填名字'); return; }
-      const gifts = giftsLoad();
-      if (editGift) {
-        const idx = gifts.findIndex(function (x) { return x.id === editGift.id; });
-        if (idx >= 0) { gifts[idx] = { id: editGift.id, name: name, emoji: emoji, price: price, cat: cat, wish: wish }; }
+      const item = { id: editGift ? editGift.id : ('g_custom_' + Date.now()), name: name, emoji: emoji, img: gmImg, price: price, cat: cat, wish: wish };
+      const customs = customLoad();
+      if (editGift && DEF_IDS[item.id]) {
+        // 默认商品编辑 → 覆盖项（base:1），giftsLoad 时叠加在默认定义上
+        const merged = Object.assign({}, DEF_GIFTS.find(function (x) { return x.id === item.id; }) || {}, item, { base: 1 });
+        const idx = customs.findIndex(function (x) { return x && x.id === item.id; });
+        if (idx >= 0) customs[idx] = merged; else customs.push(merged);
+      } else if (editGift) {
+        const idx = customs.findIndex(function (x) { return x && x.id === item.id; });
+        if (idx >= 0) customs[idx] = item; else customs.push(item);
       } else {
-        gifts.push({ id: 'g_custom_' + Date.now(), name: name, emoji: emoji, price: price, cat: cat, wish: wish });
+        customs.push(item);
       }
-      giftsSave(gifts); closeTc(); renderMarket(); toast('已保存');
+      customSave(customs); closeTc(); renderMarket(); toast('已保存');
     });
     if (cancelBtn) cancelBtn.addEventListener('click', closeTc);
   }
@@ -309,7 +526,7 @@
       const from = it.side === 'in' ? esc(partnerName()) + ' 送我' : '我 送 ' + esc(partnerName());
       const col = CAT_COLOR[it.cat] || '#f5f3fa';
       return '<div class="giftbox-card" data-id="' + esc(it.id) + '">' +
-        '<div class="giftbox-emoji" style="background:linear-gradient(135deg,' + col + ',' + col + ');">' + esc(it.emoji) + '</div>' +
+        '<div class="giftbox-emoji" style="background:linear-gradient(135deg,' + col + ',' + col + ');">' + giftMedia(it, 'giftbox-emoji-img') + '</div>' +
         '<div class="giftbox-info">' +
           '<div class="giftbox-name">' + esc(it.name) + ' <span class="giftbox-price">¥' + Number(it.price || 0).toFixed(2) + '</span></div>' +
           '<div class="giftbox-wish">"' + esc(it.wish || '心意') + '"</div>' +
@@ -325,7 +542,7 @@
         const col = CAT_COLOR[it.cat] || '#f5f3fa';
         const html =
           '<div class="gb-detail" style="background:linear-gradient(160deg,' + col + ',#fff);">' +
-            '<div class="gb-detail-emoji">' + esc(it.emoji) + '</div>' +
+            '<div class="gb-detail-emoji">' + giftMedia(it, 'gb-detail-emoji-img') + '</div>' +
             '<div class="gb-detail-name">' + esc(it.name) + '</div>' +
             '<div class="gb-detail-price">¥' + Number(it.price || 0).toFixed(2) + '</div>' +
             '<div class="gb-detail-wish">"' + esc(it.wish || '心意') + '"</div>' +
@@ -411,12 +628,20 @@
         '<div class="market-foot">' +
           '<button class="market-tool" id="market-manage" type="button">管理</button>' +
           '<button class="market-tool" id="market-add" type="button">+ 添加商品</button>' +
+          '<button class="market-tool" id="market-reset" type="button" hidden>恢复默认商品</button>' +
         '</div>' +
       '</div>';
     host.appendChild(marketPage);
     document.getElementById('market-back').addEventListener('click', backHome);
     document.getElementById('market-add').addEventListener('click', function () { if (marketManage) { marketManage = false; renderMarket(); return; } openAddGiftForm(null); });
     document.getElementById('market-manage').addEventListener('click', function () { marketManage = !marketManage; renderMarket(); });
+    document.getElementById('market-reset').addEventListener('click', function () {
+      if (!window.openModal) return;
+      window.openModal('恢复默认商品？（清除对默认商品的修改/删除记录，自定义商品保留）', '', function () {
+        customSave(customLoad().filter(function (c) { return c && !c.del && !c.base; }));
+        renderMarket(); toast('已恢复默认');
+      }, { noInput: true });
+    });
   }
 
   function buildGiftboxPage(host) {
@@ -441,6 +666,11 @@
   }
 
   function init() {
+    // 旧各桌面商品库 → 全局库一次性迁移（加载时先合并 LS；IDB 回填完成后未打标记再补跑一次）
+    try { migrateMarketGlobal(false); } catch (e) {}
+    try { rescueNewDefaults(); } catch (e) {}
+    document.addEventListener('mochi-restore-done', function () { try { migrateMarketGlobal(true); } catch (e) {} try { rescueNewDefaults(); } catch (e) {} });
+
     const host = (document.getElementById('page-phone') || {}).parentNode || document.body;
     buildMarketPage(host);
     buildGiftboxPage(host);

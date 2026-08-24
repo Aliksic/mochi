@@ -346,9 +346,15 @@
         <input type="text" id="chatcard-search" class="tc-input" placeholder="搜索字卡内容…" style="width:100%">
       </div>
       <div class="cc-sect-body" id="cc-sect-custom">
+      <!-- v3.11.x：自定义聊天字卡拆双作用域——公用（全桌面共享）/ 专属（仅当前桌面联系人） -->
+      <div class="chat-item glass" id="li-custom-cards-public">
+        <div class="av"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3.6 9h16.8M3.6 15h16.8M12 3a15 15 0 000 18M12 3a15 15 0 010 18"/></svg></div>
+        <div class="ci"><div class="n">公用字卡</div><div class="m">以后每个桌面的联系人都能使用</div></div>
+        <div class="t" id="cc-pub-count">0</div>
+      </div>
       <div class="chat-item glass" id="li-custom-cards">
         <div class="av"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg></div>
-        <div class="ci"><div class="n">自定义聊天字卡</div><div class="m" id="cc-sub-count">共收录 0 张字卡</div></div>
+        <div class="ci"><div class="n">专属字卡</div><div class="m">只有当前桌面绑定的联系人才能使用</div></div>
         <div class="t" id="cc-list-count">0</div>
       </div>
       <div class="chat-item glass" id="li-checkin-cards-mine">
@@ -793,7 +799,7 @@
         <span class="ch-back" id="cc-back">
           <svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
         </span>
-        <span class="ch-name">自定义聊天字卡</span>
+        <span class="ch-name" id="cc-page-title">自定义聊天字卡</span>
       </div>
       <div class="card-tabs" id="cc-tabs">
         <button class="cc-tab sel" data-type="text"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>主字卡</button>
@@ -807,6 +813,7 @@
       <div class="cc-toolbar">
         <button class="cc-tool" id="cc-new-group"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8a4 4 0 100 8 4 4 0 000-8z"/><path d="M19 12a7 7 0 00-.1-1.2l2-1.6-2-3.4-2.3 1a7 7 0 00-2-1.2L14.2 3h-4l-.4 2.6a7 7 0 00-2 1.2l-2.3-1-2 3.4 2 1.6A7 7 0 005 12c0 .4 0 .8.1 1.2l-2 1.6 2 3.4 2.3-1a7 7 0 002 1.2l.4 2.6h4l.4-2.6a7 7 0 002-1.2l2.3 1 2-3.4-2-1.6c.1-.4.1-.8.1-1.2z"/></svg>管理分组</button>
         <button class="cc-tool" id="cc-import"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>批量导入</button>
+        <button class="cc-tool" id="cc-import-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>链接导入</button>
       </div>
       <div class="cc-toolbar">
         <button class="cc-tool" id="cc-manage-cards"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>管理字卡</button>
@@ -961,7 +968,7 @@
         </div>
         <div class="set-row" id="row-desk-reset">
           <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 12c0-5.5 3.5-10 10-10 3.7 0 7 2 8.8 5M22 12c0 5.5-3.5 10-10 10-3.7 0-7-2-8.8-5"/></svg></div>
-          <div class="txt">恢复默认桌面<span class="sub">恢复默认页数、图标与背景图</span></div>
+          <div class="txt">恢复默认桌面<span class="sub">恢复默认布局与页数</span></div>
         </div>
         <div id="desk-page-bgs"></div>
       </div>
@@ -1075,7 +1082,7 @@
           <div class="lic-li">TA 的询问 / TA 的小问题 / TA 的好奇 / TA 的吐槽：内容可自定义</div>
           <div class="lic-li">查岗日常字卡：地点、在做什么、说的话，均可自定义</div>
           <div class="lic-li">情绪回复：按你当前的心情自动匹配相应字卡</div>
-          <div class="lic-li">字卡库页入口：自定义聊天字卡、查岗日常字卡、桌面今日情话、聊天默认字卡、聊天情绪字卡、聊天回应字卡、TA 的询问 / 小问题 / 好奇 / 吐槽</div>
+          <div class="lic-li">字卡库页入口：公用字卡（全桌面联系人共享）、专属字卡（仅当前桌面联系人）、查岗日常字卡、桌面今日情话、聊天默认字卡、聊天情绪字卡、聊天回应字卡、TA 的询问 / 小问题 / 好奇 / 吐槽</div>
           <div class="lic-li">字卡管理：去重复、导出数据、一键清空所有分类</div>
           <div class="lic-li">兼容导入 milk 字卡库导出的 json</div>
           <div class="lic-li">系统预设字卡可逐句开关（桌面今日情话 / 聊天默认字卡）</div>
@@ -2289,11 +2296,12 @@
         </div>
         <button class="poke-card-close" id="emoji-close">✕</button>
       </div>
-      <!-- 我的表情包工具行（管理分组 / 批量管理 / 添加；新建分组已并入管理分组） -->
+      <!-- 我的表情包工具行（管理分组 / 批量管理 / 添加 / 链接导入；新建分组已并入管理分组） -->
       <div class="emoji-tools" id="emoji-tools" hidden>
         <button class="emoji-tool" id="mye-manage">管理分组</button>
         <button class="emoji-tool" id="mye-batch">批量管理</button>
         <button class="emoji-tool" id="mye-add">添加</button>
+        <button class="emoji-tool" id="mye-add-link">链接导入</button>
       </div>
       <!-- 顶部分组切换栏（全部 / 各分组） -->
       <div class="emoji-groups" id="emoji-groups"></div>
@@ -2492,7 +2500,15 @@
         <!-- 恋爱纪念日（影响桌面在一起时间/日期） -->
         <div class="mem-card glass">
           <div class="mem-card-label">恋爱纪念日</div>
-          <input type="date" id="love-date-input" class="date-val mem-date" value="">
+          <div class="mem-date-wrap">
+            <button type="button" class="mem-date-btn" id="love-date-btn">
+              <span class="mem-date-btn-ico" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+              </span>
+              <span class="mem-date-btn-txt" id="love-date-btn-txt">点击设置日期</span>
+            </button>
+            <input type="date" id="love-date-input" class="date-val mem-date" value="">
+          </div>
           <div class="mem-days"><b id="mem-love-days">—</b> 天</div>
           <div class="mem-date-txt" id="mem-love-date"></div>
         </div>
@@ -3086,12 +3102,33 @@
       </div>
       <div class="chat-body gc-body" id="gc-body"></div>
       <div class="chat-typing gc-typing" id="gc-typing" hidden></div>
+      <!-- 待发送草稿条（插入的图片缩略图，与聊天页 .chat-draft 同款样式） -->
+      <div class="chat-draft" id="gc-draft" hidden>
+        <div class="chat-draft-items" id="gc-draft-items"></div>
+      </div>
+      <!-- v3.11.x：输入栏与普通聊天页统一（更多功能 / 表情包 / 输入框 / 插入图片 / 发送）；
+           原 @群成员 独立按钮移入「更多功能」面板 -->
       <div class="chat-input-row gc-input-row">
-        <button class="ch-input-btn" id="gc-at-btn" title="@群成员">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 006 0v-1a10 10 0 10-20 0v1a10 10 0 0010 10"/></svg>
+        <button class="ch-input-btn" id="gc-input-more-btn" title="更多功能">
+          <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
+        </button>
+        <button class="ch-input-btn" id="gc-emoji-btn" title="表情包">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9.5l.01.01M15 9.5l.01.01"/></svg>
         </button>
         <div class="chat-input gc-input" id="gc-input" contenteditable="true" data-ph="说点什么…" spellcheck="false" role="textbox" aria-label="说点什么…"></div>
+        <button class="ch-input-btn" id="gc-img-btn" title="插入图片">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5-9 9"/></svg>
+        </button>
         <button class="chat-send gc-send" id="gc-send">发送</button>
+      </div>
+      <!-- 更多功能面板（与聊天页 #chat-more-panel 同款悬浮面板；@群成员 入口在这里） -->
+      <div class="more-panel" id="gc-more-panel" hidden>
+        <div class="more-grid">
+          <button class="more-item" id="gc-more-at" title="@群成员">
+            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 006 0v-1a10 10 0 10-20 0v1a10 10 0 0010 10"/></svg></span>
+            <span>@群成员</span>
+          </button>
+        </div>
       </div>
       <!-- 群成员列表面板 -->
       <div class="gc-members-panel" id="gc-members-panel" hidden>
@@ -3138,10 +3175,10 @@
           <div class="txt">全屏边缘防误触</div>
           <label class="toggle"><input type="checkbox" id="cs-edge-guard"><span class="tk"></span></label>
         </div>
-        <!-- v3.7.x：音乐悬浮小窗开关（镜像音乐页 #music-float-en / 音乐设置 #sm-set-float，同一 floatEn 状态，每桌面独立） -->
+        <!-- v3.10.x：「隐藏音乐悬浮小窗」开关（同源 music-global.floatEn，每桌面独立；语义反转：勾选=隐藏，与下方「隐藏通话小框」一致。音乐页 #music-float-en / 音乐设置 #sm-set-float 仍保持勾选=开启） -->
         <div class="set-row" id="cs-music-float-row">
           <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
-          <div class="txt">音乐悬浮小窗</div>
+          <div class="txt">隐藏音乐悬浮小窗</div>
           <label class="toggle"><input type="checkbox" id="cs-music-float"><span class="tk"></span></label>
         </div>
         <!-- v3.7.x：隐藏通话小框开关（同源 call-mini-enabled，每桌面独立；勾选=接通后不弹出悬浮小框，保持通话大面板常驻） -->
@@ -3329,6 +3366,22 @@
       <div class="ce-summary" id="ce-summary"></div>
     </div>
     <button class="cc-tool ce-btn" id="ce-do">导出选中字卡</button>
+  </div>
+</div>
+
+<!-- v3.11.x：字卡库 公用/专属 双分类变动一次性提醒（引导先导出字卡 json 备份再使用新版） -->
+<div class="tc-mask" id="cc-scope-mask" hidden>
+  <div class="tc-panel">
+    <div class="mg-head"><span>字卡库更新提醒</span><button class="mg-close" id="csn-close">✕</button></div>
+    <div class="tc-body">
+      <div class="gs-title">本次更新后，聊天字卡库分为两个大分类：</div>
+      <div class="ce-grp-cat">· 公用字卡 —— 以后每个桌面的联系人都能使用</div>
+      <div class="ce-grp-cat">· 专属字卡 —— 只有当前桌面绑定的联系人才能使用</div>
+      <div class="gs-title" style="margin-top:10px">你原有的自定义聊天字卡已自动迁移，不会丢失。为防万一，建议先导出一份字卡 json 备份，再刷新使用新版。</div>
+      <div class="ce-summary" id="csn-summary"></div>
+    </div>
+    <button class="cc-tool ce-btn" id="csn-export">导出字卡 json 备份</button>
+    <button class="cc-tool ce-btn" id="csn-ok" style="margin-top:8px">我已知晓，进入新版</button>
   </div>
 </div>
 

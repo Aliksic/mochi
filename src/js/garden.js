@@ -4,19 +4,15 @@ var s = window.activeStore();
 var page = document.getElementById("page-garden");
 if (!s || !page) return;
 var G = "garden-data";
-var G_GLOBAL = "garden-data-global";
-var gs = null;
-try { gs = window.xyStore("xy-home-v2"); } catch (e) {}
-var isGlobal = false;
-function curStore() { return isGlobal ? gs : s; }
-function curKey() { return isGlobal ? G_GLOBAL : G; }
-function curIdbKey() { return isGlobal ? ("xy-home-v2:" + G_GLOBAL) : (window.activePrefix() + ":" + G); }
+// 各桌面（联系人）花园相互独立；「全球园」合并视图已按需求移除，
+// 启动时一次性清理旧合并缓存 xy-home-v2:garden-data-global（各桌面原始数据从未被改动，不受影响）
+try { var _legacyG = window.xyStore("xy-home-v2"); if (_legacyG && _legacyG.get("garden-data-global")) _legacyG.remove("garden-data-global"); } catch (e) {}
 var PLOTS = 12;
 var PI = 1800;
 var WILT_SEC = 172800;
 function pn() { return s.get("lbl-partner") || "TA"; }
-function load() { try { var d = JSON.parse(curStore().get(curKey()) || "{}"); if (!d.p) d.p = []; while (d.p.length < PLOTS) d.p.push(null); if (!d.l) d.l = []; if (!d.lpc) d.lpc = 0; if (!d.dex) d.dex = {}; if (!d.exp) d.exp = 0; if (!d.inv) d.inv = {}; if (!d.st) d.st = { p: 0, w: 0, h: 0, f: 0, mp: 0, mw: 0, mh: 0, mf: 0 }; if (!d.decor) d.decor = {}; if (!d.visitor) d.visitor = null; return d; } catch (e) { return { p: new Array(PLOTS).fill(null), l: [], lpc: 0, dex: {}, exp: 0, inv: {}, st: { p: 0, w: 0, h: 0, f: 0, mp: 0, mw: 0, mh: 0, mf: 0 }, decor: {}, visitor: null }; } }
-function save(d) { try { if (batchSave) { saveDirty = true; return; } curStore().set(curKey(), JSON.stringify(d)); try { if (window.idbSet) window.idbSet(curIdbKey(), JSON.stringify(d)); } catch (e2) {} } catch (e) {} }
+function load() { try { var d = JSON.parse(s.get(G) || "{}"); if (!d.p) d.p = []; while (d.p.length < PLOTS) d.p.push(null); if (!d.l) d.l = []; if (!d.lpc) d.lpc = 0; if (!d.dex) d.dex = {}; if (!d.exp) d.exp = 0; if (!d.inv) d.inv = {}; if (!d.st) d.st = { p: 0, w: 0, h: 0, f: 0, mp: 0, mw: 0, mh: 0, mf: 0 }; if (!d.decor) d.decor = {}; if (!d.visitor) d.visitor = null; return d; } catch (e) { return { p: new Array(PLOTS).fill(null), l: [], lpc: 0, dex: {}, exp: 0, inv: {}, st: { p: 0, w: 0, h: 0, f: 0, mp: 0, mw: 0, mh: 0, mf: 0 }, decor: {}, visitor: null }; } }
+function save(d) { try { if (batchSave) { saveDirty = true; return; } s.set(G, JSON.stringify(d)); try { if (window.idbSet) window.idbSet(window.activePrefix() + ":" + G, JSON.stringify(d)); } catch (e2) {} } catch (e) {} }
 var batchSave = false, saveDirty = false;
 (function r() { try { if (!window.idbGet) return; var pf = window.activePrefix(); if (!s.get(G)) window.idbGet(pf + ":" + G).then(function (v) { if (window.activePrefix() !== pf || !v) return; try { s.set(G, typeof v === "string" ? v : JSON.stringify(v)); } catch (e) {} }); } catch (e) {} })();
 
@@ -205,9 +201,6 @@ function buildPlotInner(plot, si, wl) {
   var h = "";
   if (plot && plot.pot && plot.pot > 1) h += "<span class=\"garden-pot-mark\">" + (plot.pot === 3 ? "\u8C6A\u534E" : "\u9AD8\u7EA7") + "</span>";
   if (si) {
-    if (isGlobal && plot.by && plot.by.indexOf("@") >= 0) {
-      h += "<span class=\"garden-plant-src\">" + plot.by.split("@")[1] + "</span>";
-    }
     var emoji = si.wilted ? "\uD83E\uDD40" : si.emoji;
     h += "<span class=\"garden-plant-emoji\">" + emoji + "</span>";
     h += "<span class=\"garden-plant-name\">" + si.name + "</span>";
@@ -250,8 +243,7 @@ function renderGrid() {
     var st = s ? (s.wilted ? "\u5DF2\u51CB\u8C22" : s.bloomed ? "\u6210\u719F" : fmtShort(s.nextSec)) : "\u7A7A\u5730";
     var pg = s && !s.bloomed && !s.wilted ? Math.floor(s.progress * 10) : -1;
     var wp = w > 0 ? Math.floor(w * 10) : 0;
-    var sr = (isGlobal && p && p.by && p.by.indexOf("@") >= 0) ? p.by.split("@")[1] : "";
-    var sig = c + "|" + em + "|" + st + "|" + pg + "|" + wp + "|" + sr + "|" + (p && p.pot || 1);
+    var sig = c + "|" + em + "|" + st + "|" + pg + "|" + wp + "|" + (p && p.pot || 1);
     var el = grid.children[j];
     if (el.getAttribute("data-sig") === sig) continue;
     el.setAttribute("data-sig", sig);
@@ -1326,7 +1318,6 @@ function spawnVisitor() {
 }
 
 function openGarden() {
-  if (isGlobal) toggleGlobal();
   var editing = Array.from(document.querySelectorAll(".app-grid")).some(function (g) { return g.classList.contains("editing"); });
   if (editing) return;
   document.querySelectorAll(".page").forEach(function (pg) { pg.hidden = true; });
@@ -1379,10 +1370,7 @@ if (toolbarEl) toolbarEl.addEventListener("click", handleTool);
 
 
 document.addEventListener("contact-switched", function () {
-  if (!page.hidden) {
-    if (isGlobal) toggleGlobal();
-    else { data = load(); selPlot = -1; renderAll(); }
-  }
+  if (!page.hidden) { data = load(); selPlot = -1; renderAll(); }
 });
 
 (function watchHome() {
@@ -1398,150 +1386,6 @@ document.addEventListener("contact-switched", function () {
     try { checkPartnerPassive(); } catch (e) {}
   }
 })();
-
-// ===== 全球园：真合并所有联系人花园数据，可继续种植/收获（原各联系人数据保留不动） =====
-var globalBtn = null;
-var remergeBtn = null;
-function ensureGlobalUI() {
-  if (globalBtn) return;
-  var header = page.querySelector("header") || page.children[0];
-  if (header) {
-    globalBtn = document.createElement("span");
-    globalBtn.className = "garden-ov-btn";
-    globalBtn.textContent = "\uD83C\uDF10 \u5168\u90E8";
-    globalBtn.addEventListener("click", toggleGlobal);
-    header.appendChild(globalBtn);
-    remergeBtn = document.createElement("span");
-    remergeBtn.className = "garden-ov-btn garden-remerge-btn";
-    remergeBtn.textContent = "\uD83D\uDD04 \u91CD\u65B0\u5408\u5E76";
-    remergeBtn.hidden = true;
-    remergeBtn.addEventListener("click", remergeGlobal);
-    header.appendChild(remergeBtn);
-  }
-}
-function loadGardenAsync(cid) {
-  return new Promise(function (resolve) {
-    var raw = null;
-    try { raw = window.storeFor(cid).get("garden-data"); } catch (e) {}
-    if (raw) { try { resolve(JSON.parse(raw)); return; } catch (e) {} }
-    if (!window.idbGet) { resolve(null); return; }
-    window.idbGet("xy-home-v2:" + cid + ":garden-data").then(function (v) {
-      if (!v) { resolve(null); return; }
-      try { resolve(typeof v === "string" ? JSON.parse(v) : v); } catch (e) { resolve(null); }
-    }).catch(function () { resolve(null); });
-  });
-}
-function loadAllGardensAsync() {
-  var list = [];
-  try { if (window.getContacts) list = window.getContacts() || []; } catch (e) {}
-  if (!list.length) list = [{ id: "default", name: "\u9ED8\u8BA4" }];
-  return Promise.all(list.map(function (c) {
-    return loadGardenAsync(c.id).then(function (d) {
-      if (!d) return null;
-      var name = c.name || c.id;
-      try { var pnn = window.storeFor(c.id).get("lbl-partner"); if (pnn) name = pnn; } catch (e) {}
-      return { cid: c.id, name: name, data: d };
-    });
-  })).then(function (arr) { return arr.filter(function (x) { return !!x; }); });
-}
-function mergeAllToGlobal() {
-  return loadAllGardensAsync().then(function (gardens) {
-    var g = { p: [], l: [], lpc: Math.floor(Date.now() / 1000), dex: {}, exp: 0, inv: {}, st: { p: 0, w: 0, h: 0, f: 0, mp: 0, mw: 0, mh: 0, mf: 0 }, decor: {}, visitor: null };
-    gardens.forEach(function (gd) {
-      var d = gd.data || {};
-        if (d.p) d.p.forEach(function (plot) {
-          if (plot) {
-            var np = { type: plot.type, planted: plot.planted, by: (plot.by || "\u6211") + "@" + gd.name };
-            if (plot.watered) np.watered = plot.watered;
-            if (plot.bloomedAt) np.bloomedAt = plot.bloomedAt;
-            if (plot.coOp) np.coOp = plot.coOp;
-            g.p.push(np);
-          }
-        });
-      g.exp += (d.exp || 0);
-      if (d.st) Object.keys(d.st).forEach(function (k) { g.st[k] = (g.st[k] || 0) + (d.st[k] || 0); });
-      if (d.dex) Object.keys(d.dex).forEach(function (t) {
-        var src = d.dex[t]; if (!src || typeof src !== "object") return;
-        if (!g.dex[t]) g.dex[t] = { p: 0, h: 0 };
-        g.dex[t].p += src.p || 0;
-        g.dex[t].h += src.h || 0;
-      });
-      if (d.inv) Object.keys(d.inv).forEach(function (t) { g.inv[t] = (g.inv[t] || 0) + (d.inv[t] || 0); });
-      if (d.decor) Object.keys(d.decor).forEach(function (t) { g.decor[t] = (g.decor[t] || 0) + (d.decor[t] || 0); });
-      if (d.l) d.l.forEach(function (e) { g.l.push({ who: e.who, act: (e.act || "") + " @" + gd.name, tm: e.tm }); });
-      if (d.visitor) {
-        var now = Math.floor(Date.now() / 1000);
-        if (d.visitor.start + d.visitor.dur > now) {
-          if (!g.visitor || d.visitor.start > g.visitor.start) g.visitor = d.visitor;
-        }
-      }
-    });
-    while (g.p.length < 12) g.p.push(null);
-    if (g.p.length > 36) {
-      var extra = g.p.splice(36);
-      extra.forEach(function (plot) { if (plot && T[plot.type]) g.inv[plot.type] = (g.inv[plot.type] || 0) + 1; });
-
-    }
-    g.l.sort(function (a, b) { return (a.tm || 0) - (b.tm || 0); });
-    g.l = g.l.slice(-100);
-    return g;
-  });
-}
-function toggleGlobal() {
-  ensureGlobalUI();
-  if (isGlobal) {
-    isGlobal = false;
-    data = load();
-    selPlot = -1;
-    if (globalBtn) globalBtn.textContent = "\uD83C\uDF10 \u5168\u90E8";
-    if (remergeBtn) remergeBtn.hidden = true;
-    renderAll();
-  } else {
-    isGlobal = true;
-    var existing = null;
-    try { existing = gs.get(G_GLOBAL); } catch (e) {}
-    if (existing) {
-      data = load();
-      selPlot = -1;
-      if (globalBtn) globalBtn.textContent = "\u2190 \u8FD4\u56DE\u672C\u684C";
-      if (remergeBtn) remergeBtn.hidden = false;
-      renderAll();
-    } else {
-      var scroll = page.querySelector(".garden-scroll");
-      var tip = null;
-      if (scroll) {
-        tip = document.createElement("div");
-        tip.className = "garden-merge-tip";
-        tip.textContent = "\u9996\u6B21\u5408\u5E76\u6240\u6709\u8054\u7CFB\u4EBA\u82B1\u56ED\u2026";
-        scroll.insertBefore(tip, scroll.firstChild);
-      }
-      mergeAllToGlobal().then(function (g) {
-        save(g);
-        data = load();
-        selPlot = -1;
-        if (globalBtn) globalBtn.textContent = "\u2190 \u8FD4\u56DE\u672C\u684C";
-        if (remergeBtn) remergeBtn.hidden = false;
-        if (tip) tip.remove();
-        renderAll();
-      });
-    }
-  }
-}
-function remergeGlobal() {
-  if (!window.openModal) { doRemerge(); return; }
-  window.openModal("\u91CD\u65B0\u5408\u5E76", "", function (v) {
-    if (v === "ok") doRemerge();
-  }, { pills: [{ label: "\u786E\u8BA4\u5408\u5E76\uFF08\u8986\u76D6\u5F53\u524D\u5168\u7403\u56ED\uFF09", value: "ok" }, { label: "\u53D6\u6D88", value: "cancel" }], noInput: true });
-}
-function doRemerge() {
-  mergeAllToGlobal().then(function (g) {
-    save(g);
-    data = load();
-    selPlot = -1;
-    renderAll();
-  });
-}
-ensureGlobalUI();
 
 window.gardenBloomDates = function () {
   var list = [];

@@ -258,8 +258,11 @@
       return pk.length ? new Set(pk) : null;
     })();
     const text = [], kaomoji = [], emoji = [];
-    const mediaSticker = cid ? (window.getMediaCardsFor ? window.getMediaCardsFor(cid, 'sticker') : []) : ((window.getMediaCards && window.getMediaCards('sticker')) || []);
-    const mediaImage = cid ? (window.getMediaCardsFor ? window.getMediaCardsFor(cid, 'image') : []) : ((window.getMediaCards && window.getMediaCards('image')) || []);
+    // v3.11.x：只收 dataURL 媒体——朋友圈配图会把图片拼进正文文本（data:image 正则
+    // 识别内联），链接导入的 http(s) 字卡进来只会显示成一段 URL 文字，先过滤掉
+    const onlyData = (arr) => (arr || []).filter(s => typeof s === 'string' && s.indexOf('data:') === 0);
+    const mediaSticker = onlyData(cid ? (window.getMediaCardsFor ? window.getMediaCardsFor(cid, 'sticker') : []) : ((window.getMediaCards && window.getMediaCards('sticker')) || []));
+    const mediaImage = onlyData(cid ? (window.getMediaCardsFor ? window.getMediaCardsFor(cid, 'image') : []) : ((window.getMediaCards && window.getMediaCards('image')) || []));
     cards.forEach(c => {
       if (pokeSet && pokeSet.has(c)) return;
       if (typeof c === 'string' && c.indexOf('data:') === 0) return; // dataURL 已按媒体分类
@@ -714,8 +717,16 @@ let comStickerTab = 'ta';   // 'ta' | 'mine'
 let comStickerCur = '';     // 当前分组
 function comStickerGroups() {
   // TA 的表情包：聊天字卡库 sticker 分类；我的表情包：my-emoji-groups
-  if (comStickerTab === 'ta') return (window.getMediaGroups && window.getMediaGroups('sticker')) || [];
-  try { const v = JSON.parse(store.get('my-emoji-groups') || 'null'); return Array.isArray(v) ? v : []; } catch (e) { return []; }
+  // v3.11.x：只收 dataURL 表情——选中后会拼进评论/正文文本（data:image 正则识别），
+  // 链接导入的 http(s) 表情拼进去只显示 URL 文字，先过滤掉
+  const onlyData = (groups) => (groups || [])
+    .map(([n, a]) => [n, (a || []).filter(s => typeof s === 'string' && s.indexOf('data:') === 0)])
+    .filter(([, a]) => a.length);
+  if (comStickerTab === 'ta') return onlyData((window.getMediaGroups && window.getMediaGroups('sticker')) || []);
+  try {
+    const v = JSON.parse(store.get('my-emoji-groups') || 'null');
+    return Array.isArray(v) ? onlyData(v) : [];
+  } catch (e) { return []; }
 }
 function openComStickerPanel() {
   const host = document.getElementById('feed-comment-panel');

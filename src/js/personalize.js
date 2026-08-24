@@ -55,6 +55,21 @@
       img.src = dataUrl;
     });
   }
+  // v3.10.x：压缩并保证产物体积达标——细节丰富的照片压到目标边长后 JPEG 仍可能超过
+  // 渲染防护阈值（如卡片背景 1000px 可 >500KB），旧流程照常入库后，启动渲染时会被
+  // sanitizeBg 判为超大值，表现为「设置成功、退出重进后变回默认白板，每次都要重新设置」。
+  // 这里在上传端按 0.75 倍率逐级降边长重压（始终从原图压，避免二次 JPEG 糊化），
+  // 确保产物 <= limit 才入库；压到 320px 仍超限的极端图返回最小一版由调用方提示。
+  function compressImageFit(dataUrl, maxSide, limit) {
+    let side = maxSide;
+    const step = (data) => {
+      if (!data) return Promise.resolve(null);
+      if (data.length <= limit || side < 320) return Promise.resolve(data);
+      side = Math.round(side * 0.75);
+      return compressImage(dataUrl, side).then(step);
+    };
+    return compressImage(dataUrl, side).then(step);
+  }
   // v3.5.107：手机壁纸清晰度——按设备物理像素计算压缩上限。
   // 之前固定压到最长边 1000px，在 2-3x 高分屏（物理宽 1080-1440）上会被放大发糊；
   // 这里用「屏幕物理最高边 × DPR」计算，保证壁纸铺满时不吃放大，同时不超 4096 防止体积过大
@@ -74,10 +89,18 @@
   // 小图类（头像/卡片背景等 1000px 内压缩 <200KB）沿用 500KB（与 applyAvatar 一致）
   const BG_SAFE_LIMIT = 6 * 1024 * 1024;
   const IMG_SAFE_LIMIT = 500 * 1024;
+  // v3.10.x：硬上限——仅旧版本绕过压缩存进去的原级别大图（渲染会拖垮 iOS Safari）
+  // 才清除自愈；正常压缩产物偶尔超阈值时绝不再删数据
+  const BG_HARD_LIMIT = 12 * 1024 * 1024;
   const sanitizeBg = (key, limit) => {
     const v = store.get(key);
     if (v && typeof v === 'string' && v.length > limit) {
-      try { store.remove(key); } catch (e) {}
+      // v3.10.x：超限只跳过本次渲染，不再删除数据——旧实现 store.remove 会把
+      // localStorage + IndexedDB 三处的图一起删掉，正常照片（如卡片背景压缩产物
+      // 略超 500KB）表现为「设置成功、重启后被清掉回默认白板，每次都要重新设置」。
+      // 配合上传端 compressImageFit 保证新设置的图都达标，存量略超标图保留在
+      // 存储里（导出备份仍含），仅不渲染。
+      if (v.length > BG_HARD_LIMIT) { try { store.remove(key); } catch (e) {} }
       return null;
     }
     return v;
@@ -94,7 +117,9 @@
     // 点击无响应，且刷新后恢复数据再次崩溃）。发现超大值即清除（LS+IDB 双清），
     // 回到默认头像——保证存量坏数据在用户刷新后不再复现。
     if (saved && saved.length > 500 * 1024) {
-      try { store.remove(key); } catch (e) {}
+      // v3.10.x：同 sanitizeBg——只跳过本次渲染，不再删数据（256px 正常头像远小于
+      // 该阈值，触发即旧版原图残留；仅超硬上限的毒数据仍清除自愈）
+      try { if (saved.length > 12 * 1024 * 1024) store.remove(key); } catch (e) {}
       saved = null;
     }
     // v3.6.x：img 用属性赋值（dataURL 含引号时拼 innerHTML 会逃逸注入 HTML）
@@ -172,6 +197,15 @@ try {
         //   自定义图标/壁纸大键可能只存 IDB，回填完成前桌面显示的是默认/空白
         try { restoreAppIcons(); } catch (e) {}
         try { applyBgVisibility(); } catch (e) {}
+        // v3.10.x：修复「退出重进后桌面卡片背景/页面背景/头像丢失变白板」——
+        //   卡片背景(card-bg-*)、页面背景(page-bg-*)、图片组件(desk-image-src-*)都是
+        //   大图键只存 IndexedDB，启动渲染时回填未完成读到空；旧重绘清单里没有它们，
+        //   回填完成后界面一直停留在空白。现在补齐 + 直读兜底 + 延迟二次刷新。
+        try { refreshDeskVisuals(); } catch (e) {}
+        try { rescueDeskVisuals(); } catch (e) {}
+        setTimeout(function () {
+          try { refreshDeskVisuals(); } catch (e) {}
+        }, 1800);
       });
     } catch (e) {}
 
@@ -577,7 +611,8 @@ try {
         if (!f) return;
         const reader = new FileReader();
         reader.onload = () => {
-          compressImage(reader.result, phoneBgMaxSide()).then(data => {
+          // v3.10.x：压缩并保证 <=4.5MB（渲染防护 6MB 留余量），超限自动降边长重压
+          compressImageFit(reader.result, phoneBgMaxSide(), 4.5 * 1024 * 1024).then(data => {
             // v3.6.x：压缩失败/图片过大返回 null——不存原图（防 iOS 解码崩溃）
             if (!data) { toast('图片过大或格式不支持，请换一张小图'); return; }
             applyPhoneBg(data);
@@ -654,8 +689,9 @@ try {
       let saved = store.get('app-icon-' + app.dataset.app);
       const ico = app.querySelector('.app-ico');
       // v3.6.x：与头像同款防护——旧版本压缩失败存过超大原图，渲染会触发 iOS 解码崩溃
+      // v3.10.x：只跳过本次渲染不删数据（仅超硬上限仍清除）
       if (saved && saved.length > 500 * 1024) {
-        try { store.remove('app-icon-' + app.dataset.app); } catch (e) {}
+        try { if (saved.length > 12 * 1024 * 1024) store.remove('app-icon-' + app.dataset.app); } catch (e) {}
         saved = null;
       }
       if (saved) {
@@ -1599,6 +1635,38 @@ try {
     });
   };
   const applyAllCardBgs = () => CARD_BG_TYPES.forEach(c => applyCardBg(c.type));
+  // v3.10.x：首屏外观键直读兜底——idbRestore 整体恢复可能迟迟完不成（安卓 Edge/雨见等
+  // 内核偶发 IndexedDB 事务挂起，分批回填卡住），或本会话早期写入导致某键被跳过回填；
+  // 双方头像 / 卡片背景 / 页面背景是用户最敏感的图，这里不依赖整体恢复进度，
+  // 直接逐键 idbGet 回填（idbGet 自带 4s+4s 超时自愈），store 已有值则跳过不覆盖。
+  function rescueDeskVisuals() {
+    if (!window.idbGet) return;
+    let pfx; try { pfx = window.activePrefix(); } catch (e) { return; }
+    const keys = ['avatar-user', 'avatar-partner'];
+    CARD_BG_TYPES.forEach(c => keys.push('card-bg-' + c.type));
+    try { for (let i = 0; i < deskPageCount(); i++) keys.push('page-bg-' + i); } catch (e) {}
+    const miss = keys.filter(k => !store.get(k));
+    if (!miss.length) return;
+    let left = miss.length, refreshed = false;
+    const done = () => { if (!refreshed) { refreshed = true; try { refreshDeskVisuals(); } catch (e) {} } };
+    miss.forEach(k => {
+      window.idbGet(pfx + ':' + k).then(v => {
+        if (v && typeof v === 'string' && v.length > 2 && !store.get(k)) {
+          store.set(k, v);
+        }
+        if (--left <= 0) done();
+      }).catch(() => { if (--left <= 0) done(); });
+    });
+  }
+  // v3.10.x：桌面外观全面重应用——回填完成后/切桌面后统一调用（含头像、卡片背景、
+  // 页面背景、图片组件），修复「大图键恢复完成但界面停留在启动时的空白」。
+  function refreshDeskVisuals() {
+    try { window.applyAvatars(); } catch (e) {}
+    try { applyAllCardBgs(); } catch (e) {}
+    try { applyPageBgs(); } catch (e) {}
+    try { renderDeskImages(); } catch (e) {}
+    try { syncBgUI(); } catch (e) {}
+  }
   // 初始化 + 多桌面切换后重应用
   applyAllCardBgs();
   document.addEventListener('contact-switched', applyAllCardBgs);
@@ -1619,7 +1687,9 @@ try {
         if (!f) return;
         const reader = new FileReader();
         reader.onload = () => {
-          compressImage(reader.result, 1000).then(data => {
+          // v3.10.x：压缩并保证 <=450KB（渲染防护阈值 500KB 留余量）——超限自动降边长重压，
+          // 防止「设置成功、重启后被渲染防护跳过变白板」
+          compressImageFit(reader.result, 1000, 450 * 1024).then(data => {
             if (!data) { toast('图片过大或格式不支持，请换一张小图'); return; }
             store.set('card-bg-' + type, data);
             applyCardBg(type);
@@ -1791,6 +1861,28 @@ try {
     const v = parseInt(store.get('desk-page-count'), 10);
     return isNaN(v) || v < DESK_PAGE_MIN ? DESK_PAGE_MIN : Math.min(v, DESK_PAGE_MAX);
   };
+  // v3.10.x：每页背景应用（从 buildDeskPages 抽出）——页面背景是大图键
+  //（>200KB 只存 IndexedDB，不进 localStorage），启动渲染时回填往往未完成读到空，
+  // 需要在 mochi-restore-done / 切换联系人后单独重应用，否则整页背景"丢失"变默认。
+  const applyPageBgs = () => {
+    if (!pagesBox) return;
+    const slides = pagesBox.querySelectorAll('.page-slide');
+    const n = Math.min(slides.length, deskPageCount());
+    for (let i = 0; i < n; i++) {
+      const s = slides[i];
+      if (!s) continue;
+      const bg = sanitizeBg('page-bg-' + i, BG_SAFE_LIMIT);
+      if (bg && typeof bg === 'string' && bg.length > 2) {
+        s.style.backgroundImage = 'url("' + bg + '")';
+        s.style.backgroundSize = 'cover';
+        s.style.backgroundPosition = 'center';
+      } else {
+        s.style.backgroundImage = '';
+        s.style.backgroundSize = '';
+        s.style.backgroundPosition = '';
+      }
+    }
+  };
   // 重建桌面页结构：保证页数 = desk-page-count，新增页为空 page-slide
   const buildDeskPages = () => {
     if (!pagesBox) return;
@@ -1845,22 +1937,8 @@ try {
       pagesBox.appendChild(s);
       slides.push(s);
     }
-    // 应用每页背景图
-    for (let i = 0; i < target; i++) {
-      const s = pagesBox.querySelectorAll('.page-slide')[i];
-      const bg = sanitizeBg('page-bg-' + i, BG_SAFE_LIMIT);
-      if (s) {
-        if (bg && typeof bg === 'string' && bg.length > 2) {
-          s.style.backgroundImage = 'url("' + bg + '")';
-          s.style.backgroundSize = 'cover';
-          s.style.backgroundPosition = 'center';
-        } else {
-          s.style.backgroundImage = '';
-          s.style.backgroundSize = '';
-          s.style.backgroundPosition = '';
-        }
-      }
-    }
+    // 应用每页背景图（v3.10.x：抽出为 applyPageBgs，供回填完成后/切桌面后单独重应用）
+    applyPageBgs();
     if (window.deskRebuild) window.deskRebuild();
     syncPagesUI();
     setTimeout(function () { if (window.ensureP3) window.ensureP3(); }, 50);
@@ -1900,7 +1978,8 @@ try {
             if (!f) return;
             const reader = new FileReader();
             reader.onload = () => {
-              compressImage(reader.result, phoneBgMaxSide()).then(data => {
+              // v3.10.x：压缩并保证 <=4.5MB（渲染防护 6MB 留余量），超限自动降边长重压
+              compressImageFit(reader.result, phoneBgMaxSide(), 4.5 * 1024 * 1024).then(data => {
                 if (!data) { toast('图片过大或格式不支持，请换一张小图'); return; }
                 store.set('page-bg-' + i, data);
                 buildDeskPages();
@@ -1962,13 +2041,74 @@ try {
   const resetDeskRow = document.getElementById('row-desk-reset');
   if (resetDeskRow) {
     resetDeskRow.addEventListener('click', () => {
-      window.openModal('恢复默认桌面', '将清除桌面页数、所有页背景图及自定义布局，恢复为默认桌面。确定继续？', (v) => {
+      window.openModal('恢复默认桌面', '将恢复桌面卡片布局与页数，桌面恢复为默认三页（每页已设置的背景图与图标不受影响）。确定继续？', (v) => {
         if (v !== '1') return;
-        try { store.remove('desk-page-count'); } catch (e) {}
-        for (var ri = 0; ri < 5; ri++) { try { store.remove('page-bg-' + ri); } catch (e) {} }
+        // v3.10.x 修复：恢复默认后第三页「经期」小组件消失——原先 remove 掉
+        // desk-page-count 后按默认 2 页收缩，静态第三页被整页删除，desk-period
+        // 与 p3apps 一起移进隐藏池；ensureP3 只找回 p3apps（图标组），desk-period
+        // 留在池里不再显示。改为直接恢复为模板默认的 3 页：第三页未被删时
+        // desk-period 原样保留；若此前第三页已被用户删掉（组件在池里），由下方
+        // ensureP3 + 找回逻辑把 desk-period / p3apps 放回重建的第三页。
+        try { store.set('desk-page-count', '3'); } catch (e) {}
         try { store.remove('desk-layout'); } catch (e) {}
         buildDeskPages();
-        setTimeout(function () { if (window.ensureP3) window.ensureP3(); }, 100);
+        // v3.11.x 修复：恢复默认后老 desk-layout 里没有的新版组件（如第三页喝水/
+        // 吃什么/同频/番茄钟等动态注入图标）会被 applyDeskLayout 收进隐藏池，
+        // 只保证页数/找回 p3apps/desk-period 仍看不到它们 → 把池中模板默认应有的
+        // 组件逐个找回默认页；仅桌面小组件（desk-clock/calendar/timer/anniv，
+        // 模板本就默认在池中「未添加」）保持原状。
+        try {
+          var wpool = document.getElementById('desk-widget-pool');
+          if (wpool) {
+            var poolWidgets = Array.prototype.slice.call(wpool.querySelectorAll('[data-desk-widget]')).filter(function (nd) { return nd.parentNode === wpool; });
+            var rslides2 = Array.prototype.slice.call(pagesBox.querySelectorAll('.page-slide'));
+            var rp0 = rslides2[0] || null, rp1 = rslides2[1] || null, rp2 = rslides2[2] || null;
+            var P3GRID = '[data-app="p3"][data-desk-widget="p3apps"]';
+            // 第一遍：整组网格先回位（apps 首页组 / p2apps 第二页组 / p3apps 第三页组）
+            poolWidgets.forEach(function (nd) {
+              var wid = nd.getAttribute('data-desk-widget');
+              if (wid === 'apps' && rp0) rp0.appendChild(nd);
+              else if (wid === 'p2apps' && rp1) rp1.appendChild(nd);
+              else if (wid === 'p3apps' && rp2) rp2.appendChild(nd);
+            });
+            // 第二遍：其余普通组件/图标回默认页
+            poolWidgets.forEach(function (nd) {
+              var wid = nd.getAttribute('data-desk-widget');
+              if (wid === 'apps' || wid === 'p2apps' || wid === 'p3apps') return;
+              if (wid === 'desk-clock' || wid === 'desk-calendar' || wid === 'desk-timer' || wid === 'desk-anniv') return;
+              var tgt;
+              if (wid === 'deco' || wid === 'quote-row' || wid === 'checkin') tgt = rp0;
+              else if (wid === 'music' || wid === 'memo-row' || wid === 'week' || wid === 'weekend') tgt = rp1;
+              else tgt = rp2;
+              if (!tgt) return;
+              if (wid.indexOf('app-') === 0) {
+                var p3grid = document.querySelector(P3GRID);
+                if (p3grid) p3grid.appendChild(nd);
+                else tgt.appendChild(nd);
+                return;
+              }
+              var p3g2 = document.querySelector(P3GRID);
+              if (rp2 && p3g2 && p3g2.parentNode === rp2) rp2.insertBefore(nd, p3g2);
+              else tgt.appendChild(nd);
+            });
+          }
+        } catch (e) {}
+        setTimeout(function () {
+          try { if (window.ensureP3) window.ensureP3(); } catch (e) {}
+          try {
+            var dp = document.querySelector('[data-desk-widget="desk-period"]');
+            var rbox = document.getElementById('desktop-pages');
+            if (dp && rbox && dp.closest && dp.closest('#desk-widget-pool')) {
+              var rslides = rbox.querySelectorAll('.page-slide');
+              var rthird = rslides.length >= 3 ? rslides[2] : null;
+              if (rthird) {
+                var anchor = rthird.querySelector('[data-desk-widget="p3apps"]');
+                if (anchor && anchor.parentNode === rthird) rthird.insertBefore(dp, anchor);
+                else rthird.appendChild(dp);
+              }
+            }
+          } catch (e) {}
+        }, 100);
         toast('已恢复默认桌面');
       }, { noInput: true, pills: [{ label: '确定恢复默认', value: '1' }] });
     });
@@ -2008,7 +2148,7 @@ try {
   // 组件 id 列表（对应 template.html 中 [data-desk-widget]）；组件节点唯一，
   // 「添加」= 把节点移动到目标页（节点移动不重建，内部事件绑定保留）
   const WIDGET_IDS = ['deco', 'quote-row', 'checkin', 'apps', 'music', 'p2apps', 'memo-row', 'week', 'weekend', 'desk-clock', 'desk-calendar', 'desk-timer', 'desk-anniv', 'desk-period',
-    'app-chat', 'app-group-chat', 'app-home', 'app-mail', 'app-feed', 'app-calendar', 'app-memory', 'app-divination', 'app-note', 'app-music', 'app-stats', 'app-interact', 'app-checkin', 'p3apps', 'app-period', 'app-accounting', 'app-garden',     'app-tongpin', 'app-shenshou', 'app-water', 'app-eat'];
+    'app-chat', 'app-group-chat', 'app-home', 'app-mail', 'app-feed', 'app-calendar', 'app-memory', 'app-divination', 'app-note', 'app-music', 'app-stats', 'app-interact', 'app-checkin', 'p3apps', 'app-period', 'app-accounting', 'app-garden',     'app-tongpin', 'app-shenshou', 'app-water', 'app-eat', 'app-pomo'];
   const WIDGET_NAMES = {
     deco: '纪念日卡', 'quote-row': '今日情话 / 已摸鱼', checkin: '打卡横幅', apps: '功能图标(整组)',
     music: '音乐播放器', p2apps: '第二页功能图标(整组)', 'memo-row': '今日备忘 / 心情', week: '本周日常', weekend: '周末倒计时',
@@ -2016,7 +2156,7 @@ try {
     'app-chat': '聊天图标', 'app-group-chat': '群聊图标', 'app-home': '主页图标', 'app-mail': '信箱图标', 'app-feed': '朋友圈图标',
     'app-calendar': '日历图标', 'app-memory': '纪念图标', 'app-divination': '占卜图标', 'app-note': '收藏图标',
     'app-music': '音乐图标', 'app-stats': '聊天统计图标', 'app-interact': '提问记录图标', 'app-checkin': '查岗图标',
-    'p3apps': '第三页功能图标(整组)', 'app-period': '经期记录图标', 'app-accounting': '记账图标', 'app-garden': '花园图标',     'app-tongpin': '同频图标', 'app-shenshou': '伸手图标', 'app-water': '喝水图标', 'app-eat': '吃什么图标',
+    'p3apps': '第三页功能图标(整组)', 'app-period': '经期记录图标', 'app-accounting': '记账图标', 'app-garden': '花园图标',     'app-tongpin': '同频图标', 'app-shenshou': '伸手图标', 'app-water': '喝水图标', 'app-eat': '吃什么图标', 'app-pomo': '番茄钟图标',
   };
   // v3.7.x：装修模式组件库静态预览缩略图（glass 质感 + 真实 SVG 图标，不依赖真实数据/事件）
   const PREV_BOX = 'display:flex;align-items:center;justify-content:center;width:78px;height:58px;border-radius:10px;background:linear-gradient(135deg,#fff,#f6f6f6);border:1px solid rgba(0,0,0,.07);box-shadow:0 1px 3px rgba(0,0,0,.06);flex-shrink:0;overflow:hidden;padding:4px;box-sizing:border-box';
@@ -2053,7 +2193,7 @@ try {
     'app-chat': _appIcoPrev('聊天'), 'app-group-chat': _appIcoPrev('群聊'), 'app-home': _appIcoPrev('主页'), 'app-mail': _appIcoPrev('信箱'), 'app-feed': _appIcoPrev('朋友圈'),
     'app-calendar': _appIcoPrev('日历'), 'app-memory': _appIcoPrev('纪念'), 'app-divination': _appIcoPrev('占卜'), 'app-note': _appIcoPrev('收藏'),
     'app-music': _appIcoPrev('音乐'), 'app-stats': _appIcoPrev('统计'), 'app-interact': _appIcoPrev('提问'), 'app-checkin': _appIcoPrev('查岗'),
-    'app-period': _appIcoPrev('经期'), 'app-accounting': _appIcoPrev('记账'), 'app-garden': _appIcoPrev('花园'),     'app-tongpin': _appIcoPrev('同频'), 'app-shenshou': _appIcoPrev('伸手'), 'app-water': _appIcoPrev('喝水'), 'app-eat': _appIcoPrev('吃什么'), 'p3apps': _appIcoPrev('经期'),
+    'app-period': _appIcoPrev('经期'), 'app-accounting': _appIcoPrev('记账'), 'app-garden': _appIcoPrev('花园'),     'app-tongpin': _appIcoPrev('同频'), 'app-shenshou': _appIcoPrev('伸手'), 'app-water': _appIcoPrev('喝水'), 'app-eat': _appIcoPrev('吃什么'), 'app-pomo': _appIcoPrev('番茄钟'), 'p3apps': _appIcoPrev('经期'),
   };
   // 隐藏池：被移除的组件暂存（display:none），可从组件库重新添加
   function ensureWidgetPool() {
@@ -3256,12 +3396,28 @@ try {
 
   // 设置页恋爱纪念日：原生日期选择器（任何浏览器/手机上都能点开）
   const dateInput = document.getElementById('love-date-input');
+  const dateBtnTxt = document.getElementById('love-date-btn-txt');
+  const dateBtn = document.getElementById('love-date-btn');
+  // 把已选的日期显示到按钮文字上（原生 date input 本身被覆盖为不可见）
+  function syncLoveDateBtn(val) {
+    if (!dateBtnTxt || !dateBtn) return;
+    if (val) {
+      const parts = val.split('-');
+      dateBtnTxt.textContent = parts[0] + ' 年 ' + parts[1] + ' 月 ' + parts[2] + ' 日';
+      dateBtn.setAttribute('data-set', '1');
+    } else {
+      dateBtnTxt.textContent = '点击设置日期';
+      dateBtn.setAttribute('data-set', '0');
+    }
+  }
   if (dateInput) {
     const saved = store.get('love-start');
     if (saved) dateInput.value = saved;
+    syncLoveDateBtn(dateInput.value);
     dateInput.addEventListener('change', () => {
       if (dateInput.value) {
         store.set('love-start', dateInput.value);
+        syncLoveDateBtn(dateInput.value);
         updateLove();
       }
     });
@@ -3972,6 +4128,10 @@ try {
   document.addEventListener('contact-switched', function () {
     try { applyBgVisibility(); } catch (e) {}
     try { restoreAppIcons(); } catch (e) {}
+    // v3.10.x：切桌面后按新命名空间重应用卡片背景/页面背景/图片组件 + 直读兜底
+    //（这些大图键只存 IndexedDB，切桌面瞬间 memoryCache 可能还没新桌面的值）
+    try { refreshDeskVisuals(); } catch (e) {}
+    try { rescueDeskVisuals(); } catch (e) {}
     // v3.6.x：小组件三色（背景/边框/按钮）按桌面独立——切换后重新应用新桌面的值
     try { applyWidgetColor(store.get('widget-bg-color') || '#ffffff'); } catch (e) {}
     try { applyWidgetBorder(store.get('widget-border-color') || 'rgba(0,0,0,.1)'); } catch (e) {}

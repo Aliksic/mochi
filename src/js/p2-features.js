@@ -1555,13 +1555,15 @@ if (ckRefresh) {
   const ssApp = makeApp('shenshou', '伸手', '<svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 11V5.5a1.5 1.5 0 013 0V11"/><path d="M10 11V4a1.5 1.5 0 013 0v7"/><path d="M13 11V5.5a1.5 1.5 0 013 0V11"/><path d="M16 11V7a1.5 1.5 0 013 0v6c0 4-2 7-6 7s-6-2-6-6v-3z"/></svg>');
   const waterApp = makeApp('water', '喝水', '<svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5C8 7 5.5 11 5.5 14.5a6.5 6.5 0 0013 0C18.5 11 16 7 12 2.5z"/></svg>');
   const eatApp = makeApp('eat', '吃什么', '<svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v8a3 3 0 003 3v7"/><path d="M8 3v8"/><path d="M17 3c-1.5 0-2.5 2-2.5 5s1 5 2.5 5v8"/></svg>');
+  const piggyApp = makeApp('piggy', '存钱罐', '<svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7h6"/><path d="M5 13.5C5 10.4 8.1 8 12 8s7 2.4 7 5.5c0 1.6-.9 3.1-2.3 4.1V20h-2.4l-.4-1.2a9.3 9.3 0 01-3.8 0L9.7 20H7.3v-2.4C5.9 16.6 5 15.1 5 13.5z"/><circle cx="9.3" cy="12.7" r=".55" fill="#111111" stroke="none"/><path d="M18.8 12.3l1.7-.9"/></svg>');
+  const pomoApp = makeApp('pomo', '番茄钟', '<svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13.8" r="7.2"/><path d="M12 6.6V4.6"/><path d="M12 6.6C10.6 5.4 9 5.3 7.8 6.1"/><path d="M12 6.6c1.4-1.2 3-1.3 4.2-.5"/></svg>');
   // 默认放第三页；若用户已装修（desk-layout 存在）且布局未含本图标 → 放新的一页，避免破坏自定义布局。
   const pagesBox = document.getElementById('desktop-pages');
   const st0 = curStore();
   let layArr = null;
   try { if (st0) layArr = JSON.parse(st0.get('desk-layout') || 'null'); } catch (e) {}
   const hasLayout = Array.isArray(layArr);
-  const alreadyInLay = hasLayout && layArr.some(p => (p || []).some(w => w === 'app-tongpin' || w === 'app-shenshou' || w === 'app-water' || w === 'app-eat'));
+  const alreadyInLay = hasLayout && layArr.some(p => (p || []).some(w => w === 'app-tongpin' || w === 'app-shenshou' || w === 'app-water' || w === 'app-eat' || w === 'app-pomo' || w === 'app-piggy'));
   let placed = false;
   if (hasLayout && !alreadyInLay && pagesBox) {
     const curCnt = pagesBox.querySelectorAll('.page-slide').length;
@@ -1572,12 +1574,12 @@ if (ckRefresh) {
       const grid = document.createElement('div');
       grid.className = 'app-grid';
       grid.setAttribute('data-app', 'tp-page');
-      grid.appendChild(tpApp); grid.appendChild(ssApp); grid.appendChild(waterApp); grid.appendChild(eatApp);
+      grid.appendChild(tpApp); grid.appendChild(ssApp); grid.appendChild(waterApp); grid.appendChild(eatApp); grid.appendChild(pomoApp); grid.appendChild(piggyApp);
       slide.appendChild(grid);
       pagesBox.appendChild(slide);
       try {
         st0.set('desk-page-count', String(curCnt + 1));
-        layArr.push(['app-tongpin', 'app-shenshou', 'app-water', 'app-eat']);
+        layArr.push(['app-tongpin', 'app-shenshou', 'app-water', 'app-eat', 'app-pomo', 'app-piggy']);
         st0.set('desk-layout', JSON.stringify(layArr));
       } catch (e) {}
       try { if (window.deskRebuild) window.deskRebuild(); } catch (e) {}
@@ -1586,7 +1588,7 @@ if (ckRefresh) {
   }
   if (!placed) {
     const p3 = document.querySelector('.app-grid.p3-grid');
-    if (p3) { p3.appendChild(tpApp); p3.appendChild(ssApp); p3.appendChild(waterApp); p3.appendChild(eatApp); }
+    if (p3) { p3.appendChild(tpApp); p3.appendChild(ssApp); p3.appendChild(waterApp); p3.appendChild(eatApp); p3.appendChild(pomoApp); p3.appendChild(piggyApp); }
     // 重应用布局：personalize.js 的 applyDeskLayout 在本文件之前执行过一次，那时图标未注入被跳过；
     // 此处图标已在 DOM，重应用可把图标按 desk-layout 移到用户装修过的目标页（alreadyInLay 时生效）。
     try { if (window.applyDeskLayout) window.applyDeskLayout(); } catch (e) {}
@@ -1736,29 +1738,101 @@ if (ckRefresh) {
   const DEF_WATER_MSGS = ['该喝水了', '别忘了喝水', '喝口水吧', '你今天水喝够了吗'];
   const DEF_WATER_PRAISE = ['今天喝够啦', '真棒', '完成了', '好乖'];
   const DEF_WATER_ENCOURAGE = ['再来一杯', '继续', '嗯', '快了'];
+  const DEF_WATER_TA = ['TA 说：{m}', 'TA 让我提醒你：{m}', 'TA 念着：{m}', 'TA 托我带句话：{m}'];
   const waterPage = document.createElement('div');
   waterPage.className = 'page'; waterPage.id = 'page-water'; waterPage.hidden = true;
   waterPage.innerHTML =
     '<div class="chat-head"><span class="ch-back" id="water-back"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><span class="ch-name">喝水</span></div>' +
     '<div class="water-body">' +
-      '<div class="water-card glass"><div class="water-num" id="water-num">0</div><div class="water-unit">杯 / <span id="water-goal-text">8</span> 杯</div><div class="water-bar"><div class="water-fill" id="water-fill"></div></div></div>' +
+      '<div class="water-card glass">' +
+        '<div class="water-num" id="water-num">0</div>' +
+        '<div class="water-unit" id="water-unit">0 杯 · 0 ml / <span id="water-goal-text">8</span> 杯</div>' +
+        '<div class="water-bar"><div class="water-fill" id="water-fill"></div></div>' +
+        '<div class="water-cups" id="water-cups"></div>' +
+      '</div>' +
+      '<div class="water-week" id="water-week"></div>' +
+      '<div class="water-streak" id="water-streak"></div>' +
       '<div class="water-btns"><button class="water-minus" id="water-minus">−1</button><button class="water-plus" id="water-plus">+1</button></div>' +
       '<div class="water-msg glass" id="water-msg">点 +1 记一杯</div>' +
-      '<div class="water-manage"><button class="water-set-goal" id="water-set-goal">设目标</button><button class="water-add-msg" id="water-add-msg">+ 提醒字卡</button></div>' +
+      '<div class="water-actions">' +
+        '<button class="water-send" id="water-send">发到聊天</button>' +
+        '<button class="water-ta" id="water-ta">TA 提醒</button>' +
+      '</div>' +
+      '<div class="water-manage"><button class="water-set-goal" id="water-set-goal">设目标</button><button class="water-set-size" id="water-set-size">单次量</button><button class="water-add-msg" id="water-add-msg">+ 提醒字卡</button></div>' +
     '</div>';
   host.appendChild(waterPage);
 
-  function waterToday() { const s = curStore(); if (!s) return { date: '', count: 0 }; try { const o = JSON.parse(s.get('water-today') || '{}'); const d = new Date(); const today = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); if (o.date !== today) return { date: today, count: 0 }; return { date: today, count: o.count || 0 }; } catch (e) { return { date: '', count: 0 }; } }
-  function waterSave(count) { const s = curStore(); if (!s) return; const d = new Date(); const today = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); try { s.set('water-today', JSON.stringify({ date: today, count: count })); } catch (e) {} }
+  function waterDayStr(offset) { const d = new Date(); if (offset) d.setDate(d.getDate() + offset); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+  function waterToday() { const s = curStore(); if (!s) return { date: '', count: 0 }; try { const o = JSON.parse(s.get('water-today') || '{}'); const today = waterDayStr(0); if (o.date !== today) return { date: today, count: 0 }; return { date: today, count: o.count || 0 }; } catch (e) { return { date: '', count: 0 }; } }
+  function waterHistory() { const s = curStore(); if (!s) return {}; try { return JSON.parse(s.get('water-history') || '{}') || {}; } catch (e) { return {}; } }
+  function waterSave(count) {
+    const s = curStore(); if (!s) return;
+    const today = waterDayStr(0);
+    try { s.set('water-today', JSON.stringify({ date: today, count: count })); } catch (e) {}
+    try {
+      const h = waterHistory(); h[today] = count;
+      const keys = Object.keys(h).sort();
+      while (keys.length > 15) { delete h[keys.shift()]; }
+      s.set('water-history', JSON.stringify(h));
+    } catch (e) {}
+    try {
+      const g = waterGoal();
+      let st = null; try { st = JSON.parse(s.get('water-streak') || 'null'); } catch (e) {}
+      const y = waterDayStr(-1);
+      if (count >= g) {
+        if (st && st.date === y) st = { date: today, n: (st.n || 0) + 1 };
+        else if (st && st.date === today) { /* 今日已记 */ }
+        else st = { date: today, n: 1 };
+        s.set('water-streak', JSON.stringify(st));
+      } else if (st && st.date === today) {
+        s.set('water-streak', JSON.stringify({ date: y, n: Math.max(0, (st.n || 1) - 1) }));
+      }
+    } catch (e) {}
+  }
   function waterGoal() { const s = curStore(); try { return parseInt(s.get('water-goal') || '8', 10) || 8; } catch (e) { return 8; } }
   function waterSetGoal(n) { const s = curStore(); if (s) try { s.set('water-goal', '' + n); } catch (e) {} }
+  function waterSize() { const s = curStore(); try { return parseInt(s.get('water-size') || '250', 10) || 250; } catch (e) { return 250; } }
+  function waterSetSize(n) { const s = curStore(); if (s) try { s.set('water-size', '' + n); } catch (e) {} }
   function waterMsgs() { const s = curStore(); if (!s) return DEF_WATER_MSGS.slice(); try { const a = JSON.parse(s.get('water-msgs') || '[]'); return a.length ? a : DEF_WATER_MSGS.slice(); } catch (e) { return DEF_WATER_MSGS.slice(); } }
   function waterSaveMsgs(a) { const s = curStore(); if (s) try { s.set('water-msgs', JSON.stringify(a)); } catch (e) {} }
   function waterRender() {
-    const t = waterToday(); const g = waterGoal(); const el = document.getElementById('water-num'); if (el) el.textContent = t.count;
+    const t = waterToday(); const g = waterGoal(); const sz = waterSize();
+    const el = document.getElementById('water-num'); if (el) el.textContent = t.count;
     const gt = document.getElementById('water-goal-text'); if (gt) gt.textContent = g;
+    const unit = document.getElementById('water-unit'); if (unit) unit.textContent = t.count + ' 杯 · ' + (t.count * sz) + ' ml / ' + g + ' 杯 · ' + (g * sz) + ' ml';
     const fill = document.getElementById('water-fill'); if (fill) fill.style.width = Math.min(100, t.count / g * 100) + '%';
+    waterRenderCups(t.count, g);
+    waterRenderWeek();
+    waterRenderStreak();
     waterSave(t.count);
+  }
+  function waterRenderCups(count, goal) {
+    const box = document.getElementById('water-cups'); if (!box) return;
+    const max = Math.max(1, Math.min(goal, 8));
+    let html = '';
+    for (let i = 0; i < max; i++) html += '<i class="water-cup' + (i < count ? ' on' : '') + '"></i>';
+    box.innerHTML = html;
+  }
+  function waterRenderWeek() {
+    const box = document.getElementById('water-week'); if (!box) return;
+    const h = waterHistory(); const g = waterGoal(); const today = waterDayStr(0);
+    let html = '';
+    for (let i = 6; i >= 0; i--) {
+      const ds = waterDayStr(-i);
+      const c = h[ds] || 0;
+      const pct = g ? Math.min(100, Math.round(c / g * 100)) : 0;
+      const todayCls = ds === today ? ' today' : '';
+      const hitCls = c > 0 ? (c >= g ? ' hit' : ' ok') : ' miss';
+      html += '<div class="water-col' + todayCls + hitCls + '"><i style="height:' + pct + '%"></i><b>' + (c || '') + '</b><em>' + ds.slice(8) + '</em></div>';
+    }
+    box.innerHTML = '<div class="water-week-title">近 7 天</div><div class="water-week-bars">' + html + '</div>';
+  }
+  function waterStreak() { const s = curStore(); if (!s) return null; try { return JSON.parse(s.get('water-streak') || 'null'); } catch (e) { return null; } }
+  function waterRenderStreak() {
+    const el = document.getElementById('water-streak'); if (!el) return;
+    const st = waterStreak();
+    if (!st || st.date !== waterDayStr(0) || !st.n) { el.textContent = ''; return; }
+    el.textContent = '🔥 连续达标 ' + st.n + ' 天';
   }
   function waterShowMsg(txt) { const el = document.getElementById('water-msg'); if (el) { el.classList.add('fade'); setTimeout(() => { el.textContent = '\u201c' + txt + '\u201d'; el.classList.remove('fade'); }, 200); } }
   function waterMaybeRemind() {
@@ -1770,19 +1844,47 @@ if (ckRefresh) {
       const msgs = waterMsgs(); waterShowMsg(msgs[Math.floor(Math.random() * msgs.length)]);
     }
   }
+  // 暴露给 calendar.js：该日期是否有喝水记录（日历打点）
+  window.waterDayHas = function (ds) { try { const h = waterHistory(); return (h[ds] || 0) > 0; } catch (e) { return false; } };
   if (waterApp) waterApp.addEventListener('click', () => { if (editingNow()) return; openPage(waterPage); waterRender(); waterMaybeRemind(); });
   document.getElementById('water-back').addEventListener('click', () => backHome(waterPage));
   document.getElementById('water-plus').addEventListener('click', () => {
     if (editingNow()) return;
-    const t = waterToday(); const g = waterGoal(); const n = t.count + 1; waterSave(n); waterRender();
-    if (n >= g) { vibrate([60, 40, 60]); const p = DEF_WATER_PRAISE; waterShowMsg(p[Math.floor(Math.random() * p.length)]); }
+    const t = waterToday(); const g = waterGoal(); const n = t.count + 1;
+    const justDone = t.count < g && n >= g;
+    waterSave(n); waterRender();
+    if (justDone) {
+      vibrate([60, 40, 60]);
+      const card = document.querySelector('#page-water .water-card');
+      if (card) { card.classList.add('done'); setTimeout(() => card.classList.remove('done'), 900); }
+      const p = DEF_WATER_PRAISE; waterShowMsg(p[Math.floor(Math.random() * p.length)]);
+    }
     else if (Math.random() < 0.2) { const e = DEF_WATER_ENCOURAGE; waterShowMsg(e[Math.floor(Math.random() * e.length)]); }
   });
   document.getElementById('water-minus').addEventListener('click', () => {
     if (editingNow()) return;
     const t = waterToday(); if (t.count <= 0) return; waterSave(t.count - 1); waterRender();
   });
+  document.getElementById('water-send').addEventListener('click', () => {
+    if (editingNow()) return;
+    const t = waterToday(); const g = waterGoal(); const sz = waterSize();
+    const done = t.count >= g;
+    const base = '我今天喝了 ' + t.count + ' / ' + g + ' 杯（' + (t.count * sz) + 'ml）';
+    const tail = done ? '，' + DEF_WATER_PRAISE[Math.floor(Math.random() * DEF_WATER_PRAISE.length)] : '，还差 ' + (g - t.count) + ' 杯';
+    if (window.chatAddIn) { try { window.chatAddIn(base + tail); } catch (e) {} }
+    toast('已发送');
+  });
+  document.getElementById('water-ta').addEventListener('click', () => {
+    if (editingNow()) return;
+    const t = waterToday(); const g = waterGoal();
+    const m = waterMsgs()[Math.floor(Math.random() * waterMsgs().length)];
+    const fmt = DEF_WATER_TA[Math.floor(Math.random() * DEF_WATER_TA.length)].replace('{m}', m);
+    const tail = t.count < g ? '（还差 ' + (g - t.count) + ' 杯）' : '（今天喝够啦）';
+    waterShowMsg(fmt + tail);
+    if (window.chatAddIn) { try { window.chatAddIn(fmt + tail); } catch (e) {} }
+  });
   document.getElementById('water-set-goal').addEventListener('click', () => { if (!window.openModal) return; window.openModal('设目标（杯）', String(waterGoal()), (v) => { if (v) { const n = parseInt(v, 10); if (n > 0 && n < 100) { waterSetGoal(n); waterRender(); toast('已设置'); } } }); });
+  document.getElementById('water-set-size').addEventListener('click', () => { if (!window.openModal) return; window.openModal('单次容量（ml）', String(waterSize()), (v) => { if (v) { const n = parseInt(v, 10); if (n > 0 && n < 2000) { waterSetSize(n); waterRender(); toast('已设置'); } } }); });
   document.getElementById('water-add-msg').addEventListener('click', () => { if (!window.openModal) return; window.openModal('添加提醒字卡', '', (v) => { if (v) { const a = waterMsgs(); a.push(v); waterSaveMsgs(a); toast('已添加'); } }); });
 
   // ---- 吃什么页 ----
@@ -1816,10 +1918,718 @@ if (ckRefresh) {
   document.getElementById('eat-send').addEventListener('click', () => { if (editingNow()) return; if (eatLastPick && window.chatAddIn) { try { window.chatAddIn(eatLastPick); } catch (e) {} toast('已发送'); } });
   document.getElementById('eat-add').addEventListener('click', () => { if (!window.openModal) return; window.openModal('添加菜名', '', (v) => { if (v) { const a = eatDishes(); a.push(v); eatSaveDishes(a.filter(d => d)); toast('已添加'); } }); });
 
+  // ---- 番茄钟页 ----
+  // 专注/小憩/长休三档倒计时 + 圆环进度；完成专注记一个 🍅（今日/累计），可发到聊天。
+  // 计时基于 endAt 时间戳（不依赖 interval 精度），离开页面后台照走、熄屏回来时间正确。
+  const DEF_POMO_PRAISE = ['专注的你最棒了', '认真的人最好看', '加油，我在陪你', '嗯嗯，我安静陪着', '专注完抱一下'];
+  const POMO_MODES = { focus: { name: '专注', def: 25 }, short: { name: '小憩', def: 5 }, long: { name: '长休', def: 15 } };
+  const POMO_RING_C = 552.92; // 2π×88 圆环周长
+  const pomoPage = document.createElement('div');
+  pomoPage.className = 'page'; pomoPage.id = 'page-pomodoro'; pomoPage.hidden = true;
+  pomoPage.innerHTML =
+    '<div class="chat-head"><span class="ch-back" id="pomo-back"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><span class="ch-name">番茄钟</span></div>' +
+    '<div class="pomo-body">' +
+      '<div class="pomo-card glass">' +
+        '<div class="pomo-tabs"><button class="pomo-tab sel" data-pmode="focus">专注</button><button class="pomo-tab" data-pmode="short">小憩</button><button class="pomo-tab" data-pmode="long">长休</button></div>' +
+        '<div class="pomo-dial">' +
+          '<svg class="pomo-ring" viewBox="0 0 200 200"><circle class="pomo-ring-bg" cx="100" cy="100" r="88"/><circle class="pomo-ring-fill" id="pomo-ring" cx="100" cy="100" r="88"/></svg>' +
+          '<div class="pomo-center"><div class="pomo-time" id="pomo-time">25:00</div><div class="pomo-state" id="pomo-state">准备专注</div></div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="pomo-btns"><button class="pomo-start" id="pomo-start">开始</button><button class="pomo-reset" id="pomo-reset">重置</button></div>' +
+      '<button class="pmp-go" id="pomo-companion">🍅 陪伴模式</button>' +
+      '<div class="pomo-msg glass" id="pomo-msg">点开始，专注一会儿</div>' +
+      '<div class="pomo-stats" id="pomo-stats">今日 🍅 × 0 · 累计 0 个</div>' +
+      '<div class="pomo-manage"><button class="pomo-set-dur" id="pomo-set-dur">设时长</button><button class="pomo-add-msg" id="pomo-add-msg">+ 夸夸字卡</button><button class="tp-send-btn pomo-send-btn" id="pomo-send">发到聊天：开</button></div>' +
+    '</div>';
+  host.appendChild(pomoPage);
+
+  function pomoCfg() {
+    let c = null;
+    try { c = JSON.parse((curStore() && curStore().get('pomo-cfg')) || '{}'); } catch (e) {}
+    const ok = (n, d) => (n && n >= 1 && n <= 180 ? n : d);
+    return {
+      f: ok(c && c.f, POMO_MODES.focus.def),
+      s: ok(c && c.s, POMO_MODES.short.def),
+      l: ok(c && c.l, POMO_MODES.long.def)
+    };
+  }
+  function pomoSetCfg(c) { const s = curStore(); if (s) try { s.set('pomo-cfg', JSON.stringify(c)); } catch (e) {} }
+  function pomoModeMin(m) { const c = pomoCfg(); return m === 'focus' ? c.f : m === 'short' ? c.s : c.l; }
+  function pomoTodayKey() { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+  function pomoToday() {
+    const s = curStore();
+    try { const o = JSON.parse((s && s.get('pomo-today')) || '{}'); if (o.date === pomoTodayKey()) return { date: o.date, count: o.count || 0 }; } catch (e) {}
+    return { date: pomoTodayKey(), count: 0 };
+  }
+  function pomoSaveToday(t) { const s = curStore(); if (s) try { s.set('pomo-today', JSON.stringify(t)); } catch (e) {} }
+  function pomoTotal() { const s = curStore(); try { return parseInt((s && s.get('pomo-total')) || '0', 10) || 0; } catch (e) { return 0; } }
+  function pomoSaveTotal(n) { const s = curStore(); if (s) try { s.set('pomo-total', '' + n); } catch (e) {} }
+  function pomoCustomMsgs() { const s = curStore(); try { const a = JSON.parse((s && s.get('pomo-msgs')) || '[]'); if (Array.isArray(a)) return a; } catch (e) {} return []; }
+  function pomoSaveMsgs(a) { const s = curStore(); if (s) try { s.set('pomo-msgs', JSON.stringify(a)); } catch (e) {} }
+  function pomoPool() { return DEF_POMO_PRAISE.concat(pomoCustomMsgs()); }
+  function pomoSendOn() { const s = curStore(); try { return s.get('pomo-send-chat') !== '0'; } catch (e) { return true; } }
+
+  let pomoMode = 'focus';
+  let pomoRunning = false;
+  let pomoEndAt = 0;
+  let pomoRemainMs = 0;
+  let pomoTickTimer = null;
+
+  function pomoRender() {
+    const totalMs = pomoModeMin(pomoMode) * 60000;
+    const remain = Math.max(0, Math.min(totalMs, pomoRunning ? pomoEndAt - Date.now() : (pomoRemainMs > 0 ? pomoRemainMs : totalMs)));
+    const sec = Math.ceil(remain / 1000);
+    const te = document.getElementById('pomo-time');
+    if (te) te.textContent = String(Math.floor(sec / 60)).padStart(2, '0') + ':' + String(sec % 60).padStart(2, '0');
+    const ring = document.getElementById('pomo-ring');
+    if (ring) ring.style.strokeDashoffset = String(POMO_RING_C * (1 - remain / totalMs));
+    const st = document.getElementById('pomo-state');
+    if (st) st.textContent = pomoRunning ? (pomoMode === 'focus' ? '专注中…' : '休息中…') : (remain < totalMs ? '已暂停' : '准备' + POMO_MODES[pomoMode].name);
+    const sb = document.getElementById('pomo-start');
+    if (sb) sb.textContent = pomoRunning ? '暂停' : (remain < totalMs ? '继续' : '开始');
+    document.querySelectorAll('#page-pomodoro .pomo-tab').forEach(t2 => t2.classList.toggle('sel', t2.dataset.pmode === pomoMode));
+    const t = pomoToday();
+    const stats = document.getElementById('pomo-stats');
+    if (stats) stats.textContent = '今日 🍅 × ' + t.count + ' · 累计 ' + pomoTotal() + ' 个';
+    pmpRefreshGoBtn();
+    if (pmpActive()) pmpRefreshBar();
+  }
+  function pomoStopTick() { clearInterval(pomoTickTimer); pomoTickTimer = null; }
+  function pomoStartTick() {
+    pomoStopTick();
+    pomoTickTimer = setInterval(() => {
+      if (!pomoRunning) return;
+      if (Date.now() >= pomoEndAt) { pomoComplete(); return; }
+      pomoRender();
+    }, 250);
+  }
+  function pomoShowMsg(txt) { const el = document.getElementById('pomo-msg'); if (el) { el.classList.add('fade'); setTimeout(() => { el.textContent = '\u201c' + txt + '\u201d'; el.classList.remove('fade'); }, 200); } }
+  function pomoIdleAt(m) { if (pmpActive()) pmpDetach(); pomoRunning = false; pomoRemainMs = 0; pomoEndAt = 0; pomoStopTick(); pomoMode = m; pomoRender(); }
+  function pomoComplete() {
+    vibrate([120, 60, 120]);
+    if (pomoMode === 'focus') {
+      const mins = pomoModeMin('focus');
+      const t = pomoToday(); t.count++; pomoSaveToday(t);
+      pomoSaveTotal(pomoTotal() + 1);
+      const pool = pomoPool();
+      const praise = pool[Math.floor(Math.random() * pool.length)];
+      const brk = t.count % 4 === 0 ? 'long' : 'short';
+      const wasPmp = pmpActive();
+      if (wasPmp) {
+        try { window.chatAddIn(PMP_DONE[Math.floor(Math.random() * PMP_DONE.length)], { initiative: true }); } catch (e) {}
+        pmpFlash('\u2705 完成 +1 🍅');
+        pmpDetach();
+      }
+      pomoIdleAt(brk);
+      pomoShowMsg(POMO_MODES[brk].name + ' ' + pomoModeMin(brk) + ' 分钟 · ' + praise);
+      if (!wasPmp && pomoSendOn() && window.chatAddIn) { try { window.chatAddIn('🍅 完成了 ' + mins + ' 分钟专注，去休息一会儿'); } catch (e) {} }
+    } else {
+      pomoIdleAt('focus');
+      pomoShowMsg('休息好了，来下一个番茄吧');
+    }
+  }
+  if (pomoApp) pomoApp.addEventListener('click', () => { if (editingNow()) return; openPage(pomoPage); pomoRender(); });
+  document.getElementById('pomo-back').addEventListener('click', () => backHome(pomoPage));
+  document.getElementById('pomo-start').addEventListener('click', () => {
+    if (editingNow()) return;
+    if (pomoRunning) {
+      pomoRemainMs = Math.max(0, pomoEndAt - Date.now());
+      pomoRunning = false; pomoStopTick(); pomoRender(); pmpSyncFromEngine();
+      return;
+    }
+    const totalMs = pomoModeMin(pomoMode) * 60000;
+    const remain = pomoRemainMs > 0 && pomoRemainMs < totalMs ? pomoRemainMs : totalMs;
+    pomoEndAt = Date.now() + remain;
+    pomoRunning = true; pomoStartTick(); pomoRender(); pmpSyncFromEngine();
+  });
+  document.getElementById('pomo-reset').addEventListener('click', () => { pomoIdleAt(pomoMode); });
+  pomoPage.querySelectorAll('.pomo-tab').forEach(t2 => t2.addEventListener('click', () => {
+    if (t2.dataset.pmode === pomoMode) return;
+    pomoIdleAt(t2.dataset.pmode);
+  }));
+  document.getElementById('pomo-set-dur').addEventListener('click', () => {
+    if (!window.openModal) return;
+    const c = pomoCfg();
+    window.openModal('设时长（分钟）', c.f + ',' + c.s + ',' + c.l, (v) => {
+      if (!v) return;
+      const p = String(v).split(/[,,\s]+/).map(x => parseInt(x, 10));
+      if (p.length < 3 || p.some(n => !(n >= 1 && n <= 180))) { toast('格式：25,5,15（各 1-180）'); return; }
+      pomoSetCfg({ f: p[0], s: p[1], l: p[2] });
+      pomoIdleAt(pomoMode);
+      toast('已设置');
+    }, { placeholder: '专注,小憩,长休 如 25,5,15' });
+  });
+  document.getElementById('pomo-add-msg').addEventListener('click', () => {
+    if (!window.openModal) return;
+    window.openModal('添加夸夸字卡', '', (v) => { if (v) { const a = pomoCustomMsgs(); a.push(v); pomoSaveMsgs(a); toast('已添加'); } });
+  });
+  const pomoSendBtn = document.getElementById('pomo-send');
+  if (pomoSendBtn) {
+    pomoSendBtn.textContent = '发到聊天：' + (pomoSendOn() ? '开' : '关');
+    pomoSendBtn.addEventListener('click', () => { const s = curStore(); const on = !pomoSendOn(); if (s) try { s.set('pomo-send-chat', on ? '1' : '0'); } catch (e) {} pomoSendBtn.textContent = '发到聊天：' + (on ? '开' : '关'); });
+  }
+
+  // ---- 存钱罐页 ----
+  // 世界观：两个人一起攒的小金库（所有桌面/联系人共用一份，同 period/fish-log 全局先例）；
+  // TA 是灵体，久未打开时有概率「塞给你」一枚硬币——纯彩蛋提示不入账，由你决定要不要存；
+  // 存钱/取钱时用碎碎念字卡回应，攒够目标会庆祝。
+  const DEF_PIGGY_IN = ['叮～又攒下一点啦', '小猪替你收好了', '离目标更近了哦', '嗯嗯，我看着呢', '慢慢攒，不着急'];
+  const DEF_PIGGY_OUT = ['该花的花，别太省', '买什么了呀？', '咦，少了一点点', '没关系，再攒回来'];
+  const DEF_PIGGY_FULL = ['我们存够啦！！', '目标达成，真棒', '攒够了！想好怎么花了吗'];
+  // 里程碑（存到目标的 25/50/75% 时各庆祝一次，标记存在心愿对象上防重复）
+  const PIGGY_MS = [{ p: 25, t: '已经攒到四分之一啦' }, { p: 50, t: '过半啦，好厉害' }, { p: 75, t: '就差一点点了' }];
+  // 取款后 TA 的关心追问（可回复一句）
+  const PIGGY_CARE = ['花在哪了呀？', '买什么了？跟我说说嘛', '没乱花钱吧？', '钱去哪啦，说来听听'];
+  const PIGGY_TA_COINS = [0.52, 5.2, 5.21, 6.66, 8.88, 9.99, 13.14];
+  const PIGGY_TA_NOTES = ['偷偷塞了一点', '给你也存了一份', '嘿嘿，别问哪来的'];
+  const piggyPage = document.createElement('div');
+  piggyPage.className = 'page'; piggyPage.id = 'page-piggy'; piggyPage.hidden = true;
+  piggyPage.innerHTML =
+    '<div class="chat-head"><span class="ch-back" id="piggy-back"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><span class="ch-name">存钱罐</span></div>' +
+    '<div class="piggy-body">' +
+      '<div class="piggy-hero glass"><div class="piggy-goal-name" id="piggy-goal-name">先设个小目标吧</div><div class="piggy-bal" id="piggy-bal"><i>¥</i>0.00</div><div class="piggy-bar"><div class="piggy-fill" id="piggy-fill"></div></div><div class="piggy-sub" id="piggy-sub">每一笔都算数</div></div>' +
+      '<div class="piggy-btns"><button class="piggy-out" id="piggy-out">取一笔</button><button class="piggy-in" id="piggy-in">存一笔</button></div>' +
+      '<div class="piggy-msg glass" id="piggy-msg">小猪替你保管着呢</div>' +
+      '<div class="piggy-share glass" id="piggy-share" hidden><div class="piggy-reply-q" id="piggy-share-title">谁来监督这个心愿？（可多选）</div><div class="piggy-share-chips" id="piggy-share-chips"></div><div class="piggy-reply-row"><button class="piggy-reply-send" id="piggy-share-ok">保存心愿</button><button class="piggy-reply-skip" id="piggy-share-cancel">取消</button></div></div>' +
+      '<div class="piggy-reply glass" id="piggy-reply" hidden><div class="piggy-reply-q" id="piggy-reply-q"></div><div class="piggy-reply-row"><input class="piggy-reply-in" id="piggy-reply-in" type="text" maxlength="40" placeholder="回一句给TA（可不填）"><button class="piggy-reply-send" id="piggy-reply-send">发送</button><button class="piggy-reply-skip" id="piggy-reply-skip">不用啦</button></div></div>' +
+      '<div class="piggy-goals glass" id="piggy-goals"></div>' +
+      '<div class="piggy-hist glass" id="piggy-hist"></div>' +
+      '<div class="piggy-manage"><button class="piggy-set-goal" id="piggy-set-goal">＋ 新小心愿</button><button class="piggy-add-msg" id="piggy-add-msg">+ TA的碎碎念</button></div>' +
+    '</div>';
+  host.appendChild(piggyPage);
+
+  function piggyEsc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  function piggyFmt(n) { try { return n.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); } catch (e) { return (Math.round(n * 100) / 100).toFixed(2); } }
+  // 输入容错：只留数字和点，两位小数，0 < n ≤ 9,999,999
+  function piggyAmt(v) {
+    const s = String(v == null ? '' : v).trim().replace(/[^\d.]/g, '');
+    const n = Math.round(parseFloat(s) * 100) / 100;
+    return (n > 0 && n <= 9999999) ? n : 0;
+  }
+  // 全局 store：根命名空间 xy-home-v2:*（所有联系人桌面读写同一份数据；xyStore.set 自动双写 IDB）
+  function piggyStore() { try { return window.xyStore('xy-home-v2'); } catch (e) { return null; } }
+  function piggyLog() { const s = piggyStore(); try { const a = JSON.parse(s.get('piggy-log') || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
+  function piggySaveLog(a) { const s = piggyStore(); if (s) try { s.set('piggy-log', JSON.stringify(a)); } catch (e) {} }
+  function piggyBal(a) { let n = 0; (a || piggyLog()).forEach(x => { n += (x && x.type === 'out' ? -1 : 1) * ((x && x.amt) || 0); }); return Math.round(n * 100) / 100; }
+  // 心愿单（多目标）：piggy-goals = [{n,a,ms:[已庆祝里程碑],done}]；余额全罐共享，
+  // 每个心愿各自算进度。老单目标（piggy-goal-name/am）首次读取时自动迁移。
+  function piggyGoals() {
+    const s = piggyStore(); let a = null;
+    try { a = JSON.parse(s.get('piggy-goals') || 'null'); } catch (e) {}
+    if (!Array.isArray(a)) {
+      try {
+        const gn = s.get('piggy-goal-name'); const ga = parseFloat(s.get('piggy-goal-amt')) || 0;
+        a = (gn && ga > 0) ? [{ n: gn, a: ga }] : [];
+      } catch (e) { a = []; }
+    }
+    return a.filter(function (g) { return g && g.n && (+g.a) > 0; }).map(function (g) {
+      return {
+        n: String(g.n), a: Math.round((+g.a) * 100) / 100,
+        ms: Array.isArray(g.ms) ? g.ms.slice() : [], done: !!g.done,
+        // 监督人/可见范围：[] 或缺省=所有桌面可见；['*']=全部；否则为联系人 id 列表
+        by: Array.isArray(g.by) ? g.by.filter(function (x) { return x && typeof x === 'string'; }) : []
+      };
+    });
+  }
+  function piggySaveGoals(a) { const s = piggyStore(); if (s) try { s.set('piggy-goals', JSON.stringify(a)); } catch (e) {} }
+  function piggyCur() { const s = piggyStore(); try { return parseInt(s.get('piggy-goal-cur') || '0', 10) || 0; } catch (e) { return 0; } }
+  function piggySetCur(i) { const s = piggyStore(); if (s) try { s.set('piggy-goal-cur', '' + i); } catch (e) {} }
+  // 心愿是否在当前桌面可见（全局金库，但心愿可指定只给某些联系人看）
+  function piggyGoalVisible(g) {
+    if (!g.by || !g.by.length) return true;
+    const cid = window.__activeCid || 'default';
+    return g.by.indexOf('*') >= 0 || g.by.indexOf(cid) >= 0;
+  }
+  function piggyContactName(cid) {
+    let l = [];
+    try { l = window.getContacts ? window.getContacts() : []; } catch (e) {}
+    for (let k = 0; k < l.length; k++) if (l[k] && l[k].id === cid) return l[k].name || cid;
+    return cid;
+  }
+  // 当前桌面视角下的激活心愿：cur 游标指向全量数组下标，不可见时回退到第一个可见
+  function piggyActive() {
+    const all = piggyGoals();
+    const vis = [];
+    all.forEach(function (g, i) { if (piggyGoalVisible(g)) vis.push({ g: g, i: i }); });
+    if (!vis.length) return { g: null, i: -1, all: all, vis: vis };
+    const cur = piggyCur();
+    let hit = null;
+    for (let k = 0; k < vis.length; k++) if (vis[k].i === cur) { hit = vis[k]; break; }
+    if (!hit) hit = vis[0];
+    return { g: hit.g, i: hit.i, all: all, vis: vis };
+  }
+  function piggyUserCards() { const s = piggyStore(); try { const a = JSON.parse(s.get('piggy-cards') || '[]'); return Array.isArray(a) ? a.filter(x => x) : []; } catch (e) { return []; } }
+  function piggySaveUserCards(a) { const s = piggyStore(); if (s) try { s.set('piggy-cards', JSON.stringify(a)); } catch (e) {} }
+  function piggyPick(a) { return a[Math.floor(Math.random() * a.length)]; }
+  function piggyShowMsg(txt) { const el = document.getElementById('piggy-msg'); if (el) { el.classList.add('fade'); setTimeout(() => { el.textContent = '\u201c' + txt + '\u201d'; el.classList.remove('fade'); }, 200); } }
+  function piggyInPool() { const u = piggyUserCards(); return u.length ? u.concat(DEF_PIGGY_IN) : DEF_PIGGY_IN.slice(); }
+  let piggyHistAll = false; // 记录展开状态（false=最近6条，true=全部+按月分组）
+  function piggyRowHtml(x) {
+    const d = new Date((x && x.t) || Date.now());
+    const ds = String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    const out = x && x.type === 'out';
+    return '<div class="piggy-row"><span class="pr-amt ' + (out ? 'out' : 'in') + '">' + (out ? '\u2212' : '+') + '¥' + piggyFmt((x && x.amt) || 0) + '</span><span class="pr-note">' + piggyEsc((x && x.note) || (out ? '取出' : '存入')) + '</span><span class="pr-date">' + ds + '</span></div>';
+  }
+  function piggyRender() {
+    const log = piggyLog(); const bal = piggyBal(log);
+    const be = document.getElementById('piggy-bal'); if (be) be.innerHTML = '<i>¥</i>' + piggyFmt(bal < 0 ? 0 : bal);
+    const act = piggyActive(); const g = act.g;
+    const ne = document.getElementById('piggy-goal-name');
+    const fill = document.getElementById('piggy-fill');
+    const sub = document.getElementById('piggy-sub');
+    if (g) {
+      const pct = Math.min(100, Math.max(0, Math.round(bal / g.a * 100)));
+      if (ne) ne.textContent = (g.done ? '已达成 · ' : '小目标 · ') + g.n;
+      if (fill) fill.style.width = pct + '%';
+      if (sub) sub.textContent = g.done ? ('已存满 ' + piggyFmt(g.a) + '，换个小目标继续吧') : ('已存 ' + piggyFmt(Math.max(0, bal)) + ' / ' + piggyFmt(g.a) + '（' + pct + '%）');
+    } else {
+      if (ne) ne.textContent = '先设个小目标吧';
+      if (fill) fill.style.width = '0';
+      if (sub) sub.textContent = log.length ? ('已经攒了 ' + log.length + ' 笔啦') : '每一笔都算数';
+    }
+    // 心愿单（仅显示当前桌面可见的心愿）
+    const glEl = document.getElementById('piggy-goals');
+    if (glEl) {
+      let h = '<div class="piggy-hist-top"><span class="piggy-hist-title">心愿单</span><button class="piggy-more" id="piggy-goal-add">＋ 添加</button></div>';
+      if (!act.all.length) h += '<div class="piggy-empty">还没有小心愿，点右上角添加</div>';
+      else if (!act.vis.length) h += '<div class="piggy-empty">这个桌面没有可见的心愿</div>';
+      else act.vis.forEach(function (ent) {
+        const gg = ent.g;
+        const p = Math.min(100, Math.max(0, Math.round(bal / gg.a * 100)));
+        const byTxt = (!gg.by || !gg.by.length) ? '监督：所有桌面' : '监督：' + piggyEsc(gg.by.map(piggyContactName).join('、'));
+        h += '<div class="pg-row' + (ent.i === act.i ? ' cur' : '') + '" data-pick="' + ent.i + '">' +
+          '<span class="pg-name' + (gg.done ? ' done' : '') + '"><span class="pg-nm">' + piggyEsc(gg.n) + (gg.done ? ' ✓' : '') + '</span><span class="pg-by">' + byTxt + '</span></span>' +
+          '<span class="pg-bar"><i style="width:' + p + '%"></i></span><span class="pg-pct">' + p + '%</span>' +
+          '<button class="pg-del" data-del="' + ent.i + '">✕</button></div>';
+      });
+      glEl.innerHTML = h;
+    }
+    // 记录（收起=最近6条倒序；全部=正序+按月分组小计）
+    const hist = document.getElementById('piggy-hist');
+    if (hist) {
+      let body;
+      if (!log.length) body = '<div class="piggy-empty">还没存过，投第一枚硬币吧</div>';
+      else if (!piggyHistAll) {
+        body = log.slice(-6).reverse().map(piggyRowHtml).join('');
+      } else {
+        const asc = log.slice().sort(function (a, b) { return (a && a.t || 0) - (b && b.t || 0); });
+        const parts = []; let curKey = ''; let sum = 0;
+        asc.forEach(function (x) {
+          const d = new Date((x && x.t) || Date.now());
+          const key = d.getFullYear() + '-' + d.getMonth();
+          if (key !== curKey) {
+            if (curKey !== '') parts.push('<div class="pr-sub">本月小结 · ' + (sum >= 0 ? '+' : '\u2212') + '¥' + piggyFmt(Math.abs(sum)) + '</div>');
+            curKey = key; sum = 0;
+            parts.push('<div class="pr-month">' + d.getFullYear() + ' 年 ' + (d.getMonth() + 1) + ' 月</div>');
+          }
+          sum += ((x && x.type === 'out' ? -1 : 1) * ((x && x.amt) || 0));
+          parts.push(piggyRowHtml(x));
+        });
+        parts.push('<div class="pr-sub">本月小结 · ' + (sum >= 0 ? '+' : '\u2212') + '¥' + piggyFmt(Math.abs(sum)) + '</div>');
+        body = parts.join('');
+      }
+      hist.innerHTML = '<div class="piggy-hist-top"><span class="piggy-hist-title">存钱记录</span>' +
+        (log.length ? '<button class="piggy-more" id="piggy-more">' + (piggyHistAll ? '只看最近' : '全部记录') + '</button>' : '') +
+        '</div>' + body;
+    }
+  }
+  function piggyAdd(type, amt, note) {
+    const log = piggyLog(); log.push({ t: Date.now(), type: type, amt: amt, note: note || '' });
+    piggySaveLog(log); piggyRender();
+    const bal = piggyBal(log);
+    const act = piggyActive(); const g = act.g;
+    if (type !== 'out') {
+      if (g && !g.done) {
+        // 攒够当前心愿：标记达成 → 庆祝 → 自动切到下一个未完成的可见心愿
+        if (bal >= g.a) {
+          const gs = act.all;
+          [25, 50, 75].forEach(function (m) { if (gs[act.i].ms.indexOf(m) < 0) gs[act.i].ms.push(m); });
+          gs[act.i].done = true;
+          piggySaveGoals(gs);
+          vibrate([60, 40, 60]);
+          piggyShowMsg(piggyPick(DEF_PIGGY_FULL));
+          let nxt = -1;
+          for (let k2 = 0; k2 < act.vis.length; k2++) { if (act.vis[k2].i !== act.i && !act.vis[k2].g.done) { nxt = act.vis[k2].i; break; } }
+          if (nxt >= 0) piggySetCur(nxt);
+          piggyRender();
+          return;
+        }
+        // 里程碑 25/50/75%（各庆祝一次，取最高新达成的档）
+        for (let k = PIGGY_MS.length - 1; k >= 0; k--) {
+          const m = PIGGY_MS[k];
+          if (bal >= g.a * m.p / 100 && g.ms.indexOf(m.p) < 0) {
+            const gs = act.all; gs[act.i].ms.push(m.p); piggySaveGoals(gs);
+            vibrate([40, 30, 40]);
+            piggyShowMsg(m.t);
+            return;
+          }
+        }
+      }
+      piggyShowMsg(piggyPick(piggyInPool()));
+    } else {
+      piggyShowMsg(piggyPick(DEF_PIGGY_OUT));
+      piggyAskCare();
+    }
+  }
+  // 取款后 TA 关心追问：内联回复框（发送=以我的身份发到聊天；也可忽略）
+  function piggyAskCare() {
+    const box = document.getElementById('piggy-reply');
+    if (!box) return;
+    const q = document.getElementById('piggy-reply-q');
+    if (q) q.textContent = 'TA：' + PIGGY_CARE[Math.floor(Math.random() * PIGGY_CARE.length)];
+    const inp = document.getElementById('piggy-reply-in'); if (inp) inp.value = '';
+    box.hidden = false;
+  }
+  function piggyCloseCare() { const b = document.getElementById('piggy-reply'); if (b) b.hidden = true; }
+  // 打开时 TA 有概率「塞给你」一枚硬币：越久没来概率越高。只是心意彩蛋——
+  // 不写进真实存钱账目，只提示你替 TA 存进去，由你自己决定。
+  function piggyMaybeTa() {
+    const s = piggyStore(); if (!s) return;
+    let last = 0; try { last = parseInt(s.get('piggy-last-visit') || '0', 10) || 0; } catch (e) {}
+    const gap = Date.now() - last;
+    try { s.set('piggy-last-visit', '' + Date.now()); } catch (e) {}
+    const prob = gap > 12 * 3600000 ? 0.45 : (gap > 3600000 ? 0.25 : 0.12);
+    if (Math.random() >= prob) return;
+    const amt = PIGGY_TA_COINS[Math.floor(Math.random() * PIGGY_TA_COINS.length)];
+    const note = PIGGY_TA_NOTES[Math.floor(Math.random() * PIGGY_TA_NOTES.length)];
+    vibrate([20, 60, 20]);
+    setTimeout(() => { piggyShowMsg(note + ' ¥' + piggyFmt(amt) + ' · 替TA存进去？'); }, 400);
+  }
+  if (piggyApp) piggyApp.addEventListener('click', () => { if (editingNow()) return; openPage(piggyPage); piggyMaybeTa(); piggyRender(); });
+  document.getElementById('piggy-back').addEventListener('click', () => backHome(piggyPage));
+  document.getElementById('piggy-in').addEventListener('click', () => {
+    if (editingNow() || !window.openModal) return;
+    window.openModal('存入金额（元）', '', (v) => {
+      const amt = piggyAmt(v);
+      if (!amt) { if (String(v || '').trim()) toast('金额没看懂，再试试'); return; }
+      // 注意：openModal 点确定后统一走 close()，回调里同步再开会立刻被关掉——延迟一帧
+      setTimeout(() => {
+        window.openModal('跟TA说一句（可不填）', '', (v2) => { piggyAdd('in', amt, String(v2 || '').trim()); }, { maxlength: 40 });
+      }, 60);
+    }, { maxlength: 10 });
+  });
+  document.getElementById('piggy-out').addEventListener('click', () => {
+    if (editingNow() || !window.openModal) return;
+    const bal = piggyBal();
+    if (bal <= 0) { toast('罐子还是空的哦'); return; }
+    window.openModal('取出金额（元）· 可用 ' + piggyFmt(bal), '', (v) => {
+      const amt = piggyAmt(v);
+      if (!amt) { if (String(v || '').trim()) toast('金额没看懂，再试试'); return; }
+      if (amt > piggyBal()) { toast('罐子里没有这么多'); return; }
+      setTimeout(() => {
+        window.openModal('用在哪啦（可不填）', '', (v2) => { piggyAdd('out', amt, String(v2 || '').trim()); }, { maxlength: 40 });
+      }, 60);
+    }, { maxlength: 10 });
+  });
+  document.getElementById('piggy-set-goal').addEventListener('click', () => {
+    if (editingNow() || !window.openModal) return;
+    window.openModal('小心愿（如：一起去看海）', '', (v1) => {
+      const name = String(v1 || '').trim();
+      if (!name) { toast('先写个心愿吧'); return; }
+      // openModal 点确定后统一 close()——延迟一帧再开金额弹窗
+      setTimeout(() => {
+        window.openModal('目标金额（元）', '', (v2) => {
+          const amt = piggyAmt(v2);
+          if (!amt) { toast('金额没看懂，再试试'); return; }
+          piggyOpenShare(name, amt);
+        }, { maxlength: 9 });
+      }, 60);
+    }, { maxlength: 16 });
+  });
+  // 监督人选择：全局金库人人可见余额，但每个心愿可指定哪些联系人（桌面）可见/监督。
+  // ['*']=全部；默认勾选当前桌面。多选 chips，点「全部桌面」互斥。
+  let piggyDraft = null;
+  function piggyOpenShare(n, a) {
+    piggyDraft = { n: n, a: a };
+    const chips = document.getElementById('piggy-share-chips');
+    const box = document.getElementById('piggy-share');
+    if (!chips || !box) { piggyCommitShare([]); return; }
+    let list = [];
+    try { list = (window.getContacts ? window.getContacts() : []).map(function (c) { return { id: c.id, name: c.name }; }); } catch (e) {}
+    if (!list.some(function (c) { return c.id === 'default'; })) list.unshift({ id: 'default', name: '默认' });
+    const me = window.__activeCid || 'default';
+    let h = '<span class="pg-chip" data-cid="*">全部桌面</span>';
+    list.forEach(function (c) {
+      h += '<span class="pg-chip' + (c.id === me ? ' on' : '') + '" data-cid="' + piggyEsc(c.id) + '">' + piggyEsc(c.name || c.id) + '</span>';
+    });
+    chips.innerHTML = h;
+    box.hidden = false;
+  }
+  function piggyCommitShare(sel) {
+    if (!piggyDraft) return;
+    if (sel.indexOf('*') >= 0) sel = [];
+    const gs = piggyGoals();
+    gs.push({ n: piggyDraft.n, a: piggyDraft.a, ms: [], done: false, by: sel });
+    piggySaveGoals(gs); piggySetCur(gs.length - 1);
+    piggyDraft = null;
+    piggyRender(); toast('已添加');
+  }
+  document.getElementById('piggy-share').addEventListener('click', (e) => {
+    const t = e.target;
+    if (!t) return;
+    if (t.classList && t.classList.contains('pg-chip')) {
+      if (t.getAttribute('data-cid') === '*') {
+        document.querySelectorAll('#piggy-share-chips .pg-chip').forEach(c => c.classList.toggle('on', c === t));
+      } else {
+        t.classList.toggle('on');
+        if (t.classList.contains('on')) {
+          const star = document.querySelector('#piggy-share-chips .pg-chip[data-cid="*"]');
+          if (star) star.classList.remove('on');
+        }
+      }
+      return;
+    }
+    if (t.id === 'piggy-share-ok') {
+      const box = document.getElementById('piggy-share');
+      if (!piggyDraft) { if (box) box.hidden = true; return; }
+      const sel = [];
+      document.querySelectorAll('#piggy-share-chips .pg-chip.on').forEach(c => sel.push(c.getAttribute('data-cid')));
+      if (!sel.length) { toast('至少选一个监督人'); return; }
+      if (box) box.hidden = true;
+      piggyCommitShare(sel);
+      return;
+    }
+    if (t.id === 'piggy-share-cancel') { piggyDraft = null; const b = document.getElementById('piggy-share'); if (b) b.hidden = true; }
+  });
+  document.getElementById('piggy-add-msg').addEventListener('click', () => {
+    if (editingNow() || !window.openModal) return;
+    window.openModal('添加TA的碎碎念（存钱时说）', '', (v) => {
+      const t = String(v || '').trim(); if (!t) return;
+      const a = piggyUserCards(); a.push(t); piggySaveUserCards(a); toast('已添加');
+    }, { maxlength: 30 });
+  });
+  // 心愿单点击委托：＋添加 / 点行切换当前心愿 / ✕ 删除（确认弹窗）
+  document.getElementById('piggy-goals').addEventListener('click', (e) => {
+    const t = e.target;
+    if (!t) return;
+    if (t.id === 'piggy-goal-add') { piggyOpenAddGoal(); return; }
+    if (t.classList && t.classList.contains('pg-del')) {
+      const idx = parseInt(t.getAttribute('data-del'), 10);
+      const gs = piggyGoals();
+      if (!(idx >= 0 && idx < gs.length)) return;
+      if (!window.openModal) return;
+      window.openModal('删除心愿「' + gs[idx].n + '」？', '', () => {
+        const gs2 = piggyGoals(); gs2.splice(idx, 1);
+        let cur = piggyCur(); if (cur >= gs2.length) cur = 0;
+        piggySaveGoals(gs2); piggySetCur(cur);
+        piggyRender(); toast('已删除');
+      }, { noInput: true });
+      return;
+    }
+    const row = t.closest ? t.closest('[data-pick]') : null;
+    if (row) {
+      if (editingNow()) return;
+      piggySetCur(parseInt(row.getAttribute('data-pick'), 10));
+      piggyRender();
+    }
+  });
+  function piggyOpenAddGoal() {
+    if (editingNow() || !window.openModal) return;
+    document.getElementById('piggy-set-goal').click();
+  }
+  // 记录展开/收起
+  document.getElementById('piggy-hist').addEventListener('click', (e) => {
+    if (e.target && e.target.id === 'piggy-more') { piggyHistAll = !piggyHistAll; piggyRender(); }
+  });
+  // 取款后回复 TA
+  document.getElementById('piggy-reply-send').addEventListener('click', () => {
+    if (editingNow()) return;
+    const inp = document.getElementById('piggy-reply-in');
+    const t = inp ? String(inp.value || '').trim() : '';
+    if (t && window.chatAddIn) { try { window.chatAddIn(t); } catch (e) {} toast('已回复'); }
+    piggyCloseCare();
+  });
+  document.getElementById('piggy-reply-skip').addEventListener('click', piggyCloseCare);
+  document.getElementById('piggy-reply-in').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) { e.preventDefault(); document.getElementById('piggy-reply-send').click(); }
+  });
+
+  // ---- 番茄钟 · 陪伴模式 ----
+  // 聊天页顶部倒计时条：专注期间 TA 勿扰（chat.js 主动发送链路遇 __pomoCompanionQuiet 跳过），
+  // 每 5~8 分钟最多 2 次极简鼓励；会话持久化（endAt 时间戳，刷新/重开继续）；切联系人自动退出。
+  const PMP_GREET = ['好，我陪着你', '去吧，我在这等你', '专注吧，我不吵你', '嗯，一起加油'];
+  const PMP_ENC = ['在呢', '继续哦', '摸摸头', '嗯嗯，陪你', '快了快了', '我在看你专注'];
+  const PMP_DONE = ['🍅 完成一个！为你骄傲', '🍅 太棒了，去休息一下吧', '🍅 收工！今天也超认真'];
+  let pmpRec = null;
+  try { pmpRec = JSON.parse((curStore() && curStore().get('pomo-companion')) || 'null'); } catch (e) { pmpRec = null; }
+  if (!pmpRec || typeof pmpRec !== 'object') pmpRec = null;
+  const chatPageEl = document.getElementById('page-chat');
+  const pmpBar = document.createElement('div');
+  pmpBar.className = 'pmp-bar'; pmpBar.id = 'pmp-bar'; pmpBar.hidden = true;
+  pmpBar.innerHTML =
+    '<span class="pmp-bar-time" id="pmp-bar-time">25:00</span>' +
+    '<span class="pmp-bar-label" id="pmp-bar-label">专注中</span>' +
+    '<button class="pmp-bar-toggle" id="pmp-bar-toggle">暂停</button>' +
+    '<button class="pmp-bar-more" id="pmp-bar-more">⋯</button>' +
+    '<div class="pmp-progress"><div class="pmp-progress-fill" id="pmp-fill"></div></div>';
+  const pmpMenu = document.createElement('div');
+  pmpMenu.className = 'pmp-menu'; pmpMenu.id = 'pmp-menu'; pmpMenu.hidden = true;
+  pmpMenu.innerHTML =
+    '<button data-pmp="page" type="button">回番茄钟页</button>' +
+    '<button data-pmp="quit" type="button">提前结束</button>';
+  if (chatPageEl) {
+    const anchor = document.getElementById('chat-body');
+    if (anchor) { chatPageEl.insertBefore(pmpMenu, anchor); chatPageEl.insertBefore(pmpBar, pmpMenu); }
+    else chatPageEl.appendChild(pmpBar);
+  }
+  function pmpActive() { return !!pmpRec; }
+  function pmpSave() { const s = curStore(); if (!s) return; try { if (pmpRec) s.set('pomo-companion', JSON.stringify(pmpRec)); else s.remove('pomo-companion'); } catch (e) {} }
+  function pmpDetach() {
+    clearTimeout(pmpEncTimer);
+    pmpRec = null; pmpSave();
+    pmpMenu.hidden = true;
+    pmpSyncBar();
+  }
+  function pmpSyncFromEngine() {
+    if (!pmpActive()) return;
+    pmpRec.paused = pomoRunning ? 0 : 1;
+    if (pomoRunning) { pmpRec.endAt = pomoEndAt; pmpRec.remainMs = 0; }
+    else pmpRec.remainMs = pomoRemainMs;
+    pmpSave();
+    if (pomoRunning) pmpScheduleEnc();
+    pmpRefreshBar();
+  }
+  function pmpRefreshBar() {
+    if (!pmpActive()) return;
+    const remainMs = Math.max(0, pomoRunning ? pomoEndAt - Date.now() : (pmpRec.remainMs || pmpRec.totalMs));
+    const sec = Math.ceil(remainMs / 1000);
+    const tm = document.getElementById('pmp-bar-time');
+    if (tm) tm.textContent = String(Math.floor(sec / 60)).padStart(2, '0') + ':' + String(sec % 60).padStart(2, '0');
+    const lb = document.getElementById('pmp-bar-label');
+    if (lb) lb.textContent = pomoRunning ? '专注中 · TA 陪着你' : '已暂停';
+    const tg = document.getElementById('pmp-bar-toggle');
+    if (tg) tg.textContent = pomoRunning ? '暂停' : '继续';
+    const fl = document.getElementById('pmp-fill');
+    if (fl && pmpRec.totalMs) fl.style.width = Math.min(100, Math.max(0, (1 - remainMs / pmpRec.totalMs) * 100)) + '%';
+  }
+  let pmpFlashing = false;
+  let pmpFlashTimer = null;
+  function pmpFlash(txt) {
+    pmpFlashing = true;
+    const tm = document.getElementById('pmp-bar-time'); if (tm) tm.textContent = '00:00';
+    const tg = document.getElementById('pmp-bar-toggle'); if (tg) tg.style.display = 'none';
+    const mo = document.getElementById('pmp-bar-more'); if (mo) mo.style.display = 'none';
+    const lb = document.getElementById('pmp-bar-label'); if (lb) lb.textContent = txt;
+    const fl = document.getElementById('pmp-fill'); if (fl) fl.style.width = '100%';
+    if (chatPageEl) pmpBar.hidden = !!chatPageEl.hidden;
+    clearTimeout(pmpFlashTimer);
+    pmpFlashTimer = setTimeout(() => {
+      pmpFlashing = false;
+      if (tg) tg.style.display = ''; if (mo) mo.style.display = '';
+      pmpSyncBar();
+    }, 2600);
+  }
+  function pmpSyncBar() {
+    if (!chatPageEl) return;
+    const show = (pmpActive() || pmpFlashing) && !chatPageEl.hidden;
+    pmpBar.hidden = !show;
+    if (show) { if (pmpActive()) pmpRefreshBar(); }
+    else pmpMenu.hidden = true;
+  }
+  let pmpEncTimer = null;
+  function pmpScheduleEnc() {
+    clearTimeout(pmpEncTimer);
+    if (!pmpActive() || pmpRec.paused || (pmpRec.enc || 0) >= 2) return;
+    const now = Date.now();
+    if (!pmpRec.nextEncAt || pmpRec.nextEncAt < now - 30000) {
+      pmpRec.nextEncAt = now + (5 + Math.random() * 3) * 60000;
+      pmpSave();
+    }
+    pmpEncTimer = setTimeout(pmpMaybeEnc, Math.max(1000, Math.min(60000, pmpRec.nextEncAt - now)));
+  }
+  function pmpMaybeEnc() {
+    if (!pmpActive() || pmpRec.paused) return;
+    const now = Date.now();
+    if (pomoRunning && now >= pmpRec.nextEncAt && (pmpRec.enc || 0) < 2) {
+      pmpRec.enc = (pmpRec.enc || 0) + 1;
+      pmpRec.nextEncAt = now + (5 + Math.random() * 3) * 60000;
+      pmpSave();
+      try { window.chatAddIn(PMP_ENC[Math.floor(Math.random() * PMP_ENC.length)], { initiative: true, silent: true }); } catch (e) {}
+    }
+    pmpScheduleEnc();
+  }
+  function pmpRefreshGoBtn() {
+    const gb = document.getElementById('pomo-companion');
+    if (gb) gb.textContent = pmpActive() ? (pmpRec.paused ? '陪伴已暂停 · 返回聊天' : '陪伴中 · 返回聊天') : '🍅 陪伴模式';
+  }
+  // 入口：番茄钟页「陪伴模式」按钮——未在跑则开一个新专注并挂上陪伴，已在跑则直接挂靠
+  const pmpGoBtn = document.getElementById('pomo-companion');
+  if (pmpGoBtn) pmpGoBtn.addEventListener('click', () => {
+    if (editingNow()) return;
+    if (pmpActive()) { if (window.enterChat) { try { window.enterChat(); } catch (e) {} } return; }
+    if (pomoMode !== 'focus') { pomoRunning = false; pomoRemainMs = 0; pomoStopTick(); pomoMode = 'focus'; }
+    if (!pomoRunning) {
+      pomoRemainMs = 0;
+      pomoEndAt = Date.now() + pomoModeMin('focus') * 60000;
+      pomoRunning = true; pomoStartTick();
+    }
+    pmpRec = { mode: 'focus', totalMs: pomoModeMin('focus') * 60000, endAt: pomoEndAt, startedAt: Date.now(), paused: 0, remainMs: 0, enc: 0, nextEncAt: 0 };
+    pmpSave();
+    try { window.chatAddIn(PMP_GREET[Math.floor(Math.random() * PMP_GREET.length)], { initiative: true, silent: true }); } catch (e) {}
+    pmpScheduleEnc();
+    pmpSyncBar(); pomoRender();
+    if (window.enterChat) { try { window.enterChat(); } catch (e) {} }
+  });
+  // 倒计时条按钮：暂停/继续 与 ⋯ 菜单
+  const pmpToggleBtn = document.getElementById('pmp-bar-toggle');
+  if (pmpToggleBtn) pmpToggleBtn.addEventListener('click', () => {
+    if (!pmpActive()) return;
+    if (pomoRunning) {
+      pomoRemainMs = Math.max(0, pomoEndAt - Date.now());
+      pomoRunning = false; pomoStopTick();
+    } else {
+      pomoEndAt = Date.now() + (pmpRec.remainMs || pmpRec.totalMs);
+      pomoRunning = true; pomoStartTick();
+    }
+    pmpSyncFromEngine(); pomoRender();
+  });
+  const pmpMoreBtn = document.getElementById('pmp-bar-more');
+  if (pmpMoreBtn) pmpMoreBtn.addEventListener('click', () => { pmpMenu.hidden = !pmpMenu.hidden; });
+  pmpMenu.querySelectorAll('button[data-pmp]').forEach(b => b.addEventListener('click', () => {
+    pmpMenu.hidden = true;
+    if (b.dataset.pmp === 'page') { openPage(pomoPage); pomoRender(); return; }
+    if (b.dataset.pmp !== 'quit' || !window.openModal) return;
+    window.openModal('提前结束这个番茄？', '', (v) => {
+      if (v !== '1') return;
+      if (pomoRunning) { pomoRunning = false; pomoStopTick(); }
+      pomoRemainMs = 0; pomoMode = 'focus';
+      try { window.chatAddIn('没事，休息一下也可以', { initiative: true }); } catch (e) {}
+      pmpDetach(); pomoRender();
+    }, { noInput: true, lock: true, pills: [{ label: '结束', value: '1' }, { label: '再撑一会儿', value: '0' }], staticText: '提前结束的话，这个 🍅 就不计入今天啦' });
+  }));
+  // 聊天页显隐时同步条显示
+  if (chatPageEl) new MutationObserver(pmpSyncBar).observe(chatPageEl, { attributes: true, attributeFilter: ['hidden'] });
+  document.addEventListener('contact-switched', () => { if (pmpActive()) pmpDetach(); });
+  // 启动恢复：上次会话还在进行 → 引擎接续走；已在关闭期间完成 → 补记一个 🍅
+  (function pmpRestore() {
+    if (!pmpRec) return;
+    if (pmpRec.mode !== 'focus' || !pmpRec.totalMs) { pmpDetach(); return; }
+    const now = Date.now();
+    pomoMode = 'focus';
+    if (pmpRec.paused) {
+      pomoRunning = false; pomoStopTick(); pomoRemainMs = pmpRec.remainMs || pmpRec.totalMs;
+      pmpScheduleEnc();
+    } else if (pmpRec.endAt > now) {
+      pomoRemainMs = 0; pomoEndAt = pmpRec.endAt; pomoRunning = true; pomoStartTick();
+      pmpScheduleEnc();
+    } else {
+      const t = pomoToday(); t.count++; pomoSaveToday(t);
+      pomoSaveTotal(pomoTotal() + 1);
+      // silent:true——启动早期音频子系统未必就绪，勿因提示音阻断恢复流程
+      try { window.chatAddIn('🍅 你刚才完成了一个专注，回来看到啦，很棒', { initiative: true, silent: true }); } catch (e) {}
+      pmpDetach();
+    }
+    pmpSyncBar();
+  })();
+  pmpRefreshGoBtn();
+
   document.addEventListener('contact-switched', () => {
     tpStopFlow();
     if (!tpPage.hidden) tpPick();
     if (!ssPage.hidden) ssRenderCount();
     if (!waterPage.hidden) waterRender();
+    if (!pomoPage.hidden) pomoRender();
+    if (!piggyPage.hidden) piggyRender();
   });
 })();

@@ -129,37 +129,43 @@
   const row = (id) => document.getElementById(id);
   const csBg = row('cs-bg-upload');
   if (csBg) {
-    csBg.addEventListener('click', () => {
-      const input = document.createElement('input');
-      input.type = 'file'; input.accept = 'image/*';
-      input.onchange = () => {
-        const f = input.files && input.files[0];
-        if (!f) return;
-        const reader = new FileReader();
-        reader.onload = () => {
-          // 压缩：v3.5.126 按设备物理像素定上限——之前固定 900px，
-          // 在 2-3x 高分屏（物理宽 1080-1440）铺满时被放大发糊
-          const img = new Image();
-          img.onload = () => {
-            try {
-              const dpr = Math.max(1, window.devicePixelRatio || 1);
-              const screenH = (window.screen && window.screen.height) || 1920;
-              const maxSide = Math.min(4096, Math.max(2160, Math.round(screenH * dpr)));
-              const c = document.createElement('canvas');
-              const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
-              c.width = Math.max(1, Math.round(img.width * scale));
-              c.height = Math.max(1, Math.round(img.height * scale));
-              c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-              const data = c.toDataURL('image/jpeg', 0.85);
-              store.set('cs-bg', data);
-              applySettings();
-            } catch (e) {}
-          };
-          img.src = reader.result;
+    // v3.9.x：红米/真我等 Android Edge 对「点击时动态创建 + 立即 click()」的 file input
+    // 会静默忽略（不弹系统选择器）。改为持久化 input（初始化时创建一次、永久挂 body、
+    // 移出屏幕、每次复用），与 avatar-lib.js bindPoolUpload 已验证可用套路一致。
+    const bgInput = document.createElement('input');
+    bgInput.type = 'file'; bgInput.accept = 'image/*';
+    bgInput.style.cssText = 'position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0;';
+    document.body.appendChild(bgInput);
+    bgInput.onchange = () => {
+      const f = bgInput.files && bgInput.files[0];
+      bgInput.value = ''; // 允许重选同一文件
+      if (!f) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        // 压缩：v3.5.126 按设备物理像素定上限——之前固定 900px，
+        // 在 2-3x 高分屏（物理宽 1080-1440）铺满时被放大发糊
+        const img = new Image();
+        img.onload = () => {
+          try {
+            const dpr = Math.max(1, window.devicePixelRatio || 1);
+            const screenH = (window.screen && window.screen.height) || 1920;
+            const maxSide = Math.min(4096, Math.max(2160, Math.round(screenH * dpr)));
+            const c = document.createElement('canvas');
+            const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+            c.width = Math.max(1, Math.round(img.width * scale));
+            c.height = Math.max(1, Math.round(img.height * scale));
+            c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+            const data = c.toDataURL('image/jpeg', 0.85);
+            store.set('cs-bg', data);
+            applySettings();
+          } catch (e) {}
         };
-        reader.readAsDataURL(f);
+        img.src = reader.result;
       };
-      input.click();
+      reader.readAsDataURL(f);
+    };
+    csBg.addEventListener('click', () => {
+      try { bgInput.click(); } catch (e) { toast('无法打开相册，请重试'); }
     });
   }
   const csBgRm = row('cs-bg-remove');
@@ -229,32 +235,32 @@
       img.src = dataUrl;
     });
   }
-  // v3.9.x：修复红米/真我等 Android Edge 文件选择器不弹出——动态创建的 file input
-  // 必须先挂载到 DOM 再 click()（未挂载时部分 Android 浏览器会静默忽略合成点击）；
-  // 用 position:fixed 移出屏幕而非 display:none 最稳。参考 data-backup.js 导入修复。
-  function pickHead(cb) {
-    const input = document.createElement('input');
-    input.type = 'file'; input.accept = 'image/*';
-    input.style.position = 'fixed';
-    input.style.left = '-9999px';
-    input.style.top = '0';
-    input.style.opacity = '0';
-    document.body.appendChild(input);
-    input.onchange = () => {
-      const f = input.files && input.files[0];
-      try { input.remove(); } catch (e) {}
-      if (!f) return;
-      const reader = new FileReader();
-      reader.onload = () => {
-        compressHead(reader.result, 256).then(data => {
-          if (!data) { toast('图片过大或格式不支持，请换一张小图'); return; }
-          cb(data);
-        });
-      };
-      reader.readAsDataURL(f);
+  // v3.9.x：红米/真我等 Android Edge 对「点击时动态创建 + 立即 click()」的 file input
+  // 会静默忽略（不弹系统选择器）。改为持久化 input：初始化时创建一次、永久挂 body、
+  // 移出屏幕、每次复用（先清 value 再 click）——与 avatar-lib.js bindPoolUpload
+  // 已验证可用套路一致。两个头像按钮（联系人/我的）共用这一个 input，靠回调区分。
+  let headCb = null;
+  const headInput = document.createElement('input');
+  headInput.type = 'file'; headInput.accept = 'image/*';
+  headInput.style.cssText = 'position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0;';
+  document.body.appendChild(headInput);
+  headInput.onchange = () => {
+    const f = headInput.files && headInput.files[0];
+    headInput.value = ''; // 允许重选同一文件
+    if (!f) return;
+    const cb = headCb; headCb = null;
+    const reader = new FileReader();
+    reader.onload = () => {
+      compressHead(reader.result, 256).then(data => {
+        if (!data) { toast('图片过大或格式不支持，请换一张小图'); return; }
+        if (cb) cb(data);
+      });
     };
-    input.click();
-    setTimeout(() => { try { if (input.parentNode) input.remove(); } catch (e) {} }, 120000);
+    reader.readAsDataURL(f);
+  };
+  function pickHead(cb) {
+    headCb = cb;
+    try { headInput.click(); } catch (e) { toast('无法打开相册，请重试'); }
   }
   function applyProfile() {
     const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
@@ -781,24 +787,25 @@
     setInterval(syncCsEg, 500);
   }
 
-  // v3.7.x：聊天设置「音乐悬浮小窗」开关——与音乐页 #music-float-en / 音乐设置
-  // #sm-set-float 同源（music-global.floatEn，每桌面独立）。本文件先于 music-player.js
+  // v3.7.x：聊天设置「隐藏音乐悬浮小窗」开关——与音乐页 #music-float-en / 音乐设置
+  // #sm-set-float 同源（music-global.floatEn，每桌面独立）。本开关语义反转：勾选=隐藏，
+  // 与「隐藏通话小框」一致（音乐页/音乐设置里仍是勾选=开启）。本文件先于 music-player.js
   // 加载，故优先走 window.musicFloatGet/Set 钩子（完整走保存+悬浮框渲染流程）；
   // 钩子未就绪时退化为直读写 store（切换桌面/初始态兜底，浮框由音乐模块下次渲染兜住）。
   const csMf = document.getElementById('cs-music-float');
   if (csMf) {
-    const mfGet = () => {
-      if (window.musicFloatGet) return !!window.musicFloatGet();
+    const mfGet = () => { // 返回「隐藏中」= !floatEn；floatEn 默认开 → 默认不隐藏
+      if (window.musicFloatGet) return !window.musicFloatGet();
       try {
         const s = JSON.parse(store.get('music-global') || '{}');
-        return s.floatEn !== undefined ? !!s.floatEn : true; // 默认开
-      } catch (e) { return true; }
+        return s.floatEn !== undefined ? !s.floatEn : false;
+      } catch (e) { return false; }
     };
-    const mfSet = (en) => {
-      if (window.musicFloatSet) { window.musicFloatSet(en); return; }
+    const mfSet = (hide) => {
+      if (window.musicFloatSet) { window.musicFloatSet(!hide); return; }
       try {
         const s = JSON.parse(store.get('music-global') || '{}');
-        s.floatEn = !!en;
+        s.floatEn = !hide;
         store.set('music-global', JSON.stringify(s));
       } catch (e) {}
     };
@@ -807,6 +814,7 @@
     csMf.addEventListener('change', () => {
       if (csMf.checked === mfGet()) return;
       mfSet(csMf.checked);
+      toast(csMf.checked ? '音乐悬浮小窗已隐藏：播放时不再显示右上角悬浮小框' : '音乐悬浮小窗已恢复显示：播放时右上角出现悬浮小框');
     });
     // 音乐页/音乐设置/桌面部件改动或切桌面后 500ms 内同步回本页开关
     setInterval(syncCsMf, 500);

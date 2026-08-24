@@ -319,6 +319,27 @@
   window.periodStatus = status;
   window.periodDayPhase = dayPhase;
 
+  // ---- 梦角经期聊天语态：经期中 TA 的文字回复更温柔 ----
+  var WARM_PREFIX = ['乖，', '傻瓜，', '我在呢。', '嘘…', '宝贝，', '嗯，'];
+  var WARM_SUFFIX = [
+    '（把你往怀里带了带）', '（轻轻抵着你额头）', '（握紧你的手）',
+    '（摸了摸你发顶）', '（语气柔下来）', '（把热牛奶推到你手边）'
+  ];
+  function warmText(text) {
+    if (typeof text !== 'string' || !text) return text;
+    try {
+      if (!status().inPeriod) return text;
+      if (Math.random() * 100 >= 25) return text;
+      var p = WARM_PREFIX[Math.floor(Math.random() * WARM_PREFIX.length)];
+      var s = WARM_SUFFIX[Math.floor(Math.random() * WARM_SUFFIX.length)];
+      var r = Math.random();
+      if (r < 0.45) return p + text;
+      if (r < 0.8) return text + s;
+      return p + text + s;
+    } catch (e) { return text; }
+  }
+  window.periodWarmText = warmText;
+
   // ---- 预测置信度（方案 3）：距预测开始日越近越深，高斯衰减 ----
   function predictConfidence(ds) {
     var stats = cycleStats();
@@ -593,7 +614,8 @@
       });
       if (phaseRows) phaseHtml = '<div class="ps-title">症状↔周期天分布</div><div class="ps-phase">' + phaseRows + '</div>';
     }
-    card.innerHTML = '<div class="period-card-title">统计<button class="period-report-btn">月度报告</button></div>' + symHtml + trendHtml + phaseHtml;
+    card.innerHTML = '<div class="period-card-title">统计<button class="period-report-btn">月度报告</button></div>' +
+      '<div class="ps-insight">' + periodInsight() + '</div>' + symHtml + trendHtml + phaseHtml;
     var reportBtn = card.querySelector('.period-report-btn');
     if (reportBtn) reportBtn.addEventListener('click', openReportPop);
     var histCardEl = scroll.querySelector('#period-history');
@@ -602,7 +624,145 @@
     else scroll.appendChild(card);
   }
 
-  function render() { try { renderStatus(); } catch (e) {} try { renderGrid(); } catch (e) {} try { renderHistory(); } catch (e) {} try { renderStats(); } catch (e) {} try { renderDeskWidget(); } catch (e) {} }
+  // ---- 每日健康小贴士（按周期阶段取池，梦角口吻）----
+  var PERIOD_TIPS = {
+    period: [
+      { main: '经期注意保暖，少碰冷饮凉食，小腹可以用暖水袋热敷。', mochi: '暖好自己，比什么都重要。' },
+      { main: '喝点温红糖姜茶，多吃含铁的红枣、瘦肉，别让手脚发凉。', mochi: '我记得你说过手凉。' },
+      { main: '经期激素波动容易累，想发脾气就发，我在呢。', mochi: '不用撑着，哭一场也没关系。' }
+    ],
+    follicular: [
+      { main: '经期结束后适当活动，散步或拉伸，帮身体找回节奏。', mochi: '我陪你走那段路。' },
+      { main: '补充蛋白质和膳食纤维，休息充足，精力会慢慢回来。', mochi: '你恢复的样子最好看。' }
+    ],
+    ovulatory: [
+      { main: '排卵期代谢加快，多吃深色蔬菜和豆类，补充叶酸。', mochi: '好好吃饭，我才放心。' },
+      { main: '这个阶段睡眠质量很重要，尽量别熬夜。', mochi: '别熬了，睡吧，我守着你。' }
+    ],
+    luteal: [
+      { main: '经前期容易烦躁或低落，这是正常的，给自己多点耐心。', mochi: '靠近一点，我抱抱你。' },
+      { main: '经前期少吃盐、多喝水，能缓解水肿和胀气。', mochi: '我给你留了温水。' }
+    ],
+    unknown: [
+      { main: '连续记录几次经期后，我可以帮你预测周期和排卵窗口。', mochi: '从今天开始记一点点，好吗？' }
+    ]
+  };
+  function tipsPool(st) {
+    if (st.inPeriod) return PERIOD_TIPS.period;
+    if (st.phase === 'fertile') return PERIOD_TIPS.ovulatory;
+    if (!st.dayOfCycle) return PERIOD_TIPS.unknown;
+    if (st.ovulationDay && st.dayOfCycle > st.ovulationDay) return PERIOD_TIPS.luteal;
+    if (st.ovulationDay && st.dayOfCycle < st.ovulationDay) return PERIOD_TIPS.follicular;
+    return PERIOD_TIPS.unknown;
+  }
+  function dayOfYear() {
+    var n = new Date();
+    return Math.floor((n - new Date(n.getFullYear(), 0, 0)) / 86400000);
+  }
+  function renderTips() {
+    var scroll = document.querySelector('#page-period .period-scroll');
+    if (!scroll) return;
+    var old = document.getElementById('period-tips-card');
+    if (old) old.remove();
+    var st = status();
+    var pool = tipsPool(st);
+    var tip = pool[dayOfYear() % pool.length];
+    var card = document.createElement('div');
+    card.className = 'period-card glass';
+    card.id = 'period-tips-card';
+    card.innerHTML = '<div class="period-card-title">健康小贴士</div>' +
+      '<div class="pt-main">' + tip.main + '</div>' +
+      '<div class="pt-mochi">梦角 · ' + tip.mochi + '</div>';
+    var statsCard = document.getElementById('period-stats-card');
+    if (statsCard && statsCard.nextSibling) statsCard.parentNode.insertBefore(card, statsCard.nextSibling);
+    else scroll.appendChild(card);
+  }
+
+  // ---- 症状缓解建议（按已记录症状，配梦角口吻）----
+  var REMEDY_MAP = {
+    cramp: { title: '痛经', main: '热敷小腹、喝温红糖姜茶，尝试侧卧蜷缩能减轻张力。', mochi: '疼得厉害就告诉我，别自己扛。' },
+    headache: { title: '头痛', main: '到安静处遮光休息一会，轻按太阳穴，暂别浓茶咖啡。', mochi: '闭会儿眼，我在这儿。' },
+    backache: { title: '腰酸', main: '热敷腰后、别久坐久站，做几下轻柔伸展。', mochi: '坐久了就站起来动动。' },
+    breast: { title: '乳房胀', main: '穿宽松内衣、少点咖啡因、温敷能缓解胀感。', mochi: '这几天都顺着你。' },
+    acne: { title: '痤疮', main: '温和洁面、少甜食油腻，别再用手挤。', mochi: '别挤它，我心疼。' },
+    fatigue: { title: '疲劳', main: '早点睡或午后小憩片刻，别逞强硬撑。', mochi: '歇一歇，好不好。' },
+    insomnia: { title: '失眠', main: '睡前一小时放下手机、泡脚放松，忌浓茶咖啡。', mochi: '睡不着就想想我，聊会天。' },
+    moodlow: { title: '情绪低落', main: '晒晒太阳、找人说说，允许自己慢半拍。', mochi: '我陪着你。' },
+    irritable: { title: '易怒', main: '深呼吸几次，给自己一个出口，别急着回应。', mochi: '愣一下，嗯？' },
+    appetite: { title: '食欲增加', main: '备点健康零嘴，正餐规律些，别苛责自己。', mochi: '想吃就吃，别自责。' },
+    ovulation: { title: '排卵症状', main: '轻微腹痛坠胀正常，多喝温水多休息。', mochi: '这几天我都记着。' }
+  };
+  function renderRemedies() {
+    var scroll = document.querySelector('#page-period .period-scroll');
+    if (!scroll) return;
+    var old = document.getElementById('period-remedy-card');
+    if (old) old.remove();
+    // 找最近一条带症状记录的每日详情（今天优先）
+    var latest = daily[todayStr()];
+    var ds = todayStr();
+    if (!latest || !latest.symptoms || !latest.symptoms.length) {
+      var keys = Object.keys(daily);
+      for (var i = keys.length - 1; i >= 0; i--) {
+        var info = daily[keys[i]];
+        if (info && info.symptoms && info.symptoms.length) { ds = keys[i]; latest = info; break; }
+      }
+    }
+    if (!latest) {
+      var card = document.createElement('div');
+      card.className = 'period-card glass';
+      card.id = 'period-card';
+      card.innerHTML = '<div class="period-card-title">症状缓解建议</div>' +
+        '<div class="pr-empty">记录症状后，这里会给针对性缓解建议。</div>';
+      var stats = document.getElementById('period-stats-card');
+      if (stats && stats.nextSibling) stats.parentNode.insertBefore(card, stats.nextSibling);
+      else scroll.appendChild(card);
+      return;
+    }
+    var html = '';
+    latest.symptoms.forEach(function (k) {
+      var r = REMEDY_MAP[k];
+      if (!r) return;
+      html += '<div class="pr-row"><span class="pr-sym">' + r.title + '</span><span class="pr-main">' + r.main + '</span><span class="pr-mochi">梦角 · ' + r.mochi + '</span></div>';
+    });
+    if (!html) return;
+    var card = document.createElement('div');
+    card.className = 'period-card glass';
+    card.id = 'period-card';
+    card.innerHTML = '<div class="period-card-title">症状缓解建议</div>' + html;
+    var stats = document.getElementById('period-stats-card');
+    if (stats && stats.nextSibling) stats.parentNode.insertBefore(card, stats.nextSibling);
+    else scroll.appendChild(card);
+  }
+
+  // ---- 周期数据洞察：一句文本 ----
+  function periodInsight() {
+    var st = cycleStats();
+    if (st.n < 2) return '继续记录几次经期后，这里会有周期洞察。';
+    var mean = st.mean, med = st.median, n = st.diffs.length;
+    var txt = '近 ' + n + ' 次周期平均 ' + (mean.toFixed(0)) + ' 天 · 中位 ' + med + ' 天';
+    // 经期平均天数
+    var lens = [];
+    recs = normalize(recs);
+    for (var i = 0; i < recs.length; i++) {
+      var r = recs[i];
+      lens.push(diffDays(r.start, r.end || addDays(r.start, cfg.periodLen - 1)) + 1);
+    }
+    if (lens.length) txt += ' · 经期平均 ' + (lens.reduce(function (a, b) { return a + b; }, 0) / lens.length).toFixed(1) + ' 天';
+    // 近3次 vs 更早：周期长度变化趋势
+    var ds = st.diffs;
+    if (ds.length >= 4) {
+      var rec3 = ds.slice(-3).reduce(function (a, b) { return a + b; }, 0) / 3;
+      var earlyArr = ds.slice(0, -3);
+      var early = earlyArr.reduce(function (a, b) { return a + b; }, 0) / earlyArr.length;
+      var delta = rec3 - early;
+      var trend = Math.abs(delta) < 1 ? '周期稳定' : (delta > 0 ? '周期较前期延长 ' + delta.toFixed(1) + ' 天' : '周期较前期缩短 ' + Math.abs(delta).toFixed(1) + ' 天');
+      txt += ' · ' + trend;
+    }
+    var reg = regularity();
+    if (reg) txt += ' · ' + reg.label;
+    return txt;
+  }
+  function render() { try { renderStatus(); } catch (e) {} try { renderGrid(); } catch (e) {} try { renderHistory(); } catch (e) {} try { renderStats(); } catch (e) {} try { renderTips(); } catch (e) {} try { renderRemedies(); } catch (e) {} try { renderDeskWidget(); } catch (e) {} }
 
   // ---- 操作 ----
   function markStart() {

@@ -37,6 +37,35 @@
   let keepEnabled = false;
   let wakeSentinel = null; // v3.5.131：模块级，供 stopKeepAlive 释放
 
+  // v3.5.160：保活音频 dataURL——用 <audio> 元素循环播放（不是 Web Audio 振荡器）。
+  // 关键机制：Chrome 安卓的媒体通知条（通知栏"正在播放"）绑定到 HTMLMediaElement
+  // （<audio>/<video>），Web Audio 的 AudioContext 振荡器【不触发媒体条】——这正是
+  // 之前"音乐能显示媒体条、保活看不到"的原因。改用 <audio> 后媒体条正常显示、
+  // 后台不冻结。合成 1 秒极轻正弦波 WAV（220Hz，幅度 0.02，人耳几乎听不到）
+  let KEEP_AUDIO_DATAURL = '';
+  function ensureKeepAudioDataUrl() {
+    if (KEEP_AUDIO_DATAURL) return KEEP_AUDIO_DATAURL;
+    try {
+      const sr = 44100, sec = 1, n = sr * sec;
+      const buf = new ArrayBuffer(44 + n * 2);
+      const dv = new DataView(buf);
+      const ws = function (o, s) { for (let i = 0; i < s.length; i++) dv.setUint8(o + i, s.charCodeAt(i)); };
+      ws(0, 'RIFF'); dv.setUint32(4, 36 + n * 2, true); ws(8, 'WAVE');
+      ws(12, 'fmt '); dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 1, true);
+      dv.setUint32(24, sr, true); dv.setUint32(28, sr * 2, true); dv.setUint16(32, 2, true); dv.setUint16(34, 16, true);
+      ws(36, 'data'); dv.setUint32(40, n * 2, true);
+      for (let i = 0; i < n; i++) {
+        const v = Math.sin(2 * Math.PI * 220 * (i / sr)) * 0.02;
+        dv.setInt16(44 + i * 2, Math.round(v * 32767), true);
+      }
+      const bytes = new Uint8Array(buf);
+      let bin = '';
+      for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+      KEEP_AUDIO_DATAURL = 'data:audio/wav;base64,' + btoa(bin);
+    } catch (e) { KEEP_AUDIO_DATAURL = ''; }
+    return KEEP_AUDIO_DATAURL;
+  }
+
   // v3.9.x：设置"后台保活"媒体会话条。音乐播放时（__musicPlaying）让位给 music-player
   // 的歌曲 metadata + 控制 handler，避免通知栏按钮空响应无法控制音乐。
   function setKeepMediaSession() {
@@ -48,6 +77,9 @@
         artist: 'mochi',
         album: '后台消息提醒运行中'
       });
+      // v3.5.159：声明 playbackState='playing'——Chrome 安卓判定"页面正在播放媒体"
+      // 必须 playbackState=playing + 音频实际输出，否则媒体会话不激活、后台照常冻结
+      try { navigator.mediaSession.playbackState = 'playing'; } catch (e) {}
       try {
         navigator.mediaSession.setActionHandler('play', function () {});
         navigator.mediaSession.setActionHandler('pause', function () {});
@@ -58,16 +90,20 @@
   function startKeepAlive(showToast) {
     if (keepAudio) return;
     try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.type = 'sine';
-      osc.frequency.value = 1;      // 1Hz，人耳基本听不见
-      gain.gain.value = 0.0001;     // 近零音量
-      osc.start();
-      keepAudio = { ctx: ctx, osc: osc, gain: gain };
+      // v3.5.160：保活音频改用 <audio> 元素循环播放极轻正弦波——媒体通知条才会显示
+      const src = ensureKeepAudioDataUrl();
+      if (!src) { if (showToast) toast('后台保活启动失败（无法生成保活音频）'); return; }
+      const keepEl = document.createElement('audio');
+      keepEl.loop = true;
+      keepEl.volume = 0.05;          // 低但非静音（近零音量会被 Chrome 无声节流）
+      keepEl.src = src;
+      keepEl.setAttribute('playsinline', '');
+      const playIt = function () {
+        const p = keepEl.play();
+        if (p && p.catch) p.catch(function () {});
+      };
+      playIt();
+      keepAudio = { el: keepEl };
 
       // v3.5.155：媒体会话标记——Chrome 安卓把「有活跃媒体会话 + 音频输出」的页面
       // 视为"正在播放媒体"，后台几乎不冻结（Youtube 网页版后台持续播放即此原理）。
@@ -78,21 +114,26 @@
       // 这里不覆盖（否则通知栏变成"后台保活"且按钮空响应，无法控制音乐）
       setKeepMediaSession();
 
-      // 用户首次交互时恢复 AudioContext（浏览器自动播放策略要求）
-      if (ctx.state === 'suspended') {
-        const resumeOnInteraction = function () {
-          if (keepAudio && keepAudio.ctx && keepAudio.ctx.state === 'suspended') {
-            keepAudio.ctx.resume().catch(function () {});
-          }
-        };
-        document.addEventListener('click', resumeOnInteraction, { once: true });
-        document.addEventListener('touchstart', resumeOnInteraction, { once: true });
-        document.addEventListener('keydown', resumeOnInteraction, { once: true });
-      }
-      // 每 5 秒尝试恢复（防止休眠导致 AudioContext 挂起）
+      // 用户首次交互时恢复播放（浏览器自动播放策略要求）
+      const resumeOnInteraction = function () {
+        if (keepAudio && keepAudio.el && keepAudio.el.paused) {
+          const p = keepAudio.el.play();
+          if (p && p.catch) p.catch(function () {});
+        }
+      };
+      document.addEventListener('click', resumeOnInteraction, { once: true });
+      document.addEventListener('touchstart', resumeOnInteraction, { once: true });
+      document.addEventListener('keydown', resumeOnInteraction, { once: true });
+      // 每 5 秒尝试恢复（防止暂停 / mediaSession 失效）
+      // v3.5.159：恢复时重设 playbackState='playing'（Chrome 挂起后可能把它重置）
       keepInterval = setInterval(function () {
-        if (keepAudio && keepAudio.ctx && keepAudio.ctx.state === 'suspended') {
-          keepAudio.ctx.resume().catch(function () {});
+        if (keepAudio && keepAudio.el) {
+          if (keepAudio.el.paused) {
+            const p = keepAudio.el.play();
+            if (p && p.catch) p.catch(function () {});
+          }
+          // 音频在跑就持续声明"正在播放"，维持媒体会话活跃
+          try { if (navigator.mediaSession) navigator.mediaSession.playbackState = 'playing'; } catch (e) {}
         }
       }, 5000);
 
@@ -134,7 +175,8 @@
     } catch (e) {}
   }
   function stopKeepAlive(showToast) {
-    try { if (keepAudio) { keepAudio.osc.stop(); keepAudio.ctx.close(); } } catch (e) {}
+    // v3.5.160：停掉 <audio> 保活音频（原来 stop osc/close ctx）
+    try { if (keepAudio && keepAudio.el) { keepAudio.el.pause(); keepAudio.el.src = ''; } } catch (e) {}
     // v3.5.155：清除媒体会话标记（通知栏媒体条消失）
     // v3.9.x：音乐播放时不清除——music-player 正在用 MediaSession 控制音乐
     if (!window.__musicPlaying) {
@@ -162,14 +204,16 @@
   function healKeepAlive() {
     if (!keepEnabled) return;
     // 1) 恢复被挂起的保活音频（回前台瞬间可能仍被浏览器阻塞，延迟再试几次）
-    if (keepAudio && keepAudio.ctx && keepAudio.ctx.state === 'suspended') {
-      keepAudio.ctx.resume().catch(function () {});
+    if (keepAudio && keepAudio.el && keepAudio.el.paused) {
+      const p = keepAudio.el.play();
+      if (p && p.catch) p.catch(function () {});
     }
     [0, 600, 1800].forEach(function (d) {
       setTimeout(function () {
         if (!keepEnabled) return;
-        if (keepAudio && keepAudio.ctx && keepAudio.ctx.state === 'suspended') {
-          keepAudio.ctx.resume().catch(function () {});
+        if (keepAudio && keepAudio.el && keepAudio.el.paused) {
+          const p = keepAudio.el.play();
+          if (p && p.catch) p.catch(function () {});
         }
       }, d);
     });
@@ -487,33 +531,44 @@
   // v3.5.137：回到前台时补弹应用内横幅——后台期间收到的消息系统通知已进通知栏，
   //   但页面切回前台时应用内顶部横幅（desk-msg）不会自动出现；这里根据未读数
   //   在屏幕上方补一条横幅（点击默认进聊天），实现「切回即见新消息」的体验
+  // v3.5.161：修复「回前台重弹看过消息」——之前用 chat-unread 总量判断，但它是
+  //   你【看过消息前】的旧未读累计（进聊天页才清零），回前台会把前几分钟看过的
+  //   消息当新消息重弹。改为：切后台时记录未读基数（resumeUnreadBase），回前台
+  //   只提示【后台期间新增】的未读增量；无增量则完全不弹。
+  let resumeUnreadBase = -1; // 切后台时的未读基数；-1=未初始化（本次会话没切过后台）
   document.addEventListener('visibilitychange', function () {
-    if (document.visibilityState !== 'visible') return;
+    const vis = document.visibilityState;
+    if (vis === 'hidden') {
+      // 切后台：记录当前未读数，作为本次后台会话的基数
+      try { resumeUnreadBase = parseInt(store.get('chat-unread'), 10) || 0; } catch (e) { resumeUnreadBase = 0; }
+      return;
+    }
+    if (vis !== 'visible') return;
     const saved = gGet('bg-notify');
     if (saved === '1') {
-      const keep = document.getElementById('bg-keepalive');
       const keepOn = keepEnabled;
       if (!keepOn) {
         toast('提醒：后台保活已关闭，后台消息到不了，通知不会弹（设置里开启）');
       }
     }
-    // 补弹应用内横幅 + 汇总系统通知：有未读新消息且不在聊天页。
-    // v3.5.154：回前台瞬间发一条汇总系统通知「你不在的时候收到 N 条新消息」——
-    // 后台冻结导致消息/通知没能实时到达，回前台时一次告知，避免堆积消息陆续补发的混乱。
-    // 30 秒内不重复发（防止反复切出切入刷屏）
+    // 补弹应用内横幅 + 汇总系统通知：仅当【本次后台期间】未读有增量。
+    // v3.5.161：用增量（当前未读 - 切后台时基数）而非总量，避免重弹看过消息；
+    // 基数未初始化（本次会话没切过后台）时跳过，不弹旧未读
     try {
+      if (resumeUnreadBase < 0) return;
       const chatPage = document.getElementById('page-chat');
       const inChat = chatPage && !chatPage.hidden;
-      const unread = parseInt(store.get('chat-unread'), 10) || 0;
-      const name = store.get('lbl-partner') || 'TA';
-      if (!inChat && unread > 0 && window.showDeskPopup) {
+      const unreadNow = parseInt(store.get('chat-unread'), 10) || 0;
+      const inc = unreadNow - resumeUnreadBase;
+      if (!inChat && inc > 0 && window.showDeskPopup) {
+        const name = store.get('lbl-partner') || 'TA';
         // visibilitychange 为 visible 时触发，isHidden=false 显示应用内横幅
-        window.showDeskPopup({ name: name, text: '你不在的时候收到 ' + unread + ' 条新消息', isHidden: false });
+        window.showDeskPopup({ name: name, text: '你不在的时候收到 ' + inc + ' 条新消息', isHidden: false });
         const now = Date.now();
         if (saved === '1' && 'Notification' in window && Notification.permission === 'granted' &&
             (!lastResumeNotifyAt || now - lastResumeNotifyAt > 30000)) {
           lastResumeNotifyAt = now;
-          showSysNotification(name, { body: '你不在的时候收到 ' + unread + ' 条新消息' });
+          showSysNotification(name, { body: '你不在的时候收到 ' + inc + ' 条新消息' });
         }
       }
     } catch (e) {}

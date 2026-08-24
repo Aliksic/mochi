@@ -18,9 +18,17 @@
   const membersPanel = document.getElementById('gc-members-panel');
   const membersClose = document.getElementById('gc-mp-close');
   const membersBody = document.getElementById('gc-mp-body');
-  const atBtn = document.getElementById('gc-at-btn');
   const atPanel = document.getElementById('gc-at-panel');
   const atBody = document.getElementById('gc-at-body');
+  // v3.11.x：输入栏与普通聊天页统一——更多功能/表情包/插入图片按钮 + 待发送图片草稿条
+  // （原 @群成员 独立按钮移入「更多功能」面板 #gc-more-panel）
+  const gcMoreBtn = document.getElementById('gc-input-more-btn');
+  const gcMorePanel = document.getElementById('gc-more-panel');
+  const gcMoreAt = document.getElementById('gc-more-at');
+  const gcEmojiBtn = document.getElementById('gc-emoji-btn');
+  const gcImgBtn = document.getElementById('gc-img-btn');
+  const gcDraftBar = document.getElementById('gc-draft');
+  const gcDraftItems = document.getElementById('gc-draft-items');
 
   const FALLBACK_REPLIES = ['好的～', '嗯嗯', '收到', '哈哈', '在的', '我知道啦', '是吗', '然后呢', '有意思', '同意', '哈哈哈', '对的', '没错', '我也觉得', '确实', '哇'];
 
@@ -469,16 +477,59 @@
   function scrollToBottom() { try { body.scrollTop = body.scrollHeight; } catch (e) {} }
 
   // ---- 发送 ----
+  // v3.11.x：待发送图片（插入图片按钮多选 → 压缩 → 草稿条预览，随文字合并为一条组合消息）
+  let gcDraftImgs = [];
+  function renderGcDraft() {
+    if (!gcDraftBar || !gcDraftItems) return;
+    gcDraftItems.innerHTML = '';
+    if (!gcDraftImgs.length) { gcDraftBar.hidden = true; return; }
+    gcDraftImgs.forEach((src, i) => {
+      const it = document.createElement('div');
+      it.className = 'chat-draft-item';
+      const img = document.createElement('img');
+      img.src = src; img.alt = '';
+      const x = document.createElement('button');
+      x.className = 'chat-draft-x';
+      x.textContent = '✕';
+      x.addEventListener('click', () => { gcDraftImgs.splice(i, 1); renderGcDraft(); });
+      it.appendChild(img);
+      it.appendChild(x);
+      gcDraftItems.appendChild(it);
+    });
+    gcDraftBar.hidden = false;
+  }
+  // 组合消息：文字 + 插入图片（与聊天页 buildParts 同构；renderMsg 已支持 parts 渲染）
+  function buildGcParts(t) {
+    const parts = [];
+    if (t) parts.push({ k: 'text', v: t });
+    gcDraftImgs.forEach(src => parts.push({ k: 'img', v: src, sub: 'image' }));
+    return parts;
+  }
   function addMsg(text) {
     const t = (text || '').trim();
-    if (!t) return;
+    const parts = buildGcParts(t);
+    if (!parts.length) return;
     const rec = { side: 'out', text: t, ts: Date.now() };
+    if (gcDraftImgs.length) rec.parts = parts;
     msgs.push(rec);
     saveMsgs();
     renderMsg(rec);
     if (window.playSfx) window.playSfx('out');
     if (input) input.textContent = '';
+    gcDraftImgs = [];
+    renderGcDraft();
     scheduleReply(t);
+  }
+  // 表情包直接发送（复用聊天页表情包面板的插入模式回调，见下方 gc-emoji-btn）
+  function sendGcSticker(src) {
+    if (!src) return;
+    const rec = { side: 'out', type: 'sticker', text: src, ts: Date.now() };
+    msgs.push(rec);
+    saveMsgs();
+    renderMsg(rec);
+    if (window.playSfx) window.playSfx('out');
+    // 表情不带文字，无 @提及，成员按概率随机回复
+    scheduleReply('');
   }
 
   // ---- 回复内容生成（从该成员字卡池随机选，兜底数组） ----
@@ -1198,7 +1249,79 @@
       atBody.appendChild(row);
     });
   }
-  if (atBtn) atBtn.addEventListener('click', () => { renderAtPanel(); if (atPanel) atPanel.hidden = false; });
+  // v3.11.x：@群成员 入口移到输入栏「更多功能」面板（原独立按钮已删）
+  if (gcMoreAt) gcMoreAt.addEventListener('click', () => {
+    if (gcMorePanel) gcMorePanel.hidden = true;
+    renderAtPanel();
+    if (atPanel) atPanel.hidden = false;
+  });
+
+  // ---- 输入栏「更多功能」面板（与聊天页 chat-more-panel 同款交互）----
+  if (gcMoreBtn && gcMorePanel) {
+    gcMoreBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (gcMorePanel.hidden) {
+        // 收起输入法，面板不被键盘遮挡（与聊天页 moreBtn 行为一致）
+        try { if (window.closeIme) window.closeIme(); } catch (err) {}
+        try { input.blur(); } catch (err) {}
+      }
+      gcMorePanel.hidden = !gcMorePanel.hidden;
+    });
+    // 点击面板外部关闭
+    document.addEventListener('click', (e) => {
+      if (!gcMorePanel.hidden && !gcMorePanel.contains(e.target) && e.target !== gcMoreBtn && !gcMoreBtn.contains(e.target)) {
+        gcMorePanel.hidden = true;
+      }
+    });
+  }
+
+  // ---- 表情包按钮：复用聊天页同一个表情包面板（写信/回信同款插入模式回调）----
+  if (gcEmojiBtn) gcEmojiBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (!window.openEmojiPanelForInsert) return;
+    // allowUrl：链接保存的表情在群聊里直接发送（仅信纸插入才限 data:）
+    window.openEmojiPanelForInsert((src) => sendGcSticker(src), { allowUrl: true });
+    // mail-emoji-mode 会把面板压低到 bottom:64px（写信页布局），群聊页与聊天页一致用默认 96px
+    document.body.classList.remove('mail-emoji-mode');
+  });
+
+  // ---- 插入图片按钮：多选图片 → 压缩 → 草稿条预览，随发送合并为组合消息（同聊天页）----
+  if (gcImgBtn) gcImgBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const fi = document.createElement('input');
+    fi.type = 'file'; fi.accept = 'image/*'; fi.multiple = true;
+    fi.onchange = () => {
+      const files = Array.prototype.slice.call(fi.files || []);
+      if (!files.length) return;
+      files.forEach(f => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const img = new Image();
+          img.onload = () => {
+            try {
+              const c = document.createElement('canvas');
+              const scale = Math.min(1, 720 / Math.max(img.width, img.height));
+              c.width = Math.max(1, Math.round(img.width * scale));
+              c.height = Math.max(1, Math.round(img.height * scale));
+              c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+              gcDraftImgs.push(c.toDataURL('image/jpeg', 0.85));
+            } catch (err) {
+              gcDraftImgs.push(reader.result);
+            }
+            renderGcDraft();
+          };
+          // 解码失败（HEIC/损坏图）按原图兜底，不静默丢失
+          img.onerror = () => {
+            gcDraftImgs.push(reader.result);
+            renderGcDraft();
+          };
+          img.src = reader.result;
+        };
+        reader.readAsDataURL(f);
+      });
+    };
+    fi.click();
+  });
 
   // 点击面板背景关闭
   if (atPanel) atPanel.addEventListener('click', (e) => { if (e.target === atPanel) atPanel.hidden = true; });
