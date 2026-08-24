@@ -21,6 +21,28 @@
     t._timer = setTimeout(() => { t.className = 'cc-toast'; }, 3000);
   }
 
+  // v3.10.x：点「刷新使用新版」——先让 SW 预取最新 index.html 写入当前缓存
+  //（PRECACHE_NOW），收到回执后再 reload；弱网下 reload 的导航请求若直接走网络
+  // 优先仍可能超时回退旧缓存 → 永远卡旧版。SW 回执或 2.5s 兜底超时后刷新。
+  let _prMsg = null;
+  function refreshNow() {
+    const doReload = function () { try { location.reload(); } catch (e) {} };
+    try {
+      if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+        let done = false;
+        if (_prMsg) navigator.serviceWorker.removeEventListener('message', _prMsg);
+        _prMsg = function (e) {
+          if (e.data && e.data.type === 'PRECACHE_DONE') { done = true; doReload(); }
+        };
+        navigator.serviceWorker.addEventListener('message', _prMsg);
+        navigator.serviceWorker.controller.postMessage({ type: 'PRECACHE_NOW', urls: ['./index.html', './version.json'] });
+        setTimeout(function () { if (!done) doReload(); }, 2500); // 兜底：SW 预取异常也刷新
+      } else {
+        doReload();
+      }
+    } catch (e) { doReload(); }
+  }
+
   // ================= v3.6.x：新版本检测（版本文件轮询，iOS/安卓均可靠） =================
   // 纯 Service Worker 检测不可靠：sw 只在页面加载/导航时检查、iOS Safari 对 sw 更新
   // 事件支持差——用户开着旧页面永远收不到「新版本」提醒。
@@ -49,30 +71,41 @@
       if (noticed) return;
       noticed = true;
       bar.hidden = false;
-      if (act) act.onclick = function () { try { location.reload(); } catch (e) {} };
+      if (act) act.onclick = refreshNow;
       // v3.5.134：可关闭（"稍后"）——不挡用户当前操作；关闭后本会话不再提示
       const closeBtn = document.getElementById('ver-update-close');
       if (closeBtn) closeBtn.onclick = function () { bar.hidden = true; };
     }
+    // v3.10.x：带超时的 fetch（5s），弱网不挂起；失败由调用方快速重试
+    function fetchJson(url, ms) {
+      const ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+      const timer = ctrl ? setTimeout(function () { ctrl.abort(); }, ms) : null;
+      return fetch(url, { cache: 'no-store', signal: ctrl ? ctrl.signal : undefined })
+        .then(function (r) { if (timer) clearTimeout(timer); if (!r.ok) throw new Error('bad'); return r.json(); })
+        .catch(function (err) { if (timer) clearTimeout(timer); throw err; });
+    }
+    let failCount = 0;
     function checkVersion() {
       const now = Date.now();
-      if (now - lastCheck < 30000) return; // 每 30 秒检查一次
+      // v3.10.x：轮询 30s → 15s；检测失败后 5s 快速重试（GitHub Pages 国内弱网抖动时尽快恢复）
+      const interval = failCount > 0 ? 5000 : 15000;
+      if (now - lastCheck < interval) return;
       lastCheck = now;
       // 加时间戳参数绕过缓存：fetch 拿到的必须是最新 version.json
       const url = './version.json?v=' + now;
-      fetch(url, { cache: 'no-store' })
-        .then(function (r) { if (!r.ok) throw new Error('bad'); return r.json(); })
+      fetchJson(url, 5000)
         .then(function (d) {
+          failCount = 0;
           const ts = Number(d && d.ts);
           if (!ts || isNaN(ts)) return;
           // 老版本页面无 data-build-ts 注入时回退旧逻辑（首次 fetch 当基线）
           if (!baseGot) { baseTs = ts; baseGot = true; return; }
           if (ts > baseTs) showBar();
         })
-        .catch(function () {});
+        .catch(function () { failCount++; });
     }
     checkVersion();
-    setInterval(checkVersion, 30000);
+    setInterval(checkVersion, 5000); // 5s 触发一次，内部再按 15s/5s 节流
     // 切回前台时立即检查（用户在别的 tab 待了很久，回来立刻发现新版）
     document.addEventListener('visibilitychange', function () {
       if (document.visibilityState === 'visible') checkVersion();
@@ -142,7 +175,20 @@
           if (!newWorker) return;
           newWorker.addEventListener('statechange', () => {
             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              try { toast('已检测到新版本，刷新页面即可更新'); } catch (e) {}
+              // v3.10.x：检测到新 SW 直接显示常驻更新条（原逻辑只 toast 一闪而过，
+              // 用户容易看不到）；与版本轮询（version.json）双通道互补，任一命中即提示。
+              try {
+                const barEl = document.getElementById('ver-update-bar');
+                if (barEl) {
+                  barEl.hidden = false;
+                  const actEl = document.getElementById('ver-update-refresh');
+                  if (actEl) actEl.onclick = refreshNow;
+                  const closeBtn = document.getElementById('ver-update-close');
+                  if (closeBtn) closeBtn.onclick = function () { barEl.hidden = true; };
+                } else {
+                  toast('已检测到新版本，刷新页面即可更新');
+                }
+              } catch (e) {}
             }
           });
         });

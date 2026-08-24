@@ -9,7 +9,11 @@
 const CACHE = 'mochi-v1';
 const BUILD_INFO = '';
 const PRECACHE = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './icon-180.png'];
-const NETWORK_TIMEOUT = 8000; // 网络请求等待上限（毫秒）
+// v3.10.x：网络优先超时从 8000 → 3500ms。GitHub Pages 国内访问经常 >8s，
+// 原 8s 超时导致手机端 fetch 频繁超时 → 回退 SW 缓存旧 index.html → 用户永远
+// 看不到新版。缩短到 3.5s：慢网络下页面秒开（回退缓存），配合页面版本检测 +
+// PRECACHE_NOW 预取机制，用户点「刷新使用新版」时能真正拿到最新版。
+const NETWORK_TIMEOUT = 3500; // 网络请求等待上限（毫秒）
 
 // 带超时的 fetch：超时按失败处理，走回退逻辑
 function fetchWithTimeout(req, ms) {
@@ -61,6 +65,28 @@ self.addEventListener('activate', (e) => {
       }).then(() => self.clients.claim());
     })
   );
+});
+
+self.addEventListener('message', (e) => {
+  // v3.10.x：页面点击「刷新使用新版」时先发 PRECACHE_NOW，让 SW 立即把最新
+  // index.html 写进当前缓存，确认完成后再 reload——否则弱网下 reload 的导航请求
+  // 仍可能超时回退旧缓存，用户永远卡在旧版（GitHub Pages 国内访问慢的根因场景）。
+  const data = e.data || {};
+  if (data.type !== 'PRECACHE_NOW') return;
+  const urls = Array.isArray(data.urls) ? data.urls : ['./index.html'];
+  caches.open(CACHE).then((c) =>
+    Promise.allSettled(urls.map((u) =>
+      fetchWithTimeout(u, NETWORK_TIMEOUT).then((res) => {
+        if (res && res.ok) { c.put(u, res); return true; }
+        return false;
+      })
+    ))
+  ).then(() => {
+    // 无论成功与否都回执，页面有超时兜底；网络再差也要让刷新流程能继续
+    try { if (e.source && e.source.postMessage) e.source.postMessage({ type: 'PRECACHE_DONE' }); } catch (x) {}
+  }).catch(() => {
+    try { if (e.source && e.source.postMessage) e.source.postMessage({ type: 'PRECACHE_DONE' }); } catch (x) {}
+  });
 });
 
 self.addEventListener('fetch', (e) => {
