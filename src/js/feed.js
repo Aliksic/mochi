@@ -334,13 +334,25 @@
     // v3.7.x：默认字卡补池——TA 发动态/评论素材不足时用系统默认字卡补，
     //   受「朋友圈使用」场景开关控制（聊天默认字卡-设置页可关闭）
     // v3.8.x：分类开关——已关闭的默认字卡分类不参与补池
+    // v3.12.x：三处对齐聊天页语义——
+    //   ① 开关按【该联系人桌面】读（defaultCardApiFor(storeFor(cid))）：某联系人桌面
+    //      关「朋友圈使用」→ 只有这个联系人的动态/评论不用默认字卡；
+    //   ② main 去掉「自定义为空才补」门——加了公用/专属字卡后 text 永远非空，
+    //      4621 张默认字卡从此不参与（用户反馈：朋友圈只会用自定义字卡）。
+    //      开启即始终混入（同 chat.js getPool / 群聊 gcPool）；
+    //   ③ 补上单卡开关过滤（此前朋友圈漏过滤 dc-off-*）+ 总开关 dc-enabled 检查
     try {
-      if (window.defaultCardUse && window.defaultCardUse('feed') && window.getDefaultCardGroups) {
+      const st = (cid && window.storeFor) ? window.storeFor(cid) : null;
+      const a = (window.defaultCardApiFor && st) ? window.defaultCardApiFor(st) : null;
+      const useFeed = a ? a.use('feed') : (window.defaultCardUse ? window.defaultCardUse('feed') : true);
+      const en = a ? a.enabled() : ((window.defaultCardCfg && window.defaultCardCfg().enabled) !== false);
+      if (en && useFeed && window.getDefaultCardGroups) {
         const gd = window.getDefaultCardGroups;
-        const catOn = window.defaultCardCat || (() => true);
-        if (catOn('main') && !text.length) (gd('main') || []).forEach(g => (g[1] || []).forEach(c => { if (typeof c === 'string' && c) text.push(c); }));
-        if (catOn('kaomoji') && !kaomoji.length) (gd('kaomoji') || []).forEach(g => (g[1] || []).forEach(c => { if (typeof c === 'string' && c) kaomoji.push(c); }));
-        if (catOn('emoji') && !emoji.length) (gd('emoji') || []).forEach(g => (g[1] || []).forEach(c => { if (typeof c === 'string' && c) emoji.push(c); }));
+        const catOn = a ? a.cat : (window.defaultCardCat || (() => true));
+        const isOff = a ? a.isOff : (window.isDefaultCardOff || null);
+        if (catOn('main')) (gd('main') || []).forEach(g => (g[1] || []).forEach(c => { if (isOff && isOff('main', c)) return; if (typeof c === 'string' && c) text.push(c); }));
+        if (catOn('kaomoji') && !kaomoji.length) (gd('kaomoji') || []).forEach(g => (g[1] || []).forEach(c => { if (isOff && isOff('kaomoji', c)) return; if (typeof c === 'string' && c) kaomoji.push(c); }));
+        if (catOn('emoji') && !emoji.length) (gd('emoji') || []).forEach(g => (g[1] || []).forEach(c => { if (isOff && isOff('emoji', c)) return; if (typeof c === 'string' && c) emoji.push(c); }));
       }
     } catch (e) {}
     return { text: text, kaomoji: kaomoji, emoji: emoji, sticker: mediaSticker, image: mediaImage };
@@ -1096,11 +1108,14 @@ if (comInput) comInput.addEventListener('keydown', (e) => { if (e.key === 'Enter
       b.textContent = n > 99 ? '99+' : String(n);
     }
     // v3.5.100：桌面「朋友圈」图标同步未读提醒（进入朋友圈清零见入口）
-    const ab = document.getElementById('feed-app-badge');
-    if (ab) {
-      const n = feedAppUnread();
-      ab.hidden = n === 0;
-      ab.textContent = n > 99 ? '99+' : String(n);
+    const appN = feedAppUnread();
+    if (window.setDeskBadge) { window.setDeskBadge('feed', appN); }
+    else {
+      const ab = document.getElementById('feed-app-badge');
+      if (ab) {
+        ab.hidden = appN === 0;
+        ab.textContent = appN > 99 ? '99+' : String(appN);
+      }
     }
   }
   function jumpToPost(pid, ci, ri) {
@@ -1120,12 +1135,14 @@ if (comInput) comInput.addEventListener('keydown', (e) => { if (e.key === 'Enter
     void target.offsetWidth;
     target.classList.add('feed-flash');
   }
-  // v3.11.x：通知项缩略图——按 ci/ri 从当前动态数据实时取内容里的首张图
+  // v3.11.x：通知项缩略图——按 ci/ri 从动态数据实时取内容里的首张图
   //（不落盘存储，避免撑大通知键；动态已删/无图返回空）
-  function noticeThumbOf(n) {
+  // posts 由调用方传入（renderNotices 每次 render 只 load() 一次，
+  // 逐条调用会把全量动态 JSON.parse 上百次）
+  function noticeThumbOf(n, posts) {
     try {
       if (!n || n.type !== 'comment' || n.ci == null) return '';
-      const p = load().find(x => x.id === n.pid);
+      const p = (posts || []).find(x => x.id === n.pid);
       if (!p || !p.comments || !p.comments[n.ci]) return '';
       const src = (n.ri != null && Array.isArray(p.comments[n.ci].replies) && p.comments[n.ci].replies[n.ri])
         ? p.comments[n.ci].replies[n.ri].content
@@ -1138,6 +1155,8 @@ if (comInput) comInput.addEventListener('keydown', (e) => { if (e.key === 'Enter
     const listEl = document.getElementById('feed-notice-list');
     if (!listEl) return;
     const list = notices();
+    // v3.11.x：整次渲染只 load() 一次，供缩略图查动态数据（防逐条全量解析）
+    const postsForThumbs = load();
     // v3.5.59：每条提醒显示联系人头像
     // v3.7.x：跨桌面——通知头像按通知记录里的 owner（动态发布者）取，旧通知无 owner 回退当前桌面
     const avFor = (n) => { try { const v = n && n.owner ? taAvFor(n.owner) : partnerAv(); return v || ''; } catch (e) { return ''; } };
@@ -1153,7 +1172,7 @@ if (comInput) comInput.addEventListener('keydown', (e) => { if (e.key === 'Enter
               : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:14px;height:14px"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>';
           // v3.11.x：评论类通知带内容首图缩略图——回复的是表情包/图片时直接可见，
           // 不再只显示「[表情包]」占位字（用户反馈"回复了图片但只有两个字不知道是啥"）
-          const thumb = noticeThumbOf(n);
+          const thumb = noticeThumbOf(n, postsForThumbs);
           const thumbHtml = thumb ? '<img class="fn-thumb" src="' + attrEsc(thumb) + '" alt="">' : '';
           return '<div class="feed-notice-item' + (n.read ? '' : ' new') + '" data-pid="' + n.pid + '" data-ci="' + (n.ci != null ? n.ci : '') + '" data-ri="' + (n.ri != null ? n.ri : '') + '">' + avHtml(avFor(n)) + '<span class="fn-ico">' + ico + '</span><span class="fn-text">' + noticeTextClean(n.text) + '</span>' + thumbHtml + '<span class="fn-time">' + fmtDT(n.ts) + '</span></div>';
         }).join('')
@@ -2010,4 +2029,18 @@ if (comInput) comInput.addEventListener('keydown', (e) => { if (e.key === 'Enter
   });
   // v3.5.100：页面加载时恢复桌面「朋友圈」通知未读提醒
   renderNoticeBadge();
+  // v3.12.x：只读探针——TA 动态/评论素材池（公用+该联系人桌面专属+按其桌面开关的
+  // 默认字卡），供回归测试与素材来源诊断；hasIn 查某张卡是否在指定分类桶里
+  window.feedPoolFor = function (cid) {
+    try {
+      const p = cardPool(cid);
+      return { textN: p.text.length, kaoN: p.kaomoji.length, emojiN: p.emoji.length, stickerN: (p.sticker || []).length, imageN: (p.image || []).length };
+    } catch (e) { return null; }
+  };
+  window.feedPoolHas = function (cid, s) {
+    try {
+      const p = cardPool(cid);
+      return { text: p.text.indexOf(s) >= 0, kaomoji: p.kaomoji.indexOf(s) >= 0, emoji: p.emoji.indexOf(s) >= 0 };
+    } catch (e) { return null; }
+  };
 })();

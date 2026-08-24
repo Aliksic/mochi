@@ -4480,6 +4480,7 @@ border-radius:12px;
 .water-col b { position:absolute; top:0; left:0; right:0; text-align:center; font-size:10px; color:var(--ink-soft,#999); font-weight:600; }
 .water-col em { display:block; font-style:normal; font-size:9px; color:var(--ink-soft,#bbb); margin-top:3px; line-height:1; }
 .water-col.today em { color:var(--ink,#555); font-weight:700; }
+.water-col.ta::after { content:''; position:absolute; top:0; left:50%; transform:translateX(-50%); width:10px; height:6px; border-radius:2px; background:rgba(232,83,61,.25); border:1px dashed rgba(232,83,61,.5); box-sizing:border-box; pointer-events:none; }
 .water-streak { text-align:center; font-size:13px; color:#e8533d; font-weight:600; margin:-6px 0 10px; min-height:18px; }
 .water-actions { display:flex; gap:10px; justify-content:center; margin:14px 0 4px; }
 .water-send, .water-ta { font-size:13px; border:none; border-radius:18px; padding:8px 16px; -webkit-tap-highlight-color:transparent; }
@@ -4511,6 +4512,15 @@ border-radius:12px;
 .pomo-center { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; pointer-events:none; }
 .pomo-time { font-size:40px; font-weight:700; color:var(--ink,#222); line-height:1; font-variant-numeric:tabular-nums; }
 .pomo-state { font-size:12px; color:var(--ink-soft,#999); }
+.pomo-spark { position:absolute; width:10px; height:10px; border-radius:50%; background:radial-gradient(circle, rgba(232,83,61,.85), rgba(232,83,61,0) 70%); pointer-events:none; opacity:0; left:50%; top:50%; transform:translate(-50%,-50%); z-index:1; }
+.pomo-spark.on { opacity:.55; animation:pomo-spark-drift 9s ease-in-out infinite; }
+@keyframes pomo-spark-drift {
+0%   { left:50%; top:50%; opacity:.35; }
+25%  { left:72%; top:38%; opacity:.6; }
+50%  { left:48%; top:28%; opacity:.45; }
+75%  { left:28%; top:42%; opacity:.6; }
+100% { left:50%; top:50%; opacity:.35; }
+}
 .pomo-btns { display:flex; gap:14px; justify-content:center; margin-bottom:16px; }
 .pomo-start, .pomo-reset { font-size:17px; font-weight:600; font-family:inherit; border:none; border-radius:14px; padding:13px 0; min-width:96px; -webkit-tap-highlight-color:transparent; }
 .pomo-start { min-width:130px; background:#e8533d; color:#fff; }
@@ -4533,6 +4543,18 @@ border-radius:12px;
 .pmp-menu[hidden] { display:none; }
 .pmp-menu button { font-size:13px; font-family:inherit; border:1px solid rgba(0,0,0,.12); background:rgba(255,255,255,.9); color:var(--ink,#333); border-radius:18px; padding:7px 16px; -webkit-tap-highlight-color:transparent; }
 .pmp-menu button[data-pmp="quit"] { color:#e8533d; border-color:rgba(232,83,61,.3); }
+.pmp-menu button[data-pmpc="quit"] { color:#e8533d; border-color:rgba(232,83,61,.3); }
+.pmp-c-list { flex:1; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch; box-sizing:border-box; padding:14px 14px 20px; display:flex; flex-direction:column; gap:10px; scrollbar-width:none; -ms-overflow-style:none; overscroll-behavior:contain; }
+.pmp-c-list::-webkit-scrollbar { display:none; }
+.pmp-c-row { display:flex; flex-shrink:0; }
+.pmp-c-row.me { justify-content:flex-end; }
+.pmp-c-bub { max-width:78%; padding:9px 13px; border-radius:16px; border-top-left-radius:5px; font-size:14px; line-height:1.55; word-break:break-word; overflow-wrap:anywhere; background:var(--card-bg,#fff); color:var(--ink,#222); border:1px solid var(--card-border,rgba(0,0,0,.08)); }
+.pmp-c-row.me .pmp-c-bub { background:#e8533d; color:#fff; border-color:transparent; border-radius:16px; border-top-right-radius:5px; }
+.pmp-c-empty { margin:auto; text-align:center; font-size:12px; line-height:1.9; color:var(--hint-ink,#999); }
+#page-pmp-chat .chat-head .ch-back svg { stroke:var(--ink,#111); }
+.pmp-c-inputbar { flex-shrink:0; display:flex; align-items:center; gap:8px; padding:8px 12px; padding-bottom:calc(8px + env(safe-area-inset-bottom, 0px)); background:var(--card-bg,#fff); border-top:1px solid var(--card-border,rgba(0,0,0,.06)); }
+.pmp-c-in { flex:1; min-width:0; border:1px solid var(--input-border,#ddd); background:var(--input-bg,#fff); color:var(--ink,#222); border-radius:18px; padding:9px 14px; font-size:15px; font-family:inherit; outline:none; }
+.pmp-c-send { flex-shrink:0; border:none; background:#e8533d; color:#fff; font-size:13px; font-weight:600; font-family:inherit; border-radius:18px; padding:9px 16px; -webkit-tap-highlight-color:transparent; }
 .piggy-body { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; box-sizing:border-box; padding:14px 14px 40px; }
 .piggy-hero { padding:22px 18px 20px; border-radius:14px; text-align:center; margin-bottom:16px; }
 .piggy-goal-name { font-size:13px; color:#b7791f; margin-bottom:8px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -4588,6 +4610,12 @@ border-radius:12px;
 .piggy-more { border:none; background:none; font-size:12px; color:#b7791f; font-family:inherit; padding:2px 4px; -webkit-tap-highlight-color:transparent; }
 .pr-month { font-size:11px; color:var(--ink-soft,#999); margin:8px 0 2px; font-weight:600; }
 .pr-sub { font-size:11px; color:#b7791f; text-align:right; padding:4px 0 8px; opacity:.85; }
+.ta-chime-note { position:fixed; left:50%; bottom:22%; transform:translate(-50%,8px); z-index:60; display:flex; align-items:center; gap:8px; max-width:86%; padding:10px 16px; border-radius:14px; background:rgba(255,255,255,.94); border:1px solid rgba(232,83,61,.22); box-shadow:0 6px 22px rgba(0,0,0,.10); font-size:14px; color:var(--ink,#444); opacity:0; pointer-events:none; transition:opacity .4s, transform .4s; }
+.ta-chime-note.show { opacity:1; transform:translate(-50%,0); }
+.ta-chime-dot { width:8px; height:8px; border-radius:50%; background:radial-gradient(circle, rgba(232,83,61,.9), rgba(232,83,61,.2) 70%); flex-shrink:0; animation:ta-chime-pulse 1.6s ease-in-out infinite; }
+@keyframes ta-chime-pulse { 0%,100%{opacity:.5; transform:scale(1);} 50%{opacity:1; transform:scale(1.25);} }
+.ta-chime-text { line-height:1.4; }
+.ta-chime-miss { display:block; font-size:11px; color:var(--ink-soft,#aaa); margin-top:2px; font-weight:400; }
 .msg-gift { align-self: center; width: 100%; display: flex; justify-content: center; margin: 8px 0; }
 .msg-gift-card {
 width: min(260px, 80vw); padding: 22px 18px 14px; border-radius: 20px; box-sizing: border-box;
@@ -5726,13 +5754,26 @@ color: #c67800;
 .memo-item.done .mm-text { opacity:.45; text-decoration:line-through; }
 .memo-item.pinned .mm-text { font-weight:700; }
 .mm-time { font-size:11px; color:var(--ink-soft,#aaa); margin-top:4px; }
-.mm-pin, .mm-del { flex-shrink:0; width:30px; height:30px; border:none; background:none; padding:0; border-radius:8px; display:flex; align-items:center; justify-content:center; cursor:pointer; -webkit-tap-highlight-color:transparent; }
-.mm-pin { font-size:14px; opacity:.4; filter:grayscale(1); transition:opacity .15s, filter .15s; }
+.mm-time.due-overdue { color:#e05a5a; font-weight:600; }
+.mm-time.due-today { color:#e8a23c; font-weight:600; }
+.memo-item.urgent .mm-text { color:#c0392b; }
+.memo-item.urgent.done .mm-text { color:var(--ink,#222); }
+.mm-act, .mm-pin, .mm-del { flex-shrink:0; width:28px; height:28px; border:none; background:none; padding:0; border-radius:8px; display:flex; align-items:center; justify-content:center; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+.mm-act { color:var(--ink-soft,#b5b5b5); }
+.mm-act svg { width:15px; height:15px; }
+.mm-act:active { background:rgba(0,0,0,.06); }
+.mm-due.on { color:#4a9fd4; }
+.mm-share:active { color:#4a9fd4; }
+.mm-pin { font-size:13px; opacity:.4; filter:grayscale(1); transition:opacity .15s, filter .15s; }
 .mm-pin.on { opacity:1; filter:none; }
 .mm-del { color:var(--ink-soft,#c0c0c0); }
-.mm-del svg { width:14px; height:14px; }
+.mm-del svg { width:13px; height:13px; }
 .memo-empty { text-align:center; font-size:13px; color:var(--ink-soft,#aaa); padding:36px 0 8px; line-height:1.9; }
 .memo-manage { text-align:center; margin-top:14px; }
+.memo-app-badge { margin-top:8px; font-size:11px; color:var(--ink-soft,#888); background:rgba(0,0,0,.045); border-radius:8px; padding:5px 8px; display:flex; align-items:center; justify-content:space-between; gap:6px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+.memo-app-badge::after { content:'›'; font-size:12px; color:var(--ink-soft,#bbb); }
+.memo-app-badge.urgent { color:#e05a5a; background:rgba(224,90,90,.08); }
+.memo-app-badge.urgent::after { color:#e05a5a; }
 </style>
 </head>
 <body>
@@ -5764,7 +5805,7 @@ color: #c67800;
       </div>
       <div class="splash-dots"><i></i><i></i><i></i></div>
       <div class="splash-brand">小红书@言序（1842523578）</div>
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787576303073">Mochi 字卡传讯 v3.6.224 · 部署于 2026-08-24 20:58</div>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787581573268">Mochi 字卡传讯 v3.6.225 · 部署于 2026-08-24 22:26</div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
       <div class="splash-loading" id="splash-loading">正在加载数据…</div>
@@ -6623,7 +6664,7 @@ color: #c67800;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.6.224</div>
+      <div class="ver">Mochi 字卡传讯 v3.6.225</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -15484,9 +15525,10 @@ try { store.set('chat-unread', '0'); } catch (e) {}
 updateChatBadge();
 }
 function updateChatBadge() {
+const n = chatUnread();
+if (window.setDeskBadge) { window.setDeskBadge('chat', n); return; }
 const badge = document.getElementById('chat-badge');
 if (!badge) return;
-const n = chatUnread();
 badge.hidden = n === 0;
 badge.textContent = n > 99 ? '99+' : String(n);
 }
@@ -20020,33 +20062,28 @@ const mediaVoice = (window.getMediaCardsFor && window.getMediaCardsFor(cid, 'voi
 sticker.push.apply(sticker, mediaSticker);
 image.push.apply(image, mediaImage);
 voice.push.apply(voice, mediaVoice);
-const raw = window.storeFor(cid).get('cc-groups');
-if (raw) {
-const groups = JSON.parse(raw);
-if (groups && typeof groups === 'object') {
-Object.keys(groups).forEach(key => {
-const g = groups[key];
-if (g && Array.isArray(g.cards)) {
-g.cards.forEach(card => {
-if (!card || typeof card !== 'object') return;
-if (card.type === 'text' && card.text) text.push(card.text);
-else if (card.type === 'emoji' && card.text) emoji.push(card.text);
-else if (card.type === 'kaomoji' && card.text) kaomoji.push(card.text);
-else if (card.type === 'sticker' && card.text) sticker.push(card.text);
-else if (card.type === 'image' && card.text) image.push(card.text);
-else if (card.type === 'voice' && card.text) voice.push(card.text);
+const pokeSet = (function () {
+const pk = (window.getPokeCardsFor && window.getPokeCardsFor(cid)) || [];
+return pk.length ? new Set(pk) : null;
+})();
+const cards = (window.getCustomCardsFor && window.getCustomCardsFor(cid)) || [];
+cards.forEach(c => {
+if (typeof c !== 'string' || !c) return;
+if (pokeSet && pokeSet.has(c)) return; // 拍一拍字卡只走拍一拍模式，不进普通回复池
+if (c.indexOf('data:') === 0) return; // 图片已按媒体分类取
+if (c.indexOf('|||') >= 0) return; // 语音已按媒体分类取
+if (/[\uD800-\uDBFF]/.test(c) || /^[😀-🙏🌀-🫿]/u.test(c)) emoji.push(c);
+else if (/[\(（｡◕(◕)(づ｡(¬)]/.test(c) && /[\)）】)]/.test(c)) kaomoji.push(c);
+else text.push(c);
 });
-}
-});
-}
-}
 } catch (e) {}
 try {
-const dcfg = (window.defaultCardCfg && window.defaultCardCfg()) || {};
-const useChat = window.defaultCardUse ? window.defaultCardUse('chat') : true;
-if (dcfg.enabled !== false && useChat && (!text.length || !kaomoji.length || !emoji.length)) {
-const catOn = window.defaultCardCat || (() => true);
-const isOff = window.isDefaultCardOff || null;
+const a = (window.defaultCardApiFor && window.storeFor) ? window.defaultCardApiFor(window.storeFor(cid)) : null;
+const dcfg = a ? a.cfg() : (window.defaultCardCfg && window.defaultCardCfg()) || {};
+const useChat = a ? a.use('chat') : (window.defaultCardUse ? window.defaultCardUse('chat') : true);
+const isOff = a ? a.isOff : (window.isDefaultCardOff || null);
+const catOn = a ? a.cat : (window.defaultCardCat || (() => true));
+if (dcfg.enabled !== false && useChat) {
 if (catOn('main')) {
 const defGrps = (window.getDefaultCardGroups && window.getDefaultCardGroups('main')) || [];
 defGrps.forEach(g => {
@@ -20106,24 +20143,13 @@ return { text: t, type: type, parts: parts };
 function gcPokeText(cid) {
 const name = memberName(cid);
 let action = '';
-const dcfg = (window.defaultCardCfg && window.defaultCardCfg()) || {};
-const useChat = window.defaultCardUse ? window.defaultCardUse('chat') : true;
-const touchOn = window.defaultCardCat ? window.defaultCardCat('touch') : true;
-if (dcfg.enabled && useChat && touchOn && (dcfg.probs && (dcfg.probs.touch || 0) > 0)) {
-const d = (window.getDefaultCards && window.getDefaultCards()) || null;
-if (d && d.type === 'poke') action = d.text;
-}
-if (!action) {
-const poke = [];
 try {
-const raw = window.storeFor(cid).get('cc-groups');
-if (raw) {
-const groups = JSON.parse(raw);
-if (groups && groups.poke && Array.isArray(groups.poke.cards)) {
-groups.poke.cards.forEach(card => { if (card && card.text) poke.push(card.text); });
-}
-}
+const st = window.storeFor ? window.storeFor(cid) : null;
+const d = (st && window.getDefaultCardsFor) ? window.getDefaultCardsFor(st) : ((window.getDefaultCards && window.getDefaultCards()) || null);
+if (d && d.type === 'poke') action = d.text;
 } catch (e) {}
+if (!action) {
+const poke = (window.getPokeCardsFor && window.getPokeCardsFor(cid)) || [];
 action = poke.length ? pick(poke) : '拍了拍我';
 }
 let text;
@@ -20431,7 +20457,7 @@ bRow.addEventListener('click', () => { gcBeautyView = true; renderSettingsPanel(
 settingsBody.appendChild(bRow);
 const note = document.createElement('div');
 note.className = 'gc-set-note';
-note.textContent = '群聊昵称/头像只在本群聊页生效；成员回复内容来自该成员桌面自己的字卡库。';
+note.textContent = '成员回复内容来自：公用字卡 + 该成员桌面专属字卡 + 系统默认字卡；某成员桌面关闭【聊天使用】，聊天和群聊里这个成员都不再使用系统默认字卡。';
 settingsBody.appendChild(note);
 }
 function beautyRow(label, val, fn) {
@@ -20720,6 +20746,9 @@ window.groupChatProfileGet = function (key) { try { return JSON.parse(JSON.strin
 window.groupChatProfileSet = function (key, name, avatar) { gcProfileSet(key, name, avatar); };
 window.groupChatBeautyGet = function (k) { return gcBeautyGet(k); };
 window.groupChatBeautySet = function (k, v) { gcBeautySet(k, v); };
+window.groupChatPoolFor = function (cid) {
+try { return JSON.parse(JSON.stringify(gcPool(cid))); } catch (e) { return null; }
+};
 })();
 } catch (__e) { try { console.error("[JS] group-chat.js", __e && __e.message || __e); } catch (x) {} if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
 (function () { try {
@@ -23936,20 +23965,39 @@ function toastCard(txt, off) {
 const s = String(txt == null ? '' : txt);
 toast((off ? '已关闭：' : '已开启：') + (s.length > 18 ? s.slice(0, 18) + '…' : s));
 }
-function getEnabled() { const v = ls.get('dc-enabled'); return v === null ? true : v === '1'; }
-function getOverall() { const v = ls.get('dc-overall'); return v === null ? 30 : Number(v); }
-function getProb(k) { const v = ls.get('dc-prob-' + k); return v === null ? 30 : Number(v); }
-function getUse(k) { const v = ls.get('dc-use-' + k); return v === null ? true : v === '1'; }
+function apiFor(st) {
+const gE = function () { const v = st.get('dc-enabled'); return v === null ? true : v === '1'; };
+const gO = function () { const v = st.get('dc-overall'); return v === null ? 30 : Number(v); };
+const gP = function (k) { const v = st.get('dc-prob-' + k); return v === null ? 30 : Number(v); };
+const gU = function (k) { const v = st.get('dc-use-' + k); return v === null ? true : v === '1'; };
+const gC = function (k) { const v = st.get('dc-cat-' + k); return v === null ? true : v === '1'; };
+const gOff = function (cat, c) { return st.get('dc-off-' + cat + ':' + c) === '1'; };
+return {
+enabled: gE,
+overall: gO,
+prob: gP,
+use: gU,
+cat: gC,
+isOff: gOff,
+cfg: function () {
+return { enabled: gE(), overall: gO(), probs: { main: gP('main'), kaomoji: gP('kaomoji'), emoji: gP('emoji'), touch: gP('touch') } };
+}
+};
+}
+const api = apiFor(ls);
+function getEnabled() { return api.enabled(); }
+function getOverall() { return api.overall(); }
+function getProb(k) { return api.prob(k); }
+function getUse(k) { return api.use(k); }
 function setUse(k, on) { ls.set('dc-use-' + k, on ? '1' : '0'); }
 window.defaultCardUse = function (k) { return getUse(k); };
-function getCat(k) { const v = ls.get('dc-cat-' + k); return v === null ? true : v === '1'; }
+function getCat(k) { return api.cat(k); }
 function setCat(k, on) { ls.set('dc-cat-' + k, on ? '1' : '0'); }
 window.defaultCardCat = function (k) { return getCat(k); };
-window.defaultCardCfg = function () {
-return { enabled: getEnabled(), overall: getOverall(), probs: { main: getProb('main'), kaomoji: getProb('kaomoji'), emoji: getProb('emoji'), touch: getProb('touch') } };
-};
+window.defaultCardCfg = function () { return api.cfg(); };
+window.defaultCardApiFor = apiFor;
 const DATA = (window.DEFAULT_CARD_DATA) || { main: [], kaomoji: [], emoji: [] };
-function isCardOff(cat, c) { return ls.get('dc-off-' + cat + ':' + c) === '1'; }
+function isCardOff(cat, c) { return api.isOff(cat, c); }
 function setCardOff(cat, c, off) { ls.set('dc-off-' + cat + ':' + c, off ? '1' : '0'); }
 window.isDefaultCardOff = function (cat, c) { return isCardOff(cat, c); };
 let cur = 'main';
@@ -23968,6 +24016,17 @@ setUse(k, el.checked);
 toast((el.checked ? '已开启' : '已关闭') + '：默认字卡' + label + '使用');
 });
 });
+(function () {
+const row = document.getElementById('dc-use-feed');
+if (!row) return;
+const grp = row.closest('.set-group');
+if (!grp || document.getElementById('dc-scope-note')) return;
+const note = document.createElement('div');
+note.id = 'dc-scope-note';
+note.style.cssText = 'margin:8px 12px 10px;font-size:11px;line-height:1.6;color:#999;';
+note.textContent = '以上开关按当前桌面对应的联系人独立保存：当当前桌面联系人关闭【聊天使用】，聊天和群聊里这个联系人也无法使用默认字卡（其他联系人不受影响）。';
+grp.parentNode.insertBefore(note, grp.nextSibling);
+})();
 [['main', '主字卡'], ['kaomoji', '颜文字'], ['emoji', 'emoji'], ['touch', '拍一拍']].forEach(([k, label]) => {
 const el = document.getElementById('dc-cat-' + k);
 if (!el) return;
@@ -24109,14 +24168,14 @@ const home = document.getElementById('page-chatcard');
 if (home) home.hidden = false;
 });
 }
-window.getDefaultCards = function () {
-if (!getUse('chat')) return [];
-const cfg = window.defaultCardCfg();
+function drawCards(a) {
+if (!a.use('chat')) return [];
+const cfg = a.cfg();
 if (!cfg.enabled) return [];
 if (Math.random() * 100 >= cfg.overall) return [];
 const keys = ['main', 'kaomoji', 'emoji', 'touch'];
-const weights = keys.map(k => (getCat(k) ? Math.max(0, cfg.probs[k] || 0) : 0));
-const total = weights.reduce((a, b) => a + b, 0);
+const weights = keys.map(k => (a.cat(k) ? Math.max(0, cfg.probs[k] || 0) : 0));
+const total = weights.reduce((x, y) => x + y, 0);
 if (total <= 0) return [];
 let roll = Math.random() * total;
 let chosen = 'main';
@@ -24125,13 +24184,15 @@ roll -= weights[i];
 if (roll < 0) { chosen = keys[i]; break; }
 }
 const grps = (DATA[chosen] || [])
-.map(g => [g[0], g[1].filter(c => !isCardOff(chosen, c))])
+.map(g => [g[0], g[1].filter(c => !a.isOff(chosen, c))])
 .filter(g => g[1].length);
 if (!grps.length) return [];
 const g = grps[Math.floor(Math.random() * grps.length)];
 const text = g[1][Math.floor(Math.random() * g[1].length)];
 return { text: text, type: chosen === 'touch' ? 'poke' : 'text' };
-};
+}
+window.getDefaultCardsFor = function (st) { return drawCards(apiFor(st)); };
+window.getDefaultCards = function () { return drawCards(api); };
 window.getDefaultCardGroups = function (cat) {
 return (DATA[cat] || []).slice();
 };
@@ -27283,14 +27344,23 @@ function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 function genMessage() {
 const cards = [];
 const custom = (window.getCustomCards && window.getCustomCards()) || [];
+const pokeSet = (function () {
+try {
+const pk = (window.getPokeCards && window.getPokeCards()) || [];
+return pk.length ? new Set(pk) : null;
+} catch (e) { return null; }
+})();
 custom.forEach(c => {
-if (typeof c === 'string' && c.indexOf('data:') !== 0 && c.indexOf('|||') < 0) cards.push(c);
+if (typeof c !== 'string') return;
+if (pokeSet && pokeSet.has(c)) return;
+if (c.indexOf('data:') !== 0 && c.indexOf('|||') < 0) cards.push(c);
 });
 const defs = (window.getDefaultCardGroups && window.getDefaultCardGroups('main')) || [];
 const dcfg = (window.defaultCardCfg && window.defaultCardCfg()) || {};
 const catOn = window.defaultCardCat ? window.defaultCardCat('main') : true;
+const isOff = window.isDefaultCardOff || null;
 if (dcfg.enabled !== false && catOn) {
-defs.forEach(([g, arr]) => { if (Array.isArray(arr)) arr.forEach(c => cards.push(c)); });
+defs.forEach(([g, arr]) => { if (Array.isArray(arr)) arr.forEach(c => { if (isOff && isOff('main', c)) return; if (typeof c === 'string' && c) cards.push(c); }); });
 }
 if (!cards.length) return '今天也想对你说点什么...';
 const maxCount = Math.min(8, cards.length);
@@ -32217,10 +32287,74 @@ showSysNotification(name, { body: '你不在的时候收到 ' + inc + ' 条新�
 } catch (e) {}
 });
 let lastResumeNotifyAt = 0; // v3.5.154：回前台汇总通知去重
+let lastVisibleAt = Date.now();
+(function () {
+const markVisible = function () {
+if (document.visibilityState === 'visible') lastVisibleAt = Date.now();
+};
+document.addEventListener('visibilitychange', markVisible);
+window.addEventListener('pageshow', markVisible);
+window.addEventListener('focus', markVisible);
+})();
+const NOTIFY_HIDDEN_MIN_MS = 15000;
+function normNotifyKey(raw) {
+let s = String(raw || '');
+if (s.length > 512) s = s.slice(0, 512); // 先截断再正则，避免超长 base64 全文替换开销
+s = s.replace(/data:[a-zA-Z0-9.+-]+\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+/g, '[附件]')
+.replace(/\|\|\|.*$/, '')
+.replace(/<[^>]*>/g, '');
+return s.replace(/\s+/g, '').slice(0, 60);
+}
+function recentChatDup(key) {
+if (!key) return false;
+try {
+const arr = window.getChatMsgs ? window.getChatMsgs() : null;
+if (!arr || !arr.length) return false;
+const cutoff = Date.now() - 30 * 60000;
+for (let i = arr.length - 1, n = 0; i >= 0 && n < 150; i--, n++) {
+const m = arr[i];
+if (!m) continue;
+const mts = m.ts || 0;
+if (mts && mts < cutoff) break; // 追加有序，更早的不可能落在 30 分钟内
+if (m.side !== 'in') continue;
+let t = m.text || '';
+if ((!t || t.indexOf('data:') === 0) && m.parts && m.parts.length) {
+t = m.parts.filter(p => p && p.k === 'text').map(p => p.v).join(' ');
+}
+if (normNotifyKey(t) === key) return true;
+}
+} catch (e) {}
+return false;
+}
+const notifiedRecently = new Map();
+function notifiedDup(key) {
+if (!key) return false;
+const last = notifiedRecently.get(key);
+return !!(last && Date.now() - last < 10 * 60000);
+}
+function markNotified(key) {
+if (!key) return;
+notifiedRecently.set(key, Date.now());
+if (notifiedRecently.size > 60) { // 上限防膨胀：删最早的（Map 保持插入序）
+notifiedRecently.delete(notifiedRecently.keys().next().value);
+}
+}
+window.bgNotifyGateInfo = function (text) {
+const key = normNotifyKey(text);
+return {
+hiddenForMs: Date.now() - lastVisibleAt,
+tooFreshHidden: Date.now() - lastVisibleAt < NOTIFY_HIDDEN_MIN_MS,
+dupNotified: notifiedDup(key),
+dupInChat: recentChatDup(key)
+};
+};
 window.bgNotifyCheck = function (text, ts, extra) {
 if (!notifyEnabled) return;
 if (document.visibilityState === 'visible') return;
 if (!('Notification' in window) || Notification.permission !== 'granted') return;
+const nkey = normNotifyKey(text);
+if (Date.now() - lastVisibleAt < NOTIFY_HIDDEN_MIN_MS) return;
+if (notifiedDup(nkey) || recentChatDup(nkey)) return;
 extra = extra || {};
 const name = extra.name || store.get('lbl-partner') || 'TA';
 let t = '';
@@ -32247,7 +32381,9 @@ try { cb(URL.createObjectURL(b)); } catch (e) { cb(''); }
 const sendNotify = function (iconUrl, imgUrl) {
 if (iconUrl) opts.icon = iconUrl;
 if (imgUrl) opts.image = imgUrl;
-showSysNotification(name, opts);
+showSysNotification(name, opts).then(function (ok) {
+if (ok) markNotified(nkey);
+});
 };
 const doSend = function (iconUrl) {
 if (previewImg && previewImg.indexOf('data:') === 0) {
@@ -33057,9 +33193,11 @@ writeSnap(list, cid);
 }
 function updateBadge() {
 const badge = document.getElementById('mail-badge');
-if (!badge) return;
+if (!badge && !window.setDeskBadge) return;
 try {
 const unread = load().filter(l => l.type === 'received' && !l.read && !l.myReply).length;
+if (window.setDeskBadge) { window.setDeskBadge('mail', unread); return; }
+if (!badge) return;
 if (unread > 0) {
 badge.textContent = unread > 99 ? '99+' : String(unread);
 badge.hidden = false;
@@ -33404,9 +33542,11 @@ const text = [], kaomoji = [], emoji = [];
 const defText = [], defKaomoji = [], defEmoji = [];
 const pushDefault = () => {
 try {
-if (window.defaultCardUse && !window.defaultCardUse('mail')) return;
-const isOff = window.isDefaultCardOff || null;
-const catOn = window.defaultCardCat || (() => true);
+const st = (cid && window.storeFor) ? window.storeFor(cid) : null;
+const a = (window.defaultCardApiFor && st) ? window.defaultCardApiFor(st) : null;
+if (a ? !a.use('mail') : (window.defaultCardUse && !window.defaultCardUse('mail'))) return;
+const isOff = a ? a.isOff : (window.isDefaultCardOff || null);
+const catOn = a ? a.cat : (window.defaultCardCat || (() => true));
 if (catOn('main') && !defText.length) {
 const dg = (window.getDefaultCardGroups && window.getDefaultCardGroups('main')) || [];
 dg.forEach(g => (g[1] || []).forEach(c => { if (isOff && isOff('main', c)) return; if (typeof c === 'string' && c) defText.push(c); }));
@@ -33447,15 +33587,17 @@ sticker: cid ? (window.getMediaCardsFor ? window.getMediaCardsFor(cid, 'sticker'
 image: cid ? (window.getMediaCardsFor ? window.getMediaCardsFor(cid, 'image') : []) : ((window.getMediaCards && window.getMediaCards('image')) || [])
 };
 }
-function pickDefaultMailCard(pool) {
+function pickDefaultMailCard(pool, cid) {
 try {
-const dcfg = (window.defaultCardCfg && window.defaultCardCfg()) || {};
+const st = (cid && window.storeFor) ? window.storeFor(cid) : null;
+const a = (window.defaultCardApiFor && st) ? window.defaultCardApiFor(st) : null;
+const dcfg = a ? a.cfg() : ((window.defaultCardCfg && window.defaultCardCfg()) || {});
 if (dcfg.enabled === false) return '';
 const overall = (dcfg.overall === undefined || dcfg.overall === null) ? 30 : dcfg.overall;
 if (Math.random() * 100 >= overall) return '';
 const keys = ['main', 'kaomoji', 'emoji'];
 const pools = { main: pool.defText, kaomoji: pool.defKaomoji, emoji: pool.defEmoji };
-const catOn = window.defaultCardCat || (() => true);
+const catOn = a ? a.cat : (window.defaultCardCat || (() => true));
 const weights = keys.map(k => (catOn(k) ? Math.max(0, (dcfg.probs && dcfg.probs[k]) || 0) : 0));
 const total = weights.reduce((a, b) => a + b, 0);
 if (total <= 0) return '';
@@ -33471,6 +33613,12 @@ return '';
 } catch (e) {}
 return '';
 }
+window.mailPoolFor = function (cid) {
+try {
+const p = mailCardPool(cid);
+return { textN: p.text.length, defTextN: p.defText.length, defKaoN: p.defKaomoji.length, defEmojiN: p.defEmoji.length };
+} catch (e) { return null; }
+};
 function taLetterContent(cfg, cid) {
 const pool = mailCardPool(cid);
 const hasCustom = pool.text.length > 0;
@@ -33482,7 +33630,7 @@ const n = wantMin + Math.floor(Math.random() * (wantMax - wantMin + 1));
 const parts = [];
 for (let i = 0; i < n; i++) {
 if (hasCustom) {
-const d = pickDefaultMailCard(pool);
+const d = pickDefaultMailCard(pool, cid);
 if (d) { parts.push(d); continue; }
 }
 parts.push(words[Math.floor(Math.random() * words.length)]);
@@ -34164,12 +34312,17 @@ else if (/[\(（｡◕(◕)(づ｡(¬)]/.test(c) && /[\)）】)]/.test(c)) kaomo
 else text.push(c);
 });
 try {
-if (window.defaultCardUse && window.defaultCardUse('feed') && window.getDefaultCardGroups) {
+const st = (cid && window.storeFor) ? window.storeFor(cid) : null;
+const a = (window.defaultCardApiFor && st) ? window.defaultCardApiFor(st) : null;
+const useFeed = a ? a.use('feed') : (window.defaultCardUse ? window.defaultCardUse('feed') : true);
+const en = a ? a.enabled() : ((window.defaultCardCfg && window.defaultCardCfg().enabled) !== false);
+if (en && useFeed && window.getDefaultCardGroups) {
 const gd = window.getDefaultCardGroups;
-const catOn = window.defaultCardCat || (() => true);
-if (catOn('main') && !text.length) (gd('main') || []).forEach(g => (g[1] || []).forEach(c => { if (typeof c === 'string' && c) text.push(c); }));
-if (catOn('kaomoji') && !kaomoji.length) (gd('kaomoji') || []).forEach(g => (g[1] || []).forEach(c => { if (typeof c === 'string' && c) kaomoji.push(c); }));
-if (catOn('emoji') && !emoji.length) (gd('emoji') || []).forEach(g => (g[1] || []).forEach(c => { if (typeof c === 'string' && c) emoji.push(c); }));
+const catOn = a ? a.cat : (window.defaultCardCat || (() => true));
+const isOff = a ? a.isOff : (window.isDefaultCardOff || null);
+if (catOn('main')) (gd('main') || []).forEach(g => (g[1] || []).forEach(c => { if (isOff && isOff('main', c)) return; if (typeof c === 'string' && c) text.push(c); }));
+if (catOn('kaomoji') && !kaomoji.length) (gd('kaomoji') || []).forEach(g => (g[1] || []).forEach(c => { if (isOff && isOff('kaomoji', c)) return; if (typeof c === 'string' && c) kaomoji.push(c); }));
+if (catOn('emoji') && !emoji.length) (gd('emoji') || []).forEach(g => (g[1] || []).forEach(c => { if (isOff && isOff('emoji', c)) return; if (typeof c === 'string' && c) emoji.push(c); }));
 }
 } catch (e) {}
 return { text: text, kaomoji: kaomoji, emoji: emoji, sticker: mediaSticker, image: mediaImage };
@@ -34813,11 +34966,14 @@ const n = unreadCount();
 b.hidden = n === 0;
 b.textContent = n > 99 ? '99+' : String(n);
 }
+const appN = feedAppUnread();
+if (window.setDeskBadge) { window.setDeskBadge('feed', appN); }
+else {
 const ab = document.getElementById('feed-app-badge');
 if (ab) {
-const n = feedAppUnread();
-ab.hidden = n === 0;
-ab.textContent = n > 99 ? '99+' : String(n);
+ab.hidden = appN === 0;
+ab.textContent = appN > 99 ? '99+' : String(appN);
+}
 }
 }
 function jumpToPost(pid, ci, ri) {
@@ -34836,10 +34992,10 @@ target.classList.remove('feed-flash');
 void target.offsetWidth;
 target.classList.add('feed-flash');
 }
-function noticeThumbOf(n) {
+function noticeThumbOf(n, posts) {
 try {
 if (!n || n.type !== 'comment' || n.ci == null) return '';
-const p = load().find(x => x.id === n.pid);
+const p = (posts || []).find(x => x.id === n.pid);
 if (!p || !p.comments || !p.comments[n.ci]) return '';
 const src = (n.ri != null && Array.isArray(p.comments[n.ci].replies) && p.comments[n.ci].replies[n.ri])
 ? p.comments[n.ci].replies[n.ri].content
@@ -34852,6 +35008,7 @@ function renderNotices() {
 const listEl = document.getElementById('feed-notice-list');
 if (!listEl) return;
 const list = notices();
+const postsForThumbs = load();
 const avFor = (n) => { try { const v = n && n.owner ? taAvFor(n.owner) : partnerAv(); return v || ''; } catch (e) { return ''; } };
 const avHtml = (data) => data
 ? '<span class="fn-av"><img src="' + attrEsc(data) + '" alt=""></span>'
@@ -34863,7 +35020,7 @@ const ico = n.type === 'like'
 : n.type === 'comment'
 ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:14px;height:14px"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>'
 : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:14px;height:14px"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>';
-const thumb = noticeThumbOf(n);
+const thumb = noticeThumbOf(n, postsForThumbs);
 const thumbHtml = thumb ? '<img class="fn-thumb" src="' + attrEsc(thumb) + '" alt="">' : '';
 return '<div class="feed-notice-item' + (n.read ? '' : ' new') + '" data-pid="' + n.pid + '" data-ci="' + (n.ci != null ? n.ci : '') + '" data-ri="' + (n.ri != null ? n.ri : '') + '">' + avHtml(avFor(n)) + '<span class="fn-ico">' + ico + '</span><span class="fn-text">' + noticeTextClean(n.text) + '</span>' + thumbHtml + '<span class="fn-time">' + fmtDT(n.ts) + '</span></div>';
 }).join('')
@@ -35627,6 +35784,18 @@ try { renderCover(); } catch (e) {}
 try { renderFeedAllCover(); } catch (e) {}
 });
 renderNoticeBadge();
+window.feedPoolFor = function (cid) {
+try {
+const p = cardPool(cid);
+return { textN: p.text.length, kaoN: p.kaomoji.length, emojiN: p.emoji.length, stickerN: (p.sticker || []).length, imageN: (p.image || []).length };
+} catch (e) { return null; }
+};
+window.feedPoolHas = function (cid, s) {
+try {
+const p = cardPool(cid);
+return { text: p.text.indexOf(s) >= 0, kaomoji: p.kaomoji.indexOf(s) >= 0, emoji: p.emoji.indexOf(s) >= 0 };
+} catch (e) { return null; }
+};
 })();
 } catch (__e) { try { console.error("[JS] feed.js", __e && __e.message || __e); } catch (x) {} if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
 (function () { try {
@@ -36958,6 +37127,65 @@ try { closeLocPanel(); locViewDate = ''; } catch (e) {}
 window.playLocFx = playLocFx;
 })();
 (function () {
+function store() { try { return window.activeStore(); } catch (e) { return null; } }
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+function dayKey() { const d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
+window.taIsNear = function () {
+const s = store(); if (!s) return false;
+let cur = null; try { cur = JSON.parse(s.get('loc-current') || 'null'); } catch (e) {}
+if (!cur) return false;
+const t = cur.text || '';
+return /能摸到|没走远|身边|心里|感觉到|隐约|陪你|跟着|马上到/.test(t);
+};
+window.taSenseDesc = function () {
+const s = store(); if (!s) return '还没感觉到 TA…';
+let cur = null; try { cur = JSON.parse(s.get('loc-current') || 'null'); } catch (e) {}
+if (!cur) return '还没感觉到 TA…';
+const t = cur.text || '';
+if (t.indexOf('隔着世界') >= 0) return 'TA 隔着世界，隐约在你身旁';
+if (t.indexOf('感觉到') >= 0) return '你感觉到了 TA，就在附近';
+if (t.indexOf('能摸到') >= 0) return '你能摸到 TA，很近很安心';
+if (t.indexOf('没走远') >= 0) return 'TA 一直没走远，就在身边';
+if (t.indexOf('隐约') >= 0) return 'TA 隐约在你身旁，感觉到了吗';
+if (t.indexOf('身边') >= 0) return 'TA 就在你身边，很安心';
+return '你感觉到 TA 在附近';
+};
+window.taChimeAllow = function (key, opts) {
+opts = opts || {};
+const s = store(); if (!s) return false;
+const now = Date.now();
+if (opts.cooldown) { let last = 0; try { last = parseInt(s.get('ta-chime:' + key + ':last') || '0', 10) || 0; } catch (e) {} if (now - last < opts.cooldown) return false; }
+if (opts.dailyMax) { let rec = null; try { rec = JSON.parse(s.get('ta-chime:' + key + ':day') || 'null'); } catch (e) {} if (rec && rec.date === dayKey() && rec.n >= opts.dailyMax) return false; }
+return true;
+};
+window.taChimeUse = function (key) {
+const s = store(); if (!s) return;
+try { s.set('ta-chime:' + key + ':last', '' + Date.now()); } catch (e) {}
+let rec = null; try { rec = JSON.parse(s.get('ta-chime:' + key + ':day') || 'null'); } catch (e) {}
+if (!rec || rec.date !== dayKey()) rec = { date: dayKey(), n: 0 };
+rec.n++; try { s.set('ta-chime:' + key + ':day', JSON.stringify(rec)); } catch (e) {}
+};
+let el = null, timer = null;
+window.taChimeShow = function (text, opts) {
+opts = opts || {};
+if (!el) { el = document.createElement('div'); el.className = 'ta-chime-note'; document.body.appendChild(el); }
+const miss = opts.miss ? '<span class="ta-chime-miss">' + esc(opts.miss) + '</span>' : '';
+el.innerHTML = '<span class="ta-chime-dot"></span><span class="ta-chime-text">' + esc(text) + '</span>' + miss;
+el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
+clearTimeout(timer); timer = setTimeout(() => { el.classList.remove('show'); }, opts.dur || 4200);
+};
+const CHECKIN_TA_CARDS = ['你今天也努力了', '我一直看着你呢', '又一起过了一天', '辛苦啦，过来抱抱', '嗯，今天也好好过来了', '你在，我就安心'];
+const CHECKIN_TA_MISS = ['（字卡有限，他想说的比这张多）', '（这张好像不是他想说的，别在意）', '（他没控制住，意思不全是这个）'];
+window.checkinTaCard = function (cb) {
+if (!window.taChimeAllow('checkin-ta', { cooldown: 24 * 3600 * 1000, dailyMax: 1 })) { if (cb) cb(null); return; }
+window.taChimeUse('checkin-ta');
+const miss = Math.random() < 0.22;
+const text = CHECKIN_TA_CARDS[Math.floor(Math.random() * CHECKIN_TA_CARDS.length)];
+const card = miss ? { text: text, miss: CHECKIN_TA_MISS[Math.floor(Math.random() * CHECKIN_TA_MISS.length)] } : { text: text };
+if (cb) cb(card);
+};
+})();
+(function () {
 function curStore() { try { return window.storeFor(window.__activeCid || 'default'); } catch (e) { return null; } }
 function vibrate(p) { try { if (navigator.vibrate) navigator.vibrate(p); } catch (e) {} }
 function editingNow() { return Array.from(document.querySelectorAll('.app-grid')).some(g => g.classList.contains('editing')); }
@@ -37177,6 +37405,7 @@ const DEF_WATER_MSGS = ['该喝水了', '别忘了喝水', '喝口水吧', '你�
 const DEF_WATER_PRAISE = ['今天喝够啦', '真棒', '完成了', '好乖'];
 const DEF_WATER_ENCOURAGE = ['再来一杯', '继续', '嗯', '快了'];
 const DEF_WATER_TA = ['TA 说：{m}', 'TA 让我提醒你：{m}', 'TA 念着：{m}', 'TA 托我带句话：{m}'];
+const DEF_WATER_TA_GENTLE = ['水凉了，喝一口？', '你忘了吧，喝一口', '我在呢，先喝口水', '嗯，去喝一口好不好', '别忙忘了喝水'];
 const waterPage = document.createElement('div');
 waterPage.className = 'page'; waterPage.id = 'page-water'; waterPage.hidden = true;
 waterPage.innerHTML =
@@ -37260,7 +37489,9 @@ const c = h[ds] || 0;
 const pct = g ? Math.min(100, Math.round(c / g * 100)) : 0;
 const todayCls = ds === today ? ' today' : '';
 const hitCls = c > 0 ? (c >= g ? ' hit' : ' ok') : ' miss';
-html += '<div class="water-col' + todayCls + hitCls + '"><i style="height:' + pct + '%"></i><b>' + (c || '') + '</b><em>' + ds.slice(8) + '</em></div>';
+const taMark = (function () { const ss = curStore(); return ss && ss.get('water-ta-mark:' + ds) === '1'; })();
+const taCls = taMark ? ' ta' : '';
+html += '<div class="water-col' + todayCls + hitCls + taCls + '"><i style="height:' + pct + '%"></i><b>' + (c || '') + '</b><em>' + ds.slice(8) + '</em></div>';
 }
 box.innerHTML = '<div class="water-week-title">近 7 天</div><div class="water-week-bars">' + html + '</div>';
 }
@@ -37278,8 +37509,22 @@ let last = 0; try { last = parseInt(s.get('water-last-visit') || '0', 10) || 0; 
 try { s.set('water-last-visit', '' + Date.now()); } catch (e) {}
 const t = waterToday(); const g = waterGoal();
 if (t.count < g && Date.now() - last > 2 * 3600000) {
+if (window.taChimeAllow && window.taChimeAllow('water-ta', { cooldown: 30 * 60 * 1000, dailyMax: 3 }) && Math.random() < 0.5) {
+window.taChimeUse('water-ta');
+const m = DEF_WATER_TA_GENTLE[Math.floor(Math.random() * DEF_WATER_TA_GENTLE.length)];
+const miss = Math.random() < 0.2 ? '（字卡有限，他想说的比这张多）' : null;
+if (window.taChimeShow) window.taChimeShow(m, { miss: miss });
+}
 const msgs = waterMsgs(); waterShowMsg(msgs[Math.floor(Math.random() * msgs.length)]);
 }
+waterMaybeTaMark();
+}
+function waterMaybeTaMark() {
+if (!window.taChimeAllow || !window.taChimeAllow('water-ta-mark', { cooldown: 24 * 3600 * 1000, dailyMax: 1 })) return;
+if (Math.random() > 0.4) return;
+window.taChimeUse('water-ta-mark');
+const s = curStore(); if (!s) return;
+try { s.set('water-ta-mark:' + waterDayStr(0), '1'); } catch (e) {}
 }
 window.waterDayHas = function (ds) { try { const h = waterHistory(); return (h[ds] || 0) > 0; } catch (e) { return false; } };
 if (waterApp) waterApp.addEventListener('click', () => { if (editingNow()) return; openPage(waterPage); waterRender(); waterMaybeRemind(); });
@@ -37351,6 +37596,7 @@ document.getElementById('eat-change').addEventListener('click', () => { if (edit
 document.getElementById('eat-send').addEventListener('click', () => { if (editingNow()) return; if (eatLastPick && window.chatAddIn) { try { window.chatAddIn(eatLastPick); } catch (e) {} toast('已发送'); } });
 document.getElementById('eat-add').addEventListener('click', () => { if (!window.openModal) return; window.openModal('添加菜名', '', (v) => { if (v) { const a = eatDishes(); a.push(v); eatSaveDishes(a.filter(d => d)); toast('已添加'); } }); });
 const DEF_POMO_PRAISE = ['专注的你最棒了', '认真的人最好看', '加油，我在陪你', '嗯嗯，我安静陪着', '专注完抱一下'];
+const DEF_POMO_NEAR = ['你专注的时候，我就静静待在旁边', '认真完啦，过来靠靠你', '我一直在旁边看着你呢', '专注完啦，抱一下', '你在认真，我在旁边，挺好'];
 const POMO_MODES = { focus: { name: '专注', def: 25 }, short: { name: '小憩', def: 5 }, long: { name: '长休', def: 15 } };
 const POMO_RING_C = 552.92; // 2π×88 圆环周长
 const pomoPage = document.createElement('div');
@@ -37363,6 +37609,7 @@ pomoPage.innerHTML =
 '<div class="pomo-dial">' +
 '<svg class="pomo-ring" viewBox="0 0 200 200"><circle class="pomo-ring-bg" cx="100" cy="100" r="88"/><circle class="pomo-ring-fill" id="pomo-ring" cx="100" cy="100" r="88"/></svg>' +
 '<div class="pomo-center"><div class="pomo-time" id="pomo-time">25:00</div><div class="pomo-state" id="pomo-state">准备专注</div></div>' +
+'<div class="pomo-spark" id="pomo-spark"></div>' +
 '</div>' +
 '</div>' +
 '<div class="pomo-btns"><button class="pomo-start" id="pomo-start">开始</button><button class="pomo-reset" id="pomo-reset">重置</button></div>' +
@@ -37420,6 +37667,8 @@ const stats = document.getElementById('pomo-stats');
 if (stats) stats.textContent = '今日 🍅 × ' + t.count + ' · 累计 ' + pomoTotal() + ' 个';
 pmpRefreshGoBtn();
 if (pmpActive()) pmpRefreshBar();
+const spark = document.getElementById('pomo-spark');
+if (spark) spark.classList.toggle('on', pomoRunning && pomoMode === 'focus');
 }
 function pomoStopTick() { clearInterval(pomoTickTimer); pomoTickTimer = null; }
 function pomoStartTick() {
@@ -37438,12 +37687,14 @@ if (pomoMode === 'focus') {
 const mins = pomoModeMin('focus');
 const t = pomoToday(); t.count++; pomoSaveToday(t);
 pomoSaveTotal(pomoTotal() + 1);
-const pool = pomoPool();
-const praise = pool[Math.floor(Math.random() * pool.length)];
+const near = window.taIsNear && window.taIsNear();
+let praise;
+if (near && Math.random() < 0.7) praise = DEF_POMO_NEAR[Math.floor(Math.random() * DEF_POMO_NEAR.length)];
+else { const pool = pomoPool(); praise = pool[Math.floor(Math.random() * pool.length)]; }
 const brk = t.count % 4 === 0 ? 'long' : 'short';
 const wasPmp = pmpActive();
 if (wasPmp) {
-try { window.chatAddIn(PMP_DONE[Math.floor(Math.random() * PMP_DONE.length)], { initiative: true }); } catch (e) {}
+try { pmpCAdd('ta', PMP_DONE[Math.floor(Math.random() * PMP_DONE.length)]); } catch (e) {}
 pmpFlash('\u2705 完成 +1 🍅');
 pmpDetach();
 }
@@ -37844,6 +38095,8 @@ if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) { e.preventDefault
 const PMP_GREET = ['好，我陪着你', '去吧，我在这等你', '专注吧，我不吵你', '嗯，一起加油'];
 const PMP_ENC = ['在呢', '继续哦', '摸摸头', '嗯嗯，陪你', '快了快了', '我在看你专注'];
 const PMP_DONE = ['🍅 完成一个！为你骄傲', '🍅 太棒了，去休息一下吧', '🍅 收工！今天也超认真'];
+const PMP_REPLIES = ['嗯嗯，我在', '专心哦，我看着你呢', '加油，很快就完成了', '嗯，陪你', '别分心呀，专注完再聊', '好，一起加油', '我在呢，安心专注'];
+const PMP_TIRED = ['累就先歇口气，深呼吸一下', '辛苦啦，摸摸头，再坚持一小会儿', '累了就慢一点，我不催你'];
 let pmpRec = null;
 try { pmpRec = JSON.parse((curStore() && curStore().get('pomo-companion')) || 'null'); } catch (e) { pmpRec = null; }
 if (!pmpRec || typeof pmpRec !== 'object') pmpRec = null;
@@ -37866,12 +38119,65 @@ const anchor = document.getElementById('chat-body');
 if (anchor) { chatPageEl.insertBefore(pmpMenu, anchor); chatPageEl.insertBefore(pmpBar, pmpMenu); }
 else chatPageEl.appendChild(pmpBar);
 }
+const pmpCPage = document.createElement('div');
+pmpCPage.className = 'page'; pmpCPage.id = 'page-pmp-chat'; pmpCPage.hidden = true;
+pmpCPage.innerHTML =
+'<div class="chat-head"><span class="ch-back" id="pmpc-back"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><span class="ch-name">陪伴专注</span></div>' +
+'<div class="pmp-bar" id="pmp-cd"><span class="pmp-bar-time" id="pmp-cd-time">25:00</span><span class="pmp-bar-label" id="pmp-cd-label">专注中 · TA 陪着你</span><button class="pmp-bar-toggle" id="pmp-cd-toggle">暂停</button><button class="pmp-bar-more" id="pmp-cd-more">⋯</button><div class="pmp-progress"><div class="pmp-progress-fill" id="pmp-cd-fill"></div></div></div>' +
+'<div class="pmp-menu" id="pmp-c-menu" hidden><button data-pmpc="page" type="button">回番茄钟页</button><button data-pmpc="quit" type="button">提前结束</button></div>' +
+'<div class="pmp-c-list" id="pmp-c-list"></div>' +
+'<div class="pmp-c-inputbar"><input class="pmp-c-in" id="pmp-c-in" type="text" maxlength="120" placeholder="想说点什么…（TA 安静陪着）"><button class="pmp-c-send" id="pmp-c-send">发送</button></div>';
+host.appendChild(pmpCPage);
+function pmpLog() { try { const a = JSON.parse((curStore() && curStore().get('pomo-companion-log')) || '[]'); if (Array.isArray(a)) return a; } catch (e) {} return []; }
+function pmpLogSave(a) { const s = curStore(); if (!s) return; try { s.set('pomo-companion-log', JSON.stringify(a.slice(-300))); } catch (e) {} }
+function pmpEsc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+function pmpCRender() {
+const box = document.getElementById('pmp-c-list'); if (!box) return;
+const a = pmpLog();
+if (!a.length) {
+box.innerHTML = '<div class="pmp-c-empty">这里是陪伴模式的专属小窗<br>专注时的鼓励和悄悄话都在这里<br>不会进普通聊天记录</div>';
+return;
+}
+let h = '';
+for (let i = 0; i < a.length; i++) h += '<div class="pmp-c-row' + (a[i].w === 'me' ? ' me' : '') + '"><div class="pmp-c-bub">' + pmpEsc(a[i].t) + '</div></div>';
+box.innerHTML = h;
+box.scrollTop = box.scrollHeight;
+}
+function pmpCAdd(who, text) {
+const a = pmpLog(); a.push({ w: who === 'me' ? 'me' : 'ta', t: String(text || ''), ts: Date.now() }); pmpLogSave(a);
+if (!pmpCPage.hidden) pmpCRender();
+}
+let pmpReplyTimer = null;
+function pmpCReply(userText) {
+clearTimeout(pmpReplyTimer);
+const t = String(userText || '');
+let pool = PMP_REPLIES;
+if (/累|难|烦|倦|困/.test(t)) pool = PMP_TIRED;
+else if (/完成|好了|结束|收工/i.test(t)) pool = PMP_DONE;
+const txt = pool[Math.floor(Math.random() * pool.length)];
+pmpReplyTimer = setTimeout(() => { try { vibrate([30]); } catch (e) {} pmpCAdd('ta', txt); }, 700 + Math.random() * 800);
+}
+function pmpCSend() {
+const inp = document.getElementById('pmp-c-in');
+const t = inp ? String(inp.value || '').trim() : '';
+if (!t) return;
+if (inp) inp.value = '';
+pmpCAdd('me', t);
+pmpCReply(t);
+}
+document.getElementById('pmpc-back').addEventListener('click', () => backHome(pmpCPage));
+document.getElementById('pmp-c-send').addEventListener('click', pmpCSend);
+document.getElementById('pmp-c-in').addEventListener('keydown', (e) => {
+if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) { e.preventDefault(); pmpCSend(); }
+});
 function pmpActive() { return !!pmpRec; }
 function pmpSave() { const s = curStore(); if (!s) return; try { if (pmpRec) s.set('pomo-companion', JSON.stringify(pmpRec)); else s.remove('pomo-companion'); } catch (e) {} }
 function pmpDetach() {
 clearTimeout(pmpEncTimer);
+clearTimeout(pmpReplyTimer);
 pmpRec = null; pmpSave();
 pmpMenu.hidden = true;
+const cm = document.getElementById('pmp-c-menu'); if (cm) cm.hidden = true;
 pmpSyncBar();
 }
 function pmpSyncFromEngine() {
@@ -37887,30 +38193,42 @@ function pmpRefreshBar() {
 if (!pmpActive()) return;
 const remainMs = Math.max(0, pomoRunning ? pomoEndAt - Date.now() : (pmpRec.remainMs || pmpRec.totalMs));
 const sec = Math.ceil(remainMs / 1000);
-const tm = document.getElementById('pmp-bar-time');
-if (tm) tm.textContent = String(Math.floor(sec / 60)).padStart(2, '0') + ':' + String(sec % 60).padStart(2, '0');
-const lb = document.getElementById('pmp-bar-label');
-if (lb) lb.textContent = pomoRunning ? '专注中 · TA 陪着你' : '已暂停';
-const tg = document.getElementById('pmp-bar-toggle');
-if (tg) tg.textContent = pomoRunning ? '暂停' : '继续';
-const fl = document.getElementById('pmp-fill');
+const tmTxt = String(Math.floor(sec / 60)).padStart(2, '0') + ':' + String(sec % 60).padStart(2, '0');
+const lbTxt = pomoRunning ? '专注中 · TA 陪着你' : '已暂停';
+const tgTxt = pomoRunning ? '暂停' : '继续';
+[['pmp-bar-time', 'pmp-bar-label', 'pmp-bar-toggle', 'pmp-fill'], ['pmp-cd-time', 'pmp-cd-label', 'pmp-cd-toggle', 'pmp-cd-fill']].forEach((ids) => {
+const tm = document.getElementById(ids[0]);
+if (tm) tm.textContent = tmTxt;
+const lb = document.getElementById(ids[1]);
+if (lb) lb.textContent = lbTxt;
+const tg = document.getElementById(ids[2]);
+if (tg) tg.textContent = tgTxt;
+const fl = document.getElementById(ids[3]);
 if (fl && pmpRec.totalMs) fl.style.width = Math.min(100, Math.max(0, (1 - remainMs / pmpRec.totalMs) * 100)) + '%';
+});
 }
 let pmpFlashing = false;
 let pmpFlashTimer = null;
 function pmpFlash(txt) {
 pmpFlashing = true;
-const tm = document.getElementById('pmp-bar-time'); if (tm) tm.textContent = '00:00';
-const tg = document.getElementById('pmp-bar-toggle'); if (tg) tg.style.display = 'none';
-const mo = document.getElementById('pmp-bar-more'); if (mo) mo.style.display = 'none';
-const lb = document.getElementById('pmp-bar-label'); if (lb) lb.textContent = txt;
-const fl = document.getElementById('pmp-fill'); if (fl) fl.style.width = '100%';
+[['pmp-bar-time', 'pmp-bar-toggle', 'pmp-bar-more', 'pmp-fill', 'pmp-bar-label'], ['pmp-cd-time', 'pmp-cd-toggle', 'pmp-cd-more', 'pmp-cd-fill', 'pmp-cd-label']].forEach((ids) => {
+const tm = document.getElementById(ids[0]); if (tm) tm.textContent = '00:00';
+const tg = document.getElementById(ids[1]); if (tg) tg.style.display = 'none';
+const mo = document.getElementById(ids[2]); if (mo) mo.style.display = 'none';
+const fl = document.getElementById(ids[3]); if (fl) fl.style.width = '100%';
+const lb = document.getElementById(ids[4]); if (lb) lb.textContent = txt;
+});
 if (chatPageEl) pmpBar.hidden = !!chatPageEl.hidden;
 clearTimeout(pmpFlashTimer);
 pmpFlashTimer = setTimeout(() => {
 pmpFlashing = false;
-if (tg) tg.style.display = ''; if (mo) mo.style.display = '';
+['pmp-bar-toggle', 'pmp-bar-more', 'pmp-cd-toggle', 'pmp-cd-more'].forEach((id) => { const el = document.getElementById(id); if (el) el.style.display = ''; });
+if (!pmpActive()) {
+const cd = document.getElementById('pmp-cd'); if (cd) cd.hidden = true;
+const cm2 = document.getElementById('pmp-c-menu'); if (cm2) cm2.hidden = true;
+}
 pmpSyncBar();
+if (!pmpCPage.hidden && pmpActive()) pmpRefreshBar();
 }, 2600);
 }
 function pmpSyncBar() {
@@ -37938,33 +38256,15 @@ if (pomoRunning && now >= pmpRec.nextEncAt && (pmpRec.enc || 0) < 2) {
 pmpRec.enc = (pmpRec.enc || 0) + 1;
 pmpRec.nextEncAt = now + (5 + Math.random() * 3) * 60000;
 pmpSave();
-try { window.chatAddIn(PMP_ENC[Math.floor(Math.random() * PMP_ENC.length)], { initiative: true, silent: true }); } catch (e) {}
+try { pmpCAdd('ta', PMP_ENC[Math.floor(Math.random() * PMP_ENC.length)]); } catch (e) {}
 }
 pmpScheduleEnc();
 }
 function pmpRefreshGoBtn() {
 const gb = document.getElementById('pomo-companion');
-if (gb) gb.textContent = pmpActive() ? (pmpRec.paused ? '陪伴已暂停 · 返回聊天' : '陪伴中 · 返回聊天') : '🍅 陪伴模式';
+if (gb) gb.textContent = pmpActive() ? (pmpRec.paused ? '陪伴已暂停 · 返回陪伴' : '陪伴中 · 返回陪伴') : '🍅 陪伴模式';
 }
-const pmpGoBtn = document.getElementById('pomo-companion');
-if (pmpGoBtn) pmpGoBtn.addEventListener('click', () => {
-if (editingNow()) return;
-if (pmpActive()) { if (window.enterChat) { try { window.enterChat(); } catch (e) {} } return; }
-if (pomoMode !== 'focus') { pomoRunning = false; pomoRemainMs = 0; pomoStopTick(); pomoMode = 'focus'; }
-if (!pomoRunning) {
-pomoRemainMs = 0;
-pomoEndAt = Date.now() + pomoModeMin('focus') * 60000;
-pomoRunning = true; pomoStartTick();
-}
-pmpRec = { mode: 'focus', totalMs: pomoModeMin('focus') * 60000, endAt: pomoEndAt, startedAt: Date.now(), paused: 0, remainMs: 0, enc: 0, nextEncAt: 0 };
-pmpSave();
-try { window.chatAddIn(PMP_GREET[Math.floor(Math.random() * PMP_GREET.length)], { initiative: true, silent: true }); } catch (e) {}
-pmpScheduleEnc();
-pmpSyncBar(); pomoRender();
-if (window.enterChat) { try { window.enterChat(); } catch (e) {} }
-});
-const pmpToggleBtn = document.getElementById('pmp-bar-toggle');
-if (pmpToggleBtn) pmpToggleBtn.addEventListener('click', () => {
+function pmpToggleRun() {
 if (!pmpActive()) return;
 if (pomoRunning) {
 pomoRemainMs = Math.max(0, pomoEndAt - Date.now());
@@ -37974,20 +38274,56 @@ pomoEndAt = Date.now() + (pmpRec.remainMs || pmpRec.totalMs);
 pomoRunning = true; pomoStartTick();
 }
 pmpSyncFromEngine(); pomoRender();
+}
+function pmpQuitAsk() {
+if (!window.openModal) return;
+window.openModal('提前结束这个番茄？', '', (v) => {
+if (v !== '1') return;
+if (pomoRunning) { pomoRunning = false; pomoStopTick(); }
+pomoRemainMs = 0; pomoMode = 'focus';
+const inWin = !pmpCPage.hidden;
+try { pmpCAdd('ta', '没事，休息一下也可以'); } catch (e) {}
+pmpDetach(); pomoRender();
+if (inWin) { openPage(pomoPage); pomoRender(); }
+}, { noInput: true, lock: true, pills: [{ label: '结束', value: '1' }, { label: '再撑一会儿', value: '0' }], staticText: '提前结束的话，这个 🍅 就不计入今天啦' });
+}
+const pmpGoBtn = document.getElementById('pomo-companion');
+if (pmpGoBtn) pmpGoBtn.addEventListener('click', () => {
+if (editingNow()) return;
+if (pmpActive()) { openPage(pmpCPage); pmpCRender(); return; }
+if (pomoMode !== 'focus') { pomoRunning = false; pomoRemainMs = 0; pomoStopTick(); pomoMode = 'focus'; }
+if (!pomoRunning) {
+pomoRemainMs = 0;
+pomoEndAt = Date.now() + pomoModeMin('focus') * 60000;
+pomoRunning = true; pomoStartTick();
+}
+pmpRec = { mode: 'focus', totalMs: pomoModeMin('focus') * 60000, endAt: pomoEndAt, startedAt: Date.now(), paused: 0, remainMs: 0, enc: 0, nextEncAt: 0 };
+pmpSave();
+const cdEl = document.getElementById('pmp-cd'); if (cdEl) cdEl.hidden = false;
+try { pmpCAdd('ta', PMP_GREET[Math.floor(Math.random() * PMP_GREET.length)]); } catch (e) {}
+pmpScheduleEnc();
+pmpSyncBar(); pomoRender();
+openPage(pmpCPage); pmpCRender();
 });
+const pmpToggleBtn = document.getElementById('pmp-bar-toggle');
+if (pmpToggleBtn) pmpToggleBtn.addEventListener('click', pmpToggleRun);
 const pmpMoreBtn = document.getElementById('pmp-bar-more');
 if (pmpMoreBtn) pmpMoreBtn.addEventListener('click', () => { pmpMenu.hidden = !pmpMenu.hidden; });
 pmpMenu.querySelectorAll('button[data-pmp]').forEach(b => b.addEventListener('click', () => {
 pmpMenu.hidden = true;
 if (b.dataset.pmp === 'page') { openPage(pomoPage); pomoRender(); return; }
-if (b.dataset.pmp !== 'quit' || !window.openModal) return;
-window.openModal('提前结束这个番茄？', '', (v) => {
-if (v !== '1') return;
-if (pomoRunning) { pomoRunning = false; pomoStopTick(); }
-pomoRemainMs = 0; pomoMode = 'focus';
-try { window.chatAddIn('没事，休息一下也可以', { initiative: true }); } catch (e) {}
-pmpDetach(); pomoRender();
-}, { noInput: true, lock: true, pills: [{ label: '结束', value: '1' }, { label: '再撑一会儿', value: '0' }], staticText: '提前结束的话，这个 🍅 就不计入今天啦' });
+if (b.dataset.pmp !== 'quit') return;
+pmpQuitAsk();
+}));
+const pmpCdToggle = document.getElementById('pmp-cd-toggle');
+if (pmpCdToggle) pmpCdToggle.addEventListener('click', pmpToggleRun);
+const pmpCdMore = document.getElementById('pmp-cd-more');
+if (pmpCdMore) pmpCdMore.addEventListener('click', () => { const m = document.getElementById('pmp-c-menu'); if (m) m.hidden = !m.hidden; });
+document.querySelectorAll('#pmp-c-menu button[data-pmpc]').forEach(b => b.addEventListener('click', () => {
+const m = document.getElementById('pmp-c-menu'); if (m) m.hidden = true;
+if (b.dataset.pmpc === 'page') { openPage(pomoPage); pomoRender(); return; }
+if (b.dataset.pmpc !== 'quit') return;
+pmpQuitAsk();
 }));
 if (chatPageEl) new MutationObserver(pmpSyncBar).observe(chatPageEl, { attributes: true, attributeFilter: ['hidden'] });
 document.addEventListener('contact-switched', () => { if (pmpActive()) pmpDetach(); });
@@ -38005,7 +38341,7 @@ pmpScheduleEnc();
 } else {
 const t = pomoToday(); t.count++; pomoSaveToday(t);
 pomoSaveTotal(pomoTotal() + 1);
-try { window.chatAddIn('🍅 你刚才完成了一个专注，回来看到啦，很棒', { initiative: true, silent: true }); } catch (e) {}
+try { pmpCAdd('ta', '🍅 你刚才完成了一个专注，回来看到啦，很棒'); } catch (e) {}
 pmpDetach();
 }
 pmpSyncBar();
@@ -38013,12 +38349,30 @@ pmpSyncBar();
 pmpRefreshGoBtn();
 document.addEventListener('contact-switched', () => {
 tpStopFlow();
+if (!pmpCPage.hidden) backHome(pmpCPage);
 if (!tpPage.hidden) tpPick();
 if (!ssPage.hidden) ssRenderCount();
 if (!waterPage.hidden) waterRender();
 if (!pomoPage.hidden) pomoRender();
 if (!piggyPage.hidden) piggyRender();
 });
+})();
+(function () {
+let lastTa = null;
+function chk() {
+if (document.hidden) return;
+const s = window.activeStore && window.activeStore(); if (!s) return;
+let cur = 0; try { cur = parseInt(s.get('fish-total-ta') || '0', 10) || 0; } catch (e) {}
+if (lastTa === null) { lastTa = cur; return; }
+if (cur > lastTa && window.taChimeAllow && window.taChimeAllow('fish-ta-note', { cooldown: 2 * 3600 * 1000, dailyMax: 3 }) && Math.random() < 0.25) {
+window.taChimeUse('fish-ta-note');
+if (window.taChimeShow) window.taChimeShow('他在那边也偷了个懒', { dur: 3600 });
+}
+lastTa = cur;
+}
+setInterval(chk, 60 * 1000);
+setTimeout(chk, 5000);
+document.addEventListener('contact-switched', () => { lastTa = null; });
 })();
 } catch (__e) { try { console.error("[JS] p2-features.js", __e && __e.message || __e); } catch (x) {} if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
 (function () { try {
@@ -38736,6 +39090,19 @@ function memoItems() { const s = gStore(); if (!s) return []; try { const a = JS
 function memoSave(a) { const s = gStore(); if (s) try { s.set('memo-app-items', JSON.stringify(a)); } catch (e) {} }
 function memoSendOn() { const s = gStore(); try { return s.get('memo-app-send') === '1'; } catch (e) { return false; } }
 function memoPick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+function memoClip(t, n) { return (t || '').length > n ? (t || '').slice(0, n) + '…' : (t || ''); }
+function memoDayStr(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function memoUrgent(it) {
+if (!it || !it.due || it.done) return null;
+const t = memoDayStr(new Date());
+if (it.due < t) return 'overdue';
+if (it.due === t) return 'today';
+return null;
+}
+function memoOverdueDays(due) {
+const d1 = new Date(due + 'T00:00:00'); const d2 = new Date(); d2.setHours(0, 0, 0, 0);
+return Math.max(1, Math.round((d2 - d1) / 86400000));
+}
 function memoFmt(ts) { const d = new Date(ts); const p = (n) => (n < 10 ? '0' + n : '' + n); return (d.getMonth() + 1) + '月' + d.getDate() + '日 ' + p(d.getHours()) + ':' + p(d.getMinutes()); }
 function memoShowMsg(t) { const el = document.getElementById('memo-msg'); if (el) { el.classList.add('fade'); setTimeout(() => { el.textContent = t; el.classList.remove('fade'); }, 200); } }
 function memoMergeById(a, b) {
@@ -38811,10 +39178,11 @@ const cnt = document.getElementById('memo-count');
 if (cnt) cnt.textContent = items.length ? ('共 ' + items.length + ' 条 · 待办 ' + undone) : '';
 const empty = document.getElementById('memo-empty');
 if (empty) empty.hidden = items.length > 0;
-const rows = items.slice().sort((a, b) => ((b.pin ? 1 : 0) - (a.pin ? 1 : 0)) || ((a.done ? 1 : 0) - (b.done ? 1 : 0)));
+const rank = (it) => (it.pin ? 8 : 0) + ((memoUrgent(it) && !it.done) ? 4 : 0) + (it.done ? 0 : 2);
+const rows = items.slice().sort((a, b) => rank(b) - rank(a));
 rows.forEach(it => {
 const row = document.createElement('div');
-row.className = 'memo-item glass' + (it.done ? ' done' : '') + (it.pin ? ' pinned' : '');
+row.className = 'memo-item glass' + (it.done ? ' done' : '') + (it.pin ? ' pinned' : '') + (memoUrgent(it) ? ' urgent' : '');
 const chk = document.createElement('span');
 chk.className = 'mm-check';
 chk.innerHTML = '<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
@@ -38842,41 +39210,122 @@ const a = memoItems(); const cur = a.find(x => x.id === it.id); if (!cur) return
 cur.t = val.slice(0, 500); cur.ts = Date.now(); memoSave(a); memoRender();
 }, { textarea: true });
 });
-const tm = document.createElement('div'); tm.className = 'mm-time'; tm.textContent = memoFmt(it.ts || Date.now());
+const tm = document.createElement('div'); tm.className = 'mm-time';
+const urg = memoUrgent(it);
+if (it.due && !it.done) {
+if (urg === 'overdue') { tm.textContent = '已过期 ' + memoOverdueDays(it.due) + ' 天 · ' + memoFmt(it.ts || Date.now()); tm.classList.add('due-overdue'); }
+else if (urg === 'today') { tm.textContent = '今天截止 · ' + memoFmt(it.ts || Date.now()); tm.classList.add('due-today'); }
+else tm.textContent = it.due + ' 截止 · ' + memoFmt(it.ts || Date.now());
+} else tm.textContent = memoFmt(it.ts || Date.now());
 main.appendChild(txt); main.appendChild(tm);
+const dueBtn = document.createElement('button');
+dueBtn.className = 'mm-act mm-due' + (it.due ? ' on' : ''); dueBtn.title = '截止日期';
+dueBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="16" rx="2.5"/><path d="M4 9.5h16M8.5 3v4M15.5 3v4"/></svg>';
+dueBtn.addEventListener('click', () => {
+if (editingNow()) return;
+if (!window.openModal) return;
+const d = new Date();
+const fmt = (off) => { const x = new Date(d.getTime() + off * 86400000); return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0'); };
+const satOff = ((6 - d.getDay()) + 7) % 7 || 7;
+window.openModal('设置截止日期', '', (v) => {
+if (v === null || v === undefined) return;
+const a = memoItems(); const cur = a.find(x => x.id === it.id); if (!cur) return;
+cur.due = v === 'clear' ? null : v; memoSave(a); memoRender();
+toast(v === 'clear' ? '已清除截止' : '已设置截止');
+}, {
+noInput: true,
+staticText: '「' + memoClip(it.t, 14) + '」' + (it.due ? '当前截止：' + it.due : '未设置截止'),
+pills: [
+{ label: '今天', value: fmt(0) }, { label: '明天', value: fmt(1) },
+{ label: '后天', value: fmt(2) }, { label: '周末', value: fmt(satOff) },
+{ label: '清除', value: 'clear' }
+]
+});
+});
+const shr = document.createElement('button');
+shr.className = 'mm-act mm-share'; shr.title = '发给TA';
+shr.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 3.5L10 13.5"/><path d="M21.5 3.5L15 21l-5-7.5-7.5-4z"/></svg>';
+shr.addEventListener('click', () => {
+if (editingNow()) return;
+if (!window.chatAddIn) { toast('聊天未就绪'); return; }
+const dueTxt = it.due ? '（' + it.due + ' 截止）' : '';
+try { window.chatAddIn('备忘 · ' + (it.t || '') + dueTxt); toast('已发送'); } catch (e) {}
+});
 const pin = document.createElement('button');
-pin.className = 'mm-pin' + (it.pin ? ' on' : ''); pin.textContent = '📌'; pin.title = it.pin ? '取消置顶' : '置顶';
+pin.className = 'mm-act mm-pin' + (it.pin ? ' on' : ''); pin.textContent = '📌'; pin.title = it.pin ? '取消置顶' : '置顶';
 pin.addEventListener('click', () => {
 if (editingNow()) return;
 const a = memoItems(); const cur = a.find(x => x.id === it.id); if (!cur) return;
 cur.pin = !cur.pin; memoSave(a); vibrate(6); memoRender();
 });
 const del = document.createElement('button');
-del.className = 'mm-del'; del.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>'; del.title = '删除';
+del.className = 'mm-act mm-del'; del.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>'; del.title = '删除';
 del.addEventListener('click', () => {
 if (editingNow()) return;
 if (!window.openModal) { memoSave(memoItems().filter(x => x.id !== it.id)); memoRender(); return; }
 const short = (it.t || '').length > 16 ? (it.t || '').slice(0, 16) + '…' : (it.t || '');
 window.openModal('删除这条备忘？', '', () => { memoSave(memoItems().filter(x => x.id !== it.id)); memoRender(); toast('已删除'); }, { noInput: true, staticText: '「' + short + '」删除后无法恢复。' });
 });
-row.appendChild(chk); row.appendChild(main); row.appendChild(pin); row.appendChild(del);
+row.appendChild(chk); row.appendChild(main); row.appendChild(dueBtn); row.appendChild(shr); row.appendChild(pin); row.appendChild(del);
 list.appendChild(row);
 });
+memoUpdateBadge();
+}
+function memoUpdateBadge() {
+let b = document.getElementById('memo-app-badge');
+const card = document.querySelector('[data-desk-widget="memo-row"] .memo-card');
+if (!card) { if (b) b.remove(); return; }
+if (!b || b.parentNode !== card) {
+if (b) b.remove();
+b = document.createElement('div');
+b.id = 'memo-app-badge'; b.className = 'memo-app-badge';
+b.addEventListener('click', (e) => {
+e.stopPropagation();
+if (editingNow()) return;
+openPage(memoPage); memoRender();
+});
+card.appendChild(b);
+}
+const items = memoItems();
+const undone = items.filter(x => !x.done);
+const urgent = undone.filter(x => memoUrgent(x)).length;
+b.textContent = undone.length
+? ('备忘录 · ' + undone.length + ' 件待办' + (urgent ? ' · ' + urgent + ' 件临期' : ''))
+: (items.length ? '备忘录 · 全部完成 ✓' : '备忘录 · 记一件想做的事');
+b.className = 'memo-app-badge' + (urgent ? ' urgent' : '');
 }
 function memoAddFromInput() {
 if (editingNow()) return;
 const inp = document.getElementById('memo-inp'); if (!inp) return;
 const v = (inp.value || '').trim(); if (!v) { toast('先写点内容吧'); return; }
 const a = memoItems();
-a.unshift({ id: Date.now() + '-' + Math.floor(Math.random() * 1000), t: v.slice(0, 500), done: false, pin: false, ts: Date.now() });
+a.unshift({ id: Date.now() + '-' + Math.floor(Math.random() * 1000), t: v.slice(0, 500), done: false, pin: false, due: null, ts: Date.now() });
 memoSave(a); inp.value = ''; memoRender();
 if (Math.random() < 0.25) memoShowMsg(memoPick(DEF_MEMO_ADD));
 }
 function memoGreet() {
 const a = memoItems();
-if (!a.length) memoShowMsg('把想做的事记下来，我帮你记着');
-else if (a.every(x => x.done)) memoShowMsg(memoPick(DEF_MEMO_ALLDONE));
-else if (Math.random() < 0.5) memoShowMsg('还有 ' + a.filter(x => !x.done).length + ' 件没做完呢，慢慢来');
+const undone = a.filter(x => !x.done);
+if (!a.length) { memoShowMsg('把想做的事记下来，我帮你记着'); return; }
+if (undone.length >= 2 && Math.random() < 0.12) {
+const target = undone.slice().sort((x, y) => (x.ts || 0) - (y.ts || 0))[0];
+target.done = true; memoSave(a); vibrate([40, 30, 40]); memoRender();
+memoShowMsg('帮你把「' + memoClip(target.t, 12) + '」打勾啦，剩下的加油');
+if (memoSendOn() && window.chatAddIn) { try { window.chatAddIn('✓ TA 帮你完成：「' + target.t + '」'); } catch (e) {} }
+return;
+}
+const urgent = undone.filter(x => memoUrgent(x));
+if (urgent.length && Math.random() < 0.45) {
+const u = urgent[0];
+memoShowMsg(memoUrgent(u) === 'overdue'
+? '「' + memoClip(u.t, 12) + '」已经过期了哦，今天补上吧'
+: '「' + memoClip(u.t, 12) + '」今天到期，别忘了');
+return;
+}
+const stale = undone.filter(x => Date.now() - (x.ts || 0) > 2 * 86400000);
+if (stale.length && Math.random() < 0.3) { memoShowMsg('有 ' + stale.length + ' 件事放了很久啦，先挑一件做掉？'); return; }
+if (undone.length) { if (Math.random() < 0.5) memoShowMsg('还有 ' + undone.length + ' 件没做完呢，慢慢来'); }
+else memoShowMsg(memoPick(DEF_MEMO_ALLDONE));
 }
 if (memoApp) memoApp.addEventListener('click', () => { if (editingNow()) return; openPage(memoPage); memoRender(); memoGreet(); });
 document.getElementById('memo-back').addEventListener('click', () => backHome(memoPage));
@@ -38898,7 +39347,8 @@ if (s) try { s.set('memo-app-send', on ? '1' : '0'); } catch (e) {}
 memoSendBtn.textContent = '完成发到聊天：' + (on ? '开' : '关');
 });
 }
-document.addEventListener('contact-switched', () => { if (!memoPage.hidden) memoRender(); });
+document.addEventListener('contact-switched', () => { if (!memoPage.hidden) memoRender(); memoUpdateBadge(); });
+memoUpdateBadge();
 })();
 } catch (__e) { try { console.error("[JS] memo-app.js", __e && __e.message || __e); } catch (x) {} if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
 (function () { try {
@@ -38951,7 +39401,8 @@ function saveRecs(list) {
 try {
 store.set(KEY_REC, JSON.stringify(list));
 try { if (window.idbSet) window.idbSet(G + ':' + KEY_REC, JSON.stringify(list)); } catch (e2) {}
-} catch (e) {}
+return true;
+} catch (e) { try { console.warn('[period] 经期记录写入失败', e); } catch (e3) {} return false; }
 }
 function loadCfg() {
 try { var c = JSON.parse(store.get(KEY_CFG) || 'null'); if (c) return c; } catch (e) {}
@@ -38968,7 +39419,8 @@ function saveDaily(obj) {
 try {
 store.set(KEY_DAILY, JSON.stringify(obj));
 try { if (window.idbSet) window.idbSet(G + ':' + KEY_DAILY, JSON.stringify(obj)); } catch (e2) {}
-} catch (e) {}
+return true;
+} catch (e) { try { console.warn('[period] 每日详情写入失败', e); } catch (e3) {} return false; }
 }
 function loadNotify() {
 try { var n = JSON.parse(store.get(KEY_NOTIFY) || 'null'); if (n) return n; } catch (e) {}
@@ -40108,7 +40560,7 @@ if (work[key] < max) { work[key]++; valEl.textContent = work[key]; ovuPreview.te
 });
 pop.querySelector('.dp-save').addEventListener('click', function () {
 saveCfg(work); cfg = work;
-var dateVal = pop.querySelector('.dp-date-input').value;
+var dateVal = pop.querySelector('input.dp-date-input').value;
 if (dateVal) {
 var norm2 = normalize(recs);
 var exists = norm2.some(function (r) { return r.start === dateVal; });
@@ -41736,7 +42188,7 @@ var ACHV = [
 { id: "decorAll", n: "尽善尽美", e: "\uD83C\uDFE0", d: "买齐全部装饰", check: function () { return Object.keys(DECOR).every(function (k) { return (data.decor[k] || 0) >= DECOR[k].max; }); } },
 { id: "visitor", n: "生机勃勃", e: "\uD83E\uDE9B", d: "招待过访客", check: function () { return !!data.visitor; } },
 { id: "bouquet3", n: "花束使者", e: "\uD83D\uDCC1", d: "制作 3 束花", check: function () { return (data.bouquetCnt || 0) >= 3; } },
-{ id: "partnerCare", n: "同育之情", e: "\uD83D\uDC95", d: "梦角打理 10 次", check: function () { return (data.st.mp || 0) + (data.st.mw || 0) + (data.st.mh || 0) + (data.st.mf || 0) >= 10; } },
+{ id: "partnerCare", n: "同育之情", e: "\uD83D\uDC95", d: "梦角打理 30 次", check: function () { return (data.st.mp || 0) + (data.st.mw || 0) + (data.st.mh || 0) + (data.st.mf || 0) >= 30; } },
 { id: "rich", n: "花山花海", e: "\uD83D\uDCB0", d: "库存 20 朵花", check: function () { var t = 0; Object.keys(data.inv || {}).forEach(function (k) { t += data.inv[k] || 0; }); return t >= 20; } },
 { id: "wiltedSee", n: "封存时光", e: "\uD83E\uDD40", d: "见证花朵凋谢", check: function () { return !!data.wiltedSeen; } },
 { id: "hybridMaster", n: "杂交大师", e: "\uD83E\uDD7C", d: "发现 5 个杂交配方", check: function () { return Object.keys(data.hybridFound || {}).length >= 5; } },
@@ -46022,6 +46474,13 @@ get: function () { return box.getAttribute('data-ph') || ''; },
 set: function (v) { if (v) box.setAttribute('data-ph', v); else box.removeAttribute('data-ph'); },
 configurable: true
 });
+try {
+Object.defineProperty(box, 'value', {
+get: function () { return inp.value; },
+set: function (v) { inp.value = v; },
+configurable: true
+});
+} catch (e) {}
 var origFocus = inp.focus, origBlur = inp.blur;
 inp.focus = function () { try { box.focus(); } catch (e) {} };
 inp.blur = function () { try { box.blur(); } catch (e) {} };

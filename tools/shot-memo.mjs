@@ -72,11 +72,14 @@ await sleep(600);
 await shot('memo-shot-p3.jpg');
 // 种两条数据再打开页面
 await ev(`(function () {
-  var s = window.activeStore();
+  var s = window.xyStore('xy-home-v2');
+  var today = new Date();
+  var fmt = function (off) { var x = new Date(today.getTime() + off * 86400000); return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0'); };
   var items = [
-    { id: 'a1', t: '周五晚上一起看电影', done: false, pin: true, ts: Date.now() - 3600000 },
-    { id: 'a2', t: '买牛奶\\n记得买低脂的', done: false, pin: false, ts: Date.now() - 1800000 },
-    { id: 'a3', t: '把阳台的花浇水', done: true, pin: false, ts: Date.now() - 900000 }
+    { id: 'a1', t: '周五晚上一起看电影', done: false, pin: true, due: null, ts: Date.now() - 3600000 },
+    { id: 'a2', t: '给 TA 挑生日礼物', done: false, pin: false, due: fmt(0), ts: Date.now() - 7200000 },
+    { id: 'a4', t: '还图书馆的书', done: false, pin: false, due: fmt(-2), ts: Date.now() - 3 * 86400000 },
+    { id: 'a3', t: '把阳台的花浇水', done: true, pin: false, due: null, ts: Date.now() - 900000 }
   ];
   s.set('memo-app-items', JSON.stringify(items));
   document.querySelector('[data-app="memo"]').click();
@@ -93,4 +96,10 @@ await ev(`(function () {
 })()`);
 await sleep(600);
 await shot('memo-shot-page.jpg');
+// 返回桌面 → 翘到第二页拍首页徽标
+await ev(`document.getElementById('memo-back').click()`);
+await sleep(500);
+await ev(`(function () { var b = document.getElementById('desktop-pages'); b.scrollLeft = b.clientWidth + 10; return b.scrollLeft; })()`);
+await sleep(600);
+await shot('memo-shot-badge.jpg');
 chrome.kill(); server.close(); process.exit(0);

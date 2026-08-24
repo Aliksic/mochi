@@ -22,31 +22,56 @@
     const s = String(txt == null ? '' : txt);
     toast((off ? '已关闭：' : '已开启：') + (s.length > 18 ? s.slice(0, 18) + '…' : s));
   }
+  // ---- 开关/概率读取（store 参数化）----
+  // 所有 dc-* 键都按桌面（联系人命名空间）独立保存；顶层 API 绑 activeStore（当前
+  // 桌面），群聊等跨桌面场景用 defaultCardApiFor(目标桌面 store) 按成员自己的桌面读。
   // 默认值（对应星言 defaultCommonOverallProb=30, probs 各30）
-  function getEnabled() { const v = ls.get('dc-enabled'); return v === null ? true : v === '1'; }
-  function getOverall() { const v = ls.get('dc-overall'); return v === null ? 30 : Number(v); }
-  function getProb(k) { const v = ls.get('dc-prob-' + k); return v === null ? 30 : Number(v); }
+  function apiFor(st) {
+    const gE = function () { const v = st.get('dc-enabled'); return v === null ? true : v === '1'; };
+    const gO = function () { const v = st.get('dc-overall'); return v === null ? 30 : Number(v); };
+    const gP = function (k) { const v = st.get('dc-prob-' + k); return v === null ? 30 : Number(v); };
+    const gU = function (k) { const v = st.get('dc-use-' + k); return v === null ? true : v === '1'; };
+    const gC = function (k) { const v = st.get('dc-cat-' + k); return v === null ? true : v === '1'; };
+    const gOff = function (cat, c) { return st.get('dc-off-' + cat + ':' + c) === '1'; };
+    return {
+      enabled: gE,
+      overall: gO,
+      prob: gP,
+      use: gU,
+      cat: gC,
+      isOff: gOff,
+      // 不依赖 this（箭头闭包）——调用方解构单个方法也不会丢上下文
+      cfg: function () {
+        return { enabled: gE(), overall: gO(), probs: { main: gP('main'), kaomoji: gP('kaomoji'), emoji: gP('emoji'), touch: gP('touch') } };
+      }
+    };
+  }
+  const api = apiFor(ls);
+  function getEnabled() { return api.enabled(); }
+  function getOverall() { return api.overall(); }
+  function getProb(k) { return api.prob(k); }
   // v3.7.x：场景开关——默认字卡可分别用于 聊天 / 信箱 / 朋友圈（默认全开）
   //   存 localStorage 键：dc-use-chat / dc-use-mail / dc-use-feed（'1' 开启）
-  function getUse(k) { const v = ls.get('dc-use-' + k); return v === null ? true : v === '1'; }
+  function getUse(k) { return api.use(k); }
   function setUse(k, on) { ls.set('dc-use-' + k, on ? '1' : '0'); }
   window.defaultCardUse = function (k) { return getUse(k); };
   // v3.8.x：分类开关——主字卡 / 颜文字 / emoji / 拍一拍 可分别开启/关闭（默认全开）
   //   存 localStorage 键：dc-cat-<k>（'1' 开启）；关闭后该分类不参与聊天混入/信箱混入/
   //   朋友圈补池/拍一拍抽取
-  function getCat(k) { const v = ls.get('dc-cat-' + k); return v === null ? true : v === '1'; }
+  function getCat(k) { return api.cat(k); }
   function setCat(k, on) { ls.set('dc-cat-' + k, on ? '1' : '0'); }
   window.defaultCardCat = function (k) { return getCat(k); };
-  window.defaultCardCfg = function () {
-    return { enabled: getEnabled(), overall: getOverall(), probs: { main: getProb('main'), kaomoji: getProb('kaomoji'), emoji: getProb('emoji'), touch: getProb('touch') } };
-  };
+  window.defaultCardCfg = function () { return api.cfg(); };
+  // v3.12.x：按指定桌面的 store 读一套开关（供群聊按成员所在桌面取：
+  // 某成员桌面关闭【聊天使用】→ 单聊和群聊里这个成员都不再使用默认字卡）
+  window.defaultCardApiFor = apiFor;
 
   // 数据（提取自星言 08_default_cards_data.js）
   const DATA = (window.DEFAULT_CARD_DATA) || { main: [], kaomoji: [], emoji: [] };
 
   // v3.6.x：单卡开关——系统预设字卡可逐张开启/关闭使用
   //   存 localStorage 键：dc-off-<分类>:<字卡内容>，关闭为 '1'
-  function isCardOff(cat, c) { return ls.get('dc-off-' + cat + ':' + c) === '1'; }
+  function isCardOff(cat, c) { return api.isOff(cat, c); }
   function setCardOff(cat, c, off) { ls.set('dc-off-' + cat + ':' + c, off ? '1' : '0'); }
   // v3.6.x：暴露单卡开关查询（供 chat.js 字卡池兜底过滤：自定义字卡为空时
   //   系统字卡补池也必须跳过用户已关闭的字卡）
@@ -71,6 +96,19 @@
       toast((el.checked ? '已开启' : '已关闭') + '：默认字卡' + label + '使用');
     });
   });
+  // v3.12.x：场景开关下方小字说明——dc-* 键按桌面（联系人）独立保存；
+  // 某联系人桌面关闭【聊天使用】，单聊和群聊里这个联系人都不会再使用默认字卡
+  (function () {
+    const row = document.getElementById('dc-use-feed');
+    if (!row) return;
+    const grp = row.closest('.set-group');
+    if (!grp || document.getElementById('dc-scope-note')) return;
+    const note = document.createElement('div');
+    note.id = 'dc-scope-note';
+    note.style.cssText = 'margin:8px 12px 10px;font-size:11px;line-height:1.6;color:#999;';
+    note.textContent = '以上开关按当前桌面对应的联系人独立保存：当当前桌面联系人关闭【聊天使用】，聊天和群聊里这个联系人也无法使用默认字卡（其他联系人不受影响）。';
+    grp.parentNode.insertBefore(note, grp.nextSibling);
+  })();
   // v3.8.x：分类开关绑定——主字卡 / 颜文字 / emoji / 拍一拍 分别控制默认字卡分类使用
   [['main', '主字卡'], ['kaomoji', '颜文字'], ['emoji', 'emoji'], ['touch', '拍一拍']].forEach(([k, label]) => {
     const el = document.getElementById('dc-cat-' + k);
@@ -246,16 +284,18 @@
 
   // ---- 回复混入：供 chat.js 调用 ----
   // 返回当前分类下按权重选中一个分组的字卡数组；未触发返回 []
-  window.getDefaultCards = function () {
+  // v3.12.x：核心逻辑抽成 getDefaultCardsFor(st)——st 传目标桌面 store；
+  //   群聊用它按成员所在桌面抽取（成员桌面关了聊天使用 → 该成员在群聊里也不用默认字卡）
+  function drawCards(a) {
     // v3.7.x：聊天场景开关——关闭后聊天回复混入/拍一拍均不使用默认字卡
-    if (!getUse('chat')) return [];
-    const cfg = window.defaultCardCfg();
+    if (!a.use('chat')) return [];
+    const cfg = a.cfg();
     if (!cfg.enabled) return [];
     if (Math.random() * 100 >= cfg.overall) return [];
     // 按 probs 加权选分类（v3.8.x：已关闭的分类权重按 0 处理，不参与抽取）
     const keys = ['main', 'kaomoji', 'emoji', 'touch'];
-    const weights = keys.map(k => (getCat(k) ? Math.max(0, cfg.probs[k] || 0) : 0));
-    const total = weights.reduce((a, b) => a + b, 0);
+    const weights = keys.map(k => (a.cat(k) ? Math.max(0, cfg.probs[k] || 0) : 0));
+    const total = weights.reduce((x, y) => x + y, 0);
     if (total <= 0) return [];
     let roll = Math.random() * total;
     let chosen = 'main';
@@ -265,13 +305,15 @@
     }
     // v3.6.x：单卡开关过滤——用户关闭的字卡不参与抽取，整组关完则跳过该组
     const grps = (DATA[chosen] || [])
-      .map(g => [g[0], g[1].filter(c => !isCardOff(chosen, c))])
+      .map(g => [g[0], g[1].filter(c => !a.isOff(chosen, c))])
       .filter(g => g[1].length);
     if (!grps.length) return [];
     const g = grps[Math.floor(Math.random() * grps.length)];
     const text = g[1][Math.floor(Math.random() * g[1].length)];
     return { text: text, type: chosen === 'touch' ? 'poke' : 'text' };
-  };
+  }
+  window.getDefaultCardsFor = function (st) { return drawCards(apiFor(st)); };
+  window.getDefaultCards = function () { return drawCards(api); };
   // 默认字卡分组（供页面按分组查看）
   window.getDefaultCardGroups = function (cat) {
     return (DATA[cat] || []).slice();

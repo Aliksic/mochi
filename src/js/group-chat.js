@@ -558,44 +558,45 @@
     while (copy.length && out.length < n) out.push(copy.splice(Math.floor(Math.random() * copy.length), 1)[0]);
     return out;
   }
-  // 该成员的字卡池（按分类；媒体/自定义字卡读该联系人桌面，默认字卡兜底）
+  // 该成员的字卡池（按分类）：公用字卡 + 该成员桌面专属字卡 + 默认字卡兜底
   function gcPool(cid) {
     const text = [], kaomoji = [], emoji = [], sticker = [], image = [], voice = [];
     try {
+      // 媒体字卡（表情包/图片/语音）——getMediaCardsFor 已合并 公用+该成员桌面专属
       const mediaSticker = (window.getMediaCardsFor && window.getMediaCardsFor(cid, 'sticker')) || [];
       const mediaImage = (window.getMediaCardsFor && window.getMediaCardsFor(cid, 'image')) || [];
       const mediaVoice = (window.getMediaCardsFor && window.getMediaCardsFor(cid, 'voice')) || [];
       sticker.push.apply(sticker, mediaSticker);
       image.push.apply(image, mediaImage);
       voice.push.apply(voice, mediaVoice);
-      const raw = window.storeFor(cid).get('cc-groups');
-      if (raw) {
-        const groups = JSON.parse(raw);
-        if (groups && typeof groups === 'object') {
-          Object.keys(groups).forEach(key => {
-            const g = groups[key];
-            if (g && Array.isArray(g.cards)) {
-              g.cards.forEach(card => {
-                if (!card || typeof card !== 'object') return;
-                if (card.type === 'text' && card.text) text.push(card.text);
-                else if (card.type === 'emoji' && card.text) emoji.push(card.text);
-                else if (card.type === 'kaomoji' && card.text) kaomoji.push(card.text);
-                else if (card.type === 'sticker' && card.text) sticker.push(card.text);
-                else if (card.type === 'image' && card.text) image.push(card.text);
-                else if (card.type === 'voice' && card.text) voice.push(card.text);
-              });
-            }
-          });
-        }
-      }
+      // v3.12.x：文字/emoji/颜文字改走 For 系列合并视图（公用+专属）。旧实现按
+      // {key:{cards:[{type,text}]}} 解析 cc-groups，与实际存储 {类型:[[分组,[卡]]]}
+      // 结构不符——专属文字/emoji/颜文字从未真正进过群聊回复池（静默失效）
+      const pokeSet = (function () {
+        const pk = (window.getPokeCardsFor && window.getPokeCardsFor(cid)) || [];
+        return pk.length ? new Set(pk) : null;
+      })();
+      const cards = (window.getCustomCardsFor && window.getCustomCardsFor(cid)) || [];
+      cards.forEach(c => {
+        if (typeof c !== 'string' || !c) return;
+        if (pokeSet && pokeSet.has(c)) return; // 拍一拍字卡只走拍一拍模式，不进普通回复池
+        if (c.indexOf('data:') === 0) return; // 图片已按媒体分类取
+        if (c.indexOf('|||') >= 0) return; // 语音已按媒体分类取
+        if (/[\uD800-\uDBFF]/.test(c) || /^[😀-🙏🌀-🫿]/u.test(c)) emoji.push(c);
+        else if (/[\(（｡◕(◕)(づ｡(¬)]/.test(c) && /[\)）】)]/.test(c)) kaomoji.push(c);
+        else text.push(c);
+      });
     } catch (e) {}
-    // 默认字卡兜底（与聊天页 getPool 一致：按默认字卡开关/分类开关/聊天场景开关）
+    // 默认字卡兜底——v3.12.x：开关全部按【该成员所在桌面】读（defaultCardApiFor）：
+    // 该成员桌面关闭【聊天使用】/总开关/某分类 → 聊天和群聊里这个成员都不用默认字卡；
+    // main 混入门对齐聊天页 getPool（开启即始终混入，颜文字/emoji 分类为空才补）
     try {
-      const dcfg = (window.defaultCardCfg && window.defaultCardCfg()) || {};
-      const useChat = window.defaultCardUse ? window.defaultCardUse('chat') : true;
-      if (dcfg.enabled !== false && useChat && (!text.length || !kaomoji.length || !emoji.length)) {
-        const catOn = window.defaultCardCat || (() => true);
-        const isOff = window.isDefaultCardOff || null;
+      const a = (window.defaultCardApiFor && window.storeFor) ? window.defaultCardApiFor(window.storeFor(cid)) : null;
+      const dcfg = a ? a.cfg() : (window.defaultCardCfg && window.defaultCardCfg()) || {};
+      const useChat = a ? a.use('chat') : (window.defaultCardUse ? window.defaultCardUse('chat') : true);
+      const isOff = a ? a.isOff : (window.isDefaultCardOff || null);
+      const catOn = a ? a.cat : (window.defaultCardCat || (() => true));
+      if (dcfg.enabled !== false && useChat) {
         if (catOn('main')) {
           const defGrps = (window.getDefaultCardGroups && window.getDefaultCardGroups('main')) || [];
           defGrps.forEach(g => {
@@ -658,24 +659,16 @@
   function gcPokeText(cid) {
     const name = memberName(cid);
     let action = '';
-    const dcfg = (window.defaultCardCfg && window.defaultCardCfg()) || {};
-    const useChat = window.defaultCardUse ? window.defaultCardUse('chat') : true;
-    const touchOn = window.defaultCardCat ? window.defaultCardCat('touch') : true;
-    if (dcfg.enabled && useChat && touchOn && (dcfg.probs && (dcfg.probs.touch || 0) > 0)) {
-      const d = (window.getDefaultCards && window.getDefaultCards()) || null;
+    // v3.12.x：默认字卡按【该成员所在桌面】抽（含 聊天使用/总开关/拍一拍分类/单卡开关
+    // 与整体概率 roll）——成员桌面关闭聊天使用 → 群聊里这个成员不用默认拍一拍
+    try {
+      const st = window.storeFor ? window.storeFor(cid) : null;
+      const d = (st && window.getDefaultCardsFor) ? window.getDefaultCardsFor(st) : ((window.getDefaultCards && window.getDefaultCards()) || null);
       if (d && d.type === 'poke') action = d.text;
-    }
+    } catch (e) {}
     if (!action) {
-      const poke = [];
-      try {
-        const raw = window.storeFor(cid).get('cc-groups');
-        if (raw) {
-          const groups = JSON.parse(raw);
-          if (groups && groups.poke && Array.isArray(groups.poke.cards)) {
-            groups.poke.cards.forEach(card => { if (card && card.text) poke.push(card.text); });
-          }
-        }
-      } catch (e) {}
+      // 自定义拍一拍：公用 + 该成员桌面专属 合并视图（getPokeCardsFor）
+      const poke = (window.getPokeCardsFor && window.getPokeCardsFor(cid)) || [];
       action = poke.length ? pick(poke) : '拍了拍我';
     }
     let text;
@@ -1015,7 +1008,7 @@
     // —— 底部说明 ——
     const note = document.createElement('div');
     note.className = 'gc-set-note';
-    note.textContent = '群聊昵称/头像只在本群聊页生效；成员回复内容来自该成员桌面自己的字卡库。';
+    note.textContent = '成员回复内容来自：公用字卡 + 该成员桌面专属字卡 + 系统默认字卡；某成员桌面关闭【聊天使用】，聊天和群聊里这个成员都不再使用系统默认字卡。';
     settingsBody.appendChild(note);
   }
 
@@ -1343,4 +1336,9 @@
   window.groupChatBeautyGet = function (k) { return gcBeautyGet(k); };
   // 设置群聊美化（空值/默认值 = 恢复默认）
   window.groupChatBeautySet = function (k, v) { gcBeautySet(k, v); };
+  // v3.12.x：只读探针——某成员当前回复字卡池（公用+专属+按其桌面开关的默认字卡），
+  // 供回归测试/作用域问题诊断（不暴露内部引用，返回纯数据副本）
+  window.groupChatPoolFor = function (cid) {
+    try { return JSON.parse(JSON.stringify(gcPool(cid))); } catch (e) { return null; }
+  };
 })();

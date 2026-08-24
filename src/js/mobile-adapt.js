@@ -366,6 +366,20 @@
       set: function (v) { if (v) box.setAttribute('data-ph', v); else box.removeAttribute('data-ph'); },
       configurable: true
     });
+    // v3.10.x：box 也挂 value 代理——历史代码大量存在 querySelector('.cls') 按 class
+    // 选输入框的写法，转换后首个匹配是继承同名的 ce-box div（插在原 input 前），
+    // DIV 无 value 属性 → 读回 undefined：轻则 parseFloat/parseInt 得 NaN 静默存错值，
+    // 重则 .trim()/.length 抛 TypeError 中断整个保存回调（vivo Edge 经期「记录今天」
+    // 点保存不保存即此根因，OPPO 存钱罐/Via 读空同族）。box.value 双向转发到
+    // inp.value（完整复用其多行换行还原/媒体标记逻辑，无递归——inp 的 getter 直读
+    // box DOM 不经 box.value），旧写法零改动即在所有内核恢复正确。
+    try {
+      Object.defineProperty(box, 'value', {
+        get: function () { return inp.value; },
+        set: function (v) { inp.value = v; },
+        configurable: true
+      });
+    } catch (e) {}
     var origFocus = inp.focus, origBlur = inp.blur;
     inp.focus = function () { try { box.focus(); } catch (e) {} };
     inp.blur = function () { try { box.blur(); } catch (e) {} };

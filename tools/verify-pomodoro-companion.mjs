@@ -1,7 +1,8 @@
-// ===== 番茄钟 · 陪伴模式 冒烟验证 =====
-// 覆盖：入口按钮、进入聊天页+顶部倒计时条、开场白消息、暂停/继续、菜单回番茄钟页、
-//       提前结束（弹窗+TA回应）、完成时祝贺+自动收条（Date.now 跳变模拟）、
-//       勿扰标记、关闭期间完成的补记恢复。
+// ===== 番茄钟 · 陪伴模式 冒烟验证（v3.x：专属聊天窗重构后） =====
+// 覆盖：入口按钮、进入【独立陪伴聊天窗】而非普通聊天、开场白只进专属窗不进普通聊天记录、
+//       窗内发消息 TA 回应（普通聊天不受影响）、暂停/继续、菜单回番茄钟页、
+//       提前结束（弹窗+TA回应进窗）、完成时祝贺只进专属窗+自动收条（Date.now 跳变模拟）、
+//       关闭期间完成的补记（进窗）、刷新接续恢复（普通聊天页状态条仍可用）。
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:http';
 import { readFileSync, statSync } from 'node:fs';
@@ -73,22 +74,29 @@ async function gotoApp(hash) {
 const results = [];
 function check(desc, ok, detail) { results.push({ desc, ok: !!ok }); console.log((ok ? 'PASS' : 'FAIL') + '  ' + desc + (detail ? '  [' + detail + ']' : '')); }
 
-const barSnap = `(() => {
-  var pg = document.getElementById('page-chat');
-  var bar = document.getElementById('pmp-bar');
-  var msgs = (window.getChatMsgs ? window.getChatMsgs() : []);
-  var last = msgs.length ? (msgs[msgs.length - 1].text || '') : '';
+const GREET = ['好，我陪着你', '去吧，我在这等你', '专注吧，我不吵你', '嗯，一起加油'];
+// 页面/消息快照：win=专属陪伴窗；chat=普通聊天页与记录
+const winSnap = `(() => {
+  var win = document.getElementById('page-pmp-chat');
+  var chatPg = document.getElementById('page-chat');
+  var list = document.getElementById('pmp-c-list');
+  var bubbles = list ? Array.prototype.map.call(list.querySelectorAll('.pmp-c-bub'), function(b){return b.textContent;}) : [];
+  var msgs = (window.getChatMsgs ? window.getChatMsgs() : []).map(function(x){return x.text||'';});
   return {
-    chatOpen: !!pg && !pg.hidden,
-    barVisible: !!bar && !bar.hidden,
-    time: (document.getElementById('pmp-bar-time') || {}).textContent || '',
-    label: (document.getElementById('pmp-bar-label') || {}).textContent || '',
-    toggle: (document.getElementById('pmp-bar-toggle') || {}).textContent || '',
-    sessionAlive: !!localStorage.getItem('xy-home-v2:default:pomo-companion'),
-    lastMsg: last,
-    fillW: document.getElementById('pmp-fill') ? document.getElementById('pmp-fill').style.width : ''
+    winOpen: !!win && !win.hidden,
+    chatOpen: !!chatPg && !chatPg.hidden,
+    time: (document.getElementById('pmp-cd-time') || {}).textContent || '',
+    label: (document.getElementById('pmp-cd-label') || {}).textContent || '',
+    toggle: (document.getElementById('pmp-cd-toggle') || {}).textContent || '',
+    bubbles: bubbles,
+    lastBubble: bubbles.length ? bubbles[bubbles.length - 1] : '',
+    chatLast: msgs.length ? msgs[msgs.length - 1] : '',
+    chatHasGreet: msgs.some(function(t){ return ${JSON.stringify(GREET)}.indexOf(t) >= 0; }),
+    chatCount: msgs.length,
+    sessionAlive: !!localStorage.getItem('xy-home-v2:default:pomo-companion')
   };
 })()`;
+const logTexts = `(() => { try { return (JSON.parse(localStorage.getItem('xy-home-v2:default:pomo-companion-log')||'[]')).map(function(x){return x.t;}); } catch(e) { return []; } })()`;
 const openPomo = () => evalJs(`(function(){ var i=document.querySelector('[data-desk-widget="app-pomo"]'); if(i) i.click(); return 'ok'; })()`);
 const openChatApp = () => evalJs(`(function(){ var a=document.querySelector('.app[data-app="chat"]'); if(a){a.click(); return 'ok';} if(window.enterChat){try{window.enterChat();}catch(e){} return 'enterChat';} return 'no'; })()`);
 
@@ -96,7 +104,7 @@ await cdpConnect();
 await cdp('Page.enable'); await cdp('Runtime.enable');
 await cdp('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 2, mobile: true });
 
-// ---- A 组：开启陪伴模式 ----
+// ---- A 组：开启陪伴模式 → 独立窗口 ----
 await gotoApp();
 await openPomo();
 await sleep(400);
@@ -104,60 +112,73 @@ let goTxt = await evalJs(`(document.getElementById('pomo-companion')||{}).textCo
 check('A1 番茄钟页有「陪伴模式」按钮', goTxt.indexOf('陪伴模式') >= 0, goTxt);
 await evalJs(`document.getElementById('pomo-companion').click()`);
 await sleep(600);
-let s = await evalJs(barSnap);
-check('A2 自动进入聊天页 + 顶部倒计时条显示', s.chatOpen && s.barVisible, JSON.stringify({ chatOpen: s.chatOpen, bar: s.barVisible }));
+let s = await evalJs(winSnap);
+check('A2 进入【专属陪伴窗】且不在普通聊天页', s.winOpen === true && s.chatOpen === false, JSON.stringify({ win: s.winOpen, chat: s.chatOpen }));
 check('A3 陪伴会话已建立（记录持久化）', s.sessionAlive === true);
 const noQuiet = await evalJs(`window.__pomoCompanionQuiet === undefined`);
-check('A3b 陪伴期间不抑制 TA 主动发送（勿扰标记已移除）', noQuiet === true);
-check('A4 开场白已发到聊天', ['好，我陪着你', '去吧，我在这等你', '专注吧，我不吵你', '嗯，一起加油'].indexOf(s.lastMsg) >= 0, s.lastMsg);
-check('A5 条上倒计时在走（≤25:00）', /^2[0-5]:\d{2}$/.test(s.time) && s.label.indexOf('专注中') >= 0, s.time + '/' + s.label);
-const t5 = s.time;
+check('A3b 陪伴期间无勿扰标记（普通聊天照常）', noQuiet === true);
+check('A4 开场白在专属窗气泡里', s.lastBubble !== '' && GREET.indexOf(s.lastBubble) >= 0, s.lastBubble);
+check('A5 开场白没有写进普通聊天记录', s.chatHasGreet === false, 'chatCount=' + s.chatCount);
+check('A6 窗内倒计时在走（≤25:00 · 专注中）', /^2[0-5]:\d{2}$/.test(s.time) && s.label.indexOf('专注中') >= 0, s.time + '/' + s.label);
+const t6 = s.time;
 await sleep(1300);
-s = await evalJs(barSnap);
-check('A6 时间在减少', s.time !== t5, t5 + '→' + s.time);
+s = await evalJs(winSnap);
+check('A7 时间在减少', s.time !== t6, t6 + '→' + s.time);
 
-// 暂停 / 继续
-await evalJs(`document.getElementById('pmp-bar-toggle').click()`);
+// ---- B 组：窗内收发消息 ----
+const chatCountBefore = s.chatCount;
+await evalJs(`(function(){ var i=document.getElementById('pmp-c-in'); i.value='有点累'; var b=document.getElementById('pmp-c-send'); b.click(); })()`);
+await sleep(400);
+s = await evalJs(winSnap);
+check('B1 我方消息进专属窗（右侧气泡）', s.bubbles.length >= 2 && s.bubbles[s.bubbles.length - 1] === '有点累', JSON.stringify(s.bubbles.slice(-2)));
+await sleep(2100);
+s = await evalJs(winSnap);
+check('B2 TA 在窗内回应', s.bubbles.length >= 3 && s.bubbles[s.bubbles.length - 1] !== '有点累', s.lastBubble);
+check('B3 窗内对话没有写进普通聊天记录', s.chatCount === chatCountBefore, 'count ' + chatCountBefore + '→' + s.chatCount);
+
+// 暂停 / 继续（专属窗条）
+await evalJs(`document.getElementById('pmp-cd-toggle').click()`);
 await sleep(250);
-s = await evalJs(barSnap);
-check('A7 暂停 → 标签=已暂停 · 按钮=继续', s.label === '已暂停' && s.toggle === '继续', s.label + '/' + s.toggle);
+s = await evalJs(winSnap);
+check('B4 暂停 → 标签=已暂停 · 按钮=继续', s.label === '已暂停' && s.toggle === '继续', s.label + '/' + s.toggle);
 const tp = s.time;
 await sleep(700);
-s = await evalJs(barSnap);
-check('A8 暂停期间不走秒', s.time === tp, tp);
-await evalJs(`document.getElementById('pmp-bar-toggle').click()`);
+s = await evalJs(winSnap);
+check('B5 暂停期间不走秒', s.time === tp, tp);
+await evalJs(`document.getElementById('pmp-cd-toggle').click()`);
 await sleep(900);
-s = await evalJs(barSnap);
-check('A9 继续后恢复走动', s.label.indexOf('专注中') >= 0 && s.time !== tp, s.time);
+s = await evalJs(winSnap);
+check('B6 继续后恢复走动', s.label.indexOf('专注中') >= 0 && s.time !== tp, s.time);
 
-// 菜单：回番茄钟页
-await evalJs(`document.getElementById('pmp-bar-more').click()`);
+// 菜单：回番茄钟页 + 再返回专属窗
+await evalJs(`document.getElementById('pmp-cd-more').click()`);
 await sleep(200);
-await evalJs(`var b=document.querySelector('.pmp-menu button[data-pmp="page"]'); if(b) b.click();`);
+await evalJs(`var b=document.querySelector('#pmp-c-menu button[data-pmpc="page"]'); if(b) b.click();`);
 await sleep(400);
 let pomoOpen = await evalJs(`!document.getElementById('page-pomodoro').hidden`);
-let goTxt2 = await evalJs(`(document.getElementById('pomo-companion')||{}).textContent||''`);
-check('A10 菜单「回番茄钟页」生效 + 按钮变「陪伴中」', pomoOpen === true && goTxt2.indexOf('陪伴中') >= 0, goTxt2);
+goTxt = await evalJs(`(document.getElementById('pomo-companion')||{}).textContent||''`);
+check('B7 菜单「回番茄钟页」生效 + 按钮变「陪伴中」', pomoOpen === true && goTxt.indexOf('陪伴中') >= 0, goTxt);
 await evalJs(`document.getElementById('pomo-companion').click()`);
 await sleep(400);
-s = await evalJs(barSnap);
-check('A11 陪伴中再点按钮直接回聊天页', s.chatOpen && s.barVisible, '');
+s = await evalJs(winSnap);
+check('B8 陪伴中再点按钮回到专属窗（历史还在）', s.winOpen === true && s.chatOpen === false && s.bubbles.length >= 3, '');
 
-// 提前结束
-await evalJs(`document.getElementById('pmp-bar-more').click()`);
+// 提前结束（专属窗菜单）
+await evalJs(`document.getElementById('pmp-cd-more').click()`);
 await sleep(200);
-await evalJs(`var b=document.querySelector('.pmp-menu button[data-pmp="quit"]'); if(b) b.click();`);
+await evalJs(`var b=document.querySelector('#pmp-c-menu button[data-pmpc="quit"]'); if(b) b.click();`);
 await sleep(500);
 const modalShown = await evalJs(`!!(document.getElementById('modal-mask') && !document.getElementById('modal-mask').hidden)`);
-check('A12 提前结束弹出确认弹窗', modalShown === true);
+check('B9 提前结束弹出确认弹窗', modalShown === true);
 await evalJs(`(function(){ var pills=document.getElementById('modal-pills'); if(!pills||pills.hidden) return; var arr=pills.querySelectorAll('.pill'); for(var i=0;i<arr.length;i++){ if(arr[i].textContent.indexOf('结束')>=0){ arr[i].click(); break; } } })()`);
 await sleep(250);
 await evalJs(`var ok=document.getElementById('modal-ok'); if(ok&&!ok.hidden) ok.click();`);
 await sleep(700);
-s = await evalJs(barSnap);
-check('A13 结束后：会话清除 + 条隐藏 + TA 温柔回应', s.sessionAlive === false && s.barVisible === false && s.lastMsg === '没事，休息一下也可以', s.lastMsg);
+s = await evalJs(winSnap);
+let quitLog = await evalJs(logTexts);
+check('B10 结束后：会话清除 + 回番茄钟页 + TA 回应进窗', s.sessionAlive === false && !!(await evalJs(`!document.getElementById('page-pomodoro').hidden`)) && quitLog[quitLog.length - 1] === '没事，休息一下也可以', JSON.stringify({ alive: s.sessionAlive, last: quitLog[quitLog.length - 1] }));
 
-// ---- B 组：完成一个番茄（陪伴中）—— Date.now 跳变 ----
+// ---- C 组：完成一个番茄（陪伴中）—— Date.now 跳变 ----
 await cdp('Page.addScriptToEvaluateOnNewDocument', { source: `(function () {
   if (location.hash.indexOf('pmpjump') < 0) return;
   var orig = Date.now.bind(Date); var t0 = orig();
@@ -169,46 +190,59 @@ await sleep(300);
 await evalJs(`document.getElementById('pomo-companion').click()`);
 await sleep(600);
 await sleep(9200);
-s = await evalJs(barSnap);
-check('B1 完成后陪伴会话自动清除', s.sessionAlive === false);
-const doneMsgs = await evalJs(`(function(){ var m=window.getChatMsgs?window.getChatMsgs():[]; var tail=m.slice(-3).map(function(x){return x.text||'';}); return tail; })()`);
-check('B2 TA 发来完成祝贺', Array.isArray(doneMsgs) && doneMsgs.some(t => typeof t === 'string' && t.indexOf('🍅') >= 0), JSON.stringify(doneMsgs));
-await sleep(3200);
-s = await evalJs(barSnap);
-check('B3 「✅ 完成 +1 🍅」闪条结束后自动隐藏', s.barVisible === false, '');
+s = await evalJs(winSnap);
+check('C1 完成后陪伴会话自动清除', s.sessionAlive === false);
+const doneLog = await evalJs(logTexts);
+check('C2 TA 完成祝贺只进专属窗记录（🍅）', doneLog.some(t => typeof t === 'string' && t.indexOf('🍅') >= 0), JSON.stringify(doneLog.slice(-2)));
+s = await evalJs(winSnap);
+check('C3 祝贺没有写进普通聊天记录', s.chatHasGreet === false && !(s.chatLast || '').includes('🍅'), s.chatLast);
 await openPomo();
 await sleep(400);
 const stats = await evalJs(`(document.getElementById('pomo-stats')||{}).textContent||''`);
 const selTab = await evalJs(`JSON.stringify({ sel: (document.querySelector('#page-pomodoro .pomo-tab.sel')||{dataset:{}}).dataset.pmode || '', st: (document.getElementById('pomo-state')||{}).textContent || '', tabs: Array.prototype.map.call(document.querySelectorAll('#page-pomodoro .pomo-tab'), function(t){return t.dataset.pmode+':'+t.classList.contains('sel');}) })`);
-check('B4 今日 🍅 计入 ×1 + 自动切小憩', stats.indexOf('× 1') >= 0 && (selTab.indexOf('"sel":"short"') >= 0 || selTab.indexOf('小憩') >= 0), stats + '/' + selTab);
+check('C4 今日 🍅 计入 ×1 + 自动切小憩', stats.indexOf('× 1') >= 0 && (selTab.indexOf('"sel":"short"') >= 0 || selTab.indexOf('小憩') >= 0), stats + '/' + selTab);
 
-// ---- C 组：关闭期间完成的补记 ----
-// 注意：此时页面可能仍带 B 组的 Date.now 跳变钩子，种子时间一律用 performance 时间轴
+// ---- D 组：关闭期间完成的补记 ----
+// 注意：此时页面可能仍带 C 组的 Date.now 跳变钩子，种子时间一律用 performance 时间轴
 await evalJs(`(function(){ var now = Math.floor(performance.timeOrigin + performance.now()); localStorage.setItem('xy-home-v2:default:pomo-companion', JSON.stringify({mode:'focus',totalMs:1500000,endAt:now-10000,startedAt:now-1510000,paused:0,remainMs:0,enc:1,nextEncAt:0})); })()`);
 await gotoApp();
 await sleep(2000);
-let restoredMsgs = await evalJs(`(function(){ var m=window.getChatMsgs?window.getChatMsgs():[]; var tail=m.slice(-5).map(function(x){return x.text||'';}); return tail; })()`);
+let restoredLog = await evalJs(logTexts);
 let recGone = await evalJs(`!localStorage.getItem('xy-home-v2:default:pomo-companion')`);
 let todayCnt = await evalJs(`(JSON.parse(localStorage.getItem('xy-home-v2:default:pomo-today')||'{}').count)||0`);
-check('C1 关闭期间完成 → 补记祝贺 + 会话记录清除', recGone === true && (Array.isArray(restoredMsgs) && restoredMsgs.some(t => String(t).indexOf('完成了一个专注') >= 0) || todayCnt >= 2), JSON.stringify({ msgs: restoredMsgs, recGone: recGone, today: todayCnt }));
+check('D1 关闭期间完成 → 补记祝贺进专属窗 + 会话记录清除', recGone === true && ((restoredLog || []).some(t => String(t).indexOf('完成了一个专注') >= 0)) && todayCnt >= 2, JSON.stringify({ log: (restoredLog || []).slice(-1), recGone: recGone, today: todayCnt }));
 
-// ---- D 组：进行中刷新 → 接续恢复 ----
+// ---- E 组：进行中刷新 → 接续恢复（普通聊天页状态条仍可用） ----
 await evalJs(`(function(){ var now = Math.floor(performance.timeOrigin + performance.now()); localStorage.setItem('xy-home-v2:default:pomo-companion', JSON.stringify({mode:'focus',totalMs:1500000,endAt:now+60000,startedAt:now,paused:0,remainMs:0,enc:0,nextEncAt:0})); })()`);
 await gotoApp();
 await openChatApp();
 await sleep(600);
+const barSnap = `(() => {
+  var pg = document.getElementById('page-chat');
+  var bar = document.getElementById('pmp-bar');
+  return {
+    chatOpen: !!pg && !pg.hidden,
+    barVisible: !!bar && !bar.hidden,
+    time: (document.getElementById('pmp-bar-time') || {}).textContent || '',
+    label: (document.getElementById('pmp-bar-label') || {}).textContent || ''
+  };
+})()`;
 s = await evalJs(barSnap);
-check('D1 刷新后陪伴接续：聊天页条恢复且剩余 ≤01:00', s.chatOpen && s.barVisible && /^0[0-1]:\d{2}$/.test(s.time), s.time + '/' + s.barVisible);
-check('D2 恢复的会话记录仍在', s.sessionAlive === true);
+check('E1 刷新接续：普通聊天页状态条恢复 ≤01:00', s.chatOpen && s.barVisible && /^0[0-1]:\d{2}$/.test(s.time), s.time + '/' + s.barVisible);
+goTxt = await evalJs(`(document.getElementById('pomo-companion')||{}).textContent||''`);
+check('E2 恢复的会话记录仍在 + 按钮为「陪伴中」', (await evalJs(`!!localStorage.getItem('xy-home-v2:default:pomo-companion')`)) === true && goTxt.indexOf('陪伴中') >= 0, goTxt);
 
-// 清理：提前退出，不留状态给其他用例
-await evalJs(`document.getElementById('pmp-bar-toggle') && document.getElementById('pmp-bar-more').click()`);
+// 清理：从普通聊天页状态条提前退出（验证旧入口仍可用），不留状态给其他用例
+await evalJs(`document.getElementById('pmp-bar-more') && document.getElementById('pmp-bar-more').click()`);
 await sleep(150);
 await evalJs(`var b=document.querySelector('.pmp-menu button[data-pmp="quit"]'); if(b) b.click();`);
 await sleep(450);
 await evalJs(`(function(){ var pills=document.getElementById('modal-pills'); if(!pills||pills.hidden) return; var arr=pills.querySelectorAll('.pill'); for(var i=0;i<arr.length;i++){ if(arr[i].textContent.indexOf('结束')>=0){ arr[i].click(); break; } } })()`);
 await sleep(200);
 await evalJs(`var ok=document.getElementById('modal-ok'); if(ok&&!ok.hidden) ok.click();`);
+await sleep(400);
+const cleaned = await evalJs(`!localStorage.getItem('xy-home-v2:default:pomo-companion')`);
+check('E3 普通聊天页状态条的提前结束仍可用', cleaned === true, '');
 
 const passed = results.filter((r) => r.ok).length;
 console.log('\n结果：' + passed + '/' + results.length + ' 项通过');

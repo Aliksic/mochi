@@ -624,6 +624,80 @@
   });
   let lastResumeNotifyAt = 0; // v3.5.154：回前台汇总通知去重
 
+  // v3.12.x：修复「刚聊完切后台，通知栏弹出几分钟前已看过的消息」——
+  // bgNotifyCheck 原来只判断「页面是否隐藏」，对内容毫无记忆：切后台后保活定时器
+  // 继续跑，回复链剩余部分/下一轮主动发送/查岗卡等一旦产出与刚才对话相同或延续的
+  // 内容，就原样再发一条系统通知（用户视角：明明看过的消息又弹一遍）。两道闸门：
+  //   ① 隐藏时长门槛：切后台头 15 秒内的"消息"多为切换过渡期定时器到点
+  //     （用户刚看完/马上回来看），不发系统通知；
+  //   ② 内容去重：与【最近 30 分钟聊天记录里 TA 已说过的内容】或【最近 10 分钟已
+  //     发过的通知】相同（归一化后）→ 不再重复弹通知。消息本体照常进聊天记录和角标。
+  let lastVisibleAt = Date.now();
+  (function () {
+    const markVisible = function () {
+      if (document.visibilityState === 'visible') lastVisibleAt = Date.now();
+    };
+    document.addEventListener('visibilitychange', markVisible);
+    window.addEventListener('pageshow', markVisible);
+    window.addEventListener('focus', markVisible);
+  })();
+  const NOTIFY_HIDDEN_MIN_MS = 15000;
+  // 通知文本归一化：剥 dataURL/语音 ||| 段/SVG 标签，去空白后取前 60 字符做指纹
+  function normNotifyKey(raw) {
+    let s = String(raw || '');
+    if (s.length > 512) s = s.slice(0, 512); // 先截断再正则，避免超长 base64 全文替换开销
+    s = s.replace(/data:[a-zA-Z0-9.+-]+\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+/g, '[附件]')
+      .replace(/\|\|\|.*$/, '')
+      .replace(/<[^>]*>/g, '');
+    return s.replace(/\s+/g, '').slice(0, 60);
+  }
+  // 最近 30 分钟聊天记录里 TA 是否已说过同样内容（扫尾部最多 150 条，命中即回）
+  function recentChatDup(key) {
+    if (!key) return false;
+    try {
+      const arr = window.getChatMsgs ? window.getChatMsgs() : null;
+      if (!arr || !arr.length) return false;
+      const cutoff = Date.now() - 30 * 60000;
+      for (let i = arr.length - 1, n = 0; i >= 0 && n < 150; i--, n++) {
+        const m = arr[i];
+        if (!m) continue;
+        const mts = m.ts || 0;
+        if (mts && mts < cutoff) break; // 追加有序，更早的不可能落在 30 分钟内
+        if (m.side !== 'in') continue;
+        let t = m.text || '';
+        if ((!t || t.indexOf('data:') === 0) && m.parts && m.parts.length) {
+          t = m.parts.filter(p => p && p.k === 'text').map(p => p.v).join(' ');
+        }
+        if (normNotifyKey(t) === key) return true;
+      }
+    } catch (e) {}
+    return false;
+  }
+  // 最近 10 分钟已发过同内容的系统通知（跨"生成源不同但文本相同"兜底）
+  const notifiedRecently = new Map();
+  function notifiedDup(key) {
+    if (!key) return false;
+    const last = notifiedRecently.get(key);
+    return !!(last && Date.now() - last < 10 * 60000);
+  }
+  function markNotified(key) {
+    if (!key) return;
+    notifiedRecently.set(key, Date.now());
+    if (notifiedRecently.size > 60) { // 上限防膨胀：删最早的（Map 保持插入序）
+      notifiedRecently.delete(notifiedRecently.keys().next().value);
+    }
+  }
+  // 只读探针：诊断/回归用——给定文本当前会被哪道闸门拦下
+  window.bgNotifyGateInfo = function (text) {
+    const key = normNotifyKey(text);
+    return {
+      hiddenForMs: Date.now() - lastVisibleAt,
+      tooFreshHidden: Date.now() - lastVisibleAt < NOTIFY_HIDDEN_MIN_MS,
+      dupNotified: notifiedDup(key),
+      dupInChat: recentChatDup(key)
+    };
+  };
+
   // 供 chat.js（showDeskPopup 联动）/ 信箱 / 朋友圈调用：TA 相关新事件且页面不在
   // 前台时弹系统通知。第三参 extra：name 通知标题（信箱/朋友圈/机制名，默认 TA 昵称）、
   // img 图片 dataURL（通知 image 字段显示缩略图）；头像 + 昵称 + 时间（精确到秒）+ 内容
@@ -631,6 +705,10 @@
     if (!notifyEnabled) return;
     if (document.visibilityState === 'visible') return;
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    // v3.12.x：两道闸门（详见上方注释）——过渡期不弹 + 已看过/已弹过的内容不重弹
+    const nkey = normNotifyKey(text);
+    if (Date.now() - lastVisibleAt < NOTIFY_HIDDEN_MIN_MS) return;
+    if (notifiedDup(nkey) || recentChatDup(nkey)) return;
     extra = extra || {};
     const name = extra.name || store.get('lbl-partner') || 'TA';
     let t = '';
@@ -671,7 +749,10 @@
     const sendNotify = function (iconUrl, imgUrl) {
       if (iconUrl) opts.icon = iconUrl;
       if (imgUrl) opts.image = imgUrl;
-      showSysNotification(name, opts);
+      // v3.12.x：受理成功才记入"已通知"指纹（10 分钟内同内容不再重弹）
+      showSysNotification(name, opts).then(function (ok) {
+        if (ok) markNotified(nkey);
+      });
     };
     // v3.5.158：右侧头像 + 展开大图（消息图）——头像 blob 转换后发送，消息图一并带上
     const doSend = function (iconUrl) {

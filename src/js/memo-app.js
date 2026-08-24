@@ -76,6 +76,20 @@
   function memoSave(a) { const s = gStore(); if (s) try { s.set('memo-app-items', JSON.stringify(a)); } catch (e) {} }
   function memoSendOn() { const s = gStore(); try { return s.get('memo-app-send') === '1'; } catch (e) { return false; } }
   function memoPick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+  function memoClip(t, n) { return (t || '').length > n ? (t || '').slice(0, n) + '…' : (t || ''); }
+  function memoDayStr(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+  // 临期/过期：due <= 今天（未完成才算）；返回 'overdue' | 'today' | null
+  function memoUrgent(it) {
+    if (!it || !it.due || it.done) return null;
+    const t = memoDayStr(new Date());
+    if (it.due < t) return 'overdue';
+    if (it.due === t) return 'today';
+    return null;
+  }
+  function memoOverdueDays(due) {
+    const d1 = new Date(due + 'T00:00:00'); const d2 = new Date(); d2.setHours(0, 0, 0, 0);
+    return Math.max(1, Math.round((d2 - d1) / 86400000));
+  }
   function memoFmt(ts) { const d = new Date(ts); const p = (n) => (n < 10 ? '0' + n : '' + n); return (d.getMonth() + 1) + '月' + d.getDate() + '日 ' + p(d.getHours()) + ':' + p(d.getMinutes()); }
   function memoShowMsg(t) { const el = document.getElementById('memo-msg'); if (el) { el.classList.add('fade'); setTimeout(() => { el.textContent = t; el.classList.remove('fade'); }, 200); } }
 
@@ -172,11 +186,12 @@
     if (cnt) cnt.textContent = items.length ? ('共 ' + items.length + ' 条 · 待办 ' + undone) : '';
     const empty = document.getElementById('memo-empty');
     if (empty) empty.hidden = items.length > 0;
-    // 展示顺序：置顶在前；同组内未完成的排前面，其余保持原顺序
-    const rows = items.slice().sort((a, b) => ((b.pin ? 1 : 0) - (a.pin ? 1 : 0)) || ((a.done ? 1 : 0) - (b.done ? 1 : 0)));
+    // 展示顺序：置顶 > 临期/过期(未完成) > 未完成 > 已完成，同组保持原顺序
+    const rank = (it) => (it.pin ? 8 : 0) + ((memoUrgent(it) && !it.done) ? 4 : 0) + (it.done ? 0 : 2);
+    const rows = items.slice().sort((a, b) => rank(b) - rank(a));
     rows.forEach(it => {
       const row = document.createElement('div');
-      row.className = 'memo-item glass' + (it.done ? ' done' : '') + (it.pin ? ' pinned' : '');
+      row.className = 'memo-item glass' + (it.done ? ' done' : '') + (it.pin ? ' pinned' : '') + (memoUrgent(it) ? ' urgent' : '');
       const chk = document.createElement('span');
       chk.className = 'mm-check';
       chk.innerHTML = '<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
@@ -204,26 +219,94 @@
           cur.t = val.slice(0, 500); cur.ts = Date.now(); memoSave(a); memoRender();
         }, { textarea: true });
       });
-      const tm = document.createElement('div'); tm.className = 'mm-time'; tm.textContent = memoFmt(it.ts || Date.now());
+      const tm = document.createElement('div'); tm.className = 'mm-time';
+      // 时间行：截止信息（过期红/今天橙）+ 原记录时间
+      const urg = memoUrgent(it);
+      if (it.due && !it.done) {
+        if (urg === 'overdue') { tm.textContent = '已过期 ' + memoOverdueDays(it.due) + ' 天 · ' + memoFmt(it.ts || Date.now()); tm.classList.add('due-overdue'); }
+        else if (urg === 'today') { tm.textContent = '今天截止 · ' + memoFmt(it.ts || Date.now()); tm.classList.add('due-today'); }
+        else tm.textContent = it.due + ' 截止 · ' + memoFmt(it.ts || Date.now());
+      } else tm.textContent = memoFmt(it.ts || Date.now());
       main.appendChild(txt); main.appendChild(tm);
+      // 截止日期：pills 快选（今天/明天/后天/周末/清除）
+      const dueBtn = document.createElement('button');
+      dueBtn.className = 'mm-act mm-due' + (it.due ? ' on' : ''); dueBtn.title = '截止日期';
+      dueBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="16" rx="2.5"/><path d="M4 9.5h16M8.5 3v4M15.5 3v4"/></svg>';
+      dueBtn.addEventListener('click', () => {
+        if (editingNow()) return;
+        if (!window.openModal) return;
+        const d = new Date();
+        const fmt = (off) => { const x = new Date(d.getTime() + off * 86400000); return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0'); };
+        const satOff = ((6 - d.getDay()) + 7) % 7 || 7;
+        window.openModal('设置截止日期', '', (v) => {
+          if (v === null || v === undefined) return;
+          const a = memoItems(); const cur = a.find(x => x.id === it.id); if (!cur) return;
+          cur.due = v === 'clear' ? null : v; memoSave(a); memoRender();
+          toast(v === 'clear' ? '已清除截止' : '已设置截止');
+        }, {
+          noInput: true,
+          staticText: '「' + memoClip(it.t, 14) + '」' + (it.due ? '当前截止：' + it.due : '未设置截止'),
+          pills: [
+            { label: '今天', value: fmt(0) }, { label: '明天', value: fmt(1) },
+            { label: '后天', value: fmt(2) }, { label: '周末', value: fmt(satOff) },
+            { label: '清除', value: 'clear' }
+          ]
+        });
+      });
+      // 单条分享到聊天
+      const shr = document.createElement('button');
+      shr.className = 'mm-act mm-share'; shr.title = '发给TA';
+      shr.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 3.5L10 13.5"/><path d="M21.5 3.5L15 21l-5-7.5-7.5-4z"/></svg>';
+      shr.addEventListener('click', () => {
+        if (editingNow()) return;
+        if (!window.chatAddIn) { toast('聊天未就绪'); return; }
+        const dueTxt = it.due ? '（' + it.due + ' 截止）' : '';
+        try { window.chatAddIn('备忘 · ' + (it.t || '') + dueTxt); toast('已发送'); } catch (e) {}
+      });
       const pin = document.createElement('button');
-      pin.className = 'mm-pin' + (it.pin ? ' on' : ''); pin.textContent = '📌'; pin.title = it.pin ? '取消置顶' : '置顶';
+      pin.className = 'mm-act mm-pin' + (it.pin ? ' on' : ''); pin.textContent = '📌'; pin.title = it.pin ? '取消置顶' : '置顶';
       pin.addEventListener('click', () => {
         if (editingNow()) return;
         const a = memoItems(); const cur = a.find(x => x.id === it.id); if (!cur) return;
         cur.pin = !cur.pin; memoSave(a); vibrate(6); memoRender();
       });
       const del = document.createElement('button');
-      del.className = 'mm-del'; del.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>'; del.title = '删除';
+      del.className = 'mm-act mm-del'; del.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>'; del.title = '删除';
       del.addEventListener('click', () => {
         if (editingNow()) return;
         if (!window.openModal) { memoSave(memoItems().filter(x => x.id !== it.id)); memoRender(); return; }
         const short = (it.t || '').length > 16 ? (it.t || '').slice(0, 16) + '…' : (it.t || '');
         window.openModal('删除这条备忘？', '', () => { memoSave(memoItems().filter(x => x.id !== it.id)); memoRender(); toast('已删除'); }, { noInput: true, staticText: '「' + short + '」删除后无法恢复。' });
       });
-      row.appendChild(chk); row.appendChild(main); row.appendChild(pin); row.appendChild(del);
+      row.appendChild(chk); row.appendChild(main); row.appendChild(dueBtn); row.appendChild(shr); row.appendChild(pin); row.appendChild(del);
       list.appendChild(row);
     });
+    memoUpdateBadge();
+  }
+
+  // ---- 首页小组件联动：在「今日备忘」卡片下注入备忘录状态行，点击直达备忘录 ----
+  function memoUpdateBadge() {
+    let b = document.getElementById('memo-app-badge');
+    const card = document.querySelector('[data-desk-widget="memo-row"] .memo-card');
+    if (!card) { if (b) b.remove(); return; }
+    if (!b || b.parentNode !== card) {
+      if (b) b.remove();
+      b = document.createElement('div');
+      b.id = 'memo-app-badge'; b.className = 'memo-app-badge';
+      b.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (editingNow()) return;
+        openPage(memoPage); memoRender();
+      });
+      card.appendChild(b);
+    }
+    const items = memoItems();
+    const undone = items.filter(x => !x.done);
+    const urgent = undone.filter(x => memoUrgent(x)).length;
+    b.textContent = undone.length
+      ? ('备忘录 · ' + undone.length + ' 件待办' + (urgent ? ' · ' + urgent + ' 件临期' : ''))
+      : (items.length ? '备忘录 · 全部完成 ✓' : '备忘录 · 记一件想做的事');
+    b.className = 'memo-app-badge' + (urgent ? ' urgent' : '');
   }
 
   function memoAddFromInput() {
@@ -231,15 +314,37 @@
     const inp = document.getElementById('memo-inp'); if (!inp) return;
     const v = (inp.value || '').trim(); if (!v) { toast('先写点内容吧'); return; }
     const a = memoItems();
-    a.unshift({ id: Date.now() + '-' + Math.floor(Math.random() * 1000), t: v.slice(0, 500), done: false, pin: false, ts: Date.now() });
+    a.unshift({ id: Date.now() + '-' + Math.floor(Math.random() * 1000), t: v.slice(0, 500), done: false, pin: false, due: null, ts: Date.now() });
     memoSave(a); inp.value = ''; memoRender();
     if (Math.random() < 0.25) memoShowMsg(memoPick(DEF_MEMO_ADD));
   }
+  // ---- TA 互动：催办（临期/积压）+ 偶尔帮你完成一件 ----
   function memoGreet() {
     const a = memoItems();
-    if (!a.length) memoShowMsg('把想做的事记下来，我帮你记着');
-    else if (a.every(x => x.done)) memoShowMsg(memoPick(DEF_MEMO_ALLDONE));
-    else if (Math.random() < 0.5) memoShowMsg('还有 ' + a.filter(x => !x.done).length + ' 件没做完呢，慢慢来');
+    const undone = a.filter(x => !x.done);
+    if (!a.length) { memoShowMsg('把想做的事记下来，我帮你记着'); return; }
+    // TA 帮完成：待办 ≥2 时 12% 概率帮你勾掉最旧的一条
+    if (undone.length >= 2 && Math.random() < 0.12) {
+      const target = undone.slice().sort((x, y) => (x.ts || 0) - (y.ts || 0))[0];
+      target.done = true; memoSave(a); vibrate([40, 30, 40]); memoRender();
+      memoShowMsg('帮你把「' + memoClip(target.t, 12) + '」打勾啦，剩下的加油');
+      if (memoSendOn() && window.chatAddIn) { try { window.chatAddIn('✓ TA 帮你完成：「' + target.t + '」'); } catch (e) {} }
+      return;
+    }
+    // 催办：有临期/过期未完成 → 45% 提醒
+    const urgent = undone.filter(x => memoUrgent(x));
+    if (urgent.length && Math.random() < 0.45) {
+      const u = urgent[0];
+      memoShowMsg(memoUrgent(u) === 'overdue'
+        ? '「' + memoClip(u.t, 12) + '」已经过期了哦，今天补上吧'
+        : '「' + memoClip(u.t, 12) + '」今天到期，别忘了');
+      return;
+    }
+    // 积压：超过 2 天未完成的 → 30% 轻轻提一句
+    const stale = undone.filter(x => Date.now() - (x.ts || 0) > 2 * 86400000);
+    if (stale.length && Math.random() < 0.3) { memoShowMsg('有 ' + stale.length + ' 件事放了很久啦，先挑一件做掉？'); return; }
+    if (undone.length) { if (Math.random() < 0.5) memoShowMsg('还有 ' + undone.length + ' 件没做完呢，慢慢来'); }
+    else memoShowMsg(memoPick(DEF_MEMO_ALLDONE));
   }
 
   if (memoApp) memoApp.addEventListener('click', () => { if (editingNow()) return; openPage(memoPage); memoRender(); memoGreet(); });
@@ -263,5 +368,6 @@
       memoSendBtn.textContent = '完成发到聊天：' + (on ? '开' : '关');
     });
   }
-  document.addEventListener('contact-switched', () => { if (!memoPage.hidden) memoRender(); });
+  document.addEventListener('contact-switched', () => { if (!memoPage.hidden) memoRender(); memoUpdateBadge(); });
+  memoUpdateBadge();
 })();

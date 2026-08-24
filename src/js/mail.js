@@ -107,9 +107,11 @@
   // v3.5.99：桌面「信箱」图标未读角标——有新来信（未读）时显示数字，进入信箱或打开信件后清除
   function updateBadge() {
     const badge = document.getElementById('mail-badge');
-    if (!badge) return;
+    if (!badge && !window.setDeskBadge) return;
     try {
       const unread = load().filter(l => l.type === 'received' && !l.read && !l.myReply).length;
+      if (window.setDeskBadge) { window.setDeskBadge('mail', unread); return; }
+      if (!badge) return;
       if (unread > 0) {
         badge.textContent = unread > 99 ? '99+' : String(unread);
         badge.hidden = false;
@@ -534,9 +536,13 @@
     const defText = [], defKaomoji = [], defEmoji = [];
     const pushDefault = () => {
       try {
-        if (window.defaultCardUse && !window.defaultCardUse('mail')) return;
-        const isOff = window.isDefaultCardOff || null;
-        const catOn = window.defaultCardCat || (() => true);
+        // v3.12.x：开关按【该联系人桌面】读（同群聊/朋友圈口径）——某联系人桌面
+        // 关「信箱使用」→ 只有这个联系人的来信不用默认字卡
+        const st = (cid && window.storeFor) ? window.storeFor(cid) : null;
+        const a = (window.defaultCardApiFor && st) ? window.defaultCardApiFor(st) : null;
+        if (a ? !a.use('mail') : (window.defaultCardUse && !window.defaultCardUse('mail'))) return;
+        const isOff = a ? a.isOff : (window.isDefaultCardOff || null);
+        const catOn = a ? a.cat : (window.defaultCardCat || (() => true));
         if (catOn('main') && !defText.length) {
           const dg = (window.getDefaultCardGroups && window.getDefaultCardGroups('main')) || [];
           dg.forEach(g => (g[1] || []).forEach(c => { if (isOff && isOff('main', c)) return; if (typeof c === 'string' && c) defText.push(c); }));
@@ -581,15 +587,18 @@
   }
   // 按「整体概率 + 分类占比」从默认字卡池抽一张（main/kaomoji/emoji；拍一拍不进信件）；
   // 未命中/池空返回 ''——与聊天 getDefaultCards 同语义，不含拍一拍分类
-  function pickDefaultMailCard(pool) {
+  function pickDefaultMailCard(pool, cid) {
     try {
-      const dcfg = (window.defaultCardCfg && window.defaultCardCfg()) || {};
+      // v3.12.x：概率/占比/分类开关按【该联系人桌面】读（同 pushDefault 口径）
+      const st = (cid && window.storeFor) ? window.storeFor(cid) : null;
+      const a = (window.defaultCardApiFor && st) ? window.defaultCardApiFor(st) : null;
+      const dcfg = a ? a.cfg() : ((window.defaultCardCfg && window.defaultCardCfg()) || {});
       if (dcfg.enabled === false) return '';
       const overall = (dcfg.overall === undefined || dcfg.overall === null) ? 30 : dcfg.overall;
       if (Math.random() * 100 >= overall) return '';
       const keys = ['main', 'kaomoji', 'emoji'];
       const pools = { main: pool.defText, kaomoji: pool.defKaomoji, emoji: pool.defEmoji };
-      const catOn = window.defaultCardCat || (() => true);
+      const catOn = a ? a.cat : (window.defaultCardCat || (() => true));
       const weights = keys.map(k => (catOn(k) ? Math.max(0, (dcfg.probs && dcfg.probs[k]) || 0) : 0));
       const total = weights.reduce((a, b) => a + b, 0);
       if (total <= 0) return '';
@@ -605,6 +614,14 @@
     } catch (e) {}
     return '';
   }
+  // v3.12.x：只读探针——TA 写信素材池（自定义 + 按该联系人桌面开关的默认字卡子池），
+  // 供回归测试与来源诊断
+  window.mailPoolFor = function (cid) {
+    try {
+      const p = mailCardPool(cid);
+      return { textN: p.text.length, defTextN: p.defText.length, defKaoN: p.defKaomoji.length, defEmojiN: p.defEmoji.length };
+    } catch (e) { return null; }
+  };
   // TA 写信内容：多个字卡（空格分隔）+ 概率加颜文字/emoji/表情包
   function taLetterContent(cfg, cid) {
     const pool = mailCardPool(cid);
@@ -623,7 +640,7 @@
       // v3.8.x：有自定义字卡时，每张卡按 dc-overall 概率混入默认字卡（自定义+默认一起用）；
       //   无自定义时正文整体已是默认字卡池，不再重复混入
       if (hasCustom) {
-        const d = pickDefaultMailCard(pool);
+        const d = pickDefaultMailCard(pool, cid);
         if (d) { parts.push(d); continue; }
       }
       parts.push(words[Math.floor(Math.random() * words.length)]);

@@ -1784,9 +1784,10 @@
     updateChatBadge();
   }
   function updateChatBadge() {
+    const n = chatUnread();
+    if (window.setDeskBadge) { window.setDeskBadge('chat', n); return; }
     const badge = document.getElementById('chat-badge');
     if (!badge) return;
-    const n = chatUnread();
     badge.hidden = n === 0;
     badge.textContent = n > 99 ? '99+' : String(n);
   }

@@ -282,6 +282,53 @@ await sleep(400);
 var healedPage = await evalJs(`document.querySelectorAll('#memo-list .memo-item').length`);
 check('16. 误迁自愈：根键被迁走后下次启动自动写回', healed && healed.count === preCount && healedPage === preCount && lsOk, JSON.stringify({ healed, pageItems: healedPage, lsRestored: lsOk, preCount }));
 
+// ---- 截止日期：pills 设「今天」→ 临期排序提前 + 红色标记 + 首页徽标临期提示 ----
+await evalJs(addMemo + '("临期事项")');
+await sleep(200);
+await evalJs(`(function () {
+  var rows = document.querySelectorAll('#memo-list .memo-item');
+  for (var i = 0; i < rows.length; i++) {
+    var t = (rows[i].querySelector('.mm-text') || {}).textContent;
+    if (t === '临期事项') { rows[i].querySelector('.mm-due').click(); return 'clicked-' + i; }
+  }
+  return 'not-found';
+})()`);
+await sleep(300);
+var dueRes = await evalJs(`(function () {
+  var pills = document.getElementById('modal-pills');
+  if (!pills || pills.hidden) return { open: false };
+  var todayPill = Array.prototype.slice.call(pills.querySelectorAll('.pill')).filter(function (p) { return p.textContent === '今天'; })[0];
+  if (!todayPill) return { open: true, noTodayPill: true };
+  todayPill.click();
+  document.getElementById('modal-ok').click();
+  return { open: true };
+})()`);
+await sleep(300);
+var dueState = await evalJs(`(() => {
+  var rows = Array.prototype.slice.call(document.querySelectorAll('#memo-list .memo-item'));
+  var urgentRow = rows.filter(function (r) { return r.className.indexOf('urgent') >= 0; })[0];
+  return { texts: rows.map(function (r) { return (r.querySelector('.mm-text') || {}).textContent; }),
+    urgentIdx: urgentRow ? rows.indexOf(urgentRow) : -1,
+    urgentText: urgentRow ? (urgentRow.querySelector('.mm-text') || {}).textContent : '',
+    timeText: urgentRow ? (urgentRow.querySelector('.mm-time') || {}).textContent : '',
+    badge: (document.getElementById('memo-app-badge') || {}).textContent || '' };
+})()`);
+check('17. 截止今天→临期排序提前+urgent标记+时间行提示+首页徽标临期', dueState && dueState.urgentIdx === 0 && dueState.urgentText === '临期事项' && /今天截止/.test(dueState.timeText) && /临期/.test(dueState.badge), JSON.stringify(dueState));
+
+// ---- 单条分享到聊天：mock chatAddIn 捕获消息 ----
+await evalJs(`window.__sentMsgs = []; window.chatAddIn = function (m) { window.__sentMsgs.push(m); };`);
+await evalJs(`(function () {
+  var rows = document.querySelectorAll('#memo-list .memo-item');
+  for (var i = 0; i < rows.length; i++) {
+    var t = (rows[i].querySelector('.mm-text') || {}).textContent;
+    if (t === '临期事项') { rows[i].querySelector('.mm-share').click(); return 'clicked'; }
+  }
+  return 'not-found';
+})()`);
+await sleep(250);
+var sent = await evalJs(`window.__sentMsgs || []`);
+check('18. 单条分享把备忘内容发到聊天', sent && sent.length >= 1 && sent[sent.length - 1].indexOf('临期事项') >= 0, JSON.stringify(sent));
+
 // ---- 返回桌面 ----
 await evalJs(`document.getElementById('memo-back').click()`);
 await sleep(300);
@@ -290,7 +337,26 @@ var backHome = await evalJs(`(() => {
   var pg = document.getElementById('page-memo');
   return { homeVisible: home && !home.hidden, memoClosed: pg.hidden };
 })()`);
-check('14. 返回键回桌面且备忘录页收起', backHome && backHome.homeVisible && backHome.memoClosed, JSON.stringify(backHome));
+check('19. 返回键回桌面且备忘录页收起', backHome && backHome.homeVisible && backHome.memoClosed, JSON.stringify(backHome));
+
+// ---- 首页小组件联动：徽标存在 + 点击直达备忘录 ----
+var badge = await evalJs(`(() => {
+  var b = document.getElementById('memo-app-badge');
+  if (!b) return { exists: false };
+  return { exists: true, inMemoCard: !!b.closest('[data-desk-widget="memo-row"]'), text: b.textContent };
+})()`);
+check('20. 首页备忘卡片注入联动徽标', badge && badge.exists && badge.inMemoCard && /待办/.test(badge.text), JSON.stringify(badge));
+await evalJs(`document.getElementById('memo-app-badge').click()`);
+await sleep(400);
+var badgeOpen = await evalJs(`(() => {
+  var pg = document.getElementById('page-memo');
+  var home = document.getElementById('page-phone');
+  var open = pg && !pg.hidden && pg.classList.contains('full');
+  if (open) { document.getElementById('memo-back').click(); }
+  return { open: open, homeBack: true };
+})()`);
+await sleep(300);
+check('21. 点首页徽标直达备忘录页', badgeOpen && badgeOpen.open, JSON.stringify(badgeOpen));
 
 const passed = results.filter((r) => r.ok).length;
 console.log('\n结果：' + passed + '/' + results.length + ' 项通过');

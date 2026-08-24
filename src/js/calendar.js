@@ -64,15 +64,27 @@
   function genMessage() {
     const cards = [];
     const custom = (window.getCustomCards && window.getCustomCards()) || [];
+    // v3.12.x：排除拍一拍字卡（getCustomCards 是全类型扁平视图，含【拍一拍】分组——
+    //   "戳戳额头"类文本不该拼进每日留言；与 chat/feed/mail 回复池同口径）
+    const pokeSet = (function () {
+      try {
+        const pk = (window.getPokeCards && window.getPokeCards()) || [];
+        return pk.length ? new Set(pk) : null;
+      } catch (e) { return null; }
+    })();
     custom.forEach(c => {
-      if (typeof c === 'string' && c.indexOf('data:') !== 0 && c.indexOf('|||') < 0) cards.push(c);
+      if (typeof c !== 'string') return;
+      if (pokeSet && pokeSet.has(c)) return;
+      if (c.indexOf('data:') !== 0 && c.indexOf('|||') < 0) cards.push(c);
     });
     const defs = (window.getDefaultCardGroups && window.getDefaultCardGroups('main')) || [];
     // v3.8.x：默认字卡总开关 + 分类开关——关闭后每日留言不混入系统默认主字卡
+    // v3.12.x：单卡开关过滤——用户在默认字卡页关掉的卡不再进留言（此前漏过滤）
     const dcfg = (window.defaultCardCfg && window.defaultCardCfg()) || {};
     const catOn = window.defaultCardCat ? window.defaultCardCat('main') : true;
+    const isOff = window.isDefaultCardOff || null;
     if (dcfg.enabled !== false && catOn) {
-      defs.forEach(([g, arr]) => { if (Array.isArray(arr)) arr.forEach(c => cards.push(c)); });
+      defs.forEach(([g, arr]) => { if (Array.isArray(arr)) arr.forEach(c => { if (isOff && isOff('main', c)) return; if (typeof c === 'string' && c) cards.push(c); }); });
     }
     if (!cards.length) return '今天也想对你说点什么...';
     const maxCount = Math.min(8, cards.length);

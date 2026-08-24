@@ -518,7 +518,7 @@ function harvestPlot(idx) {
 }
 
 
-function partnerAct(silent) {
+function partnerAct(silent, used) {
   var pName = pn();
   var r = Math.random();
   var emptyPlots = [];
@@ -539,9 +539,28 @@ function partnerAct(silent) {
     var bb = (data.p[b] && data.p[b].bloomedAt) || 0;
     return ba - bb;
   });
+  function pick(arr) {
+    if (!arr || !arr.length) return -1;
+    var avail = arr;
+    if (used && used.length) {
+      avail = arr.filter(function (x) { return used.indexOf(x) < 0; });
+      if (!avail.length) avail = arr;
+    }
+    var idx = avail[Math.floor(Math.random() * avail.length)];
+    if (used) used.push(idx);
+    return idx;
+  }
   var acted = false;
-  if (r < 0.15 && emptyPlots.length > 0) {
-    var idx = emptyPlots[Math.floor(Math.random() * emptyPlots.length)];
+  var actType;
+  if (r < 0.15) actType = "plant";
+  else if (r < 0.35) actType = "water";
+  else if (r < 0.50) actType = "waterall";
+  else if (r < 0.65) actType = "harvest";
+  else if (r < 0.78) actType = "harvestall";
+  else if (r < 0.90) actType = "fertilize";
+  else actType = "patrol";
+  if (actType === "plant" && emptyPlots.length > 0) {
+    var idx = pick(emptyPlots);
     var keys = Object.keys(T).filter(function (k) { return unlocked(k); });
     if (keys.length > 0) {
       var t = keys[Math.floor(Math.random() * keys.length)];
@@ -551,15 +570,15 @@ function partnerAct(silent) {
       updDex(t, "p"); updSt("p", false);
       acted = true;
     }
-  } else if (r < 0.35 && dryPlots.length > 0) {
-    var idx = dryPlots[Math.floor(Math.random() * dryPlots.length)];
+  } else if (actType === "water" && dryPlots.length > 0) {
+    var idx = pick(dryPlots);
     var si = stageInfo(data.p[idx]);
     data.p[idx].watered = Math.floor(Date.now() / 1000);
     data.p[idx].planted = Math.max(0, data.p[idx].planted - 7200);
     addLog(pName, "\u7ED9 " + (si ? si.name : "\u690D\u7269") + " \u6D47\u4E86\u6C34");
     updSt("w", false);
     acted = true;
-  } else if (r < 0.50 && dryPlots.length > 0) {
+  } else if (actType === "waterall" && dryPlots.length > 0) {
     var wcnt = 0;
     for (var pi = 0; pi < data.p.length; pi++) {
       if (data.p[pi] && waterLvl(data.p[pi]) < 0.3) {
@@ -569,8 +588,8 @@ function partnerAct(silent) {
       }
     }
     if (wcnt > 0) { addLog(pName, "\u4E00\u952E\u6D47\u4E86 " + wcnt + " \u68F5\u690D\u7269"); updSt("w", false); acted = true; }
-  } else if (r < 0.65 && bloomedPlots.length > 0) {
-    var idx = bloomedPlots[0];
+  } else if (actType === "harvest" && bloomedPlots.length > 0) {
+    var idx = pick(bloomedPlots);
     var si = stageInfo(data.p[idx]);
     var name = si ? si.name : "\u690D\u7269";
     var type = data.p[idx].type;
@@ -591,7 +610,7 @@ function partnerAct(silent) {
       addLog(pName, "\u6536\u83B7\u4E86 " + name + qualLabel(pq) + (wilted ? "\uFF08\u5DF2\u51CB\u8C22\uFF09" : "") + " (+" + xpg + "\u7ECF\u9A8C)");
     }
     acted = true;
-  } else if (r < 0.78 && bloomedPlots.length > 1) {
+  } else if (actType === "harvestall" && bloomedPlots.length > 0) {
     var hcnt = 0;
     for (var pi = 0; pi < data.p.length; pi++) {
       if (!data.p[pi]) continue;
@@ -609,8 +628,8 @@ function partnerAct(silent) {
       hcnt++;
     }
     if (hcnt > 0) { addLog(pName, "\u4E00\u952E\u6536\u83B7 " + hcnt + " \u6735\u82B1"); acted = true; }
-  } else if (r < 0.90 && plantedPlots.length > 0) {
-    var idx = plantedPlots[Math.floor(Math.random() * plantedPlots.length)];
+  } else if (actType === "fertilize" && plantedPlots.length > 0) {
+    var idx = pick(plantedPlots);
     var si = stageInfo(data.p[idx]);
     data.p[idx].planted = Math.max(0, data.p[idx].planted - 21600);
     addLog(pName, "\u7ED9 " + (si ? si.name : "\u690D\u7269") + " \u65BD\u4E86\u80A5");
@@ -621,9 +640,11 @@ function partnerAct(silent) {
     var msg = WM[Math.floor(Math.random() * WM.length)];
     addLog(pName, "\uD83D\uDC95 " + msg);
   }
-  data.lpc = Math.floor(Date.now() / 1000);
-  save(data);
-  if (!silent) renderAll();
+  if (acted) {
+    data.lpc = Math.floor(Date.now() / 1000);
+    save(data);
+  }
+  if (!silent && acted) renderAll();
   return acted;
 }
 
@@ -800,7 +821,7 @@ var ACHV = [
   { id: "decorAll", n: "尽善尽美", e: "\uD83C\uDFE0", d: "买齐全部装饰", check: function () { return Object.keys(DECOR).every(function (k) { return (data.decor[k] || 0) >= DECOR[k].max; }); } },
   { id: "visitor", n: "生机勃勃", e: "\uD83E\uDE9B", d: "招待过访客", check: function () { return !!data.visitor; } },
   { id: "bouquet3", n: "花束使者", e: "\uD83D\uDCC1", d: "制作 3 束花", check: function () { return (data.bouquetCnt || 0) >= 3; } },
-  { id: "partnerCare", n: "同育之情", e: "\uD83D\uDC95", d: "梦角打理 10 次", check: function () { return (data.st.mp || 0) + (data.st.mw || 0) + (data.st.mh || 0) + (data.st.mf || 0) >= 10; } },
+  { id: "partnerCare", n: "同育之情", e: "\uD83D\uDC95", d: "梦角打理 30 次", check: function () { return (data.st.mp || 0) + (data.st.mw || 0) + (data.st.mh || 0) + (data.st.mf || 0) >= 30; } },
   { id: "rich", n: "花山花海", e: "\uD83D\uDCB0", d: "库存 20 朵花", check: function () { var t = 0; Object.keys(data.inv || {}).forEach(function (k) { t += data.inv[k] || 0; }); return t >= 20; } },
   { id: "wiltedSee", n: "封存时光", e: "\uD83E\uDD40", d: "见证花朵凋谢", check: function () { return !!data.wiltedSeen; } },
   { id: "hybridMaster", n: "杂交大师", e: "\uD83E\uDD7C", d: "发现 5 个杂交配方", check: function () { return Object.keys(data.hybridFound || {}).length >= 5; } },
@@ -1049,6 +1070,9 @@ function renderReport() {
   h += '<div class="report-row"><span>\u8FDE\u7EED\u6D47\u6C34</span><b>' + streak + ' \u5929</b></div>';
   h += '<div class="report-row"><span>\u56FE\u9274\u6536\u96C6</span><b>' + dexGot + '/' + Object.keys(T).length + '</b></div>';
   h += '<div class="report-row"><span>\u68A6\u89D2\u6253\u7406</span><b>' + partnerCare + ' \u6B21</b></div>';
+  var gTime = data.gardenTime || 0;
+  var gTimeTxt = gTime >= 3600 ? Math.floor(gTime / 3600) + " \u5C0F\u65F6" : Math.floor(gTime / 60) + " \u5206\u949F";
+  h += '<div class="report-row"><span>\u901B\u82B1\u56ED\u65F6\u957F</span><b>' + gTimeTxt + '</b></div>';
   h += '</div>';
   h += '<button class="report-share-btn" id="garden-report-share">\uD83D\uDCF8 \u5206\u4EAB\u5230\u670B\u53CB\u5708</button>';
   el.innerHTML = h;
@@ -1114,19 +1138,28 @@ function renderAll() {
 
 function checkPartnerPassive() {
   try {
-    var d = load();
     var now = Math.floor(Date.now() / 1000);
+    if (data && data.lpc && now - data.lpc < PI) return;
+    var d = load();
+    now = Math.floor(Date.now() / 1000);
     var last = d.lpc || 0;
-    if (!last) { d.lpc = now; save(d); return; }
+    if (!last) {
+      data = d;
+      var ok0 = partnerAct(true);
+      if (!ok0) data.lpc = now - PI;
+      save(data);
+      return;
+    }
     var elapsed = now - last;
-    if (elapsed < PI) return;
+    if (elapsed < PI) { data = d; return; }
     var slots = Math.floor(elapsed / PI);
-    if (slots > 8) slots = 8;
     data = d;
     var triggered = 0;
+    var used = [];
     for (var i = 0; i < slots; i++) {
-      if (Math.random() < 0.35) {
-        if (partnerAct(true)) triggered++;
+      if (triggered >= 40) break;
+      if (Math.random() < 0.4) {
+        if (partnerAct(true, used)) triggered++;
       }
     }
     if (triggered > 0) {
@@ -1134,7 +1167,7 @@ function checkPartnerPassive() {
       addLog(pName, "\u6253\u7406\u4E86\u82B1\u56ED\uFF08\u540E\u53F0\uFF09");
       save(data);
     } else {
-      data.lpc = now;
+      data.lpc = last + slots * PI;
       save(data);
     }
   } catch (e) {}
@@ -1360,6 +1393,20 @@ if (backBtn) backBtn.addEventListener("click", function () {
   var home = document.getElementById("page-phone");
   if (home) home.hidden = false;
   try { document.dispatchEvent(new CustomEvent("garden-leave")); } catch (e) {}
+});
+
+document.addEventListener("garden-enter", function () {
+  try { data._enterTs = Math.floor(Date.now() / 1000); } catch (e) {}
+});
+document.addEventListener("garden-leave", function () {
+  try {
+    if (data._enterTs) {
+      var dur = Math.floor(Date.now() / 1000) - data._enterTs;
+      if (dur > 0 && dur < 86400) data.gardenTime = (data.gardenTime || 0) + dur;
+      data._enterTs = 0;
+      save(data);
+    }
+  } catch (e) {}
 });
 
 var gridEl = document.getElementById("garden-grid");

@@ -4,6 +4,190 @@
 
 ## 规则
 
+### 2026-08-24（AI-A：花园梦角打理触发机制优化——冷却/概率/离线/去重/成就/逛园时长）
+- [本会话·完成]（**已改 src，未构建未提交**）：`src/js/garden.js`（AI-A 域）。未碰其他文件。
+  - **优化点1（冷却重置过激）**：`checkPartnerPassive` 未命中时不再 `lpc=now` 浪费整个 30 分钟窗口，改为推进到已检查 slot 边界 `lpc = last + slots*PI`，下次平均 15 分钟即再有机会。
+  - **优化点2（acted=false 不消耗冷却）**：`partnerAct` 末尾 `lpc` 重置/save/render 改为仅 `acted=true` 时执行；"尝试但没动作"不再算打理过。
+  - **优化点4（冷启动保底）**：首次 `lpc=0` 不再直接 return 等 30 分钟，改为立刻 `partnerAct(true)` 保底一次；未成功则 `lpc=now-PI` 让下次立刻再有机会。
+  - **优化点5（离线收益解封）**：slots 上限 8→24（覆盖 12 小时离线），每 slot 概率 0.35→0.4，加总动作软上限 16 防卡顿；长期离线梦角打理更充分。
+  - **优化点6（概率分支跳层）**：`partnerAct` 改为先按 r 选 actType 再判条件，不满足走 patrol 兜底（acted=false），消除"1 朵花时施肥概率被放大"等状态漂移；harvestall 条件 >1 改 >0。
+  - **优化点7（动作去重）**：`partnerAct(silent, used)` 加 used 参数，`pick()` 优先选未操作过的格子；`checkPartnerPassive` 循环传 used 集合。
+  - **优化点8（成就门槛）**：`partnerCare` "同育之情" 10→30 次，与浇水 50/收获 50 档位匹配。
+  - **优化点10（事件接线）**：`garden-enter`/`garden-leave` 监听记 `_enterTs` + 累加 `gardenTime`；年报新增"逛花园时长"行。
+  - **优化点11（省 parse）**：`checkPartnerPassive` 入口用内存 `data.lpc` 预判冷却，冷却内直接 return 不 `load()`/JSON.parse。
+  - 验证：`node --check` 通过。未构建（等 AI-B 统一 build）。真机确认点：梦角打理更活跃（离线 12h 回来约 10 次打理）；新用户首次进花园即见 TA 动作；花园年报显示逛花园时长。
+
+### 2026-08-24（用户要求：番茄钟陪伴模式的聊天要独立窗口，不显示/不写普通聊天记录）
+- [本会话·完成]（**已改 src + 已构建（22:19, sw: mochi-mt7bodyk），verify-pomodoro-companion 重写后 26/26 + verify-pomodoro 20/20 + 布局 verify 10/10，未提交**）：`src/js/p2-features.js` + `src/css/chat-pages.css`（均 AI-A 域）+ 构建产物 + `tools/verify-pomodoro-companion.mjs`（重写适配新行为）。
+  - **新形态**：新增独立全屏页 `#page-pmp-chat`「陪伴专注」（chat-head 返回 + 复用 .pmp-bar 倒计时条(暂停/⋯菜单) + .pmp-c-list 消息列表 + .pmp-c-inputbar 输入栏）。陪伴期间所有对话只进此窗：开场白/每5~8分钟鼓励/完成祝贺/提前结束回应全部改走 `pmpCAdd()`，**不再调 chatAddIn、不进普通聊天记录**；入口按钮与「已在陪伴中」再点击都 openPage 到专属窗（不再 enterChat）。
+  - **窗内收发**：用户可发消息（Enter/发送按钮，maxlength120），TA 轻量回应（700~1500ms 延迟+震动30ms；关键词感知：累/难/烦→安慰池，完成/好了→祝贺池，其余→陪伴池）。记录存 `pomo-companion-log`（curStore 按联系人隔离，cap 300 条，跨会话保留可回看）。
+  - **保留**：普通聊天页顶部倒计时状态条不动（仅状态显示无聊天内容，暂停/⋯菜单共用 pmpToggleRun/pmpQuitAsk）；切联系人自动退出并关窗；刷新接续/关闭期补记逻辑不变但消息改进窗。
+  - **回归脚本重写**（26 项）：A 独立窗进入+开场白隔离 / B 窗内收发+暂停继续+菜单+提前结束 / C 完成跳变（祝贺只进窗记录、普通聊天无🍅）/ D 补记进窗 / E 普通聊天页状态条接续+旧入口可用。全程断言 getChatMsgs 不含陪伴消息。
+  - ⚠️ **构建时工作区有对方未提交改动（memo/bg-keep/chat/feed/mail/group-chat/default-cards/memo.css 等 19 文件），构建产物已一并包含——提交前请确认各方已保存完整并重新 build 收口**。
+  - ⚠️ 真机需确认（vivo Edge）：①专属窗输入框被 mobile-adapt 转 contenteditable 后发送正常 ②键盘弹出时窗内布局（list flex 收缩、输入栏贴底）③深色模式下气泡/输入栏配色。
+
+### 2026-08-24（用户反馈：手机浏览器切后台再回前台，系统通知栏弹出几分钟前已在聊天页看过的旧消息）
+- [本会话·完成]（**已改 src + 已构建（22:17, sw: mochi-mt7blwyb）+ 新专项 verify-bg-notify-dedupe 10/10 + 布局 verify 10/10，未提交**）：`src/js/bg-keep.js`（AI-B 域，本文件当时无人占用）+ 构建产物 + `tools/verify-bg-notify-dedupe.mjs`（新专项）。未碰 chat.js/template/CSS。
+  - **根因（bgNotifyCheck 无内容记忆）**：后台通知只判断「页面是否隐藏」，切后台后保活定时器继续跑——回复链剩余部分/下一轮主动发送/查岗卡等一旦产出与刚才对话相同或延续的内容，就原样再发一条系统通知（用户视角：刚看过的消息又弹一遍）。
+  - **修复（bg-keep.js bgNotifyCheck 前置两道闸门）**：① 隐藏时长门槛——`lastVisibleAt` 起算，切后台头 **15 秒内**不发系统通知（切换过渡期定时器到点的消息用户马上能看见）；② 内容去重——文本归一化指纹（剥 dataURL/语音 `|||` 段/SVG 标签、去空白取前 60 字），与【最近 30 分钟聊天记录里 TA 已说过的内容】或【最近 10 分钟已发过的通知】相同 → 不再重弹。消息本体照常进聊天记录与角标，只是不再重复弹系统通知。
+  - **只读探针**：`window.bgNotifyGateInfo(text)` 返回 `{hiddenForMs, tooFreshHidden, dupNotified, dupInChat}`（诊断哪道闸门会拦）。
+  - 验证：verify-bg-notify-dedupe.mjs 10/10（探针结构/闸门②命中/30 分钟窗外不误伤/可见态过渡期判定/带图带语音归一化同指纹/接线完好无异常）+ 布局 verify 10/10。真机确认点：刚聊完切后台几分钟再回来，通知栏不再出现刚才聊过的同款内容；后台较久（>15s）收到全新消息仍正常弹通知。
+  - ⚠️ **构建扫入提示**：22:17 构建时工作区新增了另一批 memo 相关已保存改动（`src/css/memo.css`、`src/css/chat-pages.css`、`src/js/p2-features.js`、`memo-shot-*.jpg`、`tools/shot-memo.mjs`、`tools/verify-memo.mjs`），该批次尚未在 WORKLOG 登记——若该会话还未完成，完成后请重新 build；本会话构建前已跑布局 verify 10/10 与 memo-app/p2-features 的 node --check 均通过。
+
+### 2026-08-24（用户反馈：17promax——加了公用/专属自定义字卡后，联系人发朋友圈只用自定义字卡，不再用系统默认字卡）
+- [本会话·完成]（**已改 src + 已构建（21:47, sw: mochi-mt7aji26）+ 新专项 verify-feed-mail-pool 7/7 + 回归 verify-gc-pool-scope 10/10 + 布局 verify 10/10，未提交**）：`src/js/feed.js` + `src/js/mail.js`（均 AI-A 域）+ 构建产物 + `tools/verify-feed-mail-pool.mjs`（新专项）。未碰 template.html/CSS。
+  - **根因（feed.js cardPool 补池门）**：默认主字卡补池条件是 `catOn('main') && !text.length`——自定义（公用+专属）字卡非空后 `text` 永远非空 → 4621 张默认字卡从此不参与 TA 动态/评论。与单聊 getPool v3.6.x 修过的「三类任一为空才补」同款问题（chat.js 注释有前车之鉴），朋友圈一直没跟上。
+  - **修复（feed.js cardPool，三处对齐聊天页语义）**：① main **开启即始终混入**（去掉 !text.length 门）；② 开关按【该联系人桌面】读——`defaultCardApiFor(storeFor(cid))`（复用上一轮 default-cards.js 暴露的 API），某联系人桌面关「朋友圈使用」→ 只有这个联系人的动态/评论不用默认字卡；③ 补上此前漏掉的单卡开关（dc-off-*）过滤与 dc-enabled 总开关检查。kaomoji/emoji 保持「空才补」与聊天一致。
+  - **顺手对齐（mail.js，同族开关归属问题）**：信箱混入机制本就正确（独立子池按概率混入），但 pushDefault/pickDefaultMailCard 读的是当前桌面开关——改按 `storeFor(cid)` 桌面读 use('mail')/cat/isOff/enabled/overall/probs；pickDefaultMailCard 加 cid 参数（唯一调用点 taLetterContent 已传）。
+  - **只读探针**：`window.feedPoolFor/feedPoolHas(cid,…)`、`window.mailPoolFor(cid)`（素材池摘要/含卡判断，供回归与诊断）。
+  - 验证：verify-feed-mail-pool.mjs 7/7（F1 自定义非空时池仍含 4623 条 / F2 三来源并存 / F3 关「朋友圈使用」联系人退出默认池且不误伤自定义 / F5 dc-enabled 按桌面 / M1-M2 信箱默认子池装载与按桌面清空）；回归 verify-gc-pool-scope 10/10 + 布局 verify 10/10。真机确认点：加了自定义字卡的设备上联系人朋友圈动态/评论重新出现系统默认话术；关闭某联系人桌面「朋友圈使用」后仅该联系人不混入。
+  - ⚠️ 本会话与前一会话（群聊三来源）同仓同分支连续施工、改动均在工作区未提交；提交时建议合并为一个 commit（v3.12.x：字卡来源口径统一——聊天/群聊/朋友圈/信箱 = 公用+专属+默认，默认字卡开关按联系人桌面对应联系人生效）。
+
+### 2026-08-24（用户要求：群聊联系人字卡来源捋顺——公用+专属+默认三来源；默认字卡页加小字说明）
+- [本会话·完成]（**已改 src + 已构建（21:31, sw: mochi-mt79yax4）+ 新专项 verify-gc-pool-scope 10/10 + 布局 verify 10/10，未提交**）：`src/js/group-chat.js`（本会话认领）+ `src/js/default-cards.js`（均 AI-A 域）+ 构建产物 + `tools/verify-gc-pool-scope.mjs`（新专项）。未碰 template.html/CSS。
+  - **用户口径**：群聊成员回复池 =【自定义聊天字卡·公用】+【该成员桌面专属】+【系统默认聊天字卡】；某成员桌面关闭【聊天使用】→ 聊天和群聊里这个成员都不再使用默认字卡（开关按桌面独立生效，需在默认字卡页小字说明）。
+  - **①存量 bug（group-chat.js gcPool/gcPokeText）**：旧代码按 `{key:{cards:[{type,text}]}}` 解析 `cc-groups`，与实际存储 `{类型:[[分组,[卡]]]}` 结构不符——文字/emoji/颜文字的**专属字卡从未真正进过群聊回复池**（静默失效多年）；拍一拍同病。修复：改走 chatcard For 系列合并视图——`getCustomCardsFor(cid)`（公用+专属扁平，过滤 data:/|||/拍一拍后按正则分桶，emoji 判定对齐 chat.js 双正则）+ `getPokeCardsFor(cid)`（排除拍一拍进普通池）；媒体类 `getMediaCardsFor` 原本已合并不动。
+  - **②默认字卡按成员桌面读取**：gcPool 兜底/gcPokeText 原读当前桌面开关（在 A 页面开群聊，B/C 成员跟着 A 的开关走）。新增 `default-cards.js` 开关读取 store 参数化：`window.defaultCardApiFor(st)`（enabled/use/cat/isOff/cfg）+ `window.getDefaultCardsFor(st)`（完整抽取逻辑复用 drawCards）；group-chat 用 `storeFor(cid)` 传入 → 每个成员按自己桌面的 总开关/【聊天使用】/分类/单卡开关/概率 生效。main 兜底门对齐单聊 getPool（开启即始终混入，颜文字/emoji 分类空才补，去掉旧的三类任一空整体门）。fallback 路径保留旧全局 API（a 为 null 时）。
+  - **③默认字卡页小字说明（default-cards.js JS 注入，未动 template.html）**：场景开关组下方注入 `#dc-scope-note`：「以上开关按当前桌面对应的联系人独立保存：当当前桌面联系人关闭【聊天使用】，聊天和群聊里这个联系人也无法使用默认字卡（其他联系人不受影响）。」
+  - **④文案同步**：群聊设置底部说明改为「成员回复内容来自：公用字卡 + 该成员桌面专属字卡 + 系统默认字卡；某成员桌面关闭【聊天使用】，聊天和群聊里这个成员都不再使用系统默认字卡。」
+  - **⑤只读探针**：`window.groupChatPoolFor(cid)` 返回成员当前池数据副本（供回归测试与作用域问题诊断，此类问题已反复出现）。
+  - 验证：verify-gc-pool-scope.mjs 10/10（T1 公用文字进池 / T2 专属隔离+旧结构 bug 回归 / T3 开关桌面含默认卡 / T4 关【聊天使用】成员池无默认卡 / T5 不误伤自定义 / T6 dc-enabled 按桌面 / T7 公用拍一拍合并 / T8 小字说明在页 / T9 探针安全）+ 布局 verify 10/10。真机确认点：群聊里各成员回复能用到自己桌面的自定义文字字卡；关闭某联系人桌面的【聊天使用】后，该成员在单聊+群聊都不再说系统预设话术，其他成员照常。
+  - ⚠️ 本次构建（21:31）同时收口了 WORKLOG 上条遗留警告（bg-keep.js / mail.js 20:55 未入产物的问题已随本次 build 扫入）。工作区此前无其他未提交 src 改动（git status 仅本会话文件），提交前无需再 build。
+
+### 2026-08-24（AI-A 留话给 AI-B：切联系人桌面淡入过渡——方案已与用户对齐，请 AI-B 执行）
+- [AI-A·请求 AI-B 执行]（**未构建未提交，等 AI-B 改 personalize.js + home.css 后统一 build**）：`src/js/personalize.js` + `src/css/home.css`（均 AI-B 域）。AI-A 本会话不动任何 src 文件。
+  - **需求**：`personalize.js:2138` `document.addEventListener('contact-switched', buildDeskPages)` 切联系人时整个桌面重建无过渡动画，体验生硬。加一个 240ms 淡入+微上移过渡。用户已审过方案确认要做。
+  - **改法**（已与用户对齐，AI-B 照此执行即可）：
+    1. `home.css` 加 keyframes + 类（放桌面样式区，约 `:220` 附近）：
+       ```css
+       .desk-fade-in { animation: deskFadeIn 240ms ease-out; }
+       @keyframes deskFadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+       ```
+    2. `personalize.js:2138` 的 contact-switched 监听从直接传函数引用改为包装函数（重建后触发淡入）：
+       ```js
+       // 原：document.addEventListener('contact-switched', buildDeskPages);
+       // 改为：
+       document.addEventListener('contact-switched', () => {
+         buildDeskPages();
+         const dp = document.getElementById('desktop-pages');
+         if (!dp) return;
+         dp.classList.remove('desk-fade-in');
+         void dp.offsetWidth; // 强制 reflow 重启动画
+         dp.classList.add('desk-fade-in');
+       });
+       ```
+  - **要点**：① 只在 `contact-switched` 时播淡入，`mochi-restore-done` 的 `rebuildDeskWhenReady`（`:2143`）不动——开屏数据就绪重建不播动画避免开屏闪烁；② `translateY(6px)` 是位移不是缩放，不违反 AGENTS.md「禁止整页 zoom/transform:scale」红线；③ transform 加在 `#desktop-pages` scroll 容器上，不影响子元素 scroll-snap；④ 240ms 短，频繁切联系人也不烦；⑤ `void dp.offsetWidth` 强制 reflow 确保连续切联系人时动画重新触发（否则 class 已在不会重播）；⑥ animationend 不需移除类，下次切联系人会先 remove 再 add。
+  - **风险已评估**：① buildDeskPages 主体同步，淡入在返回后立即触发，主体已重建完；② transform 不影响子元素 fixed/absolute 定位（桌面组件都是 static/relative）；③ opacity 0→1 240ms 内可接受，不会让用户觉得卡。
+  - **验证**：`node --check` + `npm run build` + `npm run verify`（布局 10/10）。真机确认：切联系人时桌面有淡入+微上移过渡；连续快速切两个联系人都触发动画；开屏首次加载不播动画（restore-done 路径不动）。
+  - ⚠️ AI-A 侧无配合改动需求。AI-B 改完保存后按 AGENTS.md 构建者协议统一 build。本条任务完成后请 AI-B 在本行末尾追加「✅ 已完成」并补 build/verify 结果。
+
+### 2026-08-24（AI-A 留话给 AI-B：图标徽章统一接口 setDeskBadge + 颜色设置工厂函数重构——方案已与用户对齐，请 AI-B 执行）
+- [AI-A·请求 AI-B 执行 + AI-A 侧已改完]（**未构建未提交，等 AI-B 改 personalize.js 后统一 build**）：AI-A 侧 `src/js/chat.js` + `src/js/mail.js` + `src/js/feed.js` 已加 `window.setDeskBadge` 守卫（`node --check` 三文件通过）；AI-B 侧 `src/js/personalize.js` 待改。
+  - **方案 6：图标徽章统一接口**（AI-B 侧）
+    - **需求**：当前只有 chat/mail/feed 三个图标有 `app-badge` DOM（`template.html:150,162,166` 写死），其他图标（日历/纪念/占卜/收藏/音乐/统计…）想挂未读数没地方挂。抽统一接口 `window.setDeskBadge(appName, count)`，任何图标都能显示未读角标。
+    - **AI-A 侧已改完**（向后兼容，AI-B 未加接口前行为完全不变）：
+      - `chat.js:1786` `updateChatBadge()` — 加 `if (window.setDeskBadge) { window.setDeskBadge('chat', n); return; }` 守卫
+      - `mail.js:108` `updateBadge()` — 加 `if (!badge && !window.setDeskBadge) return;` + try 内 `if (window.setDeskBadge) { window.setDeskBadge('mail', unread); return; }`
+      - `feed.js:1110` `renderNoticeBadge()` 的 feed-app-badge 部分 — 加 `if (window.setDeskBadge) { window.setDeskBadge('feed', appN); } else { ...原逻辑... }`
+    - **AI-B 侧待改**（`personalize.js`，加 setDeskBadge 接口实现，建议放在 `:887` 颜色设置代码之前、启动早期）：
+      ```js
+      window.setDeskBadge = function (appName, count) {
+        const app = document.querySelector('.app[data-app="' + appName + '"]');
+        if (!app) return;
+        let box = app.querySelector('.app-badge-box');
+        if (!box) {
+          const ico = app.querySelector('.app-ico');
+          if (!ico) return;
+          box = document.createElement('div'); box.className = 'app-badge-box';
+          ico.parentNode.insertBefore(box, ico); box.appendChild(ico);
+        }
+        let badge = box.querySelector('.app-badge');
+        if (!badge) {
+          badge = document.createElement('span'); badge.className = 'app-badge';
+          box.appendChild(badge);
+        }
+        if (count > 0) { badge.textContent = count > 99 ? '99+' : count; badge.hidden = false; }
+        else badge.hidden = true;
+      };
+      ```
+    - **要点**：① 接口自动给无 `app-badge-box` 的图标补 DOM，`template.html` 不用改（chat/mail/feed 已有 box 会被复用，不重复创建）；② 现有 `chat-badge`/`mail-badge`/`feed-app-badge` 的 id 仍保留（接口不删 id），其他模块直接 `getElementById` 的地方不受影响；③ `home.css:185` `.app-badge-box{position:relative}` 已就绪，接口给图标补 box 时把 `.app-ico` 包一层 div，样式不破；④ 接口要在 chat.js `updateChatBadge` 首次调用前定义，放启动早期即可。
+    - **验证**：AI-B 加完接口后 `npm run build` + `npm run verify`。真机确认：聊天/信箱/朋友圈未读数仍正常显示；其他图标可由 AI-A 后续调 `setDeskBadge('calendar', 1)` 等挂角标。
+  - **方案 10：颜色设置工厂函数重构**（AI-B 侧，纯重构不改功能）
+    - **需求**：`personalize.js:887-1184` 五套颜色设置代码（widget-bg/border/btn/btn-text/heart）结构高度相似（每套 ~62 行：取 row/val → apply 函数 → 读 saved → syncUI → 绑 click → openModal 色板 → 保存），是复制粘贴五遍。抽成工厂函数 `createColorRow(opts)`，五套都调它，省 ~223 行。第六套透明度（`:1186-1223`）逻辑不同（百分比 + 输入框），保留独立不强行套工厂。
+    - **改法**：在 `:887` 前定义工厂：
+      ```js
+      function createColorRow(o) {
+        const row = document.getElementById(o.rowId);
+        const val = document.getElementById(o.valId);
+        const apply = (color) => {
+          document.documentElement.style.setProperty(o.varName, color);
+          if (val) val.textContent = color === o.defaultColor ? o.defaultLabel : '';
+        };
+        const saved = store.get(o.storeKey);
+        if (saved) apply(saved);
+        if (!row) return;
+        const syncUI = () => {
+          const c = store.get(o.storeKey) || o.defaultColor;
+          if (val) val.textContent = c === o.defaultColor ? o.defaultLabel : '';
+        };
+        syncUI();
+        row.addEventListener('click', () => {
+          if (!window.openModal) return;
+          const current = store.get(o.storeKey) || o.defaultColor;
+          window.openModal(o.title, '', (v) => {
+            const color = (typeof v === 'number' && o.swatches[v]) ? o.swatches[v].color : v;
+            if (!color) return;
+            if (color === '__reset__') { store.remove(o.storeKey); apply(o.defaultColor); syncUI(); return; }
+            store.set(o.storeKey, color); apply(color); syncUI();
+          }, { colorPicker: true, noInput: true, color: current, swatches: o.swatches, pills: [{ label: '恢复默认', value: '__reset__' }] });
+        });
+      }
+      ```
+      然后 `:887-1184` 五套替换为五次调用（色板数组原样搬进 opts.swatches，不改色值）：
+      ```js
+      createColorRow({ rowId: 'row-widget-color', valId: 'widget-color-val', varName: '--widget-bg', storeKey: 'widget-bg-color', defaultColor: '#ffffff', defaultLabel: '默认白', title: '小组件颜色', swatches: [/* 原 20 色，原样搬来 */] });
+      createColorRow({ rowId: 'row-widget-border', valId: 'widget-border-val', varName: '--widget-border', storeKey: 'widget-border-color', defaultColor: 'rgba(0,0,0,.1)', defaultLabel: '默认', title: '小组件边框颜色', swatches: [/* 原 16 色 */] });
+      createColorRow({ rowId: 'row-widget-btn', valId: 'widget-btn-val', varName: '--widget-btn', storeKey: 'widget-btn-color', defaultColor: '#111111', defaultLabel: '默认黑', title: '按钮颜色', swatches: [/* 原 16 色 */] });
+      createColorRow({ rowId: 'row-widget-btn-text', valId: 'widget-btn-text-val', varName: '--widget-btn-text', storeKey: 'widget-btn-text-color', defaultColor: '#ffffff', defaultLabel: '默认白', title: '按钮文字颜色', swatches: [/* 原 16 色 */] });
+      createColorRow({ rowId: 'row-widget-heart', valId: 'widget-heart-val', varName: '--widget-heart', storeKey: 'widget-heart-color', defaultColor: '#111111', defaultLabel: '默认黑', title: '爱心外框颜色', swatches: [/* 原 16 色 */] });
+      ```
+    - **要点**：① 纯重构，行为完全等价（每套的 apply/syncUI/openModal 逻辑都与原代码逐行对齐）；② 色板数组原样搬进调用，不改色值；③ 透明度（`:1186-1223`）不动；④ 重构后 `:887-1184` 从 ~298 行 → ~30 行（工厂）+ ~5×9 行（调用）= ~75 行，省 ~223 行。
+    - **验证**：`node --check` + `npm run build` + `npm run verify`。真机确认：五个颜色设置行点击都弹色板、选色实时生效、恢复默认可用、刷新后保持。
+  - ⚠️ AI-A 侧 chat.js/mail.js/feed.js 改动已保存未构建（加 setDeskBadge 守卫，向后兼容，当前构建行为不变）。AI-B 改完 personalize.js 后统一 build，AI-A 侧改动会自动扫入。本条任务完成后请 AI-B 在本行末尾追加「✅ 已完成」并补 build/verify 结果。
+
+### 2026-08-24（AI-A 留话给 AI-B：桌面翻页平滑过渡——方案已与用户对齐，请 AI-B 执行）
+- [AI-A·请求 AI-B 执行]（**未构建未提交，等 AI-B 改 desktop-slider.js 后统一 build**）：`src/js/desktop-slider.js`（AI-B 域）。AI-A 本会话不动任何 src 文件。
+  - **需求**：圆点点击切换桌面页目前是瞬移（`go()` 在 `:29` 直接赋 `pages.scrollLeft`），改为平滑过渡。用户已审过完整方案确认要做。
+  - **改法**（已与用户对齐，AI-B 照此执行即可）：
+    1. 在 `desktop-slider.js:23` 的 `go()` 函数前拆出 `setScrollLeft(i, smooth)`：
+       ```js
+       function setScrollLeft(i, smooth) {
+         const left = i * pageStep();
+         if (smooth && pages.scrollTo) {
+           try { pages.scrollTo({ left: left, behavior: 'smooth' }); return; }
+           catch (e) {}
+         }
+         pages.scrollLeft = left;
+       }
+       ```
+    2. `go()` 加 `smooth` 形参，内部 `pages.scrollLeft = idx * pageStep()`（`:29`）改为 `setScrollLeft(idx, smooth)`：
+       ```js
+       function go(i, smooth) {
+         const slides = getSlides();
+         idx = Math.max(0, Math.min(slides.length - 1, i));
+         if (!pages.clientWidth) return;
+         setScrollLeft(idx, smooth);
+         getDots().forEach((d, k) => d.classList.toggle('active', k === idx));
+       }
+       ```
+    3. 调用点改动（共 4 处）：
+       - `:55` 圆点点击 `go(getDots().indexOf(dot))` → `go(getDots().indexOf(dot), true)`（**唯一传 true 的地方**，平滑过渡）
+       - `:60` resize 校正、`:69` MutationObserver 返回桌面校正、`:91` deskRebuild 重建校正——**保持瞬切**（不传 smooth），避免返回桌面/旋转/重建时还播一段动画干扰
+       - `:99` `window.deskGo = go` 暴露给拖拽跨页翻页保持瞬切（拖到边缘自动翻页用平滑会和 pointermove 拖拽手感冲突）
+  - **风险已评估**（AI-A 已分析，AI-B 可直接采信）：① smooth 期间再点圆点，浏览器平滑过渡到新位置不卡；② smooth 期间 scroll 事件持续触发，`sync()` 防抖 120ms 后算出 `cur===idx` 不重复设圆点；③ 不支持 `scrollTo` 的老浏览器走 fallback 瞬切，无回退风险。注释里"避免 smooth 被 snap 打断"是误解——`scrollTo({behavior:'smooth'})` 程序触发的平滑滚动不会被 scroll-snap 打断（snap 只在手势惯性后吸附），Chrome/Safari/iOS 13+ 都支持。
+  - **验证要求**：改后 `node --check src/js/desktop-slider.js` + `npm run build` + `npm run verify`（布局 10/10）。纯体验改动，现有 verify 覆盖桌面翻页结构，无新专项回归需要。真机确认点：圆点点击有平滑过渡；翻页中再点另一个圆点不卡；切到聊天页再回桌面不播动画（瞬切校正）；旋转屏幕不播动画。
+  - ⚠️ AI-A 侧无配合改动需求。AI-B 改完保存后按 AGENTS.md 构建者协议统一 build。本条任务完成后请 AI-B 在本行末尾追加「✅ 已完成」并补 build/verify 结果。
+
 ### 2026-08-24（用户反馈：小米15 Pro Chrome 六项——贪吃蛇胜负/Pong 侧位/记账分类/朋友圈回复提醒+图片详情/默认字卡滑动/全屏失效）
 - [本会话·完成]（**已改 src + 已构建（20:44, sw: mochi-mt78aon5）+ 新专项 verify-bugfix-six 21/21，未提交**）：`src/js/snake-game.js` + `src/js/pong.js` + `src/js/accounting.js` + `src/js/feed.js` + `src/js/fullscreen.js`（AI-B 域，跨域改动请知悉）+ `src/css/chat-pages.css` + `src/template.html` + 构建产物 + `tools/verify-bugfix-six.mjs`（新专项）。回归：布局 verify 10/10 + snake-smooth 11/11 + snake-features 8/8 + feed-comment-merge 10/10 + feed-comment-perf 18/18。
   - **①贪吃蛇胜负（snake-game.js endGame）**：原按存活判定（先死者即输），与面板展示的分数矛盾（"我分数高却显示他赢"；撞到一起也常判一边赢）。改为**按最终得分判定**——分高者胜、同分平局；存活结果仅用于触发结束。TA 回应池映射（chat.js sendSnakeResult）不受影响。
@@ -24,6 +208,7 @@
   - **根因**：开后台保活后播放音乐，页面里两个 `<audio>` 同时持续输出——①手机端混音/音频焦点互相争抢；②保活的 5 秒轮询发现自身音频被暂停（焦点被音乐抢走）就补播拉回，与 music-player 自身的防暂停补播形成双向拉锯，每个轮询周期音乐都被打断一下 = 周期性卡顿；③回前台 healKeepAlive 还会连发 4 次补播尝试雪上加霜。
   - **修复（保活侧单向让位，零改动音乐模块）**：音乐播放期间（`window.__musicPlaying=true`）保活音频主动 pause 让位——音乐自带活跃媒体会话（playbackState=playing），防后台冻结目的不丢；停止/暂停后自动收回恢复保活。实现：①`Object.defineProperty` 监听 `__musicPlaying` 写入（music-player 先于本模块加载、只在 onplay/onpause/updateMediaSession 写），起播瞬间立即让位、停止瞬间立即收回，getter/setter 透传对其他读取方透明；②5 秒轮询在音乐在播时改为「保持让位 + 不再强设 mediaSession.playbackState='playing'」（顺带修复音乐暂停时被错误标成正在播）；③resumeOnInteraction/healKeepAlive 全部补播路径加让位守卫；④music-media-release 时同步收回（teardown 边缘路径双保险）。
   - 验证：新专项 10/10（mock Audio+createElement('audio')：保活随启动在播→点歌瞬间让位→5 秒周期零补播且 playbackState 保持 playing→visible/focus/pageshow 自愈不抢回→暂停音乐自动收回→媒体条恢复）；verify-music-bg-resume 10/10 无回归（该套件不开保活，watcher 安装无副作用）；npm run verify 布局 10/10。
+  - [补充·稳妥排查轮] 全部 41 个 src JS `node --check` 通过；verify-music-dur-cover 9/9 + verify-music-vip-filter 6/6 回归全过；周边审计无同类问题——call.js 来电已正确 hold/恢复音乐（铃声为短促 sfx）、sfx.js 为一次性 WebAudio 短音无持续流、music-player teardown→music-media-release 派发条件正确、chatcard 语音预览单实例管理正常、全仓无模块全局操控所有 audio 元素；`git diff` 确认 bg-keep.js 仅 +82/-1 预期改动；根目录疑似误建文件 `indow.openModal…{,+40p` 已消失（对方会话已清理）。已知不修项：音乐暂停未完全停止时保活音频收回后媒体条仍显示歌名+playing——v3.9.x 保活依赖 playing 状态的原设计，非本次引入，不动。
   - ⚠️ 真机需确认（安卓 Chrome/Edge）：开启后台保活后播放音乐不再卡顿；通知栏显示歌曲信息可切歌；音乐暂停/停止后「Mochi 后台保活」媒体条回来、后台消息提醒仍正常。
   - ⚠️ 构建扫入工作区其他会话已保存未提交改动（chat/chatcard/feed/gift-shop/p2-features/period/personalize/accounting/pong/snake-game/fullscreen/mail/template/chat-main.css/chat-pages.css 等），提交前请构建者确认对方已保存完整并按需重新 build 收口。
 

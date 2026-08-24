@@ -21,10 +21,24 @@
 .memo-item.done .mm-text { opacity:.45; text-decoration:line-through; }
 .memo-item.pinned .mm-text { font-weight:700; }
 .mm-time { font-size:11px; color:var(--ink-soft,#aaa); margin-top:4px; }
-.mm-pin, .mm-del { flex-shrink:0; width:30px; height:30px; border:none; background:none; padding:0; border-radius:8px; display:flex; align-items:center; justify-content:center; cursor:pointer; -webkit-tap-highlight-color:transparent; }
-.mm-pin { font-size:14px; opacity:.4; filter:grayscale(1); transition:opacity .15s, filter .15s; }
+.mm-time.due-overdue { color:#e05a5a; font-weight:600; }
+.mm-time.due-today { color:#e8a23c; font-weight:600; }
+.memo-item.urgent .mm-text { color:#c0392b; }
+.memo-item.urgent.done .mm-text { color:var(--ink,#222); }
+.mm-act, .mm-pin, .mm-del { flex-shrink:0; width:28px; height:28px; border:none; background:none; padding:0; border-radius:8px; display:flex; align-items:center; justify-content:center; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+.mm-act { color:var(--ink-soft,#b5b5b5); }
+.mm-act svg { width:15px; height:15px; }
+.mm-act:active { background:rgba(0,0,0,.06); }
+.mm-due.on { color:#4a9fd4; }
+.mm-share:active { color:#4a9fd4; }
+.mm-pin { font-size:13px; opacity:.4; filter:grayscale(1); transition:opacity .15s, filter .15s; }
 .mm-pin.on { opacity:1; filter:none; }
 .mm-del { color:var(--ink-soft,#c0c0c0); }
-.mm-del svg { width:14px; height:14px; }
+.mm-del svg { width:13px; height:13px; }
 .memo-empty { text-align:center; font-size:13px; color:var(--ink-soft,#aaa); padding:36px 0 8px; line-height:1.9; }
 .memo-manage { text-align:center; margin-top:14px; }
+/* ---- 首页「今日备忘」卡片内的备忘录联动状态行 ---- */
+.memo-app-badge { margin-top:8px; font-size:11px; color:var(--ink-soft,#888); background:rgba(0,0,0,.045); border-radius:8px; padding:5px 8px; display:flex; align-items:center; justify-content:space-between; gap:6px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+.memo-app-badge::after { content:'›'; font-size:12px; color:var(--ink-soft,#bbb); }
+.memo-app-badge.urgent { color:#e05a5a; background:rgba(224,90,90,.08); }
+.memo-app-badge.urgent::after { color:#e05a5a; }

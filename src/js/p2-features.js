@@ -1497,6 +1497,77 @@ if (ckRefresh) {
   window.playLocFx = playLocFx;
 })();
 
+// ===== v3.x：世界观·他偶发出现（统一频率 + 浮层 + 打卡字卡） =====
+// 梦角是灵体，常在身边但看不见；字卡表达有限，偶尔出得不准——不准配温柔解读。
+// 供喝水/番茄钟/摸鱼/打卡复用，避免各功能各自造浮层刷屏。
+(function () {
+  function store() { try { return window.activeStore(); } catch (e) { return null; } }
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function dayKey() { const d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
+
+  // 他此刻近不近（基于位置卡 loc-current）
+  window.taIsNear = function () {
+    const s = store(); if (!s) return false;
+    let cur = null; try { cur = JSON.parse(s.get('loc-current') || 'null'); } catch (e) {}
+    if (!cur) return false;
+    const t = cur.text || '';
+    return /能摸到|没走远|身边|心里|感觉到|隐约|陪你|跟着|马上到/.test(t);
+  };
+  window.taSenseDesc = function () {
+    const s = store(); if (!s) return '还没感觉到 TA…';
+    let cur = null; try { cur = JSON.parse(s.get('loc-current') || 'null'); } catch (e) {}
+    if (!cur) return '还没感觉到 TA…';
+    const t = cur.text || '';
+    if (t.indexOf('隔着世界') >= 0) return 'TA 隔着世界，隐约在你身旁';
+    if (t.indexOf('感觉到') >= 0) return '你感觉到了 TA，就在附近';
+    if (t.indexOf('能摸到') >= 0) return '你能摸到 TA，很近很安心';
+    if (t.indexOf('没走远') >= 0) return 'TA 一直没走远，就在身边';
+    if (t.indexOf('隐约') >= 0) return 'TA 隐约在你身旁，感觉到了吗';
+    if (t.indexOf('身边') >= 0) return 'TA 就在你身边，很安心';
+    return '你感觉到 TA 在附近';
+  };
+
+  // 统一频率：冷却 + 每日上限（localStorage 记录）
+  window.taChimeAllow = function (key, opts) {
+    opts = opts || {};
+    const s = store(); if (!s) return false;
+    const now = Date.now();
+    if (opts.cooldown) { let last = 0; try { last = parseInt(s.get('ta-chime:' + key + ':last') || '0', 10) || 0; } catch (e) {} if (now - last < opts.cooldown) return false; }
+    if (opts.dailyMax) { let rec = null; try { rec = JSON.parse(s.get('ta-chime:' + key + ':day') || 'null'); } catch (e) {} if (rec && rec.date === dayKey() && rec.n >= opts.dailyMax) return false; }
+    return true;
+  };
+  window.taChimeUse = function (key) {
+    const s = store(); if (!s) return;
+    try { s.set('ta-chime:' + key + ':last', '' + Date.now()); } catch (e) {}
+    let rec = null; try { rec = JSON.parse(s.get('ta-chime:' + key + ':day') || 'null'); } catch (e) {}
+    if (!rec || rec.date !== dayKey()) rec = { date: dayKey(), n: 0 };
+    rec.n++; try { s.set('ta-chime:' + key + ':day', JSON.stringify(rec)); } catch (e) {}
+  };
+
+  // 他偶发浮层（fixed 底部偏上，淡入淡出，4s 自隐）
+  let el = null, timer = null;
+  window.taChimeShow = function (text, opts) {
+    opts = opts || {};
+    if (!el) { el = document.createElement('div'); el.className = 'ta-chime-note'; document.body.appendChild(el); }
+    const miss = opts.miss ? '<span class="ta-chime-miss">' + esc(opts.miss) + '</span>' : '';
+    el.innerHTML = '<span class="ta-chime-dot"></span><span class="ta-chime-text">' + esc(text) + '</span>' + miss;
+    el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
+    clearTimeout(timer); timer = setTimeout(() => { el.classList.remove('show'); }, opts.dur || 4200);
+  };
+
+  // 打卡字卡：他递来一张；低概率"没控制住"配温柔解读。cb(card|null)，card={text, miss?}
+  const CHECKIN_TA_CARDS = ['你今天也努力了', '我一直看着你呢', '又一起过了一天', '辛苦啦，过来抱抱', '嗯，今天也好好过来了', '你在，我就安心'];
+  const CHECKIN_TA_MISS = ['（字卡有限，他想说的比这张多）', '（这张好像不是他想说的，别在意）', '（他没控制住，意思不全是这个）'];
+  window.checkinTaCard = function (cb) {
+    if (!window.taChimeAllow('checkin-ta', { cooldown: 24 * 3600 * 1000, dailyMax: 1 })) { if (cb) cb(null); return; }
+    window.taChimeUse('checkin-ta');
+    const miss = Math.random() < 0.22;
+    const text = CHECKIN_TA_CARDS[Math.floor(Math.random() * CHECKIN_TA_CARDS.length)];
+    const card = miss ? { text: text, miss: CHECKIN_TA_MISS[Math.floor(Math.random() * CHECKIN_TA_MISS.length)] } : { text: text };
+    if (cb) cb(card);
+  };
+})();
+
 // ===== v3.x：同频 / 伸手（桌面第三页图标，纯动态注入；不依赖 template.html / tabs.js 白名单） =====
 // 世界观：梦角是灵体，常在身边但看不见，偶尔能感觉到、能摸到有体感；字卡表达有限。
 // 同频：TA 此刻状态（字卡拼）+ 敲三下暗号（跨世界弱连接，甜蜜安稳，不往危机写）。
@@ -1739,6 +1810,8 @@ if (ckRefresh) {
   const DEF_WATER_PRAISE = ['今天喝够啦', '真棒', '完成了', '好乖'];
   const DEF_WATER_ENCOURAGE = ['再来一杯', '继续', '嗯', '快了'];
   const DEF_WATER_TA = ['TA 说：{m}', 'TA 让我提醒你：{m}', 'TA 念着：{m}', 'TA 托我带句话：{m}'];
+  // 世界观：他视角提醒（灵体在身边，字卡语态）；偶尔出得不准配温柔解读
+  const DEF_WATER_TA_GENTLE = ['水凉了，喝一口？', '你忘了吧，喝一口', '我在呢，先喝口水', '嗯，去喝一口好不好', '别忙忘了喝水'];
   const waterPage = document.createElement('div');
   waterPage.className = 'page'; waterPage.id = 'page-water'; waterPage.hidden = true;
   waterPage.innerHTML =
@@ -1823,7 +1896,9 @@ if (ckRefresh) {
       const pct = g ? Math.min(100, Math.round(c / g * 100)) : 0;
       const todayCls = ds === today ? ' today' : '';
       const hitCls = c > 0 ? (c >= g ? ' hit' : ' ok') : ' miss';
-      html += '<div class="water-col' + todayCls + hitCls + '"><i style="height:' + pct + '%"></i><b>' + (c || '') + '</b><em>' + ds.slice(8) + '</em></div>';
+      const taMark = (function () { const ss = curStore(); return ss && ss.get('water-ta-mark:' + ds) === '1'; })();
+      const taCls = taMark ? ' ta' : '';
+      html += '<div class="water-col' + todayCls + hitCls + taCls + '"><i style="height:' + pct + '%"></i><b>' + (c || '') + '</b><em>' + ds.slice(8) + '</em></div>';
     }
     box.innerHTML = '<div class="water-week-title">近 7 天</div><div class="water-week-bars">' + html + '</div>';
   }
@@ -1841,8 +1916,24 @@ if (ckRefresh) {
     try { s.set('water-last-visit', '' + Date.now()); } catch (e) {}
     const t = waterToday(); const g = waterGoal();
     if (t.count < g && Date.now() - last > 2 * 3600000) {
+      // 世界观：偶尔他视角浮层（灵体在身边提醒），否则原系统语态
+      if (window.taChimeAllow && window.taChimeAllow('water-ta', { cooldown: 30 * 60 * 1000, dailyMax: 3 }) && Math.random() < 0.5) {
+        window.taChimeUse('water-ta');
+        const m = DEF_WATER_TA_GENTLE[Math.floor(Math.random() * DEF_WATER_TA_GENTLE.length)];
+        const miss = Math.random() < 0.2 ? '（字卡有限，他想说的比这张多）' : null;
+        if (window.taChimeShow) window.taChimeShow(m, { miss: miss });
+      }
       const msgs = waterMsgs(); waterShowMsg(msgs[Math.floor(Math.random() * msgs.length)]);
     }
+    // 世界观：他替你记的那杯——每天低概率生成一个标记，柱状图上叠半透明格
+    waterMaybeTaMark();
+  }
+  function waterMaybeTaMark() {
+    if (!window.taChimeAllow || !window.taChimeAllow('water-ta-mark', { cooldown: 24 * 3600 * 1000, dailyMax: 1 })) return;
+    if (Math.random() > 0.4) return;
+    window.taChimeUse('water-ta-mark');
+    const s = curStore(); if (!s) return;
+    try { s.set('water-ta-mark:' + waterDayStr(0), '1'); } catch (e) {}
   }
   // 暴露给 calendar.js：该日期是否有喝水记录（日历打点）
   window.waterDayHas = function (ds) { try { const h = waterHistory(); return (h[ds] || 0) > 0; } catch (e) { return false; } };
@@ -1922,6 +2013,8 @@ if (ckRefresh) {
   // 专注/小憩/长休三档倒计时 + 圆环进度；完成专注记一个 🍅（今日/累计），可发到聊天。
   // 计时基于 endAt 时间戳（不依赖 interval 精度），离开页面后台照走、熄屏回来时间正确。
   const DEF_POMO_PRAISE = ['专注的你最棒了', '认真的人最好看', '加油，我在陪你', '嗯嗯，我安静陪着', '专注完抱一下'];
+  // 世界观：他此刻近时，专注完成用近状态语（灵体在旁边静静陪）
+  const DEF_POMO_NEAR = ['你专注的时候，我就静静待在旁边', '认真完啦，过来靠靠你', '我一直在旁边看着你呢', '专注完啦，抱一下', '你在认真，我在旁边，挺好'];
   const POMO_MODES = { focus: { name: '专注', def: 25 }, short: { name: '小憩', def: 5 }, long: { name: '长休', def: 15 } };
   const POMO_RING_C = 552.92; // 2π×88 圆环周长
   const pomoPage = document.createElement('div');
@@ -1934,6 +2027,7 @@ if (ckRefresh) {
         '<div class="pomo-dial">' +
           '<svg class="pomo-ring" viewBox="0 0 200 200"><circle class="pomo-ring-bg" cx="100" cy="100" r="88"/><circle class="pomo-ring-fill" id="pomo-ring" cx="100" cy="100" r="88"/></svg>' +
           '<div class="pomo-center"><div class="pomo-time" id="pomo-time">25:00</div><div class="pomo-state" id="pomo-state">准备专注</div></div>' +
+          '<div class="pomo-spark" id="pomo-spark"></div>' +
         '</div>' +
       '</div>' +
       '<div class="pomo-btns"><button class="pomo-start" id="pomo-start">开始</button><button class="pomo-reset" id="pomo-reset">重置</button></div>' +
@@ -1994,6 +2088,9 @@ if (ckRefresh) {
     if (stats) stats.textContent = '今日 🍅 × ' + t.count + ' · 累计 ' + pomoTotal() + ' 个';
     pmpRefreshGoBtn();
     if (pmpActive()) pmpRefreshBar();
+    // 世界观：专注运行时圆环上叠一个缓慢游走的光点（他在旁边静静陪）
+    const spark = document.getElementById('pomo-spark');
+    if (spark) spark.classList.toggle('on', pomoRunning && pomoMode === 'focus');
   }
   function pomoStopTick() { clearInterval(pomoTickTimer); pomoTickTimer = null; }
   function pomoStartTick() {
@@ -2012,12 +2109,15 @@ if (ckRefresh) {
       const mins = pomoModeMin('focus');
       const t = pomoToday(); t.count++; pomoSaveToday(t);
       pomoSaveTotal(pomoTotal() + 1);
-      const pool = pomoPool();
-      const praise = pool[Math.floor(Math.random() * pool.length)];
+      // 世界观：他此刻近时，70% 用近状态语（灵体在旁边静静陪），否则原夸夸字卡
+      const near = window.taIsNear && window.taIsNear();
+      let praise;
+      if (near && Math.random() < 0.7) praise = DEF_POMO_NEAR[Math.floor(Math.random() * DEF_POMO_NEAR.length)];
+      else { const pool = pomoPool(); praise = pool[Math.floor(Math.random() * pool.length)]; }
       const brk = t.count % 4 === 0 ? 'long' : 'short';
       const wasPmp = pmpActive();
       if (wasPmp) {
-        try { window.chatAddIn(PMP_DONE[Math.floor(Math.random() * PMP_DONE.length)], { initiative: true }); } catch (e) {}
+        try { pmpCAdd('ta', PMP_DONE[Math.floor(Math.random() * PMP_DONE.length)]); } catch (e) {}
         pmpFlash('\u2705 完成 +1 🍅');
         pmpDetach();
       }
@@ -2446,11 +2546,13 @@ if (ckRefresh) {
   });
 
   // ---- 番茄钟 · 陪伴模式 ----
-  // 聊天页顶部倒计时条：专注期间 TA 勿扰（chat.js 主动发送链路遇 __pomoCompanionQuiet 跳过），
-  // 每 5~8 分钟最多 2 次极简鼓励；会话持久化（endAt 时间戳，刷新/重开继续）；切联系人自动退出。
+  // 专属聊天窗（#page-pmp-chat）：陪伴期间所有对话只进独立小窗，不写普通聊天记录；
+  // 普通聊天页仅保留倒计时状态条。会话持久化（endAt 时间戳，刷新/重开继续）；切联系人自动退出。
   const PMP_GREET = ['好，我陪着你', '去吧，我在这等你', '专注吧，我不吵你', '嗯，一起加油'];
   const PMP_ENC = ['在呢', '继续哦', '摸摸头', '嗯嗯，陪你', '快了快了', '我在看你专注'];
   const PMP_DONE = ['🍅 完成一个！为你骄傲', '🍅 太棒了，去休息一下吧', '🍅 收工！今天也超认真'];
+  const PMP_REPLIES = ['嗯嗯，我在', '专心哦，我看着你呢', '加油，很快就完成了', '嗯，陪你', '别分心呀，专注完再聊', '好，一起加油', '我在呢，安心专注'];
+  const PMP_TIRED = ['累就先歇口气，深呼吸一下', '辛苦啦，摸摸头，再坚持一小会儿', '累了就慢一点，我不催你'];
   let pmpRec = null;
   try { pmpRec = JSON.parse((curStore() && curStore().get('pomo-companion')) || 'null'); } catch (e) { pmpRec = null; }
   if (!pmpRec || typeof pmpRec !== 'object') pmpRec = null;
@@ -2473,12 +2575,68 @@ if (ckRefresh) {
     if (anchor) { chatPageEl.insertBefore(pmpMenu, anchor); chatPageEl.insertBefore(pmpBar, pmpMenu); }
     else chatPageEl.appendChild(pmpBar);
   }
+
+  // —— 专属陪伴聊天窗：独立全屏页，与普通聊天完全隔离 ——
+  const pmpCPage = document.createElement('div');
+  pmpCPage.className = 'page'; pmpCPage.id = 'page-pmp-chat'; pmpCPage.hidden = true;
+  pmpCPage.innerHTML =
+    '<div class="chat-head"><span class="ch-back" id="pmpc-back"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><span class="ch-name">陪伴专注</span></div>' +
+    '<div class="pmp-bar" id="pmp-cd"><span class="pmp-bar-time" id="pmp-cd-time">25:00</span><span class="pmp-bar-label" id="pmp-cd-label">专注中 · TA 陪着你</span><button class="pmp-bar-toggle" id="pmp-cd-toggle">暂停</button><button class="pmp-bar-more" id="pmp-cd-more">⋯</button><div class="pmp-progress"><div class="pmp-progress-fill" id="pmp-cd-fill"></div></div></div>' +
+    '<div class="pmp-menu" id="pmp-c-menu" hidden><button data-pmpc="page" type="button">回番茄钟页</button><button data-pmpc="quit" type="button">提前结束</button></div>' +
+    '<div class="pmp-c-list" id="pmp-c-list"></div>' +
+    '<div class="pmp-c-inputbar"><input class="pmp-c-in" id="pmp-c-in" type="text" maxlength="120" placeholder="想说点什么…（TA 安静陪着）"><button class="pmp-c-send" id="pmp-c-send">发送</button></div>';
+  host.appendChild(pmpCPage);
+
+  function pmpLog() { try { const a = JSON.parse((curStore() && curStore().get('pomo-companion-log')) || '[]'); if (Array.isArray(a)) return a; } catch (e) {} return []; }
+  function pmpLogSave(a) { const s = curStore(); if (!s) return; try { s.set('pomo-companion-log', JSON.stringify(a.slice(-300))); } catch (e) {} }
+  function pmpEsc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  function pmpCRender() {
+    const box = document.getElementById('pmp-c-list'); if (!box) return;
+    const a = pmpLog();
+    if (!a.length) {
+      box.innerHTML = '<div class="pmp-c-empty">这里是陪伴模式的专属小窗<br>专注时的鼓励和悄悄话都在这里<br>不会进普通聊天记录</div>';
+      return;
+    }
+    let h = '';
+    for (let i = 0; i < a.length; i++) h += '<div class="pmp-c-row' + (a[i].w === 'me' ? ' me' : '') + '"><div class="pmp-c-bub">' + pmpEsc(a[i].t) + '</div></div>';
+    box.innerHTML = h;
+    box.scrollTop = box.scrollHeight;
+  }
+  function pmpCAdd(who, text) {
+    const a = pmpLog(); a.push({ w: who === 'me' ? 'me' : 'ta', t: String(text || ''), ts: Date.now() }); pmpLogSave(a);
+    if (!pmpCPage.hidden) pmpCRender();
+  }
+  let pmpReplyTimer = null;
+  function pmpCReply(userText) {
+    clearTimeout(pmpReplyTimer);
+    const t = String(userText || '');
+    let pool = PMP_REPLIES;
+    if (/累|难|烦|倦|困/.test(t)) pool = PMP_TIRED;
+    else if (/完成|好了|结束|收工/i.test(t)) pool = PMP_DONE;
+    const txt = pool[Math.floor(Math.random() * pool.length)];
+    pmpReplyTimer = setTimeout(() => { try { vibrate([30]); } catch (e) {} pmpCAdd('ta', txt); }, 700 + Math.random() * 800);
+  }
+  function pmpCSend() {
+    const inp = document.getElementById('pmp-c-in');
+    const t = inp ? String(inp.value || '').trim() : '';
+    if (!t) return;
+    if (inp) inp.value = '';
+    pmpCAdd('me', t);
+    pmpCReply(t);
+  }
+  document.getElementById('pmpc-back').addEventListener('click', () => backHome(pmpCPage));
+  document.getElementById('pmp-c-send').addEventListener('click', pmpCSend);
+  document.getElementById('pmp-c-in').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) { e.preventDefault(); pmpCSend(); }
+  });
   function pmpActive() { return !!pmpRec; }
   function pmpSave() { const s = curStore(); if (!s) return; try { if (pmpRec) s.set('pomo-companion', JSON.stringify(pmpRec)); else s.remove('pomo-companion'); } catch (e) {} }
   function pmpDetach() {
     clearTimeout(pmpEncTimer);
+    clearTimeout(pmpReplyTimer);
     pmpRec = null; pmpSave();
     pmpMenu.hidden = true;
+    const cm = document.getElementById('pmp-c-menu'); if (cm) cm.hidden = true;
     pmpSyncBar();
   }
   function pmpSyncFromEngine() {
@@ -2494,30 +2652,43 @@ if (ckRefresh) {
     if (!pmpActive()) return;
     const remainMs = Math.max(0, pomoRunning ? pomoEndAt - Date.now() : (pmpRec.remainMs || pmpRec.totalMs));
     const sec = Math.ceil(remainMs / 1000);
-    const tm = document.getElementById('pmp-bar-time');
-    if (tm) tm.textContent = String(Math.floor(sec / 60)).padStart(2, '0') + ':' + String(sec % 60).padStart(2, '0');
-    const lb = document.getElementById('pmp-bar-label');
-    if (lb) lb.textContent = pomoRunning ? '专注中 · TA 陪着你' : '已暂停';
-    const tg = document.getElementById('pmp-bar-toggle');
-    if (tg) tg.textContent = pomoRunning ? '暂停' : '继续';
-    const fl = document.getElementById('pmp-fill');
-    if (fl && pmpRec.totalMs) fl.style.width = Math.min(100, Math.max(0, (1 - remainMs / pmpRec.totalMs) * 100)) + '%';
+    const tmTxt = String(Math.floor(sec / 60)).padStart(2, '0') + ':' + String(sec % 60).padStart(2, '0');
+    const lbTxt = pomoRunning ? '专注中 · TA 陪着你' : '已暂停';
+    const tgTxt = pomoRunning ? '暂停' : '继续';
+    [['pmp-bar-time', 'pmp-bar-label', 'pmp-bar-toggle', 'pmp-fill'], ['pmp-cd-time', 'pmp-cd-label', 'pmp-cd-toggle', 'pmp-cd-fill']].forEach((ids) => {
+      const tm = document.getElementById(ids[0]);
+      if (tm) tm.textContent = tmTxt;
+      const lb = document.getElementById(ids[1]);
+      if (lb) lb.textContent = lbTxt;
+      const tg = document.getElementById(ids[2]);
+      if (tg) tg.textContent = tgTxt;
+      const fl = document.getElementById(ids[3]);
+      if (fl && pmpRec.totalMs) fl.style.width = Math.min(100, Math.max(0, (1 - remainMs / pmpRec.totalMs) * 100)) + '%';
+    });
   }
   let pmpFlashing = false;
   let pmpFlashTimer = null;
   function pmpFlash(txt) {
     pmpFlashing = true;
-    const tm = document.getElementById('pmp-bar-time'); if (tm) tm.textContent = '00:00';
-    const tg = document.getElementById('pmp-bar-toggle'); if (tg) tg.style.display = 'none';
-    const mo = document.getElementById('pmp-bar-more'); if (mo) mo.style.display = 'none';
-    const lb = document.getElementById('pmp-bar-label'); if (lb) lb.textContent = txt;
-    const fl = document.getElementById('pmp-fill'); if (fl) fl.style.width = '100%';
+    [['pmp-bar-time', 'pmp-bar-toggle', 'pmp-bar-more', 'pmp-fill', 'pmp-bar-label'], ['pmp-cd-time', 'pmp-cd-toggle', 'pmp-cd-more', 'pmp-cd-fill', 'pmp-cd-label']].forEach((ids) => {
+      const tm = document.getElementById(ids[0]); if (tm) tm.textContent = '00:00';
+      const tg = document.getElementById(ids[1]); if (tg) tg.style.display = 'none';
+      const mo = document.getElementById(ids[2]); if (mo) mo.style.display = 'none';
+      const fl = document.getElementById(ids[3]); if (fl) fl.style.width = '100%';
+      const lb = document.getElementById(ids[4]); if (lb) lb.textContent = txt;
+    });
     if (chatPageEl) pmpBar.hidden = !!chatPageEl.hidden;
     clearTimeout(pmpFlashTimer);
     pmpFlashTimer = setTimeout(() => {
       pmpFlashing = false;
-      if (tg) tg.style.display = ''; if (mo) mo.style.display = '';
+      ['pmp-bar-toggle', 'pmp-bar-more', 'pmp-cd-toggle', 'pmp-cd-more'].forEach((id) => { const el = document.getElementById(id); if (el) el.style.display = ''; });
+      // 会话已随完成结束：专属窗顶部倒计时条收起（普通聊天页状态条由 pmpSyncBar 自行隐藏）
+      if (!pmpActive()) {
+        const cd = document.getElementById('pmp-cd'); if (cd) cd.hidden = true;
+        const cm2 = document.getElementById('pmp-c-menu'); if (cm2) cm2.hidden = true;
+      }
       pmpSyncBar();
+      if (!pmpCPage.hidden && pmpActive()) pmpRefreshBar();
     }, 2600);
   }
   function pmpSyncBar() {
@@ -2545,35 +2716,16 @@ if (ckRefresh) {
       pmpRec.enc = (pmpRec.enc || 0) + 1;
       pmpRec.nextEncAt = now + (5 + Math.random() * 3) * 60000;
       pmpSave();
-      try { window.chatAddIn(PMP_ENC[Math.floor(Math.random() * PMP_ENC.length)], { initiative: true, silent: true }); } catch (e) {}
+      try { pmpCAdd('ta', PMP_ENC[Math.floor(Math.random() * PMP_ENC.length)]); } catch (e) {}
     }
     pmpScheduleEnc();
   }
   function pmpRefreshGoBtn() {
     const gb = document.getElementById('pomo-companion');
-    if (gb) gb.textContent = pmpActive() ? (pmpRec.paused ? '陪伴已暂停 · 返回聊天' : '陪伴中 · 返回聊天') : '🍅 陪伴模式';
+    if (gb) gb.textContent = pmpActive() ? (pmpRec.paused ? '陪伴已暂停 · 返回陪伴' : '陪伴中 · 返回陪伴') : '🍅 陪伴模式';
   }
-  // 入口：番茄钟页「陪伴模式」按钮——未在跑则开一个新专注并挂上陪伴，已在跑则直接挂靠
-  const pmpGoBtn = document.getElementById('pomo-companion');
-  if (pmpGoBtn) pmpGoBtn.addEventListener('click', () => {
-    if (editingNow()) return;
-    if (pmpActive()) { if (window.enterChat) { try { window.enterChat(); } catch (e) {} } return; }
-    if (pomoMode !== 'focus') { pomoRunning = false; pomoRemainMs = 0; pomoStopTick(); pomoMode = 'focus'; }
-    if (!pomoRunning) {
-      pomoRemainMs = 0;
-      pomoEndAt = Date.now() + pomoModeMin('focus') * 60000;
-      pomoRunning = true; pomoStartTick();
-    }
-    pmpRec = { mode: 'focus', totalMs: pomoModeMin('focus') * 60000, endAt: pomoEndAt, startedAt: Date.now(), paused: 0, remainMs: 0, enc: 0, nextEncAt: 0 };
-    pmpSave();
-    try { window.chatAddIn(PMP_GREET[Math.floor(Math.random() * PMP_GREET.length)], { initiative: true, silent: true }); } catch (e) {}
-    pmpScheduleEnc();
-    pmpSyncBar(); pomoRender();
-    if (window.enterChat) { try { window.enterChat(); } catch (e) {} }
-  });
-  // 倒计时条按钮：暂停/继续 与 ⋯ 菜单
-  const pmpToggleBtn = document.getElementById('pmp-bar-toggle');
-  if (pmpToggleBtn) pmpToggleBtn.addEventListener('click', () => {
+  // 暂停/继续（普通聊天页状态条与专属窗共用一套引擎操作）
+  function pmpToggleRun() {
     if (!pmpActive()) return;
     if (pomoRunning) {
       pomoRemainMs = Math.max(0, pomoEndAt - Date.now());
@@ -2583,20 +2735,60 @@ if (ckRefresh) {
       pomoRunning = true; pomoStartTick();
     }
     pmpSyncFromEngine(); pomoRender();
+  }
+  // 提前结束确认弹窗（两个入口共用）；结束后 TA 回应进专属窗，若在专属窗内则带回番茄钟页
+  function pmpQuitAsk() {
+    if (!window.openModal) return;
+    window.openModal('提前结束这个番茄？', '', (v) => {
+      if (v !== '1') return;
+      if (pomoRunning) { pomoRunning = false; pomoStopTick(); }
+      pomoRemainMs = 0; pomoMode = 'focus';
+      const inWin = !pmpCPage.hidden;
+      try { pmpCAdd('ta', '没事，休息一下也可以'); } catch (e) {}
+      pmpDetach(); pomoRender();
+      if (inWin) { openPage(pomoPage); pomoRender(); }
+    }, { noInput: true, lock: true, pills: [{ label: '结束', value: '1' }, { label: '再撑一会儿', value: '0' }], staticText: '提前结束的话，这个 🍅 就不计入今天啦' });
+  }
+  // 入口：番茄钟页「陪伴模式」按钮——未在跑则开一个新专注并挂上陪伴；进入/返回的都是专属聊天窗
+  const pmpGoBtn = document.getElementById('pomo-companion');
+  if (pmpGoBtn) pmpGoBtn.addEventListener('click', () => {
+    if (editingNow()) return;
+    if (pmpActive()) { openPage(pmpCPage); pmpCRender(); return; }
+    if (pomoMode !== 'focus') { pomoRunning = false; pomoRemainMs = 0; pomoStopTick(); pomoMode = 'focus'; }
+    if (!pomoRunning) {
+      pomoRemainMs = 0;
+      pomoEndAt = Date.now() + pomoModeMin('focus') * 60000;
+      pomoRunning = true; pomoStartTick();
+    }
+    pmpRec = { mode: 'focus', totalMs: pomoModeMin('focus') * 60000, endAt: pomoEndAt, startedAt: Date.now(), paused: 0, remainMs: 0, enc: 0, nextEncAt: 0 };
+    pmpSave();
+    const cdEl = document.getElementById('pmp-cd'); if (cdEl) cdEl.hidden = false;
+    try { pmpCAdd('ta', PMP_GREET[Math.floor(Math.random() * PMP_GREET.length)]); } catch (e) {}
+    pmpScheduleEnc();
+    pmpSyncBar(); pomoRender();
+    openPage(pmpCPage); pmpCRender();
   });
+  // 倒计时条按钮：暂停/继续 与 ⋯ 菜单（普通聊天页状态条）
+  const pmpToggleBtn = document.getElementById('pmp-bar-toggle');
+  if (pmpToggleBtn) pmpToggleBtn.addEventListener('click', pmpToggleRun);
   const pmpMoreBtn = document.getElementById('pmp-bar-more');
   if (pmpMoreBtn) pmpMoreBtn.addEventListener('click', () => { pmpMenu.hidden = !pmpMenu.hidden; });
   pmpMenu.querySelectorAll('button[data-pmp]').forEach(b => b.addEventListener('click', () => {
     pmpMenu.hidden = true;
     if (b.dataset.pmp === 'page') { openPage(pomoPage); pomoRender(); return; }
-    if (b.dataset.pmp !== 'quit' || !window.openModal) return;
-    window.openModal('提前结束这个番茄？', '', (v) => {
-      if (v !== '1') return;
-      if (pomoRunning) { pomoRunning = false; pomoStopTick(); }
-      pomoRemainMs = 0; pomoMode = 'focus';
-      try { window.chatAddIn('没事，休息一下也可以', { initiative: true }); } catch (e) {}
-      pmpDetach(); pomoRender();
-    }, { noInput: true, lock: true, pills: [{ label: '结束', value: '1' }, { label: '再撑一会儿', value: '0' }], staticText: '提前结束的话，这个 🍅 就不计入今天啦' });
+    if (b.dataset.pmp !== 'quit') return;
+    pmpQuitAsk();
+  }));
+  // 专属窗内的暂停/继续与 ⋯ 菜单
+  const pmpCdToggle = document.getElementById('pmp-cd-toggle');
+  if (pmpCdToggle) pmpCdToggle.addEventListener('click', pmpToggleRun);
+  const pmpCdMore = document.getElementById('pmp-cd-more');
+  if (pmpCdMore) pmpCdMore.addEventListener('click', () => { const m = document.getElementById('pmp-c-menu'); if (m) m.hidden = !m.hidden; });
+  document.querySelectorAll('#pmp-c-menu button[data-pmpc]').forEach(b => b.addEventListener('click', () => {
+    const m = document.getElementById('pmp-c-menu'); if (m) m.hidden = true;
+    if (b.dataset.pmpc === 'page') { openPage(pomoPage); pomoRender(); return; }
+    if (b.dataset.pmpc !== 'quit') return;
+    pmpQuitAsk();
   }));
   // 聊天页显隐时同步条显示
   if (chatPageEl) new MutationObserver(pmpSyncBar).observe(chatPageEl, { attributes: true, attributeFilter: ['hidden'] });
@@ -2617,7 +2809,7 @@ if (ckRefresh) {
       const t = pomoToday(); t.count++; pomoSaveToday(t);
       pomoSaveTotal(pomoTotal() + 1);
       // silent:true——启动早期音频子系统未必就绪，勿因提示音阻断恢复流程
-      try { window.chatAddIn('🍅 你刚才完成了一个专注，回来看到啦，很棒', { initiative: true, silent: true }); } catch (e) {}
+      try { pmpCAdd('ta', '🍅 你刚才完成了一个专注，回来看到啦，很棒'); } catch (e) {}
       pmpDetach();
     }
     pmpSyncBar();
@@ -2626,10 +2818,32 @@ if (ckRefresh) {
 
   document.addEventListener('contact-switched', () => {
     tpStopFlow();
+    if (!pmpCPage.hidden) backHome(pmpCPage);
     if (!tpPage.hidden) tpPick();
     if (!ssPage.hidden) ssRenderCount();
     if (!waterPage.hidden) waterRender();
     if (!pomoPage.hidden) pomoRender();
     if (!piggyPage.hidden) piggyRender();
   });
+})();
+
+// ===== v3.x：世界观·TA 摸鱼值自动涨时桌面偶尔飘一行小字 =====
+// TA 摸鱼值由 personalize.js 每 60s 60% 概率自动涨（"他在那边也偷了个懒"的来源）。
+// 这里只做监听：值变化且通过频率控制时，桌面浮一行小字，让"他自己活着"被看见。
+(function () {
+  let lastTa = null;
+  function chk() {
+    if (document.hidden) return;
+    const s = window.activeStore && window.activeStore(); if (!s) return;
+    let cur = 0; try { cur = parseInt(s.get('fish-total-ta') || '0', 10) || 0; } catch (e) {}
+    if (lastTa === null) { lastTa = cur; return; }
+    if (cur > lastTa && window.taChimeAllow && window.taChimeAllow('fish-ta-note', { cooldown: 2 * 3600 * 1000, dailyMax: 3 }) && Math.random() < 0.25) {
+      window.taChimeUse('fish-ta-note');
+      if (window.taChimeShow) window.taChimeShow('他在那边也偷了个懒', { dur: 3600 });
+    }
+    lastTa = cur;
+  }
+  setInterval(chk, 60 * 1000);
+  setTimeout(chk, 5000);
+  document.addEventListener('contact-switched', () => { lastTa = null; });
 })();
