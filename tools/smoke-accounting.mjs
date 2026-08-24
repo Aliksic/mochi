@@ -98,7 +98,9 @@ function check(desc, ok, detail) {
 await evalJs("(function(){try{localStorage.removeItem('xy-home-v2:default:accounting-records');localStorage.removeItem('xy-home-v2:default:accounting-categories');}catch(e){}return true;})()");
 
 // ---- 1. ensureP3：第三页存在 ----
-let st = await evalJs("(function(){var n=parseInt(localStorage.getItem('xy-home-v2:desk-page-count'),10);var slides=document.querySelectorAll('#desktop-pages .page-slide').length;var p3=document.querySelector('[data-desk-widget=\"p3apps\"]');var inSlide=p3&&p3.closest&&p3.closest('.page-slide')&&!p3.closest('#desk-widget-pool');return{count:n,slides:slides,p3InSlide:!!inSlide};})()");
+// v3.11.x：修正断言键名——desk-page-count 实际存于 per-cid 命名空间（xy-home-v2:<cid>:desk-page-count），
+// 旧键 xy-home-v2:desk-page-count 恒为 null 导致本断言长期 FAIL（功能本身正常）
+let st = await evalJs("(function(){var n=parseInt(localStorage.getItem('xy-home-v2:default:desk-page-count'),10);var slides=document.querySelectorAll('#desktop-pages .page-slide').length;var p3=document.querySelector('[data-desk-widget=\"p3apps\"]');var inSlide=p3&&p3.closest&&p3.closest('.page-slide')&&!p3.closest('#desk-widget-pool');return{count:n,slides:slides,p3InSlide:!!inSlide};})()");
 check('desk-page-count >= 3', st && st.count >= 3, String(st && st.count));
 check('第三页 slide 存在（>=3 页）', st && st.slides >= 3, String(st && st.slides));
 check('p3-grid 在第三页 slide 里（非隐藏池）', st && st.p3InSlide, JSON.stringify(st));

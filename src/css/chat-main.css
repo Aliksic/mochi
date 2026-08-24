@@ -456,6 +456,11 @@ body.cs-time-divider .msg-time-divider { display:flex; }
   border:1px solid rgba(0,0,0,.1);
   box-shadow:0 1px 4px rgba(0,0,0,.1);
 }
+/* v3.10.x：信件通知（写信/回信/来信/回信到达）可点击直达信箱——
+   加下划虚线提示可点，按下反馈变深 */
+.msg-poke.mail-notice { cursor:pointer; }
+.msg-poke.mail-notice > span:first-child { text-decoration:underline dashed rgba(0,0,0,.25); text-underline-offset:3px; }
+.msg-poke.mail-notice:active { background:rgba(0,0,0,.08); }
 
 /* 更多功能面板（悬浮在输入栏上方）
    v3.5.110：bottom 加 safe-area，全面屏全屏模式下与输入栏同步上移，不错位
@@ -668,6 +673,11 @@ body.cs-time-divider .msg-time-divider { display:flex; }
 .poke-tabs-row .poke-tab.poke-tab-mine.sel {
   background:var(--ink); color:var(--card-bg, #fff); border-color:var(--ink); font-weight:800;
 }
+/* v3.11.x：公用拍一拍 tab（三分区）——虚线描边（字卡库/共享语义，区别于联系人/我） */
+.poke-tabs-row .poke-tab.poke-tab-pub.sel {
+  background:rgba(255,255,255,.92); color:var(--ink); border-color:var(--ink);
+  border-style:dashed; border-width:1.5px; font-weight:800;
+}
 .poke-add-btn {
   flex:0 0 auto; padding:9px 12px; border-radius:11px;
   border:1px dashed rgba(0,0,0,.25); background:rgba(255,255,255,.92);
@@ -741,6 +751,12 @@ body.cs-time-divider .msg-time-divider { display:flex; }
   white-space:nowrap;
 }
 .emoji-tab.sel { background:var(--ink); color:#fff; border-color:var(--ink); }
+/* v3.11.x：表情包面板三分区（公用/联系人/我的）——字号略收 + 长昵称省略号防溢出
+   （选择器限定 #emoji-panel：朋友圈评论面板复用 .emoji-tab 不受影响） */
+#emoji-panel .emoji-tab {
+  padding:9px 4px; font-size:12px; min-width:0;
+  overflow:hidden; text-overflow:ellipsis;
+}
 .emoji-head .poke-card-close { margin-left:10px; }
 /* 我的表情包工具行 */
 .emoji-tools {

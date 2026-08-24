@@ -1373,8 +1373,11 @@ width:42px; height:42px; border-radius:50%; object-fit:cover;
 border:1px solid rgba(0,0,0,.1);
 box-shadow:0 1px 4px rgba(0,0,0,.1);
 }
+.msg-poke.mail-notice { cursor:pointer; }
+.msg-poke.mail-notice > span:first-child { text-decoration:underline dashed rgba(0,0,0,.25); text-underline-offset:3px; }
+.msg-poke.mail-notice:active { background:rgba(0,0,0,.08); }
 .more-panel {
-position:fixed; left:18px; right:18px; bottom:calc(96px + env(safe-area-inset-bottom, 0px)); z-index:60;
+position:absolute; left:18px; right:18px; bottom:calc(96px + env(safe-area-inset-bottom, 0px)); z-index:60;
 background:rgba(255,255,255,.97);
 border:1px solid rgba(0,0,0,.1);
 border-radius:20px; box-shadow:0 12px 32px rgba(0,0,0,.1);
@@ -1477,7 +1480,7 @@ background:rgba(0,0,0,.04); display:flex; align-items:center; justify-content:ce
 .msg-rps-vs { font-size:12px; font-weight:700; color:#999; letter-spacing:1px; }
 .msg-rps-result { font-size:13px; font-weight:700; color:var(--ink); padding-top:4px; border-top:1px dashed rgba(0,0,0,.1); }
 .poke-card {
-position:fixed; top:auto; bottom:calc(96px + env(safe-area-inset-bottom, 0px)); left:18px; right:18px;
+position:absolute; top:auto; bottom:calc(96px + env(safe-area-inset-bottom, 0px)); left:18px; right:18px;
 height:auto; max-height:48%;
 display:flex; flex-direction:column;
 background:rgba(255,255,255,.97);
@@ -1557,6 +1560,10 @@ border-width:1.5px; font-weight:800;
 .poke-tabs-row .poke-tab.poke-tab-mine.sel {
 background:var(--ink); color:var(--card-bg, #fff); border-color:var(--ink); font-weight:800;
 }
+.poke-tabs-row .poke-tab.poke-tab-pub.sel {
+background:rgba(255,255,255,.92); color:var(--ink); border-color:var(--ink);
+border-style:dashed; border-width:1.5px; font-weight:800;
+}
 .poke-add-btn {
 flex:0 0 auto; padding:9px 12px; border-radius:11px;
 border:1px dashed rgba(0,0,0,.25); background:rgba(255,255,255,.92);
@@ -1586,7 +1593,7 @@ display:flex; align-items:center; justify-content:center;
 .poke-op-edit:active { color:var(--ink); }
 .poke-op-del:active { background:rgba(224,85,85,.15); color:#e05555; }
 .emoji-card {
-position:fixed; top:auto; bottom:calc(96px + env(safe-area-inset-bottom, 0px)); left:18px; right:18px;
+position:absolute; top:auto; bottom:calc(96px + env(safe-area-inset-bottom, 0px)); left:18px; right:18px;
 height:auto; max-height:55%;
 display:flex; flex-direction:column;
 background:rgba(255,255,255,.97);
@@ -1621,6 +1628,10 @@ cursor:pointer; font-family:inherit; -webkit-tap-highlight-color:transparent;
 white-space:nowrap;
 }
 .emoji-tab.sel { background:var(--ink); color:#fff; border-color:var(--ink); }
+#emoji-panel .emoji-tab {
+padding:9px 4px; font-size:12px; min-width:0;
+overflow:hidden; text-overflow:ellipsis;
+}
 .emoji-head .poke-card-close { margin-left:10px; }
 .emoji-tools {
 display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px; flex-shrink:0;
@@ -1992,8 +2003,6 @@ cursor:grab; user-select:none; touch-action:none;
 .call-mini:active { cursor:grabbing; }
 .call-mini[hidden] { display:none; }
 @media (min-width: 901px) {
-html:not(.force-mobile) .more-panel,
-html:not(.force-mobile) .poke-card,
 html:not(.force-mobile) .call-mini {
 position:absolute;
 }
@@ -2276,7 +2285,7 @@ animation: ccToastAutoHide 2.6s ease forwards;
 #dc-list .cc-item { box-shadow: none; transition: none; }
 #dc-list .cc-item:active { transform: none; }
 #page-default-cards { overflow-y:auto; }
-#dc-list { min-height:40vh; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; }
+#page-default-cards #dc-list { flex:0 0 auto; overflow:visible; min-height:0; -webkit-overflow-scrolling:auto; overscroll-behavior:auto; }
 .dc-toggle {
 display:flex; align-items:center; justify-content:space-between; gap:10px;
 border-radius:18px; padding:14px 16px; margin-bottom:14px; flex-shrink:0;
@@ -2697,6 +2706,13 @@ padding:6px 0; border-radius:10px; background:rgba(0,0,0,.05);
 .period-phase-bar .seg-1 { background:#fff3da; color:#f5a623; }
 .period-phase-bar .seg.active { box-shadow:0 0 0 2px var(--ink) inset; font-weight:800; }
 .period-ovu-line { font-size:12px; color:#f5a623; margin-bottom:10px; font-weight:600; }
+.period-pms-line { display:flex; align-items:center; gap:8px; margin-bottom:10px; flex-wrap:wrap; }
+.pms-badge { display:inline-block; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:700; }
+.pms-badge.pms-none { background:#f0f0f0; color:#888; }
+.pms-badge.pms-light { background:#e8f5e9; color:#2e7d32; }
+.pms-badge.pms-mid { background:#fff3da; color:#c47d12; }
+.pms-badge.pms-heavy { background:#fde2ee; color:#c44a78; }
+.pms-tip { font-size:11px; color:var(--muted,#666); }
 .period-action-row { display:flex; gap:10px; }
 .period-btn {
 flex:1; padding:12px; font-size:13px; font-weight:600; border-radius:14px;
@@ -4245,6 +4261,10 @@ color:#999;
 }
 .feed-notice-item .fn-text { flex:1; min-width:0; line-height:1.5; }
 .feed-notice-item .fn-time { font-size:10px; color:var(--muted); flex-shrink:0; }
+.feed-notice-item .fn-thumb {
+width:34px; height:34px; border-radius:6px; object-fit:cover;
+flex-shrink:0; margin-right:6px; background:#f2f2f5; cursor:zoom-in;
+}
 .feed-notice-item.new .fn-ico { color:#e05555; }
 .feed-pick-row { display:flex; align-items:center; gap:10px; margin-top:8px; }
 .feed-pick-img {
@@ -5744,7 +5764,7 @@ color: #c67800;
       </div>
       <div class="splash-dots"><i></i><i></i><i></i></div>
       <div class="splash-brand">小红书@言序（1842523578）</div>
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787571072322">Mochi 字卡传讯 v3.6.223 · 部署于 2026-08-24 19:31</div>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787576303073">Mochi 字卡传讯 v3.6.224 · 部署于 2026-08-24 20:58</div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
       <div class="splash-loading" id="splash-loading">正在加载数据…</div>
@@ -6603,7 +6623,7 @@ color: #c67800;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.6.223</div>
+      <div class="ver">Mochi 字卡传讯 v3.6.224</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -7981,6 +8001,7 @@ color: #c67800;
     <div class="poke-card emoji-card" id="emoji-panel" hidden>
       <div class="emoji-head">
         <div class="emoji-tabs">
+          <button class="emoji-tab" data-etab="public">公用表情包</button>
           <button class="emoji-tab sel" data-etab="ta">TA 的表情包</button>
           <button class="emoji-tab" data-etab="mine">我的表情包</button>
         </div>
@@ -8476,7 +8497,7 @@ color: #c67800;
                 <button class="pong-sound" id="pong-sound" title="音效开关">🔊</button>
               </div>
             </div>
-            <div class="pong-score" id="pong-score">你 0 : 0 TA</div>
+            <div class="pong-score" id="pong-score"><span class="pong-s-ta">0 TA</span><span class="pong-s-sep">:</span><span class="pong-s-you">你 0</span></div>
             <div class="pong-canvas-box">
               <canvas id="pong-canvas" width="400" height="240"></canvas>
               <div class="pong-hint" id="pong-hint"></div>
@@ -8489,7 +8510,7 @@ color: #c67800;
                 </div>
               </div>
             </div>
-            <div class="pong-foot">手机：左半边上下拖动 · 电脑：↑↓ 或 W S</div>
+            <div class="pong-foot">你控制右侧挡板 · 手机：按住画面上下拖动 · 电脑：↑↓ 或 W S</div>
           </div>
         </div>
       </div>
@@ -10558,6 +10579,19 @@ const fileInput = document.getElementById('modal-file-input');
 const okBtn = document.getElementById('modal-ok');
 const cancelBtn = document.getElementById('modal-cancel');
 if (!mask || !input) return;
+function ceBoxOf(el) {
+try {
+if (el.__ceBox) return el.__ceBox;
+if (el.parentNode) return el.parentNode.querySelector('.ce-box[data-for="' + (el.id || '') + '"]');
+} catch (e) {}
+return null;
+}
+function readModalVal(el) {
+try { const v = el.value; if (v != null && String(v).length) return String(v); } catch (e) {}
+const box = ceBoxOf(el);
+if (box) { try { const t = (box.innerText !== undefined ? box.innerText : box.textContent) || ''; if (t.length) return t; } catch (e) {} }
+try { return el.value || ''; } catch (e) { return ''; }
+}
 let cb = null;
 let pillsOnOk = null;
 let noInput = false;
@@ -10677,8 +10711,11 @@ cb = fn;
 mask.hidden = false;
 setTimeout(() => {
 if (noInput) return;
-if (opts.textarea && textarea) textarea.focus();
-else if (input) input.focus();
+const target = (opts.textarea && textarea) ? textarea : input;
+if (!target) return;
+const box = ceBoxOf(target);
+try { if (box) { box.focus(); return; } } catch (e) {}
+try { target.focus(); } catch (e) {}
 }, 60);
 };
 customBtn.addEventListener('click', function () {
@@ -10725,8 +10762,8 @@ if (pillsOnOk) pillsOnOk(pillVal);
 cb(pillVal);
 return;
 }
-if (textarea && !textarea.hidden) { cb(textarea.value, selectedGroup); return; }
-if (swatches.hidden) cb(noInput ? 'ok' : input.value);
+if (textarea && !textarea.hidden) { cb(readModalVal(textarea), selectedGroup); return; }
+if (swatches.hidden) cb(noInput ? 'ok' : readModalVal(input));
 else if (picked === -2 && customVal) cb(customVal);
 else if (picked >= 0) cb(picked);
 }
@@ -15058,9 +15095,12 @@ maybeScrollChatBottom(rec.side);
 return m;
 }
 if (rec.special === 'poke' || rec.special === 'ask-msg') {
-m.className = 'msg-poke';
+m.className = 'msg-poke' + (rec.mailNotice ? ' mail-notice' : '');
 m.innerHTML = '<span>' + pokeIconHtml(rec.text) + '</span>' +
 (rec.img ? '<img class="msg-poke-img" src="' + attrEsc(rec.img) + '" alt="新头像">' : '');
+if (rec.mailNotice) {
+m.addEventListener('click', () => { if (window.openMailPage) window.openMailPage(); });
+}
 body.appendChild(m);
 maybeScrollChatBottom(rec.side);
 return m;
@@ -15704,14 +15744,14 @@ return renderMsg(rec);
 function addIn(text, opts) {
 opts = opts || {};
 if (!opts.special && !opts.silent && window.playSfx) window.playSfx('in');
-return addRec({ side: 'in', text: text, initiative: opts.initiative, special: opts.special, quote: opts.quote, type: opts.type, img: opts.img, parts: opts.parts, askQuestion: opts.askQuestion, askStatus: opts.askStatus, askOptions: opts.askOptions, askType: opts.askType, choiceQuestion: opts.choiceQuestion, choiceOptions: opts.choiceOptions, choicePref: opts.choicePref, choiceCat: opts.choiceCat, choiceStatus: opts.choiceStatus, choiceAnswer: opts.choiceAnswer, choiceReply: opts.choiceReply, choiceMatch: opts.choiceMatch, curiousQuestion: opts.curiousQuestion, curiousQuick: opts.curiousQuick, curiousReplies: opts.curiousReplies, curiousFollowup: opts.curiousFollowup, curiousQid: opts.curiousQid, curiousCat: opts.curiousCat, curiousStatus: opts.curiousStatus, curiousAnswer: opts.curiousAnswer, curiousReply: opts.curiousReply, roastText: opts.roastText, roastCat: opts.roastCat, roastStatus: opts.roastStatus, roastAnswer: opts.roastAnswer, roastReply: opts.roastReply, rpAmount: opts.rpAmount, rpWish: opts.rpWish, rpStatus: opts.rpStatus, rpTs: opts.rpTs, rpCover: opts.rpCover });
+return addRec({ side: 'in', text: text, initiative: opts.initiative, special: opts.special, quote: opts.quote, type: opts.type, img: opts.img, parts: opts.parts, mailNotice: opts.mailNotice, askQuestion: opts.askQuestion, askStatus: opts.askStatus, askOptions: opts.askOptions, askType: opts.askType, choiceQuestion: opts.choiceQuestion, choiceOptions: opts.choiceOptions, choicePref: opts.choicePref, choiceCat: opts.choiceCat, choiceStatus: opts.choiceStatus, choiceAnswer: opts.choiceAnswer, choiceReply: opts.choiceReply, choiceMatch: opts.choiceMatch, curiousQuestion: opts.curiousQuestion, curiousQuick: opts.curiousQuick, curiousReplies: opts.curiousReplies, curiousFollowup: opts.curiousFollowup, curiousQid: opts.curiousQid, curiousCat: opts.curiousCat, curiousStatus: opts.curiousStatus, curiousAnswer: opts.curiousAnswer, curiousReply: opts.curiousReply, roastText: opts.roastText, roastCat: opts.roastCat, roastStatus: opts.roastStatus, roastAnswer: opts.roastAnswer, roastReply: opts.roastReply, rpAmount: opts.rpAmount, rpWish: opts.rpWish, rpStatus: opts.rpStatus, rpTs: opts.rpTs, rpCover: opts.rpCover });
 }
 function addOut(text) {
 return addRec({ side: 'out', text: text });
 }
 window.chatAddSystem = function (text, opts) {
 opts = opts || {};
-return addIn(text, { special: opts.special || 'poke', img: opts.img, askQuestion: opts.askQuestion, askStatus: opts.askStatus, askOptions: opts.askOptions, askType: opts.askType, choiceQuestion: opts.choiceQuestion, choiceOptions: opts.choiceOptions, choicePref: opts.choicePref, choiceCat: opts.choiceCat, curiousQuestion: opts.curiousQuestion, curiousQuick: opts.curiousQuick, curiousReplies: opts.curiousReplies, curiousFollowup: opts.curiousFollowup, curiousQid: opts.curiousQid, curiousCat: opts.curiousCat, roastText: opts.roastText, roastCat: opts.roastCat });
+return addIn(text, { special: opts.special || 'poke', img: opts.img, mailNotice: opts.mailNotice, askQuestion: opts.askQuestion, askStatus: opts.askStatus, askOptions: opts.askOptions, askType: opts.askType, choiceQuestion: opts.choiceQuestion, choiceOptions: opts.choiceOptions, choicePref: opts.choicePref, choiceCat: opts.choiceCat, curiousQuestion: opts.curiousQuestion, curiousQuick: opts.curiousQuick, curiousReplies: opts.curiousReplies, curiousFollowup: opts.curiousFollowup, curiousQid: opts.curiousQid, curiousCat: opts.curiousCat, roastText: opts.roastText, roastCat: opts.roastCat });
 };
 window.chatAddIn = function (text, opts) {
 const r = addIn(text, opts);
@@ -16442,10 +16482,14 @@ if (Array.isArray(g) && Array.isArray(g[1])) g[1].forEach(x => out.push(x));
 try { ((window.getPokeCards && window.getPokeCards()) || []).forEach(x => out.push(x)); } catch (e) {}
 return out;
 }
-let pokeMode = 'ta';            // 当前 tab：ta=联系人昵称的拍一拍 / mine=我的拍一拍
+let pokeMode = 'ta';            // 当前 tab：public=公用 / ta=联系人昵称的拍一拍 / mine=我的拍一拍
 let pokeCurGroup = '__preset';  // 当前选中分组（'__preset' = 预设）
 const pokeTabsRow = document.createElement('div');
 pokeTabsRow.className = 'poke-tabs-row';
+const pokeTabPub = document.createElement('button');
+pokeTabPub.className = 'poke-tab poke-tab-pub';
+pokeTabPub.type = 'button';
+pokeTabPub.dataset.ptab = 'public';
 const pokeTabTa = document.createElement('button');
 pokeTabTa.className = 'poke-tab sel poke-tab-ta';
 pokeTabTa.type = 'button';
@@ -16454,6 +16498,7 @@ const pokeTabMine = document.createElement('button');
 pokeTabMine.className = 'poke-tab poke-tab-mine';
 pokeTabMine.type = 'button';
 pokeTabMine.dataset.ptab = 'mine';
+pokeTabsRow.appendChild(pokeTabPub);
 pokeTabsRow.appendChild(pokeTabTa);
 pokeTabsRow.appendChild(pokeTabMine);
 const pokeToolsRow = document.createElement('div');
@@ -16556,7 +16601,7 @@ try { store.set('poke-group-' + pokeMode, pokeCurGroup); } catch (e) {}
 (function () {
 try {
 const p = store.get('poke-tab');
-if (p === 'mine') pokeMode = 'mine';
+if (p === 'mine' || p === 'public') pokeMode = p;
 } catch (e) {}
 try {
 const g = store.get('poke-group-' + pokeMode);
@@ -16564,6 +16609,7 @@ if (typeof g === 'string' && g) pokeCurGroup = g;
 } catch (e) {}
 })();
 function pokeTabLabel(kind) {
+if (kind === 'public') return '公用拍一拍';
 if (kind === 'ta') {
 const n = chatPartnerName();
 return n + ' 的拍一拍';
@@ -16573,9 +16619,9 @@ return (n === '我' ? '我的' : n + ' 的') + '拍一拍';
 }
 function pokeTabGroups(kind) {
 const out = [];
-if (kind === 'ta') {
+if (kind === 'public' || kind === 'ta') {
 let legacy = [];
-try { legacy = (window.getPokeGroups && window.getPokeGroups()) || []; } catch (e) {}
+try { legacy = (window.getScopedGroups && window.getScopedGroups('poke', kind)) || []; } catch (e) {}
 legacy.forEach(g => {
 if (!Array.isArray(g) || !Array.isArray(g[1]) || !g[0]) return;
 out.push({ key: g[0], label: g[0], cards: g[1].slice() });
@@ -16672,8 +16718,10 @@ pokeGroupsBar.appendChild(c);
 function renderPokeCard() {
 const name = chatPartnerName();
 if (pokeName) pokeName.textContent = name;
+pokeTabPub.textContent = pokeTabLabel('public');
 pokeTabTa.textContent = pokeTabLabel('ta');
 pokeTabMine.textContent = pokeTabLabel('mine');
+pokeTabPub.classList.toggle('sel', pokeMode === 'public');
 pokeTabTa.classList.toggle('sel', pokeMode === 'ta');
 pokeTabMine.classList.toggle('sel', pokeMode === 'mine');
 if (pokeToolsRow) pokeToolsRow.hidden = pokeMode !== 'mine';
@@ -16684,15 +16732,19 @@ renderPokeGroupsBar(groups);
 if (!pokeList) return;
 pokeList.innerHTML = '';
 if (!groups.length) {
-pokeList.innerHTML = pokeMode === 'ta'
-? '<div class="cc-empty">暂无拍一拍字卡<br>请到 字卡库 → 公用/专属字卡 → 拍一拍 添加</div>'
+pokeList.innerHTML = pokeMode === 'public'
+? '<div class="cc-empty">暂无公用拍一拍<br>请到 字卡库 → 公用字卡 → 拍一拍 添加</div>'
+: pokeMode === 'ta'
+? '<div class="cc-empty">暂无拍一拍字卡<br>请到 字卡库 → 专属字卡 → 拍一拍 添加</div>'
 : '<div class="cc-empty">暂无拍一拍字卡<br>点击「＋ 新增拍一拍」添加，或直接输入拍一拍文字</div>';
 return;
 }
 const cur = groups.find(g => g.key === pokeCurGroup) || groups[0];
 if (!cur.cards.length) {
-pokeList.innerHTML = pokeMode === 'ta'
-? '<div class="cc-empty">该分组暂无拍一拍字卡<br>请到 字卡库 → 公用/专属字卡 → 拍一拍 添加</div>'
+pokeList.innerHTML = pokeMode === 'public'
+? '<div class="cc-empty">该分组暂无公用拍一拍<br>请到 字卡库 → 公用字卡 → 拍一拍 添加</div>'
+: pokeMode === 'ta'
+? '<div class="cc-empty">该分组暂无拍一拍字卡<br>请到 字卡库 → 专属字卡 → 拍一拍 添加</div>'
 : '<div class="cc-empty">该分组暂无拍一拍<br>点击「＋ 新增拍一拍」添加到该分组</div>';
 return;
 }
@@ -16704,6 +16756,10 @@ pokeList.appendChild(pokeCardEl(c, editable ? { editable: true, groupKey: cur.ke
 function closePokeCard() {
 if (pokeCard) pokeCard.hidden = true;
 }
+pokeTabPub.addEventListener('click', (e) => {
+e.stopPropagation();
+if (pokeMode !== 'public') { pokeMode = 'public'; savePokePref(); renderPokeCard(); }
+});
 pokeTabTa.addEventListener('click', (e) => {
 e.stopPropagation();
 if (pokeMode !== 'ta') { pokeMode = 'ta'; savePokePref(); renderPokeCard(); }
@@ -18450,8 +18506,9 @@ const emojiGroupsBar = document.getElementById('emoji-groups');
 const emojiTools = document.getElementById('emoji-tools');
 const emojiBatch = document.getElementById('emoji-batch');
 const emojiBatchCount = document.getElementById('emoji-batch-count');
-let emojiMode = 'ta';        // ta / mine
-let emojiCurGroup = '';      // TA 表情包分组筛选（记住上次打开的分类）
+let emojiMode = 'ta';        // public（公用表情包）/ ta（联系人专属）/ mine
+let emojiCurGroup = '';      // 联系人专属表情包分组筛选（记住上次打开的分类）
+let pubCurGroup = '';        // 公用表情包分组筛选（记住上次打开的分类）
 let myCurGroup = '';         // 我的表情包分组筛选（记住上次打开的分类）
 let myBatchMode = false;     // 批量管理模式
 let myGroups = [];           // 我的表情包 [[分组名, [dataURL...]], ...]
@@ -18461,7 +18518,7 @@ let emojiInsertAllowUrl = false;
 function MYE_KEY() { return window.activePrefix() + ':my-emoji-groups'; }
 myGroups = myEmojiLoad();
 function saveEmojiGroupPref() {
-store.set('emoji-last', JSON.stringify({ ta: emojiCurGroup, mine: myCurGroup }));
+store.set('emoji-last', JSON.stringify({ ta: emojiCurGroup, mine: myCurGroup, pub: pubCurGroup }));
 }
 (function () {
 try {
@@ -18469,6 +18526,7 @@ const pref = JSON.parse(store.get('emoji-last') || 'null');
 if (pref && typeof pref === 'object') {
 if (typeof pref.ta === 'string') emojiCurGroup = pref.ta;
 if (typeof pref.mine === 'string') myCurGroup = pref.mine;
+if (typeof pref.pub === 'string') pubCurGroup = pref.pub;
 }
 } catch (e) {}
 })();
@@ -18539,22 +18597,26 @@ if (!emojiGroupsBar) return;
 emojiGroupsBar.innerHTML = '';
 let list = [];
 let cur = '';
-if (emojiMode === 'ta') {
-list = (window.getMediaGroups && window.getMediaGroups('sticker')) || [];
+if (emojiMode === 'public') {
+list = (window.getScopedGroups && window.getScopedGroups('sticker', 'public')) || [];
+cur = pubCurGroup;
+} else if (emojiMode === 'ta') {
+list = (window.getScopedGroups && window.getScopedGroups('sticker', 'own')) || [];
 cur = emojiCurGroup;
 } else {
 list = myGroups;
 cur = myCurGroup;
 }
 if (cur && !list.some(g => g[0] === cur)) cur = '';
-const chips = list.filter(g => emojiMode === 'ta' ? g[1].length : true).map(g => [g[0], g[0] + g[1].length]);
+const chips = list.filter(g => emojiMode === 'mine' ? true : g[1].length).map(g => [g[0], g[0] + g[1].length]);
 chips.forEach(([val, label]) => {
 const c = document.createElement('span');
 c.className = 'emoji-g-chip' + (cur === val ? ' sel' : '');
 c.textContent = label;
 c.addEventListener('click', (e) => {
 e.stopPropagation();
-if (emojiMode === 'ta') emojiCurGroup = (cur === val ? '' : val);
+if (emojiMode === 'public') pubCurGroup = (cur === val ? '' : val);
+else if (emojiMode === 'ta') emojiCurGroup = (cur === val ? '' : val);
 else myCurGroup = (cur === val ? '' : val);
 saveEmojiGroupPref();
 renderEmojiPanel();
@@ -18620,24 +18682,33 @@ if (emojiBatchCount) emojiBatchCount.textContent = '已选 ' + mySel.size + ' �
 }
 function renderEmojiPanel() {
 if (!emojiList) return;
-document.querySelectorAll('.emoji-tab').forEach(t => t.classList.toggle('sel', t.dataset.etab === emojiMode));
+document.querySelectorAll('#emoji-panel .emoji-tab').forEach(t => t.classList.toggle('sel', t.dataset.etab === emojiMode));
+const taTabEl = document.querySelector('#emoji-panel .emoji-tab[data-etab="ta"]');
+if (taTabEl) taTabEl.textContent = chatPartnerName() + ' 的表情包';
 if (emojiTools) emojiTools.hidden = emojiMode !== 'mine';
 if (emojiBatch) emojiBatch.hidden = !(emojiMode === 'mine' && myBatchMode);
 renderEmojiGroupsBar();
 emojiList.innerHTML = '';
-if (emojiMode === 'ta') {
-const groups = (window.getMediaGroups && window.getMediaGroups('sticker')) || [];
+if (emojiMode !== 'mine') {
+const isPub = emojiMode === 'public';
+const groups = (window.getScopedGroups && window.getScopedGroups('sticker', isPub ? 'public' : 'own')) || [];
+const emptyAll = isPub
+? '<div class="emoji-empty">暂无公用表情包<br>请到 字卡库 → 公用字卡 → 表情包 上传</div>'
+: '<div class="emoji-empty">暂无表情包<br>请到 字卡库 → 专属字卡 → 表情包 上传</div>';
 if (!groups.length) {
-emojiList.innerHTML = '<div class="emoji-empty">暂无表情包<br>请到 字卡库 → 公用/专属字卡 → 表情包 上传</div>';
+emojiList.innerHTML = emptyAll;
 return;
 }
-if (!emojiCurGroup) {
+const curn = isPub ? pubCurGroup : emojiCurGroup;
+if (!curn || !groups.some(x => x[0] === curn)) {
 emojiList.innerHTML = '<div class="emoji-empty">点击上方分组查看表情包</div>';
 return;
 }
-const g = groups.find(x => x[0] === emojiCurGroup);
+const g = groups.find(x => x[0] === curn);
 if (!g || !g[1].length) {
-emojiList.innerHTML = '<div class="emoji-empty">该分组暂无表情包<br>请到 字卡库 → 公用/专属字卡 → 表情包 上传</div>';
+emojiList.innerHTML = isPub
+? '<div class="emoji-empty">该分组暂无公用表情包<br>请到 字卡库 → 公用字卡 → 表情包 上传</div>'
+: '<div class="emoji-empty">该分组暂无表情包<br>请到 字卡库 → 专属字卡 → 表情包 上传</div>';
 return;
 }
 renderEmojiGroup(g[0], g[1], 'ta');
@@ -22434,6 +22505,14 @@ window.getMediaGroups = function (type) {
 const g = mergeWithPublic(groups);
 return (g[type] || []).map(([name, arr]) => [name, arr.filter(isMediaImg)]);
 };
+window.getScopedGroups = function (type, scope) {
+const src = (scope === 'public') ? pubGroupsRaw() : buildGroupsFrom(store.get('cc-groups'));
+const arr = (src[type] || []).slice();
+if (type === 'sticker' || type === 'image') {
+return arr.map(g => [g[0], (g[1] || []).filter(isMediaImg)]);
+}
+return arr;
+};
 function buildGroupsFrom(raw) {
 try {
 const g = JSON.parse(raw || 'null');
@@ -22599,6 +22678,12 @@ const ccPage = document.getElementById('page-custom-cards');
 if (ccPage) ccPage.hidden = false;
 try { renderGroupsBar(); render(); } catch (e) {}
 }
+function leaveCcPageReset() {
+if (ccScope !== 'public') return;
+ccScope = 'own';
+if (editSaveTimer) { clearTimeout(editSaveTimer); editSaveTimer = null; }
+try { groups = loadGroups(); } catch (e) {}
+}
 const liPub = document.getElementById('li-custom-cards-public');
 if (liPub) liPub.addEventListener('click', () => openCcPage('public'));
 const li = document.getElementById('li-custom-cards');
@@ -22609,12 +22694,16 @@ ccBack.addEventListener('click', () => {
 document.querySelectorAll('.page').forEach(p => p.hidden = true);
 const home = document.getElementById('page-chatcard');
 if (home) home.hidden = false;
+leaveCcPageReset();
 });
 }
 const ccPageEl = document.getElementById('page-custom-cards');
 if (ccPageEl && typeof MutationObserver !== 'undefined') {
 new MutationObserver(() => {
-if (ccPageEl.hidden && manageMode) exitManage();
+if (ccPageEl.hidden) {
+leaveCcPageReset();
+if (manageMode) exitManage();
+}
 }).observe(ccPageEl, { attributes: true, attributeFilter: ['hidden'] });
 }
 const ccSectBtns = document.querySelectorAll('.cc-top-tabs .cc-tab[data-ccsect]');
@@ -31669,6 +31758,33 @@ let keepAudio = null;
 let keepInterval = null;
 let keepEnabled = false;
 let wakeSentinel = null; // v3.5.131：模块级，供 stopKeepAlive 释放
+function musicNowPlaying() { try { return !!window.__musicPlaying; } catch (e) { return false; } }
+function syncKeepForMusic() {
+if (!keepAudio || !keepAudio.el) return;
+try {
+if (musicNowPlaying()) {
+if (!keepAudio.el.paused) keepAudio.el.pause(); // 让位：音乐在播，保活音频暂停
+} else if (keepEnabled && keepAudio.el.paused) {
+const p = keepAudio.el.play();
+if (p && p.catch) p.catch(function () {});
+}
+} catch (e) {}
+}
+(function installMusicPlayingWatcher() {
+try {
+let v = !!window.__musicPlaying;
+Object.defineProperty(window, '__musicPlaying', {
+configurable: true,
+get: function () { return v; },
+set: function (nv) {
+nv = !!nv;
+if (nv === v) return;
+v = nv;
+setTimeout(syncKeepForMusic, 0);
+}
+});
+} catch (e) {}
+})();
 let KEEP_AUDIO_DATAURL = '';
 function ensureKeepAudioDataUrl() {
 if (KEEP_AUDIO_DATAURL) return KEEP_AUDIO_DATAURL;
@@ -31719,6 +31835,7 @@ keepEl.volume = 0.05;          // 低但非静音（近零音量会被 Chrome �
 keepEl.src = src;
 keepEl.setAttribute('playsinline', '');
 const playIt = function () {
+if (musicNowPlaying()) return; // v3.10.x：音乐在播，让位不抢音频（由 syncKeepForMusic 收回）
 const p = keepEl.play();
 if (p && p.catch) p.catch(function () {});
 };
@@ -31726,6 +31843,7 @@ playIt();
 keepAudio = { el: keepEl };
 setKeepMediaSession();
 const resumeOnInteraction = function () {
+if (musicNowPlaying()) return; // v3.10.x：音乐在播，让位
 if (keepAudio && keepAudio.el && keepAudio.el.paused) {
 const p = keepAudio.el.play();
 if (p && p.catch) p.catch(function () {});
@@ -31736,6 +31854,10 @@ document.addEventListener('touchstart', resumeOnInteraction, { once: true });
 document.addEventListener('keydown', resumeOnInteraction, { once: true });
 keepInterval = setInterval(function () {
 if (keepAudio && keepAudio.el) {
+if (musicNowPlaying()) {
+try { if (!keepAudio.el.paused) keepAudio.el.pause(); } catch (e) {}
+return;
+}
 if (keepAudio.el.paused) {
 const p = keepAudio.el.play();
 if (p && p.catch) p.catch(function () {});
@@ -31791,13 +31913,13 @@ if (showToast) toast('后台保活已关闭');
 }
 function healKeepAlive() {
 if (!keepEnabled) return;
-if (keepAudio && keepAudio.el && keepAudio.el.paused) {
+if (!musicNowPlaying() && keepAudio && keepAudio.el && keepAudio.el.paused) {
 const p = keepAudio.el.play();
 if (p && p.catch) p.catch(function () {});
 }
 [0, 600, 1800].forEach(function (d) {
 setTimeout(function () {
-if (!keepEnabled) return;
+if (!keepEnabled || musicNowPlaying()) return; // v3.10.x：音乐在播，让位
 if (keepAudio && keepAudio.el && keepAudio.el.paused) {
 const p = keepAudio.el.play();
 if (p && p.catch) p.catch(function () {});
@@ -31837,7 +31959,7 @@ wakeSentinel = sentinel;
 } catch (e) {}
 }
 document.addEventListener('music-media-release', function () {
-if (keepEnabled) setKeepMediaSession();
+if (keepEnabled) { setKeepMediaSession(); syncKeepForMusic(); }
 });
 const kaBtn = document.getElementById('bg-keepalive');
 function syncKeepUI() { if (kaBtn) kaBtn.checked = keepEnabled; }
@@ -32960,6 +33082,7 @@ document.querySelectorAll('.page').forEach(p => p.hidden = true);
 const mp = document.getElementById('page-mail');
 if (mp) mp.hidden = false;
 }
+window.openMailPage = openMailPage;
 function escHtml(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
 function renderBody(content) {
 const s = String(content || '');
@@ -33033,7 +33156,21 @@ footer = '<div class="mail-actions"><button class="cc-tool" id="mail-fav-btn">' 
 } else {
 footer = '<div class="mail-actions"><button class="cc-tool cc-tool-danger" id="mail-del-btn">删除</button><button class="cc-tool" id="mail-close2">关闭</button></div>';
 }
-if (window.openTCPanel) window.openTCPanel('信件', html + footer);
+let panelOpened = false;
+try {
+if (window.openTCPanel) {
+window.openTCPanel('信件', html + footer);
+const mk = document.getElementById('tc-mask');
+panelOpened = !!(mk && !mk.hidden);
+}
+} catch (e) {}
+if (!panelOpened && window.openModal) {
+const stripImg = (s) => String(s == null ? '' : s).replace(/(?:sticker|image:)?data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+/g, '［图片］');
+let txt = (l.tt ? '【' + l.tt + '】\n' : '') + stripImg(l.content);
+if (l.myReply && l.type !== 'sent') txt += '\n\n—— 我的回信 ——\n' + stripImg(l.myReply.content);
+if (l.partnerReply) txt += '\n\n—— 对方的回信 ——\n' + stripImg(l.partnerReply.content);
+window.openModal(l.fromMe ? '寄出的信' : '信件', '', () => {}, { noInput: true, staticText: txt });
+}
 bindLetterImgClicks(document.getElementById('tc-body'));
 const close2 = document.getElementById('mail-close2');
 if (close2) close2.addEventListener('click', () => { document.getElementById('tc-mask').hidden = true; viewLetter = null; });
@@ -33073,7 +33210,7 @@ showPage('page-mail-reply');
 function submitReply() {
 const l = viewLetter;
 if (!l) return;
-const val = document.getElementById('mail-reply-input').value.trim();
+const val = readMailVal(document.getElementById('mail-reply-input')).trim();
 if (!val) { toast('回信内容不能为空'); return; }
 const name = partnerName();
 const list = load();
@@ -33093,7 +33230,7 @@ viewLetter = null;
 render();
 updateBadge();
 showPage('page-mail');
-if (window.chatAddSystem) window.chatAddSystem('你给 ' + name + ' 回了一封信');
+if (window.chatAddSystem) window.chatAddSystem('你给 ' + name + ' 回了一封信', { mailNotice: true });
 toast('回信已寄出');
 if (Math.random() * 100 < (window.favCfg ? window.favCfg().taMail : 30) && window.addTaFavItem) {
 window.addTaFavItem({ kind: 'mail', title: l.tt || '', text: val, ts: Date.now() });
@@ -33106,10 +33243,10 @@ function replyPendingLoad(cid) {
 try { const v = JSON.parse(csFor(cid).get(REPLY_PENDING_KEY) || '[]'); return Array.isArray(v) ? v : []; } catch (e) { return []; }
 }
 function replyPendingSave(arr, cid) { try { csFor(cid).set(REPLY_PENDING_KEY, JSON.stringify(arr)); } catch (e) {} }
-function notifyMailToChat(cid, text) {
+function notifyMailToChat(cid, text, opts) {
 const cur = window.__activeCid || 'default';
 if (cid === cur) {
-if (window.chatAddSystem) window.chatAddSystem(text);
+if (window.chatAddSystem) window.chatAddSystem(text, { mailNotice: !!(opts && opts.mailNotice) });
 return;
 }
 const prefix = 'xy-home-v2:' + cid;
@@ -33119,7 +33256,7 @@ window.idbGet(prefix + ':chat-msgs').then(v => {
 let arr = [];
 try { arr = Array.isArray(v) ? v : JSON.parse(v || '[]'); } catch (e) { arr = []; }
 if (!Array.isArray(arr)) arr = [];
-arr.push({ side: 'in', special: 'poke', text: text, ts: Date.now() });
+arr.push({ side: 'in', special: 'poke', text: text, ts: Date.now(), mailNotice: !!(opts && opts.mailNotice) });
 try { window.idbSet(prefix + ':chat-msgs', JSON.stringify(arr)); } catch (e) {}
 try { localStorage.setItem(prefix + ':chat-msgs', JSON.stringify(arr)); } catch (e) {}
 }).catch(() => {});
@@ -33156,7 +33293,7 @@ if (list[idx].partnerReply) { changed = true; return; } // 已有 TA 回信 → 
 if (p.due > now) { rest.push(p); return; }        // 未到期 → 保留
 list[idx].partnerReply = { content: p.content, tm: now };
 save(list, cid);
-notifyMailToChat(cid, name + ' 给你回了信');
+notifyMailToChat(cid, name + ' 给你回了信', { mailNotice: true });
 if (cid === (window.__activeCid || 'default') && window.showDeskPopup && !mailPageVisible()) {
 window.showDeskPopup({ name: '信箱', text: '给你回了一封信：' + p.content, onClick: openMailPage, isHidden: document.visibilityState === 'hidden' });
 }
@@ -33205,7 +33342,7 @@ if (l) openLetter(l);
 }
 function sendLetter() {
 const input = document.getElementById('mail-input');
-const content = input ? input.value.trim() : '';
+const content = input ? readMailVal(input).trim() : '';
 if (!content) { toast('信件内容不能为空'); return; }
 const name = partnerName();
 const title = TITLES[Math.floor(Math.random() * TITLES.length)];
@@ -33222,9 +33359,12 @@ pending.push({ id: letter.id, due: Date.now() + delayMs, content: replyMsg });
 replyPendingSave(pending);
 }
 if (input) input.value = '';
-if (window.chatAddSystem) window.chatAddSystem('你给 ' + name + ' 写了一封信');
+if (input && input.__ceBox) input.__ceBox.textContent = '';
+if (window.chatAddSystem) window.chatAddSystem('你给 ' + name + ' 写了一封信', { mailNotice: true });
 toast('信件已寄出');
 render();
+showPage('page-mail');
+selectMailTab('out');
 }
 const TA_LETTERS = [
 '最近总是想起我们以前聊的那些话。时间过得真快，但有些东西一直没变。给我回信吧。',
@@ -33398,7 +33538,7 @@ save(list, cid);
 cs.set('mail-letter-last', String(now));
 cs.set('mail-letter-next', String(cfg.writeMin + Math.random() * Math.max(1, cfg.writeMax - cfg.writeMin)));
 letterDayAdd(cid);
-notifyMailToChat(cid, '<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>' + name + ' 给你寄来了一封信');
+notifyMailToChat(cid, '<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>' + name + ' 给你寄来了一封信', { mailNotice: true });
 if (cid === (window.__activeCid || 'default')) {
 updateBadge();
 render();
@@ -33430,6 +33570,17 @@ if (document.visibilityState === 'visible') eagerCheck();
 });
 window.addEventListener('pageshow', function (e) { if (e.persisted) eagerCheck(); });
 window.addEventListener('focus', eagerCheck);
+function readMailVal(el) {
+if (!el) return '';
+let v;
+try { v = el.value; } catch (e) {}
+if (v !== undefined && v !== null && String(v).trim()) return String(v);
+try {
+const box = el.__ceBox || (el.parentNode && el.parentNode.querySelector('.ce-box[data-for="' + (el.id || '') + '"]'));
+if (box) return (box.innerText !== undefined ? box.innerText : box.textContent) || '';
+} catch (e) {}
+return v === undefined || v === null ? '' : String(v);
+}
 const mailApp = document.querySelector('.app[data-app="mail"]');
 const mailPage = document.getElementById('page-mail');
 if (mailApp && mailPage) {
@@ -33461,12 +33612,13 @@ const mailReplyBack = document.getElementById('mail-reply-back');
 if (mailReplyBack) mailReplyBack.addEventListener('click', () => { if (window.closeEmojiPanel) window.closeEmojiPanel(); viewLetter = null; showPage('page-mail'); });
 const mailReplySend = document.getElementById('mail-reply-send');
 if (mailReplySend) mailReplySend.addEventListener('click', submitReply);
+function selectMailTab(name) {
+mtab = name;
+document.querySelectorAll('#page-mail .fav-tab').forEach(x => x.classList.toggle('sel', x.dataset.mtab === name));
+document.querySelectorAll('#page-mail .cal-card').forEach(c => { c.hidden = c.dataset.mpanel !== name; });
+}
 document.querySelectorAll('#page-mail .fav-tab').forEach(tab => {
-tab.addEventListener('click', () => {
-mtab = tab.dataset.mtab;
-document.querySelectorAll('#page-mail .fav-tab').forEach(x => x.classList.toggle('sel', x === tab));
-document.querySelectorAll('#page-mail .cal-card').forEach(c => { c.hidden = c.dataset.mpanel !== mtab; });
-});
+tab.addEventListener('click', () => selectMailTab(tab.dataset.mtab));
 });
 function mailInsertInto(textarea, s) {
 if (!textarea) return;
@@ -34124,10 +34276,10 @@ const cName = esc(c.authorName || ((c.role || c.by) === 'me' ? feedUserName() : 
 const cBody = inlineBody(c.content);
 let repliesHtml = '';
 if (c.replies && c.replies.length) {
-repliesHtml = '<div class="feed-replies">' + c.replies.map(r => {
+repliesHtml = '<div class="feed-replies">' + c.replies.map((r, ri) => {
 const rName = esc(r.authorName || ((r.role || r.by) === 'me' ? feedUserName() : (name || taFeedName())));
 const rBody = inlineBody(r.content);
-return '<div class="feed-reply"><b>' + rName + '</b> 回复 <b>' + cName + '</b>：' + rBody + '</div>';
+return '<div class="feed-reply" data-ri="' + ri + '"><b>' + rName + '</b> 回复 <b>' + cName + '</b>：' + rBody + '</div>';
 }).join('') + '</div>';
 }
 return '<div class="feed-comment" data-c="' + p.id + '" data-ci="' + ci + '">' +
@@ -34578,10 +34730,11 @@ const p2 = list2.find(x => x.id === pid);
 if (!p2 || !p2.comments || !p2.comments[replyCi]) return;
 p2.comments[replyCi].replies = p2.comments[replyCi].replies || [];
 const replyText = pickReplyContent(cfg, tcOwner);
-p2.comments[replyCi].replies.push(stampAuthor({ content: replyText, ts: Date.now() }, taAuthorOfCid(tcOwner)));
+const replies = p2.comments[replyCi].replies;
+replies.push(stampAuthor({ content: replyText, ts: Date.now() }, taAuthorOfCid(tcOwner)));
 save(list2);
 refreshPostCard(pid);
-addNotice('comment', p2.id, taFeedNameFor(tcOwner) + ' 回复了你：' + noticeTextClean(replyText), tcOwner);
+addNotice('comment', p2.id, taFeedNameFor(tcOwner) + ' 回复了你：' + noticeTextClean(replyText), tcOwner, { ci: replyCi, ri: replies.length - 1 });
 }, (cfg.replySpeedMin + Math.random() * Math.max(1, cfg.replySpeedMax - cfg.replySpeedMin)) * 1000);
 }
 return;
@@ -34600,10 +34753,14 @@ const list2 = load();
 const p2 = list2.find(x => x.id === pid);
 if (!p2) return;
 p2.comments = p2.comments || [];
-p2.comments.push(stampAuthor({ content: pickReplyContent(cfg, p2.owner || 'default'), ts: Date.now(), replies: [] }, taAuthorOf(p2)));
+const taText = pickReplyContent(cfg, p2.owner || 'default');
+p2.comments.push(stampAuthor({ content: taText, ts: Date.now(), replies: [] }, taAuthorOf(p2)));
 save(list2);
 refreshPostCard(pid);
-if ((p2.role || p2.by) === 'me') addNotice('comment', p2.id, (p2.taName || taFeedNameFor(p2.owner || 'default')) + ' 评论了你的动态', p2.owner || 'default');
+const taName2 = p2.taName || taFeedNameFor(p2.owner || 'default');
+const loc = { ci: p2.comments.length - 1 };
+if ((p2.role || p2.by) === 'me') addNotice('comment', p2.id, taName2 + ' 评论了你的动态：' + noticeTextClean(taText), p2.owner || 'default', loc);
+else addNotice('comment', p2.id, taName2 + ' 回复了你的评论：' + noticeTextClean(taText), p2.owner || 'default', loc);
 }, (cfg.commentSpeedMin + Math.random() * Math.max(1, cfg.commentSpeedMax - cfg.commentSpeedMin)) * 1000);
 }
 }
@@ -34628,9 +34785,12 @@ document.querySelectorAll('.page').forEach(p => p.hidden = true);
 const fp = document.getElementById('page-feed');
 if (fp) fp.hidden = false;
 }
-function addNotice(type, pid, text, owner) {
+function addNotice(type, pid, text, owner, loc) {
 const list = notices();
-list.unshift({ type: type, pid: pid, text: text, ts: Date.now(), read: false, owner: owner || '' });
+const item = { type: type, pid: pid, text: text, ts: Date.now(), read: false, owner: owner || '' };
+if (loc && loc.ci != null) item.ci = loc.ci;
+if (loc && loc.ri != null) item.ri = loc.ri;
+list.unshift(item);
 if (list.length > 100) list.length = 100;
 saveNotices(list);
 try { store.set('feed-app-unread', String(feedAppUnread() + 1)); } catch (e) {}
@@ -34660,13 +34820,33 @@ ab.hidden = n === 0;
 ab.textContent = n > 99 ? '99+' : String(n);
 }
 }
-function jumpToPost(pid) {
+function jumpToPost(pid, ci, ri) {
 const el = document.getElementById('feed-post-' + pid);
 if (!el) return;
-el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-el.classList.remove('feed-flash');
-void el.offsetWidth;
-el.classList.add('feed-flash');
+let target = el;
+if (ci != null && ci !== '') {
+const cEl = el.querySelector('.feed-comment[data-ci="' + ci + '"]');
+if (cEl) {
+const rEl = (ri != null && ri !== '') ? cEl.querySelector('.feed-reply[data-ri="' + ri + '"]') : null;
+target = rEl || cEl;
+}
+}
+target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+target.classList.remove('feed-flash');
+void target.offsetWidth;
+target.classList.add('feed-flash');
+}
+function noticeThumbOf(n) {
+try {
+if (!n || n.type !== 'comment' || n.ci == null) return '';
+const p = load().find(x => x.id === n.pid);
+if (!p || !p.comments || !p.comments[n.ci]) return '';
+const src = (n.ri != null && Array.isArray(p.comments[n.ci].replies) && p.comments[n.ci].replies[n.ri])
+? p.comments[n.ci].replies[n.ri].content
+: p.comments[n.ci].content;
+const m = /data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+/.exec(String(src || ''));
+return m ? m[0] : '';
+} catch (e) { return ''; }
 }
 function renderNotices() {
 const listEl = document.getElementById('feed-notice-list');
@@ -34683,12 +34863,20 @@ const ico = n.type === 'like'
 : n.type === 'comment'
 ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:14px;height:14px"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>'
 : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:14px;height:14px"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>';
-return '<div class="feed-notice-item' + (n.read ? '' : ' new') + '" data-pid="' + n.pid + '">' + avHtml(avFor(n)) + '<span class="fn-ico">' + ico + '</span><span class="fn-text">' + noticeTextClean(n.text) + '</span><span class="fn-time">' + fmtDT(n.ts) + '</span></div>';
+const thumb = noticeThumbOf(n);
+const thumbHtml = thumb ? '<img class="fn-thumb" src="' + attrEsc(thumb) + '" alt="">' : '';
+return '<div class="feed-notice-item' + (n.read ? '' : ' new') + '" data-pid="' + n.pid + '" data-ci="' + (n.ci != null ? n.ci : '') + '" data-ri="' + (n.ri != null ? n.ri : '') + '">' + avHtml(avFor(n)) + '<span class="fn-ico">' + ico + '</span><span class="fn-text">' + noticeTextClean(n.text) + '</span>' + thumbHtml + '<span class="fn-time">' + fmtDT(n.ts) + '</span></div>';
 }).join('')
 : '<div class="ta-empty">暂时没有新的提醒</div>';
 listEl.querySelectorAll('.feed-notice-item').forEach(it => it.addEventListener('click', () => {
 document.getElementById('feed-notice-panel').hidden = true;
-jumpToPost(it.dataset.pid);
+const ci = it.dataset.ci === '' ? null : Number(it.dataset.ci);
+const ri = it.dataset.ri === '' ? null : Number(it.dataset.ri);
+jumpToPost(it.dataset.pid, ci, ri);
+}));
+listEl.querySelectorAll('.fn-thumb').forEach(t => t.addEventListener('click', (e) => {
+e.stopPropagation();
+if (window.viewChatImage) window.viewChatImage(t.src);
 }));
 }
 const feedInput = document.getElementById('feed-input');
@@ -36774,10 +36962,10 @@ function curStore() { try { return window.storeFor(window.__activeCid || 'defaul
 function vibrate(p) { try { if (navigator.vibrate) navigator.vibrate(p); } catch (e) {} }
 function editingNow() { return Array.from(document.querySelectorAll('.app-grid')).some(g => g.classList.contains('editing')); }
 function toast(msg) {
-let t = document.getElementById('tp-ss-toast');
-if (!t) { t = document.createElement('div'); t.id = 'tp-ss-toast'; document.body.appendChild(t); }
+let t = document.getElementById('cc-toast');
+if (!t) { t = document.createElement('div'); t.id = 'cc-toast'; document.body.appendChild(t); }
 t.textContent = msg; t.className = 'cc-toast'; void t.offsetWidth; t.className = 'cc-toast show';
-clearTimeout(t._tm); t._tm = setTimeout(() => { t.className = 'cc-toast'; }, 1800);
+clearTimeout(t._timer); t._timer = setTimeout(() => { t.className = 'cc-toast'; }, 2000);
 }
 function openPage(pg) {
 document.querySelectorAll('.page').forEach(p => p.hidden = true);
@@ -37332,7 +37520,7 @@ host.appendChild(piggyPage);
 function piggyEsc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 function piggyFmt(n) { try { return n.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); } catch (e) { return (Math.round(n * 100) / 100).toFixed(2); } }
 function piggyAmt(v) {
-const s = String(v == null ? '' : v).trim().replace(/[^\d.]/g, '');
+const s = String(v == null ? '' : v).replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 65248)).trim().replace(/[^\d.]/g, '');
 const n = Math.round(parseFloat(s) * 100) / 100;
 return (n > 0 && n <= 9999999) ? n : 0;
 }
@@ -38377,34 +38565,38 @@ a.className = 'app'; a.setAttribute('data-app', app); a.setAttribute('data-desk-
 a.innerHTML = '<div class="app-ico">' + svg + '</div><div class="app-name">' + name + '</div>';
 return a;
 }
-function injectDeskApp(appEl, widgetId) {
+function injectDeskApps(pairs) {
 const st = store();
 let layArr = null;
 try { if (st) layArr = JSON.parse(st.get('desk-layout') || 'null'); } catch (e) {}
 const hasLayout = Array.isArray(layArr);
-const alreadyInLay = hasLayout && layArr.some(function (p) { return (p || []).indexOf(widgetId) >= 0; });
+const ids = pairs.map(function (p) { return p.id; });
+const alreadyInLay = hasLayout && layArr.some(function (pg) { return (pg || []).some(function (w) { return ids.indexOf(w) >= 0; }); });
 let placed = false;
 if (hasLayout && !alreadyInLay) {
 const pagesBox = document.getElementById('desktop-pages');
 if (pagesBox) {
 const curCnt = pagesBox.querySelectorAll('.page-slide').length;
-if (curCnt < 6) {
+if (curCnt < 5) {
 const slide = document.createElement('div');
 slide.className = 'page-slide desk-page';
 slide.dataset.desk = String(curCnt);
 const grid = document.createElement('div');
 grid.className = 'app-grid';
-grid.appendChild(appEl);
-slide.appendChild(grid); pagesBox.appendChild(slide);
-try { st.set('desk-page-count', String(curCnt + 1)); layArr.push([widgetId]); st.set('desk-layout', JSON.stringify(layArr)); } catch (e) {}
+pairs.forEach(function (p) { grid.appendChild(p.el); });
+slide.appendChild(grid);
+pagesBox.appendChild(slide);
+try { st.set('desk-page-count', String(curCnt + 1)); layArr.push(ids.slice()); st.set('desk-layout', JSON.stringify(layArr)); } catch (e) {}
 try { if (window.deskRebuild) window.deskRebuild(); } catch (e) {}
 placed = true;
 }
 }
 }
 if (!placed) {
+pairs.forEach(function (p) {
 const p3 = document.querySelector('.app-grid.p3-grid');
-if (p3) p3.appendChild(appEl); else { const p2 = document.querySelector('.app-grid.p2-grid'); if (p2) p2.appendChild(appEl); }
+if (p3) p3.appendChild(p.el); else { const p2 = document.querySelector('.app-grid.p2-grid'); if (p2) p2.appendChild(p.el); }
+});
 try { if (window.applyDeskLayout) window.applyDeskLayout(); } catch (e) {}
 }
 }
@@ -38468,8 +38660,7 @@ buildMarketPage(host);
 buildGiftboxPage(host);
 const marketApp = makeApp('market', '心意市集', MARKET_SVG);
 const giftboxApp = makeApp('giftbox', '心意柜', BOX_SVG);
-injectDeskApp(marketApp, 'app-market');
-injectDeskApp(giftboxApp, 'app-giftbox');
+injectDeskApps([{ el: marketApp, id: 'app-market' }, { el: giftboxApp, id: 'app-giftbox' }]);
 if (marketApp) marketApp.addEventListener('click', function () { if (editingNow()) return; marketManage = false; panelCat = '全部'; openPage(marketPage); renderMarket(); });
 if (giftboxApp) giftboxApp.addEventListener('click', function () { if (editingNow()) return; boxTab = 'in'; openPage(giftboxPage); renderBox(); });
 const gp = document.getElementById('chat-gift-panel');
@@ -38920,6 +39111,36 @@ if (s.cv < 0.1) return { label: '很规律', cls: 'reg-good' };
 if (s.cv < 0.2) return { label: '较规律', cls: 'reg-mid' };
 return { label: '不规律', cls: 'reg-bad' };
 }
+function pmsLevel() {
+var st = status();
+if (st.inPeriod || !st.dayOfCycle || !st.ovulationDay || st.dayOfCycle <= st.ovulationDay) return null;
+recs = normalize(recs);
+var last = recs[recs.length - 1];
+if (!last) return null;
+var ovuDate = addDays(last.start, st.ovulationDay - 1);
+var today = todayStr();
+var score = 0, days = 0;
+for (var ds in daily) {
+if (ds < ovuDate || ds > today) continue;
+var info = daily[ds];
+if (!info) continue;
+var hasSym = info.symptoms && info.symptoms.length;
+if (hasSym) {
+days++;
+info.symptoms.forEach(function (s) {
+if (s === 'moodlow' || s === 'irritable') score += 2;
+else if (s === 'breast' || s === 'headache' || s === 'fatigue' || s === 'insomnia' || s === 'acne' || s === 'appetite') score += 1;
+});
+}
+if (info.mood && info.mood <= 2) score += 2;
+}
+var label, cls, tip;
+if (score >= 8) { label = 'PMS 重度'; cls = 'pms-heavy'; tip = '经前综合征较重，提前调整作息心情'; }
+else if (score >= 4) { label = 'PMS 中度'; cls = 'pms-mid'; tip = '经前反应明显，照顾好自己'; }
+else if (score >= 1) { label = 'PMS 轻微'; cls = 'pms-light'; tip = '经前反应轻，状态不错'; }
+else { return { score: 0, label: 'PMS 不明显', cls: 'pms-none', tip: '', days: 0 }; }
+return { score: score, label: label, cls: cls, tip: tip, days: days };
+}
 function status() {
 recs = normalize(recs);
 var today = todayStr();
@@ -39094,6 +39315,23 @@ var toOvu = st.ovulationDay - st.dayOfCycle;
 if (toOvu > 0) ovuLine.textContent = '距排卵约 ' + toOvu + ' 天';
 else if (toOvu === 0) ovuLine.textContent = '今天约为排卵日';
 else ovuLine.textContent = '距下次排卵约 ' + (st.cycleLen - st.dayOfCycle + st.ovulationDay) + ' 天';
+}
+}
+var pmsLine = document.getElementById('period-pms-line');
+if (!pmsLine) {
+pmsLine = document.createElement('div');
+pmsLine.id = 'period-pms-line';
+pmsLine.className = 'period-pms-line';
+if (ovuLine && ovuLine.parentNode) ovuLine.parentNode.insertBefore(pmsLine, ovuLine.nextSibling);
+else if (bar && bar.parentNode) bar.parentNode.insertBefore(pmsLine, bar.nextSibling);
+}
+if (pmsLine) {
+var pms = pmsLevel();
+if (!pms) { pmsLine.hidden = true; }
+else {
+pmsLine.hidden = false;
+pmsLine.innerHTML = '<span class="pms-badge ' + pms.cls + '">' + pms.label + '</span>' +
+(pms.tip ? '<span class="pms-tip">' + pms.tip + '</span>' : '');
 }
 }
 var startBtn = document.getElementById('period-mark-start');
@@ -39470,6 +39708,17 @@ if (!t) { t = document.createElement('div'); t.id = 'cc-toast'; document.body.ap
 t.textContent = msg; t.className = 'cc-toast'; void t.offsetWidth; t.className = 'cc-toast show';
 clearTimeout(t._timer); t._timer = setTimeout(function () { t.className = 'cc-toast'; }, 2000);
 }
+function readInpVal(el) {
+if (!el) return '';
+var v;
+try { v = el.value; } catch (e) {}
+if (v !== undefined && v !== null && String(v).trim()) return String(v);
+try {
+var box = el.__ceBox || (el.parentNode && el.parentNode.querySelector('.ce-box[data-for="' + (el.id || '') + '"]'));
+if (box) return (box.innerText !== undefined ? box.innerText : box.textContent) || '';
+} catch (e) {}
+return v === undefined || v === null ? '' : String(v);
+}
 function openDayPop(ds) {
 var existing = document.getElementById('period-day-pop');
 if (existing) existing.remove();
@@ -39480,6 +39729,7 @@ pop.className = 'period-day-pop';
 var flowHtml = FLOWS.map(function (f) {
 return '<button class="dp-flow' + (info.flow === f.k ? ' on' : '') + '" data-flow="' + f.k + '">' + f.label + '</button>';
 }).join('');
+var isPeriodNow = dayPhase(ds) === 'period';
 var symHtml = SYMPTOMS.map(function (s) {
 var on = info.symptoms && info.symptoms.indexOf(s.k) >= 0;
 return '<button class="dp-sym' + (on ? ' on' : '') + '" data-sym="' + s.k + '">' + s.label + '</button>';
@@ -39491,6 +39741,7 @@ pop.innerHTML =
 '<div class="dp-mask"></div>' +
 '<div class="dp-sheet">' +
 '<div class="dp-head"><span class="dp-date">' + ds + '</span><button class="dp-close" aria-label="关闭">×</button></div>' +
+'<div class="dp-section"><div class="dp-label">生理期</div><button class="dp-sym dp-period' + (isPeriodNow ? ' on' : '') + '">' + (isPeriodNow ? '已标记为生理期（点此取消）' : '标记这天为生理期') + '</button></div>' +
 '<div class="dp-section"><div class="dp-label">经量</div><div class="dp-flow-row">' + flowHtml + '</div></div>' +
 '<div class="dp-section"><div class="dp-label">症状</div><div class="dp-sym-grid">' + symHtml + '</div></div>' +
 '<div class="dp-section"><div class="dp-label">基础体温（℃）</div><input class="dp-temp" type="number" step="0.1" min="35" max="38" value="' + (info.temp || '') + '" placeholder="36.5"/></div>' +
@@ -39508,8 +39759,13 @@ pop.querySelectorAll('.dp-flow').forEach(function (x) { x.classList.remove('on')
 b.classList.add('on');
 });
 });
-pop.querySelectorAll('.dp-sym').forEach(function (b) {
+pop.querySelectorAll('.dp-sym[data-sym]').forEach(function (b) {
 b.addEventListener('click', function () { b.classList.toggle('on'); });
+});
+var perBtn = pop.querySelector('.dp-period');
+if (perBtn) perBtn.addEventListener('click', function () {
+var on = perBtn.classList.toggle('on');
+perBtn.textContent = on ? '已标记为生理期（点此取消）' : '标记这天为生理期';
 });
 pop.querySelectorAll('.dp-mood').forEach(function (b) {
 b.addEventListener('click', function () {
@@ -39521,10 +39777,10 @@ pop.querySelector('.dp-save').addEventListener('click', function () {
 var flowBtn = pop.querySelector('.dp-flow.on');
 var moodBtn = pop.querySelector('.dp-mood.on');
 var syms = [];
-pop.querySelectorAll('.dp-sym.on').forEach(function (b) { syms.push(b.getAttribute('data-sym')); });
-var temp = parseFloat(pop.querySelector('.dp-temp').value);
+pop.querySelectorAll('.dp-sym.on[data-sym]').forEach(function (b) { syms.push(b.getAttribute('data-sym')); });
+var temp = parseFloat(readInpVal(pop.querySelector('input.dp-temp')));
 var mood = moodBtn ? parseInt(moodBtn.getAttribute('data-mood'), 10) : 0;
-var note = pop.querySelector('.dp-note').value.trim();
+var note = readInpVal(pop.querySelector('textarea.dp-note')).trim();
 var obj = {};
 if (flowBtn) obj.flow = flowBtn.getAttribute('data-flow');
 if (syms.length) obj.symptoms = syms;
@@ -39533,6 +39789,10 @@ if (mood && mood !== 3) obj.mood = mood;
 if (note) obj.note = note;
 if (Object.keys(obj).length) daily[ds] = obj; else delete daily[ds];
 saveDaily(daily);
+if (perBtn) {
+var wantPeriod = perBtn.classList.contains('on');
+if (wantPeriod !== (dayPhase(ds) === 'period')) toggleDay(ds);
+}
 closeDayPop();
 render();
 toast('已保存');
@@ -39690,10 +39950,10 @@ document.body.appendChild(pop);
 document.body.classList.add('scroll-lock');
 pop.querySelector('.dp-mask').addEventListener('click', closeCarePop);
 pop.querySelector('.dp-close').addEventListener('click', closeCarePop);
-var input = pop.querySelector('.dp-care-input');
+var input = pop.querySelector('input.dp-care-input');
 var listEl = pop.querySelector('.care-list');
 function addLine() {
-var v = (input.value || '').trim();
+var v = readInpVal(input).trim();
 if (v && lines.indexOf(v) < 0) {
 lines.push(v); saveCareLines(lines);
 input.value = '';
@@ -39919,7 +40179,7 @@ pop.querySelector('.dp-save').addEventListener('click', function () {
 var advs = [];
 pop.querySelectorAll('.adv.on').forEach(function (b) { advs.push(parseInt(b.getAttribute('data-adv'), 10)); });
 if (!advs.length) advs = [3, 1, 0];
-var h = parseInt(pop.querySelector('.dp-hour').value, 10);
+var h = parseInt(readInpVal(pop.querySelector('input.dp-hour')), 10);
 notifyCfg.advanceDays = advs;
 notifyCfg.hour = isNaN(h) ? 9 : Math.min(23, Math.max(0, h));
 saveNotify(notifyCfg);
@@ -39977,6 +40237,8 @@ grid.addEventListener('contextmenu', function (e) {
 var cell = e.target.closest('.pc-cell');
 if (!cell || cell.classList.contains('blank')) return;
 e.preventDefault();
+if (longPressed) return;
+if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
 toggleDay(cell.getAttribute('data-date'));
 });
 grid.addEventListener('touchstart', function (e) {
@@ -40519,6 +40781,7 @@ window.openModal('分类管理', '', function (v) {
 if (!v) return;
 if (v.indexOf('add:') === 0) {
 var type = v.slice(4);
+setTimeout(function () {
 window.openModal('添加' + (type === 'expense' ? '支出' : '收入') + '分类', '', function (name) {
 name = (name || '').trim();
 if (!name) return;
@@ -40530,10 +40793,12 @@ cats = c;
 renderCatGrid();
 toast('已添加「' + name + '」');
 });
+}, 60);
 } else if (v.indexOf('del:') === 0) {
 var type2 = v.slice(4);
 var c2 = loadCats();
 if (!c2[type2].length) { toast('没有可删除的分类'); return; }
+setTimeout(function () {
 window.openModal('选择要删除的' + (type2 === 'expense' ? '支出' : '收入') + '分类', '', function (name) {
 if (!name) return;
 var c3 = loadCats();
@@ -40548,6 +40813,7 @@ if (curType === type2 && curCat === name) curCat = '';
 renderCatGrid();
 toast('已删除「' + name + '」');
 }, { noInput: true, pills: c2[type2].map(function (c) { return { label: c, value: c }; }) });
+}, 60);
 }
 }, {
 noInput: true,
@@ -42697,7 +42963,7 @@ localStorage.setItem(statsKey, JSON.stringify(stats));
 } catch (e) {}
 const title = draw ? '平局' : (playerWin ? '🏆 你赢了' : 'TA 赢了');
 const body =
-'<div class="pong-end-score">你 ' + s.playerScore + ' : ' + s.opponentScore + ' TA</div>' +
+'<div class="pong-end-score">TA ' + s.opponentScore + ' : ' + s.playerScore + ' 你</div>' +
 '<div class="pong-end-stat">总回合 ' + s.totalRounds + ' · 用时 ' + fmt(sec) + '</div>' +
 '<div class="pong-end-stat">你的最高连得 ' + s.maxPlayerStreak + ' · TA 最高连得 ' + s.maxOpponentStreak + '</div>' +
 '<div class="pong-end-stat">累计 ' + stats.win + '胜 ' + stats.lose + '负 ' + stats.draw + '平 · 历史最高连得 ' + stats.maxStreak + '</div>';
@@ -42784,7 +43050,7 @@ ctx.restore();
 function renderScore(s) {
 if (!scoreEl) return;
 const scale = s.flashScore > 0 ? 'transform:scale(' + (1 + s.flashScore * 0.3) + ')' : '';
-scoreEl.innerHTML = '<span class="pong-s-you">你 ' + s.playerScore + '</span><span class="pong-s-sep">:</span><span class="pong-s-ta">' + s.opponentScore + ' TA</span>';
+scoreEl.innerHTML = '<span class="pong-s-ta">' + s.opponentScore + ' TA</span><span class="pong-s-sep">:</span><span class="pong-s-you">你 ' + s.playerScore + '</span>';
 scoreEl.style.cssText = scale;
 }
 function renderHint(s, now) {
@@ -43042,12 +43308,12 @@ return;
 }
 const saved = loadSaved();
 if (saved) {
-showOverlay('双人 Pong', '<div class="pong-start-tip">有未完成的对局<br>你 ' + saved.playerScore + ' : ' + saved.opponentScore + ' TA</div><div class="pong-start-ctrl">手机：左半边上下拖动<br>电脑：↑↓ 或 W S</div>', '重新开始');
+showOverlay('双人 Pong', '<div class="pong-start-tip">有未完成的对局<br>你 ' + saved.playerScore + ' : ' + saved.opponentScore + ' TA</div><div class="pong-start-ctrl">手机：按住画面上下拖动<br>电脑：↑↓ 或 W S</div>', '重新开始');
 if (overlayBtn2El) overlayBtn2El.hidden = false;
 } else {
 const curDiff = (diffSel && diffSel.value) || 'easy';
 const ws = (DIFFS[curDiff] || DIFFS.easy).winScore;
-showOverlay('双人 Pong', '<div class="pong-start-tip">你控制左侧挡板<br>先得 ' + ws + ' 分获胜</div><div class="pong-start-ctrl">手机：左半边上下拖动<br>电脑：↑↓ 或 W S</div>', '开始');
+showOverlay('双人 Pong', '<div class="pong-start-tip">你控制右侧挡板<br>先得 ' + ws + ' 分获胜</div><div class="pong-start-ctrl">手机：按住画面上下拖动<br>电脑：↑↓ 或 W S</div>', '开始');
 if (overlayBtn2El) overlayBtn2El.hidden = true;
 }
 stopGame();
@@ -43646,12 +43912,14 @@ if (!pa) { endGame('lose'); return true; }
 if (!oa) { endGame('win'); return true; }
 return false;
 }
-function endGame(result) {
+function endGame(survival) {
 if (!state) return;
 state.status = 'over';
 stopFrame();
 if (loopTimer) { clearTimeout(loopTimer); loopTimer = null; }
 clearSaved();
+const psFinal = Math.floor(state.player.score), osFinal = Math.floor(state.opp.score);
+const result = psFinal > osFinal ? 'win' : psFinal < osFinal ? 'lose' : 'draw';
 if (result === 'win') SFX.win();
 const d = {
 result: result,
@@ -43659,8 +43927,8 @@ pLen: state.player.body.length,
 oLen: state.opp.body.length,
 pFood: state.player.foodCount,
 oFood: state.opp.foodCount,
-pScore: Math.floor(state.player.score),
-oScore: Math.floor(state.opp.score),
+pScore: psFinal,
+oScore: osFinal,
 time: Math.floor(state.elapsed / 1000)
 };
 const s = readScore();
@@ -44540,7 +44808,7 @@ if (t && t.checked && !fsVisualActive()) {
 t.checked = false;
 showFsFailTip();
 }
-}, 900);
+}, 1500);
 } else {
 if (isIOS && inIosStandalone) { applyIosFs(false); return; }
 _userFsOff = true;
@@ -44567,12 +44835,20 @@ return !!(window.matchMedia && window.matchMedia('(display-mode: standalone), (d
 } catch (e) { return false; }
 }
 let _wentBg = false;
+let _lastVisibleAt = Date.now();
 function handleFsExit() {
 stopFsMonitor();
-if (!fsInPwa() && !_wentBg) {
+const d = document.documentElement;
+if (!fsInPwa()) {
+setTimeout(() => {
+if (document.visibilityState !== 'visible') return;            // 已在后台 → 系统行为
+if (_wentBg) return;                                           // 复核窗口内切过后台
+try { if (d.classList.contains('fs-css-active')) return; } catch (e) {} // 横屏兜底自有状态
+if (_lastVisibleAt && Date.now() - _lastVisibleAt < 1500) { reenterFs(); return; } // 回前台补发的系统退出
 try { store.set(FS_KEY, '0'); } catch (e) {}
 try { store.set(FB_KEY, '0'); } catch (e) {}
-try { document.documentElement.classList.remove('fs-css-active'); } catch (e) {}
+try { d.classList.remove('fs-css-active'); } catch (e) {}
+}, 700);
 }
 }
 document.addEventListener('fullscreenchange', () => {
@@ -44597,8 +44873,8 @@ let _retryArmed = false;
 function disarmRetry() {
 if (!_retryArmed) return;
 _retryArmed = false;
-document.removeEventListener('click', retryClick);
-document.removeEventListener('touchstart', retryTouch);
+document.removeEventListener('click', retryClick, true);
+document.removeEventListener('touchstart', retryTouch, true);
 }
 function retryClick(e) { if (!e.isTrusted) return; doRetry(); }
 function retryTouch(e) { if (!e.isTrusted) return; doRetry(); }
@@ -44610,8 +44886,8 @@ enterFs();
 function armRetry() {
 disarmRetry();
 _retryArmed = true;
-document.addEventListener('click', retryClick);
-document.addEventListener('touchstart', retryTouch);
+document.addEventListener('click', retryClick, true);
+document.addEventListener('touchstart', retryTouch, true);
 }
 function reenterFs() {
 if (store.get(FS_KEY) !== '1') return;
@@ -44631,6 +44907,7 @@ else reenterFs();
 document.addEventListener('visibilitychange', () => {
 if (document.visibilityState !== 'visible') { _wentBg = true; return; }
 _wentBg = false;
+_lastVisibleAt = Date.now();   // v3.11.x：记录回前台时刻（供 handleFsExit 时序判定）
 if (isIOS && inIosStandalone) { if (store.get(FS_KEY) === '1') applyIosFs(true); }
 else reenterFs();
 });

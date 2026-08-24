@@ -625,12 +625,17 @@
     return false;
   }
 
-  function endGame(result) {
+  function endGame(survival) {
     if (!state) return;
     state.status = 'over';
     stopFrame();
     if (loopTimer) { clearTimeout(loopTimer); loopTimer = null; }
     clearSaved();
+    // v3.11.x：胜负按最终得分判定（用户反馈"我分数比他高却显示他赢、平局也显示他赢"）——
+    // 原实现按存活判定（先死者即输），与面板展示的分数对比矛盾。改为：谁分高谁赢，
+    // 同分为平局；存活结果仅用于触发结束（双方存活时游戏不会结束，行为不变）
+    const psFinal = Math.floor(state.player.score), osFinal = Math.floor(state.opp.score);
+    const result = psFinal > osFinal ? 'win' : psFinal < osFinal ? 'lose' : 'draw';
     if (result === 'win') SFX.win();
     const d = {
       result: result,
@@ -638,8 +643,8 @@
       oLen: state.opp.body.length,
       pFood: state.player.foodCount,
       oFood: state.opp.foodCount,
-      pScore: Math.floor(state.player.score),
-      oScore: Math.floor(state.opp.score),
+      pScore: psFinal,
+      oScore: osFinal,
       time: Math.floor(state.elapsed / 1000)
     };
     const s = readScore();

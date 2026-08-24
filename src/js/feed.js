@@ -469,10 +469,11 @@
       const cBody = inlineBody(c.content);
       let repliesHtml = '';
       if (c.replies && c.replies.length) {
-        repliesHtml = '<div class="feed-replies">' + c.replies.map(r => {
+        // v3.11.x：回复加 data-ri——通知点击可直接定位闪烁到具体这条回复
+        repliesHtml = '<div class="feed-replies">' + c.replies.map((r, ri) => {
           const rName = esc(r.authorName || ((r.role || r.by) === 'me' ? feedUserName() : (name || taFeedName())));
           const rBody = inlineBody(r.content);
-          return '<div class="feed-reply"><b>' + rName + '</b> 回复 <b>' + cName + '</b>：' + rBody + '</div>';
+          return '<div class="feed-reply" data-ri="' + ri + '"><b>' + rName + '</b> 回复 <b>' + cName + '</b>：' + rBody + '</div>';
         }).join('') + '</div>';
       }
       return '<div class="feed-comment" data-c="' + p.id + '" data-ci="' + ci + '">' +
@@ -991,10 +992,12 @@ function submitComment() {
         if (!p2 || !p2.comments || !p2.comments[replyCi]) return;
         p2.comments[replyCi].replies = p2.comments[replyCi].replies || [];
         const replyText = pickReplyContent(cfg, tcOwner);
-        p2.comments[replyCi].replies.push(stampAuthor({ content: replyText, ts: Date.now() }, taAuthorOfCid(tcOwner)));
+        const replies = p2.comments[replyCi].replies;
+        replies.push(stampAuthor({ content: replyText, ts: Date.now() }, taAuthorOfCid(tcOwner)));
         save(list2);
         refreshPostCard(pid);
-        addNotice('comment', p2.id, taFeedNameFor(tcOwner) + ' 回复了你：' + noticeTextClean(replyText), tcOwner);
+        // v3.11.x：通知带评论/回复定位（点击直接闪到这条回复）
+        addNotice('comment', p2.id, taFeedNameFor(tcOwner) + ' 回复了你：' + noticeTextClean(replyText), tcOwner, { ci: replyCi, ri: replies.length - 1 });
       }, (cfg.replySpeedMin + Math.random() * Math.max(1, cfg.replySpeedMax - cfg.replySpeedMin)) * 1000);
     }
     return;
@@ -1016,10 +1019,18 @@ function submitComment() {
       const p2 = list2.find(x => x.id === pid);
       if (!p2) return;
       p2.comments = p2.comments || [];
-      p2.comments.push(stampAuthor({ content: pickReplyContent(cfg, p2.owner || 'default'), ts: Date.now(), replies: [] }, taAuthorOf(p2)));
+      const taText = pickReplyContent(cfg, p2.owner || 'default');
+      p2.comments.push(stampAuthor({ content: taText, ts: Date.now(), replies: [] }, taAuthorOf(p2)));
       save(list2);
       refreshPostCard(pid);
-      if ((p2.role || p2.by) === 'me') addNotice('comment', p2.id, (p2.taName || taFeedNameFor(p2.owner || 'default')) + ' 评论了你的动态', p2.owner || 'default');
+      // v3.11.x：修复「评论联系人的朋友圈，联系人回复没有提醒」——原实现只在
+      // 动态是自己的（role==='me'）时才发通知，评论 TA 的动态后 TA 回你评论完全无感知。
+      // 改为两种情况都通知：我的动态→「评论了你的动态」；TA 的动态→「回复了你的评论」，
+      // 并带上内容预览与定位（点击通知直接闪到那条评论）。
+      const taName2 = p2.taName || taFeedNameFor(p2.owner || 'default');
+      const loc = { ci: p2.comments.length - 1 };
+      if ((p2.role || p2.by) === 'me') addNotice('comment', p2.id, taName2 + ' 评论了你的动态：' + noticeTextClean(taText), p2.owner || 'default', loc);
+      else addNotice('comment', p2.id, taName2 + ' 回复了你的评论：' + noticeTextClean(taText), p2.owner || 'default', loc);
     }, (cfg.commentSpeedMin + Math.random() * Math.max(1, cfg.commentSpeedMax - cfg.commentSpeedMin)) * 1000);
   }
 }
@@ -1050,9 +1061,14 @@ if (comInput) comInput.addEventListener('keydown', (e) => { if (e.key === 'Enter
   }
   // v3.7.x：owner 参数=动态所属联系人（跨桌面通知弹窗/列表头像按发布者取，
   // 不再一律显示当前桌面的 TA 头像/昵称）
-  function addNotice(type, pid, text, owner) {
+  // v3.11.x：loc={ci, ri} 评论/回复定位——通知点击直接滚动闪烁到具体评论/回复，
+  // 列表项按 loc 从当前动态数据实时取首图渲染缩略图（不额外存储，动态删了就不显示）
+  function addNotice(type, pid, text, owner, loc) {
     const list = notices();
-    list.unshift({ type: type, pid: pid, text: text, ts: Date.now(), read: false, owner: owner || '' });
+    const item = { type: type, pid: pid, text: text, ts: Date.now(), read: false, owner: owner || '' };
+    if (loc && loc.ci != null) item.ci = loc.ci;
+    if (loc && loc.ri != null) item.ri = loc.ri;
+    list.unshift(item);
     if (list.length > 100) list.length = 100;
     saveNotices(list);
     // v3.5.100：通知新增 → 桌面「朋友圈」图标未读数 +1
@@ -1087,13 +1103,36 @@ if (comInput) comInput.addEventListener('keydown', (e) => { if (e.key === 'Enter
       ab.textContent = n > 99 ? '99+' : String(n);
     }
   }
-  function jumpToPost(pid) {
+  function jumpToPost(pid, ci, ri) {
     const el = document.getElementById('feed-post-' + pid);
     if (!el) return;
-    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    el.classList.remove('feed-flash');
-    void el.offsetWidth;
-    el.classList.add('feed-flash');
+    // v3.11.x：带评论/回复定位——优先滚动闪烁到具体那条评论/回复（找不到回退整条动态）
+    let target = el;
+    if (ci != null && ci !== '') {
+      const cEl = el.querySelector('.feed-comment[data-ci="' + ci + '"]');
+      if (cEl) {
+        const rEl = (ri != null && ri !== '') ? cEl.querySelector('.feed-reply[data-ri="' + ri + '"]') : null;
+        target = rEl || cEl;
+      }
+    }
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    target.classList.remove('feed-flash');
+    void target.offsetWidth;
+    target.classList.add('feed-flash');
+  }
+  // v3.11.x：通知项缩略图——按 ci/ri 从当前动态数据实时取内容里的首张图
+  //（不落盘存储，避免撑大通知键；动态已删/无图返回空）
+  function noticeThumbOf(n) {
+    try {
+      if (!n || n.type !== 'comment' || n.ci == null) return '';
+      const p = load().find(x => x.id === n.pid);
+      if (!p || !p.comments || !p.comments[n.ci]) return '';
+      const src = (n.ri != null && Array.isArray(p.comments[n.ci].replies) && p.comments[n.ci].replies[n.ri])
+        ? p.comments[n.ci].replies[n.ri].content
+        : p.comments[n.ci].content;
+      const m = /data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+/.exec(String(src || ''));
+      return m ? m[0] : '';
+    } catch (e) { return ''; }
   }
   function renderNotices() {
     const listEl = document.getElementById('feed-notice-list');
@@ -1112,12 +1151,23 @@ if (comInput) comInput.addEventListener('keydown', (e) => { if (e.key === 'Enter
             : n.type === 'comment'
               ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:14px;height:14px"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>'
               : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:14px;height:14px"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>';
-          return '<div class="feed-notice-item' + (n.read ? '' : ' new') + '" data-pid="' + n.pid + '">' + avHtml(avFor(n)) + '<span class="fn-ico">' + ico + '</span><span class="fn-text">' + noticeTextClean(n.text) + '</span><span class="fn-time">' + fmtDT(n.ts) + '</span></div>';
+          // v3.11.x：评论类通知带内容首图缩略图——回复的是表情包/图片时直接可见，
+          // 不再只显示「[表情包]」占位字（用户反馈"回复了图片但只有两个字不知道是啥"）
+          const thumb = noticeThumbOf(n);
+          const thumbHtml = thumb ? '<img class="fn-thumb" src="' + attrEsc(thumb) + '" alt="">' : '';
+          return '<div class="feed-notice-item' + (n.read ? '' : ' new') + '" data-pid="' + n.pid + '" data-ci="' + (n.ci != null ? n.ci : '') + '" data-ri="' + (n.ri != null ? n.ri : '') + '">' + avHtml(avFor(n)) + '<span class="fn-ico">' + ico + '</span><span class="fn-text">' + noticeTextClean(n.text) + '</span>' + thumbHtml + '<span class="fn-time">' + fmtDT(n.ts) + '</span></div>';
         }).join('')
       : '<div class="ta-empty">暂时没有新的提醒</div>';
     listEl.querySelectorAll('.feed-notice-item').forEach(it => it.addEventListener('click', () => {
       document.getElementById('feed-notice-panel').hidden = true;
-      jumpToPost(it.dataset.pid);
+      const ci = it.dataset.ci === '' ? null : Number(it.dataset.ci);
+      const ri = it.dataset.ri === '' ? null : Number(it.dataset.ri);
+      jumpToPost(it.dataset.pid, ci, ri);
+    }));
+    // v3.11.x：点缩略图直接看大图（不触发跳转）
+    listEl.querySelectorAll('.fn-thumb').forEach(t => t.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (window.viewChatImage) window.viewChatImage(t.src);
     }));
   }
   // 发布框：添加多张图片（每张压缩后存 dataURL，与文字混排进正文，同一张图片即 1 个字卡）

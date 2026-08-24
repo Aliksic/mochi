@@ -495,39 +495,46 @@
 
   function manageCats() {
     if (!window.openModal) return;
+    // v3.11.x：修复「无法自己添加收入/支出分类」——openModal 点确定后统一 close()（cb=null），
+    // 在 ok 回调里同步再开的第二个弹窗会被立即关掉（一闪而过）。与存钱罐同款修复：
+    // 二级弹窗延迟 60ms 开启（WORKLOG 2026-08-24 存钱罐踩坑记录）。
     window.openModal('分类管理', '', function (v) {
       if (!v) return;
       if (v.indexOf('add:') === 0) {
         var type = v.slice(4);
-        window.openModal('添加' + (type === 'expense' ? '支出' : '收入') + '分类', '', function (name) {
-          name = (name || '').trim();
-          if (!name) return;
-          var c = loadCats();
-          if (c[type].indexOf(name) >= 0) { toast('该分类已存在'); return; }
-          c[type].push(name);
-          saveCats(c);
-          cats = c;
-          renderCatGrid();
-          toast('已添加「' + name + '」');
-        });
+        setTimeout(function () {
+          window.openModal('添加' + (type === 'expense' ? '支出' : '收入') + '分类', '', function (name) {
+            name = (name || '').trim();
+            if (!name) return;
+            var c = loadCats();
+            if (c[type].indexOf(name) >= 0) { toast('该分类已存在'); return; }
+            c[type].push(name);
+            saveCats(c);
+            cats = c;
+            renderCatGrid();
+            toast('已添加「' + name + '」');
+          });
+        }, 60);
       } else if (v.indexOf('del:') === 0) {
         var type2 = v.slice(4);
         var c2 = loadCats();
         if (!c2[type2].length) { toast('没有可删除的分类'); return; }
-        window.openModal('选择要删除的' + (type2 === 'expense' ? '支出' : '收入') + '分类', '', function (name) {
-          if (!name) return;
-          var c3 = loadCats();
-          var i = c3[type2].indexOf(name);
-          if (i < 0) return;
-          var used = loadRecs().some(function (r) { return r.type === type2 && r.category === name; });
-          if (used) { toast('「' + name + '」下有记录，无法删除'); return; }
-          c3[type2].splice(i, 1);
-          saveCats(c3);
-          cats = c3;
-          if (curType === type2 && curCat === name) curCat = '';
-          renderCatGrid();
-          toast('已删除「' + name + '」');
-        }, { noInput: true, pills: c2[type2].map(function (c) { return { label: c, value: c }; }) });
+        setTimeout(function () {
+          window.openModal('选择要删除的' + (type2 === 'expense' ? '支出' : '收入') + '分类', '', function (name) {
+            if (!name) return;
+            var c3 = loadCats();
+            var i = c3[type2].indexOf(name);
+            if (i < 0) return;
+            var used = loadRecs().some(function (r) { return r.type === type2 && r.category === name; });
+            if (used) { toast('「' + name + '」下有记录，无法删除'); return; }
+            c3[type2].splice(i, 1);
+            saveCats(c3);
+            cats = c3;
+            if (curType === type2 && curCat === name) curCat = '';
+            renderCatGrid();
+            toast('已删除「' + name + '」');
+          }, { noInput: true, pills: c2[type2].map(function (c) { return { label: c, value: c }; }) });
+        }, 60);
       }
     }, {
       noInput: true,

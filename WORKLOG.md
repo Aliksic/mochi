@@ -4,6 +4,93 @@
 
 ## 规则
 
+### 2026-08-24（用户反馈：小米15 Pro Chrome 六项——贪吃蛇胜负/Pong 侧位/记账分类/朋友圈回复提醒+图片详情/默认字卡滑动/全屏失效）
+- [本会话·完成]（**已改 src + 已构建（20:44, sw: mochi-mt78aon5）+ 新专项 verify-bugfix-six 21/21，未提交**）：`src/js/snake-game.js` + `src/js/pong.js` + `src/js/accounting.js` + `src/js/feed.js` + `src/js/fullscreen.js`（AI-B 域，跨域改动请知悉）+ `src/css/chat-pages.css` + `src/template.html` + 构建产物 + `tools/verify-bugfix-six.mjs`（新专项）。回归：布局 verify 10/10 + snake-smooth 11/11 + snake-features 8/8 + feed-comment-merge 10/10 + feed-comment-perf 18/18。
+  - **①贪吃蛇胜负（snake-game.js endGame）**：原按存活判定（先死者即输），与面板展示的分数矛盾（"我分数高却显示他赢"；撞到一起也常判一边赢）。改为**按最终得分判定**——分高者胜、同分平局；存活结果仅用于触发结束。TA 回应池映射（chat.js sendSnakeResult）不受影响。
+  - **②Pong 侧位（pong.js + template.html）**：代码里玩家实际控制**右侧**挡板，但开局提示写「你控制左侧挡板」、比分显示「你 X : Y TA」（左位是你）全部与实现相反。改为「你控制右侧挡板」+ 比分/结算面板统一 **TA x : y 你**（与球场左右对应）；底部提示改「手机：按住画面上下拖动」（触摸本就全画面有效，原文案「左半边」误导）。聊天系统消息文本保持「你 X : Y TA」不变（纯文字无方位语义）。
+  - **③记账无法加分类（accounting.js manageCats）**：根因=WORKLOG 存钱罐同款坑——openModal 点确定后统一 close()，ok 回调里同步开的二级弹窗被立即关掉（一闪而过）。两个二级弹窗（添加/删除分类）照先例 setTimeout(60) 延迟开启。verify 实测：分类管理→添加支出分类→输入→确定，「宠物」写入 LS 且 toast 正确（含安卓 ce-box 转换路径）。
+  - **④朋友圈评论回复（feed.js + chat-pages.css）**：
+    - 无提醒根因：TA 评论回应只在 `(p2.role||p2.by)==='me'`（自己的动态）时 addNotice——评论**联系人的动态**后 TA 回你完全无通知。改为两种情况都通知：我的动态→「评论了你的动态：预览」；TA 的动态→「回复了你的评论：预览」。
+    - 看不到详情根因：通知文字里 dataURL 被 noticeTextClean 清成「[表情包]」占位符，且点击只滚到整条动态。改进三件套：①addNotice 增加 loc={ci,ri} 定位，点击通知直接滚动闪烁到**具体那条评论/回复**（commentsHtmlFor 回复节点补 data-ri 锚点）；②通知列表对含图评论/回复**实时从动态数据取首图渲染缩略图**（.fn-thumb，不落盘防撑大存储键，点缩略图看大图）；③回复回应路径同样带定位。
+  - **⑤默认字卡下滑卡住（chat-pages.css）**：前两轮修复叠加出双嵌套滚动容器——`.page` 整页滚动 + `#dc-list` 内部滚动（min-height:40vh 撑出页面级溢出）且带 `overscroll-behavior:contain` 阻断滚动链：手指在列表上内层到边界后外层永远接不上=卡住。改为**单滚动容器**：只有 .page 一层滚到底，`#dc-list` flex:0 0 auto + overflow:visible（选择器 `#page-default-cards #dc-list` 压过 `.card-list` 基础规则）。main 分类 DOM 两版本本就全量渲染，无虚拟列表回退风险。
+  - **⑥全屏每次进入失效（fullscreen.js）**：旧 handleFsExit 在浏览器标签态同步判定「非切后台退出=用户主动退出」清 FS_KEY，但部分机型（小米 Chrome 方向）切后台时 fullscreenchange(exit) 早于 visibilitychange(hidden)，或退出事件推迟到回前台才补发——两种时序都误清持久化意图→下次进入永不恢复，只能手动重开。修复：①清除决策延迟 700ms 复核（复核时已转后台/_wentBg→保留；fs-css-active 在→横屏兜底自有状态不动；刚回前台 1.5s 内到达的 exit→后台期发生的系统退出，保留并立即尝试恢复；其余才算用户主动退出）；②手势重试监听（armRetry）改捕获阶段，防面板 stopPropagation 吞掉首次触摸；③开关开启后的失败回滚复核 900→1500ms（低端机全屏完成慢被误回滚）。真机预期：小米 Chrome 开全屏后切后台再回来，首次触摸即自动恢复全屏，无需关开开关。
+  - 附带：`tools/smoke-accounting.mjs` 首条断言读了过时键名（xy-home-v2:desk-page-count，实际 xy-home-v2:default:desk-page-count）恒 FAIL——已修正键名，31/31 全绿（功能本就正常）。
+  - ⚠️ 构建**已包含同时段拍一拍/表情包三分区会话的完整改动**（chatcard.js/chat.js/chat-main.css/template.html，对方 WORKLOG 有记录、20:32 前保存完）+ 此前 gift-shop/p2-features/period/personalize 未提交改动，提交时一并走。
+  - ⚠️ **20:55 检测到 bg-keep.js / mail.js 在本会话构建（20:44）之后又被另一并发会话保存**——当前产物不含这两个文件的改动，**提交前请构建者重新 `node build.mjs` 收口**。
+  - ⚠️ 真机确认（小米15 Pro Chrome）：①贪吃蛇打到分数高于 TA 后故意撞墙，应判「你赢了」；同分同死应「平局」②Pong 开局面板/比分/底部文案均为右侧挡板口径③记账 ⚙→添加收入/支出分类能弹出输入框并存入④评论联系人朋友圈，TA 回复有弹窗+角标，通知面板可见缩略图、点击直达那条回复⑤默认字卡页从头滑到尾无卡顿⑥开全屏→切后台→回来摸一下屏幕即回全屏。
+
+### 2026-08-24（用户反馈：手机端播放音乐和后台保活禁音音频同时启动，音乐卡顿）
+- [本会话·完成]（**已改 src + 已构建（20:55, sw: mochi-mt78nuuj），新专项 verify-music-keep-coexist 10/10 + verify-music-bg-resume 回归 10/10 + 布局 verify 10/10，未提交**）：仅 `src/js/bg-keep.js`（AI-B 域）+ 构建产物 + `tools/verify-music-keep-coexist.mjs`（新冒烟）。未碰 music-player.js。
+  - **根因**：开后台保活后播放音乐，页面里两个 `<audio>` 同时持续输出——①手机端混音/音频焦点互相争抢；②保活的 5 秒轮询发现自身音频被暂停（焦点被音乐抢走）就补播拉回，与 music-player 自身的防暂停补播形成双向拉锯，每个轮询周期音乐都被打断一下 = 周期性卡顿；③回前台 healKeepAlive 还会连发 4 次补播尝试雪上加霜。
+  - **修复（保活侧单向让位，零改动音乐模块）**：音乐播放期间（`window.__musicPlaying=true`）保活音频主动 pause 让位——音乐自带活跃媒体会话（playbackState=playing），防后台冻结目的不丢；停止/暂停后自动收回恢复保活。实现：①`Object.defineProperty` 监听 `__musicPlaying` 写入（music-player 先于本模块加载、只在 onplay/onpause/updateMediaSession 写），起播瞬间立即让位、停止瞬间立即收回，getter/setter 透传对其他读取方透明；②5 秒轮询在音乐在播时改为「保持让位 + 不再强设 mediaSession.playbackState='playing'」（顺带修复音乐暂停时被错误标成正在播）；③resumeOnInteraction/healKeepAlive 全部补播路径加让位守卫；④music-media-release 时同步收回（teardown 边缘路径双保险）。
+  - 验证：新专项 10/10（mock Audio+createElement('audio')：保活随启动在播→点歌瞬间让位→5 秒周期零补播且 playbackState 保持 playing→visible/focus/pageshow 自愈不抢回→暂停音乐自动收回→媒体条恢复）；verify-music-bg-resume 10/10 无回归（该套件不开保活，watcher 安装无副作用）；npm run verify 布局 10/10。
+  - ⚠️ 真机需确认（安卓 Chrome/Edge）：开启后台保活后播放音乐不再卡顿；通知栏显示歌曲信息可切歌；音乐暂停/停止后「Mochi 后台保活」媒体条回来、后台消息提醒仍正常。
+  - ⚠️ 构建扫入工作区其他会话已保存未提交改动（chat/chatcard/feed/gift-shop/p2-features/period/personalize/accounting/pong/snake-game/fullscreen/mail/template/chat-main.css/chat-pages.css 等），提交前请构建者确认对方已保存完整并按需重新 build 收口。
+
+### 2026-08-24（用户反馈：OPPO Reno16 Edge/Via——①自己寄出去的信没法点击查看、看不到有没有回信 ②经期记录设置不成生理期，编辑完确定不变红、卡住不动）
+- [本会话·完成]（**已改 src + 已构建，新增 verify-mail-sent-view 16/16 + verify-period-mark 12/12 + 回归 verify-period-save 15/15 + 布局 verify 10/10，未提交**）：`src/js/mail.js` + `src/js/period.js`（均 AI-A 域）+ `src/js/chat.js`（**AI-A 域最小改动 3 处，请知悉**：addIn/chatAddSystem 字段透传加 `mailNotice`；renderMsg poke 分支对 mailNotice 消息加 `.mail-notice` 类 + 点击回调）+ `src/css/chat-main.css`（.msg-poke.mail-notice 可点样式 3 行）+ 构建产物 + tools/verify-mail-sent-view.mjs（新）+ tools/verify-period-mark.mjs（新）。
+  - **问题②根因（三层叠加）**：
+    1. **部署滞后**：上一会话已修好的「安卓 ce-box 转换后 `.dp-note`/`.dp-temp` 选择器先命中 div → 读值抛 TypeError → 保存回调中断」修复（readInpVal）只在工作区、**从未提交推送**——线上版本用户编辑完点保存必现「不变红且弹窗卡死」（与 vivo Edge 先例同源）。本次随构建一并带上线。
+    2. **功能缺失**：日详情浮层原本只能记经量/症状，把某天标成经期（红色）唯一入口是**长按日格**——用户在浮层里「编辑→确定→期待变红」永远落空。已加「生理期」开关（复用 .dp-sym 样式）：保存时与 dayPhase 实际状态比对，变化才 toggleDay 一次（内部含 normalize/saveRecs/render）；重开回显 on 状态。
+    3. **长按双触发竞态**：安卓长按同时触发 contextmenu 与 touchstart 的 500ms 定时器，各 toggle 一次 = 标红又立刻取消。已去重：谁先到谁生效（定时器已触发→contextmenu 跳过；contextmenu 先到→clearTimeout），longPressed 仍留给 click 吞合成点击。CDP 真实触摸两种到达顺序验证只 toggle 一次。
+  - **问题①处理（当前代码 headless 全链路本就通过 → 加固三处 + 补可发现性）**：
+    1. **读值兜底**：sendLetter/submitReply 改 readMailVal（value 代理读空再从 __ceBox 取 innerText，period/music-player 同先例）——防个别内核代理失效导致「信件内容不能为空」信根本没寄出去；
+    2. **详情弹层兜底**：openTCPanel（ta-ask.js 尾部才定义，上游模块该机顶层抛错则永久缺失）未定义或打开失败时退回 window.openModal 静态文本展示（剥图），保证点击信件永远有响应；
+    3. **寄出后自动跳转**：寄信成功自动回信箱页并选中「寄出的信」（selectMailTab 抽函数复用）——原实现停在写信页，返回后还停在写信卡片，用户以为没寄出去；
+    4. **聊天通知可点击**：写信/回信/TA来信/TA回信四类系统消息带 mailNotice 标记渲染为可点击样式（虚线下划+按下反馈），点按直达信箱——原来只是灰字，用户在聊天里点了没反应自然以为「没法查看/看不到回信」。非当前桌面写入的原始 rec 同样带标记（切回该桌面后点击打开的就是该桌面信箱，语义正确）。
+  - 验证：verify-mail-sent-view 16/16（写信寄出自动跳转/列表/详情/openModal 兜底/对方已回信标签+回信信纸/聊天通知点击直达/来信回归）；verify-period-mark 12/12（开关标记→变红→持久化/回显/取消/长按双触发两顺序去重）；verify-period-save 15/15 + verify.mjs 10/10 回归全绿。
+  - ⚠️ **请构建者尽快提交推送**：问题②的核心修复（readInpVal）已在工作区滞留多轮未上线，线上用户一直踩坑。真机确认点：Reno16 Edge/Via 经期浮层标记生理期保存即变红；长按日格仍可快速标红且不闪断；寄出的信点击有弹层；聊天里「写了一封信/给你回了信」点按进信箱。若真机仍有异常，让用户在设置页确认版本时间（2026-08-24 之后）排除 SW 旧缓存。
+  - ⚠️ **并发提示（构建者必读）**：本会话施工期间（20:29~20:56）检测到另一会话陆续保存 accounting/bg-keep/feed/fullscreen/pong/snake-game/chatcard/template/chat-pages.css 等（另有新脚本 verify-bugfix-six/verify-music-keep-coexist/verify-poke-emoji-tabs）。本会话最终构建为 20:58（sw: mochi-mt78ryzl），已包含其当时已保存状态（全部 node --check 通过 + 四套 verify 全绿）；但若对方其后仍有 src 改动，提交前请重新 build 收口。
+
+### 2026-08-24（用户反馈：①拍一拍/表情包面板应显示【公用】【联系人昵称】【我的】三分区；②结构变了以后联系人无法发送拍一拍和表情包）
+- [本会话·完成]（**已改 src + 已构建，新专项 verify-poke-emoji-tabs 15/15 + diag-pool-scope 5/5 + verify-cc-scope 27/27 + link-import 22 通过 + 布局 verify 10/10，未提交**）：`src/js/chatcard.js` + `src/js/chat.js` + `src/css/chat-main.css` + `src/template.html`（均 AI-A 域）+ 构建产物 + `tools/verify-poke-emoji-tabs.mjs`（新专项）。
+  - **②根因（联系人发不出拍一拍/表情包）**：v3.11.x 双作用域拆分后，打开一次「公用字卡」管理页再返回，模块变量 `ccScope` 停在 `'public'`、内存 `groups` 被换成公用库——而聊天回复池 getCustomCards/getPokeCards/getMediaCards/getPool 全部以该 groups 为基准 → 公用库为空时专属拍一拍/表情包从联系人侧整体消失。修复：新增 `leaveCcPageReset()`，离开 page-custom-cards 时一律恢复专属作用域并重载 groups；挂在既有 MutationObserver（覆盖返回键/底部 tab/安卓返回/切页面所有离开路径）+ cc-back 双保险。tools/diag-pool-scope.mjs 复现场景由 T3/T4 FAIL 转 PASS。
+  - **①三分区 UI**：
+    - 拍一拍面板（chat.js 注入）：双 tab → 三 tab【公用拍一拍】【联系人昵称的拍一拍】【我的拍一拍】，新增 `.poke-tab-pub`（选中态虚线描边样式）；公用/联系人分区只读展示 公用键 / 专属键 的拍一拍分组（getScopedGroups，不再混显），我的分区不变（预设+用户分组可编辑）。tab 记忆扩展 public 值。
+    - 表情包面板（template.html + chat.js）：双 tab → 三 tab【公用表情包】【小A 的表情包】【我的表情包】；联系人分区标签动态取 lbl-partner 昵称；公用/专属分区分别读两键（renderEmojiGroupsBar/renderEmojiPanel 按 emojiMode='public'|'ta' 取 getScopedGroups('sticker',…)，分组记忆 pubCurGroup 独立并入 emoji-last 偏好）；工具行/批量条仍仅我的分区显示。`.emoji-tab` 高亮选择器收窄为 `#emoji-panel .emoji-tab`（朋友圈评论面板复用同名类不受影响），三 tab 字号略收+长昵称省略号防溢出。
+    - **回复池语义不变**：getPokeCards/getMediaCards/getMediaGroups/getCustomCards 保持「公用+专属」合并视图（联系人自动拍一拍/表情包回复同时用两份字卡）——仅展示层分区；新增 `window.getScopedGroups(type, scope)` 供面板按作用域读取（sticker/image 自动过滤链接字卡同 getMediaGroups 口径）。
+    - 空态文案按分区指引到 公用字卡/专属字卡 对应入口。
+  - 验证：verify-poke-emoji-tabs.mjs 15/15（合并池含两 scope / 访问公用页回归 B1-B4 / 拍一拍三分区 C1-C5 / 表情包三分区+动态昵称 D1-D4）；diag-pool-scope 5/5；verify-cc-scope 27/27、verify-link-import 22 通过、布局 verify 10/10 无回归。
+  - ⚠️ 构建含工作区其他会话未提交改动（gift-shop/p2-features/period/personalize/WORKLOG 等），提交前请构建者确认对方已保存完整并重 build 收口。真机需确认：三个 tab 在窄屏(360px)不挤压换行、公用分区空态文案。
+
+### 2026-08-24（用户反馈：vivo Edge 经期「记录今天」填完点保存不保存）
+- [本会话·完成]（**已改 src/js/period.js；产物已被同时段 20:16/20:22 构建扫入（index.html 内 readInpVal 5 处命中已核对）**，专项 verify-period-save 15/15 + 布局 verify 10/10，未提交）：仅 `src/js/period.js`。
+  - **根因（与上方存钱罐条目同族，但故障点不同）**：安卓上 mobile-adapt.js 的 ce-box 转换器把 input[type=number]/textarea 转成 contenteditable div 且**插在原输入框前、继承同名 class**——经期「记录今天」浮层里 `querySelector('.dp-note')` 先命中 div（无 value 属性），保存回调里备注读 `.value.trim()` 直接抛 TypeError 整体中断，`saveDaily` 未执行 → 点保存毫无反应（iOS 不转换所以正常）。同类错位共 4 处一起修：`.dp-note`（抛错中断主链路）、`.dp-temp`（体温恒 NaN 存不上）、`.dp-care-input`(关心语添加静默失效)、`.dp-hour`(提醒小时静默重置 9 点)。注意与 openModal 那条的区别：这里是浮层自建 input 用 class 选择器错位（代理本身没问题），不是 vivo Edge 代理读空——两种场景都要防。
+  - **修复**：按 reply-settings.js:136 先例固定**按标签选回原输入框**（input.dp-temp / textarea.dp-note 等，value 已被 defineProperty 代理到 ce-box）；另加 `readInpVal()` 读值兜底（代理读到空时从 `__ceBox.innerText/textContent` 兜底，同 music-player readCeInput 先例），双保险覆盖两类内核。
+  - **验证**：新专项 tools/verify-period-save.mjs 15/15——390×844 移动视口（转换器启用）先断言复现前提（A3/A4：.dp-note/.dp-temp 首匹配为 ce-box DIV），对旧构建实测点保存抛同款 `Cannot read properties of undefined (reading 'trim')`（= 用户反馈的直接复现）→ 新构建后保存全链路 15/15（持久化/备注体温读回/重开回显/删除/提醒小时 22/关心语添加）。布局 verify 10/10 无回归。
+  - ⚠️ 真机确认（vivo Edge）：经期页「记录今天」→ 选经量/症状/填备注 → 保存应弹「已保存」且日历格子出现标记；重开回显正确。顺带验证提醒设置小时、关心语管理添加。
+
+
+### 2026-08-24（用户反馈：vivo Edge——存钱罐小心愿输入完内容后无法保存）
+- [本会话·完成]（**已改 src；产物已被同时段 20:16/20:22 构建扫入**，临时 CDP 探针 6/6 + 布局 verify 10/10，未提交）：`src/js/personalize.js`（AI-B 域，跨域改动请对方知悉）+ `src/js/p2-features.js`（AI-A 域 piggyAmt 一处）。
+  - **根因（与 WORKLOG 2026-08 OPPO Edge ce-box 系列、Via 读空同源）**：安卓端 `#modal-input` 被 mobile-adapt 转成 ce-box 后，弹窗确定走 `input.value` 代理读取——vivo Edge 等内核对该代理支持不完整（defineProperty 被忽略/失败时 ghost 原生 value 恒空），用户明明打完字、点确定读回空串 → 心愿名弹「先写个心愿吧」/金额弹「金额没看懂」，三步添加链路静默卡死 =「输入完内容也没法保存」。标准 Chromium 无此问题（verify-piggy 全绿），故此前未暴露。
+  - **修复①（personalize.js openModal，全站弹窗通用）**：新增 `ceBoxOf()`/`readModalVal()`——代理读到空时直接从接管输入的 `.ce-box[data-for]` 取 innerText/textContent 兜底（同 music-player readCeInput 方案）；单行/多行（textarea）分支都接入。聚焦兜底：openModal 的 60ms 聚焦定时器优先 `box.focus()`（代理失效设备上原 focus 打在 ghost 上键盘不弹）。
+  - **修复②（p2-features.js piggyAmt）**：全角数字０-９先转半角再解析——部分输入法默认全角时「１００」此前会被过滤成空 →「金额没看懂」误报。
+  - 验证：临时探针（直载 src 源码模拟手机环境，已删）：E0 弹窗输入框已被转换 / T1 标准路径两步弹窗 / **T2 defineProperty 把 input.value 钉死为''（vivo Edge 同款故障）+ 全角１００ → 兜底生效直达监督人卡** / T3 心愿落库 a:100 / T4 正常路径回归 / T5 焦点落在 ce-box，6/6；`node --check` 通过；npm run verify 10/10。
+  - ⚠️ 真机确认（vivo Edge）：存钱罐＋新小心愿三步（名称→金额→监督人保存）应能走通并出现在心愿单；顺带验证任意弹窗（改昵称等）输入能保存。若真机仍卡在「打不出字」（连输入都失败），则是 OPPO Edge 式 ce-box 无法聚焦/打字，需下一步对 #modal-input 预标记 ceDone 跳过转换（原生 input 仅弹自动填充条不影响输入），待反馈。
+
+### 2026-08-24（用户反馈：OPPO pj110 Chrome——更新后桌面没有【心意市集】图标，刷新也没有）
+- [本会话·完成]（**已改 src + 已构建（20:16, sw: mochi-mt779xbw），新专项 verify-market-desk 10/10 + 布局 verify 10/10，未提交**）：仅 `src/js/gift-shop.js`（市集会话认领文件，1 处重构）+ 构建产物 + `tools/verify-market-desk.mjs`（新专项）。
+  - **根因（页数上限冲突死循环）**：gift-shop.js `injectDeskApp` 新建页判断用 `curCnt < 6`，而 personalize.js `DESK_PAGE_MAX = 5`、`deskPageCount()` 会把页数钳回 5。已装修满 5 页的桌面：市集注入建出**第 6 页**并写 desk-page-count=6 → `mochi-restore-done` 后 personalize `buildDeskPages()` 按 5 页收缩 → **删尾页并把页上 `[data-desk-widget]` 图标扫进隐藏池**；而 `app-market`/`app-giftbox` 不在 personalize 装修白名单 `WIDGET_IDS` 里，组件库加不回、池逻辑也不管 → 每次启动「重建第 6 页→又被钳掉进池」循环，用户看到的就是刷新也没图标（开屏等数据就绪才进入，进入时钳页已完成）。不满 5 页的桌面不受影响，故只有重度装修用户翻车。
+  - **修复**：两图标改 `injectDeskApps(pairs)` 成组注入——上限对齐 `curCnt < 5`（与 DESK_PAGE_MAX 一致）；放不下或布局已含时走 memo-app 同款安全兜底：**无条件 append 进 `.app-grid.p3-grid` 当前所在位置（哪怕整组暂在隐藏池，由 accounting ensureP3 随组找回）**+ `applyDeskLayout()` 按布局归位；两图标同进同出一页/同组，不再出现旧代码市集独占第 6 页、心意柜落第三页的分裂。
+  - 验证：`node --check` 通过；verify-market-desk 10/10（未装修落第三页组 / **满 5 页装修桌面：不新建第 6 页+计数保持 5+数据就绪钳页前后两图标均不在隐藏池** / 布局残留 app-market 场景不被吞 / 点开市集页 79 商品渲染 / 心意柜开页）；布局 verify 10/10 无回归。
+  - ⚠️ **需要 AI-B 后续处理（本会话未碰对方文件）**：personalize.js 装修白名单三处建议补 `app-market`/`app-giftbox`（以及 memo 会话遗留的 `app-memo`）——WIDGET_IDS 数组、WIDGET_NAMES、WIDGET_PREV_HTML。不加不影响本修复生效（图标已稳定落在 p3 组内），只影响装修模式组件库单独增删这三个图标。
+  - ⚠️ **构建扫入了同时段另一会话已保存改动**：p2-features.js / period.js / personalize.js（openModal ce-box 安卓读值兜底+聚焦兜底）/ WORKLOG.md——git status 显示均为完整保存状态，提交前请构建者再确认对方已收尾；如对方其后还有 src 改动需重新 build 收口。
+  - 真机确认（OPPO pj110 Chrome）：更新到新版本后桌面第三页图标组应出现【心意市集】【心意柜】两个图标，刷新/杀页面重进均在。
+
+### 2026-08-24（用户反馈：vivo Edge——番茄钟「添加夸夸字卡」/存钱罐碎碎念添加后，屏幕最右边出现竖排「已添加」且永不消失，划掉后台才没了）
+- [本会话·完成]（**已改 src + 已构建，verify-toast-cross-module 5/5 + 布局 verify 10/10 回归通过，未提交**）：仅 `src/js/p2-features.js`（AI-A 域，1 处）+ 构建产物。
+  - **根因**：p2-features.js 第三段 IIFE（同频伸手/番茄钟/存钱罐/喝水吃饭页共用段，L1504-2635）自带的 `toast()` 创建的是 `id="tp-ss-toast"` 元素——而全站 toast 样式只写在 `#cc-toast` 这个 ID 选择器上（chat-pages.css L149），无任何 `.cc-toast` 类规则 → 该 div 完全无样式。html/body 是 `display:flex` 横向居中（base.css L41），手机上 .phone 占满宽度后这个多余 flex 子项被压缩到约 0 宽 → 「已添加」一字一行竖排挤在屏幕最右缘；又因没有 #cc-toast 的 fixed 定位 + opacity:0 初始态 + 自动淡出动画，JS timer 只移除 show 类、元素本身永远可见 → 杀页面才消失。该段内所有 toast 调用（番茄钟设时长/夸夸字卡、存钱罐存取/碎碎念/心愿、同频伸手、喝水/吃饭提醒等）全部中招。
+  - **修复**：该 `toast()` 改为与其他 20+ 模块完全一致的写法——复用 `document.getElementById('cc-toast')`（无则建），timer 属性统一 `_timer`、2000ms。`node --check` 通过；tp-ss-toast 无其他引用点，无残留。
+  - ⚠️ 真机需确认（vivo Edge）：番茄钟添加夸夸字卡、存钱罐加碎碎念后，底部居中出现黑色胶囊「已添加」约 2 秒自动消失，右侧不再有竖排文字。
+
+### 2026-08-24（用户反馈：聊天「更多功能」里的【邀请TA】【问问TA】【搜索记录】打开后页面跑到聊天输入栏的下方，其他功能正常）
+- [本会话·完成]（**已改 src + 已构建，新增 tools/verify-kb-dock.mjs 12/12 + verify-more-panel-scope 30/30 回归 + 布局 verify 10/10，未提交**）：src/css/chat-main.css（AI-A 域）+ 构建产物。
+  - **根因（安卓键盘）**：三个异常功能是全部「更多功能」里**仅有的打开即自动聚焦输入框的功能**（邀请TA/问问TA 80ms 后 focus、搜索记录 60ms 后 focus）→ 面板一打开键盘立即弹出。安卓 viewport 是 interactive-widget=resizes-visual：键盘只缩 visualViewport 不缩 layout viewport，syncAndroidKb 据此把 .phone 收缩到可视高 → 输入栏上移停靠键盘上方；而 .poke-card/.more-panel/.emoji-card 半框是 position:**fixed**——锚定全高 layout viewport 原地不动 = 升起后的输入栏下方/键盘后面。其他功能不自动聚焦、键盘不弹，所以「正常显示」。headless 复现：模拟 vv.height 844→400 + resize，fixed 半框底边停在 748、输入栏顶升到 336，面板整体深入输入栏下方 348px。
+  - **修复**：`.more-panel`/`.poke-card`/`.emoji-card` 基础规则 fixed → **absolute**——锚定收缩中的 .phone/#page-chat，键盘弹出时随容器一起停靠输入栏上方（复现脚本验证：面板底边 304 < 输入栏 top 336）。手机端 .phone 满屏时 absolute 与 fixed 几何等价（无键盘时矩形逐一比对不变）；桌面宽屏行为与上一轮 @media 修复一致（该 @media 现只剩 .call-mini 需要——其拖动坐标按视口计算，真机保持 fixed）；Pong/贪吃蛇 `-fs` 全屏变体是 #id.pong-fs 显式 fixed 特异性更高不受影响。附带收益：红包自定义金额/帮我决定表单等手动聚焦场景同样不再被键盘盖住。
+  - **验证**：tools/verify-kb-dock.mjs（新专项）12/12——邀请TA/问问TA/搜索记录/帮我决定 四面板 × {无键盘贴输入栏上方 + pos=absolute + 模拟键盘弹出后仍贴输入栏上方}；verify-more-panel-scope 30/30（宽屏收进手机框 + 手机端矩形不变）+ npm run verify 10/10 无布局回归。
+  - ⚠️ 真机需确认：安卓（红米 K80/vivo Y35）打开这三个功能时键盘弹出后面板应完整可见并随输入栏停靠在键盘上方；iOS resizes-content 本就正常（layout viewport 整体收缩，fixed/absolute 行为一致），理论零变化。
+
 ### 2026-08-24（用户要求：喝水页功能优化）
 - [本会话·完成]（**已改 src + 已构建，verify-water 17/17 + 布局 verify 10/10，未提交**）：src/js/p2-features.js（AI-A 域）+ src/js/calendar.js（AI-A 域·日历打点 1 处）+ src/css/chat-pages.css（AI-A 域）+ 构建产物 + tools/verify-water.mjs（新专项）。
   - 功能：①发到聊天按钮（chatAddIn 推「我今天喝了 X/Y 杯（Zml）」）②TA 提醒按钮（字卡池随机×TA 语气模板 4 型+还差/喝够尾注，显示并推聊天）③达标彩蛋（达标瞬间震动+card.done 涟漪+8 小水杯点亮）④近7天柱状图（water-history 近15天 {date:count}，7 列达标绿/部分蓝/空灰今日高亮）⑤连续达标（water-streak{date,n} 跨天+1/减水回退，显示🔥连续达标N天）⑥单次容量ml（water-size 默认250，unit 显示 Xml/Yml）⑦日历打点（window.waterDayHas 暴露，calendar.js renderGrid 加 .cal-water 类，CSS 蓝点）。
@@ -49,7 +136,8 @@
   - **关键时序坑（重要，后续加第三页图标者必读）**：全新冷启动时 personalize.js 的 rebuildDeskWhenReady→buildDeskPages（desk-page-count 未存时按 DESK_PAGE_MIN 收缩）会把第三页整页（含 p3apps 组）**短暂移进隐藏池**，稍后 accounting.js 的 ensureP3 才把整组找回归位。所以动态图标注入**必须无条件 append 进 `.app-grid.p3-grid` 当前所在位置（哪怕在池里），随组一起回第三页**；不能加「在池里就跳过」守卫（会让图标永远孤儿——首版踩坑，verify-memo 抓出后已修）。
   - ⚠️ **需要 AI-B 后续处理（本会话未碰对方文件）**：personalize.js 装修白名单三处加 `app-memo`——WIDGET_IDS 数组、WIDGET_NAMES（'备忘录图标'）、WIDGET_PREV_HTML（_appIcoPrev('备忘')）。当时检测到对方会话正在编辑 personalize.js（16:11 有保存），按「对方进行中文件不碰」规则跳过。**不加不影响功能**（app-* 在 grid 内本就不进池逻辑、装修拖拽/布局持久化正常），只影响装修模式组件库单独增删该图标。
   - ⚠️ **并发提示**：本会话期间（16:05~16:14+）检测到另一会话在持续保存大量文件（p2-features/chat/chatcard/feed/mail/market.css/contacts/template/personalize/period/bg-keep 等，含番茄钟/存钱罐等新功能），最终构建（17:02, sw: mochi-mt70d0tg）已包含其当时已保存状态；**提交前请对方确认已保存完整，构建者建议再 build 一次收口**。本会话全程只新增文件+改 build.mjs，未碰任何对方正在编辑的文件。
-  - 验证：`node --check` 全部 src/js 通过 + verify 布局 10/10 + verify-memo 14/14（图标落位第三页/开页全屏/添加/排序/勾选/置顶/编辑/删除/清理/刷新持久化/返回）。截图 tools/shot-memo.mjs 产物 memo-shot-p3.jpg（第三页图标）/ memo-shot-page.jpg（页面效果）在仓库根目录可看。需真机确认：安卓 ce-box 输入框添加备忘、Enter 提交、震动反馈。
+  - **续改（同会话·用户要求全局互通）**：备忘录数据改为**所有桌面联系人共享一份**（参照 fish-log/period 先例）——键移到 `xy-home-v2` 根命名空间（memo-app-items / memo-app-send / memo-app-global-migrated 幂等标记）。① 存量迁移：遍历 getContacts() 把各命名空间旧 memo-app-* 按 id 合并进根键（冲突取 ts 新、发送开关任一开过即全局开）、清理旧键；② **误迁自愈（重点）**：contacts.js migrateLegacy 会把无冒号根键当旧顶层键拷进 default 并删 LS 根键（memo-app-* 尚未进 EXCLUDE，每次加载循环发生）——本文件在 eval / restore-done / +600ms / +2000ms 四个时点做「LS 根键缺失→从 default 副本写回」（必须看裸 localStorage，root.get 会被 memoryCache 掩盖误判），配合 IDB 根键保留 + memoryCache，数据三重兜底永不丢；**contacts.js 正被对方并发编辑（17:32 仍在保存），故未加 EXCLUDE，转交 AI-B 补三键**（'memo-app-items'/'memo-app-send'/'memo-app-global-migrated'，补后自愈逻辑自然闲置、default 副本循环消失）。verify-memo 扩到 16/16（新增：多桌面存量按 id 合并冲突取 ts 新 + 误迁自愈写回；测试读数必须走 xyStore.get——裸 localStorage 会被 eat 误判为空）。
+  - 验证：`node --check` 全部 src/js 通过 + verify 布局 10/10 + verify-memo 14/14（图标落位第三页/开页全屏/添加/排序/勾选/置顶/编辑/删除/清理/刷新持久化/返回）。截图 tools/shot-memo.mjs 产物 memo-shot-p3.jpg（第三页图标）/ memo-shot-page.jpg（页面效果）在仓库根目录可看。需真机确认：安卓 ce-box 输入框添加备忘、Enter 提交、震动反馈、**切桌面联系人后备忘录数据一致**。
 
 ### 2026-08-24（用户要求：字卡库公用/专属更新需一次性弹窗提醒，引导先导出字卡 json 备份）
 - [AI-A·完成]（**已构建 verify 10/10 + verify-cc-scope 扩至 27/27（新增场景 E 测弹窗），未提交**）：`src/js/chatcard.js` + `src/template.html`（#cc-scope-mask 弹层锚点）+ `src/js/contacts.js` + `src/js/mobile-adapt.js`（**两处 AI-B 域最小改动，请知悉**：EXCLUDE 加 `cc-scope-notice-done`；FLOAT_SELECTORS 加 `#cc-scope-mask`）+ 构建产物。

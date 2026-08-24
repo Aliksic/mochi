@@ -1506,10 +1506,10 @@ if (ckRefresh) {
   function vibrate(p) { try { if (navigator.vibrate) navigator.vibrate(p); } catch (e) {} }
   function editingNow() { return Array.from(document.querySelectorAll('.app-grid')).some(g => g.classList.contains('editing')); }
   function toast(msg) {
-    let t = document.getElementById('tp-ss-toast');
-    if (!t) { t = document.createElement('div'); t.id = 'tp-ss-toast'; document.body.appendChild(t); }
+    let t = document.getElementById('cc-toast');
+    if (!t) { t = document.createElement('div'); t.id = 'cc-toast'; document.body.appendChild(t); }
     t.textContent = msg; t.className = 'cc-toast'; void t.offsetWidth; t.className = 'cc-toast show';
-    clearTimeout(t._tm); t._tm = setTimeout(() => { t.className = 'cc-toast'; }, 1800);
+    clearTimeout(t._timer); t._timer = setTimeout(() => { t.className = 'cc-toast'; }, 2000);
   }
   function openPage(pg) {
     document.querySelectorAll('.page').forEach(p => p.hidden = true);
@@ -2101,9 +2101,9 @@ if (ckRefresh) {
 
   function piggyEsc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
   function piggyFmt(n) { try { return n.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); } catch (e) { return (Math.round(n * 100) / 100).toFixed(2); } }
-  // 输入容错：只留数字和点，两位小数，0 < n ≤ 9,999,999
+  // 输入容错：全角数字先转半角（部分输入法默认全角），只留数字和点，两位小数，0 < n ≤ 9,999,999
   function piggyAmt(v) {
-    const s = String(v == null ? '' : v).trim().replace(/[^\d.]/g, '');
+    const s = String(v == null ? '' : v).replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 65248)).trim().replace(/[^\d.]/g, '');
     const n = Math.round(parseFloat(s) * 100) / 100;
     return (n > 0 && n <= 9999999) ? n : 0;
   }

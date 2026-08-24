@@ -1,5 +1,6 @@
 // ===== 功能：双人 Pong 小游戏（聊天页更多功能 → Pong） =====
-// 玩家控制左侧挡板，TA 由 AI 控制右侧挡板，球在双方之间持续运动。
+// 玩家控制右侧挡板，TA 由 AI 控制左侧挡板，球在双方之间持续运动。
+// （v3.11.x：比分/提示文案与实际操控侧对应——原文案写"左侧"与实现不符）
 // AI = 基础预测 + 反应延迟 + 移动速度限制 + 预测误差 + 概率行为池 + 行为冷却。
 // 游戏结束后写入聊天记录（special:'pong'）+ TA 随机回应（内置三组字卡池）。
 // 不依赖聊天 AI；音效用 Web Audio 生成短促 beep，可静音。
@@ -479,7 +480,7 @@
     } catch (e) {}
     const title = draw ? '平局' : (playerWin ? '🏆 你赢了' : 'TA 赢了');
     const body =
-      '<div class="pong-end-score">你 ' + s.playerScore + ' : ' + s.opponentScore + ' TA</div>' +
+      '<div class="pong-end-score">TA ' + s.opponentScore + ' : ' + s.playerScore + ' 你</div>' +
       '<div class="pong-end-stat">总回合 ' + s.totalRounds + ' · 用时 ' + fmt(sec) + '</div>' +
       '<div class="pong-end-stat">你的最高连得 ' + s.maxPlayerStreak + ' · TA 最高连得 ' + s.maxOpponentStreak + '</div>' +
       '<div class="pong-end-stat">累计 ' + stats.win + '胜 ' + stats.lose + '负 ' + stats.draw + '平 · 历史最高连得 ' + stats.maxStreak + '</div>';
@@ -582,7 +583,8 @@
   function renderScore(s) {
     if (!scoreEl) return;
     const scale = s.flashScore > 0 ? 'transform:scale(' + (1 + s.flashScore * 0.3) + ')' : '';
-    scoreEl.innerHTML = '<span class="pong-s-you">你 ' + s.playerScore + '</span><span class="pong-s-sep">:</span><span class="pong-s-ta">' + s.opponentScore + ' TA</span>';
+    // v3.11.x：比分左右位与挡板侧一致——TA 挡板在左显示在左，玩家（你）在右
+    scoreEl.innerHTML = '<span class="pong-s-ta">' + s.opponentScore + ' TA</span><span class="pong-s-sep">:</span><span class="pong-s-you">你 ' + s.playerScore + '</span>';
     scoreEl.style.cssText = scale;
   }
 
@@ -873,12 +875,13 @@
     // 检查 localStorage 保存的对局（刷新页面后恢复）
     const saved = loadSaved();
     if (saved) {
-      showOverlay('双人 Pong', '<div class="pong-start-tip">有未完成的对局<br>你 ' + saved.playerScore + ' : ' + saved.opponentScore + ' TA</div><div class="pong-start-ctrl">手机：左半边上下拖动<br>电脑：↑↓ 或 W S</div>', '重新开始');
+      showOverlay('双人 Pong', '<div class="pong-start-tip">有未完成的对局<br>你 ' + saved.playerScore + ' : ' + saved.opponentScore + ' TA</div><div class="pong-start-ctrl">手机：按住画面上下拖动<br>电脑：↑↓ 或 W S</div>', '重新开始');
       if (overlayBtn2El) overlayBtn2El.hidden = false;
     } else {
       const curDiff = (diffSel && diffSel.value) || 'easy';
       const ws = (DIFFS[curDiff] || DIFFS.easy).winScore;
-      showOverlay('双人 Pong', '<div class="pong-start-tip">你控制左侧挡板<br>先得 ' + ws + ' 分获胜</div><div class="pong-start-ctrl">手机：左半边上下拖动<br>电脑：↑↓ 或 W S</div>', '开始');
+      // v3.11.x：提示与实际一致——玩家控制的是右侧挡板（原文案写"左侧"）
+      showOverlay('双人 Pong', '<div class="pong-start-tip">你控制右侧挡板<br>先得 ' + ws + ' 分获胜</div><div class="pong-start-ctrl">手机：按住画面上下拖动<br>电脑：↑↓ 或 W S</div>', '开始');
       if (overlayBtn2El) overlayBtn2El.hidden = true;
     }
     stopGame();

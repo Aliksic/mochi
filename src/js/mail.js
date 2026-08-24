@@ -127,6 +127,7 @@
     });
   }
   // 打开信箱页（渲染 + 清角标），供信箱图标点击与弹窗点击共用
+  // v3.10.x：暴露给 chat.js——聊天里的信件通知（写了一封信/给你回了信等）可点击直达
   function openMailPage() {
     // v3.9.x：打开信箱立即补查到期回信/来信——iOS 短会话里 60s 定时器往往没机会跑，
     // 用户「点开信箱」这一刻正是最该看到 TA 回信的时刻
@@ -137,6 +138,7 @@
     const mp = document.getElementById('page-mail');
     if (mp) mp.hidden = false;
   }
+  window.openMailPage = openMailPage;
   // 写信纸 HTML（简约卡片：标题 + 寄信人/时间 + 正文）
   // 正文支持字卡库图片（dataURL）直接显示；图片/表情包都是字卡，统一渲染为
   // 同尺寸缩略图（sticker:/image: 前缀仅作历史类型标记，不再区分显示大小）
@@ -225,7 +227,26 @@
     } else {
       footer = '<div class="mail-actions"><button class="cc-tool cc-tool-danger" id="mail-del-btn">删除</button><button class="cc-tool" id="mail-close2">关闭</button></div>';
     }
-    if (window.openTCPanel) window.openTCPanel('信件', html + footer);
+    // v3.10.x：详情弹层兜底——openTCPanel 定义在 ta-ask.js 模块尾部，该模块若在某设备
+    // 顶层抛错（文件级 try/catch 只保证后续模块能跑，本模块剩余部分仍中断），
+    // window.openTCPanel 会缺失 → 点信件静默无反应。这里检测打开失败时退回全站
+    // openModal 纯文本展示（personalize.js 早于 ta-ask 加载，可用性高得多），
+    // 保证信件永远有地方看。
+    let panelOpened = false;
+    try {
+      if (window.openTCPanel) {
+        window.openTCPanel('信件', html + footer);
+        const mk = document.getElementById('tc-mask');
+        panelOpened = !!(mk && !mk.hidden);
+      }
+    } catch (e) {}
+    if (!panelOpened && window.openModal) {
+      const stripImg = (s) => String(s == null ? '' : s).replace(/(?:sticker|image:)?data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+/g, '［图片］');
+      let txt = (l.tt ? '【' + l.tt + '】\n' : '') + stripImg(l.content);
+      if (l.myReply && l.type !== 'sent') txt += '\n\n—— 我的回信 ——\n' + stripImg(l.myReply.content);
+      if (l.partnerReply) txt += '\n\n—— 对方的回信 ——\n' + stripImg(l.partnerReply.content);
+      window.openModal(l.fromMe ? '寄出的信' : '信件', '', () => {}, { noInput: true, staticText: txt });
+    }
     bindLetterImgClicks(document.getElementById('tc-body'));
     const close2 = document.getElementById('mail-close2');
     if (close2) close2.addEventListener('click', () => { document.getElementById('tc-mask').hidden = true; viewLetter = null; });
@@ -267,7 +288,8 @@
     const l = viewLetter;
     if (!l) return;
     // v3.6.x：保留 sticker:/image: 标记前缀（区分图片/表情包类型），不再剥掉
-    const val = document.getElementById('mail-reply-input').value.trim();
+    // v3.10.x：读值走 readMailVal（安卓 ce-box 代理读空兜底）
+    const val = readMailVal(document.getElementById('mail-reply-input')).trim();
     if (!val) { toast('回信内容不能为空'); return; }
     const name = partnerName();
     const list = load();
@@ -290,7 +312,8 @@
       render();
       updateBadge();
       showPage('page-mail');
-      if (window.chatAddSystem) window.chatAddSystem('你给 ' + name + ' 回了一封信');
+      // v3.10.x：mailNotice=true → 聊天里该系统消息可点击直达信箱
+      if (window.chatAddSystem) window.chatAddSystem('你给 ' + name + ' 回了一封信', { mailNotice: true });
       toast('回信已寄出');
       // v3.6.x：TA 收藏我的回信（概率可调，与聊天消息收藏一致）
       // v3.7.x：概率由收藏设置页控制，默认 30%
@@ -311,10 +334,11 @@
   // v3.7.x：信件系统消息写入「信件所属桌面」的聊天——与 feed.js notifyFeedPostToChat
   //   同模式：当前桌面走内存链路（chatAddSystem 实时渲染）；非当前桌面直接写该桌面
   //   IDB 聊天记录 + LS 快照（该桌面 msgs 在 contact-switched 时重置，下次进入由 loadMsgs 读回）
-  function notifyMailToChat(cid, text) {
+  function notifyMailToChat(cid, text, opts) {
     const cur = window.__activeCid || 'default';
     if (cid === cur) {
-      if (window.chatAddSystem) window.chatAddSystem(text);
+      // v3.10.x：opts.mailNotice → 聊天通知可点击打开信箱
+      if (window.chatAddSystem) window.chatAddSystem(text, { mailNotice: !!(opts && opts.mailNotice) });
       return;
     }
     const prefix = 'xy-home-v2:' + cid;
@@ -324,7 +348,7 @@
           let arr = [];
           try { arr = Array.isArray(v) ? v : JSON.parse(v || '[]'); } catch (e) { arr = []; }
           if (!Array.isArray(arr)) arr = [];
-          arr.push({ side: 'in', special: 'poke', text: text, ts: Date.now() });
+          arr.push({ side: 'in', special: 'poke', text: text, ts: Date.now(), mailNotice: !!(opts && opts.mailNotice) });
           try { window.idbSet(prefix + ':chat-msgs', JSON.stringify(arr)); } catch (e) {}
           try { localStorage.setItem(prefix + ':chat-msgs', JSON.stringify(arr)); } catch (e) {}
         }).catch(() => {});
@@ -370,7 +394,7 @@
         // 到期：落地 TA 回信
         list[idx].partnerReply = { content: p.content, tm: now };
         save(list, cid);
-        notifyMailToChat(cid, name + ' 给你回了信');
+        notifyMailToChat(cid, name + ' 给你回了信', { mailNotice: true });
         // v3.5.107：TA 回信且不在信箱页 → 前台桌面弹窗（仅当前激活桌面才弹，用户能看到）
         if (cid === (window.__activeCid || 'default') && window.showDeskPopup && !mailPageVisible()) {
           window.showDeskPopup({ name: '信箱', text: '给你回了一封信：' + p.content, onClick: openMailPage, isHidden: document.visibilityState === 'hidden' });
@@ -428,7 +452,8 @@
   function sendLetter() {
     const input = document.getElementById('mail-input');
     // v3.6.x：保留 sticker:/image: 标记前缀（区分图片/表情包类型），不再剥掉
-    const content = input ? input.value.trim() : '';
+    // v3.10.x：读值走 readMailVal（安卓 ce-box 代理读空兜底，防「信没寄出去」）
+    const content = input ? readMailVal(input).trim() : '';
     if (!content) { toast('信件内容不能为空'); return; }
     const name = partnerName();
     const title = TITLES[Math.floor(Math.random() * TITLES.length)];
@@ -450,9 +475,15 @@
       replyPendingSave(pending);
     }
     if (input) input.value = '';
-    if (window.chatAddSystem) window.chatAddSystem('你给 ' + name + ' 写了一封信');
+    if (input && input.__ceBox) input.__ceBox.textContent = '';
+    // v3.10.x：信件通知可点击（chat.js 渲染 mail-notice 类，点击打开信箱）
+    if (window.chatAddSystem) window.chatAddSystem('你给 ' + name + ' 写了一封信', { mailNotice: true });
     toast('信件已寄出');
     render();
+    // v3.10.x：寄出后自动回到信箱页并切到「寄出的信」——原实现停在写信页，
+    // 用户返回后看到的还是写信卡片，以为信没寄出去/找不到在哪看
+    showPage('page-mail');
+    selectMailTab('out');
   }
   // ================= TA 主动来信（定时机制，概率可在回复设置-信箱调整） =================
   const TA_LETTERS = [
@@ -660,7 +691,7 @@
       cs.set('mail-letter-last', String(now));
       cs.set('mail-letter-next', String(cfg.writeMin + Math.random() * Math.max(1, cfg.writeMax - cfg.writeMin)));
       letterDayAdd(cid);
-      notifyMailToChat(cid, '<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>' + name + ' 给你寄来了一封信');
+      notifyMailToChat(cid, '<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>' + name + ' 给你寄来了一封信', { mailNotice: true });
       // 前台弹窗 + 角标刷新仅当前激活桌面（用户能看到）；非当前桌面下次切回时 load 自然显示
       if (cid === (window.__activeCid || 'default')) {
         updateBadge();
@@ -707,6 +738,22 @@
   window.addEventListener('focus', eagerCheck);
 
   // ================= 入口与交互 =================
+  // v3.10.x：写信/回信内容读取兜底——安卓 mobile-adapt 把输入框转成 ce-box 后值走
+  // value 代理，个别内核（vivo/OPPO 系实测先例）代理读空 → sendLetter 拿到空串
+  // 直接「信件内容不能为空」返回，信根本没寄出去（列表自然无信可点、也永远等不到
+  // 回信）。这里对齐 period.js readInpVal / music-player readCeInput：读空再从
+  // __ceBox 取 innerText 兜底。
+  function readMailVal(el) {
+    if (!el) return '';
+    let v;
+    try { v = el.value; } catch (e) {}
+    if (v !== undefined && v !== null && String(v).trim()) return String(v);
+    try {
+      const box = el.__ceBox || (el.parentNode && el.parentNode.querySelector('.ce-box[data-for="' + (el.id || '') + '"]'));
+      if (box) return (box.innerText !== undefined ? box.innerText : box.textContent) || '';
+    } catch (e) {}
+    return v === undefined || v === null ? '' : String(v);
+  }
   const mailApp = document.querySelector('.app[data-app="mail"]');
   const mailPage = document.getElementById('page-mail');
   if (mailApp && mailPage) {
@@ -740,13 +787,14 @@
   if (mailReplyBack) mailReplyBack.addEventListener('click', () => { if (window.closeEmojiPanel) window.closeEmojiPanel(); viewLetter = null; showPage('page-mail'); });
   const mailReplySend = document.getElementById('mail-reply-send');
   if (mailReplySend) mailReplySend.addEventListener('click', submitReply);
-  // tab 切换
+  // tab 切换（v3.10.x 抽成函数：寄信成功后自动跳「寄出的信」复用）
+  function selectMailTab(name) {
+    mtab = name;
+    document.querySelectorAll('#page-mail .fav-tab').forEach(x => x.classList.toggle('sel', x.dataset.mtab === name));
+    document.querySelectorAll('#page-mail .cal-card').forEach(c => { c.hidden = c.dataset.mpanel !== name; });
+  }
   document.querySelectorAll('#page-mail .fav-tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      mtab = tab.dataset.mtab;
-      document.querySelectorAll('#page-mail .fav-tab').forEach(x => x.classList.toggle('sel', x === tab));
-      document.querySelectorAll('#page-mail .cal-card').forEach(c => { c.hidden = c.dataset.mpanel !== mtab; });
-    });
+    tab.addEventListener('click', () => selectMailTab(tab.dataset.mtab));
   });
 
   // ================= 写信/回信：表情包 / 图片 工具栏（v3.6.x 只留这两个按钮） =================

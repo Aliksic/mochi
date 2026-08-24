@@ -232,6 +232,24 @@ try {
     const okBtn = document.getElementById('modal-ok');
     const cancelBtn = document.getElementById('modal-cancel');
     if (!mask || !input) return;
+    // v3.10.x：vivo/OPPO Edge 等安卓内核对 ce-box（mobile-adapt 输入转换器）的
+    // value 代理支持不完整——弹窗里明明打完字，点确定读 input.value 却是空，
+    // 所有走通用弹窗的保存（昵称/金额/存钱罐小心愿…）静默失败。
+    // 读值兜底：代理读到空时直接找接管输入的 .ce-box 取文本（同 music-player 方案）；
+    // 聚焦兜底：有 ce-box 时直接聚焦它（focus 可能没被代理到，键盘不弹）。
+    function ceBoxOf(el) {
+      try {
+        if (el.__ceBox) return el.__ceBox;
+        if (el.parentNode) return el.parentNode.querySelector('.ce-box[data-for="' + (el.id || '') + '"]');
+      } catch (e) {}
+      return null;
+    }
+    function readModalVal(el) {
+      try { const v = el.value; if (v != null && String(v).length) return String(v); } catch (e) {}
+      const box = ceBoxOf(el);
+      if (box) { try { const t = (box.innerText !== undefined ? box.innerText : box.textContent) || ''; if (t.length) return t; } catch (e) {} }
+      try { return el.value || ''; } catch (e) { return ''; }
+    }
     let cb = null;
     let pillsOnOk = null;
     let noInput = false;
@@ -366,8 +384,11 @@ try {
       // focus 打在 display:none 元素上，键盘不弹，批量导入用户首触必失败一次）
       setTimeout(() => {
         if (noInput) return;
-        if (opts.textarea && textarea) textarea.focus();
-        else if (input) input.focus();
+        const target = (opts.textarea && textarea) ? textarea : input;
+        if (!target) return;
+        const box = ceBoxOf(target);
+        try { if (box) { box.focus(); return; } } catch (e) {}
+        try { target.focus(); } catch (e) {}
       }, 60);
     };
     // iOS Safari：<input type="color"> 处于 display:none（hidden）时 .click() 不会弹取色器，
@@ -426,8 +447,8 @@ try {
         cb(pillVal);
         return;
       }
-      if (textarea && !textarea.hidden) { cb(textarea.value, selectedGroup); return; }
-      if (swatches.hidden) cb(noInput ? 'ok' : input.value);
+      if (textarea && !textarea.hidden) { cb(readModalVal(textarea), selectedGroup); return; }
+      if (swatches.hidden) cb(noInput ? 'ok' : readModalVal(input));
       else if (picked === -2 && customVal) cb(customVal);
       else if (picked >= 0) cb(picked);
     }

@@ -1338,9 +1338,13 @@
     // v3.5.146：'ask-msg' 为互动卡片提示语（TA想问你一个问题 等）——渲染与 poke 相同，
     // 但不算入 notable（addRec 的弹窗/通知联动），避免提示语与卡片各弹一条通知
     if (rec.special === 'poke' || rec.special === 'ask-msg') {
-      m.className = 'msg-poke';
+      // v3.10.x：信件通知（mail.js 写入 mailNotice）渲染为可点击样式，点击直达信箱
+      m.className = 'msg-poke' + (rec.mailNotice ? ' mail-notice' : '');
       m.innerHTML = '<span>' + pokeIconHtml(rec.text) + '</span>' +
         (rec.img ? '<img class="msg-poke-img" src="' + attrEsc(rec.img) + '" alt="新头像">' : '');
+      if (rec.mailNotice) {
+        m.addEventListener('click', () => { if (window.openMailPage) window.openMailPage(); });
+      }
       body.appendChild(m);
       maybeScrollChatBottom(rec.side);
       return m;
@@ -2156,7 +2160,7 @@
     if (!opts.special && !opts.silent && window.playSfx) window.playSfx('in');
     // v3.6.x：主动发送标识——标记 initiative，渲染时气泡左上角显示小爱心
     // 注意：必须在此透传给 addRec（曾漏传导致爱心从不显示）
-    return addRec({ side: 'in', text: text, initiative: opts.initiative, special: opts.special, quote: opts.quote, type: opts.type, img: opts.img, parts: opts.parts, askQuestion: opts.askQuestion, askStatus: opts.askStatus, askOptions: opts.askOptions, askType: opts.askType, choiceQuestion: opts.choiceQuestion, choiceOptions: opts.choiceOptions, choicePref: opts.choicePref, choiceCat: opts.choiceCat, choiceStatus: opts.choiceStatus, choiceAnswer: opts.choiceAnswer, choiceReply: opts.choiceReply, choiceMatch: opts.choiceMatch, curiousQuestion: opts.curiousQuestion, curiousQuick: opts.curiousQuick, curiousReplies: opts.curiousReplies, curiousFollowup: opts.curiousFollowup, curiousQid: opts.curiousQid, curiousCat: opts.curiousCat, curiousStatus: opts.curiousStatus, curiousAnswer: opts.curiousAnswer, curiousReply: opts.curiousReply, roastText: opts.roastText, roastCat: opts.roastCat, roastStatus: opts.roastStatus, roastAnswer: opts.roastAnswer, roastReply: opts.roastReply, rpAmount: opts.rpAmount, rpWish: opts.rpWish, rpStatus: opts.rpStatus, rpTs: opts.rpTs, rpCover: opts.rpCover });
+    return addRec({ side: 'in', text: text, initiative: opts.initiative, special: opts.special, quote: opts.quote, type: opts.type, img: opts.img, parts: opts.parts, mailNotice: opts.mailNotice, askQuestion: opts.askQuestion, askStatus: opts.askStatus, askOptions: opts.askOptions, askType: opts.askType, choiceQuestion: opts.choiceQuestion, choiceOptions: opts.choiceOptions, choicePref: opts.choicePref, choiceCat: opts.choiceCat, choiceStatus: opts.choiceStatus, choiceAnswer: opts.choiceAnswer, choiceReply: opts.choiceReply, choiceMatch: opts.choiceMatch, curiousQuestion: opts.curiousQuestion, curiousQuick: opts.curiousQuick, curiousReplies: opts.curiousReplies, curiousFollowup: opts.curiousFollowup, curiousQid: opts.curiousQid, curiousCat: opts.curiousCat, curiousStatus: opts.curiousStatus, curiousAnswer: opts.curiousAnswer, curiousReply: opts.curiousReply, roastText: opts.roastText, roastCat: opts.roastCat, roastStatus: opts.roastStatus, roastAnswer: opts.roastAnswer, roastReply: opts.roastReply, rpAmount: opts.rpAmount, rpWish: opts.rpWish, rpStatus: opts.rpStatus, rpTs: opts.rpTs, rpCover: opts.rpCover });
   }
   function addOut(text) {
     return addRec({ side: 'out', text: text });
@@ -2174,7 +2178,7 @@
   // 整个消息列表 = 收消息卡顿来源之一）
   window.chatAddSystem = function (text, opts) {
     opts = opts || {};
-    return addIn(text, { special: opts.special || 'poke', img: opts.img, askQuestion: opts.askQuestion, askStatus: opts.askStatus, askOptions: opts.askOptions, askType: opts.askType, choiceQuestion: opts.choiceQuestion, choiceOptions: opts.choiceOptions, choicePref: opts.choicePref, choiceCat: opts.choiceCat, curiousQuestion: opts.curiousQuestion, curiousQuick: opts.curiousQuick, curiousReplies: opts.curiousReplies, curiousFollowup: opts.curiousFollowup, curiousQid: opts.curiousQid, curiousCat: opts.curiousCat, roastText: opts.roastText, roastCat: opts.roastCat });
+    return addIn(text, { special: opts.special || 'poke', img: opts.img, mailNotice: opts.mailNotice, askQuestion: opts.askQuestion, askStatus: opts.askStatus, askOptions: opts.askOptions, askType: opts.askType, choiceQuestion: opts.choiceQuestion, choiceOptions: opts.choiceOptions, choicePref: opts.choicePref, choiceCat: opts.choiceCat, curiousQuestion: opts.curiousQuestion, curiousQuick: opts.curiousQuick, curiousReplies: opts.curiousReplies, curiousFollowup: opts.curiousFollowup, curiousQid: opts.curiousQid, curiousCat: opts.curiousCat, roastText: opts.roastText, roastCat: opts.roastCat });
   };
   // 供外部模块推送普通"联系人消息"（如查岗日常更新），持久化 + 渲染
   window.chatAddIn = function (text, opts) {
@@ -3089,12 +3093,17 @@ function partialRetractMsg(msgEl, side) {
   // v3.6.x：JS 注入到 poke-card（模板只放静态头/列表锚点，这里与 renderPokeCard 同步）
   // v3.7.x：拍一拍面板是给用户用的——两个 tab 点卡片/输入都发送"我 拍联系人"
   //   （字卡里的"我/你"由 sendPoke 自动替换成联系人昵称），不再触发"联系人拍我"
-  let pokeMode = 'ta';            // 当前 tab：ta=联系人昵称的拍一拍 / mine=我的拍一拍
+  // v3.11.x：三分区 tab——公用拍一拍 / 联系人昵称的拍一拍（专属）/ 我的拍一拍
+  let pokeMode = 'ta';            // 当前 tab：public=公用 / ta=联系人昵称的拍一拍 / mine=我的拍一拍
   let pokeCurGroup = '__preset';  // 当前选中分组（'__preset' = 预设）
   const pokeTabsRow = document.createElement('div');
   pokeTabsRow.className = 'poke-tabs-row';
-  // 拍一拍双 tab 用独立 .poke-tab 类（不能用 .emoji-tab：表情包面板全局
+  // 拍一拍多 tab 用独立 .poke-tab 类（不能用 .emoji-tab：表情包面板全局
   // document.querySelectorAll('.emoji-tab') 的监听会劫持拍一拍 tab 点击并把 sel 加回全部 tab）
+  const pokeTabPub = document.createElement('button');
+  pokeTabPub.className = 'poke-tab poke-tab-pub';
+  pokeTabPub.type = 'button';
+  pokeTabPub.dataset.ptab = 'public';
   const pokeTabTa = document.createElement('button');
   pokeTabTa.className = 'poke-tab sel poke-tab-ta';
   pokeTabTa.type = 'button';
@@ -3103,6 +3112,7 @@ function partialRetractMsg(msgEl, side) {
   pokeTabMine.className = 'poke-tab poke-tab-mine';
   pokeTabMine.type = 'button';
   pokeTabMine.dataset.ptab = 'mine';
+  pokeTabsRow.appendChild(pokeTabPub);
   pokeTabsRow.appendChild(pokeTabTa);
   pokeTabsRow.appendChild(pokeTabMine);
   // 工具行：新建分组 + 新增拍一拍（复用表情包 .emoji-tool 样式）
@@ -3217,7 +3227,7 @@ function partialRetractMsg(msgEl, side) {
   (function () {
     try {
       const p = store.get('poke-tab');
-      if (p === 'mine') pokeMode = 'mine';
+      if (p === 'mine' || p === 'public') pokeMode = p;
     } catch (e) {}
     try {
       const g = store.get('poke-group-' + pokeMode);
@@ -3225,6 +3235,7 @@ function partialRetractMsg(msgEl, side) {
     } catch (e) {}
   })();
   function pokeTabLabel(kind) {
+    if (kind === 'public') return '公用拍一拍';
     if (kind === 'ta') {
       const n = chatPartnerName();
       return n + ' 的拍一拍';
@@ -3233,13 +3244,14 @@ function partialRetractMsg(msgEl, side) {
     return (n === '我' ? '我的' : n + ' 的') + '拍一拍';
   }
   // 当前 tab 的分组列表 → [{key,label,cards}]
-  // v3.7.x：联系人的拍一拍 = 只读展示 自定义聊天字卡 → 拍一拍 的分组和字卡（原样展示，
-  //   不按人称归类、不混入预设/用户分组）；我的拍一拍 = 预设 + 用户分组（可新增/新建分组）
+  // v3.7.x：我的拍一拍 = 预设 + 用户分组（可新增/新建分组）
+  // v3.11.x：三分区——公用拍一拍 = 只读展示 公用字卡 → 拍一拍 分组；联系人昵称的
+  //   拍一拍 = 只读展示 专属字卡 → 拍一拍 的分组和字卡（原样展示，不按人称归类、不混入预设/用户分组）
   function pokeTabGroups(kind) {
     const out = [];
-    if (kind === 'ta') {
+    if (kind === 'public' || kind === 'ta') {
       let legacy = [];
-      try { legacy = (window.getPokeGroups && window.getPokeGroups()) || []; } catch (e) {}
+      try { legacy = (window.getScopedGroups && window.getScopedGroups('poke', kind)) || []; } catch (e) {}
       legacy.forEach(g => {
         if (!Array.isArray(g) || !Array.isArray(g[1]) || !g[0]) return;
         out.push({ key: g[0], label: g[0], cards: g[1].slice() });
@@ -3339,8 +3351,10 @@ function partialRetractMsg(msgEl, side) {
   function renderPokeCard() {
     const name = chatPartnerName();
     if (pokeName) pokeName.textContent = name;
+    pokeTabPub.textContent = pokeTabLabel('public');
     pokeTabTa.textContent = pokeTabLabel('ta');
     pokeTabMine.textContent = pokeTabLabel('mine');
+    pokeTabPub.classList.toggle('sel', pokeMode === 'public');
     pokeTabTa.classList.toggle('sel', pokeMode === 'ta');
     pokeTabMine.classList.toggle('sel', pokeMode === 'mine');
     // v3.7.x：联系人的拍一拍 = 只读展示（隐藏新增/输入行）；我的拍一拍 = 可新增
@@ -3352,16 +3366,20 @@ function partialRetractMsg(msgEl, side) {
     if (!pokeList) return;
     pokeList.innerHTML = '';
     if (!groups.length) {
-      pokeList.innerHTML = pokeMode === 'ta'
-        ? '<div class="cc-empty">暂无拍一拍字卡<br>请到 字卡库 → 公用/专属字卡 → 拍一拍 添加</div>'
-        : '<div class="cc-empty">暂无拍一拍字卡<br>点击「＋ 新增拍一拍」添加，或直接输入拍一拍文字</div>';
+      pokeList.innerHTML = pokeMode === 'public'
+        ? '<div class="cc-empty">暂无公用拍一拍<br>请到 字卡库 → 公用字卡 → 拍一拍 添加</div>'
+        : pokeMode === 'ta'
+          ? '<div class="cc-empty">暂无拍一拍字卡<br>请到 字卡库 → 专属字卡 → 拍一拍 添加</div>'
+          : '<div class="cc-empty">暂无拍一拍字卡<br>点击「＋ 新增拍一拍」添加，或直接输入拍一拍文字</div>';
       return;
     }
     const cur = groups.find(g => g.key === pokeCurGroup) || groups[0];
     if (!cur.cards.length) {
-      pokeList.innerHTML = pokeMode === 'ta'
-        ? '<div class="cc-empty">该分组暂无拍一拍字卡<br>请到 字卡库 → 公用/专属字卡 → 拍一拍 添加</div>'
-        : '<div class="cc-empty">该分组暂无拍一拍<br>点击「＋ 新增拍一拍」添加到该分组</div>';
+      pokeList.innerHTML = pokeMode === 'public'
+        ? '<div class="cc-empty">该分组暂无公用拍一拍<br>请到 字卡库 → 公用字卡 → 拍一拍 添加</div>'
+        : pokeMode === 'ta'
+          ? '<div class="cc-empty">该分组暂无拍一拍字卡<br>请到 字卡库 → 专属字卡 → 拍一拍 添加</div>'
+          : '<div class="cc-empty">该分组暂无拍一拍<br>点击「＋ 新增拍一拍」添加到该分组</div>';
       return;
     }
     cur.cards.forEach((c, i) => {
@@ -3372,6 +3390,10 @@ function partialRetractMsg(msgEl, side) {
   function closePokeCard() {
     if (pokeCard) pokeCard.hidden = true;
   }
+  pokeTabPub.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (pokeMode !== 'public') { pokeMode = 'public'; savePokePref(); renderPokeCard(); }
+  });
   pokeTabTa.addEventListener('click', (e) => {
     e.stopPropagation();
     if (pokeMode !== 'ta') { pokeMode = 'ta'; savePokePref(); renderPokeCard(); }
@@ -5326,8 +5348,9 @@ function partialRetractMsg(msgEl, side) {
   const emojiTools = document.getElementById('emoji-tools');
   const emojiBatch = document.getElementById('emoji-batch');
   const emojiBatchCount = document.getElementById('emoji-batch-count');
-  let emojiMode = 'ta';        // ta / mine
-  let emojiCurGroup = '';      // TA 表情包分组筛选（记住上次打开的分类）
+  let emojiMode = 'ta';        // public（公用表情包）/ ta（联系人专属）/ mine
+  let emojiCurGroup = '';      // 联系人专属表情包分组筛选（记住上次打开的分类）
+  let pubCurGroup = '';        // 公用表情包分组筛选（记住上次打开的分类）
   let myCurGroup = '';         // 我的表情包分组筛选（记住上次打开的分类）
   let myBatchMode = false;     // 批量管理模式
   let myGroups = [];           // 我的表情包 [[分组名, [dataURL...]], ...]
@@ -5344,7 +5367,7 @@ function partialRetractMsg(msgEl, side) {
 
   // 记住最后打开的表情包分类（localStorage 持久化，刷新后仍在）
   function saveEmojiGroupPref() {
-    store.set('emoji-last', JSON.stringify({ ta: emojiCurGroup, mine: myCurGroup }));
+    store.set('emoji-last', JSON.stringify({ ta: emojiCurGroup, mine: myCurGroup, pub: pubCurGroup }));
   }
   (function () {
     try {
@@ -5352,6 +5375,7 @@ function partialRetractMsg(msgEl, side) {
       if (pref && typeof pref === 'object') {
         if (typeof pref.ta === 'string') emojiCurGroup = pref.ta;
         if (typeof pref.mine === 'string') myCurGroup = pref.mine;
+        if (typeof pref.pub === 'string') pubCurGroup = pref.pub;
       }
     } catch (e) {}
   })();
@@ -5434,13 +5458,17 @@ function partialRetractMsg(msgEl, side) {
   // 分组栏
   // 顶部分组栏：只显示有内容的分组，chip 文本 = 分组名 + 张数（如「猫206」），
   // 点击才在下方显示该分组内容；再点同一分组取消选中（回到提示态）
+  // v3.11.x：公用/联系人专属分区分别读 公用键 / 专属键（getScopedGroups，不合并）
   function renderEmojiGroupsBar() {
     if (!emojiGroupsBar) return;
     emojiGroupsBar.innerHTML = '';
     let list = [];
     let cur = '';
-    if (emojiMode === 'ta') {
-      list = (window.getMediaGroups && window.getMediaGroups('sticker')) || [];
+    if (emojiMode === 'public') {
+      list = (window.getScopedGroups && window.getScopedGroups('sticker', 'public')) || [];
+      cur = pubCurGroup;
+    } else if (emojiMode === 'ta') {
+      list = (window.getScopedGroups && window.getScopedGroups('sticker', 'own')) || [];
       cur = emojiCurGroup;
     } else {
       list = myGroups;
@@ -5448,8 +5476,8 @@ function partialRetractMsg(msgEl, side) {
     }
     if (cur && !list.some(g => g[0] === cur)) cur = '';
     // v3.7.x：我的表情包分组栏显示全部分组（含空的）——新建的空分组立即可见；
-    // TA 的表情包（字卡库 sticker 分类）仍只显示有内容的分组（空分类无意义）
-    const chips = list.filter(g => emojiMode === 'ta' ? g[1].length : true).map(g => [g[0], g[0] + g[1].length]);
+    // 公用/专属表情包（字卡库 sticker 分类）仍只显示有内容的分组（空分类无意义）
+    const chips = list.filter(g => emojiMode === 'mine' ? true : g[1].length).map(g => [g[0], g[0] + g[1].length]);
     chips.forEach(([val, label]) => {
       const c = document.createElement('span');
       c.className = 'emoji-g-chip' + (cur === val ? ' sel' : '');
@@ -5457,7 +5485,8 @@ function partialRetractMsg(msgEl, side) {
       // stopPropagation：防止重渲染后元素被移除，事件冒泡到 document 误判"面板外点击"而关闭面板
       c.addEventListener('click', (e) => {
         e.stopPropagation();
-        if (emojiMode === 'ta') emojiCurGroup = (cur === val ? '' : val);
+        if (emojiMode === 'public') pubCurGroup = (cur === val ? '' : val);
+        else if (emojiMode === 'ta') emojiCurGroup = (cur === val ? '' : val);
         else myCurGroup = (cur === val ? '' : val);
         saveEmojiGroupPref();
         renderEmojiPanel();
@@ -5534,27 +5563,37 @@ function partialRetractMsg(msgEl, side) {
 
   function renderEmojiPanel() {
     if (!emojiList) return;
-    // 头部 tab 高亮
-    document.querySelectorAll('.emoji-tab').forEach(t => t.classList.toggle('sel', t.dataset.etab === emojiMode));
+    // 头部 tab 高亮 + 动态标签（联系人昵称的分区名随当前桌面变化）
+    // v3.11.x：选择器收窄到 #emoji-panel——朋友圈评论表情面板复用 .emoji-tab 类，不能误改
+    document.querySelectorAll('#emoji-panel .emoji-tab').forEach(t => t.classList.toggle('sel', t.dataset.etab === emojiMode));
+    const taTabEl = document.querySelector('#emoji-panel .emoji-tab[data-etab="ta"]');
+    if (taTabEl) taTabEl.textContent = chatPartnerName() + ' 的表情包';
     // 工具行 / 批量条：仅我的表情包模式
     if (emojiTools) emojiTools.hidden = emojiMode !== 'mine';
     if (emojiBatch) emojiBatch.hidden = !(emojiMode === 'mine' && myBatchMode);
     renderEmojiGroupsBar();
     emojiList.innerHTML = '';
-    if (emojiMode === 'ta') {
-      // ---- TA 的表情包（sticker 字卡池）：点分组才显示内容 ----
-      const groups = (window.getMediaGroups && window.getMediaGroups('sticker')) || [];
+    if (emojiMode !== 'mine') {
+      // ---- 公用 / 联系人专属（sticker 字卡池）：点分组才显示内容 ----
+      const isPub = emojiMode === 'public';
+      const groups = (window.getScopedGroups && window.getScopedGroups('sticker', isPub ? 'public' : 'own')) || [];
+      const emptyAll = isPub
+        ? '<div class="emoji-empty">暂无公用表情包<br>请到 字卡库 → 公用字卡 → 表情包 上传</div>'
+        : '<div class="emoji-empty">暂无表情包<br>请到 字卡库 → 专属字卡 → 表情包 上传</div>';
       if (!groups.length) {
-        emojiList.innerHTML = '<div class="emoji-empty">暂无表情包<br>请到 字卡库 → 公用/专属字卡 → 表情包 上传</div>';
+        emojiList.innerHTML = emptyAll;
         return;
       }
-      if (!emojiCurGroup) {
+      const curn = isPub ? pubCurGroup : emojiCurGroup;
+      if (!curn || !groups.some(x => x[0] === curn)) {
         emojiList.innerHTML = '<div class="emoji-empty">点击上方分组查看表情包</div>';
         return;
       }
-      const g = groups.find(x => x[0] === emojiCurGroup);
+      const g = groups.find(x => x[0] === curn);
       if (!g || !g[1].length) {
-        emojiList.innerHTML = '<div class="emoji-empty">该分组暂无表情包<br>请到 字卡库 → 公用/专属字卡 → 表情包 上传</div>';
+        emojiList.innerHTML = isPub
+          ? '<div class="emoji-empty">该分组暂无公用表情包<br>请到 字卡库 → 公用字卡 → 表情包 上传</div>'
+          : '<div class="emoji-empty">该分组暂无表情包<br>请到 字卡库 → 专属字卡 → 表情包 上传</div>';
         return;
       }
       renderEmojiGroup(g[0], g[1], 'ta');

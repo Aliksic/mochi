@@ -2080,6 +2080,18 @@
     const g = mergeWithPublic(groups);
     return (g[type] || []).map(([name, arr]) => [name, arr.filter(isMediaImg)]);
   };
+  // v3.11.x：按作用域取分组（不合并）——聊天页拍一拍/表情包面板三分区展示：
+  //   scope='public' 只读公用键；scope='own' 只读当前桌面专属键。
+  //   回复池仍走合并视图（getPokeCards/getMediaCards/getMediaGroups 不变），
+  //   联系人自动回复/拍一拍继续同时使用 公用+专属 两份字卡。
+  window.getScopedGroups = function (type, scope) {
+    const src = (scope === 'public') ? pubGroupsRaw() : buildGroupsFrom(store.get('cc-groups'));
+    const arr = (src[type] || []).slice();
+    if (type === 'sticker' || type === 'image') {
+      return arr.map(g => [g[0], (g[1] || []).filter(isMediaImg)]);
+    }
+    return arr;
+  };
 
   // ---- 多桌面：按指定联系人(cid)读取字卡（供朋友圈 TA 取各自桌面字卡）----
   function buildGroupsFrom(raw) {
@@ -2270,6 +2282,17 @@
     if (ccPage) ccPage.hidden = false;
     try { renderGroupsBar(); render(); } catch (e) {}
   }
+  // v3.11.x：离开自定义字卡管理页一律恢复专属作用域——回复池（getCustomCards/
+  // getPokeCards/getMediaCards 等）以内存 groups 为基准，若停留在 public 作用域，
+  // groups 只剩公用库：公用库为空时专属拍一拍/表情包会从联系人侧整体消失
+  // （「联系人无法发送拍一拍和表情包」回归，tools/diag-pool-scope.mjs 复现）。
+  // 覆盖所有离开路径：返回键 / 底部 tab / 安卓返回 / 切桌面（page 隐藏由 MutationObserver 兜底）
+  function leaveCcPageReset() {
+    if (ccScope !== 'public') return;
+    ccScope = 'own';
+    if (editSaveTimer) { clearTimeout(editSaveTimer); editSaveTimer = null; }
+    try { groups = loadGroups(); } catch (e) {}
+  }
   const liPub = document.getElementById('li-custom-cards-public');
   if (liPub) liPub.addEventListener('click', () => openCcPage('public'));
   const li = document.getElementById('li-custom-cards');
@@ -2280,16 +2303,21 @@
       document.querySelectorAll('.page').forEach(p => p.hidden = true);
       const home = document.getElementById('page-chatcard');
       if (home) home.hidden = false;
+      leaveCcPageReset();
     });
   }
 
   // v3.7.x：离开自定义字卡页时自动退出批量管理模式——manageBar 挂在 body 上，
   // 不随页面 hidden 隐藏，会残留并"跑到"其他页面（用户反馈）。监听 page-custom-cards
   // 的 hidden 变化，覆盖所有离开路径：返回按钮 / 底部 tab / 安卓返回键 / 其他入口
+  // v3.11.x：同处恢复专属作用域（leaveCcPageReset，防 ccScope 停在 public 挤掉专属池）
   const ccPageEl = document.getElementById('page-custom-cards');
   if (ccPageEl && typeof MutationObserver !== 'undefined') {
     new MutationObserver(() => {
-      if (ccPageEl.hidden && manageMode) exitManage();
+      if (ccPageEl.hidden) {
+        leaveCcPageReset();
+        if (manageMode) exitManage();
+      }
     }).observe(ccPageEl, { attributes: true, attributeFilter: ['hidden'] });
   }
 

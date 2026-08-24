@@ -244,6 +244,39 @@
     return { label: '不规律', cls: 'reg-bad' };
   }
 
+  // ---- PMS 经前综合征指数：基于黄体期症状记录 ----
+  function pmsLevel() {
+    var st = status();
+    // 只在黄体期算（排卵后、下次经期前）
+    if (st.inPeriod || !st.dayOfCycle || !st.ovulationDay || st.dayOfCycle <= st.ovulationDay) return null;
+    recs = normalize(recs);
+    var last = recs[recs.length - 1];
+    if (!last) return null;
+    var ovuDate = addDays(last.start, st.ovulationDay - 1);
+    var today = todayStr();
+    var score = 0, days = 0;
+    for (var ds in daily) {
+      if (ds < ovuDate || ds > today) continue;
+      var info = daily[ds];
+      if (!info) continue;
+      var hasSym = info.symptoms && info.symptoms.length;
+      if (hasSym) {
+        days++;
+        info.symptoms.forEach(function (s) {
+          if (s === 'moodlow' || s === 'irritable') score += 2;
+          else if (s === 'breast' || s === 'headache' || s === 'fatigue' || s === 'insomnia' || s === 'acne' || s === 'appetite') score += 1;
+        });
+      }
+      if (info.mood && info.mood <= 2) score += 2;
+    }
+    var label, cls, tip;
+    if (score >= 8) { label = 'PMS 重度'; cls = 'pms-heavy'; tip = '经前综合征较重，提前调整作息心情'; }
+    else if (score >= 4) { label = 'PMS 中度'; cls = 'pms-mid'; tip = '经前反应明显，照顾好自己'; }
+    else if (score >= 1) { label = 'PMS 轻微'; cls = 'pms-light'; tip = '经前反应轻，状态不错'; }
+    else { return { score: 0, label: 'PMS 不明显', cls: 'pms-none', tip: '', days: 0 }; }
+    return { score: score, label: label, cls: cls, tip: tip, days: days };
+  }
+
   // ---- 当前状态 ----
   function status() {
     recs = normalize(recs);
@@ -436,6 +469,24 @@
         if (toOvu > 0) ovuLine.textContent = '距排卵约 ' + toOvu + ' 天';
         else if (toOvu === 0) ovuLine.textContent = '今天约为排卵日';
         else ovuLine.textContent = '距下次排卵约 ' + (st.cycleLen - st.dayOfCycle + st.ovulationDay) + ' 天';
+      }
+    }
+    // PMS 经前综合征指数行（仅黄体期显示）
+    var pmsLine = document.getElementById('period-pms-line');
+    if (!pmsLine) {
+      pmsLine = document.createElement('div');
+      pmsLine.id = 'period-pms-line';
+      pmsLine.className = 'period-pms-line';
+      if (ovuLine && ovuLine.parentNode) ovuLine.parentNode.insertBefore(pmsLine, ovuLine.nextSibling);
+      else if (bar && bar.parentNode) bar.parentNode.insertBefore(pmsLine, bar.nextSibling);
+    }
+    if (pmsLine) {
+      var pms = pmsLevel();
+      if (!pms) { pmsLine.hidden = true; }
+      else {
+        pmsLine.hidden = false;
+        pmsLine.innerHTML = '<span class="pms-badge ' + pms.cls + '">' + pms.label + '</span>' +
+          (pms.tip ? '<span class="pms-tip">' + pms.tip + '</span>' : '');
       }
     }
     var startBtn = document.getElementById('period-mark-start');
@@ -834,6 +885,24 @@
     clearTimeout(t._timer); t._timer = setTimeout(function () { t.className = 'cc-toast'; }, 2000);
   }
 
+  // v3.10.x：安卓 ce-box 转换器读值兜底——mobile-adapt.js 把 input/textarea 转成
+  // contenteditable div（.ce-box）且插在原输入框**前面**、继承同名 class，浮层里
+  // querySelector('.dp-note') 这类按 class 选会先命中 div（无 value 属性），备注
+  // 读 .value.trim() 直接抛 TypeError、保存回调整体中断——vivo Edge 实测「记录今天
+  // 点了保存不保存」。固定按标签选回原 input/textarea（value 已被代理到 ce-box），
+  // 个别内核代理读空时再从 __ceBox 取文本兜底（同 music-player readCeInput 先例）。
+  function readInpVal(el) {
+    if (!el) return '';
+    var v;
+    try { v = el.value; } catch (e) {}
+    if (v !== undefined && v !== null && String(v).trim()) return String(v);
+    try {
+      var box = el.__ceBox || (el.parentNode && el.parentNode.querySelector('.ce-box[data-for="' + (el.id || '') + '"]'));
+      if (box) return (box.innerText !== undefined ? box.innerText : box.textContent) || '';
+    } catch (e) {}
+    return v === undefined || v === null ? '' : String(v);
+  }
+
   // ---- 每日详情浮层（方案 4）----
   function openDayPop(ds) {
     var existing = document.getElementById('period-day-pop');
@@ -845,6 +914,11 @@
     var flowHtml = FLOWS.map(function (f) {
       return '<button class="dp-flow' + (info.flow === f.k ? ' on' : '') + '" data-flow="' + f.k + '">' + f.label + '</button>';
     }).join('');
+    // v3.10.x：显式「生理期」开关——原来把某天标成经期（红色）只有长按日格一条路，
+    // 用户在编辑浮层里填完点保存自然期待变红，却永远不变（浮层只存经量/症状）；
+    // OPPO Reno16 反馈「编辑完确定也不会变红」。现在浮层顶部给开关：开=该日标为经期，
+    // 关=取消（走 toggleDay 同一套合并逻辑），保存时与当前状态比对后一次性生效。
+    var isPeriodNow = dayPhase(ds) === 'period';
     var symHtml = SYMPTOMS.map(function (s) {
       var on = info.symptoms && info.symptoms.indexOf(s.k) >= 0;
       return '<button class="dp-sym' + (on ? ' on' : '') + '" data-sym="' + s.k + '">' + s.label + '</button>';
@@ -856,6 +930,7 @@
       '<div class="dp-mask"></div>' +
       '<div class="dp-sheet">' +
         '<div class="dp-head"><span class="dp-date">' + ds + '</span><button class="dp-close" aria-label="关闭">×</button></div>' +
+        '<div class="dp-section"><div class="dp-label">生理期</div><button class="dp-sym dp-period' + (isPeriodNow ? ' on' : '') + '">' + (isPeriodNow ? '已标记为生理期（点此取消）' : '标记这天为生理期') + '</button></div>' +
         '<div class="dp-section"><div class="dp-label">经量</div><div class="dp-flow-row">' + flowHtml + '</div></div>' +
         '<div class="dp-section"><div class="dp-label">症状</div><div class="dp-sym-grid">' + symHtml + '</div></div>' +
         '<div class="dp-section"><div class="dp-label">基础体温（℃）</div><input class="dp-temp" type="number" step="0.1" min="35" max="38" value="' + (info.temp || '') + '" placeholder="36.5"/></div>' +
@@ -873,8 +948,13 @@
         b.classList.add('on');
       });
     });
-    pop.querySelectorAll('.dp-sym').forEach(function (b) {
+    pop.querySelectorAll('.dp-sym[data-sym]').forEach(function (b) {
       b.addEventListener('click', function () { b.classList.toggle('on'); });
+    });
+    var perBtn = pop.querySelector('.dp-period');
+    if (perBtn) perBtn.addEventListener('click', function () {
+      var on = perBtn.classList.toggle('on');
+      perBtn.textContent = on ? '已标记为生理期（点此取消）' : '标记这天为生理期';
     });
     pop.querySelectorAll('.dp-mood').forEach(function (b) {
       b.addEventListener('click', function () {
@@ -886,10 +966,12 @@
       var flowBtn = pop.querySelector('.dp-flow.on');
       var moodBtn = pop.querySelector('.dp-mood.on');
       var syms = [];
-      pop.querySelectorAll('.dp-sym.on').forEach(function (b) { syms.push(b.getAttribute('data-sym')); });
-      var temp = parseFloat(pop.querySelector('.dp-temp').value);
+      pop.querySelectorAll('.dp-sym.on[data-sym]').forEach(function (b) { syms.push(b.getAttribute('data-sym')); });
+      // v3.10.x：按标签选原输入框——.dp-temp/.dp-note 在安卓 ce-box 转换后先匹配到
+      // 继承同类的 div（无 value），备注读值抛错导致保存中断（vivo Edge 实测）
+      var temp = parseFloat(readInpVal(pop.querySelector('input.dp-temp')));
       var mood = moodBtn ? parseInt(moodBtn.getAttribute('data-mood'), 10) : 0;
-      var note = pop.querySelector('.dp-note').value.trim();
+      var note = readInpVal(pop.querySelector('textarea.dp-note')).trim();
       var obj = {};
       if (flowBtn) obj.flow = flowBtn.getAttribute('data-flow');
       if (syms.length) obj.symptoms = syms;
@@ -898,6 +980,12 @@
       if (note) obj.note = note;
       if (Object.keys(obj).length) daily[ds] = obj; else delete daily[ds];
       saveDaily(daily);
+      // v3.10.x：生理期开关落地——与打开浮层时的实际状态比对，变化才 toggle 一次
+      //（toggleDay 内部已含 normalize + saveRecs + render；无变化不动数据）
+      if (perBtn) {
+        var wantPeriod = perBtn.classList.contains('on');
+        if (wantPeriod !== (dayPhase(ds) === 'period')) toggleDay(ds);
+      }
       closeDayPop();
       render();
       toast('已保存');
@@ -1067,10 +1155,12 @@
     document.body.classList.add('scroll-lock');
     pop.querySelector('.dp-mask').addEventListener('click', closeCarePop);
     pop.querySelector('.dp-close').addEventListener('click', closeCarePop);
-    var input = pop.querySelector('.dp-care-input');
+    // v3.10.x：同上——按标签选原 input，读值走 readInpVal（ce-box 转换后 .dp-care-input
+    // 先命中 div，添加关心语在安卓上静默失效）
+    var input = pop.querySelector('input.dp-care-input');
     var listEl = pop.querySelector('.care-list');
     function addLine() {
-      var v = (input.value || '').trim();
+      var v = readInpVal(input).trim();
       if (v && lines.indexOf(v) < 0) {
         lines.push(v); saveCareLines(lines);
         input.value = '';
@@ -1301,7 +1391,8 @@
       var advs = [];
       pop.querySelectorAll('.adv.on').forEach(function (b) { advs.push(parseInt(b.getAttribute('data-adv'), 10)); });
       if (!advs.length) advs = [3, 1, 0];
-      var h = parseInt(pop.querySelector('.dp-hour').value, 10);
+      // v3.10.x：同上——.dp-hour 转换后先命中 div 读 undefined，提醒小时静默重置 9 点
+      var h = parseInt(readInpVal(pop.querySelector('input.dp-hour')), 10);
       notifyCfg.advanceDays = advs;
       notifyCfg.hour = isNaN(h) ? 9 : Math.min(23, Math.max(0, h));
       saveNotify(notifyCfg);
@@ -1362,6 +1453,13 @@
       var cell = e.target.closest('.pc-cell');
       if (!cell || cell.classList.contains('blank')) return;
       e.preventDefault();
+      // v3.10.x：长按双触发去重——安卓长按日格时 contextmenu 与 touchstart 的 500ms
+      // 定时器几乎同时各调一次 toggleDay = 标红又立刻取消（OPPO Reno16 Edge/Via
+      // 实测「没办法设置成生理期」）。谁先到谁生效：定时器已触发（longPressed）则
+      // 跳过；contextmenu 先到则取消定时器，保证只 toggle 一次。longPressed 不在
+      // 这里复位——它还要供 click 处理器吞掉长按后的合成点击。
+      if (longPressed) return;
+      if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
       toggleDay(cell.getAttribute('data-date'));
     });
     grid.addEventListener('touchstart', function (e) {

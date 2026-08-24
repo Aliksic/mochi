@@ -37,6 +37,43 @@
   let keepEnabled = false;
   let wakeSentinel = null; // v3.5.131：模块级，供 stopKeepAlive 释放
 
+  // v3.10.x：与音乐播放器共存（修复「音乐+保活音频同时出声导致音乐卡顿」）——
+  // 手机端两个 <audio> 同时持续输出时，混音/音频焦点互相争抢；保活音频每 5 秒的
+  // 补播重试还会与 music-player 自身的防暂停补播形成拉锯，表现为音乐周期性卡顿。
+  // 策略：音乐播放期间（window.__musicPlaying=true）保活音频主动让位暂停——
+  // 音乐自带活跃媒体会话（playbackState=playing），后台同样不被冻结，保活目的不丢；
+  // 音乐停止/暂停后自动把保活音频拉回来。
+  function musicNowPlaying() { try { return !!window.__musicPlaying; } catch (e) { return false; } }
+  function syncKeepForMusic() {
+    if (!keepAudio || !keepAudio.el) return;
+    try {
+      if (musicNowPlaying()) {
+        if (!keepAudio.el.paused) keepAudio.el.pause(); // 让位：音乐在播，保活音频暂停
+      } else if (keepEnabled && keepAudio.el.paused) {
+        const p = keepAudio.el.play();
+        if (p && p.catch) p.catch(function () {});
+      }
+    } catch (e) {}
+  }
+  // 监听 music-player 对 __musicPlaying 的写入（onplay/onpause/updateMediaSession 维护，
+  // 该文件先于本模块加载、只在播放事件时写）——音乐起播瞬间立即让位、停止瞬间立即收回，
+  // 不等下一个 5 秒轮询。getter/setter 透传，对其他读取方完全透明。
+  (function installMusicPlayingWatcher() {
+    try {
+      let v = !!window.__musicPlaying;
+      Object.defineProperty(window, '__musicPlaying', {
+        configurable: true,
+        get: function () { return v; },
+        set: function (nv) {
+          nv = !!nv;
+          if (nv === v) return;
+          v = nv;
+          setTimeout(syncKeepForMusic, 0);
+        }
+      });
+    } catch (e) {}
+  })();
+
   // v3.5.160：保活音频 dataURL——用 <audio> 元素循环播放（不是 Web Audio 振荡器）。
   // 关键机制：Chrome 安卓的媒体通知条（通知栏"正在播放"）绑定到 HTMLMediaElement
   // （<audio>/<video>），Web Audio 的 AudioContext 振荡器【不触发媒体条】——这正是
@@ -99,6 +136,7 @@
       keepEl.src = src;
       keepEl.setAttribute('playsinline', '');
       const playIt = function () {
+        if (musicNowPlaying()) return; // v3.10.x：音乐在播，让位不抢音频（由 syncKeepForMusic 收回）
         const p = keepEl.play();
         if (p && p.catch) p.catch(function () {});
       };
@@ -116,6 +154,7 @@
 
       // 用户首次交互时恢复播放（浏览器自动播放策略要求）
       const resumeOnInteraction = function () {
+        if (musicNowPlaying()) return; // v3.10.x：音乐在播，让位
         if (keepAudio && keepAudio.el && keepAudio.el.paused) {
           const p = keepAudio.el.play();
           if (p && p.catch) p.catch(function () {});
@@ -128,6 +167,13 @@
       // v3.5.159：恢复时重设 playbackState='playing'（Chrome 挂起后可能把它重置）
       keepInterval = setInterval(function () {
         if (keepAudio && keepAudio.el) {
+          if (musicNowPlaying()) {
+            // v3.10.x：音乐在播——保活音频保持让位暂停，不重试补播（避免与音乐
+            // 争抢音频焦点造成卡顿）；媒体条由 music-player 管理，也不再每 5 秒
+            // 强设 playbackState='playing'（音乐暂停时会被错误标成"正在播放"）
+            try { if (!keepAudio.el.paused) keepAudio.el.pause(); } catch (e) {}
+            return;
+          }
           if (keepAudio.el.paused) {
             const p = keepAudio.el.play();
             if (p && p.catch) p.catch(function () {});
@@ -204,13 +250,14 @@
   function healKeepAlive() {
     if (!keepEnabled) return;
     // 1) 恢复被挂起的保活音频（回前台瞬间可能仍被浏览器阻塞，延迟再试几次）
-    if (keepAudio && keepAudio.el && keepAudio.el.paused) {
+    //    v3.10.x：音乐在播时跳过——保活音频让位中，不抢音频
+    if (!musicNowPlaying() && keepAudio && keepAudio.el && keepAudio.el.paused) {
       const p = keepAudio.el.play();
       if (p && p.catch) p.catch(function () {});
     }
     [0, 600, 1800].forEach(function (d) {
       setTimeout(function () {
-        if (!keepEnabled) return;
+        if (!keepEnabled || musicNowPlaying()) return; // v3.10.x：音乐在播，让位
         if (keepAudio && keepAudio.el && keepAudio.el.paused) {
           const p = keepAudio.el.play();
           if (p && p.catch) p.catch(function () {});
@@ -256,8 +303,10 @@
   }
   // v3.9.x：音乐停止后（music-media-release）恢复"后台保活"媒体条——
   // music-player 播放时覆盖了保活 metadata，停止后这里重新设回，保活后台存活率不降
+  // v3.10.x：音乐完全停止后同时收回让位中的保活音频（正常路径由 __musicPlaying=false
+  // 的 watcher 收回，这里对 teardown 直接跳过 onpause 等边缘路径双保险）
   document.addEventListener('music-media-release', function () {
-    if (keepEnabled) setKeepMediaSession();
+    if (keepEnabled) { setKeepMediaSession(); syncKeepForMusic(); }
   });
   const kaBtn = document.getElementById('bg-keepalive');
   function syncKeepUI() { if (kaBtn) kaBtn.checked = keepEnabled; }

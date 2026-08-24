@@ -580,34 +580,43 @@
     return a;
   }
 
-  function injectDeskApp(appEl, widgetId) {
+  // v3.6.x 市集+心意柜成组注入。上限必须与 personalize.js DESK_PAGE_MAX(5) 一致：
+  // 曾用 <6 在满 5 页桌面新建第 6 页 → mochi-restore-done 后 buildDeskPages 钳回 5 页
+  // 删尾页把图标扫进隐藏池，且 app-market 不在 WIDGET_IDS 白名单永远无法找回（刷新也消失）。
+  // 兜底走 memo-app 同款模式：无条件 append 进 .app-grid.p3-grid 当前所在位置
+  // （哪怕整组暂在隐藏池，冷启动收缩后由 accounting.js ensureP3 找回归位）。
+  function injectDeskApps(pairs) {
     const st = store();
     let layArr = null;
     try { if (st) layArr = JSON.parse(st.get('desk-layout') || 'null'); } catch (e) {}
     const hasLayout = Array.isArray(layArr);
-    const alreadyInLay = hasLayout && layArr.some(function (p) { return (p || []).indexOf(widgetId) >= 0; });
+    const ids = pairs.map(function (p) { return p.id; });
+    const alreadyInLay = hasLayout && layArr.some(function (pg) { return (pg || []).some(function (w) { return ids.indexOf(w) >= 0; }); });
     let placed = false;
     if (hasLayout && !alreadyInLay) {
       const pagesBox = document.getElementById('desktop-pages');
       if (pagesBox) {
         const curCnt = pagesBox.querySelectorAll('.page-slide').length;
-        if (curCnt < 6) {
+        if (curCnt < 5) {
           const slide = document.createElement('div');
           slide.className = 'page-slide desk-page';
           slide.dataset.desk = String(curCnt);
           const grid = document.createElement('div');
           grid.className = 'app-grid';
-          grid.appendChild(appEl);
-          slide.appendChild(grid); pagesBox.appendChild(slide);
-          try { st.set('desk-page-count', String(curCnt + 1)); layArr.push([widgetId]); st.set('desk-layout', JSON.stringify(layArr)); } catch (e) {}
+          pairs.forEach(function (p) { grid.appendChild(p.el); });
+          slide.appendChild(grid);
+          pagesBox.appendChild(slide);
+          try { st.set('desk-page-count', String(curCnt + 1)); layArr.push(ids.slice()); st.set('desk-layout', JSON.stringify(layArr)); } catch (e) {}
           try { if (window.deskRebuild) window.deskRebuild(); } catch (e) {}
           placed = true;
         }
       }
     }
     if (!placed) {
-      const p3 = document.querySelector('.app-grid.p3-grid');
-      if (p3) p3.appendChild(appEl); else { const p2 = document.querySelector('.app-grid.p2-grid'); if (p2) p2.appendChild(appEl); }
+      pairs.forEach(function (p) {
+        const p3 = document.querySelector('.app-grid.p3-grid');
+        if (p3) p3.appendChild(p.el); else { const p2 = document.querySelector('.app-grid.p2-grid'); if (p2) p2.appendChild(p.el); }
+      });
       try { if (window.applyDeskLayout) window.applyDeskLayout(); } catch (e) {}
     }
   }
@@ -677,8 +686,7 @@
 
     const marketApp = makeApp('market', '心意市集', MARKET_SVG);
     const giftboxApp = makeApp('giftbox', '心意柜', BOX_SVG);
-    injectDeskApp(marketApp, 'app-market');
-    injectDeskApp(giftboxApp, 'app-giftbox');
+    injectDeskApps([{ el: marketApp, id: 'app-market' }, { el: giftboxApp, id: 'app-giftbox' }]);
     if (marketApp) marketApp.addEventListener('click', function () { if (editingNow()) return; marketManage = false; panelCat = '全部'; openPage(marketPage); renderMarket(); });
     if (giftboxApp) giftboxApp.addEventListener('click', function () { if (editingNow()) return; boxTab = 'in'; openPage(giftboxPage); renderBox(); });
 

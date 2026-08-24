@@ -179,9 +179,16 @@
    v3.x 二次修复：顶部设置区（开关+两组设置+标签+搜索）本身很高，把 #dc-list 挤到
    只有一两张卡、且 .page 被锁定 overflow:hidden 后更没法下滑。改为 .page 恢复整页
    滚动（设置区过高时可滚下去）+ #dc-list 保底 min-height:40vh，确保列表始终有足够
-   高度顺畅下滑浏览字卡，而不会因头部占用被裁没/挤到一行。 */
+   高度顺畅下滑浏览字卡，而不会因头部占用被裁没/挤到一行。
+   v3.11.x 三修（用户反馈"默认聊天字卡往下滑会卡住滑不动"）：上面两版叠加后页面存在
+   两个嵌套滚动容器——.page 整页滚动 + #dc-list 内部滚动（min-height:40vh 使总高超出
+   视口），且 #dc-list 带 overscroll-behavior:contain 阻断滚动链：手指在列表上滑动时
+   内层滚到边界后外层永远接不上 → 卡住。改为单滚动容器——只有 .page 一层滚到底，
+   #dc-list 取消内部滚动（flex/overflow/min-height 全部放开随内容自然生长）。
+   main 分类全量 DOM 渲染两版本就一致（无虚拟滚动），卡片已去阴影/transition，
+   整页长列表对性能无额外显著影响。 */
 #page-default-cards { overflow-y:auto; }
-#dc-list { min-height:40vh; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; }
+#page-default-cards #dc-list { flex:0 0 auto; overflow:visible; min-height:0; -webkit-overflow-scrolling:auto; overscroll-behavior:auto; }
 .dc-toggle {
   display:flex; align-items:center; justify-content:space-between; gap:10px;
   border-radius:18px; padding:14px 16px; margin-bottom:14px; flex-shrink:0;
@@ -664,6 +671,14 @@
 .period-phase-bar .seg-1 { background:#fff3da; color:#f5a623; }
 .period-phase-bar .seg.active { box-shadow:0 0 0 2px var(--ink) inset; font-weight:800; }
 .period-ovu-line { font-size:12px; color:#f5a623; margin-bottom:10px; font-weight:600; }
+/* PMS 经前综合征指数行 */
+.period-pms-line { display:flex; align-items:center; gap:8px; margin-bottom:10px; flex-wrap:wrap; }
+.pms-badge { display:inline-block; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:700; }
+.pms-badge.pms-none { background:#f0f0f0; color:#888; }
+.pms-badge.pms-light { background:#e8f5e9; color:#2e7d32; }
+.pms-badge.pms-mid { background:#fff3da; color:#c47d12; }
+.pms-badge.pms-heavy { background:#fde2ee; color:#c44a78; }
+.pms-tip { font-size:11px; color:var(--muted,#666); }
 .period-action-row { display:flex; gap:10px; }
 .period-btn {
   flex:1; padding:12px; font-size:13px; font-weight:600; border-radius:14px;
@@ -2370,6 +2385,11 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + env(safe-area-inset-bott
 }
 .feed-notice-item .fn-text { flex:1; min-width:0; line-height:1.5; }
 .feed-notice-item .fn-time { font-size:10px; color:var(--muted); flex-shrink:0; }
+/* v3.11.x：评论类通知的内容首图缩略图（回复表情包/图片直接可见） */
+.feed-notice-item .fn-thumb {
+  width:34px; height:34px; border-radius:6px; object-fit:cover;
+  flex-shrink:0; margin-right:6px; background:#f2f2f5; cursor:zoom-in;
+}
 .feed-notice-item.new .fn-ico { color:#e05555; }
 /* 发布框：添加图片 */
 .feed-pick-row { display:flex; align-items:center; gap:10px; margin-top:8px; }

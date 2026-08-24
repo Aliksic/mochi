@@ -2291,6 +2291,7 @@
     <div class="poke-card emoji-card" id="emoji-panel" hidden>
       <div class="emoji-head">
         <div class="emoji-tabs">
+          <button class="emoji-tab" data-etab="public">公用表情包</button>
           <button class="emoji-tab sel" data-etab="ta">TA 的表情包</button>
           <button class="emoji-tab" data-etab="mine">我的表情包</button>
         </div>
@@ -2786,7 +2787,7 @@
                 <button class="pong-sound" id="pong-sound" title="音效开关">🔊</button>
               </div>
             </div>
-            <div class="pong-score" id="pong-score">你 0 : 0 TA</div>
+            <div class="pong-score" id="pong-score"><span class="pong-s-ta">0 TA</span><span class="pong-s-sep">:</span><span class="pong-s-you">你 0</span></div>
             <div class="pong-canvas-box">
               <canvas id="pong-canvas" width="400" height="240"></canvas>
               <div class="pong-hint" id="pong-hint"></div>
@@ -2799,7 +2800,7 @@
                 </div>
               </div>
             </div>
-            <div class="pong-foot">手机：左半边上下拖动 · 电脑：↑↓ 或 W S</div>
+            <div class="pong-foot">你控制右侧挡板 · 手机：按住画面上下拖动 · 电脑：↑↓ 或 W S</div>
           </div>
         </div>
       </div>
