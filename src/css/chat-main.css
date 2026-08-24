@@ -458,9 +458,14 @@ body.cs-time-divider .msg-time-divider { display:flex; }
 }
 
 /* 更多功能面板（悬浮在输入栏上方）
-   v3.5.110：bottom 加 safe-area，全面屏全屏模式下与输入栏同步上移，不错位 */
+   v3.5.110：bottom 加 safe-area，全面屏全屏模式下与输入栏同步上移，不错位
+   v3.10.x：fixed → absolute——安卓 resizes-visual 下键盘只缩 visualViewport，
+   fixed 面板锚定全高 layout viewport 不动；absolute 锚定 .phone/#page-chat，
+   键盘弹出时容器被 syncAndroidKb 收缩、面板跟着停靠输入栏上方（否则打开即
+   自动聚焦的半框会整体掉到升起后的输入栏下方/键盘后面）。手机端 .phone
+   满屏时两者几何等价；桌面宽屏本就由文末 @media 改 absolute，此处统一。 */
 .more-panel {
-  position:fixed; left:18px; right:18px; bottom:calc(96px + env(safe-area-inset-bottom, 0px)); z-index:60;
+  position:absolute; left:18px; right:18px; bottom:calc(96px + env(safe-area-inset-bottom, 0px)); z-index:60;
   background:rgba(255,255,255,.97);
   border:1px solid rgba(0,0,0,.1);
   border-radius:20px; box-shadow:0 12px 32px rgba(0,0,0,.1);
@@ -572,9 +577,11 @@ body.cs-time-divider .msg-time-divider { display:flex; }
 
 /* 拍一拍浮层卡片（底部半框，露出顶部聊天消息，方便边看边玩）
    底部 96px：悬停在输入栏上方，不压住/不覆盖输入栏（输入栏顶部约 82px）
-   v3.5.110：bottom 加 safe-area，全面屏全屏模式下与输入栏同步上移，不错位 */
+   v3.5.110：bottom 加 safe-area，全面屏全屏模式下与输入栏同步上移，不错位
+   v3.10.x：fixed → absolute——键盘弹出时随收缩后的 .phone/#page-chat 停靠，
+   不再锚定全高 layout viewport 掉到输入栏下方（详见 .more-panel 处注释） */
 .poke-card {
-  position:fixed; top:auto; bottom:calc(96px + env(safe-area-inset-bottom, 0px)); left:18px; right:18px;
+  position:absolute; top:auto; bottom:calc(96px + env(safe-area-inset-bottom, 0px)); left:18px; right:18px;
   height:auto; max-height:48%;
   display:flex; flex-direction:column;
   background:rgba(255,255,255,.97);
@@ -694,9 +701,10 @@ body.cs-time-divider .msg-time-divider { display:flex; }
 .poke-op-edit:active { color:var(--ink); }
 .poke-op-del:active { background:rgba(224,85,85,.15); color:#e05555; }
 /* 表情包面板：底部半框，露出顶部聊天消息，高度随内容自适应（最多半屏，空态紧凑）
-   v3.5.110：bottom 加 safe-area，全面屏全屏模式下与输入栏同步上移，不错位 */
+   v3.5.110：bottom 加 safe-area，全面屏全屏模式下与输入栏同步上移，不错位
+   v3.10.x：fixed → absolute（同 .poke-card——键盘弹出时随容器停靠输入栏上方） */
 .emoji-card {
-  position:fixed; top:auto; bottom:calc(96px + env(safe-area-inset-bottom, 0px)); left:18px; right:18px;
+  position:absolute; top:auto; bottom:calc(96px + env(safe-area-inset-bottom, 0px)); left:18px; right:18px;
   height:auto; max-height:55%;
   display:flex; flex-direction:column;
   background:rgba(255,255,255,.97);
@@ -1155,18 +1163,13 @@ body.cs-time-divider .msg-time-divider { display:flex; }
 }
 .call-mini:active { cursor:grabbing; }
 .call-mini[hidden] { display:none; }
-/* ===== 宽屏（PC 浏览器预览，>900px）：聊天浮层收进 .phone 模拟框 =====
-   手机端（≤900px）.phone 本就满屏，fixed 与 absolute 等价；宽屏下 .phone 是居中
-   模拟框，上面这些 position:fixed 会锚定【浏览器窗口】——更多功能面板 / 各功能
-   半框（帮我决定/搜索/通话/占卜/拍一拍/猜拳/红包/礼物/问问TA/头像互动/表情包/
-   Pong/贪吃蛇，全部复用 .poke-card/.more-panel）整体掉到手机框外的窗口底部
-   灰底区。改 position:absolute 锚定 .phone（position:relative，面板的各祖先
-   .page 等均未定位），left/right/bottom 声明沿用原值，视觉与手机端一致。
-   html:not(.force-mobile) 排除「手机伪装桌面 UA」场景（仍走 fixed 原路径，
-   不动真机行为）；Pong/贪吃蛇 -fs 全屏变体（#id.pong-fs 特异性更高）不受影响。 */
+/* ===== 宽屏（PC 浏览器预览，>900px）：通话小框收进 .phone 模拟框 =====
+   v3.10.x：更多功能面板/.poke-card 各功能半框/表情包面板已在基础规则里统一改
+   position:absolute（键盘停靠 + 宽屏锚定一次解决），此处只剩 .call-mini——
+   它基础规则仍是 fixed（拖动定位坐标按视口计算，真机不动），宽屏下 .phone 是
+   居中模拟框，fixed 会锚定【浏览器窗口】掉到手机框外，故仅窄屏外改 absolute。
+   html:not(.force-mobile) 排除「手机伪装桌面 UA」场景（不动真机行为）。 */
 @media (min-width: 901px) {
-  html:not(.force-mobile) .more-panel,
-  html:not(.force-mobile) .poke-card,
   html:not(.force-mobile) .call-mini {
     position:absolute;
   }

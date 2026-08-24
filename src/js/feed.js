@@ -161,11 +161,51 @@
   //   save 只暂存内存（feedPending），绝不落盘；load 合并暂存，弹窗提示过的动态都可见。
   let feedDbReady = false;
   let feedPending = null;
-  // 按 id 合并两个动态列表（后者覆盖同 id），按 ts 倒序
+  // v3.10.x 修复「评论聊了多个回合次日只剩一条」：同 id 动态深度合并。
+  //   原实现 post 级后者整条覆盖——启动权威回读 feedMergeFromIdb 里本地副本（LS 主键/
+  //   剥图快照）优先级高于 IDB，而本地副本可能陈旧：主键 >200KB 时只进 IDB 不进 LS，
+  //   剥图快照超 200KB 会静默停写冻结在旧时刻，iOS 还可能在存储压力下清 LS 键——
+  //   陈旧本地版本整条盖掉 IDB 里带全部后续评论的新版本并随即写回 IDB，旧评论永久丢失。
+  //   改为字段择优 + 评论/回复/点赞按内容并集，任一侧的新数据都不再被整条挤掉。
+  function itemKey(o) { return (o && o.ts ? o.ts : 0) + '|' + (o.role || o.by || '') + '|' + (o.authorName || '') + '|' + (o.content || ''); }
+  function deeperList(a, b) {
+    const byKey = {};
+    const put = (o) => {
+      if (!o || typeof o !== 'object') return;
+      const k = itemKey(o);
+      const prev = byKey[k];
+      if (!prev) { byKey[k] = Object.assign({}, o); return; }
+      if (Array.isArray(o.replies) && o.replies.length) prev.replies = deeperList(prev.replies || [], o.replies);
+      else if (!Array.isArray(prev.replies) && Array.isArray(o.replies)) prev.replies = o.replies;
+    };
+    (a || []).forEach(put);
+    (b || []).forEach(put);
+    return Object.keys(byKey).map(k => byKey[k]).sort((x, y) => (x.ts || 0) - (y.ts || 0));
+  }
+  function unionStrArr(a, b) {
+    const out = [], seen = {};
+    (a || []).concat(b || []).forEach(s => { if (typeof s === 'string' && !seen[s]) { seen[s] = 1; out.push(s); } });
+    return out;
+  }
+  function deepMergePost(a, b) {
+    const newer = (b.ts || 0) >= (a.ts || 0) ? b : a;
+    const older = newer === a ? b : a;
+    const out = Object.assign({}, older, newer);
+    // 剥图快照侧 content 内联图被换成 [图片]、imgs/头像被清空——取未剥图的完整版
+    if ((older.content || '').length > (newer.content || '').length) out.content = older.content;
+    out.imgs = (newer.imgs && newer.imgs.length) ? newer.imgs : (older.imgs || []);
+    if (!out.authorAv && older.authorAv) out.authorAv = older.authorAv;
+    if (!out.taAv && older.taAv) out.taAv = older.taAv;
+    out.likes = unionStrArr(older.likes, newer.likes);
+    out.comments = deeperList(older.comments, newer.comments);
+    return out;
+  }
+  // 按 id 合并两个动态列表（同 id 深度合并，见 deepMergePost），按 ts 倒序
   function mergePosts(a, b) {
     const map = {};
-    (a || []).forEach(p => { if (p && p.id) map[p.id] = p; });
-    (b || []).forEach(p => { if (p && p.id) map[p.id] = p; });
+    const put = p => { if (p && p.id) map[p.id] = map[p.id] ? deepMergePost(map[p.id], p) : p; };
+    (a || []).forEach(put);
+    (b || []).forEach(put);
     return Object.keys(map).map(k => map[k]).sort((x, y) => (y.ts || 0) - (x.ts || 0));
   }
   function load() {
@@ -201,7 +241,25 @@
   //   抽成独立函数：预就绪落盘时也复用，保证评论/动态在任何阶段都有持久兜底。
   function persistSnap(arr) {
     try {
-      const snap = JSON.stringify(arr.map(stripPostImg));
+      const items = arr.map(stripPostImg);
+      // v3.10.x：只做一次全量序列化——原实现先 stringify 探大小、结尾再 stringify 一次
+      //   （超限裁剪时循环里还逐条 stringify），每次评论/点赞都多付 1~2 次兆级序列化
+      let snap = JSON.stringify(items);
+      // v3.10.x：剥图后仍超 200KB 时按新→旧裁剪动态数——原实现直接静默跳过，
+      //   快照从此冻结在旧时刻不再更新，之后每次重启权威合并都用它盖掉 IDB 新评论
+      //   （丢评论根因之一）；裁剪保证快照始终可写、始终含最新动态
+      if (snap.length > LS_BIG_LIMIT) {
+        const sorted = items.slice().sort((x, y) => (y.ts || 0) - (x.ts || 0));
+        let budget = LS_BIG_LIMIT - 2;
+        const keep = [];
+        for (let i = 0; i < sorted.length; i++) {
+          const cost = JSON.stringify(sorted[i]).length + 1;
+          if (budget - cost < 0) break;
+          budget -= cost;
+          keep.push(sorted[i]);
+        }
+        snap = JSON.stringify(keep);
+      }
       if (snap.length <= LS_BIG_LIMIT) localStorage.setItem('xy-home-v2:default:' + SNAP_KEY, snap);
     } catch (e) {}
   }
@@ -504,6 +562,31 @@
     if (v) return safeBg(v, 'feed-ta-cover', s);
     return safeBg(store.get('feed-ta-cover'), 'feed-ta-cover', store);
   }
+  // v3.10.x：单张动态卡片 HTML（主列表模板）——render 全量渲染与评论/点赞后的
+  //   局部刷新（refreshPostCard）共用同一模板，避免两处 markup 漂移
+  function postCardHtml(p, name) {
+    const isMine = (p.role || p.by) === 'me';
+    // v3.7.x：旧数据缺 authorName 快照时，昵称回退按动态所属桌面取
+    // v3.8.x：'me' 动态作者/头像也读朋友圈独立身份（按动态所属桌面）
+    const author = p.authorName || (isMine ? feedUserNameFor(p.owner || 'default') : taFeedNameFor(p.owner || 'default'));
+    // v3.7.x：跨桌面——TA 动态头像按动态所属桌面取，不再显示当前桌面的 TA 头像
+    const av = p.authorAv || (isMine ? feedUserAvFor(p.owner || 'default') : taAvFor(p.owner || 'default'));
+    // 头像可点击 → 打开该联系人的全部朋友圈
+    const avWrap = '<div class="feed-head-av" data-owner="' + esc(p.owner || '') + '" title="查看' + esc(author) + '的全部朋友圈">' + avHtml(av) + '</div>';
+    // 点赞列表：显示"XX、XX 觉得很赞"
+    const likes = p.likes && p.likes.length
+      ? '<div class="feed-likes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;vertical-align:-2px;margin-right:5px"><path d="M12 21s-7.5-4.7-9.3-9A5.3 5.3 0 0112 6.4a5.3 5.3 0 019.3 5.6c-1.8 4.3-9.3 9-9.3 9z"/></svg>' + esc(p.likes.join('、')) + ' 觉得很赞</div>'
+      : '';
+    const liked = p.likes && p.likes.some(l => l === feedUserName());
+    return '<div class="feed-post" id="feed-post-' + p.id + '"><div class="feed-head">' + avWrap +
+      '<div class="feed-who"><div class="feed-name">' + esc(author) + '</div><div class="feed-time">' + fmtDT(p.ts) + '</div></div>' +
+      '<button class="feed-del" data-id="' + p.id + '" title="删除"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2"/><path d="M6 6l1 14a2 2 0 002 2h6a2 2 0 002-2l1-14"/></svg></button>' + '</div>' +
+      '<div class="feed-content">' + contentHtmlFor(p) + '</div>' +
+      '<div class="feed-actions">' +
+      '<button class="feed-act' + (liked ? ' liked' : '') + '" data-like="' + p.id + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-3px;margin-right:4px"><path d="M12 21s-7.5-4.7-9.3-9A5.3 5.3 0 0112 6.4a5.3 5.3 0 019.3 5.6c-1.8 4.3-9.3 9-9.3 9z"/></svg>赞</button>' +
+      '<button class="feed-act" data-comment="' + p.id + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-3px;margin-right:4px"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 018 8v.5z"/></svg>评论</button>' +
+      '</div>' + likes + commentsHtmlFor(p, name) + '</div>';
+  }
   // 渲染动态列表
   function render() {
     renderCover();
@@ -512,29 +595,7 @@
     const posts = load().slice().sort((a, b) => b.ts - a.ts);
     const name = partnerName();
     listEl.innerHTML = posts.length
-      ? posts.map(p => {
-          const isMine = (p.role || p.by) === 'me';
-          // v3.7.x：旧数据缺 authorName 快照时，昵称回退按动态所属桌面取
-          // v3.8.x：'me' 动态作者/头像也读朋友圈独立身份（按动态所属桌面）
-          const author = p.authorName || (isMine ? feedUserNameFor(p.owner || 'default') : taFeedNameFor(p.owner || 'default'));
-          // v3.7.x：跨桌面——TA 动态头像按动态所属桌面取，不再显示当前桌面的 TA 头像
-          const av = p.authorAv || (isMine ? feedUserAvFor(p.owner || 'default') : taAvFor(p.owner || 'default'));
-          // 头像可点击 → 打开该联系人的全部朋友圈
-          const avWrap = '<div class="feed-head-av" data-owner="' + esc(p.owner || '') + '" title="查看' + esc(author) + '的全部朋友圈">' + avHtml(av) + '</div>';
-          // 点赞列表：显示"XX、XX 觉得很赞"
-          const likes = p.likes && p.likes.length
-            ? '<div class="feed-likes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;vertical-align:-2px;margin-right:5px"><path d="M12 21s-7.5-4.7-9.3-9A5.3 5.3 0 0112 6.4a5.3 5.3 0 019.3 5.6c-1.8 4.3-9.3 9-9.3 9z"/></svg>' + esc(p.likes.join('、')) + ' 觉得很赞</div>'
-            : '';
-          const liked = p.likes && p.likes.some(l => l === feedUserName());
-          return '<div class="feed-post" id="feed-post-' + p.id + '"><div class="feed-head">' + avWrap +
-            '<div class="feed-who"><div class="feed-name">' + esc(author) + '</div><div class="feed-time">' + fmtDT(p.ts) + '</div></div>' +
-            '<button class="feed-del" data-id="' + p.id + '" title="删除"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2"/><path d="M6 6l1 14a2 2 0 002 2h6a2 2 0 002-2l1-14"/></svg></button>' + '</div>' +
-            '<div class="feed-content">' + contentHtmlFor(p) + '</div>' +
-            '<div class="feed-actions">' +
-            '<button class="feed-act' + (liked ? ' liked' : '') + '" data-like="' + p.id + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-3px;margin-right:4px"><path d="M12 21s-7.5-4.7-9.3-9A5.3 5.3 0 0112 6.4a5.3 5.3 0 019.3 5.6c-1.8 4.3-9.3 9-9.3 9z"/></svg>赞</button>' +
-            '<button class="feed-act" data-comment="' + p.id + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-3px;margin-right:4px"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>评论</button>' +
-            '</div>' + likes + commentsHtmlFor(p, name) + '</div>';
-        }).join('')
+      ? posts.map(p => postCardHtml(p, name)).join('')
       : '<div class="ta-empty">还没有动态，TA 会不定期分享生活</div>';
     const clearBtn = document.getElementById('feed-page-clear');
     if (clearBtn) clearBtn.hidden = !posts.length;
@@ -564,6 +625,25 @@
     const fa = document.getElementById('page-feed-all');
     if (fa && !fa.hidden) { try { renderFeedAll(); } catch (e) {} } else { render(); }
   }
+  // v3.10.x：单卡局部刷新——评论/回复/点赞只改动一条动态，原实现走 renderVisible()
+  //   全量重渲染整个列表：所有卡片 HTML 字符串重建 + 全部 dataURL 配图重新解码 +
+  //   全部事件重绑，重度图片数据下发一条评论就卡顿数百 ms~秒级（手机端明显）。
+  //   改为只替换该动态的卡片节点，其余卡片 DOM 原地不动（不解码图片、不重绑事件）；
+  //   卡片不在当前列表（刚发布/已删除/空态）时回退全量渲染兜底。
+  function refreshPostCard(pid) {
+    const el = document.getElementById('feed-post-' + pid);
+    if (!el) { renderVisible(); return; }
+    const p = load().find(x => x.id === pid);
+    if (!p) { renderVisible(); return; }
+    // 「全部朋友圈」页卡片模板与主列表略有差异（点赞行样式/作者取 feedAllCid），按所在列表选模板
+    const html = el.closest('#feed-all-list') ? postCardHtmlAll(p) : postCardHtml(p, partnerName());
+    const wrap = document.createElement('div');
+    wrap.innerHTML = html;
+    const fresh = wrap.firstElementChild;
+    if (!fresh || fresh.id !== 'feed-post-' + pid) { renderVisible(); return; }
+    el.replaceWith(fresh);
+    bindEvents(fresh);
+  }
   function bindEvents(listEl) {
     // v3.5.63：动态头像点击 → 打开该人的全部朋友圈
     listEl.querySelectorAll('.feed-head-av').forEach(av => av.addEventListener('click', (e) => {
@@ -588,7 +668,7 @@
       const wasMe = i >= 0;
       if (wasMe) p.likes.splice(i, 1); else p.likes.push(nm);
       save(list);
-      renderVisible();
+      refreshPostCard(b.dataset.like);
       if (!wasMe && (p.role || p.by) === 'me' && Math.random() * 100 < feedCfgFor(p.owner || 'default').likeback) {
         // v3.7.x：回赞的是动态所属桌面 TA，用该桌面设置
         const cfg = feedCfgFor(p.owner || 'default');
@@ -599,7 +679,7 @@
           p2.likes = p2.likes || [];
           if (p2.likes.indexOf(p2.taName || taFeedNameFor(p2.owner || 'default')) < 0) p2.likes.push(p2.taName || taFeedNameFor(p2.owner || 'default'));
           save(list2);
-          renderVisible();
+          refreshPostCard(p.id);
           addNotice('like', p2.id, (p2.taName || taFeedNameFor(p2.owner || 'default')) + ' 赞了你的动态', p2.owner || 'default');
         }, (cfg.likeSpeedMin + Math.random() * Math.max(1, cfg.likeSpeedMax - cfg.likeSpeedMin)) * 1000);
       }
@@ -897,7 +977,7 @@ function submitComment() {
     // 回调里再读必现 TypeError（TA 回应回复 100% 失效）
     const replyCi = comReplyTarget.ci;
     hideCommentBar();
-    renderVisible();
+    refreshPostCard(pid);
     // TA 有概率回应我的回复（写回复区 + 消息提醒）
     // v3.7.x：多桌面——回应用「被回复评论作者」的桌面身份/字卡/设置（评论可能是
     // 其他桌面联系人的 TA 发的，不能再一律用动态所属桌面）
@@ -913,7 +993,7 @@ function submitComment() {
         const replyText = pickReplyContent(cfg, tcOwner);
         p2.comments[replyCi].replies.push(stampAuthor({ content: replyText, ts: Date.now() }, taAuthorOfCid(tcOwner)));
         save(list2);
-        renderVisible();
+        refreshPostCard(pid);
         addNotice('comment', p2.id, taFeedNameFor(tcOwner) + ' 回复了你：' + noticeTextClean(replyText), tcOwner);
       }, (cfg.replySpeedMin + Math.random() * Math.max(1, cfg.replySpeedMax - cfg.replySpeedMin)) * 1000);
     }
@@ -927,7 +1007,7 @@ function submitComment() {
   p.comments.push(stampAuthor({ content: content, ts: Date.now(), replies: [] }, activeMe()));
   save(list);
   hideCommentBar();
-  renderVisible();
+  refreshPostCard(pid);
   // TA 有概率评论回应
   if (Math.random() * 100 < pcfg.commentProb) {
     const cfg = pcfg;
@@ -938,7 +1018,7 @@ function submitComment() {
       p2.comments = p2.comments || [];
       p2.comments.push(stampAuthor({ content: pickReplyContent(cfg, p2.owner || 'default'), ts: Date.now(), replies: [] }, taAuthorOf(p2)));
       save(list2);
-      renderVisible();
+      refreshPostCard(pid);
       if ((p2.role || p2.by) === 'me') addNotice('comment', p2.id, (p2.taName || taFeedNameFor(p2.owner || 'default')) + ' 评论了你的动态', p2.owner || 'default');
     }, (cfg.commentSpeedMin + Math.random() * Math.max(1, cfg.commentSpeedMax - cfg.commentSpeedMin)) * 1000);
   }
@@ -1222,7 +1302,7 @@ if (comInput) comInput.addEventListener('keydown', (e) => { if (e.key === 'Enter
           const nm = taFeedNameFor(cid);
           if (p2.likes.indexOf(nm) < 0) p2.likes.push(nm);
           save(list2);
-          renderVisible();
+          refreshPostCard(id);
           addNotice('like', p2.id, nm + ' 赞了你的动态', cid);
         }, (ccfg.likeSpeedMin + Math.random() * Math.max(1, ccfg.likeSpeedMax - ccfg.likeSpeedMin)) * 1000);
       }
@@ -1235,7 +1315,7 @@ if (comInput) comInput.addEventListener('keydown', (e) => { if (e.key === 'Enter
           p2.comments = p2.comments || [];
           p2.comments.push(stampAuthor({ content: pickReplyContent(ccfg, cid), ts: Date.now(), replies: [] }, taAuthorOfCid(cid)));
           save(list2);
-          renderVisible();
+          refreshPostCard(id);
           addNotice('comment', p2.id, taFeedNameFor(cid) + ' 评论了你的动态', cid);
         }, (ccfg.commentSpeedMin + Math.random() * Math.max(1, ccfg.commentSpeedMax - ccfg.commentSpeedMin)) * 1000);
       }
@@ -1421,6 +1501,28 @@ if (comInput) comInput.addEventListener('keydown', (e) => { if (e.key === 'Enter
   // v3.7.x：全部朋友圈页渲染（从 openFeedAll 拆出，供点赞/评论/回复后局部刷新——
   // 原实现渲染只绑删除/图片，页面上没有评论按钮、点评论也无回复绑定，用户在该页
   // 无法评论/回复（跨桌面查看联系人动态时最常见的操作路径）
+  // v3.10.x：单张动态卡片 HTML（全部朋友圈页模板）——renderFeedAll 与局部刷新共用
+  function postCardHtmlAll(p) {
+    const isMine = (p.role || p.by) === 'me';
+    // v3.8.x：'me' 动态作者/头像也读朋友圈独立身份
+    const author = p.authorName || (isMine ? feedUserNameFor(feedAllCid) : taFeedNameFor(feedAllCid));
+    // v3.7.x：头像按动态所属桌面取（该页动态 owner===feedAllCid，直接取该桌面）
+    const av = p.authorAv || (isMine ? feedUserAvFor(feedAllCid) : taAvFor(feedAllCid));
+    const likes = p.likes && p.likes.length
+      ? '<div class="feed-likes" style="font-size:11px;color:var(--muted);padding:6px 2px">' + esc(p.likes.join('、')) + ' 觉得很赞</div>'
+      : '';
+    const liked = p.likes && p.likes.some(l => l === feedUserName());
+    // v3.7.x：与主列表一致的点赞/评论入口（原全部朋友圈页缺这两个按钮）
+    return '<div class="feed-post" id="feed-post-' + p.id + '"><div class="feed-head">' + avHtml(av) +
+      '<div class="feed-who"><div class="feed-name">' + esc(author) + '</div><div class="feed-time">' + fmtDT(p.ts) + '</div></div>' +
+      '<button class="feed-del" data-id="' + p.id + '" title="删除"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2"/><path d="M6 6l1 14a2 2 0 002 2h6a2 2 0 002-2l1-14"/></svg></button></div>' +
+      '<div class="feed-content">' + contentHtmlFor(p) + '</div>' +
+      '<div class="feed-actions">' +
+      '<button class="feed-act' + (liked ? ' liked' : '') + '" data-like="' + p.id + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-3px;margin-right:4px"><path d="M12 21s-7.5-4.7-9.3-9A5.3 5.3 0 0112 6.4a5.3 5.3 0 019.3 5.6c-1.8 4.3-9.3 9-9.3 9z"/></svg>赞</button>' +
+      '<button class="feed-act" data-comment="' + p.id + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-3px;margin-right:4px"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 018 8v.5z"/></svg>评论</button>' +
+      '</div>' + likes +
+      commentsHtmlFor(p, author) + '</div>';
+  }
   function renderFeedAll() {
     const listEl = document.getElementById('feed-all-list');
     if (!listEl) return;
@@ -1429,27 +1531,7 @@ if (comInput) comInput.addEventListener('keydown', (e) => { if (e.key === 'Enter
     if (title) title.textContent = (c.name || feedAllCid) + ' 的全部朋友圈';
     const posts = load().filter(p => (p.owner || 'default') === feedAllCid).sort((a, b) => b.ts - a.ts);
     listEl.innerHTML = posts.length
-      ? posts.map(p => {
-          const isMine = (p.role || p.by) === 'me';
-          // v3.8.x：'me' 动态作者/头像也读朋友圈独立身份
-          const author = p.authorName || (isMine ? feedUserNameFor(feedAllCid) : taFeedNameFor(feedAllCid));
-          // v3.7.x：头像按动态所属桌面取（该页动态 owner===feedAllCid，直接取该桌面）
-          const av = p.authorAv || (isMine ? feedUserAvFor(feedAllCid) : taAvFor(feedAllCid));
-          const likes = p.likes && p.likes.length
-            ? '<div class="feed-likes" style="font-size:11px;color:var(--muted);padding:6px 2px">' + esc(p.likes.join('、')) + ' 觉得很赞</div>'
-            : '';
-          const liked = p.likes && p.likes.some(l => l === feedUserName());
-          // v3.7.x：与主列表一致的点赞/评论入口（原全部朋友圈页缺这两个按钮）
-          return '<div class="feed-post" id="feed-post-' + p.id + '"><div class="feed-head">' + avHtml(av) +
-            '<div class="feed-who"><div class="feed-name">' + esc(author) + '</div><div class="feed-time">' + fmtDT(p.ts) + '</div></div>' +
-            '<button class="feed-del" data-id="' + p.id + '" title="删除"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2"/><path d="M6 6l1 14a2 2 0 002 2h6a2 2 0 002-2l1-14"/></svg></button></div>' +
-            '<div class="feed-content">' + contentHtmlFor(p) + '</div>' +
-            '<div class="feed-actions">' +
-            '<button class="feed-act' + (liked ? ' liked' : '') + '" data-like="' + p.id + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-3px;margin-right:4px"><path d="M12 21s-7.5-4.7-9.3-9A5.3 5.3 0 0112 6.4a5.3 5.3 0 019.3 5.6c-1.8 4.3-9.3 9-9.3 9z"/></svg>赞</button>' +
-            '<button class="feed-act" data-comment="' + p.id + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-3px;margin-right:4px"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>评论</button>' +
-            '</div>' + likes +
-            commentsHtmlFor(p, author) + '</div>';
-        }).join('')
+      ? posts.map(p => postCardHtmlAll(p)).join('')
       : '<div class="ta-empty">还没有动态</div>';
     // v3.7.x：全部朋友圈页与主列表共用事件绑定——点赞/评论/回复/删除/图片放大全可用
     //（bindEvents 里的 .feed-head-av 该页无此元素，自动跳过）

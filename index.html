@@ -5744,7 +5744,7 @@ color: #c67800;
       </div>
       <div class="splash-dots"><i></i><i></i><i></i></div>
       <div class="splash-brand">小红书@言序（1842523578）</div>
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787568048783">Mochi 字卡传讯 v3.6.222 · 部署于 2026-08-24 18:40</div>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787571072322">Mochi 字卡传讯 v3.6.223 · 部署于 2026-08-24 19:31</div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
       <div class="splash-loading" id="splash-loading">正在加载数据…</div>
@@ -6603,7 +6603,7 @@ color: #c67800;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.6.222</div>
+      <div class="ver">Mochi 字卡传讯 v3.6.223</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -24862,7 +24862,8 @@ name: s.name || '',
 artist: ((s.ar || []).map(a => a.name).filter(Boolean).join('/')),
 cover: String((s.al && s.al.picUrl) || '').replace(/^http:\/\//i, 'https://'),
 url: s.id ? neteaseMetingUrl(s.id) : '',
-duration: s.dt ? Math.round(s.dt / 1000) : 0
+duration: s.dt ? Math.round(s.dt / 1000) : 0,
+fee: s.fee // v3.10.x：1=VIP 专属 4=购买专辑——导入时过滤
 })).filter(t => t.url);
 } },
 { url: 'https://api.allorigins.win/raw?url=' + encodeURIComponent(apiUrl), parse(txt) {
@@ -24875,7 +24876,8 @@ name: s.name || '',
 artist: ((s.ar || []).map(a => a.name).filter(Boolean).join('/')),
 cover: String((s.al && s.al.picUrl) || '').replace(/^http:\/\//i, 'https://'),
 url: s.id ? neteaseMetingUrl(s.id) : '',
-duration: s.dt ? Math.round(s.dt / 1000) : 0
+duration: s.dt ? Math.round(s.dt / 1000) : 0,
+fee: s.fee
 })).filter(t => t.url);
 } },
 { url: 'https://corsproxy.io/?url=' + encodeURIComponent(apiUrl), parse(txt) {
@@ -24888,7 +24890,8 @@ name: s.name || '',
 artist: ((s.ar || []).map(a => a.name).filter(Boolean).join('/')),
 cover: String((s.al && s.al.picUrl) || '').replace(/^http:\/\//i, 'https://'),
 url: s.id ? neteaseMetingUrl(s.id) : '',
-duration: s.dt ? Math.round(s.dt / 1000) : 0
+duration: s.dt ? Math.round(s.dt / 1000) : 0,
+fee: s.fee
 })).filter(t => t.url);
 } }
 ];
@@ -24916,29 +24919,41 @@ tryNext();
 function importNeteasePlaylist(id, done, targetPl) {
 fetchNeteasePlaylist(id, function (tracks) {
 if (!tracks || !tracks.length) { done({ ok: false }); return; }
-let added = 0, skipped = 0;
+let added = 0, skipped = 0, vip = 0;
 const now = Date.now();
 const addedIds = [];
 const plId = targetPl || 'default';
 tracks.forEach((t, i) => {
 if (t.neteaseId && library.some(m => m.neteaseId === t.neteaseId)) { skipped++; return; }
+if (t.fee === 1 || t.fee === 4) { vip++; return; } // VIP 专属/需购买专辑：网页外链播不了
 const nid = 'sm_pl_' + now + '_' + i + '_' + Math.random().toString(36).substr(2, 4);
 library.push({ id: nid, neteaseId: t.neteaseId, name: t.name || '网易云音乐-' + (t.neteaseId || i), artist: t.artist || '', cover: t.cover || '', url: t.url, source: 'url', duration: t.duration || 0, playlistId: plId, addedAt: now });
 addedIds.push(nid);
 added++;
 });
-done({ ok: true, added: added, skipped: skipped });
+done({ ok: true, added: added, skipped: skipped, vip: vip });
 if (addedIds.length) enrichImportedDurations(id, addedIds);
 });
 }
 function enrichImportedDurations(id, trackIds) {
 const missing = trackIds.map(findTrack).filter(m => m && m.neteaseId && !m.duration);
 if (!missing.length) return;
-fetchV6Durations(id, function (durMap) {
+fetchV6Durations(id, function (durMap, feeMap) {
 if (durMap && Object.keys(durMap).length) {
 let any = false;
 missing.forEach(m => { if (durMap[m.neteaseId] && !m.duration) { m.duration = durMap[m.neteaseId]; any = true; } });
 if (any) { saveLibrary(); renderPage(); }
+}
+if (feeMap && Object.keys(feeMap).length) {
+const vipTracks = trackIds.map(findTrack).filter(m => m && m.neteaseId && (feeMap[m.neteaseId] === 1 || feeMap[m.neteaseId] === 4));
+if (vipTracks.length) {
+const vipIds = vipTracks.map(m => m.id);
+library = library.filter(x => vipIds.indexOf(x.id) < 0);
+if (currentId && vipIds.indexOf(currentId) >= 0) { teardownAudio(); currentId = null; updatePlayerBar(); renderLibrary(); }
+saveLibrary();
+renderPage();
+toast('已自动移除 ' + vipTracks.length + ' 首 VIP/付费歌曲（网页外链无法播放）');
+}
 }
 missing.forEach(m => { if (!m.duration) enqueueDurProbe(m); });
 });
@@ -24951,8 +24966,9 @@ const prox = [
 { p: 'https://corsproxy.io/?url=', enc: true }
 ];
 const out = {};
+const fees = {}; // v3.10.x：顺带收集 fee（1=VIP 4=购买专辑）供导入后移除本批 VIP
 let settled = false;
-const finish = () => { if (settled) return; settled = true; cb(out); };
+const finish = () => { if (settled) return; settled = true; cb(out, fees); };
 prox.forEach(pr => {
 let controller;
 try { controller = new AbortController(); } catch (e) { controller = null; }
@@ -24965,7 +24981,11 @@ try {
 const j = JSON.parse(txt);
 const pl = j && j.playlist;
 if (pl && Array.isArray(pl.tracks) && pl.tracks.length) {
-pl.tracks.forEach(s => { if (s && s.id && s.dt) out[String(s.id)] = Math.round(s.dt / 1000); });
+pl.tracks.forEach(s => {
+if (!s || !s.id) return;
+if (s.dt) out[String(s.id)] = Math.round(s.dt / 1000);
+fees[String(s.id)] = s.fee;
+});
 finish();
 }
 } catch (e) {}
@@ -25082,11 +25102,11 @@ ico.innerHTML = '';
 });
 }
 function importPlaylistIds(ids, cb, targetPl) {
-let total = 0, plOk = 0, plFail = 0, skipped = 0;
+let total = 0, plOk = 0, plFail = 0, skipped = 0, vip = 0;
 const next = (i) => {
-if (i >= ids.length) { cb({ total: total, plOk: plOk, plFail: plFail, skipped: skipped }); return; }
+if (i >= ids.length) { cb({ total: total, plOk: plOk, plFail: plFail, skipped: skipped, vip: vip }); return; }
 importNeteasePlaylist(ids[i], (res) => {
-if (res.ok) { plOk++; total += res.added; skipped += res.skipped; }
+if (res.ok) { plOk++; total += res.added; skipped += res.skipped; vip += res.vip || 0; }
 else plFail++;
 next(i + 1);
 }, targetPl);
@@ -25312,6 +25332,7 @@ else { saveLibrary(); document.getElementById('tc-mask').hidden = true; renderPa
 let msg = res.total
 ? '已导入 ' + res.plOk + ' 个歌单 / ' + res.total + ' 首' + (res.skipped ? '（跳过已有 ' + res.skipped + ' 首）' : '')
 : '歌单导入失败';
+if (res.vip) msg += '（VIP 歌曲 ' + res.vip + ' 首未导入）';
 if (res.plFail) {
 if (!res.total) {
 const ua = navigator.userAgent || '';
@@ -25333,7 +25354,7 @@ addLinkLines(lines, isBatch);
 function openBatch() {
 if (!window.openTCPanel) return;
 window.openTCPanel('批量导入音乐', '' +
-'<div class="sm-fld-hint" style="margin-bottom:8px"><b>支持 3 种导入方式：</b><br>① <b>网易云歌单</b>：直接粘贴歌单分享链接（music.163.com/playlist?id=xxx 或 #/playlist?id=xxx），自动导入整个歌单；<br>② <b>网易云单曲</b>：每行一个歌曲数字 ID（如 2064961530），或<b>直接粘贴完整网易云链接</b>（如 music.163.com/#/song?id=xxx、song/media/outer/url?id=xxx.mp3），自动识别导入，不用手动填 ID；<br>③ <b>本地/直链</b>：按「歌曲名称 / 歌手 / 音乐直链URL」格式粘贴，每首歌空一行分隔（URL 栏同样支持直接贴网易云链接）。<br><br><span style="opacity:.75">⚠ 链接上传的 VIP/付费歌曲无法播放（仅免费歌曲可播）；歌单导入受网络环境影响（部分手机浏览器可能拦截），失败可稍后重试</span></div>' +
+'<div class="sm-fld-hint" style="margin-bottom:8px"><b>支持 3 种导入方式：</b><br>① <b>网易云歌单</b>：直接粘贴歌单分享链接（music.163.com/playlist?id=xxx 或 #/playlist?id=xxx），自动导入整个歌单；<br>② <b>网易云单曲</b>：每行一个歌曲数字 ID（如 2064961530），或<b>直接粘贴完整网易云链接</b>（如 music.163.com/#/song?id=xxx、song/media/outer/url?id=xxx.mp3），自动识别导入，不用手动填 ID；<br>③ <b>本地/直链</b>：按「歌曲名称 / 歌手 / 音乐直链URL」格式粘贴，每首歌空一行分隔（URL 栏同样支持直接贴网易云链接）。<br><br><span style="opacity:.75">⚠ 链接上传的 VIP/付费歌曲无法播放（仅免费歌曲可播）；歌单导入会自动移除 VIP/付费歌曲；歌单导入受网络环境影响（部分手机浏览器可能拦截），失败可稍后重试</span></div>' +
 '<textarea id="sm-batch-input" class="tc-input" rows="8" placeholder="网易云歌单链接：https://music.163.com/playlist?id=3778678&#10;网易云单曲链接：https://music.163.com/#/song?id=27538343&#10;或纯数字 ID：27538343&#10;&#10;歌曲名称：Baby&#10;歌手：EXO-K&#10;音乐直链URL：http://music.163.com/song/media/outer/url?id=27538343.mp3"></textarea>' +
 '<div class="sm-fld"><label>导入到歌单</label><select class="tc-input" id="sm-target-pl">' + targetPlOptions() + '</select></div>' +
 '<div class="mail-actions"><button class="cc-tool" id="sm-batch-cancel">取消</button><button class="cc-tool" id="sm-batch-ok">开始导入</button></div>');
@@ -25422,6 +25443,7 @@ else msg += '，可稍后重试';
 msg += '）';
 }
 if (res.skipped) msg += '（跳过已有 ' + res.skipped + ' 首）';
+if (res.vip) msg += '（VIP 歌曲 ' + res.vip + ' 首未导入）';
 if (res.plFail && res.total) msg += '；' + res.plFail + ' 个歌单失败（可能私密/已失效/被拦截）';
 toast(msg);
 }, targetPl);
@@ -25923,7 +25945,6 @@ wantPlay = true; // v3.10.x：用户点播/切歌＝意图播放（外部打断�
 const p = audio.play();
 if (p && p.catch) {
 p.catch(() => {
-playRejected = true;
 try { audio.muted = true; } catch (e) {}
 const p2 = audio.play();
 if (p2 && p2.then) {
@@ -25934,12 +25955,11 @@ clearStallGuard();
 disarmAutoResume();
 try { syncPlayIcons(true); } catch (e) {}
 }).catch(() => {
-toast('点击播放被浏览器拦截，请再点一下屏幕继续播放');
-armAutoResume();
+if (audio) { try { audio.muted = false; } catch (e) {} }
+handlePlayReject();
 });
 } else {
-toast('点击播放被浏览器拦截，请再点一下屏幕继续播放');
-armAutoResume();
+handlePlayReject();
 }
 });
 }
@@ -26040,6 +26060,21 @@ setTimeout(function () { try { tryResumePlayback(); } catch (e) {} }, 200);
 setInterval(function () {
 try { if (document.hidden) tryResumePlayback(); } catch (e) {}
 }, 10000);
+let lastGestureAt = 0;
+['pointerdown', 'touchend', 'keydown', 'mousedown'].forEach(function (ev) {
+document.addEventListener(ev, function () { lastGestureAt = Date.now(); }, { capture: true, passive: true });
+});
+function recentUserGesture() { return Date.now() - lastGestureAt < 4000; }
+function handlePlayReject() {
+playRejected = true;
+if (recentUserGesture()) {
+toast('点击播放被浏览器拦截，请再点一下屏幕继续播放');
+armAutoResume();
+} else {
+armAutoResume();        // 用户下次任意触摸即恢复（不弹提示）
+scheduleBgResume();     // 定时补播先试，多数自动切歌场景直接救回
+}
+}
 let stallTimer = null;
 let playRejected = false;
 function clearStallGuard() {
@@ -33846,10 +33881,43 @@ return (d.getMonth() + 1) + '月' + d.getDate() + '日 ' + p(d.getHours()) + ':'
 function normPost(p) { if (p.by && !p.role) { p.role = p.by; if (!p.owner) p.owner = 'default'; } return p; }
 let feedDbReady = false;
 let feedPending = null;
+function itemKey(o) { return (o && o.ts ? o.ts : 0) + '|' + (o.role || o.by || '') + '|' + (o.authorName || '') + '|' + (o.content || ''); }
+function deeperList(a, b) {
+const byKey = {};
+const put = (o) => {
+if (!o || typeof o !== 'object') return;
+const k = itemKey(o);
+const prev = byKey[k];
+if (!prev) { byKey[k] = Object.assign({}, o); return; }
+if (Array.isArray(o.replies) && o.replies.length) prev.replies = deeperList(prev.replies || [], o.replies);
+else if (!Array.isArray(prev.replies) && Array.isArray(o.replies)) prev.replies = o.replies;
+};
+(a || []).forEach(put);
+(b || []).forEach(put);
+return Object.keys(byKey).map(k => byKey[k]).sort((x, y) => (x.ts || 0) - (y.ts || 0));
+}
+function unionStrArr(a, b) {
+const out = [], seen = {};
+(a || []).concat(b || []).forEach(s => { if (typeof s === 'string' && !seen[s]) { seen[s] = 1; out.push(s); } });
+return out;
+}
+function deepMergePost(a, b) {
+const newer = (b.ts || 0) >= (a.ts || 0) ? b : a;
+const older = newer === a ? b : a;
+const out = Object.assign({}, older, newer);
+if ((older.content || '').length > (newer.content || '').length) out.content = older.content;
+out.imgs = (newer.imgs && newer.imgs.length) ? newer.imgs : (older.imgs || []);
+if (!out.authorAv && older.authorAv) out.authorAv = older.authorAv;
+if (!out.taAv && older.taAv) out.taAv = older.taAv;
+out.likes = unionStrArr(older.likes, newer.likes);
+out.comments = deeperList(older.comments, newer.comments);
+return out;
+}
 function mergePosts(a, b) {
 const map = {};
-(a || []).forEach(p => { if (p && p.id) map[p.id] = p; });
-(b || []).forEach(p => { if (p && p.id) map[p.id] = p; });
+const put = p => { if (p && p.id) map[p.id] = map[p.id] ? deepMergePost(map[p.id], p) : p; };
+(a || []).forEach(put);
+(b || []).forEach(put);
 return Object.keys(map).map(k => map[k]).sort((x, y) => (y.ts || 0) - (x.ts || 0));
 }
 function load() {
@@ -33874,7 +33942,20 @@ return list;
 }
 function persistSnap(arr) {
 try {
-const snap = JSON.stringify(arr.map(stripPostImg));
+const items = arr.map(stripPostImg);
+let snap = JSON.stringify(items);
+if (snap.length > LS_BIG_LIMIT) {
+const sorted = items.slice().sort((x, y) => (y.ts || 0) - (x.ts || 0));
+let budget = LS_BIG_LIMIT - 2;
+const keep = [];
+for (let i = 0; i < sorted.length; i++) {
+const cost = JSON.stringify(sorted[i]).length + 1;
+if (budget - cost < 0) break;
+budget -= cost;
+keep.push(sorted[i]);
+}
+snap = JSON.stringify(keep);
+}
 if (snap.length <= LS_BIG_LIMIT) localStorage.setItem('xy-home-v2:default:' + SNAP_KEY, snap);
 } catch (e) {}
 }
@@ -34121,14 +34202,7 @@ const v = s.get('feed-ta-cover');
 if (v) return safeBg(v, 'feed-ta-cover', s);
 return safeBg(store.get('feed-ta-cover'), 'feed-ta-cover', store);
 }
-function render() {
-renderCover();
-const listEl = document.getElementById('feed-list');
-if (!listEl) return;
-const posts = load().slice().sort((a, b) => b.ts - a.ts);
-const name = partnerName();
-listEl.innerHTML = posts.length
-? posts.map(p => {
+function postCardHtml(p, name) {
 const isMine = (p.role || p.by) === 'me';
 const author = p.authorName || (isMine ? feedUserNameFor(p.owner || 'default') : taFeedNameFor(p.owner || 'default'));
 const av = p.authorAv || (isMine ? feedUserAvFor(p.owner || 'default') : taAvFor(p.owner || 'default'));
@@ -34143,9 +34217,17 @@ return '<div class="feed-post" id="feed-post-' + p.id + '"><div class="feed-head
 '<div class="feed-content">' + contentHtmlFor(p) + '</div>' +
 '<div class="feed-actions">' +
 '<button class="feed-act' + (liked ? ' liked' : '') + '" data-like="' + p.id + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-3px;margin-right:4px"><path d="M12 21s-7.5-4.7-9.3-9A5.3 5.3 0 0112 6.4a5.3 5.3 0 019.3 5.6c-1.8 4.3-9.3 9-9.3 9z"/></svg>赞</button>' +
-'<button class="feed-act" data-comment="' + p.id + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-3px;margin-right:4px"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>评论</button>' +
+'<button class="feed-act" data-comment="' + p.id + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-3px;margin-right:4px"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 018 8v.5z"/></svg>评论</button>' +
 '</div>' + likes + commentsHtmlFor(p, name) + '</div>';
-}).join('')
+}
+function render() {
+renderCover();
+const listEl = document.getElementById('feed-list');
+if (!listEl) return;
+const posts = load().slice().sort((a, b) => b.ts - a.ts);
+const name = partnerName();
+listEl.innerHTML = posts.length
+? posts.map(p => postCardHtml(p, name)).join('')
 : '<div class="ta-empty">还没有动态，TA 会不定期分享生活</div>';
 const clearBtn = document.getElementById('feed-page-clear');
 if (clearBtn) clearBtn.hidden = !posts.length;
@@ -34170,6 +34252,19 @@ function renderVisible() {
 const fa = document.getElementById('page-feed-all');
 if (fa && !fa.hidden) { try { renderFeedAll(); } catch (e) {} } else { render(); }
 }
+function refreshPostCard(pid) {
+const el = document.getElementById('feed-post-' + pid);
+if (!el) { renderVisible(); return; }
+const p = load().find(x => x.id === pid);
+if (!p) { renderVisible(); return; }
+const html = el.closest('#feed-all-list') ? postCardHtmlAll(p) : postCardHtml(p, partnerName());
+const wrap = document.createElement('div');
+wrap.innerHTML = html;
+const fresh = wrap.firstElementChild;
+if (!fresh || fresh.id !== 'feed-post-' + pid) { renderVisible(); return; }
+el.replaceWith(fresh);
+bindEvents(fresh);
+}
 function bindEvents(listEl) {
 listEl.querySelectorAll('.feed-head-av').forEach(av => av.addEventListener('click', (e) => {
 e.stopPropagation();
@@ -34190,7 +34285,7 @@ const i = p.likes.indexOf(nm);
 const wasMe = i >= 0;
 if (wasMe) p.likes.splice(i, 1); else p.likes.push(nm);
 save(list);
-renderVisible();
+refreshPostCard(b.dataset.like);
 if (!wasMe && (p.role || p.by) === 'me' && Math.random() * 100 < feedCfgFor(p.owner || 'default').likeback) {
 const cfg = feedCfgFor(p.owner || 'default');
 setTimeout(() => {
@@ -34200,7 +34295,7 @@ if (!p2) return;
 p2.likes = p2.likes || [];
 if (p2.likes.indexOf(p2.taName || taFeedNameFor(p2.owner || 'default')) < 0) p2.likes.push(p2.taName || taFeedNameFor(p2.owner || 'default'));
 save(list2);
-renderVisible();
+refreshPostCard(p.id);
 addNotice('like', p2.id, (p2.taName || taFeedNameFor(p2.owner || 'default')) + ' 赞了你的动态', p2.owner || 'default');
 }, (cfg.likeSpeedMin + Math.random() * Math.max(1, cfg.likeSpeedMax - cfg.likeSpeedMin)) * 1000);
 }
@@ -34472,7 +34567,7 @@ tc.replies.push(stampAuthor({ content: content, ts: Date.now() }, activeMe()));
 save(list);
 const replyCi = comReplyTarget.ci;
 hideCommentBar();
-renderVisible();
+refreshPostCard(pid);
 const tcOwner = (tc && tc.owner) || p.owner || 'default';
 const tcfg = feedCfgFor(tcOwner);
 if (Math.random() * 100 < tcfg.replyProb) {
@@ -34485,7 +34580,7 @@ p2.comments[replyCi].replies = p2.comments[replyCi].replies || [];
 const replyText = pickReplyContent(cfg, tcOwner);
 p2.comments[replyCi].replies.push(stampAuthor({ content: replyText, ts: Date.now() }, taAuthorOfCid(tcOwner)));
 save(list2);
-renderVisible();
+refreshPostCard(pid);
 addNotice('comment', p2.id, taFeedNameFor(tcOwner) + ' 回复了你：' + noticeTextClean(replyText), tcOwner);
 }, (cfg.replySpeedMin + Math.random() * Math.max(1, cfg.replySpeedMax - cfg.replySpeedMin)) * 1000);
 }
@@ -34497,7 +34592,7 @@ const commentText = pickReplyContent(pcfg, p.owner || 'default');
 p.comments.push(stampAuthor({ content: content, ts: Date.now(), replies: [] }, activeMe()));
 save(list);
 hideCommentBar();
-renderVisible();
+refreshPostCard(pid);
 if (Math.random() * 100 < pcfg.commentProb) {
 const cfg = pcfg;
 setTimeout(() => {
@@ -34507,7 +34602,7 @@ if (!p2) return;
 p2.comments = p2.comments || [];
 p2.comments.push(stampAuthor({ content: pickReplyContent(cfg, p2.owner || 'default'), ts: Date.now(), replies: [] }, taAuthorOf(p2)));
 save(list2);
-renderVisible();
+refreshPostCard(pid);
 if ((p2.role || p2.by) === 'me') addNotice('comment', p2.id, (p2.taName || taFeedNameFor(p2.owner || 'default')) + ' 评论了你的动态', p2.owner || 'default');
 }, (cfg.commentSpeedMin + Math.random() * Math.max(1, cfg.commentSpeedMax - cfg.commentSpeedMin)) * 1000);
 }
@@ -34754,7 +34849,7 @@ p2.likes = p2.likes || [];
 const nm = taFeedNameFor(cid);
 if (p2.likes.indexOf(nm) < 0) p2.likes.push(nm);
 save(list2);
-renderVisible();
+refreshPostCard(id);
 addNotice('like', p2.id, nm + ' 赞了你的动态', cid);
 }, (ccfg.likeSpeedMin + Math.random() * Math.max(1, ccfg.likeSpeedMax - ccfg.likeSpeedMin)) * 1000);
 }
@@ -34766,7 +34861,7 @@ if (!p2) return;
 p2.comments = p2.comments || [];
 p2.comments.push(stampAuthor({ content: pickReplyContent(ccfg, cid), ts: Date.now(), replies: [] }, taAuthorOfCid(cid)));
 save(list2);
-renderVisible();
+refreshPostCard(id);
 addNotice('comment', p2.id, taFeedNameFor(cid) + ' 评论了你的动态', cid);
 }, (ccfg.commentSpeedMin + Math.random() * Math.max(1, ccfg.commentSpeedMax - ccfg.commentSpeedMin)) * 1000);
 }
@@ -34926,15 +35021,7 @@ avEl.innerHTML = av ? '<img src="' + attrEsc(av) + '" alt="">' : '';
 }
 if (nameEl) nameEl.textContent = c.name || feedAllCid;
 }
-function renderFeedAll() {
-const listEl = document.getElementById('feed-all-list');
-if (!listEl) return;
-const c = (window.getContacts && window.getContacts().find(x => x.id === feedAllCid)) || { name: feedAllCid };
-const title = document.getElementById('feed-all-title');
-if (title) title.textContent = (c.name || feedAllCid) + ' 的全部朋友圈';
-const posts = load().filter(p => (p.owner || 'default') === feedAllCid).sort((a, b) => b.ts - a.ts);
-listEl.innerHTML = posts.length
-? posts.map(p => {
+function postCardHtmlAll(p) {
 const isMine = (p.role || p.by) === 'me';
 const author = p.authorName || (isMine ? feedUserNameFor(feedAllCid) : taFeedNameFor(feedAllCid));
 const av = p.authorAv || (isMine ? feedUserAvFor(feedAllCid) : taAvFor(feedAllCid));
@@ -34948,10 +35035,19 @@ return '<div class="feed-post" id="feed-post-' + p.id + '"><div class="feed-head
 '<div class="feed-content">' + contentHtmlFor(p) + '</div>' +
 '<div class="feed-actions">' +
 '<button class="feed-act' + (liked ? ' liked' : '') + '" data-like="' + p.id + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-3px;margin-right:4px"><path d="M12 21s-7.5-4.7-9.3-9A5.3 5.3 0 0112 6.4a5.3 5.3 0 019.3 5.6c-1.8 4.3-9.3 9-9.3 9z"/></svg>赞</button>' +
-'<button class="feed-act" data-comment="' + p.id + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-3px;margin-right:4px"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>评论</button>' +
+'<button class="feed-act" data-comment="' + p.id + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-3px;margin-right:4px"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 018 8v.5z"/></svg>评论</button>' +
 '</div>' + likes +
 commentsHtmlFor(p, author) + '</div>';
-}).join('')
+}
+function renderFeedAll() {
+const listEl = document.getElementById('feed-all-list');
+if (!listEl) return;
+const c = (window.getContacts && window.getContacts().find(x => x.id === feedAllCid)) || { name: feedAllCid };
+const title = document.getElementById('feed-all-title');
+if (title) title.textContent = (c.name || feedAllCid) + ' 的全部朋友圈';
+const posts = load().filter(p => (p.owner || 'default') === feedAllCid).sort((a, b) => b.ts - a.ts);
+listEl.innerHTML = posts.length
+? posts.map(p => postCardHtmlAll(p)).join('')
 : '<div class="ta-empty">还没有动态</div>';
 bindEvents(listEl);
 renderFeedAllCover();

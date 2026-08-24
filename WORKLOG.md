@@ -1568,3 +1568,25 @@ ode --check ͨ�� + verify 10/10 + verify-desk-reset-period 10/10����
   - **根因**：手机浏览器/系统在页面切后台后会因省电、音频焦点抢占、渲染进程冻结等暂停 `<audio>`（用户没点暂停）；旧代码只有 armAutoResume「等用户手势」兜底，后台毫无反击——回前台能"自己恢复"全靠冻结解除后 ended/checkAutoEnd 补处理的运气（也解释了为何"切到前台才恢复"）。bg-keep 的保活音频只能降低冻结概率，拦不住系统级音频打断。
   - **修复**：music-player.js 引入「意图播放」标记 wantPlay——只有用户主动暂停（toggle 暂停分支）、真正停止（本地文件加载失败/外链失败/内置旋律失败等 toast 失败路径）、来电 hold（musicHoldForCall(true)）才清除；其余 pause 一律视为外部打断：① 后台按 300ms~1.5s~5s~12s 退避定时补播（tryResumePlayback/scheduleBgResume）；② 补播三级降级＝原元素 play()（保留进度）→ muted 静音解锁 → 重建 audio 元素（X5 缓存 rejection 兜底，同 armAutoRetry 思路，仅限外链歌）；③ 回前台 visible/focus/pageshow 立即补播（200ms 延迟，覆盖"完全冻结定时器停摆"场景）；④ 10s 看门狗在 hidden 下周期拉起；⑤ 连续失败封顶 6 次（onplay 清零）防死链被看门狗无限重拉。全程静默不弹 toast。
   - **回归**：tools/verify-music-bg-resume.mjs 10 项全过——mock Audio 的 systemPause()（不经 pause() 直接打断+派发事件）模拟系统行为：点击列表真实起播后，切后台被打断 1.5s 内自动续播、用户暂停后不被打扰、回前台立即恢复、来电 hold 不抢播且释放后恢复、ended 未处理时自动重建元素续播。
+
+### 2026-08-24（用户反馈：①聊天时正常听歌也会突然中断并弹「点击播放被浏览器拦截」；②导入歌单需要自动去掉 VIP 歌曲）
+- [本会话·完成]（**已构建 verify 10/10 + 新增 tools/verify-music-vip-filter.mjs 6/6 + bg-resume 10/10 + dur-cover 9/9 回归全过，未提交→随工作区待提交批次一起提交**）：src/js/music-player.js。
+  - **①「被拦截」误报根因**：歌播完自动切下一首 / 断链重试（retryWithHttpsUrl）/ 本地文件异步加载后补播等场景，`audio.play()` 都发生在**无用户手势上下文**里，严格内核（X5/Via/OPPO 等）直接 NotAllowedError——旧逻辑不分场景一律 toast「点击播放被浏览器拦截」+ 等手势，用户在聊天页听歌每切一首就弹一次。修复：新增最近手势时间戳（pointerdown/touchend/keydown/mousedown 捕获阶段记录），拒绝处理统一走 handlePlayReject 分流——4s 内有手势才弹提示；非手势静默走 armAutoResume（下次触摸即恢复）+ scheduleBgResume（定时补播先试，多数自动切歌直接救回）。
+  - **② 歌单导入自动去 VIP**：两层过滤——(a) 前置：fetchNeteasePlaylist 的官方 v6 解析源自带 fee（1=VIP 专属、4=需购买专辑），importNeteasePlaylist 入库前直接跳过并计数；(b) 后置兜底：meting 源（主源）不带 fee——enrichImportedDurations 补时长的那趟 v6 详情现在顺带收集 fee（fetchV6Durations cb 增加 feeMap 参数），把**本次新导入**的 fee=1/4 曲目从库里移除（只动本批 addedIds，不碰已有歌曲；若正播到该曲则停止播放），toast「已自动移除 N 首 VIP/付费歌曲」。两处导入完成文案追加「VIP 歌曲 N 首未导入」，批量导入面板说明同步更新。注：v6 走 CORS 代理，代理全挂时 VIP 识别不可用（退化为旧行为，音频探测也会对 VIP 失败留 00:00）。
+  - **回归**：tools/verify-music-vip-filter.mjs 6 项全过——stub meting/v6 接口驱动真实批量面板导入（1 VIP + 2 免费）：VIP 不入最终曲库、免费歌经 v6 快路径补出时长、toast 提示移除数；mock Audio rejectMode 验证无手势被拒不弹提示、pointerdown 后被拒正常提示。（排错记录：模板字符串裸插值 JSON 数组导致 `new Response([obj])` body 变 `[object Object]`，须 `${JSON.stringify(text)}` 嵌入。）
+
+### 2026-08-24（用户反馈：朋友圈评论消失——昨晚 TA 动态下评论往返回复多个回合，次日只剩 1 条）
+- [本会话·完成]（**已构建，verify 10/10 + 新增 tools/verify-feed-comment-merge.mjs 10/10（修复前跑旧产物实测复现：5条评论只剩2条），未提交→随工作区待提交批次一起提交**）：src/js/feed.js。
+  - **根因**：feedMergeFromIdb 权威回读合并是 post 级「本地整条覆盖 IDB」（mergePosts(base, mergePosts(cur, pending)) 后者覆盖同 id）。而本地副本会陈旧：feed-posts 主键 >200KB 时 xyStore 只进 IDB 不进 LS，本地退化为剥图快照 feed-posts-snap；persistSnap 剥图后仍超 200KB 时【静默跳过不写】→ 快照从此冻结在旧时刻。下次启动合并时陈旧快照版本整条盖掉 IDB 里带全部后续评论的新版本，并随即 store.set 写回 IDB → 评论永久丢失（用户症状：多回合评论只剩冻结时刻的那一条）。iOS 存储压力清 LS 键 / 某次 LS 配额写失败同样触发同路径。
+  - **修复①深度合并**：mergePosts 同 id 动态改为 deepMergePost——评论/回复按 ts|role|authorName|content 并集去重（带 replies 的一方保留并递归并 replies）、点赞并集、正文取未剥图完整版（剥图侧内联图被换 [图片] 必更短）、imgs/头像非空优先；任一侧新数据都不再被整条挤掉。load() 的 feedPending 合并同函数自动受益。
+  - **修复②快照裁剪**：persistSnap 剥图后仍 >200KB 时按新→旧裁剪动态数（预算=逐条 JSON 长度+逗号，最终串 ≤200KB 精确成立），快照始终可写、始终含最新动态，不再冻结。
+  - **回归**：tools/verify-feed-comment-merge.mjs 用 Page.addScriptToEvaluateOnNewDocument 注入 getter/setter 冻结的 idbGet/idbSet 受控桩（idb.js 后续赋值走 setter 被忽略）确定性复现「IDB 完整版×本地陈旧快照」：A 组断言权威合并落盘为并集（5 评论/3 回复/点赞并集/去重）、B 组页面渲染 5 条、C 组大列表(400条>200KB)发布后快照裁剪 ≤200KB 含最新不含最老、D 组后续保存不回退。npm run verify 10/10 无布局回归。
+  - **备注**：mail.js mailMergeFromIdb 是相反优先级（base 非空时完全不读本地副本），无此 bug 类，未动。存量已丢的评论无法找回（IDB 已被覆盖+快照随后重写）；本次修复防复发。
+
+### 2026-08-24（用户反馈：朋友圈发布评论会卡顿）
+- [本会话·完成]（**已构建，verify-feed-comment-perf 18/18（跑两遍防抖）+ 旧回归 verify-feed-comment-merge 10/10 + npm run verify 10/10，未提交→随工作区待提交批次一起提交**）：src/js/feed.js。
+  - **根因**：submitComment → renderVisible() 全量重渲染整个列表——所有卡片 HTML 字符串重建 + 全部 dataURL 配图 `<img>` 重新解码 + 全部事件重绑；重度图片用户主键 MB 级，发一条评论就冻结数百 ms~秒级（TA 回应定时器同路径再付一遍）。且每次 save 多付 1~2 次全量 JSON.stringify（persistSnap 先 stringify 探大小、结尾又 stringify 一次）+ render() 内部再 load() 全量 JSON.parse 一遍。
+  - **修复①单卡局部刷新**：抽出主列表模板 postCardHtml(p,name) 与全部朋友圈页模板 postCardHtmlAll(p)（render/renderFeedAll 改为 map 调用），新增 refreshPostCard(pid)——只把该动态的卡片节点 replaceWith 新渲染的单卡并 bindEvents 重绑，其余卡片 DOM 原地不动（不解码图片、不重绑）；按卡片所在列表自动选模板（el.closest('#feed-all-list')），卡片不在当前列表时回退 renderVisible() 全量兜底。「单条动态变化」8 处调用点全部切换：submitComment 两分支、TA 回复我的回复定时器、TA 评论定时器、点赞、TA 回赞定时器、发布后 TA 首赞/首评定时器。发布新动态/删除/TA 自动发帖仍走全量渲染（需要插入/移除节点）。
+  - **修复②persistSnap 单次序列化**：只做一次全量 stringify，超限裁剪才重串（原实现固定两次+裁剪循环逐条）；裁剪语义不变（verify-feed-comment-merge C 组回归通过）。
+  - **回归**：tools/verify-feed-comment-perf.mjs——150 条含伪图 dataURL 的历史动态（≈9MB 主键走 IDB 大键路径）+ 目标动态；发评论前给全部兄弟卡片打 JS 属性标记，断言发评论/回复/点赞/TA 定时回应后兄弟节点标记原样保留（DOM 未整列表重建）、卡片总数不变、评论/回复内容入卡、落盘捕获包含新数据（8921KB 完整大对象）、快照 ≤200KB 已剥图。排错记录：①应用禁止回复自己的评论（role==='me' 直接 return），回复目标须用 TA 评论；②TA 回赞只作用于「我」的动态；③定时器作者名经 taFeedNameFor 实时取，空档案回退 'TA'，需种 lbl-partner/feed-ta-name 对齐；④until 轮询返回 -1 也是真值，条件必须布尔化。
+  - **备注**：本改动只优化渲染路径，存储结构与合并逻辑未动，与上一条「评论丢失」修复完全兼容（其回归 10/10 复跑通过）。真机 iOS 性能无法无头验证，建议手机上实测发评论跟手度。
