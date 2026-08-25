@@ -2829,7 +2829,8 @@ if (ckRefresh) {
 
 // ===== v3.x：世界观·TA 摸鱼值自动涨时桌面偶尔飘一行小字 =====
 // TA 摸鱼值由 personalize.js 每 60s 60% 概率自动涨（"他在那边也偷了个懒"的来源）。
-// 这里只做监听：值变化且通过频率控制时，桌面浮一行小字，让"他自己活着"被看见。
+// 这里只做监听：值变化且通过频率控制（冷却 45 分钟 + 每日最多 12 次 + 35% 随机，
+// 让"他一整天都可能摸鱼被看见"，又不至于刷屏）时，桌面浮一行小字。
 (function () {
   let lastTa = null;
   function chk() {
@@ -2837,7 +2838,7 @@ if (ckRefresh) {
     const s = window.activeStore && window.activeStore(); if (!s) return;
     let cur = 0; try { cur = parseInt(s.get('fish-total-ta') || '0', 10) || 0; } catch (e) {}
     if (lastTa === null) { lastTa = cur; return; }
-    if (cur > lastTa && window.taChimeAllow && window.taChimeAllow('fish-ta-note', { cooldown: 2 * 3600 * 1000, dailyMax: 3 }) && Math.random() < 0.25) {
+    if (cur > lastTa && window.taChimeAllow && window.taChimeAllow('fish-ta-note', { cooldown: 45 * 60 * 1000, dailyMax: 12 }) && Math.random() < 0.35) {
       window.taChimeUse('fish-ta-note');
       if (window.taChimeShow) window.taChimeShow('他在那边也偷了个懒', { dur: 3600 });
     }

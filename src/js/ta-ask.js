@@ -285,6 +285,14 @@
     return !!ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA');
   }
 
+  // v3.12.x：迟到弹窗守卫——手机浏览器会把后台页面的定时器冻结/深度节流，
+  // 回前台时把到点未执行的定时器一次性补跑；补跑瞬间页面已恢复可见，
+  // document.hidden 等既有守卫全部失效 → 弹出几分钟前已在聊天里看过的旧互动卡片
+  //（用户反馈：切后台再回来再切出，开屏弹出刚看过的询问/小问题/好奇/吐槽弹窗）。
+  // 正常触发在 400ms 左右执行；超过 4s 才到达的一律视为冻结补跑，不再自动弹
+  //（卡片照常留在聊天里，点击可答）。
+  function autoPopupStale(schedAt) { return Date.now() - schedAt > 4000; }
+
   // ---- 数据读写 ----
   // v3.6.x：题库合并改为「增量 + 持久化」：
   //  ① 只追加默认题库里【从未合并过】的新题（mergedIds 之外）——旧预设被用户删除后不再自动复活；
@@ -414,7 +422,15 @@
     if (window.bgNotifyCheck) window.bgNotifyCheck('TA想问你一个问题：' + q.text, Date.now(), { name: 'TA的询问' });
     // v3.5.141：页面弹窗在后台不弹（不可见弹了也没用），只发系统通知
     // v3.6.x：用户正在聊天输入栏打字时不弹（弹窗会抢焦点打断输入法，见 chatInputFocused）
-    if (popup) setTimeout(() => { if (document.hidden) return; if (chatInputFocused()) return; if (idx >= 0 && window.openAskReply && !cardPopupBusy()) window.openAskReply(idx); }, 400);
+    // v3.12.x：冻结定时器回前台补跑（autoPopupStale 迟到）时同样不弹旧卡
+    if (popup) {
+      const popSchedAt = Date.now();
+      setTimeout(() => {
+        if (autoPopupStale(popSchedAt) || document.hidden) return;
+        if (chatInputFocused()) return;
+        if (idx >= 0 && window.openAskReply && !cardPopupBusy()) window.openAskReply(idx);
+      }, 400);
+    }
   }
   // ---- 触发调度（v3.5.34：启用开关 + 触发概率滑块 + 自动弹窗概率滑块） ----
   function maybeTriggerTAAsk() {
@@ -1223,7 +1239,15 @@ const TC_DEFAULT = [
     // v3.5.141：后台收到互动卡片 → 系统通知提示
     // v3.5.146：通知文本合并提示语 + 具体问题
     if (window.bgNotifyCheck) window.bgNotifyCheck('TA想让你选一个答案：' + q.text, Date.now(), { name: 'TA的小问题' });
-    if (popup) setTimeout(() => { if (document.hidden) return; if (chatInputFocused()) return; if (idx >= 0 && window.openTC && !cardPopupBusy()) window.openTC(idx); }, 400);
+    // v3.12.x：迟到弹窗守卫（冻结定时器回前台补跑不再弹旧卡，见 autoPopupStale）
+    if (popup) {
+      const popSchedAt = Date.now();
+      setTimeout(() => {
+        if (autoPopupStale(popSchedAt) || document.hidden) return;
+        if (chatInputFocused()) return;
+        if (idx >= 0 && window.openTC && !cardPopupBusy()) window.openTC(idx);
+      }, 400);
+    }
   }
   // 自动触发：一次会话最多 1 个；冷却 30 分钟；概率可调（默认 15%）；启动 90 秒后、每 4 分钟轮询
   function maybeTriggerTC() {
@@ -2010,7 +2034,15 @@ window.openTCPanel = openTCPanel;
     // v3.5.146：通知文本合并提示语 + 具体问题
     if (window.bgNotifyCheck) window.bgNotifyCheck('TA对你有点好奇：' + q.text, Date.now(), { name: 'TA的好奇' });
     // v3.6.x：用户正在聊天输入栏打字时不弹（弹窗会抢焦点打断输入法，见 chatInputFocused）
-    if (popup) setTimeout(() => { if (document.hidden) return; if (chatInputFocused()) return; if (idx >= 0 && window.openCurious && !cardPopupBusy()) window.openCurious(idx); }, 400);
+    // v3.12.x：迟到弹窗守卫（冻结定时器回前台补跑不再弹旧卡，见 autoPopupStale）
+    if (popup) {
+      const popSchedAt = Date.now();
+      setTimeout(() => {
+        if (autoPopupStale(popSchedAt) || document.hidden) return;
+        if (chatInputFocused()) return;
+        if (idx >= 0 && window.openCurious && !cardPopupBusy()) window.openCurious(idx);
+      }, 400);
+    }
   }
   function maybeTriggerTCU() {
     try {
@@ -2578,7 +2610,15 @@ window.openTCPanel = openTCPanel;
     // v3.5.146：通知文本合并提示语 + 具体内容
     if (window.bgNotifyCheck) window.bgNotifyCheck('TA吐槽了你一句：' + q.text, Date.now(), { name: 'TA的吐槽' });
     // v3.6.x：用户正在聊天输入栏打字时不弹（弹窗会抢焦点打断输入法，见 chatInputFocused）
-    if (popup) setTimeout(() => { if (document.hidden) return; if (chatInputFocused()) return; if (idx >= 0 && window.openRoast && !cardPopupBusy()) window.openRoast(idx); }, 400);
+    // v3.12.x：迟到弹窗守卫（冻结定时器回前台补跑不再弹旧卡，见 autoPopupStale）
+    if (popup) {
+      const popSchedAt = Date.now();
+      setTimeout(() => {
+        if (autoPopupStale(popSchedAt) || document.hidden) return;
+        if (chatInputFocused()) return;
+        if (idx >= 0 && window.openRoast && !cardPopupBusy()) window.openRoast(idx);
+      }, 400);
+    }
   }
   function lastUserMsg() {
     try {

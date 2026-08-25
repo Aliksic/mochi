@@ -39,9 +39,10 @@
   function getMeEnabled() { const v = store.get('avatar-me-lib-enabled'); return v === null ? true : v === '1'; }
 
   // v3.9.x：头像库半框是聊天页内功能（聊天域）——昵称优先读聊天专用键 cs-lbl-*，
-  // 未设置回退桌面键 lbl-*。联系人头像换头像仍同时写桌面键 + 聊天键（setAvatarBoth）；
-  // "我的头像"换头像（TA 主动给我换 / 我手动点池图片）只写聊天专用键 cs-avatar-user，
-  // 桌面 deco-widget 的「我」头像（avatar-user）独立、不被头像互动改动。
+  // 未设置回退桌面键 lbl-*。
+  // v3.12.x：联系人/我的头像换头像都只写聊天专用键（cs-avatar-partner/cs-avatar-user），
+  // 桌面 deco-widget 的 avatar-partner/avatar-user 完全独立、不被头像互动改动
+  //（未设聊天键时聊天页回退显示桌面键，但换头像不再反向同步到桌面）。
   function chatName(chatKey, deskKey, fb) {
     let v = null;
     try { v = store.get(chatKey); } catch (e) {}
@@ -97,7 +98,8 @@
   function renderGrid() {
     if (!avGrid) return;
     const lib = getLib();
-    const current = store.get('avatar-partner');
+    // v3.12.x：高亮当前生效的聊天头像（cs-avatar-partner 未设时回退桌面头像，与我的头像网格同口径）
+    const current = store.get('cs-avatar-partner') || store.get('avatar-partner');
     avGrid.innerHTML = '';
     if (avCount) avCount.textContent = lib.length;
     if (avEmpty) avEmpty.hidden = lib.length > 0;
@@ -289,10 +291,8 @@
   bindPoolClear(avClear, saveLib, () => { renderGrid(); syncVal(); }, '清空头像池？', '已清空头像池');
   bindPoolClear(avMeClear, saveMeLib, () => { renderMeGrid(); syncVal(); }, '清空我的头像池？', '已清空我的头像池');
 
-  // v3.8.x：头像互动半框切换【联系人头像】时同时写桌面键和聊天专用键，保持桌面与聊天显示同步。
-  // v3.9.x：【我的头像】不再用此函数——TA 给我换 / 我手动换只写聊天键 cs-avatar-user，桌面头像独立。
-  function setAvatarBoth(key, data) { store.set(key, data); store.set('cs-' + key, data); }
-  function removeAvatarBoth(key) { store.remove(key); store.remove('cs-' + key); }
+  // v3.12.x：联系人头像换头像不再写桌面键——setAvatarBoth/removeAvatarBoth 已随「桌面与聊天
+  // 头像解耦」移除，所有路径只写聊天专用键 cs-avatar-partner（与我的头像 cs-avatar-user 同规则）。
 
   // 头像实时生效：聊天页顶部头像 + 桌面纪念日卡头像 + 已渲染的消息气泡头像
   // out=false 换联系人头像（.msg-in .msg-av 是"对方消息"旁的头像）；
@@ -347,14 +347,16 @@
     chatSystem(text, img);
     toast(text);
   }
-  // 手动点击头像库的图片：立即切换联系人头像
+  // 手动点击头像库的图片：立即切换联系人的聊天头像
   // 有概率触发 TA 的回应（同意保持 / 拒绝换回），并重置随机更换计时
+  // v3.12.x：只写聊天专用键 cs-avatar-partner，桌面 deco-widget 头像独立不变
   function switchAvatarFromLib(data) {
     const lib = getLib();
     if (!data || lib.indexOf(data) === -1) return;
-    const before = store.get('avatar-partner');
-    setAvatarBoth('avatar-partner', data);
-    applyAvatarImg(data);
+    // 换回基准也取聊天键：原本没自定义过聊天头像（cs 为空）被拒绝时移除 cs 即回退桌面头像
+    const before = store.get('cs-avatar-partner');
+    store.set('cs-avatar-partner', data);
+    applyAvatarImg(data, false, true);
     // 手动更换后重置随机计时：1-8 小时后才可能再随机换（与星言一致）
     store.set('avatar-lib-last', String(Date.now()));
     store.set('avatar-lib-next', String(1 + Math.random() * 7));
@@ -364,10 +366,10 @@
       if (Math.random() * 100 < AGREE_PROB) {
         replyInvite(true, data); // 同意：头像保持新换的，消息带新头像图
       } else {
-        // 拒绝：头像换回原来那张（原本没自定义过头像则恢复默认图标）
-        if (before) setAvatarBoth('avatar-partner', before);
-        else { removeAvatarBoth('avatar-partner'); }
-        applyAvatarImg(before);
+        // 拒绝：聊天头像换回原来那张（原本没自定义过聊天头像则恢复默认/桌面回退）
+        if (before) store.set('cs-avatar-partner', before);
+        else { store.remove('cs-avatar-partner'); }
+        applyAvatarImg(before || null, false, true);
         renderGrid();
         replyInvite(false, before || null); // 消息带换回的头像图
       }
@@ -514,19 +516,21 @@
       const idx = Math.floor(Math.random() * lib.length);
       const data = lib[idx];
       if (!data) return;
-      // 随机到当前头像：跳过不换，也不推进计时（60 秒后再随机一次，与星言一致）
-      if (data === store.get('avatar-partner')) return;
-      setAvatarBoth('avatar-partner', data);
-      applyAvatarImg(data);
+      // 随机到当前生效的聊天头像：跳过不换，也不推进计时（60 秒后再随机一次，与星言一致）
+      // v3.12.x：当前生效的是聊天专用头像 cs-avatar-partner（未设时回退桌面头像 avatar-partner）
+      if (data === (store.get('cs-avatar-partner') || store.get('avatar-partner'))) return;
+      // v3.12.x：随机换头像只写聊天专用键 cs-avatar-partner，桌面 deco-widget 头像独立不变
+      store.set('cs-avatar-partner', data);
+      applyAvatarImg(data, false, true);
       renderGrid();
       // 聊天里显示"昵称 更换了头像" + 新头像图片
       chatSystem(cPartnerName() + ' 更换了头像', data);
       // v3.5.153：换头像后补发后台通知——确保后台收到的通知右侧是新头像
-      //（头像数据在 avatar-partner 已更新，通知由 bgNotifyCheck 读它；这里显式
-      //  触发一条，避免只有聊天系统消息、后台用户没感知到换头像）
+      //（v3.12.x 头像不再写桌面键 avatar-partner，通知右侧头像用 extra.av 显式传新聊天头像；
+      //  这里显式触发一条，避免只有聊天系统消息、后台用户没感知到换头像）
       try {
         if (window.bgNotifyCheck) {
-          window.bgNotifyCheck((store.get('lbl-partner') || 'TA') + ' 更换了头像', Date.now(), { name: store.get('lbl-partner') || 'TA' });
+          window.bgNotifyCheck((store.get('lbl-partner') || 'TA') + ' 更换了头像', Date.now(), { name: store.get('lbl-partner') || 'TA', av: data });
         }
       } catch (e) {}
       // 推进周期：下次 1-8 小时

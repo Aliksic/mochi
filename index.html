@@ -5805,7 +5805,7 @@ color: #c67800;
       </div>
       <div class="splash-dots"><i></i><i></i><i></i></div>
       <div class="splash-brand">小红书@言序（1842523578）</div>
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787584890886">Mochi 字卡传讯 v3.6.227 · 部署于 2026-08-24 23:21</div>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787622019759">Mochi 字卡传讯 v3.6.228 · 部署于 2026-08-25 09:40</div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
       <div class="splash-loading" id="splash-loading">正在加载数据…</div>
@@ -6664,7 +6664,7 @@ color: #c67800;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.6.227</div>
+      <div class="ver">Mochi 字卡传讯 v3.6.228</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -19795,6 +19795,7 @@ return m ? m.name : '成员';
 }
 function memberAvatar(cid) {
 try { const p = gcProfileGet(cid); if (p.avatar) return p.avatar; } catch (e) {}
+try { const cs = window.storeFor(cid).get('cs-avatar-partner'); if (cs) return cs; } catch (e) {}
 try { return window.storeFor(cid).get('avatar-partner') || ''; } catch (e) { return ''; }
 }
 function myName() {
@@ -28407,7 +28408,7 @@ if (avPaneB) avPaneB.hidden = !me;
 function renderGrid() {
 if (!avGrid) return;
 const lib = getLib();
-const current = store.get('avatar-partner');
+const current = store.get('cs-avatar-partner') || store.get('avatar-partner');
 avGrid.innerHTML = '';
 if (avCount) avCount.textContent = lib.length;
 if (avEmpty) avEmpty.hidden = lib.length > 0;
@@ -28578,8 +28579,6 @@ toast(okText);
 }
 bindPoolClear(avClear, saveLib, () => { renderGrid(); syncVal(); }, '清空头像池？', '已清空头像池');
 bindPoolClear(avMeClear, saveMeLib, () => { renderMeGrid(); syncVal(); }, '清空我的头像池？', '已清空我的头像池');
-function setAvatarBoth(key, data) { store.set(key, data); store.set('cs-' + key, data); }
-function removeAvatarBoth(key) { store.remove(key); store.remove('cs-' + key); }
 function applyAvatarImg(data, out, chatOnly) {
 const chatAv = document.getElementById(out ? 'chat-user-av' : 'chat-partner-av');
 const deskRing = chatOnly ? null : document.querySelector(out ? '#avatar-user .ring' : '#avatar-partner .ring');
@@ -28621,9 +28620,9 @@ toast(text);
 function switchAvatarFromLib(data) {
 const lib = getLib();
 if (!data || lib.indexOf(data) === -1) return;
-const before = store.get('avatar-partner');
-setAvatarBoth('avatar-partner', data);
-applyAvatarImg(data);
+const before = store.get('cs-avatar-partner');
+store.set('cs-avatar-partner', data);
+applyAvatarImg(data, false, true);
 store.set('avatar-lib-last', String(Date.now()));
 store.set('avatar-lib-next', String(1 + Math.random() * 7));
 renderGrid();
@@ -28631,9 +28630,9 @@ if (Math.random() * 100 < INVITE_PROB) {
 if (Math.random() * 100 < AGREE_PROB) {
 replyInvite(true, data); // 同意：头像保持新换的，消息带新头像图
 } else {
-if (before) setAvatarBoth('avatar-partner', before);
-else { removeAvatarBoth('avatar-partner'); }
-applyAvatarImg(before);
+if (before) store.set('cs-avatar-partner', before);
+else { store.remove('cs-avatar-partner'); }
+applyAvatarImg(before || null, false, true);
 renderGrid();
 replyInvite(false, before || null); // 消息带换回的头像图
 }
@@ -28744,14 +28743,14 @@ if (!lib.length) return;
 const idx = Math.floor(Math.random() * lib.length);
 const data = lib[idx];
 if (!data) return;
-if (data === store.get('avatar-partner')) return;
-setAvatarBoth('avatar-partner', data);
-applyAvatarImg(data);
+if (data === (store.get('cs-avatar-partner') || store.get('avatar-partner'))) return;
+store.set('cs-avatar-partner', data);
+applyAvatarImg(data, false, true);
 renderGrid();
 chatSystem(cPartnerName() + ' 更换了头像', data);
 try {
 if (window.bgNotifyCheck) {
-window.bgNotifyCheck((store.get('lbl-partner') || 'TA') + ' 更换了头像', Date.now(), { name: store.get('lbl-partner') || 'TA' });
+window.bgNotifyCheck((store.get('lbl-partner') || 'TA') + ' 更换了头像', Date.now(), { name: store.get('lbl-partner') || 'TA', av: data });
 }
 } catch (e) {}
 store.set('avatar-lib-last', String(now));
@@ -38364,7 +38363,7 @@ if (document.hidden) return;
 const s = window.activeStore && window.activeStore(); if (!s) return;
 let cur = 0; try { cur = parseInt(s.get('fish-total-ta') || '0', 10) || 0; } catch (e) {}
 if (lastTa === null) { lastTa = cur; return; }
-if (cur > lastTa && window.taChimeAllow && window.taChimeAllow('fish-ta-note', { cooldown: 2 * 3600 * 1000, dailyMax: 3 }) && Math.random() < 0.25) {
+if (cur > lastTa && window.taChimeAllow && window.taChimeAllow('fish-ta-note', { cooldown: 45 * 60 * 1000, dailyMax: 12 }) && Math.random() < 0.35) {
 window.taChimeUse('fish-ta-note');
 if (window.taChimeShow) window.taChimeShow('他在那边也偷了个懒', { dur: 3600 });
 }
@@ -44924,7 +44923,13 @@ if (!isMobile && !isTablet) {
 try {
 const sw = screen.width || screen.availWidth || 0;
 const touch = (navigator.maxTouchPoints || 0) > 0 || 'ontouchstart' in window;
-if (sw > 0 && sw < 900 && touch) {
+let uaDesk = false, oriApi = false, coarsePtr = false, hoverNone = false;
+try { uaDesk = /Windows NT|Macintosh|X11|CrOS/i.test(String(navigator.userAgent || '')); } catch (e) {}
+try { oriApi = typeof window.orientation !== 'undefined'; } catch (e) {}
+try { coarsePtr = window.matchMedia && window.matchMedia('(pointer: coarse)').matches; } catch (e) {}
+try { hoverNone = window.matchMedia && window.matchMedia('(hover: none)').matches; } catch (e) {}
+if ((sw > 0 && sw < 900 && touch) ||
+(touch && uaDesk && (oriApi || (coarsePtr && hoverNone)))) {
 isMobile = true;
 try {
 document.querySelectorAll('meta[name="viewport"]').forEach(function (m) {
@@ -44935,7 +44940,26 @@ try {
 requestAnimationFrame(function () {
 try {
 if (!(window.matchMedia && window.matchMedia('(max-width: 900px)').matches)) {
+var vw = 0;
+try {
+var vv = window.visualViewport;
+var est = vv && vv.scale > 0 && vv.width > 0 ? Math.round(vv.width * vv.scale) : 0;
+if (est >= 200 && est < 900) vw = est;
+} catch (e2) {}
+if (vw) {
+document.querySelectorAll('meta[name="viewport"]').forEach(function (m) {
+m.setAttribute('content', 'width=' + vw + ', initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-visual');
+});
+}
+requestAnimationFrame(function () {
+requestAnimationFrame(function () {
+try {
+if (!(window.matchMedia && window.matchMedia('(max-width: 900px)').matches)) {
 document.documentElement.classList.add('force-mobile');
+}
+} catch (e3) {}
+});
+});
 }
 } catch (e) {}
 });

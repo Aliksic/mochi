@@ -4,6 +4,11 @@
 
 ## 规则
 
+### 2026-08-25（用户反馈：「他在那边也偷了个懒」每日 3 次太少，摸鱼应全天都可能）
+- [本会话·完成]（**已改 src，未构建未提交**）：仅 `src/js/p2-features.js`（AI-A 域）。
+  - `fish-ta-note` 桌面浮字频率放宽：冷却 2h→**45 分钟**、每日上限 3→**12 次**、随机概率 0.25→**0.35**（用户选定"更密集"档）。注释同步。`node --check` 通过。
+  - 真机确认点：白天使用时约每 2~3 小时能见一次摸鱼浮字，且分布全天；无连续刷屏。
+
 ### 2026-08-24（AI-A：花园梦角打理触发机制优化——冷却/概率/离线/去重/成就/逛园时长）
 - [本会话·完成]（**已改 src，未构建未提交**）：`src/js/garden.js`（AI-A 域）。未碰其他文件。
   - **优化点1（冷却重置过激）**：`checkPartnerPassive` 未命中时不再 `lpc=now` 浪费整个 30 分钟窗口，改为推进到已检查 slot 边界 `lpc = last + slots*PI`，下次平均 15 分钟即再有机会。
@@ -1863,3 +1868,10 @@ ode --check ͨ�� + verify 10/10 + verify-desk-reset-period 10/10����
   - **修复②persistSnap 单次序列化**：只做一次全量 stringify，超限裁剪才重串（原实现固定两次+裁剪循环逐条）；裁剪语义不变（verify-feed-comment-merge C 组回归通过）。
   - **回归**：tools/verify-feed-comment-perf.mjs——150 条含伪图 dataURL 的历史动态（≈9MB 主键走 IDB 大键路径）+ 目标动态；发评论前给全部兄弟卡片打 JS 属性标记，断言发评论/回复/点赞/TA 定时回应后兄弟节点标记原样保留（DOM 未整列表重建）、卡片总数不变、评论/回复内容入卡、落盘捕获包含新数据（8921KB 完整大对象）、快照 ≤200KB 已剥图。排错记录：①应用禁止回复自己的评论（role==='me' 直接 return），回复目标须用 TA 评论；②TA 回赞只作用于「我」的动态；③定时器作者名经 taFeedNameFor 实时取，空档案回退 'TA'，需种 lbl-partner/feed-ta-name 对齐；④until 轮询返回 -1 也是真值，条件必须布尔化。
   - **备注**：本改动只优化渲染路径，存储结构与合并逻辑未动，与上一条「评论丢失」修复完全兼容（其回归 10/10 复跑通过）。真机 iOS 性能无法无头验证，建议手机上实测发评论跟手度。
+
+### 2026-08-25���û����ޣ�vivo Y35 + Edge ������ PC �ˣ����ֶ�����������������վ����
+- [AI-B�����]���ѹ��� verify 10/10 + ���� verify-desktop-mode-force 8/8���湤���������ύ����src/js/mobile-adapt.js + ���� tools/verify-desktop-mode-force.mjs
+  - **����**��v3.9.x �����С����� + screen.width<900�����û��� Edge������վ�㡹ģʽ�� screen.width ��αװ���������(��900) �� ����ʧЧ�� PC ��ǡ�
+  - **�޸�**�������� UA/screen/�ӿ�αװӰ������������������� + UA �ѳ�����ϵͳ(Win/Mac/X11/CrOS) + (window.orientation ���� �� ������ pointer:coarse �� hover:none) �� ǿ���ֻ����֣�viewport ��д�� MQ ��δ����ʱ�ٸ�дΪ��ʽ���ؿ�(visualViewport.width��scale �������,200-899 �������)����֡������δ���вż� force-mobile �ౣ�ס�
+  - **�ع�**��A ȫ��αװ/D �� orientation �� coarse+hover/C ��խ��·��/B ���������(.phone ���� 390px ���) ȫ����npm run verify 10/10��
+  - ���ύͬʱ���� AI-A �ѱ���Ķ���group-chat.js(Ⱥ��Աͷ��� cs-avatar-partner ����)��p2-features.js(TA ����С��Ƶ�ʷſ� 45min/12��/35%)��avatar-lib.js(ͷ���Ķ�)+�������

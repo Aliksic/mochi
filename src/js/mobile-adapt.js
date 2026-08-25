@@ -34,11 +34,29 @@
   // 物理特征兜底：触摸屏 + 窄 screen.width（设备物理 CSS 宽度，不随 UA/layout
   // viewport 变）→ 实为手机伪装桌面，强制走手机布局。真桌面 PC 无触摸屏不命中；
   // 平板 screen.width≥900 或已走 isTablet 分支不命中。
+  // v3.11.x：vivo Y35 + Edge 用户报修「打开仍是 PC 端，只能手动关桌面版网站」
+  // ——该场景下内核连 screen.width 都伪装成桌面大屏（≥900），上面的窄屏判断
+  // 失效。补一组不受 UA/视口/screen 伪装影响的输入特征信号：
+  //   · (pointer: coarse) / (hover: none)：主输入是手指。触屏笔电/一体机的主
+  //     指针仍是鼠标 → fine/hover，不会命中；手机开桌面模式后这两条媒体查询
+  //     反映真实硬件输入能力，不受伪装影响。
+  //   · window.orientation !== undefined：移动端内核专属 API，桌面浏览器不存在；
+  //     安卓内核即使整套伪装 UA 也保留此 API。
+  //   · UA 谎称桌面系统（Windows NT/Macintosh/X11/CrOS）。安卓/iOS 正常 UA 不含。
+  // 命中组合：触摸 + 谎称桌面系统 + （有 orientation API 或 主输入 coarse 且无
+  // hover）→ 判定手机伪装桌面。误伤面只剩「安卓平板开桌面模式」被强制手机布局
+  // （内容拉宽但可交互，优于 PC 外壳）；iPad 已在上方 isTablet 分支拦截。
   if (!isMobile && !isTablet) {
     try {
       const sw = screen.width || screen.availWidth || 0;
       const touch = (navigator.maxTouchPoints || 0) > 0 || 'ontouchstart' in window;
-      if (sw > 0 && sw < 900 && touch) {
+      let uaDesk = false, oriApi = false, coarsePtr = false, hoverNone = false;
+      try { uaDesk = /Windows NT|Macintosh|X11|CrOS/i.test(String(navigator.userAgent || '')); } catch (e) {}
+      try { oriApi = typeof window.orientation !== 'undefined'; } catch (e) {}
+      try { coarsePtr = window.matchMedia && window.matchMedia('(pointer: coarse)').matches; } catch (e) {}
+      try { hoverNone = window.matchMedia && window.matchMedia('(hover: none)').matches; } catch (e) {}
+      if ((sw > 0 && sw < 900 && touch) ||
+          (touch && uaDesk && (oriApi || (coarsePtr && hoverNone)))) {
         isMobile = true;
         // 改 viewport meta 把 layout viewport 拉回设备宽度——让 CSS
         // @media(max-width:900px) 自然命中，所有手机端规则生效。桌面站点
@@ -48,13 +66,38 @@
             m.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-visual');
           });
         } catch (e) {}
-        // 等一帧看媒体查询是否命中，未命中则加 force-mobile 类
-        //（base.css 复刻 @media(max-width:900px) 关键规则作保底）
+        // 等一帧看媒体查询是否命中；未命中说明该内核「桌面站点」模式下连
+        // device-width 都被仿真成桌面大屏（980）→ 改写 viewport 为【显式像素
+        // 宽度】再试：真实设备 CSS 宽用 visualViewport 反推（vv.width×vv.scale
+        // ≈ 物理 CSS 宽，桌面模式初始缩小显示时 scale<1、两者乘积恒为真宽）。
+        // 数字宽度不依赖 device-width 仿真，多数内核会直接采纳 → 媒体查询全量
+        // 生效（force-mobile 类只复刻关键规则，覆盖不了各功能页的手机端样式）。
+        // 再等两帧复查，仍未命中才加 force-mobile 类作最终保底。
         try {
           requestAnimationFrame(function () {
             try {
               if (!(window.matchMedia && window.matchMedia('(max-width: 900px)').matches)) {
-                document.documentElement.classList.add('force-mobile');
+                var vw = 0;
+                try {
+                  var vv = window.visualViewport;
+                  var est = vv && vv.scale > 0 && vv.width > 0 ? Math.round(vv.width * vv.scale) : 0;
+                  // 合理区间过滤：缩放中/异常值不采信（手机 CSS 宽 200-899）
+                  if (est >= 200 && est < 900) vw = est;
+                } catch (e2) {}
+                if (vw) {
+                  document.querySelectorAll('meta[name="viewport"]').forEach(function (m) {
+                    m.setAttribute('content', 'width=' + vw + ', initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-visual');
+                  });
+                }
+                requestAnimationFrame(function () {
+                  requestAnimationFrame(function () {
+                    try {
+                      if (!(window.matchMedia && window.matchMedia('(max-width: 900px)').matches)) {
+                        document.documentElement.classList.add('force-mobile');
+                      }
+                    } catch (e3) {}
+                  });
+                });
               }
             } catch (e) {}
           });

@@ -270,6 +270,9 @@
   }
   function memberAvatar(cid) {
     try { const p = gcProfileGet(cid); if (p.avatar) return p.avatar; } catch (e) {}
+    // v3.12.x：与聊天页一致——联系人换聊天头像只写聊天专用键 cs-avatar-partner（桌面独立），
+    // 未设回退该联系人桌面 avatar-partner
+    try { const cs = window.storeFor(cid).get('cs-avatar-partner'); if (cs) return cs; } catch (e) {}
     try { return window.storeFor(cid).get('avatar-partner') || ''; } catch (e) { return ''; }
   }
   function myName() {
