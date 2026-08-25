@@ -238,6 +238,14 @@
 
 /* 分页指示器（v3.6.x：不再占一整行——悬浮在桌面底部中央，不挤占/遮挡功能图标） */
 #page-phone { position:relative; }
+/* v3.14.x：桌面整体禁文字选择/长按系统菜单——移动端长按图标/组件进装修/移动模式的
+   按住阶段，系统会对按住点的文字/图片弹「复制/保存」原生菜单（Android 文字选中气泡、
+   图片上下文菜单；iOS 是 callout），菜单一弹就抢占触摸序列，pointermove 被系统接管
+   → 进入移动模式后拖不动图标/组件。user-select 禁文字选中、-webkit-touch-callout 拦
+   iOS callout、Android 图片菜单由 personalize.js 的 contextmenu preventDefault 兜底。
+   桌面内无输入框/右键功能，禁用选择不影响任何功能；#desk-image-viewer 全屏查看器在
+   #page-phone 之外，长按保存图片不受影响。 */
+#page-phone { user-select:none; -webkit-user-select:none; -webkit-touch-callout:none; }
 .dots {
   position:absolute; left:0; right:0; bottom:6px;
   display:flex; justify-content:center; gap:8px; padding:0;
@@ -550,10 +558,10 @@
 
 /* ===== v3.x：桌面移动模式（长按拖拽重排，复用装修模式 decor-on） ===== */
 /* v3.x：抖动已移除（用户反馈不需要）。如需恢复，加回 @keyframes desk-jiggle + .desk-move-mode.decor-on 应用规则 */
-/* 移动模式：可拖拽元素 touch-action:none，让 pointer 完全接管拖拽（pan-y 会抢占 pointermove→拖不动）；
-   容器仍 pan-y 允许短按滑动查看超屏组件，长按时 touchstart preventDefault 兜底阻止浏览器抢手势 */
+/* 移动模式：容器允许 pan-x pan-y（空白处/组件间隙原生横滑翻页），可拖拽组件 touch-action:none
+   （手势归 JS 拖拽；移动模式下快速横滑翻页由 personalize.js 的滑动/长按判定实现，见该文件） */
 .desk-move-mode #desktop-pages,
-.desk-move-mode .page-slide { touch-action: pan-y; -webkit-touch-callout: none; }
+.desk-move-mode .page-slide { touch-action: pan-x pan-y; -webkit-touch-callout: none; }
 .desk-move-mode .app,
 .desk-move-mode [data-desk-widget]:not(.app-grid) { touch-action: none; cursor: grab; }
 /* 拖拽中源项半透明占位 */

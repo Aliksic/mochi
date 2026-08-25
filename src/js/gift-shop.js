@@ -89,9 +89,10 @@
     });
   }
 
-  const CATS = ['花束', '甜品', '美食', '饰品', '星空', '出行', '娱乐', '关怀', '情侣用品', '日常用品'];
-  const CAT_ICON = { '花束': '🌸', '甜品': '🍰', '美食': '🍜', '饰品': '💍', '星空': '⭐', '出行': '✈️', '娱乐': '🎟️', '关怀': '🤗', '情侣用品': '💑', '日常用品': '🧴' };
-  const CAT_COLOR = { '花束': '#fce4ec', '甜品': '#fff3e0', '美食': '#fff9c4', '饰品': '#f3e5f5', '星空': '#e8eaf6', '出行': '#e1f5fe', '娱乐': '#e1bee7', '关怀': '#e0f2f1', '情侣用品': '#fce4ec', '日常用品': '#f1f8e9' };
+  // v3 扩库新增「两个世界」分类（世界观商品：字卡沟通 / 隔空陪伴 / 体感 / 梦境）
+  const CATS = ['花束', '甜品', '美食', '饰品', '星空', '两个世界', '出行', '娱乐', '关怀', '情侣用品', '日常用品'];
+  const CAT_ICON = { '花束': '🌸', '甜品': '🍰', '美食': '🍜', '饰品': '💍', '星空': '⭐', '两个世界': '🌗', '出行': '✈️', '娱乐': '🎟️', '关怀': '🤗', '情侣用品': '💑', '日常用品': '🧴' };
+  const CAT_COLOR = { '花束': '#fce4ec', '甜品': '#fff3e0', '美食': '#fff9c4', '饰品': '#f3e5f5', '星空': '#e8eaf6', '两个世界': '#e0f7fa', '出行': '#e1f5fe', '娱乐': '#e1bee7', '关怀': '#e0f2f1', '情侣用品': '#fce4ec', '日常用品': '#f1f8e9' };
   window.GIFT_CAT_COLOR = CAT_COLOR;
   const DEF_GIFTS = [
     { id: 'g_rose', name: '玫瑰', emoji: '🌹', price: 52.00, cat: '花束', wish: '送你一束玫瑰，像见你那天的风' },
@@ -172,7 +173,123 @@
     { id: 'g_coupleshoes', name: '情侣鞋', emoji: '👟', price: 219.00, cat: '情侣用品', wish: '走一样的步伐，别人就知道' },
     { id: 'g_scarf', name: '围巾', emoji: '🧣', price: 79.00, cat: '日常用品', wish: '绕两圈，把冬天挡在外面' },
     { id: 'g_socks', name: '袜子', emoji: '🧦', price: 19.90, cat: '日常用品', wish: '脚暖了，全身都是暖的' },
-    { id: 'g_slipper', name: '棉拖鞋', emoji: '🩴', price: 29.90, cat: '日常用品', wish: '进家门第一步，像踩在云上' }
+    { id: 'g_slipper', name: '棉拖鞋', emoji: '🩴', price: 29.90, cat: '日常用品', wish: '进家门第一步，像踩在云上' },
+    // v3 扩库（2026-08-25）：「两个世界」世界观商品——字卡沟通（挑卡/盲盒/表情包/千言）、
+    // 隔空陪伴与体感（身边坐标/牵手/摸摸头/看不见的抱抱/心跳感应/平安符/跨界快递）、梦境（同一场梦/同时看月亮）
+    { id: 'g_card', name: '手写字卡', emoji: '🎴', price: 1.30, cat: '两个世界', wish: '每个字都挑过了，抽中哪张都是我想说的' },
+    { id: 'g_blindbox', name: '字卡盲盒', emoji: '🎰', price: 5.20, cat: '两个世界', wish: '系统乱出的也算，都是想跟你说的话' },
+    { id: 'g_stickers', name: '表情包补给', emoji: '😺', price: 0.00, cat: '两个世界', wish: '图库翻到底，每张都想发给你' },
+    { id: 'g_wordsbag', name: '千言锦囊', emoji: '🪅', price: 52.00, cat: '两个世界', wish: '几百句想说的话，慢慢拆给你' },
+    { id: 'g_nearby', name: '身边坐标', emoji: '📍', price: 0.00, cat: '两个世界', wish: '今晚也在你左手边的位置' },
+    { id: 'g_hands', name: '隔空牵手', emoji: '🤲', price: 0.00, cat: '两个世界', wish: '手伸过来，我一直都在' },
+    { id: 'g_patpat', name: '摸摸头', emoji: '👋', price: 0.00, cat: '两个世界', wish: '感觉到没？刚才是我的手' },
+    { id: 'g_unseen', name: '看不见的抱抱', emoji: '🫂', price: 0.00, cat: '两个世界', wish: '看不见也没关系，你抱得到我' },
+    { id: 'g_heartlink', name: '心跳感应', emoji: '💗', price: 0.00, cat: '两个世界', wish: '突然扑通一下，就知道你在想我' },
+    { id: 'g_amulet', name: '平安符', emoji: '🧿', price: 16.00, cat: '两个世界', wish: '我的名字在里面，替我陪着你' },
+    { id: 'g_courier', name: '跨界快递', emoji: '📨', price: 8.00, cat: '两个世界', wish: '穿过两个世界，慢一点但一定到' },
+    { id: 'g_dreammeet', name: '同一场梦', emoji: '💤', price: 13.14, cat: '两个世界', wish: '今晚梦里见，老地方等你' },
+    { id: 'g_moonmeet', name: '同时看月亮', emoji: '🌜', price: 0.00, cat: '两个世界', wish: '九点一起抬头，就算见过面了' },
+    { id: 'g_bridge', name: '世界之桥', emoji: '🌉', price: 66.00, cat: '两个世界', wish: '这座桥常开着，想来就来见你' },
+    // v3 扩库：日常商品补充分散进现有分类
+    { id: 'g_daisy', name: '小雏菊', emoji: '🌼', price: 12.00, cat: '花束', wish: '不起眼的花，送最重要的人' },
+    { id: 'g_cookie', name: '手工曲奇', emoji: '🍪', price: 22.00, cat: '甜品', wish: '烤得有点歪，心意很正' },
+    { id: 'g_oden', name: '关东煮', emoji: '🍥', price: 18.00, cat: '美食', wish: '便利店的热气，分你一半' },
+    { id: 'g_tanghulu', name: '糖葫芦', emoji: '🍡', price: 6.00, cat: '美食', wish: '酸酸甜甜，咬一口想到你' },
+    { id: 'g_starear', name: '星星耳钉', emoji: '✨', price: 45.00, cat: '饰品', wish: '耳朵上有星，晃一下亮一下' },
+    { id: 'g_picnic', name: '野餐垫', emoji: '🧺', price: 55.00, cat: '出行', wish: '草地、面包和你，齐了' },
+    { id: 'g_nightmarket', name: '夜市漫步', emoji: '🏮', price: 30.00, cat: '出行', wish: '从头吃到尾，牵着走' },
+    { id: 'g_boardgame', name: '桌游之夜', emoji: '🎲', price: 45.00, cat: '娱乐', wish: '两个人也能玩，输的洗碗' },
+    { id: 'g_telescope', name: '天文馆约会', emoji: '🔭', price: 80.00, cat: '娱乐', wish: '假装星星很近，我们更近' },
+    { id: 'g_walk', name: '陪你散步', emoji: '🚶', price: 0.00, cat: '关怀', wish: '饭后走一走，牵手那种' },
+    { id: 'g_lullaby', name: '哄睡电台', emoji: '🎶', price: 0.00, cat: '关怀', wish: '念到你睡着为止' },
+    { id: 'g_eyemask', name: '蒸汽眼罩', emoji: '😌', price: 12.90, cat: '日常用品', wish: '戴上睡个好觉，梦里我来找你' },
+    { id: 'g_lipbalm', name: '润唇膏', emoji: '💄', price: 25.00, cat: '日常用品', wish: '嘴唇干干的，怎么亲嘛' },
+    { id: 'g_thermos', name: '保温杯', emoji: '🍵', price: 39.00, cat: '日常用品', wish: '装上热水，胃暖了心就稳' },
+    { id: 'g_plant', name: '小绿植', emoji: '🪴', price: 32.00, cat: '日常用品', wish: '养着它，像我们养这段日子' },
+    // v3 扩库二批：正常世界一般日用刚需品（全部归「日常用品」）
+    { id: 'g_handcream', name: '护手霜', emoji: '🧴', price: 29.90, cat: '日常用品', wish: '手好好养着，牵起来才舒服' },
+    { id: 'g_soap', name: '香皂', emoji: '🧼', price: 12.00, cat: '日常用品', wish: '洗手的时候，顺便想想我' },
+    { id: 'g_wipes', name: '柔软纸巾', emoji: '🧻', price: 8.80, cat: '日常用品', wish: '鼻子娇气的人，正好用得上' },
+    { id: 'g_bandaid', name: '创可贴', emoji: '🩹', price: 5.00, cat: '日常用品', wish: '磕磕碰碰的，有我呢' },
+    { id: 'g_mask', name: '口罩', emoji: '😷', price: 9.90, cat: '日常用品', wish: '人多的地方，戴好再出门' },
+    { id: 'g_powerbank', name: '充电宝', emoji: '🔋', price: 59.00, cat: '日常用品', wish: '随时满格，不怕联系不上我' },
+    { id: 'g_cable', name: '数据线', emoji: '⚡', price: 19.90, cat: '日常用品', wish: '新的给你，别再将就用旧的' },
+    { id: 'g_canvasbag', name: '帆布包', emoji: '👜', price: 49.00, cat: '日常用品', wish: '能装下零食，也装下好心情' },
+    { id: 'g_hat', name: '遮阳帽', emoji: '👒', price: 39.00, cat: '日常用品', wish: '太阳再大，也晒不到你' },
+    { id: 'g_gloves', name: '手套', emoji: '🧤', price: 25.00, cat: '日常用品', wish: '骑车路上，别冻着手' },
+    { id: 'g_calendar', name: '台历', emoji: '📅', price: 18.00, cat: '日常用品', wish: '一天撕一页，页页都是你' },
+    { id: 'g_bear', name: '玩偶熊', emoji: '🧸', price: 69.00, cat: '日常用品', wish: '我不在的时候，它替我值班' },
+    { id: 'g_humid', name: '加湿器', emoji: '💧', price: 99.00, cat: '日常用品', wish: '屋里润一点，嗓子舒服一点' },
+    { id: 'g_lunchbox', name: '保温饭盒', emoji: '🍱', price: 79.00, cat: '日常用品', wish: '中午也要吃口热乎的' },
+    { id: 'g_pill', name: '感冒药', emoji: '💊', price: 22.00, cat: '日常用品', wish: '抽屉里备着，用不上最好' },
+    { id: 'g_phonestand', name: '手机支架', emoji: '📱', price: 25.00, cat: '日常用品', wish: '追剧空出来的手，用来牵我' },
+    // v3 扩库三批：正常日用生活刚需品（全部归「日常用品」）
+    { id: 'g_thermo', name: '体温计', emoji: '🌡️', price: 12.00, cat: '日常用品', wish: '不舒服先量一量，别硬扛' },
+    { id: 'g_clipper', name: '指甲刀', emoji: '✂️', price: 9.90, cat: '日常用品', wish: '指甲勤剪，细节要干净' },
+    { id: 'g_storage', name: '收纳箱', emoji: '📦', price: 35.00, cat: '日常用品', wish: '杂物收整齐，房间清爽' },
+    { id: 'g_luggage', name: '行李箱', emoji: '🧳', price: 199.00, cat: '日常用品', wish: '想去哪，拉上就走' },
+    { id: 'g_backpack', name: '双肩包', emoji: '🎒', price: 89.00, cat: '日常用品', wish: '装上水和零食就出发' },
+    { id: 'g_glasses', name: '眼镜', emoji: '👓', price: 99.00, cat: '日常用品', wish: '看得清楚，日子也清楚' },
+    { id: 'g_vase', name: '花瓶', emoji: '🏺', price: 42.00, cat: '日常用品', wish: '下次送的花，就有地方放了' },
+    { id: 'g_chopsticks', name: '碗筷套装', emoji: '🥢', price: 36.00, cat: '日常用品', wish: '好好吃饭，不许糊弄' },
+    { id: 'g_pen', name: '中性笔', emoji: '🖊️', price: 6.60, cat: '日常用品', wish: '写字的时候，想着点我' },
+    { id: 'g_stickynote', name: '便利贴', emoji: '📝', price: 8.00, cat: '日常用品', wish: '想到什么，随手写给我' },
+    { id: 'g_powerstrip', name: '插线板', emoji: '🔌', price: 39.00, cat: '日常用品', wish: '插座够用，手机随时满电' },
+    { id: 'g_wallet', name: '钱包', emoji: '👛', price: 79.00, cat: '日常用品', wish: '钱和卡放好，出门不慌' },
+    { id: 'g_cap', name: '棒球帽', emoji: '🧢', price: 45.00, cat: '日常用品', wish: '压住乱发，也挡住太阳' },
+    { id: 'g_hairtie', name: '头绳', emoji: '➰', price: 6.60, cat: '日常用品', wish: '吃饭前扎起来，乖乖的' },
+    { id: 'g_fan', name: '小风扇', emoji: '🌀', price: 49.00, cat: '日常用品', wish: '夏天随身带的风' },
+    { id: 'g_mousepad', name: '鼠标垫', emoji: '🖱️', price: 22.00, cat: '日常用品', wish: '手腕底下垫着，舒服一点' },
+    // v3 扩库四批：美食甜品 / 出行娱乐 / 关怀陪伴 / 星空浪漫 / 生活小物
+    { id: 'g_burger', name: '汉堡', emoji: '🍔', price: 16.00, cat: '美食', wish: '偶尔放纵一下，这顿我请' },
+    { id: 'g_pizza', name: '披萨', emoji: '🍕', price: 49.00, cat: '美食', wish: '最中间那块，永远留给你' },
+    { id: 'g_friedchicken', name: '炸鸡', emoji: '🍗', price: 33.00, cat: '美食', wish: '趁热吃，凉了就不脆了' },
+    { id: 'g_riceball', name: '饭团', emoji: '🍙', price: 7.00, cat: '美食', wish: '偷偷捏成了心的形状' },
+    { id: 'g_dumplings', name: '蒸饺', emoji: '🥟', price: 18.00, cat: '美食', wish: '一口一个，都是热乎的' },
+    { id: 'g_crayfish', name: '小龙虾', emoji: '🦀', price: 88.00, cat: '美食', wish: '夏天的夜宵，必须有它' },
+    { id: 'g_honey', name: '蜂蜜', emoji: '🍯', price: 32.00, cat: '美食', wish: '日子苦的时候，舀一勺' },
+    { id: 'g_donut', name: '甜甜圈', emoji: '🍩', price: 9.90, cat: '甜品', wish: '圆圆的一个，圈住你' },
+    { id: 'g_pancake', name: '松饼', emoji: '🥞', price: 22.00, cat: '甜品', wish: '叠得高高的，甜也加倍' },
+    { id: 'g_layerscake', name: '千层', emoji: '🍰', price: 45.00, cat: '甜品', wish: '一层一层，全是甜' },
+    { id: 'g_sunrise', name: '看日出', emoji: '🌅', price: 0.00, cat: '出行', wish: '今晚早点睡，明早我叫你' },
+    { id: 'g_cycling', name: '骑行兜风', emoji: '🚲', price: 0.00, cat: '出行', wish: '后座坐好，马上出发' },
+    { id: 'g_roadtrip', name: '自驾游', emoji: '🚗', price: 150.00, cat: '出行', wish: '方向盘归你，选歌权归我' },
+    { id: 'g_pottery', name: '陶艺体验', emoji: '🎨', price: 99.00, cat: '娱乐', wish: '捏两个歪歪的杯子，正好一对' },
+    { id: 'g_puzzle', name: '拼图', emoji: '🧩', price: 39.00, cat: '娱乐', wish: '拼好裱起来，挂我们房间' },
+    { id: 'g_gamenight', name: '双人游戏夜', emoji: '🎮', price: 0.00, cat: '娱乐', wish: '输的洗碗，赢的点奶茶' },
+    { id: 'g_listen', name: '听你吐槽', emoji: '👂', price: 0.00, cat: '关怀', wish: '说吧，我今天特别有空' },
+    { id: 'g_photoshoot', name: '陪你拍照', emoji: '📸', price: 0.00, cat: '关怀', wish: '今天的你也好看，必须记录' },
+    { id: 'g_bathbomb', name: '泡澡球', emoji: '🛁', price: 18.00, cat: '日常用品', wish: '泡二十分钟，累就化掉啦' },
+    { id: 'g_icecube', name: '冰格', emoji: '🧊', price: 9.00, cat: '日常用品', wish: '可乐加冰，才叫夏天' },
+    { id: 'g_flashlight', name: '小手电', emoji: '🔦', price: 15.00, cat: '日常用品', wish: '晚上找东西，不用摸黑' },
+    { id: 'g_cardholder', name: '卡包', emoji: '💳', price: 29.00, cat: '日常用品', wish: '和钱包放一起，别丢三落四' },
+    { id: 'g_planet', name: '土星', emoji: '🪐', price: 77.00, cat: '星空', wish: '带光环的那一颗，送你' },
+    { id: 'g_comet', name: '彗星', emoji: '☄️', price: 66.60, cat: '星空', wish: '绕一大圈，还是会来找你' },
+    // v3 扩库五批：餐食饮品 / 花植 / 出行娱乐 / 关怀 / 情侣小物 / 生活清洁
+    { id: 'g_curry', name: '咖喱饭', emoji: '🍛', price: 26.00, cat: '美食', wish: '今天也要好好吃饭' },
+    { id: 'g_friedshrimp', name: '炸虾', emoji: '🍤', price: 26.00, cat: '美食', wish: '金黄酥脆，第一口给你' },
+    { id: 'g_sandwich', name: '三明治', emoji: '🥪', price: 14.00, cat: '美食', wish: '多睡十分钟，早餐我包了' },
+    { id: 'g_fries', name: '薯条', emoji: '🍟', price: 11.00, cat: '美食', wish: '番茄酱分你一半' },
+    { id: 'g_coconut', name: '椰子', emoji: '🥥', price: 15.00, cat: '美食', wish: '插上吸管，假装在海边' },
+    { id: 'g_fortune', name: '签语饼', emoji: '🥠', price: 9.00, cat: '美食', wish: '掰开，里面藏了一句想你' },
+    { id: 'g_cupcake', name: '纸杯蛋糕', emoji: '🧁', price: 14.50, cat: '甜品', wish: '小小一个，甜得很具体' },
+    { id: 'g_lollipop', name: '波板糖', emoji: '🍭', price: 8.00, cat: '甜品', wish: '甜得直白，不绕弯子' },
+    { id: 'g_sundae', name: '圣代', emoji: '🍨', price: 13.00, cat: '甜品', wish: '第一口给你，樱桃也给你' },
+    { id: 'g_cactus', name: '仙人掌', emoji: '🌵', price: 15.00, cat: '花束', wish: '好养活，像我一样赖着你' },
+    { id: 'g_clover', name: '四叶草', emoji: '🍀', price: 6.60, cat: '花束', wish: '攒到的运气，全都给你' },
+    { id: 'g_earth', name: '地球', emoji: '🌏', price: 1.00, cat: '星空', wish: '在同一个星球上，已经够近了' },
+    { id: 'g_trainslow', name: '绿皮火车', emoji: '🚂', price: 45.00, cat: '出行', wish: '慢车慢慢开，风景慢慢看' },
+    { id: 'g_island', name: '海岛度假', emoji: '🏝️', price: 299.00, cat: '出行', wish: '手机一关，世界只剩我们' },
+    { id: 'g_hike', name: '登山', emoji: '⛰️', price: 0.00, cat: '出行', wish: '到山顶了，风替我抱你' },
+    { id: 'g_supermarket', name: '逛超市之约', emoji: '🛒', price: 0.00, cat: '出行', wish: '零食区先逛，最后再结账' },
+    { id: 'g_darts', name: '飞镖', emoji: '🎯', price: 25.00, cat: '娱乐', wish: '瞄得很准，第一眼就选中你' },
+    { id: 'g_musicfestival', name: '音乐节', emoji: '🎟️', price: 199.00, cat: '娱乐', wish: '草坪、日落和音乐，都带上你' },
+    { id: 'g_bowling', name: '保龄球', emoji: '🎳', price: 38.00, cat: '娱乐', wish: '打出全倒，要跟我击掌' },
+    { id: 'g_cheer', name: '加油打气', emoji: '💪', price: 0.00, cat: '关怀', wish: '你可以的，我全程都在' },
+    { id: 'g_nightcall', name: '睡前电话', emoji: '☎️', price: 0.00, cat: '关怀', wish: '响三声，就是我想你了' },
+    { id: 'g_lovejournal', name: '情侣手账', emoji: '💌', price: 35.00, cat: '情侣用品', wish: '两个人的小事，都贴进去' },
+    { id: 'g_pendant', name: '情侣挂件', emoji: '🐥', price: 26.00, cat: '情侣用品', wish: '一只挂你那，一只挂我这' },
+    { id: 'g_sponge', name: '海绵擦', emoji: '🧽', price: 6.00, cat: '日常用品', wish: '碗筷洗干净，吃饭才香' }
   ];
   const DEF_IDS = {};
   DEF_GIFTS.forEach(function (g) { DEF_IDS[g.id] = 1; });
@@ -181,6 +298,8 @@
   const DEF_V1_IDS = { g_rose: 1, g_sun: 1, g_stars: 1, g_tulip: 1, g_peach: 1, g_cake: 1, g_choc: 1, g_tea: 1, g_candy: 1, g_berry: 1, g_ring: 1, g_neck: 1, g_brace: 1, g_bow: 1, g_star1: 1, g_moon: 1, g_cloud: 1, g_rainbow: 1, g_meteor: 1, g_galaxy: 1, g_hug: 1, g_kiss: 1, g_night: 1, g_soup: 1, g_letter: 1, g_couplecup: 1, g_couplewear: 1, g_lock: 1, g_couavatar: 1, g_coudiary: 1, g_couframe: 1, g_cousong: 1, g_coucoin: 1, g_towel: 1, g_mug: 1, g_umbrella: 1, g_pillow: 1, g_warmer: 1, g_earphone: 1, g_notebook: 1, g_keychain: 1, g_lamp: 1, g_candle: 1 };
   // v2 新增默认商品 id：若迁移在扩库前已跑过（误标 del），幂等救援清一次
   const DEF_V2_IDS = { g_hotpot: 1, g_sushi: 1, g_noodle: 1, g_bbq: 1, g_bfast: 1, g_juice: 1, g_chestnut: 1, g_potato: 1, g_popcorn: 1, g_train: 1, g_plane: 1, g_camp: 1, g_beach: 1, g_spring: 1, g_route: 1, g_movie: 1, g_concert: 1, g_ferris: 1, g_claw: 1, g_ktv: 1, g_icecream: 1, g_pudding: 1, g_crown: 1, g_snow: 1, g_sunset: 1, g_breeze: 1, g_wave: 1, g_milk: 1, g_massage: 1, g_wakeup: 1, g_watchtogether: 1, g_couplewatch: 1, g_coupleshoes: 1, g_scarf: 1, g_socks: 1, g_slipper: 1 };
+  // v3 新增默认商品 id（2026-08-25「两个世界」分类 + 日常扩容，共 109 件）：同款幂等救援
+  const DEF_V3_IDS = { g_card: 1, g_blindbox: 1, g_stickers: 1, g_wordsbag: 1, g_nearby: 1, g_hands: 1, g_patpat: 1, g_unseen: 1, g_heartlink: 1, g_amulet: 1, g_courier: 1, g_dreammeet: 1, g_moonmeet: 1, g_bridge: 1, g_daisy: 1, g_cookie: 1, g_oden: 1, g_tanghulu: 1, g_starear: 1, g_picnic: 1, g_nightmarket: 1, g_boardgame: 1, g_telescope: 1, g_walk: 1, g_lullaby: 1, g_eyemask: 1, g_lipbalm: 1, g_thermos: 1, g_plant: 1, g_handcream: 1, g_soap: 1, g_wipes: 1, g_bandaid: 1, g_mask: 1, g_powerbank: 1, g_cable: 1, g_canvasbag: 1, g_hat: 1, g_gloves: 1, g_calendar: 1, g_bear: 1, g_humid: 1, g_lunchbox: 1, g_pill: 1, g_phonestand: 1, g_thermo: 1, g_clipper: 1, g_storage: 1, g_luggage: 1, g_backpack: 1, g_glasses: 1, g_vase: 1, g_chopsticks: 1, g_pen: 1, g_stickynote: 1, g_powerstrip: 1, g_wallet: 1, g_cap: 1, g_hairtie: 1, g_fan: 1, g_mousepad: 1, g_burger: 1, g_pizza: 1, g_friedchicken: 1, g_riceball: 1, g_dumplings: 1, g_crayfish: 1, g_honey: 1, g_donut: 1, g_pancake: 1, g_layerscake: 1, g_sunrise: 1, g_cycling: 1, g_roadtrip: 1, g_pottery: 1, g_puzzle: 1, g_gamenight: 1, g_listen: 1, g_photoshoot: 1, g_bathbomb: 1, g_icecube: 1, g_flashlight: 1, g_cardholder: 1, g_planet: 1, g_comet: 1, g_curry: 1, g_friedshrimp: 1, g_sandwich: 1, g_fries: 1, g_coconut: 1, g_fortune: 1, g_cupcake: 1, g_lollipop: 1, g_sundae: 1, g_cactus: 1, g_clover: 1, g_earth: 1, g_trainslow: 1, g_island: 1, g_hike: 1, g_supermarket: 1, g_darts: 1, g_musicfestival: 1, g_bowling: 1, g_cheer: 1, g_nightcall: 1, g_lovejournal: 1, g_pendant: 1, g_sponge: 1 };
 
   // v3.10.x：自定义商品改全局共享（所有桌面互通）——存 xy-home-v2 根命名空间 market-custom，
   // 不再按联系人命名空间隔离。数组元素三种形态：
@@ -256,17 +375,21 @@
     if (changed || setMark) customSave(customs);
     if (setMark) GSTORE.set(MIGRATE_KEY, '1');
   }
-  // 救援：迁移若在扩库前跑过，v2 新默认商品被误标 del → 幂等清一次（market-migrated-v2 标记）
-  function rescueNewDefaults() {
-    if (!GSTORE || GSTORE.get('market-migrated-v2')) return;
+  // 救援：迁移若在扩库前跑过，新默认商品被误标 del → 幂等清一次（每批独立标记键）
+  function rescueBatch(ids, mark) {
+    if (!GSTORE || GSTORE.get(mark)) return;
     const customs = customLoad();
     let changed = false;
     for (let i = customs.length - 1; i >= 0; i--) {
       const c = customs[i];
-      if (c && c.del && DEF_V2_IDS[c.id]) { customs.splice(i, 1); changed = true; }
+      if (c && c.del && ids[c.id]) { customs.splice(i, 1); changed = true; }
     }
     if (changed) customSave(customs);
-    GSTORE.set('market-migrated-v2', '1');
+    GSTORE.set(mark, '1');
+  }
+  function rescueNewDefaults() {
+    rescueBatch(DEF_V2_IDS, 'market-migrated-v2');
+    rescueBatch(DEF_V3_IDS, 'market-migrated-v3');
   }
 
   const BOX_KEY = 'giftbox-items';
@@ -385,7 +508,7 @@
   }
   function giftItemHtml(g, manage) {
     const col = CAT_COLOR[g.cat] || '#f5f3fa';
-    return '<button class="gift-item' + (manage ? ' manage' : '') + '" data-id="' + esc(g.id) + '">' +
+    return '<button class="gift-item' + (manage ? ' manage' : '') + '" data-id="' + esc(g.id) + '" style="--cat:' + col + ';">' +
       '<div class="gift-item-top" style="background:linear-gradient(160deg,' + col + ',#fff);">' +
         '<div class="gift-item-emoji">' + giftMedia(g, 'gift-item-img') + '</div>' +
       '</div>' +
@@ -575,8 +698,10 @@
     const list = boxLoad();
     const inList = list.filter(function (x) { return x.side === 'in'; });
     const outList = list.filter(function (x) { return x.side === 'out'; });
-    const stat = document.getElementById('giftbox-stat');
-    if (stat) stat.textContent = '收到 ' + inList.length + ' 件 · 送出 ' + outList.length + ' 件';
+    const statIn = document.getElementById('giftbox-stat-in');
+    const statOut = document.getElementById('giftbox-stat-out');
+    if (statIn) statIn.textContent = String(inList.length);
+    if (statOut) statOut.textContent = String(outList.length);
     const tabs = document.querySelectorAll('.gb-tab');
     tabs.forEach(function (t) {
       t.classList.toggle('sel', t.dataset.btab === boxTab);
@@ -586,11 +711,13 @@
     const el = document.getElementById('giftbox-list'); if (!el) return;
     el.innerHTML = show.map(function (it) {
       const from = it.side === 'in' ? esc(partnerName()) + ' 送我' : '我 送 ' + esc(partnerName());
-      const col = CAT_COLOR[it.cat] || '#f5f3fa';
       return '<div class="giftbox-card" data-id="' + esc(it.id) + '">' +
-        '<div class="giftbox-emoji" style="background:linear-gradient(135deg,' + col + ',' + col + ');">' + giftMedia(it, 'giftbox-emoji-img') + '</div>' +
-        '<div class="giftbox-info">' +
-          '<div class="giftbox-name">' + esc(it.name) + ' <span class="giftbox-price">¥' + Number(it.price || 0).toFixed(2) + '</span></div>' +
+        '<div class="giftbox-card-top">' +
+          '<div class="giftbox-emoji">' + giftMedia(it, 'giftbox-emoji-img') + '</div>' +
+        '</div>' +
+        '<div class="giftbox-card-body">' +
+          '<div class="giftbox-name">' + esc(it.name) + '</div>' +
+          '<div class="giftbox-price">¥' + Number(it.price || 0).toFixed(2) + '</div>' +
           '<div class="giftbox-wish">"' + esc(it.wish || '心意') + '"</div>' +
           '<div class="giftbox-meta">' + esc(from) + ' · ' + esc(fmtTime(it.tm)) + '</div>' +
         '</div>' +
@@ -601,9 +728,8 @@
         const it = list.find(function (x) { return x.id === c.dataset.id; });
         if (!it || !window.openTCPanel) return;
         const from = it.side === 'in' ? esc(partnerName()) + ' 送我' : '我 送 ' + esc(partnerName());
-        const col = CAT_COLOR[it.cat] || '#f5f3fa';
         const html =
-          '<div class="gb-detail" style="background:linear-gradient(160deg,' + col + ',#fff);">' +
+          '<div class="gb-detail">' +
             '<div class="gb-detail-emoji">' + giftMedia(it, 'gb-detail-emoji-img') + '</div>' +
             '<div class="gb-detail-name">' + esc(it.name) + '</div>' +
             '<div class="gb-detail-price">¥' + Number(it.price || 0).toFixed(2) + '</div>' +
@@ -690,6 +816,7 @@
       '<div class="chat-head"><span class="ch-back" id="market-back">' + BACK_SVG + '</span><span class="ch-name">心意市集</span></div>' +
       '<div class="market-body">' +
         '<div class="market-hero">' +
+
           '<div class="market-hero-title">心意市集</div>' +
           '<div class="market-hero-sub">挑一份心意，跨越两个世界送给你</div>' +
           '<div class="market-balance" id="market-balance"></div>' +
@@ -722,7 +849,11 @@
       '<div class="chat-head"><span class="ch-back" id="giftbox-back">' + BACK_SVG + '</span><span class="ch-name">心意柜</span></div>' +
       '<div class="giftbox-hero">' +
         '<div class="giftbox-hero-title">心意柜</div>' +
-        '<div class="giftbox-stat" id="giftbox-stat"></div>' +
+        '<div class="giftbox-hero-sub">每一份心意，都值得被珍藏</div>' +
+        '<div class="giftbox-stat-cards">' +
+          '<div class="giftbox-stat-card"><div class="giftbox-stat-ico">🎁</div><div class="giftbox-stat-num" id="giftbox-stat-in">0</div><div class="giftbox-stat-lbl">收到</div></div>' +
+          '<div class="giftbox-stat-card"><div class="giftbox-stat-ico">💌</div><div class="giftbox-stat-num" id="giftbox-stat-out">0</div><div class="giftbox-stat-lbl">送出</div></div>' +
+        '</div>' +
       '</div>' +
       '<div class="giftbox-tabs">' +
         '<button class="gb-tab sel" data-btab="in" type="button">收到的</button>' +

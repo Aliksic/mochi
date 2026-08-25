@@ -840,80 +840,81 @@ try {
     }
   } catch (e) {}
 
+  // v3.14.x：换图标菜单提取为全局函数——图标可能被 applyGroupChatMode/applyDeskLayout
+  // 移出 .app-grid（如群聊开启时占卜移到隐藏池，或用户拖到其他页），grid click 监听器
+  // 不触发；暴露 window.openIconMenu 供各图标自身监听器兜底调用
+  window.openIconMenu = function (app) {
+    const grid = app.closest('.app-grid');
+    const key = app.dataset.app;
+    const ico = app.querySelector('.app-ico');
+    const hasCustom = !!store.get('app-icon-' + key);
+    const pickFile = () => {
+      const input = document.createElement('input');
+      input.type = 'file'; input.accept = 'image/*';
+      input.onchange = () => {
+        const f = input.files && input.files[0];
+        if (!f) { return; }
+        const reader = new FileReader();
+        reader.onload = () => {
+          compressImage(reader.result, 256).then(data => {
+            if (!data) { toast('图片过大或格式不支持，请换一张小图'); return; }
+            if (ico) {
+              ico.innerHTML = '';
+              const img = document.createElement('img');
+              img.src = data;
+              img.alt = '';
+              ico.appendChild(img);
+            }
+            store.set('app-icon-' + key, data);
+          });
+        };
+        reader.readAsDataURL(f);
+      };
+      input.click();
+    };
+    const moveApp = (dir) => {
+      if (!grid) return;
+      const apps = Array.prototype.slice.call(grid.querySelectorAll('.app'));
+      const idx = apps.indexOf(app);
+      if (dir === 'up' && idx > 0) grid.insertBefore(app, apps[idx - 1]);
+      else if (dir === 'down' && idx < apps.length - 1) grid.insertBefore(apps[idx + 1], app);
+      const order = Array.prototype.slice.call(grid.querySelectorAll('.app')).map(a => a.dataset.app);
+      store.set('app-icon-order-' + grid.dataset.app, JSON.stringify(order));
+      toast(dir === 'up' ? '已上移' : '已下移');
+    };
+    const pills = [];
+    pills.push({ label: hasCustom ? '更换图片' : '上传图片', value: '1' });
+    if (hasCustom) pills.push({ label: '清除图片', value: '2' });
+    if (grid) { pills.push({ label: '上移', value: 'up' }); pills.push({ label: '下移', value: 'down' }); }
+    pills.push({ label: '隐藏图标', value: 'hide' });
+    if (window.openModal) {
+      window.openModal('图标设置', '', (v) => {
+        if (v === '1') pickFile();
+        else if (v === '2' && hasCustom) {
+          store.remove('app-icon-' + key);
+          if (ico && ico.dataset.orig) ico.innerHTML = ico.dataset.orig;
+          toast('已恢复默认图标');
+        } else if (v === 'up') moveApp('up');
+        else if (v === 'down') moveApp('down');
+        else if (v === 'hide') {
+          const hidden = getHiddenIcons();
+          if (hidden.indexOf(key) < 0) hidden.push(key);
+          setHiddenIcons(hidden);
+          app.style.display = 'none';
+          toast('已隐藏，可在装修栏恢复');
+        }
+      }, { noInput: true, pills: pills });
+    } else {
+      pickFile();
+    }
+  };
   grids.forEach(grid => {
     grid.addEventListener('click', (e) => {
       if (!grid.classList.contains('editing')) return;
       const app = e.target.closest('.app');
       if (!app) return;
       e.stopPropagation();
-      const key = app.dataset.app;
-      const ico = app.querySelector('.app-ico');
-      const hasCustom = !!store.get('app-icon-' + key);
-      const pickFile = () => {
-        const input = document.createElement('input');
-        input.type = 'file'; input.accept = 'image/*';
-        input.onchange = () => {
-          const f = input.files && input.files[0];
-          if (!f) { return; }
-          const reader = new FileReader();
-          reader.onload = () => {
-            compressImage(reader.result, 256).then(data => {
-              // v3.6.x：压缩失败/图片过大返回 null——不存原图（防 iOS 解码崩溃）
-              if (!data) { toast('图片过大或格式不支持，请换一张小图'); return; }
-              // v3.6.x：img 用属性赋值（dataURL 含引号时拼 innerHTML 会逃逸注入 HTML）
-              if (ico) {
-                ico.innerHTML = '';
-                const img = document.createElement('img');
-                img.src = data;
-                img.alt = '';
-                ico.appendChild(img);
-              }
-              store.set('app-icon-' + key, data);
-              // 持续装修：上传后保持编辑模式，手动点击"退出装修模式"才退出
-            });
-          };
-          reader.readAsDataURL(f);
-        };
-        input.click();
-      };
-      // v3.6.x：图标位置调整（网格内上移/下移，顺序持久化 app-icon-order-<gridIdx>）
-      const moveApp = (dir) => {
-        const apps = Array.prototype.slice.call(grid.querySelectorAll('.app'));
-        const idx = apps.indexOf(app);
-        if (dir === 'up' && idx > 0) grid.insertBefore(app, apps[idx - 1]);
-        else if (dir === 'down' && idx < apps.length - 1) grid.insertBefore(apps[idx + 1], app);
-        // 持久化顺序
-        const order = Array.prototype.slice.call(grid.querySelectorAll('.app')).map(a => a.dataset.app);
-        store.set('app-icon-order-' + grid.dataset.app, JSON.stringify(order));
-        toast(dir === 'up' ? '已上移' : '已下移');
-      };
-      // 组装菜单：更换/清除（有自定义图时）+ 上移/下移 + 隐藏
-      const pills = [];
-      pills.push({ label: hasCustom ? '更换图片' : '上传图片', value: '1' });
-      if (hasCustom) pills.push({ label: '清除图片', value: '2' });
-      pills.push({ label: '上移', value: 'up' });
-      pills.push({ label: '下移', value: 'down' });
-      pills.push({ label: '隐藏图标', value: 'hide' });
-      if (window.openModal) {
-        window.openModal('图标设置', '', (v) => {
-          if (v === '1') pickFile();
-          else if (v === '2' && hasCustom) {
-            store.remove('app-icon-' + key);
-            if (ico && ico.dataset.orig) ico.innerHTML = ico.dataset.orig;
-            toast('已恢复默认图标');
-          } else if (v === 'up') moveApp('up');
-          else if (v === 'down') moveApp('down');
-          else if (v === 'hide') {
-            const hidden = getHiddenIcons();
-            if (hidden.indexOf(key) < 0) hidden.push(key);
-            setHiddenIcons(hidden);
-            app.style.display = 'none';
-            toast('已隐藏，可在装修栏恢复');
-          }
-        }, { noInput: true, pills: pills });
-      } else {
-        pickFile();
-      }
+      window.openIconMenu(app);
     });
   });
 
@@ -3272,6 +3273,9 @@ try {
       if (phone) phone.classList.add('desk-move-mode');
       const span = document.querySelector('#decor-bar span');
       if (span) span.textContent = '移动模式 · 短按图标拖动换位 · 完成退出';
+      // v3.14.x：清掉长按按住阶段已形成的文字选区——Android 选中文字弹「复制」气泡后
+      // 触摸序列被气泡抢占，进移动模式后拖不动；CSS 已禁桌面选择，这里兜底清残留
+      try { const _sel = window.getSelection(); if (_sel && _sel.removeAllRanges) _sel.removeAllRanges(); } catch (e) {}
       if (navigator.vibrate) try { navigator.vibrate(20); } catch (e) {}
     };
     // 装修栏「编辑布局」按钮：点击进入移动模式（短按即拖，绕开长按 + 浏览器手势抢占）
@@ -3288,6 +3292,11 @@ try {
     document.addEventListener('decor-exited', resetMoveMode);
     const _tabbar = document.querySelector('.tabbar');
     if (_tabbar) _tabbar.addEventListener('click', resetMoveMode);
+    // v3.14.x：拦截桌面原生右键/长按系统菜单——Android 长按图片组件/头像会弹
+    // 「保存/复制」上下文菜单（-webkit-touch-callout 只拦 iOS 管不到 Android），
+    // 菜单一弹即抢占触摸序列导致拖拽中断（配合 home.css 的 #page-phone 禁选择）。
+    // 桌面无任何右键功能，全时拦截（含桌面 PC 右键，避免误触发浏览器菜单打断拖拽）
+    if (phone) phone.addEventListener('contextmenu', (e) => e.preventDefault());
 
     // touchstart capture 兜底：移动模式下短按即拖，浏览器会按 pan-x pan-y 接管触摸序列→
     // pointermove 被抢占/翻页→拖不动。在 touchstart capture 阶段 preventDefault，阻止浏览器
@@ -3296,6 +3305,17 @@ try {
     //    非移动模式下若也无条件 preventDefault，桌面所有功能按钮（.app）/卡片点击全部失效
     //    （v3.10.x 回归：开屏进入后桌面按钮全点不动）。仅在移动模式（编辑布局后短按即拖）才需要。
     pagesBox.addEventListener('touchstart', (e) => {
+      if (!inMoveMode) return;
+      if (e.target.closest('.desk-lib, .desk-page-add, .decor-bar')) return;
+      if (!e.target.closest('[data-desk-widget], .app')) return;
+      e.preventDefault();
+    }, { capture: true, passive: false });
+    // v3.14.x：touchmove capture 兜底——组件已允许 pan-x pan-y（移动模式下桌面横滑翻页），
+    //   长按进移动模式那一下 touchstart 发生时 inMoveMode 还是 false 拦不到，但手指要 350ms
+    //   后才开始移动，第一个 touchmove 到达时 inMoveMode 已是 true——这里 preventDefault 阻止
+    //   浏览器把序列当滚动，长按拖拽不被抢占（否则组件允许 pan 后拖动会被浏览器抢成翻页）。
+    //   限 inMoveMode + 组件目标，不影响移动模式下组件间隙/空白处的正常横滑翻页。
+    pagesBox.addEventListener('touchmove', (e) => {
       if (!inMoveMode) return;
       if (e.target.closest('.desk-lib, .desk-page-add, .decor-bar')) return;
       if (!e.target.closest('[data-desk-widget], .app')) return;
@@ -3310,8 +3330,16 @@ try {
       if (!target) return;
       startX = e.clientX; startY = e.clientY;
       const t = target;
-      // 移动模式已开启：短按即拖，零延迟（绕开长按 + 浏览器手势抢占）
-      if (inMoveMode) { startDeskDrag(e, t); return; }
+      // 移动模式已开启：区分「快速横滑翻页」与「长按/短按拖拽」——组件 touch-action:none
+      // 时浏览器不会自动滚动，手指快速横滑由 JS 判为翻页（v3.14.x：修复移动/装修模式桌面
+      // 滑不动）。记录按下时刻：短按后立即横向位移>12px → 翻页；长按超过 MOVE_DELAY（按住
+      // 不动）或纵向位移为主 → 拖拽。这样长按图标拖动仍可拖（长按超时后移动不被判横滑）。
+      if (inMoveMode) {
+        t._swipeX = e.clientX; t._swipeY = e.clientY;
+        t._swipeT = Date.now();
+        t._swiping = null;
+        return; // 等 pointermove 判定方向
+      }
       // 非移动模式：长按 350ms 进入移动模式 + 开始拖拽（兼容旧入口）
       pressTimer = setTimeout(() => {
         pressTimer = null;
@@ -3323,10 +3351,53 @@ try {
       if (pressTimer && (Math.abs(e.clientX - startX) > 10 || Math.abs(e.clientY - startY) > 10)) {
         clearTimeout(pressTimer); pressTimer = null;
       }
+      // 移动模式下的横滑翻页判定：手指按下但未进入拖拽（_swiping 未定）时判定方向
+      if (inMoveMode && !dragging) {
+        const t = e.target.closest ? e.target.closest('[data-desk-widget], .app') : null;
+        if (t && t._swiping !== undefined && t._swiping === null) {
+          const dx = e.clientX - t._swipeX, dy = e.clientY - t._swipeY;
+          // 长按超过 MOVE_DELAY 后移动 → 直接拖拽（按住图标/组件拖动的场景）
+          if (Date.now() - t._swipeT > MOVE_DELAY) {
+            t._swiping = 'v';
+            startDeskDrag(e, t);
+            return;
+          }
+          if (Math.abs(dx) > 12 || Math.abs(dy) > 12) {
+            if (Math.abs(dx) > Math.abs(dy) * 1.5) {
+              // 短按后立即横向位移为主 → 翻页手势（组件上快速横滑翻页），不进入拖拽
+              t._swiping = 'h';
+            } else {
+              // 纵向为主 → 立即开始拖拽（短按即拖）
+              t._swiping = 'v';
+              startDeskDrag(e, t);
+            }
+          }
+        }
+        // 已判为横滑：跟手更新，但不动 scrollLeft（松手时 deskGo 吸附翻页）
+        if (t && t._swiping === 'h' && window.deskIdx) {
+          const dx = e.clientX - t._swipeX;
+          if (Math.abs(dx) > 46) {
+            const slides = pagesBox.querySelectorAll('.page-slide').length;
+            const cur = window.deskIdx();
+            const dir = dx < 0 ? 1 : -1; // 左滑下一页
+            if (cur + dir >= 0 && cur + dir < slides) {
+              if (window.deskGo) window.deskGo(cur + dir);
+              t._swiping = 'done';
+            }
+          }
+        }
+      }
     });
     const cancelPress = () => { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } };
     pagesBox.addEventListener('pointerup', cancelPress);
     pagesBox.addEventListener('pointercancel', cancelPress);
+    // v3.14.x：移动模式下横滑判定结束/取消时清理（避免残留 _swiping 状态）
+    const clearSwipe = (e) => {
+      const t = e.target.closest ? e.target.closest('[data-desk-widget], .app') : null;
+      if (t) { t._swiping = undefined; t._swipeX = undefined; t._swipeY = undefined; }
+    };
+    pagesBox.addEventListener('pointerup', clearSwipe);
+    pagesBox.addEventListener('pointercancel', clearSwipe);
 
     // v3.10.x：tap→click 兜底——部分国产浏览器（X5 内核/夸克/UC 等）触摸不合成 click
     // 事件，桌面所有 .app 按钮触摸点击无响应（直接 .click() 正常，证明监听器已绑定）。

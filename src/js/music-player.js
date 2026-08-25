@@ -29,7 +29,13 @@
   let history = [];          // {id,trackId,trackName,triggerType,ts} —— TA 邀请听歌记录
   let myHistory = [];        // {id,trackId,trackName,ts} —— 我的听歌记录（自己点击播放）
   let hisSubTab = 'ta';      // 听歌记录二级子 tab：ta（TA 邀请）/ mine（我的）；默认 ta 与原 tab 语义一致
-  let settings = { floatEn: true, reqProb: 5, cooldownMs: 600000, widgetCoverMode: 'song' };
+  // v3.14.x：梦角主动控制概率可调——taNextProb/taRandProb/taModeProb=歌曲播完时
+  // 梦角接动作（切下一首/随机挑一首/换播放模式）的概率；taFavProb=我播放歌曲时
+  // 联系人把歌收进「TA的收藏」的概率。默认值与原硬编码行为一致（15/10/5）。
+  const DEF_SETTINGS = { floatEn: true, reqProb: 5, cooldownMs: 600000, widgetCoverMode: 'song', taNextProb: 15, taRandProb: 10, taModeProb: 5, taFavProb: 20 };
+  let settings = Object.assign({}, DEF_SETTINGS);
+  // 概率取值兜底：非数字/越界时回退默认值并夹在 0~100
+  function probOf(v, def) { const n = (typeof v === 'number' && !isNaN(v)) ? v : def; return Math.max(0, Math.min(100, n)); }
   let currentId = null;
   let mode = 'list';         // list / shuffle / single
   let audio = null;
@@ -131,7 +137,7 @@
       }
       if (migrated) { saveHistory(); saveMyHistory(); }
     }
-    try { settings = Object.assign({ floatEn: true, reqProb: 5, cooldownMs: 600000, widgetCoverMode: 'song' }, JSON.parse(store.get('music-global') || '{}')); } catch(e) {}
+    try { settings = Object.assign({}, DEF_SETTINGS, JSON.parse(store.get('music-global') || '{}')); } catch(e) {}
     // 旧字段兼容：url 歌曲标记 source
     library.forEach(m => { if (!m.source) m.source = m.url ? 'url' : 'local'; });
     // 首次运行：内置默认歌单
@@ -1607,6 +1613,8 @@
     renderLibrary();
     renderPlaylists();
     renderFavList();
+    renderTaFavList();
+    syncTaFavTab();
     renderHistory();
     updatePlayerBar();
     syncFloatToggle();
@@ -1736,6 +1744,8 @@
     disarmAutoResume();
     clearBgResume();
     clearStallGuard();
+    // v3.14.x：停止/切歌后不再判定联系人收藏（新播放会重新调度）
+    clearTaFavTimer();
     if (progressTimer) { clearInterval(progressTimer); progressTimer = null; }
     // v3.9.x：真正停止（非切歌）后让 bg-keep 恢复"后台保活"媒体会话条；
     // 切歌时 currentId 已指向新歌，此处不触发
@@ -1808,6 +1818,8 @@
     renderLibrary();
     startProgress();
     addMyRecord(m.id);
+    // v3.14.x：联系人按概率收藏正在播的歌（听 10~25s 后判定，切歌/暂停即取消）
+    scheduleTaFavCheck(m);
     updateMediaSession(true);
   }
   // v3.6.x：自动播放被拒后的手势恢复——移动端 play() 被拒（异步链丢手势）后，
@@ -2534,6 +2546,98 @@
     const cb = document.getElementById('music-float-en');
     if (cb) cb.checked = settings.floatEn;
   }
+
+  // ================= 联系人的收藏 =================
+  // v3.14.x：我播放歌曲时，联系人按设置概率把这首歌收进「TA的收藏」（独立于我的收藏）。
+  // 存 music-favs-ta（与音乐库同在 default 全局命名空间），tab 标题用联系人昵称动态渲染。
+  function taFavIds() {
+    try { const v = JSON.parse(store.get('music-favs-ta') || '[]'); return Array.isArray(v) ? v : []; } catch (e) { return []; }
+  }
+  function saveTaFavIds(list) { store.set('music-favs-ta', JSON.stringify(list)); }
+  function isTaFav(id) { return taFavIds().indexOf(id) >= 0; }
+  function addTaFav(id) {
+    if (isTaFav(id)) return false;
+    const list = taFavIds();
+    list.unshift(id);
+    saveTaFavIds(list);
+    renderTaFavList();
+    return true;
+  }
+  function removeTaFav(id) {
+    const list = taFavIds();
+    const i = list.indexOf(id);
+    if (i < 0) return false;
+    list.splice(i, 1);
+    saveTaFavIds(list);
+    renderTaFavList();
+    return true;
+  }
+  // 播放判定：听满 10~25 秒仍在播这首歌才掷概率——刚点开就切走不算「听过」，
+  // 也避免快速切歌时连续弹提示。两次收藏间隔至少 90s，防刷屏。
+  let taFavTimer = null;
+  let taSongFavAt = 0;
+  function clearTaFavTimer() {
+    if (taFavTimer) { clearTimeout(taFavTimer); taFavTimer = null; }
+  }
+  function scheduleTaFavCheck(m) {
+    clearTaFavTimer();
+    const prob = probOf(settings.taFavProb, 20);
+    if (!prob || !m || !m.id) return;
+    if (isTaFav(m.id)) return;
+    if (Date.now() - taSongFavAt < 90000) return;
+    const trackId = m.id;
+    taFavTimer = setTimeout(function () {
+      taFavTimer = null;
+      // 听歌中途切歌/暂停/停止都不再收藏
+      if (currentId !== trackId) return;
+      if (!audio || audio.paused) return;
+      if (Math.random() * 100 >= probOf(settings.taFavProb, 20)) return;
+      const mm = findTrack(trackId);
+      if (!mm) return;
+      if (addTaFav(trackId)) {
+        taSongFavAt = Date.now();
+        const name = partnerName();
+        const trackName = mm.name || '未知歌曲';
+        try { toast(window.taFit ? window.taFit(name + ' 收藏了这首歌') : (name + ' 收藏了《' + trackName + '》')); } catch (e) {}
+        if (window.chatAddSystem) window.chatAddSystem(name + ' 收藏了歌曲《' + trackName + '》');
+      }
+    }, 10000 + Math.floor(Math.random() * 15000));
+  }
+  // 联系人的收藏列表（音乐页 tab：XX的收藏）
+  function renderTaFavList() {
+    const el = document.getElementById('music-fav-ta-list');
+    if (!el) return;
+    const nm = partnerName();
+    const songs = taFavIds().map(id => findTrack(id)).filter(Boolean);
+    el.innerHTML = songs.length
+      ? songs.map(m => {
+          const active = m.id === currentId;
+          return '<div class="sm-song' + (active ? ' active' : '') + '" data-id="' + m.id + '">' +
+            songIcoHtml(m) +
+            '<div class="sm-song-info"><div class="sm-song-name">' + esc(m.name || '未知歌曲') + '</div>' +
+            '<div class="sm-song-sub">' + esc(m.artist || '未知歌手') + '</div></div>' +
+            '<button class="sm-song-more" data-id="' + m.id + '" title="取消收藏"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 20.5S4.5 15.2 4.5 9.9A4.9 4.9 0 0112 7.1a4.9 4.9 0 017.5 2.8c0 5.3-7.5 10.6-7.5 10.6z"/></svg></button>' +
+            '</div>';
+        }).join('')
+      : '<div class="ta-empty">' + esc(nm) + ' 还没有收藏歌曲，播放时 ' + esc(nm) + ' 有概率把喜欢的歌收进来</div>';
+    el.querySelectorAll('.sm-song').forEach(row => {
+      row.addEventListener('click', (e) => {
+        if (e.target.closest('.sm-song-more')) return;
+        playTrack(row.dataset.id);
+      });
+    });
+    el.querySelectorAll('.sm-song-more').forEach(b => {
+      b.addEventListener('click', () => {
+        removeTaFav(b.dataset.id);
+        toast('已取消收藏');
+      });
+    });
+  }
+  // tab 标题跟随联系人昵称（模板里是静态占位，进入页面/切换联系人后由 JS 填）
+  function syncTaFavTab() {
+    const tab = document.querySelector('#page-music .fav-tab[data-mtab="favta"]');
+    if (tab) tab.textContent = partnerName() + '的收藏';
+  }
   function setupFloatDrag() {
     const el = document.getElementById('sm-float');
     if (!el) return;
@@ -2775,14 +2879,15 @@
     // v3.6.x：记录结束的这首歌——延迟抢播回调必须校验 currentId 仍是它，
     // 否则只要播放器还活跃（currentId 恒非 null），用户 300ms 内手动切歌也会被 TA 抢播覆盖
     const endedId = currentId;
-    // 加权：继续 70 / 下一首 15 / 随机 10 / 换模式 5
+    // v3.14.x：三个动作概率改为音乐设置可调（默认 切下一首15 / 随机挑歌10 / 换播放模式5，
+    // 与原硬编码加权一致）；剩余概率=TA 不接动作，按当前播放模式正常自动切下一首。
+    // 三项全设 0 即 TA 从不主动控制播放。
+    const pNext = probOf(settings.taNextProb, 15);
+    const pRand = probOf(settings.taRandProb, 10);
+    const pMode = probOf(settings.taModeProb, 5);
     const r = Math.random() * 100;
     const name = partnerName();
-    if (r < 70) {
-      // 继续（正常切下一首）
-      return false;
-    }
-    if (r < 85) {
+    if (r < pNext) {
       const list = playableList();
       if (list.length > 1) {
         const others = list.filter(x => x.id !== currentId);
@@ -2795,7 +2900,7 @@
       }
       return false;
     }
-    if (r < 95) {
+    if (r < pNext + pRand) {
       const list = playableList();
       if (list.length > 1) {
         const t = list[Math.floor(Math.random() * list.length)];
@@ -2806,10 +2911,12 @@
       }
       return false;
     }
-    cycleMode();
-    const modeLabel = { list: '顺序播放', shuffle: '随机播放', single: '单曲循环' }[mode];
-    if (window.chatAddSystem) window.chatAddSystem(name + ' 把播放模式换成了' + modeLabel);
-    addModeRecord(modeLabel);
+    if (r < pNext + pRand + pMode) {
+      cycleMode();
+      const modeLabel = { list: '顺序播放', shuffle: '随机播放', single: '单曲循环' }[mode];
+      if (window.chatAddSystem) window.chatAddSystem(name + ' 把播放模式换成了' + modeLabel);
+      addModeRecord(modeLabel);
+    }
     return false;
   }
 
@@ -2897,6 +3004,12 @@
       '<div class="gs-row"><span>请求冷却时间</span><select class="tc-input" id="sm-set-cool" style="width:110px">' + cooldownOpts + '</select></div>' +
       '<div class="gs-row"><span>桌面小组件封面</span><select class="tc-input" id="sm-set-wcov" style="width:120px"><option value="song"' + (settings.widgetCoverMode !== 'playlist' ? ' selected' : '') + '>歌曲封面</option><option value="playlist"' + (settings.widgetCoverMode === 'playlist' ? ' selected' : '') + '>歌单封面</option></select></div>' +
       '<div class="sm-set-hint">聊天过程中 TA 会按概率请求和你一起听歌；播放时右上角出现可拖动的悬浮小框</div>' +
+      '<div class="gs-row"><span>歌曲播完·切下一首概率</span><div class="stepper" id="sm-set-next" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="sm-set-next-val" readonly><button class="stp-max">+</button></div></div>' +
+      '<div class="gs-row"><span>歌曲播完·随机挑歌概率</span><div class="stepper" id="sm-set-rand" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="sm-set-rand-val" readonly><button class="stp-max">+</button></div></div>' +
+      '<div class="gs-row"><span>歌曲播完·换播放模式概率</span><div class="stepper" id="sm-set-modep" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="sm-set-modep-val" readonly><button class="stp-max">+</button></div></div>' +
+      '<div class="sm-set-hint">一起听完一首歌时，TA 按上面三个概率主动控制播放：切到下一首 / 随机挑一首 / 把播放模式换成顺序播放·列表循环·随机播放·单曲循环；三个都不中就正常自动切下一首（全设 0 = TA 从不主动控制）</div>' +
+      '<div class="gs-row"><span>TA 收藏歌曲概率</span><div class="stepper" id="sm-set-favprob" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="sm-set-favprob-val" readonly><button class="stp-max">+</button></div></div>' +
+      '<div class="sm-set-hint">你播放歌曲听一会儿后，TA 有概率把这首歌收进「TA的收藏」（音乐页收藏 tab 右边可查看；已收藏过的歌不重复判定，两次收藏间隔至少 90 秒）</div>' +
       '<div class="sm-set-row"><span>本地音频缓存</span><span id="sm-storage-use" style="color:var(--muted);font-size:12px">计算中…</span></div>' +
       '<div class="mail-actions"><button class="cc-tool" id="sm-diag-req">诊断邀请</button><button class="cc-tool" id="sm-clear-cache">清理本地音频缓存</button><button class="cc-tool" id="sm-set-close">关闭</button></div>');
     document.getElementById('sm-set-close').addEventListener('click', () => { document.getElementById('tc-mask').hidden = true; });
@@ -2932,21 +3045,27 @@
     const clearBtn = document.getElementById('sm-clear-cache');
     if (clearBtn) clearBtn.addEventListener('click', clearLocalAudioCache);
     refreshStorageUse();
-    const probVal = document.getElementById('sm-set-prob-val');
-    if (probVal) probVal.value = settings.reqProb;
-    const st = document.getElementById('sm-set-prob');
-    if (st) {
-      st.querySelector('.stp-min').addEventListener('click', () => {
-        const cur = parseInt(probVal.value, 10) || 0;
-        const nv = Math.max(0, cur - 5);
-        probVal.value = nv; settings.reqProb = nv; saveSettings();
+    // v3.14.x：概率步进器统一绑定（步长 5；reqProb 上限保持原 30，
+    // 新增的歌曲播完三动作 / TA 收藏歌曲上限 100——设 0 即关闭该行为）
+    const bindProbStep = (id, key, def, max) => {
+      const valEl = document.getElementById(id + '-val');
+      const box = document.getElementById(id);
+      if (!valEl || !box) return;
+      valEl.value = probOf(settings[key], def);
+      box.querySelector('.stp-min').addEventListener('click', () => {
+        const nv = Math.max(0, (parseInt(valEl.value, 10) || 0) - 5);
+        valEl.value = nv; settings[key] = nv; saveSettings();
       });
-      st.querySelector('.stp-max').addEventListener('click', () => {
-        const cur = parseInt(probVal.value, 10) || 0;
-        const nv = Math.min(30, cur + 5);
-        probVal.value = nv; settings.reqProb = nv; saveSettings();
+      box.querySelector('.stp-max').addEventListener('click', () => {
+        const nv = Math.min(max, (parseInt(valEl.value, 10) || 0) + 5);
+        valEl.value = nv; settings[key] = nv; saveSettings();
       });
-    }
+    };
+    bindProbStep('sm-set-prob', 'reqProb', 5, 30);
+    bindProbStep('sm-set-next', 'taNextProb', 15, 100);
+    bindProbStep('sm-set-rand', 'taRandProb', 10, 100);
+    bindProbStep('sm-set-modep', 'taModeProb', 5, 100);
+    bindProbStep('sm-set-favprob', 'taFavProb', 20, 100);
     const cool = document.getElementById('sm-set-cool');
     if (cool) cool.addEventListener('change', () => { settings.cooldownMs = Number(cool.value); saveSettings(); });
     const floatCb = document.getElementById('sm-set-float');
@@ -3062,6 +3181,7 @@
       document.querySelectorAll('#page-music .cal-card').forEach(c => { c.hidden = c.dataset.mpanel !== curTab; });
       if (curTab === 'pl') renderPlaylists();
       if (curTab === 'fav') renderFavList();
+      if (curTab === 'favta') renderTaFavList();
       if (curTab === 'his') renderHistory();
     });
   });
@@ -3170,7 +3290,10 @@
       cooldownAt = 0;
       reqData = null;
       libFilter = 'all';
+      // v3.14.x：取消待判定的联系人收藏（旧桌面的歌不带到新桌面）
+      clearTaFavTimer();
       try { renderFloat(); } catch (e) {}
+      try { syncTaFavTab(); renderTaFavList(); } catch (e) {}
     } catch (e) {}
   });
 })();

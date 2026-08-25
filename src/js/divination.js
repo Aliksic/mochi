@@ -602,9 +602,14 @@
   // 桌面【占卜】图标进入
   const divApp = document.querySelector('.app[data-app="divination"]');
   if (divApp && page) {
-    divApp.addEventListener('click', () => {
+    divApp.addEventListener('click', (e) => {
       const editing = Array.from(document.querySelectorAll('.app-grid')).some(g => g.classList.contains('editing'));
-      if (editing) return;
+      if (editing) {
+        const grid = divApp.closest('.app-grid');
+        if (grid && grid.classList.contains('editing')) return;
+        if (window.openIconMenu) { e.stopPropagation(); window.openIconMenu(divApp); }
+        return;
+      }
       document.querySelectorAll('.page').forEach(p => p.hidden = true);
       page.hidden = false;
       renderHistOnOpen();

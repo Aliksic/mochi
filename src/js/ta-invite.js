@@ -1,6 +1,6 @@
-// ===== 功能：TA的邀请（联系人主动邀请字卡库） v3.13.x =====
+// ===== 功能：TA的邀请（联系人主动邀请字卡库） v3.14.x =====
 // 把 chat.js 里硬编码的「联系人主动邀请」话术升级为字卡库「TA的邀请」：
-// 预设邀请卡入库（猜拳/Pong/贪吃蛇 三类，逐条开关、不可删、「使用系统预设」总开关），
+// 预设邀请卡入库（猜拳/Pong/贪吃蛇/贴贴 四类，逐条开关、不可删、「使用系统预设」总开关），
 // 支持自定义新增、分组管理、批量导入、跨分类搜索、字卡库双入口、IndexedDB 权威恢复。
 // 触发链路不变：tryAutoSend → tryActiveInvite（chat.js）按 联系人回复设置→其他 的
 // ai-rps-en/prob、ai-game-en/prob 判定后从本库抽一张；本文件只负责题库存储与抽取。
@@ -11,8 +11,11 @@
   const KEY = 'ta-invite';
 
   // ---------- 系统预设邀请卡 ----------
-  // kind: rps=猜拳 / pong=Pong / snake=双人贪吃蛇；text=TA 发出的邀请消息正文
+  // kind: rps=猜拳 / pong=Pong / snake=双人贪吃蛇 / cuddle=贴贴；text=TA 发出的邀请消息正文
   //（发送时自动带联系人昵称前缀）。前三条与原硬编码文案一致。
+  // v3.14.x：新增 cuddle 贴贴邀请——正常情侣的贴贴互动（贴/抱/牵手/靠着/蹭蹭），
+  // 措辞甜而安稳，贴合两个世界设定（平时看不见但偶尔能碰到、有体感），无游戏半框，
+  // 同意后 TA 回应一句贴贴的话（回应文案在 chat.js CUDDLE_REPLIES）。
   const DEFAULT_QUESTIONS = [
     { id: 'iv_r1', cat: 'rps', kind: 'rps', text: '想和你猜拳，来一局？', enabled: true },
     { id: 'iv_r2', cat: 'rps', kind: 'rps', text: '来猜拳呀，输的人答应一件事！', enabled: true },
@@ -23,9 +26,19 @@
     { id: 'iv_p3', cat: 'pong', kind: 'pong', text: 'Pong 桌子摆好了，就等你了。', enabled: true },
     { id: 'iv_s1', cat: 'snake', kind: 'snake', text: '想和你玩双人贪吃蛇，来吗？', enabled: true },
     { id: 'iv_s2', cat: 'snake', kind: 'snake', text: '来盘贪吃蛇？看谁吃得多！', enabled: true },
-    { id: 'iv_s3', cat: 'snake', kind: 'snake', text: '双人贪吃蛇开一局？这次我不撞你。', enabled: true }
+    { id: 'iv_s3', cat: 'snake', kind: 'snake', text: '双人贪吃蛇开一局？这次我不撞你。', enabled: true },
+    { id: 'iv_c1', cat: 'cuddle', kind: 'cuddle', text: '想贴贴了，你可以过来一点吗？', enabled: true },
+    { id: 'iv_c2', cat: 'cuddle', kind: 'cuddle', text: '抱一下再忙别的嘛，就一下下。', enabled: true },
+    { id: 'iv_c3', cat: 'cuddle', kind: 'cuddle', text: '手伸过来，我想牵一会儿。', enabled: true },
+    { id: 'iv_c4', cat: 'cuddle', kind: 'cuddle', text: '靠着你坐一会儿吧，什么都不做的那种。', enabled: true },
+    { id: 'iv_c5', cat: 'cuddle', kind: 'cuddle', text: '想把脑袋搁在你肩上，借我五分钟。', enabled: true },
+    { id: 'iv_c6', cat: 'cuddle', kind: 'cuddle', text: '刚才好像碰到你的手了？再来一次，这次牵住不放。', enabled: true },
+    { id: 'iv_c7', cat: 'cuddle', kind: 'cuddle', text: '隔着世界也想贴贴你，感觉到了就不要躲。', enabled: true },
+    { id: 'iv_c8', cat: 'cuddle', kind: 'cuddle', text: '今天很想你，想到想蹭蹭你。', enabled: true },
+    { id: 'iv_c9', cat: 'cuddle', kind: 'cuddle', text: '晚上早点休息，我来抱着你睡。', enabled: true },
+    { id: 'iv_c10', cat: 'cuddle', kind: 'cuddle', text: '心情很好，这种时候最适合亲亲了。', enabled: true }
   ];
-  const CATS_TI = [['rps', '猜拳邀请'], ['pong', 'Pong 邀请'], ['snake', '贪吃蛇邀请']];
+  const CATS_TI = [['rps', '猜拳邀请'], ['pong', 'Pong 邀请'], ['snake', '贪吃蛇邀请'], ['cuddle', '贴贴邀请']];
   const KIND_OF = {};
   CATS_TI.forEach(([k]) => { KIND_OF[k] = k; });
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
@@ -107,7 +120,8 @@
   }
   // 自动链路抽取（chat.js tryActiveInvite 调用）：保持旧版权重语义——
   // 先掷猜拳门（ai-rps-en/ai-rps-prob），命中且猜拳池有货则出猜拳；
-  // 否则掷游戏门（ai-game-en/ai-game-prob），从 Pong+贪吃蛇池抽。
+  // 否则掷游戏门（ai-game-en/ai-game-prob），从 Pong+贪吃蛇池抽；
+  // 最后掷贴贴门（ai-cuddle-en/ai-cuddle-prob），从贴贴池抽（默认开 5%，与另两门独立）。
   // c 为联系人回复设置对象（cfg()），缺字段回退默认值（与 reply-settings 默认一致）。
   function gn(c, k, def) { try { const v = c ? c[k] : undefined; return (typeof v === 'number' && !isNaN(v)) ? v : def; } catch (e) { return def; } }
   function hit(p) { return Math.random() * 100 < p; }
@@ -122,6 +136,11 @@
         const q = drawFrom(enabledPool(d, ['pong', 'snake']));
         if (q) return q;
       }
+      // v3.14.x：贴贴门——情侣贴贴互动邀请（同意后 TA 回应一句，不开游戏半框）
+      if (gn(c, 'ai-cuddle-en', 1) === 1 && hit(gn(c, 'ai-cuddle-prob', 5))) {
+        const q = drawFrom(enabledPool(d, ['cuddle']));
+        if (q) return q;
+      }
       return null;
     } catch (e) { return null; }
   };
@@ -129,7 +148,7 @@
   window.taInvitePickAny = function () {
     try {
       const d = tiLoad();
-      return drawFrom(enabledPool(d, ['rps', 'pong', 'snake']));
+      return drawFrom(enabledPool(d, ['rps', 'pong', 'snake', 'cuddle']));
     } catch (e) { return null; }
   };
   window.__tiBankInfo = function () {
@@ -200,6 +219,7 @@
       '<option value="rps">猜拳邀请</option>' +
       '<option value="pong">Pong 邀请</option>' +
       '<option value="snake">贪吃蛇邀请</option>' +
+      '<option value="cuddle">贴贴邀请</option>' +
       '</select>' +
       '<input id="ti-new-' + blockKey + '" type="text" placeholder="添加邀请话术…（发送时自动带昵称）">' +
       '<button class="ta-add-btn" data-key="' + blockKey + '" data-cat="' + (kind || 'rps') + '" data-grp="' + (grp || '') + '">添加</button>' +

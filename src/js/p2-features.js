@@ -2045,6 +2045,9 @@ if (ckRefresh) {
   const DEF_WATER_TA = ['TA 说：{m}', 'TA 让我提醒你：{m}', 'TA 念着：{m}', 'TA 托我带句话：{m}'];
   // 世界观：他视角提醒（灵体在身边，字卡语态）；偶尔出得不准配温柔解读
   const DEF_WATER_TA_GENTLE = ['水凉了，喝一口？', '你忘了吧，喝一口', '我在呢，先喝口水', '嗯，去喝一口好不好', '别忙忘了喝水'];
+  // v3.14.x：梦角催喝水兜底池（同 default-cards-data.js「梦角催喝水」分组，
+  // 正常走 libPool('water','梦角催喝水') 同源+逐张开关，数据缺失才用这里）
+  const DEF_WATER_CHAT_REMIND = ['该喝水啦，我看着你呢', '去喝口水吧，我在这儿等你回来', '半天没听见你倒水的声音了', '杯子是不是空了很久了？', '别光顾着忙，润润嗓子好不好', '水就放在手边，伸伸手就够到了'];
   const waterPage = document.createElement('div');
   waterPage.className = 'page'; waterPage.id = 'page-water'; waterPage.hidden = true;
   waterPage.innerHTML =
@@ -2143,6 +2146,49 @@ if (ckRefresh) {
     el.textContent = '🔥 连续达标 ' + st.n + ' 天';
   }
   function waterShowMsg(txt) { const el = document.getElementById('water-msg'); if (el) { el.classList.add('fade'); setTimeout(() => { el.textContent = '\u201c' + txt + '\u201d'; el.classList.remove('fade'); }, 200); } }
+  // v3.14.x：梦角催喝水——从「梦角催喝水」预设池抽一张字卡直接发进聊天
+  //（chatAddIn 自带未读数 +1 与桌面横幅/后台系统通知联动，不在聊天页也能被提醒）。
+  // v2（按用户反馈）：不再强绑打卡进度——懒得打卡也照常来催；
+  //   进度尾巴只在「今天记过杯数且确实没喝够」时才附（count>0 且 count<goal），
+  //   一口没记时不妄下判断；已打卡达标则改发喝够夸奖、概率降到 1/4 不打扰。
+  //   「梦角催喝水」整组逐张关光 = 明确不想被打扰，直接不发（不回退兜底池）。
+  function waterChatDone() { const g = waterGoal(); const t = waterToday(); return !!g && t.count >= g; }
+  function waterChatGroupAllOff() {
+    try {
+      const grp = ((window.DEFAULT_CARD_DATA && window.DEFAULT_CARD_DATA.water) || []).find(g => g[0] === '梦角催喝水');
+      if (!grp || !Array.isArray(grp[1]) || !grp[1].length || !window.isDefaultCardOff) return false;
+      return grp[1].every(c => window.isDefaultCardOff('water', c));
+    } catch (e) { return false; }
+  }
+  function waterTaChatSend() {
+    if (waterChatGroupAllOff()) return false;
+    const t = waterToday(); const g = waterGoal();
+    const done = waterChatDone();
+    const pool = libPool('water', done ? '喝够夸奖' : '梦角催喝水', done ? DEF_WATER_PRAISE : DEF_WATER_CHAT_REMIND);
+    const m = pool[Math.floor(Math.random() * pool.length)];
+    const tail = (!done && g && t.count > 0 && t.count < g) ? '（还差 ' + (g - t.count) + ' 杯）' : '';
+    const text = window.taFit ? window.taFit(m + tail) : (m + tail);
+    try { if (window.chatAddIn) { window.chatAddIn(text); return true; } } catch (e) {}
+    return false;
+  }
+  // 概率触发入口——应用在前台期间每 8 分钟掷一次骰子：
+  // 页面可见 + 频率控制（冷却 50 分钟 / 每日最多 4 次，taChime 统一管）
+  // + 基础 22% 概率（深夜 0-6 点降到 8%、清晨 6-9 点 15%，半夜不吵人）；
+  // 已打卡达标只按 1/4 概率改发夸奖（偶尔来夸一句不打扰）。实际节奏≈活跃
+  // 半小时内第一催、之后至少隔 50 分钟一条、一天最多 4 条。
+  // 打开喝水页时 waterMaybeRemind 里还有一次独立判定。
+  // 暴露 window.waterChimeTick 供专项验证手动驱动。
+  window.waterChimeTick = function () {
+    if (document.hidden || editingNow()) return;
+    const h = new Date().getHours();
+    const base = h < 6 ? 0.08 : (h < 9 ? 0.15 : 0.22);
+    const p = waterChatDone() ? base * 0.25 : base;
+    if (Math.random() >= p) return;
+    if (!(window.taChimeAllow && window.taChimeAllow('water-chat', { cooldown: 50 * 60 * 1000, dailyMax: 4 }))) return;
+    window.taChimeUse('water-chat');
+    waterTaChatSend();
+  };
+  setInterval(window.waterChimeTick, 8 * 60 * 1000);
   function waterMaybeRemind() {
     const s = curStore(); if (!s) return;
     let last = 0; try { last = parseInt(s.get('water-last-visit') || '0', 10) || 0; } catch (e) {}
@@ -2158,6 +2204,16 @@ if (ckRefresh) {
         if (window.taChimeShow) window.taChimeShow(m, { miss: miss });
       }
       const msgs = waterMsgs(); waterShowMsg(msgs[Math.floor(Math.random() * msgs.length)]);
+    }
+    // v3.14.x v2：进入页面距上次 >2 小时时独立判定一次聊天催水（独立频率键
+    // water-chat，与前台定时掷骰共用冷却/每日上限，同一时段不会连发两条）——
+    // 不再要求「未打卡达标」（懒得打卡也照常来催）；已达标降为约 1/4 概率改发夸奖
+    if (Date.now() - last > 2 * 3600000) {
+      const wp = waterChatDone() ? 0.09 : 0.35;
+      if (!waterChatGroupAllOff() && window.taChimeAllow && window.taChimeAllow('water-chat', { cooldown: 50 * 60 * 1000, dailyMax: 4 }) && Math.random() < wp) {
+        window.taChimeUse('water-chat');
+        waterTaChatSend();
+      }
     }
     // 世界观：他替你记的那杯——每天低概率生成一个标记，柱状图上叠半透明格
     waterMaybeTaMark();
@@ -2231,6 +2287,7 @@ if (ckRefresh) {
       '<div class="eat-btns"><button class="eat-spin" id="eat-spin">转盘抽取</button><button class="eat-askta" id="eat-askta">问 TA</button></div>' +
       '<div class="eat-history" id="eat-history"></div>' +
       '<div class="eat-mgr"><button class="eat-add" id="eat-add">+ 添加菜名</button><button class="eat-menu-btn" id="eat-menu-btn">编辑菜单</button></div>' +
+      '<div class="eat-mgr"><button class="eat-menu-btn" id="eat-remind-toggle">TA 提醒：开</button><button class="eat-menu-btn" id="eat-remind-prob">触发概率 2%</button></div>' +
       '<div class="eat-menu-panel" id="eat-menu-panel" hidden>' +
         '<div class="eat-menu-chips" id="eat-menu-chips"></div>' +
         '<div class="eat-menu-ops"><button class="eat-menu-op" id="eat-menu-new">+ 新建</button><button class="eat-menu-op" id="eat-menu-rename">重命名</button><button class="eat-menu-op" id="eat-menu-del">删除</button></div>' +
@@ -2397,7 +2454,7 @@ if (ckRefresh) {
     return dish + ' · ' + comment;
   }
   let eatLastPick = '';
-  if (eatApp) eatApp.addEventListener('click', () => { if (editingNow()) return; eatClearSpin(); eatInitCanvas(); openPage(eatPage); eatRenderCurName(); eatLastPick = eatPick(); eatRenderHistory(); eatDrawWheel(eatDishes()); });
+  if (eatApp) eatApp.addEventListener('click', () => { if (editingNow()) return; eatClearSpin(); eatInitCanvas(); openPage(eatPage); eatRenderCurName(); eatLastPick = eatPick(); eatRenderHistory(); eatDrawWheel(eatDishes()); eatRenderRemind(); });
   document.getElementById('eat-back').addEventListener('click', () => { eatClearSpin(); backHome(eatPage); });
   (function () {
     var de = document.getElementById('eat-dish'); if (!de) return;
@@ -2498,6 +2555,81 @@ if (ckRefresh) {
   document.getElementById('eat-switch-menu').addEventListener('click', () => { if (editingNow() || eatSpinning) return; eatSwitchOpen(); });
   document.getElementById('eat-switch-cancel').addEventListener('click', () => { eatSwitchClose(); });
   document.getElementById('eat-switch-go').addEventListener('click', () => { eatSwitchSpin(); });
+
+  // ---- TA 饭点提醒（v3.14.x）：概率触发梦角发字卡到聊天提醒吃饭 ----
+  // 世界观同喝水「他视角温柔提醒」：梦角是灵体，饭点偶尔冒出来催你吃饭。
+  // 话术池与字卡库【系统预设字卡 → 吃什么】tab 同源（DEFAULT_CARD_DATA.eat，
+  // 分组「提醒吃饭/追问关心」），逐张开关（dc-off-eat:*）经 libPool 过滤后参与抽取。
+  const DEF_EAT_REMIND = ['到饭点啦，去吃饭吧', '该吃饭了哦，别饿着', '今天吃 {d} 怎么样？就它了', '{d} 挺好的，去吃这个吧', '记得吃热乎的，别随便对付一口', '去吃饭吧，吃完跟我说说吃了什么', '别忙忘了吃饭，胃是自己的', '我看着呢，快去吃饭', '放下手里的事，先吃饭好不好', '饭要按时吃，我才会放心', '好好吃饭的人，运气不会太差哦', '饿了就去做点吃的，别硬撑'];
+  const DEF_EAT_REMIND_CARE = ['吃了什么呀？说给我听听', '吃饱了吗？没饱再去添一点', '吃得合胃口吗？', '慢慢吃，不着急', '记得配点汤汤水水', '吃完了就休息一会儿吧'];
+  // 饭点窗口（分钟）：早 06:30–09:30 / 午 11:00–13:30 / 晚 17:00–19:30 / 夜宵 21:30–23:30
+  const EAT_REMIND_WINDOWS = [['breakfast', 390, 570], ['lunch', 660, 810], ['dinner', 1020, 1170], ['nightcap', 1290, 1410]];
+  function eatDayKey() { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+  function eatRemindEn() { const s = curStore(); const v = s && s.get('eat-remind-en'); return v === null ? true : v === '1'; }
+  function eatRemindSetEn(on) { const s = curStore(); if (s) try { s.set('eat-remind-en', on ? '1' : '0'); } catch (e) {} }
+  function eatRemindProb() { const s = curStore(); try { const n = parseInt(s && s.get('eat-remind-prob'), 10); if (!isNaN(n)) return Math.max(0, Math.min(100, n)); } catch (e) {} return 2; }
+  function eatRenderRemind() {
+    const t = document.getElementById('eat-remind-toggle');
+    if (t) t.textContent = 'TA 提醒：' + (eatRemindEn() ? '开' : '关');
+    const p = document.getElementById('eat-remind-prob');
+    if (p) p.textContent = '触发概率 ' + eatRemindProb() + '%';
+  }
+  function eatRemindFire(code) {
+    const s = curStore(); if (!s) return;
+    // 每个饭点窗口每天最多提醒一次（发出即标记）
+    try { s.set('eat-remind-done:' + code + ':' + eatDayKey(), '1'); } catch (e) {}
+    const dishes = eatDishes();
+    const dish = dishes.length ? dishes[Math.floor(Math.random() * dishes.length)] : '';
+    let text = '';
+    const pool = libPool('eat', '提醒吃饭', DEF_EAT_REMIND);
+    if (pool.length) text = pool[Math.floor(Math.random() * pool.length)] || '';
+    if (!text) return;
+    text = text.replace(/\{d\}/g, dish || '饭');
+    // 字卡进聊天记录（后台也照进）；系统通知由 bgNotifyCheck 内部按隐藏时长/去重闸门决定
+    if (window.chatAddIn) { try { window.chatAddIn(text); } catch (e) {} }
+    if (window.bgNotifyCheck) { try { window.bgNotifyCheck(text, Date.now(), { name: 'TA的吃饭提醒' }); } catch (e) {} }
+    try { if (navigator.vibrate) navigator.vibrate([80, 60, 80]); } catch (e) {}
+    // 35% 概率隔一小会儿再补一句「追问关心」（第 2+ 条不重复响提示音，同回复链惯例）
+    if (Math.random() < 0.35) {
+      setTimeout(() => {
+        const care = libPool('eat', '追问关心', DEF_EAT_REMIND_CARE);
+        if (care.length && window.chatAddIn) { try { window.chatAddIn(care[Math.floor(Math.random() * care.length)], { silent: true }); } catch (e) {} }
+      }, 1400);
+    }
+  }
+  function eatRemindMaybe() {
+    try {
+      if (!window.chatAddIn) return;
+      if (!eatRemindEn()) return;
+      const now = new Date(); const mins = now.getHours() * 60 + now.getMinutes();
+      const w = EAT_REMIND_WINDOWS.find(x => mins >= x[1] && mins <= x[2]);
+      if (!w) return;
+      const s = curStore(); if (!s) return;
+      if (s.get('eat-remind-done:' + w[0] + ':' + eatDayKey()) === '1') return;
+      // 窗口内每 4 分钟掷一次；未命中下轮再掷（越往后越可能），命中即发、窗口内不再重复
+      if (Math.random() * 100 >= eatRemindProb()) return;
+      eatRemindFire(w[0]);
+    } catch (e) {}
+  }
+  eatRemindMaybe(); // 启动即查一次：打开应用时恰在饭点窗口内可立即触发（守卫齐备，安全）
+  setTimeout(eatRemindMaybe, 60000);
+  setInterval(eatRemindMaybe, 240000);
+  document.getElementById('eat-remind-toggle').addEventListener('click', () => {
+    if (editingNow()) return;
+    const on = !eatRemindEn();
+    eatRemindSetEn(on); eatRenderRemind();
+    toast(on ? '已开启：TA 会偶尔在饭点发字卡提醒你吃饭' : '已关闭：TA 不再饭点提醒');
+  });
+  document.getElementById('eat-remind-prob').addEventListener('click', () => {
+    if (!window.openModal) return;
+    window.openModal('触发概率（%）', String(eatRemindProb()), (v) => {
+      if (v === null || v === '') return;
+      const n = parseInt(v, 10);
+      if (isNaN(n) || n < 0 || n > 100) { toast('请输入 0-100 的整数'); return; }
+      const s = curStore(); if (s) try { s.set('eat-remind-prob', String(n)); } catch (e) {}
+      eatRenderRemind(); toast(n <= 0 ? '已设置：基本不会触发' : '已设置：每个饭点约 ' + n + '%/4分钟 概率触发');
+    });
+  });
 
   // ---- 番茄钟页 ----
   // 专注/小憩/长休三档倒计时 + 圆环进度；完成专注记一个 🍅（今日/累计），可发到聊天。

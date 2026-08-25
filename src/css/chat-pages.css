@@ -842,14 +842,18 @@
 .ps-bar .ps-track { flex:1; height:8px; background:#f0f0f0; border-radius:4px; overflow:hidden; }
 .ps-bar .ps-fill { display:block; height:100%; background:linear-gradient(90deg,#f5a623,#e85a8f); border-radius:4px; }
 .ps-bar .ps-num { min-width:16px; text-align:right; color:var(--muted); }
-.ps-trend { width:100%; max-width:280px; height:auto; display:block; margin:4px 0 8px; }
+.ps-trend { width:100%; max-width:280px; height:auto; display:block; margin:2px auto 10px; }
+.ps-trend-cap { font-size:10px; color:var(--muted); margin:-3px 0 4px; }
 /* 症状↔周期天分布 */
-.ps-phase { display:flex; flex-direction:column; gap:8px; margin-bottom:10px; }
+/* v3.14.x：柱底「第N天」数字标签原 bottom:-13px 悬在容器外，直接压到下一行症状的
+   图形上（字与图形重叠）。修复：每行容器加高并预留 14px 底部标签槽（padding-bottom），
+   柱体仍在 32px 绘图区贴底对齐，标签落在自己的槽内不再越界 */
+.ps-phase { display:flex; flex-direction:column; gap:10px; margin-bottom:10px; }
 .ps-phase-row { display:flex; align-items:center; gap:8px; }
 .ps-phase-name { width:56px; font-size:11px; color:var(--ink); flex-shrink:0; }
-.ps-phase-bars { flex:1; display:flex; align-items:flex-end; gap:2px; height:32px; }
-.ps-phase-bar { position:relative; flex:1; min-width:6px; background:linear-gradient(180deg,#e85a8f,#f5a623); border-radius:2px 2px 0 0; }
-.ps-phase-bar i { position:absolute; bottom:-13px; left:0; right:0; text-align:center; font-size:8px; color:var(--muted); font-style:normal; }
+.ps-phase-bars { flex:1; display:flex; align-items:flex-end; gap:2px; height:46px; padding-bottom:14px; }
+.ps-phase-bar { position:relative; flex:1; min-width:6px; min-height:3px; background:linear-gradient(180deg,#e85a8f,#f5a623); border-radius:2px 2px 0 0; }
+.ps-phase-bar i { position:absolute; top:100%; left:0; right:0; margin-top:2px; text-align:center; font-size:8px; line-height:12px; color:var(--muted); font-style:normal; overflow:hidden; white-space:nowrap; }
 .period-report-btn { float:right; padding:3px 10px; font-size:11px; border:1px solid #e85a8f; border-radius:10px; background:#fff; color:#e85a8f; cursor:pointer; }
 /* 每日健康小贴士 */
 #period-tips-card .pt-main { font-size:14px; color:var(--ink); line-height:1.7; }
@@ -1980,17 +1984,28 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + env(safe-area-inset-bott
   font-size:12px; font-family:inherit; cursor:pointer;
 }
 .feed-more-btn:active { background:rgba(0,0,0,.12); }
-/* 评论区（v3.5.55 星言式：灰底区块、昵称高亮、回复嵌套缩进对称对齐） */
+/* 评论区（v3.14.x 重设计：统一灰底圆角面板——删除文件后段重复定义的 border-top 冲突规则，
+   灰底面板内不再有一道横线；楼中楼改「左引导线 + 我/TA 统一缩进」对称对齐；
+   「A 回复 B」的回复分隔徽章化，双方名字同权重高亮） */
 .feed-comments {
   margin-top:8px; padding:8px 10px;
   background:rgba(0,0,0,.045); border-radius:10px;
 }
-.feed-comment { font-size:12px; color:#555; line-height:1.8; }
-.feed-comment b { color:var(--ink); font-weight:700; }
-/* 回复：缩进在对应评论下方，对称对齐 */
-.feed-replies { padding-left:22px; margin-top:2px; }
-.feed-reply { font-size:12px; color:#666; line-height:1.8; }
+.feed-comment { font-size:12px; color:#555; line-height:1.7; padding:3px 0; cursor:pointer; }
+.feed-comment b { color:var(--ink); font-weight:600; }
+/* 楼中楼：统一缩进 + 左引导线——我的回复与 TA 的回复同一对齐（对称），不再双重缩进 */
+.feed-replies {
+  margin:2px 0 2px 4px; padding-left:9px;
+  border-left:2px solid rgba(0,0,0,.08);
+}
+.feed-reply { font-size:12px; color:#666; line-height:1.7; padding:2px 0; cursor:pointer; }
 .feed-reply b { color:var(--ink); font-weight:600; }
+/* 「回复」分隔徽章：弱化为小胶囊，A、B 两个名字视觉同权重（谁回复谁都对称可读） */
+.fd-r-sep {
+  display:inline-block; margin:0 5px; padding:0 5px; border-radius:8px;
+  background:rgba(0,0,0,.06); color:#999; font-size:10px; line-height:15px;
+  vertical-align:1px;
+}
 /* v3.6.x：朋友圈页底部「删除全部动态」按钮（有动态时显示） */
 .feed-clear-btn {
   display:flex; align-items:center; justify-content:center; gap:6px;
@@ -2379,11 +2394,9 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + env(safe-area-inset-bott
   font-size:11px; color:var(--ink); background:rgba(0,0,0,.03);
   border-radius:8px; padding:6px 10px; margin-top:8px; line-height:1.5;
 }
-.feed-comments { border-top:1px solid rgba(0,0,0,.05); margin-top:8px; padding-top:8px; }
-.feed-comment { font-size:12px; color:#555; line-height:1.7; padding:3px 0; cursor:pointer; }
-.feed-comment b { color:var(--ink); font-weight:600; }
-.feed-reply { font-size:12px; color:#666; line-height:1.7; padding:2px 0 2px 12px; }
-.feed-reply b { color:var(--ink); font-weight:600; }
+/* v3.14.x：评论区样式统一收敛到上方 .feed-comments 定义块——此处原有一组重复
+   .feed-comments/.feed-comment/.feed-reply 规则会覆盖前面的面板样式（灰底面板里多出
+   一道 border-top 横线、回复区双重缩进 22+12px 不对称），已删除 */
 /* 朋友圈页面内评论条（点【评论】出现，微信式） */
 #page-feed { position:relative; }
 /* 评论表情/图片面板容器：absolute 定位在评论条上方，紧贴输入栏
@@ -2592,6 +2605,32 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + env(safe-area-inset-bott
 #chat-pong-panel.pong-fs .pong-end-score { font-size:30px; }
 #chat-pong-panel.pong-fs .pong-end-stat { font-size:15px; }
 #chat-pong-panel.pong-fs .pong-overlay-btn { padding:12px 36px; font-size:20px; border-radius:24px; }
+
+/* 双人打砖块半框（复用 .poke-card 容器与 .pong-canvas-box/.pong-overlay/.pong-hint 组件） */
+#chat-brick-panel { height:auto; max-height:86%; }
+#chat-brick-panel .poke-card-scroll { min-height:0; max-height:none; }
+.brick-wrap { display:flex; flex-direction:column; align-items:center; gap:8px; padding:2px 0 4px; }
+.brick-info { display:flex; align-items:center; justify-content:space-between; width:100%; max-width:560px; font-size:13px; color:var(--muted); padding:0 2px; }
+.brick-info b { color:var(--ink); font-size:15px; }
+.brick-combo { color:#e8590c; font-weight:700; min-width:34px; text-align:center; }
+.brick-lives { letter-spacing:1px; font-size:13px; color:#ff5f7a; }
+.brick-lives .brick-hlost { opacity:.22; filter:grayscale(1); }
+#brick-canvas { display:block; width:100%; height:auto; border-radius:10px; background:#101625; touch-action:none; user-select:none; -webkit-user-select:none; }
+/* 打砖块全屏：面板占满视口（对齐 pong-fs 布局方案） */
+#chat-brick-panel.brick-fs { position:fixed; inset:0; z-index:9999; border-radius:0; max-height:none; height:100vh; background:#101625; padding:0; }
+#chat-brick-panel.brick-fs .poke-card-scroll { max-height:none; flex:1; overflow:hidden; display:flex; flex-direction:column; padding:0; }
+#chat-brick-panel.brick-fs .poke-card-head { background:transparent; color:#fff; border-bottom-color:rgba(255,255,255,.12); padding:12px 18px; flex-shrink:0; }
+#chat-brick-panel.brick-fs .poke-card-head b { color:#fff; font-size:20px; }
+#chat-brick-panel.brick-fs .poke-card-close { color:#fff; font-size:24px; }
+#chat-brick-panel.brick-fs .snake-icon-btn { background:rgba(255,255,255,.12); color:#fff; width:44px; height:44px; font-size:21px; }
+#chat-brick-panel.brick-fs .snake-diff { background:rgba(255,255,255,.1); color:#fff; border-color:rgba(255,255,255,.2); font-size:16px; padding:6px 12px; }
+#chat-brick-panel.brick-fs .brick-wrap { flex:1; display:flex; max-width:none; gap:10px; padding:8px 6px; }
+#chat-brick-panel.brick-fs .brick-info { color:rgba(255,255,255,.75); font-size:17px; flex-shrink:0; max-width:none; }
+#chat-brick-panel.brick-fs .brick-info b { color:#fff; font-size:21px; }
+#chat-brick-panel.brick-fs .pong-canvas-box { max-width:none; flex:1; display:flex; align-items:center; justify-content:center; min-height:0; }
+#chat-brick-panel.brick-fs #brick-canvas { border-radius:0; }
+#chat-brick-panel.brick-fs .pong-foot { color:rgba(255,255,255,.5); font-size:16px; flex-shrink:0; }
+#chat-brick-panel.brick-fs .pong-hint { font-size:48px; }
 
 /* 双人贪吃蛇半框（复用 .poke-card 容器） */
 #chat-snake-panel { height:auto; max-height:86%; }
@@ -3045,3 +3084,53 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + env(safe-area-inset-bott
 .cj-d-row-name { font-size: 13px; font-weight: 800; color: var(--ink); flex-shrink: 0; }
 .cj-d-row-p { font-size: 12.5px; color: rgba(0,0,0,.6); text-align: right; }
 .cj-d-foot { margin-top: 12px; font-size: 11.5px; color: rgba(0,0,0,.4); }
+
+/* ===== v3.14.x：此间按桌面分组切换 + 「全部」总览 ===== */
+/* 分组条吸顶：平时透明贴合页面渐变；滚离顶部（.stuck，cjian.js rAF 合帧切换）才有
+   底色/描边/阴影。负 margin 抵消 .page.full .gs-scroll 的左右 18px 内边距，吸住后
+   横贯整屏宽，卡片从其下方穿过。不用 backdrop-filter（低端安卓模糊开销大易抖动） */
+.cj-groups {
+  display: flex; gap: 8px; align-items: center;
+  overflow-x: auto; margin: 0 -18px 2px; padding: 6px 18px 10px;
+  -webkit-overflow-scrolling: touch; scrollbar-width: none;
+  position: -webkit-sticky; position: sticky; top: 0; z-index: 5;
+}
+.cj-groups::-webkit-scrollbar { display: none; }
+.cj-groups.stuck {
+  background: #f4f0ea;
+  border-bottom: 1px solid rgba(0,0,0,.06);
+  box-shadow: 0 4px 14px rgba(0,0,0,.05);
+}
+.cj-gchip {
+  flex-shrink: 0; padding: 7px 14px;
+  border: 1px solid rgba(0,0,0,.12); border-radius: 99px;
+  background: rgba(255,255,255,.9); color: rgba(0,0,0,.6);
+  font-size: 12.5px; font-weight: 700; white-space: nowrap;
+  cursor: pointer; font-family: inherit; -webkit-tap-highlight-color: transparent;
+}
+.cj-gchip.on { background: var(--ink, #222); border-color: var(--ink, #222); color: #fff; }
+.cj-gchip:active { opacity: .85; }
+.cj-group-head {
+  display: flex; align-items: center; gap: 8px;
+  margin: 16px 2px 8px; font-size: 13px; font-weight: 800;
+  letter-spacing: .5px; color: var(--ink);
+}
+.cj-group-head:first-child { margin-top: 2px; }
+.cj-group-count {
+  padding: 1px 8px; font-size: 11px; font-weight: 700;
+  color: #b7791f; background: rgba(255,247,237,1);
+  border: 1px solid rgba(183,121,31,.35); border-radius: 99px;
+}
+.cj-group-empty { padding: 4px 2px 10px; font-size: 12px; color: rgba(0,0,0,.35); }
+.cj-all-tip { margin: 4px 2px 10px; font-size: 11.5px; color: rgba(0,0,0,.45); }
+.cj-d-src { margin-top: 6px; font-size: 11px; color: rgba(0,0,0,.45); }
+.cj-d-nav { display: flex; align-items: center; gap: 10px; margin-top: 14px; }
+.cj-d-nav-btn {
+  flex: 1; padding: 9px 0;
+  border: 1px solid rgba(0,0,0,.1); border-radius: 12px;
+  background: rgba(255,255,255,.9); color: var(--ink);
+  font-size: 12.5px; font-weight: 700; cursor: pointer;
+  font-family: inherit; -webkit-tap-highlight-color: transparent;
+}
+.cj-d-nav-btn:active { background: rgba(0,0,0,.07); }
+.cj-d-nav-pos { flex-shrink: 0; min-width: 36px; text-align: center; font-size: 11px; color: rgba(0,0,0,.4); }

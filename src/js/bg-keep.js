@@ -353,17 +353,24 @@
       }
     } catch (e) {}
   }
+  // v3.14.x：回前台统一信号——healKeepAlive + dispatch mochi-fg-resume 事件，
+  // ta-ask 等模块监听后补触发主动消息 + 补弹后台新卡片（安卓后台 setInterval 被节流，
+  // 回前台不等下一个 tick 立即检查；小米MIX4 Edge 收不到后台消息修复）
+  function _onFgVisible() {
+    healKeepAlive();
+    try { document.dispatchEvent(new Event('mochi-fg-resume')); } catch (e) {}
+  }
   document.addEventListener('visibilitychange', function () {
-    if (document.visibilityState === 'visible') healKeepAlive();
+    if (document.visibilityState === 'visible') _onFgVisible();
   });
   // v3.9.x：窗口重新聚焦 / bfcache 恢复（pageshow persisted）同样自愈——
   // 有些浏览器从后台切回只触发 focus 不触发 visibilitychange；bfcache 恢复时
   // 定时器已暂停，恢复后保活音频也一并拉回
   document.addEventListener('focus', function () {
-    if (document.visibilityState === 'visible') healKeepAlive();
+    if (document.visibilityState === 'visible') _onFgVisible();
   });
   window.addEventListener('pageshow', function (e) {
-    if (e.persisted || document.visibilityState === 'visible') healKeepAlive();
+    if (e.persisted || document.visibilityState === 'visible') _onFgVisible();
   });
   function requestWakeLockTop() {
     try {

@@ -242,6 +242,33 @@
       tabsWrap.appendChild(b);
     }
   });
+  // v3.15.x：房间 tab（JS 注入）——双人小屋互动话术池（DEFAULT_CARD_DATA.room，
+  // 进门/打招呼/靠近/坐到旁边等分组）；逐张开关（dc-off-room:*）与 room.js 实际抽取联动
+  if (!tabsWrap.querySelector('[data-type="room"]')) {
+    const b = document.createElement('button');
+    b.className = 'cc-tab';
+    b.dataset.type = 'room';
+    b.textContent = '房间';
+    tabsWrap.appendChild(b);
+  }
+  // v3.14.x：经期关心 tab（JS 注入）——period.js 梦角关心触发同源预设池
+  //（DEFAULT_CARD_DATA.period）；逐张开关（dc-off-period:*）与 period.js pickCareLine 联动
+  if (!tabsWrap.querySelector('[data-type="period"]')) {
+    const b = document.createElement('button');
+    b.className = 'cc-tab';
+    b.dataset.type = 'period';
+    b.textContent = '经期关心';
+    tabsWrap.appendChild(b);
+  }
+  // v3.14.x：吃什么 tab（JS 注入）——TA 饭点概率提醒话术池（DEFAULT_CARD_DATA.eat，
+  // 分组「提醒吃饭/追问关心」）；逐张开关（dc-off-eat:*）与 p2-features.js 实际抽取联动
+  if (!tabsWrap.querySelector('[data-type="eat"]')) {
+    const b = document.createElement('button');
+    b.className = 'cc-tab';
+    b.dataset.type = 'eat';
+    b.textContent = '吃什么';
+    tabsWrap.appendChild(b);
+  }
 
   tabsWrap.querySelectorAll('.cc-tab').forEach(tab => {
     tab.addEventListener('click', () => {

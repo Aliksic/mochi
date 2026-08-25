@@ -27,28 +27,23 @@
   var KEY_CARE = 'period-care-lines';
 
   // ---- 经期专属关心语（梦角触发，配合 ta-ask care 题库）----
-  var PERIOD_CARE_LINES = [
+  // v3.14.x：预设语单一数据源迁至 default-cards-data.js 的 DEFAULT_CARD_DATA.period
+  //   （字卡库【系统预设字卡】「经期关心」tab 同源展示/逐张开关 dc-off-period:*，
+  //   构建顺序保证其先于本文件加载）；此处仅留精简兜底防数据文件缺失。
+  var PERIOD_CARE_FALLBACK = [
     '今天经期第几天了？肚子还痛不痛，要不要帮你揉揉',
     '记得喝点红糖水，别碰凉的，听话',
     '经期别太累了，早点躺下休息，我陪你',
-    '肚子还难受吗？抱抱你，暖暖的',
-    '今天经量多不多？记得勤换，别着凉',
     '经期情绪低落是正常的，不是你的错，我在',
-    '别碰凉水，别吃辣的，乖，听话',
-    '要不要给你捂个热水袋？隔着衣服贴肚子上',
-    '经期别熬夜，早点睡，明天会舒服一点',
-    '今天有没有好好吃饭？经期要吃热乎的',
-    '腰酸不酸？帮你捶捶背好不好',
-    '经期别太拼了，今天的事明天再做，先休息',
-    '心情不好就发出来，别憋着，我接着',
-    '今天经痛厉害吗？厉害就吃颗布洛芬，别硬扛',
-    '经期第几天了？快过去了吧，再忍忍',
-    '别喝冰的！听话，喝温的，肚子会舒服',
-    '今天有没有为自己留点时间？经期要对自己好一点',
-    '肚子凉不凉？多穿点，别让肚子受风',
-    '经期情绪起伏大是激素的事，不是你矫情',
     '抱抱，今天什么都不做也行，就躺着'
   ];
+  var PERIOD_CARE_LINES = (function () {
+    try {
+      var g = window.DEFAULT_CARD_DATA && window.DEFAULT_CARD_DATA.period;
+      if (g && g[0] && Array.isArray(g[0][1]) && g[0][1].length) return g[0][1];
+    } catch (e) {}
+    return PERIOD_CARE_FALLBACK;
+  })();
   function loadCareLines() {
     try { var a = JSON.parse(store.get(KEY_CARE) || 'null'); if (Array.isArray(a)) return a; } catch (e) {}
     return PERIOD_CARE_LINES.slice();
@@ -61,6 +56,14 @@
   }
   function isCareOff(line) { return store.get('period-care-off:' + line) === '1'; }
   function setCareOff(line, off) { store.set('period-care-off:' + line, off ? '1' : '0'); }
+  // v3.14.x：字卡库【经期关心】tab 的逐张开关（dc-off-period:<文案>）同样参与过滤——
+  //   库内关掉某张 → 实际抽取也不再用它；与经期页「关心语管理」的旧开关（period-care-off:*）
+  //   任一关闭即视为关闭（两处入口语义一致）
+  function careLineBlocked(l) {
+    if (isCareOff(l)) return true;
+    try { if (window.isDefaultCardOff && window.isDefaultCardOff('period', l)) return true; } catch (e) {}
+    return false;
+  }
 
   function loadRecs() { try { return JSON.parse(store.get(KEY_REC) || '[]'); } catch (e) { return []; } }
   function saveRecs(list) {
@@ -615,15 +618,20 @@
       var pad = 2;
       var lo = Math.min(minV, mean) - pad, hi = Math.max(maxV, mean) + pad;
       if (hi <= lo) hi = lo + 1;
-      var W = 280, H = 90, pl = 24, pr = 8, pt = 8, pb = 16;
+      var W = 280, H = 90, pl = 26, pr = 10, pt = 8, pb = 16;
       var xStep = (W - pl - pr) / Math.max(1, diffs.length - 1);
       var yOf = function (v) { return pt + (H - pt - pb) * (1 - (v - lo) / (hi - lo)); };
       var pts = diffs.map(function (v, i) { return (pl + i * xStep).toFixed(1) + ',' + yOf(v).toFixed(1); });
       var meanY = yOf(mean);
+      // v3.14.x：均值文字标签从图形区移到标题下方的说明行（原来画在均值线上方、
+      //   常与折线/数据点重叠）；左侧留白改画 y 轴上下界刻度（此前 pl 空占无内容）
+      function fN(v) { return String(Number(v.toFixed(1))); }
       trendHtml = '<div class="ps-title">周期长度趋势（近 ' + diffs.length + ' 次）</div>' +
+        '<div class="ps-trend-cap">— — 均值 ' + mean.toFixed(1) + ' 天 · 区间 ' + fN(minV) + '～' + fN(maxV) + ' 天</div>' +
         '<svg viewBox="0 0 ' + W + ' ' + H + '" class="ps-trend" preserveAspectRatio="xMidYMid meet">' +
+          '<text x="' + (pl - 4) + '" y="' + (pt + 4).toFixed(1) + '" fill="#aaa" font-size="8" text-anchor="end">' + fN(hi) + '</text>' +
+          '<text x="' + (pl - 4) + '" y="' + (H - pb + 3).toFixed(1) + '" fill="#aaa" font-size="8" text-anchor="end">' + fN(lo) + '</text>' +
           '<line x1="' + pl + '" y1="' + meanY.toFixed(1) + '" x2="' + (W - pr) + '" y2="' + meanY.toFixed(1) + '" stroke="#f5a623" stroke-dasharray="3 3" stroke-width="1"/>' +
-          '<text x="' + (W - pr) + '" y="' + (meanY - 3).toFixed(1) + '" fill="#f5a623" font-size="9" text-anchor="end">均值 ' + mean.toFixed(1) + '</text>' +
           '<polyline points="' + pts.join(' ') + '" fill="none" stroke="#e85a8f" stroke-width="2"/>' +
           diffs.map(function (v, i) { return '<circle cx="' + (pl + i * xStep).toFixed(1) + '" cy="' + yOf(v).toFixed(1) + '" r="2.5" fill="#e85a8f"/>'; }).join('') +
         '</svg>';
@@ -1065,15 +1073,10 @@
     if (fired) saveNotify(notifyCfg);
   }
 
-  // ---- 梦角关心触发（经期专属，概率连续衰减 + 同日冷却）----
-  // 触发时机：经期前 advanceDays + 当天 + 经期中每天 + 延迟≥5天
-  // 概率：首日 70% → 连发 4+ 降到 20%（参考 mood-reply-cards emotionStreak 衰减）
-  // 内容：80% 经期专属语 + 20% ta-ask care 题库；入口 window.chatAddIn
-  var careStreak = 0;
-  var careLastTs = 0;
+  // ---- 关心语抽取（80% 经期专属语 + 20% ta-ask care 题库）----
   function pickCareLine() {
-    var lines = loadCareLines().filter(function (l) { return l && !isCareOff(l); });
-    if (!lines.length) lines = PERIOD_CARE_LINES.slice();
+    var lines = loadCareLines().filter(function (l) { return l && !careLineBlocked(l); });
+    if (!lines.length) lines = PERIOD_CARE_LINES.filter(function (l) { return l && !careLineBlocked(l); });
     if (Math.random() * 100 < 80) {
       return lines[Math.floor(Math.random() * lines.length)];
     }
@@ -1085,6 +1088,14 @@
     }
     return lines[Math.floor(Math.random() * lines.length)];
   }
+  // ---- 梦角关心触发（经期专属，每天最多一条）----
+  // 触发时机：启动后 + 联系人每条文字回复后（chat.js）；经期中每天 + 经期前
+  //   advanceDays 提醒日 + 推迟≥5天
+  // v3.14.x 概率重设计——旧版三层门控叠加（chat 回复路径预掷 20% × 连发衰减至 20%
+  //   × 当日基数），第 2 天起单次触发率跌到约 12%、第 5 天起仅 ~4%，体感就是
+  //   「只有第一天会来关心」。现在：去掉连发衰减与 chat 预掷，只保留「同一天最多
+  //   一条」冷却；进入判定后按当天基数掷一次——经期第1-2天 90%、第3-4天 70%、
+  //   第5+天 55%；经期前提醒/推迟预警 75%。防刷屏由每日一条上限兜底。
   function checkCare() {
     if (!notifyCfg.careEnabled) return;
     if (!window.chatAddIn) return;
@@ -1105,27 +1116,17 @@
     notifyCfg.fired = notifyCfg.fired || {};
     var careKey = today + '_care_' + ctx;
     if (notifyCfg.fired[careKey]) return;
-    // 6 小时间隔重置 streak（避免会话内永久低概率）
-    if (careLastTs && Date.now() - careLastTs > 6 * 3600000) careStreak = 0;
-    // 经期中按天数差异化：第1-2天 85%、第3-4天 60%、第5+天 35%；非经期 70%
-    var baseProb = 70;
+    var baseProb = 75;
     if (st.inPeriod) {
       var doc = st.dayOfCycle || 1;
-      if (doc <= 2) baseProb = 85;
-      else if (doc <= 4) baseProb = 60;
-      else baseProb = 35;
+      if (doc <= 2) baseProb = 90;
+      else if (doc <= 4) baseProb = 70;
+      else baseProb = 55;
     }
-    var prob = baseProb;
-    if (careStreak >= 4) prob = Math.min(prob, 20);
-    else if (careStreak >= 3) prob = Math.min(prob, 30);
-    else if (careStreak >= 2) prob = Math.min(prob, 45);
-    else if (careStreak >= 1) prob = Math.min(prob, 60);
-    if (Math.random() * 100 > prob) return;
+    if (Math.random() * 100 > baseProb) return;
     var line = pickCareLine();
     if (!line) return;
     try { window.chatAddIn(line); } catch (e) {}
-    careStreak++;
-    careLastTs = Date.now();
     notifyCfg.fired[careKey] = 1;
     var cut = addDays(today, -30);
     Object.keys(notifyCfg.fired).forEach(function (k) { if (k < cut) delete notifyCfg.fired[k]; });

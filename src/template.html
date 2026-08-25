@@ -304,6 +304,11 @@
 <div class="app-ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5h11a1 1 0 011 1V20a1 1 0 01-.55.9A2 2 0 0115.5 21H6a1 1 0 01-1-1v-16a1 1 0 011-.5z"/><path d="M9 8.5h6M9 12.5h6M9 16.5h3.5"/><path d="M15.5 4v5l-1.5-1-1.5 1V4"/></svg></div>
 <div class="app-name">梦角档案</div>
 </div>
+<!-- v3.15.x：房间（双人小屋）桌面第三页入口——聊天「更多功能」同款页面，从桌面进入返回桌面 -->
+<div class="app" data-app="room" data-desk-widget="app-room">
+<div class="app-ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 11L12 4l8.5 7"/><path d="M5.8 9.6V20h12.4V9.6"/><path d="M10 20v-5.4h4V20"/></svg></div>
+<div class="app-name">房间</div>
+</div>
 <!-- 本页动态注入 喝水/吃什么/存钱罐/番茄钟（p2-features.js，喝水排在本页静态图标之后） -->
 </div>
       </div><!-- /page-slide 第三页 -->
@@ -761,7 +766,7 @@
     </button>
     <div class="set-group glass">
       <div class="gs-row"><span>使用系统预设话术</span><label class="toggle"><input type="checkbox" id="ti-default" checked><span class="tk"></span></label></div>
-      <div class="gs-sub" style="padding:0 14px 14px">TA 主动邀请的开关/概率在「回复设置 → 其他」（主动邀请猜拳 / 主动邀请玩游戏）按联系人独立设置；同意邀请会打开对应半框（猜拳 / Pong / 贪吃蛇），拒绝则回一句婉拒。题库随当前桌面的联系人保存</div>
+      <div class="gs-sub" style="padding:0 14px 14px">TA 主动邀请的开关/概率在「回复设置 → 其他」（猜拳 / 玩游戏 / 贴贴）按联系人独立设置；同意猜拳/Pong/贪吃蛇会打开对应半框，同意贴贴则 TA 会回应一句贴贴的话；拒绝都回一句婉拒。题库随当前桌面的联系人保存</div>
     </div>
     <div class="card-tabs" id="ti-tabs" style="padding:6px 12px 8px">
       <button class="cc-tab sel" data-tab="sys">系统预设</button>
@@ -784,6 +789,7 @@
             <option value="rps">导入到 · 猜拳邀请</option>
             <option value="pong">导入到 · Pong 邀请</option>
             <option value="snake">导入到 · 贪吃蛇邀请</option>
+            <option value="cuddle">导入到 · 贴贴邀请</option>
           </select>
           <textarea id="ti-batch" class="tc-input" rows="5" placeholder="每行一条邀请话术，如：&#10;来猜拳呀，输的人答应一件事！&#10;敢不敢来一局 Pong？"></textarea>
           <button class="ta-add-btn" style="width:100%" id="ti-batch-add">批量导入</button>
@@ -1658,8 +1664,10 @@
             <div class="gs-row"><span>猜拳邀请概率</span><div class="stepper" data-k="ai-rps-prob" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="ai-rps-prob-val" readonly><button class="stp-max">+</button></div></div>
             <div class="gs-row"><span>主动邀请玩游戏</span><label class="toggle"><input type="checkbox" id="ai-game-en"><span class="tk"></span></label></div>
             <div class="gs-row"><span>游戏邀请概率</span><div class="stepper" data-k="ai-game-prob" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="ai-game-prob-val" readonly><button class="stp-max">+</button></div></div>
+            <div class="gs-row"><span>主动邀请贴贴</span><label class="toggle"><input type="checkbox" id="ai-cuddle-en"><span class="tk"></span></label></div>
+            <div class="gs-row"><span>贴贴邀请概率</span><div class="stepper" data-k="ai-cuddle-prob" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="ai-cuddle-prob-val" readonly><button class="stp-max">+</button></div></div>
           </div>
-          <div class="gs-sub" style="padding:0 14px 14px">TA 主动找你的消息会按概率变成猜拳/游戏邀请（Pong、贪吃蛇随机），自动打开对应半框，不想玩直接关掉即可；仅在你在聊天页时触发，需开启「主动发送」。邀请话术可在 字卡库 →「TA的邀请」里逐句开关或自定义添加</div>
+          <div class="gs-sub" style="padding:0 14px 14px">TA 主动找你的消息会按概率变成猜拳/游戏/贴贴邀请（游戏在 Pong、贪吃蛇中随机；贴贴同意后 TA 会回应一句），自动打开对应半框或回应，不想玩直接关掉即可；仅在你在聊天页时触发，需开启「主动发送」。邀请话术可在 字卡库 →「TA的邀请」里逐句开关或自定义添加</div>
         </div>
         <!-- v3.6.x：保存设置按钮——点击把当前所有概率/开关写入本地并提示 -->
         <button class="ta-add-btn gs-save-btn" id="reply-save-btn" style="width:100%;margin:6px 0 18px">
@@ -2217,6 +2225,8 @@
         <button class="fav-tab sel" data-mtab="lib">我的音乐库</button>
         <button class="fav-tab" data-mtab="pl">歌单</button>
         <button class="fav-tab" data-mtab="fav">我的收藏</button>
+        <!-- v3.14.x：联系人的收藏——标题由 music-player.js syncTaFavTab() 按联系人昵称填充 -->
+        <button class="fav-tab" data-mtab="favta">TA的收藏</button>
         <button class="fav-tab" data-mtab="his">梦角邀请听歌记录</button>
       </div>
       <div class="cal-scroll sm-scroll">
@@ -2245,6 +2255,10 @@
         </div>
         <div class="cal-card glass" data-mpanel="fav" hidden>
           <div id="music-fav-list"></div>
+        </div>
+        <!-- v3.14.x：联系人的收藏列表 -->
+        <div class="cal-card glass" data-mpanel="favta" hidden>
+          <div id="music-fav-ta-list"></div>
         </div>
         <div class="cal-card glass" data-mpanel="his" hidden>
           <div id="music-his-list"></div>
@@ -3003,6 +3017,46 @@
           </div>
         </div>
       </div>
+      <!-- 双人打砖块：聊天页底部半框（合作清砖：玩家左挡板 / 梦角右挡板由代码控制，共接一球） -->
+      <div class="poke-card" id="chat-brick-panel" hidden>
+        <div class="poke-card-head">
+          <span>双人打砖块 · <b id="brick-partner-name">TA</b></span>
+          <div class="snake-head-actions">
+            <select class="snake-diff" id="brick-diff">
+              <option value="easy" selected>轻松</option>
+              <option value="normal">普通</option>
+              <option value="hard">困难</option>
+            </select>
+            <button class="snake-icon-btn" id="brick-pause" title="暂停/继续">⏸</button>
+            <button class="snake-icon-btn" id="brick-sound" title="音效开关">🔊</button>
+            <button class="snake-icon-btn" id="brick-fs" title="全屏">⛶</button>
+            <button class="poke-card-close" id="chat-brick-close">✕</button>
+          </div>
+        </div>
+        <div class="poke-card-scroll">
+          <div class="brick-wrap">
+            <div class="brick-info">
+              <span>得分 <b id="brick-score">0</b></span>
+              <span class="brick-combo" id="brick-combo"></span>
+              <span class="brick-lives" id="brick-lives"></span>
+              <span>第 <b id="brick-level">1</b> 层</span>
+            </div>
+            <div class="pong-canvas-box">
+              <canvas id="brick-canvas" width="400" height="340"></canvas>
+              <div class="pong-hint" id="brick-hint"></div>
+              <div class="pong-overlay" id="brick-overlay">
+                <div class="pong-overlay-title" id="brick-overlay-title">双人打砖块</div>
+                <div class="pong-overlay-body" id="brick-overlay-body"></div>
+                <div class="pong-overlay-btns">
+                  <button class="pong-overlay-btn" id="brick-overlay-btn" type="button">开始</button>
+                  <button class="pong-overlay-btn pong-overlay-btn2" id="brick-overlay-close" type="button" hidden>返回小游戏</button>
+                </div>
+              </div>
+            </div>
+            <div class="pong-foot">你控制左挡板 · <span id="brick-foot-name">TA</span> 控制右挡板 · 手机按住拖动 · 电脑 A/D 或 ← →</div>
+          </div>
+        </div>
+      </div>
       <!-- 红包：聊天页底部半框（我和 TA 互发红包，情侣特殊金额 / 随机 / 七夕特别） -->
       <div class="poke-card" id="chat-rp-panel" hidden>
         <div class="poke-card-head">
@@ -3192,6 +3246,10 @@
             <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 7h3v3H7zM14 14h3v3h-3z"/></svg></span>
             <span>贪吃蛇</span>
           </button>
+          <button class="more-item" id="more-brick" title="双人打砖块（合作）">
+            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="1.5"/><path d="M3 9.3h18M3 14.6h18"/><path d="M12 4v5.3M7.5 9.3v5.3M16.5 9.3v5.3M12 14.6V20"/></svg></span>
+            <span>打砖块</span>
+          </button>
           <button class="more-item" id="more-ck" title="查岗（打开 TA 的日常）">
             <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/><path d="M12 3a9 9 0 000 18"/></svg></span>
             <span>查岗</span>
@@ -3199,6 +3257,10 @@
           <button class="more-item" id="more-cjian" title="此间（梦角世界时间与在场感知）">
             <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 010 18"/><circle cx="12" cy="12" r="2.2"/></svg></span>
             <span>此间</span>
+          </button>
+          <button class="more-item" id="more-room" title="房间（双人小屋）">
+            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 11L12 4l8.5 7"/><path d="M5.8 9.6V20h12.4V9.6"/><path d="M10 20v-5.4h4V20"/></svg></span>
+            <span>房间</span>
           </button>
         </div>
         <div class="more-grid" id="more-grid-ask" hidden>
@@ -3218,7 +3280,7 @@
             <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 5.4 5.7.3-4.4 3.6 1.5 5.5-4.6-3.3-4.6 3.3 1.5-5.5-4.4-3.6 5.7-.3z"/></svg></span>
             <span>吐槽</span>
           </button>
-          <button class="more-item" id="more-invite-now" title="让TA现在邀请一次（猜拳/Pong/贪吃蛇，话术来自字卡库「TA的邀请」）">
+          <button class="more-item" id="more-invite-now" title="让TA现在邀请一次（猜拳/Pong/贪吃蛇/贴贴，话术来自字卡库「TA的邀请」）">
             <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="11" rx="5"/><path d="M7 10.5v3M5.5 12h3"/><path d="M15.5 11h.01M18.5 13h.01"/></svg></span>
             <span>邀请</span>
           </button>
@@ -3310,6 +3372,48 @@
       <div class="gs-scroll cj-scroll" id="cj-detail" hidden>
         <button class="cj-detail-back" id="cj-detail-back" type="button">‹ 返回</button>
         <div id="cj-detail-body"></div>
+      </div>
+    </div>
+
+    <!-- 房间：双人小屋（桌面第三页「房间」/ 聊天更多功能进入） -->
+    <div class="page" id="page-room" hidden>
+      <div class="chat-head">
+        <span class="ch-back" id="room-back">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        </span>
+        <span class="ch-name">房间</span>
+        <span class="ch-settings" id="room-info-btn" title="小屋信息">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 8h.01"/></svg>
+        </span>
+      </div>
+      <div class="room-stage">
+        <div class="r-hud">
+          <span class="r-chip" id="room-chip-lv">🏡 Lv.1</span>
+          <span class="r-chip" id="room-chip-cf">舒适度 ★☆☆☆☆</span>
+          <span class="r-chip" id="room-chip-cap">家具 0/9</span>
+          <span class="r-chip" id="room-chip-pt">🏠 0</span>
+        </div>
+        <div class="r-scene" id="room-scene">
+          <div class="r-wall wall-cream" id="room-wall">
+            <div class="r-door"></div>
+            <div class="r-window wa" id="room-win-a"><span class="r-sky" id="room-sky-a">☀️</span></div>
+            <div class="r-window wb" id="room-win-b"><span class="r-sky" id="room-sky-b">☀️</span></div>
+          </div>
+          <div class="r-floor floor-wood" id="room-floor"></div>
+          <div id="room-ta"><i class="r-ta-glow"></i></div>
+          <div class="r-bubble" id="room-bubble" hidden></div>
+          <div class="r-banner" id="room-banner" hidden>
+            <span id="room-banner-txt"></span>
+            <button id="room-banner-cancel" type="button">取消</button>
+          </div>
+        </div>
+        <div class="r-status" id="room-status">…</div>
+        <div class="r-sense-out" id="room-sense-out" hidden></div>
+        <div class="r-bar">
+          <button id="room-btn-inv" type="button">家具仓</button>
+          <button id="room-btn-sense" type="button">感应</button>
+          <button id="room-btn-deco" type="button">装扮</button>
+        </div>
       </div>
     </div>
 
@@ -3705,14 +3809,14 @@
   </div>
 
   <!-- v3.6.x：桌面图片组件全屏查看器——点图片组件放大查看，点空白/×关闭。
-       注意：必须放在 <script> 之前（body 直子节点，position:fixed 不受布局影响）——
+       注意：必须放在脚本标签之前（body 直子节点，position:fixed 不受布局影响）——
        启动时 personalize.js 的 setupDeskImageViewerClose 会立即查询并绑定关闭事件，
        放在脚本后面会导致启动时元素不存在、绑定被跳过，点 × 无反应无法关闭。 -->
   <div class="desk-image-viewer" id="desk-image-viewer" hidden>
     <img id="desk-image-viewer-img" alt="">
     <span class="desk-image-viewer-close" id="desk-image-viewer-close">×</span>
   </div>
-  <!-- v3.7.x：检测到新版本提示条/备份提醒条也必须放在 <script> 之前——
+  <!-- v3.7.x：检测到新版本提示条/备份提醒条也必须放在脚本标签之前——
        pwa.js 在脚本执行时立即 getElementById('ver-update-bar')，放在脚本后面
        会得到 null 直接 return，版本检测/备份提醒整块逻辑从未执行（用户永远
        收不到更新提示、一直停留在旧缓存版本 = 「修了没效果」的隐藏根因） -->

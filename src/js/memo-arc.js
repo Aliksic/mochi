@@ -4,6 +4,8 @@
 //   梦角设定 = TA本来是什么样的人；梦角档案 = 我后来才慢慢发现TA原来是这样的人。
 // 每个梦角一份独立档案（挂在「此间」的梦角 roster id 下，全局根命名空间共享，不随桌面隔离）。
 // 数据键 xy-home-v2:narc-<rosterId>（已在 contacts.js EXCLUDE 登记，防 migrateLegacy 误迁）。
+// v3.14.x：此间梦角名单已按桌面分离（xy-home-v2:<cid>:cjian-roster），档案仍全局互通——
+//   名单改为合并读取所有桌面的 cjian-roster（按 id 去重），另兼容旧版根命名空间残留键。
 // 模块：概览(名字/相处天数/统计/最近发现) → 我认识的TA / TA的习惯 / TA的喜好 / 我们之间 / 相处记录 / 还不了解 / 理解变化
 (function () {
   const GNS = 'xy-home-v2';
@@ -38,7 +40,18 @@
   const LEVEL_PILLS = LEVELS.map(l => ({ label: l[1], value: l[0] }));
 
   // ---- 数据存取 ----
-  function roster() { const s = gStore(); if (!s) return []; try { const a = JSON.parse(s.get('cjian-roster') || '[]'); return Array.isArray(a) ? a.filter(x => x && x.name) : []; } catch (e) { return []; } }
+  // v3.14.x：名单合并所有桌面命名空间的 cjian-roster（按 id 去重）+ 旧版根键兜底
+  function roster() {
+    const out = [], seen = {};
+    const push = a => { (Array.isArray(a) ? a : []).forEach(x => { if (x && x.name && x.id && !seen[x.id]) { seen[x.id] = 1; out.push(x); } }); };
+    let cs = null;
+    try { cs = window.getContacts ? window.getContacts() : null; } catch (e) {}
+    (cs && cs.length ? cs : [{ id: 'default' }]).forEach(c => {
+      try { push(JSON.parse(window.xyStore(GNS + ':' + c.id).get('cjian-roster') || '[]')); } catch (e) {}
+    });
+    try { push(JSON.parse(gStore().get('cjian-roster') || '[]')); } catch (e) {}
+    return out;
+  }
   function keyOf(id) { return 'narc-' + id; }
   function loadArc(id) { const s = gStore(); if (!s) return null; try { const o = JSON.parse(s.get(keyOf(id)) || 'null'); if (o && typeof o === 'object') return o; } catch (e) {} return null; }
   function saveArc(id, o) { const s = gStore(); if (s) { try { s.set(keyOf(id), JSON.stringify(o)); } catch (e) {} } }

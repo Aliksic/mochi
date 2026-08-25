@@ -128,6 +128,14 @@
   const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent)
     && !/android/i.test(navigator.userAgent) && !window.MSStream;
 
+  // v3.15.x：键盘弹起时需要停靠到可视区底部的悬浮面板（聊天「更多功能」里的
+  // 小功能半框 + 更多面板自身 + 表情包等）。它们都是 absolute 锚定 .phone 底部
+  // （bottom:96px），键盘弹出 .phone 收缩后底部锚点退出视口——必须 fixed 停靠。
+  // 仅 .phone 内部、无内部滚动体（fixed 停靠后滚动区 height 仍由面板自身收缩，
+  // 内部 scroll 正常）的底半框才需要；全屏遮罩（#call-mask 等 fixed/inset 或
+  // 自带滚动）不在列。
+  const FLOAT_PANEL_SELECTORS = ['#chat-more-panel', '#chat-decision-panel', '#chat-divine-panel', '#chat-ask-panel', '#poke-card', '#emoji-panel', '#chat-rp-panel', '#chat-rps-panel', '#chat-pong-panel', '#chat-snake-panel', '#chat-brick-panel', '#chat-gift-panel', '#ck-panel', '#chat-search', '#gc-more-panel'];
+
   // v3.10.x：iOS 用 interactive-widget=resizes-content，安卓用 resizes-visual。
   // template.html 默认 resizes-visual（安卓：visualViewport 收缩可检测键盘 + layout
   // viewport 不变无白闪）。但 iOS Safari 在 resizes-visual 下 syncIosKb 收缩 .phone
@@ -673,6 +681,7 @@
         _kbActive = false;
         _phone.style.height = '';
         _phone.style.alignSelf = '';
+        kbUndockPanels();
         unlockDocScroll();
         pinScrollTop();
         stopKbWatch();
@@ -713,6 +722,7 @@
           // 顶对齐（替代 position:fixed）——避免 iOS contenteditable 在 fixed
           // 容器内无法输入的已知问题；水平居中交给 body flex 原有规则
           _phone.style.alignSelf = 'flex-start';
+          kbDockPanels(); // 底部半框停靠可视区底部=输入栏上方（防面板被挤出视口）
           // 键盘弹出瞬间浏览器可能已滚动页面，立即归零，防止灰底露出
           pinScrollTop();
           // v3.7.x：键盘弹出动画期（约 500ms）内持续钉顶防灰底露出；
@@ -797,6 +807,7 @@
         lockDocScroll();
         _phone.style.alignSelf = 'flex-start';
         if (_phone.style.height !== ph + 'px') _phone.style.height = ph + 'px';
+        kbDockPanels();
         pinScrollTop();
       }
       function _iProvClear() {
@@ -806,6 +817,7 @@
         unlockDocScroll();
         _phone.style.height = '';
         _phone.style.alignSelf = '';
+        kbUndockPanels();
         pinScrollTop();
       }
       function _iProvCheck() {
@@ -820,15 +832,15 @@
             if (_iProv && _vv.height >= _noKbH - 60) _iProvClear();
             return;
           }
-            if (!_kbActive && !_iProv &&
-                Date.now() - _iFocusAt > 900 &&
-                Date.now() - kbLastTouchAt < 1500 &&
-                kbTouchArmed(tgt) &&
-                Date.now() > kbHardKeyUntil &&
-                Math.abs(_vv.height - _noKbH) <= 2 &&
-                Math.abs(ih - _iIH) <= 2) {
-              _iProvDock();
-            }
+          if (!_kbActive && !_iProv &&
+              Date.now() - _iFocusAt > 900 &&
+              Date.now() - kbLastTouchAt < 1500 &&
+              kbTouchArmed(tgt) &&
+              Date.now() > kbHardKeyUntil &&
+              Math.abs(_vv.height - _noKbH) <= 2 &&
+              Math.abs(ih - _iIH) <= 2) {
+            _iProvDock();
+          }
         } catch (e) {}
       }
       // v3.7.x：vv scroll 独立处理——打字时系统微滚 caret 触发高频 vv scroll，
@@ -924,11 +936,12 @@
           var h = _aVV.height;
           var open = h < _aH - 60; // 可视高度明显变小 = 键盘弹出
           if (!open && h > _aH) _aH = h; // 无键盘时更新基准，地址栏变化不误判
-          if (open && !_aKb) { _aKb = true; _aPhone.style.alignSelf = 'flex-start'; }
+          if (open && !_aKb) { _aKb = true; _aPhone.style.alignSelf = 'flex-start'; kbDockPanels(); }
           if (!open && _aKb) {
             _aKb = false;
             _aPhone.style.height = '';
             _aPhone.style.alignSelf = '';
+            kbUndockPanels();
             return;
           }
           if (_aKb) {
@@ -974,6 +987,7 @@
                   _aKb = false;
                   _aPhone.style.height = '';
                   _aPhone.style.alignSelf = '';
+                  kbUndockPanels();
                 }
               } else {
                 // v3.12.x：停表前做一次兜底清理（保底停靠残留时复原 .phone）
@@ -1006,6 +1020,7 @@
           _aProv = true;
           _aPhone.style.alignSelf = 'flex-start';
           if (_aPhone.style.height !== ph + 'px') _aPhone.style.height = ph + 'px';
+          kbDockPanels();
           try { window.scrollTo(0, 0); } catch (e) {}
         }
         function _aProvClear() {
@@ -1014,6 +1029,7 @@
           if (_aKb) return; // 正常机制已接管 .phone 高度，交回原逻辑管理
           _aPhone.style.height = '';
           _aPhone.style.alignSelf = '';
+          kbUndockPanels();
         }
         function _aProvCheck() {
           try {
@@ -1079,6 +1095,7 @@
               _aKb = false;
               _aPhone.style.height = '';
               _aPhone.style.alignSelf = '';
+              kbUndockPanels();
             }
           }, 400);
         });
@@ -1092,6 +1109,7 @@
                 _aKb = false;
                 _aPhone.style.height = '';
                 _aPhone.style.alignSelf = '';
+                kbUndockPanels();
               }
               _aLastVVH = 0;
             } catch (e2) {}
@@ -1112,7 +1130,54 @@
   // v3.12.x：补三个漏登记浮层（AI-A 全仓浮层清点发现，跨域改动请知悉）——
   //   #img-view-mask 聊天/字卡大图查看全屏遮罩（chatcard.js 动态创建，打开时背景聊天页可继续滚动）；
   //   #chat-rp-panel 红包底部半框、#batch-panel 消息批量操作面板（与 poke-card/emoji-panel 同族底半框）
-  const FLOAT_SELECTORS = ['#tc-mask', '#cc-export-mask', '#cc-scope-mask', '#call-mask', '#feed-notice-panel', '#feed-comment-panel', '#poke-card', '#emoji-panel', '#chat-ask-panel', '#qa-mask', '#chat-more-panel', '#gc-more-panel', '#chat-search', '#chat-decision-panel', '#chat-divine-panel', '#chat-rps-panel', '#chat-call-panel', '#chat-pong-panel', '#chat-snake-panel', '#chat-gift-panel', '#avlib-card', '#ck-panel', '#loc-panel', '.mg-mask', '#modal-mask', '#msg-actions', '#desk-image-viewer', '.desk-lib', '#gc-members-panel', '#gc-at-panel', '#gc-settings-panel', '#img-view-mask', '#chat-rp-panel', '#batch-panel', '#eat-switch-overlay'];
+  const FLOAT_SELECTORS = ['#tc-mask', '#cc-export-mask', '#cc-scope-mask', '#call-mask', '#feed-notice-panel', '#feed-comment-panel', '#poke-card', '#emoji-panel', '#chat-ask-panel', '#qa-mask', '#chat-more-panel', '#gc-more-panel', '#chat-search', '#chat-decision-panel', '#chat-divine-panel', '#chat-rps-panel', '#chat-call-panel', '#chat-pong-panel', '#chat-snake-panel', '#chat-brick-panel', '#chat-gift-panel', '#avlib-card', '#ck-panel', '#loc-panel', '.mg-mask', '#modal-mask', '#msg-actions', '#desk-image-viewer', '.desk-lib', '#gc-members-panel', '#gc-at-panel', '#gc-settings-panel', '#img-view-mask', '#chat-rp-panel', '#batch-panel', '#eat-switch-overlay'];
+  // v3.15.x：键盘弹起时把锚定在 .phone 底部的悬浮面板（更多功能/帮我决定/占卜/
+  // 问问TA/红包/拍一拍等）重新锚定到可视区底部=输入栏上方。背景（用户反馈
+  // 「更多功能里的小功能输入框一点，功能页面被错误挤压到屏幕输入栏一行的下方，
+  // 中间出现大面积无用灰色」）：面板是 absolute 锚定 .phone 底部（bottom:96px），
+  // 键盘弹出时 JS 把 .phone 收缩到可视高度（vv 或 58% 推定停靠）——面板 bottom 锚
+  // 点已退出可视区，面板整体被推到可视区外（视觉=被挤压到输入栏下方），输入框
+  // 完全消失，输入栏下露出的 .phone 底色呈现为「大面积无用灰色」。绝对定位的
+  // 面板不会自动收缩，必须 JS 干预：键盘期间给面板设 fixed 底部停靠（=可视区
+  // 底部），与输入栏同位。两分支（syncAndroidKb / syncIosKb 及各自的推定停靠
+  // _aProvDock / _iProvDock）在收缩 .phone 时统一触发，restore 时解除。
+  let kbPanelDocked = false;
+  function kbDockPanels() {
+    if (kbPanelDocked) return;
+    kbPanelDocked = true;
+    try {
+      document.querySelectorAll(FLOAT_PANEL_SELECTORS.join(',')).forEach(function (el) {
+        if (el.hidden || el.getClientRects().length === 0) return;
+        if (el.style.position !== 'fixed') el.dataset.kbPrevPos = el.style.position || '';
+        el.style.position = 'fixed';
+        el.style.left = '18px'; el.style.right = '18px';
+        el.style.top = 'auto';
+        el.style.bottom = 'calc(96px + env(safe-area-inset-bottom, 0px))';
+      });
+    } catch (e) {}
+  }
+  function kbUndockPanels() {
+    if (!kbPanelDocked) return;
+    kbPanelDocked = false;
+    try {
+      document.querySelectorAll(FLOAT_PANEL_SELECTORS.join(',')).forEach(function (el) {
+        if (el.dataset.kbPrevPos !== undefined) {
+          if (el.dataset.kbPrevPos) el.style.position = el.dataset.kbPrevPos;
+          else el.style.removeProperty('position');
+          delete el.dataset.kbPrevPos;
+        }
+        // 面板关闭期间恢复：inline bottom/left/right 一并清掉，回到 CSS 锚定
+        el.style.removeProperty('bottom');
+        el.style.removeProperty('left');
+        el.style.removeProperty('right');
+        el.style.removeProperty('top');
+      });
+    } catch (e) {}
+  }
+  // 键盘期间「新打开的面板」也会自动停靠（kbDockPanels 只锚定当时可见的面板）
+  try {
+    document.addEventListener('transitionstart', function () { if (kbPanelDocked) kbDockPanels(); }, true);
+  } catch (e) {}
   let locked = false;
   // v3.13.x：手动锁浮层（period.js 弹层动态 append/remove、不走 hidden 属性）——
   // 存在于 DOM 即视为开着，纳入统一判定，防其他浮层变动时误摘经期弹层的锁

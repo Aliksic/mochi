@@ -107,10 +107,14 @@ try {
   ok('桌面第三页「梦角档案」图标存在', icon && icon.name === '梦角档案', icon);
 
   // 预置 3 个梦角 + 各自档案（含一条「了解」记录），根命名空间共享
+  // （v3.14.x 起此间按桌面分离、启动时各桌自动播种——先清掉 default 桌自动播种的
+  //   名单，保证本用例的 chips 断言只看到预置的 3 个；memo-arc 合并读取含根键兜底）
   await evalJs(`(function () {
     const G = 'xy-home-v2';
     const mk = (id, name) => ({ id: id, name: name, offsetMin: 0 });
     const R = [mk('dAAA1', '景元'), mk('dBBB2', '丹恒'), mk('dCCC3', '三月七')];
+    // 注意不能 removeItem——xyStore 读内存缓存优先级高于「键不存在」，直接置空名单才生效
+    localStorage.setItem(G + ':default:cjian-roster', '[]');
     localStorage.setItem(G + ':cjian-roster', JSON.stringify(R));
     localStorage.setItem(G + ':narc-cur', 'dAAA1');
     const arcA = { created: Date.now() - 5 * 86400000, loves: [{ id: 'n1', type: 'habit', text: '不太喜欢被催着做决定', level: 1, created: Date.now() - 86400000, updated: Date.now() - 86400000, status: 'active', revisions: [] }], bonds: [], moments: [], records: [], wonders: [], history: [] };

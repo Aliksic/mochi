@@ -1,8 +1,161 @@
-# WORKLOG — 双方交接日志（AI-A / AI-B 共用）
+﻿# WORKLOG — 双方交接日志（AI-A / AI-B 共用）
 
 两个 AI 不能直接对话，开工/完工时在这里各写一行，让对方打开仓库就知道当前状态。
 
+### 2026-08-26（用户反馈：小米MIX4+Edge 后台收不到消息/联系人不会主动发消息 + 后台弹窗丢失）
+- [本会话·完成]（**已改 src/js/bg-keep.js（AI-B 域）+ src/js/ta-ask.js（AI-A 域，跨域改动请 AI-A 复核）+ WORKLOG.md；已构建（00:22, sw: mochi-mt8viopb）+ 布局 verify 10/10 全绿；待提交**）。
+  - **根因**：安卓 Edge 后台 setInterval 被深度节流/冻结，导致两个问题：① maybeTriggerTAAsk/TC/TCU/TR 四函数不触发 → 联系人不主动发消息；② 后台新收到卡片 document.hidden 守卫不弹，回前台后无补弹机制 → 后台弹窗丢失。autoPopupStale 守卫（防冻结补跑旧卡）误伤不了这个场景，问题是根本没有补弹路径。
+  - **修复①（bg-keep.js，AI-B 域）**：回前台统一信号——visibilitychange/focus/pageshow 三处抽 `_onFgVisible()`，healKeepAlive + `document.dispatchEvent(new Event('mochi-fg-resume'))`，不依赖保活开关无条件 dispatch。
+  - **修复②（ta-ask.js，AI-A 域）**：新增 `_pendingPops` 队列 + `_enqueuePop(idx,openFnName)` + `_flushPendingPops()`；四个 push 函数（pushAsk/tcPush/tcuPush/trPush）后台时 `document.hidden` 入队不依赖 setTimeout；监听 mochi-fg-resume 事件回前台时立即补触发四个 maybeTrigger（解①）+ flush 补弹最近一张（解②，只弹一张避免刷屏）。autoPopupStale 不适用于补弹（那是防冻结补跑旧卡；此处是用户主动回前台补弹新卡）。
+  - **真机确认点（小米MIX4+Edge 优先）**：① 切后台数分钟后回前台，联系人应能主动发消息（询问/小问题/好奇/吐槽）；② 后台收到互动卡片回前台后应自动弹窗（最近一张）；③ 正常前台行为不受影响（弹窗时机/频率不变）。
+  - **⚠️ 跨域改动**：ta-ask.js 属 AI-A 域，本次由 AI-B 跨域修改（加队列+事件监听+四 push 入队），请 AI-A 复核 _pendingPops/_enqueuePop/_flushPendingPops 逻辑与四 push 函数改造是否影响既有触发流程。
+  - **构建扫入说明**：本次构建（mochi-mt8viopb）同时包含工作区所有已保存的并行会话改动（mobile-adapt.js kbDockPanels/chat.js/feed.js/contacts.js 等十几个 src + deleted jpg），按 AGENTS.md 并行协议一次 v3.14.x 提交。untracked repro/diag 脚本不提交。
+
+## 🚨🚨 紧急（2026-08-26 00:05，所有会话必读）🚨🚨
+
+### 2026-08-26（用户反馈：①经期关心字卡没进字卡库【系统预设字卡】 ②经期只有第一天触发关心「设计阉割了？」 ③经期统计卡字和图形重叠不好看）
+- [本会话·完成]（**已改 src/js/default-cards-data.js + default-cards.js + period.js + chat-pages.css（均 AI-A 域）+ src/js/chat.js（AI-A 域，仅回复路径一处门控移除；该文件当晚磁盘满事故见上方横幅，恢复时一并补回）+ 新专项 tools/verify-period-care.mjs 26/26 全绿；已构建（00:15, sw: mochi-mt8v9xk0）+ 布局 verify 10/10 全绿；未提交**）：经期关心三项修复。
+  - **① 字卡库新增「经期关心」分组**：20 条经期专属关心语迁为 `DEFAULT_CARD_DATA.period` 单一数据源（default-cards-data.js，与摸鱼浮字/花园/喝水等同款模式），【系统预设字卡】页新增「经期关心」tab 可查看、逐张开关（`dc-off-period:<文案>`）；period.js 抽取侧 `careLineBlocked()` 同时认库内新开关与经期页「关心语管理」旧开关（任一关闭即不抽），period.js 内置精简兜底防数据缺失。
+  - **② 触发概率重设计**：旧行为=三层门控叠加——chat 回复路径预掷 20% × 连发衰减（发过 1 次后封顶 60%/45%/30%/20%）× 当日基数（85/60/35），第 2 天起单次触发率仅 ~12%、第 5 天起 ~4%，体感即「只有第一天会关心」。现改为：chat.js 不再预掷（每条文字回复都尝试一次）；period.js checkCare 只保留「同一天最多一条」冷却 + 当天基数一次掷——经期第1-2天 90%、第3-4天 70%、第5+天 55%（需经期内，受设置的经期长度约束）、经期前提醒日/推迟≥5天 75%；连发衰减机制整体删除。触发时机不变：启动后 5s 兜底 + 每条联系人文字回复后。
+  - **③ 统计卡重叠修复**：a) 趋势图均值文字标签原画在均值线上方常压折线/数据点 → 移到标题下 `.ps-trend-cap` 说明行（— — 均值 X 天 · 区间 X～X 天），SVG 左侧留白改画 y 轴上下界数字刻度（此前空占），图改居中；b) 症状↔周期天分布柱底的「第N天」标签原 `bottom:-13px` 悬在容器外直接压到下一行图形 → 容器加高 32→46px 并预留 14px 底部标签槽（padding-bottom），标签 `top:100%+2px` 落在自己行内，另加 `min-height:3px` 防极矮柱消失。深色模式无需改动（沿用 var(--muted)/#aaa）。
+  - 验证：verify-period-care 26/26（A 静态 10 + B 运行时触发链路 8：种数据驯化 Math.random 控制必中/必不中，验证 第3天触发、同日冷却持久化、重复调用不再追加、库内全关静默、放开一张恢复且必抽中它、经期第7天(8天经期配置)可达 55% 档；C 运行时 UI 8：统计卡渲染、均值文字出图、46/14 标签槽 computedStyle、标签零越界几何断言、柱体收在绘图区、字卡库 tab 渲染 20 张、开关写入 dc-off-period 键）。布局 verify 10/10。
+  - ⚠️ **构建扫入说明**：00:15 构建收口了当时工作区全部已保存改动（含音乐设置三概率/TA收藏、room、cuddle 等并行会话成果与 chat.js 恢复版）。**chat.js 当前带只读属性**（防旧缓冲会话再次覆盖），任何会话要改它先 `attrib -r src\js\chat.js` 并核对文件头恢复横幅。
+  - 真机确认点：①字卡库→系统预设字卡→「经期关心」tab 可见 20 张、逐张关掉后聊天里不再抽到；②经期中每天（不再只有第一天）聊天都可能收到一条关心语，同一天最多一条；③经期记录页统计卡：趋势图无文字压线、相位分布的日期数字不再叠到下一行。
+
+
+**src/js/chat.js 曾被截断为 0 字节（08-25 23:29:40，磁盘瞬时占满 ENOSPC 期间），且 23:45 的并行构建把空文件扫进了 index.html（产物一度丢失整个聊天模块）；23:58 又检测到一次外部整包回写（写入的是连 22:34 头像修复都没有的更旧缓冲）。**
+- 当前处置：chat.js 已由 **HEAD 提交(9928715) 的 index.html 产物段**恢复（构建器 per-file try/catch 带文件名可精确切分），并手工补回两处已知未提交改动：① `fillAvatar(deskMsgAv,'cs-avatar-partner')`（22:34 桌面弹窗头像修复）；② 经期关心 20% 预掷门控移除（本轮需求，见下条）。恢复版为 minified（原注释丢失，文件头有说明横幅）。
+- **⚠️ 若你的会话内存里有旧版 chat.js 缓冲：绝对不要再保存覆盖！先从磁盘重新读取。** 文件已被设为只读属性防误写；需要改 chat.js 先 `attrib -r src\js\chat.js` 并确认内容含「cs-avatar-partner」与「v3.14.x：移除 20% 预掷门控」两个标记。
+- HEAD 之后、截断之前的 chat.js 未提交改动若有本横幅未列出的（当前仅知上述两处），请在本文件追加说明，丢失内容需重做。
+- 根因预防：TEMP 里堆积了 1500+ 个 mochi-* 无头测试临时目录把 C 盘瞬时塞满；各会话跑完 verify 请顺手清理自己的 tmp 目录（或统一加 finally 删目录）。
+
+### 2026-08-25（用户需求：音乐设置补梦角主动控制概率 + 联系人收藏歌曲 + 【TA的收藏】页）
+- [本会话·完成]（**已改 src/js/music-player.js（AI-A 域）+ src/template.html（AI-B 域跨域：仅音乐页加一个 tab 按钮 + 一个面板锚点，机械两行请知悉）+ 新专项 tools/verify-music-ta-control.mjs 16/16 全绿（连续两轮）；已构建一次（23:14, sw: mochi-mt8t2lk6），其后并行会话 23:16/23:55 再构建已把本改动一并收口——已核对最新产物含新代码；未提交**）：音乐功能三项增强。
+  - **① 梦角主动控制概率可调**：原「歌曲播完 TA 接动作」的加权是硬编码（切下一首15/随机挑歌10/换模式5），音乐设置里没有入口。现新增三个步进器（0~100、步长5）：「歌曲播完·切下一首概率」「歌曲播完·随机挑歌概率」「歌曲播完·换播放模式概率」（换模式=顺序播放·列表循环·随机播放·单曲循环间切换），maybeTAAutoAction 改按配置加权判定，剩余概率=TA 不接动作正常自动切歌；三项全设 0 即 TA 从不主动控制。默认值与原硬编码一致，老用户行为不变。
+  - **② 联系人收藏我播放的歌曲**：新设「TA 收藏歌曲概率」（默认20%）。我播放一首歌听满 10~25 秒（随机延迟，切歌/暂停即取消）后掷概率，命中则把歌收进「TA的收藏」+ toast + 聊天系统消息「XX 收藏了歌曲《…》」。防刷屏：已收藏过的歌不重复判定；两次收藏间隔至少 90 秒；切桌面取消待判定定时器。存储键 `music-favs-ta`（default 全局命名空间，data-backup 的 `music-` 键尾已天然覆盖备份）。
+  - **③ 音乐页【我的收藏】右边新增【联系人昵称的收藏】tab**：模板静态占位「TA的收藏」，由 syncTaFavTab() 按 lbl-partner 昵称填充（如「小梦的收藏」，进页/切桌面联动刷新）；列表显示联系人收藏的歌，点击播放、爱心可取消收藏；空态文案带昵称。fav-tabs 本就横向滚动，第 5 个 tab 无需改 CSS。
+  - 设置面板顺带把原 reqProb 步进器重构为统一 bindProbStep 绑定（reqProb 上限保持原 30 不变）；DEF_SETTINGS 统一默认值声明（loadAll 与初始值共用）。专项验证注意点：无头测试音频采样率需 ≥8000Hz（2000Hz 会 PIPELINE_ERROR_INITIALIZATION_FAILED）；诊断面板「强制触发一次」不绑接受按钮，运行时验证走真实 window.maybeMusicRequest()。
+  - 真机确认点：①音乐设置出现四个新概率行且 ± 可调持久化；②一起听歌播完后 TA 会按概率切下一首/随机挑一首/换播放模式（全设 0 则永不干预）；③自己放歌听一会儿弹「XX 收藏了《…》」，聊天里也有系统消息；④音乐页「我的收藏」右边出现「XX的收藏」tab，里面是 TA 收藏的歌、可点播/取消。
+
+### 2026-08-25（复核补充：【此间/梦角档案按桌面分离】新增边缘用例专项探针）
+- [本会话·仅测试补充]（**未改任何 src 功能文件**；新增 `tools/verify-cjian-split-edge.mjs`（自组装临时页运行时验证，不触发 build）16/16 全绿；未提交）：补主 verify 未覆盖的三条高危路径——① 旧全局根键启动迁移（按 id 并集+状态随迁+seeded 落位）且根键被 IDB 回填"复活"后再次加载幂等不重复、复活旧状态不覆盖已迁移状态；② 梦角档案当前选中被删（此间侧删除）→ 重开自动回退剩余第一位、narc-cur 正确持久化；③ 档案页顶部「＋添加」落入当前桌面名单、其他桌面名单不受影响（viewCid='' 分支）。另静态排查全 src 无残留旧键直读者。请构建者随批次一并提交该脚本。
+
+### 2026-08-25（用户反馈：朋友圈评论区两问题——①「A 回复 B」排序 UI 不对称 ②联系人回应我的回复显示成【联系人 回复 联系人】）
+- [本会话·完成]（**已改 src/js/feed.js + src/css/chat-pages.css（均 AI-A 域，feed.js 开工时无并行改动冲突）+ 新专项 tools/verify-feed-reply-ui.mjs 12/12；已构建（23:16, sw: mochi-mt8t59cb）+ 布局 verify 10/10 + 回归 verify-feed-comment-merge 10/10、verify-feed-comment-perf 18/18 全绿；未提交**）。
+  - **②显示错误根因**：commentsHtmlFor 把每条回复的被回复人写死为**原评论作者**——TA 评论下我回复后再获 TA 回应，渲染成「TA 回复 TA」。**修复（双端）**：① 写入端——我的回复与 TA 自动回应均新增 `to`（被回复人昵称快照）：ri 定向回复对那位作者、否则原评论作者；TA 回应的 to 取本楼最后一条我的回复昵称（回应对象=我）。② 渲染端——按对话轮次解析：有 to 用 to；旧数据无 to 按「本楼最近一位与我不同名的发言者」推断（存量坏显示自动纠正），兜底原评论作者/我的昵称。
+  - **①UI 不对称根因**：chat-pages.css 里评论区样式定义了两次，后段 `.feed-comments{border-top…}` 覆盖前面 → 灰底圆角面板内多出一道横线；回复区双重缩进（容器 22px + 行内 12px=34px）而评论 0 缩进。**重设计**：删除重复块统一为一处——灰底圆角面板（无横线）；楼中楼改「左引导线(2px) + 我/TA 统一缩进」对称对齐；「回复」分隔改小胶囊徽章（.fd-r-sep），双方名字同权重；回复行可点击（cursor:pointer）。
+  - **顺带补全交互**：点楼内某条回复 → 定向回复该条作者（评论条占位符同步显示其昵称；自己的回复不可自回；stopPropagation 防误触整条评论）——原先在 TA 的动态里我只能对着自己的评论被回复、无法继续聊（点自己评论被拦截），现在多轮往返回路打通。通知定位 loc={ci,ri} 不受影响。
+  - 验证：verify-feed-reply-ui 12/12（存量推断渲染无自指行/徽章存在/面板无 border-top+左引导线/我与 TA 回复左缘像素级对齐/点行占位符/定向回复入库 to=小桃/TA 必回 to=我/DOM 四行全对称/源码双写入口静态断言）。真机确认点：①老帖子里的旧回复打开即显示正确「X 回复 Y」（不用发新回复）；②TA 的动态→我评论→TA 回复我→再点 TA 那条回复可继续回，全程名字方向正确；③评论区灰底面板无横线、回复整体带左侧细线且我的/TA 回复对齐。
+
+### 2026-08-25（用户需求：「TA的提问→邀请」补充正常情侣的贴贴互动内容——贴贴邀请字卡入库）
+- [本会话·完成]（**已改 src/js/ta-invite.js + src/js/chat.js + src/js/reply-settings.js + src/template.html（AI-B 域机械改动请知悉）+ tools/verify-ta-invite.mjs / tools/verify-invite-settings.mjs 断言更新；未自己构建——并行构建进程已在 23:00 把本会话 src 改动扫入 index.html/sw.js/version.json（已 grep 核对 iv_c1/ai-cuddle-prob/window.openRpsPanel 等标记全在产物中）**）。
+  - **① 贴贴邀请字卡（ta-invite.js，新 kind=cuddle，10 张系统预设不可删可逐句开关）**：iv_c1 想贴贴了，你可以过来一点吗？／iv_c2 抱一下再忙别的嘛，就一下下。／iv_c3 手伸过来，我想牵一会儿。／iv_c4 靠着你坐一会儿吧，什么都不做的那种。／iv_c5 想把脑袋搁在你肩上，借我五分钟。／iv_c6 刚才好像碰到你的手了？再来一次，这次牵住不放。／iv_c7 隔着世界也想贴贴你，感觉到了就不要躲。／iv_c8 今天很想你，想到想蹭蹭你。／iv_c9 晚上早点休息，我来抱着你睡。／iv_c10 心情很好，这种时候最适合亲亲了。（措辞甜而安稳，贴合两个世界设定：平时看不见但偶尔能碰到有体感；预设总数 10→20，tiMerge 自动为存量用户补种）
+  - **② 流程（chat.js）**：贴贴没有游戏半框——同意后轻震动 [30,60,90]（体感反馈），TA 回应一句（CUDDLE_REPLIES 5 条：「嗯……蹭到了。暖暖的，很喜欢。」等，主动爱心标识）；拒绝走专属婉拒池 CUDDLE_DECLINE（「下次再贴吧，先记着这笔~」等 4 条，不扫兴）。确认弹窗标题「XX 的贴贴邀请」。
+  - **③ 自动门控**：taInviteDraw 新增第三门 ai-cuddle-en/prob（默认开 5%，独立于猜拳 8%/游戏 5%），顺序 rps→game→cuddle 保持旧语义不变；手动触发（更多功能→邀请）抽卡池加入 cuddle；管理页分类 tab、行内添加下拉、批量导入下拉均含「贴贴邀请」；回复设置→其他新增「主动邀请贴贴」开关 + 「贴贴邀请概率」stepper（template 两行，reply-settings DEFAULTS/三处开关注册）。
+  - **④ 顺手修了一个既有 bug**：`openRpsPanel` 是 chat.js 局部函数从未导出 window，而邀请同意链路 `openInvitePanelFor('rps')` 调的是 `window.openRpsPanel`——**此前同意猜拳邀请后半框一直打不开（静默 no-op）**（Pong/贪吃蛇有导出所以正常）。已在定义后补 `window.openRpsPanel = openRpsPanel;`，无头实测同意后 chat-rps-panel 正常打开。临时诊断脚本 diag-invite-rps-panel.mjs 用完已删。
+  - **验证**：verify-ta-invite 36/36（T4 加 cuddleOnly 门控/三关 null、新 T5b 贴贴同意链路 stub 抽卡→同意→回应消息数+2；顺手把 useDefault 用例原依赖 5% 随机命中的隐性 flaky 改成 game 门 100% 确定性）；verify-invite-settings 28/28（默认值断言从 v3.9.x 初版过期值 15%/10% 修正为实际 8%/5%/5%、第 7 节改为三类全关才不触发 + 新增仅贴贴门用例；猜拳半框用例因④由 FAIL 转 PASS）；布局 verify 10/10。
+  - **⚠️ 并行提示**：verify-ta-gender 当前 21/22——唯一失败是 T8「喝水 tab 渲染 21 张」断言过期：并行会话已保存未提交的 default-cards-data.js 把水池扩到 30 张（与本会话无关，HEAD 上该套件 22/22），请该会话把计数更新为新值。构建产物已含双方改动，提交前按协议 git diff 自查一次性 v3.14.x 提交。
+
+
 ## 规则
+
+### 2026-08-25（用户反馈：切换桌面联系人，联系人的聊天记录又丢失了）
+- [本会话·完成]（**已改 src/js/chat.js（AI-A 域）+ 新专项 tools/verify-chat-switch-idb-timeout.mjs 7/7 + 切换全场景回归 tools/diag-contact-switch-chat.mjs 11/11；我方已构建（22:54, mochi-mt8scw6a），其后并行会话 23:00 构建（mochi-mt8skz6k）已含本修复；回归 verify-chat-switch-idb-hang 9/9 + verify-data-loss 11/11 + 布局 verify 10/10 全绿；未提交**）。
+  - **根因（无头复现+写入堆栈定位）**：idb.js 的 `idbGet` 有 4s+4s 超时兜底（v3.9.x 防挂起），对「键存在但读取超时」也 resolve `undefined`——与「键确实不存在」不可区分。真机切换桌面瞬间几十个模块并发抢 IDB 事务，`<cid>:chat-msgs` 大键读取极易超时；chat.js `loadMsgs` 把 `undefined` 当「IDB 无权威数据」分支执行：置 `chatDbReady=true` 并用内存/LS 有损快照覆盖 IDB → 刚切完桌面内存为空 → **全部历史被覆盖成 [] 或有损快照**。复现：模拟超时型失败后注入一条消息，IDB 三条历史被覆盖只剩 1 条（终态键 n=1）。此前 v3.6/v3.7/v3.9 三轮「切桌面丢聊天记录」修复都在读成功路径，这是超时兜底引入的新破坏面。
+  - **修复（均在 chat.js）**：① `loadMsgs` 的 undefined 分支先用 `idbGetAllKeys` 复核——键在列表=这次读取失败：不置 ready、绝不落盘、安排有界自动重试（5s × 最多 6 次，恢复后按权威合并渲染）；键不在列表=确认无权威，才走原迁移逻辑。② 空记录落盘守卫三处（saveMsgs 防抖回调 / flushSave / saveMsgsNow）：本会话从未读过该桌面权威（`authLoadedPrefix` 未置）前禁止把空数组写进 IDB；LS 兜底快照同样不在内存为空时写（防把最后备份也覆盖成 "[]"）。③ contact-switched 清掉旧联系人的 15s 保险丝与重试定时器 + 保险丝触发时校验命名空间仍是武装时的那一个（防跨联系人误置就绪的残留隐患）。④ 权威合并成功/确认无权威时记 `authLoadedPrefix` 并复位重试计数（清空聊天走 clearChatHistory 直删不受影响，导入/导出路径不变）。
+  - 排查过并确认无恙：8s 重读时间闸（切联系人 chatDbReady 归 false 不会跳读）、scheduleReply 跨联系人 sameCid 守卫、防抖窗口切换落盘顺序、group-chat.js loadMsgs（undefined 直接 return 不破坏 + 只在 IDB 条数≥本地时采用 + 全局键不随切换重置）。
+  - ⚠️ **构建扫入说明（构建者必读）**：22:54 我方构建收口了当时工作区全部已保存批次（desk-popup-avatar / 气泡CSS持久化 / 桌面横滑翻页等）；其后并行会话仍有多条新改动与 23:00 再构建——提交前请最后一位构建者以最终产物为准，按协议 git diff 自查一次性 v3.14.x 提交。
+  - 真机确认点（低配安卓/真我 vivo Edge 类优先）：① 切换联系人桌面后进聊天页，历史应正常显示；② 即使首屏短暂空白（读取超时），几秒内自动重试补回，且期间收到的新消息不顶掉旧历史；③ 来回快速切换多个桌面后各桌面聊天记录完整。
+  - **给 AI-B 的后续建议（本会话未动 idb.js）**：可考虑让 idbGet 从源头区分「确认不存在 vs 读取失败」（三态返回或独立 idbGetStrict），mail.js 信件读取同属「undefined 当空」语义类，统一后更稳。
+
+### 2026-08-25（新功能：吃什么·TA 饭点概率提醒——梦角发字卡到聊天 + 字卡库【系统预设字卡】新增「吃什么」分组）
+- [本会话·完成]（**已改 src/js/p2-features.js + src/js/default-cards-data.js + src/js/default-cards.js（均 AI-A 域）+ 新专项 tools/verify-eat-remind.mjs 16/16 全绿；终版已构建（23:55, sw: mochi-mt8ujd6g）+ 布局 verify exit 0 + 回归 verify-eat-menus 12/12 全绿；未提交**）：饭点概率触发梦角提醒吃饭。
+  - **需求**：吃什么功能概率触发梦角提醒吃饭、字卡发送到聊天；新增的吃什么字卡放字卡库【系统预设字卡】新分组供查看。
+  - **概率核算（用户复核后调整）**：默认每 4 分钟一掷 8% 时，窗口内至少触发一次 = 早97.7%/午晚95.3%/夜宵91.8% ≈ 3.8 次/天（餐餐必响，过高）→ **默认降为 2%**：早59.7%/午晚52.6%/夜宵45.5% ≈ 2.1 次/天，且真机后台定时器节流实际更低；可在页面调 0–100%（1%≈1.4 次/天）。
+  - **字卡库**：`DEFAULT_CARD_DATA.eat` 新增两组——「提醒吃饭」12 句（含 `{d}` 占位符，发送时替换为当前菜单随机菜名）+「追问关心」6 句；default-cards.js JS 注入「吃什么」tab；逐张开关（`dc-off-eat:*`）与实际抽取联动（p2-features 经 libPool('eat',…) 过滤），与摸鱼/花园/喝水同模式。
+  - **触发设计**：饭点窗口 早06:30–09:30/午11:00–13:30/晚17:00–19:30/夜宵21:30–23:30，窗口内每 4 分钟掷一次概率（默认 2%，可设 0–100%），未命中下轮再掷、命中即发；每窗口每天最多 1 次（`eat-remind-done:<餐>:<日期>` 标记）；启动即查一次（打开应用恰在窗口内立即触发）；后台照发进聊天记录+角标，系统通知走 bgNotifyCheck 内部闸门（隐藏>15s 才弹+内容去重）；35% 概率隔 1.4s 补一句「追问关心」（silent 不重复响提示音）；震动提示。
+  - **UI**：吃什么页新增一行管理钮——【TA 提醒：开/关】（键 `eat-remind-en` 默认开）+【触发概率 N%】（openModal 数字输入，键 `eat-remind-prob`）；均按联系人命名空间独立保存。
+  - **验证要点**：专项用 CDP addScriptToEvaluateOnNewDocument 补丁 Date 定格晚餐窗口 18:30 + Math.random=0 + prob=100 做运行时确定性验证（触发/done 去重/总开关关闭不触发/库 tab 渲染/单卡开关退出抽取池/UI 开关与概率弹窗）。真机确认点：①饭点时段开着应用等一会儿，聊天里应出现梦角的吃饭提醒字卡（偶尔跟第二条关心）；②同一饭点不会重复提醒；③吃什么页可关提醒/调概率；④字卡库→系统预设字卡→「吃什么」tab 能看到两组话术并可逐张关。
+  - ⚠️ **⚠️ 磁盘满事故波及说明（重要）**：23:45 我曾构建出一份 **缺 chat.js 段的坏产物**（index.html 仅 2.34MB，运行期 window.chatAddIn 为 undefined——构建时 src/js/chat.js 正处于磁盘满损坏状态）。并行会话 23:50 已从 HEAD 恢复 chat.js（文件头有恢复注释）；我方 23:55 全量重构建（46 个 jsFiles 全部 node 语法校验通过后收口，sw: mochi-mt8ujd6g），专项 16/16 复跑全绿确认 chatAddIn 触发链路恢复。**若有人本地还留着 mt8u6um7/mt8skz6q 版产物请弃用，以 23:55 mt8ujd6g 为准。**
+  - ⚠️ **构建扫入说明（提交者必读）**：本会话多次构建期间并行会话持续大改（gift-shop/memo-arc/reply-settings/contacts/period/market.css/feed/music-player/template/home+chat-pages css、删除 garden-shop/giftcard-*/market-new 等 jpg、新增未注册的 src/js/breakout.js 与若干 tools 脚本）——均已按当时工作区状态扫入产物。**提交前请按协议 git diff 自查全部范围**；breakout.js 尚未见 build.mjs 注册，请其会话确认是否漏登记。
+
+### 2026-08-25（用户需求：心意市集新商品扩容——「两个世界」世界观商品 + 正常世界一般日用商品）
+- [本会话·完成]（**已改 src/js/gift-shop.js（AI-A 域）+ src/js/contacts.js（AI-B 域，仅 EXCLUDE 机械一行，跨域改动请知悉）+ 新专项 tools/verify-gift-market-v3.mjs 14/14 全绿；未构建、未提交——请构建者执行 `node build.mjs` 收口**）：心意市集默认商品 79→188 件（五轮扩容），新增分类「两个世界」（🌗，#e0f7fa，位于星空后）。
+  - **世界观商品 14 件**（文案走甜蜜/安稳/亲密路线）：字卡沟通类——手写字卡 ¥1.30「每个字都挑过了，抽中哪张都是我想说的」、字卡盲盒 ¥5.20「系统乱出的也算，都是想跟你说的话」（正面接纳"TA 控制不住随机出卡"设定）、表情包补给、千言锦囊 ¥52「几百句想说的话慢慢拆」；隔空陪伴与体感类——身边坐标「今晚也在你左手边的位置」、隔空牵手、摸摸头、看不见的抱抱（看不见但抱得到）、心跳感应、平安符「我的名字在里面替我陪着你」、跨界快递「慢一点但一定到」；梦境类——同一场梦 ¥13.14、同时看月亮「九点一起抬头就算见过面了」、世界之桥 ¥66「这座桥常开着」。
+  - **日常/生活商品 95 件**分散进现有 10 分类（五轮累计，含用户多轮追加）：美食甜品 24、出行娱乐 21、关怀 15、日常用品 37、花束 8、饰品 7、星空 14（世界观外）、情侣用品 12 等；清单详见 gift-shop.js DEF_GIFTS v3 扩库注释块（一至五批）。emoji 全部不与既有商品重复。
+  - **v3 扩库救援（防老设备误删复活问题重演）**：`rescueNewDefaults` 重构为 `rescueBatch(ids, mark)` 泛化——v2 行为不变（market-migrated-v2 标记），新增 DEF_V3_IDS（109 件）+ market-migrated-v3 幂等标记；contacts.js EXCLUDE 补 `market-migrated-v3`（防 migrateLegacy 把标记根键当旧业务键迁走致救援反复清用户删除记录）。
+  - 验证：tools/verify-gift-market-v3.mjs 14/14——A 组静态 7 项（分类登记/188 条 id 无重复/109 件新商品字段完整/DEF_V3_IDS 与集合一致/双标记接线/EXCLUDE 登记）；B 组无头运行时 7 项（自组装临时站点不依赖构建：12 分类胶囊+总数 188、「两个世界」筛选 14 件齐全、购买全链路弹窗预填→送出→扣 ¥1.30→心意柜入账、误标 del 被救援清一次且幂等标记落盘、标记已在时用户主动删除被尊重不复活）。
+  - ⚠️ **并发提示（构建者必读）**：工作区含大量并行会话未提交改动（mobile-adapt/template/cjian/chat 等，见上条及其余条目），本次仅 gift-shop.js 整文件 + contacts.js EXCLUDE 一行为本会话改动，构建收口时按协议 git diff 自查。真机确认点：心意市集出现「两个世界」分类及 14 件世界观商品；买一件手写字卡正常扣款入柜；老桌面打开市集新商品全部可见（若此前在旧版本删过默认商品的桌面，v2/v3 商品恢复一次属预期救援）。
+
+### 2026-08-25 23:5x（⚠️ 紧急事故：src/js/chat.js 被清零 + 连续两次构建把空文件扫进产物）
+- [本会话·事故记录与恢复]（**未改任何功能代码**；chat.js 当前内容由对方会话于 23:58 恢复，我方已确认其含 clearChatInput/rpEditWallet/taInviteDraw/startAskKbRefresh/cjianNoteChat/cs-avatar-partner 桌面弹窗修复，仅缺「贴贴邀请 cuddle」一处已知增量）。
+  - **时间线**：23:29:40 chat.js 变成 0 字节（谁清的不明，恰在本会话首次编辑尝试失败前后）；**23:31:37 与 23:45:xx 各有一次 
+ode build.mjs**，把空 chat.js 扫进 index.html/sw.js/version.json——**这两版产物缺整个聊天模块（无 tryAutoSend/scheduleAutoSend/addIn 等），绝对不能 push 部署**。TEMP 里 mochi-* 无头缓存已全部被 23:31+ 版本覆盖，无法从缓存找回更新版本。
+  - **已做**：① 从 git HEAD(9928715) 内嵌产物（21:19 构建）成功剖出完整 chat.js（含全部已知修复）作为兜底副本（%TEMP%\chat_recovered.js，235KB）；② 对方 23:58 已写入更好的带格式恢复版（317KB），本会话核对功能清单后停手不再覆写；③ 唯一确定缺失的增量=贴贴邀请（cuddle：CUDDLE_DECLINE/CUDDLE_REPLIES/KIND_META.cuddle/openInvitePanelFor 分支/sendTaInvite declinePool/openInviteConfirm 第 4 参），**补丁脚本已备好：
+ode tools/patch-chat-cuddle.mjs**（幂等断言，仅在文件未被锁定时可写——刚才两次 EPERM，说明对方仍持有句柄，请对方收尾时自行执行或告知我执行）。
+  - **风险声明**：chat.js 在被清零前最后保存是 23:00:33，21:19 之后~23:00 之间若还有未在 WORKLOG 登记的 chat.js 改动则不可知、可能丢失；请双方下次开工前真机冒烟聊天页（发送/主动发送/邀请/红包钱包编辑/桌面弹窗头像）。
+  - **给构建者**：push 前必须先确认 src/js/chat.js 非空且 node --check 通过，再重新 build 覆盖 23:31/23:45 两版坏产物。
+
+### 2026-08-25（用户反馈：手机端聊天「更多功能」里的小功能（帮我决定/占卜/问问TA等）点输入栏，功能页面被错误挤压到屏幕输入栏一行下方、中间出现大面积无用灰色）
+- [本会话·完成]（**已改 src/js/mobile-adapt.js（AI-B 域，键盘面板停靠）+ src/template.html（AI-B 域，仅注释措辞修复）+ 新专项 tools/verify-more-panel-kb.mjs 5/5；已构建（23:0x, sw: mochi-mt8qxxxx）+ 布局 verify 10/10 + 键盘回归 verify-android-kb 3/3、verify-ask-no-false-dock 4/4、verify-kb-overlay-kernel 10/10、verify-kb-overlays 8/8、verify-kb-dock 12/12、verify-ios-kb-edge-scroll 16/16、verify-scroll-lock-ghost 9/9、verify-chat-scroll-bottom 7/7、verify-feed-root-rescue ✅、verify-eat-menus 12/12、verify-cjian-desk 11/11 全绿；未提交**）。
+  - **根因**：聊天「更多功能」里的小功能半框（帮我决定/占卜/问问TA/红包/拍一拍等）都是 absolute 锚定 .phone 底部（bottom:96px=输入栏上方）。键盘弹出时 mobile-adapt.js 把 .phone 收缩到可视高度（vv 收缩或 58% 推定停靠），底部锚点随 .phone 底移出视口 → 面板整体被推出可视区下方，输入框完全不可见；输入栏下方露出的 .phone 底色=用户看到的「大面积无用灰色」。
+  - **修复（mobile-adapt.js）**：新增 `kbDockPanels()/kbUndockPanels()`——键盘弹起（.phone 收缩）时把当前可见的底部半框改 `position:fixed; bottom:calc(96px+safe-area)` 停靠到可视区底部=输入栏上方，键盘收起/面板关闭时还原 absolute 锚定。接入点：安卓 syncAndroidKb 开关、_aProvDock/Clear、轮询 _aKb 恢复、focusout 400ms 恢复、visibilitychange 切后台；iOS syncIosKb 开关、restoreKb、_iProvDock/Clear。真机上 fixed bottom 元素会被系统自动顶到键盘上方（_probe-fixed-kb 实测 pb=400=vv 底），输入框始终可见。
+  - **⚠️ 顺手修复了构建产物隐藏炸弹（重要）**：template.html 两处 HTML 注释正文里写了字面量 `<script>`（「必须放在 <script> 之前」），HTML 解析器遇到注释里的 `<script>` 会退出注释态进入脚本解析态，把注释后的大段 HTML 当 JS 吞掉 → 整页脚本区被破坏、body 只剩一个错误 `<script src="audio.js">`（本机无头 + 某 Chrome 组件扩展下复现：页面完全不渲染）。已把两处注释改为「脚本标签」措辞。**此问题存在于所有历史构建产物，建议构建者知悉**。
+  - 真机确认点：更多功能→帮我决定/占卜/问问TA→点面板内输入框弹键盘→面板完整停靠在输入栏上方、输入框可见、无灰底；收键盘后面板复原在输入栏上方。
+
+### 2026-08-25（新功能：喝水概率触发梦角催喝水发进聊天 + 字卡库【系统预设字卡】喝水 tab 新增「梦角催喝水」分组）
+- [本会话·完成]（**已改 src/js/default-cards-data.js + src/js/p2-features.js（均 AI-A 域，开工时两文件均 clean 无并行冲突）+ 新专项 tools/verify-water-chat.mjs 18/18；已构建（22:57, sw: mochi-mt8sgyxa）+ 布局 verify 10/10 + 回归 verify-cc-scope 27/27、verify-ta-invite 36/0 全绿；未提交**）。
+  - **需求**：① 喝水功能概率触发梦角提醒喝水，并把字卡直接发送到聊天里提醒；② 新增的喝水字卡放字卡库【系统预设字卡】新增分组供查看。
+  - **触发设计（两层判定共用一套频率键 water-chat：冷却 50 分钟 + 每日最多 4 次，taChime 统一管）**：
+    1. **前台定时掷骰** `window.waterChimeTick`——应用在前台期间每 8 分钟判一次：页面可见 + 今日还没喝够（count<goal）+ 频率控制 + 基础 22% 概率（深夜 0-6 点降 8%、清晨 6-9 点 15%，半夜不吵人）；命中即把字卡发进聊天。启动首 8 分钟不触发，防开屏连发。
+    2. **打开喝水页时** `waterMaybeRemind` 内独立分支——距上次进入>2 小时且未达标时 35% 概率也发一条进聊天（与原「他视角温柔提醒」桌面浮字并存互不影响）。
+  - **发送实现** `waterTaChatSend`：从「梦角催喝水」池抽一张（libPool 同源 + dc-off-water:* 逐张开关过滤），尾巴附今日进度「（还差 N 杯）」，taFit 按联系人性别替换措辞后走 `window.chatAddIn` 发送——自动获得未读数 +1 与桌面横幅/后台系统通知联动（chat.js addIn 现成链路），不在聊天页也能被提醒。
+  - **字卡库新分组**：`DEFAULT_CARD_DATA.water` 新增第 6 组「梦角催喝水」（9 条话术），【系统预设字卡 → 喝水】tab 的分组条/列表自动出现该组，可逐张开关（关掉的不参与抽取，全关回退内置兜底 DEF_WATER_CHAT_REMIND）。
+  - 验证：verify-water-chat 18/18（A 组静态接线 ×4；B 组运行时：字卡库渲染新分组/强制命中 tick 发送一次且文案来自新池/进度尾巴正确/未读联动/50 分钟冷却内不重发/每日上限 4 次/喝够后不再催/打开喝水页路径发送+浮字并存）。真机确认点：正常使用几分钟到几十分钟内偶尔收到 TA 发来的催喝水聊天消息（横幅或未读角标）；点开字卡库→系统预设→喝水能看到「梦角催喝水」组并可逐张关；把某几条关掉后不再抽到它们。
+  - **[v2·同会话追加]（用户反馈：不用完全按打卡来设计，有时候懒得打卡）**：重构触发条件不再强绑打卡进度——
+    1. **定时掷骰去掉「未达标」硬门槛**：懒得打卡（count=0）也照常来催；
+    2. **进度尾巴只在「今天记过杯数且确实没喝够」时附**（count>0 且 count<goal），一口没记不妄下判断（不再出现「还差 8 杯」冤枉句）；打开喝水页路径同步放宽（距上次>2h 即判定，达标降为约 9% 概率）；
+    3. **已打卡达标改发「喝够夸奖」池、概率降到 1/4**（偶尔来夸一句不打扰），共用同一频率键防刷屏；
+    4. **新增静默开关语义**：「梦角催喝水」整组逐张关光 = 明确不想被打扰，直接不发（不回退内置兜底池，waterChatGroupAllOff 守卫两处触发点都生效）。
+    - 概率自评（回复用户「合理吗」）：结构上由 冷却50分钟+每日4次 主导节奏，22% 基础概率决定活跃期首催约半小时内到来、之后至少隔 50 分钟一条——情侣日常「偶尔被惦记」密度合适；若嫌多可整组关光或后续把 dailyMax 调 3。深夜/清晨自动降档。
+    - verify-water-chat 升级 24/24 全绿（新增：0 杯照常催且无尾巴/达标改发夸奖无尾巴/整组关光静默/A 组静态断言同步）；重新构建（23:12, sw: mochi-mt8t0bw8）+ 布局 verify 10/10。真机确认点不变，另加：完全不打卡时 TA 照样偶尔来催且消息不带「还差 N 杯」；把新分组 9 条全关后彻底安静。
+  - ⚠️ **构建扫入说明（提交者必读）**：22:57 / 23:12 两次构建收口了并行会话在我编辑期间已保存的改动（git status 显示 chat-pages.css / market.css / home.css / contacts.js / default-cards.js / gift-shop.js / memo-arc.js / period.js / reply-settings.js / ta-invite.js / template.html / tools 若干等共 26 文件未提交态）。本会话只改了上述两个 AI-A 域文件 + 新增专项脚本；其余文件的完整性请按协议 git diff 自查后再一次性提交。
+
+### 2026-08-25（用户需求：【此间】梦角按桌面分开 + 页内直接切换别的梦角 + 「全部」总览模式）
+- [本会话·完成]（**已改 src/js/cjian.js + src/js/memo-arc.js + src/css/chat-pages.css（均 AI-A 域，未动 template.html/contacts.js/tabs.js/build.mjs）+ 重写 tools/verify-cjian.mjs 48/48 + verify-cjian-desk 11/11 + verify-memo-arc 16/16 + 布局 verify 10/10 全绿；已构建（22:55, sw: mochi-mt8se2ii）；未提交**）。
+  - **按桌面分离**：梦角名单/状态从全局根键迁到联系人命名空间 `xy-home-v2:<cid>:cjian-roster|cjian-state|cjian-seeded`——每个桌面有自己的梦角（首次自动用该桌 TA 名播种）；存量旧版全局键启动时一次性**合并迁移**进当前桌面（按 id 并集去重+带状态，幂等，绝不丢数据），随后清根键；新键形命中 contacts.js 命名空间排除规则，无需改 EXCLUDE。状态随机刷新/突然靠近/聊天互动打点改为遍历所有桌面（后台也在流动），打点记在当前桌面。
+  - **页内直接切换**：`#cj-main` 顶部新增桌面分组 chips 条（`.cj-groups`，JS 动态注入不动模板）——每桌面一枚 +「全部」；点别的桌 chip 不退出此间直接看那桌梦角（自动播种）。详情页新增 **‹ 上一位 / 下一位 ›**（`.cj-d-nav`，跨桌面循环切换，显示位次 n/N）+ 来源桌标签 `.cj-d-src`；「去找TA」在非当前桌时先 setActiveContact 再进聊天。
+  - **「全部」总览模式**：一次看完全部梦角——按桌面分组头（`.cj-group-head` 名字+人数）列出各桌卡片与实时状态；感知此间/今日时间轴范围跟随当前视图（总览=全桌合并）。总览模式下梦角管理先进「选桌面」阶段，增删改名作用于所选桌自己的名单。
+  - **memo-arc 联动**：梦角档案仍全局互通——roster() 改为合并读取所有桌面的 cjian-roster（按 id 去重）+ 旧根键兜底（兼容备份恢复），档案键 narc-* 不变。verify-memo-arc 预置数据改为置空 default 桌自动播种名单（xyStore 读内存缓存优先，removeItem 无效须 set '[]'）。
+  - ⚠️ **给构建者/对方**：22:55 这次构建把工作区里另一会话的未提交 src（chat.js/chat-settings.js/gift-shop.js/period.js/ta-invite.js/market.css/default-cards*.js/group-chat.js/p2-features.js/reply-settings.js/template.html 等）一并收口进产物——提交前请对方确认其改动已保存完整，并按协议 git diff 自查分批提交。
+  - **稳定性加固（同轮二建 23:06, sw: mochi-mt8ssboh）**：① 修复新梦角初始状态不落盘的遗留隐患——原 ensureState 只在内存临时对象里生成初始状态，refreshStates 的 dirty 不含"新建"，导致新梦角状态在 30s 心跳重渲染时反复重抽（列表/详情/今日轴各滚各的）；现在新建即落盘，verify-cjian 新增回归「初始状态已落盘（30s 重渲染不重抽）」49/49。② 迁移时机加固——IDB 回填（mochi-restore-done）晚于启动时旧全局键会迟到，监听该事件幂等重跑一次 migrateSplit（并集去重无副作用），升级当天即可见老梦角。
+  - 真机确认点：① A 桌进此间只见 A 梦角，顶部 chips 点 B 桌名直接切看 B 梦角（B 桌首次自动出现以 B TA 命名的梦角）；② 点「全部」一屏分组看完全部梦角状态；③ 详情页「下一位」能连着翻完所有桌的梦角不回列表；④ 非当前桌的梦角点「去找TA」会切到对应桌面再进聊天；⑤ 老用户升级后原梦角出现在升级时所在桌面，档案页仍能看到全部梦角。
+
+### 2026-08-25（用户反馈：联系人已在【聊天互动】换过头像，桌面弹窗横幅仍显示旧头像）
+- [本会话·完成]（**已改 src/js/chat.js（AI-A 域）+ 新专项 tools/verify-desk-popup-avatar.mjs 7/7；已构建（22:34, sw: mochi-mt8rnlol）+ 布局 verify 10/10 + 回归 verify-avatar-decouple 15/15 全绿；未提交**）：v3.12.x 头像解耦后【聊天互动】换头像只写聊天专用键 cs-avatar-partner（桌面键 avatar-partner 独立不再跟随），后台系统通知（bg-keep.js）/通话（call.js）/群聊均已改为「先读 cs 键、未设回退桌面键」，但前台桌面弹窗横幅 showDeskPopup 漏改——chat.js 里 `fillAvatar(deskMsgAv,'avatar-partner')` 只读桌面键 → 弹窗一直显示换头像前的旧图。
+  - **修复**：改为 `fillAvatar(deskMsgAv, 'cs-avatar-partner')`（fillAvatar 内部已有回退：cs 未设时读 avatar-partner），与 bg-keep/call/group-chat 完全同口径；opts.av 跨桌面发布者头像优先级、isHidden 后台分支行为均不变。
+  - ⚠️ **构建扫入说明**：本次 build 收口了并行会话已保存的 chat-settings.js（气泡 CSS ce-box 读空兜底 cssReadVal + IDB 回填补应用）、group-chat.js（同款兜底 + mochi-restore-done 重载）、cjian.js（stopPropagation 移到 editing 判断后）、template.html（注释措辞）——均为完整成块改动，产物已核对包含；提交时请一并自查。
+  - 真机确认点：【聊天互动】给 TA 换一个新头像 → 回桌面等一条新消息弹横幅，弹窗左侧应是新头像（不再停留旧桌面头像）；没单独设过聊天头像的联系人弹窗仍显示桌面头像（回退不变）；朋友圈通知头像仍用发布者头像。
+
+### 2026-08-25（用户反馈：荣耀200Pro+Edge——聊天设置输入气泡 CSS 应用后，退出重进就没了/变回原始气泡）
+- [本会话·完成]（**已改 src/js/chat-settings.js + src/js/group-chat.js（均 AI-A 域，跨域改动请知悉）+ 新专项 tools/verify-bubble-css.mjs 8/8 全绿；已构建（22:35, sw: mochi-mt8roast）+ 布局 verify 10/10 + verify-cs-music-hide 全绿；未提交**）：气泡 CSS 持久化在「值只剩 IndexedDB 副本」时丢失。
+  - **根因（无头复现 tools/verify-bubble-css.mjs C1）**：手机浏览器 LS 写失败（配额满/被清理）时 xyStore 只落 IDB+内存缓存；重进后 boot 的 applyCss() 跑在 idbRestore 回填**之前**读空 → 不注入样式；而 mochi-restore-done 兜底只调了 applyFont/applyProfile **漏了 applyCss**、启动 idbGet 补读清单也只有 cs-bg/cs-font 没有气泡 CSS → 之后无任何路径补应用（普通重进不触发 contact-switched）→ 回退默认气泡。壁纸/字体早有同款双兜底，气泡 CSS 是漏网之鱼。正常 LS 路径全链路（A 组）本来就通，故仅部分设备/时机复现。
+  - **修复**：① chat-settings.js 启动 idbGet 兜底清单补 `cs-bubble-css`（补读→store.set→applyCss）；② mochi-restore-done 处理器补 `applyCss()`（幂等）；③ 两处「应用」按钮读值加 ce-box 读空兜底（mail/music/period 同款先例：代理读空但盒子仍有内容时直读盒子，防存空串丢样式；真清空语义不变）；④ group-chat.js 群聊美化 gc-beauty 同病同治——restore-done 后 gcBeautyLoad+applyGcBeauty 重载重应用 + gc-css-ok 读空兜底。
+  - ⚠️ 构建扫入说明：22:35 构建收口了并行会话已保存改动（home.css/personalize.js 桌面移动模式横滑翻页，见上条其自述 22:31 已构建过一次；另有 template.html/cjian.js/chat.js 22:30-22:31 的保存改动一并扫入）。提交前请按协议 git diff 自查范围。
+
+### 2026-08-25（用户反馈：手机端桌面长按进装修/移动模式时误触手机复制文字，拖动组件/图标位置失效；且装修/移动模式下无法滑动桌面 3 页）
+- [本会话·完成]（**已改 src/css/home.css + src/js/personalize.js（AI-B 域）+ 新专项 tools/verify-desk-move-swipe.mjs 8/8 全绿，已构建（22:31, sw: mochi-mt8rk30k）+ verify 10/10 + verify-cjian-desk 11/11 + verify-eat-menus 12/12 全绿；未提交**）。
+  - **问题一：长按进装修模式误触手机复制文字，拖不动**——长按按住期间系统对按住点文字/图片弹原生「复制/保存」菜单（Android 文字选中气泡/图片上下文菜单、iOS callout），菜单一弹就抢占触摸序列，pointermove 被系统接管 → 拖拽中断。**修复**：① `home.css` 给 `#page-phone` 加 `user-select:none; -webkit-user-select:none; -webkit-touch-callout:none`；② `personalize.js` 进移动模式时 `getSelection().removeAllRanges()` 清残留选区 + `#page-phone` 全时 `contextmenu` preventDefault（Android 图片菜单走 contextmenu）。
+  - **问题二：装修/移动模式下无法滑动桌面 3 页**——根因①容器限 `pan-y` 禁横滑；根因②移动模式下组件 `touch-action:none`（为拖拽），而桌面 3 页组件密集（每页 12 个 widget）几乎铺满，手指按在组件上横滑被 none 拦截 → 滑不动。**修复**：① 容器改 `pan-x pan-y`（空白处原生横滑）；② 组件保持 none（保拖拽），但 `personalize.js` 加**短按横滑翻页判定**——移动/装修模式下手指按下，短按后立即横向位移>12px 判为翻页（`deskGo` 吸附），长按超过 350ms 或纵向位移为主判为拖拽。纯装饰模式（设置入口进）同样生效。
+  - 真机确认点：① 桌面长按图标不再弹复制气泡、可拖拽换位；② 长按桌面图片/头像不再弹保存/复制菜单；③ 装修/移动模式下手指在图标/组件上快速横滑可翻页、长按图标可拖动；④ 日常点图标/卡片功能不受影响。
+
+### 2026-08-25（新功能：吃什么 多菜单管理 + 转盘切换菜单）
+- [本会话·完成]（**已改 src/js/p2-features.js + src/css/chat-pages.css（AI-A 域）+ src/js/mobile-adapt.js（AI-B 域，仅 FLOAT_SELECTORS 末尾加 '#eat-switch-overlay'，与并行摩托罗拉键盘修复不冲突）+ 新专项 tools/verify-eat-menus.mjs 12/12 全绿；已构建（sw: mochi-mt8p4790）+ 布局 verify 10/10 全绿；未提交**）：「吃什么」从单菜单升级为多菜单。
+  - **需求**：用户要能保存多个完整菜单，点击切换菜单时用转盘选（菜单名当扇区，转一下落在哪个切到哪个）。
+  - **数据**：新增 `eat-menus`=`[{name,dishes}]` + `eat-cur-idx`（按联系人命名空间存）；旧 `eat-menu`/`eat-cards` 首次进入自动迁移为「我的菜单」（迁移后清旧键）；无任何数据时返回「默认菜单」（DEF_EAT_DISHES 20 道）。
+  - **UI**：主页顶部加「当前菜单：xxx + 切换菜单」栏；切换浮层 = 独立 canvas 转盘（菜单名当扇区 200px，复用 eatDrawWheelCore 绘制 + 独立状态变量 eatSwAngle 等，3.2s easeOutCubic 旋转 + 指针 pop + 高亮 + 震动，转完自动切换并关闭）；编辑菜单面板顶部加菜单 chips（点击切换编辑目标）+ 新建/重命名/删除按钮（走 openModal）；「填入默认菜品」按钮把 DEF_EAT_DISHES 填入 textarea（点保存生效）。
+  - **转盘绘制重构**：抽出 `eatDrawWheelCore(canvas, dishes, hlIdx, angle)` 供主页转盘 + 切换浮层复用，原 `eatDrawWheel` 改为薄封装。
+  - 真机确认点：进吃什么看到当前菜单名 + 转盘；点「切换菜单」弹转盘选菜单（≥2 菜单时，仅 1 个时 toast 提示）；编辑菜单里新建/重命名/删除菜单 + chips 切换编辑；旧用户首次进入自动迁移为「我的菜单」。
 
 ### 2026-08-25（用户反馈：摩托罗拉G100+雨见——发完消息键盘收回后输入框停留几秒才回底；切后台再切回来也复现）
 - [本会话·完成]（**已改 src/js/mobile-adapt.js（AI-B 域），已构建（21:19, sw: mochi-mt8ozgqf）+ verify 10/10 全绿；未提交**）：v3.13.x 的 58% 推顶自愈用 `Date.now() - _aLastAct > 2200` 兜底摩托罗拉G100/雨见 focusout/vv.resize 漏触发，但 2.2s 仍被用户感知为"停留几秒"；切后台 setInterval 被节流，切回来才自愈 → 残留。
@@ -2365,3 +2518,11 @@ ode --check ͨ�� + verify 10/10 + verify-desk-reset-period 10/10����
   - **② 位置面板里不显示字卡**：删掉 `renderLocPanel` 的发卡区（TA发位置卡词库/组合开关/自定义/彩蛋/添加按钮）及其绑定；保留方位感知区（感知圆/明细/感知一下/结果）、感知描述、此刻位置、时间线、问TA一声。字卡只在字卡库「TA在身边位置卡」管理页管理；TA 自动发位置卡/问TA一声回位置/光点动效等后台逻辑保留。
   - **验证**：CDP——loc-panel 不在任何 .page 内、桌面查岗页打开面板可见(390)且聊天页隐藏、面板无 .loc-card/.loc-send-area、保留问TA/时间线/感知/方位感知、聊天入口仍可用、无 JS 异常。布局 verify 10/10。临时脚本已删。
   - **未提交**，等待统一构建提交。
+### 2026-08-25 23:5x（⚠️ 紧急事故：src/js/chat.js 被清零 + 连续两次构建把空文件扫进产物）
+- [本会话·事故记录与恢复]（**未改任何功能代码**；chat.js 当前内容由对方会话于 23:58 恢复，我方已确认其含 clearChatInput/rpEditWallet/taInviteDraw/startAskKbRefresh/cjianNoteChat/cs-avatar-partner 桌面弹窗修复，仅缺「贴贴邀请 cuddle」一处已知增量）。
+  - **时间线**：23:29:40 chat.js 变成 0 字节（谁清的不明，恰在本会话首次编辑尝试失败前后）；**23:31:37 与 23:45:xx 各有一次 
+ode build.mjs**，把空 chat.js 扫进 index.html/sw.js/version.json——**这两版产物缺整个聊天模块（无 tryAutoSend/scheduleAutoSend/addIn 等），绝对不能 push 部署**。TEMP 里 mochi-* 无头缓存已全部被 23:31+ 版本覆盖，无法从缓存找回更新版本。
+  - **已做**：① 从 git HEAD(9928715) 内嵌产物（21:19 构建）成功剖出完整 chat.js（含全部已知修复）作为兜底副本（%TEMP%\chat_recovered.js，235KB）；② 对方 23:58 已写入更好的带格式恢复版（317KB），本会话核对功能清单后停手不再覆写；③ 唯一确定缺失的增量=贴贴邀请（cuddle：CUDDLE_DECLINE/CUDDLE_REPLIES/KIND_META.cuddle/openInvitePanelFor 分支/sendTaInvite declinePool/openInviteConfirm 第 4 参），**补丁脚本已备好：
+ode tools/patch-chat-cuddle.mjs**（幂等断言，仅在文件未被锁定时可写——刚才两次 EPERM，说明对方仍持有句柄，请对方收尾时自行执行或告知我执行）。
+  - **风险声明**：chat.js 在被清零前最后保存是 23:00:33，21:19 之后~23:00 之间若还有未在 WORKLOG 登记的 chat.js 改动则不可知、可能丢失；请双方下次开工前真机冒烟聊天页（发送/主动发送/邀请/红包钱包编辑/桌面弹窗头像）。
+  - **给构建者**：push 前必须先确认 src/js/chat.js 非空且 node --check 通过，再重新 build 覆盖 23:31/23:45 两版坏产物。

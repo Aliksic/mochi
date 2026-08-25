@@ -263,6 +263,12 @@
   }
   gcBeautyLoad();
   applyGcBeauty();
+  // v3.14.x：IDB 回填完成后重载+重应用——gc-beauty 若只存于 IndexedDB（LS 写失败/被清理），
+  // boot 时 load 读空走默认 → 重进后退回默认美化（与 chat-settings 气泡 CSS 同款兜底）
+  document.addEventListener('mochi-restore-done', function () {
+    try { gcBeautyLoad(); } catch (e) {}
+    try { applyGcBeauty(); } catch (e) {}
+  });
   // v3.11.x：深色/浅色切换时重算默认配色（html data-theme 属性变化即重写 page 级内联变量）
   try {
     new MutationObserver(() => { try { applyGcBeauty(); } catch (e) {} })
@@ -1198,7 +1204,18 @@
       toast('已清空气泡样式');
     });
     document.getElementById('gc-css-ok').addEventListener('click', () => {
-      gcBeautySet('css', (document.getElementById('gc-css-input').value || '').trim());
+      // v3.14.x：安卓 ce-box 读空兜底（同 chat-settings cssReadVal，防存空串丢样式）
+      const el = document.getElementById('gc-css-input');
+      let v = '';
+      try { v = el ? (el.value || '') : ''; } catch (e) {}
+      if (!String(v).trim() && el) {
+        try {
+          const box = el.__ceBox || (el.parentNode && el.parentNode.querySelector('.ce-box[data-for="' + (el.id || '') + '"]'));
+          const t = box ? (box.innerText || box.textContent || '') : '';
+          if (String(t).trim()) v = String(t);
+        } catch (e) {}
+      }
+      gcBeautySet('css', String(v).trim());
       document.getElementById('tc-mask').hidden = true;
       toast('气泡样式已应用');
     });

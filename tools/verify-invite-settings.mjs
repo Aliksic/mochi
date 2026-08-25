@@ -1,10 +1,12 @@
-// ===== 专项验证：回复设置「其他」tab + 联系人主动邀请（v3.9.x） =====
-// 链路：设置页「回复设置」有 5 个 tab（聊天/群聊/信箱/朋友圈/其他）→
-//       其他面板含 猜拳/游戏 邀请开关+概率（默认开，15%/10%）→
+// ===== 专项验证：回复设置「其他」tab + 联系人主动邀请（v3.9.x / v3.14.x 更新） =====
+// 链路：设置页「回复设置」有 6 个 tab（聊天/群聊/信箱/朋友圈/查岗/其他）→
+//       其他面板含 猜拳/游戏/贴贴 邀请开关+概率（默认开，8%/5%/5%，v3.14.x 加贴贴门）→
 //       replyCfg 默认值正确 → 开关关闭后落库并生效 → 聊天页可见时
 //       tryActiveInvite 按概率发邀请消息并弹窗让我同意/拒绝，同意才打开对应半框（猜拳 / Pong / 贪吃蛇）、
 //       拒绝则发一条拒绝消息；半框不再自动打开 →
-//       开关全关时不发邀请（走普通主动消息）→ 全程无 JS 异常。
+//       三类开关全关时不发邀请（走普通主动消息）→ 全程无 JS 异常。
+// 注：默认值断言曾写 15%/10%（v3.9.x 初版），实际 v3.9.x 后期已降至 8%/5%，
+//     本次随贴贴门一并修正；第 5 节猜拳同意链路修复依赖 chat.js window.openRpsPanel 导出（v3.14.x）。
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:http';
 import { readFileSync, statSync } from 'node:fs';
@@ -147,18 +149,19 @@ check('点击其他 tab 后面板显示', panelShown === true);
 const ctl = JSON.parse(await evalJs("(function(){var rows=[].slice.call(document.querySelectorAll('#page-reply-settings .gs-panel[data-rpanel=\"other\"] .stepper')).map(function(st){return {k:st.dataset.k,v:st.querySelector('input.stp-val')?st.querySelector('input.stp-val').value:null};});var rpsEn=document.getElementById('ai-rps-en');var gameEn=document.getElementById('ai-game-en');var title=[].slice.call(document.querySelectorAll('#page-reply-settings .gs-panel[data-rpanel=\"other\"] .gs-title')).map(function(t){return t.textContent;});return JSON.stringify({steppers:rows,rpsEn:rpsEn?rpsEn.checked:null,gameEn:gameEn?gameEn.checked:null,title:title});})()") || '{}');
 const vmap = {};
 (ctl.steppers || []).forEach(s => { vmap[s.k] = s.v; });
-check('其他面板含 2 个 stepper（猜拳/游戏邀请概率）', vmap['ai-rps-prob'] !== undefined && vmap['ai-game-prob'] !== undefined, 'keys=' + Object.keys(vmap).join(','));
-check('默认值：ai-rps-prob=15 / ai-game-prob=10', vmap['ai-rps-prob'] === '15' && vmap['ai-game-prob'] === '10', vmap['ai-rps-prob'] + '/' + vmap['ai-game-prob']);
+check('其他面板含 3 个 stepper（猜拳/游戏/贴贴邀请概率）', vmap['ai-rps-prob'] !== undefined && vmap['ai-game-prob'] !== undefined && vmap['ai-cuddle-prob'] !== undefined, 'keys=' + Object.keys(vmap).join(','));
+check('默认值：ai-rps-prob=8 / ai-game-prob=5 / ai-cuddle-prob=5', vmap['ai-rps-prob'] === '8' && vmap['ai-game-prob'] === '5' && vmap['ai-cuddle-prob'] === '5', vmap['ai-rps-prob'] + '/' + vmap['ai-game-prob'] + '/' + vmap['ai-cuddle-prob']);
 check('默认值：猜拳/游戏邀请开关均开启', ctl.rpsEn === true && ctl.gameEn === true, 'rps=' + ctl.rpsEn + ' game=' + ctl.gameEn);
 check('面板有「联系人主动邀请」分组标题', (ctl.title || []).length === 1 && ctl.title[0].indexOf('主动邀请') >= 0, JSON.stringify(ctl.title));
 
 // ==================== 3. replyCfg 默认值 ====================
 const cfg0 = {
   rpsEn: await cfgVal('ai-rps-en'), rpsProb: await cfgVal('ai-rps-prob'),
-  gameEn: await cfgVal('ai-game-en'), gameProb: await cfgVal('ai-game-prob')
+  gameEn: await cfgVal('ai-game-en'), gameProb: await cfgVal('ai-game-prob'),
+  cuddleEn: await cfgVal('ai-cuddle-en'), cuddleProb: await cfgVal('ai-cuddle-prob')
 };
-check('replyCfg 默认值：ai-rps-en=1 / ai-rps-prob=15 / ai-game-en=1 / ai-game-prob=10',
-  cfg0.rpsEn === 1 && cfg0.rpsProb === 15 && cfg0.gameEn === 1 && cfg0.gameProb === 10, JSON.stringify(cfg0));
+check('replyCfg 默认值：rps 1/8、game 1/5、cuddle 1/5',
+  cfg0.rpsEn === 1 && cfg0.rpsProb === 8 && cfg0.gameEn === 1 && cfg0.gameProb === 5 && cfg0.cuddleEn === 1 && cfg0.cuddleProb === 5, JSON.stringify(cfg0));
 
 // ==================== 4. 开关关闭 → 落库生效 ====================
 await setCfg('ai-game-en', 0);
@@ -238,9 +241,21 @@ check('点「拒绝」+确定后发出一条拒绝消息（.msg-out +1）', outA
 check('点「拒绝」+确定后半框未打开', gamePanelClosed === true);
 
 // ==================== 7. 全部关闭 → 不触发邀请 ====================
-await setCfg('ai-rps-en', 0); await setCfg('ai-game-en', 0);
+// v3.14.x：贴贴门独立（ai-cuddle-en），三类全关才算「邀请全关」
+await setCfg('ai-rps-en', 0); await setCfg('ai-game-en', 0); await setCfg('ai-cuddle-en', 0);
 const offRet = await evalJs("(function(){return window.tryActiveInvite(window.replyCfg());})()");
-check('猜拳/游戏开关全关时不触发邀请（返回 false）', offRet === false, String(offRet));
+check('猜拳/游戏/贴贴开关全关时不触发邀请（返回 false）', offRet === false, String(offRet));
+// 仅贴贴开时抽到的是贴贴卡（固定随机 0 → 100% 命中）
+await setCfg('ai-cuddle-en', 1); await setCfg('ai-cuddle-prob', 100);
+const cudRet = await evalJs("(function(){return window.tryActiveInvite(window.replyCfg());})()");
+let cudMsg = '';
+for (let i = 0; i < 20; i++) {
+  cudMsg = await evalJs("(function(){var bs=document.querySelectorAll('#chat-body .msg-poke');if(!bs.length)return '';return bs[bs.length-1].textContent||'';})()") || '';
+  if (cudMsg.indexOf('贴贴') >= 0 || cudMsg.indexOf('牵') >= 0 || cudMsg.indexOf('抱') >= 0) break;
+  await sleep(200);
+}
+check('仅贴贴门开时发出贴贴邀请（含贴贴/牵手/抱话术）', cudRet === true && (cudMsg.indexOf('贴贴') >= 0 || cudMsg.indexOf('牵') >= 0 || cudMsg.indexOf('抱') >= 0), cudMsg);
+await setCfg('ai-cuddle-prob', 5);
 
 await restoreRandom();
 

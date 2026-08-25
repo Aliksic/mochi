@@ -1,18 +1,38 @@
-// ===== 此间：梦角世界时间与在场感知（v3.13.x 重设计） =====
+// ===== 此间：梦角世界时间与在场感知（v3.13.x 重设计；v3.14.x 按桌面分组） =====
 // 核心哲学：
 //   时间不是纯随机——梦角世界时间 = 现实时间 + 偏移，连续流动（按十二时辰+初/正展示）；
 //   刷新机制本质是随机——状态不是模拟出来的，是每个梦角【自己随机选择】的：
 //   冷却过了就重新选一次（受世界时辰加权 / 最近互动加权约束，但选择本身是随机抽取）。
 // 双维状态：在场（很近/附近/遥远/感觉不到/离开）+ 空闲（有空/有事/忙着/休息/睡着/未知）。
-// 数据存根命名空间 xy-home-v2:cjian-*（全局共享），键已在 contacts.js EXCLUDE 登记。
+// v3.14.x 分组：梦角名单/状态按桌面（联系人）命名空间分离——每个桌面有自己的梦角，
+//   页内顶部 chips 可直接切换查看别的桌面的梦角，「全部」总览一次看完全部梦角状态。
+//   存量全局键迁移进当前桌面（合并去重，绝不丢数据）；梦角档案（memo-arc）改为
+//   合并读取各桌面名单，档案仍全局共享不受影响。键形 xy-home-v2:<cid>:cjian-*，
+//   命中 contacts.js 命名空间排除规则，不会被 migrateLegacy 误迁。
 (function () {
   const G = 'xy-home-v2';
   const ROSTER_KEY = 'cjian-roster';
   const STATE_KEY = 'cjian-state';
   const SEED_KEY = 'cjian-seeded';
+  const ALL = '__all__'; // 总览模式：一次查看全部桌面的全部梦角
 
   function rootStore() {
     try { return window.xyStore(G); } catch (e) { return null; }
+  }
+  function curCid() { return window.__activeCid || 'default'; }
+  function storeOf(cid) {
+    try { return window.xyStore(G + ':' + (cid || 'default')); } catch (e) { return null; }
+  }
+  function contacts() {
+    try {
+      const a = window.getContacts ? window.getContacts() : null;
+      if (Array.isArray(a) && a.length) return a;
+    } catch (e) {}
+    return [{ id: 'default', name: '默认' }];
+  }
+  function contactName(cid) {
+    const c = contacts().find(x => x.id === cid);
+    return (c && c.name) || '默认';
   }
   function toast(t) { if (typeof window.toast === 'function') window.toast(t); }
   function rand(min, max) { return min + Math.floor(Math.random() * (max - min + 1)); }
@@ -68,59 +88,86 @@
     unknown: { label: '未知', desc: '暂时不知道TA在做什么' }
   };
 
-  // ---- 存储 ----
-  function loadRoster() {
+  // ---- 存储（按桌面命名空间分离） ----
+  function loadRoster(cid) {
     try {
-      const s = rootStore();
+      const s = storeOf(cid);
       if (!s) return [];
       const v = s.get(ROSTER_KEY);
       if (v) {
         const a = JSON.parse(v);
-        if (Array.isArray(a)) return a.filter(x => x && x.name);
+        if (Array.isArray(a)) return a.filter(x => x && x.name && x.id);
       }
     } catch (e) {}
     return [];
   }
-  function saveRoster(list) {
-    try { rootStore().set(ROSTER_KEY, JSON.stringify(list)); } catch (e) {}
+  function saveRoster(list, cid) {
+    try { storeOf(cid).set(ROSTER_KEY, JSON.stringify(list)); } catch (e) {}
   }
-  function loadState() {
+  function loadState(cid) {
     try {
-      const s = rootStore();
+      const s = storeOf(cid);
       if (!s) return {};
       const v = s.get(STATE_KEY);
       if (v) { const o = JSON.parse(v); if (o && typeof o === 'object') return o; }
     } catch (e) {}
     return {};
   }
-  function saveState(st) {
-    try { rootStore().set(STATE_KEY, JSON.stringify(st)); } catch (e) {}
+  function saveState(st, cid) {
+    try { storeOf(cid).set(STATE_KEY, JSON.stringify(st)); } catch (e) {}
   }
   function makeId() { return 'd' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36); }
 
-  // 首次使用：用当前联系人的名字种下第一个梦角
-  function seedIfEmpty() {
+  // ---- 存量迁移：旧版全局键 → 当前桌面（合并去重，幂等，绝不丢数据） ----
+  // 老数据本就是用当时激活桌面 TA 名播种的一份数据，归入当前桌面最贴近原意；
+  // 若本桌面已有名单（如 IDB 回填迟到导致迁移跑过又见到根键），按 id 并集合入，
+  // 之后清掉根键——memo-arc 已改为合并读取各桌面名单并兼容根键残留，不受影响。
+  function migrateSplit() {
+    const r = rootStore();
+    if (!r) return;
+    let gr = null, gs = null;
+    try { const v = r.get(ROSTER_KEY); gr = v ? JSON.parse(v) : null; } catch (e) {}
+    try { const v = r.get(STATE_KEY); gs = v ? JSON.parse(v) : null; } catch (e) {}
+    const gseed = r.get(SEED_KEY);
+    const grArr = Array.isArray(gr) ? gr.filter(x => x && x.name && x.id) : [];
+    const gsObj = (gs && typeof gs === 'object') ? gs : {};
+    if (!grArr.length && !Object.keys(gsObj).length) { if (gseed) r.remove(SEED_KEY); return; }
+    const cid = curCid();
+    const s = storeOf(cid);
+    if (!s) return;
+    const nsList = loadRoster(cid);
+    const have = {};
+    nsList.forEach(x => { have[x.id] = 1; });
+    const add = grArr.filter(x => !have[x.id]);
+    if (add.length) {
+      const st = loadState(cid);
+      add.forEach(x => { if (gsObj[x.id]) st[x.id] = gsObj[x.id]; });
+      saveRoster(nsList.concat(add), cid);
+      saveState(st, cid);
+    }
+    if (gseed || nsList.length || add.length) s.set(SEED_KEY, '1');
+    r.remove(ROSTER_KEY); r.remove(STATE_KEY); r.remove(SEED_KEY);
+  }
+
+  // 首次使用：每个桌面各自种下自己的第一个梦角（用该桌面 TA 的名字）
+  function seedIfEmpty(cid) {
     try {
-      const s = rootStore();
+      const s = storeOf(cid);
       if (!s || s.get(SEED_KEY)) return;
-      const list = loadRoster();
+      const list = loadRoster(cid);
       if (list.length) { s.set(SEED_KEY, '1'); return; }
       let name = '';
       try {
-        const cid = window.__activeCid || 'default';
-        const cs = window.getContacts ? (window.getContacts() || []) : [];
-        const c = cs.find(x => x.id === cid);
-        if (window.storeFor) {
-          const lbl = window.storeFor(cid).get('lbl-partner');
-          if (lbl) name = lbl;
-        }
-        if (!name && c && c.name) name = c.name;
+        const lbl = s.get('lbl-partner');
+        if (lbl) name = lbl;
+        if (!name) name = contactName(cid);
       } catch (e) {}
       list.push({ id: makeId(), name: name || 'TA', offsetMin: 0 });
-      saveRoster(list);
+      saveRoster(list, cid);
       s.set(SEED_KEY, '1');
     } catch (e) {}
   }
+  function ensureAllSeeds() { contacts().forEach(ct => seedIfEmpty(ct.id)); }
 
   // ---- 随机选择核心（基础概率 + 世界时间 + 最近互动；性格不写死） ----
   function presenceWeights(worldHour) {
@@ -184,71 +231,108 @@
     return s;
   }
 
-  // 刷新：梦角自己随机选择——冷却过了就重新选。返回是否有变化。
+  // 刷新：梦角自己随机选择——冷却过了就重新选。遍历【所有桌面】的梦角（后台也在流动）。
   function refreshStates() {
-    const roster = loadRoster();
-    if (!roster.length) return false;
     const now = Date.now();
-    const st = loadState();
-    let dirty = false;
-    roster.forEach(c => {
-      const s = ensureState(c, st, now);
-      const worldHour = new Date(worldNow(c.offsetMin)).getHours();
-      const boost = recentBoost(s, now);
-      if (now - s.sinceA >= s.cdA) {
-        s.a = rollActivity(worldHour);
-        s.sinceA = now;
-        s.cdA = rand(8, 25) * 60000;
-        dirty = true;
-      }
-      if (now - s.sinceP >= s.cdP) {
-        s.p = rollPresence(worldHour, boost);
-        s.sinceP = now;
-        s.cdP = rand(20, 45) * 60000;
-        dirty = true;
-      }
+    let dirtyAny = false;
+    contacts().forEach(ct => {
+      const roster = loadRoster(ct.id);
+      if (!roster.length) return;
+      const st = loadState(ct.id);
+      let dirty = false;
+      roster.forEach(c => {
+        // v3.14.x 修复：新梦角首次生成的初始状态必须落盘——否则状态只存在于本次渲染的
+        // 临时对象里，下次渲染（30s 心跳/重开页面）会重新随机一次，表现为新梦角
+        // 状态每 30 秒无规律跳动，且列表/详情/今日轴各滚各的（老版遗留隐患）
+        const isNew = !st[c.id];
+        const s = ensureState(c, st, now);
+        if (isNew) dirty = true;
+        const worldHour = new Date(worldNow(c.offsetMin)).getHours();
+        const boost = recentBoost(s, now);
+        if (now - s.sinceA >= s.cdA) {
+          s.a = rollActivity(worldHour);
+          s.sinceA = now;
+          s.cdA = rand(8, 25) * 60000;
+          dirty = true;
+        }
+        if (now - s.sinceP >= s.cdP) {
+          s.p = rollPresence(worldHour, boost);
+          s.sinceP = now;
+          s.cdP = rand(20, 45) * 60000;
+          dirty = true;
+        }
+      });
+      if (dirty) { saveState(st, ct.id); dirtyAny = true; }
     });
-    if (dirty) saveState(st);
-    return dirty;
+    return dirtyAny;
   }
   window.cjianRefresh = refreshStates; // 测试/运维钩子
 
   // 低概率小惊喜：长时间没互动且状态久未变化，可能「突然靠近」——不是常规机制
   let lastApproachAt = 0;
   function tickApproach() {
-    const roster = loadRoster();
-    if (!roster.length) return;
     const now = Date.now();
     if (now - lastApproachAt < 20 * 60000) return;
-    const st = loadState();
-    let hit = false;
-    roster.forEach(c => {
-      if (hit) return;
-      const s = ensureState(c, st, now);
-      if (now - s.sinceP < 120 * 60000) return;
-      if (Math.random() >= 0.003) return; // 每个梦角每次刷新约 0.3%
-      s.p = Math.random() < 0.1 ? 'near' : 'nearby';
-      s.sinceP = now;
-      s.cdP = rand(20, 45) * 60000;
-      lastApproachAt = now;
-      hit = true;
+    let hitName = '';
+    contacts().forEach(ct => {
+      if (hitName) return;
+      const roster = loadRoster(ct.id);
+      if (!roster.length) return;
+      const st = loadState(ct.id);
+      let dirty = false;
+      roster.forEach(c => {
+        if (hitName) return;
+        const s = ensureState(c, st, now);
+        if (now - s.sinceP < 120 * 60000) return;
+        if (Math.random() >= 0.003) return; // 每个梦角每次刷新约 0.3%
+        s.p = Math.random() < 0.1 ? 'near' : 'nearby';
+        s.sinceP = now;
+        s.cdP = rand(20, 45) * 60000;
+        lastApproachAt = now;
+        hitName = c.name;
+        dirty = true;
+      });
+      if (dirty) saveState(st, ct.id);
     });
-    if (hit) {
-      saveState(st);
+    if (hitName) {
       toast('……好像有什么靠近了。');
       if (typeof window.renderCjian === 'function') window.renderCjian(false);
     }
   }
 
-  // 聊天互动钩子（chat.js addMsg 调用）
+  // 聊天互动钩子（chat.js addMsg 调用）——记在当前桌面的状态上
   window.cjianNoteChat = function () {
-    try { const st = loadState(); st.__chat = Date.now(); saveState(st); } catch (e) {}
+    try { const cid = curCid(); const st = loadState(cid); st.__chat = Date.now(); saveState(st, cid); } catch (e) {}
   };
   window.cjianNoteOpen = function () {
-    try { const st = loadState(); st.__open = Date.now(); saveState(st); } catch (e) {}
+    try { const cid = curCid(); const st = loadState(cid); st.__open = Date.now(); saveState(st, cid); } catch (e) {}
   };
 
-  // ---- 感知此间：轻量反馈，不是剧情系统 ----
+  // ---- 视图范围：单个桌面 / 全部总览 ----
+  let viewCid = ''; // '' 未初始化；打开此间时置为当前桌面
+  function scopeCids() {
+    if (viewCid === ALL) return contacts().map(ct => ct.id);
+    const v = viewCid || curCid();
+    return [v];
+  }
+  // 全部梦角扁平列表（联系人顺序 × 名单顺序），供详情上一位/下一位切换
+  function flatEntries() {
+    const out = [];
+    contacts().forEach(ct => {
+      loadRoster(ct.id).forEach(c => out.push({ c: c, cid: ct.id }));
+    });
+    return out;
+  }
+  function cidOfDreamer(id) {
+    let hit = '';
+    contacts().some(ct => {
+      if (loadRoster(ct.id).some(x => x.id === id)) { hit = ct.id; return true; }
+      return false;
+    });
+    return hit;
+  }
+
+  // ---- 感知此间：轻量反馈，不是剧情系统（范围跟随当前视图） ----
   const MIN_CHANGE = 15 * 60000; // 状态变化冷却：一次感知最多改变一个梦角
   let perceiveCooldownUntil = 0;
   function perceiveChance(p) {
@@ -259,18 +343,22 @@
     return 12; // unfelt
   }
   window.cjianPerceive = function () {
-    const roster = loadRoster();
-    if (!roster.length) { toast('此间还没有梦角，先添加一个吧'); return; }
+    const entries = [];
+    scopeCids().forEach(cid => {
+      loadRoster(cid).forEach(c => entries.push({ c: c, cid: cid }));
+    });
+    if (!entries.length) { toast('此间还没有梦角，先添加一个吧'); return; }
     if (Date.now() < perceiveCooldownUntil) return;
     perceiveCooldownUntil = Date.now() + 4000;
     const now = Date.now();
-    const st = loadState();
+    const states = {}; // cid -> st（惰性加载，最后统一回写）
+    function stOf(cid) { return states[cid] || (states[cid] = loadState(cid)); }
     const nearOnes = [], farOnes = [];
-    roster.forEach(c => {
-      const s = ensureState(c, st, now);
-      if (s.p === 'near' || s.p === 'nearby') { nearOnes.push(c); return; }
-      if (Math.random() * 100 < perceiveChance(s.p)) nearOnes.push(c);
-      else farOnes.push(c);
+    entries.forEach(en => {
+      const s = ensureState(en.c, stOf(en.cid), now);
+      if (s.p === 'near' || s.p === 'nearby') { nearOnes.push(en.c); return; }
+      if (Math.random() * 100 < perceiveChance(s.p)) nearOnes.push(en.c);
+      else farOnes.push(en.c);
     });
     const lines = [];
     if (nearOnes.length) {
@@ -284,19 +372,19 @@
     }
     // 一次感知最多产生一次状态变化，且需过 15 分钟状态冷却
     let changedName = null, changedTo = '';
-    const eligible = roster.filter(c => now - ensureState(c, st, now).sinceP > MIN_CHANGE);
+    const eligible = entries.filter(en => now - ensureState(en.c, stOf(en.cid), now).sinceP > MIN_CHANGE);
     if (eligible.length) {
       const target = eligible[Math.floor(Math.random() * eligible.length)];
-      const s = ensureState(target, st, now);
+      const s = ensureState(target.c, stOf(target.cid), now);
       const r = Math.random();
       s.p = r < 0.45 ? 'nearby' : (r < 0.75 ? 'unfelt' : (r < 0.9 ? 'near' : 'far'));
       s.sinceP = now;
       s.cdP = rand(20, 45) * 60000;
       s.lastPerceive = now;
-      changedName = target.name;
+      changedName = target.c.name;
       changedTo = PRESENCE[s.p].label;
     }
-    saveState(st);
+    Object.keys(states).forEach(cid => saveState(states[cid], cid));
     renderPerceiveResult(lines, changedName, changedTo);
     return { lines: lines, changedName: changedName, changedTo: changedTo };
   };
@@ -324,36 +412,40 @@
   }
 
   // ---- 今日时间轴：每次打开「此间」，梦角重新随机选择今天的可能轨迹 ----
-  // 缓存：打开时随机一次，浏览期间保持稳定（只把当前时辰行换成实时状态），下次打开再选。
-  let todayCache = null;
+  // 缓存（v3.14.x 起按视图分桶）：打开时随机一次，浏览期间保持稳定——切换桌面/总览
+  // 再切回来仍是同一份预测（各视图各一份），只把当前时辰行换成实时状态；
+  // 关闭重开（openCjian forceForecast）才全部重掷，名单增删改也会作废对应缓存。
+  let todayCacheMap = {};
+  function scopeKey() { return viewCid === ALL ? ALL : (viewCid || curCid()); }
   function rollTodayForecast() {
-    const roster = loadRoster();
+    const entries = flatEntries().filter(en => scopeCids().indexOf(en.cid) >= 0);
     const d = new Date();
     const curIdx = shichenAt(d.getHours());
     const cache = [];
     for (let k = 0; k < 12; k++) {
       const idx = (curIdx + k) % 12;
       const realStartH = shichenStartHour(idx);
-      const parts = roster.map(c => {
-        const worldHour = (((realStartH * 60 + (c.offsetMin || 0)) / 60) % 24 + 24) % 24;
+      const parts = entries.map(en => {
+        const worldHour = (((realStartH * 60 + (en.c.offsetMin || 0)) / 60) % 24 + 24) % 24;
         const pr = rollPresence(worldHour, false);
         const ac = rollActivity(worldHour);
-        return c.name + ' · ' + predictPhrase(pr, ac);
+        return en.c.name + ' · ' + predictPhrase(pr, ac);
       });
       cache.push({ idx: idx, startH: realStartH, parts: parts });
     }
-    todayCache = cache;
+    todayCacheMap[scopeKey()] = cache;
   }
   function renderToday(liveNow) {
     const box = document.getElementById('cj-today');
     if (!box) return;
     box.innerHTML = '';
-    if (!todayCache) return;
-    const roster = loadRoster();
-    if (!roster.length) return;
+    const rows = todayCacheMap[scopeKey()];
+    if (!rows) return;
+    const entries = flatEntries().filter(en => scopeCids().indexOf(en.cid) >= 0);
+    if (!entries.length) return;
     const now = Date.now();
-    const st = loadState();
-    todayCache.forEach((row, k) => {
+    const states = {};
+    rows.forEach((row, k) => {
       const rowEl = el('div', 'cj-today-row');
       const left = el('div', 'cj-today-left');
       left.appendChild(el('span', 'cj-today-name', SHICHEN[row.idx] + '时'));
@@ -363,9 +455,10 @@
       let parts = row.parts;
       if (k === 0) {
         // 当前时辰行始终反映实时状态
-        parts = roster.map(c => {
-          const s = ensureState(c, st, now);
-          return c.name + ' · ' + predictPhrase(s.p, s.a);
+        parts = entries.map(en => {
+          const st = states[en.cid] || (states[en.cid] = loadState(en.cid));
+          const s = ensureState(en.c, st, now);
+          return en.c.name + ' · ' + predictPhrase(s.p, s.a);
         });
       }
       if (parts.length) right.appendChild(el('span', 'cj-today-c', parts.join('　')));
@@ -404,59 +497,117 @@
     if (h1) h1.textContent = t.half;
     if (h2) h2.textContent = t.range + ' · 现实此刻 ' + t.hhmm;
   }
+
+  // 桌面分组切换条：每个桌面一枚 chips + 「全部」总览（v3.14.x）
+  function renderGroupBar() {
+    const main = document.getElementById('cj-main');
+    if (!main) return;
+    let bar = document.getElementById('cj-groups');
+    if (!bar) {
+      bar = el('div', 'cj-groups');
+      bar.id = 'cj-groups';
+      main.insertBefore(bar, main.firstChild);
+    }
+    bar.innerHTML = '';
+    function chip(label, val) {
+      const b = el('button', 'cj-gchip' + (viewCid === val ? ' on' : ''), label);
+      b.type = 'button';
+      b.addEventListener('click', e => {
+        e.stopPropagation();
+        setView(val);
+      });
+      bar.appendChild(b);
+    }
+    contacts().forEach(ct => chip(contactName(ct.id), ct.id));
+    chip('全部', ALL);
+  }
+  function setView(v) {
+    if (viewCid === v) return;
+    viewCid = v;
+    // 不清缓存：同一浏览期内每个视图的今日预测各自保持稳定，切回来还是原来那份
+    window.renderCjian(false);
+    const main = document.getElementById('cj-main');
+    if (main) main.scrollTop = 0;
+  }
+
+  function cardEl(c, cid, s) {
+    const t = timeInfo(worldNow(c.offsetMin));
+    const card = el('div', 'cj-card');
+    card.setAttribute('data-id', c.id);
+    const head = el('div', 'cj-card-head');
+    head.appendChild(el('span', 'cj-card-name', c.name));
+    head.appendChild(el('span', 'cj-card-hint', '查看TA的一天 ›'));
+    card.appendChild(head);
+    const timeRow = el('div', 'cj-card-time');
+    timeRow.appendChild(el('span', 'cj-card-half', t.half));
+    timeRow.appendChild(el('span', 'cj-card-range', t.range));
+    card.appendChild(timeRow);
+    const tags = el('div', 'cj-card-tags');
+    const pTag = el('span', 'cj-tag cj-tag-p', PRESENCE[s.p].label);
+    pTag.title = PRESENCE[s.p].desc;
+    const aTag = el('span', 'cj-tag cj-tag-a', ACTIVITY[s.a].label);
+    aTag.title = ACTIVITY[s.a].desc;
+    tags.appendChild(pTag);
+    tags.appendChild(aTag);
+    card.appendChild(tags);
+    if (s.a === 'sleep') card.appendChild(el('div', 'cj-card-note', 'TA那边似乎已经睡了。'));
+    if (s.a === 'rest') card.appendChild(el('div', 'cj-card-note', 'TA正在休息。'));
+    const goBtn = el('button', 'cj-go', '去找TA');
+    goBtn.type = 'button';
+    goBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      // 不是当前桌面的梦角：先切到 TA 所在桌面再进聊天
+      try { if (cid !== curCid() && window.setActiveContact) window.setActiveContact(cid); } catch (err) {}
+      if (window.enterChat) window.enterChat();
+      else toast('聊天页未就绪');
+    });
+    card.appendChild(goBtn);
+    card.addEventListener('click', () => window.cjianOpenDetail(c.id, cid));
+    return card;
+  }
   function renderList() {
     const listEl = document.getElementById('cj-list');
     if (!listEl) return;
     listEl.innerHTML = '';
-    const roster = loadRoster();
     const empty = document.getElementById('cj-empty');
+    const now = Date.now();
+    if (viewCid === ALL) {
+      // 总览模式：按桌面分组，一次看完全部梦角状态
+      if (empty) empty.hidden = true;
+      let any = false;
+      contacts().forEach(ct => {
+        const roster = loadRoster(ct.id);
+        const head = el('div', 'cj-group-head');
+        head.appendChild(el('span', null, contactName(ct.id)));
+        head.appendChild(el('span', 'cj-group-count', roster.length + '位'));
+        listEl.appendChild(head);
+        if (!roster.length) {
+          listEl.appendChild(el('div', 'cj-group-empty', '这个桌面还没有梦角。'));
+          return;
+        }
+        any = true;
+        const st = loadState(ct.id);
+        roster.forEach(c => listEl.appendChild(cardEl(c, ct.id, ensureState(c, st, now))));
+      });
+      if (!any) listEl.appendChild(el('div', 'cj-all-tip', '各个桌面还没有梦角。'));
+      return;
+    }
+    const cid = viewCid || curCid();
+    const roster = loadRoster(cid);
     if (empty) empty.hidden = roster.length > 0;
     if (!roster.length) return;
-    const now = Date.now();
-    const st = loadState();
-    roster.forEach(c => {
-      const s = ensureState(c, st, now);
-      const t = timeInfo(worldNow(c.offsetMin));
-      const card = el('div', 'cj-card');
-      card.setAttribute('data-id', c.id);
-      const head = el('div', 'cj-card-head');
-      head.appendChild(el('span', 'cj-card-name', c.name));
-      head.appendChild(el('span', 'cj-card-hint', '查看TA的一天 ›'));
-      card.appendChild(head);
-      const timeRow = el('div', 'cj-card-time');
-      timeRow.appendChild(el('span', 'cj-card-half', t.half));
-      timeRow.appendChild(el('span', 'cj-card-range', t.range));
-      card.appendChild(timeRow);
-      const tags = el('div', 'cj-card-tags');
-      const pTag = el('span', 'cj-tag cj-tag-p', PRESENCE[s.p].label);
-      pTag.title = PRESENCE[s.p].desc;
-      const aTag = el('span', 'cj-tag cj-tag-a', ACTIVITY[s.a].label);
-      aTag.title = ACTIVITY[s.a].desc;
-      tags.appendChild(pTag);
-      tags.appendChild(aTag);
-      card.appendChild(tags);
-      if (s.a === 'sleep') card.appendChild(el('div', 'cj-card-note', 'TA那边似乎已经睡了。'));
-      if (s.a === 'rest') card.appendChild(el('div', 'cj-card-note', 'TA正在休息。'));
-      const goBtn = el('button', 'cj-go', '去找TA');
-      goBtn.type = 'button';
-      goBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (window.enterChat) window.enterChat();
-        else toast('聊天页未就绪');
-      });
-      card.appendChild(goBtn);
-      card.addEventListener('click', () => window.cjianOpenDetail(c.id));
-      listEl.appendChild(card);
-    });
+    const st = loadState(cid);
+    roster.forEach(c => listEl.appendChild(cardEl(c, cid, ensureState(c, st, now))));
   }
 
-  // ---- 梦角详情（TA 自己的一天） ----
-  let detailId = '';
-  window.cjianOpenDetail = function (id) {
+  // ---- 梦角详情（TA 自己的一天；可上一位/下一位直接切换别的梦角） ----
+  let detailId = '', detailCid = '';
+  window.cjianOpenDetail = function (id, cid) {
     const main = document.getElementById('cj-main');
     const det = document.getElementById('cj-detail');
     if (!main || !det) return;
     detailId = id;
+    detailCid = cid || cidOfDreamer(id) || curCid();
     renderDetail();
     main.hidden = true;
     det.hidden = false;
@@ -468,20 +619,21 @@
     det.hidden = true;
     main.hidden = false;
     detailId = '';
+    detailCid = '';
   };
   function renderDetail() {
     const body = document.getElementById('cj-detail-body');
     if (!body) return;
     body.innerHTML = '';
-    const roster = loadRoster();
-    const c = roster.find(x => x.id === detailId);
+    const c = loadRoster(detailCid).find(x => x.id === detailId);
     if (!c) { window.cjianCloseDetail(); return; }
     const now = Date.now();
-    const st = loadState();
+    const st = loadState(detailCid);
     const s = ensureState(c, st, now);
     const t = timeInfo(worldNow(c.offsetMin));
     body.appendChild(el('div', 'cj-d-name', c.name));
     body.appendChild(el('div', 'cj-d-offset', offsetLabel(c.offsetMin)));
+    body.appendChild(el('div', 'cj-d-src', '来自「' + contactName(detailCid) + '」的此间'));
     const timeBig = el('div', 'cj-d-time');
     timeBig.appendChild(el('span', 'cj-d-half', t.half));
     body.appendChild(timeBig);
@@ -514,10 +666,34 @@
     }
     body.appendChild(traj);
     body.appendChild(el('div', 'cj-d-foot', '这不是TA的日程表，只是TA可能的样子。'));
+    // 上一位 / 下一位：不回列表直接切换查看别的梦角（跨桌面，循环）
+    const entries = flatEntries();
+    const pos = entries.findIndex(en => en.c.id === detailId);
+    if (pos >= 0 && entries.length > 1) {
+      function jump(en) { detailId = en.c.id; detailCid = en.cid; renderDetail(); }
+      const nav = el('div', 'cj-d-nav');
+      const prevB = el('button', 'cj-d-nav-btn', '‹ 上一位');
+      prevB.type = 'button';
+      prevB.addEventListener('click', e => {
+        e.stopPropagation();
+        jump(entries[(pos - 1 + entries.length) % entries.length]);
+      });
+      nav.appendChild(prevB);
+      nav.appendChild(el('span', 'cj-d-nav-pos', (pos + 1) + '/' + entries.length));
+      const nextB = el('button', 'cj-d-nav-btn', '下一位 ›');
+      nextB.type = 'button';
+      nextB.addEventListener('click', e => {
+        e.stopPropagation();
+        jump(entries[(pos + 1) % entries.length]);
+      });
+      nav.appendChild(nextB);
+      body.appendChild(nav);
+    }
     const goBtn = el('button', 'cj-go', '去找TA');
     goBtn.type = 'button';
     goBtn.addEventListener('click', (e) => {
       e.stopPropagation();
+      try { if (detailCid !== curCid() && window.setActiveContact) window.setActiveContact(detailCid); } catch (err) {}
       if (window.enterChat) window.enterChat();
       else toast('聊天页未就绪');
     });
@@ -526,10 +702,13 @@
 
   // ---- 整页渲染 ----
   window.renderCjian = function (forceForecast) {
-    seedIfEmpty();
-    if (forceForecast || !todayCache) rollTodayForecast();
+    ensureAllSeeds();
+    if (viewCid !== ALL && !contacts().some(ct => ct.id === viewCid)) viewCid = curCid(); // 视图兜底
+    if (forceForecast) todayCacheMap = {}; // 每次打开此间：TA们重新选择今天的可能样子
+    if (!todayCacheMap[scopeKey()]) rollTodayForecast();
     refreshStates();
     renderHero();
+    renderGroupBar();
     renderList();
     renderToday(true);
     if (detailId) renderDetail();
@@ -541,6 +720,7 @@
     document.querySelectorAll('.page').forEach(p => p.hidden = true);
     page.hidden = false;
     try { if (window.cjianNoteOpen) window.cjianNoteOpen(); } catch (e) {}
+    viewCid = curCid(); // 每次打开回到当前桌面
     window.renderCjian(true);
   };
   window.closeCjian = function () {
@@ -549,6 +729,7 @@
   };
 
   // ---- 梦角管理：添加/改名/删除（单弹窗多阶段，openModal 控制器） ----
+  // 总览模式下先进「选桌面」阶段，管理动作作用于所选桌面自己的名单。
   const OFFSET_PILLS = [
     { label: '与现实同步', value: '0' },
     { label: '比现实快1小时', value: '60' },
@@ -556,6 +737,11 @@
     { label: '比现实快3小时', value: '180' },
     { label: '比现实慢3小时', value: '-180' },
     { label: '独立时间流', value: 'rand' }
+  ];
+  const ACTION_PILLS = [
+    { label: '添加梦角', value: 'add' },
+    { label: '改名', value: 'rename' },
+    { label: '删除梦角', value: 'del' }
   ];
   // 独立时间流：一个只属于TA自己的随机偏移（非整点，跨天稳定）
   function randomOffset() {
@@ -565,22 +751,32 @@
   }
   window.cjianManage = function () {
     if (!window.openModal) return;
-    let phase = 'action', pendingName = '', renameTarget = null;
+    let mCid = (viewCid === ALL) ? '' : (viewCid || curCid());
+    let phase = mCid ? 'action' : 'pickGroup', pendingName = '', renameTarget = null;
     const ctl = window.openModal('梦角管理', '', function (v) {
       if (!v) return;
+      if (phase === 'pickGroup') {
+        mCid = v;
+        phase = 'action';
+        ctl.stay();
+        ctl.title('梦角管理 · 「' + contactName(mCid) + '」');
+        ctl.input(false);
+        ctl.pills(ACTION_PILLS);
+        return;
+      }
       if (phase === 'action') {
         if (v === 'add') {
           phase = 'name';
           ctl.stay();
-          ctl.title('添加梦角');
+          ctl.title('添加梦角 · 「' + contactName(mCid) + '」');
           ctl.pills(null);
           ctl.input(true);
           ctl.maxLen(10);
           ctl.ph('梦角的名字，如：景元');
           ctl.okText('下一步');
         } else {
-          const list = loadRoster();
-          if (!list.length) { toast('还没有梦角，先添加一个吧'); return; }
+          const list = loadRoster(mCid);
+          if (!list.length) { toast('这个桌面还没有梦角，先添加一个吧'); return; }
           phase = v === 'rename' ? 'pickRename' : 'pickDel';
           ctl.stay();
           ctl.title(v === 'rename' ? '改谁的称呼' : '删除梦角');
@@ -605,17 +801,17 @@
       if (phase === 'offset') {
         const off = v === 'rand' ? randomOffset() : parseInt(v, 10);
         if (v !== 'rand' && isNaN(off)) return;
-        const list = loadRoster();
+        const list = loadRoster(mCid);
         list.push({ id: makeId(), name: pendingName, offsetMin: off });
-        saveRoster(list);
+        saveRoster(list, mCid);
         toast('已加入此间：「' + pendingName + '」');
         phase = ''; pendingName = '';
-        todayCache = null;
+        todayCacheMap = {}; // 名单变了，各视图的今日预测全部作废
         window.renderCjian(true);
         return;
       }
       if (phase === 'pickRename') {
-        const list = loadRoster();
+        const list = loadRoster(mCid);
         const c = list.find(x => x.id === v);
         if (!c) return;
         renameTarget = c;
@@ -632,39 +828,45 @@
       if (phase === 'renameInput') {
         const n = String(v == null ? '' : v).trim();
         if (!n) return;
-        const list = loadRoster();
+        const list = loadRoster(mCid);
         const c = list.find(x => x.id === (renameTarget ? renameTarget.id : ''));
         if (c) {
           c.name = n;
-          saveRoster(list);
+          saveRoster(list, mCid);
           toast('已改名为「' + n + '」');
         }
         phase = ''; renameTarget = null;
-        window.renderCjian(false);
+        todayCacheMap = {}; // 名字出现在今日预测里，一并作废
+        window.renderCjian(true);
         return;
       }
       if (phase === 'pickDel') {
-        const list = loadRoster();
+        const list = loadRoster(mCid);
         const idx = list.findIndex(x => x.id === v);
         if (idx < 0) return;
         const name = list[idx].name;
         list.splice(idx, 1);
-        saveRoster(list);
-        const st = loadState();
+        saveRoster(list, mCid);
+        const st = loadState(mCid);
         delete st[v];
-        saveState(st);
+        saveState(st, mCid);
+        // v3.14.x：同步清掉 TA 的梦角档案（narc-<id>，memo-arc.js 存根命名空间）
+        // 与指向 TA 的 narc-cur（档案页打开时会自愈，这里顺手清干净不留孤儿数据）
+        try {
+          const r0 = rootStore();
+          if (r0) {
+            r0.remove('narc-' + v);
+            if ((r0.get('narc-cur') || '') === v) r0.remove('narc-cur');
+          }
+        } catch (err) {}
         toast('「' + name + '」已从此间离开');
         phase = '';
         if (detailId === v) window.cjianCloseDetail();
-        todayCache = null;
+        todayCacheMap = {}; // 名单变了，各视图的今日预测全部作废
         window.renderCjian(true);
         return;
       }
-    }, { noInput: true, pills: [
-      { label: '添加梦角', value: 'add' },
-      { label: '改名', value: 'rename' },
-      { label: '删除梦角', value: 'del' }
-    ] });
+    }, mCid ? { noInput: true, pills: ACTION_PILLS } : { noInput: true, pills: contacts().map(ct => ({ label: contactName(ct.id), value: ct.id })) });
   };
 
   // ---- 定时器：随机刷新 + 突然靠近 + 页面打开时刷新时钟 ----
@@ -673,7 +875,17 @@
     return !!(page && !page.hidden);
   }
   function boot() {
-    seedIfEmpty();
+    migrateSplit();
+    ensureAllSeeds();
+    // 迁移时机加固：IndexedDB 回填（mochi-restore-done）可能晚于本模块启动——旧全局键
+    // 迟到时首次迁移会扑空（老梦角要等下次刷新才合并回来）。就绪后幂等重跑一次合并
+    // （并集去重 + 清根键，重复执行无副作用），升级当天即可见老梦角。
+    let reMigrated = false;
+    document.addEventListener('mochi-restore-done', function () {
+      if (reMigrated) return;
+      reMigrated = true;
+      try { migrateSplit(); } catch (e) {}
+    });
     setInterval(function () {
       tickApproach();
       if (pageVisible()) window.renderCjian(false);
@@ -681,6 +893,21 @@
     document.addEventListener('visibilitychange', function () {
       if (!document.hidden && pageVisible()) window.renderCjian(false);
     });
+    // 分组条吸顶态：滚离顶部后才有底色/阴影（平时透明贴合页面渐变）。
+    // rAF 合帧 + passive 监听，滚动主线程零阻塞（低端安卓也不抖）
+    const scroller = document.getElementById('cj-main');
+    if (scroller) {
+      let stickTick = false;
+      scroller.addEventListener('scroll', function () {
+        if (stickTick) return;
+        stickTick = true;
+        requestAnimationFrame(function () {
+          stickTick = false;
+          const barEl = document.getElementById('cj-groups');
+          if (barEl) barEl.classList.toggle('stuck', scroller.scrollTop > 4);
+        });
+      }, { passive: true });
+    }
     const backBtn = document.getElementById('cj-back');
     if (backBtn) {
       backBtn.addEventListener('click', function (e) {

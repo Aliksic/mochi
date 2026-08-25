@@ -1,20 +1,22 @@
-// ===== 专项回归：TA的邀请字卡库 + 更多功能「邀请」手动触发（ta-invite.js / chat.js v3.13.x） =====
+﻿// ===== 专项回归：TA的邀请字卡库 + 更多功能「邀请」手动触发（ta-invite.js / chat.js v3.14.x） =====
 // 用户反馈：①字卡库系统预设里没有【TA的邀请】字卡库；②聊天更多功能→TA的提问分类缺少
-//          【邀请】让对方现在邀请一次的功能。
-// 实现：新建 ta-invite.js（预设 10 条入库：4 猜拳+3 Pong+3 贪吃蛇，逐条开关/总开关/
-//       自定义/分组/批量导入/搜索/双入口/IDB 权威恢复）；chat.js tryActiveInvite 改从库抽
-//       （保持 ai-rps-en/prob、ai-game-en/prob 门控语义）+ triggerTaInviteNow 手动触发；
-//       template.html 加字卡库双入口、管理页 page-ta-invite、more-grid-ask 邀请按钮。
+//          【邀请】让对方现在邀请一次的功能；③邀请缺少正常情侣的贴贴互动内容。
+// 实现：新建 ta-invite.js（预设 20 条入库：4 猜拳+3 Pong+3 贪吃蛇+v3.14.x 贴贴 10 条，逐条开关/
+//       总开关/自定义/分组/批量导入/搜索/双入口/IDB 权威恢复）；chat.js tryActiveInvite 改从库抽
+//       （保持 ai-rps-en/prob、ai-game-en/prob、ai-cuddle-en/prob 门控语义）+ triggerTaInviteNow
+//       手动触发；贴贴同意后轻震动 + TA 回应一句（CUDDLE_REPLIES），拒绝走专属婉拒池；
+//       template.html 加字卡库双入口、管理页 page-ta-invite、more-grid-ask 邀请按钮、贴贴设置行。
 // 用例：
-//   T1 入库：__tiBankInfo total/preset=10、mine=0；双入口与计数
-//   T2 管理页：主入口系统预设视图（3 分类子标签）、我的添加入口、返回、全屏态无 tabbar
+//   T1 入库：__tiBankInfo total/preset=20、mine=0；双入口与计数
+//   T2 管理页：主入口系统预设视图（4 分类子标签）、我的添加入口、返回、全屏态无 tabbar
 //   T3 自定义：批量导入 2 条 Pong + 表单加 1 条贪吃蛇 + 删除 1 条
-//   T4 抽取门控：rps 门 100% 出猜拳；仅游戏门开时出 Pong/贪吃蛇；双关返回 null；useDefault 关只用自定义
+//   T4 抽取门控：rps 门 100% 出猜拳；仅游戏门开时出 Pong/贪吃蛇；仅贴贴门开出贴贴；三关返回 null；useDefault 关只用自定义
 //   T5 手动触发：triggerTaInviteNow 发邀请消息 + 弹同意/拒绝确认弹窗；拒绝后发婉拒消息
+//   T5b 贴贴同意链路：固定抽到贴贴卡 → 同意 → 无半框、TA 回应一句贴贴的话（主动爱心）
 //   T6 更多功能面板按钮存在且可触发
 //   T7 搜索注册 + 计数刷新
 //   T8 IndexedDB 权威持久化
-//   T9 源码静态断言（页面/入口/FULL_PAGES/jsFiles/chat 接线）
+//   T9 源码静态断言（页面/入口/FULL_PAGES/jsFiles/chat 接线/贴贴门）
 //   T10 加载至今无未捕获异常
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:http';
@@ -119,17 +121,17 @@ try {
   console.log('\n== T1 题库入库 ==');
   const info1 = await evalJs('window.__tiBankInfo ? window.__tiBankInfo() : null');
   ok('__tiBankInfo 探针可用', !!info1, info1);
-  ok('total=10 / preset=10 / mine=0', info1 && info1.total === 10 && info1.preset === 10 && info1.mine === 0, info1);
+  ok('total=20 / preset=20 / mine=0', info1 && info1.total === 20 && info1.preset === 20 && info1.mine === 0, info1);
   const entries = await evalJs("({ sys: !!document.getElementById('li-ta-invite'), mine: !!document.getElementById('li-ta-invite-mine'), page: !!document.getElementById('page-ta-invite'), btn: !!document.getElementById('more-invite-now'), tSys: (document.querySelector('#li-ta-invite > .t')||{}).textContent })");
   ok('字卡库双入口 + 管理页 + 更多功能按钮存在', entries && entries.sys && entries.mine && entries.page && entries.btn, entries);
-  ok('入口计数初始 10', entries && entries.tSys === '10', entries);
+  ok('入口计数初始 20', entries && entries.tSys === '20', entries);
 
   console.log('\n== T2 管理页导航 ==');
   await evalJs("(function(){var e=document.getElementById('li-ta-invite');if(e)e.click();return true;})()");
   await sleep(150);
   let st = await evalJs("({ pageHidden: document.getElementById('page-ta-invite').hidden, sysHidden: document.getElementById('ti-sys-panel').hidden, tabs: Array.from(document.querySelectorAll('#ti-sys-cats .cc-tab[data-cat]')).map(function(t){return t.dataset.cat;}), rows: document.querySelectorAll('#ti-sys-cats input[data-idx]').length, tabbarHidden: (document.querySelector('.tabbar')||{}).hidden })");
   ok('主入口进系统预设视图', st && st.pageHidden === false && st.sysHidden === false, st);
-  ok('分类子标签 rps/pong/snake 渲染', st && Array.isArray(st.tabs) && st.tabs.indexOf('rps') >= 0 && st.tabs.indexOf('pong') >= 0 && st.tabs.indexOf('snake') >= 0, st && st.tabs);
+  ok('分类子标签 rps/pong/snake/cuddle 渲染', st && Array.isArray(st.tabs) && st.tabs.indexOf('rps') >= 0 && st.tabs.indexOf('pong') >= 0 && st.tabs.indexOf('snake') >= 0 && st.tabs.indexOf('cuddle') >= 0, st && st.tabs);
   ok('猜拳类预设 4 行', st && st.rows === 4, st && st.rows);
   ok('全屏页隐藏底部 tabbar', st && st.tabbarHidden === true, st && st.tabbarHidden);
   await evalJs("(function(){var b=document.getElementById('ti-back');if(b)b.click();return true;})()");
@@ -159,11 +161,12 @@ try {
   ok('删除一条后 mine=2', info && info.mine === 2, info);
 
   console.log('\n== T4 抽取门控 ==');
-  const gate = await evalJs("(function(){\n  function tryN(n, c){ var ks={}; for(var i=0;i<n;i++){ var q=window.taInviteDraw(c); if(!q) return null; ks[q.kind]=(ks[q.kind]||0)+1; } return ks; }\n  return {\n    rpsOnly: tryN(20, { 'ai-rps-en':1, 'ai-rps-prob':100, 'ai-game-en':0 }),\n    gameOnly: tryN(30, { 'ai-rps-en':0, 'ai-game-en':1, 'ai-game-prob':100 }),\n    none: window.taInviteDraw({ 'ai-rps-en':0, 'ai-game-en':0 })\n  };\n})()");
+  const gate = await evalJs("(function(){\n  function tryN(n, c){ var ks={}; for(var i=0;i<n;i++){ var q=window.taInviteDraw(c); if(!q) return null; ks[q.kind]=(ks[q.kind]||0)+1; } return ks; }\n  return {\n    rpsOnly: tryN(20, { 'ai-rps-en':1, 'ai-rps-prob':100, 'ai-game-en':0 }),\n    gameOnly: tryN(30, { 'ai-rps-en':0, 'ai-game-en':1, 'ai-game-prob':100 }),\n    cuddleOnly: tryN(25, { 'ai-rps-en':0, 'ai-game-en':0, 'ai-cuddle-en':1, 'ai-cuddle-prob':100 }),\n    none: window.taInviteDraw({ 'ai-rps-en':0, 'ai-game-en':0, 'ai-cuddle-en':0 })\n  };\n})()");
   ok('rps 门 100% 时只出猜拳', gate && gate.rpsOnly && Object.keys(gate.rpsOnly).length === 1 && gate.rpsOnly.rps === 20, gate && gate.rpsOnly);
   ok('仅游戏门开时只出 Pong/贪吃蛇', gate && gate.gameOnly && !gate.gameOnly.rps && (gate.gameOnly.pong || 0) + (gate.gameOnly.snake || 0) === 30, gate && gate.gameOnly);
-  ok('双开关关闭返回 null', gate && gate.none === null, gate && gate.none);
-  const gd = await evalJs("(function(){ var d=JSON.parse(window.activeStore().get('ta-invite')); d.settings.useDefault=false; window.activeStore().set('ta-invite', JSON.stringify(d)); var out=[]; for(var i=0;i<15;i++){ var q=window.taInviteDraw({ 'ai-rps-en':1,'ai-rps-prob':100 }); if(q) out.push(q.isPreset!==true); } d.settings.useDefault=true; window.activeStore().set('ta-invite', JSON.stringify(d)); return out.length>0 && out.every(function(x){return x===true;}); })()");
+  ok('仅贴贴门开时只出贴贴', gate && gate.cuddleOnly && !gate.cuddleOnly.rps && !gate.cuddleOnly.pong && !gate.cuddleOnly.snake && gate.cuddleOnly.cuddle === 25, gate && gate.cuddleOnly);
+  ok('三开关关闭返回 null', gate && gate.none === null, gate && gate.none);
+  const gd = await evalJs("(function(){ var d=JSON.parse(window.activeStore().get('ta-invite')); d.settings.useDefault=false; window.activeStore().set('ta-invite', JSON.stringify(d)); var out=[]; for(var i=0;i<15;i++){ var q=window.taInviteDraw({ 'ai-rps-en':1,'ai-rps-prob':100,'ai-game-en':1,'ai-game-prob':100 }); if(q) out.push(q.isPreset!==true); } d.settings.useDefault=true; window.activeStore().set('ta-invite', JSON.stringify(d)); return out.length>0 && out.every(function(x){return x===true;}); })()");
   ok('useDefault 关闭后自动链路只抽自定义', gd === true, gd);
 
   console.log('\n== T5 手动触发链路 ==');
@@ -183,6 +186,20 @@ try {
   const declined = await evalJs("(function(){ try{ var a=window.getChatMsgs(); var rec=a[a.length-1]; return { out: rec && rec.side==='out', len: a.length }; }catch(e){ return String(e); } })()");
   ok('拒绝后发出婉拒消息（我方气泡）', declined && declined.out === true, declined);
 
+  console.log('\n== T5b 贴贴同意链路 ==');
+  // 固定抽到贴贴卡 → 触发 → 点「同意」→ 不开游戏半框，TA 回应一句贴贴的话（主动爱心）
+  const stubRes = await evalJs("(function(){ window.__tiOrigPickAny = window.taInvitePickAny; window.taInvitePickAny = function(){ return { kind:'cuddle', text:'想贴贴了，你可以过来一点吗？' }; }; return true; })()");
+  const n0c = await evalJs('(window.getChatMsgs()||[]).length');
+  const trigC = await evalJs('!!window.triggerTaInviteNow && window.triggerTaInviteNow()');
+  await sleep(1900); // typing 700~1400ms + 弹窗
+  const agreeRes = await evalJs("(function(){\n  var mask=document.getElementById('modal-mask');\n  if(!mask || mask.hidden) return 'no-modal';\n  var btns=mask.querySelectorAll('button');\n  for(var i=0;i<btns.length;i++){ if(btns[i].textContent.trim()==='同意'){ btns[i].click(); break; } }\n  var okBtn=mask.querySelector('.modal-btn.ok'); if(okBtn) okBtn.click();\n  return 'agreed';\n})()");
+  await sleep(2400); // 同意后回应延迟 600~1200ms + 余量
+  const cuddleState = await evalJs("(function(){\n  try {\n    var a = window.getChatMsgs(); var rec = a[a.length-1];\n    var mask = document.getElementById('modal-mask');\n    return {\n      grew: a.length > " + n0c + ", lastIn: !!(rec && rec.side==='in'), lastInitiative: !!(rec && rec.initiative),\n      isReply: !!(rec && rec.text && rec.text.indexOf('蹭到') >= 0 || (rec && rec.text && (rec.text.indexOf('贴') >= 0 || rec.text.indexOf('握住') >= 0 || rec.text.indexOf('充电') >= 0))),\n      modalClosed: !!(mask && mask.hidden), len: a.length\n    };\n  } catch(e){ return String(e); }\n})()");
+  await evalJs("(function(){ window.taInvitePickAny = window.__tiOrigPickAny; return true; })()");
+  ok('贴贴卡触发返回 true', stubRes === true && trigC === true, { stubRes, trigC });
+  ok('点同意后弹窗关闭且无游戏半框路径', agreeRes === 'agreed' && cuddleState && cuddleState.modalClosed === true, { agreeRes, cuddleState });
+  ok('TA 回应一句贴贴的话（联系人气泡+主动爱心，消息数 +2）', cuddleState && cuddleState.grew === true && cuddleState.lastIn === true && cuddleState.lastInitiative === true && cuddleState.isReply === true && cuddleState.len === n0c + 2, { n0c, cuddleState });
+
   console.log('\n== T6 更多功能面板按钮触发 ==');
   const moreRes = await evalJs("(function(){\n  try {\n    var mb=document.getElementById('chat-more-btn'); if(mb) mb.click();\n    var askTab=document.getElementById('more-tab-ask'); if(askTab) askTab.click();\n    var btn=document.getElementById('more-invite-now'); if(!btn) return 'no-btn';\n    var n0=(window.getChatMsgs()||[]).length;\n    btn.click();\n    var panel=document.getElementById('chat-more-panel');\n    return { ok:true, panelClosed: panel? !!panel.hidden : true, n0:n0, n1:(window.getChatMsgs()||[]).length };\n  } catch(e){ return String(e); }\n})()");
   await sleep(1600);
@@ -193,13 +210,13 @@ try {
   const searchRes = await evalJs("(function(){ try { var f=(window.__cardSearchFns||[]).filter(function(x){return x.name==='TA的邀请';})[0]; if(!f) return null; return { hit: f.fn('猜拳').length>=1, mineHit: f.fn('测试').length>=1 }; }catch(e){ return String(e);} })()");
   ok('跨分类搜索命中预设/自定义', searchRes && searchRes.hit === true && searchRes.mineHit === true, searchRes);
   const counts = await evalJs("(function(){ window.refreshTiCardCounts(); return { tSys:(document.querySelector('#li-ta-invite > .t')||{}).textContent, tMine:(document.querySelector('#li-ta-invite-mine > .t')||{}).textContent }; })()");
-  ok('入口计数刷新（系统 10 / 自定义 2）', counts && counts.tSys === '10' && counts.tMine === '2', counts);
+  ok('入口计数刷新（系统 20 / 自定义 2）', counts && counts.tSys === '20' && counts.tMine === '2', counts);
 
   console.log('\n== T8 IndexedDB 权威持久化 ==');
   await evalJs("window.activeStore().set('ta-invite', window.activeStore().get('ta-invite')); true");
   await sleep(400);
   const idbVal = await evalJs("(async function(){ try { var v=await window.idbGet(window.activePrefix()+':ta-invite'); if(v===undefined||v===null) return 'EMPTY'; var d=typeof v==='string'?JSON.parse(v):v; return d&&d.questions?d.questions.length:'BAD'; }catch(e){ return String(e);} })()");
-  ok('IDB 中 ta-invite 有权威数据（≥12 条）', typeof idbVal === 'number' && idbVal >= 12, idbVal);
+  ok('IDB 中 ta-invite 有权威数据（≥20 条）', typeof idbVal === 'number' && idbVal >= 20, idbVal);
 
   console.log('\n== T9 源码静态断言 ==');
   const tpl = readFileSync(join(root, 'src/template.html'), 'utf8');
@@ -210,6 +227,8 @@ try {
   ok("build.mjs jsFiles 含 'ta-invite.js'", buildSrc.includes("'ta-invite.js'"));
   const chatSrc = readFileSync(join(root, 'src/js/chat.js'), 'utf8');
   ok('chat.js 已接线（taInviteDraw/triggerTaInviteNow/sendTaInvite）', chatSrc.includes('window.taInviteDraw') && chatSrc.includes('window.triggerTaInviteNow') && chatSrc.includes('sendTaInvite'));
+  ok('chat.js 贴贴链路（cuddle 回应/婉拒池）', chatSrc.includes("cuddle: { title: '贴贴邀请' }") && chatSrc.includes('CUDDLE_REPLIES') && chatSrc.includes('CUDDLE_DECLINE'));
+  ok('template 批量导入含贴贴选项 + 设置行 ai-cuddle-en/prob', tpl.includes('<option value="cuddle">导入到 · 贴贴邀请</option>') && tpl.includes('id="ai-cuddle-en"') && tpl.includes('data-k="ai-cuddle-prob"'));
   let builtHas = false;
   try { builtHas = readFileSync(join(root, 'index.html'), 'utf8').includes('page-ta-invite'); } catch (e) {}
   console.log(builtHas ? '  ℹ INFO: index.html 已包含本次改动（已构建收口）' : '  ℹ INFO: index.html 尚未包含本次改动（等待构建者执行 node build.mjs）');

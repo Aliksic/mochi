@@ -513,18 +513,30 @@
     return html;
   }
   // 评论区 HTML（v3.5.95：提升到模块作用域，主列表 + 全部朋友圈共用）
+  // v3.14.x：回复目标按对话轮次解析——不再一律指向原评论作者（旧版 TA 回应我的回复
+  //   会显示成「联系人 回复 联系人」）。每条新回复写入 to=被回复人昵称快照；旧数据无 to
+  //   时按「本楼最近一位与我不同名的发言者」推断。回复行可点 → 定向回复该条作者。
   function commentsHtmlFor(p, name) {
     if (!p.comments || !p.comments.length) return '';
     return '<div class="feed-comments">' + p.comments.map((c, ci) => {
-      const cName = esc(c.authorName || ((c.role || c.by) === 'me' ? feedUserName() : (name || taFeedName())));
+      const cNameRaw = c.authorName || ((c.role || c.by) === 'me' ? feedUserName() : (name || taFeedName()));
+      const cName = esc(cNameRaw);
       const cBody = inlineBody(c.content, (c.role || c.by) === 'me' ? '' : p.owner);
       let repliesHtml = '';
       if (c.replies && c.replies.length) {
         // v3.11.x：回复加 data-ri——通知点击可直接定位闪烁到具体这条回复
+        // v3.14.x：data-ci/data-ri 供点行定向回复；to 缺失按发言轮次推断（存量数据兼容）
+        const speakers = [cNameRaw];
         repliesHtml = '<div class="feed-replies">' + c.replies.map((r, ri) => {
-          const rName = esc(r.authorName || ((r.role || r.by) === 'me' ? feedUserName() : (name || taFeedName())));
+          const rNameRaw = r.authorName || ((r.role || r.by) === 'me' ? feedUserName() : (name || taFeedName()));
+          let toRaw = (typeof r.to === 'string' && r.to) ? r.to : '';
+          if (!toRaw) {
+            for (let i = speakers.length - 1; i >= 0; i--) { if (speakers[i] !== rNameRaw) { toRaw = speakers[i]; break; } }
+            if (!toRaw) toRaw = cNameRaw !== rNameRaw ? cNameRaw : feedUserName();
+          }
+          speakers.push(rNameRaw);
           const rBody = inlineBody(r.content, (r.role || r.by) === 'me' ? '' : p.owner);
-          return '<div class="feed-reply" data-ri="' + ri + '"><b>' + rName + '</b> 回复 <b>' + cName + '</b>：' + rBody + '</div>';
+          return '<div class="feed-reply" data-ci="' + ci + '" data-ri="' + ri + '"><b>' + esc(rNameRaw) + '</b><span class="fd-r-sep">回复</span><b>' + esc(toRaw) + '</b>：' + rBody + '</div>';
         }).join('') + '</div>';
       }
       return '<div class="feed-comment" data-c="' + p.id + '" data-ci="' + ci + '">' +
@@ -795,6 +807,22 @@
       if (!p || !p.comments || !p.comments[ci] || (p.comments[ci].role || p.comments[ci].by) === 'me') return;
       showCommentBar(pid, { pid: pid, ci: ci });
     }));
+    // v3.14.x：点楼内某条回复 → 定向回复该条作者（不再只能对着原评论回，TA 的最新
+    // 回复也能继续聊）；自己的回复不可自回；stopPropagation 防冒泡触发整条评论的回复
+    listEl.querySelectorAll('.feed-reply').forEach(rEl => rEl.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const wrap = rEl.closest('.feed-comment');
+      if (!wrap) return;
+      const pid = wrap.dataset.c;
+      const ci = Number(rEl.dataset.ci);
+      const ri = Number(rEl.dataset.ri);
+      const list = load();
+      const p = list.find(x => x.id === pid);
+      const tc = p && p.comments && p.comments[ci];
+      const tr = tc && tc.replies && tc.replies[ri];
+      if (!tr || (tr.role || tr.by) === 'me') return;
+      showCommentBar(pid, { pid: pid, ci: ci, ri: ri });
+    }));
   }
   // ================= 评论条（固定元素只绑定一次，v3.5.64 修复重复弹窗） =================
 // 评论：点【评论】→ 页面内评论条（不用独立弹窗），可发文字/表情包/图片；TA 有概率回复评论
@@ -844,13 +872,18 @@ function showCommentBar(pid, replyTarget) {
   if (comInput) {
     comInput.value = '';
     // v3.7.x：回复占位显示被回复评论的作者昵称（跨桌面时不再一律显示当前桌面 TA 名）
+    // v3.14.x：ri 指定楼内某条回复时，占位显示该条回复作者
     let rpName = partnerName();
     if (replyTarget) {
       try {
         const lst = load();
         const pp = lst.find(x => x.id === pid);
         const tc = pp && pp.comments && pp.comments[replyTarget.ci];
-        if (tc && tc.authorName) rpName = tc.authorName;
+        if (tc) {
+          if (tc.authorName) rpName = tc.authorName;
+          const tr = replyTarget.ri != null && tc.replies ? tc.replies[replyTarget.ri] : null;
+          if (tr && tr.authorName) rpName = tr.authorName;
+        }
       } catch (e) {}
     }
     comInput.placeholder = replyTarget ? '回复 ' + rpName + '…' : '评论…';
@@ -1079,7 +1112,18 @@ function submitComment() {
   if (comReplyTarget && p.comments && p.comments[comReplyTarget.ci]) {
     const tc = p.comments[comReplyTarget.ci];
     tc.replies = tc.replies || [];
-    tc.replies.push(stampAuthor({ content: content, ts: Date.now() }, activeMe()));
+    // v3.7.x：多桌面——回应用「被回复评论作者」的桌面身份/字卡/设置（评论可能是
+    // 其他桌面联系人的 TA 发的，不能再一律用动态所属桌面）
+    const tcOwner = (tc && tc.owner) || p.owner || 'default';
+    // v3.14.x：记录被回复人昵称快照 to——ri 指定楼内某条回复时对那位作者，否则原评论
+    // 作者；渲染「A 回复 B」的 B 不再永远等于原评论作者（修复 TA 回应我的回复显示成
+    // 「TA 回复 TA」），旧数据无 to 由渲染端按发言轮次推断兜底
+    let toName = tc.authorName || (((tc.role || tc.by) === 'me') ? feedUserName() : taFeedNameFor(tcOwner));
+    if (comReplyTarget.ri != null) {
+      const tr = tc.replies[comReplyTarget.ri];
+      if (tr) toName = tr.authorName || ((((tr.role || tr.by) === 'me') ? feedUserName() : taFeedNameFor(tr.owner || tcOwner)));
+    }
+    tc.replies.push(stampAuthor({ content: content, ts: Date.now(), to: toName }, activeMe()));
     save(list);
     // v3.5.130：调度定时器前捕获回复下标——hideCommentBar 会把 comReplyTarget 置 null，
     // 回调里再读必现 TypeError（TA 回应回复 100% 失效）
@@ -1087,9 +1131,6 @@ function submitComment() {
     hideCommentBar();
     refreshPostCard(pid);
     // TA 有概率回应我的回复（写回复区 + 消息提醒）
-    // v3.7.x：多桌面——回应用「被回复评论作者」的桌面身份/字卡/设置（评论可能是
-    // 其他桌面联系人的 TA 发的，不能再一律用动态所属桌面）
-    const tcOwner = (tc && tc.owner) || p.owner || 'default';
     const tcfg = feedCfgFor(tcOwner);
     if (Math.random() * 100 < tcfg.replyProb) {
       const cfg = tcfg;
@@ -1100,7 +1141,14 @@ function submitComment() {
         p2.comments[replyCi].replies = p2.comments[replyCi].replies || [];
         const replyText = pickReplyContent(cfg, tcOwner);
         const replies = p2.comments[replyCi].replies;
-        replies.push(stampAuthor({ content: replyText, ts: Date.now() }, taAuthorOfCid(tcOwner)));
+        // v3.14.x：TA 回应的目标是我——to 取本楼最后一条我的回复的昵称快照，
+        // 不再缺省渲染成「TA 回复 TA」（回应对象=被回复评论作者的老 bug）
+        let myToName = feedUserName();
+        for (let i = replies.length - 1; i >= 0; i--) {
+          const x = replies[i];
+          if ((x.role || x.by) === 'me') { myToName = x.authorName || myToName; break; }
+        }
+        replies.push(stampAuthor({ content: replyText, ts: Date.now(), to: myToName }, taAuthorOfCid(tcOwner)));
         save(list2);
         refreshPostCard(pid);
         // v3.11.x：通知带评论/回复定位（点击直接闪到这条回复）

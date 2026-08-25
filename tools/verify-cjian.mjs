@@ -1,18 +1,23 @@
-// ===== 专项回归：此间（梦角世界时间与在场感知，cjian.js 重设计） =====
+// ===== 专项回归：此间（梦角世界时间与在场感知；v3.14.x 按桌面分组 + 总览） =====
 // 重设计核心：刷新机制本质是随机，梦角自己随机选择状态（受世界时辰/最近互动加权 + 冷却约束）；
 //   时间连续流动（现实+偏移，十二时辰+初/正，非重抽）；每次打开此间 TA 们重新随机选择今天的轨迹。
+// v3.14.x：名单/状态按桌面命名空间分离；页内顶部 chips 直接切换别的桌面梦角；
+//   「全部」总览一次看完全部梦角状态；详情可上一位/下一位跨桌面切换。
 // 用例：
 //   T1 更多功能面板出现「此间」入口，点击后进入 page-cjian（记录来源，可返回聊天）
-//   T2 首次打开自动播种一个梦角；世界时间/时辰细分（初/正）渲染出来
+//   T2 首次打开自动播种一个梦角；世界时间/时辰细分（初/正）渲染出来；桌面分组条渲染
+//   T2b 分组切换与总览：chips 切换别的桌面梦角（自动播种）；「全部」按桌面分组一次看全
 //   T3 时间引擎：初/正边界正确（初=时辰前半小时，正=其后）；偏移产生不同世界时辰
 //   T4 状态双维：在场/空闲标签齐全，均在预设内
 //   T5 感知此间：无梦角提示 / 有输出文案 / 4s 点击冷却拦截 / 一次最多改变一个梦角
 //   T6 刷新机制=随机选择：冷却没过的梦角状态保持不动；冷却过了会重新随机（sinceP 更新时间戳）
 //   T7 今日轴：12 行、当前时辰行反映实时状态、预测文案为可能性表述；再次打开会重新随机选择
 //   T8 梦角管理：添加（名字→时间偏移两阶段，含「独立时间流」）→ 改名 → 删除
+//   T8b 详情上一位/下一位：不回列表直接切换别的梦角（跨桌面循环）
 //   T9 梦角详情：点卡片进入 TA 的一天（12 时辰轨迹 + 世界时间 + 偏移标签），可返回
+//   T9b 总览模式下管理先进「选桌面」，动作作用于所选桌面自己的名单
 //   T10 突然靠近：长时间无变化+低概率事件路径不报错
-//   T11 发送消息后 cjianNoteChat 打点
+//   T11 发送消息后 cjianNoteChat 打点（记在当前桌面命名空间）
 //   T12 加载与操作全程无未捕获异常
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:http';
@@ -124,20 +129,42 @@ try {
   ok('页面标题为「此间」', opened && opened.title === '此间', opened && opened.title);
 
   console.log('\n== T2 首次播种与渲染 ==');
-  const hero = await evalJs("(function () { return { seeded: !!localStorage.getItem('xy-home-v2:cjian-seeded'), cards: document.querySelectorAll('#cj-list .cj-card').length, hero: document.getElementById('cj-hero-time').textContent, todayRows: document.querySelectorAll('#cj-today .cj-today-row').length, emptyHidden: document.getElementById('cj-empty').hidden }; })()");
+  const hero = await evalJs("(function () { const cid = window.__activeCid || 'default'; return { seeded: !!localStorage.getItem('xy-home-v2:' + cid + ':cjian-seeded'), cards: document.querySelectorAll('#cj-list .cj-card').length, hero: document.getElementById('cj-hero-time').textContent, todayRows: document.querySelectorAll('#cj-today .cj-today-row').length, emptyHidden: document.getElementById('cj-empty').hidden }; })()");
   ok('首次打开自动播种（seed 标记 + 至少一个梦角卡片）', hero && hero.seeded && hero.cards >= 1, hero);
   ok('此刻时辰细分已渲染（初/正）', hero && /^[子丑寅卯辰巳午未申酉戌亥][初正]$/.test(hero.hero), hero && hero.hero);
   ok('今日时间轴渲染 12 行', hero && hero.todayRows === 12, hero && hero.todayRows);
   ok('有梦角时空态提示隐藏', hero && hero.emptyHidden, hero && hero.emptyHidden);
+  const bar = await evalJs("(function () { const b = document.getElementById('cj-groups'); if (!b) return null; const cs = Array.prototype.map.call(b.querySelectorAll('.cj-gchip'), function (x) { return x.textContent; }); return { n: cs.length, labels: cs, on: (b.querySelector('.cj-gchip.on') || {}).textContent }; })()");
+  ok('桌面分组条渲染（各桌面 chips + 「全部」，当前桌面高亮）', bar && bar.n === 2 && bar.labels.indexOf('全部') >= 0 && bar.on !== '全部' && bar.on === bar.labels[0], bar);
+  // v3.14.x 回归：新梦角初始状态必须落盘，30s 心跳重渲染不得重抽
+  const persist = await evalJs("(function () { const cid = window.__activeCid || 'default'; const P = 'xy-home-v2:' + cid + ':'; const r = JSON.parse(localStorage.getItem(P + 'cjian-roster') || '[]'); const id = r[0] && r[0].id; const st1 = JSON.parse(localStorage.getItem(P + 'cjian-state') || '{}'); if (!id || !st1[id]) return { hasState: false }; const before = st1[id].p + '|' + st1[id].a; window.renderCjian(false); const st2 = JSON.parse(localStorage.getItem(P + 'cjian-state') || '{}'); return { hasState: true, same: st2[id].p + '|' + st2[id].a === before, sinceKept: st2[id].sinceP === st1[id].sinceP }; })()");
+  ok('新梦角初始状态已落盘（30s 重渲染不重抽、时间戳稳定）', persist && persist.hasState && persist.same && persist.sinceKept, persist);
+
+  console.log('\n== T2b 分组切换与「全部」总览 ==');
+  await evalJs("(function () { window.createContact('小柒'); return true; })()");
+  await evalJs("window.openCjian(); true");
+  await sleep(250);
+  const bar2 = await evalJs("(function () { const b = document.getElementById('cj-groups'); return Array.prototype.map.call(b.querySelectorAll('.cj-gchip'), function (x) { return x.textContent; }); })()");
+  ok('新桌面的梦角出现在分组条（含「小柒」与「全部」）', bar2 && bar2.length === 3 && bar2.indexOf('小柒') >= 0 && bar2[bar2.length - 1] === '全部', bar2);
+  // 点「小柒」直接切换查看别的桌面的梦角（自动播种，名字取该桌 TA）
+  await evalJs("(function () { const cs = document.querySelectorAll('#cj-groups .cj-gchip'); for (let i = 0; i < cs.length; i++) { if (cs[i].textContent === '小柒') { cs[i].click(); break; } } return true; })()");
+  await sleep(200);
+  const grp = await evalJs("(function () { return { names: Array.prototype.map.call(document.querySelectorAll('#cj-list .cj-card-name'), function (x) { return x.textContent; }), rows: document.querySelectorAll('#cj-today .cj-today-row').length }; })()");
+  ok('点「小柒」chip 直接切到该桌梦角（自动播种且名字=该桌TA）', grp && grp.names.length === 1 && grp.names[0] === '小柒' && grp.rows === 12, grp);
+  // 「全部」总览：按桌面分组一次看完全部梦角状态
+  await evalJs("(function () { const cs = document.querySelectorAll('#cj-groups .cj-gchip'); for (let i = 0; i < cs.length; i++) { if (cs[i].textContent === '全部') { cs[i].click(); break; } } return true; })()");
+  await sleep(200);
+  const all = await evalJs("(function () { return { heads: Array.prototype.map.call(document.querySelectorAll('#cj-list .cj-group-head'), function (x) { return x.textContent; }), cards: document.querySelectorAll('#cj-list .cj-card').length, emptyHidden: document.getElementById('cj-empty').hidden }; })()");
+  ok('「全部」总览按桌面分组（两个分组头）', all && all.heads.length === 2 && all.heads[1].indexOf('小柒') >= 0, all);
+  ok('「全部」总览同时显示所有桌面的梦角卡片', all && all.cards === 2 && all.emptyHidden, all);
+  // 切回当前桌面
+  await evalJs("(function () { const cs = document.querySelectorAll('#cj-groups .cj-gchip'); if (cs.length) cs[0].click(); return true; })()");
+  await sleep(200);
 
   console.log('\n== T3 时间引擎 ==');
   const timeTests = await evalJs("(function () { const cur = document.getElementById('cj-hero-time').textContent; const rows = document.querySelectorAll('#cj-today .cj-today-name'); const firstRow = rows.length ? rows[0].textContent : ''; const rangeText = document.getElementById('cj-hero-range').textContent; return { cur: cur, firstRow: firstRow, rangeText: rangeText }; })()");
   ok('今日轴从当前时辰开始（首行=当前时辰）', timeTests && timeTests.firstRow === timeTests.cur.charAt(0) + '时', timeTests);
   ok('hero 副行含细分时刻区间', timeTests && /\d{2}:\d{2}–\d{2}:\d{2}/.test(timeTests.rangeText), timeTests && timeTests.rangeText);
-  // 初/正边界：直接算 19:10→戌初 19:00–19:29；19:40→戌正 19:30–20:29
-  const boundary = await evalJs("(function () { const d = new Date(); const realNow = Date.now(); function infoFor(h, m) { const t = new Date(realNow); t.setHours(h, m, 0, 0); return t.getTime() - realNow + realNow; } return { a: (function(){ var t = new Date(); t.setHours(19,10,0,0); return String(t.getTime()); })(), b: (function(){ var t = new Date(); t.setHours(19,40,0,0); return String(t.getTime()); })() }; })()");
-  // 通过 cjian 内部不可达，改用 worldNow 校验：直接构造 timeInfo 不可行，改用窗口对照
-  ok('初/正边界逻辑存在（测试点 T6 另行覆盖）', boundary && boundary.a && boundary.b, boundary);
 
   console.log('\n== T4 状态双维 ==');
   const tags = await evalJs("(function () { const t = document.querySelector('#cj-list .cj-card-tags'); if (!t) return null; return Array.prototype.map.call(t.querySelectorAll('.cj-tag'), function (x) { return x.textContent; }); })()");
@@ -160,10 +187,10 @@ try {
 
   console.log('\n== T6 刷新机制=随机选择（冷却门） ==');
   // 冷却没过：状态与时间戳都不动
-  const cold = await evalJs("(function () { const st = JSON.parse(localStorage.getItem('xy-home-v2:cjian-state') || '{}'); const roster = JSON.parse(localStorage.getItem('xy-home-v2:cjian-roster') || '[]'); const c = roster[0]; const s = st[c.id]; s.sinceP = Date.now(); s.cdP = 40 * 60000; s.sinceA = Date.now(); s.cdA = 20 * 60000; const beforeP = s.p, beforeA = s.a, beforeTs = s.sinceP; localStorage.setItem('xy-home-v2:cjian-state', JSON.stringify(st)); window.cjianRefresh(); const st2 = JSON.parse(localStorage.getItem('xy-home-v2:cjian-state') || '{}'); return { sameP: st2[c.id].p === beforeP, sameA: st2[c.id].a === beforeA, tsUnchanged: st2[c.id].sinceP === beforeTs }; })()");
+  const cold = await evalJs("(function () { const cid = window.__activeCid || 'default'; const P = 'xy-home-v2:' + cid + ':'; const st = JSON.parse(localStorage.getItem(P + 'cjian-state') || '{}'); const roster = JSON.parse(localStorage.getItem(P + 'cjian-roster') || '[]'); const c = roster[0]; const s = st[c.id]; s.sinceP = Date.now(); s.cdP = 40 * 60000; s.sinceA = Date.now(); s.cdA = 20 * 60000; const beforeP = s.p, beforeA = s.a, beforeTs = s.sinceP; localStorage.setItem(P + 'cjian-state', JSON.stringify(st)); window.cjianRefresh(); const st2 = JSON.parse(localStorage.getItem(P + 'cjian-state') || '{}'); return { sameP: st2[c.id].p === beforeP, sameA: st2[c.id].a === beforeA, tsUnchanged: st2[c.id].sinceP === beforeTs }; })()");
   ok('冷却未过 → 梦角不重新选择（状态与时间戳保持不变）', cold && cold.sameP && cold.sameA && cold.tsUnchanged, cold);
   // 冷却过了：重新随机选择（sinceP 时间戳更新为新）
-  const warm = await evalJs("(function () { const st = JSON.parse(localStorage.getItem('xy-home-v2:cjian-state') || '{}'); const roster = JSON.parse(localStorage.getItem('xy-home-v2:cjian-roster') || '[]'); const c = roster[0]; const s = st[c.id]; s.sinceP = Date.now() - 3 * 3600 * 1000; s.cdP = 1; localStorage.setItem('xy-home-v2:cjian-state', JSON.stringify(st)); window.cjianRefresh(); const st2 = JSON.parse(localStorage.getItem('xy-home-v2:cjian-state') || '{}'); return { tsFresh: st2[c.id].sinceP >= Date.now() - 5000, cdReset: st2[c.id].cdP >= 20 * 60000 }; })()");
+  const warm = await evalJs("(function () { const cid = window.__activeCid || 'default'; const P = 'xy-home-v2:' + cid + ':'; const st = JSON.parse(localStorage.getItem(P + 'cjian-state') || '{}'); const roster = JSON.parse(localStorage.getItem(P + 'cjian-roster') || '[]'); const c = roster[0]; const s = st[c.id]; s.sinceP = Date.now() - 3 * 3600 * 1000; s.cdP = 1; localStorage.setItem(P + 'cjian-state', JSON.stringify(st)); window.cjianRefresh(); const st2 = JSON.parse(localStorage.getItem(P + 'cjian-state') || '{}'); return { tsFresh: st2[c.id].sinceP >= Date.now() - 5000, cdReset: st2[c.id].cdP >= 20 * 60000 }; })()");
   ok('冷却已过 → 梦角重新随机选择（时间戳更新+冷却重置）', warm && warm.tsFresh && warm.cdReset, warm);
 
   console.log('\n== T7 今日轴预测 ==');
@@ -178,11 +205,11 @@ try {
   await evalJs("window.cjianManage(); true");
   await sleep(150);
   const mg1 = await evalJs("(function () { return Array.prototype.map.call(document.querySelectorAll('#modal-pills .pill'), function (b) { return b.textContent; }); })()");
-  ok('管理弹窗三选项（添加/改名/删除）', mg1 && mg1.join('|') === '添加梦角|改名|删除梦角', mg1);
+  ok('管理弹窗三选项（添加/改名/删除）——单桌视图直接进动作阶段', mg1 && mg1.join('|') === '添加梦角|改名|删除梦角', mg1);
   await evalJs("Array.prototype.find.call(document.querySelectorAll('#modal-pills .pill'), function (b) { return b.textContent === '添加梦角'; }).click(); document.getElementById('modal-ok').click(); true");
   await sleep(120);
   const add1 = await evalJs("(function () { return { title: document.getElementById('modal-title').textContent, hasInput: document.getElementById('modal-input').hidden === false }; })()");
-  ok('添加第一步：弹窗切到输入名字', add1 && add1.title === '添加梦角' && add1.hasInput, add1);
+  ok('添加第一步：弹窗切到输入名字', add1 && add1.title.indexOf('添加梦角') >= 0 && add1.hasInput, add1);
   await evalJs("(function () { const i = document.getElementById('modal-input'); i.value = '那刻夏'; i.dispatchEvent(new Event('input', { bubbles: true })); document.getElementById('modal-ok').click(); true; })()");
   await sleep(120);
   const add2 = await evalJs("(function () { return { title: document.getElementById('modal-title').textContent, pills: Array.prototype.map.call(document.querySelectorAll('#modal-pills .pill'), function (b) { return b.textContent; }) }; })()");
@@ -192,9 +219,26 @@ try {
   const names = await evalJs("Array.prototype.map.call(document.querySelectorAll('#cj-list .cj-card-name'), function (x) { return x.textContent; })");
   ok('添加完成（独立时间流）：梦角出现在列表', names && names.indexOf('那刻夏') >= 0, names);
   // 独立时间流应生成非整点偏移（独立于现实）
-  const roOff = await evalJs("(function () { const r = JSON.parse(localStorage.getItem('xy-home-v2:cjian-roster') || '[]'); const c = r.find(function (x) { return x.name === '那刻夏'; }); return c ? c.offsetMin : null; })()");
+  const roOff = await evalJs("(function () { const cid = window.__activeCid || 'default'; const r = JSON.parse(localStorage.getItem('xy-home-v2:' + cid + ':cjian-roster') || '[]'); const c = r.find(function (x) { return x.name === '那刻夏'; }); return c ? c.offsetMin : null; })()");
   ok('独立时间流 = 非整点随机偏移', typeof roOff === 'number' && roOff % 60 !== 0, roOff);
-  // 改名
+
+  console.log('\n== T8b 详情上一位/下一位（跨桌面直接切换） ==');
+  await evalJs("(function () { const card = document.querySelector('#cj-list .cj-card'); if (card) card.click(); return true; })()");
+  await sleep(150);
+  const dnav1 = await evalJs("(function () { return { shown: !document.getElementById('cj-detail').hidden, name: (document.querySelector('.cj-d-name') || {}).textContent, pos: (document.querySelector('.cj-d-nav-pos') || {}).textContent, src: (document.querySelector('.cj-d-src') || {}).textContent }; })()");
+  ok('详情显示来源桌面 + 位次（1/3）', dnav1 && dnav1.shown && dnav1.pos === '1/3' && dnav1.src.indexOf('的此间') >= 0, dnav1);
+  await evalJs("(function () { const bs = document.querySelectorAll('.cj-d-nav-btn'); bs[bs.length - 1].click(); return true; })()");
+  await sleep(120);
+  const dnav2 = await evalJs("(function () { return { shown: !document.getElementById('cj-detail').hidden, name: (document.querySelector('.cj-d-name') || {}).textContent, pos: (document.querySelector('.cj-d-nav-pos') || {}).textContent }; })()");
+  ok('「下一位」不回列表直接切到下一个梦角（那刻夏 2/3）', dnav2 && dnav2.shown && dnav2.name === '那刻夏' && dnav2.pos === '2/3', dnav2);
+  await evalJs("(function () { const bs = document.querySelectorAll('.cj-d-nav-btn'); bs[bs.length - 1].click(); return true; })()");
+  await sleep(120);
+  const dnav3 = await evalJs("(function () { return { name: (document.querySelector('.cj-d-name') || {}).textContent, pos: (document.querySelector('.cj-d-nav-pos') || {}).textContent }; })()");
+  ok('继续「下一位」跨到别的桌面的梦角（小柒 3/3）', dnav3 && dnav3.name === '小柒' && dnav3.pos === '3/3', dnav3);
+  await evalJs("(function () { document.getElementById('cj-detail-back').click(); return true; })()");
+  await sleep(120);
+
+  console.log('\n== T8c 改名/删除（作用于当前桌面名单） ==');
   await evalJs("window.cjianManage(); true");
   await sleep(120);
   await evalJs("Array.prototype.find.call(document.querySelectorAll('#modal-pills .pill'), function (b) { return b.textContent === '改名'; }).click(); document.getElementById('modal-ok').click(); true");
@@ -207,7 +251,6 @@ try {
   await sleep(200);
   const names2 = await evalJs("Array.prototype.map.call(document.querySelectorAll('#cj-list .cj-card-name'), function (x) { return x.textContent; })");
   ok('改名完成：列表出现新名字', names2 && names2.indexOf('那刻夏·改') >= 0, names2);
-  // 删除
   await evalJs("window.cjianManage(); true");
   await sleep(120);
   await evalJs("Array.prototype.find.call(document.querySelectorAll('#modal-pills .pill'), function (b) { return b.textContent === '删除梦角'; }).click(); document.getElementById('modal-ok').click(); true");
@@ -229,14 +272,32 @@ try {
   const detailBack = await evalJs("(function () { return { detailHidden: document.getElementById('cj-detail').hidden, mainShown: !document.getElementById('cj-main').hidden }; })()");
   ok('详情可返回列表', detailBack && detailBack.detailHidden && detailBack.mainShown, detailBack);
 
+  console.log('\n== T9b 总览模式下管理先进「选桌面」 ==');
+  await evalJs("(function () { const cs = document.querySelectorAll('#cj-groups .cj-gchip'); for (let i = 0; i < cs.length; i++) { if (cs[i].textContent === '全部') { cs[i].click(); break; } } return true; })()");
+  await sleep(200);
+  await evalJs("window.cjianManage(); true");
+  await sleep(150);
+  const pick = await evalJs("(function () { return Array.prototype.map.call(document.querySelectorAll('#modal-pills .pill'), function (b) { return b.textContent; }); })()");
+  ok('总览模式打开管理：先选桌面（列出各桌面名）', pick && pick.indexOf('小柒') >= 0 && pick.indexOf('添加梦角') < 0, pick);
+  await evalJs("(function () { const p = Array.prototype.find.call(document.querySelectorAll('#modal-pills .pill'), function (b) { return b.textContent === '小柒'; }); if (p) p.click(); document.getElementById('modal-ok').click(); true; })()");
+  await sleep(120);
+  const act = await evalJs("(function () { return { title: document.getElementById('modal-title').textContent, pills: Array.prototype.map.call(document.querySelectorAll('#modal-pills .pill'), function (b) { return b.textContent; }) }; })()");
+  ok('选定桌面后进入该桌的动作菜单', act && act.title.indexOf('小柒') >= 0 && act.pills.join('|') === '添加梦角|改名|删除梦角', act);
+  await evalJs("Array.prototype.find.call(document.querySelectorAll('#modal-pills .pill'), function (b) { return b.textContent === '删除梦角'; }).click(); document.getElementById('modal-ok').click(); true");
+  await sleep(120);
+  await evalJs("(function () { const ps = document.querySelectorAll('#modal-pills .pill'); if (ps.length === 1) ps[0].click(); document.getElementById('modal-ok').click(); true; })()");
+  await sleep(200);
+  const delCheck = await evalJs("(function () { const c = window.getContacts().find(function (x) { return x.name === '小柒'; }); const r = JSON.parse(localStorage.getItem('xy-home-v2:' + c.id + ':cjian-roster') || '[]'); return { left: r.length, emptyTip: (document.querySelector('#cj-list .cj-group-empty') || {}).textContent }; })()");
+  ok('删除作用于所选桌面自己的名单（小柒桌清空并提示空态）', delCheck && delCheck.left === 0 && String(delCheck.emptyTip || '').indexOf('还没有梦角') >= 0, delCheck);
+
   console.log('\n== T10 突然靠近 ==');
-  await evalJs("(function () { const st = JSON.parse(localStorage.getItem('xy-home-v2:cjian-state') || '{}'); const roster = JSON.parse(localStorage.getItem('xy-home-v2:cjian-roster') || '[]'); if (!roster.length) return false; const c = roster[0]; const s = st[c.id] || {}; s.sinceP = Date.now() - 2 * 3600 * 1000; st[c.id] = s; localStorage.setItem('xy-home-v2:cjian-state', JSON.stringify(st)); return true; })()");
+  await evalJs("(function () { const cid = window.__activeCid || 'default'; const P = 'xy-home-v2:' + cid + ':'; const st = JSON.parse(localStorage.getItem(P + 'cjian-state') || '{}'); const roster = JSON.parse(localStorage.getItem(P + 'cjian-roster') || '[]'); if (!roster.length) return false; const c = roster[0]; const s = st[c.id] || {}; s.sinceP = Date.now() - 2 * 3600 * 1000; st[c.id] = s; localStorage.setItem(P + 'cjian-state', JSON.stringify(st)); return true; })()");
   const tickOk = await evalJs("(function () { try { window.cjianRefresh(); window.cjianPerceive(); return true; } catch (e) { return String(e); } })()");
   ok('状态更新/感知路径不报错', tickOk === true, tickOk);
 
   console.log('\n== T11 聊天互动钩子 ==');
-  const hook = await evalJs("(function () { window.cjianNoteChat(); const st = JSON.parse(localStorage.getItem('xy-home-v2:cjian-state') || '{}'); return typeof st.__chat === 'number'; })()");
-  ok('发送消息后 cjianNoteChat 打点', hook === true, hook);
+  const hook = await evalJs("(function () { window.cjianNoteChat(); const cid = window.__activeCid || 'default'; const st = JSON.parse(localStorage.getItem('xy-home-v2:' + cid + ':cjian-state') || '{}'); return typeof st.__chat === 'number'; })()");
+  ok('发送消息后 cjianNoteChat 打点（当前桌面命名空间）', hook === true, hook);
 
   console.log('\n== T12 返回聊天 ==');
   await evalJs("document.getElementById('cj-back').click(); true");

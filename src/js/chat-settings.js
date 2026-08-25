@@ -598,6 +598,23 @@
   // ================= 气泡 CSS（自定义样式，极简黑白灰） =================
   const csCss = row('cs-css');
   const CSS_KEY = 'cs-bubble-css';
+  // v3.14.x：安卓 ce-box 转换后 .value 代理在个别内核读空（mail.js/music-player.js/
+  // period.js 同款先例）——代理读空但 ce-box 里仍有可见内容时直接从盒子取值兜底，
+  // 防「点应用存了空串」→ 重进后退回默认气泡；用户真清空时盒子也是空的，语义不变
+  function cssReadVal(el) {
+    if (!el) return '';
+    let v = '';
+    try { v = el.value || ''; } catch (e) {}
+    if (String(v).trim()) return String(v);
+    try {
+      const box = el.__ceBox || (el.parentNode && el.parentNode.querySelector('.ce-box[data-for="' + (el.id || '') + '"]'));
+      if (box) {
+        const t = box.innerText || box.textContent || '';
+        if (String(t).trim()) return String(t);
+      }
+    } catch (e) {}
+    return v;
+  }
   function applyCss() {
     const old = document.getElementById('cs-bubble-style');
     if (old) old.remove();
@@ -643,7 +660,7 @@
         toast('已清空气泡样式');
       });
       document.getElementById('cs-css-ok').addEventListener('click', () => {
-        const v = (document.getElementById('cs-css-input').value || '').trim();
+        const v = cssReadVal(document.getElementById('cs-css-input')).trim();
         store.set(CSS_KEY, v);
         document.getElementById('tc-mask').hidden = true;
         applyCss();
@@ -747,6 +764,16 @@
           applyFont();
         }
       });
+      // v3.14.x：气泡 CSS 同款兜底——LS 写失败（配额满）或被浏览器清理后值只剩 IDB 副本，
+      // boot 时 applyCss 跑在回填前读空 → 重进后退回默认气泡（荣耀200Pro Edge 实测）。
+      // 启动补读 + 重应用（applyCss 幂等）
+      window.idbGet(myPrefix + ':' + CSS_KEY).then(v => {
+        if (window.activePrefix() !== myPrefix) return;
+        if (v && typeof v === 'string' && v.length > 0 && !store.get(CSS_KEY)) {
+          store.set(CSS_KEY, v);
+          applyCss();
+        }
+      });
     }
   } catch (e) {}
   // v3.7.x 修复：上传字体 dataURL 属大键（>200KB）只进 IDB+memoryCache、localStorage 被删，
@@ -756,6 +783,10 @@
   document.addEventListener('mochi-restore-done', function () {
     try { applyFont(); } catch (e) {}
     try { applyProfile(); } catch (e) {}
+    // v3.14.x：气泡 CSS 补应用——boot 时 applyCss 跑在 IDB 回填完成前（值只在 IDB 时
+    // 读空不注入），字体/头像此前有本兜底而气泡 CSS 漏了 → 重进后回退默认气泡。
+    // applyCss 幂等：会话内已写入时 memoryCache 值更新，重应用无副作用
+    try { applyCss(); } catch (e) {}
   });
   // v3.6.x：多桌面——切换联系人后重新应用聊天美化（壁纸/气泡颜色/字号/形状按新桌面）
   // v3.9.x 修复：气泡 CSS / 全局字体也是按联系人存储（cs-bubble-css / cs-font），

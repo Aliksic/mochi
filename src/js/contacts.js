@@ -45,7 +45,8 @@
     // （否则非 default 桌面读不到全局商品库，自定义商品"消失"）。market-migrated 为迁移幂等标记
     'market-custom', 'market-migrated',
     // v3.10.x：扩库救援标记（gift-shop.js rescueNewDefaults，v2 新默认商品误删恢复），同为全局根键
-    'market-migrated-v2',
+    // v3.13.x：扩库救援标记 v3（gift-shop.js rescueBatch，「两个世界」分类+日常扩容 109 件），同上
+    'market-migrated-v2', 'market-migrated-v3',
     // v3.13.x：此间（梦角世界时间与在场感知，cjian.js）——梦角名单/状态/初始化标记
     // 走根命名空间全局共享，不随联系人隔离，绝不能被 migrateLegacy 迁进 default 桌面
     // （否则切换桌面后梦角名单/状态"消失"）
