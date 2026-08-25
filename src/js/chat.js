@@ -2314,12 +2314,16 @@ document.addEventListener('contact-switched', function () {
 try { if (window.replyCfg) scheduleAutoSend(); } catch (e) {}
 });
 const INVITE_DECLINE = ['下次吧，现在不太想玩~', '等会儿再陪我玩好不好', '先不玩啦，待会儿再说', '现在没状态，下次一定'];
-function openInviteConfirm(title, staticText, onAccept) {
+// v3.14.x：贴贴邀请（cuddle）——正常情侣贴贴互动（贴/抱/牵手/靠着），没有游戏半框：
+// 同意后轻震动一下（体感反馈），TA 稍后回应一句贴贴的话；婉拒用专属文案
+const CUDDLE_DECLINE = ['下次再贴吧，先记着这笔~', '等会儿补给你，说话算数', '先欠着，攒到晚上一起还~', '今天想先自己待会儿，明天加倍还你'];
+const CUDDLE_REPLIES = ['嗯……蹭到了。暖暖的，很喜欢。', '那我要贴很久哦，不许偷偷跑掉。', '手被握住了，就这样待一会儿。', '感觉到了，你在旁边。很安心。', '贴贴充电中……好，满格了。'];
+function openInviteConfirm(title, staticText, onAccept, declinePool) {
 const mask = document.getElementById('modal-mask');
 if ((mask && !mask.hidden) || !window.openModal) { onAccept(); return; }
 window.openModal(title, '', (v) => {
 if (v === '1') onAccept();
-else addOut(pick(INVITE_DECLINE));
+else addOut(pick(declinePool || INVITE_DECLINE));
 }, {
 noInput: true,
 lock: true,
@@ -2327,7 +2331,12 @@ pills: [{ label: '同意', value: '1' }, { label: '拒绝', value: '0' }],
 staticText: staticText
 });
 }
-function openInvitePanelFor(kind) {
+function openInvitePanelFor(kind, name) {
+if (kind === 'cuddle') {
+try { if (navigator.vibrate) navigator.vibrate([30, 60, 90]); } catch (e) {}
+setTimeout(() => { try { addIn(name + ' ' + pick(CUDDLE_REPLIES), { initiative: true }); } catch (e) {} }, randInt(600, 1200));
+return;
+}
 if (kind === 'rps') { if (window.openRpsPanel) window.openRpsPanel(); return; }
 if (kind === 'pong') {
 const ids = ['poke-card', 'emoji-panel', 'chat-ask-panel', 'chat-search', 'chat-divine-panel', 'chat-decision-panel', 'chat-rps-panel', 'chat-rp-panel', 'chat-call-panel'];
@@ -2341,7 +2350,8 @@ if (kind === 'snake') { if (window.openSnakePanel) window.openSnakePanel(); }
 const INVITE_KIND_META = {
 rps: { title: '猜拳邀请' },
 pong: { title: '游戏邀请' },
-snake: { title: '游戏邀请' }
+snake: { title: '游戏邀请' },
+cuddle: { title: '贴贴邀请' }
 };
 function sendTaInvite(inv, name) {
 const meta = INVITE_KIND_META[inv && inv.kind] || INVITE_KIND_META.rps;
@@ -2349,7 +2359,7 @@ addIn(name + ' ' + (inv.text || ''), { special: 'poke', initiative: true });
 showTyping();
 setTimeout(() => {
 hideTyping();
-openInviteConfirm(name + ' 的' + meta.title, name + ' ' + (inv.text || ''), () => openInvitePanelFor(inv.kind));
+openInviteConfirm(name + ' 的' + meta.title, name + ' ' + (inv.text || ''), () => openInvitePanelFor(inv.kind, name), inv.kind === 'cuddle' ? CUDDLE_DECLINE : null);
 }, randInt(700, 1400));
 }
 window.sendTaInvite = sendTaInvite;

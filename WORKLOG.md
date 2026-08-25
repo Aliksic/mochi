@@ -79,6 +79,19 @@
   - ⚠️ **⚠️ 磁盘满事故波及说明（重要）**：23:45 我曾构建出一份 **缺 chat.js 段的坏产物**（index.html 仅 2.34MB，运行期 window.chatAddIn 为 undefined——构建时 src/js/chat.js 正处于磁盘满损坏状态）。并行会话 23:50 已从 HEAD 恢复 chat.js（文件头有恢复注释）；我方 23:55 全量重构建（46 个 jsFiles 全部 node 语法校验通过后收口，sw: mochi-mt8ujd6g），专项 16/16 复跑全绿确认 chatAddIn 触发链路恢复。**若有人本地还留着 mt8u6um7/mt8skz6q 版产物请弃用，以 23:55 mt8ujd6g 为准。**
   - ⚠️ **构建扫入说明（提交者必读）**：本会话多次构建期间并行会话持续大改（gift-shop/memo-arc/reply-settings/contacts/period/market.css/feed/music-player/template/home+chat-pages css、删除 garden-shop/giftcard-*/market-new 等 jpg、新增未注册的 src/js/breakout.js 与若干 tools 脚本）——均已按当时工作区状态扫入产物。**提交前请按协议 git diff 自查全部范围**；breakout.js 尚未见 build.mjs 注册，请其会话确认是否漏登记。
 
+### 2026-08-26（新功能：聊天「更多功能」新增【双人打砖块】——合作清砖小游戏，玩家+梦角各守半场共接一球）
+- [本会话·完成]（**已改 src/js/breakout.js（新增）+ src/js/chat.js（接线×2）+ src/template.html（半框面板+入口按钮）+ src/css/chat-pages.css（样式）+ build.mjs（注册）+ src/js/mobile-adapt.js（AI-B 域，仅 FLOAT_PANEL_SELECTORS/FLOAT_SELECTORS 各加 '#chat-brick-panel'）+ 新专项 tools/verify-brick.mjs 16/16；已构建三次收口（最终 00:23, sw: mochi-mt8vjjhc）+ 布局 verify 10/10 全绿；未提交**）。
+  - **玩法（按需求 23 条落实）**：横向场地 8列×4行砖（普通1血+10分/坚固2血+20分）；玩家左挡板、梦角右挡板各锁半场；共享3命❤❤❤、掉球-1命重发；共享连击（掉球清零）与总分；无限层（清层【这一层完成！】→坚固砖比例↑/排列轮换3种/球速↑封顶5.0）；结算面板=得分/最高连击/清除砖块/完成层数+【再来一局】【返回小游戏】；再来一局全重置且重新生成本局发挥、难度保持。
+  - **操作**：手机按住画面拖动（touch-action:none 防滚动）/电脑 A/D、←→；反弹角按击中位置偏转（中央垂直/边缘斜向，±60°上限）。
+  - **梦角控制（无 AI 模型）**：落点预测（解析折叠左右墙反弹）→目标位→限速移动；难度三档=思考间隔/移速/预测误差σ/放水率（轻松250-430ms·2.35·30px·17%，普通135-240ms·3.5·16px·8%，困难80-160ms·4.8·8px·3%）；误差采用 pong v3.12 教训的**锁定式**（每次下落掷一次整段保持，防逐帧平均失效）；球飞向玩家半场时梦角只回中线待命不做无意义横穿；球快到跟前自动提速。
+  - **本局发挥**：开局掷定 正常80%/较好10%（误差×0.55放水减半）/走神8%（周期性反应停摆0.45-0.85s+误差放大）/特殊2%（二选一：10s「超神」临场强化 或 整局一次必然偏出的大走神），只对难度小幅波动不覆盖。
+  - **字卡互动（低概率，全局9s冷却+分事件冷却，纯场内泡泡+结束进聊天，游戏零字卡也可完整玩）**：接住「接到了。/继续。/还在。」10%、险接「差一点。/……/看球。」、玩家边缘救球「漂亮。/接得好。」35%、清层「清完了。/不错。/继续？」40%、丢球「没接住。/可惜。/再来。」30%、合作默契（连续互接≥10次）「我们配合得不错。」极低概率、连击≥9「还挺顺的。」极低概率；结束后写聊天记录卡（special:'brick'，chat.js 渲染居中小卡片）+ TA 固定回应「还玩吗？/再来一局？」。
+  - **其他**：历史最佳分按联系人存 `xy-home-v2:<cid>:brick-best`；切后台自动暂停；切联系人桌面自动关闭；音效 Web Audio beep 可静音；全屏模式（brick-fs 对齐 pong-fs 方案）。
+  - ⚠️⚠️ **重大事故披露（构建者/对方必读）**：本会话期间 chat.js 发生两次写入事故——① 我用编辑工具改 chat.js 时工具报错致文件被截断为 **0 字节**（时间线在并行会话 23:45 构建之前），当时从 git HEAD(9928715) 完整恢复并打上补丁；② 并行会话在 00:10 用其编辑器缓冲把 chat.js 整文件覆盖成 **234KB 无注释版**（我的补丁被冲掉）。经结构对比（window 导出+函数名清单），该 234KB 版本是 HEAD 的**超集、无功能缺失**（疑似对方也从构建产物恢复过，注释被剥故体积小于 HEAD 的 379KB）；我已在**该版本之上**用 Node 脚本重新注入两处打砖块补丁（more-brick 接线 + special:'brick' 结算卡渲染，现 236138 字节，node --check 通过，verify-brick 全绿）。**因此 git diff 里 chat.js 会显示「全部注释消失」的巨大 diff，属预期，非丢功能**；若对方编辑器仍开着旧缓冲，请勿再对 chat.js 做整文件覆盖保存（期间该文件出现持续 EPERM 文件锁，我是用 delete+rename 方式完成替换的）。
+  - ⚠️ **并发提示**：工作区另有大量并行未提交改动（00:08 与 00:23 两次构建均按现状整体收口，含 bg-keep/divination/ta-ask/tabs 等后续变化）；`src/js/room.js`（空文件）与 `src/css/room.css` 为并行会话新建，本会话未触碰（room.js 不在 jsFiles，不影响构建）。真机确认点：更多功能→打砖块→开始，拖动左挡板接球、看梦角右挡板自己防守并偶尔失误；清一层出「这一层完成！」升层加速；掉 3 球出结算并收到 TA「还玩吗？」消息；三档难度梦角水平差异明显；同一桌面再进入可续玩进行中对局。
+  - 📌 **事故根因更正与交叉引用**：本条开头披露的 chat.js 截断，与下方「2026-08-25 23:5x 紧急事故」条目为**同一事件**——根因是当晚**磁盘满**（多个会话的写入同时失败/被截断），非单一会话责任；各会话先后从 HEAD/构建产物做了多轮恢复（详见该条时间线）。另按其记录：当前恢复版 chat.js 相比事故前仍缺「贴贴邀请 cuddle」一处已知增量（其补丁脚本已备好），请构建者收口前确认该增量是否已补回。
+
+
 ### 2026-08-25（用户需求：心意市集新商品扩容——「两个世界」世界观商品 + 正常世界一般日用商品）
 - [本会话·完成]（**已改 src/js/gift-shop.js（AI-A 域）+ src/js/contacts.js（AI-B 域，仅 EXCLUDE 机械一行，跨域改动请知悉）+ 新专项 tools/verify-gift-market-v3.mjs 14/14 全绿；未构建、未提交——请构建者执行 `node build.mjs` 收口**）：心意市集默认商品 79→188 件（五轮扩容），新增分类「两个世界」（🌗，#e0f7fa，位于星空后）。
   - **世界观商品 14 件**（文案走甜蜜/安稳/亲密路线）：字卡沟通类——手写字卡 ¥1.30「每个字都挑过了，抽中哪张都是我想说的」、字卡盲盒 ¥5.20「系统乱出的也算，都是想跟你说的话」（正面接纳"TA 控制不住随机出卡"设定）、表情包补给、千言锦囊 ¥52「几百句想说的话慢慢拆」；隔空陪伴与体感类——身边坐标「今晚也在你左手边的位置」、隔空牵手、摸摸头、看不见的抱抱（看不见但抱得到）、心跳感应、平安符「我的名字在里面替我陪着你」、跨界快递「慢一点但一定到」；梦境类——同一场梦 ¥13.14、同时看月亮「九点一起抬头就算见过面了」、世界之桥 ¥66「这座桥常开着」。
@@ -95,6 +108,7 @@ ode build.mjs**，把空 chat.js 扫进 index.html/sw.js/version.json——**这
 ode tools/patch-chat-cuddle.mjs**（幂等断言，仅在文件未被锁定时可写——刚才两次 EPERM，说明对方仍持有句柄，请对方收尾时自行执行或告知我执行）。
   - **风险声明**：chat.js 在被清零前最后保存是 23:00:33，21:19 之后~23:00 之间若还有未在 WORKLOG 登记的 chat.js 改动则不可知、可能丢失；请双方下次开工前真机冒烟聊天页（发送/主动发送/邀请/红包钱包编辑/桌面弹窗头像）。
   - **给构建者**：push 前必须先确认 src/js/chat.js 非空且 node --check 通过，再重新 build 覆盖 23:31/23:45 两版坏产物。
+  - **【后续 00:3x 收口】**：cuddle 补丁已由本会话成功打进 src/js/chat.js（node tools/patch-chat-cuddle.mjs 同款逻辑，7 断言全过 + node --check 通过）。当前 chat.js = HEAD 内嵌产物(21:19 构建)剖出基座 + cs-avatar-partner 弹窗修复 + 贴贴邀请全套；功能清单核对 clearChatInput/CUDDLE/cs-avatar/startAskKbRefresh/cjianNoteChat/rpEditWallet/taInviteDraw 全在（interactPopupStale 本就在 ta-ask.js，正常）。注意：中途对方会话曾写入过一版 317KB 恢复稿后被产物剖出版取代——若那版含未登记增量请对方补充说明。23:31/23:45 两版缺聊天模块的坏产物仍待重新 build 覆盖。
 
 ### 2026-08-25（用户反馈：手机端聊天「更多功能」里的小功能（帮我决定/占卜/问问TA等）点输入栏，功能页面被错误挤压到屏幕输入栏一行下方、中间出现大面积无用灰色）
 - [本会话·完成]（**已改 src/js/mobile-adapt.js（AI-B 域，键盘面板停靠）+ src/template.html（AI-B 域，仅注释措辞修复）+ 新专项 tools/verify-more-panel-kb.mjs 5/5；已构建（23:0x, sw: mochi-mt8qxxxx）+ 布局 verify 10/10 + 键盘回归 verify-android-kb 3/3、verify-ask-no-false-dock 4/4、verify-kb-overlay-kernel 10/10、verify-kb-overlays 8/8、verify-kb-dock 12/12、verify-ios-kb-edge-scroll 16/16、verify-scroll-lock-ghost 9/9、verify-chat-scroll-bottom 7/7、verify-feed-root-rescue ✅、verify-eat-menus 12/12、verify-cjian-desk 11/11 全绿；未提交**）。
