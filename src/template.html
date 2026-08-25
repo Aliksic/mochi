@@ -225,7 +225,24 @@
           </div>
         </div>
 
-<!-- 第二页功能：音乐 / 聊天统计 / 小互动 -->
+<!-- 第二页补充：每周日程（填空白区）；今日备忘/今天的心情已移第三页经期卡下方 -->
+<div class="week-card glass" data-desk-widget="week" data-card-bg="week">
+<div class="mc-top">本周日常</div>
+<div class="week-days" id="week-days"></div>
+</div>
+<!-- 离周末还有几天（点击摸鱼 +1，可累计） -->
+<div class="weekend-box glass" id="weekend-box" data-desk-widget="weekend" data-card-bg="weekend">
+<div class="we-left">
+<span class="we-days" id="weekend-days">离周末还有 0 天</span>
+<span class="we-sub">距离周末 · 摸鱼倒计时</span>
+<span class="we-ta" id="weekend-ta-name"><span class="pair"><i>TA 摸鱼值</i><b id="weekend-ta">0</b></span><span class="pair"><i>TA 工作值</i><b id="weekend-work-ta">0</b></span></span>
+<span class="we-ta" id="weekend-mine-name"><span class="pair"><i>我 摸鱼值</i><b id="weekend-mine">0</b></span><span class="pair"><i>我 工作值</i><b id="weekend-work">0</b></span></span>
+</div>
+<button class="we-btn" id="weekend-fish" title="摸鱼 +1">摸鱼 +<b id="weekend-count">0</b></button>
+</div>
+
+<!-- 第二页功能：两排图标（第一排 音乐/聊天统计/提问记录/查岗；第二排 喝水(p2-features 注入)/花园/同频(注入)/伸手(注入)），
+     整组移到摸鱼组件（周末倒计时）下面 -->
 <div class="app-grid p2-grid" data-app="p2" data-desk-widget="p2apps">
 <div class="app" data-app="music" data-desk-widget="app-music">
 <div class="app-ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
@@ -243,22 +260,11 @@
 <div class="app-ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/><path d="M12 3a9 9 0 000 18"/></svg></div>
 <div class="app-name">查岗</div>
 </div>
+<!-- 花园自第三页移入：第二排「喝水 花园 同频 伸手」（喝水由 p2-features 插到本图标前，同频/伸手追加其后） -->
+<div class="app" data-app="garden" data-desk-widget="app-garden">
+<div class="app-ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 21h10l-1.5-5h-7z"/><path d="M12 16v-7"/><path d="M12 12c-2 0-3.5-1-3.5-3"/><path d="M12 10c2 0 3.5-1 3.5-3"/><circle cx="12" cy="6" r="2"/></svg></div>
+<div class="app-name">花园</div>
 </div>
-
-<!-- 第二页补充：每周日程（填空白区）；今日备忘/今天的心情已移第三页经期卡下方 -->
-<div class="week-card glass" data-desk-widget="week" data-card-bg="week">
-<div class="mc-top">本周日常</div>
-<div class="week-days" id="week-days"></div>
-</div>
-<!-- 离周末还有几天（点击摸鱼 +1，可累计） -->
-<div class="weekend-box glass" id="weekend-box" data-desk-widget="weekend" data-card-bg="weekend">
-<div class="we-left">
-<span class="we-days" id="weekend-days">离周末还有 0 天</span>
-<span class="we-sub">距离周末 · 摸鱼倒计时</span>
-<span class="we-ta" id="weekend-ta-name"><span class="pair"><i>TA 摸鱼值</i><b id="weekend-ta">0</b></span><span class="pair"><i>TA 工作值</i><b id="weekend-work-ta">0</b></span></span>
-<span class="we-ta" id="weekend-mine-name"><span class="pair"><i>我 摸鱼值</i><b id="weekend-mine">0</b></span><span class="pair"><i>我 工作值</i><b id="weekend-work">0</b></span></span>
-</div>
-<button class="we-btn" id="weekend-fish" title="摸鱼 +1">摸鱼 +<b id="weekend-count">0</b></button>
 </div>
       </div><!-- /page-slide 第二页 -->
 
@@ -289,10 +295,7 @@
 <div class="app-ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="3" width="15" height="18" rx="2"/><path d="M4.5 8h15"/><path d="M10 13l2-2 2 2"/><path d="M12 11v6"/><path d="M10.5 14h3"/></svg></div>
 <div class="app-name">记账</div>
 </div>
-<div class="app" data-app="garden" data-desk-widget="app-garden">
-<div class="app-ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 21h10l-1.5-5h-7z"/><path d="M12 16v-7"/><path d="M12 12c-2 0-3.5-1-3.5-3"/><path d="M12 10c2 0 3.5-1 3.5-3"/><circle cx="12" cy="6" r="2"/></svg></div>
-<div class="app-name">花园</div>
-</div>
+<!-- 花园图标已移第二页（第二排）；本页动态注入 吃什么/存钱罐/番茄钟（p2-features.js） -->
 </div>
       </div><!-- /page-slide 第三页 -->
       </div><!-- /desktop-pages -->
@@ -1219,8 +1222,8 @@
           <div class="lic-li">装修模式：点图标换图、点卡片设背景、添加卡片、恢复图标、完成</div>
           <div class="lic-li">桌面图片组件（尺寸档位：小 / 中 / 大，全屏查看器）</div>
           <div class="lic-li">第一页功能图标：聊天、主页、信箱、朋友圈、日历、纪念、占卜、收藏</div>
-          <div class="lic-li">第二页功能图标：聊天统计、提问记录、查岗、本周日常、离周末还有几天</div>
-          <div class="lic-li">第三页卡片：经期倒计时、今日备忘、今天的心情；功能图标：经期记录、记账、花园</div>
+          <div class="lic-li">第二页：本周日常、周末倒计时（摸鱼组件）；功能图标两排——聊天统计、提问记录、查岗、音乐 / 喝水、花园、同频、伸手</div>
+          <div class="lic-li">第三页卡片：经期倒计时、今日备忘、今天的心情；功能图标：经期记录、记账（吃什么/存钱罐/番茄钟动态注入）</div>
           <div class="lic-li">设置页：深色模式开关；桌面美化：主题色、桌面字号、卡片大小、内置壁纸预设</div>
           <div class="lic-li">小组件颜色：背景 / 边框 / 按钮 / 按钮文字 / 爱心外框颜色、小组件透明度、图标圆角</div>
         </div>
@@ -2031,7 +2034,7 @@
       </div>
     </div>
 
-    <!-- 花园页（桌面第三页点「花园」进入） -->
+    <!-- 花园页（桌面第二页点「花园」进入） -->
     <div class="page" id="page-garden" hidden>
       <div class="chat-head">
         <span class="ch-back" id="garden-back">

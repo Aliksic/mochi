@@ -513,12 +513,24 @@
   // 检测信号永远不来 → .phone 永不收缩 → 输入栏被盖住且不自愈。两分支各加一条
   // 二线兜底（_iProvCheck / _aProvCheck），这里先备好两个公共判定信号：
   var kbLastTouchAt = 0;
-  // 「最近一次触摸」时间戳——软键盘弹出必然源于用户点按输入框；而程序化
-  // .focus()（邀请TA/问问TA 等半框打开即自动聚焦）在安卓上通常【不】弹键盘。
-  // 保底只对「触摸后短窗口内发生的聚焦」武装，防止自动聚焦误触发收缩。
+  var kbLastTouchTarget = null;
+  // 「最近一次触摸」时间戳 + 触摸目标——软键盘弹出必然源于用户【直接点按输入框】；
+  // 而程序化 .focus()（邀请TA/问问TA 等半框打开即自动聚焦）在安卓上通常【不】弹键盘。
+  // v3.13.x：只记时间戳不够——点【问问TA】按钮后 80ms 面板程序化聚焦问题输入框，
+  // 时间窗（<1.5s）照样命中 → 无键盘却把 .phone 假收缩到 58%（面板被压扁变形、
+  // ce-box 合成层文字停在旧位置=「字出界出现在框下面」，小米15Pro Chrome 实测复现）。
+  // 补触摸目标校验 kbTouchArmed()：聚焦元素与触摸目标无包含关系不武装。
   try {
-    document.addEventListener('touchstart', function () { kbLastTouchAt = Date.now(); }, { passive: true, capture: true });
+    document.addEventListener('touchstart', function (e) { kbLastTouchAt = Date.now(); kbLastTouchTarget = e.target; }, { passive: true, capture: true });
   } catch (e) {}
+  // 保底武装校验：聚焦元素 = 触摸目标本身（或互为包含，兼容 label 包 input、
+  // 输入框内点击子节点等结构）。X5 等纯悬浮键盘真场景手指点的就是输入框，必过。
+  function kbTouchArmed(tgt) {
+    if (!tgt || !kbLastTouchTarget) return false;
+    try {
+      return tgt === kbLastTouchTarget || tgt.contains(kbLastTouchTarget) || kbLastTouchTarget.contains(tgt);
+    } catch (e) { return false; }
+  }
   var kbHardKeyUntil = 0;
   // 「物理/外接键盘」抑制信号——真实按键（keyCode 229 是中文输入法组合标记，
   // 软键盘多数内核不派发 keydown 或恒为 229，不会误伤）。外接键盘打字场景
@@ -578,6 +590,59 @@
           }
         } catch (e) {}
       }
+      // v3.13.x：键盘期「文档大偏移滚动」自愈（iOS Edge 报修修复）——
+      // Edge iOS（同 WebKit 内核）聚焦输入框后，除了键盘弹出还会把【文档】滚一段
+      // 距离让焦点可见；该原生滚动可能晚于 _pinUntil 钉顶窗口（>500ms）才发生，
+      // 甚至打字期间反复发生。此时 .phone 已收缩停靠在键盘上沿，文档再被滚走
+      // S px → 屏幕上只剩 .phone 的底部切片：输入栏贴屏幕顶部、其下到键盘之间
+      // 全是 body 灰底，观感即用户报修的「整个聊天页被挤压/中间全是灰色」。
+      // 稳态期刻意不 pin（防 Safari caret 微滚↔归零打架闪屏），所以补一条
+      // 「大偏移才治」的自愈：文档滚动超过阈值才归零（caret 微滚一般 <60px，
+      // 手机布局下 window 正常恒为 0，不会误伤）。
+      var KB_SCROLL_HEAL = 80;
+      function winScrollY() {
+        try { return window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0; } catch (e) { return 0; }
+      }
+      // v3.13.x：键盘期禁文档根滚动（iOS Edge 聚焦「滚一段让焦点可见」根治）。
+      // 背景：上一版只靠 winScrollY() 判泥祖师，但真实 iOS Edge 的「滚动到焦点可见」
+      // 走的是 visualViewport 平移、window.scrollY 恒为 0 → 自愈永不触发，挤压照旧。
+      // 本应用页面内容逐屏、滚动都在 .phone 内层容器（.page/.chat-body 等）完成，
+      // html/body 根本不需要滚动——键盘弹出时直接把根 overflow 锁死，iOS 无法再
+      // 平移动画文档，输入栏自然停靠键盘上沿，灰底一条不可能再露出来。
+      // 用内联 style 而非 body.scroll-lock（那套由 applyLock 看门狗每 1s 对账、会把
+      // 无浮层时的手动锁摘掉），且只在 isIOS 分支生效，桌面/安卓不受影响。
+      var _docLocked = false, _docPrevOverflow = '';
+      function lockDocScroll() {
+        try {
+          if (_docLocked) return;
+          _docLocked = true;
+          _docPrevOverflow = document.documentElement.style.overflow;
+          document.documentElement.style.overflow = 'hidden';
+        } catch (e) {}
+      }
+      function unlockDocScroll() {
+        try {
+          if (!_docLocked) return;
+          _docLocked = false;
+          document.documentElement.style.overflow = _docPrevOverflow;
+        } catch (e) {}
+      }
+      function healKbScroll() {
+        try {
+          if (!_kbActive) return;
+          // 主信号：文档滚动超阈值（caret 微滚一般 <60px，不误伤）。
+          // 补充信号：不管 window.scrollY 读到多少，只要 .phone 被整体平移出位
+          //（顶被推出屏幕 → 上方露灰；底越过可视区上沿挡键盘 → 输入栏跑到顶上）
+          // 就归零。真实 iOS Edge 的 visualViewport 平移只体现在 getBoundingClientRect，
+          // window.scrollY 不变（0）也能被此信号捕获。
+          var shifted = winScrollY() > KB_SCROLL_HEAL;
+          if (!shifted) {
+            var pr = _phone.getBoundingClientRect();
+            if (pr.top < -2 || pr.bottom > (_vv ? _vv.height : window.innerHeight) - 24) shifted = true;
+          }
+          if (shifted) pinScrollTop();
+        } catch (e) {}
+      }
       // v3.6.x：恢复 .phone 到自然高度（键盘收起）。统一入口——避免多处重复；
       // 恢复后若键盘又弹出，syncIosKb 会重新收缩
       function restoreKb() {
@@ -585,6 +650,7 @@
         _kbActive = false;
         _phone.style.height = '';
         _phone.style.alignSelf = '';
+        unlockDocScroll();
         pinScrollTop();
         stopKbWatch();
       }
@@ -597,9 +663,12 @@
         // v3.10.x：下限保护——iOS Safari 在 interactive-widget=resizes-visual 下，
         // 键盘弹出 transition 中间态 visualViewport.height 可能瞬时异常小（或 layout
         // viewport 双重收缩），直接设 .phone.height=该值会把 .phone 压成一条缝→
-        // "所有页面挤压不见、输入栏跑到顶部、其他页面灰底露出"。_h 低于无键盘基准
-        // 30% 时视为异常，用 50% 基准兜底（至少能显示内容、输入栏在键盘上方附近）。
-        var _safeH = (_h > _noKbH * 0.3) ? _h : Math.round(_noKbH * 0.5);
+        // "所有页面挤压不见、输入栏跑到顶部、其他页面灰底露出"。
+        // v3.13.x：下限从基准 30% 收紧到 45%、兜底从 50% 提到 55%——iOS Edge 键盘
+        // 动画期间 vv.height 曾读到远小于真实可视区的值且之后不再更新，.phone 被
+        // 钉在过矮高度整页挤压。主流机型键盘+工具条最大约占屏 50%（SE 级小屏
+        // 可视约剩 56%），低于无键盘基准 45% 必是异常读数。
+        var _safeH = (_h >= _noKbH * 0.45) ? _h : Math.round(_noKbH * 0.55);
 
         // 键盘是否仍开——按可视高度判定，不依赖焦点。
         //   点击字卡/按钮时焦点短暂离开输入框但键盘未必收，靠焦点判断会误 restore
@@ -617,6 +686,7 @@
         var _open = _focused && _kbStill;
         if (_open && !_kbActive) {
           _kbActive = true;
+          lockDocScroll(); // 禁文档根滚动：iOS 无法再把页面滚走露灰底（Edge 关键）
           // 顶对齐（替代 position:fixed）——避免 iOS contenteditable 在 fixed
           // 容器内无法输入的已知问题；水平居中交给 body flex 原有规则
           _phone.style.alignSelf = 'flex-start';
@@ -662,6 +732,9 @@
               // 收缩后内层滚动容器里的输入框（问问ta 问题栏等）高度随之变化，
               // 补一次可见性对齐，确保它停在键盘上方
               nudgeInputVisible();
+              // v3.13.x：Edge iOS 延迟文档滚动自愈——vv scroll 事件漏触发时
+              // 由 250ms 轮询兜底把超阈值滚动归零
+              healKbScroll();
               // v3.12.x：悬浮键盘推定停靠复查（vv 不反映键盘的内核走这里兜底）
               _iProvCheck();
             } else if (_kbActive) {
@@ -694,8 +767,11 @@
       // 58% 可视区必在其上方）；失焦 / 出现真实 resize 即由原机制接管恢复。
       function _iProvDock() {
         var base = Math.min(_noKbH, _iIH);
-        var ph = Math.max(240, Math.round(base * 0.58));
+        // v3.13.x：矮视口保护——原 Math.max(240, base*0.58) 在 base<414 时绝对值
+        // 240 会占掉近六成以上屏高加重挤压；改纯比例 + 基准 62% 封顶（最多压四成）
+        var ph = Math.min(Math.max(Math.round(base * 0.58), 240), Math.round(base * 0.62));
         _iProv = true;
+        lockDocScroll();
         _phone.style.alignSelf = 'flex-start';
         if (_phone.style.height !== ph + 'px') _phone.style.height = ph + 'px';
         pinScrollTop();
@@ -704,6 +780,7 @@
         if (!_iProv) return;
         _iProv = false;
         if (_kbActive) return; // 正常机制已接管 .phone 高度，交回原逻辑管理
+        unlockDocScroll();
         _phone.style.height = '';
         _phone.style.alignSelf = '';
         pinScrollTop();
@@ -720,22 +797,26 @@
             if (_iProv && _vv.height >= _noKbH - 60) _iProvClear();
             return;
           }
-          if (!_kbActive && !_iProv &&
-              Date.now() - _iFocusAt > 900 &&
-              Date.now() - kbLastTouchAt < 1500 &&
-              Date.now() > kbHardKeyUntil &&
-              Math.abs(_vv.height - _noKbH) <= 2 &&
-              Math.abs(ih - _iIH) <= 2) {
-            _iProvDock();
-          }
+            if (!_kbActive && !_iProv &&
+                Date.now() - _iFocusAt > 900 &&
+                Date.now() - kbLastTouchAt < 1500 &&
+                kbTouchArmed(tgt) &&
+                Date.now() > kbHardKeyUntil &&
+                Math.abs(_vv.height - _noKbH) <= 2 &&
+                Math.abs(ih - _iIH) <= 2) {
+              _iProvDock();
+            }
         } catch (e) {}
       }
       // v3.7.x：vv scroll 独立处理——打字时系统微滚 caret 触发高频 vv scroll，
       //   若走 syncIosKb 会在稳态期反复读 vv.height/比较字符串（JS 开销→打字卡顿），
-      //   且任何 DOM 写入都会 reflow 闪屏。scroll 只在键盘开合动画窗口内钉顶防灰底，
-      //   稳态打字完全 no-op。键盘开合判定交给 resize（高度真正变化才触发）
+      //   且任何 DOM 写入都会 reflow 闪屏。scroll 只在键盘开合动画窗口内钉顶防灰底；
+      //   v3.13.x：窗口外仅当文档滚动超阈值才自愈（Edge iOS 延迟滚动修复），
+      //   caret 微滚（<阈值）仍是 no-op，不闪屏。
       function onIosKbScroll() {
-        if (_kbActive && Date.now() < _pinUntil) pinScrollTop();
+        if (!_kbActive) return;
+        if (Date.now() < _pinUntil) { pinScrollTop(); return; }
+        healKbScroll();
       }
       if (_vv) {
         _vv.addEventListener('resize', syncIosKb);
@@ -769,6 +850,9 @@
         setTimeout(function () {
           if (_kbActive && _vv && _vv.height >= _noKbH - 60) restoreKb();
         }, 400);
+        // v3.13.x：快速开合键盘时 Edge iOS 的焦点滚动可能残留（_kbActive 从未
+        // 置位、无人归零）——失焦稳定后复查一次，文档仍滚超阈值就拉回顶部
+        setTimeout(function () { if (!_kbActive && winScrollY() > KB_SCROLL_HEAL) pinScrollTop(); }, 650);
       });
     } catch (e) {}
   }
@@ -899,6 +983,7 @@
             if (!_aKb && !_aProv &&
                 Date.now() - _aFocusAt > 900 &&
                 Date.now() - kbLastTouchAt < 1500 &&
+                kbTouchArmed(tgt) &&
                 Date.now() > kbHardKeyUntil &&
                 Math.abs(_aVV.height - _aH) <= 2 &&
                 Math.abs(ih - _aIH) <= 2) {

@@ -495,46 +495,64 @@
 
   function manageCats() {
     if (!window.openModal) return;
-    // v3.11.x：修复「无法自己添加收入/支出分类」——openModal 点确定后统一 close()（cb=null），
-    // 在 ok 回调里同步再开的第二个弹窗会被立即关掉（一闪而过）。与存钱罐同款修复：
-    // 二级弹窗延迟 60ms 开启（WORKLOG 2026-08-24 存钱罐踩坑记录）。
-    window.openModal('分类管理', '', function (v) {
-      if (!v) return;
-      if (v.indexOf('add:') === 0) {
-        var type = v.slice(4);
-        setTimeout(function () {
-          window.openModal('添加' + (type === 'expense' ? '支出' : '收入') + '分类', '', function (name) {
-            name = (name || '').trim();
-            if (!name) return;
-            var c = loadCats();
-            if (c[type].indexOf(name) >= 0) { toast('该分类已存在'); return; }
-            c[type].push(name);
-            saveCats(c);
-            cats = c;
-            renderCatGrid();
-            toast('已添加「' + name + '」');
-          });
-        }, 60);
-      } else if (v.indexOf('del:') === 0) {
-        var type2 = v.slice(4);
-        var c2 = loadCats();
-        if (!c2[type2].length) { toast('没有可删除的分类'); return; }
-        setTimeout(function () {
-          window.openModal('选择要删除的' + (type2 === 'expense' ? '支出' : '收入') + '分类', '', function (name) {
-            if (!name) return;
-            var c3 = loadCats();
-            var i = c3[type2].indexOf(name);
-            if (i < 0) return;
-            var used = loadRecs().some(function (r) { return r.type === type2 && r.category === name; });
-            if (used) { toast('「' + name + '」下有记录，无法删除'); return; }
-            c3[type2].splice(i, 1);
-            saveCats(c3);
-            cats = c3;
-            if (curType === type2 && curCat === name) curCat = '';
-            renderCatGrid();
-            toast('已删除「' + name + '」');
-          }, { noInput: true, pills: c2[type2].map(function (c) { return { label: c, value: c }; }) });
-        }, 60);
+    // v3.13.x：单弹窗两阶段重构（ctl.stay 就地切换）——取代旧「60ms 再开第二层」
+    // 嵌套写法。真机键盘收起/再聚焦竞态会让嵌套的第二层无法输入（与红包/市集
+    // 钱包弹窗同族问题）；现在加/删都在同一个弹窗里完成。
+    var phase = 1, action = '', delType = '';
+    function typeName(t) { return t === 'expense' ? '支出' : '收入'; }
+    const ctl = window.openModal('分类管理', '', function (v) {
+      if (phase === 1) {
+        if (!v) return;
+        action = v;
+        if (v.indexOf('add:') === 0) {
+          var type = v.slice(4);
+          phase = 2;
+          ctl.stay();
+          ctl.title('添加' + typeName(type) + '分类');
+          ctl.pills(null);
+          ctl.input(true);
+          ctl.maxLen(8);
+          ctl.ph('新分类名，如：宠物');
+          ctl.okText('添加');
+        } else {
+          var type2 = v.slice(4);
+          delType = type2;
+          var cs = loadCats()[type2] || [];
+          if (!cs.length) { toast('没有可删除的分类'); return; }
+          phase = 2;
+          ctl.stay();
+          ctl.title('选择要删除的' + typeName(type2) + '分类');
+          ctl.input(false);
+          ctl.pills(cs.map(function (c) { return { label: c, value: c }; }));
+          ctl.okText('删除');
+        }
+        return;
+      }
+      // 阶段二：v = 输入的分类名（加）或点中的分类胶囊值（删）
+      if (action.indexOf('add:') === 0) {
+        var name = String(v == null ? '' : v).trim();
+        if (!name) return;
+        var typeA = action.slice(4);
+        var c1 = loadCats();
+        if (c1[typeA].indexOf(name) >= 0) { toast('该分类已存在'); return; }
+        c1[typeA].push(name);
+        saveCats(c1);
+        cats = c1;
+        renderCatGrid();
+        toast('已添加「' + name + '」');
+      } else {
+        if (!v) return;
+        var c3 = loadCats();
+        var i = c3[delType].indexOf(v);
+        if (i < 0) { toast('分类不存在'); return; }
+        var used = loadRecs().some(function (r) { return r.type === delType && r.category === v; });
+        if (used) { toast('「' + v + '」下有记录，无法删除'); return; }
+        c3[delType].splice(i, 1);
+        saveCats(c3);
+        cats = c3;
+        if (curType === delType && curCat === v) curCat = '';
+        renderCatGrid();
+        toast('已删除「' + v + '」');
       }
     }, {
       noInput: true,

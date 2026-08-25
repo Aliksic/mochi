@@ -45,7 +45,15 @@
     // （否则非 default 桌面读不到全局商品库，自定义商品"消失"）。market-migrated 为迁移幂等标记
     'market-custom', 'market-migrated',
     // v3.10.x：扩库救援标记（gift-shop.js rescueNewDefaults，v2 新默认商品误删恢复），同为全局根键
-    'market-migrated-v2'];
+    'market-migrated-v2',
+    // v3.13.x：朋友圈根命名空间键（feed.js 全部走 xy-home-v2 根 store，是现行设计不是
+    // 旧顶层业务键）——此前漏排除，每次启动 migrateLegacy 把它们当旧键迁进 default:
+    // 并删根键（default 已有陈旧副本时连迁移都不做直接删）→ 朋友圈通知列表/未读角标/
+    // 双方朋友圈昵称头像/封面/TA发帖调度每次刷新全丢（用户反馈：联系人回复我朋友圈
+    // 评论没有提示——提示数据刷新即被清）。feed-posts 本就在排除清单。
+    'feed-notices', 'feed-app-unread', 'feed-cover-bg', 'feed-ta-cover',
+    'feed-ta-name', 'feed-ta-avatar', 'feed-user-name', 'feed-user-avatar',
+    'feed-last', 'feed-next', 'feed-day-count'];
   function isExcluded(k) {
     const r = k.slice(G.length + 1);
     if (EXCLUDE.indexOf(r) >= 0) return true;

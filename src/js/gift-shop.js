@@ -40,27 +40,52 @@
       if (el) el.textContent = walletText();
     });
   }
-  // 心意币金额设置：点余额行依次弹「我的心意币」「TA 的心意币」输入（单位元；留空 = 保持不变）
+  // 心意币金额设置：点余额行出单个多阶段弹窗——胶囊选「我的 / TA」，保存一侧后
+  // 弹窗不关（ctl.stay），自动切到另一侧继续输入；留空点【完成】/取消随时结束。
+  // v3.13.x 二轮：与 chat.js rpEditWallet 同款，去掉「60ms 再开第二层」嵌套竞态。
   function giftEditWallet() {
     if (!window.openModal) return;
-    window.openModal('我的心意币金额（元）', (walletGet().myBalance / 100).toFixed(2), function (v) {
-      const s = String(v == null ? '' : v).trim();
-      if (s !== '') {
-        const n = parseFloat(s);
-        if (isNaN(n) || n < 0) { toast('金额无效，未修改'); return; }
-        const w = walletGet(); w.myBalance = Math.round(n * 100); walletSet(w); renderGiftBalances();
+    var pn = partnerName();
+    var LBL = { my: '我的心意币', ta: pn + '的心意币' };
+    var side = 'my';
+    var doneAny = false;
+    function hintTxt() {
+      var w = walletGet();
+      return '当前：心意币 ¥' + fenToYuan(w.myBalance) + ' · ' + pn + ' ¥' + fenToYuan(w.systemBalance) +
+        (doneAny ? '\n已保存，可继续输入' + LBL[side] + '金额；留空点【完成】结束' : '\n输入新金额后点【保存】；留空确定 = 不改动');
+    }
+    var ctl = null;
+    ctl = window.openModal('修改心意币（元）', '', function (arg) {
+      var picked = (arg === 'my' || arg === 'ta');
+      var el = document.getElementById('modal-input');
+      var raw = String(picked ? ((el && el.value) || '') : (arg == null ? '' : arg)).trim();
+      var target = picked ? arg : side;
+      if (raw === '') return; // 留空 = 不改动并结束
+      var n = parseFloat(raw);
+      if (isNaN(n) || n < 0) { toast('金额无效，未修改'); return; }
+      var w = walletGet();
+      if (target === 'my') w.myBalance = Math.round(n * 100);
+      else w.systemBalance = Math.round(n * 100);
+      walletSet(w); renderGiftBalances();
+      toast(LBL[target] + '已更新');
+      doneAny = true;
+      side = target === 'my' ? 'ta' : 'my';
+      if (ctl) {
+        ctl.stay();
+        var pbs = document.querySelectorAll('#modal-pills .pill');
+        var flip = pbs[side === 'my' ? 0 : 1];
+        if (flip) flip.click();
+        ctl.text('');
+        ctl.hint(hintTxt());
+        ctl.okText('完成');
       }
-      // 二级弹窗要等上一个 close 完成后再开（照 accounting.js manageCats 先例延迟 60ms）
-      setTimeout(function () {
-        window.openModal(partnerName() + ' 的心意币金额（元）', (walletGet().systemBalance / 100).toFixed(2), function (v2) {
-          const s2 = String(v2 == null ? '' : v2).trim();
-          if (s2 === '') { toast('心意币金额未改动'); return; }
-          const n2 = parseFloat(s2);
-          if (isNaN(n2) || n2 < 0) { toast('金额无效，未修改'); return; }
-          const w = walletGet(); w.systemBalance = Math.round(n2 * 100); walletSet(w); renderGiftBalances();
-          toast('心意币金额已更新');
-        });
-      }, 60);
+    }, {
+      staticText: hintTxt(),
+      pills: [{ value: 'my', label: '我的心意币' }, { value: 'ta', label: pn + ' 的心意币' }],
+      pill: 'my',
+      placeholder: '输入新金额（元），留空结束',
+      inputmode: 'decimal',
+      maxlength: 9
     });
   }
 

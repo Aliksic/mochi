@@ -1667,7 +1667,9 @@ if (ckRefresh) {
   const eatApp = makeApp('eat', '吃什么', '<svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v8a3 3 0 003 3v7"/><path d="M8 3v8"/><path d="M17 3c-1.5 0-2.5 2-2.5 5s1 5 2.5 5v8"/></svg>');
   const piggyApp = makeApp('piggy', '存钱罐', '<svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7h6"/><path d="M5 13.5C5 10.4 8.1 8 12 8s7 2.4 7 5.5c0 1.6-.9 3.1-2.3 4.1V20h-2.4l-.4-1.2a9.3 9.3 0 01-3.8 0L9.7 20H7.3v-2.4C5.9 16.6 5 15.1 5 13.5z"/><circle cx="9.3" cy="12.7" r=".55" fill="#111111" stroke="none"/><path d="M18.8 12.3l1.7-.9"/></svg>');
   const pomoApp = makeApp('pomo', '番茄钟', '<svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13.8" r="7.2"/><path d="M12 6.6V4.6"/><path d="M12 6.6C10.6 5.4 9 5.3 7.8 6.1"/><path d="M12 6.6c1.4-1.2 3-1.3 4.2-.5"/></svg>');
-  // 默认放第三页；若用户已装修（desk-layout 存在）且布局未含本图标 → 放新的一页，避免破坏自定义布局。
+  // v3.13.x：默认注入改两页分布——第二排「喝水 同频 伸手」进第二页 p2-grid（喝水插到
+  // 花园前，整排顺序 = 喝水 花园 同频 伸手），吃什么/存钱罐/番茄钟留第三页 p3-grid；
+  // 若用户已装修（desk-layout 存在）且布局未含本图标 → 放新的一页，避免破坏自定义布局。
   const pagesBox = document.getElementById('desktop-pages');
   const st0 = curStore();
   let layArr = null;
@@ -1697,8 +1699,17 @@ if (ckRefresh) {
     }
   }
   if (!placed) {
-    const p3 = document.querySelector('.app-grid.p3-grid');
-    if (p3) { p3.appendChild(tpApp); p3.appendChild(ssApp); p3.appendChild(waterApp); p3.appendChild(eatApp); p3.appendChild(pomoApp); p3.appendChild(piggyApp); }
+    const p2Grid = document.querySelector('.app-grid.p2-grid');
+    const p3g = document.querySelector('.app-grid.p3-grid');
+    const gNode = document.querySelector('[data-desk-widget="app-garden"]');
+    const gInP2 = !!(gNode && p2Grid && gNode.parentNode === p2Grid);
+    if (p2Grid) {
+      // 第二排顺序：喝水 花园 同频 伸手（喝水插到花园图标前）
+      if (gInP2) p2Grid.insertBefore(waterApp, gNode); else p2Grid.appendChild(waterApp);
+      p2Grid.appendChild(tpApp); p2Grid.appendChild(ssApp);
+    } else if (p3g) { p3g.appendChild(waterApp); p3g.appendChild(tpApp); p3g.appendChild(ssApp); }
+    if (p3g) { p3g.appendChild(eatApp); p3g.appendChild(piggyApp); p3g.appendChild(pomoApp); }
+    else if (p2Grid) { p2Grid.appendChild(eatApp); p2Grid.appendChild(piggyApp); p2Grid.appendChild(pomoApp); }
     // 重应用布局：personalize.js 的 applyDeskLayout 在本文件之前执行过一次，那时图标未注入被跳过；
     // 此处图标已在 DOM，重应用可把图标按 desk-layout 移到用户装修过的目标页（alreadyInLay 时生效）。
     try { if (window.applyDeskLayout) window.applyDeskLayout(); } catch (e) {}
@@ -2196,7 +2207,7 @@ if (ckRefresh) {
       '<button class="pmp-go" id="pomo-companion">🍅 陪伴模式</button>' +
       '<div class="pomo-msg glass" id="pomo-msg">点开始，专注一会儿</div>' +
       '<div class="pomo-stats" id="pomo-stats">今日 🍅 × 0 · 累计 0 个</div>' +
-      '<div class="pomo-manage"><button class="pomo-set-dur" id="pomo-set-dur">设时长</button><button class="pomo-add-msg" id="pomo-add-msg">+ 夸夸字卡</button><button class="tp-send-btn pomo-send-btn" id="pomo-send">发到聊天：开</button></div>' +
+      '<div class="pomo-manage"><button class="pomo-bell" id="pomo-bell">铃声：开</button><button class="pomo-set-dur" id="pomo-set-dur">设时长</button><button class="pomo-add-msg" id="pomo-add-msg">+ 夸夸字卡</button><button class="tp-send-btn pomo-send-btn" id="pomo-send">发到聊天：开</button></div>' +
     '</div>';
   host.appendChild(pomoPage);
 
@@ -2225,6 +2236,24 @@ if (ckRefresh) {
   function pomoSaveMsgs(a) { const s = curStore(); if (s) try { s.set('pomo-msgs', JSON.stringify(a)); } catch (e) {} }
   function pomoPool() { return DEF_POMO_PRAISE.concat(pomoCustomMsgs()); }
   function pomoSendOn() { const s = curStore(); try { return s.get('pomo-send-chat') !== '0'; } catch (e) { return true; } }
+  // 结束铃声开关（每桌面独立，默认开；关了只静音、震动与本地通知保留）
+  function pomoBellOn() { const s = curStore(); try { return s.get('pomo-bell') !== '0'; } catch (e) { return true; } }
+  // 到点本地通知（period.js notifyAssist 先例）：页面在后台/熄屏时 Web Audio 会挂起、
+  // iOS 又没有 navigator.vibrate——系统通知是唯一可靠的到点提醒。只看通知权限，
+  // 不受「TA 消息通知」开关影响（番茄钟是用户主动启动的闹钟类功能）。
+  function pomoNotify(title, body) {
+    try {
+      if (!('Notification' in window) || Notification.permission !== 'granted') return;
+      if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.ready.then(function (reg) {
+          try { reg.showNotification(title, { body: body, tag: 'pomo-' + Date.now() }); }
+          catch (e) { try { new Notification(title, { body: body }); } catch (e2) {} }
+        });
+      } else {
+        try { new Notification(title, { body: body }); } catch (e) {}
+      }
+    } catch (e) {}
+  }
 
   let pomoMode = 'focus';
   let pomoRunning = false;
@@ -2257,7 +2286,26 @@ if (ckRefresh) {
     const spark = document.getElementById('pomo-spark');
     if (spark) spark.classList.toggle('on', pomoRunning && pomoMode === 'focus');
   }
-  function pomoStopTick() { clearInterval(pomoTickTimer); pomoTickTimer = null; }
+  function pomoStopTick() { clearInterval(pomoTickTimer); pomoTickTimer = null; pomoDisarmNotify(); }
+  // 到点通知的「准点保险」：后台标签页计时器会被浏览器节流（隐藏页 250ms tick 可能
+  // 被推迟到分钟级），tick 兜底之外再按 endAt 定一个 setTimeout 直接发通知——
+  // 同样受节流影响但与 tick 解耦，谁先到点谁先提醒（都有防重守卫）。
+  let pomoNotifyTimer = null;
+  function pomoArmNotify() {
+    pomoDisarmNotify();
+    if (!pomoRunning) return;
+    const delay = pomoEndAt - Date.now();
+    if (!(delay > 0)) return;
+    const mode = pomoMode;
+    pomoNotifyTimer = setTimeout(() => {
+      pomoNotifyTimer = null;
+      if (!pomoRunning || pomoMode !== mode) return;
+      if (Date.now() < pomoEndAt - 1500) return;
+      if (document.visibilityState === 'visible') return; // 前台由铃声/震动负责
+      pomoNotify('番茄钟 · ' + POMO_MODES[mode].name + '结束', mode === 'focus' ? '专注完成，休息一下吧 🍅' : '休息好了，来下一个番茄吧');
+    }, delay + 120);
+  }
+  function pomoDisarmNotify() { if (pomoNotifyTimer) { clearTimeout(pomoNotifyTimer); pomoNotifyTimer = null; } }
   function pomoStartTick() {
     pomoStopTick();
     pomoTickTimer = setInterval(() => {
@@ -2265,11 +2313,19 @@ if (ckRefresh) {
       if (Date.now() >= pomoEndAt) { pomoComplete(); return; }
       pomoRender();
     }, 250);
+    pomoArmNotify();
   }
   function pomoShowMsg(txt) { const el = document.getElementById('pomo-msg'); if (el) { el.classList.add('fade'); setTimeout(() => { el.textContent = '\u201c' + txt + '\u201d'; el.classList.remove('fade'); }, 200); } }
   function pomoIdleAt(m) { if (pmpActive()) pmpDetach(); pomoRunning = false; pomoRemainMs = 0; pomoEndAt = 0; pomoStopTick(); pomoMode = m; pomoRender(); }
   function pomoComplete() {
     vibrate([120, 60, 120]);
+    // 结束铃声：倒计时到点响一声内置温馨铃（Web Audio 合成、零存储；固定播不跟随联系人音效设置——
+    // 番茄钟是闹钟类功能，消息音效静音时也应出声提醒）。AudioContext 已由全局手势解锁，定时器触发可播。
+    // 页面设置里可关（铃声：开/关）；后台/熄屏场景由 pomoNotify 本地通知兜底提醒。
+    if (pomoBellOn()) { try { if (window.playBuiltinSfx) window.playBuiltinSfx('ring-warm', false); } catch (e) {} }
+    if (document.visibilityState !== 'visible') {
+      pomoNotify('番茄钟 · ' + POMO_MODES[pomoMode].name + '结束', pomoMode === 'focus' ? '专注完成，休息一下吧 🍅' : '休息好了，来下一个番茄吧');
+    }
     if (pomoMode === 'focus') {
       const mins = pomoModeMin('focus');
       const t = pomoToday(); t.count++; pomoSaveToday(t);
@@ -2339,6 +2395,18 @@ if (ckRefresh) {
   if (pomoSendBtn) {
     pomoSendBtn.textContent = '发到聊天：' + (pomoSendOn() ? '开' : '关');
     pomoSendBtn.addEventListener('click', () => { const s = curStore(); const on = !pomoSendOn(); if (s) try { s.set('pomo-send-chat', on ? '1' : '0'); } catch (e) {} pomoSendBtn.textContent = '发到聊天：' + (on ? '开' : '关'); });
+  }
+  // 结束铃声开关（关=只静音；震动与后台本地通知仍保留）
+  const pomoBellBtn = document.getElementById('pomo-bell');
+  if (pomoBellBtn) {
+    pomoBellBtn.textContent = '铃声：' + (pomoBellOn() ? '开' : '关');
+    pomoBellBtn.addEventListener('click', () => {
+      const s = curStore();
+      const on = !pomoBellOn();
+      if (s) try { s.set('pomo-bell', on ? '1' : '0'); } catch (e) {}
+      pomoBellBtn.textContent = '铃声：' + (on ? '开' : '关');
+      toast(on ? '结束铃声已开启' : '结束铃声已关闭');
+    });
   }
 
   // ---- 存钱罐页 ----
@@ -2570,44 +2638,63 @@ if (ckRefresh) {
   }
   if (piggyApp) piggyApp.addEventListener('click', () => { if (editingNow()) return; openPage(piggyPage); piggyMaybeTa(); piggyRender(); });
   document.getElementById('piggy-back').addEventListener('click', () => backHome(piggyPage));
+  // 存入/取出/小心愿：单弹窗两阶段（ctl.stay 就地切阶段）——取代旧「60ms 再开
+  // 第二层」嵌套写法，真机键盘收起/聚焦竞态不再卡住第二步（与钱包弹窗同款）。
   document.getElementById('piggy-in').addEventListener('click', () => {
     if (editingNow() || !window.openModal) return;
-    window.openModal('存入金额（元）', '', (v) => {
-      const amt = piggyAmt(v);
-      if (!amt) { if (String(v || '').trim()) toast('金额没看懂，再试试'); return; }
-      // 注意：openModal 点确定后统一走 close()，回调里同步再开会立刻被关掉——延迟一帧
-      setTimeout(() => {
-        window.openModal(window.taFit ? window.taFit('跟TA说一句（可不填）') : '跟TA说一句（可不填）', '', (v2) => { piggyAdd('in', amt, String(v2 || '').trim()); }, { maxlength: 40 });
-      }, 60);
-    }, { maxlength: 10 });
+    let amt = 0, phase = 1;
+    const ctl = window.openModal('存入金额（元）', '', (v) => {
+      if (phase === 1) {
+        amt = piggyAmt(v);
+        if (!amt) { if (String(v || '').trim()) toast('金额没看懂，再试试'); return; }
+        phase = 2;
+        ctl.stay();
+        ctl.title(window.taFit ? window.taFit('跟TA说一句（可不填）') : '跟TA说一句（可不填）');
+        ctl.maxLen(40); ctl.ph('留言可不填，直接点【存入】'); ctl.text('');
+        ctl.okText('存入');
+        return;
+      }
+      piggyAdd('in', amt, String(v || '').trim());
+    }, { maxlength: 10, inputmode: 'decimal', placeholder: '存多少' });
   });
   document.getElementById('piggy-out').addEventListener('click', () => {
     if (editingNow() || !window.openModal) return;
     const bal = piggyBal();
     if (bal <= 0) { toast('罐子还是空的哦'); return; }
-    window.openModal('取出金额（元）· 可用 ' + piggyFmt(bal), '', (v) => {
-      const amt = piggyAmt(v);
-      if (!amt) { if (String(v || '').trim()) toast('金额没看懂，再试试'); return; }
-      if (amt > piggyBal()) { toast('罐子里没有这么多'); return; }
-      setTimeout(() => {
-        window.openModal('用在哪啦（可不填）', '', (v2) => { piggyAdd('out', amt, String(v2 || '').trim()); }, { maxlength: 40 });
-      }, 60);
-    }, { maxlength: 10 });
+    let amt = 0, phase = 1;
+    const ctl = window.openModal('取出金额（元）· 可用 ' + piggyFmt(bal), '', (v) => {
+      if (phase === 1) {
+        amt = piggyAmt(v);
+        if (!amt) { if (String(v || '').trim()) toast('金额没看懂，再试试'); return; }
+        if (amt > piggyBal()) { toast('罐子里没有这么多'); return; }
+        phase = 2;
+        ctl.stay();
+        ctl.title('用在哪啦（可不填）');
+        ctl.maxLen(40); ctl.ph('用途可不填，直接点【取出】'); ctl.text('');
+        ctl.okText('取出');
+        return;
+      }
+      piggyAdd('out', amt, String(v || '').trim());
+    }, { maxlength: 10, inputmode: 'decimal', placeholder: '取多少' });
   });
   document.getElementById('piggy-set-goal').addEventListener('click', () => {
     if (editingNow() || !window.openModal) return;
-    window.openModal('小心愿（如：一起去看海）', '', (v1) => {
-      const name = String(v1 || '').trim();
-      if (!name) { toast('先写个心愿吧'); return; }
-      // openModal 点确定后统一 close()——延迟一帧再开金额弹窗
-      setTimeout(() => {
-        window.openModal('目标金额（元）', '', (v2) => {
-          const amt = piggyAmt(v2);
-          if (!amt) { toast('金额没看懂，再试试'); return; }
-          piggyOpenShare(name, amt);
-        }, { maxlength: 9 });
-      }, 60);
-    }, { maxlength: 16 });
+    let gName = '', phase = 1;
+    const ctl = window.openModal('小心愿（如：一起去看海）', '', (v) => {
+      if (phase === 1) {
+        gName = String(v || '').trim();
+        if (!gName) { toast('先写个心愿吧'); return; }
+        phase = 2;
+        ctl.stay();
+        ctl.title('目标金额（元）');
+        ctl.maxLen(9); ctl.ph('想攒多少'); ctl.text('');
+        ctl.okText('下一步 · 选监督人');
+        return;
+      }
+      const amt = piggyAmt(v);
+      if (!amt) { toast('金额没看懂，再试试'); return; }
+      piggyOpenShare(gName, amt);
+    }, { maxlength: 16, placeholder: '心愿名' });
   });
   // 监督人选择：全局金库人人可见余额，但每个心愿可指定哪些联系人（桌面）可见/监督。
   // ['*']=全部；默认勾选当前桌面。多选 chips，点「全部桌面」互斥。

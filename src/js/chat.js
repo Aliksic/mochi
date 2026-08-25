@@ -85,7 +85,7 @@
         draftImgs = [];
         renderDraft();
       } catch (e) {}
-      try { if (input) input.textContent = ''; } catch (e) {}
+      try { if (input) input.value = ''; } catch (e) {}
       // v3.7.x：切换联系人后刷新顶部栏名字 + 双方头像（原实现从不刷新，顶部栏停留在旧联系人名字）
       try { updateChatPartnerName(); } catch (e) {}
       try { fillAvatar('chat-user-av', 'cs-avatar-user'); fillAvatar('chat-partner-av', 'cs-avatar-partner'); } catch (e) {}
@@ -2294,6 +2294,19 @@
   // 追加记录（存 + 渲染）
   function addRec(rec) {
     if (!rec.ts) rec.ts = Date.now();
+    // v3.13.x：入口去重守卫——任何调用路径带来的同内容相邻重复（同 side+同 text+Δts≤3000ms、
+    // 非互动卡片），在 push 前拦截。覆盖：send 按钮双派发/input 不清空后重发/loadMsgs
+    // 合并竞态 等场景的残余重复，保证 msgs 不积累翻倍数据
+    const len = msgs.length;
+    for (let i = len - 1; i >= Math.max(0, len - 5); i--) {
+      const p = msgs[i];
+      if (!p || p.special || rec.special) continue;
+      if ((p.side || '') !== (rec.side || '')) continue;
+      if ((p.text || '') !== (rec.text || '')) continue;
+      if (!!p.img !== !!rec.img) continue;
+      const dts = (rec.ts || 0) - (p.ts || 0);
+      if (dts >= 0 && dts <= 3000) { saveMsgs(); return null; }
+    }
     msgs.push(rec);
     saveMsgs();
     // v3.5.140：系统通知统一由 showDeskPopup 联动——聊天消息/拍一拍在非聊天页时
@@ -4006,27 +4019,56 @@ function partialRetractMsg(msgEl, side) {
     const w = rpWalletGet();
     el.textContent = '我的 ¥' + (w.myBalance / 100).toFixed(2) + ' · TA ¥' + (w.systemBalance / 100).toFixed(2) + ' · 点此设置金额';
   }
-  // 钱包金额设置：点余额行依次弹「我的钱包」「TA 的钱包」输入（单位元，两位小数；留空 = 保持不变）
+  // 钱包金额设置：点余额行出单个多阶段弹窗——胶囊选「我的 / TA」，保存一侧后
+  // 弹窗不关（ctl.stay），自动切到另一侧继续输入；留空点【完成】/取消随时结束。
+  // v3.13.x 二轮：彻底去掉「60ms 再开第二层」嵌套（真机键盘收起/再聚焦竞态导致
+  // 联系人的金额没法输入）；同时比单侧版少一次重开弹窗。
   function rpEditWallet() {
     if (!window.openModal) return;
-    window.openModal('我的钱包金额（元）', (rpWalletGet().myBalance / 100).toFixed(2), (v) => {
-      const s = String(v == null ? '' : v).trim();
-      if (s !== '') {
-        const n = parseFloat(s);
-        if (isNaN(n) || n < 0) { toast('金额无效，未修改'); return; }
-        const w = rpWalletGet(); w.myBalance = Math.round(n * 100); rpWalletSet(w); rpRenderBalance();
+    const taName = window.taFit ? window.taFit('TA') : 'TA';
+    const LBL = { my: '我的', ta: taName };
+    let side = 'my';
+    let doneAny = false;
+    const hintTxt = () => {
+      const w = rpWalletGet();
+      return '当前：我的 ¥' + (w.myBalance / 100).toFixed(2) + ' · ' + taName + ' ¥' + (w.systemBalance / 100).toFixed(2) +
+        (doneAny ? '\n已保存，可继续输入' + LBL[side] + '的金额；留空点【完成】结束' : '\n输入新金额后点【保存】；留空确定 = 不改动');
+    };
+    let ctl = null;
+    ctl = window.openModal('修改钱包金额（元）', '', (arg) => {
+      // 点过胶囊 → fire 走 pills 分支回传 pillVal（此刻输入框尚未清空，直读补齐）；
+      // 没点胶囊只输了文字 → 回传的就是文本，侧别取当前选中
+      const picked = (arg === 'my' || arg === 'ta');
+      const el = document.getElementById('modal-input');
+      const raw = String(picked ? ((el && el.value) || '') : (arg == null ? '' : arg)).trim();
+      const target = picked ? arg : side;
+      if (raw === '') return; // 留空 = 不改动并结束（stay 未置位，本次确定正常关闭）
+      const n = parseFloat(raw);
+      if (isNaN(n) || n < 0) { toast('金额无效，未修改'); return; }
+      const w = rpWalletGet();
+      if (target === 'my') w.myBalance = Math.round(n * 100);
+      else w.systemBalance = Math.round(n * 100);
+      rpWalletSet(w); rpRenderBalance();
+      toast(LBL[target] + '钱包金额已更新');
+      doneAny = true;
+      side = target === 'my' ? 'ta' : 'my';
+      // 就地续填另一侧：不关窗、翻转胶囊、清空输入、刷新提示与按钮文案
+      if (ctl) {
+        ctl.stay();
+        const pbs = document.querySelectorAll('#modal-pills .pill');
+        const flip = pbs[side === 'my' ? 0 : 1];
+        if (flip) flip.click(); // 同步胶囊高亮与内部选中态（下一轮确认仍走 pills 分支）
+        ctl.text('');
+        ctl.hint(hintTxt());
+        ctl.okText('完成');
       }
-      // 二级弹窗要等上一个 close 完成后再开（照 accounting.js manageCats 先例延迟 60ms）
-      setTimeout(() => {
-        window.openModal('TA 的钱包金额（元）', (rpWalletGet().systemBalance / 100).toFixed(2), (v2) => {
-          const s2 = String(v2 == null ? '' : v2).trim();
-          if (s2 === '') { toast('钱包金额未改动'); return; }
-          const n2 = parseFloat(s2);
-          if (isNaN(n2) || n2 < 0) { toast('金额无效，未修改'); return; }
-          const w = rpWalletGet(); w.systemBalance = Math.round(n2 * 100); rpWalletSet(w); rpRenderBalance();
-          toast('钱包金额已更新');
-        });
-      }, 60);
+    }, {
+      staticText: hintTxt(),
+      pills: [{ value: 'my', label: '我的' }, { value: 'ta', label: taName }],
+      pill: 'my',
+      placeholder: '输入新金额（元），留空结束',
+      inputmode: 'decimal',
+      maxlength: 9
     });
   }
   const rpBalanceEl = document.getElementById('rp-balance');
@@ -4587,9 +4629,25 @@ function partialRetractMsg(msgEl, side) {
     //   周期性闪屏/卡顿（iOS Safari 复现，与主输入栏 mobile-adapt syncIosKb 同病）。
     //   合成层错位只发生在键盘弹出/收起位置突变时，由 resize 驱动，scroll 无需处理。
     vv.addEventListener('resize', refresh);
+    // v3.13.x：.phone 高度兜底刷新——键盘兜底停靠/恢复（mobile-adapt 悬浮键盘推定
+    //   停靠）等路径直接写 .phone.style.height，不伴随 vv resize 事件 → 半框整体
+    //   移位而合成层停在旧位置，表现=输入的文字飞出框显示在框外/框下面。观察
+    //   .phone style 变化，高度真变了走同款 160ms 防抖重建（字符串比对防抖）。
+    let phMo = null, lastPhH = null;
+    try {
+      const phEl = document.querySelector('.phone');
+      if (phEl && typeof MutationObserver === 'function') {
+        lastPhH = phEl.style.height;
+        phMo = new MutationObserver(() => {
+          const h = phEl.style.height;
+          if (h !== lastPhH) { lastPhH = h; refresh(); }
+        });
+        phMo.observe(phEl, { attributes: true, attributeFilter: ['style'] });
+      }
+    } catch (e) {}
     askKbRefreshStop = () => {
       if (t) clearTimeout(t);
-      t = null;
+      if (phMo) { try { phMo.disconnect(); } catch (e) {} phMo = null; }
       vv.removeEventListener('resize', refresh);
       askKbRefreshStop = null;
     };
@@ -6817,7 +6875,7 @@ function partialRetractMsg(msgEl, side) {
   const addMsg = (text) => {
     const t0 = (text || '').trim();
     if (t0 && t0 === lastSendTxt && Date.now() - lastSendTs < SEND_GUARD_MS) {
-      input.textContent = '';
+      input.value = '';
       draftImgs = [];
       renderDraft();
       return;
@@ -6839,8 +6897,8 @@ function partialRetractMsg(msgEl, side) {
     lastSendTs = Date.now();
     // v3.5.60：我发送消息播放设置的音效
     if (window.playSfx) window.playSfx('out');
-    // v3.5.127：contenteditable 版输入框清空用 textContent
-    input.textContent = '';
+    // v3.5.127：contenteditable 版输入框清空用 value（手机端 ce-box 代理了 value setter）
+    input.value = '';
     draftImgs = [];
     renderDraft();
     if (window.logFish) window.logFish();

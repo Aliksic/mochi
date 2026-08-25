@@ -4,6 +4,43 @@
 
 ## 规则
 
+### 2026-08-25（用户反馈小米15Pro Chrome：①问问TA单选题打字框变形/字出框/5行选项发不出 ②联系人回复朋友圈评论没提示 ③心意柜文字展示不全——三项回归修复）
+- [本会话·完成]（**已改 src + 已构建（17:57, sw: mochi-mt8hr661）+ 新专项 verify-ask-no-false-dock 4/4、verify-feed-root-rescue ✅、verify-feed-inpage-toast ✅ + 回归 kb-overlay-kernel 10/10、android-kb 3/3、kb-overlays 8/8、kb-dock 12、scroll-lock-ghost 9/9、feed-comment-merge 10/10、data-loss 11/11、cc-scope 27/27、mye-global 11/11、ta-gender 22/22、ta-invite 30/30、wallet-edit 14/14、two-phase-modals 15/15、pomo-extra 8/8、pomo-bell 7/7、interact-popup-stale 10/10、布局 verify 10/10；未提交**）：`src/js/mobile-adapt.js` + `src/js/contacts.js`（均 **AI-B 域跨域改动请知悉**）+ `src/js/chat.js` + `src/js/feed.js` + `src/css/market.css` + 新工具 3 个（见上）。**构建同时收口了并行会话已登记的待构建改动**（openModal 控制器/两阶段弹窗/钱包连续编辑/番茄铃声+后台通知，见其 WORKLOG 三条，其专项 verify 全部重跑通过）。
+  - **① 问问TA单选题（根因：v3.12.x 悬浮键盘兜底误触发「假停靠」）**：`_aProvCheck/_iProvCheck` 的武装条件只看「触摸后 1.5s 内聚焦」——点【问问TA】按钮后 80ms 面板程序化聚焦问题输入框照样命中，而程序化聚焦在安卓通常不弹软键盘 → vv 纹丝不动 → 聚焦 900ms 后把 .phone 无键盘假收缩到 58%（490px）：半框被压扁=「框变形」，ce-box 合成层（translateZ(0)）停在旧位置=「字出界出现在框下面」，挤压态下选项框/发送按钮布局错乱=「多行选项发不出」。无头实测复现（面板打开 1.6s 后 .phone 844→490 且不自愈）。**修复**：① mobile-adapt.js 新增 `kbLastTouchTarget` + `kbTouchArmed(tgt)`——聚焦元素与触摸目标无包含关系（点的是按钮不是输入框）不武装；X5 真场景手指点的就是输入框必过（kb-overlay-kernel 10/10 回归含 A1 停靠/D 程序化聚焦不误触）；② chat.js startAskKbRefresh 增 .phone style MutationObserver——兜底停靠/恢复等不伴随 vv resize 的 .phone 高度变化也走 160ms 防抖重建合成层（文字不再停在旧位置）。
+  - **② 朋友圈评论回复没提示（根因：migrateLegacy 每次启动清空朋友圈根键）**：feed.js 的通知/未读数/双方朋友圈昵称头像/封面/发帖调度全部存 xy-home-v2 根命名空间（`feed-notices`/`feed-app-unread`/`feed-user-*`/`feed-ta-*`/`feed-last`/`feed-next`/`feed-day-count`/`feed-cover-bg`/`feed-ta-cover`），不在 contacts.js EXCLUDE → 每次启动 migrateLegacy 当旧顶层业务键迁进 default: 并删根键（default 已有陈旧副本时连迁移都不做**直接删**）→ 通知横幅当场能看到、但刷新后通知列表/角标全空（用户回头查看=「没有提示」）。无头端到端复现：回复后通知在，reload 后根键 null。**修复**：① contacts.js EXCLUDE 补上述 11 键（my-emoji-groups/period-* 同款先例）；② feed.js 新增 feedRootRescue——restore-done 后把仍滞留在 default: 的副本一次性搬回根命名空间（根键已有值不覆盖、搬完删副本、幂等），存量用户被清掉的通知/设置自动找回；③ addNotice 补页内轻提示——人在朋友圈页内时顶部横幅按设计不弹（v3.5.107），此前 TA 回复到达毫无感知，现补 cc-toast（文案同通知，40 字截断），页外横幅行为不变。
+  - **③ 心意柜文字展示不全**：`.giftbox-wish`（联系人送礼的留言/心意语）带 `-webkit-line-clamp:2` 硬截两行出省略号——留言超两行即「展示不全」。移除截断改完整展示（word-break 兜底），卡片自适应增高、列表本就可滚；详情弹窗本就完整不变。
+  - 真机确认点（小米15Pro Chrome 优先）：①更多功能→问问TA→单选题：打开面板后页面不再无故压扁/跳动，打问题文字不出框，选项打 5 行+也能正常滚动点「发送」发出；②朋友圈里回复联系人的评论后停在朋友圈页等回复——页内底部应弹「XX 回复了你：…」轻提示，且杀掉重开后通知列表/朋友圈图标角标不再清零（旧通知找回一次属正常）；③心意柜里 TA 送的礼物留言长的不再只显示两行省略号。
+  - ⚠️ **构建扫入说明**：17:57 构建收口了工作区全部已保存改动——含并行会话三条已登记任务（personalize openModal 控制器/chat 钱包+邀请/gift-shop 钱包连续编辑/accounting/p2-features 番茄铃声+后台通知/template/chat-pages.css/home.css）与本会话五文件；提交前请按协议 git diff 自查范围，一次性 v3.13.x 提交。
+
+### 2026-08-25（用户反馈：iOS Edge 点聊天输入栏弹键盘→聊天页被挤压、输入栏顶到顶部、下方到键盘全灰）
+- [完成·已构建 sw: mochi-mt8htibr，未提交]：`src/js/mobile-adapt.js`（iOS 键盘分支）+ 专项 `tools/verify-ios-kb-edge-scroll.mjs`（16/16）。未提交，push 需人工确认。
+  - **根因**：Edge iOS 聚焦输入框会主动滚文档让焦点可见，该滚动走 visualViewport 平移、`window.scrollY` 恒为 0 → 旧版只靠 `winScrollY()>80` 的自愈永远不触发；`.phone` 已被收缩停靠在键盘上沿，文档再被平移 S px → 屏幕只剩 `.phone` 底部切片（输入栏贴顶），其下到键盘全露 body 灰底，即用户所报「整个聊天页被挤压/中间全是灰色」。
+  - **修复（治本就根治）**：键盘弹出时把 `documentElement.style.overflow` 锁成 `hidden`（本应用滚动都在 .phone 内层容器，html/body 本就不该滚）→ iOS 无法再平移文档，灰底不可能再露；收起时还原 inline overflow。用内联 style 而非 `body.scroll-lock`（那套由 applyLock 看门狗每 1s 对账，会自动摘掉无浮层的手动锁）。另把自愈信号从单一 `winScrollY` 扩为「window.scrollY 超阈值 或 .phone 整体平移出位（getBoundingClientRect 顶<−2 / 底>可视高−24）」作二线兜底。lock/unlock 接在 syncIosKb `_open` 与 `_iProvDock`（开）/ `restoreKb` 与 `_iProvClear`（关）四处。
+  - **验证**：verify-ios-kb-edge-scroll 16/16（新增 A1c 键盘期 overflow=hidden、A2/A3 键盘期外部滚动被吞掉无法位移露灰、A5c 收起后解锁；原断言在真机上无法触发 focus 故调整驱动方式，非逻辑改动）。此套件此前依赖 `window.scrollTo` 却因 `overflow-x:hidden` 基线本就滚不动，属测试未真正跑通路径，本次改为显式派发 focusin/focusout 打通）。布局 verify 10/10 通过。
+  - ⚠️ 并发:本 build 已把工作区其余 16 个未提交 src 改动（含 AI-A 上轮 openModal/钱包/番茄等）一并收口进 index.html，均未提交，push 前请确认。
+
+### 2026-08-25（用户确认：上轮四项优化「都做」——番茄后台通知+铃声开关 / openModal 控制器底座 / 两阶段弹窗全家桶 / 钱包连续编辑）
+- [本会话·完成]（**已改 src，未构建未提交——请构建者执行 `node build.mjs` 收口**）：`src/js/personalize.js`（openModal 增强，**AI-B 域跨域代改请知悉**，向后兼容见下）+ `src/js/chat.js` + `src/js/gift-shop.js` + `src/js/p2-features.js` + `src/js/accounting.js` + `src/css/chat-pages.css`（1 行选择器）+ 新专项 `tools/verify-pomo-extra.mjs`(8/8)、`tools/verify-two-phase-modals.mjs`(15/15)；更新 `tools/verify-wallet-edit.mjs`(14/14)。未碰 template.html/sfx/bg-keep/sw。
+  - **① openModal 控制器底座（personalize.js）**：返回值从 undefined → 控制器 `ctl`（旧调用方全部忽略返回值，零影响）。`ctl.stay()`=本次确定不关窗（close 只跳过一次，okBtn/Enter 的 finally 照旧执行）；`ctl.title/hint/text/maxLen/ph/okText/focus/input(show)/pills(list,init)` 就地切阶段；新增 `opts.placeholder`（此前调用方传了被静默忽略——pomo 设时长/单选题选项一直无效）与 `opts.inputmode`（ghost+ce-box 双写，金额弹数字键盘）；胶囊构建抽 `buildPills` 共用。**目的：为全仓两步弹窗提供无嵌套的公共机制**。
+  - **② 番茄钟到点加固**：a) 页面管理行新增【铃声：开/关】（键 pomo-bell 每桌面独立默认开，关=只静音、震动保留）；b) 后台/熄屏兜底 `pomoNotify()`（SW showNotification，period.js notifyAssist 同款，只看通知权限不看 TA 消息通知开关）——完成回调里 visibility!=='visible' 时发 + 启动时按 endAt 挂准点 setTimeout（后台节流下 tick 可能推迟到分钟级，双路径谁先到点谁先提醒，均有防重守卫）；pomoStopTick 统一 disarm。
+  - **③ 两阶段弹窗全家桶（消灭「60ms 再开第二层」嵌套族）**：存钱罐 存入(金额→留言)/取出(金额→用途)/小心愿(名称→目标金额)、记账 manageCats(动作胶囊→输入/删除列表)、红包钱包与心意币钱包升级为「保存一侧不关窗自动翻转到另一侧连填，留空点【完成】结束」——真机键盘收起/聚焦竞态不再卡第二层，改双侧也只需一次进入。
+  - **验证**：verify-pomo-extra 8/8（静态接线×3+运行时：开关静音但 🍅 照记/重开后恢复响铃/visibilityState 补丁模拟后台通知路径无权限安全）；verify-two-phase-modals 15/15（存入含留言/取出跳留言/心愿→监督人 chips、记账加分类阶段切换/删分类/占用守卫拦截）；verify-wallet-edit 14/14（连续编辑流：保存后保持打开+胶囊翻转+完成文案、留空结束、取消退出、非法拦截）；回归 verify-pomo-bell 7/7、布局 verify 10/10。真机确认点：①番茄页「铃声：关」后到点无声有震动，系统通知权限授予且熄屏时到点应收到通知；②存钱罐存入一步弹窗内先金额后留言；③记账⚙️加/删分类全程一个弹窗；④红包余额行可连续填完我的和 TA 的再点完成。
+  - ⚠️ **并发提示（构建者必读）**：工作区累积本会话三条任务（番茄铃声 p2-features / 钱包 chat+gift-shop / 本批 personalize+chat+gift+p2+accounting+css）及 ta-invite 会话已保存完的 chat.js 改动——统一 build 收口后按 v3.13.x 规范一次提交。
+
+### 2026-08-25（用户反馈：红包和心意集市里无法修改联系人的金额）
+- [本会话·完成]（**已改 src，未构建未提交——请构建者执行 `node build.mjs` 收口**）：`src/js/chat.js`（仅 rpEditWallet 区块）+ `src/js/gift-shop.js`（仅 giftEditWallet 区块，均 AI-A 域）+ 新专项 `tools/verify-wallet-edit.mjs`；临时诊断脚本 diag-wallet-edit.mjs 已用完删除。未碰 sfx/template/CSS。
+  - **排查**：无头 Chrome 走真实 UI 全链路（点余额行→两层弹窗→保存→回显+持久化 LS/IDB 双写）在标准内核**完全正常**，线上产物也含该功能 → 判定真机场景问题。两入口唯一共同脆弱点=「我的→TA」**两步连续 openModal（60ms 间隔）**：真机键盘收起→再弹出、焦点重聚焦在该间隙竞态（本仓 feed/reply-settings 已有 ce-box 内核聚焦失效先例），表现恰为"我的能改、联系人的（第二层）没法输入"；且第一步输入非法会静默跳过第二步。
+  - **修复（同款重构两处）**：改**单层弹窗**——胶囊【我的 / TA】选侧 + 一个输入框（staticText 显示双方当前余额，留空=不改，非法输入 toast 拦截）。彻底消除嵌套竞态；一次改一侧。实现要点：fire() 点过胶囊走 pills 分支回传 pillVal（'my'/'ta'），此刻输入框尚未清空、回调内直读 #modal-input 补齐金额；没点胶囊则回传文本本身、侧别取默认「我的」——两种路径都拿全「侧别+金额」，无需改 personalize.js。
+  - 验证：verify-wallet-edit 12/12（静态接线 3 + 运行时 9：默认侧/TA 侧定向修改、互不串账、留空双侧不动、非法输入提示拦截、余额行回显、gift-balance 与 market-balance 两入口）；布局 verify 10/10。真机确认点：红包面板与心意市集点余额行 → 一个弹窗内先点「TA」胶囊再输金额 → 确定后 TA 余额立即更新且回显正确；留空确定不改动任何一侧。
+  - ⚠️ **并发提示**：chat.js 工作区含并行会话（ta-invite）已保存完的未提交改动，本次只动了 rpEditWallet 小区块不重叠；构建时按协议统一收口。同会话上一条任务（番茄钟结束铃声，p2-features.js）也待构建。
+
+### 2026-08-25（用户反馈：番茄钟倒计时结束没有铃声提示）
+- [本会话·完成]（**已改 src，未构建未提交——请构建者执行 `node build.mjs` 收口**）：仅 `src/js/p2-features.js`（AI-A 域）+ 新专项 `tools/verify-pomo-bell.mjs`。未碰 sfx.js/template/CSS。
+  - **根因**：`pomoComplete()` 到点只 `vibrate([120,60,120])`，从未接任何音频——专注/休息两档结束都没有声音。
+  - **修复**：pomoComplete 开头补播一声内置「温馨铃」（复用 AI-B 域 sfx.js 已暴露的公开 API `window.playBuiltinSfx('ring-warm', false)`，Web Audio 合成零存储；**固定播放、不读联系人音效设置**——番茄钟属闹钟类功能，消息音效选了静音也应出声；try/catch 守卫，sfx.js 缺席时不炸）。AudioContext 已由全局手势解锁（点开始即满足），定时器触发可正常发声。陪伴模式恢复计时走同一 tick→pomoComplete 路径，自动覆盖。
+  - 验证：verify-pomo-bell 7/7（静态接线断言 + 运行时包装 playBuiltinSfx 计数、拨快 Date.now 让 250ms tick 判到点：专注到点响铃/记 🍅/切休息档、休息到点再响铃回专注档）；布局 verify 10/10。真机确认点：番茄专注倒计时走完应有「叮～」琶音铃声+震动；小憩/长休结束同样响铃。
+  - ⚠️ **并发提示**：工作区另有并行会话未提交改动（chat.js/index.html/sw.js/version.json 等），构建时按协议统一收口。
+
 ### 2026-08-25（用户反馈：①字卡库没有【TA的邀请】库 ②聊天更多功能→TA的提问缺「邀请」入口）
 - [本会话·完成]（**已改 src，未自己构建**；并发构建会话 13:56 已把本会话当时已保存改动扫入 index.html（已核对产物：page-ta-invite / triggerTaInviteNow / avatarBatchCache 单声明 全部在），其后仅剩 verify 脚本与 WORKLOG 改动 → 提交前请构建者按需重 build 收口）：新增 `src/js/ta-invite.js`（新文件）+ `src/js/chat.js`（tryActiveInvite 改造 + triggerTaInviteNow/sendTaInvite + **avatarBatchCache TDZ 修复见下**）+ `src/template.html`（字卡库双入口 li-ta-invite(-mine) + 管理页 page-ta-invite + more-grid-ask 邀请按钮 + 回复设置→其他/license 文案）+ `src/js/tabs.js` FULL_PAGES 加 page-ta-invite + `build.mjs` jsFiles 插入 'ta-invite.js'（**AI-B 域机械一行，知悉**）+ `tools/verify-ta-invite.mjs`（新专项 30/30）。
   - **① TA的邀请字卡库**：10 张预设入库（4 猜拳 + 3 Pong + 3 贪吃蛇；前三条与原硬编码文案一致），逐句开关/不可删/「使用系统预设」总开关；自定义话术（选类型）、分组、批量导入（带类型下拉）；管理页「让TA现在邀请一次」；跨分类搜索注册；IDB 权威恢复；键 `ta-invite` 随联系人桌面隔离。

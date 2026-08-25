@@ -2733,7 +2733,7 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + env(safe-area-inset-bott
 .pomo-msg.fade { opacity:0; }
 .pomo-stats { text-align:center; font-size:13px; color:var(--ink-soft,#999); margin-top:12px; }
 .pomo-manage { text-align:center; margin-top:6px; }
-.pomo-set-dur, .pomo-add-msg { font-size:13px; color:var(--ink-soft,#888); background:none; border:1px dashed rgba(0,0,0,.15); border-radius:10px; padding:8px 14px; margin:0 4px; }
+.pomo-set-dur, .pomo-add-msg, .pomo-bell { font-size:13px; color:var(--ink-soft,#888); background:none; border:1px dashed rgba(0,0,0,.15); border-radius:10px; padding:8px 14px; margin:0 4px; }
 .pmp-go { display:block; margin:0 auto 16px; width:86%; max-width:320px; font-size:15px; font-weight:600; font-family:inherit; border:1px solid rgba(232,83,61,.35); background:rgba(232,83,61,.07); color:#e8533d; border-radius:14px; padding:11px 0; -webkit-tap-highlight-color:transparent; }
 
 /* ===== 番茄钟 · 陪伴模式（聊天页顶部倒计时条） ===== */

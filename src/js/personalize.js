@@ -251,6 +251,28 @@ try {
       try { return el.value || ''; } catch (e) { return ''; }
     }
     let cb = null;
+    // v3.13.x：胶囊构建抽出共用——openModal 打开时与控制器 ctl.pills() 阶段切换
+    // 都走这一份（选中态/点击翻转/pillClicked 语义不变）
+    function buildPills(list, initVal) {
+      pillClicked = false;
+      pillVal = initVal !== undefined ? initVal : null;
+      pillsEl.hidden = !(list && list.length);
+      pillsEl.innerHTML = '';
+      if (list && list.length) {
+        list.forEach(p => {
+          const b = document.createElement('button');
+          b.className = 'pill' + (p.value === pillVal ? ' on' : '');
+          b.textContent = p.label;
+          b.addEventListener('click', () => {
+            Array.prototype.forEach.call(pillsEl.children, c => c.classList.remove('on'));
+            b.classList.add('on');
+            pillVal = p.value;
+            pillClicked = true;
+          });
+          pillsEl.appendChild(b);
+        });
+      }
+    }
     let pillsOnOk = null;
     let noInput = false;
     let picked = -1;
@@ -258,6 +280,11 @@ try {
     let pillVal = null;
     let selectedGroup = null;
     let lock = false;
+    // v3.13.x：「本次确定后保持打开」标记——cb 里调 ctl.stay() 置位，紧随其后的
+    // close()（okBtn/Enter 的 finally）只跳过这一次。供同一弹窗内做多阶段表单
+    // （钱包两侧连填/存钱罐金额→留言/记账分类管理），取代旧「60ms 后开第二层」
+    // 的嵌套写法——真机键盘收起/再聚焦竞态会让第二层弹窗无法输入。
+    let stayOnce = false;
     let sliderCfg = null;
     let sliderInitPill = null;
     // v3.6.x：用户是否真的点过 pill——区分「opts.pill 预设值」与「用户主动选择」。
@@ -266,6 +293,7 @@ try {
     let pillClicked = false;
     window.openModal = function (t, v, fn, opts) {
       opts = opts || {};
+      stayOnce = false;
       pillsOnOk = opts.pillsOnOk || null;
       noInput = !!(opts.noInput);
       pillClicked = false;
@@ -284,6 +312,17 @@ try {
       // 昵称类短输入传 opts.maxlength，编辑消息等不传
       if (opts.maxlength) input.maxLength = opts.maxlength;
       else input.removeAttribute('maxlength');
+      // v3.13.x：opts.placeholder——单行输入占位符（此前调用方传了也被静默忽略，
+      // 如 pomo 设时长/单选题选项；ce-box 转换后 placeholder 走代理 setter 同步
+      // 到 box 的 data-ph，原生输入框与安卓转换框两端一致生效）
+      if ('placeholder' in opts) { try { input.placeholder = opts.placeholder || ''; } catch (e) {} }
+      // v3.13.x：opts.inputmode——金额等数字弹窗弹数字键盘；ghost 与已生成的
+      // ce-box 都要写（转换器只在转换瞬间复制一次该属性）
+      if ('inputmode' in opts) {
+        var _im = opts.inputmode || '';
+        try { if (_im) input.setAttribute('inputmode', _im); else input.removeAttribute('inputmode'); } catch (e) {}
+        try { const _b = ceBoxOf(input); if (_b) { if (_im) _b.setAttribute('inputmode', _im); else _b.removeAttribute('inputmode'); } } catch (e) {}
+      }
       if (textarea) {
         textarea.hidden = !opts.textarea;
         if (opts.textarea) {
@@ -334,24 +373,8 @@ try {
           swatches.appendChild(s);
         });
       }
-      // 选项胶囊（pills）
-      pillsEl.hidden = !(opts.pills && opts.pills.length);
-      pillsEl.innerHTML = '';
-      pillVal = opts.pill !== undefined ? opts.pill : null;
-      if (opts.pills && opts.pills.length) {
-        opts.pills.forEach(p => {
-          const b = document.createElement('button');
-          b.className = 'pill' + (p.value === pillVal ? ' on' : '');
-          b.textContent = p.label;
-          b.addEventListener('click', () => {
-            Array.prototype.forEach.call(pillsEl.children, c => c.classList.remove('on'));
-            b.classList.add('on');
-            pillVal = p.value;
-            pillClicked = true;
-          });
-          pillsEl.appendChild(b);
-        });
-      }
+      // 选项胶囊（pills）——构建逻辑抽到 buildPills（ctl.pills 阶段切换共用）
+      buildPills(opts.pills, opts.pill);
       // 自定义取色（简约按钮）
       customBtn.hidden = !opts.colorPicker;
       customBtn.classList.remove('on');
@@ -390,6 +413,35 @@ try {
         try { if (box) { box.focus(); return; } } catch (e) {}
         try { target.focus(); } catch (e) {}
       }, 60);
+      // v3.13.x：弹窗控制器——openModal 现在返回 ctl（旧调用方忽略返回值，零影响）。
+      // 回调里用 ctl.stay() 让「本次确定」不关窗，再配合下列方法就地切换到下一阶段，
+      // 实现单弹窗多阶段表单（钱包两侧连填/存钱罐/记账分类管理），消除嵌套竞态。
+      const ctl = {
+        stay: function () { stayOnce = true; },
+        title: function (s) { title.textContent = String(s == null ? '' : s); },
+        hint: function (s) { if (staticEl) { staticEl.hidden = !s; staticEl.textContent = s || ''; } },
+        text: function (s) { try { input.value = s || ''; } catch (e) {} },
+        maxLen: function (n) { try { if (n) input.maxLength = n; else input.removeAttribute('maxlength'); } catch (e) {} },
+        ph: function (s) { try { input.placeholder = s || ''; } catch (e) {} },
+        okText: function (s) { if (okBtn) okBtn.textContent = s || '确定'; },
+        focus: function () {
+          setTimeout(function () {
+            if (noInput) return;
+            const b3 = ceBoxOf(input);
+            try { if (b3) { b3.focus(); return; } } catch (e) {}
+            try { input.focus(); } catch (e) {}
+          }, 60);
+        },
+        // 显示/隐藏输入框（安卓 ce-box 的显隐由转换器 MutationObserver 自动跟随）
+        input: function (show) {
+          noInput = !show;
+          input.hidden = !show;
+          if (show) ctl.focus();
+        },
+        // 重建胶囊组；传空数组/null 隐藏。initVal 设初始选中项
+        pills: function (list, initVal) { buildPills(list, initVal); }
+      };
+      return ctl;
     };
     // iOS Safari：<input type="color"> 处于 display:none（hidden）时 .click() 不会弹取色器，
     // 点击【自定义颜色】前先临时取消隐藏并改成离屏（不占布局不挡触摸），
@@ -419,7 +471,10 @@ try {
       // 取完色后把离屏状态恢复隐藏（值已进 customVal，不影响后续）
       try { colorInput.hidden = true; colorInput.style.cssText = ''; } catch (e) {}
     });
-    function close() { mask.hidden = true; cb = null; }
+    function close() {
+      if (stayOnce) { stayOnce = false; return; } // ctl.stay()：本次确定不关闭，cb 已就地切到下一阶段
+      mask.hidden = true; cb = null;
+    }
     function fire() {
       if (!cb) return;
       // 色板/自定义取色优先于 pills（v3.6.x：widget 颜色等弹窗同时带 pills 和色板时，
@@ -2423,6 +2478,73 @@ try {
   ensureMemoRowP3();
   setTimeout(ensureMemoRowP3, 150); // 等 buildDeskPages 的 setTimeout(ensureP3) 补齐第三页后兜底一次
   document.addEventListener('contact-switched', ensureMemoRowP3);
+
+  // ===== v3.13.x：第二页改版迁移（仿 ensureMemoRowP3 先例） =====
+  // ① 功能图标组（p2apps：音乐/聊天统计/提问记录/查岗/花园 + 动态注入的喝水/同频/伸手）
+  //    默认位置改为「周末倒计时」（摸鱼组件）下方——template 已移；
+  //    老用户 desk-layout 里 p2apps 排在 weekend 前面的自动换序到其后（DOM+存储同步改写），
+  //    已在其后的不动；两组件不在同一页 / weekend 已被用户移除进池的尊重现状不强行挪。
+  // ② 第三页 p3apps 网格里的 花园 图标归入第二页网格第二排（喝水/同频/伸手由 p2-features
+  //    注入时直接落第二页，见该文件；此处兜底搬运仍留在第三页网格内的默认位节点）。
+  //    只搬仍位于 .p3-grid 内的节点——用户手动拖出成独立组件 / 移除进隐藏池的尊重不找回。
+  // 每联系人桌面独立（desk-layout 按桌面命名空间存储，切联系人各自触发）。
+  function ensureP2SecondRowIcons() {
+    const p2g = document.querySelector('.app-grid.p2-grid');
+    const p3g = document.querySelector('.app-grid.p3-grid');
+    if (!p2g) return;
+    let moved = false;
+    ['app-water', 'app-tongpin', 'app-shenshou', 'app-garden'].forEach(wid => {
+      const n = document.querySelector('[data-desk-widget="' + wid + '"]');
+      if (!n || !p3g || n.parentNode !== p3g) return;
+      p2g.appendChild(n); moved = true;
+    });
+    if (!moved) return;
+    // 归位后按新默认排序追加在已有图标之后：喝水 花园 同频 伸手
+    ['app-water', 'app-garden', 'app-tongpin', 'app-shenshou'].forEach(wid => {
+      const n = document.querySelector('[data-desk-widget="' + wid + '"]');
+      if (n && n.parentNode === p2g) p2g.appendChild(n);
+    });
+  }
+  function ensureP2AppsBelowWeekend() {
+    const node = document.querySelector('[data-desk-widget="p2apps"]');
+    const we = document.querySelector('[data-desk-widget="weekend"]');
+    ensureP2SecondRowIcons();
+    if (!node || !we) return;
+    const domBefore = (() => {
+      const s1 = node.closest('.page-slide');
+      return !!(s1 && s1 === we.closest('.page-slide') &&
+        Array.prototype.indexOf.call(s1.children, node) < Array.prototype.indexOf.call(s1.children, we));
+    })();
+    const lay = deskLayout();
+    if (!lay) {
+      // 未装修：模板默认即在 weekend 后；被其他流程挪到前面则校正 DOM（恢复默认桌面后也走这里兜底）
+      if (domBefore) node.parentNode.insertBefore(node, we.nextSibling);
+      return;
+    }
+    const pi = lay.findIndex(page => (page || []).indexOf('weekend') >= 0);
+    const pj = lay.findIndex(page => (page || []).indexOf('p2apps') >= 0);
+    if (pi < 0 || pj !== pi) return; // weekend 不在任何页(已移除)或两组不在同一页：尊重现状
+    const pw = lay[pi] || [];
+    const wi = pw.indexOf('weekend'), ni = pw.indexOf('p2apps');
+    if (ni < 0 || wi < 0 || ni > wi) {
+      // 存储已正确但 DOM 仍错位（如老版本写入顺序）：只校正 DOM
+      if (domBefore) node.parentNode.insertBefore(node, we.nextSibling);
+      return;
+    }
+    // 存储换序：摘出 p2apps 插到 weekend 后一位
+    lay[pi] = pw.filter(w => w !== 'p2apps');
+    lay[pi].splice((lay[pi].indexOf('weekend')) + 1, 0, 'p2apps');
+    store.set('desk-layout', JSON.stringify(lay));
+    if (domBefore || node.closest('.page-slide') !== we.closest('.page-slide')) {
+      we.parentNode.insertBefore(node, we.nextSibling);
+    }
+    try { window.applyDeskLayout(); } catch (e) {} // 重跑一次布局应用刷新各页提示与顺序
+  }
+  ensureP2AppsBelowWeekend();
+  setTimeout(ensureP2AppsBelowWeekend, 150); // 等 buildDeskPages/ensureP3 收尾后兜底一次
+  window.ensureP2AppsBelowWeekend = ensureP2AppsBelowWeekend;
+  window.ensureP2SecondRowIcons = ensureP2SecondRowIcons;
+  document.addEventListener('contact-switched', () => { try { ensureP2AppsBelowWeekend(); } catch (e) {} });
   document.addEventListener('contact-switched', () => { applyDeskFontPct(getDeskFontPct()); applyDeskCardPct(getDeskCardPct()); });
   document.addEventListener('contact-switched', () => { const sp = getBgPresetName(); if (sp) { const p = BG_PRESETS.find(b => b.name === sp); if (p) applyPhoneBgPreset(p.css); else clearPhoneBg(); } syncBgPresetUI(); });
 

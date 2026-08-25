@@ -5,6 +5,40 @@
 (function () {
   const uid = 'xy-home-v2';
   const store = window.xyStore(uid);
+  // v3.13.x：根键滞留回收——contacts.js EXCLUDE 生效前，migrateLegacy 曾把 feed-* 根键
+  // 当旧顶层业务键迁进 default: 并删根键（首次迁移；其后 default 已有副本时每次刷新
+  // 连迁移都不做直接删根键）→ 朋友圈通知列表/未读角标/双方朋友圈昵称头像/封面每次
+  // 刷新全丢（用户反馈：联系人回复我朋友圈评论没有提示）。这里把仍滞留在 default: 的
+  // 副本一次性搬回根命名空间（根键已有值不覆盖，搬完删副本），幂等；等 restore-done
+  // 后跑（大键已从 IDB 回填再搬，避免读到空）。EXCLUDE 已补，此后不会再产生新滞留。
+  (function feedRootRescue() {
+    const KEYS = ['feed-notices', 'feed-app-unread', 'feed-cover-bg', 'feed-ta-cover', 'feed-ta-name', 'feed-ta-avatar', 'feed-user-name', 'feed-user-avatar', 'feed-last', 'feed-next', 'feed-day-count'];
+    function run() {
+      try {
+        const root = window.xyStore('xy-home-v2');
+        const def = window.xyStore('xy-home-v2:default');
+        KEYS.forEach(function (k) {
+          let rv = null;
+          try { rv = root.get(k); } catch (e) {}
+          if (rv !== null && rv !== undefined && rv !== '') { try { def.remove(k); } catch (e) {} return; }
+          let dv = null;
+          try { dv = def.get(k); } catch (e) {}
+          if (dv !== null && dv !== undefined && dv !== '') {
+            try { root.set(k, dv); } catch (e) {}
+            try { def.remove(k); } catch (e) {}
+          }
+        });
+        try { renderNoticeBadge(); } catch (e) {}
+      } catch (e) {}
+    }
+    if (window.__mochiDataReady) { run(); return; }
+    try {
+      document.addEventListener('mochi-restore-done', function h() {
+        document.removeEventListener('mochi-restore-done', h);
+        run();
+      });
+    } catch (e) {}
+  })();
   const KEY = 'feed-posts';
   // v3.7.x：LS 剥图快照兜底——主键 >200KB（含图片 dataURL）时 xyStore 只进
   // IndexedDB + 内存缓存（LS 5MB 配额保护），Edge 等浏览器杀后台/强制关闭会丢
@@ -1152,6 +1186,13 @@ if (comInput) comInput.addEventListener('keydown', (e) => { if (e.key === 'Enter
       // v3.7.x：弹窗头像带发布者 TA 头像（跨桌面动态弹窗不显示当前桌面 TA 头像）
       const av = owner ? taAvFor(owner) : '';
       window.showDeskPopup({ name: '朋友圈', text: (window.taFit ? window.taFit(noticeTextClean(text), owner) : noticeTextClean(text)), av: av, onClick: openFeedPage, isHidden: document.visibilityState === 'hidden' });
+    } else if (feedPageVisible() && document.visibilityState !== 'hidden') {
+      // v3.13.x：人在朋友圈页内时顶部横幅按设计不弹（v3.5.107，防遮挡）——但 TA
+      // 评论/回复/点赞到达毫无感知（用户反馈：联系人回复我朋友圈评论没有提示，
+      // 页内只有小角标太隐蔽）。补一条页内轻提示（cc-toast），文案与通知一致。
+      let nt = noticeTextClean(text);
+      if (nt.length > 40) nt = nt.slice(0, 40) + '…';
+      toast(nt);
     }
   }
   function unreadCount() { return notices().filter(n => !n.read).length; }
