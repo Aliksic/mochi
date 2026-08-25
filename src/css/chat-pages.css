@@ -610,10 +610,18 @@
 }
 .cal-grid .cal-cell.today.cal-water::after { background:rgba(255,255,255,.9); box-shadow:0 0 0 1px rgba(0,0,0,.15); }
 .cal-grid .cal-cell.sel.cal-water::after { background:rgba(255,255,255,.9); box-shadow:0 0 0 1px rgba(0,0,0,.15); }
-/* 经期日标记（与 period.js 联动，长按跳经期页）*/
-.cal-grid .cal-cell.cal-period-period { background:#e84a5f; color:#fff; font-weight:700; }
-.cal-grid .cal-cell.cal-period-predict { background:rgba(232,74,95,.28); color:#c0392b; }
-.cal-grid .cal-cell.cal-period-fertile { background:rgba(241,130,170,.3); color:#d63384; }
+/* v3.12.x：有记录日打点（我的留言/备忘/心情，calendar.js dayRecordSet）——
+   琥珀点与喝水蓝点区分；同一天两记录都在时两点并排（water 左 / rec 右）；
+   today/sel 深色底改白点。原 cal-period-* 经期着色随主日历去经期化移除，
+   经期展示只保留在 page-period 独立月历（pc-cell/ph-* 类，互不共用）。 */
+.cal-grid .cal-cell.cal-rec::before {
+  content:''; position:absolute; bottom:2px; left:50%; transform:translateX(-50%);
+  width:4px; height:4px; border-radius:50%; background:#e8912d;
+}
+.cal-grid .cal-cell.cal-water.cal-rec::after { transform:translateX(calc(-50% - 4px)); }
+.cal-grid .cal-cell.cal-water.cal-rec::before { transform:translateX(calc(-50% + 4px)); }
+.cal-grid .cal-cell.today.cal-rec::before,
+.cal-grid .cal-cell.sel.cal-rec::before { background:rgba(255,255,255,.9); box-shadow:0 0 0 1px rgba(0,0,0,.15); }
 .cal-grid .cal-cell.today { background:var(--ink); color:#fff; font-weight:700; }
 .cal-grid .cal-cell.blank { background:transparent; }
 /* v3.7.x：日期可点击自选——非今天日期选中后填充高亮，点击有反馈 */
@@ -1895,7 +1903,13 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + env(safe-area-inset-bott
   font-family:inherit; padding:4px 0;
 }
 .feed-act.liked { color:#e05555; }
-.feed-likes { font-size:11px; color:var(--muted); background:rgba(0,0,0,.03); border-radius:8px; padding:6px 10px; margin-top:8px; }
+/* v3.12.x：朋友圈「查看更早的动态」增量加载按钮（主列表/全部朋友圈共用，列表窗口化渲染） */
+.feed-more-btn {
+  display:block; margin:12px auto; padding:8px 22px;
+  border:none; border-radius:18px; background:rgba(0,0,0,.06); color:var(--muted);
+  font-size:12px; font-family:inherit; cursor:pointer;
+}
+.feed-more-btn:active { background:rgba(0,0,0,.12); }
 /* 评论区（v3.5.55 星言式：灰底区块、昵称高亮、回复嵌套缩进对称对齐） */
 .feed-comments {
   margin-top:8px; padding:8px 10px;

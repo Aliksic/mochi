@@ -202,9 +202,23 @@
       if (!real.length) { exprEl.innerHTML = '<div class="ta-empty">暂无聊天记录</div>'; }
       else {
         const textCount = {}, emotion = {}, heart = {}, intent = {};
+        // v3.12.x：文字字卡排名剔除表情和颜文字——emoji/颜文字字卡发出时 type 就是 'text'
+        //   （chat.js 的分类只在发送端选卡用），只能按内容过滤：去掉符号后不含任何
+        //   可读文字（汉字/假名/字母/数字）的消息视为纯表情/颜文字，不入榜；
+        //   「常用文字」前五名才能反映联系人平时说得最多的话。
+        //   同时排除媒体消息（表情包/图片/语音）与链接，避免占位/乱码进榜。
+        const EXPR_CORE_RE = /[^0-9A-Za-z\u00C0-\u024F\u0370-\u03FF\u0400-\u04FF\u3040-\u30FF\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF\uAC00-\uD7AF]/g;
         real.forEach(m => {
           if (typeof m.text === 'string' && m.text.indexOf('data:') !== 0 && !m.special && !m.retracted) {
-            textCount[m.text] = (textCount[m.text] || 0) + 1;
+            const t = m.text;
+            const isMediaMsg = m.type === 'sticker' || m.type === 'image' || m.type === 'voice';
+            const core = t.replace(EXPR_CORE_RE, '');
+            // 颜文字兜底：带括号特征且可读部分只剩假名（ヾノ等装饰符）的也算颜文字
+            const kaomojiShape = /[\(（｡◕(◕)(づ｡(¬]/.test(t) && /[\)）】)]/.test(t) &&
+              /^[\u3040-\u30FF\u31F0-\u31FF\uFF66-\uFF9D]*$/.test(core);
+            if (!isMediaMsg && t.indexOf('http') !== 0 && t.indexOf('|||') < 0 && core && !kaomojiShape) {
+              textCount[t] = (textCount[t] || 0) + 1;
+            }
           }
           (m.mood || []).forEach(md => {
             // v3.6.x：脏数据防御——mood 条目非对象（导入/损坏数据）时跳过，避免统计页中断
@@ -1278,7 +1292,7 @@ if (ckRefresh) {
     if (asking) return;
     asking = true;
     if (window.chatSendMsg) window.chatSendMsg('你在哪？');
-    toast('已问 TA 一声，等 TA 回位置…');
+    toast(window.taFit ? window.taFit('已问 TA 一声，等 TA 回位置…') : '已问 TA 一声，等 TA 回位置…');
     setTimeout(() => {
       asking = false;
       const d = LOC.dir[Math.floor(Math.random() * LOC.dir.length)];
@@ -1297,7 +1311,7 @@ if (ckRefresh) {
       bub.className = 'loc-change-bubble';
       document.body.appendChild(bub);
     }
-    bub.textContent = '你感觉到 TA 换了位置：' + text;
+    bub.textContent = window.taFit ? window.taFit('你感觉到 TA 换了位置：' + text) : ('你感觉到 TA 换了位置：' + text);
     bub.classList.add('loc-bubble-show');
     clearTimeout(bub._t);
     bub._t = setTimeout(() => { bub.classList.remove('loc-bubble-show'); }, 3000);
@@ -1518,13 +1532,13 @@ if (ckRefresh) {
     let cur = null; try { cur = JSON.parse(s.get('loc-current') || 'null'); } catch (e) {}
     if (!cur) return '还没感觉到 TA…';
     const t = cur.text || '';
-    if (t.indexOf('隔着世界') >= 0) return 'TA 隔着世界，隐约在你身旁';
-    if (t.indexOf('感觉到') >= 0) return '你感觉到了 TA，就在附近';
-    if (t.indexOf('能摸到') >= 0) return '你能摸到 TA，很近很安心';
-    if (t.indexOf('没走远') >= 0) return 'TA 一直没走远，就在身边';
-    if (t.indexOf('隐约') >= 0) return 'TA 隐约在你身旁，感觉到了吗';
-    if (t.indexOf('身边') >= 0) return 'TA 就在你身边，很安心';
-    return '你感觉到 TA 在附近';
+    if (t.indexOf('隔着世界') >= 0) return window.taFit ? window.taFit('TA 隔着世界，隐约在你身旁') : 'TA 隔着世界，隐约在你身旁';
+    if (t.indexOf('感觉到') >= 0) return window.taFit ? window.taFit('你感觉到了 TA，就在附近') : '你感觉到了 TA，就在附近';
+    if (t.indexOf('能摸到') >= 0) return window.taFit ? window.taFit('你能摸到 TA，很近很安心') : '你能摸到 TA，很近很安心';
+    if (t.indexOf('没走远') >= 0) return window.taFit ? window.taFit('TA 一直没走远，就在身边') : 'TA 一直没走远，就在身边';
+    if (t.indexOf('隐约') >= 0) return window.taFit ? window.taFit('TA 隐约在你身旁，感觉到了吗') : 'TA 隐约在你身旁，感觉到了吗';
+    if (t.indexOf('身边') >= 0) return window.taFit ? window.taFit('TA 就在你身边，很安心') : 'TA 就在你身边，很安心';
+    return window.taFit ? window.taFit('你感觉到 TA 在附近') : '你感觉到 TA 在附近';
   };
 
   // 统一频率：冷却 + 每日上限（localStorage 记录）
@@ -1545,11 +1559,13 @@ if (ckRefresh) {
   };
 
   // 他偶发浮层（fixed 底部偏上，淡入淡出，4s 自隐）
+  // v3.x.x：称呼跟随——所有桌面浮字统一在此按当前联系人性别替换 TA/他（显示层）
   let el = null, timer = null;
   window.taChimeShow = function (text, opts) {
     opts = opts || {};
+    if (window.taFit) text = window.taFit(text);
     if (!el) { el = document.createElement('div'); el.className = 'ta-chime-note'; document.body.appendChild(el); }
-    const miss = opts.miss ? '<span class="ta-chime-miss">' + esc(opts.miss) + '</span>' : '';
+    const miss = opts.miss ? '<span class="ta-chime-miss">' + esc(window.taFit ? window.taFit(opts.miss) : opts.miss) + '</span>' : '';
     el.innerHTML = '<span class="ta-chime-dot"></span><span class="ta-chime-text">' + esc(text) + '</span>' + miss;
     el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
     clearTimeout(timer); timer = setTimeout(() => { el.classList.remove('show'); }, opts.dur || 4200);
@@ -1564,6 +1580,7 @@ if (ckRefresh) {
     const miss = Math.random() < 0.22;
     const text = CHECKIN_TA_CARDS[Math.floor(Math.random() * CHECKIN_TA_CARDS.length)];
     const card = miss ? { text: text, miss: CHECKIN_TA_MISS[Math.floor(Math.random() * CHECKIN_TA_MISS.length)] } : { text: text };
+    if (cb && window.taFit) { card.text = window.taFit(card.text); if (card.miss) card.miss = window.taFit(card.miss); }
     if (cb) cb(card);
   };
 })();
@@ -1673,7 +1690,7 @@ if (ckRefresh) {
     '<div class="chat-head"><span class="ch-back" id="tp-back"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><span class="ch-name">同频</span></div>' +
     '<div class="tp-body">' +
       '<div class="tp-card glass"><div class="tp-label">TA 此刻</div><div class="tp-status" id="tp-status">…</div><button class="tp-refresh" id="tp-refresh">换一个</button></div>' +
-      '<div class="tp-card glass"><div class="tp-label">敲三下 · 看他回不回</div><div class="tp-knock" id="tp-knock"><span class="tp-dot"></span><span class="tp-dot"></span><span class="tp-dot"></span></div><div class="tp-hint" id="tp-hint">长按下方 · 凑三下敲桌面</div><div class="tp-knock-area" id="tp-knock-area">长按这里</div></div>' +
+      '<div class="tp-card glass"><div class="tp-label">' + (window.taFit ? window.taFit('敲三下 · 看他回不回') : '敲三下 · 看他回不回') + '</div><div class="tp-knock" id="tp-knock"><span class="tp-dot"></span><span class="tp-dot"></span><span class="tp-dot"></span></div><div class="tp-hint" id="tp-hint">长按下方 · 凑三下敲桌面</div><div class="tp-knock-area" id="tp-knock-area">长按这里</div></div>' +
       '<div class="tp-manage"><button class="tp-add" id="tp-add">+ 添加状态字卡</button><button class="tp-send-btn" id="tp-send">发到聊天：开</button></div>' +
     '</div>';
   host.appendChild(tpPage);
@@ -1705,7 +1722,7 @@ if (ckRefresh) {
       if (area) area.classList.add('flash');
       setTimeout(() => { if (area) area.classList.remove('flash'); }, 700);
       const r = pool[Math.floor(Math.random() * pool.length)];
-      if (hint) hint.textContent = '他回你了 · ' + r;
+      if (hint) hint.textContent = window.taFit ? window.taFit('他回你了 · ' + r) : ('他回你了 · ' + r);
       if (tpSendOn() && window.chatAddIn) { try { window.chatAddIn(r); } catch (e) {} }
     } else {
       if (Math.random() < 0.4) {
@@ -1795,7 +1812,7 @@ if (ckRefresh) {
     vibrate(30);
     const area = document.getElementById('ss-area');
     if (area) { const tr = document.createElement('div'); tr.className = 'ss-trace'; area.appendChild(tr); setTimeout(() => { try { tr.remove(); } catch (e) {} }, 1600); }
-    const hint = document.getElementById('ss-hint'); if (hint) hint.textContent = '他刚才碰了你一下';
+    const hint = document.getElementById('ss-hint'); if (hint) hint.textContent = window.taFit ? window.taFit('他刚才碰了你一下') : '他刚才碰了你一下';
     const res = document.getElementById('ss-result'); if (res) { res.textContent = '\u201c' + txt + '\u201d'; res.className = 'ss-result reach'; }
   }
   if (ssApp) ssApp.addEventListener('click', () => { if (editingNow()) return; openPage(ssPage); ssRenderCount(); ssMaybePassive(); });
@@ -1829,7 +1846,7 @@ if (ckRefresh) {
       '<div class="water-msg glass" id="water-msg">点 +1 记一杯</div>' +
       '<div class="water-actions">' +
         '<button class="water-send" id="water-send">发到聊天</button>' +
-        '<button class="water-ta" id="water-ta">TA 提醒</button>' +
+        '<button class="water-ta" id="water-ta">' + (window.taFit ? window.taFit('TA 提醒') : 'TA 提醒') + '</button>' +
       '</div>' +
       '<div class="water-manage"><button class="water-set-goal" id="water-set-goal">设目标</button><button class="water-set-size" id="water-set-size">单次量</button><button class="water-add-msg" id="water-add-msg">+ 提醒字卡</button></div>' +
     '</div>';
@@ -1971,7 +1988,8 @@ if (ckRefresh) {
     const m = waterMsgs()[Math.floor(Math.random() * waterMsgs().length)];
     const fmt = DEF_WATER_TA[Math.floor(Math.random() * DEF_WATER_TA.length)].replace('{m}', m);
     const tail = t.count < g ? '（还差 ' + (g - t.count) + ' 杯）' : '（今天喝够啦）';
-    waterShowMsg(fmt + tail);
+    const shown = window.taFit ? window.taFit(fmt + tail) : (fmt + tail);
+    waterShowMsg(shown);
     if (window.chatAddIn) { try { window.chatAddIn(fmt + tail); } catch (e) {} }
   });
   document.getElementById('water-set-goal').addEventListener('click', () => { if (!window.openModal) return; window.openModal('设目标（杯）', String(waterGoal()), (v) => { if (v) { const n = parseInt(v, 10); if (n > 0 && n < 100) { waterSetGoal(n); waterRender(); toast('已设置'); } } }); });
@@ -2377,7 +2395,7 @@ if (ckRefresh) {
     const box = document.getElementById('piggy-reply');
     if (!box) return;
     const q = document.getElementById('piggy-reply-q');
-    if (q) q.textContent = 'TA：' + PIGGY_CARE[Math.floor(Math.random() * PIGGY_CARE.length)];
+    if (q) q.textContent = (window.taFit ? window.taFit('TA：' + PIGGY_CARE[Math.floor(Math.random() * PIGGY_CARE.length)]) : ('TA：' + PIGGY_CARE[Math.floor(Math.random() * PIGGY_CARE.length)]));
     const inp = document.getElementById('piggy-reply-in'); if (inp) inp.value = '';
     box.hidden = false;
   }
@@ -2394,7 +2412,7 @@ if (ckRefresh) {
     const amt = PIGGY_TA_COINS[Math.floor(Math.random() * PIGGY_TA_COINS.length)];
     const note = PIGGY_TA_NOTES[Math.floor(Math.random() * PIGGY_TA_NOTES.length)];
     vibrate([20, 60, 20]);
-    setTimeout(() => { piggyShowMsg(note + ' ¥' + piggyFmt(amt) + ' · 替TA存进去？'); }, 400);
+    setTimeout(() => { piggyShowMsg(window.taFit ? window.taFit(note + ' ¥' + piggyFmt(amt) + ' · 替TA存进去？') : (note + ' ¥' + piggyFmt(amt) + ' · 替TA存进去？')); }, 400);
   }
   if (piggyApp) piggyApp.addEventListener('click', () => { if (editingNow()) return; openPage(piggyPage); piggyMaybeTa(); piggyRender(); });
   document.getElementById('piggy-back').addEventListener('click', () => backHome(piggyPage));
@@ -2405,7 +2423,7 @@ if (ckRefresh) {
       if (!amt) { if (String(v || '').trim()) toast('金额没看懂，再试试'); return; }
       // 注意：openModal 点确定后统一走 close()，回调里同步再开会立刻被关掉——延迟一帧
       setTimeout(() => {
-        window.openModal('跟TA说一句（可不填）', '', (v2) => { piggyAdd('in', amt, String(v2 || '').trim()); }, { maxlength: 40 });
+        window.openModal(window.taFit ? window.taFit('跟TA说一句（可不填）') : '跟TA说一句（可不填）', '', (v2) => { piggyAdd('in', amt, String(v2 || '').trim()); }, { maxlength: 40 });
       }, 60);
     }, { maxlength: 10 });
   });
@@ -2494,7 +2512,7 @@ if (ckRefresh) {
   });
   document.getElementById('piggy-add-msg').addEventListener('click', () => {
     if (editingNow() || !window.openModal) return;
-    window.openModal('添加TA的碎碎念（存钱时说）', '', (v) => {
+    window.openModal(window.taFit ? window.taFit('添加TA的碎碎念（存钱时说）') : '添加TA的碎碎念（存钱时说）', '', (v) => {
       const t = String(v || '').trim(); if (!t) return;
       const a = piggyUserCards(); a.push(t); piggySaveUserCards(a); toast('已添加');
     }, { maxlength: 30 });
@@ -2598,7 +2616,11 @@ if (ckRefresh) {
       return;
     }
     let h = '';
-    for (let i = 0; i < a.length; i++) h += '<div class="pmp-c-row' + (a[i].w === 'me' ? ' me' : '') + '"><div class="pmp-c-bub">' + pmpEsc(a[i].t) + '</div></div>';
+    for (let i = 0; i < a.length; i++) {
+      // v3.x.x：称呼跟随——TA 的陪伴消息在渲染层替换（存储原文不动）
+      const t = (a[i].w !== 'me' && window.taFit) ? window.taFit(a[i].t) : a[i].t;
+      h += '<div class="pmp-c-row' + (a[i].w === 'me' ? ' me' : '') + '"><div class="pmp-c-bub">' + pmpEsc(t) + '</div></div>';
+    }
     box.innerHTML = h;
     box.scrollTop = box.scrollHeight;
   }

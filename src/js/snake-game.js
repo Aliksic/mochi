@@ -660,11 +660,11 @@
   function showResult(d) {
     if (!resultEl) return;
     const icon = d.result === 'win' ? '🏆' : d.result === 'lose' ? '💔' : '🤝';
-    const resTxt = d.result === 'win' ? '你赢了' : d.result === 'lose' ? 'TA 赢了' : '平局';
+    const resTxt = d.result === 'win' ? '你赢了' : d.result === 'lose' ? (window.taFit ? window.taFit('TA 赢了') : 'TA 赢了') : '平局';
     resultEl.innerHTML = '<div class="snake-res-icon">' + icon + '</div>' +
       '<div class="snake-res-title">' + resTxt + '</div>' +
       '<div class="snake-res-row"><span>🐍 你</span><span>长度 ' + d.pLen + ' · 食物 ' + d.pFood + ' · ' + d.pScore + '分</span></div>' +
-      '<div class="snake-res-row"><span>🤖 TA</span><span>长度 ' + d.oLen + ' · 食物 ' + d.oFood + ' · ' + d.oScore + '分</span></div>' +
+      '<div class="snake-res-row"><span>🤖 ' + (window.taFit ? window.taFit('TA') : 'TA') + '</span><span>长度 ' + d.oLen + ' · 食物 ' + d.oFood + ' · ' + d.oScore + '分</span></div>' +
       '<div class="snake-res-time">存活 ' + d.time + ' 秒 · 已分享到聊天 ✓</div>';
     resultEl.hidden = false;
     resultEl.classList.remove('snake-res-pop');

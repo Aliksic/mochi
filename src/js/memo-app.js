@@ -255,7 +255,7 @@
       });
       // 单条分享到聊天
       const shr = document.createElement('button');
-      shr.className = 'mm-act mm-share'; shr.title = '发给TA';
+      shr.className = 'mm-act mm-share'; shr.title = window.taFit ? window.taFit('发给TA') : '发给TA';
       shr.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 3.5L10 13.5"/><path d="M21.5 3.5L15 21l-5-7.5-7.5-4z"/></svg>';
       shr.addEventListener('click', () => {
         if (editingNow()) return;

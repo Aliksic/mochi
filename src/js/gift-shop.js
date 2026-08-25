@@ -19,13 +19,50 @@
   function fmtTime(tm) { const d = new Date(tm); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0') + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
   function fenToYuan(fen) { const y = fen / 100; if (y >= 100000) return (y / 10000).toFixed(1) + '万'; if (y >= 1000) return y.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ','); return y.toFixed(2); }
 
-  const WALLET_KEY = 'rp-wallet';
+  // v3.12.x：心意币账本与红包拆分——红包保留 rp-wallet 键，市集独立用 gift-wallet 键；
+  // 首次读取时继承原共账本（rp-wallet）的当前余额（老用户余额无缝延续），落盘后两本账各自独立互不影响
+  const WALLET_KEY = 'gift-wallet';
+  const LEGACY_WALLET_KEY = 'rp-wallet';
   function walletGet() {
-    try { const s = store(); if (!s) return { myBalance: 99999999, systemBalance: 99999999 }; const w = JSON.parse(s.get(WALLET_KEY) || ''); if (typeof w.myBalance === 'number' && typeof w.systemBalance === 'number') return w; } catch (e) {}
-    return { myBalance: 99999999, systemBalance: 99999999 };
+    const s = store();
+    if (!s) return { myBalance: 99999999, systemBalance: 99999999 };
+    try { const w = JSON.parse(s.get(WALLET_KEY) || ''); if (typeof w.myBalance === 'number' && typeof w.systemBalance === 'number') return w; } catch (e) {}
+    let seed = { myBalance: 99999999, systemBalance: 99999999 };
+    try { const o = JSON.parse(s.get(LEGACY_WALLET_KEY) || ''); if (typeof o.myBalance === 'number' && typeof o.systemBalance === 'number') seed = { myBalance: o.myBalance, systemBalance: o.systemBalance }; } catch (e) {}
+    s.set(WALLET_KEY, JSON.stringify(seed));
+    return seed;
   }
   function walletSet(w) { const s = store(); if (s) s.set(WALLET_KEY, JSON.stringify(w)); }
-  function walletText() { const w = walletGet(); return '心意币 ¥' + fenToYuan(w.myBalance); }
+  function walletText() { const w = walletGet(); return '心意币 ¥' + fenToYuan(w.myBalance) + ' · ' + partnerName() + ' ¥' + fenToYuan(w.systemBalance) + ' · 点此设置金额'; }
+  function renderGiftBalances() {
+    ['gift-balance', 'market-balance'].forEach(function (id) {
+      const el = document.getElementById(id);
+      if (el) el.textContent = walletText();
+    });
+  }
+  // 心意币金额设置：点余额行依次弹「我的心意币」「TA 的心意币」输入（单位元；留空 = 保持不变）
+  function giftEditWallet() {
+    if (!window.openModal) return;
+    window.openModal('我的心意币金额（元）', (walletGet().myBalance / 100).toFixed(2), function (v) {
+      const s = String(v == null ? '' : v).trim();
+      if (s !== '') {
+        const n = parseFloat(s);
+        if (isNaN(n) || n < 0) { toast('金额无效，未修改'); return; }
+        const w = walletGet(); w.myBalance = Math.round(n * 100); walletSet(w); renderGiftBalances();
+      }
+      // 二级弹窗要等上一个 close 完成后再开（照 accounting.js manageCats 先例延迟 60ms）
+      setTimeout(function () {
+        window.openModal(partnerName() + ' 的心意币金额（元）', (walletGet().systemBalance / 100).toFixed(2), function (v2) {
+          const s2 = String(v2 == null ? '' : v2).trim();
+          if (s2 === '') { toast('心意币金额未改动'); return; }
+          const n2 = parseFloat(s2);
+          if (isNaN(n2) || n2 < 0) { toast('金额无效，未修改'); return; }
+          const w = walletGet(); w.systemBalance = Math.round(n2 * 100); walletSet(w); renderGiftBalances();
+          toast('心意币金额已更新');
+        });
+      }, 60);
+    });
+  }
 
   const CATS = ['花束', '甜品', '美食', '饰品', '星空', '出行', '娱乐', '关怀', '情侣用品', '日常用品'];
   const CAT_ICON = { '花束': '🌸', '甜品': '🍰', '美食': '🍜', '饰品': '💍', '星空': '⭐', '出行': '✈️', '娱乐': '🎟️', '关怀': '🤗', '情侣用品': '💑', '日常用品': '🧴' };
@@ -533,7 +570,7 @@
           '<div class="giftbox-meta">' + esc(from) + ' · ' + esc(fmtTime(it.tm)) + '</div>' +
         '</div>' +
       '</div>';
-    }).join('') || '<div class="gift-empty">' + (boxTab === 'in' ? (esc(partnerName()) + ' 还没送你礼物<br>他偶尔会主动从市集挑一份给你，耐心等等') : ('你还没送出礼物<br>去心意市集挑一份送给 ' + esc(partnerName()) + ' 吧')) + '</div>';
+    }).join('') || '<div class="gift-empty">' + (boxTab === 'in' ? (esc(partnerName()) + ' 还没送你礼物<br>' + (window.taFit ? window.taFit('他偶尔会主动从市集挑一份给你，耐心等等') : '他偶尔会主动从市集挑一份给你，耐心等等')) : ('你还没送出礼物<br>去心意市集挑一份送给 ' + esc(partnerName()) + ' 吧')) + '</div>';
     el.querySelectorAll('.giftbox-card').forEach(function (c) {
       c.addEventListener('click', function () {
         const it = list.find(function (x) { return x.id === c.dataset.id; });
@@ -683,6 +720,12 @@
     const host = (document.getElementById('page-phone') || {}).parentNode || document.body;
     buildMarketPage(host);
     buildGiftboxPage(host);
+
+    // 心意币余额行（聊天送礼面板 + 市集页 hero）点击 → 设置我和 TA 的心意币金额
+    ['gift-balance', 'market-balance'].forEach(function (id) {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('click', function (e) { e.stopPropagation(); giftEditWallet(); });
+    });
 
     const marketApp = makeApp('market', '心意市集', MARKET_SVG);
     const giftboxApp = makeApp('giftbox', '心意柜', BOX_SVG);

@@ -297,13 +297,21 @@ try {
   check('B3 导入结果统计正确（2 成功）', /已导入 2 个表情/.test(toastB) && /按链接保存/.test(toastB), toastB.trim());
 
   const mine = await evalJs(`(function(){
-    var v = []; try { v = JSON.parse(window.activeStore().get('my-emoji-groups') || '[]'); } catch(e) {}
+    var v = []; try { v = JSON.parse(window.xyStore('xy-home-v2').get('my-emoji-groups') || '[]'); } catch(e) {}
     var g = (v || []).find(function(x){ return x[0] === '默认'; }) || [];
     return JSON.stringify(g[1] || []);
   })()`);
   const arrB = JSON.parse(mine || '[]');
   check('B4 GIF 直存为 dataURL（保留动画）', arrB.some(s => s.indexOf('data:image/gif;base64,') === 0), '');
   check('B5 CORS 拒绝回退存原始 URL', arrB.indexOf('https://cors.example/b.jpg') >= 0, '');
+  // v3.12.x：我的表情包改全局键后，不应再写各联系人命名空间键
+  // （defaultStore 对 default 桌面回退读顶层键=全局键，属预期，不算写入）
+  check('B4b 旧桌面命名空间键不再写入（全局共享）', await evalJs(`(function(){
+    try {
+      var cid = window.__activeCid || 'default';
+      return localStorage.getItem('xy-home-v2:' + cid + ':my-emoji-groups') === null;
+    } catch (e) { return false; }
+  })()`));
 
   // 面板网格把链接表情渲染出来
   check('B6 面板网格渲染链接表情', await evalJs(`(function(){

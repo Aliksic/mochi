@@ -262,7 +262,10 @@ function renderLog() {
   entries.forEach(function (e) {
     var tm = e.tm ? new Date(e.tm * 1000) : new Date();
     var ts = tm.getHours().toString().padStart(2, "0") + ":" + tm.getMinutes().toString().padStart(2, "0");
-    h += "<div class=\"garden-log-item\"><span class=\"who\">" + (e.who || "") + "</span><span class=\"act\">" + (e.act || "") + "</span><span class=\"tm\">" + ts + "</span></div>";
+    // v3.x.x：称呼跟随——日志渲染层替换 TA/他（存储原文不动）
+    var who = (e.who || ""), act = (e.act || "");
+    if (window.taFit) { who = window.taFit(who); act = window.taFit(act); }
+    h += "<div class=\"garden-log-item\"><span class=\"who\">" + who + "</span><span class=\"act\">" + act + "</span><span class=\"tm\">" + ts + "</span></div>";
   });
   el.innerHTML = h;
 }

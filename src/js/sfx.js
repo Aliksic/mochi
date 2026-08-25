@@ -233,8 +233,15 @@
       const custom = store.get(KEYS[type]);
       if (custom && typeof custom === 'string' && custom.length > 10) {
         // —— 自定义上传音频（每次新建 Audio，避免并发冲突；ring 长铃用单例可停止）——
+        // v3.12.x：播完即卸 src——自定义音效是 data: 音频，解码缓冲随元素存活，
+        // 每条消息一个不释放会在低内存安卓上软滞留累积（OOM 放大器）
+        const releaseWhenDone = function (el) {
+          const done = function () { try { el.removeAttribute('src'); el.load(); } catch (e) {} };
+          el.addEventListener('ended', done);
+          el.addEventListener('error', done);
+        };
         if (type === 'ring' && loop) {
-          if (ringAudio) { try { ringAudio.pause(); } catch (e) {} }
+          if (ringAudio) { try { ringAudio.pause(); } catch (e) {} try { ringAudio.removeAttribute('src'); ringAudio.load(); } catch (e) {} }
           ringAudio = new Audio(custom);
           ringAudio.loop = true;
           ringAudio.volume = 0.9;
@@ -242,6 +249,7 @@
         } else {
           const a = new Audio(custom);
           a.volume = 0.9;
+          releaseWhenDone(a);
           a.play().catch(() => {});
         }
         return;

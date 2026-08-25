@@ -146,35 +146,42 @@
   // 同尺寸缩略图（sticker:/image: 前缀仅作历史类型标记，不再区分显示大小）
   // v3.6.x：完整 HTML 转义（只转 < 可被 `&lt;…&gt;` 实体绕过注入）
   function escHtml(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
-  function renderBody(content) {
+  // v3.x.x：称呼跟随——TA 写的信在显示层替换 TA/他（fit 参数，我写的信保持原文）
+  function renderBody(content, fit) {
     const s = String(content || '');
     let html = '';
     const re = /((?:sticker|image):)?(data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+)/g;
     let last = 0, m;
+    const seg = (t) => {
+      t = escHtml(t);
+      return (fit && window.taFit) ? window.taFit(t) : t;
+    };
     while ((m = re.exec(s))) {
-      html += escHtml(s.slice(last, m.index));
+      html += seg(s.slice(last, m.index));
       html += '<img class="mail-body-img" src="' + m[2] + '" alt="表情"> ';
       last = m.index + m[0].length;
     }
-    html += escHtml(s.slice(last));
+    html += seg(s.slice(last));
     return html;
   }
   // 信箱列表摘要：剔除图片/表情包 dataURL（含标记前缀），避免显示超长 base64 乱码
   // v3.9.x：补 HTML 转义——shortDesc 结果直接拼 innerHTML（render 列表项），未转义
   //   可被含 < > 的信件内容注入 HTML（导入恶意备份 XSS）
-  function shortDesc(s) {
+  function shortDesc(s, fit) {
     const str = String(s || '');
     const cleaned = str
       .replace(/(?:sticker|image):data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+/g, '')
       .replace(/data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+/g, '')
       .replace(/\s+/g, ' ').trim();
-    return escHtml((cleaned || '（图片）').slice(0, 30));
+    let out = escHtml((cleaned || '（图片）').slice(0, 30));
+    if (fit && window.taFit) out = window.taFit(out);
+    return out;
   }
-  function letterPaper(title, content, date, author) {
+  function letterPaper(title, content, date, author, fit) {
     return '<div class="mail-paper">' +
       '<div class="mail-paper-head"><span class="mail-paper-author">' + escHtml(author) + '</span><span class="mail-paper-date">' + date + '</span></div>' +
       (title ? '<div class="mail-paper-title">' + escHtml(title) + '</div>' : '') +
-      '<div class="mail-paper-body">' + renderBody(content) + '</div>' +
+      '<div class="mail-paper-body">' + renderBody(content, fit) + '</div>' +
       '</div>';
   }
   // 信纸图片可点击查看大图（复用聊天大图查看器 viewChatImage）
@@ -204,13 +211,13 @@
     let html = '';
     // 收到的信 / 寄出的信 都完整显示（含标题）
     if (l.type === 'received' || l.fromMe) {
-      html += letterPaper(l.tt || '来信', l.content, fmtDT(l.tm), l.fromMe ? myName : name);
+      html += letterPaper(l.tt || '来信', l.content, fmtDT(l.tm), l.fromMe ? myName : name, !l.fromMe);
     } else if (l.type === 'sent') {
-      html += letterPaper(l.tt || '寄出的信', l.content, fmtDT(l.tm), myName);
+      html += letterPaper(l.tt || '寄出的信', l.content, fmtDT(l.tm), myName, false);
     }
     // 我的回信（寄出的信内容已在上方完整展示，不再重复）
-    if (l.myReply && l.type !== 'sent') html += letterPaper('我的回信', l.myReply.content, fmtDT(l.myReply.tm), myName);
-    if (l.partnerReply) html += letterPaper('对方的回信', l.partnerReply.content, fmtDT(l.partnerReply.tm), name);
+    if (l.myReply && l.type !== 'sent') html += letterPaper('我的回信', l.myReply.content, fmtDT(l.myReply.tm), myName, false);
+    if (l.partnerReply) html += letterPaper('对方的回信', l.partnerReply.content, fmtDT(l.partnerReply.tm), name, true);
     // 底部按钮：收到的信且未回信 → 提笔回信（打开独立回信页）；任意信可删除
     // v3.10.x：收到的来信可收藏到【我的收藏】→ 信件分类
     const canFav = l.type === 'received';
@@ -276,7 +283,7 @@
     const name = partnerName();
     const origEl = document.getElementById('mail-reply-original');
     if (origEl) {
-      origEl.innerHTML = letterPaper(l.tt || '来信', l.content, fmtDT(l.tm), name);
+      origEl.innerHTML = letterPaper(l.tt || '来信', l.content, fmtDT(l.tm), name, true);
       bindLetterImgClicks(origEl);
     }
     const toEl = document.getElementById('mail-reply-to');
@@ -321,7 +328,7 @@
       // v3.7.x：概率由收藏设置页控制，默认 30%
       if (Math.random() * 100 < (window.favCfg ? window.favCfg().taMail : 30) && window.addTaFavItem) {
         window.addTaFavItem({ kind: 'mail', title: l.tt || '', text: val, ts: Date.now() });
-        setTimeout(() => toast('TA 收藏了你的回信'), 1200);
+        setTimeout(() => toast(window.taFit ? window.taFit('TA 收藏了你的回信') : 'TA 收藏了你的回信'), 1200);
       }
     }
   }
@@ -424,9 +431,9 @@
         ? inList.map(l => '<div class="mail-item" data-id="' + l.id + '"><div class="mail-item-av"><svg viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg></div>' +
             '<div class="mail-item-body"><div class="mail-item-title">来自 ' + name +
               (l.myReply ? ' <span class="mail-tag">已回信</span>' : (l.read ? '' : ' <span class="mail-tag new">新来信</span>')) + '</div>' +
-            '<div class="mail-item-desc">' + shortDesc(l.content) + '</div></div>' +
+            '<div class="mail-item-desc">' + shortDesc(l.content, true) + '</div></div>' +
             '<div class="mail-item-time">' + fmtDT(l.tm) + '</div></div>').join('')
-        : '<div class="ta-empty">还没有收到信，等等 TA 吧</div>';
+        : '<div class="ta-empty">' + (window.taFit ? window.taFit('还没有收到信，等等 TA 吧') : '还没有收到信，等等 TA 吧') + '</div>';
       inEl.querySelectorAll('.mail-item').forEach(it => it.addEventListener('click', () => {
         const l = list.find(x => x.id === it.dataset.id);
         if (l) openLetter(l);
@@ -519,6 +526,40 @@
       stickerEn: c['ml-sticker-en'] !== undefined ? c['ml-sticker-en'] : 1
     };
   }
+  // v3.12.x：按「指定联系人桌面」读信箱回复设置（ml-*）——多桌面下每个联系人 TA
+  //   写信（概率/间隔/每天最多来信等）应使用各自桌面的设置值。原实现 maybeIncomingLetterFor
+  //   遍历所有联系人时统一调 mailCfg()=当前激活桌面的值：用户停在 A 桌面，B 桌面设的
+  //   「每天最多写信」等从不生效（与朋友圈 feedCfgFor 同款问题）。以 mailCfg() 为基底
+  //   （保留默认值/坏数据兜底），再用该联系人命名空间的 reply-ml-* 覆盖；
+  //   当前桌面直接复用 mailCfg() 不重复读。概率 0/负不覆盖（同 prob() 兜底口径，
+  //   防 TA 永不写信的旧坏数据）。
+  function mailCfgFor(cid) {
+    const cfg = mailCfg();
+    if (!cid || cid === (window.__activeCid || 'default')) return cfg;
+    try {
+      const s = window.storeFor(cid);
+      [['ml-min-cards', 'minCards'], ['ml-max-cards', 'maxCards'],
+       ['ml-write-prob', 'writeProb'], ['ml-write-min', 'writeMin'], ['ml-write-max', 'writeMax'],
+       ['ml-write-daily-max', 'dailyMax'], ['ml-reply-prob', 'replyProb'],
+       ['ml-reply-min', 'replyMin'], ['ml-reply-max', 'replyMax'],
+       ['ml-kaomoji-en', 'kaomojiEn'], ['ml-emoji-en', 'emojiEn'], ['ml-sticker-en', 'stickerEn']
+      ].forEach(pair => {
+        try {
+          const v = s.get('reply-' + pair[0]);
+          if (v === null || v === undefined || v === '') return;
+          const n = Number(v);
+          if (isNaN(n)) return;
+          if ((pair[0] === 'ml-write-prob' || pair[0] === 'ml-reply-prob') && n <= 0) return;
+          cfg[pair[1]] = n;
+        } catch (e) {}
+      });
+    } catch (e) {}
+    return cfg;
+  }
+  // 只读探针：该联系人桌面的信箱触发配置（供回归测试与来源诊断）
+  window.mailCfgForProbe = function (cid) {
+    try { const c = mailCfgFor(cid); return JSON.parse(JSON.stringify(c)); } catch (e) { return null; }
+  };
   // 字卡库分类（与聊天/朋友圈同一套规则）：文字 / 颜文字 / emoji / 表情包(图片)
   // v3.6.x：用户未添加自定义字卡时（内置预设已移除）用系统默认字卡补池——
   //   否则信件只能从 5 条固定文案里抽，内容单一且条数上限超过池子时爆重复
@@ -688,7 +729,8 @@
       if (cid === (window.__activeCid || 'default') && !mailDbReady) return;
       const cs = csFor(cid);
       const now = Date.now();
-      const cfg = mailCfg();
+      // v3.12.x：按该联系人桌面读设置（每天最多写信/概率/间隔各自独立生效）
+      const cfg = mailCfgFor(cid);
       let last = letterLast(cid), next = letterNext(cid);
       if (last > now || last < 0 || isNaN(last)) { last = 0; next = 0; }
       if ((now - last) / 60000 < next) return;

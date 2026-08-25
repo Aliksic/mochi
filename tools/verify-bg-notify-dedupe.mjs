@@ -123,7 +123,17 @@ try {
   await evalJs(`window.chatAddSystem && window.chatAddSystem('data:image/png;base64,iVBORw0KGgoAAAANSUhEUg'); true`);
   await sleep(120);
   const d5b = await evalJs(`window.bgNotifyGateInfo('data:image/png;base64,AAAAAAAAAAAAAAAA')`);
-  ok('图片 dataURL 剥离后同指纹命中', d5b && d5b.dupInChat === true, d5b);
+  ok('图片 dataURL 归一化后不同图不互判重复', d5b && d5b.dupInChat === false, d5b);
+
+  console.log('\n== T5b v3.13.x 附件指纹：不同图片不再互判重复 ==');
+  // 真实链路：纯图消息的 text 是 [图片] 占位、img 才是图片 dataURL（showDeskPopup→bgNotifyCheck）
+  await evalJs(`window.chatAddSystem && window.chatAddSystem('data:image/png;base64,AAAAAAAAAAAAAAAAAAAA'); true`);
+  await sleep(120);
+  const d5b1 = await evalJs(`window.bgNotifyGateInfo('[图片]', 'data:image/png;base64,BBBBBBBBBBBBBBBBBBBB')`);
+  ok('不同图片 → dupInChat=false（不再被 [附件] 归一化误杀）', d5b1 && d5b1.dupInChat === false, d5b1);
+  // 同一张图（同采样指纹）再次出现 → 仍可去重（防重复弹）
+  const d5b2 = await evalJs(`window.bgNotifyGateInfo('[图片]', 'data:image/png;base64,AAAAAAAAAAAAAAAAAAAA')`);
+  ok('同一图片（同采样）→ dupInChat=true（仍可去重）', d5b2 && d5b2.dupInChat === true, d5b2);
 
   console.log('\n== T6 接线完好 & 无 JS 异常 ==');
   const t6 = await evalJs(`typeof window.bgNotifyCheck === 'function' && typeof window.showDeskPopup === 'function'`);

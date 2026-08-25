@@ -41,13 +41,23 @@
     { label: '隐藏', value: 'hidden' }
   ];
 
+  // v3.11.x：未自定义的配色默认值跟随深浅主题。此前默认色写死浅色（白气泡/黑时间字），
+  // 且以 root 内联样式写入——内联优先级高于 dark.css 的 [data-theme] 覆盖，导致
+  // 深色模式下联系人气泡纯白、时间戳纯黑看不见。用户自定义过（store 有值）仍优先。
+  function themeDefaults() {
+    const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+    return dark
+      ? { inBg: '#2a2a2a', inInk: '#f0f0f0', outBg: '#3a3a3a', outInk: '#ffffff', timeInk: '#8a8a8a', sendBg: '#f0f0f0', sendInk: '#111111' }
+      : { inBg: '#ffffff', inInk: '#111111', outBg: '#111111', outInk: '#ffffff', timeInk: '#111111', sendBg: '#111111', sendInk: '#ffffff' };
+  }
   function applySettings() {
     // 设置页值写入（定义在最前，避免暂时性死区）
     const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-    const inBg = store.get('cs-in-bg') || '#ffffff';
-    const inInk = store.get('cs-in-ink') || '#111111';
-    const outBg = store.get('cs-out-bg') || '#111111';
-    const outInk = store.get('cs-out-ink') || '#ffffff';
+    const DEF = themeDefaults();
+    const inBg = store.get('cs-in-bg') || DEF.inBg;
+    const inInk = store.get('cs-in-ink') || DEF.inInk;
+    const outBg = store.get('cs-out-bg') || DEF.outBg;
+    const outInk = store.get('cs-out-ink') || DEF.outInk;
     const fs = store.get('cs-font-size') || '14px';
     const pad = store.get('cs-bubble-size') || '11px 14px';
     root.style.setProperty('--msg-in-bg', inBg);
@@ -56,29 +66,29 @@
     root.style.setProperty('--msg-out-ink', outInk);
     root.style.setProperty('--chat-font-size', fs);
     root.style.setProperty('--chat-bubble-pad', pad);
-    // 时间轴颜色（默认黑）
-    const timeInk = store.get('cs-time-ink') || '#111111';
+    // 时间轴颜色（默认黑/深色模式灰）
+    const timeInk = store.get('cs-time-ink') || DEF.timeInk;
     root.style.setProperty('--msg-time-ink', timeInk);
     // 正在输入中颜色（默认灰）
     const typingInk = store.get('cs-typing-ink') || '#8a8a8a';
     root.style.setProperty('--typing-ink', typingInk);
-    // 发送按钮颜色（默认黑）
-    const sendBg = store.get('cs-send-bg') || '#111111';
+    // 发送按钮颜色（默认黑/深色模式白）
+    const sendBg = store.get('cs-send-bg') || DEF.sendBg;
     root.style.setProperty('--send-bg', sendBg);
-    // 发送按钮文字颜色（默认白）
-    const sendInk = store.get('cs-send-ink') || '#ffffff';
+    // 发送按钮文字颜色（默认白/深色模式黑）
+    const sendInk = store.get('cs-send-ink') || DEF.sendInk;
     root.style.setProperty('--send-ink', sendInk);
     // 发送按钮显示/隐藏（默认显示；隐藏后仍可按 Enter 发送）
     const sendShow = store.get('cs-send-show') || 'show';
     const sendBtn = document.getElementById('chat-send');
     if (sendBtn) sendBtn.style.display = sendShow === 'hide' ? 'none' : '';
-    set('cs-send-bg-val', sendBg === '#111111' ? '默认 #111111' : sendBg);
-    set('cs-send-ink-val', sendInk === '#ffffff' ? '默认 #ffffff' : sendInk);
+    set('cs-send-bg-val', sendBg === DEF.sendBg ? '默认 ' + DEF.sendBg : sendBg);
+    set('cs-send-ink-val', sendInk === DEF.sendInk ? '默认 ' + DEF.sendInk : sendInk);
     // 双方气泡颜色/文字颜色当前值回显（默认值显示「默认 #色值」，让用户知道默认颜色）
-    set('cs-out-bg-val', outBg === '#111111' ? '默认 #111111' : outBg);
-    set('cs-out-ink-val', outInk === '#ffffff' ? '默认 #ffffff' : outInk);
-    set('cs-in-bg-val', inBg === '#ffffff' ? '默认 #ffffff' : inBg);
-    set('cs-in-ink-val', inInk === '#111111' ? '默认 #111111' : inInk);
+    set('cs-out-bg-val', outBg === DEF.outBg ? '默认 ' + DEF.outBg : outBg);
+    set('cs-out-ink-val', outInk === DEF.outInk ? '默认 ' + DEF.outInk : outInk);
+    set('cs-in-bg-val', inBg === DEF.inBg ? '默认 ' + DEF.inBg : inBg);
+    set('cs-in-ink-val', inInk === DEF.inInk ? '默认 ' + DEF.inInk : inInk);
     // 聊天头像形状（circle 圆形 / square 方形）
     const avShape = store.get('cs-av-shape') || 'circle';
     root.style.setProperty('--msg-av-radius', avShape === 'square' ? '10px' : '50%');
@@ -124,6 +134,12 @@
   }
   window.applyChatSettings = applySettings;
   applySettings();
+  // v3.11.x：深色/浅色切换时重算默认配色（personalize.js 切换 html data-theme，
+  // 这里监听属性变化即时重写内联变量，不用跨模块调用）
+  try {
+    new MutationObserver(() => { try { applySettings(); } catch (e) {} })
+      .observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  } catch (e) {}
 
   // 各设置行
   const row = (id) => document.getElementById(id);
@@ -905,5 +921,30 @@
       toast(csBs.checked ? '已开启：聊天输入栏右侧显示「批量发送」按钮，可插入表情包/图片/文字批量发送' : '已关闭：聊天输入栏「批量发送」按钮已隐藏');
     });
     document.addEventListener('contact-switched', syncBs);
+  }
+
+  // v3.12.x：「隐藏联系人的表情包」开关——默认关闭，全局生效（存根命名空间，与
+  // my-emoji-groups 全局化同口径：聊天/朋友圈表情包面板是跨桌面共用 UI，不随桌面切换）。
+  // 开启后聊天与朋友圈的表情包面板只显示「我的表情包」，不再显示 TA 的/公用表情包。
+  // 写回后广播 hide-ta-sticker-changed 事件，chat.js 即时重渲染面板；feed.js 每次打开时读键。
+  const csHts = document.getElementById('cs-hide-ta-sticker');
+  if (csHts) {
+    const GNS = 'xy-home-v2';
+    const KEY = 'hide-ta-sticker';
+    const htsGet = () => {
+      try { if (window.xyStore) return window.xyStore(GNS).get(KEY) === '1'; } catch (e) {}
+      try { return store.get(KEY) === '1'; } catch (e) { return false; }
+    };
+    const htsSet = (en) => { try { if (window.xyStore) window.xyStore(GNS).set(KEY, en ? '1' : '0'); } catch (e) {} };
+    const syncHts = () => { const v = htsGet(); if (v !== csHts.checked) csHts.checked = v; };
+    syncHts();
+    csHts.addEventListener('change', () => {
+      if (csHts.checked === htsGet()) return;
+      htsSet(csHts.checked);
+      try { document.dispatchEvent(new Event('hide-ta-sticker-changed')); } catch (e) {}
+      toast(csHts.checked ? '已隐藏：聊天和朋友圈的表情包面板只显示「我的表情包」' : '已恢复显示 TA 的和公用表情包');
+    });
+    setInterval(syncHts, 500);
+    document.addEventListener('contact-switched', syncHts);
   }
 })();

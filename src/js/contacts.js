@@ -5,6 +5,10 @@
 (function () {
   const G = 'xy-home-v2';
   const EXCLUDE = ['contacts', 'active-contact', 'feed-posts', 'migrated-v1', 'js-errors', 'theme-mode', 'accent-color',
+    // v3.12.x：group-chat-msgs（群聊消息，v3.8 起全局存储于根命名空间）——同 bg-* 道理，
+    // 不是旧顶层业务键。此前漏排除导致每次刷新 migrateLegacy 把群聊记录搬进 default:
+    // 并删根键，群聊页读根键为空 → 历史看似清空（数据滞留 default: 副本）+ 迁移循环空转。
+    'group-chat-msgs',
     // v3.9.x：全局系统键——后台保活/通知（bg-*）、群聊回复设置（reply-gc-*）、
     // 备份/引导内部标记（__*）。这些键本就存 xy-home-v2 根命名空间（bg-keep.js
     // gSet 用 xyStore(GNS)、reply-settings.js gcWrite 用 xyStore('xy-home-v2')），
@@ -27,6 +31,11 @@
     'cc-groups-public', 'cc-scope-migrated',
     // v3.11.x：字卡库公用/专属变动一次性提醒的已读标记（chatcard.js 弹窗），同为全局根键
     'cc-scope-notice-done',
+    // v3.12.x：我的表情包改全局共享（chat.js）——键 xy-home-v2:my-emoji-groups 走根命名
+    // 空间，所有联系人桌面共用一份；mye-global-migrated 为存量桌面数据合并迁移的幂等标记。
+    // 都是全局根键，绝不能被 migrateLegacy 当旧顶层业务键迁进 default 桌面
+    // （否则全局键被搬走/删除：表情包"消失"+ 迁移标记丢失每次重跑）
+    'my-emoji-groups', 'mye-global-migrated',
     // v3.11.x：存钱罐改全局共享（两人共同金库，p2-features.js）——键 xy-home-v2:piggy-*
     // 走根命名空间，绝不能被 migrateLegacy 迁进 default 桌面（否则非 default 桌面余额读空）
     'piggy-log', 'piggy-goal-name', 'piggy-goal-amt', 'piggy-cards', 'piggy-last-visit',
@@ -116,6 +125,39 @@
 
   // 任意联系人的存储（供朋友圈后台遍历各联系人生成 TA 动态/评论）
   window.storeFor = function (cid) { return window.xyStore(G + ':' + cid); };
+
+  // ---- 联系人性别 / TA 称呼跟随 ----
+  // 存储键：<cid>:partner-gender = 'he' | 'she' | ''（未设置 → 默认「TA」），随联系人命名空间隔离。
+  // 各模块在【显示层】调 window.taFit(text[, cid]) 把指代联系人的「他/TA」替换为「他/她/TA」；
+  // 只改显示不改存储原文，历史消息重新渲染即自动跟随。
+  window.partnerGenderFor = function (cid) {
+    try { return window.xyStore(G + ':' + (cid || 'default')).get('partner-gender') || ''; } catch (e) { return ''; }
+  };
+  window.taWordFor = function (cid) {
+    const g = window.partnerGenderFor(cid);
+    if (g === 'he') return '他';
+    if (g === 'she') return '她';
+    return 'TA';
+  };
+  window.taWord = function () { return window.taWordFor(window.__activeCid || 'default'); };
+  // 人称替换：TA/他 → 性别称呼。保护「其他」（非人称）、base64 段（dataURL 不能动，
+  // 大写 TA 可能出现在 base64 字符里）与 <svg>…</svg> 图标段（系统消息带图标前缀）；
+  // 不用正则 lookbehind（旧版 iOS Safari 不支持）。
+  window.taFit = function (text, cid) {
+    if (text === null || text === undefined) return text;
+    const s = String(text);
+    if (s.indexOf('他') < 0 && s.indexOf('TA') < 0) return s;
+    const w = window.taWordFor(cid || window.__activeCid || 'default');
+    const segs = s.split(/(<svg[\s\S]*?<\/svg>)/);
+    for (let i = 0; i < segs.length; i += 2) {
+      const parts = segs[i].split(/(data:[a-zA-Z0-9.+-]+\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+)/);
+      for (let j = 0; j < parts.length; j += 2) {
+        parts[j] = parts[j].split('其他').join('\u0001').split('TA').join(w).split('他').join(w).split('\u0001').join('其他');
+      }
+      segs[i] = parts.join('');
+    }
+    return segs.join('');
+  };
 
   // ---- 联系人注册表（全局，不随某个联系人隔离） ----
   function regStore() { return window.xyStore(G); }
@@ -381,14 +423,16 @@
     m.innerHTML = '';
     const box = el('div');
     box.style.cssText = 'width:min(92vw,420px);max-height:80vh;display:flex;flex-direction:column;background:#fff;border-radius:16px;padding:18px;box-shadow:0 8px 30px rgba(0,0,0,.2)';
-    box.appendChild(el('div', '', '<div style="font-size:16px;font-weight:600;margin-bottom:4px">联系人 / 桌面</div><div style="font-size:12px;color:#888;margin-bottom:12px">每个联系人数据独立；仅朋友圈互通</div>'));
+    box.appendChild(el('div', '', '<div style="font-size:16px;font-weight:600;margin-bottom:4px">联系人 / 桌面</div><div style="font-size:12px;color:#888;margin-bottom:12px">每个联系人数据独立；仅朋友圈互通<br>「称呼」可设置消息里 TA 的性别叫法（他 / 她 / 不设置）</div>'));
     const list = el('div'); list.style.cssText = 'display:flex;flex-direction:column;gap:8px;margin-bottom:12px;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;flex:1;min-height:0';
     getContacts().forEach(c => {
       const row = el('div');
       row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px;border:1px solid #eee;border-radius:10px';
       const dot = el('div');
       dot.style.cssText = 'width:10px;height:10px;border-radius:50%;background:' + (c.id === window.__activeCid ? '#111' : '#ccc');
-      const nm = el('div', '', '<div style="font-size:14px;font-weight:500">' + (c.name || c.id) + '</div><div style="font-size:11px;color:#999">' + (c.id === window.__activeCid ? '当前桌面' : '点击切换') + '</div>');
+      const gw = window.taWordFor(c.id);
+      const gLabel = gw === 'TA' ? '' : (' · 称呼：' + gw);
+      const nm = el('div', '', '<div style="font-size:14px;font-weight:500">' + (c.name || c.id) + '</div><div style="font-size:11px;color:#999">' + (c.id === window.__activeCid ? '当前桌面' : '点击切换') + gLabel + '</div>');
       nm.style.flex = '1';
       row.appendChild(dot); row.appendChild(nm);
       if (c.id !== window.__activeCid) {
@@ -396,6 +440,13 @@
         row.addEventListener('click', () => { window.setActiveContact(c.id); hideContactModal(m); });
       }
       const acts = el('div'); acts.style.cssText = 'display:flex;gap:6px';
+      const gen = el('button', '', '称呼');
+      gen.style.cssText = 'font-size:12px;padding:4px 8px;border:1px solid #ddd;border-radius:8px;background:#fafafa';
+      gen.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openGenderModal(c, m);
+      });
+      acts.appendChild(gen);
       const ren = el('button', '', '改名');
       ren.style.cssText = 'font-size:12px;padding:4px 8px;border:1px solid #ddd;border-radius:8px;background:#fafafa';
       ren.addEventListener('click', (e) => {
@@ -429,6 +480,28 @@
     m.appendChild(box);
     showContactModal(m);
   };
+  // 称呼（性别）设置弹窗：他 / 她 / 不设置（默认 TA）
+  function openGenderModal(c, m) {
+    if (!window.openModal) return;
+    const cur = window.partnerGenderFor(c.id);
+    window.openModal('称呼设置 · ' + (c.name || c.id), '', function (v) {
+      if (v !== 'he' && v !== 'she' && v !== '') return;
+      try { window.xyStore(G + ':' + c.id).set('partner-gender', v); } catch (e) {}
+      try { document.dispatchEvent(new CustomEvent('ta-word-changed', { detail: { id: c.id } })); } catch (e) {}
+      if ((window.__activeCid || 'default') === c.id && window.refreshActiveContactUI) window.refreshActiveContactUI();
+      hideContactModal(m);
+    }, {
+      noInput: true,
+      pill: cur,
+      staticText: '小字说明：设置后，桌面浮字、聊天、朋友圈、信箱等消息里的「TA／他」会跟随显示为「他」或「她」；选「不设置」则保持默认「TA」。该设置为每个联系人独立保存，只改显示方式，不会改动已保存的消息原文。',
+      pills: [
+        { label: '他（男生）', value: 'he' },
+        { label: '她（女生）', value: 'she' },
+        { label: '不设置（默认 TA）', value: '' }
+      ]
+    });
+  }
+
   function confirmDelete(c, m) {
     const m2 = ensureModal();
     m2.innerHTML = '';

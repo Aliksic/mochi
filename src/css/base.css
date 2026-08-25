@@ -583,9 +583,17 @@ input.ce-ghost, textarea.ce-ghost {
 /* 通用弹层（替代 prompt/confirm，IAB 不支持原生弹窗）
    层级最高，确保任何面板/浮层之上都能弹出
    v3.6.x：去掉 backdrop-filter blur——iOS Safari 全屏模糊每次弹窗打开都做一次
-   整屏栅格化（弹窗是最高频操作），纯 rgba 遮罩视觉几乎无差，性能收益大 */
+   整屏栅格化（弹窗是最高频操作），纯 rgba 遮罩视觉几乎无差，性能收益大
+   v3.12.x：fixed → absolute——手机端键盘弹出时 mobile-adapt.js 会把 .phone 收缩
+   停靠在键盘上方（align-self:flex-start + height=可视高度），fixed 元素仍相对
+   整屏布局视口定位 → 弹窗中心落在停靠后的输入栏下方、下半截被键盘盖住
+   （用户反馈：我的表情包「链接导入」弹窗跑到聊天输入栏下面）。改 absolute 锚定
+   .phone（本就 position:relative），随 .phone 停靠，弹窗始终在可视区内居中；
+   .modal 的 max-height min(78vh, calc(100% - 24px)) 中 calc 项保证键盘弹出后的
+   小可视区里弹窗内部可滚动。桌面外壳/平板下 .phone 即整屏，视觉与层级不变
+   （.phone 无 z-index 不产生堆叠上下文，z 90 与 call-mask 95 等相对次序照旧）。 */
 .modal-mask {
-  position:fixed; inset:0; z-index:90;
+  position:absolute; inset:0; z-index:90;
   background:var(--overlay-bg);
   display:flex; align-items:center; justify-content:center;
 }

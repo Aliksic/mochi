@@ -7,7 +7,7 @@
 //   4. 自动弹窗路径（ckq-popup-prob=100）：openModal pills 弹窗 → 点选 → 确定 → 作答。
 //   5. askOptions/askType 透传修复验证：刷新后已作答单选卡点开仍能列出选项（数据持久化）。
 //   6. 开关/冷却：ckq-en=0 时 ckQuestionTry 返回 false；触发后冷却期内返回 false。
-//   7. 设置页：查岗 tab/面板存在，ckq-prob 默认 15。
+//   7. 设置页：查岗 tab/面板存在，ckq-prob 默认 8（v3.12.x 互动卡降频：15→8，冷却30不变）。
 // 前置：禁用自动回复（rs-min/max=9999s、rn-prob=0、as-en=0）避免「正在输入」行竞态。
 // 需要：Node 21+ + 本机 Chrome/Edge（CHROME_PATH 可指定）
 import { spawn } from 'node:child_process';
@@ -307,7 +307,7 @@ const coolRet = await evalJs('window.ckQuestionTry(window.replyCfg())');
 check('触发后冷却期内 ckQuestionTry 返回 false', coolRet === false);
 // 删除已写入的键 → replyCfg 回退默认值（验证 DEFAULTS：概率15/冷却30/弹窗70）
 const cfg0 = await evalJs("(function(){var st=window.activeStore();st.remove('reply-ckq-prob');st.remove('reply-ckq-cool');st.remove('reply-ckq-popup-prob');var c=window.replyCfg();return {prob:c['ckq-prob'],cool:c['ckq-cool'],popup:c['ckq-popup-prob']};})()");
-check('设置默认值正确（概率15/冷却30/弹窗70）', cfg0 && cfg0.prob === 15 && cfg0.cool === 30 && cfg0.popup === 70, cfg0 ? JSON.stringify(cfg0) : 'n/a');
+check('设置默认值正确（概率8/冷却30/弹窗70）', cfg0 && cfg0.prob === 8 && cfg0.cool === 30 && cfg0.popup === 70, cfg0 ? JSON.stringify(cfg0) : 'n/a');
 
 // ---- 7. 设置页面板 ----
 const panel = await evalJs(`(function(){

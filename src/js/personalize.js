@@ -3369,7 +3369,7 @@ try {
     const el = document.getElementById('love-quote');
     if (!el) return;
     const text = (window.getQuoteOfDay && window.getQuoteOfDay()) || '我偏爱你。';
-    el.textContent = text;
+    el.textContent = window.taFit ? window.taFit(text) : text;
     // 今日情话存档：每天一条，全部历史保存在主页（同一天不重复）
     try {
       const today = fishToday();

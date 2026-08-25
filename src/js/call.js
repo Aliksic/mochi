@@ -42,41 +42,70 @@
     if (val) val.textContent = bg ? '已设置' : '默认';
     const rm = document.getElementById('call-bg-remove');
     if (rm) rm.hidden = !bg;
+    // v3.12.x：聊天页「更多功能→通话」半框里的背景行同步回显（设置页与半框两处入口共用状态）
+    const evalVal = document.getElementById('call-bg-edit-val');
+    if (evalVal) evalVal.textContent = bg ? '已设置' : '默认';
+    const rmEdit = document.getElementById('call-bg-edit-remove');
+    if (rmEdit) rmEdit.hidden = !bg;
+  }
+  // v3.12.x：上传逻辑抽成 pickCallBg()——设置页 #call-bg-row 与通话半框 #call-bg-edit-row 两个入口共用
+  function pickCallBg() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = () => {
+      const f = input.files && input.files[0];
+      if (!f) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          try {
+            const scale = Math.min(1, 600 / Math.max(img.width, img.height));
+            const c = document.createElement('canvas');
+            c.width = Math.max(1, Math.round(img.width * scale));
+            c.height = Math.max(1, Math.round(img.height * scale));
+            c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+            const data = c.toDataURL('image/jpeg', 0.85);
+            store.set(CALL_BG_KEY, data);
+            applyCallBg();
+            toast('通话背景已设置');
+          } catch (e) {
+            toast('图片处理失败');
+          }
+        };
+        img.onerror = () => toast('图片读取失败');
+        img.src = reader.result;
+      };
+      reader.onerror = () => toast('图片读取失败');
+      reader.readAsDataURL(f);
+    };
+    input.click();
+    return input;
   }
   const callBgRow = document.getElementById('call-bg-row');
-  if (callBgRow) {
-    callBgRow.addEventListener('click', () => {
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.accept = 'image/*';
-      input.onchange = () => {
-        const f = input.files && input.files[0];
-        if (!f) return;
-        const reader = new FileReader();
-        reader.onload = () => {
-          const img = new Image();
-          img.onload = () => {
-            try {
-              const scale = Math.min(1, 600 / Math.max(img.width, img.height));
-              const c = document.createElement('canvas');
-              c.width = Math.max(1, Math.round(img.width * scale));
-              c.height = Math.max(1, Math.round(img.height * scale));
-              c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-              const data = c.toDataURL('image/jpeg', 0.85);
-              store.set(CALL_BG_KEY, data);
-              applyCallBg();
-              toast('通话背景已设置');
-            } catch (e) {
-              toast('图片处理失败');
-            }
-          };
-          img.onerror = () => toast('图片读取失败');
-          img.src = reader.result;
-        };
-        reader.onerror = () => toast('图片读取失败');
-        reader.readAsDataURL(f);
-      };
-      input.click();
+  if (callBgRow) callBgRow.addEventListener('click', pickCallBg);
+  // v3.12.x：聊天页「更多功能→通话」半框内直接修改联系人头像 / 通话卡片背景图片
+  //   - 联系人头像行 → 收起通话半框，打开「头像互动」半框（上传/点选即换，写 cs-avatar-partner）
+  //   - 通话背景图片行 → 与设置页同款上传流程
+  //   - 移除行 → 恢复默认背景（无背景时隐藏，随 applyCallBg 同步显隐）
+  const callAvEditRow = document.getElementById('call-av-edit-row');
+  if (callAvEditRow) {
+    callAvEditRow.addEventListener('click', () => {
+      const cp = document.getElementById('chat-call-panel');
+      if (cp) cp.hidden = true;
+      if (window.openAvlib) window.openAvlib();
+      else toast('头像库暂不可用');
+    });
+  }
+  const callBgEditRow = document.getElementById('call-bg-edit-row');
+  if (callBgEditRow) callBgEditRow.addEventListener('click', pickCallBg);
+  const callBgEditRm = document.getElementById('call-bg-edit-remove');
+  if (callBgEditRm) {
+    callBgEditRm.addEventListener('click', () => {
+      store.remove(CALL_BG_KEY);
+      applyCallBg();
+      toast('已恢复默认通话背景');
     });
   }
   const callBgRm = document.getElementById('call-bg-remove');
@@ -176,8 +205,10 @@
     miniPos = null;
   }
 
-  function partnerName() { return store.get('lbl-partner') || 'TA'; }
-  function partnerAv() { return store.get('avatar-partner') || ''; }
+  function partnerName() { return store.get('lbl-partner') || (window.taWord ? window.taWord() : 'TA'); }
+  // v3.12.x：通话头像跟随聊天域——优先读聊天专用键 cs-avatar-partner（头像互动半框/换头像写的就是它），
+  // 未设置时回退桌面键 avatar-partner；此前只读桌面键，导致通话面板不跟随换头像
+  function partnerAv() { return store.get('cs-avatar-partner') || store.get('avatar-partner') || ''; }
   // v3.6.x：通话绑定归属桌面（cid + 昵称 + 头像）——通话中切换到其他联系人桌面再挂断时，
   // 文案与记录仍归属发起通话的桌面，不会显示成当前桌面的联系人
   function bindCall(callObj) {
@@ -208,7 +239,8 @@
     let av = '';
     try {
       const s = (window.storeFor && window.storeFor(currentCall.cid)) || store;
-      av = s.get('avatar-partner') || '';
+      // v3.12.x：同 partnerAv——先读聊天专用键再回退桌面键（按归属桌面读，跨桌面通话仍显示正确的 TA）
+      av = s.get('cs-avatar-partner') || s.get('avatar-partner') || '';
     } catch (e) { av = currentCall.av || partnerAv(); }
     if (av === shownAv) return;
     shownAv = av;

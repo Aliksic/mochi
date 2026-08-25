@@ -1570,8 +1570,8 @@
           ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 014-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>'
           : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>') + '</span>';
     return '<div class="sm-his">' + ico +
-      '<div class="sm-his-info"><div class="sm-his-name">' + (x.mode ? esc(x.triggerType || '播放模式') : esc(x.trackName || '未知歌曲')) + '</div>' +
-      '<div class="sm-his-sub">' + fmtDT(x.ts) + (x.mode ? '' : (x.triggerType ? ' · ' + esc(x.triggerType) : '')) + '</div></div></div>';
+      '<div class="sm-his-info"><div class="sm-his-name">' + (x.mode ? esc(window.taFit ? window.taFit(x.triggerType || '播放模式') : (x.triggerType || '播放模式')) : esc(x.trackName || '未知歌曲')) + '</div>' +
+      '<div class="sm-his-sub">' + fmtDT(x.ts) + (x.mode ? '' : (x.triggerType ? ' · ' + esc(window.taFit ? window.taFit(x.triggerType) : x.triggerType) : '')) + '</div></div></div>';
   }
   function renderHistory() {
     const el = document.getElementById('music-his-list');
@@ -1579,7 +1579,7 @@
     // v3.9.x：二级子 tab——「我的听歌」/「TA 邀请听歌」分开记，避免自己点歌和 TA 邀请混在一起
     const subBar = '<div class="sm-his-subtabs">' +
       '<button class="sm-his-subtab' + (hisSubTab === 'mine' ? ' sel' : '') + '" data-hissub="mine">我的听歌</button>' +
-      '<button class="sm-his-subtab' + (hisSubTab === 'ta' ? ' sel' : '') + '" data-hissub="ta">TA 邀请听歌</button>' +
+      '<button class="sm-his-subtab' + (hisSubTab === 'ta' ? ' sel' : '') + '" data-hissub="ta">' + (window.taFit ? window.taFit('TA 邀请听歌') : 'TA 邀请听歌') + '</button>' +
       '</div>';
     if (hisSubTab === 'mine') {
       const h = myHistory.slice().reverse();
@@ -1590,7 +1590,7 @@
       const h = history.slice().reverse();
       el.innerHTML = subBar + (h.length
         ? h.map(renderHistoryItem).join('')
-        : '<div class="ta-empty">还没有梦角邀请听歌记录，TA 邀请你一起听歌的记录会出现在这里</div>');
+        : '<div class="ta-empty">' + (window.taFit ? window.taFit('还没有梦角邀请听歌记录，TA 邀请你一起听歌的记录会出现在这里') : '还没有梦角邀请听歌记录，TA 邀请你一起听歌的记录会出现在这里') + '</div>');
     }
     // 子 tab 点击：切换并重渲染
     el.querySelectorAll('.sm-his-subtab').forEach(btn => {
@@ -1700,20 +1700,36 @@
       startWithSrc(v, false);
     }
   }
+  // v3.10.x：单实例清场——本模块创建的每个 <audio> 都登记在 liveAudioEls，
+  // 每次新建前把在册旧元素全部硬停（pause＋解绑事件＋去 src＋load 中断下载＋移出 DOM）。
+  // 根因（用户实测：红米K80 弱网点播出现两个播放器同时响、暂停只停一个）：
+  // 停滞守卫 retryWithHttpsUrl 先 teardownAudio 再异步拉 meting 直链（最长 8s），
+  // 空窗期里原 play() 被 teardown 中断而 reject → handlePlayReject 武装自动续播/
+  // 后台补播 → tryResumePlayback 见 !audio 就 rebuildAndPlay 用旧 URL 造出野元素；
+  // 直链回来后 audio = createAudio() 只覆盖变量、没人停野元素 → 双声，暂停只停
+  // 变量指向的那个。收口到唯一工厂后，无论哪条竞态路径抢先造过元素，新建时必被
+  // 清场，结构上保证任意时刻最多只有一个可能出声的 <audio>（暂停即全停）。
+  let liveAudioEls = [];
+  function killAudioEl(a) {
+    try { a.onended = null; a.onerror = null; a.onloadedmetadata = null; a.onplay = null; a.onpause = null; a.pause(); a.removeAttribute('src'); a.load(); } catch (e) {}
+    try { if (a.parentNode) a.parentNode.removeChild(a); } catch (e) {}
+  }
   // v3.9.x：创建 audio 元素并 attached 到 DOM（display:none）——
   // QQ浏览器 X5 内核对未 attached 的 new Audio() 元素播放限制更严格
   //（即使用户手势内 play() 也被拒），attached 后手势续播能放行。
   function createAudio() {
+    liveAudioEls.forEach(killAudioEl);
+    liveAudioEls = [];
     const a = new Audio();
     try { a.style.display = 'none'; document.body.appendChild(a); } catch (e) {}
+    liveAudioEls.push(a);
     return a;
   }
   function teardownAudio() {
-    if (audio) {
-      try { audio.pause(); audio.onended = null; audio.onerror = null; audio.onloadedmetadata = null; audio.onplay = null; audio.onpause = null; audio.removeAttribute('src'); audio.load(); } catch(e) {}
-      try { if (audio.parentNode) audio.parentNode.removeChild(audio); } catch (e) {}
-      audio = null;
-    }
+    if (audio) { killAudioEl(audio); audio = null; }
+    // v3.10.x：在册元素一并清场（竞态窗口内可能存在未被变量引用的野元素）
+    liveAudioEls.forEach(killAudioEl);
+    liveAudioEls = [];
     revokeObjectUrl();
     playRejected = false;
     endedHandled = false;
@@ -1806,6 +1822,8 @@
     const retry = function () {
       disarmAutoResume();
       if (!currentId) return;
+      // v3.10.x：换源/兜底窗口期不重建——同理防野元素双声，等换源回调接管
+      if (httpsRetrying || demoFallbackBusy) return;
       const m = findTrack(currentId);
       if (!m) return;
       // v3.9.x：重新创建 audio 元素（X5 内核缓存 rejection 的兜底）
@@ -1855,6 +1873,9 @@
   }
   function tryResumePlayback() {
     if (!wantPlay || callHoldPending || bgResumeFails >= 6) return;
+    // v3.10.x：换源/兜底窗口期不补播——!audio 分支会用旧 URL 造野元素，
+    // 与即将回来的直链播放形成双声（弱网双播放器根因之一），还抢弱网带宽
+    if (httpsRetrying || demoFallbackBusy) return;
     const m = findTrack(currentId);
     if (!m) { wantPlay = false; return; }
     if (!audio || audio.ended) {
@@ -1914,6 +1935,10 @@
   // startPlayback / toggle 共用的拒绝处理：手势内提示用户，非手势静默反击
   function handlePlayReject() {
     playRejected = true;
+    // v3.10.x：换源重试（meting 直链/内置旋律合成）窗口期的拒绝是主动 teardown 旧元素
+    // 的自然结果，不是播放被拦——此时武装续播反击会用旧 URL 造出第二个播放器抢跑，
+    // 与即将回来的直链播放形成双声（弱网双播放器根因之一），交给换源回调接管即可
+    if (httpsRetrying || demoFallbackBusy) return;
     if (recentUserGesture()) {
       toast('点击播放被浏览器拦截，请再点一下屏幕继续播放');
       armAutoResume();
@@ -2026,21 +2051,22 @@
     // v3.9.x：meting API 不可达（直链为空）时，用网易云官方外链作为备用
     // 播放源（<audio> 不走 CORS，能请求官方外链；302 到 CDN mp3 直接播放）
     resolveNeteaseDirectUrl(m, function (directUrl) {
-      if (directUrl) {
-        httpsRetrying = false;
-        if (currentId !== m.id) { demoFallbackOrError(m); return; }
-        audio = createAudio();;
-        try { audio.referrerPolicy = 'no-referrer'; } catch (e) {}
-        audio.src = directUrl;
-        startPlayback(m);
-        return;
-      }
-      // meting API 失败 → 尝试网易云官方外链（<audio> 直接跟随 302 播放）
+      // v3.10.x：换源窗口到此结束
       httpsRetrying = false;
+      // v3.10.x：拉直链的空窗期（最长 8s）里可能已切歌/按暂停/来电 hold——原实现
+      // 无视状态强行起播（表现为"暂停了过几秒自己又响"）。切歌仍走 demo 兜底判定
+      // （playDemoFor 内有 currentId 守卫不会串音）；暂停/hold 直接清场不再出声，
+      // teardown 同时清掉空窗期补播反击可能造出的野元素
       if (currentId !== m.id) { demoFallbackOrError(m); return; }
-      audio = createAudio();;
+      if (!wantPlay || callHoldPending) { teardownAudio(); try { syncPlayIcons(false); } catch (e) {} return; }
+      audio = createAudio();
       try { audio.referrerPolicy = 'no-referrer'; } catch (e) {}
-      audio.src = neteaseOuterUrl(m.neteaseId);
+      if (directUrl) {
+        audio.src = directUrl;
+      } else {
+        // meting API 失败 → 尝试网易云官方外链（<audio> 直接跟随 302 播放）
+        audio.src = neteaseOuterUrl(m.neteaseId);
+      }
       startPlayback(m);
     });
     return true;
@@ -2716,7 +2742,7 @@
         window.openTCPanel('音乐', '' +
           '<div class="sm-req">' +
           '<div class="sm-req-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>' +
-          '<div class="sm-req-hint">' + name + ' 想和你一起听：</div>' +
+          '<div class="sm-req-hint">' + (window.taFit ? window.taFit(name + ' 想和你一起听：') : (name + ' 想和你一起听：')) + '</div>' +
           '<div class="sm-req-name">《' + esc(trackName) + '》</div>' +
           '</div>' +
           '<div class="mail-actions"><button class="cc-tool" id="sm-req-no">稍后</button><button class="cc-tool" id="sm-req-yes">一起听</button></div>');

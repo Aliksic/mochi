@@ -12,6 +12,15 @@
   --dark-border-12: rgba(255,255,255,.12);
   --dark-soft: #aaa;
   --dark-hover: rgba(255,255,255,.06);
+  /* v3.11.x 深色重设计：桌面小组件五件套默认值（home.css :root 里是纯白，
+     此前深色模式从未覆盖——桌面卡片/按钮白底黑字刺眼）。
+     用户在桌面美化里自定义过颜色时 JS 写的内联变量仍优先生效 */
+  --widget-bg:#1e1e1e; --widget-border:rgba(255,255,255,.12);
+  --widget-btn:#f0f0f0; --widget-btn-text:#111111; --widget-heart:#f0f0f0;
+  /* 新组件大量使用 var(--ink-soft,#999) 兜底；浅色无定义走灰色兜底即可，深色给亮灰 */
+  --ink-soft:#aaaaaa;
+  /* 原生控件（输入框/日期选择器/滚动条）跟随深色 */
+  color-scheme:dark;
 
   /* ---- home.css ---- */
   /* v3.7.x：背景遮罩深色覆盖——浅色模式是白色蒙层，深色模式改黑（此前 dark.css 无覆盖） */
@@ -70,6 +79,9 @@
 
   /* ---- chat-main.css 全面覆盖 ---- */
   .chat-head { background:var(--dark-card-92); border-bottom-color:var(--dark-border); }
+  /* v3.11.x：.page.full（进入聊天页挂 full 类）3 级特异性压过上面的 2 级覆盖，
+     全屏聊天模式顶栏回白底+白字看不见——同链覆盖 */
+  .page.full .chat-head { background:var(--dark-card-92); border-bottom-color:var(--dark-border); box-shadow:none; }
   .msg-av { background:#2a2a2a; }
   .msg-bubble { border-color:var(--dark-border); }
   .msg-in .msg-bubble { background:var(--msg-in-bg, var(--dark-card)); }
@@ -79,7 +91,7 @@
   .chat-search-new { background:var(--dark-hover); }
   .chat-search-new:active { background:rgba(255,255,255,.1); }
   .chat-search-bar { background:var(--dark-input); border-color:var(--dark-border-12); }
-  .chat-search-input { background:#f6f6f6; border-color:var(--dark-border-12); color:var(--ink); }
+  .chat-search-input { background:var(--dark-input); border-color:var(--dark-border-12); color:var(--ink); }
   .chat-search-input:focus { border-color:var(--ink); background:var(--dark-card); }
   .chat-search-go { background:var(--btn-bg); color:var(--btn-ink); }
   .chat-search-results .tc-listitem:active { background:var(--dark-hover); }
@@ -145,6 +157,9 @@
   .call-panel { background:var(--dark-card-97); border-color:var(--dark-border); }
   .call-info { color:var(--ink); }
   .call-name { color:var(--ink); }
+  /* v3.12.x：通话半框「联系人头像/通话背景图片」编辑行深色覆盖（chat-main.css 浅色为白底） */
+  .call-panel-row { background:var(--dark-card-92); border-color:var(--dark-border); }
+  .call-panel-row-danger .cpr-txt { color:#ff7a7f; }
 
   /* ---- chat-pages.css 全面覆盖 ---- */
   .card-tabs { background:transparent; }
@@ -282,7 +297,7 @@
 
   /* 装修模式 */
   .decor-bar { background:rgba(17,17,17,.9); color:#fff; }
-  .decor-add { background:var(--dark-card); color:#111; }
+  .decor-add { background:var(--dark-hover); color:#f0f0f0; }
   .decor-add:active { background:rgba(255,255,255,.15); }
   .decor-done { background:transparent; color:#fff; }
 
@@ -397,4 +412,421 @@
   .sfx-preset { background:var(--dark-hover); color:var(--dark-soft); border-color:var(--dark-border-12); }
   .sfx-preset:active { background:var(--btn-bg); color:var(--btn-ink); }
   .sfx-preset.on { background:var(--btn-bg); color:var(--btn-ink); border-color:var(--btn-bg); }
+}
+
+/* ======================================================================
+   v3.11.x 深色模式重设计补齐（用户反馈：深色下大量白底/纯黑字看不见）
+   背景：8/20 后新增的 chat-pages/chat-main/group-chat/garden/memo/market
+   组件从未做过深色适配，本段集中补齐。garden.css / memo.css 在构建顺序中
+   位于本文件之后，这两节使用镜像完整选择器链（[data-theme] 前缀 +1 层
+   特异性保证覆盖）；其余文件在本文件之前加载，同特异性后到者胜。
+   ====================================================================== */
+
+[data-theme="dark"] {
+  /* ---- home.css 补漏 ---- */
+  .desk-cal .dcal-cell.today { background:#f0f0f0; color:#111; }
+  .desk-cal .dcal-cell.today.has-msg::after { background:#111; }
+  .desk-cal .dcal-cell:not(.empty):active { background:rgba(255,255,255,.08); }
+  .desk-timer .dt-btn { border-color:rgba(255,255,255,.12); background:var(--static-bg); }
+  .desk-timer .dt-btn:active { background:rgba(255,255,255,.12); }
+  .week-day:not(.today):active { background:rgba(255,255,255,.10); }
+  .desk-image-widget { background:rgba(255,255,255,.06); }
+
+  /* ---- chat-main.css 补漏 ---- */
+  .ch-back, .ch-settings { background:rgba(40,40,40,.92); border-color:var(--dark-border); }
+  .ch-av { background:#2a2a2a; }
+  body.cs-time-under-bubble .msg-side .msg-time,
+  body.cs-time-bubble .msg-side .msg-time,
+  body.cs-time-center .msg-side .msg-time { background:rgba(255,255,255,.08); }
+  body.cs-time-float .msg-side .msg-time { background:rgba(255,255,255,.10); }
+  .msg-time-divider span { background:rgba(255,255,255,.08); }
+  .chat-draft-quote-img, .chat-draft-item { border-color:rgba(255,255,255,.1); }
+  .chat-search-date-input { border-color:var(--dark-border-12); background:var(--dark-input); color:var(--ink); }
+  .chat-search-date-input:focus { background:var(--dark-card); border-color:var(--ink); }
+  .chat-search-date-clear { border-color:var(--dark-border-12); background:var(--dark-input); color:#aaa; }
+  .chat-search-date-clear:active { background:var(--dark-hover); }
+  #chat-divine-body .div-mode { border-color:var(--dark-border-12); background:var(--dark-hover); color:var(--dark-soft); }
+  #chat-divine-body .div-mode.sel { background:var(--ink); color:#111; border-color:var(--ink); }
+  #chat-divine-body .div-card-face { background:#262a30; border-color:rgba(255,255,255,.08); }
+  #chat-divine-body .div-result-empty { color:#666; }
+  .ch-input-btn { background:rgba(40,40,40,.92); border-color:var(--dark-border); color:var(--soft-ink); box-shadow:none; }
+  .ch-input-btn:active { background:rgba(255,255,255,.08); }
+  .msg-poke { background:var(--static-bg); border-color:rgba(255,255,255,.07); }
+  .more-item .mi-ico { background:var(--dark-card); border-color:var(--dark-border); box-shadow:none; }
+  .more-item .mi-ico svg { color:#ccc; }
+  .rp-cover-preview { background:#2a2a2a; border-color:var(--dark-border-12); }
+  .rp-cover-btn { border-color:var(--dark-border-12); background:var(--dark-card); }
+  .rp-cover-btn:active { background:var(--dark-hover); }
+  .rp-send { background:var(--btn-bg); color:var(--btn-ink); }
+  .rp-side.sel, .rp-amt.sel { background:var(--btn-bg); color:var(--btn-ink); border-color:var(--btn-bg); }
+  .poke-tabs-row .poke-tab { border-color:var(--dark-border-12); background:var(--dark-hover); color:var(--dark-soft); }
+  .poke-tabs-row .poke-tab.poke-tab-pub.sel { background:var(--dark-card); }
+  .poke-add-btn { border-color:rgba(255,255,255,.3); background:var(--dark-hover); color:var(--dark-soft); }
+  .my-mg-panel .mg-row .mg-rn { border-color:var(--dark-border-12); background:var(--dark-card); color:var(--dark-soft); }
+  .emoji-grid, #emoji-list .emoji-grid { background:rgba(40,40,40,.92); border-color:rgba(255,255,255,.08); }
+  #emoji-list .cc-group-header { background:rgba(255,255,255,.06); }
+  .batch-tool { border-color:var(--dark-border-12); background:var(--dark-hover); }
+  .batch-tool:active { background:rgba(255,255,255,.1); }
+  .batch-empty { color:#666; }
+  .batch-item { background:var(--static-bg); border-color:var(--dark-border); }
+  .batch-item-media { border-color:var(--dark-border-12); }
+  .batch-item-type { color:#888; }
+  .batch-item-x { background:rgba(255,255,255,.1); color:#aaa; }
+  .batch-item-x:active { background:rgba(255,255,255,.2); }
+  .batch-clear { border-color:var(--dark-border-12); background:var(--dark-card); color:var(--dark-soft); }
+  .batch-clear:active { background:var(--dark-hover); }
+  .msg-actions { background:var(--dark-card-97); border-color:var(--dark-border); }
+  .ma-btn { color:#ccc; }
+  .ma-btn:active { background:rgba(255,255,255,.08); }
+  .msg-quote { background:var(--static-bg); }
+  .msg-moods { border-top-color:rgba(255,255,255,.14); }
+  .msg-mood .msg-mood-tag { background:rgba(255,255,255,.1); }
+  .msg-fav-heart { background:rgba(255,255,255,.07); }
+  .msg-inplace .ip-opt, .msg-inplace .ip-chip { border-color:var(--dark-border-12); background:var(--dark-card); }
+  .msg-inplace .ip-opt:active, .msg-inplace .ip-chip:active { background:var(--dark-hover); }
+  /* var(--ink) 底+白字的按钮族：深色下底变浅、白字隐形，统一改深字 */
+  .msg-inplace .ip-send, .call-panel-dial, .poke-big { color:#111; }
+  .call-av, .call-mini-av { background:#2a2a2a; }
+  .msg-poke-seg-detail { background:var(--static-bg); }
+  /* 鲜花卡：浅粉渐变改暗玫瑰，文字提亮 */
+  .msg-flower-card { background:linear-gradient(160deg,#3a2530 0%,#2e1c26 55%,#241620 100%); border-color:rgba(233,30,99,.3); }
+  .msg-flower-name { color:#ff8ab3; }
+  .msg-flower-wish { color:#d98caf; }
+  .msg-flower-foot { color:rgba(255,150,190,.55); border-top-color:rgba(233,30,99,.25); }
+
+  /* ---- chat-pages.css 补齐：字卡库/收藏/纪念日/日历 ---- */
+  .cc-modal-topbar { background:var(--dark-card-97); border-bottom-color:rgba(255,255,255,.08); }
+  .cc-modal-top-ok { background:var(--btn-bg); color:var(--btn-ink); }
+  .ccg-name { color:#ddd; }
+  .ccg-count { background:var(--dark-hover); }
+  .cc-type, .cc-img { border-color:var(--dark-border); }
+  .card-list.cc-grid .cc-ico { background:var(--dark-hover) !important; }
+  .card-list.cc-grid2 .cc-ico { background:var(--dark-hover) !important; }
+  .card-list.cc-managing .cc-item.sel::before { color:var(--btn-ink); }
+  #poke-list .cc-item, #poke-list .cc-group-header { background:var(--dark-card); border-color:var(--dark-border); }
+  #poke-list .cc-group-header { background:var(--dark-hover); }
+  #poke-list .cc-item .ccg-name, #poke-list .ccg-name { color:#ddd; }
+  #poke-list .cc-item .ccg-count { background:var(--dark-hover); color:var(--dark-soft); }
+  .mem-date-btn { border-color:var(--dark-border-12); background:var(--static-bg); }
+  .fs-stat-head { border-top-color:rgba(255,255,255,.06); }
+  .fs-stat-label { color:#ccc; }
+  .cal-sec { border-top-color:rgba(255,255,255,.07); }
+  .cal-grid .cal-cell.today.cal-water::after,
+  .cal-grid .cal-cell.sel.cal-water::after { background:rgba(17,17,17,.85); box-shadow:0 0 0 1px rgba(255,255,255,.2); }
+
+  /* ---- chat-pages.css 补齐：经期页（整页白底大区） ---- */
+  .period-card { background:var(--dark-card-92); border-color:var(--dark-border); }
+  .period-status-ico { background:#555; }
+  .period-phase-bar .seg { color:#999; background:var(--static-bg); }
+  .period-phase-bar .seg-0 { background:rgba(232,90,143,.18); color:#ff9ec4; }
+  .period-phase-bar .seg-1 { background:rgba(245,166,35,.16); color:#ffc76e; }
+  .pms-badge.pms-none { background:var(--dark-hover); color:#999; }
+  .pms-badge.pms-light { background:rgba(76,175,80,.15); color:#81c784; }
+  .pms-badge.pms-mid { background:rgba(245,166,35,.15); color:#ffb74d; }
+  .pms-badge.pms-heavy { background:rgba(232,90,143,.16); color:#f48fb1; }
+  .period-btn { border-color:var(--dark-border-12); background:var(--dark-card-92); }
+  .period-month-btn { border-color:var(--dark-border-12); background:var(--dark-card); color:var(--ink); }
+  .period-month-btn:active { background:var(--dark-hover); }
+  .period-legend .lg { color:#999; }
+  .period-legend .lg-predict::before { background:rgba(232,90,143,.12); }
+  .period-grid .pc-cell { color:#999; background:var(--dark-card); border-color:var(--dark-border); }
+  .period-grid .pc-cell.ph-predict { background:rgba(232,90,143,.14); color:#f48fb1; border-color:#b04a67; }
+  .period-grid .pc-cell.band.ph-predict { color:#ef7fa4; }
+  .period-hist-row { background:var(--dark-card-92); border-color:rgba(255,255,255,.09); }
+  .reg-badge.reg-good { background:rgba(58,155,90,.16); color:#7ed6a2; }
+  .reg-badge.reg-mid { background:rgba(245,166,35,.15); color:#ffb74d; }
+  .reg-badge.reg-bad { background:rgba(214,69,120,.16); color:#f48fb1; }
+  .period-report-btn { background:var(--dark-card-92); }
+  .ps-bar .ps-track { background:var(--dark-hover); }
+  /* 日详情浮层（底部白色大弹层） */
+  .period-day-pop .dp-sheet { background:#1e1e1e; }
+  .period-day-pop .dp-close { background:var(--dark-hover); }
+  .period-day-pop .dp-flow,
+  .period-day-pop .dp-sym,
+  .period-day-pop .dp-temp,
+  .period-day-pop .dp-hour,
+  .period-day-pop .dp-date-input { border-color:var(--dark-border); background:var(--dark-card); }
+  .period-day-pop .dp-flow.on { background:rgba(232,90,143,.18); border-color:#e85a8f; color:#f48fb1; }
+  .period-day-pop .dp-sym.on { background:rgba(245,166,35,.15); border-color:#f5a623; color:#ffc76e; }
+  .period-day-pop .dp-note { border-color:var(--dark-border); }
+  .period-day-pop .dp-mood { border-color:var(--dark-border); background:var(--dark-card); }
+  .period-day-pop .dp-mood.on { background:rgba(76,175,80,.15); border-color:#4caf50; color:#81c784; }
+  .period-day-pop .dp-toggle { border-color:var(--dark-border); background:var(--dark-card); }
+  .period-day-pop .dp-toggle.on { background:rgba(58,155,90,.16); border-color:#3a9b5a; color:#7ed6a2; }
+  .period-day-pop .dp-care-mgr { border-color:#b05677; background:var(--dark-card); color:#f48fb1; }
+  .period-day-pop .dp-add-row .dp-care-input { border-color:var(--dark-border); }
+  .period-day-pop .care-row { background:rgba(255,255,255,.04); border-color:rgba(255,255,255,.07); }
+  .period-day-pop .care-txt.off { color:#666; }
+  .period-day-pop .care-toggle { border-color:var(--dark-border); background:var(--dark-card); }
+  .period-day-pop .care-toggle.on { background:rgba(58,155,90,.16); border-color:#3a9b5a; color:#7ed6a2; }
+  .period-day-pop .care-del { color:#888; }
+  .period-day-pop .care-del:active { background:rgba(255,255,255,.08); }
+  .period-day-pop .dp-del { border-color:#444; background:var(--dark-card); color:#999; }
+  .period-day-pop .st-btn { border-color:var(--dark-border-12); background:var(--dark-card); }
+  .period-day-pop .st-btn:active { background:var(--dark-hover); }
+
+  /* ---- chat-pages.css 补齐：TA的小问题/问答/记录/记账/决策/统计 ---- */
+  .tc-panel { background:var(--dark-card-97); border-color:var(--dark-border); }
+  .tc-res-mine { background:var(--static-bg); }
+  .tc-res-line { border-top-color:rgba(255,255,255,.1); }
+  .tc-res-match { background:rgba(245,222,140,.1); color:#d9c37e; }
+  .tc-res-match.pref { background:rgba(110,190,130,.12); color:#8fd0a0; }
+  .tc-res-close { border-color:var(--dark-border-12); }
+  .tc-cat-t { color:#aaa; }
+  .tc-li-match { color:#d9c37e; }
+  .tc-known { color:#8fd0a0; border-color:#3d5c46; }
+  .qa-panel { background:var(--dark-card-97); border-color:var(--dark-border); }
+  .qa-close { border-color:var(--dark-border-12); }
+  .qa-mine { background:var(--static-bg); }
+  .qa-send { color:#111; }
+  .acc-month-btn:active { background:var(--dark-hover); }
+  .dec-inp-clear { background:var(--dark-hover); color:#aaa; }
+  .dec-inp-clear:active { background:rgba(255,255,255,.15); }
+  .dc-result { background:var(--static-bg); }
+  .dc-credit { border-top-color:rgba(255,255,255,.12); }
+  .decide-opt { border-color:var(--dark-border-12); background:var(--dark-card-92); }
+  .decide-opt .do-x { background:var(--dark-hover); color:#999; }
+  .decide-add { border-color:rgba(255,255,255,.28); }
+  .stats-row { border-bottom-color:rgba(255,255,255,.06); }
+  .stats-sec-title { color:#bbb; }
+  .stats-sec-count { background:var(--dark-hover); }
+  .stats-top { background:var(--dark-hover); }
+  .stats-top-tag { border-color:var(--dark-border-12); }
+  .stats-item-name { color:#bbb; }
+  .rec-av-img { border-color:rgba(255,255,255,.09); }
+  .it-ico { background:var(--dark-hover); }
+  .lic-code { color:#aaa; background:var(--static-bg); }
+
+  /* ---- chat-pages.css 补齐：占卜/查岗位置面板/管理分组/装修 ---- */
+  .div-hero, .div-summary { background:var(--dark-card-92); border-color:var(--dark-border); }
+  .div-hero-ico, .div-draw, .div-send-btn { color:#111; }
+  .div-input { border-color:var(--dark-border-12); background:var(--dark-card); color:var(--ink); }
+  .div-card-face { background:#262a30; border-color:rgba(255,255,255,.08); }
+  .div-card-ico { background:var(--dark-hover); }
+  .div-mini-tag { background:var(--dark-hover); }
+  .div-copy-btn { background:var(--dark-hover); }
+  .div-h-item { border-color:rgba(255,255,255,.09); background:rgba(255,255,255,.04); }
+  .div-h-view, .div-chat-hist-view { background:var(--dark-hover); }
+  .div-chat-hist { border-top-color:rgba(255,255,255,.14); }
+  .div-chat-hist-item { border-color:rgba(255,255,255,.09); background:rgba(255,255,255,.04); }
+  .div-drawn-card .ddc-face::before {
+    border-color:rgba(255,255,255,.12);
+    background:
+      radial-gradient(circle at 5px 5px, rgba(255,255,255,.16) 1.1px, transparent 1.6px),
+      radial-gradient(circle at calc(100% - 5px) 5px, rgba(255,255,255,.16) 1.1px, transparent 1.6px),
+      radial-gradient(circle at 5px calc(100% - 5px), rgba(255,255,255,.16) 1.1px, transparent 1.6px),
+      radial-gradient(circle at calc(100% - 5px) calc(100% - 5px), rgba(255,255,255,.16) 1.1px, transparent 1.6px);
+  }
+  .ck-location { border-bottom-color:rgba(255,255,255,.06); }
+  .ck-loc-entry { border-color:rgba(255,255,255,.22); background:var(--static-bg); }
+  .ck-loc-entry:active { background:var(--dark-hover); }
+  .loc-panel { background:var(--dark-card-97); }
+  .loc-head, .loc-section { border-bottom-color:rgba(255,255,255,.07); }
+  .loc-send-area { border-top-color:rgba(255,255,255,.07); }
+  .loc-ask-btn { color:#111; }
+  .loc-card { border-color:var(--dark-border); background:var(--dark-card-92); }
+  .loc-card:active { background:var(--dark-hover); }
+  .loc-card-egg { border-color:rgba(255,180,80,.4); background:rgba(255,180,80,.12); color:#ffc97e; }
+  .loc-card-egg:active { background:rgba(255,180,80,.2); }
+  .loc-day-btn { border-color:var(--dark-border-12); background:var(--dark-card-92); }
+  .loc-day-btn:active { background:var(--dark-hover); }
+  .loc-switch-tk { background:rgba(255,255,255,.2); }
+  .loc-combo-pending { background:rgba(255,180,80,.1); border-color:rgba(255,180,80,.35); }
+  .loc-combo-pending b { color:#ffc97e; }
+  .loc-sense-box { background:linear-gradient(135deg, rgba(255,180,80,.14), rgba(255,160,60,.08)); }
+  .loc-sense-title { color:#ffc97e; }
+  .loc-add-custom { border-color:rgba(255,255,255,.25); }
+  .loc-add-custom:active { background:var(--dark-hover); }
+  .loc-tl-tag { background:var(--dark-hover); }
+  .loc-tl-auto { color:#ffc97e; background:rgba(255,180,80,.14); }
+  .mg-panel { background:var(--dark-card-97); border-color:var(--dark-border); }
+  .mg-close { background:var(--dark-hover); color:#aaa; }
+  .mg-close:active { background:rgba(255,255,255,.12); }
+  .mg-empty { color:#666; }
+  .mg-row { background:var(--dark-card-92); border-color:var(--dark-border); }
+  .mg-tag { border-color:var(--dark-border-12); }
+  .mg-del { background:var(--dark-hover); color:#999; }
+  .mg-add { border-color:var(--dark-border); }
+  .mg-add:active { background:var(--dark-hover); }
+  .decor-done { background:rgba(255,255,255,.15); color:#fff; }
+  .avlib-cell { background:var(--dark-hover); border-color:var(--dark-border); }
+  .ff-sec, .ff-row { background:var(--dark-card-92); border-color:rgba(255,255,255,.08); }
+  .ff-desktop-av { background:#2a2a2a; }
+  .ff-pill { border-color:var(--dark-border-12); background:var(--dark-card); }
+  .ff-pill:active { background:var(--dark-hover); }
+  .ff-pill .ff-cur { color:#999; }
+  .fish-total .ft-item { background:var(--dark-card-92); border-color:var(--dark-border); }
+
+  /* ---- chat-pages.css 补齐：问答历史行/字卡编辑 ---- */
+  .ta-row { border-bottom-color:rgba(255,255,255,.08); }
+  .ta-del { background:var(--dark-hover); color:#999; }
+  .ta-mv { background:var(--dark-hover); color:#999; }
+  .ta-mv:active { background:rgba(255,255,255,.12); }
+  .ta-add-btn { color:#111; }
+  .ta-h { border-bottom-color:rgba(255,255,255,.08); }
+
+  /* ---- chat-pages.css 补齐：信箱 ---- */
+  .mail-item-av { background:#2a2a2a; }
+  .mail-paper-head { border-bottom-color:rgba(255,255,255,.09); }
+  .mail-paper-body { color:#ccc; }
+  .mail-tb { background:var(--dark-card-92); border-color:var(--dark-border); color:var(--soft-ink); }
+
+  /* ---- chat-pages.css 补齐：朋友圈/通知面板 ---- */
+  .feed-av { background:#2a2a2a; }
+  .feed-actions { border-top-color:rgba(255,255,255,.06); }
+  .feed-likes { background:rgba(255,255,255,.04); }
+  .feed-comments { background:rgba(255,255,255,.04); border-top-color:rgba(255,255,255,.06); }
+  .feed-comment { color:#bbb; }
+  .feed-reply { color:#aaa; }
+  .feed-head-btn { color:var(--ink); }
+  .feed-comment-bar { background:var(--dark-card-97); border-top-color:var(--dark-border); }
+  .feed-comment-send { color:#111; }
+  .feed-notice-panel { background:var(--dark-card-97); border-color:var(--dark-border); }
+  .fn-av { background:#2a2a2a; }
+  .feed-notice-item { color:#ccc; }
+  .feed-notice-item:active { background:var(--dark-hover); }
+  .feed-notice-item .fn-thumb { background:#2a2a2a; }
+  .feed-imgs img { background:#2a2a2a; }
+
+  /* ---- chat-pages.css 补齐：音乐页/悬浮播放器 ---- */
+  .ch-more { color:var(--ink); }
+  .sm-float-row { color:var(--soft-ink); border-bottom-color:rgba(255,255,255,.07); }
+  .sm-tool { border-color:var(--dark-border-12); background:var(--dark-card-92); color:var(--ink); }
+  .sm-tool:active { background:var(--dark-hover); }
+  .mlf-chip { border-color:var(--dark-border-12); background:var(--dark-hover); color:var(--dark-soft); }
+  .mlf-chip.sel { background:var(--ink); color:#111; border-color:var(--ink); }
+  .sm-song-ico { background:var(--static-bg); color:#aaa; }
+  .sm-src { border-color:var(--dark-border-12); }
+  .sm-cov-prev { background:var(--static-bg); border-color:rgba(255,255,255,.09); }
+  .music-batch-bar { background:var(--dark-card-97); border-top-color:var(--dark-border); }
+  .sm-pl-ico, .sm-his-ico { background:var(--static-bg); color:#aaa; }
+  .sm-his-subtabs { border-bottom-color:rgba(255,255,255,.07); }
+  .sm-his-subtab.sel { background:var(--btn-bg); color:var(--btn-ink); border-color:var(--btn-bg); }
+  .sm-pb-play { color:#111; }
+  .cc-play { color:#111; }
+  .sm-player-bar { background:var(--dark-card-97); border-top-color:rgba(255,255,255,.09); }
+  .sm-pb-btn { background:var(--dark-hover); color:#ddd; }
+  .sm-float { background:var(--dark-card-97); border-color:rgba(255,255,255,.09); }
+  .sm-f-name, .sm-f-btn { color:#ddd; }
+  .sm-f-progress { background:rgba(255,255,255,.12); }
+  .sm-f-fill { background:#f0f0f0; }
+  .sm-f-play { color:#f0f0f0; }
+  .sm-f-heart.liked svg { fill:#ff8ab3; stroke:#ff8ab3; }
+  .sm-req-ico { background:var(--static-bg); color:#ccc; }
+
+  /* ---- chat-pages.css 补齐：小游戏/桌面浮字/喝水/吃饭/番茄钟/存钱罐 ---- */
+  .pong-diff, .snake-diff { border-color:var(--dark-border-12); background:var(--static-bg); }
+  .pong-sound, .pong-icon-btn, .snake-icon-btn { background:var(--dark-hover); }
+  .snake-toggle.on, .snake-btn { color:#111; }
+  #chat-snake-panel.snake-fs { background:#15151a; }
+  #chat-snake-panel.snake-fs .poke-card-head { border-bottom-color:rgba(255,255,255,.1); }
+  .snake-dp { border-color:var(--dark-border-12); background:var(--dark-card-92); }
+  .snake-dp:active { background:var(--dark-hover); }
+  .msg-snake-title { border-bottom-color:rgba(255,255,255,.12); }
+  .tp-refresh { border-color:var(--dark-border-12); }
+  .tp-dot { background:rgba(255,255,255,.14); }
+  .tp-knock-area { background:var(--static-bg); color:#bbb; }
+  .water-bar, .piggy-bar, .pg-bar { background:rgba(255,255,255,.1); }
+  .water-minus { background:var(--dark-hover); color:#ccc; }
+  .water-week { background:rgba(30,30,30,.6); }
+  .water-col i { background:rgba(255,255,255,.1); }
+  .water-col em { color:#aaa; }
+  .water-col.today em { color:#ddd; }
+  .water-msg { color:#ccc; }
+  .eat-change { background:var(--dark-hover); color:#ccc; }
+  .eat-send { background:var(--btn-bg); color:var(--btn-ink); }
+  .pmp-menu button { border-color:var(--dark-border); background:var(--dark-card-97); color:var(--ink); }
+  .pomo-ring-bg { stroke:rgba(255,255,255,.1); }
+  .pomo-reset { background:var(--dark-hover); color:#ccc; }
+  .piggy-out { background:var(--dark-hover); color:#ccc; }
+  .pg-chip { background:var(--dark-hover); color:#bbb; }
+  .piggy-reply-in { border-color:var(--dark-border-12); color:var(--ink); }
+  .piggy-reply-send { background:var(--btn-bg); color:var(--btn-ink); }
+  .piggy-reply-skip { background:var(--dark-hover); color:#aaa; }
+  .ta-chime-note { background:rgba(35,32,34,.96); border-color:rgba(232,83,61,.35); }
+}
+
+/* ===== group-chat.css 全套（8/21 新增，此前零覆盖） ===== */
+[data-theme="dark"] {
+  .gc-from-name { color:#999; }
+  .gc-input:empty:before { color:#777; }
+  .gc-more-menu { background:var(--dark-card-97); border-color:var(--dark-border); box-shadow:0 6px 24px rgba(0,0,0,.5); }
+  .gc-more-item { color:#ddd; }
+  .gc-more-item:active { background:var(--dark-hover); }
+  .gc-more-item svg { color:#aaa; }
+  .gc-settings-panel { background:var(--dark-card-97); box-shadow:0 -4px 20px rgba(0,0,0,.5); }
+  .gc-set-head { border-bottom-color:rgba(255,255,255,.07); }
+  .gc-set-title { color:#999; }
+  .gc-set-av { background:#2a2a2a; }
+  .gc-set-name { color:#eee; }
+  .gc-set-tag { color:#999; background:var(--dark-hover); }
+  .gc-set-desk { color:#888; }
+  .gc-set-btn { border-color:var(--dark-border); background:var(--dark-card); color:#ccc; }
+  .gc-set-btn:active { background:var(--dark-hover); }
+  .gc-set-btn.ghost { color:#e08a7a; border-color:rgba(224,138,122,.35); background:rgba(224,138,122,.08); }
+  .gc-set-note { color:#888; }
+  .gc-set-back { color:#aaa; }
+  .gc-set-back:active { color:#fff; }
+  .gc-set-link:active { background:var(--dark-hover); }
+  .gc-set-chev { color:#666; }
+  .gc-set-row:active { background:var(--dark-hover); }
+  .gc-set-row .txt { color:#ddd; }
+  .gc-set-row .val { color:#888; }
+  .gc-set-row .chev { color:#555; }
+  .gc-set-warn { color:#e08a7a; background:rgba(224,138,122,.08); border-color:rgba(224,138,122,.35); }
+  #page-group-chat.cs-time-under-bubble .msg-side .msg-time,
+  #page-group-chat.cs-time-bubble .msg-side .msg-time,
+  #page-group-chat.cs-time-center .msg-side .msg-time { background:rgba(255,255,255,.08); }
+  #page-group-chat.cs-time-float .msg-side .msg-time { background:rgba(255,255,255,.10); }
+  .gc-members-panel { background:var(--dark-card-97); box-shadow:0 8px 32px rgba(0,0,0,.55); }
+  .gc-mp-head { border-bottom-color:rgba(255,255,255,.07); }
+  .gc-mp-close { color:#888; }
+  .gc-mp-av { background:#2a2a2a; }
+  .gc-mp-sub { color:#888; }
+  .gc-mp-tag { color:#999; background:var(--dark-hover); }
+  .gc-at-panel { background:var(--dark-card-97); box-shadow:0 -4px 20px rgba(0,0,0,.5); }
+  .gc-at-head { border-bottom-color:rgba(255,255,255,.07); color:#999; }
+  .gc-at-item:active { background:var(--dark-hover); }
+  .gc-at-av { background:#2a2a2a; }
+}
+
+/* ===== garden.css 全套（构建顺序在本文件之后，镜像完整选择器链保证覆盖） ===== */
+[data-theme="dark"] {
+  .garden-plot { background:rgba(36,40,36,.94); border-color:rgba(255,255,255,.1); }
+  .garden-plot:active { border-color:rgba(255,255,255,.3); }
+  .garden-plot.empty { border-color:rgba(255,255,255,.16); background:rgba(255,255,255,.03); }
+  .garden-plot.wilted { border-color:rgba(160,110,60,.55); background:rgba(120,80,50,.14); }
+  .garden-plot.selected { border-color:#f0f0f0; }
+  .garden-water-bar, .garden-grow-bar, .garden-lv-track { background:rgba(255,255,255,.1); }
+  .garden-tool { border-color:var(--dark-border); background:rgba(40,40,40,.92); }
+  .garden-tool:active { background:#f0f0f0; color:#111; }
+  .garden-tool:active svg { stroke:#111; }
+  .garden-seed { border-color:rgba(255,255,255,.1); }
+  .garden-seed:active { background:rgba(255,255,255,.06); border-color:#f0f0f0; }
+  .garden-dex-item, .garden-inv-item, .garden-decor-item, .garden-recipe,
+  .garden-achv-item { background:rgba(255,255,255,.05); }
+  .garden-daily-task { background:rgba(255,255,255,.07); }
+  .garden-daily-task.done { color:#7ed6a2; }
+  .garden-achv { background:rgba(255,255,255,.05); }
+  .garden-craft { background:rgba(255,255,255,.05); }
+  .garden-tab { background:var(--dark-hover); }
+  .report-row { background:rgba(255,255,255,.08); }
+  .garden-dex-search { border-color:var(--dark-border-12); background:rgba(40,40,40,.8); }
+  .garden-dex-season { background:var(--dark-hover); }
+  .garden-qual-tag, .garden-pot-mark { color:#ffcc66; }
+}
+
+/* ===== memo.css 全套（构建顺序在本文件之后，镜像完整选择器链保证覆盖） ===== */
+[data-theme="dark"] {
+  .memo-inp { background:rgba(40,40,40,.75); box-shadow:inset 0 0 0 1px rgba(255,255,255,.12); color:var(--ink); }
+  .memo-inp:focus { box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.3); }
+  .memo-add { background:var(--btn-bg); color:var(--btn-ink); }
+  .memo-cleardone { border-color:rgba(255,255,255,.18); }
+  .mm-check { border-color:rgba(255,255,255,.45); }
+  .memo-item.done .mm-check { background:#f0f0f0; border-color:#f0f0f0; }
+  .memo-item.done .mm-check svg { stroke:#111; }
+  .memo-item.urgent .mm-text { color:#e07a6a; }
+  .memo-item.urgent.done .mm-text { color:var(--muted); }
+  .mm-act:active { background:rgba(255,255,255,.08); }
+  .memo-app-badge { background:rgba(255,255,255,.08); }
 }

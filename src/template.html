@@ -387,6 +387,11 @@
         <div class="ci"><div class="n">TA的吐槽·我的添加</div><div class="m">你添加的吐槽字卡</div></div>
         <div class="t" id="cc-ta-roast-count-mine">0</div>
       </div>
+      <div class="chat-item glass" id="li-ta-checkin-mine">
+        <div class="av"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/><path d="M12 3a9 9 0 000 18"/></svg></div>
+        <div class="ci"><div class="n">TA的查岗·我的添加</div><div class="m">你添加的查岗问题</div></div>
+        <div class="t" id="cc-ta-checkin-count-mine">0</div>
+      </div>
       </div>
       <div class="cc-sect-body" id="cc-sect-preset" hidden>
       <div class="chat-item glass" id="li-default-cards">
@@ -433,6 +438,11 @@
         <div class="av"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 5.4 5.7.3-4.4 3.6 1.5 5.5-4.6-3.3-4.6 3.3 1.5-5.5-4.4-3.6 5.7-.3z"/></svg></div>
         <div class="ci"><div class="n">TA的吐槽</div><div class="m">突然吐槽你一句 · 情侣式调侃</div><div class="note">回应：90% 系统预设 + 10% 字卡库</div></div>
         <div class="t">46</div>
+      </div>
+      <div class="chat-item glass" id="li-ta-checkin">
+        <div class="av"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/><path d="M12 3a9 9 0 000 18"/></svg></div>
+        <div class="ci"><div class="n">TA的查岗</div><div class="m">TA 来查你的岗 · 随机出查岗问题卡</div><div class="note">开关/概率在 回复设置 → 查岗</div></div>
+        <div class="t" id="cc-ta-checkin-count">17</div>
       </div>
       </div>
     </div>
@@ -661,6 +671,49 @@
         <div class="cal-card-title" style="padding:14px 14px 0">我添加的字卡 <span style="font-size:11px;color:var(--muted);font-weight:400">（可停用/删除）</span></div>
         <div id="tr-mine-cats" style="padding:8px 14px 14px"></div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- TA的查岗（查岗问题卡管理页，独立页面；触发开关/概率在 回复设置→查岗 按联系人设置） -->
+<div class="page" id="page-ta-checkin" hidden>
+  <div class="chat-head">
+    <span class="ch-back" id="ckq-back">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    </span>
+    <span class="ch-name">TA的查岗</span>
+  </div>
+  <div class="gs-scroll">
+    <button class="div-draw" id="ckq-now">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/><path d="M12 3a9 9 0 000 18"/></svg>
+      让TA现在查岗一次
+    </button>
+    <div class="set-group glass">
+      <div class="gs-row"><span>使用系统预设问题</span><label class="toggle"><input type="checkbox" id="ckq-default" checked><span class="tk"></span></label></div>
+      <div class="gs-sub" style="padding:0 14px 14px">TA 来查岗的开关/概率/冷却/自动弹窗概率在「回复设置 → 查岗」里按联系人独立设置；这里的题库随当前桌面的联系人保存</div>
+    </div>
+    <div class="card-tabs" id="ckq-tabs" style="padding:6px 12px 8px">
+      <button class="cc-tab sel" data-tab="sys">系统预设</button>
+      <button class="cc-tab" data-tab="mine">我的添加</button>
+    </div>
+    <div class="tc-search-wrap" style="padding:0 12px 8px">
+      <input type="text" id="ckq-search" class="tc-input" placeholder="搜索问题…" style="width:100%">
+    </div>
+    <div id="ckq-sys-panel">
+      <div class="set-group glass">
+        <div class="cal-card-title" style="padding:14px 14px 0">系统预设题库（可逐句开关，不可删除）</div>
+        <div id="ckq-sys-cats" style="padding:8px 14px 14px"></div>
+      </div>
+    </div>
+    <div id="ckq-mine-panel" hidden>
+      <div class="set-group glass">
+        <div class="cal-card-title" style="padding:14px 14px 0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg>批量导入文字查岗问题</div>
+        <div class="tc-addform">
+          <textarea id="ckq-batch" class="tc-input" rows="6" placeholder="每行一个问题，如：&#10;快说说，今天过得怎么样？&#10;发一句你现在看到的东西给我&#10;（单选题请在下方「我的添加」里用表单添加）"></textarea>
+          <button class="ta-add-btn" style="width:100%" id="ckq-batch-add">批量导入</button>
+        </div>
+      </div>
+      <div id="ckq-mine-cats"></div>
     </div>
   </div>
 </div>
@@ -1082,7 +1135,7 @@
           <div class="lic-li">TA 的询问 / TA 的小问题 / TA 的好奇 / TA 的吐槽：内容可自定义</div>
           <div class="lic-li">查岗日常字卡：地点、在做什么、说的话，均可自定义</div>
           <div class="lic-li">情绪回复：按你当前的心情自动匹配相应字卡</div>
-          <div class="lic-li">字卡库页入口：公用字卡（全桌面联系人共享）、专属字卡（仅当前桌面联系人）、查岗日常字卡、桌面今日情话、聊天默认字卡、聊天情绪字卡、聊天回应字卡、TA 的询问 / 小问题 / 好奇 / 吐槽</div>
+          <div class="lic-li">字卡库页入口：公用字卡（全桌面联系人共享）、专属字卡（仅当前桌面联系人）、查岗日常字卡、桌面今日情话、聊天默认字卡、聊天情绪字卡、聊天回应字卡、TA 的询问 / 小问题 / 好奇 / 吐槽 / 查岗</div>
           <div class="lic-li">字卡管理：去重复、导出数据、一键清空所有分类</div>
           <div class="lic-li">兼容导入 milk 字卡库导出的 json</div>
           <div class="lic-li">系统预设字卡可逐句开关（桌面今日情话 / 聊天默认字卡）</div>
@@ -1259,8 +1312,10 @@
           <div class="lic-h">许可</div>
           <div class="lic-li">Mochi 可自由二传、二改，支持私人部署，禁止商用，必须保留署名：小红书 @言序（1842523578）</div>
           <div class="lic-li">星言字卡本体禁止二传二改</div>
-          <div class="lic-li">Mochi 字卡虽然是以我的另一个字卡「星言」为基础修改的，但字卡基础回复逻辑和灵感来源：小红书 @milk（2777299956）</div>
-          <div class="lic-li">帮我决定功能参考：小红书@FelixFelicis（9416318007）</div>
+          <div class="lic-li">Mochi 字卡代码已完全公开；本网站并非复刻他人网站，代码均从零编写</div>
+          <div class="lic-li">除随机回复的基础逻辑、基础框架外（灵感来源为 milk 字卡：小红书 @milk，2777299956），以下功能为借鉴——帮我决定功能：借鉴自小红书 @FelixFelicis（9416318007）；公用字卡+专享字卡模式：借鉴自 @默玉（8012400317）</div>
+          <div class="lic-li">情绪字卡：源于早期网络上的类似提议（小红书 @心汋是颗彩虹多宝糖（9725312970）也提过这个模式）；换头像：灵感来自看到网络上有人提议小手机想要 chat 自己换头像——均源于已有想法，设计由我独立完成</div>
+          <div class="lic-li">其余功能和 UI 均为我独立设计；若使用代码或借鉴功能，请注明灵感来源，这是对创作者最基本的尊重</div>
         </div>
       </div>
     </div>
@@ -1281,12 +1336,19 @@
           <div class="lic-li">- 必须保留署名：<b>小红书 @言序（1842523578）</b>（禁止删除或修改）</div>
           <div class="lic-li">- 借鉴功能或代码，希望标注灵感来源：Mochi 字卡 · 小红书 @言序（1842523578）</div>
           <div class="lic-p" style="margin-top:10px"><b>星言字卡本体禁止二传二改。</b></div>
-          <div class="lic-p">Mochi 字卡虽然是以我的另一个字卡「星言」为基础修改的，但字卡基础回复逻辑和灵感来源：<b>小红书 @milk（2777299956）</b>；帮我决定功能参考：<b>小红书@FelixFelicis（9416318007）</b>。</div>
+          <div class="lic-p">Mochi 字卡代码已完全公开。本网站并非复刻他人网站，代码均从零编写。</div>
+          <div class="lic-p" style="margin-top:10px">除随机回复的基础逻辑、基础框架外（灵感来源为 <b>milk 字卡 · 小红书 @milk（2777299956）</b>），以下功能为借鉴：</div>
+          <div class="lic-li">- 帮我决定功能：借鉴自小红书 <b>@FelixFelicis（9416318007）</b></div>
+          <div class="lic-li">- 公用字卡+专享字卡模式：借鉴自 <b>@默玉（8012400317）</b></div>
+          <div class="lic-p" style="margin-top:10px">另有以下功能源于网络上已有的类似想法，但设计均由我独立完成：</div>
+          <div class="lic-li">- 情绪字卡：源于早期网络上的类似提议（有人建议在聊天中加入情绪字卡以方便交流，小红书 @心汋是颗彩虹多宝糖（9725312970）也提过这个模式）</div>
+          <div class="lic-li">- 换头像：灵感来自看到网络上有人提议小手机想要 chat 自己换头像</div>
+          <div class="lic-p" style="margin-top:10px">其余功能和 UI 均为我独立设计，代码全部开源，支持二传二改。若使用代码或借鉴功能，请注明灵感来源，这是对创作者最基本的尊重。</div>
           <div class="lic-p">Mochi 字卡不会修改为很复杂的程度，发布后不一定频繁更新。</div>
         </div>
         <div class="cal-card glass">
           <div class="lic-h">README 配文</div>
-          <div class="lic-code">## 许可<br>Mochi 字卡可自由二传、二改，<b>支持私人部署</b>，<b>禁止商用</b>，必须保留署名：<b>小红书 @言序（1842523578）</b>。<br>星言字卡本体禁止二传二改。借鉴功能或代码的话，希望可以标注灵感来源：<b>Mochi 字卡 / 星言字卡 · 小红书 @言序（1842523578）</b>。<br>Mochi 字卡虽然是以我的另一个字卡「星言」为基础修改的，但字卡基础回复逻辑和灵感来源：<b>小红书 @milk（2777299956）</b>；帮我决定功能参考：<b>小红书@FelixFelicis（9416318007）</b>。</div>
+          <div class="lic-code">## 许可<br>Mochi 字卡可自由二传、二改，<b>支持私人部署</b>，<b>禁止商用</b>，必须保留署名：<b>小红书 @言序（1842523578）</b>。<br>星言字卡本体禁止二传二改。借鉴功能或代码的话，希望可以标注灵感来源：<b>Mochi 字卡 / 星言字卡 · 小红书 @言序（1842523578）</b>。<br>Mochi 字卡代码已完全公开。本网站并非复刻他人网站，代码均从零编写。除随机回复的基础逻辑、基础框架外（灵感来源为 <b>milk 字卡 · 小红书 @milk（2777299956）</b>），以下功能为借鉴：帮我决定功能 借鉴自<b>小红书 @FelixFelicis（9416318007）</b>；公用字卡+专享字卡模式 借鉴自<b>@默玉（8012400317）</b>。另有以下功能源于网络上已有的类似想法，但设计均由我独立完成：情绪字卡 源于早期网络上的类似提议（有人建议在聊天中加入情绪字卡以方便交流，<b>小红书 @心汋是颗彩虹多宝糖（9725312970）</b>也提过这个模式）；换头像 灵感来自看到网络上有人提议小手机想要 chat 自己换头像。其余功能和 UI 均为我独立设计，代码全部开源，支持二传二改。若使用代码或借鉴功能，请注明灵感来源，这是对创作者最基本的尊重。</div>
         </div>
       </div>
     </div>
@@ -1460,7 +1522,7 @@
             <div class="gs-row"><span>自动弹窗概率</span><div class="stepper" data-k="ckq-popup-prob" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="ckq-popup-prob-val" readonly><button class="stp-max">+</button></div></div>
             <div class="gs-row"><span>查岗冷却（分钟）</span><div class="stepper" data-k="ckq-cool" data-min="0" data-max="240" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="ckq-cool-val" readonly><button class="stp-max">+</button></div></div>
           </div>
-          <div class="gs-sub" style="padding:0 14px 14px">TA 主动找你时按概率来查你的岗：聊天里出现查岗问题卡（单选点击作答、文字题输入作答），作答后 TA 会回应；概率命中时直接弹出回答弹窗。冷却内不重复查岗，需开启「主动发送」，各联系人独立保存</div>
+          <div class="gs-sub" style="padding:0 14px 14px">TA 主动找你时按概率来查你的岗：聊天里出现查岗问题卡（单选点击作答、文字题输入作答），作答后 TA 会回应；概率命中时直接弹出回答弹窗。冷却内不重复查岗，需开启「主动发送」，各联系人独立保存。查岗题库可在 字卡库 →「TA的查岗」里逐条开关或自定义添加</div>
         </div>
         <!-- v3.9.x：其他——联系人主动邀请（猜拳/玩游戏），随 TA 主动找你的消息按概率触发 -->
         <div class="gs-panel" data-rpanel="other" hidden>
@@ -2691,6 +2753,16 @@
         </div>
         <div class="poke-card-scroll">
           <div class="call-panel-status" id="call-panel-status">空闲 · 点击拨打语音通话</div>
+          <!-- v3.12.x：通话半框内直接修改联系人头像（点头像行）与通话卡片背景图片 -->
+          <div class="call-panel-row" id="call-av-edit-row" title="修改联系人头像">
+            <span class="cpr-txt">联系人头像</span><span class="cpr-val" id="call-av-edit-val">点击更换</span>
+          </div>
+          <div class="call-panel-row" id="call-bg-edit-row" title="设置通话背景图片">
+            <span class="cpr-txt">通话背景图片</span><span class="cpr-val" id="call-bg-edit-val"></span>
+          </div>
+          <div class="call-panel-row call-panel-row-danger" id="call-bg-edit-remove" hidden title="移除通话背景图片">
+            <span class="cpr-txt">移除通话背景</span><span class="cpr-val">恢复默认</span>
+          </div>
           <button class="call-panel-dial" id="call-panel-dial" type="button">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>
             拨打语音通话
@@ -2774,12 +2846,12 @@
             <div class="pong-bar">
               <div class="pong-bar-left">
                 <select class="pong-diff" id="pong-diff">
-                  <option value="casual">休闲</option>
-                  <option value="easy" selected>简单</option>
+                  <option value="casual" selected>休闲</option>
+                  <option value="easy">简单</option>
                   <option value="normal">普通</option>
                   <option value="hard">困难</option>
                 </select>
-                <span id="pong-win-tip">先得 5 分获胜</span>
+                <span id="pong-win-tip">先得 3 分获胜</span>
               </div>
               <div class="pong-bar-right">
                 <button class="pong-icon-btn" id="pong-pause" title="暂停/继续">⏸</button>
@@ -3306,6 +3378,16 @@
           <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6h.01M3 12h.01M3 18h.01"/></svg></div>
           <div class="txt">批量发送消息<span class="sub">聊天输入栏右侧显示「批量发送」按钮：可插入表情包、图片、文字，每条消息单独一条，多条按顺序一次性发送</span></div>
           <label class="toggle"><input type="checkbox" id="cs-batch-send"><span class="tk"></span></label>
+        </div>
+      </div>
+      <!-- v3.12.x：隐藏联系人的表情包开关（默认关闭，全局生效）。开启后聊天与朋友圈的
+           表情包面板只显示「我的表情包」，不再显示 TA 的/公用表情包 -->
+      <div class="gs-title">表情包</div>
+      <div class="set-group glass">
+        <div class="set-row" id="cs-hide-ta-sticker-row">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 10h.01M15 10h.01"/><path d="M8.5 14a4.5 4.5 0 007 0"/></svg></div>
+          <div class="txt">隐藏联系人的表情包<span class="sub">隐藏后，聊天和朋友圈的表情包面板里只显示「我的表情包」，不再显示TA的和公用表情包</span></div>
+          <label class="toggle"><input type="checkbox" id="cs-hide-ta-sticker"><span class="tk"></span></label>
         </div>
       </div>
       <div class="gs-title">字体</div>

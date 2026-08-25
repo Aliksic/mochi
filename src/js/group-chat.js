@@ -121,6 +121,9 @@
     { color: '#ffffff', label: '白色' }, { color: '#3a3a3a', label: '炭灰' }
   ];
   const gcBeautyStored = {};
+  // v3.11.x：深色模式下未自定义配色键的默认值（浅色默认白气泡/黑字在内联变量上
+  // 压过 dark.css 覆盖，是深色模式群聊白块+黑字的根源）；用户自定义过仍优先
+  const GC_DARK_DEFAULTS = { 'out-bg': '#3a3a3a', 'in-bg': '#2a2a2a', 'in-ink': '#f0f0f0', 'send-bg': '#f0f0f0', 'send-ink': '#111111' };
   function gcBeautyStore() { return gcProfileStore(); }
   function gcBeautyLoad() {
     try {
@@ -128,7 +131,11 @@
       if (v) { const o = JSON.parse(v); if (o && typeof o === 'object') Object.keys(o).forEach(k => { gcBeautyStored[k] = o[k]; }); }
     } catch (e) {}
   }
-  function gcBeautyGet(k) { return gcBeautyStored[k] !== undefined ? gcBeautyStored[k] : GC_BEAUTY_DEFAULTS[k]; }
+  function gcBeautyGet(k) {
+    if (gcBeautyStored[k] !== undefined) return gcBeautyStored[k];
+    if (document.documentElement.getAttribute('data-theme') === 'dark' && GC_DARK_DEFAULTS[k] !== undefined) return GC_DARK_DEFAULTS[k];
+    return GC_BEAUTY_DEFAULTS[k];
+  }
   function gcBeautySave() { try { gcBeautyStore().set('gc-beauty', JSON.stringify(gcBeautyStored)); } catch (e) {} }
   // 设置（空值/默认值 → 删除键）；应用 + 刷新设置面板回显
   function gcBeautySet(k, v) {
@@ -256,6 +263,11 @@
   }
   gcBeautyLoad();
   applyGcBeauty();
+  // v3.11.x：深色/浅色切换时重算默认配色（html data-theme 属性变化即重写 page 级内联变量）
+  try {
+    new MutationObserver(() => { try { applyGcBeauty(); } catch (e) {} })
+      .observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  } catch (e) {}
 
   // ---- 成员信息 ----
   function getMembers() {
@@ -377,7 +389,13 @@
     const a = new Audio(src);
     gcVoiceAudio = a; gcVoiceBtn = btn;
     btn.classList.add('playing');
-    const stop = () => { if (gcVoiceBtn) gcVoiceBtn.classList.remove('playing'); gcVoiceBtn = null; gcVoiceAudio = null; };
+    // v3.12.x：播完/出错即卸掉 src——data: 音频的解码缓冲随元素存活，显式释放
+    // 不等 GC（长时间群聊里每条语音一个 Audio，软滞留会在低内存安卓上累积）
+    const stop = () => {
+      try { a.removeAttribute('src'); a.load(); } catch (e) {}
+      if (gcVoiceBtn) gcVoiceBtn.classList.remove('playing');
+      gcVoiceBtn = null; gcVoiceAudio = null;
+    };
     a.addEventListener('ended', stop);
     a.addEventListener('error', stop);
     a.play().catch(stop);
@@ -403,6 +421,7 @@
       m.className = 'msg-poke';
       m.innerHTML = '<span>' + escTxt(rec.text || '') + '</span>';
       body.appendChild(m);
+      pruneGcDom();
       return m;
     }
     const quoteStr = rec.quote ? gcQuoteHtml(rec.quote) : '';
@@ -468,6 +487,7 @@
       b.innerHTML = quoteStr + '<span style="opacity:.85">' + escTxtBr(rec.text || '') + '</span>';
     }
     body.appendChild(m);
+    pruneGcDom();
     return m;
   }
   function renderAll() {
@@ -478,6 +498,20 @@
     scrollToBottom();
   }
   function scrollToBottom() { try { body.scrollTop = body.scrollHeight; } catch (e) {} }
+  // v3.12.x：停留页内实时追加的 DOM 窗口上限——renderAll 只在进页时收窄到 RENDER_MAX，
+  // 之后每条收发都走 renderMsg 直接 append，长时间泡在群里 DOM（含每条一个 dataURL 头像
+  // img 的位图）无界增长 → 安卓 Chrome 渲染进程 OOM「网页崩溃」。超过窗口硬上限时从最早端
+  // 裁剪：仅当用户贴近底部（正在看最新消息）才执行——回看历史时不动视口；贴底状态下浏览器
+  // 会把 scrollTop 钳制到新的最大值，视觉仍停在最新一条。重新进群聊页 renderAll 会重渲。
+  const GC_DOM_WINDOW = 400, GC_DOM_CUT = 320;
+  function pruneGcDom() {
+    try {
+      if (body.children.length <= GC_DOM_WINDOW) return;
+      if (body.scrollHeight - body.scrollTop - body.clientHeight > 400) return; // 远离底部：在看历史
+      let excess = body.children.length - GC_DOM_CUT;
+      while (excess-- > 0 && body.firstElementChild) body.firstElementChild.remove();
+    } catch (e) {}
+  }
 
   // ---- 发送 ----
   // v3.11.x：待发送图片（插入图片按钮多选 → 压缩 → 草稿条预览，随文字合并为一条组合消息）

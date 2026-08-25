@@ -37,6 +37,57 @@
   let keepEnabled = false;
   let wakeSentinel = null; // v3.5.131：模块级，供 stopKeepAlive 释放
 
+  // v3.13.x：保活补播改指数退避——原来每 5 秒无条件 play() 抢回播放权，但安卓上网页
+  // 音频与其他 App 共用系统音频焦点：被抢暂停后每 5 秒抢一次＝与对方无限拉锯（用户实测：
+  // 开保活后别的 App 声音一直被打断；音乐播放器因补播带退避反而显得"能共存"）。
+  // 新节奏：外部打断（pause 事件）按连击退避排期 5s→10s→20s→…→60s 封顶，被音频自己
+  // 打断且连续 N 次时同样退避；补播失败自动翻倍续期。稳定播放够久才复位连击。回前台
+  // 自愈立即清零。测试可覆盖 window.__kaRetryBaseMs / __kaRetryMaxMs / __kaStableMs。
+  let kaTimer = null;     // 排中的退避补播定时器
+  let kaDelay = 0;        // 下一次补播间隔 ms；0=不在退避轨道
+  let kaPauseStreak = 0;  // 连续被打断次数（稳定播放一段时间后清零）
+  let kaLastPlayAt = 0;   // 最近一次 play() 被接受的时间（音频跑起来后刷新）
+  let kaPlayFailStreak = 0; // 连续 play() 被拒次数（补播一直失败时翻倍退避，不无限撞墙）
+  function kaCfg() {
+    let base = 5000, max = 60000;
+    try { if (typeof window.__kaRetryBaseMs === 'number') base = Math.max(1, window.__kaRetryBaseMs); } catch (e) {}
+    try { if (typeof window.__kaRetryMaxMs === 'number') max = Math.max(1, window.__kaRetryMaxMs); } catch (e) {}
+    return { base: base, max: Math.max(base, max) };
+  }
+  function kaStableMs() {
+    try { if (typeof window.__kaStableMs === 'number') return Math.max(1, window.__kaStableMs); } catch (e) {}
+    return 90000;
+  }
+  // 排一次退避补播。delayMs 缺省按连击次数指数化（1st=base, 2nd=2*base…封顶 max）。
+  // 已有排程不重复排。测试探针：window.__kaNextDelayMs 返回当前将用的间隔。
+  function kaSchedule(delayMs) {
+    if (!keepEnabled || kaTimer) return;
+    const cfg = kaCfg();
+    if (!delayMs) {
+      kaPauseStreak++;
+      delayMs = Math.min(cfg.base * Math.pow(2, Math.min(kaPauseStreak - 1, 10)), cfg.max);
+    }
+    kaDelay = delayMs;
+    window.__kaNextDelayMs = delayMs; // 回归探针
+    kaTimer = setTimeout(function () {
+      kaTimer = null;
+      if (!keepEnabled || !keepAudio || !keepAudio.el || musicNowPlaying()) { kaDelay = 0; return; }
+      if (!keepAudio.el.paused) { kaDelay = 0; return; }
+      const p = keepAudio.el.play();
+      const after = function () {
+        // 补播后仍在暂停（play 被拒/又被按住）→ 翻倍排下一次，封顶 max
+        if (keepEnabled && keepAudio && keepAudio.el && keepAudio.el.paused && !musicNowPlaying()) {
+          const c2 = kaCfg();
+          kaSchedule(Math.min((kaDelay || c2.base) * 2, c2.max));
+        }
+      };
+      if (p && p.then) p.then(after, after); else after();
+    }, kaDelay);
+  }
+  function kaStopTimer() { if (kaTimer) { clearTimeout(kaTimer); kaTimer = null; } kaDelay = 0; }
+  function kaResetBackoff() { kaStopTimer(); kaPauseStreak = 0; kaPlayFailStreak = 0; }
+  function kaMarkPlayed() { kaLastPlayAt = Date.now(); }
+
   // v3.10.x：与音乐播放器共存（修复「音乐+保活音频同时出声导致音乐卡顿」）——
   // 手机端两个 <audio> 同时持续输出时，混音/音频焦点互相争抢；保活音频每 5 秒的
   // 补播重试还会与 music-player 自身的防暂停补播形成拉锯，表现为音乐周期性卡顿。
@@ -50,6 +101,8 @@
       if (musicNowPlaying()) {
         if (!keepAudio.el.paused) keepAudio.el.pause(); // 让位：音乐在播，保活音频暂停
       } else if (keepEnabled && keepAudio.el.paused) {
+        // 音乐停止，收回保活音频：已在退避轨道就让排程接管；否则立即试播
+        if (kaTimer || kaDelay) return;
         const p = keepAudio.el.play();
         if (p && p.catch) p.catch(function () {});
       }
@@ -135,6 +188,14 @@
       keepEl.volume = 0.05;          // 低但非静音（近零音量会被 Chrome 无声节流）
       keepEl.src = src;
       keepEl.setAttribute('playsinline', '');
+      // v3.13.x：play/pause 事件跟踪——play 成功刷新"最近播过"，外部打断（pause）
+      // 进入退避排程；主动让位（音乐在播）不算打断
+      keepEl.addEventListener('play', function () { kaMarkPlayed(); });
+      keepEl.addEventListener('pause', function () {
+        if (!keepEnabled || !keepAudio || !keepAudio.el || musicNowPlaying()) return;
+        if (kaTimer) return; // 已在退避轨道
+        kaSchedule(); // 连击计数由 kaSchedule 内部递增
+      });
       const playIt = function () {
         if (musicNowPlaying()) return; // v3.10.x：音乐在播，让位不抢音频（由 syncKeepForMusic 收回）
         const p = keepEl.play();
@@ -163,23 +224,29 @@
       document.addEventListener('click', resumeOnInteraction, { once: true });
       document.addEventListener('touchstart', resumeOnInteraction, { once: true });
       document.addEventListener('keydown', resumeOnInteraction, { once: true });
-      // 每 5 秒尝试恢复（防止暂停 / mediaSession 失效）
-      // v3.5.159：恢复时重设 playbackState='playing'（Chrome 挂起后可能把它重置）
+      // v3.13.x：轻心跳（原每 5 秒无条件补播）——不再主动抢播，只做三件事：
+      //   ① 音乐在播→保持让位；② 音频在跑→维持 mediaSession='playing'，稳定够久复位退避；
+      //   ③ 音频被外部打断暂停→排一次退避补播（间隔由 kaSchedule 按连击指数化）。
+      // 补播节奏明显放缓后，与其他 App 抢音频焦点的拉锯大幅减轻。
       keepInterval = setInterval(function () {
         if (keepAudio && keepAudio.el) {
-          if (musicNowPlaying()) {
-            // v3.10.x：音乐在播——保活音频保持让位暂停，不重试补播（避免与音乐
-            // 争抢音频焦点造成卡顿）；媒体条由 music-player 管理，也不再每 5 秒
-            // 强设 playbackState='playing'（音乐暂停时会被错误标成"正在播放"）
-            try { if (!keepAudio.el.paused) keepAudio.el.pause(); } catch (e) {}
-            return;
-          }
-          if (keepAudio.el.paused) {
-            const p = keepAudio.el.play();
-            if (p && p.catch) p.catch(function () {});
-          }
-          // 音频在跑就持续声明"正在播放"，维持媒体会话活跃
-          try { if (navigator.mediaSession) navigator.mediaSession.playbackState = 'playing'; } catch (e) {}
+          try {
+            if (musicNowPlaying()) {
+              // v3.10.x：音乐在播——保活音频保持让位暂停，不重试补播；媒体条由
+              // music-player 管理，不再强设 playbackState（音乐暂停时会被误标）
+              if (!keepAudio.el.paused) keepAudio.el.pause();
+              return;
+            }
+            if (!keepAudio.el.paused) {
+              // 音频在跑就持续声明"正在播放"，维持媒体会话活跃
+              try { if (navigator.mediaSession) navigator.mediaSession.playbackState = 'playing'; } catch (e) {}
+              // 稳定播放够久 → 复位退避连击（下次打断从头 5s 起退避）
+              if (kaPauseStreak && Date.now() - kaLastPlayAt > kaStableMs()) kaPauseStreak = 0;
+              return;
+            }
+            // 音频暂停且不在退避轨道（启动被拒/媒体条丢失等漏网场景）→ 排退避补播
+            if (!kaTimer) kaSchedule();
+          } catch (e) {}
         }
       }, 5000);
 
@@ -237,6 +304,10 @@
     // v3.5.131：释放屏幕常亮（原实现从不 release——关闭保活后屏幕持续不熄）
     try { if (wakeSentinel) { wakeSentinel.release(); } } catch (e) {}
     wakeSentinel = null;
+    // v3.13.x：清掉排中的退避补播与连击计数
+    kaStopTimer();
+    kaPauseStreak = 0;
+    kaPlayFailStreak = 0;
     clearInterval(keepInterval);
     keepAudio = null;
     keepInterval = null;
@@ -249,6 +320,8 @@
   // wakeLock 一并恢复，保证下一次后台会话依旧保活。
   function healKeepAlive() {
     if (!keepEnabled) return;
+    // v3.13.x：回前台立即清零退避轨道——用户切回来了，补播不再退避，马上恢复
+    kaResetBackoff();
     // 1) 恢复被挂起的保活音频（回前台瞬间可能仍被浏览器阻塞，延迟再试几次）
     //    v3.10.x：音乐在播时跳过——保活音频让位中，不抢音频
     if (!musicNowPlaying() && keepAudio && keepAudio.el && keepAudio.el.paused) {
@@ -532,6 +605,13 @@
       const keep = document.getElementById('bg-keepalive');
       const keepOn = keepEnabled;
       env.push(keepOn ? '✓ 后台保活：已开启' : '✗ 后台保活：未开启（TA 消息后台到不了，通知不会弹）');
+      // v3.13.x：拦截统计——本次会话后台期间有多少消息被去重闸门吞掉（定位"只有声不弹窗"）
+      try {
+        if (window.bgNotifyGateStats) {
+          const st = window.bgNotifyGateStats();
+          env.push('拦截统计（本次会话后台）：收到 ' + st.total + ' 条 · 过渡期拦 ' + st.tooFresh + ' · 重复拦 ' + st.dup + ' · 已发 ' + st.sent + '');
+        }
+      } catch (e) {}
       const isHttps = location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
       env.push(isHttps ? '✓ 访问协议：HTTPS 或本地' : '✗ 访问协议：' + location.protocol + '//（安卓 Chrome 需 HTTPS 才弹通知，GitHub Pages 部署后即是 HTTPS）');
       // v3.5.144：聊天消息后台弹窗诊断——后台收不到聊天消息 ≠ 通知问题，
@@ -556,7 +636,7 @@
       }
       // 环境 OK：真发一条测试通知（走 SW showNotification，页面隐藏也能显示）
       try {
-        const name = store.get('lbl-partner') || 'TA';
+        const name = store.get('lbl-partner') || (window.taWord ? window.taWord() : 'TA');
         showSysNotification('后台通知测试', { body: '来自 ' + name + ' · 如果能看到这条，后台通知就通了' }).then(function (ok) {
           if (ok) {
             env.push('✓ 测试通知已发送（Service Worker）');
@@ -610,7 +690,7 @@
       const unreadNow = parseInt(store.get('chat-unread'), 10) || 0;
       const inc = unreadNow - resumeUnreadBase;
       if (!inChat && inc > 0 && window.showDeskPopup) {
-        const name = store.get('lbl-partner') || 'TA';
+        const name = store.get('lbl-partner') || (window.taWord ? window.taWord() : 'TA');
         // visibilitychange 为 visible 时触发，isHidden=false 显示应用内横幅
         window.showDeskPopup({ name: name, text: '你不在的时候收到 ' + inc + ' 条新消息', isHidden: false });
         const now = Date.now();
@@ -630,8 +710,14 @@
   // 内容，就原样再发一条系统通知（用户视角：明明看过的消息又弹一遍）。两道闸门：
   //   ① 隐藏时长门槛：切后台头 15 秒内的"消息"多为切换过渡期定时器到点
   //     （用户刚看完/马上回来看），不发系统通知；
-  //   ② 内容去重：与【最近 30 分钟聊天记录里 TA 已说过的内容】或【最近 10 分钟已
-  //     发过的通知】相同（归一化后）→ 不再重复弹通知。消息本体照常进聊天记录和角标。
+  //   ② 内容去重：与【最近聊天记录里 TA 已说过的内容】或【最近已发过的通知】
+  //     相同（指纹一致）→ 不再重复弹通知。消息本体照常进聊天记录和角标。
+  // v3.13.x 修正误杀（用户反馈：只听见消息声音、后台却不弹窗）——原实现把图片/表情包
+  // 统一归一成 [附件] 指纹，30 分钟内第二条图片消息或撞车的常见短语必被误拦：
+  //   - 附件指纹加入图片本体采样（MIME + 长度 + 3 个错位段哈希）——不同图片互不误判，
+  //     同一张图重复发仍可去重；
+  //   - 历史聊天查重窗口 30→15 分钟、已发通知查重窗口 10→6 分钟，误杀面减半；
+  //   - 文本指纹取前 60→100 字符，常见短语互撞更少。
   let lastVisibleAt = Date.now();
   (function () {
     const markVisible = function () {
@@ -642,43 +728,85 @@
     window.addEventListener('focus', markVisible);
   })();
   const NOTIFY_HIDDEN_MIN_MS = 15000;
-  // 通知文本归一化：剥 dataURL/语音 ||| 段/SVG 标签，去空白后取前 60 字符做指纹
+  const NOTIFY_CHAT_DUP_MS = 15 * 60000; // v3.13.x：30→15 分钟
+  const NOTIFY_SENT_DUP_MS = 6 * 60000;  // v3.13.x：10→6 分钟
+  // 通知文本归一化：剥 dataURL/语音 ||| 段/SVG 标签，去空白后取前 100 字符做指纹
   function normNotifyKey(raw) {
     let s = String(raw || '');
-    if (s.length > 512) s = s.slice(0, 512); // 先截断再正则，避免超长 base64 全文替换开销
+    if (s.length > 1024) s = s.slice(0, 1024); // 先截断再正则，避免超长 base64 全文替换开销
     s = s.replace(/data:[a-zA-Z0-9.+-]+\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+/g, '[附件]')
       .replace(/\|\|\|.*$/, '')
       .replace(/<[^>]*>/g, '');
-    return s.replace(/\s+/g, '').slice(0, 60);
+    return s.replace(/\s+/g, '').slice(0, 100);
   }
-  // 最近 30 分钟聊天记录里 TA 是否已说过同样内容（扫尾部最多 150 条，命中即回）
+  // dataURL 采样哈希（v3.13.x）：不读 base64 全文，取 MIME + 长度 + 3 个错位散列——
+  // 不同图片指纹互异（不再因都显示成 [图片] 而互判重复），相同图片重复发采样一致仍可去重
+  function sampleDataUrl(dataUrl) {
+    try {
+      if (!dataUrl || typeof dataUrl !== 'string') return '';
+      const m = /^data:([a-zA-Z0-9.+-]+\/[a-zA-Z0-9.+-]+);base64,/.exec(dataUrl);
+      const b64 = m ? dataUrl.slice(m[0].length) : dataUrl;
+      const h = function (shift) {
+        let x = 0;
+        for (let i = shift; i < b64.length; i += 7) x = (x * 31 + b64.charCodeAt(i)) & 0x7fffffff;
+        return x.toString(36);
+      };
+      return '|' + (m ? m[1] : '?') + ':' + b64.length + ':' + h(0) + ':' + h(1) + ':' + h(2);
+    } catch (e) { return ''; }
+  }
+  // 组装消息去重指纹：文本指纹 + 附件采样。纯附件消息（正文是 [图片]/[表情包] 占位、
+  // 空串、或本身是 dataURL）且带图时，文本基统一为 [附件] —— 与聊天记录里纯图消息
+  // （text 即 dataURL，扫描时抽出为 img）的指纹口径一致，保证查重能对上
+  function msgFingerprint(text, img) {
+    let t = String(text || '');
+    const isPh = /^\[(图片|表情包|语音|附件)\]$/.test(t.trim());
+    const imgOnly = isPh || !t.trim() || t.indexOf('data:') === 0;
+    let k = normNotifyKey(imgOnly && img ? '[附件]' : t);
+    const a = sampleDataUrl(img);
+    if (a) k += a;
+    return k;
+  }
+  // 最近窗口内聊天记录里 TA 是否已说过同样内容（扫尾部最多 150 条，命中即回）
   function recentChatDup(key) {
     if (!key) return false;
     try {
       const arr = window.getChatMsgs ? window.getChatMsgs() : null;
       if (!arr || !arr.length) return false;
-      const cutoff = Date.now() - 30 * 60000;
+      const cutoff = Date.now() - NOTIFY_CHAT_DUP_MS;
       for (let i = arr.length - 1, n = 0; i >= 0 && n < 150; i--, n++) {
         const m = arr[i];
         if (!m) continue;
         const mts = m.ts || 0;
-        if (mts && mts < cutoff) break; // 追加有序，更早的不可能落在 30 分钟内
+        if (mts && mts < cutoff) break; // 追加有序，更早的不可能落在窗口内
         if (m.side !== 'in') continue;
         let t = m.text || '';
+        let img = '';
+        // v3.13.x：parts 化消息——图片/表情包/语音的 dataURL 一并采样，参与指纹比对
         if ((!t || t.indexOf('data:') === 0) && m.parts && m.parts.length) {
-          t = m.parts.filter(p => p && p.k === 'text').map(p => p.v).join(' ');
+          const texts = [], images = [];
+          for (let p = 0; p < m.parts.length; p++) {
+            const part = m.parts[p];
+            if (!part || !part.k) continue;
+            if (part.k === 'text') texts.push(part.v);
+            else if (part.k === 'image' || part.k === 'sticker' || part.k === 'voice') images.push(part.v);
+          }
+          t = texts.join(' ');
+          img = images[0] || '';
+        } else if (t.indexOf('data:') === 0) {
+          img = t; // 无 parts 的旧式纯图消息：dataURL 即正文
+          t = '';
         }
-        if (normNotifyKey(t) === key) return true;
+        if (msgFingerprint(t, img) === key) return true;
       }
     } catch (e) {}
     return false;
   }
-  // 最近 10 分钟已发过同内容的系统通知（跨"生成源不同但文本相同"兜底）
+  // 最近已发过同内容的系统通知（跨"生成源不同但文本相同"兜底）
   const notifiedRecently = new Map();
   function notifiedDup(key) {
     if (!key) return false;
     const last = notifiedRecently.get(key);
-    return !!(last && Date.now() - last < 10 * 60000);
+    return !!(last && Date.now() - last < NOTIFY_SENT_DUP_MS);
   }
   function markNotified(key) {
     if (!key) return;
@@ -687,14 +815,18 @@
       notifiedRecently.delete(notifiedRecently.keys().next().value);
     }
   }
-  // 只读探针：诊断/回归用——给定文本当前会被哪道闸门拦下
-  window.bgNotifyGateInfo = function (text) {
-    const key = normNotifyKey(text);
+  // v3.13.x：拦截统计——诊断"只听见声音不弹窗"时一屏看出每条消息卡在哪道闸门
+  let gateStats = { total: 0, tooFresh: 0, dup: 0, sent: 0 };
+  window.bgNotifyGateStats = function () { return Object.assign({}, gateStats); };
+  // 只读探针：诊断/回归用——给定文本（+可选图片 dataURL）当前会被哪道闸门拦下
+  window.bgNotifyGateInfo = function (text, img) {
+    const nkey = msgFingerprint(text, img);
     return {
       hiddenForMs: Date.now() - lastVisibleAt,
       tooFreshHidden: Date.now() - lastVisibleAt < NOTIFY_HIDDEN_MIN_MS,
-      dupNotified: notifiedDup(key),
-      dupInChat: recentChatDup(key)
+      dupNotified: notifiedDup(nkey),
+      dupInChat: recentChatDup(nkey),
+      nkey: nkey
     };
   };
 
@@ -705,12 +837,16 @@
     if (!notifyEnabled) return;
     if (document.visibilityState === 'visible') return;
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
-    // v3.12.x：两道闸门（详见上方注释）——过渡期不弹 + 已看过/已弹过的内容不重弹
-    const nkey = normNotifyKey(text);
-    if (Date.now() - lastVisibleAt < NOTIFY_HIDDEN_MIN_MS) return;
-    if (notifiedDup(nkey) || recentChatDup(nkey)) return;
     extra = extra || {};
-    const name = extra.name || store.get('lbl-partner') || 'TA';
+    // v3.12.x：两道闸门（详见上方注释）——过渡期不弹 + 已看过/已弹过的内容不重弹
+    // v3.13.x：指纹由文本+附件采样构成——图片/表情包用本体采样去重，不同图片不再互拦
+    const nkey = msgFingerprint(text, extra.img);
+    gateStats.total++;
+    if (Date.now() - lastVisibleAt < NOTIFY_HIDDEN_MIN_MS) { gateStats.tooFresh++; return; }
+    if (notifiedDup(nkey)) { gateStats.dup++; return; }
+    if (recentChatDup(nkey)) { gateStats.dup++; return; }
+    gateStats.sent++;
+    const name = extra.name || store.get('lbl-partner') || (window.taWord ? window.taWord() : 'TA');
     let t = '';
     if (ts) {
       const d = new Date(ts);
@@ -724,7 +860,9 @@
     const body = String(text || '收到一条新消息')
       .replace(/data:[a-zA-Z0-9.+-]+\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+/g, '[附件]')
       .replace(/\|\|\|.*$/, '');
-    const opts = { body: (t ? t + '  ' : '') + (body && body.length > 40 ? body.slice(0, 40) + '…' : body) };
+    // v3.x.x：称呼跟随——通知正文里的 TA/他 按当前联系人性别替换（纯文本，安全）
+    const bodyFitted = window.taFit ? window.taFit(body) : body;
+    const opts = { body: (t ? t + '  ' : '') + (bodyFitted && bodyFitted.length > 40 ? bodyFitted.slice(0, 40) + '…' : bodyFitted) };
     // v3.5.156：修正安卓通知字段语义（此前 icon/badge/image 用反，导致
     // 「左侧浏览器图标、右侧 mochi、无头像」）：
     //   - badge（左侧小图标，单色）= mochi 字母图标（showSysNotification 兜底设）
@@ -742,7 +880,18 @@
     const toBlob = function (dataUrl, cb) {
       try {
         fetch(dataUrl).then(function (r) { return r.blob(); }).then(function (b) {
-          try { cb(URL.createObjectURL(b)); } catch (e) { cb(''); }
+          try {
+            var u = URL.createObjectURL(b);
+            // v3.12.x：通知展示完成后回收 blob URL——URL 注册表会一直持有底层 Blob 直到
+            // revoke；保活场景后台通知持续产生（每条头像+可选消息图各一个），不回收会
+            // 随挂机时长慢性泄漏（安卓 Chrome 渲染进程 OOM「网页崩溃」的来源之一）。
+            // 60s 远大于通知渲染所需，届时位图已固化到通知 UI，可安全释放。
+            // （延迟可被 window.__bgBlobRevokeDelayMs 覆盖，仅回归工具用）
+            var _rvMs = 60000;
+            try { if (typeof window.__bgBlobRevokeDelayMs === 'number') _rvMs = window.__bgBlobRevokeDelayMs; } catch (e2) {}
+            setTimeout(function () { try { URL.revokeObjectURL(u); } catch (e3) {} }, _rvMs);
+            cb(u);
+          } catch (e) { cb(''); }
         }).catch(function () { cb(''); });
       } catch (e) { cb(''); }
     };
@@ -754,12 +903,22 @@
         if (ok) markNotified(nkey);
       });
     };
-    // v3.5.158：右侧头像 + 展开大图（消息图）——头像 blob 转换后发送，消息图一并带上
-    const doSend = function (iconUrl) {
+    const sendIco = function (iconUrl) {
       if (previewImg && previewImg.indexOf('data:') === 0) {
         toBlob(previewImg, function (u) { sendNotify(iconUrl, u || ''); });
       } else {
         sendNotify(iconUrl, previewImg);
+      }
+    };
+    // v3.5.158：右侧头像 + 展开大图（消息图）——头像 blob 转换后发送，消息图一并带上。
+    // v3.12.x 修正：原实现只把【消息预览图】转了 blob，头像 dataURL 一直原样直发——
+    // 安卓 Chrome 对 data: 图标渲染不可靠，正是本段注释声称要解决却漏做的一半；
+    // 现在头像同样转 blob（转失败回退原 dataURL，保证文字通知不丢）。
+    const doSend = function (iconDataUrl) {
+      if (iconDataUrl && iconDataUrl.indexOf('data:') === 0) {
+        toBlob(iconDataUrl, function (u) { sendIco(u || iconDataUrl); });
+      } else {
+        sendIco(iconDataUrl);
       }
     };
     // v3.9.x 修复：头像裁剪为正方形，防止安卓通知拉伸变形

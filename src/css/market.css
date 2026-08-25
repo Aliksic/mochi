@@ -37,7 +37,8 @@
 }
 .market-hero-title { font-size: 23px; font-weight: 700; letter-spacing: 1.5px; position: relative; }
 .market-hero-sub { font-size: 13px; opacity: 0.88; margin-top: 5px; position: relative; letter-spacing: 0.3px; }
-.market-balance { font-size: 12px; opacity: 0.92; margin-top: 14px; position: relative; font-weight: 500; }
+.market-balance { font-size: 12px; opacity: 0.92; margin-top: 14px; position: relative; font-weight: 500; cursor: pointer; -webkit-tap-highlight-color: transparent; user-select: none; }
+.market-balance:active { opacity: 0.6; }
 
 /* ===== 彩色圆形分类入口 ===== */
 .market-cats { display: flex; gap: 14px; padding: 18px 14px 10px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
@@ -67,7 +68,8 @@
 /* ===== 聊天送礼面板（底部半框，加大面板 + 2 列宽松） ===== */
 #chat-gift-panel { max-height: 78%; }
 #chat-gift-panel .poke-card-scroll { max-height: none; }
-.gift-balance { text-align: center; font-size: 12px; color: #8b7ac8; padding: 6px 16px 2px; font-weight: 600; }
+.gift-balance { text-align: center; font-size: 12px; color: #8b7ac8; padding: 6px 16px 2px; font-weight: 600; cursor: pointer; -webkit-tap-highlight-color: transparent; user-select: none; }
+.gift-balance:active { opacity: 0.6; }
 .gift-cats { display: flex; gap: 7px; padding: 8px 14px 4px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .gift-cats::-webkit-scrollbar { display: none; }
 .gift-cat { flex-shrink: 0; padding: 6px 14px; border-radius: 99px; background: rgba(139, 122, 200, 0.08); color: #6d5bb0; font-size: 13px; border: none; cursor: pointer; transition: all 0.15s; }
@@ -151,22 +153,22 @@ textarea.gm-input { min-height: 52px; resize: none; }
 .gb-detail-wish { font-size: 14px; color: #6d5bb0; margin: 16px 20px 0; line-height: 1.7; }
 .gb-detail-meta { font-size: 12px; color: #b0a8c8; margin-top: 14px; }
 
-@media (prefers-color-scheme: dark) {
-  .msg-gift-card { background: #1c1c1e; border-color: rgba(255, 255, 255, 0.08); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4); }
-  .msg-gift-name, .gb-name, .gb-detail-name, .giftbox-name { color: #f2f2f2; }
-  .msg-gift-divider { background: rgba(255, 255, 255, 0.12); }
-  .msg-gift-wish { color: #98989e; }
-  .gb-detail-wish { color: #c9b8e8; }
-  .mg-side { color: #6b6b70; }
-  .msg-gift-price { color: #5a5a5f; }
-  .giftbox-meta, .gb-detail-meta { color: #8a7fa8; }
-  .gift-item, .giftbox-card { background: #2a2638; }
-  .gift-item-name, .giftbox-wish, .gb-desc, .gb-wish-label, .gm-row label { color: #c9c0d8; }
-  .gift-cat, .gb-tab, .gb-cancel { background: rgba(255, 255, 255, 0.08); color: #c9b8e8; }
-  .gm-input, .gb-wish { background: #2a2638; border-color: rgba(255, 255, 255, 0.12); color: #e0d8f0; }
-  .market-tool { background: #2a2638; }
-  .gm-img-prev { background: #2a2638; border-color: rgba(255, 255, 255, 0.12); }
-  .gm-img-btn { background: #2a2638; border-color: rgba(139, 122, 200, 0.4); }
-  .gift-empty { color: #6a6280; }
-  .market-cat-name { color: #8a7fa8; }
-}
+/* v3.11.x：深色适配改挂 [data-theme="dark"]（原 @media prefers-color-scheme 只跟系统、
+   不跟应用内两档主题开关——App 深色+系统浅色时整页白底刺眼，系统深色+App 浅色时又错变黑） */
+[data-theme="dark"] .msg-gift-card { background: #1c1c1e; border-color: rgba(255, 255, 255, 0.08); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4); }
+[data-theme="dark"] .msg-gift-name, [data-theme="dark"] .gb-name, [data-theme="dark"] .gb-detail-name, [data-theme="dark"] .giftbox-name { color: #f2f2f2; }
+[data-theme="dark"] .msg-gift-divider { background: rgba(255, 255, 255, 0.12); }
+[data-theme="dark"] .msg-gift-wish { color: #98989e; }
+[data-theme="dark"] .gb-detail-wish { color: #c9b8e8; }
+[data-theme="dark"] .mg-side { color: #6b6b70; }
+[data-theme="dark"] .msg-gift-price { color: #5a5a5f; }
+[data-theme="dark"] .giftbox-meta, [data-theme="dark"] .gb-detail-meta { color: #8a7fa8; }
+[data-theme="dark"] .gift-item, [data-theme="dark"] .giftbox-card { background: #2a2638; }
+[data-theme="dark"] .gift-item-name, [data-theme="dark"] .giftbox-wish, [data-theme="dark"] .gb-desc, [data-theme="dark"] .gb-wish-label, [data-theme="dark"] .gm-row label { color: #c9c0d8; }
+[data-theme="dark"] .gift-cat, [data-theme="dark"] .gb-tab, [data-theme="dark"] .gb-cancel { background: rgba(255, 255, 255, 0.08); color: #c9b8e8; }
+[data-theme="dark"] .gm-input, [data-theme="dark"] .gb-wish { background: #2a2638; border-color: rgba(255, 255, 255, 0.12); color: #e0d8f0; }
+[data-theme="dark"] .market-tool { background: #2a2638; }
+[data-theme="dark"] .gm-img-prev { background: #2a2638; border-color: rgba(255, 255, 255, 0.12); }
+[data-theme="dark"] .gm-img-btn { background: #2a2638; border-color: rgba(139, 122, 200, 0.4); }
+[data-theme="dark"] .gift-empty { color: #6a6280; }
+[data-theme="dark"] .market-cat-name { color: #8a7fa8; }

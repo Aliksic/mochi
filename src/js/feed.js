@@ -361,17 +361,22 @@
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
   function attrEsc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
   // 图文混排正文渲染（与聊天一致）：data:image 段 → 内联图片，其余文字保留空格
-  function inlineBody(s) {
+  // v3.x.x：称呼跟随——文字段按动态所属联系人(owner cid)在显示层替换 TA/他
+  function inlineBody(s, cid) {
     const str = String(s || '');
     let html = '';
     const re = /(data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+)/g;
     let last = 0, m;
+    const fitSeg = (seg) => {
+      seg = seg.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+      return (cid && window.taFit) ? window.taFit(seg, cid) : seg;
+    };
     while ((m = re.exec(str))) {
-      html += str.slice(last, m.index).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+      html += fitSeg(str.slice(last, m.index));
       html += '<img class="feed-inline-img" src="' + m[0] + '" alt="图片">';
       last = m.index + m[0].length;
     }
-    html += str.slice(last).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    html += fitSeg(str.slice(last));
     return html;
   }
   // 无重复抽取器：同一轮生成内不重复抽同一张卡（池子抽完一轮后重新洗牌再继续），
@@ -467,7 +472,7 @@
     // 引擎会在 'data:image' 中间误匹配 'image'，导致后面 (data:image…) 整体匹配失败
     // （mail.js renderBody 同款已生效模式）
     content = content.replace(/((?:sticker|image):)?(data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+)/g, (m, pre, u) => { imgs.push(u); return ' '; });
-    let html = inlineBody(content);
+    let html = inlineBody(content, (p.role || p.by) === 'me' ? '' : p.owner);
     if (imgs.length) {
       html += '<div class="feed-imgs">' + imgs.map(u => '<img src="' + attrEsc(u) + '" alt="图片" loading="lazy">').join('') + '</div>';
     }
@@ -478,13 +483,13 @@
     if (!p.comments || !p.comments.length) return '';
     return '<div class="feed-comments">' + p.comments.map((c, ci) => {
       const cName = esc(c.authorName || ((c.role || c.by) === 'me' ? feedUserName() : (name || taFeedName())));
-      const cBody = inlineBody(c.content);
+      const cBody = inlineBody(c.content, (c.role || c.by) === 'me' ? '' : p.owner);
       let repliesHtml = '';
       if (c.replies && c.replies.length) {
         // v3.11.x：回复加 data-ri——通知点击可直接定位闪烁到具体这条回复
         repliesHtml = '<div class="feed-replies">' + c.replies.map((r, ri) => {
           const rName = esc(r.authorName || ((r.role || r.by) === 'me' ? feedUserName() : (name || taFeedName())));
-          const rBody = inlineBody(r.content);
+          const rBody = inlineBody(r.content, (r.role || r.by) === 'me' ? '' : p.owner);
           return '<div class="feed-reply" data-ri="' + ri + '"><b>' + rName + '</b> 回复 <b>' + cName + '</b>：' + rBody + '</div>';
         }).join('') + '</div>';
       }
@@ -601,14 +606,57 @@
       '</div>' + likes + commentsHtmlFor(p, name) + '</div>';
   }
   // 渲染动态列表
+  // v3.12.x：列表窗口化渲染——TA 自动发帖每天累积、动态含 dataURL 配图，原实现每次进页把
+  // 全部动态一次性 innerHTML 进列表（挂机数月可达数百上千条），整页 <img> 位图解码的内存
+  // 峰值是安卓 Chrome「网页崩溃」（渲染进程 OOM）的主要触发点。改为只渲染最新 FEED_RENDER_MAX
+  // 条，更早的经底部「查看更早」按 FEED_LOAD_STEP 增量插入；存储不裁剪、历史零丢失。
+  // 初始窗口取 200 兼容既有回归（verify-feed-comment-perf 种子 151 条需全量可见）。
+  const FEED_RENDER_MAX = 200, FEED_LOAD_STEP = 100;
+  let feedShownMain = 0, feedShownAll = 0;
+  function feedMoreBtnHtml(remaining) {
+    return '<button class="feed-more-btn" type="button">查看更早的动态（还有 ' + remaining + ' 条）</button>';
+  }
+  // 「查看更早」点击：插入下一批卡片后给新按钮重新挂监听（按钮每次重建，必须重绑）
+  function feedBindMoreBtn(listEl) {
+    const moreBtn = listEl.querySelector('.feed-more-btn');
+    if (!moreBtn) return;
+    moreBtn.addEventListener('click', () => {
+      const isAll = listEl.id === 'feed-all-list';
+      let posts = feedSortedAll();
+      if (isAll) posts = posts.filter(p => (p.owner || 'default') === feedAllCid);
+      const shown = isAll ? feedShownAll : feedShownMain;
+      const end = Math.min(posts.length, shown + FEED_LOAD_STEP);
+      if (end <= shown) { moreBtn.remove(); return; }
+      const htmlFn = isAll ? postCardHtmlAll : (p => postCardHtml(p, partnerName()));
+      moreBtn.remove();
+      const tmp = document.createElement('div');
+      tmp.innerHTML = posts.slice(shown, end).map(htmlFn).join('');
+      // 先取静态数组再逐张搬移——tmp.children 是活 HTMLCollection，边 appendChild（节点
+      // 随即离开 tmp）边迭代会「隔一跳一」只搬一半，曾致加载更多少插一半卡片
+      const cards = Array.prototype.slice.call(tmp.children);
+      cards.forEach(function (card) {
+        listEl.appendChild(card);
+        try { bindEvents(card); } catch (e) {}
+      });
+      const left = posts.length - end;
+      if (left > 0) {
+        listEl.insertAdjacentHTML('beforeend', feedMoreBtnHtml(left));
+        feedBindMoreBtn(listEl); // 新按钮重新挂监听
+      }
+      if (isAll) feedShownAll = end; else feedShownMain = end;
+    });
+  }
+  function feedSortedAll() { return load().slice().sort((a, b) => b.ts - a.ts); }
   function render() {
     renderCover();
     const listEl = document.getElementById('feed-list');
     if (!listEl) return;
-    const posts = load().slice().sort((a, b) => b.ts - a.ts);
+    const posts = feedSortedAll();
+    feedShownMain = Math.min(posts.length, FEED_RENDER_MAX);
     const name = partnerName();
     listEl.innerHTML = posts.length
-      ? posts.map(p => postCardHtml(p, name)).join('')
+      ? posts.slice(0, feedShownMain).map(p => postCardHtml(p, name)).join('') +
+        (posts.length > feedShownMain ? feedMoreBtnHtml(posts.length - feedShownMain) : '')
       : '<div class="ta-empty">还没有动态，TA 会不定期分享生活</div>';
     const clearBtn = document.getElementById('feed-page-clear');
     if (clearBtn) clearBtn.hidden = !posts.length;
@@ -658,6 +706,9 @@
     bindEvents(fresh);
   }
   function bindEvents(listEl) {
+    // v3.12.x：「查看更早」增量加载——只插入新卡片并逐卡绑定（refreshPostCard 同款单卡
+    // bindEvents 复用），旧卡片 DOM 原地不动：不重新解码已显示的 dataURL 配图、不重复绑定
+    feedBindMoreBtn(listEl);
     // v3.5.63：动态头像点击 → 打开该人的全部朋友圈
     listEl.querySelectorAll('.feed-head-av').forEach(av => av.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -816,8 +867,9 @@ function comStickerGroups() {
     .map(([n, a]) => [n, (a || []).filter(s => typeof s === 'string' && s.indexOf('data:') === 0)])
     .filter(([, a]) => a.length);
   if (comStickerTab === 'ta') return onlyData((window.getMediaGroups && window.getMediaGroups('sticker')) || []);
+  // v3.12.x：我的表情包改全局键（与聊天面板同源，各桌面互通）
   try {
-    const v = JSON.parse(store.get('my-emoji-groups') || 'null');
+    const v = JSON.parse(window.xyStore('xy-home-v2').get('my-emoji-groups') || 'null');
     return Array.isArray(v) ? onlyData(v) : [];
   } catch (e) { return []; }
 }
@@ -862,6 +914,8 @@ function openComStickerPanel() {
       comStickerPanel.querySelectorAll('[data-cs-tab]').forEach(x => x.classList.toggle('sel', x === tb));
       renderComStickerBar();
       renderComStickerList();
+      // v3.12.x：点完即失焦——部分安卓浏览器对聚焦按钮画虚线框（与聊天面板同修）
+      try { tb.blur(); } catch (err) {}
     }));
   }
   function renderComStickerBar() {
@@ -927,9 +981,16 @@ function openComStickerPanel() {
     });
     list.appendChild(grid);
   }
-  comStickerTab = 'ta';
+  // v3.12.x：每次打开按「隐藏联系人的表情包」开关（聊天设置，全局键 hide-ta-sticker）
+  // 决定默认 tab——开启时隐藏 TA 的表情包 tab、只显示我的表情包（与聊天面板同口径）
+  let htsHide = false;
+  try { if (window.xyStore) htsHide = window.xyStore('xy-home-v2').get('hide-ta-sticker') === '1'; } catch (e) {}
+  const taTabBtn = comStickerPanel.querySelector('[data-cs-tab="ta"]');
+  if (taTabBtn) taTabBtn.hidden = htsHide;
+  const defTab = htsHide ? 'mine' : 'ta';
+  comStickerTab = defTab;
   comStickerCur = '';
-  comStickerPanel.querySelectorAll('[data-cs-tab]').forEach(x => x.classList.toggle('sel', x.getAttribute('data-cs-tab') === 'ta'));
+  comStickerPanel.querySelectorAll('[data-cs-tab]').forEach(x => x.classList.toggle('sel', x.getAttribute('data-cs-tab') === defTab));
   renderComStickerBar();
   renderComStickerList();
   comStickerPanel.hidden = false;
@@ -1090,7 +1151,7 @@ if (comInput) comInput.addEventListener('keydown', (e) => { if (e.key === 'Enter
     if (window.showDeskPopup && !feedPageVisible()) {
       // v3.7.x：弹窗头像带发布者 TA 头像（跨桌面动态弹窗不显示当前桌面 TA 头像）
       const av = owner ? taAvFor(owner) : '';
-      window.showDeskPopup({ name: '朋友圈', text: noticeTextClean(text), av: av, onClick: openFeedPage, isHidden: document.visibilityState === 'hidden' });
+      window.showDeskPopup({ name: '朋友圈', text: (window.taFit ? window.taFit(noticeTextClean(text), owner) : noticeTextClean(text)), av: av, onClick: openFeedPage, isHidden: document.visibilityState === 'hidden' });
     }
   }
   function unreadCount() { return notices().filter(n => !n.read).length; }
@@ -1174,7 +1235,7 @@ if (comInput) comInput.addEventListener('keydown', (e) => { if (e.key === 'Enter
           // 不再只显示「[表情包]」占位字（用户反馈"回复了图片但只有两个字不知道是啥"）
           const thumb = noticeThumbOf(n, postsForThumbs);
           const thumbHtml = thumb ? '<img class="fn-thumb" src="' + attrEsc(thumb) + '" alt="">' : '';
-          return '<div class="feed-notice-item' + (n.read ? '' : ' new') + '" data-pid="' + n.pid + '" data-ci="' + (n.ci != null ? n.ci : '') + '" data-ri="' + (n.ri != null ? n.ri : '') + '">' + avHtml(avFor(n)) + '<span class="fn-ico">' + ico + '</span><span class="fn-text">' + noticeTextClean(n.text) + '</span>' + thumbHtml + '<span class="fn-time">' + fmtDT(n.ts) + '</span></div>';
+          return '<div class="feed-notice-item' + (n.read ? '' : ' new') + '" data-pid="' + n.pid + '" data-ci="' + (n.ci != null ? n.ci : '') + '" data-ri="' + (n.ri != null ? n.ri : '') + '">' + avHtml(avFor(n)) + '<span class="fn-ico">' + ico + '</span><span class="fn-text">' + (window.taFit ? window.taFit(noticeTextClean(n.text), n.owner) : noticeTextClean(n.text)) + '</span>' + thumbHtml + '<span class="fn-time">' + fmtDT(n.ts) + '</span></div>';
         }).join('')
       : '<div class="ta-empty">暂时没有新的提醒</div>';
     listEl.querySelectorAll('.feed-notice-item').forEach(it => it.addEventListener('click', () => {
@@ -1399,7 +1460,7 @@ if (comInput) comInput.addEventListener('keydown', (e) => { if (e.key === 'Enter
         const p2 = list2.find(x => x.id === id);
         if (!p2) return;
         if (window.addTaFavItem({ kind: 'feed', text: p2.content || '', imgs: (p2.imgs || []).slice(), ts: Date.now() })) {
-          toast('TA 收藏了你的朋友圈动态');
+          toast(window.taFit ? window.taFit('TA 收藏了你的朋友圈动态') : 'TA 收藏了你的朋友圈动态');
         }
       }, (cfg.likeSpeedMin + Math.random() * Math.max(1, cfg.likeSpeedMax - cfg.likeSpeedMin)) * 1000);
     }
@@ -1599,8 +1660,11 @@ if (comInput) comInput.addEventListener('keydown', (e) => { if (e.key === 'Enter
     const title = document.getElementById('feed-all-title');
     if (title) title.textContent = (c.name || feedAllCid) + ' 的全部朋友圈';
     const posts = load().filter(p => (p.owner || 'default') === feedAllCid).sort((a, b) => b.ts - a.ts);
+    // v3.12.x：与主列表同口径窗口化（FEED_RENDER_MAX + 查看更早），防整页全量位图解码
+    feedShownAll = Math.min(posts.length, FEED_RENDER_MAX);
     listEl.innerHTML = posts.length
-      ? posts.map(p => postCardHtmlAll(p)).join('')
+      ? posts.slice(0, feedShownAll).map(p => postCardHtmlAll(p)).join('') +
+        (posts.length > feedShownAll ? feedMoreBtnHtml(posts.length - feedShownAll) : '')
       : '<div class="ta-empty">还没有动态</div>';
     // v3.7.x：全部朋友圈页与主列表共用事件绑定——点赞/评论/回复/删除/图片放大全可用
     //（bindEvents 里的 .feed-head-av 该页无此元素，自动跳过）

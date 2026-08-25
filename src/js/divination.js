@@ -478,14 +478,14 @@
           '<div class="div-card-ico">' + icons[c.icon] + '</div>' +
           '<div class="div-card-name">' + (c.rev ? c.name + '（逆）' : c.name) + '</div>' +
         '</div>' +
-        '<div class="div-card-meaning">' + c.meaning + '</div>' +
+        '<div class="div-card-meaning">' + (window.taFit ? window.taFit(c.meaning) : c.meaning) + '</div>' +
         '</div>';
     });
     html += '</div>';
-    html += '<div class="div-summary">' + summary + '</div>';
+    html += '<div class="div-summary">' + (window.taFit ? window.taFit(summary) : summary) + '</div>';
     if (question) html += '<div class="div-question-q">问：' + String(question).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;') + '</div>';
     html += '<div class="div-result-actions">';
-    html += '<button class="div-send-btn" id="div-send-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-3px;margin-right:6px"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>发给 ' + (partnerName2() || 'TA') + '</button>';
+    html += '<button class="div-send-btn" id="div-send-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-3px;margin-right:6px"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>发给 ' + (partnerName2() || (window.taWord ? window.taWord() : 'TA')) + '</button>';
     html += '<button class="div-copy-btn" id="div-copy-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-3px;margin-right:6px"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>点击复制文字</button>';
     html += '</div>';
     r.innerHTML = html;

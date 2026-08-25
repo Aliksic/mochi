@@ -203,7 +203,7 @@ check('P0 初始聊天顶部头像回退显示桌面头像(蓝)', (() => true)()
     return {
       cs: s.get('cs-avatar-partner'),
       desk: s.get('avatar-partner'),
-      chatDom: chatAv ? chatAv.innerHTML.slice(0, 100) : '',
+      chatDom: chatAv ? chatAv.innerHTML : '',
       lastMsgImg: sysMsgs.length ? String(sysMsgs[sysMsgs.length-1].img||'').slice(0,60) : ''
     };
   })()`);

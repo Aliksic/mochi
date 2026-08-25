@@ -526,6 +526,18 @@ body.cs-time-divider .msg-time-divider { display:flex; }
 .call-panel-dial:active, .call-panel-hang:active { opacity:.85; }
 .call-panel-dial svg, .call-panel-hang svg { width:18px; height:18px; flex-shrink:0; }
 
+/* v3.12.x：通话半框「联系人头像 / 通话背景图片」编辑行（更多功能→通话 直接修改） */
+.call-panel-row {
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  padding:12px 14px; margin-bottom:8px;
+  background:rgba(255,255,255,.92); border:1px solid rgba(0,0,0,.1); border-radius:14px;
+  cursor:pointer; -webkit-tap-highlight-color:transparent;
+}
+.call-panel-row:active { opacity:.75; }
+.call-panel-row .cpr-txt { font-size:13px; font-weight:600; color:var(--ink); }
+.call-panel-row .cpr-val { font-size:12px; color:var(--muted); }
+.call-panel-row-danger .cpr-txt { color:#e5484d; }
+
 /* 猜拳半框（复用 .poke-card 容器）：战绩 + 提示 + 三个出拳按钮 */
 #chat-rps-panel { height:auto; max-height:56%; }
 #chat-rps-panel .poke-card-scroll { min-height:0; max-height:none; }
@@ -751,12 +763,20 @@ body.cs-time-divider .msg-time-divider { display:flex; }
   white-space:nowrap;
 }
 .emoji-tab.sel { background:var(--ink); color:#fff; border-color:var(--ink); }
+/* v3.12.x：部分安卓浏览器（vivo/OPPO 等）会给点按过的按钮画虚线聚焦框——点
+   「公用表情包」后该 tab 周围出现虚线框，看起来与其他两个 tab 不统一。统一关掉
+   聚焦外框（选中态仍由 .sel 深色填充表达；聊天/朋友圈评论面板共用本类一并生效） */
+.emoji-tab:focus, .emoji-tab:focus-visible { outline:none; }
 /* v3.11.x：表情包面板三分区（公用/联系人/我的）——字号略收 + 长昵称省略号防溢出
    （选择器限定 #emoji-panel：朋友圈评论面板复用 .emoji-tab 不受影响） */
 #emoji-panel .emoji-tab {
   padding:9px 4px; font-size:12px; min-width:0;
   overflow:hidden; text-overflow:ellipsis;
 }
+/* v3.12.x：「隐藏联系人的表情包」开关收起公用/TA 的 tab——按 .emoji-tools[hidden]
+   先例显式兜底，防后续给 .emoji-tab 加 display 后 hidden 属性失效（聊天与
+   朋友圈评论面板复用同一类名，一条规则双覆盖） */
+.emoji-tab[hidden] { display:none !important; }
 .emoji-head .poke-card-close { margin-left:10px; }
 /* 我的表情包工具行 */
 .emoji-tools {
@@ -911,11 +931,14 @@ body.cs-time-divider .msg-time-divider { display:flex; }
 .msg-quote-imgs .msg-quote-img { margin-top:0; }
 
 /* 引用块（带「引用 XX」标签，清晰可读） */
+/* v3.12.x：引用块可点——点击跳转到被引用的原消息（chat.js 委托处理） */
 .msg-quote {
   font-size:12px; border-left:3px solid currentColor;
   padding:4px 8px; margin-bottom:5px; border-radius:0 6px 6px 0;
   background:rgba(0,0,0,.05);
+  cursor:pointer; -webkit-tap-highlight-color:transparent;
 }
+.msg-quote:active { opacity:.6; }
 .msg-quote-label {
   display:block; font-size:10px; font-weight:700;
   color:inherit; opacity:.6; margin-bottom:2px;
@@ -1324,7 +1347,9 @@ body.cs-time-divider .msg-time-divider { display:flex; }
 .rp-balance {
   font-size:11px; color:var(--muted); text-align:center;
   padding:4px 0 8px; border-bottom:1px solid rgba(0,0,0,.06); margin-bottom:10px;
+  cursor:pointer; -webkit-tap-highlight-color:transparent; user-select:none;
 }
+.rp-balance:active { opacity:.6; }
 /* 红包封面上传区 */
 .rp-cover-row { display:flex; align-items:center; gap:10px; margin-bottom:14px; }
 .rp-cover-preview {

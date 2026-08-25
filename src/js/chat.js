@@ -100,6 +100,11 @@
             const hasBig = m.img || m.voice || (typeof m.text === 'string' && m.text.length > 8192);
             if (!hasBig) return m;
             const c = Object.assign({}, m);
+            // v3.12.x：给有损副本打标记——冷启动先读这份快照，IDB 权威读回合并时
+            // 剥过 img/voice 的记录指纹（img=''）必不等于完整版，会被当成新消息
+            // append → 图片/语音类历史永久翻倍。带标记（及 img===''/voice==='' 的
+            // 旧版剥离残留）的记录只要 IDB 已有同 ts+side 记录就不再计入本地新增。
+            c._lsLite = 1;
             if (c.img) c.img = '';
             if (c.voice) c.voice = '';
             if (typeof c.text === 'string' && c.text.length > 8192) c.text = '[内容已省略]';
@@ -226,6 +231,26 @@
     });
     if (migrated) saveMsgs();
   }
+  // v3.12.x：存量快速重复收敛——「输入复活/事件重派」类 bug 曾把同一条消息连写两遍
+  //（同 side+同 text，Δts 多在一两秒内——iOS 中文键盘确认候选词即发送、文本重组回来
+  // 后用户再点发送，间隔可达 1s+，人类刻意重发同一串字不会这么快）。
+  // 只处理按 ts 排序后相邻的重复对（保守：中间隔着其他消息的不动），互动卡片
+  //（special）不参与；用户手机里已被翻倍的历史在加载时自动收敛为一条。
+  function collapseRapidDups(arr) {
+    let removed = 0;
+    for (let i = arr.length - 1; i > 0; i--) {
+      const a = arr[i], b = arr[i - 1];
+      if (!a || !b || a.side !== b.side || a.special || b.special) continue;
+      if ((a.type || '') !== (b.type || '')) continue;
+      const dts = (a.ts || 0) - (b.ts || 0);
+      if (dts < 0 || dts > 1200) continue;
+      if ((a.text || '') !== (b.text || '') || !!a.img !== !!b.img) continue;
+      if (!a.text && !a.img) continue;
+      arr.splice(i, 1);
+      removed++;
+    }
+    return removed;
+  }
   // v3.6.x：判断记录是否为「已作答」的互动卡片（小问题/好奇/吐槽/询问/邀请）
   function answeredRec(r) {
     if (!r) return false;
@@ -249,6 +274,8 @@
       try { syncLastMineText(); } catch (e) {}
     }
     migrateLegacyMediaMsgs();
+    // v3.12.x：LS 预载副本同样收敛存量快速重复（IDB 挂起期间画面也不出现双条）
+    try { if (collapseRapidDups(msgs)) saveMsgs(); } catch (e) {}
     // v3.5.119：每次进入聊天页都以 IndexedDB 为权威读一次并合并——
     // 手机上 IDB 读取可能偶发失败/时序靠后，之前"读完一次就置 chatDbReady 不再读"
     // 会让失败后的页面永远停留在空/残缺状态；现在每次 loadMsgs 都重试，
@@ -302,7 +329,17 @@
             const sigOf = (m) => { try { return JSON.stringify({ t: m && m.text, s: m && m.side, ts: m && m.ts, i: m && m.img ? (typeof m.img === 'string' ? m.img.slice(0, 32) : String(m.img.length)) : 0 }); } catch (e) { return ''; } };
             const idbSigs = new Set();
             idbArr.forEach(x => { if (x) idbSigs.add(sigOf(x)); });
-            const localNew = (pendingLocal || msgs || []).filter(m => m && !idbSigs.has(sigOf(m)));
+            // v3.12.x：有损快照残影不重复计入本地新增——LS 兜底快照超限时剥掉
+            // img/voice（_lsLite 标记；旧版无标记，但 img===''/voice==='' 本身就是
+            // 剥离产物，正常写入不会产生），其指纹与 IDB 完整版必不相同，原逻辑会
+            // 把同一消息 append 两遍并回写固化。改为按 ts+side 对照 IDB，已存在则跳过。
+            const idbTsSide = new Set(idbArr.map(x => (((x && x.ts) || 0) + '|' + ((x && x.side) || ''))));
+            const liteResidue = (m) => !!(m && (m._lsLite || m.img === '' || m.voice === ''));
+            const localNew = (pendingLocal || msgs || []).filter(m => m && !idbSigs.has(sigOf(m))).filter(m => {
+              if (!liteResidue(m)) return true;
+              return !idbTsSide.has((((m && m.ts) || 0)) + '|' + ((m && m.side) || ''));
+            });
+            localNew.forEach(m => { try { delete m._lsLite; } catch (e) {} });
             const merged = idbArr.concat(localNew).sort((a, b) => ((a && a.ts || 0) - (b && b.ts || 0)));
             // v3.6.x：防止过期快照把刚作答的卡片刷回未作答——
             // 用户点卡片作答后 saveMsgsNow 已把「已作答」状态写入 IDB；但若本次
@@ -337,6 +374,9 @@
             msgs = merged;
             // 条数不一致（IDB 快照与内存不是同一批消息）→ 索引已失效，清空会话改动标记
             if (merged.length !== curArr.length) sessionChangedIdx.clear();
+            // v3.12.x：收敛存量快速重复（历史版本把同一条消息写了两遍的脏数据），
+            // 有收敛视为变更 → 走下方 changed 分支回写 IDB/LS + 重渲染
+            if (collapseRapidDups(msgs)) { changed = true; sessionChangedIdx.clear(); }
             migrateLegacyMediaMsgs();
             // v3.7.x：IDB 权威合并完成后再同步一次 lastMineText（此时才是完整历史）
             try { syncLastMineText(); } catch (e) {}
@@ -561,7 +601,7 @@
         if (c && c.name) { pname.textContent = c.name; return; }
       }
     } catch (e) {}
-    pname.textContent = 'TA';
+    pname.textContent = window.taWord ? window.taWord() : 'TA';
   }
   updateChatPartnerName();
   window.renderChatHeader = updateChatPartnerName;
@@ -760,6 +800,9 @@
   const QUOTE_PLACEHOLDER = /^(图片|表情包|\[图片\]|\[表情包\])$/;
   function quoteHtml(q, side) {
     // side = 被引用消息的发送方（'out'=我发，'in'=TA发）
+    // v3.x.x：称呼跟随——引用 TA 发的内容在显示层替换称呼；引用我发的保持原文
+    const __fitQ = (side !== 'out') && !!window.taFit;
+    const FQ = (s) => (__fitQ ? window.taFit(s) : s);
     // v3.5.82：不再显示「引用 XX」标签行，只显示被引用的内容（方向也不再展示）
     if (q && typeof q === 'object') {
       // 组合消息引用：文字 + 图片缩略图（q = { t: 文字, imgs: [dataURL...] }）
@@ -767,7 +810,7 @@
       const t = String(q.t || '');
       // t 若是 dataURL（纯表情包消息的 text 就是图片），不当作文字显示，避免 base64 乱码
       // v3.7.x：t 是占位文案（图片/表情包）且有缩略图时同样不显示——引用块只留图，去掉重复文字
-      const tHtml = (t && t.indexOf('data:') !== 0 && !(imgs.length && QUOTE_PLACEHOLDER.test(t))) ? escTxtBr(t) : '';
+      const tHtml = (t && t.indexOf('data:') !== 0 && !(imgs.length && QUOTE_PLACEHOLDER.test(t))) ? escTxtBr(FQ(t)) : '';
       let inner = '';
       if (imgs.length) inner += '<span class="msg-quote-imgs">' + imgs.map(s => '<img class="msg-quote-img" src="' + attrEsc(s) + '" alt="图片">').join('') + '</span>';
       if (tHtml) inner += '<span class="msg-quote-text">' + tHtml + '</span>';
@@ -777,7 +820,7 @@
       // 引用图片（表情包）缩略图
       return '<div class="msg-quote"><img class="msg-quote-img" src="' + attrEsc(q) + '" alt="图片"></div>';
     }
-    return '<div class="msg-quote"><span class="msg-quote-text">' + escTxtBr(q) + '</span></div>';
+    return '<div class="msg-quote"><span class="msg-quote-text">' + escTxtBr(FQ(q)) + '</span></div>';
   }
   // v3.6.x：互动卡片就地作答——点击聊天里的互动卡片（小问题/好奇/吐槽/询问），
   // 直接在卡片内展开选项/输入框作答，不再强制弹窗。
@@ -939,10 +982,10 @@
       const inp = document.createElement('input');
       inp.className = 'ip-input';
       inp.type = 'text';
-      inp.placeholder = type === 'roast' ? '回 TA 一句…' : '输入你的回答…';
+      inp.placeholder = type === 'roast' ? (window.taFit ? window.taFit('回 TA 一句…') : '回 TA 一句…') : '输入你的回答…';
       const send = document.createElement('button');
       send.className = 'ip-send';
-      send.textContent = type === 'roast' ? '回TA' : '回答';
+      send.textContent = type === 'roast' ? (window.taFit ? window.taFit('回TA') : '回TA') : '回答';
       const doSend = () => {
         const v = (inp.value || '').trim();
         if (!v) return;
@@ -1051,7 +1094,7 @@
         const rpRec = msgs[rpIdx];
         if (!rpRec || rpRec.special !== 'redpacket') return;
         if (rpRec.rpStatus !== 'pending') return;
-        if (rpRec.side !== 'in') { toast('等待 TA 领取'); return; }
+        if (rpRec.side !== 'in') { toast(window.taFit ? window.taFit('等待 TA 领取') : '等待 TA 领取'); return; }
         rpRec.rpStatus = 'received';
         rpRec.rpOpenedAt = Date.now();
         const wallet = rpWalletGet();
@@ -1223,8 +1266,11 @@
     renderStart = newStart;
     if (preNum > 0 && anchor) {
       // 把新批节点移到顶部，保持时间顺序；用锚点 offsetTop 校正滚动位置
+      // v3.12.x：必须升序遍历——insertBefore(x, anchor) 每次都把 x 插到锚点紧前方
+      //（即上一批已插节点的后面），降序遍历会把整批倒序排（深翻历史时顶部一段
+      // 消息新旧颠倒的根源），升序插入才能得到 [旧…新, 锚点] 的正确时序
       const newNodes = Array.prototype.slice.call(body.children, preNum);
-      for (let k = newNodes.length - 1; k >= 0; k--) body.insertBefore(newNodes[k], anchor);
+      for (let k = 0; k < newNodes.length; k++) body.insertBefore(newNodes[k], anchor);
       body.scrollTop = beforeTop + anchor.offsetTop;
     } else {
       body.scrollTop = body.scrollHeight; // 原窗口为空，直接滚到底
@@ -1240,10 +1286,23 @@
     const newEnd = Math.min(len, renderEnd + LOAD_STEP);
     if (newEnd === renderEnd) return;
     batchRendering = true;
+    // v3.12.x：脱尾处理——深翻历史被裁尾后，新到的消息由 addRec 直接 append 在窗口外
+    // （"脱尾"）。补画缺口时：已存在的下标跳过不重画；缺失节点插到「其后第一个已在
+    // DOM 的节点」之前，保持先旧后新的时序
+    let anchor = null;
     for (let i = renderEnd; i < newEnd; i++) {
+      // 已由增量追加画过的下标直接跳过——防同一条消息/卡片出现两个气泡
+      //（历史缺陷：addRec 不推进 renderEnd 时整段被原样重画）
+      if (body.querySelector('.msg[data-idx="' + i + '"]')) continue;
+      if (!anchor) {
+        for (let j = i + 1; j < len && !anchor; j++) {
+          anchor = body.querySelector('.msg[data-idx="' + j + '"]');
+        }
+      }
       maybeInsertDivider(i);
       const m = renderMsg(msgs[i]);
       m.dataset.idx = i;
+      if (anchor && m.parentNode === body) body.insertBefore(m, anchor);
     }
     batchRendering = false;
     renderEnd = newEnd;
@@ -1293,16 +1352,19 @@
   }, { passive: true });
   function renderMsg(rec) {
     const m = document.createElement('div');
+    // v3.x.x：称呼跟随——仅对方/系统消息在显示层把 TA/他 替换为性别称呼（我方消息保持原话）
+    const __fit = rec.side !== 'out' && !!window.taFit;
+    const T = (s) => (__fit ? window.taFit(s) : s);
     // 邀请TA：居中完整卡片（问题 + TA 的回应），等待中显示等待状态
     if (rec.special === 'invite') {
       m.className = 'msg-ask';
       m.dataset.idx = msgs.length - 1;
       const answered = rec.inviteStatus === 'answered';
       m.innerHTML = '<div class="msg-ask-card' + (answered ? ' answered' : '') + '">' +
-        '<div class="msg-ask-q">邀请TA · ' + escTxt(rec.inviteContent || rec.text || '') + '</div>' +
+        '<div class="msg-ask-q">' + T('邀请TA') + ' · ' + escTxt(rec.inviteContent || rec.text || '') + '</div>' +
         (answered
-          ? '<div class="msg-ask-a">✓ ' + escTxt(rec.inviteAnswer || 'TA 回应了你') + '</div>'
-          : '<div class="msg-ask-tip">等待 TA 回应…</div>') +
+          ? '<div class="msg-ask-a">✓ ' + escTxt(T(rec.inviteAnswer || 'TA 回应了你')) + '</div>'
+          : '<div class="msg-ask-tip">' + T('等待 TA 回应…') + '</div>') +
         favHeartHtml() +
         '</div>';
       body.appendChild(m);
@@ -1316,10 +1378,10 @@
       const answered = rec.askStatus === 'answered';
       const askIsSingle = rec.askType === 'single';
       m.innerHTML = '<div class="msg-ask-card' + (answered ? ' answered' : '') + '">' +
-        '<div class="msg-ask-q">问问TA · ' + escTxt(rec.askQuestion || '') + '</div>' +
+        '<div class="msg-ask-q">' + T('问问TA') + ' · ' + escTxt(rec.askQuestion || '') + '</div>' +
         (answered
-          ? '<div class="msg-ask-a">✓ TA：' + escTxt(rec.askAnswer || '回答了你') + '</div>' + (rec.askReply ? '<div class="msg-choose-r">TA：' + escTxt(rec.askReply) + '</div>' : '')
-          : '<div class="msg-ask-tip">' + (askIsSingle ? '等待 TA 选择…' : '等待 TA 回答…') + '</div>') +
+          ? '<div class="msg-ask-a">✓ ' + T('TA：') + escTxt(T(rec.askAnswer || '回答了你')) + '</div>' + (rec.askReply ? '<div class="msg-choose-r">' + T('TA：') + escTxt(T(rec.askReply)) + '</div>' : '')
+          : '<div class="msg-ask-tip">' + (askIsSingle ? T('等待 TA 选择…') : T('等待 TA 回答…')) + '</div>') +
         favHeartHtml() +
         '</div>';
       body.appendChild(m);
@@ -1329,7 +1391,7 @@
     // 通话：居中卡片
     if (rec.special === 'call' || rec.special === 'call-reply' || rec.special === 'invite-reply') {
       m.className = 'msg-center';
-      m.innerHTML = '<div class="msg-center-card">' + escTxt(rec.text) + '</div>';
+      m.innerHTML = '<div class="msg-center-card">' + escTxt(T(rec.text)) + '</div>';
       body.appendChild(m);
       maybeScrollChatBottom(rec.side);
       return m;
@@ -1340,7 +1402,7 @@
     if (rec.special === 'poke' || rec.special === 'ask-msg') {
       // v3.10.x：信件通知（mail.js 写入 mailNotice）渲染为可点击样式，点击直达信箱
       m.className = 'msg-poke' + (rec.mailNotice ? ' mail-notice' : '');
-      m.innerHTML = '<span>' + pokeIconHtml(rec.text) + '</span>' +
+      m.innerHTML = '<span>' + pokeIconHtml(T(rec.text)) + '</span>' +
         (rec.img ? '<img class="msg-poke-img" src="' + attrEsc(rec.img) + '" alt="新头像">' : '');
       if (rec.mailNotice) {
         m.addEventListener('click', () => { if (window.openMailPage) window.openMailPage(); });
@@ -1364,7 +1426,7 @@
         '<div class="msg-rps-hands">' +
           '<span class="msg-rps-hand"><span class="msg-rps-ico">' + (rpsIco[rec.rpsMine] || '') + '</span><span class="msg-rps-name">你 · ' + escTxt(rpsName[rec.rpsMine] || '') + '</span></span>' +
           '<span class="msg-rps-vs">VS</span>' +
-          '<span class="msg-rps-hand"><span class="msg-rps-ico">' + (rpsIco[rec.rpsTa] || '') + '</span><span class="msg-rps-name">TA · ' + escTxt(rpsName[rec.rpsTa] || '') + '</span></span>' +
+          '<span class="msg-rps-hand"><span class="msg-rps-ico">' + (rpsIco[rec.rpsTa] || '') + '</span><span class="msg-rps-name">' + T('TA') + ' · ' + escTxt(rpsName[rec.rpsTa] || '') + '</span></span>' +
         '</div>' +
         '<div class="msg-rps-result">' + escTxt(resTxt) + '</div>' +
       '</div>';
@@ -1376,8 +1438,8 @@
     if (rec.special === 'pong') {
       m.className = 'msg-pong';
       m.innerHTML = '<div class="msg-pong-card">' +
-        '<div class="msg-pong-label">双人 Pong</div>' +
-        '<div class="msg-pong-result">' + escTxt(rec.text || '') + '</div>' +
+        '<div class="msg-pong-label">' + T('双人 Pong') + '</div>' +
+        '<div class="msg-pong-result">' + escTxt(T(rec.text || '')) + '</div>' +
       '</div>';
       body.appendChild(m);
       maybeScrollChatBottom(rec.side);
@@ -1386,12 +1448,12 @@
     // 双人贪吃蛇：居中白底卡片，双方长度/食物/得分 + 结果
     if (rec.special === 'snake') {
       m.className = 'msg-rps';
-      const snkResTxt = rec.snkResult === 'win' ? '你赢了' : rec.snkResult === 'lose' ? 'TA 赢了' : '平局';
+      const snkResTxt = rec.snkResult === 'win' ? '你赢了' : rec.snkResult === 'lose' ? T('TA 赢了') : '平局';
       const snkClr = rec.snkResult === 'win' ? '#34c759' : rec.snkResult === 'lose' ? '#ff6b6b' : '#888';
       m.innerHTML = '<div class="msg-rps-card msg-snake-card">' +
         '<div class="msg-snake-title">🐍 双人贪吃蛇</div>' +
         '<div class="msg-snake-row"><span class="msg-snake-side">你</span><span>长度 ' + rec.snkPLen + '</span><span>食物 ' + rec.snkPFood + '</span><span>' + rec.snkPScore + '分</span></div>' +
-        '<div class="msg-snake-row"><span class="msg-snake-side">TA</span><span>长度 ' + rec.snkOLen + '</span><span>食物 ' + rec.snkOFood + '</span><span>' + rec.snkOScore + '分</span></div>' +
+        '<div class="msg-snake-row"><span class="msg-snake-side">' + T('TA') + '</span><span>长度 ' + rec.snkOLen + '</span><span>食物 ' + rec.snkOFood + '</span><span>' + rec.snkOScore + '分</span></div>' +
         '<div class="msg-rps-result" style="color:' + snkClr + '">存活 ' + rec.snkTime + 's · ' + escTxt(snkResTxt) + '</div>' +
       '</div>';
       body.appendChild(m);
@@ -1472,7 +1534,7 @@
       m.innerHTML = '<div class="msg-choose-card' + (answered ? ' answered' : '') + '">' +
         '<div class="msg-ask-q">' + escTxt(rec.choiceQuestion || '') + '</div>' +
         (answered
-          ? '<div class="msg-ask-a">✓ 你选择了：' + escTxt(rec.choiceAnswer) + '</div><div class="msg-choose-r">TA：' + escTxt(rec.choiceReply) + '</div>'
+          ? '<div class="msg-ask-a">✓ 你选择了：' + escTxt(rec.choiceAnswer) + '</div><div class="msg-choose-r">' + T('TA：') + escTxt(T(rec.choiceReply)) + '</div>'
           : '<div class="msg-ask-tip">点击选择你的答案</div>') +
         favHeartHtml() +
         '</div>';
@@ -1488,8 +1550,8 @@
       m.innerHTML = '<div class="msg-choose-card' + (answered ? ' answered' : '') + '">' +
         '<div class="msg-ask-q">' + escTxt(rec.curiousQuestion || '') + '</div>' +
         (answered
-          ? '<div class="msg-ask-a">✓ 你：' + escTxt(rec.curiousAnswer) + '</div><div class="msg-choose-r">TA：' + escTxt(rec.curiousReply) + '</div>'
-          : '<div class="msg-ask-tip">点击回答 TA 的好奇</div>') +
+          ? '<div class="msg-ask-a">✓ 你：' + escTxt(rec.curiousAnswer) + '</div><div class="msg-choose-r">' + T('TA：') + escTxt(T(rec.curiousReply)) + '</div>'
+          : '<div class="msg-ask-tip">' + T('点击回答 TA 的好奇') + '</div>') +
         favHeartHtml() +
         '</div>';
       body.appendChild(m);
@@ -1504,8 +1566,8 @@
       m.innerHTML = '<div class="msg-choose-card' + (answered ? ' answered' : '') + '">' +
         '<div class="msg-ask-q">' + escTxt(rec.roastText || '') + '</div>' +
         (answered
-          ? '<div class="msg-ask-a">✓ 你：' + escTxt(rec.roastAnswer) + '</div><div class="msg-choose-r">TA：' + escTxt(rec.roastReply) + '</div>'
-          : '<div class="msg-ask-tip">点击回 TA 一句</div>') +
+          ? '<div class="msg-ask-a">✓ 你：' + escTxt(rec.roastAnswer) + '</div><div class="msg-choose-r">' + T('TA：') + escTxt(T(rec.roastReply)) + '</div>'
+          : '<div class="msg-ask-tip">' + T('点击回 TA 一句') + '</div>') +
         favHeartHtml() +
         '</div>';
       body.appendChild(m);
@@ -1522,8 +1584,8 @@
       m.innerHTML = '<div class="msg-ask-card' + (answered ? ' answered' : '') + '">' +
         '<div class="msg-ask-q">' + escTxt(rec.askQuestion || rec.text) + '</div>' +
         (answered
-          ? '<div class="msg-ask-a">✓ 已回答：' + escTxt(rec.askAnswer) + '</div>' + (rec.askReply ? '<div class="msg-choose-r">TA：' + escTxt(rec.askReply) + '</div>' : '')
-          : '<div class="msg-ask-tip">' + (isSingle ? '点击选择你的答案' : '点击回答 TA 的提问') + '</div>') +
+          ? '<div class="msg-ask-a">✓ 已回答：' + escTxt(rec.askAnswer) + '</div>' + (rec.askReply ? '<div class="msg-choose-r">' + T('TA：') + escTxt(T(rec.askReply)) + '</div>' : '')
+          : '<div class="msg-ask-tip">' + (isSingle ? '点击选择你的答案' : T('点击回答 TA 的提问')) + '</div>') +
         favHeartHtml() +
         '</div>';
       body.appendChild(m);
@@ -1599,7 +1661,7 @@
           }).join('') + '</div>';
       }
       if (textPart) {
-        inner += '<span style="opacity:.85;word-break:break-word">' + escTxtBr(textPart) + '</span>';
+        inner += '<span style="opacity:.85;word-break:break-word">' + escTxtBr(T(textPart)) + '</span>';
       }
       b.innerHTML = rec.quote
         ? quoteHtml(rec.quote, rec.qside) + inner
@@ -1619,7 +1681,7 @@
       for (let i = 0; i < segs.length; i++) {
         if (!rcs.some(r => r.idx === i)) {
           if (segHtml) segHtml += ' ';
-          segHtml += escTxtBr(segs[i]);
+          segHtml += escTxtBr(T(segs[i]));
         }
       }
       let sub = '';
@@ -1643,7 +1705,7 @@
       // v3.5.131：文本转义（用户输入含 < 会破坏气泡结构/注入 HTML）
       // v3.6.x：升级为完整转义（只转 < 可被 `&lt;…&gt;` 实体绕过）
       // v3.7.x：多行文本 \n 转 <br>（占卜结果等多行消息排版正常）
-      const escTxtS = escTxtBr(rec.text);
+      const escTxtS = escTxtBr(T(rec.text));
       b.innerHTML = rec.quote
         ? quoteHtml(rec.quote, rec.qside) + '<span style="opacity:.85">' + escTxtS + '</span>'
         : '<span style="opacity:.85">' + escTxtS + '</span>';
@@ -1657,7 +1719,7 @@
       rec.mood.forEach((md, mi) => {
         // v3.7.x：被撤的情绪字卡不再直接隐藏——收进「撤回胶囊」，可展开查看原内容
         if (rec.retractedMood && rec.retractedMood.indexOf(mi) >= 0) { recalled.push(md); return; }
-        const mt = escTxt(md.tag), ml = escTxt(md.label);
+          const mt = escTxt(T(md.tag)), ml = escTxt(T(md.label));
         if (md.tag === '交流意图') {
           mm.innerHTML += '<div class="msg-mood msg-intent"><span class="msg-mood-tag">' + mt + '</span><span>' + ml + '</span></div>';
         } else {
@@ -1687,7 +1749,7 @@
     // 点击联系人消息左侧头像 → 打开拍一拍半框，对 TA 使用拍一拍
     if (rec.side === 'in') {
       av.style.cursor = 'pointer';
-      av.title = '对 TA 拍一拍';
+      av.title = T('对 TA 拍一拍');
       av.addEventListener('click', (e) => {
         e.stopPropagation();
         openPokeCard();
@@ -1910,7 +1972,7 @@
     }
     if (!deskMsgEl || !deskMsgEnabled()) return;
     if (deskMsgText) deskMsgText.textContent = notifyT;
-    if (deskMsgName) deskMsgName.textContent = opts.name || store.get('lbl-partner') || 'TA';
+    if (deskMsgName) deskMsgName.textContent = opts.name || store.get('lbl-partner') || (window.taWord ? window.taWord() : 'TA');
     if (deskMsgAv) {
       // v3.7.x：跨桌面通知（朋友圈等）弹窗头像用发布者头像（opts.av），
       // 普通聊天消息仍用当前桌面 TA 头像
@@ -1977,7 +2039,7 @@
   }
   function showDeskMsg(rec) {
     const info = extractDeskMsg(rec);
-    const name = store.get('lbl-partner') || 'TA';
+    const name = store.get('lbl-partner') || (window.taWord ? window.taWord() : 'TA');
     // v3.5.145：页面在后台 → 无论是否在聊天页都发系统通知（聊天页切后台，
     // TA 回复到达也要提醒）；showDeskPopup 内部 hidden 分支发通知
     // v3.5.157：imgSub 传给 showDeskPopup，后台通知正文据此补 [表情包]/[图片] 占位
@@ -2151,7 +2213,16 @@
     }
     // v3.9.x：时间分隔线样式下，新消息与上一条间隔足够大 → 插入居中时间胶囊
     maybeInsertDivider(msgs.length - 1);
-    return renderMsg(rec);
+    const el = renderMsg(rec);
+    // v3.12.x：增量追加必须同步推进渲染窗口终点——renderEnd 只在整窗重建/上下增量
+    // 加载时更新，这里不推进的话 renderEnd<msgs.length，贴底状态下下一次 scroll 事件
+    // （收到消息的自动贴底/用户轻扫/发送后的补偿滚动）就会命中 loadNewerIncremental，
+    // 把 [renderEnd,msgs.length) 原样重画一遍 → 同一条联系人消息/卡片出现两个气泡；
+    // 我方发送常走整窗重建分支把重复冲掉，观感即"只有 TA 侧翻倍、我一发消息就恢复"。
+    // 仅无缺口（renderEnd 恰指到本条之前）时直接推进；有缺口（深翻历史被裁过尾）保持
+    // 不动，由 loadNewerIncremental 补画（其内部按 data-idx 跳过已渲染节点防重）。
+    if (renderEnd >= msgs.length - 1) renderEnd = msgs.length;
+    return el;
   }
   function addIn(text, opts) {
     opts = opts || {};
@@ -2161,7 +2232,7 @@
     if (!opts.special && !opts.silent && window.playSfx) window.playSfx('in');
     // v3.6.x：主动发送标识——标记 initiative，渲染时气泡左上角显示小爱心
     // 注意：必须在此透传给 addRec（曾漏传导致爱心从不显示）
-    return addRec({ side: 'in', text: text, initiative: opts.initiative, special: opts.special, quote: opts.quote, type: opts.type, img: opts.img, parts: opts.parts, mailNotice: opts.mailNotice, askQuestion: opts.askQuestion, askStatus: opts.askStatus, askOptions: opts.askOptions, askType: opts.askType, choiceQuestion: opts.choiceQuestion, choiceOptions: opts.choiceOptions, choicePref: opts.choicePref, choiceCat: opts.choiceCat, choiceStatus: opts.choiceStatus, choiceAnswer: opts.choiceAnswer, choiceReply: opts.choiceReply, choiceMatch: opts.choiceMatch, curiousQuestion: opts.curiousQuestion, curiousQuick: opts.curiousQuick, curiousReplies: opts.curiousReplies, curiousFollowup: opts.curiousFollowup, curiousQid: opts.curiousQid, curiousCat: opts.curiousCat, curiousStatus: opts.curiousStatus, curiousAnswer: opts.curiousAnswer, curiousReply: opts.curiousReply, roastText: opts.roastText, roastCat: opts.roastCat, roastStatus: opts.roastStatus, roastAnswer: opts.roastAnswer, roastReply: opts.roastReply, rpAmount: opts.rpAmount, rpWish: opts.rpWish, rpStatus: opts.rpStatus, rpTs: opts.rpTs, rpCover: opts.rpCover });
+    return addRec({ side: 'in', text: text, initiative: opts.initiative, special: opts.special, quote: opts.quote, qidx: opts.qidx, type: opts.type, img: opts.img, parts: opts.parts, mailNotice: opts.mailNotice, askQuestion: opts.askQuestion, askStatus: opts.askStatus, askOptions: opts.askOptions, askType: opts.askType, choiceQuestion: opts.choiceQuestion, choiceOptions: opts.choiceOptions, choicePref: opts.choicePref, choiceCat: opts.choiceCat, choiceStatus: opts.choiceStatus, choiceAnswer: opts.choiceAnswer, choiceReply: opts.choiceReply, choiceMatch: opts.choiceMatch, curiousQuestion: opts.curiousQuestion, curiousQuick: opts.curiousQuick, curiousReplies: opts.curiousReplies, curiousFollowup: opts.curiousFollowup, curiousQid: opts.curiousQid, curiousCat: opts.curiousCat, curiousStatus: opts.curiousStatus, curiousAnswer: opts.curiousAnswer, curiousReply: opts.curiousReply, roastText: opts.roastText, roastCat: opts.roastCat, roastStatus: opts.roastStatus, roastAnswer: opts.roastAnswer, roastReply: opts.roastReply, rpAmount: opts.rpAmount, rpWish: opts.rpWish, rpStatus: opts.rpStatus, rpTs: opts.rpTs, rpCover: opts.rpCover });
   }
   function addOut(text) {
     return addRec({ side: 'out', text: text });
@@ -2243,7 +2314,7 @@
     // 就地更新已渲染的卡片
     const el = body.querySelector('.msg-ask[data-idx="' + msgIdx + '"]');
     if (el) {
-      el.innerHTML = '<div class="msg-choose-card answered"><div class="msg-ask-q">' + escTxt(rec.choiceQuestion || '') + '</div><div class="msg-ask-a">✓ 你选择了：' + escTxt(answer) + '</div><div class="msg-choose-r">TA：' + escTxt(reply || '…') + '</div>' + favHeartHtml() + '</div>';
+      el.innerHTML = '<div class="msg-choose-card answered"><div class="msg-ask-q">' + escTxt(rec.choiceQuestion || '') + '</div><div class="msg-ask-a">✓ 你选择了：' + escTxt(answer) + '</div><div class="msg-choose-r">' + (window.taFit ? window.taFit('TA：') : 'TA：') + escTxt(window.taFit ? window.taFit(reply || '…') : (reply || '…')) + '</div>' + favHeartHtml() + '</div>';
     }
   };
   // 回答 TA 的好奇（开放式）：更新记录 + 插入"我的回答"和 TA 回应（含 30% 追问）
@@ -2261,7 +2332,7 @@
     taFavCard(rec);
     const el = body.querySelector('.msg-ask[data-idx="' + msgIdx + '"]');
     if (el) {
-      el.innerHTML = '<div class="msg-choose-card answered"><div class="msg-ask-q">' + escTxt(rec.curiousQuestion || '') + '</div><div class="msg-ask-a">✓ 你：' + escTxt(answer) + '</div><div class="msg-choose-r">TA：' + escTxt(reply || '…') + '</div>' + favHeartHtml() + '</div>';
+      el.innerHTML = '<div class="msg-choose-card answered"><div class="msg-ask-q">' + escTxt(rec.curiousQuestion || '') + '</div><div class="msg-ask-a">✓ 你：' + escTxt(answer) + '</div><div class="msg-choose-r">' + (window.taFit ? window.taFit('TA：') : 'TA：') + escTxt(window.taFit ? window.taFit(reply || '…') : (reply || '…')) + '</div>' + favHeartHtml() + '</div>';
     }
   };
   // 回应 TA 的吐槽：更新记录 + 插入"我的回应"和 TA 回应
@@ -2278,7 +2349,7 @@
     taFavCard(rec);
     const el = body.querySelector('.msg-ask[data-idx="' + msgIdx + '"]');
     if (el) {
-      el.innerHTML = '<div class="msg-choose-card answered"><div class="msg-ask-q">' + escTxt(rec.roastText || '') + '</div><div class="msg-ask-a">✓ 你：' + escTxt(answer) + '</div><div class="msg-choose-r">TA：' + escTxt(reply || '…') + '</div>' + favHeartHtml() + '</div>';
+      el.innerHTML = '<div class="msg-choose-card answered"><div class="msg-ask-q">' + escTxt(rec.roastText || '') + '</div><div class="msg-ask-a">✓ 你：' + escTxt(answer) + '</div><div class="msg-choose-r">' + (window.taFit ? window.taFit('TA：') : 'TA：') + escTxt(window.taFit ? window.taFit(reply || '…') : (reply || '…')) + '</div>' + favHeartHtml() + '</div>';
     }
   };
   // 回答 TA 的询问：更新记录 + 插入"我的回答"和 TA 回复消息
@@ -2309,7 +2380,7 @@
     // 就地更新已渲染的询问卡片
     const el = body.querySelector('.msg-ask[data-idx="' + msgIdx + '"]');
     if (el) {
-      el.innerHTML = '<div class="msg-ask-card answered"><div class="msg-ask-q">' + escTxt(rec.askQuestion || '') + '</div><div class="msg-ask-a">✓ 已回答：' + escTxt(answer) + '</div><div class="msg-choose-r">TA：' + escTxt(taReply) + '</div>' + favHeartHtml() + '</div>';
+      el.innerHTML = '<div class="msg-ask-card answered"><div class="msg-ask-q">' + escTxt(rec.askQuestion || '') + '</div><div class="msg-ask-a">✓ 已回答：' + escTxt(answer) + '</div><div class="msg-choose-r">' + (window.taFit ? window.taFit('TA：') : 'TA：') + escTxt(window.taFit ? window.taFit(taReply) : taReply) + '</div>' + favHeartHtml() + '</div>';
     }
     return taReply;
   };
@@ -2474,7 +2545,11 @@ function partialRetractMsg(msgEl, side) {
     // 句1/句2/句3 会排多个回复轮，若执行时才读，各轮拿到的都是最后一条（引用永远
     // 指向最后一句），且多轮都命中 quote-prob 会连续引用同一条消息。改为每轮引用
     // 触发它的那条消息（句1 的回复轮引用句1，句3 的回复轮引用句3）。
+    // v3.12.x：经 syncLastMineText 重扫取「文本+下标」成对快照——下标写入 TA 引用的
+    // qidx，点引用块可跳回原消息；顺带保证不引用已撤回内容。
+    syncLastMineText();
     const quoteSrc = lastMineText;
+    const quoteSrcIdx = lastMineIdx;
     const c = cfg();
     if (hit(c['rn-prob'])) {
       setTimeout(() => { if (!sameCid()) return; addIn('', { special: 'read' }); }, randInt(1000, 4000));
@@ -2511,7 +2586,7 @@ function partialRetractMsg(msgEl, side) {
           hideTyping();
           const q = (wantQuote && i === 0 && quoteSrc !== lastQuotedText) ? quoteSrc : null;
           if (q) lastQuotedText = q;
-          replyOnce(c, q, i > 0);
+          replyOnce(c, q, i > 0, q ? quoteSrcIdx : -1);
           // 还有下一条时继续显示「正在输入」
           if (i < count - 1) showTyping();
           // 最后一条回复完成后：音乐 TA 可能请求一起听歌（延后 2 秒）
@@ -2524,7 +2599,7 @@ function partialRetractMsg(msgEl, side) {
   }
   // 单条回复：生成内容 + 发送 + 收藏/情绪/撤回 附带逻辑（供普通回复与「让对方继续说」共用）
   // v3.7.x：silent——一轮多条回复时第 2+ 条不响音效（每轮只响一次）
-  function replyOnce(c, quote, silent) {
+  function replyOnce(c, quote, silent, quoteIdx) {
     try { console.log('[mochi-reply] replyOnce #%s quote=%s silent=%s', (window.__replyOnceDiag=(window.__replyOnceDiag||0)+1), !!quote, !!silent); } catch(e){}
     // v3.7.x：同 scheduleReply，回调执行时若已切联系人则放弃（防串桌面）
     const myCid = window.__activeCid || 'default';
@@ -2535,7 +2610,7 @@ function partialRetractMsg(msgEl, side) {
       try { const _w = window.periodWarmText(rep.text); if (_w) rep.text = _w; } catch (e) {}
     }
     // 引用我的消息：quote 是我发的文本，qside='out'（我发）
-    const m = addIn(rep.text, { quote: quote, qside: 'out', type: rep.type, parts: rep.parts, silent: silent });
+    const m = addIn(rep.text, { quote: quote, qside: 'out', qidx: quote ? quoteIdx : undefined, type: rep.type, parts: rep.parts, silent: silent });
     // TA 收藏夹：联系人有概率收藏我发的最新一条消息（独立于情绪系统，任何回复后判定）
     // v3.7.x：概率可调（收藏设置页），默认 30%
     const _favProbMsg = (window.favCfg ? window.favCfg().taMsg : 30);
@@ -2673,6 +2748,8 @@ function partialRetractMsg(msgEl, side) {
     });
   }
   let lastMineText = '';
+  // v3.12.x：lastMineText 对应消息的 msgs 下标——TA 引用时写入新记录的 qidx（点引用块跳回原消息）
+  let lastMineIdx = -1;
   // v3.7.x：TA 上次实际引用过的文本——同内容不连续引用（防并发回复轮连续引用同一句）
   let lastQuotedText = '';
   // v3.6.x：撤回/编辑我的消息后重新扫描最后一条可见的"我"的消息，
@@ -2682,10 +2759,12 @@ function partialRetractMsg(msgEl, side) {
       const m = msgs[i];
       if (m && m.side === 'out' && !m.retracted && typeof m.text === 'string' && m.text) {
         lastMineText = m.text;
+        lastMineIdx = i;
         return;
       }
     }
     lastMineText = '';
+    lastMineIdx = -1;
   }
 
   // 生成一条回复文本：每条消息多字卡回复命中 → 多卡空格拼接；否则单卡（默认字卡按概率混入）
@@ -3657,7 +3736,7 @@ function partialRetractMsg(msgEl, side) {
     if (st === 'received') return '已领取';
     if (st === 'expired') return '已过期·退回';
     if (st === 'returned') return '已退回';
-    return rec.side === 'in' ? '待领取' : '待TA领取';
+    return rec.side === 'in' ? '待领取' : (window.taFit ? window.taFit('待TA领取') : '待TA领取');
   }
   function rpStatusCls(rec) {
     const st = rec.rpStatus || 'pending';
@@ -3793,8 +3872,33 @@ function partialRetractMsg(msgEl, side) {
     const el = document.getElementById('rp-balance');
     if (!el) return;
     const w = rpWalletGet();
-    el.textContent = '我的 ¥' + (w.myBalance / 100).toFixed(2) + ' · TA ¥' + (w.systemBalance / 100).toFixed(2);
+    el.textContent = '我的 ¥' + (w.myBalance / 100).toFixed(2) + ' · TA ¥' + (w.systemBalance / 100).toFixed(2) + ' · 点此设置金额';
   }
+  // 钱包金额设置：点余额行依次弹「我的钱包」「TA 的钱包」输入（单位元，两位小数；留空 = 保持不变）
+  function rpEditWallet() {
+    if (!window.openModal) return;
+    window.openModal('我的钱包金额（元）', (rpWalletGet().myBalance / 100).toFixed(2), (v) => {
+      const s = String(v == null ? '' : v).trim();
+      if (s !== '') {
+        const n = parseFloat(s);
+        if (isNaN(n) || n < 0) { toast('金额无效，未修改'); return; }
+        const w = rpWalletGet(); w.myBalance = Math.round(n * 100); rpWalletSet(w); rpRenderBalance();
+      }
+      // 二级弹窗要等上一个 close 完成后再开（照 accounting.js manageCats 先例延迟 60ms）
+      setTimeout(() => {
+        window.openModal('TA 的钱包金额（元）', (rpWalletGet().systemBalance / 100).toFixed(2), (v2) => {
+          const s2 = String(v2 == null ? '' : v2).trim();
+          if (s2 === '') { toast('钱包金额未改动'); return; }
+          const n2 = parseFloat(s2);
+          if (isNaN(n2) || n2 < 0) { toast('金额无效，未修改'); return; }
+          const w = rpWalletGet(); w.systemBalance = Math.round(n2 * 100); rpWalletSet(w); rpRenderBalance();
+          toast('钱包金额已更新');
+        });
+      }, 60);
+    });
+  }
+  const rpBalanceEl = document.getElementById('rp-balance');
+  if (rpBalanceEl) rpBalanceEl.addEventListener('click', (e) => { e.stopPropagation(); rpEditWallet(); });
 
   // 红包封面预设：存 ls + idb（大键），键 {prefix}:rp-cover
   const RP_COVER_KEY = 'rp-cover';
@@ -3895,7 +3999,7 @@ function partialRetractMsg(msgEl, side) {
       if (amtFen > wallet.myBalance) { toast('我的余额不足'); return; }
       wallet.myBalance -= amtFen;
     } else {
-      if (amtFen > wallet.systemBalance) { toast('TA 余额不足'); return; }
+      if (amtFen > wallet.systemBalance) { toast(window.taFit ? window.taFit('TA 余额不足') : 'TA 余额不足'); return; }
       wallet.systemBalance -= amtFen;
     }
     rpWalletSet(wallet);
@@ -4453,7 +4557,7 @@ function partialRetractMsg(msgEl, side) {
           taFavCard(rec);
           const el = body.querySelector('.msg-ask[data-idx="' + inviteIdx + '"]');
           if (el) {
-            el.innerHTML = '<div class="msg-ask-card answered"><div class="msg-ask-q">邀请TA · ' + escTxt(content) + '</div><div class="msg-ask-a">✓ ' + escTxt(answer) + '</div>' + favHeartHtml() + '</div>';
+            el.innerHTML = '<div class="msg-ask-card answered"><div class="msg-ask-q">' + (window.taFit ? window.taFit('邀请TA') : '邀请TA') + ' · ' + escTxt(content) + '</div><div class="msg-ask-a">✓ ' + escTxt(window.taFit ? window.taFit(answer) : answer) + '</div>' + favHeartHtml() + '</div>';
           }
         }
         try {
@@ -4501,7 +4605,7 @@ function partialRetractMsg(msgEl, side) {
           saveMsgs();
           const el = body.querySelector('.msg-ask[data-idx="' + askIdx + '"]');
           if (el) {
-            el.innerHTML = '<div class="msg-ask-card answered"><div class="msg-ask-q">问问TA · ' + escTxt(content) + '</div><div class="msg-ask-a">✓ TA：' + escTxt(text) + '</div>' + favHeartHtml() + '</div>';
+            el.innerHTML = '<div class="msg-ask-card answered"><div class="msg-ask-q">' + (window.taFit ? window.taFit('问问TA') : '问问TA') + ' · ' + escTxt(content) + '</div><div class="msg-ask-a">✓ ' + (window.taFit ? window.taFit('TA：') : 'TA：') + escTxt(window.taFit ? window.taFit(text) : text) + '</div>' + favHeartHtml() + '</div>';
           }
         }
         addIn(text);
@@ -4629,20 +4733,8 @@ function partialRetractMsg(msgEl, side) {
       el.addEventListener('click', () => {
         const idx = Number(el.dataset.sidx);
         closeChatSearch();
-        let target = body.querySelector('.msg[data-idx="' + idx + '"]');
-        // v3.6.x：分页渲染下目标可能落在未渲染的旧消息区 → 扩窗后跳转
-        if (!target && idx < renderStart) {
-          renderStart = Math.max(0, idx - JUMP_VIEW);
-          renderWindow(true, false);
-          target = body.querySelector('.msg[data-idx="' + idx + '"]');
-        }
-        if (target) {
-          try { target.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) { target.scrollIntoView(); }
-          target.classList.add('highlight');
-          setTimeout(() => target.classList.remove('highlight'), 2200);
-        } else {
-          body.scrollTop = body.scrollHeight;
-        }
+        // v3.12.x：扩窗+滚动+高亮抽为 jumpToMsg（引用块点击跳转共用同一实现）
+        if (!jumpToMsg(idx)) body.scrollTop = body.scrollHeight;
       });
     });
   }
@@ -4923,11 +5015,76 @@ function partialRetractMsg(msgEl, side) {
     if (msgActions) msgActions.hidden = true;
     activeMsgEl = null;
   }
+  // v3.12.x：点击引用块跳转到被引用的原消息。
+  // 新引用在记录上带 qidx（被引消息的 msgs 下标）；旧数据无 qidx 时按内容就近匹配：
+  // 用与长按「引用」相同的快照规则重建候选消息的引用文案再比对（向前取第一条命中）。
+  function quoteSnapOf(m) {
+    let qi = (m.parts || []).filter(p => p.k === 'img').map(p => p.v).slice(0, 3);
+    if (!qi.length && (m.type === 'sticker' || m.type === 'image')
+        && typeof m.text === 'string'
+        && (m.text.indexOf('data:') === 0 || /^https?:\/\//i.test(m.text))) {
+      qi.push(m.text);
+    }
+    let qt = m.text;
+    if (m.type === 'voice') qt = '[语音] ' + String(qt || '').split('|||')[0];
+    else if (m.type === 'sticker') qt = '表情包';
+    else if (qi.length && (String(qt || '').indexOf('data:') === 0 || /^https?:\/\//i.test(String(qt || '')))) qt = '图片';
+    return qi.length ? { t: qt, imgs: qi } : qt;
+  }
+  function quoteEq(a, b) {
+    if (a === b) return true;
+    if (a && b && typeof a === 'object' && typeof b === 'object') return (a.t || '') === (b.t || '') && (a.imgs || []).join() === (b.imgs || []).join();
+    return false;
+  }
+  function resolveQuoteTarget(selfIdx) {
+    const rec = msgs[selfIdx];
+    if (!rec || !rec.quote) return -1;
+    const qs = rec.qside || 'out';
+    // ① qidx 直查：目标存在、同方向、未撤回、在当前消息之前才采信；
+    //    删除/重排造成的下标漂移由 ② 内容匹配兜底
+    if (typeof rec.qidx === 'number' && rec.qidx >= 0 && rec.qidx < selfIdx) {
+      const t = msgs[rec.qidx];
+      if (t && !t.retracted && t.side === qs) return rec.qidx;
+    }
+    for (let i = selfIdx - 1; i >= 0; i--) {
+      const m = msgs[i];
+      if (!m || m.retracted || m.side !== qs) continue;
+      if (quoteEq(rec.quote, quoteSnapOf(m))) return i;
+    }
+    return -1;
+  }
+  // 跳到指定下标的消息：分页窗口外先扩窗，滚动到视口中央并高亮闪烁（搜索跳转共用）
+  function jumpToMsg(idx) {
+    let target = body.querySelector('.msg[data-idx="' + idx + '"]');
+    if (!target && idx < renderStart) {
+      renderStart = Math.max(0, idx - JUMP_VIEW);
+      renderWindow(true, false);
+      target = body.querySelector('.msg[data-idx="' + idx + '"]');
+    }
+    if (!target) return false;
+    try { target.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) { target.scrollIntoView(); }
+    target.classList.add('highlight');
+    setTimeout(() => target.classList.remove('highlight'), 2200);
+    return true;
+  }
+  // 引用块点击委托——点引用区域只做「跳回原消息」，不弹操作菜单
+  if (body) {
+    body.addEventListener('click', (e) => {
+      const qb = e.target.closest('.msg-quote');
+      if (!qb) return;
+      const item = qb.closest('.msg');
+      if (!item || item.dataset.idx === undefined) return;
+      const tIdx = resolveQuoteTarget(Number(item.dataset.idx));
+      if (tIdx < 0 || !jumpToMsg(tIdx)) toast('未找到原消息');
+    });
+  }
   // 气泡点击弹出操作菜单
   if (body) {
     body.addEventListener('click', (e) => {
       const b = e.target.closest('.msg-bubble');
       if (!b) { closeMsgActions(); return; }
+      // v3.12.x：点引用块交给上方委托做「跳转原消息」，不弹操作菜单
+      if (e.target.closest('.msg-quote')) return;
       const item = b.closest('.msg');
       if (!item) return;
       // 特殊消息不弹菜单（已读不回/拍一拍/撤回提示/局部撤回胶囊）
@@ -5011,7 +5168,8 @@ function partialRetractMsg(msgEl, side) {
           } else if (qimgs.length && (String(qtext || '').indexOf('data:') === 0 || /^https?:\/\//i.test(String(qtext || '')))) {
             qtext = '图片';
           }
-          lastQuote = { side: rec.side, text: qtext, type: rec.type, imgs: qimgs };
+          // v3.12.x：记录被引消息下标——发送后写入新消息的 qidx，点引用块可跳回原消息
+          lastQuote = { side: rec.side, text: qtext, type: rec.type, imgs: qimgs, idx: idx };
           renderDraft();
         }
         closeMsgActions();
@@ -5173,9 +5331,9 @@ function partialRetractMsg(msgEl, side) {
         const label = FAV_KIND_LABEL[f.special] || '互动卡片';
         let html = '<div class="fav-item-card">' +
           '<span class="fav-item-tag">互动卡片 · ' + label + '</span>' +
-          '<div class="fav-item-q">' + (f.special === 'invite' ? '邀请TA · ' : '') + escTxt(f.q || '') + '</div>';
+          '<div class="fav-item-q">' + (f.special === 'invite' ? (window.taFit ? window.taFit('邀请TA') : '邀请TA') + ' · ' : '') + escTxt(f.q || '') + '</div>';
         if (f.mine) html += '<div class="fav-item-a">✓ 我：' + escTxt(f.mine) + '</div>';
-        if (f.ta) html += '<div class="fav-item-r">TA：' + escTxt(f.ta) + '</div>';
+        if (f.ta) html += '<div class="fav-item-r">' + (window.taFit ? window.taFit('TA：') : 'TA：') + escTxt(window.taFit ? window.taFit(f.ta) : f.ta) + '</div>';
         if (!f.mine && !f.ta) html += '<div class="fav-item-tip">等待回应…</div>';
         html += '</div>';
         m.innerHTML = html + side;
@@ -5340,7 +5498,7 @@ function partialRetractMsg(msgEl, side) {
   }
 
   // ---- 表情包面板：TA 的表情包 + 我的表情包（v3.5.31）----
-  // 我的表情包独立存储（my-emoji-groups）：可新建/管理分组、批量管理、添加表情
+  // 我的表情包独立存储（v3.12.x 起全局键 my-emoji-groups，各桌面互通）：可新建/管理分组、批量管理、添加表情
   const emojiPanel = document.getElementById('emoji-panel');
   const emojiList = document.getElementById('emoji-list');
   const emojiClose = document.getElementById('emoji-close');
@@ -5359,7 +5517,20 @@ function partialRetractMsg(msgEl, side) {
   let emojiInsertCb = null;    // v3.6.x：写信/回信「插入模式」回调（点击表情插入信纸）
   // v3.11.x：插入模式放行链接表情（非 data:）——群聊发送用（信纸场景仍只支持 data: 内联图）
   let emojiInsertAllowUrl = false;
-  function MYE_KEY() { return window.activePrefix() + ':my-emoji-groups'; }
+  // v3.12.x：我的表情包改全局共享——原按桌面隔离（xy-home-v2:<cid>:my-emoji-groups），
+  // 每个联系人桌面各一份，切桌面就「换了一批」；现统一存全局根键
+  // xy-home-v2:my-emoji-groups，所有桌面读写同一份（需求：我的表情包每个桌面数据互通）。
+  // 存量各桌面数据由下方迁移块在数据就绪后一次性合并进全局键（幂等，标记 mye-global-migrated）。
+  const MYE_G_PREFIX = 'xy-home-v2';
+  function myEmojiStore() { return window.xyStore(MYE_G_PREFIX); }
+  function MYE_KEY() { return MYE_G_PREFIX + ':my-emoji-groups'; }
+  // v3.12.x：「隐藏联系人的表情包」开关（聊天设置，全局键 hide-ta-sticker）——开启后
+  // 表情包面板隐藏 TA 的/公用 tab、只显示「我的表情包」；朋友圈评论面板读同一键。
+  // 开关本身全局生效（面板 UI 跨桌面共用），故走根命名空间而非桌面 store。
+  function taStickerHidden() {
+    try { if (window.xyStore) return window.xyStore(MYE_G_PREFIX).get('hide-ta-sticker') === '1'; } catch (e) {}
+    try { return store.get('hide-ta-sticker') === '1'; } catch (e) { return false; }
+  }
   // v3.7.x：启动即从 localStorage 加载我的表情包——原实现只靠「IDB 内容更多才覆盖」
   // 的恢复块，LS 与 IDB 一致时（正常双写后刷新）myGroups 永远是空数组，
   // 刷新后我的表情包整组消失（与 chatcard.js cc-groups 的 loadGroups 模式对齐；
@@ -5382,34 +5553,32 @@ function partialRetractMsg(msgEl, side) {
   })();
 
   // ---- 我的表情包数据：localStorage + IndexedDB 双写（失败检测 + 兜底恢复）----
+  // v3.12.x：读写走全局根 store（不再随桌面切换）
   function myEmojiLoad() {
-    try { const v = JSON.parse(store.get('my-emoji-groups') || 'null'); if (Array.isArray(v)) return v; } catch (e) {}
+    try { const v = JSON.parse(myEmojiStore().get('my-emoji-groups') || 'null'); if (Array.isArray(v)) return v; } catch (e) {}
     return [];
   }
   function myEmojiSave() {
     const data = JSON.stringify(myGroups);
     // 统一走适配层：localStorage 快照 + IndexedDB 权威（配额满也不丢，启动自动恢复）
-    store.set('my-emoji-groups', data);
+    myEmojiStore().set('my-emoji-groups', data);
     return true;
   }
   // 启动恢复：IDB 内容更多优先（与字卡库一致，防配额丢数据）
-  // v3.9.x：发起时捕获 myPrefix，回调校验桌面归属——否则慢 IDB（OPPO Chrome）下
-  // 启动的 idbGet 迟到返回，用动态 store 把旧桌面表情包写进新桌面（串桌面/丢失）。
   // v3.9.x：读到 undefined（慢 IDB 首次失败）延迟重试，防「我的表情包」整组消失。
+  // v3.12.x：全局键后无「切桌面串写」问题，去掉桌面归属校验（原 myPrefix 守卫删除）。
   (function () {
     if (!window.idbGet) return;
-    const myPrefix = window.activePrefix();
     let retry = 0;
     function tryRestore() {
       window.idbGet(MYE_KEY()).then(v => {
-        if (window.activePrefix() !== myPrefix) return; // 已切桌面，作废
         if (!v) { if (retry < 3) { retry++; setTimeout(tryRestore, 800 * retry); } return; }
         try {
           const data = typeof v === 'string' ? JSON.parse(v) : v;
           if (!Array.isArray(data)) return;
           const cnt = (g) => { let n = 0; g.forEach(x => n += (Array.isArray(x[1]) ? x[1].length : 0)); return n; };
           let local = null;
-          try { local = JSON.parse(store.get('my-emoji-groups') || 'null'); } catch (e) {}
+          try { local = JSON.parse(myEmojiStore().get('my-emoji-groups') || 'null'); } catch (e) {}
           const lc = Array.isArray(local) ? cnt(local) : -1;
           if (lc < 0 || cnt(data) > lc) {
             myGroups = data;
@@ -5419,6 +5588,70 @@ function partialRetractMsg(msgEl, side) {
       });
     }
     tryRestore();
+  })();
+
+  // ---- v3.12.x：存量各桌面「我的表情包」一次性合并迁移到全局键（幂等） ----
+  // 升级前数据按桌面存 xy-home-v2:<cid>:my-emoji-groups；更老版本顶层键
+  // xy-home-v2:my-emoji-groups（defaultStore 回退落点）恰好就是新全局键。
+  // 迁移把 当前全局键 + 各联系人桌面键 + 顶层旧键 合并去重（同名分组并组、组内按
+  // 字符串去重），写回全局键后清除各桌面键。时序：等 mochi-restore-done /
+  // __mochiDataReady（IDB 整体回填就绪），防止把尚未恢复的空库当「无存量」误清；
+  // 源数据在 LS/memoryCache 快照与 IDB 权威值之间都参与合并（大键可能只在 IDB）。
+  (function () {
+    const gStore = myEmojiStore();
+    let started = false;
+    const cntOf = (g) => { let n = 0; (g || []).forEach(x => n += (Array.isArray(x[1]) ? x[1].length : 0)); return n; };
+    function parseArr(v) {
+      try { const d = typeof v === 'string' ? JSON.parse(v) : v; if (Array.isArray(d)) return d; } catch (e) {}
+      return null;
+    }
+    function mergeInto(merged, src) {
+      (src || []).forEach(g => {
+        if (!g || typeof g[0] !== 'string' || !Array.isArray(g[1])) return;
+        let t = merged.find(x => x[0] === g[0]);
+        if (!t) { t = [g[0], []]; merged.push(t); }
+        g[1].forEach(item => { if (t[1].indexOf(item) < 0) t[1].push(item); });
+      });
+    }
+    function finish(merged) {
+      try {
+        if (cntOf(merged)) gStore.set('my-emoji-groups', JSON.stringify(merged));
+        (window.getContacts ? window.getContacts() : [{ id: 'default' }]).forEach(c => {
+          try { window.storeFor(c.id || 'default').remove('my-emoji-groups'); } catch (e) {}
+        });
+        try { gStore.set('mye-global-migrated', '1'); } catch (e) {}
+      } catch (e) { try { gStore.set('mye-global-migrated', '1'); } catch (e2) {} }
+      if (cntOf(merged) && cntOf(merged) !== cntOf(myGroups)) {
+        myGroups = merged;
+        if (!emojiPanel.hidden) renderEmojiPanel();
+      }
+    }
+    function run() {
+      if (started) return;
+      started = true;
+      try {
+        if (gStore.get('mye-global-migrated') === '1') return;
+        // 合并顺序：当前桌面 → 其余联系人桌面 → 全局/顶层旧键（面板分组栏顺序与桌面一致）
+        const cids = ((window.getContacts && window.getContacts()) || [{ id: 'default' }]).map(c => c.id || 'default');
+        const cur = window.__activeCid || 'default';
+        const order = cids.indexOf(cur) >= 0 ? [cur].concat(cids.filter(c => c !== cur)) : cids;
+        const merged = [];
+        order.forEach(c => { try { mergeInto(merged, parseArr(window.storeFor(c).get('my-emoji-groups'))); } catch (e) {} });
+        mergeInto(merged, parseArr(gStore.get('my-emoji-groups'))); // 顶层旧键快照（= 全局键）
+        if (!window.idbGet) { finish(merged); return; }
+        const reads = order.map(c => MYE_G_PREFIX + ':' + c + ':my-emoji-groups');
+        reads.push(MYE_KEY()); // 顶层旧键 IDB 权威
+        Promise.all(reads.map(k => window.idbGet(k).catch(() => null))).then(vals => {
+          vals.forEach(v => { const d = parseArr(v); if (d) mergeInto(merged, d); });
+          finish(merged);
+        });
+      } catch (e) { try { gStore.set('mye-global-migrated', '1'); } catch (e2) {} }
+    }
+    if (window.__mochiDataReady) run();
+    else document.addEventListener('mochi-restore-done', function h() {
+      document.removeEventListener('mochi-restore-done', h);
+      run();
+    });
   })();
 
     // 待引用 → 引用块数据：有图片则对象 {t, imgs}（组合消息），否则字符串
@@ -5433,13 +5666,13 @@ function partialRetractMsg(msgEl, side) {
     // 读取文本用 textContent 代替 input.value
     const inputEl = document.getElementById('chat-input');
     const text = (inputEl ? (inputEl.textContent || '') : '').trim();
-    const quote = lastQuote ? { q: quoteValue(lastQuote), s: lastQuote.side } : null;
+    const quote = lastQuote ? { q: quoteValue(lastQuote), s: lastQuote.side, i: lastQuote.idx } : null;
     // v3.7.x：发送后清引用并刷新预览条（无文字分支也要清，否则引用条残留）
     if (quote) { lastQuote = null; renderDraft(); }
     if (text) {
       lastMineText = text;
       const rec = { side: 'out', text: text, parts: [{ k: 'text', v: text }, { k: 'img', v: src, sub: 'sticker' }] };
-      if (quote) { rec.quote = quote.q; rec.qside = quote.s; }
+      if (quote) { rec.quote = quote.q; rec.qside = quote.s; if (typeof quote.i === 'number' && quote.i >= 0) rec.qidx = quote.i; }
       addRec(rec);
       if (inputEl) inputEl.textContent = '';
       renderDraft();
@@ -5448,7 +5681,7 @@ function partialRetractMsg(msgEl, side) {
     } else {
       lastMineText = src;
       const rec = { side: 'out', text: src, type: 'sticker', parts: [{ k: 'img', v: src }] };
-      if (quote) { rec.quote = quote.q; rec.qside = quote.s; }
+      if (quote) { rec.quote = quote.q; rec.qside = quote.s; if (typeof quote.i === 'number' && quote.i >= 0) rec.qidx = quote.i; }
       addRec(rec);
       if (window.logFish) window.logFish();
       scheduleReply();
@@ -5564,6 +5797,11 @@ function partialRetractMsg(msgEl, side) {
 
   function renderEmojiPanel() {
     if (!emojiList) return;
+    // v3.12.x：开启「隐藏联系人的表情包」→ 隐藏公用/TA 的 tab，强制回到我的表情包
+    //（关闭时恢复显示；写信插入/群聊等所有入口都经这里，一处收口）
+    const hts = taStickerHidden();
+    document.querySelectorAll('#emoji-panel .emoji-tab').forEach(t => { if (t.dataset.etab !== 'mine') t.hidden = hts; });
+    if (hts && emojiMode !== 'mine') emojiMode = 'mine';
     // 头部 tab 高亮 + 动态标签（联系人昵称的分区名随当前桌面变化）
     // v3.11.x：选择器收窄到 #emoji-panel——朋友圈评论表情面板复用 .emoji-tab 类，不能误改
     document.querySelectorAll('#emoji-panel .emoji-tab').forEach(t => t.classList.toggle('sel', t.dataset.etab === emojiMode));
@@ -5620,7 +5858,7 @@ function partialRetractMsg(msgEl, side) {
 
   function openEmojiPanel() {
     if (!emojiPanel) return;
-    // v3.9.x：打开前补读新桌面 IDB 权威数据（我的表情包大键切桌面后可能只在 IDB）
+    // v3.9.x：打开前补读 IDB 权威数据（我的表情包大键慢 IDB 下可能只在 IDB；v3.12.x 起为全局键）
     reloadMyEmojiFromIdb();
     // 关闭其他底部半框（拍一拍/头像互动）
     const pc = document.getElementById('poke-card');
@@ -5644,22 +5882,20 @@ function partialRetractMsg(msgEl, side) {
     emojiInsertCb = null;
     emojiInsertAllowUrl = false;
   }
-  // v3.9.x：切桌面后重载我的表情包 + 打开面板时补读新桌面 IDB 权威数据——
-  // 我的表情包大键（图片 dataURL）只进 IDB+内存缓存，慢 IDB（OPPO Chrome）下
-  // 切桌面时 memoryCache 尚未回填新桌面数据，myEmojiLoad() 从 store 读到空 →
+  // v3.9.x：打开面板时补读 IDB 权威数据——我的表情包大键（图片 dataURL）可能只在
+  // IDB，慢 IDB（OPPO Chrome）下 memoryCache 尚未回填，myEmojiLoad() 读到空 →
   // 「我的表情包整组消失」。重载逻辑与启动恢复一致：IDB 内容更多才覆盖。
+  // v3.12.x：全局键后切桌面数据不变，此函数保留为「补读 IDB 权威」（去桌面归属校验）。
   function reloadMyEmojiFromIdb() {
     if (!window.idbGet) return;
-    const myPrefix = window.activePrefix();
     window.idbGet(MYE_KEY()).then(v => {
-      if (window.activePrefix() !== myPrefix) return;
       if (!v) return;
       try {
         const data = typeof v === 'string' ? JSON.parse(v) : v;
         if (!Array.isArray(data)) return;
         const cnt = (g) => { let n = 0; g.forEach(x => n += (Array.isArray(x[1]) ? x[1].length : 0)); return n; };
         let local = null;
-        try { local = JSON.parse(store.get('my-emoji-groups') || 'null'); } catch (e) {}
+        try { local = JSON.parse(myEmojiStore().get('my-emoji-groups') || 'null'); } catch (e) {}
         const lc = Array.isArray(local) ? cnt(local) : -1;
         if (lc < 0 || cnt(data) > lc) {
           myGroups = data;
@@ -5669,9 +5905,14 @@ function partialRetractMsg(msgEl, side) {
     });
   }
   document.addEventListener('contact-switched', function () {
-    myGroups = myEmojiLoad(); // 先读新桌面快照（内存/LS 已就绪时立即生效）
+    // v3.12.x：全局共享后数据不随桌面变，重读 + 补渲染仅作慢 IDB 兜底
+    myGroups = myEmojiLoad();
     if (!emojiPanel.hidden) renderEmojiPanel();
-    reloadMyEmojiFromIdb();   // 再补读新桌面 IDB 权威（大键场景）
+    reloadMyEmojiFromIdb();
+  });
+  // v3.12.x：聊天设置切换「隐藏联系人的表情包」→ 面板开着时立即按新状态重渲染
+  document.addEventListener('hide-ta-sticker-changed', function () {
+    if (emojiPanel && !emojiPanel.hidden) renderEmojiPanel();
   });
   // 邮件写信/回信插入表情也走 openEmojiPanelForInsert → 内部 openEmojiPanel（见下），
   // openEmojiPanel 内已补读新桌面 IDB，避免显示旧桌面残留
@@ -5922,6 +6163,9 @@ function partialRetractMsg(msgEl, side) {
     // 分组各自保留（TA/我的 分开记忆），切换不重置
     saveEmojiGroupPref();
     renderEmojiPanel();
+    // v3.12.x：部分安卓浏览器（vivo/OPPO 等）对保持聚焦的按钮画虚线框，被点的 tab
+    // 会显示成虚线与其他两个不一致——点完即失焦（CSS 已同时关 outline 兜底）
+    try { t.blur(); } catch (err) {}
   }));
 
   // 压缩图片（我的表情包添加用，260px 与字卡库一致）
@@ -6422,18 +6666,38 @@ function partialRetractMsg(msgEl, side) {
     draftImgs.forEach(src => parts.push({ k: 'img', v: src, sub: 'image' }));
     return parts;
   }
+  // v3.12.x：防重发窗口——OPPO 默认浏览器 / vivo Edge / iOS Safari 实测均有重复问题：
+  // 发送成功清空 contenteditable 后，输入法重组/自动填充会把刚发的文本"复活"回输入框
+  //（iOS 中文键盘确认候选词还会先补发一个干净 Enter 触发"确认即发送"，清空时合成
+  // 会话未结束→文本必然重组回来），用户看到字还在再点一次发送就出两条一模一样的
+  // 消息；部分内核还对同一动作重复派发事件。复活后的补点一般在 0.1~1.2s 内，故窗口
+  // 取 1200ms——同非空文本窗口内第二次 addMsg 直接吞掉并清理输入区（不响音效、不再
+  // 排回复轮，TA 回复不再成对出现）；窗口外的人工重发不受影响。
+  const SEND_GUARD_MS = 1200;
+  let lastSendTxt = '', lastSendTs = 0;
   const addMsg = (text) => {
+    const t0 = (text || '').trim();
+    if (t0 && t0 === lastSendTxt && Date.now() - lastSendTs < SEND_GUARD_MS) {
+      input.textContent = '';
+      draftImgs = [];
+      renderDraft();
+      return;
+    }
     const parts = buildParts(text);
     if (!parts.length) return;
-    const t = (text || '').trim();
+    const t = t0;
     lastMineText = t || (draftImgs.length ? draftImgs[0] : '');
     const rec = { side: 'out', text: lastMineText, parts: parts };
     if (lastQuote) {
       rec.quote = quoteValue(lastQuote);
       rec.qside = lastQuote.side;
+      // v3.12.x：带上被引消息下标（点引用块跳回原消息）
+      if (typeof lastQuote.idx === 'number' && lastQuote.idx >= 0) rec.qidx = lastQuote.idx;
       lastQuote = null;
     }
     addRec(rec);
+    lastSendTxt = t;
+    lastSendTs = Date.now();
     // v3.5.60：我发送消息播放设置的音效
     if (window.playSfx) window.playSfx('out');
     // v3.5.127：contenteditable 版输入框清空用 textContent
@@ -6500,4 +6764,8 @@ function partialRetractMsg(msgEl, side) {
   } catch (e) {}
   // v3.5.100：页面加载时恢复桌面「聊天」未读提醒
   updateChatBadge();
+  // v3.x.x：称呼设置变化 → 重渲染当前窗口（显示层替换，存储原文不动）
+  document.addEventListener('ta-word-changed', function () {
+    try { if (msgs.length) renderWindow(false, false); } catch (e) {}
+  });
 })();

@@ -2015,7 +2015,12 @@
   let playingAudio = null;
   let playingBtn = null;
   function stopPlay() {
-    if (playingAudio) { try { playingAudio.pause(); } catch (e) {} playingAudio = null; }
+    // v3.12.x：停播同时卸 src——data: 音频解码缓冲随元素存活，显式释放不等 GC
+    if (playingAudio) {
+      try { playingAudio.pause(); } catch (e) {}
+      try { playingAudio.removeAttribute('src'); playingAudio.load(); } catch (e) {}
+      playingAudio = null;
+    }
     if (playingBtn) { playingBtn.classList.remove('playing'); playingBtn = null; }
   }
   list.addEventListener('click', (e) => {

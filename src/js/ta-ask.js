@@ -1,6 +1,6 @@
 // ===== 功能：TA的询问 =====
 // 题库 3 分类（日常/关心/互动），可添加/删除/开关问题；
-// 联系人随机触发向你提问（冷却 25 分钟、概率 20%，启动 60 秒后首次检查、每 4 分钟轮询）；
+// 联系人随机触发向你提问（v3.12.x：冷却 45 分钟、概率 10%——用户反馈发卡太频繁，原 25 分钟/20%；启动 60 秒后首次检查、每 4 分钟轮询）；
 // 聊天里显示"TA想问你一个问题。" + 询问卡片，点击卡片可回答；
 // 回答后显示"我的回答" + "收到你的回答。"，并记入历史（最多 50 条）；
 // 管理页可"让TA现在问一次"（无视冷却/概率），并可清空问答历史
@@ -332,7 +332,7 @@
     try { d = JSON.parse(store.get(KEY) || 'null'); } catch (e) { d = null; }
     if (!d || typeof d !== 'object' || Array.isArray(d)) d = {};
     // v3.5.33：设置（启用/概率/自动弹窗）
-    if (!d.settings || typeof d.settings !== 'object') d.settings = { enabled: true, prob: 20, popupProb: 70 };
+    if (!d.settings || typeof d.settings !== 'object') d.settings = { enabled: true, prob: 10, popupProb: 70 };
     // v3.6.x：是否使用系统预设问题（默认开启；关闭后预设不再被抽取，但题目仍在库里可随时重新开启）
     if (d.settings.useDefault === undefined) d.settings.useDefault = true;
     if (!Array.isArray(d.questions) || !d.questions.length) {
@@ -438,10 +438,10 @@
       // v3.5.141：后台也触发（卡片进聊天记录 + 系统通知提示）；页面弹窗由
       // push 内 document.hidden 守卫控制，后台不会弹页面弹窗
       const d = taAskLoad();
-      const s = d.settings || { enabled: true, prob: 20, popupProb: 70 };
+      const s = d.settings || { enabled: true, prob: 10, popupProb: 70 };
       if (s.enabled === false) return;
-      if (Date.now() - (d.lastAskAt || 0) < 25 * 60000) return;
-      if (Math.random() * 100 >= (typeof s.prob === 'number' ? s.prob : 20)) return;
+      if (Date.now() - (d.lastAskAt || 0) < 45 * 60000) return;
+      if (Math.random() * 100 >= (typeof s.prob === 'number' ? s.prob : 10)) return;
       const q = taAskPick(d);
       if (!q) return;
       d.lastAskAt = Date.now();
@@ -521,7 +521,7 @@
     const d = taAskLoad();
     const q = taAskPick(d);
     if (!q) { toast('题库没有启用的问题'); return; }
-    const s = d.settings || { enabled: true, prob: 20, popupProb: 70 };
+    const s = d.settings || { enabled: true, prob: 10, popupProb: 70 };
     d.lastAskAt = Date.now();
     taAskSave(d);
     pushAsk(q, { popupProb: askPopupProb(s) });
@@ -532,7 +532,7 @@
   // v3.5.34：TA 询问设置——启用 / 使用系统预设 / 触发概率 / 自动弹窗概率
   function renderAskSettings() {
     const d = taAskLoad();
-    const s = d.settings || { enabled: true, prob: 20, popupProb: 70 };
+    const s = d.settings || { enabled: true, prob: 10, popupProb: 70 };
     const enEl = document.getElementById('ta-ask-enable');
     if (enEl) enEl.checked = s.enabled !== false;
     const defEl = document.getElementById('ta-ask-default');
@@ -1186,7 +1186,7 @@ const TC_DEFAULT = [
     let d = null;
     try { d = JSON.parse(store.get(KEY2) || 'null'); } catch (e) { d = null; }
     if (!d || typeof d !== 'object' || Array.isArray(d)) d = {};
-    if (!d.settings || typeof d.settings !== 'object') d.settings = { enabled: true, prob: 15 };
+    if (!d.settings || typeof d.settings !== 'object') d.settings = { enabled: true, prob: 8 };
     // v3.6.x：是否使用系统预设问题（默认开启）
     if (d.settings.useDefault === undefined) d.settings.useDefault = true;
     if (!Array.isArray(d.questions) || !d.questions.length) {
@@ -1249,16 +1249,16 @@ const TC_DEFAULT = [
       }, 400);
     }
   }
-  // 自动触发：一次会话最多 1 个；冷却 30 分钟；概率可调（默认 15%）；启动 90 秒后、每 4 分钟轮询
+  // 自动触发：一次会话最多 1 个；冷却 30 分钟；概率可调（v3.12.x 默认 8%，原 15%——发卡整体降频）；启动 90 秒后、每 4 分钟轮询
   function maybeTriggerTC() {
     try {
       // v3.5.141：后台也触发（卡片进聊天记录 + 系统通知提示）
       const d = tcLoad();
-      const s = d.settings || { enabled: true, prob: 15, popupProb: 70 };
+      const s = d.settings || { enabled: true, prob: 8, popupProb: 70 };
       if (s.enabled === false) return;
       if (_tcSessionTriggered) return;
       if (Date.now() - (d.lastChoiceAt || 0) < 30 * 60000) return;
-      if (Math.random() * 100 >= (typeof s.prob === 'number' ? s.prob : 15)) return;
+      if (Math.random() * 100 >= (typeof s.prob === 'number' ? s.prob : 8)) return;
       const q = tcPick(d);
       if (!q) return;
       tcPush(q, { popupProb: askPopupProb(s) });
@@ -1359,7 +1359,7 @@ window.openTCPanel = openTCPanel;
       html += '<div class="tc-res-label">TA心里的答案</div><div class="tc-res-pref">' + String(prefTxt || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;') + '</div>';
     }
     html += '<div class="tc-res-line"></div>';
-    html += '<div class="tc-res-reply"><b>TA：</b>“' + String(rec.choiceReply || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;') + '”</div>';
+    html += '<div class="tc-res-reply"><b>' + (window.taFit ? window.taFit('TA：') : 'TA：') + '</b>“' + String(window.taFit ? window.taFit(rec.choiceReply || '') : (rec.choiceReply || '')).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;') + '”</div>';
     html += '<div class="tc-res-match ' + (isPref ? 'pref' : '') + '">' + String(rec.choiceMatch || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;') + '</div>';
     if (Math.random() < 0.4 && _tcChain < 2) {
       html += '<div class="tc-res-cont" id="tc-cont">TA还想问一个 ▸</div>';
@@ -1395,7 +1395,7 @@ window.openTCPanel = openTCPanel;
   let tcTab = 'sys';
   function renderTCSettings() {
     const d = tcLoad();
-    const s = d.settings || { enabled: true, prob: 15, popupProb: 70 };
+    const s = d.settings || { enabled: true, prob: 8, popupProb: 70 };
     const enEl = document.getElementById('tc-enable');
     if (enEl) enEl.checked = s.enabled !== false;
     const defEl = document.getElementById('tc-default');
@@ -1759,7 +1759,7 @@ window.openTCPanel = openTCPanel;
     const d = tcLoad();
     const q = tcPick(d);
     if (!q) { toast('题库没有可用的问题'); return; }
-    const s = d.settings || { enabled: true, prob: 15, popupProb: 70 };
+    const s = d.settings || { enabled: true, prob: 8, popupProb: 70 };
     tcPush(q, { popupProb: askPopupProb(s) });
     toast('TA 在聊天里向你提问了');
   };
@@ -1982,7 +1982,7 @@ window.openTCPanel = openTCPanel;
         else if (h && h.my === '只给我看') h.my = '只给你看';
       });
     }
-    if (!d.settings || typeof d.settings !== 'object') d.settings = { enabled: true, prob: 15, followup: true };
+    if (!d.settings || typeof d.settings !== 'object') d.settings = { enabled: true, prob: 8, followup: true };
     // v3.6.x：是否使用系统预设问题（默认开启）
     if (d.settings.useDefault === undefined) d.settings.useDefault = true;
     if (!Array.isArray(d.questions) || !d.questions.length) {
@@ -2048,11 +2048,11 @@ window.openTCPanel = openTCPanel;
     try {
       // v3.5.141：后台也触发（卡片进聊天记录 + 系统通知提示）
       const d = tcuLoad();
-      const s = d.settings || { enabled: true, prob: 15, popupProb: 70 };
+      const s = d.settings || { enabled: true, prob: 8, popupProb: 70 };
       if (s.enabled === false) return;
       if (_tcuSessionTriggered) return;
       if (Date.now() - (d.lastCuriousAt || 0) < 30 * 60000) return;
-      if (Math.random() * 100 >= (typeof s.prob === 'number' ? s.prob : 15)) return;
+      if (Math.random() * 100 >= (typeof s.prob === 'number' ? s.prob : 8)) return;
       const q = tcuPick(d);
       if (!q) return;
       tcuPush(q, { popupProb: askPopupProb(s) });
@@ -2076,7 +2076,7 @@ window.openTCPanel = openTCPanel;
     const body = document.getElementById('qa-body');
     const title = document.getElementById('qa-title');
     if (!mask || !body) return;
-    if (title) title.textContent = 'TA的好奇';
+    if (title) title.textContent = window.taFit ? window.taFit('TA的好奇') : 'TA的好奇';
     let html = '<div class="qa-hint">TA有点好奇</div><div class="qa-q">' + String(rec.curiousQuestion || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;') + '</div>';
     const quicks = rec.curiousQuick || [];
     if (quicks.length) {
@@ -2142,10 +2142,10 @@ window.openTCPanel = openTCPanel;
     const body = document.getElementById('qa-body');
     const title = document.getElementById('qa-title');
     if (!mask || !body) return;
-    if (title) title.textContent = 'TA的好奇';
+    if (title) title.textContent = window.taFit ? window.taFit('TA的好奇') : 'TA的好奇';
     body.innerHTML = '<div class="qa-q">' + String(rec.curiousQuestion || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;') + '</div>' +
       '<div class="qa-mine">你说：' + String(rec.curiousAnswer || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;') + '</div>' +
-      '<div class="qa-reply"><b>TA：</b>“' + String(rec.curiousReply || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;') + '”</div>' +
+      '<div class="qa-reply"><b>' + (window.taFit ? window.taFit('TA：') : 'TA：') + '</b>“' + String(window.taFit ? window.taFit(rec.curiousReply || '') : (rec.curiousReply || '')).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;') + '”</div>' +
       '<div class="qa-close" id="qa-close2">收起来</div>';
     mask.hidden = false;
     document.getElementById('qa-close2').addEventListener('click', () => { mask.hidden = true; });
@@ -2155,7 +2155,7 @@ window.openTCPanel = openTCPanel;
   let tcuTab = 'sys';
   function renderTCUSettings() {
     const d = tcuLoad();
-    const s = d.settings || { enabled: true, prob: 15, popupProb: 70, followup: true };
+    const s = d.settings || { enabled: true, prob: 8, popupProb: 70, followup: true };
     const enEl = document.getElementById('tcu-enable');
     if (enEl) enEl.checked = s.enabled !== false;
     const defEl = document.getElementById('tcu-default');
@@ -2403,7 +2403,7 @@ window.openTCPanel = openTCPanel;
     const d = tcuLoad();
     const q = tcuPick(d);
     if (!q) { toast('题库没有可用的问题'); return; }
-    const s = d.settings || { enabled: true, prob: 15, popupProb: 70 };
+    const s = d.settings || { enabled: true, prob: 8, popupProb: 70 };
     tcuPush(q, { popupProb: askPopupProb(s) });
     toast('TA 在聊天里向你好奇了');
   };
@@ -2559,7 +2559,7 @@ window.openTCPanel = openTCPanel;
     let d = null;
     try { d = JSON.parse(store.get(KEY4) || 'null'); } catch (e) { d = null; }
     if (!d || typeof d !== 'object' || Array.isArray(d)) d = {};
-    if (!d.settings || typeof d.settings !== 'object') d.settings = { enabled: true, prob: 30 };
+    if (!d.settings || typeof d.settings !== 'object') d.settings = { enabled: true, prob: 15 };
     // v3.6.x：是否使用系统预设字卡（默认开启）
     if (d.settings.useDefault === undefined) d.settings.useDefault = true;
     if (!Array.isArray(d.questions) || !d.questions.length) {
@@ -2633,11 +2633,11 @@ window.openTCPanel = openTCPanel;
     try {
       // v3.5.141：后台也触发（卡片进聊天记录 + 系统通知提示）
       const d = trLoad();
-      const s = d.settings || { enabled: true, prob: 30, popupProb: 70 };
+      const s = d.settings || { enabled: true, prob: 15, popupProb: 70 };
       if (s.enabled === false) return;
       if (_trSessionTriggered) return;
       if (Date.now() - (d.lastRoastAt || 0) < 30 * 60000) return;
-      if (Math.random() * 100 < (typeof s.prob === 'number' ? s.prob : 30)) {
+      if (Math.random() * 100 < (typeof s.prob === 'number' ? s.prob : 15)) {
         const q = trPick(d, lastUserMsg());
         if (q) trPush(q, { popupProb: askPopupProb(s) });
       }
@@ -2661,7 +2661,7 @@ window.openTCPanel = openTCPanel;
     const body = document.getElementById('qa-body');
     const title = document.getElementById('qa-title');
     if (!mask || !body) return;
-    if (title) title.textContent = 'TA的吐槽';
+    if (title) title.textContent = window.taFit ? window.taFit('TA的吐槽') : 'TA的吐槽';
     body.innerHTML = '<div class="qa-hint">TA 吐槽你</div><div class="qa-q">“' + String(rec.roastText || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;') + '”</div>' +
       '<input id="qa-input" class="qa-input" type="text" placeholder="回 TA 一句…">' +
       '<button class="qa-send" id="qa-send">回TA一句</button>';
@@ -2713,10 +2713,10 @@ window.openTCPanel = openTCPanel;
     const body = document.getElementById('qa-body');
     const title = document.getElementById('qa-title');
     if (!mask || !body) return;
-    if (title) title.textContent = 'TA的吐槽';
+    if (title) title.textContent = window.taFit ? window.taFit('TA的吐槽') : 'TA的吐槽';
     body.innerHTML = '<div class="qa-q">“' + String(rec.roastText || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;') + '”</div>' +
       '<div class="qa-mine">你说：' + String(rec.roastAnswer || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;') + '</div>' +
-      '<div class="qa-reply"><b>TA：</b>“' + String(rec.roastReply || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;') + '”</div>' +
+      '<div class="qa-reply"><b>' + (window.taFit ? window.taFit('TA：') : 'TA：') + '</b>“' + String(window.taFit ? window.taFit(rec.roastReply || '') : (rec.roastReply || '')).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;') + '”</div>' +
       '<div class="qa-close" id="qa-close2">收起来</div>';
     mask.hidden = false;
     document.getElementById('qa-close2').addEventListener('click', () => { mask.hidden = true; });
@@ -2726,7 +2726,7 @@ window.openTCPanel = openTCPanel;
   let trTab = 'sys';
   function renderTRSettings() {
     const d = trLoad();
-    const s = d.settings || { enabled: true, prob: 30, popupProb: 70 };
+    const s = d.settings || { enabled: true, prob: 15, popupProb: 70 };
     const enEl = document.getElementById('tr-enable');
     if (enEl) enEl.checked = s.enabled !== false;
     const defEl = document.getElementById('tr-default');
@@ -2961,7 +2961,7 @@ window.openTCPanel = openTCPanel;
     const d = trLoad();
     const q = trPick(d, '');
     if (!q) { toast('题库没有可用吐槽'); return; }
-    const s = d.settings || { enabled: true, prob: 30, popupProb: 70 };
+    const s = d.settings || { enabled: true, prob: 15, popupProb: 70 };
     trPush(q, { popupProb: askPopupProb(s) });
     toast('TA 在聊天里吐槽你了');
   };
@@ -2982,7 +2982,7 @@ window.openTCPanel = openTCPanel;
     if (askEl) {
       const h = taAskLoad().history || [];
       askEl.innerHTML = h.length
-        ? h.slice().reverse().map(x => '<div class="tc-listitem"><div class="tc-li-q">问：' + x.q + '</div><div class="tc-li-line">你：' + x.a + '</div>' + (x.reply ? '<div class="tc-li-line">TA：' + x.reply + '</div>' : '') + '<div class="tc-li-time">' + fmtDT(x.ts) + '</div></div>').join('')
+        ? h.slice().reverse().map(x => '<div class="tc-listitem"><div class="tc-li-q">问：' + x.q + '</div><div class="tc-li-line">你：' + x.a + '</div>' + (x.reply ? '<div class="tc-li-line">' + (window.taFit ? window.taFit('TA：') : 'TA：') + (window.taFit ? window.taFit(x.reply) : x.reply) + '</div>' : '') + '<div class="tc-li-time">' + fmtDT(x.ts) + '</div></div>').join('')
         : '<div class="ta-empty">暂无询问记录</div>';
     }
     // TA的小问题
@@ -2990,7 +2990,7 @@ window.openTCPanel = openTCPanel;
     if (chEl) {
       const h = tcLoad().history || [];
       chEl.innerHTML = h.length
-        ? h.slice().reverse().map(x => '<div class="tc-listitem"><div class="tc-li-q">' + x.q + '</div><div class="tc-li-line">你的选择：' + x.my + '</div><div class="tc-li-line">TA：' + x.reply + '</div><div class="tc-li-match">' + x.match + '</div><div class="tc-li-time">' + fmtDT(x.ts) + '</div></div>').join('')
+        ? h.slice().reverse().map(x => '<div class="tc-listitem"><div class="tc-li-q">' + x.q + '</div><div class="tc-li-line">你的选择：' + x.my + '</div><div class="tc-li-line">' + (window.taFit ? window.taFit('TA：') : 'TA：') + (window.taFit ? window.taFit(x.reply) : x.reply) + '</div><div class="tc-li-match">' + x.match + '</div><div class="tc-li-time">' + fmtDT(x.ts) + '</div></div>').join('')
         : '<div class="ta-empty">暂无小问题记录</div>';
     }
     // TA的好奇
@@ -2998,7 +2998,7 @@ window.openTCPanel = openTCPanel;
     if (cuEl) {
       const h = tcuLoad().history || [];
       cuEl.innerHTML = h.length
-        ? h.slice().reverse().map(x => '<div class="tc-listitem"><div class="tc-li-q">' + x.q + '</div><div class="tc-li-line">你：' + x.my + '</div><div class="tc-li-line">TA：' + x.reply + '</div><div class="tc-li-time">' + fmtDT(x.ts) + '</div></div>').join('')
+        ? h.slice().reverse().map(x => '<div class="tc-listitem"><div class="tc-li-q">' + x.q + '</div><div class="tc-li-line">你：' + x.my + '</div><div class="tc-li-line">' + (window.taFit ? window.taFit('TA：') : 'TA：') + (window.taFit ? window.taFit(x.reply) : x.reply) + '</div><div class="tc-li-time">' + fmtDT(x.ts) + '</div></div>').join('')
         : '<div class="ta-empty">暂无好奇记录</div>';
     }
     // TA的吐槽
@@ -3006,7 +3006,7 @@ window.openTCPanel = openTCPanel;
     if (roEl) {
       const h = trLoad().history || [];
       roEl.innerHTML = h.length
-        ? h.slice().reverse().map(x => '<div class="tc-listitem"><div class="tc-li-q">' + x.roast + '</div><div class="tc-li-line">你：' + x.my + '</div><div class="tc-li-line">TA：' + x.reply + '</div><div class="tc-li-time">' + fmtDT(x.ts) + '</div></div>').join('')
+        ? h.slice().reverse().map(x => '<div class="tc-listitem"><div class="tc-li-q">' + x.roast + '</div><div class="tc-li-line">你：' + x.my + '</div><div class="tc-li-line">' + (window.taFit ? window.taFit('TA：') : 'TA：') + (window.taFit ? window.taFit(x.reply) : x.reply) + '</div><div class="tc-li-time">' + fmtDT(x.ts) + '</div></div>').join('')
         : '<div class="ta-empty">暂无吐槽记录</div>';
     }
     // 邀请 / 问问 TA（我的提问 + 联系人答案）
@@ -3017,7 +3017,7 @@ window.openTCPanel = openTCPanel;
       inEl.innerHTML = h.length
         ? h.map(x => '<div class="tc-listitem"><div class="tc-li-q">' +
             (x.type === 'invite' ? '邀请：' : '问：') + String(x.q || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;') + '</div>' +
-            '<div class="tc-li-line">TA：' + String(x.a || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;') + '</div>' +
+            '<div class="tc-li-line">' + (window.taFit ? window.taFit('TA：') : 'TA：') + String(window.taFit ? window.taFit(x.a || '') : (x.a || '')).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;') + '</div>' +
             '<div class="tc-li-time">' + fmtDT(x.ts) + '</div></div>').join('')
         : '<div class="ta-empty">暂无邀请/问问记录</div>';
     }
