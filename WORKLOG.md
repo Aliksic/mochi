@@ -4,6 +4,15 @@
 
 ## 规则
 
+### 2026-08-25（用户复测 vivo Y35 + Edge 仍被强制 PC 端，不再只靠 screen.width/UA/orientation 指纹）
+- [本会话·完成]（**已改 src/js/mobile-adapt.js（AI-B 域），已构建（18:33, sw: mochi-mt8j1cym）+ verify 10/10 全绿；未提交**）：上一条 v3.11.x 修复在真实 vivo Y35+Edge 上仍漏判——Edge「桌面站点」能把 screen.width、UA、window.orientation 一并伪装，导致 isMobile=false 走桌面模拟器外壳（=「打开还是 PC 端」）。
+  - **补无法伪装的真机信号**：`visualViewport.width`。它反映屏幕真实可见 CSS 宽（真机 ~360-412），无论 layout viewport 被拉成 980 还是 UA 谎报 Windows 都不变。新判据 `touch && vvW>0 && vvW<=900` 加入检测 OR 链；触摸笔电窄窗口耦合度极低、且本就更适合手机布局，误伤可忽略。
+  - **修 viewport 反推**：rAF 改写 meta 的 `est` 原用 `vv.width×vv.scale`，桌面模式下会算出伪装的 980 被区间过滤掉 → 改写静默失败只能退 partial 的 force-mobile。改为优先采信 `vv.width`（桌面模式 = 真机宽），乘积仅作缺失兜底 → 能真正把 viewport 写成真机宽，媒体查询全量命中走完整手机布局。
+  - ⚠️ 构建收口了并行会话的同文件改动（G100 _aProv 悬浮键盘自愈，见下条）及其余未提交 src。真机确认点：vivo Y35 + Edge（含「桌面版网站/请求桌面 UA」开启状态）打开应直接手机满屏布局而非 PC 外壳。
+
+### 2026-08-25（用户反馈：摩托罗拉 G100 / 雨见浏览器——发完消息键盘收回后，输入框停留几秒才回到底部）
+- [本会话·完成]（**已改 src/js/mobile-adapt.js（AI-B 域），未构建、未提交；请构建者重新 `node build.mjs` 收口 + 真机验证**）：安卓 `_aProv`（悬浮键盘推定停靠）自愈——浮悬键核心收起时常不派发 focusout/vv.resize，且发送后输入框不 blur 仍保持聚焦 → 58% 推顶残留到用户下次交互才复位 =「停留几秒才回底」。**修复**：`_aWatch` 聚焦轮询里加兜底——`_aProv` 激活且 vv 已到无键盘基准、用户连续 2.2s 无任何交互（触摸/按键/聚焦，keydown 捕获含 IME 229）即视为键盘已收，立即 `_aProvClear()` 回底。常规 resize 内核不设 `_aProv`，本逻辑完全不介入正常路径；误清时用户再触摸输入框会经 `_aProvCheck` 重新推定停靠自愈。语法 node --check 通过。
+
 ### 2026-08-25（用户反馈小米15Pro Chrome：①问问TA单选题打字框变形/字出框/5行选项发不出 ②联系人回复朋友圈评论没提示 ③心意柜文字展示不全——三项回归修复）
 - [本会话·完成]（**已改 src + 已构建（17:57, sw: mochi-mt8hr661）+ 新专项 verify-ask-no-false-dock 4/4、verify-feed-root-rescue ✅、verify-feed-inpage-toast ✅ + 回归 kb-overlay-kernel 10/10、android-kb 3/3、kb-overlays 8/8、kb-dock 12、scroll-lock-ghost 9/9、feed-comment-merge 10/10、data-loss 11/11、cc-scope 27/27、mye-global 11/11、ta-gender 22/22、ta-invite 30/30、wallet-edit 14/14、two-phase-modals 15/15、pomo-extra 8/8、pomo-bell 7/7、interact-popup-stale 10/10、布局 verify 10/10；未提交**）：`src/js/mobile-adapt.js` + `src/js/contacts.js`（均 **AI-B 域跨域改动请知悉**）+ `src/js/chat.js` + `src/js/feed.js` + `src/css/market.css` + 新工具 3 个（见上）。**构建同时收口了并行会话已登记的待构建改动**（openModal 控制器/两阶段弹窗/钱包连续编辑/番茄铃声+后台通知，见其 WORKLOG 三条，其专项 verify 全部重跑通过）。
   - **① 问问TA单选题（根因：v3.12.x 悬浮键盘兜底误触发「假停靠」）**：`_aProvCheck/_iProvCheck` 的武装条件只看「触摸后 1.5s 内聚焦」——点【问问TA】按钮后 80ms 面板程序化聚焦问题输入框照样命中，而程序化聚焦在安卓通常不弹软键盘 → vv 纹丝不动 → 聚焦 900ms 后把 .phone 无键盘假收缩到 58%（490px）：半框被压扁=「框变形」，ce-box 合成层（translateZ(0)）停在旧位置=「字出界出现在框下面」，挤压态下选项框/发送按钮布局错乱=「多行选项发不出」。无头实测复现（面板打开 1.6s 后 .phone 844→490 且不自愈）。**修复**：① mobile-adapt.js 新增 `kbLastTouchTarget` + `kbTouchArmed(tgt)`——聚焦元素与触摸目标无包含关系（点的是按钮不是输入框）不武装；X5 真场景手指点的就是输入框必过（kb-overlay-kernel 10/10 回归含 A1 停靠/D 程序化聚焦不误触）；② chat.js startAskKbRefresh 增 .phone style MutationObserver——兜底停靠/恢复等不伴随 vv resize 的 .phone 高度变化也走 160ms 防抖重建合成层（文字不再停在旧位置）。
@@ -2268,3 +2277,7 @@ ode --check ͨ�� + verify 10/10 + verify-desk-reset-period 10/10����
   - **A3 LS 有损快照（>2MB 瘦身路径）节流**：原 writeLsSnapshot 在历史 >2MB（带图/语音常见）时每次消息落盘都同步 JSON.parse 全量 + 剥 img/voice + stringify（几十 ms 级，低端机卡顿）。重构为 `performLsSnapWrite` + `writeLsSnapshot(raw,prefix,force)`：重路径 leading 立即写 + 4s trailing 写窗口内最新值；<2MB 轻路径不节流；所有退出/正确性路径 force 立即写（flushSave/contact-switched/IDB 保险丝/导入 clearChatHistory/saveMsgsNow/IDB 挂起暂存）。**IndexedDB 权威每次都在写不受影响**；LS 快照只是第二备份，退出必刷，不增加丢失风险。
   - **验证**：`node --check` 通过；当前产物（不含本次改动）跑 `verify-data-loss 11/11`（快照兜底/迁移回归）+ 上轮 `verify-chat-window-sync 10/10` + `verify-time-divider 9/9` 基线通过。构建者收口后请回归：`verify-data-loss`（LS/IDB 兜底）、`verify-avatar-decouple`（头像解耦）、`verify-chat-window-sync`、`verify-time-divider`。
   - ⚠️ 说明：上轮 A2（loadMsgs 同步迁移块加「只跑一次」标志）**经评估放弃**——那些迁移（铃铛/信封/补时间戳/乱码还原）依赖「每次进聊天页跑一遍」的两遍收敛语义（IDB 合并异步，首载合入的旧记录要二次进入才被同步修正），加标志会让老记录修复失效；且真正贵的 IDB 读+parse+sort 已被上轮时间闸挡住。B 级（分帧加载/content-visibility）未做，需真机验证。
+- [AI-A·完成]（**已构建**：verify-chat-dupe 扩至 11/11 + window-sync 10/10 + quote-jump 11/11 + npm run verify 10/10，未提交→随批次一起提交）：src/js/chat.js + tools/verify-chat-dupe.mjs。
+  - **背景**：华为 Mate 10 Pro Chrome 反馈「聊天记录一直重复」——模拟点击/慢 IDB 场景均不复现，判定为**存量双条数据无法自愈**：旧 collapseRapidDups 明确跳过 special（互动卡片/系统提示）且文本窗口仅 1200ms，历史里已固化的卡片双条/系统提示双条/间隔 1~3s 的文本双条永远收敛不掉。
+  - **改动（collapseRapidDups 加强，行为仅对重复对生效）**：① 互动卡片/系统提示（special）改按**内容签名**参与收敛（dupSig：side+归一 type+special+text+img/voice 存在性+卡片核心字段 askQuestion/askOptions/askType、choiceQuestion/choicePref/choiceCat、curiousQuestion/curiousQuick/curiousCat、roastText/roastCat、inviteContent、gift/flower 的 flName/flEmoji/flWish）——同 special+同核心字段才收敛，不同内容卡片不误删；② 文本窗口 1200→2500ms（对齐 addMsg 防重窗口，覆盖内核双发）；③ 图片/语音/卡片等非文本记录窗口放宽到 60s（人工不可能 1 分钟内紧挨着发两条完全相同的图/语音/卡片，而它们正是合并翻倍/卡片双条的形态）。
+  - **回归（verify-chat-dupe 11 项）**：新增 相邻 poke 收敛、完全相同 ask-card 收敛（不同问题卡片保留）、相邻同图收敛、超窗(>2.5s)/异侧/非相邻保留；AC2 检查口径与 dupSig 对齐。

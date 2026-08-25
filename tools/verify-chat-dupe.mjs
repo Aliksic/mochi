@@ -110,23 +110,31 @@ function seedJs(fullExtra) {
     { side: 'in', text: '我也发一个', ts: t + 5000, img: 'data:image/png;base64,' + 'B'.repeat(40) }
   ];
   if (fullExtra === 'dupe') {
-    // C 组用：历史里已存在一对重复（同 side+text，Δts=120ms，历史 bug 写入的存量脏数据）
+    // C 组用：历史里已存在重复对（历史 bug 写入的存量脏数据）
+    // 1) 相邻同文本快速重复（Δts=120ms）→ 收敛为 1
     recs.push({ side: 'out', text: '晚上吃什么', ts: t + 6000 });
     recs.push({ side: 'out', text: '晚上吃什么', ts: t + 6120 });
-    // 不该误伤的四类（必须原样保留）：
-    // a) 超出收敛窗口（Δts=1500ms>1200ms）的同文本人工重发
+    // 2) 超出收敛窗口（Δts=15000ms>2500ms）的同文本人工重发 → 必须保留 2 条
     recs.push({ side: 'out', text: '明天见', ts: t + 7000 });
-    recs.push({ side: 'out', text: '明天见', ts: t + 8500 });
-    // b) 异侧（我发+TA回）同文本
+    recs.push({ side: 'out', text: '明天见', ts: t + 22000 });
+    // 3) 异侧（我发+TA回）同文本 → 保留 2 条
     recs.push({ side: 'out', text: '哈哈', ts: t + 9000 });
     recs.push({ side: 'in', text: '哈哈', ts: t + 9050 });
-    // c) 系统提示/互动卡片（special）不参与收敛
+    // 4) 相邻同内容系统提示（poke 双发形态）→ 收敛为 1
     recs.push({ side: 'in', special: 'poke', text: '拍了拍你', ts: t + 9200 });
     recs.push({ side: 'in', special: 'poke', text: '拍了拍你', ts: t + 9250 });
-    // d) 非相邻（中间隔着其他消息）不收敛
+    // 5) 非相邻（中间隔着其他消息）同文本 → 保留 2 条
     recs.push({ side: 'out', text: '在吗', ts: t + 9400 });
     recs.push({ side: 'out', text: '别的', ts: t + 9450 });
     recs.push({ side: 'out', text: '在吗', ts: t + 9500 });
+    // 6) 两张完全相同的互动卡片（ask-card 双发/合并翻倍形态）→ 收敛为 1；
+    //    紧接着另一张【不同问题】的卡片 → 保留（不同内容不误删）
+    recs.push({ side: 'in', special: 'ask-card', askQuestion: '今晚吃什么', askType: 'text', askStatus: 'pending', ts: t + 9600 });
+    recs.push({ side: 'in', special: 'ask-card', askQuestion: '今晚吃什么', askType: 'text', askStatus: 'pending', ts: t + 9620 });
+    recs.push({ side: 'in', special: 'ask-card', askQuestion: '周末去哪玩', askType: 'text', askStatus: 'pending', ts: t + 9700 });
+    // 7) 相邻同图片消息（同 img dataURL）→ 收敛为 1
+    recs.push({ side: 'in', text: 'img1', img: 'data:image/png;base64,' + 'C'.repeat(40), ts: t + 9800 });
+    recs.push({ side: 'in', text: 'img1', img: 'data:image/png;base64,' + 'C'.repeat(40), ts: t + 9850 });
   }
   const lite = recs.map(m => (m.img ? Object.assign({}, m, { img: '' }) : m));
   return { full: JSON.stringify(recs), lite: JSON.stringify(lite), n: recs.length };
@@ -160,25 +168,43 @@ async function loadFresh(seedMode) {
 }
 
 // ---- A+C. LS 有损快照合并 + 存量重复自愈 ----
-await loadFresh('dupe'); // 种子含一对存量重复（C），含 2 条带图记录（A）
-const baseN = seedJs('dupe').n - 1; // 期望干净条数 = 种子数 - 1 对重复
+await loadFresh('dupe'); // 种子含存量重复（C）：文本对/超窗对/异侧/系统提示/非相邻/卡片对/图片对
+const baseN = seedJs('dupe').n - 4; // 期望干净条数 = 种子数 - 4 对重复（晚上吃什么/poke/相同卡片/同图片）
 const a = await evalJs(`(function(){
   try {
     var m = window.getChatMsgs();
-    // 与 collapseRapidDups 同口径：只检查【数组相邻】的同内容对
+    // 与 collapseRapidDups 同口径（dupSig）检查：只查【数组相邻】的重复对
+    function sig(x){
+      if(!x) return '';
+      var sp=x.special||''; var extra='';
+      if(sp==='ask-card'||sp==='ask') extra=String(x.askQuestion||'')+'|'+JSON.stringify(x.askOptions||[])+'|'+String(x.askType||'');
+      else if(sp==='ask-choose') extra=String(x.choiceQuestion||'')+'|'+JSON.stringify(x.choiceOptions||[])+'|'+String(x.choicePref||'')+'|'+String(x.choiceCat||'');
+      else if(sp==='ask-curious') extra=String(x.curiousQuestion||'')+'|'+JSON.stringify(x.curiousQuick||[])+'|'+String(x.curiousCat||'');
+      else if(sp==='ask-roast') extra=String(x.roastText||'')+'|'+String(x.roastCat||'');
+      else if(sp==='invite') extra=String(x.inviteContent||x.text||'');
+      else if(sp==='gift'||sp==='flower') extra=String(x.flName||'')+'|'+String(x.flEmoji||'')+'|'+String(x.flWish||'');
+      var nt=(x.type==='text'||!x.type)?'':String(x.type||'');
+      return JSON.stringify({s:x.side||'',t:nt,sp:sp,x:x.text||'',im:!!x.img,vc:!!x.voice,e:extra});
+    }
     var badDup = [];
     for (var i = 1; i < m.length; i++) {
       var p = m[i-1], q = m[i];
-      if (!p || !q || p.side !== q.side || p.special || q.special) continue;
-      if ((p.type||'') !== (q.type||'')) continue;
-      if ((p.text||'') !== (q.text||'') || !!p.img !== !!q.img) continue;
+      if (!p || !q || !p.side || p.side !== q.side) continue;
+      if (sig(p) !== sig(q)) continue;
+      var hasContent=(p.text&&p.text.length)||p.img||p.voice||!!p.special||(p.parts&&p.parts.length);
+      if(!hasContent) continue;
+      var isMedia=!!p.img||!!p.voice||!!p.special;
       var dts = (q.ts||0) - (p.ts||0);
-      if (dts >= 0 && dts <= 1200) badDup.push((q.text||'').slice(0,10) + '@' + dts);
+      var cap = isMedia ? 60000 : 2500;
+      if (dts >= 0 && dts <= cap) badDup.push((p.text||'').slice(0,10) + '@' + dts + '@' + p.special);
     }
     var cnt = function(side, text){ var n=0; m.forEach(function(r){ if ((r.side||'')===side && (r.text||'')===text) n++; }); return n; };
+    var cntAsk = function(q){ var n=0; m.forEach(function(r){ if (r.special==='ask-card' && r.askQuestion===q) n++; }); return n; };
+    var cntImg = function(){ var n=0; m.forEach(function(r){ if (r.img && (r.text||'')==='img1') n++; }); return n; };
     return JSON.stringify({ total: m.length, badDup: badDup,
       cntNight: cnt('out','晚上吃什么'), cntBye: cnt('out','明天见'),
-      cntPoke: cnt('in','拍了拍你'), cntZaima: cnt('out','在吗'), cntOther: cnt('out','别的') });
+      cntPoke: cnt('in','拍了拍你'), cntZaima: cnt('out','在吗'), cntOther: cnt('out','别的'),
+      cntAskSame: cntAsk('今晚吃什么'), cntAskDiff: cntAsk('周末去哪玩'), cntImg: cntImg() });
   } catch (e) { return JSON.stringify({ err: String(e) }); }
 })()`) || '{}';
 {
@@ -186,9 +212,12 @@ const a = await evalJs(`(function(){
   check('AC1 合并后条数正确（有损副本不计入+存量重复已收敛）', aObj.total === baseN, 'total=' + aObj.total + ' expect=' + baseN);
   check('AC2 收敛窗口内无残留同内容重复对', Array.isArray(aObj.badDup) && aObj.badDup.length === 0, JSON.stringify(aObj.badDup));
   check('AC4 存量脏重复对已收敛为 1 条', aObj.cntNight === 1, 'cnt=' + aObj.cntNight);
-  check('AC3 超窗/异侧/special/非相邻的合法重复原样保留',
-    aObj.cntBye === 2 && aObj.cntPoke === 2 && aObj.cntZaima === 2 && aObj.cntOther === 1,
-    'bye=' + aObj.cntBye + ' poke=' + aObj.cntPoke + ' zaima=' + aObj.cntZaima + ' other=' + aObj.cntOther);
+  check('AC6 相邻同内容系统提示(poke)已收敛为 1 条', aObj.cntPoke === 1, 'cnt=' + aObj.cntPoke);
+  check('AC7 完全相同互动卡片收敛为 1 / 不同问题卡片保留', aObj.cntAskSame === 1 && aObj.cntAskDiff === 1, 'same=' + aObj.cntAskSame + ' diff=' + aObj.cntAskDiff);
+  check('AC8 相邻同图片消息已收敛为 1 条', aObj.cntImg === 1, 'cnt=' + aObj.cntImg);
+  check('AC3 超窗(>2.5s)/异侧/非相邻的合法重复原样保留',
+    aObj.cntBye === 2 && aObj.cntZaima === 2 && aObj.cntOther === 1,
+    'bye=' + aObj.cntBye + ' zaima=' + aObj.cntZaima + ' other=' + aObj.cntOther);
 }
 // 回写后二次刷新，确认没有把重复固化进 IDB / 自愈结果持久
 await cdp('Page.navigate', { url: baseUrl + '/index.html' });

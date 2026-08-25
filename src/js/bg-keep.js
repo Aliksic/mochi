@@ -883,7 +883,10 @@
     // v3.5.158：右侧固定显示联系人头像——即使消息带表情包/图片，右侧仍是 TA 的头像，
     // 消息图只放 image（展开大图），不顶替头像位置
     // v3.7.x：跨桌面——extra.av（朋友圈通知的发布者头像）优先，其次当前桌面 TA 头像
-    const avatar = extra.av || store.get('avatar-partner') || '';
+    // v3.13.x：头像互动/换头像 v3.12.x 起只写聊天专用键 cs-avatar-partner（桌面
+    // avatar-partner 独立不再跟随），后台通知此前仍读桌面键 → 通知弹窗头像不跟随换头像；
+    // 与通话/聊天域同口径：先 cs-avatar-partner，未设回退 avatar-partner
+    const avatar = extra.av || store.get('cs-avatar-partner') || store.get('avatar-partner') || '';
     if (avatar && (avatar.indexOf('data:') === 0 || /^https?:\/\//i.test(avatar))) bigIcon = avatar;
     if (extra.img && (extra.img.indexOf('data:') === 0 || /^https?:\/\//i.test(extra.img))) previewImg = extra.img;
     const toBlob = function (dataUrl, cb) {

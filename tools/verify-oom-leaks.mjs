@@ -159,7 +159,7 @@ const boot = `
   window.Notification.permission = 'granted';
   window.Notification.requestPermission = function () { return Promise.resolve('granted'); };
   try {
-    Object.defineProperty(navigator, 'serviceWorker', { get: function () { return { getRegistration: function () { return Promise.resolve(null); }, ready: Promise.reject(new Error('no-sw')) }; }, configurable: true });
+    Object.defineProperty(navigator, 'serviceWorker', { get: function () { return { getRegistration: function () { return Promise.resolve(null); }, ready: Promise.resolve({ showNotification: function (title, opts) { window.__notis.push({ title: title, opts: opts || {} }); return Promise.resolve(); } }) }; }, configurable: true });
   } catch (e) {}
 })();
 `;
@@ -329,6 +329,33 @@ try {
   check('B1 本条测试通知走完发送链路(标记在body)', b1.mine === true, 'notis=' + (await evalJs('(window.__notis||[]).length')));
   check('B2 通知头像创建了 blob URL', b1.created >= 1, 'created=' + b1.created);
   check('B3 blob URL 已被 revokeObjectURL 回收', b1.revoked >= 1, 'created=' + b1.created + ' revoked=' + b1.revoked);
+
+  // ================= ⑥ 通知头像跟随聊天专用键（bg-keep v3.13.x） =================
+  // 头像互动/换头像只写 cs-avatar-partner，后台通知若仍读桌面键 avatar-partner 则不跟随
+  const av1 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+  const av2 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==AA';
+  const b4 = await evalJs(`(function(){
+    try { window.activeStore().set('cs-avatar-partner', ${JSON.stringify(av1)}); } catch (e) {}
+    try { window.activeStore().set('avatar-partner', ${JSON.stringify(av2)}); } catch (e) {}
+    window.__notiTitles = [];
+    if (window.bgNotifyCheck) window.bgNotifyCheck('通知头像跟随聊天键XYZ', Date.now(), { name: '小桃' });
+    return true;
+  })()`);
+  await sleep(2000);
+  // icon 是 blob URL（cropAvatarToSquare→toBlob），fetch 回字节转 base64 与源 dataURL 比对
+  const b5 = await evalJs(`(async function(){
+    const ours = (window.__notis || []).filter(function (n) { return ((n.opts||{}).body||'').indexOf('通知头像跟随聊天键XYZ') >= 0; });
+    if (!ours.length) return { mine: false };
+    const icon = ours[0].opts.icon || '';
+    if (!icon || icon.indexOf('blob:') !== 0) return { mine: true, got: false, note: 'icon=' + icon };
+    const b64 = await fetch(icon).then(function (r) { return r.blob(); }).then(function (b) { return new Promise(function (res) { const fr = new FileReader(); fr.onload = function () { res(String(fr.result).split(',')[1] || ''); }; fr.readAsDataURL(b); }); });
+    const a1b64 = (${JSON.stringify(av1)}).split(',')[1] || '';
+    const a2b64 = (${JSON.stringify(av2)}).split(',')[1] || '';
+    return { mine: true, got: b64 === a1b64, desktop: b64 === a2b64 };
+  })()`);
+  check('B4 通知头像采用 cs-avatar-partner（桌面 avatar-partner 不误用）', b5 && b5.mine === true && b5.got === true && b5.desktop !== true,
+    'got=' + (b5 && b5.got) + ' desktop=' + (b5 && b5.desktop));
+  try { window.activeStore().remove('cs-avatar-partner'); window.activeStore().remove('avatar-partner'); } catch (e) {}
 
   console.log('\n结果：' + pass + ' 通过 / ' + fail + ' 失败');
   chrome.kill();

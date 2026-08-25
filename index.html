@@ -6274,7 +6274,7 @@ color: #c67800;
       </div>
       <div class="splash-dots"><i></i><i></i><i></i></div>
       <div class="splash-brand">小红书@言序（1842523578）</div>
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787651957511">Mochi 字卡传讯 v3.6.232 · 部署于 2026-08-25 17:59</div>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787654003422">Mochi 字卡传讯 v3.6.233 · 部署于 2026-08-25 18:33</div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
       <div class="splash-loading" id="splash-loading">正在加载数据…</div>
@@ -7253,7 +7253,7 @@ color: #c67800;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.6.232</div>
+      <div class="ver">Mochi 字卡传讯 v3.6.233</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -15198,16 +15198,34 @@ migrated = true;
 });
 if (migrated) saveMsgs();
 }
+function dupSig(m) {
+if (!m) return '';
+const sp = m.special || '';
+let extra = '';
+try {
+if (sp === 'ask-card' || sp === 'ask') extra = String(m.askQuestion || '') + '|' + JSON.stringify(m.askOptions || []) + '|' + String(m.askType || '');
+else if (sp === 'ask-choose') extra = String(m.choiceQuestion || '') + '|' + JSON.stringify(m.choiceOptions || []) + '|' + String(m.choicePref || '') + '|' + String(m.choiceCat || '');
+else if (sp === 'ask-curious') extra = String(m.curiousQuestion || '') + '|' + JSON.stringify(m.curiousQuick || []) + '|' + String(m.curiousCat || '');
+else if (sp === 'ask-roast') extra = String(m.roastText || '') + '|' + String(m.roastCat || '');
+else if (sp === 'invite') extra = String(m.inviteContent || m.text || '');
+else if (sp === 'gift') extra = String(m.flName || '') + '|' + String(m.flEmoji || '') + '|' + String(m.flWish || '');
+else if (sp === 'flower') extra = String(m.flName || '') + '|' + String(m.flEmoji || '') + '|' + String(m.flWish || '');
+} catch (e) {}
+const normT = (m.type === 'text' || !m.type) ? '' : String(m.type || '');
+return JSON.stringify({ s: m.side || '', t: normT, sp: sp, x: m.text || '', im: !!m.img, vc: !!m.voice, e: extra });
+}
 function collapseRapidDups(arr) {
 let removed = 0;
+const GAP_TEXT = 2500, GAP_MEDIA = 60000;
 for (let i = arr.length - 1; i > 0; i--) {
 const a = arr[i], b = arr[i - 1];
-if (!a || !b || a.side !== b.side || a.special || b.special) continue;
-if ((a.type || '') !== (b.type || '')) continue;
+if (!a || !b || !a.side || a.side !== b.side) continue;
+if (dupSig(a) !== dupSig(b)) continue;
+const hasContent = (a.text && a.text.length) || a.img || a.voice || !!a.special || (a.parts && a.parts.length);
+if (!hasContent) continue;
+const isMedia = !!a.img || !!a.voice || !!a.special;
 const dts = (a.ts || 0) - (b.ts || 0);
-if (dts < 0 || dts > 1200) continue;
-if ((a.text || '') !== (b.text || '') || !!a.img !== !!b.img) continue;
-if (!a.text && !a.img) continue;
+if (dts < 0 || dts > (isMedia ? GAP_MEDIA : GAP_TEXT)) continue;
 arr.splice(i, 1);
 removed++;
 }
@@ -16783,7 +16801,7 @@ if ((p.side || '') !== (rec.side || '')) continue;
 if ((p.text || '') !== (rec.text || '')) continue;
 if (!!p.img !== !!rec.img) continue;
 const dts = (rec.ts || 0) - (p.ts || 0);
-if (dts >= 0 && dts <= 3000) { saveMsgs(); return null; }
+if (dts >= 0 && dts <= 1200) { saveMsgs(); return null; }
 }
 msgs.push(rec);
 saveMsgs();
@@ -34895,7 +34913,7 @@ const bodyFitted = window.taFit ? window.taFit(body) : body;
 const opts = { body: (t ? t + '  ' : '') + (bodyFitted && bodyFitted.length > 40 ? bodyFitted.slice(0, 40) + '…' : bodyFitted) };
 let bigIcon = '';   // 右侧大图标：始终联系人头像
 let previewImg = ''; // 展开大图：消息图片
-const avatar = extra.av || store.get('avatar-partner') || '';
+const avatar = extra.av || store.get('cs-avatar-partner') || store.get('avatar-partner') || '';
 if (avatar && (avatar.indexOf('data:') === 0 || /^https?:\/\//i.test(avatar))) bigIcon = avatar;
 if (extra.img && (extra.img.indexOf('data:') === 0 || /^https?:\/\//i.test(extra.img))) previewImg = extra.img;
 const toBlob = function (dataUrl, cb) {
@@ -49489,7 +49507,10 @@ try { uaDesk = /Windows NT|Macintosh|X11|CrOS/i.test(String(navigator.userAgent 
 try { oriApi = typeof window.orientation !== 'undefined'; } catch (e) {}
 try { coarsePtr = window.matchMedia && window.matchMedia('(pointer: coarse)').matches; } catch (e) {}
 try { hoverNone = window.matchMedia && window.matchMedia('(hover: none)').matches; } catch (e) {}
+let vvW = 0;
+try { vvW = (window.visualViewport && window.visualViewport.width) || 0; } catch (e) {}
 if ((sw > 0 && sw < 900 && touch) ||
+(touch && vvW > 0 && vvW <= 900) ||
 (touch && uaDesk && (oriApi || (coarsePtr && hoverNone)))) {
 isMobile = true;
 try {
@@ -49504,7 +49525,8 @@ if (!(window.matchMedia && window.matchMedia('(max-width: 900px)').matches)) {
 var vw = 0;
 try {
 var vv = window.visualViewport;
-var est = vv && vv.scale > 0 && vv.width > 0 ? Math.round(vv.width * vv.scale) : 0;
+var est = vv && vv.width > 0 ? Math.round(vv.width)
+: (vv && vv.scale > 0 && vv.width > 0 ? Math.round(vv.width * vv.scale) : 0);
 if (est >= 200 && est < 900) vw = est;
 } catch (e2) {}
 if (vw) {
@@ -50004,6 +50026,8 @@ var _aH = _aVV.height; // 无键盘基准（跟随地址栏显隐更新）
 var _aKb = false;
 var _aTextFocused = null;
 var _aFocusAt = 0, _aProv = false, _aIH = window.innerHeight;
+var _aLastAct = Date.now();
+function _aBump() { _aLastAct = Date.now(); }
 function _aIsText(el) {
 return el && ((el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')
 ? (el.type !== 'checkbox' && el.type !== 'range' && el.type !== 'file' && el.type !== 'color' && !el.readOnly)
@@ -50036,6 +50060,9 @@ if (foc) {
 syncAndroidKb();
 nudgeInputVisible();
 _aProvCheck();
+if (_aProv && _aVV.height >= _aH - 60 && Date.now() - _aLastAct > 2200) {
+_aProvClear();
+}
 } else if (_aKb) {
 if (_aVV.height >= _aH - 60) {
 _aKb = false;
@@ -50089,10 +50116,16 @@ _aProvDock();
 }
 } catch (e) {}
 }
+try {
+document.addEventListener('touchstart', _aBump, { passive: true, capture: true });
+} catch (e) {}
+try {
+document.addEventListener('keydown', _aBump, true);
+} catch (e) {}
 _aVV.addEventListener('resize', syncAndroidKb);
 document.addEventListener('focusin', function (e) {
 try {
-if (_aIsText(e.target)) { _aTextFocused = e.target; _aFocusAt = Date.now(); }
+if (_aIsText(e.target)) { _aTextFocused = e.target; _aFocusAt = Date.now(); _aBump(); }
 if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable)) {
 try { syncAndroidKb(); } catch (e3) {}
 setTimeout(syncAndroidKb, 120);

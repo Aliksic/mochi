@@ -277,21 +277,47 @@
     });
     if (migrated) saveMsgs();
   }
-  // v3.12.x：存量快速重复收敛——「输入复活/事件重派」类 bug 曾把同一条消息连写两遍
-  //（同 side+同 text，Δts 多在一两秒内——iOS 中文键盘确认候选词即发送、文本重组回来
-  // 后用户再点发送，间隔可达 1s+，人类刻意重发同一串字不会这么快）。
-  // 只处理按 ts 排序后相邻的重复对（保守：中间隔着其他消息的不动），互动卡片
-  //（special）不参与；用户手机里已被翻倍的历史在加载时自动收敛为一条。
+  // v3.12.x：存量快速重复收敛——「输入复活/事件重派/内核双发」类 bug 曾把同一条
+  // 消息连写两遍（同 side+同内容，Δts 多在零点几秒~几秒内；iOS 中文键盘确认候选词
+  // 即发送、文本重组后用户再点发送，间隔可达 1s+；荣耀/雨见等内核同一点按派发两次
+  // click，间隔可达 2s+）。只处理按 ts 排序后相邻的重复对（保守：中间隔着其他消息
+  // 的不动），人类刻意重发同一串字间隔必然更长。
+  // v3.12.x 加强（华为 Mate 10 Pro Chrome 反馈「聊天记录一直重复」）：
+  //   · 互动卡片/系统提示（special）此前整体不参与收敛——若历史里已固化两张完全
+  //     一样的卡片（同 special+同内容字段），永远无法自愈，表现为"聊天记录一直重复"。
+  //     现在按「内容签名」参与：同 special+同核心字段才收敛，不同卡片不误删。
+  //   · 文本消息窗口 1200ms→2500ms（对齐 addMsg 防重窗口，覆盖内核双发间隔）；
+  //     图片/语音/互动卡片等非文本记录窗口放宽到 60s——人工几乎不可能在 1 分钟内
+  //     紧挨着发两条完全相同的图/语音/卡片，而它们正是「合并翻倍/卡片双条」的形态。
+  // 内容签名：side+type(归一 text/空)+special+text+img/voice 存在性+卡片核心字段。
+  function dupSig(m) {
+    if (!m) return '';
+    const sp = m.special || '';
+    let extra = '';
+    try {
+      if (sp === 'ask-card' || sp === 'ask') extra = String(m.askQuestion || '') + '|' + JSON.stringify(m.askOptions || []) + '|' + String(m.askType || '');
+      else if (sp === 'ask-choose') extra = String(m.choiceQuestion || '') + '|' + JSON.stringify(m.choiceOptions || []) + '|' + String(m.choicePref || '') + '|' + String(m.choiceCat || '');
+      else if (sp === 'ask-curious') extra = String(m.curiousQuestion || '') + '|' + JSON.stringify(m.curiousQuick || []) + '|' + String(m.curiousCat || '');
+      else if (sp === 'ask-roast') extra = String(m.roastText || '') + '|' + String(m.roastCat || '');
+      else if (sp === 'invite') extra = String(m.inviteContent || m.text || '');
+      else if (sp === 'gift') extra = String(m.flName || '') + '|' + String(m.flEmoji || '') + '|' + String(m.flWish || '');
+      else if (sp === 'flower') extra = String(m.flName || '') + '|' + String(m.flEmoji || '') + '|' + String(m.flWish || '');
+    } catch (e) {}
+    const normT = (m.type === 'text' || !m.type) ? '' : String(m.type || '');
+    return JSON.stringify({ s: m.side || '', t: normT, sp: sp, x: m.text || '', im: !!m.img, vc: !!m.voice, e: extra });
+  }
   function collapseRapidDups(arr) {
     let removed = 0;
+    const GAP_TEXT = 2500, GAP_MEDIA = 60000;
     for (let i = arr.length - 1; i > 0; i--) {
       const a = arr[i], b = arr[i - 1];
-      if (!a || !b || a.side !== b.side || a.special || b.special) continue;
-      if ((a.type || '') !== (b.type || '')) continue;
+      if (!a || !b || !a.side || a.side !== b.side) continue;
+      if (dupSig(a) !== dupSig(b)) continue;
+      const hasContent = (a.text && a.text.length) || a.img || a.voice || !!a.special || (a.parts && a.parts.length);
+      if (!hasContent) continue;
+      const isMedia = !!a.img || !!a.voice || !!a.special;
       const dts = (a.ts || 0) - (b.ts || 0);
-      if (dts < 0 || dts > 1200) continue;
-      if ((a.text || '') !== (b.text || '') || !!a.img !== !!b.img) continue;
-      if (!a.text && !a.img) continue;
+      if (dts < 0 || dts > (isMedia ? GAP_MEDIA : GAP_TEXT)) continue;
       arr.splice(i, 1);
       removed++;
     }
@@ -2294,7 +2320,7 @@
   // 追加记录（存 + 渲染）
   function addRec(rec) {
     if (!rec.ts) rec.ts = Date.now();
-    // v3.13.x：入口去重守卫——任何调用路径带来的同内容相邻重复（同 side+同 text+Δts≤3000ms、
+    // v3.13.x：入口去重守卫——任何调用路径带来的同内容相邻重复（同 side+同 text+Δts≤1200ms、
     // 非互动卡片），在 push 前拦截。覆盖：send 按钮双派发/input 不清空后重发/loadMsgs
     // 合并竞态 等场景的残余重复，保证 msgs 不积累翻倍数据
     const len = msgs.length;
@@ -2305,7 +2331,7 @@
       if ((p.text || '') !== (rec.text || '')) continue;
       if (!!p.img !== !!rec.img) continue;
       const dts = (rec.ts || 0) - (p.ts || 0);
-      if (dts >= 0 && dts <= 3000) { saveMsgs(); return null; }
+      if (dts >= 0 && dts <= 1200) { saveMsgs(); return null; }
     }
     msgs.push(rec);
     saveMsgs();

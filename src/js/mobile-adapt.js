@@ -57,7 +57,15 @@
       try { oriApi = typeof window.orientation !== 'undefined'; } catch (e) {}
       try { coarsePtr = window.matchMedia && window.matchMedia('(pointer: coarse)').matches; } catch (e) {}
       try { hoverNone = window.matchMedia && window.matchMedia('(hover: none)').matches; } catch (e) {}
+      // v3.13.x：vivo Y35 + Edge 仍被强制 PC 端——上面的 screen.width / UA / orientation
+      // 指纹 Edge「桌面站点」模式能一并伪装。补真机最可靠、无法伪装的信号：
+      // visualViewport.width 反映屏幕真实可见宽（真机 CSS 宽 ~360-412），无论 layout
+      // viewport 被拉成 980 还是 UA 谎报 Windows 都不变；但仅限触摸屏（触碰笔电的
+      // 窄窗口 innerWidth<900 与之耦合度极低，且触摸窄窗口本就更适合手机布局）。
+      let vvW = 0;
+      try { vvW = (window.visualViewport && window.visualViewport.width) || 0; } catch (e) {}
       if ((sw > 0 && sw < 900 && touch) ||
+          (touch && vvW > 0 && vvW <= 900) ||
           (touch && uaDesk && (oriApi || (coarsePtr && hoverNone)))) {
         isMobile = true;
         // 改 viewport meta 把 layout viewport 拉回设备宽度——让 CSS
@@ -82,7 +90,12 @@
                 var vw = 0;
                 try {
                   var vv = window.visualViewport;
-                  var est = vv && vv.scale > 0 && vv.width > 0 ? Math.round(vv.width * vv.scale) : 0;
+                  // v3.13.x：优先采信 vv.width（桌面站点模式下 = 真机 CSS 宽 ~360-412，
+                  // 不会被 980 伪装）；vv.width×vv.scale 在桌面模式会算出伪装的 980
+                  // 而被下方区间过滤掉 → viewport 改写静默失败只能退 force-mobile，
+                  // 故仅在 vv.width 缺失时才用乘积兜底。
+                  var est = vv && vv.width > 0 ? Math.round(vv.width)
+                    : (vv && vv.scale > 0 && vv.width > 0 ? Math.round(vv.width * vv.scale) : 0);
                   // 合理区间过滤：缩放中/异常值不采信（手机 CSS 宽 200-899）
                   if (est >= 200 && est < 900) vw = est;
                 } catch (e2) {}
@@ -881,6 +894,12 @@
         var _aTextFocused = null;
         // v3.12.x：悬浮键盘保底停靠状态（见下方 _aProvCheck 注释）
         var _aFocusAt = 0, _aProv = false, _aIH = window.innerHeight;
+        // v3.13.x：推定停靠自愈的活动基线——浮悬键盘收回后输入框仍保持聚焦时，
+        // focusout/vv.resize 都可能不来（摩托罗拉 G100 / 雨见 实测），58% 推顶
+        // 会残留到用户下次交互才复位（表现为「输入框停留几秒才回底」）。用
+        // 最近一次用户交互（触摸/按键/聚焦）时间戳，长时间无活动即视键盘已收。
+        var _aLastAct = Date.now();
+        function _aBump() { _aLastAct = Date.now(); }
         function _aIsText(el) {
           return el && ((el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')
             ? (el.type !== 'checkbox' && el.type !== 'range' && el.type !== 'file' && el.type !== 'color' && !el.readOnly)
@@ -922,6 +941,12 @@
                 nudgeInputVisible();
                 // v3.12.x：悬浮键盘推定停靠复查（vv 不反映键盘的内核走这里兜底）
                 _aProvCheck();
+                // v3.13.x：推定停靠自愈——vv 已到无键盘基准（键盘肉眼已收）但
+                // _aProv 仍顶住 58%、输入框保持聚焦干等 focusout 时，用户长时间
+                // 无任何交互即视为键盘已收，立即清除推顶，输入框马上回底
+                if (_aProv && _aVV.height >= _aH - 60 && Date.now() - _aLastAct > 2200) {
+                  _aProvClear();
+                }
               } else if (_aKb) {
                 if (_aVV.height >= _aH - 60) {
                   _aKb = false;
@@ -991,11 +1016,20 @@
             }
           } catch (e) {}
         }
+        // 任何真实交互（触摸/按键/聚焦）都续期活动基线——打字停顿、点键盘键、
+        // 点击输入框都不会被上面的自愈误判为「键盘已收」误清除推顶
+        try {
+          document.addEventListener('touchstart', _aBump, { passive: true, capture: true });
+        } catch (e) {}
+        try {
+          // keydown 用捕获，输入法组合（keyCode 229）也持续刷新，保证长时间打字不误清除
+          document.addEventListener('keydown', _aBump, true);
+        } catch (e) {}
         _aVV.addEventListener('resize', syncAndroidKb);
         // 首次聚焦兜底：键盘弹出的 resize 偶发前置/漏触发，紧跟一次判定
         document.addEventListener('focusin', function (e) {
           try {
-            if (_aIsText(e.target)) { _aTextFocused = e.target; _aFocusAt = Date.now(); }
+            if (_aIsText(e.target)) { _aTextFocused = e.target; _aFocusAt = Date.now(); _aBump(); }
             if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable)) {
               try { syncAndroidKb(); } catch (e3) {}
               setTimeout(syncAndroidKb, 120);
