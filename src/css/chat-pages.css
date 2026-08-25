@@ -2758,6 +2758,27 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + env(safe-area-inset-bott
 .eat-menu-save, .eat-menu-reset { font-size:13px; border:none; border-radius:14px; padding:7px 18px; -webkit-tap-highlight-color:transparent; }
 .eat-menu-save { background:#111; color:#fff; }
 .eat-menu-reset { background:rgba(0,0,0,.08); color:var(--ink-soft,#888); }
+/* ---- 吃什么 · 当前菜单栏 + 切换菜单转盘 + 多菜单管理（v3.13.x） ---- */
+.eat-cur-bar { display:flex; align-items:center; gap:8px; justify-content:center; margin-bottom:12px; font-size:13px; }
+.eat-cur-label { color:var(--ink-soft,#999); }
+.eat-cur-name { color:var(--ink,#222); font-weight:600; max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.eat-switch-menu { margin-left:4px; font-size:12px; border:none; border-radius:14px; padding:5px 12px; background:#e8533d; color:#fff; -webkit-tap-highlight-color:transparent; }
+.eat-menu-chips { display:flex; gap:6px; flex-wrap:wrap; justify-content:center; margin-bottom:8px; }
+.eat-chip { display:inline-block; padding:4px 12px; border-radius:12px; background:rgba(0,0,0,.06); color:var(--ink-soft,#888); font-size:12px; -webkit-tap-highlight-color:transparent; user-select:none; -webkit-user-select:none; }
+.eat-chip.on { background:#111; color:#fff; }
+.eat-menu-ops { display:flex; gap:8px; justify-content:center; margin-bottom:8px; }
+.eat-menu-op { font-size:12px; color:var(--ink-soft,#888); background:none; border:1px dashed rgba(0,0,0,.15); border-radius:10px; padding:5px 10px; -webkit-tap-highlight-color:transparent; }
+.eat-wheel-wrap-sm { width:200px; height:200px; }
+.eat-switch-overlay { position:fixed; inset:0; z-index:60; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.45); padding:20px; box-sizing:border-box; }
+.eat-switch-overlay[hidden] { display:none; }
+.eat-switch-card { width:100%; max-width:300px; padding:20px 18px; border-radius:16px; text-align:center; }
+.eat-switch-title { font-size:16px; font-weight:600; color:var(--ink,#222); margin-bottom:14px; }
+.eat-switch-name { font-size:20px; font-weight:700; color:var(--ink,#222); min-height:28px; margin:12px 0; transition:opacity .2s; }
+.eat-switch-name.fade { opacity:0; }
+.eat-switch-acts { display:flex; gap:12px; justify-content:center; }
+.eat-switch-cancel { font-size:14px; border:none; border-radius:20px; padding:10px 20px; background:rgba(0,0,0,.08); color:var(--ink,#333); -webkit-tap-highlight-color:transparent; }
+.eat-switch-go { font-size:14px; border:none; border-radius:20px; padding:10px 20px; background:#e8533d; color:#fff; -webkit-tap-highlight-color:transparent; }
+.eat-switch-go[disabled] { opacity:.45; pointer-events:none; }
 
 /* ===== 番茄钟 页（桌面第三页动态注入） ===== */
 .pomo-body { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; box-sizing:border-box; padding:14px 14px 40px; }

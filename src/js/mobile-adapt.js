@@ -909,6 +909,10 @@
         // 会残留到用户下次交互才复位（表现为「输入框停留几秒才回底」）。用
         // 最近一次用户交互（触摸/按键/聚焦）时间戳，长时间无活动即视键盘已收。
         var _aLastAct = Date.now();
+        // v3.14.x：上一次轮询的 vv.height——检测"vv 从小变大=键盘收回动画"。
+        // 摩托罗拉G100/雨见 focusout/vv.resize 漏触发，但轮询读 vv.height 能读到
+        // 回升，据此立即清除推顶，不用等 2200ms 无活动（用户感知"输入框停留几秒才回底"）
+        var _aLastVVH = 0;
         function _aBump() { _aLastAct = Date.now(); }
         function _aIsText(el) {
           return el && ((el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')
@@ -951,6 +955,14 @@
                 nudgeInputVisible();
                 // v3.12.x：悬浮键盘推定停靠复查（vv 不反映键盘的内核走这里兜底）
                 _aProvCheck();
+                // v3.14.x：vv 从小变大=键盘收回动画（摩托罗拉G100/雨见 focusout/
+                // vv.resize 漏触发，但轮询能读到 vv.height 回升）→ 立即清除推顶，
+                // 不等 2200ms。悬浮键盘 vv 恒接近 _aH，_aLastVVH 不会小于 _aH-60，不误清除
+                var _hNow = _aVV.height;
+                if (_aProv && _aLastVVH && _aLastVVH < _aH - 60 && _hNow >= _aH - 60) {
+                  _aProvClear();
+                }
+                _aLastVVH = _hNow;
                 // v3.13.x：推定停靠自愈——vv 已到无键盘基准（键盘肉眼已收）但
                 // _aProv 仍顶住 58%、输入框保持聚焦干等 focusout 时，用户长时间
                 // 无任何交互即视为键盘已收，立即清除推顶，输入框马上回底
@@ -1070,6 +1082,21 @@
             }
           }, 400);
         });
+        // v3.14.x：切后台立即清除推顶 + 复位 .phone——键盘必然收了，setInterval 在
+        // 后台被节流，切回来才自愈会残留几秒（摩托罗拉G100/雨见切后台再切回来复现）
+        document.addEventListener('visibilitychange', function () {
+          if (document.visibilityState !== 'visible') {
+            try {
+              _aProvClear();
+              if (_aKb) {
+                _aKb = false;
+                _aPhone.style.height = '';
+                _aPhone.style.alignSelf = '';
+              }
+              _aLastVVH = 0;
+            } catch (e2) {}
+          }
+        });
       }
     } catch (e) {}
   }
@@ -1085,7 +1112,7 @@
   // v3.12.x：补三个漏登记浮层（AI-A 全仓浮层清点发现，跨域改动请知悉）——
   //   #img-view-mask 聊天/字卡大图查看全屏遮罩（chatcard.js 动态创建，打开时背景聊天页可继续滚动）；
   //   #chat-rp-panel 红包底部半框、#batch-panel 消息批量操作面板（与 poke-card/emoji-panel 同族底半框）
-  const FLOAT_SELECTORS = ['#tc-mask', '#cc-export-mask', '#cc-scope-mask', '#call-mask', '#feed-notice-panel', '#feed-comment-panel', '#poke-card', '#emoji-panel', '#chat-ask-panel', '#qa-mask', '#chat-more-panel', '#gc-more-panel', '#chat-search', '#chat-decision-panel', '#chat-divine-panel', '#chat-rps-panel', '#chat-call-panel', '#chat-pong-panel', '#chat-snake-panel', '#chat-gift-panel', '#avlib-card', '#ck-panel', '#loc-panel', '.mg-mask', '#modal-mask', '#msg-actions', '#desk-image-viewer', '.desk-lib', '#gc-members-panel', '#gc-at-panel', '#gc-settings-panel', '#img-view-mask', '#chat-rp-panel', '#batch-panel'];
+  const FLOAT_SELECTORS = ['#tc-mask', '#cc-export-mask', '#cc-scope-mask', '#call-mask', '#feed-notice-panel', '#feed-comment-panel', '#poke-card', '#emoji-panel', '#chat-ask-panel', '#qa-mask', '#chat-more-panel', '#gc-more-panel', '#chat-search', '#chat-decision-panel', '#chat-divine-panel', '#chat-rps-panel', '#chat-call-panel', '#chat-pong-panel', '#chat-snake-panel', '#chat-gift-panel', '#avlib-card', '#ck-panel', '#loc-panel', '.mg-mask', '#modal-mask', '#msg-actions', '#desk-image-viewer', '.desk-lib', '#gc-members-panel', '#gc-at-panel', '#gc-settings-panel', '#img-view-mask', '#chat-rp-panel', '#batch-panel', '#eat-switch-overlay'];
   let locked = false;
   // v3.13.x：手动锁浮层（period.js 弹层动态 append/remove、不走 hidden 属性）——
   // 存在于 DOM 即视为开着，纳入统一判定，防其他浮层变动时误摘经期弹层的锁
