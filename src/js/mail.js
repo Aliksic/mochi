@@ -1192,12 +1192,17 @@
         const idbArr = JSON.parse(v);
         if (Array.isArray(idbArr)) base = idbArr;
       }
-      let cur = null;
-      if (mailDbReady || !base.length) {
-        // 保险丝已就绪：store 里已含暂存信件，并集保留；IDB 空：保留本地旧信
-        try { cur = JSON.parse(csFor(cid).get(KEY) || '[]'); } catch (e) { cur = []; }
-      }
-      const merged = mergeLists(base, mergeLists(cur || [], pending));
+      // v3.13.x：无论 IDB 是否有数据，始终把当前持久层（localStorage 主键/快照）合进并集——
+      // 原实现仅在「权威已就绪 或 IDB 为空」时读 cur，IDB 非空且未就绪时直接跳过本地：
+      // 在 vivo/OPPO/真我 Edge 等 IDB 写入失败或挂起的设备上，新信（周报小结/寄出的信/
+      // 收到的信）只写进 localStorage+内存缓存没进 IDB，下次启动权威合并以【旧 IDB】为
+      // 基准，新信被整体丢弃 → 弹窗提示「寄来了一份本周摸鱼小结」信箱里却看不到。
+      // 与 feed.js feedMergeFromIdb 同口径：基准 = IDB，并集保留本地独有数据（按 id 覆盖，
+      // 本地优先），不重演旧的「save([]) 覆盖 IDB」问题。
+      let cur = [];
+      try { cur = JSON.parse(csFor(cid).get(KEY) || '[]'); } catch (e) { cur = []; }
+      if (!cur.length) { try { cur = loadSnap(cid); } catch (e) {} }
+      const merged = mergeLists(base, mergeLists(cur, pending));
       if (merged.length) { csFor(cid).set(KEY, JSON.stringify(merged)); writeSnap(merged, cid); }
     } catch (e) { /* 解析失败：仍置就绪，避免下次启动重复合并 */ }
   }

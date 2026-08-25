@@ -241,8 +241,8 @@
 <button class="we-btn" id="weekend-fish" title="摸鱼 +1">摸鱼 +<b id="weekend-count">0</b></button>
 </div>
 
-<!-- 第二页功能：两排图标（第一排 音乐/聊天统计/提问记录/查岗；第二排 喝水(p2-features 注入)/花园/同频(注入)/伸手(注入)），
-     整组移到摸鱼组件（周末倒计时）下面 -->
+<!-- 第二页功能：两排图标（第一排 音乐/聊天统计/提问记录/查岗；第二排 花园/此间/同频(注入)/伸手(注入)；
+     喝水已移至第三页 p3-grid（p2-features 注入）），整组移到摸鱼组件（周末倒计时）下面 -->
 <div class="app-grid p2-grid" data-app="p2" data-desk-widget="p2apps">
 <div class="app" data-app="music" data-desk-widget="app-music">
 <div class="app-ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
@@ -260,10 +260,15 @@
 <div class="app-ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/><path d="M12 3a9 9 0 000 18"/></svg></div>
 <div class="app-name">查岗</div>
 </div>
-<!-- 花园自第三页移入：第二排「喝水 花园 同频 伸手」（喝水由 p2-features 插到本图标前，同频/伸手追加其后） -->
+<!-- 花园自第三页移入：第二排「花园 此间 同频 伸手」（此间紧随其后为模板静态图标，同频/伸手由 p2-features 追加） -->
 <div class="app" data-app="garden" data-desk-widget="app-garden">
 <div class="app-ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 21h10l-1.5-5h-7z"/><path d="M12 16v-7"/><path d="M12 12c-2 0-3.5-1-3.5-3"/><path d="M12 10c2 0 3.5-1 3.5-3"/><circle cx="12" cy="6" r="2"/></svg></div>
 <div class="app-name">花园</div>
+</div>
+<!-- v3.13.x：此间（梦角世界时间与在场感知）桌面入口——聊天「更多功能」同款页面，从桌面进入返回桌面 -->
+<div class="app" data-app="cjian" data-desk-widget="app-cjian">
+<div class="app-ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21V5a2 2 0 012-2h12a2 2 0 012 2v16"/><path d="M4 21h16"/><path d="M10 21v-6h4v6"/></svg></div>
+<div class="app-name">此间</div>
 </div>
 </div>
       </div><!-- /page-slide 第二页 -->
@@ -299,7 +304,7 @@
 <div class="app-ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5h11a1 1 0 011 1V20a1 1 0 01-.55.9A2 2 0 0115.5 21H6a1 1 0 01-1-1v-16a1 1 0 011-.5z"/><path d="M9 8.5h6M9 12.5h6M9 16.5h3.5"/><path d="M15.5 4v5l-1.5-1-1.5 1V4"/></svg></div>
 <div class="app-name">梦角档案</div>
 </div>
-<!-- 花园图标已移第二页（第二排）；本页动态注入 吃什么/存钱罐/番茄钟（p2-features.js） -->
+<!-- 本页动态注入 喝水/吃什么/存钱罐/番茄钟（p2-features.js，喝水排在本页静态图标之后） -->
 </div>
       </div><!-- /page-slide 第三页 -->
       </div><!-- /desktop-pages -->
@@ -1280,7 +1285,7 @@
           <div class="lic-li">装修模式：点图标换图、点卡片设背景、添加卡片、恢复图标、完成</div>
           <div class="lic-li">桌面图片组件（尺寸档位：小 / 中 / 大，全屏查看器）</div>
           <div class="lic-li">第一页功能图标：聊天、主页、信箱、朋友圈、日历、纪念、占卜、收藏</div>
-          <div class="lic-li">第二页：本周日常、周末倒计时（摸鱼组件）；功能图标两排——聊天统计、提问记录、查岗、音乐 / 喝水、花园、同频、伸手</div>
+          <div class="lic-li">第二页：本周日常、周末倒计时（摸鱼组件）；功能图标两排——聊天统计、提问记录、查岗、音乐 / 花园、此间、同频、伸手；第三页：喝水、吃什么、存钱罐、番茄钟</div>
           <div class="lic-li">第三页卡片：经期倒计时、今日备忘、今天的心情；功能图标：经期记录、记账（吃什么/存钱罐/番茄钟动态注入）</div>
           <div class="lic-li">设置页：深色模式开关；桌面美化：主题色、桌面字号、卡片大小、内置壁纸预设</div>
           <div class="lic-li">小组件颜色：背景 / 边框 / 按钮 / 按钮文字 / 爱心外框颜色、小组件透明度、图标圆角</div>
@@ -3284,7 +3289,7 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8a4 4 0 100 8 4 4 0 000-8z"/><path d="M19 12a7 7 0 00-.1-1.2l2-1.6-2-3.4-2.3 1a7 7 0 00-2-1.2L14.2 3h-4l-.4 2.6a7 7 0 00-2 1.2l-2.3-1-2 3.4 2 1.6A7 7 0 005 12c0 .4 0 .8.1 1.2l-2 1.6 2 3.4 2.3-1a7 7 0 002 1.2l.4 2.6h4l.4-2.6a7 7 0 002-1.2l2.3 1 2-3.4-2-1.6c.1-.4.1-.8.1-1.2z"/></svg>
         </span>
       </div>
-      <div class="gs-scroll cj-scroll">
+      <div class="gs-scroll cj-scroll" id="cj-main">
         <div class="cj-hero">
           <div class="cj-hero-sub">此刻，你与TA之间。</div>
           <div class="cj-hero-time" id="cj-hero-time">—</div>
@@ -3299,8 +3304,12 @@
         <button class="cj-perceive" id="cj-perceive" type="button">感知此间</button>
         <div class="cj-perceive-result" id="cj-perceive-result" hidden></div>
         <div class="cj-today-title">今日</div>
-        <div class="cj-today-note">今天的轨迹不是排班，只是可能的样子。</div>
+        <div class="cj-today-note">每次打开，TA们会重新选择今天可能的样子。</div>
         <div id="cj-today"></div>
+      </div>
+      <div class="gs-scroll cj-scroll" id="cj-detail" hidden>
+        <button class="cj-detail-back" id="cj-detail-back" type="button">‹ 返回</button>
+        <div id="cj-detail-body"></div>
       </div>
     </div>
 

@@ -2480,27 +2480,29 @@ try {
   document.addEventListener('contact-switched', ensureMemoRowP3);
 
   // ===== v3.13.x：第二页改版迁移（仿 ensureMemoRowP3 先例） =====
-  // ① 功能图标组（p2apps：音乐/聊天统计/提问记录/查岗/花园 + 动态注入的喝水/同频/伸手）
+  // ① 功能图标组（p2apps：音乐/聊天统计/提问记录/查岗/花园/此间 + 动态注入的同频/伸手）
   //    默认位置改为「周末倒计时」（摸鱼组件）下方——template 已移；
   //    老用户 desk-layout 里 p2apps 排在 weekend 前面的自动换序到其后（DOM+存储同步改写），
   //    已在其后的不动；两组件不在同一页 / weekend 已被用户移除进池的尊重现状不强行挪。
-  // ② 第三页 p3apps 网格里的 花园 图标归入第二页网格第二排（喝水/同频/伸手由 p2-features
+  // ② 第三页 p3apps 网格里的 花园/同频/伸手 图标归入第二页网格第二排（同频/伸手由 p2-features
   //    注入时直接落第二页，见该文件；此处兜底搬运仍留在第三页网格内的默认位节点）。
-  //    只搬仍位于 .p3-grid 内的节点——用户手动拖出成独立组件 / 移除进隐藏池的尊重不找回。
+  //    喝水已默认移至第三页，绝不再拖回第二页。只搬仍位于 .p3-grid 内的节点——
+  //    用户手动拖出成独立组件 / 移除进隐藏池的尊重不找回。
   // 每联系人桌面独立（desk-layout 按桌面命名空间存储，切联系人各自触发）。
   function ensureP2SecondRowIcons() {
     const p2g = document.querySelector('.app-grid.p2-grid');
     const p3g = document.querySelector('.app-grid.p3-grid');
     if (!p2g) return;
     let moved = false;
-    ['app-water', 'app-tongpin', 'app-shenshou', 'app-garden'].forEach(wid => {
+    ['app-tongpin', 'app-shenshou', 'app-garden'].forEach(wid => {
       const n = document.querySelector('[data-desk-widget="' + wid + '"]');
       if (!n || !p3g || n.parentNode !== p3g) return;
       p2g.appendChild(n); moved = true;
     });
     if (!moved) return;
-    // 归位后按新默认排序追加在已有图标之后：喝水 花园 同频 伸手
-    ['app-water', 'app-garden', 'app-tongpin', 'app-shenshou'].forEach(wid => {
+    // 归位后按新默认排序追加在已有图标之后：花园 此间 同频 伸手（此间为模板静态图标，
+    // 在 p2-grid 内；喝水留在第三页）
+    ['app-garden', 'app-cjian', 'app-tongpin', 'app-shenshou'].forEach(wid => {
       const n = document.querySelector('[data-desk-widget="' + wid + '"]');
       if (n && n.parentNode === p2g) p2g.appendChild(n);
     });

@@ -2989,3 +2989,38 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + env(safe-area-inset-bott
 .cj-today-range { display: block; font-size: 10.5px; color: rgba(0,0,0,.45); margin-top: 1px; }
 .cj-today-chars { flex: 1; min-width: 0; font-size: 12px; line-height: 1.7; color: rgba(0,0,0,.6); }
 .cj-today-mute { color: rgba(0,0,0,.3); }
+
+/* ===== v3.13.x：此间（重设计）——卡片可点进详情 / 梦角一天 ===== */
+.cj-card { cursor: pointer; }
+.cj-card-hint { font-size: 11px; color: rgba(0,0,0,.4); flex-shrink: 0; }
+.cj-detail-back {
+  display: inline-flex; align-items: center; gap: 2px;
+  margin: 4px 0 12px; padding: 7px 14px;
+  border: 1px solid rgba(0,0,0,.1); border-radius: 99px;
+  background: rgba(255,255,255,.9); color: var(--ink);
+  font-size: 12.5px; font-weight: 700; cursor: pointer;
+  font-family: inherit; -webkit-tap-highlight-color: transparent;
+}
+.cj-detail-back:active { background: rgba(0,0,0,.07); }
+.cj-d-name { font-size: 20px; font-weight: 800; letter-spacing: .5px; color: var(--ink); }
+.cj-d-offset {
+  display: inline-block; margin-top: 6px; padding: 3px 10px;
+  font-size: 11px; font-weight: 700; color: #b7791f;
+  background: rgba(255,247,237,1); border: 1px solid rgba(183,121,31,.35);
+  border-radius: 99px;
+}
+.cj-d-time { margin-top: 14px; }
+.cj-d-half { font-size: 40px; font-weight: 800; letter-spacing: 3px; color: var(--ink); }
+.cj-d-range { margin-top: 2px; font-size: 13px; color: rgba(0,0,0,.5); }
+.cj-d-real { margin-top: 3px; font-size: 11.5px; color: rgba(0,0,0,.4); }
+.cj-d-note { margin-top: 10px; font-size: 12px; color: rgba(0,0,0,.5); }
+.cj-d-today-title { margin-top: 18px; font-size: 15px; font-weight: 800; letter-spacing: .5px; color: var(--ink); }
+.cj-d-today { margin-top: 6px; }
+.cj-d-row {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 10px;
+  padding: 8px 2px; border-bottom: 1px solid rgba(0,0,0,.05);
+}
+.cj-d-row:last-child { border-bottom: none; }
+.cj-d-row-name { font-size: 13px; font-weight: 800; color: var(--ink); flex-shrink: 0; }
+.cj-d-row-p { font-size: 12.5px; color: rgba(0,0,0,.6); text-align: right; }
+.cj-d-foot { margin-top: 12px; font-size: 11.5px; color: rgba(0,0,0,.4); }
