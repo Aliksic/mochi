@@ -175,7 +175,7 @@
 .we-btn b { font-size:13px; }
 
 /* 应用图标 */
-.app-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:22px 10px; padding:2px 8px 6px; }
+.app-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px 8px; padding:2px 8px 6px; }
 .app { display:flex; flex-direction:column; align-items:center; gap:8px; cursor:pointer; }
 .app .app-ico {
   /* v3.5.133：min(58px, 21vw)——极窄屏（<305px）固定 58px 会撑爆 4 列网格被裁 */

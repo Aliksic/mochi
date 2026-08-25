@@ -46,6 +46,10 @@
     'market-custom', 'market-migrated',
     // v3.10.x：扩库救援标记（gift-shop.js rescueNewDefaults，v2 新默认商品误删恢复），同为全局根键
     'market-migrated-v2',
+    // v3.13.x：此间（梦角世界时间与在场感知，cjian.js）——梦角名单/状态/初始化标记
+    // 走根命名空间全局共享，不随联系人隔离，绝不能被 migrateLegacy 迁进 default 桌面
+    // （否则切换桌面后梦角名单/状态"消失"）
+    'cjian-roster', 'cjian-state', 'cjian-seeded',
     // v3.13.x：朋友圈根命名空间键（feed.js 全部走 xy-home-v2 根 store，是现行设计不是
     // 旧顶层业务键）——此前漏排除，每次启动 migrateLegacy 把它们当旧键迁进 default:
     // 并删根键（default 已有陈旧副本时连迁移都不做直接删）→ 朋友圈通知列表/未读角标/
@@ -60,6 +64,9 @@
     // v3.9.x：reply-gc-* 群聊全局设置键同样不能迁移（无冒号，原逻辑会误判为旧业务键）
     if (r.indexOf('reply-gc-') === 0) return true;
     if (r.indexOf('music-file:') === 0) return true;
+    // 梦角档案：narc-* 走根命名空间（全局共享，memo-arc.js），绝不能当旧顶层业务键迁移
+    // （否则切换桌面后档案/当前梦角读全局键读不到，"消失"）。narc-cur 亦不例外。
+    if (r.indexOf('narc-') === 0) return true;
     // v3.6.x：命名空间键（default:* / <cid>:*）不是"旧顶层键"，绝不能迁移——
     // 否则会把 xy-home-v2:default:avatar-user 再迁成 xy-home-v2:default:default:avatar-user
     // 并删除原键（刷新后头像/壁纸/聊天壁纸丢失 + default:default: 双重前缀垃圾键）。

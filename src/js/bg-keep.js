@@ -412,6 +412,44 @@
   const NOTIFY_ICON = (function () {
     try { return new URL('./icon-512.png', location.href).href; } catch (e) { return ''; }
   })();
+  // v3.13.x：badge（通知左侧小图标）专用单色透明图——icon-512.png 是全不透明白底黑字
+  // 大图，直接放 badge 位不符合 Android small icon 规范（要求 alpha 蒙版单色图），
+  // 部分系统/浏览器（OPPO ColorOS + Edge 等）会渲染成白块或不显示。这里用 canvas
+  // 把白底变透明、内容变白色剪影，生成 96px 透明底单色 PNG dataURL，供 badge 使用。
+  let BADGE_DATAURL = '';
+  let badgeReady = false;
+  let badgeQueue = null;
+  function getBadgeUrl(cb) {
+    cb = cb || function () {};
+    if (badgeReady) { cb(BADGE_DATAURL); return; }
+    if (badgeQueue) { badgeQueue.push(cb); return; }
+    badgeQueue = [cb];
+    if (!NOTIFY_ICON) { badgeReady = true; BADGE_DATAURL = ''; const q = badgeQueue; badgeQueue = null; for (let i = 0; i < q.length; i++) q[i](''); return; }
+    const img = new Image();
+    img.onload = function () {
+      try {
+        const s = 96;
+        const c = document.createElement('canvas');
+        c.width = s; c.height = s;
+        const ctx = c.getContext('2d');
+        ctx.drawImage(img, 0, 0, s, s);
+        const d = ctx.getImageData(0, 0, s, s);
+        const px = d.data;
+        for (let i = 0; i < px.length; i += 4) {
+          const r = px[i], g = px[i + 1], b = px[i + 2];
+          if (r > 248 && g > 248 && b > 248) px[i + 3] = 0;   // 白底 → 透明
+          else { px[i] = 255; px[i + 1] = 255; px[i + 2] = 255; px[i + 3] = 255; } // 内容 → 白色不透明
+        }
+        ctx.putImageData(d, 0, 0);
+        BADGE_DATAURL = c.toDataURL('image/png');
+      } catch (e) { BADGE_DATAURL = ''; }
+      badgeReady = true;
+      const q = badgeQueue; badgeQueue = null;
+      for (let i = 0; i < q.length; i++) { try { q[i](BADGE_DATAURL); } catch (e2) {} }
+    };
+    img.onerror = function () { badgeReady = true; BADGE_DATAURL = ''; const q = badgeQueue; badgeQueue = null; for (let i = 0; i < q.length; i++) { try { q[i](''); } catch (e) {} } };
+    img.src = NOTIFY_ICON;
+  }
   // v3.5.135：统一走 Service Worker 显示通知——Chrome Android 规范：页面在后台（隐藏）
   //   时，页面脚本直接 new Notification() 会被静默抑制（通知不弹也不报错），
   //   标准做法是 navigator.serviceWorker.ready → reg.showNotification()（SW 独立于页面，
@@ -431,7 +469,9 @@
           // v3.5.156：mochi 图标设到 badge（左侧小图标）——安卓通知里 badge 才是
           // 左侧小图标位；icon 是右侧大图标位（由调用方传联系人头像/消息图）。
           // 此前把 mochi 设进 icon → 显示在右侧，左侧 badge 未设 → 浏览器默认图标
-          if (!swOpts.badge && NOTIFY_ICON) swOpts.badge = NOTIFY_ICON;
+          // v3.13.x：badge 优先用 canvas 生成的单色透明图（Android small icon 规范）；
+          // 未生成完成时回退原始 icon-512 URL（已启动即预热，首条通知前通常已就绪）
+          if (!swOpts.badge) swOpts.badge = BADGE_DATAURL || NOTIFY_ICON || undefined;
           navigator.serviceWorker.ready.then(function (reg) {
             reg.showNotification(title, swOpts).then(function () { resolve(true); }, function () {
               // v3.5.142：逐级降级重发——带 image（图片缩略图）失败 → 去 image 重发；
@@ -554,6 +594,8 @@
     }
     // v3.5.131：恢复时校验权限——浏览器/系统回收权限后开关仍显示"开"但通知静默失效
     notifyEnabled = saved === '1' && 'Notification' in window && Notification.permission === 'granted';
+    // v3.13.x：预热 badge 单色图——页面启动即后台生成，首条通知前通常已就绪
+    if ('Notification' in window && Notification.permission === 'granted') { getBadgeUrl(function () {}); }
     if (saved === '1' && !notifyEnabled) {
       try { gSet('bg-notify', '0'); } catch (e) {}
       toast('通知权限已被回收，已自动关闭通知');

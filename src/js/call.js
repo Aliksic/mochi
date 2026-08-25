@@ -292,7 +292,10 @@
   }
   function updateDur() {
     if (!currentCall) return;
-    const sec = Math.floor((Date.now() - currentCall.startTime) / 1000);
+    // v3.13.x：计时基准用「接听时刻」而非「响铃/拨出时刻」——
+    // 此前用 startTime 会把响铃等待时长计入通话，响铃末尾接听时时长会从 0 直接蹦到 30 秒
+    const base = currentCall.connectedTime || currentCall.startTime;
+    const sec = Math.floor((Date.now() - base) / 1000);
     if (durEl) durEl.textContent = fmtDur(sec);
     if (miniTime) miniTime.textContent = fmtDur(sec);
   }
@@ -300,6 +303,7 @@
   function startCallDuration() {
     stopTimers();
     currentCall.connectedTime = Date.now();
+    updateDur(); // v3.13.x：接通立即刷新显示，避免接通瞬间仍停留「00:00」卡一下
     let checkCount = 0;
     durationTimer = setInterval(() => {
       updateDur();
@@ -356,7 +360,7 @@
     } catch (e) {}
   }
   // 结束通话：清界面 + 聊天系统消息（接通过必带时长）+ 记录
-  // v3.5.51：真实时长从 startTime 计算（覆盖对方挂断/不明原因中断路径）；
+  // v3.5.51：真实时长从接听时刻计算（覆盖对方挂断/不明原因中断路径）；
   //   接通后结束 → 系统消息明确「通话已挂断 / 对方已挂断 · 时长 xx」
   function endCall(text) {
     // v3.5.127：所有结束路径（超时/拒绝/挂断/对方挂断）统一停铃声
@@ -368,7 +372,7 @@
     if (mini) mini.hidden = true;
     if (cdEl) cdEl.hidden = true;
     if (currentCall) {
-      // 真实通话时长：durationSec（接通后已计时）兜底用 startTime 计算
+      // 真实通话时长：durationSec（接通后已计时）兜底用 connectedTime 计算
       const dur = currentCall.durationSec || (currentCall.connectedTime ? Math.max(0, Math.floor((Date.now() - currentCall.connectedTime) / 1000)) : 0);
       const dir = currentCall.direction;
       // v3.6.x：姓名用通话绑定的桌面（通话中切桌面后挂断不显示成当前联系人）
@@ -490,7 +494,8 @@
     if (!currentCall) return;
     if (currentCall.status === 'ringing') { currentCall.status = 'ended'; endCall('已取消'); return; }
     // v3.6.x：未接通（呼叫中取消）不算时长——endCall 只在 connectedTime 存在时才标注时长
-    if (currentCall.connectedTime) currentCall.durationSec = Math.floor((Date.now() - currentCall.startTime) / 1000);
+    // v3.13.x：真实时长按接听时刻 connectedTime 计算（与 updateDur 基准一致，不含响铃/拨出等待）
+    if (currentCall.connectedTime) currentCall.durationSec = Math.floor((Date.now() - currentCall.connectedTime) / 1000);
     currentCall.status = 'ended';
     endCall('已挂断');
   }

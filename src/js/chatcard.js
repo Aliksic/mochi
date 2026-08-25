@@ -1761,6 +1761,7 @@
           }
           let done = 0;
           let skipped = 0;
+          let notAudio = 0;
           // v3.6.x：上传大小限制——语音不压缩直接存 dataURL（字符串膨胀约 33%），
           // 超大音频会撑爆手机内存/IDB；图片虽有 260px 压缩兜底，原图读取也占峰值内存。
           // 语音限 10MB、图片限 20MB，超出跳过并提示
@@ -1774,6 +1775,18 @@
             }
             const reader = new FileReader();
             reader.onload = () => {
+              // v3.13.x：语音分类里用户可能误传视频（安卓文件管理器常忽略 accept 过滤）——
+              // 视频 MIME 直接跳过，绝不当作音频存。存了播放只会空白/报错，还拖慢整库序列化
+              if (cur === 'voice') {
+                const rvm = /^data:([^;,]*);/.exec(reader.result || '');
+                const rvMime = rvm ? rvm[1] : '';
+                if ((f.type && f.type.indexOf('video/') === 0) || rvMime.indexOf('video/') === 0) {
+                  notAudio++;
+                  done++;
+                  if (done === files.length) finishUpload(done - skipped - notAudio, skipped, notAudio);
+                  return;
+                }
+              }
               const process = (data) => {
                 // 语音：存 "文件名|||音频数据"，图片/表情：存图片 dataURL
                 // v3.6.x：文件名去掉 mp3/mp4 等后缀（聊天里语音名称不显示 .mp3/.mp4）
@@ -1802,12 +1815,16 @@
             };
             reader.readAsDataURL(f);
           });
-          function finishUpload(ok, skip) {
+          function finishUpload(ok, skip, skipNotAudio) {
             saveGroups(groups);
             renderGroupsBar();
             render();
-            if (skip > 0) toast('已上传 ' + ok + ' 个，跳过 ' + skip + ' 个超大文件（' + (cur === 'voice' ? '音频>10MB' : '图片>20MB') + '）');
-            else toast('已上传 ' + ok + ' 个' + (cur === 'voice' ? '音频' : '图片'));
+            const msgs = [];
+            if (ok > 0) msgs.push('已上传 ' + ok + ' 个' + (cur === 'voice' ? '音频' : '图片'));
+            if (skip > 0) msgs.push('跳过 ' + skip + ' 个超大文件（' + (cur === 'voice' ? '音频>10MB' : '图片>20MB') + '）');
+            if (skipNotAudio > 0) msgs.push('跳过 ' + skipNotAudio + ' 个视频/非音频（语音分类只支持音频）');
+            if (!msgs.length) msgs.push('没有可上传的文件');
+            toast(msgs.join('，'));
           }
         });
         return;
@@ -2012,6 +2029,11 @@
 
   // 音频播放（事件委托；字卡删除统一走【管理字卡】）
   // 播放中：按钮高亮 + 图标变波形动画；再次点击暂停；同一时间只播放一条
+  // v3.13.x：播放前先校验——只构造 data:audio/ 前缀、长度有界（约等于允许存储的
+  // 10MB 音频 base64）的 Audio。误存成语音的视频/超大/空 MIME 数据若直接喂给
+  // new Audio(dataURL)，vivo 等低配 Edge 会在主线程同步解码而整页卡死，且播放空白
+  // 无音。这里统一拦截改为 toast 提示，不再解码、不再卡死。
+  const MAX_AUDIO_VAULT = 16 * 1024 * 1024; // 字符数≈12MB 二进制，高于 10MB 存储上限，合法录音仍可播
   let playingAudio = null;
   let playingBtn = null;
   function stopPlay() {
@@ -2029,9 +2051,18 @@
     if (playingBtn === btn) { stopPlay(); return; }
     // v3.6.x：audio dataURL 不存 DOM——从 WeakMap 按节点取（搜索过滤后索引会错位，不能回查）
     const src = audioSrcMap.get(btn) || '';
+    // v3.13.x：播放前守门——非音频前缀/超大数据一律不构造 Audio（防主线程解码卡死）
     if (!src) { stopPlay(); toast('音频数据不可用'); return; }
+    if (!/^data:audio\//.test(src)) { stopPlay(); toast('该语音数据异常，无法播放'); return; }
+    if (src.length > MAX_AUDIO_VAULT) { stopPlay(); toast('该语音文件过大，无法播放'); return; }
+    let nextAudio;
+    try {
+      nextAudio = new Audio(src);
+    } catch (err) {
+      stopPlay(); toast('该语音无法播放'); return;
+    }
     stopPlay();
-    playingAudio = new Audio(src);
+    playingAudio = nextAudio;
     playingBtn = btn;
     btn.classList.add('playing');
     playingAudio.addEventListener('ended', stopPlay);

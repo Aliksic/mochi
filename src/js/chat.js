@@ -2899,6 +2899,29 @@ function partialRetractMsg(msgEl, side) {
       if (window.openCkPanel) window.openCkPanel();
     });
   }
+  // 更多功能面板「查岗」按钮：打开同一查岗半框
+  const moreCk = document.getElementById('more-ck');
+  if (moreCk) {
+    moreCk.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (morePanel) morePanel.hidden = true;
+      if (window.openCkPanel) window.openCkPanel();
+    });
+  }
+  // 更多功能面板「此间」按钮：梦角世界时间与在场感知（v3.13.x）
+  // 此间是独立全屏页（page-cjian），需要记录来源页以便返回；
+  // 打开/关闭处理逻辑在 cjian.js（window.openCjian / window.closeCjian）
+  const moreCjian = document.getElementById('more-cjian');
+  if (moreCjian) {
+    moreCjian.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (morePanel) morePanel.hidden = true;
+      if (window.openCjian) {
+        window.__cjianFrom = 'chat';
+        window.openCjian();
+      } else toast('此间加载失败');
+    });
+  }
   let lastMineText = '';
   // v3.12.x：lastMineText 对应消息的 msgs 下标——TA 引用时写入新记录的 qidx（点引用块跳回原消息）
   let lastMineIdx = -1;
@@ -6898,10 +6921,25 @@ function partialRetractMsg(msgEl, side) {
   //（防的是同一次发送的重复事件，人工重发同内容间隔必然 >2.5s，不受影响）。
   const SEND_GUARD_MS = 2500;
   let lastSendTxt = '', lastSendTs = 0;
+  // v3.13.x：清空聊天输入框。聊天输入框 #chat-input 是模板原生 contenteditable div，
+  // 可见文本存在 DOM 里（不是 input 的 .value）——只走 input.value='' 是空操作，
+  // 发送后文字仍留在输入框，紧接着再点发送会被防重窗口吞掉/再发一条，于是表现为
+  // 「发送按钮无法发送消息/发重」。这里同时清 .textContent（原生 contenteditable）
+  // 与 .value（兼容被 ceConvert 转成幽灵的 input 代理），两者都做才真正做到清空。
+  function clearChatInput() {
+    if (!input) return;
+    try {
+      if (input.isContentEditable) input.textContent = '';
+    } catch (e) {}
+    try { input.value = ''; } catch (e) {}
+    // v3.14.x：记录"刚被清空"的文本——供 #chat-input 的 input 监听做 IME 复活防御
+    //（见下方 6986 附近）。textContent='' 只是先把 DOM 清空，并非本次清空的尾声。
+    input._mClearTxt = lastSendTxt || '';
+  }
   const addMsg = (text) => {
     const t0 = (text || '').trim();
     if (t0 && t0 === lastSendTxt && Date.now() - lastSendTs < SEND_GUARD_MS) {
-      input.value = '';
+      clearChatInput();
       draftImgs = [];
       renderDraft();
       return;
@@ -6921,10 +6959,12 @@ function partialRetractMsg(msgEl, side) {
     addRec(rec);
     lastSendTxt = t;
     lastSendTs = Date.now();
+    // v3.13.x：此间——刚聊过天会让梦角靠近概率短时间提高（30 分钟内）
+    try { if (window.cjianNoteChat) window.cjianNoteChat(); } catch (err) {}
     // v3.5.60：我发送消息播放设置的音效
     if (window.playSfx) window.playSfx('out');
-    // v3.5.127：contenteditable 版输入框清空用 value（手机端 ce-box 代理了 value setter）
-    input.value = '';
+    // v3.13.x：清空输入框——原生 contenteditable 文本在 DOM，见 clearChatInput 注释
+    clearChatInput();
     draftImgs = [];
     renderDraft();
     if (window.logFish) window.logFish();
@@ -6947,6 +6987,21 @@ function partialRetractMsg(msgEl, side) {
     } catch (err) {}
   });
   if (input) {
+    // v3.14.x：安卓 Chrome（红米 K80 等上报）输入法在"回车发送清空"后会把刚发出的
+    // 文本"复活"写回 contenteditable——clearChatInput 已把 DOM 清空，但紧跟的
+    // composition/input 事件会把旧文本再次写回，表现为"消息发出去了但字还留在输入框"
+    //（发送按钮路径也同源触发）。当随后内容又恰好变回刚清空的文本（且仍在防重窗口内）
+    // 时立即再清一次；只要用户改打了别的字就解除防御，避免误清重敲的同样内容。
+    input.addEventListener('input', () => {
+      if (!input._mClearTxt) return;
+      const now = input.innerText.trim();
+      if (now === input._mClearTxt && Date.now() - lastSendTs < SEND_GUARD_MS) {
+        input.textContent = '';
+        input._mClearTxt = '';
+      } else if (now && now !== input._mClearTxt) {
+        input._mClearTxt = '';
+      }
+    });
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) {
         // v3.5.127：contenteditable 里 Enter 默认插入换行——阻止后由发送逻辑接管

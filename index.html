@@ -708,7 +708,7 @@ display:flex; align-items:center; gap:3px;
 }
 .we-btn:active { transform:scale(.95); }
 .we-btn b { font-size:13px; }
-.app-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:22px 10px; padding:2px 8px 6px; }
+.app-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px 8px; padding:2px 8px 6px; }
 .app { display:flex; flex-direction:column; align-items:center; gap:8px; cursor:pointer; }
 .app .app-ico {
 width:min(58px, 21vw); height:min(58px, 21vw); border-radius:var(--app-ico-radius);
@@ -1532,6 +1532,11 @@ display:flex; align-items:center; justify-content:center;
 #ck-panel .poke-card-scroll { min-height:0; max-height:none; }
 #chat-decision-panel { height:auto; max-height:68%; }
 #chat-decision-panel .poke-card-scroll { min-height:0; max-height:none; }
+#chat-decision-body .dec-inp-wrap .ce-box[data-for="dec-opts"] {
+max-height:176px;
+overflow-y:auto;
+overscroll-behavior:contain;
+}
 .poke-big {
 flex-shrink:0; display:flex; align-items:center; justify-content:center; gap:6px;
 margin-top:12px; padding:12px; border:none; border-radius:14px;
@@ -3352,6 +3357,60 @@ transition:background .15s, transform .1s;
 .loc-card.disabled { opacity:.4; cursor:not-allowed; }
 .loc-card-egg { border-color:rgba(255,180,80,.6); background:rgba(255,240,210,.9); color:#b8742a; }
 .loc-card-egg:active { background:rgba(255,220,160,.9); }
+.fw-sense {
+padding:14px 16px 12px; border-bottom:1px solid rgba(0,0,0,.06);
+background:linear-gradient(160deg, rgba(250,247,242,.6) 0%, rgba(244,238,228,.5) 100%);
+}
+.fw-circle {
+position:relative; width:170px; height:170px; margin:0 auto;
+border-radius:50%;
+border:1px dashed rgba(0,0,0,.18);
+background:radial-gradient(circle, rgba(255,255,255,.9) 0%, rgba(255,255,255,.4) 60%, rgba(255,255,255,0) 75%);
+}
+.fw-dir {
+position:absolute; transform:translate(-50%,-50%);
+width:26px; height:26px; border-radius:50%;
+border:1px solid rgba(0,0,0,.1); background:rgba(255,255,255,.85);
+color:var(--muted); font-size:14px; font-weight:700; cursor:pointer;
+display:flex; align-items:center; justify-content:center;
+font-family:inherit; padding:0;
+}
+.fw-dir.on {
+background:#b7791f; border-color:#b7791f; color:#fff;
+box-shadow:0 2px 10px rgba(183,121,31,.4);
+}
+.fw-me {
+position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+width:44px; height:44px; border-radius:50%;
+background:var(--ink); color:#fff;
+font-size:14px; font-weight:800; display:flex; align-items:center; justify-content:center;
+}
+.fw-cur-dir {
+position:absolute; left:50%; top:50%; transform:translate(-50%, -50%) translateY(30px);
+font-size:12px; font-weight:700; color:#b7791f; white-space:nowrap;
+}
+.fw-detail { margin-top:34px; display:flex; flex-direction:column; gap:6px; }
+.fw-row {
+display:flex; align-items:center; justify-content:space-between;
+padding:7px 12px; border-radius:10px;
+background:rgba(255,255,255,.8); border:1px solid rgba(0,0,0,.06);
+}
+.fw-row-label { font-size:12px; color:var(--muted); font-weight:600; }
+.fw-row-val { font-size:14px; font-weight:800; color:var(--ink); }
+.fw-perceive {
+display:block; width:100%; margin:12px 0 4px; padding:11px 0;
+border:none; border-radius:12px; background:var(--ink); color:#fff;
+font-size:14px; font-weight:800; letter-spacing:2px; cursor:pointer; font-family:inherit;
+}
+.fw-perceive:active { opacity:.85; }
+.fw-perceive.busy, .fw-perceive:disabled { opacity:.45; }
+.fw-result {
+margin-top:10px; padding:10px 14px; border-radius:12px;
+background:rgba(183,121,31,.08); border:1px solid rgba(183,121,31,.22);
+}
+.fw-result[hidden] { display:none; }
+.fw-p-line { font-size:13px; line-height:1.8; color:rgba(0,0,0,.75); }
+.fw-result .fw-p-line:first-child { font-weight:800; color:#b7791f; }
 .loc-fx {
 position:fixed; z-index:95; width:28px; height:28px; border-radius:50%;
 background:radial-gradient(circle, rgba(255,225,160,.95) 0%, rgba(255,180,80,.6) 55%, rgba(255,180,80,0) 72%);
@@ -4690,6 +4749,83 @@ border-radius:12px;
 .fh-legend .fh-cell { width:10px; height:10px; }
 .fh-tip { margin-left:auto; color:var(--ink-soft,#bbb); }
 .fish-combo-line { font-size:11px; color:#b7791f; padding:6px 2px 2px; letter-spacing:.3px; }
+.cj-scroll { padding-bottom: 28px; }
+.cj-hero {
+margin: 6px 0 14px; padding: 18px 16px 16px;
+background: linear-gradient(150deg, #f6f3ee 0%, #efe9e0 60%, #e8e2d8 100%);
+border: 1px solid rgba(0,0,0,.07); border-radius: 18px;
+}
+.cj-hero-sub { font-size: 12px; color: rgba(0,0,0,.55); letter-spacing: .4px; }
+.cj-hero-time {
+margin-top: 6px; font-size: 44px; font-weight: 800; letter-spacing: 4px;
+color: var(--ink); line-height: 1.1;
+}
+.cj-hero-range { margin-top: 2px; font-size: 12px; color: rgba(0,0,0,.5); letter-spacing: .3px; }
+.cj-card {
+margin-bottom: 10px; padding: 14px 16px 12px;
+background: var(--card-bg, rgba(255,255,255,.95));
+border: 1px solid var(--card-border, rgba(0,0,0,.08));
+border-radius: 16px; box-shadow: 0 2px 10px rgba(0,0,0,.04);
+}
+.cj-card-head { display: flex; align-items: center; justify-content: space-between; }
+.cj-card-name { font-size: 15px; font-weight: 800; letter-spacing: .5px; color: var(--ink); }
+.cj-card-time { display: flex; align-items: baseline; gap: 8px; margin-top: 8px; }
+.cj-card-half { font-size: 24px; font-weight: 800; letter-spacing: 2px; color: var(--ink); }
+.cj-card-range { font-size: 12px; color: rgba(0,0,0,.5); }
+.cj-card-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.cj-tag {
+padding: 4px 10px; border-radius: 99px; font-size: 11.5px; font-weight: 700;
+border: 1px solid rgba(0,0,0,.1);
+}
+.cj-tag-p { background: rgba(255,247,237,1); color: #b7791f; border-color: rgba(183,121,31,.35); }
+.cj-tag-a { background: rgba(0,0,0,.04); color: #555; }
+.cj-card-note { margin-top: 8px; font-size: 11.5px; color: rgba(0,0,0,.5); }
+.cj-go {
+margin-top: 12px; padding: 9px 0; width: 100%;
+border: none; border-radius: 12px;
+background: var(--ink); color: var(--card-bg, #fff);
+font-size: 13px; font-weight: 700; cursor: pointer;
+font-family: inherit; -webkit-tap-highlight-color: transparent;
+}
+.cj-go:active { opacity: .85; }
+.cj-empty {
+padding: 22px 16px; text-align: center;
+background: var(--card-bg, rgba(255,255,255,.95));
+border: 1px dashed rgba(0,0,0,.18); border-radius: 16px;
+color: rgba(0,0,0,.55); font-size: 13px; line-height: 1.7;
+}
+.cj-empty-sub { font-size: 12px; color: rgba(0,0,0,.45); }
+.cj-empty .cj-go { max-width: 180px; }
+.cj-perceive {
+margin: 14px 0 10px; padding: 13px 0; width: 100%;
+border: none; border-radius: 14px;
+background: var(--ink); color: var(--card-bg, #fff);
+font-size: 14px; font-weight: 800; letter-spacing: 1px;
+cursor: pointer; font-family: inherit; -webkit-tap-highlight-color: transparent;
+}
+.cj-perceive:active { opacity: .85; }
+.cj-perceive:disabled, .cj-perceive.busy { opacity: .45; cursor: default; }
+.cj-perceive-result {
+margin: 0 0 14px; padding: 13px 15px;
+background: rgba(0,0,0,.035); border-radius: 13px;
+font-size: 13px; line-height: 1.8; color: rgba(0,0,0,.7);
+}
+.cj-perceive-result p { margin: 0; }
+.cj-perceive-result .cj-p-note { margin-top: 6px; color: #b7791f; font-weight: 700; }
+.cj-today-title {
+margin-top: 6px; font-size: 15px; font-weight: 800; letter-spacing: .5px; color: var(--ink);
+}
+.cj-today-note { margin: 4px 0 10px; font-size: 11.5px; color: rgba(0,0,0,.45); }
+.cj-today-row {
+display: flex; gap: 10px; padding: 9px 2px;
+border-bottom: 1px solid rgba(0,0,0,.05);
+}
+.cj-today-row:last-child { border-bottom: none; }
+.cj-today-left { flex-shrink: 0; width: 88px; }
+.cj-today-name { display: block; font-size: 13px; font-weight: 800; color: var(--ink); }
+.cj-today-range { display: block; font-size: 10.5px; color: rgba(0,0,0,.45); margin-top: 1px; }
+.cj-today-chars { flex: 1; min-width: 0; font-size: 12px; line-height: 1.7; color: rgba(0,0,0,.6); }
+.cj-today-mute { color: rgba(0,0,0,.3); }
 .msg-gift { align-self: center; width: 100%; display: flex; justify-content: center; margin: 8px 0; }
 .msg-gift-card {
 width: min(260px, 80vw); padding: 22px 18px 14px; border-radius: 20px; box-sizing: border-box;
@@ -5666,6 +5802,18 @@ radial-gradient(circle at calc(100% - 5px) calc(100% - 5px), rgba(255,255,255,.1
 .loc-add-custom:active { background:var(--dark-hover); }
 .loc-tl-tag { background:var(--dark-hover); }
 .loc-tl-auto { color:#ffc97e; background:rgba(255,180,80,.14); }
+.fw-sense { border-bottom-color:rgba(255,255,255,.07); background:linear-gradient(160deg, rgba(255,180,80,.08), rgba(255,160,60,.04)); }
+.fw-circle { border-color:rgba(255,255,255,.2); background:radial-gradient(circle, rgba(255,255,255,.08) 0%, rgba(255,255,255,.02) 60%, rgba(255,255,255,0) 75%); }
+.fw-dir { border-color:rgba(255,255,255,.16); background:rgba(255,255,255,.1); color:rgba(255,255,255,.6); }
+.fw-dir.on { background:#b7791f; border-color:#b7791f; color:#fff; }
+.fw-me { background:var(--ink); color:var(--card-bg, #fff); }
+.fw-cur-dir { color:#ffc97e; }
+.fw-row { background:rgba(255,255,255,.06); border-color:rgba(255,255,255,.08); }
+.fw-row-val { color:var(--ink); }
+.fw-perceive { color:#111; }
+.fw-result { background:rgba(255,180,80,.1); border-color:rgba(255,180,80,.35); }
+.fw-p-line { color:rgba(255,255,255,.75); }
+.fw-result .fw-p-line:first-child { color:#ffc97e; }
 .mg-panel { background:var(--dark-card-97); border-color:var(--dark-border); }
 .mg-close { background:var(--dark-hover); color:#aaa; }
 .mg-close:active { background:rgba(255,255,255,.12); }
@@ -6243,6 +6391,74 @@ color: #c67800;
 .memo-app-badge::after { content:'›'; font-size:12px; color:var(--ink-soft,#bbb); }
 .memo-app-badge.urgent { color:#e05a5a; background:rgba(224,90,90,.08); }
 .memo-app-badge.urgent::after { color:#e05a5a; }
+.narc-scroll { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; box-sizing:border-box; padding:12px 14px 120px; }
+.narc-chips { display:flex; gap:8px; overflow-x:auto; padding:2px 2px 12px; scrollbar-width:none; }
+.narc-chips::-webkit-scrollbar { display:none; }
+.narc-chip { flex-shrink:0; display:inline-flex; align-items:center; height:32px; padding:0 16px; border-radius:18px;
+background:var(--card-bg); border:1px solid var(--card-border); color:var(--soft-ink,#555);
+font-size:13px; font-family:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+.narc-chip.on { background:var(--ink); border-color:var(--ink); color:#fff; font-weight:700; }
+.narc-addchip { background:none; border-style:dashed; color:var(--soft-ink,#777); }
+.narc-hero { border-radius:16px; padding:16px 16px 14px; background:var(--card-bg); border:1px solid var(--card-border); }
+.narc-hero-top { display:flex; align-items:baseline; justify-content:space-between; gap:10px; }
+.narc-name { font-size:19px; font-weight:800; color:var(--ink); }
+.narc-days { font-size:12px; color:var(--soft-ink,#888); }
+.narc-hero-sub { margin-top:3px; font-size:11.5px; color:var(--muted,#999); }
+.narc-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:14px; }
+.narc-stat { text-align:center; padding:10px 4px 9px; border-radius:12px; background:rgba(0,0,0,.03); }
+.narc-stat b { display:block; font-size:17px; color:var(--ink); line-height:1.1; }
+.narc-stat span { display:block; margin-top:3px; font-size:10.5px; color:var(--soft-ink,#888); }
+.narc-recent { margin-top:12px; padding:11px 13px; border-radius:12px; background:rgba(0,0,0,.03); font-size:12.5px; color:var(--soft-ink,#666); line-height:1.6; }
+.narc-recent b { color:var(--ink); font-weight:800; }
+.narc-recent .nr-date { font-size:11px; color:var(--muted,#aaa); margin-left:6px; }
+.narc-nav { display:flex; gap:8px; overflow-x:auto; padding:14px 2px 12px; scrollbar-width:none; }
+.narc-nav::-webkit-scrollbar { display:none; }
+.narc-navchip { flex-shrink:0; padding:6px 14px; border-radius:16px; font-size:13px; color:var(--soft-ink,#555);
+background:var(--card-bg); border:1px solid var(--card-border); cursor:pointer; font-family:inherit; -webkit-tap-highlight-color:transparent; }
+.narc-navchip.on { background:var(--ink); border-color:var(--ink); color:#fff; font-weight:700; }
+.narc-sect { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:2px 2px 10px; }
+.narc-sect h3 { margin:0; font-size:15px; font-weight:800; color:var(--ink); }
+.narc-sect-sub { font-size:11px; color:var(--muted,#999); }
+.narc-add { border:none; background:none; color:var(--ink); font-size:13px; font-weight:700; padding:6px 2px; cursor:pointer; font-family:inherit; -webkit-tap-highlight-color:transparent; }
+.narc-add:active { opacity:.5; }
+.narc-empty { text-align:center; color:var(--soft-ink,#aaa); font-size:13px; line-height:1.9; padding:30px 8px 10px; }
+.narc-empty .ne-btn { display:inline-block; margin-top:10px; padding:8px 18px; border-radius:18px; background:var(--ink); color:#fff; font-size:13px; font-weight:700; border:none; cursor:pointer; font-family:inherit; }
+.narc-empty .ne-btn.ghost { background:none; color:var(--soft-ink,#777); border:1px dashed var(--card-border); }
+.narc-k { border-radius:14px; padding:13px 13px 9px; background:var(--card-bg); border:1px solid var(--card-border); margin-bottom:10px; }
+.narc-k.retired { opacity:.58; }
+.nk-top { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.nk-type { font-size:12px; font-weight:800; color:var(--soft-ink,#666); }
+.nk-level { flex-shrink:0; font-size:11px; color:var(--soft-ink,#666); background:rgba(0,0,0,.05); border-radius:12px; padding:3px 9px; }
+.narc-k.retired .nk-level { background:none; }
+.nk-text { margin-top:7px; font-size:16px; line-height:1.5; color:var(--ink); white-space:pre-wrap; word-break:break-word; }
+.nk-why { margin-top:7px; font-size:12.5px; color:var(--muted,#999); line-height:1.5; }
+.nk-why::before { content:'为什么认为　'; color:var(--muted,#aaa); }
+.nk-meta { margin-top:8px; display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.nk-date { font-size:11px; color:var(--muted,#aaa); }
+.nk-ops { display:flex; gap:14px; }
+.nk-op { border:none; background:none; padding:2px 0; font-size:12px; color:var(--soft-ink,#888); cursor:pointer; font-family:inherit; -webkit-tap-highlight-color:transparent; }
+.nk-op.warn { color:#c9665e; }
+.nk-op:active { opacity:.5; }
+.narc-note { margin-top:8px; padding-top:8px; border-top:1px dashed var(--card-border); font-size:12px; color:var(--muted,#999); line-height:1.5; }
+.narc-btabs { display:flex; gap:8px; margin:0 2px 12px; }
+.narc-btab { padding:5px 12px; border-radius:14px; font-size:12.5px; color:var(--soft-ink,#666); background:var(--card-bg); border:1px solid var(--card-border); cursor:pointer; font-family:inherit; }
+.narc-btab.on { background:var(--ink); border-color:var(--ink); color:#fff; font-weight:700; }
+.narc-item { border-radius:14px; padding:11px 13px 8px; background:var(--card-bg); border:1px solid var(--card-border); margin-bottom:10px; }
+.ni-top { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.ni-star { flex-shrink:0; font-size:15px; line-height:1; color:var(--muted,#ccc); background:none; border:none; padding:2px; cursor:pointer; }
+.ni-star.on { color:#f4b83a; }
+.ni-text { margin-top:6px; font-size:15px; line-height:1.5; color:var(--ink); white-space:pre-wrap; word-break:break-word; }
+.ni-why { margin-top:6px; font-size:12.5px; color:var(--muted,#999); line-height:1.5; white-space:pre-wrap; }
+.ni-meta { margin-top:8px; display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.ni-date { font-size:11px; color:var(--muted,#aaa); }
+.ni-tag { font-size:10.5px; color:#4a9fd4; background:rgba(74,159,212,.12); border-radius:10px; padding:2px 8px; }
+.narc-item.solved { opacity:.55; }
+.narc-hist { display:flex; gap:8px; margin-bottom:12px; }
+.narc-hist .nh-dot { flex-shrink:0; width:8px; height:8px; border-radius:50%; background:var(--ink); margin-top:6px; }
+.narc-hist .nh-wrap { flex:1; min-width:0; }
+.narc-hist .nh-date { font-size:11px; color:var(--muted,#aaa); }
+.narc-hist .nh-text { font-size:13.5px; color:var(--soft-ink,#555); line-height:1.5; margin-top:2px; }
+.narc-hist .nh-text em { font-style:normal; color:var(--ink); font-weight:700; }
 </style>
 </head>
 <body>
@@ -6274,7 +6490,7 @@ color: #c67800;
       </div>
       <div class="splash-dots"><i></i><i></i><i></i></div>
       <div class="splash-brand">小红书@言序（1842523578）</div>
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787654003422">Mochi 字卡传讯 v3.6.233 · 部署于 2026-08-25 18:33</div>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787658943402">Mochi 字卡传讯 v3.6.234 · 部署于 2026-08-25 19:55</div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
       <div class="splash-loading" id="splash-loading">正在加载数据…</div>
@@ -6515,6 +6731,10 @@ color: #c67800;
 <div class="app-ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="3" width="15" height="18" rx="2"/><path d="M4.5 8h15"/><path d="M10 13l2-2 2 2"/><path d="M12 11v6"/><path d="M10.5 14h3"/></svg></div>
 <div class="app-name">记账</div>
 </div>
+<div class="app" data-app="memo-arc" data-desk-widget="app-memo-arc">
+<div class="app-ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5h11a1 1 0 011 1V20a1 1 0 01-.55.9A2 2 0 0115.5 21H6a1 1 0 01-1-1v-16a1 1 0 011-.5z"/><path d="M9 8.5h6M9 12.5h6M9 16.5h3.5"/><path d="M15.5 4v5l-1.5-1-1.5 1V4"/></svg></div>
+<div class="app-name">梦角档案</div>
+</div>
 <!-- 花园图标已移第二页（第二排）；本页动态注入 吃什么/存钱罐/番茄钟（p2-features.js） -->
 </div>
       </div><!-- /page-slide 第三页 -->
@@ -6647,6 +6867,11 @@ color: #c67800;
         <div class="av"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 3.5h11a1 1 0 011 1v16l-6.5-4-6.5 4v-16a1 1 0 011-1z"/></svg></div>
         <div class="ci"><div class="n">桌面今日情话</div><div class="m">桌面每日展示 · 可自由添加</div></div>
         <div class="t" id="cc-quote-count">46</div>
+      </div>
+      <div class="chat-item glass" id="li-loc-cards">
+        <div class="av"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6-5.3-6-10a6 6 0 1112 0c0 4.7-6 10-6 10z"/><circle cx="12" cy="11" r="2.2"/></svg></div>
+        <div class="ci"><div class="n">TA在身边位置卡</div><div class="m">TA 的位置 · 方位/距离/状态/感知</div></div>
+        <div class="t" id="cc-loc-count">0</div>
       </div>
       <div class="chat-item glass" id="li-ta-ask">
         <div class="av"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
@@ -7077,6 +7302,55 @@ color: #c67800;
   </div>
 </div>
 
+<!-- TA在身边位置卡（字卡库：方位/距离/状态/感知/彩蛋，位置面板词源） -->
+<div class="page" id="page-loc-cards" hidden>
+  <div class="chat-head">
+    <span class="ch-back" id="loc-cards-back">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    </span>
+    <span class="ch-name">TA在身边位置卡</span>
+  </div>
+  <div class="gs-scroll">
+    <div class="set-group glass">
+      <div class="gs-row"><span>使用系统预设位置卡</span><label class="toggle"><input type="checkbox" id="loc-default" checked><span class="tk"></span></label></div>
+    </div>
+    <div class="cal-card-title" style="padding:0 14px 2px">TA 想告诉你的位置（发送字卡）</div>
+    <div class="fav-tabs">
+      <button class="fav-tab sel" data-loctab="dir"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;vertical-align:-2px;margin-right:3px"><path d="M12 21s-6-5.3-6-10a6 6 0 1112 0c0 4.7-6 10-6 10z"/><circle cx="12" cy="11" r="2.2"/></svg>方位</button>
+      <button class="fav-tab" data-loctab="dist"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;vertical-align:-2px;margin-right:3px"><circle cx="12" cy="12" r="9"/><path d="M12 12l3-3"/></svg>距离</button>
+      <button class="fav-tab" data-loctab="state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;vertical-align:-2px;margin-right:3px"><path d="M13 2L4.5 13.5H11l-1 8.5L18.5 10H12l1-8z"/></svg>状态</button>
+      <button class="fav-tab" data-loctab="sense"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;vertical-align:-2px;margin-right:3px"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>感知</button>
+      <button class="fav-tab" data-loctab="egg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;vertical-align:-2px;margin-right:3px"><path d="M12 3c4 5 6 8 6 11a6 6 0 11-12 0c0-3 2-6 6-11z"/></svg>彩蛋</button>
+    </div>
+    <div class="cal-card-title" style="padding:8px 14px 2px">你的感知（方位感知 · 不是精确定位）</div>
+    <div class="fav-tabs">
+      <button class="fav-tab" data-loctab="direct"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;vertical-align:-2px;margin-right:3px"><path d="M12 3l3.5 3.5L12 10l-3.5-3.5z"/><path d="M12 3v18M12 10v11"/></svg>方向</button>
+      <button class="fav-tab" data-loctab="rangef"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;vertical-align:-2px;margin-right:3px"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg>距离感</button>
+      <button class="fav-tab" data-loctab="power"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;vertical-align:-2px;margin-right:3px"><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/><circle cx="12" cy="12" r="2.5"/></svg>感知强度</button>
+      <button class="fav-tab" data-loctab="touch"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;vertical-align:-2px;margin-right:3px"><path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V12"/><path d="M11 12V4.5a1.5 1.5 0 0 1 3 0V12.5"/><path d="M14 12.5V7a1.5 1.5 0 0 1 3 0v6c0 3-2.5 5.5-5.5 5.5-1.7 0-3-.6-4-1.6L5 14.3"/></svg>触碰</button>
+    </div>
+    <div class="card-tabs" id="loc-tabs" style="padding:6px 12px 8px">
+      <button class="cc-tab sel" data-tab="sys">系统预设</button>
+      <button class="cc-tab" data-tab="mine">我的添加</button>
+    </div>
+    <div class="set-group glass" id="loc-sys-panel">
+      <div class="cal-card-title" style="padding:14px 14px 0" id="cloc-sys-title">方位</div>
+      <div id="cloc-sys-list" style="padding:8px 14px 14px"></div>
+    </div>
+    <div class="set-group glass" id="loc-mine-panel" hidden>
+      <div class="cal-card-title" style="padding:14px 14px 0;display:flex;align-items:center;justify-content:space-between"><span>批量输入位置卡</span><button class="cc-tool" id="loc-new-grp" style="padding:4px 8px;font-size:11px">＋ 分组</button></div>
+      <div class="tc-addform">
+        <select id="cloc-batch-grp" class="tc-input"></select>
+        <textarea id="cloc-batch" class="tc-input" rows="6" placeholder="每行一个，如：&#10;在咖啡店等你&#10;在回家的路上&#10;在你看不到的地方"></textarea>
+        <button class="ta-add-btn" style="width:100%" id="cloc-batch-add">添加到我的位置卡</button>
+      </div>
+      <div class="cal-card-title" style="padding:14px 14px 0" id="cloc-mine-title">我的位置卡</div>
+      <div id="cloc-mine-list" style="padding:8px 14px 14px"></div>
+    </div>
+    <div class="cal-card-title" style="padding:0 2px">TA 想告诉你 TA 在哪时，会从上面的发送字卡里选（发出后有光点动效）；方位感知用的是下面的感知字卡</div>
+  </div>
+</div>
+
 <!-- 通用回答弹层（TA的好奇 / TA的吐槽 共用） -->
 <div class="qa-mask" id="qa-mask" hidden>
   <div class="qa-panel">
@@ -7253,7 +7527,7 @@ color: #c67800;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.6.233</div>
+      <div class="ver">Mochi 字卡传讯 v3.6.234</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -8824,6 +9098,7 @@ color: #c67800;
             <span class="ck-label">TA 想对你说</span>
             <div class="ck-value" id="ck-msg">—</div>
           </div>
+          <button class="ck-loc-entry" id="ck-loc-entry-desk">TA在身边 · 看看 TA 在哪</button>
         </div>
         <div class="cal-card glass">
           <div class="cal-card-title">查岗记录</div>
@@ -9256,17 +9531,6 @@ color: #c67800;
           <button class="ck-loc-entry" id="ck-loc-entry">TA在身边 · 看看 TA 在哪</button>
         </div>
       </div>
-      <!-- TA在身边·位置面板（查岗半框「TA在身边」入口打开） -->
-      <div class="loc-panel" id="loc-panel" hidden>
-        <div class="loc-head">
-          <span>TA在身边 · <b id="loc-name">TA</b> 的位置</span>
-          <button class="loc-close" id="loc-close">✕</button>
-        </div>
-        <div class="loc-body" id="loc-body"></div>
-      </div>
-
-      <!-- 位置卡光点动效层 -->
-      <div class="loc-fx" id="loc-fx" hidden></div>
       <!-- 拍一拍浮层卡片（聊天页内） -->
       <div class="poke-card" id="poke-card" hidden>
         <div class="poke-card-head">
@@ -9359,6 +9623,14 @@ color: #c67800;
             <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 7h3v3H7zM14 14h3v3h-3z"/></svg></span>
             <span>贪吃蛇</span>
           </button>
+          <button class="more-item" id="more-ck" title="查岗（打开 TA 的日常）">
+            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/><path d="M12 3a9 9 0 000 18"/></svg></span>
+            <span>查岗</span>
+          </button>
+          <button class="more-item" id="more-cjian" title="此间（梦角世界时间与在场感知）">
+            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 010 18"/><circle cx="12" cy="12" r="2.2"/></svg></span>
+            <span>此间</span>
+          </button>
         </div>
         <div class="more-grid" id="more-grid-ask" hidden>
           <button class="more-item" id="more-ask-now" title="让TA现在问一次（TA的询问）">
@@ -9437,6 +9709,51 @@ color: #c67800;
       </div>
     </div>
 
+    <!-- 此间：梦角世界时间与在场感知（聊天「更多功能」进入） -->
+    <div class="page" id="page-cjian" hidden>
+      <div class="chat-head">
+        <span class="ch-back" id="cj-back">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        </span>
+        <span class="ch-name">此间</span>
+        <span class="ch-settings" id="cj-manage-btn" title="梦角管理">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8a4 4 0 100 8 4 4 0 000-8z"/><path d="M19 12a7 7 0 00-.1-1.2l2-1.6-2-3.4-2.3 1a7 7 0 00-2-1.2L14.2 3h-4l-.4 2.6a7 7 0 00-2 1.2l-2.3-1-2 3.4 2 1.6A7 7 0 005 12c0 .4 0 .8.1 1.2l-2 1.6 2 3.4 2.3-1a7 7 0 002 1.2l.4 2.6h4l.4-2.6a7 7 0 002-1.2l2.3 1 2-3.4-2-1.6c.1-.4.1-.8.1-1.2z"/></svg>
+        </span>
+      </div>
+      <div class="gs-scroll cj-scroll">
+        <div class="cj-hero">
+          <div class="cj-hero-sub">此刻，你与TA之间。</div>
+          <div class="cj-hero-time" id="cj-hero-time">—</div>
+          <div class="cj-hero-range" id="cj-hero-range"></div>
+        </div>
+        <div id="cj-list"></div>
+        <div class="cj-empty" id="cj-empty" hidden>
+          <p>此间还没有梦角。</p>
+          <p class="cj-empty-sub">添加一个你想感知的人，看看TA此刻在哪、在做什么。</p>
+          <button class="cj-go cj-empty-add" id="cj-empty-add" type="button">添加梦角</button>
+        </div>
+        <button class="cj-perceive" id="cj-perceive" type="button">感知此间</button>
+        <div class="cj-perceive-result" id="cj-perceive-result" hidden></div>
+        <div class="cj-today-title">今日</div>
+        <div class="cj-today-note">今天的轨迹不是排班，只是可能的样子。</div>
+        <div id="cj-today"></div>
+      </div>
+    </div>
+
+    <!-- 梦角档案：每个梦角一份，记录「我后来才慢慢了解到的TA」（桌面第三页「梦角档案」进入） -->
+    <div class="page" id="page-memo-arc" hidden>
+      <div class="chat-head">
+        <span class="ch-back" id="narc-back">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        </span>
+        <span class="ch-name" id="narc-title">梦角档案</span>
+        <span class="ch-settings" id="narc-manage" title="管理梦角">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>
+        </span>
+      </div>
+      <div class="narc-scroll" id="narc-root"></div>
+    </div>
+
     <!-- 群聊页（桌面点「群聊」进入；所有桌面成员在一个窗口里聊天） -->
     <div class="page" id="page-group-chat" hidden>
       <div class="chat-head gc-head">
@@ -9512,6 +9829,26 @@ color: #c67800;
         <div class="gc-set-body" id="gc-set-body"></div>
       </div>
     </div>
+
+    <!-- TA在身边·位置面板（聊天查岗半框 / 桌面查岗页「TA在身边」入口共用，必须放在所有 .page 之外——
+         position:fixed 弹层若嵌在 .page 内，页面切换时会被父级 hidden 隐藏，桌面查岗页点开就会"跑到聊天页"） -->
+    <div class="loc-panel" id="loc-panel" hidden>
+      <div class="loc-head">
+        <span>TA在身边 · <b id="loc-name">TA</b> 的位置</span>
+        <button class="loc-close" id="loc-close">✕</button>
+      </div>
+      <!-- 方位感知（v3.13.x：模糊感知，不是精确定位） -->
+      <div class="fw-sense" id="fw-sense">
+        <div class="fw-circle" id="fw-circle"></div>
+        <div class="fw-detail" id="fw-detail"></div>
+        <button class="fw-perceive" id="fw-perceive" type="button">感知一下</button>
+        <div class="fw-result" id="fw-result" hidden></div>
+      </div>
+      <div class="loc-body" id="loc-body"></div>
+    </div>
+
+    <!-- 位置卡光点动效层（全局，同样须在 .page 外） -->
+    <div class="loc-fx" id="loc-fx" hidden></div>
 
     <!-- 聊天设置（独立页面） -->
     <div class="page" id="page-chat-settings" hidden>
@@ -10147,6 +10484,7 @@ const EXCLUDE = ['contacts', 'active-contact', 'feed-posts', 'migrated-v1', 'js-
 'piggy-goals', 'piggy-goal-cur',
 'market-custom', 'market-migrated',
 'market-migrated-v2',
+'cjian-roster', 'cjian-state', 'cjian-seeded',
 'feed-notices', 'feed-app-unread', 'feed-cover-bg', 'feed-ta-cover',
 'feed-ta-name', 'feed-ta-avatar', 'feed-user-name', 'feed-user-avatar',
 'feed-last', 'feed-next', 'feed-day-count'];
@@ -10155,6 +10493,7 @@ const r = k.slice(G.length + 1);
 if (EXCLUDE.indexOf(r) >= 0) return true;
 if (r.indexOf('reply-gc-') === 0) return true;
 if (r.indexOf('music-file:') === 0) return true;
+if (r.indexOf('narc-') === 0) return true;
 const m = r.match(/^([^:]+):/);
 if (m) {
 const head = m[1];
@@ -10652,7 +10991,7 @@ pages.forEach(p => p.hidden = true);
 document.getElementById(tab.dataset.page).hidden = false;
 });
 });
-const FULL_PAGES = ['page-chat', 'page-group-chat', 'page-chat-settings', 'page-custom-cards', 'page-default-cards', 'page-mood-cards', 'page-reply-cards', 'page-theme', 'page-fav', 'page-fav-settings', 'page-memory', 'page-calendar', 'page-period', 'page-accounting', 'page-garden', 'page-divine', 'page-music', 'page-stats', 'page-interact', 'page-checkin', 'page-ta-ask', 'page-ta-choose', 'page-ta-curious', 'page-ta-roast', 'page-ta-checkin', 'page-ta-invite', 'page-checkin-cards', 'page-quote-cards', 'page-home', 'page-mail', 'page-mail-write', 'page-mail-reply', 'page-feed', 'page-feed-all', 'page-feed-friends', 'page-license', 'page-about', 'page-reply-settings', 'page-call-settings', 'page-sfx-settings'];
+const FULL_PAGES = ['page-chat', 'page-group-chat', 'page-chat-settings', 'page-custom-cards', 'page-default-cards', 'page-mood-cards', 'page-reply-cards', 'page-theme', 'page-fav', 'page-fav-settings', 'page-memory', 'page-calendar', 'page-period', 'page-accounting', 'page-garden', 'page-divine', 'page-music', 'page-stats', 'page-interact', 'page-checkin', 'page-ta-ask', 'page-ta-choose', 'page-ta-curious', 'page-ta-roast', 'page-ta-checkin', 'page-ta-invite', 'page-checkin-cards', 'page-quote-cards', 'page-home', 'page-mail', 'page-mail-write', 'page-mail-reply', 'page-feed', 'page-feed-all', 'page-feed-friends', 'page-license', 'page-about', 'page-reply-settings', 'page-call-settings', 'page-sfx-settings', 'page-memo-arc', 'page-cjian'];
 function syncChrome() {
 const phone = document.querySelector('.phone');
 const tabbar = document.querySelector('.tabbar');
@@ -13329,6 +13668,21 @@ window.ensureP2SecondRowIcons = ensureP2SecondRowIcons;
 document.addEventListener('contact-switched', () => { try { ensureP2AppsBelowWeekend(); } catch (e) {} });
 document.addEventListener('contact-switched', () => { applyDeskFontPct(getDeskFontPct()); applyDeskCardPct(getDeskCardPct()); });
 document.addEventListener('contact-switched', () => { const sp = getBgPresetName(); if (sp) { const p = BG_PRESETS.find(b => b.name === sp); if (p) applyPhoneBgPreset(p.css); else clearPhoneBg(); } syncBgPresetUI(); });
+const reapplyDeskAfterRestore = () => {
+try {
+ensureMemoRowP3();
+ensureP2AppsBelowWeekend();
+} catch (e) {}
+try { window.applyDeskLayout(); } catch (e) {}
+try { if (window.ensureP2SecondRowIcons) window.ensureP2SecondRowIcons(); } catch (e) {}
+};
+let _reapplyScheduled = false;
+document.addEventListener('mochi-restore-done', () => {
+if (_reapplyScheduled) return;
+_reapplyScheduled = true;
+[0, 120, 400].forEach(del => setTimeout(reapplyDeskAfterRestore, del));
+setTimeout(() => { _reapplyScheduled = false; }, 2000);
+});
 function applyGroupChatMode() {
 try {
 let en = false;
@@ -17228,6 +17582,25 @@ e.stopPropagation();
 if (window.openCkPanel) window.openCkPanel();
 });
 }
+const moreCk = document.getElementById('more-ck');
+if (moreCk) {
+moreCk.addEventListener('click', (e) => {
+e.stopPropagation();
+if (morePanel) morePanel.hidden = true;
+if (window.openCkPanel) window.openCkPanel();
+});
+}
+const moreCjian = document.getElementById('more-cjian');
+if (moreCjian) {
+moreCjian.addEventListener('click', (e) => {
+e.stopPropagation();
+if (morePanel) morePanel.hidden = true;
+if (window.openCjian) {
+window.__cjianFrom = 'chat';
+window.openCjian();
+} else toast('此间加载失败');
+});
+}
 let lastMineText = '';
 let lastMineIdx = -1;
 let lastQuotedText = '';
@@ -20725,10 +21098,18 @@ return parts;
 }
 const SEND_GUARD_MS = 2500;
 let lastSendTxt = '', lastSendTs = 0;
+function clearChatInput() {
+if (!input) return;
+try {
+if (input.isContentEditable) input.textContent = '';
+} catch (e) {}
+try { input.value = ''; } catch (e) {}
+input._mClearTxt = lastSendTxt || '';
+}
 const addMsg = (text) => {
 const t0 = (text || '').trim();
 if (t0 && t0 === lastSendTxt && Date.now() - lastSendTs < SEND_GUARD_MS) {
-input.value = '';
+clearChatInput();
 draftImgs = [];
 renderDraft();
 return;
@@ -20747,8 +21128,9 @@ lastQuote = null;
 addRec(rec);
 lastSendTxt = t;
 lastSendTs = Date.now();
+try { if (window.cjianNoteChat) window.cjianNoteChat(); } catch (err) {}
 if (window.playSfx) window.playSfx('out');
-input.value = '';
+clearChatInput();
 draftImgs = [];
 renderDraft();
 if (window.logFish) window.logFish();
@@ -20764,6 +21146,16 @@ if (t && t === lastSendTxt) lastSendTs = Date.now();
 } catch (err) {}
 });
 if (input) {
+input.addEventListener('input', () => {
+if (!input._mClearTxt) return;
+const now = input.innerText.trim();
+if (now === input._mClearTxt && Date.now() - lastSendTs < SEND_GUARD_MS) {
+input.textContent = '';
+input._mClearTxt = '';
+} else if (now && now !== input._mClearTxt) {
+input._mClearTxt = '';
+}
+});
 input.addEventListener('keydown', (e) => {
 if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) {
 e.preventDefault();
@@ -23543,6 +23935,7 @@ if (!g) { g = [defName, []]; groups[cur].push(g); }
 }
 let done = 0;
 let skipped = 0;
+let notAudio = 0;
 const sizeLimit = cur === 'voice' ? 10 * 1024 * 1024 : 20 * 1024 * 1024;
 files.forEach((f) => {
 if (f.size > sizeLimit) {
@@ -23553,6 +23946,16 @@ return;
 }
 const reader = new FileReader();
 reader.onload = () => {
+if (cur === 'voice') {
+const rvm = /^data:([^;,]*);/.exec(reader.result || '');
+const rvMime = rvm ? rvm[1] : '';
+if ((f.type && f.type.indexOf('video/') === 0) || rvMime.indexOf('video/') === 0) {
+notAudio++;
+done++;
+if (done === files.length) finishUpload(done - skipped - notAudio, skipped, notAudio);
+return;
+}
+}
 const process = (data) => {
 const val = cur === 'voice' ? ((f.name || '音频').replace(/\.[^.]+$/, '') + '|||' + data) : data;
 g[1].push(val);
@@ -23572,12 +23975,16 @@ process(data);
 };
 reader.readAsDataURL(f);
 });
-function finishUpload(ok, skip) {
+function finishUpload(ok, skip, skipNotAudio) {
 saveGroups(groups);
 renderGroupsBar();
 render();
-if (skip > 0) toast('已上传 ' + ok + ' 个，跳过 ' + skip + ' 个超大文件（' + (cur === 'voice' ? '音频>10MB' : '图片>20MB') + '）');
-else toast('已上传 ' + ok + ' 个' + (cur === 'voice' ? '音频' : '图片'));
+const msgs = [];
+if (ok > 0) msgs.push('已上传 ' + ok + ' 个' + (cur === 'voice' ? '音频' : '图片'));
+if (skip > 0) msgs.push('跳过 ' + skip + ' 个超大文件（' + (cur === 'voice' ? '音频>10MB' : '图片>20MB') + '）');
+if (skipNotAudio > 0) msgs.push('跳过 ' + skipNotAudio + ' 个视频/非音频（语音分类只支持音频）');
+if (!msgs.length) msgs.push('没有可上传的文件');
+toast(msgs.join('，'));
 }
 });
 return;
@@ -23752,6 +24159,7 @@ groups: (groups[cur] || []).map(g => g[0])
 });
 });
 }
+const MAX_AUDIO_VAULT = 16 * 1024 * 1024; // 字符数≈12MB 二进制，高于 10MB 存储上限，合法录音仍可播
 let playingAudio = null;
 let playingBtn = null;
 function stopPlay() {
@@ -23768,8 +24176,16 @@ if (!btn) return;
 if (playingBtn === btn) { stopPlay(); return; }
 const src = audioSrcMap.get(btn) || '';
 if (!src) { stopPlay(); toast('音频数据不可用'); return; }
+if (!/^data:audio\//.test(src)) { stopPlay(); toast('该语音数据异常，无法播放'); return; }
+if (src.length > MAX_AUDIO_VAULT) { stopPlay(); toast('该语音文件过大，无法播放'); return; }
+let nextAudio;
+try {
+nextAudio = new Audio(src);
+} catch (err) {
+stopPlay(); toast('该语音无法播放'); return;
+}
 stopPlay();
-playingAudio = new Audio(src);
+playingAudio = nextAudio;
 playingBtn = btn;
 btn.classList.add('playing');
 playingAudio.addEventListener('ended', stopPlay);
@@ -30571,7 +30987,17 @@ if (ci && document.activeElement === ci) return true;
 const ae = document.activeElement;
 return !!ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA');
 }
-function autoPopupStale(schedAt) { return Date.now() - schedAt > 4000; }
+let lastPopHiddenAt = 0;
+try {
+document.addEventListener('visibilitychange', function onVis() {
+if (document.visibilityState !== 'visible') lastPopHiddenAt = Date.now();
+}, true);
+} catch (e) {}
+function autoPopupStale(schedAt) {
+if (lastPopHiddenAt > schedAt) return true;
+return Date.now() - schedAt > 4000;
+}
+window.interactPopupStale = autoPopupStale;
 const INTERACT_GATE_KEY = 'interact-card-last';
 const INTERACT_GATE_MS = 60 * 60000;
 function interactGateOk() {
@@ -33438,7 +33864,8 @@ if (cfg && typeof cfg['ckq-popup-prob'] === 'number' && cfg['ckq-popup-prob'] >=
 if (Math.random() * 100 < popupProb) {
 const popSchedAt = Date.now();
 setTimeout(function () {
-if (Date.now() - popSchedAt > 4000 || document.hidden) return;
+const stale = window.interactPopupStale ? window.interactPopupStale(popSchedAt) : (Date.now() - popSchedAt > 4000);
+if (stale || document.hidden) return;
 if (chatInputFocused() || cardPopupBusy()) return;
 if (msgIdx >= 0) openCkReply(msgIdx, q);
 }, 400);
@@ -34549,6 +34976,40 @@ let notifyEnabled = false;
 const NOTIFY_ICON = (function () {
 try { return new URL('./icon-512.png', location.href).href; } catch (e) { return ''; }
 })();
+let BADGE_DATAURL = '';
+let badgeReady = false;
+let badgeQueue = null;
+function getBadgeUrl(cb) {
+cb = cb || function () {};
+if (badgeReady) { cb(BADGE_DATAURL); return; }
+if (badgeQueue) { badgeQueue.push(cb); return; }
+badgeQueue = [cb];
+if (!NOTIFY_ICON) { badgeReady = true; BADGE_DATAURL = ''; const q = badgeQueue; badgeQueue = null; for (let i = 0; i < q.length; i++) q[i](''); return; }
+const img = new Image();
+img.onload = function () {
+try {
+const s = 96;
+const c = document.createElement('canvas');
+c.width = s; c.height = s;
+const ctx = c.getContext('2d');
+ctx.drawImage(img, 0, 0, s, s);
+const d = ctx.getImageData(0, 0, s, s);
+const px = d.data;
+for (let i = 0; i < px.length; i += 4) {
+const r = px[i], g = px[i + 1], b = px[i + 2];
+if (r > 248 && g > 248 && b > 248) px[i + 3] = 0;   // 白底 → 透明
+else { px[i] = 255; px[i + 1] = 255; px[i + 2] = 255; px[i + 3] = 255; } // 内容 → 白色不透明
+}
+ctx.putImageData(d, 0, 0);
+BADGE_DATAURL = c.toDataURL('image/png');
+} catch (e) { BADGE_DATAURL = ''; }
+badgeReady = true;
+const q = badgeQueue; badgeQueue = null;
+for (let i = 0; i < q.length; i++) { try { q[i](BADGE_DATAURL); } catch (e2) {} }
+};
+img.onerror = function () { badgeReady = true; BADGE_DATAURL = ''; const q = badgeQueue; badgeQueue = null; for (let i = 0; i < q.length; i++) { try { q[i](''); } catch (e) {} } };
+img.src = NOTIFY_ICON;
+}
 function showSysNotification(title, opts) {
 opts = opts || {};
 return new Promise(function (resolve) {
@@ -34557,7 +35018,7 @@ if (!('Notification' in window) || Notification.permission !== 'granted') { reso
 if ('serviceWorker' in navigator && navigator.serviceWorker) {
 const swOpts = Object.assign({}, opts);
 if (!swOpts.urgency) swOpts.urgency = 'high';
-if (!swOpts.badge && NOTIFY_ICON) swOpts.badge = NOTIFY_ICON;
+if (!swOpts.badge) swOpts.badge = BADGE_DATAURL || NOTIFY_ICON || undefined;
 navigator.serviceWorker.ready.then(function (reg) {
 reg.showNotification(title, swOpts).then(function () { resolve(true); }, function () {
 const tryNoImage = function () {
@@ -34666,6 +35127,7 @@ const old = store.get('bg-notify');
 if (old !== null) { gSet('bg-notify', old); saved = old; }
 }
 notifyEnabled = saved === '1' && 'Notification' in window && Notification.permission === 'granted';
+if ('Notification' in window && Notification.permission === 'granted') { getBadgeUrl(function () {}); }
 if (saved === '1' && !notifyEnabled) {
 try { gSet('bg-notify', '0'); } catch (e) {}
 toast('通知权限已被回收，已自动关闭通知');
@@ -35410,13 +35872,15 @@ if (durationTimer) { clearInterval(durationTimer); durationTimer = null; }
 }
 function updateDur() {
 if (!currentCall) return;
-const sec = Math.floor((Date.now() - currentCall.startTime) / 1000);
+const base = currentCall.connectedTime || currentCall.startTime;
+const sec = Math.floor((Date.now() - base) / 1000);
 if (durEl) durEl.textContent = fmtDur(sec);
 if (miniTime) miniTime.textContent = fmtDur(sec);
 }
 function startCallDuration() {
 stopTimers();
 currentCall.connectedTime = Date.now();
+updateDur(); // v3.13.x：接通立即刷新显示，避免接通瞬间仍停留「00:00」卡一下
 let checkCount = 0;
 durationTimer = setInterval(() => {
 updateDur();
@@ -35571,7 +36035,7 @@ endCall('已拒绝');
 function userHangup() {
 if (!currentCall) return;
 if (currentCall.status === 'ringing') { currentCall.status = 'ended'; endCall('已取消'); return; }
-if (currentCall.connectedTime) currentCall.durationSec = Math.floor((Date.now() - currentCall.startTime) / 1000);
+if (currentCall.connectedTime) currentCall.durationSec = Math.floor((Date.now() - currentCall.connectedTime) / 1000);
 currentCall.status = 'ended';
 endCall('已挂断');
 }
@@ -38576,6 +39040,377 @@ return { text: p.text.indexOf(s) >= 0, kaomoji: p.kaomoji.indexOf(s) >= 0, emoji
 } catch (__e) { try { console.error("[JS] feed.js", __e && __e.message || __e); } catch (x) {} if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
 (function () { try {
 (function () {
+const store = window.activeStore();
+const LIB = {
+dir: ['在你左边', '在你右边', '在你身后', '在你前面', '离你两步', '抬头就能看到', '在你看不到的地方偷看你'],
+dist: ['再近一点', '再远一点', '就停这儿', '马上到你身边', '一直在原地等你'],
+state: ['跟在你后面', '陪你走着', '停下来等你', '绕着你转圈', '在你身边'],
+sense: ['在你看不到的地方', '隔着世界在你身边', '感觉到了吗', '能摸到我吗', '一直没走远', '隐约在你身旁'],
+egg: ['在你心里'],
+direct: ['正前方', '右前方', '右侧', '右后方', '后方', '左后方', '左侧', '左前方', '身边', '无法判断'],
+rangef: ['很近', '近', '稍远', '很远', '无法判断'],
+power: ['明显', '微弱', '若有若无', '消失'],
+touch: ['好像碰到了你的手', '有什么轻轻碰了一下你的肩', '耳边好像有气息拂过', '衣角被轻轻拉了一下']
+};
+const LABEL = { dir: '方位', dist: '距离', state: '状态', sense: '感知', egg: '彩蛋', custom: '自定义', combo: '组合', direct: '方向', rangef: '距离感', power: '感知强度', touch: '触碰' };
+const CATS = ['dir', 'dist', 'state', 'sense', 'egg', 'direct', 'rangef', 'power', 'touch'];
+const DEF_KEY = 'loc-lib-default';          // 使用系统预设开关（默认开）
+const CUSTOM_KEY = 'loc-lib-custom';        // 我的添加（对象数组 [{t,grp}]）
+const GRP_KEY = 'loc-lib-groups';           // 我的添加自定义分组
+function getUseDefault() {
+const v = store.get(DEF_KEY);
+return v === null ? true : v === '1';
+}
+function isOff(cat, text) { return store.get('loc-off-' + cat + ':' + text) === '1'; }
+function setOff(cat, text, off) { store.set('loc-off-' + cat + ':' + text, off ? '1' : '0'); }
+function getGroups() {
+try {
+const v = JSON.parse(store.get(GRP_KEY) || 'null');
+if (Array.isArray(v)) return v;
+} catch (e) {}
+return [];
+}
+function saveGroups(groups) { store.set(GRP_KEY, JSON.stringify(groups)); }
+function getCustom() {
+try {
+const v = JSON.parse(store.get(CUSTOM_KEY) || 'null');
+if (Array.isArray(v)) return v.map(x => typeof x === 'string' ? { t: x } : (x && typeof x === 'object' && x.t != null ? x : null)).filter(Boolean);
+} catch (e) {}
+try {
+const old = JSON.parse(store.get('loc-custom') || 'null');
+if (Array.isArray(old) && old.length) {
+const arr = old.filter(x => typeof x === 'string' && x.trim()).map(x => ({ t: x.trim() }));
+store.set(CUSTOM_KEY, JSON.stringify(arr));
+return arr;
+}
+} catch (e) {}
+return [];
+}
+function saveCustom(list) {
+const arr = (list || []).map(x => typeof x === 'string' ? { t: x } : x).filter(x => x && x.t != null);
+store.set(CUSTOM_KEY, JSON.stringify(arr));
+try { if (window.idbSet) window.idbSet(window.activePrefix() + ':' + CUSTOM_KEY, JSON.stringify(arr)); } catch (e) {}
+}
+function sysCards(cat) {
+if (!getUseDefault()) return [];
+const def = LIB[cat] || [];
+return def.filter(x => !isOff(cat, x));
+}
+function customCards() { return getCustom().map(x => x.t).filter(Boolean); }
+function getSysAll() {
+const out = {};
+CATS.forEach(c => { out[c] = sysCards(c); });
+return out;
+}
+function allEnabled() {
+return [].concat(sysCards('dir'), sysCards('dist'), sysCards('state'), sysCards('sense'), customCards());
+}
+function typeOf(text) {
+if (LIB.dir.indexOf(text) >= 0) return 'dir';
+if (LIB.dist.indexOf(text) >= 0) return 'dist';
+if (LIB.state.indexOf(text) >= 0) return 'state';
+if (LIB.sense.indexOf(text) >= 0) return 'sense';
+if (LIB.egg.indexOf(text) >= 0) return 'egg';
+if (LIB.direct.indexOf(text) >= 0) return 'direct';
+if (LIB.rangef.indexOf(text) >= 0) return 'rangef';
+if (LIB.power.indexOf(text) >= 0) return 'power';
+if (LIB.touch.indexOf(text) >= 0) return 'touch';
+return 'custom';
+}
+function senseCards(k) {
+return sysCards(k);
+}
+function senseGroup(k) {
+const list = senseCards(k).slice();
+if (!list.length) { // 全被关：给一个内置兜底，感知引擎不至于空
+const fb = { direct: '无法判断', rangef: '无法判断', power: '若有若无', touch: '好像碰到了你的手' }[k];
+if (fb) list.push(fb);
+}
+return list;
+}
+function eggText() { return (LIB.egg && LIB.egg[0]) || '在你心里'; }
+function eggEnabled() { return getUseDefault() && !isOff('egg', eggText()); }
+window.locLibGetSys = getSysAll;
+window.locLibGetCustomCards = customCards;
+window.locLibGetCustomItems = getCustom;
+window.locLibSaveCustom = saveCustom;
+window.locLibGetGroups = getGroups;
+window.locLibSaveGroups = saveGroups;
+window.locLibAllEnabled = allEnabled;
+window.locLibTypeOf = typeOf;
+window.locLibLabel = function (t) { return LABEL[t] || t || ''; };
+window.locLibEggText = eggText;
+window.locLibEggEnabled = eggEnabled;
+window.locLibIsOff = isOff;
+window.locLibSetOff = setOff;
+window.locLibGetUseDefault = getUseDefault;
+window.locLibSenseGroup = senseGroup;
+const PAGE = document.getElementById('page-loc-cards');
+if (!PAGE) return;
+let cat = 'dir';      // 分类 tab
+let tab2 = 'sys';     // 系统预设 / 我的添加
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+function toast(msg) {
+let t = document.getElementById('cc-toast');
+if (!t) { t = document.createElement('div'); t.id = 'cc-toast'; document.body.appendChild(t); }
+t.textContent = msg;
+t.className = 'cc-toast'; void t.offsetWidth; t.className = 'cc-toast show';
+clearTimeout(t._timer);
+t._timer = setTimeout(() => { t.className = 'cc-toast'; }, 2000);
+}
+function updateEntryCount() {
+const useDefault = getUseDefault();
+let sysN = 0;
+CATS.forEach(c => { sysN += useDefault ? (LIB[c] || []).filter(x => !isOff(c, x)).length : 0; });
+const cnt = document.getElementById('cc-loc-count');
+if (cnt) cnt.textContent = sysN;
+}
+function renderSysList() {
+const listEl = document.getElementById('cloc-sys-list');
+const titleEl = document.getElementById('cloc-sys-title');
+if (titleEl) titleEl.textContent = LABEL[cat] || '';
+if (!listEl) return;
+listEl.innerHTML = '';
+if (!getUseDefault()) {
+const tip = document.createElement('div');
+tip.className = 'ta-empty';
+tip.textContent = '系统预设位置卡已关闭（位置面板只显示「我的添加」）。开启上方开关即可恢复使用。';
+listEl.appendChild(tip);
+return;
+}
+(LIB[cat] || []).forEach(x => {
+const off = isOff(cat, x);
+const row = document.createElement('div');
+row.className = 'tc-qrow' + (off ? ' off' : '');
+row.innerHTML = '<div class="tc-qmain"><div class="tc-qtext">' + esc(x) + ' <span class="tc-known">系统</span></div></div>';
+const lab = document.createElement('label');
+lab.className = 'toggle ccard-toggle';
+lab.innerHTML = '<input type="checkbox"' + (off ? '' : ' checked') + '><span class="tk"></span>';
+lab.querySelector('input').addEventListener('change', () => {
+const nowOff = !lab.querySelector('input').checked;
+setOff(cat, x, nowOff);
+renderSysList();
+updateEntryCount();
+toast((nowOff ? '已关闭：' : '已开启：') + (x.length > 18 ? x.slice(0, 18) + '…' : x));
+});
+row.appendChild(lab);
+listEl.appendChild(row);
+});
+}
+function renderMineList() {
+const listEl = document.getElementById('cloc-mine-list');
+const titleEl = document.getElementById('cloc-mine-title');
+if (titleEl) titleEl.textContent = LABEL[cat] || '';
+if (!listEl) return;
+const groups = getGroups();
+const custom = getCustom();
+let html = '';
+html += '<div class="mg-grp-row"><button class="cc-tool mg-grp-add"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;vertical-align:-2px;margin-right:4px"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>新建分组</button></div>';
+if (!custom.length && !groups.length) {
+html += '<div class="ta-empty">暂未添加自定义位置卡，可在上方批量输入（每行一个）。</div>';
+listEl.innerHTML = html;
+bindGroupOps();
+return;
+}
+groups.forEach(g => {
+const arr = custom.filter(x => x.grp === g.id);
+html += '<div class="cal-card glass mg-block">' +
+'<div class="cal-card-title mg-title"><span class="mg-name">' + esc(g.name) + '</span><span class="mg-cnt">(' + arr.length + ')</span>' +
+'<span class="mg-ops"><button class="mg-op" data-g="' + esc(g.id) + '" data-op="rn" title="重命名">✎</button><button class="mg-op" data-g="' + esc(g.id) + '" data-op="rm" title="删除分组">✕</button></span></div>' +
+(arr.length ? arr.map(x => itemHtml(x, custom.indexOf(x))).join('') : '<div class="ta-empty">这个分组还没有内容</div>') +
+'</div>';
+});
+const ungrouped = custom.filter(x => !x.grp);
+html += '<div class="cal-card glass mg-block mg-ungrouped"><div class="cal-card-title mg-title"><span class="mg-name">未分组</span><span class="mg-cnt">(' + ungrouped.length + ')</span></div>';
+if (!ungrouped.length) html += '<div class="ta-empty">暂无未分组位置卡，可在上方批量输入</div>';
+html += ungrouped.map(x => itemHtml(x, custom.indexOf(x))).join('');
+html += '</div>';
+listEl.innerHTML = html;
+listEl.querySelectorAll('.ta-del').forEach(b => {
+b.addEventListener('click', () => {
+const list = getCustom();
+list.splice(Number(b.dataset.idx), 1);
+saveCustom(list);
+renderMineList();
+toast('已删除');
+});
+});
+bindGroupOps();
+}
+function itemHtml(x, idx) {
+return '<div class="tc-qrow"><div class="tc-qmain"><div class="tc-qtext">' + esc(x.t) + '</div></div>' +
+'<button class="ta-del" data-idx="' + idx + '">✕</button></div>';
+}
+function refreshGrpSelect() {
+if (!window.cardGroups) { setTimeout(refreshGrpSelect, 50); return; }
+const grpSel = document.getElementById('cloc-batch-grp');
+if (!grpSel) return;
+const groups = getGroups();
+grpSel.innerHTML = window.cardGroups.grpOnlyOptsHtml(groups, grpSel.value);
+window.cardGroups.bindNewGrp(grpSel, groups, function () { saveGroups(groups); });
+}
+function bindGroupOps() {
+const wrap = document.getElementById('cloc-mine-list');
+if (!wrap) return;
+wrap.querySelectorAll('.mg-grp-add').forEach(b => {
+if (b.__bound) return;
+b.__bound = true;
+b.addEventListener('click', () => {
+const groups = getGroups();
+window.cardGroups.addFlow(groups, g => {
+if (!g) return;
+saveGroups(groups);
+refreshGrpSelect();
+renderMineList();
+toast('已新建分组「' + g.name + '」');
+});
+});
+});
+wrap.querySelectorAll('.mg-op').forEach(b => {
+if (b.__bound) return;
+b.__bound = true;
+b.addEventListener('click', () => {
+const groups = getGroups();
+const gid = b.dataset.g;
+const g = groups.find(x => x.id === gid);
+if (!g) return;
+if (b.dataset.op === 'rn') {
+window.cardGroups.renameFlow(g, groups, name => {
+if (!name) return;
+saveGroups(groups);
+refreshGrpSelect();
+renderMineList();
+toast('分组已重命名');
+});
+} else if (b.dataset.op === 'rm') {
+window.cardGroups.removeFlow(g.name, ok => {
+if (!ok) return;
+const list = getCustom();
+list.forEach(x => { if (x.grp === gid) x.grp = ''; });
+saveCustom(list);
+saveGroups(groups.filter(x => x.id !== gid));
+refreshGrpSelect();
+renderMineList();
+toast('已删除分组「' + g.name + '」');
+});
+}
+});
+});
+}
+function switchTab2(tab) {
+tab2 = tab;
+const tabsWrap = document.getElementById('loc-tabs');
+if (tabsWrap) tabsWrap.querySelectorAll('.cc-tab').forEach(t => t.classList.toggle('sel', t.dataset.tab === tab));
+const sysPanel = document.getElementById('loc-sys-panel');
+const minePanel = document.getElementById('loc-mine-panel');
+if (sysPanel) sysPanel.hidden = tab !== 'sys';
+if (minePanel) minePanel.hidden = tab !== 'mine';
+if (tab === 'sys') renderSysList(); else renderMineList();
+}
+function renderPage() {
+document.querySelectorAll('#page-loc-cards .fav-tab').forEach(tab => {
+tab.classList.toggle('sel', tab.dataset.loctab === cat);
+});
+const defEl = document.getElementById('loc-default');
+if (defEl) defEl.checked = getUseDefault();
+refreshGrpSelect();
+switchTab2(tab2);
+updateEntryCount();
+}
+const defEl = document.getElementById('loc-default');
+if (defEl) {
+defEl.addEventListener('change', () => {
+store.set(DEF_KEY, defEl.checked ? '1' : '0');
+renderPage();
+toast(defEl.checked ? '系统预设位置卡已开启' : '系统预设位置卡已关闭（仅用你添加的位置卡）');
+});
+}
+document.querySelectorAll('#page-loc-cards .fav-tab').forEach(tab => {
+tab.addEventListener('click', () => { cat = tab.dataset.loctab; renderPage(); });
+});
+const tabsWrap = document.getElementById('loc-tabs');
+if (tabsWrap) {
+tabsWrap.querySelectorAll('.cc-tab').forEach(tab => {
+tab.addEventListener('click', () => { switchTab2(tab.dataset.tab); });
+});
+}
+const batchAdd = document.getElementById('cloc-batch-add');
+if (batchAdd) {
+refreshGrpSelect();
+batchAdd.addEventListener('click', () => {
+const ta = document.getElementById('cloc-batch');
+const raw = ta ? ta.value : '';
+const items = raw.split('\n').map(s => s.trim()).filter(Boolean);
+if (!items.length) { toast('请输入内容，每行一个'); return; }
+const grpSel = document.getElementById('cloc-batch-grp');
+const parsed = window.cardGroups ? window.cardGroups.parseCatVal(grpSel ? grpSel.value : '') : null;
+const list = getCustom();
+items.forEach(it => {
+const x = { t: it };
+if (parsed && parsed.grp) x.grp = parsed.grp;
+list.push(x);
+});
+saveCustom(list);
+if (ta) ta.value = '';
+switchTab2('mine');
+toast('已添加 ' + items.length + ' 条位置卡');
+});
+}
+const newGrpBtn = document.getElementById('loc-new-grp');
+if (newGrpBtn) {
+newGrpBtn.addEventListener('click', () => {
+const groups = getGroups();
+if (!window.cardGroups) { toast('分组功能尚未就绪，请稍后再试'); return; }
+window.cardGroups.addFlow(groups, g => {
+if (!g) return;
+saveGroups(groups);
+refreshGrpSelect();
+renderMineList();
+toast('已新建分组「' + g.name + '」');
+});
+});
+}
+const liLoc = document.getElementById('li-loc-cards');
+const locPage = document.getElementById('page-loc-cards');
+if (liLoc && locPage) {
+liLoc.addEventListener('click', () => {
+document.querySelectorAll('.page').forEach(p => p.hidden = true);
+locPage.hidden = false;
+cat = 'dir';
+tab2 = 'sys';
+const tw = document.getElementById('loc-tabs'); if (tw) tw.style.display = 'none';
+renderPage();
+});
+}
+const back = document.getElementById('loc-cards-back');
+if (back) {
+back.addEventListener('click', () => {
+document.querySelectorAll('.page').forEach(p => p.hidden = true);
+const home = document.getElementById('page-chatcard');
+if (home) home.hidden = false;
+});
+}
+renderPage();
+window.__cardSearchFns = window.__cardSearchFns || [];
+window.__cardSearchFns.push({ name: 'TA在身边位置卡', fn: function (kw) {
+const out = [];
+try {
+CATS.forEach(function (c) {
+(LIB[c] || []).forEach(function (x) {
+if (x && String(x).toLowerCase().indexOf(kw) >= 0) out.push({ t: String(x), cat: LABEL[c] + '·系统' });
+});
+});
+getCustom().forEach(function (item) {
+const txt = item && item.t ? String(item.t) : '';
+if (txt && txt.toLowerCase().indexOf(kw) >= 0) out.push({ t: txt, cat: '自定义·我的' });
+});
+} catch (e) {}
+return out;
+} });
+})();
+} catch (__e) { try { console.error("[JS] loc-lib.js", __e && __e.message || __e); } catch (x) {} if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
+(function () { try {
+(function () {
 const uid = window.activePrefix();
 const store = window.activeStore();
 function pushHist(key, text) {
@@ -39575,14 +40410,6 @@ if (md) md.textContent = todayMoodText() || '点一下选心情';
 })();
 (function () {
 const store = window.activeStore();
-const LOC = {
-dir: ['在你左边', '在你右边', '在你身后', '在你前面', '离你两步', '抬头就能看到', '在你看不到的地方偷看你'],
-dist: ['再近一点', '再远一点', '就停这儿', '马上到你身边', '一直在原地等你'],
-state: ['跟在你后面', '陪你走着', '停下来等你', '绕着你转圈', '在你身边'],
-sense: ['在你看不到的地方', '隔着世界在你身边', '感觉到了吗', '能摸到我吗', '一直没走远', '隐约在你身旁'],
-egg: '在你心里'
-};
-const LOC_LABEL = { dir: '方位', dist: '距离', state: '状态', sense: '感知', egg: '彩蛋', custom: '自定义', combo: '组合' };
 const DIR_POS = {
 '在你左边': { x: 0.08, y: 0.5 },
 '在你右边': { x: 0.92, y: 0.5 },
@@ -39632,12 +40459,8 @@ try { if (window.idbSet) window.idbSet(window.activePrefix() + ':loc-history', s
 }
 function eggLastTs() { return parseInt(store.get('loc-egg-last') || '0', 10) || 0; }
 function eggUsed() { return Date.now() - eggLastTs() < EGG_COOLDOWN; }
-function loadCustom() { try { return JSON.parse(store.get('loc-custom') || '[]'); } catch (e) { return []; } }
-function saveCustom(list) {
-const s = JSON.stringify(list);
-store.set('loc-custom', s);
-try { if (window.idbSet) window.idbSet(window.activePrefix() + ':loc-custom', s); } catch (e) {}
-}
+function loadCustom() { return window.locLibGetCustomCards ? window.locLibGetCustomCards() : []; }
+function saveCustom(list) { if (window.locLibSaveCustom) window.locLibSaveCustom(list); }
 function senseDesc(cur) {
 if (!cur) return '还没感觉到 TA…';
 const t = cur.text;
@@ -39722,6 +40545,13 @@ locViewDate = dayStr(new Date());
 renderLocPanel();
 }
 let asking = false;
+function locLibGroup(k) {
+try {
+const sys = window.locLibGetSys ? window.locLibGetSys() : null;
+if (sys && Array.isArray(sys[k])) return sys[k];
+} catch (e) {}
+return [];
+}
 function askWhere() {
 if (asking) return;
 asking = true;
@@ -39729,8 +40559,10 @@ if (window.chatSendMsg) window.chatSendMsg('你在哪？');
 toast(window.taFit ? window.taFit('已问 TA 一声，等 TA 回位置…') : '已问 TA 一声，等 TA 回位置…');
 setTimeout(() => {
 asking = false;
-const d = LOC.dir[Math.floor(Math.random() * LOC.dir.length)];
-const t = LOC.dist[Math.floor(Math.random() * LOC.dist.length)];
+const dirs = locLibGroup('dir');
+const dists = locLibGroup('dist');
+const d = (dirs.length ? dirs : ['在你左边'])[Math.floor(Math.random() * (dirs.length ? dirs.length : 1))];
+const t = (dists.length ? dists : ['再近一点'])[Math.floor(Math.random() * (dists.length ? dists.length : 1))];
 sendComboCard(d, t);
 }, 2000 + Math.random() * 2000);
 }
@@ -39752,12 +40584,12 @@ const body = document.getElementById('loc-body');
 if (!body) return;
 const cur = loadCur();
 const allHist = loadHist();
-const used = eggUsed();
 const days = uniqueDays(allHist);
 if (!locViewDate || days.indexOf(locViewDate) < 0) locViewDate = days[0] || dayStr(new Date());
 const dayHist = allHist.filter(h => { try { return dayStr(new Date(h.ts)) === locViewDate; } catch (e) { return false; } });
 const dayIdx = days.indexOf(locViewDate);
 let html = '';
+const LOC_LABEL = window.locLibLabel || function (t) { return t; };
 html += '<div class="loc-sense-box"><div class="loc-sense-title">你感觉到的</div><div class="loc-sense-text">' + esc(senseDesc(cur)) + '</div></div>';
 html += '<div class="loc-section"><div class="loc-sec-title">TA 此刻的位置</div>';
 html += '<div class="loc-sec-value">' + (cur
@@ -39777,33 +40609,6 @@ html += '<div class="loc-sec-value loc-empty">这天没有位置记录</div>';
 }
 html += '</div>';
 html += '<button class="loc-ask-btn" id="loc-ask-btn">问 TA 一声「你在哪？」</button>';
-html += '<div class="loc-send-area"><div class="loc-send-tip">TA 想告诉你 TA 在哪（发出后有光点动效）</div>';
-html += '<div class="loc-combo-toggle"><label class="loc-switch"><input type="checkbox" id="loc-combo-chk"' + (comboMode ? ' checked' : '') + '><span class="loc-switch-tk"></span></label><span class="loc-combo-label">组合发送（方位 + 距离）</span></div>';
-if (comboMode && pendingDir) {
-html += '<div class="loc-combo-pending">已选方位：<b>' + esc(pendingDir) + '</b>，再点距离卡组合发送 <span class="loc-combo-clear" id="loc-combo-clear">取消</span></div>';
-} else if (comboMode) {
-html += '<div class="loc-combo-pending loc-empty">组合模式：先点一张方位卡选中，再点距离卡组合发送</div>';
-}
-function groupHtml(key, label, arr) {
-const cards = arr.map(t => {
-const sel = (key === 'dir' && comboMode && pendingDir === t) ? ' loc-card-sel' : '';
-return '<button class="loc-card' + sel + '" data-text="' + esc(t) + '" data-type="' + key + '">' + esc(t) + '</button>';
-}).join('');
-return '<div class="loc-grp"><div class="loc-grp-label">' + label + '</div><div class="loc-grp-cards">' + cards + '</div></div>';
-}
-html += groupHtml('dir', '方位卡', LOC.dir);
-html += groupHtml('dist', '距离卡', LOC.dist);
-html += groupHtml('state', '状态卡', LOC.state);
-html += groupHtml('sense', '感知卡', LOC.sense);
-const custom = loadCustom();
-if (custom.length) {
-const ccards = custom.map((t, i) => '<button class="loc-card loc-card-custom" data-text="' + esc(t) + '" data-type="custom">' + esc(t) + '<span class="loc-card-del" data-del="' + i + '">✕</span></button>').join('');
-html += '<div class="loc-grp"><div class="loc-grp-label">我的自定义</div><div class="loc-grp-cards">' + ccards + '</div></div>';
-}
-html += '<button class="loc-add-custom" id="loc-add-custom">+ 添加自定义位置卡</button>';
-html += '<div class="loc-grp"><div class="loc-grp-label">彩蛋' + (used ? '（本周已用）' : '（一周一次 · 特殊动效）') + '</div><div class="loc-grp-cards">' +
-'<button class="loc-card loc-card-egg' + (used ? ' disabled' : '') + '" data-text="' + esc(LOC.egg) + '" data-type="egg"' + (used ? ' disabled' : '') + '>' + esc(LOC.egg) + '</button></div></div>';
-html += '</div>';
 body.innerHTML = html;
 const askBtn = document.getElementById('loc-ask-btn');
 if (askBtn) askBtn.addEventListener('click', askWhere);
@@ -39811,39 +40616,12 @@ const prevBtn = document.getElementById('loc-day-prev');
 if (prevBtn) prevBtn.addEventListener('click', () => { if (dayIdx < days.length - 1) { locViewDate = days[dayIdx + 1]; renderLocPanel(); } });
 const nextBtn = document.getElementById('loc-day-next');
 if (nextBtn) nextBtn.addEventListener('click', () => { if (dayIdx > 0) { locViewDate = days[dayIdx - 1]; renderLocPanel(); } });
-const comboChk = document.getElementById('loc-combo-chk');
-if (comboChk) comboChk.addEventListener('change', () => { comboMode = comboChk.checked; store.set('loc-combo', comboMode ? '1' : '0'); pendingDir = null; renderLocPanel(); });
-const comboClear = document.getElementById('loc-combo-clear');
-if (comboClear) comboClear.addEventListener('click', () => { pendingDir = null; renderLocPanel(); });
-const addCustom = document.getElementById('loc-add-custom');
-if (addCustom) addCustom.addEventListener('click', () => {
-if (window.openModal) window.openModal('添加自定义位置卡', '', (val) => {
-if (val && val.trim()) { const list = loadCustom(); list.push(val.trim()); saveCustom(list); renderLocPanel(); toast('已添加：' + val.trim()); }
-});
-});
-body.querySelectorAll('.loc-card-del').forEach(del => {
-del.addEventListener('click', (e) => { e.stopPropagation(); const idx = parseInt(del.dataset.del, 10); const list = loadCustom(); list.splice(idx, 1); saveCustom(list); renderLocPanel(); });
-});
-body.querySelectorAll('.loc-card').forEach(btn => {
-const text = btn.dataset.text;
-const type = btn.dataset.type;
-btn.addEventListener('click', () => {
-if (btn.classList.contains('disabled')) return;
-if (comboMode) {
-if (type === 'dir') { pendingDir = (pendingDir === text) ? null : text; renderLocPanel(); return; }
-if (type === 'dist') { if (pendingDir) { sendComboCard(pendingDir, text); return; } toast('组合模式：请先点一张方位卡'); return; }
-pendingDir = null;
-sendLocCard(text, type);
-return;
-}
-sendLocCard(text, type);
-});
-});
 }
 function openLocPanel() {
 const panel = document.getElementById('loc-panel');
 const nameEl = document.getElementById('loc-name');
 if (nameEl) nameEl.textContent = store.get('lbl-partner') || 'TA';
+if (window.refreshSense) window.refreshSense();
 renderLocPanel();
 if (panel) panel.hidden = false;
 const ck = document.getElementById('ck-panel');
@@ -39855,6 +40633,8 @@ if (panel) panel.hidden = true;
 }
 const entry = document.getElementById('ck-loc-entry');
 if (entry) entry.addEventListener('click', openLocPanel);
+const entryDesk = document.getElementById('ck-loc-entry-desk');
+if (entryDesk) entryDesk.addEventListener('click', openLocPanel);
 const closeBtn = document.getElementById('loc-close');
 if (closeBtn) closeBtn.addEventListener('click', closeLocPanel);
 try {
@@ -39869,10 +40649,7 @@ if (v) { try { store.set('loc-history', typeof v === 'string' ? v : JSON.stringi
 let locAutoTimer = null, locWakeAt = 0;
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') locWakeAt = Date.now() + 60000; });
 function locTypeOf(text) {
-if (LOC.dir.indexOf(text) >= 0) return 'dir';
-if (LOC.dist.indexOf(text) >= 0) return 'dist';
-if (LOC.state.indexOf(text) >= 0) return 'state';
-if (LOC.sense.indexOf(text) >= 0) return 'sense';
+if (window.locLibTypeOf) return window.locLibTypeOf(text);
 return 'custom';
 }
 function doLocAuto() {
@@ -39882,7 +40659,8 @@ let text;
 if (Math.random() < 0.7) {
 text = companion[Math.floor(Math.random() * companion.length)];
 } else {
-const all = [].concat(LOC.dir, LOC.dist, LOC.state, LOC.sense, loadCustom());
+const all = (window.locLibAllEnabled ? window.locLibAllEnabled() : []).slice();
+if (!all.length) all.push('在你身边');
 text = all[Math.floor(Math.random() * all.length)];
 }
 if (!text) return;
@@ -39909,6 +40687,226 @@ document.addEventListener('contact-switched', () => {
 try { closeLocPanel(); locViewDate = ''; } catch (e) {}
 });
 window.playLocFx = playLocFx;
+})();
+(function () {
+const store = window.activeStore();
+const KEY = 'loc-sense';
+const DIRS = [
+{ k: '正前方', arrow: '↑', angle: -90 },
+{ k: '右前方', arrow: '↗', angle: -45 },
+{ k: '右侧',   arrow: '→', angle: 0 },
+{ k: '右后方', arrow: '↘', angle: 45 },
+{ k: '后方',   arrow: '↓', angle: 90 },
+{ k: '左后方', arrow: '↙', angle: 135 },
+{ k: '左侧',   arrow: '←', angle: 180 },
+{ k: '左前方', arrow: '↖', angle: 225 }
+];
+const NEAR_WORDS = ['在你身边', '一直没走远', '隔着世界在你身边', '能摸到我吗', '陪你走着', '停下来等你', '抬头就能看到', '在你前面'];
+const FAR_WORDS = ['在你看不到的地方', '在你看不到的地方偷看你', '再远一点', '就停这儿'];
+function load() {
+try {
+const v = JSON.parse(store.get(KEY) || 'null');
+if (v && typeof v === 'object') return v;
+} catch (e) {}
+return {};
+}
+function save(s) { store.set(KEY, JSON.stringify(s)); }
+function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+function esc(x) { return String(x == null ? '' : x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+function senseWords(k) {
+if (window.locLibSenseGroup) {
+const w = window.locLibSenseGroup(k);
+if (Array.isArray(w) && w.length) return w;
+}
+return { direct: ['无法判断'], rangef: ['无法判断'], power: ['若有若无'], touch: ['好像碰到了你的手'] }[k];
+}
+function isUndirected(d) { return d === '无法判断' || d === '身边'; }
+function rollDir() {
+const words = senseWords('direct');
+const dir8 = DIRS.map(d => d.k).filter(k => words.indexOf(k) >= 0);
+if (Math.random() >= 0.08) {
+if (dir8.length) return pick(dir8);
+const others = words.filter(w => !isUndirected(w));
+return others.length ? pick(others) : '无法判断';
+}
+const pool = words.indexOf('身边') >= 0 ? ['无法判断', '无法判断', '无法判断', '身边'] : ['无法判断', '无法判断', '无法判断', '无法判断'];
+return pick(pool);
+}
+function ensureDirInLib(d) {
+const words = senseWords('direct');
+if (words.indexOf(d) >= 0) return d;
+return '无法判断';
+}
+function rollRangeAndPower() {
+let hist = [];
+try { hist = JSON.parse(store.get('loc-history') || '[]'); } catch (e) {}
+let near = false, far = false;
+for (let i = 0; i < hist.length && i < 5; i++) {
+const t = hist[i].text || '';
+if (NEAR_WORDS.some(w => t.indexOf(w) >= 0)) near = true;
+if (FAR_WORDS.some(w => t.indexOf(w) >= 0)) far = true;
+}
+const rfWords = senseWords('rangef');
+const pwWords = senseWords('power');
+let rf, pw;
+if (near && !far) {
+const nearRf = rfWords.filter(w => w === '很近' || w === '近');
+const nearPw = pwWords.filter(w => w === '明显');
+rf = pick(nearRf.length ? nearRf : rfWords);
+pw = pick(nearPw.length ? nearPw : pwWords);
+} else if (far && !near) {
+const farRf = rfWords.filter(w => w === '稍远' || w === '很远' || w === '无法判断');
+const farPw = pwWords.filter(w => w === '微弱' || w === '若有若无');
+rf = pick(farRf.length ? farRf : rfWords);
+pw = pick(farPw.length ? farPw : pwWords);
+} else {
+rf = pick(rfWords);
+pw = pick(pwWords);
+}
+return { rangef: rf, power: pw };
+}
+function getSense(force) {
+const s = load();
+const now = Date.now();
+let dirty = false;
+if (!s.dir || (s.nextDirAt && now >= s.nextDirAt)) {
+s.dir = rollDir();
+s.nextDirAt = now + (15 + Math.floor(Math.random() * 31)) * 60000; // 15~45 分钟
+dirty = true;
+} else {
+s.dir = ensureDirInLib(s.dir);
+}
+if (!s.rangef || !s.power || force) {
+const rp = rollRangeAndPower();
+s.rangef = rp.rangef;
+s.power = rp.power;
+dirty = true;
+}
+if (dirty) save(s);
+return s;
+}
+function maybeTouch(s) {
+if (Math.random() >= 0.04) return null; // 4% 概率
+const t = pick(senseWords('touch'));
+s.touch = t;
+s.touchAt = Date.now();
+save(s);
+if (window.playLocFx) window.playLocFx(t, 'touch');
+return t;
+}
+function resultText(s, touched) {
+const name = store.get('lbl-partner') || 'TA';
+if (isUndirected(s.dir)) {
+return '方位感知 · ' + name + '\n？ 暂时无法判断方向。\n但你似乎感觉到，有谁在附近。';
+}
+if (s.power === '消失') {
+return '方位感知 · ' + name + '\n刚才似乎还在，现在已经感觉不到了。';
+}
+const arrows = DIRS.find(d => d.k === s.dir);
+return '方位感知 · ' + name + '\n' + (arrows ? arrows.arrow + ' ' : '') + s.dir + '\n' + s.rangef + ' · ' + s.power +
+(touched ? '\n……好像有什么轻轻碰了你一下。' : '');
+}
+function render() {
+const s = getSense(false);
+const circle = document.getElementById('fw-circle');
+if (circle) {
+circle.innerHTML = '';
+const cx = 50, cy = 50, r = 36;
+DIRS.forEach(d => {
+const rad = d.angle * Math.PI / 180;
+const x = cx + r * Math.cos(rad);
+const y = cy + r * Math.sin(rad);
+const b = document.createElement('button');
+b.type = 'button';
+b.className = 'fw-dir' + (s.dir === d.k ? ' on' : '');
+b.textContent = d.arrow;
+b.style.left = x + '%';
+b.style.top = y + '%';
+b.title = d.k;
+circle.appendChild(b);
+});
+const me = document.createElement('div');
+me.className = 'fw-me';
+me.textContent = '你';
+circle.appendChild(me);
+const cur = document.createElement('div');
+cur.id = 'fw-cur-dir';
+cur.className = 'fw-cur-dir';
+cur.textContent = s.dir || '无法判断';
+circle.appendChild(cur);
+}
+const detail = document.getElementById('fw-detail');
+if (detail) {
+const arrows = DIRS.find(d => d.k === s.dir);
+detail.innerHTML =
+'<div class="fw-row"><span class="fw-row-label">方向</span><span class="fw-row-val">' + (arrows ? arrows.arrow + ' ' : '') + esc(s.dir) + '</span></div>' +
+'<div class="fw-row"><span class="fw-row-label">距离感</span><span class="fw-row-val">' + esc(s.rangef) + '</span></div>' +
+'<div class="fw-row"><span class="fw-row-label">感知强度</span><span class="fw-row-val">' + esc(s.power) + '</span></div>';
+}
+}
+let perceiveCdUntil = 0;
+function perceive() {
+const btn = document.getElementById('fw-perceive');
+const now = Date.now();
+if (now < perceiveCdUntil) return;
+perceiveCdUntil = now + 4000;
+if (btn) { btn.classList.add('busy'); btn.disabled = true; }
+const s = getSense(true);
+const touched = maybeTouch(s);
+const result = document.getElementById('fw-result');
+if (result) {
+result.hidden = false;
+result.innerHTML = '';
+resultText(s, touched).split('\n').forEach(l => {
+const p = document.createElement('p');
+p.className = 'fw-p-line';
+p.textContent = l;
+result.appendChild(p);
+});
+}
+render();
+setTimeout(() => {
+if (btn) { btn.classList.remove('busy'); btn.disabled = false; }
+}, 4000);
+}
+function passiveHint() {
+const s = load();
+const now = Date.now();
+if (s.hintAt && now - s.hintAt < 3600000) return;
+if (Math.random() >= 0.02) return; // 每次检查 2% 低概率
+const gs = getSense(false);
+if (isUndirected(gs.dir)) return;
+const arrows = DIRS.find(d => d.k === gs.dir);
+const name = store.get('lbl-partner') || 'TA';
+if (window.toast) window.toast('……好像' + (arrows ? arrows.arrow + ' ' : '') + '有人在你' + gs.dir + '。');
+s.hintAt = now;
+save(s);
+}
+window.refreshSense = function () {
+getSense(false);
+render();
+};
+const perceiveBtn = document.getElementById('fw-perceive');
+if (perceiveBtn) perceiveBtn.addEventListener('click', function (e) {
+e.stopPropagation();
+perceive();
+});
+let lastHintCheck = 0;
+setInterval(function () {
+const panel = document.getElementById('loc-panel');
+if (panel && !panel.hidden) {
+const s = load();
+if (s.nextDirAt && Date.now() >= s.nextDirAt) { getSense(false); render(); }
+}
+if (Math.floor(Date.now() / 30000) !== lastHintCheck) {
+lastHintCheck = Math.floor(Date.now() / 30000);
+passiveHint();
+}
+}, 30000);
+document.addEventListener('contact-switched', function () {
+const panel = document.getElementById('loc-panel');
+if (panel) panel.hidden = true;
+});
 })();
 (function () {
 function store() { try { return window.activeStore(); } catch (e) { return null; } }
@@ -42459,6 +43457,579 @@ document.addEventListener('contact-switched', () => { if (!memoPage.hidden) memo
 memoUpdateBadge();
 })();
 } catch (__e) { try { console.error("[JS] memo-app.js", __e && __e.message || __e); } catch (x) {} if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
+(function () { try {
+(function () {
+const GNS = 'xy-home-v2';
+const page = document.getElementById('page-memo-arc');
+const root = document.getElementById('narc-root');
+function gStore() { try { return window.xyStore(GNS); } catch (e) { return null; } }
+function toast(m) {
+let t = document.getElementById('cc-toast');
+if (!t) { t = document.createElement('div'); t.id = 'cc-toast'; document.body.appendChild(t); }
+t.textContent = m; t.className = 'cc-toast'; void t.offsetWidth; t.className = 'cc-toast show';
+clearTimeout(t._timer); t._timer = setTimeout(() => { t.className = 'cc-toast'; }, 1800);
+}
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+function pad(n) { return String(n).padStart(2, '0'); }
+function mdstr(ts) { const d = new Date(ts); return (d.getMonth() + 1) + '月' + d.getDate() + '日'; }
+function short(s, n) { s = String(s == null ? '' : s); n = n || 18; return s.length > n ? s.slice(0, n) + '…' : s; }
+const TYPES = [['like', 'TA喜欢'], ['dislike', 'TA不喜欢'], ['habit', 'TA习惯'], ['care', 'TA在意'],
+['do', 'TA会'], ['dont', 'TA不会'], ['good', 'TA擅长'], ['bad', 'TA不擅长'],
+['fear', 'TA害怕'], ['need', 'TA需要'], ['truth', 'TA其实'], ['us', '我们之间'], ['other', '其他']];
+const TYPE_MAP = {}; TYPES.forEach(t => TYPE_MAP[t[0]] = t[1]);
+const ALL_TYPES = TYPES.map(t => t[0]);
+const HABIT_TYPES = ['habit', 'do', 'dont', 'good', 'bad'];   // TA的习惯：行为模式
+const TASTE_TYPES = ['like', 'dislike', 'care'];               // TA的喜好
+const LEVELS = [['0', '🌱 初步发现', '目前只是我的感觉'], ['1', '🌿 越来越确定', '已经出现过几次类似情况'], ['2', '🌳 已确认', '相处中已经比较明确']];
+const BOND_CATS = { first: '第一次', habit: '共同习惯', secret: '只有我们知道的事' };
+function levelLabel(l) { const x = LEVELS[parseInt(l, 10)]; return x ? x[1] : ''; }
+function levelHint(l) { const x = LEVELS[parseInt(l, 10)]; return x ? x[2] : ''; }
+function typePills(types) { return types.map(t => ({ label: TYPE_MAP[t], value: t })); }
+const LEVEL_PILLS = LEVELS.map(l => ({ label: l[1], value: l[0] }));
+function roster() { const s = gStore(); if (!s) return []; try { const a = JSON.parse(s.get('cjian-roster') || '[]'); return Array.isArray(a) ? a.filter(x => x && x.name) : []; } catch (e) { return []; } }
+function keyOf(id) { return 'narc-' + id; }
+function loadArc(id) { const s = gStore(); if (!s) return null; try { const o = JSON.parse(s.get(keyOf(id)) || 'null'); if (o && typeof o === 'object') return o; } catch (e) {} return null; }
+function saveArc(id, o) { const s = gStore(); if (s) { try { s.set(keyOf(id), JSON.stringify(o)); } catch (e) {} } }
+function ensureArc(id) {
+let o = loadArc(id);
+if (!o) { o = { created: Date.now(), loves: [], bonds: [], moments: [], records: [], wonders: [], history: [] }; saveArc(id, o); }
+['loves', 'bonds', 'moments', 'records', 'wonders', 'history'].forEach(k => { if (!Array.isArray(o[k])) o[k] = []; });
+return o;
+}
+function makeId() { return 'n' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36); }
+function curId() { try { return gStore().get('narc-cur') || ''; } catch (e) { return ''; } }
+function setCur(id) { try { gStore().set('narc-cur', id); } catch (e) {} }
+let cur = '';            // 当前梦角 roster id
+let view = 'knows';      // knows|habits|tastes|bonds|records|wonders|changes
+let bondsTab = 'first';  // first|habit|secret|moments
+window.openNarc = function () {
+const r = roster();
+if (!r.length) { cur = ''; }
+else { const c = curId(); cur = r.some(x => x.id === c) ? c : r[0].id; setCur(cur); }
+if (!page || !root) return;
+document.querySelectorAll('.page').forEach(p => p.hidden = true);
+page.hidden = false;
+render();
+};
+window.closeNarc = function () {
+if (!page) return;
+page.classList.remove('full');
+document.querySelectorAll('.page').forEach(p => p.hidden = true);
+const home = document.getElementById('page-phone');
+if (home) home.hidden = false;
+};
+function render() {
+if (!root) return;
+const r = roster();
+if (!r.length) { cur = ''; }
+else { const c = curId(); cur = r.some(x => x.id === c) ? c : r[0].id; setCur(cur); }
+let h = '';
+h += '<div class="narc-chips">';
+r.forEach(c => { h += '<button class="narc-chip' + (c.id === cur ? ' on' : '') + '" data-op="pick-roster" data-rid="' + esc(c.id) + '">' + esc(c.name) + '</button>'; });
+h += '<button class="narc-chip narc-addchip" data-op="add-roster">＋ 添加</button>';
+h += '</div>';
+if (!cur) {
+h += '<div class="narc-empty">此间还没有梦角<br>先添加一个你要慢慢认识的人吧';
+h += '<br><button class="ne-btn" data-op="add-roster">去添加梦角</button></div>';
+root.innerHTML = h;
+return;
+}
+const arc = ensureArc(cur); // created 初始化在这：打开即开始计相处天数
+const rosterName = (r.find(x => x.id === cur) || {}).name || 'TA';
+const days = Math.max(0, Math.floor((Date.now() - arc.created) / 86400000));
+const activeLoves = arc.loves.filter(x => x.status !== 'retired');
+const known = arc.loves.length;
+const bondsN = arc.bonds.length;
+const momentsN = arc.moments.length;
+const wondersOpen = arc.wonders.filter(w => !w.solved).length;
+let recent = null;
+activeLoves.forEach(x => { if (!recent || x.updated > recent.updated) recent = x; });
+h += '<div class="narc-hero">';
+h += '<div class="narc-hero-top"><span class="narc-name">' + esc(rosterName) + '</span><span class="narc-days">一起留下 · ' + days + ' 天</span></div>';
+h += '<div class="narc-hero-sub">「我认识的TA」不是TA的全部，是我和TA相处以后、慢慢知道的事。</div>';
+h += '<div class="narc-stats">';
+h += '<div class="narc-stat"><b>' + known + '</b><span>了解</span></div>';
+h += '<div class="narc-stat"><b>' + bondsN + '</b><span>共同经历</span></div>';
+h += '<div class="narc-stat"><b>' + momentsN + '</b><span>重要时刻</span></div>';
+h += '<div class="narc-stat"><b>' + wondersOpen + '</b><span>还不了解</span></div>';
+h += '</div>';
+if (recent) {
+h += '<div class="narc-recent"><b>最近发现</b>　' + (TYPE_MAP[recent.type] ? TYPE_MAP[recent.type] + '……' : '') + esc(short(recent.text, 26));
+h += '<span class="nr-date">' + mdstr(recent.updated) + '</span></div>';
+}
+h += '</div>';
+const NAVS = [['knows', '我认识的TA'], ['habits', 'TA的习惯'], ['tastes', 'TA的喜好'], ['bonds', '我们之间'], ['records', '相处记录'], ['wonders', '还不了解'], ['changes', '理解变化']];
+h += '<div class="narc-nav">';
+NAVS.forEach(n => { h += '<button class="narc-navchip' + (view === n[0] ? ' on' : '') + '" data-op="nav" data-view="' + n[0] + '">' + n[1] + '</button>'; });
+h += '</div>';
+h += '<div id="narc-content">' + contentHTML(arc, rosterName) + '</div>';
+root.innerHTML = h;
+}
+function contentHTML(arc, rosterName) {
+if (view === 'knows') return knownsHTML(arc, ALL_TYPES, true, '我认识的TA', '这些是你相处后慢慢发现的TA。');
+if (view === 'habits') return knownsHTML(arc, HABIT_TYPES, false, 'TA的习惯', 'TA常常、偶尔会做的事。');
+if (view === 'tastes') return knownsHTML(arc, TASTE_TYPES, false, 'TA的喜好', '喜欢 / 不太喜欢 / 在意。');
+if (view === 'bonds') return bondsHTML(arc);
+if (view === 'records') return recordsHTML(arc);
+if (view === 'wonders') return wondersHTML(arc);
+if (view === 'changes') return changesHTML(arc);
+return '';
+}
+function knownsHTML(arc, types, all, title, sub) {
+const items = arc.loves.filter(l => types.indexOf(l.type) >= 0).sort((a, b) => b.created - a.created);
+let h = '<div class="narc-sect"><div><h3>' + esc(title) + '</h3><div class="narc-sect-sub">' + esc(sub) + '</div></div>';
+h += '<button class="narc-add" data-op="add-know" data-pool="' + (all ? 'all' : types.join(',')) + '">＋ 记录新的了解</button></div>';
+if (!items.length) {
+h += '<div class="narc-empty">还没有了解记录。<br>从第一次相处的发现开始填吧。</div>';
+return h;
+}
+items.forEach(it => {
+const retired = it.status === 'retired';
+h += '<div class="narc-k' + (retired ? ' retired' : '') + '">';
+h += '<div class="nk-top"><span class="nk-type">' + esc(TYPE_MAP[it.type] || '其他') + '……</span>';
+if (!retired) h += '<span class="nk-level" title="' + esc(levelHint(it.level)) + '">' + esc(levelLabel(it.level) || '') + '</span>';
+h += '</div>';
+h += '<div class="nk-text">' + esc(it.text) + '</div>';
+if (it.why) h += '<div class="nk-why">' + esc(it.why) + '</div>';
+if (retired && it.note) h += '<div class="narc-note">这条了解暂时不再适用' + (it.note ? '：' + esc(it.note) : '') + '</div>';
+h += '<div class="nk-meta"><span class="nk-date">' + (retired ? '' : '记录于 ' + mdstr(it.updated || it.created)) + '</span>';
+h += '<span class="nk-ops">';
+if (retired) {
+h += '<button class="nk-op" data-op="restore-know" data-id="' + it.id + '">恢复适用</button>';
+h += '<button class="nk-op warn" data-op="del-know" data-id="' + it.id + '">删除</button>';
+} else {
+h += '<button class="nk-op" data-op="edit-know" data-id="' + it.id + '">编辑</button>';
+h += '<button class="nk-op" data-op="revise-know" data-id="' + it.id + '">重新理解</button>';
+h += '<button class="nk-op" data-op="retire-know" data-id="' + it.id + '">暂不适用</button>';
+h += '<button class="nk-op warn" data-op="del-know" data-id="' + it.id + '">删除</button>';
+}
+h += '</span></div></div>';
+});
+return h;
+}
+function bondsHTML(arc) {
+const TABS = [['first', '第一次'], ['habit', '共同习惯'], ['secret', '只有我们知道的事'], ['moments', '重要时刻']];
+let h = '<div class="narc-sect"><div><h3>我们之间</h3><div class="narc-sect-sub">记录的是「我和你」发生过的事，不是TA一个人。</div></div></div>';
+h += '<div class="narc-btabs">';
+TABS.forEach(t => { h += '<button class="narc-btab' + (bondsTab === t[0] ? ' on' : '') + '" data-op="bond-tab" data-bt="' + t[0] + '">' + t[1] + '</button>'; });
+h += '</div>';
+if (bondsTab === 'moments') {
+h += '<div class="narc-sect" style="margin-top:2px"><span class="narc-spect"></span><button class="narc-add" data-op="add-moment">＋ 记一个重要时刻</button></div>';
+if (!arc.moments.length) h += '<div class="narc-empty">把特别的日子标记为 ⭐ 重要时刻<br>会在这里汇成你们的时光。</div>';
+arc.moments.slice().sort((a, b) => (a.date || '').localeCompare(b.date || '')).forEach(m => {
+h += '<div class="narc-item">';
+h += '<div class="ni-top"><span class="ni-star on">⭐</span></div>';
+h += '<div class="ni-text">' + esc(m.text) + '</div>';
+h += '<div class="ni-meta"><span class="ni-date">' + esc(m.date || '') + '</span>';
+h += '<span class="nk-ops"><button class="nk-op" data-op="edit-entry" data-kind="moment" data-id="' + m.id + '">编辑</button>';
+h += '<button class="nk-op warn" data-op="del-entry" data-kind="moment" data-id="' + m.id + '">删除</button></span></div></div>';
+});
+return h;
+}
+h += '<div class="narc-sect" style="margin-top:2px"><span></span><button class="narc-add" data-op="add-bond" data-cat="' + bondsTab + '">＋ 记一条「' + BOND_CATS[bondsTab] + '」</button></div>';
+const items = arc.bonds.filter(b => b.cat === bondsTab).sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+if (!items.length) h += '<div class="narc-empty">这里还没有记录。<br>' + (bondsTab === 'first' ? '把第一次发生的事记下来。' : '记下你们共同的那一部分。') + '</div>';
+items.forEach(b => {
+h += '<div class="narc-item">';
+h += '<div class="ni-top"><span class="ni-tag">' + BOND_CATS[b.cat] + '</span></div>';
+h += '<div class="ni-text">' + esc(b.text) + '</div>';
+h += '<div class="ni-meta"><span class="ni-date">' + esc(b.date || '') + '</span>';
+h += '<span class="nk-ops"><button class="nk-op" data-op="edit-entry" data-kind="bond" data-id="' + b.id + '">编辑</button>';
+h += '<button class="nk-op warn" data-op="del-entry" data-kind="bond" data-id="' + b.id + '">删除</button></span></div></div>';
+});
+return h;
+}
+function recordsHTML(arc) {
+let h = '<div class="narc-sect"><div><h3>相处记录</h3><div class="narc-sect-sub">记录下来「发生了什么」。遇到特别的日子，点 ⭐ 记为重要时刻。</div></div>';
+h += '<button class="narc-add" data-op="add-record">＋ 写一条</button></div>';
+const items = arc.records.slice().sort((a, b) => b.created - a.created);
+if (!items.length) h += '<div class="narc-empty">还没有相处记录。<br>今天聊了些什么、发生了些什么，都可以写在这里。</div>';
+items.forEach(rec => {
+h += '<div class="narc-item">';
+h += '<div class="ni-top"><button class="ni-star' + (rec.momentId ? ' on' : '') + '" data-op="toggle-moment" data-id="' + rec.id + '" title="记为重要时刻">⭐</button>';
+h += (rec.momentId ? '<span class="ni-tag">重要时刻</span>' : ''); h += '</div>';
+h += '<div class="ni-text">' + esc(rec.text) + '</div>';
+h += '<div class="ni-meta"><span class="ni-date">' + esc(rec.date || '') + '</span>';
+h += '<span class="nk-ops"><button class="nk-op" data-op="edit-entry" data-kind="record" data-id="' + rec.id + '">编辑</button>';
+h += '<button class="nk-op warn" data-op="del-entry" data-kind="record" data-id="' + rec.id + '">删除</button></span></div></div>';
+});
+return h;
+}
+function wondersHTML(arc) {
+let h = '<div class="narc-sect"><div><h3>还不了解TA</h3><div class="narc-sect-sub">这是档案里的留白——留给未来的你们。</div></div>';
+h += '<button class="narc-add" data-op="add-wonder">＋ 记一个想了解的事</button></div>';
+const open = arc.wonders.filter(w => !w.solved);
+const solved = arc.wonders.filter(w => w.solved);
+if (!open.length && !solved.length) {
+h += '<div class="narc-empty">暂时没有「还不了解」的事。<br>可以把你正想知道、还没答案的问题写在这里。</div>';
+return h;
+}
+open.forEach(w => {
+h += '<div class="narc-item">';
+h += '<div class="ni-top"><span class="ni-tag">还不了解</span></div>';
+h += '<div class="ni-text">' + esc(w.text) + '</div>';
+h += '<div class="ni-meta"><span class="ni-date">' + mdstr(w.created) + '</span>';
+h += '<span class="nk-ops"><button class="nk-op" data-op="solve-wonder" data-id="' + w.id + '">已了解</button>';
+h += '<button class="nk-op warn" data-op="del-wonder" data-id="' + w.id + '">删除</button></span></div></div>';
+});
+if (solved.length) {
+h += '<div class="narc-sect" style="margin-top:16px"><h3 style="opacity:.7">已解开的疑问</h3></div>';
+solved.forEach(w => {
+h += '<div class="narc-item solved">';
+h += '<div class="ni-top"><span class="ni-tag">已了解</span></div>';
+h += '<div class="ni-text">' + esc(w.text) + '</div>';
+h += '<div class="ni-meta"><span class="ni-date">' + (w.solvedAt ? mdstr(w.solvedAt) + ' 有了答案' : '') + '</span>';
+h += '<span class="nk-ops"><button class="nk-op" data-op="reopen-wonder" data-id="' + w.id + '">重新打开</button>';
+h += '<button class="nk-op warn" data-op="del-wonder" data-id="' + w.id + '">删除</button></span></div></div>';
+});
+}
+return h;
+}
+function changesHTML(arc) {
+let h = '<div class="narc-sect"><div><h3>理解变化</h3><div class="narc-sect-sub">我对TA的理解，是怎样一点点改变的。</div></div></div>';
+const hist = arc.history.slice().sort((a, b) => b.time - a.time);
+if (!hist.length) {
+h += '<div class="narc-empty">还没有理解上的变化。<br>当有一天你发现自己——「原来TA不是我以为的那样」——它会出现在这里。</div>';
+return h;
+}
+hist.forEach(ev => {
+h += '<div class="narc-hist"><span class="nh-dot"></span><div class="nh-wrap"><div class="nh-date">' + mdstr(ev.time) + '</div><div class="nh-text">' + ev.text.replace(/〈([^〈]*)〉/g, '<em>「$1」</em>') + '</div></div></div>';
+});
+return h;
+}
+function addKnow(pool, prefill) {
+if (!window.openModal) return;
+const types = pool && pool.length ? pool : ALL_TYPES;
+let phase = 'type', pendingType = '', pendingText = '', pendingWhy = '';
+function typeOkText() { ctl.okText('下一步'); }
+const ctl = window.openModal('记录一条新的了解', prefill || '', function (v) {
+if (phase === 'type') {
+if (!v) return;
+pendingType = v;
+phase = 'text';
+ctl.stay();
+ctl.title(TYPE_MAP[v] + '……');
+ctl.hint('写下你的发现，一句话就好。');
+ctl.input(true); ctl.maxLen(120); ctl.ph('例如：不太喜欢被催着做决定');
+ctl.okText('下一步');
+if (prefill) ctl.text(prefill);
+return;
+}
+if (phase === 'text') {
+const t = String(v == null ? '' : v).trim();
+if (!t) { ctl.stay(); ctl.focus(); return; }
+pendingText = t;
+phase = 'why';
+ctl.stay();
+ctl.title('为什么这样认为？（可选）');
+ctl.hint('记下当时的场景/依据，不想写就点「下一步」。');
+ctl.text(''); ctl.maxLen(120); ctl.ph('可留空'); ctl.input(true); ctl.okText('下一步');
+return;
+}
+if (phase === 'why') {
+pendingWhy = String(v == null ? '' : v).trim();
+phase = 'level';
+ctl.stay();
+ctl.input(false);
+ctl.pills(LEVEL_PILLS, '0');
+ctl.title('你有多确定？');
+ctl.hint('初步的观察也可以记下，之后还能修改。');
+ctl.okText('保存');
+return;
+}
+if (phase === 'level') {
+const lvl = parseInt(v, 10);
+const arc = ensureArc(cur); const now = Date.now();
+arc.loves.push({ id: makeId(), type: pendingType, text: pendingText, why: pendingWhy, level: isNaN(lvl) ? 0 : (lvl || 0), created: now, updated: now, status: 'active', revisions: [] });
+arc.history.push({ time: now, text: '「' + (TYPE_MAP[pendingType] || '') + '」新增了解：' + short(pendingText) });
+saveArc(cur, arc);
+toast('记下了一条了解');
+render();
+}
+}, { noInput: true, pills: typePills(types) });
+}
+function editKnow(id) {
+const arc = ensureArc(cur); const it = arc.loves.find(x => x.id === id); if (!it) return;
+let phase = 'text', newText = '';
+const ctl = window.openModal('编辑这条了解', it.text, function (v) {
+if (phase === 'text') {
+const t = String(v == null ? '' : v).trim(); if (!t) { ctl.stay(); ctl.focus(); return; }
+newText = t; phase = 'why';
+ctl.stay(); ctl.title('为什么这样认为？（可选）'); ctl.hint('改动理解，也可以留一句话理由。');
+ctl.text(it.why || ''); ctl.maxLen(120); ctl.ph('可留空'); ctl.input(true); ctl.okText('下一步');
+return;
+}
+if (phase === 'why') {
+const why = String(v == null ? '' : v).trim();
+it.newText = newText; it.newWhy = why;
+phase = 'level';
+ctl.stay(); ctl.input(false);
+ctl.pills(LEVEL_PILLS, String(it.level));
+ctl.title('现在你有多确定？'); ctl.hint(levelHint(it.level)); ctl.okText('保存');
+return;
+}
+if (phase === 'level') {
+const lvl = parseInt(v, 10);
+const old = it.text;
+it.text = it.newText; it.why = it.newWhy || ''; it.newText = it.newWhy = undefined;
+it.level = isNaN(lvl) ? it.level : (lvl || 0);
+it.updated = Date.now();
+if (old !== it.text) arc.history.push({ time: it.updated, text: '「' + (TYPE_MAP[it.type] || '') + '」〈' + short(old) + '〉→〈' + short(it.text) + '〉' });
+saveArc(cur, arc); toast('已更新'); render();
+}
+}, { placeholder: '你发现的TA' });
+}
+function reviseKnow(id) {
+const arc = ensureArc(cur); const it = arc.loves.find(x => x.id === id); if (!it) return;
+let phase = 'text', newText = '';
+const ctl = window.openModal('重新理解TA', '', function (v) {
+if (phase === 'text') {
+const t = String(v == null ? '' : v).trim(); if (!t) { ctl.stay(); ctl.focus(); return; }
+newText = t; phase = 'why';
+ctl.stay(); ctl.title('为什么这样认为？（可选）'); ctl.hint('旧的看法会保留在「理解变化」里。');
+ctl.text(''); ctl.maxLen(120); ctl.ph('可留空'); ctl.input(true); ctl.okText('下一步');
+return;
+}
+if (phase === 'why') {
+const why = String(v == null ? '' : v).trim();
+it.newText = newText; it.newWhy = why;
+phase = 'level';
+ctl.stay(); ctl.input(false);
+ctl.pills(LEVEL_PILLS, String(it.level));
+ctl.title('现在你有多确定？'); ctl.okText('保存');
+return;
+}
+if (phase === 'level') {
+const lvl = parseInt(v, 10);
+const oldText = it.text, oldWhy = it.why, oldLevel = it.level;
+it.revisions.push({ text: oldText, why: oldWhy, level: oldLevel, time: Date.now() });
+it.text = it.newText; it.newText = undefined;
+it.why = it.newWhy || ''; it.newWhy = undefined;
+it.level = isNaN(lvl) ? it.level : (lvl || 0);
+it.updated = Date.now(); it.status = 'active';
+arc.history.push({ time: it.updated, text: '「' + (TYPE_MAP[it.type] || '') + '」重新理解：〈' + short(oldText) + '〉→〈' + short(it.text) + '〉' });
+saveArc(cur, arc); toast('更新了对TA的理解'); render();
+}
+}, { placeholder: '新的理解，例如：TA只是不习惯主动表达' });
+}
+function retireKnow(id) {
+const arc = ensureArc(cur); const it = arc.loves.find(x => x.id === id); if (!it) return;
+if (!window.openModal) return;
+let phase = 'ask';
+const ctl = window.openModal('暂不适用这条了解？', '', function (v) {
+if (phase === 'ask') {
+if (v === 'no') return;
+phase = 'note';
+ctl.stay(); ctl.title('想留句话吗？（可选）');
+ctl.hint('以后还能回来看，当初为什么暂停。');
+ctl.input(true); ctl.maxLen(120); ctl.ph('可留空'); ctl.okText('确认'); ctl.text('');
+return;
+}
+if (phase === 'note') {
+it.note = String(v == null ? '' : v).trim();
+it.status = 'retired'; it.updated = Date.now();
+arc.history.push({ time: it.updated, text: '「' + (TYPE_MAP[it.type] || '') + '」暂时不再适用：' + short(it.text) });
+saveArc(cur, arc); toast('已暂不适用'); render();
+}
+}, { noInput: true, pills: [{ label: '取消', value: 'no' }, { label: '暂不适用', value: 'yes' }] });
+}
+function restoreKnow(id) {
+const arc = ensureArc(cur); const it = arc.loves.find(x => x.id === id); if (!it) return;
+it.status = 'active'; it.updated = Date.now();
+arc.history.push({ time: it.updated, text: '「' + (TYPE_MAP[it.type] || '') + '」恢复适用：' + short(it.text) });
+saveArc(cur, arc); toast('已恢复'); render();
+}
+function delKnow(id) {
+const arc = ensureArc(cur);
+window.openModal('删除这条了解？', '', function (v) {
+if (v !== 'del') return;
+arc.loves = arc.loves.filter(x => x.id !== id);
+saveArc(cur, arc); toast('已删除'); render();
+}, { noInput: true, pills: [{ label: '取消', value: 'no' }, { label: '删除', value: 'del' }] });
+}
+function addBond(cat) {
+let phase = 'text', text = '';
+const ctl = window.openModal('记一条「' + BOND_CATS[cat] + '」', '', function (v) {
+if (phase === 'text') {
+const t = String(v == null ? '' : v).trim(); if (!t) { ctl.stay(); ctl.focus(); return; }
+text = t; phase = 'date';
+ctl.stay(); ctl.title('发生在哪一天？'); ctl.hint('留空默认今天。');
+ctl.text(mdstr(Date.now())); ctl.maxLen(30); ctl.input(true); ctl.ph('如 8月3日'); ctl.okText('保存');
+return;
+}
+if (phase === 'date') {
+const arc = ensureArc(cur);
+arc.bonds.push({ id: makeId(), cat: cat, text: text, date: String(v == null ? '' : v).trim() || mdstr(Date.now()), created: Date.now() });
+saveArc(cur, arc); toast('已记下'); render();
+}
+}, { placeholder: '例如：第一次一起玩游戏' });
+}
+function addMoment() {
+let phase = 'text', text = '';
+const ctl = window.openModal('记一个重要时刻', '', function (v) {
+if (phase === 'text') {
+const t = String(v == null ? '' : v).trim(); if (!t) { ctl.stay(); ctl.focus(); return; }
+text = t; phase = 'date';
+ctl.stay(); ctl.title('在哪一天？'); ctl.hint('留空默认今天。');
+ctl.text(mdstr(Date.now())); ctl.maxLen(30); ctl.input(true); ctl.ph('如 8月12日'); ctl.okText('保存');
+return;
+}
+if (phase === 'date') {
+const arc = ensureArc(cur);
+arc.moments.push({ id: makeId(), text: text, date: String(v == null ? '' : v).trim() || mdstr(Date.now()), created: Date.now() });
+arc.history.push({ time: Date.now(), text: '重要时刻：' + short(text) });
+saveArc(cur, arc); toast('记下了重要时刻'); render();
+}
+}, { placeholder: '例如：TA第一次主动说想留下来' });
+}
+function addRecord() {
+let phase = 'text', text = '';
+const ctl = window.openModal('记一条相处', '', function (v) {
+if (phase === 'text') {
+const t = String(v == null ? '' : v).trim(); if (!t) { ctl.stay(); ctl.focus(); return; }
+text = t; phase = 'date';
+ctl.stay(); ctl.title('在哪一天？'); ctl.hint('留空默认今天。');
+ctl.text(mdstr(Date.now())); ctl.maxLen(30); ctl.input(true); ctl.ph('如 8月25日'); ctl.okText('保存');
+return;
+}
+if (phase === 'date') {
+const arc = ensureArc(cur);
+arc.records.push({ id: makeId(), text: text, date: String(v == null ? '' : v).trim() || mdstr(Date.now()), created: Date.now() });
+saveArc(cur, arc); toast('已记下'); render();
+}
+}, { placeholder: '今天和TA聊了很久……' });
+}
+function editEntry(kind, id) {
+const arc = ensureArc(cur);
+const arr = kind === 'bond' ? arc.bonds : (kind === 'moment' ? arc.moments : arc.records);
+const it = arr.find(x => x.id === id); if (!it) return;
+let phase = 'text', newText = '';
+const ctl = window.openModal('编辑', it.text, function (v) {
+if (phase === 'text') {
+const t = String(v == null ? '' : v).trim(); if (!t) { ctl.stay(); ctl.focus(); return; }
+newText = t; phase = 'date';
+ctl.stay(); ctl.title('在哪一天？');
+ctl.text(it.date || mdstr(Date.now())); ctl.maxLen(30); ctl.input(true); ctl.ph('如 8月3日'); ctl.okText('保存');
+return;
+}
+if (phase === 'date') {
+it.text = newText; it.date = String(v == null ? '' : v).trim() || mdstr(Date.now());
+saveArc(cur, arc); toast('已更新'); render();
+}
+}, { placeholder: '内容' });
+}
+function delEntry(kind, id) {
+const arc = ensureArc(cur);
+window.openModal('删除这条？', '', function (v) {
+if (v !== 'del') return;
+if (kind === 'bond') arc.bonds = arc.bonds.filter(x => x.id !== id);
+else if (kind === 'moment') arc.moments = arc.moments.filter(x => x.id !== id);
+else { arc.records = arc.records.filter(x => x.id !== id); }
+saveArc(cur, arc); toast('已删除'); render();
+}, { noInput: true, pills: [{ label: '取消', value: 'no' }, { label: '删除', value: 'del' }] });
+}
+function toggleMoment(recId) {
+const arc = ensureArc(cur); const rec = arc.records.find(x => x.id === recId);
+if (!rec) return;
+if (rec.momentId) {
+arc.moments = arc.moments.filter(m => m.id !== rec.momentId);
+rec.momentId = '';
+} else {
+const m = { id: makeId(), text: rec.text, date: rec.date || mdstr(Date.now()), created: Date.now() };
+arc.moments.push(m); rec.momentId = m.id;
+arc.history.push({ time: Date.now(), text: '重要时刻：' + short(rec.text) });
+}
+saveArc(cur, arc); render();
+}
+function addWonder() {
+if (!window.openModal) return;
+window.openModal('记一个想了解的事', '', function (v) {
+const t = String(v == null ? '' : v).trim(); if (!t) return;
+const arc = ensureArc(cur);
+arc.wonders.push({ id: makeId(), text: t, solved: false, created: Date.now(), solvedAt: null });
+saveArc(cur, arc); toast('记下了，留给未来的你们'); render();
+}, { placeholder: '例如：TA真正害怕的是什么？' }).maxLen(80);
+}
+function solveWonder(id) {
+const arc = ensureArc(cur); const w = arc.wonders.find(x => x.id === id); if (!w) return;
+window.openModal('「' + short(w.text, 20) + '」已经有答案了吗？', '', function (v) {
+if (v === 'only') { w.solved = true; w.solvedAt = Date.now(); saveArc(cur, arc); toast('已了解'); render(); return; }
+if (v === 'convert') {
+w.solved = true; w.solvedAt = Date.now(); saveArc(cur, arc); render();
+addKnow(ALL_TYPES, w.text); // 把答案也记成一条「了解」
+}
+}, { noInput: true, pills: [{ label: '只是已了解', value: 'only' }, { label: '已了解 · 也记为了解', value: 'convert' }] });
+}
+function reopenWonder(id) {
+const arc = ensureArc(cur); const w = arc.wonders.find(x => x.id === id); if (!w) return;
+w.solved = false; w.solvedAt = null; saveArc(cur, arc); render();
+}
+function delWonder(id) {
+const arc = ensureArc(cur);
+window.openModal('删除这个疑问？', '', function (v) {
+if (v !== 'del') return;
+arc.wonders = arc.wonders.filter(x => x.id !== id);
+saveArc(cur, arc); toast('已删除'); render();
+}, { noInput: true, pills: [{ label: '取消', value: 'no' }, { label: '删除', value: 'del' }] });
+}
+function dispatch(op, el) {
+const id = el.getAttribute('data-id');
+const kind = el.getAttribute('data-kind');
+const cat = el.getAttribute('data-cat');
+const pool = el.getAttribute('data-pool');
+const view2 = el.getAttribute('data-view');
+const rid = el.getAttribute('data-rid');
+switch (op) {
+case 'nav': view = view2 || 'knows'; render(); break;
+case 'bond-tab': bondsTab = el.getAttribute('data-bt') || 'first'; render(); break;
+case 'pick-roster': cur = rid; setCur(cur); if (view === 'bonds') bondsTab = 'first'; render(); break;
+case 'add-roster': if (window.cjianManage) window.cjianManage(); break;
+case 'add-know': addKnow(pool && pool !== 'all' ? pool.split(',') : ALL_TYPES); break;
+case 'edit-know': editKnow(id); break;
+case 'revise-know': reviseKnow(id); break;
+case 'retire-know': retireKnow(id); break;
+case 'restore-know': restoreKnow(id); break;
+case 'del-know': delKnow(id); break;
+case 'add-bond': addBond(cat); break;
+case 'add-moment': addMoment(); break;
+case 'add-record': addRecord(); break;
+case 'edit-entry': editEntry(kind, id); break;
+case 'del-entry': delEntry(kind, id); break;
+case 'toggle-moment': toggleMoment(id); break;
+case 'add-wonder': addWonder(); break;
+case 'solve-wonder': solveWonder(id); break;
+case 'reopen-wonder': reopenWonder(id); break;
+case 'del-wonder': delWonder(id); break;
+}
+}
+function bind() {
+const back = document.getElementById('narc-back');
+if (back) back.addEventListener('click', function () { window.closeNarc(); });
+const manage = document.getElementById('narc-manage');
+if (manage) manage.addEventListener('click', function (e) { e.stopPropagation(); if (window.cjianManage) window.cjianManage(); });
+const appIcon = document.querySelector('.app[data-app="memo-arc"]');
+if (appIcon) {
+appIcon.addEventListener('click', function () {
+const editing = Array.prototype.some.call(document.querySelectorAll('.app-grid'), g => g.classList.contains('editing'));
+if (editing) return;
+window.openNarc();
+});
+}
+if (root) {
+root.addEventListener('click', function (e) {
+const b = e.target.closest('[data-op]');
+if (!b) return;
+dispatch(b.getAttribute('data-op'), b);
+});
+}
+}
+function boot() {
+bind();
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+else boot();
+})();
+} catch (__e) { try { console.error("[JS] memo-arc.js", __e && __e.message || __e); } catch (x) {} if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
 (function () { try {
 (function () {
 var G = 'xy-home-v2';
@@ -49488,6 +51059,579 @@ setTimeout(maybeShow, 300); // 留一点开屏退出动画缓冲
 } catch (__e) { try { console.error("[JS] pwa.js", __e && __e.message || __e); } catch (x) {} if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
 (function () { try {
 (function () {
+const G = 'xy-home-v2';
+const ROSTER_KEY = 'cjian-roster';
+const STATE_KEY = 'cjian-state';
+const SEED_KEY = 'cjian-seeded';
+function rootStore() {
+try { return window.xyStore(G); } catch (e) { return null; }
+}
+function toast(t) { if (typeof window.toast === 'function') window.toast(t); }
+const SHICHEN = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
+function shichenStartHour(i) { return (2 * i + 23) % 24; }
+function shichenAt(hour) { return Math.floor(((hour + 1) % 24) / 2); }
+function pad(n) { return (n < 10 ? '0' : '') + n; }
+function timeInfo(ts) {
+const d = new Date(ts);
+const mOfDay = d.getHours() * 60 + d.getMinutes();
+const idx = shichenAt(d.getHours());
+const startH = shichenStartHour(idx);
+const isZheng = (mOfDay - startH * 60) >= 60;
+const h0 = (startH + (isZheng ? 1 : 0)) % 24;
+return {
+idx: idx,
+half: SHICHEN[idx] + (isZheng ? '正' : '初'),
+range: pad(h0) + ':00–' + pad(h0) + ':59',
+hhmm: pad(d.getHours()) + ':' + pad(d.getMinutes())
+};
+}
+function worldNow(offsetMin) { return Date.now() + ((offsetMin || 0) * 60000); }
+const PRESENCE = {
+near:   { label: '很近',     desc: '感觉就在身边' },
+nearby: { label: '附近',     desc: 'TA可能就在附近' },
+far:    { label: '遥远',     desc: '能感觉到，但距离很远' },
+unfelt: { label: '感觉不到', desc: '暂时无法感知TA' },
+gone:   { label: '离开',     desc: 'TA暂时不在附近' }
+};
+const ACTIVITY = {
+free:    { label: '有空', desc: '现在比较适合交流' },
+busy:    { label: '有事', desc: 'TA正在做自己的事情' },
+rushed:  { label: '忙着', desc: '暂时不太方便' },
+rest:    { label: '休息', desc: 'TA正在休息' },
+sleep:   { label: '睡着', desc: 'TA那边已经入睡' },
+unknown: { label: '未知', desc: '暂时不知道TA在做什么' }
+};
+function loadRoster() {
+try {
+const s = rootStore();
+if (!s) return [];
+const v = s.get(ROSTER_KEY);
+if (v) {
+const a = JSON.parse(v);
+if (Array.isArray(a)) return a.filter(x => x && x.name);
+}
+} catch (e) {}
+return [];
+}
+function saveRoster(list) {
+try { rootStore().set(ROSTER_KEY, JSON.stringify(list)); } catch (e) {}
+}
+function loadState() {
+try {
+const s = rootStore();
+if (!s) return {};
+const v = s.get(STATE_KEY);
+if (v) { const o = JSON.parse(v); if (o && typeof o === 'object') return o; }
+} catch (e) {}
+return {};
+}
+function saveState(st) {
+try { rootStore().set(STATE_KEY, JSON.stringify(st)); } catch (e) {}
+}
+function makeId() { return 'd' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36); }
+function seedIfEmpty() {
+try {
+const s = rootStore();
+if (!s || s.get(SEED_KEY)) return;
+const list = loadRoster();
+if (list.length) { s.set(SEED_KEY, '1'); return; }
+let name = '';
+try {
+const cid = window.__activeCid || 'default';
+const cs = window.getContacts ? (window.getContacts() || []) : [];
+const c = cs.find(x => x.id === cid);
+if (window.storeFor) {
+const lbl = window.storeFor(cid).get('lbl-partner');
+if (lbl) name = lbl;
+}
+if (!name && c && c.name) name = c.name;
+} catch (e) {}
+list.push({ id: makeId(), name: name || 'TA', offsetMin: 0 });
+saveRoster(list);
+s.set(SEED_KEY, '1');
+} catch (e) {}
+}
+function presenceWeights(worldHour) {
+if (worldHour >= 23 || worldHour < 5) return { near: 8, nearby: 18, far: 26, unfelt: 33, gone: 15 };
+if (worldHour >= 5 && worldHour < 9) return { near: 22, nearby: 30, far: 18, unfelt: 18, gone: 12 };
+if (worldHour >= 9 && worldHour < 17) return { near: 18, nearby: 30, far: 20, unfelt: 20, gone: 12 };
+if (worldHour >= 17 && worldHour < 22) return { near: 30, nearby: 32, far: 14, unfelt: 14, gone: 10 };
+return { near: 20, nearby: 26, far: 20, unfelt: 22, gone: 12 };
+}
+function activityWeights(worldHour) {
+if (worldHour >= 23 || worldHour < 6) return { free: 4, busy: 8, rushed: 4, rest: 12, sleep: 62, unknown: 10 };
+if (worldHour >= 6 && worldHour < 9) return { free: 28, busy: 24, rushed: 14, rest: 10, sleep: 14, unknown: 10 };
+if (worldHour >= 9 && worldHour < 12) return { free: 34, busy: 30, rushed: 18, rest: 2, sleep: 2, unknown: 14 };
+if (worldHour >= 12 && worldHour < 14) return { free: 32, busy: 26, rushed: 16, rest: 16, sleep: 2, unknown: 8 };
+if (worldHour >= 14 && worldHour < 18) return { free: 34, busy: 32, rushed: 18, rest: 4, sleep: 2, unknown: 10 };
+if (worldHour >= 18 && worldHour < 21) return { free: 36, busy: 26, rushed: 16, rest: 8, sleep: 4, unknown: 10 };
+return { free: 24, busy: 22, rushed: 14, rest: 18, sleep: 12, unknown: 10 };
+}
+function pickWeighted(weights, r) {
+const total = Object.keys(weights).reduce((s, k) => s + weights[k], 0);
+let acc = 0;
+const rr = (r == null ? Math.random() : r) * total;
+for (const k in weights) {
+acc += weights[k];
+if (rr < acc) return k;
+}
+const keys = Object.keys(weights);
+return keys[keys.length - 1];
+}
+function recentBoost(st, now) {
+const ref = Math.max(st.lastPerceive || 0, st.__open || 0, st.__chat || 0);
+return now - ref < 30 * 60000;
+}
+function rollPresence(worldHour, boost) {
+const w = presenceWeights(worldHour);
+if (boost) {
+w.near += 16; w.nearby += 16;
+w.far = Math.max(2, w.far - 8);
+w.unfelt = Math.max(2, w.unfelt - 8);
+w.gone = Math.max(2, w.gone - 6);
+}
+return pickWeighted(w);
+}
+function rollActivity(worldHour) {
+return pickWeighted(activityWeights(worldHour));
+}
+function rand(min, max) { return min + Math.floor(Math.random() * (max - min + 1)); }
+function ensureState(c, st, now) {
+const s = st[c.id] || (st[c.id] = {});
+if (!s.p) {
+const h = new Date(worldNow(c.offsetMin)).getHours();
+s.p = rollPresence(h, false);
+s.a = rollActivity(h);
+}
+if (!s.sinceP) s.sinceP = now;
+if (!s.sinceA) s.sinceA = now;
+if (!s.nextP) s.nextP = now + rand(60, 200) * 60000;
+if (!s.nextA) s.nextA = now + rand(20, 70) * 60000;
+return s;
+}
+function tickNatural() {
+const roster = loadRoster();
+if (!roster.length) return;
+const now = Date.now();
+const st = loadState();
+let dirty = false;
+roster.forEach(c => {
+const s = ensureState(c, st, now);
+const worldHour = new Date(worldNow(c.offsetMin)).getHours();
+if (now >= s.nextA) {
+s.a = rollActivity(worldHour);
+s.sinceA = now;
+s.nextA = now + rand(20, 70) * 60000;
+dirty = true;
+}
+if (now >= s.nextP) {
+s.p = rollPresence(worldHour, recentBoost(s, now));
+s.sinceP = now;
+s.nextP = now + rand(60, 200) * 60000;
+dirty = true;
+}
+});
+if (dirty) saveState(st);
+}
+let lastApproachAt = 0;
+function tickApproach() {
+const roster = loadRoster();
+if (!roster.length) return;
+const now = Date.now();
+if (now - lastApproachAt < 20 * 60000) return;
+const st = loadState();
+let hit = false;
+roster.forEach(c => {
+if (hit) return;
+const s = ensureState(c, st, now);
+if (now - s.sinceP < 25 * 60000) return;
+if (Math.random() >= 0.001) return; // 每个梦角每 30s 约 0.1%：低概率
+if (Math.random() < 0.04) s.p = 'near';
+else s.p = 'nearby';
+s.sinceP = now;
+s.nextP = now + rand(60, 200) * 60000;
+lastApproachAt = now;
+hit = true;
+});
+if (hit) {
+saveState(st);
+toast('……好像有什么靠近了。');
+if (typeof window.renderCjian === 'function') window.renderCjian();
+}
+}
+window.cjianNoteChat = function () {
+try {
+const st = loadState();
+st.__chat = Date.now();
+saveState(st);
+} catch (e) {}
+};
+window.cjianNoteOpen = function () {
+try {
+const st = loadState();
+st.__open = Date.now();
+saveState(st);
+} catch (e) {}
+};
+const MIN_CHANGE = 15 * 60000; // 状态变化冷却：状态持续一段时间后才允许再变
+let perceiveCooldownUntil = 0;
+function perceiveChance(p) {
+if (p === 'near') return 95;
+if (p === 'nearby') return 75;
+if (p === 'far') return 40;
+if (p === 'gone') return 25;
+return 12; // unfelt
+}
+window.cjianPerceive = function () {
+const roster = loadRoster();
+if (!roster.length) { toast('此间还没有梦角，先添加一个吧'); return; }
+if (Date.now() < perceiveCooldownUntil) return;
+perceiveCooldownUntil = Date.now() + 4000;
+const now = Date.now();
+const st = loadState();
+const nearOnes = [], farOnes = [];
+roster.forEach(c => {
+const s = ensureState(c, st, now);
+if (s.p === 'near' || s.p === 'nearby') { nearOnes.push(c.name); return; }
+if (Math.random() * 100 < perceiveChance(s.p)) nearOnes.push(c.name);
+else farOnes.push(c.name);
+});
+const lines = [];
+if (nearOnes.length) {
+if (nearOnes.length === 1) lines.push('你安静了一会儿，好像有人就在附近。');
+else if (nearOnes.length === 2) lines.push('似乎有两个人，一个离得很近，另一个也不远。');
+else lines.push('似乎有' + nearOnes.length + '道熟悉的气息。');
+nearOnes.forEach(n => lines.push('「' + n + '」——可以感觉到一点熟悉的气息。'));
+if (farOnes.length) lines.push('还有谁……在很远的地方。');
+} else {
+lines.push('没有感觉到谁。');
+lines.push('但这并不代表他们不在。');
+}
+let changedName = null, changedTo = '';
+const eligible = roster.filter(c => now - ensureState(c, st, now).sinceP > MIN_CHANGE);
+if (eligible.length) {
+const target = eligible[Math.floor(Math.random() * eligible.length)];
+const s = ensureState(target, st, now);
+const r = Math.random();
+s.p = r < 0.45 ? 'nearby' : (r < 0.75 ? 'unfelt' : (r < 0.9 ? 'near' : 'far'));
+s.sinceP = now;
+s.nextP = now + rand(60, 200) * 60000;
+s.lastPerceive = now;
+changedName = target.name;
+changedTo = PRESENCE[s.p].label;
+}
+saveState(st);
+renderPerceiveResult(lines, changedName, changedTo);
+return { lines: lines, changedName: changedName, changedTo: changedTo };
+};
+function mulberry32(seed) {
+let a = seed >>> 0;
+return function () {
+a |= 0; a = (a + 0x6D2B79F5) | 0;
+let t = Math.imul(a ^ (a >>> 15), 1 | a);
+t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+};
+}
+function hashStr(s) {
+let h = 2166136261;
+for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+return h >>> 0;
+}
+function predictLabel(pr, ac) {
+if (ac === 'sleep') return '可能在休息';
+if (ac === 'rest') return '可能在休息';
+if (ac === 'unknown') return '暂时未知';
+if (pr === 'near' || pr === 'nearby') return ac === 'free' ? '可能在附近' : '可能较忙';
+if (pr === 'far') return '在远处';
+return '可能感知不到';
+}
+function todayRow(c, shichenIdx, dateKey) {
+const rnd = mulberry32(hashStr(dateKey + '|' + c.id + '|' + shichenIdx));
+const realStartHour = shichenStartHour(shichenIdx);
+const worldHour = (((realStartHour * 60 + (c.offsetMin || 0)) / 60) % 24 + 24) % 24;
+const pr = pickWeighted(presenceWeights(worldHour), rnd() * 100);
+const ac = pickWeighted(activityWeights(worldHour), rnd() * 100);
+return predictLabel(pr, ac);
+}
+function el(tag, cls, text) {
+const e = document.createElement(tag);
+if (cls) e.className = cls;
+if (text !== undefined) e.textContent = text;
+return e;
+}
+function renderPerceiveResult(lines, changedName, changedTo) {
+const box = document.getElementById('cj-perceive-result');
+if (!box) return;
+box.innerHTML = '';
+lines.forEach(l => box.appendChild(el('p', 'cj-p-line', l)));
+if (changedName) box.appendChild(el('p', 'cj-p-note', '「' + changedName + '」似乎改变了状态——现在' + changedTo + '。'));
+box.hidden = false;
+}
+function renderHero() {
+const t = timeInfo(Date.now());
+const h1 = document.getElementById('cj-hero-time');
+const h2 = document.getElementById('cj-hero-range');
+const h3 = document.getElementById('cj-hero-clock');
+if (h1) h1.textContent = t.half;
+if (h2) h2.textContent = t.range + ' · 现实此刻';
+if (h3) h3.textContent = t.hhmm;
+}
+function renderList() {
+const listEl = document.getElementById('cj-list');
+if (!listEl) return;
+listEl.innerHTML = '';
+const roster = loadRoster();
+const empty = document.getElementById('cj-empty');
+if (empty) empty.hidden = roster.length > 0;
+if (!roster.length) return;
+const now = Date.now();
+const st = loadState();
+roster.forEach(c => {
+const s = ensureState(c, st, now);
+const t = timeInfo(worldNow(c.offsetMin));
+const card = el('div', 'cj-card');
+const head = el('div', 'cj-card-head');
+head.appendChild(el('span', 'cj-card-name', c.name));
+card.appendChild(head);
+const timeRow = el('div', 'cj-card-time');
+timeRow.appendChild(el('span', 'cj-card-half', t.half));
+timeRow.appendChild(el('span', 'cj-card-range', t.range));
+card.appendChild(timeRow);
+const tags = el('div', 'cj-card-tags');
+const pTag = el('span', 'cj-tag cj-tag-p', PRESENCE[s.p].label);
+pTag.title = PRESENCE[s.p].desc;
+const aTag = el('span', 'cj-tag cj-tag-a', ACTIVITY[s.a].label);
+aTag.title = ACTIVITY[s.a].desc;
+tags.appendChild(pTag);
+tags.appendChild(aTag);
+card.appendChild(tags);
+if (s.a === 'sleep') card.appendChild(el('div', 'cj-card-note', 'TA那边似乎已经睡了。'));
+if (s.a === 'rest') card.appendChild(el('div', 'cj-card-note', 'TA正在休息。'));
+const goBtn = el('button', 'cj-go', '去找TA');
+goBtn.type = 'button';
+goBtn.addEventListener('click', (e) => {
+e.stopPropagation();
+if (window.enterChat) window.enterChat();
+else toast('聊天页未就绪');
+});
+card.appendChild(goBtn);
+listEl.appendChild(card);
+});
+}
+function renderToday() {
+const box = document.getElementById('cj-today');
+if (!box) return;
+box.innerHTML = '';
+const roster = loadRoster();
+if (!roster.length) return;
+const d = new Date();
+const dateKey = d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
+const curIdx = shichenAt(d.getHours());
+for (let k = 0; k < 12; k++) {
+const idx = (curIdx + k) % 12;
+const startH = shichenStartHour(idx);
+const row = el('div', 'cj-today-row');
+const left = el('div', 'cj-today-left');
+left.appendChild(el('span', 'cj-today-name', SHICHEN[idx] + '时'));
+left.appendChild(el('span', 'cj-today-range', pad(startH) + ':00–' + pad((startH + 2) % 24) + ':59'));
+row.appendChild(left);
+const right = el('div', 'cj-today-chars');
+const parts = [];
+roster.forEach(c => { parts.push(c.name + ' · ' + todayRow(c, idx, dateKey)); });
+if (parts.length) right.appendChild(el('span', 'cj-today-c', parts.join('　')));
+else right.appendChild(el('span', 'cj-today-c cj-today-mute', '——'));
+row.appendChild(right);
+box.appendChild(row);
+}
+}
+window.renderCjian = function () {
+seedIfEmpty();
+renderHero();
+renderList();
+renderToday();
+};
+window.openCjian = function () {
+const page = document.getElementById('page-cjian');
+if (!page) return;
+document.querySelectorAll('.page').forEach(p => p.hidden = true);
+page.hidden = false;
+try { if (window.cjianNoteOpen) window.cjianNoteOpen(); } catch (e) {}
+window.renderCjian();
+};
+window.closeCjian = function () {
+const page = document.getElementById('page-cjian');
+if (page) page.hidden = true;
+};
+const OFFSET_PILLS = [
+{ label: '与现实同步', value: '0' },
+{ label: '快1小时', value: '60' },
+{ label: '慢1小时', value: '-60' },
+{ label: '快3小时', value: '180' },
+{ label: '慢3小时', value: '-180' },
+{ label: '快6小时', value: '360' },
+{ label: '慢6小时', value: '-360' }
+];
+window.cjianManage = function () {
+if (!window.openModal) return;
+let phase = 'action', pendingName = '', renameTarget = null;
+const ctl = window.openModal('梦角管理', '', function (v) {
+if (!v) return;
+if (phase === 'action') {
+if (v === 'add') {
+phase = 'name';
+ctl.stay();
+ctl.title('添加梦角');
+ctl.pills(null);
+ctl.input(true);
+ctl.maxLen(10);
+ctl.ph('梦角的名字，如：景元');
+ctl.okText('下一步');
+} else {
+const list = loadRoster();
+if (!list.length) { toast('还没有梦角，先添加一个吧'); return; }
+phase = v === 'rename' ? 'pickRename' : 'pickDel';
+ctl.stay();
+ctl.title(v === 'rename' ? '改谁的称呼' : '删除梦角');
+ctl.input(false);
+ctl.pills(list.map(c => ({ label: c.name, value: c.id })));
+ctl.okText(v === 'rename' ? '改名' : '删除');
+}
+return;
+}
+if (phase === 'name') {
+const name = String(v == null ? '' : v).trim();
+if (!name) return;
+pendingName = name;
+phase = 'offset';
+ctl.stay();
+ctl.title('设定「' + name + '」的世界时间');
+ctl.input(false);
+ctl.pills(OFFSET_PILLS);
+ctl.okText('添加');
+return;
+}
+if (phase === 'offset') {
+const off = parseInt(v, 10);
+if (isNaN(off)) return;
+const list = loadRoster();
+list.push({ id: makeId(), name: pendingName, offsetMin: off });
+saveRoster(list);
+toast('已加入此间：「' + pendingName + '」');
+phase = ''; pendingName = '';
+window.renderCjian();
+return;
+}
+if (phase === 'pickRename') {
+const list = loadRoster();
+const c = list.find(x => x.id === v);
+if (!c) return;
+renameTarget = c;
+phase = 'renameInput';
+ctl.stay();
+ctl.title('把「' + c.name + '」改成');
+ctl.pills(null);
+ctl.input(true);
+ctl.maxLen(10);
+ctl.ph('新名字');
+ctl.okText('改名');
+return;
+}
+if (phase === 'renameInput') {
+const n = String(v == null ? '' : v).trim();
+if (!n) return;
+const list = loadRoster();
+const c = list.find(x => x.id === (renameTarget ? renameTarget.id : ''));
+if (c) {
+c.name = n;
+saveRoster(list);
+toast('已改名为「' + n + '」');
+}
+phase = ''; renameTarget = null;
+window.renderCjian();
+return;
+}
+if (phase === 'pickDel') {
+const list = loadRoster();
+const idx = list.findIndex(x => x.id === v);
+if (idx < 0) return;
+const name = list[idx].name;
+list.splice(idx, 1);
+saveRoster(list);
+const st = loadState();
+delete st[v];
+saveState(st);
+toast('「' + name + '」已从此间离开');
+phase = '';
+window.renderCjian();
+return;
+}
+}, { noInput: true, pills: [
+{ label: '添加梦角', value: 'add' },
+{ label: '改名', value: 'rename' },
+{ label: '删除梦角', value: 'del' }
+] });
+};
+function pageVisible() {
+const page = document.getElementById('page-cjian');
+return !!(page && !page.hidden);
+}
+function boot() {
+seedIfEmpty();
+tickNatural();
+setInterval(function () {
+tickNatural();
+tickApproach();
+if (pageVisible()) window.renderCjian();
+}, 30000);
+document.addEventListener('visibilitychange', function () {
+if (!document.hidden && pageVisible()) window.renderCjian();
+});
+const backBtn = document.getElementById('cj-back');
+if (backBtn) {
+backBtn.addEventListener('click', function (e) {
+e.stopPropagation();
+if (window.__cjianFrom === 'chat') {
+const chatPage = document.getElementById('page-chat');
+if (chatPage) {
+document.querySelectorAll('.page').forEach(p => p.hidden = true);
+chatPage.hidden = false;
+}
+} else {
+document.querySelectorAll('.page').forEach(p => p.hidden = true);
+const phonePage = document.getElementById('page-phone');
+if (phonePage) phonePage.hidden = false;
+}
+window.__cjianFrom = '';
+});
+}
+const manageBtn = document.getElementById('cj-manage-btn');
+if (manageBtn) manageBtn.addEventListener('click', function (e) {
+e.stopPropagation();
+window.cjianManage();
+});
+const perceiveBtn = document.getElementById('cj-perceive');
+if (perceiveBtn) perceiveBtn.addEventListener('click', function (e) {
+e.stopPropagation();
+if (perceiveBtn.disabled) return;
+perceiveBtn.disabled = true;
+perceiveBtn.classList.add('busy');
+const r = window.cjianPerceive();
+if (r && r.lines) window.renderCjian();
+setTimeout(function () { perceiveBtn.disabled = false; perceiveBtn.classList.remove('busy'); }, 4000);
+});
+const addBtn = document.getElementById('cj-empty-add');
+if (addBtn) addBtn.addEventListener('click', function (e) {
+e.stopPropagation();
+window.cjianManage();
+});
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+else boot();
+})();
+} catch (__e) { try { console.error("[JS] cjian.js", __e && __e.message || __e); } catch (x) {} if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
+(function () { try {
+(function () {
 let isMobile = false;
 try { isMobile = window.matchMedia && window.matchMedia('(max-width: 900px)').matches; } catch (e) {}
 let isTablet = false;
@@ -49852,6 +51996,9 @@ if (window.scrollY || document.documentElement.scrollTop || document.body.scroll
 window.scrollTo(0, 0);
 document.documentElement.scrollTop = 0;
 document.body.scrollTop = 0;
+}
+if (_vv && _vv.scrollTo && (_vv.offsetTop > 1 || _vv.offsetLeft > 1)) {
+try { _vv.scrollTo(0, 0); } catch (e2) {}
 }
 } catch (e) {}
 }

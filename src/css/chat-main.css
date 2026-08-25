@@ -630,6 +630,14 @@ body.cs-time-divider .msg-time-divider { display:flex; }
 /* 帮我决定半框：内容多，调大高度（未输入时表单也完整显示，不用滑动） */
 #chat-decision-panel { height:auto; max-height:68%; }
 #chat-decision-panel .poke-card-scroll { min-height:0; max-height:none; }
+/* 帮我决定「自定义选项」：选项输入框在安卓被转成 contenteditable .ce-box，
+   默认会随行数无上限增高，把下方控件顶出屏幕且整框无法上划。
+   设高度上限 + 框内滚动，让选项多的场景也能正常滚动查看。 */
+#chat-decision-body .dec-inp-wrap .ce-box[data-for="dec-opts"] {
+  max-height:176px;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+}
 .poke-big {
   flex-shrink:0; display:flex; align-items:center; justify-content:center; gap:6px;
   margin-top:12px; padding:12px; border:none; border-radius:14px;

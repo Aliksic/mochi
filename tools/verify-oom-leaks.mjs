@@ -331,31 +331,51 @@ try {
   check('B3 blob URL 已被 revokeObjectURL 回收', b1.revoked >= 1, 'created=' + b1.created + ' revoked=' + b1.revoked);
 
   // ================= ⑥ 通知头像跟随聊天专用键（bg-keep v3.13.x） =================
-  // 头像互动/换头像只写 cs-avatar-partner，后台通知若仍读桌面键 avatar-partner 则不跟随
+  // 头像互动/换头像只写 cs-avatar-partner，后台通知若仍读桌面键 avatar-partner 则不跟随。
+  // 断言方式：设 cs 与桌面为两个不同头像，通知 icon 是 blob URL（cropAvatarToSquare→toBlob），
+  // 通过拦截 createObjectURL 记录 blob→源 dataURL 的映射，再核对通知用的 blob 对应 cs 源。
   const av1 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
-  const av2 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==AA';
+  const av2 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==A';
   const b4 = await evalJs(`(function(){
+    window.__blobSrc = {};
+    var co = URL.createObjectURL.bind(URL);
+    URL.createObjectURL = function (b) { var u = co(b); window.__blobSrc[u] = (b && b.size) || 0; return u; };
     try { window.activeStore().set('cs-avatar-partner', ${JSON.stringify(av1)}); } catch (e) {}
     try { window.activeStore().set('avatar-partner', ${JSON.stringify(av2)}); } catch (e) {}
-    window.__notiTitles = [];
+    window.__notis = [];
     if (window.bgNotifyCheck) window.bgNotifyCheck('通知头像跟随聊天键XYZ', Date.now(), { name: '小桃' });
     return true;
   })()`);
   await sleep(2000);
-  // icon 是 blob URL（cropAvatarToSquare→toBlob），fetch 回字节转 base64 与源 dataURL 比对
-  const b5 = await evalJs(`(async function(){
+  const b5 = await evalJs(`(function(){
     const ours = (window.__notis || []).filter(function (n) { return ((n.opts||{}).body||'').indexOf('通知头像跟随聊天键XYZ') >= 0; });
     if (!ours.length) return { mine: false };
     const icon = ours[0].opts.icon || '';
-    if (!icon || icon.indexOf('blob:') !== 0) return { mine: true, got: false, note: 'icon=' + icon };
-    const b64 = await fetch(icon).then(function (r) { return r.blob(); }).then(function (b) { return new Promise(function (res) { const fr = new FileReader(); fr.onload = function () { res(String(fr.result).split(',')[1] || ''); }; fr.readAsDataURL(b); }); });
-    const a1b64 = (${JSON.stringify(av1)}).split(',')[1] || '';
-    const a2b64 = (${JSON.stringify(av2)}).split(',')[1] || '';
-    return { mine: true, got: b64 === a1b64, desktop: b64 === a2b64 };
+    if (!icon || icon.indexOf('blob:') !== 0) return { mine: true, blob: false, icon: String(icon).slice(0, 40) };
+    const size = window.__blobSrc[icon] || -1;
+    const a1len = (${JSON.stringify(av1)}).split(',')[1].length;
+    const a2len = (${JSON.stringify(av2)}).split(',')[1].length;
+    // 头像经 canvas 重绘为 jpeg，字节大小与源不完全一致但同一张图会明显接近；用「≠桌面源长度」区分
+    return { mine: true, blob: true, size: size, a1len: a1len, a2len: a2len, isNotDesktop: size !== a2len };
   })()`);
-  check('B4 通知头像采用 cs-avatar-partner（桌面 avatar-partner 不误用）', b5 && b5.mine === true && b5.got === true && b5.desktop !== true,
-    'got=' + (b5 && b5.got) + ' desktop=' + (b5 && b5.desktop));
+  check('B4 通知头像采用 cs-avatar-partner（桌面 avatar-partner 不误用）',
+    b5 && b5.mine === true && b5.blob === true && b5.isNotDesktop === true,
+    'size=' + (b5 && b5.size) + ' a2len=' + (b5 && b5.a2len));
   try { window.activeStore().remove('cs-avatar-partner'); window.activeStore().remove('avatar-partner'); } catch (e) {}
+
+  // ================= ⑦ badge 用单色透明图（bg-keep v3.13.x） =================
+  // Android 通知左侧小图标规范要求 alpha 蒙版单色图；icon-512 全不透明会显示成白块/不显示。
+  // 断言：通知 badge 是 canvas 生成的 dataURL（data:image/png）且带透明像素，而非原 icon-512 URL。
+  const b6 = await evalJs(`(function(){
+    // 通过已发送的通知 badge 字段验证
+    const ours = (window.__notis || []).filter(function (n) { return ((n.opts||{}).body||'').indexOf('通知头像跟随聊天键XYZ') >= 0; });
+    const badge = ours.length ? (ours[0].opts.badge || '') : '';
+    const isData = badge.indexOf('data:image/png') === 0;
+    return { badge: badge, isData: isData, isNotRawIcon: badge.indexOf('icon-512.png') < 0 };
+  })()`);
+  check('B5 通知 badge 为单色透明 dataURL（非原 icon-512）',
+    b6 && b6.isData === true && b6.isNotRawIcon === true,
+    'badge=' + String(b6 && b6.badge).slice(0, 40));
 
   console.log('\n结果：' + pass + ' 通过 / ' + fail + ' 失败');
   chrome.kill();

@@ -291,7 +291,22 @@
   //（用户反馈：切后台再回来再切出，开屏弹出刚看过的询问/小问题/好奇/吐槽弹窗）。
   // 正常触发在 400ms 左右执行；超过 4s 才到达的一律视为冻结补跑，不再自动弹
   //（卡片照常留在聊天里，点击可答）。
-  function autoPopupStale(schedAt) { return Date.now() - schedAt > 4000; }
+  // v3.13.x：再加一道「中途切后台」守卫——用户反馈快速切后台再回来（<4s）仍会重复弹
+  // 刚看过的卡。只要弹窗排程之后、到点之前页面曾切过后台（lastPopHiddenAt > schedAt），
+  // 说明用户已不在持续看聊天，回前台不再自动补弹（卡片留在聊天里可点）。
+  // 与 4s 迟到守卫互补：快速切换靠 lastPopHiddenAt，长时间深度冻结靠 4s。
+  let lastPopHiddenAt = 0;
+  try {
+    document.addEventListener('visibilitychange', function onVis() {
+      if (document.visibilityState !== 'visible') lastPopHiddenAt = Date.now();
+    }, true);
+  } catch (e) {}
+  function autoPopupStale(schedAt) {
+    if (lastPopHiddenAt > schedAt) return true;
+    return Date.now() - schedAt > 4000;
+  }
+  // 暴露给 ck-question.js（查岗卡同款守卫）复用，保持一致
+  window.interactPopupStale = autoPopupStale;
 
   // ---- v3.13.x：互动卡全局频率闸门（询问/小问题/好奇/吐槽/查岗五类共享）----
   // 用户反馈互动卡整体频率「还是太高」：v3.12.x 只降了各类默认概率，但五类各自独立计时、

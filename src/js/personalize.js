@@ -2548,6 +2548,33 @@ try {
   document.addEventListener('contact-switched', () => { applyDeskFontPct(getDeskFontPct()); applyDeskCardPct(getDeskCardPct()); });
   document.addEventListener('contact-switched', () => { const sp = getBgPresetName(); if (sp) { const p = BG_PRESETS.find(b => b.name === sp); if (p) applyPhoneBgPreset(p.css); else clearPhoneBg(); } syncBgPresetUI(); });
 
+  // v3.14.x 修复：vivo/OPPO/真我等 Edge 内核 IndexedDB 打开/回填较慢，且 localStorage
+  // 偶发写入失败——启动阶段上方 applyDeskLayout() 在恢复到 localStorage 前读到的是
+  // 旧/空 desk-layout，回填完成后又没有任何机制再应用一次，于是桌面小组件"保存后
+  // 重开又回到上次位置"。现在监听 mochi-restore-done（idb.js 回填完成即派发），
+  // 再完整重放一次布局应用，让 IDB 权威布局最终落到 DOM。
+  // 幂等安全：applyDeskLayout 仅在 DOM 顺序与存储不一致时才重排（比对 cur/want），
+  // 已一致则跳过，不会抖动；不重放 ensureDeskPeriod——它在「删页进池」场景下会
+  // 把用户已删除的经期卡拉回第三页（延迟执行时页面已自愈回 3 页），破坏删除意图。
+  const reapplyDeskAfterRestore = () => {
+    try {
+      ensureMemoRowP3();
+      ensureP2AppsBelowWeekend();
+    } catch (e) {}
+    try { window.applyDeskLayout(); } catch (e) {}
+    try { if (window.ensureP2SecondRowIcons) window.ensureP2SecondRowIcons(); } catch (e) {}
+  };
+  let _reapplyScheduled = false;
+  document.addEventListener('mochi-restore-done', () => {
+    if (_reapplyScheduled) return;
+    _reapplyScheduled = true;
+    // 回填是分批异步的，desk-layout 可能在事件派发后一小会儿才落到 localStorage；
+    // 用多次短延时覆盖不同内核的回填时序（幂等可重复调用）
+    [0, 120, 400].forEach(del => setTimeout(reapplyDeskAfterRestore, del));
+    // 本会话后续再收到 restore 事件不再重放（只拾重新载入时的一次消费）
+    setTimeout(() => { _reapplyScheduled = false; }, 2000);
+  });
+
   // v3.8.x：群聊模式——开启后桌面聊天按钮右侧显示「群聊」按钮，占卜按钮隐藏（移到隐藏池，
   // 可在美化装修模式组件库自由添加到其他页面）；关闭恢复原样。须在 applyDeskLayout 之后执行
   // （覆盖 desk-layout 对群聊/占卜图标的处置）。每桌面独立（group-chat-enabled，默认关闭）。

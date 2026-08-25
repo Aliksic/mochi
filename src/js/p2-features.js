@@ -1118,15 +1118,8 @@ if (ckRefresh) {
 // 收到位置卡时屏幕光点动效
 (function () {
   const store = window.activeStore();
-  // ---- 位置词库（内置，独立于聊天字卡库） ----
-  const LOC = {
-    dir: ['在你左边', '在你右边', '在你身后', '在你前面', '离你两步', '抬头就能看到', '在你看不到的地方偷看你'],
-    dist: ['再近一点', '再远一点', '就停这儿', '马上到你身边', '一直在原地等你'],
-    state: ['跟在你后面', '陪你走着', '停下来等你', '绕着你转圈', '在你身边'],
-    sense: ['在你看不到的地方', '隔着世界在你身边', '感觉到了吗', '能摸到我吗', '一直没走远', '隐约在你身旁'],
-    egg: '在你心里'
-  };
-  const LOC_LABEL = { dir: '方位', dist: '距离', state: '状态', sense: '感知', egg: '彩蛋', custom: '自定义', combo: '组合' };
+  // ---- 位置词库（v3.13.x：移入字卡库 loc-lib.js 管理——字卡库「系统预设字卡 → TA在身边位置卡」，
+  //      位置面板词源 = 该库（系统预设开关 + 单卡开关过滤 + 我的添加），此处经 window.locLib* 读取 ----
   // 方位/感知/彩蛋 → 光点落点（相对视口 0~1）
   const DIR_POS = {
     '在你左边': { x: 0.08, y: 0.5 },
@@ -1183,13 +1176,9 @@ if (ckRefresh) {
   }
   function eggLastTs() { return parseInt(store.get('loc-egg-last') || '0', 10) || 0; }
   function eggUsed() { return Date.now() - eggLastTs() < EGG_COOLDOWN; }
-  // ---- 自定义位置卡 ----
-  function loadCustom() { try { return JSON.parse(store.get('loc-custom') || '[]'); } catch (e) { return []; } }
-  function saveCustom(list) {
-    const s = JSON.stringify(list);
-    store.set('loc-custom', s);
-    try { if (window.idbSet) window.idbSet(window.activePrefix() + ':loc-custom', s); } catch (e) {}
-  }
+  // ---- 自定义位置卡（v3.13.x：存储并入字卡库 loc-lib「我的添加」，旧 loc-custom 首次读取自动迁移） ----
+  function loadCustom() { return window.locLibGetCustomCards ? window.locLibGetCustomCards() : []; }
+  function saveCustom(list) { if (window.locLibSaveCustom) window.locLibSaveCustom(list); }
   // ---- 感知描述（基于最近位置卡 · 体现"偶尔能感觉到"） ----
   function senseDesc(cur) {
     if (!cur) return '还没感觉到 TA…';
@@ -1288,6 +1277,14 @@ if (ckRefresh) {
 
   // ---- 问 TA 一声 ----
   let asking = false;
+  // v3.13.x：取字卡库 loc-lib 某分类启用的系统预设词（供问TA一声/自动发随机用）
+  function locLibGroup(k) {
+    try {
+      const sys = window.locLibGetSys ? window.locLibGetSys() : null;
+      if (sys && Array.isArray(sys[k])) return sys[k];
+    } catch (e) {}
+    return [];
+  }
   function askWhere() {
     if (asking) return;
     asking = true;
@@ -1295,8 +1292,11 @@ if (ckRefresh) {
     toast(window.taFit ? window.taFit('已问 TA 一声，等 TA 回位置…') : '已问 TA 一声，等 TA 回位置…');
     setTimeout(() => {
       asking = false;
-      const d = LOC.dir[Math.floor(Math.random() * LOC.dir.length)];
-      const t = LOC.dist[Math.floor(Math.random() * LOC.dist.length)];
+      // v3.13.x：词源 = 字卡库；方位/距离组空（被全关）时回退内置默认词兜底
+      const dirs = locLibGroup('dir');
+      const dists = locLibGroup('dist');
+      const d = (dirs.length ? dirs : ['在你左边'])[Math.floor(Math.random() * (dirs.length ? dirs.length : 1))];
+      const t = (dists.length ? dists : ['再近一点'])[Math.floor(Math.random() * (dists.length ? dists.length : 1))];
       sendComboCard(d, t);
     }, 2000 + Math.random() * 2000);
   }
@@ -1324,7 +1324,6 @@ if (ckRefresh) {
     const cur = loadCur();
 
     const allHist = loadHist();
-    const used = eggUsed();
 
     // 按日切换：默认今天（或有记录的最近一天）
     const days = uniqueDays(allHist);
@@ -1333,6 +1332,8 @@ if (ckRefresh) {
     const dayIdx = days.indexOf(locViewDate);
 
     let html = '';
+    // v3.13.x：分类标签统一走字卡库 loc-lib
+    const LOC_LABEL = window.locLibLabel || function (t) { return t; };
     // 感知描述
     html += '<div class="loc-sense-box"><div class="loc-sense-title">你感觉到的</div><div class="loc-sense-text">' + esc(senseDesc(cur)) + '</div></div>';
     // 此刻位置
@@ -1357,35 +1358,6 @@ if (ckRefresh) {
     html += '</div>';
     // 问 TA 一声
     html += '<button class="loc-ask-btn" id="loc-ask-btn">问 TA 一声「你在哪？」</button>';
-    // TA 发位置卡词库
-    html += '<div class="loc-send-area"><div class="loc-send-tip">TA 想告诉你 TA 在哪（发出后有光点动效）</div>';
-    // 组合开关
-    html += '<div class="loc-combo-toggle"><label class="loc-switch"><input type="checkbox" id="loc-combo-chk"' + (comboMode ? ' checked' : '') + '><span class="loc-switch-tk"></span></label><span class="loc-combo-label">组合发送（方位 + 距离）</span></div>';
-    if (comboMode && pendingDir) {
-      html += '<div class="loc-combo-pending">已选方位：<b>' + esc(pendingDir) + '</b>，再点距离卡组合发送 <span class="loc-combo-clear" id="loc-combo-clear">取消</span></div>';
-    } else if (comboMode) {
-      html += '<div class="loc-combo-pending loc-empty">组合模式：先点一张方位卡选中，再点距离卡组合发送</div>';
-    }
-    function groupHtml(key, label, arr) {
-      const cards = arr.map(t => {
-        const sel = (key === 'dir' && comboMode && pendingDir === t) ? ' loc-card-sel' : '';
-        return '<button class="loc-card' + sel + '" data-text="' + esc(t) + '" data-type="' + key + '">' + esc(t) + '</button>';
-      }).join('');
-      return '<div class="loc-grp"><div class="loc-grp-label">' + label + '</div><div class="loc-grp-cards">' + cards + '</div></div>';
-    }
-    html += groupHtml('dir', '方位卡', LOC.dir);
-    html += groupHtml('dist', '距离卡', LOC.dist);
-    html += groupHtml('state', '状态卡', LOC.state);
-    html += groupHtml('sense', '感知卡', LOC.sense);
-    const custom = loadCustom();
-    if (custom.length) {
-      const ccards = custom.map((t, i) => '<button class="loc-card loc-card-custom" data-text="' + esc(t) + '" data-type="custom">' + esc(t) + '<span class="loc-card-del" data-del="' + i + '">✕</span></button>').join('');
-      html += '<div class="loc-grp"><div class="loc-grp-label">我的自定义</div><div class="loc-grp-cards">' + ccards + '</div></div>';
-    }
-    html += '<button class="loc-add-custom" id="loc-add-custom">+ 添加自定义位置卡</button>';
-    html += '<div class="loc-grp"><div class="loc-grp-label">彩蛋' + (used ? '（本周已用）' : '（一周一次 · 特殊动效）') + '</div><div class="loc-grp-cards">' +
-      '<button class="loc-card loc-card-egg' + (used ? ' disabled' : '') + '" data-text="' + esc(LOC.egg) + '" data-type="egg"' + (used ? ' disabled' : '') + '>' + esc(LOC.egg) + '</button></div></div>';
-    html += '</div>';
 
     body.innerHTML = html;
 
@@ -1397,38 +1369,6 @@ if (ckRefresh) {
     if (prevBtn) prevBtn.addEventListener('click', () => { if (dayIdx < days.length - 1) { locViewDate = days[dayIdx + 1]; renderLocPanel(); } });
     const nextBtn = document.getElementById('loc-day-next');
     if (nextBtn) nextBtn.addEventListener('click', () => { if (dayIdx > 0) { locViewDate = days[dayIdx - 1]; renderLocPanel(); } });
-    // 组合开关
-    const comboChk = document.getElementById('loc-combo-chk');
-    if (comboChk) comboChk.addEventListener('change', () => { comboMode = comboChk.checked; store.set('loc-combo', comboMode ? '1' : '0'); pendingDir = null; renderLocPanel(); });
-    const comboClear = document.getElementById('loc-combo-clear');
-    if (comboClear) comboClear.addEventListener('click', () => { pendingDir = null; renderLocPanel(); });
-    // 自定义卡添加
-    const addCustom = document.getElementById('loc-add-custom');
-    if (addCustom) addCustom.addEventListener('click', () => {
-      if (window.openModal) window.openModal('添加自定义位置卡', '', (val) => {
-        if (val && val.trim()) { const list = loadCustom(); list.push(val.trim()); saveCustom(list); renderLocPanel(); toast('已添加：' + val.trim()); }
-      });
-    });
-    // 自定义卡删除
-    body.querySelectorAll('.loc-card-del').forEach(del => {
-      del.addEventListener('click', (e) => { e.stopPropagation(); const idx = parseInt(del.dataset.del, 10); const list = loadCustom(); list.splice(idx, 1); saveCustom(list); renderLocPanel(); });
-    });
-    // 字卡点击/长按
-    body.querySelectorAll('.loc-card').forEach(btn => {
-      const text = btn.dataset.text;
-      const type = btn.dataset.type;
-      btn.addEventListener('click', () => {
-        if (btn.classList.contains('disabled')) return;
-        if (comboMode) {
-          if (type === 'dir') { pendingDir = (pendingDir === text) ? null : text; renderLocPanel(); return; }
-          if (type === 'dist') { if (pendingDir) { sendComboCard(pendingDir, text); return; } toast('组合模式：请先点一张方位卡'); return; }
-          pendingDir = null;
-          sendLocCard(text, type);
-          return;
-        }
-        sendLocCard(text, type);
-      });
-    });
   }
 
   // ---- 打开/关闭 ----
@@ -1436,6 +1376,8 @@ if (ckRefresh) {
     const panel = document.getElementById('loc-panel');
     const nameEl = document.getElementById('loc-name');
     if (nameEl) nameEl.textContent = store.get('lbl-partner') || 'TA';
+    // v3.13.x：刷新方位感知（含漂移检查）+ 渲染感知圆
+    if (window.refreshSense) window.refreshSense();
     renderLocPanel();
     if (panel) panel.hidden = false;
     const ck = document.getElementById('ck-panel');
@@ -1448,6 +1390,9 @@ if (ckRefresh) {
 
   const entry = document.getElementById('ck-loc-entry');
   if (entry) entry.addEventListener('click', openLocPanel);
+  // 桌面查岗页同款入口（点「TA在身边 · 看看 TA 在哪」打开同一位置面板）
+  const entryDesk = document.getElementById('ck-loc-entry-desk');
+  if (entryDesk) entryDesk.addEventListener('click', openLocPanel);
   const closeBtn = document.getElementById('loc-close');
   if (closeBtn) closeBtn.addEventListener('click', closeLocPanel);
 
@@ -1466,10 +1411,7 @@ if (ckRefresh) {
   let locAutoTimer = null, locWakeAt = 0;
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') locWakeAt = Date.now() + 60000; });
   function locTypeOf(text) {
-    if (LOC.dir.indexOf(text) >= 0) return 'dir';
-    if (LOC.dist.indexOf(text) >= 0) return 'dist';
-    if (LOC.state.indexOf(text) >= 0) return 'state';
-    if (LOC.sense.indexOf(text) >= 0) return 'sense';
+    if (window.locLibTypeOf) return window.locLibTypeOf(text);
     return 'custom';
   }
   function doLocAuto() {
@@ -1479,7 +1421,9 @@ if (ckRefresh) {
     if (Math.random() < 0.7) {
       text = companion[Math.floor(Math.random() * companion.length)];
     } else {
-      const all = [].concat(LOC.dir, LOC.dist, LOC.state, LOC.sense, loadCustom());
+      // v3.13.x：词源 = 字卡库全部启用（系统预设 dir/dist/state/sense + 我的添加）
+      const all = (window.locLibAllEnabled ? window.locLibAllEnabled() : []).slice();
+      if (!all.length) all.push('在你身边');
       text = all[Math.floor(Math.random() * all.length)];
     }
     if (!text) return;
@@ -1509,6 +1453,247 @@ if (ckRefresh) {
   });
 
   window.playLocFx = playLocFx;
+})();
+
+// ===== 方位感知（v3.13.x）：TA在身边 → 不是GPS，是模糊的感知 =====
+// 方向（8方向+身边/无法判断）+ 距离感 + 感知强度 三个模糊维度，随时间漂移；
+// 字卡来自字卡库「TA在身边位置卡」新增的 direct/rangef/power/touch 四组（loc-lib.js 管理）。
+// 感知状态存当前联系人（activeStore 的 loc-sense 键），随联系人隔离。
+(function () {
+  const store = window.activeStore();
+  const KEY = 'loc-sense';
+  // 感知圆 8 方向：标签文字 + 在圆上的位置（角度，上=0° 顺时针）
+  const DIRS = [
+    { k: '正前方', arrow: '↑', angle: -90 },
+    { k: '右前方', arrow: '↗', angle: -45 },
+    { k: '右侧',   arrow: '→', angle: 0 },
+    { k: '右后方', arrow: '↘', angle: 45 },
+    { k: '后方',   arrow: '↓', angle: 90 },
+    { k: '左后方', arrow: '↙', angle: 135 },
+    { k: '左侧',   arrow: '←', angle: 180 },
+    { k: '左前方', arrow: '↖', angle: 225 }
+  ];
+  const NEAR_WORDS = ['在你身边', '一直没走远', '隔着世界在你身边', '能摸到我吗', '陪你走着', '停下来等你', '抬头就能看到', '在你前面'];
+  const FAR_WORDS = ['在你看不到的地方', '在你看不到的地方偷看你', '再远一点', '就停这儿'];
+  function load() {
+    try {
+      const v = JSON.parse(store.get(KEY) || 'null');
+      if (v && typeof v === 'object') return v;
+    } catch (e) {}
+    return {};
+  }
+  function save(s) { store.set(KEY, JSON.stringify(s)); }
+  function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+  function esc(x) { return String(x == null ? '' : x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  // 从字卡库取一组感知词（含开关过滤 + 兜底）
+  function senseWords(k) {
+    if (window.locLibSenseGroup) {
+      const w = window.locLibSenseGroup(k);
+      if (Array.isArray(w) && w.length) return w;
+    }
+    return { direct: ['无法判断'], rangef: ['无法判断'], power: ['若有若无'], touch: ['好像碰到了你的手'] }[k];
+  }
+  function isUndirected(d) { return d === '无法判断' || d === '身边'; }
+  // 重掷方向：92% 落 8 方向，8% 无法判断/身边（身边是低概率惊喜）
+  function rollDir() {
+    const words = senseWords('direct');
+    const dir8 = DIRS.map(d => d.k).filter(k => words.indexOf(k) >= 0);
+    if (Math.random() >= 0.08) {
+      if (dir8.length) return pick(dir8);
+      const others = words.filter(w => !isUndirected(w));
+      return others.length ? pick(others) : '无法判断';
+    }
+    // 8%：无法判断（主要是）/ 身边（小惊喜）
+    const pool = words.indexOf('身边') >= 0 ? ['无法判断', '无法判断', '无法判断', '身边'] : ['无法判断', '无法判断', '无法判断', '无法判断'];
+    return pick(pool);
+  }
+  // 保证方向在词库里（用户可能关了当前方向的单卡开关）
+  function ensureDirInLib(d) {
+    const words = senseWords('direct');
+    if (words.indexOf(d) >= 0) return d;
+    return '无法判断';
+  }
+  // 重掷距离感/感知强度：与最近发送的位置卡联动（近卡→偏近偏明显，远卡→偏远偏微弱）
+  function rollRangeAndPower() {
+    let hist = [];
+    try { hist = JSON.parse(store.get('loc-history') || '[]'); } catch (e) {}
+    let near = false, far = false;
+    for (let i = 0; i < hist.length && i < 5; i++) {
+      const t = hist[i].text || '';
+      if (NEAR_WORDS.some(w => t.indexOf(w) >= 0)) near = true;
+      if (FAR_WORDS.some(w => t.indexOf(w) >= 0)) far = true;
+    }
+    const rfWords = senseWords('rangef');
+    const pwWords = senseWords('power');
+    let rf, pw;
+    if (near && !far) {
+      const nearRf = rfWords.filter(w => w === '很近' || w === '近');
+      const nearPw = pwWords.filter(w => w === '明显');
+      rf = pick(nearRf.length ? nearRf : rfWords);
+      pw = pick(nearPw.length ? nearPw : pwWords);
+    } else if (far && !near) {
+      const farRf = rfWords.filter(w => w === '稍远' || w === '很远' || w === '无法判断');
+      const farPw = pwWords.filter(w => w === '微弱' || w === '若有若无');
+      rf = pick(farRf.length ? farRf : rfWords);
+      pw = pick(farPw.length ? farPw : pwWords);
+    } else {
+      rf = pick(rfWords);
+      pw = pick(pwWords);
+    }
+    return { rangef: rf, power: pw };
+  }
+  // 感知状态（懒初始化 + 漂移）
+  function getSense(force) {
+    const s = load();
+    const now = Date.now();
+    let dirty = false;
+    if (!s.dir || (s.nextDirAt && now >= s.nextDirAt)) {
+      s.dir = rollDir();
+      s.nextDirAt = now + (15 + Math.floor(Math.random() * 31)) * 60000; // 15~45 分钟
+      dirty = true;
+    } else {
+      s.dir = ensureDirInLib(s.dir);
+    }
+    if (!s.rangef || !s.power || force) {
+      const rp = rollRangeAndPower();
+      s.rangef = rp.rangef;
+      s.power = rp.power;
+      dirty = true;
+    }
+    if (dirty) save(s);
+    return s;
+  }
+  // 触碰（低概率，从触碰字卡取词 + 光点动效）
+  function maybeTouch(s) {
+    if (Math.random() >= 0.04) return null; // 4% 概率
+    const t = pick(senseWords('touch'));
+    s.touch = t;
+    s.touchAt = Date.now();
+    save(s);
+    if (window.playLocFx) window.playLocFx(t, 'touch');
+    return t;
+  }
+  // 感知结果卡文案
+  function resultText(s, touched) {
+    const name = store.get('lbl-partner') || 'TA';
+    if (isUndirected(s.dir)) {
+      return '方位感知 · ' + name + '\n？ 暂时无法判断方向。\n但你似乎感觉到，有谁在附近。';
+    }
+    if (s.power === '消失') {
+      return '方位感知 · ' + name + '\n刚才似乎还在，现在已经感觉不到了。';
+    }
+    const arrows = DIRS.find(d => d.k === s.dir);
+    return '方位感知 · ' + name + '\n' + (arrows ? arrows.arrow + ' ' : '') + s.dir + '\n' + s.rangef + ' · ' + s.power +
+      (touched ? '\n……好像有什么轻轻碰了你一下。' : '');
+  }
+  // 渲染感知圆 + 明细
+  function render() {
+    const s = getSense(false);
+    const circle = document.getElementById('fw-circle');
+    if (circle) {
+      circle.innerHTML = '';
+      const cx = 50, cy = 50, r = 36;
+      DIRS.forEach(d => {
+        const rad = d.angle * Math.PI / 180;
+        const x = cx + r * Math.cos(rad);
+        const y = cy + r * Math.sin(rad);
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'fw-dir' + (s.dir === d.k ? ' on' : '');
+        b.textContent = d.arrow;
+        b.style.left = x + '%';
+        b.style.top = y + '%';
+        b.title = d.k;
+        circle.appendChild(b);
+      });
+      const me = document.createElement('div');
+      me.className = 'fw-me';
+      me.textContent = '你';
+      circle.appendChild(me);
+      const cur = document.createElement('div');
+      cur.id = 'fw-cur-dir';
+      cur.className = 'fw-cur-dir';
+      cur.textContent = s.dir || '无法判断';
+      circle.appendChild(cur);
+    }
+    const detail = document.getElementById('fw-detail');
+    if (detail) {
+      const arrows = DIRS.find(d => d.k === s.dir);
+      detail.innerHTML =
+        '<div class="fw-row"><span class="fw-row-label">方向</span><span class="fw-row-val">' + (arrows ? arrows.arrow + ' ' : '') + esc(s.dir) + '</span></div>' +
+        '<div class="fw-row"><span class="fw-row-label">距离感</span><span class="fw-row-val">' + esc(s.rangef) + '</span></div>' +
+        '<div class="fw-row"><span class="fw-row-label">感知强度</span><span class="fw-row-val">' + esc(s.power) + '</span></div>';
+    }
+  }
+  // 「感知一下」：重掷 + 4% 触碰 + 结果卡，4s 冷却（仿 cj-perceive busy）
+  let perceiveCdUntil = 0;
+  function perceive() {
+    const btn = document.getElementById('fw-perceive');
+    const now = Date.now();
+    if (now < perceiveCdUntil) return;
+    perceiveCdUntil = now + 4000;
+    if (btn) { btn.classList.add('busy'); btn.disabled = true; }
+    const s = getSense(true);
+    const touched = maybeTouch(s);
+    const result = document.getElementById('fw-result');
+    if (result) {
+      result.hidden = false;
+      result.innerHTML = '';
+      resultText(s, touched).split('\n').forEach(l => {
+        const p = document.createElement('p');
+        p.className = 'fw-p-line';
+        p.textContent = l;
+        result.appendChild(p);
+      });
+    }
+    render();
+    setTimeout(() => {
+      if (btn) { btn.classList.remove('busy'); btn.disabled = false; }
+    }, 4000);
+  }
+  // 被动提示：每小时最多一次，低概率 toast 提示方向（不在弹层打开时）
+  function passiveHint() {
+    const s = load();
+    const now = Date.now();
+    if (s.hintAt && now - s.hintAt < 3600000) return;
+    if (Math.random() >= 0.02) return; // 每次检查 2% 低概率
+    const gs = getSense(false);
+    if (isUndirected(gs.dir)) return;
+    const arrows = DIRS.find(d => d.k === gs.dir);
+    const name = store.get('lbl-partner') || 'TA';
+    if (window.toast) window.toast('……好像' + (arrows ? arrows.arrow + ' ' : '') + '有人在你' + gs.dir + '。');
+    s.hintAt = now;
+    save(s);
+  }
+  // 打开弹层时：刷新感知（含漂移检查）+ 渲染
+  window.refreshSense = function () {
+    getSense(false);
+    render();
+  };
+  // 事件绑定
+  const perceiveBtn = document.getElementById('fw-perceive');
+  if (perceiveBtn) perceiveBtn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    perceive();
+  });
+  // 定时：漂移检查（每 30s）+ 被动提示
+  let lastHintCheck = 0;
+  setInterval(function () {
+    const panel = document.getElementById('loc-panel');
+    if (panel && !panel.hidden) {
+      const s = load();
+      if (s.nextDirAt && Date.now() >= s.nextDirAt) { getSense(false); render(); }
+    }
+    if (Math.floor(Date.now() / 30000) !== lastHintCheck) {
+      lastHintCheck = Math.floor(Date.now() / 30000);
+      passiveHint();
+    }
+  }, 30000);
+  // 切联系人关闭弹层
+  document.addEventListener('contact-switched', function () {
+    const panel = document.getElementById('loc-panel');
+    if (panel) panel.hidden = true;
+  });
 })();
 
 // ===== v3.x：世界观·他偶发出现（统一频率 + 浮层 + 打卡字卡） =====

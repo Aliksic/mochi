@@ -217,13 +217,15 @@
     // 自动弹窗：后台不弹 / 正在输入不弹 / 已有互动弹窗不弹（卡片仍在聊天里可点）
     // v3.12.x：迟到弹窗守卫——后台冻结的定时器回前台会被一次性补跑，补跑时页面已可见、
     // document.hidden 守卫失效 → 弹出几分钟前已在聊天里看过的旧查岗卡。
-    // 正常触发 400ms 左右执行；超过 4s 到达的一律视为冻结补跑不再弹（与 ta-ask.js 同款）。
+    // v3.13.x：与 ta-ask.js 共用 interactPopupStale（含「中途切后台」守卫）——
+    // 弹窗排程后页面切过后台回前台的也不再自动弹，防快速切后台重复弹旧卡。
     let popupProb = 70;
     if (cfg && typeof cfg['ckq-popup-prob'] === 'number' && cfg['ckq-popup-prob'] >= 0) popupProb = cfg['ckq-popup-prob'];
     if (Math.random() * 100 < popupProb) {
       const popSchedAt = Date.now();
       setTimeout(function () {
-        if (Date.now() - popSchedAt > 4000 || document.hidden) return;
+        const stale = window.interactPopupStale ? window.interactPopupStale(popSchedAt) : (Date.now() - popSchedAt > 4000);
+        if (stale || document.hidden) return;
         if (chatInputFocused() || cardPopupBusy()) return;
         if (msgIdx >= 0) openCkReply(msgIdx, q);
       }, 400);

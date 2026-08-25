@@ -601,6 +601,16 @@
             document.documentElement.scrollTop = 0;
             document.body.scrollTop = 0;
           }
+          // v3.13.x：iOS Edge 视口平移归零——Edge iOS 聚焦 contenteditable 后通过
+          // visualViewport offset 平移让焦点可见（window.scrollY 恒为 0、
+          // documentElement.overflow:hidden 也挡不住该平移），.phone 整体被推上移 →
+          // 输入栏贴屏幕顶部、其下到键盘全露 body 灰底（用户报修「整页被挤压」）。
+          // 归零 vv 偏移才能根治。仅在 offset>1 时调用（无偏移 no-op），try 容错
+          // 不支持 scrollTo 的旧内核。pinScrollTop 只在键盘开合动画窗口/大偏移自愈
+          // 时被调，稳态打字期不触发，不会与 caret 微滚打架闪屏。
+          if (_vv && _vv.scrollTo && (_vv.offsetTop > 1 || _vv.offsetLeft > 1)) {
+            try { _vv.scrollTo(0, 0); } catch (e2) {}
+          }
         } catch (e) {}
       }
       // v3.13.x：键盘期「文档大偏移滚动」自愈（iOS Edge 报修修复）——

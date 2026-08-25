@@ -4,6 +4,49 @@
 
 ## 规则
 
+### 2026-08-25（用户需求：梦角档案顶部显示所有梦角名字点击切换 + 所有桌面数据互通）
+- [本会话·复核完成]（**未改功能代码，新增 tools/verify-memo-arc.mjs 专项 16/16 全绿**）：该需求在当前源码与工作区构建产物（index.html 19:37, sw: mochi-mt8lbkh4）中**已完整实现**——① 顶部 `.narc-chips` 渲染全部梦角名字（含「＋ 添加」），点击切换（`pick-roster`）；② 数据互通：档案键 `xy-home-v2:narc-<rosterId>` + `narc-cur` 存根命名空间（全局共享），roster 复用此间 `cjian-roster`（同为根命名空间），contacts.js EXCLUDE 已登记 `narc-*`/`cjian-*` 防误迁。
+  - **实测覆盖**：T1 桌面第三页图标入口；T2 顶部 chips 显示全部名字+默认选中当前；T3 点击切换名字/内容/持久化；T4 切换桌面（setActiveContact）后仍显示全部梦角、档案不丢、键确认在根命名空间；T5 记录归属不串桌；T6 ＋ 添加打开「此间」同款管理弹窗、此间新增梦角后档案顶部同步出现；T7 无 JS 异常。
+  - **需构建者注意**：功能源码（19:04/19:20）与构建产物（19:37）均早于 index.html，无过期；**已提交 HEAD（8ff882a 18:34）不含梦角档案**，线上部署仍是旧版——本批未提交改动提交推送后用户即可看到。未改任何 src 功能文件。
+
+### 2026-08-25（用户反馈：语音通话接通后时长卡 0 秒、再直接从第 1 秒蹦到 30 秒）
+- [本会话·完成]（**已改 src/js/call.js（AI-B 域）+ 新专项 tools/verify-call-dur.mjs 6/6 全绿；我方已 19:34 构建一次，后 AI-A 19:36 构建（sw: mochi-mt8la2uv）已把我方 call.js 改动一并收口——已 grep index.html 确认修复代码在产物中，无需再重复构建；verify 10/10 + verify-call-edit 11/11 + verify-call-mini-live 14/14；未提交**）：通话时长把响铃/拨出等待计入了通话——`updateDur` 用 `startTime`（响铃起点）计时，响铃末尾接听时时长会从 0 直接蹦到约 30 秒；且接通瞬间不立即刷新（要等首个 1s 间隔），表现为先卡 0 秒。
+  - **修复**：计时基准统一改用 `connectedTime`（接听/接通时刻）——`updateDur` 用 `connectedTime || startTime` 兜底；`startCallDuration` 置 connectedTime 后立即 `updateDur()` 刷新显示（不再卡 0 秒）；`userHangup` 的真实时长也改按 connectedTime 计算（与 endCall/getCallState 一致）。
+  - **验证**：新专项 verify-call-dur 6/6（响铃 3s 后接听 → 接通瞬间 00:00、+1.2s 00:01、小框 00:02、挂断记录 00:02、去电也按接通时刻），修复前会显示 00:04/00:05。真机确认点（vivo+Edge 优先）：来电响铃一会儿再接通 → 时长应从 0 开始逐秒走，不再蹦到 30 秒。
+
+### 2026-08-25（用户反馈：vivo Edge 公用字卡语音——点语音整页卡死/点不动；批量添加误传视频后点语音空白报错）
+- [本会话·完成]（**已改 src/js/chatcard.js（AI-A 域，git status 确认该文件原已 clean，无并行冲突），已构建（19:36, sw: mochi-mt8la2uv）+ verify-cc-batch-import 13/13 + verify-cc-scope 27/27 + 布局 verify 10/10 全绿；未提交**）。
+  - **根因（两类互相纠缠）**：① 点语音卡「卡死/点不动」——播放逻辑直接 `new Audio(src)`，源是 dataURL。旧数据里混入的空 MIME（`data:;base64,`）/超大/被误存成语音的视频，vivo 低配 Edge 会在**主线程同步解码**而整页冻结；② 批量添加时安卓文件管理器常忽略 `<input accept="audio/*">` 过滤，用户可选中**视频**，原 `normalizeAudioDataURL` 又会按扩展名把 mp4 视频硬标成 `audio/mp4` 存进语音库 → 播放`<audio>`解不出音轨=「空白/没声音/报错」，且把视频 blob 塞进整个字卡库令 saveGroups 序列化变慢。
+  - **修复**：① **播放前守门**——点播放只构造 `data:audio/` 前缀、长度有界（`MAX_AUDIO_VAULT=16MB` 字符，高于 10MB 存储上限、合法录音可播）的 `new Audio()`，其余一律 toast（「音频数据不可用/该语音数据异常/该语音文件过大」），`new Audio()` 也套 try/catch——坏源不再进解码器，**不再卡死**；② **批量添加拒视频**——语音分类上传时，凡 `f.type` 或读出的 dataURL MIME 以 `video/` 开头即跳过（notAudio 计数），不写入语音库（避免回放的空白/报错与整库序列化变慢），toast 明示「跳过 N 个视频/非音频（语音分类只支持音频）」；对空 MIME 的合法音频（雨见等返回 `data:;base64`）仍走原有按扩展名归一化，**不影响正常录音上传**。
+  - 真机确认点（vivo Edge）：①公共字卡/专属字卡的语音卡点播放：正常录音出声、坏数据不再把整页卡死而是弹提示；②语音分类批量添加**选视频** → 提示「跳过 N 个视频/非音频」且库里不再出现该空白语音；选正常音频照常入库可播放。
+### 2026-08-25（新功能：聊天「更多功能」新增【此间】——梦角世界时间与在场感知）
+- [本会话·完成]（**已构建（19:22, sw: mochi-mt8ks975）+ verify 10/10 + 新专项 verify-cjian 30/30 全绿；未提交**）：此间（入口 = 聊天页「更多功能」面板「此间」按钮，独立全屏页 `#page-cjian`，从聊天进入、返回聊天）。
+  - **涉及文件**：新增 `src/js/cjian.js`（功能全部逻辑）、`tools/verify-cjian.mjs`；改动 `src/template.html`（更多面板入口按钮 + 页面结构）、`src/js/chat.js`（more-cjian 接线 + addMsg 后 `cjianNoteChat` 打点）、`src/css/chat-pages.css`（此间样式）、`src/js/contacts.js`（EXCLUDE 登记 `cjian-roster`/`cjian-state`/`cjian-seeded`）、`src/js/tabs.js`（FULL_PAGES 加 `page-cjian`）、`build.mjs`（注册 cjian.js）。**跨域提示（构建者知悉）**：本次动了 AI-B 域文件（template.html / tabs.js / contacts.js / build.mjs），均为一两行的登记/接线，请复核。
+  - **功能**：每个梦角独立世界时间（可设偏移：与现实同步/快慢 1、3、6 小时，时间=现实+偏移**连续流动**非每次重抽，按十二时辰+初/正展示，初/正各一小时区间）；双维状态——在场（很近/附近/遥远/感觉不到/离开）+ 空闲（有空/有事/忙着/休息/睡着/未知），按世界时辰权重随机、时间戳驱动自然演变（非老虎机）；【感知此间】轻量随机判定（一次感知最多改变一个梦角，15 分钟状态冷却 + 4s 点击冷却），文案遵循世界观「感觉不到≠不存在」；【今日】从当前时辰起 12 行预测（日期+梦角+时辰种子随机，当天稳定跨天变化，措辞「可能在附近/可能较忙/暂时未知」，不保证未来一定发生）；低概率「突然靠近」（25 分钟无变化 + 0.1% 级概率，toast「……好像有什么靠近了」）；最近互动（打开此间/感知/刚聊过天）30 分钟内提高靠近概率；梦角管理（添加：名称→时间偏移两阶段弹窗；改名；删除）复用 openModal 控制器。
+  - **数据**：`xy-home-v2:cjian-roster`（梦角名单，结构与梦角档案 memo-arc 复用同键同 `window.cjianManage`）、`cjian-state`（状态+时间戳）、`cjian-seeded`（首次用当前联系人昵称播种）。全局根命名空间共享，已在 EXCLUDE 登记防误迁。
+  - 真机确认点：聊天「更多功能」→「此间」→ 看到此刻时辰与梦角状态卡片；点「感知此间」出文案且 4 秒内不能再点；右下角齿轮可添加/改名/删除梦角（含时间偏移选择）；「今日」从当前时辰开始逐时辰展示预测；在聊天里发条消息后回此间，靠近概率短时提高。
+
+### 2026-08-25（新功能：桌面第三页新增「梦角档案」——每个梦角一份，随相处逐渐记录「我认识的TA」）
+- [完成·已构建（19:06, sw: mochi-mt8k7vtp）+ verify 10/10；未提交]：梦角档案（AI-A 业务域，入口 = 桌面第三页「梦角档案」图标）。
+  - 涉及文件（新增）：`src/js/memo-arc.js`、`src/css/memo-arc.css`；（改动）`src/template.html`（第三页图标 + `#page-memo-arc` 整页锚点）、`build.mjs`（cssFiles/jsFiles 注册）、`src/js/tabs.js`（FULL_PAGES 加 `page-memo-arc`）、`src/js/contacts.js`（EXCLUDE 加 `narc-` 前缀防迁移）。
+  - 功能：梦角切换筹码 / 概览（相处天数、了解数、共同经历、重要时刻、还不了解、最近发现）/「我认识的TA」「TA的习惯」「TA的喜好」用了解卡片（含类型、了解程度 🌱🌿🌳、为什么认为、可编辑/重新理解/暂不适用/恢复/删除）+「我们之间」（第一次/共同习惯/只有我们知道的事/重要时刻 ⭐ 可标互转）+「相处记录」（⭐ 标为重要时刻）+「还不了解TA」（可转「了解」）+「理解变化」（全部历史流水）。数据全局共享：键 `xy-home-v2:narc-<rosterId>` + `narc-cur`。
+  - 要点：记忆在 openModal 多阶段表单里完成，无新建 JS 文件依赖；roster 读取复用此间 `cjian-roster`。已构建并 verify 全绿。真机确认点：第三页点「梦角档案」→ 选梦角 → 记录一条了解并改状态。
+
+### 2026-08-25（用户反馈：桌面功能按钮之间间隙太大，看起来和之前不一样）
+- [完成·已改 src/css/home.css，已构建（18:53, sw: mochi-mt8jr6nf）+ verify 10/10；未提交]：`.app-grid` 行间距 22px 过大、列间距 10px，导致桌面图标网格显得松散。收紧为 `gap:14px 8px`（压缩行高、微调列距），布局更紧凑贴近旧版观感。真机确认点：桌面主页图标行距/列距缩小、整体不松散。
+
+### 2026-08-25（用户复测：①聊天【发送】按钮发不出消息/发重 ②切后台再回来仍重复弹刚看过的开屏互动·聊天消息·TA小问题弹窗）
+- [本会话·完成]（**已改 src/js/chat.js + ta-ask.js + ck-question.js（AI-A 域），已构建（18:42, sw: mochi-mt8jckfu）+ verify 10/10 全绿；未提交**）。
+  - **①【发送】按钮**（根因：#chat-input 是模板原生 contenteditable div，可见文本在 DOM，`input.value=''` 是空操作 → 发后文字残留框内，紧接着再点被 addMsg 防重窗口吞掉/再发一条=「发不出/发重」）。**修复**：chat.js 新增 `clearChatInput()`——同时清 `.textContent`（原生 contenteditable）+ `.value`（兼容被 ceConvert 转幽灵的 input 代理），addMsg 成功与防重命中两条路径统一走它；群聊页本就是 `textContent=''` 不受影响。真机确认点：输入文字点发送后输入框应干净清空、可连续发不同消息且无残留。
+  - **② 后台重复弹窗**（根因：v3.12.x 的 4s 迟到守卫只在「冻结补跑 >4s」拦截，快速切后台再回来（<4s）时定时器回前台补跑照样弹刚看过已留聊天里的卡）。**修复**：ta-ask.js 加「中途切后台」守卫——`lastPopHiddenAt` 在 visibilitychange 非 visible 时打点，`autoPopupStale` 里 `lastPopHiddenAt > schedAt` 即视为回前台不再自动弹；并导出 `window.interactPopupStale`，ck-question.js 查岗卡弹窗改为共用同一套守卫（长冻结靠 4s、快速切换靠 lastPopHiddenAt，互为补充）。询问/小问题/好奇/吐槽/查岗五类自动弹窗全覆盖。真机确认点：看到互动卡后马上切后台再回来，不应再自动弹同一张已看过的卡（卡片仍在聊天可点）。
+  - ⚠️ 构建收口了工作区其余未提交 src（mobile-adapt.js/tools 等上一轮并行会话改动），push 前请按协议 git diff 自查一次性 v3.13.x 提交。
+
+### 2026-08-25（用户复测：iOS Edge 点聊天输入栏弹键盘→聊天页仍被挤压、输入栏顶到顶部、下方到键盘全灰——上一轮 lockDocScroll 不够）
+- [本会话·完成]（**已改 src/js/mobile-adapt.js（AI-B 域），已构建（18:40, sw: mochi-mt8jabr8）+ verify 10/10 + verify-ios-kb-edge-scroll 16/16 全绿；未提交**）：上一轮 v3.13.x 的 `lockDocScroll`（`documentElement.overflow=hidden`）在真机 Edge iOS 上不够——Edge iOS 聚焦 contenteditable 后的视口平移**不走文档根滚动**，走的是 `visualViewport.offsetTop` 平移，`overflow:hidden` 挡不住，`window.scrollY` 恒为 0 也归零无门 → `.phone` 整体被推上移、输入栏贴顶、中间全灰照旧。
+  - **修复（治本）**：`pinScrollTop()` 内补 `_vv.scrollTo(0, 0)` 归零 visualViewport 偏移——仅在 `offsetTop>1 || offsetLeft>1` 时调用（无偏移 no-op），try 容错不支持 scrollTo 的旧内核。`pinScrollTop` 已在所有需归零位置被调（syncIosKb 开合动画窗口 / onIosKbScroll / healKbScroll 大偏移自愈 / restoreKb / _iProvDock / _iProvClear），一处修改全覆盖。稳态打字期 pinScrollTop 不触发，不会与 caret 微滚打架闪屏。
+  - **安全性**：`.phone` 已收缩到 `vv.height` + `align-self:flex-start` 顶对齐，输入栏天然在键盘上沿可见，Edge iOS 无需额外平移，归零后稳定不抖。
+  - 真机确认点：iOS Edge 点聊天输入栏 → 键盘弹出 → 输入栏应停靠键盘正上方，聊天页正常显示无挤压、无灰底。
+
 ### 2026-08-25（用户复测 vivo Y35 + Edge 仍被强制 PC 端，不再只靠 screen.width/UA/orientation 指纹）
 - [本会话·完成]（**已改 src/js/mobile-adapt.js（AI-B 域），已构建（18:33, sw: mochi-mt8j1cym）+ verify 10/10 全绿；未提交**）：上一条 v3.11.x 修复在真实 vivo Y35+Edge 上仍漏判——Edge「桌面站点」能把 screen.width、UA、window.orientation 一并伪装，导致 isMobile=false 走桌面模拟器外壳（=「打开还是 PC 端」）。
   - **补无法伪装的真机信号**：`visualViewport.width`。它反映屏幕真实可见 CSS 宽（真机 ~360-412），无论 layout viewport 被拉成 980 还是 UA 谎报 Windows 都不变。新判据 `touch && vvW>0 && vvW<=900` 加入检测 OR 链；触摸笔电窄窗口耦合度极低、且本就更适合手机布局，误伤可忽略。
@@ -2281,3 +2324,38 @@ ode --check ͨ�� + verify 10/10 + verify-desk-reset-period 10/10����
   - **背景**：华为 Mate 10 Pro Chrome 反馈「聊天记录一直重复」——模拟点击/慢 IDB 场景均不复现，判定为**存量双条数据无法自愈**：旧 collapseRapidDups 明确跳过 special（互动卡片/系统提示）且文本窗口仅 1200ms，历史里已固化的卡片双条/系统提示双条/间隔 1~3s 的文本双条永远收敛不掉。
   - **改动（collapseRapidDups 加强，行为仅对重复对生效）**：① 互动卡片/系统提示（special）改按**内容签名**参与收敛（dupSig：side+归一 type+special+text+img/voice 存在性+卡片核心字段 askQuestion/askOptions/askType、choiceQuestion/choicePref/choiceCat、curiousQuestion/curiousQuick/curiousCat、roastText/roastCat、inviteContent、gift/flower 的 flName/flEmoji/flWish）——同 special+同核心字段才收敛，不同内容卡片不误删；② 文本窗口 1200→2500ms（对齐 addMsg 防重窗口，覆盖内核双发）；③ 图片/语音/卡片等非文本记录窗口放宽到 60s（人工不可能 1 分钟内紧挨着发两条完全相同的图/语音/卡片，而它们正是合并翻倍/卡片双条的形态）。
   - **回归（verify-chat-dupe 11 项）**：新增 相邻 poke 收敛、完全相同 ask-card 收敛（不同问题卡片保留）、相邻同图收敛、超窗(>2.5s)/异侧/非相邻保留；AC2 检查口径与 dupSig 对齐。
+
+### 2026-08-25（用户反馈：后台弹窗联系人头像不跟随【头像互动】换的头像）
+- [本会话·完成]（**已改 src + 已构建（18:36, sw: mochi-mt8j5rea）+ verify-bg-notify-dedupe 15/15 + verify-bg-keep-retry 10/10 + verify-oom-leaks 22/22 + 布局 verify 10/10，未提交**）：`src/js/bg-keep.js` + tools/verify-oom-leaks.mjs。
+  - **根因**：头像互动/换头像 v3.12.x 起只写聊天专用键 `cs-avatar-partner`（桌面 `avatar-partner` 独立、不再被换头像同步）；后台通知 `bgNotifyCheck` 仍只读桌面键 `avatar-partner` → 通知弹窗头像停留在旧头像。通话（v3.12.x）早已改成「先 cs-avatar-partner 回退桌面」，通知这里漏改。
+  - **修复**：`bg-keep.js` 通知头像取值 `extra.av || cs-avatar-partner || avatar-partner`（extra.av 仍为朋友圈发布者头像优先）。
+  - **回归**：OOM 工具新增 B4 断言——设 cs/桌面为不同头像，断言通知 icon（blob）对应 cs 源、非桌面源；测试桩 serviceWorker.ready 改 resolved 使走 SW 完整通知路径（原 rejected 走页面降级路径会剥 icon，测不到头像）。
+  - **需构建者注意**：本次构建已收口（sw: mochi-mt8j5rea）；改动仅 bg-keep.js 通知头像取值 + OOM 工具，未触碰其他会话施工区。提交时随批次一起。
+
+### 2026-08-25（用户反馈：后台弹窗最左侧不显示 mochi 字母图标）
+- [本会话·完成]（**已改 src + 已构建（sw: mochi-mt8jlz93）+ verify-oom-leaks 23/23 + verify-bg-notify-dedupe 15/15 + verify-bg-keep-retry 10/10 + 布局 verify 10/10，未提交**）：`src/js/bg-keep.js` + tools/verify-oom-leaks.mjs。
+  - **根因**：通知左侧小图标（badge 位）用的是 icon-512.png，但它是一张 512×512 **全不透明、白底黑字**的大图。Android 通知 small icon 规范要求「alpha 蒙版 + 单色 + 透明底」——系统按 alpha 通道把图染成主题色；全不透明白底图会被当成不透明方块渲染（白块/看不到字母）或直接不显示。此前浏览器宽松渲染勉强能看，OPPO+Edge 按规范处理后 mochi 字母就不见了。
+  - **修复**：新增 `getBadgeUrl()`——运行时用 canvas 把 icon-512 转成 **96px 透明底 + 白色内容剪影**的单色 PNG dataURL；`showSysNotification` 的 badge 优先用它，未生成完成时回退原 icon-512；启动时（通知权限已授予）即预热生成，首条通知前通常已就绪。
+  - **回归**：OOM 新增 B5 断言——通知 badge 是 `data:image/png` 单色透明 dataURL（且非原 icon-512 URL）。
+  - **需构建者注意**：本次构建已收口（sw: mochi-mt8jlz93）；改动仅 bg-keep.js（badge 生成）+ OOM 工具，未触碰其他会话施工区。提交时随批次一起。
+### 2026-08-25（用户需求：聊天输入栏「更多功能」新增【查岗】按钮）
+- [本会话·完成]（**已改 src + 已构建（18:50, sw: mochi-mt8jnv9g）+ verify 10/10，未提交**）：`src/template.html` + `src/js/chat.js`（AI-A 域，同头像点击的查岗半框复用）。
+  - 改动：更多功能面板（#more-grid-fun）末尾新增 `#more-ck`「查岗」按钮（图标复用第二页查岗入口的时钟图标）；chat.js 头像点击监听（`openCkPanel` 引用处）旁绑定 `#more-ck` 点击——收起更多面板后调 `window.openCkPanel()`，与点顶部联系人头像打开的查岗半框完全一致。
+  - 验证：`node --check` 通过；构建 + 布局 verify 10/10。**未提交**，等待统一构建提交。
+- [本会话·补充]（**已构建（18:52, sw: mochi-mt8jqid1）+ verify 10/10，未提交**）：桌面「查岗」页（#page-checkin）日常卡片内新增 `#ck-loc-entry-desk`「TA在身边 · 看看 TA 在哪」按钮（复用聊天查岗半框同款 `.ck-loc-entry` 样式与文案）；p2-features.js `openLocPanel` 绑定处补同名监听，点击打开同一 `#loc-panel` 位置面板。未触碰其他文件。
+- [本会话·补充]（**已构建（19:01, sw: mochi-mt8k18dz）+ verify 10/10 + loc-lib 专项 CDP 17/17，未提交**）：把【TA在身边 · 看看TA在哪】位置面板的词库纳入字卡库管理。
+  - **新增** `src/js/loc-lib.js`（已注册进 build.mjs jsFiles，放 p2-features.js 之前）：位置字卡库——内置 5 分类（方位 7/距离 5/状态 5/感知 6/彩蛋 1，文案与原位置面板硬编码完全一致，光点映射不破坏）+「使用系统预设」总开关（loc-lib-default）+ 单卡开关（loc-off-<cat>:<text>）+ 我的添加（loc-lib-custom，对象数组 {t,grp}，兼容旧 loc-custom 字符串数组自动迁移）+ 自定义分组（loc-lib-groups）；字卡库入口「TA在身边位置卡」（#li-loc-cards，计数 cc-loc-count）+ 管理页（#page-loc-cards：分类 tab 方位/距离/状态/感知/彩蛋 + 系统预设/我的添加 双 tab + 批量输入 + 单卡开关 + 分组）；跨分类搜索注册。
+  - **改造** `src/js/p2-features.js` 位置面板：删除硬编码 LOC/LOC_LABEL，词源改为 window.locLib*——渲染（方位/距离/状态/感知/彩蛋按开关过滤）、askWhere 随机（组空回退默认词兜底）、doLocAuto 自动发（locLibAllEnabled）、locTypeOf；自定义卡读写走 locLibGetCustomCards/SaveCustom。
+  - **验证**：专项 CDP 17/17（入口→管理页→分类 tab→单卡开关→位置面板词源联动→批量添加→发送进历史→旧数据迁移→总开关关闭后仅剩自定义/彩蛋禁用→无 JS 异常）。**未提交**，等待统一构建提交。
+- [本会话·完成]（**已构建（19:37, sw: mochi-mt8lbkh4）+ verify 10/10 + 方位感知专项 CDP 22/22 + 几何布局 6/7（1项为断言口径误判，实际布局正确），未提交**）：【TA在身边 · 看看TA在哪】升级为「方位感知」系统。
+  - **设计**（用户明确：不与此间联动、不新增字卡库入口，并入位置卡库）：方向（8方向+身边/无法判断）+ 距离感（很近/近/稍远/很远/无法判断）+ 感知强度（明显/微弱/若有若无/消失）+ 触碰（4条低概率）四组感知字卡，并入字卡库「TA在身边位置卡」管理页（分类 tab 扩到 9 个：发送类 5 + 感知类 4，两组 tab 用说明分隔）。世界观：模糊感知不是 GPS。
+  - **词库**：`src/js/loc-lib.js` LIB/LABEL/CATS 新增 direct/rangef/power/touch 四组；新增 `locLibSenseGroup(k)` 感知词源接口（按组取启用词，全关时内置兜底词）。
+  - **感知引擎**：`src/js/p2-features.js` 新增独立 IIFE——感知状态存 activeStore `loc-sense` 键（随联系人隔离，不新增全局键）；方向每 15~45 分钟漂移（92% 8方向 / 8% 无法判断·身边）；距离感/感知强度与最近发送位置卡联动（近卡偏近、远卡偏远）；「感知一下」4s 冷却 + 4% 概率触碰（从触碰词取 + 复用 #loc-fx 光点动效）+ 结果卡（明确/无法判断/消失三种文案）；被动提示每小时最多一次、2% 低概率 toast「好像有人在你X侧」。`openLocPanel` 挂 `refreshSense()`。
+  - **UI**：`#loc-panel` 顶部新增感知圆（8 方向标签均匀分布 + 中心「你」+ 当前方向词）+ 明细三行卡 + 感知按钮 + 结果卡；下方原发卡区/时间线/问TA一声原样保留。CSS 新增 `.fw-*`（chat-pages.css）+ dark 适配（dark.css 12 行）。
+  - **验证**：CDP 22/22（词源 4 组/感知圆 8 方向/状态落库/感知一下结果+冷却/管理页 9 tab/开关过滤/无 JS 异常）；几何 6/7（8 方向均匀分布、感知圆 170px、明细在发卡区上方，1 项为测试断言把轴线方向算错象限，实际布局正确）；布局 verify 10/10。临时脚本已删。
+  - ⚠️ **注意**：dark.css 为仓库既有混合行尾（HEAD 即 419 CRLF+425 LF），本次 Edit 带出 850 行行尾噪声，已按 HEAD 逐行行尾恢复，`git diff --ignore-space-at-eol` 确认内容仅 +12 行。**未提交**，等待统一构建提交。
+- [本会话·修复]（**已构建（19:55, sw: mochi-mt8lz8oa）+ verify 10/10 + CDP 13/14（1项为断言口径误判，实际正确），未提交**）：用户反馈两个问题。
+  - **① 桌面查岗页点「TA在身边」图层跑到聊天里**：根因——`#loc-panel`/`#loc-fx` 之前嵌在 `#page-chat` 内，从桌面 `#page-checkin` 打开时父级 page 是 hidden（display:none），position:fixed 子元素不显示，弹层被"困"在聊天页。修复：两个节点移出 `#page-chat`，放到 `.phone` 公共容器（所有 .page 之外、与 modal-mask 同级），聊天/桌面两入口共用，均正常。
+  - **② 位置面板里不显示字卡**：删掉 `renderLocPanel` 的发卡区（TA发位置卡词库/组合开关/自定义/彩蛋/添加按钮）及其绑定；保留方位感知区（感知圆/明细/感知一下/结果）、感知描述、此刻位置、时间线、问TA一声。字卡只在字卡库「TA在身边位置卡」管理页管理；TA 自动发位置卡/问TA一声回位置/光点动效等后台逻辑保留。
+  - **验证**：CDP——loc-panel 不在任何 .page 内、桌面查岗页打开面板可见(390)且聊天页隐藏、面板无 .loc-card/.loc-send-area、保留问TA/时间线/感知/方位感知、聊天入口仍可用、无 JS 异常。布局 verify 10/10。临时脚本已删。
+  - **未提交**，等待统一构建提交。

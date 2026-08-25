@@ -295,6 +295,10 @@
 <div class="app-ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="3" width="15" height="18" rx="2"/><path d="M4.5 8h15"/><path d="M10 13l2-2 2 2"/><path d="M12 11v6"/><path d="M10.5 14h3"/></svg></div>
 <div class="app-name">记账</div>
 </div>
+<div class="app" data-app="memo-arc" data-desk-widget="app-memo-arc">
+<div class="app-ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5h11a1 1 0 011 1V20a1 1 0 01-.55.9A2 2 0 0115.5 21H6a1 1 0 01-1-1v-16a1 1 0 011-.5z"/><path d="M9 8.5h6M9 12.5h6M9 16.5h3.5"/><path d="M15.5 4v5l-1.5-1-1.5 1V4"/></svg></div>
+<div class="app-name">梦角档案</div>
+</div>
 <!-- 花园图标已移第二页（第二排）；本页动态注入 吃什么/存钱罐/番茄钟（p2-features.js） -->
 </div>
       </div><!-- /page-slide 第三页 -->
@@ -427,6 +431,11 @@
         <div class="av"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 3.5h11a1 1 0 011 1v16l-6.5-4-6.5 4v-16a1 1 0 011-1z"/></svg></div>
         <div class="ci"><div class="n">桌面今日情话</div><div class="m">桌面每日展示 · 可自由添加</div></div>
         <div class="t" id="cc-quote-count">46</div>
+      </div>
+      <div class="chat-item glass" id="li-loc-cards">
+        <div class="av"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6-5.3-6-10a6 6 0 1112 0c0 4.7-6 10-6 10z"/><circle cx="12" cy="11" r="2.2"/></svg></div>
+        <div class="ci"><div class="n">TA在身边位置卡</div><div class="m">TA 的位置 · 方位/距离/状态/感知</div></div>
+        <div class="t" id="cc-loc-count">0</div>
       </div>
       <div class="chat-item glass" id="li-ta-ask">
         <div class="av"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
@@ -854,6 +863,55 @@
       <div id="cq-mine-list" style="padding:8px 14px 14px"></div>
     </div>
     <div class="cal-card-title" style="padding:0 2px">桌面每天会从这些情话里随机展示一句</div>
+  </div>
+</div>
+
+<!-- TA在身边位置卡（字卡库：方位/距离/状态/感知/彩蛋，位置面板词源） -->
+<div class="page" id="page-loc-cards" hidden>
+  <div class="chat-head">
+    <span class="ch-back" id="loc-cards-back">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    </span>
+    <span class="ch-name">TA在身边位置卡</span>
+  </div>
+  <div class="gs-scroll">
+    <div class="set-group glass">
+      <div class="gs-row"><span>使用系统预设位置卡</span><label class="toggle"><input type="checkbox" id="loc-default" checked><span class="tk"></span></label></div>
+    </div>
+    <div class="cal-card-title" style="padding:0 14px 2px">TA 想告诉你的位置（发送字卡）</div>
+    <div class="fav-tabs">
+      <button class="fav-tab sel" data-loctab="dir"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;vertical-align:-2px;margin-right:3px"><path d="M12 21s-6-5.3-6-10a6 6 0 1112 0c0 4.7-6 10-6 10z"/><circle cx="12" cy="11" r="2.2"/></svg>方位</button>
+      <button class="fav-tab" data-loctab="dist"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;vertical-align:-2px;margin-right:3px"><circle cx="12" cy="12" r="9"/><path d="M12 12l3-3"/></svg>距离</button>
+      <button class="fav-tab" data-loctab="state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;vertical-align:-2px;margin-right:3px"><path d="M13 2L4.5 13.5H11l-1 8.5L18.5 10H12l1-8z"/></svg>状态</button>
+      <button class="fav-tab" data-loctab="sense"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;vertical-align:-2px;margin-right:3px"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>感知</button>
+      <button class="fav-tab" data-loctab="egg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;vertical-align:-2px;margin-right:3px"><path d="M12 3c4 5 6 8 6 11a6 6 0 11-12 0c0-3 2-6 6-11z"/></svg>彩蛋</button>
+    </div>
+    <div class="cal-card-title" style="padding:8px 14px 2px">你的感知（方位感知 · 不是精确定位）</div>
+    <div class="fav-tabs">
+      <button class="fav-tab" data-loctab="direct"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;vertical-align:-2px;margin-right:3px"><path d="M12 3l3.5 3.5L12 10l-3.5-3.5z"/><path d="M12 3v18M12 10v11"/></svg>方向</button>
+      <button class="fav-tab" data-loctab="rangef"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;vertical-align:-2px;margin-right:3px"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg>距离感</button>
+      <button class="fav-tab" data-loctab="power"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;vertical-align:-2px;margin-right:3px"><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/><circle cx="12" cy="12" r="2.5"/></svg>感知强度</button>
+      <button class="fav-tab" data-loctab="touch"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;vertical-align:-2px;margin-right:3px"><path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V12"/><path d="M11 12V4.5a1.5 1.5 0 0 1 3 0V12.5"/><path d="M14 12.5V7a1.5 1.5 0 0 1 3 0v6c0 3-2.5 5.5-5.5 5.5-1.7 0-3-.6-4-1.6L5 14.3"/></svg>触碰</button>
+    </div>
+    <div class="card-tabs" id="loc-tabs" style="padding:6px 12px 8px">
+      <button class="cc-tab sel" data-tab="sys">系统预设</button>
+      <button class="cc-tab" data-tab="mine">我的添加</button>
+    </div>
+    <div class="set-group glass" id="loc-sys-panel">
+      <div class="cal-card-title" style="padding:14px 14px 0" id="cloc-sys-title">方位</div>
+      <div id="cloc-sys-list" style="padding:8px 14px 14px"></div>
+    </div>
+    <div class="set-group glass" id="loc-mine-panel" hidden>
+      <div class="cal-card-title" style="padding:14px 14px 0;display:flex;align-items:center;justify-content:space-between"><span>批量输入位置卡</span><button class="cc-tool" id="loc-new-grp" style="padding:4px 8px;font-size:11px">＋ 分组</button></div>
+      <div class="tc-addform">
+        <select id="cloc-batch-grp" class="tc-input"></select>
+        <textarea id="cloc-batch" class="tc-input" rows="6" placeholder="每行一个，如：&#10;在咖啡店等你&#10;在回家的路上&#10;在你看不到的地方"></textarea>
+        <button class="ta-add-btn" style="width:100%" id="cloc-batch-add">添加到我的位置卡</button>
+      </div>
+      <div class="cal-card-title" style="padding:14px 14px 0" id="cloc-mine-title">我的位置卡</div>
+      <div id="cloc-mine-list" style="padding:8px 14px 14px"></div>
+    </div>
+    <div class="cal-card-title" style="padding:0 2px">TA 想告诉你 TA 在哪时，会从上面的发送字卡里选（发出后有光点动效）；方位感知用的是下面的感知字卡</div>
   </div>
 </div>
 
@@ -2604,6 +2662,7 @@
             <span class="ck-label">TA 想对你说</span>
             <div class="ck-value" id="ck-msg">—</div>
           </div>
+          <button class="ck-loc-entry" id="ck-loc-entry-desk">TA在身边 · 看看 TA 在哪</button>
         </div>
         <div class="cal-card glass">
           <div class="cal-card-title">查岗记录</div>
@@ -3036,17 +3095,6 @@
           <button class="ck-loc-entry" id="ck-loc-entry">TA在身边 · 看看 TA 在哪</button>
         </div>
       </div>
-      <!-- TA在身边·位置面板（查岗半框「TA在身边」入口打开） -->
-      <div class="loc-panel" id="loc-panel" hidden>
-        <div class="loc-head">
-          <span>TA在身边 · <b id="loc-name">TA</b> 的位置</span>
-          <button class="loc-close" id="loc-close">✕</button>
-        </div>
-        <div class="loc-body" id="loc-body"></div>
-      </div>
-
-      <!-- 位置卡光点动效层 -->
-      <div class="loc-fx" id="loc-fx" hidden></div>
       <!-- 拍一拍浮层卡片（聊天页内） -->
       <div class="poke-card" id="poke-card" hidden>
         <div class="poke-card-head">
@@ -3139,6 +3187,14 @@
             <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 7h3v3H7zM14 14h3v3h-3z"/></svg></span>
             <span>贪吃蛇</span>
           </button>
+          <button class="more-item" id="more-ck" title="查岗（打开 TA 的日常）">
+            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/><path d="M12 3a9 9 0 000 18"/></svg></span>
+            <span>查岗</span>
+          </button>
+          <button class="more-item" id="more-cjian" title="此间（梦角世界时间与在场感知）">
+            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 010 18"/><circle cx="12" cy="12" r="2.2"/></svg></span>
+            <span>此间</span>
+          </button>
         </div>
         <div class="more-grid" id="more-grid-ask" hidden>
           <button class="more-item" id="more-ask-now" title="让TA现在问一次（TA的询问）">
@@ -3217,6 +3273,51 @@
       </div>
     </div>
 
+    <!-- 此间：梦角世界时间与在场感知（聊天「更多功能」进入） -->
+    <div class="page" id="page-cjian" hidden>
+      <div class="chat-head">
+        <span class="ch-back" id="cj-back">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        </span>
+        <span class="ch-name">此间</span>
+        <span class="ch-settings" id="cj-manage-btn" title="梦角管理">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8a4 4 0 100 8 4 4 0 000-8z"/><path d="M19 12a7 7 0 00-.1-1.2l2-1.6-2-3.4-2.3 1a7 7 0 00-2-1.2L14.2 3h-4l-.4 2.6a7 7 0 00-2 1.2l-2.3-1-2 3.4 2 1.6A7 7 0 005 12c0 .4 0 .8.1 1.2l-2 1.6 2 3.4 2.3-1a7 7 0 002 1.2l.4 2.6h4l.4-2.6a7 7 0 002-1.2l2.3 1 2-3.4-2-1.6c.1-.4.1-.8.1-1.2z"/></svg>
+        </span>
+      </div>
+      <div class="gs-scroll cj-scroll">
+        <div class="cj-hero">
+          <div class="cj-hero-sub">此刻，你与TA之间。</div>
+          <div class="cj-hero-time" id="cj-hero-time">—</div>
+          <div class="cj-hero-range" id="cj-hero-range"></div>
+        </div>
+        <div id="cj-list"></div>
+        <div class="cj-empty" id="cj-empty" hidden>
+          <p>此间还没有梦角。</p>
+          <p class="cj-empty-sub">添加一个你想感知的人，看看TA此刻在哪、在做什么。</p>
+          <button class="cj-go cj-empty-add" id="cj-empty-add" type="button">添加梦角</button>
+        </div>
+        <button class="cj-perceive" id="cj-perceive" type="button">感知此间</button>
+        <div class="cj-perceive-result" id="cj-perceive-result" hidden></div>
+        <div class="cj-today-title">今日</div>
+        <div class="cj-today-note">今天的轨迹不是排班，只是可能的样子。</div>
+        <div id="cj-today"></div>
+      </div>
+    </div>
+
+    <!-- 梦角档案：每个梦角一份，记录「我后来才慢慢了解到的TA」（桌面第三页「梦角档案」进入） -->
+    <div class="page" id="page-memo-arc" hidden>
+      <div class="chat-head">
+        <span class="ch-back" id="narc-back">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        </span>
+        <span class="ch-name" id="narc-title">梦角档案</span>
+        <span class="ch-settings" id="narc-manage" title="管理梦角">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>
+        </span>
+      </div>
+      <div class="narc-scroll" id="narc-root"></div>
+    </div>
+
     <!-- 群聊页（桌面点「群聊」进入；所有桌面成员在一个窗口里聊天） -->
     <div class="page" id="page-group-chat" hidden>
       <div class="chat-head gc-head">
@@ -3292,6 +3393,26 @@
         <div class="gc-set-body" id="gc-set-body"></div>
       </div>
     </div>
+
+    <!-- TA在身边·位置面板（聊天查岗半框 / 桌面查岗页「TA在身边」入口共用，必须放在所有 .page 之外——
+         position:fixed 弹层若嵌在 .page 内，页面切换时会被父级 hidden 隐藏，桌面查岗页点开就会"跑到聊天页"） -->
+    <div class="loc-panel" id="loc-panel" hidden>
+      <div class="loc-head">
+        <span>TA在身边 · <b id="loc-name">TA</b> 的位置</span>
+        <button class="loc-close" id="loc-close">✕</button>
+      </div>
+      <!-- 方位感知（v3.13.x：模糊感知，不是精确定位） -->
+      <div class="fw-sense" id="fw-sense">
+        <div class="fw-circle" id="fw-circle"></div>
+        <div class="fw-detail" id="fw-detail"></div>
+        <button class="fw-perceive" id="fw-perceive" type="button">感知一下</button>
+        <div class="fw-result" id="fw-result" hidden></div>
+      </div>
+      <div class="loc-body" id="loc-body"></div>
+    </div>
+
+    <!-- 位置卡光点动效层（全局，同样须在 .page 外） -->
+    <div class="loc-fx" id="loc-fx" hidden></div>
 
     <!-- 聊天设置（独立页面） -->
     <div class="page" id="page-chat-settings" hidden>
