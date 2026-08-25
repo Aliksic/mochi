@@ -177,6 +177,9 @@ try {
   // 卡片题面必须是库内某题文本
   const qInBank = await evalJs("(function(){ try { var a=window.getChatMsgs(); var card=null; for(var i=a.length-1;i>=0;i--){ if(a[i]&&a[i].special==='ask-card'){card=a[i];break;} } var d=JSON.parse(window.activeStore().get('ta-checkin')); return d.questions.some(function(q){return q.text===card.askQuestion;}); } catch(e){ return String(e); } })()");
   ok('卡片题面与字卡库题目匹配', qInBank === true, qInBank);
+  // v3.13.x：互动卡全局闸门——上面 triggerCkQuestion 手动触发也会标记闸门，
+  // 这里先清掉再验自动路径，避免闸门拦截 prob=100 的确定性用例
+  await evalJs("window.activeStore().set('interact-card-last', '0'); true");
   const gate1 = await evalJs('window.ckQuestionTry({})');
   const gate2 = await evalJs("window.ckQuestionTry({ 'ckq-en': 1, 'ckq-prob': 100, 'ckq-cool': 0, 'ckq-popup-prob': 0 })");
   ok('ckQuestionTry：无开关拒绝 / 开关+概率100 命中推卡', gate1 === false && gate2 === true, { gate1, gate2 });

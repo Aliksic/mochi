@@ -158,15 +158,16 @@ window.Audio = function () {
     el.__played = true;
     el.paused = false;
     window.__au.log.push({ act: 'play', inst: idx, src: String(el.src).slice(0, 90) });
-    if (String(el.src).indexOf('126.net') >= 0) {
-      el.readyState = 4; el.networkState = 1; el.duration = 180; el.currentTime = 0.5;
-      if (el.onloadedmetadata) el.onloadedmetadata();
-      if (el.onplay) el.onplay();
+    // 网易云外链（meting/outer，需换源）→ 挂起不出声，复现停滞守卫路径；其余立即成功
+    if (String(el.src).indexOf('music.163.com') >= 0 || String(el.src).indexOf('meting') >= 0) {
       bump();
-      return Promise.resolve();
+      return new Promise(function (res, rej) { el.__res = res; el.__rej = rej; });
     }
+    el.readyState = 4; el.networkState = 1; el.duration = 180; el.currentTime = 0.5;
+    if (el.onloadedmetadata) el.onloadedmetadata();
+    if (el.onplay) el.onplay();
     bump();
-    return new Promise(function (res, rej) { el.__res = res; el.__rej = rej; });
+    return Promise.resolve();
   };
   window.__au.list.push(el);
   return el;
@@ -180,7 +181,8 @@ setInterval(function () {
 `;
 
 const SEED_LIB = JSON.stringify([
-  { id: 'sm_weak1', name: '弱网测试歌', artist: 'Test', url: 'https://music.163.com/song/media/outer/url?id=999', source: 'url', neteaseId: '999', duration: 0, playlistId: 'default', addedAt: 1 }
+  { id: 'sm_weak1', name: '弱网测试歌', artist: 'Test', url: 'https://music.163.com/song/media/outer/url?id=999', source: 'url', neteaseId: '999', duration: 0, playlistId: 'default', addedAt: 1 },
+  { id: 'sm_weak2', name: '普通外链歌', artist: 'Test', url: 'https://cdn.example.com/song2.mp3', source: 'url', neteaseId: '', duration: 0, playlistId: 'default', addedAt: 2 }
 ]);
 
 let pass = 0, fail = 0;
@@ -250,6 +252,43 @@ try {
   check('核心指标：全程可听音乐实例数峰值为 1（旧代码此场景=2）', snapA && snapA.max === 1, 'max=' + (snapA && snapA.max));
   check('无野元素存活：曾播放的音乐实例中除当前在播者外均已销毁', snapA && snapA.strays.length === 0, 'strays=' + JSON.stringify(snapA && snapA.strays));
   check('换源流程完整走过（出现「正在获取完整版直链」提示）', !!(snapA && snapA.toasts.indexOf('正在获取完整版直链') >= 0), snapA && snapA.toasts);
+
+  // ================= 场景 C：消息栏切歌（next()）路径不残留旧声源 =================
+  // 用户反馈复现：弱网双播放器状态下按消息栏「下一首」→ 只切走一个，旧歌继续响 → 双声。
+  // 修复后：playTrack → teardownAudio 清场在册全部元素 + createAudio 建新 → 旧声源必毁。
+  // 场景 A 结束时 song1（直链）在播，此时模拟消息栏 nexttrack 按钮调用 next()
+  //（播放条 #sm-next 与 mediaSession nexttrack handler 调用同一个 next()）
+  const nextOk = await evalJs(`(function(){ var b = document.getElementById('sm-next'); if(!b) return false; b.click(); return true; })()`);
+  check('消息栏切歌可触发（找到下一首按钮）', !!nextOk);
+  let song2Playing = null;
+  for (let i = 0; i < 15; i++) {
+    song2Playing = await evalJs(`(function(){
+      var L = window.__au.list;
+      for (var i = L.length - 1; i >= 0; i--) {
+        var x = L[i];
+        if (x.__played && !x.__stopped && !x.paused && String(x.src).indexOf('cdn.example.com') >= 0) return { idx: x.__idx, src: x.src };
+      }
+      return null;
+    })()`);
+    if (song2Playing) break;
+    await sleep(200);
+  }
+  check('消息栏切歌：成功切到下一首并出声', !!song2Playing, JSON.stringify(song2Playing));
+  const snapC = await evalJs(`(function(){
+    var L = window.__au.list;
+    function aud(x){ return x.volume > 0.5 && String(x.src).indexOf('data:') !== 0; }
+    var cur = null;
+    for (var i = L.length - 1; i >= 0; i--) { if (!L[i].__stopped && !L[i].paused && aud(L[i])) { cur = L[i]; break; } }
+    return {
+      max: window.__au.maxConcurrent,
+      cur: cur ? { i: cur.__idx, src: String(cur.src).slice(0, 40) } : null,
+      prevGone: !L.some(function(x){ return x.__played && aud(x) && String(x.src).indexOf('126.net') >= 0 && !x.__stopped; }),
+      strays: L.filter(function(x){ return x.__played && aud(x) && x !== cur && !x.__stopped; }).map(function(x){ return x.__idx; })
+    };
+  })()`);
+  check('切歌后旧歌（直链实例）已被销毁', !!(snapC && snapC.prevGone), JSON.stringify(snapC));
+  check('切歌后仍无野元素存活', !!(snapC && snapC.strays.length === 0), 'strays=' + JSON.stringify(snapC && snapC.strays));
+  check('全程可听音乐实例数峰值保持 1（消息栏切歌不产生双声）', !!(snapC && snapC.max === 1), 'max=' + (snapC && snapC.max));
 
   // ================= 场景 B：换源空窗期来电 hold → 直链回来不得起播 =================
   await loadAndSeed('?slowms=2600');

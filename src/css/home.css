@@ -129,6 +129,7 @@
 
 /* 离周末还有几天（摸鱼小组件，v3.5.35 整体压缩：更矮更紧凑） */
 .weekend-box {
+  position:relative; /* v3.13.x：连击角标 .we-combo 绝对定位锚点 */
   display:flex; align-items:center; justify-content:space-between; gap:8px;
   border-radius:16px; padding:6px 12px; margin:0 2px 10px; flex-shrink:0;
   background:var(--widget-bg);
@@ -136,6 +137,16 @@
   opacity:var(--widget-opacity);
   border:1px solid var(--widget-border);
 }
+/* v3.13.x：摸鱼连击角标（周末组件「摸鱼+1」短时连击时浮出） */
+.we-combo {
+  position:absolute; top:-9px; right:10px;
+  font-size:10px; font-weight:700; color:#fff; letter-spacing:.5px;
+  background:#e8533d; padding:2px 8px; border-radius:99px;
+  box-shadow:0 2px 8px rgba(232,83,61,.4);
+  opacity:0; transform:translateY(3px) scale(.9); pointer-events:none;
+  transition:opacity .18s ease, transform .18s ease;
+}
+.we-combo.on { opacity:1; transform:translateY(0) scale(1); }
 .we-left { display:flex; flex-direction:column; gap:1px; }
 .we-days { font-size:13px; font-weight:700; color:var(--ink); letter-spacing:.5px; }
 .we-sub { font-size:9px; color:var(--muted); letter-spacing:1px; }

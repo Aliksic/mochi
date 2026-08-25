@@ -37,6 +37,9 @@
 .mm-del svg { width:13px; height:13px; }
 .memo-empty { text-align:center; font-size:13px; color:var(--ink-soft,#aaa); padding:36px 0 8px; line-height:1.9; }
 .memo-manage { text-align:center; margin-top:14px; }
+/* ---- 「完成发到聊天」开关（v3.13.x：此前无任何样式、渲染成系统默认按钮） ---- */
+.memo-send-btn { font-size:12px; color:var(--ink-soft,#888); background:rgba(255,255,255,.7); border:1px solid rgba(0,0,0,.12); border-radius:16px; padding:6px 16px; cursor:pointer; font-family:inherit; -webkit-tap-highlight-color:transparent; }
+.memo-send-btn:active { background:rgba(0,0,0,.06); }
 /* ---- 首页「今日备忘」卡片内的备忘录联动状态行 ---- */
 .memo-app-badge { margin-top:8px; font-size:11px; color:var(--ink-soft,#888); background:rgba(0,0,0,.045); border-radius:8px; padding:5px 8px; display:flex; align-items:center; justify-content:space-between; gap:6px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
 .memo-app-badge::after { content:'›'; font-size:12px; color:var(--ink-soft,#bbb); }

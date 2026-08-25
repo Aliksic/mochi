@@ -102,7 +102,13 @@ try {
   await evalJs(`window.chatAddSystem && window.chatAddSystem('今晚一起去吃火锅呀'); true`);
   await sleep(120);
   const d2 = await evalJs(`window.bgNotifyGateInfo('今晚一起去吃火锅呀')`);
-  ok('dupInChat=true（30 分钟内说过 → 不再弹通知）', d2 && d2.dupInChat === true, d2);
+  ok('刚到达的新消息不自查判重（不再被自己吞掉弹窗）', d2 && d2.dupInChat === false, d2);
+
+  console.log('\n== T2b 第二条相同文本 → 真重复仍被拦 ==');
+  await evalJs(`window.chatAddSystem && window.chatAddSystem('今晚一起去吃火锅呀'); true`);
+  await sleep(120);
+  const d2b = await evalJs(`window.bgNotifyGateInfo('今晚一起去吃火锅呀')`);
+  ok('第二条相同消息 → dupInChat=true（真重复仍去重）', d2b && d2b.dupInChat === true, d2b);
 
   console.log('\n== T3 窗口外旧消息/无关文本不误伤 ==');
   await evalJs(`(function(){ try { var a = window.getChatMsgs(); a.push({ side:'in', text:'很久很久以前的老消息', ts: Date.now() - 40*60000 }); } catch(e){} return true; })()`);
@@ -116,28 +122,43 @@ try {
   ok('可见态 tooFreshHidden=true（hiddenForMs 极小）', d4 && d4.tooFreshHidden === true && d4.hiddenForMs < 5000, d4);
 
   console.log('\n== T5 归一化：带图/带语音段的文本与可见文字同指纹 ==');
+  // 旧式语音消息：入库「名称|||音频dataURL」，两条相同名称入库后，探针应命中（去重仍有效）
   await evalJs(`window.chatAddSystem && window.chatAddSystem('看这个|||data:audio/mp3;base64,AAAA BBBB'); true`);
+  await evalJs(`window.chatAddSystem && window.chatAddSystem('看这个|||data:audio/mp3;base64,EEEE FFFF'); true`);
   await sleep(120);
   const d5a = await evalJs(`window.bgNotifyGateInfo('看这个|||data:audio/mp3;base64,CCCC DDDD')`);
   ok('语音段剥离后同指纹命中', d5a && d5a.dupInChat === true, d5a);
+  // 旧式纯图消息：两条相同图入库后，探针同图应命中（去重仍有效）；不同图不互判
   await evalJs(`window.chatAddSystem && window.chatAddSystem('data:image/png;base64,iVBORw0KGgoAAAANSUhEUg'); true`);
+  await evalJs(`window.chatAddSystem && window.chatAddSystem('data:image/png;base64,AAAAAAAAAAAAAAAA'); true`);
   await sleep(120);
-  const d5b = await evalJs(`window.bgNotifyGateInfo('data:image/png;base64,AAAAAAAAAAAAAAAA')`);
+  const d5b = await evalJs(`window.bgNotifyGateInfo('data:image/png;base64,ZZZZZZZZZZZZZZZZZZZZ')`);
   ok('图片 dataURL 归一化后不同图不互判重复', d5b && d5b.dupInChat === false, d5b);
 
   console.log('\n== T5b v3.13.x 附件指纹：不同图片不再互判重复 ==');
   // 真实链路：纯图消息的 text 是 [图片] 占位、img 才是图片 dataURL（showDeskPopup→bgNotifyCheck）
+  // 先入库两条相同图，使"上一条同图在记录中"成立；再入库一条不同图用于负例
   await evalJs(`window.chatAddSystem && window.chatAddSystem('data:image/png;base64,AAAAAAAAAAAAAAAAAAAA'); true`);
+  await evalJs(`window.chatAddSystem && window.chatAddSystem('data:image/png;base64,AAAAAAAAAAAAAAAAAAAA'); true`);
+  await evalJs(`window.chatAddSystem && window.chatAddSystem('data:image/png;base64,BBBBBBBBBBBBBBBBBBBB'); true`);
   await sleep(120);
-  const d5b1 = await evalJs(`window.bgNotifyGateInfo('[图片]', 'data:image/png;base64,BBBBBBBBBBBBBBBBBBBB')`);
+  const d5b1 = await evalJs(`window.bgNotifyGateInfo('[图片]', 'data:image/png;base64,CCCCCCCCCCCCCCCCCCCC')`);
   ok('不同图片 → dupInChat=false（不再被 [附件] 归一化误杀）', d5b1 && d5b1.dupInChat === false, d5b1);
-  // 同一张图（同采样指纹）再次出现 → 仍可去重（防重复弹）
+  // 与上一条同图（倒数第二条）探针 → 命中
   const d5b2 = await evalJs(`window.bgNotifyGateInfo('[图片]', 'data:image/png;base64,AAAAAAAAAAAAAAAAAAAA')`);
-  ok('同一图片（同采样）→ dupInChat=true（仍可去重）', d5b2 && d5b2.dupInChat === true, d5b2);
+  ok('同图再次到达（上一条同图在记录中）→ dupInChat=true（仍可去重）', d5b2 && d5b2.dupInChat === true, d5b2);
+  console.log('\n== T7 真实到达链路：隐藏态新消息不被自查判重 ==');
+  // 模拟 bgNotifyCheck 在 hidden 时收到刚入库的聊天消息（自查判重会吞通知的复现场景）
+  // 用未入库的探针文本（模拟"刚刚到达"），recentChatDup 应放行（不自查）
+  const t7pre = await evalJs(`window.bgNotifyGateStats ? JSON.stringify(window.bgNotifyGateStats()) : null`);
+  const t7 = await evalJs(`window.bgNotifyGateInfo('全新到聊天记录的消息XYZ')`);
+  ok('新消息探针 dupInChat=false（不被自己吞掉）', t7 && t7.dupInChat === false, t7);
+  const t7b = await evalJs(`window.bgNotifyGateStats && typeof window.bgNotifyGateStats === 'function'`);
+  ok('bgNotifyGateStats 拦截统计可用', t7b === true);
 
-  console.log('\n== T6 接线完好 & 无 JS 异常 ==');
-  const t6 = await evalJs(`typeof window.bgNotifyCheck === 'function' && typeof window.showDeskPopup === 'function'`);
-  ok('bgNotifyCheck/showDeskPopup 均在', t6 === true);
+  console.log('\n== T8 接线完好 & 无 JS 异常 ==');
+  const t8 = await evalJs(`typeof window.bgNotifyCheck === 'function' && typeof window.showDeskPopup === 'function'`);
+  ok('bgNotifyCheck/showDeskPopup 均在', t8 === true);
   ok('加载至今无未捕获异常', jsErrors.length === 0, jsErrors.slice(0, 3));
 
 } finally {

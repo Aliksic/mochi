@@ -422,17 +422,18 @@
     const m = ensureModal();
     m.innerHTML = '';
     const box = el('div');
-    box.style.cssText = 'width:min(92vw,420px);max-height:80vh;display:flex;flex-direction:column;background:#fff;border-radius:16px;padding:18px;box-shadow:0 8px 30px rgba(0,0,0,.2)';
-    box.appendChild(el('div', '', '<div style="font-size:16px;font-weight:600;margin-bottom:4px">联系人 / 桌面</div><div style="font-size:12px;color:#888;margin-bottom:12px">每个联系人数据独立；仅朋友圈互通<br>「称呼」可设置消息里 TA 的性别叫法（他 / 她 / 不设置）</div>'));
+    // v3.11.x：颜色改主题变量（内联硬编码浅色在深色模式下白底白字不可见）
+    box.style.cssText = 'width:min(92vw,420px);max-height:80vh;display:flex;flex-direction:column;background:var(--card-bg,#fff);color:var(--ink,#111);border-radius:16px;padding:18px;box-shadow:0 8px 30px rgba(0,0,0,.2)';
+    box.appendChild(el('div', '', '<div style="font-size:16px;font-weight:600;margin-bottom:4px">联系人 / 桌面</div><div style="font-size:12px;color:var(--muted,#888);margin-bottom:12px">每个联系人数据独立；仅朋友圈互通<br>「称呼」可设置消息里 TA 的性别叫法（他 / 她 / 不设置）</div>'));
     const list = el('div'); list.style.cssText = 'display:flex;flex-direction:column;gap:8px;margin-bottom:12px;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;flex:1;min-height:0';
     getContacts().forEach(c => {
       const row = el('div');
-      row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px;border:1px solid #eee;border-radius:10px';
+      row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px;border:1px solid var(--card-border,#eee);border-radius:10px';
       const dot = el('div');
-      dot.style.cssText = 'width:10px;height:10px;border-radius:50%;background:' + (c.id === window.__activeCid ? '#111' : '#ccc');
+      dot.style.cssText = 'width:10px;height:10px;border-radius:50%;background:' + (c.id === window.__activeCid ? 'var(--ink,#111)' : '#ccc');
       const gw = window.taWordFor(c.id);
       const gLabel = gw === 'TA' ? '' : (' · 称呼：' + gw);
-      const nm = el('div', '', '<div style="font-size:14px;font-weight:500">' + (c.name || c.id) + '</div><div style="font-size:11px;color:#999">' + (c.id === window.__activeCid ? '当前桌面' : '点击切换') + gLabel + '</div>');
+      const nm = el('div', '', '<div style="font-size:14px;font-weight:500">' + (c.name || c.id) + '</div><div style="font-size:11px;color:var(--muted,#999)">' + (c.id === window.__activeCid ? '当前桌面' : '点击切换') + gLabel + '</div>');
       nm.style.flex = '1';
       row.appendChild(dot); row.appendChild(nm);
       if (c.id !== window.__activeCid) {
@@ -441,14 +442,14 @@
       }
       const acts = el('div'); acts.style.cssText = 'display:flex;gap:6px';
       const gen = el('button', '', '称呼');
-      gen.style.cssText = 'font-size:12px;padding:4px 8px;border:1px solid #ddd;border-radius:8px;background:#fafafa';
+      gen.style.cssText = 'font-size:12px;padding:4px 8px;border:1px solid var(--pill-border,#ddd);border-radius:8px;background:var(--static-bg,#fafafa);color:var(--ink,#111)';
       gen.addEventListener('click', (e) => {
         e.stopPropagation();
         openGenderModal(c, m);
       });
       acts.appendChild(gen);
       const ren = el('button', '', '改名');
-      ren.style.cssText = 'font-size:12px;padding:4px 8px;border:1px solid #ddd;border-radius:8px;background:#fafafa';
+      ren.style.cssText = 'font-size:12px;padding:4px 8px;border:1px solid var(--pill-border,#ddd);border-radius:8px;background:var(--static-bg,#fafafa);color:var(--ink,#111)';
       ren.addEventListener('click', (e) => {
         e.stopPropagation();
         if (window.openModal) window.openModal('改名', c.name || '', (v) => { if (v && v.trim()) { window.renameContact(c.id, v.trim()); window.openContactManager(); } });
@@ -456,7 +457,7 @@
       acts.appendChild(ren);
       if (c.id !== 'default') {
         const del = el('button', '', '删除');
-        del.style.cssText = 'font-size:12px;padding:4px 8px;border:1px solid #f3c0c0;border-radius:8px;background:#fff5f5;color:#a32';
+        del.style.cssText = 'font-size:12px;padding:4px 8px;border:1px solid rgba(163,45,45,.35);border-radius:8px;background:var(--danger-soft,#fff5f5);color:var(--danger-ink,#a32d2d)';
         del.addEventListener('click', (e) => { e.stopPropagation(); confirmDelete(c, m); });
         acts.appendChild(del);
       }
@@ -465,7 +466,7 @@
     });
     box.appendChild(list);
     const add = el('button', '', '+ 添加联系人 / 桌面');
-    add.style.cssText = 'width:100%;padding:12px;border:none;border-radius:10px;background:#111;color:#fff;font-size:14px;font-weight:600';
+    add.style.cssText = 'width:100%;padding:12px;border:none;border-radius:10px;background:var(--ink,#111);color:var(--bg-b,#fff);font-size:14px;font-weight:600';
     add.addEventListener('click', () => {
       if (window.openModal) window.openModal('新建联系人', '', (v) => {
         const name = (v || '').trim(); if (!name) return;
@@ -474,7 +475,7 @@
     });
     box.appendChild(add);
     const close = el('button', '', '关闭');
-    close.style.cssText = 'width:100%;margin-top:8px;padding:10px;border:1px solid #eee;border-radius:10px;background:#fafafa';
+    close.style.cssText = 'width:100%;margin-top:8px;padding:10px;border:1px solid var(--card-border,#eee);border-radius:10px;background:var(--btn-cancel-bg,#fafafa);color:var(--btn-cancel-ink,#555)';
     close.addEventListener('click', () => { hideContactModal(m); });
     box.appendChild(close);
     m.appendChild(box);
@@ -506,14 +507,14 @@
     const m2 = ensureModal();
     m2.innerHTML = '';
     const box = el('div');
-    box.style.cssText = 'width:min(88vw,340px);background:#fff;border-radius:16px;padding:18px;text-align:center';
-    box.appendChild(el('div', '', '<div style="font-size:15px;font-weight:600;margin-bottom:6px">删除「' + (c.name || c.id) + '」？</div><div style="font-size:12px;color:#a32;margin-bottom:14px">该联系人的全部数据将清空，且不可恢复</div>'));
+    box.style.cssText = 'width:min(88vw,340px);background:var(--card-bg,#fff);color:var(--ink,#111);border-radius:16px;padding:18px;text-align:center';
+    box.appendChild(el('div', '', '<div style="font-size:15px;font-weight:600;margin-bottom:6px">删除「' + (c.name || c.id) + '」？</div><div style="font-size:12px;color:var(--danger-ink,#a32d2d);margin-bottom:14px">该联系人的全部数据将清空，且不可恢复</div>'));
     const row = el('div'); row.style.cssText = 'display:flex;gap:10px';
     const ok = el('button', '', '删除');
     ok.style.cssText = 'flex:1;padding:10px;border:none;border-radius:10px;background:#a32d2d;color:#fff;font-weight:600';
     ok.addEventListener('click', () => { window.deleteContact(c.id); hideContactModal(m2); hideContactModal(m); window.openContactManager(); });
     const no = el('button', '', '取消');
-    no.style.cssText = 'flex:1;padding:10px;border:1px solid #eee;border-radius:10px;background:#fafafa';
+    no.style.cssText = 'flex:1;padding:10px;border:1px solid var(--card-border,#eee);border-radius:10px;background:var(--btn-cancel-bg,#fafafa);color:var(--btn-cancel-ink,#555)';
     no.addEventListener('click', () => { hideContactModal(m2); });
     row.appendChild(ok); row.appendChild(no); box.appendChild(row);
     m2.appendChild(box); showContactModal(m2);

@@ -885,6 +885,15 @@
     clearTimeout(t._timer); t._timer = setTimeout(function () { t.className = 'cc-toast'; }, 2000);
   }
 
+  // v3.12.x：浮层挂到 .phone 内（原挂 body）——配合 .period-day-pop fixed→absolute：
+  // 手机端键盘弹出时 mobile-adapt 收缩 .phone 停靠键盘上方，挂 body 的 fixed 浮层
+  // 仍相对整屏定位 → 底部面板沉到键盘后面（备注/体温/关心语输入和保存按钮被盖住）。
+  // 挂 .phone 后 absolute 锚定手机框，面板始终停靠在可视区底部。
+  function appendPop(pop) {
+    var host = document.querySelector('.phone');
+    (host || document.body).appendChild(pop);
+  }
+
   // v3.10.x：安卓 ce-box 转换器读值兜底——mobile-adapt.js 把 input/textarea 转成
   // contenteditable div（.ce-box）且插在原输入框**前面**、继承同名 class，浮层里
   // querySelector('.dp-note') 这类按 class 选会先命中 div（无 value 属性），备注
@@ -938,7 +947,7 @@
         '<div class="dp-section"><div class="dp-label">备注</div><textarea class="dp-note" placeholder="今天的感觉…">' + (info.note || '') + '</textarea></div>' +
         '<div class="dp-actions"><button class="dp-del">删除</button><button class="dp-save period-btn primary">保存</button></div>' +
       '</div>';
-    document.body.appendChild(pop);
+    appendPop(pop);
     document.body.classList.add('scroll-lock');
     pop.querySelector('.dp-mask').addEventListener('click', closeDayPop);
     pop.querySelector('.dp-close').addEventListener('click', closeDayPop);
@@ -1151,7 +1160,7 @@
         '<div class="dp-section"><div class="dp-label">已有关心语（点开关启停，×删除）</div><div class="care-list">' + renderList() + '</div></div>' +
         '<div class="dp-tip">经期触发时从开启的关心语里随机抽一条推到聊天。关闭的不会被抽中。</div>' +
       '</div>';
-    document.body.appendChild(pop);
+    appendPop(pop);
     document.body.classList.add('scroll-lock');
     pop.querySelector('.dp-mask').addEventListener('click', closeCarePop);
     pop.querySelector('.dp-close').addEventListener('click', closeCarePop);
@@ -1250,7 +1259,7 @@
         '<div class="dp-section"><div class="dp-label">记录天数</div><div class="dp-val">' + recordDays + ' 天</div></div>' +
         '<div class="dp-actions"><button class="dp-save period-btn primary" id="period-report-share">分享到朋友圈</button></div>' +
       '</div>';
-    document.body.appendChild(pop);
+    appendPop(pop);
     document.body.classList.add('scroll-lock');
     pop.querySelector('.dp-mask').addEventListener('click', closeReportPop);
     pop.querySelector('.dp-close').addEventListener('click', closeReportPop);
@@ -1299,7 +1308,7 @@
         '<div class="dp-tip">周期长度=两次经期开始间隔；经期天数=每次持续天数；黄体期=排卵后到下次经期的天数。每个人不同，按自己情况设。</div>' +
         '<div class="dp-actions"><button class="dp-save period-btn primary">保存</button></div>' +
       '</div>';
-    document.body.appendChild(pop);
+    appendPop(pop);
     document.body.classList.add('scroll-lock');
     pop.querySelector('.dp-mask').addEventListener('click', closeSettingsPop);
     pop.querySelector('.dp-close').addEventListener('click', closeSettingsPop);
@@ -1363,7 +1372,7 @@
         '<div class="dp-tip">提醒在打开应用时检查并推送；后台通知需浏览器支持。</div>' +
         '<div class="dp-actions"><button class="dp-save period-btn primary">保存</button></div>' +
       '</div>';
-    document.body.appendChild(pop);
+    appendPop(pop);
     document.body.classList.add('scroll-lock');
     pop.querySelector('.dp-mask').addEventListener('click', closeNotifyPop);
     pop.querySelector('.dp-close').addEventListener('click', closeNotifyPop);

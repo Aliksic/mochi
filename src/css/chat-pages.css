@@ -770,11 +770,16 @@
 .period-grid .pc-cell .dm-flow.f-heavy { background:#c43c6e; }
 .period-grid .pc-cell .dm-sym { left:7px; background:#f5a623; }
 .period-grid .pc-cell .dm-note { right:2px; background:#7ec69e; }
-/* 每日详情浮层（复用于通知设置） */
-.period-day-pop { position:fixed; inset:0; z-index:9999; }
+/* 每日经期浮层（方案4，通用通知弹窗）
+   v3.12.x：fixed → absolute——浮层改挂到 .phone 内（period.js），随手机端键盘停靠：
+   浮层含体温/提醒小时/关心语输入和备注 textarea，键盘弹出时 .phone 收缩，fixed 的
+   底部面板会沉到键盘后面（正在输入的内容和保存按钮被盖住）。absolute 锚定 .phone
+   后底部面板始终停靠在可视区底部；dp-sheet 高度加 calc(100%) 封顶，键盘弹出后的
+   小可视区里面板内部可滚（80vh 在收缩后可能超出可视区）。 */
+.period-day-pop { position:absolute; inset:0; z-index:9999; }
 .period-day-pop .dp-mask { position:absolute; inset:0; background:rgba(0,0,0,.4); }
 .period-day-pop .dp-sheet {
-  position:absolute; left:0; right:0; bottom:0; max-height:80vh; overflow-y:auto;
+  position:absolute; left:0; right:0; bottom:0; max-height:min(80vh, calc(100% - 12px)); overflow-y:auto;
   background:#fff; border-radius:18px 18px 0 0; padding:16px 18px 24px;
   box-shadow:0 -4px 24px rgba(0,0,0,.12); animation:dpSlideUp .22s ease;
 }
@@ -1632,9 +1637,14 @@
 .ta-h-q { color:var(--ink); }
 .ta-h-a { color:var(--muted); margin-top:2px; }
 
-/* 选择题弹层 */
+/* 选择题弹层
+   v3.12.x：fixed → absolute——手机端键盘弹出时 mobile-adapt 收缩 .phone 停靠键盘上方，
+   fixed 仍相对整屏布局视口居中 → 面板下半截沉到键盘后面（openTCPanel 子面板含文字
+   输入：气泡大小自定义/字体名等，输入时看不到内容）。改 absolute 锚定 .phone（模板内
+   本就在 .phone 里），随 .phone 停靠；.tc-panel 的 calc(100% - 24px) 项保证小可视区
+   内面板可滚。同层 cc-export-mask/cc-scope-mask 复用本类，无输入框，行为不变。 */
 .tc-mask {
-  position:fixed; inset:0; z-index:85;
+  position:absolute; inset:0; z-index:85;
   background:rgba(0,0,0,.35);
   display:flex; align-items:center; justify-content:center;
 }
@@ -1722,9 +1732,12 @@
 .tc-li-time { font-size:11px; color:var(--muted); margin-top:6px; }
 .tc-known { font-size:10px; color:#4e7a54; border:1px solid #bcd8c2; border-radius:6px; padding:0 5px; margin-left:4px; }
 
-/* ===== 通用回答弹层（TA的好奇 / TA的吐槽） ===== */
+/* ===== 通用回答弹层（TA的好奇 / TA的吐槽） =====
+   v3.12.x：fixed → absolute——同 .tc-mask/.modal-mask：手机端键盘弹出时 .phone 收缩
+   停靠键盘上方，fixed 面板仍按整屏居中 → 回怼输入框（#qa-input）沉到键盘后面看不见。
+   改 absolute 锚定 .phone（模板内本就在 .phone 里），面板始终在可视区内居中。 */
 .qa-mask {
-  position:fixed; inset:0; z-index:88;
+  position:absolute; inset:0; z-index:88;
   background:rgba(0,0,0,.35);
   display:flex; align-items:center; justify-content:center;
 }
@@ -2665,6 +2678,22 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + env(safe-area-inset-bott
 .eat-change { background:rgba(0,0,0,.08); color:var(--ink,#333); }
 .eat-send { background:#111; color:#fff; }
 .eat-add { display:block; margin:0 auto; font-size:13px; color:var(--ink-soft,#888); background:none; border:1px dashed rgba(0,0,0,.15); border-radius:10px; padding:8px 14px; }
+/* ---- 吃什么 · 转盘 ---- */
+.eat-wheel-wrap { position:relative; width:240px; height:240px; margin:0 auto 16px; display:flex; align-items:center; justify-content:center; }
+.eat-wheel { width:100%; height:100%; border-radius:50%; box-shadow:0 4px 20px rgba(0,0,0,.1); display:block; }
+.eat-pointer { position:absolute; top:-10px; left:50%; transform:translateX(-50%); font-size:24px; color:#e8533d; z-index:2; line-height:1; text-shadow:0 2px 4px rgba(0,0,0,.2); }
+.eat-spin, .eat-askta { font-size:14px; border:none; border-radius:20px; padding:10px 20px; }
+.eat-spin { background:#e8533d; color:#fff; }
+.eat-askta { background:rgba(232,135,61,.14); color:#e8873d; }
+/* ---- 吃什么 · 菜单编辑 ---- */
+.eat-mgr { display:flex; gap:10px; justify-content:center; margin-top:10px; }
+.eat-menu-btn { font-size:13px; color:var(--ink-soft,#888); background:none; border:1px dashed rgba(0,0,0,.15); border-radius:10px; padding:8px 14px; }
+.eat-menu-panel { margin-top:12px; padding:10px; background:rgba(255,255,255,.4); border-radius:12px; }
+.eat-menu-ta { display:block; width:100%; box-sizing:border-box; min-height:120px; padding:10px 12px; font-size:14px; font-family:inherit; border:1px solid rgba(0,0,0,.12); border-radius:10px; resize:vertical; background:rgba(255,255,255,.7); color:var(--ink,#333); line-height:1.7; }
+.eat-menu-acts { display:flex; gap:10px; justify-content:center; margin-top:10px; }
+.eat-menu-save, .eat-menu-reset { font-size:13px; border:none; border-radius:14px; padding:7px 18px; }
+.eat-menu-save { background:#111; color:#fff; }
+.eat-menu-reset { background:rgba(0,0,0,.08); color:var(--ink-soft,#888); }
 
 /* ===== 番茄钟 页（桌面第三页动态注入） ===== */
 .pomo-body { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; box-sizing:border-box; padding:14px 14px 40px; }
@@ -2796,3 +2825,24 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + env(safe-area-inset-bott
 @keyframes ta-chime-pulse { 0%,100%{opacity:.5; transform:scale(1);} 50%{opacity:1; transform:scale(1.25);} }
 .ta-chime-text { line-height:1.4; }
 .ta-chime-miss { display:block; font-size:11px; color:var(--ink-soft,#aaa); margin-top:2px; font-weight:400; }
+/* v3.13.x：限时可点击浮字（摸鱼「抓包 TA」）——展示期开启点击，带呼吸描边 */
+.ta-chime-note.grab { pointer-events:auto; cursor:pointer; border-color:rgba(232,83,61,.55); box-shadow:0 6px 22px rgba(232,83,61,.22); animation:ta-chime-grab 1.2s ease-in-out infinite; }
+@keyframes ta-chime-grab { 0%,100%{ transform:translate(-50%,0) scale(1);} 50%{ transform:translate(-50%,0) scale(1.03);} }
+.ta-chime-grab-tip { flex-shrink:0; font-size:11px; font-weight:700; color:#fff; background:#e8533d; padding:3px 8px; border-radius:99px; }
+
+/* ===== v3.13.x：日历页·摸鱼热力图（近一年 GitHub 贡献格样式） ===== */
+.fh-range { font-size:10px; color:var(--ink-soft,#bbb); }
+.fh-scroll { overflow-x:auto; -webkit-overflow-scrolling:touch; padding:2px 0 4px; }
+.fh-grid-wrap { display:grid; grid-template-rows:repeat(7,11px); grid-auto-flow:column; grid-auto-columns:11px; gap:3px; width:max-content; }
+.fh-cell { display:block; border-radius:2.5px; background:rgba(17,17,17,.07); }
+.fh-cell.fut { opacity:.35; }
+.fh-cell.l1 { background:#f3c1ba; }
+.fh-cell.l2 { background:#ea968c; }
+.fh-cell.l3 { background:#dd6a5e; }
+.fh-cell.l4 { background:#b23a30; }
+.fh-legend { margin-top:8px; font-size:10px; color:var(--ink-soft,#999); display:flex; align-items:center; gap:3px; }
+.fh-legend .fh-cell { width:10px; height:10px; }
+.fh-tip { margin-left:auto; color:var(--ink-soft,#bbb); }
+
+/* ===== v3.13.x：主页记录·摸鱼连击纪录行 ===== */
+.fish-combo-line { font-size:11px; color:#b7791f; padding:6px 2px 2px; letter-spacing:.3px; }

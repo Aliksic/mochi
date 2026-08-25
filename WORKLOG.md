@@ -4,6 +4,128 @@
 
 ## 规则
 
+### 2026-08-25（用户反馈：①字卡库没有【TA的邀请】库 ②聊天更多功能→TA的提问缺「邀请」入口）
+- [本会话·完成]（**已改 src，未自己构建**；并发构建会话 13:56 已把本会话当时已保存改动扫入 index.html（已核对产物：page-ta-invite / triggerTaInviteNow / avatarBatchCache 单声明 全部在），其后仅剩 verify 脚本与 WORKLOG 改动 → 提交前请构建者按需重 build 收口）：新增 `src/js/ta-invite.js`（新文件）+ `src/js/chat.js`（tryActiveInvite 改造 + triggerTaInviteNow/sendTaInvite + **avatarBatchCache TDZ 修复见下**）+ `src/template.html`（字卡库双入口 li-ta-invite(-mine) + 管理页 page-ta-invite + more-grid-ask 邀请按钮 + 回复设置→其他/license 文案）+ `src/js/tabs.js` FULL_PAGES 加 page-ta-invite + `build.mjs` jsFiles 插入 'ta-invite.js'（**AI-B 域机械一行，知悉**）+ `tools/verify-ta-invite.mjs`（新专项 30/30）。
+  - **① TA的邀请字卡库**：10 张预设入库（4 猜拳 + 3 Pong + 3 贪吃蛇；前三条与原硬编码文案一致），逐句开关/不可删/「使用系统预设」总开关；自定义话术（选类型）、分组、批量导入（带类型下拉）；管理页「让TA现在邀请一次」；跨分类搜索注册；IDB 权威恢复；键 `ta-invite` 随联系人桌面隔离。
+  - **② 更多功能→TA的提问→【邀请】**：bindTaNow 接 more-invite-now → window.triggerTaInviteNow（不看开关概率，从全部启用池抽一张，立即发邀请消息+确认弹窗）。自动链路 tryActiveInvite 保持原门控语义：先掷猜拳门 ai-rps-en/prob 再掷游戏门 ai-game-en/prob，命中后从对应类型启用池抽话术（taInviteDraw）；库 API 缺失回退旧硬编码文案。同意开对应半框、拒绝发婉拒消息，流程不变。
+  - **⚠️ 顺手修了并发会话引入的 chat.js 启动崩溃（重要）**：「批量渲染头像缓存」的 `let avatarBatchCache` 声明在 :1254，而 `fillAvatar`（:589）启动渲染即调用 → let TDZ 抛 "Cannot access before initialization"，per-file try/catch 吞掉后 **chat.js 自消息渲染段起整段失效**（主动发送/邀请/回应等全失联）。修复=声明上移至 fillAvatar 之前（现 :592）。该崩溃存在于工作区约一小时，13:15 前后的构建可能受影响——**请构建者知悉并确认线上版本为 13:56 之后**。
+  - 验证：verify-ta-invite 30/30（入库/导航/FULL_PAGES/批量导入/kind 归类/删除/rps 门优先/游戏门/双关 null/useDefault 只抽自定义/手动触发发消息+同意拒绝弹窗+婉拒/面板按钮触发/搜索/计数/IDB/静态断言/无异常）；回归：布局 10/10 + interact-popup-stale 10/10 + scroll-lock-ghost 9/9 + ta-checkin 30/30。真机确认点：字卡库出现「TA的邀请」「TA的邀请·我的添加」；聊天更多功能→TA的提问第 5 格「邀请」点了就弹同意/拒绝；关掉某条预设后不再抽到它；聊天功能整体正常（TDZ 修复验证：进聊天有消息渲染、TA 会主动说话）。
+
+### 2026-08-25（用户要求：检查深色模式全部功能颜色显示）
+- [本会话·完成]（**已改 src + 已构建（13:24, sw: mochi-mt8802tl）+ 新专项 tools/dark-audit.mjs 101 步全页面扫描（余 1 条 emoji 误报）+ verify-dark-mode 28/28 + 布局 verify 10/10；未提交**）：`src/js/contacts.js`（AI-B 域）+ `src/css/base.css` + `src/css/dark.css` + `src/css/market.css`（各少量）+ 新工具 `tools/dark-audit.mjs`/`dark-audit-fn.js`（无头 Chrome 逐页 computedStyle 对比度/白底扫描 + 截图，产物 tools/dark-audit/*.png + dark-audit-report.json）。
+  - **审计方式**：预置深色模式 → 动态点击全部 25 个桌面 app + 直开 40 个 page + 设置链真实导航 + 30 个聊天浮层/半框/body 级弹窗强制显示 → 每步全元素扫描（近纯白背景块 + 文字/有效背景 WCAG 对比度 <2.6）+ 截图目检。
+  - **修复 6 处**：① `contacts.js` 联系人管理/删除确认弹窗内联硬编码浅色（深色下白底白字：标题/称呼/改名/关闭全不可见）→ 改主题变量 `var(--card-bg/--card-border/--static-bg/--pill-border/--btn-cancel-*/--muted/--ink/--bg-b)`，浅色回退值=原值零变化；② `base.css` 新增 `--danger-soft/--danger-ink` 两档（删除按钮/确认弹窗）；③ `dark.css` `.cc-tab.sel .cc-tab-n` 徽标白字白底（选中 tab 深色下是浅底）→ `rgba(17,17,17,.12)` 底 + `var(--btn-ink)` 字；④ `dark.css` `.mail-tag.new` 白字改跟 `var(--btn-ink)`（原硬编码 #fff 在默认 accent 下白底白字，「新来信」标签隐形）；⑤ `dark.css` `.poke-big`（批量发送「发送全部」等）119 行 dark-hover 底与 490 行 #111 深字相撞成深底深字（ratio 1.34）→ 统一 `var(--btn-bg)/var(--btn-ink)` 并从 490 行组移除；⑥ `market.css` 选中分类名 `#4a3d6b` 深紫黑底 ratio 2.0 → 深色下 `#b3a6e0`。另 `dark.css` `.ver-credit` #555→#777（页脚版权黑底看不清）。
+  - **判定为刻意设计的浅色元素（不改）**：发送类按钮/选中 tab/开关圆点/今日日历格/占卜抽牌钮等 `#f0f0f0` 强调底（均配深字对比正常）；贪吃蛇画布白底（游戏棋盘）；市集分类圆底 pastel 色（内容是 emoji 彩色字形，审计剩余 1 条 low-contrast 即此误报）。
+  - ⚠️ **回归说明**：verify-ta-gender 19/22——3 失败均为 `window.chatAddIn is not a function`（**并行会话进行中的 chat.js 被扫入 13:24 构建致其初始化中途异常，与本会话无关**；本会话相关的 T1-T4 联系人弹窗 UI/称呼链路全过）。chat.js 会话完成后请重新 build 收口并重跑 verify-ta-gender。
+  - ⚠️ **并发扫入提醒（构建者必读）**：13:24 构建扫入工作区 38 个文件的已保存改动（多会话并行进行中：memo/kb-overlay 等见上两条）；若各会话其后仍有 src 改动，提交前请统一重新 build 收口。
+  - 真机确认点：深色模式下 设置→联系人/桌面 弹窗应为深色卡片（标题/称呼/改名/关闭清晰可读）；聊天批量发送面板「发送全部」浅底深字；字卡库选中 tab 计数徽标可读；信箱「新来信」标签可见；心意市集选中分类名亮紫可读；页脚版权微亮可辨。
+
+### 2026-08-25（用户反馈：手机端打开备忘录，里面功能 UI 和字「飞出页面」——要求重新设计）
+- [AI-B·完成]（**已改 src + 已构建（13:08, sw: mochi-mt87fam3）+ 回归 verify-memo 20/20 + verify-toast-cross-module 5/5 + 布局 verify 10/10；未提交**）：`src/js/memo-app.js` + `src/css/memo.css` + `src/css/dark.css`（memo 段 2 行）。备忘录文件按 WORKLOG 惯例归 AI-A，**跨域改动请知悉**。
+  - **根因一（字飞出页面）**：memo-app.js 的 toast 创建的是 `id="memo-app-toast"`，而轻提示样式只定义在 `#cc-toast`（chat-pages.css，ID 选择器）——备忘录 toast 完全无样式，以裸文本 append 在 body 末尾（.phone 之外），实测渲染成**页面右缘外竖排大字**（390px 视口下 x=382 仅 16px 宽逐字换行），即用户看到的「字飞出页面」。修复：改用全站共享 `#cc-toast`（与 chat.js 等二十余模块同款），toast 恢复为底部居中黑色胶囊。
+  - **根因二（UI 飞出/突兀）**：`.memo-send-btn`（完成发到聊天：开/关）从未写过任何样式，渲染成系统默认灰边按钮。修复：memo.css 补胶囊描边样式（与「清已完成」同族）；dark.css memo 段补深色两行。
+  - 排查过程确认：备忘录编辑/截止日期/删除弹窗（openModal）与页面本体布局在手机端均正常，无需重排；截图工具 shot-memo.mjs 重跑，memo-shot-*.jpg 参考图已随新 UI 更新。
+  - 验证：无头 390×844 实测 toast `position:fixed` 底部居中（x=138/w=114）且文案正确、sendBtn 命中新样式；verify-memo 20/20 + verify-toast-cross-module 5/5 + 布局 verify 10/10。真机确认点：备忘录里点「添加」空内容/删除/设截止等操作，提示应为屏幕下方黑色小胶囊，不再出现页面外飞字；底部「完成发到聊天」开关为浅色胶囊按钮（深色模式为深底）。
+  - ⚠️ **并发提示（构建者必读）**：13:08 构建扫入了当时工作区全部已保存改动（base/chat-pages/dark/home/market.css、bg-keep/calendar/chat/ck-question/contacts/garden/mail/memo-app/mobile-adapt/p2-features/period/personalize/records/reply-settings/ta-ask/tabs.js 等——含多个并行会话成果）；若各会话其后仍有 src 改动，提交前请重新 build 收口。
+
+### 2026-08-25（用户反馈：手机端首次点击聊天输入栏打字，输入法整行挡住输入栏、不弹到键盘上方）
+- [本会话·完成]（**已改 src + 已构建（13:15, sw: mochi-mt87p4b6）+ 新专项 verify-kb-overlay-kernel 10/10 + 回归 verify-android-kb 3/3 + verify-kb-dock 12 pass + verify-kb-overlays 8/8 + 布局 verify 10/10；未提交**）：仅 `src/js/mobile-adapt.js`（AI-B 域；与「滚动锁幽灵浮层」会话同文件并发改动已共存于同一产物，双方断言互不影响）+ `tools/verify-kb-overlay-kernel.mjs`（新专项）。
+  - **根因（该症状第四轮补缺）**：现有键盘适配（安卓 syncAndroidKb / iOS syncIosKb + 各自 250ms 轮询）全靠「visualViewport.height 收缩」检测键盘。纯悬浮键盘内核（腾讯 X5、旧版夸克、部分国产 ROM——interactive-widget 不生效且 vv 高度也不变）信号永远不来 → `.phone` 永不收缩 → 输入栏被输入法整个盖住不自愈。97bf02f 红米 K80 那次是 overlays-content 元数据问题，本次是内核本身不上报：同症不同根因。另补首次聚焦「失焦竞态提前停轮询表」小缺口。
+  - **修复：二线兜底「悬浮键盘推定停靠」（安卓 `_aProvCheck` / iOS `_iProvCheck` 镜像）**——全部保守条件命中才推定键盘弹出并把 `.phone` 收缩到无键盘基准的 58%（主流中文输入法连工具栏约占屏 35%~45%，58% 可视区必在其上方）：①用户手势聚焦文本框（touchstart 后 1.5s 内的 focusin 才武装——程序化自动聚焦安卓上通常不弹软键盘）；②聚焦持续 >900ms 宽限（正常内核几百 ms 内 vv 必收缩走原路径，绝不进兜底）；③期间 vv.height 与 window.innerHeight 都纹丝不动（≤2px）；④近 30s 无硬件键盘真实按键（keyCode 229 组合键不算）。恢复：失焦（focusout 后 250/900ms 复查）/ 真实 vv resize 到达即原机制接管 / 轮询停表前清理；focusin 另挂 950/1700ms 独立复查拍，轮询表被竞态停掉也能完成停靠。
+  - **验证**：verify-kb-overlay-kernel.mjs 10/10——无头环境天然=悬浮键盘模拟场（聚焦不引起视口变化），CDP Input.dispatchTouchEvent 走真实触摸管线武装手势条件：A1 保底停靠 490px 且输入栏 bottom=490 弹到典型 IME 上沿 / A2 失焦复原 / B 正常内核 vv→400px 不被兜底覆盖且稳态无振荡 / C 迟到 vv 信号原机制接管 / D 程序化聚焦不误触 / E 硬件键盘抑制。真机确认点（重点 X5 微信内置/夸克/Edge 手机版）：首次点聊天输入栏，输入栏应升到键盘上方（约屏高中部偏下），收起键盘/发送后恢复满高；Chrome/Safari 行为零变化（宽限期设计保证正常路径不受影响）。
+  - ⚠️ **构建扫入说明（提交者必读）**：本会话 13:15 构建与「滚动锁幽灵浮层」会话 13:15 构建（mt87ov5m）同分钟先后执行，磁盘最终产物（mt87p4b6 之后若其再建以其为准）经核对**同时包含**双方 mobile-adapt.js 改动（`_aProvCheck/_iProvCheck` 与 `scrollLockInfo` 均在 index.html）；此外产物还扫入 dark.css/base.css/home.css/memo.css/garden.js/bg-keep.js/contacts.js/memo-app.js/reply-settings.js/tabs.js/chat 等 37 个并行会话已保存改动——提交前请各方确认保存完整，若其后仍有 src 改动请重新 build 收口。
+
+### 2026-08-25（用户反馈：字卡库无法滑动查看上下分组、卡顿——滚动锁「幽灵浮层」死锁）
+- [本会话·完成]（**已改 src + 已构建（13:15, sw: mochi-mt87ov5m）+ 新专项 verify-scroll-lock-ghost 9/9 + 布局 verify 10/10 + verify-interact-popup-stale 10/10 + verify-ta-checkin 30/30**）：仅 `src/js/mobile-adapt.js`（**AI-B 域跨域改动请知悉**，沿用今日 v3.12.x 浮层清点同款先例）+ `tools/verify-scroll-lock-ghost.mjs`（新专项）+ 诊断工具 `tools/diag-chatcard-scroll.mjs` / `tools/diag-float-dump.mjs` / `tools/diag-scroll-lock-flow.mjs`（全流程扫查用，可留可删）。
+  - **根因（滚动锁死锁类 bug）**：`applyLock` 只看浮层 `hidden` 属性。在聊天页打开「更多功能面板 / 表情包 / 拍一拍」等底半框后**不关闭直接离开聊天页**（顶栏返回回桌面、或经设置进字卡库——所有这些导航都会整页 `hidden=true`），面板本体仍 `hidden=false` 但随父页面 `display:none` 变成零渲染盒 → 被判定为「开着」→ `body.scroll-lock` 永久残留；v3.6.x 的触摸兜底每次触摸都重跑同一判定**重新确认锁** → 死锁。表现：字卡库等所有 `.page` 页面完全滑不动（反复滑=卡顿感），只能杀进程。
+  - **修复（mobile-adapt.js）**：① 判定改视觉可见口径 `floatIsOpen = !hidden && getClientRects().length>0`（藏在隐藏页里的面板不再维持锁）；② period.js 手动锁弹层（#period-day-pop 等 5 个动态 append/remove、不走 hidden）纳入统一判定，防其他浮层变动时误摘经期弹层的锁；③ 每秒看门狗对账一次（覆盖无触摸场景与漏跑关闭路径后再无 mutation 的残留锁，有可见浮层时同样补挂）；④ 只读探针 `window.scrollLockInfo()` 返回 `{lock, open[]}`（真机再遇「滑不动」可直接看是哪个浮层挂着）。
+  - 验证：verify-scroll-lock-ghost 9/9（开面板上锁/不关直接离开→探针即空+字卡库 scrollTop 恢复生效/表情包同型/period 手动锁不被误摘+移除自愈/正常开关无回归）；diag-scroll-lock-flow 全流程 17 检查点全过；布局 verify 10/10；verify-interact-popup-stale 10/10（构建产物守卫断言不受影响）。真机确认点：聊天里展开「更多功能」面板后不关闭直接返回桌面再进字卡库，页面立即可正常滑动；若再遇滑不动，控制台看 `window.scrollLockInfo().open`。
+  - ⚠️ **13:15 构建扫入并发会话大量已保存改动**（dark.css/base.css/home.css/memo.css/memo 三截图/chat/bg-keep/calendar/contacts/default-cards*/garden/mail/memo-app/p2-features/period/personalize/records/reply-settings/ta-ask 及其工具脚本、另有 dark-audit/kb-overlay/fish-play 等未跟踪 diag 脚本未提交）——其中 dark.css 在本会话构建前 1 分钟仍在保存，**提交前请该会话确认已保存完整并按需重新 build 收口**。
+
+### 2026-08-25（用户要求：全仓手机端适配再稳妥检查——全页扫描 + 浮层清单比对，修复 2 处）
+- [本会话·完成]（**已改 src + 已构建（13:12, sw: mochi-mt87kn4x）+ 布局 verify 10/10 + scroll-lock 4/4 + scroll-lock-ghost 9/9 + android-kb 3/3 + kb-dock 12 + desktop-mode-force 8/8 + dark-mode 28/28 + memo-p3 16/16 全绿；未提交**）：`src/js/tabs.js` + `src/css/base.css`（均 AI-B 域）+ 构建产物。其余为审计只读。
+  - **🐛 修复①（tabs.js FULL_PAGES 漏网）**：`page-feed-friends`（朋友圈好友列表）/`page-fav-settings`（收藏设置）两个静态子页从未进 FULL_PAGES——从朋友圈/收藏夹进入时 syncChrome 把它们当普通 tab 页：底部 tabbar 回弹显示、模拟状态栏回归、`.full` 被摘除，与同型子页（page-mail-write 等）不一致且布局跳变。各补入清单一项即可（无头 Chrome 实测修复前 tabbar flex 显示、修复后 none）。历史遗留非本轮回归。
+  - **🐛 修复②（base.css ce-ghost 尺寸泄漏）**：带内联 `style="width:100%"` 的文本输入框（#ckq-search 等模板 6 处）转 ce-box 后，幽灵锚点保留内联宽度——`.ce-ghost{position:absolute;width:1px}` 的 1px 被内联覆盖，绝对定位下按最近定位祖先解析成整屏宽（实测 390px、右缘出界 30~42px），撑大 gs-scroll 类 overflow-x:auto 容器的 scrollWidth（列表可被拖出空白横移）。修法：width/height 加 `!important` 压过内联（focus 已被代理转发到 ce-box，幽灵纯数据锚点，零功能风险）。修复后实测幽灵 w=1px、容器无多余横移。
+  - **审计结论（无新增问题）**：①alert/confirm/prompt 仍零使用；②position:fixed 浮层全量提取 vs FLOAT_SELECTORS 比对——未纳入滚锁的均为非模态横幅/工具条（cc-manage-bar/music-batch-bar 锁了反而坏管理操作，pwa-install/ver-update-bar/desk-msg/toast/浮字等本就不该锁），无缺口；③p2-features/gift-shop/memo-app 的**动态创建页**不在 tabs.js 初始观察器内，但各自 openPage 有 rAF 手动恢复全屏 chrome 的双保险（源码注释明确该设计），9 个桌面图标入口逐一实开验证 tabbar/状态栏/溢出全部正常；④ce-box 动态输入转换有 body 子树 MutationObserver 兜底（陪伴专注窗 pmp-c-in 等后创建输入框可转）；⑤39 个静态页 × 2 视口（390×844/360×640）逐页打开扫横向溢出/整页缩放：无页面级溢出、zoom 全为 1，此前探针报的"元素出头"均在横向滚动容器内属正常设计。
+  - ⚠️ **并发扫入说明（构建者必读）**：13:12 构建时并行会话正活跃保存（bg-keep/contacts/garden/memo-app/memo.css/reply-settings/period/chat/p2-features/dark.css 及 mobile-adapt 13:10 时点版本被扫入；**mobile-adapt.js 13:12:41 在构建启动后又有保存**，其「滚动锁幽灵浮层死锁」修复最新态可能未进产物）——提交前请重新 `node build.mjs` 收口。我的改动（tabs.js/base.css）已在 src 与本次产物中。
+  - 📌 真机确认点：①朋友圈→好友列表、收藏夹→收藏设置：进入后不再弹出底部 tabbar、顶部状态栏不回归、返回不跳变；②TA的查岗管理等带搜索框的页面：列表不能被左右拖出一截空白。
+
+### 2026-08-25（用户需求：字卡库【系统预设】补齐 花园/同频/伸手/喝水/存钱罐 预设分类）
+- [本会话·完成]（**已改 src + 已构建（13:10, sw: mochi-mt87ipaw）+ verify-ta-gender 扩至 22/22 + 布局 verify 10/10，未提交**）：`src/js/default-cards-data.js` + `src/js/default-cards.js` + `src/js/p2-features.js` + `src/js/garden.js` + `tools/verify-ta-gender.mjs` + 构建产物。
+  - **数据**：DEFAULT_CARD_DATA 新增 5 分类——garden【梦角悄悄话7】、sync【TA 此刻8+没接住回应3】、reach【悄悄话6+触感·温热/微凉/发丝 各3-4】、water【提醒模板4+TA 提醒句式4({m})+他视角温柔提醒5+喝够夸奖4+继续鼓励4】、piggy【存入碎碎念5+取款回应4+取款关心4+塞硬币悄悄话3】。
+  - **字卡库 UI**：JS 注入 5 个 tab（花园/同频/伸手/喝水/存钱罐，card-tabs 横向滚动可容纳）；分组条/搜索/逐张开关全复用。新增泛化取池接口 `window.getLibPool(分类, 分组, 兜底)`，getFishPool/getInteractPool 改为其别名（行为不变）。
+  - **实际抽取联动**（全部过滤 dc-off-<分类>:* 用户已关卡，池缺失回退内置兜底）：同频 TA 此刻与敲三下回应、伸手触感字卡+悄悄话、喝水提醒模板/句式/温柔浮层/夸奖/鼓励、存钱罐存入碎碎念/取款回应/取款关心/塞硬币悄悄话、花园梦角悄悄话日志。
+  - 验证：verify-ta-gender T8 三项（5 tab 注入/池数量断言/喝水 tab 5 组 21 张渲染）+ 全套 22/22；布局 verify 10/10；node --check 全过。真机确认点：字卡库末尾出现 5 个新 tab 可查看；关掉「该喝水了」后喝水提醒不再出这句。
+  - ⚠️ **并发扫入提醒**：13:10 构建在键盘停靠会话（12:50）之后，其 chat-pages.css/period.js 改动已被本次产物包含；若其后续仍有 src 改动请重新 build 收口再统一提交。
+
+### 2026-08-25（用户需求：手机端 bug 稳妥排查——浮层键盘停靠同族问题清查+修复）
+- [本会话·完成]（**已改 src + 已构建（12:50, sw: mochi-mt86snp2）+ 新专项 verify-kb-overlays 8/8 + 回归 verify-period-save 15/15 + verify-period-mark 12/12 + verify-mye-global 11/11 + verify-link-import 23/23 + verify-poke-emoji-tabs 15/15 + verify-data-loss 11/11 + verify-ck-question 18/18 + 布局 verify 10/10，未提交**）：`src/css/chat-pages.css` + `src/js/period.js`（均 AI-A 域）+ 构建产物 + `tools/verify-kb-overlays.mjs`（新专项）。
+  - **排查方法**：承接上一轮「链接导入弹窗沉到输入栏下面」的根因（fixed 弹层不随 mobile-adapt 键盘停靠收缩 .phone），全量清查 26 处 `position:fixed` 弹层 + 全部 `document.body.appendChild` 动态弹层（无头 DOM 探针实测各弹层 parentElement 链）：**判定标准 = 弹层内有行内文字输入（键盘会弹出）才受影响**；无输入（游戏全屏/图片查看器/toast/批量操作条/悬浮球）或输入走 openModal（已修复，如 .mg-mask 管理分组的新建/改名）的均不受影响，不动。
+  - **命中 3 处，全部修复**（均在 .phone 内，z-index 相对次序不变）：
+    1. `.qa-mask`（TA吐槽回怼 #qa-input / TA好奇回答，z88）fixed→absolute——输入时面板下半截沉到键盘后。
+    2. `.tc-mask`（openTCPanel 子面板：气泡大小自定义/字体名等 tc-input，z85；同层 cc-export/cc-scope 复用此类无输入不受影响）fixed→absolute。
+    3. `.period-day-pop`（经期 5 个浮层：日详情体温/备注、关心语管理、提醒小时等，z9999）——period.js 新增 appendPop() 把 5 处 `document.body.appendChild(pop)` 改挂 `.phone`（兜底 body）+ CSS fixed→absolute + dp-sheet max-height 加 `calc(100% - 12px)` 封顶（键盘弹出后 80vh 可能超出可视区，面板内部可滚）。
+  - **明确不修项（有输入但已安全/无键盘场景）**：.mg-mask（挂 body，fixed==absolute 等价；行内无输入，新建/改名走 openModal 已修复）；#loc-panel（仅 checkbox 无文字输入）；#call-mask（无输入）；#feed-comment-panel/.poke-card/#emoji-panel/.chat-search（v3.10.x 已是 absolute）；#chat-pong/snake-panel 全屏（无输入）；.img-view-mask/.desk-image-viewer/音乐批量条/字卡批量条/悬浮球/toast（无输入）。
+  - 验证：verify-kb-overlays.mjs 8/8（qa/tc 面板模拟 .phone 收缩 400px 后遮罩随缩+面板完整居中可视区内；经期浮层真实 UI 路径打开→挂 .phone→键盘收缩后底部面板完整→遮罩点击可关）；宽视口 1280×900 桌面外壳探针：openModal 弹窗仍居中于 .phone 框内且完整可见。
+  - ⚠️ 真机确认点（安卓优先）：①TA吐槽/好奇回答弹窗打字时输入框和发送按钮在键盘上方可见 ②TA问答子面板（聊天气泡大小自定义/字体名）输入正常 ③经期日详情填备注/体温、关心语管理添加、提醒小时修改——键盘弹出时正在编辑的行和保存按钮不被盖住 ④桌面外壳（PC 宽窗口）各弹窗仍居中于手机框。
+  - ⚠️ **构建扫入提示**：12:50 构建含工作区当时已保存的其他会话改动（chat-pages.css 同文件摸鱼会话改动等）；其后检测到 mobile-adapt.js/home.css/dark.css/calendar.js/chat.js 等又有新保存——**提交前请构建者重新 build 收口**。
+  - 临时探针（diag-overlay-parents/diag-wide-modal）已用完删除。
+
+### 2026-08-25（用户需求：摸鱼玩法扩展——抓包TA/反向抓包/摸鱼连击/年度热力图/番茄钟对抗/周报小结）
+- [本会话·完成]（**已改 src + 已构建（12:46, sw: mochi-mt86n1k2；其后并发会话 12:55 再构建亦含本会话改动）+ 新专项 verify-fish-play 33/33（9 静态+24 运行时）+ 布局 verify 10/10，未提交**）：`src/js/p2-features.js` + `src/js/personalize.js`（**AI-B 域跨域改动请知悉；与桌面 memo 会话先后都改了 personalize.js，合并后 node --check 通过**）+ `src/js/calendar.js` + `src/js/records.js` + `src/js/mail.js`（均 AI-A 域）+ `src/css/chat-pages.css` + `src/css/home.css`、`src/css/dark.css`（**跨域代改各十来行，请知悉**）+ 构建产物 + `tools/verify-fish-play.mjs`（新专项）。未碰 template.html。
+  - **① 抓包 TA**：taChimeShow(text,{onClick,dur}) 新增限时可点击浮字（.grab 态呼吸描边+「点我抓包」角标，点中立即回调收起，超时不回调原行为不变）；fish-ta-note 浮字接 onClick——点中=「抓包成功」本次 TA 涨值翻倍（TA 补一份+我得同额，走新导出的 window.addFishPts）+ 害羞回应随机一条进聊天 + 次数记 fish-catch-day；不点就只是看着涨。
+  - **② 反向抓包（TA 抓包我）**：周末组件「摸鱼+1」90 秒内点满 8 次且过 10 分钟冷却时 45% 概率被反抓——openModal 弹调侃文案 + 该次点击改记工作值(+1) 不进摸鱼 + 连击清零；冷却键 fish-caught-me:last。
+  - **③ 摸鱼连击**：2.5 秒内连续点击算一波，第 3 连起每次 +2（翻倍），断了从头算；组件右上 .we-combo 角标实时 ×N，断连后结算——破纪录才写 fish-combo-best 并 toast「连击新纪录」；主页「每日摸鱼值」tab 顶部新增纪录行（getFishComboBest）。
+  - **④ 年度摸鱼热力图**：日历页动态注入卡片（#cal-fish-heat，插在 #cal-empty-card 后，不加模板锚点）；近一年 GitHub 贡献格 53 周×7 天横向滚动，数据源 fish-day-add 双方当日合计，5 档玫瑰色阶+图例+范围文案+未来日期置灰；render() 进页即刷。
+  - **⑤ 番茄钟对抗**：pomo 引擎暴露 window.pomoFocusActive()；personalize 60s 自动增长 tick 加守卫——专注进行中双方摸鱼值冻结（工作值照常=专注算打工）；完成专注按时长结算补偿（每 10 分钟+1 至少+1）走 addFishPts 入账，提示卡/聊天消息带「补偿摸鱼 +N」；启动恢复路径同样补结算。提前结束/暂停不结算。
+  - **⑥ 周报小结**：mail.js 新增每周摸鱼小结——周日 18 点后生成当周、周一~周三补上一周（标记键 fish-week-report:<M-D> 防重）；以该联系人桌面命名空间 fish/work-day-add 为源，汇总双方合计+最会摸的星期几，以 TA 来信（tt=本周摸鱼小结）入信箱+聊天通知+角标/桌面弹窗（仅当前桌面）；挂入既有 60s tick/eagerCheck。测试钩子：window.fishWeekTick + window.__fishWeekNowOverride（生产 null，仿 mailCfgForProbe 先例）。
+  - **验证**：verify-fish-play.mjs 33/33（静态接线×9；运行时 A 浮字点击机制/B 连击翻倍+纪录/C 反抓弹窗+改记工作/D 冻结守卫+补偿+3/E 热力图 371 格+着色+置灰/F 周报生成+内容+防重）+ 布局 verify 10/10。真机确认点：①TA 浮字出现 6 秒内可点中出「抓包成功」toast 和害羞回复；②狂点摸鱼按钮被弹窗抓包且那次算工作值；③快速连点出连击角标、断连后主页记录看到最高连击；④番茄专注期间桌面摸鱼值不动、完成后 +补偿；⑤日历页底部热力图横滑正常；⑥周日晚上信箱收到周报。
+  - ⚠️ **并发扫入提醒（构建者必读）**：本会话开工时 git 干净，12:46 构建时工作区已有其他会话改动约 21 文件（chat.js / default-cards-data.js / default-cards.js / mobile-adapt.js / ta-ask.js / template.html / tools 多个 verify 与 diag 脚本等）被一并扫入产物——提交前请各会话确认已保存完整并按需重新 build 收口。
+
+### 2026-08-25（用户反馈：联系人发互动卡片的频率还是太高——降频第二轮）
+- [本会话·完成]（**已改 src + 已构建（12:55, sw: mochi-mt86yv0y）+ 新专项 verify-interact-frequency 13/13 + 回归 verify-interact-popup-stale 10/10 + verify-ta-checkin 30/30 + 布局 verify 10/10；未提交**）：`src/js/ta-ask.js` + `src/js/ck-question.js` + `src/js/reply-settings.js`（仅注释）+ `src/template.html`（4 处滑块初始标签，**跨域改动请 AI-B 知悉**：仅 ta-ask 各设置面板内的静态初始值文本，JS 渲染时会覆盖）+ 构建产物 + `tools/verify-interact-frequency.mjs`（新专项）。未碰 CSS/chat.js。
+  - **为什么 v3.12.x 降完还是太高**：① 默认概率只改了代码兜底——各库 settings 一旦保存就固化旧值，老设备从不跟随新默认（询问还存着 20、吐槽 30）；② v3.12.x 说好的「吐槽同步降半」漏改（默认仍 15）；③ 五类互动卡（询问/小问题/好奇/吐槽/查岗）各自独立计时、冷却互不相干，叠加观感仍是十几分钟一张。
+  - **修复三件套**：
+    1. **全局闸门**（主要杠杆）：新增共享键 `interact-card-last`（activeStore 按联系人桌面隔离），任意互动卡发出后 **60 分钟内其余类型一律不再自动触发**；ta-ask.js 四个 maybeTrigger* + ck-question.js ckQuestionTry 五处接入（经 window.interactGateOk/interactGateMark 共享）；手动「现在问一次 / 让TA现在查岗一次」不受限；探针 `window.__interactGateInfo()` 只读。
+    2. **存量概率一次性迁移**：`migrateInteractProb(d,key,oldDefaults)` 在四库 Load 里执行——存储 prob 恰好等于历史默认值（询问 20/10 · 小问题 15/8 · 好奇 15/8 · 吐槽 30/15）→ 吸附为 5 并打 `probLowV313` 标记（幂等）；用户自定义的其他值不动。老设备无需清数据即生效。
+    3. **默认概率统一降到 5%**：询问 10→5、小问题 8→5、好奇 8→5、吐槽 15→5（含各 Load 兜底/设置页显示兜底/滑块解析兜底/template 初始标签同步）；ck-question.js 兜底 15→8 与 reply-settings 的 ckq-prob 默认对齐（ckq-prob=8 本身不变）。
+  - **效果估算**：改动前活跃使用约 10~25 分钟一张互动卡；现在硬性下限 60 分钟/张（跨类型合计），叠加 5% 概率后典型 1~2 小时一张。嫌多可把各设置页「触发概率」滑块调到 1%，或关对应开关。
+  - 验证：verify-interact-frequency.mjs 13/13（旧值迁移吸附+打标 / 自定义 42 不动 / 新装四库默认 5 / 查岗端到端命中→标记→同窗拦截→拨回 61 分钟放行 / 探针翻转 / 静态断言五处闸门+四处迁移+产物含闸门 / 无 JS 异常）；回归 interact-popup-stale 10/10（手动触发路径不受闸门影响）、ta-checkin 30/30（T5 前清闸门键隔离，脚本已随本次更新）；布局 verify 10/10。
+  - 真机确认点：正常使用 1 小时内最多见到 1 张互动卡（聊天提示+卡+通知算同一张）；手动触发不受影响；某联系人桌面设置里把概率调高能恢复旧频率。
+  - ⚠️ **并发扫入提醒（构建者必读）**：12:53/12:55 两次构建均收口了工作区其他会话已保存未提交的改动（calendar/chat/dark.css/home.css/chat-pages.css/mobile-adapt/period/records/default-cards*/mail/p2-features/personalize/memo-shot 等 27 文件）——提交前请按协议确认各方保存完整。
+
+### 2026-08-25（用户需求：桌面第二页【今日备忘】【今天的心情】卡片移到第三页经期卡下方）
+- [AI-B·完成]（**已改 src + 已构建（12:44, sw: mochi-mt86kp6d）+ 新专项 verify-memo-p3 16/16 + 回归 verify-desk-reset-period 10/10 + verify-memo 20/20 + verify-market-desk 10/10 + 布局 verify 10/10；未提交**）：`src/template.html`（memo-row 区块自第二页移至第三页 `.desk-period` 之后、`p3apps` 之前；lic 功能清单文案同步）+ `src/js/personalize.js`（均 AI-B 域）。未碰 p2-features/memo-app（按 id 渲染不受位置影响）。
+  - **模板默认**：今日备忘/心情行（`[data-desk-widget="memo-row"]`）现位于第三页「经期倒计时」下方、功能图标组上方；第二页只留 本周日常 + 周末倒计时。
+  - **老用户迁移 `ensureMemoRowP3()`**（仿 ensureDeskPeriod 先例）：desk-layout 里 memo-row 在其他页的自动迁到第三页经期卡后一位（DOM+存储同步改写），其余布局/页数不动；已在第三页的不动；**用户手动移除过（隐藏池）的尊重不找回**；每联系人桌面独立（desk-layout 按桌面存储，contact-switched 各自触发）；启动后 150ms 兜底一次防第三页重建竞态。
+  - **恢复默认桌面同步修正**：池找回映射里 memo-row 不再回第二页；setTimeout 收尾统一校正为「紧跟经期卡之后」（修掉"先落位的 memo-row 被后找回的经期卡插到前面"的顺序颠倒）。
+  - 验证：verify-memo-p3.mjs 16/16（src+产物静态顺序 / 全新用户默认位置且不写布局 / 第二页遗留布局自动迁移+存储前三页比对（动态注入图标会追加页条目故只比前 3 页）/ 幂等 / 池中不找回 / 已正确布局逐字保留）；verify-desk-reset-period.mjs A3 断言更新为新默认顺序 dp<memo-row<p3apps 后 10/10。真机确认点：第三页从上到下 = 经期卡 → 备忘/心情两卡 → 经期记录/记账/花园图标；第二页不再有备忘心情卡；装修模式里仍可自由挪动。
+  - ⚠️ **并发提示（构建者必读）**：12:44 构建扫入了当时工作区全部已保存改动（calendar/chat/default-cards-data/default-cards/mail/mobile-adapt/p2-features/ta-ask/records/personalize/template/dark.css/chat-pages.css/home.css 及 tools 若干——含 mail 独立配置、TA性别等前序会话成果）；若各会话其后仍有 src 改动，提交前请重新 build 收口。
+
+### 2026-08-25（用户要求：全仓手机端 bug 稳妥检查——静态审计六族 + 回归 17 套，发现并修复浮层滚动锁缺口）
+- [本会话·完成]（**已改 src + 已构建（12:38/12:40, sw: mochi-mt86f99b）+ 新专项 verify-scroll-lock 4/4 + 布局 verify 10/10，未提交**）：`src/js/mobile-adapt.js`（**AI-B 域，跨域最小改动请知悉**）+ `tools/verify-scroll-lock.mjs`（新专项）。其余为审计只读。
+  - **审计范围与结论（均无问题）**：①alert/confirm/prompt 零使用；②zoom/scale 红线——全部为元素级动效，桌面字号 zoom 有 force-mobile/tablet 强制 zoom:1 兜底，无整页缩放；③直写 localStorage 均为既有快照/系统键模式（divination 裸键是一次性旧数据迁移清理）；④ce-box 类选择器遮蔽族——剩余 class 读值均为 date 型原生 input（不参与转换）或消息 DOM；⑤openModal 同步嵌套二次弹窗族——gift-shop 两步已 setTimeout(60)、group-chat 颜色冲突走 toast、ta-ask/music/mail/calendar 全查无嵌套；⑥taFit 实现（保护段/base64 与 svg 分段/无 lookbehind）稳妥。
+  - **🐛 发现并修复（唯一实锤）**：`#img-view-mask`（聊天/字卡大图查看全屏遮罩，chatcard.js **动态创建**）不在 FLOAT_SELECTORS → 打开大图时背景聊天页可继续滚动。且该层动态创建导致启动时 querySelector 拿不到、观察器挂不上——仅加清单不够，另给 bodyMo 动态补偿观察器加了「插入 body 的节点 id 在清单内也补观察」分支（.mg-mask 类路径不变）。同批补进清单的同族底半框 `#chat-rp-panel`（红包）/`#batch-panel`（消息批量操作）为 template 静态节点直接生效。
+  - 其余浮层清点：#cc-mg-mask/#mem-add-mask 带 .mg-mask 类已覆盖；period 系弹层自管 scroll-lock；ta-ask-popup/tc-popup 等 *-popup 是设置页输入框非浮层；*-mine/sys-panel 为页内 tab 面板不涉及。
+  - 验证：verify-scroll-lock.mjs 4/4（大图开层即锁/对照 openModal/半框/关闭解锁）；布局 verify 10/10；verify-android-kb 3/3 + kb-dock 12 pass + desktop-mode-force 全过（mobile-adapt 改动回归）；ta-gender 19/19、data-loss 11/11、cc-scope 27/27、more-panel-scope 30、poke-emoji-tabs 15/15、gc-pool-scope 10/10、mail-sent-view 16/16、period-save 15/15、dark-mode、call-edit、oom-leaks 全过。
+  - ⚠️ **构建扫入说明**：本会话 12:38/12:40 构建与摸鱼浮字会话 12:40 构建同分钟先后执行，两次均扫同一工作区（深色模式迁移/default-cards×2/mail/personalize(+91)/records/calendar/chat/p2-features/CSS 等全部在内），产物内容一致以最后一次为准；提交前请各方确认保存完整，若其后仍有 src 改动请重新 build 收口。
+  - 📌 真机确认点（手机）：聊天里点开图片/表情包大图后，背景页面不再跟手滚动；红包面板、消息批量操作条打开时同样锁背景。
+
+### 2026-08-25（用户需求：摸鱼浮字文案池化 + 进字卡库【系统预设】新分类可查看）
+- [本会话·完成]（**已改 src + 已构建（12:40, sw: mochi-mt86felw）+ verify-ta-gender 扩至 19/19 + 布局 verify 10/10，未提交**）：`src/js/default-cards-data.js` + `src/js/default-cards.js` + `src/js/p2-features.js` + `tools/verify-ta-gender.mjs` + 构建产物。（12:34 深色模式会话看到的「default-cards-* / p2-features 疑似并行改动」即本会话，现已保存完整。）
+  - **数据**：DEFAULT_CARD_DATA 新增 `fish` 分类两组——【摸鱼浮字】10 条（含原句"他在那边也偷了个懒"+9 条新文案）、【抓包回应】6 条（原 CATCH_REPLIES 迁入同源）。
+  - **字卡库 UI**：default-cards.js JS 注入新 tab「摸鱼浮字」（data-type=fish，互动回应同款先例）；分组条/搜索/逐张开关（dc-off-fish:*）全复用现有渲染。
+  - **联动**：p2-features 摸鱼浮字与抓包回应改为 getFishPool 随机抽取，过滤用户已关闭的卡（isDefaultCardOff('fish',…))，池缺失回退内置兜底；称呼跟随经 taChimeShow/chatAddIn 自动生效。新增 `window.getFishPool(group, fallback)`。
+  - 验证：verify-ta-gender T7 五项（池数据/tab 注入/16 张渲染/dc-off 写入恢复）+ 全套 19/19；布局 verify 10/10；node --check 通过。真机确认点：字卡库【系统预设】末尾出现「摸鱼浮字」tab；关掉某条浮字后桌面不再飘该句。
+  - ⚠️ **并发扫入提醒**：12:40 构建（在深色模式会话 12:34 之后）已包含其 template.html 改动与其余工作区未提交内容——提交前请构建者确认各方已保存完整并按需重新 build 收口。
+
+### 2026-08-25（用户要求：桌面美化的【深色模式】移到设置页）
+- [本会话·完成]（**已改 src + 已构建（12:34, sw: mochi-mt8679iz）+ 布局 verify 10/10 + 回归 verify-dark-mode 28/28；未提交**）：仅 `src/template.html`（AI-B 域）。personalize.js 零改动。
+  - **改动**：「深色模式」行（`#row-theme-mode` + `#theme-mode-val`）从 手机桌面美化页（page-theme）整块移到 设置页（page-setting）——放在「手机桌面美化」入口同一分组的第一行。ID/类名/交互完全不变（点击切换 浅色/深色，val 显示 关闭/已开启），personalize.js 的绑定与回显自动生效。
+  - 同步改 可二传二改的说明 功能清单文案：「设置页：深色模式开关；桌面美化：主题色、桌面字号、卡片大小、内置壁纸预设」。
+  - 兼容：tools/verify-dark-mode.mjs 按 ID 点行、不依赖所在页面，无需改动（D1/D6 实测新位置点击切换正常）。真机确认点：设置页「手机桌面美化」上方出现「深色模式」行且点击可切换；美化页里不再有该行。
+  - ⚠️ **并发扫入提醒（构建者必读）**：12:34 构建时工作区除本会话 template.html 外，还含其他会话已保存未提交改动（chat.js / p2-features.js 为早前会话遗留；**default-cards-data.js / default-cards.js / mail.js / personalize.js(+91 行) 是本会话开工后才出现的新改动，疑似并行会话进行中**，node --check 均通过但请其会话确认已保存完整）；若其后仍有 src 改动请重新 build 收口再提交。
+
 ### 2026-08-25（用户需求：联系人性别设置 + 所有弹窗/消息的 TA·他 跟随性别，不设置默认 TA）
 - [本会话·完成]（**已改 src + 已构建（11:48, sw: mochi-mt84l7sv）+ 新专项 verify-ta-gender 14/14 + 布局 verify 10/10，未提交**）：核心 `src/js/contacts.js`（AI-B 域）+ 渲染出口接入 chat/feed/mail/calendar/divination/p2-features/garden/records/ta-ask/personalize/music-player/call/bg-keep/memo-app/gift-shop/snake-game/pong/ck-question/reply-settings（跨 AI-A/B 域大面积接入，请对方知悉）+ 构建产物 + tools/verify-ta-gender.mjs（新）。
   - **架构**：渲染层统一替换——不改任何存储原文，历史消息重开自动跟随；改设置后派发 `ta-word-changed` 事件，chat.js 监听重渲染当前窗口。
@@ -2085,3 +2207,27 @@ ode --check ͨ�� + verify 10/10 + verify-desk-reset-period 10/10����
   - **问题③ 关媒体通知连弹窗一起关**：属安卓机制非 bug（媒体通知=浏览器前台服务凭证，关掉即冻结页面），未改代码，WORKLOG 已向用户说明需保持开启。
   - **回归**：verify-bg-keep-retry（10 断言，拦截 createElement('audio') 桩驱动）覆盖参数覆盖/外部打断退避/补播失败翻倍/连续打断封顶/音乐在播不抢播/无异常；verify-bg-notify-dedupe（12 断言）覆盖原去重语义 + 不同图片不再互判 + 同图采样去重 + 探针/统计存在。
   - **需构建者注意**：构建已包含本会话全部改动（sw 缓存 mochi-mt857ki3）；bg-keep.js 本轮改动区域为保活退避基础设施 + 通知去重指纹/统计，未触碰其他会话施工区。提交时随批次一起。
+- [AI-A·完成]（**已构建**：verify-chat-dupe 8/8 + window-sync 10/10 + quote-jump 11/11 + npm run verify 10/10，未提交→随批次一起提交）：src/js/chat.js + tools/verify-chat-dupe.mjs（B 组扩为三断言）。
+  - **背景**：荣耀 200 Pro Edge / 雨见浏览器「我发一条，系统显示两条」；via 无此问题 → 纯内核事件派发差异（荣耀 MagicOS 内置 WebView/雨见对点按 <button> 会先后派发合成触摸 click + 原生 click，间隔可达 1.2~2s，旧 1200ms 防重窗口漏网）。
+  - **改动**：① SEND_GUARD_MS 1200→2500ms（同文本 2.5s 内第二次 addMsg 吞掉；人工重发同内容间隔必 >2.5s，不误伤；iOS 输入法复活补点/荣耀雨见双 click 全覆盖）。② 发送按钮加 pointerup 兜底：用户确认点击时若输入框文本 == 上次已发送文本，同步顺延 lastSendTs——迟到的第二次 click 落在窗口内被吞。窗口不延长、不误吞其他文本。
+### 2026-08-25（用户反馈 OPPO+Edge：朋友圈/信箱弹窗正常、只有聊天不弹，有提示音无弹窗）
+- [本会话·完成]（**已改 src + 已构建（13:12, sw: mochi-mt87kk5x）+ verify-bg-notify-dedupe 15/15 + verify-bg-keep-retry 10/10 + verify-oom-leaks 21/21 + 布局 verify 10/10，未提交**）：`src/js/bg-keep.js` + tools/verify-bg-notify-dedupe.mjs。
+  - **根因（确凿）**：聊天消息到达是先 `addRec` 把消息 `msgs.push` 入库、再走 `showDeskMsg→bgNotifyCheck` 发系统通知；而 v3.12 的防重复闸门 `recentChatDup` 扫描 `getChatMsgs()`（=msgs）时**把刚到达的这条自己判成"最近说过的重复内容"**，通知被吞。朋友圈/信箱通知文本不在聊天记录里，故只有聊天不弹、朋友圈正常——与用户现象完全吻合。音效是独立路径（addIn 直接 playSfx）所以有提示音。
+  - **修复**：`recentChatDup` 从倒数第二条开始扫（跳过刚到达正要通知的最后一条）——自查不判重，真正的先前重复（倒数第二条起）仍被拦。另补：旧式语音消息 text「名称|||dataURL」扫描侧剥离 ||| 段再比指纹（与通知侧一致）。
+  - **回归**：新增用例「刚到达新消息不自查判重 / 第二条相同仍去重 / 同图再次到达仍去重 / 语音段剥离命中 / 隐藏态真实链路放行」。同时修正此前测试种子的盲区（先入库再探针会掩盖自查 bug）。
+  - **需构建者注意**：本次构建已收口（sw: mochi-mt87kk5x）；改动仅 bg-keep.js 通知去重区域 + 测试工具，未触碰其他会话施工区。提交时随批次一起。
+
+### 2026-08-25（用户需求：手机端聊天记录多时卡顿——性能优化三项）
+- [AI-A·本会话·完成]（**已改 src/js/chat.js 仅一个文件，未构建未提交**；构建者收口时请一并 build，改动用现有 verify 回归）：
+  - **① saveMsgs 同步 stringify 移进防抖**：原每次收发消息都同步 JSON.stringify(全部历史)（几 MB 记录时低端机每消息卡顿），现在 stringify 与 idbSet 一起在 400ms 防抖回调里执行（写入内容仍是回调那一刻的最新 msgs）；`pendingSaveData` 改为存 msgs 数组引用，contact-switched 兜底落盘时才序列化。
+  - **② loadMsgs 全量 IDB 重读加时间闸**：原每次进聊天页/搜索都无条件 idbGet 整条历史 + JSON.parse + 排序 + Set 去重；现在同联系人 8s 内已成功合并过权威就跳过重读（`lastIdbLoadPrefix/lastIdbLoadAt/IDB_RELOAD_MIN_GAP=8000`），启动首读、`mochi-restore-done`（导入备份后）强制重读（`loadMsgs(true)`）。保留了原「每次重试防 IDB 偶发失败」的兜底语义。
+  - **③ 批量渲染/增量加载改 DocumentFragment**：renderMsg 内部 16 处 append 统一走新增 `appendMsg(m)`（`appendTarget` 批量期间指向 fragment，单条追加仍直接挂 body）；renderWindow/loadOlder/loadNewer 三处批量循环改为「fragment 攒完一次挂载」（renderWindow 挂尾部、增量插锚点前/补缺口）。避免 200+ 条逐节点 append/insertBefore 触发多次布局。
+  - **验证**：`node --check` 通过；当前产物（13:10 构建，不含本次 src 改动）跑 `verify-chat-window-sync 10/10` + `verify-time-divider 9/9` 基线通过。构建者收口后请回归：`verify-chat-window-sync`（分页窗口/增量/脱尾）、`verify-time-divider`（时间分隔线，renderMsg 改动回归）、`verify-chat-dupe`。
+  - ⚠️ 注意：工作区存在其他会话的并发改动（index.html/多个 src 文件），本会话仅动了 chat.js，未碰任何构建产物；提交前请构建者统一 build 收口。
+
+### 2026-08-25（续：聊天卡顿优化 A 级两项——fillAvatar 批量缓存 + LS 快照重路径节流）
+- [AI-A·本会话·完成]（**仍只改 src/js/chat.js，未构建未提交**；与上轮三项同属一次收口）：
+  - **A1 批量渲染 fillAvatar 存储读取缓存**：fillAvatar 原对每条消息都 store.get 读头像（200 条 = 200 次存储读 + 建 img）。新增 `avatarBatchCache` + `appendAvatarBatch(on)`：只在 renderWindow/loadOlder/loadNewer 批量循环期间按 key 缓存双方头像 dataURL（读一次存 cache），循环结束即清空；进聊天页头部/换头像/restore-done 等非批量调用走原逻辑实时读——**无陈旧风险**（作用域仅限批量循环）。
+  - **A3 LS 有损快照（>2MB 瘦身路径）节流**：原 writeLsSnapshot 在历史 >2MB（带图/语音常见）时每次消息落盘都同步 JSON.parse 全量 + 剥 img/voice + stringify（几十 ms 级，低端机卡顿）。重构为 `performLsSnapWrite` + `writeLsSnapshot(raw,prefix,force)`：重路径 leading 立即写 + 4s trailing 写窗口内最新值；<2MB 轻路径不节流；所有退出/正确性路径 force 立即写（flushSave/contact-switched/IDB 保险丝/导入 clearChatHistory/saveMsgsNow/IDB 挂起暂存）。**IndexedDB 权威每次都在写不受影响**；LS 快照只是第二备份，退出必刷，不增加丢失风险。
+  - **验证**：`node --check` 通过；当前产物（不含本次改动）跑 `verify-data-loss 11/11`（快照兜底/迁移回归）+ 上轮 `verify-chat-window-sync 10/10` + `verify-time-divider 9/9` 基线通过。构建者收口后请回归：`verify-data-loss`（LS/IDB 兜底）、`verify-avatar-decouple`（头像解耦）、`verify-chat-window-sync`、`verify-time-divider`。
+  - ⚠️ 说明：上轮 A2（loadMsgs 同步迁移块加「只跑一次」标志）**经评估放弃**——那些迁移（铃铛/信封/补时间戳/乱码还原）依赖「每次进聊天页跑一遍」的两遍收敛语义（IDB 合并异步，首载合入的旧记录要二次进入才被同步修正），加标志会让老记录修复失效；且真正贵的 IDB 读+parse+sort 已被上轮时间闸挡住。B 级（分帧加载/content-visibility）未做，需真机验证。

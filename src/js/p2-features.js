@@ -1560,16 +1560,31 @@ if (ckRefresh) {
 
   // 他偶发浮层（fixed 底部偏上，淡入淡出，4s 自隐）
   // v3.x.x：称呼跟随——所有桌面浮字统一在此按当前联系人性别替换 TA/他（显示层）
-  let el = null, timer = null;
+  // v3.13.x：opts.onClick——限时可点击浮字（摸鱼「抓包 TA」用）：展示期间 pointer-events
+  //   开启并加 .grab 态，点中立即回调并提前收起；超时未点自然隐去（不回调）。
+  let el = null, timer = null, clickFn = null;
   window.taChimeShow = function (text, opts) {
     opts = opts || {};
     if (window.taFit) text = window.taFit(text);
     if (!el) { el = document.createElement('div'); el.className = 'ta-chime-note'; document.body.appendChild(el); }
     const miss = opts.miss ? '<span class="ta-chime-miss">' + esc(window.taFit ? window.taFit(opts.miss) : opts.miss) + '</span>' : '';
-    el.innerHTML = '<span class="ta-chime-dot"></span><span class="ta-chime-text">' + esc(text) + '</span>' + miss;
+    const grabTip = opts.onClick ? '<span class="ta-chime-grab-tip">点我抓包</span>' : '';
+    el.innerHTML = '<span class="ta-chime-dot"></span><span class="ta-chime-text">' + esc(text) + '</span>' + miss + grabTip;
+    clickFn = opts.onClick || null;
+    el.classList.toggle('grab', !!clickFn);
     el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
-    clearTimeout(timer); timer = setTimeout(() => { el.classList.remove('show'); }, opts.dur || 4200);
+    clearTimeout(timer);
+    timer = setTimeout(() => { el.classList.remove('show', 'grab'); clickFn = null; }, opts.dur || 4200);
   };
+  // 浮字点击代理（委托到常驻节点，抓包判定走 clickFn）
+  document.addEventListener('click', (ev) => {
+    if (!el || !el.classList.contains('grab') || !el.contains(ev.target)) return;
+    const fn = clickFn; clickFn = null;
+    el.classList.remove('show', 'grab');
+    clearTimeout(timer);
+    try { if (navigator.vibrate) navigator.vibrate([60, 40, 120]); } catch (e) {}
+    if (fn) fn();
+  }, true);
 
   // 打卡字卡：他递来一张；低概率"没控制住"配温柔解读。cb(card|null)，card={text, miss?}
   const CHECKIN_TA_CARDS = ['你今天也努力了', '我一直看着你呢', '又一起过了一天', '辛苦啦，过来抱抱', '嗯，今天也好好过来了', '你在，我就安心'];
@@ -1593,6 +1608,13 @@ if (ckRefresh) {
   function curStore() { try { return window.storeFor(window.__activeCid || 'default'); } catch (e) { return null; } }
   function vibrate(p) { try { if (navigator.vibrate) navigator.vibrate(p); } catch (e) {} }
   function editingNow() { return Array.from(document.querySelectorAll('.app-grid')).some(g => g.classList.contains('editing')); }
+  // v3.13.x：系统预设字卡池读取（字卡库「花园/同频/伸手/喝水/存钱罐」tab 同源）；
+  // 过滤用户已关闭的卡片（dc-off-<分类>:*），全关/缺失时回退内置兜底
+  function libPool(cat, group, fallback) {
+    let arr = (window.getLibPool ? window.getLibPool(cat, group, fallback) : (fallback || [])).slice();
+    if (window.isDefaultCardOff) arr = arr.filter(c => !window.isDefaultCardOff(cat, c));
+    return arr.length ? arr.slice() : (fallback || []).slice();
+  }
   function toast(msg) {
     let t = document.getElementById('cc-toast');
     if (!t) { t = document.createElement('div'); t.id = 'cc-toast'; document.body.appendChild(t); }
@@ -1699,7 +1721,7 @@ if (ckRefresh) {
   function tpSave(a) { const s = curStore(); if (s) try { s.set('tongpin-status', JSON.stringify(a)); } catch (e) {} }
   // 状态池：用户自定义 + TA 日常 action 字卡（在做什么）合并去重，接入字卡库
   function tpPool() {
-    const s = curStore(); let pool = DEF_STATUS.slice();
+    const s = curStore(); let pool = libPool('sync', 'TA 此刻', DEF_STATUS);
     try { const a = JSON.parse((s && s.get('tongpin-status')) || '[]'); if (Array.isArray(a) && a.length) pool = a.slice(); } catch (e) {}
     try { const a = JSON.parse((s && s.get('checkin-cards-action')) || '[]'); if (Array.isArray(a)) a.forEach(x => { const t = typeof x === 'string' ? x : (x && x.t); if (t && pool.indexOf(t) < 0) pool.push(t); }); } catch (e) {}
     return pool.length ? pool : DEF_STATUS.slice();
@@ -1726,7 +1748,7 @@ if (ckRefresh) {
       if (tpSendOn() && window.chatAddIn) { try { window.chatAddIn(r); } catch (e) {} }
     } else {
       if (Math.random() < 0.4) {
-        const miss = ['…没听到', '没接住', '好像走开了'];
+        const miss = libPool('sync', '没接住回应', ['…没听到', '没接住', '好像走开了']);
         if (hint) hint.textContent = miss[Math.floor(Math.random() * miss.length)];
       } else {
         if (hint) hint.textContent = '没接住 · 过会儿再敲';
@@ -1763,7 +1785,7 @@ if (ckRefresh) {
     '</div>';
   host.appendChild(ssPage);
 
-  function ssCards() { const s = curStore(); if (!s) return DEF_WHISPER.slice(); try { const a = JSON.parse(s.get('shenshou-cards') || '[]'); return a.length ? a : DEF_WHISPER.slice(); } catch (e) { return DEF_WHISPER.slice(); } }
+  function ssCards() { const s = curStore(); if (!s) return libPool('reach', '悄悄话', DEF_WHISPER); try { const a = JSON.parse(s.get('shenshou-cards') || '[]'); return a.length ? a : libPool('reach', '悄悄话', DEF_WHISPER); } catch (e) { return libPool('reach', '悄悄话', DEF_WHISPER); } }
   function ssSave(a) { const s = curStore(); if (s) try { s.set('shenshou-cards', JSON.stringify(a)); } catch (e) {} }
   function ssCount() { const s = curStore(); if (!s) return 0; try { return parseInt(s.get('shenshou-count') || '0', 10) || 0; } catch (e) { return 0; } }
   function ssSetCount(n) { const s = curStore(); if (s) try { s.set('shenshou-count', '' + n); } catch (e) {} }
@@ -1782,7 +1804,7 @@ if (ckRefresh) {
       if (glow) glow.classList.remove('reach');
       if (Math.random() < 0.55) {
         const feel = SS_FEEL[Math.floor(Math.random() * SS_FEEL.length)];
-        const cards = feel.cards.concat(ssCards());
+        const cards = libPool('reach', '触感·' + feel.label, feel.cards).concat(ssCards());
         const txt = cards[Math.floor(Math.random() * cards.length)];
         vibrate(feel.vib);
         if (glow) { glow.classList.add('on'); glow.classList.add(feel.cls); }
@@ -1883,7 +1905,7 @@ if (ckRefresh) {
   function waterSetGoal(n) { const s = curStore(); if (s) try { s.set('water-goal', '' + n); } catch (e) {} }
   function waterSize() { const s = curStore(); try { return parseInt(s.get('water-size') || '250', 10) || 250; } catch (e) { return 250; } }
   function waterSetSize(n) { const s = curStore(); if (s) try { s.set('water-size', '' + n); } catch (e) {} }
-  function waterMsgs() { const s = curStore(); if (!s) return DEF_WATER_MSGS.slice(); try { const a = JSON.parse(s.get('water-msgs') || '[]'); return a.length ? a : DEF_WATER_MSGS.slice(); } catch (e) { return DEF_WATER_MSGS.slice(); } }
+  function waterMsgs() { const s = curStore(); if (!s) return libPool('water', '提醒模板', DEF_WATER_MSGS); try { const a = JSON.parse(s.get('water-msgs') || '[]'); return a.length ? a : libPool('water', '提醒模板', DEF_WATER_MSGS); } catch (e) { return libPool('water', '提醒模板', DEF_WATER_MSGS); } }
   function waterSaveMsgs(a) { const s = curStore(); if (s) try { s.set('water-msgs', JSON.stringify(a)); } catch (e) {} }
   function waterRender() {
     const t = waterToday(); const g = waterGoal(); const sz = waterSize();
@@ -1936,7 +1958,8 @@ if (ckRefresh) {
       // 世界观：偶尔他视角浮层（灵体在身边提醒），否则原系统语态
       if (window.taChimeAllow && window.taChimeAllow('water-ta', { cooldown: 30 * 60 * 1000, dailyMax: 3 }) && Math.random() < 0.5) {
         window.taChimeUse('water-ta');
-        const m = DEF_WATER_TA_GENTLE[Math.floor(Math.random() * DEF_WATER_TA_GENTLE.length)];
+        const gentle = libPool('water', '他视角温柔提醒', DEF_WATER_TA_GENTLE);
+        const m = gentle[Math.floor(Math.random() * gentle.length)];
         const miss = Math.random() < 0.2 ? '（字卡有限，他想说的比这张多）' : null;
         if (window.taChimeShow) window.taChimeShow(m, { miss: miss });
       }
@@ -1965,9 +1988,9 @@ if (ckRefresh) {
       vibrate([60, 40, 60]);
       const card = document.querySelector('#page-water .water-card');
       if (card) { card.classList.add('done'); setTimeout(() => card.classList.remove('done'), 900); }
-      const p = DEF_WATER_PRAISE; waterShowMsg(p[Math.floor(Math.random() * p.length)]);
+      const p = libPool('water', '喝够夸奖', DEF_WATER_PRAISE); waterShowMsg(p[Math.floor(Math.random() * p.length)]);
     }
-    else if (Math.random() < 0.2) { const e = DEF_WATER_ENCOURAGE; waterShowMsg(e[Math.floor(Math.random() * e.length)]); }
+    else if (Math.random() < 0.2) { const e = libPool('water', '继续鼓励', DEF_WATER_ENCOURAGE); waterShowMsg(e[Math.floor(Math.random() * e.length)]); }
   });
   document.getElementById('water-minus').addEventListener('click', () => {
     if (editingNow()) return;
@@ -1978,7 +2001,8 @@ if (ckRefresh) {
     const t = waterToday(); const g = waterGoal(); const sz = waterSize();
     const done = t.count >= g;
     const base = '我今天喝了 ' + t.count + ' / ' + g + ' 杯（' + (t.count * sz) + 'ml）';
-    const tail = done ? '，' + DEF_WATER_PRAISE[Math.floor(Math.random() * DEF_WATER_PRAISE.length)] : '，还差 ' + (g - t.count) + ' 杯';
+    const praise = libPool('water', '喝够夸奖', DEF_WATER_PRAISE);
+    const tail = done ? '，' + praise[Math.floor(Math.random() * praise.length)] : '，还差 ' + (g - t.count) + ' 杯';
     if (window.chatAddIn) { try { window.chatAddIn(base + tail); } catch (e) {} }
     toast('已发送');
   });
@@ -1986,7 +2010,8 @@ if (ckRefresh) {
     if (editingNow()) return;
     const t = waterToday(); const g = waterGoal();
     const m = waterMsgs()[Math.floor(Math.random() * waterMsgs().length)];
-    const fmt = DEF_WATER_TA[Math.floor(Math.random() * DEF_WATER_TA.length)].replace('{m}', m);
+    const taFmt = libPool('water', 'TA 提醒句式', DEF_WATER_TA);
+    const fmt = taFmt[Math.floor(Math.random() * taFmt.length)].replace('{m}', m);
     const tail = t.count < g ? '（还差 ' + (g - t.count) + ' 杯）' : '（今天喝够啦）';
     const shown = window.taFit ? window.taFit(fmt + tail) : (fmt + tail);
     waterShowMsg(shown);
@@ -2004,14 +2029,57 @@ if (ckRefresh) {
   eatPage.innerHTML =
     '<div class="chat-head"><span class="ch-back" id="eat-back"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><span class="ch-name">吃什么</span></div>' +
     '<div class="eat-body">' +
+      '<div class="eat-wheel-wrap"><canvas class="eat-wheel" id="eat-wheel" width="280" height="280"></canvas><div class="eat-pointer">▼</div></div>' +
       '<div class="eat-card glass"><div class="eat-label">今天吃</div><div class="eat-dish" id="eat-dish">…</div><div class="eat-comment" id="eat-comment">…</div></div>' +
       '<div class="eat-btns"><button class="eat-change" id="eat-change">换一个</button><button class="eat-send" id="eat-send">发到聊天</button></div>' +
-      '<button class="eat-add" id="eat-add">+ 添加菜名</button>' +
+      '<div class="eat-btns"><button class="eat-spin" id="eat-spin">转盘抽取</button><button class="eat-askta" id="eat-askta">问 TA 吃这个</button></div>' +
+      '<div class="eat-mgr"><button class="eat-add" id="eat-add">+ 添加菜名</button><button class="eat-menu-btn" id="eat-menu-btn">编辑菜单</button></div>' +
+      '<div class="eat-menu-panel" id="eat-menu-panel" hidden>' +
+        '<textarea class="eat-menu-ta" id="eat-menu-ta" rows="8" placeholder="一行一个菜名，留空则恢复默认菜单"></textarea>' +
+        '<div class="eat-menu-acts"><button class="eat-menu-save" id="eat-menu-save">保存菜单</button><button class="eat-menu-reset" id="eat-menu-reset">恢复默认</button></div>' +
+      '</div>' +
     '</div>';
   host.appendChild(eatPage);
 
-  function eatDishes() { const s = curStore(); let pool = DEF_EAT_DISHES.slice(); try { const a = JSON.parse((s && s.get('eat-cards')) || '[]'); if (Array.isArray(a)) a.forEach(d => { if (d && pool.indexOf(d) < 0) pool.push(d); }); } catch (e) {} return pool; }
+  function eatMenu() { const s = curStore(); try { const a = JSON.parse((s && s.get('eat-menu')) || '[]'); if (Array.isArray(a) && a.length) return a.filter(d => d); } catch (e) {} return null; }
+  function eatSaveMenu(a) { const s = curStore(); if (s) try { s.set('eat-menu', JSON.stringify(a)); } catch (e) {} }
+  function eatDishes() { const m = eatMenu(); if (m) return m; const s = curStore(); let pool = DEF_EAT_DISHES.slice(); try { const a = JSON.parse((s && s.get('eat-cards')) || '[]'); if (Array.isArray(a)) a.forEach(d => { if (d && pool.indexOf(d) < 0) pool.push(d); }); } catch (e) {} return pool; }
   function eatSaveDishes(a) { const s = curStore(); if (s) try { s.set('eat-cards', JSON.stringify(a)); } catch (e) {} }
+  let eatSpinAngle = 0; let eatSpinTimer = null;
+  function eatDrawWheel(dishes) {
+    const c = document.getElementById('eat-wheel'); if (!c) return;
+    const ctx = c.getContext('2d'); const cx = c.width / 2; const cy = c.height / 2; const r = cx - 4;
+    const n = dishes.length; const slice = (2 * Math.PI) / n;
+    const colors = ['#ff6b6b','#ffa94d','#69db7c','#4dabf7','#f06595','#ffd43b','#a9e34b','#74c0fc','#e599f7','#ff922b'];
+    ctx.clearRect(0, 0, c.width, c.height);
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate(eatSpinAngle);
+    for (let i = 0; i < n; i++) {
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, r, i * slice, (i + 1) * slice);
+      ctx.fillStyle = colors[i % colors.length]; ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.save(); ctx.rotate(i * slice + slice / 2); ctx.fillStyle = '#fff'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'right';
+      const txt = dishes[i].length > 5 ? dishes[i].slice(0, 5) + '..' : dishes[i];
+      ctx.fillText(txt, r - 10, 4); ctx.restore();
+    }
+    ctx.restore();
+  }
+  function eatSpinWheel(dishes, cb) {
+    if (eatSpinTimer) return;
+    const totalAngle = eatSpinAngle + (3 + Math.random() * 4) * Math.PI * 2 + Math.random() * Math.PI * 2;
+    const startAngle = eatSpinAngle; const duration = 3200; const startTime = Date.now();
+    function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+    function tick() {
+      const elapsed = Date.now() - startTime; const t = Math.min(elapsed / duration, 1);
+      eatSpinAngle = startAngle + (totalAngle - startAngle) * easeOutCubic(t);
+      eatDrawWheel(dishes);
+      if (t < 1) { eatSpinTimer = requestAnimationFrame(tick); return; }
+      eatSpinTimer = null;
+      const n = dishes.length; const slice = 2 * Math.PI / n;
+      const normalized = (totalAngle % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
+      const idx = Math.floor(((2 * Math.PI - normalized + slice / 2) % (2 * Math.PI)) / slice) % n;
+      if (cb) cb(dishes[idx]);
+    }
+    eatSpinTimer = requestAnimationFrame(tick);
+  }
   function eatPick() {
     const dishes = eatDishes(); const dish = dishes[Math.floor(Math.random() * dishes.length)];
     const comments = DEF_EAT_COMMENTS; const comment = comments[Math.floor(Math.random() * comments.length)];
@@ -2021,11 +2089,28 @@ if (ckRefresh) {
     return dish + ' · ' + comment;
   }
   let eatLastPick = '';
-  if (eatApp) eatApp.addEventListener('click', () => { if (editingNow()) return; openPage(eatPage); eatLastPick = eatPick(); });
+  if (eatApp) eatApp.addEventListener('click', () => { if (editingNow()) return; openPage(eatPage); eatLastPick = eatPick(); eatDrawWheel(eatDishes()); });
   document.getElementById('eat-back').addEventListener('click', () => backHome(eatPage));
-  document.getElementById('eat-change').addEventListener('click', () => { if (editingNow()) return; eatLastPick = eatPick(); });
+  document.getElementById('eat-change').addEventListener('click', () => { if (editingNow()) return; eatLastPick = eatPick(); eatDrawWheel(eatDishes()); });
   document.getElementById('eat-send').addEventListener('click', () => { if (editingNow()) return; if (eatLastPick && window.chatAddIn) { try { window.chatAddIn(eatLastPick); } catch (e) {} toast('已发送'); } });
-  document.getElementById('eat-add').addEventListener('click', () => { if (!window.openModal) return; window.openModal('添加菜名', '', (v) => { if (v) { const a = eatDishes(); a.push(v); eatSaveDishes(a.filter(d => d)); toast('已添加'); } }); });
+  document.getElementById('eat-add').addEventListener('click', () => { if (!window.openModal) return; window.openModal('添加菜名', '', (v) => { if (v) { const a = eatDishes(); a.push(v); eatSaveDishes(a.filter(d => d)); eatDrawWheel(eatDishes()); toast('已添加'); } }); });
+  document.getElementById('eat-spin').addEventListener('click', () => { if (editingNow()) return; const dishes = eatDishes(); eatSpinWheel(dishes, (dish) => { const de = document.getElementById('eat-dish'); if (de) { de.classList.add('fade'); setTimeout(() => { de.textContent = dish; de.classList.remove('fade'); }, 200); } const ce = document.getElementById('eat-comment'); const comments = DEF_EAT_COMMENTS; const comment = comments[Math.floor(Math.random() * comments.length)]; if (ce) { ce.classList.add('fade'); setTimeout(() => { ce.textContent = '\u201c' + comment + '\u201d'; ce.classList.remove('fade'); }, 200); } eatLastPick = dish + ' · ' + comment; }); });
+  document.getElementById('eat-askta').addEventListener('click', () => { if (editingNow()) return; if (!eatLastPick) { eatLastPick = eatPick(); } const m = eatLastPick.match(/^(.+?) ·/); const dish = m ? m[1] : eatLastPick; if (window.chatAddIn) { try { window.chatAddIn('今晚吃 ' + dish + ' 怎么样？'); } catch (e) {} toast('已发送'); } });
+  document.getElementById('eat-menu-btn').addEventListener('click', () => {
+    const panel = document.getElementById('eat-menu-panel'); const ta = document.getElementById('eat-menu-ta');
+    if (panel.hidden) { const m = eatMenu(); ta.value = m ? m.join('\n') : ''; panel.hidden = false; } else { panel.hidden = true; }
+  });
+  document.getElementById('eat-menu-save').addEventListener('click', () => {
+    const ta = document.getElementById('eat-menu-ta'); const lines = ta.value.split('\n').map(s => s.trim()).filter(s => s);
+    if (lines.length < 2) { toast('至少输入 2 个菜名'); return; }
+    eatSaveMenu(lines); document.getElementById('eat-menu-panel').hidden = true;
+    eatDrawWheel(eatDishes()); eatLastPick = eatPick(); toast('菜单已保存（' + lines.length + ' 道）');
+  });
+  document.getElementById('eat-menu-reset').addEventListener('click', () => {
+    eatSaveMenu([]); document.getElementById('eat-menu-ta').value = '';
+    document.getElementById('eat-menu-panel').hidden = true;
+    eatDrawWheel(eatDishes()); eatLastPick = eatPick(); toast('已恢复默认菜单');
+  });
 
   // ---- 番茄钟页 ----
   // 专注/小憩/长休三档倒计时 + 圆环进度；完成专注记一个 🍅（今日/累计），可发到聊天。
@@ -2087,6 +2172,9 @@ if (ckRefresh) {
   let pomoEndAt = 0;
   let pomoRemainMs = 0;
   let pomoTickTimer = null;
+  // v3.13.x：「番茄钟 ×摸鱼值 对抗」——专注计时进行中时，personalize.js 的摸鱼值
+  //   自动增长暂停（双方都冻结，TA 在旁边安静陪）；完成专注后按时长结算补偿摸鱼。
+  window.pomoFocusActive = function () { return !!(pomoRunning && pomoMode === 'focus'); };
 
   function pomoRender() {
     const totalMs = pomoModeMin(pomoMode) * 60000;
@@ -2127,6 +2215,12 @@ if (ckRefresh) {
       const mins = pomoModeMin('focus');
       const t = pomoToday(); t.count++; pomoSaveToday(t);
       pomoSaveTotal(pomoTotal() + 1);
+      // v3.13.x：补偿摸鱼——专注期间摸鱼值被冻结，完成按时长结算（每 10 分钟 +1，至少 +1）
+      let comp = 0;
+      try {
+        comp = Math.max(1, Math.round(mins / 10));
+        if (window.addFishPts) window.addFishPts(comp, 0);
+      } catch (e) { comp = 0; }
       // 世界观：他此刻近时，70% 用近状态语（灵体在旁边静静陪），否则原夸夸字卡
       const near = window.taIsNear && window.taIsNear();
       let praise;
@@ -2140,8 +2234,8 @@ if (ckRefresh) {
         pmpDetach();
       }
       pomoIdleAt(brk);
-      pomoShowMsg(POMO_MODES[brk].name + ' ' + pomoModeMin(brk) + ' 分钟 · ' + praise);
-      if (!wasPmp && pomoSendOn() && window.chatAddIn) { try { window.chatAddIn('🍅 完成了 ' + mins + ' 分钟专注，去休息一会儿'); } catch (e) {} }
+      pomoShowMsg(POMO_MODES[brk].name + ' ' + pomoModeMin(brk) + ' 分钟 · ' + praise + (comp ? '（补偿摸鱼 +' + comp + '）' : ''));
+      if (!wasPmp && pomoSendOn() && window.chatAddIn) { try { window.chatAddIn('🍅 完成了 ' + mins + ' 分钟专注，去休息一会儿' + (comp ? '（奖励补偿摸鱼 +' + comp + '）' : '')); } catch (e) {} }
     } else {
       pomoIdleAt('focus');
       pomoShowMsg('休息好了，来下一个番茄吧');
@@ -2281,7 +2375,7 @@ if (ckRefresh) {
   function piggySaveUserCards(a) { const s = piggyStore(); if (s) try { s.set('piggy-cards', JSON.stringify(a)); } catch (e) {} }
   function piggyPick(a) { return a[Math.floor(Math.random() * a.length)]; }
   function piggyShowMsg(txt) { const el = document.getElementById('piggy-msg'); if (el) { el.classList.add('fade'); setTimeout(() => { el.textContent = '\u201c' + txt + '\u201d'; el.classList.remove('fade'); }, 200); } }
-  function piggyInPool() { const u = piggyUserCards(); return u.length ? u.concat(DEF_PIGGY_IN) : DEF_PIGGY_IN.slice(); }
+  function piggyInPool() { const u = piggyUserCards(); const d = libPool('piggy', '存入碎碎念', DEF_PIGGY_IN); return u.length ? u.concat(d) : d.slice(); }
   let piggyHistAll = false; // 记录展开状态（false=最近6条，true=全部+按月分组）
   function piggyRowHtml(x) {
     const d = new Date((x && x.t) || Date.now());
@@ -2386,7 +2480,7 @@ if (ckRefresh) {
       }
       piggyShowMsg(piggyPick(piggyInPool()));
     } else {
-      piggyShowMsg(piggyPick(DEF_PIGGY_OUT));
+      piggyShowMsg(piggyPick(libPool('piggy', '取款回应', DEF_PIGGY_OUT)));
       piggyAskCare();
     }
   }
@@ -2395,7 +2489,7 @@ if (ckRefresh) {
     const box = document.getElementById('piggy-reply');
     if (!box) return;
     const q = document.getElementById('piggy-reply-q');
-    if (q) q.textContent = (window.taFit ? window.taFit('TA：' + PIGGY_CARE[Math.floor(Math.random() * PIGGY_CARE.length)]) : ('TA：' + PIGGY_CARE[Math.floor(Math.random() * PIGGY_CARE.length)]));
+    if (q) { var care = libPool('piggy', '取款关心', PIGGY_CARE); var careTxt = 'TA：' + care[Math.floor(Math.random() * care.length)]; q.textContent = window.taFit ? window.taFit(careTxt) : careTxt; }
     const inp = document.getElementById('piggy-reply-in'); if (inp) inp.value = '';
     box.hidden = false;
   }
@@ -2410,7 +2504,8 @@ if (ckRefresh) {
     const prob = gap > 12 * 3600000 ? 0.45 : (gap > 3600000 ? 0.25 : 0.12);
     if (Math.random() >= prob) return;
     const amt = PIGGY_TA_COINS[Math.floor(Math.random() * PIGGY_TA_COINS.length)];
-    const note = PIGGY_TA_NOTES[Math.floor(Math.random() * PIGGY_TA_NOTES.length)];
+    const notes = libPool('piggy', '塞硬币悄悄话', PIGGY_TA_NOTES);
+    const note = notes[Math.floor(Math.random() * notes.length)];
     vibrate([20, 60, 20]);
     setTimeout(() => { piggyShowMsg(window.taFit ? window.taFit(note + ' ¥' + piggyFmt(amt) + ' · 替TA存进去？') : (note + ' ¥' + piggyFmt(amt) + ' · 替TA存进去？')); }, 400);
   }
@@ -2830,6 +2925,8 @@ if (ckRefresh) {
     } else {
       const t = pomoToday(); t.count++; pomoSaveToday(t);
       pomoSaveTotal(pomoTotal() + 1);
+      // v3.13.x：关闭期间完成的专注同样结算补偿摸鱼
+      try { const c2 = Math.max(1, Math.round(pomoModeMin('focus') / 10)); if (window.addFishPts) window.addFishPts(c2, 0); } catch (e) {}
       // silent:true——启动早期音频子系统未必就绪，勿因提示音阻断恢复流程
       try { pmpCAdd('ta', '🍅 你刚才完成了一个专注，回来看到啦，很棒'); } catch (e) {}
       pmpDetach();
@@ -2853,16 +2950,58 @@ if (ckRefresh) {
 // TA 摸鱼值由 personalize.js 每 60s 60% 概率自动涨（"他在那边也偷了个懒"的来源）。
 // 这里只做监听：值变化且通过频率控制（冷却 45 分钟 + 每日最多 12 次 + 35% 随机，
 // 让"他一整天都可能摸鱼被看见"，又不至于刷屏）时，桌面浮一行小字。
+// v3.13.x：浮字 6 秒内可点——「抓包成功」：这次涨值翻倍（TA 补一份 + 我得同额），
+//   并触发一条害羞回应进聊天；不点就只是看着 TA 涨（原行为不变）。
 (function () {
   let lastTa = null;
+  // v3.13.x：浮字/抓包回应改走系统预设字卡池（DEFAULT_CARD_DATA.fish，字卡库「摸鱼浮字」
+  // tab 同源可查看/逐张开关）；过滤用户已关闭的卡片，池缺失时回退内置兜底
+  const FISH_NOTE_FALLBACK = ['他在那边也偷了个懒'];
+  const CATCH_REPLIES = [
+    '呀…被你看到了',
+    '才、才没有偷懒…好吧，被抓到了',
+    '被你抓包了……脸有点烫',
+    '哼，下次偷偷的，不让你发现',
+    '抓到就抓到……要抱一下才肯继续摸',
+    '……罚我陪你十分钟行不行'
+  ];
+  function fishPool(name, fallback) {
+    let arr = (window.getFishPool ? window.getFishPool(name, fallback) : fallback).slice();
+    if (window.isDefaultCardOff) arr = arr.filter(c => !window.isDefaultCardOff('fish', c));
+    return arr.length ? arr : fallback.slice();
+  }
+  function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
   function chk() {
     if (document.hidden) return;
     const s = window.activeStore && window.activeStore(); if (!s) return;
     let cur = 0; try { cur = parseInt(s.get('fish-total-ta') || '0', 10) || 0; } catch (e) {}
     if (lastTa === null) { lastTa = cur; return; }
-    if (cur > lastTa && window.taChimeAllow && window.taChimeAllow('fish-ta-note', { cooldown: 45 * 60 * 1000, dailyMax: 12 }) && Math.random() < 0.35) {
+    const delta = cur - lastTa;
+    if (delta > 0 && window.taChimeAllow && window.taChimeAllow('fish-ta-note', { cooldown: 45 * 60 * 1000, dailyMax: 12 }) && Math.random() < 0.35) {
       window.taChimeUse('fish-ta-note');
-      if (window.taChimeShow) window.taChimeShow('他在那边也偷了个懒', { dur: 3600 });
+      if (window.taChimeShow) {
+        const note = pick(fishPool('摸鱼浮字', FISH_NOTE_FALLBACK));
+        window.taChimeShow(note, {
+          dur: 6000,
+          onClick: function () {
+            try {
+              // 抓包奖励：本次涨值翻倍——TA 再补一份，我得同额
+              const bonus = Math.max(1, delta);
+              if (window.addFishPts) window.addFishPts(bonus, bonus);
+              let rec = null;
+              try { rec = JSON.parse(s.get('fish-catch-day') || 'null'); } catch (e) {}
+              const dk = (function () { const d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); })();
+              if (!rec || rec.date !== dk) rec = { date: dk, n: 0 };
+              rec.n++; s.set('fish-catch-day', JSON.stringify(rec));
+              if (window.toast) window.toast(window.taFit ? window.taFit('抓包成功！双方摸鱼值 +' + bonus) : ('抓包成功！双方摸鱼值 +' + bonus));
+              if (window.chatAddIn) {
+                const r = pick(fishPool('抓包回应', CATCH_REPLIES));
+                setTimeout(() => { try { window.chatAddIn(window.taFit ? window.taFit(r) : r); } catch (e) {} }, 900);
+              }
+            } catch (e) {}
+          }
+        });
+      }
     }
     lastTa = cur;
   }

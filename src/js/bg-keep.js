@@ -773,7 +773,12 @@
       const arr = window.getChatMsgs ? window.getChatMsgs() : null;
       if (!arr || !arr.length) return false;
       const cutoff = Date.now() - NOTIFY_CHAT_DUP_MS;
-      for (let i = arr.length - 1, n = 0; i >= 0 && n < 150; i--, n++) {
+      // v3.13.x 修复：从倒数第二条开始扫——聊天消息到达是「先入库（addRec msgs.push）
+      // 再走 bgNotifyCheck」，查重扫历史会把【刚到达的这条】自己判成"最近说过"而吞掉
+      // 通知（用户表现：联系人发消息有提示音但从不弹窗，且只有聊天如此——朋友圈/信箱
+      // 的通知文本不在聊天记录里，不受影响）。跳过最后一条后，真正先前已看过/已弹过的
+      // 重复内容（倒数第二条起）仍会被拦下。
+      for (let i = arr.length - 2, n = 0; i >= 0 && n < 150; i--, n++) {
         const m = arr[i];
         if (!m) continue;
         const mts = m.ts || 0;
@@ -795,6 +800,10 @@
         } else if (t.indexOf('data:') === 0) {
           img = t; // 无 parts 的旧式纯图消息：dataURL 即正文
           t = '';
+        } else if (t.indexOf('|||') >= 0) {
+          // v3.13.x：旧式语音消息 text 为「名称|||音频dataURL」——与探针/通知侧一致地
+          // 剥离 ||| 段再比指纹，否则带语音文本查不到历史（语音段剥离后同指纹）
+          t = t.split('|||')[0];
         }
         if (msgFingerprint(t, img) === key) return true;
       }

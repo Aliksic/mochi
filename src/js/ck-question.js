@@ -229,10 +229,12 @@
       }, 400);
     }
     try { store.set('ckq-last-at', String(Date.now())); } catch (e) {}
+    // v3.13.x：互动卡全局闸门——查岗卡发出后同样进入 60 分钟跨类型冷却
+    try { if (window.interactGateMark) window.interactGateMark(); } catch (e) {}
     return true;
   }
 
-  // 主动发送轮调用（chat.js tryAutoSend）：开关 + 冷却 + 概率判定；
+  // 主动发送轮调用（chat.js tryAutoSend）：开关 + 冷却 + 全局闸门 + 概率判定；
   // 命中推卡并返回 true（本轮主动消息被查岗占用）。概率为 0/异常时回退默认
   // （与 as-prob 同惯例），想彻底关闭请关开关。
   window.ckQuestionTry = function (c) {
@@ -243,7 +245,11 @@
       let last = 0;
       try { last = Number(store.get('ckq-last-at')) || 0; } catch (e) {}
       if (Date.now() - last < cool * 60000) return false;
-      let prob = 15;
+      // v3.13.x：互动卡全局闸门——任一互动卡（询问/小问题/好奇/吐槽/查岗）发出后
+      // 60 分钟内不再自动触发（手动 triggerCkQuestion 不受限）
+      if (window.interactGateOk && !window.interactGateOk()) return false;
+      // v3.13.x：兜底默认 15 → 8，与 reply-settings 的 ckq-prob 默认对齐（v3.12.x 漏改处）
+      let prob = 8;
       if (typeof c['ckq-prob'] === 'number' && c['ckq-prob'] > 0) prob = c['ckq-prob'];
       if (Math.random() * 100 >= prob) return false;
       return pushCkQuestion(c);

@@ -31,6 +31,15 @@
   // chatDbReady=false 期间 saveMsgs 只暂存内存、不落盘；loadMsgs 首次从 IDB
   // 读到完整历史后才置真，后续保存恢复正常双写。
   let chatDbReady = false;
+  // v3.13.x 性能：loadMsgs 全量 IDB 重读时间闸——enterChat/搜索每次进入都会
+  // 无条件 idbGet 整条历史 + JSON.parse + 按 ts 排序 + Set 去重，记录越大这份
+  // 全量解析成本每次进聊天页都重复一遍。加会话级冷却：同联系人 8s 内已成功
+  // 合并过权威就跳过重读（8s 窗口内的本地改动在退出聊天页时已由 flushSave 落盘，
+  // 8s 后重读正好覆盖"编辑/撤回被其他途径写盘"的极端情况）。启动首读、
+  // 导入备份后（mochi-restore-done）强制绕过闸门重读权威，保证能看到最新数据。
+  let lastIdbLoadPrefix = null;
+  let lastIdbLoadAt = 0;
+  const IDB_RELOAD_MIN_GAP = 8000;
   let pendingLocal = null; // 权威就绪前暂存的内存消息（绝不落盘，防止污染读取/覆盖 IDB）
   // v3.5.127：防抖——TA 连发多条（间隔 1-3s）时把多次全量序列化合并成一次
   //（历史上千条带图消息时每次 stringify 是几十 MB，逐条写会明显卡顿）
@@ -54,8 +63,11 @@
         clearTimeout(saveTimer);
         saveTimer = null;
         if (pendingSaveData && pendingSavePrefix) {
-          try { if (window.idbSet) window.idbSet(pendingSavePrefix + ':chat-msgs', pendingSaveData); } catch (e) {}
-          try { writeLsSnapshot(pendingSaveData, pendingSavePrefix); } catch (e) {}
+          // v3.13.x：pendingSaveData 改为 msgs 数组引用（stringify 已移入防抖回调），
+          // 这里兜底落盘时才序列化
+          const snap = JSON.stringify(pendingSaveData);
+          try { if (window.idbSet) window.idbSet(pendingSavePrefix + ':chat-msgs', snap); } catch (e) {}
+          try { writeLsSnapshot(snap, pendingSavePrefix, true); } catch (e) {}
         }
         pendingSaveData = null;
         pendingSavePrefix = null;
@@ -89,7 +101,15 @@
   // loadMsgs 在 IDB 无数据时自动从这份快照恢复（复用了原「老版本 LS 迁入 IDB」
   // 的恢复分支，同一键名）。
   const LS_SNAP_LIMIT = 2 * 1024 * 1024;
-  function writeLsSnapshot(raw, prefix) {
+  // v3.13.x 性能：快照瘦身（>2MB 时 JSON.parse 全量 + 剥离 img/voice + stringify）
+  // 是几十 ms 级同步开销，聊天记录带图/语音后每次消息落盘都跑一遍会卡低端机。
+  // 重路径节流：leading 立即写 + 4s trailing 写窗口内最新值；<2MB 轻路径（纯
+  // setItem）不节流；所有退出/正确性路径（flushSave/切联系人/IDB 保险丝/导入/
+  // 作答立即落盘）走 force=true 立即写最新快照。权威数据 IndexedDB 每次都在写，
+  // 节流只影响第二备份（LS 快照）的更新频率，且退出时必刷，不增加丢失风险。
+  let lsSnapTimer = null;
+  let lsSnapPending = null; // { raw, prefix }：窗口内最新一次请求，trailing 时写
+  function performLsSnapWrite(raw, prefix) {
     try {
       let snap = raw;
       if (snap.length > LS_SNAP_LIMIT) {
@@ -117,6 +137,25 @@
       }
     } catch (e) {}
   }
+  function writeLsSnapshot(raw, prefix, force) {
+    if (force) {
+      if (lsSnapTimer) { clearTimeout(lsSnapTimer); lsSnapTimer = null; }
+      lsSnapPending = null;
+      performLsSnapWrite(raw, prefix);
+      return;
+    }
+    if (raw.length <= LS_SNAP_LIMIT) { performLsSnapWrite(raw, prefix); return; }
+    if (lsSnapTimer) { lsSnapPending = { raw: raw, prefix: prefix }; return; }
+    performLsSnapWrite(raw, prefix);
+    lsSnapTimer = setTimeout(() => {
+      lsSnapTimer = null;
+      if (lsSnapPending) {
+        const p = lsSnapPending;
+        lsSnapPending = null;
+        performLsSnapWrite(p.raw, p.prefix);
+      }
+    }, 4000);
+  }
   // v3.6.x：IDB 权威读取保险丝（仿 mail.js 15s）——X浏览器等第三方浏览器在 OPPO
   // 后台挂起时 indexedDB.open/读取可能永不返回，chatDbReady 永远 false → 消息只进
   // 内存不落盘，刷新即丢（用户实测"聊一天、第二天全没"）。15s 后强制就绪：此后
@@ -132,7 +171,7 @@
       chatDbReady = true;
       const fuseMsgs = (pendingLocal && pendingLocal.length) ? pendingLocal : msgs;
       if (fuseMsgs && fuseMsgs.length) {
-        try { writeLsSnapshot(JSON.stringify(fuseMsgs), fusePrefix); } catch (e) {}
+        try { writeLsSnapshot(JSON.stringify(fuseMsgs), fusePrefix, true); } catch (e) {}
       } else {
         // v3.9.x 修复（切联系人后聊天记录丢失）：IDB 读取挂起且内存为空时，
         //   从 LS 兜底快照恢复。否则 chatDbReady=true 后 loadMsgs 的 LS 预载条件
@@ -164,25 +203,31 @@
   //   暂存 data+prefix 供 handler 切前强制落盘到正确（旧）桌面
   let pendingSaveData = null, pendingSavePrefix = null;
   function saveMsgs() {
-    const data = JSON.stringify(msgs);
+    // v3.13.x 性能：JSON.stringify 是 O(全部记录) 的同步开销，记录越多（几 MB 的
+    // 聊天历史）每次收发消息都序列化一遍会让低端机输入/滚动掉帧——移到 400ms
+    // 防抖回调里执行（与 idbSet 同一时机），字符串化工作不再卡住消息渲染路径。
+    // 写入内容仍是回调执行那一刻的最新 msgs，行为不变。
     // 权威未就绪（IDB 打开/读取挂起，如 X浏览器等第三方浏览器后台挂起）：消息暂存
     // 内存，同时写 LS 快照兜底——loadMsgs 第一步会先读 LS 快照渲染，IDB 读回后按
     // 权威合并（快照仅兜底，不会覆盖 IDB 权威）；不写 LS 的话刷新后消息全部丢失
     if (!chatDbReady) {
       try { pendingLocal = msgs.slice(); } catch (e) {}
-      writeLsSnapshot(data);
+      // v3.13.x：IDB 挂起期间 LS 快照是唯一落盘路径，force 立即写（不节流）——
+      // 该场景已退化，数据安全优先
+      writeLsSnapshot(JSON.stringify(msgs), undefined, true);
       return;
     }
     if (saveTimer) clearTimeout(saveTimer);
     // v3.6.x 修复（防抖定时器跨联系人写串）：闭包捕获当前命名空间，
     // 防止 400ms 回调执行时 activePrefix() 已切到新联系人
     const myPrefix = window.activePrefix();
-    pendingSaveData = data;
+    pendingSaveData = msgs;
     pendingSavePrefix = myPrefix;
     saveTimer = setTimeout(() => {
       saveTimer = null;
       pendingSaveData = null;
       pendingSavePrefix = null;
+      const data = JSON.stringify(msgs);
       try { if (window.idbSet) window.idbSet(myPrefix + ':chat-msgs', data); } catch (e) {}
       writeLsSnapshot(data, myPrefix);
     }, 400);
@@ -198,10 +243,11 @@
       const data = JSON.stringify(msgs);
       const myPrefix = window.activePrefix();
       try { if (window.idbSet) window.idbSet(myPrefix + ':chat-msgs', data); } catch (e) {}
-      writeLsSnapshot(data, myPrefix);
+      // v3.13.x：页面离开前强制立即写快照（不节流），防退出时窗口内最新消息只进内存
+      writeLsSnapshot(data, myPrefix, true);
     } else if (!chatDbReady && msgs.length) {
       // IDB 未就绪期间的杀进程/切后台：内存消息写 LS 快照兜底，下次启动从快照恢复
-      writeLsSnapshot(JSON.stringify(msgs));
+      writeLsSnapshot(JSON.stringify(msgs), undefined, true);
     }
   }
   // v3.5.134：暴露给导出/清除等外部流程（导出前强制落盘，防止备份缺最后几条消息）
@@ -261,7 +307,7 @@
     if (r.special === 'invite' && r.inviteStatus === 'answered') return true;
     return false;
   }
-  function loadMsgs() {
+  function loadMsgs(forceIdb) {
     armReadyFuse();
     // v3.6.x：聊天记录已改为只写 IndexedDB，这里不再优先读 localStorage 快照。
     // 仅当内存为空（首次启动/刷新）且 IDB 尚未读回时，用 localStorage 兜底渲染一次
@@ -280,6 +326,14 @@
     // 手机上 IDB 读取可能偶发失败/时序靠后，之前"读完一次就置 chatDbReady 不再读"
     // 会让失败后的页面永远停留在空/残缺状态；现在每次 loadMsgs 都重试，
     // 且合并规则是「IDB 完整历史 + 本地更新的消息」，绝不覆盖 IDB 权威数据。
+    // v3.13.x：加时间闸（见 lastIdbLoadAt）——同联系人 8s 内已成功读过就跳过，
+    // 避免每次进聊天页重复全量解析+排序。forceIdb=true 强制重读（导入备份后）。
+    const nowT = Date.now();
+    const skipRead = chatDbReady &&
+      lastIdbLoadPrefix === window.activePrefix() &&
+      nowT - lastIdbLoadAt < IDB_RELOAD_MIN_GAP &&
+      !forceIdb;
+    if (!skipRead) {
     try {
       if (window.idbGet) {
         // v3.6.x 修复（跨联系人写串桌面）：闭包捕获当前命名空间，回调内一律用 myPrefix，
@@ -310,7 +364,7 @@
               msgs = pendingLocal.concat(msgs.filter(m => !pendingLocal.some(p => p && p.ts === m.ts && p.text === m.text)));
               pendingLocal = null;
               try { if (window.idbSet) window.idbSet(myPrefix + ':chat-msgs', JSON.stringify(msgs)); } catch (e) {}
-              writeLsSnapshot(JSON.stringify(msgs), myPrefix);
+              writeLsSnapshot(JSON.stringify(msgs), myPrefix, true);
             }
             return;
           }
@@ -386,6 +440,11 @@
             if (restoreEscapedPokeIcons()) changed = true;
             pendingLocal = null;
             chatDbReady = true;
+            // v3.13.x：合并成功 → 记录闸门状态，8s 内的再次 loadMsgs 跳过全量重读
+            try {
+              lastIdbLoadPrefix = window.activePrefix();
+              lastIdbLoadAt = Date.now();
+            } catch (e) {}
             // v3.6.x 修复（iQOO/QQ浏览器「聊天记录重进后消失」根因）：这里绝不能再用
             // store.remove('chat-msgs')——它是「内存缓存 + localStorage + IndexedDB」
             // 三连删，而 v3.6.x 起聊天记录权威数据只存 IDB：同一会话再次进入聊天页时
@@ -403,7 +462,7 @@
               //   IDB 事务挂起，loadMsgs 同步阶段也能从 LS 快照渲染，不消失。原实现
               //   只写 IDB 不写 LS，"只在 IDB、从未发消息"的联系人查看后 LS 仍空，
               //   切走再切回时 IDB 挂起 + LS 空 → 永久消失
-              try { writeLsSnapshot(JSON.stringify(msgs), myPrefix); } catch (e) {}
+              try { writeLsSnapshot(JSON.stringify(msgs), myPrefix, true); } catch (e) {}
               // 聊天页当前可见且贴近底部 → 重新渲染窗口，让恢复出的历史立即显示
               // v3.6.x：改用分页渲染（原全量 forEach 渲染几千条会卡顿）
               if (chatVisible() && chatNearBottom()) {
@@ -415,6 +474,7 @@
         });
       }
     } catch (e) {}
+    } // v3.13.x：时间闸跳过全量重读的关闭括号
     // 注意：换头像消息不做文案迁移——
     // 「昵称 更换了头像」是联系人自己换的头像（avatar-lib 自动随机/手动切换），
     // 「我 更换了 TA 的头像」是"我"给联系人换头像，两者都要保留原样
@@ -525,14 +585,25 @@
   function chatPartnerName() { return chatLabel('cs-lbl-partner', 'lbl-partner', 'TA'); }
   window.chatPartnerName = chatPartnerName;
   function chatUserName() { return chatLabel('cs-lbl-user', 'lbl-user', '我'); }
+  // v3.13.x 性能：批量渲染期间的双方头像缓存（{ key: dataURL|null }，appendAvatarBatch 开关）。
+  // ⚠️ 必须声明在 fillAvatar 之前——fillAvatar 启动渲染即被调用，原声明在 :1259（let TDZ）
+  // 导致启动抛 "Cannot access 'avatarBatchCache' before initialization"，chat.js 自消息
+  // 渲染段起整段失效。本会话上移修复。
+  let avatarBatchCache = null;
   // 头像回填（接受元素或 id）
   function fillAvatar(el, key) {
     if (typeof el === 'string') el = document.getElementById(el);
     if (!el) return;
-    let data = store.get(key);
-    // v3.9.x：聊天专用头像未设置时回退桌面头像（独立设置语义——未单独设置则与桌面一致）
-    if (!data && key === 'cs-avatar-partner') data = store.get('avatar-partner');
-    if (!data && key === 'cs-avatar-user') data = store.get('avatar-user');
+    let data;
+    if (avatarBatchCache && key in avatarBatchCache) {
+      data = avatarBatchCache[key];
+    } else {
+      data = store.get(key);
+      // v3.9.x：聊天专用头像未设置时回退桌面头像（独立设置语义——未单独设置则与桌面一致）
+      if (!data && key === 'cs-avatar-partner') data = store.get('avatar-partner');
+      if (!data && key === 'cs-avatar-user') data = store.get('avatar-user');
+      if (avatarBatchCache) avatarBatchCache[key] = data || null;
+    }
     // v3.6.x：渲染前防护——超大 dataURL 不渲染（personalize 启动时已清除存量坏数据，
     // 这里兜底防止清理前渲染触发 iOS Safari 解码崩溃：画面正常但点击无响应）
     if (data && data.length > 500 * 1024) data = null;
@@ -565,9 +636,12 @@
   // v3.6.x：加贴底判断——数据恢复期间用户可能已在翻旧消息，全量重渲染
   // 会把滚动位置重置到底部（之前每条恢复消息也强制滚动到底）
   // v3.6.x：改用分页渲染（renderWindow）
+  // v3.13.x：强制重读 IDB 权威（loadMsgs(true)）——时间闸会跳过 8s 内的
+  // 重复读取，但导入备份/配额恢复后内存里的可能是旧数据，必须绕过闸门重读合并
   try {
     document.addEventListener('mochi-restore-done', function () {
       try {
+        loadMsgs(true);
         if (chatVisible() && chatNearBottom() && body && msgs.length) {
           renderWindow(false, true);
           scrollChatBottom();
@@ -1172,6 +1246,23 @@
   // 批量中 renderMsg 里的 maybeScrollChatBottom 会被 batchRendering 跳过，
   // 若没有补偿，发送的消息渲染出来却停在视口外（「发送后不自动滚到最新」）。
   let pendingOutScroll = false;
+  // v3.13.x 性能：批量渲染（renderWindow/增量加载）用 DocumentFragment 一次性挂载——
+  // renderMsg 内部 15 处 append 都走 appendMsg()：appendTarget 非空（批量中）时节点
+  // 收进 fragment（不碰 live DOM），循环结束统一挂回 body，避免 200+ 条逐节点触发
+  // 布局；单条追加（addRec/撤回重建）appendTarget 为 null，行为与原来完全一致。
+  let appendTarget = null;
+  function appendMsg(m) { (appendTarget || body).appendChild(m); }
+  // v3.13.x 性能：批量渲染（renderWindow/增量加载）期间 fillAvatar 对每条消息都
+  // store.get 读头像——200 条消息 = 200 次存储读取 + 建 img 节点。批量作用域缓存：
+  // 只在批量循环期间缓存双方头像 dataURL（按 key），批量结束立即清空；非批量调用
+  //（进聊天页头部、换头像、restore-done）走原逻辑实时读，无陈旧风险。
+  // ⚠️ avatarBatchCache 声明已上移至 fillAvatar（:589）之前——原写在此处（let TDZ），
+  // 启动时 fillAvatar 触碰未初始化的绑定直接抛 "Cannot access before initialization"，
+  // chat.js 自此处起整段失效（主动发送/邀请等全部失联）。本会话上移修复。
+  function appendAvatarBatch(on) {
+    if (on) { if (!avatarBatchCache) avatarBatchCache = {}; }
+    else avatarBatchCache = null;
+  }
 
   // v3.6.x：聊天记录分页渲染——首屏只渲染最近 RENDER_MAX 条，向上滚动加载更早。
   // 数据不变（msgs 全量在内存，getChatMsgs/统计/搜索遍历不受影响），只分 DOM 渲染层：
@@ -1218,13 +1309,22 @@
     collectInplaceDrafts();
     body.innerHTML = '';
     batchRendering = true;
+    // v3.13.x 性能：批量渲染（200+ 条）改用 DocumentFragment 收集后一次插入——
+    // 批量期间 appendTarget 指向 frag，renderMsg 内部的 appendMsg 收进 fragment
+    // 不碰 live DOM，循环结束统一挂载，避免逐节点 append 触发多次布局
+    const frag = document.createDocumentFragment();
+    appendTarget = frag;
+    appendAvatarBatch(true);
     for (let i = start; i < len; i++) {
       // v3.9.x：时间分隔线样式下，间隔足够大的消息前补插居中时间胶囊
       maybeInsertDivider(i);
       const m = renderMsg(msgs[i]);
       m.dataset.idx = i; // 覆盖 renderMsg 内的 msgs.length-1（批量渲染时必须为真实下标）
     }
+    appendAvatarBatch(false);
+    appendTarget = null;
     batchRendering = false;
+    body.appendChild(frag);
     if (keepScroll && prevHeight > 0) {
       body.scrollTop = prevTop + (body.scrollHeight - prevHeight);
     }
@@ -1256,12 +1356,19 @@
     const preNum = body.children.length;
     const anchor = body.children[0] || null;
     batchRendering = true;
-    // 新批渲染到 body 尾部（renderMsg 只会 append）
+    // v3.13.x：新批先收进 DocumentFragment（renderMsg 内部 append 走 appendMsg，
+    // 批量期间落到 frag），再一次插到锚点前——避免逐条 insertBefore 触发多次布局
+    const frag = document.createDocumentFragment();
+    appendTarget = frag;
+    appendAvatarBatch(true);
+    // 新批渲染到 frag 尾部
     for (let i = newStart; i < renderStart; i++) {
       maybeInsertDivider(i); // 时间分隔线：新批首条与前一条间距大时补胶囊
       const m = renderMsg(msgs[i]);
       m.dataset.idx = i;
     }
+    appendAvatarBatch(false);
+    appendTarget = null;
     batchRendering = false;
     renderStart = newStart;
     if (preNum > 0 && anchor) {
@@ -1269,8 +1376,7 @@
       // v3.12.x：必须升序遍历——insertBefore(x, anchor) 每次都把 x 插到锚点紧前方
       //（即上一批已插节点的后面），降序遍历会把整批倒序排（深翻历史时顶部一段
       // 消息新旧颠倒的根源），升序插入才能得到 [旧…新, 锚点] 的正确时序
-      const newNodes = Array.prototype.slice.call(body.children, preNum);
-      for (let k = 0; k < newNodes.length; k++) body.insertBefore(newNodes[k], anchor);
+      body.insertBefore(frag, anchor);
       body.scrollTop = beforeTop + anchor.offsetTop;
     } else {
       body.scrollTop = body.scrollHeight; // 原窗口为空，直接滚到底
@@ -1289,7 +1395,11 @@
     // v3.12.x：脱尾处理——深翻历史被裁尾后，新到的消息由 addRec 直接 append 在窗口外
     // （"脱尾"）。补画缺口时：已存在的下标跳过不重画；缺失节点插到「其后第一个已在
     // DOM 的节点」之前，保持先旧后新的时序
+    // v3.13.x：有锚点时先收进 DocumentFragment 再一次插到锚点前，避免逐条 insertBefore
     let anchor = null;
+    const frag = document.createDocumentFragment();
+    appendTarget = frag;
+    appendAvatarBatch(true);
     for (let i = renderEnd; i < newEnd; i++) {
       // 已由增量追加画过的下标直接跳过——防同一条消息/卡片出现两个气泡
       //（历史缺陷：addRec 不推进 renderEnd 时整段被原样重画）
@@ -1302,10 +1412,13 @@
       maybeInsertDivider(i);
       const m = renderMsg(msgs[i]);
       m.dataset.idx = i;
-      if (anchor && m.parentNode === body) body.insertBefore(m, anchor);
     }
+    appendAvatarBatch(false);
+    appendTarget = null;
     batchRendering = false;
     renderEnd = newEnd;
+    if (anchor) body.insertBefore(frag, anchor);
+    else if (frag.childNodes.length) body.appendChild(frag);
     // 窗口超上限 → 从远离视口的顶部（最早端）裁剪
     if (newEnd - renderStart > WINDOW_MAX) pruneWindowTop();
     suppressScrollUntil = Date.now() + 200;
@@ -1367,7 +1480,7 @@
           : '<div class="msg-ask-tip">' + T('等待 TA 回应…') + '</div>') +
         favHeartHtml() +
         '</div>';
-      body.appendChild(m);
+      appendMsg(m);
       maybeScrollChatBottom(rec.side);
       return m;
     }
@@ -1384,7 +1497,7 @@
           : '<div class="msg-ask-tip">' + (askIsSingle ? T('等待 TA 选择…') : T('等待 TA 回答…')) + '</div>') +
         favHeartHtml() +
         '</div>';
-      body.appendChild(m);
+      appendMsg(m);
       maybeScrollChatBottom(rec.side);
       return m;
     }
@@ -1392,7 +1505,7 @@
     if (rec.special === 'call' || rec.special === 'call-reply' || rec.special === 'invite-reply') {
       m.className = 'msg-center';
       m.innerHTML = '<div class="msg-center-card">' + escTxt(T(rec.text)) + '</div>';
-      body.appendChild(m);
+      appendMsg(m);
       maybeScrollChatBottom(rec.side);
       return m;
     }
@@ -1407,7 +1520,7 @@
       if (rec.mailNotice) {
         m.addEventListener('click', () => { if (window.openMailPage) window.openMailPage(); });
       }
-      body.appendChild(m);
+      appendMsg(m);
       maybeScrollChatBottom(rec.side);
       return m;
     }
@@ -1430,7 +1543,7 @@
         '</div>' +
         '<div class="msg-rps-result">' + escTxt(resTxt) + '</div>' +
       '</div>';
-      body.appendChild(m);
+      appendMsg(m);
       maybeScrollChatBottom(rec.side);
       return m;
     }
@@ -1441,7 +1554,7 @@
         '<div class="msg-pong-label">' + T('双人 Pong') + '</div>' +
         '<div class="msg-pong-result">' + escTxt(T(rec.text || '')) + '</div>' +
       '</div>';
-      body.appendChild(m);
+      appendMsg(m);
       maybeScrollChatBottom(rec.side);
       return m;
     }
@@ -1456,7 +1569,7 @@
         '<div class="msg-snake-row"><span class="msg-snake-side">' + T('TA') + '</span><span>长度 ' + rec.snkOLen + '</span><span>食物 ' + rec.snkOFood + '</span><span>' + rec.snkOScore + '分</span></div>' +
         '<div class="msg-rps-result" style="color:' + snkClr + '">存活 ' + rec.snkTime + 's · ' + escTxt(snkResTxt) + '</div>' +
       '</div>';
-      body.appendChild(m);
+      appendMsg(m);
       maybeScrollChatBottom(rec.side);
       return m;
     }
@@ -1487,7 +1600,7 @@
           }
         }
       }
-      body.appendChild(m);
+      appendMsg(m);
       maybeScrollChatBottom(rec.side);
       return m;
     }
@@ -1504,7 +1617,7 @@
         '<div class="msg-flower-foot"><span>' + escTxt(sideTxt) + ' \u9001\u51FA</span></div>' +
         favHeartHtml() +
         '</div>';
-      body.appendChild(m);
+      appendMsg(m);
       maybeScrollChatBottom(rec.side);
       return m;
     }
@@ -1522,7 +1635,7 @@
           '<span class="msg-gift-price">\u00A5' + escTxt(Number(rec.giftPrice || 0).toFixed(2)) + '</span></div>' +
         favHeartHtml() +
         '</div>';
-      body.appendChild(m);
+      appendMsg(m);
       maybeScrollChatBottom(rec.side);
       return m;
     }
@@ -1538,7 +1651,7 @@
           : '<div class="msg-ask-tip">点击选择你的答案</div>') +
         favHeartHtml() +
         '</div>';
-      body.appendChild(m);
+      appendMsg(m);
       maybeScrollChatBottom(rec.side);
       return m;
     }
@@ -1554,7 +1667,7 @@
           : '<div class="msg-ask-tip">' + T('点击回答 TA 的好奇') + '</div>') +
         favHeartHtml() +
         '</div>';
-      body.appendChild(m);
+      appendMsg(m);
       maybeScrollChatBottom(rec.side);
       return m;
     }
@@ -1570,7 +1683,7 @@
           : '<div class="msg-ask-tip">' + T('点击回 TA 一句') + '</div>') +
         favHeartHtml() +
         '</div>';
-      body.appendChild(m);
+      appendMsg(m);
       maybeScrollChatBottom(rec.side);
       return m;
     }
@@ -1588,7 +1701,7 @@
           : '<div class="msg-ask-tip">' + (isSingle ? '点击选择你的答案' : T('点击回答 TA 的提问')) + '</div>') +
         favHeartHtml() +
         '</div>';
-      body.appendChild(m);
+      appendMsg(m);
       maybeScrollChatBottom(rec.side);
       return m;
     }
@@ -1787,7 +1900,7 @@
         });
       });
     } catch (e) {}
-    body.appendChild(m);
+    appendMsg(m);
     // v3.9.x：side 透传——我发送的消息（side:out）一律滚到底（发送即意图看最新），
     // TA 消息贴近底部才滚（翻旧消息时不打断阅读位置）。修复「发送消息后不自动滚到最新」
     maybeScrollChatBottom(rec.side);
@@ -1894,7 +2007,7 @@
     // idbSet 并发可能后执行把刚导入的数据删掉。idbSet(put) 本就覆盖旧值，无需先删
     const importedData = JSON.stringify(msgs);
     try { if (window.idbSet) window.idbSet(window.activePrefix() + ':chat-msgs', importedData); } catch (e) {}
-    writeLsSnapshot(importedData);
+    writeLsSnapshot(importedData, undefined, true);
     if (body) body.innerHTML = '';
     clearChatUnread();
     if (chatVisible() && msgs.length) {
@@ -2267,7 +2380,7 @@
   function saveMsgsNow() {
     const data = JSON.stringify(msgs);
     try { if (window.idbSet) window.idbSet(window.activePrefix() + ':chat-msgs', data); } catch (e) {}
-    writeLsSnapshot(data);
+    writeLsSnapshot(data, undefined, true);
   }
 
   // 回答 TA 的小问题（选择题）：更新记录 + 插入"我的选择"和 TA 回应
@@ -2865,43 +2978,62 @@ function partialRetractMsg(msgEl, side) {
       staticText: staticText
     });
   }
+  // 按邀请类型打开对应半框（Pong 前先清其他半框，参照原 more-pong 清理列表）
+  function openInvitePanelFor(kind) {
+    if (kind === 'rps') { if (window.openRpsPanel) window.openRpsPanel(); return; }
+    if (kind === 'pong') {
+      const ids = ['poke-card', 'emoji-panel', 'chat-ask-panel', 'chat-search', 'chat-divine-panel', 'chat-decision-panel', 'chat-rps-panel', 'chat-rp-panel', 'chat-call-panel'];
+      ids.forEach(id => { const el = document.getElementById(id); if (el) el.hidden = true; });
+      if (window.closeAvlib) window.closeAvlib();
+      if (window.openPongPanel) window.openPongPanel();
+      return;
+    }
+    if (kind === 'snake') { if (window.openSnakePanel) window.openSnakePanel(); }
+  }
+  const INVITE_KIND_META = {
+    rps: { title: '猜拳邀请' },
+    pong: { title: '游戏邀请' },
+    snake: { title: '游戏邀请' }
+  };
+  // 发一张邀请（inv={kind,text}，text 来自字卡库「TA的邀请」）：
+  // 邀请消息（带主动爱心标识）→ typing → 同意/拒绝弹窗 → 同意开对应半框、拒绝发婉拒消息
+  function sendTaInvite(inv, name) {
+    const meta = INVITE_KIND_META[inv && inv.kind] || INVITE_KIND_META.rps;
+    addIn(name + ' ' + (inv.text || ''), { special: 'poke', initiative: true });
+    showTyping();
+    setTimeout(() => {
+      hideTyping();
+      openInviteConfirm(name + ' 的' + meta.title, name + ' ' + (inv.text || ''), () => openInvitePanelFor(inv.kind));
+    }, randInt(700, 1400));
+  }
+  window.sendTaInvite = sendTaInvite;
+  // v3.13.x：话术从字卡库「TA的邀请」抽取（ta-invite.js taInviteDraw 保持原开关/概率语义：
+  // 先掷猜拳门 ai-rps-en/prob 再掷游戏门 ai-game-en/prob）；库 API 缺失时回退旧硬编码文案
   function tryActiveInvite(c) {
     if (!chatVisible()) return false;
     const name = chatPartnerName();
-    // 猜拳邀请
-    if (cfgn(c, 'ai-rps-en', 1) === 1 && hit(cfgn(c, 'ai-rps-prob', 8))) {
-      addIn(name + ' 想和你猜拳，来一局？', { special: 'poke', initiative: true });
-      showTyping();
-      setTimeout(() => {
-        hideTyping();
-        openInviteConfirm(name + ' 的猜拳邀请', name + ' 邀请你猜拳，来一局？', () => openRpsPanel());
-      }, randInt(700, 1400));
-      return true;
+    let inv = null;
+    if (window.taInviteDraw) {
+      inv = window.taInviteDraw(c);
+    } else {
+      if (cfgn(c, 'ai-rps-en', 1) === 1 && hit(cfgn(c, 'ai-rps-prob', 8))) inv = { kind: 'rps', text: '想和你猜拳，来一局？' };
+      else if (cfgn(c, 'ai-game-en', 1) === 1 && hit(cfgn(c, 'ai-game-prob', 5))) inv = Math.random() < 0.5 ? { kind: 'pong', text: '想和你玩一局 Pong，来吗？' } : { kind: 'snake', text: '想和你玩双人贪吃蛇，来吗？' };
     }
-    // 游戏邀请（Pong / 贪吃蛇随机）
-    if (cfgn(c, 'ai-game-en', 1) === 1 && hit(cfgn(c, 'ai-game-prob', 5))) {
-      const isPong = Math.random() < 0.5;
-      const gameName = isPong ? 'Pong' : '双人贪吃蛇';
-      addIn(name + (isPong ? ' 想和你玩一局 Pong，来吗？' : ' 想和你玩双人贪吃蛇，来吗？'), { special: 'poke', initiative: true });
-      showTyping();
-      setTimeout(() => {
-        hideTyping();
-        openInviteConfirm(name + ' 的游戏邀请', name + ' 邀请你玩' + gameName + '，来吗？', () => {
-          if (isPong) {
-            // Pong 面板打开前关闭其他半框（openPongPanel 自身不清，参照 more-pong 的清理列表）
-            const ids = ['poke-card', 'emoji-panel', 'chat-ask-panel', 'chat-search', 'chat-divine-panel', 'chat-decision-panel', 'chat-rps-panel', 'chat-rp-panel', 'chat-call-panel'];
-            ids.forEach(id => { const el = document.getElementById(id); if (el) el.hidden = true; });
-            if (window.closeAvlib) window.closeAvlib();
-            if (window.openPongPanel) window.openPongPanel();
-          } else if (window.openSnakePanel) {
-            window.openSnakePanel();
-          }
-        });
-      }, randInt(700, 1400));
-      return true;
-    }
-    return false;
+    if (!inv || !inv.text) return false;
+    sendTaInvite(inv, name);
+    return true;
   }
+  // 手动触发一次邀请（更多功能→TA的提问→邀请 / 字卡库「TA的邀请」管理页按钮）：
+  // 不看开关与概率，从全部启用池抽一张
+  window.triggerTaInviteNow = function () {
+    try {
+      const name = chatPartnerName();
+      const inv = window.taInvitePickAny ? window.taInvitePickAny() : null;
+      if (!inv || !inv.text) { toast('TA的邀请题库没有可用内容'); return false; }
+      sendTaInvite(inv, name);
+      return true;
+    } catch (e) { return false; }
+  };
   // 暴露给主动发送链路（tryAutoSend）调用；同文件内其余模块/回归测试也可直接触发
   window.tryActiveInvite = tryActiveInvite;
   function tryAutoSend() {
@@ -4286,6 +4418,8 @@ function partialRetractMsg(msgEl, side) {
   bindTaNow('more-choose-now', () => { if (window.triggerTaChooseNow) window.triggerTaChooseNow(); });
   bindTaNow('more-curious-now', () => { if (window.triggerTaCuriousNow) window.triggerTaCuriousNow(); });
   bindTaNow('more-roast-now', () => { if (window.triggerTaRoastNow) window.triggerTaRoastNow(); });
+  // v3.13.x：邀请（联系人主动邀请，话术来自字卡库「TA的邀请」）
+  bindTaNow('more-invite-now', () => { if (window.triggerTaInviteNow) window.triggerTaInviteNow(); });
 
   // ---- 帮我决定：聊天页底部半框（v3.5.53 露出聊天消息）----
   const moreDecide = document.getElementById('more-decide');
@@ -6670,10 +6804,15 @@ function partialRetractMsg(msgEl, side) {
   // 发送成功清空 contenteditable 后，输入法重组/自动填充会把刚发的文本"复活"回输入框
   //（iOS 中文键盘确认候选词还会先补发一个干净 Enter 触发"确认即发送"，清空时合成
   // 会话未结束→文本必然重组回来），用户看到字还在再点一次发送就出两条一模一样的
-  // 消息；部分内核还对同一动作重复派发事件。复活后的补点一般在 0.1~1.2s 内，故窗口
-  // 取 1200ms——同非空文本窗口内第二次 addMsg 直接吞掉并清理输入区（不响音效、不再
-  // 排回复轮，TA 回复不再成对出现）；窗口外的人工重发不受影响。
-  const SEND_GUARD_MS = 1200;
+  // 消息；部分内核还对同一动作重复派发事件。复活后的补点一般在 0.1~1.2s 内。
+  // v3.12.x（荣耀 200 Pro Edge / 雨见 双条反馈）：个别安卓内核（荣耀 MagicOS 内置
+  // WebView、雨见等套壳）对点按发送按钮会【先后派发两次 click】（先合成触摸
+  // click、再补一次原生 click，或快速双击被算作两次），间隔与输入法复活补点
+  // 同量级（几十毫秒~1.2s）——via 无此现象说明纯属内核事件派发差异。
+  // 原 1200ms 窗口（600ms 实测偏紧）在部分机型的双发间隔（可达 1.2~2s）下仍会
+  // 漏网出双条。窗口放宽到 2500ms：同文本 2.5s 内的重复点击/重复派发一律吞掉
+  //（防的是同一次发送的重复事件，人工重发同内容间隔必然 >2.5s，不受影响）。
+  const SEND_GUARD_MS = 2500;
   let lastSendTxt = '', lastSendTs = 0;
   const addMsg = (text) => {
     const t0 = (text || '').trim();
@@ -6709,6 +6848,20 @@ function partialRetractMsg(msgEl, side) {
     scheduleReply();
   };
   if (send) send.addEventListener('click', () => addMsg(input.innerText));
+  // v3.12.x：pointerup 兜底——个别安卓内核（荣耀/雨见等）对点按 <button> 会先后派发
+  // 合成触摸 click 与原生 click 两个事件，仅靠 click 防重窗口仍可能漏网（两次 click
+  // 间隔可超 2s）；且部分内核的第二次 click 不携带可靠坐标。这里在 pointerup 时同步
+  // 记录一次"用户确认点击"时间戳——若与已发送文本间隔 < 防重窗口，同步更新为最近
+  // 点击时间，把防重窗口从"上次发送时刻"顺延到"最近一次用户点击"，从而让迟到的
+  // 第二次 click 仍落在窗口内被吞掉。用户刻意等待超过窗口再点同一内容照常放行。
+  // 注意：同步更新只在文本匹配防重条件时执行，不会延长窗口本身，也不会误吞其他文本。
+  if (send) send.addEventListener('pointerup', function (e) {
+    try {
+      if (e.button !== undefined && e.button !== 0) return;
+      const t = (input ? input.innerText : '').trim();
+      if (t && t === lastSendTxt) lastSendTs = Date.now();
+    } catch (err) {}
+  });
   if (input) {
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) {

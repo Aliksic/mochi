@@ -443,6 +443,7 @@
   }
 
   function render() {
+    try { ensureFishHeat(); } catch (e) {} // v3.13.x：热力图与选中日期无关，进页即刷
     const parts = selDate.split('-');
     const dd = new Date(+parts[0], +parts[1] - 1, +parts[2]);
     const n2 = new Date();
@@ -487,6 +488,72 @@
     renderMyMessage();
     renderDayNotes(dd, isFuture);
     renderGrid();
+  }
+
+  // ===== v3.13.x：摸鱼热力图（近一年 GitHub 贡献格样式，双方当日合计） =====
+  // 数据源 fish-day-add（与桌面周末面板/主页记录/信箱周报同源）。与选中日期无关，
+  // 卡片动态创建、插在 #cal-empty-card 之后；render() 每次进入页面时刷新数据。
+  let _heatCard = null;
+  function heatNorm(s) {
+    const p = String(s || '').split('-');
+    if (p.length !== 3) return null;
+    const y = +p[0], m = +p[1], d = +p[2];
+    if (!y || !(m >= 1 && m <= 12) || !(d >= 1 && d <= 31)) return null;
+    return new Date(y, m - 1, d);
+  }
+  function ensureFishHeat() {
+    const emptyCard = document.getElementById('cal-empty-card');
+    const meCard = document.getElementById('cal-me-card');
+    const anchor = emptyCard || meCard;
+    if (!anchor) return;
+    if (!_heatCard) {
+      _heatCard = document.createElement('div');
+      _heatCard.className = 'cal-card glass';
+      _heatCard.id = 'cal-fish-heat';
+      _heatCard.innerHTML =
+        '<div class="cal-sec">' +
+          '<div class="cal-sec-head"><div class="cal-sec-title">摸鱼热力图</div><span class="fh-range" id="fh-range"></span></div>' +
+          '<div class="fh-scroll"><div class="fh-grid-wrap" id="fh-wrap"></div></div>' +
+          '<div class="fh-legend">少 <i class="fh-cell l0"></i><i class="fh-cell l1"></i><i class="fh-cell l2"></i><i class="fh-cell l3"></i><i class="fh-cell l4"></i> 多' +
+          '<span class="fh-tip">格子 = 双方当日合计</span></div>' +
+        '</div>';
+      anchor.parentNode.insertBefore(_heatCard, anchor.nextSibling);
+    }
+    const rangeEl = document.getElementById('fh-range');
+    const wrap = document.getElementById('fh-wrap');
+    if (!wrap) return;
+    // 汇总每日合计（键 Y-M-D 与 fishDayKey 同格式）
+    const map = {};
+    try {
+      JSON.parse(store.get('fish-day-add') || '[]').forEach(x => {
+        const d = heatNorm(x && x.date);
+        if (!d || isNaN(d.getTime())) return;
+        const k = d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate();
+        const ex = map[k] || { m: 0, t: 0 };
+        ex.m += x.mine || 0; ex.t += x.ta || 0;
+        map[k] = ex;
+      });
+    } catch (e) {}
+    // 53 列（周）× 7 行：从本周周六往前推，今天之后的格子置灰
+    const now = new Date();
+    const today0 = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const end = new Date(today0); end.setDate(end.getDate() + (6 - end.getDay())); // 本周周六
+    const start = new Date(end); start.setDate(start.getDate() - 53 * 7 + 1);
+    let html = '';
+    const cur = new Date(start);
+    while (cur <= end) {
+      const k = cur.getFullYear() + '-' + cur.getMonth() + '-' + cur.getDate();
+      const v = map[k];
+      const sum = v ? (v.m + v.t) : 0;
+      const lv = sum >= 60 ? 4 : sum >= 30 ? 3 : sum >= 10 ? 2 : sum >= 1 ? 1 : 0;
+      const fut = cur > today0 ? ' fut' : '';
+      html += '<i class="fh-cell l' + lv + fut + '" title="' + (cur.getMonth() + 1) + ' 月 ' + cur.getDate() + ' 日 · 摸鱼 ' + sum + ' 点"></i>';
+      cur.setDate(cur.getDate() + 1);
+    }
+    wrap.innerHTML = html;
+    if (rangeEl) {
+      rangeEl.textContent = '近一年 · ' + (start.getMonth() + 1) + '.' + start.getDate() + ' - ' + (today0.getMonth() + 1) + '.' + today0.getDate();
+    }
   }
 
   // 桌面【日历】图标进入

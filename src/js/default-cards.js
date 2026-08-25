@@ -222,6 +222,26 @@
     b.textContent = '互动回应';
     tabsWrap.appendChild(b);
   }
+  // v3.13.x：摸鱼浮字 tab（JS 注入）——TA 摸鱼值上涨时的桌面浮字与抓包回应预设池
+  //（DEFAULT_CARD_DATA.fish）；逐张开关（dc-off-fish:*）与 p2-features.js 实际抽取联动
+  if (!tabsWrap.querySelector('[data-type="fish"]')) {
+    const b = document.createElement('button');
+    b.className = 'cc-tab';
+    b.dataset.type = 'fish';
+    b.textContent = '摸鱼浮字';
+    tabsWrap.appendChild(b);
+  }
+  // v3.13.x：花园/同频/伸手/喝水/存钱罐 tab（JS 注入）——各功能预设话术池
+  //（DEFAULT_CARD_DATA.garden/sync/reach/water/piggy）；逐张开关与实际抽取联动
+  [['garden', '花园'], ['sync', '同频'], ['reach', '伸手'], ['water', '喝水'], ['piggy', '存钱罐']].forEach(([k, label]) => {
+    if (!tabsWrap.querySelector('[data-type="' + k + '"]')) {
+      const b = document.createElement('button');
+      b.className = 'cc-tab';
+      b.dataset.type = k;
+      b.textContent = label;
+      tabsWrap.appendChild(b);
+    }
+  });
 
   tabsWrap.querySelectorAll('.cc-tab').forEach(tab => {
     tab.addEventListener('click', () => {
@@ -321,9 +341,20 @@
   // v3.7.x：互动回应预设池读取（供互动卡片回复侧使用）——name 分组名（邀请TA·接受/
   // 邀请TA·拒绝/问问TA·回应/小问题·回应/好奇·回应/吐槽·回应/询问·回应），
   // 与「互动回应」tab 展示同源（DEFAULT_CARD_DATA.interact）；数据缺失时回退 fallback
-  window.getInteractPool = function (name, fallback) {
-    const g = (DATA.interact || []).find(x => x[0] === name);
+  // v3.7.x：互动回应预设池读取（供互动卡片回复侧使用）——name 分组名（邀请TA·接受/
+  // 邀请TA·拒绝/问问TA·回应/小问题·回应/好奇·回应/吐槽·回应/询问·回应），
+  // 与「互动回应」tab 展示同源（DEFAULT_CARD_DATA.interact）；数据缺失时回退 fallback
+  // v3.13.x：泛化为 getLibPool(分类, 分组, 兜底)——摸鱼浮字/花园/同频/伸手/喝水/存钱罐
+  // 各功能统一走它取同源池（消费侧再按 isDefaultCardOff(分类, 文案) 过滤已关卡片）
+  window.getLibPool = function (cat, group, fallback) {
+    const g = (DATA[cat] || []).find(x => x[0] === group);
     const arr = g && Array.isArray(g[1]) && g[1].length ? g[1] : (Array.isArray(fallback) ? fallback : []);
     return arr.slice();
+  };
+  window.getInteractPool = function (name, fallback) {
+    return window.getLibPool('interact', name, fallback);
+  };
+  window.getFishPool = function (name, fallback) {
+    return window.getLibPool('fish', name, fallback);
   };
 })();

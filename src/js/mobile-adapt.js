@@ -2,6 +2,8 @@
 // CSS 已处理：输入框字号 16px 防 iOS 聚焦缩放、safe-area 底部留白、overscroll 防回弹
 // 这里补 JS 层：iOS 手势/双击缩放兜底 + 文本输入框 contenteditable 化（防 Chrome 自动填充条）
 //              + 输入法适配（v3.6.x 最小干预，不再锁 .phone 高度）+ 弹层滚动穿透锁
+//   v3.12.x：纯悬浮键盘内核（X5/旧夸克等 vv 不反映键盘）加「推定停靠」二线兜底——
+//              手势聚焦文本框后宽限期两视口仍不动 → 按基准 58% 保底收缩 .phone
 (function () {
   // 只在真实手机窄屏启用（桌面模拟器外壳不受影响）
   // v3.5.137：900px——Moto G100 等 2400px 物理屏 / DPR 2.75-3 的 CSS 视口约 800-873px，
@@ -504,6 +506,29 @@
   });
   // 输入法收起（失焦）无需任何处理：.phone 高度从未被 JS 改动
 
+  // ===== v3.12.x：键盘保底停靠的公共信号（下方 iOS / 安卓两分支共用） =====
+  // 背景（用户反馈「首次点击聊天输入栏打字，输入法把输入栏一行完全挡住」）：
+  // 上面的键盘适配全靠 visualViewport.height 收缩来检测键盘；腾讯 X5、旧版夸克、
+  // 部分国产 ROM 浏览器是「纯悬浮键盘」——interactive-widget 不生效、vv 高度也不变，
+  // 检测信号永远不来 → .phone 永不收缩 → 输入栏被盖住且不自愈。两分支各加一条
+  // 二线兜底（_iProvCheck / _aProvCheck），这里先备好两个公共判定信号：
+  var kbLastTouchAt = 0;
+  // 「最近一次触摸」时间戳——软键盘弹出必然源于用户点按输入框；而程序化
+  // .focus()（邀请TA/问问TA 等半框打开即自动聚焦）在安卓上通常【不】弹键盘。
+  // 保底只对「触摸后短窗口内发生的聚焦」武装，防止自动聚焦误触发收缩。
+  try {
+    document.addEventListener('touchstart', function () { kbLastTouchAt = Date.now(); }, { passive: true, capture: true });
+  } catch (e) {}
+  var kbHardKeyUntil = 0;
+  // 「物理/外接键盘」抑制信号——真实按键（keyCode 229 是中文输入法组合标记，
+  // 软键盘多数内核不派发 keydown 或恒为 229，不会误伤）。外接键盘打字场景
+  // 软键盘不弹，30s 内不再做保底收缩。
+  try {
+    document.addEventListener('keydown', function (e) {
+      try { if (e.keyCode !== 229) kbHardKeyUntil = Date.now() + 30000; } catch (err) {}
+    }, true);
+  } catch (e) {}
+
   // ================= iOS 专用：键盘（IME）弹出适配（v3.6.x） =================
   // iOS Safari 键盘是 overlay 模式——弹出时【不收缩布局视口】，.phone 的 100dvh
   // 不会重算，输入栏会被键盘盖住，看起来像"键盘没弹/无法输入"（安卓 Chrome/Edge
@@ -537,6 +562,8 @@
       // → .phone 永不收缩 → 键盘盖住输入栏完全无法输入。focusin 事件聚焦上报可靠，
       // 用它记录目标元素；用 activeElement 复合判断兜底。
       var _textFocused = null;
+      // v3.12.x：悬浮键盘保底停靠状态（见下方 _iProvCheck 注释）
+      var _iFocusAt = 0, _iProv = false, _iIH = window.innerHeight;
       // v3.6.x：键盘弹出期间把页面滚动钉在顶部——iOS Safari 键盘弹出时会自动把页面
       // 滚动到聚焦的输入框（聊天输入栏在 .phone 底部），而 .phone 已按 visualViewport
       // 收缩到键盘上沿，此时 window 再滚动会把 .phone 整体上移，其下方露出 body 灰色
@@ -635,6 +662,8 @@
               // 收缩后内层滚动容器里的输入框（问问ta 问题栏等）高度随之变化，
               // 补一次可见性对齐，确保它停在键盘上方
               nudgeInputVisible();
+              // v3.12.x：悬浮键盘推定停靠复查（vv 不反映键盘的内核走这里兜底）
+              _iProvCheck();
             } else if (_kbActive) {
               // 失焦但键盘仍开着（含收起动画窗口 / vv resize 漏触发的收起）：
               // 只做「键盘真的收了吗」复原，不调 syncIosKb——它会在键盘收起动画
@@ -642,6 +671,8 @@
               // 每个键盘收起都闪屏（用户反馈），改回一次性复原判断
               if (_vv && _vv.height >= _noKbH - 60) restoreKb();
             } else {
+              // v3.12.x：停表前做一次兜底清理（保底停靠残留时复原 .phone）
+              _iProvCheck();
               stopKbWatch();
             }
           } catch (e) {}
@@ -649,6 +680,55 @@
       }
       function stopKbWatch() {
         if (_kbWatch) { clearInterval(_kbWatch); _kbWatch = null; }
+      }
+      // ===== v3.12.x：二线兜底「悬浮键盘推定停靠」（iOS 分支） =====
+      // 旧版 iOS Safari / 国产 iOS 内核浏览器键盘纯悬浮且 visualViewport.height
+      // 不更新时，syncIosKb 判 _kbStill=false 永不收缩 → 输入栏被完全盖住。
+      // 这类内核没有任何可读信号，只能在全部保守条件命中时【推定】键盘已弹出：
+      //   · 用户手势聚焦文本框（touchstart 后 1.5s 内的 focusin 才武装——程序化
+      //     自动聚焦不弹软键盘，不能算数）
+      //   · 聚焦已持续 >900ms（正常内核几百 ms 内 vv 必收缩走原路径，绝不进这里）
+      //   · 期间 visualViewport.height 与 window.innerHeight 都纹丝不动（≤2px）
+      //   · 近 30s 无硬件键盘真实按键（kbHardKeyUntil）
+      // 命中后按无键盘基准的 58% 保底收缩（主流输入法连工具栏约占屏 35%~45%，
+      // 58% 可视区必在其上方）；失焦 / 出现真实 resize 即由原机制接管恢复。
+      function _iProvDock() {
+        var base = Math.min(_noKbH, _iIH);
+        var ph = Math.max(240, Math.round(base * 0.58));
+        _iProv = true;
+        _phone.style.alignSelf = 'flex-start';
+        if (_phone.style.height !== ph + 'px') _phone.style.height = ph + 'px';
+        pinScrollTop();
+      }
+      function _iProvClear() {
+        if (!_iProv) return;
+        _iProv = false;
+        if (_kbActive) return; // 正常机制已接管 .phone 高度，交回原逻辑管理
+        _phone.style.height = '';
+        _phone.style.alignSelf = '';
+        pinScrollTop();
+      }
+      function _iProvCheck() {
+        try {
+          if (!_vv || !_phone) return;
+          var tgt = (isTextEl(_textFocused) ? _textFocused : null) ||
+            (isTextEl(document.activeElement) ? document.activeElement : null);
+          var ih = window.innerHeight;
+          if (!tgt) {
+            // 无键盘态基线跟随（地址栏显隐等整体变化不误判；键盘开着时不更新）
+            if (!_kbActive && !_iProv) _iIH = ih;
+            if (_iProv && _vv.height >= _noKbH - 60) _iProvClear();
+            return;
+          }
+          if (!_kbActive && !_iProv &&
+              Date.now() - _iFocusAt > 900 &&
+              Date.now() - kbLastTouchAt < 1500 &&
+              Date.now() > kbHardKeyUntil &&
+              Math.abs(_vv.height - _noKbH) <= 2 &&
+              Math.abs(ih - _iIH) <= 2) {
+            _iProvDock();
+          }
+        } catch (e) {}
       }
       // v3.7.x：vv scroll 独立处理——打字时系统微滚 caret 触发高频 vv scroll，
       //   若走 syncIosKb 会在稳态期反复读 vv.height/比较字符串（JS 开销→打字卡顿），
@@ -662,12 +742,16 @@
         _vv.addEventListener('scroll', onIosKbScroll);
       }
       document.addEventListener('focusin', function (e) {
-        try { if (isTextEl(e.target)) _textFocused = e.target; } catch (e2) {}
+        try { if (isTextEl(e.target)) { _textFocused = e.target; _iFocusAt = Date.now(); } } catch (e2) {}
         // v3.10.x：立即同步一次——键盘弹出动画期间 vv.height 开始明显收缩，
         // 尽早收缩 .phone，避免头 300ms 输入栏还在键盘下面（视觉"被盖住"）
         try { syncIosKb(); } catch (e3) {}
         setTimeout(syncIosKb, 250);
         setTimeout(syncIosKb, 450);
+        // v3.12.x：悬浮键盘推定停靠复查——950ms（宽限期刚过）与 1700ms 各一次，
+        // 即使轮询表因失焦竞态提前停掉，这里也能独立完成保底停靠/清理
+        setTimeout(_iProvCheck, 950);
+        setTimeout(_iProvCheck, 1700);
         // v3.10.x：聚焦文本输入框即启动主动轮询兜底——即使 vv resize 漏触发，
         // 250ms 内也会按可视高度收缩 .phone，输入栏不会被键盘盖住
         if (isTextEl(e.target)) { try { startKbWatch(); } catch (e4) {} }
@@ -676,6 +760,9 @@
         try { if (e.target === _textFocused) _textFocused = null; } catch (e2) {}
         setTimeout(syncIosKb, 250);
         setTimeout(syncIosKb, 450);
+        // v3.12.x：失焦后复查保底停靠——键盘已收/无聚焦即复原 .phone
+        setTimeout(_iProvCheck, 250);
+        setTimeout(_iProvCheck, 900);
         // 输入框失焦即键盘收起：不依赖 vv resize（iOS 程序化失焦/滑动收起常漏事件），
         // 400ms 后若可视高度已回升（键盘真的收了）才恢复——不靠焦点判断，
         //   防点击字卡/按钮时焦点短暂离开但键盘未收就误 restore→reflow 闪屏
@@ -708,6 +795,8 @@
         // v3.10.x：当前聚焦的文本元素（focusin 可靠上报，部分安卓浏览器
         // activeElement 在 contenteditable 上返回 <body>，单看它会漏判聚焦）
         var _aTextFocused = null;
+        // v3.12.x：悬浮键盘保底停靠状态（见下方 _aProvCheck 注释）
+        var _aFocusAt = 0, _aProv = false, _aIH = window.innerHeight;
         function _aIsText(el) {
           return el && ((el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')
             ? (el.type !== 'checkbox' && el.type !== 'range' && el.type !== 'file' && el.type !== 'color' && !el.readOnly)
@@ -747,6 +836,8 @@
               if (foc) {
                 syncAndroidKb();
                 nudgeInputVisible();
+                // v3.12.x：悬浮键盘推定停靠复查（vv 不反映键盘的内核走这里兜底）
+                _aProvCheck();
               } else if (_aKb) {
                 if (_aVV.height >= _aH - 60) {
                   _aKb = false;
@@ -754,6 +845,8 @@
                   _aPhone.style.alignSelf = '';
                 }
               } else {
+                // v3.12.x：停表前做一次兜底清理（保底停靠残留时复原 .phone）
+                _aProvCheck();
                 stopAWatch();
               }
             } catch (e) {}
@@ -762,15 +855,70 @@
         function stopAWatch() {
           if (_aWatch) { clearInterval(_aWatch); _aWatch = null; }
         }
+        // ===== v3.12.x：二线兜底「悬浮键盘推定停靠」（安卓分支） =====
+        // 纯悬浮键盘内核（腾讯 X5、旧版夸克、部分国产 ROM）：键盘弹出时
+        // visualViewport.height 与 window.innerHeight 【都】不变（interactive-widget
+        // 也不生效），上面按 vv 判定 open 永远 false → .phone 永不收缩 → 输入栏
+        // 被输入法整个盖住且不自愈。这类内核没有任何可读信号，只能在全部保守
+        // 条件命中时【推定】键盘已弹出：
+        //   · 用户手势聚焦文本框（touchstart 后 1.5s 内的 focusin 才武装——程序化
+        //     自动聚焦在安卓上通常不弹软键盘，不能算数）
+        //   · 聚焦已持续 >900ms（正常内核几百 ms 内 vv 必收缩走原路径，绝不进这里）
+        //   · 期间两个视口高度都纹丝不动（差值 ≤2px）
+        //   · 近 30s 无硬件键盘真实按键（kbHardKeyUntil）
+        // 命中后按无键盘基准的 58% 保底收缩（主流中文输入法连工具栏约占屏
+        // 35%~45%，58% 可视区必在其上方）；失焦 / 出现真实 resize 即由原机制
+        // 接管恢复，正常设备永远不会触发本兜底。
+        function _aProvDock() {
+          var base = Math.min(_aH, _aIH);
+          var ph = Math.max(240, Math.round(base * 0.58));
+          _aProv = true;
+          _aPhone.style.alignSelf = 'flex-start';
+          if (_aPhone.style.height !== ph + 'px') _aPhone.style.height = ph + 'px';
+          try { window.scrollTo(0, 0); } catch (e) {}
+        }
+        function _aProvClear() {
+          if (!_aProv) return;
+          _aProv = false;
+          if (_aKb) return; // 正常机制已接管 .phone 高度，交回原逻辑管理
+          _aPhone.style.height = '';
+          _aPhone.style.alignSelf = '';
+        }
+        function _aProvCheck() {
+          try {
+            if (!_aVV || !_aPhone) return;
+            var tgt = (_aIsText(_aTextFocused) ? _aTextFocused : null) ||
+              (_aIsText(document.activeElement) ? document.activeElement : null);
+            var ih = window.innerHeight;
+            if (!tgt) {
+              // 无聚焦：无键盘态基线跟随 + 保底停靠残留清理（可视高度回基准=键盘已收）
+              if (!_aKb && !_aProv) _aIH = ih;
+              if (_aProv && _aVV.height >= _aH - 60) _aProvClear();
+              return;
+            }
+            if (!_aKb && !_aProv &&
+                Date.now() - _aFocusAt > 900 &&
+                Date.now() - kbLastTouchAt < 1500 &&
+                Date.now() > kbHardKeyUntil &&
+                Math.abs(_aVV.height - _aH) <= 2 &&
+                Math.abs(ih - _aIH) <= 2) {
+              _aProvDock();
+            }
+          } catch (e) {}
+        }
         _aVV.addEventListener('resize', syncAndroidKb);
         // 首次聚焦兜底：键盘弹出的 resize 偶发前置/漏触发，紧跟一次判定
         document.addEventListener('focusin', function (e) {
           try {
-            if (_aIsText(e.target)) _aTextFocused = e.target;
+            if (_aIsText(e.target)) { _aTextFocused = e.target; _aFocusAt = Date.now(); }
             if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable)) {
               try { syncAndroidKb(); } catch (e3) {}
               setTimeout(syncAndroidKb, 120);
               setTimeout(syncAndroidKb, 350);
+              // v3.12.x：悬浮键盘推定停靠复查——950ms（宽限期刚过）与 1700ms 各一次，
+              // 即使轮询表因失焦竞态提前停掉，这里也能独立完成保底停靠/清理
+              setTimeout(_aProvCheck, 950);
+              setTimeout(_aProvCheck, 1700);
               try { startAWatch(); } catch (e4) {}
             }
           } catch (e2) {}
@@ -780,6 +928,9 @@
           try { if (e.target === _aTextFocused) _aTextFocused = null; } catch (e2) {}
           setTimeout(syncAndroidKb, 120);
           setTimeout(syncAndroidKb, 350);
+          // v3.12.x：失焦后复查保底停靠——键盘已收/无聚焦即复原 .phone
+          setTimeout(_aProvCheck, 250);
+          setTimeout(_aProvCheck, 900);
           // 失焦即键盘收起：不依赖 resize（安卓程序化失焦/滑动收起常漏事件），
           // 400ms 后若可视高度已回升（键盘真的收了）才恢复
           setTimeout(function () {
@@ -802,15 +953,31 @@
   // v3.6.x：去掉 #desk-msg——新消息横幅只是顶部 fixed 小提示条（6 秒自动隐藏，
   //   不遮挡滚动区域），把它当浮层锁滚动会让整个页面在横幅弹出的 6 秒内滑不动，
   //   用户感知为「页面卡住/滑动失效」（iPad 夸克反馈）。横幅自身交互由 chat.js 处理。
-  const FLOAT_SELECTORS = ['#tc-mask', '#cc-export-mask', '#cc-scope-mask', '#call-mask', '#feed-notice-panel', '#feed-comment-panel', '#poke-card', '#emoji-panel', '#chat-ask-panel', '#qa-mask', '#chat-more-panel', '#gc-more-panel', '#chat-search', '#chat-decision-panel', '#chat-divine-panel', '#chat-rps-panel', '#chat-call-panel', '#chat-pong-panel', '#chat-snake-panel', '#chat-gift-panel', '#avlib-card', '#ck-panel', '#loc-panel', '.mg-mask', '#modal-mask', '#msg-actions', '#desk-image-viewer', '.desk-lib', '#gc-members-panel', '#gc-at-panel', '#gc-settings-panel'];
+  // v3.12.x：补三个漏登记浮层（AI-A 全仓浮层清点发现，跨域改动请知悉）——
+  //   #img-view-mask 聊天/字卡大图查看全屏遮罩（chatcard.js 动态创建，打开时背景聊天页可继续滚动）；
+  //   #chat-rp-panel 红包底部半框、#batch-panel 消息批量操作面板（与 poke-card/emoji-panel 同族底半框）
+  const FLOAT_SELECTORS = ['#tc-mask', '#cc-export-mask', '#cc-scope-mask', '#call-mask', '#feed-notice-panel', '#feed-comment-panel', '#poke-card', '#emoji-panel', '#chat-ask-panel', '#qa-mask', '#chat-more-panel', '#gc-more-panel', '#chat-search', '#chat-decision-panel', '#chat-divine-panel', '#chat-rps-panel', '#chat-call-panel', '#chat-pong-panel', '#chat-snake-panel', '#chat-gift-panel', '#avlib-card', '#ck-panel', '#loc-panel', '.mg-mask', '#modal-mask', '#msg-actions', '#desk-image-viewer', '.desk-lib', '#gc-members-panel', '#gc-at-panel', '#gc-settings-panel', '#img-view-mask', '#chat-rp-panel', '#batch-panel'];
   let locked = false;
+  // v3.13.x：手动锁浮层（period.js 弹层动态 append/remove、不走 hidden 属性）——
+  // 存在于 DOM 即视为开着，纳入统一判定，防其他浮层变动时误摘经期弹层的锁
+  const MANUAL_LOCK_IDS = ['period-day-pop', 'period-care-pop', 'period-report-pop', 'period-settings-pop', 'period-notify-pop'];
+  // v3.13.x：浮层「真开着」= 非 hidden 且视觉上有渲染盒子（AI-A 修字卡库全局滑不动）。
+  // 只判 hidden 属性会死锁：在聊天页打开更多面板/表情包/拍一拍等底半框后不关闭直接
+  // 离开聊天页（返回键/切字卡库都会整页隐藏），面板 hidden=false 但祖先 display:none
+  // → 零渲染盒却被当成「开着」→ body.scroll-lock 永久残留，且每次触摸兜底都重新确认
+  // 锁 → 所有 .page 页面滑不动（用户感知：字卡库无法滑动、卡顿），只能杀进程。
+  function floatIsOpen(el) {
+    try {
+      if (!el || el.hidden) return false;
+      return el.getClientRects().length > 0;
+    } catch (e) { return false; }
+  }
   function applyLock() {
-    const anyOpen = FLOAT_SELECTORS.some(function (sel) {
-      try {
-        const el = document.querySelector(sel);
-        return el && !el.hidden;
-      } catch (e) { return false; }
-    });
+    let anyOpen = false;
+    try {
+      anyOpen = FLOAT_SELECTORS.some(function (sel) { return floatIsOpen(document.querySelector(sel)); }) ||
+        MANUAL_LOCK_IDS.some(function (id) { return !!document.getElementById(id); });
+    } catch (e) { anyOpen = false; }
     if (anyOpen && !locked) {
       document.body.classList.add('scroll-lock');
       locked = true;
@@ -827,13 +994,18 @@
         if (el) mo.observe(el, { attributes: true, attributeFilter: ['hidden'] });
       } catch (e) {}
     });
-    // 动态创建的 .mg-mask（管理分组弹层）：插入 body 时补观察 hidden + 立即应用锁
+    // 动态创建的 .mg-mask（管理分组弹层）：插入 body 时补观察 hidden + 立即应用锁；
+    // v3.12.x：清单内 id 的动态层（如 #img-view-mask 大图遮罩，chatcard.js 首次查看时才创建）
+    // 启动时 querySelector 拿不到、观察不到 → 插入 body 时按 id 补观察
     const bodyMo = new MutationObserver(function (muts) {
       let changed = false;
       muts.forEach(function (m) {
         if (!m.addedNodes) return;
         m.addedNodes.forEach(function (n) {
-          if (n && n.nodeType === 1 && n.classList && n.classList.contains('mg-mask')) {
+          if (!n || n.nodeType !== 1 || !n.classList) return;
+          const isMg = n.classList.contains('mg-mask');
+          const inList = !isMg && n.id && FLOAT_SELECTORS.indexOf('#' + n.id) >= 0;
+          if (isMg || inList) {
             try { mo.observe(n, { attributes: true, attributeFilter: ['hidden'] }); } catch (e) {}
             changed = true;
           }
@@ -850,4 +1022,19 @@
   document.addEventListener('touchstart', function () {
     try { applyLock(); } catch (e) {}
   }, { passive: true });
+  // v3.13.x：滚动锁自愈看门狗——触摸兜底之外每秒对账一次（覆盖无触摸场景与
+  // 「漏跑关闭路径后再也没有相关 mutation 事件」的残留锁；有浮层视觉可见时同样补挂）
+  setInterval(function () { try { applyLock(); } catch (e) {} }, 1000);
+  // v3.13.x：只读探针（诊断「滑不动」时看哪个浮层挂着锁）window.scrollLockInfo()
+  window.scrollLockInfo = function () {
+    try {
+      const open = [];
+      FLOAT_SELECTORS.forEach(function (sel) {
+        const el = document.querySelector(sel);
+        if (floatIsOpen(el)) open.push(sel);
+      });
+      MANUAL_LOCK_IDS.forEach(function (id) { if (document.getElementById(id)) open.push('#' + id); });
+      return { lock: document.body.classList.contains('scroll-lock'), open: open };
+    } catch (e) { return null; }
+  };
 })();

@@ -171,4 +171,6 @@ textarea.gm-input { min-height: 52px; resize: none; }
 [data-theme="dark"] .gm-img-prev { background: #2a2638; border-color: rgba(255, 255, 255, 0.12); }
 [data-theme="dark"] .gm-img-btn { background: #2a2638; border-color: rgba(139, 122, 200, 0.4); }
 [data-theme="dark"] .gift-empty { color: #6a6280; }
-[data-theme="dark"] .market-cat-name { color: #8a7fa8; }
+[data-theme="dark"] .market-cat-name { color: #8a8a8a; }
+/* v3.11.x：选中分类名原 #4a3d6b 深紫在深底上对比不足（ratio 2.0）；黑白简约风——选中纯白加粗，未选中中性灰 */
+[data-theme="dark"] .market-cat.sel .market-cat-name { color: #f0f0f0; }

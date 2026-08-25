@@ -2099,7 +2099,9 @@ try {
               if (wid === 'desk-clock' || wid === 'desk-calendar' || wid === 'desk-timer' || wid === 'desk-anniv') return;
               var tgt;
               if (wid === 'deco' || wid === 'quote-row' || wid === 'checkin') tgt = rp0;
-              else if (wid === 'music' || wid === 'memo-row' || wid === 'week' || wid === 'weekend') tgt = rp1;
+              else if (wid === 'music' || wid === 'week' || wid === 'weekend') tgt = rp1;
+              // v3.13.x：memo-row 不在此处回位——下方 setTimeout 统一放到第三页经期卡下方
+              else if (wid === 'memo-row') return;
               else tgt = rp2;
               if (!tgt) return;
               if (wid.indexOf('app-') === 0) {
@@ -2126,6 +2128,29 @@ try {
                 var anchor = rthird.querySelector('[data-desk-widget="p3apps"]');
                 if (anchor && anchor.parentNode === rthird) rthird.insertBefore(dp, anchor);
                 else rthird.appendChild(dp);
+              }
+            }
+          } catch (e) {}
+          // v3.13.x：今日备忘/心情行放回第三页「经期卡」下方（p3apps 前）。
+          // 不只看是否在池里——池外但位置不对（如已在页上但被后续找回的经期卡
+          // 插到了前面）也一并校正为「紧跟经期卡之后」。
+          try {
+            var mr = document.querySelector('[data-desk-widget="memo-row"]');
+            var rbox2 = document.getElementById('desktop-pages');
+            if (mr && rbox2) {
+              var rs2 = rbox2.querySelectorAll('.page-slide');
+              var rt2 = rs2.length >= 3 ? rs2[2] : null;
+              if (rt2) {
+                var dp2 = rt2.querySelector('[data-desk-widget="desk-period"]');
+                var okPos = dp2 && dp2.parentNode === rt2 && mr.parentNode === rt2 && mr.previousElementSibling === dp2;
+                if (!okPos) {
+                  if (dp2 && dp2.parentNode === rt2) rt2.insertBefore(mr, dp2.nextSibling);
+                  else {
+                    var an2 = rt2.querySelector('[data-desk-widget="p3apps"]');
+                    if (an2 && an2.parentNode === rt2) rt2.insertBefore(mr, an2);
+                    else rt2.appendChild(mr);
+                  }
+                }
               }
             }
           } catch (e) {}
@@ -2355,6 +2380,49 @@ try {
   }
   ensureDeskPeriod();
   document.addEventListener('contact-switched', ensureDeskPeriod);
+  // v3.13.x：今日备忘/心情卡默认位置改为第三页「经期倒计时」下方（template 已移）。
+  // 老用户 desk-layout 里 memo-row 在第一/二页的自动迁到第三页经期卡下方，其余布局不动；
+  // 已在第三页的不动；用户手动移除过（隐藏池）的尊重不找回。每联系人桌面独立迁移
+  //（desk-layout 按桌面命名空间存储，切联系人时各自触发）。
+  function ensureMemoRowP3() {
+    const node = document.querySelector('[data-desk-widget="memo-row"]');
+    if (!node || !pagesBox) return;
+    const slides = Array.prototype.slice.call(pagesBox.querySelectorAll('.page-slide'));
+    const p3 = slides[2];
+    if (!p3) return;
+    const lay = deskLayout();
+    const placeUnderPeriod = () => {
+      const dp = p3.querySelector('[data-desk-widget="desk-period"]');
+      if (dp && dp.parentNode === p3) p3.insertBefore(node, dp.nextSibling);
+      else {
+        const grid = p3.querySelector('[data-desk-widget="p3apps"]');
+        if (grid && grid.parentNode === p3) p3.insertBefore(node, grid);
+        else p3.appendChild(node);
+      }
+    };
+    if (!lay) {
+      // 未装修：模板默认就在第三页经期卡下方；被删页等流程挪走/进池则移回
+      if (node.closest('.page-slide') !== p3) placeUnderPeriod();
+      return;
+    }
+    const at = lay.findIndex(page => (page || []).indexOf('memo-row') >= 0);
+    if (at === 2) return; // 已在第三页（顺序由 applyDeskLayout 按存储维护）
+    if (at < 0) return;   // 不在任何页 = 用户已移除进池，不找回
+    // 从原页数组摘除，插入第三页数组（经期卡后一位；无则放最前）
+    lay[at] = (lay[at] || []).filter(w => w !== 'memo-row');
+    const p3w = (lay[2] || []).slice();
+    const dpAt = p3w.indexOf('desk-period');
+    if (dpAt >= 0) p3w.splice(dpAt + 1, 0, 'memo-row');
+    else p3w.unshift('memo-row');
+    while (lay.length < 3) lay.push([]);
+    lay[2] = p3w;
+    store.set('desk-layout', JSON.stringify(lay));
+    placeUnderPeriod();
+    try { window.applyDeskLayout(); } catch (e) {} // 重跑一次布局应用刷新各页提示与顺序
+  }
+  ensureMemoRowP3();
+  setTimeout(ensureMemoRowP3, 150); // 等 buildDeskPages 的 setTimeout(ensureP3) 补齐第三页后兜底一次
+  document.addEventListener('contact-switched', ensureMemoRowP3);
   document.addEventListener('contact-switched', () => { applyDeskFontPct(getDeskFontPct()); applyDeskCardPct(getDeskCardPct()); });
   document.addEventListener('contact-switched', () => { const sp = getBgPresetName(); if (sp) { const p = BG_PRESETS.find(b => b.name === sp); if (p) applyPhoneBgPreset(p.css); else clearPhoneBg(); } syncBgPresetUI(); });
 
@@ -3748,6 +3816,11 @@ try {
     if (list.length > 365) list.splice(0, list.length - 365);
     saveFishDayLog(list);
   }
+  // v3.13.x：跨模块加分口（番茄钟补偿摸鱼 / 抓包 TA 翻倍用）——加完同步桌面数值 UI
+  window.addFishPts = function (addMine, addTa) {
+    try { addFish(addMine || 0, addTa || 0); } catch (e) {}
+    try { syncFishUI(); } catch (e) {}
+  };
   // 一次性迁移 v3.5.25 及更早数据：
   //  旧 weekend-fish / weekend-fish-ta（历史累计）→ fish-total*（历史累计）
   //  旧 fish-day-log（按天累计值）→ 按天差值拆成每日新增 fish-day-add + 重建当天 day-fish-*
@@ -3847,8 +3920,83 @@ try {
     weMineEl.textContent = todayMine();
   }
   if (weFish) {
+    // ===== v3.13.x：摸鱼连击 + TA 反向抓包 =====
+    // 连击：2.5 秒内连续点击算一波；第 3 连起每次 +2（翻倍），断了从头算。
+    //   当天/历史最高连击存 fish-combo-best（主页「每日摸鱼值」顶部展示）。
+    // 反向抓包：90 秒内点满 8 次且过冷却（10 分钟）时 45% 概率被 TA 抓包——
+    //   弹窗调侃 + 这次点击改记工作值（不进摸鱼）+ 当前连击清零。
+    const COMBO_WIN = 2500;
+    let comboLast = 0, comboRun = 0, runMax = 0, runTimer = null;
+    let recent = []; // 最近点击时间戳（反向抓包判定）
+    let weComboEl = null;
+    function comboBest() {
+      try {
+        const o = JSON.parse(store.get('fish-combo-best') || 'null');
+        const dk = fishDayKey();
+        if (o && o.d === dk) return { today: o.t || 0, best: o.b || 0 };
+        return { today: 0, best: (o && o.b) || 0 };
+      } catch (e) { return { today: 0, best: 0 }; }
+    }
+    function comboBestSave(today, best) {
+      store.set('fish-combo-best', JSON.stringify({ d: fishDayKey(), t: today, b: best }));
+    }
+    function comboShow(n) {
+      if (!n) { if (weComboEl) weComboEl.classList.remove('on'); return; }
+      if (!weComboEl) {
+        weComboEl = document.createElement('span');
+        weComboEl.className = 'we-combo';
+        weFish.parentNode.appendChild(weComboEl);
+      }
+      weComboEl.textContent = '连击 ×' + n;
+      weComboEl.classList.add('on');
+    }
+    function runEnd() {
+      if (runMax >= 3) {
+        const cb = comboBest();
+        if (runMax > cb.best) {
+          comboBestSave(Math.max(runMax, cb.today), runMax);
+          toast('连击新纪录 ×' + runMax + '！');
+          if (window.renderFishHistory) window.renderFishHistory();
+        }
+      }
+      comboRun = 0; runMax = 0; comboShow(0);
+    }
+    window.getFishComboBest = function () { return comboBest(); };
     weFish.addEventListener('click', () => {
-      addFish(1, 0);
+      const now = Date.now();
+      // —— 反向抓包判定 ——
+      recent = recent.filter(t => now - t < 90 * 1000);
+      recent.push(now);
+      let caughtCd = 0;
+      try { caughtCd = parseInt(store.get('fish-caught-me:last') || '0', 10) || 0; } catch (e) {}
+      if (recent.length >= 8 && now - caughtCd > 10 * 60 * 1000 && Math.random() < 0.45 && window.openModal) {
+        store.set('fish-caught-me:last', String(now));
+        recent = [];
+        comboRun = 0; runMax = 0; comboShow(0);
+        addWork(1, 0); // 被抓包：这次算打工，不进摸鱼
+        syncFishUI();
+        const taName = store.get('lbl-partner') || 'TA';
+        const tease = [
+          '点这么快，老板就在身后吧？这次给你记成工作值啦。',
+          '被抓包了！摸鱼太频繁会被发现的——这条先算打工。',
+          '『你刚才是不是在疯狂点？』——嗯，被看见了。这次记工作值。',
+          '摸鱼要有节奏感。连续猛点会被抓的，这条算你打工。'
+        ][Math.floor(Math.random() * 4)];
+        window.openModal('被 ' + taName + ' 抓包了！', '', () => {}, {
+          noInput: true,
+          staticText: (window.taFit ? window.taFit(tease) : tease) + '\n\n本次点击已改为 工作值 +1'
+        });
+        return;
+      }
+      // —— 连击 ——
+      comboRun = (now - comboLast <= COMBO_WIN) ? comboRun + 1 : 1;
+      comboLast = now;
+      runMax = Math.max(runMax, comboRun);
+      const pts = comboRun >= 3 ? 2 : 1; // 第 3 连起翻倍
+      addFish(pts, 0);
+      comboShow(comboRun);
+      clearTimeout(runTimer);
+      runTimer = setTimeout(runEnd, COMBO_WIN + 100);
       if (weCount) weCount.textContent = todayMine();
       if (weMineEl) weMineEl.textContent = todayMine();
       if (window.logFish) window.logFish();
@@ -3896,6 +4044,15 @@ try {
     setInterval(() => {
       try {
         if (document.hidden) return; // v3.5.127：后台不累计摸鱼/打工值
+        // v3.13.x：番茄钟专注进行中——摸鱼值双方冻结（TA 在旁边安静陪），
+        //   完成专注后由番茄钟结算「补偿摸鱼」；工作值照常累计（专注=在打工）
+        if (window.pomoFocusActive && window.pomoFocusActive()) {
+          let awm = 0, awt = 0;
+          if (Math.random() * 100 < 60) awm = 1 + Math.floor(Math.random() * 10);
+          if (Math.random() * 100 < 60) awt = 1 + Math.floor(Math.random() * 10);
+          if (awm || awt) { addWork(awm, awt); syncFishUI(); }
+          return;
+        }
         let addMine = 0, addTa = 0, addWM = 0, addWT = 0;
         // 摸鱼值：双方各 60% 概率 +1~10
         if (Math.random() * 100 < 60) addTa = 1 + Math.floor(Math.random() * 10);

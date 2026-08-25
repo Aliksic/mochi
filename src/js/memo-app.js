@@ -10,10 +10,13 @@
   function vibrate(p) { try { if (navigator.vibrate) navigator.vibrate(p); } catch (e) {} }
   function editingNow() { return Array.from(document.querySelectorAll('.app-grid')).some(g => g.classList.contains('editing')); }
   function toast(msg) {
-    let t = document.getElementById('memo-app-toast');
-    if (!t) { t = document.createElement('div'); t.id = 'memo-app-toast'; document.body.appendChild(t); }
+    // v3.13.x：修复「字飞出页面」——原创建 id=memo-app-toast，而轻提示样式只定义在
+    // #cc-toast（chat-pages.css），备忘录的 toast 完全无样式、以裸文本渲染在
+    // body 末尾（手机框外右侧竖排大字）。改用全站共享的 #cc-toast（同 chat.js 等）。
+    let t = document.getElementById('cc-toast');
+    if (!t) { t = document.createElement('div'); t.id = 'cc-toast'; document.body.appendChild(t); }
     t.textContent = msg; t.className = 'cc-toast'; void t.offsetWidth; t.className = 'cc-toast show';
-    clearTimeout(t._tm); t._tm = setTimeout(() => { t.className = 'cc-toast'; }, 1800);
+    clearTimeout(t._timer); t._timer = setTimeout(() => { t.className = 'cc-toast'; }, 1800);
   }
   // 与 p2-features 同频/伸手/喝水页同款开页方式：rAF 后隐藏 tabbar/状态栏并加 .full
   function openPage(pg) {

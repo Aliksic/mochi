@@ -640,7 +640,11 @@ function partnerAct(silent, used) {
     acted = true;
   }
   if (acted && Math.random() < 0.4) {
-    var msg = WM[Math.floor(Math.random() * WM.length)];
+    // v3.13.x：悄悄话走系统预设字卡池（字卡库「花园」tab 同源，dc-off-garden:* 过滤）
+    var wmPool = (window.getLibPool ? window.getLibPool("garden", "梦角悄悄话", WM) : WM).slice();
+    if (window.isDefaultCardOff) wmPool = wmPool.filter(function (c) { return !window.isDefaultCardOff("garden", c); });
+    if (!wmPool.length) wmPool = WM.slice();
+    var msg = wmPool[Math.floor(Math.random() * wmPool.length)];
     addLog(pName, "\uD83D\uDC95 " + msg);
   }
   if (acted) {

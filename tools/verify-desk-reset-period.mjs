@@ -100,7 +100,9 @@ const dpState = `(() => {
   var orderOk = false;
   if (slide && p3Slide === slide) {
     var kids = Array.prototype.slice.call(slide.children).filter(function (c) { return c.hasAttribute('data-desk-widget'); });
-    orderOk = kids.length > 1 && kids[0] === n && kids[1] === p3;
+    // v3.13.x：今日备忘/心情行(memo-row)移到第三页经期卡下方 → 新默认顺序 dp < memo-row < p3apps
+    var mr = slide.querySelector('[data-desk-widget="memo-row"]');
+    orderOk = kids.length > 2 && kids[0] === n && mr && kids[1] === mr && kids[2] === p3;
   }
   return { exists: true, inPool: inPool, pageIdx: idx, p3Idx: p3Idx, beforeP3: orderOk,
     count: localStorage.getItem('xy-home-v2:default:desk-page-count') };

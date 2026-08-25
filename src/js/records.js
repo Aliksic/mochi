@@ -50,7 +50,12 @@
         '<span class="ft-item"><b>' + myName + '</b> 累计 ' + (tot.mine || 0) + '</span>' +
         '<span class="ft-item"><b>' + name + '</b> 累计 ' + (tot.ta || 0) + '</span>' +
       '</div>';
-    el.innerHTML = totalHtml + (h.length
+    // v3.13.x：摸鱼连击纪录（桌面周末组件「摸鱼+1」短时连击的最高存档）
+    const cb = (window.getFishComboBest && window.getFishComboBest()) || { today: 0, best: 0 };
+    const comboHtml = (cb && (cb.today > 0 || cb.best > 0))
+      ? '<div class="fish-combo-line">今日最高连击 ×' + (cb.today || 0) + ' · 历史最高 ×' + (cb.best || 0) + '</div>'
+      : '';
+    el.innerHTML = totalHtml + comboHtml + (h.length
       ? h.map(x => '<div class="tc-listitem"><div class="tc-li-top"><span class="tc-li-q">' + x.date + '</span></div>' +
           '<div class="tc-li-line">' + myName + ' 当天摸鱼：+' + (x.mine || 0) + '</div>' +
           '<div class="tc-li-line">' + name + ' 当天摸鱼：+' + (x.ta || 0) + '</div></div>').join('')

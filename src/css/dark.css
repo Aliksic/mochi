@@ -66,7 +66,7 @@
   .set-row .arrow svg { stroke:#666; }
   .set-row.sub .txt { color:#ccc; }
   .ver { color:#666; }
-  .ver-credit { color:#555; }
+  .ver-credit { color:#777; }
   .gs-row { border-bottom-color:rgba(255,255,255,.05); }
   .stp-min, .stp-max { background:var(--dark-hover); color:#aaa; }
   .stp-min:active, .stp-max:active { background:var(--ink); color:#111; }
@@ -116,7 +116,8 @@
   .poke-card { background:var(--dark-card-97); border-color:var(--dark-border); }
   .poke-card-head { border-bottom-color:var(--dark-border); }
   .poke-card-close { background:var(--dark-hover); color:var(--ink); }
-  .poke-big { background:var(--dark-hover); }
+  /* v3.11.x：主操作按钮统一跟 accent（原 dark-hover 底 + 后加的 #111 深字相撞成深底深字） */
+  .poke-big { background:var(--btn-bg); color:var(--btn-ink); }
   .poke-big:active { background:rgba(255,255,255,.1); }
   .poke-groups .emoji-g-chip { background:var(--dark-hover); border-color:var(--dark-border-12); color:var(--dark-soft); }
   .poke-groups .emoji-g-chip.sel { background:var(--btn-bg); color:var(--btn-ink); border-color:var(--btn-bg); }
@@ -166,7 +167,8 @@
   .card-tab, .cc-tab { background:var(--dark-hover); border-color:var(--dark-border-12); color:var(--dark-soft); }
   .card-tab.sel, .cc-tab.sel { background:var(--btn-bg); color:var(--btn-ink); border-color:var(--btn-bg); }
   .cc-tab-n { background:var(--dark-border-12); color:var(--dark-soft); }
-  .cc-tab.sel .cc-tab-n { background:rgba(255,255,255,.22); color:#fff; }
+  /* v3.11.x：选中 tab 深色下是浅底(--btn-bg #f0f0f0)，徽标白字改深字（原 #fff 白字白底不可见） */
+  .cc-tab.sel .cc-tab-n { background:rgba(17,17,17,.12); color:var(--btn-ink); }
   .card-search { background:var(--dark-input); border-color:var(--dark-border-12); }
   .card-search-input { background:transparent; color:var(--ink); }
   .card-search-input::placeholder { color:var(--muted); }
@@ -239,7 +241,8 @@
   .mail-compose { background:var(--dark-card-92); border-color:var(--dark-border); }
   .mail-compose .mail-paper { background:var(--dark-card); }
   .mail-write-area, .mail-write-input { background:var(--dark-card); border-color:var(--dark-border-12); color:var(--ink); }
-  .mail-tag.new { color:#fff; background:var(--btn-bg); border-color:var(--btn-bg); }
+  /* v3.11.x：文字跟 --btn-ink（原硬编码 #fff 在默认黑 accent 反转成浅底后白字白底不可见） */
+  .mail-tag.new { color:var(--btn-ink); background:var(--btn-bg); border-color:var(--btn-bg); }
 
   .feed-post { background:var(--dark-card-92); border-color:var(--dark-border); }
   .feed-comment { background:var(--dark-hover); }
@@ -484,8 +487,9 @@
   .msg-fav-heart { background:rgba(255,255,255,.07); }
   .msg-inplace .ip-opt, .msg-inplace .ip-chip { border-color:var(--dark-border-12); background:var(--dark-card); }
   .msg-inplace .ip-opt:active, .msg-inplace .ip-chip:active { background:var(--dark-hover); }
-  /* var(--ink) 底+白字的按钮族：深色下底变浅、白字隐形，统一改深字 */
-  .msg-inplace .ip-send, .call-panel-dial, .poke-big { color:#111; }
+  /* var(--ink) 底+白字的按钮族：深色下底变浅、白字隐形，统一改深字
+     （.poke-big 已单独跟 accent 变量，不在此列） */
+  .msg-inplace .ip-send, .call-panel-dial { color:#111; }
   .call-av, .call-mini-av { background:#2a2a2a; }
   .msg-poke-seg-detail { background:var(--static-bg); }
   /* 鲜花卡：浅粉渐变改暗玫瑰，文字提亮 */
@@ -829,4 +833,13 @@
   .memo-item.urgent.done .mm-text { color:var(--muted); }
   .mm-act:active { background:rgba(255,255,255,.08); }
   .memo-app-badge { background:rgba(255,255,255,.08); }
+  .memo-send-btn { color:var(--ink-soft,#aaa); background:rgba(40,40,40,.7); border-color:rgba(255,255,255,.18); }
+  .memo-send-btn:active { background:rgba(255,255,255,.08); }
 }
+
+/* ===== v3.13.x：日历页·摸鱼热力图 深色适配（AI-A 会话代改，请知悉） ===== */
+[data-theme="dark"] .fh-cell { background:rgba(255,255,255,.09); }
+[data-theme="dark"] .fh-cell.l1 { background:#57332f; }
+[data-theme="dark"] .fh-cell.l2 { background:#7d413a; }
+[data-theme="dark"] .fh-cell.l3 { background:#a85046; }
+[data-theme="dark"] .fh-cell.l4 { background:#cf6155; }

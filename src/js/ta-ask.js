@@ -293,6 +293,43 @@
   //（卡片照常留在聊天里，点击可答）。
   function autoPopupStale(schedAt) { return Date.now() - schedAt > 4000; }
 
+  // ---- v3.13.x：互动卡全局频率闸门（询问/小问题/好奇/吐槽/查岗五类共享）----
+  // 用户反馈互动卡整体频率「还是太高」：v3.12.x 只降了各类默认概率，但五类各自独立计时、
+  // 冷却互不相干，叠加起来观感仍是「每隔十几分钟就来一张」。现加一道跨类型总闸门：
+  // 任意互动卡发出后 INTERACT_GATE_MS 内，其余类型一律不再自动触发
+  //（手动「现在问一次 / 让TA现在查岗一次」不受限）。键按联系人桌面隔离（activeStore 同惯例）。
+  const INTERACT_GATE_KEY = 'interact-card-last';
+  const INTERACT_GATE_MS = 60 * 60000;
+  function interactGateOk() {
+    try {
+      const last = Number(store.get(INTERACT_GATE_KEY)) || 0;
+      return Date.now() - last >= INTERACT_GATE_MS;
+    } catch (e) { return true; }
+  }
+  function interactGateMark() {
+    try { store.set(INTERACT_GATE_KEY, String(Date.now())); } catch (e) {}
+  }
+  // 查岗卡（ck-question.js，后打包）经 window 调用同一道闸门；探针供回归/诊断只读
+  window.interactGateOk = interactGateOk;
+  window.interactGateMark = interactGateMark;
+  window.__interactGateInfo = function () {
+    let last = 0;
+    try { last = Number(store.get(INTERACT_GATE_KEY)) || 0; } catch (e) {}
+    return { key: INTERACT_GATE_KEY, lastAt: last, gateMs: INTERACT_GATE_MS, open: interactGateOk(), waitMs: Math.max(0, last + INTERACT_GATE_MS - Date.now()) };
+  };
+  // v3.13.x：一次性降频迁移——设置对象一旦保存就固化了当时的默认概率，
+  // v3.12.x 降默认对老设备从不生效（存储里还是旧高概率）。这里把「恰好等于历史默认值」的
+  // 概率吸附到新默认 5%；用户真正自定义过的其他值不动。幂等，写盘仅限已有数据。
+  // 各库历史默认：询问 20/10 · 小问题 15/8 · 好奇 15/8 · 吐槽 30/15
+  function migrateInteractProb(d, storeKey, oldDefaults) {
+    try {
+      if (!d.settings || d.settings.probLowV313) return;
+      if (oldDefaults.indexOf(Number(d.settings.prob)) !== -1) d.settings.prob = 5;
+      d.settings.probLowV313 = true;
+      if (store.get(storeKey)) { try { store.set(storeKey, JSON.stringify(d)); } catch (e) {} }
+    } catch (e) {}
+  }
+
   // ---- 数据读写 ----
   // v3.6.x：题库合并改为「增量 + 持久化」：
   //  ① 只追加默认题库里【从未合并过】的新题（mergedIds 之外）——旧预设被用户删除后不再自动复活；
@@ -332,9 +369,11 @@
     try { d = JSON.parse(store.get(KEY) || 'null'); } catch (e) { d = null; }
     if (!d || typeof d !== 'object' || Array.isArray(d)) d = {};
     // v3.5.33：设置（启用/概率/自动弹窗）
-    if (!d.settings || typeof d.settings !== 'object') d.settings = { enabled: true, prob: 10, popupProb: 70 };
+    // v3.13.x：默认触发概率 10 → 5（互动卡整体降频第二轮，配合全局闸门）
+    if (!d.settings || typeof d.settings !== 'object') d.settings = { enabled: true, prob: 5, popupProb: 70 };
     // v3.6.x：是否使用系统预设问题（默认开启；关闭后预设不再被抽取，但题目仍在库里可随时重新开启）
     if (d.settings.useDefault === undefined) d.settings.useDefault = true;
+    migrateInteractProb(d, KEY, [20, 10]);
     if (!Array.isArray(d.questions) || !d.questions.length) {
       // 首次使用（本地无题库）或题库被清空：以默认题库为准
       const isNew = !store.get(KEY);
@@ -438,14 +477,17 @@
       // v3.5.141：后台也触发（卡片进聊天记录 + 系统通知提示）；页面弹窗由
       // push 内 document.hidden 守卫控制，后台不会弹页面弹窗
       const d = taAskLoad();
-      const s = d.settings || { enabled: true, prob: 10, popupProb: 70 };
+      const s = d.settings || { enabled: true, prob: 5, popupProb: 70 };
       if (s.enabled === false) return;
       if (Date.now() - (d.lastAskAt || 0) < 45 * 60000) return;
-      if (Math.random() * 100 >= (typeof s.prob === 'number' ? s.prob : 10)) return;
+      // v3.13.x：全局闸门——任一互动卡发出后 60 分钟内不再自动触发
+      if (!interactGateOk()) return;
+      if (Math.random() * 100 >= (typeof s.prob === 'number' ? s.prob : 5)) return;
       const q = taAskPick(d);
       if (!q) return;
       d.lastAskAt = Date.now();
       taAskSave(d);
+      interactGateMark();
       pushAsk(q, { popupProb: askPopupProb(s) });
     } catch (e) {}
   }
@@ -521,7 +563,7 @@
     const d = taAskLoad();
     const q = taAskPick(d);
     if (!q) { toast('题库没有启用的问题'); return; }
-    const s = d.settings || { enabled: true, prob: 10, popupProb: 70 };
+    const s = d.settings || { enabled: true, prob: 5, popupProb: 70 };
     d.lastAskAt = Date.now();
     taAskSave(d);
     pushAsk(q, { popupProb: askPopupProb(s) });
@@ -532,15 +574,15 @@
   // v3.5.34：TA 询问设置——启用 / 使用系统预设 / 触发概率 / 自动弹窗概率
   function renderAskSettings() {
     const d = taAskLoad();
-    const s = d.settings || { enabled: true, prob: 10, popupProb: 70 };
+    const s = d.settings || { enabled: true, prob: 5, popupProb: 70 };
     const enEl = document.getElementById('ta-ask-enable');
     if (enEl) enEl.checked = s.enabled !== false;
     const defEl = document.getElementById('ta-ask-default');
     if (defEl) defEl.checked = s.useDefault !== false;
     const probEl = document.getElementById('ta-ask-prob');
     const probVal = document.getElementById('ta-ask-prob-val');
-    if (probEl) probEl.value = typeof s.prob === 'number' ? s.prob : 20;
-    if (probVal) probVal.textContent = (typeof s.prob === 'number' ? s.prob : 20) + '%';
+    if (probEl) probEl.value = typeof s.prob === 'number' ? s.prob : 5;
+    if (probVal) probVal.textContent = (typeof s.prob === 'number' ? s.prob : 5) + '%';
     const popEl = document.getElementById('ta-ask-popup');
     const popVal = document.getElementById('ta-ask-popup-val');
     const pp = askPopupProb(s);
@@ -565,7 +607,7 @@
   const askProb = document.getElementById('ta-ask-prob');
   if (askProb) askProb.addEventListener('input', () => {
     const d = taAskLoad();
-    d.settings.prob = parseInt(askProb.value, 10) || 20;
+    d.settings.prob = parseInt(askProb.value, 10) || 5;
     taAskSave(d);
     const v = document.getElementById('ta-ask-prob-val');
     if (v) v.textContent = askProb.value + '%';
@@ -1186,9 +1228,11 @@ const TC_DEFAULT = [
     let d = null;
     try { d = JSON.parse(store.get(KEY2) || 'null'); } catch (e) { d = null; }
     if (!d || typeof d !== 'object' || Array.isArray(d)) d = {};
-    if (!d.settings || typeof d.settings !== 'object') d.settings = { enabled: true, prob: 8 };
+    // v3.13.x：默认触发概率 8 → 5 + 存量旧默认值迁移（互动卡整体降频第二轮）
+    if (!d.settings || typeof d.settings !== 'object') d.settings = { enabled: true, prob: 5 };
     // v3.6.x：是否使用系统预设问题（默认开启）
     if (d.settings.useDefault === undefined) d.settings.useDefault = true;
+    migrateInteractProb(d, KEY2, [15, 8]);
     if (!Array.isArray(d.questions) || !d.questions.length) {
       const isNew = !store.get(KEY2);
       d.questions = TC_DEFAULT.map(q => {
@@ -1249,18 +1293,21 @@ const TC_DEFAULT = [
       }, 400);
     }
   }
-  // 自动触发：一次会话最多 1 个；冷却 30 分钟；概率可调（v3.12.x 默认 8%，原 15%——发卡整体降频）；启动 90 秒后、每 4 分钟轮询
+  // 自动触发：一次会话最多 1 个；冷却 30 分钟；概率可调（v3.13.x 默认 5%，原 8%/15%——发卡整体降频）；启动 90 秒后、每 4 分钟轮询
   function maybeTriggerTC() {
     try {
       // v3.5.141：后台也触发（卡片进聊天记录 + 系统通知提示）
       const d = tcLoad();
-      const s = d.settings || { enabled: true, prob: 8, popupProb: 70 };
+      const s = d.settings || { enabled: true, prob: 5, popupProb: 70 };
       if (s.enabled === false) return;
       if (_tcSessionTriggered) return;
       if (Date.now() - (d.lastChoiceAt || 0) < 30 * 60000) return;
-      if (Math.random() * 100 >= (typeof s.prob === 'number' ? s.prob : 8)) return;
+      // v3.13.x：全局闸门——任一互动卡发出后 60 分钟内不再自动触发
+      if (!interactGateOk()) return;
+      if (Math.random() * 100 >= (typeof s.prob === 'number' ? s.prob : 5)) return;
       const q = tcPick(d);
       if (!q) return;
+      interactGateMark();
       tcPush(q, { popupProb: askPopupProb(s) });
     } catch (e) {}
   }
@@ -1395,7 +1442,7 @@ window.openTCPanel = openTCPanel;
   let tcTab = 'sys';
   function renderTCSettings() {
     const d = tcLoad();
-    const s = d.settings || { enabled: true, prob: 8, popupProb: 70 };
+    const s = d.settings || { enabled: true, prob: 5, popupProb: 70 };
     const enEl = document.getElementById('tc-enable');
     if (enEl) enEl.checked = s.enabled !== false;
     const defEl = document.getElementById('tc-default');
@@ -1407,8 +1454,8 @@ window.openTCPanel = openTCPanel;
     if (popVal) popVal.textContent = pp + '%';
     const probEl = document.getElementById('tc-prob');
     const probVal = document.getElementById('tc-prob-val');
-    if (probEl) probEl.value = typeof s.prob === 'number' ? s.prob : 15;
-    if (probVal) probVal.textContent = (typeof s.prob === 'number' ? s.prob : 15) + '%';
+    if (probEl) probEl.value = typeof s.prob === 'number' ? s.prob : 5;
+    if (probVal) probVal.textContent = (typeof s.prob === 'number' ? s.prob : 5) + '%';
     const favBtn = document.getElementById('tc-favs');
     if (favBtn) favBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;vertical-align:-2px;margin-right:4px"><path d="M12 2l2.4 5 5.6.8-4 4 .9 5.6-4.9-2.6-4.9 2.6.9-5.6-4-4 5.6-.8z"/></svg>' + '收藏（' + d.favs.length + '）';
   }
@@ -1670,7 +1717,7 @@ window.openTCPanel = openTCPanel;
   if (tcProb) {
     tcProb.addEventListener('input', () => {
       const d = tcLoad();
-      d.settings.prob = parseInt(tcProb.value, 10) || 15;
+      d.settings.prob = parseInt(tcProb.value, 10) || 5;
       tcSave(d);
       const v = document.getElementById('tc-prob-val');
       if (v) v.textContent = tcProb.value + '%';
@@ -1759,7 +1806,7 @@ window.openTCPanel = openTCPanel;
     const d = tcLoad();
     const q = tcPick(d);
     if (!q) { toast('题库没有可用的问题'); return; }
-    const s = d.settings || { enabled: true, prob: 8, popupProb: 70 };
+    const s = d.settings || { enabled: true, prob: 5, popupProb: 70 };
     tcPush(q, { popupProb: askPopupProb(s) });
     toast('TA 在聊天里向你提问了');
   };
@@ -1982,9 +2029,11 @@ window.openTCPanel = openTCPanel;
         else if (h && h.my === '只给我看') h.my = '只给你看';
       });
     }
-    if (!d.settings || typeof d.settings !== 'object') d.settings = { enabled: true, prob: 8, followup: true };
+    // v3.13.x：默认触发概率 8 → 5 + 存量旧默认值迁移（互动卡整体降频第二轮）
+    if (!d.settings || typeof d.settings !== 'object') d.settings = { enabled: true, prob: 5, followup: true };
     // v3.6.x：是否使用系统预设问题（默认开启）
     if (d.settings.useDefault === undefined) d.settings.useDefault = true;
+    migrateInteractProb(d, KEY3, [15, 8]);
     if (!Array.isArray(d.questions) || !d.questions.length) {
       const isNew = !store.get(KEY3);
       d.questions = TCU_DEFAULT.map(q => {
@@ -2048,13 +2097,16 @@ window.openTCPanel = openTCPanel;
     try {
       // v3.5.141：后台也触发（卡片进聊天记录 + 系统通知提示）
       const d = tcuLoad();
-      const s = d.settings || { enabled: true, prob: 8, popupProb: 70 };
+      const s = d.settings || { enabled: true, prob: 5, popupProb: 70 };
       if (s.enabled === false) return;
       if (_tcuSessionTriggered) return;
       if (Date.now() - (d.lastCuriousAt || 0) < 30 * 60000) return;
-      if (Math.random() * 100 >= (typeof s.prob === 'number' ? s.prob : 8)) return;
+      // v3.13.x：全局闸门——任一互动卡发出后 60 分钟内不再自动触发
+      if (!interactGateOk()) return;
+      if (Math.random() * 100 >= (typeof s.prob === 'number' ? s.prob : 5)) return;
       const q = tcuPick(d);
       if (!q) return;
+      interactGateMark();
       tcuPush(q, { popupProb: askPopupProb(s) });
     } catch (e) {}
   }
@@ -2155,7 +2207,7 @@ window.openTCPanel = openTCPanel;
   let tcuTab = 'sys';
   function renderTCUSettings() {
     const d = tcuLoad();
-    const s = d.settings || { enabled: true, prob: 8, popupProb: 70, followup: true };
+    const s = d.settings || { enabled: true, prob: 5, popupProb: 70, followup: true };
     const enEl = document.getElementById('tcu-enable');
     if (enEl) enEl.checked = s.enabled !== false;
     const defEl = document.getElementById('tcu-default');
@@ -2167,8 +2219,8 @@ window.openTCPanel = openTCPanel;
     if (popVal) popVal.textContent = pp + '%';
     const probEl = document.getElementById('tcu-prob');
     const probVal = document.getElementById('tcu-prob-val');
-    if (probEl) probEl.value = typeof s.prob === 'number' ? s.prob : 15;
-    if (probVal) probVal.textContent = (typeof s.prob === 'number' ? s.prob : 15) + '%';
+    if (probEl) probEl.value = typeof s.prob === 'number' ? s.prob : 5;
+    if (probVal) probVal.textContent = (typeof s.prob === 'number' ? s.prob : 5) + '%';
     const fuEl = document.getElementById('tcu-followup');
     if (fuEl) fuEl.checked = s.followup !== false;
   }
@@ -2332,7 +2384,7 @@ window.openTCPanel = openTCPanel;
   });
   const tcuProb = document.getElementById('tcu-prob');
   if (tcuProb) tcuProb.addEventListener('input', () => {
-    const d = tcuLoad(); d.settings.prob = parseInt(tcuProb.value, 10) || 15; tcuSave(d);
+    const d = tcuLoad(); d.settings.prob = parseInt(tcuProb.value, 10) || 5; tcuSave(d);
     const v = document.getElementById('tcu-prob-val'); if (v) v.textContent = tcuProb.value + '%';
     toast('触发概率已设为 ' + tcuProb.value + '%');
   });
@@ -2403,7 +2455,7 @@ window.openTCPanel = openTCPanel;
     const d = tcuLoad();
     const q = tcuPick(d);
     if (!q) { toast('题库没有可用的问题'); return; }
-    const s = d.settings || { enabled: true, prob: 8, popupProb: 70 };
+    const s = d.settings || { enabled: true, prob: 5, popupProb: 70 };
     tcuPush(q, { popupProb: askPopupProb(s) });
     toast('TA 在聊天里向你好奇了');
   };
@@ -2559,9 +2611,11 @@ window.openTCPanel = openTCPanel;
     let d = null;
     try { d = JSON.parse(store.get(KEY4) || 'null'); } catch (e) { d = null; }
     if (!d || typeof d !== 'object' || Array.isArray(d)) d = {};
-    if (!d.settings || typeof d.settings !== 'object') d.settings = { enabled: true, prob: 15 };
+    // v3.13.x：默认触发概率 15 → 5（v3.12.x 降频漏改了吐槽，这次补上）+ 存量旧默认值迁移
+    if (!d.settings || typeof d.settings !== 'object') d.settings = { enabled: true, prob: 5 };
     // v3.6.x：是否使用系统预设字卡（默认开启）
     if (d.settings.useDefault === undefined) d.settings.useDefault = true;
+    migrateInteractProb(d, KEY4, [30, 15]);
     if (!Array.isArray(d.questions) || !d.questions.length) {
       const isNew = !store.get(KEY4);
       d.questions = TR_DEFAULT.map(q => {
@@ -2633,13 +2687,15 @@ window.openTCPanel = openTCPanel;
     try {
       // v3.5.141：后台也触发（卡片进聊天记录 + 系统通知提示）
       const d = trLoad();
-      const s = d.settings || { enabled: true, prob: 15, popupProb: 70 };
+      const s = d.settings || { enabled: true, prob: 5, popupProb: 70 };
       if (s.enabled === false) return;
       if (_trSessionTriggered) return;
       if (Date.now() - (d.lastRoastAt || 0) < 30 * 60000) return;
-      if (Math.random() * 100 < (typeof s.prob === 'number' ? s.prob : 15)) {
+      // v3.13.x：全局闸门——任一互动卡发出后 60 分钟内不再自动触发
+      if (!interactGateOk()) return;
+      if (Math.random() * 100 < (typeof s.prob === 'number' ? s.prob : 5)) {
         const q = trPick(d, lastUserMsg());
-        if (q) trPush(q, { popupProb: askPopupProb(s) });
+        if (q) { interactGateMark(); trPush(q, { popupProb: askPopupProb(s) }); }
       }
     } catch (e) {}
   }
@@ -2726,7 +2782,7 @@ window.openTCPanel = openTCPanel;
   let trTab = 'sys';
   function renderTRSettings() {
     const d = trLoad();
-    const s = d.settings || { enabled: true, prob: 15, popupProb: 70 };
+    const s = d.settings || { enabled: true, prob: 5, popupProb: 70 };
     const enEl = document.getElementById('tr-enable');
     if (enEl) enEl.checked = s.enabled !== false;
     const defEl = document.getElementById('tr-default');
@@ -2738,8 +2794,8 @@ window.openTCPanel = openTCPanel;
     if (popVal) popVal.textContent = pp + '%';
     const probEl = document.getElementById('tr-prob');
     const probVal = document.getElementById('tr-prob-val');
-    if (probEl) probEl.value = typeof s.prob === 'number' ? s.prob : 30;
-    if (probVal) probVal.textContent = (typeof s.prob === 'number' ? s.prob : 30) + '%';
+    if (probEl) probEl.value = typeof s.prob === 'number' ? s.prob : 5;
+    if (probVal) probVal.textContent = (typeof s.prob === 'number' ? s.prob : 5) + '%';
   }
   // v3.7.x：系统预设分类切换——顶部标签栏点击切换，避免全部分类堆叠导致页面过长
   let trSysCat = null;
@@ -2896,7 +2952,7 @@ window.openTCPanel = openTCPanel;
   });
   const trProb = document.getElementById('tr-prob');
   if (trProb) trProb.addEventListener('input', () => {
-    const d = trLoad(); d.settings.prob = parseInt(trProb.value, 10) || 30; trSave(d);
+    const d = trLoad(); d.settings.prob = parseInt(trProb.value, 10) || 5; trSave(d);
     const v = document.getElementById('tr-prob-val'); if (v) v.textContent = trProb.value + '%';
     toast('触发概率已设为 ' + trProb.value + '%');
   });
@@ -2961,7 +3017,7 @@ window.openTCPanel = openTCPanel;
     const d = trLoad();
     const q = trPick(d, '');
     if (!q) { toast('题库没有可用吐槽'); return; }
-    const s = d.settings || { enabled: true, prob: 15, popupProb: 70 };
+    const s = d.settings || { enabled: true, prob: 5, popupProb: 70 };
     trPush(q, { popupProb: askPopupProb(s) });
     toast('TA 在聊天里吐槽你了');
   };

@@ -207,6 +207,8 @@ const a2 = await evalJs(`(function(){
 // ---- B. 发送路径防重发窗口 ----
 // 场景：输入法重组/自动填充把已清空的输入复活 → 同文本短时间内第二次 addMsg。
 // 窗口内第二次必须被吞掉；窗口过后允许再次发送。
+// v3.12.x：窗口 2500ms——覆盖荣耀 200 Pro Edge / 雨见 等内核「同一次点按派发两次
+// click」的双发场景（两次事件间隔实测可达 1.2~2s，旧 1200ms 窗口漏网出双条）。
 const b = await evalJs(`(async function(){
   try {
     var inp = document.getElementById('chat-input');
@@ -219,13 +221,19 @@ const b = await evalJs(`(async function(){
     send.click();                       // 窗口内第 2 次：应被吞掉
     inp.innerText = '在吗';             // iOS 候选词确认→重组回补点可达 1s+，仍属窗口内
     await new Promise(function(r){ setTimeout(r, 900); });
-    send.click();                       // 距上次成功发送 ~900ms < 1200ms：仍应被吞掉
+    send.click();                       // 距上次成功发送 ~900ms < 2500ms：仍应被吞掉
     var midCount = window.getChatMsgs().filter(function(r){ return r.side === 'out'; }).length;
-    await new Promise(function(r){ setTimeout(r, 700); });
+    // v3.12.x：荣耀/雨见双发区间——距上次成功发送 1.6s（>旧窗口 1.2s，<新窗口 2.5s）：
+    // 第二次 click 应被吞掉，不再产出第 2 条
     inp.innerText = '在吗';
-    send.click();                       // 窗口外（距首次发送 >1.6s）：放行
+    await new Promise(function(r){ setTimeout(r, 700); });
+    send.click();
+    var mid2Count = window.getChatMsgs().filter(function(r){ return r.side === 'out'; }).length;
+    await new Promise(function(r){ setTimeout(r, 1300); });
+    inp.innerText = '在吗';
+    send.click();                       // 窗口外（距首次发送 >2.9s）：放行
     var endCount = window.getChatMsgs().filter(function(r){ return r.side === 'out'; }).length;
-    return JSON.stringify({ before: before, mid: midCount, end: endCount });
+    return JSON.stringify({ before: before, mid: midCount, mid2: mid2Count, end: endCount });
   } catch (e) { return JSON.stringify({ err: String(e) }); }
 })()`) || '{}';
 {
@@ -233,7 +241,8 @@ const b = await evalJs(`(async function(){
   if (o.err) check('B1 防重发窗口', false, o.err);
   else {
     check('B1 窗口内重复发送只发 1 条', o.mid - o.before === 1, 'mid-before=' + (o.mid - o.before));
-    check('B2 窗口外重发放行', o.end - o.mid === 1, 'end-mid=' + (o.end - o.mid));
+    check('B3 双发区间（1.2~2.5s）仍只发 1 条', o.mid2 - o.before === 1, 'mid2-before=' + (o.mid2 - o.before));
+    check('B2 窗口外重发放行', o.end - o.mid2 === 1, 'end-mid2=' + (o.end - o.mid2));
   }
 }
 

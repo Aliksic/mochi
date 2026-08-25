@@ -245,17 +245,7 @@
 </div>
 </div>
 
-<!-- 第二页补充：今日备忘 + 每周日程（填空白区） -->
-<div class="mini-row" data-desk-widget="memo-row">
-<div class="mini-card glass memo-card" data-card-bg="memo">
-<div class="mc-top">今日备忘</div>
-<div class="mc-b" id="memo-text" title="点击记录">点这里记一句话</div>
-</div>
-<div class="mini-card glass mood-card" data-card-bg="mood">
-<div class="mc-top">今天的心情</div>
-<div class="mc-b" id="today-mood-text">点一下选心情</div>
-</div>
-</div>
+<!-- 第二页补充：每周日程（填空白区）；今日备忘/今天的心情已移第三页经期卡下方 -->
 <div class="week-card glass" data-desk-widget="week" data-card-bg="week">
 <div class="mc-top">本周日常</div>
 <div class="week-days" id="week-days"></div>
@@ -278,6 +268,17 @@
   <div class="dpd-label" id="dpd-label">经期</div>
   <div class="dpd-days" id="dpd-days">—</div>
   <div class="dpd-sub" id="dpd-sub">未记录</div>
+</div>
+<!-- v3.13.x：今日备忘 + 今天的心情（自第二页移入，放经期卡下方） -->
+<div class="mini-row" data-desk-widget="memo-row">
+<div class="mini-card glass memo-card" data-card-bg="memo">
+<div class="mc-top">今日备忘</div>
+<div class="mc-b" id="memo-text" title="点击记录">点这里记一句话</div>
+</div>
+<div class="mini-card glass mood-card" data-card-bg="mood">
+<div class="mc-top">今天的心情</div>
+<div class="mc-b" id="today-mood-text">点一下选心情</div>
+</div>
 </div>
 <div class="app-grid p3-grid" data-app="p3" data-desk-widget="p3apps">
 <div class="app" data-app="period" data-desk-widget="app-period">
@@ -392,6 +393,11 @@
         <div class="ci"><div class="n">TA的查岗·我的添加</div><div class="m">你添加的查岗问题</div></div>
         <div class="t" id="cc-ta-checkin-count-mine">0</div>
       </div>
+      <div class="chat-item glass" id="li-ta-invite-mine">
+        <div class="av"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="11" rx="5"/><path d="M7 10.5v3M5.5 12h3"/><path d="M15.5 11h.01M18.5 13h.01"/></svg></div>
+        <div class="ci"><div class="n">TA的邀请·我的添加</div><div class="m">你添加的邀请话术</div></div>
+        <div class="t" id="cc-ta-invite-count-mine">0</div>
+      </div>
       </div>
       <div class="cc-sect-body" id="cc-sect-preset" hidden>
       <div class="chat-item glass" id="li-default-cards">
@@ -444,6 +450,11 @@
         <div class="ci"><div class="n">TA的查岗</div><div class="m">TA 来查你的岗 · 随机出查岗问题卡</div><div class="note">开关/概率在 回复设置 → 查岗</div></div>
         <div class="t" id="cc-ta-checkin-count">17</div>
       </div>
+      <div class="chat-item glass" id="li-ta-invite">
+        <div class="av"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="11" rx="5"/><path d="M7 10.5v3M5.5 12h3"/><path d="M15.5 11h.01M18.5 13h.01"/></svg></div>
+        <div class="ci"><div class="n">TA的邀请</div><div class="m">TA 主动约你玩 · 猜拳/Pong/贪吃蛇邀请话术</div><div class="note">开关/概率在 回复设置 → 其他</div></div>
+        <div class="t" id="cc-ta-invite-count">10</div>
+      </div>
       </div>
     </div>
 
@@ -463,7 +474,7 @@
     <div class="set-group glass">
       <div class="gs-row"><span>TA 偶尔向你提问</span><label class="toggle"><input type="checkbox" id="ta-ask-enable"><span class="tk"></span></label></div>
       <div class="gs-row"><span>使用系统预设问题</span><label class="toggle"><input type="checkbox" id="ta-ask-default" checked><span class="tk"></span></label></div>
-      <div class="gs-row"><span>触发概率</span><input type="range" id="ta-ask-prob" min="1" max="100" step="1" class="tc-range"><span class="tc-prob-val" id="ta-ask-prob-val">20%</span></div>
+      <div class="gs-row"><span>触发概率</span><input type="range" id="ta-ask-prob" min="1" max="100" step="1" class="tc-range"><span class="tc-prob-val" id="ta-ask-prob-val">5%</span></div>
       <div class="gs-row"><span>自动弹窗概率</span><input type="range" id="ta-ask-popup" min="0" max="100" step="1" class="tc-range"><span class="tc-prob-val" id="ta-ask-popup-val">70%</span></div>
     </div>
     <div class="card-tabs" id="ta-ask-tabs" style="padding:6px 12px 8px">
@@ -511,7 +522,7 @@
     <div class="set-group glass">
       <div class="gs-row"><span>TA 偶尔递选择题</span><label class="toggle"><input type="checkbox" id="tc-enable"><span class="tk"></span></label></div>
       <div class="gs-row"><span>使用系统预设问题</span><label class="toggle"><input type="checkbox" id="tc-default" checked><span class="tk"></span></label></div>
-      <div class="gs-row"><span>触发概率</span><input type="range" id="tc-prob" min="1" max="100" step="1" class="tc-range"><span class="tc-prob-val" id="tc-prob-val">15%</span></div>
+      <div class="gs-row"><span>触发概率</span><input type="range" id="tc-prob" min="1" max="100" step="1" class="tc-range"><span class="tc-prob-val" id="tc-prob-val">5%</span></div>
       <div class="gs-row"><span>自动弹窗概率</span><input type="range" id="tc-popup" min="0" max="100" step="1" class="tc-range"><span class="tc-prob-val" id="tc-popup-val">70%</span></div>
     </div>
     <div class="card-tabs" id="tc-tabs" style="padding:6px 12px 8px">
@@ -572,7 +583,7 @@
     <div class="set-group glass">
       <div class="gs-row"><span>TA 偶尔对你好奇</span><label class="toggle"><input type="checkbox" id="tcu-enable"><span class="tk"></span></label></div>
       <div class="gs-row"><span>使用系统预设问题</span><label class="toggle"><input type="checkbox" id="tcu-default" checked><span class="tk"></span></label></div>
-      <div class="gs-row"><span>触发概率</span><input type="range" id="tcu-prob" min="1" max="100" step="1" class="tc-range"><span class="tc-prob-val" id="tcu-prob-val">15%</span></div>
+      <div class="gs-row"><span>触发概率</span><input type="range" id="tcu-prob" min="1" max="100" step="1" class="tc-range"><span class="tc-prob-val" id="tcu-prob-val">5%</span></div>
       <div class="gs-row"><span>自动弹窗概率</span><input type="range" id="tcu-popup" min="0" max="100" step="1" class="tc-range"><span class="tc-prob-val" id="tcu-popup-val">70%</span></div>
       <div class="gs-row"><span>回答后 TA 偶尔追问</span><label class="toggle"><input type="checkbox" id="tcu-followup"><span class="tk"></span></label></div>
     </div>
@@ -634,7 +645,7 @@
     <div class="set-group glass">
       <div class="gs-row"><span>TA 偶尔吐槽你一句</span><label class="toggle"><input type="checkbox" id="tr-enable"><span class="tk"></span></label></div>
       <div class="gs-row"><span>使用系统预设字卡</span><label class="toggle"><input type="checkbox" id="tr-default" checked><span class="tk"></span></label></div>
-      <div class="gs-row"><span>触发概率</span><input type="range" id="tr-prob" min="1" max="100" step="1" class="tc-range"><span class="tc-prob-val" id="tr-prob-val">30%</span></div>
+      <div class="gs-row"><span>触发概率</span><input type="range" id="tr-prob" min="1" max="100" step="1" class="tc-range"><span class="tc-prob-val" id="tr-prob-val">5%</span></div>
       <div class="gs-row"><span>自动弹窗概率</span><input type="range" id="tr-popup" min="0" max="100" step="1" class="tc-range"><span class="tc-prob-val" id="tr-popup-val">70%</span></div>
     </div>
     <div class="card-tabs" id="tr-tabs" style="padding:6px 12px 8px">
@@ -714,6 +725,54 @@
         </div>
       </div>
       <div id="ckq-mine-cats"></div>
+    </div>
+  </div>
+</div>
+
+<!-- TA的邀请（联系人主动邀请话术管理页；触发开关/概率在 回复设置→其他 按联系人设置） -->
+<div class="page" id="page-ta-invite" hidden>
+  <div class="chat-head">
+    <span class="ch-back" id="ti-back">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    </span>
+    <span class="ch-name">TA的邀请</span>
+  </div>
+  <div class="gs-scroll">
+    <button class="div-draw" id="ti-now">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="11" rx="5"/><path d="M7 10.5v3M5.5 12h3"/><path d="M15.5 11h.01M18.5 13h.01"/></svg>
+      让TA现在邀请一次
+    </button>
+    <div class="set-group glass">
+      <div class="gs-row"><span>使用系统预设话术</span><label class="toggle"><input type="checkbox" id="ti-default" checked><span class="tk"></span></label></div>
+      <div class="gs-sub" style="padding:0 14px 14px">TA 主动邀请的开关/概率在「回复设置 → 其他」（主动邀请猜拳 / 主动邀请玩游戏）按联系人独立设置；同意邀请会打开对应半框（猜拳 / Pong / 贪吃蛇），拒绝则回一句婉拒。题库随当前桌面的联系人保存</div>
+    </div>
+    <div class="card-tabs" id="ti-tabs" style="padding:6px 12px 8px">
+      <button class="cc-tab sel" data-tab="sys">系统预设</button>
+      <button class="cc-tab" data-tab="mine">我的添加</button>
+    </div>
+    <div class="tc-search-wrap" style="padding:0 12px 8px">
+      <input type="text" id="ti-search" class="tc-input" placeholder="搜索邀请话术…" style="width:100%">
+    </div>
+    <div id="ti-sys-panel">
+      <div class="set-group glass">
+        <div class="cal-card-title" style="padding:14px 14px 0">系统预设话术（可逐句开关，不可删除）</div>
+        <div id="ti-sys-cats" style="padding:8px 14px 14px"></div>
+      </div>
+    </div>
+    <div id="ti-mine-panel" hidden>
+      <div class="set-group glass">
+        <div class="cal-card-title" style="padding:14px 14px 0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg>批量导入邀请话术</div>
+        <div class="tc-addform">
+          <select id="ti-batch-kind" class="tc-input">
+            <option value="rps">导入到 · 猜拳邀请</option>
+            <option value="pong">导入到 · Pong 邀请</option>
+            <option value="snake">导入到 · 贪吃蛇邀请</option>
+          </select>
+          <textarea id="ti-batch" class="tc-input" rows="5" placeholder="每行一条邀请话术，如：&#10;来猜拳呀，输的人答应一件事！&#10;敢不敢来一局 Pong？"></textarea>
+          <button class="ta-add-btn" style="width:100%" id="ti-batch-add">批量导入</button>
+        </div>
+      </div>
+      <div id="ti-mine-cats"></div>
     </div>
   </div>
 </div>
@@ -904,6 +963,11 @@
         </div>
       </div>
       <div class="set-group glass">
+        <div class="set-row" id="row-theme-mode">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg></div>
+          <div class="txt">深色模式</div>
+          <div class="val" id="theme-mode-val">关闭</div>
+        </div>
         <div class="set-row" id="row-appearance">
           <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 2.5 15 0 18M12 3c-2.5 2.5-2.5 15 0 18"/></svg></div>
           <div class="txt">手机桌面美化</div>
@@ -979,11 +1043,6 @@
         <span class="ch-name">手机桌面美化</span>
       </div>
       <div class="set-group glass">
-        <div class="set-row" id="row-theme-mode">
-          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg></div>
-          <div class="txt">深色模式</div>
-          <div class="val" id="theme-mode-val">关闭</div>
-        </div>
         <div class="set-row" id="row-accent-color">
           <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4" fill="#111111" stroke="none"/></svg></div>
           <div class="txt">主题色</div>
@@ -1135,7 +1194,7 @@
           <div class="lic-li">TA 的询问 / TA 的小问题 / TA 的好奇 / TA 的吐槽：内容可自定义</div>
           <div class="lic-li">查岗日常字卡：地点、在做什么、说的话，均可自定义</div>
           <div class="lic-li">情绪回复：按你当前的心情自动匹配相应字卡</div>
-          <div class="lic-li">字卡库页入口：公用字卡（全桌面联系人共享）、专属字卡（仅当前桌面联系人）、查岗日常字卡、桌面今日情话、聊天默认字卡、聊天情绪字卡、聊天回应字卡、TA 的询问 / 小问题 / 好奇 / 吐槽 / 查岗</div>
+          <div class="lic-li">字卡库页入口：公用字卡（全桌面联系人共享）、专属字卡（仅当前桌面联系人）、查岗日常字卡、桌面今日情话、聊天默认字卡、聊天情绪字卡、聊天回应字卡、TA 的询问 / 小问题 / 好奇 / 吐槽 / 查岗 / 邀请</div>
           <div class="lic-li">字卡管理：去重复、导出数据、一键清空所有分类</div>
           <div class="lic-li">兼容导入 milk 字卡库导出的 json</div>
           <div class="lic-li">系统预设字卡可逐句开关（桌面今日情话 / 聊天默认字卡）</div>
@@ -1160,8 +1219,9 @@
           <div class="lic-li">装修模式：点图标换图、点卡片设背景、添加卡片、恢复图标、完成</div>
           <div class="lic-li">桌面图片组件（尺寸档位：小 / 中 / 大，全屏查看器）</div>
           <div class="lic-li">第一页功能图标：聊天、主页、信箱、朋友圈、日历、纪念、占卜、收藏</div>
-          <div class="lic-li">第二页功能图标：聊天统计、提问记录、查岗、今日备忘、今天的心情、本周日常、离周末还有几天</div>
-          <div class="lic-li">桌面美化：深色模式、主题色、桌面字号、卡片大小、内置壁纸预设</div>
+          <div class="lic-li">第二页功能图标：聊天统计、提问记录、查岗、本周日常、离周末还有几天</div>
+          <div class="lic-li">第三页卡片：经期倒计时、今日备忘、今天的心情；功能图标：经期记录、记账、花园</div>
+          <div class="lic-li">设置页：深色模式开关；桌面美化：主题色、桌面字号、卡片大小、内置壁纸预设</div>
           <div class="lic-li">小组件颜色：背景 / 边框 / 按钮 / 按钮文字 / 爱心外框颜色、小组件透明度、图标圆角</div>
         </div>
         <div class="cal-card glass">
@@ -1533,7 +1593,7 @@
             <div class="gs-row"><span>主动邀请玩游戏</span><label class="toggle"><input type="checkbox" id="ai-game-en"><span class="tk"></span></label></div>
             <div class="gs-row"><span>游戏邀请概率</span><div class="stepper" data-k="ai-game-prob" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="ai-game-prob-val" readonly><button class="stp-max">+</button></div></div>
           </div>
-          <div class="gs-sub" style="padding:0 14px 14px">TA 主动找你的消息会按概率变成猜拳/游戏邀请（Pong、贪吃蛇随机），自动打开对应半框，不想玩直接关掉即可；仅在你在聊天页时触发，需开启「主动发送」</div>
+          <div class="gs-sub" style="padding:0 14px 14px">TA 主动找你的消息会按概率变成猜拳/游戏邀请（Pong、贪吃蛇随机），自动打开对应半框，不想玩直接关掉即可；仅在你在聊天页时触发，需开启「主动发送」。邀请话术可在 字卡库 →「TA的邀请」里逐句开关或自定义添加</div>
         </div>
         <!-- v3.6.x：保存设置按钮——点击把当前所有概率/开关写入本地并提示 -->
         <button class="ta-add-btn gs-save-btn" id="reply-save-btn" style="width:100%;margin:6px 0 18px">
@@ -3093,6 +3153,10 @@
           <button class="more-item" id="more-roast-now" title="让TA现在吐槽一次（TA的吐槽）">
             <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 5.4 5.7.3-4.4 3.6 1.5 5.5-4.6-3.3-4.6 3.3 1.5-5.5-4.4-3.6 5.7-.3z"/></svg></span>
             <span>吐槽</span>
+          </button>
+          <button class="more-item" id="more-invite-now" title="让TA现在邀请一次（猜拳/Pong/贪吃蛇，话术来自字卡库「TA的邀请」）">
+            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="11" rx="5"/><path d="M7 10.5v3M5.5 12h3"/><path d="M15.5 11h.01M18.5 13h.01"/></svg></span>
+            <span>邀请</span>
           </button>
         </div>
       </div>
