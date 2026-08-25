@@ -2024,15 +2024,17 @@ if (ckRefresh) {
   // ---- 吃什么页 ----
   const DEF_EAT_DISHES = ['番茄炒蛋', '红烧肉', '清蒸鱼', '麻婆豆腐', '宫保鸡丁', '酸辣土豆丝', '蛋炒饭', '牛肉面', '饺子', '馄饨', '皮蛋瘦肉粥', '可乐鸡翅', '糖醋排骨', '清炒时蔬', '蛋花汤', '凉拌黄瓜', '回锅肉', '水煮肉片', '鱼香肉丝', '葱油拌面'];
   const DEF_EAT_COMMENTS = ['就吃这个吧', '听起来不错', '我想吃这个', '可以', '这个好吃', '嗯，就这个', '想吃'];
+  const EAT_ASK_MSGS = ['今晚吃 {0} 怎么样？', '{0}，想吃吗？', '要不要吃 {0}？', '今天吃 {0} 好不好？'];
   const eatPage = document.createElement('div');
   eatPage.className = 'page'; eatPage.id = 'page-eat'; eatPage.hidden = true;
   eatPage.innerHTML =
     '<div class="chat-head"><span class="ch-back" id="eat-back"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><span class="ch-name">吃什么</span></div>' +
     '<div class="eat-body">' +
-      '<div class="eat-wheel-wrap"><canvas class="eat-wheel" id="eat-wheel" width="280" height="280"></canvas><div class="eat-pointer">▼</div></div>' +
+      '<div class="eat-wheel-wrap"><canvas class="eat-wheel" id="eat-wheel"></canvas><div class="eat-pointer" id="eat-pointer"><svg viewBox="0 0 20 20" width="20" height="20"><polygon points="10,18 3,2 17,2" fill="#e8533d"/></svg></div></div>' +
       '<div class="eat-card glass"><div class="eat-label">今天吃</div><div class="eat-dish" id="eat-dish">…</div><div class="eat-comment" id="eat-comment">…</div></div>' +
       '<div class="eat-btns"><button class="eat-change" id="eat-change">换一个</button><button class="eat-send" id="eat-send">发到聊天</button></div>' +
-      '<div class="eat-btns"><button class="eat-spin" id="eat-spin">转盘抽取</button><button class="eat-askta" id="eat-askta">问 TA 吃这个</button></div>' +
+      '<div class="eat-btns"><button class="eat-spin" id="eat-spin">转盘抽取</button><button class="eat-askta" id="eat-askta">问 TA</button></div>' +
+      '<div class="eat-history" id="eat-history"></div>' +
       '<div class="eat-mgr"><button class="eat-add" id="eat-add">+ 添加菜名</button><button class="eat-menu-btn" id="eat-menu-btn">编辑菜单</button></div>' +
       '<div class="eat-menu-panel" id="eat-menu-panel" hidden>' +
         '<textarea class="eat-menu-ta" id="eat-menu-ta" rows="8" placeholder="一行一个菜名，留空则恢复默认菜单"></textarea>' +
@@ -2043,39 +2045,70 @@ if (ckRefresh) {
 
   function eatMenu() { const s = curStore(); try { const a = JSON.parse((s && s.get('eat-menu')) || '[]'); if (Array.isArray(a) && a.length) return a.filter(d => d); } catch (e) {} return null; }
   function eatSaveMenu(a) { const s = curStore(); if (s) try { s.set('eat-menu', JSON.stringify(a)); } catch (e) {} }
+  function eatHistory() { const s = curStore(); try { const a = JSON.parse((s && s.get('eat-history')) || '[]'); return Array.isArray(a) ? a.slice(-3) : []; } catch (e) {} return []; }
+  function eatPushHistory(dish) { const h = eatHistory(); h.push({ d: dish, t: Date.now() }); const s = curStore(); if (s) try { s.set('eat-history', JSON.stringify(h.slice(-10))); } catch (e) {} eatRenderHistory(); }
+  function eatRenderHistory() { const h = eatHistory(); const el = document.getElementById('eat-history'); if (!el) return; if (!h.length) { el.innerHTML = ''; return; } el.innerHTML = '最近吃了：' + h.map(x => '<span class="eh-tag">' + x.d + '</span>').join(''); }
   function eatDishes() { const m = eatMenu(); if (m) return m; const s = curStore(); let pool = DEF_EAT_DISHES.slice(); try { const a = JSON.parse((s && s.get('eat-cards')) || '[]'); if (Array.isArray(a)) a.forEach(d => { if (d && pool.indexOf(d) < 0) pool.push(d); }); } catch (e) {} return pool; }
   function eatSaveDishes(a) { const s = curStore(); if (s) try { s.set('eat-cards', JSON.stringify(a)); } catch (e) {} }
-  let eatSpinAngle = 0; let eatSpinTimer = null;
-  function eatDrawWheel(dishes) {
+  let eatSpinAngle = 0; let eatSpinTimer = null; let eatSpinning = false; let eatHlIdx = -1; let eatHlTimer = null;
+  const EAT_BTN_IDS = ['eat-change', 'eat-send', 'eat-spin', 'eat-askta'];
+  function eatSetBtns(dis) { EAT_BTN_IDS.forEach(id => { const b = document.getElementById(id); if (b) { if (dis) b.setAttribute('disabled', ''); else b.removeAttribute('disabled'); } }); }
+  function eatClearSpin() { if (eatSpinTimer) { cancelAnimationFrame(eatSpinTimer); eatSpinTimer = null; } eatSpinning = false; eatSetBtns(false); eatHlIdx = -1; if (eatHlTimer) { clearTimeout(eatHlTimer); eatHlTimer = null; } }
+  function eatInitCanvas() { const c = document.getElementById('eat-wheel'); if (!c) return; const dpr = window.devicePixelRatio || 1; const size = 240; c.width = size * dpr; c.height = size * dpr; c.style.width = size + 'px'; c.style.height = size + 'px'; c.getContext('2d').setTransform(dpr, 0, 0, dpr, 0, 0); }
+  function eatDrawWheel(dishes, hlIdx) {
     const c = document.getElementById('eat-wheel'); if (!c) return;
-    const ctx = c.getContext('2d'); const cx = c.width / 2; const cy = c.height / 2; const r = cx - 4;
+    const ctx = c.getContext('2d'); const dpr = window.devicePixelRatio || 1; const W = c.width / dpr; const cx = W / 2; const cy = W / 2; const r = cx - 4;
     const n = dishes.length; const slice = (2 * Math.PI) / n;
     const colors = ['#ff6b6b','#ffa94d','#69db7c','#4dabf7','#f06595','#ffd43b','#a9e34b','#74c0fc','#e599f7','#ff922b'];
-    ctx.clearRect(0, 0, c.width, c.height);
+    ctx.save(); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, W, W);
     ctx.save(); ctx.translate(cx, cy); ctx.rotate(eatSpinAngle);
     for (let i = 0; i < n; i++) {
       ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, r, i * slice, (i + 1) * slice);
-      ctx.fillStyle = colors[i % colors.length]; ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
-      ctx.save(); ctx.rotate(i * slice + slice / 2); ctx.fillStyle = '#fff'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'right';
-      const txt = dishes[i].length > 5 ? dishes[i].slice(0, 5) + '..' : dishes[i];
-      ctx.fillText(txt, r - 10, 4); ctx.restore();
+      const isHl = (hlIdx != null && hlIdx >= 0 && i === hlIdx);
+      ctx.fillStyle = isHl ? '#fff' : colors[i % colors.length]; ctx.fill();
+      ctx.strokeStyle = isHl ? colors[i % colors.length] : '#fff'; ctx.lineWidth = isHl ? 3 : 2; ctx.stroke();
+      ctx.save(); ctx.rotate(i * slice + slice / 2);
+      ctx.fillStyle = isHl ? colors[i % colors.length] : '#fff';
+      ctx.font = 'bold 11px "PingFang SC","Microsoft YaHei","Hiragino Sans GB",sans-serif'; ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
+      const maxW = r - 14; let txt = dishes[i]; let w = ctx.measureText(txt).width;
+      while (w > maxW && txt.length > 2) { txt = txt.slice(0, -1); w = ctx.measureText(txt + '..').width; }
+      if (txt !== dishes[i]) txt += '..';
+      ctx.fillText(txt, r - 8, 0); ctx.restore();
     }
-    ctx.restore();
+    ctx.restore(); ctx.restore();
   }
   function eatSpinWheel(dishes, cb) {
-    if (eatSpinTimer) return;
+    if (eatSpinning) return;
+    eatSpinning = true; eatSetBtns(true);
     const totalAngle = eatSpinAngle + (3 + Math.random() * 4) * Math.PI * 2 + Math.random() * Math.PI * 2;
     const startAngle = eatSpinAngle; const duration = 3200; const startTime = Date.now();
+    const de = document.getElementById('eat-dish'); const flashDishes = dishes.slice();
+    let flashIdx = 0; let flashTimer;
+    function flashTick(t) {
+      const interval = Math.max(40, Math.round(50 + t * 400));
+      flashTimer = setTimeout(() => {
+        if (!eatSpinning) return;
+        flashIdx = (flashIdx + 1) % flashDishes.length;
+        if (de) { de.classList.add('fade'); setTimeout(() => { de.textContent = flashDishes[flashIdx]; de.classList.remove('fade'); }, 80); }
+        if (eatSpinning) flashTick(Math.min((Date.now() - startTime) / duration, 1));
+      }, interval);
+    }
+    flashTick(0);
     function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
     function tick() {
       const elapsed = Date.now() - startTime; const t = Math.min(elapsed / duration, 1);
       eatSpinAngle = startAngle + (totalAngle - startAngle) * easeOutCubic(t);
       eatDrawWheel(dishes);
       if (t < 1) { eatSpinTimer = requestAnimationFrame(tick); return; }
-      eatSpinTimer = null;
+      eatSpinTimer = null; clearTimeout(flashTimer);
       const n = dishes.length; const slice = 2 * Math.PI / n;
       const normalized = (totalAngle % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
       const idx = Math.floor(((2 * Math.PI - normalized + slice / 2) % (2 * Math.PI)) / slice) % n;
+      var ptr = document.getElementById('eat-pointer'); if (ptr) { ptr.classList.add('pop'); setTimeout(function () { ptr.classList.remove('pop'); }, 500); }
+      eatHlIdx = idx; eatDrawWheel(dishes, idx); vibrate([10, 40, 10]);
+      eatHlTimer = setTimeout(function () { eatHlIdx = -1; eatDrawWheel(dishes); eatHlTimer = null; eatSpinning = false; eatSetBtns(false); }, 1200);
       if (cb) cb(dishes[idx]);
     }
     eatSpinTimer = requestAnimationFrame(tick);
@@ -2089,13 +2122,39 @@ if (ckRefresh) {
     return dish + ' · ' + comment;
   }
   let eatLastPick = '';
-  if (eatApp) eatApp.addEventListener('click', () => { if (editingNow()) return; openPage(eatPage); eatLastPick = eatPick(); eatDrawWheel(eatDishes()); });
-  document.getElementById('eat-back').addEventListener('click', () => backHome(eatPage));
-  document.getElementById('eat-change').addEventListener('click', () => { if (editingNow()) return; eatLastPick = eatPick(); eatDrawWheel(eatDishes()); });
-  document.getElementById('eat-send').addEventListener('click', () => { if (editingNow()) return; if (eatLastPick && window.chatAddIn) { try { window.chatAddIn(eatLastPick); } catch (e) {} toast('已发送'); } });
+  if (eatApp) eatApp.addEventListener('click', () => { if (editingNow()) return; eatClearSpin(); eatInitCanvas(); openPage(eatPage); eatLastPick = eatPick(); eatRenderHistory(); eatDrawWheel(eatDishes()); });
+  document.getElementById('eat-back').addEventListener('click', () => { eatClearSpin(); backHome(eatPage); });
+  (function () {
+    var de = document.getElementById('eat-dish'); if (!de) return;
+    var pressTimer = null;
+    de.addEventListener('touchstart', function (e) { if (e.touches.length > 1) return; pressTimer = setTimeout(function () { rmDish(); }, 600); }, { passive: true });
+    de.addEventListener('touchend', function () { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } });
+    de.addEventListener('touchmove', function () { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } });
+    de.addEventListener('mousedown', function () { pressTimer = setTimeout(function () { rmDish(); }, 600); });
+    de.addEventListener('mouseup', function () { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } });
+    de.addEventListener('mouseleave', function () { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } });
+    function rmDish() {
+      pressTimer = null; if (eatSpinning) return;
+      var de2 = document.getElementById('eat-dish'); var curDish = de2 ? de2.textContent : '';
+      if (!curDish || curDish === '…') return;
+      if (!window.openModal) return;
+      window.openModal('删除菜名', '', function (v) {
+        if (!v) return;
+        var m = eatMenu();
+        if (m) { var i = m.indexOf(curDish); if (i >= 0) { m.splice(i, 1); eatSaveMenu(m.length ? m : []); eatDrawWheel(eatDishes()); eatLastPick = eatPick(); eatRenderHistory(); toast('已移除'); return; } }
+        var s = curStore();
+        var custom = []; try { var a = JSON.parse((s && s.get('eat-cards')) || '[]'); if (Array.isArray(a)) custom = a.filter(function (d) { return d; }); } catch (e) {}
+        var ci = custom.indexOf(curDish);
+        if (ci >= 0) { custom.splice(ci, 1); eatSaveDishes(custom); eatDrawWheel(eatDishes()); eatLastPick = eatPick(); eatRenderHistory(); toast('已移除'); return; }
+        toast('默认菜名无法删除，请先预设菜单');
+      }, { noInput: true, staticText: '要从菜单中移除「' + curDish + '」吗？' });
+    }
+  })();
+  document.getElementById('eat-change').addEventListener('click', () => { if (editingNow() || eatSpinning) return; eatLastPick = eatPick(); eatDrawWheel(eatDishes()); });
+  document.getElementById('eat-send').addEventListener('click', () => { if (editingNow() || eatSpinning) return; if (eatLastPick && window.chatAddIn) { try { window.chatAddIn(eatLastPick); } catch (e) {} toast('已发送'); } });
   document.getElementById('eat-add').addEventListener('click', () => { if (!window.openModal) return; window.openModal('添加菜名', '', (v) => { if (v) { const a = eatDishes(); a.push(v); eatSaveDishes(a.filter(d => d)); eatDrawWheel(eatDishes()); toast('已添加'); } }); });
-  document.getElementById('eat-spin').addEventListener('click', () => { if (editingNow()) return; const dishes = eatDishes(); eatSpinWheel(dishes, (dish) => { const de = document.getElementById('eat-dish'); if (de) { de.classList.add('fade'); setTimeout(() => { de.textContent = dish; de.classList.remove('fade'); }, 200); } const ce = document.getElementById('eat-comment'); const comments = DEF_EAT_COMMENTS; const comment = comments[Math.floor(Math.random() * comments.length)]; if (ce) { ce.classList.add('fade'); setTimeout(() => { ce.textContent = '\u201c' + comment + '\u201d'; ce.classList.remove('fade'); }, 200); } eatLastPick = dish + ' · ' + comment; }); });
-  document.getElementById('eat-askta').addEventListener('click', () => { if (editingNow()) return; if (!eatLastPick) { eatLastPick = eatPick(); } const m = eatLastPick.match(/^(.+?) ·/); const dish = m ? m[1] : eatLastPick; if (window.chatAddIn) { try { window.chatAddIn('今晚吃 ' + dish + ' 怎么样？'); } catch (e) {} toast('已发送'); } });
+  document.getElementById('eat-spin').addEventListener('click', () => { if (editingNow() || eatSpinning) return; const dishes = eatDishes(); eatSpinWheel(dishes, (dish) => { const de = document.getElementById('eat-dish'); if (de) { de.classList.add('fade'); setTimeout(() => { de.textContent = dish; de.classList.remove('fade'); }, 200); } const ce = document.getElementById('eat-comment'); const comments = DEF_EAT_COMMENTS; const comment = comments[Math.floor(Math.random() * comments.length)]; if (ce) { ce.classList.add('fade'); setTimeout(() => { ce.textContent = '\u201c' + comment + '\u201d'; ce.classList.remove('fade'); }, 200); } eatLastPick = dish + ' · ' + comment; eatPushHistory(dish); }); });
+  document.getElementById('eat-askta').addEventListener('click', () => { if (editingNow() || eatSpinning) return; if (!eatLastPick) { eatLastPick = eatPick(); } const m = eatLastPick.match(/^(.+?) ·/); const dish = m ? m[1] : eatLastPick; const msg = EAT_ASK_MSGS[Math.floor(Math.random() * EAT_ASK_MSGS.length)].replace('{0}', dish); if (window.chatAddIn) { try { window.chatAddIn(msg); } catch (e) {} toast('已发送'); } });
   document.getElementById('eat-menu-btn').addEventListener('click', () => {
     const panel = document.getElementById('eat-menu-panel'); const ta = document.getElementById('eat-menu-ta');
     if (panel.hidden) { const m = eatMenu(); ta.value = m ? m.join('\n') : ''; panel.hidden = false; } else { panel.hidden = true; }

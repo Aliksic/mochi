@@ -297,6 +297,7 @@ function waterPlot(idx) {
   updDaily("w");
   updWaterStreak();
   fxAtPlot(idx, "fx-water", 900);
+  if (Math.random() < 0.08) { var pn3 = pn(); addLog(pn3, "\u770B\u5230\u4F60\u5728\u6D47\u6C34\uFF0C\u4E5F\u6765\u5E2E\u5FD9\u4E86~"); partnerAct(true); }
   save(data); renderAll();
 }
 
@@ -492,6 +493,7 @@ function fertilizePlot(idx) {
   updSt("f", true);
   updDaily("f");
   fxAtPlot(idx, "fx-fert", 800);
+  if (Math.random() < 0.08) { var pn3 = pn(); addLog(pn3, "\u770B\u5230\u4F60\u5728\u65BD\u80A5\uFF0C\u4E5F\u6765\u5E2E\u5FD9\u4E86~"); partnerAct(true); }
   save(data); renderAll();
 }
 
@@ -612,6 +614,15 @@ function partnerAct(silent, used) {
       addInvQual(type, pq);
       addLog(pName, "\u6536\u83B7\u4E86 " + name + qualLabel(pq) + (wilted ? "\uFF08\u5DF2\u51CB\u8C22\uFF09" : "") + " (+" + xpg + "\u7ECF\u9A8C)");
     }
+    if (Math.random() < 0.03) {
+      var rareKs = Object.keys(T).filter(function(k){return T[k].rare;});
+      if (rareKs.length) {
+        var rk = rareKs[Math.floor(Math.random()*rareKs.length)];
+        if (!data.rareInv) data.rareInv = {};
+        data.rareInv[rk] = (data.rareInv[rk]||0) + 1;
+        addLog(pName, "\u7559\u4E0B\u4E86\u4E00\u9897" + T[rk].n + "\u7684\u79CD\u5B50 \u2728");
+      }
+    }
     acted = true;
   } else if (actType === "harvestall" && bloomedPlots.length > 0) {
     var hcnt = 0;
@@ -631,6 +642,15 @@ function partnerAct(silent, used) {
       hcnt++;
     }
     if (hcnt > 0) { addLog(pName, "\u4E00\u952E\u6536\u83B7 " + hcnt + " \u6735\u82B1"); acted = true; }
+    if (hcnt > 0 && Math.random() < 0.03) {
+      var rareKs2 = Object.keys(T).filter(function(k2){return T[k2].rare;});
+      if (rareKs2.length) {
+        var rk2 = rareKs2[Math.floor(Math.random()*rareKs2.length)];
+        if (!data.rareInv) data.rareInv = {};
+        data.rareInv[rk2] = (data.rareInv[rk2]||0) + 1;
+        addLog(pName, "\u7559\u4E0B\u4E86\u4E00\u9897" + T[rk2].n + "\u7684\u79CD\u5B50 \u2728");
+      }
+    }
   } else if (actType === "fertilize" && plantedPlots.length > 0) {
     var idx = pick(plantedPlots);
     var si = stageInfo(data.p[idx]);
@@ -829,6 +849,8 @@ var ACHV = [
   { id: "visitor", n: "生机勃勃", e: "\uD83E\uDE9B", d: "招待过访客", check: function () { return !!data.visitor; } },
   { id: "bouquet3", n: "花束使者", e: "\uD83D\uDCC1", d: "制作 3 束花", check: function () { return (data.bouquetCnt || 0) >= 3; } },
   { id: "partnerCare", n: "同育之情", e: "\uD83D\uDC95", d: "梦角打理 30 次", check: function () { return (data.st.mp || 0) + (data.st.mw || 0) + (data.st.mh || 0) + (data.st.mf || 0) >= 30; } },
+  { id: "partnerCareII", n: "日久情深", e: "\uD83D\uDC9D", d: "梦角打理 100 次", check: function () { return (data.st.mp || 0) + (data.st.mw || 0) + (data.st.mh || 0) + (data.st.mf || 0) >= 100; } },
+  { id: "partnerCareIII", n: "生生不息", e: "\uD83D\uDC9E", d: "梦角打理 300 次", check: function () { return (data.st.mp || 0) + (data.st.mw || 0) + (data.st.mh || 0) + (data.st.mf || 0) >= 300; } },
   { id: "rich", n: "花山花海", e: "\uD83D\uDCB0", d: "库存 20 朵花", check: function () { var t = 0; Object.keys(data.inv || {}).forEach(function (k) { t += data.inv[k] || 0; }); return t >= 20; } },
   { id: "wiltedSee", n: "封存时光", e: "\uD83E\uDD40", d: "见证花朵凋谢", check: function () { return !!data.wiltedSeen; } },
   { id: "hybridMaster", n: "杂交大师", e: "\uD83E\uDD7C", d: "发现 5 个杂交配方", check: function () { return Object.keys(data.hybridFound || {}).length >= 5; } },
@@ -1257,6 +1279,7 @@ function waterAll() {
   if (cnt > 0) {
     addLog("\u6211", "\u4E00\u952E\u6D47\u4E86 " + cnt + " \u68F5\u690D\u7269");
     updSt("w", true);
+    if (Math.random() < 0.08) { var pn3 = pn(); addLog(pn3, "\u770B\u5230\u4F60\u5728\u6D47\u6C34\uFF0C\u4E5F\u6765\u5E2E\u5FD9\u4E86~"); partnerAct(true); }
     save(data); renderAll();
   }
 }

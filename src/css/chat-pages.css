@@ -2667,31 +2667,38 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + env(safe-area-inset-bott
 .water-card { transition:box-shadow .3s, transform .3s; }
 .water-card.done { animation: waterDone .9s ease; }
 @keyframes waterDone { 0%{ transform:scale(1); } 30%{ transform:scale(1.035); box-shadow:0 0 0 6px rgba(74,159,212,.18); } 70%{ box-shadow:0 0 0 14px rgba(74,159,212,.05); } 100%{ transform:scale(1); box-shadow:none; } }
-.eat-card { padding:28px 18px; border-radius:14px; text-align:center; margin-bottom:16px; }
+.eat-card { padding:28px 18px; border-radius:14px; text-align:center; margin-bottom:8px; }
 .eat-label { font-size:13px; color:var(--ink-soft,#999); margin-bottom:8px; }
-.eat-dish { font-size:28px; font-weight:700; color:var(--ink,#222); min-height:36px; transition:opacity .2s; }
+.eat-dish { font-size:28px; font-weight:700; color:var(--ink,#222); min-height:36px; transition:opacity .2s; user-select:none; -webkit-user-select:none; }
 .eat-dish.fade { opacity:0; }
 .eat-comment { font-size:16px; color:var(--ink-soft,#888); margin-top:10px; min-height:22px; transition:opacity .2s; }
 .eat-comment.fade { opacity:0; }
-.eat-btns { display:flex; gap:12px; justify-content:center; margin-bottom:14px; }
-.eat-change, .eat-send { font-size:14px; border:none; border-radius:20px; padding:10px 20px; }
+.eat-btns { display:flex; gap:12px; justify-content:center; margin-bottom:10px; }
+.eat-change, .eat-send { font-size:14px; border:none; border-radius:20px; padding:10px 20px; -webkit-tap-highlight-color:transparent; }
 .eat-change { background:rgba(0,0,0,.08); color:var(--ink,#333); }
 .eat-send { background:#111; color:#fff; }
-.eat-add { display:block; margin:0 auto; font-size:13px; color:var(--ink-soft,#888); background:none; border:1px dashed rgba(0,0,0,.15); border-radius:10px; padding:8px 14px; }
 /* ---- 吃什么 · 转盘 ---- */
-.eat-wheel-wrap { position:relative; width:240px; height:240px; margin:0 auto 16px; display:flex; align-items:center; justify-content:center; }
-.eat-wheel { width:100%; height:100%; border-radius:50%; box-shadow:0 4px 20px rgba(0,0,0,.1); display:block; }
-.eat-pointer { position:absolute; top:-10px; left:50%; transform:translateX(-50%); font-size:24px; color:#e8533d; z-index:2; line-height:1; text-shadow:0 2px 4px rgba(0,0,0,.2); }
-.eat-spin, .eat-askta { font-size:14px; border:none; border-radius:20px; padding:10px 20px; }
+.eat-wheel-wrap { position:relative; width:240px; height:240px; margin:0 auto 14px; }
+.eat-wheel { border-radius:50%; box-shadow:0 4px 20px rgba(0,0,0,.1); display:block; }
+.eat-pointer { position:absolute; top:-12px; left:50%; transform:translateX(-50%); z-index:2; line-height:1; filter:drop-shadow(0 2px 3px rgba(0,0,0,.25)); transition:transform .15s; }
+.eat-pointer.pop { animation:eatPtrPop .45s ease; }
+@keyframes eatPtrPop { 0%{transform:translateX(-50%) translateY(0);} 35%{transform:translateX(-50%) translateY(6px);} 100%{transform:translateX(-50%) translateY(0);} }
+.eat-spin, .eat-askta { font-size:14px; border:none; border-radius:20px; padding:10px 20px; -webkit-tap-highlight-color:transparent; }
 .eat-spin { background:#e8533d; color:#fff; }
+.eat-spin[disabled] { opacity:.45; pointer-events:none; }
 .eat-askta { background:rgba(232,135,61,.14); color:#e8873d; }
+.eat-askta[disabled] { opacity:.45; pointer-events:none; }
+/* ---- 吃什么 · 历史 ---- */
+.eat-history { text-align:center; font-size:12px; color:var(--ink-soft,#aaa); min-height:18px; margin-bottom:4px; line-height:1.8; }
+.eh-tag { display:inline-block; margin:0 4px; padding:2px 10px; border-radius:12px; background:rgba(0,0,0,.05); font-size:12px; color:var(--ink-soft,#999); }
 /* ---- 吃什么 · 菜单编辑 ---- */
-.eat-mgr { display:flex; gap:10px; justify-content:center; margin-top:10px; }
-.eat-menu-btn { font-size:13px; color:var(--ink-soft,#888); background:none; border:1px dashed rgba(0,0,0,.15); border-radius:10px; padding:8px 14px; }
+.eat-mgr { display:flex; gap:10px; justify-content:center; margin-top:6px; }
+.eat-menu-btn { font-size:13px; color:var(--ink-soft,#888); background:none; border:1px dashed rgba(0,0,0,.15); border-radius:10px; padding:8px 14px; -webkit-tap-highlight-color:transparent; user-select:none; -webkit-user-select:none; }
+.eat-add { font-size:13px; color:var(--ink-soft,#888); background:none; border:1px dashed rgba(0,0,0,.15); border-radius:10px; padding:8px 14px; -webkit-tap-highlight-color:transparent; user-select:none; -webkit-user-select:none; }
 .eat-menu-panel { margin-top:12px; padding:10px; background:rgba(255,255,255,.4); border-radius:12px; }
 .eat-menu-ta { display:block; width:100%; box-sizing:border-box; min-height:120px; padding:10px 12px; font-size:14px; font-family:inherit; border:1px solid rgba(0,0,0,.12); border-radius:10px; resize:vertical; background:rgba(255,255,255,.7); color:var(--ink,#333); line-height:1.7; }
 .eat-menu-acts { display:flex; gap:10px; justify-content:center; margin-top:10px; }
-.eat-menu-save, .eat-menu-reset { font-size:13px; border:none; border-radius:14px; padding:7px 18px; }
+.eat-menu-save, .eat-menu-reset { font-size:13px; border:none; border-radius:14px; padding:7px 18px; -webkit-tap-highlight-color:transparent; }
 .eat-menu-save { background:#111; color:#fff; }
 .eat-menu-reset { background:rgba(0,0,0,.08); color:var(--ink-soft,#888); }
 
