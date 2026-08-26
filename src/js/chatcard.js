@@ -84,7 +84,7 @@
     const map = {
       mp3: 'audio/mpeg', wav: 'audio/wav', m4a: 'audio/mp4', mp4: 'audio/mp4',
       ogg: 'audio/ogg', ogx: 'application/ogg', aac: 'audio/aac', amr: 'audio/amr',
-      flac: 'audio/flac', webm: 'audio/webm', opus: 'audio/ogg'
+      flac: 'audio/flac', webm: 'audio/webm', opus: 'audio/ogg', caf: 'audio/x-caf'
     };
     return map[ext] || '';
   }
@@ -1838,8 +1838,12 @@
   if (impBtn) {
     impBtn.addEventListener('click', () => {
       // 媒体分类：表情包/图片上传图片，语音上传音频
+      // v3.16.x：iOS Safari「文件」选择器会按 accept 过滤文件——accept="audio/*" 时只
+      // 放行系统识别为音频的文件，amr/silk/无扩展名等语音导出文件会被灰显不可选（用户
+      // 反馈公用/专属字卡语音无法上传「梦角语音文件」）。语音分类改为不限制类型
+      //（全文件可选），选完后在回调里按 MIME/扩展名校验，非音频直接跳过，绝不当作音频存库。
       if (IMG_TYPES[cur]) {
-        pickFiles(cur === 'voice' ? 'audio/*' : 'image/*', true, (files) => {
+        pickFiles(cur === 'voice' ? '' : 'image/*', true, (files) => {
           if (!files.length) return;
           if (!groups[cur]) groups[cur] = [];
           // 目标分组：当前选中分组，否则默认分组（表情包/图片），再否则新建
@@ -1870,10 +1874,15 @@
             reader.onload = () => {
               // v3.13.x：语音分类里用户可能误传视频（安卓文件管理器常忽略 accept 过滤）——
               // 视频 MIME 直接跳过，绝不当作音频存。存了播放只会空白/报错，还拖慢整库序列化
+              // v3.16.x：accept 放宽后（iOS Files 按 audio/* 过滤会让 amr/silk/无扩展名等
+              // 语音文件灰显不可选）文件可能是任意类型——非视频也非音频（MIME 不是 audio/
+              // 且扩展名推导不出音频 MIME）的一律跳过，避免把图片/文档/视频硬塞进语音库
               if (cur === 'voice') {
                 const rvm = /^data:([^;,]*);/.exec(reader.result || '');
                 const rvMime = rvm ? rvm[1] : '';
-                if ((f.type && f.type.indexOf('video/') === 0) || rvMime.indexOf('video/') === 0) {
+                const isVideo = (f.type && f.type.indexOf('video/') === 0) || rvMime.indexOf('video/') === 0;
+                const isAudio = audioMimeFromName(f.name) || (f.type && f.type.indexOf('audio/') === 0) || rvMime.indexOf('audio/') === 0;
+                if (isVideo || !isAudio) {
                   notAudio++;
                   done++;
                   if (done === files.length) finishUpload(done - skipped - notAudio, skipped, notAudio);

@@ -190,6 +190,16 @@
 
 /* 应用图标 */
 .app-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px 8px; padding:2px 8px 6px; }
+/* v3.16.x：第三页图标组行高压缩——第三页默认 12 个图标 3 行（含动态注入的喝水/吃什么/
+   存钱罐/番茄钟/备忘录/心意市集/心意柜），此前 3×96=288+间距共 324 高，把第三页总长
+   推到 747（超出容器 714），且比 1/2 页功能图标底部（636）长出 111px。
+   行高压到 86（grid-auto-rows）：3×86 + 2×14 gap + 8 padding = 294 → 第三页 total 636
+   与 1/2 页底部完全对齐（190 + 77 + 294，误差 ≤1px）。
+   行内 52 图标+8 gap+14 文字=74 ≤ 86，图标垂直居中不受影响；≥4 行布局（用户自定义
+   多行）内容仍完整、不裁剪，只是比 1/2 页略高（自定义布局不强制对齐）。 */
+.app-grid.p3-grid { grid-auto-rows:86px; }
+.app-grid.p3-grid .app { justify-content:center; }
+.app-grid.p3-grid .app-ico { width:52px; height:52px; }
 .app { display:flex; flex-direction:column; align-items:center; gap:8px; cursor:pointer; }
 .app .app-ico {
   /* v3.5.133：min(58px, 21vw)——极窄屏（<305px）固定 58px 会撑爆 4 列网格被裁 */
@@ -551,13 +561,15 @@
 /* ===== 第二页补充：今日备忘 / 今天的心情 / 本周日常 ===== */
 .memo-card, .mood-card { cursor:pointer; }
 .memo-card .mc-b, .mood-card .mc-b { font-size:12px; }
-/* v3.15.x：第三页「今日备忘 / 今天的心情」改上下两张整宽卡（原为左右半卡）——
-   与 1/2 页三档节奏对齐：备忘卡 77（对应本周日常档）、心情卡 66（对应打卡/摸鱼横幅档），
-   图标区顶部与第一/二页同一高度；内容不足时 flex 居中 */
-.page-slide.third .mini-row { flex-direction:column; gap:14px; }
+/* v3.16.x：第三页「今日备忘 / 今天的心情」改回左右两张半卡同行（原为上下整宽卡）——
+   第三页内容总长 747 超出桌面容器 714，且 1/2 页功能图标底部在 636；上下整宽布局
+   让第三页比 1/2 页长出 111px（用户反馈「第三页没有和前两页对齐」）。
+   改回两半卡同行（宽度 171/张、与首页小卡行同档），并把第三页图标行高压缩到与
+   1/2 页相同的 107px/行，第三页总长 636 与 1/2 页底部对齐 */
+.page-slide.third .mini-row { flex-direction:row; gap:12px; }
 .page-slide.third .mini-row .mini-card { min-height:0; }
-.page-slide.third .mini-row .memo-card { min-height:77px; }
-.page-slide.third .mini-row .mood-card { min-height:66px; }
+.page-slide.third .mini-row .memo-card,
+.page-slide.third .mini-row .mood-card { min-height:77px; }
 /* v3.15.x：本周日常定高 77px（与首页小卡行/第三页备忘心情行统一第二档 band），
    日期格 7→4 压缩内容——横滑三页第二档上下边缘对齐 */
 .week-card { border-radius:20px; padding:8px 14px; margin-bottom:14px; min-height:77px; box-sizing:border-box; display:flex; flex-direction:column; justify-content:center; }

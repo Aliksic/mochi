@@ -311,9 +311,10 @@ var dueState = await evalJs(`(() => {
     urgentIdx: urgentRow ? rows.indexOf(urgentRow) : -1,
     urgentText: urgentRow ? (urgentRow.querySelector('.mm-text') || {}).textContent : '',
     timeText: urgentRow ? (urgentRow.querySelector('.mm-time') || {}).textContent : '',
-    badge: (document.getElementById('memo-app-badge') || {}).textContent || '' };
+    badgeGone: !document.getElementById('memo-app-badge') };
 })()`);
-check('17. 截止今天→临期排序提前+urgent标记+时间行提示+首页徽标临期', dueState && dueState.urgentIdx === 0 && dueState.urgentText === '临期事项' && /今天截止/.test(dueState.timeText) && /临期/.test(dueState.badge), JSON.stringify(dueState));
+// v3.15.x：桌面状态横幅已删，临期断言只保留列表内排序/urgent/时间行
+check('17. 截止今天→临期排序提前+urgent标记+时间行提示', dueState && dueState.urgentIdx === 0 && dueState.urgentText === '临期事项' && /今天截止/.test(dueState.timeText) && dueState.badgeGone, JSON.stringify(dueState));
 
 // ---- 单条分享到聊天：mock chatAddIn 捕获消息 ----
 await evalJs(`window.__sentMsgs = []; window.chatAddIn = function (m) { window.__sentMsgs.push(m); };`);
@@ -339,24 +340,31 @@ var backHome = await evalJs(`(() => {
 })()`);
 check('19. 返回键回桌面且备忘录页收起', backHome && backHome.homeVisible && backHome.memoClosed, JSON.stringify(backHome));
 
-// ---- 首页小组件联动：徽标存在 + 点击直达备忘录 ----
+// ---- 首页小组件联动检查
+//      v3.15.x：桌面第三页「备忘录」状态横幅已按用户要求删除——断言其不存在；
+//      备忘/心情改上下整宽卡补齐三档节奏，备忘录入口保留第三页图标 ----
 var badge = await evalJs(`(() => {
-  var b = document.getElementById('memo-app-badge');
-  if (!b) return { exists: false };
-  return { exists: true, inMemoCard: !!b.closest('[data-desk-widget="memo-row"]'), text: b.textContent };
+  return { exists: !!document.getElementById('memo-app-badge'),
+    anyCls: !!document.querySelector('.memo-app-badge') };
 })()`);
-check('20. 首页备忘卡片注入联动徽标', badge && badge.exists && badge.inMemoCard && /待办/.test(badge.text), JSON.stringify(badge));
+check('20. 桌面备忘录状态横幅已删除（入口保留图标）', badge && !badge.exists && !badge.anyCls, JSON.stringify(badge));
 await evalJs(`document.getElementById('memo-app-badge').click()`);
+await sleep(400);
+// v3.15.x：横幅已删，改验「第三页图标 → 备忘录页」直达链路
+await evalJs(`(() => {
+  var app = document.querySelector('[data-desk-widget="app-memo"]') || document.querySelector('.page-slide.third .app[data-app="memo"]');
+  if (app) app.click();
+  return true;
+})()`);
 await sleep(400);
 var badgeOpen = await evalJs(`(() => {
   var pg = document.getElementById('page-memo');
-  var home = document.getElementById('page-phone');
   var open = pg && !pg.hidden && pg.classList.contains('full');
   if (open) { document.getElementById('memo-back').click(); }
-  return { open: open, homeBack: true };
+  return { open: open };
 })()`);
 await sleep(300);
-check('21. 点首页徽标直达备忘录页', badgeOpen && badgeOpen.open, JSON.stringify(badgeOpen));
+check('21. 第三页备忘录图标直达备忘录页', badgeOpen && badgeOpen.open, JSON.stringify(badgeOpen));
 
 const passed = results.filter((r) => r.ok).length;
 console.log('\n结果：' + passed + '/' + results.length + ' 项通过');

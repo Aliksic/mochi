@@ -269,8 +269,13 @@
     return {
       get(k) {
         const key = prefix + ':' + k;
-        try { const v = localStorage.getItem(key); if (v !== null) return v; } catch (e) {}
+        // v3.16.x：内存缓存优先——localStorage 只是快速快照，配额满/隐私模式/存储异常时
+        // setItem 静默失败，localStorage 会残留旧值；若 get 仍优先读它，memoryCache/IDB 里
+        // 的新值被永久遮蔽（典型表现：换头像后聊天页顶部/气泡不更新，刷新、回前台重刷都不恢复）。
+        // memoryCache 只在本会话写入（set 无条件写最新值；idbRestore/idbHydrateKey 回填 IDB
+        // 权威值且跳过已有键），新鲜度恒 >= localStorage，优先读它保证「已写入的新值立即可见」。
         if (memoryCache && key in memoryCache) return memoryCache[key];
+        try { const v = localStorage.getItem(key); if (v !== null) return v; } catch (e) {}
         return null;
       },
       set(k, v) {
@@ -531,4 +536,14 @@
       })();
     }
   } catch (e) {}
+
+  // v3.16.x：跨上下文同步——get 改 memoryCache 优先后，另一上下文（PWA + 浏览器标签双开、
+  // 多窗口）写入 localStorage 的新值会被本侧 memoryCache 旧值遮蔽。storage 事件（仅跨上下文
+  // 触发）到达时删除对应缓存键，后续 get 自然回退读到 localStorage 新值；业务侧（如
+  // avatar-lib 的 storage 监听）随后触发界面刷新。e.key 是完整键（含前缀），与 memoryCache 键一致。
+  window.addEventListener('storage', function (e) {
+    try {
+      if (e && e.key && memoryCache && e.key in memoryCache) delete memoryCache[e.key];
+    } catch (err) {}
+  });
 })();

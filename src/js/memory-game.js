@@ -84,6 +84,11 @@
     try { return String(localStorage.getItem(storeKey('memory-first-clears')) || '').split(',').filter(Boolean); } catch (e) { return []; }
   }
   function writeFirst(list) { try { localStorage.setItem(storeKey('memory-first-clears'), Array.isArray(list) ? list.join(',') : ''); } catch (e) {} }
+  function readStats() {
+    try { const o = JSON.parse(localStorage.getItem(storeKey('memory-stats')) || ''); if (o && typeof o === 'object') return Object.assign({ bestChem: 0, clears: 0 }, o); } catch (e) {}
+    return { bestChem: 0, clears: 0 };
+  }
+  function writeStats(o) { try { localStorage.setItem(storeKey('memory-stats'), JSON.stringify(o)); } catch (e) {} }
 
   // 发放心意币：受每日上限约束，返回实际到账（分）
   // v3.16.x：记忆翻牌奖励双方同步同额（原只加我的余额），记赚钱流水「记忆翻牌」
@@ -368,6 +373,12 @@
     const totalYuan = COIN_CLEAR + Math.round(g.coinFen / YUAN) + COIN_ALL + (firstClear ? COIN_FIRST : 0);
     const grantedYuan = Math.round(grantCoins(totalYuan) / YUAN);
 
+    // 历史统计
+    const stats = readStats();
+    stats.clears = (stats.clears || 0) + 1;
+    stats.bestChem = Math.max(stats.bestChem || 0, g.chemistry);
+    writeStats(stats);
+
     renderInfo();
 
     // 覆盖层结算
@@ -378,7 +389,8 @@
         '<div class="pong-end-stat">你　配对 ' + g.myPairs + ' · 翻牌 ' + g.myFlips + ' 次</div>' +
         '<div class="pong-end-stat">' + T('TA') + '　配对 ' + g.taPairs + ' · 翻牌 ' + g.taFlips + ' 次</div>' +
         '<div class="memory-res-chem">💕 默契 ' + g.chemistry + '</div>' +
-        '<div class="memory-res-coin">获得心意币 +' + grantedYuan + (firstClear ? '（首次通关' + g.params.label + '）' : '') + '</div>';
+        '<div class="memory-res-coin">获得心意币 +' + grantedYuan + (grantedYuan < totalYuan ? '（今日奖励已达上限 +' + COIN_DAILY_CAP + '）' : (firstClear ? '（首次通关' + g.params.label + '）' : '')) + '</div>' +
+        '<div class="pong-end-stat">累计完成 ' + stats.clears + ' 局 · 历史最佳默契 ' + stats.bestChem + '</div>';
     }
     if (overlayBtnEl) overlayBtnEl.textContent = '再玩一局';
     if (overlayBtn2El) { overlayBtn2El.textContent = '返回小游戏'; overlayBtn2El.hidden = false; }

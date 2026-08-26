@@ -486,6 +486,11 @@ el.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="#999999" stroke-wid
 }
 window.fillAvatar = fillAvatar;
 function refreshChatAvatars() {
+// v3.16.x：先清批量渲染缓存——渲染窗口内某条消息 renderMsg 抛异常会跳过末尾的
+// appendAvatarBatch(false)，avatarBatchCache 残留后 fillAvatar 永远读缓存旧值，
+// 换头像后回前台/切桌面触发的刷新仍显示旧头像（刷新页面才恢复）。这里强制失效，
+// 让本次刷新重新读存储最新值。
+avatarBatchCache = null;
 fillAvatar('chat-user-av', 'cs-avatar-user');
 fillAvatar('chat-partner-av', 'cs-avatar-partner');
 document.querySelectorAll('.msg-in .msg-av').forEach(av => fillAvatar(av, 'cs-avatar-partner'));
@@ -1408,6 +1413,13 @@ const av = m.querySelector('.msg-av');
 const b = m.querySelector('.msg-bubble');
 if (rec.special === 'read') {
 b.innerHTML = '<span style="opacity:.5;font-size:12px">已读不回</span>';
+} else if (rec.retracted) {
+// v3.16.x：撤回分支必须先于 sticker/image/voice/parts 类型分支——
+// 否则表情包/图片/语音被撤回后任何全量重渲染（renderWindow/loadMsgs/切会话）
+// 都会命中类型分支，把原内容（表情包 img 等）重新渲染出来，撤回形同失效
+b.dataset.orig = rec.orig || rec.text;
+b.innerHTML = '<span style="opacity:.6;font-size:12px;cursor:pointer">' + (rec.side === 'out' ? '我' : '对方') + '撤回了一条消息</span>';
+bindToggle(b, rec.side);
 } else if (rec.type === 'sticker' || rec.type === 'image') {
 b.style.padding = '6px';
 b.style.background = '';
@@ -1441,10 +1453,6 @@ b.querySelector('.msg-voice-play').addEventListener('click', function (e) {
 e.stopPropagation();
 playVoiceInChat(this, vsrc);
 });
-} else if (rec.retracted) {
-b.dataset.orig = rec.orig || rec.text;
-b.innerHTML = '<span style="opacity:.6;font-size:12px;cursor:pointer">' + (rec.side === 'out' ? '我' : '对方') + '撤回了一条消息</span>';
-bindToggle(b, rec.side);
 } else if (rec.parts && rec.parts.length) {
 const imgs = rec.parts.filter(p => p.k === 'img').map(p => p);
 const textPart = rec.parts.filter(p => p.k === 'text').map(p => p.v).join(' ');
@@ -1500,7 +1508,7 @@ b.innerHTML = rec.quote
 ? quoteHtml(rec.quote, rec.qside) + '<span style="opacity:.85">' + escTxtS + '</span>'
 : '<span style="opacity:.85">' + escTxtS + '</span>';
 }
-if (rec.mood && rec.mood.length) {
+if (rec.mood && rec.mood.length && !rec.retracted) {
 const mm = document.createElement('div');
 mm.className = 'msg-moods';
 const recalled = [];
@@ -2243,9 +2251,20 @@ saveFav(fav);
 setTimeout(() => { if (!sameCid()) return; toast('TA 收藏了你的一条消息'); }, 1200);
 }
 }
-if (rep.type === 'text' || rep.type === 'sticker' || rep.type === 'image') {
-if (window.addChatCount) window.addChatCount();
-const chain = (window.triggerEmotionChain && window.triggerEmotionChain()) || null;
+	if (rep.type === 'text' || rep.type === 'sticker' || rep.type === 'image') {
+	if (window.addChatCount) window.addChatCount();
+	// v3.16.x：【TA的心情】低概率主动分享——正常回复后小概率额外追加一条
+	// 独立分享（内容来自 TA 的心情字卡库，非情绪链；自带总冷却 + 同类冷却）
+	try {
+	const tm = (window.tryTaMoodShare && window.tryTaMoodShare()) || null;
+	if (tm && tm.content) {
+	setTimeout(() => {
+	if (!sameCid()) return;
+	addIn(tm.content, { initiative: true, tag: 'TA的心情', tagNoDup: true });
+	}, randInt(1500, 3500));
+	}
+	} catch (e) {}
+	const chain = (window.triggerEmotionChain && window.triggerEmotionChain()) || null;
 if (chain && chain.length) {
 const typeName = { mood: '情绪', heart: '心意', intent: '交流意图' };
 setTimeout(() => {

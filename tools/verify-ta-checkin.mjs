@@ -184,7 +184,7 @@ try {
   const gate2 = await evalJs("window.ckQuestionTry({ 'ckq-en': 1, 'ckq-prob': 100, 'ckq-cool': 0, 'ckq-popup-prob': 0 })");
   ok('ckQuestionTry：无开关拒绝 / 开关+概率100 命中推卡', gate1 === false && gate2 === true, { gate1, gate2 });
   console.log('\n== T6 搜索注册 + 计数刷新 ==');
-  const searchRes = await evalJs("(function(){ try { var f = (window.__cardSearchFns||[]).filter(function(x){ return x.name === 'TA的寻踪'; })[0]; if (!f) return null; var r1 = f.fn('在干嘛'); var r2 = f.fn('测试'); return { hit: r1.length >= 1, mineHit: r2.length >= 1 }; } catch (e) { return String(e); } })()");
+  const searchRes = await evalJs("(function(){ try { var f = (window.__cardSearchFns||[]).filter(function(x){ return x.name === 'TA的查岗'; })[0]; if (!f) return null; var r1 = f.fn('在干嘛'); var r2 = f.fn('测试'); return { hit: r1.length >= 1, mineHit: r2.length >= 1 }; } catch (e) { return String(e); } })()");
   ok('跨分类搜索注册且能命中预设/自定义', searchRes && searchRes.hit === true && searchRes.mineHit === true, searchRes);
   const counts = await evalJs("(function(){ window.refreshCkCardCounts(); return { tSys: (document.querySelector('#li-ta-checkin > .t')||{}).textContent, tMine: (document.querySelector('#li-ta-checkin-mine > .t')||{}).textContent }; })()");
   ok('入口计数刷新（系统 17 / 自定义 2）', counts && counts.tSys === '17' && counts.tMine === '2', counts);

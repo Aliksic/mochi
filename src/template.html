@@ -433,6 +433,11 @@
         <div class="ci"><div class="n">聊天情绪字卡</div><div class="m">按情绪分类的字卡</div></div>
         <div class="t">209</div>
       </div>
+      <div class="chat-item glass" id="li-ta-mood">
+        <div class="av"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7.5-4.7-9.3-9A5.3 5.3 0 0112 6.4 5.3 5.3 0 0121.3 12c-1.8 4.3-9.3 9-9.3 9z"/><circle cx="9" cy="10" r="1"/><circle cx="15" cy="10" r="1"/><path d="M8.5 14.5a4 4 0 007 0"/></svg></div>
+        <div class="ci"><div class="n">TA的心情</div><div class="m">TA 偶尔主动分享 · 心情/近况/状态</div></div>
+        <div class="t" id="cc-ta-mood-count">235</div>
+      </div>
       <div class="chat-item glass" id="li-reply-cards">
         <div class="av"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg></div>
         <div class="ci"><div class="n">聊天回应字卡</div><div class="m">逻辑连接词字卡</div></div>
@@ -1277,6 +1282,7 @@
           <div class="lic-li">字卡交流：文字、情绪、心意、交流意图四种字卡回复，联系人所有内容均为字卡回复</div>
           <div class="lic-li">每条消息使用多字卡回复：可开启、调触发概率与最少/最多条数</div>
           <div class="lic-li">联系人发送的消息可额外触发聊天情绪字卡（情绪 / 心意 / 交流意图）</div>
+          <div class="lic-li">联系人偶尔主动分享自己的心情/近况/状态（TA的心情字卡库，可调触发概率）</div>
           <div class="lic-li">撤回与补发、已读不回、拍一拍、颜文字附加</div>
           <div class="lic-li">聊天可同时发送图文消息（表情包或上传图片）</div>
           <div class="lic-li">聊天可引用消息，引用可发送表情包 + 文字</div>
@@ -2055,6 +2061,34 @@
       </div>
       <div class="card-list" id="mc-list">
         <!-- 情绪字卡按分组渲染 -->
+      </div>
+    </div>
+
+    <!-- TA的心情（独立页面，可开关） -->
+    <div class="page" id="page-ta-mood" hidden>
+      <div class="chat-head">
+        <span class="ch-back" id="tm-back">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        </span>
+        <span class="ch-name">TA的心情</span>
+      </div>
+      <div class="dc-toggle glass">
+        <div class="dc-toggle-txt">
+          <div class="dc-toggle-name">使用心情分享</div>
+          <div class="dc-toggle-sub">开启后，TA 在聊天中有概率主动分享自己的心情/近况</div>
+        </div>
+        <label class="toggle"><input type="checkbox" id="tm-enabled"><span class="tk"></span></label>
+      </div>
+      <div class="gs-row"><span>分享概率</span><div class="stepper" data-min="5" data-max="30" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="tm-prob-val" readonly><button class="stp-max">+</button></div></div>
+      <div class="sm-set-hint" style="padding:4px 16px 6px">触发后需间隔几条正常聊天才会再次分享；同类心情短时间不会连续出现。</div>
+      <div class="gs-title">心情分组</div>
+      <div class="cc-groups-bar" id="tm-groups-bar"></div>
+      <div class="card-search glass" id="tm-search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input class="card-search-input" id="tm-search-input" placeholder="搜索心情字卡" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+      </div>
+      <div class="card-list" id="tm-list">
+        <!-- 心情字卡按分组渲染 -->
       </div>
     </div>
 
