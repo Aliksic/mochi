@@ -93,19 +93,22 @@
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0;
 }
 
-/* 小卡片行：今日情话 / 纪念日倒计时 */
+/* 小卡片行：今日情话 / 纪念日倒计时
+   v3.15.x：min-height 77px——三页第二档（情话/本周日常/备忘心情）统一 band 高 */
 .mini-row { display:flex; gap:12px; margin-bottom:14px; flex-shrink:0; }
-.mini-card { flex:1; border-radius:20px; padding:14px; box-shadow:0 6px 16px rgba(0,0,0,.06); background:var(--widget-bg); opacity:var(--widget-opacity); border:1px solid var(--widget-border); }
+.mini-card { flex:1; min-height:77px; border-radius:20px; padding:14px; box-shadow:0 6px 16px rgba(0,0,0,.06); background:var(--widget-bg); opacity:var(--widget-opacity); border:1px solid var(--widget-border); display:flex; flex-direction:column; justify-content:center; }
 .mc-top { font-size:11px; color:var(--muted); letter-spacing:1px; }
 .mc-b { font-size:13px; font-weight:600; color:var(--ink); margin-top:6px; line-height:1.45; }
 .mc-b b { font-size:16px; }
 
 /* 打卡横幅
    v3.15.x：去掉 0 2px 左右内缩——与 deco/mini-row 等卡片同宽（左右边缘跨页对齐）；
-   下边距 16→14 与全站卡片间距节奏统一 */
+   下边距 16→14 与全站卡片间距节奏统一；min-height 66px 与摸鱼横幅/备忘录横幅
+   统一第三档 band 高（内容不足时 flex 居中） */
 .checkin {
   display:flex; align-items:center; gap:10px;
   border-radius:18px; padding:12px 14px; margin:0 0 14px; flex-shrink:0;
+  min-height:66px;
   background:var(--widget-bg);
   box-shadow:0 4px 14px rgba(0,0,0,.05);
   opacity:var(--widget-opacity);
@@ -130,12 +133,13 @@
 .ck-btn.done { background:#e2e2e2; color:#777; box-shadow:none; }
 
 /* 离周末还有几天（摸鱼小组件）
-   v3.15.x：与首页打卡横幅同档高度——去掉 2px 内缩全宽、padding 6→10 更透气，
-   标题与副题合并同一行（.we-top），摸鱼值/工作值两行收紧，整体 ~86px→~70px */
+   v3.15.x：与首页打卡横幅同档（min-height 66、padding 9px 12px）——去掉 2px 内缩全宽，
+   标题与副题合并同一行（.we-top），摸鱼值/工作值两行收紧，整体 ~86px→~66px */
 .weekend-box {
   position:relative; /* v3.13.x：连击角标 .we-combo 绝对定位锚点 */
   display:flex; align-items:center; justify-content:space-between; gap:8px;
-  border-radius:16px; padding:10px 12px; margin:0 0 14px; flex-shrink:0;
+  border-radius:16px; padding:9px 12px; margin:0 0 14px; flex-shrink:0;
+  min-height:66px; box-sizing:border-box;
   background:var(--widget-bg);
   box-shadow:0 4px 14px rgba(0,0,0,.05);
   opacity:var(--widget-opacity);
@@ -547,13 +551,9 @@
 /* ===== 第二页补充：今日备忘 / 今天的心情 / 本周日常 ===== */
 .memo-card, .mood-card { cursor:pointer; }
 .memo-card .mc-b, .mood-card .mc-b { font-size:12px; }
-/* v3.15.x：备忘卡 padding 14→10（配合 memo.css 状态行压缩）——第三页
-   今日备忘/心情行高度 ~113px→~77px，与首页小卡行（~73px）/第二页本周日常（~77px）同档，
-   横滑三页时第二档上下边缘对齐（心情卡无状态行，随行高 stretch 自动等高） */
-.memo-card { padding:10px 14px; }
-/* v3.15.x：本周日常压缩（padding 14→8、日期格 7→4）——高度 ~101px→~77px，
-   与首页「今日情话/已摸鱼」小卡行（~73px）同档，横滑时上下边缘基本对齐 */
-.week-card { border-radius:20px; padding:8px 14px; margin-bottom:14px; }
+/* v3.15.x：本周日常定高 77px（与首页小卡行/第三页备忘心情行统一第二档 band），
+   日期格 7→4 压缩内容——横滑三页第二档上下边缘对齐 */
+.week-card { border-radius:20px; padding:8px 14px; margin-bottom:14px; min-height:77px; box-sizing:border-box; display:flex; flex-direction:column; justify-content:center; }
 .week-days { display:flex; gap:6px; margin-top:5px; }
 .week-day {
   flex:1; text-align:center; padding:4px 0; border-radius:10px;

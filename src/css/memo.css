@@ -41,9 +41,10 @@
 .memo-send-btn { font-size:12px; color:var(--ink-soft,#888); background:rgba(255,255,255,.7); border:1px solid rgba(0,0,0,.12); border-radius:16px; padding:6px 16px; cursor:pointer; font-family:inherit; -webkit-tap-highlight-color:transparent; }
 .memo-send-btn:active { background:rgba(0,0,0,.06); }
 /* ---- 首页「今日备忘」卡片内的备忘录联动状态行 ---- */
-/* v3.15.x：桌面「今日备忘」卡内的备忘录状态行压缩（mt 8→4、字号 11→10、padding 5→2）——
-   配合 .memo-card padding 收窄，整卡高度对齐三页统一 band（~77px，与本周日常卡同档） */
-.memo-app-badge { margin-top:4px; font-size:10px; line-height:1.2; color:var(--ink-soft,#888); background:rgba(0,0,0,.045); border-radius:8px; padding:2px 8px; display:flex; align-items:center; justify-content:space-between; gap:6px; cursor:pointer; -webkit-tap-highlight-color:transparent; white-space:nowrap; overflow:hidden; }
+/* v3.15.x：桌面「今日备忘/心情」行下方的整宽备忘录状态横幅（原为半卡内状态行）——
+   与首页打卡横幅/第二页摸鱼横幅同档（min-height 66、卡片化外观），补齐第三页第三 band，
+   实现三页「卡片→横幅→图标区」整列对齐；urgent 临期态保留红染 */
+.memo-app-badge { margin:0 0 14px; min-height:66px; padding:12px 14px; font-size:12px; font-weight:600; color:var(--ink-soft,#555); background:var(--widget-bg,#fff); opacity:var(--widget-opacity,1); border:1px solid var(--widget-border,rgba(0,0,0,.1)); box-shadow:0 4px 14px rgba(0,0,0,.05); border-radius:18px; display:flex; align-items:center; justify-content:space-between; gap:10px; cursor:pointer; -webkit-tap-highlight-color:transparent; white-space:nowrap; overflow:hidden; }
 .memo-app-badge::after { content:'›'; font-size:12px; color:var(--ink-soft,#bbb); }
 .memo-app-badge.urgent { color:#e05a5a; background:rgba(224,90,90,.08); }
 .memo-app-badge.urgent::after { color:#e05a5a; }

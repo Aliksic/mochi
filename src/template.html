@@ -3207,6 +3207,73 @@
           </div>
         </div>
       </div>
+      <!-- 合作扫雷：聊天页底部半框（和 TA 轮流探索一张雷区，共用 ❤️❤️❤️，踩雷不即死） -->
+      <div class="poke-card" id="chat-ms-panel" hidden>
+        <div class="poke-card-head">
+          <span>合作扫雷 · <b id="ms-partner-name">TA</b></span>
+          <div class="snake-head-actions">
+            <button class="snake-icon-btn" id="ms-mode" title="插旗模式开关">⛏️</button>
+            <button class="snake-icon-btn" id="ms-bag" title="小收藏">🎒</button>
+            <button class="snake-icon-btn" id="ms-sound" title="音效开关">🔊</button>
+            <button class="poke-card-close" id="ms-close">✕</button>
+          </div>
+        </div>
+        <div class="poke-card-scroll">
+          <div class="ms-wrap">
+            <div class="ms-topbar"><span class="ms-hearts" id="ms-lives"></span><span class="ms-prog" id="ms-prog"></span></div>
+            <div class="ms-stage" id="ms-stage">
+              <div class="ms-board" id="ms-board"></div>
+              <div class="pong-overlay ms-overlay" id="ms-overlay" hidden>
+                <div class="pong-overlay-title" id="ms-ov-title">合作扫雷</div>
+                <div class="pong-overlay-body" id="ms-ov-body"></div>
+                <div class="pong-overlay-btns">
+                  <button class="pong-overlay-btn" id="ms-btn-start" type="button">开始探索</button>
+                  <button class="pong-overlay-btn pong-overlay-btn2" id="ms-btn-end" type="button" hidden>结束游戏</button>
+                </div>
+              </div>
+            </div>
+            <div class="ms-status" id="ms-status">选择难度开始探索</div>
+            <div class="ms-foot">点击挖开 · 长按插旗 · 数字=周围雷数 · 🪙🎁🌸 藏在格子里</div>
+          </div>
+        </div>
+      </div>
+      <!-- 记忆翻牌：聊天页底部半框（双人合作记忆配对，TA 由代码控制、按难度概率记牌） -->
+      <div class="poke-card" id="chat-memory-panel" hidden>
+        <div class="poke-card-head">
+          <span>记忆翻牌 · <b id="memory-partner-name">TA</b></span>
+          <div class="snake-head-actions">
+            <select class="snake-diff" id="memory-diff" title="难度">
+              <option value="casual">🌱 休闲 3×4</option>
+              <option value="normal" selected>🌙 普通 4×4</option>
+              <option value="hard">⭐ 挑战 4×5</option>
+            </select>
+            <button class="snake-icon-btn" id="memory-sound" title="音效开关">🔊</button>
+            <button class="poke-card-close" id="memory-close">✕</button>
+          </div>
+        </div>
+        <div class="poke-card-scroll">
+          <div class="mgm-wrap">
+            <div class="mgm-info">
+              <span class="mgm-turn" id="memory-turn"></span>
+              <span class="mgm-chem" id="memory-chem">💕 默契 —</span>
+              <span class="mgm-coin" id="memory-coin">心意币 +0</span>
+            </div>
+            <div class="mgm-stage">
+              <div class="memory-board" id="memory-board"></div>
+              <div class="pong-overlay c4-overlay mgm-overlay" id="memory-overlay" hidden>
+                <div class="pong-overlay-title" id="memory-overlay-title">记忆翻牌</div>
+                <div class="pong-overlay-body" id="memory-overlay-body"></div>
+                <div class="pong-overlay-btns">
+                  <button class="pong-overlay-btn" id="memory-overlay-btn" type="button">开始</button>
+                  <button class="pong-overlay-btn pong-overlay-btn2" id="memory-overlay-btn2" type="button" hidden>返回小游戏</button>
+                </div>
+              </div>
+            </div>
+            <div class="mgm-hint" id="memory-hint"></div>
+            <div class="pong-foot">和 TA 轮流翻两张 · 配对成功再来一次 · 一起找完所有牌</div>
+          </div>
+        </div>
+      </div>
       <!-- 红包：聊天页底部半框（我和 TA 互发红包，情侣特殊金额 / 随机 / 七夕特别） -->
       <div class="poke-card" id="chat-rp-panel" hidden>
         <div class="poke-card-head">
@@ -3424,6 +3491,14 @@
           <button class="more-item" id="more-c4" data-mcat="game" title="四子棋">
             <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="3.2"/><circle cx="16" cy="8" r="3.2"/><circle cx="8" cy="16" r="3.2"/><circle cx="16" cy="16" r="3.2"/></svg></span>
             <span>四子棋</span>
+          </button>
+          <button class="more-item" id="more-ms" data-mcat="game" title="合作扫雷（和TA一起探索雷区）">
+            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="10" cy="14" r="4"/><path d="M13.2 10.8L15.5 8.5"/><path d="M17.5 5.5h3"/><path d="M19 4v3"/></svg></span>
+            <span>扫雷</span>
+          </button>
+          <button class="more-item" id="more-memory" data-mcat="game" title="记忆翻牌（和TA合作）">
+            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="12.5" height="17" rx="2"/><path d="M9.5 2.5H19a2 2 0 012 2v14"/><path d="M9.25 12.6l1.05 2.15 2.15 1.05-2.15 1.05-1.05 2.15-1.05-2.15-2.15-1.05 2.15-1.05z"/></svg></span>
+            <span>记忆翻牌</span>
           </button>
           <button class="more-item" id="more-ck" data-mcat="tool" title="寻踪（打开 TA 的日常）">
             <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/><path d="M12 3a9 9 0 000 18"/></svg></span>
@@ -3648,9 +3723,6 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
         </span>
         <span class="ch-name" id="myarc-title">我的档案</span>
-        <span class="ch-settings" id="myarc-ta" title="去TA的档案">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9.5" cy="8" r="3"/><path d="M4 19c.6-3.2 2.8-4.8 5.5-4.8S14.4 15.8 15 19"/><path d="M16.5 6.5h5M16.5 10h5M18.5 14h3"/></svg>
-        </span>
       </div>
       <div class="narc-scroll" id="myarc-root"></div>
     </div>

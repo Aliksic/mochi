@@ -342,15 +342,16 @@
     else { s.d++; s.nextFirst = Math.random() < 0.5 ? 'you' : 'ta'; }   // 平局下一局随机先手
     saveStats(s);
     if (winner === 1) sfxWin(); else if (winner === 2) sfxLose(); else sfxDraw();
-    // v3.15.x：四子棋联动心意币——胜我得 ¥2 / 平 ¥1 / TA 赢 TA 得 ¥2（日内封顶 ¥4）
+    // v3.15.x 二调：奖励对齐红包金额体系——胜 80% ¥13.14 / 20% ¥52，平 ¥5.2，TA 赢 TA 得 ¥13.14（日封顶 ¥104）
     var coinLine4 = '';
     try {
-      var COIN_CAP = 400;
+      var COIN_CAP = 10400;
       var day4 = new Date().toISOString().slice(0, 10);
       var ck4 = (window.activePrefix && window.activePrefix() || 'xy-home-v2') + ':ml2_coin_c4_' + day4;
       var cur4 = Number(localStorage.getItem(ck4)) || 0;
       if (cur4 < COIN_CAP) {
-        var real4 = Math.min(winner === 0 ? 100 : 200, COIN_CAP - cur4);
+        var c4WinFen = Math.random() < 0.2 ? 5200 : 1314;
+        var real4 = Math.min(winner === 0 ? 520 : c4WinFen, COIN_CAP - cur4);
         try { localStorage.setItem(ck4, String(cur4 + real4)); } catch (e2) {}
         if (real4 > 0 && typeof window.giftWalletChange === 'function') {
           var toTa4 = winner === 2;

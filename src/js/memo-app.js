@@ -287,12 +287,15 @@
     memoUpdateBadge();
   }
 
-  // ---- 首页小组件联动：在「今日备忘」卡片下注入备忘录状态行，点击直达备忘录 ----
+  // ---- 首页小组件联动：在「今日备忘/心情」行下方注入整宽备忘录状态横幅，点击直达备忘录
+  //      （v3.15.x：原为半卡内状态行，为三页 band 对齐升级为与打卡/摸鱼同档的整宽横幅） ----
   function memoUpdateBadge() {
     let b = document.getElementById('memo-app-badge');
-    const card = document.querySelector('[data-desk-widget="memo-row"] .memo-card');
-    if (!card) { if (b) b.remove(); return; }
-    if (!b || b.parentNode !== card) {
+    const row = document.querySelector('[data-desk-widget="memo-row"]');
+    const card = row && row.querySelector('.memo-card');
+    if (!row || !card) { if (b) b.remove(); return; }
+    // 跟随 memo-row：不紧贴其后（被移动/重建/落池）时重新插入
+    if (!b || b.previousElementSibling !== row || b.parentNode !== row.parentNode) {
       if (b) b.remove();
       b = document.createElement('div');
       b.id = 'memo-app-badge'; b.className = 'memo-app-badge';
@@ -301,7 +304,7 @@
         if (editingNow()) return;
         openPage(memoPage); memoRender();
       });
-      card.appendChild(b);
+      row.parentNode.insertBefore(b, row.nextSibling);
     }
     const items = memoItems();
     const undone = items.filter(x => !x.done);
@@ -373,4 +376,9 @@
   }
   document.addEventListener('contact-switched', () => { if (!memoPage.hidden) memoRender(); memoUpdateBadge(); });
   memoUpdateBadge();
+  // v3.15.x：冷启动时 memo-row 可能仍在隐藏池（150ms 才被搬回第三页），init 这次
+  // memoUpdateBadge 会把状态横幅插在池里；延迟重跑两次让它跟随 memo-row 落位
+  // （memoUpdateBadge 幂等：横幅不紧贴 memo-row 之后就重新插入），同时刷新待办计数。
+  setTimeout(memoUpdateBadge, 300);
+  setTimeout(memoUpdateBadge, 700);
 })();

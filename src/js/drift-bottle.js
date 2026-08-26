@@ -1,7 +1,10 @@
 // ===== 漂流瓶：两个世界之间的海（聊天「更多功能」→【互动】进入；独立全屏页 page-drift） =====
 // 定位（对齐用户设计文档）：不是随机陌生人社交瓶，而是「偶尔收到一份来自TA的东西」——
 //   你写下的话会漂到两个世界之间，过几天可能漂回来（熟悉的瓶子）；
-//   TA 的话像从另一个世界慢慢漂过来（字卡库抽取，绝不 AI 瞎编）；偶尔是空瓶/小礼物。
+//   TA 的话像从另一个世界慢慢漂过来——优先抽当前桌面聊天记录里 TA 说过的字卡
+//   （一条混合气泡里的多张字卡逐段拆开、每张都可能单独漂回来；表情包/图片/语音/
+//   互动组件不收），没有合适内容时回退字卡库【漂流瓶·TA的话】分组，绝不 AI 瞎编；
+//   偶尔是空瓶/小礼物。
 // 核心玩法：
 //   捡一个 → 概率出瓶（普通60 / 空瓶·小物25 / 特殊10 / TA5，按状态微调：
 //   今天互动多→TA概率↑；很久没来→第一瓶大概率是TA刚漂来的；TA瓶每日上限3防刷）；
@@ -37,6 +40,68 @@
     clearTimeout(toastT); toastT = setTimeout(() => { el.className = 'cc-toast'; }, 2200);
   }
   function taFit(t) { let s = String(t == null ? '' : t).replace(/\{n\}/g, pn()); try { if (window.taFit) s = window.taFit(s); } catch (e) {} return s; }
+
+  // ---- 从当前桌面聊天记录抽 TA 说过的字卡（TA 瓶的优先来源）----
+  // 关键结构认知（chat.js）：TA 的「一条回复」可能是——
+  //   ① 纯文本 rec（type:'text'，text 即内容）；
+  //   ② 整条表情包/图片/语音 rec（type:'sticker'|'image'|'voice'，text 是 dataURL/文件名，不收）；
+  //   ③ 混合气泡 rec（parts 数组 = 若干 {k:'text',v:字卡} + 若干 {k:'img'} 贴图打包在同一条里）
+  //      → 必须按 k:'text' 逐段拆成独立候选，每张字卡都可能单独漂进瓶子，绝不合并/截断。
+  function histMsgOk(m) {
+    if (!m || m.side !== 'in' || m.retracted) return false;
+    if (m.type && m.type !== 'text') return false;                  // 表情包/图片/语音/拍一拍等整条跳过
+    if (m.voice || m.img || m.gift) return false;
+    if (m.special || m.mailNotice) return false;                    // 系统提示 / 来信通知
+    if (m.askQuestion != null || m.askStatus != null || m.choiceQuestion != null || m.choiceStatus != null ||
+        m.curiousQuestion != null || m.curiousStatus != null || m.roastStatus != null ||
+        m.rpAmount != null || m.rpWish != null) return false;       // 提问/选择/好奇/吐槽/红包等互动组件
+    return true;
+  }
+  function candText(t) {
+    const s = String(t == null ? '' : t).trim();
+    if (!s || s.length > 100) return '';                            // 超长不装瓶（与放瓶输入上限一致）
+    if (s.indexOf('|||') >= 0) return '';                           // 语音卡标记
+    if (/^(https?:|data:)/i.test(s)) return '';                     // 链接 / 内联图片
+    return s;
+  }
+  function histCandidates() {
+    try {
+      const cid = window.__activeCid || 'default';
+      const raw = localStorage.getItem('xy-home-v2:' + cid + ':chat-msgs');
+      if (!raw || raw.length > 600000) return [];                   // 超大记录守卫：直接回退字卡库
+      const arr = JSON.parse(raw);
+      if (!Array.isArray(arr)) return [];
+      const out = [];
+      const scan = Math.min(arr.length, 400);                       // 只看最近约 400 条，够回忆也不卡
+      for (let i = arr.length - 1; i >= arr.length - scan && out.length < 80; i--) {
+        const m = arr[i];
+        if (!histMsgOk(m)) continue;
+        if (Array.isArray(m.parts) && m.parts.length) {
+          for (let j = 0; j < m.parts.length && out.length < 80; j++) {
+            const p = m.parts[j];
+            if (!p || p.k !== 'text') continue;
+            const s = candText(p.v);
+            if (s) out.push(s);
+          }
+        } else {
+          const s = candText(m.text);
+          if (s) out.push(s);
+        }
+      }
+      return out;
+    } catch (e) { return []; }
+  }
+  function sampleHistLine() {
+    const cands = histCandidates();
+    if (!cands.length) return '';
+    const seen = Array.isArray(d.histSeen) ? d.histSeen : [];
+    let pool = cands.filter(c => seen.indexOf(c) < 0);              // 近期漂过的先避开，减少连重复
+    if (!pool.length) pool = cands.slice();
+    const t = rnd(pool);
+    d.histSeen = seen.concat([t]).slice(-8);
+    save();
+    return t;
+  }
 
   // ---- 字卡池（与字卡库【漂流瓶】tab 同源；逐张开关过滤；全关回退内置兜底） ----
   const FB = {
@@ -76,7 +141,7 @@
   const MINE_CAP = 50, GOT_CAP = 120, PICK_CD = 20000;
   function fresh() {
     return {
-      mine: [], got: [],
+      mine: [], got: [], histSeen: [],
       day: { date: '', picks: 0, coin: 0, taGot: 0 },
       lastVisit: 0, cdUntil: 0
     };
@@ -85,6 +150,7 @@
   function fix(o) {
     if (!Array.isArray(o.mine)) o.mine = [];
     if (!Array.isArray(o.got)) o.got = [];
+    if (!Array.isArray(o.histSeen)) o.histSeen = [];
     if (!o.day || typeof o.day !== 'object') o.day = { date: '', picks: 0, coin: 0, taGot: 0 };
     o.mine.forEach(m => { if (typeof m.fav !== 'number') m.fav = 0; });
     o.got.forEach(g => { if (typeof g.fav !== 'number') g.fav = 0; });
@@ -134,7 +200,7 @@
       const s = S();
       let w = null;
       try { w = JSON.parse(s.get('gift-wallet') || ''); } catch (e) {}
-      if (!w || typeof w.myBalance !== 'number') w = { myBalance: 99999999, systemBalance: 99999999 };
+      if (!w || typeof w.myBalance !== 'number' || typeof w.systemBalance !== 'number') w = { myBalance: 52000, systemBalance: 52000 }; // v3.15.x：默认对齐 ¥520/¥520
       w.myBalance += real;
       s.set('gift-wallet', JSON.stringify(w));
       d.day.coin += real;
@@ -252,7 +318,9 @@
       if (kind === 'ta') {
         d.day.taGot++;
         head = '💙 ' + pn() + '漂来的瓶子';
-        note = poolLine('TA的话', 'ta');
+        // 优先从当前桌面聊天记录抽 TA 说过的字卡（含混合气泡逐段拆出的每张）；
+        // 记录为空/超大/全是图片语音时回退字卡库【漂流瓶·TA的话】
+        note = sampleHistLine() || poolLine('TA的话', 'ta');
         sig = '—— ' + pn();
         if (Math.random() < 0.2) gift = rnd(ITEMS);
       } else if (kind === 'special') {
@@ -452,7 +520,7 @@
     if (!window.openModal) return;
     window.openModal('漂流瓶 · 关于这片海', '', function () {}, {
       noInput: true,
-      staticText: '你写下的话会漂到两个世界之间：过几天它可能自己漂回来，也可能收到一句回应。\n\n有时候，也会捡到「' + pn() + '」漂来的瓶子——那些话都来自字卡库，不会凭空编造。\n\n每日首次捡瓶送 2 心意币，特殊瓶 +5（每天最多 10）。瓶子是偶尔的惊喜，不用一直守着海。'
+      staticText: '你写下的话会漂到两个世界之间：过几天它可能自己漂回来，也可能收到一句回应。\n\n有时候，也会捡到「' + pn() + '」漂来的瓶子——TA以前在聊天里说过的字卡，都可能单独漂回来；没有合适的话时，才从字卡库的漂流瓶分组里取一句。\n\n每日首次捡瓶送 2 心意币，特殊瓶 +5（每天最多 10）。瓶子是偶尔的惊喜，不用一直守着海。'
     });
   }
 

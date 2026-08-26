@@ -489,14 +489,14 @@ function addInvQual(type, q) {
 function qualMul(q) { return q === "p" ? 2 : q === "f" ? 1.5 : 1; }
 function qualLabel(q) { return q === "p" ? "【完美】" : q === "f" ? "【优质】" : ""; }
 // ---- v3.15.x：收花联动心意币（与心意集市/红包同一本账）——按品质发给我：
-// 完美 ¥2 / 优质 ¥1 / 普通 ¥0.5，枯萎 ¥0.2；日封顶 ¥10 防刷。走 giftWalletChange 统一入口。
-function harvestCoinFen(q, wilted) { return wilted ? 20 : q === "p" ? 200 : q === "f" ? 100 : 50; }
+// 二调对齐红包金额体系——完美 ¥52 / 优质 ¥13.14 / 普通 ¥5.2，枯萎 ¥1.3；日封顶 ¥520 防刷。
+function harvestCoinFen(q, wilted) { return wilted ? 130 : q === "p" ? 5200 : q === "f" ? 1314 : 520; }
 function grantHarvestCoin(q, wilted) {
   try {
     if (typeof window.giftWalletChange !== "function") return null;
     var ck = "ml2_coin_garden_" + new Date().toISOString().slice(0, 10);
     var cur = Number(s.get(ck)) || 0;
-    var cap = 1000;
+    var cap = 52000;
     if (cur >= cap) return null;
     var fen = Math.min(harvestCoinFen(q, wilted), cap - cur);
     s.set(ck, String(cur + fen));

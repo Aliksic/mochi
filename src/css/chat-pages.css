@@ -3284,3 +3284,355 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + env(safe-area-inset-bott
   .c4-disc { transition-duration:0s !important; }
   .c4-land, .c4-win, .c4-shake { animation:none; }
 }
+
+/* ===== 合作扫雷（聊天页底部半框，复用 .poke-card 容器与 .pong-overlay 组件） ===== */
+#chat-ms-panel { height:auto; max-height:86%; }
+#chat-ms-panel .poke-card-scroll { min-height:0; max-height:none; }
+.ms-wrap { display:flex; flex-direction:column; align-items:center; gap:8px; padding:6px 4px 4px; width:100%; }
+.ms-topbar { display:flex; align-items:center; justify-content:space-between; width:100%; max-width:352px; padding:0 2px; min-height:20px; }
+.ms-hearts { font-size:14px; letter-spacing:2px; line-height:1; }
+.ms-prog { font-size:11.5px; color:var(--muted,#999); font-variant-numeric:tabular-nums; }
+.ms-stage { position:relative; width:100%; max-width:352px; margin:0 auto; }
+.ms-board { display:grid; gap:3px; margin:0 auto; background:rgba(127,127,127,.12); border:1px solid rgba(127,127,127,.15); border-radius:10px; padding:5px; user-select:none; -webkit-user-select:none; touch-action:manipulation; width:max-content; }
+.ms-cell { position:relative; box-sizing:border-box; border-radius:6px; background:linear-gradient(150deg, rgba(255,255,255,.92), rgba(0,0,0,.07)); box-shadow:inset 0 -2px 3px rgba(0,0,0,.13), inset 0 2px 2px rgba(255,255,255,.6), 0 1px 2px rgba(0,0,0,.08); cursor:pointer; display:flex; align-items:center; justify-content:center; font-weight:700; line-height:1; -webkit-tap-highlight-color:transparent; }
+@media (hover:hover) {
+  .ms-cell:not(.ms-open):hover { filter:brightness(1.06); }
+}
+.ms-cell.ms-open { background:rgba(127,127,127,.10); box-shadow:none; cursor:default; }
+.ms-boom { background:#f2d4cd !important; }
+.ms-fyou { background:linear-gradient(150deg, #fdeae2, #f9d3c4); }
+.ms-fta { background:linear-gradient(150deg, #fdf3d9, #f7e3ad); }
+.ms-face { pointer-events:none; transform:translateZ(0); }
+.ms-face.ms-pop { animation:mspop .22s ease-out; }
+@keyframes mspop { 0% { transform:scale(.5); opacity:.25; } 100% { transform:scale(1); opacity:1; } }
+.ms-n1 { color:#3a7fd5; } .ms-n2 { color:#2e8b57; } .ms-n3 { color:#d9534f; } .ms-n4 { color:#7a4fd9; }
+.ms-n5 { color:#b7791f; } .ms-n6 { color:#2aa198; } .ms-n7 { color:#666; } .ms-n8 { color:#999; }
+.ms-status { min-height:20px; font-size:13px; color:var(--muted,#888); text-align:center; width:100%; }
+.ms-foot { font-size:11px; color:var(--muted,#aaa); text-align:center; line-height:1.7; width:100%; }
+.ms-shake { animation:msshake .26s ease-in-out; }
+@keyframes msshake { 0%,100% { transform:translateX(0); } 25% { transform:translateX(-3px); } 50% { transform:translateX(3px); } 75% { transform:translateX(-2px); } }
+/* 覆盖层内：难度胶囊 / 提示（覆盖层深底白字） */
+.ms-overlay { border-radius:12px; }
+.ms-diffs { display:flex; flex-wrap:wrap; gap:6px; justify-content:center; margin-bottom:8px; }
+.ms-diff { font-size:12px; font-family:inherit; border:1px solid rgba(255,255,255,.35); background:rgba(255,255,255,.12); color:rgba(255,255,255,.85); border-radius:14px; padding:6px 12px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+.ms-diff.on { background:#e8533d; border-color:#e8533d; color:#fff; font-weight:700; }
+.ms-tip { font-size:12.5px; color:rgba(255,255,255,.88); line-height:1.8; text-align:center; margin-bottom:2px; }
+.ms-note { font-size:11px; color:rgba(255,255,255,.6); text-align:center; margin-bottom:4px; }
+.ms-quote { font-size:11.5px; color:rgba(255,255,255,.62); font-style:normal; }
+.snake-icon-btn.ms-mode-on { background:#fde8e0; color:#e8533d; }
+/* 弱动效偏好：开格/抖动动画关闭（布局不受影响） */
+@media (prefers-reduced-motion: reduce) {
+  .ms-face.ms-pop, .ms-shake { animation:none; }
+}
+
+/* ===== 双人钓鱼（聊天页底部半框：水边场景 + 时机收竿 + 今日收获/图鉴/TA送礼） ===== */
+#chat-fish-panel { height:auto; max-height:86%; }
+#chat-fish-panel .poke-card-scroll { min-height:0; max-height:none; }
+.fish-wrap { display:flex; flex-direction:column; gap:8px; padding:2px 2px 4px; }
+
+/* 场景：天空 + 水面；小人与鱼竿为纯 CSS 绘制 */
+.fish-scene {
+  position:relative; height:148px; border-radius:16px; overflow:hidden;
+  background:linear-gradient(180deg,#a8d8f0 0%,#d6effc 52%,#eaf7ff 58%,#eaf7ff 100%);
+}
+.fish-sky { position:absolute; left:0; right:0; top:0; height:58%; }
+.fish-sky::before {
+  content:''; position:absolute; right:14px; top:10px; width:22px; height:22px; border-radius:50%;
+  background:radial-gradient(circle at 38% 35%, #fff3b0, #ffd75e 70%);
+  box-shadow:0 0 12px rgba(255,215,94,.55);
+}
+.fish-sky::after {
+  content:''; position:absolute; left:16px; top:16px; width:46px; height:13px; border-radius:99px;
+  background:rgba(255,255,255,.85); box-shadow:62px 12px 0 -3px rgba(255,255,255,.7);
+}
+.fish-water {
+  position:absolute; left:0; right:0; bottom:0; height:42%;
+  background:linear-gradient(180deg,#79c4de,#4f97bd);
+  border-top:2px solid rgba(255,255,255,.65); overflow:hidden;
+}
+.fish-water::before {
+  content:''; position:absolute; inset:-2px -40px;
+  background:repeating-linear-gradient(105deg, rgba(255,255,255,.13) 0 12px, rgba(255,255,255,0) 12px 30px);
+  animation:fishwave 5s linear infinite;
+}
+@keyframes fishwave { from { transform:translateX(0); } to { transform:translateX(36px); } }
+
+/* 人物（头+身体）与状态徽章 */
+.fish-persons { position:absolute; left:0; right:0; top:0; height:58%;
+  display:flex; justify-content:space-evenly; align-items:flex-end; }
+.fish-person { position:relative; width:72px; height:54px; transition:opacity .3s, filter .3s, transform .3s; }
+.fish-person::before {
+  content:''; position:absolute; left:50%; bottom:21px; width:15px; height:15px; margin-left:-7.5px;
+  border-radius:50%; background:#ffd9b8; z-index:1;
+}
+.fish-person::after {
+  content:''; position:absolute; left:50%; bottom:3px; width:24px; height:20px; margin-left:-12px;
+  border-radius:9px 9px 5px 5px; z-index:1;
+}
+.fish-me::after { background:#6a9ef0; }
+.fish-ta::after { background:#f08bb0; }
+.fish-person-name {
+  position:absolute; bottom:-6px; left:50%; transform:translateX(-50%);
+  font-size:9.5px; color:#fff; background:rgba(60,90,120,.45);
+  padding:1px 8px; border-radius:99px; white-space:nowrap; z-index:2;
+}
+.fish-ta-state {
+  position:absolute; top:-8px; left:50%; transform:translateX(-50%);
+  font-size:10px; color:#5a7c95; background:rgba(255,255,255,.82);
+  padding:2px 8px; border-radius:99px; white-space:nowrap; z-index:3;
+}
+.fish-scene[data-ta="biting"] .fish-ta-state { color:#fff; background:#f2764a; }
+.fish-scene[data-ta="rest"] .fish-ta { opacity:.55; filter:saturate(.55); }
+.fish-scene[data-ta="daze"] .fish-ta { opacity:.85; }
+.fish-scene[data-ta="shift"] .fish-ta { transform:translateX(-8px); }
+
+/* 鱼竿：你左 TA 右各一根斜竿，等待时放平、咬钩时抖动 */
+.fish-rod {
+  position:absolute; bottom:28px; left:30px; width:54px; height:3px; border-radius:2px;
+  background:linear-gradient(90deg,#9c7b5e,#7a5b40);
+  transform-origin:0 100%; transform:rotate(-30deg);
+  transition:transform .25s ease; z-index:0;
+}
+.fish-ta .fish-rod {
+  left:auto; right:30px;
+  transform-origin:100% 100%; transform:rotate(30deg);
+  background:linear-gradient(270deg,#9c7b5e,#7a5b40);
+}
+.fish-scene[data-mine="waiting"] .fish-me .fish-rod,
+.fish-scene[data-ta="waiting"] .fish-ta .fish-rod { }
+.fish-scene[data-mine="biting"] .fish-me .fish-rod { animation:fishrodmine .32s linear infinite; }
+@keyframes fishrodmine { 0%,100% { transform:rotate(-24deg); } 50% { transform:rotate(-34deg); } }
+.fish-scene[data-ta="casting"] .fish-ta .fish-rod { transform:rotate(44deg); }
+.fish-scene[data-ta="biting"] .fish-ta .fish-rod { animation:fishrodta .32s linear infinite; }
+@keyframes fishrodta { 0%,100% { transform:rotate(24deg); } 50% { transform:rotate(34deg); } }
+
+/* 鱼漂（fishing.js 注入的纯视觉元素）：等待轻浮 · 咬钩变蓝剧烈晃动 */
+.fish-bobber {
+  position:absolute; bottom:26%; width:10px; height:15px; z-index:2; display:none;
+  border-radius:50%/60% 60% 42% 42%;
+  background:linear-gradient(#fff 0 42%, #f05a5a 42%);
+  border:1px solid rgba(0,0,0,.18);
+}
+.fish-bobber-mine { left:22%; }
+.fish-bobber-ta { right:22%; }
+.fish-scene[data-mine="waiting"] .fish-bobber-mine,
+.fish-scene[data-ta="waiting"] .fish-bobber-ta,
+.fish-scene[data-ta="casting"] .fish-bobber-ta {
+  display:block; animation:fishbobfloat 2.4s ease-in-out infinite;
+}
+.fish-scene[data-mine="biting"] .fish-bobber-mine {
+  display:block;
+  background:linear-gradient(#cfe8ff 0 42%, #2f6fe0 42%);
+  animation:fishbobbite .38s ease-in-out infinite;
+}
+.fish-scene[data-ta="biting"] .fish-bobber-ta {
+  display:block;
+  background:linear-gradient(#cfe8ff 0 42%, #2f6fe0 42%);
+  animation:fishbobbite .38s ease-in-out infinite;
+}
+@keyframes fishbobfloat { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-3px); } }
+@keyframes fishbobbite { 0%,100% { transform:translateY(0) rotate(-10deg); } 50% { transform:translateY(-5px) rotate(10deg); } }
+
+/* 咬钩时机条：红→绿→红渐变，白线光标走到中段绿色区收竿最佳 */
+.fish-status { min-height:18px; font-size:12.5px; color:var(--muted); text-align:center; line-height:1.5; }
+.fish-timing-wrap { display:flex; flex-direction:column; gap:5px; padding:0 4px; }
+.fish-timing-wrap[hidden] { display:none; }
+.fish-timing-label { font-size:11px; color:#b7791f; text-align:center; letter-spacing:.3px; }
+.fish-timing-bar {
+  position:relative; height:16px; border-radius:99px; overflow:hidden;
+  background:linear-gradient(90deg,#f9b4ab 0%,#fbd3a4 22%,#a9dfa6 38%,#8fd48b 50%,#a9dfa6 68%,#fbd3a4 82%,#f9b4ab 100%);
+  box-shadow:inset 0 1px 3px rgba(0,0,0,.15);
+}
+.fish-timing-good {
+  position:absolute; left:38%; width:30%; top:0; bottom:0;
+  border-left:2px dashed rgba(255,255,255,.75); border-right:2px dashed rgba(255,255,255,.75);
+  background:rgba(255,255,255,.18);
+}
+.fish-timing-cursor {
+  position:absolute; top:0; bottom:0; width:4px; margin-left:-2px; border-radius:2px;
+  background:#fff; box-shadow:0 0 6px rgba(0,0,0,.35), 0 0 2px #fff;
+}
+
+/* 操作按钮：抛竿蓝 / 收竿橙脉冲提示赶紧点 */
+.fish-actions { display:flex; gap:10px; padding:0 4px; }
+.fish-btn {
+  flex:1; padding:11px 0; border:none; border-radius:14px; font-size:14.5px; font-weight:700;
+  font-family:inherit; cursor:pointer; color:#fff;
+  background:linear-gradient(135deg,#5aa7e6,#3d7fc4);
+  box-shadow:0 3px 8px rgba(61,127,196,.35);
+  -webkit-tap-highlight-color:transparent;
+}
+.fish-btn:active { transform:translateY(1px); box-shadow:0 2px 4px rgba(61,127,196,.3); }
+.fish-btn:disabled { opacity:.55; box-shadow:none; }
+.fish-btn[hidden] { display:none; }
+.fish-reel {
+  background:linear-gradient(135deg,#f2994a,#e8683a);
+  box-shadow:0 3px 8px rgba(232,104,58,.35);
+  animation:fishreelpulse 1s ease-in-out infinite;
+}
+@keyframes fishreelpulse { 0%,100% { filter:brightness(1); } 50% { filter:brightness(1.14); } }
+
+/* 页签：今日收获 / 鱼图鉴 / TA送我的 */
+.fish-tabs { display:flex; gap:8px; padding:0 4px; }
+.fish-tab {
+  flex:1; padding:8px 0; border:none; border-radius:12px; font-size:12.5px; font-weight:600;
+  font-family:inherit; cursor:pointer;
+  background:rgba(90,140,190,.1); color:#6b89a5;
+  -webkit-tap-highlight-color:transparent;
+}
+.fish-tab.sel {
+  background:linear-gradient(135deg,#5aa7e6,#3d7fc4); color:#fff;
+  box-shadow:0 2px 6px rgba(61,127,196,.3);
+}
+
+/* 列表页内容 */
+.fish-page { min-height:80px; }
+.fish-sub { font-size:13px; font-weight:800; color:var(--ink); margin:2px 4px 8px; }
+.fish-subhead { display:flex; align-items:center; gap:6px; margin:10px 4px 6px;
+  font-size:11.5px; font-weight:700; color:#6b89a5; }
+.fish-subhead::after { content:''; flex:1; height:1px; background:rgba(107,137,165,.25); }
+.fish-row {
+  display:flex; align-items:center; gap:9px; padding:8px 11px; margin-bottom:6px;
+  border-radius:12px; background:rgba(127,160,190,.09); font-size:13px;
+}
+.fish-ico { font-size:19px; flex-shrink:0; }
+.fish-name { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  font-weight:600; color:var(--ink); }
+.fish-gift-tag {
+  font-style:normal; font-size:9.5px; color:#e05a8a; background:rgba(240,139,176,.16);
+  border-radius:99px; padding:1px 6px; margin-left:5px; vertical-align:1px;
+}
+.fish-cnt { font-size:12px; color:var(--muted); flex-shrink:0; }
+.fish-price { font-size:12.5px; font-weight:700; color:#3d9a5f; flex-shrink:0; font-variant-numeric:tabular-nums; }
+.fish-empty { padding:16px 0 10px; text-align:center; font-size:12px; color:rgba(0,0,0,.35); }
+.fish-sellbar {
+  display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:10px;
+  padding:9px 11px; border-radius:12px; background:rgba(90,140,190,.08);
+  font-size:12px; color:#5a7c95;
+}
+.fish-sellbar b { color:#e8963a; font-size:13px; }
+.fish-sell {
+  flex-shrink:0; padding:8px 16px; border:none; border-radius:99px;
+  font-size:12.5px; font-weight:700; font-family:inherit; cursor:pointer; color:#fff;
+  background:linear-gradient(135deg,#f2b04a,#e88a3a);
+  box-shadow:0 2px 6px rgba(232,138,58,.35);
+  -webkit-tap-highlight-color:transparent;
+}
+.fish-sell:active { transform:translateY(1px); }
+
+/* 图鉴网格 */
+.fish-dex-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; }
+.fish-dex-item {
+  position:relative; display:flex; align-items:center; gap:8px; padding:9px 11px;
+  border-radius:12px; background:rgba(127,160,190,.09);
+  font-size:12.5px; color:rgba(0,0,0,.32);
+}
+.fish-dex-item.got { color:var(--ink); font-weight:600; background:rgba(143,212,139,.15); }
+.fish-dex-ico { font-size:17px; flex-shrink:0; }
+.fish-dex-item:not(.got) .fish-dex-ico { opacity:.55; }
+.fish-dex-name { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.fish-dex-check {
+  position:absolute; top:-4px; right:-4px; width:17px; height:17px; border-radius:50%;
+  background:#5fbf72; color:#fff; font-size:11px; line-height:17px; text-align:center;
+  box-shadow:0 1px 3px rgba(0,0,0,.2);
+}
+.fish-dex-foot { margin-top:10px; text-align:center; font-size:11.5px; color:rgba(0,0,0,.4); }
+
+/* TA 送我的东西 */
+.fish-exch {
+  flex-shrink:0; padding:6px 12px; border:none; border-radius:99px;
+  font-size:11.5px; font-weight:700; font-family:inherit; cursor:pointer;
+  color:#8a6d1f; background:rgba(240,200,100,.25);
+  -webkit-tap-highlight-color:transparent;
+}
+.fish-exch:active { background:rgba(240,200,100,.45); }
+.fish-gift-ts { flex-shrink:0; font-size:10.5px; color:rgba(0,0,0,.35); }
+
+/* 收获水花（钓到/跑掉的场景反馈） */
+.fish-splash {
+  position:absolute; left:50%; top:42%; z-index:5; font-size:21px;
+  pointer-events:none; animation:fishrise 1.15s ease-out forwards;
+}
+@keyframes fishrise {
+  0% { opacity:0; transform:translate(-50%,8px) scale(.5); }
+  25% { opacity:1; }
+  100% { opacity:0; transform:translate(-50%,-30px) scale(1.2); }
+}
+
+/* 弱动效偏好：波纹/鱼漂/按钮脉冲/水花全关（布局不受影响） */
+@media (prefers-reduced-motion: reduce) {
+  .fish-water::before { animation:none; }
+  .fish-bobber { animation:none !important; }
+  .fish-reel { animation:none; }
+  .fish-scene[data-mine="biting"] .fish-me .fish-rod,
+  .fish-scene[data-ta="biting"] .fish-ta .fish-rod { animation:none; }
+  .fish-splash { animation-duration:.01s; opacity:0; }
+}
+
+/* 深色模式兜底（dark.css 未覆盖本功能自定义元素时保持可读，drift/room 同款惯例） */
+[data-theme="dark"] .fish-scene { background:linear-gradient(180deg,#233246 0%,#2c4258 52%,#33495e 58%,#33495e 100%); }
+[data-theme="dark"] .fish-sky::after { background:rgba(255,255,255,.35); box-shadow:62px 12px 0 -3px rgba(255,255,255,.26); }
+[data-theme="dark"] .fish-water { background:linear-gradient(180deg,#2b5d78,#1f4258); border-top-color:rgba(255,255,255,.3); }
+[data-theme="dark"] .fish-water::before { background:repeating-linear-gradient(105deg, rgba(255,255,255,.07) 0 12px, rgba(255,255,255,0) 12px 30px); }
+[data-theme="dark"] .fish-person-name { background:rgba(20,30,40,.6); }
+[data-theme="dark"] .fish-ta-state { color:#bcd6e8; background:rgba(20,30,40,.75); }
+[data-theme="dark"] .fish-row, [data-theme="dark"] .fish-dex-item { background:rgba(255,255,255,.06); }
+[data-theme="dark"] .fish-dex-item.got { background:rgba(143,212,139,.12); }
+[data-theme="dark"] .fish-dex-item:not(.got) { color:rgba(255,255,255,.32); }
+[data-theme="dark"] .fish-empty, [data-theme="dark"] .fish-dex-foot { color:rgba(255,255,255,.38); }
+[data-theme="dark"] .fish-sellbar { background:rgba(255,255,255,.05); color:#9db8cc; }
+[data-theme="dark"] .fish-tab { background:rgba(255,255,255,.07); color:#9db8cc; }
+[data-theme="dark"] .fish-tab.sel { color:#fff; }
+[data-theme="dark"] .fish-gift-ts { color:rgba(255,255,255,.35); }
+
+/* ===== 记忆翻牌（聊天页底部半框，双人合作记忆配对；复用 .poke-card/.pong-overlay 组件） ===== */
+#chat-memory-panel { height:auto; max-height:86%; }
+#chat-memory-panel .poke-card-scroll { min-height:0; max-height:none; }
+.mgm-wrap { display:flex; flex-direction:column; align-items:center; gap:8px; padding:6px 4px 4px; }
+.mgm-info { display:flex; align-items:center; justify-content:center; gap:12px; width:100%; flex-wrap:wrap; }
+.mgm-turn { font-size:13px; font-weight:700; color:var(--ink); background:rgba(127,127,127,.1); border-radius:14px; padding:4px 12px; }
+.mgm-chem, .mgm-coin { font-size:12px; color:var(--muted); }
+.mgm-stage { position:relative; width:100%; max-width:360px; margin:0 auto; }
+.memory-board { display:grid; gap:7px; user-select:none; -webkit-user-select:none; touch-action:manipulation; }
+/* 卡片：::before 占位撑高（不依赖 aspect-ratio，兼容旧 webview），3D 翻转纯 CSS */
+.mgm-card { position:relative; border:none; padding:0; background:transparent; cursor:pointer; perspective:620px; border-radius:10px; -webkit-tap-highlight-color:transparent; }
+.mgm-card::before { content:''; display:block; padding-top:136%; }
+.mgm-in { position:absolute; inset:0; transform-style:preserve-3d; transition:transform .38s cubic-bezier(.4,.2,.2,1); }
+.mgm-card.flipped .mgm-in { transform:rotateY(180deg); }
+.mgm-back, .mgm-face {
+  position:absolute; inset:0;
+  backface-visibility:hidden; -webkit-backface-visibility:hidden;
+  border-radius:10px; display:flex; align-items:center; justify-content:center; overflow:hidden;
+}
+/* 牌背：全站统一的星语渐变 + ✦，简单牌面也不显廉价 */
+.mgm-back {
+  background:linear-gradient(145deg,#5b7cfa 0%,#8a63d2 55%,#b163b8 100%);
+  box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.3), inset 0 0 14px rgba(255,255,255,.12), 0 2px 5px rgba(60,60,120,.22);
+}
+.mgm-back i { font-style:normal; color:rgba(255,255,255,.92); font-size:calc(var(--mgm-fs,27px) * .62); text-shadow:0 1px 2px rgba(0,0,0,.2); }
+.mgm-face {
+  transform:rotateY(180deg);
+  background:rgba(255,255,255,.96); border:1px solid rgba(0,0,0,.08);
+  box-shadow:0 1px 3px rgba(0,0,0,.08);
+  font-size:var(--mgm-fs,27px); line-height:1;
+}
+.mgm-card.matched { cursor:default; }
+.mgm-own-p .mgm-face { background:#eaf3ff; box-shadow:inset 0 0 0 2px #3a7fd5; }
+.mgm-own-t .mgm-face { background:#fff7e6; box-shadow:inset 0 0 0 2px #f0b03c; }
+.mgm-card.matched .mgm-in { animation:mgmpop .34s ease-out; }
+@keyframes mgmpop {
+  0% { transform:rotateY(180deg) scale(1); }
+  50% { transform:rotateY(180deg) scale(1.09); }
+  100% { transform:rotateY(180deg) scale(1); }
+}
+.mgm-hint { min-height:18px; font-size:13px; color:var(--muted); text-align:center; }
+@media (prefers-reduced-motion: reduce) {
+  .mgm-in { transition-duration:0s !important; }
+  .mgm-card.matched .mgm-in { animation:none; }
+}
+/* 深色模式兜底（dark.css 未覆盖本功能自定义元素时保持可读，drift/room/fish 同款惯例） */
+[data-theme="dark"] .mgm-turn { background:rgba(255,255,255,.08); }
+[data-theme="dark"] .mgm-chem, [data-theme="dark"] .mgm-coin, [data-theme="dark"] .mgm-hint { color:#9aa3ad; }
+[data-theme="dark"] .mgm-face { background:var(--dark-card-92); border-color:var(--dark-border); }
+[data-theme="dark"] .mgm-own-p .mgm-face { background:rgba(58,127,213,.24); }
+[data-theme="dark"] .mgm-own-t .mgm-face { background:rgba(240,176,60,.2); }

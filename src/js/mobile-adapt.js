@@ -134,7 +134,7 @@
   // 仅 .phone 内部、无内部滚动体（fixed 停靠后滚动区 height 仍由面板自身收缩，
   // 内部 scroll 正常）的底半框才需要；全屏遮罩（#call-mask 等 fixed/inset 或
   // 自带滚动）不在列。
-  const FLOAT_PANEL_SELECTORS = ['#chat-more-panel', '#chat-decision-panel', '#chat-gdecision-panel', '#chat-divine-panel', '#chat-ask-panel', '#poke-card', '#emoji-panel', '#chat-rp-panel', '#chat-rps-panel', '#chat-pong-panel', '#chat-snake-panel', '#chat-brick-panel', '#chat-c4-panel', '#chat-gift-panel', '#ck-panel', '#chat-search', '#gc-more-panel'];
+  const FLOAT_PANEL_SELECTORS = ['#chat-more-panel', '#chat-decision-panel', '#chat-gdecision-panel', '#chat-divine-panel', '#chat-ask-panel', '#poke-card', '#emoji-panel', '#chat-rp-panel', '#chat-rps-panel', '#chat-pong-panel', '#chat-snake-panel', '#chat-brick-panel', '#chat-c4-panel', '#chat-ms-panel', '#chat-fish-panel', '#chat-memory-panel', '#chat-gift-panel', '#ck-panel', '#chat-search', '#gc-more-panel'];
 
   // v3.10.x：iOS 用 interactive-widget=resizes-content，安卓用 resizes-visual。
   // template.html 默认 resizes-visual（安卓：visualViewport 收缩可检测键盘 + layout
@@ -1225,7 +1225,7 @@
   //   #img-view-mask 聊天/字卡大图查看全屏遮罩（chatcard.js 动态创建，打开时背景聊天页可继续滚动）；
   //   #chat-rp-panel 红包底部半框、#batch-panel 消息批量操作面板（与 poke-card/emoji-panel 同族底半框）
   // v3.14.x：补 #chat-gdecision-panel 多人决定底部半框（group-decision.js，与帮我决定同族）
-  const FLOAT_SELECTORS = ['#tc-mask', '#cc-export-mask', '#cc-scope-mask', '#call-mask', '#feed-notice-panel', '#feed-comment-panel', '#poke-card', '#emoji-panel', '#chat-ask-panel', '#qa-mask', '#chat-more-panel', '#gc-more-panel', '#chat-search', '#chat-decision-panel', '#chat-gdecision-panel', '#chat-divine-panel', '#chat-rps-panel', '#chat-call-panel', '#chat-pong-panel', '#chat-snake-panel', '#chat-brick-panel', '#chat-c4-panel', '#chat-gift-panel', '#avlib-card', '#ck-panel', '#loc-panel', '.mg-mask', '#modal-mask', '#msg-actions', '#desk-image-viewer', '.desk-lib', '#gc-members-panel', '#gc-at-panel', '#gc-settings-panel', '#img-view-mask', '#chat-rp-panel', '#batch-panel', '#eat-switch-overlay'];
+  const FLOAT_SELECTORS = ['#tc-mask', '#cc-export-mask', '#cc-scope-mask', '#call-mask', '#feed-notice-panel', '#feed-comment-panel', '#poke-card', '#emoji-panel', '#chat-ask-panel', '#qa-mask', '#chat-more-panel', '#gc-more-panel', '#chat-search', '#chat-decision-panel', '#chat-gdecision-panel', '#chat-divine-panel', '#chat-rps-panel', '#chat-call-panel', '#chat-pong-panel', '#chat-snake-panel', '#chat-brick-panel', '#chat-c4-panel', '#chat-ms-panel', '#chat-fish-panel', '#chat-memory-panel', '#chat-gift-panel', '#avlib-card', '#ck-panel', '#loc-panel', '.mg-mask', '#modal-mask', '#msg-actions', '#desk-image-viewer', '.desk-lib', '#gc-members-panel', '#gc-at-panel', '#gc-settings-panel', '#img-view-mask', '#chat-rp-panel', '#batch-panel', '#eat-switch-overlay'];
   // v3.15.x：键盘弹起时把锚定在 .phone 底部的悬浮面板（更多功能/帮我决定/占卜/
   // 问问TA/红包/拍一拍等）重新锚定到可视区底部=输入栏上方。背景（用户反馈
   // 「更多功能里的小功能输入框一点，功能页面被错误挤压到屏幕输入栏一行的下方，

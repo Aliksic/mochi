@@ -2476,8 +2476,22 @@ try {
   // 存在 → 直接 return），此后无人再补位，经期卡从此留在池里，第三页缺首卡。
   // 补两次延迟重跑（200/600ms，均晚于 ensureP3 的 50ms）：!lay 分支只在「新用户且
   // 节点不在第三页」时移回，已装修用户走原 lay 分支语义不变，不破坏删除意图。
-  setTimeout(ensureDeskPeriod, 200);
-  setTimeout(ensureDeskPeriod, 600);
+  // 重跑后若 memo-row（150ms 兜底先落位）排在了经期卡前面，校正回模板默认顺序
+  // 「经期卡 → 备忘心情行 → p3apps」。
+  function ensureDeskPeriodP3Order() {
+    ensureDeskPeriod();
+    try {
+      const p3 = pagesBox.querySelectorAll('.page-slide')[2];
+      if (!p3) return;
+      const dp = p3.querySelector('[data-desk-widget="desk-period"]');
+      const mr = p3.querySelector('[data-desk-widget="memo-row"]');
+      if (dp && mr && Array.prototype.indexOf.call(p3.children, dp) > Array.prototype.indexOf.call(p3.children, mr)) {
+        p3.insertBefore(dp, mr);
+      }
+    } catch (e) {}
+  }
+  setTimeout(ensureDeskPeriodP3Order, 200);
+  setTimeout(ensureDeskPeriodP3Order, 600);
   document.addEventListener('contact-switched', ensureDeskPeriod);
   // v3.13.x：今日备忘/心情卡默认位置改为第三页「经期倒计时」下方（template 已移）。
   // 老用户 desk-layout 里 memo-row 在第一/二页的自动迁到第三页经期卡下方，其余布局不动；

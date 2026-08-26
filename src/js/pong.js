@@ -499,15 +499,16 @@
       localStorage.setItem(statsKey, JSON.stringify(stats));
     } catch (e) {}
     const fit = window.taFit ? window.taFit : function (x) { return x; };
-    // v3.15.x：Pong 联动心意币——胜我得 ¥2 / 平 ¥1 / TA 赢 TA 得 ¥2（日内封顶 ¥4）
+    // v3.15.x 二调：奖励对齐红包金额体系——胜 80% ¥13.14 / 20% ¥52，平 ¥5.2，TA 赢 TA 得 ¥13.14（日封顶 ¥104）
     var coinLine = '';
     try {
-      var COIN_CAP = 400;
+      var COIN_CAP = 10400;
       var day = new Date().toISOString().slice(0, 10);
       var ck = (window.activePrefix && window.activePrefix() || 'xy-home-v2') + ':ml2_coin_pong_' + day;
       var cur = Number(localStorage.getItem(ck)) || 0;
       if (cur < COIN_CAP) {
-        var real = Math.min(draw ? 100 : 200, COIN_CAP - cur);
+        var pongWinFen = Math.random() < 0.2 ? 5200 : 1314;
+        var real = Math.min(draw ? 520 : pongWinFen, COIN_CAP - cur);
         try { localStorage.setItem(ck, String(cur + real)); } catch (e2) {}
         if (real > 0 && typeof window.giftWalletChange === 'function') {
           var toTa = !draw && !playerWin;

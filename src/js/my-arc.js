@@ -489,12 +489,7 @@
   function bind() {
     const back = document.getElementById('myarc-back');
     if (back) back.addEventListener('click', function () { window.closeMyArc(); });
-    const toTa = document.getElementById('myarc-ta');
-    if (toTa) toTa.addEventListener('click', function (e) {
-      e.stopPropagation();
-      if (window.openNarcShared) window.openNarcShared();
-      else if (window.openNarc) window.openNarc();
-    });
+    // 右上角不放「去TA的档案」按钮（用户要求）；去 TA 档案走总览末行「我们的共同记录」桥接
     const appIcon = document.querySelector('.app[data-app="my-arc"]');
     if (appIcon) {
       appIcon.addEventListener('click', function () {

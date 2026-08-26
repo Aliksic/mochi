@@ -638,13 +638,14 @@ font-size:11px; color:var(--muted); letter-spacing:.5px;
 white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0;
 }
 .mini-row { display:flex; gap:12px; margin-bottom:14px; flex-shrink:0; }
-.mini-card { flex:1; border-radius:20px; padding:14px; box-shadow:0 6px 16px rgba(0,0,0,.06); background:var(--widget-bg); opacity:var(--widget-opacity); border:1px solid var(--widget-border); }
+.mini-card { flex:1; min-height:77px; border-radius:20px; padding:14px; box-shadow:0 6px 16px rgba(0,0,0,.06); background:var(--widget-bg); opacity:var(--widget-opacity); border:1px solid var(--widget-border); display:flex; flex-direction:column; justify-content:center; }
 .mc-top { font-size:11px; color:var(--muted); letter-spacing:1px; }
 .mc-b { font-size:13px; font-weight:600; color:var(--ink); margin-top:6px; line-height:1.45; }
 .mc-b b { font-size:16px; }
 .checkin {
 display:flex; align-items:center; gap:10px;
 border-radius:18px; padding:12px 14px; margin:0 0 14px; flex-shrink:0;
+min-height:66px;
 background:var(--widget-bg);
 box-shadow:0 4px 14px rgba(0,0,0,.05);
 opacity:var(--widget-opacity);
@@ -669,7 +670,8 @@ font-family:inherit; -webkit-tap-highlight-color:transparent;
 .ck-btn.done { background:#e2e2e2; color:#777; box-shadow:none; }
 .weekend-box {
 position:relative; display:flex; align-items:center; justify-content:space-between; gap:8px;
-border-radius:16px; padding:10px 12px; margin:0 0 14px; flex-shrink:0;
+border-radius:16px; padding:9px 12px; margin:0 0 14px; flex-shrink:0;
+min-height:66px; box-sizing:border-box;
 background:var(--widget-bg);
 box-shadow:0 4px 14px rgba(0,0,0,.05);
 opacity:var(--widget-opacity);
@@ -1001,8 +1003,7 @@ color:var(--ink); display:flex; align-items:center; justify-content:center;
 #mw-bar { cursor:pointer; }
 .memo-card, .mood-card { cursor:pointer; }
 .memo-card .mc-b, .mood-card .mc-b { font-size:12px; }
-.memo-card { padding:10px 14px; }
-.week-card { border-radius:20px; padding:8px 14px; margin-bottom:14px; }
+.week-card { border-radius:20px; padding:8px 14px; margin-bottom:14px; min-height:77px; box-sizing:border-box; display:flex; flex-direction:column; justify-content:center; }
 .week-days { display:flex; gap:6px; margin-top:5px; }
 .week-day {
 flex:1; text-align:center; padding:4px 0; border-radius:10px;
@@ -5096,6 +5097,320 @@ to { filter:brightness(1.25) drop-shadow(0 0 7px rgba(255,224,138,.9)); }
 .c4-disc { transition-duration:0s !important; }
 .c4-land, .c4-win, .c4-shake { animation:none; }
 }
+#chat-ms-panel { height:auto; max-height:86%; }
+#chat-ms-panel .poke-card-scroll { min-height:0; max-height:none; }
+.ms-wrap { display:flex; flex-direction:column; align-items:center; gap:8px; padding:6px 4px 4px; width:100%; }
+.ms-topbar { display:flex; align-items:center; justify-content:space-between; width:100%; max-width:352px; padding:0 2px; min-height:20px; }
+.ms-hearts { font-size:14px; letter-spacing:2px; line-height:1; }
+.ms-prog { font-size:11.5px; color:var(--muted,#999); font-variant-numeric:tabular-nums; }
+.ms-stage { position:relative; width:100%; max-width:352px; margin:0 auto; }
+.ms-board { display:grid; gap:3px; margin:0 auto; background:rgba(127,127,127,.12); border:1px solid rgba(127,127,127,.15); border-radius:10px; padding:5px; user-select:none; -webkit-user-select:none; touch-action:manipulation; width:max-content; }
+.ms-cell { position:relative; box-sizing:border-box; border-radius:6px; background:linear-gradient(150deg, rgba(255,255,255,.92), rgba(0,0,0,.07)); box-shadow:inset 0 -2px 3px rgba(0,0,0,.13), inset 0 2px 2px rgba(255,255,255,.6), 0 1px 2px rgba(0,0,0,.08); cursor:pointer; display:flex; align-items:center; justify-content:center; font-weight:700; line-height:1; -webkit-tap-highlight-color:transparent; }
+@media (hover:hover) {
+.ms-cell:not(.ms-open):hover { filter:brightness(1.06); }
+}
+.ms-cell.ms-open { background:rgba(127,127,127,.10); box-shadow:none; cursor:default; }
+.ms-boom { background:#f2d4cd !important; }
+.ms-fyou { background:linear-gradient(150deg, #fdeae2, #f9d3c4); }
+.ms-fta { background:linear-gradient(150deg, #fdf3d9, #f7e3ad); }
+.ms-face { pointer-events:none; transform:translateZ(0); }
+.ms-face.ms-pop { animation:mspop .22s ease-out; }
+@keyframes mspop { 0% { transform:scale(.5); opacity:.25; } 100% { transform:scale(1); opacity:1; } }
+.ms-n1 { color:#3a7fd5; } .ms-n2 { color:#2e8b57; } .ms-n3 { color:#d9534f; } .ms-n4 { color:#7a4fd9; }
+.ms-n5 { color:#b7791f; } .ms-n6 { color:#2aa198; } .ms-n7 { color:#666; } .ms-n8 { color:#999; }
+.ms-status { min-height:20px; font-size:13px; color:var(--muted,#888); text-align:center; width:100%; }
+.ms-foot { font-size:11px; color:var(--muted,#aaa); text-align:center; line-height:1.7; width:100%; }
+.ms-shake { animation:msshake .26s ease-in-out; }
+@keyframes msshake { 0%,100% { transform:translateX(0); } 25% { transform:translateX(-3px); } 50% { transform:translateX(3px); } 75% { transform:translateX(-2px); } }
+.ms-overlay { border-radius:12px; }
+.ms-diffs { display:flex; flex-wrap:wrap; gap:6px; justify-content:center; margin-bottom:8px; }
+.ms-diff { font-size:12px; font-family:inherit; border:1px solid rgba(255,255,255,.35); background:rgba(255,255,255,.12); color:rgba(255,255,255,.85); border-radius:14px; padding:6px 12px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+.ms-diff.on { background:#e8533d; border-color:#e8533d; color:#fff; font-weight:700; }
+.ms-tip { font-size:12.5px; color:rgba(255,255,255,.88); line-height:1.8; text-align:center; margin-bottom:2px; }
+.ms-note { font-size:11px; color:rgba(255,255,255,.6); text-align:center; margin-bottom:4px; }
+.ms-quote { font-size:11.5px; color:rgba(255,255,255,.62); font-style:normal; }
+.snake-icon-btn.ms-mode-on { background:#fde8e0; color:#e8533d; }
+@media (prefers-reduced-motion: reduce) {
+.ms-face.ms-pop, .ms-shake { animation:none; }
+}
+#chat-fish-panel { height:auto; max-height:86%; }
+#chat-fish-panel .poke-card-scroll { min-height:0; max-height:none; }
+.fish-wrap { display:flex; flex-direction:column; gap:8px; padding:2px 2px 4px; }
+.fish-scene {
+position:relative; height:148px; border-radius:16px; overflow:hidden;
+background:linear-gradient(180deg,#a8d8f0 0%,#d6effc 52%,#eaf7ff 58%,#eaf7ff 100%);
+}
+.fish-sky { position:absolute; left:0; right:0; top:0; height:58%; }
+.fish-sky::before {
+content:''; position:absolute; right:14px; top:10px; width:22px; height:22px; border-radius:50%;
+background:radial-gradient(circle at 38% 35%, #fff3b0, #ffd75e 70%);
+box-shadow:0 0 12px rgba(255,215,94,.55);
+}
+.fish-sky::after {
+content:''; position:absolute; left:16px; top:16px; width:46px; height:13px; border-radius:99px;
+background:rgba(255,255,255,.85); box-shadow:62px 12px 0 -3px rgba(255,255,255,.7);
+}
+.fish-water {
+position:absolute; left:0; right:0; bottom:0; height:42%;
+background:linear-gradient(180deg,#79c4de,#4f97bd);
+border-top:2px solid rgba(255,255,255,.65); overflow:hidden;
+}
+.fish-water::before {
+content:''; position:absolute; inset:-2px -40px;
+background:repeating-linear-gradient(105deg, rgba(255,255,255,.13) 0 12px, rgba(255,255,255,0) 12px 30px);
+animation:fishwave 5s linear infinite;
+}
+@keyframes fishwave { from { transform:translateX(0); } to { transform:translateX(36px); } }
+.fish-persons { position:absolute; left:0; right:0; top:0; height:58%;
+display:flex; justify-content:space-evenly; align-items:flex-end; }
+.fish-person { position:relative; width:72px; height:54px; transition:opacity .3s, filter .3s, transform .3s; }
+.fish-person::before {
+content:''; position:absolute; left:50%; bottom:21px; width:15px; height:15px; margin-left:-7.5px;
+border-radius:50%; background:#ffd9b8; z-index:1;
+}
+.fish-person::after {
+content:''; position:absolute; left:50%; bottom:3px; width:24px; height:20px; margin-left:-12px;
+border-radius:9px 9px 5px 5px; z-index:1;
+}
+.fish-me::after { background:#6a9ef0; }
+.fish-ta::after { background:#f08bb0; }
+.fish-person-name {
+position:absolute; bottom:-6px; left:50%; transform:translateX(-50%);
+font-size:9.5px; color:#fff; background:rgba(60,90,120,.45);
+padding:1px 8px; border-radius:99px; white-space:nowrap; z-index:2;
+}
+.fish-ta-state {
+position:absolute; top:-8px; left:50%; transform:translateX(-50%);
+font-size:10px; color:#5a7c95; background:rgba(255,255,255,.82);
+padding:2px 8px; border-radius:99px; white-space:nowrap; z-index:3;
+}
+.fish-scene[data-ta="biting"] .fish-ta-state { color:#fff; background:#f2764a; }
+.fish-scene[data-ta="rest"] .fish-ta { opacity:.55; filter:saturate(.55); }
+.fish-scene[data-ta="daze"] .fish-ta { opacity:.85; }
+.fish-scene[data-ta="shift"] .fish-ta { transform:translateX(-8px); }
+.fish-rod {
+position:absolute; bottom:28px; left:30px; width:54px; height:3px; border-radius:2px;
+background:linear-gradient(90deg,#9c7b5e,#7a5b40);
+transform-origin:0 100%; transform:rotate(-30deg);
+transition:transform .25s ease; z-index:0;
+}
+.fish-ta .fish-rod {
+left:auto; right:30px;
+transform-origin:100% 100%; transform:rotate(30deg);
+background:linear-gradient(270deg,#9c7b5e,#7a5b40);
+}
+.fish-scene[data-mine="waiting"] .fish-me .fish-rod,
+.fish-scene[data-ta="waiting"] .fish-ta .fish-rod { }
+.fish-scene[data-mine="biting"] .fish-me .fish-rod { animation:fishrodmine .32s linear infinite; }
+@keyframes fishrodmine { 0%,100% { transform:rotate(-24deg); } 50% { transform:rotate(-34deg); } }
+.fish-scene[data-ta="casting"] .fish-ta .fish-rod { transform:rotate(44deg); }
+.fish-scene[data-ta="biting"] .fish-ta .fish-rod { animation:fishrodta .32s linear infinite; }
+@keyframes fishrodta { 0%,100% { transform:rotate(24deg); } 50% { transform:rotate(34deg); } }
+.fish-bobber {
+position:absolute; bottom:26%; width:10px; height:15px; z-index:2; display:none;
+border-radius:50%/60% 60% 42% 42%;
+background:linear-gradient(#fff 0 42%, #f05a5a 42%);
+border:1px solid rgba(0,0,0,.18);
+}
+.fish-bobber-mine { left:46%; }
+.fish-bobber-ta { right:46%; }
+.fish-scene[data-mine="waiting"] .fish-bobber-mine,
+.fish-scene[data-ta="waiting"] .fish-bobber-ta,
+.fish-scene[data-ta="casting"] .fish-bobber-ta {
+display:block; animation:fishbobfloat 2.4s ease-in-out infinite;
+}
+.fish-scene[data-mine="biting"] .fish-bobber-mine {
+display:block;
+background:linear-gradient(#cfe8ff 0 42%, #2f6fe0 42%);
+animation:fishbobbite .38s ease-in-out infinite;
+}
+.fish-scene[data-ta="biting"] .fish-bobber-ta {
+display:block;
+background:linear-gradient(#cfe8ff 0 42%, #2f6fe0 42%);
+animation:fishbobbite .38s ease-in-out infinite;
+}
+@keyframes fishbobfloat { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-3px); } }
+@keyframes fishbobbite { 0%,100% { transform:translateY(0) rotate(-10deg); } 50% { transform:translateY(-5px) rotate(10deg); } }
+.fish-status { min-height:18px; font-size:12.5px; color:var(--muted); text-align:center; line-height:1.5; }
+.fish-timing-wrap { display:flex; flex-direction:column; gap:5px; padding:0 4px; }
+.fish-timing-wrap[hidden] { display:none; }
+.fish-timing-label { font-size:11px; color:#b7791f; text-align:center; letter-spacing:.3px; }
+.fish-timing-bar {
+position:relative; height:16px; border-radius:99px; overflow:hidden;
+background:linear-gradient(90deg,#f9b4ab 0%,#fbd3a4 22%,#a9dfa6 38%,#8fd48b 50%,#a9dfa6 68%,#fbd3a4 82%,#f9b4ab 100%);
+box-shadow:inset 0 1px 3px rgba(0,0,0,.15);
+}
+.fish-timing-good {
+position:absolute; left:38%; width:30%; top:0; bottom:0;
+border-left:2px dashed rgba(255,255,255,.75); border-right:2px dashed rgba(255,255,255,.75);
+background:rgba(255,255,255,.18);
+}
+.fish-timing-cursor {
+position:absolute; top:0; bottom:0; width:4px; margin-left:-2px; border-radius:2px;
+background:#fff; box-shadow:0 0 6px rgba(0,0,0,.35), 0 0 2px #fff;
+}
+.fish-actions { display:flex; gap:10px; padding:0 4px; }
+.fish-btn {
+flex:1; padding:11px 0; border:none; border-radius:14px; font-size:14.5px; font-weight:700;
+font-family:inherit; cursor:pointer; color:#fff;
+background:linear-gradient(135deg,#5aa7e6,#3d7fc4);
+box-shadow:0 3px 8px rgba(61,127,196,.35);
+-webkit-tap-highlight-color:transparent;
+}
+.fish-btn:active { transform:translateY(1px); box-shadow:0 2px 4px rgba(61,127,196,.3); }
+.fish-btn[hidden] { display:none; }
+.fish-reel {
+background:linear-gradient(135deg,#f2994a,#e8683a);
+box-shadow:0 3px 8px rgba(232,104,58,.35);
+animation:fishreelpulse 1s ease-in-out infinite;
+}
+@keyframes fishreelpulse { 0%,100% { filter:brightness(1); } 50% { filter:brightness(1.14); } }
+.fish-tabs { display:flex; gap:8px; padding:0 4px; }
+.fish-tab {
+flex:1; padding:8px 0; border:none; border-radius:12px; font-size:12.5px; font-weight:600;
+font-family:inherit; cursor:pointer;
+background:rgba(90,140,190,.1); color:#6b89a5;
+-webkit-tap-highlight-color:transparent;
+}
+.fish-tab.sel {
+background:linear-gradient(135deg,#5aa7e6,#3d7fc4); color:#fff;
+box-shadow:0 2px 6px rgba(61,127,196,.3);
+}
+.fish-page { min-height:80px; }
+.fish-sub { font-size:13px; font-weight:800; color:var(--ink); margin:2px 4px 8px; }
+.fish-subhead { display:flex; align-items:center; gap:6px; margin:10px 4px 6px;
+font-size:11.5px; font-weight:700; color:#6b89a5; }
+.fish-subhead::after { content:''; flex:1; height:1px; background:rgba(107,137,165,.25); }
+.fish-row {
+display:flex; align-items:center; gap:9px; padding:8px 11px; margin-bottom:6px;
+border-radius:12px; background:rgba(127,160,190,.09); font-size:13px;
+}
+.fish-ico { font-size:19px; flex-shrink:0; }
+.fish-name { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+font-weight:600; color:var(--ink); }
+.fish-gift-tag {
+font-style:normal; font-size:9.5px; color:#e05a8a; background:rgba(240,139,176,.16);
+border-radius:99px; padding:1px 6px; margin-left:5px; vertical-align:1px;
+}
+.fish-cnt { font-size:12px; color:var(--muted); flex-shrink:0; }
+.fish-price { font-size:12.5px; font-weight:700; color:#3d9a5f; flex-shrink:0; font-variant-numeric:tabular-nums; }
+.fish-empty { padding:16px 0 10px; text-align:center; font-size:12px; color:rgba(0,0,0,.35); }
+.fish-sellbar {
+display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:10px;
+padding:9px 11px; border-radius:12px; background:rgba(90,140,190,.08);
+font-size:12px; color:#5a7c95;
+}
+.fish-sellbar b { color:#e8963a; font-size:13px; }
+.fish-sell {
+flex-shrink:0; padding:8px 16px; border:none; border-radius:99px;
+font-size:12.5px; font-weight:700; font-family:inherit; cursor:pointer; color:#fff;
+background:linear-gradient(135deg,#f2b04a,#e88a3a);
+box-shadow:0 2px 6px rgba(232,138,58,.35);
+-webkit-tap-highlight-color:transparent;
+}
+.fish-sell:active { transform:translateY(1px); }
+.fish-dex-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; }
+.fish-dex-item {
+position:relative; display:flex; align-items:center; gap:8px; padding:9px 11px;
+border-radius:12px; background:rgba(127,160,190,.09);
+font-size:12.5px; color:rgba(0,0,0,.32);
+}
+.fish-dex-item.got { color:var(--ink); font-weight:600; background:rgba(143,212,139,.15); }
+.fish-dex-ico { font-size:17px; flex-shrink:0; }
+.fish-dex-item:not(.got) .fish-dex-ico { opacity:.55; }
+.fish-dex-name { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.fish-dex-check {
+position:absolute; top:-4px; right:-4px; width:17px; height:17px; border-radius:50%;
+background:#5fbf72; color:#fff; font-size:11px; line-height:17px; text-align:center;
+box-shadow:0 1px 3px rgba(0,0,0,.2);
+}
+.fish-dex-foot { margin-top:10px; text-align:center; font-size:11.5px; color:rgba(0,0,0,.4); }
+.fish-exch {
+flex-shrink:0; padding:6px 12px; border:none; border-radius:99px;
+font-size:11.5px; font-weight:700; font-family:inherit; cursor:pointer;
+color:#8a6d1f; background:rgba(240,200,100,.25);
+-webkit-tap-highlight-color:transparent;
+}
+.fish-exch:active { background:rgba(240,200,100,.45); }
+.fish-gift-ts { flex-shrink:0; font-size:10.5px; color:rgba(0,0,0,.35); }
+.fish-splash {
+position:absolute; left:50%; top:42%; z-index:5; font-size:21px;
+pointer-events:none; animation:fishrise 1.15s ease-out forwards;
+}
+@keyframes fishrise {
+0% { opacity:0; transform:translate(-50%,8px) scale(.5); }
+25% { opacity:1; }
+100% { opacity:0; transform:translate(-50%,-30px) scale(1.2); }
+}
+@media (prefers-reduced-motion: reduce) {
+.fish-water::before { animation:none; }
+.fish-bobber { animation:none !important; }
+.fish-reel { animation:none; }
+.fish-scene[data-mine="biting"] .fish-me .fish-rod,
+.fish-scene[data-ta="biting"] .fish-ta .fish-rod { animation:none; }
+.fish-splash { animation-duration:.01s; opacity:0; }
+}
+[data-theme="dark"] .fish-scene { background:linear-gradient(180deg,#233246 0%,#2c4258 52%,#33495e 58%,#33495e 100%); }
+[data-theme="dark"] .fish-sky::after { background:rgba(255,255,255,.35); box-shadow:62px 12px 0 -3px rgba(255,255,255,.26); }
+[data-theme="dark"] .fish-water { background:linear-gradient(180deg,#2b5d78,#1f4258); border-top-color:rgba(255,255,255,.3); }
+[data-theme="dark"] .fish-water::before { background:repeating-linear-gradient(105deg, rgba(255,255,255,.07) 0 12px, rgba(255,255,255,0) 12px 30px); }
+[data-theme="dark"] .fish-person-name { background:rgba(20,30,40,.6); }
+[data-theme="dark"] .fish-ta-state { color:#bcd6e8; background:rgba(20,30,40,.75); }
+[data-theme="dark"] .fish-row, [data-theme="dark"] .fish-dex-item { background:rgba(255,255,255,.06); }
+[data-theme="dark"] .fish-dex-item.got { background:rgba(143,212,139,.12); }
+[data-theme="dark"] .fish-dex-item:not(.got) { color:rgba(255,255,255,.32); }
+[data-theme="dark"] .fish-empty, [data-theme="dark"] .fish-dex-foot { color:rgba(255,255,255,.38); }
+[data-theme="dark"] .fish-sellbar { background:rgba(255,255,255,.05); color:#9db8cc; }
+[data-theme="dark"] .fish-tab { background:rgba(255,255,255,.07); color:#9db8cc; }
+[data-theme="dark"] .fish-tab.sel { color:#fff; }
+[data-theme="dark"] .fish-gift-ts { color:rgba(255,255,255,.35); }
+#chat-memory-panel { height:auto; max-height:86%; }
+#chat-memory-panel .poke-card-scroll { min-height:0; max-height:none; }
+.mgm-wrap { display:flex; flex-direction:column; align-items:center; gap:8px; padding:6px 4px 4px; }
+.mgm-info { display:flex; align-items:center; justify-content:center; gap:12px; width:100%; flex-wrap:wrap; }
+.mgm-turn { font-size:13px; font-weight:700; color:var(--ink); background:rgba(127,127,127,.1); border-radius:14px; padding:4px 12px; }
+.mgm-chem, .mgm-coin { font-size:12px; color:var(--muted); }
+.mgm-stage { position:relative; width:100%; max-width:360px; margin:0 auto; }
+.memory-board { display:grid; gap:7px; user-select:none; -webkit-user-select:none; touch-action:manipulation; }
+.mgm-card { position:relative; border:none; padding:0; background:transparent; cursor:pointer; perspective:620px; border-radius:10px; -webkit-tap-highlight-color:transparent; }
+.mgm-card::before { content:''; display:block; padding-top:136%; }
+.mgm-in { position:absolute; inset:0; transform-style:preserve-3d; transition:transform .38s cubic-bezier(.4,.2,.2,1); }
+.mgm-card.flipped .mgm-in { transform:rotateY(180deg); }
+.mgm-back, .mgm-face {
+position:absolute; inset:0;
+backface-visibility:hidden; -webkit-backface-visibility:hidden;
+border-radius:10px; display:flex; align-items:center; justify-content:center; overflow:hidden;
+}
+.mgm-back {
+background:linear-gradient(145deg,#5b7cfa 0%,#8a63d2 55%,#b163b8 100%);
+box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.3), inset 0 0 14px rgba(255,255,255,.12), 0 2px 5px rgba(60,60,120,.22);
+}
+.mgm-back i { font-style:normal; color:rgba(255,255,255,.92); font-size:calc(var(--mgm-fs,27px) * .62); text-shadow:0 1px 2px rgba(0,0,0,.2); }
+.mgm-face {
+transform:rotateY(180deg);
+background:rgba(255,255,255,.96); border:1px solid rgba(0,0,0,.08);
+box-shadow:0 1px 3px rgba(0,0,0,.08);
+font-size:var(--mgm-fs,27px); line-height:1;
+}
+.mgm-card.matched { cursor:default; }
+.mgm-own-p .mgm-face { background:#eaf3ff; box-shadow:inset 0 0 0 2px #3a7fd5; }
+.mgm-own-t .mgm-face { background:#fff7e6; box-shadow:inset 0 0 0 2px #f0b03c; }
+.mgm-card.matched .mgm-in { animation:mgmpop .34s ease-out; }
+@keyframes mgmpop {
+0% { transform:rotateY(180deg) scale(1); }
+50% { transform:rotateY(180deg) scale(1.09); }
+100% { transform:rotateY(180deg) scale(1); }
+}
+.mgm-hint { min-height:18px; font-size:13px; color:var(--muted); text-align:center; }
+@media (prefers-reduced-motion: reduce) {
+.mgm-in { transition-duration:0s !important; }
+.mgm-card.matched .mgm-in { animation:none; }
+}
+[data-theme="dark"] .mgm-turn { background:rgba(255,255,255,.08); }
+[data-theme="dark"] .mgm-chem, [data-theme="dark"] .mgm-coin, [data-theme="dark"] .mgm-hint { color:#9aa3ad; }
+[data-theme="dark"] .mgm-face { background:var(--dark-card-92); border-color:var(--dark-border); }
+[data-theme="dark"] .mgm-own-p .mgm-face { background:rgba(58,127,213,.24); }
+[data-theme="dark"] .mgm-own-t .mgm-face { background:rgba(240,176,60,.2); }
 .msg-gift { align-self: center; width: 100%; display: flex; justify-content: center; margin: 8px 0; }
 .msg-gift-card {
 width: min(260px, 80vw); padding: 22px 18px 14px; border-radius: 20px; box-sizing: border-box;
@@ -6721,7 +7036,7 @@ color: #c67800;
 .memo-manage { text-align:center; margin-top:14px; }
 .memo-send-btn { font-size:12px; color:var(--ink-soft,#888); background:rgba(255,255,255,.7); border:1px solid rgba(0,0,0,.12); border-radius:16px; padding:6px 16px; cursor:pointer; font-family:inherit; -webkit-tap-highlight-color:transparent; }
 .memo-send-btn:active { background:rgba(0,0,0,.06); }
-.memo-app-badge { margin-top:4px; font-size:10px; line-height:1.2; color:var(--ink-soft,#888); background:rgba(0,0,0,.045); border-radius:8px; padding:2px 8px; display:flex; align-items:center; justify-content:space-between; gap:6px; cursor:pointer; -webkit-tap-highlight-color:transparent; white-space:nowrap; overflow:hidden; }
+.memo-app-badge { margin:0 0 14px; min-height:66px; padding:12px 14px; font-size:12px; font-weight:600; color:var(--ink-soft,#555); background:var(--widget-bg,#fff); opacity:var(--widget-opacity,1); border:1px solid var(--widget-border,rgba(0,0,0,.1)); box-shadow:0 4px 14px rgba(0,0,0,.05); border-radius:18px; display:flex; align-items:center; justify-content:space-between; gap:10px; cursor:pointer; -webkit-tap-highlight-color:transparent; white-space:nowrap; overflow:hidden; }
 .memo-app-badge::after { content:'›'; font-size:12px; color:var(--ink-soft,#bbb); }
 .memo-app-badge.urgent { color:#e05a5a; background:rgba(224,90,90,.08); }
 .memo-app-badge.urgent::after { color:#e05a5a; }
@@ -7355,7 +7670,7 @@ transition-duration: .01ms !important;
       </div>
       <div class="splash-dots"><i></i><i></i><i></i></div>
       <div class="splash-brand">小红书@言序（1842523578）</div>
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787739857096">Mochi 字卡传讯 v3.6.244 · 部署于 2026-08-26 18:24</div>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787741185974">Mochi 字卡传讯 v3.6.245 · 部署于 2026-08-26 18:46</div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
       <div class="splash-loading" id="splash-loading">正在加载数据…</div>
@@ -8408,7 +8723,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.6.244</div>
+      <div class="ver">Mochi 字卡传讯 v3.6.245</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -8550,7 +8865,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.6.244</span>
+              <span class="lic-ver">v3.6.245</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -10508,6 +10823,73 @@ transition-duration: .01ms !important;
           </div>
         </div>
       </div>
+      <!-- 合作扫雷：聊天页底部半框（和 TA 轮流探索一张雷区，共用 ❤️❤️❤️，踩雷不即死） -->
+      <div class="poke-card" id="chat-ms-panel" hidden>
+        <div class="poke-card-head">
+          <span>合作扫雷 · <b id="ms-partner-name">TA</b></span>
+          <div class="snake-head-actions">
+            <button class="snake-icon-btn" id="ms-mode" title="插旗模式开关">⛏️</button>
+            <button class="snake-icon-btn" id="ms-bag" title="小收藏">🎒</button>
+            <button class="snake-icon-btn" id="ms-sound" title="音效开关">🔊</button>
+            <button class="poke-card-close" id="ms-close">✕</button>
+          </div>
+        </div>
+        <div class="poke-card-scroll">
+          <div class="ms-wrap">
+            <div class="ms-topbar"><span class="ms-hearts" id="ms-lives"></span><span class="ms-prog" id="ms-prog"></span></div>
+            <div class="ms-stage" id="ms-stage">
+              <div class="ms-board" id="ms-board"></div>
+              <div class="pong-overlay ms-overlay" id="ms-overlay" hidden>
+                <div class="pong-overlay-title" id="ms-ov-title">合作扫雷</div>
+                <div class="pong-overlay-body" id="ms-ov-body"></div>
+                <div class="pong-overlay-btns">
+                  <button class="pong-overlay-btn" id="ms-btn-start" type="button">开始探索</button>
+                  <button class="pong-overlay-btn pong-overlay-btn2" id="ms-btn-end" type="button" hidden>结束游戏</button>
+                </div>
+              </div>
+            </div>
+            <div class="ms-status" id="ms-status">选择难度开始探索</div>
+            <div class="ms-foot">点击挖开 · 长按插旗 · 数字=周围雷数 · 🪙🎁🌸 藏在格子里</div>
+          </div>
+        </div>
+      </div>
+      <!-- 记忆翻牌：聊天页底部半框（双人合作记忆配对，TA 由代码控制、按难度概率记牌） -->
+      <div class="poke-card" id="chat-memory-panel" hidden>
+        <div class="poke-card-head">
+          <span>记忆翻牌 · <b id="memory-partner-name">TA</b></span>
+          <div class="snake-head-actions">
+            <select class="snake-diff" id="memory-diff" title="难度">
+              <option value="casual">🌱 休闲 3×4</option>
+              <option value="normal" selected>🌙 普通 4×4</option>
+              <option value="hard">⭐ 挑战 4×5</option>
+            </select>
+            <button class="snake-icon-btn" id="memory-sound" title="音效开关">🔊</button>
+            <button class="poke-card-close" id="memory-close">✕</button>
+          </div>
+        </div>
+        <div class="poke-card-scroll">
+          <div class="mgm-wrap">
+            <div class="mgm-info">
+              <span class="mgm-turn" id="memory-turn"></span>
+              <span class="mgm-chem" id="memory-chem">💕 默契 —</span>
+              <span class="mgm-coin" id="memory-coin">心意币 +0</span>
+            </div>
+            <div class="mgm-stage">
+              <div class="memory-board" id="memory-board"></div>
+              <div class="pong-overlay c4-overlay mgm-overlay" id="memory-overlay" hidden>
+                <div class="pong-overlay-title" id="memory-overlay-title">记忆翻牌</div>
+                <div class="pong-overlay-body" id="memory-overlay-body"></div>
+                <div class="pong-overlay-btns">
+                  <button class="pong-overlay-btn" id="memory-overlay-btn" type="button">开始</button>
+                  <button class="pong-overlay-btn pong-overlay-btn2" id="memory-overlay-btn2" type="button" hidden>返回小游戏</button>
+                </div>
+              </div>
+            </div>
+            <div class="mgm-hint" id="memory-hint"></div>
+            <div class="pong-foot">和 TA 轮流翻两张 · 配对成功再来一次 · 一起找完所有牌</div>
+          </div>
+        </div>
+      </div>
       <!-- 红包：聊天页底部半框（我和 TA 互发红包，情侣特殊金额 / 随机 / 七夕特别） -->
       <div class="poke-card" id="chat-rp-panel" hidden>
         <div class="poke-card-head">
@@ -10725,6 +11107,14 @@ transition-duration: .01ms !important;
           <button class="more-item" id="more-c4" data-mcat="game" title="四子棋">
             <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="3.2"/><circle cx="16" cy="8" r="3.2"/><circle cx="8" cy="16" r="3.2"/><circle cx="16" cy="16" r="3.2"/></svg></span>
             <span>四子棋</span>
+          </button>
+          <button class="more-item" id="more-ms" data-mcat="game" title="合作扫雷（和TA一起探索雷区）">
+            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="10" cy="14" r="4"/><path d="M13.2 10.8L15.5 8.5"/><path d="M17.5 5.5h3"/><path d="M19 4v3"/></svg></span>
+            <span>扫雷</span>
+          </button>
+          <button class="more-item" id="more-memory" data-mcat="game" title="记忆翻牌（和TA合作）">
+            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="12.5" height="17" rx="2"/><path d="M9.5 2.5H19a2 2 0 012 2v14"/><path d="M9.25 12.6l1.05 2.15 2.15 1.05-2.15 1.05-1.05 2.15-1.05-2.15-2.15-1.05 2.15-1.05z"/></svg></span>
+            <span>记忆翻牌</span>
           </button>
           <button class="more-item" id="more-ck" data-mcat="tool" title="寻踪（打开 TA 的日常）">
             <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/><path d="M12 3a9 9 0 000 18"/></svg></span>
@@ -19948,12 +20338,20 @@ const RP_LEGACY_WALLET_KEY = 'rp-wallet';
 const RP_DAILY_PREFIX = 'ml2_rp_daily_';
 const RP_EXPIRY_MS = 24 * 60 * 60 * 1000;
 const RP_SPECIAL_FEN = [520, 5200, 52000, 520000, 1314, 131400]; // 5.2/52/520/5200/13.14/1314 元
+const RP_WALLET_DEFAULT_FEN = 52000;
 function rpWalletGet() {
 try {
 const w = JSON.parse(store.get(RP_WALLET_KEY) || '');
-if (typeof w.myBalance === 'number' && typeof w.systemBalance === 'number') return w;
+if (typeof w.myBalance === 'number' && typeof w.systemBalance === 'number') {
+if (w.myBalance === 99999999 && w.systemBalance === 99999999) {
+const nw = { myBalance: RP_WALLET_DEFAULT_FEN, systemBalance: RP_WALLET_DEFAULT_FEN };
+store.set(RP_WALLET_KEY, JSON.stringify(nw));
+return nw;
+}
+return w;
+}
 } catch (e) {}
-let seed = { myBalance: 99999999, systemBalance: 99999999 };
+let seed = { myBalance: RP_WALLET_DEFAULT_FEN, systemBalance: RP_WALLET_DEFAULT_FEN };
 try {
 const o = JSON.parse(store.get(RP_LEGACY_WALLET_KEY) || '');
 if (typeof o.myBalance === 'number' && typeof o.systemBalance === 'number') seed = { myBalance: o.myBalance, systemBalance: o.systemBalance };
@@ -20012,20 +20410,18 @@ if (rpDailyCount() >= 5) return;
 const qixi = isQixiToday();
 const baseRate = qixi ? 0.08 : 0.04;
 if (Math.random() >= baseRate) return;
-const wallet = rpWalletGet();
-if (wallet.systemBalance < 1) return;
 let amtFen, wish;
 if (qixi && Math.random() < 0.6) {
-const qixiPool = [777, 7777, 77777].filter(f => f <= wallet.systemBalance);
+const qixiPool = [777, 7777, 77777];
 if (qixiPool.length) {
 amtFen = pick(qixiPool);
 wish = pick(['七夕快乐', '七夕快乐呀', '宝宝七夕快乐', '今天七夕，给你花']);
 } else {
-amtFen = genRpAmount(wallet.systemBalance);
+amtFen = genRpAmount(5200000);
 wish = '七夕快乐';
 }
 } else {
-amtFen = genRpAmount(wallet.systemBalance);
+amtFen = genRpAmount(5200000);
 wish = pick(['心意', '给你花', '小礼物', '辛苦啦', '开心一下']);
 }
 if (amtFen < 1) return;
@@ -20273,10 +20669,8 @@ const wish = (rpWishInput && rpWishInput.value || '').trim() || (isQixiToday() ?
 const amtFen = Math.round(amt * 100);
 const wallet = rpWalletGet();
 if (rpSide === 'out') {
-if (amtFen > wallet.myBalance) { toast('我的心意币不足'); return; }
 wallet.myBalance -= amtFen;
 } else {
-if (amtFen > wallet.systemBalance) { toast(window.taFit ? window.taFit('TA 的心意币不足') : 'TA 的心意币不足'); return; }
 wallet.systemBalance -= amtFen;
 }
 rpWalletSet(wallet);
@@ -37627,6 +38021,18 @@ const st = window.bgNotifyGateStats();
 env.push('拦截统计（本次会话后台）：收到 ' + st.total + ' 条 · 过渡期拦 ' + st.tooFresh + ' · 重复拦 ' + st.dup + ' · 已发 ' + st.sent + '');
 }
 } catch (e) {}
+try {
+const avCs = store.get('cs-avatar-partner') || '';
+const avOld = store.get('avatar-partner') || '';
+const avUsed = avCs || avOld;
+if (!avUsed) {
+env.push('✗ 联系人头像：无数据（cs-avatar-partner 与 avatar-partner 均为空）');
+env.push('  解决：去【手机桌面美化】点 TA 头像上传一张图片');
+} else {
+env.push('✓ 联系人头像：' + (avUsed.length > 200 * 1024 ? '存在(' + Math.round(avUsed.length / 1024) + 'KB)' : '存在(' + Math.round(avUsed.length / 1024) + 'KB)') + ' · 来源:' + (avCs ? '聊天头像(cs)' : '桌面头像'));
+env.push('  提示：若通知仍不显示头像 → 系统通知样式由 Chrome/ROM 决定，部分机型需展开通知才显示大图');
+}
+} catch (e) {}
 const isHttps = location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
 env.push(isHttps ? '✓ 访问协议：HTTPS 或本地' : '✗ 访问协议：' + location.protocol + '//（安卓 Chrome 需 HTTPS 才弹通知，GitHub Pages 部署后即是 HTTPS）');
 try {
@@ -37873,7 +38279,7 @@ if (ok) markNotified(nkey);
 });
 };
 if (bigIcon && bigIcon.indexOf('data:') === 0) {
-cropAvatarToSquare(bigIcon, function (u) { sendFinal(u || ''); });
+cropAvatarToSquare(bigIcon, function (u) { sendFinal(u || bigIcon); });
 } else {
 sendFinal(bigIcon);
 }
@@ -45318,11 +45724,22 @@ function fmtTime(tm) { const d = new Date(tm); return d.getFullYear() + '-' + St
 function fenToYuan(fen) { const y = fen / 100; if (y >= 100000) return (y / 10000).toFixed(1) + '万'; if (y >= 1000) return y.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ','); return y.toFixed(2); }
 const WALLET_KEY = 'gift-wallet';
 const LEGACY_WALLET_KEY = 'rp-wallet';
+const WALLET_DEFAULT_FEN = 52000;
 function walletGet() {
 const s = store();
-if (!s) return { myBalance: 99999999, systemBalance: 99999999 };
-try { const w = JSON.parse(s.get(WALLET_KEY) || ''); if (typeof w.myBalance === 'number' && typeof w.systemBalance === 'number') return w; } catch (e) {}
-let seed = { myBalance: 99999999, systemBalance: 99999999 };
+if (!s) return { myBalance: WALLET_DEFAULT_FEN, systemBalance: WALLET_DEFAULT_FEN };
+try {
+const w = JSON.parse(s.get(WALLET_KEY) || '');
+if (typeof w.myBalance === 'number' && typeof w.systemBalance === 'number') {
+if (w.myBalance === 99999999 && w.systemBalance === 99999999) {
+const nw = { myBalance: WALLET_DEFAULT_FEN, systemBalance: WALLET_DEFAULT_FEN };
+s.set(WALLET_KEY, JSON.stringify(nw));
+return nw;
+}
+return w;
+}
+} catch (e) {}
+let seed = { myBalance: WALLET_DEFAULT_FEN, systemBalance: WALLET_DEFAULT_FEN };
 try { const o = JSON.parse(s.get(LEGACY_WALLET_KEY) || ''); if (typeof o.myBalance === 'number' && typeof o.systemBalance === 'number') seed = { myBalance: o.myBalance, systemBalance: o.systemBalance }; } catch (e) {}
 s.set(WALLET_KEY, JSON.stringify(seed));
 return seed;
@@ -45806,8 +46223,8 @@ boxSave(box);
 function buyAndSend(gift, side, wish) {
 const priceFen = Math.round((gift.price || 0) * 100);
 const w = walletGet();
-if (side === 'out') { if (priceFen > w.myBalance) { toast('我的心意币不足'); return false; } w.myBalance -= priceFen; }
-else { if (priceFen > w.systemBalance) { toast(partnerName() + ' 的心意币不足'); return false; } w.systemBalance -= priceFen; }
+if (side === 'out') { w.myBalance -= priceFen; }
+else { w.systemBalance -= priceFen; }
 walletSet(w);
 const rec = { side: side, special: 'gift', giftId: gift.id, giftName: gift.name, giftEmoji: gift.emoji, giftImg: gift.img || '', giftPrice: gift.price, giftWish: wish, giftCat: gift.cat, ts: Date.now() };
 if (window.chatAddGift) window.chatAddGift(rec); else if (window.chatAddIn) window.chatAddIn('', { special: 'gift' });
@@ -46644,6 +47061,8 @@ memoSendBtn.textContent = '完成发到聊天：' + (on ? '开' : '关');
 }
 document.addEventListener('contact-switched', () => { if (!memoPage.hidden) memoRender(); memoUpdateBadge(); });
 memoUpdateBadge();
+setTimeout(memoUpdateBadge, 300);
+setTimeout(memoUpdateBadge, 700);
 })();
 } catch (__e) { try { console.error("[JS] memo-app.js", __e && __e.message || __e); } catch (x) {} if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
 (function () { try {
@@ -52402,6 +52821,61 @@ el.textContent = t; el.className = 'cc-toast'; void el.offsetWidth; el.className
 clearTimeout(toastT); toastT = setTimeout(() => { el.className = 'cc-toast'; }, 2200);
 }
 function taFit(t) { let s = String(t == null ? '' : t).replace(/\{n\}/g, pn()); try { if (window.taFit) s = window.taFit(s); } catch (e) {} return s; }
+function histMsgOk(m) {
+if (!m || m.side !== 'in' || m.retracted) return false;
+if (m.type && m.type !== 'text') return false;                  // 表情包/图片/语音/拍一拍等整条跳过
+if (m.voice || m.img || m.gift) return false;
+if (m.special || m.mailNotice) return false;                    // 系统提示 / 来信通知
+if (m.askQuestion != null || m.askStatus != null || m.choiceQuestion != null || m.choiceStatus != null ||
+m.curiousQuestion != null || m.curiousStatus != null || m.roastStatus != null ||
+m.rpAmount != null || m.rpWish != null) return false;       // 提问/选择/好奇/吐槽/红包等互动组件
+return true;
+}
+function candText(t) {
+const s = String(t == null ? '' : t).trim();
+if (!s || s.length > 100) return '';                            // 超长不装瓶（与放瓶输入上限一致）
+if (s.indexOf('|||') >= 0) return '';                           // 语音卡标记
+if (/^(https?:|data:)/i.test(s)) return '';                     // 链接 / 内联图片
+return s;
+}
+function histCandidates() {
+try {
+const cid = window.__activeCid || 'default';
+const raw = localStorage.getItem('xy-home-v2:' + cid + ':chat-msgs');
+if (!raw || raw.length > 600000) return [];                   // 超大记录守卫：直接回退字卡库
+const arr = JSON.parse(raw);
+if (!Array.isArray(arr)) return [];
+const out = [];
+const scan = Math.min(arr.length, 400);                       // 只看最近约 400 条，够回忆也不卡
+for (let i = arr.length - 1; i >= arr.length - scan && out.length < 80; i--) {
+const m = arr[i];
+if (!histMsgOk(m)) continue;
+if (Array.isArray(m.parts) && m.parts.length) {
+for (let j = 0; j < m.parts.length && out.length < 80; j++) {
+const p = m.parts[j];
+if (!p || p.k !== 'text') continue;
+const s = candText(p.v);
+if (s) out.push(s);
+}
+} else {
+const s = candText(m.text);
+if (s) out.push(s);
+}
+}
+return out;
+} catch (e) { return []; }
+}
+function sampleHistLine() {
+const cands = histCandidates();
+if (!cands.length) return '';
+const seen = Array.isArray(d.histSeen) ? d.histSeen : [];
+let pool = cands.filter(c => seen.indexOf(c) < 0);              // 近期漂过的先避开，减少连重复
+if (!pool.length) pool = cands.slice();
+const t = rnd(pool);
+d.histSeen = seen.concat([t]).slice(-8);
+save();
+return t;
+}
 const FB = {
 ta: ['过来一点。', '我在。', '今天也陪着你。', '别急，慢慢来。'],
 reply: ['看到了。', '好。等我。', '嗯，收到了。', '我也想你。这句是回礼。'],
@@ -52435,7 +52909,7 @@ const ITEM_LINES = [
 const MINE_CAP = 50, GOT_CAP = 120, PICK_CD = 20000;
 function fresh() {
 return {
-mine: [], got: [],
+mine: [], got: [], histSeen: [],
 day: { date: '', picks: 0, coin: 0, taGot: 0 },
 lastVisit: 0, cdUntil: 0
 };
@@ -52444,6 +52918,7 @@ let d = null;
 function fix(o) {
 if (!Array.isArray(o.mine)) o.mine = [];
 if (!Array.isArray(o.got)) o.got = [];
+if (!Array.isArray(o.histSeen)) o.histSeen = [];
 if (!o.day || typeof o.day !== 'object') o.day = { date: '', picks: 0, coin: 0, taGot: 0 };
 o.mine.forEach(m => { if (typeof m.fav !== 'number') m.fav = 0; });
 o.got.forEach(g => { if (typeof g.fav !== 'number') g.fav = 0; });
@@ -52489,7 +52964,7 @@ try {
 const s = S();
 let w = null;
 try { w = JSON.parse(s.get('gift-wallet') || ''); } catch (e) {}
-if (!w || typeof w.myBalance !== 'number') w = { myBalance: 99999999, systemBalance: 99999999 };
+if (!w || typeof w.myBalance !== 'number' || typeof w.systemBalance !== 'number') w = { myBalance: 52000, systemBalance: 52000 }; // v3.15.x：默认对齐 ¥520/¥520
 w.myBalance += real;
 s.set('gift-wallet', JSON.stringify(w));
 d.day.coin += real;
@@ -52590,7 +53065,7 @@ kind = rollKind();
 if (kind === 'ta') {
 d.day.taGot++;
 head = '💙 ' + pn() + '漂来的瓶子';
-note = poolLine('TA的话', 'ta');
+note = sampleHistLine() || poolLine('TA的话', 'ta');
 sig = '—— ' + pn();
 if (Math.random() < 0.2) gift = rnd(ITEMS);
 } else if (kind === 'special') {
@@ -52775,7 +53250,7 @@ function infoModal() {
 if (!window.openModal) return;
 window.openModal('漂流瓶 · 关于这片海', '', function () {}, {
 noInput: true,
-staticText: '你写下的话会漂到两个世界之间：过几天它可能自己漂回来，也可能收到一句回应。\n\n有时候，也会捡到「' + pn() + '」漂来的瓶子——那些话都来自字卡库，不会凭空编造。\n\n每日首次捡瓶送 2 心意币，特殊瓶 +5（每天最多 10）。瓶子是偶尔的惊喜，不用一直守着海。'
+staticText: '你写下的话会漂到两个世界之间：过几天它可能自己漂回来，也可能收到一句回应。\n\n有时候，也会捡到「' + pn() + '」漂来的瓶子——TA以前在聊天里说过的字卡，都可能单独漂回来；没有合适的话时，才从字卡库的漂流瓶分组里取一句。\n\n每日首次捡瓶送 2 心意币，特殊瓶 +5（每天最多 10）。瓶子是偶尔的惊喜，不用一直守着海。'
 });
 }
 function openDrift() {
@@ -56657,6 +57132,713 @@ fast: false
 } catch (__e) { try { console.error("[JS] connect-four.js", __e && __e.message || __e); } catch (x) {} if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
 (function () { try {
 (function () {
+const panel = document.getElementById('chat-ms-panel');
+if (!panel) return;
+const boardEl = document.getElementById('ms-board');
+const stageEl = document.getElementById('ms-stage');
+const statusEl = document.getElementById('ms-status');
+const livesEl = document.getElementById('ms-lives');
+const progEl = document.getElementById('ms-prog');
+const overlayEl = document.getElementById('ms-overlay');
+const ovTitleEl = document.getElementById('ms-ov-title');
+const ovBodyEl = document.getElementById('ms-ov-body');
+const startBtn = document.getElementById('ms-btn-start');
+const endBtn = document.getElementById('ms-btn-end');
+const soundBtn = document.getElementById('ms-sound');
+const modeBtn = document.getElementById('ms-mode');
+const bagBtn = document.getElementById('ms-bag');
+const closeBtn = document.getElementById('ms-close');
+const partnerNameEl = document.getElementById('ms-partner-name');
+const MAX_LIVES = 3;
+const MS_COIN_CAP = 1000;                       // 心意币日封顶（分）
+const FLAWLESS_BONUS = 300;                     // 有雷模式全程未踩雷的额外奖励
+const DIFFS = {
+chill:  { n: 6, mines: 0,  label: '🌱 轻松', name: '轻松', tip: '6×6 · 无雷 · 一起挖宝' },
+easy:   { n: 5, mines: 3,  label: '🍬 休闲', name: '休闲', tip: '5×5 · 3 雷' },
+normal: { n: 6, mines: 6,  label: '⚙️ 普通', name: '普通', tip: '6×6 · 6 雷' },
+hard:   { n: 8, mines: 12, label: '🔥 挑战', name: '挑战', tip: '8×8 · 12 雷' }
+};
+const NUM_COLORS = ['', '#3a7fd5', '#2e8b57', '#d9534f', '#7a4fd9', '#b7791f', '#2aa198', '#666', '#999'];
+const THINK_LINES = ['TA正在观察雷区……', 'TA托着下巴想了想', 'TA盯着数字琢磨了一会儿'];
+const T = window.taFit || function (x) { return x; };
+function prefix() { return (window.activePrefix && window.activePrefix()) || 'xy-home-v2'; }
+function taName() { try { return window.taWord ? window.taWord() : T('TA'); } catch (e) { return T('TA'); } }
+function fastMul() { return (window.__msDebug && window.__msDebug.fast) ? 0.05 : 1; }
+function pick(arr) { return arr && arr.length ? arr[Math.floor(Math.random() * arr.length)] : null; }
+function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+let audioCtx = null, soundOn = true;
+function beep(freq, dur, vol, type) {
+if (!soundOn) return;
+try {
+if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+o.frequency.value = freq; o.type = type || 'sine';
+g.gain.value = vol || 0.16;
+o.connect(g); g.connect(audioCtx.destination);
+const t = audioCtx.currentTime;
+o.start(t); g.gain.setValueAtTime(g.gain.value, t);
+g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+o.stop(t + dur);
+} catch (e) {}
+}
+const sfxDig = () => beep(520, 0.06, 0.14);
+const sfxFlag = () => beep(760, 0.05, 0.12);
+const sfxBoom = () => beep(110, 0.3, 0.22, 'triangle');
+const sfxCoin = () => { beep(880, 0.08, 0.14); setTimeout(() => beep(1174, 0.1, 0.12), 80); };
+const sfxGift = () => { beep(784, 0.08, 0.13); setTimeout(() => beep(1046, 0.12, 0.13), 90); };
+const sfxWin = () => { beep(523, 0.12, 0.18); setTimeout(() => beep(659, 0.12, 0.18), 120); setTimeout(() => beep(784, 0.18, 0.18), 240); };
+const sfxFail = () => { beep(330, 0.16, 0.16); setTimeout(() => beep(247, 0.22, 0.16), 150); };
+function statsKey() { return prefix() + ':ms-stats'; }
+function loadStats() {
+const d = { play: 0, win: 0, fail: 0, lastDiff: 'normal' };
+try {
+const raw = localStorage.getItem(statsKey());
+if (raw) { const v = JSON.parse(raw); if (v && typeof v === 'object') return Object.assign(d, v); }
+} catch (e) {}
+return d;
+}
+function saveStats(s) { try { localStorage.setItem(statsKey(), JSON.stringify(s)); } catch (e) {} }
+function keepsKey() { return prefix() + ':ms-keeps'; }
+function loadKeeps() {
+try {
+const raw = localStorage.getItem(keepsKey());
+const v = raw ? JSON.parse(raw) : [];
+return Array.isArray(v) ? v : [];
+} catch (e) { return []; }
+}
+function saveKeeps(list) { try { localStorage.setItem(keepsKey(), JSON.stringify(list.slice(-60))); } catch (e) {} }
+function coinDayKey() { return prefix() + ':ml2_coin_ms_' + new Date().toISOString().slice(0, 10); }
+function grantCoin(fen) {
+let cur = 0;
+try { cur = Number(localStorage.getItem(coinDayKey())) || 0; } catch (e) {}
+const real = Math.min(fen, MS_COIN_CAP - cur);
+if (real <= 0) return 0;
+try { localStorage.setItem(coinDayKey(), String(cur + real)); } catch (e2) {}
+try { if (typeof window.giftWalletChange === 'function') window.giftWalletChange(real, 0); } catch (e3) {}
+return real;
+}
+let st = null;
+let taT = null;
+let selDiff = loadStats().lastDiff;
+if (!DIFFS[selDiff]) selDiff = 'normal';
+let flagMode = false;
+let cellPx = 44;
+function newState(key) {
+const d = DIFFS[key];
+const N = d.n * d.n;
+return {
+diffKey: key, n: d.n, mineTotal: d.mines,
+mine: null, num: null, content: null,       // 懒生成：第一次挖掘才布雷/放宝物
+open: new Array(N).fill(false),
+flag: new Array(N).fill(0),                 // 0 无 / 1 你 / 2 TA
+boom: new Array(N).fill(false),
+taFlagged: {},                              // TA 插过旗的格子（用于「判断错了/猜对了」吐槽）
+judged: {},
+lives: MAX_LIVES, turn: 1,
+started: false, over: false, lock: false,
+firstDig: true,
+digs: { you: 0, ta: 0 },
+minesFound: 0,
+foundList: [],                              // 本局发现的宝物类型序列
+coinEarned: 0                               // 本局实际入账的心意币（分）
+};
+}
+function N() { return st.n * st.n; }
+function neighborsOf(i) {
+const n = st.n, r = Math.floor(i / n), c = i % n, out = [];
+for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
+if (!dr && !dc) continue;
+const rr = r + dr, cc = c + dc;
+if (rr >= 0 && rr < n && cc >= 0 && cc < n) out.push(rr * n + cc);
+}
+return out;
+}
+function recalcNums() {
+st.num = new Array(N()).fill(0);
+for (let i = 0; i < N(); i++) {
+let m = 0;
+neighborsOf(i).forEach((j) => { if (st.mine[j]) m++; });
+st.num[i] = m;
+}
+}
+function generateMap(firstIdx) {
+const total = N();
+st.mine = new Array(total).fill(0);
+if (st.mineTotal > 0) {
+let banned = new Set([firstIdx]);
+neighborsOf(firstIdx).forEach((j) => banned.add(j));
+if (total - banned.size < st.mineTotal) { banned = new Set([firstIdx]); }
+const pool = [];
+for (let i = 0; i < total; i++) if (!banned.has(i)) pool.push(i);
+shuffle(pool);
+for (let k = 0; k < st.mineTotal; k++) st.mine[pool[k]] = 1;
+}
+recalcNums();
+const chill = st.mineTotal === 0;
+const safe = [];
+for (let i = 0; i < total; i++) if (!st.mine[i]) safe.push(i);
+shuffle(safe);
+let coins = Math.max(2, Math.min(8, Math.round(safe.length * 0.12)));
+if (chill) coins = Math.min(safe.length, coins * 2);
+const gifts = chill ? 2 : 1, flowers = chill ? 2 : 1;
+let p = 0;
+const take = () => (p < safe.length ? safe[p++] : -1);
+for (let k = 0; k < coins && p < safe.length; k++) st.content[take()] = 'coin';
+for (let k = 0; k < gifts && p < safe.length; k++) st.content[take()] = 'gift';
+for (let k = 0; k < flowers && p < safe.length; k++) st.content[take()] = 'flower';
+}
+function forceMap(mineArr) {
+const total = N();
+st.mine = new Array(total).fill(0);
+for (let i = 0; i < total && i < mineArr.length; i++) st.mine[i] = mineArr[i] ? 1 : 0;
+st.content = new Array(total).fill(null);
+recalcNums();
+st.firstDig = false;
+st.over = false; st.lock = false; st.turn = 1;
+}
+function constraints() {
+const cons = [];
+for (let i = 0; i < N(); i++) {
+if (!st.open[i] || st.mine[i]) continue;
+const nb = neighborsOf(i);
+const free = nb.filter((j) => !st.open[j]);
+if (!free.length) continue;
+let boomAdj = 0;
+nb.forEach((j) => { if (st.boom[j]) boomAdj++; });
+cons.push({ need: st.num[i] - boomAdj, free });
+}
+return cons;
+}
+function deduceSafe() {
+const out = [], seen = {};
+constraints().forEach((c) => {
+if (c.need <= 0) c.free.forEach((j) => { if (!seen[j]) { seen[j] = 1; out.push(j); } });
+});
+return out;
+}
+function deduceMines() {
+const out = [], seen = {};
+constraints().forEach((c) => {
+if (c.need > 0 && c.free.length === c.need) {
+c.free.forEach((j) => { if (!seen[j]) { seen[j] = 1; out.push(j); } });
+}
+});
+return out;
+}
+function estProbs() {
+const p = {};
+constraints().forEach((c) => {
+const share = c.free.length ? Math.max(0, c.need) / c.free.length : 1;
+c.free.forEach((j) => { p[j] = Math.max(p[j] || 0, share); });
+});
+return p;
+}
+function defaultRatio() {
+let hidden = 0;
+for (let i = 0; i < N(); i++) if (!st.open[i]) hidden++;
+return hidden ? Math.max(0, st.mineTotal - st.minesFound) / hidden : 1;
+}
+function rollTaMode() {
+const r = Math.random();
+if (r < 0.7) return 'smart';
+if (r < 0.9) return 'memory';
+return 'wild';
+}
+function taDecide(mode) {
+const hidden = [];
+for (let i = 0; i < N(); i++) if (!st.open[i] && !st.flag[i]) hidden.push(i);
+if (!hidden.length) {
+const flagged = [];
+for (let i = 0; i < N(); i++) if (!st.open[i] && st.flag[i]) flagged.push(i);
+if (!flagged.length) return null;
+const P = estProbs();
+let best = flagged[0], bp = Infinity;
+flagged.forEach((i) => { const q = P[i] != null ? P[i] : defaultRatio(); if (q < bp) { bp = q; best = i; } });
+return { type: 'dig', idx: best };
+}
+const sureMines = deduceMines().filter((i) => !st.flag[i]);
+const safeCells = deduceSafe();   // 含「被旗插着但可证明安全」的格：挖开即顺手纠正错误旗
+if (mode !== 'wild') {
+if (sureMines.length && Math.random() < 0.55) return { type: 'flag', idx: pick(sureMines) };
+if (safeCells.length) return { type: 'dig', idx: pick(safeCells) };
+}
+if (mode === 'wild') return { type: 'dig', idx: pick(hidden) };
+const P = estProbs();
+const ranked = hidden.map((i) => ({ i, p: P[i] != null ? P[i] : defaultRatio() }));
+ranked.sort((a, b) => a.p - b.p);
+if (mode === 'memory') {
+const half = ranked.slice(0, Math.max(1, Math.ceil(ranked.length * 0.5)));
+return { type: 'dig', idx: pick(half).i };
+}
+const worst = ranked[ranked.length - 1];
+if (worst && worst.p >= 0.72 && Math.random() < 0.3) return { type: 'flag', idx: worst.i, guess: true };
+return { type: 'dig', idx: ranked[0].i };
+}
+function buildBoardDom() {
+boardEl.innerHTML = '';
+boardEl.style.gridTemplateColumns = 'repeat(' + st.n + ', ' + cellPx + 'px)';
+for (let i = 0; i < N(); i++) {
+const cell = document.createElement('div');
+cell.className = 'ms-cell';
+cell.setAttribute('data-i', String(i));
+const face = document.createElement('span');
+face.className = 'ms-face';
+cell.appendChild(face);
+boardEl.appendChild(cell);
+}
+fitBoard();
+}
+function fitBoard() {
+if (!stageEl || panel.hidden || !st) return;
+const w = stageEl.clientWidth;
+if (!w) return;
+cellPx = Math.max(26, Math.min(50, Math.floor((w - 10) / st.n)));
+boardEl.style.gridTemplateColumns = 'repeat(' + st.n + ', ' + cellPx + 'px)';
+const cells = boardEl.children;
+for (let i = 0; i < cells.length; i++) {
+cells[i].style.width = cellPx + 'px';
+cells[i].style.height = cellPx + 'px';
+cells[i].style.fontSize = Math.round(cellPx * 0.46) + 'px';
+}
+}
+function cellAt(i) { return boardEl.children[i] || null; }
+function renderCell(i, pop) {
+const cell = cellAt(i);
+if (!cell) return;
+const face = cell.firstChild;
+let txt = '', cls = 'ms-cell';
+if (st.boom[i]) { cls += ' ms-open ms-boom'; txt = '💥'; }
+else if (st.open[i]) {
+cls += ' ms-open';
+const c = st.content[i];
+if (c === 'coin') { txt = '🪙'; cls += ' ms-tr'; }
+else if (c === 'gift') { txt = '🎁'; cls += ' ms-tr'; }
+else if (c === 'flower') { txt = '🌸'; cls += ' ms-tr'; }
+else if (st.num[i] > 0) {
+txt = String(st.num[i]);
+cls += ' ms-n' + st.num[i];
+}
+} else if (st.flag[i]) {
+txt = '🚩';
+cls += st.flag[i] === 1 ? ' ms-fyou' : ' ms-fta';
+}
+cell.className = cls;
+face.textContent = txt;
+if (pop) { face.classList.remove('ms-pop'); void face.offsetWidth; face.classList.add('ms-pop'); }
+}
+function heartsStr() { return '❤️'.repeat(st.lives) + '🖤'.repeat(MAX_LIVES - st.lives); }
+function openCount() { let x = 0; for (let i = 0; i < N(); i++) if (st.open[i]) x++; return x; }
+function safeTotal() { return st.mineTotal === 0 ? N() : N() - st.mineTotal; }
+function updateHud() {
+if (livesEl) livesEl.textContent = st.started ? heartsStr() : '';
+if (progEl) progEl.textContent = st.started ? '已探索 ' + openCount() + ' / ' + safeTotal() : '';
+}
+function setStatus(html) { if (statusEl) statusEl.innerHTML = html; }
+function shakeCell(i) {
+const cell = cellAt(i);
+if (!cell) return;
+cell.classList.remove('ms-shake'); void cell.offsetWidth; cell.classList.add('ms-shake');
+}
+let extraMsg = '';    // 一次性补充说明（如 TA 挪旗吐槽），由 composeStatus 消费
+function floodOpen(start, out) {
+if (st.mineTotal === 0) { st.open[start] = true; out.push(start); return; }
+const stack = [start];
+while (stack.length) {
+const i = stack.pop();
+if (st.open[i] || st.flag[i]) continue;
+st.open[i] = true;
+out.push(i);
+if (st.num[i] === 0) {
+neighborsOf(i).forEach((j) => { if (!st.open[j] && !st.flag[j]) stack.push(j); });
+}
+}
+}
+function allSafeOpened() {
+for (let i = 0; i < N(); i++) { if (!st.mine[i] && !st.open[i]) return false; }
+return true;
+}
+function scheduleTaGiftChat(kind) {
+setTimeout(() => {
+try {
+const builtin = kind === 'flower'
+? ['挖到一朵小花，「这个给你。」', '发现了这个，觉得很适合你。']
+: ['挖到了一个小礼物，「这个给你。」', '发现了这个，「送你呀。」'];
+const pool = window.getInteractPool ? window.getInteractPool('游戏胜利·回应', builtin) : builtin;
+const say = (pool && pool.length ? pick(pool) : builtin[0]) || '这个给你。';
+if (window.chatAddIn) window.chatAddIn(T(say), { silent: true });
+} catch (e) {}
+}, 700);
+}
+function dig(idx, byYou, allowFlagged) {
+const s = st;
+if (!s || !s.started || s.over || s.lock) return false;
+if (idx == null || idx < 0 || idx >= N() || s.open[idx]) return false;
+if (s.flag[idx] && !allowFlagged) {
+shakeCell(idx);
+setStatus('🚩 这格插着记号，长按取消后再挖');
+return false;
+}
+s.lock = true;
+if (s.firstDig) generateMap(s.mineTotal > 0 ? idx : -1);
+s.firstDig = false;
+const wasTaFlagged = !!s.taFlagged[idx];
+const hadPlayerFlag = s.flag[idx] === 1;
+s.flag[idx] = 0;
+extraMsg = '';
+if (s.mine[idx]) {
+s.open[idx] = true; s.boom[idx] = true;
+s.lives--; s.minesFound++;
+s.digs[byYou ? 'you' : 'ta']++;
+renderCell(idx, true);
+updateHud();
+sfxBoom();
+const who = byYou ? '你' : T('TA');
+let msg = '💥 ' + who + '踩到了雷！' + heartsStr();
+if (wasTaFlagged && !s.judged[idx]) { msg += '（不过 ' + T('TA') + ' 的旗没错）'; s.judged[idx] = 1; }
+if (hadPlayerFlag && byYou) msg += '（是你自己插的旗那格…）';
+if (s.lives <= 0) { setStatus(msg); finish(false); return true; }
+setStatus(msg);
+passTurn(byYou);
+return true;
+}
+const newly = [];
+floodOpen(idx, newly);
+const gotIcons = [];
+for (let k = 0; k < newly.length; k++) {
+const i = newly[k];
+s.digs[byYou ? 'you' : 'ta']++;
+renderCell(i, true);
+const c = s.content ? s.content[i] : null;
+if (!c) continue;
+s.foundList.push(c);
+if (c === 'coin') {
+const real = grantCoin(100);
+if (real > 0) s.coinEarned += real;
+gotIcons.push('🪙');
+sfxCoin();
+} else {
+gotIcons.push(c === 'gift' ? '🎁' : '🌸');
+sfxGift();
+const keeps = loadKeeps();
+keeps.push({ t: c, ts: Date.now(), by: byYou ? 'you' : 'ta' });
+saveKeeps(keeps);
+if (!byYou) scheduleTaGiftChat(c);
+}
+}
+updateHud();
+sfxDig();
+let msg;
+if (gotIcons.length) {
+msg = (byYou ? '你发现了 ' : T('TA') + '发现了 ') + gotIcons.join(' ');
+if (gotIcons.indexOf('🪙') >= 0 && s.coinEarned > 0) msg += ' · 心意币 +¥1';
+} else if (byYou) {
+msg = '你挖开了一格';
+} else {
+msg = T('TA') + '挖开了一格';
+}
+if (wasTaFlagged && !s.judged[idx]) { msg += ' —— 这里其实是安全的，' + T('TA') + '判断错了'; s.judged[idx] = 1; }
+if (extraMsg) { msg += '（' + extraMsg + '）'; extraMsg = ''; }
+if (allSafeOpened()) { setStatus(msg); finish(true); return true; }
+setStatus(msg);
+passTurn(byYou);
+return true;
+}
+function playerDig(idx) {
+if (!st || !st.started || st.over || st.lock || st.turn !== 1) return;
+if (flagMode) { toggleFlag(idx, 1); return; }
+dig(idx, true, false);
+}
+function toggleFlag(idx, who) {
+const s = st;
+if (!s || !s.started || s.over || s.lock || s.open[idx]) return;
+s.flag[idx] = s.flag[idx] === who ? 0 : who;
+renderCell(idx);
+sfxFlag();
+}
+function placeTaFlag(idx) {
+const s = st;
+if (!s || s.open[idx] || s.flag[idx] === 2) return;
+s.taFlagged[idx] = 1;
+s.flag[idx] = 2;
+renderCell(idx);
+}
+function passTurn(byYou) {
+const s = st;
+if (s.over) return;
+s.turn = byYou ? 2 : 1;
+if (s.turn === 2) { s.lock = true; scheduleTa(); }
+else { s.lock = false; showTurnStatus(); }
+}
+function showTurnStatus() {
+if (!st || st.over) return;
+setStatus('轮到你了' + (st.mineTotal === 0 ? '，慢慢挖～' : ''));
+}
+function scheduleTa(extraDelay) {
+clearTimeout(taT); taT = null;
+if (!st || st.over) return;
+const line = THINK_LINES[Math.floor(Math.random() * THINK_LINES.length)];
+setStatus(T(line).replace('TA', T('TA')) + ' ' + heartsStr());
+const d = typeof extraDelay === 'number' ? extraDelay : 620 + Math.random() * 680;
+taT = setTimeout(() => { taT = null; taTurn(); }, Math.round(d * fastMul()));
+}
+function taTurn() {
+const s = st;
+if (!s || s.over || !s.started || s.turn !== 2) return;
+const act = taDecide(rollTaMode());
+if (!act) { s.turn = 1; s.lock = false; showTurnStatus(); return; }
+if (act.type === 'flag') {
+placeTaFlag(act.idx);
+sfxFlag();
+setStatus('🚩 ' + T('TA') + (act.guess ? '觉得这里有雷，先做了个记号' : '标记了一颗雷的位置'));
+s.turn = 1; s.lock = false;
+setTimeout(showTurnStatus, Math.round(900 * fastMul()));
+return;
+}
+if (s.flag[act.idx] === 1) extraMsg = T('TA') + '把你的旗轻轻挪开了——下面确实是安全的';
+s.flag[act.idx] = 0;
+renderCell(act.idx);
+s.lock = false;   // dig 入口会重新上锁；TA 的思考期锁在这里解除
+dig(act.idx, false, true);
+}
+function finish(win) {
+const s = st;
+s.over = true; s.lock = false;
+clearTimeout(taT); taT = null;
+const stat = loadStats();
+stat.play++; if (win) stat.win++; else stat.fail++;
+stat.lastDiff = s.diffKey;
+saveStats(stat);
+if (win) {
+const base = s.mineTotal === 0 ? 200 : 500;
+const flawless = (s.mineTotal > 0 && s.lives === MAX_LIVES) ? FLAWLESS_BONUS : 0;
+const real = grantCoin(base + flawless);
+if (real > 0) s.coinEarned += real;
+sfxWin();
+} else {
+sfxFail();
+}
+const gifts = s.foundList.filter((x) => x === 'gift').length;
+const flowers = s.foundList.filter((x) => x === 'flower').length;
+let body = pillsHtml();
+if (win) {
+body +=
+'<div class="pong-end-stat">💣 雷区清理完成！</div>' +
+'<div class="pong-end-stat">你探索 ' + s.digs.you + ' 格 · ' + T('TA') + '探索 ' + s.digs.ta + ' 格</div>' +
+'<div class="pong-end-stat">💣 找到地雷 ' + s.minesFound + '/' + s.mineTotal +
+' · 🎁 宝物 ' + (gifts + flowers) + '</div>';
+if (s.lives === MAX_LIVES && s.mineTotal > 0) body += '<div class="pong-end-stat">💕 一颗雷都没踩，完美合作</div>';
+} else {
+body +=
+'<div class="pong-end-stat">💥 这次踩到太多雷了。</div>' +
+'<div class="pong-end-stat">你们一起探索了 ' + openCount() + ' 格，还差一点。</div>';
+}
+if (s.coinEarned > 0) body += '<div class="pong-end-stat">🪙 我的心意币 +¥' + (s.coinEarned / 100).toFixed(2) + '</div>';
+body += '<div class="pong-end-stat ms-quote">「' + (win ? pick(['一起找完了。', '我们配合得不错嘛。', '全部清完啦，开心。']) : pick(['差一点点而已，再来！', '下次小心一点就好。'])) + '」</div>';
+showOverlay(win ? '💣 合作完成' : '💥 差一点', body, '再来一次');
+if (startBtn) startBtn.textContent = '再来一次';
+if (endBtn) endBtn.hidden = false;
+try {
+if (window.chatAddSystem) window.chatAddSystem(T('合作扫雷') + ' · ' + (win ? '完成 ' + DIFFS[s.diffKey].name : '差一点（' + DIFFS[s.diffKey].name + '）'));
+const fb = win
+? ['一起找完了。', '我们配合得不错嘛。', '全部清完啦，开心。']
+: ['差一点点而已，再来！', '下次小心一点就好。', '没事，再来一次？'];
+const pool = window.getInteractPool ? window.getInteractPool(win ? '游戏平局·回应' : '游戏失败·回应', fb) : fb;
+const say = (pool && pool.length ? pick(pool) : fb[0]) || fb[0];
+setTimeout(() => { try { if (window.chatAddIn) window.chatAddIn(T(say), { silent: true }); } catch (e) {} }, 900);
+} catch (e) {}
+}
+function pillsHtml() {
+return '<div class="ms-diffs">' + Object.keys(DIFFS).map((k) => {
+const d = DIFFS[k];
+return '<button class="ms-diff' + (k === selDiff ? ' on' : '') + '" data-diff="' + k + '" type="button" title="' + d.tip + '">' + d.label + '</button>';
+}).join('') + '</div>';
+}
+function showOverlay(title, body, btnText) {
+if (!overlayEl) return;
+if (ovTitleEl) ovTitleEl.innerHTML = title || '';
+if (ovBodyEl) ovBodyEl.innerHTML = body || '';
+if (startBtn && btnText) startBtn.textContent = btnText;
+overlayEl.hidden = false;
+}
+function showStartOverlay() {
+const s = loadStats();
+let body = pillsHtml();
+body += '<div class="ms-tip">轮流挖掘 · 你们共用 ' + heartsStrStatic() + '<br>数字 = 周围雷数 · 长按格子插旗<br>🪙🎁🌸 藏在格子里，一起找找看</div>';
+body += '<div class="ms-note">🎲 ' + T('TA') + '会推理也会失误——偶尔也需要你救场</div>';
+if (s.play > 0) body += '<div class="pong-end-stat">合作 ' + s.play + ' 局 · 完成 ' + s.win + ' 次</div>';
+showOverlay('合作扫雷', body, s.play > 0 ? '继续探索' : '开始探索');
+if (endBtn) endBtn.hidden = true;
+}
+function heartsStrStatic() { return '❤️❤️❤️'; }
+function hideOverlay() { if (overlayEl) overlayEl.hidden = true; if (endBtn) endBtn.hidden = true; }
+function newGame() {
+clearTimeout(taT); taT = null;
+st = newState(selDiff);
+st.started = true;
+buildBoardDom();
+hideOverlay();
+updateHud();
+setStatus(st.mineTotal === 0 ? '轮到你了，慢慢挖～' : '你的回合，点一格开始探索');
+}
+function bagText() {
+const keeps = loadKeeps();
+if (!keeps.length) return '还没有收藏。\n一起挖挖看吧，🎁 和 🌸 都藏在地里。';
+let giftN = 0, flowerN = 0;
+keeps.forEach((k) => { if (k.t === 'gift') giftN++; else if (k.t === 'flower') flowerN++; });
+const fmt = (ts) => { const d = new Date(ts); return (d.getMonth() + 1) + '月' + d.getDate() + '日'; };
+const recent = keeps.slice(-4).reverse().map((k) => (k.t === 'gift' ? '🎁' : '🌸') + ' ' + fmt(k.ts) + (k.by === 'ta' ? '（' + T('TA') + '送的）' : ''));
+return '🎁 神秘礼物 ×' + giftN + '\n🌸 花朵 ×' + flowerN + '\n\n最近：\n' + recent.join('\n');
+}
+let lpTimer = null, lpFired = false, lastFlagTs = 0;
+boardEl.addEventListener('pointerdown', (e) => {
+const cell = e.target.closest('.ms-cell');
+if (!cell) return;
+e.stopPropagation();
+lpFired = false;
+const idx = parseInt(cell.getAttribute('data-i'), 10) || 0;
+clearTimeout(lpTimer);
+lpTimer = setTimeout(() => {
+lpFired = true;
+lastFlagTs = Date.now();
+toggleFlag(idx, 1);
+try { if (navigator.vibrate) navigator.vibrate(15); } catch (err) {}
+}, 430);
+});
+['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) => {
+boardEl.addEventListener(ev, () => { clearTimeout(lpTimer); });
+});
+boardEl.addEventListener('click', (e) => {
+e.stopPropagation();
+const cell = e.target.closest('.ms-cell');
+if (!cell) return;
+if (lpFired) { lpFired = false; return; }
+playerDig(parseInt(cell.getAttribute('data-i'), 10) || 0);
+});
+boardEl.addEventListener('contextmenu', (e) => {
+const cell = e.target.closest('.ms-cell');
+if (!cell) return;
+e.preventDefault();
+e.stopPropagation();
+if (Date.now() - lastFlagTs < 700) return;   // 长按后紧跟的 contextmenu 不重复切换
+toggleFlag(parseInt(cell.getAttribute('data-i'), 10) || 0, 1);
+});
+if (startBtn) startBtn.addEventListener('click', (e) => { e.stopPropagation(); newGame(); });
+if (endBtn) endBtn.addEventListener('click', (e) => { e.stopPropagation(); closeMsPanel(); });
+if (closeBtn) closeBtn.addEventListener('click', (e) => { e.stopPropagation(); closeMsPanel(); });
+if (soundBtn) soundBtn.addEventListener('click', (e) => {
+e.stopPropagation();
+soundOn = !soundOn;
+soundBtn.textContent = soundOn ? '🔊' : '🔇';
+});
+if (modeBtn) modeBtn.addEventListener('click', (e) => {
+e.stopPropagation();
+flagMode = !flagMode;
+modeBtn.textContent = flagMode ? '🚩' : '⛏️';
+modeBtn.classList.toggle('ms-mode-on', flagMode);
+if (statusEl && flagMode && st && st.started && !st.over) setStatus('插旗模式：点一下格子就是 🚩（再按一次切回挖掘）');
+});
+if (bagBtn) bagBtn.addEventListener('click', (e) => {
+e.stopPropagation();
+try {
+if (window.openModal) window.openModal('小收藏', '', function () {}, { noInput: true, staticText: bagText(), pills: [{ label: '好的', value: 'ok' }] });
+} catch (err) {}
+});
+if (ovBodyEl) ovBodyEl.addEventListener('click', (e) => {
+const pill = e.target.closest('.ms-diff');
+if (!pill) return;
+e.stopPropagation();
+const k = pill.getAttribute('data-diff');
+if (!DIFFS[k]) return;
+selDiff = k;
+const stat = loadStats();
+stat.lastDiff = k;
+saveStats(stat);
+const pills = ovBodyEl.querySelectorAll('.ms-diff');
+pills.forEach((p) => { p.classList.toggle('on', p.getAttribute('data-diff') === k); });
+});
+function setNames() {
+let name = T('TA');
+try {
+const s = window.activeStore && window.activeStore();
+name = (s && (s.get('cs-lbl-partner') || s.get('lbl-partner'))) || name;
+} catch (e) {}
+if (partnerNameEl) partnerNameEl.textContent = name;
+}
+window.openMsPanel = function () {
+panel.hidden = false;
+try { setNames(); } catch (e) {}
+try { fitBoard(); } catch (e) {}
+if (st && st.started && !st.over) {
+if (st.turn === 2 && !taT) scheduleTa();
+else if (st.turn === 1 && !st.lock) showTurnStatus();
+return;
+}
+showStartOverlay();
+setStatus('选择难度开始探索');
+};
+function closeMsPanel() {
+clearTimeout(taT); taT = null;
+if (panel) panel.hidden = true;
+}
+window.closeMsPanel = closeMsPanel;
+document.addEventListener('contact-switched', () => { try { closeMsPanel(); } catch (e) {} });
+window.addEventListener('resize', () => { if (!panel.hidden) fitBoard(); });
+(function bindEntry() {
+const btn = document.getElementById('more-ms');
+if (!btn) return;
+btn.addEventListener('click', (e) => {
+e.stopPropagation();
+const mp = document.getElementById('chat-more-panel');
+if (mp) mp.hidden = true;
+const hideIds = ['poke-card', 'emoji-panel', 'chat-search', 'chat-divine-panel', 'chat-decision-panel', 'chat-gdecision-panel', 'chat-rps-panel', 'chat-rp-panel', 'chat-call-panel', 'chat-snake-panel', 'chat-brick-panel', 'chat-c4-panel'];
+hideIds.forEach((id) => { const el = document.getElementById(id); if (el) el.hidden = true; });
+try { if (window.closeAvlib) window.closeAvlib(); } catch (err) {}
+try { if (window.closePongPanel) window.closePongPanel(); } catch (err) {}
+try { if (window.closeC4Panel) window.closeC4Panel(); } catch (err) {}
+try { openMsPanel(); } catch (err) {
+try { panel.hidden = false; showStartOverlay(); setStatus('选择难度开始探索'); } catch (e2) {}
+try { console.error('[ms] open failed', err); } catch (e2) {}
+}
+});
+try {
+if (window.MutationObserver) {
+const SIBLING_IDS = ['poke-card', 'emoji-panel', 'chat-search', 'chat-ask-panel', 'chat-divine-panel', 'chat-decision-panel', 'chat-gdecision-panel', 'chat-rps-panel', 'chat-rp-panel', 'chat-call-panel', 'chat-pong-panel', 'chat-snake-panel', 'chat-brick-panel', 'chat-c4-panel', 'chat-more-panel'];
+const mo = new MutationObserver(() => {
+if (panel.hidden) return;
+for (let i = 0; i < SIBLING_IDS.length; i++) {
+const el = document.getElementById(SIBLING_IDS[i]);
+if (el && !el.hidden) { closeMsPanel(); break; }
+}
+});
+SIBLING_IDS.forEach((id) => { const el = document.getElementById(id); if (el) mo.observe(el, { attributes: true, attributeFilter: ['hidden'] }); });
+}
+} catch (e) {}
+})();
+window.__msDebug = {
+st: () => st,
+newGame: newGame,
+setDiff: (k) => { if (DIFFS[k]) selDiff = k; },
+dig: (i, you) => dig(i, you !== false, true),
+toggleFlag: (i, w) => toggleFlag(i, w || 1),
+clearFlag: (i) => { if (st) { st.flag[i] = 0; renderCell(i); } },
+placeTaFlag: placeTaFlag,
+forceMap: forceMap,
+setContent: (i, t) => { if (st && st.content) st.content[i] = t; },
+setNum: (i, v) => { if (st) st.num[i] = v; },
+openCell: (i) => { if (st) { st.open[i] = true; renderCell(i); } },
+recalcNums: recalcNums,
+deduceSafe: deduceSafe,
+deduceMines: deduceMines,
+probs: estProbs,
+decide: taDecide,
+rollMode: rollTaMode,
+grantCoinRaw: grantCoin,
+fast: false
+};
+})();
+} catch (__e) { try { console.error("[JS] coop-mine.js", __e && __e.message || __e); } catch (x) {} if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
+(function () { try {
+(function () {
 const panel = document.getElementById('chat-fish-panel');
 if (!panel) return;
 if (window.__fishInit) return;
@@ -56768,9 +57950,9 @@ function loadTogether() { const t = readJSON(togetherKey(), null); if (t && t.da
 function saveTogether(t) { writeJSON(togetherKey(), t); }
 function walletGet() {
 const s = store();
-if (!s) return { myBalance: 99999999, systemBalance: 99999999 };
+if (!s) return { myBalance: 52000, systemBalance: 52000 };
 try { const w = JSON.parse(s.get('gift-wallet') || ''); if (typeof w.myBalance === 'number' && typeof w.systemBalance === 'number') return w; } catch (e) {}
-let seed = { myBalance: 99999999, systemBalance: 99999999 };
+let seed = { myBalance: 52000, systemBalance: 52000 };
 try { const o = JSON.parse(s.get('rp-wallet') || ''); if (typeof o.myBalance === 'number' && typeof o.systemBalance === 'number') seed = { myBalance: o.myBalance, systemBalance: o.systemBalance }; } catch (e) {}
 s.set('gift-wallet', JSON.stringify(seed));
 return seed;
@@ -56787,6 +57969,11 @@ const timingBarEl = document.getElementById('fish-timing-bar');
 const timingCursorEl = document.getElementById('fish-timing-cursor');
 const pageEl = document.getElementById('fish-page');
 const tabEls = panel.querySelectorAll('.fish-tab');
+if (sceneEl && !sceneEl.querySelector('.fish-bobber')) {
+const bm = document.createElement('span'); bm.className = 'fish-bobber fish-bobber-mine';
+const bt = document.createElement('span'); bt.className = 'fish-bobber fish-bobber-ta';
+sceneEl.appendChild(bm); sceneEl.appendChild(bt);
+}
 let mine = null;       // 玩家：{phase, since, biteAt, rafId}
 let ta = null;         // TA：{phase, until, ...}
 let taTimer = null, togetherTimer = null;
@@ -56799,6 +57986,7 @@ resetMine(); resetTa();
 function castMine() {
 if (mine.phase === 'waiting' || mine.phase === 'biting') return;
 sfxCast();
+if (statusEl) delete statusEl.dataset.keep;
 mine.phase = 'waiting'; mine.since = Date.now();
 mine.biteAt = Date.now() + rand(2000, 4500);
 const wait = mine.biteAt - Date.now();
@@ -56998,7 +58186,12 @@ sc.setAttribute('data-ta', ta.phase);
 const taStateEl = sc.querySelector('.fish-ta-state'); if (taStateEl) taStateEl.textContent = taStateLabel();
 }
 const bitting = mine.phase === 'biting';
-if (castBtn) { castBtn.hidden = (mine.phase === 'waiting' || bitting); castBtn.disabled = (mine.phase === 'waiting' || bitting); }
+if (castBtn) {
+const waiting = mine.phase === 'waiting';
+castBtn.hidden = bitting;
+castBtn.disabled = waiting;
+castBtn.textContent = waiting ? '等待鱼漂…' : '抛竿';
+}
 if (reelBtn) reelBtn.hidden = !bitting;
 if (timingWrapEl) timingWrapEl.hidden = !bitting;
 if (statusEl && !statusEl.dataset.keep) {
@@ -57046,7 +58239,7 @@ const html =
 '<div class="fish-sub">今日收获</div>' +
 '<div class="fish-subhead">你</div>' + rows('mine') +
 '<div class="fish-subhead">' + esc(taWord()) + '</div>' + rows('ta') +
-'<div class="fish-sellbar">' + (count ? '<span>共 ' + count + ' 件 · 价值 <b>+' + fenToStr(total) + '</b> 心意币</span>' : '<span>还没有可出售的收获</span>') + '<button class="fish-sell" id="fish-sell-btn">' + (count ? '出售全部' : '出售') + '</button></div>';
+'<div class="fish-sellbar">' + (count ? '<span>共 ' + count + ' 件 · 价值 <b>+' + fenToStr(total) + '</b> 心意币</span>' : '<span>还没有可出售的收获</span>') + '<button class="fish-sell" id="fish-sell-btn"' + (count ? '' : ' disabled') + '>' + (count ? '出售全部' : '出售') + '</button></div>';
 return html;
 }
 function renderDex() {
@@ -57090,8 +58283,27 @@ render();
 });
 });
 panel.querySelector('.fish-close').addEventListener('click', function (e) { e.stopPropagation(); closeFishPanel(); });
+const FISH_SIBLING_IDS = ['poke-card', 'emoji-panel', 'chat-search', 'chat-ask-panel', 'chat-divine-panel', 'chat-decision-panel', 'chat-gdecision-panel', 'chat-rps-panel', 'chat-rp-panel', 'chat-call-panel', 'chat-pong-panel', 'chat-snake-panel', 'chat-brick-panel', 'chat-c4-panel', 'chat-more-panel'];
+function hideSiblings() {
+FISH_SIBLING_IDS.forEach(function (id) { const el = document.getElementById(id); if (el && el !== panel) el.hidden = true; });
+try { if (window.closeAvlib) window.closeAvlib(); } catch (e) {}
+}
+(function bindFishMutual() {
+try {
+if (!window.MutationObserver) return;
+const mo = new MutationObserver(function () {
+if (!panel || panel.hidden || !window.closeFishPanel) return;
+for (let i = 0; i < FISH_SIBLING_IDS.length; i++) {
+const el = document.getElementById(FISH_SIBLING_IDS[i]);
+if (el && !el.hidden) { try { window.closeFishPanel(); } catch (e) {} break; }
+}
+});
+FISH_SIBLING_IDS.forEach(function (id) { const el = document.getElementById(id); if (el) mo.observe(el, { attributes: true, attributeFilter: ['hidden'] }); });
+} catch (e) {}
+})();
 window.openFishPanel = function () {
 if (!panel) return;
+hideSiblings();
 resetTa();
 resetMine();
 panel.hidden = false;
@@ -57117,6 +58329,25 @@ if (panel) panel.hidden = true;
 function stopTaTimer() { if (taTimer) { clearInterval(taTimer); taTimer = null; } }
 function stopMineTimer() { if (mine && mine._tm) { clearTimeout(mine._tm); mine._tm = null; } }
 document.addEventListener('contact-switched', function () { try { closeFishPanel(); } catch (e) {} });
+window.__fishDebug = {
+state: function () { return { open: open, mine: mine && mine.phase, ta: ta && ta.phase, today: loadToday(), dex: loadDex(), gifts: loadGifts(), together: loadTogether(), wallet: walletGet() }; },
+forceBite: function () { if (mine.phase === 'waiting') { clearTimeout(mine._tm); startBiting(); } return mine.phase; },
+reelAt: function (p, force) {
+if (mine.phase !== 'biting') return false;
+mine.progress = p;
+if (force) {
+const q = (p >= 0.38 && p <= 0.68) ? 'perfect' : ((p >= 0.2 && p < 0.38) || (p > 0.68 && p <= 0.85)) ? 'good' : 'poor';
+const item = rollFish(q);
+if (timingRafId) { cancelAnimationFrame(timingRafId); timingRafId = null; }
+gainMine(item); flashScene(true, item);
+statusText((q === 'perfect' ? '完美收竿！钓到了 ' : '收竿！钓到了 ') + item.icon + ' ' + item.name);
+mine.phase = 'idle'; mine.progress = null; render();
+return true;
+}
+reelMine(); return true;
+},
+addTaGift: function (id) { const g = loadGifts(); g.unshift({ id: id || 'gift_shell', ts: Date.now() }); saveGifts(g); renderPage(); return true; }
+};
 })();
 } catch (__e) { try { console.error("[JS] fishing.js", __e && __e.message || __e); } catch (x) {} if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
 (function () { try {
@@ -57165,12 +58396,16 @@ const COIN_FIRST = 5;      // 首次通关某难度 +5
 const COIN_DAILY_CAP = 30; // 每日奖励上限（元）
 function walletGet() {
 const s = window.activeStore && window.activeStore();
-if (!s) return { myBalance: 99999999, systemBalance: 99999999 };
+if (!s) return { myBalance: 52000, systemBalance: 52000 };
 try {
 const w = JSON.parse(s.get('gift-wallet') || '');
 if (typeof w.myBalance === 'number' && typeof w.systemBalance === 'number') return w;
 } catch (e) {}
-const seed = { myBalance: 99999999, systemBalance: 99999999 };
+let seed = { myBalance: 52000, systemBalance: 52000 }; // v3.15.x：默认对齐 ¥520/¥520
+try {
+const o = JSON.parse(s.get('rp-wallet') || '');
+if (typeof o.myBalance === 'number' && typeof o.systemBalance === 'number') seed = { myBalance: o.myBalance, systemBalance: o.systemBalance };
+} catch (e) {}
 try { s.set('gift-wallet', JSON.stringify(seed)); } catch (e) {}
 return seed;
 }
@@ -57244,14 +58479,15 @@ lastPlayerFace: null, lastTaFace: null
 function buildBoard(g) {
 if (!boardEl) return;
 boardEl.style.gridTemplateColumns = 'repeat(' + g.params.cols + ', 1fr)';
+boardEl.style.setProperty('--mgm-fs', g.params.cols <= 3 ? '32px' : g.params.cols === 4 ? '27px' : '23px');
 boardEl.innerHTML = '';
 g.cards.forEach((card, idx) => {
 const b = document.createElement('button');
 b.type = 'button';
-b.className = 'mem-card';
+b.className = 'mgm-card';
 b.dataset.idx = String(idx);
 b.setAttribute('aria-label', '第 ' + (idx + 1) + ' 张牌');
-b.innerHTML = '<span class="mem-card-inner"><span class="mem-back"></span><span class="mem-face">' + card.face + '</span></span>';
+b.innerHTML = '<span class="mgm-in"><span class="mgm-back"><i>✦</i></span><span class="mgm-face">' + card.face + '</span></span>';
 b.addEventListener('click', () => onCardClick(idx));
 boardEl.appendChild(b);
 });
@@ -57260,12 +58496,12 @@ function syncCard(idx) {
 const g = game;
 if (!g) return;
 const card = g.cards[idx];
-const el = boardEl.querySelector('.mem-card[data-idx="' + idx + '"]');
+const el = boardEl.querySelector('.mgm-card[data-idx="' + idx + '"]');
 if (!el) return;
 el.classList.toggle('flipped', card.flipped || card.matched);
 el.classList.toggle('matched', card.matched);
-el.classList.toggle('mem-own-player', card.matched && card.owner === 'player');
-el.classList.toggle('mem-own-ta', card.matched && card.owner === 'ta');
+el.classList.toggle('mgm-own-p', card.matched && card.owner === 'player');
+el.classList.toggle('mgm-own-t', card.matched && card.owner === 'ta');
 }
 function renderInfo() {
 const g = game;
@@ -57275,7 +58511,7 @@ if (g.phase === 'ended') turnEl.textContent = '本局完成';
 else if (g.turn === 'player') turnEl.textContent = '轮到你了';
 else turnEl.textContent = T('TA') + ' 的回合';
 }
-if (chemEl) chemEl.textContent = '💕 默契 ' + Math.round(g.chemistry);
+if (chemEl) chemEl.textContent = '💕 默契 ' + Math.min(100, Math.round(g.chemistry));
 if (coinEl) coinEl.textContent = '心意币 +' + Math.round(g.coinFen / YUAN);
 }
 function hint(text) { if (hintEl) hintEl.textContent = text || ''; }
@@ -57327,7 +58563,11 @@ const other = findOtherKnown(g, first.face);
 if (other && Math.random() < g.params.memory) return other;        // 记得 first 的另一半
 return pick(avail);
 }
-function randPause() { const p = game ? game.params.pause : [500, 800]; return p[0] + Math.random() * (p[1] - p[0]); }
+function fastMode() { return !!(window.__mgmDebug && window.__mgmDebug.fast); }
+function randPause() {
+if (fastMode()) return 60 + Math.random() * 80;
+const p = game ? game.params.pause : [500, 800]; return p[0] + Math.random() * (p[1] - p[0]);
+}
 function scheduleTa() {
 const g = game;
 if (!g || g.phase !== 'idle' || g.turn !== 'ta') return;
@@ -57396,7 +58636,7 @@ const next = me === 'player' ? 'ta' : 'player';
 setTurn(next);
 if (next === 'ta') { hint(T('TA') + '的回合'); scheduleTa(); }
 else hint('轮到你了');
-}, 760));
+}, fastMode() ? 120 : 760));
 }
 }
 function setTurn(who) {
@@ -57526,6 +58766,42 @@ soundBtn.classList.toggle('pong-sound-off', !soundOn);
 });
 }
 document.addEventListener('contact-switched', () => { try { window.closeMemoryPanel(); } catch (e) {} });
+(function bindEntry() {
+const btn = document.getElementById('more-memory');
+if (!btn) return;
+btn.addEventListener('click', (e) => {
+e.stopPropagation();
+const mp = document.getElementById('chat-more-panel');
+if (mp) mp.hidden = true;
+const hideIds = ['poke-card', 'emoji-panel', 'chat-search', 'chat-divine-panel', 'chat-decision-panel', 'chat-gdecision-panel', 'chat-rps-panel', 'chat-rp-panel', 'chat-call-panel', 'chat-snake-panel', 'chat-pong-panel', 'chat-brick-panel', 'chat-fish-panel', 'chat-c4-panel'];
+hideIds.forEach((id) => { const el = document.getElementById(id); if (el) el.hidden = true; });
+try { if (window.closeAvlib) window.closeAvlib(); } catch (err) {}
+try { if (window.closePongPanel) window.closePongPanel(); } catch (err) {}
+try { if (window.closeC4Panel) window.closeC4Panel(); } catch (err) {}
+try { if (window.closeFishPanel) window.closeFishPanel(); } catch (err) {}
+try { window.openMemoryPanel(); } catch (err) {
+try { panel.hidden = false; } catch (e2) {}
+try { console.error('[memory] open failed', err); } catch (e2) {}
+}
+});
+try {
+if (window.MutationObserver) {
+const SIBLING_IDS = ['poke-card', 'emoji-panel', 'chat-search', 'chat-ask-panel', 'chat-divine-panel', 'chat-decision-panel', 'chat-gdecision-panel', 'chat-rps-panel', 'chat-rp-panel', 'chat-call-panel', 'chat-pong-panel', 'chat-snake-panel', 'chat-brick-panel', 'chat-fish-panel', 'chat-c4-panel', 'chat-more-panel'];
+const mo = new MutationObserver(() => {
+if (panel.hidden) return;
+for (let i = 0; i < SIBLING_IDS.length; i++) {
+const el = document.getElementById(SIBLING_IDS[i]);
+if (el && !el.hidden) { window.closeMemoryPanel(); break; }
+}
+});
+SIBLING_IDS.forEach((id) => { const el = document.getElementById(id); if (el) mo.observe(el, { attributes: true, attributeFilter: ['hidden'] }); });
+}
+} catch (e) {}
+})();
+window.__mgmDebug = {
+st: () => game,
+fast: false
+};
 })();
 } catch (__e) { try { console.error("[JS] memory-game.js", __e && __e.message || __e); } catch (x) {} if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
 (function () { try {
@@ -60228,7 +61504,7 @@ document.documentElement.classList.add('force-mobile');
 if (!isMobile && !isTablet) return;
 const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent)
 && !/android/i.test(navigator.userAgent) && !window.MSStream;
-const FLOAT_PANEL_SELECTORS = ['#chat-more-panel', '#chat-decision-panel', '#chat-gdecision-panel', '#chat-divine-panel', '#chat-ask-panel', '#poke-card', '#emoji-panel', '#chat-rp-panel', '#chat-rps-panel', '#chat-pong-panel', '#chat-snake-panel', '#chat-brick-panel', '#chat-c4-panel', '#chat-gift-panel', '#ck-panel', '#chat-search', '#gc-more-panel'];
+const FLOAT_PANEL_SELECTORS = ['#chat-more-panel', '#chat-decision-panel', '#chat-gdecision-panel', '#chat-divine-panel', '#chat-ask-panel', '#poke-card', '#emoji-panel', '#chat-rp-panel', '#chat-rps-panel', '#chat-pong-panel', '#chat-snake-panel', '#chat-brick-panel', '#chat-c4-panel', '#chat-ms-panel', '#chat-fish-panel', '#chat-memory-panel', '#chat-gift-panel', '#ck-panel', '#chat-search', '#gc-more-panel'];
 if (isIOS) {
 try {
 document.querySelectorAll('meta[name="viewport"]').forEach(function (m) {
@@ -60919,7 +62195,7 @@ _aLastVVH = 0;
 }
 } catch (e) {}
 }
-const FLOAT_SELECTORS = ['#tc-mask', '#cc-export-mask', '#cc-scope-mask', '#call-mask', '#feed-notice-panel', '#feed-comment-panel', '#poke-card', '#emoji-panel', '#chat-ask-panel', '#qa-mask', '#chat-more-panel', '#gc-more-panel', '#chat-search', '#chat-decision-panel', '#chat-gdecision-panel', '#chat-divine-panel', '#chat-rps-panel', '#chat-call-panel', '#chat-pong-panel', '#chat-snake-panel', '#chat-brick-panel', '#chat-c4-panel', '#chat-gift-panel', '#avlib-card', '#ck-panel', '#loc-panel', '.mg-mask', '#modal-mask', '#msg-actions', '#desk-image-viewer', '.desk-lib', '#gc-members-panel', '#gc-at-panel', '#gc-settings-panel', '#img-view-mask', '#chat-rp-panel', '#batch-panel', '#eat-switch-overlay'];
+const FLOAT_SELECTORS = ['#tc-mask', '#cc-export-mask', '#cc-scope-mask', '#call-mask', '#feed-notice-panel', '#feed-comment-panel', '#poke-card', '#emoji-panel', '#chat-ask-panel', '#qa-mask', '#chat-more-panel', '#gc-more-panel', '#chat-search', '#chat-decision-panel', '#chat-gdecision-panel', '#chat-divine-panel', '#chat-rps-panel', '#chat-call-panel', '#chat-pong-panel', '#chat-snake-panel', '#chat-brick-panel', '#chat-c4-panel', '#chat-ms-panel', '#chat-fish-panel', '#chat-memory-panel', '#chat-gift-panel', '#avlib-card', '#ck-panel', '#loc-panel', '.mg-mask', '#modal-mask', '#msg-actions', '#desk-image-viewer', '.desk-lib', '#gc-members-panel', '#gc-at-panel', '#gc-settings-panel', '#img-view-mask', '#chat-rp-panel', '#batch-panel', '#eat-switch-overlay'];
 let kbPanelDocked = false;
 let kbFixedTracksVV = true;
 function kbDockPanels() {

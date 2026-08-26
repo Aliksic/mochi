@@ -137,9 +137,10 @@
   // v3.15.x：对齐 chat.js/gift-shop.js 读取语义——缺 gift-wallet 时先继承旧键 rp-wallet 再落盘
   function walletGet() {
     const s = store();
-    if (!s) return { myBalance: 99999999, systemBalance: 99999999 };
+    // v3.15.x：默认对齐新用户 ¥520/¥520（与 gift-shop WALLET_DEFAULT_FEN 同步）
+    if (!s) return { myBalance: 52000, systemBalance: 52000 };
     try { const w = JSON.parse(s.get('gift-wallet') || ''); if (typeof w.myBalance === 'number' && typeof w.systemBalance === 'number') return w; } catch (e) {}
-    let seed = { myBalance: 99999999, systemBalance: 99999999 };
+    let seed = { myBalance: 52000, systemBalance: 52000 };
     try { const o = JSON.parse(s.get('rp-wallet') || ''); if (typeof o.myBalance === 'number' && typeof o.systemBalance === 'number') seed = { myBalance: o.myBalance, systemBalance: o.systemBalance }; } catch (e) {}
     s.set('gift-wallet', JSON.stringify(seed));
     return seed;
@@ -158,6 +159,12 @@
   const timingCursorEl = document.getElementById('fish-timing-cursor');
   const pageEl = document.getElementById('fish-page');
   const tabEls = panel.querySelectorAll('.fish-tab');
+  // 鱼漂（纯视觉元素，由 scene 的 data-mine/data-ta 状态驱动显隐/变色，见 chat-pages.css .fish-bobber）
+  if (sceneEl && !sceneEl.querySelector('.fish-bobber')) {
+    const bm = document.createElement('span'); bm.className = 'fish-bobber fish-bobber-mine';
+    const bt = document.createElement('span'); bt.className = 'fish-bobber fish-bobber-ta';
+    sceneEl.appendChild(bm); sceneEl.appendChild(bt);
+  }
 
   // ---- 运行时状态 ----
   let mine = null;       // 玩家：{phase, since, biteAt, rafId}
@@ -175,6 +182,7 @@
   function castMine() {
     if (mine.phase === 'waiting' || mine.phase === 'biting') return;
     sfxCast();
+    if (statusEl) delete statusEl.dataset.keep;
     mine.phase = 'waiting'; mine.since = Date.now();
     mine.biteAt = Date.now() + rand(2000, 4500);
     const wait = mine.biteAt - Date.now();
@@ -336,10 +344,10 @@
       t.sec += 1; saveTogether(t);
       if (t.sec >= TOGETHER_GOAL) {
         t.rewarded = true; saveTogether(t);
-        const w = walletGet(); w.myBalance += 500; walletSet(w);
+        const w = walletGet(); w.myBalance += 1314; walletSet(w);
         sfxGift();
-        toast('💕 陪伴奖励：一起钓鱼 5 分钟，心意币 +5');
-        if (window.chatAddIn) { try { window.chatAddIn(fit('陪了我这么久，鱼都知道你不走了。') + '（陪伴奖励 +5 心意币）', { silent: true }); } catch (e) {} }
+        toast('💕 陪伴奖励：一起钓鱼 5 分钟，心意币 +¥13.14');
+        if (window.chatAddIn) { try { window.chatAddIn(fit('陪了我这么久，鱼都知道你不走了。') + '（陪伴奖励 +¥13.14）', { silent: true }); } catch (e) {} }
       }
     }, 1000);
   }
@@ -365,14 +373,14 @@
     render();
   }
 
-  // ---- 兑换 TA 送的纪念品为心意币 ----
+  // ---- 兑换 TA 送的纪念品为心意币（v3.15.x 二调：¥5.2，对齐红包小额档） ----
   function exchangeGift(idx) {
     const g = loadGifts();
     const item = g[idx]; if (!item) return;
     g.splice(idx, 1); saveGifts(g);
-    const w = walletGet(); w.myBalance += 300; walletSet(w);
+    const w = walletGet(); w.myBalance += 520; walletSet(w);
     sfxSell();
-    toast('已兑换心意币 +3');
+    toast('已兑换心意币 +¥5.2');
     render();
   }
 
@@ -393,9 +401,14 @@
       sc.setAttribute('data-ta', ta.phase);
       const taStateEl = sc.querySelector('.fish-ta-state'); if (taStateEl) taStateEl.textContent = taStateLabel();
     }
-    // 按钮
+    // 按钮：等待期保留禁用态「等待鱼漂…」（避免按钮区塌陷跳动）；咬钩期只显示收竿
     const bitting = mine.phase === 'biting';
-    if (castBtn) { castBtn.hidden = (mine.phase === 'waiting' || bitting); castBtn.disabled = (mine.phase === 'waiting' || bitting); }
+    if (castBtn) {
+      const waiting = mine.phase === 'waiting';
+      castBtn.hidden = bitting;
+      castBtn.disabled = waiting;
+      castBtn.textContent = waiting ? '等待鱼漂…' : '抛竿';
+    }
     if (reelBtn) reelBtn.hidden = !bitting;
     if (timingWrapEl) timingWrapEl.hidden = !bitting;
     // 默认状态提示
@@ -444,7 +457,7 @@
       '<div class="fish-sub">今日收获</div>' +
       '<div class="fish-subhead">你</div>' + rows('mine') +
       '<div class="fish-subhead">' + esc(taWord()) + '</div>' + rows('ta') +
-      '<div class="fish-sellbar">' + (count ? '<span>共 ' + count + ' 件 · 价值 <b>+' + fenToStr(total) + '</b> 心意币</span>' : '<span>还没有可出售的收获</span>') + '<button class="fish-sell" id="fish-sell-btn">' + (count ? '出售全部' : '出售') + '</button></div>';
+      '<div class="fish-sellbar">' + (count ? '<span>共 ' + count + ' 件 · 价值 <b>+' + fenToStr(total) + '</b> 心意币</span>' : '<span>还没有可出售的收获</span>') + '<button class="fish-sell" id="fish-sell-btn"' + (count ? '' : ' disabled') + '>' + (count ? '出售全部' : '出售') + '</button></div>';
     return html;
   }
   function renderDex() {
@@ -492,8 +505,28 @@
   panel.querySelector('.fish-close').addEventListener('click', function (e) { e.stopPropagation(); closeFishPanel(); });
 
   // ---- 入口（供 chat.js 调用） ----
+  // 兄弟半框互斥（connect-four 同款）：打开钓鱼时收起其他浮层；任何兄弟面板被打开时自动收起本面板
+  const FISH_SIBLING_IDS = ['poke-card', 'emoji-panel', 'chat-search', 'chat-ask-panel', 'chat-divine-panel', 'chat-decision-panel', 'chat-gdecision-panel', 'chat-rps-panel', 'chat-rp-panel', 'chat-call-panel', 'chat-pong-panel', 'chat-snake-panel', 'chat-brick-panel', 'chat-c4-panel', 'chat-more-panel'];
+  function hideSiblings() {
+    FISH_SIBLING_IDS.forEach(function (id) { const el = document.getElementById(id); if (el && el !== panel) el.hidden = true; });
+    try { if (window.closeAvlib) window.closeAvlib(); } catch (e) {}
+  }
+  (function bindFishMutual() {
+    try {
+      if (!window.MutationObserver) return;
+      const mo = new MutationObserver(function () {
+        if (!panel || panel.hidden || !window.closeFishPanel) return;
+        for (let i = 0; i < FISH_SIBLING_IDS.length; i++) {
+          const el = document.getElementById(FISH_SIBLING_IDS[i]);
+          if (el && !el.hidden) { try { window.closeFishPanel(); } catch (e) {} break; }
+        }
+      });
+      FISH_SIBLING_IDS.forEach(function (id) { const el = document.getElementById(id); if (el) mo.observe(el, { attributes: true, attributeFilter: ['hidden'] }); });
+    } catch (e) {}
+  })();
   window.openFishPanel = function () {
     if (!panel) return;
+    hideSiblings();
     resetTa();
     resetMine();
     panel.hidden = false;
@@ -520,4 +553,26 @@
   function stopTaTimer() { if (taTimer) { clearInterval(taTimer); taTimer = null; } }
   function stopMineTimer() { if (mine && mine._tm) { clearTimeout(mine._tm); mine._tm = null; } }
   document.addEventListener('contact-switched', function () { try { closeFishPanel(); } catch (e) {} });
+
+  // ---- 只读/驯化测试钩子（tools/verify-fishing-ui.mjs 专用；不影响正常玩法） ----
+  window.__fishDebug = {
+    state: function () { return { open: open, mine: mine && mine.phase, ta: ta && ta.phase, today: loadToday(), dex: loadDex(), gifts: loadGifts(), together: loadTogether(), wallet: walletGet() }; },
+    forceBite: function () { if (mine.phase === 'waiting') { clearTimeout(mine._tm); startBiting(); } return mine.phase; },
+    // 以指定进度收竿（p∈0..1，0.5=完美区间中心）；force=true 跳过成功概率必命中（仅测试）
+    reelAt: function (p, force) {
+      if (mine.phase !== 'biting') return false;
+      mine.progress = p;
+      if (force) {
+        const q = (p >= 0.38 && p <= 0.68) ? 'perfect' : ((p >= 0.2 && p < 0.38) || (p > 0.68 && p <= 0.85)) ? 'good' : 'poor';
+        const item = rollFish(q);
+        if (timingRafId) { cancelAnimationFrame(timingRafId); timingRafId = null; }
+        gainMine(item); flashScene(true, item);
+        statusText((q === 'perfect' ? '完美收竿！钓到了 ' : '收竿！钓到了 ') + item.icon + ' ' + item.name);
+        mine.phase = 'idle'; mine.progress = null; render();
+        return true;
+      }
+      reelMine(); return true;
+    },
+    addTaGift: function (id) { const g = loadGifts(); g.unshift({ id: id || 'gift_shell', ts: Date.now() }); saveGifts(g); renderPage(); return true; }
+  };
 })();

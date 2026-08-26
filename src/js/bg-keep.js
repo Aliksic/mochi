@@ -697,6 +697,20 @@
           env.push('拦截统计（本次会话后台）：收到 ' + st.total + ' 条 · 过渡期拦 ' + st.tooFresh + ' · 重复拦 ' + st.dup + ' · 已发 ' + st.sent + '');
         }
       } catch (e) {}
+      // v3.15.x：头像链路探针——定位「通知里没有联系人头像」卡在哪一环：
+      // 头像值是否存在、长度、来源键、dataURL→Blob 转换是否成功
+      try {
+        const avCs = store.get('cs-avatar-partner') || '';
+        const avOld = store.get('avatar-partner') || '';
+        const avUsed = avCs || avOld;
+        if (!avUsed) {
+          env.push('✗ 联系人头像：无数据（cs-avatar-partner 与 avatar-partner 均为空）');
+          env.push('  解决：去【手机桌面美化】点 TA 头像上传一张图片');
+        } else {
+          env.push('✓ 联系人头像：' + (avUsed.length > 200 * 1024 ? '存在(' + Math.round(avUsed.length / 1024) + 'KB)' : '存在(' + Math.round(avUsed.length / 1024) + 'KB)') + ' · 来源:' + (avCs ? '聊天头像(cs)' : '桌面头像'));
+          env.push('  提示：若通知仍不显示头像 → 系统通知样式由 Chrome/ROM 决定，部分机型需展开通知才显示大图');
+        }
+      } catch (e) {}
       const isHttps = location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
       env.push(isHttps ? '✓ 访问协议：HTTPS 或本地' : '✗ 访问协议：' + location.protocol + '//（安卓 Chrome 需 HTTPS 才弹通知，GitHub Pages 部署后即是 HTTPS）');
       // v3.5.144：聊天消息后台弹窗诊断——后台收不到聊天消息 ≠ 通知问题，
@@ -1047,7 +1061,9 @@
       });
     };
     if (bigIcon && bigIcon.indexOf('data:') === 0) {
-      cropAvatarToSquare(bigIcon, function (u) { sendFinal(u || ''); });
+      // v3.15.x：裁剪失败不再丢弃头像——回退原 dataURL 交给 showSysNotification 的
+      // prepMediaBlobs 转 Blob；此前裁剪失败 cb('') 会直接丢头像导致通知无头像
+      cropAvatarToSquare(bigIcon, function (u) { sendFinal(u || bigIcon); });
     } else {
       sendFinal(bigIcon);
     }

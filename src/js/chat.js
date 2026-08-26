@@ -3103,9 +3103,10 @@ const s = rpsReadScore();
 if (judge > 0) s.w++; else if (judge < 0) s.l++; else s.d++;
 rpsWriteScore(s);
 addRec({ side: 'in', special: 'rps', rpsMine: mine, rpsTa: ta, rpsResult: judge });
-// v3.15.x：猜拳联动心意币——胜我得 ¥1 / 平我得 ¥0.2 / TA 赢 TA 得 ¥1（日封顶 ¥3）
+// v3.15.x 二调：奖励对齐红包金额体系——胜 70% ¥5.2 / 30% ¥13.14，平 ¥1.3，TA 赢 TA 得 ¥5.2（日封顶 ¥26）
 try {
-const real = rpGameCoinGrant('rps', judge > 0 ? 100 : judge < 0 ? 100 : 20, 300);
+const rpsWinFen = Math.random() < 0.3 ? 1314 : 520;
+const real = rpGameCoinGrant('rps', judge > 0 ? rpsWinFen : judge < 0 ? 520 : 130, 2600);
 if (real > 0) {
 const w = rpWalletGet();
 if (judge < 0) w.systemBalance += real; else w.myBalance += real;
@@ -3226,12 +3227,21 @@ const RP_LEGACY_WALLET_KEY = 'rp-wallet';
 const RP_DAILY_PREFIX = 'ml2_rp_daily_';
 const RP_EXPIRY_MS = 24 * 60 * 60 * 1000;
 const RP_SPECIAL_FEN = [520, 5200, 52000, 520000, 1314, 131400]; // 5.2/52/520/5200/13.14/1314 元
+// v3.15.x：新用户默认双方各 ¥520（与 gift-shop WALLET_DEFAULT_FEN 同步），旧占位巨款一次性迁移
+const RP_WALLET_DEFAULT_FEN = 52000;
 function rpWalletGet() {
 try {
 const w = JSON.parse(store.get(RP_WALLET_KEY) || '');
-if (typeof w.myBalance === 'number' && typeof w.systemBalance === 'number') return w;
+if (typeof w.myBalance === 'number' && typeof w.systemBalance === 'number') {
+if (w.myBalance === 99999999 && w.systemBalance === 99999999) {
+const nw = { myBalance: RP_WALLET_DEFAULT_FEN, systemBalance: RP_WALLET_DEFAULT_FEN };
+store.set(RP_WALLET_KEY, JSON.stringify(nw));
+return nw;
+}
+return w;
+}
 } catch (e) {}
-let seed = { myBalance: 99999999, systemBalance: 99999999 };
+let seed = { myBalance: RP_WALLET_DEFAULT_FEN, systemBalance: RP_WALLET_DEFAULT_FEN };
 try {
 const o = JSON.parse(store.get(RP_LEGACY_WALLET_KEY) || '');
 if (typeof o.myBalance === 'number' && typeof o.systemBalance === 'number') seed = { myBalance: o.myBalance, systemBalance: o.systemBalance };
@@ -3291,20 +3301,19 @@ if (rpDailyCount() >= 5) return;
 const qixi = isQixiToday();
 const baseRate = qixi ? 0.08 : 0.04;
 if (Math.random() >= baseRate) return;
-const wallet = rpWalletGet();
-if (wallet.systemBalance < 1) return;
+// v3.15.x：TA 自动红包不再受余额约束——余额不足也照发（可透支为负），金额上限维持原 ¥52000 档
 let amtFen, wish;
 if (qixi && Math.random() < 0.6) {
-const qixiPool = [777, 7777, 77777].filter(f => f <= wallet.systemBalance);
+const qixiPool = [777, 7777, 77777];
 if (qixiPool.length) {
 amtFen = pick(qixiPool);
 wish = pick(['七夕快乐', '七夕快乐呀', '宝宝七夕快乐', '今天七夕，给你花']);
 } else {
-amtFen = genRpAmount(wallet.systemBalance);
+amtFen = genRpAmount(5200000);
 wish = '七夕快乐';
 }
 } else {
-amtFen = genRpAmount(wallet.systemBalance);
+amtFen = genRpAmount(5200000);
 wish = pick(['心意', '给你花', '小礼物', '辛苦啦', '开心一下']);
 }
 if (amtFen < 1) return;
@@ -3552,12 +3561,11 @@ if (!isNaN(cv) && cv >= 0) amt = Math.round(cv * 100) / 100;
 if (amt == null || isNaN(amt) || amt < 0) { toast('先选择或输入红包金额'); return; }
 const wish = (rpWishInput && rpWishInput.value || '').trim() || (isQixiToday() ? '七夕快乐' : '心意');
 const amtFen = Math.round(amt * 100);
+// v3.15.x：余额不足也照发——心意币直接透支为负数，不再拦截
 const wallet = rpWalletGet();
 if (rpSide === 'out') {
-if (amtFen > wallet.myBalance) { toast('我的心意币不足'); return; }
 wallet.myBalance -= amtFen;
 } else {
-if (amtFen > wallet.systemBalance) { toast(window.taFit ? window.taFit('TA 的心意币不足') : 'TA 的心意币不足'); return; }
 wallet.systemBalance -= amtFen;
 }
 rpWalletSet(wallet);
@@ -4380,9 +4388,10 @@ if (moreBrick) {
 window.sendSnakeResult = function (d) {
 if (!d) return;
 addRec({ side: 'in', special: 'snake', snkResult: d.result, snkPLen: d.pLen, snkOLen: d.oLen, snkPFood: d.pFood, snkOFood: d.oFood, snkPScore: d.pScore, snkOScore: d.oScore, snkTime: d.time });
-// v3.15.x：贪吃蛇联动心意币——胜我得 ¥2 / 平 ¥1 / TA 赢 TA 得 ¥2（日封顶 ¥6）
+// v3.15.x 二调：奖励对齐红包金额体系——胜 80% ¥13.14 / 20% ¥52，平 ¥5.2，TA 赢 TA 得 ¥13.14（日封顶 ¥104）
 try {
-const real = rpGameCoinGrant('snake', d.result === 'draw' ? 100 : 200, 600);
+const snkWinFen = Math.random() < 0.2 ? 5200 : 1314;
+const real = rpGameCoinGrant('snake', d.result === 'draw' ? 520 : snkWinFen, 10400);
 if (real > 0) {
 const w = rpWalletGet();
 const toTa = d.result === 'lose';

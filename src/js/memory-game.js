@@ -59,12 +59,17 @@
 
   function walletGet() {
     const s = window.activeStore && window.activeStore();
-    if (!s) return { myBalance: 99999999, systemBalance: 99999999 };
+    if (!s) return { myBalance: 52000, systemBalance: 52000 };
     try {
       const w = JSON.parse(s.get('gift-wallet') || '');
       if (typeof w.myBalance === 'number' && typeof w.systemBalance === 'number') return w;
     } catch (e) {}
-    const seed = { myBalance: 99999999, systemBalance: 99999999 };
+    // v3.16.x：对齐 chat.js/gift-shop.js/fishing.js 语义——缺 gift-wallet 时先继承旧键 rp-wallet 再落盘
+    let seed = { myBalance: 52000, systemBalance: 52000 }; // v3.15.x：默认对齐 ¥520/¥520
+    try {
+      const o = JSON.parse(s.get('rp-wallet') || '');
+      if (typeof o.myBalance === 'number' && typeof o.systemBalance === 'number') seed = { myBalance: o.myBalance, systemBalance: o.systemBalance };
+    } catch (e) {}
     try { s.set('gift-wallet', JSON.stringify(seed)); } catch (e) {}
     return seed;
   }
@@ -147,14 +152,15 @@
   function buildBoard(g) {
     if (!boardEl) return;
     boardEl.style.gridTemplateColumns = 'repeat(' + g.params.cols + ', 1fr)';
+    boardEl.style.setProperty('--mgm-fs', g.params.cols <= 3 ? '32px' : g.params.cols === 4 ? '27px' : '23px');
     boardEl.innerHTML = '';
     g.cards.forEach((card, idx) => {
       const b = document.createElement('button');
       b.type = 'button';
-      b.className = 'mem-card';
+      b.className = 'mgm-card';
       b.dataset.idx = String(idx);
       b.setAttribute('aria-label', '第 ' + (idx + 1) + ' 张牌');
-      b.innerHTML = '<span class="mem-card-inner"><span class="mem-back"></span><span class="mem-face">' + card.face + '</span></span>';
+      b.innerHTML = '<span class="mgm-in"><span class="mgm-back"><i>✦</i></span><span class="mgm-face">' + card.face + '</span></span>';
       b.addEventListener('click', () => onCardClick(idx));
       boardEl.appendChild(b);
     });
@@ -163,12 +169,12 @@
     const g = game;
     if (!g) return;
     const card = g.cards[idx];
-    const el = boardEl.querySelector('.mem-card[data-idx="' + idx + '"]');
+    const el = boardEl.querySelector('.mgm-card[data-idx="' + idx + '"]');
     if (!el) return;
     el.classList.toggle('flipped', card.flipped || card.matched);
     el.classList.toggle('matched', card.matched);
-    el.classList.toggle('mem-own-player', card.matched && card.owner === 'player');
-    el.classList.toggle('mem-own-ta', card.matched && card.owner === 'ta');
+    el.classList.toggle('mgm-own-p', card.matched && card.owner === 'player');
+    el.classList.toggle('mgm-own-t', card.matched && card.owner === 'ta');
   }
   function renderInfo() {
     const g = game;
@@ -178,7 +184,7 @@
       else if (g.turn === 'player') turnEl.textContent = '轮到你了';
       else turnEl.textContent = T('TA') + ' 的回合';
     }
-    if (chemEl) chemEl.textContent = '💕 默契 ' + Math.round(g.chemistry);
+    if (chemEl) chemEl.textContent = '💕 默契 ' + Math.min(100, Math.round(g.chemistry));
     if (coinEl) coinEl.textContent = '心意币 +' + Math.round(g.coinFen / YUAN);
   }
   function hint(text) { if (hintEl) hintEl.textContent = text || ''; }
@@ -234,7 +240,11 @@
     if (other && Math.random() < g.params.memory) return other;        // 记得 first 的另一半
     return pick(avail);
   }
-  function randPause() { const p = game ? game.params.pause : [500, 800]; return p[0] + Math.random() * (p[1] - p[0]); }
+  function fastMode() { return !!(window.__mgmDebug && window.__mgmDebug.fast); }
+  function randPause() {
+    if (fastMode()) return 60 + Math.random() * 80;
+    const p = game ? game.params.pause : [500, 800]; return p[0] + Math.random() * (p[1] - p[0]);
+  }
   function scheduleTa() {
     const g = game;
     if (!g || g.phase !== 'idle' || g.turn !== 'ta') return;
@@ -312,7 +322,7 @@
         setTurn(next);
         if (next === 'ta') { hint(T('TA') + '的回合'); scheduleTa(); }
         else hint('轮到你了');
-      }, 760));
+      }, fastMode() ? 120 : 760));
     }
   }
 
@@ -462,4 +472,46 @@
     });
   }
   document.addEventListener('contact-switched', () => { try { window.closeMemoryPanel(); } catch (e) {} });
+
+  // ---- 入口：聊天更多功能 → 小游戏 → 记忆翻牌（自绑定，chat.js 不改） ----
+  (function bindEntry() {
+    const btn = document.getElementById('more-memory');
+    if (!btn) return;
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const mp = document.getElementById('chat-more-panel');
+      if (mp) mp.hidden = true;
+      const hideIds = ['poke-card', 'emoji-panel', 'chat-search', 'chat-divine-panel', 'chat-decision-panel', 'chat-gdecision-panel', 'chat-rps-panel', 'chat-rp-panel', 'chat-call-panel', 'chat-snake-panel', 'chat-pong-panel', 'chat-brick-panel', 'chat-fish-panel', 'chat-c4-panel'];
+      hideIds.forEach((id) => { const el = document.getElementById(id); if (el) el.hidden = true; });
+      try { if (window.closeAvlib) window.closeAvlib(); } catch (err) {}
+      try { if (window.closePongPanel) window.closePongPanel(); } catch (err) {}
+      try { if (window.closeC4Panel) window.closeC4Panel(); } catch (err) {}
+      try { if (window.closeFishPanel) window.closeFishPanel(); } catch (err) {}
+      try { window.openMemoryPanel(); } catch (err) {
+        // 兜底：初始化异常也要把面板亮出来（否则表现为「点了没反应」）
+        try { panel.hidden = false; } catch (e2) {}
+        try { console.error('[memory] open failed', err); } catch (e2) {}
+      }
+    });
+    // 兄弟浮层互斥兜底：其他入口不知道本面板，它们打开时收起本面板
+    try {
+      if (window.MutationObserver) {
+        const SIBLING_IDS = ['poke-card', 'emoji-panel', 'chat-search', 'chat-ask-panel', 'chat-divine-panel', 'chat-decision-panel', 'chat-gdecision-panel', 'chat-rps-panel', 'chat-rp-panel', 'chat-call-panel', 'chat-pong-panel', 'chat-snake-panel', 'chat-brick-panel', 'chat-fish-panel', 'chat-c4-panel', 'chat-more-panel'];
+        const mo = new MutationObserver(() => {
+          if (panel.hidden) return;
+          for (let i = 0; i < SIBLING_IDS.length; i++) {
+            const el = document.getElementById(SIBLING_IDS[i]);
+            if (el && !el.hidden) { window.closeMemoryPanel(); break; }
+          }
+        });
+        SIBLING_IDS.forEach((id) => { const el = document.getElementById(id); if (el) mo.observe(el, { attributes: true, attributeFilter: ['hidden'] }); });
+      }
+    } catch (e) {}
+  })();
+
+  // 只读调试口（tools/verify-memory-flip.mjs 专用）：状态快照 + 快速模式（缩短等待）
+  window.__mgmDebug = {
+    st: () => game,
+    fast: false
+  };
 })();

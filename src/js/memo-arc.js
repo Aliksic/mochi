@@ -136,16 +136,56 @@
     place: '例如：常一起发呆的天台'
   };
   // ---- 数据存取（名单合并所有桌面命名空间 cjian-roster + 旧根键兜底，同 v3.14.x） ----
+  // v3.16.x：条目带 cid（属于哪个桌面联系人）；还没有梦角的联系人也给出「虚拟」chip
+  // （virtual:true，id 为空串）——点击即按 cjian.seedIfEmpty 同款语义落一份真身。
+  // 虚拟条件：该桌面 roster 为空且没有 cjian-seeded 标记（有标记=用户删过，尊重不复活）。
+  function partnerNameOf(cid) {
+    let name = '';
+    try { name = String(window.xyStore(GNS + ':' + cid).get('lbl-partner') || '').trim(); } catch (e) {}
+    if (!name) {
+      try {
+        const cs = window.getContacts ? window.getContacts() : [];
+        const c = cs.find(x => x.id === cid);
+        if (c && c.name) name = c.name;
+      } catch (e) {}
+    }
+    return name || 'TA';
+  }
+  function deskRoster(cid) {
+    let list = [];
+    try { list = JSON.parse(window.xyStore(GNS + ':' + cid).get('cjian-roster') || '[]'); } catch (e) {}
+    return Array.isArray(list) ? list : [];
+  }
   function roster() {
     const out = [], seen = {};
-    const push = a => { (Array.isArray(a) ? a : []).forEach(x => { if (x && x.name && x.id && !seen[x.id]) { seen[x.id] = 1; out.push(x); } }); };
+    const push = (a, cid) => { (Array.isArray(a) ? a : []).forEach(x => { if (x && x.name && x.id && !seen[x.id]) { seen[x.id] = 1; out.push({ id: x.id, name: x.name, cid: cid || null, virtual: false }); } }); };
     let cs = null;
     try { cs = window.getContacts ? window.getContacts() : null; } catch (e) {}
-    (cs && cs.length ? cs : [{ id: 'default' }]).forEach(c => {
-      try { push(JSON.parse(window.xyStore(GNS + ':' + c.id).get('cjian-roster') || '[]')); } catch (e) {}
+    const desks = (cs && cs.length ? cs : [{ id: 'default' }]);
+    desks.forEach(c => {
+      const list = deskRoster(c.id);
+      if (list.length) push(list, c.id);
+      else {
+        let seeded = false;
+        try { seeded = !!window.xyStore(GNS + ':' + c.id).get('cjian-seeded'); } catch (e) {}
+        if (!seeded) out.push({ id: '', name: partnerNameOf(c.id), cid: c.id, virtual: true });
+      }
     });
-    try { push(JSON.parse(gStore().get('cjian-roster') || '[]')); } catch (e) {}
+    push(JSON.parse(gStore().get('cjian-roster') || '[]'), null);
     return out;
+  }
+  // 把某个桌面的虚拟名单落成真身（返回新梦角 id）；已有名单/已播种则直接返回首个
+  function materializeDesk(cid) {
+    try {
+      const ds = window.xyStore(GNS + ':' + cid);
+      let list = deskRoster(cid);
+      if (!list.length) {
+        list.push({ id: makeId(), name: partnerNameOf(cid), offsetMin: 0 });
+        ds.set('cjian-roster', JSON.stringify(list));
+      }
+      ds.set('cjian-seeded', '1');
+      return list[0].id;
+    } catch (e) { return ''; }
   }
   function keyOf(id) { return 'narc-' + id; }
   function loadRaw(id) { const s = gStore(); if (!s) return null; try { const o = JSON.parse(s.get(keyOf(id)) || 'null'); if (o && typeof o === 'object') return o; } catch (e) {} return null; }
@@ -174,6 +214,38 @@
   }
   function curId() { try { return gStore().get('narc-cur') || ''; } catch (e) { return ''; } }
   function setCur(id) { try { gStore().set('narc-cur', id); } catch (e) {} }
+
+  // ---- 默认播种：名单为空时把当前桌面的联系人（TA）种为第一个梦角 ----
+  // 与 cjian.js seedIfEmpty 同源同键：取 lbl-partner → 联系人名 → 'TA'；写该桌面
+  // cjian-roster 并落 cjian-seeded 标记——用户之后删光梦角不会复活（标记已存在）。
+  function seedDefaultRoster() {
+    try {
+      let cid = 'default';
+      try {
+        const m = String(window.activePrefix ? window.activePrefix() : '').match(/xy-home-v2:([^:]+)$/);
+        if (m) cid = m[1];
+      } catch (e) {}
+      const ds = window.xyStore(GNS + ':' + cid);
+      if (!ds || ds.get('cjian-seeded')) return;
+      let list = [];
+      try { list = JSON.parse(ds.get('cjian-roster') || '[]'); } catch (e) {}
+      if (!Array.isArray(list)) list = [];
+      if (!list.length) {
+        let name = '';
+        try { name = String(ds.get('lbl-partner') || '').trim(); } catch (e) {}
+        if (!name) {
+          try {
+            const cs = window.getContacts ? window.getContacts() : [];
+            const c = cs.find(x => x.id === cid) || null;
+            if (c && c.name) name = c.name;
+          } catch (e) {}
+        }
+        list.push({ id: makeId(), name: name || 'TA', offsetMin: 0 });
+        ds.set('cjian-roster', JSON.stringify(list));
+      }
+      ds.set('cjian-seeded', '1');
+    } catch (e) {}
+  }
 
   // ---- 页面状态 ----
   let cur = '';
@@ -205,6 +277,7 @@
     if (home) home.hidden = false;
   };
   function syncCur() {
+    seedDefaultRoster(); // 名单为空时默认把当前桌面联系人种为第一个梦角（与 cjian.seedIfEmpty 同键同标记）
     const r = roster();
     if (!r.length) { cur = ''; return; }
     const c = curId();
