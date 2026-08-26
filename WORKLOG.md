@@ -1,3 +1,48 @@
+### 2026-08-26 23:1x（✅ 完成·用户需求「字卡库【系统预设字卡】里新增分组【其他互动功能字卡】，功能触发字卡不放在聊天默认字卡里」）
+- [本会话·完成]（**已改 src/template.html（字卡库 preset 区新增入口「其他互动功能字卡」#li-fun-cards + 独立页 #page-fun-cards：12 个功能 tab 全量静态预置 #fc-tabs、#fc-groups-bar/#fc-search-input/#fc-list 齐全）+ src/js/default-cards.js（把 11 功能 tab + 互动回应从 page-default-cards 拆出：渲染内核抽成 mountCardView 双页共用——默认页只留 主字卡/颜文字/emoji/拍一拍 4 基础分类，功能页只渲染 FUNC_KEYS 12 功能分类；数据/开关键 dc-off-<分类>:*、池 API getLibPool/getInteractPool/getFishPool/getDefaultCards 全部不变；两入口角标分别动态统计基础/功能总数）+ src/js/tabs.js（FULL_PAGES 登记 page-fun-cards）+ src/css/chat-pages.css（#fc-tabs 与 #dc-tabs 同款换行铺开防横向溢出）**；**未构建未提交**——device.js/base.css 等并行会话刚改动（23:0x 已构建收口过一次，之后我改了 src），请构建者待并行会话再收尾后统一 `node build.mjs` 收口）。
+  - **UI 变更**：聊天默认字卡页只剩 4 个基础分类 tab；摸鱼/吃饭/经期/喝水/花园/同频/伸手/此间/房间/存钱罐/漂流瓶/互动回应 移到新入口「其他互动功能字卡」（字卡库→系统预设字卡 列表顶部第 1 项，副标题「各功能触发的系统预设字卡·如摸鱼/吃饭/经期等」，角标=功能分类总数 558）。这些字卡不是聊天通用回复，是触发对应功能时联系人才会用，符合用户语义。
+  - **同步更新 8 个 verify/diag 脚本**（cjian-lib/water-chat/eat-remind/period-care/drift-bottle/ta-gender/gc-pool-scope/scroll-lock-flow）：导航从 #dc-tabs/#dc-list/#li-default-cards 改为 #fc-tabs/#fc-list/#li-fun-cards；period-care C9/C10 改为断言功能页 12 tab；cjian-lib B0 改为双入口角标分别统计；ta-gender 喝水 tab 快照随数据增长更新为 6 组 30 张；drift-bottle A6/eat-remind S2/period-care A3 源码断言改为模板静态预置。
+  - **验证**：verify-cjian-lib 14/14、verify-period-care 32/32、verify-water-chat 24/24、verify-eat-remind 16/16、verify-drift-bottle 38/38、verify-ta-gender 22/22、verify-gc-pool-scope 10/10、verify-cc-tab-totals（A1-A3+B 全过，预设徽标 6951）、verify 布局 10/10、verify-webkit 22/22、diag-scroll-lock-flow（含新页 lock=false）全绿；运行时探针：默认页 4 tab/角标 5269/渲染正常、功能页 12 tab/角标 558/摸鱼首屏 16 张、互动回应 116 张、0 JS 异常。
+  - 真机确认点：①字卡库→系统预设字卡 顶部出现「其他互动功能字卡」入口，点进看到 12 个功能 tab（换行铺开不横向溢出）；②聊天默认字卡页只剩 4 个基础分类；③各功能 tab 逐张开关仍生效（与聊天/信箱/朋友圈/各功能抽取联动不变）。
+
+### 2026-08-26 23:0x（✅ 完成·「复制诊断信息」补弹窗内复制按钮 + 字段补强 + 剪贴板悬空兜底）
+- [本会话·完成]（**已改 src/js/device.js（AI-B 域）+ src/js/personalize.js（AI-B 域·openModal 新增 opts.copyBtn）+ src/css/base.css（.modal-btn.copy 样式）+ src/template.html（弹窗按钮区新增 #modal-copy 锚点）**；已构建（23:03, sw: mochi-mta84sjy）+ 临时冒烟脚本实测诊断链路 + 布局 verify 10/10；未提交**）。
+  - **用户反馈**：设置页「复制诊断信息」缺直接点「复制」的按钮，且担心功能是否有用。诊断：功能有用（UA/设备判定/视口/能力/配额/最近错误都是报障刚需），但有两个真实缺陷——①只有点行那一下自动复制，失败后弹窗里无重试入口；②实测发现 `navigator.clipboard.writeText` 在权限被拒/WebView/headless 下可能**永不 settle（Promise 悬空）**，导致 `.then()` 链卡死、诊断弹窗永远不弹（headless Chrome 实测 TIMEOUT 复现）。
+  - **修复**：①弹窗底部新增独立「复制」按钮（`opts.copyBtn`，仅诊断弹窗用，不传保持隐藏零影响），点击重新复制 + hint() 就地反馈「已复制/复制失败」；②`copyText` 加 1.5s 超时兜底——超时按复制失败处理，流程必达弹窗；③诊断字段补强：storage.estimate 配额使用量（配额满写失败是历史真实根因）、navigator.onLine 在线状态、storage.persisted 持久化、serviceWorker controller 状态（已激活/未控制本页）。
+  - **验证**：headless CDP 冒烟（模拟安卓 390×844）——点击诊断行弹窗必现、文本框含诊断内容、复制按钮可见、点复制有反馈、含配额/在线/SW 字段，全部通过；npm run verify 10/10。
+  - 真机确认点：①设置页点「复制诊断信息」必弹窗；②自动复制失败时点弹窗底部「复制」按钮可重试并见反馈；③诊断文本【数据】区含「存储配额：已用 x / y」。
+  - ⚠️ 跨域说明：base.css 归 AI-B 域本次新增 3 行按钮样式；personalize.js/template.html 均 AI-B 域。未动 AI-A 功能文件。构建已含并行会话未提交改动（fun-cards 功能字卡页 + 文案），一次性收口。
+
+### 2026-08-26 22:5x（✅ 完成·修复联系人邀请游戏同意后不开页面——猜拳邀请）
+- [本会话·完成]（**已改 src/js/chat.js（openRpsPanel/closeRpsPanel 导出到 window）；已构建（22:56, sw: mochi-mta7w69z）+ 新增 tools/diag-invite-accept.mjs 实测三条邀请链路 + 布局 verify 10/10；未提交**）。
+  - **根因**（用户反馈：联系人邀请我玩游戏，同意后没自动打开小游戏，需手动开）：`openInvitePanelFor`（chat.js）在邀请同意后按 kind 调 `window.openPongPanel`/`window.openSnakePanel`/`window.openRpsPanel`。pong/snake 都已导出到 window，**唯独 rps 的 openRpsPanel 只是 chat.js 内部局部函数、从未挂 window**（自 v3.13.x 引入 TA 邀请起就存在，历史提交 7673db0 同样只有引用无赋值），导致猜拳邀请同意后条件不成立、什么都不发生。实测确认：修复前 openRpsPanel=undefined、rps 同意后 chat-rps-panel 仍 hidden；pong/snake 正常。
+  - **修复**：chat.js 里 `function openRpsPanel`/`closeRpsPanel` 后补 `window.openRpsPanel = openRpsPanel; window.closeRpsPanel = closeRpsPanel;`（与 pong/snake 导出风格一致）。修复后实测 rps/pong/snake 三条邀请同意后对应面板全部打开，无 JS 异常。
+  - **真机确认点**：联系人发起猜拳邀请 → 弹窗点同意 → 应立即弹出聊天页底部猜拳面板（不用再手动点更多→小游戏）；Pong/贪吃蛇邀请本就正常。
+  - 说明：本次构建按工作区现状整体扫入并行会话改动（git status 可见），提交前请按协议统一 git diff 自查。
+### 2026-08-26 22:5x（✅ 完成·主页新增【TA的关心】tab——汇总查岗/经期关心/喝水/吃饭/番茄陪伴五类联系人主动关心记录）
+- [本会话·完成]（**已改 src/template.html（主页 #page-home 新增 care tab「TA的关心」+ panel#home-care）+ src/js/records.js（新增 caresLoad/caresSave/addCareRecord 存储 records-care 按联系人桌面隔离 + renderCarePanel 渲染——五类：📋查岗（ask-card 问题文本/ask-msg 提示，30s 内有问卡则不重复列）/🌸经期关心/💧提醒喝水/🍚提醒吃饭（从聊天记录 mood tag 回溯）/🍅番茄陪伴（只记时间）+ render() care 分支）+ src/js/p2-features.js（番茄陪伴入口进陪伴时 addCareRecord('pomo','') 记一条时间）**；已构建（22:54, sw: mochi-mta7suyv）+ verify-coin-ledger.mjs 扩展（注入五类 → CARE has 五类全 true，无查岗重复，面板 5 条）全绿；未提交**）。
+  - 设计口径（用户拍板）：主页新增 tab；番茄陪伴**只记时间不记内容**（records-care 存 {kind:'pomo',ts}）。查岗/经期/喝水/吃饭从聊天记录回溯（tag 或 ask-card），历史已有记录自动可见；番茄陪伴从本次起新记录。
+  - 真机确认点：①主页 tab 横向滑到「TA的关心」；②TA 查岗/关心经期/提醒喝水吃饭后对应记录出现在面板；③开一次番茄陪伴模式后出现「🍅 番茄钟陪伴」时间记录；④无记录时显示引导空态。
+### 2026-08-26 22:4x（✅ 完成·小游戏记录补充【联系人主动邀请玩游戏】识别——聊天统计游戏区块并入邀请记录）
+- [本会话·完成]（**已改 src/js/chat.js（sendTaInvite 邀请消息新增 gInv 字段记录游戏类型 rps/pong/snake；addIn 白名单补 gInv: opts.gInv 使其随消息持久化，渲染仍走 poke 不受影响）+ src/js/p2-features.js（小游戏记录区块识别 m.gInv：显示「📩 TA 邀请玩 Pong/双人贪吃蛇/猜拳」，cuddle 贴贴邀请排除不算游戏；空态文案与计数单位调为「n 条」）**；已构建（22:47, sw: mochi-mta7k70h）+ verify-coin-ledger.mjs 扩展（注入 2 条邀请 pong/rps + 1 条 cuddle → 区块 7 条，pong/rps 邀请识别 true，cuddle 排除 true）全绿；未提交**）。
+  - 老数据说明：gInv 是 v3.16.x 新增字段，历史邀请消息（无 gInv）无法回溯识别为游戏邀请，仍只按普通消息显示（聊天里可见，统计区不再单列）。如需把老邀请也归入，可考虑按文本关键词兜底（如「想和你玩/来一局/猜拳/贪吃蛇」），本期未做避免误伤普通聊天。
+  - 真机确认点：①聊天统计→聊天记录，小游戏记录区应见「📩 TA 邀请玩 Pong」「📩 TA 邀请玩 猜拳」行；②cuddle 贴贴邀请不出现；③正常对局（打砖块/乒乓等）仍在列。
+### 2026-08-26 22:4x（✅ 完成·聊天统计→聊天记录区新增【小游戏记录】区块——汇总我和 TA 玩过的 7 款对局）
+- [本会话·完成]（**已改 src/js/p2-features.js（renderStats 聊天记录区底部新增「🎮 小游戏记录」区块：按 special 识别 brick/pong/snake/memory/rps/c4/ms 七款对局消息，时间倒序展示「游戏 · 结果」，标题计数「n 局」；老数据兜底：四子棋/扫雷/记忆翻牌/打砖块/Pong 按文本前缀识别无 special 的历史消息）+ src/js/connect-four.js（四子棋结束写聊天消息补 { special:'c4' }）+ src/js/coop-mine.js（合作扫雷补 { special:'ms' }）**；已构建（22:43, sw: mochi-mta7er90）+ verify-coin-ledger.mjs 扩展（注入 brick/pong/memory/c4/ms 五条对局消息 → 区块显示 5 局、五款全部识别）全绿；未提交**）。
+  - 设计口径：只汇总【更多功能→小游戏】8 款里写聊天消息的 7 款（钓鱼是独立收获页不写对局消息）；数据复用聊天记录零新增存储（用户拍板）；石头剪刀布(rps)/贪吃蛇(snake)本就带 special。
+  - 真机确认点：①聊天统计→聊天记录，底部见「🎮 小游戏记录 · n 局」，每行游戏名+结果+时间；②和 TA 玩一局四子棋/扫雷后新对局出现在列表顶部；③老对局（v3.16.x 前无标记）也能识别。
+### 2026-08-26 22:3x（✅ 完成·桌面三页底部图标完全对齐——修复「功能图标间隙不一样」）
+- [本会话·完成]（**已改 src/css/home.css（AI-B 域）+ 已构建（22:35, sw: mochi-mta6hylc）+ 更新 tools/verify-desk-align.mjs **20/20 全绿** + npm run verify 10/10 + verify-desk-reset-period 9/10（FAIL 为改动前既有，见下）；未提交**）。
+  - **用户复反馈**：上一轮为强行对齐第三页 grid 底部，把第三页图标压到 52px + 行高 86px，导致三页图标间隙/大小不一致，底部图标视觉上仍没对齐。
+  - **修复（改思路）**：不再压缩第三页图标，改为**三页图标完全一致**——移除 `.app-grid.p3-grid` 的 86px 行高/52px 图标专属覆盖，三页统一 58px 图标、96px 行高、14px 行距。第三页多一行的 110px 空间由**经期卡**让出（min-height 190→160，内容 标签+天数+副题 ≈100px 仍富余居中）。
+  - **结果**：三页图标组底部全部 636.3、最后一行图标下沿全部 622.3、图标 58px/行高 96px 三页一致；P3 第 2/3 行图标与 P1/P2 第 1/2 行图标同一水平线。
+  - **验证**：verify-desk-align 20/20（C6 经期卡 160 / C11 三页图标 58px·行距一致 / C11b grid 底对齐 / C11c 末行图标下沿对齐）；npm run verify 10/10；verify-desk-reset-period 9/10（FAIL 是脚本前置断言期望旧 bug 复现条件，改动前干净树同结果，非回归）。
+  - ⚠️ 跨域说明：home.css 归 AI-B 域；未动 AI-A 功能文件。已顺带清掉历史残留 stash。提交前请按协议 git diff 自查。
+
+### 2026-08-26 22:3x（✅ 完成·主页新增【心意币红包记录】tab + 聊天统计红包区改累计摘要）
+- [本会话·完成]（**已改 src/template.html（主页 #page-home 新增 coinrp tab「心意币红包记录」+ panel#home-coinrp）+ src/js/records.js（renderRpPanel()：双向流水——我发/联系人发各显一行，含金额、状态(待领取/已领取/已过期·退回/已退回)、留言、时间；render() 加 coinrp 分支）+ src/js/p2-features.js（聊天记录 tab 原「联系人发红包记录」明细区改为摘要：累计心意币金额 + 总次数，明细已上移主页）**；已构建（22:28, sw: mochi-mta6vnyf）+ verify-coin-ledger.mjs 扩展（8 tabs 渲染 / 红包双向注入后主页文案 / 统计页摘要 ¥52·1次且无明细行残留）全绿；未提交**）。
+  - 数据源：红包即心意币，读当前桌面聊天记录 special=redpacket（侧 in=TA 发 / out=我发），与聊天统计同源，无需新增存储。
+  - 真机确认点：①主页 tab 横向滑到「心意币红包记录」，应见我发/TA 发双向红包流水；②桌面聊天统计→聊天记录，原红包明细区现为「TA 发红包 · 累计心意币 ¥xx · 共 n 次」。
 ### 2026-08-26 22:3x（🐛 修复·iOS Safari 公用/专属字卡语音无法上传「梦角语音文件」）
 - [本会话·完成]（**已改 src/js/chatcard.js（AI-A 域）+ 已构建（22:16, sw: mochi-mta6gpi8）+ 新专项 tools/verify-voice-ios-upload.mjs **8/8 全绿** + 布局 verify 10/10；已提交 d071e83（含并行会话已保存改动收口），推送待凭据**）。
   - **根因**：iOS Safari「文件」选择器按 `accept="audio/*"` 过滤文件——只放行系统识别为音频的文件，amr/silk/无扩展名等语音导出文件（用户手里的「梦角语音」）在文件列表里**灰显不可选**，公用/专属字卡语音分类都传不上去。
@@ -3171,3 +3216,21 @@ ode tools/patch-chat-cuddle.mjs**（幂等断言，仅在文件未被锁定时�
 ### 2026-08-26 17:0x���û�������ץ���ɹ���������Ϣ�����ظ������������� + ��ǩchip�ִ�һ��ͬ�����ģ�
 - [���Ự����ɡ�δ����]**�Ѹ� src/js/p2-features.js��ץ����Ӧ���ʹ����� 1 �е��ã�**��`chatAddIn(r, { tag: '����ץ��' })` ��Ϊ `chatAddIn(r, { mood: [{ tag: '����ץ��', label: '' }] })`����addIn �� opts.tag ������ĸ��ƽ� chip label��_tagMood�������¡�����ץ���ֿ�������һ�С���ǩ+�ظ��ֿ������Ĵ��Զ��� mood �� label ��chip ֻʣ������ץ������ǩ�����������������ظ�����Ⱦ/�־û�/�ղ���·�Կ� label ��Ȼ���ݣ�ֻ��һ������� span�����Ӿ�Ӱ�죩��
 - **��������**������ֻ�� p2-features.js һ�������������д������лỰ�Ķ���git status �ɼ������밴Э���տڹ����ύ��
+
+### 2026-08-26 22:2x（AI-A 留话：请正在改 chat.js 的 AI 顺手补 memory 渲染分支）
+- **背景**：memory-game.js 已由前一轮实现，endGame 调 chatAddSystem(text, {special:'memory'})，但 chat.js renderMsg 无该分支，结算消息 fallback 到普通 TA 气泡（应像 pong/brick 那样居中中性卡片）。
+- **请帮忙在 chat.js renderMsg 里、brick 分支后、snake 分支前，插入以下分支（零新增 CSS，复用 .msg-pong-card）**：
+```js
+if (rec.special === 'memory') {
+m.className = 'msg-pong';
+m.innerHTML = '<div class="msg-pong-card">' +
+'<div class="msg-pong-label">🃏 ' + T('记忆翻牌') + '</div>' +
+'<div class="msg-pong-result">' + escTxt(T(rec.text || '')) + '</div>' +
+'</div>';
+appendMsg(m);
+maybeScrollChatBottom(rec.side);
+return m;
+}
+```
+- **我本轮已落地（memory-game.js，已验证 25/25）**：①每日心意币达上限时显示「（今日奖励已达上限 +30）」而非令人困惑的 +0；②新增历史最佳默契/累计完成局数统计（key memory-stats），结算 overlay 末尾显示「累计完成 N 局 · 历史最佳默契 X」。
+- **未构建**：等 chat.js memory 分支补上后，由构建者统一 node build.mjs。

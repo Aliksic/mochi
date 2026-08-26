@@ -238,7 +238,48 @@
               main: '+¥' + (Number(m.askFen || 0) / 100).toFixed(2),
               sub: fmtMDHM(m.askTs || m.ts)
             })),
-            escH(name) + ' 还没有向 Mochi 申请过');
+            escH(name) + ' 还没有向 Mochi 申请过') +
+          // v3.16.x：小游戏记录（更多功能→小游戏 7 款对局 + 联系人主动邀请玩游戏，全部汇总）
+          (function () {
+            const GAME_SPECIAL = { brick: '双人打砖块', pong: '乒乓', snake: '贪吃蛇', memory: '记忆翻牌', rps: '猜拳', c4: '四子棋', ms: '合作扫雷' };
+            const GAME_KIND = { rps: '猜拳', pong: 'Pong', snake: '双人贪吃蛇' };   // TA 主动邀请（cuddle 贴贴不算游戏）
+            const GAME_NAME_RE = /^(四子棋|合作扫雷|记忆翻牌|双人打砖块|Pong)/;
+            const rows = [];
+            const push = (m, mainTxt, ico) => {
+              if (!m) return;
+              rows.push({ main: (ico || '🎮') + ' ' + escH(mainTxt), sub: fmtMDHM(m.ts || m.rpTs), ts: m.ts || m.rpTs || 0 });
+            };
+            msgs.forEach(m => {
+              if (!m) return;
+              if (m.special && GAME_SPECIAL[m.special]) push(m, GAME_SPECIAL[m.special] + ' · ' + (m.text || ''), '🎮');
+              // 联系人主动邀请玩游戏（sendTaInvite 写入的 gInv 字段）
+              else if (m.gInv && GAME_KIND[m.gInv]) push(m, name + ' 邀请玩 ' + GAME_KIND[m.gInv], '📩');
+            });
+            // 兜底：无 special 的老记录按文本前缀识别（四子棋/扫雷 v3.16.x 前未带标记）
+            msgs.forEach(m => {
+              if (!m || !m.text || !GAME_NAME_RE.test(m.text)) return;
+              if (m.special && GAME_SPECIAL[m.special]) return;
+              if (m.gInv) return;
+              push(m, m.text, '🎮');
+            });
+            // 去重 + 时间倒序
+            const seen = new Set();
+            const uniq = rows.filter(r => { const k = r.main + '|' + r.sub; if (seen.has(k)) return false; seen.add(k); return true; });
+            uniq.sort((a, b) => (b.ts || 0) - (a.ts || 0));
+            let html = '<div class="stats-sec"><div class="stats-sec-head"><span class="stats-sec-title">🎮 小游戏记录</span>' +
+              '<span class="stats-sec-count">' + uniq.length + ' 条</span></div>';
+            if (!uniq.length) {
+              html += '<div class="ta-empty">还没有小游戏记录（更多功能 → 小游戏，和 TA 玩一局试试）</div>';
+            } else {
+              html += '<div class="stats-list">';
+              uniq.forEach(r => {
+                html += '<div class="stats-item"><span class="stats-item-name">' + r.main + '</span>' +
+                  '<span class="stats-item-num">' + r.sub + '</span></div>';
+              });
+              html += '</div>';
+            }
+            return html + '</div>';
+          })();
         }
     }
     // ---- 情绪表达 ----
@@ -3548,6 +3589,8 @@ if (ckRefresh) {
     }
     pmpRec = { mode: 'focus', totalMs: pomoModeMin('focus') * 60000, endAt: pomoEndAt, startedAt: Date.now(), paused: 0, remainMs: 0, enc: 0, nextEncAt: 0 };
     pmpSave();
+    // v3.16.x：记录一次番茄陪伴时间（主页「TA的关心」展示）
+    try { if (window.addCareRecord) window.addCareRecord('pomo', ''); } catch (e) {}
     const cdEl = document.getElementById('pmp-cd'); if (cdEl) cdEl.hidden = false;
     try { pmpCAdd('ta', PMP_GREET[Math.floor(Math.random() * PMP_GREET.length)]); } catch (e) {}
     pmpScheduleEnc();

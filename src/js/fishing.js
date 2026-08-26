@@ -62,6 +62,9 @@
     { id: 'fish_octopus',  name: '八爪鱼', icon: '🐙', price: 1200, cat: 'fish',    r: 3 },
     { id: 'fish_rare',     name: '稀有鱼', icon: '🐠', price: 3000, cat: 'fish',    r: 4 },
     { id: 'fish_gold',     name: '金色鱼', icon: '🌟', price: 5000, cat: 'fish',    r: 5 },
+    { id: 'fish_koi',      name: '锦鲤',   icon: '🎏', price: 8000,  cat: 'fish',    r: 6 },
+    { id: 'fish_moon',     name: '月光鱼', icon: '🌙', price: 12000, cat: 'fish',    r: 6 },
+    { id: 'fish_abyss',    name: '深渊王', icon: '🐲', price: 20000, cat: 'fish',    r: 6 },
     { id: 'sp_flower',     name: '漂流花', icon: '🌸', price: 800,  cat: 'special', giftNote: 'flower' },
     { id: 'sp_chest',      name: '小宝箱', icon: '🎁', price: 2000, cat: 'special' },
     { id: 'gift_shell',    name: '小贝壳', icon: '🐚', cat: 'gift',    price: 0, giftNote: 'shell' },
@@ -77,9 +80,9 @@
   // 玩家出货：按品质给稀有度权重
   function qualityWeights(quality) {
     // perfect: 高稀有度倾斜；good: 中等；poor: 低稀有度倾斜
-    if (quality === 'perfect') return { 1: 30, 2: 30, 3: 22, 4: 13, 5: 5 };
-    if (quality === 'good')    return { 1: 45, 2: 30, 3: 16, 4: 7, 5: 2 };
-    return { 1: 68, 2: 22, 3: 8, 4: 2, 5: 0 };
+    if (quality === 'perfect') return { 1: 30, 2: 30, 3: 22, 4: 13, 5: 5, 6: 3 };
+    if (quality === 'good')    return { 1: 45, 2: 30, 3: 16, 4: 7, 5: 2, 6: 1 };
+    return { 1: 68, 2: 22, 3: 8, 4: 2, 5: 0, 6: 0 };
   }
   function rollFish(quality) {
     const w = qualityWeights(quality);
@@ -122,7 +125,7 @@
   function loadToday() {
     const t = readJSON(todayDataKey(), null);
     if (t && t.date === todayKey()) return t;
-    return { date: todayKey(), mine: {}, ta: {} };
+    return { date: todayKey(), mine: {}, ta: {}, keep: {} };
   }
   function saveToday(t) { writeJSON(todayDataKey(), t); }
 
@@ -133,6 +136,12 @@
   function togetherKey() { return 'fishing-together'; }
   function loadTogether() { const t = readJSON(togetherKey(), null); if (t && t.date === todayKey()) return t; return { date: todayKey(), sec: 0, rewarded: false }; }
   function saveTogether(t) { writeJSON(togetherKey(), t); }
+
+  // ---- 成就统计（永久累计：抛竿次数 / 完美收竿 / 累计心意币） ----
+  function statsKey() { return 'fishing-stats'; }
+  function loadStats() { const s = readJSON(statsKey(), null); return s && typeof s === 'object' ? s : { totalCast: 0, perfectCatch: 0, totalEarned: 0 }; }
+  function saveStats(s) { writeJSON(statsKey(), s); }
+  function addStats(delta) { const s = loadStats(); s.totalCast += delta.totalCast || 0; s.perfectCatch += delta.perfectCatch || 0; s.totalEarned += delta.totalEarned || 0; saveStats(s); }
 
   // ---- 心意币钱包：读写统一走 window.giftWalletGet / window.giftWalletChange（gift-shop.js 维护，根键 xy-home-v2:gift-wallet，单位分）----
 
@@ -162,6 +171,9 @@
   let timingRafId = null;
   let curTab = 'today';
   let open = false;
+  let missStreak = 0;     // 连续跑鱼次数（保底：第 5 次起必命中）
+  let togetherSec = -1, togetherRewarded = null;  // 陪伴计时内存缓存（减少写盘）
+  let _lastPageKey = '';  // renderPage 脏标记（无变化时跳过 innerHTML 重建）
 
   function resetMine() { mine = { phase: 'idle', since: 0, biteAt: 0 }; }
   function resetTa() { ta = { phase: 'idle', until: 0, next: 0 }; }
@@ -171,6 +183,7 @@
   function castMine() {
     if (mine.phase === 'waiting' || mine.phase === 'biting') return;
     sfxCast();
+    addStats({ totalCast: 1 });
     if (statusEl) delete statusEl.dataset.keep;
     mine.phase = 'waiting'; mine.since = Date.now();
     mine.biteAt = Date.now() + rand(2000, 4500);
@@ -203,19 +216,25 @@
     if (p >= 0.38 && p <= 0.68) quality = 'perfect';
     else if ((p >= 0.2 && p < 0.38) || (p > 0.68 && p <= 0.85)) quality = 'good';
     else quality = 'poor';
-    const hit = Math.random() < successRate(quality);
+    const pity = missStreak >= 5;
+    const hit = pity || Math.random() < successRate(quality);
     if (timingRafId) { cancelAnimationFrame(timingRafId); timingRafId = null; }
     if (hit) {
       const item = rollFish(quality);
       sfxCatch();
       gainMine(item);
       flashScene(true, item);
-      if (quality === 'perfect') statusText('完美收竿！钓到了 ' + item.icon + ' ' + item.name);
+      if (pity) { statusText('保底命中！钓到了 ' + item.icon + ' ' + item.name); missStreak = 0; }
+      else if (quality === 'perfect') { statusText('完美收竿！钓到了 ' + item.icon + ' ' + item.name); addStats({ perfectCatch: 1 }); }
       else statusText('收竿！钓到了 ' + item.icon + ' ' + item.name);
     } else {
       sfxMiss();
       flashScene(false);
-      statusText('鱼跑了…（' + (quality === 'perfect' ? '差一点点' : '时机不对') + '）');
+      missStreak++;
+      let msg = '鱼跑了…（' + (quality === 'perfect' ? '差一点点' : '时机不对') + '）';
+      if (missStreak === 3 || missStreak === 4) msg += ' 别急，慢慢来';
+      statusText(msg);
+      if (Math.random() < 0.15) { setTimeout(function () { sendTaLine(fit('TA：') + pick(TA_COMFORT), false); }, 500); }
     }
     mine.phase = 'idle'; mine.progress = null;
     render();
@@ -240,6 +259,8 @@
   function flashScene(got, item) {
     const wp = sceneEl.querySelector('.fish-water');
     if (!wp) return;
+    const existing = wp.querySelectorAll('.fish-splash');
+    if (existing.length >= 3 && existing[0].parentNode) existing[0].parentNode.removeChild(existing[0]);
     const splash = document.createElement('div');
     splash.className = 'fish-splash' + (got ? ' ok' : '');
     splash.textContent = got ? (item ? item.icon : '🐟') : '💨';
@@ -313,9 +334,17 @@
       if (item.giftNote === 'flower' && Math.random() < 0.5) {
         const note = giftNoteFor(item);
         setTimeout(function () { sendTaLine(fit('TA：') + note, false); }, 700);
+      } else if (item.r >= 4 && Math.random() < 0.5) {
+        setTimeout(function () { sendTaLine(fit('TA：') + pick(TA_PROUD), false); }, 600);
+      } else if (Math.random() < 0.3) {
+        setTimeout(function () { sendTaLine(fit('TA：') + pick(TA_HAPPY), false); }, 600);
       }
     }
   }
+  // ---- TA 钓鱼互动话术（开心/得意/安慰，内置兜底） ----
+  const TA_HAPPY = ['钓到了！', '今天运气不错。', '这条给你看看。', '嘿嘿，上钩了。'];
+  const TA_PROUD = ['难得的收获呢。', '这条很漂亮吧。', '好久没钓到这么好的了。'];
+  const TA_COMFORT = ['没事，再试一次。', '鱼很狡猾的。', '别灰心，慢慢来。', '跑掉的总是比较大的。'];
   function sendTaLine(text, glow) {
     try { if (window.chatAddIn) window.chatAddIn(glow ? '💝 ' + text : text, { silent: true }); } catch (e) {}
   }
@@ -324,16 +353,18 @@
   const TOGETHER_GOAL = 300; // 秒
   function startTogetherTimer() {
     stopTogetherTimer();
+    const t0 = loadTogether();
+    togetherSec = t0.sec; togetherRewarded = t0.rewarded;
     togetherTimer = setInterval(function () {
       if (!open) return;
       const bothFishing = (mine.phase === 'waiting' || mine.phase === 'biting') && (ta.phase === 'casting' || ta.phase === 'waiting' || ta.phase === 'biting');
       if (!bothFishing) return;
-      const t = loadTogether();
-      if (t.rewarded) return;
-      t.sec += 1; saveTogether(t);
-      if (t.sec >= TOGETHER_GOAL) {
-        t.rewarded = true; saveTogether(t);
-        // v3.16.x：陪伴奖励双方同步同额（原只加我的余额）
+      if (togetherRewarded) return;
+      togetherSec++;
+      if (togetherSec % 10 === 0) { const t = loadTogether(); t.sec = togetherSec; t.rewarded = !!togetherRewarded; saveTogether(t); }
+      if (togetherSec >= TOGETHER_GOAL) {
+        togetherRewarded = true;
+        const t = loadTogether(); t.sec = togetherSec; t.rewarded = true; saveTogether(t);
         if (window.giftWalletChange) window.giftWalletChange(1314, 1314, '钓鱼陪伴奖励');
         sfxGift();
         toast('💕 陪伴奖励：一起钓鱼 5 分钟，心意币各 +¥13.14');
@@ -341,24 +372,32 @@
       }
     }, 1000);
   }
-  function stopTogetherTimer() { if (togetherTimer) { clearInterval(togetherTimer); togetherTimer = null; } }
+  function stopTogetherTimer() {
+    if (togetherTimer) { clearInterval(togetherTimer); togetherTimer = null; }
+    if (togetherSec >= 0) { const t = loadTogether(); t.sec = togetherSec; t.rewarded = !!togetherRewarded; saveTogether(t); togetherSec = -1; togetherRewarded = null; }
+  }
 
   // ---- 出售（今日收获 → 心意币） ----
   function sellAll() {
     const t = loadToday();
+    const keep = t.keep || {};
     let total = 0, count = 0;
+    const sold = {};
     ['mine', 'ta'].forEach(function (side) {
       Object.keys(t[side]).forEach(function (id) {
         const it = ITEM_MAP[id];
         if (!it || it.cat === 'gift') return;
+        if (keep[id]) return;
         const n = t[side][id] || 0;
         total += it.price * n; count += n;
+        sold[side] = sold[side] || {}; sold[side][id] = 1;
       });
     });
-    if (count === 0) { toast('还没有可出售的收获'); return; }
-    // v3.16.x：出售收获双方同步同额（原只加我的余额）
+    if (count === 0) { toast('没有可出售的收获（勾选「留」的不卖）'); return; }
     if (window.giftWalletChange) window.giftWalletChange(total, total, '钓鱼出售');
-    t.mine = {}; t.ta = {}; saveToday(t);
+    Object.keys(sold).forEach(function (side) { Object.keys(sold[side]).forEach(function (id) { delete t[side][id]; }); });
+    saveToday(t);
+    addStats({ totalEarned: total });
     sfxSell();
     toast('已出售 ' + count + ' 件，心意币各 +' + fenToStr(total));
     render();
@@ -423,12 +462,19 @@
   }
   function renderPage() {
     if (!pageEl) return;
+    let key;
+    if (curTab === 'today') key = 'today:' + JSON.stringify(loadToday());
+    else if (curTab === 'dex') key = 'dex:' + JSON.stringify(loadDex()) + ':' + JSON.stringify(loadStats());
+    else key = 'gifts:' + JSON.stringify(loadGifts());
+    if (key === _lastPageKey) return;
+    _lastPageKey = key;
     if (curTab === 'today') pageEl.innerHTML = renderToday();
     else if (curTab === 'dex') pageEl.innerHTML = renderDex();
     else if (curTab === 'gifts') pageEl.innerHTML = renderGifts();
   }
   function renderToday() {
     const t = loadToday();
+    const keep = t.keep || {};
     let total = 0, count = 0;
     function rows(side) {
       const m = t[side] || {};
@@ -440,8 +486,9 @@
         const n = m[id];
         const p = it.price * n;
         const sellable = it.cat !== 'gift';
-        if (sellable) { total += p; count += n; }
-        html += '<div class="fish-row"><span class="fish-ico">' + it.icon + '</span><span class="fish-name">' + esc(it.name) + (it.cat === 'gift' ? '<i class="fish-gift-tag">已收藏</i>' : '') + '</span><span class="fish-cnt">×' + n + '</span>' + (sellable ? '<span class="fish-price">+' + fenToStr(p) + '</span>' : '<span class="fish-price">纪念</span>') + '</div>';
+        const kept = !!keep[id];
+        if (sellable && !kept) { total += p; count += n; }
+        html += '<div class="fish-row"><span class="fish-ico">' + it.icon + '</span><span class="fish-name">' + esc(it.name) + (it.cat === 'gift' ? '<i class="fish-gift-tag">已收藏</i>' : '') + '</span><span class="fish-cnt">×' + n + '</span>' + (sellable ? '<label class="fish-keep"><input type="checkbox" class="fish-keep-cb" data-id="' + id + '"' + (kept ? ' checked' : '') + '><span>留</span></label><span class="fish-price">+' + fenToStr(p) + '</span>' : '<span class="fish-price">纪念</span>') + '</div>';
       });
       return html;
     }
@@ -449,7 +496,7 @@
       '<div class="fish-sub">今日收获</div>' +
       '<div class="fish-subhead">你</div>' + rows('mine') +
       '<div class="fish-subhead">' + esc(taWord()) + '</div>' + rows('ta') +
-      '<div class="fish-sellbar">' + (count ? '<span>共 ' + count + ' 件 · 价值 <b>+' + fenToStr(total) + '</b> 心意币</span>' : '<span>还没有可出售的收获</span>') + '<button class="fish-sell" id="fish-sell-btn"' + (count ? '' : ' disabled') + '>' + (count ? '出售全部' : '出售') + '</button></div>';
+      '<div class="fish-sellbar">' + (count ? '<span>可出售 ' + count + ' 件 · <b>+' + fenToStr(total) + '</b> 心意币（勾「留」不卖）</span>' : '<span>没有可出售的收获</span>') + '<button class="fish-sell" id="fish-sell-btn"' + (count ? '' : ' disabled') + '>出售</button></div>';
     return html;
   }
   function renderDex() {
@@ -462,6 +509,8 @@
     html += '</div>';
     const gotCount = Object.keys(d).length;
     html += '<div class="fish-dex-foot">已发现 ' + gotCount + ' / ' + ITEMS.length + '</div>';
+    const st = loadStats();
+    html += '<div class="fish-stats">累计抛竿 <b>' + st.totalCast + '</b> · 完美收竿 <b>' + st.perfectCatch + '</b> · 累计赚 <b>¥' + fenToStr(st.totalEarned) + '</b></div>';
     return html;
   }
   function renderGifts() {
@@ -485,6 +534,16 @@
     if (sell) { e.stopPropagation(); sellAll(); return; }
     const exch = e.target.closest && e.target.closest('.fish-exch');
     if (exch) { e.stopPropagation(); exchangeGift(parseInt(exch.getAttribute('data-idx'), 10)); return; }
+  });
+  if (pageEl) pageEl.addEventListener('change', function (e) {
+    const cb = e.target.closest && e.target.closest('.fish-keep-cb');
+    if (!cb) return;
+    e.stopPropagation();
+    const t = loadToday();
+    if (!t.keep) t.keep = {};
+    const id = cb.getAttribute('data-id');
+    if (cb.checked) t.keep[id] = 1; else delete t.keep[id];
+    saveToday(t);
   });
   tabEls.forEach(function (tab) {
     tab.addEventListener('click', function (e) {

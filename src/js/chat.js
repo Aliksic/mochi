@@ -1897,7 +1897,8 @@ opts = opts || {};
   // v3.15.x：opts.tagNoDup = 只留来源 chip，不把正文重复写进 mood label（摸鱼抓包回应用：
   // 正文本身就是一张完整字卡，label 再渲染一遍会上下两行内容重复）
   const _tagMood = opts.tag ? [{ tag: String(opts.tag), label: opts.tagNoDup ? '' : String(text) }] : null;
-return addRec({ side: 'in', text: text, initiative: opts.initiative, special: opts.special, quote: opts.quote, qidx: opts.qidx, type: opts.type, img: opts.img, parts: opts.parts, mailNotice: opts.mailNotice, askQuestion: opts.askQuestion, askStatus: opts.askStatus, askOptions: opts.askOptions, askType: opts.askType, choiceQuestion: opts.choiceQuestion, choiceOptions: opts.choiceOptions, choicePref: opts.choicePref, choiceCat: opts.choiceCat, choiceStatus: opts.choiceStatus, choiceAnswer: opts.choiceAnswer, choiceReply: opts.choiceReply, choiceMatch: opts.choiceMatch, curiousQuestion: opts.curiousQuestion, curiousQuick: opts.curiousQuick, curiousReplies: opts.curiousReplies, curiousFollowup: opts.curiousFollowup, curiousQid: opts.curiousQid, curiousCat: opts.curiousCat, curiousStatus: opts.curiousStatus, curiousAnswer: opts.curiousAnswer, curiousReply: opts.curiousReply, roastText: opts.roastText, roastCat: opts.roastCat, roastStatus: opts.roastStatus, roastAnswer: opts.roastAnswer, roastReply: opts.roastReply, rpAmount: opts.rpAmount, rpWish: opts.rpWish, rpStatus: opts.rpStatus, rpTs: opts.rpTs, rpCover: opts.rpCover, askFen: opts.askFen, askTs: opts.askTs, mood: opts.mood || _tagMood || undefined });
+  // v3.16.x：gInv = 联系人主动邀请的游戏类型（pong/snake/rps），随消息持久化供小游戏记录识别
+return addRec({ side: 'in', text: text, initiative: opts.initiative, special: opts.special, quote: opts.quote, qidx: opts.qidx, type: opts.type, img: opts.img, parts: opts.parts, mailNotice: opts.mailNotice, gInv: opts.gInv, askQuestion: opts.askQuestion, askStatus: opts.askStatus, askOptions: opts.askOptions, askType: opts.askType, choiceQuestion: opts.choiceQuestion, choiceOptions: opts.choiceOptions, choicePref: opts.choicePref, choiceCat: opts.choiceCat, choiceStatus: opts.choiceStatus, choiceAnswer: opts.choiceAnswer, choiceReply: opts.choiceReply, choiceMatch: opts.choiceMatch, curiousQuestion: opts.curiousQuestion, curiousQuick: opts.curiousQuick, curiousReplies: opts.curiousReplies, curiousFollowup: opts.curiousFollowup, curiousQid: opts.curiousQid, curiousCat: opts.curiousCat, curiousStatus: opts.curiousStatus, curiousAnswer: opts.curiousAnswer, curiousReply: opts.curiousReply, roastText: opts.roastText, roastCat: opts.roastCat, roastStatus: opts.roastStatus, roastAnswer: opts.roastAnswer, roastReply: opts.roastReply, rpAmount: opts.rpAmount, rpWish: opts.rpWish, rpStatus: opts.rpStatus, rpTs: opts.rpTs, rpCover: opts.rpCover, askFen: opts.askFen, askTs: opts.askTs, mood: opts.mood || _tagMood || undefined });
 }
 function addOut(text) {
 return addRec({ side: 'out', text: text });
@@ -2495,7 +2496,8 @@ cuddle: { title: '贴贴邀请' }
 };
 function sendTaInvite(inv, name) {
 const meta = INVITE_KIND_META[inv && inv.kind] || INVITE_KIND_META.rps;
-addIn(name + ' ' + (inv.text || ''), { special: 'poke', initiative: true });
+// v3.16.x：邀请消息带 gInv 游戏类型字段（渲染仍走 poke），供聊天统计「小游戏记录」识别 TA 主动邀请
+addIn(name + ' ' + (inv.text || ''), { special: 'poke', initiative: true, gInv: inv.kind });
 showTyping();
 setTimeout(() => {
 hideTyping();
@@ -3110,6 +3112,10 @@ rpsRenderScore();
 rpsPanel.hidden = false;
 }
 function closeRpsPanel() { if (rpsPanel) rpsPanel.hidden = true; }
+// v3.16.x：导出到 window——联系人猜拳邀请同意后 openInvitePanelFor 走 window.openRpsPanel，
+// 此前只导出 pong/snake 忘了 rps，导致猜拳邀请同意后不开面板（历史 bug，自 v3.13.x 引入）
+window.openRpsPanel = openRpsPanel;
+window.closeRpsPanel = closeRpsPanel;
 function rpsJudge(a, b) {
 if (a === b) return 0;
 if ((a === 'rock' && b === 'scissors') ||
@@ -5567,7 +5573,7 @@ const micBtn = document.getElementById('chat-mic-btn');
 const voicePanel = document.getElementById('voice-panel');
 const VOICE_MAX_MS = 60000;
 let voiceStream = null, voiceRec = null, voiceChunks = [], voiceTimer = null;
-let voiceStartTs = 0, voiceDataUrl = '', voiceDur = 0, voiceSilent = false, voicePreviewAudio = null;
+let voiceStartTs = 0, voiceDataUrl = '', voiceDur = 0, voiceSilent = false, voicePreviewAudio = null, voiceVisHandler = null;
 function voiceEnabled() {
 try { return store.get('cs-voice-send') === '1'; } catch (e) { return false; }
 }
@@ -5667,15 +5673,22 @@ const sb = document.getElementById('voice-send-btn');
 if (sb) sb.disabled = true;
 const rb = document.getElementById('voice-record-btn');
 if (rb) { rb.textContent = '停止录音'; rb.classList.add('rec'); }
+voiceVisHandler = () => {
+if (document.visibilityState === 'hidden' && voiceRec && voiceRec.state === 'recording') {
+stopVoiceRec(false); toast('页面切到后台，录音已停止');
+}
+};
+document.addEventListener('visibilitychange', voiceVisHandler);
 voiceTimer = setInterval(() => {
 const el = Math.floor((Date.now() - voiceStartTs) / 1000);
 const tm = document.getElementById('voice-time');
 if (tm) tm.textContent = voiceFmt(Math.min(el, 60));
-if (Date.now() - voiceStartTs >= VOICE_MAX_MS) stopVoiceRec(false);
+if (Date.now() - voiceStartTs >= VOICE_MAX_MS) { stopVoiceRec(false); toast('已达最长 60 秒，自动停止'); }
 }, 250);
 }
 function stopVoiceRec(silent) {
 if (voiceTimer) { clearInterval(voiceTimer); voiceTimer = null; }
+if (voiceVisHandler) { document.removeEventListener('visibilitychange', voiceVisHandler); voiceVisHandler = null; }
 if (silent) voiceSilent = true;
 if (voicePanel) voicePanel.classList.remove('recording');
 const rb = document.getElementById('voice-record-btn');
@@ -5697,6 +5710,7 @@ voiceChunks = [];
 const rb = document.getElementById('voice-record-btn');
 if (rb) rb.textContent = '重新录音';
 if (wasSilent || !blob.size) return; // 关闭面板打断的录音直接丢弃
+  if (Date.now() - voiceStartTs < 800) { toast('录音太短，请录满 1 秒以上'); return; }
 const fr = new FileReader();
 fr.onload = () => {
 voiceDataUrl = String(fr.result || '');

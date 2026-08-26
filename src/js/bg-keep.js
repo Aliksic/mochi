@@ -105,6 +105,10 @@
         if (kaTimer || kaDelay) return;
         const p = keepAudio.el.play();
         if (p && p.catch) p.catch(function () {});
+        // v3.17.x：音乐停止/暂停后把媒体条接管回「Mochi 后台保活」——
+        // 音乐暂停瞬间保活音频拉回，但媒体条 metadata 仍是歌曲（title=歌名），
+        // 通知栏媒体条显示"已暂停的歌曲"甚至消失；这里立即重设保活条
+        setKeepMediaSession();
       }
     } catch (e) {}
   }

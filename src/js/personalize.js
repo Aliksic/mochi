@@ -231,6 +231,7 @@ try {
     const fileInput = document.getElementById('modal-file-input');
     const okBtn = document.getElementById('modal-ok');
     const cancelBtn = document.getElementById('modal-cancel');
+    const copyBtn = document.getElementById('modal-copy');
     if (!mask || !input) return;
     // v3.10.x：vivo/OPPO Edge 等安卓内核对 ce-box（mobile-adapt 输入转换器）的
     // value 代理支持不完整——弹窗里明明打完字，点确定读 input.value 却是空，
@@ -441,6 +442,20 @@ try {
         // 重建胶囊组；传空数组/null 隐藏。initVal 设初始选中项
         pills: function (list, initVal) { buildPills(list, initVal); }
       };
+      // v3.16.x：opts.copyBtn——弹窗底部「复制」按钮（诊断信息等只读展示场景）。
+      // 传 { label, fn }，fn(ctl) 在点击时调用，可用 ctl.hint() 就地反馈复制结果；
+      // 不传则按钮保持隐藏，对既有弹窗零影响。
+      if (copyBtn) {
+        const cfg = opts.copyBtn || null;
+        copyBtn.hidden = !cfg;
+        copyBtn.onclick = null;
+        if (cfg) {
+          if (cfg.label) copyBtn.textContent = cfg.label;
+          if (typeof cfg.fn === 'function') {
+            copyBtn.onclick = function () { try { cfg.fn(ctl); } catch (e) {} };
+          }
+        }
+      }
       return ctl;
     };
     // iOS Safari：<input type="color"> 处于 display:none（hidden）时 .click() 不会弹取色器，

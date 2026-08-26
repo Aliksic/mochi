@@ -210,6 +210,9 @@
     } catch (e) { return '不支持'; }
   }
   function collectDiag() {
+    // v3.16.x：storage.estimate 是异步 API，整个采集改为 Promise 返回，调用方 .then 拿文本。
+    // 内部同步段先拼行，配额占位行在异步回调里就地替换（保持【数据】区行序）。
+    return new Promise(function (resolve) {
     const d = window.mochiDevice || {};
     const L = [];
     // 版本号：开屏注入（构建时 __APP_VERSION__ 替换），取不到时留空
@@ -250,7 +253,14 @@
     L.push('【能力】');
     L.push('Fullscreen API=' + !!(document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen));
     L.push('方向锁 API=' + !!(screen.orientation && screen.orientation.lock));
-    L.push('serviceWorker=' + ('serviceWorker' in navigator));
+    try {
+      if ('serviceWorker' in navigator && navigator.serviceWorker) {
+        const swc = navigator.serviceWorker.controller;
+        L.push('serviceWorker=支持' + (swc ? '（已激活，controller=' + swc.scriptURL + '）' : '（未控制本页面）'));
+      } else {
+        L.push('serviceWorker=不支持');
+      }
+    } catch (e) { L.push('serviceWorker=读取失败'); }
     L.push('storage.persist=' + !!(navigator.storage && navigator.storage.persist));
     L.push('CSS dvh=' + cssSupports('height: 1dvh') + '  svh=' + cssSupports('height: 1svh') + '  env(safe-area)=' + cssSupports('padding-top: env(safe-area-inset-top)'));
     L.push('安卓输入框已转 ce-box=' + !!document.querySelector('.ce-box'));
@@ -265,6 +275,43 @@
       }
       L.push('localStorage 数据键=' + n + ' 个');
     } catch (e) { L.push('localStorage 不可访问'); }
+    // v3.16.x：存储配额/持久化/在线状态——「数据写不进去/丢失」类报障的关键字段：
+    // 配额满写失败曾是本项目真实根因（localStorage setItem 静默失败），
+    // estimate() 是异步 API，先放占位行，回调里就地替换。
+    try {
+      L.push('存储配额：读取中…');
+    } catch (e) {}
+    try { L.push('navigator.onLine=' + navigator.onLine); } catch (e) {}
+    try {
+      const est = navigator.storage && navigator.storage.estimate;
+      if (est) {
+        const usageStr = function (u) {
+          if (u == null) return '(未知)';
+          if (u >= 1048576) return (u / 1048576).toFixed(1) + ' MB';
+          if (u >= 1024) return (u / 1024).toFixed(1) + ' KB';
+          return u + ' B';
+        };
+        try {
+          est.call(navigator.storage).then(function (r) {
+            const s = r || {};
+            const idx = L.indexOf('存储配额：读取中…');
+            const line = '存储配额：已用 ' + usageStr(s.usage) + ' / ' + usageStr(s.quota);
+            if (idx >= 0) L[idx] = line; else L.push(line);
+          }).catch(function () {
+            const idx = L.indexOf('存储配额：读取中…');
+            if (idx >= 0) L[idx] = '存储配额：读取失败';
+          });
+        } catch (e) {}
+      } else {
+        const idx = L.indexOf('存储配额：读取中…');
+        if (idx >= 0) L[idx] = '存储配额：接口不可用';
+      }
+    } catch (e) {}
+    try {
+      navigator.storage && navigator.storage.persisted && navigator.storage.persisted().then(function (p) {
+        L.push('storage.persisted=' + p);
+      }).catch(function () {});
+    } catch (e) {}
     // v3.16.x：最近错误（onerror/unhandledrejection 自动采集）
     try {
       const errs = JSON.parse(localStorage.getItem(ERR_KEY) || '[]');
@@ -278,31 +325,55 @@
         L.push('最近错误：无');
       }
     } catch (e) {}
-    return L.join('\n');
+    resolve(L.join('\n'));
+    });
   }
   function copyText(t) {
-    try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        return navigator.clipboard.writeText(t).then(function () { return true; }).catch(function () { return false; });
-      }
-    } catch (e) {}
-    return Promise.resolve(false);
+    // v3.16.x：clipboard.writeText 在权限被拒/WebView 剪贴板不可用时可能永不 settle
+    //（headless、部分 IAB 实测 Promise 悬空），会导致「复制诊断信息」弹窗永远不弹。
+    // 加 1.5s 超时兜底：超时按复制失败处理，流程照常走到弹窗。
+    return new Promise(function (resolve) {
+      let done = false;
+      const finish = function (ok) { if (done) return; done = true; resolve(ok); };
+      let started = false;
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          started = true;
+          navigator.clipboard.writeText(t).then(function () { finish(true); }).catch(function () { finish(false); });
+        }
+      } catch (e) {}
+      if (!started) { finish(false); return; }
+      try { setTimeout(function () { finish(false); }, 1500); } catch (e) {}
+    });
   }
   row.addEventListener('click', function () {
-    const text = collectDiag();
-    copyText(text).then(function (ok) {
-      const tip = ok
-        ? '诊断信息已复制到剪贴板，直接粘贴发给开发者即可。\n（下方内容可再核对）'
-        : '自动复制失败，请长按下方文字全选后手动复制。';
-      if (window.openModal) {
-        window.openModal('复制诊断信息', text, function () {}, {
-          noInput: true,
-          textarea: true,
-          textareaRows: 14,
-          placeholder: '',
-          staticText: tip
-        });
-      }
+    collectDiag().then(function (text) {
+      copyText(text).then(function (ok) {
+        const tip = ok
+          ? '诊断信息已复制到剪贴板，直接粘贴发给开发者即可。\n（下方内容可再核对）'
+          : '自动复制失败，请点下方【复制】按钮重试，或长按选字手动复制。';
+        if (window.openModal) {
+          window.openModal('复制诊断信息', text, function () {}, {
+            noInput: true,
+            textarea: true,
+            textareaRows: 14,
+            placeholder: '',
+            staticText: tip,
+            // v3.16.x：弹窗内「复制」按钮——自动复制失败/想再复制时直接点它重试，
+            // 复制成功用 hint() 就地反馈，不用关窗重进。
+            copyBtn: {
+              label: '复制',
+              fn: function (ctl) {
+                copyText(ctl ? ctl.text() : text).then(function (ok2) {
+                  if (ctl && ctl.hint) {
+                    ctl.hint(ok2 ? '已复制到剪贴板，直接粘贴发给开发者即可。' : '复制失败，请长按选字手动复制。');
+                  }
+                });
+              }
+            }
+          });
+        }
+      });
     });
   });
 })();

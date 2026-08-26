@@ -190,16 +190,11 @@
 
 /* 应用图标 */
 .app-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px 8px; padding:2px 8px 6px; }
-/* v3.16.x：第三页图标组行高压缩——第三页默认 12 个图标 3 行（含动态注入的喝水/吃什么/
-   存钱罐/番茄钟/备忘录/心意市集/心意柜），此前 3×96=288+间距共 324 高，把第三页总长
-   推到 747（超出容器 714），且比 1/2 页功能图标底部（636）长出 111px。
-   行高压到 86（grid-auto-rows）：3×86 + 2×14 gap + 8 padding = 294 → 第三页 total 636
-   与 1/2 页底部完全对齐（190 + 77 + 294，误差 ≤1px）。
-   行内 52 图标+8 gap+14 文字=74 ≤ 86，图标垂直居中不受影响；≥4 行布局（用户自定义
-   多行）内容仍完整、不裁剪，只是比 1/2 页略高（自定义布局不强制对齐）。 */
-.app-grid.p3-grid { grid-auto-rows:86px; }
-.app-grid.p3-grid .app { justify-content:center; }
-.app-grid.p3-grid .app-ico { width:52px; height:52px; }
+/* v3.16.x：三页功能图标完全一致（大小/行高/间距）——第三页默认 12 个图标 3 行，
+   与 1/2 页 8 个图标 2 行同用默认行高 96px、图标 58px、行距 14px；
+   第三页多一行的空间由经期卡让出（见 .desk-period min-height 190→160），
+   三页图标区底部对齐 636.3、图标下沿一致 622.3。此处不设任何 p3 专属行高/图标
+   覆盖，避免重蹈 v3.16.x 早期「压行高到 86 + 图标缩到 52」导致的间隙不一致。 */
 .app { display:flex; flex-direction:column; align-items:center; gap:8px; cursor:pointer; }
 .app .app-ico {
   /* v3.5.133：min(58px, 21vw)——极窄屏（<305px）固定 58px 会撑爆 4 列网格被裁 */
@@ -382,10 +377,13 @@
    距顶 14px 由上方 [data-desk-widget]:first-child 规则提供（置于页首时），
    被移到页中时不再叠加出 28px 大缝。
    同轮升级为 190px hero 档（与首页纪念日卡/第二页音乐卡同高）——flex 垂直居中，
-   天数数字放大，横滑 1→2→3 页首卡上下边缘对齐 */
+   天数数字放大，横滑 1→2→3 页首卡上下边缘对齐。
+   v3.16.x：min-height 190→160——第三页 12 个图标 3 行（与 1/2 页 2 行图标完全一致
+   的 96px 行高/58px 图标）需要 110px 空间，经期卡让出 30px 后三页图标区底部
+   精确对齐 636.3（内容 标签+天数+副题 ≈100px，160 高度 flex 居中仍富余） */
 .desk-period { padding:18px; text-align:center; cursor:pointer; white-space:nowrap;
   display:flex; flex-direction:column; align-items:center; justify-content:center;
-  min-height:190px;
+  min-height:160px;
   margin:0 0 14px; }
 .desk-period .dpd-label { font-size:13px; color:#e85a8f; }
 .desk-period .dpd-days { font-size:50px; font-weight:700; color:#e85a8f; margin:10px 0; line-height:1.1; }

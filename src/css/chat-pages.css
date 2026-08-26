@@ -36,8 +36,9 @@
 /* v3.14.x：【系统预设字卡】分类已扩到 12 个 tab（主/颜/emoji/拍一拍/互动回应/摸鱼浮字/
    花园/同频/伸手/喝水/存钱罐/经期关心），横向滑动条在手机上后段完全滑出屏幕且滚动条
    隐藏、无任何「还有更多」暗示——用户以为经期关心等分组不存在。改为仅此页自动换行
-   全部铺开（其余 card-tabs 共用处不受影响） */
-#dc-tabs.card-tabs { flex-wrap:wrap; overflow-x:visible; row-gap:8px; }
+   全部铺开（其余 card-tabs 共用处不受影响）。
+   v3.16.x：功能触发字卡拆到独立页 #fc-tabs（12 个功能 tab 同量级），同样换行铺开 */
+#dc-tabs.card-tabs, #fc-tabs.card-tabs { flex-wrap:wrap; overflow-x:visible; row-gap:8px; }
 .cc-tab {
   flex:0 0 auto; display:inline-flex; align-items:center; gap:5px;
   padding:9px 14px; font-size:13px; border-radius:99px;
@@ -3649,3 +3650,9 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + env(safe-area-inset-bott
 [data-theme="dark"] .mgm-face { background:var(--dark-card-92); border-color:var(--dark-border); }
 [data-theme="dark"] .mgm-own-p .mgm-face { background:rgba(58,127,213,.24); }
 [data-theme="dark"] .mgm-own-t .mgm-face { background:rgba(240,176,60,.2); }
+.fish-stats { margin:8px 4px 0; padding:9px 11px; border-radius:12px; background:rgba(90,140,190,.08); font-size:11.5px; color:#5a7c95; text-align:center; }
+.fish-stats b { color:#e8963a; font-weight:700; }
+.fish-keep { display:flex; align-items:center; gap:2px; font-size:10px; color:#9aa; cursor:pointer; flex-shrink:0; margin-right:2px; -webkit-tap-highlight-color:transparent; }
+.fish-keep input { width:13px; height:13px; margin:0; accent-color:#5aa7e6; }
+.fish-keep span { line-height:1; }
+[data-theme="dark"] .fish-stats { background:rgba(255,255,255,.06); color:#bcd6e8; }

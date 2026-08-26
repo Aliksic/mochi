@@ -1,6 +1,9 @@
-// ===== 功能：聊天默认字卡 =====
+// ===== 功能：聊天默认字卡 + 其他互动功能字卡 =====
 // 数据来自星言简易版默认通用字卡；可开关；分类浏览（主字卡/颜文字/emoji）；
 // 开启后联系人回复按「整体概率 + 分类占比」混入默认字卡
+// v3.16.x：功能触发字卡（摸鱼/吃饭/经期/喝水/花园/同频/伸手/此间/房间/存钱罐/
+// 漂流瓶/互动回应）从「聊天默认字卡」页拆出，独立成「其他互动功能字卡」页——
+// 这些字卡不是聊天通用回复，是触发对应功能时联系人才会使用。
 (function () {
   const list = document.getElementById('dc-list');
   const tabsWrap = document.getElementById('dc-tabs');
@@ -72,12 +75,21 @@
   // v3.16.x：字卡库入口角标数量动态化——template.html 里写死的「3260」早已过期
   //（主字卡现 4621，全库含互动回应/摸鱼/吃什么/经期/喝水/花园等同源功能池共 5800+），
   // 改为按 DEFAULT_CARD_DATA 全部分类实时合计；后续新增分类角标自动跟上不再写死。
+  // v3.16.x：拆页后「聊天默认字卡」角标只统计四大基础分类；
+  // 「其他互动功能字卡」入口角标统计全部功能分类（fish/eat/period/water/garden/
+  // sync/reach/cjian/room/piggy/drift/interact）。
+  const FUNC_KEYS = ['fish', 'eat', 'period', 'water', 'garden', 'sync', 'reach', 'cjian', 'room', 'piggy', 'drift', 'interact'];
+  const BASE_KEYS = ['main', 'kaomoji', 'emoji', 'touch'];
+  function sumKeys(keys) {
+    let n = 0;
+    keys.forEach(k => { (DATA[k] || []).forEach(g => { n += Array.isArray(g[1]) ? g[1].length : 0; }); });
+    return n;
+  }
   function refreshLibCount() {
     const el = document.querySelector('#li-default-cards .t');
-    if (!el) return;
-    let n = 0;
-    Object.keys(DATA).forEach(k => { (DATA[k] || []).forEach(g => { n += Array.isArray(g[1]) ? g[1].length : 0; }); });
-    el.textContent = String(n);
+    if (el) el.textContent = String(sumKeys(BASE_KEYS));
+    const fel = document.getElementById('fc-lib-count');
+    if (fel) fel.textContent = String(sumKeys(FUNC_KEYS));
   }
   refreshLibCount();
 
@@ -132,168 +144,141 @@
     });
   });
 
-  let curGroup = '';
-  function renderGroupsBar2() {
-    const bar = document.getElementById('dc-groups-bar');
-    if (!bar) return;
-    bar.innerHTML = '';
-    const grps = DATA[cur] || [];
-    const chips = [['', '全部']].concat(grps.map(g => [g[0], g[0]]));
-    chips.forEach(([val, label]) => {
-      const cEl = document.createElement('span');
-      cEl.className = 'cc-g-chip' + (curGroup === val ? ' sel' : '');
-      cEl.textContent = label;
-      cEl.addEventListener('click', () => { curGroup = val; renderGroupsBar2(); render(); });
-      bar.appendChild(cEl);
-    });
-  }
-  // v3.7.x：分批渲染——main 分类 4621 张字卡一次性同步构建 DOM（每卡 div+innerHTML+
-  // querySelector+addEventListener）会阻塞 iOS Safari 主线程数百毫秒到数秒，低端机白屏；
-  // 改为每帧挂载一批（rAF + DocumentFragment），首屏立即可滚动，后续渐进填充。
-  // 切换 tab/分组/搜索时递增 renderToken，旧批次发现 token 不匹配即废弃，防旧卡复活。
-  const RENDER_BATCH = 120;
-  let renderToken = 0;
-  // change 委托查表：idx → {c, item, input}。原每卡一个 change 监听器（4621 个）是
-  // 内存与启动负担，改为 list 单一 change 监听器按 data-idx 查表（rec.input 校验防旧批次残留）
-  let cardByIdx = [];
-  function render() {
-    const token = ++renderToken;
-    const grps = DATA[cur] || [];
-    let shown = grps;
-    if (curGroup) shown = shown.filter(g => g[0] === curGroup);
-    if (q) {
-      // 基于已选分组过滤后的 shown 再筛内容（v3.6.x：修复搜索覆盖分组筛选的 bug）
-      shown = shown.map(([g, arr]) => [g, arr.filter(c => c.indexOf(q) >= 0)]).filter(([g, arr]) => arr.length || g.indexOf(q) >= 0);
-    }
-    list.innerHTML = '';
-    cardByIdx = [];
-    if (!shown.length) {
-      list.innerHTML = '<div class="cc-empty">暂无默认字卡</div>';
-      return;
-    }
-    // 展开扁平结构：分组 header 与字卡项交错
-    const flat = [];
-    shown.forEach(([gname, arr]) => {
-      flat.push({ header: true, gname, count: arr.length });
-      arr.forEach(c => flat.push({ header: false, c }));
-    });
-    const frag = document.createDocumentFragment();
-    let pos = 0;
-    const step = () => {
-      if (token !== renderToken) return; // 新渲染已开始，废弃本批次
-      const end = Math.min(pos + RENDER_BATCH, flat.length);
-      for (; pos < end; pos++) {
-        const it = flat[pos];
-        if (it.header) {
-          const h = document.createElement('div');
-          h.className = 'cc-group-header';
-          h.innerHTML = '<span class="ccg-name">' + it.gname + '</span><span class="ccg-count">' + it.count + '</span>';
-          frag.appendChild(h);
-        } else {
-          const c = it.c;
-          const off = isCardOff(cur, c);
-          const d = document.createElement('div');
-          d.className = 'cc-item glass' + (off ? ' off' : '');
-          // v3.6.x：整页为系统预设字卡，统一标【系统】与自定义字卡区分；
-          // 右侧单卡开关——逐张开启/关闭该字卡（关闭后聊天回复不再抽取）
-          d.innerHTML = '<div class="cc-txt"><div class="t">' + c + ' <span class="tc-known">系统</span></div></div>' +
-            '<label class="toggle ccard-toggle"><input type="checkbox"' + (off ? '' : ' checked') + '><span class="tk"></span></label>';
-          d.dataset.idx = cardByIdx.length;
-          cardByIdx.push({ c, item: d, input: d.querySelector('input') });
-          frag.appendChild(d);
-        }
-      }
-      // 每帧挂载一批：列表渐进出现，首屏立即可滚动
-      list.appendChild(frag);
-      if (pos < flat.length) requestAnimationFrame(step);
+  // ---- 双页共用渲染内核 ----
+  // v3.16.x：把「分类 tab + 分组条 + 搜索 + 分批列表 + change 委托」抽成工厂，
+  // 聊天默认字卡页（dc-* 锚点，仅基础分类）与 其他互动功能字卡页（fc-* 锚点，
+  // 仅功能分类）各持一份独立状态；数据/开关键（dc-off-<分类>:*）与池 API 完全不变。
+  function mountCardView(ids, allowedKeys, emptyText) {
+    const viewList = document.getElementById(ids.list);
+    const viewTabs = document.getElementById(ids.tabs);
+    const viewBar = document.getElementById(ids.groupsBar);
+    const viewSearch = document.getElementById(ids.search);
+    const pageEl = document.getElementById(ids.page);
+    if (!viewList || !viewTabs || !viewBar || !viewSearch || !pageEl) return null;
+    const view = {
+      keys: allowedKeys.slice(),
+      cur: allowedKeys[0] || '',
+      q: '',
+      curGroup: '',
+      cardByIdx: [],
+      renderToken: 0,
+      RENDER_BATCH: 120
     };
-    step(); // 首帧同步跑第一批（小列表一次完成，行为与原一致）
-  }
-  // v3.7.x：change 事件委托——list 单一监听器替代每卡一个（4621 → 1）
-  list.addEventListener('change', (e) => {
-    const input = e.target;
-    if (!input || input.type !== 'checkbox') return;
-    const item = input.closest('.cc-item');
-    if (!item) return;
-    const rec = cardByIdx[Number(item.dataset.idx)];
-    if (!rec || rec.input !== input) return; // 旧批次残留 DOM，忽略
-    const nowOff = !input.checked;
-    setCardOff(cur, rec.c, nowOff);
-    item.classList.toggle('off', nowOff);
-    toastCard(rec.c, nowOff);
-  });
-
-  // v3.15.x：功能触发字卡 tab 统一连排（JS 注入）——用户反馈按功能名找不到分类，
-  // 全部功能池紧跟四大基础分类最先注入、命名与功能同名，打开页面第一眼即可见：
-  // 摸鱼(fish)/吃饭(eat)/经期(period)/喝水(water)/花园(garden)/同频(sync)/
-  // 伸手(reach)/此间(cjian)/房间(room)/存钱罐(piggy)/漂流瓶(drift，v3.16.x 并行会话追加)。
-  // 各池数据与开关联动不变：DEFAULT_CARD_DATA.<分类>（dc-off-<分类>:*），
-  // 消费侧 p2-features/period/room/cjian 等经 getLibPool(分类,分组,兜底) 同源抽取；
-  // 其中 此间(cjian) 为本轮新增——感知播报句与状态说明文案入库可查看。
-  [['fish', '摸鱼'], ['eat', '吃饭'], ['period', '经期'], ['water', '喝水'], ['garden', '花园'],
-   ['sync', '同频'], ['reach', '伸手'], ['cjian', '此间'], ['room', '房间'], ['piggy', '存钱罐'],
-   ['drift', '漂流瓶']].forEach(([k, label]) => {
-    if (!tabsWrap.querySelector('[data-type="' + k + '"]')) {
-      const b = document.createElement('button');
-      b.className = 'cc-tab';
-      b.dataset.type = k;
-      b.textContent = label;
-      tabsWrap.appendChild(b);
+    function renderGroupsBar() {
+      viewBar.innerHTML = '';
+      const grps = DATA[view.cur] || [];
+      const chips = [['', '全部']].concat(grps.map(g => [g[0], g[0]]));
+      chips.forEach(([val, label]) => {
+        const cEl = document.createElement('span');
+        cEl.className = 'cc-g-chip' + (view.curGroup === val ? ' sel' : '');
+        cEl.textContent = label;
+        cEl.addEventListener('click', () => { view.curGroup = val; renderGroupsBar(); render(); });
+        viewBar.appendChild(cEl);
+      });
     }
-  });
-  // v3.7.x：互动回应 tab（JS 注入，避免改 template.html）——展示互动卡片预设话术池
-  // （邀请TA 接受/拒绝、问问TA 回应、小问题/好奇/吐槽/询问 的预设回应，数据在
-  // DEFAULT_CARD_DATA.interact）；逐张开关（dc-off-interact-*）与互动回复抽取联动，
-  // ta-ask.js pickAskCardReply / chat.js chatChooseReply 会读取该开关过滤已关闭话术。
-  // v3.15.x 移到功能池之后末位（功能分类优先露出）
-  if (!tabsWrap.querySelector('[data-type="interact"]')) {
-    const b = document.createElement('button');
-    b.className = 'cc-tab';
-    b.dataset.type = 'interact';
-    b.textContent = '互动回应';
-    tabsWrap.appendChild(b);
-  }
-
-  tabsWrap.querySelectorAll('.cc-tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      tabsWrap.querySelectorAll('.cc-tab').forEach(t => t.classList.remove('sel'));
+    function render() {
+      const token = ++view.renderToken;
+      const grps = DATA[view.cur] || [];
+      let shown = grps;
+      if (view.curGroup) shown = shown.filter(g => g[0] === view.curGroup);
+      if (view.q) {
+        shown = shown.map(([g, arr]) => [g, arr.filter(c => c.indexOf(view.q) >= 0)]).filter(([g, arr]) => arr.length || g.indexOf(view.q) >= 0);
+      }
+      viewList.innerHTML = '';
+      view.cardByIdx = [];
+      if (!shown.length) {
+        viewList.innerHTML = '<div class="cc-empty">' + emptyText + '</div>';
+        return;
+      }
+      const flat = [];
+      shown.forEach(([gname, arr]) => {
+        flat.push({ header: true, gname, count: arr.length });
+        arr.forEach(c => flat.push({ header: false, c }));
+      });
+      const frag = document.createDocumentFragment();
+      let pos = 0;
+      const step = () => {
+        if (token !== view.renderToken) return;
+        const end = Math.min(pos + view.RENDER_BATCH, flat.length);
+        for (; pos < end; pos++) {
+          const it = flat[pos];
+          if (it.header) {
+            const h = document.createElement('div');
+            h.className = 'cc-group-header';
+            h.innerHTML = '<span class="ccg-name">' + it.gname + '</span><span class="ccg-count">' + it.count + '</span>';
+            frag.appendChild(h);
+          } else {
+            const c = it.c;
+            const off = isCardOff(view.cur, c);
+            const d = document.createElement('div');
+            d.className = 'cc-item glass' + (off ? ' off' : '');
+            // 整页为系统预设字卡，统一标【系统】与自定义字卡区分；
+            // 右侧单卡开关——逐张开启/关闭该字卡（关闭后功能/聊天回复不再抽取）
+            d.innerHTML = '<div class="cc-txt"><div class="t">' + c + ' <span class="tc-known">系统</span></div></div>' +
+              '<label class="toggle ccard-toggle"><input type="checkbox"' + (off ? '' : ' checked') + '><span class="tk"></span></label>';
+            d.dataset.idx = view.cardByIdx.length;
+            view.cardByIdx.push({ c, item: d, input: d.querySelector('input') });
+            frag.appendChild(d);
+          }
+        }
+        viewList.appendChild(frag);
+        if (pos < flat.length) requestAnimationFrame(step);
+      };
+      step();
+    }
+    // change 事件委托——list 单一监听器替代每卡一个
+    viewList.addEventListener('change', (e) => {
+      const input = e.target;
+      if (!input || input.type !== 'checkbox') return;
+      const item = input.closest('.cc-item');
+      if (!item) return;
+      const rec = view.cardByIdx[Number(item.dataset.idx)];
+      if (!rec || rec.input !== input) return;
+      const nowOff = !input.checked;
+      setCardOff(view.cur, rec.c, nowOff);
+      item.classList.toggle('off', nowOff);
+      toastCard(rec.c, nowOff);
+    });
+    viewTabs.addEventListener('click', (e) => {
+      const tab = e.target.closest('.cc-tab[data-type]');
+      if (!tab) return;
+      if (view.keys.indexOf(tab.dataset.type) < 0) return;
+      viewTabs.querySelectorAll('.cc-tab').forEach(t => t.classList.remove('sel'));
       tab.classList.add('sel');
-      cur = tab.dataset.type;
-      q = '';
-      curGroup = '';
-      renderGroupsBar2();
+      view.cur = tab.dataset.type;
+      view.q = '';
+      view.curGroup = '';
+      renderGroupsBar();
       render();
     });
-  });
-
-  // 搜索：页内输入框直接过滤（v3.6.x：与自定义聊天字卡一致，不再弹窗，输入即筛，清空即恢复）
-  const searchInput = document.getElementById('dc-search-input');
-  if (searchInput) {
-    // v3.5.138：不再标记 ceDone 跳过 contenteditable 转换——手机 Chrome 对
-    // 原生 input 聚焦弹「自动填充」白条；ce-box 兼容 input 转发 + value 代理
-    // v3.7.x：150ms 防抖——main 分类 4621 张字卡每敲一个字全量渲染会卡，输入停顿后再筛
-    let searchTimer = null;
-    searchInput.addEventListener('input', () => {
-      q = searchInput.value.trim();
-      clearTimeout(searchTimer);
-      searchTimer = setTimeout(render, 150);
+    viewSearch.addEventListener('input', () => {
+      view.q = viewSearch.value.trim();
+      clearTimeout(view._searchTimer);
+      view._searchTimer = setTimeout(render, 150);
     });
-    searchInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') { searchInput.value = ''; q = ''; render(); searchInput.blur(); }
+    viewSearch.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') { viewSearch.value = ''; view.q = ''; render(); viewSearch.blur(); }
     });
+    // 懒渲染：打开页才构建（大库不阻塞启动）
+    let renderedOnce = false;
+    function ensureRendered() {
+      if (renderedOnce) return;
+      renderedOnce = true;
+      refreshLibCount();
+      renderGroupsBar();
+      render();
+    }
+    return { view, ensureRendered };
   }
 
-  // v3.6.x：懒渲染——4621+ 张系统字卡在启动时全部构建 DOM（每个都带开关 toggle），
-  // 低端机（尤其 iOS Safari）启动同步构建数百毫秒级 DOM，改为首次打开「系统字卡」
-  // 页才构建；聊天抽取（defaultCardCfg）走数据不依赖 DOM，功能不受影响
-  let renderedOnce = false;
-  function ensureRendered() {
-    if (renderedOnce) return;
-    renderedOnce = true;
-    refreshLibCount(); // v3.16.x：兜底再刷一次入口角标（防数据晚于本文件追加时数字过期）
-    renderGroupsBar2();
-    render();
-  }
+  // 聊天默认字卡页：仅四大基础分类
+  const dcView = mountCardView({
+    list: 'dc-list', tabs: 'dc-tabs', groupsBar: 'dc-groups-bar', search: 'dc-search-input', page: 'page-default-cards'
+  }, BASE_KEYS, '暂无默认字卡');
+  // 其他互动功能字卡页：仅功能分类（模板已预置全部功能 tab）
+  const fcView = mountCardView({
+    list: 'fc-list', tabs: 'fc-tabs', groupsBar: 'fc-groups-bar', search: 'fc-search-input', page: 'page-fun-cards'
+  }, FUNC_KEYS, '暂无功能触发字卡');
 
   // 入口/返回
   const li = document.getElementById('li-default-cards');
@@ -302,12 +287,29 @@
       document.querySelectorAll('.page').forEach(p => p.hidden = true);
       const page = document.getElementById('page-default-cards');
       if (page) page.hidden = false;
-      ensureRendered();
+      if (dcView) dcView.ensureRendered();
     });
   }
   const back = document.getElementById('dc-back');
   if (back) {
     back.addEventListener('click', () => {
+      document.querySelectorAll('.page').forEach(p => p.hidden = true);
+      const home = document.getElementById('page-chatcard');
+      if (home) home.hidden = false;
+    });
+  }
+  const liFun = document.getElementById('li-fun-cards');
+  if (liFun) {
+    liFun.addEventListener('click', () => {
+      document.querySelectorAll('.page').forEach(p => p.hidden = true);
+      const page = document.getElementById('page-fun-cards');
+      if (page) page.hidden = false;
+      if (fcView) fcView.ensureRendered();
+    });
+  }
+  const fcBack = document.getElementById('fc-back');
+  if (fcBack) {
+    fcBack.addEventListener('click', () => {
       document.querySelectorAll('.page').forEach(p => p.hidden = true);
       const home = document.getElementById('page-chatcard');
       if (home) home.hidden = false;
@@ -350,9 +352,6 @@
   window.getDefaultCardGroups = function (cat) {
     return (DATA[cat] || []).slice();
   };
-  // v3.7.x：互动回应预设池读取（供互动卡片回复侧使用）——name 分组名（邀请TA·接受/
-  // 邀请TA·拒绝/问问TA·回应/小问题·回应/好奇·回应/吐槽·回应/询问·回应），
-  // 与「互动回应」tab 展示同源（DEFAULT_CARD_DATA.interact）；数据缺失时回退 fallback
   // v3.7.x：互动回应预设池读取（供互动卡片回复侧使用）——name 分组名（邀请TA·接受/
   // 邀请TA·拒绝/问问TA·回应/小问题·回应/好奇·回应/吐槽·回应/询问·回应），
   // 与「互动回应」tab 展示同源（DEFAULT_CARD_DATA.interact）；数据缺失时回退 fallback

@@ -97,6 +97,51 @@
     if (htab === 'coinearn') renderCoinPanel('earn');
     else if (htab === 'coinask') renderCoinPanel('ask');
   };
+  // ---- 联系人的关心/提醒记录（v3.16.x：查岗 / 经期关心 / 喝水提醒 / 吃饭提醒 / 番茄陪伴） ----
+  // 事件低频、按联系人桌面隔离；番茄陪伴只记时间不记内容
+  function caresLoad() {
+    try { return JSON.parse(store.get('records-care') || '[]'); } catch (e) { return []; }
+  }
+  function caresSave(list) { store.set('records-care', JSON.stringify(list.slice(0, 100))); }
+  // kind: checkin=查岗 / period=经期关心 / water=喝水提醒 / eat=吃饭提醒 / pomo=番茄陪伴
+  window.addCareRecord = function (kind, text, ts) {
+    const list = caresLoad();
+    list.unshift({ kind: kind, text: text || '', ts: ts || Date.now() });
+    caresSave(list);
+    const hp = document.getElementById('page-home');
+    if (hp && !hp.hidden && htab === 'care') renderCarePanel();
+  };
+  // 查岗/经期/喝水/吃饭从聊天记录回溯（带 tag 或 ask-card），番茄陪伴读 records-care
+  function renderCarePanel() {
+    const el = document.getElementById('home-care');
+    if (!el) return;
+    const name = store.get('lbl-partner') || (window.taWord ? window.taWord() : 'TA');
+    const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    const KIND_ICON = { checkin: '📋', period: '🌸', water: '💧', eat: '🍚', pomo: '🍅' };
+    const rows = [];
+    // 1) 番茄陪伴：records-care 里的 pomo 记录（只记时间）
+    caresLoad().forEach(r => { if (r.kind === 'pomo') rows.push({ icon: '🍅', main: '番茄钟陪伴', sub: fmtDT(r.ts), ts: r.ts }); });
+    // 2) 查岗 / 经期 / 喝水 / 吃饭：从聊天记录回溯
+    let msgs = [];
+    try { msgs = (window.getChatMsgs ? window.getChatMsgs() : JSON.parse(store.get('chat-msgs') || '[]')); } catch (e) {}
+    (msgs || []).forEach(m => {
+      if (!m) return;
+      const t = m.ts || 0;
+      const tag = (m.mood && m.mood[0] && m.mood[0].tag) || '';
+      if (tag === '经期关心') rows.push({ icon: KIND_ICON.period, main: '经期关心 · ' + esc(m.text || ''), sub: fmtDT(t), ts: t });
+      else if (tag === '喝水提醒') rows.push({ icon: KIND_ICON.water, main: '提醒喝水 · ' + esc(m.text || ''), sub: fmtDT(t), ts: t });
+      else if (tag === '吃饭提醒') rows.push({ icon: KIND_ICON.eat, main: '提醒吃饭 · ' + esc(m.text || ''), sub: fmtDT(t), ts: t });
+      // 查岗：ask-card 是问题卡本体；ask-msg 提示语只作补充（若 30s 内已有问卡则不重复列）
+      else if (m.special === 'ask-card' && m.askQuestion) rows.push({ icon: KIND_ICON.checkin, main: '查岗 · ' + esc(m.askQuestion), sub: fmtDT(t), ts: t });
+      else if (m.special === 'ask-msg' && /查岗/.test(m.text || '')) {
+        const nearCard = (msgs || []).some(o => o && o.special === 'ask-card' && o.askQuestion && Math.abs((o.ts || 0) - t) < 30000);
+        if (!nearCard) rows.push({ icon: KIND_ICON.checkin, main: '查岗', sub: fmtDT(t), ts: t });
+      }
+    });
+    if (!rows.length) { el.innerHTML = '<div class="ta-empty">暂无联系人的关心记录（TA 会主动查岗、提醒你喝水吃饭、关心经期、陪你专注）</div>'; return; }
+    rows.sort((a, b) => (b.ts || 0) - (a.ts || 0));
+    el.innerHTML = rows.map(r => '<div class="tc-listitem"><div class="tc-li-top"><span class="tc-li-q">' + r.icon + ' ' + r.main + '</span><span class="tc-li-time">' + r.sub + '</span></div></div>').join('');
+  }
   // ---- 心意币红包记录（v3.16.x：双向——我发 + 联系人发；红包即心意币，读当前桌面聊天记录） ----
   function renderRpPanel() {
     const el = document.getElementById('home-coinrp');
@@ -192,6 +237,10 @@
     // 心意币红包记录（v3.16.x：双向）
     if (showOnly === 'coinrp') {
       renderRpPanel();
+    }
+    // 联系人的关心/提醒记录（v3.16.x）
+    if (showOnly === 'care') {
+      renderCarePanel();
     }
     // 换头像记录（全部事件：直接换 / 邀请同意 / 邀请拒绝 / 我手动更换）
     if (showOnly === 'av') {

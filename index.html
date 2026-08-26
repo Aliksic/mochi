@@ -484,6 +484,8 @@ font-size:14px; font-family:inherit; cursor:pointer;
 }
 .modal-btn.cancel { background:var(--btn-cancel-bg); color:var(--btn-cancel-ink); }
 .modal-btn.ok { background:var(--btn-bg); color:var(--btn-ink); font-weight:600; }
+.modal-btn.copy { background:var(--btn-bg); color:var(--btn-ink); font-weight:600; }
+.modal-btn[hidden] { display:none; }
 .page { scrollbar-width:none; -ms-overflow-style:none; }
 .page::-webkit-scrollbar { display:none; }
 .modal-select {
@@ -715,9 +717,6 @@ display:flex; align-items:center; gap:3px;
 .we-btn:active { transform:scale(.95); }
 .we-btn b { font-size:13px; }
 .app-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px 8px; padding:2px 8px 6px; }
-.app-grid.p3-grid { grid-auto-rows:86px; }
-.app-grid.p3-grid .app { justify-content:center; }
-.app-grid.p3-grid .app-ico { width:52px; height:52px; }
 .app { display:flex; flex-direction:column; align-items:center; gap:8px; cursor:pointer; }
 .app .app-ico {
 width:min(58px, 21vw); height:min(58px, 21vw); border-radius:var(--app-ico-radius);
@@ -852,7 +851,7 @@ background:#111; color:#fff; cursor:pointer; font-family:inherit; flex-shrink:0;
 .desk-anniv .da-name { font-size:12px; color:var(--muted,#666); }
 .desk-period { padding:18px; text-align:center; cursor:pointer; white-space:nowrap;
 display:flex; flex-direction:column; align-items:center; justify-content:center;
-min-height:190px;
+min-height:160px;
 margin:0 0 14px; }
 .desk-period .dpd-label { font-size:13px; color:#e85a8f; }
 .desk-period .dpd-days { font-size:50px; font-weight:700; color:#e85a8f; margin:10px 0; line-height:1.1; }
@@ -2290,7 +2289,7 @@ display:flex; gap:8px; overflow-x:auto; padding:2px 2px 12px;
 scrollbar-width:none; -ms-overflow-style:none; flex-shrink:0;
 }
 .card-tabs::-webkit-scrollbar { display:none; }
-#dc-tabs.card-tabs { flex-wrap:wrap; overflow-x:visible; row-gap:8px; }
+#dc-tabs.card-tabs, #fc-tabs.card-tabs { flex-wrap:wrap; overflow-x:visible; row-gap:8px; }
 .cc-tab {
 flex:0 0 auto; display:inline-flex; align-items:center; gap:5px;
 padding:9px 14px; font-size:13px; border-radius:99px;
@@ -5491,6 +5490,12 @@ font-size:var(--mgm-fs,27px); line-height:1;
 [data-theme="dark"] .mgm-face { background:var(--dark-card-92); border-color:var(--dark-border); }
 [data-theme="dark"] .mgm-own-p .mgm-face { background:rgba(58,127,213,.24); }
 [data-theme="dark"] .mgm-own-t .mgm-face { background:rgba(240,176,60,.2); }
+.fish-stats { margin:8px 4px 0; padding:9px 11px; border-radius:12px; background:rgba(90,140,190,.08); font-size:11.5px; color:#5a7c95; text-align:center; }
+.fish-stats b { color:#e8963a; font-weight:700; }
+.fish-keep { display:flex; align-items:center; gap:2px; font-size:10px; color:#9aa; cursor:pointer; flex-shrink:0; margin-right:2px; -webkit-tap-highlight-color:transparent; }
+.fish-keep input { width:13px; height:13px; margin:0; accent-color:#5aa7e6; }
+.fish-keep span { line-height:1; }
+[data-theme="dark"] .fish-stats { background:rgba(255,255,255,.06); color:#bcd6e8; }
 .msg-gift { align-self: center; width: 100%; display: flex; justify-content: center; margin: 8px 0; }
 .msg-gift-card {
 width: min(260px, 80vw); padding: 22px 18px 14px; border-radius: 20px; box-sizing: border-box;
@@ -7747,7 +7752,7 @@ transition-duration: .01ms !important;
       </div>
       <div class="splash-dots"><i></i><i></i><i></i></div>
       <div class="splash-brand">小红书@言序（1842523578）</div>
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787754514695">Mochi 字卡传讯 v3.6.253 · 部署于 2026-08-26 22:28</div>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787756706769">Mochi 字卡传讯 v3.6.255 · 部署于 2026-08-26 23:05</div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
       <div class="splash-loading" id="splash-loading">正在加载数据…</div>
@@ -8115,11 +8120,16 @@ transition-duration: .01ms !important;
       </div>
       </div>
       <div class="cc-sect-body" id="cc-sect-preset" hidden>
-      <div class="sm-set-hint" style="padding:2px 16px 10px">说明：本站「系统预设字卡」均为自搓字卡（作者原创），按分类/分组展示，可逐张开启或关闭。</div>
+      <div class="sm-set-hint" style="padding:2px 16px 10px">说明：本站「系统预设字卡」均为自搓字卡（AI 辅助设计），按分类/分组展示，可逐张开启或关闭。</div>
       <div class="chat-item glass" id="li-default-cards">
         <div class="av"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1L3.2 9.4l6.1-.9z"/></svg></div>
         <div class="ci"><div class="n">默认聊天字卡</div><div class="m">日常默认回复字卡（自搓）</div></div>
         <div class="t">3260</div>
+      </div>
+      <div class="chat-item glass" id="li-fun-cards">
+        <div class="av"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1L3.2 9.4l6.1-.9z"/></svg></div>
+        <div class="ci"><div class="n">其他互动功能字卡</div><div class="m">各功能触发的系统预设字卡 · 如摸鱼/吃饭/经期等</div></div>
+        <div class="t" id="fc-lib-count">0</div>
       </div>
       <div class="chat-item glass" id="li-mood-cards">
         <div class="av"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7.5-4.7-9.3-9A5.3 5.3 0 0112 6.4 5.3 5.3 0 0121.3 12c-1.8 4.3-9.3 9-9.3 9z"/></svg></div>
@@ -8813,7 +8823,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.6.253</div>
+      <div class="ver">Mochi 字卡传讯 v3.6.255</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -8955,7 +8965,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.6.253</span>
+              <span class="lic-ver">v3.6.255</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -9695,7 +9705,7 @@ transition-duration: .01ms !important;
         </span>
         <span class="ch-name">聊天默认字卡</span>
       </div>
-      <div class="sm-set-hint" style="padding:8px 16px 0">说明：以下系统预设字卡为本站自搓字卡（作者原创），可逐张开启或关闭。</div>
+      <div class="sm-set-hint" style="padding:8px 16px 0">说明：以下系统预设字卡为本站自搓字卡（AI 辅助设计），可逐张开启或关闭。</div>
       <div class="dc-toggle glass">
         <div class="dc-toggle-txt">
           <div class="dc-toggle-name">使用默认字卡</div>
@@ -9728,6 +9738,39 @@ transition-duration: .01ms !important;
       </div>
       <div class="card-list" id="dc-list">
         <!-- 默认字卡由 JS 按分类/分组渲染 -->
+      </div>
+    </div>
+
+    <!-- 其他互动功能字卡（独立页面，可开关；功能触发字卡不放进聊天默认字卡） -->
+    <div class="page" id="page-fun-cards" hidden>
+      <div class="chat-head">
+        <span class="ch-back" id="fc-back">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        </span>
+        <span class="ch-name">其他互动功能字卡</span>
+      </div>
+      <div class="sm-set-hint" style="padding:8px 16px 0">说明：以下为各功能（摸鱼 / 吃饭 / 经期 / 喝水 / 花园 / 同频 / 伸手 / 此间 / 房间 / 存钱罐 / 漂流瓶 / 互动回应）触发时联系人会使用的自搓字卡，非聊天通用字卡，可逐张开启或关闭。</div>
+      <div class="card-tabs" id="fc-tabs">
+        <button class="cc-tab sel" data-type="fish">摸鱼</button>
+        <button class="cc-tab" data-type="eat">吃饭</button>
+        <button class="cc-tab" data-type="period">经期</button>
+        <button class="cc-tab" data-type="water">喝水</button>
+        <button class="cc-tab" data-type="garden">花园</button>
+        <button class="cc-tab" data-type="sync">同频</button>
+        <button class="cc-tab" data-type="reach">伸手</button>
+        <button class="cc-tab" data-type="cjian">此间</button>
+        <button class="cc-tab" data-type="room">房间</button>
+        <button class="cc-tab" data-type="piggy">存钱罐</button>
+        <button class="cc-tab" data-type="drift">漂流瓶</button>
+        <button class="cc-tab" data-type="interact">互动回应</button>
+      </div>
+      <div class="cc-groups-bar" id="fc-groups-bar"></div>
+      <div class="card-search glass">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input class="card-search-input" id="fc-search-input" placeholder="搜索功能触发字卡" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+      </div>
+      <div class="card-list" id="fc-list">
+        <!-- 功能触发字卡由 JS 按分类/分组渲染 -->
       </div>
     </div>
 
@@ -9837,6 +9880,7 @@ transition-duration: .01ms !important;
         <button class="modal-file" id="modal-file" hidden>从 txt 文件导入</button>
         <input type="file" id="modal-file-input" accept=".txt,text/plain" style="display:none">
         <div class="modal-btns">
+          <button class="modal-btn copy" id="modal-copy" hidden>复制</button>
           <button class="modal-btn cancel" id="modal-cancel">取消</button>
           <button class="modal-btn ok" id="modal-ok">确定</button>
         </div>
@@ -10340,6 +10384,7 @@ transition-duration: .01ms !important;
         <button class="fav-tab" data-htab="coinearn">心意币赚钱记录</button>
         <button class="fav-tab" data-htab="coinask">心意币申请记录</button>
         <button class="fav-tab" data-htab="coinrp">心意币红包记录</button>
+        <button class="fav-tab" data-htab="care">TA的关心</button>
       </div>
       <div class="cal-scroll">
         <div class="cal-card glass" data-hpanel="av">
@@ -10375,6 +10420,11 @@ transition-duration: .01ms !important;
         <div class="cal-card glass" data-hpanel="coinrp" hidden>
           <div class="cal-card-title">心意币红包记录</div>
           <div id="home-coinrp"></div>
+        </div>
+        <!-- v3.16.x：联系人的关心（查岗/经期/喝水/吃饭/番茄陪伴） -->
+        <div class="cal-card glass" data-hpanel="care" hidden>
+          <div class="cal-card-title">TA 的关心记录</div>
+          <div id="home-care"></div>
         </div>
       </div>
     </div>
@@ -12232,6 +12282,7 @@ return CSS.supports(decl) ? '支持' : '不支持';
 } catch (e) { return '不支持'; }
 }
 function collectDiag() {
+return new Promise(function (resolve) {
 const d = window.mochiDevice || {};
 const L = [];
 let ver = '';
@@ -12271,7 +12322,14 @@ L.push('');
 L.push('【能力】');
 L.push('Fullscreen API=' + !!(document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen));
 L.push('方向锁 API=' + !!(screen.orientation && screen.orientation.lock));
-L.push('serviceWorker=' + ('serviceWorker' in navigator));
+try {
+if ('serviceWorker' in navigator && navigator.serviceWorker) {
+const swc = navigator.serviceWorker.controller;
+L.push('serviceWorker=支持' + (swc ? '（已激活，controller=' + swc.scriptURL + '）' : '（未控制本页面）'));
+} else {
+L.push('serviceWorker=不支持');
+}
+} catch (e) { L.push('serviceWorker=读取失败'); }
 L.push('storage.persist=' + !!(navigator.storage && navigator.storage.persist));
 L.push('CSS dvh=' + cssSupports('height: 1dvh') + '  svh=' + cssSupports('height: 1svh') + '  env(safe-area)=' + cssSupports('padding-top: env(safe-area-inset-top)'));
 L.push('安卓输入框已转 ce-box=' + !!document.querySelector('.ce-box'));
@@ -12287,6 +12345,40 @@ if (k && k.indexOf(G) === 0) n++;
 L.push('localStorage 数据键=' + n + ' 个');
 } catch (e) { L.push('localStorage 不可访问'); }
 try {
+L.push('存储配额：读取中…');
+} catch (e) {}
+try { L.push('navigator.onLine=' + navigator.onLine); } catch (e) {}
+try {
+const est = navigator.storage && navigator.storage.estimate;
+if (est) {
+const usageStr = function (u) {
+if (u == null) return '(未知)';
+if (u >= 1048576) return (u / 1048576).toFixed(1) + ' MB';
+if (u >= 1024) return (u / 1024).toFixed(1) + ' KB';
+return u + ' B';
+};
+try {
+est.call(navigator.storage).then(function (r) {
+const s = r || {};
+const idx = L.indexOf('存储配额：读取中…');
+const line = '存储配额：已用 ' + usageStr(s.usage) + ' / ' + usageStr(s.quota);
+if (idx >= 0) L[idx] = line; else L.push(line);
+}).catch(function () {
+const idx = L.indexOf('存储配额：读取中…');
+if (idx >= 0) L[idx] = '存储配额：读取失败';
+});
+} catch (e) {}
+} else {
+const idx = L.indexOf('存储配额：读取中…');
+if (idx >= 0) L[idx] = '存储配额：接口不可用';
+}
+} catch (e) {}
+try {
+navigator.storage && navigator.storage.persisted && navigator.storage.persisted().then(function (p) {
+L.push('storage.persisted=' + p);
+}).catch(function () {});
+} catch (e) {}
+try {
 const errs = JSON.parse(localStorage.getItem(ERR_KEY) || '[]');
 if (Array.isArray(errs) && errs.length) {
 L.push('最近错误 ' + errs.length + ' 条：');
@@ -12298,31 +12390,50 @@ L.push('· ' + dt + ' [' + (it.dev || '') + '] ' + (it.msg || '').slice(0, 180) 
 L.push('最近错误：无');
 }
 } catch (e) {}
-return L.join('\n');
+resolve(L.join('\n'));
+});
 }
 function copyText(t) {
+return new Promise(function (resolve) {
+let done = false;
+const finish = function (ok) { if (done) return; done = true; resolve(ok); };
+let started = false;
 try {
 if (navigator.clipboard && navigator.clipboard.writeText) {
-return navigator.clipboard.writeText(t).then(function () { return true; }).catch(function () { return false; });
+started = true;
+navigator.clipboard.writeText(t).then(function () { finish(true); }).catch(function () { finish(false); });
 }
 } catch (e) {}
-return Promise.resolve(false);
+if (!started) { finish(false); return; }
+try { setTimeout(function () { finish(false); }, 1500); } catch (e) {}
+});
 }
 row.addEventListener('click', function () {
-const text = collectDiag();
+collectDiag().then(function (text) {
 copyText(text).then(function (ok) {
 const tip = ok
 ? '诊断信息已复制到剪贴板，直接粘贴发给开发者即可。\n（下方内容可再核对）'
-: '自动复制失败，请长按下方文字全选后手动复制。';
+: '自动复制失败，请点下方【复制】按钮重试，或长按选字手动复制。';
 if (window.openModal) {
 window.openModal('复制诊断信息', text, function () {}, {
 noInput: true,
 textarea: true,
 textareaRows: 14,
 placeholder: '',
-staticText: tip
+staticText: tip,
+copyBtn: {
+label: '复制',
+fn: function (ctl) {
+copyText(ctl ? ctl.text() : text).then(function (ok2) {
+if (ctl && ctl.hint) {
+ctl.hint(ok2 ? '已复制到剪贴板，直接粘贴发给开发者即可。' : '复制失败，请长按选字手动复制。');
+}
 });
 }
+}
+});
+}
+});
 });
 });
 })();
@@ -13261,7 +13372,7 @@ pages.forEach(p => p.hidden = true);
 document.getElementById(tab.dataset.page).hidden = false;
 });
 });
-const FULL_PAGES = ['page-chat', 'page-group-chat', 'page-chat-settings', 'page-custom-cards', 'page-default-cards', 'page-mood-cards', 'page-reply-cards', 'page-theme', 'page-fav', 'page-fav-settings', 'page-memory', 'page-calendar', 'page-period', 'page-accounting', 'page-garden', 'page-divine', 'page-music', 'page-stats', 'page-interact', 'page-checkin', 'page-ta-ask', 'page-ta-choose', 'page-ta-curious', 'page-ta-roast', 'page-ta-checkin', 'page-ta-invite', 'page-checkin-cards', 'page-quote-cards', 'page-home', 'page-mail', 'page-mail-write', 'page-mail-reply', 'page-feed', 'page-feed-all', 'page-feed-friends', 'page-license', 'page-about', 'page-reply-settings', 'page-call-settings', 'page-sfx-settings', 'page-memo-arc', 'page-cjian', 'page-room', 'page-drift', 'page-my-arc'];
+const FULL_PAGES = ['page-chat', 'page-group-chat', 'page-chat-settings', 'page-custom-cards', 'page-default-cards', 'page-fun-cards', 'page-mood-cards', 'page-reply-cards', 'page-theme', 'page-fav', 'page-fav-settings', 'page-memory', 'page-calendar', 'page-period', 'page-accounting', 'page-garden', 'page-divine', 'page-music', 'page-stats', 'page-interact', 'page-checkin', 'page-ta-ask', 'page-ta-choose', 'page-ta-curious', 'page-ta-roast', 'page-ta-checkin', 'page-ta-invite', 'page-checkin-cards', 'page-quote-cards', 'page-home', 'page-mail', 'page-mail-write', 'page-mail-reply', 'page-feed', 'page-feed-all', 'page-feed-friends', 'page-license', 'page-about', 'page-reply-settings', 'page-call-settings', 'page-sfx-settings', 'page-memo-arc', 'page-cjian', 'page-room', 'page-drift', 'page-my-arc'];
 function syncChrome() {
 const phone = document.querySelector('.phone');
 const tabbar = document.querySelector('.tabbar');
@@ -13921,6 +14032,7 @@ const fileBtn = document.getElementById('modal-file');
 const fileInput = document.getElementById('modal-file-input');
 const okBtn = document.getElementById('modal-ok');
 const cancelBtn = document.getElementById('modal-cancel');
+const copyBtn = document.getElementById('modal-copy');
 if (!mask || !input) return;
 function ceBoxOf(el) {
 try {
@@ -14095,6 +14207,17 @@ if (show) ctl.focus();
 },
 pills: function (list, initVal) { buildPills(list, initVal); }
 };
+if (copyBtn) {
+const cfg = opts.copyBtn || null;
+copyBtn.hidden = !cfg;
+copyBtn.onclick = null;
+if (cfg) {
+if (cfg.label) copyBtn.textContent = cfg.label;
+if (typeof cfg.fn === 'function') {
+copyBtn.onclick = function () { try { cfg.fn(ctl); } catch (e) {} };
+}
+}
+}
 return ctl;
 };
 customBtn.addEventListener('click', function () {
@@ -19605,7 +19728,7 @@ return el;
 function addIn(text, opts) {
 opts = opts || {};
 const _tagMood = opts.tag ? [{ tag: String(opts.tag), label: opts.tagNoDup ? '' : String(text) }] : null;
-return addRec({ side: 'in', text: text, initiative: opts.initiative, special: opts.special, quote: opts.quote, qidx: opts.qidx, type: opts.type, img: opts.img, parts: opts.parts, mailNotice: opts.mailNotice, askQuestion: opts.askQuestion, askStatus: opts.askStatus, askOptions: opts.askOptions, askType: opts.askType, choiceQuestion: opts.choiceQuestion, choiceOptions: opts.choiceOptions, choicePref: opts.choicePref, choiceCat: opts.choiceCat, choiceStatus: opts.choiceStatus, choiceAnswer: opts.choiceAnswer, choiceReply: opts.choiceReply, choiceMatch: opts.choiceMatch, curiousQuestion: opts.curiousQuestion, curiousQuick: opts.curiousQuick, curiousReplies: opts.curiousReplies, curiousFollowup: opts.curiousFollowup, curiousQid: opts.curiousQid, curiousCat: opts.curiousCat, curiousStatus: opts.curiousStatus, curiousAnswer: opts.curiousAnswer, curiousReply: opts.curiousReply, roastText: opts.roastText, roastCat: opts.roastCat, roastStatus: opts.roastStatus, roastAnswer: opts.roastAnswer, roastReply: opts.roastReply, rpAmount: opts.rpAmount, rpWish: opts.rpWish, rpStatus: opts.rpStatus, rpTs: opts.rpTs, rpCover: opts.rpCover, askFen: opts.askFen, askTs: opts.askTs, mood: opts.mood || _tagMood || undefined });
+return addRec({ side: 'in', text: text, initiative: opts.initiative, special: opts.special, quote: opts.quote, qidx: opts.qidx, type: opts.type, img: opts.img, parts: opts.parts, mailNotice: opts.mailNotice, gInv: opts.gInv, askQuestion: opts.askQuestion, askStatus: opts.askStatus, askOptions: opts.askOptions, askType: opts.askType, choiceQuestion: opts.choiceQuestion, choiceOptions: opts.choiceOptions, choicePref: opts.choicePref, choiceCat: opts.choiceCat, choiceStatus: opts.choiceStatus, choiceAnswer: opts.choiceAnswer, choiceReply: opts.choiceReply, choiceMatch: opts.choiceMatch, curiousQuestion: opts.curiousQuestion, curiousQuick: opts.curiousQuick, curiousReplies: opts.curiousReplies, curiousFollowup: opts.curiousFollowup, curiousQid: opts.curiousQid, curiousCat: opts.curiousCat, curiousStatus: opts.curiousStatus, curiousAnswer: opts.curiousAnswer, curiousReply: opts.curiousReply, roastText: opts.roastText, roastCat: opts.roastCat, roastStatus: opts.roastStatus, roastAnswer: opts.roastAnswer, roastReply: opts.roastReply, rpAmount: opts.rpAmount, rpWish: opts.rpWish, rpStatus: opts.rpStatus, rpTs: opts.rpTs, rpCover: opts.rpCover, askFen: opts.askFen, askTs: opts.askTs, mood: opts.mood || _tagMood || undefined });
 }
 function addOut(text) {
 return addRec({ side: 'out', text: text });
@@ -20187,7 +20310,7 @@ cuddle: { title: '贴贴邀请' }
 };
 function sendTaInvite(inv, name) {
 const meta = INVITE_KIND_META[inv && inv.kind] || INVITE_KIND_META.rps;
-addIn(name + ' ' + (inv.text || ''), { special: 'poke', initiative: true });
+addIn(name + ' ' + (inv.text || ''), { special: 'poke', initiative: true, gInv: inv.kind });
 showTyping();
 setTimeout(() => {
 hideTyping();
@@ -20800,6 +20923,8 @@ rpsRenderScore();
 rpsPanel.hidden = false;
 }
 function closeRpsPanel() { if (rpsPanel) rpsPanel.hidden = true; }
+window.openRpsPanel = openRpsPanel;
+window.closeRpsPanel = closeRpsPanel;
 function rpsJudge(a, b) {
 if (a === b) return 0;
 if ((a === 'rock' && b === 'scissors') ||
@@ -23235,7 +23360,7 @@ const micBtn = document.getElementById('chat-mic-btn');
 const voicePanel = document.getElementById('voice-panel');
 const VOICE_MAX_MS = 60000;
 let voiceStream = null, voiceRec = null, voiceChunks = [], voiceTimer = null;
-let voiceStartTs = 0, voiceDataUrl = '', voiceDur = 0, voiceSilent = false, voicePreviewAudio = null;
+let voiceStartTs = 0, voiceDataUrl = '', voiceDur = 0, voiceSilent = false, voicePreviewAudio = null, voiceVisHandler = null;
 function voiceEnabled() {
 try { return store.get('cs-voice-send') === '1'; } catch (e) { return false; }
 }
@@ -23335,15 +23460,22 @@ const sb = document.getElementById('voice-send-btn');
 if (sb) sb.disabled = true;
 const rb = document.getElementById('voice-record-btn');
 if (rb) { rb.textContent = '停止录音'; rb.classList.add('rec'); }
+voiceVisHandler = () => {
+if (document.visibilityState === 'hidden' && voiceRec && voiceRec.state === 'recording') {
+stopVoiceRec(false); toast('页面切到后台，录音已停止');
+}
+};
+document.addEventListener('visibilitychange', voiceVisHandler);
 voiceTimer = setInterval(() => {
 const el = Math.floor((Date.now() - voiceStartTs) / 1000);
 const tm = document.getElementById('voice-time');
 if (tm) tm.textContent = voiceFmt(Math.min(el, 60));
-if (Date.now() - voiceStartTs >= VOICE_MAX_MS) stopVoiceRec(false);
+if (Date.now() - voiceStartTs >= VOICE_MAX_MS) { stopVoiceRec(false); toast('已达最长 60 秒，自动停止'); }
 }, 250);
 }
 function stopVoiceRec(silent) {
 if (voiceTimer) { clearInterval(voiceTimer); voiceTimer = null; }
+if (voiceVisHandler) { document.removeEventListener('visibilitychange', voiceVisHandler); voiceVisHandler = null; }
 if (silent) voiceSilent = true;
 if (voicePanel) voicePanel.classList.remove('recording');
 const rb = document.getElementById('voice-record-btn');
@@ -23365,6 +23497,7 @@ voiceChunks = [];
 const rb = document.getElementById('voice-record-btn');
 if (rb) rb.textContent = '重新录音';
 if (wasSilent || !blob.size) return; // 关闭面板打断的录音直接丢弃
+if (Date.now() - voiceStartTs < 800) { toast('录音太短，请录满 1 秒以上'); return; }
 const fr = new FileReader();
 fr.onload = () => {
 voiceDataUrl = String(fr.result || '');
@@ -29237,12 +29370,18 @@ window.defaultCardCat = function (k) { return getCat(k); };
 window.defaultCardCfg = function () { return api.cfg(); };
 window.defaultCardApiFor = apiFor;
 const DATA = (window.DEFAULT_CARD_DATA) || { main: [], kaomoji: [], emoji: [] };
+const FUNC_KEYS = ['fish', 'eat', 'period', 'water', 'garden', 'sync', 'reach', 'cjian', 'room', 'piggy', 'drift', 'interact'];
+const BASE_KEYS = ['main', 'kaomoji', 'emoji', 'touch'];
+function sumKeys(keys) {
+let n = 0;
+keys.forEach(k => { (DATA[k] || []).forEach(g => { n += Array.isArray(g[1]) ? g[1].length : 0; }); });
+return n;
+}
 function refreshLibCount() {
 const el = document.querySelector('#li-default-cards .t');
-if (!el) return;
-let n = 0;
-Object.keys(DATA).forEach(k => { (DATA[k] || []).forEach(g => { n += Array.isArray(g[1]) ? g[1].length : 0; }); });
-el.textContent = String(n);
+if (el) el.textContent = String(sumKeys(BASE_KEYS));
+const fel = document.getElementById('fc-lib-count');
+if (fel) fel.textContent = String(sumKeys(FUNC_KEYS));
 }
 refreshLibCount();
 function isCardOff(cat, c) { return api.isOff(cat, c); }
@@ -29284,36 +29423,46 @@ setCat(k, el.checked);
 toast((el.checked ? '已开启' : '已关闭') + '：默认字卡' + label + '使用');
 });
 });
-let curGroup = '';
-function renderGroupsBar2() {
-const bar = document.getElementById('dc-groups-bar');
-if (!bar) return;
-bar.innerHTML = '';
-const grps = DATA[cur] || [];
+function mountCardView(ids, allowedKeys, emptyText) {
+const viewList = document.getElementById(ids.list);
+const viewTabs = document.getElementById(ids.tabs);
+const viewBar = document.getElementById(ids.groupsBar);
+const viewSearch = document.getElementById(ids.search);
+const pageEl = document.getElementById(ids.page);
+if (!viewList || !viewTabs || !viewBar || !viewSearch || !pageEl) return null;
+const view = {
+keys: allowedKeys.slice(),
+cur: allowedKeys[0] || '',
+q: '',
+curGroup: '',
+cardByIdx: [],
+renderToken: 0,
+RENDER_BATCH: 120
+};
+function renderGroupsBar() {
+viewBar.innerHTML = '';
+const grps = DATA[view.cur] || [];
 const chips = [['', '全部']].concat(grps.map(g => [g[0], g[0]]));
 chips.forEach(([val, label]) => {
 const cEl = document.createElement('span');
-cEl.className = 'cc-g-chip' + (curGroup === val ? ' sel' : '');
+cEl.className = 'cc-g-chip' + (view.curGroup === val ? ' sel' : '');
 cEl.textContent = label;
-cEl.addEventListener('click', () => { curGroup = val; renderGroupsBar2(); render(); });
-bar.appendChild(cEl);
+cEl.addEventListener('click', () => { view.curGroup = val; renderGroupsBar(); render(); });
+viewBar.appendChild(cEl);
 });
 }
-const RENDER_BATCH = 120;
-let renderToken = 0;
-let cardByIdx = [];
 function render() {
-const token = ++renderToken;
-const grps = DATA[cur] || [];
+const token = ++view.renderToken;
+const grps = DATA[view.cur] || [];
 let shown = grps;
-if (curGroup) shown = shown.filter(g => g[0] === curGroup);
-if (q) {
-shown = shown.map(([g, arr]) => [g, arr.filter(c => c.indexOf(q) >= 0)]).filter(([g, arr]) => arr.length || g.indexOf(q) >= 0);
+if (view.curGroup) shown = shown.filter(g => g[0] === view.curGroup);
+if (view.q) {
+shown = shown.map(([g, arr]) => [g, arr.filter(c => c.indexOf(view.q) >= 0)]).filter(([g, arr]) => arr.length || g.indexOf(view.q) >= 0);
 }
-list.innerHTML = '';
-cardByIdx = [];
+viewList.innerHTML = '';
+view.cardByIdx = [];
 if (!shown.length) {
-list.innerHTML = '<div class="cc-empty">暂无默认字卡</div>';
+viewList.innerHTML = '<div class="cc-empty">' + emptyText + '</div>';
 return;
 }
 const flat = [];
@@ -29324,8 +29473,8 @@ arr.forEach(c => flat.push({ header: false, c }));
 const frag = document.createDocumentFragment();
 let pos = 0;
 const step = () => {
-if (token !== renderToken) return; // 新渲染已开始，废弃本批次
-const end = Math.min(pos + RENDER_BATCH, flat.length);
+if (token !== view.renderToken) return;
+const end = Math.min(pos + view.RENDER_BATCH, flat.length);
 for (; pos < end; pos++) {
 const it = flat[pos];
 if (it.header) {
@@ -29335,94 +29484,98 @@ h.innerHTML = '<span class="ccg-name">' + it.gname + '</span><span class="ccg-co
 frag.appendChild(h);
 } else {
 const c = it.c;
-const off = isCardOff(cur, c);
+const off = isCardOff(view.cur, c);
 const d = document.createElement('div');
 d.className = 'cc-item glass' + (off ? ' off' : '');
 d.innerHTML = '<div class="cc-txt"><div class="t">' + c + ' <span class="tc-known">系统</span></div></div>' +
 '<label class="toggle ccard-toggle"><input type="checkbox"' + (off ? '' : ' checked') + '><span class="tk"></span></label>';
-d.dataset.idx = cardByIdx.length;
-cardByIdx.push({ c, item: d, input: d.querySelector('input') });
+d.dataset.idx = view.cardByIdx.length;
+view.cardByIdx.push({ c, item: d, input: d.querySelector('input') });
 frag.appendChild(d);
 }
 }
-list.appendChild(frag);
+viewList.appendChild(frag);
 if (pos < flat.length) requestAnimationFrame(step);
 };
-step(); // 首帧同步跑第一批（小列表一次完成，行为与原一致）
+step();
 }
-list.addEventListener('change', (e) => {
+viewList.addEventListener('change', (e) => {
 const input = e.target;
 if (!input || input.type !== 'checkbox') return;
 const item = input.closest('.cc-item');
 if (!item) return;
-const rec = cardByIdx[Number(item.dataset.idx)];
-if (!rec || rec.input !== input) return; // 旧批次残留 DOM，忽略
+const rec = view.cardByIdx[Number(item.dataset.idx)];
+if (!rec || rec.input !== input) return;
 const nowOff = !input.checked;
-setCardOff(cur, rec.c, nowOff);
+setCardOff(view.cur, rec.c, nowOff);
 item.classList.toggle('off', nowOff);
 toastCard(rec.c, nowOff);
 });
-[['fish', '摸鱼'], ['eat', '吃饭'], ['period', '经期'], ['water', '喝水'], ['garden', '花园'],
-['sync', '同频'], ['reach', '伸手'], ['cjian', '此间'], ['room', '房间'], ['piggy', '存钱罐'],
-['drift', '漂流瓶']].forEach(([k, label]) => {
-if (!tabsWrap.querySelector('[data-type="' + k + '"]')) {
-const b = document.createElement('button');
-b.className = 'cc-tab';
-b.dataset.type = k;
-b.textContent = label;
-tabsWrap.appendChild(b);
-}
-});
-if (!tabsWrap.querySelector('[data-type="interact"]')) {
-const b = document.createElement('button');
-b.className = 'cc-tab';
-b.dataset.type = 'interact';
-b.textContent = '互动回应';
-tabsWrap.appendChild(b);
-}
-tabsWrap.querySelectorAll('.cc-tab').forEach(tab => {
-tab.addEventListener('click', () => {
-tabsWrap.querySelectorAll('.cc-tab').forEach(t => t.classList.remove('sel'));
+viewTabs.addEventListener('click', (e) => {
+const tab = e.target.closest('.cc-tab[data-type]');
+if (!tab) return;
+if (view.keys.indexOf(tab.dataset.type) < 0) return;
+viewTabs.querySelectorAll('.cc-tab').forEach(t => t.classList.remove('sel'));
 tab.classList.add('sel');
-cur = tab.dataset.type;
-q = '';
-curGroup = '';
-renderGroupsBar2();
+view.cur = tab.dataset.type;
+view.q = '';
+view.curGroup = '';
+renderGroupsBar();
 render();
 });
+viewSearch.addEventListener('input', () => {
+view.q = viewSearch.value.trim();
+clearTimeout(view._searchTimer);
+view._searchTimer = setTimeout(render, 150);
 });
-const searchInput = document.getElementById('dc-search-input');
-if (searchInput) {
-let searchTimer = null;
-searchInput.addEventListener('input', () => {
-q = searchInput.value.trim();
-clearTimeout(searchTimer);
-searchTimer = setTimeout(render, 150);
+viewSearch.addEventListener('keydown', (e) => {
+if (e.key === 'Escape') { viewSearch.value = ''; view.q = ''; render(); viewSearch.blur(); }
 });
-searchInput.addEventListener('keydown', (e) => {
-if (e.key === 'Escape') { searchInput.value = ''; q = ''; render(); searchInput.blur(); }
-});
-}
 let renderedOnce = false;
 function ensureRendered() {
 if (renderedOnce) return;
 renderedOnce = true;
-refreshLibCount(); // v3.16.x：兜底再刷一次入口角标（防数据晚于本文件追加时数字过期）
-renderGroupsBar2();
+refreshLibCount();
+renderGroupsBar();
 render();
 }
+return { view, ensureRendered };
+}
+const dcView = mountCardView({
+list: 'dc-list', tabs: 'dc-tabs', groupsBar: 'dc-groups-bar', search: 'dc-search-input', page: 'page-default-cards'
+}, BASE_KEYS, '暂无默认字卡');
+const fcView = mountCardView({
+list: 'fc-list', tabs: 'fc-tabs', groupsBar: 'fc-groups-bar', search: 'fc-search-input', page: 'page-fun-cards'
+}, FUNC_KEYS, '暂无功能触发字卡');
 const li = document.getElementById('li-default-cards');
 if (li) {
 li.addEventListener('click', () => {
 document.querySelectorAll('.page').forEach(p => p.hidden = true);
 const page = document.getElementById('page-default-cards');
 if (page) page.hidden = false;
-ensureRendered();
+if (dcView) dcView.ensureRendered();
 });
 }
 const back = document.getElementById('dc-back');
 if (back) {
 back.addEventListener('click', () => {
+document.querySelectorAll('.page').forEach(p => p.hidden = true);
+const home = document.getElementById('page-chatcard');
+if (home) home.hidden = false;
+});
+}
+const liFun = document.getElementById('li-fun-cards');
+if (liFun) {
+liFun.addEventListener('click', () => {
+document.querySelectorAll('.page').forEach(p => p.hidden = true);
+const page = document.getElementById('page-fun-cards');
+if (page) page.hidden = false;
+if (fcView) fcView.ensureRendered();
+});
+}
+const fcBack = document.getElementById('fc-back');
+if (fcBack) {
+fcBack.addEventListener('click', () => {
 document.querySelectorAll('.page').forEach(p => p.hidden = true);
 const home = document.getElementById('page-chatcard');
 if (home) home.hidden = false;
@@ -39036,6 +39189,7 @@ if (!keepAudio.el.paused) keepAudio.el.pause(); // 让位：音乐在播，保�
 if (kaTimer || kaDelay) return;
 const p = keepAudio.el.play();
 if (p && p.catch) p.catch(function () {});
+setKeepMediaSession();
 }
 } catch (e) {}
 }
@@ -40017,6 +40171,44 @@ window.__renderHomeCoin = function () {
 if (htab === 'coinearn') renderCoinPanel('earn');
 else if (htab === 'coinask') renderCoinPanel('ask');
 };
+function caresLoad() {
+try { return JSON.parse(store.get('records-care') || '[]'); } catch (e) { return []; }
+}
+function caresSave(list) { store.set('records-care', JSON.stringify(list.slice(0, 100))); }
+window.addCareRecord = function (kind, text, ts) {
+const list = caresLoad();
+list.unshift({ kind: kind, text: text || '', ts: ts || Date.now() });
+caresSave(list);
+const hp = document.getElementById('page-home');
+if (hp && !hp.hidden && htab === 'care') renderCarePanel();
+};
+function renderCarePanel() {
+const el = document.getElementById('home-care');
+if (!el) return;
+const name = store.get('lbl-partner') || (window.taWord ? window.taWord() : 'TA');
+const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+const KIND_ICON = { checkin: '📋', period: '🌸', water: '💧', eat: '🍚', pomo: '🍅' };
+const rows = [];
+caresLoad().forEach(r => { if (r.kind === 'pomo') rows.push({ icon: '🍅', main: '番茄钟陪伴', sub: fmtDT(r.ts), ts: r.ts }); });
+let msgs = [];
+try { msgs = (window.getChatMsgs ? window.getChatMsgs() : JSON.parse(store.get('chat-msgs') || '[]')); } catch (e) {}
+(msgs || []).forEach(m => {
+if (!m) return;
+const t = m.ts || 0;
+const tag = (m.mood && m.mood[0] && m.mood[0].tag) || '';
+if (tag === '经期关心') rows.push({ icon: KIND_ICON.period, main: '经期关心 · ' + esc(m.text || ''), sub: fmtDT(t), ts: t });
+else if (tag === '喝水提醒') rows.push({ icon: KIND_ICON.water, main: '提醒喝水 · ' + esc(m.text || ''), sub: fmtDT(t), ts: t });
+else if (tag === '吃饭提醒') rows.push({ icon: KIND_ICON.eat, main: '提醒吃饭 · ' + esc(m.text || ''), sub: fmtDT(t), ts: t });
+else if (m.special === 'ask-card' && m.askQuestion) rows.push({ icon: KIND_ICON.checkin, main: '查岗 · ' + esc(m.askQuestion), sub: fmtDT(t), ts: t });
+else if (m.special === 'ask-msg' && /查岗/.test(m.text || '')) {
+const nearCard = (msgs || []).some(o => o && o.special === 'ask-card' && o.askQuestion && Math.abs((o.ts || 0) - t) < 30000);
+if (!nearCard) rows.push({ icon: KIND_ICON.checkin, main: '查岗', sub: fmtDT(t), ts: t });
+}
+});
+if (!rows.length) { el.innerHTML = '<div class="ta-empty">暂无联系人的关心记录（TA 会主动查岗、提醒你喝水吃饭、关心经期、陪你专注）</div>'; return; }
+rows.sort((a, b) => (b.ts || 0) - (a.ts || 0));
+el.innerHTML = rows.map(r => '<div class="tc-listitem"><div class="tc-li-top"><span class="tc-li-q">' + r.icon + ' ' + r.main + '</span><span class="tc-li-time">' + r.sub + '</span></div></div>').join('');
+}
 function renderRpPanel() {
 const el = document.getElementById('home-coinrp');
 if (!el) return;
@@ -40099,6 +40291,9 @@ renderCoinPanel('ask');
 }
 if (showOnly === 'coinrp') {
 renderRpPanel();
+}
+if (showOnly === 'care') {
+renderCarePanel();
 }
 if (showOnly === 'av') {
 const avEl = document.getElementById('home-av');
@@ -44194,7 +44389,44 @@ msgs.filter(m => m && m.special === 'askcoin').map(m => ({
 main: '+¥' + (Number(m.askFen || 0) / 100).toFixed(2),
 sub: fmtMDHM(m.askTs || m.ts)
 })),
-escH(name) + ' 还没有向 Mochi 申请过');
+escH(name) + ' 还没有向 Mochi 申请过') +
+(function () {
+const GAME_SPECIAL = { brick: '双人打砖块', pong: '乒乓', snake: '贪吃蛇', memory: '记忆翻牌', rps: '猜拳', c4: '四子棋', ms: '合作扫雷' };
+const GAME_KIND = { rps: '猜拳', pong: 'Pong', snake: '双人贪吃蛇' };   // TA 主动邀请（cuddle 贴贴不算游戏）
+const GAME_NAME_RE = /^(四子棋|合作扫雷|记忆翻牌|双人打砖块|Pong)/;
+const rows = [];
+const push = (m, mainTxt, ico) => {
+if (!m) return;
+rows.push({ main: (ico || '🎮') + ' ' + escH(mainTxt), sub: fmtMDHM(m.ts || m.rpTs), ts: m.ts || m.rpTs || 0 });
+};
+msgs.forEach(m => {
+if (!m) return;
+if (m.special && GAME_SPECIAL[m.special]) push(m, GAME_SPECIAL[m.special] + ' · ' + (m.text || ''), '🎮');
+else if (m.gInv && GAME_KIND[m.gInv]) push(m, name + ' 邀请玩 ' + GAME_KIND[m.gInv], '📩');
+});
+msgs.forEach(m => {
+if (!m || !m.text || !GAME_NAME_RE.test(m.text)) return;
+if (m.special && GAME_SPECIAL[m.special]) return;
+if (m.gInv) return;
+push(m, m.text, '🎮');
+});
+const seen = new Set();
+const uniq = rows.filter(r => { const k = r.main + '|' + r.sub; if (seen.has(k)) return false; seen.add(k); return true; });
+uniq.sort((a, b) => (b.ts || 0) - (a.ts || 0));
+let html = '<div class="stats-sec"><div class="stats-sec-head"><span class="stats-sec-title">🎮 小游戏记录</span>' +
+'<span class="stats-sec-count">' + uniq.length + ' 条</span></div>';
+if (!uniq.length) {
+html += '<div class="ta-empty">还没有小游戏记录（更多功能 → 小游戏，和 TA 玩一局试试）</div>';
+} else {
+html += '<div class="stats-list">';
+uniq.forEach(r => {
+html += '<div class="stats-item"><span class="stats-item-name">' + r.main + '</span>' +
+'<span class="stats-item-num">' + r.sub + '</span></div>';
+});
+html += '</div>';
+}
+return html + '</div>';
+})();
 }
 }
 const exprEl = document.getElementById('st-expr-content');
@@ -47163,6 +47395,7 @@ pomoRunning = true; pomoStartTick();
 }
 pmpRec = { mode: 'focus', totalMs: pomoModeMin('focus') * 60000, endAt: pomoEndAt, startedAt: Date.now(), paused: 0, remainMs: 0, enc: 0, nextEncAt: 0 };
 pmpSave();
+try { if (window.addCareRecord) window.addCareRecord('pomo', ''); } catch (e) {}
 const cdEl = document.getElementById('pmp-cd'); if (cdEl) cdEl.hidden = false;
 try { pmpCAdd('ta', PMP_GREET[Math.floor(Math.random() * PMP_GREET.length)]); } catch (e) {}
 pmpScheduleEnc();
@@ -58813,7 +59046,7 @@ if (endBtn) endBtn.hidden = false;
 setStatus(winner === 1 ? '🎉 你赢了！' : winner === 2 ? T('TA') + '赢了这一局' : '这局没有分出胜负');
 try {
 const resTxt = winner === 1 ? '你赢' : winner === 2 ? T('TA') + '赢' : '平局';
-if (window.chatAddSystem) window.chatAddSystem(T('四子棋') + ' · ' + resTxt);
+if (window.chatAddSystem) window.chatAddSystem(T('四子棋') + ' · ' + resTxt, { special: 'c4' });
 const grp = winner === 1 ? '游戏失败·回应' : winner === 2 ? '游戏胜利·回应' : '游戏平局·回应';
 const fb = winner === 1 ? ['让你赢啦，再来？'] : winner === 2 ? ['我赢啦，再来一局吗'] : ['平局，再来一局？'];
 const pool = window.getInteractPool ? window.getInteractPool(grp, fb) : fb;
@@ -59451,7 +59684,7 @@ showOverlay(win ? '💣 合作完成' : '💥 差一点', body, '再来一次');
 if (startBtn) startBtn.textContent = '再来一次';
 if (endBtn) endBtn.hidden = false;
 try {
-if (window.chatAddSystem) window.chatAddSystem(T('合作扫雷') + ' · ' + (win ? '完成 ' + DIFFS[s.diffKey].name : '差一点（' + DIFFS[s.diffKey].name + '）'));
+if (window.chatAddSystem) window.chatAddSystem(T('合作扫雷') + ' · ' + (win ? '完成 ' + DIFFS[s.diffKey].name : '差一点（' + DIFFS[s.diffKey].name + '）'), { special: 'ms' });
 const fb = win
 ? ['一起找完了。', '我们配合得不错嘛。', '全部清完啦，开心。', '这一片雷区都清理干净了。']
 : ['差一点点而已，再来！', '下次小心一点就好。', '没事，再来一次？'];
@@ -59695,6 +59928,7 @@ function beep(freq, dur, vol, type) {
 if (!soundOn) return;
 try {
 if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+if (audioCtx.state === 'suspended') audioCtx.resume();
 const o = audioCtx.createOscillator(), g = audioCtx.createGain();
 o.frequency.value = freq; o.type = type || 'sine';
 g.gain.value = vol || 0.08;
@@ -59720,6 +59954,9 @@ const ITEMS = [
 { id: 'fish_octopus',  name: '八爪鱼', icon: '🐙', price: 1200, cat: 'fish',    r: 3 },
 { id: 'fish_rare',     name: '稀有鱼', icon: '🐠', price: 3000, cat: 'fish',    r: 4 },
 { id: 'fish_gold',     name: '金色鱼', icon: '🌟', price: 5000, cat: 'fish',    r: 5 },
+{ id: 'fish_koi',      name: '锦鲤',   icon: '🎏', price: 8000,  cat: 'fish',    r: 6 },
+{ id: 'fish_moon',     name: '月光鱼', icon: '🌙', price: 12000, cat: 'fish',    r: 6 },
+{ id: 'fish_abyss',    name: '深渊王', icon: '🐲', price: 20000, cat: 'fish',    r: 6 },
 { id: 'sp_flower',     name: '漂流花', icon: '🌸', price: 800,  cat: 'special', giftNote: 'flower' },
 { id: 'sp_chest',      name: '小宝箱', icon: '🎁', price: 2000, cat: 'special' },
 { id: 'gift_shell',    name: '小贝壳', icon: '🐚', cat: 'gift',    price: 0, giftNote: 'shell' },
@@ -59731,9 +59968,9 @@ const ITEM_MAP = {}; ITEMS.forEach(function (it) { ITEM_MAP[it.id] = it; });
 const FISH_POOL = ITEMS.filter(function (it) { return it.cat === 'fish' || it.cat === 'special'; });
 const GIFT_POOL = ITEMS.filter(function (it) { return it.cat === 'gift'; });
 function qualityWeights(quality) {
-if (quality === 'perfect') return { 1: 30, 2: 30, 3: 22, 4: 13, 5: 5 };
-if (quality === 'good')    return { 1: 45, 2: 30, 3: 16, 4: 7, 5: 2 };
-return { 1: 68, 2: 22, 3: 8, 4: 2, 5: 0 };
+if (quality === 'perfect') return { 1: 30, 2: 30, 3: 22, 4: 13, 5: 5, 6: 3 };
+if (quality === 'good')    return { 1: 45, 2: 30, 3: 16, 4: 7, 5: 2, 6: 1 };
+return { 1: 68, 2: 22, 3: 8, 4: 2, 5: 0, 6: 0 };
 }
 function rollFish(quality) {
 const w = qualityWeights(quality);
@@ -59769,7 +60006,7 @@ function todayDataKey() { return 'fishing-today'; }
 function loadToday() {
 const t = readJSON(todayDataKey(), null);
 if (t && t.date === todayKey()) return t;
-return { date: todayKey(), mine: {}, ta: {} };
+return { date: todayKey(), mine: {}, ta: {}, keep: {} };
 }
 function saveToday(t) { writeJSON(todayDataKey(), t); }
 function giftsKey() { return 'fishing-gifts'; }
@@ -59778,15 +60015,10 @@ function saveGifts(g) { writeJSON(giftsKey(), g); }
 function togetherKey() { return 'fishing-together'; }
 function loadTogether() { const t = readJSON(togetherKey(), null); if (t && t.date === todayKey()) return t; return { date: todayKey(), sec: 0, rewarded: false }; }
 function saveTogether(t) { writeJSON(togetherKey(), t); }
-function walletGet() {
-const s = window.xyStore ? window.xyStore('xy-home-v2') : null;
-if (!s) return { myBalance: 52000, systemBalance: 52000 };
-try { const w = JSON.parse(s.get('gift-wallet') || ''); if (typeof w.myBalance === 'number' && typeof w.systemBalance === 'number') return w; } catch (e) {}
-const seed = { myBalance: 52000, systemBalance: 52000 };
-s.set('gift-wallet', JSON.stringify(seed));
-return seed;
-}
-function walletSet(w) { const s = window.xyStore ? window.xyStore('xy-home-v2') : null; if (s) s.set('gift-wallet', JSON.stringify(w)); }
+function statsKey() { return 'fishing-stats'; }
+function loadStats() { const s = readJSON(statsKey(), null); return s && typeof s === 'object' ? s : { totalCast: 0, perfectCatch: 0, totalEarned: 0 }; }
+function saveStats(s) { writeJSON(statsKey(), s); }
+function addStats(delta) { const s = loadStats(); s.totalCast += delta.totalCast || 0; s.perfectCatch += delta.perfectCatch || 0; s.totalEarned += delta.totalEarned || 0; saveStats(s); }
 const partnerNameEl = document.getElementById('fish-partner-name');
 const sceneEl = document.getElementById('fish-scene');
 const statusEl = document.getElementById('fish-status');
@@ -59809,12 +60041,16 @@ let taTimer = null, togetherTimer = null;
 let timingRafId = null;
 let curTab = 'today';
 let open = false;
+let missStreak = 0;     // 连续跑鱼次数（保底：第 5 次起必命中）
+let togetherSec = -1, togetherRewarded = null;  // 陪伴计时内存缓存（减少写盘）
+let _lastPageKey = '';  // renderPage 脏标记（无变化时跳过 innerHTML 重建）
 function resetMine() { mine = { phase: 'idle', since: 0, biteAt: 0 }; }
 function resetTa() { ta = { phase: 'idle', until: 0, next: 0 }; }
 resetMine(); resetTa();
 function castMine() {
 if (mine.phase === 'waiting' || mine.phase === 'biting') return;
 sfxCast();
+addStats({ totalCast: 1 });
 if (statusEl) delete statusEl.dataset.keep;
 mine.phase = 'waiting'; mine.since = Date.now();
 mine.biteAt = Date.now() + rand(2000, 4500);
@@ -59847,19 +60083,25 @@ let quality;
 if (p >= 0.38 && p <= 0.68) quality = 'perfect';
 else if ((p >= 0.2 && p < 0.38) || (p > 0.68 && p <= 0.85)) quality = 'good';
 else quality = 'poor';
-const hit = Math.random() < successRate(quality);
+const pity = missStreak >= 5;
+const hit = pity || Math.random() < successRate(quality);
 if (timingRafId) { cancelAnimationFrame(timingRafId); timingRafId = null; }
 if (hit) {
 const item = rollFish(quality);
 sfxCatch();
 gainMine(item);
 flashScene(true, item);
-if (quality === 'perfect') statusText('完美收竿！钓到了 ' + item.icon + ' ' + item.name);
+if (pity) { statusText('保底命中！钓到了 ' + item.icon + ' ' + item.name); missStreak = 0; }
+else if (quality === 'perfect') { statusText('完美收竿！钓到了 ' + item.icon + ' ' + item.name); addStats({ perfectCatch: 1 }); }
 else statusText('收竿！钓到了 ' + item.icon + ' ' + item.name);
 } else {
 sfxMiss();
 flashScene(false);
-statusText('鱼跑了…（' + (quality === 'perfect' ? '差一点点' : '时机不对') + '）');
+missStreak++;
+let msg = '鱼跑了…（' + (quality === 'perfect' ? '差一点点' : '时机不对') + '）';
+if (missStreak === 3 || missStreak === 4) msg += ' 别急，慢慢来';
+statusText(msg);
+if (Math.random() < 0.15) { setTimeout(function () { sendTaLine(fit('TA：') + pick(TA_COMFORT), false); }, 500); }
 }
 mine.phase = 'idle'; mine.progress = null;
 render();
@@ -59880,6 +60122,8 @@ toast('发现新物品！' + item.icon + ' ' + item.name);
 function flashScene(got, item) {
 const wp = sceneEl.querySelector('.fish-water');
 if (!wp) return;
+const existing = wp.querySelectorAll('.fish-splash');
+if (existing.length >= 3 && existing[0].parentNode) existing[0].parentNode.removeChild(existing[0]);
 const splash = document.createElement('div');
 splash.className = 'fish-splash' + (got ? ' ok' : '');
 splash.textContent = got ? (item ? item.icon : '🐟') : '💨';
@@ -59947,24 +60191,34 @@ statusText(taWord() + ' 钓到了 ' + item.icon + ' ' + item.name);
 if (item.giftNote === 'flower' && Math.random() < 0.5) {
 const note = giftNoteFor(item);
 setTimeout(function () { sendTaLine(fit('TA：') + note, false); }, 700);
+} else if (item.r >= 4 && Math.random() < 0.5) {
+setTimeout(function () { sendTaLine(fit('TA：') + pick(TA_PROUD), false); }, 600);
+} else if (Math.random() < 0.3) {
+setTimeout(function () { sendTaLine(fit('TA：') + pick(TA_HAPPY), false); }, 600);
 }
 }
 }
+const TA_HAPPY = ['钓到了！', '今天运气不错。', '这条给你看看。', '嘿嘿，上钩了。'];
+const TA_PROUD = ['难得的收获呢。', '这条很漂亮吧。', '好久没钓到这么好的了。'];
+const TA_COMFORT = ['没事，再试一次。', '鱼很狡猾的。', '别灰心，慢慢来。', '跑掉的总是比较大的。'];
 function sendTaLine(text, glow) {
-try { if (window.chatAddIn) window.chatAddIn(text, { silent: true }); } catch (e) {}
+try { if (window.chatAddIn) window.chatAddIn(glow ? '💝 ' + text : text, { silent: true }); } catch (e) {}
 }
 const TOGETHER_GOAL = 300; // 秒
 function startTogetherTimer() {
 stopTogetherTimer();
+const t0 = loadTogether();
+togetherSec = t0.sec; togetherRewarded = t0.rewarded;
 togetherTimer = setInterval(function () {
 if (!open) return;
 const bothFishing = (mine.phase === 'waiting' || mine.phase === 'biting') && (ta.phase === 'casting' || ta.phase === 'waiting' || ta.phase === 'biting');
 if (!bothFishing) return;
-const t = loadTogether();
-if (t.rewarded) return;
-t.sec += 1; saveTogether(t);
-if (t.sec >= TOGETHER_GOAL) {
-t.rewarded = true; saveTogether(t);
+if (togetherRewarded) return;
+togetherSec++;
+if (togetherSec % 10 === 0) { const t = loadTogether(); t.sec = togetherSec; t.rewarded = !!togetherRewarded; saveTogether(t); }
+if (togetherSec >= TOGETHER_GOAL) {
+togetherRewarded = true;
+const t = loadTogether(); t.sec = togetherSec; t.rewarded = true; saveTogether(t);
 if (window.giftWalletChange) window.giftWalletChange(1314, 1314, '钓鱼陪伴奖励');
 sfxGift();
 toast('💕 陪伴奖励：一起钓鱼 5 分钟，心意币各 +¥13.14');
@@ -59972,21 +60226,30 @@ if (window.chatAddIn) { try { window.chatAddIn(fit('陪了我这么久，鱼都�
 }
 }, 1000);
 }
-function stopTogetherTimer() { if (togetherTimer) { clearInterval(togetherTimer); togetherTimer = null; } }
+function stopTogetherTimer() {
+if (togetherTimer) { clearInterval(togetherTimer); togetherTimer = null; }
+if (togetherSec >= 0) { const t = loadTogether(); t.sec = togetherSec; t.rewarded = !!togetherRewarded; saveTogether(t); togetherSec = -1; togetherRewarded = null; }
+}
 function sellAll() {
 const t = loadToday();
+const keep = t.keep || {};
 let total = 0, count = 0;
+const sold = {};
 ['mine', 'ta'].forEach(function (side) {
 Object.keys(t[side]).forEach(function (id) {
 const it = ITEM_MAP[id];
 if (!it || it.cat === 'gift') return;
+if (keep[id]) return;
 const n = t[side][id] || 0;
 total += it.price * n; count += n;
+sold[side] = sold[side] || {}; sold[side][id] = 1;
 });
 });
-if (count === 0) { toast('还没有可出售的收获'); return; }
+if (count === 0) { toast('没有可出售的收获（勾选「留」的不卖）'); return; }
 if (window.giftWalletChange) window.giftWalletChange(total, total, '钓鱼出售');
-t.mine = {}; t.ta = {}; saveToday(t);
+Object.keys(sold).forEach(function (side) { Object.keys(sold[side]).forEach(function (id) { delete t[side][id]; }); });
+saveToday(t);
+addStats({ totalEarned: total });
 sfxSell();
 toast('已出售 ' + count + ' 件，心意币各 +' + fenToStr(total));
 render();
@@ -60042,12 +60305,19 @@ default: return '待着';
 }
 function renderPage() {
 if (!pageEl) return;
+let key;
+if (curTab === 'today') key = 'today:' + JSON.stringify(loadToday());
+else if (curTab === 'dex') key = 'dex:' + JSON.stringify(loadDex()) + ':' + JSON.stringify(loadStats());
+else key = 'gifts:' + JSON.stringify(loadGifts());
+if (key === _lastPageKey) return;
+_lastPageKey = key;
 if (curTab === 'today') pageEl.innerHTML = renderToday();
 else if (curTab === 'dex') pageEl.innerHTML = renderDex();
 else if (curTab === 'gifts') pageEl.innerHTML = renderGifts();
 }
 function renderToday() {
 const t = loadToday();
+const keep = t.keep || {};
 let total = 0, count = 0;
 function rows(side) {
 const m = t[side] || {};
@@ -60059,8 +60329,9 @@ const it = ITEM_MAP[id]; if (!it) return;
 const n = m[id];
 const p = it.price * n;
 const sellable = it.cat !== 'gift';
-if (sellable) { total += p; count += n; }
-html += '<div class="fish-row"><span class="fish-ico">' + it.icon + '</span><span class="fish-name">' + esc(it.name) + (it.cat === 'gift' ? '<i class="fish-gift-tag">已收藏</i>' : '') + '</span><span class="fish-cnt">×' + n + '</span>' + (sellable ? '<span class="fish-price">+' + fenToStr(p) + '</span>' : '<span class="fish-price">纪念</span>') + '</div>';
+const kept = !!keep[id];
+if (sellable && !kept) { total += p; count += n; }
+html += '<div class="fish-row"><span class="fish-ico">' + it.icon + '</span><span class="fish-name">' + esc(it.name) + (it.cat === 'gift' ? '<i class="fish-gift-tag">已收藏</i>' : '') + '</span><span class="fish-cnt">×' + n + '</span>' + (sellable ? '<label class="fish-keep"><input type="checkbox" class="fish-keep-cb" data-id="' + id + '"' + (kept ? ' checked' : '') + '><span>留</span></label><span class="fish-price">+' + fenToStr(p) + '</span>' : '<span class="fish-price">纪念</span>') + '</div>';
 });
 return html;
 }
@@ -60068,7 +60339,7 @@ const html =
 '<div class="fish-sub">今日收获</div>' +
 '<div class="fish-subhead">你</div>' + rows('mine') +
 '<div class="fish-subhead">' + esc(taWord()) + '</div>' + rows('ta') +
-'<div class="fish-sellbar">' + (count ? '<span>共 ' + count + ' 件 · 价值 <b>+' + fenToStr(total) + '</b> 心意币</span>' : '<span>还没有可出售的收获</span>') + '<button class="fish-sell" id="fish-sell-btn"' + (count ? '' : ' disabled') + '>' + (count ? '出售全部' : '出售') + '</button></div>';
+'<div class="fish-sellbar">' + (count ? '<span>可出售 ' + count + ' 件 · <b>+' + fenToStr(total) + '</b> 心意币（勾「留」不卖）</span>' : '<span>没有可出售的收获</span>') + '<button class="fish-sell" id="fish-sell-btn"' + (count ? '' : ' disabled') + '>出售</button></div>';
 return html;
 }
 function renderDex() {
@@ -60081,6 +60352,8 @@ html += '<div class="fish-dex-item' + (got ? ' got' : '') + '"><span class="fish
 html += '</div>';
 const gotCount = Object.keys(d).length;
 html += '<div class="fish-dex-foot">已发现 ' + gotCount + ' / ' + ITEMS.length + '</div>';
+const st = loadStats();
+html += '<div class="fish-stats">累计抛竿 <b>' + st.totalCast + '</b> · 完美收竿 <b>' + st.perfectCatch + '</b> · 累计赚 <b>¥' + fenToStr(st.totalEarned) + '</b></div>';
 return html;
 }
 function renderGifts() {
@@ -60089,7 +60362,7 @@ const html =
 '<div class="fish-sub">TA 送我的东西</div>' +
 (g.length ? g.map(function (item, idx) {
 const it = ITEM_MAP[item.id]; if (!it) return '';
-return '<div class="fish-row"><span class="fish-ico">' + it.icon + '</span><span class="fish-name">' + esc(it.name) + '</span><span class="fish-gift-ts">' + esc(fmtTs(item.ts)) + '</span><button class="fish-exch" data-idx="' + idx + '">兑换 +3</button></div>';
+return '<div class="fish-row"><span class="fish-ico">' + it.icon + '</span><span class="fish-name">' + esc(it.name) + '</span><span class="fish-gift-ts">' + esc(fmtTs(item.ts)) + '</span><button class="fish-exch" data-idx="' + idx + '">兑换 ¥5.20</button></div>';
 }).join('') : '<div class="fish-empty">TA 还没送你东西，继续一起钓鱼吧～</div>');
 return html;
 }
@@ -60102,6 +60375,16 @@ const sell = e.target.closest && e.target.closest('#fish-sell-btn');
 if (sell) { e.stopPropagation(); sellAll(); return; }
 const exch = e.target.closest && e.target.closest('.fish-exch');
 if (exch) { e.stopPropagation(); exchangeGift(parseInt(exch.getAttribute('data-idx'), 10)); return; }
+});
+if (pageEl) pageEl.addEventListener('change', function (e) {
+const cb = e.target.closest && e.target.closest('.fish-keep-cb');
+if (!cb) return;
+e.stopPropagation();
+const t = loadToday();
+if (!t.keep) t.keep = {};
+const id = cb.getAttribute('data-id');
+if (cb.checked) t.keep[id] = 1; else delete t.keep[id];
+saveToday(t);
 });
 tabEls.forEach(function (tab) {
 tab.addEventListener('click', function (e) {
@@ -60159,7 +60442,7 @@ function stopTaTimer() { if (taTimer) { clearInterval(taTimer); taTimer = null; 
 function stopMineTimer() { if (mine && mine._tm) { clearTimeout(mine._tm); mine._tm = null; } }
 document.addEventListener('contact-switched', function () { try { closeFishPanel(); } catch (e) {} });
 window.__fishDebug = {
-state: function () { return { open: open, mine: mine && mine.phase, ta: ta && ta.phase, today: loadToday(), dex: loadDex(), gifts: loadGifts(), together: loadTogether(), wallet: walletGet() }; },
+state: function () { return { open: open, mine: mine && mine.phase, ta: ta && ta.phase, today: loadToday(), dex: loadDex(), gifts: loadGifts(), together: loadTogether(), wallet: (window.giftWalletGet ? window.giftWalletGet() : null) }; },
 forceBite: function () { if (mine.phase === 'waiting') { clearTimeout(mine._tm); startBiting(); } return mine.phase; },
 reelAt: function (p, force) {
 if (mine.phase !== 'biting') return false;

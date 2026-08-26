@@ -422,11 +422,16 @@
       </div>
       </div>
       <div class="cc-sect-body" id="cc-sect-preset" hidden>
-      <div class="sm-set-hint" style="padding:2px 16px 10px">说明：本站「系统预设字卡」均为自搓字卡（作者原创），按分类/分组展示，可逐张开启或关闭。</div>
+      <div class="sm-set-hint" style="padding:2px 16px 10px">说明：本站「系统预设字卡」均为自搓字卡（AI 辅助设计），按分类/分组展示，可逐张开启或关闭。</div>
       <div class="chat-item glass" id="li-default-cards">
         <div class="av"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1L3.2 9.4l6.1-.9z"/></svg></div>
         <div class="ci"><div class="n">默认聊天字卡</div><div class="m">日常默认回复字卡（自搓）</div></div>
         <div class="t">3260</div>
+      </div>
+      <div class="chat-item glass" id="li-fun-cards">
+        <div class="av"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1L3.2 9.4l6.1-.9z"/></svg></div>
+        <div class="ci"><div class="n">其他互动功能字卡</div><div class="m">各功能触发的系统预设字卡 · 如摸鱼/吃饭/经期等</div></div>
+        <div class="t" id="fc-lib-count">0</div>
       </div>
       <div class="chat-item glass" id="li-mood-cards">
         <div class="av"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7.5-4.7-9.3-9A5.3 5.3 0 0112 6.4 5.3 5.3 0 0121.3 12c-1.8 4.3-9.3 9-9.3 9z"/></svg></div>
@@ -2002,7 +2007,7 @@
         </span>
         <span class="ch-name">聊天默认字卡</span>
       </div>
-      <div class="sm-set-hint" style="padding:8px 16px 0">说明：以下系统预设字卡为本站自搓字卡（作者原创），可逐张开启或关闭。</div>
+      <div class="sm-set-hint" style="padding:8px 16px 0">说明：以下系统预设字卡为本站自搓字卡（AI 辅助设计），可逐张开启或关闭。</div>
       <div class="dc-toggle glass">
         <div class="dc-toggle-txt">
           <div class="dc-toggle-name">使用默认字卡</div>
@@ -2035,6 +2040,39 @@
       </div>
       <div class="card-list" id="dc-list">
         <!-- 默认字卡由 JS 按分类/分组渲染 -->
+      </div>
+    </div>
+
+    <!-- 其他互动功能字卡（独立页面，可开关；功能触发字卡不放进聊天默认字卡） -->
+    <div class="page" id="page-fun-cards" hidden>
+      <div class="chat-head">
+        <span class="ch-back" id="fc-back">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        </span>
+        <span class="ch-name">其他互动功能字卡</span>
+      </div>
+      <div class="sm-set-hint" style="padding:8px 16px 0">说明：以下为各功能（摸鱼 / 吃饭 / 经期 / 喝水 / 花园 / 同频 / 伸手 / 此间 / 房间 / 存钱罐 / 漂流瓶 / 互动回应）触发时联系人会使用的自搓字卡，非聊天通用字卡，可逐张开启或关闭。</div>
+      <div class="card-tabs" id="fc-tabs">
+        <button class="cc-tab sel" data-type="fish">摸鱼</button>
+        <button class="cc-tab" data-type="eat">吃饭</button>
+        <button class="cc-tab" data-type="period">经期</button>
+        <button class="cc-tab" data-type="water">喝水</button>
+        <button class="cc-tab" data-type="garden">花园</button>
+        <button class="cc-tab" data-type="sync">同频</button>
+        <button class="cc-tab" data-type="reach">伸手</button>
+        <button class="cc-tab" data-type="cjian">此间</button>
+        <button class="cc-tab" data-type="room">房间</button>
+        <button class="cc-tab" data-type="piggy">存钱罐</button>
+        <button class="cc-tab" data-type="drift">漂流瓶</button>
+        <button class="cc-tab" data-type="interact">互动回应</button>
+      </div>
+      <div class="cc-groups-bar" id="fc-groups-bar"></div>
+      <div class="card-search glass">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input class="card-search-input" id="fc-search-input" placeholder="搜索功能触发字卡" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+      </div>
+      <div class="card-list" id="fc-list">
+        <!-- 功能触发字卡由 JS 按分类/分组渲染 -->
       </div>
     </div>
 
@@ -2144,6 +2182,7 @@
         <button class="modal-file" id="modal-file" hidden>从 txt 文件导入</button>
         <input type="file" id="modal-file-input" accept=".txt,text/plain" style="display:none">
         <div class="modal-btns">
+          <button class="modal-btn copy" id="modal-copy" hidden>复制</button>
           <button class="modal-btn cancel" id="modal-cancel">取消</button>
           <button class="modal-btn ok" id="modal-ok">确定</button>
         </div>
@@ -2647,6 +2686,7 @@
         <button class="fav-tab" data-htab="coinearn">心意币赚钱记录</button>
         <button class="fav-tab" data-htab="coinask">心意币申请记录</button>
         <button class="fav-tab" data-htab="coinrp">心意币红包记录</button>
+        <button class="fav-tab" data-htab="care">TA的关心</button>
       </div>
       <div class="cal-scroll">
         <div class="cal-card glass" data-hpanel="av">
@@ -2682,6 +2722,11 @@
         <div class="cal-card glass" data-hpanel="coinrp" hidden>
           <div class="cal-card-title">心意币红包记录</div>
           <div id="home-coinrp"></div>
+        </div>
+        <!-- v3.16.x：联系人的关心（查岗/经期/喝水/吃饭/番茄陪伴） -->
+        <div class="cal-card glass" data-hpanel="care" hidden>
+          <div class="cal-card-title">TA 的关心记录</div>
+          <div id="home-care"></div>
         </div>
       </div>
     </div>
