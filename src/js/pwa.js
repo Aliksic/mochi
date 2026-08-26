@@ -226,10 +226,10 @@
     btn.addEventListener('click', () => {
       if (!deferredPrompt) {
         // beforeinstallprompt 未触发（不满足可安装条件 / 已安装过旧版 / 浏览器 UI 变化）→ 引导手动安装
-        // v3.7.x：isIOS 加 Android 排除（UA 伪装兜底，与 fullscreen.js / mobile-adapt.js 一致）
-        const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent)
-          && !/android/i.test(navigator.userAgent) && !window.MSStream;
-        const isAndroid = /android/i.test(navigator.userAgent);
+        // v3.16.x：设备判定统一读 device.js（mochiDevice）——此前这里各自算 isIOS/isAndroid
+        const d = window.mochiDevice || {};
+        const isIOS = !!d.isIOS;
+        const isAndroid = !!d.isAndroid;
         let guide = isIOS
           ? 'iPhone 安装：点底部「分享」按钮 → 「添加到主屏幕」。'
           : isAndroid
@@ -285,9 +285,8 @@
 
   window.addEventListener('appinstalled', hide);
   // iOS Safari 提示（无 beforeinstallprompt）
-  // v3.7.x：isIOS 加 Android 排除（UA 伪装兜底）
-  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent)
-    && !/android/i.test(navigator.userAgent) && !window.MSStream;
+  // v3.16.x：设备判定统一读 device.js（mochiDevice）
+  const isIOS = !!(window.mochiDevice || {}).isIOS;
   if (isIOS) {
     const iOSHint = document.getElementById('pwa-ios-hint');
     if (iOSHint) {

@@ -284,36 +284,11 @@
       row.appendChild(chk); row.appendChild(main); row.appendChild(dueBtn); row.appendChild(shr); row.appendChild(pin); row.appendChild(del);
       list.appendChild(row);
     });
-    memoUpdateBadge();
   }
 
-  // ---- 首页小组件联动：在「今日备忘/心情」行下方注入整宽备忘录状态横幅，点击直达备忘录
-  //      （v3.15.x：原为半卡内状态行，为三页 band 对齐升级为与打卡/摸鱼同档的整宽横幅） ----
-  function memoUpdateBadge() {
-    let b = document.getElementById('memo-app-badge');
-    const row = document.querySelector('[data-desk-widget="memo-row"]');
-    const card = row && row.querySelector('.memo-card');
-    if (!row || !card) { if (b) b.remove(); return; }
-    // 跟随 memo-row：不紧贴其后（被移动/重建/落池）时重新插入
-    if (!b || b.previousElementSibling !== row || b.parentNode !== row.parentNode) {
-      if (b) b.remove();
-      b = document.createElement('div');
-      b.id = 'memo-app-badge'; b.className = 'memo-app-badge';
-      b.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (editingNow()) return;
-        openPage(memoPage); memoRender();
-      });
-      row.parentNode.insertBefore(b, row.nextSibling);
-    }
-    const items = memoItems();
-    const undone = items.filter(x => !x.done);
-    const urgent = undone.filter(x => memoUrgent(x)).length;
-    b.textContent = undone.length
-      ? ('备忘录 · ' + undone.length + ' 件待办' + (urgent ? ' · ' + urgent + ' 件临期' : ''))
-      : (items.length ? '备忘录 · 全部完成 ✓' : '备忘录 · 记一件想做的事');
-    b.className = 'memo-app-badge' + (urgent ? ' urgent' : '');
-  }
+  // v3.15.x：桌面第三页「备忘录」状态横幅已按用户要求删除（第三页改由
+  // 今日备忘/今天的心情 两张整宽卡补齐三档节奏，与第一/二页对齐）；
+  // 备忘录入口保留第三页图标 + 聊天更多功能。
 
   function memoAddFromInput() {
     if (editingNow()) return;
@@ -374,11 +349,5 @@
       memoSendBtn.textContent = '完成发到聊天：' + (on ? '开' : '关');
     });
   }
-  document.addEventListener('contact-switched', () => { if (!memoPage.hidden) memoRender(); memoUpdateBadge(); });
-  memoUpdateBadge();
-  // v3.15.x：冷启动时 memo-row 可能仍在隐藏池（150ms 才被搬回第三页），init 这次
-  // memoUpdateBadge 会把状态横幅插在池里；延迟重跑两次让它跟随 memo-row 落位
-  // （memoUpdateBadge 幂等：横幅不紧贴 memo-row 之后就重新插入），同时刷新待办计数。
-  setTimeout(memoUpdateBadge, 300);
-  setTimeout(memoUpdateBadge, 700);
+  document.addEventListener('contact-switched', () => { if (!memoPage.hidden) memoRender(); });
 })();

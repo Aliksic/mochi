@@ -83,7 +83,9 @@
     'send-bg': '#111111', 'send-ink': '#ffffff', 'send-show': 'show',
     'font-size': '14px', 'bubble-size': '11px 14px',
     'av-shape': 'circle', 'time-style': 'under-av',
-    'bg': '', 'font': '', 'css': ''
+    'bg': '', 'font': '', 'css': '',
+    // v3.16.x：成员群聊昵称显示开关（on = 成员消息头像上方显示昵称，默认不显示）
+    'show-name': 'off'
   };
   const GC_BEAUTY_STYLES = [
     { label: '头像下方', value: 'under-av' },
@@ -144,6 +146,8 @@
     else gcBeautyStored[k] = v;
     gcBeautySave();
     applyGcBeauty();
+    // v3.16.x：昵称显示开关变化需整页重渲（昵称在 renderMsg 里按开关生成）
+    if (k === 'show-name') { try { renderAll(); } catch (e) {} }
     try { if (settingsPanel && !settingsPanel.hidden) renderSettingsPanel(); } catch (e) {}
   }
   // ---- 颜色对比度保护（v3.9.x 修复：黑底黑字消息看不见） ----
@@ -376,7 +380,14 @@
   function escTxtBr(s) { return escTxt(s).replace(/\n/g, '<br>'); }
   function attrEsc(s) { return escapeHtml(s).replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
   // 引用块（复用聊天页 .msg-quote 样式；图片/表情包引用只显示缩略图）
+  // v3.16.x：支持 { t, imgs } 对象格式（气泡点「引用」后发送的组合引用，与聊天页 quoteValue 同构）
   function gcQuoteHtml(q) {
+    if (q && typeof q === 'object' && Array.isArray(q.imgs) && q.imgs.length) {
+      const tOk = typeof q.t === 'string' && q.t && q.t.indexOf('data:') !== 0;
+      return '<div class="msg-quote"><span class="msg-quote-imgs">' +
+        q.imgs.map(s => '<img class="msg-quote-img" src="' + attrEsc(s) + '" alt="图片">').join('') +
+        '</span>' + (tOk ? '<span class="msg-quote-text">' + escTxtBr(q.t) + '</span>' : '') + '</div>';
+    }
     if (q && typeof q === 'string') {
       if (q.indexOf('data:') === 0) {
         return '<div class="msg-quote"><img class="msg-quote-img" src="' + attrEsc(q) + '" alt="图片"></div>';
@@ -415,8 +426,12 @@
     if (rec.side === 'out') {
       m.innerHTML = '<div class="msg-bubble"></div><div class="msg-side"><div class="msg-av"></div>' + timeHtml + '</div>';
     } else {
-      // v3.8.x：群聊不显示成员昵称（与普通聊天页一致——头像 + 气泡，无名字）
-      m.innerHTML = '<div class="msg-side"><div class="msg-av"></div>' + timeHtml + '</div><div class="msg-bubble"></div>';
+      // v3.16.x：可选显示成员群聊昵称（群聊设置→成员昵称显示，默认关）——
+      // 昵称插在 .msg-side 首位（列向布局天然在头像上方），与聊天页无名字的旧表现兼容
+      const nmHtml = gcBeautyGet('show-name') === 'on'
+        ? '<span class="gc-from-name">' + escapeHtml(memberName(rec.cid)) + '</span>'
+        : '';
+      m.innerHTML = '<div class="msg-side">' + nmHtml + '<div class="msg-av"></div>' + timeHtml + '</div><div class="msg-bubble"></div>';
     }
     const av = m.querySelector('.msg-av');
     const b = m.querySelector('.msg-bubble');
@@ -492,6 +507,23 @@
       // v3.8.x：与 chat.js 一致——span 包裹 + 全量转义 + 换行转 <br>
       b.innerHTML = quoteStr + '<span style="opacity:.85">' + escTxtBr(rec.text || '') + '</span>';
     }
+    // v3.16.x：心意字卡（情绪/心意/交流意图）渲染——与聊天页 renderMsg 同构，
+    // label 与气泡正文完全相同时只留标签胶囊（与聊天页 dupBody 去重规则一致）
+    if (rec.mood && rec.mood.length) {
+      let mm = b.querySelector('.msg-moods');
+      if (!mm) {
+        mm = document.createElement('div');
+        mm.className = 'msg-moods';
+        b.appendChild(mm);
+      }
+      rec.mood.forEach(md => {
+        if (!md) return;
+        const tag = md.tag || '情绪';
+        const label = md.label == null ? '' : String(md.label);
+        mm.innerHTML += '<div class="msg-mood' + (md.tag === '交流意图' ? ' msg-intent' : '') + '"><span class="msg-mood-tag">' + escTxt(tag) + '</span>' +
+          (label && label !== (rec.text || '') ? '<span>' + escTxt(label) + '</span>' : '') + '</div>';
+      });
+    }
     body.appendChild(m);
     pruneGcDom();
     return m;
@@ -504,6 +536,14 @@
     scrollToBottom();
   }
   function scrollToBottom() { try { body.scrollTop = body.scrollHeight; } catch (e) {} }
+  // v3.16.x：新消息自动跟底——收发消息后调用；用户正回看历史（离底 >150px）时不打扰，
+  // 贴底状态下始终跟随（此前只有 renderAll 进页时滚一次，停留页内收发都要手动下滑）
+  function nearGcBottom() {
+    try { return body.scrollHeight - body.scrollTop - body.clientHeight < 150; } catch (e) { return true; }
+  }
+  function followGcBottom(force) {
+    try { if (force || nearGcBottom()) scrollToBottom(); } catch (e) {}
+  }
   // v3.12.x：停留页内实时追加的 DOM 窗口上限——renderAll 只在进页时收窄到 RENDER_MAX，
   // 之后每条收发都走 renderMsg 直接 append，长时间泡在群里 DOM（含每条一个 dataURL 头像
   // img 的位图）无界增长 → 安卓 Chrome 渲染进程 OOM「网页崩溃」。超过窗口硬上限时从最早端
@@ -522,10 +562,42 @@
   // ---- 发送 ----
   // v3.11.x：待发送图片（插入图片按钮多选 → 压缩 → 草稿条预览，随文字合并为一条组合消息）
   let gcDraftImgs = [];
+  // v3.16.x：待引用内容（点气泡→引用 后暂存，随下一条发出的消息带上；{ text, imgs, idx }）
+  let gcLastQuote = null;
+  // 引用预览条（与聊天页 #chat-draft-quote 同款交互，元素在 template 的输入栏上方）
+  function renderGcQuoteBar() {
+    const qEl = document.getElementById('gc-quote-bar');
+    if (!qEl) return;
+    qEl.innerHTML = '';
+    if (!gcLastQuote) { qEl.hidden = true; return; }
+    qEl.hidden = false;
+    const bar = document.createElement('div');
+    bar.className = 'chat-draft-quote-bar';
+    const thumb = (gcLastQuote.imgs && gcLastQuote.imgs.length) ? gcLastQuote.imgs[0] : null;
+    if (thumb) {
+      const img = document.createElement('img');
+      img.className = 'chat-draft-quote-img';
+      img.src = thumb;
+      img.alt = '';
+      bar.appendChild(img);
+    }
+    const t = document.createElement('span');
+    t.className = 'chat-draft-quote-text';
+    const raw = String(gcLastQuote.text || '');
+    t.textContent = (thumb && raw.indexOf('data:') === 0) ? '' : (raw || '图片');
+    bar.appendChild(t);
+    const xBtn = document.createElement('button');
+    xBtn.className = 'chat-draft-x chat-draft-quote-x';
+    xBtn.textContent = '✕';
+    xBtn.addEventListener('click', () => { gcLastQuote = null; renderGcDraft(); });
+    bar.appendChild(xBtn);
+    qEl.appendChild(bar);
+  }
   function renderGcDraft() {
     if (!gcDraftBar || !gcDraftItems) return;
+    renderGcQuoteBar();
     gcDraftItems.innerHTML = '';
-    if (!gcDraftImgs.length) { gcDraftBar.hidden = true; return; }
+    if (!gcDraftImgs.length && !gcLastQuote) { gcDraftBar.hidden = true; return; }
     gcDraftImgs.forEach((src, i) => {
       const it = document.createElement('div');
       it.className = 'chat-draft-item';
@@ -548,15 +620,27 @@
     gcDraftImgs.forEach(src => parts.push({ k: 'img', v: src, sub: 'image' }));
     return parts;
   }
+  // 取走待引用内容（与聊天页 quoteValue 同构：带图 → {t,imgs} 对象，纯文本 → 字符串）
+  function gcTakeQuoteValue() {
+    if (!gcLastQuote) return null;
+    const q = (gcLastQuote.imgs && gcLastQuote.imgs.length)
+      ? { t: gcLastQuote.text, imgs: gcLastQuote.imgs }
+      : (gcLastQuote.text || null);
+    gcLastQuote = null;
+    return q;
+  }
   function addMsg(text) {
     const t = (text || '').trim();
     const parts = buildGcParts(t);
     if (!parts.length) return;
     const rec = { side: 'out', text: t, ts: Date.now() };
     if (gcDraftImgs.length) rec.parts = parts;
+    const qv = gcTakeQuoteValue();
+    if (qv) rec.quote = qv;
     msgs.push(rec);
     saveMsgs();
     renderMsg(rec);
+    followGcBottom(true);
     if (window.playSfx) window.playSfx('out');
     if (input) input.textContent = '';
     gcDraftImgs = [];
@@ -567,9 +651,12 @@
   function sendGcSticker(src) {
     if (!src) return;
     const rec = { side: 'out', type: 'sticker', text: src, ts: Date.now() };
+    const qv = gcTakeQuoteValue();
+    if (qv) rec.quote = qv;
     msgs.push(rec);
     saveMsgs();
     renderMsg(rec);
+    followGcBottom(true);
     if (window.playSfx) window.playSfx('out');
     // 表情不带文字，无 @提及，成员按概率随机回复
     scheduleReply('');
@@ -760,6 +847,7 @@
         msgs.push(rec);
         saveMsgs();
         renderMsg(rec, msgs.length - 1);
+        followGcBottom();
         if (window.playSfx) window.playSfx('in');
         return;
       }
@@ -776,9 +864,22 @@
           const q = (wantQuote && i === 0) ? quoteText : null;
           const rec = { side: 'in', cid: cid, name: name, text: rep.text, type: rep.type, parts: rep.parts, ts: Date.now() };
           if (q) rec.quote = q;
+          // v3.16.x：心意字卡链（情绪→心意→交流意图）——与聊天页 replyOnce 同源同链
+          //（triggerEmotionChain 内部自带总开关/单卡开关/概率与冷却），文本/表情/图片消息可挂
+          if (rep.type === 'text' || rep.type === 'sticker' || rep.type === 'image') {
+            try {
+              const chain = (window.triggerEmotionChain && window.triggerEmotionChain()) || null;
+              if (chain && chain.length) {
+                const typeName = { mood: '情绪', heart: '心意', intent: '交流意图' };
+                rec.mood = chain.map(it => ({ tag: typeName[it.type] || '情绪', label: it.content }));
+              }
+              if (window.addChatCount) window.addChatCount();
+            } catch (e) {}
+          }
           msgs.push(rec);
           saveMsgs();
           renderMsg(rec, msgs.length - 1);
+          followGcBottom();
           if (window.playSfx) window.playSfx('in');
           if (i < count - 1) showTyping(name);
           const myIdx = msgs.length - 1;
@@ -792,9 +893,19 @@
                   hideTyping();
                   const rep2 = gcGenReply(cid, c);
                   const rec2 = { side: 'in', cid: cid, name: name, text: rep2.text, type: rep2.type, parts: rep2.parts, ts: Date.now() };
+                  if (rep2.type === 'text' || rep2.type === 'sticker' || rep2.type === 'image') {
+                    try {
+                      const chain2 = (window.triggerEmotionChain && window.triggerEmotionChain()) || null;
+                      if (chain2 && chain2.length) {
+                        const typeName2 = { mood: '情绪', heart: '心意', intent: '交流意图' };
+                        rec2.mood = chain2.map(it => ({ tag: typeName2[it.type] || '情绪', label: it.content }));
+                      }
+                    } catch (e) {}
+                  }
                   msgs.push(rec2);
                   saveMsgs();
                   renderMsg(rec2, msgs.length - 1);
+                  followGcBottom();
                   if (window.playSfx) window.playSfx('in');
                 }, 700);
               }
@@ -1034,6 +1145,13 @@
       const p = gcProfileGet(m.id);
       settingsBody.appendChild(item(m.id, p.name || '', p.avatar || '', deskPartnerName(m.id)));
     });
+    // —— 成员昵称显示（v3.16.x：是否在消息头像上方显示群聊昵称） ——
+    const nmRow = beautyRow('成员昵称显示', gcBeautyGet('show-name') === 'on' ? '头像上方显示' : '不显示', () => {
+      pickGcPills('show-name', '成员昵称显示', [
+        { label: '头像上方显示', value: 'on' }, { label: '不显示', value: 'off' }
+      ], 'off');
+    });
+    settingsBody.appendChild(nmRow);
     // —— 美化聊天入口（v3.9.x） ——
     const bRow = document.createElement('div');
     bRow.className = 'gc-set-item gc-set-link';
@@ -1372,6 +1490,74 @@
 
   // 点击面板背景关闭
   if (atPanel) atPanel.addEventListener('click', (e) => { if (e.target === atPanel) atPanel.hidden = true; });
+
+  // ---- 消息气泡操作菜单（v3.16.x：点气泡弹出「引用」，与聊天页 #msg-actions 同款交互）----
+  const gcMsgActions = document.getElementById('gc-msg-actions');
+  let gcActiveMsgEl = null;
+  function closeGcMsgActions() {
+    if (gcMsgActions) gcMsgActions.hidden = true;
+    gcActiveMsgEl = null;
+  }
+  // 消息快照 → 待引用内容（与聊天页 quote 分支同构：语音/表情/图片转占位文案）
+  function gcQuoteSnapOf(rec) {
+    let qimgs = (rec.parts || []).filter(p => p.k === 'img').map(p => p.v).slice(0, 3);
+    if (!qimgs.length && (rec.type === 'sticker' || rec.type === 'image')
+      && typeof rec.text === 'string' && rec.text.indexOf('data:') === 0) qimgs.push(rec.text);
+    let qtext = rec.text;
+    if (rec.type === 'voice') qtext = '[语音] ' + String(qtext || '').split('|||')[0];
+    else if (rec.type === 'sticker') qtext = '表情包';
+    else if (qimgs.length && String(qtext || '').indexOf('data:') === 0) qtext = '图片';
+    return { text: qtext, imgs: qimgs, idx: msgs.indexOf(rec) };
+  }
+  if (body && gcMsgActions) {
+    body.addEventListener('click', (e) => {
+      const bk = e.target.closest('.msg-bubble');
+      if (!bk) return;
+      const item = bk.closest('.msg');
+      if (!item) return;
+      if (item.classList.contains('msg-poke')) return;          // 拍一拍居中条不弹
+      if (e.target.closest('.msg-quote')) return;               // 引用块点击留给后续跳原消息
+      if ((bk.textContent || '').indexOf('撤回了一条消息') >= 0) return; // 撤回提示有专属点击（查看原文）
+      e.stopPropagation();
+      gcActiveMsgEl = item;
+      gcMsgActions.hidden = false;
+      // 定位：气泡上方居中，放不下换下方；clamp 在视口内（与聊天页同款算法）
+      try {
+        const bRect = bk.getBoundingClientRect();
+        const aw = gcMsgActions.offsetWidth || 120;
+        const ah = gcMsgActions.offsetHeight || 50;
+        const vv = window.visualViewport;
+        const vw = vv ? vv.width : window.innerWidth;
+        const vh = vv ? vv.height : window.innerHeight;
+        let x = bRect.left + bRect.width / 2 - aw / 2;
+        x = Math.max(10, Math.min(vw - aw - 10, x));
+        let y = bRect.top - ah - 8;
+        const below = bRect.bottom + 8;
+        const aboveFits = y >= 50;
+        const belowFits = below + ah <= vh - 8;
+        y = aboveFits || !belowFits ? y : below;
+        gcMsgActions.style.left = x + 'px';
+        gcMsgActions.style.top = y + 'px';
+      } catch (err) {}
+    });
+    document.addEventListener('click', (e) => {
+      if (!gcMsgActions.hidden && !gcMsgActions.contains(e.target)) closeGcMsgActions();
+    });
+    gcMsgActions.addEventListener('click', (e) => {
+      const btn = e.target.closest('.ma-btn');
+      if (!btn) return;
+      if (btn.dataset.act === 'quote' && gcActiveMsgEl) {
+        const idx = Number(gcActiveMsgEl.dataset.gcIdx);
+        const rec = (idx >= 0 && msgs[idx]) ? msgs[idx] : null;
+        if (rec) {
+          gcLastQuote = gcQuoteSnapOf(rec);
+          renderGcDraft();
+          try { if (input) input.focus(); } catch (err) {}
+        }
+      }
+      closeGcMsgActions();
+    });
+  }
 
   // ---- 切联系人：消息全局不变，刷新群名 + 重渲染（"我"头像/成员名可能变） ----
   document.addEventListener('contact-switched', function () {

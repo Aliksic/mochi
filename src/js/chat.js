@@ -3228,16 +3228,14 @@ if (rpRandVal) rpRandVal.textContent = '';
 });
 }
 }
-// v3.15.x：红包金额与心意市集心意币统一为同一本账（gift-wallet），红包里的钱=心意币；
-// rp-wallet 仅作老数据一次性迁移种子（首次读取 gift-wallet 缺失时继承其余额并落盘）
+// v3.15.x 二轮：钱包读写委托 gift-shop 的【全局一本账】（根键 xy-home-v2:gift-wallet，跨桌面共用）；
+// 本地 ns 逻辑仅作 gift-shop 未加载时的兜底。新用户默认双方各 ¥520。
 const RP_WALLET_KEY = 'gift-wallet';
 const RP_LEGACY_WALLET_KEY = 'rp-wallet';
-const RP_DAILY_PREFIX = 'ml2_rp_daily_';
-const RP_EXPIRY_MS = 24 * 60 * 60 * 1000;
-const RP_SPECIAL_FEN = [520, 5200, 52000, 520000, 1314, 131400]; // 5.2/52/520/5200/13.14/1314 元
-// v3.15.x：新用户默认双方各 ¥520（与 gift-shop WALLET_DEFAULT_FEN 同步），旧占位巨款一次性迁移
 const RP_WALLET_DEFAULT_FEN = 52000;
+const RP_DAILY_PREFIX = 'ml2_rp_daily_';
 function rpWalletGet() {
+if (typeof window.giftWalletGet === 'function') return window.giftWalletGet();
 try {
 const w = JSON.parse(store.get(RP_WALLET_KEY) || '');
 if (typeof w.myBalance === 'number' && typeof w.systemBalance === 'number') {
@@ -3257,7 +3255,12 @@ if (typeof o.myBalance === 'number' && typeof o.systemBalance === 'number') seed
 store.set(RP_WALLET_KEY, JSON.stringify(seed));
 return seed;
 }
-function rpWalletSet(w) { store.set(RP_WALLET_KEY, JSON.stringify(w)); }
+function rpWalletSet(w) {
+if (typeof window.giftWalletSet === 'function') { window.giftWalletSet(w); return; }
+store.set(RP_WALLET_KEY, JSON.stringify(w));
+}
+const RP_EXPIRY_MS = 24 * 60 * 60 * 1000;
+const RP_SPECIAL_FEN = [520, 5200, 52000, 520000, 1314, 131400]; // 5.2/52/520/5200/13.14/1314 元
 function rpDailyCount() {
 const k = RP_DAILY_PREFIX + new Date().toISOString().slice(0, 10);
 return Number(store.get(k)) || 0;
@@ -5532,6 +5535,210 @@ syncBatchBtn();
 });
 document.addEventListener('batch-send-changed', syncBatchBtn);
 syncBatchBtn();
+// ============================== v3.16.x：我可发送语音（录音 → 试听 → 发送） ==============================
+// 聊天设置「我可发送语音」（cs-voice-send，每联系人独立）开启后，输入栏左侧显示「麦克风」按钮：
+// 点击弹出底部录音半框——MediaRecorder 录音（最长 60 秒，到时自动停）→ 试听 → 以既有语音消息
+// 格式「名称|||dataURL」(type:'voice') 入列，渲染/播放/撤回/引用/统计全部复用原语音链路。
+const micBtn = document.getElementById('chat-mic-btn');
+const voicePanel = document.getElementById('voice-panel');
+const VOICE_MAX_MS = 60000;
+let voiceStream = null, voiceRec = null, voiceChunks = [], voiceTimer = null;
+let voiceStartTs = 0, voiceDataUrl = '', voiceDur = 0, voiceSilent = false, voicePreviewAudio = null;
+function voiceEnabled() {
+try { return store.get('cs-voice-send') === '1'; } catch (e) { return false; }
+}
+function syncMicBtn() {
+if (micBtn) micBtn.style.display = voiceEnabled() ? '' : 'none';
+if (!voiceEnabled()) closeVoicePanel();
+}
+function voiceFmt(sec) {
+const m = Math.floor(sec / 60), s = sec % 60;
+return (m < 10 ? '0' + m : '' + m) + ':' + (s < 10 ? '0' + s : '' + s);
+}
+function voiceStopStream() {
+if (voiceStream) { try { voiceStream.getTracks().forEach(t => t.stop()); } catch (e) {} voiceStream = null; }
+}
+function voiceStopPreview() {
+if (voicePreviewAudio) { try { voicePreviewAudio.pause(); } catch (e) {} voicePreviewAudio = null; }
+const pb = document.getElementById('voice-play-btn');
+if (pb) pb.classList.remove('playing');
+}
+function renderVoiceIdle() {
+if (!voicePanel) return;
+voicePanel.classList.remove('recording');
+const st = document.getElementById('voice-status');
+if (st) st.textContent = '点下方按钮开始录音 · 最长 60 秒';
+const tm = document.getElementById('voice-time');
+if (tm) tm.textContent = '00:00';
+const pv = document.getElementById('voice-preview');
+if (pv) pv.hidden = true;
+const rb = document.getElementById('voice-record-btn');
+if (rb) { rb.textContent = '开始录音'; rb.classList.remove('rec'); }
+const sb = document.getElementById('voice-send-btn');
+if (sb) { sb.disabled = true; sb.textContent = '发送到聊天'; }
+}
+function closeVoicePanel() {
+if (!voicePanel || voicePanel.hidden) return;
+stopVoiceRec(true);
+voiceStopPreview();
+voiceDataUrl = ''; voiceDur = 0;
+voicePanel.hidden = true;
+renderVoiceIdle();
+}
+function openVoicePanel() {
+if (!voicePanel) return;
+const pc = document.getElementById('poke-card');
+if (pc) pc.hidden = true;
+closeEmojiPanel();
+if (window.closeAvlib) window.closeAvlib();
+closeIme(); // 收起输入法，面板完整不被键盘遮挡
+if (batchPanel) batchPanel.hidden = true;
+const morePanel = document.getElementById('chat-more-panel');
+if (morePanel) morePanel.hidden = true;
+voiceDataUrl = ''; voiceDur = 0;
+renderVoiceIdle();
+voicePanel.hidden = false;
+scrollChatBottom();
+}
+function pickVoiceMime() {
+if (typeof MediaRecorder === 'undefined' || !MediaRecorder.isTypeSupported) return '';
+const list = ['audio/mp4', 'audio/aac', 'audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus'];
+for (let i = 0; i < list.length; i++) {
+try { if (MediaRecorder.isTypeSupported(list[i])) return list[i]; } catch (e) {}
+}
+return '';
+}
+async function startVoiceRec() {
+if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || typeof MediaRecorder === 'undefined') {
+toast('当前浏览器不支持录音'); return;
+}
+let stream = null;
+try {
+stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+} catch (e) {
+toast(e && e.name === 'NotAllowedError' ? '麦克风权限被拒绝，请在浏览器设置里允许后重试' : '无法访问麦克风');
+return;
+}
+voiceStopPreview();
+voiceStream = stream;
+voiceChunks = [];
+let rec = null;
+try {
+const mime = pickVoiceMime();
+rec = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+} catch (e) {}
+if (!rec) { voiceStopStream(); toast('当前浏览器不支持录音'); return; }
+rec.ondataavailable = (ev) => { if (ev.data && ev.data.size) voiceChunks.push(ev.data); };
+rec.onstop = onVoiceRecStop;
+voiceRec = rec;
+voiceStartTs = Date.now();
+voiceSilent = false;
+try { rec.start(); } catch (e) { voiceStopStream(); voiceRec = null; toast('录音启动失败'); return; }
+voicePanel.classList.add('recording');
+const st = document.getElementById('voice-status');
+if (st) st.textContent = '正在录音…';
+const pv = document.getElementById('voice-preview');
+if (pv) pv.hidden = true;
+const sb = document.getElementById('voice-send-btn');
+if (sb) sb.disabled = true;
+const rb = document.getElementById('voice-record-btn');
+if (rb) { rb.textContent = '停止录音'; rb.classList.add('rec'); }
+voiceTimer = setInterval(() => {
+const el = Math.floor((Date.now() - voiceStartTs) / 1000);
+const tm = document.getElementById('voice-time');
+if (tm) tm.textContent = voiceFmt(Math.min(el, 60));
+if (Date.now() - voiceStartTs >= VOICE_MAX_MS) stopVoiceRec(false);
+}, 250);
+}
+function stopVoiceRec(silent) {
+if (voiceTimer) { clearInterval(voiceTimer); voiceTimer = null; }
+if (silent) voiceSilent = true;
+if (voicePanel) voicePanel.classList.remove('recording');
+const rb = document.getElementById('voice-record-btn');
+if (rb) rb.classList.remove('rec');
+if (voiceRec && voiceRec.state === 'recording') {
+try { voiceRec.stop(); } catch (e) { voiceStopStream(); }
+} else {
+voiceStopStream();
+}
+}
+function onVoiceRecStop() {
+voiceStopStream();
+voiceRec = null;
+const wasSilent = voiceSilent;
+voiceSilent = false;
+const durSec = Math.max(1, Math.round((Date.now() - voiceStartTs) / 1000));
+const blob = new Blob(voiceChunks.length ? voiceChunks : [], { type: (voiceChunks[0] && voiceChunks[0].type) || 'audio/webm' });
+voiceChunks = [];
+const rb = document.getElementById('voice-record-btn');
+if (rb) rb.textContent = '重新录音';
+if (wasSilent || !blob.size) return; // 关闭面板打断的录音直接丢弃
+const fr = new FileReader();
+fr.onload = () => {
+voiceDataUrl = String(fr.result || '');
+voiceDur = durSec;
+if (!voiceDataUrl) { toast('录音数据读取失败'); return; }
+if (!voicePanel) return;
+const tm = document.getElementById('voice-time');
+if (tm) tm.textContent = voiceFmt(durSec);
+const st = document.getElementById('voice-status');
+if (st) st.textContent = '录制完成';
+const txt = document.getElementById('voice-preview-txt');
+if (txt) txt.textContent = '试听 · ' + durSec + '″';
+const pv = document.getElementById('voice-preview');
+if (pv) pv.hidden = false;
+const sb = document.getElementById('voice-send-btn');
+if (sb) { sb.disabled = false; sb.textContent = '发送到聊天'; }
+};
+fr.onerror = () => { toast('录音数据读取失败'); };
+fr.readAsDataURL(blob);
+}
+async function toggleVoiceRecord() {
+if (voiceRec && voiceRec.state === 'recording') stopVoiceRec(false);
+else await startVoiceRec();
+}
+function toggleVoicePlay() {
+if (!voiceDataUrl) return;
+if (voicePreviewAudio && !voicePreviewAudio.paused) { voiceStopPreview(); return; }
+voiceStopPreview();
+const a = new Audio(voiceDataUrl);
+voicePreviewAudio = a;
+const pb = document.getElementById('voice-play-btn');
+if (pb) pb.classList.add('playing');
+a.addEventListener('ended', voiceStopPreview);
+a.addEventListener('error', () => { voiceStopPreview(); toast('语音播放失败'); });
+a.play().catch(() => { voiceStopPreview(); toast('语音播放失败'); });
+}
+function sendVoiceMsg() {
+if (!voiceDataUrl) { toast('还没有录音'); return; }
+const name = '语音 ' + voiceDur + '″';
+lastMineText = '[语音]';
+addRec({ side: 'out', text: name + '|||' + voiceDataUrl, type: 'voice' });
+closeVoicePanel();
+if (window.playSfx) window.playSfx('out');
+if (window.logFish) window.logFish();
+scheduleReply();
+toast('语音已发送');
+}
+if (micBtn) micBtn.addEventListener('click', (e) => {
+e.stopPropagation();
+if (!voicePanel) return;
+if (voicePanel.hidden) openVoicePanel(); else closeVoicePanel();
+});
+const voiceCloseBtn = document.getElementById('voice-close');
+if (voiceCloseBtn) voiceCloseBtn.addEventListener('click', (e) => { e.stopPropagation(); closeVoicePanel(); });
+const voiceRecordBtnEl = document.getElementById('voice-record-btn');
+if (voiceRecordBtnEl) voiceRecordBtnEl.addEventListener('click', (e) => { e.stopPropagation(); toggleVoiceRecord(); });
+const voicePlayBtnEl = document.getElementById('voice-play-btn');
+if (voicePlayBtnEl) voicePlayBtnEl.addEventListener('click', (e) => { e.stopPropagation(); toggleVoicePlay(); });
+const voiceSendBtnEl = document.getElementById('voice-send-btn');
+if (voiceSendBtnEl) voiceSendBtnEl.addEventListener('click', (e) => { e.stopPropagation(); sendVoiceMsg(); });
+document.addEventListener('click', (e) => {
+if (voicePanel && !voicePanel.hidden && !voicePanel.contains(e.target) && micBtn && !micBtn.contains(e.target)) closeVoicePanel();
+});
+document.addEventListener('contact-switched', () => { closeVoicePanel(); syncMicBtn(); });
+document.addEventListener('voice-send-changed', syncMicBtn);
+syncMicBtn();
 document.querySelectorAll('.emoji-tab').forEach(t => t.addEventListener('click', (e) => {
 e.stopPropagation();
 emojiMode = t.dataset.etab;

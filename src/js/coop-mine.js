@@ -615,6 +615,13 @@
     setStatus(st.mineTotal === 0 ? '轮到你了，慢慢挖～' : '你的回合，点一格开始探索');
   }
 
+  // 预建棋盘（c4 同款）：面板首开时舞台上就有未翻开的格子撑起高度，
+  // 否则 .ms-stage 零高塌缩，开始覆盖层会被裁剪到看不见也没法点
+  try {
+    st = newState(selDiff);
+    buildBoardDom();
+  } catch (ePre) {}
+
   // ---- 小收藏 ----
   function bagText() {
     const keeps = loadKeeps();

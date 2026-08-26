@@ -133,19 +133,17 @@
   function loadTogether() { const t = readJSON(togetherKey(), null); if (t && t.date === todayKey()) return t; return { date: todayKey(), sec: 0, rewarded: false }; }
   function saveTogether(t) { writeJSON(togetherKey(), t); }
 
-  // ---- 心意币钱包（与 gift-shop/红包共用 gift-wallet，单位分）----
-  // v3.15.x：对齐 chat.js/gift-shop.js 读取语义——缺 gift-wallet 时先继承旧键 rp-wallet 再落盘
+  // ---- 心意币钱包（全局一本账：根键 xy-home-v2:gift-wallet，跨桌面共用，单位分）----
+  // v3.15.x 二轮：默认对齐新用户 ¥520/¥520，读写切根命名空间
   function walletGet() {
-    const s = store();
-    // v3.15.x：默认对齐新用户 ¥520/¥520（与 gift-shop WALLET_DEFAULT_FEN 同步）
+    const s = window.xyStore ? window.xyStore('xy-home-v2') : null;
     if (!s) return { myBalance: 52000, systemBalance: 52000 };
     try { const w = JSON.parse(s.get('gift-wallet') || ''); if (typeof w.myBalance === 'number' && typeof w.systemBalance === 'number') return w; } catch (e) {}
-    let seed = { myBalance: 52000, systemBalance: 52000 };
-    try { const o = JSON.parse(s.get('rp-wallet') || ''); if (typeof o.myBalance === 'number' && typeof o.systemBalance === 'number') seed = { myBalance: o.myBalance, systemBalance: o.systemBalance }; } catch (e) {}
+    const seed = { myBalance: 52000, systemBalance: 52000 };
     s.set('gift-wallet', JSON.stringify(seed));
     return seed;
   }
-  function walletSet(w) { const s = store(); if (s) s.set('gift-wallet', JSON.stringify(w)); }
+  function walletSet(w) { const s = window.xyStore ? window.xyStore('xy-home-v2') : null; if (s) s.set('gift-wallet', JSON.stringify(w)); }
 
   // ---- DOM ----
   const partnerNameEl = document.getElementById('fish-partner-name');

@@ -1,12 +1,12 @@
-/* ===== 聊天核心样式（消息 / 输入栏 / 半框 / 聊天卡片） ===== */
-/* ===== 聊天页 ===== */
+/* ===== 鑱婂ぉ鏍稿績鏍峰紡锛堟秷鎭?/ 杈撳叆鏍?/ 鍗婃 / 鑱婂ぉ鍗＄墖锛?===== */
+/* ===== 鑱婂ぉ椤?===== */
 .chat-head {
   display:flex; align-items:center; gap:10px;
   padding:8px 2px 12px; flex-shrink:0;
-  /* v3.5.124：sticky 固定顶部——手机端全屏下消息区滚动穿透/视觉视口
-     瞬态变化时，顶部栏（返回/头像/昵称/设置）不再被带出屏幕 */
+  /* v3.5.124锛歴ticky 鍥哄畾椤堕儴鈥斺€旀墜鏈虹鍏ㄥ睆涓嬫秷鎭尯婊氬姩绌块€?瑙嗚瑙嗗彛
+     鐬€佸彉鍖栨椂锛岄《閮ㄦ爮锛堣繑鍥?澶村儚/鏄电О/璁剧疆锛変笉鍐嶈甯﹀嚭灞忓箷 */
   position:sticky; top:0; z-index:5;
-  /* v3.5.89 统一桌面白色简约风格（同 .glass）：白底 + 淡边 + 轻阴影 */
+  /* v3.5.89 缁熶竴妗岄潰鐧借壊绠€绾﹂鏍硷紙鍚?.glass锛夛細鐧藉簳 + 娣¤竟 + 杞婚槾褰?*/
   background:rgba(255,255,255,.92);
   border-bottom:1px solid rgba(0,0,0,.1);
   box-shadow:0 2px 8px rgba(0,0,0,.04);
@@ -29,7 +29,7 @@
   display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0;
 }
 .ch-settings svg { width:18px; height:18px; }
-/* 顶部栏联系人头像（点击打开查岗半框） */
+/* 椤堕儴鏍忚仈绯讳汉澶村儚锛堢偣鍑绘墦寮€鏌ュ矖鍗婃锛?*/
 .ch-av {
   width:34px; height:34px; border-radius:var(--msg-av-radius, 50%); flex-shrink:0;
   background:#e9e9e9; overflow:hidden;
@@ -38,7 +38,7 @@
 }
 .ch-av svg { width:16px; height:16px; }
 .ch-av img { width:100%; height:100%; object-fit:cover; display:block; border-radius:var(--msg-av-radius, 50%); }
-/* 顶部昵称：点击「让对方继续说」 */
+/* 椤堕儴鏄电О锛氱偣鍑汇€岃瀵规柟缁х画璇淬€?*/
 #chat-partner-name { cursor:pointer; -webkit-tap-highlight-color:transparent; user-select:none; -webkit-user-select:none; }
 #chat-partner-name:active { opacity:.6; }
 
@@ -47,15 +47,11 @@
   padding:6px 18px; display:flex; flex-direction:column; gap:14px;
   background:transparent; position:relative;
   -webkit-overflow-scrolling:touch;
-  /* v3.5.124：滚动边界不穿透——消息区滚到顶/底不再带动页面（含顶部栏）滚动 */
+  /* v3.5.124锛氭粴鍔ㄨ竟鐣屼笉绌块€忊€斺€旀秷鎭尯婊氬埌椤?搴曚笉鍐嶅甫鍔ㄩ〉闈紙鍚《閮ㄦ爮锛夋粴鍔?*/
   overscroll-behavior:contain;
-  /* v3.6.x：强制独立合成层——部分手机浏览器（老 WebKit/国产内核）在点击输入栏、
-     键盘弹出、.phone 被锁定为 fixed 且高度骤变的瞬间，滚动容器绘制层失效，
-     消息区内容仍在 DOM 里却不绘制 → 聊天页白屏（发送消息触发重排后才恢复）。
-     translateZ(0) 让消息区始终有独立绘制层；现代浏览器对滚动容器自动建层，
-     此声明无副作用（.chat-body 内无 fixed/随视口定位的后代，#msg-actions 不在此容器内）。
-     iOS Safari 豁免由 mobile-adapt.js 运行时设置内联 transform:none（用 JS 判断更准确，
-     不能用 @supports 判断 webkit 属性——安卓 Chrome 也识别 -webkit-touch-callout） */
+  /* v3.6.x锛氬己鍒剁嫭绔嬪悎鎴愬眰鈥斺€旈儴鍒嗘墜鏈烘祻瑙堝櫒锛堣€?WebKit/鍥戒骇鍐呮牳锛夊湪鐐瑰嚮杈撳叆鏍忋€?     閿洏寮瑰嚭銆?phone 琚攣瀹氫负 fixed 涓旈珮搴﹂鍙樼殑鐬棿锛屾粴鍔ㄥ鍣ㄧ粯鍒跺眰澶辨晥锛?     娑堟伅鍖哄唴瀹逛粛鍦?DOM 閲屽嵈涓嶇粯鍒?鈫?鑱婂ぉ椤电櫧灞忥紙鍙戦€佹秷鎭Е鍙戦噸鎺掑悗鎵嶆仮澶嶏級銆?     translateZ(0) 璁╂秷鎭尯濮嬬粓鏈夌嫭绔嬬粯鍒跺眰锛涚幇浠ｆ祻瑙堝櫒瀵规粴鍔ㄥ鍣ㄨ嚜鍔ㄥ缓灞傦紝
+     姝ゅ０鏄庢棤鍓綔鐢紙.chat-body 鍐呮棤 fixed/闅忚鍙ｅ畾浣嶇殑鍚庝唬锛?msg-actions 涓嶅湪姝ゅ鍣ㄥ唴锛夈€?     iOS Safari 璞佸厤鐢?mobile-adapt.js 杩愯鏃惰缃唴鑱?transform:none锛堢敤 JS 鍒ゆ柇鏇村噯纭紝
+     涓嶈兘鐢?@supports 鍒ゆ柇 webkit 灞炴€р€斺€斿畨鍗?Chrome 涔熻瘑鍒?-webkit-touch-callout锛?*/
   transform:translateZ(0);
 }
 .chat-body::-webkit-scrollbar { display:none; }
@@ -70,23 +66,21 @@
 .msg-av svg { width:19px; height:19px; }
 .msg-av img { width:100%; height:100%; object-fit:cover; border-radius:var(--msg-av-radius, 50%); display:block; }
 .msg-bubble {
-  /* v3.6.x：relative 供主动发送爱心标识（.msg-hi-heart）绝对定位 */
+  /* v3.6.x锛歳elative 渚涗富鍔ㄥ彂閫佺埍蹇冩爣璇嗭紙.msg-hi-heart锛夌粷瀵瑰畾浣?*/
   position:relative;
   padding: var(--chat-bubble-pad, 11px 14px);
   font-size: var(--chat-font-size, 14px);
   border-radius:18px; line-height:1.5; word-break:break-word;
   background:#fff; border:1px solid rgba(255,255,255,.9); box-shadow:0 2px 8px rgba(0,0,0,.05);
-  /* v3.5.107：允许气泡收缩，防止图片/长内容把右侧头像列挤出屏外（flex 默认 min-width:auto） */
+  /* v3.5.107锛氬厑璁告皵娉℃敹缂╋紝闃叉鍥剧墖/闀垮唴瀹规妸鍙充晶澶村儚鍒楁尋鍑哄睆澶栵紙flex 榛樿 min-width:auto锛?*/
   min-width:0;
-  /* v3.6.x：禁用文本选择——气泡点击/长按是弹操作菜单，Android 长按不再叠加系统文本选择/复制工具栏 */
+  /* v3.6.x锛氱鐢ㄦ枃鏈€夋嫨鈥斺€旀皵娉＄偣鍑?闀挎寜鏄脊鎿嶄綔鑿滃崟锛孉ndroid 闀挎寜涓嶅啀鍙犲姞绯荤粺鏂囨湰閫夋嫨/澶嶅埗宸ュ叿鏍?*/
   user-select:none; -webkit-user-select:none;
 }
 .msg-in .msg-bubble { background: var(--msg-in-bg, #ffffff); color: var(--msg-in-ink, #111111); }
 .msg-out .msg-bubble { background: var(--msg-out-bg, #111111); color: var(--msg-out-ink, #ffffff); }
 
-/* 主动发送标识：联系人主动找你的消息，气泡左上角一枚小爱心（矢量图）
-   v3.6.x：爱心放在气泡内部左上角（2px/4px 偏移 + 9px 尺寸，恰好落在气泡
-   11px/14px 内边距范围内，不压文字）；此前 top/left:-8px 是挂在气泡外角 */
+/* 涓诲姩鍙戦€佹爣璇嗭細鑱旂郴浜轰富鍔ㄦ壘浣犵殑娑堟伅锛屾皵娉″乏涓婅涓€鏋氬皬鐖卞績锛堢煝閲忓浘锛?   v3.6.x锛氱埍蹇冩斁鍦ㄦ皵娉″唴閮ㄥ乏涓婅锛?px/4px 鍋忕Щ + 9px 灏哄锛屾伆濂借惤鍦ㄦ皵娉?   11px/14px 鍐呰竟璺濊寖鍥村唴锛屼笉鍘嬫枃瀛楋級锛涙鍓?top/left:-8px 鏄寕鍦ㄦ皵娉″瑙?*/
 .msg-hi-heart {
   position:absolute;
   top:2px; left:4px;
@@ -97,20 +91,19 @@
   display:block;
 }
 
-/* 头像列：头像 + 时间轴（时间在头像底下） */
+/* 澶村儚鍒楋細澶村儚 + 鏃堕棿杞达紙鏃堕棿鍦ㄥご鍍忓簳涓嬶級 */
 .msg-side {
   display:flex; flex-direction:column; align-items:center; gap:3px; flex-shrink:0;
 }
 .msg-time {
-  /* v3.5.133：9px→10px（手机端可读性，时间戳每气泡都出现） */
+  /* v3.5.133锛?px鈫?0px锛堟墜鏈虹鍙鎬э紝鏃堕棿鎴虫瘡姘旀场閮藉嚭鐜帮級 */
   font-size:10px; line-height:1; color:var(--msg-time-ink, #111111); letter-spacing:.5px;
   font-weight:400; white-space:nowrap;
   opacity:.5;
 }
-/* 时间轴样式（v3.9.x，聊天设置「时间轴样式」，body 上挂 cs-time-* 类驱动）
-   默认「头像下方」即上方原样式，无需额外规则。消息结构不变，CSS 类即时生效
-   （收藏页 #page-fav 与群聊复用 .msg-side/.msg-time，同样受这些类影响，全局一致）。 */
-/* 气泡下方：时间从头像列移到气泡下沿（绝对定位相对消息行，行内只留头像） */
+/* 鏃堕棿杞存牱寮忥紙v3.9.x锛岃亰澶╄缃€屾椂闂磋酱鏍峰紡銆嶏紝body 涓婃寕 cs-time-* 绫婚┍鍔級
+   榛樿銆屽ご鍍忎笅鏂广€嶅嵆涓婃柟鍘熸牱寮忥紝鏃犻渶棰濆瑙勫垯銆傛秷鎭粨鏋勪笉鍙橈紝CSS 绫诲嵆鏃剁敓鏁?   锛堟敹钘忛〉 #page-fav 涓庣兢鑱婂鐢?.msg-side/.msg-time锛屽悓鏍峰彈杩欎簺绫诲奖鍝嶏紝鍏ㄥ眬涓€鑷达級銆?*/
+/* 姘旀场涓嬫柟锛氭椂闂翠粠澶村儚鍒楃Щ鍒版皵娉′笅娌匡紙缁濆瀹氫綅鐩稿娑堟伅琛岋紝琛屽唴鍙暀澶村儚锛?*/
 body.cs-time-under-bubble .msg { position:relative; }
 body.cs-time-under-bubble .msg-side .msg-time {
   position:absolute; top:calc(100% + 3px); padding:2px 8px; border-radius:10px;
@@ -118,13 +111,13 @@ body.cs-time-under-bubble .msg-side .msg-time {
 }
 body.cs-time-under-bubble .msg-in .msg-side .msg-time { right:0; }
 body.cs-time-under-bubble .msg-out .msg-side .msg-time { left:0; }
-/* 时间气泡：头像与时间并排，时间胶囊在头像外侧（贴近屏幕边一侧），纵向居中 */
+/* 鏃堕棿姘旀场锛氬ご鍍忎笌鏃堕棿骞舵帓锛屾椂闂磋兌鍥婂湪澶村儚澶栦晶锛堣创杩戝睆骞曡竟涓€渚э級锛岀旱鍚戝眳涓?*/
 body.cs-time-bubble .msg-side { display:flex; flex-direction:row; align-items:center; gap:8px; }
 body.cs-time-bubble .msg-side .msg-time {
   padding:3px 8px; border-radius:10px; background:rgba(0,0,0,.05);
   opacity:.6; letter-spacing:.3px;
 }
-/* 气泡外侧悬浮：小胶囊浮在气泡外侧上角（贴近屏幕边那一角） */
+/* 姘旀场澶栦晶鎮诞锛氬皬鑳跺泭娴湪姘旀场澶栦晶涓婅锛堣创杩戝睆骞曡竟閭ｄ竴瑙掞級 */
 body.cs-time-float .msg { position:relative; }
 body.cs-time-float .msg-side .msg-time {
   position:absolute; top:-4px; padding:2px 8px; border-radius:10px;
@@ -132,7 +125,7 @@ body.cs-time-float .msg-side .msg-time {
 }
 body.cs-time-float .msg-in .msg-side .msg-time { right:-4px; }
 body.cs-time-float .msg-out .msg-side .msg-time { left:-4px; }
-/* 消息上方居中：整行拉满，时间胶囊居中悬浮在消息上方（类似系统时间分隔条） */
+/* 娑堟伅涓婃柟灞呬腑锛氭暣琛屾媺婊★紝鏃堕棿鑳跺泭灞呬腑鎮诞鍦ㄦ秷鎭笂鏂癸紙绫讳技绯荤粺鏃堕棿鍒嗛殧鏉★級 */
 body.cs-time-center .msg { position:relative; padding-top:18px; width:100%; max-width:100%; }
 body.cs-time-center .msg-in { justify-content:flex-start; }
 body.cs-time-center .msg-out { justify-content:flex-end; }
@@ -141,14 +134,9 @@ body.cs-time-center .msg-side .msg-time {
   padding:2px 10px; border-radius:10px; background:rgba(0,0,0,.05);
   opacity:.6; letter-spacing:.3px;
 }
-/* 隐藏：不显示时间 */
+/* 闅愯棌锛氫笉鏄剧ず鏃堕棿 */
 body.cs-time-hidden .msg-time { display:none; }
-/* 时间分隔线（v3.9.x，聊天设置「时间轴样式-时间分隔线」）：微信式居中时间胶囊。
-   插入逻辑在 chat.js（renderWindow 批量 + addRec 增量 + 切换样式即时重渲染），CSS 只管样式：
-   聊天页（#chat-body）每条消息的 .msg-time 隐藏，改由分隔条替代显示时间。
-   收藏页（#fav-list）/群聊（#gc-body）不含插入逻辑，msg-time 保留原样式不受影响。
-   .msg-time-divider 默认 display:none——从 divider 切到其它样式时已插入的 DOM 元素自动隐藏，
-   不占布局；下次 renderWindow 重建会清空。 */
+/* 鏃堕棿鍒嗛殧绾匡紙v3.9.x锛岃亰澶╄缃€屾椂闂磋酱鏍峰紡-鏃堕棿鍒嗛殧绾裤€嶏級锛氬井淇″紡灞呬腑鏃堕棿鑳跺泭銆?   鎻掑叆閫昏緫鍦?chat.js锛坮enderWindow 鎵归噺 + addRec 澧為噺 + 鍒囨崲鏍峰紡鍗虫椂閲嶆覆鏌擄級锛孋SS 鍙鏍峰紡锛?   鑱婂ぉ椤碉紙#chat-body锛夋瘡鏉℃秷鎭殑 .msg-time 闅愯棌锛屾敼鐢卞垎闅旀潯鏇夸唬鏄剧ず鏃堕棿銆?   鏀惰棌椤碉紙#fav-list锛?缇よ亰锛?gc-body锛変笉鍚彃鍏ラ€昏緫锛宮sg-time 淇濈暀鍘熸牱寮忎笉鍙楀奖鍝嶃€?   .msg-time-divider 榛樿 display:none鈥斺€斾粠 divider 鍒囧埌鍏跺畠鏍峰紡鏃跺凡鎻掑叆鐨?DOM 鍏冪礌鑷姩闅愯棌锛?   涓嶅崰甯冨眬锛涗笅娆?renderWindow 閲嶅缓浼氭竻绌恒€?*/
 body.cs-time-divider #chat-body .msg-time { display:none; }
 .msg-time-divider { display:none; justify-content:center; margin:14px 0 10px; }
 body.cs-time-divider .msg-time-divider { display:flex; }
@@ -157,31 +145,20 @@ body.cs-time-divider .msg-time-divider { display:flex; }
   font-size:10px; line-height:1; color:var(--msg-time-ink, #111111);
   letter-spacing:.3px; opacity:.6; white-space:nowrap;
 }
-/* 联系人正在输入：正常流占位，无需额外留白补偿（此前浮层方案已移除） */
+/* 鑱旂郴浜烘鍦ㄨ緭鍏ワ細姝ｅ父娴佸崰浣嶏紝鏃犻渶棰濆鐣欑櫧琛ュ伩锛堟鍓嶆诞灞傛柟妗堝凡绉婚櫎锛?*/
 
-/* 联系人「正在输入」状态：消息区与输入栏之间的内嵌条（正常流，不遮挡任何消息）
-   v3.5.27 从"悬浮在输入栏上方"改为星言式内嵌条：出现时占一小行，消息区自动缩小，不压气泡 */
-/* 联系人「正在输入」：纯文字一行（v3.5.47）
-   width:fit-content → 只占文字宽度，不透出整行壁纸、不形成色块/矩形；
-   透明背景，就是一行干净的文字提示，不遮挡消息 */
-/* 联系人「正在输入」：悬浮在输入栏正上方的小字（v3.5.49 彻底改为悬浮式）
-   不占布局高度 → 不挤动消息区、不遮挡任何消息、不影响底部间距；
-   未触发时 display:none 完全不存在（无任何占位/遮挡）；
-   v3.5.50 修正：元素必须位于 .chat-input-row 内部（其 position:relative 为包含块），
-   bottom:calc(100% + 4px) 才能正确悬浮在输入栏正上方（此前误放在 page-chat 下，
-   absolute 相对整页定位，位置错乱） */
-/* 联系人「正在输入」：消息区与输入栏之间的内嵌占位行（v3.6.x 由悬浮式改回）
-   占一行、随消息区正常滚动，不悬浮、不遮挡任何消息；未触发时 display:none 无痕。
-   v3.5.49 曾改为悬浮式（absolute 相对输入栏 + z-index:5），消息滚动时会从
-   这行灰色小字下方穿过、被盖住（用户反馈"灰色一行遮挡聊天消息"）——
-   改回 v3.5.27/44 的内嵌方案，chat.js showTyping/hideTyping 已有占位滚动处理。
-   v3.7.x 回归修复：必须 align-self:flex-start + width:fit-content（v3.5.47 曾有，
-   改内嵌时漏掉）——本行是 #page-chat（flex column）的直接子项，align-items 默认
-   stretch 会把它拉成整行全宽透明块；设置了聊天壁纸（cs-bg 铺满 #page-chat）时
-   整行透出壁纸图案，看起来"不是只有文字、这一整行是一个图形"（用户反馈）。
-   align-self:flex-start 让 flex 交叉轴不拉伸（宽度收缩到内容，flex 基础属性，
-   任何支持 flex 的内核都生效，不依赖 fit-content 关键字的支持度），
-   fit-content 双保险，行只占文字宽度，不透出整行壁纸、不形成色块/矩形 */
+/* 鑱旂郴浜恒€屾鍦ㄨ緭鍏ャ€嶇姸鎬侊細娑堟伅鍖轰笌杈撳叆鏍忎箣闂寸殑鍐呭祵鏉★紙姝ｅ父娴侊紝涓嶉伄鎸′换浣曟秷鎭級
+   v3.5.27 浠?鎮诞鍦ㄨ緭鍏ユ爮涓婃柟"鏀逛负鏄熻█寮忓唴宓屾潯锛氬嚭鐜版椂鍗犱竴灏忚锛屾秷鎭尯鑷姩缂╁皬锛屼笉鍘嬫皵娉?*/
+/* 鑱旂郴浜恒€屾鍦ㄨ緭鍏ャ€嶏細绾枃瀛椾竴琛岋紙v3.5.47锛?   width:fit-content 鈫?鍙崰鏂囧瓧瀹藉害锛屼笉閫忓嚭鏁磋澹佺焊銆佷笉褰㈡垚鑹插潡/鐭╁舰锛?   閫忔槑鑳屾櫙锛屽氨鏄竴琛屽共鍑€鐨勬枃瀛楁彁绀猴紝涓嶉伄鎸℃秷鎭?*/
+/* 鑱旂郴浜恒€屾鍦ㄨ緭鍏ャ€嶏細鎮诞鍦ㄨ緭鍏ユ爮姝ｄ笂鏂圭殑灏忓瓧锛坴3.5.49 褰诲簳鏀逛负鎮诞寮忥級
+   涓嶅崰甯冨眬楂樺害 鈫?涓嶆尋鍔ㄦ秷鎭尯銆佷笉閬尅浠讳綍娑堟伅銆佷笉褰卞搷搴曢儴闂磋窛锛?   鏈Е鍙戞椂 display:none 瀹屽叏涓嶅瓨鍦紙鏃犱换浣曞崰浣?閬尅锛夛紱
+   v3.5.50 淇锛氬厓绱犲繀椤讳綅浜?.chat-input-row 鍐呴儴锛堝叾 position:relative 涓哄寘鍚潡锛夛紝
+   bottom:calc(100% + 4px) 鎵嶈兘姝ｇ‘鎮诞鍦ㄨ緭鍏ユ爮姝ｄ笂鏂癸紙姝ゅ墠璇斁鍦?page-chat 涓嬶紝
+   absolute 鐩稿鏁撮〉瀹氫綅锛屼綅缃敊涔憋級 */
+/* 鑱旂郴浜恒€屾鍦ㄨ緭鍏ャ€嶏細娑堟伅鍖轰笌杈撳叆鏍忎箣闂寸殑鍐呭祵鍗犱綅琛岋紙v3.6.x 鐢辨偓娴紡鏀瑰洖锛?   鍗犱竴琛屻€侀殢娑堟伅鍖烘甯告粴鍔紝涓嶆偓娴€佷笉閬尅浠讳綍娑堟伅锛涙湭瑙﹀彂鏃?display:none 鏃犵棔銆?   v3.5.49 鏇炬敼涓烘偓娴紡锛坅bsolute 鐩稿杈撳叆鏍?+ z-index:5锛夛紝娑堟伅婊氬姩鏃朵細浠?   杩欒鐏拌壊灏忓瓧涓嬫柟绌胯繃銆佽鐩栦綇锛堢敤鎴峰弽棣?鐏拌壊涓€琛岄伄鎸¤亰澶╂秷鎭?锛夆€斺€?   鏀瑰洖 v3.5.27/44 鐨勫唴宓屾柟妗堬紝chat.js showTyping/hideTyping 宸叉湁鍗犱綅婊氬姩澶勭悊銆?   v3.7.x 鍥炲綊淇锛氬繀椤?align-self:flex-start + width:fit-content锛坴3.5.47 鏇炬湁锛?   鏀瑰唴宓屾椂婕忔帀锛夆€斺€旀湰琛屾槸 #page-chat锛坒lex column锛夌殑鐩存帴瀛愰」锛宎lign-items 榛樿
+   stretch 浼氭妸瀹冩媺鎴愭暣琛屽叏瀹介€忔槑鍧楋紱璁剧疆浜嗚亰澶╁绾革紙cs-bg 閾烘弧 #page-chat锛夋椂
+   鏁磋閫忓嚭澹佺焊鍥炬锛岀湅璧锋潵"涓嶆槸鍙湁鏂囧瓧銆佽繖涓€鏁磋鏄竴涓浘褰?锛堢敤鎴峰弽棣堬級銆?   align-self:flex-start 璁?flex 浜ゅ弶杞翠笉鎷変几锛堝搴︽敹缂╁埌鍐呭锛宖lex 鍩虹灞炴€э紝
+   浠讳綍鏀寔 flex 鐨勫唴鏍搁兘鐢熸晥锛屼笉渚濊禆 fit-content 鍏抽敭瀛楃殑鏀寔搴︼級锛?   fit-content 鍙屼繚闄╋紝琛屽彧鍗犳枃瀛楀搴︼紝涓嶉€忓嚭鏁磋澹佺焊銆佷笉褰㈡垚鑹插潡/鐭╁舰 */
 .chat-typing {
   flex-shrink:0;
   align-self:flex-start;
@@ -195,11 +172,11 @@ body.cs-time-divider .msg-time-divider { display:flex; }
   pointer-events:none;
 }
 .chat-typing[hidden] { display:none; }
-/* 消息区底部留白，最后一条消息不贴输入栏 */
+/* 娑堟伅鍖哄簳閮ㄧ暀鐧斤紝鏈€鍚庝竴鏉℃秷鎭笉璐磋緭鍏ユ爮 */
 .chat-body { padding-bottom:24px; }
 
-/* 待发送草稿条（图片/表情组合 + 引用预览）——无边框，不显示白色长方形框
-   v3.7.x：改纵向排列——引用预览条在上、图片缩略图在下，可同时存在 */
+/* 寰呭彂閫佽崏绋挎潯锛堝浘鐗?琛ㄦ儏缁勫悎 + 寮曠敤棰勮锛夆€斺€旀棤杈规锛屼笉鏄剧ず鐧借壊闀挎柟褰㈡
+   v3.7.x锛氭敼绾靛悜鎺掑垪鈥斺€斿紩鐢ㄩ瑙堟潯鍦ㄤ笂銆佸浘鐗囩缉鐣ュ浘鍦ㄤ笅锛屽彲鍚屾椂瀛樺湪 */
 .chat-draft {
   display:flex; flex-direction:column; align-items:stretch; gap:8px;
   margin:6px 4px 0; padding:8px 10px;
@@ -207,8 +184,7 @@ body.cs-time-divider .msg-time-divider { display:flex; }
   border-radius:12px;
 }
 .chat-draft[hidden] { display:none; }
-/* 引用预览条（v3.7.x：点消息操作「引用」后显示引用了什么，✕ 删除）——
-   中性灰底 + 左侧竖条，深浅主题通吃 */
+/* 寮曠敤棰勮鏉★紙v3.7.x锛氱偣娑堟伅鎿嶄綔銆屽紩鐢ㄣ€嶅悗鏄剧ず寮曠敤浜嗕粈涔堬紝鉁?鍒犻櫎锛夆€斺€?   涓€х伆搴?+ 宸︿晶绔栨潯锛屾繁娴呬富棰橀€氬悆 */
 .chat-draft-quote { display:flex; }
 .chat-draft-quote[hidden] { display:none; }
 .chat-draft-quote-bar {
@@ -237,29 +213,28 @@ body.cs-time-divider .msg-time-divider { display:flex; }
   background:rgba(0,0,0,.55); color:#fff; border:none; font-size:10px;
   display:flex; align-items:center; justify-content:center; cursor:pointer;
 }
-/* 引用预览条的 ✕ 删除按钮：必须写在本条（.chat-draft-x position:absolute）之后——
-   同优先级 (0,1,0) 后定义者生效，否则被 absolute 覆盖跑出预览条外（用户看不到删除按钮） */
+/* 寮曠敤棰勮鏉＄殑 鉁?鍒犻櫎鎸夐挳锛氬繀椤诲啓鍦ㄦ湰鏉★紙.chat-draft-x position:absolute锛変箣鍚庘€斺€?   鍚屼紭鍏堢骇 (0,1,0) 鍚庡畾涔夎€呯敓鏁堬紝鍚﹀垯琚?absolute 瑕嗙洊璺戝嚭棰勮鏉″锛堢敤鎴风湅涓嶅埌鍒犻櫎鎸夐挳锛?*/
 .chat-draft-quote-x {
   position:static; width:18px; height:18px; flex-shrink:0;
   border-radius:50%; background:rgba(127,127,127,.45);
   font-size:11px; line-height:1;
 }
 
-/* 组合消息：同一条气泡内 图片网格 + 文字 */
+/* 缁勫悎娑堟伅锛氬悓涓€鏉℃皵娉″唴 鍥剧墖缃戞牸 + 鏂囧瓧 */
 .msg-parts-imgs { display:flex; gap:4px; margin-bottom:6px; }
 .msg-img { max-width:90px; max-height:90px; border-radius:8px; display:block; }
-/* 图片消息：大图（v3.5.43 放大到 260px，可点击查看）；表情包保持小图 90px
-   双类 .msg-img.msg-img-big：与下方 .msg-img（96px 上限）同优先级时后写者会盖掉大图
-   → 用更高优先级保证【图片】恒为大图，不被压成表情包大小 */
+/* 鍥剧墖娑堟伅锛氬ぇ鍥撅紙v3.5.43 鏀惧ぇ鍒?260px锛屽彲鐐瑰嚮鏌ョ湅锛夛紱琛ㄦ儏鍖呬繚鎸佸皬鍥?90px
+   鍙岀被 .msg-img.msg-img-big锛氫笌涓嬫柟 .msg-img锛?6px 涓婇檺锛夊悓浼樺厛绾ф椂鍚庡啓鑰呬細鐩栨帀澶у浘
+   鈫?鐢ㄦ洿楂樹紭鍏堢骇淇濊瘉銆愬浘鐗囥€戞亽涓哄ぇ鍥撅紝涓嶈鍘嬫垚琛ㄦ儏鍖呭ぇ灏?*/
 .msg-img.msg-img-big { max-width:min(260px, 100%); max-height:260px; border-radius:10px; cursor:zoom-in; }
-/* 组合消息（文字+图片）里的【图片】与纯图片消息同尺寸（260px）；【表情包】保持 90px 小图 */
+/* 缁勫悎娑堟伅锛堟枃瀛?鍥剧墖锛夐噷鐨勩€愬浘鐗囥€戜笌绾浘鐗囨秷鎭悓灏哄锛?60px锛夛紱銆愯〃鎯呭寘銆戜繚鎸?90px 灏忓浘 */
 .msg-parts-imgs .msg-img-big { max-width:min(260px, 100%); max-height:260px; }
 .msg-parts-imgs.multi { flex-wrap:wrap; }
 .msg-parts-imgs.multi .msg-img { width:70px; height:70px; object-fit:cover; }
 .msg-parts-imgs.multi .msg-img-big { width:110px; height:110px; object-fit:cover; }
 
-/* 搜索聊天记录：聊天页内嵌覆盖层（v3.5.52，星言式——不离开聊天页） */
-/* 搜索聊天记录：聊天页底部半框（v3.5.53 露出聊天消息）——复用 .poke-card 布局 */
+/* 鎼滅储鑱婂ぉ璁板綍锛氳亰澶╅〉鍐呭祵瑕嗙洊灞傦紙v3.5.52锛屾槦瑷€寮忊€斺€斾笉绂诲紑鑱婂ぉ椤碉級 */
+/* 鎼滅储鑱婂ぉ璁板綍锛氳亰澶╅〉搴曢儴鍗婃锛坴3.5.53 闇插嚭鑱婂ぉ娑堟伅锛夆€斺€斿鐢?.poke-card 甯冨眬 */
 .chat-search { height:auto; max-height:60%; }
 .chat-search[hidden] { display:none; }
 .chat-search-new {
@@ -282,7 +257,7 @@ body.cs-time-divider .msg-time-divider { display:flex; }
   background:var(--ink); color:#fff; font-size:13px; font-weight:700;
   cursor:pointer; font-family:inherit; -webkit-tap-highlight-color:transparent;
 }
-/* v3.7.x：按日期查询——开始/结束日期 + 清除，与关键词可组合使用 */
+/* v3.7.x锛氭寜鏃ユ湡鏌ヨ鈥斺€斿紑濮?缁撴潫鏃ユ湡 + 娓呴櫎锛屼笌鍏抽敭璇嶅彲缁勫悎浣跨敤 */
 .chat-search-date {
   display:flex; align-items:center; gap:6px; padding:0 2px 10px; flex-shrink:0;
 }
@@ -309,7 +284,7 @@ body.cs-time-divider .msg-time-divider { display:flex; }
 .chat-search-hl { background:#ffe58f; border-radius:2px; padding:0 1px; }
 .chat-search-empty { text-align:center; color:#c0c0c0; font-size:12px; padding:24px 0; }
 
-/* 聊天页输入半框（邀请TA / 问问TA，v3.5.52 露出聊天消息） */
+/* 鑱婂ぉ椤佃緭鍏ュ崐妗嗭紙閭€璇稵A / 闂棶TA锛寁3.5.52 闇插嚭鑱婂ぉ娑堟伅锛?*/
 .chat-ask-body { display:flex; flex-direction:column; gap:10px; }
 .chat-ask-input {
   border:1px solid rgba(0,0,0,.12); border-radius:12px; padding:11px 14px;
@@ -318,12 +293,12 @@ body.cs-time-divider .msg-time-divider { display:flex; }
 }
 .chat-ask-input:focus {
   border-color:var(--ink);
-  /* v3.7.x：安卓 Chrome 键盘弹出动画把 fixed 半框上移时，聚焦的 contenteditable
-     （ce-box）文本层偶发停在旧位置，表现=文字显示在输入框外面。translateZ(0)
-     让输入框在聚焦期间自带独立合成层，逐帧按当前布局位置合成，文本不再错位 */
+  /* v3.7.x锛氬畨鍗?Chrome 閿洏寮瑰嚭鍔ㄧ敾鎶?fixed 鍗婃涓婄Щ鏃讹紝鑱氱劍鐨?contenteditable
+     锛坈e-box锛夋枃鏈眰鍋跺彂鍋滃湪鏃т綅缃紝琛ㄧ幇=鏂囧瓧鏄剧ず鍦ㄨ緭鍏ユ澶栭潰銆倀ranslateZ(0)
+     璁╄緭鍏ユ鍦ㄨ仛鐒︽湡闂磋嚜甯︾嫭绔嬪悎鎴愬眰锛岄€愬抚鎸夊綋鍓嶅竷灞€浣嶇疆鍚堟垚锛屾枃鏈笉鍐嶉敊浣?*/
   transform:translateZ(0);
 }
-/* 问问TA 回复类型选择（文字回复/单选题，v3.6.x） */
+/* 闂棶TA 鍥炲绫诲瀷閫夋嫨锛堟枃瀛楀洖澶?鍗曢€夐锛寁3.6.x锛?*/
 .chat-ask-type { display:flex; gap:8px; }
 .chat-ask-type[hidden] { display:none; }
 .chat-ask-type-btn {
@@ -339,13 +314,13 @@ body.cs-time-divider .msg-time-divider { display:flex; }
 }
 .chat-ask-opts:focus {
   border-color:var(--ink);
-  /* 同上：单选选项输入框同样在 fixed 半框内，聚焦期间建独立合成层防文本错位 */
+  /* 鍚屼笂锛氬崟閫夐€夐」杈撳叆妗嗗悓鏍峰湪 fixed 鍗婃鍐咃紝鑱氱劍鏈熼棿寤虹嫭绔嬪悎鎴愬眰闃叉枃鏈敊浣?*/
   transform:translateZ(0);
 }
 .chat-ask-actions { display:flex; gap:8px; }
 .chat-ask-actions .cc-tool { flex:1; }
 
-/* 聊天页占卜半框（v3.5.53）：模式/张数切换 + 抽牌结果，复用 .div-* 卡片样式 */
+/* 鑱婂ぉ椤靛崰鍗滃崐妗嗭紙v3.5.53锛夛細妯″紡/寮犳暟鍒囨崲 + 鎶界墝缁撴灉锛屽鐢?.div-* 鍗＄墖鏍峰紡 */
 #chat-divine-body .div-modes-wrap,
 #chat-divine-body .div-counts-wrap {
   display:flex; gap:8px; margin-bottom:10px;
@@ -376,28 +351,25 @@ body.cs-time-divider .msg-time-divider { display:flex; }
 .chat-input-row {
   display:flex; align-items:center; gap:8px;
   border-radius:99px; padding:14px 12px 14px 16px; flex-shrink:0; margin-top:8px;
-  /* v3.5.89 统一桌面白色简约风格（同 .glass）：白底 + 淡边 + 轻阴影 */
+  /* v3.5.89 缁熶竴妗岄潰鐧借壊绠€绾﹂鏍硷紙鍚?.glass锛夛細鐧藉簳 + 娣¤竟 + 杞婚槾褰?*/
   background:rgba(255,255,255,.92);
   border:1px solid rgba(0,0,0,.1);
   box-shadow:0 2px 8px rgba(0,0,0,.04);
-  /* 供「对方正在输入」提示绝对定位（悬浮在栏上方，不占布局高度） */
+  /* 渚涖€屽鏂规鍦ㄨ緭鍏ャ€嶆彁绀虹粷瀵瑰畾浣嶏紙鎮诞鍦ㄦ爮涓婃柟锛屼笉鍗犲竷灞€楂樺害锛?*/
   position:relative;
 }
 .chat-input {
   flex:1; min-width:0; border:none; outline:none; background:transparent;
   font-size:15px; font-family:inherit; color:var(--ink);
-  /* v3.5.127：contenteditable div 版输入框——Chrome 不对 contenteditable
-     弹「自动填充」条（input 无论如何都会被识别成表单字段）。补齐 div 版
-     需要的排版：行高对齐、长文本换行、超高滚动。
-     v3.6.x：不再加 -webkit-user-modify:read-write-plaintext-only——
-     iOS Safari 对它支持有 bug（部分版本会阻止 contenteditable 输入/键盘），
-     去掉后 contenteditable 在 iOS/安卓均正常输入 */
+  /* v3.5.127锛歝ontenteditable div 鐗堣緭鍏ユ鈥斺€擟hrome 涓嶅 contenteditable
+     寮广€岃嚜鍔ㄥ～鍏呫€嶆潯锛坕nput 鏃犺濡備綍閮戒細琚瘑鍒垚琛ㄥ崟瀛楁锛夈€傝ˉ榻?div 鐗?     闇€瑕佺殑鎺掔増锛氳楂樺榻愩€侀暱鏂囨湰鎹㈣銆佽秴楂樻粴鍔ㄣ€?     v3.6.x锛氫笉鍐嶅姞 -webkit-user-modify:read-write-plaintext-only鈥斺€?     iOS Safari 瀵瑰畠鏀寔鏈?bug锛堥儴鍒嗙増鏈細闃绘 contenteditable 杈撳叆/閿洏锛夛紝
+     鍘绘帀鍚?contenteditable 鍦?iOS/瀹夊崜鍧囨甯歌緭鍏?*/
   line-height:1.45; min-height:21px; max-height:96px; overflow-y:auto;
   white-space:pre-wrap; word-break:break-word; caret-color:var(--ink);
   scrollbar-width:none; -ms-overflow-style:none;
 }
 .chat-input::-webkit-scrollbar { display:none; }
-/* 空内容时显示 placeholder（contenteditable 无 placeholder 属性，用 :empty 伪元素） */
+/* 绌哄唴瀹规椂鏄剧ず placeholder锛坈ontenteditable 鏃?placeholder 灞炴€э紝鐢?:empty 浼厓绱狅級 */
 .chat-input:empty::before {
   content:attr(data-ph); color:#b5b5b5; pointer-events:none;
 }
@@ -405,32 +377,28 @@ body.cs-time-divider .msg-time-divider { display:flex; }
   outline:none; cursor:pointer; flex-shrink:0;
   background:var(--send-bg, #111111); color:var(--send-ink, #ffffff); font-size:14px; font-weight:600;
   padding:12px 24px; border-radius:99px; font-family:inherit;
-  /* 与其他输入栏功能按钮一致的灰色描边 */
+  /* 涓庡叾浠栬緭鍏ユ爮鍔熻兘鎸夐挳涓€鑷寸殑鐏拌壊鎻忚竟 */
   border:1px solid rgba(0,0,0,.1);
 }
 
-/* 全屏聊天：头部/消息/输入栏左右 18px 对齐，背景铺满 */
+/* 鍏ㄥ睆鑱婂ぉ锛氬ご閮?娑堟伅/杈撳叆鏍忓乏鍙?18px 瀵归綈锛岃儗鏅摵婊?*/
 #page-chat {
   position:relative;
-  /* v3.5.125：聊天页整体永不滚动——只有消息区（.chat-body）内部滚动。
-     从结构上消灭「页面整体被滚动/回弹带走顶部栏」：.page 通用样式是
-     overflow-y:auto（内容超高时页面可滚，顶部联系人栏会被推出屏幕），
-     这里覆盖为 hidden——顶部栏与输入栏物理固定，任何情况（消息超高、
-     全屏、输入法弹出、滚动到边界回弹）都不会再移动 */
+  /* v3.5.125锛氳亰澶╅〉鏁翠綋姘镐笉婊氬姩鈥斺€斿彧鏈夋秷鎭尯锛?chat-body锛夊唴閮ㄦ粴鍔ㄣ€?     浠庣粨鏋勪笂娑堢伃銆岄〉闈㈡暣浣撹婊氬姩/鍥炲脊甯﹁蛋椤堕儴鏍忋€嶏細.page 閫氱敤鏍峰紡鏄?     overflow-y:auto锛堝唴瀹硅秴楂樻椂椤甸潰鍙粴锛岄《閮ㄨ仈绯讳汉鏍忎細琚帹鍑哄睆骞曪級锛?     杩欓噷瑕嗙洊涓?hidden鈥斺€旈《閮ㄦ爮涓庤緭鍏ユ爮鐗╃悊鍥哄畾锛屼换浣曟儏鍐碉紙娑堟伅瓒呴珮銆?     鍏ㄥ睆銆佽緭鍏ユ硶寮瑰嚭銆佹粴鍔ㄥ埌杈圭晫鍥炲脊锛夐兘涓嶄細鍐嶇Щ鍔?*/
   overflow:hidden;
   overscroll-behavior:none;
 }
 .page.full .chat-head {
   padding: calc(14px + env(safe-area-inset-top, 0px)) 18px 12px;
   margin: 0;
-  background:rgba(255,255,255,.92); /* v3.5.89 统一桌面白色简约风格 */
+  background:rgba(255,255,255,.92); /* v3.5.89 缁熶竴妗岄潰鐧借壊绠€绾﹂鏍?*/
   border-bottom:1px solid rgba(0,0,0,.1);
   box-shadow:0 2px 8px rgba(0,0,0,.04);
 }
-.page.full .chat-body { padding: 14px 18px 28px; } /* v3.5.48 底部留白加大：最后一条消息不贴输入栏 */
+.page.full .chat-body { padding: 14px 18px 28px; } /* v3.5.48 搴曢儴鐣欑櫧鍔犲ぇ锛氭渶鍚庝竴鏉℃秷鎭笉璐磋緭鍏ユ爮 */
 .page.full .chat-input-row { margin: 8px 18px 16px; }
 
-/* 输入栏图标按钮（更多功能 / 表情包） */
+/* 杈撳叆鏍忓浘鏍囨寜閽紙鏇村鍔熻兘 / 琛ㄦ儏鍖咃級 */
 .ch-input-btn {
   width:38px; height:38px; border-radius:50%; cursor:pointer; flex-shrink:0;
   background:rgba(255,255,255,.92); border:1px solid rgba(0,0,0,.1);
@@ -441,7 +409,7 @@ body.cs-time-divider .msg-time-divider { display:flex; }
 .ch-input-btn:active { background:rgba(0,0,0,.08); }
 .ch-input-btn svg { width:20px; height:20px; }
 
-/* 拍一拍 / 换头像：居中灰字小卡片（可选附带一张头像图） */
+/* 鎷嶄竴鎷?/ 鎹㈠ご鍍忥細灞呬腑鐏板瓧灏忓崱鐗囷紙鍙€夐檮甯︿竴寮犲ご鍍忓浘锛?*/
 .msg-poke {
   align-self:center; text-align:center;
   font-size:12px; color:var(--msg-time-ink, #8a8a8a);
@@ -456,19 +424,14 @@ body.cs-time-divider .msg-time-divider { display:flex; }
   border:1px solid rgba(0,0,0,.1);
   box-shadow:0 1px 4px rgba(0,0,0,.1);
 }
-/* v3.10.x：信件通知（写信/回信/来信/回信到达）可点击直达信箱——
-   加下划虚线提示可点，按下反馈变深 */
+/* v3.10.x锛氫俊浠堕€氱煡锛堝啓淇?鍥炰俊/鏉ヤ俊/鍥炰俊鍒拌揪锛夊彲鐐瑰嚮鐩磋揪淇＄鈥斺€?   鍔犱笅鍒掕櫄绾挎彁绀哄彲鐐癸紝鎸変笅鍙嶉鍙樻繁 */
 .msg-poke.mail-notice { cursor:pointer; }
 .msg-poke.mail-notice > span:first-child { text-decoration:underline dashed rgba(0,0,0,.25); text-underline-offset:3px; }
 .msg-poke.mail-notice:active { background:rgba(0,0,0,.08); }
 
-/* 更多功能面板（悬浮在输入栏上方）
-   v3.5.110：bottom 加 safe-area，全面屏全屏模式下与输入栏同步上移，不错位
-   v3.10.x：fixed → absolute——安卓 resizes-visual 下键盘只缩 visualViewport，
-   fixed 面板锚定全高 layout viewport 不动；absolute 锚定 .phone/#page-chat，
-   键盘弹出时容器被 syncAndroidKb 收缩、面板跟着停靠输入栏上方（否则打开即
-   自动聚焦的半框会整体掉到升起后的输入栏下方/键盘后面）。手机端 .phone
-   满屏时两者几何等价；桌面宽屏本就由文末 @media 改 absolute，此处统一。 */
+/* 鏇村鍔熻兘闈㈡澘锛堟偓娴湪杈撳叆鏍忎笂鏂癸級
+   v3.5.110锛歜ottom 鍔?safe-area锛屽叏闈㈠睆鍏ㄥ睆妯″紡涓嬩笌杈撳叆鏍忓悓姝ヤ笂绉伙紝涓嶉敊浣?   v3.10.x锛歠ixed 鈫?absolute鈥斺€斿畨鍗?resizes-visual 涓嬮敭鐩樺彧缂?visualViewport锛?   fixed 闈㈡澘閿氬畾鍏ㄩ珮 layout viewport 涓嶅姩锛沘bsolute 閿氬畾 .phone/#page-chat锛?   閿洏寮瑰嚭鏃跺鍣ㄨ syncAndroidKb 鏀剁缉銆侀潰鏉胯窡鐫€鍋滈潬杈撳叆鏍忎笂鏂癸紙鍚﹀垯鎵撳紑鍗?   鑷姩鑱氱劍鐨勫崐妗嗕細鏁翠綋鎺夊埌鍗囪捣鍚庣殑杈撳叆鏍忎笅鏂?閿洏鍚庨潰锛夈€傛墜鏈虹 .phone
+   婊″睆鏃朵袱鑰呭嚑浣曠瓑浠凤紱妗岄潰瀹藉睆鏈氨鐢辨枃鏈?@media 鏀?absolute锛屾澶勭粺涓€銆?*/
 .more-panel {
   position:absolute; left:18px; right:18px; bottom:calc(96px + env(safe-area-inset-bottom, 0px)); z-index:60;
   background:rgba(255,255,255,.97);
@@ -477,8 +440,8 @@ body.cs-time-divider .msg-time-divider { display:flex; }
   padding:16px;
 }
 .more-panel[hidden] { display:none; }
-/* 更多功能面板：顶部分类切换（v3.15.x：功能增多后由两页签改为分类 chips
-   常用/互动/小游戏/工具/TA的提问；窄屏放不下时横向滚动） */
+/* 鏇村鍔熻兘闈㈡澘锛氶《閮ㄥ垎绫诲垏鎹紙v3.15.x锛氬姛鑳藉澶氬悗鐢变袱椤电鏀逛负鍒嗙被 chips
+   甯哥敤/浜掑姩/灏忔父鎴?宸ュ叿/TA鐨勬彁闂紱绐勫睆鏀句笉涓嬫椂妯悜婊氬姩锛?*/
 .more-tabs { display:flex; gap:6px; margin-bottom:14px; overflow-x:auto; scrollbar-width:none; }
 .more-tabs::-webkit-scrollbar { display:none; }
 .more-tab {
@@ -490,7 +453,7 @@ body.cs-time-divider .msg-time-divider { display:flex; }
 .more-tab.sel { background:#111; color:#fff; border-color:#111; }
 .more-grid { display:flex; flex-wrap:wrap; gap:14px; justify-content:center; }
 .more-grid[hidden] { display:none; }
-/* .more-item 自带 display:flex，需显式兜底 hidden 属性（分类过滤靠它隐藏） */
+/* .more-item 鑷甫 display:flex锛岄渶鏄惧紡鍏滃簳 hidden 灞炴€э紙鍒嗙被杩囨护闈犲畠闅愯棌锛?*/
 .more-item[hidden] { display:none; }
 .more-item {
   width:64px; display:flex; flex-direction:column; align-items:center; gap:7px;
@@ -513,7 +476,7 @@ body.cs-time-divider .msg-time-divider { display:flex; }
 .more-item svg { width:22px; height:22px; }
 .more-item span { font-size:11px; }
 
-/* 通话半框（复用 .poke-card 容器）：状态行 + 拨打/挂断大按钮 */
+/* 閫氳瘽鍗婃锛堝鐢?.poke-card 瀹瑰櫒锛夛細鐘舵€佽 + 鎷ㄦ墦/鎸傛柇澶ф寜閽?*/
 #chat-call-panel .poke-card-scroll { min-height:0; max-height:none; }
 .call-panel-status {
   text-align:center; font-size:13px; font-weight:600; color:var(--ink);
@@ -530,7 +493,7 @@ body.cs-time-divider .msg-time-divider { display:flex; }
 .call-panel-dial:active, .call-panel-hang:active { opacity:.85; }
 .call-panel-dial svg, .call-panel-hang svg { width:18px; height:18px; flex-shrink:0; }
 
-/* v3.12.x：通话半框「联系人头像 / 通话背景图片」编辑行（更多功能→通话 直接修改） */
+/* v3.12.x锛氶€氳瘽鍗婃銆岃仈绯讳汉澶村儚 / 閫氳瘽鑳屾櫙鍥剧墖銆嶇紪杈戣锛堟洿澶氬姛鑳解啋閫氳瘽 鐩存帴淇敼锛?*/
 .call-panel-row {
   display:flex; align-items:center; justify-content:space-between; gap:10px;
   padding:12px 14px; margin-bottom:8px;
@@ -542,7 +505,7 @@ body.cs-time-divider .msg-time-divider { display:flex; }
 .call-panel-row .cpr-val { font-size:12px; color:var(--muted); }
 .call-panel-row-danger .cpr-txt { color:#e5484d; }
 
-/* 猜拳半框（复用 .poke-card 容器）：战绩 + 提示 + 三个出拳按钮 */
+/* 鐚滄嫵鍗婃锛堝鐢?.poke-card 瀹瑰櫒锛夛細鎴樼哗 + 鎻愮ず + 涓変釜鍑烘嫵鎸夐挳 */
 #chat-rps-panel { height:auto; max-height:56%; }
 #chat-rps-panel .poke-card-scroll { min-height:0; max-height:none; }
 .rps-score {
@@ -571,7 +534,7 @@ body.cs-time-divider .msg-time-divider { display:flex; }
 .rps-c-ico svg { width:26px; height:26px; color:#444; }
 .rps-choice span:last-child { font-size:13px; font-weight:600; }
 
-/* 猜拳结果消息：居中白底灰边卡片，双方手势对比 + 结果文字，简约无彩色 */
+/* 鐚滄嫵缁撴灉娑堟伅锛氬眳涓櫧搴曠伆杈瑰崱鐗囷紝鍙屾柟鎵嬪娍瀵规瘮 + 缁撴灉鏂囧瓧锛岀畝绾︽棤褰╄壊 */
 .msg-rps { align-self:center; width:100%; display:flex; justify-content:center; padding:4px 0; animation:rpsFadeIn .35s ease both; }
 @keyframes rpsFadeIn { from { opacity:0; transform:translateY(8px) scale(.96); } to { opacity:1; transform:none; } }
 .msg-rps-card {
@@ -596,11 +559,7 @@ body.cs-time-divider .msg-time-divider { display:flex; }
 .msg-rps-vs { font-size:12px; font-weight:700; color:#999; letter-spacing:1px; }
 .msg-rps-result { font-size:13px; font-weight:700; color:var(--ink); padding-top:4px; border-top:1px dashed rgba(0,0,0,.1); }
 
-/* 拍一拍浮层卡片（底部半框，露出顶部聊天消息，方便边看边玩）
-   底部 96px：悬停在输入栏上方，不压住/不覆盖输入栏（输入栏顶部约 82px）
-   v3.5.110：bottom 加 safe-area，全面屏全屏模式下与输入栏同步上移，不错位
-   v3.10.x：fixed → absolute——键盘弹出时随收缩后的 .phone/#page-chat 停靠，
-   不再锚定全高 layout viewport 掉到输入栏下方（详见 .more-panel 处注释） */
+/* 鎷嶄竴鎷嶆诞灞傚崱鐗囷紙搴曢儴鍗婃锛岄湶鍑洪《閮ㄨ亰澶╂秷鎭紝鏂逛究杈圭湅杈圭帺锛?   搴曢儴 96px锛氭偓鍋滃湪杈撳叆鏍忎笂鏂癸紝涓嶅帇浣?涓嶈鐩栬緭鍏ユ爮锛堣緭鍏ユ爮椤堕儴绾?82px锛?   v3.5.110锛歜ottom 鍔?safe-area锛屽叏闈㈠睆鍏ㄥ睆妯″紡涓嬩笌杈撳叆鏍忓悓姝ヤ笂绉伙紝涓嶉敊浣?   v3.10.x锛歠ixed 鈫?absolute鈥斺€旈敭鐩樺脊鍑烘椂闅忔敹缂╁悗鐨?.phone/#page-chat 鍋滈潬锛?   涓嶅啀閿氬畾鍏ㄩ珮 layout viewport 鎺夊埌杈撳叆鏍忎笅鏂癸紙璇﹁ .more-panel 澶勬敞閲婏級 */
 .poke-card {
   position:absolute; top:auto; bottom:calc(96px + env(safe-area-inset-bottom, 0px)); left:18px; right:18px;
   height:auto; max-height:48%;
@@ -628,15 +587,13 @@ body.cs-time-divider .msg-time-divider { display:flex; }
 }
 .poke-card-scroll { flex:1; overflow-y:auto; scrollbar-width:none; -ms-overflow-style:none; min-height:60px; max-height:40vh; padding:2px; }
 .poke-card-scroll::-webkit-scrollbar { display:none; }
-/* 查岗半框：内容少，缩小高度（只容纳三行日常 + 更新时间） */
+/* 鏌ュ矖鍗婃锛氬唴瀹瑰皯锛岀缉灏忛珮搴︼紙鍙绾充笁琛屾棩甯?+ 鏇存柊鏃堕棿锛?*/
 #ck-panel { height:auto; max-height:56%; }
 #ck-panel .poke-card-scroll { min-height:0; max-height:none; }
-/* 帮我决定半框：内容多，调大高度（未输入时表单也完整显示，不用滑动） */
+/* 甯垜鍐冲畾鍗婃锛氬唴瀹瑰锛岃皟澶ч珮搴︼紙鏈緭鍏ユ椂琛ㄥ崟涔熷畬鏁存樉绀猴紝涓嶇敤婊戝姩锛?*/
 #chat-decision-panel { height:auto; max-height:68%; }
 #chat-decision-panel .poke-card-scroll { min-height:0; max-height:none; }
-/* 帮我决定「自定义选项」：选项输入框在安卓被转成 contenteditable .ce-box，
-   默认会随行数无上限增高，把下方控件顶出屏幕且整框无法上划。
-   设高度上限 + 框内滚动，让选项多的场景也能正常滚动查看。 */
+/* 甯垜鍐冲畾銆岃嚜瀹氫箟閫夐」銆嶏細閫夐」杈撳叆妗嗗湪瀹夊崜琚浆鎴?contenteditable .ce-box锛?   榛樿浼氶殢琛屾暟鏃犱笂闄愬楂橈紝鎶婁笅鏂规帶浠堕《鍑哄睆骞曚笖鏁存鏃犳硶涓婂垝銆?   璁鹃珮搴︿笂闄?+ 妗嗗唴婊氬姩锛岃閫夐」澶氱殑鍦烘櫙涔熻兘姝ｅ父婊氬姩鏌ョ湅銆?*/
 #chat-decision-body .dec-inp-wrap .ce-box[data-for="dec-opts"] {
   max-height:176px;
   overflow-y:auto;
@@ -650,7 +607,7 @@ body.cs-time-divider .msg-time-divider { display:flex; }
 }
 .poke-big:active { opacity:.85; }
 .poke-big svg { width:18px; height:18px; }
-/* 拍一拍卡片：顶部分组切换栏（chips 复用 .emoji-g-chip 样式） */
+/* 鎷嶄竴鎷嶅崱鐗囷細椤堕儴鍒嗙粍鍒囨崲鏍忥紙chips 澶嶇敤 .emoji-g-chip 鏍峰紡锛?*/
 .poke-groups {
   display:flex; gap:6px; overflow-x:auto; padding:0 2px 10px;
   flex-shrink:0; scrollbar-width:none; -ms-overflow-style:none;
@@ -659,7 +616,7 @@ body.cs-time-divider .msg-time-divider { display:flex; }
 .poke-groups .emoji-g-chip {
   padding:9px 14px; font-size:13px; font-weight:700; border-radius:11px;
 }
-/* 拍一拍卡片：自定义文字输入行（复用聊天搜索输入行风格） */
+/* 鎷嶄竴鎷嶅崱鐗囷細鑷畾涔夋枃瀛楄緭鍏ヨ锛堝鐢ㄨ亰澶╂悳绱㈣緭鍏ヨ椋庢牸锛?*/
 .poke-input-row {
   display:flex; gap:8px; padding:0 2px 10px; flex-shrink:0;
 }
@@ -674,8 +631,8 @@ body.cs-time-divider .msg-time-divider { display:flex; }
   cursor:pointer; font-family:inherit; -webkit-tap-highlight-color:transparent;
 }
 .poke-input-go:active { opacity:.85; }
-/* 拍一拍卡片：联系人/我方 双 tab 行（独立 .poke-tab——样式同 .emoji-tab 但类名独立，
-   避免表情包面板全局 .emoji-tab 监听劫持拍一拍 tab 点击）（v3.7.x） */
+/* 鎷嶄竴鎷嶅崱鐗囷細鑱旂郴浜?鎴戞柟 鍙?tab 琛岋紙鐙珛 .poke-tab鈥斺€旀牱寮忓悓 .emoji-tab 浣嗙被鍚嶇嫭绔嬶紝
+   閬垮厤琛ㄦ儏鍖呴潰鏉垮叏灞€ .emoji-tab 鐩戝惉鍔寔鎷嶄竴鎷?tab 鐐瑰嚮锛夛紙v3.7.x锛?*/
 .poke-tabs-row {
   display:flex; gap:6px; margin-bottom:10px; flex-shrink:0;
 }
@@ -689,7 +646,7 @@ body.cs-time-divider .msg-time-divider { display:flex; }
 .poke-tabs-row .poke-tab.sel {
   background:var(--ink); color:var(--card-bg, #fff); border-color:var(--ink); font-weight:800;
 }
-/* 拍一拍双 tab 颜色区分（v3.7.x）：联系人的=浅色描边（对方气泡风），我的=深色填充（我方气泡风） */
+/* 鎷嶄竴鎷嶅弻 tab 棰滆壊鍖哄垎锛坴3.7.x锛夛細鑱旂郴浜虹殑=娴呰壊鎻忚竟锛堝鏂规皵娉￠锛夛紝鎴戠殑=娣辫壊濉厖锛堟垜鏂规皵娉￠锛?*/
 .poke-tabs-row .poke-tab.poke-tab-ta.sel {
   background:transparent; color:var(--ink); border-color:var(--ink);
   border-width:1.5px; font-weight:800;
@@ -697,7 +654,7 @@ body.cs-time-divider .msg-time-divider { display:flex; }
 .poke-tabs-row .poke-tab.poke-tab-mine.sel {
   background:var(--ink); color:var(--card-bg, #fff); border-color:var(--ink); font-weight:800;
 }
-/* v3.11.x：公用拍一拍 tab（三分区）——虚线描边（字卡库/共享语义，区别于联系人/我） */
+/* v3.11.x锛氬叕鐢ㄦ媿涓€鎷?tab锛堜笁鍒嗗尯锛夆€斺€旇櫄绾挎弿杈癸紙瀛楀崱搴?鍏变韩璇箟锛屽尯鍒簬鑱旂郴浜?鎴戯級 */
 .poke-tabs-row .poke-tab.poke-tab-pub.sel {
   background:rgba(255,255,255,.92); color:var(--ink); border-color:var(--ink);
   border-style:dashed; border-width:1.5px; font-weight:800;
@@ -709,18 +666,18 @@ body.cs-time-divider .msg-time-divider { display:flex; }
   font-family:inherit; -webkit-tap-highlight-color:transparent;
 }
 .poke-add-btn:active { opacity:.85; }
-/* 拍一拍工具行（新建分组 / 新增拍一拍，复用 .emoji-tool） */
+/* 鎷嶄竴鎷嶅伐鍏疯锛堟柊寤哄垎缁?/ 鏂板鎷嶄竴鎷嶏紝澶嶇敤 .emoji-tool锛?*/
 .poke-tools {
   display:flex; gap:6px; margin-bottom:8px; flex-shrink:0;
 }
-/* display:flex 会覆盖 hidden 属性，必须显式补 [hidden] 才真正隐藏（v3.7.x：联系人的拍一拍隐藏工具行/输入行） */
+/* display:flex 浼氳鐩?hidden 灞炴€э紝蹇呴』鏄惧紡琛?[hidden] 鎵嶇湡姝ｉ殣钘忥紙v3.7.x锛氳仈绯讳汉鐨勬媿涓€鎷嶉殣钘忓伐鍏疯/杈撳叆琛岋級 */
 .poke-tools[hidden], .poke-input-row[hidden] { display:none; }
 .poke-tools .emoji-tool { flex:1; }
-/* 拍一拍列表：预设/自定义 小节标题 */
+/* 鎷嶄竴鎷嶅垪琛細棰勮/鑷畾涔?灏忚妭鏍囬 */
 .poke-sec-label {
   font-size:11px; color:var(--muted); padding:8px 2px 4px; flex-shrink:0;
 }
-/* 拍一拍卡片：我的拍一拍·用户分组字卡的修改/删除按钮（预设/联系人的只读，不显示） */
+/* 鎷嶄竴鎷嶅崱鐗囷細鎴戠殑鎷嶄竴鎷嵚风敤鎴峰垎缁勫瓧鍗＄殑淇敼/鍒犻櫎鎸夐挳锛堥璁?鑱旂郴浜虹殑鍙锛屼笉鏄剧ず锛?*/
 .poke-card-ops {
   display:flex; gap:6px; flex-shrink:0; align-items:center; margin-left:auto;
 }
@@ -734,9 +691,8 @@ body.cs-time-divider .msg-time-divider { display:flex; }
 .poke-card-op:active { background:rgba(0,0,0,.12); }
 .poke-op-edit:active { color:var(--ink); }
 .poke-op-del:active { background:rgba(224,85,85,.15); color:#e05555; }
-/* 表情包面板：底部半框，露出顶部聊天消息，高度随内容自适应（最多半屏，空态紧凑）
-   v3.5.110：bottom 加 safe-area，全面屏全屏模式下与输入栏同步上移，不错位
-   v3.10.x：fixed → absolute（同 .poke-card——键盘弹出时随容器停靠输入栏上方） */
+/* 琛ㄦ儏鍖呴潰鏉匡細搴曢儴鍗婃锛岄湶鍑洪《閮ㄨ亰澶╂秷鎭紝楂樺害闅忓唴瀹硅嚜閫傚簲锛堟渶澶氬崐灞忥紝绌烘€佺揣鍑戯級
+   v3.5.110锛歜ottom 鍔?safe-area锛屽叏闈㈠睆鍏ㄥ睆妯″紡涓嬩笌杈撳叆鏍忓悓姝ヤ笂绉伙紝涓嶉敊浣?   v3.10.x锛歠ixed 鈫?absolute锛堝悓 .poke-card鈥斺€旈敭鐩樺脊鍑烘椂闅忓鍣ㄥ仠闈犺緭鍏ユ爮涓婃柟锛?*/
 .emoji-card {
   position:absolute; top:auto; bottom:calc(96px + env(safe-area-inset-bottom, 0px)); left:18px; right:18px;
   height:auto; max-height:55%;
@@ -748,7 +704,7 @@ body.cs-time-divider .msg-time-divider { display:flex; }
   box-shadow:0 12px 32px rgba(0,0,0,.14);
   z-index:70; padding:14px 16px 14px;
 }
-/* 表情包面板：顶部分组切换栏（横向滚动 chips） */
+/* 琛ㄦ儏鍖呴潰鏉匡細椤堕儴鍒嗙粍鍒囨崲鏍忥紙妯悜婊氬姩 chips锛?*/
 .emoji-groups {
   display:flex; gap:6px; overflow-x:auto; padding:0 2px 8px;
   flex-shrink:0; scrollbar-width:none; -ms-overflow-style:none;
@@ -761,7 +717,7 @@ body.cs-time-divider .msg-time-divider { display:flex; }
   -webkit-tap-highlight-color:transparent;
 }
 .emoji-g-chip.sel { background:#111; color:#fff; border-color:#111; }
-/* 表情包面板：TA / 我的 双 tab（v3.5.31） */
+/* 琛ㄦ儏鍖呴潰鏉匡細TA / 鎴戠殑 鍙?tab锛坴3.5.31锛?*/
 .emoji-head {
   display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;
 }
@@ -775,22 +731,20 @@ body.cs-time-divider .msg-time-divider { display:flex; }
   white-space:nowrap;
 }
 .emoji-tab.sel { background:var(--ink); color:#fff; border-color:var(--ink); }
-/* v3.12.x：部分安卓浏览器（vivo/OPPO 等）会给点按过的按钮画虚线聚焦框——点
-   「公用表情包」后该 tab 周围出现虚线框，看起来与其他两个 tab 不统一。统一关掉
-   聚焦外框（选中态仍由 .sel 深色填充表达；聊天/朋友圈评论面板共用本类一并生效） */
+/* v3.12.x锛氶儴鍒嗗畨鍗撴祻瑙堝櫒锛坴ivo/OPPO 绛夛級浼氱粰鐐规寜杩囩殑鎸夐挳鐢昏櫄绾胯仛鐒︽鈥斺€旂偣
+   銆屽叕鐢ㄨ〃鎯呭寘銆嶅悗璇?tab 鍛ㄥ洿鍑虹幇铏氱嚎妗嗭紝鐪嬭捣鏉ヤ笌鍏朵粬涓や釜 tab 涓嶇粺涓€銆傜粺涓€鍏虫帀
+   鑱氱劍澶栨锛堥€変腑鎬佷粛鐢?.sel 娣辫壊濉厖琛ㄨ揪锛涜亰澶?鏈嬪弸鍦堣瘎璁洪潰鏉垮叡鐢ㄦ湰绫讳竴骞剁敓鏁堬級 */
 .emoji-tab:focus, .emoji-tab:focus-visible { outline:none; }
-/* v3.11.x：表情包面板三分区（公用/联系人/我的）——字号略收 + 长昵称省略号防溢出
-   （选择器限定 #emoji-panel：朋友圈评论面板复用 .emoji-tab 不受影响） */
+/* v3.11.x锛氳〃鎯呭寘闈㈡澘涓夊垎鍖猴紙鍏敤/鑱旂郴浜?鎴戠殑锛夆€斺€斿瓧鍙风暐鏀?+ 闀挎樀绉扮渷鐣ュ彿闃叉孩鍑?   锛堥€夋嫨鍣ㄩ檺瀹?#emoji-panel锛氭湅鍙嬪湀璇勮闈㈡澘澶嶇敤 .emoji-tab 涓嶅彈褰卞搷锛?*/
 #emoji-panel .emoji-tab {
   padding:9px 4px; font-size:12px; min-width:0;
   overflow:hidden; text-overflow:ellipsis;
 }
-/* v3.12.x：「隐藏联系人的表情包」开关收起公用/TA 的 tab——按 .emoji-tools[hidden]
-   先例显式兜底，防后续给 .emoji-tab 加 display 后 hidden 属性失效（聊天与
-   朋友圈评论面板复用同一类名，一条规则双覆盖） */
+/* v3.12.x锛氥€岄殣钘忚仈绯讳汉鐨勮〃鎯呭寘銆嶅紑鍏虫敹璧峰叕鐢?TA 鐨?tab鈥斺€旀寜 .emoji-tools[hidden]
+   鍏堜緥鏄惧紡鍏滃簳锛岄槻鍚庣画缁?.emoji-tab 鍔?display 鍚?hidden 灞炴€уけ鏁堬紙鑱婂ぉ涓?   鏈嬪弸鍦堣瘎璁洪潰鏉垮鐢ㄥ悓涓€绫诲悕锛屼竴鏉¤鍒欏弻瑕嗙洊锛?*/
 .emoji-tab[hidden] { display:none !important; }
 .emoji-head .poke-card-close { margin-left:10px; }
-/* 我的表情包工具行 */
+/* 鎴戠殑琛ㄦ儏鍖呭伐鍏疯 */
 .emoji-tools {
   display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px; flex-shrink:0;
 }
@@ -802,7 +756,7 @@ body.cs-time-divider .msg-time-divider { display:flex; }
   -webkit-tap-highlight-color:transparent;
 }
 .emoji-tool:active { background:rgba(0,0,0,.05); }
-/* 批量管理工具条 */
+/* 鎵归噺绠＄悊宸ュ叿鏉?*/
 .emoji-batch {
   display:flex; align-items:center; gap:8px; flex-shrink:0;
   background:#fff; border:1px solid rgba(0,0,0,.12);
@@ -818,7 +772,7 @@ body.cs-time-divider .msg-time-divider { display:flex; }
 }
 .emoji-batch-btn.del { border-color:#e05555; color:#e05555; }
 .emoji-batch-btn:active { background:rgba(0,0,0,.05); }
-/* 批量模式勾选角标 */
+/* 鎵归噺妯″紡鍕鹃€夎鏍?*/
 .emoji-item.sel { position:relative; background:rgba(0,0,0,.05); }
 .emoji-item.sel::after {
   content:''; position:absolute; inset:0; border:2px solid var(--ink); border-radius:0;
@@ -829,14 +783,13 @@ body.cs-time-divider .msg-time-divider { display:flex; }
   background:var(--ink); color:#fff; font-size:10px; font-weight:700;
   display:flex; align-items:center; justify-content:center; pointer-events:none;
 }
-/* 管理分组弹层：改名按钮 */
+/* 绠＄悊鍒嗙粍寮瑰眰锛氭敼鍚嶆寜閽?*/
 .my-mg-panel .mg-row .mg-rn {
   border:1px solid rgba(0,0,0,.15); background:#fff; color:#555;
   font-size:11px; padding:4px 10px; border-radius:8px; cursor:pointer;
   font-family:inherit;
 }
-/* v3.5.76 基础 .emoji-grid：朋友圈评论面板等动态网格也按 4 列渲染
-   （此前只有 #emoji-list 作用域版有 4 列，动态面板无父级 id → 每行只有 1 个表情） */
+/* v3.5.76 鍩虹 .emoji-grid锛氭湅鍙嬪湀璇勮闈㈡澘绛夊姩鎬佺綉鏍间篃鎸?4 鍒楁覆鏌?   锛堟鍓嶅彧鏈?#emoji-list 浣滅敤鍩熺増鏈?4 鍒楋紝鍔ㄦ€侀潰鏉挎棤鐖剁骇 id 鈫?姣忚鍙湁 1 涓〃鎯咃級 */
 .emoji-grid {
   display:grid; grid-template-columns:repeat(4, 1fr); gap:0;
   background:rgba(255,255,255,.92); border-radius:12px;
@@ -850,7 +803,7 @@ body.cs-time-divider .msg-time-divider { display:flex; }
   overflow:hidden;
 }
 #emoji-list .cc-group-header {
-  display:inline-flex;           /* 宽度按内容，不占满整行 */
+  display:inline-flex;           /* 瀹藉害鎸夊唴瀹癸紝涓嶅崰婊℃暣琛?*/
   width:fit-content;
   background:rgba(0,0,0,.05);
   border-radius:8px;
@@ -865,17 +818,17 @@ body.cs-time-divider .msg-time-divider { display:flex; }
   display:flex; align-items:center; justify-content:center;
   padding:0; -webkit-tap-highlight-color:transparent;
 }
-/* 每行最后一个去掉右边线，最后一列底部去掉下边线 */
+/* 姣忚鏈€鍚庝竴涓幓鎺夊彸杈圭嚎锛屾渶鍚庝竴鍒楀簳閮ㄥ幓鎺変笅杈圭嚎 */
 .emoji-item:nth-child(4n) { border-right:none; }
 .emoji-item:last-child { border-bottom:none; }
 .emoji-item:active { background:rgba(0,0,0,.05); }
 .emoji-item img { width:82%; height:82%; object-fit:contain; border-radius:0; display:block; }
 .emoji-empty { text-align:center; color:#c0c0c0; font-size:12px; padding:30px 0; }
 
-/* v3.11.x：批量发送面板——复用 .poke-card 底部半框布局 */
+/* v3.11.x锛氭壒閲忓彂閫侀潰鏉库€斺€斿鐢?.poke-card 搴曢儴鍗婃甯冨眬 */
 .batch-card { max-height:62%; }
 .batch-card .batch-count { font-size:12px; font-weight:600; color:var(--muted); margin-left:6px; }
-/* 工具区：文字输入行 + 表情包/图片 按钮行 */
+/* 宸ュ叿鍖猴細鏂囧瓧杈撳叆琛?+ 琛ㄦ儏鍖?鍥剧墖 鎸夐挳琛?*/
 .batch-tools { flex-shrink:0; }
 .batch-btns { display:flex; gap:6px; padding:0 2px 10px; }
 .batch-tool {
@@ -887,7 +840,7 @@ body.cs-time-divider .msg-time-divider { display:flex; }
 }
 .batch-tool:active { background:rgba(0,0,0,.05); }
 .batch-tool svg { width:18px; height:18px; flex-shrink:0; }
-/* 待发送队列列表 */
+/* 寰呭彂閫侀槦鍒楀垪琛?*/
 .batch-list { max-height:32vh; }
 .batch-empty { text-align:center; color:#c0c0c0; font-size:12px; padding:24px 0; }
 .batch-item {
@@ -917,7 +870,7 @@ body.cs-time-divider .msg-time-divider { display:flex; }
   -webkit-tap-highlight-color:transparent;
 }
 .batch-item-x:active { background:rgba(0,0,0,.16); }
-/* 底部操作条 */
+/* 搴曢儴鎿嶄綔鏉?*/
 .batch-foot { display:flex; align-items:center; gap:8px; padding-top:10px; flex-shrink:0; }
 .batch-clear {
   flex-shrink:0; padding:0 16px; border-radius:14px; height:44px;
@@ -927,12 +880,12 @@ body.cs-time-divider .msg-time-divider { display:flex; }
 }
 .batch-clear:active { background:rgba(0,0,0,.05); }
 
-/* 聊天图片消息 */
+/* 鑱婂ぉ鍥剧墖娑堟伅 */
 .msg-img {
   max-width:96px; max-height:96px; border-radius:10px; display:block;
 }
 
-/* 引用图片缩略图 */
+/* 寮曠敤鍥剧墖缂╃暐鍥?*/
 .msg-quote-img {
   display:inline-block; width:34px; height:34px; border-radius:6px;
   object-fit:cover; vertical-align:middle; margin-top:4px;
@@ -942,8 +895,8 @@ body.cs-time-divider .msg-time-divider { display:flex; }
 }
 .msg-quote-imgs .msg-quote-img { margin-top:0; }
 
-/* 引用块（带「引用 XX」标签，清晰可读） */
-/* v3.12.x：引用块可点——点击跳转到被引用的原消息（chat.js 委托处理） */
+/* 寮曠敤鍧楋紙甯︺€屽紩鐢?XX銆嶆爣绛撅紝娓呮櫚鍙锛?*/
+/* v3.12.x锛氬紩鐢ㄥ潡鍙偣鈥斺€旂偣鍑昏烦杞埌琚紩鐢ㄧ殑鍘熸秷鎭紙chat.js 濮旀墭澶勭悊锛?*/
 .msg-quote {
   font-size:12px; border-left:3px solid currentColor;
   padding:4px 8px; margin-bottom:5px; border-radius:0 6px 6px 0;
@@ -959,8 +912,8 @@ body.cs-time-divider .msg-time-divider { display:flex; }
   color:inherit; opacity:.8; word-break:break-word;
 }
 
-/* 情绪/心意/意图字卡：所有字卡包在 .msg-moods 容器内，
-   容器顶部一条虚线与正文隔离；字卡在容器内 flex 紧凑同行，放不下才自动换行 */
+/* 鎯呯华/蹇冩剰/鎰忓浘瀛楀崱锛氭墍鏈夊瓧鍗″寘鍦?.msg-moods 瀹瑰櫒鍐咃紝
+   瀹瑰櫒椤堕儴涓€鏉¤櫄绾夸笌姝ｆ枃闅旂锛涘瓧鍗″湪瀹瑰櫒鍐?flex 绱у噾鍚岃锛屾斁涓嶄笅鎵嶈嚜鍔ㄦ崲琛?*/
 .msg-moods {
   display:flex; flex-wrap:wrap; align-items:center;
   gap:4px 10px; margin-top:5px; padding-top:5px;
@@ -974,14 +927,14 @@ body.cs-time-divider .msg-time-divider { display:flex; }
 .msg-mood span { font-weight:600; }
 .msg-intent { opacity:.6; }
 
-/* 情绪/心意/意图字卡标签 */
+/* 鎯呯华/蹇冩剰/鎰忓浘瀛楀崱鏍囩 */
 .msg-mood .msg-mood-tag {
   display:inline-block; font-size:10px; font-weight:600;
   padding:1px 6px; border-radius:99px; margin-right:5px;
   background:rgba(0,0,0,.08); opacity:.8; vertical-align:1px;
 }
 
-/* 消息气泡操作菜单 */
+/* 娑堟伅姘旀场鎿嶄綔鑿滃崟 */
 .msg-actions {
   position:fixed; display:flex; gap:6px; z-index:80;
   background:rgba(255,255,255,.97);
@@ -990,7 +943,7 @@ body.cs-time-divider .msg-time-divider { display:flex; }
   padding:8px;
 }
 .msg-actions[hidden] { display:none; }
-/* 搜索结果跳转定位高亮 */
+/* 鎼滅储缁撴灉璺宠浆瀹氫綅楂樹寒 */
 .msg.highlight { animation:msg-flash 1.2s ease 2; }
 @keyframes msg-flash {
   0%, 100% { background:transparent; }
@@ -1006,7 +959,7 @@ body.cs-time-divider .msg-time-divider { display:flex; }
 .ma-btn[hidden] { display:none; }
 .ma-btn:active { background:rgba(0,0,0,.07); }
 
-/* 居中卡片消息（邀请/提问） */
+/* 灞呬腑鍗＄墖娑堟伅锛堥個璇?鎻愰棶锛?*/
 .msg-center { align-self:center; width:100%; display:flex; justify-content:center; padding:4px 0; }
 .msg-center-card {
   max-width:80%; text-align:center;
@@ -1017,7 +970,7 @@ body.cs-time-divider .msg-time-divider { display:flex; }
   box-shadow:0 2px 8px rgba(0,0,0,.04);
 }
 
-/* v3.6.x：互动卡片就地作答区——点击卡片直接在聊天页展开，不弹窗 */
+/* v3.6.x锛氫簰鍔ㄥ崱鐗囧氨鍦颁綔绛斿尯鈥斺€旂偣鍑诲崱鐗囩洿鎺ュ湪鑱婂ぉ椤靛睍寮€锛屼笉寮圭獥 */
 .msg-inplace {
   margin-top:12px; padding-top:10px; border-top:1px dashed rgba(0,0,0,.12);
   display:flex; flex-direction:column; gap:8px;
@@ -1047,7 +1000,7 @@ body.cs-time-divider .msg-time-divider { display:flex; }
   background:var(--ink); color:#fff; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit;
 }
 .msg-inplace .ip-send:active { opacity:.85; }
-/* v3.7.x：问问TA 单选题已作答的选项查看——列出设置的选项+各选项预设回应，TA 选的选项高亮 */
+/* v3.7.x锛氶棶闂甌A 鍗曢€夐宸蹭綔绛旂殑閫夐」鏌ョ湅鈥斺€斿垪鍑鸿缃殑閫夐」+鍚勯€夐」棰勮鍥炲簲锛孴A 閫夌殑閫夐」楂樹寒 */
 .msg-inplace .ip-opt-row {
   display:flex; align-items:center; justify-content:space-between; gap:10px;
   padding:9px 12px; border:1px solid rgba(0,0,0,.1); border-radius:10px;
@@ -1057,8 +1010,8 @@ body.cs-time-divider .msg-time-divider { display:flex; }
 .msg-inplace .ip-opt-row .ip-opt-t { min-width:0; }
 .msg-inplace .ip-opt-row .ip-opt-reply { flex-shrink:0; font-size:12px; opacity:.6; }
 
-/* ===== TA的询问 ===== */
-/* 聊天里的询问卡片 */
+/* ===== TA鐨勮闂?===== */
+/* 鑱婂ぉ閲岀殑璇㈤棶鍗＄墖 */
 .msg-ask { align-self:center; width:100%; display:flex; justify-content:center; padding:2px 0; }
 .msg-ask-card {
   max-width:78%; min-width:220px; text-align:center;
@@ -1072,8 +1025,8 @@ body.cs-time-divider .msg-time-divider { display:flex; }
 .msg-ask-tip { font-size:11px; color:var(--muted); margin-top:8px; }
 .msg-ask-a { font-size:12px; color:#3b7a4e; font-weight:600; margin-top:8px; }
 
-/* ===== TA的小问题 ===== */
-/* 聊天里的选择题卡片 */
+/* ===== TA鐨勫皬闂 ===== */
+/* 鑱婂ぉ閲岀殑閫夋嫨棰樺崱鐗?*/
 .msg-choose-card {
   max-width:78%; min-width:220px; text-align:center;
   background:#fff; border:1px solid rgba(0,0,0,.1);
@@ -1084,8 +1037,7 @@ body.cs-time-divider .msg-time-divider { display:flex; }
 .msg-choose-card.answered { cursor:pointer; }
 .msg-choose-r { font-size:12px; color:var(--ink); opacity:.75; margin-top:6px; line-height:1.5; }
 
-/* 互动卡片收藏按钮：卡片底部居中的小爱心（收藏整卡进桌面收藏页）
-   v3.6.77：默认隐藏，点击卡片才浮现（卡片加 .show-fav 显示，点击卡片外区域自动收起） */
+/* 浜掑姩鍗＄墖鏀惰棌鎸夐挳锛氬崱鐗囧簳閮ㄥ眳涓殑灏忕埍蹇冿紙鏀惰棌鏁村崱杩涙闈㈡敹钘忛〉锛?   v3.6.77锛氶粯璁ら殣钘忥紝鐐瑰嚮鍗＄墖鎵嶆诞鐜帮紙鍗＄墖鍔?.show-fav 鏄剧ず锛岀偣鍑诲崱鐗囧鍖哄煙鑷姩鏀惰捣锛?*/
 .msg-fav-heart {
   margin-top:10px; border:none; cursor:pointer; font-family:inherit;
   display:none; align-items:center; gap:4px;
@@ -1102,8 +1054,8 @@ body.cs-time-divider .msg-time-divider { display:flex; }
 .msg-fav-heart svg { width:12px; height:12px; }
 .msg-fav-heart:active { background:rgba(255,77,106,.12); color:#ff4d6a; }
 
-/* ===== 语音消息 ===== */
-/* 播放按钮 + 波形 + 文件名 */
+/* ===== 璇煶娑堟伅 ===== */
+/* 鎾斁鎸夐挳 + 娉㈠舰 + 鏂囦欢鍚?*/
 .msg-voice {
   display:flex; align-items:center; gap:8px; min-width:150px; max-width:220px;
 }
@@ -1135,7 +1087,7 @@ body.cs-time-divider .msg-time-divider { display:flex; }
   max-width:70px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
 }
 
-/* ===== 通话系统 ===== */
+/* ===== 閫氳瘽绯荤粺 ===== */
 .call-mask {
   position:fixed; inset:0; z-index:95;
   background:rgba(0,0,0,.5);
@@ -1149,7 +1101,7 @@ body.cs-time-divider .msg-time-divider { display:flex; }
   box-shadow:0 20px 50px rgba(0,0,0,.25);
   padding:16px 20px 22px;
 }
-/* v3.5.50 通话背景：有背景图时文字加白投影提高可读性 */
+/* v3.5.50 閫氳瘽鑳屾櫙锛氭湁鑳屾櫙鍥炬椂鏂囧瓧鍔犵櫧鎶曞奖鎻愰珮鍙鎬?*/
 .call-panel.has-bg .call-title,
 .call-panel.has-bg .call-name,
 .call-panel.has-bg .call-status,
@@ -1198,12 +1150,10 @@ body.cs-time-divider .msg-time-divider { display:flex; }
 .call-answer { background:#52c41a; }
 .call-btn:active { transform:scale(.94); }
 
-/* 通话小框（接通后最小化；白色、可拖动；位于输入栏上方）
-   v3.5.110：bottom 加 safe-area，全面屏全屏模式下与输入栏同步上移，不错位 */
+/* 閫氳瘽灏忔锛堟帴閫氬悗鏈€灏忓寲锛涚櫧鑹层€佸彲鎷栧姩锛涗綅浜庤緭鍏ユ爮涓婃柟锛?   v3.5.110锛歜ottom 鍔?safe-area锛屽叏闈㈠睆鍏ㄥ睆妯″紡涓嬩笌杈撳叆鏍忓悓姝ヤ笂绉伙紝涓嶉敊浣?*/
 .call-mini {
   position:fixed; left:50%; bottom:calc(96px + env(safe-area-inset-bottom, 0px)); transform:translateX(-50%);
-  /* v3.5.127：z 90 → 95——与 modal-mask 同层时会被弹窗盖住（通话中打开弹窗，
-     通话小框/挂断入口不可见） */
+  /* v3.5.127锛歾 90 鈫?95鈥斺€斾笌 modal-mask 鍚屽眰鏃朵細琚脊绐楃洊浣忥紙閫氳瘽涓墦寮€寮圭獥锛?     閫氳瘽灏忔/鎸傛柇鍏ュ彛涓嶅彲瑙侊級 */
   z-index:95;
   display:flex; align-items:center; gap:10px;
   background:#fff; color:var(--ink);
@@ -1214,12 +1164,8 @@ body.cs-time-divider .msg-time-divider { display:flex; }
 }
 .call-mini:active { cursor:grabbing; }
 .call-mini[hidden] { display:none; }
-/* ===== 宽屏（PC 浏览器预览，>900px）：通话小框收进 .phone 模拟框 =====
-   v3.10.x：更多功能面板/.poke-card 各功能半框/表情包面板已在基础规则里统一改
-   position:absolute（键盘停靠 + 宽屏锚定一次解决），此处只剩 .call-mini——
-   它基础规则仍是 fixed（拖动定位坐标按视口计算，真机不动），宽屏下 .phone 是
-   居中模拟框，fixed 会锚定【浏览器窗口】掉到手机框外，故仅窄屏外改 absolute。
-   html:not(.force-mobile) 排除「手机伪装桌面 UA」场景（不动真机行为）。 */
+/* ===== 瀹藉睆锛圥C 娴忚鍣ㄩ瑙堬紝>900px锛夛細閫氳瘽灏忔鏀惰繘 .phone 妯℃嫙妗?=====
+   v3.10.x锛氭洿澶氬姛鑳介潰鏉?.poke-card 鍚勫姛鑳藉崐妗?琛ㄦ儏鍖呴潰鏉垮凡鍦ㄥ熀纭€瑙勫垯閲岀粺涓€鏀?   position:absolute锛堥敭鐩樺仠闈?+ 瀹藉睆閿氬畾涓€娆¤В鍐筹級锛屾澶勫彧鍓?.call-mini鈥斺€?   瀹冨熀纭€瑙勫垯浠嶆槸 fixed锛堟嫋鍔ㄥ畾浣嶅潗鏍囨寜瑙嗗彛璁＄畻锛岀湡鏈轰笉鍔級锛屽灞忎笅 .phone 鏄?   灞呬腑妯℃嫙妗嗭紝fixed 浼氶敋瀹氥€愭祻瑙堝櫒绐楀彛銆戞帀鍒版墜鏈烘澶栵紝鏁呬粎绐勫睆澶栨敼 absolute銆?   html:not(.force-mobile) 鎺掗櫎銆屾墜鏈轰吉瑁呮闈?UA銆嶅満鏅紙涓嶅姩鐪熸満琛屼负锛夈€?*/
 @media (min-width: 901px) {
   html:not(.force-mobile) .call-mini {
     position:absolute;
@@ -1242,7 +1188,7 @@ body.cs-time-divider .msg-time-divider { display:flex; }
 .call-mini-hang svg { width:16px; height:16px; }
 .call-mini-hang:active { transform:scale(.92); }
 
-/* 字卡级局部撤回：胶囊提示 + 展开内容 */
+/* 瀛楀崱绾у眬閮ㄦ挙鍥烇細鑳跺泭鎻愮ず + 灞曞紑鍐呭 */
 .msg-poke-seg {
   display:inline-flex; align-items:center; gap:3px;
   font-size:11px; color:var(--muted); cursor:pointer; user-select:none;
@@ -1255,15 +1201,13 @@ body.cs-time-divider .msg-time-divider { display:flex; }
   background:rgba(0,0,0,.04); font-size:12px; color:var(--ink); line-height:1.8;
 }
 
-/* 系统消息（来电/通话）内联矢量图标 */
+/* 绯荤粺娑堟伅锛堟潵鐢?閫氳瘽锛夊唴鑱旂煝閲忓浘鏍?*/
 .msg-poke svg, .msg-center-card svg { width:15px; height:15px; vertical-align:-2px; margin-right:3px; color:inherit; }
 
-/* v3.5.126：移除 background-attachment:fixed 兜底——手机上 fixed 背景相对视口
-   定位，全屏/输入法/安全区变化时比例错位、且移动端降采样发糊。
-    聊天页本身不滚动（overflow:hidden），默认 scroll 模式下背景即固定，无需 fixed。
-    背景铺满逻辑由 JS applySettings 设置（cover + center）。 */
+/* v3.5.126锛氱Щ闄?background-attachment:fixed 鍏滃簳鈥斺€旀墜鏈轰笂 fixed 鑳屾櫙鐩稿瑙嗗彛
+   瀹氫綅锛屽叏灞?杈撳叆娉?瀹夊叏鍖哄彉鍖栨椂姣斾緥閿欎綅銆佷笖绉诲姩绔檷閲囨牱鍙戠硦銆?    鑱婂ぉ椤垫湰韬笉婊氬姩锛坥verflow:hidden锛夛紝榛樿 scroll 妯″紡涓嬭儗鏅嵆鍥哄畾锛屾棤闇€ fixed銆?    鑳屾櫙閾烘弧閫昏緫鐢?JS applySettings 璁剧疆锛坈over + center锛夈€?*/
 
-/* ===== 红包面板（底部半框，白灰简约） ===== */
+/* ===== 绾㈠寘闈㈡澘锛堝簳閮ㄥ崐妗嗭紝鐧界伆绠€绾︼級 ===== */
 .rp-side-row { display:flex; gap:8px; margin-bottom:14px; }
 .rp-side {
   flex:1; padding:9px 0; font-size:13px; font-weight:600;
@@ -1308,7 +1252,7 @@ body.cs-time-divider .msg-time-divider { display:flex; }
 }
 .rp-send:active { opacity:.85; }
 
-/* ===== 红包消息卡片（白底简约，封面图作顶部横幅） ===== */
+/* ===== 绾㈠寘娑堟伅鍗＄墖锛堢櫧搴曠畝绾︼紝灏侀潰鍥句綔椤堕儴妯箙锛?===== */
 .msg-rp { align-self:center; width:100%; display:flex; justify-content:center; padding:2px 0; }
 .msg-rp-card {
   max-width:78%; min-width:220px; text-align:center;
@@ -1339,7 +1283,7 @@ body.cs-time-divider .msg-time-divider { display:flex; }
 .msg-rp-card.opened { border-color:rgba(0,0,0,.18); }
 .msg-rp-card.expired { opacity:.6; }
 .msg-rp-card.expired .msg-rp-status { color:var(--muted); }
-/* 花朵卡片 */
+/* 鑺辨湹鍗＄墖 */
 .msg-flower { align-self:center; width:100%; display:flex; justify-content:center; padding:4px 0; }
 .msg-flower-card {
   width:min(260px,82vw); padding:0 0 14px; border-radius:20px;
@@ -1362,7 +1306,7 @@ body.cs-time-divider .msg-time-divider { display:flex; }
   cursor:pointer; -webkit-tap-highlight-color:transparent; user-select:none;
 }
 .rp-balance:active { opacity:.6; }
-/* 红包封面上传区 */
+/* 绾㈠寘灏侀潰涓婁紶鍖?*/
 .rp-cover-row { display:flex; align-items:center; gap:10px; margin-bottom:14px; }
 .rp-cover-preview {
   width:72px; height:48px; border-radius:8px; flex-shrink:0;
@@ -1381,4 +1325,5 @@ body.cs-time-divider .msg-time-divider { display:flex; }
 }
 .rp-cover-btn:active { background:rgba(0,0,0,.05); }
 .rp-cover-btn[hidden] { display:none; }
+
 

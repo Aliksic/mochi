@@ -149,21 +149,36 @@
   }
 
   // ---- 渲染 ----
+  function applyBoardLayout(d) {
+    if (!boardEl) return;
+    boardEl.style.gridTemplateColumns = 'repeat(' + d.cols + ', 1fr)';
+    boardEl.style.setProperty('--mgm-fs', d.cols <= 3 ? '32px' : d.cols === 4 ? '27px' : '23px');
+  }
+  function makeCardEl(face, idx, withClick) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'mgm-card';
+    b.dataset.idx = String(idx);
+    b.setAttribute('aria-label', '第 ' + (idx + 1) + ' 张牌');
+    b.innerHTML = '<span class="mgm-in"><span class="mgm-back"><i>✦</i></span><span class="mgm-face">' + face + '</span></span>';
+    if (withClick) b.addEventListener('click', () => onCardClick(idx));
+    return b;
+  }
   function buildBoard(g) {
     if (!boardEl) return;
-    boardEl.style.gridTemplateColumns = 'repeat(' + g.params.cols + ', 1fr)';
-    boardEl.style.setProperty('--mgm-fs', g.params.cols <= 3 ? '32px' : g.params.cols === 4 ? '27px' : '23px');
+    applyBoardLayout(g.params);
     boardEl.innerHTML = '';
-    g.cards.forEach((card, idx) => {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'mgm-card';
-      b.dataset.idx = String(idx);
-      b.setAttribute('aria-label', '第 ' + (idx + 1) + ' 张牌');
-      b.innerHTML = '<span class="mgm-in"><span class="mgm-back"><i>✦</i></span><span class="mgm-face">' + card.face + '</span></span>';
-      b.addEventListener('click', () => onCardClick(idx));
-      boardEl.appendChild(b);
-    });
+    g.cards.forEach((card, idx) => boardEl.appendChild(makeCardEl(card.face, idx, true)));
+  }
+  // 开始前的背面牌墙预览：撑起舞台高度，覆盖层浮在其上（未开始点击无效）
+  function buildPreview() {
+    if (!boardEl) return;
+    const d = curDiff();
+    const faces = shuffle(FACE_POOL).slice(0, d.pairs);
+    const cards = shuffle(faces.concat(faces));
+    applyBoardLayout(d);
+    boardEl.innerHTML = '';
+    cards.forEach((face, idx) => boardEl.appendChild(makeCardEl(face, idx, false)));
   }
   function syncCard(idx) {
     const g = game;
@@ -439,7 +454,7 @@
     }
     stopTimers();
     game = null;
-    if (boardEl) boardEl.innerHTML = '';
+    buildPreview();
     if (turnEl) turnEl.textContent = '';
     if (chemEl) chemEl.textContent = '💕 默契 —';
     if (coinEl) coinEl.textContent = '心意币 +0';
@@ -459,9 +474,11 @@
   if (overlayBtn2El) overlayBtn2El.addEventListener('click', (e) => { e.stopPropagation(); window.closeMemoryPanel(); });
   if (diffSel) {
     diffSel.addEventListener('change', () => {
-      if (game && game.phase !== 'ended') { stopTimers(); game = null; }
-      if (!overlayEl || overlayEl.hidden) { if (boardEl) boardEl.innerHTML = ''; showStartOverlay(); }
-      else { showStartOverlay(); }
+      // 换难度即放弃当前对局，回到开始覆盖层 + 新牌墙预览
+      stopTimers();
+      game = null;
+      showStartOverlay();
+      buildPreview();
     });
   }
   if (soundBtn) {

@@ -1,6 +1,77 @@
+
+### 2026-08-26 20:5x（🐛 修复·记忆翻牌打开后 UI 塌缩、开始按钮不可见不可点——用户反馈「打开ui完全不正常，无法点击玩」）
+- [本会话·完成]（**已改 src/js/memory-game.js（①新增 buildPreview()：打开面板/换难度时先铺一面背面牌墙预览——撑起舞台高度，开始覆盖层浮在其上，未开始点击无效；openMemoryPanel 与 diffSel change 都改走它，换难度即放弃当前对局回覆盖层）+ src/css/chat-pages.css（.mgm-stage 加 min-height:200px 兜底 + 矮屏(≤700px)收紧 gap/牌比例 + .mgm-turn:empty 隐藏空回合胶囊 + 面板头 nowrap/难度选择限宽防折行）**；已构建（20:51, sw: mochi-mta3epi0）+ verify-memory-flip 25/25 + 布局 verify 10/10 + verify-connect-four 30/30 + 新增 tools/diag-memory-ui.mjs 截图诊断（390×844/360×644 双视口）全绿；未提交**）。
+  - **根因**：棋盘要点了「开始」才 build，打开面板时 .mgm-stage 内全是绝对定位/空内容 → 高度塌到 8px，.pong-overlay(overflow:hidden, inset:0) 跟着塌 → 标题/说明/【开始】按钮全部被裁剪不可见不可点（headless 里 .click() 直调 DOM 所以此前 verify 没拦住）。四子棋没这问题是因为它 open 时就 fitBoard 铺空棋盘骨架。
+  - **验证方式升级**：verify 脚本此前只断言 DOM/样式存在，现 diag-memory-ui.mjs 用 Page.captureScreenshot + elementFromPoint 命中测试补视觉/可点性盲区（⚠️ 测试坑：headless 必现的报修确认卡 #splash-confirm 会盖住全屏拦截命中，必须先点 #splash-confirm-ok——WORKLOG 既有记录，本次又踩一遍）。修复后：打开态覆盖层 309×412/279×331、开始按钮命中 same:true、开局 16 张牌全部命中可点。
+  - 真机确认点：①打开记忆翻牌应看到完整「标题+说明+开始按钮」盖在牌墙预览上；②点开始后正常轮流翻牌；③换难度立即重开新牌墙；④小屏（≤640 高）4×4 一屏放下或半框内滚动，不溢出。
+
+### 2026-08-26 21:0x（🐛✅ 用户反馈「扫雷打开 UI 完全不正常无法点击」——根因：开局前舞台零高塌缩，开始覆盖层被裁剪；已修复+已构建）
+- [本会话·修复]（**已改 src/js/coop-mine.js（脚本加载即预建当前难度的空棋盘 DOM，c4 同款——原来棋盘要点「开始探索」才建，首开面板时 .ms-stage 无内容高度塌缩到 ~0，绝对定位的开始覆盖层（难度胶囊+按钮）被 .pong-overlay 的 overflow:hidden 裁掉，用户既看不到也点不到开始按钮）+ src/css/chat-pages.css（.ms-stage 加 min-height:170px 兜底）+ 已重新 node build.mjs 收口（index.html 2,995,981 字节，sw: mochi-mta3hbn0）**）。
+  - **为什么此前没测出来**：verify-coop-mine 的 B 组全用 JS 程序化点击 + 只读 `.hidden` 属性/状态对象，从不断言几何与真实命中——程序化 click 不经过视觉层，覆盖层裁剪完全无感。本轮补了 **B1b 几何哨兵**（首开后棋盘格数/格宽、舞台高 ≥170、面板高 ≥320、overlay computed display=flex、**elementFromPoint 命中开始按钮**），以后同类塌缩会在专项里直接红。
+  - 排查记录：①先排掉 `[hidden]` 被 display 覆盖假设（.pong-overlay[hidden]/.poke-card[hidden] 守卫都在）；②产物诊断（临时脚本已删）实测修复前面板 h=179px/棋盘区 11×11px/0 格，修复后 h=488px/棋盘 320×320/36 格 @49px、按钮可命中；③顺带发现 verify 脚本钱包探针读错键——心意币 v3.15.x 起是全局一本账 `xy-home-v2:gift-wallet`（gift-shop wstore()），不是 activePrefix() 桌面键，游戏集成本身没问题。
+  - 验证：verify-coop-mine **42/42 连跑两次全绿**（含新 B1b/B0 环境预检）；布局 verify 10/10；产物级真实 UI 路径复测通过（点扫雷→面板完整→开始探索→挖格/连锁/🪙🎁宝物/TA回合正常）。⚠️ 测试坑再+1：headless 里 #splash-confirm 报修确认卡会挡 elementFromPoint（WORKLOG 既有条目重演），B1b 前需先点 #splash-confirm-ok。
+  - 真机确认点：更多功能→小游戏→扫雷，打开即是「完整高度半框 + 未翻开棋盘打底的深色开始层」，四个难度胶囊和【开始探索】按钮完整可见可点；选难度→开始→点击/长按插旗正常。
+- [上轮遗留说明] 本会话早些时候完成合作扫雷新功能本体（coop-mine.js/chat-pages.css/template/build.mjs/mobile-adapt 四处登记 + tools/verify-coop-mine.mjs），玩法与登记明细见下条。
+
+### 2026-08-26 19:3x（✅ 用户需求·更多功能【小游戏】新增【合作扫雷】——非对抗式共探雷区）
+- [本会话·完成]（**已改 src：新增 src/js/coop-mine.js（AI-A 业务域，自绑定入口 chat.js 零改动）+ src/css/chat-pages.css 末尾 .ms-* 样式段 + 跨域登记三处请知悉：src/template.html（more-grid 加 #more-ms 按钮 data-mcat=game + c4 面板后插 #chat-ms-panel 半框锚点）、build.mjs（jsFiles 注册 'coop-mine.js' 紧跟 connect-four.js）、src/js/mobile-adapt.js（FLOAT_PANEL_SELECTORS/FLOAT_SELECTORS 各加 '#chat-ms-panel'）+ 新专项 tools/verify-coop-mine.mjs（现 42/42）**）。
+  - **玩法（对齐用户设计文档，非传统「谁踩雷谁输」）**：你与 TA 轮流探索同一张地图，共用 ❤️❤️❤️ 三条命——任何一方踩雷只扣一颗，扣完才失败（温和结算「还差一点」不惩罚）；数字=周围雷数，0 连锁自动展开；地图懒生成（第一格挖下时布雷，首挖及周围必安全，开局必有一片连锁爽点）；四档难度 🌱轻松6×6无雷纯挖宝 / 🍬休闲5×5·3雷 / ⚙️普通6×6·6雷 / 🔥挑战8×8·12雷，结束层与开局层都可换难度。
+  - **TA 行为（无真 AI）**：每回合抽状态 smart70%（约束推理）/memory20%（已探索边缘挑记得的安全区）/wild10%随缘乱选；推理把「旗」当未知数而非事实——某数字周围剩余未知数=所需雷数 → 全是雷（55% 概率先插旗🚩提醒）；已凑满 → 其余未知格判安全直接挖；没把握又感觉危险时 30% 猜一面旗（可能错）。玩家之后挖开验证：「TA判断错了」/「TA 的旗没错」吐槽；玩家错旗被证明安全时 TA 会「把你的旗轻轻挪开」。底线防死局：只剩带旗格时可挖风险最低者收尾。
+  - **操作**：点击=挖开、长按 430ms/右键=插旗（带 contextmenu 去重守卫）、头部 ⛏️/🚩 一键切插旗模式；带旗格不能直接挖（抖动提示）。
+  - **联动**：🪙金币格 +¥1 即时入账；完成 +¥5（轻松模式 +¥2）、有雷局全程未踩雷额外 +¥3；日封顶 ¥10（计数键 ml2_coin_ms_日期），全部走 giftWalletChange 统一入口进全局心意币账本。🎁神秘礼物/🌸花朵进本游戏小收藏（头部🎒查看，按桌面存 ms-keeps 上限60）；**TA 挖到礼物会发聊天字卡**「挖到了一个小礼物，「这个给你。」」（送礼话术固定内置池，不接互动分组——游戏胜负回应池是泛用文案会把送礼语义顶掉，踩过一次）。结束时聊天写系统消息 + TA 回应（win 走 游戏平局·回应 同记忆翻牌语义）。
+  - 验证：verify-coop-mine 42/42×2（静态7 + 运行时35：入口/几何哨兵/开局流程/数字校验/连锁/共用生命失败流/战绩持久化/TA 推理确定性构造（含 boom 计入凑满分支）/行为权重±6%/长按插旗/兄弟互斥/零 JS 异常）+ 布局 verify 10/10 + 回归 verify-connect-four 30/30。⚠️ verify-more-cats A2/A3/A6/A6b 为旧口径断言过期（23项→现29、互动6→8、小游戏4→8），fish/c4/giftbox/drift/memory 各会话增项累积所致、非本次引入，留给其归属会话/构建者刷新。
+  - 真机确认点见上条 21:0x 条目（两轮合并验证）。
+
+### 2026-08-26 20:4x（✅ 完成·兼容加固第 3 批：错误自动采集 + playwright 入依赖 + GitHub Actions CI——用户需求「继续稳妥优化不要出错」）
+- [本会话·完成]（**已改 src/js/device.js（诊断 IIFE 内新增错误自动采集：window.onerror / unhandledrejection 最近 5 条存 localStorage 键 __diag-errs，诊断文本追加「最近错误」节，含 UA/设备判定/页面/时间）+ package.json 加 devDependencies: playwright ^1.62 + package-lock.json 同步（此前是 npm i --no-save，未入库，已转正式依赖）+ 新增 .github/workflows/verify.yml（push/PR 自动 npm ci + 装 webkit + node build.mjs + 三套验证）**；已构建；未提交**）。
+  - 行为变化：诊断信息现在自带最近错误栈——用户报障复制诊断信息，开发者能直接看到错误消息+当时设备判定+所在页面，不用再问「点了哪没反应」。错误只存本地、不发送任何外部服务。CI 跑起来后每次 push 自动验证三套（10+22+37），失败标红。
+  - 验证：build 哨兵 11/11 + verify 10/10 + verify:webkit 22/22 + verify:device 37/37 全绿；专项验证错误采集真实生效（注入 throw new Error，诊断文本出现该错误+判定 M1 T0 I1 A0 V0+页面）。
+  - ⚠️ CI 说明：workflow 只验证产物正确性，不部署（部署仍按 AGENTS.md 由构建者手动 build+push）。npm ci 用 package-lock（已入库），Actions 里 npx playwright install --with-deps webkit 装引擎。本机首次跑 verify:webkit/verify:device 需 npx playwright install webkit（已装）。
+  - 真机确认点：设置页「复制诊断信息」文本末尾应有「最近错误」节；报障时直接粘贴即可。
+
+### 2026-08-26 20:3x（✅ 完成·已知设备伪装场景回归矩阵——用户需求「减少各设备各有各的问题」第 2 批）
+- [本会话·完成]（**新增 tools/verify-device-regression.mjs（Playwright WebKit 注入/覆写 UA、screen.width、visualViewport.width、window.orientation、maxTouchPoints 指纹，还原 git 历史真实报障设备场景：真安卓/真 iPhone/真 iPad 基线、OPPO/Via/夸克 UA 伪装 iPhone、安卓窄屏机伪装 iPad、vivo Y35+Edge 桌面站点模式靠 vv.width 识破、vv/screen 全伪装退 UA+coarse+orientation 组合、真桌面 PC 对照不误判）+ package.json 加 verify:device**；纯新增测试代码，未动 src 业务、未构建；未提交**）。
+  - 验证：verify:device **37/37**（9 个场景×4-5 项断言全过）+ verify (Chrome) 10/10 + verify:webkit 22/22，三套全绿互不影响。
+  - 用法：以后改 device.js / mobile-adapt.js 判定逻辑，跑 `npm run verify:device` 即可知道有没有搞坏历史设备场景；**新增设备报障解决后第一件事：往 CASES 数组加一条还原用例**（已写注释说明）。
+  - ⚠️ 无头模拟边界已写进文件头：meta viewport 对 layout 的真实影响无头无法还原，断言目标是「伪装被识破并走手机布局」而非绑定具体分支（vivo 案例断言 force-mobile 兜底类）。真机仍按需人工确认。
+
+### 2026-08-26 20:3x（✅ 完成·群聊四项修复——用户反馈：①联系人消息没有心意字卡 ②无法设置群昵称是否显示在头像上方 ③消息不自动往下滚 ④点气泡打不开引用框）
+- [本会话·完成]（**已改 src/js/group-chat.js（AI-A 域，四处）+ src/template.html / src/js/mobile-adapt.js（跨域最小登记各一处，请知悉）+ src/css/group-chat.css（一行守卫）；新增 tools/verify-group-chat-fixes.mjs **19/19 连跑两次全绿** + tools/diag-gc-reply.mjs 留档；**已构建（20:29, sw: mochi-mta2mdr1，整体收口工作区现状含并行会话已保存改动——含你方 device.js/mobile-adapt 设备判定批）** + 布局 verify 10/10 + verify-group-decision 13/13 + verify-tag-chip-dedupe 10/10 + verify-unified-heart-wallet 21/21 回归全绿；未提交**）。
+  - **①心意字卡接入群聊**：renderMsg 末尾补 `rec.mood` 渲染分支（.msg-moods/.msg-mood/.msg-intent 与聊天页同款样式；label===气泡正文只留标签胶囊，同聊天页 dupBody 去重规则）；memberReply 主回复与撤回补发两分支落库前调 `window.triggerEmotionChain()` 挂情绪/心意/交流意图链（文本/表情/图片消息可挂，内部自带总开关/单卡开关/概率冷却），顺带 addChatCount 对齐聊天页计数口径。
+  - **②成员昵称显示开关**：gc-beauty 新键 `show-name`（默认 off 保持旧行为）；群聊设置面板新增「成员昵称显示」行（pills：头像上方显示/不显示）；开启后 renderMsg 在 .msg-side 首位插 `.gc-from-name`（列向布局天然在头像上方；cs-time-bubble 行向布局有换行守卫 CSS）；切换即 renderAll 即时生效。dark.css 里沉睡的 .gc-from-name 样式首次接线。
+  - **③自动跟底**：新 followGcBottom(force)/nearGcBottom()（离底 >150px 视为回看历史不打扰）；addMsg/sendGcSticker 发送强制回底，memberReply 拍一拍/主回复/撤回补发三处贴底跟随——此前只有进页 renderAll 滚一次，停留页内收发全靠手动下滑（用户报的就是这个）。发送本身强制回底属常规设计。
+  - **④气泡操作菜单+引用**：template 新增 #gc-msg-actions（复用聊天页 .msg-actions/.ma-btn 样式，仅「引用」一键）+ #gc-quote-bar（chat-draft-quote 同款预览条）；点气泡弹菜单（visualViewport 定位同聊天页；撤回提示/拍一拍居中条/引用块点击不弹）→ 引用 → 预览条（✕ 可取消）→ 发送 rec.quote 带上（gcQuoteHtml 扩展支持 {t,imgs} 对象格式，与聊天页 quoteValue 同构；纯图引用只渲染缩略图）。mobile-adapt FLOAT_SELECTORS 补 '#gc-msg-actions'（20:0x 你方编辑该文件时已见并保留，谢谢）。
+  - ⚠️ **测试坑（给后来者）**：群聊回复设置经 saveReplyCfg 落盘是 **reply-gc-gc-* 双前缀**（'reply-gc-'+k 而 k 自带 gc-）——测试直写 reply-gc-* 读不到、静默回退默认值（rs-max=40s 导致回复永远等不到，diag 初版踩坑）；单成员驯化 `window.getContacts` 收敛回复时序；回复链路上限 ~4.8s（1-2s 打字+1.2-2.8s 条间），等待按 6s 预算；「回看不打扰」要在发送后、回复落地前滚离底部再断言。
+  - 真机确认点：①群里联系人的消息下方偶现 情绪/心意/交流意图 小卡（概率与普通聊天一致，字卡库情绪总开关可控）；②群聊设置→成员昵称显示→「头像上方显示」，成员消息头像正上方出现灰色小昵称，改回「不显示」立即消失；③停在群聊页收发消息自动滚到最新一条（往回翻历史时不会被强行拽底）；④点任意气泡弹出「引用」，选择后输入栏上方出现原文预览条，发出的消息气泡内带引用块。
+
+### 2026-08-26 20:2x（✅ 完成·移动端兼容加固第 1 批：统一设备判定 + 复制诊断信息 + WebKit 验证——用户需求「减少各设备各有各的问题」）
+- [本会话·完成]（**已改/新增 src/js/device.js（新增·统一设备判定 window.mochiDevice：isMobile/isTablet/isIOS/isAndroid/isVia，判定逻辑从 mobile-adapt.js 原样迁入，副作用 viewport 改写/force-mobile/.tablet 类一并在此）+ 改造 mobile-adapt.js / fullscreen.js / pwa.js / bg-keep.js 四处散落判定全部改读 mochiDevice（此前各算一遍、规则略出入会互相打架）+ src/template.html 设置页新增「复制诊断信息」行 + build.mjs 的 jsFiles 首位加 device.js + package.json 加 verify:webkit + 新增 tools/verify-webkit.mjs（Playwright WebKit 引擎 390×844 跑 Chrome verify 同款布局检查 + mochiDevice 断言 + 诊断入口验证，iPhone/安卓双 UA）**；已构建；**未提交**）。
+  - **行为变化**：设备判定不再各模块各猜——mobile-adapt/fullscreen/pwa/bg-keep 统一读 mochiDevice，改判定只改 device.js 一处；设置页新增「复制诊断信息」行（一键复制 UA/视口/能力/判定/数据量，用户报障直接发文本，免来回猜）。
+  - 验证：verify (Chrome) 10/10 + verify:webkit 22/22（WebKit-iPhone + WebKit-Android 双 UA 全过）+ 构建哨兵 11/11。WebKit 是 Playwright 自带的独立引擎二进制（首次需 `npx playwright install webkit`，已装到用户目录），不依赖本机 Safari。
+  - ⚠️ 协作注意：mobile-adapt.js 我在 20:0x 编辑时发现你方刚加了 #gc-msg-actions 到 FLOAT_SELECTORS（已保留未动）；本轮我改的是该文件顶部设备判定段，与你方群聊改动无交集。**playwright 是 `npm i --no-save` 装的**（node_modules 忽略不提交），verify:webkit 需本机有 playwright，首次跑前 `npm i --no-save playwright && npx playwright install webkit`。
+  - 真机确认点：设置页底部能看到「复制诊断信息」行、点击弹出含 UA 的诊断文本；各浏览器打开行为应与之前一致（判定值不变）。
 # WORKLOG — 双方交接日志（AI-A / AI-B 共用）
 
 两个 AI 不能直接对话，开工/完工时在这里各留一行，让对方打开仓库就知道当前状态。
+
+### 2026-08-26 19:4x（✅ 完成·「功能介绍与二传二改说明」页功能清单全量补新——用户需求）
+- [本会话·完成]（**只改 src/template.html 的 page-about 功能清单卡（原 1264–1509 行区域），已保存；未构建未提交**）。21 组 → **31 组 / 约 240 条**：新增「心意币 · 红包 · 礼物」「小游戏」「花园」「漂流瓶」「生活工具（备忘录/喝水/吃什么/存钱罐/番茄钟/记账）」「经期记录」「此间 · 同频 · 伸手」「梦角档案 / 我的档案」「房间」「群聊」10 个分组；并更新既有组——聊天传讯（更多面板四分类全入口+贴贴邀请+查岗）、字卡系统（词库规模/游戏回应池/新功能专属字卡页签）、互动卡片、手机桌面（三页组件图标按现状重写+心意市集/心意柜注入+美化方案导入导出）、寻踪（位置感知）、音乐（TA 一起听/接动作/收藏）、通话（迷你小框）、记录统计（红包/申请流水等）、个性化（离线消息提醒 psync）、回复设置（六面板 tab 含群聊/查岗）。所有数值（¥520 默认、奖励档位、概率上限）均按源码现状核对；每分组 lg-count 与 lic-li 条数已脚本校验一致（0 不匹配）。
+- ⚠️ 与并行会话同文件不同区：本轮编辑期间检测到 template.html 被并行改动（row-diagnostics 设置行 + 群聊引用条 #gc-quote-bar/#gc-msg-actions，约 1100/3750 行附近），与 page-about 区不重叠、无冲突；构建收口时两边改动会一起进产物。
+- 真机确认点：设置 → 功能介绍与二传二改说明 → 各折叠组展开正常、计数徽标与条目数一致、长文案在 390 宽度不溢出。
+
+### 2026-08-26 20:1x（✅ 完成·心意币升级【全局一本账】——跨桌面共用 + 各桌面旧副本自动合并——用户反馈「不同桌面的数值独立分开」）
+- [本会话·完成]（**已改 src/js/gift-shop.js（wstore() 根命名空间读写 + migrateGlobalWallet 合并迁移 + 导出 giftWalletGet/Set）+ chat.js（rpWalletGet/Set 委托全局实现，ns 逻辑仅兜底）+ fishing.js / drift-bottle.js（钱包读写切根键）+ contacts.js（EXCLUDE 补 gift-wallet / wallet-global-migrated 两根键）；memory-game.js 正被并行会话编辑且休眠中，本轮未碰（启用时需同样切根键）；tools/verify-unified-heart-wallet.mjs 扩至 **21/21**（新增 S3 全局根键断言）+ verify-coin-linkage 14/14 + market-v3 B5 切根键后 0 FAIL + group-decision 回归 13/13（EXCLUDE 未破坏 migrateLegacy）+ 布局 10/10；已构建；未提交**）。
+  - **行为变化**：心意币不再按联系人桌面隔离——所有桌面读写同一根键 `xy-home-v2:gift-wallet`，「我的/TA 的」余额全应用唯一。此前用户反馈「不同桌面的数值独立分开」即此问题：旧版每桌面各自一份账，切换联系人看到不同余额、默认值也只在部分桌面出现。
+  - **合并迁移（幂等标记 wallet-global-migrated）**：首次读取时若根键缺失，按优先级采纳候选——default 桌面 gift-wallet > 其他桌面 gift-wallet > default 桌面旧 rp-wallet > 其他 rp-wallet > 新默认 ¥520/¥520；采纳后删除所有 `xy-home-v2:<cid>:gift-wallet` 命名空间副本（LS+IDB）。占位巨款指纹（两侧恰为 99999999）在 normalize 阶段换 ¥520。⚠️ 多桌面余额不同的老用户：合并后只保留一个值（default 优先），其余桌面的差异会被丢弃——属预期收敛。
+  - **默认金额重申**：全新状态（无任何副本/标记）首读即 ¥520/¥520 并落盘全局根键，D1-D4 已断言。
+  - 验证：S3 断言发红包只写根键且 default 命名空间副本不再生成；M 组验证「仅剩 ns rp-wallet」的极老用户经迁移继承 ¥123.45/¥678.90。真机确认点：任意两个联系人桌面打开红包面板/市集显示完全相同余额；一边申请/消费另一边立即可见。
+  - ⚠️ contacts.js EXCLUDE 两键必须与本轮同发布，否则刷新即被 migrateLegacy 搬进 default 并删根键（decision-*/group-chat-msgs 同款事故先例）。
+
+### 2026-08-26 20:0x（✅ 完成·桌面「吃什么」图标刀叉贴死修复——用户反馈）
+- [本会话·完成]（**已改 src/js/p2-features.js 仅 1 行（eatApp SVG 路径：叉整体 x−1.5 → 3~11，刀整体 x+1.5 → 16~21）**；独立预览截图+量化验证通过（路径间隙 2.0u→5.0u，可见间隙 0.3u→3.3u，bbox x 3~21 左右留白各 3 完全对称，node --check 通过）；**未构建未提交**——⚠️ 工作区 group-chat.js 20:02 仍有并行会话进行中改动，请构建者待其收尾后统一 `node build.mjs` 收口）。
+  - 根因：上一轮 eat 图标重设计（59c5529）选了 D2 四齿叉版，但叉右缘 12.5 与刀左缘 14.5 只隔 2 单位，扣掉 stroke-width 1.7（两侧各 0.85）后可见间隙仅 0.3 单位，28px 渲染下 ≈0.35px 视觉贴死。
+  - 修法仅平移不变形：fork 三条 path 全部绝对 x −1.5（头 M3、齿 5.7/8.3、柄 x7），knife 两条 path 起点绝对 x +1.5（M21，相对 arc/cubic 不动）；图标仅此一处定义（personalize 的图标预览走 DOM 克隆自动跟随）。
+  - 真机确认点：桌面第三页「吃什么」图标刀叉之间有清晰间隙、整体不偏不挤。
 
 ### 2026-08-26 19:1x（✅ 完成·TA 自动「向 Mochi 申请」心意币 + 聊天记录页新增红包/申请流水——用户需求）
 - [本会话·完成]（**已改 src/js/chat.js（trySystemAskMochi + askDailyCount/Incr + mochi-fg-resume 补触发监听 + renderMsg 新增 special:'askcoin' 分支 + addIn 白名单补 askFen/askTs）+ src/js/p2-features.js（coinRecordSection/fmtMDHM/escH 助手，聊天记录 tab 追加两个流水区块）；tools/verify-unified-heart-wallet.mjs 扩至 **20/20**；已构建 + 布局 verify 10/10 + verify-coin-linkage 14/14 + verify-gift-market-v3 回归 0 FAIL 全绿；未提交**）。
@@ -156,17 +227,22 @@
   - ⚠️ tools/verify-wallet-edit.mjs 自此 FAIL（其静态断言要求存在「修改钱包金额（元）」直改弹窗）——属预期作废，回归以 verify-unified-heart-wallet.mjs 为准；verify-gift-wallet-split / verify-rp-wallet-edit 同前条一样已被推翻。
   - ⚠️ **构建扫入说明**：17:09 构建整体收口工作区现状，含并行会话已保存改动（漂流瓶 drift-bottle.js/.css + template/build/tabs/default-cards 接线、四子棋 connect-four.js、心意柜 more-giftbox 等）；构建前全仓 src/js node --check 通过。此后各会话若有改动请重新 build 收口。
 
-### 2026-08-26 17:0x（✅ 新功能·聊天更多功能【互动】新增「漂流瓶」——两个世界之间的海；含追加：TA瓶优先抽聊天历史字卡）
-- [本会话·完成]（**已改 src：新增 src/js/drift-bottle.js + src/css/drift-bottle.css（均 AI-A 业务域）；跨域登记/接线小改请构建者知悉：src/template.html（more-drift 按钮归 data-mcat="chat" 互动类 + page-drift 页面锚点）、build.mjs（cssFiles/jsFiles 各注册一项）、src/js/tabs.js（FULL_PAGES 加 page-drift 一词）；default-cards-data.js 尾部独立语句 DEFAULT_CARD_DATA.drift 三组 + default-cards.js 功能 tab 数组加 ['drift','漂流瓶'] 一项（同文件并行改动互不重叠，只动了自己那几行）；新专项 tools/verify-drift-bottle.mjs **34/34 全绿**；回归 verify-group-decision 13/13 全绿。**未构建未提交**——按协议留给构建者统一收口（memo-arc.js 等并行会话文件静默后执行 node build.mjs）。**
-  - **玩法（对齐用户设计文档，无 AI、纯代码随机）**：捡一个 → 概率出瓶（普通60/空瓶·小物25/特殊10/TA5）→ 开瓶纸条卡（TA 瓶带「—— TA名」签名、特殊瓶 ✨+🪙+5、小物瓶 🌸🐚🪶 等、漂回瓶 🕰「这是你以前写下的话」）；【我也放一个】openModal textarea → 排期 36~96h 后 70% 概率「漂回来」进下一瓶队列 + 45% 概率 6~40h 后生成「TA的回应」瓶并给聊天发一次性轻提示（chatAddIn tag:'漂流瓶'，stub 验证恰好一次）。
-  - **【用户追加】TA 瓶内容优先抽当前桌面聊天记录里 TA 说过的字卡**（chat.js 结构认知：一条回复可能是纯文本 rec / 整条表情包·图片·语音 rec / **parts 混合气泡 rec（多张 {k:'text'} 字卡+贴图打包一条）→ 按 k:'text' 逐段拆开，每张字卡都可能单独漂进瓶子，绝不合并截断**）；过滤=非 side:'in'/撤回/type≠text/voice/img/gift/special/mailNotice/提问·选择·好奇·吐槽·红包组件/含|||/http·data:开头/>100字；只扫最近约400条、候选上限80、>600KB 大记录直接回退库；histSeen 记近8条防连重复；无合适历史→回退字卡库【漂流瓶·TA的话】。B26/B27/B28 三用例覆盖：历史优先命中、parts-only 场景三连捡必出其中一张碎片、空记录回退库句。⚠️ 测试坑复现：种子只写 LS 会被 idbRestore 用 IDB 旧副本复活（chat.js 镜像），必须 LS+IDB 双写。
-  - **防刷机制**：TA 瓶每日上限 3；今天聊天互动多→TA 概率 5→9%；距上次来访 ≥48h 且当日还没见过 TA 瓶→首捡 TA 权重提到 26（"很久没来，TA刚漂来一只"）；捡瓶 20s 冷却倒计时；心意币=每日首捡+2/特殊+5/每日上限10，直接写 gift-wallet 同一本账（与心意集市/红包共用，只加我的余额）。
+### 2026-08-26 17:0x（✅ 新功能·聊天更多功能【互动】新增「漂流瓶」——两个世界之间的海；含追加：TA瓶优先抽聊天历史字卡 + 概率体系补强）
+- [本会话·完成]（**已改 src：新增 src/js/drift-bottle.js + src/css/drift-bottle.css（均 AI-A 业务域）；跨域登记/接线小改请构建者知悉：src/template.html（more-drift 按钮归 data-mcat="chat" 互动类 + page-drift 页面锚点）、build.mjs（cssFiles/jsFiles 各注册一项）、src/js/tabs.js（FULL_PAGES 加 page-drift 一词）；default-cards-data.js 尾部独立语句 DEFAULT_CARD_DATA.drift 三组 + default-cards.js 功能 tab 数组加 ['drift','漂流瓶'] 一项（同文件并行改动互不重叠，只动了自己那几行）；新专项 tools/verify-drift-bottle.mjs **38/38 全绿**（含钉死 Math.random 的概率表确定性断言）；回归 verify-group-decision 13/13 全绿。**未构建未提交**——按协议留给构建者统一收口（memo-arc.js 等并行会话文件静默后执行 node build.mjs）。**
+  - **玩法（对齐用户设计文档，无 AI、纯代码随机）**：捡一个 → 概率出瓶 → 开瓶纸条卡（TA 瓶带「—— TA名」签名、特殊瓶 ✨+🪙+5、小物瓶 🌸🐚🪶 等、漂回瓶 🕰「这是你以前写下的话」）；【我也放一个】openModal textarea → 排期 36~96h 后 70% 概率「漂回来」进下一瓶队列 + 45% 概率 6~40h 后生成「TA的回应」瓶并给聊天发一次性轻提示（chatAddIn tag:'漂流瓶'，stub 验证恰好一次）。
+  - **概率体系（用户问「怎么设计合理概率」后补强，全部确定性断言覆盖）**：
+    - 出瓶类型：普通60/空瓶小物25/特殊10/**TA基础5**；
+    - **梯度互动**：今天我发过 1~5 条消息→ta=7，≥6 条→ta=9（替代原二值判断）；
+    - **软保底（防指数长尾）**：连续 12 捡未出 TA 瓶后每多捡一次 ta+8%、封顶+40%→最坏空窗钳在约17~18捡，早期手感仍是5%；出TA即清零（d.dry 持久化）；
+    - 久违回归：≥48h 未访且当日没见过TA瓶→首捡 ta=26（瞬间感，不保证）；TA瓶每日上限3（优先级最高，保底不可突破同日上限）；20s 冷却防连点把概率磨成刷子；
+    - **回应堆叠上限**：同时最多 2 个未回应瓶子在海上，超出的不再排期（防「惊喜」变批量发货）；
+    - 心意币：首捡+2/特殊+5/每日上限10 写 gift-wallet 同一本账。
+  - **【用户追加】TA 瓶内容优先抽当前桌面聊天记录里 TA 说过的字卡**（chat.js 结构认知：一条回复可能是纯文本 rec / 整条表情包·图片·语音 rec / **parts 混合气泡 rec（多张 {k:'text'} 字卡+贴图打包一条）→ 按 k:'text' 逐段拆开，每张字卡都可能单独漂进瓶子，绝不合并截断**）；过滤=非 side:'in'/撤回/type≠text/voice/img/gift/special/mailNotice/提问·选择·好奇·吐槽·红包组件/含|||/http·data:开头/>100字；只扫最近约400条、候选上限80、>600KB 大记录直接回退库；histSeen 记近8条防连重复；无合适历史→回退字卡库【漂流瓶·TA的话】。B26/B27/B28 三用例覆盖。⚠️ 测试坑复现×2：①种子只写 LS 会被 idbRestore 用 IDB 旧副本复活，必须双写或重载后活会话内原子写入；②Page.navigate 销毁 JS 上下文，Math.random 钉桩必须在导航后打。
   - **字卡库联动**：【系统预设字卡】新增「漂流瓶」tab（TA的话14/TA的回应10/海风16 张可逐张开关 dc-off-drift:*），getLibPool('drift',分组,兜底) 同源抽取＋isDefaultCardOff 过滤，全关回退内置兜底。
   - **页面结构**：海面场景（昼夜切换 19:00~6:00 夜色+🌙、双层错速波浪 CSS 动画、随浪起伏小瓶、捡瓶时 dsArrive 漂近动画）+ 统计行（我放入 X · TA漂来 Y · 收藏 Z）+ 三 tab 记录列表（我的瓶子/捡到的/收藏，行内 ♡ 收藏切换）+ 右上 info 说明弹窗；prefers-reduced-motion 全关动画；dark 模式自带兜底覆盖。
   - **数据**：`xy-home-v2:<cid>:drift-data` 按联系人桌面隔离（activeStore + idbSet 镜像回填，room/garden 同款；键带冒号命名空间，无需 contacts.js EXCLUDE 登记）；mine cap 50 / got cap 120。
-  - chat.js **零改动**（入口绑定在 drift-bottle.js 内自完成，more-room 同款先例；读聊天记录只读 LS 键、不碰其写入链路）；mobile-adapt.js 零改动（整页 .page 非浮层，不需 FLOAT_SELECTORS/kbDockPanels 登记）。
-  - 测试钩子（极小面）：window.__driftNext(kind) 强制下一瓶类型 / __driftState() 只读快照，供专项脚本驯化随机。
-  - 真机确认点：①聊天更多功能【互动】出现「漂流瓶」，进入见海面场景、返回回聊天；②捡一个出各色瓶子、TA 瓶里能捡到 TA 以前聊天的字卡原句（混合气泡的字卡单张漂出）、首捡 +2 心意币、20s 冷却；③放一个瓶子后等回应/漂回排期到点再开页可见；④字卡库→系统预设字卡有「漂流瓶」tab 可逐张关；⑤夜晚（19点后）海面变夜色有月亮。
+  - chat.js **零改动**（入口绑定自完成 more-room 先例；读聊天记录只读 LS 键）；mobile-adapt.js 零改动（整页 .page 非浮层）。测试钩子（极小面）：__driftNext(kind)/__driftState()/__driftPeek()（试算 rollKind 不消耗强制标记）。
+  - 真机确认点：①更多功能【互动】出现「漂流瓶」，海面场景可进可回；②捡瓶出各色瓶子，TA 瓶能捡到 TA 聊天原句（混合气泡单张漂出）、首捡+2心意币、20s冷却；③连续多捡不出TA瓶时后续概率悄悄上升（软保底体感）；④放瓶排期到点有回应/漂回；⑤字卡库「漂流瓶」tab 可逐张关；⑥夜晚海面变夜色。
 
 
 ### 2026-08-26 16:5x（✅ 用户需求·更多功能【小游戏】里新增【四子棋】——梦角行为随机化双人棋盘）

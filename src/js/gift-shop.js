@@ -23,31 +23,80 @@
   // 与市集共用 gift-wallet 同一本账，红包金额即心意币；
   // rp-wallet 仅作老数据一次性迁移种子（首次读取 gift-wallet 缺失时继承其当前余额并落盘）
   const WALLET_KEY = 'gift-wallet';
-  const LEGACY_WALLET_KEY = 'rp-wallet';
+  const WALLET_MIGRATE_KEY = 'wallet-global-migrated';
   // v3.15.x：新用户默认心意币——双方各 ¥520（我爱你）：够立刻体验小额红包与日常礼物，
   // 大礼（¥1314 项链/机票、¥5200 王冠）需要一起玩游戏/种花攒或透支；旧占位巨款 ¥999999.99 废除
   const WALLET_DEFAULT_FEN = 52000;
-  function walletGet() {
-    const s = store();
-    if (!s) return { myBalance: WALLET_DEFAULT_FEN, systemBalance: WALLET_DEFAULT_FEN };
-    try {
-      const w = JSON.parse(s.get(WALLET_KEY) || '');
-      if (typeof w.myBalance === 'number' && typeof w.systemBalance === 'number') {
-        // 老版本从未动过钱包的占位巨款（两侧恰好都 99999999）一次性换成新默认 ¥520/¥520
-        if (w.myBalance === 99999999 && w.systemBalance === 99999999) {
-          const nw = { myBalance: WALLET_DEFAULT_FEN, systemBalance: WALLET_DEFAULT_FEN };
-          s.set(WALLET_KEY, JSON.stringify(nw));
-          return nw;
-        }
-        return w;
-      }
-    } catch (e) {}
-    let seed = { myBalance: WALLET_DEFAULT_FEN, systemBalance: WALLET_DEFAULT_FEN };
-    try { const o = JSON.parse(s.get(LEGACY_WALLET_KEY) || ''); if (typeof o.myBalance === 'number' && typeof o.systemBalance === 'number') seed = { myBalance: o.myBalance, systemBalance: o.systemBalance }; } catch (e) {}
-    s.set(WALLET_KEY, JSON.stringify(seed));
-    return seed;
+  // v3.15.x 二轮：心意币改为【全局一本账】——所有联系人桌面共用根键 xy-home-v2:gift-wallet，
+  // 不再按桌面隔离（market-custom 全局商品库同款先例）；各桌面旧副本一次性合并迁移：
+  // 优先 default 桌面副本 > 其他桌面副本 > 各桌面旧 rp-wallet > 新默认 ¥520/¥520
+  function wstore() { return window.xyStore ? window.xyStore('xy-home-v2') : null; }
+  function normalizeWallet(w) {
+    if (!w || typeof w.myBalance !== 'number' || typeof w.systemBalance !== 'number') return null;
+    if (w.myBalance === 99999999 && w.systemBalance === 99999999) return { myBalance: WALLET_DEFAULT_FEN, systemBalance: WALLET_DEFAULT_FEN };
+    return { myBalance: w.myBalance, systemBalance: w.systemBalance };
   }
-  function walletSet(w) { const s = store(); if (s) s.set(WALLET_KEY, JSON.stringify(w)); }
+  function parseRaw(str) { try { return JSON.parse(str || ''); } catch (e) { return null; } }
+  function migrateGlobalWallet(s) {
+    try {
+      if (s.get(WALLET_MIGRATE_KEY)) return;
+      let chosen = normalizeWallet(parseRaw(s.get(WALLET_KEY)));
+      if (!chosen) {
+        let giftDefault = null, giftAny = null, rpDefault = null, rpAny = null;
+        try {
+          for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (!k || k.indexOf('xy-home-v2:') !== 0) continue;
+            let m = k.match(/^xy-home-v2:(.+):gift-wallet$/);
+            if (m) {
+              const c = normalizeWallet(parseRaw(localStorage.getItem(k)));
+              if (!c) continue;
+              if (m[1] === 'default') { if (!giftDefault) giftDefault = c; } else if (!giftAny) giftAny = c;
+              continue;
+            }
+            m = k.match(/^xy-home-v2:(.+):rp-wallet$/);
+            if (m) {
+              const c = normalizeWallet(parseRaw(localStorage.getItem(k)));
+              if (!c) continue;
+              if (m[1] === 'default') { if (!rpDefault) rpDefault = c; } else if (!rpAny) rpAny = c;
+            }
+          }
+        } catch (e) {}
+        chosen = giftDefault || giftAny || rpDefault || rpAny || null;
+      }
+      if (chosen) s.set(WALLET_KEY, JSON.stringify(chosen));
+      try {
+        const rm = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && /^xy-home-v2:.+:gift-wallet$/.test(k)) rm.push(k);
+        }
+        rm.forEach(function (k) {
+          try { localStorage.removeItem(k); } catch (e) {}
+          try { if (window.idbDelete) window.idbDelete(k); } catch (e) {}
+        });
+      } catch (e) {}
+      s.set(WALLET_MIGRATE_KEY, '1');
+    } catch (e) {}
+  }
+  function walletGet() {
+    const s = wstore();
+    if (!s) return { myBalance: WALLET_DEFAULT_FEN, systemBalance: WALLET_DEFAULT_FEN };
+    migrateGlobalWallet(s);
+    const raw = parseRaw(s.get(WALLET_KEY));
+    const n = normalizeWallet(raw);
+    if (!n) {
+      const seed = { myBalance: WALLET_DEFAULT_FEN, systemBalance: WALLET_DEFAULT_FEN };
+      s.set(WALLET_KEY, JSON.stringify(seed));
+      return seed;
+    }
+    if (raw.myBalance !== n.myBalance || raw.systemBalance !== n.systemBalance) s.set(WALLET_KEY, JSON.stringify(n));
+    return n;
+  }
+  function walletSet(w) { const s = wstore(); if (s) s.set(WALLET_KEY, JSON.stringify(w)); }
+  // 供 chat.js 红包侧委托同一本全局账（避免两套实现漂移）
+  window.giftWalletGet = walletGet;
+  window.giftWalletSet = walletSet;
   function walletText() { const w = walletGet(); return '心意币 ¥' + fenToYuan(w.myBalance) + ' · ' + partnerName() + ' ¥' + fenToYuan(w.systemBalance) + ' · 点此向 Mochi 申请'; }
   function renderGiftBalances() {
     ['gift-balance', 'market-balance'].forEach(function (id) {

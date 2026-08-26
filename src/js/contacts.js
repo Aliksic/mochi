@@ -16,6 +16,9 @@
     // migrateLegacy 把 bg-keepalive/bg-notify 迁进 default 并删全局键，非 default
     // 桌面刷新后开关读不到全局值自动变关（用户反馈「后台保活/后台弹窗自己关了」）。
     'bg-keepalive', 'bg-notify',
+    // v3.15.x：心意币全局一本账（根键 gift-wallet）与其一次性迁移标记——
+    // 红包/市集/游戏/花园共用，跨桌面不隔离；漏排除会被 migrateLegacy 搬进 default 并删根键
+    'gift-wallet', 'wallet-global-migrated',
     // v3.9.x：群聊全局设置——回复设置（reply-gc-*）与成员群聊形象（gc-profiles）、
     // 群聊美化（gc-beauty）、开启开关（group-chat-enabled）都是群聊（全局功能）的
     // 根命名空间键，绝不能迁移进 default 桌面（否则切换桌面后设置读不到全局值、仿佛"丢失"）

@@ -198,12 +198,13 @@
     if (d.day.coin >= DAILY_COIN_CAP) return false;
     const real = Math.min(fen, DAILY_COIN_CAP - d.day.coin);
     try {
-      const s = S();
+      const ws = window.xyStore ? window.xyStore('xy-home-v2') : null; // v3.15.x：全局一本账根键
+      if (!ws) return false;
       let w = null;
-      try { w = JSON.parse(s.get('gift-wallet') || ''); } catch (e) {}
+      try { w = JSON.parse(ws.get('gift-wallet') || ''); } catch (e) {}
       if (!w || typeof w.myBalance !== 'number' || typeof w.systemBalance !== 'number') w = { myBalance: 52000, systemBalance: 52000 }; // v3.15.x：默认对齐 ¥520/¥520
       w.myBalance += real;
-      s.set('gift-wallet', JSON.stringify(w));
+      ws.set('gift-wallet', JSON.stringify(w));
       d.day.coin += real;
       save();
       return true;

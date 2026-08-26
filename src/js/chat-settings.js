@@ -954,6 +954,25 @@
     document.addEventListener('contact-switched', syncBs);
   }
 
+  // v3.16.x：「我可发送语音」开关——默认关闭，每联系人独立。开启后聊天输入栏左侧显示
+  // 「麦克风」按钮：点击打开录音半框，录完可试听并作为语音消息发送进聊天。
+  // 存 cs-voice-send，chat.js 读同一键控制按钮显隐与录音逻辑。
+  const csVs = document.getElementById('cs-voice-send');
+  if (csVs) {
+    const vsGet = () => { try { return store.get('cs-voice-send') === '1'; } catch (e) { return false; } };
+    const vsSet = (en) => { try { store.set('cs-voice-send', en ? '1' : '0'); } catch (e) {} };
+    const syncVs = () => { const v = vsGet(); if (v !== csVs.checked) csVs.checked = v; };
+    syncVs();
+    csVs.addEventListener('change', () => {
+      if (csVs.checked === vsGet()) return;
+      vsSet(csVs.checked);
+      // 通知聊天页即时刷新「麦克风」按钮显隐（不依赖切联系人）
+      try { document.dispatchEvent(new Event('voice-send-changed')); } catch (e) {}
+      toast(csVs.checked ? '已开启：聊天输入栏左侧显示「麦克风」按钮，点击可录音并发送语音' : '已关闭：聊天输入栏「麦克风」按钮已隐藏');
+    });
+    document.addEventListener('contact-switched', syncVs);
+  }
+
   // v3.12.x：「隐藏联系人的表情包」开关——默认关闭，全局生效（存根命名空间，与
   // my-emoji-groups 全局化同口径：聊天/朋友圈表情包面板是跨桌面共用 UI，不随桌面切换）。
   // 开启后聊天与朋友圈的表情包面板只显示「我的表情包」，不再显示 TA 的/公用表情包。

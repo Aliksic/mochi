@@ -5,128 +5,22 @@
 //   v3.12.x：纯悬浮键盘内核（X5/旧夸克等 vv 不反映键盘）加「推定停靠」二线兜底——
 //              手势聚焦文本框后宽限期两视口仍不动 → 按基准 58% 保底收缩 .phone
 (function () {
-  // 只在真实手机窄屏启用（桌面模拟器外壳不受影响）
-  // v3.5.137：900px——Moto G100 等 2400px 物理屏 / DPR 2.75-3 的 CSS 视口约 800-873px，
-  // 原 768px 上限会误判为桌面（显示 390px 小手机框 + 两侧灰底）
-  let isMobile = false;
-  try { isMobile = window.matchMedia && window.matchMedia('(max-width: 900px)').matches; } catch (e) {}
-
-  // v3.7.x：iPad/平板检测——iPad 竖屏（768-834px CSS 视口）命中 isMobile 走手机全屏
-  // 布局，内容被整屏拉宽（桌面图标间距巨大、气泡过宽）；iPad 横屏（≥1024px）走
-  // 桌面模拟器外壳（390px 小框 + 两侧灰底）。两者都不适合平板。
-  // 命中给 <html> 加 .tablet 类（base.css 平板布局：全高 + 内容限宽居中 +
-  // 无模拟器外壳，竖屏/横屏观感一致）。
-  // iPadOS 13+ 的 UA 伪装成 Macintosh（桌面 macOS UA + 触摸屏 maxTouchPoints>1），
-  // 老系统 UA 带 iPad 关键字，两种都覆盖。
-  let isTablet = false;
+  // v3.16.x：设备判定统一收口到 device.js（window.mochiDevice）——此前 isMobile /
+  // isTablet / isIOS 在此与 fullscreen/pwa/bg-keep 各算一遍、规则略有出入，同一台
+  // 设备可能被两个模块判成不同形态互相打架。判定副作用（viewport 改写 /
+  // force-mobile / .tablet 类）随判定逻辑移入 device.js，此处只读取结果。
+  // 兜底：device.js 缺失时 isMobile/isTablet 为 false → 本文件不启用任何适配，
+  // 至少保证不出现「判错导致的错乱布局」（判定逻辑全部保留在 device.js）。
+  let isMobile = false, isTablet = false, isIOS = false;
   try {
-    const ua = String(navigator.userAgent || '');
-    const plat = String(navigator.platform || '');
-    // v3.7.x：/iPad/ 分支加 Android 排除——UA 伪装成 iPad 的安卓窄屏机（OPPO/Via 等）
-    //   会被误判为平板走手机全屏布局，内容整屏拉宽。真 iPad 不含 Android 关键字，安全
-    isTablet = (/iPad/i.test(ua) || plat === 'iPad') && !/android/i.test(ua) ||
-      ((plat === 'MacIntel' || /Macintosh/i.test(ua)) && navigator.maxTouchPoints > 1 && 'ontouchstart' in window);
+    const d = window.mochiDevice;
+    if (d) { isMobile = !!d.isMobile; isTablet = !!d.isTablet; isIOS = !!d.isIOS; }
   } catch (e) {}
-  if (isTablet) { try { document.documentElement.classList.add('tablet'); } catch (e) {} }
-
-  // v3.9.x：UA 桌面伪装兜底——Edge/Via 等浏览器「桌面站点」模式把 UA 改成
-  // Windows 桌面、layout viewport 拉到 980px，上面 matchMedia('(max-width:900px)')
-  // 误判为桌面，走桌面模拟器外壳（390px 小框 + 两侧灰底），手机上显示「变小/
-  // PC 端布局」，且全屏开关成了「恢复正常大小」的开关（熄屏/重开又变小）。
-  // 物理特征兜底：触摸屏 + 窄 screen.width（设备物理 CSS 宽度，不随 UA/layout
-  // viewport 变）→ 实为手机伪装桌面，强制走手机布局。真桌面 PC 无触摸屏不命中；
-  // 平板 screen.width≥900 或已走 isTablet 分支不命中。
-  // v3.11.x：vivo Y35 + Edge 用户报修「打开仍是 PC 端，只能手动关桌面版网站」
-  // ——该场景下内核连 screen.width 都伪装成桌面大屏（≥900），上面的窄屏判断
-  // 失效。补一组不受 UA/视口/screen 伪装影响的输入特征信号：
-  //   · (pointer: coarse) / (hover: none)：主输入是手指。触屏笔电/一体机的主
-  //     指针仍是鼠标 → fine/hover，不会命中；手机开桌面模式后这两条媒体查询
-  //     反映真实硬件输入能力，不受伪装影响。
-  //   · window.orientation !== undefined：移动端内核专属 API，桌面浏览器不存在；
-  //     安卓内核即使整套伪装 UA 也保留此 API。
-  //   · UA 谎称桌面系统（Windows NT/Macintosh/X11/CrOS）。安卓/iOS 正常 UA 不含。
-  // 命中组合：触摸 + 谎称桌面系统 + （有 orientation API 或 主输入 coarse 且无
-  // hover）→ 判定手机伪装桌面。误伤面只剩「安卓平板开桌面模式」被强制手机布局
-  // （内容拉宽但可交互，优于 PC 外壳）；iPad 已在上方 isTablet 分支拦截。
-  if (!isMobile && !isTablet) {
-    try {
-      const sw = screen.width || screen.availWidth || 0;
-      const touch = (navigator.maxTouchPoints || 0) > 0 || 'ontouchstart' in window;
-      let uaDesk = false, oriApi = false, coarsePtr = false, hoverNone = false;
-      try { uaDesk = /Windows NT|Macintosh|X11|CrOS/i.test(String(navigator.userAgent || '')); } catch (e) {}
-      try { oriApi = typeof window.orientation !== 'undefined'; } catch (e) {}
-      try { coarsePtr = window.matchMedia && window.matchMedia('(pointer: coarse)').matches; } catch (e) {}
-      try { hoverNone = window.matchMedia && window.matchMedia('(hover: none)').matches; } catch (e) {}
-      // v3.13.x：vivo Y35 + Edge 仍被强制 PC 端——上面的 screen.width / UA / orientation
-      // 指纹 Edge「桌面站点」模式能一并伪装。补真机最可靠、无法伪装的信号：
-      // visualViewport.width 反映屏幕真实可见宽（真机 CSS 宽 ~360-412），无论 layout
-      // viewport 被拉成 980 还是 UA 谎报 Windows 都不变；但仅限触摸屏（触碰笔电的
-      // 窄窗口 innerWidth<900 与之耦合度极低，且触摸窄窗口本就更适合手机布局）。
-      let vvW = 0;
-      try { vvW = (window.visualViewport && window.visualViewport.width) || 0; } catch (e) {}
-      if ((sw > 0 && sw < 900 && touch) ||
-          (touch && vvW > 0 && vvW <= 900) ||
-          (touch && uaDesk && (oriApi || (coarsePtr && hoverNone)))) {
-        isMobile = true;
-        // 改 viewport meta 把 layout viewport 拉回设备宽度——让 CSS
-        // @media(max-width:900px) 自然命中，所有手机端规则生效。桌面站点
-        // 模式浏览器可能忽略 meta，下方加 force-mobile 类作 CSS 保底。
-        try {
-          document.querySelectorAll('meta[name="viewport"]').forEach(function (m) {
-            m.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-visual');
-          });
-        } catch (e) {}
-        // 等一帧看媒体查询是否命中；未命中说明该内核「桌面站点」模式下连
-        // device-width 都被仿真成桌面大屏（980）→ 改写 viewport 为【显式像素
-        // 宽度】再试：真实设备 CSS 宽用 visualViewport 反推（vv.width×vv.scale
-        // ≈ 物理 CSS 宽，桌面模式初始缩小显示时 scale<1、两者乘积恒为真宽）。
-        // 数字宽度不依赖 device-width 仿真，多数内核会直接采纳 → 媒体查询全量
-        // 生效（force-mobile 类只复刻关键规则，覆盖不了各功能页的手机端样式）。
-        // 再等两帧复查，仍未命中才加 force-mobile 类作最终保底。
-        try {
-          requestAnimationFrame(function () {
-            try {
-              if (!(window.matchMedia && window.matchMedia('(max-width: 900px)').matches)) {
-                var vw = 0;
-                try {
-                  var vv = window.visualViewport;
-                  // v3.13.x：优先采信 vv.width（桌面站点模式下 = 真机 CSS 宽 ~360-412，
-                  // 不会被 980 伪装）；vv.width×vv.scale 在桌面模式会算出伪装的 980
-                  // 而被下方区间过滤掉 → viewport 改写静默失败只能退 force-mobile，
-                  // 故仅在 vv.width 缺失时才用乘积兜底。
-                  var est = vv && vv.width > 0 ? Math.round(vv.width)
-                    : (vv && vv.scale > 0 && vv.width > 0 ? Math.round(vv.width * vv.scale) : 0);
-                  // 合理区间过滤：缩放中/异常值不采信（手机 CSS 宽 200-899）
-                  if (est >= 200 && est < 900) vw = est;
-                } catch (e2) {}
-                if (vw) {
-                  document.querySelectorAll('meta[name="viewport"]').forEach(function (m) {
-                    m.setAttribute('content', 'width=' + vw + ', initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-visual');
-                  });
-                }
-                requestAnimationFrame(function () {
-                  requestAnimationFrame(function () {
-                    try {
-                      if (!(window.matchMedia && window.matchMedia('(max-width: 900px)').matches)) {
-                        document.documentElement.classList.add('force-mobile');
-                      }
-                    } catch (e3) {}
-                  });
-                });
-              }
-            } catch (e) {}
-          });
-        } catch (e) {}
-      }
-    } catch (e) {}
-  }
+  // 兼容守卫：device.js 判平板时会给 <html> 加 .tablet 类（base.css 平板布局），
+  // 若加载顺序异常导致此处读不到 mochiDevice，仍按类恢复 isTablet。
+  if (!isTablet) { try { if (document.documentElement.classList.contains('tablet')) isTablet = true; } catch (e) {} }
   // 手机窄屏或平板都启用本文件适配（桌面模拟器外壳不受影响）
   if (!isMobile && !isTablet) return;
-
-  // v3.6.x：iOS 检测——iOS Safari 上不启用 contenteditable 转换器（见下方 ceConvert 说明）
-  // v3.7.x：加 Android 排除——UA 伪装成 iPhone 的安卓浏览器（OPPO/Via/夸克等）不应进 iOS 分支
-  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent)
-    && !/android/i.test(navigator.userAgent) && !window.MSStream;
 
   // v3.15.x：键盘弹起时需要停靠到可视区底部的悬浮面板（聊天「更多功能」里的
   // 小功能半框 + 更多面板自身 + 表情包等）。它们都是 absolute 锚定 .phone 底部
@@ -134,7 +28,7 @@
   // 仅 .phone 内部、无内部滚动体（fixed 停靠后滚动区 height 仍由面板自身收缩，
   // 内部 scroll 正常）的底半框才需要；全屏遮罩（#call-mask 等 fixed/inset 或
   // 自带滚动）不在列。
-  const FLOAT_PANEL_SELECTORS = ['#chat-more-panel', '#chat-decision-panel', '#chat-gdecision-panel', '#chat-divine-panel', '#chat-ask-panel', '#poke-card', '#emoji-panel', '#chat-rp-panel', '#chat-rps-panel', '#chat-pong-panel', '#chat-snake-panel', '#chat-brick-panel', '#chat-c4-panel', '#chat-ms-panel', '#chat-fish-panel', '#chat-memory-panel', '#chat-gift-panel', '#ck-panel', '#chat-search', '#gc-more-panel'];
+  const FLOAT_PANEL_SELECTORS = ['#chat-more-panel', '#chat-decision-panel', '#chat-gdecision-panel', '#chat-divine-panel', '#chat-ask-panel', '#poke-card', '#emoji-panel', '#chat-rp-panel', '#chat-rps-panel', '#chat-pong-panel', '#chat-snake-panel', '#chat-brick-panel', '#chat-c4-panel', '#chat-ms-panel', '#chat-fish-panel', '#chat-memory-panel', '#chat-gift-panel', '#ck-panel', '#chat-search', '#gc-more-panel', '#voice-panel'];
 
   // v3.10.x：iOS 用 interactive-widget=resizes-content，安卓用 resizes-visual。
   // template.html 默认 resizes-visual（安卓：visualViewport 收缩可检测键盘 + layout
@@ -1225,7 +1119,9 @@
   //   #img-view-mask 聊天/字卡大图查看全屏遮罩（chatcard.js 动态创建，打开时背景聊天页可继续滚动）；
   //   #chat-rp-panel 红包底部半框、#batch-panel 消息批量操作面板（与 poke-card/emoji-panel 同族底半框）
   // v3.14.x：补 #chat-gdecision-panel 多人决定底部半框（group-decision.js，与帮我决定同族）
-  const FLOAT_SELECTORS = ['#tc-mask', '#cc-export-mask', '#cc-scope-mask', '#call-mask', '#feed-notice-panel', '#feed-comment-panel', '#poke-card', '#emoji-panel', '#chat-ask-panel', '#qa-mask', '#chat-more-panel', '#gc-more-panel', '#chat-search', '#chat-decision-panel', '#chat-gdecision-panel', '#chat-divine-panel', '#chat-rps-panel', '#chat-call-panel', '#chat-pong-panel', '#chat-snake-panel', '#chat-brick-panel', '#chat-c4-panel', '#chat-ms-panel', '#chat-fish-panel', '#chat-memory-panel', '#chat-gift-panel', '#avlib-card', '#ck-panel', '#loc-panel', '.mg-mask', '#modal-mask', '#msg-actions', '#desk-image-viewer', '.desk-lib', '#gc-members-panel', '#gc-at-panel', '#gc-settings-panel', '#img-view-mask', '#chat-rp-panel', '#batch-panel', '#eat-switch-overlay'];
+  // v3.16.x：补 #gc-msg-actions 群聊气泡操作菜单（与聊天页 #msg-actions 同族，跨域一词登记请知悉）
+  // v3.16.x：补 #voice-panel 语音录制半框（聊天设置「我可发送语音」的麦克风按钮打开，跨域一词登记请知悉）
+  const FLOAT_SELECTORS = ['#tc-mask', '#cc-export-mask', '#cc-scope-mask', '#call-mask', '#feed-notice-panel', '#feed-comment-panel', '#poke-card', '#emoji-panel', '#chat-ask-panel', '#qa-mask', '#chat-more-panel', '#gc-more-panel', '#chat-search', '#chat-decision-panel', '#chat-gdecision-panel', '#chat-divine-panel', '#chat-rps-panel', '#chat-call-panel', '#chat-pong-panel', '#chat-snake-panel', '#chat-brick-panel', '#chat-c4-panel', '#chat-ms-panel', '#chat-fish-panel', '#chat-memory-panel', '#chat-gift-panel', '#avlib-card', '#ck-panel', '#loc-panel', '.mg-mask', '#modal-mask', '#msg-actions', '#gc-msg-actions', '#desk-image-viewer', '.desk-lib', '#gc-members-panel', '#gc-at-panel', '#gc-settings-panel', '#img-view-mask', '#chat-rp-panel', '#batch-panel', '#eat-switch-overlay', '#voice-panel'];
   // v3.15.x：键盘弹起时把锚定在 .phone 底部的悬浮面板（更多功能/帮我决定/占卜/
   // 问问TA/红包/拍一拍等）重新锚定到可视区底部=输入栏上方。背景（用户反馈
   // 「更多功能里的小功能输入框一点，功能页面被错误挤压到屏幕输入栏一行的下方，

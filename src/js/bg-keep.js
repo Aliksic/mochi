@@ -565,8 +565,8 @@
     if (!('Notification' in window)) {
       // v3.7.x：按平台区分文案——安卓阉割 WebView（OPPO 自带/Via 等）也无 Notification API，
       //   原文案硬编码"iPhone"对安卓用户很困惑。iOS 仍引导装主屏（iOS PWA 也不支持本地通知）
-      const _isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent)
-        && !/android/i.test(navigator.userAgent) && !window.MSStream;
+      // v3.16.x：设备判定统一读 device.js（mochiDevice）
+      const _isIOS = !!(window.mochiDevice || {}).isIOS;
       toast(_isIOS
         ? 'iPhone 网页版不支持系统通知\n请安装到主屏幕后由系统接管'
         : '当前浏览器不支持系统通知\n请改用 Chrome/Edge，或添加到主屏幕后由系统接管');

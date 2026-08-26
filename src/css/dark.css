@@ -844,7 +844,6 @@
   .memo-item.urgent .mm-text { color:#e07a6a; }
   .memo-item.urgent.done .mm-text { color:var(--muted); }
   .mm-act:active { background:rgba(255,255,255,.08); }
-  .memo-app-badge { background:rgba(255,255,255,.08); }
   .memo-send-btn { color:var(--ink-soft,#aaa); background:rgba(40,40,40,.7); border-color:rgba(255,255,255,.18); }
   .memo-send-btn:active { background:rgba(255,255,255,.08); }
 }

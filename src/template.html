@@ -1100,6 +1100,13 @@
           <div class="txt">导入数据</div>
           <div class="arrow"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div>
         </div>
+        <!-- v3.16.x：复制诊断信息——遇设备/浏览器兼容问题时，用户一键复制本机环境信息发给开发者，
+             避免靠描述反推（此前每台新设备报障都要来回猜） -->
+        <div class="set-row" id="row-diagnostics">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></div>
+          <div class="txt">复制诊断信息<span class="sub">遇到兼容问题发给开发者</span></div>
+          <div class="arrow"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div>
+        </div>
       </div>
       <div class="set-group glass">
         <div class="set-row" id="row-reset">
@@ -1264,7 +1271,7 @@
         <!-- 功能清单：分组折叠 -->
         <div class="cal-card glass">
           <details class="lic-grp" open>
-            <summary><span class="lg-num">01</span><span class="lg-name">聊天传讯</span><span class="lg-count">13</span></summary>
+            <summary><span class="lg-num">01</span><span class="lg-name">聊天传讯</span><span class="lg-count">16</span></summary>
             <div class="lg-body">
           <div class="lic-li">字卡交流：文字、情绪、心意、交流意图四种字卡回复，联系人所有内容均为字卡回复</div>
           <div class="lic-li">每条消息使用多字卡回复：可开启、调触发概率与最少/最多条数</div>
@@ -1277,86 +1284,158 @@
           <div class="lic-li">聊天里点击顶部栏联系人的头像可打开【寻踪 TA 的日常】页面</div>
           <div class="lic-li">聊天页面点击顶部栏联系人的昵称，可以让对方立即发送消息</div>
           <div class="lic-li">可搜索聊天记录并跳转到对应位置</div>
-          <div class="lic-li">聊天 + 按钮展开更多功能面板：帮我决定、多人决定、邀请 TA、问问 TA、搜索记录、通话、拍一拍、头像互动、占卜</div>
-          <div class="lic-li">更多功能面板「TA 的提问」：让 TA 现在问一次（询问 / 小问题 / 好奇 / 吐槽）</div>
+          <div class="lic-li">聊天 + 按钮展开更多功能面板（互动 / 小游戏 / 工具 / TA的提问 四分类）：互动类——邀请TA、通话、拍一拍、红包、心意集市、心意柜、头像互动、漂流瓶</div>
+          <div class="lic-li">小游戏类——猜拳、Pong、贪吃蛇、打砖块、钓鱼、四子棋、扫雷、记忆翻牌；工具类——帮我决定、多人决定、问问TA、搜索记录、占卜、寻踪、此间、房间</div>
+          <div class="lic-li">「TA 的提问」面板：让 TA 现在问一次（询问 / 小问题 / 好奇 / 吐槽 / 邀请）</div>
+          <div class="lic-li">贴贴邀请：TA 会主动发来贴贴 / 抱抱 / 牵手 / 靠着的邀请，同意有轻震回应，婉拒也有专属台阶文案</div>
+          <div class="lic-li">TA 的查岗：温柔关心式查岗问题卡（单选 / 文字作答），作答后 TA 会回应</div>
             </div>
           </details>
+
           <details class="lic-grp">
-            <summary><span class="lg-num">02</span><span class="lg-name">字卡系统</span><span class="lg-count">10</span></summary>
+            <summary><span class="lg-num">02</span><span class="lg-name">字卡系统</span><span class="lg-count">13</span></summary>
             <div class="lg-body">
           <div class="lic-li">字卡库：浏览全部字卡，支持搜索与自定义分组管理</div>
           <div class="lic-li">聊天字卡分类可上传：【主字卡】【颜文字】【emoji】【表情包】【图片】【拍一拍】【语音】分类</div>
           <div class="lic-li">互动卡片可自定义内容，概率触发互动（在字卡库里）</div>
-          <div class="lic-li">TA 的询问 / TA 的小问题 / TA 的好奇 / TA 的吐槽：内容可自定义</div>
+          <div class="lic-li">TA 的询问 / 小问题 / 好奇 / 吐槽 / 查岗 / 邀请：题库内容均可自定义</div>
           <div class="lic-li">寻踪日常字卡：地点、在做什么、说的话，均可自定义</div>
           <div class="lic-li">情绪回复：按你当前的心情自动匹配相应字卡</div>
-          <div class="lic-li">字卡库页入口：公用字卡（全桌面联系人共享）、专属字卡（仅当前桌面联系人）、寻踪日常字卡、桌面今日情话、聊天默认字卡、聊天情绪字卡、聊天回应字卡、TA 的询问 / 小问题 / 好奇 / 吐槽 / 查岗 / 邀请</div>
+          <div class="lic-li">内置词库规模：情绪 11 组 → 心意 9 组 + 特殊心意 4 组 → 交流意图 8 组三级链路，整类与单张均可开关</div>
+          <div class="lic-li">经期中负面情绪组权重自动上调、正向组下调，TA 的回应更贴合状态</div>
+          <div class="lic-li">游戏结果回应池：游戏胜利 / 失败 / 平局后 TA 抽对应字卡回应</div>
+          <div class="lic-li">新功能专属字卡：TA 的邀请（猜拳 / Pong / 贪吃蛇 / 贴贴）、经期关心、喝水、花园、房间、漂流瓶、位置卡等，逐条开关 + 自定义添加</div>
+          <div class="lic-li">字卡库页入口：公用字卡（全桌面联系人共享）、专属字卡（仅当前桌面联系人）、寻踪日常字卡、桌面今日情话、聊天默认字卡、聊天情绪字卡、聊天回应字卡及各功能专属字卡统一管理</div>
           <div class="lic-li">字卡管理：去重复、导出数据、一键清空所有分类</div>
-          <div class="lic-li">兼容导入 milk 字卡库导出的 json</div>
-          <div class="lic-li">系统预设字卡可逐句开关（桌面今日情话 / 聊天默认字卡）</div>
+          <div class="lic-li">兼容导入 milk 字卡库导出的 json；系统预设字卡可逐句开关</div>
             </div>
           </details>
+
           <details class="lic-grp">
-            <summary><span class="lg-num">03</span><span class="lg-name">互动卡片</span><span class="lg-count">5</span></summary>
+            <summary><span class="lg-num">03</span><span class="lg-name">互动卡片</span><span class="lg-count">6</span></summary>
             <div class="lg-body">
           <div class="lic-li">联系人发送互动卡片：概率触发弹窗，或直接在聊天发送卡片</div>
           <div class="lic-li">我发送互动卡片与联系人互动（邀请 TA / 问问 TA 在聊天内发送卡片）</div>
+          <div class="lic-li">TA 的邀请三类开局：猜拳 / Pong / 贪吃蛇邀请，同意后直接进入对局</div>
           <div class="lic-li">可使用【帮我决定】提问联系人（功能参考：小红书@FelixFelicis 9416318007）</div>
           <div class="lic-li">可使用【多人决定】让多位成员各自给出决定（功能参考同上）</div>
           <div class="lic-li">联系人邀请一起播放音乐</div>
             </div>
           </details>
+
           <details class="lic-grp">
-            <summary><span class="lg-num">04</span><span class="lg-name">手机桌面</span><span class="lg-count">15</span></summary>
+            <summary><span class="lg-num">04</span><span class="lg-name">心意币 · 红包 · 礼物</span><span class="lg-count">10</span></summary>
             <div class="lg-body">
-          <div class="lic-li">桌面多页滑动，可上传壁纸、自定义功能图标（默认空白需自己装修）</div>
-          <div class="lic-li">时钟、日历、备忘录、今日心情、离周末还有几天</div>
-          <div class="lic-li">桌面组件【今日情话】为联系人每日随机刷新想对你说的话（可在字卡库自定义添加）</div>
-          <div class="lic-li">桌面组件【今日备忘】可简单输入记录；【今日心情】可简单输入记录</div>
-          <div class="lic-li">和 TA 一起摸鱼打卡，桌面组件可统计摸鱼打卡天数</div>
-          <div class="lic-li">打开 mochi 使用时，我的摸鱼值和联系人的摸鱼值都会随机增加；桌面组件右侧黑色按钮可主动点击 +1</div>
-          <div class="lic-li">桌面【工作值】刷新机制与摸鱼值一致（双方随机增加）</div>
-          <div class="lic-li">桌面多页滑动（scroll-snap），指示器圆点点击切换，支持动态新增 / 删除最后一页（最多 5 页）</div>
-          <div class="lic-li">装修模式：点图标换图、点卡片设背景、添加卡片、恢复图标、完成</div>
-          <div class="lic-li">桌面图片组件（尺寸档位：小 / 中 / 大，全屏查看器）</div>
-          <div class="lic-li">第一页功能图标：聊天、主页、信箱、朋友圈、日历、纪念、占卜、收藏</div>
-          <div class="lic-li">第二页：本周日常、周末倒计时（摸鱼组件）；功能图标两排——聊天统计、提问记录、寻踪、音乐 / 花园、此间、同频、伸手；第三页：喝水、吃什么、存钱罐、番茄钟</div>
-          <div class="lic-li">第三页卡片：经期倒计时、今日备忘、今天的心情；功能图标：经期记录、记账（吃什么/存钱罐/番茄钟动态注入）</div>
-          <div class="lic-li">设置页：深色模式开关；桌面美化：主题色、桌面字号、卡片大小、内置壁纸预设</div>
-          <div class="lic-li">小组件颜色：背景 / 边框 / 按钮 / 按钮文字 / 爱心外框颜色、小组件透明度、图标圆角</div>
+          <div class="lic-li">全局统一账本「心意币」：红包、礼物、小游戏、花园、钓鱼、漂流瓶共用一本账，新用户双方各 ¥520</div>
+          <div class="lic-li">聊天红包：「我发 / TA 发」双向红包，预设情侣金额档（¥5.20 / 13.14 / 52 / 99.99 / 131.40 / 520）与七夕特别档，支持随机金额、自定义金额、留言与红包封面图</div>
+          <div class="lic-li">发出的红包约 80% 概率被领取并致谢，24 小时未领取自动退回；长按可退回待领红包</div>
+          <div class="lic-li">TA 平时也会主动发红包（每天最多 5 次），七夕更爱发大额</div>
+          <div class="lic-li">余额不足也能照发照买：直接透支成负数不拦截，后续收红包 / 申请回正</div>
+          <div class="lic-li">「向 Mochi 申请心意币」：点击任意余额行弹出，可给我和 TA 双向充值入账；TA 也会随机向 Mochi 申请（每天最多 2 次）并在聊天留下记录</div>
+          <div class="lic-li">心意市集：220+ 件默认商品分 12 类，支持搜索、自建商品（名字 / 图片 / 价格 / 默认留言）、编辑与恢复默认商品</div>
+          <div class="lic-li">送礼给 TA：挑商品写心意留言送出，礼物卡片飞进聊天并同步存进心意柜；TA 每天 5% 概率主动从市集挑礼物回礼（最多 3 次）</div>
+          <div class="lic-li">心意柜：收到 / 送出礼物册，「TA 送我的 / 我送 TA 的」分类翻看与统计</div>
+          <div class="lic-li">小游戏与种花奖励对齐红包金额体系（¥5.2 / 13.14 / 52 / 1314…），各自每日封顶防刷</div>
             </div>
           </details>
+
           <details class="lic-grp">
-            <summary><span class="lg-num">05</span><span class="lg-name">寻踪</span><span class="lg-count">2</span></summary>
+            <summary><span class="lg-num">05</span><span class="lg-name">小游戏</span><span class="lg-count">9</span></summary>
+            <div class="lg-body">
+          <div class="lic-li">入口：聊天更多功能 → 小游戏，共 8 款——猜拳 / Pong / 贪吃蛇 / 打砖块 / 钓鱼 / 四子棋 / 扫雷 / 记忆翻牌</div>
+          <div class="lic-li">对战三款：猜拳、Pong（四档难度）、四子棋（TA 每局状态随机：认真 / 放水 / 失误），累计战绩记录</div>
+          <div class="lic-li">双人贪吃蛇同场抢食：三档速度分段提速 + 穿墙 / 安全模式开关，手机端打开自动全屏放大地图</div>
+          <div class="lic-li">双人打砖块合作：各守半场共同清砖，COMBO 连击与危险预警，结算按 ❤ 给出合作评级</div>
+          <div class="lic-li">合作扫雷：轮流挖完整张地图的安全格，共用 3 颗❤；TA 会推理插旗也会失误，格子藏心意币 / 礼物彩蛋</div>
+          <div class="lic-li">记忆翻牌和 TA 合作找配对：三档难度记「默契分」，完成 / 连击 / 首通均有心意币奖励</div>
+          <div class="lic-li">双人钓鱼：抛竿等咬钩，时机条蓝区收竿最佳；14 种收集物鱼图鉴，TA 会钓到纪念品送你并可兑换</div>
+          <div class="lic-li">钓鱼陪伴奖励：双方同时在钓鱼满 5 分钟，每天一次 ¥13.14 与一句留言</div>
+          <div class="lic-li">所有对局结果以系统消息写进聊天，TA 抽『游戏胜利 / 失败 / 平局·回应』字卡回应；赢局有心意币入账（各游戏每日封顶）</div>
+            </div>
+          </details>
+
+          <details class="lic-grp">
+            <summary><span class="lg-num">06</span><span class="lg-name">花园</span><span class="lg-count">8</span></summary>
+            <div class="lg-body">
+          <div class="lic-li">桌面【花园】：初始 12 块地可扩到 30 块，24 种普通花 + 10 种稀有花，种子 → 发芽 → 开花</div>
+          <div class="lic-li">天气季节氛围：晴天生长加速、当季花 1.3 倍速、雨天自动浇水</div>
+          <div class="lic-li">浇水 / 施肥加速成熟；开花 48 小时不收会凋谢（只拿一半经验）</div>
+          <div class="lic-li">相邻同阶段不同花可杂交出稀有种子；升级花盆提升生长速度</div>
+          <div class="lic-li">收花按品质入库存并发心意币：完美 ¥52 / 优质 ¥13.14 / 普通 ¥5.2（每日封顶 ¥520）</div>
+          <div class="lic-li">TA 定期代管花园：帮忙种植浇水收获，还可能把花做成花束直接送到聊天，偶尔留悄悄话</div>
+          <div class="lic-li">六个页签：花园 / 图鉴（搜索 + 按季筛选）/ 工坊（花束合成送 TA）/ 装饰 / 成就（23 枚徽章）/ 年报（年度数据一键分享朋友圈）</div>
+          <div class="lic-li">免费装饰带增益 buff（喷泉保湿、鸟巢引 TA 来…），蝴蝶蜜蜂小鸟随机来访，每日任务 + 连续打理保底稀有种子</div>
+            </div>
+          </details>
+
+          <details class="lic-grp">
+            <summary><span class="lg-num">07</span><span class="lg-name">漂流瓶</span><span class="lg-count">5</span></summary>
+            <div class="lg-body">
+          <div class="lic-li">全屏页「两个世界之间的海」：捡一个瓶子 / 放一个瓶子，19 点后切换夜景</div>
+          <div class="lic-li">可捡到话痨瓶 / 装小物的瓶子 / 特别瓶；小概率捡到 TA 的瓶子——内容取自 TA 说过的字卡，越久没聊越可能出现</div>
+          <div class="lic-li">放出去的瓶子 36~96 小时后可能漂回来；TA 也可能捡到你的瓶子并回一瓶</div>
+          <div class="lic-li">瓶中可能附小礼物彩蛋；捡瓶有心意币小奖励（每天首次 +2、特殊瓶 +5、日上限 ¥10）</div>
+          <div class="lic-li">我的瓶子 / 捡到的 / 收藏三个页签，瓶子可 ♡ 收藏，顶部统计</div>
+            </div>
+          </details>
+
+          <details class="lic-grp">
+            <summary><span class="lg-num">08</span><span class="lg-name">手机桌面</span><span class="lg-count">14</span></summary>
+            <div class="lg-body">
+          <div class="lic-li">桌面多页滑动（scroll-snap，最多 5 页），指示器圆点点击切换，支持动态新增 / 删除页面</div>
+          <div class="lic-li">组件隐藏池自由添加：时钟 / 月历 / 计时器 / 纪念日倒计时 / 图片组件 / 文字组件</div>
+          <div class="lic-li">时钟、日历、备忘录、今日心情、离周末还有几天</div>
+          <div class="lic-li">桌面组件【今日情话】为联系人每日随机刷新想对你说的话（可在字卡库自定义添加）</div>
+          <div class="lic-li">桌面组件【今日备忘】【今天的心情】可简单输入记录</div>
+          <div class="lic-li">和 TA 一起摸鱼打卡：摸鱼值 / 工作值双方随机增长，打卡横幅统计摸鱼天数，摸鱼抓包彩蛋涨值翻倍</div>
+          <div class="lic-li">第一页图标：聊天、群聊（开启群聊模式后显示）、主页、信箱、朋友圈、日历、纪念、占卜、收藏</div>
+          <div class="lic-li">第二页：音乐播放器卡、本周日常、周末倒计时；图标——音乐、聊天统计、提问记录、寻踪、花园、此间、同频、伸手</div>
+          <div class="lic-li">第三页：经期倒计时大卡、今日备忘 / 今天的心情、备忘录状态横幅；图标——经期记录、记账、梦角档案、我的档案、房间、备忘录、喝水、吃什么、存钱罐、番茄钟</div>
+          <div class="lic-li">心意市集 / 心意柜图标成组自动注入桌面</div>
+          <div class="lic-li">装修模式：编辑布局、添加卡片、点图标换图、卡片设背景、长按拖拽跨页摆放、恢复图标</div>
+          <div class="lic-li">手机桌面美化：主题色、桌面字号、卡片大小、组件圆角、内置壁纸预设、背景模糊遮罩、每页独立背景图</div>
+          <div class="lic-li">小组件样式：背景 / 边框 / 按钮 / 按钮文字 / 爱心外框颜色、小组件透明度、图标圆角</div>
+          <div class="lic-li">美化方案导出 / 导入（配置文本发给对方粘贴即可同步外观）；设置页深色模式开关</div>
+            </div>
+          </details>
+
+          <details class="lic-grp">
+            <summary><span class="lg-num">09</span><span class="lg-name">寻踪</span><span class="lg-count">3</span></summary>
             <div class="lg-body">
           <div class="lic-li">桌面【寻踪】包含：TA 的日常、TA 在哪里、TA 在做什么、TA 想对你说——为【TA 的日常】字卡库内容随机刷新，可自由添加字卡</div>
           <div class="lic-li">联系人更新日常时，聊天消息里会发送一条【联系人昵称 更新了一条日常】，且有概率触发联系人提醒你寻踪的消息</div>
+          <div class="lic-li">「TA 在身边」位置感知：模糊感知 TA 的方位与距离，文案来自位置卡字卡库，可自定义</div>
             </div>
           </details>
+
           <details class="lic-grp">
-            <summary><span class="lg-num">06</span><span class="lg-name">音乐</span><span class="lg-count">7</span></summary>
+            <summary><span class="lg-num">10</span><span class="lg-name">音乐</span><span class="lg-count">9</span></summary>
             <div class="lg-body">
           <div class="lic-li">音乐功能可本地上传音乐，也可链接上传网易云免费歌曲</div>
           <div class="lic-li">桌面组件与【音乐】功能同步显示播放状态</div>
           <div class="lic-li">联系人可主动更换音乐播放模式（循环播放 / 顺序播放 / 随机播放）</div>
           <div class="lic-li">我的收藏、批量管理、悬浮小框可拖动</div>
           <div class="lic-li">歌单：可新建歌单管理</div>
-          <div class="lic-li">听歌记录：联系人邀请听歌记录</div>
+          <div class="lic-li">听歌记录分「TA 邀请听歌 / 我的听歌」两个页签</div>
           <div class="lic-li">自定义歌曲封面（上传图片压缩）、批量导入歌曲</div>
+          <div class="lic-li">TA 想和你一起听歌：聊天弹窗邀请（一起听 / 稍后），接受即开始播放并记入记录</div>
+          <div class="lic-li">歌曲播完 TA 可能接动作：切下一首 / 随机挑一首 / 更换播放模式（概率可调）；还会按概率把你在听的歌收进「TA的收藏」</div>
             </div>
           </details>
+
           <details class="lic-grp">
-            <summary><span class="lg-num">07</span><span class="lg-name">通话</span><span class="lg-count">5</span></summary>
+            <summary><span class="lg-num">11</span><span class="lg-name">通话</span><span class="lg-count">5</span></summary>
             <div class="lg-body">
           <div class="lic-li">联系人可主动拨打和挂断电话；我也可以拨打</div>
-          <div class="lic-li">TA 会来电，可接听 / 拒绝，挂断后变为迷你小框</div>
+          <div class="lic-li">TA 会来电，可接听 / 拒绝，接通后缩为可拖动的迷你通话小框（位置记忆）</div>
           <div class="lic-li">来电可播放自定义铃声（音效设置）</div>
           <div class="lic-li">通话设置页：可调来电 / 接听 / 忙线 / 拒接 / 通话中挂断概率</div>
           <div class="lic-li">通话背景图片：可上传 / 移除</div>
             </div>
           </details>
+
           <details class="lic-grp">
-            <summary><span class="lg-num">08</span><span class="lg-name">信箱</span><span class="lg-count">5</span></summary>
+            <summary><span class="lg-num">12</span><span class="lg-name">信箱</span><span class="lg-count">5</span></summary>
             <div class="lg-body">
           <div class="lic-li">信箱里我可以主动给联系人写信和回信</div>
           <div class="lic-li">联系人可以主动写信和回信</div>
@@ -1365,8 +1444,9 @@
           <div class="lic-li">信件数据管理：导出 / 导入 / 清空所有信件</div>
             </div>
           </details>
+
           <details class="lic-grp">
-            <summary><span class="lg-num">09</span><span class="lg-name">朋友圈</span><span class="lg-count">8</span></summary>
+            <summary><span class="lg-num">13</span><span class="lg-name">朋友圈</span><span class="lg-count">8</span></summary>
             <div class="lg-body">
           <div class="lic-li">朋友圈里我可以主动发布朋友圈动态（点右上角 + 图标）</div>
           <div class="lic-li">联系人可主动发布朋友圈</div>
@@ -1378,8 +1458,9 @@
           <div class="lic-li">多联系人：朋友圈为全局共享，按联系人聚合显示</div>
             </div>
           </details>
+
           <details class="lic-grp">
-            <summary><span class="lg-num">10</span><span class="lg-name">日历</span><span class="lg-count">6</span></summary>
+            <summary><span class="lg-num">14</span><span class="lg-name">日历</span><span class="lg-count">6</span></summary>
             <div class="lg-body">
           <div class="lic-li">每日首次打开，联系人会在日历留言并触发弹窗</div>
           <div class="lic-li">日历里除了联系人留言，我也可以简单留言</div>
@@ -1389,26 +1470,103 @@
           <div class="lic-li">TA 正在做什么、TA 的留言卡片、我的留言卡片（可编辑留言）</div>
             </div>
           </details>
+
           <details class="lic-grp">
-            <summary><span class="lg-num">11</span><span class="lg-name">纪念</span><span class="lg-count">3</span></summary>
+            <summary><span class="lg-num">15</span><span class="lg-name">纪念</span><span class="lg-count">3</span></summary>
             <div class="lg-body">
           <div class="lic-li">桌面【纪念】可设置纪念日和倒数日</div>
           <div class="lic-li">恋爱纪念日显示在桌面顶部双方头像下方（我们在一起的天数）</div>
           <div class="lic-li">下一个纪念日倒计时</div>
             </div>
           </details>
+
           <details class="lic-grp">
-            <summary><span class="lg-num">12</span><span class="lg-name">记录统计</span><span class="lg-count">5</span></summary>
+            <summary><span class="lg-num">16</span><span class="lg-name">生活工具</span><span class="lg-count">6</span></summary>
+            <div class="lg-body">
+          <div class="lic-li">【备忘录】待办管理：置顶 / 截止日期 / 临期排序 / 一键清已完成；TA 会催办临期事项、偶尔帮你勾掉最旧一条，桌面横幅实时显示待办数</div>
+          <div class="lic-li">【喝水】今日杯数进度环 + 近 7 天柱状图，目标杯数 / 杯量自定义；TA 定时催喝水、达标夸奖，战报可发到聊天</div>
+          <div class="lic-li">【吃什么】随机抽菜或转盘抽取，多菜单管理与批量编辑，「问 TA」把菜名发到聊天征求意见；饭点有吃饭提醒（概率可调）</div>
+          <div class="lic-li">【存钱罐】存取 + 多个小心愿目标（可请 TA 当监督人），25% / 50% / 75% 进度里程碑庆祝，TA 碎碎念回应与偷偷塞硬币彩蛋</div>
+          <div class="lic-li">【番茄钟】专注 / 小憩 / 长休三档计时（时长可调），🍅 今日与累计统计，铃声 / 本地通知，退回桌面有陪伴模式悬浮条</div>
+          <div class="lic-li">【记账】支出收入与自定义分类、月 / 周 / 年视角切换、月度预算进度条、收支柱状图、分类占比环形图与 TOP 排行、流水搜索过滤</div>
+            </div>
+          </details>
+
+          <details class="lic-grp">
+            <summary><span class="lg-num">17</span><span class="lg-name">经期记录</span><span class="lg-count">6</span></summary>
+            <div class="lg-body">
+          <div class="lic-li">一键标记经期开始 / 结束，月历标注实际经期、预测区间与排卵期，可翻月查看</div>
+          <div class="lic-li">每日详情浮层：经量四档、11 种症状多选、基础体温、五档情绪与备注，长按快速标记</div>
+          <div class="lic-li">取近 6 次周期动态预测下次经期与排卵日，显示波动范围与规律性徽章；PMS 经前指数提示</div>
+          <div class="lic-li">统计图表：常见症状 TOP3、周期长度趋势折线、一句话周期洞察，月度报告可一键分享朋友圈</div>
+          <div class="lic-li">本地通知提醒（经前 3 天 / 1 天 / 当天可选 + 经期中每日 + 推迟预警）；TA 自动发「经期关心」（每天最多一条，话术可增删开关）</div>
+          <div class="lic-li">经期中 TA 的文字回复有概率附加温柔前缀 / 动作后缀</div>
+            </div>
+          </details>
+
+          <details class="lic-grp">
+            <summary><span class="lg-num">18</span><span class="lg-name">此间 · 同频 · 伸手</span><span class="lg-count">7</span></summary>
+            <div class="lg-body">
+          <div class="lic-li">【此间】每位梦角有自己的世界时间（十二时辰展示：与现实同步 / 快慢偏移 / 独立时间流）与「在场 × 空闲」双状态，随时间自动变化</div>
+          <div class="lic-li">梦角名单管理：添加 / 改名 / 删除，首次打开自动以 TA 的名字建档（删光后不复活）</div>
+          <div class="lic-li">「TA 的一天」今日时辰轨迹轮播，「去找TA」直达聊天；「感知此间」给出谁在附近的氛围文字</div>
+          <div class="lic-li">顶部 chips 跨桌面查看所有桌面的梦角，「全部」总览所有在场状态</div>
+          <div class="lic-li">【同频】「TA 此刻」状态字卡定时刷新；长按敲三下暗号，约六成概率得到回应（震动 + 闪光，可发到聊天）</div>
+          <div class="lic-li">【伸手】长按伸手摸摸身边，约五成概率摸到——温热 / 微凉 / 发丝三种触感 + 一句悄悄话；TA 偶尔也会反过来轻轻碰你</div>
+          <div class="lic-li">同频状态与伸手悄悄话均可在字卡库自定义</div>
+            </div>
+          </details>
+
+          <details class="lic-grp">
+            <summary><span class="lg-num">19</span><span class="lg-name">梦角档案 / 我的档案</span><span class="lg-count">7</span></summary>
+            <div class="lg-body">
+          <div class="lic-li">【梦角档案】认识 TA：九个分区——TA 是谁 / 喜好 / 习惯 / 与我的相处 / 我对 TA 的了解 / 位置感 / 物品 / 我们的共同记录 / 当前 IF 世界</div>
+          <div class="lic-li">发现卡片记录你对 TA 的了解（来源标注 + 确定程度圆点），「还不了解」疑问清单可转成发现，理解变化全程留痕</div>
+          <div class="lic-li">共同记录六类 + 时间线视图，相处小事可升格为重要时刻</div>
+          <div class="lic-li">【我的档案】认识自己：写给某位 TA 的自我说明——关于我 / 喜好 / 习惯 / 物品 / 我和 TA（期望的相处方式）/ 对自己的描述 / IF 世界母档</div>
+          <div class="lic-li">两份档案均按联系人独立分档保存，顶部 chips 切换为哪位 TA 维护；没建过档的联系人点一下即建档</div>
+          <div class="lic-li">我的档案末行桥接梦角档案的共同记录，两边数据互不重复维护</div>
+          <div class="lic-li">IF 世界设定在「我的档案」统一维护（世界 / 我的身份 / TA 的身份 / 关系），梦角档案侧镜像 TA 在该世界的样子</div>
+            </div>
+          </details>
+
+          <details class="lic-grp">
+            <summary><span class="lg-num">20</span><span class="lg-name">房间（双人小屋）</span><span class="lg-count">6</span></summary>
+            <div class="lg-body">
+          <div class="lic-li">和 TA 共同拥有一个小屋：21 种家具全部可互动（躺床 / 浇绿植 / 点台灯 / 泡热茶…），支持移动 / 翻转 / 收回仓库 / 长按拖动</div>
+          <div class="lic-li">小屋 Lv1~5 按舒适度升级，解锁新家具与 9 种墙纸 × 4 种地板装扮</div>
+          <div class="lic-li">屋里的 TA 使用当前联系人头像渲染，会在房间走动 / 坐家具 / 看书 / 靠近你，点 TA 可靠近 / 打招呼</div>
+          <div class="lic-li">点数来源：每日进屋礼 + 使用 / 互动得点数，攒点数兑换解锁新家具；白天夜晚灯光氛围与天气变化</div>
+          <div class="lic-li">点家具窗户冒字卡话术，「感应」查 TA 大致方位；花园有收成后房间花瓶才能真正插上花</div>
+          <div class="lic-li">数据按联系人隔离——每位 TA 一个家；桌面第三页与聊天更多功能均可进入</div>
+            </div>
+          </details>
+
+          <details class="lic-grp">
+            <summary><span class="lg-num">21</span><span class="lg-name">群聊</span><span class="lg-count">5</span></summary>
+            <div class="lg-body">
+          <div class="lic-li">设置开启「群聊模式」后桌面第一页出现群聊入口：所有联系人桌面的成员聚在一个窗口聊天</div>
+          <div class="lic-li">你发言后随机成员回复，@某成员昵称则 TA 必定回复；回复内容由公用字卡 + 各自桌面专属字卡 + 默认字卡三层决定</div>
+          <div class="lic-li">成员管理：群成员列表查看，给自己和每位成员设群聊专属昵称 / 头像（覆盖桌面形象，可重置）</div>
+          <div class="lic-li">成员回复参数独立可调：回复概率 / 速度 / 条数、拍一拍、表情包、emoji、图片、语音、颜文字、引用、撤回补发（回复设置 → 群聊）</div>
+          <div class="lic-li">独立的群聊美化：壁纸 / 双方气泡色 / 字体大小 / 头像形状 / 时间轴等只作用于群聊页；表情包、多图、引用、语音、拍一拍与主聊天对齐</div>
+            </div>
+          </details>
+
+          <details class="lic-grp">
+            <summary><span class="lg-num">22</span><span class="lg-name">记录统计</span><span class="lg-count">6</span></summary>
             <div class="lg-body">
           <div class="lic-li">桌面【提问记录】统计历史：提问记录、TA 的询问、TA 的小问题、TA 的好奇、TA 的吐槽、我的邀请 / 问问</div>
           <div class="lic-li">桌面【主页】统计以下历史：联系人换头像、通话记录、每日摸鱼值、每日打工值、摸鱼抓包（我抓到 TA / 被 TA 抓到 双向记录）</div>
           <div class="lic-li">联系人今日情话、我的备忘、我的心情的历史可在【日历】里按天切换查看</div>
           <div class="lic-li">桌面【聊天统计】统计：相处记录（第一次聊天时间、最近聊天时间、聊天消息条数、文字数量、收藏记录）、聊天记录（消息比例、最常聊天时间段、最常聊天日期、平均每日消息、最长连续聊天、单日最高消息）、情绪表达（文字字卡 / 情绪 / 心意 / 交流意图使用次数排行）</div>
-          <div class="lic-li">占卜记录、帮我决定 / 多人决定记录</div>
+          <div class="lic-li">聊天统计含两条完整流水：「TA 发红包记录」「TA 申请心意币记录」，全量保存按时间倒序</div>
+          <div class="lic-li">占卜记录、帮我决定 / 多人决定记录、听歌记录（TA 邀请 / 我的）、小游戏战绩与钓鱼图鉴单独留存</div>
             </div>
           </details>
+
           <details class="lic-grp">
-            <summary><span class="lg-num">13</span><span class="lg-name">个性化</span><span class="lg-count">17</span></summary>
+            <summary><span class="lg-num">23</span><span class="lg-name">个性化</span><span class="lg-count">18</span></summary>
             <div class="lg-body">
           <div class="lic-li">联系人昵称和我的昵称在桌面双方头像组件下方修改</div>
           <div class="lic-li">联系人名称与头像，消息头像形状（圆形 / 方形）</div>
@@ -1424,21 +1582,24 @@
           <div class="lic-li">通用设置：回复速度、概率、条数等参数可调</div>
           <div class="lic-li">后台保活与后台通知</div>
           <div class="lic-li">后台保活：开启可播放禁音音频；打开【后台弹窗】并设置浏览器弹窗权限，联系人发送消息可触发浏览器弹窗</div>
+          <div class="lic-li">离线消息提醒：页面全部关闭后，安卓 PWA 后台同步仍会推送「TA 来消息了」（需先添加到桌面，iOS 不支持）</div>
           <div class="lic-li">PWA 安装：安装按钮、iOS 引导、已安装隐藏</div>
           <div class="lic-li">版本检测：在线对比版本时间戳，显示新版本提示条，可关闭</div>
           <div class="lic-li">定期备份提醒：距上次导出超 7 天提醒；首次使用引导：无数据时提示可导入备份</div>
             </div>
           </details>
+
           <details class="lic-grp">
-            <summary><span class="lg-num">14</span><span class="lg-name">音效设置</span><span class="lg-count">3</span></summary>
+            <summary><span class="lg-num">24</span><span class="lg-name">音效设置</span><span class="lg-count">3</span></summary>
             <div class="lg-body">
           <div class="lic-li">可本地上传音频设置：【联系人来电铃声】【联系人聊天消息音效】【我的消息音效】</div>
           <div class="lic-li">上传后可试听、清除；未设置则不播放</div>
           <div class="lic-li">iOS Safari 自动播放策略兼容</div>
             </div>
           </details>
+
           <details class="lic-grp">
-            <summary><span class="lg-num">15</span><span class="lg-name">数据</span><span class="lg-count">5</span></summary>
+            <summary><span class="lg-num">25</span><span class="lg-name">数据</span><span class="lg-count">5</span></summary>
             <div class="lg-body">
           <div class="lic-li">数据存储设备本地，可导入导出</div>
           <div class="lic-li">支持导入星言简约版聊天字卡库导出的 json（字卡内容与分组完整导入）</div>
@@ -1447,8 +1608,9 @@
           <div class="lic-li">兼容导入 milk 字卡库导出的 json</div>
             </div>
           </details>
+
           <details class="lic-grp">
-            <summary><span class="lg-num">16</span><span class="lg-name">帮我决定 / 多人决定</span><span class="lg-count">7</span></summary>
+            <summary><span class="lg-num">26</span><span class="lg-name">帮我决定 / 多人决定</span><span class="lg-count">7</span></summary>
             <div class="lg-body">
           <div class="lic-li">类型 A：是 / 否 / 半对 随机决定</div>
           <div class="lic-li">类型 B：自定义选项随机决定，可设置最多选几个（1-5 个）</div>
@@ -1459,8 +1621,9 @@
           <div class="lic-li">功能参考：小红书 @FelixFelicis（9416318007）</div>
             </div>
           </details>
+
           <details class="lic-grp">
-            <summary><span class="lg-num">17</span><span class="lg-name">占卜</span><span class="lg-count">5</span></summary>
+            <summary><span class="lg-num">27</span><span class="lg-name">占卜</span><span class="lg-count">5</span></summary>
             <div class="lg-body">
           <div class="lic-li">两种模式：塔罗（22 张大阿卡纳，带正逆位与详细解读）/ 雷诺曼（40 张）</div>
           <div class="lic-li">抽取张数：1 张（运势）/ 3 张（过去 · 现在 · 未来）</div>
@@ -1469,25 +1632,30 @@
           <div class="lic-li">桌面占卜页入口 + 聊天页半框入口，自动发送开关（每个联系人独立记忆）</div>
             </div>
           </details>
+
           <details class="lic-grp">
-            <summary><span class="lg-num">18</span><span class="lg-name">多联系人 / 多桌面</span><span class="lg-count">3</span></summary>
+            <summary><span class="lg-num">28</span><span class="lg-name">多联系人 / 多桌面</span><span class="lg-count">3</span></summary>
             <div class="lg-body">
           <div class="lic-li">每个联系人 = 独立命名空间，数据互不互通（聊天 / 字卡 / 桌面 / 设置等均独立）</div>
           <div class="lic-li">朋友圈为全局共享层，按联系人聚合显示所有动态</div>
           <div class="lic-li">新建 / 改名 / 删除 / 切换联系人（设置页入口），旧顶层数据自动迁移到默认联系人</div>
             </div>
           </details>
+
           <details class="lic-grp">
-            <summary><span class="lg-num">19</span><span class="lg-name">回复设置</span><span class="lg-count">4</span></summary>
+            <summary><span class="lg-num">29</span><span class="lg-name">回复设置</span><span class="lg-count">6</span></summary>
             <div class="lg-body">
-          <div class="lic-li">三面板 tab：聊天 / 信箱 / 朋友圈，各页参数独立</div>
+          <div class="lic-li">六面板 tab：聊天 / 群聊 / 信箱 / 朋友圈 / 查岗 / 其他，参数按联系人独立保存（群聊面板全局共用）</div>
           <div class="lic-li">聊天：被动回复（回复速度 / 条数 / 已读不回 / 拍一拍 / 表情包 / emoji / 图片 / 语音 / 颜文字 / 引用 / 撤回 / 补发概率）、多字卡回复（触发概率 / 最少最多条数）、主动发送（概率 / 间隔 / 条数 / 免打扰 / 爱心标识）</div>
           <div class="lic-li">信箱：信件内容字卡条数、联系人主动写信（每天最多 / 概率 / 最短最长时间）、联系人回信（概率 / 最短最长时间）、写信内容类型</div>
           <div class="lic-li">朋友圈：互动设置（点赞 / 评论 / 回复概率及速度 / 回赞概率）、回复内容设置（多字卡概率 / 最多字卡数 / 表情包概率）、TA 发朋友圈设置（主动发概率 / 每天最多 / 冷却 / 间隔 / 字卡条数 / 内容类型）、清除所有朋友圈数据</div>
+          <div class="lic-li">群聊：每个成员回复概率 / 速度 / 条数与各类附加行为概率，独立于主聊天设置</div>
+          <div class="lic-li">查岗：TA 主动查岗的开关 / 概率 / 冷却 / 自动弹窗概率</div>
             </div>
           </details>
+
           <details class="lic-grp">
-            <summary><span class="lg-num">20</span><span class="lg-name">全屏 / 移动端适配</span><span class="lg-count">4</span></summary>
+            <summary><span class="lg-num">30</span><span class="lg-name">全屏 / 移动端适配</span><span class="lg-count">4</span></summary>
             <div class="lg-body">
           <div class="lic-li">全屏模式：设置页开关，安卓 Chrome PWA 隐藏系统状态栏，iOS 隐藏应用内模拟状态栏</div>
           <div class="lic-li">iOS 手势 / 双击缩放兜底，Via 浏览器 CSS 兜底保持竖屏</div>
@@ -1495,8 +1663,9 @@
           <div class="lic-li">弹层滚动穿透锁（body.scroll-lock），输入法适配</div>
             </div>
           </details>
+
           <details class="lic-grp">
-            <summary><span class="lg-num">21</span><span class="lg-name">开屏 / 系统</span><span class="lg-count">6</span></summary>
+            <summary><span class="lg-num">31</span><span class="lg-name">开屏 / 系统</span><span class="lg-count">6</span></summary>
             <div class="lg-body">
           <div class="lic-li">开屏加载动画（含公告 / 版本时间 / 数据加载等待 / 点击进入）</div>
           <div class="lic-li">开屏公告远程化：notice.json 在线覆盖公告文案</div>
@@ -2616,7 +2785,32 @@
       </div>
     </div>
 
-    <!-- 动态页（朋友圈，桌面点「动态」进入） -->
+      <!-- v3.16.x：语音录制半框（聊天输入栏「麦克风」按钮打开）。录音（最长 60 秒）→ 试听 →
+           以既有语音消息格式「名称|||dataURL」(type=voice) 发送进聊天，复用原渲染/播放链路 -->
+      <div class="poke-card voice-card" id="voice-panel" hidden>
+        <div class="poke-card-head">
+          <span>录制语音<span class="voice-status" id="voice-status"></span></span>
+          <span class="poke-card-head-actions">
+            <button class="poke-card-close" id="voice-close" title="关闭">✕</button>
+          </span>
+        </div>
+        <div class="voice-stage">
+          <div class="voice-wave" id="voice-wave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          <div class="voice-time" id="voice-time">00:00</div>
+        </div>
+        <div class="voice-preview" id="voice-preview" hidden>
+          <button class="msg-voice-play voice-play-btn" id="voice-play-btn" title="试听">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          </button>
+          <span class="voice-preview-txt" id="voice-preview-txt"></span>
+        </div>
+        <div class="voice-foot">
+          <button class="voice-rec-btn" id="voice-record-btn">开始录音</button>
+          <button class="poke-big voice-send-big" id="voice-send-btn" disabled>发送到聊天</button>
+        </div>
+      </div>
+
+      <!-- 动态页（朋友圈，桌面点「动态」进入） -->
     <div class="page" id="page-feed" hidden>
       <div class="chat-head">
         <span class="ch-back" id="feed-back">
@@ -2868,6 +3062,10 @@
         <div class="chat-draft-items" id="chat-draft-items"></div>
       </div>
       <div class="chat-input-row">
+        <!-- v3.16.x：语音消息「麦克风」按钮（聊天设置「我可发送语音」开启后显示；点击打开录音半框） -->
+        <button class="ch-input-btn" id="chat-mic-btn" title="录制语音" style="display:none">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg>
+        </button>
         <button class="ch-input-btn" id="chat-continue-btn" title="让对方继续说" style="display:none">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/><path d="M9 11h6M9 14h4"/></svg>
         </button>
@@ -3752,6 +3950,8 @@
       </div>
       <div class="chat-body gc-body" id="gc-body"></div>
       <div class="chat-typing gc-typing" id="gc-typing" hidden></div>
+      <!-- v3.16.x：待引用预览条（点气泡→引用 后出现，与聊天页 #chat-draft-quote 同款样式） -->
+      <div class="chat-draft-quote" id="gc-quote-bar" hidden></div>
       <!-- 待发送草稿条（插入的图片缩略图，与聊天页 .chat-draft 同款样式） -->
       <div class="chat-draft" id="gc-draft" hidden>
         <div class="chat-draft-items" id="gc-draft-items"></div>
@@ -3792,6 +3992,13 @@
       <div class="gc-at-panel" id="gc-at-panel" hidden>
         <div class="gc-at-head">选择要@的成员</div>
         <div class="gc-at-body" id="gc-at-body"></div>
+      </div>
+      <!-- v3.16.x：消息气泡操作菜单（点气泡弹出「引用」，复用聊天页 .msg-actions/.ma-btn 样式） -->
+      <div class="msg-actions" id="gc-msg-actions" hidden>
+        <button class="ma-btn" data-act="quote" title="引用">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 11H6a2 2 0 01-2-2V6a2 2 0 012-2h2a2 2 0 012 2v7a4 4 0 01-4 4"/><path d="M20 11h-4a2 2 0 01-2-2V6a2 2 0 012-2h2a2 2 0 012 2v7a4 4 0 01-4 4"/></svg>
+          <span>引用</span>
+        </button>
       </div>
       <!-- 群聊设置面板（v3.9.x：我的群聊形象 + 成员群聊形象，内容 JS 渲染） -->
       <div class="gc-settings-panel" id="gc-settings-panel" hidden>
@@ -3975,6 +4182,16 @@
           <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6h.01M3 12h.01M3 18h.01"/></svg></div>
           <div class="txt">批量发送消息<span class="sub">聊天输入栏右侧显示「批量发送」按钮：可插入表情包、图片、文字，每条消息单独一条，多条按顺序一次性发送</span></div>
           <label class="toggle"><input type="checkbox" id="cs-batch-send"><span class="tk"></span></label>
+        </div>
+      </div>
+      <!-- v3.16.x：我可发送语音开关（默认关闭，每联系人独立）。开启后聊天输入栏左侧显示
+           「麦克风」按钮：点击打开录音半框，录完可试听，一键把语音发进聊天 -->
+      <div class="gs-title">语音消息</div>
+      <div class="set-group glass">
+        <div class="set-row" id="cs-voice-send-row">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg></div>
+          <div class="txt">我可发送语音<span class="sub">聊天输入栏左侧出现「麦克风」按钮：点击打开录音窗口，最长录 60 秒，可先试听再发送为语音消息</span></div>
+          <label class="toggle"><input type="checkbox" id="cs-voice-send"><span class="tk"></span></label>
         </div>
       </div>
       <!-- v3.12.x：隐藏联系人的表情包开关（默认关闭，全局生效）。开启后聊天与朋友圈的
