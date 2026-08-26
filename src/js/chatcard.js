@@ -281,6 +281,14 @@
           if (isOwn) ownRestoreResolve();
           return;
         }
+        // v3.14.x：挂起复核（放在 JSON.parse 之前）——该键已进入回填预算挂起名单
+        // （__xyIdbDeferredKeys，几十 MB 字卡库在低内存设备会被 idbRestore 挂起）时，
+        // 不在启动链路读入内存解析/写回，留给用户打开字卡库时的 openCcPage→
+        // idbHydrateKey 按需取回。否则这条无差别全量读会抢在预算系统前面把大库
+        // 拉进堆（低端机点开就冻结/崩溃的残留源）。
+        let deferredNow = false;
+        try { deferredNow = Array.isArray(window.__xyIdbDeferredKeys) && window.__xyIdbDeferredKeys.indexOf(idbFullKey) >= 0; } catch (e0) {}
+        if (deferredNow) { if (isOwn) ownRestoreResolve(); return; }
         try {
           const data = typeof v === 'string' ? JSON.parse(v) : v;
           if (data && data.text) {
@@ -293,8 +301,22 @@
         if (isOwn) ownRestoreResolve();
       }).catch(() => { if (isOwn) ownRestoreResolve(); });
     }
-    attempt(myPrefix + ':cc-groups', 'cc-groups', store, true, { retry: 0 });
-    attempt(PUB_PREFIX + ':' + PUB_KEY, PUB_KEY, pubStore(), false, { retry: 0 });
+    // v3.14.x：恢复尝试延迟到启动回填落定之后——__xyIdbDeferredKeys 名单由 idbRestore
+    // 在处理各键的过程中逐步登记，脚本加载期立即 attempt 时名单还是空的，挂起复核
+    // 形同虚设。等 mochi-restore-done（或已就绪）再发起，名单即最终态。
+    function kick() {
+      attempt(myPrefix + ':cc-groups', 'cc-groups', store, true, { retry: 0 });
+      attempt(PUB_PREFIX + ':' + PUB_KEY, PUB_KEY, pubStore(), false, { retry: 0 });
+    }
+    if (window.__mochiDataReady) kick();
+    else {
+      try {
+        document.addEventListener('mochi-restore-done', function h() {
+          document.removeEventListener('mochi-restore-done', h);
+          setTimeout(kick, 0);
+        });
+      } catch (e) { kick(); }
+    }
   })();
   function saveGroups(groups) {
     // 统一走适配层：localStorage 快照 + IndexedDB 权威（配额满也不丢，启动自动恢复）

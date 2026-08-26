@@ -84,7 +84,7 @@
       if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       const o = audioCtx.createOscillator(), g = audioCtx.createGain();
       o.frequency.value = freq; o.type = 'square';
-      g.gain.value = vol || 0.05;
+      g.gain.value = vol || 0.15;   // v3.15.x：默认 0.05→0.15，用户反馈边听音乐边玩时音效听不清
       o.connect(g); g.connect(audioCtx.destination);
       const t = audioCtx.currentTime;
       o.start(t); g.gain.setValueAtTime(g.gain.value, t);
@@ -92,11 +92,12 @@
       o.stop(t + (dur || 0.06));
     } catch (e) {}
   }
-  function sfxWall()   { beep(360, 0.04, 0.04); }
-  function sfxPaddle() { beep(500, 0.05, 0.06); }
-  function sfxBrick(hp){ beep(hp > 0 ? 300 : 640 + Math.random() * 120, hp > 0 ? 0.05 : 0.09, 0.07); }
-  function sfxLose()   { beep(200, 0.22, 0.08); setTimeout(() => beep(150, 0.26, 0.08), 130); }
-  function sfxClear()  { beep(620, 0.1, 0.08); setTimeout(() => beep(830, 0.14, 0.08), 110); }
+  // v3.15.x：音量整体调大（0.04~0.08 → 0.14~0.2）——用户反馈边听音乐边玩时音效听不清
+  function sfxWall()   { beep(360, 0.04, 0.14); }
+  function sfxPaddle() { beep(500, 0.05, 0.18); }
+  function sfxBrick(hp){ beep(hp > 0 ? 300 : 640 + Math.random() * 120, hp > 0 ? 0.05 : 0.09, 0.18); }
+  function sfxLose()   { beep(200, 0.22, 0.2); setTimeout(() => beep(150, 0.26, 0.2), 130); }
+  function sfxClear()  { beep(620, 0.1, 0.2); setTimeout(() => beep(830, 0.14, 0.2), 110); }
 
   // ---- 工具 ----
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));

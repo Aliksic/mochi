@@ -4391,8 +4391,9 @@ padding:9px 14px; font-size:13px; font-family:inherit; outline:none; background:
 resize:none; }
 .feed-comment-input:focus { border-color:var(--ink); background:#fff; }
 .feed-comment-send {
-flex-shrink:0; border:none; border-radius:99px; padding:0 18px;
-background:var(--ink); color:#fff; font-size:13px; font-weight:700;
+flex-shrink:0; border:none; border-radius:99px; padding:0 20px;
+min-height:36px; display:flex; align-items:center; justify-content:center;
+background:var(--ink); color:#fff; font-size:14px; font-weight:700;
 cursor:pointer; font-family:inherit; -webkit-tap-highlight-color:transparent;
 }
 .feed-head-actions { display:flex; align-items:center; gap:8px; flex-shrink:0; }
@@ -7077,7 +7078,7 @@ transition-duration: .01ms !important;
       </div>
       <div class="splash-dots"><i></i><i></i><i></i></div>
       <div class="splash-brand">小红书@言序（1842523578）</div>
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787720537862">Mochi 字卡传讯 v3.6.239 · 部署于 2026-08-26 13:02</div>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787722838475">Mochi 字卡传讯 v3.6.240 · 部署于 2026-08-26 13:40</div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
       <div class="splash-loading" id="splash-loading">正在加载数据…</div>
@@ -8125,7 +8126,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.6.239</div>
+      <div class="ver">Mochi 字卡传讯 v3.6.240</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -8267,7 +8268,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.6.239</span>
+              <span class="lic-ver">v3.6.240</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -9319,6 +9320,10 @@ transition-duration: .01ms !important;
             <button class="sm-tool" id="music-batch-manage">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>批量管理
             </button>
+            <!-- v3.14.x：存量库清理——网易云会员/付费歌曲网页外链无法播放，批量检测并移除 -->
+            <button class="sm-tool" id="music-vip-clean">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>清理会员歌曲
+            </button>
           </div>
           <div class="music-lib-filter" id="music-lib-filter"></div>
           <div id="music-lib-list"></div>
@@ -10272,12 +10277,11 @@ transition-duration: .01ms !important;
         </button>
       </div>
       <div class="more-panel" id="chat-more-panel" hidden>
-        <!-- v3.15.x：功能增多后改为顶部分类 chips 切换（常用/互动/小游戏/工具/TA的提问）。
+        <!-- v3.15.x：功能增多后改为顶部分类 chips 切换（互动/小游戏/工具/TA的提问）。
              功能按钮元素与 ID 全部保留（各功能模块按 ID 接线），仅加 data-mcat 由 JS 过滤显示；
-             「常用」按真实点击频次自动统计，其余按 data-mcat 归类 -->
+             每个功能只归属一个分类、分类间互不重复（v3.16.x 起移除「常用」页签，原常用默认项并入所属分类） -->
         <div class="more-tabs" id="more-tabs">
-          <button class="more-tab sel" type="button" data-mcat="often">常用</button>
-          <button class="more-tab" type="button" data-mcat="chat">互动</button>
+          <button class="more-tab sel" type="button" data-mcat="chat">互动</button>
           <button class="more-tab" type="button" data-mcat="game">小游戏</button>
           <button class="more-tab" type="button" data-mcat="tool">工具</button>
           <button class="more-tab" type="button" data-mcat="ask">TA的提问</button>
@@ -18862,36 +18866,15 @@ const moreBtn = document.getElementById('chat-more-btn');
 if (moreBtn && morePanel) {
 const moreGridFun = document.getElementById('more-grid-fun');
 const moreGridAsk = document.getElementById('more-grid-ask');
-const MORE_CATS = ['often', 'chat', 'game', 'tool', 'ask'];
-const MORE_OFTEN_DEFAULT = ['more-call', 'more-poke', 'more-gift', 'more-rp', 'more-decide', 'more-search'];
-function moreUseRead() {
-try { const v = JSON.parse(store.get('more-item-use') || '{}'); if (v && typeof v === 'object' && !Array.isArray(v)) return v; } catch (e) {}
-return {};
-}
-function moreOftenIds() {
-const use = moreUseRead();
-const score = {};
-MORE_OFTEN_DEFAULT.forEach(id => { if (document.getElementById(id)) score[id] = 0; });
-Object.keys(use).forEach(id => {
-const n = use[id] | 0;
-if (n > 0 && document.getElementById(id)) score[id] = Math.max(score[id] || 0, n);
-});
-return Object.keys(score).sort((a, b) => (score[b] - score[a]) || (MORE_OFTEN_DEFAULT.indexOf(a) - MORE_OFTEN_DEFAULT.indexOf(b))).slice(0, 12);
-}
-morePanel.addEventListener('click', (e) => {
-const it = e.target.closest ? e.target.closest('.more-item') : null;
-if (!it || !it.id || !morePanel.contains(it)) return;
-try { const use = moreUseRead(); use[it.id] = (use[it.id] || 0) + 1; store.set('more-item-use', JSON.stringify(use)); } catch (err) {}
-}, true);
+const MORE_CATS = ['chat', 'game', 'tool', 'ask'];
 function applyMoreCat(cat) {
-if (MORE_CATS.indexOf(cat) < 0) cat = 'often';
+if (MORE_CATS.indexOf(cat) < 0) cat = 'chat';
 document.querySelectorAll('#more-tabs .more-tab').forEach(t => t.classList.toggle('sel', t.dataset.mcat === cat));
 if (moreGridAsk) moreGridAsk.hidden = cat !== 'ask';
 if (moreGridFun) {
 moreGridFun.hidden = cat === 'ask';
-const often = cat === 'often' ? moreOftenIds() : null;
 moreGridFun.querySelectorAll('.more-item').forEach(it => {
-it.hidden = often ? (often.indexOf(it.id) < 0) : (it.dataset.mcat !== cat);
+it.hidden = it.dataset.mcat !== cat;
 });
 }
 store.set('more-cat', cat);
@@ -18900,7 +18883,7 @@ document.querySelectorAll('#more-tabs .more-tab').forEach(t => t.addEventListene
 moreBtn.addEventListener('click', (e) => {
 e.stopPropagation();
 if (morePanel.hidden) {
-let tab = 'often';
+let tab = 'chat';
 try {
 const saved = store.get('more-cat');
 if (saved && MORE_CATS.indexOf(saved) >= 0) tab = saved;
@@ -23732,6 +23715,9 @@ if (state.retry < MAX_RETRY) { state.retry++; setTimeout(() => attempt(idbFullKe
 if (isOwn) ownRestoreResolve();
 return;
 }
+let deferredNow = false;
+try { deferredNow = Array.isArray(window.__xyIdbDeferredKeys) && window.__xyIdbDeferredKeys.indexOf(idbFullKey) >= 0; } catch (e0) {}
+if (deferredNow) { if (isOwn) ownRestoreResolve(); return; }
 try {
 const data = typeof v === 'string' ? JSON.parse(v) : v;
 if (data && data.text) {
@@ -23744,8 +23730,19 @@ if (localCount < 0 || cardCount(data) > localCount) applyRestored(lsKey, st, dat
 if (isOwn) ownRestoreResolve();
 }).catch(() => { if (isOwn) ownRestoreResolve(); });
 }
+function kick() {
 attempt(myPrefix + ':cc-groups', 'cc-groups', store, true, { retry: 0 });
 attempt(PUB_PREFIX + ':' + PUB_KEY, PUB_KEY, pubStore(), false, { retry: 0 });
+}
+if (window.__mochiDataReady) kick();
+else {
+try {
+document.addEventListener('mochi-restore-done', function h() {
+document.removeEventListener('mochi-restore-done', h);
+setTimeout(kick, 0);
+});
+} catch (e) { kick(); }
+}
 })();
 function saveGroups(groups) {
 curStore().set(curKey(), JSON.stringify(groups));
@@ -27891,7 +27888,8 @@ function mergeDesksMusic() {
 let contacts = [];
 try { contacts = window.getContacts() || []; } catch (e) {}
 const otherCids = contacts.map(c => c.id).filter(id => id && id !== 'default');
-if (!otherCids.length) return;
+if (store.get('music-merge-done')) return;
+if (!otherCids.length) { store.set('music-merge-done', '1'); return; }
 const libIds = new Set(library.map(m => m && m.id));
 const plIds = new Set(playlists.map(p => p && p.id));
 const histIds = new Set(history.map(h => h && h.id));
@@ -27919,6 +27917,15 @@ myHistory.push(h); myHistIds.add(h.id); myChanged = true;
 });
 if (changed) { saveLibrary(); savePlaylists(); saveHistory(); }
 if (myChanged) { saveMyHistory(); }
+otherCids.forEach(cid => {
+let s; try { s = window.storeFor(cid); } catch (e) { return; }
+if (!s || typeof s.remove !== 'function') return;
+try { s.remove('music-library'); } catch (e) {}
+try { s.remove('music-playlists'); } catch (e) {}
+try { s.remove('music-history'); } catch (e) {}
+try { s.remove('music-my-history'); } catch (e) {}
+});
+store.set('music-merge-done', '1');
 if (window.idbGet && window.idbSet && window.idbGetAllKeys) {
 const localIds = library.filter(m => m && (m.source === 'local' || (!m.url && m.source !== 'url'))).map(m => m.id);
 if (!localIds.length) return;
@@ -28316,6 +28323,77 @@ finish();
 .catch(() => { clearTimeout(timer); });
 });
 setTimeout(finish, 7000);
+}
+function fetchNeteaseFees(ids, cb) {
+if (!ids || !ids.length) { cb({}, false); return; }
+const apiUrls = [
+'https://music.163.com/api/v6/song/detail?ids=' + encodeURIComponent('[' + ids.join(',') + ']'),
+'https://music.163.com/api/song/detail/?ids=' + encodeURIComponent('[' + ids.join(',') + ']')
+];
+const prox = [
+{ p: 'https://proxy.cors.sh/', enc: false },
+{ p: 'https://api.allorigins.win/raw?url=', enc: true },
+{ p: 'https://corsproxy.io/?url=', enc: true }
+];
+const out = {};
+let settled = false;
+let pending = 0;
+const finish = (ok) => { if (settled) return; settled = true; cb(out, ok); };
+prox.forEach(pr => {
+apiUrls.forEach(u => {
+pending++;
+let controller;
+try { controller = new AbortController(); } catch (e) { controller = null; }
+const timer = setTimeout(() => { try { controller && controller.abort(); } catch (e) {} }, 6000);
+fetch(pr.p + (pr.enc ? encodeURIComponent(u) : u), controller ? { signal: controller.signal } : undefined)
+.then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+.then(txt => {
+clearTimeout(timer);
+try {
+const j = JSON.parse(txt);
+const songs = (j && Array.isArray(j.songs)) ? j.songs : [];
+let got = 0;
+songs.forEach(s => { if (s && s.id && typeof s.fee === 'number') { out[String(s.id)] = s.fee; got++; } });
+if (got) { finish(true); return; }
+} catch (e) {}
+})
+.catch(() => { clearTimeout(timer); })
+.then(() => { if (--pending === 0 && !settled) finish(false); });
+});
+});
+setTimeout(() => finish(false), 7000);
+}
+function openVipClean() {
+const candidates = library.filter(m => m && m.neteaseId && m.source === 'url');
+if (!candidates.length) { toast('音乐库里没有网易云链接歌曲'); return; }
+const uniqueIds = [];
+candidates.forEach(m => { if (uniqueIds.indexOf(m.neteaseId) < 0) uniqueIds.push(m.neteaseId); });
+toast('正在检测 ' + uniqueIds.length + ' 首歌曲的会员状态…');
+fetchNeteaseFees(uniqueIds, (fees, ok) => {
+if (!ok || !Object.keys(fees).length) { toast('检测失败：网络不可用，请稍后重试'); return; }
+const vip = candidates.filter(m => fees[m.neteaseId] === 1 || fees[m.neteaseId] === 4);
+if (!vip.length) { toast('未发现会员/付费歌曲'); return; }
+const shown = vip.slice(0, 30);
+const more = vip.length - shown.length;
+if (!window.openTCPanel) return;
+window.openTCPanel('清理会员歌曲', '' +
+'<div class="sm-fld-hint" style="margin-bottom:8px">以下 ' + vip.length + ' 首为网易云会员/付费歌曲（网页外链无法播放），可移除出音乐库：</div>' +
+shown.map(m => '<div class="sm-song" data-id="' + m.id + '">' + songIcoHtml(m) +
+'<div class="sm-song-info"><div class="sm-song-name">' + esc(m.name || '未知歌曲') + '</div>' +
+'<div class="sm-song-sub">' + esc(m.artist || '未知歌手') + '</div></div></div>').join('') +
+(more > 0 ? '<div class="sm-fld-hint" style="margin-top:6px">…还有 ' + more + ' 首，一并移除</div>' : '') +
+'<div class="mail-actions"><button class="cc-tool" id="sm-vip-cancel">取消</button><button class="cc-tool" id="sm-vip-ok">移除 ' + vip.length + ' 首</button></div>');
+document.getElementById('sm-vip-cancel').addEventListener('click', () => { document.getElementById('tc-mask').hidden = true; });
+document.getElementById('sm-vip-ok').addEventListener('click', () => {
+const vipIds = vip.map(m => m.id);
+library = library.filter(m => vipIds.indexOf(m.id) < 0);
+if (currentId && vipIds.indexOf(currentId) >= 0) { teardownAudio(); currentId = null; }
+saveLibrary();
+document.getElementById('tc-mask').hidden = true;
+renderPage();
+toast('已移除 ' + vip.length + ' 首会员/付费歌曲');
+});
+});
 }
 function updateDurUI(id, dur) {
 if (!dur) return;
@@ -30485,6 +30563,8 @@ const batchBtn = document.getElementById('music-batch');
 if (batchBtn) batchBtn.addEventListener('click', openBatch);
 const batchMgmt = document.getElementById('music-batch-manage');
 if (batchMgmt) batchMgmt.addEventListener('click', () => { if (musicBatch) exitBatch(); else enterBatch(); });
+const vipClean = document.getElementById('music-vip-clean');
+if (vipClean) vipClean.addEventListener('click', openVipClean);
 const setBtn = document.getElementById('music-set');
 if (setBtn) setBtn.addEventListener('click', openSettings);
 const playBtn = document.getElementById('sm-play');
@@ -51559,10 +51639,10 @@ g.gain.exponentialRampToValueAtTime(0.0001, t + (dur || 0.06));
 o.stop(t + (dur || 0.06));
 } catch (e) {}
 }
-function sfxWall() { beep(380, 0.04, 0.04); }
-function sfxPaddle() { beep(520, 0.05, 0.06); }
-function sfxScore() { beep(300, 0.12, 0.08); }
-function sfxWin() { beep(660, 0.18, 0.09); setTimeout(() => beep(880, 0.22, 0.09), 140); }
+function sfxWall() { beep(380, 0.04, 0.14); }
+function sfxPaddle() { beep(520, 0.05, 0.18); }
+function sfxScore() { beep(300, 0.12, 0.2); }
+function sfxWin() { beep(660, 0.18, 0.22); setTimeout(() => beep(880, 0.22, 0.22), 140); }
 let state = null;
 let rafId = null, lastTs = 0, acc = 0;
 let running = false;
@@ -52283,7 +52363,7 @@ function beep(freq, dur) {
 try {
 if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 const o = audioCtx.createOscillator(), g = audioCtx.createGain();
-o.frequency.value = freq; o.type = 'square'; g.gain.value = 0.04;
+o.frequency.value = freq; o.type = 'square'; g.gain.value = 0.14;   // v3.15.x：0.04→0.14，边听音乐边玩时音效清晰
 o.connect(g); g.connect(audioCtx.destination);
 o.start();
 g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
@@ -53164,7 +53244,7 @@ try {
 if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 const o = audioCtx.createOscillator(), g = audioCtx.createGain();
 o.frequency.value = freq; o.type = 'square';
-g.gain.value = vol || 0.05;
+g.gain.value = vol || 0.15;   // v3.15.x：默认 0.05→0.15，用户反馈边听音乐边玩时音效听不清
 o.connect(g); g.connect(audioCtx.destination);
 const t = audioCtx.currentTime;
 o.start(t); g.gain.setValueAtTime(g.gain.value, t);
@@ -53172,11 +53252,11 @@ g.gain.exponentialRampToValueAtTime(0.0001, t + (dur || 0.06));
 o.stop(t + (dur || 0.06));
 } catch (e) {}
 }
-function sfxWall()   { beep(360, 0.04, 0.04); }
-function sfxPaddle() { beep(500, 0.05, 0.06); }
-function sfxBrick(hp){ beep(hp > 0 ? 300 : 640 + Math.random() * 120, hp > 0 ? 0.05 : 0.09, 0.07); }
-function sfxLose()   { beep(200, 0.22, 0.08); setTimeout(() => beep(150, 0.26, 0.08), 130); }
-function sfxClear()  { beep(620, 0.1, 0.08); setTimeout(() => beep(830, 0.14, 0.08), 110); }
+function sfxWall()   { beep(360, 0.04, 0.14); }
+function sfxPaddle() { beep(500, 0.05, 0.18); }
+function sfxBrick(hp){ beep(hp > 0 ? 300 : 640 + Math.random() * 120, hp > 0 ? 0.05 : 0.09, 0.18); }
+function sfxLose()   { beep(200, 0.22, 0.2); setTimeout(() => beep(150, 0.26, 0.2), 130); }
+function sfxClear()  { beep(620, 0.1, 0.2); setTimeout(() => beep(830, 0.14, 0.2), 110); }
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const rand = (a, b) => a + Math.random() * (b - a);
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];

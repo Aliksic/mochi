@@ -2612,39 +2612,17 @@ const moreBtn = document.getElementById('chat-more-btn');
 if (moreBtn && morePanel) {
 const moreGridFun = document.getElementById('more-grid-fun');
 const moreGridAsk = document.getElementById('more-grid-ask');
-// v3.15.x：功能增多后顶部改为分类 chips（常用/互动/小游戏/工具/TA的提问），
-// 按钮元素与 ID 全部保留只做过滤显示；「常用」按真实点击频次统计（无数据时用默认集）
-const MORE_CATS = ['often', 'chat', 'game', 'tool', 'ask'];
-const MORE_OFTEN_DEFAULT = ['more-call', 'more-poke', 'more-gift', 'more-rp', 'more-decide', 'more-search'];
-function moreUseRead() {
-try { const v = JSON.parse(store.get('more-item-use') || '{}'); if (v && typeof v === 'object' && !Array.isArray(v)) return v; } catch (e) {}
-return {};
-}
-function moreOftenIds() {
-// 默认集打底（计 0 次），真实点击过的按次数插到前面；最多展示 12 个
-const use = moreUseRead();
-const score = {};
-MORE_OFTEN_DEFAULT.forEach(id => { if (document.getElementById(id)) score[id] = 0; });
-Object.keys(use).forEach(id => {
-const n = use[id] | 0;
-if (n > 0 && document.getElementById(id)) score[id] = Math.max(score[id] || 0, n);
-});
-return Object.keys(score).sort((a, b) => (score[b] - score[a]) || (MORE_OFTEN_DEFAULT.indexOf(a) - MORE_OFTEN_DEFAULT.indexOf(b))).slice(0, 12);
-}
-morePanel.addEventListener('click', (e) => {
-const it = e.target.closest ? e.target.closest('.more-item') : null;
-if (!it || !it.id || !morePanel.contains(it)) return;
-try { const use = moreUseRead(); use[it.id] = (use[it.id] || 0) + 1; store.set('more-item-use', JSON.stringify(use)); } catch (err) {}
-}, true);
+// v3.15.x：功能增多后顶部改为分类 chips（互动/小游戏/工具/TA的提问），
+// 按钮元素与 ID 全部保留只做过滤显示；每个功能只归属一个分类、分类间不重复
+const MORE_CATS = ['chat', 'game', 'tool', 'ask'];
 function applyMoreCat(cat) {
-if (MORE_CATS.indexOf(cat) < 0) cat = 'often';
+if (MORE_CATS.indexOf(cat) < 0) cat = 'chat';
 document.querySelectorAll('#more-tabs .more-tab').forEach(t => t.classList.toggle('sel', t.dataset.mcat === cat));
 if (moreGridAsk) moreGridAsk.hidden = cat !== 'ask';
 if (moreGridFun) {
 moreGridFun.hidden = cat === 'ask';
-const often = cat === 'often' ? moreOftenIds() : null;
 moreGridFun.querySelectorAll('.more-item').forEach(it => {
-it.hidden = often ? (often.indexOf(it.id) < 0) : (it.dataset.mcat !== cat);
+it.hidden = it.dataset.mcat !== cat;
 });
 }
 store.set('more-cat', cat);
@@ -2653,7 +2631,7 @@ document.querySelectorAll('#more-tabs .more-tab').forEach(t => t.addEventListene
 moreBtn.addEventListener('click', (e) => {
 e.stopPropagation();
 if (morePanel.hidden) {
-let tab = 'often';
+let tab = 'chat';
 try {
 const saved = store.get('more-cat');
 if (saved && MORE_CATS.indexOf(saved) >= 0) tab = saved;

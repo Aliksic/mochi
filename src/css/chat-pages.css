@@ -2518,8 +2518,9 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + env(safe-area-inset-bott
 }
 .feed-comment-input:focus { border-color:var(--ink); background:#fff; }
 .feed-comment-send {
-  flex-shrink:0; border:none; border-radius:99px; padding:0 18px;
-  background:var(--ink); color:#fff; font-size:13px; font-weight:700;
+  flex-shrink:0; border:none; border-radius:99px; padding:0 20px;
+  min-height:36px; display:flex; align-items:center; justify-content:center;
+  background:var(--ink); color:#fff; font-size:14px; font-weight:700;
   cursor:pointer; font-family:inherit; -webkit-tap-highlight-color:transparent;
 }
 /* 朋友圈顶部栏：通知提醒（带未读角标）/ 发布 按钮 */

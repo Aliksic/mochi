@@ -55,7 +55,7 @@
     try {
       if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       const o = audioCtx.createOscillator(), g = audioCtx.createGain();
-      o.frequency.value = freq; o.type = 'square'; g.gain.value = 0.04;
+      o.frequency.value = freq; o.type = 'square'; g.gain.value = 0.14;   // v3.15.x：0.04→0.14，边听音乐边玩时音效清晰
       o.connect(g); g.connect(audioCtx.destination);
       o.start();
       g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);

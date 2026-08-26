@@ -103,10 +103,11 @@
       o.stop(t + (dur || 0.06));
     } catch (e) {}
   }
-  function sfxWall() { beep(380, 0.04, 0.04); }
-  function sfxPaddle() { beep(520, 0.05, 0.06); }
-  function sfxScore() { beep(300, 0.12, 0.08); }
-  function sfxWin() { beep(660, 0.18, 0.09); setTimeout(() => beep(880, 0.22, 0.09), 140); }
+  // v3.15.x：音量整体调大（0.04~0.09 → 0.14~0.22）——用户反馈边听音乐边玩时音效听不清
+  function sfxWall() { beep(380, 0.04, 0.14); }
+  function sfxPaddle() { beep(520, 0.05, 0.18); }
+  function sfxScore() { beep(300, 0.12, 0.2); }
+  function sfxWin() { beep(660, 0.18, 0.22); setTimeout(() => beep(880, 0.22, 0.22), 140); }
 
   // ---- 游戏状态 ----
   let state = null;

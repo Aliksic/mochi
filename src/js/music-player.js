@@ -4,8 +4,9 @@
 (function () {
   // v3.9.x：音乐数据全局共享——所有桌面共用同一份音乐库/歌单/历史/收藏/设置，
   // 固定读写 default 桌面命名空间（xy-home-v2:default:music-*）。各桌面原先独立
-  // 的音乐数据由 mergeDesksMusic() 一次性合并迁移到 default（不删除原桌面数据，
-  // 作冗余备份，已上传的本地音频文件也不会丢）。本地音频文件 IDB 键固定用 default 前缀。
+  // 的音乐数据由 mergeDesksMusic() 一次性合并迁移到 default（合并后清除源桌面的
+  // 库/歌单键，见该函数注释；已上传的本地音频文件 IDB 仍保留作备份）。
+  // 本地音频文件 IDB 键固定用 default 前缀。
   const MUSIC_PREFIX = 'xy-home-v2:default';
   const store = window.storeFor('default');
   function toast(msg) {
@@ -198,13 +199,17 @@
 
   // v3.9.x：多桌面音乐合并——把所有非 default 桌面的音乐库/歌单/历史合并到 default
   // 共享库（按 id 去重），本地音频文件从各桌面 IDB 拷贝到 default IDB（已存在则跳过）。
-  // 不删除原桌面数据（冗余备份，已上传的歌不会丢）。幂等：每次 loadAll 跑一遍，已有则跳过。
+  // v3.14.x：一次性迁移——合并完成即置 music-merge-done 标记并清除源桌面 music-* 键。
+  // 原实现「不删除原桌面数据、每次启动重复合并」导致用户在共享库里删除的歌曲，重启后
+  // 又被旧桌面备份合并回来（用户反馈「音乐里能播放已删除的歌曲」）。现在首次合并后
+  // 源键已清 + 标记挡住后续合并，即使旧备份导入把源桌面键恢复回来也不会再合并。
   function loadArrFrom(s, k) { try { const v = JSON.parse(s.get(k) || 'null'); return Array.isArray(v) ? v : []; } catch (e) { return []; } }
   function mergeDesksMusic() {
     let contacts = [];
     try { contacts = window.getContacts() || []; } catch (e) {}
     const otherCids = contacts.map(c => c.id).filter(id => id && id !== 'default');
-    if (!otherCids.length) return;
+    if (store.get('music-merge-done')) return;
+    if (!otherCids.length) { store.set('music-merge-done', '1'); return; }
     const libIds = new Set(library.map(m => m && m.id));
     const plIds = new Set(playlists.map(p => p && p.id));
     const histIds = new Set(history.map(h => h && h.id));
@@ -232,6 +237,20 @@
     });
     if (changed) { saveLibrary(); savePlaylists(); saveHistory(); }
     if (myChanged) { saveMyHistory(); }
+    // v3.14.x：源桌面键清理 + 一次性迁移标记——音乐全局共享后，各非 default 桌面的
+    // music-* 键只是迁移前的陈旧副本。不清理的话，用户在共享库里删除的歌曲会在下次
+    // 启动被旧副本重新合并回来（用户反馈「音乐里能播放已删除的歌曲」）。这里清掉源
+    // 桌面 4 个键并置 music-merge-done，后续启动直接跳过合并；IDB 里已拷贝的本地
+    // 音频文件保留作数据兜底，不影响。
+    otherCids.forEach(cid => {
+      let s; try { s = window.storeFor(cid); } catch (e) { return; }
+      if (!s || typeof s.remove !== 'function') return;
+      try { s.remove('music-library'); } catch (e) {}
+      try { s.remove('music-playlists'); } catch (e) {}
+      try { s.remove('music-history'); } catch (e) {}
+      try { s.remove('music-my-history'); } catch (e) {}
+    });
+    store.set('music-merge-done', '1');
     // 拷贝本地音频文件 IDB（异步，不阻塞 UI）：各桌面 music-file:<id> → default music-file:<id>
     if (window.idbGet && window.idbSet && window.idbGetAllKeys) {
       const localIds = library.filter(m => m && (m.source === 'local' || (!m.url && m.source !== 'url'))).map(m => m.id);
@@ -699,6 +718,84 @@
     });
     // 兜底：最多等 7s（代理全挂时快速收尾，交给音频探测）
     setTimeout(finish, 7000);
+  }
+  // ================= 网易云会员歌曲批量检测与清理 =================
+  // v3.14.x：存量库清理入口——导入时的 VIP 过滤（importNeteasePlaylist/
+  // enrichImportedDurations）只覆盖「当批新导入」且依赖代理可用，老歌单/代理失效那批
+  // 漏网的会员歌（fee=1 VIP 专属 / 4 需购买专辑）留在库里，点播即失败。这里批量查
+  // 网易云单曲详情 API（与 v6 歌单详情同族，经 CORS 代理），拿到每首 fee 后确认移除。
+  // 代理全挂时如实提示，绝不把「查不到」当成「免费」误删。
+  function fetchNeteaseFees(ids, cb) {
+    if (!ids || !ids.length) { cb({}, false); return; }
+    const apiUrls = [
+      'https://music.163.com/api/v6/song/detail?ids=' + encodeURIComponent('[' + ids.join(',') + ']'),
+      'https://music.163.com/api/song/detail/?ids=' + encodeURIComponent('[' + ids.join(',') + ']')
+    ];
+    const prox = [
+      { p: 'https://proxy.cors.sh/', enc: false },
+      { p: 'https://api.allorigins.win/raw?url=', enc: true },
+      { p: 'https://corsproxy.io/?url=', enc: true }
+    ];
+    const out = {};
+    let settled = false;
+    let pending = 0;
+    const finish = (ok) => { if (settled) return; settled = true; cb(out, ok); };
+    prox.forEach(pr => {
+      apiUrls.forEach(u => {
+        pending++;
+        let controller;
+        try { controller = new AbortController(); } catch (e) { controller = null; }
+        const timer = setTimeout(() => { try { controller && controller.abort(); } catch (e) {} }, 6000);
+        fetch(pr.p + (pr.enc ? encodeURIComponent(u) : u), controller ? { signal: controller.signal } : undefined)
+          .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+          .then(txt => {
+            clearTimeout(timer);
+            try {
+              const j = JSON.parse(txt);
+              const songs = (j && Array.isArray(j.songs)) ? j.songs : [];
+              let got = 0;
+              songs.forEach(s => { if (s && s.id && typeof s.fee === 'number') { out[String(s.id)] = s.fee; got++; } });
+              if (got) { finish(true); return; }
+            } catch (e) {}
+          })
+          .catch(() => { clearTimeout(timer); })
+          .then(() => { if (--pending === 0 && !settled) finish(false); });
+      });
+    });
+    // 兜底：全部请求 6s 内无有效结果 → 结束（回调 ok=false，调用方提示网络失败）
+    setTimeout(() => finish(false), 7000);
+  }
+  function openVipClean() {
+    const candidates = library.filter(m => m && m.neteaseId && m.source === 'url');
+    if (!candidates.length) { toast('音乐库里没有网易云链接歌曲'); return; }
+    const uniqueIds = [];
+    candidates.forEach(m => { if (uniqueIds.indexOf(m.neteaseId) < 0) uniqueIds.push(m.neteaseId); });
+    toast('正在检测 ' + uniqueIds.length + ' 首歌曲的会员状态…');
+    fetchNeteaseFees(uniqueIds, (fees, ok) => {
+      if (!ok || !Object.keys(fees).length) { toast('检测失败：网络不可用，请稍后重试'); return; }
+      const vip = candidates.filter(m => fees[m.neteaseId] === 1 || fees[m.neteaseId] === 4);
+      if (!vip.length) { toast('未发现会员/付费歌曲'); return; }
+      const shown = vip.slice(0, 30);
+      const more = vip.length - shown.length;
+      if (!window.openTCPanel) return;
+      window.openTCPanel('清理会员歌曲', '' +
+        '<div class="sm-fld-hint" style="margin-bottom:8px">以下 ' + vip.length + ' 首为网易云会员/付费歌曲（网页外链无法播放），可移除出音乐库：</div>' +
+        shown.map(m => '<div class="sm-song" data-id="' + m.id + '">' + songIcoHtml(m) +
+          '<div class="sm-song-info"><div class="sm-song-name">' + esc(m.name || '未知歌曲') + '</div>' +
+          '<div class="sm-song-sub">' + esc(m.artist || '未知歌手') + '</div></div></div>').join('') +
+        (more > 0 ? '<div class="sm-fld-hint" style="margin-top:6px">…还有 ' + more + ' 首，一并移除</div>' : '') +
+        '<div class="mail-actions"><button class="cc-tool" id="sm-vip-cancel">取消</button><button class="cc-tool" id="sm-vip-ok">移除 ' + vip.length + ' 首</button></div>');
+      document.getElementById('sm-vip-cancel').addEventListener('click', () => { document.getElementById('tc-mask').hidden = true; });
+      document.getElementById('sm-vip-ok').addEventListener('click', () => {
+        const vipIds = vip.map(m => m.id);
+        library = library.filter(m => vipIds.indexOf(m.id) < 0);
+        if (currentId && vipIds.indexOf(currentId) >= 0) { teardownAudio(); currentId = null; }
+        saveLibrary();
+        document.getElementById('tc-mask').hidden = true;
+        renderPage();
+        toast('已移除 ' + vip.length + ' 首会员/付费歌曲');
+      });
+    });
   }
   function updateDurUI(id, dur) {
     if (!dur) return;
@@ -3194,6 +3291,8 @@
   if (batchBtn) batchBtn.addEventListener('click', openBatch);
   const batchMgmt = document.getElementById('music-batch-manage');
   if (batchMgmt) batchMgmt.addEventListener('click', () => { if (musicBatch) exitBatch(); else enterBatch(); });
+  const vipClean = document.getElementById('music-vip-clean');
+  if (vipClean) vipClean.addEventListener('click', openVipClean);
   const setBtn = document.getElementById('music-set');
   if (setBtn) setBtn.addEventListener('click', openSettings);
   // 播放器控制

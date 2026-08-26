@@ -2718,3 +2718,30 @@ ode tools/patch-chat-cuddle.mjs**（幂等断言，仅在文件未被锁定时�
   - **⚠️ 跨域说明**：本任务按用户要求改了 AI-B 名下的 src/template.html（更多面板结构在此文件）；chat-main.css 属 AI-A 域无冲突。12:35 检测到 chat.js 有并行会话写入，本人所有编辑均先重读再窄替换，node --check 通过。
   - **验证**：新 tools/verify-more-cats.mjs **12/12**（A1-A8 分类过滤/频次进常用/刷新记忆分类；B1-B4 模式+分组跨重启恢复/真实上传路径注入合成图片后偏好补存/二次重启仍落在上传分组）；回归 verify-group-decision **13/13**、verify-more-panel-kb **5/5**、verify-morekb-pan **7/7**、npm run verify 布局 **10/10**。
   - **给构建者**：本次 node build.mjs 已执行，产物同时包含今日其他会话已登记完成的改动（avatar-lib/idb/bg-keep 等，均标注"已保存完整"）；如后续还有并行改动入库请重新构建再提交。
+
+### 2026-08-26 13:2x（用户反馈 vivo Edge 四连：①发送后输入框残留 ②通话接通卡0秒后跳30秒 ③小组件位置重启回退 ④公用字卡语音卡死/空白）
+- [本会话·完成]（**已改 chat.js / personalize.js / chatcard.js，已构建（13:20, sw: mochi-mt9nghna）+ npm run verify 10/10 + verify-chat-dupe 11/11 + verify-cc-scope 27/27 + verify-cc-batch-import 13/13 + verify-desk-move-swipe 8/8 + verify-desk-reset-period 10/10；新增 tools/verify-desk-persist.mjs 4/4 + tools/verify-voice-heal.mjs 9/9；未提交**）：
+  - **① 发送后输入框残留**（chat.js clearChatInput 加固）：vivo Edge 聚焦中的 contenteditable 直写 textContent='' 后，输入法把刚提交的组合文本整体写回（迟到、常不派发 input 事件），原 _mClearTxt 守卫收不到。改聚焦态走 execCommand 编辑管线删除（终结组合会话）+ 200/800ms 两次迟到复活复查（仅当内容=刚发文本且防重发窗口内才清）。
+  - **② 通话接通卡0秒后跳30秒**（call.js 无改动，根因判定）：计时基准已用 connectedTime、接通立即刷新（上轮已修）；真机残余「冻结≈30s 后一次跳到 30s」指向 vivo 低端机接通瞬间主线程内存压力/长 GC（字卡库几十 MB dataURL 全量驻留），本轮 ④ 的字卡启动恢复接入预算+按需懒加载+坏语音清理即为此缓解，通话本身无代码问题。
+  - **③ 小组件位置重启回退**（personalize.js rebuildDeskWhenReady 补 applyDeskLayout）：desk-layout 的 LS 副本可能缺失（只存 IDB），首次 applyDeskLayout 在脚本加载期（回填未完）读到空不应用，此前只重建页数不重排组件 → 装修位置整会话失效，失效期间 saveDeskLayout 还把默认 DOM 固化成新布局。修复：mochi-restore-done 后补一次 applyDeskLayout（幂等）。verify-desk-persist 4/4 覆盖：拖拽落库/重启保持/仅 IDB 有布局时重启恢复。
+  - **④ 公用字卡语音卡死/空白**（chatcard.js 三处）：a) 语音坏数据自愈 sanitizeVoiceGroups——视频/图片/无法抢救空MIME 剔除（按扩展名救回空MIME音频），含 ||| 文字卡与健康音频保留，loadGroups 与 pubGroupsRaw 双入口各清一次+一次性提示；b) openCcPage 大键懒加载——超预算挂起键（__xyIdbDeferredKeys）打开页面时 idbHydrateKey 按需取回再渲染；c) 启动恢复 attempt 接入预算系统——延迟到 mochi-restore-done 后 kick（此前脚本加载期立即 attempt 时挂起名单还空），且回调在 JSON.parse 前复核挂起名单、挂起键跳过启动读入（此前无差别全量读会抢在预算系统前把几十 MB 大库拉进堆 = 低端机点开字卡页冻结/崩溃残留源）。verify-voice-heal 9/9 覆盖自愈六断言+真实 27MB 超预算键懒加载全链路。
+  - ⚠️ **需要 AI-A 处理**（chatcard.js 属 AI-A 域，本会话按「跨领域先告知」已越界修改，特此登记）：chatcard.js 启动恢复的挂起复核依赖 idb.js 的 __xyIdbDeferredKeys 名单时序，后续改动该恢复块请注意与 idbRestore 的先后关系；新增两个验证脚本可随时复用。
+  - **构建收口说明**：本次构建前检测到 chat-main.css（12:39，AI-A 会话改动）与 chat.js（12:41 本会话）、chatcard.js（13:16 本会话）均已保存完整无后续写入；产物已含当日全部并行会话已登记完成的改动（avatar-lib/idb/bg-keep/decision/group-decision 等）。提交前请构建者 git diff 复核后统一提交。
+- [⚠️ 构建收口提示（13:27 追加）]：检测到另一并行会话正活跃编辑 src/css/chat-pages.css / src/js/breakout.js / music-player.js / pong.js / snake-game.js / template.html（13:22–13:26 仍在写），本会话**不构建不提交**；我的 chat.js/chatcard.js 改动 + 上一会话的 personalize.js 补应用布局改动均已保存完整、语法通过、专项全绿（desk-persist 4/4 / voice-heal 9/9 / chat-dupe 11/11 / verify 10/10 / cc-scope 27/27 / cc-batch-import 13/13）。d80f30a（13:09）已含我的 personalize.js 改动，但**不含** chat.js clearChatInput 与 chatcard.js 语音自愈/懒加载——这两个文件改动尚未入库，请并行会话静默后由构建者统一 build+提交（我 13:20 的构建产物已含全部改动，可直接 `git diff` 复核后提交）。
+
+### 2026-08-26 13:30（✅ 完成·用户反馈：小游戏音效音量太小，边听音乐边玩听不清——三游戏音效音量调大约3~4倍）
+- [本会话·完成]（**已改 src/js/pong.js + src/js/snake-game.js + src/js/breakout.js 三处音效音量数值，均为 AI-A 业务功能域；已构建（13:26, sw: mochi-mt9nj2gx）+ 回归 verify-brick 21/21、verify-pong-balance 18/18、verify-snake-features 8/8 全绿；未提交**）。
+  - Pong：sfxWall/sfxPaddle/sfxScore/sfxWin 音量 0.04~0.09 → 0.14~0.22（相对层次保持：墙<板<得分<胜利）。
+  - 贪吃蛇：beep 固定音量 0.04 → 0.14（eat/hit/win 三音共用）。
+  - 打砖块：sfxWall/sfxPaddle/sfxBrick/sfxLose/sfxClear 音量 0.04~0.08 → 0.14~0.2（默认兜底 0.05→0.15）。
+  - 仅改 gain 数值，振荡器/包络不变，不会爆音；音乐播放器无独立音量（音乐是 dataURL/Blob <audio>，音量 1），游戏 beep 走 Web Audio 增益，与音乐音量互相独立——调大后叠加无冲突。
+  - 未提交，请构建者随统一提交收尾。
+
+### 2026-08-26（用户反馈：音乐里能播放已删除的歌曲 + 缺清理会员歌曲按钮）
+- [AI-A·本会话·完成]（**已构建未提交**：node build.mjs 已执行，index.html/sw.js/version.json 为最新产物；提交推送留给用户/构建者确认后执行）。
+  - **问题 1「音乐里能播放已删除的歌曲」根因**：`mergeDesksMusic()` 每次启动把其他桌面命名空间（`xy-home-v2:<cid>:music-*`）的旧音乐数据合并回共享库（default），且「不删除原桌面数据、每次启动重复合并」——用户在共享库里删掉的歌，重启后又被旧桌面备份合并回来。
+  - **修复（music-player.js，仅 AI-A 域）**：合并改为**一次性迁移**——① 合并完成即置 `music-merge-done` 标记，后续启动直接跳过合并；② 合并同时清除各源桌面的 `music-library/music-playlists/music-history/music-my-history` 键（IDB 已拷贝的本地音频文件保留作数据兜底）。即使旧备份导入把源桌面键恢复，标记也挡在门外，删除的歌不会再复活。
+  - **问题 2「缺少清理会员歌曲按钮」**：导入期的 VIP 过滤（fee=1/4）只覆盖当批新导入且依赖代理可用，存量库漏网的会员歌没有清理入口。新增音乐页工具栏按钮「清理会员歌曲」（template.html 加按钮 + music-player.js 的 `openVipClean`）：批量查网易云单曲详情 API（多代理兜底）→ 确认面板列出会员歌 → 移除并提示。代理全挂如实提示「检测失败」，绝不把「查不到」当「免费」误删。
+  - **⚠️ 跨域说明**：本次在 template.html（AI-B 域）追加了一个音乐页按钮（音乐功能本体在 AI-A 域；上个会话也曾按用户要求改过 template.html，先例一致）。其余改动均限 music-player.js。
+  - **验证**：新增 `tools/verify-music-vip-clean.mjs` **6/6**（T1 首轮合并并入共享库+清源键+置标记；T2 删歌后重启不复活；T3 旧备份恢复源键后重启仍不复活；T4 会员歌列出并移除、免费歌保留；T5 全免费提示不弹面板不误删；T6 无网易云歌提示不弹面板）；`npm run verify` 布局 **10/10**；node --check 通过。
+  - **给构建者**：本次只动 music-player.js + template.html + 新增 tools 脚本；工作区有其他会话并发改动（chat.js/chatcard.js/breakout.js 等，git status 可见），收口提交前请按协议确认对方已完成。

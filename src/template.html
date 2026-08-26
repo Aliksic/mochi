@@ -2296,6 +2296,10 @@
             <button class="sm-tool" id="music-batch-manage">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>批量管理
             </button>
+            <!-- v3.14.x：存量库清理——网易云会员/付费歌曲网页外链无法播放，批量检测并移除 -->
+            <button class="sm-tool" id="music-vip-clean">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>清理会员歌曲
+            </button>
           </div>
           <div class="music-lib-filter" id="music-lib-filter"></div>
           <div id="music-lib-list"></div>
@@ -3249,12 +3253,11 @@
         </button>
       </div>
       <div class="more-panel" id="chat-more-panel" hidden>
-        <!-- v3.15.x：功能增多后改为顶部分类 chips 切换（常用/互动/小游戏/工具/TA的提问）。
+        <!-- v3.15.x：功能增多后改为顶部分类 chips 切换（互动/小游戏/工具/TA的提问）。
              功能按钮元素与 ID 全部保留（各功能模块按 ID 接线），仅加 data-mcat 由 JS 过滤显示；
-             「常用」按真实点击频次自动统计，其余按 data-mcat 归类 -->
+             每个功能只归属一个分类、分类间互不重复（v3.16.x 起移除「常用」页签，原常用默认项并入所属分类） -->
         <div class="more-tabs" id="more-tabs">
-          <button class="more-tab sel" type="button" data-mcat="often">常用</button>
-          <button class="more-tab" type="button" data-mcat="chat">互动</button>
+          <button class="more-tab sel" type="button" data-mcat="chat">互动</button>
           <button class="more-tab" type="button" data-mcat="game">小游戏</button>
           <button class="more-tab" type="button" data-mcat="tool">工具</button>
           <button class="more-tab" type="button" data-mcat="ask">TA的提问</button>
