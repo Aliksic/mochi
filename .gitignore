@@ -24,3 +24,6 @@ codebase-structure.md
 # 临时截图
 *.jpg
 memo-shot-*.png
+
+# 未完成功能的数据文件（接入 build.mjs 前不提交）
+src/js/ta-mood-data.js
