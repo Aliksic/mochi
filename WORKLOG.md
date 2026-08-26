@@ -9,7 +9,12 @@
   - 已知局限（真机确认点）：①PeriodicSync 在无头/file:// 下不可验证 SW 唤醒本体，B 组用注入队列+drain 验证了补投递全链路；真机需安装 PWA 后锁屏关页等数小时看是否弹通知、点通知回应用内消息是否补齐且历史无损；②iOS Safari 无此 API（设置页会显示不支持，属预期）；③自建卡池为空时只用内置兜底语。
   - ⚠️ **构建扫入说明**：本次构建按工作区现状整体收口（含并行会话未提交的 market.css/garden/breakout/mobile-adapt 等 24 文件），本会话仅改上列文件；提交前请按协议 git diff 自查一次性 v3.15.x 提交。verify-psync-cc 的 B 组 T3 按仓库惯例临时覆写 getCustomCards 提供数据源（chatcard 内存缓存无外部刷新事件），过滤与触发链路均为真实代码路径。
 
-### 2026-08-26 12:47（✅ 构建·本会话代执行统一构建——含双方全部未提交改动）
+### 2026-08-26 15:17（✅ 修复·多人决定面板头部 × 关闭按钮点击无效——用户反馈）
+- [本会话·完成]（**已改 src/js/group-decision.js（补 chat-gdecision-close 点击绑定，chat.js 零改动）+ tools/verify-group-decision.mjs T10 加固；已构建（15:17, sw: mochi-mt9rgw47）+ 专项 13/13 + 布局 verify 10/10 全绿；未提交**）。
+  - **根因**：模板 template.html:2915 有 `<button id="chat-gdecision-close" class="poke-card-close">×</button>`，但全仓 JS 没有任何地方给它绑 click（帮我决定/占卜的关闭绑定都在 chat.js 里：chat.js:3570/3804；本功能为不动 chat.js 自绑定入口与互斥，漏了这颗按钮）。旧 verify T10 恰在 T9 已把本面板收起后空点 ×，hidden 本就为 true → 假绿漏测。
+  - **修复**：group-decision.js 在 `window.openGroupDecision` 导出处自绑定 close 按钮（stopPropagation + panel.hidden=true），与其他半框同语义。
+  - **T10 加固**：先 `openGroupDecision()` 重开面板断言 hidden===false，再点 × 断言变 true——复现真实路径，防再假绿。
+  - 真机确认点：聊天更多功能→多人决定→右上 × 应能收起面板（倒计时进行中关闭不取消结果，仍会照常出结果/写历史/回聊天，属预期）。
 - [本会话·构建]（**node build.mjs 完成：index.html 2,736,656 字节 / version.json ts 1787719561781 / sw: mochi-mt9m2i45**；布局 verify 10/10 全绿）。构建前确认对方会话 12:44 后无新写入（监控 5 分钟）、chat.js 完整（247KB）且 jsFiles 全部 node --check 通过；产物已含多人决定+全局互通+介绍许可合并页等本会话全部改动与对方字卡分享/psync/房间头像等改动。**未提交**——线上更新需提交推送（等用户确认后执行）。tools/*.mjs 验证脚本按构建脚本提示勿随产物提交。
 
 ### 2026-08-26 12:20（✅ 完成·【mochi原版功能介绍】与【可二传二改的说明】两页合并为单页并重设计 UI——用户需求；定位改为「本作即原版」）

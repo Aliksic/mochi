@@ -433,6 +433,14 @@
   // 入口函数导出（桌面快捷方式等外部也可调用）
   window.openGroupDecision = openPanel;
 
+  // 头部 × 关闭按钮（模板锚点在 panel 头部、不在 body 内，故在自绑定处补齐——
+  // 帮我决定/占卜的关闭绑定在 chat.js 里，本功能不动 chat.js）
+  const closeBtn = document.getElementById('chat-gdecision-close');
+  if (closeBtn) closeBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (panel) panel.hidden = true;
+  });
+
 // 入口：聊天更多功能 → 多人决定。本文件自绑定 more-gdecide（chat.js 侧无需改动），
 // 级联收起其他浮层的动作与 chat.js 里 moreDecide 处理器保持一致；
 // 「TA的提问」面板的关闭逻辑（清键盘刷新定时器/合成层）是 chat.js 内部函数，
