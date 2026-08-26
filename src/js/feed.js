@@ -1623,19 +1623,9 @@ if (comInput) comInput.addEventListener('keydown', (e) => { if (e.key === 'Enter
       if (window.chatAddSystem) window.chatAddSystem(taName + ' 发布了一条朋友圈动态');
       return;
     }
-    const prefix = 'xy-home-v2:' + cid;
-    try {
-      if (window.idbGet && window.idbSet) {
-        window.idbGet(prefix + ':chat-msgs').then(v => {
-          let arr = [];
-          try { arr = Array.isArray(v) ? v : JSON.parse(v || '[]'); } catch (e) { arr = []; }
-          if (!Array.isArray(arr)) arr = [];
-          arr.push({ side: 'in', special: 'poke', text: taName + ' 发布了一条朋友圈动态', ts: Date.now() });
-          try { window.idbSet(prefix + ':chat-msgs', JSON.stringify(arr)); } catch (e) {}
-          try { localStorage.setItem(prefix + ':chat-msgs', JSON.stringify(arr)); } catch (e) {}
-        }).catch(() => {});
-      }
-    } catch (e) {}
+    // v3.14.x：改走 chat.js 统一安全追加——原「idbGet→push→整包写回」在读取
+    // 超时（返回 undefined）时会把该桌面全部聊天记录覆盖成 [这一条]
+    if (window.chatAppendToDeskMsg) { window.chatAppendToDeskMsg(cid, taName + ' 发布了一条朋友圈动态'); }
   }
   // 单个联系人的 TA 自动发动态（用该联系人自己的字卡 + TA 身份）
   function maybeAutoPostFor(cid) {

@@ -53,6 +53,92 @@
   function cPartnerName() { return chatName('cs-lbl-partner', 'lbl-partner', 'TA'); }
   function cUserName() { return chatName('cs-lbl-user', 'lbl-user', '我'); }
 
+  // v3.14.x：字符串哈希（djb2）——压缩落盘后聊天键与池内原图字节不同，
+  // 用小哈希记录「上次已换入的是哪张池图」，防止同一张图反复触发更换
+  function strHash(s) {
+    let h = 5381;
+    s = String(s || '');
+    for (let i = 0; i < s.length; i++) { h = ((h << 5) + h + s.charCodeAt(i)) | 0; }
+    return String(h);
+  }
+
+  // v3.14.x：写入聊天头像键（cs-avatar-partner/cs-avatar-user）前统一压缩到 <200KB。
+  // 根因：xyStore.set 对 >200KB 的值会移出 localStorage 只存 IndexedDB（异步），
+  // 下次启动要等 idbRestore 回填才能读到——慢 IDB 设备（OPPO/vivo Chrome 等）窗口可达
+  // 数秒~分钟，窗口内聊天顶栏/消息气泡读空回退旧桌面头像，用户看到「TA 换了头像但
+  // 没生效」。备份导入的旧头像池可含未压缩原图（绕过上传时的 bindPoolUpload 压缩），
+  // TA 随机选中即触发。压缩后小键同步落 localStorage，所有读路径立即可用，
+  // 也顺带消除 fillAvatar 500KB 渲染上限的不对称。
+  // ≤180KB 原样通过（同步回调，保持既有调用方行为）；非 data:image 或解码失败也原样放行。
+  const AV_TARGET = 180 * 1024;
+  function normalizeAvSize(data, cb) {
+    if (!data || typeof data !== 'string' || data.indexOf('data:image') !== 0 || data.length <= AV_TARGET) { cb(data); return; }
+    try {
+      const img = new Image();
+      img.onload = function () {
+        try {
+          const iw = img.width || 256, ih = img.height || 256;
+          const scale = Math.min(1, 256 / Math.max(iw, ih));
+          let w = Math.max(1, Math.round(iw * scale));
+          let h = Math.max(1, Math.round(ih * scale));
+          let q = 0.85, out = '';
+          for (let tries = 0; tries < 4; tries++) {
+            const c = document.createElement('canvas');
+            c.width = w; c.height = h;
+            c.getContext('2d').drawImage(img, 0, 0, w, h);
+            out = c.toDataURL('image/jpeg', q);
+            if (out.length <= AV_TARGET) break;
+            w = Math.max(48, Math.round(w * 0.8));
+            h = Math.max(48, Math.round(h * 0.8));
+            q = Math.max(0.5, q - 0.1);
+          }
+          cb(out && out.length < data.length ? out : data);
+        } catch (e) { cb(data); }
+      };
+      img.onerror = function () { cb(data); };
+      img.src = data;
+    } catch (e) { cb(data); }
+  }
+
+  // ===== v3.14.x：聊天头像显示收敛兜底 =====
+  // 「存储已是新头像、界面还停在旧头像」的残留场景统一兜底：
+  // ① 历史大图换入后 cs 键只在 IDB、慢设备启动早期读空回退旧桌面头像，idbRestore
+  //    迟到回填后需要有人重刷界面（mochi-restore-done 只刷顶栏且要求聊天页可见才重渲消息）；
+  // ② 后台定时器被深度节流/冻结期间浏览器合并 DOM 变更等环境因素；
+  // ③ 同一浏览器双开上下文（PWA + 浏览器标签）另一侧换了头像（storage 事件跨上下文同步）。
+  // 触发时机：回前台 / 页面重新可见 / storage 事件。带哈希基线对比——值没变化不重刷
+  // （refreshChatAvatars 会重建已渲染消息的 img，200 条消息级别有成本，不能每次都跑）。
+  let appliedPh = null, appliedUh = null;
+  function convergeAvatars() {
+    try {
+      const ph = strHash(store.get('cs-avatar-partner') || store.get('avatar-partner') || '');
+      const uh = strHash(store.get('cs-avatar-user') || store.get('avatar-user') || '');
+      if (appliedPh !== null && ph === appliedPh && uh === appliedUh) return;
+      appliedPh = ph; appliedUh = uh;
+      if (window.refreshChatAvatars) window.refreshChatAvatars();
+    } catch (e) {}
+  }
+  // 本模块自己写入了新值：applyAvatarImg 已即时生效，这里只需对齐基线防 converge 重刷
+  function noteApplied(kind, val) {
+    try {
+      const h = strHash(val || '');
+      if (kind === 'partner') appliedPh = h; else appliedUh = h;
+    } catch (e) {}
+  }
+  // 基线初始化取当前存储值（启动时 chat.js 已按同口径填过一次头像）
+  try { appliedPh = strHash(store.get('cs-avatar-partner') || store.get('avatar-partner') || ''); } catch (e) {}
+  try { appliedUh = strHash(store.get('cs-avatar-user') || store.get('avatar-user') || ''); } catch (e) {}
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible') convergeAvatars();
+  });
+  document.addEventListener('mochi-fg-resume', convergeAvatars);
+  document.addEventListener('contact-switched', function () { setTimeout(convergeAvatars, 0); });
+  window.addEventListener('storage', function (e) {
+    try {
+      if (e.key && /:cs-avatar-(partner|user)$/.test(e.key)) convergeAvatars();
+    } catch (err) {}
+  });
+
   // ===== 功能：头像互动（原联系人头像库，改为聊天页内底部半框） =====
   // 半框展示头像池：上传多张 + 删除单张 + 清空 + 开关 + 点击切换（半框露出聊天消息，方便边看边玩）
   // 定时随机更换联系人聊天头像（1-8 小时）；更换时聊天显示"昵称 更换了头像"
@@ -355,31 +441,41 @@
     if (!data || lib.indexOf(data) === -1) return;
     // 换回基准也取聊天键：原本没自定义过聊天头像（cs 为空）被拒绝时移除 cs 即回退桌面头像
     const before = store.get('cs-avatar-partner');
-    store.set('cs-avatar-partner', data);
-    applyAvatarImg(data, false, true);
-    // 手动更换后重置随机计时：1-8 小时后才可能再随机换（与星言一致）
-    store.set('avatar-lib-last', String(Date.now()));
-    store.set('avatar-lib-next', String(1 + Math.random() * 7));
-    renderGrid();
-    // 邀请回应：触发时同意概率高（AGREE_PROB），拒绝概率低
-    if (Math.random() * 100 < INVITE_PROB) {
-      if (Math.random() * 100 < AGREE_PROB) {
-        replyInvite(true, data); // 同意：头像保持新换的，消息带新头像图
+    // 邀请回应/计时随机数先同步按原顺序掷完（保持与旧实现相同的 Math.random 序列，
+    // 回归工具会钉死序列），压缩回调里按预掷结果走分支
+    const nextHours = String(1 + Math.random() * 7);
+    const inviteHit = Math.random() * 100 < INVITE_PROB;
+    const agreeHit = Math.random() * 100 < AGREE_PROB;
+    // v3.14.x：写入前压缩（见 normalizeAvSize 注释），大图不再把 cs 键挤进 IDB-only 区
+    normalizeAvSize(data, function (fit) {
+      store.set('cs-avatar-partner', fit);
+      applyAvatarImg(fit, false, true);
+      noteApplied('partner', fit);
+      // 手动更换后重置随机计时：1-8 小时后才可能再随机换（与星言一致）
+      store.set('avatar-lib-last', String(Date.now()));
+      store.set('avatar-lib-next', nextHours);
+      store.set('avatar-lib-cur-hash', strHash(data));
+      renderGrid();
+      if (inviteHit) {
+        if (agreeHit) {
+          replyInvite(true, fit); // 同意：头像保持新换的，消息带新头像图
+        } else {
+          // 拒绝：聊天头像换回原来那张（原本没自定义过聊天头像则恢复默认/桌面回退）
+          if (before) { store.set('cs-avatar-partner', before); store.set('avatar-lib-cur-hash', strHash(before)); }
+          else { store.remove('cs-avatar-partner'); store.remove('avatar-lib-cur-hash'); }
+          applyAvatarImg(before || null, false, true);
+          renderGrid();
+          noteApplied('partner', before || '');
+          replyInvite(false, before || null); // 消息带换回的头像图
+        }
       } else {
-        // 拒绝：聊天头像换回原来那张（原本没自定义过聊天头像则恢复默认/桌面回退）
-        if (before) store.set('cs-avatar-partner', before);
-        else { store.remove('cs-avatar-partner'); }
-        applyAvatarImg(before || null, false, true);
-        renderGrid();
-        replyInvite(false, before || null); // 消息带换回的头像图
+        // 直接切换成功：轻提示 + 聊天里显示"我的昵称 更换了 联系人昵称 的头像"+ 新头像图片
+        toast('头像已切换');
+        const name = cPartnerName();
+        const myName = cUserName();
+        chatSystem(myName + ' 更换了 ' + name + ' 的头像', fit);
       }
-    } else {
-      // 直接切换成功：轻提示 + 聊天里显示"我的昵称 更换了 联系人昵称 的头像"+ 新头像图片
-      toast('头像已切换');
-      const name = cPartnerName();
-      const myName = cUserName();
-      chatSystem(myName + ' 更换了 ' + name + ' 的头像', data);
-    }
+    });
   }
 
   // 手动点击我的头像库的图片：立即换成我的聊天头像（聊天系统消息 + 主页记录）
@@ -387,12 +483,17 @@
   function switchMyAvatarFromLib(data) {
     const lib = getMeLib();
     if (!data || lib.indexOf(data) === -1) return;
-    store.set('cs-avatar-user', data);
-    applyAvatarImg(data, true, true);
-    renderMeGrid();
-    toast('头像已更换');
-    const myName = cUserName();
-    chatSystem(myName + ' 更换了头像', data);
+    // v3.14.x：写入前压缩（见 normalizeAvSize 注释）
+    normalizeAvSize(data, function (fit) {
+      store.set('cs-avatar-user', fit);
+      applyAvatarImg(fit, true, true);
+      store.set('avatar-me-lib-cur-hash', strHash(data));
+      renderMeGrid();
+      noteApplied('user', fit);
+      toast('头像已更换');
+      const myName = cUserName();
+      chatSystem(myName + ' 更换了头像', fit);
+    });
   }
 
   // TA 主动给我换头像：邀请回应文案（聊天消息 + toast）
@@ -411,10 +512,15 @@
     window.openModal(name + ' 的换头像邀请', '', (v) => {
       if (v === '1') {
         // v3.9.x：TA 给我换头像只换聊天专用头像 cs-avatar-user，桌面头像不变
-        store.set('cs-avatar-user', data);
-        applyAvatarImg(data, true, true);
-        renderMeGrid();
-        replyMeInvite(true, data);
+        // v3.14.x：写入前压缩（见 normalizeAvSize 注释）
+        normalizeAvSize(data, function (fit) {
+          store.set('cs-avatar-user', fit);
+          applyAvatarImg(fit, true, true);
+          store.set('avatar-me-lib-cur-hash', strHash(data));
+          renderMeGrid();
+          noteApplied('user', fit);
+          replyMeInvite(true, fit);
+        });
       } else {
         replyMeInvite(false, null);
       }
@@ -462,6 +568,9 @@
       // 随机到当前头像：跳过不换，也不推进计时（60 秒后再随机一次）
       // v3.9.x：当前生效的是聊天专用头像 cs-avatar-user（未设时回退桌面头像 avatar-user）
       if (data === (store.get('cs-avatar-user') || store.get('avatar-user'))) return;
+      // v3.14.x：同联系人池——比对上次已换入池图的哈希，防同一张大图重复触发
+      const curMeHash = store.get('avatar-me-lib-cur-hash');
+      if (curMeHash && strHash(data) === curMeHash) return;
       const invite = Math.random() * 100 < INVITE_PROB;
       if (invite) {
         // 已有其他弹窗打开时本次跳过（不推进计时，60 秒后再触发）
@@ -481,13 +590,17 @@
       } else {
         // 直接换：换上 + 聊天显示"昵称 更换了你的头像" + 新头像图片
         // v3.9.x：TA 给我换头像只换聊天专用头像 cs-avatar-user，桌面 deco-widget 头像不变
-        store.set('cs-avatar-user', data);
-        applyAvatarImg(data, true, true);
-        renderMeGrid();
-        const name = cPartnerName();
-        const text = name + ' 更换了你的头像';
-        chatSystem(text, data);
-        toast(text);
+        // v3.14.x：写入前压缩（见 normalizeAvSize 注释），保证 cs 键同步落 localStorage
+        normalizeAvSize(data, function (fit) {
+          store.set('cs-avatar-user', fit);
+          applyAvatarImg(fit, true, true);
+          renderMeGrid();
+          noteApplied('user', fit);
+          const name = cPartnerName();
+          const text = name + ' 更换了你的头像';
+          chatSystem(text, fit);
+          toast(text);
+        });
       }
     } catch (e) {}
   }
@@ -519,23 +632,32 @@
       // 随机到当前生效的聊天头像：跳过不换，也不推进计时（60 秒后再随机一次，与星言一致）
       // v3.12.x：当前生效的是聊天专用头像 cs-avatar-partner（未设时回退桌面头像 avatar-partner）
       if (data === (store.get('cs-avatar-partner') || store.get('avatar-partner'))) return;
-      // v3.12.x：随机换头像只写聊天专用键 cs-avatar-partner，桌面 deco-widget 头像独立不变
-      store.set('cs-avatar-partner', data);
-      applyAvatarImg(data, false, true);
-      renderGrid();
-      // 聊天里显示"昵称 更换了头像" + 新头像图片
-      chatSystem(cPartnerName() + ' 更换了头像', data);
-      // v3.5.153：换头像后补发后台通知——确保后台收到的通知右侧是新头像
-      //（v3.12.x 头像不再写桌面键 avatar-partner，通知右侧头像用 extra.av 显式传新聊天头像；
-      //  这里显式触发一条，避免只有聊天系统消息、后台用户没感知到换头像）
-      try {
-        if (window.bgNotifyCheck) {
-          window.bgNotifyCheck((store.get('lbl-partner') || 'TA') + ' 更换了头像', Date.now(), { name: store.get('lbl-partner') || 'TA', av: data });
-        }
-      } catch (e) {}
-      // 推进周期：下次 1-8 小时
+      // v3.14.x：当前值可能已被压缩落盘（与池内原图字节不同）——再比对上次已换入池图的哈希，
+      // 防止同一张大图被反复选中时重复发「更换了头像」系统消息
+      const curHash = store.get('avatar-lib-cur-hash');
+      if (curHash && strHash(data) === curHash) return;
+      // v3.14.x：先推进周期再异步压缩——压缩要等 Image 解码（异步），若等回调再推进，
+      // 60 秒轮询可能在窗口期重复触发换头像
       store.set('avatar-lib-last', String(now));
       store.set('avatar-lib-next', String(1 + Math.random() * 7));
+      // v3.12.x：随机换头像只写聊天专用键 cs-avatar-partner，桌面 deco-widget 头像独立不变
+      // v3.14.x：写入前压缩（见 normalizeAvSize 注释），保证 cs 键同步落 localStorage
+      normalizeAvSize(data, function (fit) {
+        store.set('cs-avatar-partner', fit);
+        applyAvatarImg(fit, false, true);
+        renderGrid();
+        noteApplied('partner', fit);
+        // 聊天里显示"昵称 更换了头像" + 新头像图片
+        chatSystem(cPartnerName() + ' 更换了头像', fit);
+        // v3.5.153：换头像后补发后台通知——确保后台收到的通知右侧是新头像
+        //（v3.12.x 头像不再写桌面键 avatar-partner，通知右侧头像用 extra.av 显式传新聊天头像；
+        //  这里显式触发一条，避免只有聊天系统消息、后台用户没感知到换头像）
+        try {
+          if (window.bgNotifyCheck) {
+            window.bgNotifyCheck((store.get('lbl-partner') || 'TA') + ' 更换了头像', Date.now(), { name: store.get('lbl-partner') || 'TA', av: fit });
+          }
+        } catch (e) {}
+      });
     } catch (e) {}
   }
   // 每 60 秒轮询一次 + 启动立即检查（首次加载立即换一次）

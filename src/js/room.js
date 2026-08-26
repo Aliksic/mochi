@@ -81,9 +81,9 @@
     painting:   { n: '挂画',     e: '🖼️', cf: 1, lv: 2, cost: 20, act: '看看画', grp: 'furnuse' },
     doll:       { n: '玩偶熊',   e: '🧸', cf: 1, lv: 1, cost: 16, act: '抱一抱', grp: 'furnuse' },
     vase:       { n: '花瓶',     e: '🏺', cf: 1, lv: 3, cost: 24, act: '插花',   grp: 'water' },
-    candle:     { n: '香薰蜡烛', e: '🕯️', cf: 2, lv: 2, cost: 20, act: '点上',   grp: 'night', lamp: true },
+    candle:     { n: '香薰蜡烛', e: '🕯️', cf: 2, lv: 2, cost: 20, act: '点上',   grp: 'night', lamp: true, flk: true },
     nightlight: { n: '小夜灯',   e: '🪔', cf: 1, lv: 1, cost: 15, act: '打开',   grp: 'night', lamp: true },
-    starlight:  { n: '星星灯',   e: '✨', cf: 2, lv: 3, cost: 28, act: '许愿',   grp: 'wish', lamp: true },
+    starlight:  { n: '星星灯',   e: '✨', cf: 2, lv: 3, cost: 28, act: '许愿',   grp: 'wish', lamp: true, flk: true },
     radio:      { n: '收音机',   e: '📻', cf: 2, lv: 2, cost: 26, act: '放音乐', grp: 'music' },
     mirror:     { n: '穿衣镜',   e: '🪞', cf: 1, lv: 2, cost: 18, act: '照镜子', grp: 'furnuse' },
     kettle:     { n: '热茶壶',   e: '☕', cf: 1, lv: 1, cost: 14, act: '泡杯热茶', grp: 'tea' },
@@ -95,8 +95,9 @@
   const LAMPABLE = Object.keys(CAT).filter(k => CAT[k].lamp);
 
   const WALLS = [
-    { id: 'cream', n: '米白', lv: 1 }, { id: 'cloud', n: '云朵', lv: 1 }, { id: 'cabin', n: '木屋', lv: 2 },
-    { id: 'gardenw', n: '花园', lv: 3 }, { id: 'starw', n: '星空', lv: 4 }, { id: 'nightw', n: '夜色', lv: 5 }
+    { id: 'cream', n: '米白', lv: 1 }, { id: 'cloud', n: '云朵', lv: 1 }, { id: 'stripe', n: '奶油条纹', lv: 2 },
+    { id: 'cabin', n: '木屋', lv: 2 }, { id: 'gardenw', n: '花园', lv: 3 }, { id: 'dusk', n: '暮色', lv: 3 },
+    { id: 'starw', n: '星空', lv: 4 }, { id: 'checkerw', n: '棋盘砖', lv: 4 }, { id: 'nightw', n: '夜色', lv: 5 }
   ];
   const FLOORS = [
     { id: 'wood', n: '木地板', lv: 1 }, { id: 'light', n: '浅色地板', lv: 1 }, { id: 'carpet', n: '软地毯', lv: 2 }, { id: 'stone', n: '石板', lv: 3 }
@@ -190,13 +191,13 @@
     if (d.earn.day !== tk) d.earn = { day: tk, n: 0, ta: 0 };
     if (kind === 'ta') { if (d.earn.ta >= 5) return false; d.earn.ta++; }
     else if (kind === 'n') { if (d.earn.n >= 10) return false; d.earn.n++; }
-    d.pts += n; updHud(); return true;
+    d.pts += n; updHud(); floatPts('+' + n + '🏠'); return true;
   }
   function checkLevel() {
     const c = comfortSum(); let nl = 1;
     for (let i = 0; i < LV_TH.length; i++) if (c >= LV_TH[i]) nl = i + 1;
     if (nl > d.lv) {
-      d.lv = nl;
+      d.lv = nl; fete(nl);
       setTimeout(() => {
         toast('🏡 小屋升到 Lv.' + nl + '！解锁了新家具和装扮');
         vib([40, 60, 40]);
@@ -246,35 +247,52 @@
     $id('room-win-b').className = 'r-window wb' + (night ? ' nw' : '');
     $id('room-sky-a').textContent = night ? '🌙' : w.i;
     $id('room-sky-b').textContent = night ? '🌙' : w.i;
-    Array.prototype.slice.call(floorEl.querySelectorAll('.r-furn')).forEach(n => n.remove());
+    Array.prototype.slice.call(floorEl.querySelectorAll('.r-furn,.r-pool')).forEach(n => n.remove());
     d.fx.forEach(it => {
       const c = CAT[it.t]; if (!c) return;
       const el = document.createElement('div');
-      el.className = 'r-furn' + (it.r ? ' r-flip' : '') + (d.lit[it.t] ? ' r-lit' : '');
+      el.className = 'r-furn' + (it.r ? ' r-flip' : '') + (d.lit[it.t] ? ' r-lit' : '') + (c.flk ? ' r-flkc' : '');
       const p = pctPos(it.x, it.y);
       el.style.left = p.l + '%'; el.style.top = p.t + '%';
-      el.textContent = c.e;
+      if (it.t === 'vase' && d.vaseFlower) el.innerHTML = c.e + '<u class="r-bloom">🌸</u>';
+      else el.textContent = c.e;
       el.dataset.i = it.i;
       floorEl.appendChild(el);
+      // 点亮的灯在地板投一滩暖光（蜡烛/星星灯带火苗闪烁）
+      if (d.lit[it.t]) {
+        const pool = document.createElement('div');
+        pool.className = 'r-pool' + (c.flk ? ' r-pool-f' : '');
+        pool.style.left = p.l + '%'; pool.style.top = (p.t + 4.2) + '%';
+        floorEl.appendChild(pool);
+      }
     });
     renderTa();
     renderStatus();
+    refreshCells();
   }
   function taAvatarNode() {
-    const old = taEl.querySelector('.r-ta-av');
-    if (old) return;
+    // v3.15.x：每次渲染都重读当前联系人头像——此前创建后 if(old) return 短路，
+    // 头像只在首次渲染读一次，切换联系人桌面后房间仍显示上一个联系人的头像
+    let av = taEl.querySelector('.r-ta-av');
+    if (!av) {
+      av = document.createElement('i');
+      taEl.appendChild(av);
+    }
     let url = '';
     try { const s = S(); url = (s && (s.get('cs-avatar-partner') || s.get('avatar-partner'))) || ''; } catch (e) {}
-    const av = document.createElement('i');
-    av.className = 'r-ta-av' + ((url && url.length > 30) ? '' : ' r-ta-sil');
-    if (url && url.length > 30) av.style.backgroundImage = 'url("' + url.replace(/"/g, '&quot;') + '")';
-    taEl.appendChild(av);
+    const hasImg = !!(url && url.length > 30);
+    av.className = 'r-ta-av' + (hasImg ? '' : ' r-ta-sil');
+    av.style.backgroundImage = hasImg ? 'url("' + url.replace(/"/g, '&quot;') + '")' : '';
   }
   function renderTa() {
     taAvatarNode();
     const p = pctPos(d.ta.x, d.ta.y);
     taEl.style.left = p.l + '%'; taEl.style.top = p.t + '%';
     taEl.classList.toggle('r-faint', !!d.ta.faint);
+    const moving = d.ta.x !== d.ta.tx || d.ta.y !== d.ta.ty;
+    const seated = !moving && ['sit', 'lie', 'read', 'plant', 'use', 'winwatch'].indexOf(d.ta.act) >= 0;
+    taEl.classList.toggle('walking', moving);
+    taEl.classList.toggle('seated', seated);
   }
   function actLabel() {
     switch (d.ta.act) {
@@ -306,6 +324,39 @@
     $id('room-chip-cf').textContent = '舒适度 ' + '★'.repeat(starsOf()) + '☆'.repeat(5 - starsOf());
     $id('room-chip-pt').textContent = '🏠 ' + d.pts;
     $id('room-chip-cap').textContent = '家具 ' + placedCount() + '/' + capOf();
+  }
+
+  // ---- 轻量动效：点数飘字 / 升级庆祝 / 放置模式格子高亮 ----
+  function floatPts(txt) {
+    const chip = $id('room-chip-pt'); if (!chip) return;
+    const s = document.createElement('span');
+    s.className = 'r-fly'; s.textContent = txt;
+    s.style.right = ri(0, 16) + 'px';
+    chip.appendChild(s);
+    setTimeout(() => s.remove(), 850);
+  }
+  function fete(lv) {
+    if (!sceneEl) return;
+    const ov = document.createElement('div');
+    ov.className = 'r-fete';
+    let html = '<div class="r-fete-t">🏡 小屋 Lv.' + lv + '！</div>';
+    for (let i = 0; i < 14; i++) {
+      html += '<i style="left:' + ri(4, 96) + '%;animation-delay:' + (Math.random() * 1.2).toFixed(2) + 's;font-size:' + ri(12, 22) + 'px">' + rnd(['✨', '⭐', '🌟']) + '</i>';
+    }
+    ov.innerHTML = html;
+    sceneEl.appendChild(ov);
+    setTimeout(() => ov.remove(), 2600);
+  }
+  function refreshCells() {
+    if (!floorEl || !floorEl.dataset.cells) return;
+    const occ = {};
+    d.fx.forEach(f => { occ[f.x + ',' + f.y] = 1; });
+    const active = !!mode || !!(drag && drag.on);
+    Array.prototype.forEach.call(floorEl.querySelectorAll('.r-cell'), c => {
+      const k = c.dataset.x + ',' + c.dataset.y;
+      c.classList.toggle('ok', active && !occ[k]);
+      c.classList.toggle('bad', active && !!occ[k]);
+    });
   }
 
   // ---- 梦角活动引擎（冷却式随机：到点自己选一次，按房内现有家具筛选） ----
@@ -373,9 +424,23 @@
     if (!b) return;
     if (txt == null) { b.hidden = true; sceneEl.classList.remove('placing'); mode = null; }
     else { b.hidden = false; tx.textContent = txt; sceneEl.classList.add('placing'); }
+    refreshCells();
   }
 
   // ---- 家具交互 ----
+  function gardenBloom() {
+    // 花园联动彩蛋：花园有过收获（st.h>0）或有一株种下超 3 天的花 → 花瓶可以真正插花
+    try {
+      const raw = S().get('garden-data'); if (!raw) return false;
+      const g = JSON.parse(raw);
+      if (g && g.st && (g.st.h | 0) > 0) return true;
+      if (Array.isArray(g.p)) {
+        const now = Date.now() / 1000;
+        return g.p.some(pl => pl && pl.planted && (now - pl.planted) > 259200);
+      }
+    } catch (e) {}
+    return false;
+  }
   function useFurniture(inst) {
     const c = CAT[inst.t];
     if (c.lamp) {
@@ -383,6 +448,12 @@
       d.lit[inst.t] = on; save(); renderScene();
       bubble(on ? (isNight() ? '灯亮起来了，房间一下子软了。' : '亮着也很好看。') : '关掉灯，安静了一会儿。');
       gainPts(1, 'n'); vib(15);
+      return;
+    }
+    if (inst.t === 'vase' && gardenBloom() && !d.vaseFlower) {
+      d.vaseFlower = true; save(); renderScene();
+      bubble('把花园带回来的花，插进了瓶子里。🌸');
+      gainPts(1, 'n'); vib([15, 40, 15]);
       return;
     }
     const taHere = d.ta.x === inst.x && d.ta.y === inst.y;
@@ -536,9 +607,78 @@
     });
   }
 
+  // ---- 长按家具直接拖动（350ms 抓起，松手落格；短按仍弹菜单） ----
+  let drag = null, suppressClick = false;
+  function cellFromPoint(cx, cy) {
+    const r = floorEl.getBoundingClientRect();
+    const x = Math.max(0, Math.min(COLS - 1, Math.floor((cx - r.left) / r.width * COLS)));
+    const y = Math.max(0, Math.min(ROWS - 1, Math.floor((cy - r.top) / r.height * ROWS)));
+    return { x: x, y: y };
+  }
+  function clearTgt() {
+    Array.prototype.forEach.call(floorEl.querySelectorAll('.r-cell.tgt'), c => c.classList.remove('tgt'));
+  }
+  function bindDrag() {
+    if (!floorEl) return;
+    floorEl.addEventListener('pointerdown', function (e) {
+      if (mode || page.hidden || document.hidden) return;
+      const fu = e.target.closest('.r-furn'); if (!fu) return;
+      const inst = d.fx.find(z => z.i === fu.dataset.i); if (!inst) return;
+      drag = {
+        i: inst.i, el: fu, inst: inst, sx: e.clientX, sy: e.clientY, on: false,
+        timer: setTimeout(function () {
+          if (!drag) return;
+          drag.on = true; suppressClick = true;
+          drag.el.classList.add('dragging');
+          sceneEl.classList.add('placing');
+          refreshCells(); vib(18);
+        }, 330)
+      };
+      try { fu.setPointerCapture(e.pointerId); } catch (err) {}
+    });
+    floorEl.addEventListener('pointermove', function (e) {
+      if (!drag) return;
+      if (!drag.on) {
+        if (Math.abs(e.clientX - drag.sx) > 10 || Math.abs(e.clientY - drag.sy) > 10) { clearTimeout(drag.timer); drag = null; }
+        return;
+      }
+      e.preventDefault();
+      const c = cellFromPoint(e.clientX, e.clientY);
+      drag.el.style.left = ((c.x + 0.5) * 100 / COLS) + '%';
+      drag.el.style.top = ((c.y + 0.86) * 100 / ROWS) + '%';
+      clearTgt();
+      if (!itemAt(c.x, c.y)) {
+        const cell = floorEl.querySelector('.r-cell[data-x="' + c.x + '"][data-y="' + c.y + '"]');
+        if (cell) cell.classList.add('tgt');
+      }
+    });
+    floorEl.addEventListener('pointerup', up);
+    floorEl.addEventListener('pointercancel', up);
+    function up(e) {
+      if (!drag) return;
+      clearTimeout(drag.timer);
+      const wasOn = drag.on;
+      if (!wasOn) { drag = null; return; }
+      const inst = drag.inst;
+      const c = cellFromPoint(e.clientX, e.clientY);
+      const same = c.x === inst.x && c.y === inst.y;
+      if (!same && !itemAt(c.x, c.y)) {
+        inst.x = c.x; inst.y = c.y;
+        save(); checkLevel(); updHud(); vib(20);
+      }
+      drag.el.classList.remove('dragging');
+      if (!mode) sceneEl.classList.remove('placing');
+      clearTgt();
+      drag = null;
+      renderScene(); // 内部 refreshCells 会按当前状态清掉格子高亮
+      setTimeout(function () { suppressClick = false; }, 400);
+    }
+  }
+
   // ---- 场景点击分发（委托） ----
   function bindScene() {
     sceneEl.addEventListener('click', function (e) {
+      if (suppressClick) { suppressClick = false; return; } // 拖拽刚结束：吃掉这次误触 click
       if (mode) {
         if (e.target.closest('#room-banner-cancel')) { banner(null); return; }
         const cell = e.target.closest('.r-cell');
@@ -605,6 +745,8 @@
     dailyVisit();
     if (Date.now() >= (d.ta.nextAt || 0)) pickAction();
     updHud(); buildCells(); renderScene();
+    // 入场动画：灯光从暗到亮渐显
+    sceneEl.classList.remove('room-in'); void sceneEl.offsetWidth; sceneEl.classList.add('room-in');
     setTimeout(() => { if (!page.hidden) bubble(isNight() ? sayLine('夜晚', 'night') : sayLine('进门', 'enter')); }, 700);
   }
   function closeRoom(toChat) {
@@ -650,6 +792,7 @@
     const bDeco = $id('room-btn-deco'); if (bDeco) bDeco.addEventListener('click', function (e) { e.stopPropagation(); decoFlow(); });
     const bInfo = $id('room-info-btn'); if (bInfo) bInfo.addEventListener('click', function (e) { e.stopPropagation(); infoModal(); });
     bindScene();
+    bindDrag();
     setInterval(tick, 1000);
     document.addEventListener('visibilitychange', function () {
       if (!document.hidden && !page.hidden) { renderScene(); renderStatus(); }

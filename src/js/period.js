@@ -1126,7 +1126,9 @@
     if (Math.random() * 100 > baseProb) return;
     var line = pickCareLine();
     if (!line) return;
-    try { window.chatAddIn(line); } catch (e) {}
+    // v3.14.x：带「经期关心」标签 chip 发进聊天（addIn opts.tag → rec.mood），
+    // 用户能看出这条消息是经期功能触发的关心，不再是没头没尾的普通气泡
+    try { window.chatAddIn(line, { tag: '经期关心' }); } catch (e) {}
     notifyCfg.fired[careKey] = 1;
     var cut = addDays(today, -30);
     Object.keys(notifyCfg.fired).forEach(function (k) { if (k < cut) delete notifyCfg.fired[k]; });

@@ -11,10 +11,105 @@ var PLOTS = 12;
 var PI = 1800;
 var WILT_SEC = 172800;
 function pn() { return s.get("lbl-partner") || "TA"; }
-function load() { try { var d = JSON.parse(s.get(G) || "{}"); if (!d.p) d.p = []; while (d.p.length < PLOTS) d.p.push(null); if (!d.l) d.l = []; if (!d.lpc) d.lpc = 0; if (!d.dex) d.dex = {}; if (!d.exp) d.exp = 0; if (!d.inv) d.inv = {}; if (!d.st) d.st = { p: 0, w: 0, h: 0, f: 0, mp: 0, mw: 0, mh: 0, mf: 0 }; if (!d.decor) d.decor = {}; if (!d.visitor) d.visitor = null; return d; } catch (e) { return { p: new Array(PLOTS).fill(null), l: [], lpc: 0, dex: {}, exp: 0, inv: {}, st: { p: 0, w: 0, h: 0, f: 0, mp: 0, mw: 0, mh: 0, mf: 0 }, decor: {}, visitor: null }; } }
-function save(d) { try { if (batchSave) { saveDirty = true; return; } s.set(G, JSON.stringify(d)); try { if (window.idbSet) window.idbSet(window.activePrefix() + ":" + G, JSON.stringify(d)); } catch (e2) {} } catch (e) {} }
+function load() { try { dataPf = window.activePrefix(); var d = JSON.parse(s.get(G) || "{}"); if (!d.p) d.p = []; while (d.p.length < PLOTS) d.p.push(null); if (!d.l) d.l = []; if (!d.lpc) d.lpc = 0; if (!d.dex) d.dex = {}; if (!d.exp) d.exp = 0; if (!d.inv) d.inv = {}; if (!d.st) d.st = { p: 0, w: 0, h: 0, f: 0, mp: 0, mw: 0, mh: 0, mf: 0 }; if (!d.decor) d.decor = {}; if (!d.visitor) d.visitor = null; return d; } catch (e) { return { p: new Array(PLOTS).fill(null), l: [], lpc: 0, dex: {}, exp: 0, inv: {}, st: { p: 0, w: 0, h: 0, f: 0, mp: 0, mw: 0, mh: 0, mf: 0 }, decor: {}, visitor: null }; } }
+// v3.14.x 丢数据修复：save 加两道闸——
+// a) saveLock：启动/进园时 LS 缺 garden-data 且 IDB 尚未判定（有值回填 or 确认为空）前，
+//    一律禁止落盘。否则真我/荣耀 Edge 等 IDB 读慢或事务挂起的机型上，checkPartnerPassive
+//    （回到手机桌面即触发）/下雨浇水/访客等自动保存会把「未加载出来的空花园」写回存储，
+//    永久覆盖 IndexedDB 里的老数据 = 用户种的花全部消失。
+// b) 桌面护栏：data 归属桌面（dataPf）与当前激活桌面不一致时（切桌面后残留旧对象），
+//    绝不把旧桌面花园写进新桌面的键——放弃本次保存并按新桌面重新加载。
+var saveLock = true, dataPf = null;
+function save(d) {
+  try {
+    if (saveLock) return;
+    var pfNow = window.activePrefix();
+    if (dataPf && pfNow !== dataPf) { try { data = load(); } catch (e0) {} return; }
+    if (batchSave) { saveDirty = true; return; }
+    s.set(G, JSON.stringify(d));
+    try { if (window.idbSet) window.idbSet(pfNow + ":" + G, JSON.stringify(d)); } catch (e2) {}
+  } catch (e) {}
+}
 var batchSave = false, saveDirty = false;
-(function r() { try { if (!window.idbGet) return; var pf = window.activePrefix(); if (!s.get(G)) window.idbGet(pf + ":" + G).then(function (v) { if (window.activePrefix() !== pf || !v) return; try { s.set(G, typeof v === "string" ? v : JSON.stringify(v)); } catch (e) {} }); } catch (e) {} })();
+// 「垃圾空档」判定：无任何花、经验、日志、背包的档案视同不存在——
+// Edge 等浏览器部分清理/慢IDB窗口期里，自动保存会把全新默认档写进存储；
+// 之后启动若把它当「有数据」就会跳过找回流程，花永远回不来。
+function isJunkGardenStr(raw) {
+  try {
+    if (!raw) return true;
+    var d = JSON.parse(raw);
+    if (!d || typeof d !== "object") return true;
+    if (d.p) { for (var i = 0; i < d.p.length; i++) if (d.p[i]) return false; }
+    if ((d.exp || 0) > 0) return false;
+    if (d.l && d.l.length) return false;
+    if (d.inv) { for (var k in d.inv) { if (d.inv[k]) return false; break; } }
+    return true;
+  } catch (e) { return false; } // 解析失败按有效数据处理，宁可保守不覆盖
+}
+function junkEmpty() { try { return isJunkGardenStr(s.get(G)); } catch (e) { return false; } }
+function toast(msg) { try { var t = document.getElementById("cc-toast"); if (!t) { t = document.createElement("div"); t.id = "cc-toast"; document.body.appendChild(t); } t.textContent = msg; t.className = "cc-toast"; void t.offsetWidth; t.className = "cc-toast show"; clearTimeout(t._timer); t._timer = setTimeout(function () { t.className = "cc-toast"; }, 2000); } catch (e) {} }
+// 从 IDB 判定当前桌面的 garden-data：命中→回填 LS（先回查防覆盖期间新写入）→解锁；
+// 未命中→重试一次仍无→解锁并尝试从自动备份副本定向找回。cb(值或null) 在判定完成后回调。
+var _probeCbs = null;
+function probeIdb(cb) {
+  if (cb) { if (_probeCbs) { _probeCbs.push(cb); return; } _probeCbs = [cb]; }
+  var pf = window.activePrefix();
+  function done(v) {
+    saveLock = false;
+    var cbs = _probeCbs || []; _probeCbs = null;
+    for (var i = 0; i < cbs.length; i++) { try { cbs[i](v); } catch (e) {} }
+    if (!v) offerSnapshotRecover(pf);
+  }
+  try {
+    if (!window.idbGet) { done(null); return; }
+    var attempt = 0;
+    (function run() {
+      attempt++;
+      window.idbGet(pf + ":" + G).then(function (v) {
+        if (window.activePrefix() !== pf) { done(null); return; }
+        if (v) {
+          var str = typeof v === "string" ? v : JSON.stringify(v);
+          if (isJunkGardenStr(str)) { // IDB 里也只是垃圾空档 → 视同不存在
+            if (attempt < 2) setTimeout(run, 300);
+            else done(null);
+            return;
+          }
+          try { if (!s.get(G) || junkEmpty()) s.set(G, str); } catch (e) {}
+          done(str);
+        } else if (attempt < 2) setTimeout(run, 300);
+        else done(null);
+      }).catch(function () { if (attempt < 2) setTimeout(run, 300); else done(null); });
+    })();
+  } catch (e) { done(null); }
+}
+// 定向找回：IDB 判定为空但自动备份副本里有本桌面花园（含花）时，弹窗询问恢复（每会话一次）
+function offerSnapshotRecover(pf) {
+  try {
+    if (sessionStorage.getItem("xy-garden-recover-offered")) return;
+    sessionStorage.setItem("xy-garden-recover-offered", "1");
+    if (!window.idbGet || !window.openModal) return;
+    window.idbGet("xy-home-v2:__auto-backup-snapshot").then(function (raw) {
+      if (!raw || window.activePrefix() !== pf || !junkEmpty()) return;
+      var snap; try { snap = JSON.parse(typeof raw === "string" ? raw : JSON.stringify(raw)); } catch (e) { return; }
+      var key = pf + ":" + G;
+      var val = (snap.ls && snap.ls[key]) || (snap.idb && snap.idb[key]);
+      if (!val || typeof val !== "string") return;
+      var d; try { d = JSON.parse(val); } catch (e) { return; }
+      var hasFlower = false;
+      if (d && d.p) for (var i = 0; i < d.p.length; i++) if (d.p[i]) { hasFlower = true; break; }
+      if (!hasFlower) return;
+      window.openModal("找回花园", "", function () {
+        if (window.activePrefix() !== pf || !junkEmpty()) return;
+        try { s.set(G, val); } catch (e) {}
+        try { if (window.idbSet) window.idbSet(key, val); } catch (e2) {}
+        dataPf = null; data = load(); selPlot = -1;
+        if (!page.hidden) renderAll();
+        toast("花园数据已找回 🌸");
+      }, { noInput: true, staticText: "这个桌面的花园现在是空的，但在自动备份副本里发现了它种着花的样子。\n\n要恢复吗？（会用副本覆盖当前的空花园）" });
+    }).catch(function () {});
+  } catch (e) {}
+}
+(function r() { try { if (!junkEmpty()) { dataPf = window.activePrefix(); saveLock = false; return; } probeIdb(function (v) { if (v) { try { data = load(); } catch (e) {} } }); } catch (e) { saveLock = false; } })();
 
 var T = {
   rose: { n: "\u73AB\u7470", e: ["\uD83C\uDF31", "\uD83C\uDF3F", "\uD83C\uDF39"], sn: ["\u79CD\u5B50", "\u53D1\u82BD", "\u5F00\u82B1"], g: [172800, 432000], xp: 30, lv: 1, ss: 3, m: "\u70ED\u70C8\u7684\u7231" },
@@ -1385,6 +1480,19 @@ function openGarden() {
   if (editing) return;
   document.querySelectorAll(".page").forEach(function (pg) { pg.hidden = true; });
   page.hidden = false;
+  // v3.14.x：LS 缺 garden-data（或只是垃圾空档）时先等 IDB 判定再初始化本局——
+  // 直接往下走会 load() 出全新空档并触发一连串自动保存（下雨浇水/访客/伙伴），
+  // 把 IDB 里还没读完的老花园覆盖掉。先渲染当前内存态（可能为空），判定命中后重载。
+  if (junkEmpty()) {
+    try { renderAll(); } catch (e) {}
+    probeIdb(function (v) {
+      if (!page.hidden) openGardenBody(!!v);
+    });
+    return;
+  }
+  openGardenBody(false);
+}
+function openGardenBody(recovered) {
   checkPartnerPassive();
   data = load();
   checkLoginReward();
@@ -1411,6 +1519,7 @@ function openGarden() {
   spawnVisitor();
   if (Math.random() < 0.3 + dbf.partner) partnerAct();
   renderAll();
+  if (recovered) toast("\u5DF2\u627E\u56DE\u82B1\u56ED\u6570\u636E \uD83C\uDF38");
   try { document.dispatchEvent(new CustomEvent("garden-enter")); } catch (e) {}
 }
 

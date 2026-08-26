@@ -1532,7 +1532,10 @@ try {
   applyThemeMode(getThemeMode());
   if (themeModeRow) {
     themeModeRow.addEventListener('click', () => {
-      const next = getThemeMode() === 'dark' ? 'light' : 'dark';
+      // 方向按当前实际生效的主题取反，不回读存储：存储不可用/写失败（iOS 隐私模式、
+      // 配额满等）时回读恒为非 dark → 每次点击都算出 next=dark 再刷一遍深色，
+      // 表现为「点得开、永远关不掉」。存储写入保持尽力而为，只影响下次启动的初始值。
+      const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
       try { localStorage.setItem(THEME_KEY, next); } catch (e) {}
       applyThemeMode(next);
     });
@@ -2223,6 +2226,12 @@ try {
   // 恢复完成事件后重建一次：页数未变时幂等（不动已存在页内容，仅重设背景/圆点）。
   const rebuildDeskWhenReady = () => {
     try { buildDeskPages(); } catch (e) {}
+    // v3.14.x：回填完成后补应用组件布局——desk-layout 的 localStorage 副本可能因配额/
+    // 浏览器清理而缺失（只存于 IndexedDB），首次 applyDeskLayout（脚本加载期，回填未完）
+    // 读到空不应用；此前只重建页数不重排组件 → 用户装修的位置整次会话失效（重启回旧位），
+    // 且失效期间的 saveDeskLayout 还会把默认 DOM 固化成新布局。此处补一次应用（幂等）；
+    // 用 window 引用避免脚本顺序上的 TDZ 问题。
+    try { if (window.applyDeskLayout) window.applyDeskLayout(); } catch (e) {}
   };
   if (window.__mochiDataReady) rebuildDeskWhenReady();
   else {

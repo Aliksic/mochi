@@ -39,6 +39,12 @@ msgs = [];
 pendingLocal = null;
 chatDbReady = false;
 sessionChangedIdx.clear();
+// v3.14.x：清掉旧联系人遗留的异步状态（跨切换残留的保险丝会把新桌面误置
+// 就绪；重试定时器只对旧联系人有意义；authLoadedPrefix 归位重新考核）
+if (readyFuse) { clearTimeout(readyFuse); readyFuse = null; }
+if (idbRetryTimer) { clearTimeout(idbRetryTimer); idbRetryTimer = null; }
+idbRetryCount = 0;
+authLoadedPrefix = null;
 armReadyFuse();
 try { lastQuote = null; } catch (e) {}
 try { lastMineText = ''; } catch (e) {}
@@ -99,6 +105,23 @@ performLsSnapWrite(p.raw, p.prefix);
 }
 }, 4000);
 }
+// v3.14.x：防「权威读取失败被当空历史」守卫状态——idbGet 的 4s+4s 超时兜底
+//（v3.9.x 防挂起）对「键存在但读取超时」也 resolve undefined，与「键不存在」不可区分；
+// 真机切桌面瞬间几十模块并发抢 IDB，chat-msgs 大键读取易超时 → 若当"无权威数据"
+// 处理会用内存/LS 有损快照覆盖 IDB = 聊天记录丢失。authLoadedPrefix=本会话已成功
+// 读过权威的命名空间（空记录落盘守卫用）；读取失败走有界自动重试。
+let authLoadedPrefix = null;
+let idbRetryTimer = null;
+let idbRetryCount = 0;
+const IDB_RETRY_MAX = 6;
+function scheduleIdbRetry() {
+if (idbRetryTimer || idbRetryCount >= IDB_RETRY_MAX) return;
+idbRetryCount++;
+idbRetryTimer = setTimeout(function () {
+idbRetryTimer = null;
+try { loadMsgs(); } catch (e) {}
+}, 5000);
+}
 let readyFuse = null;
 function armReadyFuse() {
 if (readyFuse || chatDbReady) return;
@@ -106,6 +129,9 @@ const fusePrefix = window.activePrefix();
 readyFuse = setTimeout(function () {
 readyFuse = null;
 if (chatDbReady) return;
+// v3.14.x：跨联系人兜底——保险丝按武装时命名空间捕获，若已切走（正常路径
+// contact-switched 已清本定时器，此处防极端时序漏清）不得误置新桌面就绪
+try { if (window.activePrefix() !== fusePrefix) return; } catch (e) {}
 chatDbReady = true;
 const fuseMsgs = (pendingLocal && pendingLocal.length) ? pendingLocal : msgs;
 if (fuseMsgs && fuseMsgs.length) {
@@ -134,31 +160,41 @@ let pendingSaveData = null, pendingSavePrefix = null;
 function saveMsgs() {
 if (!chatDbReady) {
 try { pendingLocal = msgs.slice(); } catch (e) {}
-writeLsSnapshot(JSON.stringify(msgs), undefined, true);
+// v3.14.x：内存为空时不写 LS 快照——权威读取失败窗口里任何模块触发保存，
+// 会把 LS 里仅存的有损备份也覆盖成 "[]"（IDB 万一后续丢失将无从恢复）
+if (msgs.length) writeLsSnapshot(JSON.stringify(msgs), undefined, true);
 return;
 }
 if (saveTimer) clearTimeout(saveTimer);
 const myPrefix = window.activePrefix();
 pendingSaveData = msgs;
 pendingSavePrefix = myPrefix;
-saveTimer = setTimeout(() => {
-saveTimer = null;
-pendingSaveData = null;
-pendingSavePrefix = null;
-const data = JSON.stringify(msgs);
+    saveTimer = setTimeout(() => {
+      saveTimer = null;
+      pendingSaveData = null;
+      pendingSavePrefix = null;
+      // v3.14.x：空记录落盘守卫——本会话从未成功读过该桌面的权威数据时，
+      // 禁止把空数组写进 IDB（极端场景：权威读取失败+内存被重置后任何模块
+      // 触发保存，会把全部历史覆盖成 []）。清空聊天记录走 clearChatHistory
+      // 的 store.remove 直删，不依赖空数组落盘。
+      if (!msgs.length && authLoadedPrefix !== myPrefix) return;
+      const data = JSON.stringify(msgs);
 try { if (window.idbSet) window.idbSet(myPrefix + ':chat-msgs', data); } catch (e) {}
 writeLsSnapshot(data, myPrefix);
 }, 400);
 }
 function flushSave() {
 if (window.__resetting) return;
-if (saveTimer) {
-clearTimeout(saveTimer);
-saveTimer = null;
-const data = JSON.stringify(msgs);
-const myPrefix = window.activePrefix();
-try { if (window.idbSet) window.idbSet(myPrefix + ':chat-msgs', data); } catch (e) {}
-writeLsSnapshot(data, myPrefix, true);
+    if (saveTimer) {
+      clearTimeout(saveTimer);
+      saveTimer = null;
+      const myPrefix = window.activePrefix();
+      // v3.14.x：空记录落盘守卫（同 saveMsgs 防抖回调）——权威未读过前不写空数组
+      if (!msgs.length && authLoadedPrefix !== myPrefix) return;
+      const data = JSON.stringify(msgs);
+      try { if (window.idbSet) window.idbSet(myPrefix + ':chat-msgs', data); } catch (e) {}
+      // v3.13.x：页面离开前强制立即写快照（不节流），防退出时窗口内最新消息只进内存
+      writeLsSnapshot(data, myPrefix, true);
 } else if (!chatDbReady && msgs.length) {
 writeLsSnapshot(JSON.stringify(msgs), undefined, true);
 }
@@ -245,7 +281,22 @@ const myPrefix = window.activePrefix();
 window.idbGet(myPrefix + ':chat-msgs').then(v => {
 if (window.activePrefix() !== myPrefix) return;
 if (v === undefined || v === null) {
+// v3.14.x：先区分「键确实不存在」与「读取失败/超时」——idbGet 超时兜底也
+// resolve undefined，真机切桌面并发抢事务时大键读取超时并不罕见；若当"无权威"
+// 会置 ready 并用内存/LS 有损快照覆盖 IDB = 全部历史被清。用 idbGetAllKeys
+// 复核：键在列表=这次读取失败，绝不落盘、安排有界重试；不在=确认无历史才走原逻辑。
+const idbKey = myPrefix + ':chat-msgs';
+const confirmMiss = window.idbGetAllKeys
+? window.idbGetAllKeys().then(function (keys) {
+return !(keys || []).some(function (k) { return k === idbKey; });
+}).catch(function () { return false; })
+: Promise.resolve(true);
+confirmMiss.then(function (isMiss) {
+if (window.activePrefix() !== myPrefix) return;
+if (!isMiss) { scheduleIdbRetry(); return; }
 chatDbReady = true;
+idbRetryCount = 0;
+authLoadedPrefix = myPrefix;
 try { syncLastMineText(); } catch (e) {}
 const lsRaw = store.get('chat-msgs');
 if (lsRaw) {
@@ -262,6 +313,7 @@ pendingLocal = null;
 try { if (window.idbSet) window.idbSet(myPrefix + ':chat-msgs', JSON.stringify(msgs)); } catch (e) {}
 writeLsSnapshot(JSON.stringify(msgs), myPrefix, true);
 }
+});
 return;
 }
 try {
@@ -302,6 +354,9 @@ try { syncLastMineText(); } catch (e) {}
 if (restoreEscapedPokeIcons()) changed = true;
 pendingLocal = null;
 chatDbReady = true;
+// v3.14.x：本命名空间已读到权威（此后空数组落盘才被允许——内存已含全部历史）
+authLoadedPrefix = myPrefix;
+idbRetryCount = 0;
 try {
 lastIdbLoadPrefix = window.activePrefix();
 lastIdbLoadAt = Date.now();
@@ -1817,8 +1872,11 @@ return el;
 }
 function addIn(text, opts) {
 opts = opts || {};
-if (!opts.special && !opts.silent && window.playSfx) window.playSfx('in');
-return addRec({ side: 'in', text: text, initiative: opts.initiative, special: opts.special, quote: opts.quote, qidx: opts.qidx, type: opts.type, img: opts.img, parts: opts.parts, mailNotice: opts.mailNotice, askQuestion: opts.askQuestion, askStatus: opts.askStatus, askOptions: opts.askOptions, askType: opts.askType, choiceQuestion: opts.choiceQuestion, choiceOptions: opts.choiceOptions, choicePref: opts.choicePref, choiceCat: opts.choiceCat, choiceStatus: opts.choiceStatus, choiceAnswer: opts.choiceAnswer, choiceReply: opts.choiceReply, choiceMatch: opts.choiceMatch, curiousQuestion: opts.curiousQuestion, curiousQuick: opts.curiousQuick, curiousReplies: opts.curiousReplies, curiousFollowup: opts.curiousFollowup, curiousQid: opts.curiousQid, curiousCat: opts.curiousCat, curiousStatus: opts.curiousStatus, curiousAnswer: opts.curiousAnswer, curiousReply: opts.curiousReply, roastText: opts.roastText, roastCat: opts.roastCat, roastStatus: opts.roastStatus, roastAnswer: opts.roastAnswer, roastReply: opts.roastReply, rpAmount: opts.rpAmount, rpWish: opts.rpWish, rpStatus: opts.rpStatus, rpTs: opts.rpTs, rpCover: opts.rpCover });
+// v3.14.x：opts.tag = 来源标注（如「经期关心/喝水提醒/吃饭提醒」）——系统功能直接发进
+// 聊天的字卡带一枚标签 chip（复用 rec.mood 渲染与持久化链路，重进聊天仍在），
+// 用户能看出这条消息是哪个功能触发的，不再是无来由的普通气泡
+const _tagMood = opts.tag ? [{ tag: String(opts.tag), label: String(text) }] : null;
+return addRec({ side: 'in', text: text, initiative: opts.initiative, special: opts.special, quote: opts.quote, qidx: opts.qidx, type: opts.type, img: opts.img, parts: opts.parts, mailNotice: opts.mailNotice, askQuestion: opts.askQuestion, askStatus: opts.askStatus, askOptions: opts.askOptions, askType: opts.askType, choiceQuestion: opts.choiceQuestion, choiceOptions: opts.choiceOptions, choicePref: opts.choicePref, choiceCat: opts.choiceCat, choiceStatus: opts.choiceStatus, choiceAnswer: opts.choiceAnswer, choiceReply: opts.choiceReply, choiceMatch: opts.choiceMatch, curiousQuestion: opts.curiousQuestion, curiousQuick: opts.curiousQuick, curiousReplies: opts.curiousReplies, curiousFollowup: opts.curiousFollowup, curiousQid: opts.curiousQid, curiousCat: opts.curiousCat, curiousStatus: opts.curiousStatus, curiousAnswer: opts.curiousAnswer, curiousReply: opts.curiousReply, roastText: opts.roastText, roastCat: opts.roastCat, roastStatus: opts.roastStatus, roastAnswer: opts.roastAnswer, roastReply: opts.roastReply, rpAmount: opts.rpAmount, rpWish: opts.rpWish, rpStatus: opts.rpStatus, rpTs: opts.rpTs, rpCover: opts.rpCover, mood: opts.mood || _tagMood || undefined });
 }
 function addOut(text) {
 return addRec({ side: 'out', text: text });
@@ -1833,7 +1891,57 @@ if (opts && opts.enter && !chatVisible()) enterChat();
 return r;
 };
 window.chatAddGift = function (rec) { if (!rec.ts) rec.ts = Date.now(); return addRec(rec); };
+// v3.14.x：跨桌面安全追加一条系统消息到指定联系人的聊天记录——
+// call.js notifyCallEnd / feed.js notifyFeedPostToChat / mail.js notifyMailToChat 共用。
+// 旧实现各自「idbGet → push → idbSet 整包写回」，idbGet 超时兜底返回 undefined 时
+// 会把该桌面全部历史覆盖成 [这一条]（与 loadMsgs 同款破坏面）。这里统一：
+// ① 当前桌面走内存链路（实时渲染/未读角标/防抖统一落盘）；
+// ② 非当前桌面先读后写，读到的 undefined 先用 idbGetAllKeys 复核是「确认无历史」
+//    还是「这次读取失败」——失败则 1.5s 后重试（最多 3 次），仍失败放弃写入：
+//    宁可丢一条系统提示，绝不冒覆盖整个聊天记录的风险。
+window.chatAppendToDeskMsg = function (cid, text, opts) {
+opts = opts || {};
+const cur = window.__activeCid || 'default';
+if (cid === cur) {
+if (window.chatAddSystem) window.chatAddSystem(text, { special: opts.special, img: opts.img, mailNotice: opts.mailNotice });
+return;
+}
+if (!window.idbGet || !window.idbSet) return;
+const key = 'xy-home-v2:' + cid + ':chat-msgs';
+let tries = 0;
+const writeArr = function (arr) {
+try { window.idbSet(key, JSON.stringify(arr)); } catch (e) {}
+try { localStorage.setItem(key, JSON.stringify(arr)); } catch (e) {}
+};
+const attempt = function () {
+tries++;
+window.idbGet(key).then(function (v) {
+if (v !== undefined && v !== null) {
+let arr = [];
+try { arr = typeof v === 'string' ? JSON.parse(v) : v; } catch (e) { arr = []; }
+if (!Array.isArray(arr)) arr = [];
+arr.push({ side: 'in', special: opts.special || 'poke', text: text, ts: Date.now(), mailNotice: !!opts.mailNotice });
+writeArr(arr);
+return;
+}
+// undefined：复核键是否真的不存在
+const confirmMiss = window.idbGetAllKeys
+? window.idbGetAllKeys().then(function (keys) {
+return !(keys || []).some(function (k) { return k === key; });
+}).catch(function () { return false; })
+: Promise.resolve(true);
+confirmMiss.then(function (isMiss) {
+if (isMiss) writeArr([{ side: 'in', special: opts.special || 'poke', text: text, ts: Date.now(), mailNotice: !!opts.mailNotice }]);
+else if (tries < 3) setTimeout(attempt, 1500);
+});
+}).catch(function () { if (tries < 3) setTimeout(attempt, 1500); });
+};
+attempt();
+};
 function saveMsgsNow() {
+// v3.14.x：空记录落盘守卫（同 saveMsgs）——调用方都是作答/回应后触发，
+// msgs 必非空；真出现空+权威未读过时绝不写盘（防覆盖全部历史）
+if (!msgs.length && authLoadedPrefix !== window.activePrefix()) return;
 const data = JSON.stringify(msgs);
 try { if (window.idbSet) window.idbSet(window.activePrefix() + ':chat-msgs', data); } catch (e) {}
 writeLsSnapshot(data, undefined, true);
@@ -2502,29 +2610,56 @@ chatPage.hidden = false;
 const morePanel = document.getElementById('chat-more-panel');
 const moreBtn = document.getElementById('chat-more-btn');
 if (moreBtn && morePanel) {
-const moreTabFun = document.getElementById('more-tab-fun');
-const moreTabAsk = document.getElementById('more-tab-ask');
 const moreGridFun = document.getElementById('more-grid-fun');
 const moreGridAsk = document.getElementById('more-grid-ask');
-function applyMoreTab(tab) {
-const fun = tab !== 'ask';
-if (moreTabFun) moreTabFun.classList.toggle('sel', fun);
-if (moreTabAsk) moreTabAsk.classList.toggle('sel', !fun);
-if (moreGridFun) moreGridFun.hidden = !fun;
-if (moreGridAsk) moreGridAsk.hidden = fun;
-store.set('more-tab', fun ? 'fun' : 'ask');
+// v3.15.x：功能增多后顶部改为分类 chips（常用/互动/小游戏/工具/TA的提问），
+// 按钮元素与 ID 全部保留只做过滤显示；「常用」按真实点击频次统计（无数据时用默认集）
+const MORE_CATS = ['often', 'chat', 'game', 'tool', 'ask'];
+const MORE_OFTEN_DEFAULT = ['more-call', 'more-poke', 'more-gift', 'more-rp', 'more-decide', 'more-search'];
+function moreUseRead() {
+try { const v = JSON.parse(store.get('more-item-use') || '{}'); if (v && typeof v === 'object' && !Array.isArray(v)) return v; } catch (e) {}
+return {};
 }
-if (moreTabFun) moreTabFun.addEventListener('click', (e) => { e.stopPropagation(); applyMoreTab('fun'); });
-if (moreTabAsk) moreTabAsk.addEventListener('click', (e) => { e.stopPropagation(); applyMoreTab('ask'); });
+function moreOftenIds() {
+// 默认集打底（计 0 次），真实点击过的按次数插到前面；最多展示 12 个
+const use = moreUseRead();
+const score = {};
+MORE_OFTEN_DEFAULT.forEach(id => { if (document.getElementById(id)) score[id] = 0; });
+Object.keys(use).forEach(id => {
+const n = use[id] | 0;
+if (n > 0 && document.getElementById(id)) score[id] = Math.max(score[id] || 0, n);
+});
+return Object.keys(score).sort((a, b) => (score[b] - score[a]) || (MORE_OFTEN_DEFAULT.indexOf(a) - MORE_OFTEN_DEFAULT.indexOf(b))).slice(0, 12);
+}
+morePanel.addEventListener('click', (e) => {
+const it = e.target.closest ? e.target.closest('.more-item') : null;
+if (!it || !it.id || !morePanel.contains(it)) return;
+try { const use = moreUseRead(); use[it.id] = (use[it.id] || 0) + 1; store.set('more-item-use', JSON.stringify(use)); } catch (err) {}
+}, true);
+function applyMoreCat(cat) {
+if (MORE_CATS.indexOf(cat) < 0) cat = 'often';
+document.querySelectorAll('#more-tabs .more-tab').forEach(t => t.classList.toggle('sel', t.dataset.mcat === cat));
+if (moreGridAsk) moreGridAsk.hidden = cat !== 'ask';
+if (moreGridFun) {
+moreGridFun.hidden = cat === 'ask';
+const often = cat === 'often' ? moreOftenIds() : null;
+moreGridFun.querySelectorAll('.more-item').forEach(it => {
+it.hidden = often ? (often.indexOf(it.id) < 0) : (it.dataset.mcat !== cat);
+});
+}
+store.set('more-cat', cat);
+}
+document.querySelectorAll('#more-tabs .more-tab').forEach(t => t.addEventListener('click', (e) => { e.stopPropagation(); applyMoreCat(t.dataset.mcat); }));
 moreBtn.addEventListener('click', (e) => {
 e.stopPropagation();
 if (morePanel.hidden) {
-let tab = 'fun';
+let tab = 'often';
 try {
-const saved = store.get('more-tab');
-if (saved === 'ask') tab = 'ask';
+const saved = store.get('more-cat');
+if (saved && MORE_CATS.indexOf(saved) >= 0) tab = saved;
+else if (store.get('more-tab') === 'ask') tab = 'ask'; // 旧两页签记忆迁移
 } catch (err) {}
-applyMoreTab(tab);
+applyMoreCat(tab);
 closeIme(); // v3.5.116：收起输入法，面板不被键盘遮挡
 }
 morePanel.hidden = !morePanel.hidden;
@@ -4752,10 +4887,10 @@ const emojiGroupsBar = document.getElementById('emoji-groups');
 const emojiTools = document.getElementById('emoji-tools');
 const emojiBatch = document.getElementById('emoji-batch');
 const emojiBatchCount = document.getElementById('emoji-batch-count');
-let emojiMode = 'ta';        // public（公用表情包）/ ta（联系人专属）/ mine
-let emojiCurGroup = '';      // 联系人专属表情包分组筛选（记住上次打开的分类）
-let pubCurGroup = '';        // 公用表情包分组筛选（记住上次打开的分类）
-let myCurGroup = '';         // 我的表情包分组筛选（记住上次打开的分类）
+let emojiMode = 'ta';        // public（公用表情包）/ ta（联系人专属）/ mine（跨会话记住上次模式）
+let emojiCurGroup = '';      // 联系人专属表情包分组筛选（记住上次打开的分组）
+let pubCurGroup = '';        // 公用表情包分组筛选（记住上次打开的分组）
+let myCurGroup = '';         // 我的表情包分组筛选（记住上次打开/上传进的分组）
 let myBatchMode = false;     // 批量管理模式
 let myGroups = [];           // 我的表情包 [[分组名, [dataURL...]], ...]
 let mySel = new Set();       // 批量勾选：分组名\u0001索引
@@ -4770,12 +4905,14 @@ try { return store.get('hide-ta-sticker') === '1'; } catch (e) { return false; }
 }
 myGroups = myEmojiLoad();
 function saveEmojiGroupPref() {
-store.set('emoji-last', JSON.stringify({ ta: emojiCurGroup, mine: myCurGroup, pub: pubCurGroup }));
+// v3.15.x：mode 一并持久化——每次打开表情包直接落在上次用的模式+分组，不用重复点
+store.set('emoji-last', JSON.stringify({ mode: emojiMode, ta: emojiCurGroup, mine: myCurGroup, pub: pubCurGroup }));
 }
 (function () {
 try {
 const pref = JSON.parse(store.get('emoji-last') || 'null');
 if (pref && typeof pref === 'object') {
+if (pref.mode === 'public' || pref.mode === 'ta' || pref.mode === 'mine') emojiMode = pref.mode;
 if (typeof pref.ta === 'string') emojiCurGroup = pref.ta;
 if (typeof pref.mine === 'string') myCurGroup = pref.mine;
 if (typeof pref.pub === 'string') pubCurGroup = pref.pub;
@@ -5382,6 +5519,7 @@ done++;
 if (done === files.length) {
 const ok = myEmojiSave();
 myCurGroup = g[0];
+saveEmojiGroupPref();
 renderEmojiPanel();
 if (!ok) toast('存储空间不足：表情已用备用存储，刷新后恢复。请清理不用的表情');
 else toast('已添加 ' + okCount + ' 个表情');
@@ -5400,6 +5538,7 @@ done++;
 if (done === files.length) {
 const ok = myEmojiSave();
 myCurGroup = g[0];
+saveEmojiGroupPref();
 renderEmojiPanel();
 if (!ok) toast('存储空间不足：表情已用备用存储，刷新后恢复。请清理不用的表情');
 else toast('已添加 ' + okCount + ' 个表情');
@@ -5506,6 +5645,7 @@ if (/^http:\/\//i.test(jobs[i].url)) httpSaved++; // 升级 https 抓取也失�
 });
 const ok = myEmojiSave();
 myCurGroup = jobs[0].bucket.g[0];
+saveEmojiGroupPref();
 renderEmojiPanel();
 myeLinkBusy = false;
 const got = okData + okUrl;
@@ -5621,7 +5761,9 @@ window.openModal('重命名分组', g[0], (v) => {
 const name = (v || '').trim();
 if (!name || name === g[0]) return;
 if (myGroups.some(x => x[0] === name)) { toast('分组「' + name + '」已存在'); return; }
+const oldName = g[0];
 g[0] = name;
+if (myCurGroup === oldName) { myCurGroup = name; saveEmojiGroupPref(); }
 mySel.clear();
 updateBatchCount();
 myEmojiSave();
@@ -5634,7 +5776,7 @@ row.querySelector('.mg-del').addEventListener('click', () => {
 if (window.openModal) {
 window.openModal('删除分组「' + g[0] + '」及其全部表情？', '', () => {
 myGroups.splice(gi, 1);
-if (myCurGroup === g[0]) myCurGroup = '';
+if (myCurGroup === g[0]) { myCurGroup = ''; saveEmojiGroupPref(); }
 mySel.clear();
 myEmojiSave();
 renderMyMgList();
@@ -5768,11 +5910,43 @@ const SEND_GUARD_MS = 2500;
 let lastSendTxt = '', lastSendTs = 0;
 function clearChatInput() {
 if (!input) return;
-try {
-if (input.isContentEditable) input.textContent = '';
-} catch (e) {}
-try { input.value = ''; } catch (e) {}
+// 先挂复活守卫再清空——清空动作本身会同步派发 input 事件，守卫需已就位
 input._mClearTxt = lastSendTxt || '';
+const sentTxt = lastSendTxt || '';
+// v3.14.x：vivo Edge 等内核实测——聚焦中的 contenteditable 直写 textContent=''
+// 后，输入法会把刚提交的组合文本整体写回输入框（迟到、且常不派发 input 事件），
+// 表现为「消息发出去了，聊天框还留着刚发的内容」。聚焦态改走 execCommand 编辑
+// 管线删除（浏览器层面终结组合会话，写回无从发生）；非聚焦/不支持再退回直清。
+try {
+if (input.isContentEditable && document.activeElement === input) {
+input.focus();
+if (!(document.execCommand && document.execCommand('selectAll', false, null) &&
+document.execCommand('delete', false, null))) {
+input.textContent = '';
+}
+} else if (input.isContentEditable) {
+input.textContent = '';
+}
+} catch (e) {
+try { input.textContent = ''; } catch (e2) {}
+}
+try { input.value = ''; } catch (e) {}
+// v3.14.x：迟到复活兜底——部分内核重组文本不派发 input（原守卫收不到），定时
+// 复查两次；仅当内容与刚发送文本完全一致且仍在防重发窗口内才清，人工重打不受影响
+if (sentTxt && input.isContentEditable) {
+[200, 800].forEach((ms) => {
+setTimeout(() => {
+try {
+if (!input || !input.isContentEditable) return;
+const now = (input.innerText || '').trim();
+if (now && now === sentTxt && Date.now() - lastSendTs < SEND_GUARD_MS) {
+input.textContent = '';
+input._mClearTxt = '';
+}
+} catch (e) {}
+}, ms);
+});
+}
 }
 const addMsg = (text) => {
 const t0 = (text || '').trim();

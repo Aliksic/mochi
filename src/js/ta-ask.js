@@ -358,7 +358,7 @@
   try {
     document.addEventListener('mochi-fg-resume', function () {
       try {
-        maybeTriggerTAAsk(); maybeTriggerTC(); maybeTriggerTCU(); maybeTriggerTR();
+        maybeTriggerTAAsk(); maybeTriggerTC(); maybeTriggerTCU(); maybeTriggerTR(); if (typeof maybeTriggerTACC === 'function') try { maybeTriggerTACC(); } catch (e) {}
       } catch (e) {}
       _flushPendingPops();
     });
@@ -2759,6 +2759,62 @@ window.openTCPanel = openTCPanel;
   }
   setTimeout(maybeTriggerTR, 120000);
   setInterval(maybeTriggerTR, 300000);
+
+  // ===== v3.15.x：第五类主动触发「TA 分享你的字卡」 =====
+  // 用户在字卡库自建的字卡（cc-groups，含公用 cc-groups-public）按概率被 TA 抽一张、
+  // 当作 TA 自己想说的话发出来（initiative 爱心角标 + mood 标签标注来源）。
+  // 门控走 回复设置→其他 的 ai-cc-en / ai-cc-prob（与猜拳/游戏/贴贴邀请同体系，
+  // 读法沿用 mail.js/feed.js 的 ls.get('reply-'+k) 惯例）；冷却 90 分钟 + 全局互动闸门。
+  // 池过滤：纯文本（排除语音 |||/图片 data:/链接 http(s)）、≤60 字；最近 6 条不重复抽。
+  const CC_TRIGGER_KEY = 'ta-cc-state';
+  function ccStateLoad() { try { return JSON.parse(store.get(CC_TRIGGER_KEY) || '{}') || {}; } catch (e) { return {}; } }
+  function ccStateSave(d) { try { store.set(CC_TRIGGER_KEY, JSON.stringify(d)); } catch (e) {} }
+  function ccCfg(k, def) {
+    try {
+      const v = store.get('reply-' + k);
+      if (v === null || v === undefined || v === '') return def;
+      const n = Number(v);
+      return isNaN(n) ? def : n;
+    } catch (e) { return def; }
+  }
+  window.__taCcPool = function () {
+    let cards = [];
+    try { cards = ((window.getCustomCards ? window.getCustomCards() : []) || []); } catch (e) { cards = []; }
+    return cards.filter(function (s) {
+      if (typeof s !== 'string') return false;
+      const t = s.trim();
+      if (!t || t.length > 60) return false;
+      if (t.indexOf('|||') >= 0) return false;
+      if (t.indexOf('data:') === 0 || t.indexOf('http:') === 0 || t.indexOf('https:') === 0) return false;
+      return true;
+    });
+  };
+  function maybeTriggerTACC() {
+    try {
+      // v3.14.x 教训：后台也照常进聊天记录+系统通知，前台弹窗交给通知链路
+      if (ccCfg('ai-cc-en', 1) !== 1) return;
+      // v3.13.x：全局闸门——任一互动卡发出后 60 分钟内不再自动触发
+      if (!interactGateOk()) return;
+      const st = ccStateLoad();
+      if (Date.now() - (st.lastCcAt || 0) < 90 * 60000) return;
+      if (Math.random() * 100 >= ccCfg('ai-cc-prob', 4)) return;
+      const pool = window.__taCcPool();
+      if (!pool.length) return;
+      const recent = Array.isArray(st.recent) ? st.recent : [];
+      const fresh = pool.filter(function (t) { return recent.indexOf(t) < 0; });
+      const arr2 = fresh.length ? fresh : pool;
+      const text = arr2[Math.floor(Math.random() * arr2.length)];
+      st.lastCcAt = Date.now();
+      st.recent = recent.concat([text]).slice(-6);
+      ccStateSave(st);
+      interactGateMark();
+      if (window.chatAddIn) window.chatAddIn(text, { initiative: 1, tag: '用了你建的字卡' });
+      if (window.bgNotifyCheck) { try { window.bgNotifyCheck(text, Date.now(), { name: window.taFit ? window.taFit('TA') + '的字卡' : 'TA的字卡' }); } catch (e) {} }
+    } catch (e) {}
+  }
+  window.maybeTriggerTACC = maybeTriggerTACC;
+  setTimeout(maybeTriggerTACC, 150000);
+  setInterval(maybeTriggerTACC, 240000);
 
   // 吐槽回应弹窗
   window.openRoast = function (msgIdx) {

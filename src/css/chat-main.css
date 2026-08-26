@@ -477,10 +477,12 @@ body.cs-time-divider .msg-time-divider { display:flex; }
   padding:16px;
 }
 .more-panel[hidden] { display:none; }
-/* 更多功能面板：顶部分类切换（更多功能 / TA的提问） */
-.more-tabs { display:flex; gap:6px; margin-bottom:14px; }
+/* 更多功能面板：顶部分类切换（v3.15.x：功能增多后由两页签改为分类 chips
+   常用/互动/小游戏/工具/TA的提问；窄屏放不下时横向滚动） */
+.more-tabs { display:flex; gap:6px; margin-bottom:14px; overflow-x:auto; scrollbar-width:none; }
+.more-tabs::-webkit-scrollbar { display:none; }
 .more-tab {
-  flex:1; padding:8px 0; font-size:13px; font-weight:700;
+  flex:0 0 auto; padding:7px 13px; font-size:12px; font-weight:700;
   border:1px solid rgba(0,0,0,.1); border-radius:99px;
   background:rgba(255,255,255,.92); color:#666; cursor:pointer;
   font-family:inherit; -webkit-tap-highlight-color:transparent;
@@ -488,6 +490,8 @@ body.cs-time-divider .msg-time-divider { display:flex; }
 .more-tab.sel { background:#111; color:#fff; border-color:#111; }
 .more-grid { display:flex; flex-wrap:wrap; gap:14px; justify-content:center; }
 .more-grid[hidden] { display:none; }
+/* .more-item 自带 display:flex，需显式兜底 hidden 属性（分类过滤靠它隐藏） */
+.more-item[hidden] { display:none; }
 .more-item {
   width:64px; display:flex; flex-direction:column; align-items:center; gap:7px;
   background:transparent; border:none; cursor:pointer; font-family:inherit;

@@ -236,6 +236,35 @@
   //   不写 localStorage——手机 5MB 配额不再被几十 MB 图片撑爆，大数据全进 IDB（配额大得多）
   const LS_BIG_LIMIT = 200 * 1024;
   let memoryCache = null;
+
+  // v3.14.x：大键尺寸索引（OOM 防线之一）——启动回填前就能知道哪些键 >200KB，
+  // 从而把大键单独逐批流式恢复（避免多个 MB 级字符串同批读入叠加峰值），
+  // 并对大键驻留总量设预算上限（重度数据用户在手机上曾因回填把堆推到
+  // 渲染进程上限直接崩溃，见 tools/diag-oom-repro.mjs 复现）。
+  // 索引本身是极小的 JSON（只有键名+长度），存 localStorage；旧数据没有索引时
+  // 回填会在读到实际值后自愈补记。键名带 __ 前缀，idbRestore 不回填它。
+  const BIG_IDX_KEY = 'xy-home-v2:__big-idx';
+  function bigIdxLoad() {
+    try { return JSON.parse(localStorage.getItem(BIG_IDX_KEY) || '{}') || {}; } catch (e) { return {}; }
+  }
+  let _bigIdx = bigIdxLoad();
+  let _bigIdxSaveTimer = null;
+  function bigIdxSave() {
+    if (_bigIdxSaveTimer) return;
+    _bigIdxSaveTimer = setTimeout(function () {
+      _bigIdxSaveTimer = null;
+      try { localStorage.setItem(BIG_IDX_KEY, JSON.stringify(_bigIdx)); } catch (e) {}
+    }, 300);
+  }
+  function bigIdxTrack(key, v) {
+    const big = typeof v === 'string' && v.length > LS_BIG_LIMIT;
+    if (big) {
+      if (_bigIdx[key] !== v.length) { _bigIdx[key] = v.length; bigIdxSave(); }
+    } else if (_bigIdx[key] !== undefined) {
+      delete _bigIdx[key]; bigIdxSave();
+    }
+  }
+
   window.xyStore = function (prefix) {
     return {
       get(k) {
@@ -251,6 +280,7 @@
         // 会既不在 localStorage 也不在内存缓存，切回桌面时读空导致壁纸被清掉。
         if (!memoryCache) memoryCache = {};
         memoryCache[key] = v;
+        try { bigIdxTrack(key, v); } catch (e) {}
         // 大键跳过 localStorage（只进 IDB + 内存缓存）
         const big = typeof v === 'string' && v.length > LS_BIG_LIMIT;
         if (!big) {
@@ -264,6 +294,7 @@
         const key = prefix + ':' + k;
         if (memoryCache) delete memoryCache[key];
         try { localStorage.removeItem(key); } catch (e) {}
+        if (_bigIdx[key] !== undefined) { delete _bigIdx[key]; bigIdxSave(); }
         try { if (window.idbDelete) window.idbDelete(key); } catch (e) {}
       }
     };
@@ -281,6 +312,15 @@
   }
 
   // 恢复：从 IndexedDB 读回 localStorage 缺失的键（初始化时调用）
+  // v3.14.x OOM 防线（修复荣耀等安卓真机「开屏卡住→网页崩溃」）：
+  //   原实现把所有键无上限读入 memoryCache 驻留——重度数据用户（几十 MB 字卡/
+  //   图片键）启动回填时 JS 堆被推到渲染进程上限直接崩溃（diag-oom-repro.mjs
+  //   实测 40MB 种子→堆 164MB→targetCrashed）。现改为：
+  //   ① 大键（>200KB）按 __big-idx 索引提前识别，单独逐键流式恢复（不再与
+  //      其他键同批叠加峰值）；旧数据无索引时读到实际值后自愈补记。
+  //   ② 大键驻留总量设预算（设备内存 ≤4GB 取 12MB，否则 24MB）：超预算的键
+  //      本会话不加载，记入 window.__xyIdbDeferredKeys，可用 window.idbHydrateKey(key)
+  //      按需异步取回；小键行为完全不变。
   window.idbRestore = function (uidPrefix) {
     // v3.5.116：所有路径都设置就绪标志（空数据/无 IDB 也算就绪），
     //   开屏「点击进入」靠它判断，避免空数据场景误等
@@ -323,41 +363,88 @@
         !isChatMsgsKey(k) &&
         // v3.7.0：自动备份副本键不回填——它是 data-backup.js 写入的全量 JSON 快照，
         // 体积可能几 MB，回填到 localStorage 会撑爆 5MB 配额，且不是业务数据
-        k !== 'xy-home-v2:__auto-backup-snapshot');
+        k !== 'xy-home-v2:__auto-backup-snapshot' &&
+        k !== BIG_IDX_KEY);
       if (!need.length) { finish(); return; }
-      // v3.5.122：分批恢复（每批 8 个键，批间让出主线程）——v3.5.117 的单事务
-      //   idbGetMany 会把几百个键（含几十 MB 大图）一次性读进内存，低端手机
-      //   内存飙升/事务挂起导致回填卡死，开屏永远转圈。分批后每批只占少量内存，
-      //   让出主线程避免 UI 卡死，总耗时仍远低于单事务挂起。
-      const BATCH = 8;
-      let idx = 0;
+      // v3.14.x：大键驻留预算——低内存手机（deviceMemory≤4GB）更保守。
+      // 重度数据用户曾因回填把堆推到渲染进程上限直接崩溃（diag-oom-repro.mjs 复现：
+      // 40MB 种子→手机级堆上限下 targetCrashed），预算封顶后最坏驻留可控。
+      const deviceGB = (function () { try { return navigator.deviceMemory || 8; } catch (e) { return 8; } })();
+      const BIG_BUDGET = (deviceGB <= 4 ? 12 : 24) * 1024 * 1024;
+      let bigBudgetUsed = 0;
+      let budgetWarned = false;
+      window.__xyIdbDeferredKeys = [];
+      // v3.14.x：已知大键分流（__big-idx 索引）——
+      //   ① 超过整个预算的键【直接不读】：读了也留不下，白制造一次 MB 级垃圾峰值
+      //     （GC 时机不可控，手机上垃圾堆积本身就是崩溃源），只登记挂起；
+      //   ② 其余已知大键单独成批流式恢复；未知键单键起步探路，索引自愈后下次走快路
+      const neverRead = [], knownBig = [], rest = [];
+      need.forEach(function (k) {
+        const sz = _bigIdx[k];
+        if (typeof sz === 'number' && sz > LS_BIG_LIMIT) {
+          if (sz > BIG_BUDGET) neverRead.push(k);
+          else knownBig.push(k);
+        } else rest.push(k);
+      });
+      if (neverRead.length) {
+        budgetWarned = true;
+        neverRead.forEach(function (k) { window.__xyIdbDeferredKeys.push(k); });
+        try { console.info('[mochi] 启动回填：' + neverRead.length + ' 个超大键跳过加载（单键超 ' + Math.round(BIG_BUDGET / 1048576) + 'MB 预算），需要时可用 idbHydrateKey(键名) 按需取回'); } catch (e) {}
+      }
+      // 返回 true=已驻留；false=超预算挂起（或本会话已写入更新值，跳过）
+      function retainValue(k, v) {
+        if (v === undefined || v === null) return false;
+        // 本会话已写入更新值则跳过（原 v3.6.x 语义）：OPPO 雨见等 IDB 慢的浏览器上，
+        // 回填未完成时收到的新数据（大键只进 IDB+内存）若被 IDB 旧快照覆盖，
+        // 会出现来信弹窗已提示、信箱列表却是旧数据的错位——memoryCache 有值即最新。
+        if (memoryCache && (k in memoryCache)) return false;
+        const str = typeof v === 'string' ? v : JSON.stringify(v);
+        try { if (str.length > LS_BIG_LIMIT) { if (_bigIdx[k] !== str.length) { _bigIdx[k] = str.length; bigIdxSave(); } } else if (_bigIdx[k] !== undefined) { delete _bigIdx[k]; bigIdxSave(); } } catch (e) {}
+        if (str.length > LS_BIG_LIMIT) {
+          if (str.length > BIG_BUDGET || bigBudgetUsed + str.length > BIG_BUDGET) {
+            window.__xyIdbDeferredKeys.push(k);
+            if (!budgetWarned) {
+              budgetWarned = true;
+              try { console.info('[mochi] 启动回填：大键驻留超预算(' + Math.round(BIG_BUDGET / 1048576) + 'MB)，超出部分本会话挂起，可随时 idbHydrateKey(键名) 按需取回'); } catch (e) {}
+            }
+            return false;
+          }
+          bigBudgetUsed += str.length;
+        }
+        if (!memoryCache) memoryCache = {};
+        memoryCache[k] = str;
+        // v3.5.92：大键（>200KB 图片 dataURL）只留 IDB + 内存缓存，不回填 localStorage
+        if (str.length > LS_BIG_LIMIT) return true;
+        try {
+          // 仅当 localStorage 无此键，或 IndexedDB 数据更新时覆盖
+          if (!localStorage.getItem(k)) localStorage.setItem(k, str);
+        } catch (e) {}
+        return true;
+      }
+      // 队列：已知大键（solo 单元）优先，其后未知键按 curBatch 动态切批——
+      // 初始单键探路（最坏瞬时峰值=最大单键×2，而非多键叠加），连续小键后恢复批量提速
+      const soloQueue = knownBig.map(function (k) { return [k]; });
+      let restIdx = 0;
+      let curBatch = 1;
+      let smallStreak = 0;
+      function takeUnit() {
+        if (soloQueue.length) return soloQueue.shift();
+        if (restIdx >= rest.length) return null;
+        const u = rest.slice(restIdx, restIdx + curBatch);
+        restIdx += u.length;
+        return u;
+      }
       function processBatch() {
         if (finished) return;
-        const batch = need.slice(idx, idx + BATCH);
-        idx += BATCH;
-        if (!batch.length) { finish(); return; }
-        window.idbGetMany(batch).then(map => {
-          batch.forEach(k => {
-            const v = map[k];
-            if (v === undefined || v === null) return;
-            const str = typeof v === 'string' ? v : JSON.stringify(v);
-            if (!memoryCache) memoryCache = {};
-            // v3.6.x 修复：回填只补「缺失」数据，不覆盖本会话已写入的新值。
-            // 场景：OPPO 雨见等 IndexedDB 打开/读取慢的浏览器，启动回填尚未完成时
-            // 收到新来信/新数据——大键（>200KB，如带表情包的来信）只进 IDB+内存缓存、
-            // 不写 localStorage，迟到回填拿 IDB 旧值覆盖 memoryCache → 来信弹窗已提示、
-            // 信箱列表却是旧数据（空白/缺新信），直到下次写入才恢复。
-            // memoryCache 有值 = 本会话已写入过（xyStore.set 同步更新），永远比
-            // 启动回填时的 IDB 快照新，故跳过回填（含 LS 补写，防旧值污染）。
-            if (k in memoryCache) return;
-            memoryCache[k] = str;
-            // v3.5.92：大键（>200KB 图片 dataURL）只留 IDB + 内存缓存，不回填 localStorage
-            if (str.length > LS_BIG_LIMIT) return;
-            try {
-              // 仅当 localStorage 无此键，或 IndexedDB 数据更新时覆盖
-              if (!localStorage.getItem(k)) localStorage.setItem(k, str);
-            } catch (e) {}
-          });
+        const unit = takeUnit();
+        if (!unit) { finish(); return; }
+        window.idbGetMany(unit).then(map => {
+          let bytes = 0, allSmall = true;
+          unit.forEach(k => { const v = map[k]; if (typeof v === 'string') { bytes += v.length; if (v.length > 65536) allSmall = false; } });
+          unit.forEach(k => { retainValue(k, map[k]); map[k] = null; });
+          // 自适应批次：本单元偏大 → 保持/回到单键探路；连续 10 个全小键单元 → 恢复批量
+          if (bytes > 2 * 1048576) { curBatch = 1; smallStreak = 0; }
+          else if (allSmall && ++smallStreak >= 10 && curBatch === 1) { curBatch = 4; smallStreak = 0; }
           setTimeout(processBatch, 0); // 让出主线程，下一批
         }).catch(() => {
           // v3.5.132：批次失败继续下一批（原实现 finish() 会截断剩余全部键——
@@ -367,6 +454,33 @@
       }
       setTimeout(processBatch, 0);
     }).catch(() => { finish(); });
+  };
+  // v3.14.x：按需恢复单个键（含被预算挂起的大键）——显式调用不受预算限制，
+  // 成功后自动移出 __xyIdbDeferredKeys。供各功能模块对"用户正在看的"大数据
+  // 做懒加载兜底（如打开字卡面板前先 idbHydrateKey('xy-home-v2:cc-groups')）。
+  window.idbHydrateKey = function (key) {
+    return open().then(db => new Promise((resolve) => {
+      let done = false;
+      const t = setTimeout(function () { if (!done) { done = true; resolve(undefined); } }, 8000);
+      try {
+        const tx = db.transaction(STORE, 'readonly');
+        const req = tx.objectStore(STORE).get(key);
+        req.onsuccess = () => { if (!done) { done = true; clearTimeout(t); resolve(req.result); } };
+        req.onerror = () => { if (!done) { done = true; clearTimeout(t); resolve(undefined); } };
+      } catch (e) { if (!done) { done = true; clearTimeout(t); resolve(undefined); } }
+    })).then(v => {
+      if (v === undefined || v === null) return false;
+      if (!(memoryCache && (key in memoryCache))) {
+        const str = typeof v === 'string' ? v : JSON.stringify(v);
+        if (!memoryCache) memoryCache = {};
+        memoryCache[key] = str;
+        try { if (str.length > LS_BIG_LIMIT) { if (_bigIdx[key] !== str.length) { _bigIdx[key] = str.length; bigIdxSave(); } } } catch (e) {}
+        if (str.length <= LS_BIG_LIMIT) { try { if (!localStorage.getItem(key)) localStorage.setItem(key, str); } catch (e) {} }
+      }
+      const di = window.__xyIdbDeferredKeys;
+      if (Array.isArray(di)) { const i = di.indexOf(key); if (i >= 0) di.splice(i, 1); }
+      return true;
+    }).catch(() => false);
   };
   window.__mochiLoadT = Date.now();
   // v3.5.24：启动时自动从 IndexedDB 回填 localStorage 缺失的键。

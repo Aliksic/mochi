@@ -4,10 +4,13 @@
 // 结果可发送到聊天（联系人回复样式）
 // 功能参考：小红书@FelixFelicis（9416318007）
 (function () {
-  const uid = window.activePrefix();
-  const store = window.activeStore();
+  const uid = window.activePrefix(); // 历史遗留声明（未使用），保留兼容
+  // v3.14.x：数据/历史改全局共享——store 走根命名空间 xy-home-v2，所有桌面互通一份，
+  // 不再随联系人隔离（同 period/表情包/存钱罐的全局键先例）；昵称展示仍按当前桌面动态读
+  const store = window.xyStore('xy-home-v2');
   const HISTORY_KEY = 'decision-history';
   const SETTINGS_KEY = 'decision-settings';
+  const MIGRATE_KEY = 'dec-global-migrated';
 
   function toast(msg) {
     let t = document.getElementById('cc-toast');
@@ -18,7 +21,7 @@
     t._timer = setTimeout(() => { t.className = 'cc-toast'; }, 2000);
   }
   // v3.9.x：帮我决定从聊天页进入（聊天域）——优先读聊天专用昵称，未设置回退桌面昵称
-  function partnerName() { return store.get('cs-lbl-partner') || store.get('lbl-partner') || 'TA'; }
+  function partnerName() { try { const s = window.activeStore(); return s.get('cs-lbl-partner') || s.get('lbl-partner') || 'TA'; } catch (e) { return 'TA'; } }
   function fmtDT(ts) {
     const d = new Date(ts);
     const p = (n) => (n < 10 ? '0' + n : '' + n);
@@ -54,19 +57,86 @@
       finish(base);
     };
     if (window.idbGet) {
-      window.idbGet(window.activePrefix() + ':' + HISTORY_KEY).then(v => {
+      window.idbGet('xy-home-v2:' + HISTORY_KEY).then(v => {
         let base = [];
         try { const p = typeof v === 'string' ? JSON.parse(v) : v; if (Array.isArray(p)) base = p; } catch (e) {}
+        // 迁移刚写完根键时 idbSet 可能尚未落库，idbGet 或读到旧值——
+        // 并入当前 LS 值兜底（按 ts 去重，只增不丢），防止合并结果被冲掉
+        loadHistory().forEach(x => {
+          if (x && x.ts !== undefined && !base.some(b => b && b.ts === x.ts)) base.push(x);
+        });
         merge(base);
       }).catch(() => merge(loadHistory()));
     } else {
       merge(loadHistory());
     }
   }
+  // v3.14.x：存量迁移——升级前历史/设置散在各桌面命名空间（xy-home-v2:<cid>:decision-*），
+  // 改全局共享后一次性收编进根键（打 MIGRATE_KEY 标记，幂等）：
+  // 历史按 ts 去重合并（LS + IDB 双源扫描——超 200KB 大键只存 IDB，也要捞回），
+  // 设置优先级 根 > default 桌面 > 任一桌面第一份；完成后删除旧命名空间副本防残留。
+  function readJsonLs(lsKey) {
+    try { const v = localStorage.getItem(lsKey); const p = v == null ? null : JSON.parse(v); return p && typeof p === 'object' ? p : null; } catch (e) { return null; }
+  }
+  function migrateGlobalData() {
+    try {
+      if (store.get(MIGRATE_KEY)) return Promise.resolve();
+      const HIST_RE = /^xy-home-v2:[^:]+:decision-history$/;
+      const SET_RE = /^xy-home-v2:[^:]+:decision-settings$/;
+      const histArrs = [], setCands = [];
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (!k || k === 'xy-home-v2:' + HISTORY_KEY || k === 'xy-home-v2:' + SETTINGS_KEY) continue;
+          if (HIST_RE.test(k)) { const v = readJsonLs(k); if (Array.isArray(v)) histArrs.push({ key: k, arr: v }); }
+          else if (SET_RE.test(k)) { const v = readJsonLs(k); if (v && !Array.isArray(v)) setCands.push({ key: k, val: v }); }
+        }
+      } catch (e) {}
+      let scan = Promise.resolve();
+      if (window.idbGetAllKeys && window.idbGet) {
+        scan = window.idbGetAllKeys().then(function (keys) {
+          const want = (keys || []).filter(function (k) { return typeof k === 'string' && k !== 'xy-home-v2:' + HISTORY_KEY && k !== 'xy-home-v2:' + SETTINGS_KEY && (HIST_RE.test(k) || SET_RE.test(k)); });
+          return want.reduce(function (p, k) {
+            return p.then(function () {
+              return Promise.resolve(window.idbGet(k)).then(function (v) {
+                let parsed = null;
+                try { parsed = typeof v === 'string' ? JSON.parse(v) : v; } catch (e) {}
+                if (!parsed) return;
+                if (HIST_RE.test(k) && Array.isArray(parsed)) histArrs.push({ key: k, arr: parsed });
+                else if (SET_RE.test(k) && typeof parsed === 'object') setCands.push({ key: k, val: parsed });
+              }).catch(function () {});
+            });
+          }, Promise.resolve());
+        }).catch(function () {});
+      }
+      return scan.then(function () {
+        const merged = {};
+        loadHistory().forEach(x => { if (x && x.ts !== undefined) merged[x.ts] = x; });
+        histArrs.forEach(h => h.arr.forEach(x => { if (x && x.ts !== undefined && !merged[x.ts]) merged[x.ts] = x; }));
+        const out = Object.keys(merged).map(k => merged[k]);
+        out.sort((a, b) => (b.ts || 0) - (a.ts || 0));
+        if (out.length) store.set(HISTORY_KEY, JSON.stringify(out.slice(0, 1000)));
+        if (readJsonLs('xy-home-v2:' + SETTINGS_KEY) === null) {
+          setCands.sort(function (a, b) {
+            return (a.key.indexOf(':default:') >= 0 ? 0 : 1) - (b.key.indexOf(':default:') >= 0 ? 0 : 1);
+          });
+          if (setCands[0]) store.set(SETTINGS_KEY, JSON.stringify(setCands[0].val));
+        }
+        histArrs.concat(setCands.map(s => ({ key: s.key }))).forEach(h => {
+          try { localStorage.removeItem(h.key); } catch (e) {}
+          try { if (window.idbDelete) window.idbDelete(h.key); } catch (e) {}
+        });
+        store.set(MIGRATE_KEY, '1');
+      });
+    } catch (e) { return Promise.resolve(); }
+  }
   try {
     document.addEventListener('mochi-restore-done', function () {
-      histReady = true;
-      flushPendingHist();
+      // 先把存量各桌面旧数据合并进全局根键，完成前不放开写保护（防止半路写覆盖）
+      Promise.resolve(migrateGlobalData()).catch(function () {}).then(function () {
+        histReady = true;
+        flushPendingHist();
+      });
     });
   } catch (e) {}
   // v3.6.x：多桌面——切换联系人后重置历史权威状态（防止旧桌面的 histPending 串入新桌面）

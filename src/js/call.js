@@ -337,19 +337,9 @@
       if (window.addCallRecord) window.addCallRecord(recType, recText);
       return;
     }
-    const prefix = 'xy-home-v2:' + cid;
-    try {
-      if (window.idbGet && window.idbSet) {
-        window.idbGet(prefix + ':chat-msgs').then(v => {
-          let arr = [];
-          try { arr = Array.isArray(v) ? v : JSON.parse(v || '[]'); } catch (e) { arr = []; }
-          if (!Array.isArray(arr)) arr = [];
-          arr.push({ side: 'in', special: 'poke', text: sysHtml, ts: Date.now() });
-          try { window.idbSet(prefix + ':chat-msgs', JSON.stringify(arr)); } catch (e) {}
-          try { localStorage.setItem(prefix + ':chat-msgs', JSON.stringify(arr)); } catch (e) {}
-        }).catch(() => {});
-      }
-    } catch (e) {}
+    // v3.14.x：改走 chat.js 统一安全追加——原「idbGet→push→整包写回」在读取
+    // 超时（返回 undefined）时会把该桌面全部聊天记录覆盖成 [这一条]
+    if (window.chatAppendToDeskMsg) { window.chatAppendToDeskMsg(cid, sysHtml); }
     try {
       const s = (window.storeFor && window.storeFor(cid)) || store;
       let list = [];

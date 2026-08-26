@@ -45,12 +45,15 @@
     // （否则非 default 桌面读不到全局商品库，自定义商品"消失"）。market-migrated 为迁移幂等标记
     'market-custom', 'market-migrated',
     // v3.10.x：扩库救援标记（gift-shop.js rescueNewDefaults，v2 新默认商品误删恢复），同为全局根键
-    // v3.13.x：扩库救援标记 v3（gift-shop.js rescueBatch，「两个世界」分类+日常扩容 109 件），同上
+    // v3.13.x：扩库救援标记 v3（gift-shop.js rescueBatch，「两个世界」+「饮品」新分类与日常扩容 222 件），同上
     'market-migrated-v2', 'market-migrated-v3',
     // v3.13.x：此间（梦角世界时间与在场感知，cjian.js）——梦角名单/状态/初始化标记
     // 走根命名空间全局共享，不随联系人隔离，绝不能被 migrateLegacy 迁进 default 桌面
     // （否则切换桌面后梦角名单/状态"消失"）
-    'cjian-roster', 'cjian-state', 'cjian-seeded',
+    // v3.14.x：cjian-rehome-v1 为错放梦角一次性存量纠偏标记（cjian.js rehomeMisfiled），
+    // 同为根键——被迁进 default 会导致纠偏每次启动重跑，把用户后来手动放在别桌面的
+    // 同名梦角也搬走
+    'cjian-roster', 'cjian-state', 'cjian-seeded', 'cjian-rehome-v1',
     // v3.13.x：朋友圈根命名空间键（feed.js 全部走 xy-home-v2 根 store，是现行设计不是
     // 旧顶层业务键）——此前漏排除，每次启动 migrateLegacy 把它们当旧键迁进 default:
     // 并删根键（default 已有陈旧副本时连迁移都不做直接删）→ 朋友圈通知列表/未读角标/
@@ -58,7 +61,16 @@
     // 评论没有提示——提示数据刷新即被清）。feed-posts 本就在排除清单。
     'feed-notices', 'feed-app-unread', 'feed-cover-bg', 'feed-ta-cover',
     'feed-ta-name', 'feed-ta-avatar', 'feed-user-name', 'feed-user-avatar',
-    'feed-last', 'feed-next', 'feed-day-count'];
+    'feed-last', 'feed-next', 'feed-day-count',
+    // v3.15.x：离线消息提醒（Periodic Background Sync，bg-keep.js psync 段）——
+    // 快照/队列走 IDB+LS 根键、开关是全局根键，均不随联系人隔离，防 migrateLegacy 迁走
+    'psync-snap', 'psync-queue', 'psync-en',
+    // v3.14.x：帮我决定/多人决定改全局共享（decision.js / group-decision.js）——
+    // 历史/成员/设置走根命名空间 xy-home-v2:decision-* 与 gdec-*，所有桌面互通一份，
+    // 绝不能被 migrateLegacy 当旧顶层业务键迁进 default 桌面（否则其他桌面读不到=「消失」）。
+    // dec-global-migrated / gdec-global-migrated 为存量各桌面数据合并进根键的一次性幂等标记。
+    'decision-history', 'decision-settings', 'dec-global-migrated',
+    'gdec-members', 'gdec-history', 'gdec-settings', 'gdec-global-migrated'];
   function isExcluded(k) {
     const r = k.slice(G.length + 1);
     if (EXCLUDE.indexOf(r) >= 0) return true;

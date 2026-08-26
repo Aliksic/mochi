@@ -33,6 +33,11 @@
   scrollbar-width:none; -ms-overflow-style:none; flex-shrink:0;
 }
 .card-tabs::-webkit-scrollbar { display:none; }
+/* v3.14.x：【系统预设字卡】分类已扩到 12 个 tab（主/颜/emoji/拍一拍/互动回应/摸鱼浮字/
+   花园/同频/伸手/喝水/存钱罐/经期关心），横向滑动条在手机上后段完全滑出屏幕且滚动条
+   隐藏、无任何「还有更多」暗示——用户以为经期关心等分组不存在。改为仅此页自动换行
+   全部铺开（其余 card-tabs 共用处不受影响） */
+#dc-tabs.card-tabs { flex-wrap:wrap; overflow-x:visible; row-gap:8px; }
 .cc-tab {
   flex:0 0 auto; display:inline-flex; align-items:center; gap:5px;
   padding:9px 14px; font-size:13px; border-radius:99px;
@@ -2029,6 +2034,49 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + env(safe-area-inset-bott
   background:rgba(0,0,0,.04); border-radius:10px; padding:10px 12px;
   font-family:inherit; word-break:break-word;
 }
+/* v3.14.x：功能介绍与许可合并页——hero 信息卡 + 分组折叠清单（原生 details，零 JS） */
+.lic-hero-top { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.lic-hero .lic-title { margin:0; font-size:17px; }
+.lic-hero .lic-p { margin-top:8px; }
+.lic-badge {
+  font-size:10px; font-weight:800; color:#fff; background:var(--ink);
+  border-radius:999px; padding:2px 9px; letter-spacing:.06em; flex-shrink:0;
+}
+.lic-ver { font-size:11px; color:var(--muted); margin-left:auto; flex-shrink:0; }
+.lic-pills { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+.lic-pill {
+  font-size:10px; color:var(--ink); border:1px solid rgba(0,0,0,.14);
+  border-radius:999px; padding:3px 9px; white-space:nowrap;
+}
+.lic-grp { border-bottom:1px dashed rgba(0,0,0,.08); }
+.cal-card .lic-grp:last-child { border-bottom:none; }
+.lic-grp summary {
+  list-style:none; display:flex; align-items:center; gap:8px;
+  padding:11px 2px; cursor:pointer; user-select:none;
+  -webkit-tap-highlight-color:transparent;
+}
+.lic-grp summary::-webkit-details-marker { display:none; }
+.lg-num { font-size:10px; font-weight:800; color:var(--muted); width:20px; flex-shrink:0; }
+.lg-name { flex:1; font-size:13px; font-weight:700; color:var(--ink); }
+.lg-count {
+  font-size:10px; color:var(--muted); border:1px solid rgba(0,0,0,.12);
+  border-radius:999px; padding:1px 7px; flex-shrink:0;
+}
+/* 纯 CSS 折叠箭头：收起时指右，展开时转下（margin-left:auto 推到行尾，
+   有 lg-count 时靠 gap 与其隔开） */
+.lic-grp summary::after {
+  content:''; width:6px; height:6px; flex-shrink:0; margin-left:auto;
+  border-right:1.6px solid var(--muted); border-bottom:1.6px solid var(--muted);
+  transform:rotate(-45deg); transition:transform .18s;
+}
+.lic-grp[open] summary::after { transform:rotate(45deg); }
+.lg-body { padding:0 2px 12px 28px; }
+.lic-grp .lg-body .lic-li { position:relative; padding-left:11px; margin-top:5px; }
+.lic-grp .lg-body .lic-li:first-child { margin-top:0; }
+.lic-grp .lg-body .lic-li::before {
+  content:''; position:absolute; left:0; top:.72em;
+  width:4px; height:4px; border-radius:50%; background:rgba(0,0,0,.25);
+}
 
 /* ===== 音乐（音乐库 / 歌单 / 听歌记录） ===== */
 .ch-more {
@@ -2307,6 +2355,41 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + env(safe-area-inset-bott
 .dc-h-options { font-size:11px; color:var(--muted); margin-top:3px; }
 .dc-h-result { font-size:13px; font-weight:700; color:var(--ink); margin-top:4px; }
 .dc-h-time { font-size:10px; color:var(--muted); margin-top:3px; }
+
+/* ===== 多人决定 ===== */
+/* 成员选择块：胶囊 chip（checkbox 藏进 label，勾选态由 JS 上 .on 类） */
+.gd-members {
+  border:1px solid rgba(0,0,0,.1); border-radius:12px;
+  padding:10px; margin-bottom:12px;
+}
+.gd-members-head { display:flex; align-items:center; justify-content:space-between; gap:6px; flex-wrap:wrap; margin-bottom:8px; }
+.gd-members-label { font-size:11px; color:var(--muted); }
+.gd-members-actions { display:flex; gap:6px; }
+.gd-btn-sm {
+  border:1px solid rgba(0,0,0,.14); background:transparent; color:#555;
+  font-size:11px; padding:3px 8px; border-radius:8px; cursor:pointer;
+  -webkit-tap-highlight-color:transparent; white-space:nowrap;
+}
+.gd-btn-sm:active { background:var(--ink); border-color:var(--ink); color:#fff; }
+.gd-members-list { display:flex; flex-wrap:wrap; gap:6px; }
+.gd-member {
+  display:inline-flex; align-items:center; gap:4px;
+  border:1px solid rgba(0,0,0,.14); border-radius:999px;
+  padding:5px 11px; font-size:12px; color:#555; cursor:pointer;
+  user-select:none; -webkit-tap-highlight-color:transparent;
+}
+.gd-member input { display:none; }
+.gd-member.on { background:var(--ink); border-color:var(--ink); color:#fff; }
+.gd-empty-tip { font-size:11px; color:var(--muted); }
+/* 结果区：逐成员一行（white-space:pre-wrap），done 后不再放大到帮我决定的 20px */
+.gd-result {
+  margin-top:12px; padding:14px; border-radius:12px;
+  background:rgba(0,0,0,.04); font-size:13px; color:var(--ink);
+  font-weight:600; text-align:center; word-break:break-word; white-space:pre-wrap;
+}
+.gd-result.done { font-size:15px; font-weight:800; line-height:1.7; }
+/* 历史里逐成员结果同样按行展示 */
+.dc-h-result.gd-pre { white-space:pre-wrap; line-height:1.7; }
 
 /* ===== 朋友圈 ===== */
 /* v3.8.x：朋友圈好友列表（每行：桌面头像+桌面昵称，下两行改朋友圈昵称/头像） */
@@ -2616,21 +2699,43 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + env(safe-area-inset-bott
 .brick-lives { letter-spacing:1px; font-size:13px; color:#ff5f7a; }
 .brick-lives .brick-hlost { opacity:.22; filter:grayscale(1); }
 #brick-canvas { display:block; width:100%; height:auto; border-radius:10px; background:#101625; touch-action:none; user-select:none; -webkit-user-select:none; }
+/* 半框模式：信息栏药丸化 + 画布柔和投影（与全屏 UI 呼应） */
+.brick-info span { background:rgba(0,0,0,.05); border-radius:9px; padding:2px 8px; }
+.brick-info .brick-lives { background:none !important; padding:2px 2px !important; }
+.brick-info .brick-combo { background:rgba(232,89,12,.14) !important; }
+#chat-brick-panel:not(.brick-fs) #brick-canvas { box-shadow:0 6px 22px rgba(0,0,0,.28); }
+.brick-rate { font-size:17px; letter-spacing:2px; margin:2px 0; color:#ff5f7a; font-weight:700; }
+.brick-rate span { opacity:.4; }
 /* 打砖块全屏：面板占满视口（对齐 pong-fs 布局方案） */
-#chat-brick-panel.brick-fs { position:fixed; inset:0; z-index:9999; border-radius:0; max-height:none; height:100vh; background:#101625; padding:0; }
+/* 打砖块全屏：面板占满视口（真·Fullscreen API 或 CSS 兜底），UI 单独设计 */
+#chat-brick-panel.brick-fs { position:fixed; inset:0; z-index:9999; border-radius:0; max-height:none; height:100vh; height:100dvh; background:#101625; padding-top:max(env(safe-area-inset-top,0px),8px); padding-bottom:max(env(safe-area-inset-bottom,0px),8px); overscroll-behavior:none; }
 #chat-brick-panel.brick-fs .poke-card-scroll { max-height:none; flex:1; overflow:hidden; display:flex; flex-direction:column; padding:0; }
-#chat-brick-panel.brick-fs .poke-card-head { background:transparent; color:#fff; border-bottom-color:rgba(255,255,255,.12); padding:12px 18px; flex-shrink:0; }
-#chat-brick-panel.brick-fs .poke-card-head b { color:#fff; font-size:20px; }
+#chat-brick-panel.brick-fs .poke-card-head { background:transparent; color:#fff; border-bottom-color:rgba(255,255,255,.12); padding:10px 16px; flex-shrink:0; }
+#chat-brick-panel.brick-fs .poke-card-head b { color:#fff; font-size:19px; }
 #chat-brick-panel.brick-fs .poke-card-close { color:#fff; font-size:24px; }
-#chat-brick-panel.brick-fs .snake-icon-btn { background:rgba(255,255,255,.12); color:#fff; width:44px; height:44px; font-size:21px; }
-#chat-brick-panel.brick-fs .snake-diff { background:rgba(255,255,255,.1); color:#fff; border-color:rgba(255,255,255,.2); font-size:16px; padding:6px 12px; }
-#chat-brick-panel.brick-fs .brick-wrap { flex:1; display:flex; max-width:none; gap:10px; padding:8px 6px; }
-#chat-brick-panel.brick-fs .brick-info { color:rgba(255,255,255,.75); font-size:17px; flex-shrink:0; max-width:none; }
-#chat-brick-panel.brick-fs .brick-info b { color:#fff; font-size:21px; }
+#chat-brick-panel.brick-fs .snake-icon-btn { background:rgba(255,255,255,.12); color:#fff; width:42px; height:42px; font-size:20px; }
+#chat-brick-panel.brick-fs .snake-diff { background:rgba(255,255,255,.1); color:#fff; border-color:rgba(255,255,255,.2); font-size:15px; padding:6px 12px; }
+#chat-brick-panel.brick-fs .brick-wrap { flex:1; display:flex; max-width:none; gap:10px; padding:6px 8px; }
+#chat-brick-panel.brick-fs .brick-info { color:rgba(255,255,255,.78); font-size:15px; flex-shrink:0; max-width:none; flex-wrap:wrap; justify-content:center; gap:6px 12px; }
+#chat-brick-panel.brick-fs .brick-info b { color:#fff; font-size:19px; }
+#chat-brick-panel.brick-fs .brick-info > span { background:rgba(255,255,255,.07); border-radius:10px; padding:3px 10px; }
+#chat-brick-panel.brick-fs .brick-lives { background:none !important; padding:3px 2px !important; }
+#chat-brick-panel.brick-fs .brick-combo { background:rgba(232,89,12,.18) !important; padding:3px 10px !important; }
 #chat-brick-panel.brick-fs .pong-canvas-box { max-width:none; flex:1; display:flex; align-items:center; justify-content:center; min-height:0; }
-#chat-brick-panel.brick-fs #brick-canvas { border-radius:0; }
-#chat-brick-panel.brick-fs .pong-foot { color:rgba(255,255,255,.5); font-size:16px; flex-shrink:0; }
+#chat-brick-panel.brick-fs #brick-canvas { border-radius:12px; box-shadow:0 0 0 1px rgba(255,255,255,.08), 0 10px 40px rgba(0,0,0,.5); }
+#chat-brick-panel.brick-fs .pong-foot { color:rgba(255,255,255,.45); font-size:13px; flex-shrink:0; }
 #chat-brick-panel.brick-fs .pong-hint { font-size:48px; }
+/* 全屏横屏：信息栏变左侧竖排 HUD，隐藏底注，画布吃满剩余高度 */
+@media (orientation:landscape) {
+  #chat-brick-panel.brick-fs .poke-card-head { padding:6px 14px; }
+  #chat-brick-panel.brick-fs .poke-card-head b { font-size:16px; }
+  #chat-brick-panel.brick-fs .snake-icon-btn { width:36px; height:36px; font-size:17px; }
+  #chat-brick-panel.brick-fs .brick-wrap { flex-direction:row; align-items:center; justify-content:center; gap:16px; padding:4px 14px; }
+  #chat-brick-panel.brick-fs .brick-info { flex-direction:column; align-items:stretch; gap:8px; width:auto; min-width:104px; font-size:14px; order:-1; }
+  #chat-brick-panel.brick-fs .brick-info b { font-size:17px; }
+  #chat-brick-panel.brick-fs .pong-canvas-box { align-self:stretch; }
+  #chat-brick-panel.brick-fs .pong-foot { display:none; }
+}
 
 /* 双人贪吃蛇半框（复用 .poke-card 容器） */
 #chat-snake-panel { height:auto; max-height:86%; }

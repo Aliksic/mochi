@@ -12,11 +12,21 @@
 /* ---- HUD 状态条 ---- */
 .r-hud { display: flex; flex-wrap: wrap; gap: 6px; }
 .r-chip {
+  position: relative;
   font-size: 11px; color: var(--ink); opacity: .85;
   background: var(--glass-bg, rgba(255,255,255,.55));
   border: 1px solid rgba(0,0,0,.06); border-radius: 999px;
   padding: 4px 10px; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
 }
+/* 点数飘字（+n🏠） */
+.r-fly {
+  position: absolute; top: -13px; right: 4px; z-index: 5;
+  font-size: 11.5px; font-weight: 800; color: #c08a1e;
+  text-shadow: 0 1px 0 rgba(255,255,255,.7);
+  pointer-events: none;
+  animation: rFly .82s ease-out forwards;
+}
+@keyframes rFly { from { transform: translateY(2px); opacity: 1; } to { transform: translateY(-17px); opacity: 0; } }
 
 /* ---- 场景 ---- */
 .r-scene {
@@ -41,6 +51,28 @@
 .wall-gardenw{ background: radial-gradient(7px 7px at 12% 30%, #f9a8c5 46%, transparent 50%), radial-gradient(6px 6px at 34% 66%, #f9a8c5 46%, transparent 50%), radial-gradient(7px 7px at 58% 24%, #ffd479 46%, transparent 50%), radial-gradient(6px 6px at 82% 60%, #f9a8c5 46%, transparent 50%), radial-gradient(5px 5px at 70% 84%, #fff 46%, transparent 50%), linear-gradient(#e4f4dd, #f0faea); }
 .wall-starw  { background: radial-gradient(1.6px 1.6px at 14% 26%, #fff 50%, transparent 52%), radial-gradient(1.4px 1.4px at 32% 64%, #ffe9b8 50%, transparent 52%), radial-gradient(1.8px 1.8px at 55% 20%, #fff 50%, transparent 52%), radial-gradient(1.3px 1.3px at 74% 52%, #cfe4ff 50%, transparent 52%), radial-gradient(1.7px 1.7px at 88% 30%, #fff 50%, transparent 52%), radial-gradient(1.2px 1.2px at 44% 82%, #fff 50%, transparent 52%), linear-gradient(#232c54, #171d3c); }
 .wall-nightw { background: linear-gradient(#2b3050, #191c33); }
+.wall-stripe { background: repeating-linear-gradient(90deg, #faf3e6 0 26px, #f2e5d0 26px 52px); }
+.wall-dusk   { background: linear-gradient(#f6c99f 0%, #e79a9e 38%, #8f7bb8 72%, #5d5a93 100%); }
+.wall-checkerw{ background: conic-gradient(#efe3d2 25%, #e0cdb2 0 50%, #efe3d2 0 75%, #e0cdb2 0) 0 0/44px 44px; }
+
+/* 墙脚线（踢脚线）：墙地交界立刻有"房间感" */
+.r-wall::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 4px;
+  background: linear-gradient(rgba(74,56,34,.42), rgba(74,56,34,.24));
+  border-radius: 1px;
+}
+.wall-starw::after, .wall-nightw::after { background: linear-gradient(rgba(12,14,30,.75), rgba(12,14,30,.45)); }
+
+/* 星空墙纸：亮星缓慢闪烁（两层错拍） */
+.wall-starw::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(2px 2px at 22% 38%, #fff 50%, transparent 55%),
+    radial-gradient(1.6px 1.6px at 62% 62%, #fff8dc 50%, transparent 55%),
+    radial-gradient(2.2px 2.2px at 84% 18%, #fff 50%, transparent 55%);
+  animation: rTwinkle 2.6s ease-in-out infinite alternate;
+}
+@keyframes rTwinkle { from { opacity: .25; } to { opacity: 1; } }
 
 /* 地板主题 */
 .floor-wood   { background: repeating-linear-gradient(90deg, #dcbd8e 0 15.8%, #d0ae7d 15.8% 16%, #d5b483 16% 33%, #c9a673 33% 33.2%); background-size: 100% 100%; }
@@ -91,19 +123,49 @@
   margin-top: -1px; background: rgba(255,255,255,.7);
 }
 
-/* 下雨时窗外雨丝 */
-.r-scene.raining .r-window::before {
-  background: repeating-linear-gradient(165deg, transparent 0 5px, rgba(190,215,245,.85) 5px 6px);
-  opacity: .8; width: 200%; left: -50%;
+/* 夜晚窗内流星（错拍划过） */
+.r-window.nw .r-sky::after {
+  content: ''; position: absolute; top: 22%; left: -34%;
+  width: 36%; height: 2px; border-radius: 1px;
+  background: linear-gradient(90deg, transparent, #fff);
+  transform: rotate(-22deg); opacity: 0;
+  animation: rMeteor 7s linear infinite;
+}
+.r-window.wb.nw .r-sky::after { animation-delay: 3.4s; }
+@keyframes rMeteor {
+  0% { left: -34%; opacity: 0; }
+  5% { opacity: .95; }
+  11% { left: 128%; opacity: 0; }
+  100% { left: 128%; opacity: 0; }
 }
 
-/* ---- 地板格（放置/移动模式显示虚线格） ---- */
-.r-cell { position: absolute; box-sizing: border-box; }
-.r-scene.placing .r-cell {
-  outline: 1.5px dashed rgba(120,110,90,.4); outline-offset: -3px;
-  border-radius: 6px;
+/* 下雨时窗外雨滴下滑 */
+.r-scene.raining .r-sky::before {
+  content: ''; position: absolute; left: 0; right: 0; top: -120%; height: 340%;
+  background: repeating-linear-gradient(172deg, transparent 0 8px, rgba(205,228,250,.85) 8px 9.5px);
+  animation: rRainfall .55s linear infinite;
+  pointer-events: none;
 }
+@keyframes rRainfall { to { transform: translateY(29.4%); } }
+
+/* ---- 地板格（放置/移动模式：可放绿色呼吸、被占灰掉） ---- */
+.r-cell { position: absolute; box-sizing: border-box; border-radius: 6px; }
 .r-cell:hover { background: rgba(255,255,255,.18); }
+.r-scene.placing .r-cell.ok {
+  outline: 1.5px solid rgba(96,168,96,.65); outline-offset: -3px;
+  background: rgba(122,200,122,.12);
+  animation: rBreath 1.6s ease-in-out infinite;
+}
+.r-scene.placing .r-cell.bad {
+  outline: 1.5px solid rgba(150,140,130,.35); outline-offset: -3px;
+  background: rgba(120,110,100,.10);
+}
+.r-scene.placing .r-cell.tgt {
+  outline: 2px solid rgba(80,170,90,.85); outline-offset: -3px;
+  background: rgba(110,200,110,.26);
+  animation: none;
+}
+@keyframes rBreath { 0%,100% { background: rgba(122,200,122,.08); } 50% { background: rgba(122,200,122,.28); } }
 
 /* ---- 家具 ---- */
 .r-furn {
@@ -111,13 +173,44 @@
   transform: translate(-50%, -92%);
   font-size: clamp(24px, 7vw, 34px);
   line-height: 1; cursor: pointer; user-select: none; -webkit-user-select: none;
+  -webkit-touch-callout: none; touch-action: none;
   filter: drop-shadow(0 4px 3px rgba(40,30,15,.25));
   transition: filter .3s ease;
+}
+/* 接地椭圆阴影（在 emoji 脚下，随元素翻转；z-index:-1 垫到字后面） */
+.r-furn::before {
+  content: ''; position: absolute; left: 50%; bottom: -5px; z-index: -1;
+  width: 74%; height: 9px; transform: translateX(-50%);
+  background: radial-gradient(ellipse at center, rgba(60,45,20,.30), transparent 68%);
+  border-radius: 50%;
 }
 .r-furn:active { transform: translate(-50%, -86%); }
 .r-furn.r-flip { transform: translate(-50%, -92%) scaleX(-1); }
 .r-furn.r-flip:active { transform: translate(-50%, -86%) scaleX(-1); }
 .r-furn.r-lit { filter: drop-shadow(0 4px 3px rgba(40,30,15,.25)) drop-shadow(0 0 9px rgba(255,208,112,.95)); }
+/* 火苗闪烁（蜡烛/星星灯点亮时） */
+.r-furn.r-lit.r-flkc { animation: rFlicker 1.7s ease-in-out infinite; }
+@keyframes rFlicker { 0%,100% { opacity: 1; } 45% { opacity: .82; } 62% { opacity: .92; } }
+/* 长按拖拽中 */
+.r-furn.dragging { z-index: 12; opacity: .88; cursor: grabbing; filter: drop-shadow(0 10px 8px rgba(40,30,15,.32)) drop-shadow(0 0 6px rgba(255,220,150,.5)); }
+
+/* 点亮的灯在地板投暖光斑 */
+.r-pool {
+  position: absolute; z-index: 3; pointer-events: none;
+  width: 74px; height: 44px; transform: translate(-50%, -50%);
+  background: radial-gradient(ellipse at center, rgba(255,196,100,.38) 0%, rgba(255,196,100,.16) 46%, transparent 72%);
+  animation: rPoolIn .5s ease-out;
+}
+.r-pool-f { animation: rPoolIn .5s ease-out, rFlicker 1.7s ease-in-out infinite; }
+@keyframes rPoolIn { from { opacity: 0; transform: translate(-50%, -50%) scale(.6); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+
+/* 花瓶插花徽章（花园联动） */
+.r-bloom {
+  position: absolute; top: -9px; right: -7px;
+  font-size: 13px; text-decoration: none; line-height: 1;
+  animation: rBloomPop .5s cubic-bezier(.2,1.6,.4,1);
+}
+@keyframes rBloomPop { from { transform: scale(0) rotate(-40deg); } to { transform: scale(1) rotate(0); } }
 
 /* ---- 梦角 ---- */
 #room-ta {
@@ -150,6 +243,48 @@
 }
 #room-ta.r-faint .r-ta-av { opacity: .16; filter: blur(1.5px) grayscale(.5); }
 #room-ta.r-faint .r-ta-glow { animation-duration: 5s; background: radial-gradient(circle, rgba(200,205,255,.4) 0%, rgba(200,205,255,.12) 45%, transparent 70%); }
+
+/* 走路颠步（动画作用在头像 margin 上，不与定位 transform 冲突） */
+#room-ta.walking .r-ta-av { animation: rBob .46s ease-in-out infinite; }
+#room-ta.walking .r-ta-glow { animation-duration: 1.6s; }
+@keyframes rBob { 0%,100% { margin-top: 0; } 50% { margin-top: -4px; } }
+/* 坐/躺等安顿姿态：略缩小下沉，显得"坐进去了" */
+#room-ta.seated .r-ta-av { width: 29px; height: 29px; margin-top: 7px; opacity: .95; }
+#room-ta.seated .r-ta-glow { width: 40px; height: 40px; top: 62%; }
+
+/* ---- 入场：灯光从暗到亮渐显 ---- */
+.r-scene.room-in { animation: roomIn .95s ease-out; }
+@keyframes roomIn { from { filter: brightness(.32); } to { filter: brightness(1); } }
+
+/* ---- 升级庆祝层 ---- */
+.r-fete {
+  position: absolute; inset: 0; z-index: 20;
+  pointer-events: none; overflow: hidden; border-radius: inherit;
+  background: radial-gradient(circle at 50% 42%, rgba(255,240,198,.28), transparent 62%);
+}
+.r-fete-t {
+  position: absolute; top: 34%; left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 19px; font-weight: 800; color: #7a5a1e;
+  text-shadow: 0 1px 0 #fff, 0 0 16px rgba(255,215,130,.95);
+  white-space: nowrap;
+  animation: rFeteT 2.4s ease forwards;
+}
+@keyframes rFeteT {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(.55); }
+  14% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  78% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -62%) scale(1); }
+}
+.r-fete i {
+  position: absolute; bottom: -24px; line-height: 1; opacity: 0;
+  animation: rFeteStar 1.9s ease-in forwards;
+}
+@keyframes rFeteStar {
+  0% { transform: translateY(0) rotate(0); opacity: 0; }
+  14% { opacity: 1; }
+  100% { transform: translateY(-270px) rotate(48deg); opacity: 0; }
+}
 
 /* ---- TA 头顶气泡（场景顶部居中，轻提示） ---- */
 .r-bubble {
@@ -214,3 +349,14 @@
 [data-theme="dark"] .r-chip,
 [data-theme="dark"] .r-sense-out,
 [data-theme="dark"] .r-bar button { color: #eee; background: rgba(40,40,48,.66); border-color: rgba(255,255,255,.08); }
+
+/* 无障碍 / 低端机：偏好减弱动效时关闭全部动画过渡 */
+@media (prefers-reduced-motion: reduce) {
+  #page-room *,
+  #page-room *::before,
+  #page-room *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}

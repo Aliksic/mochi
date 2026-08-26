@@ -9,11 +9,19 @@
 //   存量全局键迁移进当前桌面（合并去重，绝不丢数据）；梦角档案（memo-arc）改为
 //   合并读取各桌面名单，档案仍全局共享不受影响。键形 xy-home-v2:<cid>:cjian-*，
 //   命中 contacts.js 命名空间排除规则，不会被 migrateLegacy 误迁。
+// v3.14.x 修复（数据串桌）：① 迁移不再把整份旧名单塞给「升级时激活的桌面」——梦角名
+//   精确匹配唯一桌面 TA 身份（lbl-partner/联系人名）的归该桌面，认不到的才归当前桌面；
+//   ② 一次性存量纠偏 rehomeMisfiled（标记 xy-home-v2:cjian-rehome-v1）：把早期错放进
+//   别桌面的梦角搬回同名 TA 的桌面（状态随迁；同名冲突仅当外来者带互动痕迹而家里那位
+//   没有——家里那位多半是自动播种的幻影——才替换）；③ 播种时机从「启动给每个桌面都种
+//   一个」改为「首次打开该桌面的此间才种」——老版会在用户从没碰过的桌面凭空造出以联系
+//   人命名的梦角，是「不同联系人数据串了/全是一个联系人名字」观感的另一半来源。
 (function () {
   const G = 'xy-home-v2';
   const ROSTER_KEY = 'cjian-roster';
   const STATE_KEY = 'cjian-state';
   const SEED_KEY = 'cjian-seeded';
+  const REHOME_KEY = 'cjian-rehome-v1'; // 存量纠偏一次性标记（根键，已登记 contacts.js EXCLUDE）
   const ALL = '__all__'; // 总览模式：一次查看全部桌面的全部梦角
 
   function rootStore() {
@@ -118,10 +126,35 @@
   }
   function makeId() { return 'd' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36); }
 
-  // ---- 存量迁移：旧版全局键 → 当前桌面（合并去重，幂等，绝不丢数据） ----
-  // 老数据本就是用当时激活桌面 TA 名播种的一份数据，归入当前桌面最贴近原意；
-  // 若本桌面已有名单（如 IDB 回填迟到导致迁移跑过又见到根键），按 id 并集合入，
-  // 之后清掉根键——memo-arc 已改为合并读取各桌面名单并兼容根键残留，不受影响。
+  // ---- TA 身份与归属判定 ----
+  // 桌面的「TA 身份」：lbl-partner（聊天设置里的 TA 昵称）优先，注册表联系人名兜底——
+  // 与 v3.13 给梦角取名同源。梦角名精确等于某桌面的 TA 身份 → 那个桌面就是它的家。
+  function taIdentity(cid) {
+    let idn = '';
+    try { idn = String(storeOf(cid).get('lbl-partner') || '').trim(); } catch (e) {}
+    if (!idn) {
+      const c = contacts().find(x => x.id === cid);
+      idn = String((c && c.name) || '').trim();
+    }
+    return idn;
+  }
+  // 名字 → 唯一归属桌面：恰好一个桌面的 TA 身份与其同名才认（0 个或多个同名都不算，宁不搬不错搬）
+  function homeCidForName(name) {
+    const n = String(name || '').trim();
+    if (!n) return '';
+    let hit = '', hits = 0;
+    contacts().forEach(ct => {
+      if (taIdentity(ct.id) === n) { hit = ct.id; hits++; }
+    });
+    return hits === 1 ? hit : '';
+  }
+
+  // ---- 存量迁移：旧版全局键 → 各桌面（按名认亲 + 合并去重，幂等，绝不丢数据） ----
+  // v3.14.x 修复（数据串桌）：老版把整份旧名单塞给「当前桌面」——多联系人用户升级后，
+  // 属于不同 TA 的梦角全部挤在一个联系人名下（用户反馈「不同联系人的数据串了，全部显示
+  // 为一个联系人名字」）。现改为按名认亲：梦角名精确匹配唯一桌面 TA 身份的归该桌面
+  // （状态随迁），认不到的才归当前桌面。若目标桌面已有名单（如 IDB 回填迟到导致迁移跑过
+  // 又见到根键），按 id 并集合入，之后清掉根键——memo-arc 已兼容根键残留，不受影响。
   function migrateSplit() {
     const r = rootStore();
     if (!r) return;
@@ -132,24 +165,111 @@
     const grArr = Array.isArray(gr) ? gr.filter(x => x && x.name && x.id) : [];
     const gsObj = (gs && typeof gs === 'object') ? gs : {};
     if (!grArr.length && !Object.keys(gsObj).length) { if (gseed) r.remove(SEED_KEY); return; }
-    const cid = curCid();
-    const s = storeOf(cid);
-    if (!s) return;
-    const nsList = loadRoster(cid);
-    const have = {};
-    nsList.forEach(x => { have[x.id] = 1; });
-    const add = grArr.filter(x => !have[x.id]);
-    if (add.length) {
-      const st = loadState(cid);
-      add.forEach(x => { if (gsObj[x.id]) st[x.id] = gsObj[x.id]; });
-      saveRoster(nsList.concat(add), cid);
-      saveState(st, cid);
+    const cur = curCid();
+    const plan = {}; // cid -> { add: [], state: {} }
+    grArr.forEach(x => {
+      const target = homeCidForName(x.name) || cur;
+      const p = plan[target] || (plan[target] = { add: [], state: {} });
+      p.add.push(x);
+      if (gsObj[x.id]) p.state[x.id] = gsObj[x.id];
+    });
+    if (gseed && !plan[cur]) plan[cur] = { add: [], state: {} }; // 旧播种标记也要落位，防当前桌面之后重复播种
+    const targets = Object.keys(plan);
+    for (let i = 0; i < targets.length; i++) {
+      if (!storeOf(targets[i])) return; // 任一目标桌不可写：整批保留根键，下次启动重试
     }
-    if (gseed || nsList.length || add.length) s.set(SEED_KEY, '1');
+    targets.forEach(cid => {
+      const s = storeOf(cid);
+      const p = plan[cid];
+      const nsList = loadRoster(cid);
+      const have = {};
+      nsList.forEach(x => { have[x.id] = 1; });
+      const add = p.add.filter(x => !have[x.id]);
+      if (add.length) {
+        const st = loadState(cid);
+        add.forEach(x => { if (p.state[x.id]) st[x.id] = p.state[x.id]; });
+        saveRoster(nsList.concat(add), cid);
+        saveState(st, cid);
+      }
+      if (gseed || nsList.length || add.length) s.set(SEED_KEY, '1');
+    });
     r.remove(ROSTER_KEY); r.remove(STATE_KEY); r.remove(SEED_KEY);
   }
 
-  // 首次使用：每个桌面各自种下自己的第一个梦角（用该桌面 TA 的名字）
+  // ---- 存量纠偏（一次性）：把早期错放进别桌面的梦角搬回同名 TA 的桌面 ----
+  // 修复对象：v3.14 早期迁移「一锅端给当时激活桌面」造成的错放。判定与迁移同源：梦角名
+  // 精确匹配唯一桌面 TA 身份 → 那里是它的家。家里已有同名梦角时不搬，唯一例外：外来者
+  // 带互动痕迹（感知/聊天/打开过此间）而家里那位没有——家里那位多半是老版启动时自动播种
+  // 的幻影——才用外来者替换（连同状态与梦角档案）。标记幂等只跑一次，之后用户手动放在
+  // 别桌面的同名梦角绝不乱动。注册表未就绪（IDB 回填未完成）时本轮不跑也不标记。
+  function rehomeMisfiled() {
+    const r = rootStore();
+    if (!r || r.get(REHOME_KEY)) return;
+    let regOk = false;
+    try { regOk = !!window.xyStore(G).get('contacts'); } catch (e) {}
+    if (!regOk) return;
+    const idents = {};
+    contacts().forEach(ct => { idents[ct.id] = taIdentity(ct.id); });
+    const rosters = {}, states = {};
+    const moves = [];
+    contacts().forEach(ct => {
+      const list = loadRoster(ct.id);
+      if (!list.length) return;
+      rosters[ct.id] = list;
+      list.forEach(c => {
+        const n = String(c.name || '').trim();
+        if (!n || n === idents[ct.id]) return; // 已在同名身份桌面：不动
+        let home = '', hits = 0;
+        contacts().forEach(o => { if (idents[o.id] === n) { home = o.id; hits++; } });
+        if (hits !== 1 || home === ct.id) return;
+        moves.push({ from: ct.id, to: home, id: c.id, name: c.name });
+      });
+    });
+    if (moves.length) {
+      moves.forEach(m => {
+        if (!rosters[m.to]) rosters[m.to] = loadRoster(m.to);
+        if (!states[m.from]) states[m.from] = loadState(m.from);
+        if (!states[m.to]) states[m.to] = loadState(m.to);
+      });
+      moves.forEach(m => {
+        const src = rosters[m.from], dst = rosters[m.to];
+        const i = src.findIndex(x => x.id === m.id);
+        if (i < 0) return;
+        if (dst.some(x => x.id === m.id)) return;
+        const twin = dst.find(x => x.name === m.name);
+        if (twin) {
+          const stFrom = states[m.from], stTo = states[m.to];
+          const mMark = stFrom[m.id] && (stFrom[m.id].lastPerceive || stFrom[m.id].__chat || stFrom[m.id].__open);
+          const tMark = stTo[twin.id] && (stTo[twin.id].lastPerceive || stTo[twin.id].__chat || stTo[twin.id].__open);
+          if (!mMark || tMark) return; // 分不清真身/幻影：宁留错位不删真身
+          dst.splice(dst.indexOf(twin), 1);
+          delete stTo[twin.id];
+          // 被替换的幻影若挂有梦角档案，顺手清掉不留孤儿（narc-cur 档案页会自愈，这里清干净）
+          try {
+            r.remove('narc-' + twin.id);
+            if ((r.get('narc-cur') || '') === twin.id) r.remove('narc-cur');
+          } catch (e) {}
+        }
+        const c = src.splice(i, 1)[0];
+        dst.push(c);
+        if (states[m.from][m.id] !== undefined) {
+          states[m.to][m.id] = states[m.from][m.id];
+          delete states[m.from][m.id];
+        }
+      });
+      Object.keys(rosters).forEach(cid => {
+        saveRoster(rosters[cid], cid);
+        if (states[cid]) saveState(states[cid], cid);
+      });
+      todayCacheMap = {}; // 名单归属变了，各视图的今日预测全部作废
+      try { if (typeof window.renderCjian === 'function') window.renderCjian(false); } catch (e) {}
+    }
+    r.set(REHOME_KEY, '1');
+  }
+
+  // 首次使用：该桌面第一次打开此间时，用 TA 的名字种下自己的第一个梦角
+  //（v3.14.x 修复：不再在启动时给【每个】桌面都种——老版会在用户从没碰过的桌面凭空
+  // 造出以联系人命名的梦角，看起来像别人的数据串了进来）
   function seedIfEmpty(cid) {
     try {
       const s = storeOf(cid);
@@ -167,7 +287,6 @@
       s.set(SEED_KEY, '1');
     } catch (e) {}
   }
-  function ensureAllSeeds() { contacts().forEach(ct => seedIfEmpty(ct.id)); }
 
   // ---- 随机选择核心（基础概率 + 世界时间 + 最近互动；性格不写死） ----
   function presenceWeights(worldHour) {
@@ -702,7 +821,6 @@
 
   // ---- 整页渲染 ----
   window.renderCjian = function (forceForecast) {
-    ensureAllSeeds();
     if (viewCid !== ALL && !contacts().some(ct => ct.id === viewCid)) viewCid = curCid(); // 视图兜底
     if (forceForecast) todayCacheMap = {}; // 每次打开此间：TA们重新选择今天的可能样子
     if (!todayCacheMap[scopeKey()]) rollTodayForecast();
@@ -721,6 +839,7 @@
     page.hidden = false;
     try { if (window.cjianNoteOpen) window.cjianNoteOpen(); } catch (e) {}
     viewCid = curCid(); // 每次打开回到当前桌面
+    seedIfEmpty(curCid()); // 该桌面第一次打开此间：种下自己的第一个梦角（用 TA 的名字）
     window.renderCjian(true);
   };
   window.closeCjian = function () {
@@ -876,15 +995,17 @@
   }
   function boot() {
     migrateSplit();
-    ensureAllSeeds();
+    rehomeMisfiled();
     // 迁移时机加固：IndexedDB 回填（mochi-restore-done）可能晚于本模块启动——旧全局键
     // 迟到时首次迁移会扑空（老梦角要等下次刷新才合并回来）。就绪后幂等重跑一次合并
-    // （并集去重 + 清根键，重复执行无副作用），升级当天即可见老梦角。
+    // （按名认亲 + 并集去重 + 清根键，重复执行无副作用），升级当天即可见老梦角；
+    // 存量纠偏同样补跑一次（注册表刚就绪时才能可靠认亲，未就绪轮次不会误置标记）。
     let reMigrated = false;
     document.addEventListener('mochi-restore-done', function () {
       if (reMigrated) return;
       reMigrated = true;
       try { migrateSplit(); } catch (e) {}
+      try { rehomeMisfiled(); } catch (e) {}
     });
     setInterval(function () {
       tickApproach();

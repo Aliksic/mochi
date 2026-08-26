@@ -2168,7 +2168,8 @@ if (ckRefresh) {
     const m = pool[Math.floor(Math.random() * pool.length)];
     const tail = (!done && g && t.count > 0 && t.count < g) ? '（还差 ' + (g - t.count) + ' 杯）' : '';
     const text = window.taFit ? window.taFit(m + tail) : (m + tail);
-    try { if (window.chatAddIn) { window.chatAddIn(text); return true; } } catch (e) {}
+    // v3.14.x：带「喝水提醒」标签 chip（addIn opts.tag），来源可辨识
+    try { if (window.chatAddIn) { window.chatAddIn(text, { tag: '喝水提醒' }); return true; } } catch (e) {}
     return false;
   }
   // 概率触发入口——应用在前台期间每 8 分钟掷一次骰子：
@@ -2265,7 +2266,8 @@ if (ckRefresh) {
     const tail = t.count < g ? '（还差 ' + (g - t.count) + ' 杯）' : '（今天喝够啦）';
     const shown = window.taFit ? window.taFit(fmt + tail) : (fmt + tail);
     waterShowMsg(shown);
-    if (window.chatAddIn) { try { window.chatAddIn(fmt + tail); } catch (e) {} }
+    // v3.14.x：手动「让TA提醒」同样带标签 chip
+    if (window.chatAddIn) { try { window.chatAddIn(fmt + tail, { tag: '喝水提醒' }); } catch (e) {} }
   });
   document.getElementById('water-set-goal').addEventListener('click', () => { if (!window.openModal) return; window.openModal('设目标（杯）', String(waterGoal()), (v) => { if (v) { const n = parseInt(v, 10); if (n > 0 && n < 100) { waterSetGoal(n); waterRender(); toast('已设置'); } } }); });
   document.getElementById('water-set-size').addEventListener('click', () => { if (!window.openModal) return; window.openModal('单次容量（ml）', String(waterSize()), (v) => { if (v) { const n = parseInt(v, 10); if (n > 0 && n < 2000) { waterSetSize(n); waterRender(); toast('已设置'); } } }); });
@@ -2586,14 +2588,15 @@ if (ckRefresh) {
     if (!text) return;
     text = text.replace(/\{d\}/g, dish || '饭');
     // 字卡进聊天记录（后台也照进）；系统通知由 bgNotifyCheck 内部按隐藏时长/去重闸门决定
-    if (window.chatAddIn) { try { window.chatAddIn(text); } catch (e) {} }
+    // v3.14.x：带「吃饭提醒」标签 chip（addIn opts.tag），来源可辨识
+    if (window.chatAddIn) { try { window.chatAddIn(text, { tag: '吃饭提醒' }); } catch (e) {} }
     if (window.bgNotifyCheck) { try { window.bgNotifyCheck(text, Date.now(), { name: 'TA的吃饭提醒' }); } catch (e) {} }
     try { if (navigator.vibrate) navigator.vibrate([80, 60, 80]); } catch (e) {}
     // 35% 概率隔一小会儿再补一句「追问关心」（第 2+ 条不重复响提示音，同回复链惯例）
     if (Math.random() < 0.35) {
       setTimeout(() => {
         const care = libPool('eat', '追问关心', DEF_EAT_REMIND_CARE);
-        if (care.length && window.chatAddIn) { try { window.chatAddIn(care[Math.floor(Math.random() * care.length)], { silent: true }); } catch (e) {} }
+        if (care.length && window.chatAddIn) { try { window.chatAddIn(care[Math.floor(Math.random() * care.length)], { silent: true, tag: '吃饭提醒' }); } catch (e) {} }
       }, 1400);
     }
   }
@@ -3591,7 +3594,8 @@ if (ckRefresh) {
               if (window.toast) window.toast(window.taFit ? window.taFit('抓包成功！双方摸鱼值 +' + bonus) : ('抓包成功！双方摸鱼值 +' + bonus));
               if (window.chatAddIn) {
                 const r = pick(fishPool('抓包回应', CATCH_REPLIES));
-                setTimeout(() => { try { window.chatAddIn(window.taFit ? window.taFit(r) : r); } catch (e) {} }, 900);
+                // v3.14.x：带「摸鱼抓包」标签 chip（addIn opts.tag），用户能看出这是抓包后的回应
+                setTimeout(() => { try { window.chatAddIn(window.taFit ? window.taFit(r) : r, { tag: '摸鱼抓包' }); } catch (e) {} }, 900);
               }
             } catch (e) {}
           }

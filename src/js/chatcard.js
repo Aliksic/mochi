@@ -26,7 +26,15 @@
   let pubCache = null;
   function pubInvalidate() { pubCache = null; }
   function pubGroupsRaw() {
-    if (!pubCache) pubCache = buildGroupsFrom(pubStore().get(PUB_KEY));
+    if (!pubCache) {
+      pubCache = buildGroupsFrom(pubStore().get(PUB_KEY));
+      // v3.14.x：公用库同样过语音坏数据体检（回复池/搜索都走这份缓存，入口唯一）
+      const _vhp = sanitizeVoiceGroups(pubCache);
+      if (_vhp.fixed || _vhp.removed) {
+        try { pubStore().set(PUB_KEY, JSON.stringify(pubCache)); } catch (e) {}
+        notifyVoiceHeal(_vhp.fixed, _vhp.removed);
+      }
+    }
     return pubCache;
   }
   function ownGroupsRaw() { return buildGroupsFrom(store.get('cc-groups')); }
@@ -137,6 +145,63 @@
     return changed;
   }
 
+  // v3.14.x：语音坏数据自愈——历史版本曾把视频/空 MIME 数据当语音存进库
+  //（安卓文件管理器忽略 accept 过滤 + 按扩展名硬推 MIME），这类条目播放必然
+  // 空白/报错，还会把整个字卡库撑成几十 MB（低端机点开语音页整页冻结的主诱因）。
+  // 加载时统一体检：只看条目前缀不整串扫描（大库也不卡）；空 MIME 但扩展名可
+  // 识别的补上正确 MIME（救回数据），视频/图片/无法识别的直接剔除并提示一次。
+  const AUDIO_EXT_MIME = {
+    mp3: 'audio/mpeg', m4a: 'audio/mp4', aac: 'audio/aac', wav: 'audio/wav',
+    ogg: 'audio/ogg', oga: 'audio/ogg', opus: 'audio/ogg', flac: 'audio/flac',
+    amr: 'audio/amr', wma: 'audio/x-ms-wma', mid: 'audio/midi', midi: 'audio/midi',
+    weba: 'audio/webm', caf: 'audio/x-caf'
+  };
+  let voiceHealToasted = false;
+  function notifyVoiceHeal(fixed, removed) {
+    if (voiceHealToasted || (!fixed && !removed)) return;
+    voiceHealToasted = true;
+    const msg = [];
+    if (fixed) msg.push('修复 ' + fixed + ' 条语音格式');
+    if (removed) msg.push('清理 ' + removed + ' 条无法播放的视频/坏语音');
+    try { toast('已自动' + msg.join('，')); } catch (e) {}
+  }
+  function sanitizeVoiceGroups(groups) {
+    let fixed = 0, removed = 0;
+    const gs = groups && Array.isArray(groups.voice) ? groups.voice : [];
+    gs.forEach(g => {
+      if (!Array.isArray(g) || !Array.isArray(g[1])) return;
+      // 用 forEach 构建新数组——Array.filter 按规范在调用回调【前】取值，回调内
+      // 改写当前下标不会进入结果数组（抢救重写会静默失效）
+      const kept = [];
+      g[1].forEach(c => {
+        if (typeof c !== 'string') { kept.push(c); return; }
+        const sep = c.indexOf('|||');
+        if (sep <= 0) { kept.push(c); return; } // 非语音格式（普通文字含 ||| 的不算）
+        const name = c.slice(0, sep);
+        let d = c.slice(sep + 3);
+        // 渲染层口径：||| 之后不是 dataURL 的条目按「普通文字卡」展示——不是坏语音，
+        // 保留不动（用户含 ||| 的文字字卡在这里，删了就是丢数据）
+        if (d.indexOf('data:') !== 0) { kept.push(c); return; }
+        const m = /^data:([^,;]*)/.exec(d);
+        const mime = m ? m[1] : '';
+        if (mime.indexOf('audio/') === 0) { kept.push(c); return; } // 健康
+        if (mime === '') {
+          // 空 MIME：能按文件名扩展抢救就重写前缀，救不回才剔除
+          const ext = (name.split('.').pop() || '').toLowerCase();
+          const good = AUDIO_EXT_MIME[ext];
+          if (good) {
+            kept.push(name + '|||' + 'data:' + good + d.slice(5));
+            fixed++;
+            return;
+          }
+        }
+        removed++; // video/*、image/*、未知类型——播放空白/报错的元凶
+      });
+      g[1] = kept;
+    });
+    return { fixed, removed };
+  }
+
   // 读取全部分组：{ 类型: [ [分组名, [字卡...]], ... ] }
   // v3.11.x：按当前作用域读——公用页读全局键 cc-groups-public，专属页读本联系人 cc-groups
   function loadGroups() {
@@ -157,6 +222,12 @@
         }
         // v3.6.x：剔除旧版内置预设字卡（只保留用户添加的）
         if (stripBuiltins(saved)) { try { curStore().set(curKey(), JSON.stringify(saved)); } catch (e) {} }
+        // v3.14.x：语音坏数据体检（视频/空 MIME 自愈或剔除，见 sanitizeVoiceGroups）
+        const _vh = sanitizeVoiceGroups(saved);
+        if (_vh.fixed || _vh.removed) {
+          try { curStore().set(curKey(), JSON.stringify(saved)); } catch (e) {}
+          notifyVoiceHeal(_vh.fixed, _vh.removed);
+        }
         return saved;
       }
     } catch (e) {}
@@ -2302,11 +2373,25 @@
   })();
 
   // 入口：字卡库列表页点「公用字卡 / 专属字卡」进入本页（v3.11.x 双作用域）
+  // v3.14.x：大键懒加载兜底（idb.js OOM 防线配套）——低内存设备启动回填可能把
+  // 字卡库大键挂起在 IDB（__xyIdbDeferredKeys），此时 store.get 读空、字卡库显示为空
+  // 像「数据丢了」。打开管理页=用户正在看这份数据，先按需取回再渲染列表；
+  // 只对「被挂起且确实读不到」的键生效，正常设备零等待。
+  function hydrateCurScope() {
+    let fullKey = '', deferred = false;
+    try {
+      fullKey = ccScope === 'public' ? PUB_PREFIX + ':' + PUB_KEY : (window.activePrefix() + ':cc-groups');
+      deferred = Array.isArray(window.__xyIdbDeferredKeys) && window.__xyIdbDeferredKeys.indexOf(fullKey) >= 0;
+    } catch (e) {}
+    if (!deferred || !window.idbHydrateKey) return Promise.resolve(false);
+    try { if (curStore().get(curKey())) return Promise.resolve(false); } catch (e) {}
+    try { toast('字卡较多，正在加载…'); } catch (e) {}
+    return window.idbHydrateKey(fullKey).catch(() => false);
+  }
   function openCcPage(scope) {
     ccScope = scope === 'public' ? 'public' : 'own';
     pubInvalidate();
     if (editSaveTimer) { clearTimeout(editSaveTimer); editSaveTimer = null; }
-    groups = loadGroups();
     cur = 'text'; q = ''; curGroup = '';
     const ttl = document.getElementById('cc-page-title');
     if (ttl) ttl.textContent = ccScope === 'public' ? '公用字卡' : '专属字卡';
@@ -2316,7 +2401,10 @@
     document.querySelectorAll('.page').forEach(p => p.hidden = true);
     const ccPage = document.getElementById('page-custom-cards');
     if (ccPage) ccPage.hidden = false;
-    try { renderGroupsBar(); render(); } catch (e) {}
+    hydrateCurScope().then(() => {
+      groups = loadGroups();
+      try { renderGroupsBar(); render(); } catch (e) {}
+    });
   }
   // v3.11.x：离开自定义字卡管理页一律恢复专属作用域——回复池（getCustomCards/
   // getPokeCards/getMediaCards 等）以内存 groups 为基准，若停留在 public 作用域，

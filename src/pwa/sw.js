@@ -133,3 +133,80 @@ self.addEventListener('fetch', (e) => {
 // 旧逻辑会让用户刚进入桌面就被打断刷新回开屏（每次构建 sw.js 内容都变，更新频繁时必现）。
 // 现在新 sw 安装即 skipWaiting 接管，activate 自动清理旧缓存，当前页面继续可用，
 // 用户下次刷新自然加载最新版；旧页面发来的 UPDATE_READY 消息在此一律忽略。
+
+// ===== v3.15.x：离线消息提醒（Periodic Background Sync，零后端） =====
+// 页面端（bg-keep.js psync 段）把可发文案快照写入 IDB 根键 xy-home-v2:psync-snap，
+// 并注册 periodicsync。页面全关后浏览器按自身策略定期唤醒本 SW：读快照 → 随机抽
+// 一条 → 弹系统通知，同时把该条追加进 xy-home-v2:psync-queue；用户回开应用后由
+// 页面端 drainPsyncQueue 安全补投递进聊天（走 chatAddIn 内存链路，绝不直写 chat-msgs）。
+// 如实边界（设置页状态行同步展示）：仅 Chromium 系支持且需 PWA 添加到桌面；调度
+// 频率由浏览器决定（通常数小时~一天一次，非精确闹钟）；浏览器进程被系统杀死后
+// 无法唤醒——那需要真推送服务端，本项目纯本地架构暂不引入。
+
+const PSYNC_SNAP_KEY = 'xy-home-v2:psync-snap';
+const PSYNC_QUEUE_KEY = 'xy-home-v2:psync-queue';
+const PSYNC_TAG = 'mochi-ta-msg';
+const PSYNC_SNAP_TTL = 7 * 24 * 60 * 60 * 1000; // 快照 7 天未刷新（长期没开应用）不再打扰
+
+function psyncOpenDb() {
+  return new Promise(function (resolve, reject) {
+    var req = indexedDB.open('mochi-db', 1);
+    req.onupgradeneeded = function () { try { req.result.createObjectStore('kv'); } catch (e) {} };
+    req.onsuccess = function () { resolve(req.result); };
+    req.onerror = function () { reject(req.error || new Error('psync idb open fail')); };
+  });
+}
+function psyncIdbGet(key) {
+  return psyncOpenDb().then(function (db) {
+    return new Promise(function (resolve, reject) {
+      var tx = db.transaction('kv', 'readonly');
+      var rq = tx.objectStore('kv').get(key);
+      rq.onsuccess = function () { resolve(rq.result); };
+      rq.onerror = function () { reject(rq.error); };
+    });
+  });
+}
+function psyncIdbSet(key, val) {
+  return psyncOpenDb().then(function (db) {
+    return new Promise(function (resolve, reject) {
+      var tx = db.transaction('kv', 'readwrite');
+      tx.objectStore('kv').put(val, key);
+      tx.oncomplete = function () { resolve(true); };
+      tx.onerror = function () { reject(tx.error); };
+    });
+  });
+}
+
+self.addEventListener('periodicsync', function (e) {
+  if (e.tag !== PSYNC_TAG) return;
+  e.waitUntil((async function () {
+    const snap = await psyncIdbGet(PSYNC_SNAP_KEY);
+    if (!snap || !Array.isArray(snap.texts) || !snap.texts.length) return;
+    if (!snap.ts || Date.now() - snap.ts > PSYNC_SNAP_TTL) return;
+    const pick = snap.texts[Math.floor(Math.random() * snap.texts.length)];
+    const text = pick && pick.t ? String(pick.t) : '';
+    if (!text) return;
+    let arr = [];
+    try { const q = await psyncIdbGet(PSYNC_QUEUE_KEY); if (Array.isArray(q)) arr = q; } catch (e2) {}
+    arr.push({ t: text, cid: snap.cid || 'default', ts: Date.now(), k: pick.k || '' });
+    while (arr.length > 20) arr.shift();
+    await psyncIdbSet(PSYNC_QUEUE_KEY, arr);
+    await self.registration.showNotification(snap.name || 'TA', {
+      body: text,
+      tag: PSYNC_TAG,
+      renotify: true,
+      icon: './icon-192.png',
+      badge: './icon-192.png'
+    });
+  })().catch(function () {}));
+});
+
+self.addEventListener('notificationclick', function (e) {
+  if (!e.notification || e.notification.tag !== PSYNC_TAG) return;
+  e.notification.close();
+  e.waitUntil((async function () {
+    const cs = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (let i = 0; i < cs.length; i++) { try { await cs[i].focus(); return; } catch (x) {} }
+    try { await self.clients.openWindow('./'); } catch (x) {}
+  })());
+});

@@ -134,7 +134,7 @@
   // 仅 .phone 内部、无内部滚动体（fixed 停靠后滚动区 height 仍由面板自身收缩，
   // 内部 scroll 正常）的底半框才需要；全屏遮罩（#call-mask 等 fixed/inset 或
   // 自带滚动）不在列。
-  const FLOAT_PANEL_SELECTORS = ['#chat-more-panel', '#chat-decision-panel', '#chat-divine-panel', '#chat-ask-panel', '#poke-card', '#emoji-panel', '#chat-rp-panel', '#chat-rps-panel', '#chat-pong-panel', '#chat-snake-panel', '#chat-brick-panel', '#chat-gift-panel', '#ck-panel', '#chat-search', '#gc-more-panel'];
+  const FLOAT_PANEL_SELECTORS = ['#chat-more-panel', '#chat-decision-panel', '#chat-gdecision-panel', '#chat-divine-panel', '#chat-ask-panel', '#poke-card', '#emoji-panel', '#chat-rp-panel', '#chat-rps-panel', '#chat-pong-panel', '#chat-snake-panel', '#chat-brick-panel', '#chat-gift-panel', '#ck-panel', '#chat-search', '#gc-more-panel'];
 
   // v3.10.x：iOS 用 interactive-widget=resizes-content，安卓用 resizes-visual。
   // template.html 默认 resizes-visual（安卓：visualViewport 收缩可检测键盘 + layout
@@ -663,13 +663,25 @@
           if (!_kbActive) return;
           // 主信号：文档滚动超阈值（caret 微滚一般 <60px，不误伤）。
           // 补充信号：不管 window.scrollY 读到多少，只要 .phone 被整体平移出位
-          //（顶被推出屏幕 → 上方露灰；底越过可视区上沿挡键盘 → 输入栏跑到顶上）
+          //（顶被推出屏幕 → 上方露灰；底越过可视区下沿挡键盘 → 输入栏跑到顶上）
           // 就归零。真实 iOS Edge 的 visualViewport 平移只体现在 getBoundingClientRect，
           // window.scrollY 不变（0）也能被此信号捕获。
+          // v3.15.x：位移阈值修正（iOS Safari 打字全程闪跳修复）——原判定
+          // pr.top<-2 || pr.bottom>可视高-24 在键盘开启、.phone 正常停靠（top≈0、
+          // bottom==vv.height）时【恒真】：每次 250ms 轮询和每次 vv scroll 都判
+          // 「已位移」并 pinScrollTop 强行归零。而 iOS Safari 打字时会微移视口让
+          // caret 可见（一般 <60px），刚移就被归零 → 系统再移 → 再归零，全程打架：
+          // 表现即「打字时屏幕一直一闪一闪/一跳一跳」，回跳瞬间输入栏还会被带回
+          // 键盘下方（用户报修：iOS Safari 打字闪烁 + 键盘遮挡输入栏无法使用）。
+          // 这正是 v3.7.x 移除稳态钉顶修过的「每打一个字屏幕闪一下」打架闪屏，
+          // v3.13.x 的自愈把它带了回来。收紧为只治「大位移出视口」（Edge 整页挤压
+          // 是数百 px 级）：顶移出超 KB_SCROLL_HEAL、或底边越出可视下沿 24px 以上
+          // 才算位移；caret 微移恢复 no-op，不再与系统滚动打架。
+          var _vh = _vv ? _vv.height : window.innerHeight;
           var shifted = winScrollY() > KB_SCROLL_HEAL;
           if (!shifted) {
             var pr = _phone.getBoundingClientRect();
-            if (pr.top < -2 || pr.bottom > (_vv ? _vv.height : window.innerHeight) - 24) shifted = true;
+            if (pr.top < -KB_SCROLL_HEAL || pr.bottom > _vh + 24) shifted = true;
           }
           if (shifted) pinScrollTop();
         } catch (e) {}
@@ -925,6 +937,43 @@
         // 摩托罗拉G100/雨见 focusout/vv.resize 漏触发，但轮询读 vv.height 能读到
         // 回升，据此立即清除推顶，不用等 2200ms 无活动（用户感知"输入框停留几秒才回底"）
         var _aLastVVH = 0;
+        // v3.15.x：键盘期「页面平移归零」自愈（红米 K80 Chrome 报修：更多功能里的小功能
+        // 页面键盘一弹整页飞走、下方全灰；帮我决定打字输入框不弹到屏幕上方）。机理与
+        // iOS Edge 当年同款：聚焦底部半框内输入框时，浏览器为让焦点可见先把【视觉视口
+        // 往下平移】（vv.offsetTop>0，部分内核还伴随文档滚动），随后本模块才把 .phone
+        // 收缩到可视高度——平移残留不归零：.phone（普通流）整体被推出屏幕上方，其下露出
+        // body 底色=大面积灰。iOS 分支 pinScrollTop/healKbScroll 已修同症状，这里对齐安卓：
+        //   · 仅键盘开启期（_aKb 或推定停靠 _aProv）干预，平时绝不碰；
+        //   · 偏移 ≤8px 忽略——caret 微滚不误伤，防「每打一个字闪一下」；
+        //   · 焦点已完整落在可视区内＝平移纯属残留 → 归零；或偏移 >160px（必然露灰）也归零。
+        function _aWinY() {
+          try { return window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0; } catch (e) { return 0; }
+        }
+        function _aPinPan() {
+          try {
+            if (!_aKb && !_aProv) return;
+            var offT = _aVV.offsetTop || 0;
+            var winY = _aWinY();
+            if (offT <= 8 && winY <= 8) return;
+            var need = offT > 160 || winY > 160;
+            if (!need) {
+              var tgt = (_aIsText(_aTextFocused) ? _aTextFocused : null) ||
+                (_aIsText(document.activeElement) ? document.activeElement : null);
+              if (tgt && tgt.getBoundingClientRect) {
+                var r = tgt.getBoundingClientRect(); // 布局坐标；可视区=[offT, offT+vv.height]
+                if (r.top >= offT - 8 && r.bottom <= offT + _aVV.height - 8) need = true;
+              } else {
+                need = true;
+              }
+            }
+            if (!need) return;
+            if (winY) {
+              try { window.scrollTo(0, 0); } catch (e2) {}
+              try { document.documentElement.scrollTop = 0; document.body.scrollTop = 0; } catch (e3) {}
+            }
+            if (offT && _aVV.scrollTo) { try { _aVV.scrollTo(0, 0); } catch (e4) {} }
+          } catch (e) {}
+        }
         function _aBump() { _aLastAct = Date.now(); }
         function _aIsText(el) {
           return el && ((el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')
@@ -948,6 +997,8 @@
             var hs = h + 'px';
             // 值不变不写 DOM（字符串比对早退），打字/滚动时不重排
             if (_aPhone.style.height !== hs) _aPhone.style.height = hs;
+            // v3.15.x：收缩后浏览器为露焦点做的视口平移已无必要，残留会整页飞走露灰
+            _aPinPan();
           }
         }
         // v3.10.x：聚焦期间主动轮询兜底——安卓 visualViewport.resize 在键盘弹出时
@@ -968,6 +1019,9 @@
                 nudgeInputVisible();
                 // v3.12.x：悬浮键盘推定停靠复查（vv 不反映键盘的内核走这里兜底）
                 _aProvCheck();
+                // v3.15.x：平移残留归零 + fixed 停靠结果自检（不随可视区上移的内核摘回 absolute）
+                _aPinPan();
+                kbDockEnsureVisible();
                 // v3.14.x：vv 从小变大=键盘收回动画（摩托罗拉G100/雨见 focusout/
                 // vv.resize 漏触发，但轮询能读到 vv.height 回升）→ 立即清除推顶，
                 // 不等 2200ms。悬浮键盘 vv 恒接近 _aH，_aLastVVH 不会小于 _aH-60，不误清除
@@ -1022,6 +1076,7 @@
           if (_aPhone.style.height !== ph + 'px') _aPhone.style.height = ph + 'px';
           kbDockPanels();
           try { window.scrollTo(0, 0); } catch (e) {}
+          _aPinPan(); // v3.15.x：推顶后残留的 vv 平移同样归零（K80 同症状）
         }
         function _aProvClear() {
           if (!_aProv) return;
@@ -1130,7 +1185,8 @@
   // v3.12.x：补三个漏登记浮层（AI-A 全仓浮层清点发现，跨域改动请知悉）——
   //   #img-view-mask 聊天/字卡大图查看全屏遮罩（chatcard.js 动态创建，打开时背景聊天页可继续滚动）；
   //   #chat-rp-panel 红包底部半框、#batch-panel 消息批量操作面板（与 poke-card/emoji-panel 同族底半框）
-  const FLOAT_SELECTORS = ['#tc-mask', '#cc-export-mask', '#cc-scope-mask', '#call-mask', '#feed-notice-panel', '#feed-comment-panel', '#poke-card', '#emoji-panel', '#chat-ask-panel', '#qa-mask', '#chat-more-panel', '#gc-more-panel', '#chat-search', '#chat-decision-panel', '#chat-divine-panel', '#chat-rps-panel', '#chat-call-panel', '#chat-pong-panel', '#chat-snake-panel', '#chat-brick-panel', '#chat-gift-panel', '#avlib-card', '#ck-panel', '#loc-panel', '.mg-mask', '#modal-mask', '#msg-actions', '#desk-image-viewer', '.desk-lib', '#gc-members-panel', '#gc-at-panel', '#gc-settings-panel', '#img-view-mask', '#chat-rp-panel', '#batch-panel', '#eat-switch-overlay'];
+  // v3.14.x：补 #chat-gdecision-panel 多人决定底部半框（group-decision.js，与帮我决定同族）
+  const FLOAT_SELECTORS = ['#tc-mask', '#cc-export-mask', '#cc-scope-mask', '#call-mask', '#feed-notice-panel', '#feed-comment-panel', '#poke-card', '#emoji-panel', '#chat-ask-panel', '#qa-mask', '#chat-more-panel', '#gc-more-panel', '#chat-search', '#chat-decision-panel', '#chat-gdecision-panel', '#chat-divine-panel', '#chat-rps-panel', '#chat-call-panel', '#chat-pong-panel', '#chat-snake-panel', '#chat-brick-panel', '#chat-gift-panel', '#avlib-card', '#ck-panel', '#loc-panel', '.mg-mask', '#modal-mask', '#msg-actions', '#desk-image-viewer', '.desk-lib', '#gc-members-panel', '#gc-at-panel', '#gc-settings-panel', '#img-view-mask', '#chat-rp-panel', '#batch-panel', '#eat-switch-overlay'];
   // v3.15.x：键盘弹起时把锚定在 .phone 底部的悬浮面板（更多功能/帮我决定/占卜/
   // 问问TA/红包/拍一拍等）重新锚定到可视区底部=输入栏上方。背景（用户反馈
   // 「更多功能里的小功能输入框一点，功能页面被错误挤压到屏幕输入栏一行的下方，
@@ -1142,8 +1198,14 @@
   // 底部），与输入栏同位。两分支（syncAndroidKb / syncIosKb 及各自的推定停靠
   // _aProvDock / _iProvDock）在收缩 .phone 时统一触发，restore 时解除。
   let kbPanelDocked = false;
+  // v3.15.x：内核自检开关——position:fixed 在键盘期是否随 visualViewport 上移。
+  // 多数安卓内核会（_probe-fixed-kb 真机实测 pb=vv 底），但部分内核/无头环境 fixed
+  // 恒锚定【布局视口】底：停靠后面板仍整体在可视区外=被键盘盖住（「帮我决定输入框
+  // 不弹到屏幕上方」）。kbDockEnsureVisible 检测到一次即置 false，本会话键盘期改用
+  // absolute 兜底；收键盘 kbUndockPanels 复位，下次会话重新按 fixed 停靠探测。
+  let kbFixedTracksVV = true;
   function kbDockPanels() {
-    if (kbPanelDocked) return;
+    if (kbPanelDocked || !kbFixedTracksVV) return;
     kbPanelDocked = true;
     try {
       document.querySelectorAll(FLOAT_PANEL_SELECTORS.join(',')).forEach(function (el) {
@@ -1159,6 +1221,7 @@
   function kbUndockPanels() {
     if (!kbPanelDocked) return;
     kbPanelDocked = false;
+    kbFixedTracksVV = true; // v3.15.x：下次键盘会话重新探测 fixed 是否随可视区上移
     try {
       document.querySelectorAll(FLOAT_PANEL_SELECTORS.join(',')).forEach(function (el) {
         if (el.dataset.kbPrevPos !== undefined) {
@@ -1172,6 +1235,36 @@
         el.style.removeProperty('right');
         el.style.removeProperty('top');
       });
+    } catch (e) {}
+  }
+  // v3.15.x：fixed 停靠结果自检（_aWatch 轮询调用，幂等）——停靠中的可见面板若
+  // 【整体】仍滞留在可视区下沿之外（bottom 越过可视区底=被键盘盖住），说明该内核
+  // position:fixed 不随 visualViewport 上移、仍锚定布局视口。把这类面板摘回 absolute：
+  // .phone 已收缩顶对齐到可视高度，absolute bottom:96 必然停在输入栏上方——两种内核
+  // 行为下面板/输入框都可见。摘回后置 kbFixedTracksVV=false，本会话不再 fixed 重挂。
+  function kbDockEnsureVisible() {
+    if (!kbPanelDocked) return;
+    try {
+      var vv = window.visualViewport; if (!vv) return;
+      var offT = vv.offsetTop || 0, vh = vv.height;
+      var swapped = false;
+      document.querySelectorAll(FLOAT_PANEL_SELECTORS.join(',')).forEach(function (el) {
+        if (el.hidden || el.getClientRects().length === 0) return;
+        if (el.style.position !== 'fixed') return;
+        var r = el.getBoundingClientRect();
+        if (r.height > 10 && r.bottom - offT > vh + 4) {
+          var prev = el.dataset.kbPrevPos;
+          if (prev) el.style.position = prev;
+          else el.style.removeProperty('position');
+          delete el.dataset.kbPrevPos;
+          el.style.removeProperty('bottom');
+          el.style.removeProperty('left');
+          el.style.removeProperty('right');
+          el.style.removeProperty('top');
+          swapped = true;
+        }
+      });
+      if (swapped) kbFixedTracksVV = false;
     } catch (e) {}
   }
   // 键盘期间「新打开的面板」也会自动停靠（kbDockPanels 只锚定当时可见的面板）
