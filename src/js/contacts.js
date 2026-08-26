@@ -80,6 +80,8 @@
     // 梦角档案：narc-* 走根命名空间（全局共享，memo-arc.js），绝不能当旧顶层业务键迁移
     // （否则切换桌面后档案/当前梦角读全局键读不到，"消失"）。narc-cur 亦不例外。
     if (r.indexOf('narc-') === 0) return true;
+    // 我的档案：myarc 根键（全局唯一 JSON，my-arc.js）同理不可迁移
+    if (r.indexOf('myarc') === 0) return true;
     // v3.6.x：命名空间键（default:* / <cid>:*）不是"旧顶层键"，绝不能迁移——
     // 否则会把 xy-home-v2:default:avatar-user 再迁成 xy-home-v2:default:default:avatar-user
     // 并删除原键（刷新后头像/壁纸/聊天壁纸丢失 + default:default: 双重前缀垃圾键）。

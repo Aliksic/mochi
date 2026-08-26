@@ -499,12 +499,31 @@
       localStorage.setItem(statsKey, JSON.stringify(stats));
     } catch (e) {}
     const fit = window.taFit ? window.taFit : function (x) { return x; };
+    // v3.15.x：Pong 联动心意币——胜我得 ¥2 / 平 ¥1 / TA 赢 TA 得 ¥2（日内封顶 ¥4）
+    var coinLine = '';
+    try {
+      var COIN_CAP = 400;
+      var day = new Date().toISOString().slice(0, 10);
+      var ck = (window.activePrefix && window.activePrefix() || 'xy-home-v2') + ':ml2_coin_pong_' + day;
+      var cur = Number(localStorage.getItem(ck)) || 0;
+      if (cur < COIN_CAP) {
+        var real = Math.min(draw ? 100 : 200, COIN_CAP - cur);
+        try { localStorage.setItem(ck, String(cur + real)); } catch (e2) {}
+        if (real > 0 && typeof window.giftWalletChange === 'function') {
+          var toTa = !draw && !playerWin;
+          if (window.giftWalletChange(toTa ? 0 : real, toTa ? real : 0)) {
+            coinLine = '🪙 ' + (toTa ? fit('TA') + ' 的心意币' : '我的心意币') + ' +¥' + (real / 100).toFixed(2);
+          }
+        }
+      }
+    } catch (e) {}
     const title = draw ? '平局' : (playerWin ? '🏆 你赢了' : fit('TA 赢了'));
     const body =
       '<div class="pong-end-score">' + fit('TA') + ' ' + s.opponentScore + ' : ' + s.playerScore + ' 你</div>' +
       '<div class="pong-end-stat">总回合 ' + s.totalRounds + ' · 用时 ' + fmt(sec) + '</div>' +
       '<div class="pong-end-stat">你的最高连得 ' + s.maxPlayerStreak + ' · ' + fit('TA') + ' 最高连得 ' + s.maxOpponentStreak + '</div>' +
-      '<div class="pong-end-stat">累计 ' + stats.win + '胜 ' + stats.lose + '负 ' + stats.draw + '平 · 历史最高连得 ' + stats.maxStreak + '</div>';
+      '<div class="pong-end-stat">累计 ' + stats.win + '胜 ' + stats.lose + '负 ' + stats.draw + '平 · 历史最高连得 ' + stats.maxStreak + '</div>' +
+      (coinLine ? '<div class="pong-end-stat">' + coinLine + '</div>' : '');
     showOverlay(title, body, '再玩一次');
     // 写入聊天记录 + TA 回应
     try {

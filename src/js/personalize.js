@@ -2470,6 +2470,14 @@ try {
     try { renderDeskWidgets(); } catch (e) {}
   }
   ensureDeskPeriod();
+  // v3.15.x 修复：全新冷启动时序里 desk-period 曾流失进隐藏池——buildDeskPages 按
+  // desk-page-count 默认 2 页收缩时把静态第三页整页删进池，第三页由 ensureP3 在
+  // setTimeout(50) 重建，而 ensureDeskPeriod 只在 0ms 同步跑一次（当时 slides[2] 尚不
+  // 存在 → 直接 return），此后无人再补位，经期卡从此留在池里，第三页缺首卡。
+  // 补两次延迟重跑（200/600ms，均晚于 ensureP3 的 50ms）：!lay 分支只在「新用户且
+  // 节点不在第三页」时移回，已装修用户走原 lay 分支语义不变，不破坏删除意图。
+  setTimeout(ensureDeskPeriod, 200);
+  setTimeout(ensureDeskPeriod, 600);
   document.addEventListener('contact-switched', ensureDeskPeriod);
   // v3.13.x：今日备忘/心情卡默认位置改为第三页「经期倒计时」下方（template 已移）。
   // 老用户 desk-layout 里 memo-row 在第一/二页的自动迁到第三页经期卡下方，其余布局不动；

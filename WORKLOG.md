@@ -2,6 +2,59 @@
 
 两个 AI 不能直接对话，开工/完工时在这里各留一行，让对方打开仓库就知道当前状态。
 
+### 2026-08-26 18:02（✅ 完成·新增【我的档案】+ 第三页图标接线补全——用户反馈「梦角档案右边没有我的档案按钮」）
+- [本会话·完成]（**已改 src/js/my-arc.js（新增，518 行）+ src/js/memo-arc.js（桥接入口两处）+ src/template.html（第三页图标 + page-my-arc 锚点，均紧邻 memo-arc）+ src/js/tabs.js / src/js/contacts.js（缺失接线补丁）**；验证 tools/verify-myarc.mjs **27/27** + 布局 verify 10/10；**已构建（18:02, sw: mochi-mt9xcvk8）扫入并行会话 20 文件改动；未提交——线上更新需 commit+push（等用户确认后执行）**）。
+  - **背景澄清**：HEAD 1b6b8c1 已含 my-arc 图标/页面/产物且已推送——用户看不到按钮大概率是 **PWA SW 缓存未更新**（真机需杀掉 PWA 重开触发 SW 更新）。但排查发现两处**功能性接线缺失**，本次已补：
+    - ⚠️ **contacts.js isExcluded 缺 `myarc` 保护（高危）**：根键 `xy-home-v2:myarc` 无冒号，会被 migrateLegacy 当旧顶层业务键迁进 default 桌面并删根键 → 我的档案数据「消失」+每次加载循环迁移。已补一行（与 narc-* 同款）。老版本用户若已被误迁过：数据还在 default 命名空间的 `myarc` 键里，后续可做一次性回迁（当前无存量用户，暂不做）。
+    - tabs.js FULL_PAGES 补 `page-my-arc`（缺它进入页面时 tabbar/状态栏 chrome 不同步）。
+  - **【我的档案】功能**（src/js/my-arc.js，复用 narc-\* 样式族零新 CSS）：8 分区总览菜单 = 关于我(8 字段含「我希望被怎样理解」) / 我的喜好(喜欢12类/不喜欢/偏好) / 我的习惯(日常·小动作·表达·和TA在一起时) / 我的物品(常用·喜欢·珍视纪念·想送TA的) / 我和TA(6 字段=希望的相处方式) / 我对自己的描述(8 类定义卡，无来源圆点——是定义不是观察) / 我的IF世界(**世界母档**：世界名/设定/我的身份/TA的身份母档记录/关系 + 这个世界里的我们列表) / 我们的共同记录→**桥接**到梦角档案对应分区（不重复维护）。存储键 `xy-home-v2:myarc` 单一全局 JSON。
+  - **memo-arc.js 配套小改**：`openNarc(view0)` 支持初始分区参数；新增 `window.openNarcShared()`（我的档案桥接直达当前梦角的共同记录；无梦角回总览引导）。头部右侧「去TA的档案」图标 ↔ 我的档案页头部「去TA的档案」按钮，双向互跳。
+  - 验证：verify-myarc.mjs 27/27（S1-S5 四处接线静态断言 + P1 图标相邻性 + P2 八行菜单顺序 + P3-P6 各分区编辑入库 + P7 两种路径桥接 + P8 刷新持久化 + P9 零 JS 异常）；布局 verify 10/10。
+  - 真机确认点：①杀掉 PWA 重开后第三页「梦角档案」右边应出现「我的档案」；②进页面 8 行菜单、关于我字段点击即改；③末行「我们的共同记录」点进去应落在梦角档案的共同记录分区；④两页头部可互相跳转。
+
+
+### 2026-08-26 18:0x（✅ 用户反馈·桌面「吃什么」图标看着像被截断——重画为碗+筷子）
+- [本会话·完成]（**已改 src/js/p2-features.js:1878 仅换 eatApp 的 SVG 一处（AI-A 域）；未构建未提交——请构建者随本批一起 node build.mjs 收口**）。
+  - **旧图标问题**：叉子只画了 2 根齿且中齿悬空断在半空、刀只有半片刃——小尺寸下读作「断掉的笔画」。
+  - **新图标**：碗+双筷（碗沿线 M4 12.5h16 + 下弧碗身，两根筷子从碗口斜插向右上），与花园/房间/经期等同款 1.7 圆头线稿风格；getBBox 4..21.3/3.6..19.5，含描边余量距 viewBox 边 ≥1.2，无任何贴边裁切。
+  - 验证：tools/diag-eat-icon.mjs（旧版 vs 叉刀/碗筷/碗筷+底/叉勺 5 候选，58px 瓦片 28px 实际尺寸+96px 放大截图 tools/eat-icon-preview.png 目检 + 几何边界断言全过）；node --check 通过。该 SVG 全仓仅此一处引用（personalize 装修预览按组件名克隆 DOM，自动跟随）。
+  - 真机确认点：手机桌面第三页「吃什么」图标应为完整碗+筷子线稿，不再有断笔感；装修模式换图/预览不受影响。
+
+### 2026-08-26 17:5x（✅ 用户反馈·抓包回消息「字卡一行+标签行重复正文」——与并行会话双路修复已合流，本会话验证收口）
+- [本会话·完成]（**用户原话：触发抓包后联系人发的消息「是字卡，下一行是摸鱼抓包标签+同一张字卡，内容重复」**。本会话最初改法：src/js/chat.js addIn 新增 opts.tagNoDup（tag 型 mood 的 label 置空只留 chip）+ src/js/p2-features.js 统计循环加空 label 守卫 + tools/verify-period-care.mjs A11 断言同步/C10 tab 数 15→16（补漂流瓶）；保存后这些改动已被并行构建者随 v3.16.x 提交（1b6b8c1）扫入。**合流说明**：并行会话同期落了更通用的渲染层去重（chat.js renderMsg dupBody / 收藏视图 dupFav：label===正文 → 标签行只留胶囊），抓包发送点现走 `{ mood: [{ tag: '摸鱼抓包', label: '' }] }` 直传空 label——两机制共存无冲突；**opts.tagNoDup 现无调用方，属冗余但无害的 API，留给构建者决定下轮是否摘除**（摘除需同步还原 verify-period-care A11 正则）。
+- 验证：本会话临时运行时 diag **6/6**（S1 抓包回应带「摸鱼抓包」chip/S2 chip 右侧不再有重复字卡/S3 正文仅出现一次/S4 经期关心同规则去重/S5 重进聊天持久化仍正确(label:'' 存储在、渲染 chip-only)/S6 无 JS 异常）；回归 **verify-tag-chip-dedupe 10/10、verify-period-care 32/32（C10 已按现状修为 16 个 tab）、verify-fish-catch-record 16/16、布局 verify 10/10** 全绿。
+- 真机确认点：桌面浮字点抓包 → 聊天里 TA 回应应为「回应正文一行 + [摸鱼抓包] 标签胶囊一行」，标签右侧不再重复一遍正文；喝水/吃饭/经期/漂流瓶等带来源标签的消息同规则；TA 真实情绪字卡（label≠正文）显示不变。
+- ⚠️ 本会话未提交（src 改动已在 1b6b8c1 内）；工作区仍有 17:3x/17:4x 两批并行改动待构建者统一收口，本会话不重复构建；临时 diag 脚本在 %TEMP%\opencode 未入库。
+
+### 2026-08-26 17:5x（✅ 用户反馈·摸鱼抓包回应消息内容重复——来源标签 chip 不再重复渲染右侧同文文案）
+- [本会话·完成]（**已改 src/js/chat.js（AI-A 域，仅两处 mood 渲染点）：renderMsg 与收藏详情渲染 rec.mood/f.mood 时，label 与气泡正文完全相同的来源标签 chip（opts.tag 生成，如「摸鱼抓包/经期关心/喝水提醒/吃饭提醒/漂流瓶」）只渲染 chip、删去右侧重复文案；真实情绪字卡（label≠正文）不受影响。新增 tools/verify-tag-chip-dedup.mjs 9/9；布局 verify 10/10 + 回归 verify-period-care 32/32、verify-fish-catch-record 16/16 全绿**）。修复已被并行会话随 **v3.16.x(1b6b8c1) 提交**、产物 index.html(17:34 构建) 已含，本会话无需再构建。
+  - 用户看到的现象：抓包成功后联系人消息=第一行字卡原文 + 第二行「[摸鱼抓包] 同一句原文」。根因：addIn 的 opts.tag 会写 `mood:[{tag,label:text}]`，而 renderMsg 把气泡正文和 mood 行各渲染一遍——chip 机制自带的展示性重复。
+  - 去重规则：`md.label === rec.text`（完全相同）才隐藏 label span；存储结构零改动（rec.mood 照旧持久化），旧数据/新数据通用。⚠️ 注意 addRec 有 1200ms 同文去重守卫（chat.js addRec），自动化测试连发同文本第二条会被吞——专项脚本 B3 已换独立正文绕开，后续写脚本的人留意。
+  - 另注意到有并行会话的 tools/verify-tag-chip-dedupe.mjs（同需求运行时验证，断言 dupBody 分支存在）——与本会话 verify-tag-chip-dedup.mjs 二选一保留即可，请构建者收口时定夺。
+
+### 2026-08-26 17:4x（✅ 用户纠偏·改名范围修正——只有桌面看 TA 日常的叫【寻踪】，联系人主动来查你的岗依旧叫【查岗】）
+- [本会话·完成]（**已改 src/template.html（字卡库入口「TA的查岗·我的添加」/「TA的查岗」两入口、page-ta-checkin 管理页全部文案、回复设置 ck 面板 TA主动查岗/查岗概率/查岗冷却/gs-sub、fav-tab data-rp="ck" 标签、license 字卡库入口列表那一个词）+ src/js/ck-question.js 整文件回退（TA 来查岗了。/查岗回答/单选查岗/文字查岗/TA查岗通知名等全部恢复）；tools/verify-ck-question.mjs + tools/verify-ta-checkin.mjs 断言同步回退。已重建 + verify-ck-question 18/18 + verify-ta-checkin 30/30 + 布局 10/10 + verify-fish-catch-record 16/16 全绿；未提交**）。
+  - **最终命名边界（两功能并存，后续会话勿再混改）**：【寻踪】=桌面第二页图标+聊天点头像半框——看 TA 的日常（地点/在做什么/说的话），含「寻踪日常字卡」「寻踪记录」「正在寻踪...」；【查岗】=TA 主动来查你——回复设置→查岗 开关/概率/冷却、聊天查岗问题卡、「TA的查岗」题库管理页、让TA现在查岗一次。两者 ID/存储键本就独立（checkin-* vs ckq-*），数据互不影响。
+  - 上一条 16:5x 记录中「全局更名」表述作废，以本条为准；build.mjs 函数注入修复与并发构建警告仍然有效。
+
+### 2026-08-26 17:4x（✅ 用户反馈·字卡库「聊天默认字卡」入口角标显示 3260 数量不对——写死数字改动态统计）
+- [本会话·完成]（**已改 src/js/default-cards.js（AI-A 域，仅角标动态化 + 注释补漂流瓶）+ tools/verify-cjian-lib.mjs 增 B0 角标断言 14/14；verify-period-care.mjs 复跑 32/32（其 C10 已由并行会话同步加漂流瓶至16个，本会话未重复改动）；未构建未提交**）。
+  - **根因**：template.html `#li-default-cards` 的角标 `<div class="t">3260</div>` 自 v3.6.x(24e64b0) 起就是**写死的静态值**且从未被 JS 刷新——而主字卡现 4621、加上互动回应302/房间69/漂流瓶40等功能池后全库共 **5827**。其他入口（自定义字卡 cc-pub-count / TA的问答 / TA的邀请 等）都有各自的动态刷新函数，唯独这个漏了。
+  - **修复（default-cards.js）**：新增 `refreshLibCount()`——按 `DEFAULT_CARD_DATA` 全部分类实时合计写入 `#li-default-cards .t`；脚本加载即刷一次 + `ensureRendered()` 兜底再刷一次（防数据晚于本文件追加）。后续任何新增分类/扩充词库角标自动跟上，永不再过期。顺带把功能 tab 连排块注释补上「漂流瓶(drift)」（并行会话本轮在数组里追加了 drift tab，注释未跟）。
+  - 验证：verify-cjian-lib.mjs **14/14**（新增 B0：角标===全库实际总数且 >5000，实测 badge=5827）；verify-period-care 复跑 **32/32**。顺带核对相邻两个同样写死的角标：情绪字卡 209=实际209 ✓、回复字卡 102≈实际 ✓——均无需处理。
+  - ⚠️ 构建提示同前条：verify-eat-remind S 组读构建产物，重新 build 后请复跑；提交前 git diff 自查 default-cards.js 含 refreshLibCount 与功能 tab 连排块。
+
+### 2026-08-26 17:3x（✅ 新增·字卡库顶部【可自定义字卡】【系统预设字卡】tab 显示字卡总数徽标——用户需求）
+- [本会话·完成]（**已改 src/js/chatcard.js（AI-A 域，顶部切换代码后追加 ccTopTabTotals 一段）；新增 tools/verify-cc-tab-totals.mjs 7/7 全绿 + 回归 verify-cc-mine-clean.mjs 14/14 全绿；未构建未提交——请构建者随本批（含上条污染清洗）一起 node build.mjs 收口**）。
+  - **做法**：两个顶部 tab 追加 `<em class="cc-tab-n">总数</em>` 徽标（复用既有样式，含 dark.css 暗色与 .zero 灰化，零新增 CSS/零 template 改动）；汇总各自分区（cc-sect-custom / cc-sect-preset）内全部条目的 .t 计数。
+  - **动态刷新不逐模块接线**：各模块（quote-cards/p2-features/ta-ask/ck-question/ta-invite/loc-lib/本文件公用·专属角标）写计数时序不一（部分在 idbRestore 回填后），用 MutationObserver 监听两分区容器（subtree+childList+characterData）防抖 120ms 重算——任何模块任何时刻写 .t 都会自动反映到总和；另在 mochi-restore-done 后补刷一次。
+  - 验证：verify-cc-tab-totals.mjs **7/7**（两 tab 徽标渲染/徽标=分区内计数之和(预设 6716)/全新用户 0 且灰化/批量添加 2 句情话实时 +2/关一张查岗预设卡实时 -1/污染清洗后总和=真实自定义数 3/无 JS 异常）。测试脚本注意：清洗 IIFE 空载也会落标记——种污染数据必须在同一次加载前与 wipe 一起做，否则清洗跳过（假阳性 8≠3 踩过）。
+  - 真机确认点：字卡库顶部两个 tab 名字后应出现小徽标显示该分类字卡总和；添加/删除/开关字卡后徽标数字实时跟着变。
+
+### 2026-08-26 17:2x（✅ 验证·聊天「来源标签 chip」与正文重复渲染修复（摸鱼抓包等）——用户反馈；修复本体由并行会话落盘，本会话补专项验证）
+- [本会话·完成]（**src/js/chat.js 未再改动**——开工时发现 renderMsg `dupBody` / 收藏视图 `dupFav` 去重分支已被并行会话抢先保存（v3.16.x 注释，与用户需求一致：label===正文的 opts.tag 标签行只留标签胶囊，真实情绪字卡 label≠正文不受影响）；本会话仅新增 tools/verify-tag-chip-dedupe.mjs **10/10 全绿**；未构建未提交——请构建者随本批一起 node build.mjs 收口**）。
+  - 验证覆盖：S1/S2 两处渲染点含去重分支；T0 activeStore 三写种两条旧格式消息→整页重载从存储真实加载（首启欢迎语会覆盖预置 LS，须 boot 后经 store 种子再 reload，勿走裸 LS 预置）；T1/T2 摸鱼抓包 chip 存在且右侧不再重复同文字卡；T3 真实情绪字卡 label 照常显示；T4 气泡正文不受影响；S3 撤回详情折叠区仍保留完整 tag：label 可追溯；T5 chatAddIn(tag) 新链路端到端同样去重；E1 全程无 JS 异常。
+  - 真机确认点：触发浮字抓包后聊天里回应消息应为「回应正文一行 + [摸鱼抓包]标签胶囊一行」，标签右边不再重复一遍正文；喝水/吃饭/经期/漂流瓶等带来源标签的消息同规则；TA 情绪字卡（情绪/心意/交流意图+内容）显示不变。
 ### 2026-08-26 17:1x（✅ 完成·心意币余额行改「向 Mochi 申请」申请制——打款累加入账，不再直接改数值——用户需求）
 - [本会话·完成]（**已改 src/js/chat.js rpEditWallet + src/js/gift-shop.js walletText/giftEditWallet（两处同构，纯文案+累加逻辑，无存储结构变化）；tools/verify-unified-heart-wallet.mjs 同步更新到申请制口径 13/13；已构建（17:09, index.html 2,823,067 字节）+ 布局 verify 10/10 + verify-gift-market-v3 回归 0 FAIL 全绿；未提交**）。
   - **交互变化**：红包面板余额行 / 市集 hero 余额行 / 送礼面板余额行点击后不再是「修改心意币（元）直接设置」，改为弹「向 Mochi 申请心意币」——胶囊选收款方（我的心意币 / TA 的心意币），输入申请金额点【申请】即模拟 Mochi 打款并**累加**进共用账本 gift-wallet（toast「Mochi 已打款，XX的心意币 +¥66.66」），保存一侧不关窗自动翻转到另一侧连填（ctl.stay 两阶段同前），留空点【完成】结束；非法金额（≤0）拦截提示「申请金额需大于 0」。余额行尾部提示同步改「点此向 Mochi 申请」。**只能加不能减**：如需调小余额暂无入口（用户明确要求非直接修改）。
@@ -2897,6 +2950,6 @@ ode tools/patch-chat-cuddle.mjs**（幂等断言，仅在文件未被锁定时�
   - **验证**：临时 CDP 专项 9/9——打开即全屏、画布填充率宽 0.90/高 0.82（开始后重适配 0.86+）、对局 15×29 且蛇身/食物全部界内、对局中退全屏格数不变游戏继续、关闭→重开自动回全屏并续玩原 15×29 对局、半框新开一局回 15×15、全程无 JS 异常；verify-snake-features 8/8（穿墙/安全/结算/最高分回归）+ npm run verify 布局 10/10。
   - **给构建者**：本次只动 snake-game.js + chat-pages.css（snake-fs 两行）；工作区含上一条打砖块满屏改造与本日其他并行改动（base.css/home.css/bg-keep/default-cards/memo-arc/mobile-adapt/p2-features/personalize/records/template.html 等），提交前请 git diff 统一自查后一并提交。未提交。
 
-### 2026-08-26 17:0x���û�������ץ���ɹ���������Ϣ�����ظ������������� + ��ǩchip�ִ�һ��ͬ�����ģ�
-- [���Ự����ɡ�δ����]**�Ѹ� src/js/p2-features.js��ץ����Ӧ���ʹ����� 1 �е��ã�**��`chatAddIn(r, { tag: '����ץ��' })` ��Ϊ `chatAddIn(r, { mood: [{ tag: '����ץ��', label: '' }] })`����addIn �� opts.tag ������ĸ��ƽ� chip label��_tagMood�������¡�����ץ���ֿ�������һ�С���ǩ+�ظ��ֿ������Ĵ��Զ��� mood �� label ��chip ֻʣ������ץ������ǩ�����������������ظ�����Ⱦ/�־û�/�ղ���·�Կ� label ��Ȼ���ݣ�ֻ��һ������� span�����Ӿ�Ӱ�죩��
-- **��������**������ֻ�� p2-features.js һ�������������д������лỰ�Ķ���git status �ɼ������밴Э���տڹ����ύ��
+### 2026-08-26 17:0x���û�������ץ���ɹ���������Ϣ�����ظ������������� + ��ǩchip�ִ�һ��ͬ�����ģ�
+- [���Ự����ɡ�δ����]**�Ѹ� src/js/p2-features.js��ץ����Ӧ���ʹ����� 1 �е��ã�**��`chatAddIn(r, { tag: '����ץ��' })` ��Ϊ `chatAddIn(r, { mood: [{ tag: '����ץ��', label: '' }] })`����addIn �� opts.tag ������ĸ��ƽ� chip label��_tagMood�������¡�����ץ���ֿ�������һ�С���ǩ+�ظ��ֿ������Ĵ��Զ��� mood �� label ��chip ֻʣ������ץ������ǩ�����������������ظ�����Ⱦ/�־û�/�ղ���·�Կ� label ��Ȼ���ݣ�ֻ��һ������� span�����Ӿ�Ӱ�죩��
+- **��������**������ֻ�� p2-features.js һ�������������д������лỰ�Ķ���git status �ɼ������밴Э���տڹ����ύ��

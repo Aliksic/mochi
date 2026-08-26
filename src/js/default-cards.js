@@ -226,7 +226,7 @@
   // v3.15.x：功能触发字卡 tab 统一连排（JS 注入）——用户反馈按功能名找不到分类，
   // 全部功能池紧跟四大基础分类最先注入、命名与功能同名，打开页面第一眼即可见：
   // 摸鱼(fish)/吃饭(eat)/经期(period)/喝水(water)/花园(garden)/同频(sync)/
-  // 伸手(reach)/此间(cjian)/房间(room)/存钱罐(piggy)。
+  // 伸手(reach)/此间(cjian)/房间(room)/存钱罐(piggy)/漂流瓶(drift，v3.16.x 并行会话追加)。
   // 各池数据与开关联动不变：DEFAULT_CARD_DATA.<分类>（dc-off-<分类>:*），
   // 消费侧 p2-features/period/room/cjian 等经 getLibPool(分类,分组,兜底) 同源抽取；
   // 其中 此间(cjian) 为本轮新增——感知播报句与状态说明文案入库可查看。
@@ -290,6 +290,7 @@
   function ensureRendered() {
     if (renderedOnce) return;
     renderedOnce = true;
+    refreshLibCount(); // v3.16.x：兜底再刷一次入口角标（防数据晚于本文件追加时数字过期）
     renderGroupsBar2();
     render();
   }

@@ -487,7 +487,24 @@ function addInvQual(type, q) {
   data.qual[type][q] = (data.qual[type][q] || 0) + 1;
 }
 function qualMul(q) { return q === "p" ? 2 : q === "f" ? 1.5 : 1; }
-function qualLabel(q) { return q === "p" ? "\u3010\u5B8C\u7F8E\u3011" : q === "f" ? "\u3010\u4F18\u8D28\u3011" : ""; }
+function qualLabel(q) { return q === "p" ? "【完美】" : q === "f" ? "【优质】" : ""; }
+// ---- v3.15.x：收花联动心意币（与心意集市/红包同一本账）——按品质发给我：
+// 完美 ¥2 / 优质 ¥1 / 普通 ¥0.5，枯萎 ¥0.2；日封顶 ¥10 防刷。走 giftWalletChange 统一入口。
+function harvestCoinFen(q, wilted) { return wilted ? 20 : q === "p" ? 200 : q === "f" ? 100 : 50; }
+function grantHarvestCoin(q, wilted) {
+  try {
+    if (typeof window.giftWalletChange !== "function") return null;
+    var ck = "ml2_coin_garden_" + new Date().toISOString().slice(0, 10);
+    var cur = Number(s.get(ck)) || 0;
+    var cap = 1000;
+    if (cur >= cap) return null;
+    var fen = Math.min(harvestCoinFen(q, wilted), cap - cur);
+    s.set(ck, String(cur + fen));
+    window.giftWalletChange(fen, 0);
+    return fen;
+  } catch (e) { return null; }
+}
+function coinTxt(fen) { return "🪙 我的心意币 +¥" + (fen / 100).toFixed(2); }
 var HYBRIDS = [
   { a: "rose", b: "sakura", r: "flameRose" },
   { a: "rose", b: "clover", r: "blueRose" },
@@ -614,6 +631,8 @@ function harvestPlot(idx) {
   var dropped = dropRareSeed();
   fxAtPlot(idx, "fx-harvest", 1000);
   addLog("\u6211", "\u6536\u83B7\u4E86 " + name + qualLabel(q) + (wilted ? "\uFF08\u5DF2\u51CB\u8C22\uFF09" : "") + " (+" + xpg + "\u7ECF\u9A8C)" + (dropped ? " \u2728\u83B7\u5F97\u7A00\u6709\u79CD\u5B50" + T[dropped].n : ""));
+  var coinGot = grantHarvestCoin(q, wilted);
+  if (coinGot) addLog("\u6211", "\u6536\u82B1\u5956\u52B1\u5230\u8D26 " + coinTxt(coinGot));
   save(data); renderAll();
 }
 
@@ -1382,6 +1401,7 @@ function waterAll() {
 function harvestAll() {
   var cnt = 0;
   var totalXp = 0;
+  var totalCoin = 0;
   var xpb = 1 + decorBuffs().xp;
   var dropped = [];
   for (var i = 0; i < data.p.length; i++) {
@@ -1401,10 +1421,14 @@ function harvestAll() {
     var dr = dropRareSeed(); if (dr) dropped.push(dr);
     fxAtPlot(i, "fx-harvest", 1000);
     totalXp += xpg;
+    // v3.15.x：一键收获同样发收花奖励（grantHarvestCoin 内部走同一日封顶计数）
+    var cg = grantHarvestCoin(q, wilted);
+    if (cg) totalCoin += cg;
     cnt++;
   }
   if (cnt > 0) {
     addLog("\u6211", "\u4E00\u952E\u6536\u83B7 " + cnt + " \u6735\u82B1 (+" + totalXp + "\u7ECF\u9A8C)" + (dropped.length ? " \u2728\u83B7\u5F97" + dropped.length + "\u9897\u7A00\u6709\u79CD\u5B50" : ""));
+    if (totalCoin > 0) addLog("\u6211", "\u6536\u82B1\u5956\u52B1\u5230\u8D26 " + coinTxt(totalCoin));
     save(data); renderAll();
   }
 }

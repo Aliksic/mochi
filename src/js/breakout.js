@@ -486,11 +486,29 @@
     const doneLv = s.level - 1;
     const stars = (doneLv >= 4 || s.score >= 600) ? 3 : (doneLv >= 2 || s.score >= 250) ? 2 : 1;
     const rateTxt = ['热身一下', '配合不错', '默契满分'][stars - 1];
+    // v3.15.x：合作联动心意币——按 ❤ 评级双方各得（3❤=¥3/人），日内封顶 ¥5
+    var coinLineBrick = '';
+    try {
+      var COIN_CAP = 500;
+      var day = new Date().toISOString().slice(0, 10);
+      var ck = (window.activePrefix && window.activePrefix() || 'xy-home-v2') + ':ml2_coin_brick_' + day;
+      var cur = Number(localStorage.getItem(ck)) || 0;
+      if (cur < COIN_CAP) {
+        var real = Math.min(stars * 100, COIN_CAP - cur);
+        try { localStorage.setItem(ck, String(cur + real)); } catch (e2) {}
+        if (real > 0 && typeof window.giftWalletChange === 'function') {
+          if (window.giftWalletChange(real, real)) {
+            coinLineBrick = '🪙 双方心意币各 +¥' + (real / 100).toFixed(2);
+          }
+        }
+      }
+    } catch (e) {}
     const body =
       '<div class="pong-end-score">' + s.score + ' 分</div>' +
       '<div class="brick-rate">' + '❤️'.repeat(stars) + '<span>' + '🤍'.repeat(3 - stars) + '</span> · ' + rateTxt + '</div>' +
       '<div class="pong-end-stat">最高连击 ×' + s.maxCombo + ' · 清除砖块 ' + s.bricksCleared + ' 块</div>' +
-      '<div class="pong-end-stat">完成层数 ' + doneLv + ' · 历史最佳 ' + best + ' 分' + (isBest ? ' 🎉新纪录' : '') + '</div>';
+      '<div class="pong-end-stat">完成层数 ' + doneLv + ' · 历史最佳 ' + best + ' 分' + (isBest ? ' 🎉新纪录' : '') + '</div>' +
+      (coinLineBrick ? '<div class="pong-end-stat">' + coinLineBrick + '</div>' : '');
     showOverlay(T('游戏结束'), body, '再来一局');
     if (overlayCloseBtn) overlayCloseBtn.hidden = false;
     // 写聊天记录（居中小卡片）+ TA 回应（固定发送，语气随机二选一）

@@ -342,11 +342,30 @@
     else { s.d++; s.nextFirst = Math.random() < 0.5 ? 'you' : 'ta'; }   // 平局下一局随机先手
     saveStats(s);
     if (winner === 1) sfxWin(); else if (winner === 2) sfxLose(); else sfxDraw();
+    // v3.15.x：四子棋联动心意币——胜我得 ¥2 / 平 ¥1 / TA 赢 TA 得 ¥2（日内封顶 ¥4）
+    var coinLine4 = '';
+    try {
+      var COIN_CAP = 400;
+      var day4 = new Date().toISOString().slice(0, 10);
+      var ck4 = (window.activePrefix && window.activePrefix() || 'xy-home-v2') + ':ml2_coin_c4_' + day4;
+      var cur4 = Number(localStorage.getItem(ck4)) || 0;
+      if (cur4 < COIN_CAP) {
+        var real4 = Math.min(winner === 0 ? 100 : 200, COIN_CAP - cur4);
+        try { localStorage.setItem(ck4, String(cur4 + real4)); } catch (e2) {}
+        if (real4 > 0 && typeof window.giftWalletChange === 'function') {
+          var toTa4 = winner === 2;
+          if (window.giftWalletChange(toTa4 ? 0 : real4, toTa4 ? real4 : 0)) {
+            coinLine4 = '🪙 ' + (toTa4 ? T('TA') + ' 的心意币' : '我的心意币') + ' +¥' + (real4 / 100).toFixed(2);
+          }
+        }
+      }
+    } catch (e) {}
     const title = winner === 1 ? '🏆 你赢了！' : winner === 2 ? T('TA') + '赢了' : '平局';
     const body =
       '<div class="pong-end-stat">本局共 ' + st.moves + ' 手</div>' +
       '<div class="pong-end-stat">' + statsLine() + '</div>' +
-      '<div class="pong-end-stat">下一局 ' + (s.nextFirst === 'you' ? '你' : T('TA')) + '先手</div>';
+      '<div class="pong-end-stat">下一局 ' + (s.nextFirst === 'you' ? '你' : T('TA')) + '先手</div>' +
+      (coinLine4 ? '<div class="pong-end-stat">' + coinLine4 + '</div>' : '');
     showOverlay(title, body, '再来一局');
     if (startBtn) startBtn.textContent = '再来一局';
     if (endBtn) endBtn.hidden = false;
@@ -414,10 +433,11 @@
     if (sideNameEl) sideNameEl.textContent = name;
   }
   window.openC4Panel = function () {
-    setNames();
-    if (!boardEl.children.length) buildBoard();
+    // 先亮面板再做次要初始化：任何一步异常都不影响半框本身弹出
+    if (!boardEl.children.length) { try { buildBoard(); } catch (e) {} }
     panel.hidden = false;
-    fitBoard();
+    try { setNames(); } catch (e) {}
+    try { fitBoard(); } catch (e) {}
     // 有进行中的对局 → 接着玩（关面板期间轮到 TA 的补调度）
     if (st && st.started && !st.over) {
       if (st.turn === 2 && !thinkT) scheduleTaMove(THINK_MIN + Math.random() * THINK_VAR);
@@ -446,9 +466,13 @@
       // 收起其他半框（与 chat.js 各入口处理一致）
       const hideIds = ['poke-card', 'emoji-panel', 'chat-search', 'chat-divine-panel', 'chat-decision-panel', 'chat-gdecision-panel', 'chat-rps-panel', 'chat-rp-panel', 'chat-call-panel', 'chat-snake-panel'];
       hideIds.forEach((id) => { const el = document.getElementById(id); if (el) el.hidden = true; });
-      if (window.closeAvlib) window.closeAvlib();
-      if (window.closePongPanel) window.closePongPanel();
-      openC4Panel();
+      try { if (window.closeAvlib) window.closeAvlib(); } catch (err) {}
+      try { if (window.closePongPanel) window.closePongPanel(); } catch (err) {}
+      try { openC4Panel(); } catch (err) {
+        // 兜底：初始化异常也要把面板亮出来（否则表现为「点了没反应」）
+        try { panel.hidden = false; showStartOverlay(); setStatus('点击「开始对局」'); } catch (e2) {}
+        try { console.error('[c4] open failed', err); } catch (e2) {}
+      }
     });
     // 兄弟浮层互斥兜底：其他入口不知道本面板，它们打开时收起本面板
     try {

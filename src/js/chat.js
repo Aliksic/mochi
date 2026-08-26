@@ -3103,6 +3103,17 @@ const s = rpsReadScore();
 if (judge > 0) s.w++; else if (judge < 0) s.l++; else s.d++;
 rpsWriteScore(s);
 addRec({ side: 'in', special: 'rps', rpsMine: mine, rpsTa: ta, rpsResult: judge });
+// v3.15.x：猜拳联动心意币——胜我得 ¥1 / 平我得 ¥0.2 / TA 赢 TA 得 ¥1（日封顶 ¥3）
+try {
+const real = rpGameCoinGrant('rps', judge > 0 ? 100 : judge < 0 ? 100 : 20, 300);
+if (real > 0) {
+const w = rpWalletGet();
+if (judge < 0) w.systemBalance += real; else w.myBalance += real;
+rpWalletSet(w);
+const coinMsg = rpCoinTxt(real, judge < 0);
+setTimeout(() => addIn(coinMsg, { special: 'poke' }), randInt(800, 1600));
+}
+} catch (e) {}
 if (window.logFish) window.logFish();
 }, randInt(900, 1600));
 }
@@ -3236,6 +3247,19 @@ return Number(store.get(k)) || 0;
 function rpDailyIncr() {
 const k = RP_DAILY_PREFIX + new Date().toISOString().slice(0, 10);
 store.set(k, String((Number(store.get(k)) || 0) + 1));
+}
+// v3.15.x：小游戏联动心意币——按日封顶发放（fen），返回实际入账分值（0=今日已到顶）
+function rpGameCoinGrant(gameKey, fen, capFen) {
+if (!fen || fen <= 0) return 0;
+const k = 'ml2_coin_' + gameKey + '_' + new Date().toISOString().slice(0, 10);
+const cur = Number(store.get(k)) || 0;
+if (cur >= capFen) return 0;
+const real = Math.min(fen, capFen - cur);
+store.set(k, String(cur + real));
+return real;
+}
+function rpCoinTxt(real, toTa) {
+return '🪙 ' + (toTa ? chatPartnerName() + ' 的心意币' : '我的心意币') + ' +¥' + (real / 100).toFixed(2);
 }
 function genRpAmount(systemBalanceFen) {
 let amt;
@@ -4325,6 +4349,15 @@ if (morePanel) morePanel.hidden = true;
 if (window.openSnakePanel) window.openSnakePanel();
 });
 }
+// v3.15.x：补接双人钓鱼入口（按钮/面板锚点早已存在，此前无绑定是死入口）
+const moreFish = document.getElementById('more-fish');
+if (moreFish) {
+moreFish.addEventListener('click', (e) => {
+e.stopPropagation();
+if (morePanel) morePanel.hidden = true;
+if (window.openFishPanel) window.openFishPanel();
+});
+}
 var moreBrick = document.getElementById('more-brick');
 if (moreBrick) {
   moreBrick.addEventListener('click', function (e) {
@@ -4347,6 +4380,18 @@ if (moreBrick) {
 window.sendSnakeResult = function (d) {
 if (!d) return;
 addRec({ side: 'in', special: 'snake', snkResult: d.result, snkPLen: d.pLen, snkOLen: d.oLen, snkPFood: d.pFood, snkOFood: d.oFood, snkPScore: d.pScore, snkOScore: d.oScore, snkTime: d.time });
+// v3.15.x：贪吃蛇联动心意币——胜我得 ¥2 / 平 ¥1 / TA 赢 TA 得 ¥2（日封顶 ¥6）
+try {
+const real = rpGameCoinGrant('snake', d.result === 'draw' ? 100 : 200, 600);
+if (real > 0) {
+const w = rpWalletGet();
+const toTa = d.result === 'lose';
+if (toTa) w.systemBalance += real; else w.myBalance += real;
+rpWalletSet(w);
+const coinMsg = rpCoinTxt(real, toTa);
+setTimeout(() => addIn(coinMsg, { special: 'poke' }), randInt(800, 1600));
+}
+} catch (e) {}
 if (window.logFish) window.logFish();
 showTyping();
 setTimeout(() => {

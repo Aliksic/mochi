@@ -41,7 +41,9 @@
 .memo-send-btn { font-size:12px; color:var(--ink-soft,#888); background:rgba(255,255,255,.7); border:1px solid rgba(0,0,0,.12); border-radius:16px; padding:6px 16px; cursor:pointer; font-family:inherit; -webkit-tap-highlight-color:transparent; }
 .memo-send-btn:active { background:rgba(0,0,0,.06); }
 /* ---- 首页「今日备忘」卡片内的备忘录联动状态行 ---- */
-.memo-app-badge { margin-top:8px; font-size:11px; color:var(--ink-soft,#888); background:rgba(0,0,0,.045); border-radius:8px; padding:5px 8px; display:flex; align-items:center; justify-content:space-between; gap:6px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+/* v3.15.x：桌面「今日备忘」卡内的备忘录状态行压缩（mt 8→4、字号 11→10、padding 5→2）——
+   配合 .memo-card padding 收窄，整卡高度对齐三页统一 band（~77px，与本周日常卡同档） */
+.memo-app-badge { margin-top:4px; font-size:10px; line-height:1.2; color:var(--ink-soft,#888); background:rgba(0,0,0,.045); border-radius:8px; padding:2px 8px; display:flex; align-items:center; justify-content:space-between; gap:6px; cursor:pointer; -webkit-tap-highlight-color:transparent; white-space:nowrap; overflow:hidden; }
 .memo-app-badge::after { content:'›'; font-size:12px; color:var(--ink-soft,#bbb); }
 .memo-app-badge.urgent { color:#e05a5a; background:rgba(224,90,90,.08); }
 .memo-app-badge.urgent::after { color:#e05a5a; }

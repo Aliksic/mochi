@@ -845,10 +845,12 @@ background:#111; color:#fff; cursor:pointer; font-family:inherit; flex-shrink:0;
 .desk-anniv .da-label { font-size:11px; color:var(--muted,#888); }
 .desk-anniv .da-days { font-size:26px; font-weight:700; color:var(--ink,#111); margin:2px 0; }
 .desk-anniv .da-name { font-size:12px; color:var(--muted,#666); }
-.desk-period { padding:18px 18px; text-align:center; cursor:pointer; white-space:nowrap;
+.desk-period { padding:18px; text-align:center; cursor:pointer; white-space:nowrap;
+display:flex; flex-direction:column; align-items:center; justify-content:center;
+min-height:190px;
 margin:0 0 14px; }
 .desk-period .dpd-label { font-size:13px; color:#e85a8f; }
-.desk-period .dpd-days { font-size:34px; font-weight:700; color:#e85a8f; margin:4px 0; line-height:1.1; }
+.desk-period .dpd-days { font-size:50px; font-weight:700; color:#e85a8f; margin:10px 0; line-height:1.1; }
 .desk-period .dpd-sub { font-size:13px; color:var(--muted,#666); }
 .desk-image-widget {
 position:relative; margin:14px 0; border-radius:var(--desk-card-radius,20px);
@@ -999,6 +1001,7 @@ color:var(--ink); display:flex; align-items:center; justify-content:center;
 #mw-bar { cursor:pointer; }
 .memo-card, .mood-card { cursor:pointer; }
 .memo-card .mc-b, .mood-card .mc-b { font-size:12px; }
+.memo-card { padding:10px 14px; }
 .week-card { border-radius:20px; padding:8px 14px; margin-bottom:14px; }
 .week-days { display:flex; gap:6px; margin-top:5px; }
 .week-day {
@@ -6718,7 +6721,7 @@ color: #c67800;
 .memo-manage { text-align:center; margin-top:14px; }
 .memo-send-btn { font-size:12px; color:var(--ink-soft,#888); background:rgba(255,255,255,.7); border:1px solid rgba(0,0,0,.12); border-radius:16px; padding:6px 16px; cursor:pointer; font-family:inherit; -webkit-tap-highlight-color:transparent; }
 .memo-send-btn:active { background:rgba(0,0,0,.06); }
-.memo-app-badge { margin-top:8px; font-size:11px; color:var(--ink-soft,#888); background:rgba(0,0,0,.045); border-radius:8px; padding:5px 8px; display:flex; align-items:center; justify-content:space-between; gap:6px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+.memo-app-badge { margin-top:4px; font-size:10px; line-height:1.2; color:var(--ink-soft,#888); background:rgba(0,0,0,.045); border-radius:8px; padding:2px 8px; display:flex; align-items:center; justify-content:space-between; gap:6px; cursor:pointer; -webkit-tap-highlight-color:transparent; white-space:nowrap; overflow:hidden; }
 .memo-app-badge::after { content:'›'; font-size:12px; color:var(--ink-soft,#bbb); }
 .memo-app-badge.urgent { color:#e05a5a; background:rgba(224,90,90,.08); }
 .memo-app-badge.urgent::after { color:#e05a5a; }
@@ -7352,7 +7355,7 @@ transition-duration: .01ms !important;
       </div>
       <div class="splash-dots"><i></i><i></i><i></i></div>
       <div class="splash-brand">小红书@言序（1842523578）</div>
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787736891715">Mochi 字卡传讯 v3.6.242 · 部署于 2026-08-26 17:34</div>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787738521544">Mochi 字卡传讯 v3.6.243 · 部署于 2026-08-26 18:02</div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
       <div class="splash-loading" id="splash-loading">正在加载数据…</div>
@@ -8405,7 +8408,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.6.242</div>
+      <div class="ver">Mochi 字卡传讯 v3.6.243</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -8547,7 +8550,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.6.242</span>
+              <span class="lic-ver">v3.6.243</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -10939,6 +10942,20 @@ transition-duration: .01ms !important;
       <div class="narc-scroll" id="narc-root"></div>
     </div>
 
+    <!-- 我的档案：认识自己——「我是谁，以及我希望怎样被理解」（桌面第三页，与梦角档案互为镜像） -->
+    <div class="page" id="page-my-arc" hidden>
+      <div class="chat-head">
+        <span class="ch-back" id="myarc-back">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        </span>
+        <span class="ch-name" id="myarc-title">我的档案</span>
+        <span class="ch-settings" id="myarc-ta" title="去TA的档案">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9.5" cy="8" r="3"/><path d="M4 19c.6-3.2 2.8-4.8 5.5-4.8S14.4 15.8 15 19"/><path d="M16.5 6.5h5M16.5 10h5M18.5 14h3"/></svg>
+        </span>
+      </div>
+      <div class="narc-scroll" id="myarc-root"></div>
+    </div>
+
     <!-- 群聊页（桌面点「群聊」进入；所有桌面成员在一个窗口里聊天） -->
     <div class="page" id="page-group-chat" hidden>
       <div class="chat-head gc-head">
@@ -11773,6 +11790,7 @@ if (EXCLUDE.indexOf(r) >= 0) return true;
 if (r.indexOf('reply-gc-') === 0) return true;
 if (r.indexOf('music-file:') === 0) return true;
 if (r.indexOf('narc-') === 0) return true;
+if (r.indexOf('myarc') === 0) return true;
 const m = r.match(/^([^:]+):/);
 if (m) {
 const head = m[1];
@@ -12270,7 +12288,7 @@ pages.forEach(p => p.hidden = true);
 document.getElementById(tab.dataset.page).hidden = false;
 });
 });
-const FULL_PAGES = ['page-chat', 'page-group-chat', 'page-chat-settings', 'page-custom-cards', 'page-default-cards', 'page-mood-cards', 'page-reply-cards', 'page-theme', 'page-fav', 'page-fav-settings', 'page-memory', 'page-calendar', 'page-period', 'page-accounting', 'page-garden', 'page-divine', 'page-music', 'page-stats', 'page-interact', 'page-checkin', 'page-ta-ask', 'page-ta-choose', 'page-ta-curious', 'page-ta-roast', 'page-ta-checkin', 'page-ta-invite', 'page-checkin-cards', 'page-quote-cards', 'page-home', 'page-mail', 'page-mail-write', 'page-mail-reply', 'page-feed', 'page-feed-all', 'page-feed-friends', 'page-license', 'page-about', 'page-reply-settings', 'page-call-settings', 'page-sfx-settings', 'page-memo-arc', 'page-cjian', 'page-room', 'page-drift'];
+const FULL_PAGES = ['page-chat', 'page-group-chat', 'page-chat-settings', 'page-custom-cards', 'page-default-cards', 'page-mood-cards', 'page-reply-cards', 'page-theme', 'page-fav', 'page-fav-settings', 'page-memory', 'page-calendar', 'page-period', 'page-accounting', 'page-garden', 'page-divine', 'page-music', 'page-stats', 'page-interact', 'page-checkin', 'page-ta-ask', 'page-ta-choose', 'page-ta-curious', 'page-ta-roast', 'page-ta-checkin', 'page-ta-invite', 'page-checkin-cards', 'page-quote-cards', 'page-home', 'page-mail', 'page-mail-write', 'page-mail-reply', 'page-feed', 'page-feed-all', 'page-feed-friends', 'page-license', 'page-about', 'page-reply-settings', 'page-call-settings', 'page-sfx-settings', 'page-memo-arc', 'page-cjian', 'page-room', 'page-drift', 'page-my-arc'];
 function syncChrome() {
 const phone = document.querySelector('.phone');
 const tabbar = document.querySelector('.tabbar');
@@ -19798,6 +19816,16 @@ const s = rpsReadScore();
 if (judge > 0) s.w++; else if (judge < 0) s.l++; else s.d++;
 rpsWriteScore(s);
 addRec({ side: 'in', special: 'rps', rpsMine: mine, rpsTa: ta, rpsResult: judge });
+try {
+const real = rpGameCoinGrant('rps', judge > 0 ? 100 : judge < 0 ? 100 : 20, 300);
+if (real > 0) {
+const w = rpWalletGet();
+if (judge < 0) w.systemBalance += real; else w.myBalance += real;
+rpWalletSet(w);
+const coinMsg = rpCoinTxt(real, judge < 0);
+setTimeout(() => addIn(coinMsg, { special: 'poke' }), randInt(800, 1600));
+}
+} catch (e) {}
 if (window.logFish) window.logFish();
 }, randInt(900, 1600));
 }
@@ -19929,6 +19957,18 @@ return Number(store.get(k)) || 0;
 function rpDailyIncr() {
 const k = RP_DAILY_PREFIX + new Date().toISOString().slice(0, 10);
 store.set(k, String((Number(store.get(k)) || 0) + 1));
+}
+function rpGameCoinGrant(gameKey, fen, capFen) {
+if (!fen || fen <= 0) return 0;
+const k = 'ml2_coin_' + gameKey + '_' + new Date().toISOString().slice(0, 10);
+const cur = Number(store.get(k)) || 0;
+if (cur >= capFen) return 0;
+const real = Math.min(fen, capFen - cur);
+store.set(k, String(cur + real));
+return real;
+}
+function rpCoinTxt(real, toTa) {
+return '🪙 ' + (toTa ? chatPartnerName() + ' 的心意币' : '我的心意币') + ' +¥' + (real / 100).toFixed(2);
 }
 function genRpAmount(systemBalanceFen) {
 let amt;
@@ -21016,6 +21056,14 @@ if (morePanel) morePanel.hidden = true;
 if (window.openSnakePanel) window.openSnakePanel();
 });
 }
+const moreFish = document.getElementById('more-fish');
+if (moreFish) {
+moreFish.addEventListener('click', (e) => {
+e.stopPropagation();
+if (morePanel) morePanel.hidden = true;
+if (window.openFishPanel) window.openFishPanel();
+});
+}
 var moreBrick = document.getElementById('more-brick');
 if (moreBrick) {
 moreBrick.addEventListener('click', function (e) {
@@ -21038,6 +21086,17 @@ if (window.openBrickPanel) window.openBrickPanel();
 window.sendSnakeResult = function (d) {
 if (!d) return;
 addRec({ side: 'in', special: 'snake', snkResult: d.result, snkPLen: d.pLen, snkOLen: d.oLen, snkPFood: d.pFood, snkOFood: d.oFood, snkPScore: d.pScore, snkOScore: d.oScore, snkTime: d.time });
+try {
+const real = rpGameCoinGrant('snake', d.result === 'draw' ? 100 : 200, 600);
+if (real > 0) {
+const w = rpWalletGet();
+const toTa = d.result === 'lose';
+if (toTa) w.systemBalance += real; else w.myBalance += real;
+rpWalletSet(w);
+const coinMsg = rpCoinTxt(real, toTa);
+setTimeout(() => addIn(coinMsg, { special: 'poke' }), randInt(800, 1600));
+}
+} catch (e) {}
 if (window.logFish) window.logFish();
 showTyping();
 setTimeout(() => {
@@ -27919,6 +27978,7 @@ let renderedOnce = false;
 function ensureRendered() {
 if (renderedOnce) return;
 renderedOnce = true;
+refreshLibCount(); // v3.16.x：兜底再刷一次入口角标（防数据晚于本文件追加时数字过期）
 renderGroupsBar2();
 render();
 }
@@ -43601,7 +43661,7 @@ return a;
 const tpApp = makeApp('tongpin', '同频', '<svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h3l2-6 4 14 3-9 2 5h6"/></svg>');
 const ssApp = makeApp('shenshou', '伸手', '<svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 11V5.5a1.5 1.5 0 013 0V11"/><path d="M10 11V4a1.5 1.5 0 013 0v7"/><path d="M13 11V5.5a1.5 1.5 0 013 0V11"/><path d="M16 11V7a1.5 1.5 0 013 0v6c0 4-2 7-6 7s-6-2-6-6v-3z"/></svg>');
 const waterApp = makeApp('water', '喝水', '<svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5C8 7 5.5 11 5.5 14.5a6.5 6.5 0 0013 0C18.5 11 16 7 12 2.5z"/></svg>');
-const eatApp = makeApp('eat', '吃什么', '<svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v8a3 3 0 003 3v7"/><path d="M8 3v8"/><path d="M17 3c-1.5 0-2.5 2-2.5 5s1 5 2.5 5v8"/></svg>');
+const eatApp = makeApp('eat', '吃什么', '<svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5h16"/><path d="M4 12.5c0 4.1 3.4 7 8 7s8-2.9 8-7"/><path d="M13 13.4L20.7 3.6"/><path d="M17 13.4l4.3-5.4"/></svg>');
 const piggyApp = makeApp('piggy', '存钱罐', '<svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7h6"/><path d="M5 13.5C5 10.4 8.1 8 12 8s7 2.4 7 5.5c0 1.6-.9 3.1-2.3 4.1V20h-2.4l-.4-1.2a9.3 9.3 0 01-3.8 0L9.7 20H7.3v-2.4C5.9 16.6 5 15.1 5 13.5z"/><circle cx="9.3" cy="12.7" r=".55" fill="#111111" stroke="none"/><path d="M18.8 12.3l1.7-.9"/></svg>');
 const pomoApp = makeApp('pomo', '番茄钟', '<svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13.8" r="7.2"/><path d="M12 6.6V4.6"/><path d="M12 6.6C10.6 5.4 9 5.3 7.8 6.1"/><path d="M12 6.6c1.4-1.2 3-1.3 4.2-.5"/></svg>');
 const pagesBox = document.getElementById('desktop-pages');
@@ -45262,6 +45322,13 @@ const el = document.getElementById(id);
 if (el) el.textContent = walletText();
 });
 }
+window.giftWalletChange = function (dMy, dTa) {
+const w = walletGet();
+if (dMy) w.myBalance += dMy;
+if (dTa) w.systemBalance += dTa;
+walletSet(w); renderGiftBalances();
+return { myBalance: w.myBalance, systemBalance: w.systemBalance };
+};
 function giftEditWallet() {
 if (!window.openModal) return;
 var pn = partnerName();
@@ -50428,7 +50495,22 @@ if (!data.qual[type]) data.qual[type] = { n: 0, f: 0, p: 0 };
 data.qual[type][q] = (data.qual[type][q] || 0) + 1;
 }
 function qualMul(q) { return q === "p" ? 2 : q === "f" ? 1.5 : 1; }
-function qualLabel(q) { return q === "p" ? "\u3010\u5B8C\u7F8E\u3011" : q === "f" ? "\u3010\u4F18\u8D28\u3011" : ""; }
+function qualLabel(q) { return q === "p" ? "【完美】" : q === "f" ? "【优质】" : ""; }
+function harvestCoinFen(q, wilted) { return wilted ? 20 : q === "p" ? 200 : q === "f" ? 100 : 50; }
+function grantHarvestCoin(q, wilted) {
+try {
+if (typeof window.giftWalletChange !== "function") return null;
+var ck = "ml2_coin_garden_" + new Date().toISOString().slice(0, 10);
+var cur = Number(s.get(ck)) || 0;
+var cap = 1000;
+if (cur >= cap) return null;
+var fen = Math.min(harvestCoinFen(q, wilted), cap - cur);
+s.set(ck, String(cur + fen));
+window.giftWalletChange(fen, 0);
+return fen;
+} catch (e) { return null; }
+}
+function coinTxt(fen) { return "🪙 我的心意币 +¥" + (fen / 100).toFixed(2); }
 var HYBRIDS = [
 { a: "rose", b: "sakura", r: "flameRose" },
 { a: "rose", b: "clover", r: "blueRose" },
@@ -50552,6 +50634,8 @@ updDaily("h");
 var dropped = dropRareSeed();
 fxAtPlot(idx, "fx-harvest", 1000);
 addLog("\u6211", "\u6536\u83B7\u4E86 " + name + qualLabel(q) + (wilted ? "\uFF08\u5DF2\u51CB\u8C22\uFF09" : "") + " (+" + xpg + "\u7ECF\u9A8C)" + (dropped ? " \u2728\u83B7\u5F97\u7A00\u6709\u79CD\u5B50" + T[dropped].n : ""));
+var coinGot = grantHarvestCoin(q, wilted);
+if (coinGot) addLog("\u6211", "\u6536\u82B1\u5956\u52B1\u5230\u8D26 " + coinTxt(coinGot));
 save(data); renderAll();
 }
 function partnerAct(silent, used) {
@@ -51304,6 +51388,7 @@ save(data); renderAll();
 function harvestAll() {
 var cnt = 0;
 var totalXp = 0;
+var totalCoin = 0;
 var xpb = 1 + decorBuffs().xp;
 var dropped = [];
 for (var i = 0; i < data.p.length; i++) {
@@ -51323,10 +51408,13 @@ updDex(plot.type, "h"); updSt("h", true); updDaily("h");
 var dr = dropRareSeed(); if (dr) dropped.push(dr);
 fxAtPlot(i, "fx-harvest", 1000);
 totalXp += xpg;
+var cg = grantHarvestCoin(q, wilted);
+if (cg) totalCoin += cg;
 cnt++;
 }
 if (cnt > 0) {
 addLog("\u6211", "\u4E00\u952E\u6536\u83B7 " + cnt + " \u6735\u82B1 (+" + totalXp + "\u7ECF\u9A8C)" + (dropped.length ? " \u2728\u83B7\u5F97" + dropped.length + "\u9897\u7A00\u6709\u79CD\u5B50" : ""));
+if (totalCoin > 0) addLog("\u6211", "\u6536\u82B1\u5956\u52B1\u5230\u8D26 " + coinTxt(totalCoin));
 save(data); renderAll();
 }
 }
@@ -53862,12 +53950,30 @@ stats.total++;
 localStorage.setItem(statsKey, JSON.stringify(stats));
 } catch (e) {}
 const fit = window.taFit ? window.taFit : function (x) { return x; };
+var coinLine = '';
+try {
+var COIN_CAP = 400;
+var day = new Date().toISOString().slice(0, 10);
+var ck = (window.activePrefix && window.activePrefix() || 'xy-home-v2') + ':ml2_coin_pong_' + day;
+var cur = Number(localStorage.getItem(ck)) || 0;
+if (cur < COIN_CAP) {
+var real = Math.min(draw ? 100 : 200, COIN_CAP - cur);
+try { localStorage.setItem(ck, String(cur + real)); } catch (e2) {}
+if (real > 0 && typeof window.giftWalletChange === 'function') {
+var toTa = !draw && !playerWin;
+if (window.giftWalletChange(toTa ? 0 : real, toTa ? real : 0)) {
+coinLine = '🪙 ' + (toTa ? fit('TA') + ' 的心意币' : '我的心意币') + ' +¥' + (real / 100).toFixed(2);
+}
+}
+}
+} catch (e) {}
 const title = draw ? '平局' : (playerWin ? '🏆 你赢了' : fit('TA 赢了'));
 const body =
 '<div class="pong-end-score">' + fit('TA') + ' ' + s.opponentScore + ' : ' + s.playerScore + ' 你</div>' +
 '<div class="pong-end-stat">总回合 ' + s.totalRounds + ' · 用时 ' + fmt(sec) + '</div>' +
 '<div class="pong-end-stat">你的最高连得 ' + s.maxPlayerStreak + ' · ' + fit('TA') + ' 最高连得 ' + s.maxOpponentStreak + '</div>' +
-'<div class="pong-end-stat">累计 ' + stats.win + '胜 ' + stats.lose + '负 ' + stats.draw + '平 · 历史最高连得 ' + stats.maxStreak + '</div>';
+'<div class="pong-end-stat">累计 ' + stats.win + '胜 ' + stats.lose + '负 ' + stats.draw + '平 · 历史最高连得 ' + stats.maxStreak + '</div>' +
+(coinLine ? '<div class="pong-end-stat">' + coinLine + '</div>' : '');
 showOverlay(title, body, '再玩一次');
 try {
 if (window.chatAddSystem) {
@@ -55544,11 +55650,28 @@ if (isBest) { best = s.score; try { localStorage.setItem(bestKey(), String(best)
 const doneLv = s.level - 1;
 const stars = (doneLv >= 4 || s.score >= 600) ? 3 : (doneLv >= 2 || s.score >= 250) ? 2 : 1;
 const rateTxt = ['热身一下', '配合不错', '默契满分'][stars - 1];
+var coinLineBrick = '';
+try {
+var COIN_CAP = 500;
+var day = new Date().toISOString().slice(0, 10);
+var ck = (window.activePrefix && window.activePrefix() || 'xy-home-v2') + ':ml2_coin_brick_' + day;
+var cur = Number(localStorage.getItem(ck)) || 0;
+if (cur < COIN_CAP) {
+var real = Math.min(stars * 100, COIN_CAP - cur);
+try { localStorage.setItem(ck, String(cur + real)); } catch (e2) {}
+if (real > 0 && typeof window.giftWalletChange === 'function') {
+if (window.giftWalletChange(real, real)) {
+coinLineBrick = '🪙 双方心意币各 +¥' + (real / 100).toFixed(2);
+}
+}
+}
+} catch (e) {}
 const body =
 '<div class="pong-end-score">' + s.score + ' 分</div>' +
 '<div class="brick-rate">' + '❤️'.repeat(stars) + '<span>' + '🤍'.repeat(3 - stars) + '</span> · ' + rateTxt + '</div>' +
 '<div class="pong-end-stat">最高连击 ×' + s.maxCombo + ' · 清除砖块 ' + s.bricksCleared + ' 块</div>' +
-'<div class="pong-end-stat">完成层数 ' + doneLv + ' · 历史最佳 ' + best + ' 分' + (isBest ? ' 🎉新纪录' : '') + '</div>';
+'<div class="pong-end-stat">完成层数 ' + doneLv + ' · 历史最佳 ' + best + ' 分' + (isBest ? ' 🎉新纪录' : '') + '</div>' +
+(coinLineBrick ? '<div class="pong-end-stat">' + coinLineBrick + '</div>' : '');
 showOverlay(T('游戏结束'), body, '再来一局');
 if (overlayCloseBtn) overlayCloseBtn.hidden = false;
 try {
@@ -56349,11 +56472,29 @@ else if (winner === 2) { s.l++; s.nextFirst = 'you'; }
 else { s.d++; s.nextFirst = Math.random() < 0.5 ? 'you' : 'ta'; }   // 平局下一局随机先手
 saveStats(s);
 if (winner === 1) sfxWin(); else if (winner === 2) sfxLose(); else sfxDraw();
+var coinLine4 = '';
+try {
+var COIN_CAP = 400;
+var day4 = new Date().toISOString().slice(0, 10);
+var ck4 = (window.activePrefix && window.activePrefix() || 'xy-home-v2') + ':ml2_coin_c4_' + day4;
+var cur4 = Number(localStorage.getItem(ck4)) || 0;
+if (cur4 < COIN_CAP) {
+var real4 = Math.min(winner === 0 ? 100 : 200, COIN_CAP - cur4);
+try { localStorage.setItem(ck4, String(cur4 + real4)); } catch (e2) {}
+if (real4 > 0 && typeof window.giftWalletChange === 'function') {
+var toTa4 = winner === 2;
+if (window.giftWalletChange(toTa4 ? 0 : real4, toTa4 ? real4 : 0)) {
+coinLine4 = '🪙 ' + (toTa4 ? T('TA') + ' 的心意币' : '我的心意币') + ' +¥' + (real4 / 100).toFixed(2);
+}
+}
+}
+} catch (e) {}
 const title = winner === 1 ? '🏆 你赢了！' : winner === 2 ? T('TA') + '赢了' : '平局';
 const body =
 '<div class="pong-end-stat">本局共 ' + st.moves + ' 手</div>' +
 '<div class="pong-end-stat">' + statsLine() + '</div>' +
-'<div class="pong-end-stat">下一局 ' + (s.nextFirst === 'you' ? '你' : T('TA')) + '先手</div>';
+'<div class="pong-end-stat">下一局 ' + (s.nextFirst === 'you' ? '你' : T('TA')) + '先手</div>' +
+(coinLine4 ? '<div class="pong-end-stat">' + coinLine4 + '</div>' : '');
 showOverlay(title, body, '再来一局');
 if (startBtn) startBtn.textContent = '再来一局';
 if (endBtn) endBtn.hidden = false;
@@ -56413,10 +56554,10 @@ if (partnerNameEl) partnerNameEl.textContent = name;
 if (sideNameEl) sideNameEl.textContent = name;
 }
 window.openC4Panel = function () {
-setNames();
-if (!boardEl.children.length) buildBoard();
+if (!boardEl.children.length) { try { buildBoard(); } catch (e) {} }
 panel.hidden = false;
-fitBoard();
+try { setNames(); } catch (e) {}
+try { fitBoard(); } catch (e) {}
 if (st && st.started && !st.over) {
 if (st.turn === 2 && !thinkT) scheduleTaMove(THINK_MIN + Math.random() * THINK_VAR);
 else if (st.turn === 1) showTurnStatus();
@@ -56441,9 +56582,12 @@ const mp = document.getElementById('chat-more-panel');
 if (mp) mp.hidden = true;
 const hideIds = ['poke-card', 'emoji-panel', 'chat-search', 'chat-divine-panel', 'chat-decision-panel', 'chat-gdecision-panel', 'chat-rps-panel', 'chat-rp-panel', 'chat-call-panel', 'chat-snake-panel'];
 hideIds.forEach((id) => { const el = document.getElementById(id); if (el) el.hidden = true; });
-if (window.closeAvlib) window.closeAvlib();
-if (window.closePongPanel) window.closePongPanel();
-openC4Panel();
+try { if (window.closeAvlib) window.closeAvlib(); } catch (err) {}
+try { if (window.closePongPanel) window.closePongPanel(); } catch (err) {}
+try { openC4Panel(); } catch (err) {
+try { panel.hidden = false; showStartOverlay(); setStatus('点击「开始对局」'); } catch (e2) {}
+try { console.error('[c4] open failed', err); } catch (e2) {}
+}
 });
 try {
 if (window.MutationObserver) {
@@ -56585,9 +56729,12 @@ function loadTogether() { const t = readJSON(togetherKey(), null); if (t && t.da
 function saveTogether(t) { writeJSON(togetherKey(), t); }
 function walletGet() {
 const s = store();
-if (!s) return { myBalance: 0, systemBalance: 0 };
-try { const w = JSON.parse(s.get('gift-wallet') || ''); if (typeof w.myBalance === 'number') return w; } catch (e) {}
-return { myBalance: 0, systemBalance: 0 };
+if (!s) return { myBalance: 99999999, systemBalance: 99999999 };
+try { const w = JSON.parse(s.get('gift-wallet') || ''); if (typeof w.myBalance === 'number' && typeof w.systemBalance === 'number') return w; } catch (e) {}
+let seed = { myBalance: 99999999, systemBalance: 99999999 };
+try { const o = JSON.parse(s.get('rp-wallet') || ''); if (typeof o.myBalance === 'number' && typeof o.systemBalance === 'number') seed = { myBalance: o.myBalance, systemBalance: o.systemBalance }; } catch (e) {}
+s.set('gift-wallet', JSON.stringify(seed));
+return seed;
 }
 function walletSet(w) { const s = store(); if (s) s.set('gift-wallet', JSON.stringify(w)); }
 const partnerNameEl = document.getElementById('fish-partner-name');

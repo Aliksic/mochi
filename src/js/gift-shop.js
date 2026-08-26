@@ -41,6 +41,15 @@
       if (el) el.textContent = walletText();
     });
   }
+  // v3.15.x：小游戏/花园等联动发放心意币的统一入口——dMy/dTa 为变动分值（可正可负），
+  // 累加进共用账本 gift-wallet（自动沿用旧键迁移种子）；返回更新后余额，供调用方拼提示
+  window.giftWalletChange = function (dMy, dTa) {
+    const w = walletGet();
+    if (dMy) w.myBalance += dMy;
+    if (dTa) w.systemBalance += dTa;
+    walletSet(w); renderGiftBalances();
+    return { myBalance: w.myBalance, systemBalance: w.systemBalance };
+  };
   // 心意币申请（向 Mochi 打款入账，非直接改数值）：点余额行出单个多阶段弹窗——
   // 胶囊选收款方「我的 / TA」，输入申请金额确定后模拟 Mochi 打款累加进账；
   // 弹窗不关（ctl.stay）自动切到另一侧继续申请；留空点【完成】/取消随时结束。
