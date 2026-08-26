@@ -1296,6 +1296,14 @@ appendMsg(m);
 maybeScrollChatBottom(rec.side);
 return m;
 }
+// v3.15.x：TA 向 Mochi 申请心意币的回执卡（金额与红包同款随机分布）
+if (rec.special === 'askcoin') {
+m.className = 'msg-center';
+m.innerHTML = '<div class="msg-center-card">🪙 ' + escTxt(chatPartnerName()) + ' 向 Mochi 申请了心意币 ¥' + (Number(rec.askFen || 0) / 100).toFixed(2) + '</div>';
+appendMsg(m);
+maybeScrollChatBottom(rec.side);
+return m;
+}
 if (rec.special === 'flower') {
 m.className = 'msg-flower';
 const sideTxt = rec.side === 'out' ? '我' : chatPartnerName();
@@ -1881,7 +1889,7 @@ opts = opts || {};
   // v3.15.x：opts.tagNoDup = 只留来源 chip，不把正文重复写进 mood label（摸鱼抓包回应用：
   // 正文本身就是一张完整字卡，label 再渲染一遍会上下两行内容重复）
   const _tagMood = opts.tag ? [{ tag: String(opts.tag), label: opts.tagNoDup ? '' : String(text) }] : null;
-return addRec({ side: 'in', text: text, initiative: opts.initiative, special: opts.special, quote: opts.quote, qidx: opts.qidx, type: opts.type, img: opts.img, parts: opts.parts, mailNotice: opts.mailNotice, askQuestion: opts.askQuestion, askStatus: opts.askStatus, askOptions: opts.askOptions, askType: opts.askType, choiceQuestion: opts.choiceQuestion, choiceOptions: opts.choiceOptions, choicePref: opts.choicePref, choiceCat: opts.choiceCat, choiceStatus: opts.choiceStatus, choiceAnswer: opts.choiceAnswer, choiceReply: opts.choiceReply, choiceMatch: opts.choiceMatch, curiousQuestion: opts.curiousQuestion, curiousQuick: opts.curiousQuick, curiousReplies: opts.curiousReplies, curiousFollowup: opts.curiousFollowup, curiousQid: opts.curiousQid, curiousCat: opts.curiousCat, curiousStatus: opts.curiousStatus, curiousAnswer: opts.curiousAnswer, curiousReply: opts.curiousReply, roastText: opts.roastText, roastCat: opts.roastCat, roastStatus: opts.roastStatus, roastAnswer: opts.roastAnswer, roastReply: opts.roastReply, rpAmount: opts.rpAmount, rpWish: opts.rpWish, rpStatus: opts.rpStatus, rpTs: opts.rpTs, rpCover: opts.rpCover, mood: opts.mood || _tagMood || undefined });
+return addRec({ side: 'in', text: text, initiative: opts.initiative, special: opts.special, quote: opts.quote, qidx: opts.qidx, type: opts.type, img: opts.img, parts: opts.parts, mailNotice: opts.mailNotice, askQuestion: opts.askQuestion, askStatus: opts.askStatus, askOptions: opts.askOptions, askType: opts.askType, choiceQuestion: opts.choiceQuestion, choiceOptions: opts.choiceOptions, choicePref: opts.choicePref, choiceCat: opts.choiceCat, choiceStatus: opts.choiceStatus, choiceAnswer: opts.choiceAnswer, choiceReply: opts.choiceReply, choiceMatch: opts.choiceMatch, curiousQuestion: opts.curiousQuestion, curiousQuick: opts.curiousQuick, curiousReplies: opts.curiousReplies, curiousFollowup: opts.curiousFollowup, curiousQid: opts.curiousQid, curiousCat: opts.curiousCat, curiousStatus: opts.curiousStatus, curiousAnswer: opts.curiousAnswer, curiousReply: opts.curiousReply, roastText: opts.roastText, roastCat: opts.roastCat, roastStatus: opts.roastStatus, roastAnswer: opts.roastAnswer, roastReply: opts.roastReply, rpAmount: opts.rpAmount, rpWish: opts.rpWish, rpStatus: opts.rpStatus, rpTs: opts.rpTs, rpCover: opts.rpCover, askFen: opts.askFen, askTs: opts.askTs, mood: opts.mood || _tagMood || undefined });
 }
 function addOut(text) {
 return addRec({ side: 'out', text: text });
@@ -2279,7 +2287,7 @@ setTimeout(() => { if (!sameCid()) return; hideTyping(); replyOnce(c, null); }, 
 }, 900);
 }
 setTimeout(() => { if (!sameCid()) return; if (window.callMaybeTrigger) window.callMaybeTrigger(); }, 3500);
-setTimeout(() => { if (!sameCid()) return; trySystemAutoSend(); tryCollectPending(); if (window.maybeAutoGift) window.maybeAutoGift(); }, 2500);
+setTimeout(() => { if (!sameCid()) return; trySystemAutoSend(); trySystemAskMochi(); tryCollectPending(); if (window.maybeAutoGift) window.maybeAutoGift(); }, 2500);
 }
 window.continueChat = function () {
 const myCid = window.__activeCid || 'default';
@@ -2543,7 +2551,7 @@ if (i < count - 1) showTyping();
 }, i * randInt(900, 2600));
 }
 setTimeout(() => { if (window.callMaybeTrigger) window.callMaybeTrigger(); }, count * 2600 + 3500);
-setTimeout(() => { trySystemAutoSend(); tryCollectPending(); if (window.maybeAutoGift) window.maybeAutoGift(); }, count * 2600 + 2500);
+setTimeout(() => { trySystemAutoSend(); trySystemAskMochi(); tryCollectPending(); if (window.maybeAutoGift) window.maybeAutoGift(); }, count * 2600 + 2500);
 } catch (e) {
 try {
 const errArr = (window.__jsErrors = window.__jsErrors || []);
@@ -3328,6 +3336,39 @@ addIn('', { special: 'redpacket', rpAmount: amt, rpWish: wish, rpStatus: 'pendin
 if (window.logFish) window.logFish();
 }, randInt(800, 2000));
 }
+const ASK_DAILY_PREFIX = 'ml2_ask_daily_';
+function askDailyCount() {
+const k = ASK_DAILY_PREFIX + new Date().toISOString().slice(0, 10);
+return Number(store.get(k)) || 0;
+}
+function askDailyIncr() {
+const k = ASK_DAILY_PREFIX + new Date().toISOString().slice(0, 10);
+store.set(k, String((Number(store.get(k)) || 0) + 1));
+}
+// v3.15.x：TA 也会随机「向 Mochi 申请」心意币——金额与红包同款随机分布（genRpAmount），
+// 概率门同自动红包（平时 4% / 七夕 8%），日上限 2 次；入 TA 的 systemBalance，聊天留 askcoin 卡片
+function trySystemAskMochi() {
+if (askDailyCount() >= 2) return;
+const qixi = isQixiToday();
+const baseRate = qixi ? 0.08 : 0.04;
+if (Math.random() >= baseRate) return;
+const amtFen = genRpAmount(5200000);
+if (amtFen < 1) return;
+askDailyIncr();
+const wallet = rpWalletGet();
+wallet.systemBalance += amtFen;
+rpWalletSet(wallet);
+const myCid = window.__activeCid || 'default';
+setTimeout(() => {
+if ((window.__activeCid || 'default') !== myCid) return;
+addRec({ side: 'in', special: 'askcoin', askFen: amtFen, askTs: Date.now() });
+saveMsgsNow();
+}, randInt(800, 2400));
+}
+// 回前台补触发（与 ta-ask 同款通道），避免后台期间错过的申请永远丢失
+document.addEventListener('mochi-fg-resume', function () {
+try { if (!sameCid()) return; setTimeout(function () { trySystemAskMochi(); }, randInt(2000, 6000)); } catch (e) {}
+});
 function rpThanksMsg() {
 return pick(['谢谢亲爱的～', '收到啦❤', '嘿嘿谢谢宝宝', '爱你哟', '🥰 谢谢', '开心！谢谢～', '么么哒']);
 }

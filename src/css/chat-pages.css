@@ -3433,20 +3433,20 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + env(safe-area-inset-bott
 @keyframes fishbobfloat { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-3px); } }
 @keyframes fishbobbite { 0%,100% { transform:translateY(0) rotate(-10deg); } 50% { transform:translateY(-5px) rotate(10deg); } }
 
-/* 咬钩时机条：红→绿→红渐变，白线光标走到中段绿色区收竿最佳 */
+/* 咬钩时机条：两端红（太早/太迟）→ 中段蓝（最佳，与鱼漂咬钩同色系），白线光标进蓝区收竿 */
 .fish-status { min-height:18px; font-size:12.5px; color:var(--muted); text-align:center; line-height:1.5; }
 .fish-timing-wrap { display:flex; flex-direction:column; gap:5px; padding:0 4px; }
 .fish-timing-wrap[hidden] { display:none; }
 .fish-timing-label { font-size:11px; color:#b7791f; text-align:center; letter-spacing:.3px; }
 .fish-timing-bar {
   position:relative; height:16px; border-radius:99px; overflow:hidden;
-  background:linear-gradient(90deg,#f9b4ab 0%,#fbd3a4 22%,#a9dfa6 38%,#8fd48b 50%,#a9dfa6 68%,#fbd3a4 82%,#f9b4ab 100%);
+  background:linear-gradient(90deg,#f9b4ab 0%,#fbd3a4 22%,#8ec9f5 38%,#4a9fe8 50%,#8ec9f5 68%,#fbd3a4 82%,#f9b4ab 100%);
   box-shadow:inset 0 1px 3px rgba(0,0,0,.15);
 }
 .fish-timing-good {
   position:absolute; left:38%; width:30%; top:0; bottom:0;
-  border-left:2px dashed rgba(255,255,255,.75); border-right:2px dashed rgba(255,255,255,.75);
-  background:rgba(255,255,255,.18);
+  border-left:2px dashed rgba(255,255,255,.85); border-right:2px dashed rgba(255,255,255,.85);
+  background:rgba(255,255,255,.14);
 }
 .fish-timing-cursor {
   position:absolute; top:0; bottom:0; width:4px; margin-left:-2px; border-radius:2px;
@@ -3571,6 +3571,7 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + env(safe-area-inset-bott
 
 /* 深色模式兜底（dark.css 未覆盖本功能自定义元素时保持可读，drift/room 同款惯例） */
 [data-theme="dark"] .fish-scene { background:linear-gradient(180deg,#233246 0%,#2c4258 52%,#33495e 58%,#33495e 100%); }
+[data-theme="dark"] .fish-sky::before { background:radial-gradient(circle at 38% 35%, #f5f2e8, #d9d4c2 70%); box-shadow:0 0 10px rgba(240,240,255,.18); }
 [data-theme="dark"] .fish-sky::after { background:rgba(255,255,255,.35); box-shadow:62px 12px 0 -3px rgba(255,255,255,.26); }
 [data-theme="dark"] .fish-water { background:linear-gradient(180deg,#2b5d78,#1f4258); border-top-color:rgba(255,255,255,.3); }
 [data-theme="dark"] .fish-water::before { background:repeating-linear-gradient(105deg, rgba(255,255,255,.07) 0 12px, rgba(255,255,255,0) 12px 30px); }

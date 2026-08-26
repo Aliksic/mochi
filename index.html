@@ -5212,8 +5212,8 @@ border-radius:50%/60% 60% 42% 42%;
 background:linear-gradient(#fff 0 42%, #f05a5a 42%);
 border:1px solid rgba(0,0,0,.18);
 }
-.fish-bobber-mine { left:46%; }
-.fish-bobber-ta { right:46%; }
+.fish-bobber-mine { left:22%; }
+.fish-bobber-ta { right:22%; }
 .fish-scene[data-mine="waiting"] .fish-bobber-mine,
 .fish-scene[data-ta="waiting"] .fish-bobber-ta,
 .fish-scene[data-ta="casting"] .fish-bobber-ta {
@@ -5237,13 +5237,13 @@ animation:fishbobbite .38s ease-in-out infinite;
 .fish-timing-label { font-size:11px; color:#b7791f; text-align:center; letter-spacing:.3px; }
 .fish-timing-bar {
 position:relative; height:16px; border-radius:99px; overflow:hidden;
-background:linear-gradient(90deg,#f9b4ab 0%,#fbd3a4 22%,#a9dfa6 38%,#8fd48b 50%,#a9dfa6 68%,#fbd3a4 82%,#f9b4ab 100%);
+background:linear-gradient(90deg,#f9b4ab 0%,#fbd3a4 22%,#8ec9f5 38%,#4a9fe8 50%,#8ec9f5 68%,#fbd3a4 82%,#f9b4ab 100%);
 box-shadow:inset 0 1px 3px rgba(0,0,0,.15);
 }
 .fish-timing-good {
 position:absolute; left:38%; width:30%; top:0; bottom:0;
-border-left:2px dashed rgba(255,255,255,.75); border-right:2px dashed rgba(255,255,255,.75);
-background:rgba(255,255,255,.18);
+border-left:2px dashed rgba(255,255,255,.85); border-right:2px dashed rgba(255,255,255,.85);
+background:rgba(255,255,255,.14);
 }
 .fish-timing-cursor {
 position:absolute; top:0; bottom:0; width:4px; margin-left:-2px; border-radius:2px;
@@ -5258,6 +5258,7 @@ box-shadow:0 3px 8px rgba(61,127,196,.35);
 -webkit-tap-highlight-color:transparent;
 }
 .fish-btn:active { transform:translateY(1px); box-shadow:0 2px 4px rgba(61,127,196,.3); }
+.fish-btn:disabled { opacity:.55; box-shadow:none; }
 .fish-btn[hidden] { display:none; }
 .fish-reel {
 background:linear-gradient(135deg,#f2994a,#e8683a);
@@ -5351,6 +5352,7 @@ pointer-events:none; animation:fishrise 1.15s ease-out forwards;
 .fish-splash { animation-duration:.01s; opacity:0; }
 }
 [data-theme="dark"] .fish-scene { background:linear-gradient(180deg,#233246 0%,#2c4258 52%,#33495e 58%,#33495e 100%); }
+[data-theme="dark"] .fish-sky::before { background:radial-gradient(circle at 38% 35%, #f5f2e8, #d9d4c2 70%); box-shadow:0 0 10px rgba(240,240,255,.18); }
 [data-theme="dark"] .fish-sky::after { background:rgba(255,255,255,.35); box-shadow:62px 12px 0 -3px rgba(255,255,255,.26); }
 [data-theme="dark"] .fish-water { background:linear-gradient(180deg,#2b5d78,#1f4258); border-top-color:rgba(255,255,255,.3); }
 [data-theme="dark"] .fish-water::before { background:repeating-linear-gradient(105deg, rgba(255,255,255,.07) 0 12px, rgba(255,255,255,0) 12px 30px); }
@@ -7670,7 +7672,7 @@ transition-duration: .01ms !important;
       </div>
       <div class="splash-dots"><i></i><i></i><i></i></div>
       <div class="splash-brand">小红书@言序（1842523578）</div>
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787741185974">Mochi 字卡传讯 v3.6.245 · 部署于 2026-08-26 18:46</div>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787743559868">Mochi 字卡传讯 v3.6.246 · 部署于 2026-08-26 19:25</div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
       <div class="splash-loading" id="splash-loading">正在加载数据…</div>
@@ -8723,7 +8725,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.6.245</div>
+      <div class="ver">Mochi 字卡传讯 v3.6.246</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -8865,7 +8867,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.6.245</span>
+              <span class="lic-ver">v3.6.246</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -10775,7 +10777,7 @@ transition-duration: .01ms !important;
             </div>
             <div class="fish-status" id="fish-status"></div>
             <div class="fish-timing-wrap" id="fish-timing-wrap" hidden>
-              <div class="fish-timing-label">鱼漂晃动了 · 变色变蓝时收竿最佳</div>
+              <div class="fish-timing-label">鱼漂变蓝晃动了 · 光标进蓝区收竿最佳</div>
               <div class="fish-timing-bar" id="fish-timing-bar"><span class="fish-timing-good"></span><span class="fish-timing-cursor" id="fish-timing-cursor"></span></div>
             </div>
             <div class="fish-actions">
@@ -18433,6 +18435,13 @@ appendMsg(m);
 maybeScrollChatBottom(rec.side);
 return m;
 }
+if (rec.special === 'askcoin') {
+m.className = 'msg-center';
+m.innerHTML = '<div class="msg-center-card">🪙 ' + escTxt(chatPartnerName()) + ' 向 Mochi 申请了心意币 ¥' + (Number(rec.askFen || 0) / 100).toFixed(2) + '</div>';
+appendMsg(m);
+maybeScrollChatBottom(rec.side);
+return m;
+}
 if (rec.special === 'flower') {
 m.className = 'msg-flower';
 const sideTxt = rec.side === 'out' ? '我' : chatPartnerName();
@@ -19011,7 +19020,7 @@ return el;
 function addIn(text, opts) {
 opts = opts || {};
 const _tagMood = opts.tag ? [{ tag: String(opts.tag), label: opts.tagNoDup ? '' : String(text) }] : null;
-return addRec({ side: 'in', text: text, initiative: opts.initiative, special: opts.special, quote: opts.quote, qidx: opts.qidx, type: opts.type, img: opts.img, parts: opts.parts, mailNotice: opts.mailNotice, askQuestion: opts.askQuestion, askStatus: opts.askStatus, askOptions: opts.askOptions, askType: opts.askType, choiceQuestion: opts.choiceQuestion, choiceOptions: opts.choiceOptions, choicePref: opts.choicePref, choiceCat: opts.choiceCat, choiceStatus: opts.choiceStatus, choiceAnswer: opts.choiceAnswer, choiceReply: opts.choiceReply, choiceMatch: opts.choiceMatch, curiousQuestion: opts.curiousQuestion, curiousQuick: opts.curiousQuick, curiousReplies: opts.curiousReplies, curiousFollowup: opts.curiousFollowup, curiousQid: opts.curiousQid, curiousCat: opts.curiousCat, curiousStatus: opts.curiousStatus, curiousAnswer: opts.curiousAnswer, curiousReply: opts.curiousReply, roastText: opts.roastText, roastCat: opts.roastCat, roastStatus: opts.roastStatus, roastAnswer: opts.roastAnswer, roastReply: opts.roastReply, rpAmount: opts.rpAmount, rpWish: opts.rpWish, rpStatus: opts.rpStatus, rpTs: opts.rpTs, rpCover: opts.rpCover, mood: opts.mood || _tagMood || undefined });
+return addRec({ side: 'in', text: text, initiative: opts.initiative, special: opts.special, quote: opts.quote, qidx: opts.qidx, type: opts.type, img: opts.img, parts: opts.parts, mailNotice: opts.mailNotice, askQuestion: opts.askQuestion, askStatus: opts.askStatus, askOptions: opts.askOptions, askType: opts.askType, choiceQuestion: opts.choiceQuestion, choiceOptions: opts.choiceOptions, choicePref: opts.choicePref, choiceCat: opts.choiceCat, choiceStatus: opts.choiceStatus, choiceAnswer: opts.choiceAnswer, choiceReply: opts.choiceReply, choiceMatch: opts.choiceMatch, curiousQuestion: opts.curiousQuestion, curiousQuick: opts.curiousQuick, curiousReplies: opts.curiousReplies, curiousFollowup: opts.curiousFollowup, curiousQid: opts.curiousQid, curiousCat: opts.curiousCat, curiousStatus: opts.curiousStatus, curiousAnswer: opts.curiousAnswer, curiousReply: opts.curiousReply, roastText: opts.roastText, roastCat: opts.roastCat, roastStatus: opts.roastStatus, roastAnswer: opts.roastAnswer, roastReply: opts.roastReply, rpAmount: opts.rpAmount, rpWish: opts.rpWish, rpStatus: opts.rpStatus, rpTs: opts.rpTs, rpCover: opts.rpCover, askFen: opts.askFen, askTs: opts.askTs, mood: opts.mood || _tagMood || undefined });
 }
 function addOut(text) {
 return addRec({ side: 'out', text: text });
@@ -19397,7 +19406,7 @@ setTimeout(() => { if (!sameCid()) return; hideTyping(); replyOnce(c, null); }, 
 }, 900);
 }
 setTimeout(() => { if (!sameCid()) return; if (window.callMaybeTrigger) window.callMaybeTrigger(); }, 3500);
-setTimeout(() => { if (!sameCid()) return; trySystemAutoSend(); tryCollectPending(); if (window.maybeAutoGift) window.maybeAutoGift(); }, 2500);
+setTimeout(() => { if (!sameCid()) return; trySystemAutoSend(); trySystemAskMochi(); tryCollectPending(); if (window.maybeAutoGift) window.maybeAutoGift(); }, 2500);
 }
 window.continueChat = function () {
 const myCid = window.__activeCid || 'default';
@@ -19659,7 +19668,7 @@ if (i < count - 1) showTyping();
 }, i * randInt(900, 2600));
 }
 setTimeout(() => { if (window.callMaybeTrigger) window.callMaybeTrigger(); }, count * 2600 + 3500);
-setTimeout(() => { trySystemAutoSend(); tryCollectPending(); if (window.maybeAutoGift) window.maybeAutoGift(); }, count * 2600 + 2500);
+setTimeout(() => { trySystemAutoSend(); trySystemAskMochi(); tryCollectPending(); if (window.maybeAutoGift) window.maybeAutoGift(); }, count * 2600 + 2500);
 } catch (e) {
 try {
 const errArr = (window.__jsErrors = window.__jsErrors || []);
@@ -20436,6 +20445,36 @@ addIn('', { special: 'redpacket', rpAmount: amt, rpWish: wish, rpStatus: 'pendin
 if (window.logFish) window.logFish();
 }, randInt(800, 2000));
 }
+const ASK_DAILY_PREFIX = 'ml2_ask_daily_';
+function askDailyCount() {
+const k = ASK_DAILY_PREFIX + new Date().toISOString().slice(0, 10);
+return Number(store.get(k)) || 0;
+}
+function askDailyIncr() {
+const k = ASK_DAILY_PREFIX + new Date().toISOString().slice(0, 10);
+store.set(k, String((Number(store.get(k)) || 0) + 1));
+}
+function trySystemAskMochi() {
+if (askDailyCount() >= 2) return;
+const qixi = isQixiToday();
+const baseRate = qixi ? 0.08 : 0.04;
+if (Math.random() >= baseRate) return;
+const amtFen = genRpAmount(5200000);
+if (amtFen < 1) return;
+askDailyIncr();
+const wallet = rpWalletGet();
+wallet.systemBalance += amtFen;
+rpWalletSet(wallet);
+const myCid = window.__activeCid || 'default';
+setTimeout(() => {
+if ((window.__activeCid || 'default') !== myCid) return;
+addRec({ side: 'in', special: 'askcoin', askFen: amtFen, askTs: Date.now() });
+saveMsgsNow();
+}, randInt(800, 2400));
+}
+document.addEventListener('mochi-fg-resume', function () {
+try { if (!sameCid()) return; setTimeout(function () { trySystemAskMochi(); }, randInt(2000, 6000)); } catch (e) {}
+});
 function rpThanksMsg() {
 return pick(['谢谢亲爱的～', '收到啦❤', '嘿嘿谢谢宝宝', '爱你哟', '🥰 谢谢', '开心！谢谢～', '么么哒']);
 }
@@ -42521,6 +42560,31 @@ if (diff === 1) { cur++; max = Math.max(max, cur); } else cur = 1;
 }
 return max;
 }
+function coinRecordSection(icon, title, unit, rows, emptyText) {
+let html = '<div class="stats-sec">' +
+'<div class="stats-sec-head"><span class="stats-sec-title">' + icon + title + '</span>' +
+'<span class="stats-sec-count">' + rows.length + ' 笔</span></div>';
+if (!rows.length) {
+html += '<div class="ta-empty">' + emptyText + '</div>';
+} else {
+html += '<div class="stats-list">';
+for (let i = rows.length - 1; i >= 0; i--) {
+const r = rows[i];
+html += '<div class="stats-item">' +
+'<span class="stats-item-name">' + r.main + '</span>' +
+'<span class="stats-item-num">' + r.sub + '</span></div>';
+}
+html += '</div>';
+}
+return html + '</div>';
+}
+function fmtMDHM(ts) {
+if (!ts) return '';
+const t = new Date(ts);
+return String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0') + ' ' +
+String(t.getHours()).padStart(2, '0') + ':' + String(t.getMinutes()).padStart(2, '0');
+}
+const escH = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 function statsBarSection(icon, title, countMap, topLabel, emptyText) {
 const entries = [];
 for (const k in countMap) if (countMap.hasOwnProperty(k)) entries.push({ name: k, count: countMap[k] });
@@ -42616,7 +42680,24 @@ statsInfoCard('<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="curre
 statsInfoCard('<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>', '最常聊天日期', '星期' + dayNames[peakDay]) +
 statsInfoCard('<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="20" x2="6" y2="14"/><line x1="12" y1="20" x2="12" y2="8"/><line x1="18" y1="20" x2="18" y2="11"/></svg>', '平均每日消息', Math.round(total / totalDays) + ' 条') +
 statsInfoCard('<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c1 3-3 4-3 7a3 3 0 006 0c0-1-.3-2-.8-3 1.8 1 3 3 3 5a6 6 0 11-12 0c0-4 3-6 4.5-8.5z"/></svg>', '最长连续聊天', calcStreak(Object.keys(dateCount)) + ' 天') +
-statsInfoCard('<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>', '单日最高消息', maxSingle + ' 条');
+statsInfoCard('<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>', '单日最高消息', maxSingle + ' 条') +
+coinRecordSection('🧧', name + '发红包记录', '笔',
+msgs.filter(m => m && m.special === 'redpacket' && m.side === 'in').map(m => {
+const stMap = { pending: '待领取', received: '已领取', expired: '已过期·退回', returned: '已退回' };
+const st = stMap[m.rpStatus || 'pending'] || '';
+const wish = m.rpWish ? '「' + m.rpWish + '」' : '';
+return {
+main: '¥' + Number(m.rpAmount || 0).toFixed(2) + escH(wish) + ' · ' + escH(st),
+sub: fmtMDHM(m.rpTs || m.ts)
+};
+}),
+'还没有 ' + escH(name) + ' 发的红包') +
+coinRecordSection('🪙', name + '申请心意币记录', '笔',
+msgs.filter(m => m && m.special === 'askcoin').map(m => ({
+main: '+¥' + (Number(m.askFen || 0) / 100).toFixed(2),
+sub: fmtMDHM(m.askTs || m.ts)
+})),
+escH(name) + ' 还没有向 Mochi 申请过');
 }
 }
 const exprEl = document.getElementById('st-expr-content');
@@ -47180,16 +47261,54 @@ day: '例如：在一起的第一百天',
 thing: '例如：那半块橡皮',
 place: '例如：常一起发呆的天台'
 };
+function partnerNameOf(cid) {
+let name = '';
+try { name = String(window.xyStore(GNS + ':' + cid).get('lbl-partner') || '').trim(); } catch (e) {}
+if (!name) {
+try {
+const cs = window.getContacts ? window.getContacts() : [];
+const c = cs.find(x => x.id === cid);
+if (c && c.name) name = c.name;
+} catch (e) {}
+}
+return name || 'TA';
+}
+function deskRoster(cid) {
+let list = [];
+try { list = JSON.parse(window.xyStore(GNS + ':' + cid).get('cjian-roster') || '[]'); } catch (e) {}
+return Array.isArray(list) ? list : [];
+}
 function roster() {
 const out = [], seen = {};
-const push = a => { (Array.isArray(a) ? a : []).forEach(x => { if (x && x.name && x.id && !seen[x.id]) { seen[x.id] = 1; out.push(x); } }); };
+const push = (a, cid) => { (Array.isArray(a) ? a : []).forEach(x => { if (x && x.name && x.id && !seen[x.id]) { seen[x.id] = 1; out.push({ id: x.id, name: x.name, cid: cid || null, virtual: false }); } }); };
 let cs = null;
 try { cs = window.getContacts ? window.getContacts() : null; } catch (e) {}
-(cs && cs.length ? cs : [{ id: 'default' }]).forEach(c => {
-try { push(JSON.parse(window.xyStore(GNS + ':' + c.id).get('cjian-roster') || '[]')); } catch (e) {}
+const desks = (cs && cs.length ? cs : [{ id: 'default' }]);
+desks.forEach(c => {
+const list = deskRoster(c.id);
+if (list.length) push(list, c.id);
+else {
+let seeded = false;
+try { seeded = !!window.xyStore(GNS + ':' + c.id).get('cjian-seeded'); } catch (e) {}
+if (!seeded) out.push({ id: '', name: partnerNameOf(c.id), cid: c.id, virtual: true });
+}
 });
-try { push(JSON.parse(gStore().get('cjian-roster') || '[]')); } catch (e) {}
+push(JSON.parse(gStore().get('cjian-roster') || '[]'), null);
 return out;
+}
+function materializeDesk(cid) {
+try {
+const ds = window.xyStore(GNS + ':' + cid);
+const list = deskRoster(cid);
+if (list.length) { ds.set('cjian-seeded', '1'); return list[0].id; }
+let seeded = false;
+try { seeded = !!ds.get('cjian-seeded'); } catch (e) {}
+if (seeded) return '';
+const entry = { id: makeId(), name: partnerNameOf(cid), offsetMin: 0 };
+ds.set('cjian-roster', JSON.stringify([entry]));
+ds.set('cjian-seeded', '1');
+return entry.id;
+} catch (e) { return ''; }
 }
 function keyOf(id) { return 'narc-' + id; }
 function loadRaw(id) { const s = gStore(); if (!s) return null; try { const o = JSON.parse(s.get(keyOf(id)) || 'null'); if (o && typeof o === 'object') return o; } catch (e) {} return null; }
@@ -47219,30 +47338,13 @@ function curId() { try { return gStore().get('narc-cur') || ''; } catch (e) { re
 function setCur(id) { try { gStore().set('narc-cur', id); } catch (e) {} }
 function seedDefaultRoster() {
 try {
+if (roster().some(x => !x.virtual)) return; // 已有真身，不播种
 let cid = 'default';
 try {
 const m = String(window.activePrefix ? window.activePrefix() : '').match(/xy-home-v2:([^:]+)$/);
 if (m) cid = m[1];
 } catch (e) {}
-const ds = window.xyStore(GNS + ':' + cid);
-if (!ds || ds.get('cjian-seeded')) return;
-let list = [];
-try { list = JSON.parse(ds.get('cjian-roster') || '[]'); } catch (e) {}
-if (!Array.isArray(list)) list = [];
-if (!list.length) {
-let name = '';
-try { name = String(ds.get('lbl-partner') || '').trim(); } catch (e) {}
-if (!name) {
-try {
-const cs = window.getContacts ? window.getContacts() : [];
-const c = cs.find(x => x.id === cid) || null;
-if (c && c.name) name = c.name;
-} catch (e) {}
-}
-list.push({ id: makeId(), name: name || 'TA', offsetMin: 0 });
-ds.set('cjian-roster', JSON.stringify(list));
-}
-ds.set('cjian-seeded', '1');
+materializeDesk(cid);
 } catch (e) {}
 }
 let cur = '';
@@ -47271,11 +47373,11 @@ const home = document.getElementById('page-phone');
 if (home) home.hidden = false;
 };
 function syncCur() {
-seedDefaultRoster(); // 名单为空时默认把当前桌面联系人种为第一个梦角（与 cjian.seedIfEmpty 同键同标记）
-const r = roster();
-if (!r.length) { cur = ''; return; }
+seedDefaultRoster(); // 全局还没有真身时，把当前桌面联系人种为第一个梦角（与 cjian.seedIfEmpty 同键同标记）
+const real = roster().filter(x => !x.virtual); // 虚拟 chip 只作入口展示，不参与选中
+if (!real.length) { cur = ''; return; }
 const c = curId();
-cur = r.some(x => x.id === c) ? c : r[0].id;
+cur = real.some(x => x.id === c) ? c : real[0].id;
 setCur(cur);
 }
 function render() {
@@ -47284,11 +47386,13 @@ syncCur();
 const r = roster();
 let h = '';
 h += '<div class="narc-chips">';
-r.forEach(c => { h += '<button class="narc-chip' + (c.id === cur ? ' on' : '') + '" data-op="pick-roster" data-rid="' + esc(c.id) + '">' + esc(c.name) + '</button>'; });
+r.forEach(c => {
+h += '<button class="narc-chip' + (!c.virtual && c.id === cur ? ' on' : '') + '" data-op="pick-roster" data-rid="' + esc(c.id) + '" data-cid="' + esc(c.cid || '') + '">' + esc(c.name) + '</button>';
+});
 h += '<button class="narc-chip narc-addchip" data-op="add-roster">＋ 添加</button>';
 h += '</div>';
 if (!cur) {
-h += '<div class="narc-empty">此间还没有梦角<br>先添加一个你要慢慢认识的人吧';
+h += '<div class="narc-empty">还没有可以写档案的梦角<br>点上方联系人创建，或从「此间」添加';
 h += '<br><button class="ne-btn" data-op="add-roster">去添加梦角</button></div>';
 root.innerHTML = h;
 return;
@@ -47909,7 +48013,15 @@ const kind = el.getAttribute('data-kind');
 switch (op) {
 case 'nav': view = el.getAttribute('data-view') || 'home'; render(); break;
 case 'stab': { const tv = el.getAttribute('data-view'), tb = el.getAttribute('data-tab'); if (tv && tab[tv] != null) tab[tv] = tb; render(); break; }
-case 'pick-roster': cur = el.getAttribute('data-rid'); setCur(cur); tab.tastes = 'like'; tab.habits = 'daily'; tab.things = 'use'; tab.shared = 'first'; tab.knows = 'cards'; render(); break;
+case 'pick-roster': {
+const rid = el.getAttribute('data-rid') || '';
+const cid = el.getAttribute('data-cid') || '';
+cur = rid || (cid ? materializeDesk(cid) : '');
+if (cur) setCur(cur);
+tab.tastes = 'like'; tab.habits = 'daily'; tab.things = 'use'; tab.shared = 'first'; tab.knows = 'cards';
+render();
+break;
+}
 case 'add-roster': if (window.cjianManage) window.cjianManage(); break;
 case 'efield': editField(el.getAttribute('data-map'), el.getAttribute('data-key')); break;
 case 'add-li': addLi(el.getAttribute('data-kind')); break;
@@ -48021,13 +48133,29 @@ fav: '例如：那台旧相机',
 dear: '例如：第一次收到的那封信',
 gift: '例如：一直想送TA的一条围巾'
 };
-function loadRaw() { const s = gStore(); if (!s) return null; try { const o = JSON.parse(s.get(KEY) || 'null'); if (o && typeof o === 'object') return o; } catch (e) {} return null; }
-function save(o) { const s = gStore(); if (s) { try { s.set(KEY, JSON.stringify(o)); } catch (e) {} } }
+function contactsList() {
+try { const cs = window.getContacts ? window.getContacts() : null; if (cs && cs.length) return cs; } catch (e) {}
+return [{ id: 'default', name: '默认' }];
+}
+function storeOf(cid) { return window.xyStore(GNS + ':' + cid); }
+function partnerNameOf(cid) {
+let n = '';
+try { n = String(storeOf(cid).get('lbl-partner') || '').trim(); } catch (e) {}
+if (!n) { const c = contactsList().find(x => x.id === cid); if (c && c.name) n = c.name; }
+return n || 'TA';
+}
+function loadRaw(cid) {
+const s = storeOf(cid); if (!s) return null;
+try { const o = JSON.parse(s.get(KEY) || 'null'); if (o && typeof o === 'object') return o; } catch (e) {}
+try { const o = JSON.parse(gStore().get(KEY) || 'null'); if (o && typeof o === 'object') return o; } catch (e) {} // 旧全局键兜底
+return null;
+}
+function save(o) { const s = storeOf(viewCid); if (s) { try { s.set(KEY, JSON.stringify(o)); } catch (e) {} } }
 function normObj(v) { return (v && typeof v === 'object' && !Array.isArray(v)) ? v : null; }
 function makeId() { return 'm' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36); }
-let cache = null;
+const cache = {};
 function ensureArc() {
-let o = cache || loadRaw(), dirty = false;
+let o = cache[viewCid] || loadRaw(viewCid), dirty = false;
 if (!o) { o = { created: Date.now() }; dirty = true; }
 ['tastes', 'habits', 'things', 'selfs', 'ifchanges'].forEach(k => { if (!Array.isArray(o[k])) { o[k] = []; dirty = true; } });
 if (!normObj(o.who)) { o.who = { f: {} }; dirty = true; } else if (!normObj(o.who.f)) { o.who.f = {}; dirty = true; }
@@ -48036,17 +48164,27 @@ else { if (!normObj(o.relate.f)) { o.relate.f = {}; dirty = true; } if (!Array.i
 if (!normObj(o.ifw)) { o.ifw = {}; dirty = true; }
 IFW_FIELDS.forEach(f => { if (typeof o.ifw[f[0]] !== 'string') { o.ifw[f[0]] = ''; dirty = true; } });
 if (dirty) save(o);
-cache = o;
+cache[viewCid] = o;
 return o;
 }
 let view = 'home';           // home|who|tastes|habits|things|relate|self|ifw
+let viewCid = 'default';     // 当前正在看哪位桌面联系人的那份
 const tab = { tastes: 'like', habits: 'daily', things: 'use' };
 const FIELD_INDEX = {};
 WHO_FIELDS.forEach(f => { FIELD_INDEX[f[0]] = { map: 'who', label: f[1], ph: f[2], multi: f[3] }; });
 RELATE_FIELDS.forEach(f => { FIELD_INDEX[f[0]] = { map: 'relate', label: f[1], ph: f[2], multi: f[3] }; });
 IFW_FIELDS.forEach(f => { FIELD_INDEX[f[0]] = { map: 'ifw', label: f[1], ph: f[2], multi: f[3] }; });
+function restoreCur() {
+const ids = contactsList().map(c => c.id);
+let c = '';
+try { c = String(gStore().get('myarc-cur') || ''); } catch (e) {}
+if (ids.indexOf(c) >= 0) return c;
+const act = window.__activeCid || 'default';
+return ids.indexOf(act) >= 0 ? act : ids[0];
+}
 window.openMyArc = function () {
 if (!page || !root) return;
+viewCid = restoreCur();
 document.querySelectorAll('.page').forEach(p => p.hidden = true);
 page.hidden = false;
 view = 'home'; tab.tastes = 'like'; tab.habits = 'daily'; tab.things = 'use';
@@ -48063,8 +48201,17 @@ function render() {
 if (!root) return;
 const arc = ensureArc();
 let h = '';
+h += chipsHTML();
 h += (view === 'home') ? overviewHTML(arc) : sectionHTML(arc);
 root.innerHTML = h;
+}
+function chipsHTML() {
+let h = '<div class="narc-chips">';
+contactsList().forEach(c => {
+h += '<button class="narc-chip' + (c.id === viewCid ? ' on' : '') + '" data-op="pick-cid" data-cid="' + esc(c.id) + '">' + esc(partnerNameOf(c.id)) + '</button>';
+});
+h += '</div>';
+return h;
 }
 function filledN(m, keys) { return keys.filter(k => String(m[k] || '').trim()).length; }
 function overviewHTML(arc) {
@@ -48074,7 +48221,7 @@ const relFilled = RELATE_FIELDS.filter(f => String(arc.relate.f[f[0]] || '').tri
 const ifwFilled = IFW_FIELDS.filter(f => String(arc.ifw[f[0]] || '').trim()).length + arc.ifchanges.length;
 let h = '<div class="narc-hero">';
 h += '<div class="narc-hero-top"><span class="narc-name">我的档案</span><span class="narc-days">写下自己 · ' + days + ' 天</span></div>';
-h += '<div class="narc-hero-sub">认识自己——写下来，让TA慢慢读懂你。TA的那一份在「梦角档案」。</div>';
+h += '<div class="narc-hero-sub">写给「' + esc(partnerNameOf(viewCid)) + '」的那一份——认识自己，让TA慢慢读懂你。</div>';
 h += '<div class="narc-stats">';
 h += '<div class="narc-stat"><b>' + arc.selfs.length + '</b><span>描述</span></div>';
 h += '<div class="narc-stat"><b>' + arc.tastes.length + '</b><span>喜好</span></div>';
@@ -48389,6 +48536,16 @@ case 'del-li': delLi(el.getAttribute('data-kind'), id); break;
 case 'add-self': addSelf(); break;
 case 'edit-self': editSelf(id); break;
 case 'del-self': delSelf(id); break;
+case 'pick-cid': {
+const cid = el.getAttribute('data-cid') || '';
+if (cid && contactsList().some(c => c.id === cid)) {
+viewCid = cid;
+try { gStore().set('myarc-cur', cid); } catch (e) {}
+tab.tastes = 'like'; tab.habits = 'daily'; tab.things = 'use';
+}
+render();
+break;
+}
 case 'go-shared':
 if (window.openNarcShared) window.openNarcShared();
 else if (window.openNarc) window.openNarc();
@@ -57263,7 +57420,9 @@ st.num[i] = m;
 }
 function generateMap(firstIdx) {
 const total = N();
+if (firstIdx == null || firstIdx < 0) firstIdx = 0;
 st.mine = new Array(total).fill(0);
+st.content = new Array(total).fill(null);
 if (st.mineTotal > 0) {
 let banned = new Set([firstIdx]);
 neighborsOf(firstIdx).forEach((j) => banned.add(j));
@@ -57293,8 +57452,18 @@ st.mine = new Array(total).fill(0);
 for (let i = 0; i < total && i < mineArr.length; i++) st.mine[i] = mineArr[i] ? 1 : 0;
 st.content = new Array(total).fill(null);
 recalcNums();
+st.open = new Array(total).fill(false);
+st.flag = new Array(total).fill(0);
+st.boom = new Array(total).fill(false);
+st.taFlagged = {}; st.judged = {};
+st.lives = MAX_LIVES;
+st.digs = { you: 0, ta: 0 };
+st.minesFound = 0; st.foundList = []; st.coinEarned = 0;
 st.firstDig = false;
 st.over = false; st.lock = false; st.turn = 1;
+clearTimeout(taT); taT = null;
+for (let i = 0; i < total; i++) renderCell(i);
+updateHud();
 }
 function constraints() {
 const cons = [];
@@ -57460,11 +57629,10 @@ return true;
 function scheduleTaGiftChat(kind) {
 setTimeout(() => {
 try {
-const builtin = kind === 'flower'
+const lines = kind === 'flower'
 ? ['挖到一朵小花，「这个给你。」', '发现了这个，觉得很适合你。']
 : ['挖到了一个小礼物，「这个给你。」', '发现了这个，「送你呀。」'];
-const pool = window.getInteractPool ? window.getInteractPool('游戏胜利·回应', builtin) : builtin;
-const say = (pool && pool.length ? pick(pool) : builtin[0]) || '这个给你。';
+const say = pick(lines) || lines[0];
 if (window.chatAddIn) window.chatAddIn(T(say), { silent: true });
 } catch (e) {}
 }, 700);
@@ -57498,7 +57666,7 @@ if (wasTaFlagged && !s.judged[idx]) { msg += '（不过 ' + T('TA') + ' 的旗�
 if (hadPlayerFlag && byYou) msg += '（是你自己插的旗那格…）';
 if (s.lives <= 0) { setStatus(msg); finish(false); return true; }
 setStatus(msg);
-passTurn(byYou);
+passTurn(byYou, 950);   // 停一拍再让 TA 开口，踩雷提示不会被思考语立刻顶掉
 return true;
 }
 const newly = [];
@@ -57540,7 +57708,7 @@ if (wasTaFlagged && !s.judged[idx]) { msg += ' —— 这里其实是安全的�
 if (extraMsg) { msg += '（' + extraMsg + '）'; extraMsg = ''; }
 if (allSafeOpened()) { setStatus(msg); finish(true); return true; }
 setStatus(msg);
-passTurn(byYou);
+passTurn(byYou, gotIcons.length ? 1100 : undefined);   // 有发现时同样停一拍
 return true;
 }
 function playerDig(idx) {
@@ -57562,11 +57730,11 @@ s.taFlagged[idx] = 1;
 s.flag[idx] = 2;
 renderCell(idx);
 }
-function passTurn(byYou) {
+function passTurn(byYou, taDelay) {
 const s = st;
 if (s.over) return;
 s.turn = byYou ? 2 : 1;
-if (s.turn === 2) { s.lock = true; scheduleTa(); }
+if (s.turn === 2) { s.lock = true; scheduleTa(taDelay); }
 else { s.lock = false; showTurnStatus(); }
 }
 function showTurnStatus() {
@@ -57577,9 +57745,13 @@ function scheduleTa(extraDelay) {
 clearTimeout(taT); taT = null;
 if (!st || st.over) return;
 const line = THINK_LINES[Math.floor(Math.random() * THINK_LINES.length)];
-setStatus(T(line).replace('TA', T('TA')) + ' ' + heartsStr());
 const d = typeof extraDelay === 'number' ? extraDelay : 620 + Math.random() * 680;
-taT = setTimeout(() => { taT = null; taTurn(); }, Math.round(d * fastMul()));
+taT = setTimeout(() => {
+taT = null;
+if (!st || st.over || st.turn !== 2) return;
+setStatus(T(line).replace('TA', T('TA')) + ' ' + heartsStr());
+taTurn();
+}, Math.round(d * fastMul()));
 }
 function taTurn() {
 const s = st;
@@ -57824,7 +57996,9 @@ clearFlag: (i) => { if (st) { st.flag[i] = 0; renderCell(i); } },
 placeTaFlag: placeTaFlag,
 forceMap: forceMap,
 setContent: (i, t) => { if (st && st.content) st.content[i] = t; },
+setMine: (i, v) => { if (st && st.mine) st.mine[i] = v ? 1 : 0; },
 setNum: (i, v) => { if (st) st.num[i] = v; },
+setBoom: (i) => { if (st) { st.boom[i] = true; st.open[i] = true; renderCell(i); } },
 openCell: (i) => { if (st) { st.open[i] = true; renderCell(i); } },
 recalcNums: recalcNums,
 deduceSafe: deduceSafe,
@@ -57833,6 +58007,8 @@ probs: estProbs,
 decide: taDecide,
 rollMode: rollTaMode,
 grantCoinRaw: grantCoin,
+stopTa: () => { clearTimeout(taT); taT = null; },
+unlock: () => { if (st) st.lock = false; },
 fast: false
 };
 })();

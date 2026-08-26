@@ -141,7 +141,7 @@
   const MINE_CAP = 50, GOT_CAP = 120, PICK_CD = 20000;
   function fresh() {
     return {
-      mine: [], got: [], histSeen: [],
+      mine: [], got: [], histSeen: [], dry: 0,
       day: { date: '', picks: 0, coin: 0, taGot: 0 },
       lastVisit: 0, cdUntil: 0
     };
@@ -151,6 +151,7 @@
     if (!Array.isArray(o.mine)) o.mine = [];
     if (!Array.isArray(o.got)) o.got = [];
     if (!Array.isArray(o.histSeen)) o.histSeen = [];
+    if (typeof o.dry !== 'number' || o.dry < 0 || !isFinite(o.dry)) o.dry = 0;
     if (!o.day || typeof o.day !== 'object') o.day = { date: '', picks: 0, coin: 0, taGot: 0 };
     o.mine.forEach(m => { if (typeof m.fav !== 'number') m.fav = 0; });
     o.got.forEach(g => { if (typeof g.fav !== 'number') g.fav = 0; });
@@ -211,36 +212,47 @@
   const FIRST_PICK_COIN = 200, SPECIAL_COIN = 500, DAILY_COIN_CAP = 1000;
 
   // ---- 今日互动信号（读当前桌面聊天末尾若干条，带体积守卫防大记录卡顿） ----
-  function chatActiveToday() {
+  // 返回我今天发过的消息条数（只扫末尾 30 条）：0=今天没说过话；1~5=日常互动；≥6=聊得比较多
+  function outCountToday() {
     try {
       const cid = window.__activeCid || 'default';
       const raw = localStorage.getItem('xy-home-v2:' + cid + ':chat-msgs');
-      if (!raw || raw.length > 400000) return false;
+      if (!raw || raw.length > 400000) return 0;
       const arr = JSON.parse(raw);
-      if (!Array.isArray(arr)) return false;
+      if (!Array.isArray(arr)) return 0;
       const tk = todayKey();
+      let n = 0;
       for (let i = arr.length - 1, seen = 0; i >= 0 && seen < 30; i--, seen++) {
         const m = arr[i];
         if (!m || !m.ts || m.side !== 'out') continue;
         const t = new Date(m.ts);
-        if (tk === t.getFullYear() + '-' + (t.getMonth() + 1) + '-' + t.getDate()) return true;
+        if (tk === t.getFullYear() + '-' + (t.getMonth() + 1) + '-' + t.getDate()) n++;
       }
-    } catch (e) {}
-    return false;
+      return n;
+    } catch (e) { return 0; }
   }
 
   // ---- 出瓶概率 ----
   // 基础：普通60 / 空瓶·小物25 / 特殊10 / TA5；
-  // 微调：今天互动多→TA 提到 9；距上次来访 ≥48h 且今日还没见过 TA 瓶→本次 TA 大幅加权（久违漂来）；
-  // TA 瓶每日上限 3，到顶后权重并入普通瓶。
+  // 梯度互动：今天我发过 1~5 条→TA 提到 7%，≥6 条（聊得比较多）→9%；
+  // 软保底（防指数长尾）：连续 12 捡没出 TA 瓶后每多 1 捡 +8%、封顶 +40%——
+  //   最坏空窗被钳在约 17~18 捡内，早期手感仍是 5% 不变的「偶尔」；
+  // 久违回归：距上次来访 ≥48h 且当日还没见过 TA 瓶→本次 TA 大幅加权（久违漂来的瞬间感，不保证）；
+  // TA 瓶每日上限 3（优先级最高，软保底也不能突破同日上限），到顶后权重并入普通瓶。
   let _forceKind = '';
   function rollKind() {
     if (_forceKind) { const k = _forceKind; _forceKind = ''; return k; }
     ensureDaily();
-    let taW = 5;
     const absentH = d.lastVisit ? (Date.now() - d.lastVisit) / 3600000 : 999;
-    if (absentH >= 48 && d.day.taGot < 1) taW = 26;
-    else if (chatActiveToday()) taW = 9;
+    let taW;
+    if (absentH >= 48 && d.day.taGot < 1) {
+      taW = 26;
+    } else {
+      const n = outCountToday();
+      taW = n <= 0 ? 5 : (n <= 5 ? 7 : 9);
+      const dry = d.dry || 0;
+      if (dry >= 12) taW += Math.min(40, (dry - 11) * 8);
+    }
     if (d.day.taGot >= 3) taW = 0;
     const table = [['normal', Math.max(0, 60 + (5 - taW) - (taW >= 26 ? 16 : 0))], ['item', 25], ['special', 10], ['ta', taW]];
     let total = 0; table.forEach(x => total += x[1]);
@@ -316,6 +328,7 @@
     } else {
       kind = rollKind();
       if (kind === 'ta') {
+        d.dry = 0;                                        // 出了 TA 瓶，软保底计数清零
         d.day.taGot++;
         head = '💙 ' + pn() + '漂来的瓶子';
         // 优先从当前桌面聊天记录抽 TA 说过的字卡（含混合气泡逐段拆出的每张）；
@@ -363,9 +376,10 @@
       ensureDaily();
       const rec = {
         id: uid(), text: text, ts: Date.now(), fav: 0,
-        // 漂回来：36~96 小时后随机到点；TA 的回应：45% 概率排期 6~40 小时后
+        // 漂回来：36~96 小时后随机到点；TA 的回应：45% 概率排期 6~40 小时后——
+        // 但同时最多 2 个未回应的瓶子在海上（堆太多「惊喜」会变成批量发货）
         backAt: Date.now() + ri(36, 96) * 3600000,
-        willReply: Math.random() < 0.45,
+        willReply: d.mine.filter(m => m.willReply && !m.replied).length < 2 && Math.random() < 0.45,
         replyAt: 0
       };
       if (rec.willReply) rec.replyAt = Date.now() + ri(6, 40) * 3600000;
@@ -583,9 +597,10 @@
     document.addEventListener('visibilitychange', function () {
       if (!document.hidden && !page.hidden) { settleSchedules(); save(); renderAll(); }
     });
-    // 测试钩子（极小面）：强制下一瓶类型 + 只读状态快照
+    // 测试钩子（极小面）：强制下一瓶类型 + 只读状态快照 + 概率表试算（不消耗强制标记）
     window.__driftNext = function (k) { _forceKind = k; };
     window.__driftState = function () { return JSON.parse(JSON.stringify(d)); };
+    window.__driftPeek = function () { const f = _forceKind; _forceKind = ''; const k = rollKind(); _forceKind = f; return k; };
     booted = true;
   }
   let booted = false;

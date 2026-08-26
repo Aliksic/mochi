@@ -161,7 +161,9 @@
   // 懒生成：firstIdx 及其周围必无雷（小图兜底只保 firstIdx）；宝物落在安全格
   function generateMap(firstIdx) {
     const total = N();
+    if (firstIdx == null || firstIdx < 0) firstIdx = 0;
     st.mine = new Array(total).fill(0);
+    st.content = new Array(total).fill(null);
     if (st.mineTotal > 0) {
       let banned = new Set([firstIdx]);
       neighborsOf(firstIdx).forEach((j) => banned.add(j));
@@ -191,8 +193,19 @@
     for (let i = 0; i < total && i < mineArr.length; i++) st.mine[i] = mineArr[i] ? 1 : 0;
     st.content = new Array(total).fill(null);
     recalcNums();
+    // 整局软复位：open/flag/boom 与计数全部归零并重绘（调试场景之间互不污染）
+    st.open = new Array(total).fill(false);
+    st.flag = new Array(total).fill(0);
+    st.boom = new Array(total).fill(false);
+    st.taFlagged = {}; st.judged = {};
+    st.lives = MAX_LIVES;
+    st.digs = { you: 0, ta: 0 };
+    st.minesFound = 0; st.foundList = []; st.coinEarned = 0;
     st.firstDig = false;
     st.over = false; st.lock = false; st.turn = 1;
+    clearTimeout(taT); taT = null;
+    for (let i = 0; i < total; i++) renderCell(i);
+    updateHud();
   }
 
   // ---- TA 推理（纯函数族；旗视为未知数而非事实，因此不会误信玩家的错误旗） ----
@@ -367,11 +380,12 @@
   function scheduleTaGiftChat(kind) {
     setTimeout(() => {
       try {
-        const builtin = kind === 'flower'
+        // 送礼话术固定走内置池——不接互动字卡分组（游戏胜负回应池是泛用文案，
+        // 会把「这个给你」顶成「我赢啦」一类，丢失送礼语义）
+        const lines = kind === 'flower'
           ? ['挖到一朵小花，「这个给你。」', '发现了这个，觉得很适合你。']
           : ['挖到了一个小礼物，「这个给你。」', '发现了这个，「送你呀。」'];
-        const pool = window.getInteractPool ? window.getInteractPool('游戏胜利·回应', builtin) : builtin;
-        const say = (pool && pool.length ? pick(pool) : builtin[0]) || '这个给你。';
+        const say = pick(lines) || lines[0];
         if (window.chatAddIn) window.chatAddIn(T(say), { silent: true });
       } catch (e) {}
     }, 700);
@@ -406,7 +420,7 @@
       if (hadPlayerFlag && byYou) msg += '（是你自己插的旗那格…）';
       if (s.lives <= 0) { setStatus(msg); finish(false); return true; }
       setStatus(msg);
-      passTurn(byYou);
+      passTurn(byYou, 950);   // 停一拍再让 TA 开口，踩雷提示不会被思考语立刻顶掉
       return true;
     }
 
@@ -449,7 +463,7 @@
     if (extraMsg) { msg += '（' + extraMsg + '）'; extraMsg = ''; }
     if (allSafeOpened()) { setStatus(msg); finish(true); return true; }
     setStatus(msg);
-    passTurn(byYou);
+    passTurn(byYou, gotIcons.length ? 1100 : undefined);   // 有发现时同样停一拍
     return true;
   }
   function playerDig(idx) {
@@ -471,11 +485,11 @@
     s.flag[idx] = 2;
     renderCell(idx);
   }
-  function passTurn(byYou) {
+  function passTurn(byYou, taDelay) {
     const s = st;
     if (s.over) return;
     s.turn = byYou ? 2 : 1;
-    if (s.turn === 2) { s.lock = true; scheduleTa(); }
+    if (s.turn === 2) { s.lock = true; scheduleTa(taDelay); }
     else { s.lock = false; showTurnStatus(); }
   }
   function showTurnStatus() {
@@ -486,9 +500,14 @@
     clearTimeout(taT); taT = null;
     if (!st || st.over) return;
     const line = THINK_LINES[Math.floor(Math.random() * THINK_LINES.length)];
-    setStatus(T(line).replace('TA', T('TA')) + ' ' + heartsStr());
     const d = typeof extraDelay === 'number' ? extraDelay : 620 + Math.random() * 680;
-    taT = setTimeout(() => { taT = null; taTurn(); }, Math.round(d * fastMul()));
+    // 思考语延迟到行动前一刻才显示——刚挖出的踩雷/宝物提示不会被立刻顶掉
+    taT = setTimeout(() => {
+      taT = null;
+      if (!st || st.over || st.turn !== 2) return;
+      setStatus(T(line).replace('TA', T('TA')) + ' ' + heartsStr());
+      taTurn();
+    }, Math.round(d * fastMul()));
   }
   function taTurn() {
     const s = st;
@@ -752,6 +771,7 @@
     placeTaFlag: placeTaFlag,
     forceMap: forceMap,
     setContent: (i, t) => { if (st && st.content) st.content[i] = t; },
+    setMine: (i, v) => { if (st && st.mine) st.mine[i] = v ? 1 : 0; },
     setNum: (i, v) => { if (st) st.num[i] = v; },
     setBoom: (i) => { if (st) { st.boom[i] = true; st.open[i] = true; renderCell(i); } },
     openCell: (i) => { if (st) { st.open[i] = true; renderCell(i); } },
@@ -762,6 +782,8 @@
     decide: taDecide,
     rollMode: rollTaMode,
     grantCoinRaw: grantCoin,
+    stopTa: () => { clearTimeout(taT); taT = null; },
+    unlock: () => { if (st) st.lock = false; },
     fast: false
   };
 })();

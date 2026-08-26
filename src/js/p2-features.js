@@ -92,8 +92,35 @@
       const diff = (new Date(dates[i]) - new Date(dates[i - 1])) / 864e5;
       if (diff === 1) { cur++; max = Math.max(max, cur); } else cur = 1;
     }
-    return max;
+      return max;
   }
+  // v3.15.x：聊天记录 tab 新增「联系人发红包 / 申请心意币」流水区块（rows: {main, sub}）
+  // 全量展示不截断——流水本身低频（红包≤5/日、申请≤2/日），按时间倒序最新在上
+  function coinRecordSection(icon, title, unit, rows, emptyText) {
+    let html = '<div class="stats-sec">' +
+      '<div class="stats-sec-head"><span class="stats-sec-title">' + icon + title + '</span>' +
+      '<span class="stats-sec-count">' + rows.length + ' 笔</span></div>';
+    if (!rows.length) {
+      html += '<div class="ta-empty">' + emptyText + '</div>';
+    } else {
+      html += '<div class="stats-list">';
+      for (let i = rows.length - 1; i >= 0; i--) {
+        const r = rows[i];
+        html += '<div class="stats-item">' +
+          '<span class="stats-item-name">' + r.main + '</span>' +
+          '<span class="stats-item-num">' + r.sub + '</span></div>';
+      }
+      html += '</div>';
+    }
+    return html + '</div>';
+  }
+  function fmtMDHM(ts) {
+    if (!ts) return '';
+    const t = new Date(ts);
+    return String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0') + ' ' +
+      String(t.getHours()).padStart(2, '0') + ':' + String(t.getMinutes()).padStart(2, '0');
+  }
+  const escH = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   function statsBarSection(icon, title, countMap, topLabel, emptyText) {
     const entries = [];
     for (const k in countMap) if (countMap.hasOwnProperty(k)) entries.push({ name: k, count: countMap[k] });
@@ -193,8 +220,27 @@
           statsInfoCard('<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>', '最常聊天日期', '星期' + dayNames[peakDay]) +
           statsInfoCard('<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="20" x2="6" y2="14"/><line x1="12" y1="20" x2="12" y2="8"/><line x1="18" y1="20" x2="18" y2="11"/></svg>', '平均每日消息', Math.round(total / totalDays) + ' 条') +
           statsInfoCard('<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c1 3-3 4-3 7a3 3 0 006 0c0-1-.3-2-.8-3 1.8 1 3 3 3 5a6 6 0 11-12 0c0-4 3-6 4.5-8.5z"/></svg>', '最长连续聊天', calcStreak(Object.keys(dateCount)) + ' 天') +
-          statsInfoCard('<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>', '单日最高消息', maxSingle + ' 条');
-      }
+          statsInfoCard('<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>', '单日最高消息', maxSingle + ' 条') +
+          // v3.15.x：联系人发红包记录（side=in 的 redpacket 消息）
+          coinRecordSection('🧧', name + '发红包记录', '笔',
+            msgs.filter(m => m && m.special === 'redpacket' && m.side === 'in').map(m => {
+              const stMap = { pending: '待领取', received: '已领取', expired: '已过期·退回', returned: '已退回' };
+              const st = stMap[m.rpStatus || 'pending'] || '';
+              const wish = m.rpWish ? '「' + m.rpWish + '」' : '';
+              return {
+                main: '¥' + Number(m.rpAmount || 0).toFixed(2) + escH(wish) + ' · ' + escH(st),
+                sub: fmtMDHM(m.rpTs || m.ts)
+              };
+            }),
+            '还没有 ' + escH(name) + ' 发的红包') +
+          // v3.15.x：联系人申请心意币记录（askcoin 卡片）
+          coinRecordSection('🪙', name + '申请心意币记录', '笔',
+            msgs.filter(m => m && m.special === 'askcoin').map(m => ({
+              main: '+¥' + (Number(m.askFen || 0) / 100).toFixed(2),
+              sub: fmtMDHM(m.askTs || m.ts)
+            })),
+            escH(name) + ' 还没有向 Mochi 申请过');
+        }
     }
     // ---- 情绪表达 ----
     const exprEl = document.getElementById('st-expr-content');

@@ -174,17 +174,20 @@
     push(JSON.parse(gStore().get('cjian-roster') || '[]'), null);
     return out;
   }
-  // 把某个桌面的虚拟名单落成真身（返回新梦角 id）；已有名单/已播种则直接返回首个
+  // 把某个桌面的虚拟名单落成真身（返回新梦角 id）；已有名单直接返回首个；
+  // 该桌面带 cjian-seeded 标记且名单为空 = 用户删过，尊重不复活（返回空串）。
   function materializeDesk(cid) {
     try {
       const ds = window.xyStore(GNS + ':' + cid);
-      let list = deskRoster(cid);
-      if (!list.length) {
-        list.push({ id: makeId(), name: partnerNameOf(cid), offsetMin: 0 });
-        ds.set('cjian-roster', JSON.stringify(list));
-      }
+      const list = deskRoster(cid);
+      if (list.length) { ds.set('cjian-seeded', '1'); return list[0].id; }
+      let seeded = false;
+      try { seeded = !!ds.get('cjian-seeded'); } catch (e) {}
+      if (seeded) return '';
+      const entry = { id: makeId(), name: partnerNameOf(cid), offsetMin: 0 };
+      ds.set('cjian-roster', JSON.stringify([entry]));
       ds.set('cjian-seeded', '1');
-      return list[0].id;
+      return entry.id;
     } catch (e) { return ''; }
   }
   function keyOf(id) { return 'narc-' + id; }
@@ -215,35 +218,18 @@
   function curId() { try { return gStore().get('narc-cur') || ''; } catch (e) { return ''; } }
   function setCur(id) { try { gStore().set('narc-cur', id); } catch (e) {} }
 
-  // ---- 默认播种：名单为空时把当前桌面的联系人（TA）种为第一个梦角 ----
+  // ---- 默认播种：全局还没有任何真身梦角时，把当前桌面的联系人（TA）先落成真身 ----
   // 与 cjian.js seedIfEmpty 同源同键：取 lbl-partner → 联系人名 → 'TA'；写该桌面
   // cjian-roster 并落 cjian-seeded 标记——用户之后删光梦角不会复活（标记已存在）。
   function seedDefaultRoster() {
     try {
+      if (roster().some(x => !x.virtual)) return; // 已有真身，不播种
       let cid = 'default';
       try {
         const m = String(window.activePrefix ? window.activePrefix() : '').match(/xy-home-v2:([^:]+)$/);
         if (m) cid = m[1];
       } catch (e) {}
-      const ds = window.xyStore(GNS + ':' + cid);
-      if (!ds || ds.get('cjian-seeded')) return;
-      let list = [];
-      try { list = JSON.parse(ds.get('cjian-roster') || '[]'); } catch (e) {}
-      if (!Array.isArray(list)) list = [];
-      if (!list.length) {
-        let name = '';
-        try { name = String(ds.get('lbl-partner') || '').trim(); } catch (e) {}
-        if (!name) {
-          try {
-            const cs = window.getContacts ? window.getContacts() : [];
-            const c = cs.find(x => x.id === cid) || null;
-            if (c && c.name) name = c.name;
-          } catch (e) {}
-        }
-        list.push({ id: makeId(), name: name || 'TA', offsetMin: 0 });
-        ds.set('cjian-roster', JSON.stringify(list));
-      }
-      ds.set('cjian-seeded', '1');
+      materializeDesk(cid);
     } catch (e) {}
   }
 
@@ -277,11 +263,11 @@
     if (home) home.hidden = false;
   };
   function syncCur() {
-    seedDefaultRoster(); // 名单为空时默认把当前桌面联系人种为第一个梦角（与 cjian.seedIfEmpty 同键同标记）
-    const r = roster();
-    if (!r.length) { cur = ''; return; }
+    seedDefaultRoster(); // 全局还没有真身时，把当前桌面联系人种为第一个梦角（与 cjian.seedIfEmpty 同键同标记）
+    const real = roster().filter(x => !x.virtual); // 虚拟 chip 只作入口展示，不参与选中
+    if (!real.length) { cur = ''; return; }
     const c = curId();
-    cur = r.some(x => x.id === c) ? c : r[0].id;
+    cur = real.some(x => x.id === c) ? c : real[0].id;
     setCur(cur);
   }
 
@@ -292,11 +278,13 @@
     const r = roster();
     let h = '';
     h += '<div class="narc-chips">';
-    r.forEach(c => { h += '<button class="narc-chip' + (c.id === cur ? ' on' : '') + '" data-op="pick-roster" data-rid="' + esc(c.id) + '">' + esc(c.name) + '</button>'; });
+    r.forEach(c => {
+      h += '<button class="narc-chip' + (!c.virtual && c.id === cur ? ' on' : '') + '" data-op="pick-roster" data-rid="' + esc(c.id) + '" data-cid="' + esc(c.cid || '') + '">' + esc(c.name) + '</button>';
+    });
     h += '<button class="narc-chip narc-addchip" data-op="add-roster">＋ 添加</button>';
     h += '</div>';
     if (!cur) {
-      h += '<div class="narc-empty">此间还没有梦角<br>先添加一个你要慢慢认识的人吧';
+      h += '<div class="narc-empty">还没有可以写档案的梦角<br>点上方联系人创建，或从「此间」添加';
       h += '<br><button class="ne-btn" data-op="add-roster">去添加梦角</button></div>';
       root.innerHTML = h;
       return;
@@ -954,7 +942,17 @@
     switch (op) {
       case 'nav': view = el.getAttribute('data-view') || 'home'; render(); break;
       case 'stab': { const tv = el.getAttribute('data-view'), tb = el.getAttribute('data-tab'); if (tv && tab[tv] != null) tab[tv] = tb; render(); break; }
-      case 'pick-roster': cur = el.getAttribute('data-rid'); setCur(cur); tab.tastes = 'like'; tab.habits = 'daily'; tab.things = 'use'; tab.shared = 'first'; tab.knows = 'cards'; render(); break;
+      case 'pick-roster': {
+        // 虚拟 chip（rid 为空 + 带 cid）：点击即把该桌面联系人落成真身再选中——
+        // 已被用户删过的桌面（有 cjian-seeded 标记）不会复活，materializeDesk 返回空串
+        const rid = el.getAttribute('data-rid') || '';
+        const cid = el.getAttribute('data-cid') || '';
+        cur = rid || (cid ? materializeDesk(cid) : '');
+        if (cur) setCur(cur);
+        tab.tastes = 'like'; tab.habits = 'daily'; tab.things = 'use'; tab.shared = 'first'; tab.knows = 'cards';
+        render();
+        break;
+      }
       case 'add-roster': if (window.cjianManage) window.cjianManage(); break;
       case 'efield': editField(el.getAttribute('data-map'), el.getAttribute('data-key')); break;
       case 'add-li': addLi(el.getAttribute('data-kind')); break;

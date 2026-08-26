@@ -2,6 +2,39 @@
 
 两个 AI 不能直接对话，开工/完工时在这里各留一行，让对方打开仓库就知道当前状态。
 
+### 2026-08-26 19:1x（✅ 完成·TA 自动「向 Mochi 申请」心意币 + 聊天记录页新增红包/申请流水——用户需求）
+- [本会话·完成]（**已改 src/js/chat.js（trySystemAskMochi + askDailyCount/Incr + mochi-fg-resume 补触发监听 + renderMsg 新增 special:'askcoin' 分支 + addIn 白名单补 askFen/askTs）+ src/js/p2-features.js（coinRecordSection/fmtMDHM/escH 助手，聊天记录 tab 追加两个流水区块）；tools/verify-unified-heart-wallet.mjs 扩至 **20/20**；已构建 + 布局 verify 10/10 + verify-coin-linkage 14/14 + verify-gift-market-v3 回归 0 FAIL 全绿；未提交**）。
+  - **①TA 自动申请**：新 trySystemAskMochi 搭车 replyOnce/tryAutoSend 尾部两条既有链（L2282/L2546 同款位置）+ 自挂 mochi-fg-resume 回前台补触发；概率门同自动红包（平时 4% / 七夕 8%）、日上限 2 次（计数键 `ml2_ask_daily_<date>`）；金额走 genRpAmount(5200000) 与发红包完全同分布；入 TA 的 systemBalance（可透支为负），聊天落一条居中卡「🪙 TA 向 Mochi 申请了心意币 ¥13.14」（special:'askcoin' + askFen/askTs 字段，渲染分支插在 redpacket 之后复用 .msg-center-card）。askFen/askTs 已加进 addIn 白名单，外部模块可用 chatAddIn 注入同类型记录（bg-keep 后台队列未来可直接用）。
+  - **②聊天统计→聊天记录 tab 新增两个区块**（p2-features renderStats 内，追加在原五张信息卡之后）：「🧧 <联系人名>发红包记录」= msgs 里 side==='in' 且 special==='redpacket'（¥金额+留言+状态 待领取/已领取/已过期·退回/已退回+时间）；「🪙 <联系人名>申请心意币记录」= special==='askcoin'（+¥金额+时间）。样式复用 stats-sec/stats-list/stats-item；**全量展示不截断**（用户要求保存全部记录），按时间倒序最新在上，流水低频（红包≤5/日、申请≤2/日）无性能顾虑。取数用完整 msgs（含无 text 的卡片消息），与面板原有 real 过滤并存。
+  - 验证：verify-unified-heart-wallet 20/20——K2 注入 askcoin 后聊天流出现居中卡、K3 统计页两区块渲染且注入的 ¥66.00 已领取红包与 +¥13.14 申请均可见、F3 静态断言生成器与记录区块均已打包。真机确认点：正常聊几天后偶见 TA 申请卡片且 TA 余额增加；统计页两条流水随聊天历史滚动可见；切联系人后各自独立。
+  - ⚠️ 与并行会话档案跨桌面改动无文件交集（本轮 chat.js+p2-features.js，对方 memo-arc/my-arc）。
+
+### 2026-08-26 18:58（✅ 完成·两个档案都支持跨桌面联系人切换——用户需求）
+- [本会话·完成]（**已改 src/js/memo-arc.js（roster 带桌面归属+虚拟 chip+materializeDesk）+ src/js/my-arc.js（改按联系人分档存储+chip 切换）**；验证 verify-narc-v2 **67/67**（新增 P16a-e 跨桌面用例）+ verify-myarc **33/33**（新增 P10a-f 多联系人分档用例）+ 布局 verify 10/10；**已重新构建（18:58, sw: mochi-mt9zdmlk）；未提交**）。
+  - **梦角档案·跨桌面切换**：roster 条目带 cid（属于哪个桌面）；还没有名单的联系人渲染「虚拟 chip」（条件=该桌面 roster 空 **且无 cjian-seeded 标记**——被用户删过的不复活），点击即按 cjian.seedIfEmpty 同款语义落真身并选中。chips 覆盖所有桌面联系人，来回切换各自档案独立。
+  - **我的档案·按联系人分档**：存储键从全局 `xy-home-v2:myarc` 改为 `xy-home-v2:<cid>:myarc`（命名空间键天然免 migrateLegacy 误迁；旧全局键保留作首次读取兜底=各桌面第一次打开继承其内容当起点）；根键 `myarc-cur` 记住上次查看（EXCLUDE 的 'myarc' 前缀同时覆盖）。页面顶部 chips 列出全部联系人（显示 lbl-partner 备注名优先），hero 副标题标明「写给『某TA』的那一份」；各份完全独立、互不串档（P10e/f 验证）。打开页默认定位当前桌面联系人，其次记住的上一个。
+  - 数据说明：本次改动前若已有用户在全局键里写过「我的档案」（功能当天刚上线，存量≈0），升级后每个桌面首次打开会以旧内容为起点，之后各桌面独立修改即自然分档。
+  - 真机确认点：①多联系人的设备上，梦角档案/我的档案顶部 chips 都能看到所有联系人名字，点击切换；②在 A 的我的档案写的「我和TA」，切到 B 不出现；③没开过此间的联系人也会出现在梦角档案 chips 里，点一下即建档。
+
+
+### 2026-08-26 18:5x（✅ 完成·新用户默认心意币 ¥520/¥520 + 老占位巨款自动迁移——用户需求）
+- [本会话·完成]（**已改 src/js/gift-shop.js（WALLET_DEFAULT_FEN=52000 + walletGet 迁移分支）+ chat.js（rpWalletGet 同步默认与迁移）+ fishing.js / drift-bottle.js / memory-game.js（种子对齐 52000）；tools/verify-unified-heart-wallet.mjs 扩至 **17/17**（新增 D 组默认+迁移用例）；tools/verify-coin-linkage.mjs 种子加 lpc 修 A1 竞态后复跑全绿；tools/verify-gift-market-v3.mjs B5 期望值随新默认更新（99999999→52000 基准）；已构建 + 布局 verify 10/10；未提交**）。
+  - **默认设计**：新用户（从未读写过钱包）我和联系人各 **¥520**（我爱你）——够立刻体验发几个小额红包、买两三件日常礼物；¥1314 项链/机票、¥5200 王冠等大礼需要一起玩游戏/种花攒或透支，形成完整经济循环。旧占位巨款 ¥999999.99 废除。
+  - **迁移规则**：读取 gift-wallet 时若两侧余额【恰好都等于 99999999】（=老版本占位且从未动过的指纹），一次性替换为 ¥520/¥520 并落盘；只要动过任意一侧（申请/红包/游戏收入等）就不匹配、绝不误伤真实数据。chat.js 与 gift-shop.js 双读取口同构实现，谁先读到谁迁移。注意：用户若曾「向 Mochi 申请」恰好输到 99999999 元整（maxlength 9 位内可能）会被误迁——概率极低，接受此权衡（如在意可后续加迁移标记键）。
+  - 验证：verify-unified-heart-wallet 17/17——D1 清空双键后红包面板显示 心意币 ¥520.00 · TA ¥520.00、D2 默认值落盘 52000/52000 分、D3 种入 {99999999,99999999} 后自动迁回 ¥520、D4 迁移落盘；M 组继承 rp-wallet 用例改用 activeStore().remove() 三清（仅删 LS 会被 IDB 回填挡住——测试坑，生产无此路径）。⚠️ verify-coin-linkage 的花园用例此前偶发失败根因：进园瞬间 checkPartnerPassive 会抢收盛开的花（data.lpc 缺省视为到期立即触发）——种子补 lpc: now-100 跳过代管即稳定；诊断脚本 tools/diag-garden-harvest.mjs 留档。
+  - ⚠️ 与并行会话钓鱼 UI 收尾同文件（fishing.js）改动不重叠（我只动 walletGet 两行常量）。真机确认点：全新安装/清除数据后首次打开红包面板显示 ¥520/¥520；老用户升级后巨款占位自动变 ¥520（动过的余额不受影响）。
+
+### 2026-08-26 18:4x（✅ 完成·双人钓鱼 UI 补全收尾——用户「之前设计了一点没设计完，继续」）
+- [本会话·完成]（**已改 src/css/chat-pages.css（末尾追加整套 .fish-* 样式段，AI-A 域）+ src/js/fishing.js（视觉元素/互斥/按钮态/测试钩子，AI-A 域）+ src/js/mobile-adapt.js（两处浮层列表登记 '#chat-fish-panel'，⚠️ 跨 AI-B 域一行登记对齐 c4 先例，请知悉）；新增 tools/verify-fishing-ui.mjs 23/23 + 回归 verify-coin-linkage 14/14 + verify-unified-heart-wallet 17/17 全绿；未构建未提交——请构建者随本批统一 node build.mjs 收口**）。
+  - **缺口定位**：fishing.js 逻辑与 template 锚点此前已完整（今日收获/图鉴/TA送礼/陪伴奖励/时机收竿全在），但①整套 .fish-* 视觉样式从未编写（面板渲染为裸 div）；②mobile-adapt 两浮层列表漏登记（背景滚动锁/键盘停靠不生效）；③无兄弟浮层互斥（与 pong/snake/c4 半框叠层）；④无鱼漂视觉元素。本轮四项全补齐。
+  - **样式段内容**：水边场景（渐变天空+太阳/云+纯 CSS 小人双方+斜竿+波纹流动水面）+ 状态驱动视觉（data-mine/ta：waiting 漂浮出水、biting 漂变蓝剧烈晃动+竿抖动+TA徽章变橙、rest 灰化、shift 挪位）+ 时机条（红→绿→红渐变+虚线完美区+白色光标）+ 收竿橙脉冲按钮 + 三页签/收获行/图鉴网格(✓角标)/送礼行/水花动画 + **[data-theme=dark] 兜底段**（drift/room 同款惯例）+ prefers-reduced-motion 全关。
+  - **fishing.js 增量**：init 注入 .fish-bobber 双漂（纯视觉，data 状态驱动）+ FISH_SIBLING_IDS 兄弟互斥（openFishPanel 收兄弟 + MutationObserver 反向兜底，connect-four 同款）+ 等待期按钮禁用态文案「等待鱼漂…」（修按钮区塌陷跳动）+ 抛竿时放开 status keep 让「鱼漂已下水」提示生效 + 空收获禁用出售按钮 + `window.__fishDebug` 驯化钩子（state/forceBite/reelAt(p,force)/addTaGift，供专项脚本确定性验证）。
+  - **修了一个真 bug**：`.fish-timing-wrap { display:flex }` 特异性压过 UA `[hidden]` 规则 → 等待期时机条常显；已补 `.fish-timing-wrap[hidden]{display:none}`（T3 含回归哨兵断言）。
+  - ⚠️ **fishing.js 双会话叠加说明**：本轮开工前后并行会话对 fishing.js 做过「二调」（兑换 ¥5.2/陪伴奖励 ¥13.14 对齐红包体系，18:26 落盘）；我的补全基于该版本追加、无冲突（静态 A7-A9 + 运行时全绿佐证），收口时 git diff 自查两拨改动都在即可。
+  - 验证：verify-fishing-ui.mjs **23/23**（A 组静态 10：样式覆盖/容器高度/dark兜底/reduced-motion/两列表登记/鱼漂/互斥/钩子/锚点；T 组运行时 13：面板打开样式生效/场景元素/抛竿漂出+时机条隐藏哨兵/咬钩时机条/收竿入账+图鉴/出售到账+空态禁用/图鉴14格/送礼空态→收藏→兑换+¥5.2/TA状态机运转/dark切换/兄弟互斥自动收起/reduced-motion 波纹关/零 JS 异常）；截图目检浅色/深色两版（%TEMP%\opencode\fish-*.png）。
+  - 真机确认点：①聊天更多功能→小游戏→钓鱼：水边场景+双方小人+双竿+鱼漂，抛竿后漂浮出、咬钩时漂变蓝晃动+时机条弹出，绿区收竿必高品质；②等待期按钮显示灰色「等待鱼漂…」不塌陷；③今日收获/鱼图鉴（首钓发现提示）/TA送我的（收藏+兑换¥5.2）三页签可切；④一起钓鱼累计 5 分钟出陪伴奖励 +¥13.14（每日一次）；⑤暗色模式全面板可读；⑥开钓鱼时再开其他游戏半框互不叠层。
+- [追加·用户反馈「条根本没有蓝色」]（**已改 src/css/chat-pages.css + src/template.html 一行文案 + verify A11 断言，复跑 24/24 全绿**）：原时机条最佳区是绿色、label 却写「变色变蓝时收竿最佳」——蓝色只在鱼漂上且变蓝瞬间恰是最差时机（刚咬钩=进度0），视觉引导自相矛盾。修正：**时机条最佳区间（38%~68%，与 JS perfect 判定同区间）改为蓝色渐变**（#8ec9f5→#4a9fe8，与咬钩鱼漂同色系），两端红橙=太早/太迟；label 改「鱼漂变蓝晃动了 · 光标进蓝区收竿最佳」（漂变蓝=开始信号，光标进蓝区=收竿）；verify 新增 A11 防漂移断言（条蓝区位置==JS perfect 区间==good 区 CSS 位置三方一致）。咬钩态截图目检通过（%TEMP%\opencode\fish-biting.png）。
+
 ### 2026-08-26 18:4x（✅ 完成·聊天更多功能【小游戏】新增【记忆翻牌】——用户详细规格；激活此前休眠的 memory-game.js）
 - [本会话·完成]（**已改 src/template.html（c4 面板后插 #chat-memory-panel 半框锚点 15 个 id + more-grid 四子棋后加 #more-memory 入口 data-mcat=game）+ src/css/chat-pages.css（末尾追加 .mgm-* 样式段：棋盘网格/纯 CSS 3D 翻牌/星语渐变牌背✦/双方配对归属描边/mgmpop 动画/reduced-motion/[data-theme=dark] 兜底）+ src/js/memory-game.js（三处小改：①牌类名 mem-card→mgm-card 全家桶改名——与纪念页 .mem-card 样式串味隔离；②walletGet 补继承 rp-wallet 种子一步对齐 chat/gift-shop/fishing v3.15.x 口径；③入口自绑定 bindEntry+兄弟浮层互斥 MutationObserver+window.__mgmDebug 只读调试口/fast 快速模式）+ src/js/mobile-adapt.js（FLOAT_PANEL_SELECTORS/FLOAT_SELECTORS 两列表各登记 '#chat-memory-panel'，跨域最小登记请知悉）；新增 tools/verify-memory-flip.mjs **25/25 连跑 2 次全绿**；已构建（18:41, sw: mochi-mt9yrj8s）+ 布局 verify 10/10 + verify-connect-four 30/30 + verify-coin-linkage 14/14 + verify-unified-heart-wallet 17/17 回归全绿；未提交**）。
   - **玩法落地**（对齐用户规格）：双人合作轮流翻两张、配对成功同一人连击继续；三档难度 🌱休闲3×4(6对·记忆率60%)/🌙普通4×4(8对·80%)/⭐挑战5×4(10对·95%)；TA 纯代码控制——known 表按概率记牌+行为池（发现配对/顺着线索/犹豫停顿/记错/翻到你刚翻过的牌有专属提示）；默契分（起始50 配对+4 连击+2 互相接牌+3 翻错-3 完成封顶100）；结算覆盖层（双方配对/翻牌统计+默契+心意币）→【再玩一局】【返回小游戏】；聊天写「记忆翻牌 · …」系统消息 + TA 从字卡库『游戏平局·回应』池抽一句。
@@ -30,17 +63,22 @@
   - 真机确认点：①我的档案页右上角应为空白（无按钮），去共同记录走总览末行桥接行；②全新环境（或从没用过此间的桌面）进梦角档案，顶部应直接出现以 TA 名命名的 chip 与档案总览，不再是「此间还没有梦角」空态；③删光梦角后重开不复活。
 
 
-### 2026-08-26 18:1x（✅ 完成·桌面 1/2/3 页卡片尺寸与节奏全面对齐（第二轮收口第三页）——用户需求「三页位置长度对齐」）
-- [本会话·完成]（**已改 src/css/home.css + src/template.html（AI-B 域）+ src/css/memo.css + src/js/personalize.js（AI-B 域）+ 新增 tools/verify-desk-align.mjs 14/14；已构建（18:05, sw: mochi-mt9xhe89）+ 布局 verify 10/10 + verify-desk-reset-period 10/10 + verify-desk-visuals-restore 5/5 + verify-desk-persist 4/4 + verify-music-ta-control 16/16 + verify-memo 20/20 + verify-fish-play 33/33 全绿；改动已随后续 1b6b8c1/59c5529 一并入库；未单独提交**）。
-  - **统一横向**：checkin/weekend-box/desk-period 去掉 `margin:0 2px` 内缩 → 三页所有卡片同宽（354），左右边缘跨页对齐。
-  - **统一纵向节奏**：每页首卡距顶 14px（新增 `.page-slide > [data-desk-widget]:first-child{margin-top:14px}`，第三页无经期卡时 mini-row 不再贴顶）；卡片间距统一 14px（checkin 16→14、weekend 10→14、desk-period 16→14；`.app-grid{margin-top:0}` + `.app-grid.p2-grid` 提特异性压过 chat-pages.css 的 14px——第三页 flex 容器边距不折叠，原 14+8=22px 与他页不一致）。
-  - **第二页三组件重设计**：音乐卡 `min-height:190px` + flex 垂直居中（与首页纪念日卡 190 同档，横滑首卡上下边缘完全对齐）；本周日常压缩（padding 14→8、日期格 7→4、b 14→13）101→76.7px；摸鱼卡重构（标题+副题合并 `.we-top` 同行基线排列、摸鱼值行距收紧、按钮垂直居中）85.7→67.7px，与首页打卡横幅（63.3）同档。
-  - **第三页对齐（第二轮，用户反馈「依旧没有对齐」的根因）**：① desk-period 升级 190 hero 档（flex 居中、天数 34→50px）——与 deco/music 完全同高；② 今日备忘/心情行 112.7→81.1px（memo-app-badge 状态行压缩 mt8→4/字号11→10/padding5→2 + .memo-card padding 14→10）；③ **修复 fresh 冷启动 desk-period 流失隐藏池**（buildDeskPages 按默认 2 页收缩把静态第三页删进池 → ensureP3 仅 50ms 后重建 p3apps，而 ensureDeskPeriod 只在 0ms 同步跑一次扑空 → 经期卡从此消失、第三页缺首卡）：personalize.js 增 `ensureDeskPeriodP3Order` 200/600ms 延迟补位（!lay 分支才移回，不破坏已装修用户删除意图）+ 顺序校正（memo-row 150ms 先落位时会排在经期卡前，校正回「经期卡→备忘心情行→p3apps」模板默认序）。
-  - **对齐结果（390×844 实测）**：三页首卡全部 190/190/190；第二档起点三页全部 218；全卡 14px 间距；图标组顶部 P1↔P2 Δ8.5px。verify-desk-align.mjs 固化 14 项几何断言（只读几何不写存储，结果稳定，可作回归）。
-  - ⚠️ **memo.css/memo-app.js 归属**：不在 AGENTS.md 分工清单，本轮按「谁先开工谁负责」接手改了 memo-app-badge 样式（纯 CSS），memo-app.js 零改动（badge 注入逻辑兼容）。
-  - ⚠️ **事故记录（16:18）**：本轮第一轮 src 改动（home.css/template.html）曾被并行会话的 checkout/编辑器旧缓冲整包回写清掉（同 WORKLOG 既有事故模式），已从工作记录重做；当时并行会话自身未提交的 src（寻踪 rename/personalize desk-period 修复等）也一并被清，如缺失请该会话自查重做。
-  - ⚠️ **预存问题（非本轮引入，worktree 纯 HEAD 隔离复现）**：tools/verify-memo-p3.mjs B2/B3/D2/E2 在纯 HEAD 构建上同样失败——种子布局 `['p2apps','week','weekend']` 会被 ensureP2AppsBelowWeekend 的「p2apps 挪到 weekend 后」迁移改写（v3.13 行为 vs 种子数据过时）+ 跨组 IDB 回填竞态；需要该脚本所有者把种子更新为已迁移形态或隔离每组 IndexedDB。
-  - 真机确认点：①横滑 1→2→3 页，三页首卡（纪念日/音乐/经期）上下边缘齐平、第二档（情话/本周日常/备忘心情）齐平；②卡片左右边缘三页一致无 2px 参差；③全新用户第三页顶部有经期倒计时大卡（190px），备忘录状态行变小胶囊；④装修模式移动组件后各页首卡仍距顶 14px。
+### 2026-08-26 18:1x→19:0x（✅ 完成·桌面 1/2/3 页「整列对齐」——三页统一 [190 hero][77 中卡][66 横幅][图标区同顶] 节奏——用户需求两轮迭代）
+- [本会话·完成]（**已改 src/css/home.css + src/template.html + src/css/memo.css + src/js/memo-app.js + src/js/personalize.js（除 home.css/template.html 外 memo.css/memo-app.js 不在 AGENTS 分工清单、personalize.js 为 AI-B 域；memo-app.js 仅徽标挂载点与延迟重跑两处小改）+ 新增 tools/verify-desk-align.mjs 16/16 + tools/verify-memo.mjs T20 断言同步新结构 20/20；已构建（18:27/19:0x, sw: mochi-mt9y9ops）+ 布局 verify 10/10 + desk-reset-period 10/10 + desk-visuals-restore 5/5 + desk-persist 4/4 + music-ta-control 16/16 + fish-play 33/33 全绿；home.css/memo.css 已随后续 v3.16.x 提交入库，其余未提交**）。
+  - **用户需求**：从每页顶部组件到最下方图标按钮，1/2/3 页整列对齐；通过调桌面小组件大小实现。
+  - **最终对齐结构（390×844 实测，三页逐像素一致）**：首卡 190（14→204）｜第二档 77（218→295）｜第三档横幅 66（309→375）｜图标区顶部全部 y=389（Δ0）。
+    - 第一页：纪念日卡 190（不变）→ 今日情话/已摸鱼 min-height:77 → 打卡横幅 min-height:66 → 图标。
+    - 第二页：音乐卡 min-height:190 + flex 居中 → 本周日常压缩+min-height:77（padding 8、日期格 4px、b 13px，101→77）→ 摸鱼卡重构 66（`.we-top` 标题+副题同行、值行收紧、按钮垂直居中，86→66）→ 图标。
+    - 第三页：经期卡升级 190 hero（flex 居中、天数 34→50px）→ 备忘/心情 77（min-height）→ **备忘录状态行升级为整宽横幅 66**（自半卡内移出，memo-app.js 挂到 memo-row 之后跟随移动，与打卡/摸鱼同款卡片外观）→ 图标。
+  - **横向统一**：checkin/weekend-box/desk-period 去 `0 2px` 内缩全宽；间距统一 14px（`.app-grid{margin-top:0}`+`.app-grid.p2-grid` 提特异性压 chat-pages.css；第三页 flex 容器不折叠故必须归零）；新增 `.page-slide > [data-desk-widget]:first-child{margin-top:14px}`。
+  - **修复 fresh 冷启动 desk-period 流失隐藏池**：buildDeskPages 按默认 2 页收缩删静态第三页 → ensureP3 50ms 后重建，而 ensureDeskPeriod 0ms 同步跑一次扑空 → 经期卡永留池里、第三页缺首卡。personalize.js 增 `ensureDeskPeriodP3Order` 200/600ms 补位（!lay 分支才移回，不破坏已装修用户删除意图）+ 顺序校正（memo-row 150ms 先落位时校正回「经期卡→备忘心情→p3apps」）。
+  - **memo-app.js 徽标跟随**：memoUpdateBadge 改挂 memo-row 后（previousElementSibling 校验幂等重插，装修移动/落池后自动跟随）+ 300/700ms 延迟重跑（冷启动时 memo-row 尚在池中，init 首跑会把横幅插进池里）。
+  - **验证**：verify-desk-align.mjs 16 项几何断言（三页同宽/14px 节奏/三档同高/图标区同顶 Δ0/横幅整宽/无 JS 异常/经期卡在位）——只读几何不写存储，结果稳定；verify-memo T20 断言同步横幅新结构。
+  - ⚠️ **归属说明**：memo.css/memo-app.js 不在 AGENTS.md 分工清单，本轮按「谁先开工谁负责」接手（memo-app.js 仅 memoUpdateBadge 挂载点 + 两行延迟重跑，请原归属方复核）；verify-memo.mjs T20 断言随新结构更新。
+  - ⚠️ **事故记录（16:18）**：本轮第一轮 src 改动曾被并行会话 checkout/编辑器旧缓冲整包回写清掉（同 WORKLOG 既有事故模式），已重做；当时并行会话自身未提交 src 也一并被清，请该会话自查。
+  - ⚠️ **预存问题（非本轮引入，worktree 纯 HEAD 隔离复现）**：tools/verify-memo-p3.mjs B2/B3/D2/E2 在纯 HEAD 上同样失败——种子布局 `['p2apps','week','weekend']` 被 ensureP2AppsBelowWeekend 的 v3.13 迁移改写 + 跨组 IDB 回填竞态；请脚本所有者把种子更新为已迁移形态或隔离每组 IndexedDB。另 verify-desk-persist T1 前置（elementFromPoint 命中测试）偶发被浮层遮挡，重跑即过，属环境 flaky。
+  - 真机确认点：①横滑 1→2→3 页，三页首卡（纪念日/音乐/经期）上下边缘齐平，第二档（情话/本周日常/备忘心情）齐平，第三档（打卡/摸鱼/备忘录横幅）齐平，图标区第一行同一高度起步；②卡片左右边缘三页一致；③第三页备忘录横幅点击直达备忘录、待办数正常；④全新用户第三页顶部有经期大卡；⑤装修模式移动组件后各页首卡仍距顶 14px。
+
 
 ### 2026-08-26 18:2x（✅ 完成·心意币与【小游戏】+桌面【花园】联动——用户需求）
 - [本会话·完成]（**已改 src/js/gift-shop.js（导出 window.giftWalletChange 统一发币入口）+ src/js/chat.js（rpGameCoinGrant/rpCoinTxt 助手 + 猜拳/贪吃蛇结算发币 + 补接钓鱼死入口 more-fish）+ src/js/pong.js / breakout.js / connect-four.js（endGame 结算发币，与你上条 c4 加固同文件无冲突）+ src/js/garden.js（收花奖励）+ src/js/fishing.js（walletGet 对齐旧键迁移种子语义）；新增 tools/verify-coin-linkage.mjs **11/11**；已构建 + 布局 verify 10/10 + verify-unified-heart-wallet 回归 13/13 + verify-gift-market-v3 回归 0 FAIL 全绿；未提交**）。

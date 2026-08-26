@@ -1,7 +1,9 @@
 ﻿// ===== 我的档案（v3.16.x：与【梦角档案】互为镜像——这里记录「我是谁，以及我希望怎样被理解」） =====
 // 入口：桌面第三页「我的档案」图标（梦角档案右边）。
 // 定位：我的档案=认识自己；梦角档案=认识TA；共同记录=记录我们（在梦角档案内维护，本页只做桥接入口）。
-// 数据键 xy-home-v2:myarc（单一全局 JSON，contacts.js EXCLUDE 已登记防 migrateLegacy 误迁）。
+// 数据键 xy-home-v2:<cid>:myarc——按桌面联系人各存一份（我和不同 TA 的相处期望可能不同，
+//   不设全局统一档）；命名空间键天然免 migrateLegacy 误迁。旧版全局键 myarc 仅作首次读取兜底，
+//   另有根键 myarc-cur 记住上次查看（contacts.js EXCLUDE 的 'myarc' 前缀同时覆盖两键）。
 // 结构（8 个分区，前 7 个为本页数据，第 8 个桥接梦角档案·共同记录）：
 //   关于我 / 我的喜好 / 我的习惯 / 我的物品 / 我和TA（希望的相处）/ 我对自己的描述 / 我的IF世界(世界母档) / 我们的共同记录→
 // 双向约定：本页与梦角档案互不自动改写对方数据；「TA的身份」等母档字段将来由梦角档案侧读取镜像。
@@ -78,14 +80,32 @@
     gift: '例如：一直想送TA的一条围巾'
   };
 
-  // ---- 数据存取（单一全局键） ----
-  function loadRaw() { const s = gStore(); if (!s) return null; try { const o = JSON.parse(s.get(KEY) || 'null'); if (o && typeof o === 'object') return o; } catch (e) {} return null; }
-  function save(o) { const s = gStore(); if (s) { try { s.set(KEY, JSON.stringify(o)); } catch (e) {} } }
+  // ---- 数据存取（按桌面联系人各存一份：xy-home-v2:<cid>:myarc） ----
+  // 我和某位 TA 的相处期望可能不同，所以不设全局统一档；切换 chip 同梦角档案。
+  // 旧版全局键 xy-home-v2:myarc 作为首次读取兜底（各桌面第一次打开时继承其内容作为起点）。
+  function contactsList() {
+    try { const cs = window.getContacts ? window.getContacts() : null; if (cs && cs.length) return cs; } catch (e) {}
+    return [{ id: 'default', name: '默认' }];
+  }
+  function storeOf(cid) { return window.xyStore(GNS + ':' + cid); }
+  function partnerNameOf(cid) {
+    let n = '';
+    try { n = String(storeOf(cid).get('lbl-partner') || '').trim(); } catch (e) {}
+    if (!n) { const c = contactsList().find(x => x.id === cid); if (c && c.name) n = c.name; }
+    return n || 'TA';
+  }
+  function loadRaw(cid) {
+    const s = storeOf(cid); if (!s) return null;
+    try { const o = JSON.parse(s.get(KEY) || 'null'); if (o && typeof o === 'object') return o; } catch (e) {}
+    try { const o = JSON.parse(gStore().get(KEY) || 'null'); if (o && typeof o === 'object') return o; } catch (e) {} // 旧全局键兜底
+    return null;
+  }
+  function save(o) { const s = storeOf(viewCid); if (s) { try { s.set(KEY, JSON.stringify(o)); } catch (e) {} } }
   function normObj(v) { return (v && typeof v === 'object' && !Array.isArray(v)) ? v : null; }
   function makeId() { return 'm' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36); }
-  let cache = null;
+  const cache = {};
   function ensureArc() {
-    let o = cache || loadRaw(), dirty = false;
+    let o = cache[viewCid] || loadRaw(viewCid), dirty = false;
     if (!o) { o = { created: Date.now() }; dirty = true; }
     ['tastes', 'habits', 'things', 'selfs', 'ifchanges'].forEach(k => { if (!Array.isArray(o[k])) { o[k] = []; dirty = true; } });
     if (!normObj(o.who)) { o.who = { f: {} }; dirty = true; } else if (!normObj(o.who.f)) { o.who.f = {}; dirty = true; }
@@ -94,12 +114,13 @@
     if (!normObj(o.ifw)) { o.ifw = {}; dirty = true; }
     IFW_FIELDS.forEach(f => { if (typeof o.ifw[f[0]] !== 'string') { o.ifw[f[0]] = ''; dirty = true; } });
     if (dirty) save(o);
-    cache = o;
+    cache[viewCid] = o;
     return o;
   }
 
   // ---- 页面状态 ----
   let view = 'home';           // home|who|tastes|habits|things|relate|self|ifw
+  let viewCid = 'default';     // 当前正在看哪位桌面联系人的那份
   const tab = { tastes: 'like', habits: 'daily', things: 'use' };
   const FIELD_INDEX = {};
   WHO_FIELDS.forEach(f => { FIELD_INDEX[f[0]] = { map: 'who', label: f[1], ph: f[2], multi: f[3] }; });
@@ -107,8 +128,17 @@
   IFW_FIELDS.forEach(f => { FIELD_INDEX[f[0]] = { map: 'ifw', label: f[1], ph: f[2], multi: f[3] }; });
 
   // ---- 打开/关闭 ----
+  function restoreCur() {
+    const ids = contactsList().map(c => c.id);
+    let c = '';
+    try { c = String(gStore().get('myarc-cur') || ''); } catch (e) {}
+    if (ids.indexOf(c) >= 0) return c;
+    const act = window.__activeCid || 'default';
+    return ids.indexOf(act) >= 0 ? act : ids[0];
+  }
   window.openMyArc = function () {
     if (!page || !root) return;
+    viewCid = restoreCur();
     document.querySelectorAll('.page').forEach(p => p.hidden = true);
     page.hidden = false;
     view = 'home'; tab.tastes = 'like'; tab.habits = 'daily'; tab.things = 'use';
@@ -127,8 +157,17 @@
     if (!root) return;
     const arc = ensureArc();
     let h = '';
+    h += chipsHTML();
     h += (view === 'home') ? overviewHTML(arc) : sectionHTML(arc);
     root.innerHTML = h;
+  }
+  function chipsHTML() {
+    let h = '<div class="narc-chips">';
+    contactsList().forEach(c => {
+      h += '<button class="narc-chip' + (c.id === viewCid ? ' on' : '') + '" data-op="pick-cid" data-cid="' + esc(c.id) + '">' + esc(partnerNameOf(c.id)) + '</button>';
+    });
+    h += '</div>';
+    return h;
   }
 
   function filledN(m, keys) { return keys.filter(k => String(m[k] || '').trim()).length; }
@@ -141,7 +180,7 @@
     const ifwFilled = IFW_FIELDS.filter(f => String(arc.ifw[f[0]] || '').trim()).length + arc.ifchanges.length;
     let h = '<div class="narc-hero">';
     h += '<div class="narc-hero-top"><span class="narc-name">我的档案</span><span class="narc-days">写下自己 · ' + days + ' 天</span></div>';
-    h += '<div class="narc-hero-sub">认识自己——写下来，让TA慢慢读懂你。TA的那一份在「梦角档案」。</div>';
+    h += '<div class="narc-hero-sub">写给「' + esc(partnerNameOf(viewCid)) + '」的那一份——认识自己，让TA慢慢读懂你。</div>';
     h += '<div class="narc-stats">';
     h += '<div class="narc-stat"><b>' + arc.selfs.length + '</b><span>描述</span></div>';
     h += '<div class="narc-stat"><b>' + arc.tastes.length + '</b><span>喜好</span></div>';
@@ -477,6 +516,17 @@
       case 'add-self': addSelf(); break;
       case 'edit-self': editSelf(id); break;
       case 'del-self': delSelf(id); break;
+      case 'pick-cid': {
+        // 切换到另一位桌面联系人的那份档案（数据互不统一，各自独立维护）
+        const cid = el.getAttribute('data-cid') || '';
+        if (cid && contactsList().some(c => c.id === cid)) {
+          viewCid = cid;
+          try { gStore().set('myarc-cur', cid); } catch (e) {}
+          tab.tastes = 'like'; tab.habits = 'daily'; tab.things = 'use';
+        }
+        render();
+        break;
+      }
       case 'go-shared':
         // 共同记录在梦角档案内维护：桥接过去（无梦角时那边会显示引导）
         if (window.openNarcShared) window.openNarcShared();
