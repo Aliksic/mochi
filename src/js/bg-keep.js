@@ -818,9 +818,15 @@
   //   - 历史聊天查重窗口 30→15 分钟、已发通知查重窗口 10→6 分钟，误杀面减半；
   //   - 文本指纹取前 60→100 字符，常见短语互撞更少。
   let lastVisibleAt = Date.now();
+  let lastHiddenAt = 0; // v3.16.x：最近一次切后台时刻（修复过渡期闸门失效）
   (function () {
     const markVisible = function () {
-      if (document.visibilityState === 'visible') lastVisibleAt = Date.now();
+      if (document.visibilityState === 'visible') {
+        lastVisibleAt = Date.now();
+        lastHiddenAt = 0;
+      } else if (document.visibilityState === 'hidden') {
+        lastHiddenAt = Date.now();
+      }
     };
     document.addEventListener('visibilitychange', markVisible);
     window.addEventListener('pageshow', markVisible);
@@ -964,7 +970,8 @@
     const nkey = msgFingerprint(text, img);
     return {
       hiddenForMs: Date.now() - lastVisibleAt,
-      tooFreshHidden: Date.now() - lastVisibleAt < NOTIFY_HIDDEN_MIN_MS,
+      // v3.16.x：过渡期用「切后台时刻 lastHiddenAt」——切后台头 15 秒内的积压消息不弹
+      tooFreshHidden: lastHiddenAt > 0 && Date.now() - lastHiddenAt < NOTIFY_HIDDEN_MIN_MS,
       dupNotified: notifiedDup(nkey),
       dupSeen: seenDup(nkey),
       dupInChat: recentChatDup(nkey, refTs),
@@ -986,7 +993,10 @@
     if (document.visibilityState === 'visible') { markSeen(nkey); return; }
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
     gateStats.total++;
-    if (Date.now() - lastVisibleAt < NOTIFY_HIDDEN_MIN_MS) { gateStats.tooFresh++; return; }
+    // v3.16.x：过渡期闸门改用「切后台时刻」——lastVisibleAt 是最近一次回前台时间，
+    // 前台久驻后（如看了 10 分钟）它很旧，切后台瞬间积压的定时器批量到点产生的
+    // 一堆消息会全部通过闸门 → 弹出大量看过的内容。改为切后台头 15 秒内一律不弹
+    if (lastHiddenAt > 0 && Date.now() - lastHiddenAt < NOTIFY_HIDDEN_MIN_MS) { gateStats.tooFresh++; return; }
     if (notifiedDup(nkey) || seenDup(nkey)) { gateStats.dup++; return; }
     if (recentChatDup(nkey, ts)) { gateStats.dup++; return; }
     gateStats.sent++;

@@ -44,6 +44,72 @@
   }
   function toast(t) { if (typeof window.toast === 'function') window.toast(t); }
   function rand(min, max) { return min + Math.floor(Math.random() * (max - min + 1)); }
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  // v3.16.x 时辰区间：openModal 的 pills 是单选（互斥高亮），时辰需要多选——
+  // 时辰多选阶段由 cjianManage 自建全屏遮罩 #cj-slot-mask（独立于通用弹窗，不入侵 personalize）。
+  function showSlotPicker(selIdx, onDone, onCancel, onSkip) {
+    try {
+      const old = document.getElementById('cj-slot-mask');
+      if (old) old.remove();
+    } catch (e) {}
+    const m = document.createElement('div');
+    m.id = 'cj-slot-mask';
+    m.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(10,10,20,.52);display:flex;align-items:center;justify-content:center;padding:18px;';
+    const box = document.createElement('div');
+    box.style.cssText = 'width:100%;max-width:330px;background:var(--card-bg);border:1px solid var(--card-border);border-radius:16px;padding:18px 16px 14px;box-shadow:0 12px 40px var(--shadow-strong);';
+    const h = document.createElement('div');
+    h.style.cssText = 'font-weight:700;font-size:15px;margin-bottom:4px;text-align:center;color:var(--ink);';
+    h.textContent = 'TA 常在哪些时辰出现？';
+    const sub = document.createElement('div');
+    sub.style.cssText = 'font-size:12px;color:var(--muted);margin-bottom:10px;text-align:center;';
+    sub.textContent = '可多选 · 至少选一个 · 世界时间只在这些时辰里随机';
+    const grid = document.createElement('div');
+    grid.style.cssText = 'display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px;';
+    const st = {};
+    selIdx.forEach(i => { st[i] = true; });
+    const chipBase = 'padding:9px 0;border-radius:999px;border:1px solid var(--pill-border);background:var(--static-bg);color:var(--soft-ink);font-size:13px;';
+    const chipOn = 'padding:9px 0;border-radius:999px;border:1px solid #ffb454;background:#ffe1a8;color:#5a3d00;font-size:13px;font-weight:700;';
+    SHICHEN.forEach((name, i) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = name + '时';
+      b.style.cssText = st[i] ? chipOn : chipBase;
+      b.addEventListener('click', () => {
+        if (st[i]) { delete st[i]; b.style.cssText = chipBase; }
+        else { st[i] = true; b.style.cssText = chipOn; }
+      });
+      grid.appendChild(b);
+    });
+    const btns = document.createElement('div');
+    btns.style.cssText = 'display:flex;gap:10px;';
+    const cn = document.createElement('button');
+    cn.type = 'button';
+    cn.textContent = '取消';
+    cn.style.cssText = 'flex:1;padding:10px 0;border-radius:10px;border:1px solid var(--pill-border);background:var(--btn-cancel-bg);color:var(--btn-cancel-ink);font-size:14px;';
+    cn.addEventListener('click', () => { try { m.remove(); } catch (e) {} if (onCancel) onCancel(); });
+    const ok = document.createElement('button');
+    ok.type = 'button';
+    ok.textContent = '确定';
+    ok.style.cssText = 'flex:1;padding:10px 0;border-radius:10px;border:none;background:#ff9f43;color:#fff;font-size:14px;font-weight:700;';
+    ok.addEventListener('click', () => {
+      const idxs = Object.keys(st).map(Number).sort((a, b) => a - b);
+      if (!idxs.length) { const w = document.createElement('div'); w.style.cssText = 'font-size:12px;color:#d9534f;margin:-8px 0 10px;text-align:center;'; w.textContent = '至少选一个时辰'; box.insertBefore(w, btns); return; }
+      try { m.remove(); } catch (e) {}
+      if (onDone) onDone(idxs);
+    });
+    btns.appendChild(cn); btns.appendChild(ok);
+    box.appendChild(h); box.appendChild(sub); box.appendChild(grid); box.appendChild(btns);
+    if (onSkip) {
+      const skip = document.createElement('button');
+      skip.type = 'button';
+      skip.textContent = '不限定 · 用时间偏移';
+      skip.style.cssText = 'margin-top:10px;width:100%;padding:8px 0;border:none;background:none;color:var(--soft-ink);font-size:12px;text-align:center;text-decoration:underline;';
+      skip.addEventListener('click', () => { try { m.remove(); } catch (e) {} if (onSkip) onSkip(); });
+      box.appendChild(skip);
+    }
+    m.appendChild(box);
+    document.body.appendChild(m);
+  }
   // v3.15.x：感知播报句走字卡库【系统预设字卡→此间】同源池（DEFAULT_CARD_DATA.cjian，
   // dc-off-cjian:* 过滤已关卡片，全关回退内置兜底）——与 room/garden 同模式
   function cjLine(group, fallbackArr) {
@@ -58,12 +124,33 @@
 
   // ---- 十二时辰 ----
   const SHICHEN = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
-  function shichenStartHour(i) { return (2 * i + 23) % 24; }
+  const SHICHEN_START = [23, 1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21];
+  function shichenStartHour(i) { return SHICHEN_START[i % 12]; }
   function shichenAt(hour) { return Math.floor(((hour + 1) % 24) / 2); }
   function pad(n) { return (n < 10 ? '0' : '') + n; }
-
-  // 世界时刻 → 时辰细分（初/正）
-  // 初 = 时辰前半小时（戌初 19:00–19:29）；正 = 其后（含中段一小时与末半小时，戌正 19:30–20:29）。
+  // v3.16.x：时辰区间（slots）——梦角可设定「常在哪些时辰出现」，世界时间只在
+  // 所选时辰里随机生成；无 slots 的老梦角沿用旧行为（现实+偏移连续流动）。
+  // slots 存 roster 条目的 startH 数组（各时辰起始整点，覆盖含初/正的整两小时）。
+  function slotMinuteRange(startH) {
+    return (startH * 60) + Math.floor(Math.random() * 120); // 时辰起始整点 + 0..119 分钟（覆盖初/正）
+  }
+  function slotLabel(arr) {
+    arr = Array.isArray(arr) ? arr : [];
+    if (!arr.length) return '';
+    const sorted = arr.slice().sort((a, b) => a - b);
+    return sorted.map(h => SHICHEN[shichenAt(h)] + '时').join('·');
+  }
+  // 有 slots：世界时间（分钟）在所选时辰里随机；无 slots：现实+偏移连续流动
+  function worldMinuteOf(c) {
+    const slots = c && c.slots;
+    if (Array.isArray(slots) && slots.length) {
+      const s = slots[Math.floor(Math.random() * slots.length)];
+      return slotMinuteRange(s);
+    }
+    const off = (c && c.offsetMin) || 0;
+    const d = new Date(Date.now() + off * 60000);
+    return d.getHours() * 60 + d.getMinutes();
+  }
   function timeInfo(ts) {
     const d = new Date(ts);
     const hour = d.getHours();
@@ -84,11 +171,36 @@
     return { idx: idx, half: half, range: range, hhmm: pad(hour) + ':' + pad(d.getMinutes()) };
   }
   function worldNow(offsetMin) { return Date.now() + ((offsetMin || 0) * 60000); }
+  // v3.16.x：展示用世界时间戳——有 slots 的梦角按当前抽中的时辰随机时刻，无 slots 按偏移
+  function worldNowFor(c) {
+    const slots = c && c.slots;
+    if (Array.isArray(slots) && slots.length) {
+      const s = slots[Math.floor(Math.random() * slots.length)];
+      const mm = slotMinuteRange(s);
+      const d = new Date();
+      d.setHours(Math.floor(mm / 60), mm % 60, 0, 0);
+      return d.getTime();
+    }
+    return worldNow(c && c.offsetMin);
+  }
   function offsetLabel(off) {
     if (!off) return '与现实同步';
     if (off % 60 === 0) return off > 0 ? ('比现实快' + (off / 60) + '小时') : ('比现实慢' + (-off / 60) + '小时');
     return '独立时间流';
   }
+  // v3.16.x：梦角世界时间展示标签——slots 显示时辰区间，否则显示偏移
+  function worldTagLabel(c) {
+    if (Array.isArray(c && c.slots) && c.slots.length) {
+      const sd = slotLabel(c.slots);
+      return c.offsetMin ? (sd + ' · ' + offsetLabel(c.offsetMin)) : sd;
+    }
+    return offsetLabel(c.offsetMin);
+  }
+
+  // v3.16.x：测试/运维钩子（同 cjianRefresh 先例，导出纯函数供专项验证与诊断）
+  window.cjianWorldMinuteOf = worldMinuteOf;
+  window.cjianWorldNowFor = worldNowFor;
+  window.cjianShichenAt = shichenAt;
 
   // ---- 状态定义 ----
   const PRESENCE = {
@@ -350,7 +462,7 @@
   function ensureState(c, st, now) {
     const s = st[c.id] || (st[c.id] = {});
     if (!s.p) {
-      const h = new Date(worldNow(c.offsetMin)).getHours();
+      const h = Math.floor(worldMinuteOf(c) / 60);
       s.p = rollPresence(h, false);
       s.a = rollActivity(h);
     }
@@ -377,7 +489,7 @@
         const isNew = !st[c.id];
         const s = ensureState(c, st, now);
         if (isNew) dirty = true;
-        const worldHour = new Date(worldNow(c.offsetMin)).getHours();
+        const worldHour = Math.floor(worldMinuteOf(c) / 60);
         const boost = recentBoost(s, now);
         if (now - s.sinceA >= s.cdA) {
           s.a = rollActivity(worldHour);
@@ -556,7 +668,7 @@
       const idx = (curIdx + k) % 12;
       const realStartH = shichenStartHour(idx);
       const parts = entries.map(en => {
-        const worldHour = (((realStartH * 60 + (en.c.offsetMin || 0)) / 60) % 24 + 24) % 24;
+        const worldHour = Math.floor(worldMinuteOf(en.c) / 60);
         const pr = rollPresence(worldHour, false);
         const ac = rollActivity(worldHour);
         return en.c.name + ' · ' + predictPhrase(pr, ac);
@@ -661,7 +773,7 @@
   }
 
   function cardEl(c, cid, s) {
-    const t = timeInfo(worldNow(c.offsetMin));
+    const t = timeInfo(worldNowFor(c));
     const card = el('div', 'cj-card');
     card.setAttribute('data-id', c.id);
     const head = el('div', 'cj-card-head');
@@ -682,6 +794,7 @@
     card.appendChild(tags);
     if (s.a === 'sleep') card.appendChild(el('div', 'cj-card-note', 'TA那边似乎已经睡了。'));
     if (s.a === 'rest') card.appendChild(el('div', 'cj-card-note', 'TA正在休息。'));
+    if (Array.isArray(c.slots) && c.slots.length) card.appendChild(el('div', 'cj-card-note', '常在 ' + slotLabel(c.slots) + ' 出现'));
     const goBtn = el('button', 'cj-go', '去找TA');
     goBtn.type = 'button';
     goBtn.addEventListener('click', (e) => {
@@ -760,9 +873,9 @@
     const now = Date.now();
     const st = loadState(detailCid);
     const s = ensureState(c, st, now);
-    const t = timeInfo(worldNow(c.offsetMin));
+    const t = timeInfo(worldNowFor(c));
     body.appendChild(el('div', 'cj-d-name', c.name));
-    body.appendChild(el('div', 'cj-d-offset', offsetLabel(c.offsetMin)));
+    body.appendChild(el('div', 'cj-d-offset', worldTagLabel(c)));
     body.appendChild(el('div', 'cj-d-src', '来自「' + contactName(detailCid) + '」的此间'));
     const timeBig = el('div', 'cj-d-time');
     timeBig.appendChild(el('span', 'cj-d-half', t.half));
@@ -779,6 +892,7 @@
     body.appendChild(tags);
     if (s.a === 'sleep') body.appendChild(el('div', 'cj-d-note', 'TA那边似乎已经睡了。'));
     if (s.a === 'rest') body.appendChild(el('div', 'cj-d-note', 'TA正在休息。'));
+    if (Array.isArray(c.slots) && c.slots.length) body.appendChild(el('div', 'cj-d-note', '常在 ' + slotLabel(c.slots) + ' 出现 · 世界时间只在这些时辰里随机'));
     body.appendChild(el('div', 'cj-d-today-title', 'TA的今日'));
     const traj = el('div', 'cj-d-today');
     for (let k = 0; k < 12; k++) {
@@ -788,8 +902,13 @@
       let pr, ac;
       if (k === 0) { pr = s.p; ac = s.a; }
       else {
-        pr = rollPresence((t.idx + k) % 24, false);
-        ac = rollActivity((t.idx + k) % 24);
+        // 该行是哪个真实时辰 → 按它的起始整点 + 偏移（slots 梦角的可能世界时间按真实时辰推进）
+        const rowStartH = shichenStartHour(idx);
+        const wh = (Array.isArray(c.slots) && c.slots.length)
+          ? rowStartH
+          : (Math.floor((rowStartH * 60 + ((c.offsetMin || 0))) / 60) % 24 + 24) % 24;
+        pr = rollPresence(wh, false);
+        ac = rollActivity(wh);
       }
       row.appendChild(el('span', 'cj-d-row-p', trajectoryPhrase(pr, ac)));
       traj.appendChild(row);
@@ -870,6 +989,7 @@
   ];
   const ACTION_PILLS = [
     { label: '添加梦角', value: 'add' },
+    { label: '时辰区间', value: 'slots' },
     { label: '改名', value: 'rename' },
     { label: '删除梦角', value: 'del' }
   ];
@@ -882,7 +1002,7 @@
   window.cjianManage = function () {
     if (!window.openModal) return;
     let mCid = (viewCid === ALL) ? '' : (viewCid || curCid());
-    let phase = mCid ? 'action' : 'pickGroup', pendingName = '', renameTarget = null;
+    let phase = mCid ? 'action' : 'pickGroup', pendingName = '', pendingOffset = 0, renameTarget = null;
     const ctl = window.openModal('梦角管理', '', function (v) {
       if (!v) return;
       if (phase === 'pickGroup') {
@@ -907,12 +1027,23 @@
         } else {
           const list = loadRoster(mCid);
           if (!list.length) { toast('这个桌面还没有梦角，先添加一个吧'); return; }
-          phase = v === 'rename' ? 'pickRename' : 'pickDel';
-          ctl.stay();
-          ctl.title(v === 'rename' ? '改谁的称呼' : '删除梦角');
-          ctl.input(false);
-          ctl.pills(list.map(c => ({ label: c.name, value: c.id })));
-          ctl.okText(v === 'rename' ? '改名' : '删除');
+          if (v === 'slots') {
+            // v3.16.x：给已有梦角改时辰区间
+            phase = 'pickSlot';
+            ctl.stay();
+            ctl.title('给谁设时辰区间');
+            ctl.hint('TA 的世界时间会只在这些时辰里随机');
+            ctl.input(false);
+            ctl.pills(list.map(c => ({ label: c.name + ((Array.isArray(c.slots) && c.slots.length) ? ' · ' + slotLabel(c.slots) : ''), value: c.id })));
+            ctl.okText('设置');
+          } else {
+            phase = v === 'rename' ? 'pickRename' : 'pickDel';
+            ctl.stay();
+            ctl.title(v === 'rename' ? '改谁的称呼' : '删除梦角');
+            ctl.input(false);
+            ctl.pills(list.map(c => ({ label: c.name, value: c.id })));
+            ctl.okText(v === 'rename' ? '改名' : '删除');
+          }
         }
         return;
       }
@@ -923,21 +1054,74 @@
         phase = 'offset';
         ctl.stay();
         ctl.title('设定「' + name + '」的世界时间');
+        ctl.hint('先选时间偏移，下一步还能限定 TA 常在的时辰区间');
         ctl.input(false);
         ctl.pills(OFFSET_PILLS);
-        ctl.okText('添加');
+        ctl.okText('下一步');
         return;
       }
       if (phase === 'offset') {
         const off = v === 'rand' ? randomOffset() : parseInt(v, 10);
         if (v !== 'rand' && isNaN(off)) return;
+        pendingOffset = off;
+        // 不 stay：本次确定后通用弹窗关闭，再开时辰多选浮层（外层 finally close 会清 cb，须延后一拍）
+        phase = '';
+        setTimeout(function () {
+          showSlotPicker(
+            [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+            function (idxs) {
+              const list = loadRoster(mCid);
+              list.push({ id: makeId(), name: pendingName, offsetMin: pendingOffset, slots: idxs.map(i => SHICHEN_START[i]) });
+              saveRoster(list, mCid);
+              toast('已加入此间：「' + pendingName + '」');
+              pendingName = ''; pendingOffset = 0;
+              todayCacheMap = {}; // 名单变了，各视图的今日预测全部作废
+              window.renderCjian(true);
+            },
+            function () { pendingName = ''; pendingOffset = 0; }, // 取消：不创建
+            function () {
+              const list = loadRoster(mCid);
+              list.push({ id: makeId(), name: pendingName, offsetMin: pendingOffset });
+              saveRoster(list, mCid);
+              toast('已加入此间：「' + pendingName + '」');
+              pendingName = ''; pendingOffset = 0;
+              todayCacheMap = {}; // 名单变了，各视图的今日预测全部作废
+              window.renderCjian(true);
+            }
+          );
+        }, 0);
+        return;
+      }
+      if (phase === 'pickSlot') {
         const list = loadRoster(mCid);
-        list.push({ id: makeId(), name: pendingName, offsetMin: off });
-        saveRoster(list, mCid);
-        toast('已加入此间：「' + pendingName + '」');
-        phase = ''; pendingName = '';
-        todayCacheMap = {}; // 名单变了，各视图的今日预测全部作废
-        window.renderCjian(true);
+        const c = list.find(x => x.id === v);
+        if (!c) return;
+        setTimeout(function () {
+          showSlotPicker(
+            (Array.isArray(c.slots) && c.slots.length) ? c.slots.map(h => shichenAt(h)) : [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+            function (idxs) {
+              const l2 = loadRoster(mCid);
+              const cc = l2.find(x => x.id === c.id);
+              if (!cc) return;
+              cc.slots = idxs.map(i => SHICHEN_START[i]);
+              saveRoster(l2, mCid);
+              toast('已设时辰区间：' + slotLabel(cc.slots));
+              todayCacheMap = {};
+              window.renderCjian(true);
+            },
+            function () {}, // 取消：不改
+            function () {
+              const l2 = loadRoster(mCid);
+              const cc = l2.find(x => x.id === c.id);
+              if (!cc) return;
+              delete cc.slots;
+              saveRoster(l2, mCid);
+              toast('已改回：按时间偏移流动');
+              todayCacheMap = {};
+              window.renderCjian(true);
+            }
+          );
+        }, 0);
         return;
       }
       if (phase === 'pickRename') {

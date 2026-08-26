@@ -2700,6 +2700,8 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + env(safe-area-inset-bott
 .brick-lives { letter-spacing:1px; font-size:13px; color:#ff5f7a; }
 .brick-lives .brick-hlost { opacity:.22; filter:grayscale(1); }
 #brick-canvas { display:block; width:100%; height:auto; border-radius:10px; background:#101625; touch-action:none; user-select:none; -webkit-user-select:none; }
+/* 球数量选择框：头部空间有限，压窄一些与难度框并排 */
+#chat-brick-panel #brick-balls { max-width:70px; min-width:0; padding-left:7px; padding-right:18px; }
 /* 半框模式：信息栏药丸化 + 画布柔和投影（与全屏 UI 呼应） */
 .brick-info span { background:rgba(0,0,0,.05); border-radius:9px; padding:2px 8px; }
 .brick-info .brick-lives { background:none !important; padding:2px 2px !important; }

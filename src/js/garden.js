@@ -488,8 +488,9 @@ function addInvQual(type, q) {
 }
 function qualMul(q) { return q === "p" ? 2 : q === "f" ? 1.5 : 1; }
 function qualLabel(q) { return q === "p" ? "【完美】" : q === "f" ? "【优质】" : ""; }
-// ---- v3.15.x：收花联动心意币（与心意集市/红包同一本账）——按品质发给我：
+// ---- v3.15.x：收花联动心意币（与心意集市/红包同一本账）——按品质发给双方：
 // 二调对齐红包金额体系——完美 ¥52 / 优质 ¥13.14 / 普通 ¥5.2，枯萎 ¥1.3；日封顶 ¥520 防刷。
+// v3.16.x：花园收花改为我和 TA 同步同额入账（不再只进我的余额），流水记「花园收花」。
 function harvestCoinFen(q, wilted) { return wilted ? 130 : q === "p" ? 5200 : q === "f" ? 1314 : 520; }
 function grantHarvestCoin(q, wilted) {
   try {
@@ -500,11 +501,11 @@ function grantHarvestCoin(q, wilted) {
     if (cur >= cap) return null;
     var fen = Math.min(harvestCoinFen(q, wilted), cap - cur);
     s.set(ck, String(cur + fen));
-    window.giftWalletChange(fen, 0);
+    window.giftWalletChange(fen, fen, "花园收花");
     return fen;
   } catch (e) { return null; }
 }
-function coinTxt(fen) { return "🪙 我的心意币 +¥" + (fen / 100).toFixed(2); }
+function coinTxt(fen) { return "🪙 双方心意币各 +¥" + (fen / 100).toFixed(2); }
 var HYBRIDS = [
   { a: "rose", b: "sakura", r: "flameRose" },
   { a: "rose", b: "clover", r: "blueRose" },

@@ -106,13 +106,45 @@
   }
   // v3.15.x：小游戏/花园等联动发放心意币的统一入口——dMy/dTa 为变动分值（可正可负），
   // 累加进共用账本 gift-wallet（自动沿用旧键迁移种子）；返回更新后余额，供调用方拼提示
-  window.giftWalletChange = function (dMy, dTa) {
+  // v3.16.x：新增第三参 src（来源标签，如「双人打砖块」）——传入时同步记入主页赚钱流水，
+  // 游戏互动/花园一律双方同步同额（dMy=dTa=real），流水里我和 TA 各记一笔
+  window.giftWalletChange = function (dMy, dTa, src) {
     const w = walletGet();
     if (dMy) w.myBalance += dMy;
     if (dTa) w.systemBalance += dTa;
     walletSet(w); renderGiftBalances();
+    if (src) coinLedgerAdd('earn', dMy || 0, dTa || 0, src);
     return { myBalance: w.myBalance, systemBalance: w.systemBalance };
   };
+  // v3.16.x：心意币流水账（按联系人桌面前缀隔离，主页「心意币赚钱/申请记录」读取）。
+  // kind='earn' 写 records-coin-earn（游戏/花园赚钱），kind='ask' 写 records-coin-ask（向 Mochi 申请）。
+  // myFen/taFen = 我和 TA 各自入账分值（可一方为 0）；src 为来源/渠道中文标签。
+  function coinLedgerLoad(kind) {
+    try {
+      const s = window.activeStore ? window.activeStore() : null;
+      if (!s) return [];
+      const arr = JSON.parse(s.get(kind === 'ask' ? 'records-coin-ask' : 'records-coin-earn') || '[]');
+      return Array.isArray(arr) ? arr : [];
+    } catch (e) { return []; }
+  }
+  function coinLedgerAdd(kind, myFen, taFen, src) {
+    try {
+      const s = window.activeStore ? window.activeStore() : null;
+      if (!s) return;
+      if (!myFen && !taFen) return;
+      const key = kind === 'ask' ? 'records-coin-ask' : 'records-coin-earn';
+      const list = coinLedgerLoad(kind);
+      list.unshift({ ts: Date.now(), myFen: myFen || 0, taFen: taFen || 0, src: src || '' });
+      s.set(key, JSON.stringify(list.slice(0, 100)));
+      // 主页当前面板可见时即时重绘
+      try {
+        const hp = document.getElementById('page-home');
+        if (hp && !hp.hidden && window.__renderHomeCoin) window.__renderHomeCoin();
+      } catch (e) {}
+    } catch (e) {}
+  }
+  window.giftCoinLedgerAdd = coinLedgerAdd;
+  window.giftCoinLedgerLoad = coinLedgerLoad;
   // 心意币申请（向 Mochi 打款入账，非直接改数值）：点余额行出单个多阶段弹窗——
   // 胶囊选收款方「我的 / TA」，输入申请金额确定后模拟 Mochi 打款累加进账；
   // 弹窗不关（ctl.stay）自动切到另一侧继续申请；留空点【完成】/取消随时结束。
@@ -143,6 +175,7 @@
       if (target === 'my') w.myBalance += fen;
       else w.systemBalance += fen;
       walletSet(w); renderGiftBalances();
+      coinLedgerAdd('ask', target === 'my' ? fen : 0, target === 'ta' ? fen : 0, '市集申请');
       toast('Mochi 已打款，' + LBL[target] + ' +¥' + fmtYuan(fen / 100));
       doneAny = true;
       side = target === 'my' ? 'ta' : 'my';

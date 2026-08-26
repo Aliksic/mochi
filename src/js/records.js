@@ -64,6 +64,39 @@
         ).join('')
       : '<div class="ta-empty">暂无摸鱼抓包记录（桌面浮字可点击抓包 TA；点太快会被 TA 反向抓包）</div>';
   }
+  // ---- 心意币流水（v3.16.x：赚钱 / 申请记录，分列我和当前联系人） ----
+  // 数据由 gift-shop.js 的 giftCoinLedgerLoad 提供（按联系人桌面前缀隔离）；记录结构 { ts, myFen, taFen, src }
+  function renderCoinPanel(kind) {
+    const el = document.getElementById(kind === 'ask' ? 'home-coinask' : 'home-coinearn');
+    if (!el) return;
+    const list = (window.giftCoinLedgerLoad ? window.giftCoinLedgerLoad(kind) : []) || [];
+    const name = store.get('lbl-partner') || (window.taWord ? window.taWord() : 'TA');
+    const myName = store.get('lbl-user') || '我';
+    const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    if (!list.length) {
+      el.innerHTML = '<div class="ta-empty">' + (kind === 'ask' ? '暂无申请记录（可点心意币余额行向 Mochi 申请）' : '暂无赚钱记录（玩游戏、种花、钓鱼都能赚心意币）') + '</div>';
+      return;
+    }
+    const yuan = (fen) => (fen / 100).toFixed(2);
+    el.innerHTML = list.map(x => {
+      let line;
+      if (x.myFen && x.taFen && x.myFen === x.taFen) line = '双方各 +¥' + yuan(x.myFen);
+      else {
+        const parts = [];
+        if (x.myFen) parts.push(myName + ' +¥' + yuan(x.myFen));
+        if (x.taFen) parts.push(name + ' +¥' + yuan(x.taFen));
+        line = parts.join(' · ') || '—';
+      }
+      const src = x.src ? esc(x.src) : (kind === 'ask' ? '向 Mochi 申请' : '赚钱');
+      return '<div class="tc-listitem"><div class="tc-li-top"><span class="tc-li-q">🪙 ' + src + '</span><span class="tc-li-time">' + fmtDT(x.ts) + '</span></div>' +
+        '<div class="tc-li-line">' + line + '</div></div>';
+    }).join('');
+  }
+  // 供 gift-shop.js 记账后即时重绘当前可见的流水面板
+  window.__renderHomeCoin = function () {
+    if (htab === 'coinearn') renderCoinPanel('earn');
+    else if (htab === 'coinask') renderCoinPanel('ask');
+  };
   // ---- 渲染主页记录 ----
   function histList(key) { try { return JSON.parse(store.get(key) || '[]'); } catch (e) { return []; } }
   // v3.9.x：联系人今日情话 / 我的备忘 / 我的心情记录已迁移到日历页按天查看，主页不再保留
@@ -126,6 +159,13 @@
     // 摸鱼抓包记录（双向：我抓到 TA / 被 TA 抓到）
     if (showOnly === 'catch') {
       renderCatch();
+    }
+    // 心意币赚钱记录 / 申请记录（v3.16.x）
+    if (showOnly === 'coinearn') {
+      renderCoinPanel('earn');
+    }
+    if (showOnly === 'coinask') {
+      renderCoinPanel('ask');
     }
     // 换头像记录（全部事件：直接换 / 邀请同意 / 邀请拒绝 / 我手动更换）
     if (showOnly === 'av') {

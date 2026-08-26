@@ -191,20 +191,16 @@
     } catch (e) {}
   })();
 
-  // ---- 心意币（与心意集市/红包同一本账 gift-wallet，只加「我的」余额） ----
+  // ---- 心意币（与心意集市/红包同一本账 gift-wallet；v3.16.x：捡瓶奖励我和 TA 同步同额） ----
   function addCoin(fen) {
     if (!fen) return false;
     ensureDaily();
     if (d.day.coin >= DAILY_COIN_CAP) return false;
     const real = Math.min(fen, DAILY_COIN_CAP - d.day.coin);
+    // v3.16.x：漂流瓶改走统一入口 giftWalletChange（原为直接改账本只加我）——双方同额入账并记赚钱流水
     try {
-      const ws = window.xyStore ? window.xyStore('xy-home-v2') : null; // v3.15.x：全局一本账根键
-      if (!ws) return false;
-      let w = null;
-      try { w = JSON.parse(ws.get('gift-wallet') || ''); } catch (e) {}
-      if (!w || typeof w.myBalance !== 'number' || typeof w.systemBalance !== 'number') w = { myBalance: 52000, systemBalance: 52000 }; // v3.15.x：默认对齐 ¥520/¥520
-      w.myBalance += real;
-      ws.set('gift-wallet', JSON.stringify(w));
+      if (typeof window.giftWalletChange !== 'function') return false;
+      window.giftWalletChange(real, real, '漂流瓶');
       d.day.coin += real;
       save();
       return true;

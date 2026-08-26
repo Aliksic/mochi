@@ -57,8 +57,9 @@
   const COIN_FIRST = 5;      // 首次通关某难度 +5
   const COIN_DAILY_CAP = 30; // 每日奖励上限（元）
 
+  // v3.16.x：兜底钱包读写统一全局根键 xy-home-v2:gift-wallet（与 gift-shop 一本账一致）
   function walletGet() {
-    const s = window.activeStore && window.activeStore();
+    const s = window.xyStore && window.xyStore('xy-home-v2');
     if (!s) return { myBalance: 52000, systemBalance: 52000 };
     try {
       const w = JSON.parse(s.get('gift-wallet') || '');
@@ -73,7 +74,7 @@
     try { s.set('gift-wallet', JSON.stringify(seed)); } catch (e) {}
     return seed;
   }
-  function walletSet(w) { const s = window.activeStore && window.activeStore(); if (s) s.set('gift-wallet', JSON.stringify(w)); }
+  function walletSet(w) { const s = window.xyStore && window.xyStore('xy-home-v2'); if (s) s.set('gift-wallet', JSON.stringify(w)); }
   function readDaily() {
     try { const o = JSON.parse(localStorage.getItem(storeKey('memory-coin-day')) || ''); if (o && typeof o.total === 'number') return o; } catch (e) {}
     return { date: todayKey(), total: 0 };
@@ -85,6 +86,7 @@
   function writeFirst(list) { try { localStorage.setItem(storeKey('memory-first-clears'), Array.isArray(list) ? list.join(',') : ''); } catch (e) {} }
 
   // 发放心意币：受每日上限约束，返回实际到账（分）
+  // v3.16.x：记忆翻牌奖励双方同步同额（原只加我的余额），记赚钱流水「记忆翻牌」
   function grantCoins(yuan) {
     const daily = readDaily();
     if (daily.date !== todayKey()) { daily.date = todayKey(); daily.total = 0; }
@@ -92,9 +94,12 @@
     const remain = Math.max(0, capFen - daily.total);
     const grantFen = Math.min(Math.round(yuan * YUAN), remain);
     if (grantFen > 0) {
-      const w = walletGet();
-      w.myBalance = (w.myBalance || 0) + grantFen;
-      walletSet(w);
+      if (window.giftWalletChange) window.giftWalletChange(grantFen, grantFen, '记忆翻牌');
+      else {
+        const w = walletGet();
+        w.myBalance = (w.myBalance || 0) + grantFen;
+        walletSet(w);
+      }
       daily.total += grantFen;
       writeDaily(daily);
     }

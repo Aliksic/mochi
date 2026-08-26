@@ -342,7 +342,8 @@
     else { s.d++; s.nextFirst = Math.random() < 0.5 ? 'you' : 'ta'; }   // 平局下一局随机先手
     saveStats(s);
     if (winner === 1) sfxWin(); else if (winner === 2) sfxLose(); else sfxDraw();
-    // v3.15.x 二调：奖励对齐红包金额体系——胜 80% ¥13.14 / 20% ¥52，平 ¥5.2，TA 赢 TA 得 ¥13.14（日封顶 ¥104）
+    // v3.15.x 二调：奖励对齐红包金额体系——胜 80% ¥13.14 / 20% ¥52，平 ¥5.2（日封顶 ¥104）
+    // v3.16.x：四子棋改为双方同步同额入账（不再只给赢家），赚钱流水记「四子棋」
     var coinLine4 = '';
     try {
       var COIN_CAP = 10400;
@@ -354,9 +355,8 @@
         var real4 = Math.min(winner === 0 ? 520 : c4WinFen, COIN_CAP - cur4);
         try { localStorage.setItem(ck4, String(cur4 + real4)); } catch (e2) {}
         if (real4 > 0 && typeof window.giftWalletChange === 'function') {
-          var toTa4 = winner === 2;
-          if (window.giftWalletChange(toTa4 ? 0 : real4, toTa4 ? real4 : 0)) {
-            coinLine4 = '🪙 ' + (toTa4 ? T('TA') + ' 的心意币' : '我的心意币') + ' +¥' + (real4 / 100).toFixed(2);
+          if (window.giftWalletChange(real4, real4, '四子棋')) {
+            coinLine4 = '🪙 双方心意币各 +¥' + (real4 / 100).toFixed(2);
           }
         }
       }

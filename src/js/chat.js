@@ -3111,16 +3111,17 @@ const s = rpsReadScore();
 if (judge > 0) s.w++; else if (judge < 0) s.l++; else s.d++;
 rpsWriteScore(s);
 addRec({ side: 'in', special: 'rps', rpsMine: mine, rpsTa: ta, rpsResult: judge });
-// v3.15.x 二调：奖励对齐红包金额体系——胜 70% ¥5.2 / 30% ¥13.14，平 ¥1.3，TA 赢 TA 得 ¥5.2（日封顶 ¥26）
+// v3.15.x 二调：奖励对齐红包金额体系——胜 70% ¥5.2 / 30% ¥13.14，平 ¥1.3（日封顶 ¥26）
+// v3.16.x：石头剪刀布改为双方同步同额入账（不再只给赢家），记赚钱流水「石头剪刀布」
 try {
 const rpsWinFen = Math.random() < 0.3 ? 1314 : 520;
 const real = rpGameCoinGrant('rps', judge > 0 ? rpsWinFen : judge < 0 ? 520 : 130, 2600);
 if (real > 0) {
 const w = rpWalletGet();
-if (judge < 0) w.systemBalance += real; else w.myBalance += real;
+w.myBalance += real; w.systemBalance += real;
 rpWalletSet(w);
-const coinMsg = rpCoinTxt(real, judge < 0);
-setTimeout(() => addIn(coinMsg, { special: 'poke' }), randInt(800, 1600));
+try { if (window.giftCoinLedgerAdd) window.giftCoinLedgerAdd('earn', real, real, '石头剪刀布'); } catch (e2) {}
+setTimeout(() => addIn('🪙 双方心意币各 +¥' + (real / 100).toFixed(2), { special: 'poke' }), randInt(800, 1600));
 }
 } catch (e) {}
 if (window.logFish) window.logFish();
@@ -3357,11 +3358,13 @@ const baseRate = qixi ? 0.08 : 0.04;
 if (Math.random() >= baseRate) return;
 const amtFen = genRpAmount(5200000);
 if (amtFen < 1) return;
-askDailyIncr();
-const wallet = rpWalletGet();
-wallet.systemBalance += amtFen;
-rpWalletSet(wallet);
-const myCid = window.__activeCid || 'default';
+	askDailyIncr();
+	const wallet = rpWalletGet();
+	wallet.systemBalance += amtFen;
+	rpWalletSet(wallet);
+	// v3.16.x：TA 自动申请同步记入主页申请流水
+	try { if (window.giftCoinLedgerAdd) window.giftCoinLedgerAdd('ask', 0, amtFen, 'TA自动申请'); } catch (e) {}
+	const myCid = window.__activeCid || 'default';
 setTimeout(() => {
 if ((window.__activeCid || 'default') !== myCid) return;
 addRec({ side: 'in', special: 'askcoin', askFen: amtFen, askTs: Date.now() });
@@ -3486,10 +3489,12 @@ const n = parseFloat(raw);
 if (isNaN(n) || n <= 0) { toast('申请金额需大于 0'); return; }
 const fen = Math.round(n * 100);
 const w = rpWalletGet();
-if (target === 'my') w.myBalance += fen;
-else w.systemBalance += fen;
-rpWalletSet(w); rpRenderBalance();
-toast('Mochi 已打款，' + LBL[target] + ' +¥' + fmtYuan(fen / 100));
+	if (target === 'my') w.myBalance += fen;
+	else w.systemBalance += fen;
+	rpWalletSet(w); rpRenderBalance();
+	// v3.16.x：聊天侧申请同步记入主页申请流水
+	try { if (window.giftCoinLedgerAdd) window.giftCoinLedgerAdd('ask', target === 'my' ? fen : 0, target === 'ta' ? fen : 0, '聊天申请'); } catch (e) {}
+	toast('Mochi 已打款，' + LBL[target] + ' +¥' + fmtYuan(fen / 100));
 doneAny = true;
 side = target === 'my' ? 'ta' : 'my';
 if (ctl) {
@@ -4432,17 +4437,17 @@ if (moreBrick) {
 window.sendSnakeResult = function (d) {
 if (!d) return;
 addRec({ side: 'in', special: 'snake', snkResult: d.result, snkPLen: d.pLen, snkOLen: d.oLen, snkPFood: d.pFood, snkOFood: d.oFood, snkPScore: d.pScore, snkOScore: d.oScore, snkTime: d.time });
-// v3.15.x 二调：奖励对齐红包金额体系——胜 80% ¥13.14 / 20% ¥52，平 ¥5.2，TA 赢 TA 得 ¥13.14（日封顶 ¥104）
+// v3.15.x 二调：奖励对齐红包金额体系——胜 80% ¥13.14 / 20% ¥52，平 ¥5.2（日封顶 ¥104）
+// v3.16.x：贪吃蛇改为双方同步同额入账（不再只给赢家），记赚钱流水「贪吃蛇」
 try {
 const snkWinFen = Math.random() < 0.2 ? 5200 : 1314;
 const real = rpGameCoinGrant('snake', d.result === 'draw' ? 520 : snkWinFen, 10400);
 if (real > 0) {
 const w = rpWalletGet();
-const toTa = d.result === 'lose';
-if (toTa) w.systemBalance += real; else w.myBalance += real;
+w.myBalance += real; w.systemBalance += real;
 rpWalletSet(w);
-const coinMsg = rpCoinTxt(real, toTa);
-setTimeout(() => addIn(coinMsg, { special: 'poke' }), randInt(800, 1600));
+try { if (window.giftCoinLedgerAdd) window.giftCoinLedgerAdd('earn', real, real, '贪吃蛇'); } catch (e2) {}
+setTimeout(() => addIn('🪙 双方心意币各 +¥' + (real / 100).toFixed(2), { special: 'poke' }), randInt(800, 1600));
 }
 } catch (e) {}
 if (window.logFish) window.logFish();

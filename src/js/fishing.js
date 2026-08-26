@@ -134,7 +134,7 @@
   function saveTogether(t) { writeJSON(togetherKey(), t); }
 
   // ---- 心意币钱包（全局一本账：根键 xy-home-v2:gift-wallet，跨桌面共用，单位分）----
-  // v3.15.x 二轮：默认对齐新用户 ¥520/¥520，读写切根命名空间
+  // v3.15.x 二轮：默认对齐新用户 ¥520/¥520，读写切根命名空间；v3.16.x 发币已改走 giftWalletChange
   function walletGet() {
     const s = window.xyStore ? window.xyStore('xy-home-v2') : null;
     if (!s) return { myBalance: 52000, systemBalance: 52000 };
@@ -342,10 +342,11 @@
       t.sec += 1; saveTogether(t);
       if (t.sec >= TOGETHER_GOAL) {
         t.rewarded = true; saveTogether(t);
-        const w = walletGet(); w.myBalance += 1314; walletSet(w);
+        // v3.16.x：陪伴奖励双方同步同额（原只加我的余额）
+        if (window.giftWalletChange) window.giftWalletChange(1314, 1314, '钓鱼陪伴奖励');
         sfxGift();
-        toast('💕 陪伴奖励：一起钓鱼 5 分钟，心意币 +¥13.14');
-        if (window.chatAddIn) { try { window.chatAddIn(fit('陪了我这么久，鱼都知道你不走了。') + '（陪伴奖励 +¥13.14）', { silent: true }); } catch (e) {} }
+        toast('💕 陪伴奖励：一起钓鱼 5 分钟，心意币各 +¥13.14');
+        if (window.chatAddIn) { try { window.chatAddIn(fit('陪了我这么久，鱼都知道你不走了。') + '（陪伴奖励各 +¥13.14）', { silent: true }); } catch (e) {} }
       }
     }, 1000);
   }
@@ -364,10 +365,11 @@
       });
     });
     if (count === 0) { toast('还没有可出售的收获'); return; }
-    const w = walletGet(); w.myBalance += total; walletSet(w);
+    // v3.16.x：出售收获双方同步同额（原只加我的余额）
+    if (window.giftWalletChange) window.giftWalletChange(total, total, '钓鱼出售');
     t.mine = {}; t.ta = {}; saveToday(t);
     sfxSell();
-    toast('已出售 ' + count + ' 件，心意币 +' + fenToStr(total));
+    toast('已出售 ' + count + ' 件，心意币各 +' + fenToStr(total));
     render();
   }
 
@@ -376,9 +378,10 @@
     const g = loadGifts();
     const item = g[idx]; if (!item) return;
     g.splice(idx, 1); saveGifts(g);
-    const w = walletGet(); w.myBalance += 520; walletSet(w);
+    // v3.16.x：兑换 TA 纪念品双方同步同额（原只加我的余额）
+    if (window.giftWalletChange) window.giftWalletChange(520, 520, '纪念品兑换');
     sfxSell();
-    toast('已兑换心意币 +¥5.2');
+    toast('已兑换心意币各 +¥5.2');
     render();
   }
 

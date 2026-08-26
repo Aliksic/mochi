@@ -1,5 +1,7 @@
 // ===== 功能：双人打砖块（聊天页更多功能 → 打砖块） =====
-// 合作模式：玩家控制左侧挡板，梦角（TA）由代码控制右侧挡板，双方共同接住同一颗球清砖。
+// 合作模式：玩家控制左侧挡板，梦角（TA）由代码控制右侧挡板，双方共同接球清砖。
+// 球数量可设 1~3（头部选择框）：1=经典单球；2/3 球同时在场，掉一颗扣 1 命、
+// 其余球不中断继续打，稍后按设定数量自动补发（改动在下次发球/补发时生效）。
 // 不依赖聊天 AI。梦角 = 落点预测 + 反应间隔 + 移动速度限制 + 锁定式预测误差（每次下落掷一次）
 // + 概率放水 + 难度分档 + 本局发挥状态（正常/较好/走神/特殊，开局掷定）。
 // 字卡只作低概率反馈：场内 TA 泡泡（接球/险救/清层/丢球）+ 结束后写聊天记录与 TA 回应。
@@ -21,6 +23,7 @@
   const overlayBtnEl = document.getElementById('brick-overlay-btn');
   const overlayCloseBtn = document.getElementById('brick-overlay-close');
   const diffSel = document.getElementById('brick-diff');
+  const ballsSel = document.getElementById('brick-balls');
   const soundBtn = document.getElementById('brick-sound');
   const pauseBtn = document.getElementById('brick-pause');
   const fsBtn = document.getElementById('brick-fs');
@@ -49,6 +52,13 @@
     normal: { think: [135, 240], maxV: 3.5,  err: 16, fumble: 0.08 },
     hard:   { think: [80, 160],  maxV: 4.8,  err: 8,  fumble: 0.03 }
   };
+
+  // ---- 球数量设置（1~3；改动在下次发球/补发时生效，选择随联系人记忆） ----
+  function targetBallCount() {
+    const n = parseInt(ballsSel && ballsSel.value, 10);
+    return n >= 1 && n <= 3 ? n : 1;
+  }
+  function ballsPrefKey() { return (window.activePrefix && window.activePrefix() || 'xy-home-v2') + ':brick-balls'; }
 
   // ---- 本局发挥：每局开始掷定一次，只对难度做小幅波动，不覆盖难度 ----
   function rollPerformance() {
@@ -157,12 +167,16 @@
   let running = false, paused = false;
   let rafId = null, lastTs = 0, acc = 0;
 
+  function newBallObj() { return { x: W / 2, y: BALL_HOME_Y, vx: 0, vy: 0, trail: [] }; }
+
   function newState(diffKey) {
     const d = DIFFS[diffKey] || DIFFS.easy;
-    return {
+    const st = {
       diff: diffKey, params: d,
       perf: rollPerformance(),
-      ball: { x: W / 2, y: BALL_HOME_Y, vx: 0, vy: 0 },
+      ball: null,
+      balls: [],                 // 场上所有球；恒有 s.ball === s.balls[0]（调试口/用例依赖）
+      respawns: [],              // 掉球补发队列（时间戳，按球数上限补足）
       player: { x: PLAYER_HOME_X, targetX: PLAYER_HOME_X },
       dream: { x: DREAM_HOME_X, targetX: DREAM_HOME_X, nextThinkAt: 0 },
       bricks: buildBricks(1),
@@ -170,6 +184,8 @@
       serveAt: 0,
       score: 0, combo: 0, maxCombo: 0, bricksCleared: 0, level: 1, lives: 3,
       prevVy: 0,
+      aiBall: null,              // 梦角当前锁定的目标球（多球时选最快落地的）
+      prevAiVy: 0,               // 目标球上一帧 vy（判定「转为下落」）
       dreamErr: 0,               // 锁定式误差：每次球向下飞只掷一次，整段保持
       fumbleOffset: null,        // 放水：本次下落故意偏离（非 null 即武装）
       slipArmed: false,          // 特殊发挥·slip 的必失球
@@ -177,7 +193,6 @@
       rallyHits: 0,              // 双方连续接球数（合作默契反馈用）
       floaters: [],              // {x,y,text,until}
       taBubble: null,            // {text,until}
-      trail: [],                 // 球拖尾采样点
       parts: [],                 // 砖块碎裂粒子
       comboPopUntil: 0, comboPopVal: 0,   // COMBO 中央弹跳动画
       playerFlashAt: 0, dreamFlashAt: 0,  // 挡板命中白闪时刻
@@ -186,27 +201,43 @@
       lastBrickAt: 0,            // 上次碰到砖的时间（防僵局看门狗用，newState 后由 startGame 补齐）
       endReplied: false
     };
+    st.ball = newBallObj();
+    st.balls.push(st.ball);
+    return st;
   }
 
-  // ---- 发球：中央向上 ±38°，短暂等待后自动发射 ----
-  function serve(s, now) {
+  // ---- 发球：多球时第 i 颗横向错开 34px、角度分散（2球左右对开 / 3球左中右），避免开局同轨 ----
+  function spawnX(i, n) { return clamp(W / 2 + (i - (n - 1) / 2) * 34, BALL_R + 2, W - BALL_R - 2); }
+  function launchBall(s, bl, i, n, now) {
     const sp = levelSpeed(s.level);
-    let sa = Math.sin(rand(-38, 38) * Math.PI / 180);
+    let deg;
+    if (n <= 1) deg = rand(-38, 38);
+    else {
+      const t = n === 2 ? (i === 0 ? -1 : 1) : (i - 1);   // 3球：-1/0/1 → 左中右
+      deg = t * rand(24, 36);
+    }
+    let sa = Math.sin(deg * Math.PI / 180);
     const MIN_SX = 0.22;
     if (Math.abs(sa) < MIN_SX) sa = (Math.random() < 0.5 ? -MIN_SX : MIN_SX);   // 与挡板反弹同款防纯垂直
-    s.ball.x = W / 2; s.ball.y = BALL_HOME_Y;
-    s.ball.vx = sa * sp;
-    s.ball.vy = -Math.sqrt(Math.max(0, 1 - sa * sa)) * sp;
+    bl.x = spawnX(i, n); bl.y = BALL_HOME_Y;
+    bl.vx = sa * sp;
+    bl.vy = -Math.sqrt(Math.max(0, 1 - sa * sa)) * sp;
+    bl.trail.length = 0;   // 新球清空旧尾迹
+  }
+  function serve(s, now) {
+    const n = targetBallCount();
+    s.balls.length = 1;   // 只保留主球对象，保证 s.ball === s.balls[0] 恒成立
+    launchBall(s, s.ball, 0, n, now);
+    for (let i = 1; i < n; i++) { const nb = newBallObj(); launchBall(s, nb, i, n, now); s.balls.push(nb); }
     s.prevVy = s.ball.vy;
     s.status = 'rally';
-    s.trail.length = 0;    // 新球清空旧尾迹
     s.lastBrickAt = now;   // 看门狗重新计时（每次发球=新的无进度窗口）
     s.dreamErr = 0; s.fumbleOffset = null; s.slipArmed = false;
+    s.respawns.length = 0;
   }
 
-  // ---- 梦角落点预测：从当前球态推演到挡板平面的 x（含左右墙反弹折叠） ----
-  function predictLandingX(s) {
-    const b = s.ball;
+  // ---- 梦角落点预测：从球态推演到挡板平面的 x（含左右墙反弹折叠） ----
+  function predictLandingX(b) {
     if (b.vy <= 0.05) return null;
     const planeY = PADDLE_Y - BALL_R;
     const t = (planeY - b.y) / b.vy;
@@ -222,11 +253,26 @@
     // slip 在下一次下落判定时消费（见 planDescent）
   }
 
-  // ---- 梦角决策（每次下落掷定误差/放水；周期性思考更新目标） ----
+  // ---- 梦角决策目标球：多球时选「最快落到挡板平面」的下落球（现任目标带迟滞优势防来回抖动） ----
+  function aiTargetBall(s) {
+    let best = null, bestT = Infinity;
+    for (const b of s.balls) {
+      const pred = predictLandingX(b);
+      if (pred == null) continue;
+      const t = (PADDLE_Y - BALL_R - b.y) / b.vy;
+      if (t < 0) continue;
+      const w = (b === s.aiBall) ? t * 0.78 : t;
+      if (w < bestT) { bestT = w; best = b; }
+    }
+    return best;
+  }
+
+  // ---- 梦角决策（切换目标球或目标球转为下落时掷定误差/放水；周期性思考更新目标） ----
   function planDescent(s, now) {
-    const b = s.ball;
-    // 新的一次下落（vy 由 ≤0 转 >0）→ 掷本段误差与放水
-    if (b.vy > 0 && s.prevVy <= 0) {
+    const tb = aiTargetBall(s);
+    if (!tb) { s.aiBall = null; s.prevAiVy = 0; return; }
+    // 新的一次下落（换目标球，或同球 vy 由 ≤0 转 >0）→ 掷本段误差与放水
+    if (tb !== s.aiBall || (tb.vy > 0 && s.prevAiVy <= 0)) {
       const pf = s.perf;
       const p = effectiveParams(s, now);
       s.dreamErr = tri(p.err);
@@ -249,6 +295,8 @@
         }
       }
     }
+    s.aiBall = tb;
+    s.prevAiVy = tb.vy;
   }
   // 生效参数：难度为基础，叠加本局发挥 / 特殊发挥临场变化
   function effectiveParams(s, now) {
@@ -268,10 +316,9 @@
 
   function dreamAI(s, now) {
     const d = s.dream;
-    const b = s.ball;
     const p = effectiveParams(s, now);
-    const pred = predictLandingX(s);
-    const comingDown = b.vy > 0 && pred != null;
+    const pred = s.aiBall ? predictLandingX(s.aiBall) : null;
+    const comingDown = !!(s.aiBall && s.aiBall.vy > 0 && pred != null);
     if (comingDown) {
       let target = pred + s.dreamErr + (s.fumbleOffset || 0);
       // 球会落进玩家半场（右）：梦角只压到中线附近待命，不做无意义横穿
@@ -305,8 +352,7 @@
   // 防死循环：强制最小水平分量 MIN_SX——纯垂直反弹（hit≈0）会在「已清空列」里被
   // 梦角自动居中接球无限循环（球原地上下弹、挡板看似卡住），这是打砖块经典陷阱；
   // MIN_SX=0.22 时出射角离垂直至少约 12.7°，任何竖直通道都无法维持。
-  function bouncePaddle(s, px, isPlayer, now) {
-    const b = s.ball;
+  function bouncePaddle(s, px, isPlayer, now, b) {
     const hit = clamp((b.x - px) / (PADDLE_W / 2 + BALL_R), -1, 1);
     const sp = levelSpeed(s.level);
     const ang = hit * (Math.PI / 3);   // 最大 60°
@@ -335,8 +381,7 @@
   }
 
   // ---- 砖块碰撞：圆 vs AABB，按穿透小的轴反弹；命中即扣血 ----
-  function brickCollide(s) {
-    const b = s.ball;
+  function brickCollide(s, b) {
     for (let i = 0; i < s.bricks.length; i++) {
       const k = s.bricks[i];
       if (k.hp <= 0) continue;
@@ -346,7 +391,7 @@
       if (dx * dx + dy * dy > BALL_R * BALL_R) continue;
       // 反弹轴：比较球心到砖面的重叠量
       const overlapX = BALL_R - Math.abs(dx), overlapY = BALL_R - Math.abs(dy);
-      if (dx === 0 && dy === 0) { s.ball.vy = -s.ball.vy; }
+      if (dx === 0 && dy === 0) { b.vy = -b.vy; }
       else if (overlapY <= overlapX) { b.vy = dy < 0 ? -Math.abs(b.vy) : Math.abs(b.vy); b.y = dy < 0 ? k.y - BALL_R : cy + BALL_R; }
       else { b.vx = dx < 0 ? -Math.abs(b.vx) : Math.abs(b.vx); b.x = dx < 0 ? k.x - BALL_R : cx + BALL_R; }
       s.lastBrickAt = performance.now();
@@ -383,7 +428,7 @@
       if (now >= s.serveAt) {
         s.level++;
         s.bricks = buildBricks(s.level);
-        s.ball.vx = 0; s.ball.vy = 0;
+        for (const bl of s.balls) { bl.vx = 0; bl.vy = 0; }
         s.status = 'serve'; s.serveAt = now + 900;
         hintEl.textContent = '第 ' + s.level + ' 层';
       }
@@ -399,10 +444,10 @@
     const pdx = clamp(s.player.targetX - s.player.x, -PLAYER_V, PLAYER_V);
     s.player.x = clampPlayerX(s.player.x + pdx);
 
-    // 梦角：按思考间隔更新（危险=球快速下行时提高频率）
+    // 梦角：按思考间隔更新（危险=任一球快速下行时提高频率）
     planDescent(s, now);
-    const b = s.ball;
-    const urgent = b.vy > 0 && b.y > H * 0.55;
+    let urgent = false;
+    for (const bl of s.balls) { if (bl.vy > 0 && bl.y > H * 0.55) { urgent = true; break; } }
     if (now >= s.dream.nextThinkAt) {
       dreamAI(s, now);
       const p = effectiveParams(s, now);
@@ -412,38 +457,54 @@
       dreamAI(s, now);   // 目标不变也要继续朝目标移动（限速在 dreamAI 内）
     }
 
-    // 球移动
-    b.x += b.vx; b.y += b.vy;
-
-    // 左右墙 / 顶反弹
-    if (b.x - BALL_R < 0) { b.x = BALL_R; b.vx = Math.abs(b.vx); sfxWall(); }
-    if (b.x + BALL_R > W) { b.x = W - BALL_R; b.vx = -Math.abs(b.vx); sfxWall(); }
-    if (b.y - BALL_R < 0) { b.y = BALL_R; b.vy = Math.abs(b.vy); sfxWall(); }
-
-    brickCollide(s);
-
-    // 挡板碰撞（vy>0 才判，防粘板）；半场守卫防跨边误接（玩家右 / 梦角左）
-    if (b.vy > 0 && b.y + BALL_R >= PADDLE_Y && b.y - BALL_R <= PADDLE_Y + PADDLE_H + 6) {
-      if (Math.abs(b.x - s.player.x) <= PADDLE_W / 2 + BALL_R && b.x > W / 2 - PADDLE_W) bouncePaddle(s, s.player.x, true, now);
-      else if (Math.abs(b.x - s.dream.x) <= PADDLE_W / 2 + BALL_R && b.x <= W / 2 + PADDLE_W) bouncePaddle(s, s.dream.x, false, now);
-    }
-    s.prevVy = b.vy;
-
-    // 防僵局看门狗：12s 没碰过任何砖（竖直通道循环 / 砖顶走廊横滑等几何死角）→
-    // 轻推球改变方向并保证最小纵向分量，确保对局永远有进展
-    if (now - (s.lastBrickAt || 0) > 12000) {
-      s.lastBrickAt = now;
-      const sp2 = Math.hypot(b.vx, b.vy) || levelSpeed(s.level);
-      const na = Math.atan2(b.vy, b.vx) + (Math.random() < 0.5 ? -1 : 1) * (25 + Math.random() * 20) * Math.PI / 180;
-      b.vx = Math.cos(na) * sp2; b.vy = Math.sin(na) * sp2;
-      if (Math.abs(b.vy) < 0.3 * sp2) {   // 防转成近水平贴地/贴顶滑行
-        b.vy = (b.vy >= 0 ? 1 : -1) * 0.3 * sp2;
-        b.vx = (b.vx >= 0 ? 1 : -1) * Math.sqrt(Math.max(0, sp2 * sp2 - b.vy * b.vy));
+    // 掉球补发队列：到点按设定球数上限补足（多球局其余球不中断）
+    for (let ri = s.respawns.length - 1; ri >= 0; ri--) {
+      if (now < s.respawns[ri]) continue;
+      s.respawns.splice(ri, 1);
+      if (s.status === 'rally' && s.lives > 0 && s.balls.length < targetBallCount()) {
+        const nb = newBallObj();
+        launchBall(s, nb, s.balls.length, targetBallCount(), now);
+        s.balls.push(nb);
       }
     }
 
-    // 球掉出场地 → 生命-1
-    if (b.y - BALL_R > H) loseLife(s, now);
+    // 各球移动 / 碰撞 / 出界（倒序遍历便于出界移除）
+    for (let bi = s.balls.length - 1; bi >= 0; bi--) {
+      const b = s.balls[bi];
+      b.x += b.vx; b.y += b.vy;
+
+      // 左右墙 / 顶反弹
+      if (b.x - BALL_R < 0) { b.x = BALL_R; b.vx = Math.abs(b.vx); sfxWall(); }
+      if (b.x + BALL_R > W) { b.x = W - BALL_R; b.vx = -Math.abs(b.vx); sfxWall(); }
+      if (b.y - BALL_R < 0) { b.y = BALL_R; b.vy = Math.abs(b.vy); sfxWall(); }
+
+      brickCollide(s, b);
+
+      // 挡板碰撞（vy>0 才判，防粘板）；半场守卫防跨边误接（玩家右 / 梦角左）
+      if (b.vy > 0 && b.y + BALL_R >= PADDLE_Y && b.y - BALL_R <= PADDLE_Y + PADDLE_H + 6) {
+        if (Math.abs(b.x - s.player.x) <= PADDLE_W / 2 + BALL_R && b.x > W / 2 - PADDLE_W) bouncePaddle(s, s.player.x, true, now, b);
+        else if (Math.abs(b.x - s.dream.x) <= PADDLE_W / 2 + BALL_R && b.x <= W / 2 + PADDLE_W) bouncePaddle(s, s.dream.x, false, now, b);
+      }
+
+      // 防僵局看门狗：12s 没碰过任何砖（竖直通道循环 / 砖顶走廊横滑等几何死角）→
+      // 轻推球改变方向并保证最小纵向分量，确保对局永远有进展
+      // （lastBrickAt 全局共用：任一球碰砖都算进度，触发时对所有球各轻推一次）
+      if (now - (s.lastBrickAt || 0) > 12000) {
+        s.lastBrickAt = now;
+        const sp2 = Math.hypot(b.vx, b.vy) || levelSpeed(s.level);
+        const na = Math.atan2(b.vy, b.vx) + (Math.random() < 0.5 ? -1 : 1) * (25 + Math.random() * 20) * Math.PI / 180;
+        b.vx = Math.cos(na) * sp2; b.vy = Math.sin(na) * sp2;
+        if (Math.abs(b.vy) < 0.3 * sp2) {   // 防转成近水平贴地/贴顶滑行
+          b.vy = (b.vy >= 0 ? 1 : -1) * 0.3 * sp2;
+          b.vx = (b.vx >= 0 ? 1 : -1) * Math.sqrt(Math.max(0, sp2 * sp2 - b.vy * b.vy));
+        }
+      }
+
+      // 球掉出场地 → 移除并扣命（可能切到 serve/over 态，即停本帧循环）
+      if (b.y - BALL_R > H) loseLife(s, b, now);
+      if (s.status !== 'rally') break;
+    }
+    s.prevVy = s.ball.vy;
 
     // 清层判定（「这一层完成！」由 render 画布中央大字动画呈现，不走 hint）
     if (s.status === 'rally' && !s.bricks.some(k => k.hp > 0)) {
@@ -455,21 +516,44 @@
     }
   }
 
-  function loseLife(s, now) {
+  function loseLife(s, b, now) {
+    // 移除该球；同时保持「s.ball === s.balls[0]」恒成立（调试口/既有用例依赖）。
+    // 关键：最后一颗球（balls.length===1）永不移除——单球局 serve 等待期球冻结在场内、
+    // 始终留在 balls[] 里，避免「status 被强切 rally 但数组为空 → 物理失效」。
+    const hadMulti = s.balls.length > 1;
+    const idx = s.balls.indexOf(b);
+    if (idx >= 0 && hadMulti) {
+      if (idx === 0) {
+        // 移除的是主球：把剩余球姿态搬进主球对象，再删掉那个对象
+        const o = s.balls[1];
+        s.ball.x = o.x; s.ball.y = o.y; s.ball.vx = o.vx; s.ball.vy = o.vy; s.ball.trail = o.trail;
+        s.balls.splice(1, 1);
+      } else {
+        s.balls.splice(idx, 1);
+      }
+    }
+    if (s.aiBall && s.balls.indexOf(s.aiBall) < 0) { s.aiBall = null; s.prevAiVy = 0; }
     s.lives--;
     s.combo = 0;
     s.rallyHits = 0;
     sfxLose();
     // 失误方侧的低概率短句（左半场掉=梦角侧，也含「差点」语义池）
-    if (s.ball.x <= W / 2) trySay(s, 'nearmiss', 0.22, now);
-    if (s.lives > 0) {
-      hintEl.textContent = T('差一点！还剩 ') + s.lives + T(' 次');
+    if (b.x <= W / 2) trySay(s, 'nearmiss', 0.22, now);
+    if (s.lives <= 0) {
+      endGame(s, now);
+      return;
+    }
+    hintEl.textContent = T('差一点！还剩 ') + s.lives + T(' 次');
+    trySay(s, 'fail', 0.3, now);
+    if (!hadMulti) {
+      // 单球局：经典发球等待（球冻结在原地）
       s.ball.vx = 0; s.ball.vy = 0;
       s.status = 'serve';
       s.serveAt = now + 1000;
-      trySay(s, 'fail', 0.3, now);
     } else {
-      endGame(s, now);
+      // 多球局：即使只剩一颗也走补发，回到设定球数（对局不中断）
+      const deficit = targetBallCount() - s.balls.length;
+      for (let i = 0; i < deficit; i++) s.respawns.push(now + 1100 + i * 700);
     }
   }
 
@@ -497,7 +581,7 @@
         var real = Math.min([520, 1314, 5200][stars - 1], COIN_CAP - cur);
         try { localStorage.setItem(ck, String(cur + real)); } catch (e2) {}
         if (real > 0 && typeof window.giftWalletChange === 'function') {
-          if (window.giftWalletChange(real, real)) {
+          if (window.giftWalletChange(real, real, '双人打砖块')) {
             coinLineBrick = '🪙 双方心意币各 +¥' + (real / 100).toFixed(2);
           }
         }
@@ -528,7 +612,6 @@
   // ---- 渲染 ----
   let _bgGrad = null, _rowGrads = null;
   function render(s, now) {
-    const b = s.ball;
     ctx.save();
     ctx.clearRect(0, 0, W, H);
     // 背景：纵向深空渐变 + 呼吸星点
@@ -546,11 +629,16 @@
       ctx.fillRect(st.x, st.y, st.r, st.r);
     }
     ctx.globalAlpha = 1;
-    // 危险预警：球下行且落点在玩家半场深处 → 底部泛淡红光提醒补救
-    if (s.status === 'rally' && b.vy > 0 && b.y > H * 0.6) {
-      const predX = predictLandingX(s);
-      if (predX != null && predX > W * 0.58) {
-        const inten = Math.min(1, (b.y / H - 0.6) / 0.4);
+    // 危险预警：任一球下行且落点在玩家半场深处 → 底部泛淡红光提醒补救（取最深的一颗）
+    if (s.status === 'rally') {
+      let worst = null, worstY = -1;
+      for (const bl of s.balls) {
+        if (bl.vy <= 0 || bl.y <= H * 0.6) continue;
+        const predX = predictLandingX(bl);
+        if (predX != null && predX > W * 0.58 && bl.y > worstY) { worstY = bl.y; worst = bl; }
+      }
+      if (worst) {
+        const inten = Math.min(1, (worst.y / H - 0.6) / 0.4);
         const dg = ctx.createLinearGradient(0, H - 36, 0, H);
         dg.addColorStop(0, 'rgba(255,95,122,0)');
         dg.addColorStop(1, 'rgba(255,95,122,' + (0.08 + 0.26 * inten).toFixed(3) + ')');
@@ -602,12 +690,14 @@
       ctx.fillRect(pt.x - pt.sz / 2, pt.y - pt.sz / 2, pt.sz, pt.sz);
     }
     ctx.globalAlpha = 1;
-    // 球拖尾（渐隐渐小）
-    for (let ti = 0; ti < s.trail.length; ti++) {
-      const tp = s.trail[ti], f = (ti + 1) / s.trail.length;
-      ctx.globalAlpha = f * 0.25;
-      ctx.fillStyle = '#ffd9e2';
-      ctx.beginPath(); ctx.arc(tp.x, tp.y, BALL_R * (0.35 + 0.65 * f), 0, Math.PI * 2); ctx.fill();
+    // 球拖尾（渐隐渐小，每球独立一条）
+    for (const bl of s.balls) {
+      for (let ti = 0; ti < bl.trail.length; ti++) {
+        const tp = bl.trail[ti], f = (ti + 1) / bl.trail.length;
+        ctx.globalAlpha = f * 0.25;
+        ctx.fillStyle = '#ffd9e2';
+        ctx.beginPath(); ctx.arc(tp.x, tp.y, BALL_R * (0.35 + 0.65 * f), 0, Math.PI * 2); ctx.fill();
+      }
     }
     ctx.globalAlpha = 1;
     // 挡板：玩家右（蓝）/ 梦角左（暖橙），圆角+命中白闪；带小标签帮助识别半场
@@ -631,20 +721,28 @@
       ctx.fillStyle = 'rgba(255,178,125,0.85)';
       ctx.fillText(taName(), s.dream.x, PADDLE_Y - 5);
     }
-    // 球（外圈微光）
-    ctx.fillStyle = 'rgba(255,255,255,0.22)';
-    ctx.beginPath(); ctx.arc(b.x, b.y, BALL_R + 3, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath(); ctx.arc(b.x, b.y, BALL_R, 0, Math.PI * 2); ctx.fill();
-    // 发球前提示：脉冲圆环 + 上行箭头
-    if (s.status === 'serve') {
+    // 球（外圈微光）；发球等待期不画实体球，改画各出生点的幽灵球+脉冲指示
+    if (s.status !== 'serve') {
+      for (const bl of s.balls) {
+        ctx.fillStyle = 'rgba(255,255,255,0.22)';
+        ctx.beginPath(); ctx.arc(bl.x, bl.y, BALL_R + 3, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath(); ctx.arc(bl.x, bl.y, BALL_R, 0, Math.PI * 2); ctx.fill();
+      }
+    } else {
+      const nServe = targetBallCount();
       const pu = 0.5 + 0.5 * Math.sin(now / 170);
       ctx.strokeStyle = 'rgba(110,168,255,' + (0.35 + 0.45 * pu).toFixed(3) + ')';
       ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.arc(b.x, b.y, BALL_R + 6 + 3 * pu, 0, Math.PI * 2); ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(b.x - 7, b.y - 15); ctx.lineTo(b.x, b.y - 22); ctx.lineTo(b.x + 7, b.y - 15);
-      ctx.stroke();
+      for (let i = 0; i < nServe; i++) {
+        const hx = spawnX(i, nServe), hy = BALL_HOME_Y;
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath(); ctx.arc(hx, hy, BALL_R, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(hx, hy, BALL_R + 6 + 3 * pu, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(hx - 7, hy - 15); ctx.lineTo(hx, hy - 22); ctx.lineTo(hx + 7, hy - 15);
+        ctx.stroke();
+      }
     }
     // 得分漂浮数字
     for (const f of s.floaters) {
@@ -741,8 +839,10 @@
       const fxDt = Math.min(50, dt) / 16.7;
       const nowFx = performance.now();
       if (state.status === 'rally') {
-        state.trail.push({ x: state.ball.x, y: state.ball.y });
-        if (state.trail.length > 9) state.trail.shift();
+        for (const bl of state.balls) {
+          bl.trail.push({ x: bl.x, y: bl.y });
+          if (bl.trail.length > 9) bl.trail.shift();
+        }
       }
       for (let i = state.parts.length - 1; i >= 0; i--) {
         const pt = state.parts[i];
@@ -983,6 +1083,10 @@
     // 进行中切换难度即时生效（下次思考起用新参数）；结束后只影响下一局
     if (state && state.status !== 'over') state.params = DIFFS[diffSel.value] || DIFFS.easy;
   });
+  if (ballsSel) ballsSel.addEventListener('change', () => {
+    // 球数量在下次发球/补发时生效（不打断当前球）；选择随联系人记忆
+    try { localStorage.setItem(ballsPrefKey(), String(targetBallCount())); } catch (e) {}
+  });
   if (soundBtn) soundBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     soundOn = !soundOn;
@@ -1012,7 +1116,9 @@
   window.__brickDebug = {
     get state() { return state; },
     get running() { return running; },
-    get paused() { return paused; }
+    get paused() { return paused; },
+    get W() { return W; },
+    get H() { return H; }
   };
   window.openBrickPanel = function () {
     if (!panel) return;
@@ -1045,8 +1151,14 @@
     }
     const best = loadBest();
     armResume(null);
+    // 恢复该联系人记住的球数偏好
+    try {
+      const savedBalls = Number(localStorage.getItem(ballsPrefKey()));
+      if (savedBalls >= 1 && savedBalls <= 3 && ballsSel) ballsSel.value = String(savedBalls);
+    } catch (e) {}
+    const bn = targetBallCount();
     showOverlay(T('双人打砖块'),
-      '<div class="pong-start-tip">你和' + T('TA') + '各守半场接同一颗球<br>清光砖块进入下一层 · 共 3 次失误机会</div>' +
+      '<div class="pong-start-tip">你和' + T('TA') + '各守半场共接' + (bn > 1 ? bn + ' 颗球' : '同一颗球') + '<br>清光砖块进入下一层 · 共 3 次失误机会</div>' +
       '<div class="pong-start-ctrl">手机：按住画面左右拖动<br>电脑：A/D 或 ← →</div>' +
       (best > 0 ? '<div class="pong-end-stat">历史最佳 ' + best + ' 分</div>' : ''),
       '开始');

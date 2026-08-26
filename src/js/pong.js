@@ -499,7 +499,8 @@
       localStorage.setItem(statsKey, JSON.stringify(stats));
     } catch (e) {}
     const fit = window.taFit ? window.taFit : function (x) { return x; };
-    // v3.15.x 二调：奖励对齐红包金额体系——胜 80% ¥13.14 / 20% ¥52，平 ¥5.2，TA 赢 TA 得 ¥13.14（日封顶 ¥104）
+    // v3.15.x 二调：奖励对齐红包金额体系——胜 80% ¥13.14 / 20% ¥52，平 ¥5.2（日封顶 ¥104）
+    // v3.16.x：乒乓改为双方同步同额入账（不再只给赢家），赚钱流水记「乒乓」
     var coinLine = '';
     try {
       var COIN_CAP = 10400;
@@ -511,9 +512,8 @@
         var real = Math.min(draw ? 520 : pongWinFen, COIN_CAP - cur);
         try { localStorage.setItem(ck, String(cur + real)); } catch (e2) {}
         if (real > 0 && typeof window.giftWalletChange === 'function') {
-          var toTa = !draw && !playerWin;
-          if (window.giftWalletChange(toTa ? 0 : real, toTa ? real : 0)) {
-            coinLine = '🪙 ' + (toTa ? fit('TA') + ' 的心意币' : '我的心意币') + ' +¥' + (real / 100).toFixed(2);
+          if (window.giftWalletChange(real, real, '乒乓')) {
+            coinLine = '🪙 双方心意币各 +¥' + (real / 100).toFixed(2);
           }
         }
       }

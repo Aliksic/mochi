@@ -870,6 +870,11 @@
         // 摩托罗拉G100/雨见 focusout/vv.resize 漏触发，但轮询读 vv.height 能读到
         // 回升，据此立即清除推顶，不用等 2200ms 无活动（用户感知"输入框停留几秒才回底"）
         var _aLastVVH = 0;
+        // v3.16.x：focusin 后短时高频补偿宽限期——此期间 _aPinPan 即使 _aKb/_aProv 都
+        // false 也执行，归零浏览器为露焦点提前平移的视口残留（红米 K80 Chrome 首次
+        // 点击输入栏键盘弹出动画期间 vv.offsetTop 先起、vv.height 后缩，_aKb 未置位时
+        // 平移已残留 → 输入栏错位+灰条）。850ms 后交回稳态条件。
+        var _aBurstUntil = 0;
         // v3.15.x：键盘期「页面平移归零」自愈（红米 K80 Chrome 报修：更多功能里的小功能
         // 页面键盘一弹整页飞走、下方全灰；帮我决定打字输入框不弹到屏幕上方）。机理与
         // iOS Edge 当年同款：聚焦底部半框内输入框时，浏览器为让焦点可见先把【视觉视口
@@ -884,7 +889,7 @@
         }
         function _aPinPan() {
           try {
-            if (!_aKb && !_aProv) return;
+            if (!_aKb && !_aProv && Date.now() > _aBurstUntil) return;
             var offT = _aVV.offsetTop || 0;
             var winY = _aWinY();
             if (offT <= 8 && winY <= 8) return;
@@ -1060,6 +1065,19 @@
               try { syncAndroidKb(); } catch (e3) {}
               setTimeout(syncAndroidKb, 120);
               setTimeout(syncAndroidKb, 350);
+              // v3.16.x：红米 K80 Chrome 首次点击输入栏键盘弹出动画（~300-500ms）期间，
+              // vv.resize 在动画早期触发使 .phone 收缩到中间值高度 + _aPinPan 平移归零
+              // 跟不上动画帧 → 输入栏行按钮错位、输入栏与键盘间露 body 底色（灰条）。
+              // 再点一次时 vv.height 已稳定故正常。此处 focusin 后启动 80ms 高频补偿
+              // 持续 ~800ms，每帧 syncAndroidKb+_aPinPan+nudge 跟随动画收敛；850ms 宽限期
+              // 内 _aPinPan 即使 _aKb/_aProv 未置位也归零提前平移的视口残留。
+              _aBurstUntil = Date.now() + 850;
+              var _burstCnt = 0;
+              function _burstTick() {
+                try { syncAndroidKb(); _aPinPan(); nudgeInputVisible(); } catch (ee) {}
+                if (++_burstCnt < 10) setTimeout(_burstTick, 80);
+              }
+              setTimeout(_burstTick, 40);
               // v3.12.x：悬浮键盘推定停靠复查——950ms（宽限期刚过）与 1700ms 各一次，
               // 即使轮询表因失焦竞态提前停掉，这里也能独立完成保底停靠/清理
               setTimeout(_aProvCheck, 950);

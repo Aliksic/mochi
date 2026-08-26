@@ -100,14 +100,14 @@
   function saveKeeps(list) { try { localStorage.setItem(keepsKey(), JSON.stringify(list.slice(-60))); } catch (e) {} }
   function coinDayKey() { return prefix() + ':ml2_coin_ms_' + new Date().toISOString().slice(0, 10); }
 
-  // 心意币统一入口：日封顶内走 giftWalletChange 进我的余额，返回实际入账（分）
+  // 心意币统一入口：日封顶内走 giftWalletChange 进双方余额（v3.16.x：我和 TA 同步同额），返回实际入账（分）
   function grantCoin(fen) {
     let cur = 0;
     try { cur = Number(localStorage.getItem(coinDayKey())) || 0; } catch (e) {}
     const real = Math.min(fen, MS_COIN_CAP - cur);
     if (real <= 0) return 0;
     try { localStorage.setItem(coinDayKey(), String(cur + real)); } catch (e2) {}
-    try { if (typeof window.giftWalletChange === 'function') window.giftWalletChange(real, 0); } catch (e3) {}
+    try { if (typeof window.giftWalletChange === 'function') window.giftWalletChange(real, real, '合作扫雷'); } catch (e3) {}
     return real;
   }
 

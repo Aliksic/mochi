@@ -2198,6 +2198,67 @@ background:#fff; color:var(--ink); cursor:pointer; font-family:inherit;
 }
 .rp-cover-btn:active { background:rgba(0,0,0,.05); }
 .rp-cover-btn[hidden] { display:none; }
+.voice-card { max-height:58%; }
+.voice-card .voice-status { font-size:11px; font-weight:600; color:var(--muted); margin-left:6px; }
+.voice-stage {
+flex-shrink:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+gap:12px; padding:20px 0 8px;
+}
+.voice-wave { display:flex; align-items:center; gap:4px; height:46px; }
+.voice-wave i {
+width:4px; height:28%; border-radius:3px; background:var(--ink); opacity:.22;
+transition:height .25s ease;
+}
+.voice-card.recording .voice-wave i {
+opacity:.85;
+animation:voiceRecWave .8s ease-in-out infinite alternate;
+}
+.voice-wave i:nth-child(1) { height:34%; animation-delay:0s; }
+.voice-wave i:nth-child(2) { height:58%; animation-delay:.1s; }
+.voice-wave i:nth-child(3) { height:82%; animation-delay:.2s; }
+.voice-wave i:nth-child(4) { height:100%; animation-delay:.3s; }
+.voice-wave i:nth-child(5) { height:76%; animation-delay:.4s; }
+.voice-wave i:nth-child(6) { height:52%; animation-delay:.5s; }
+.voice-wave i:nth-child(7) { height:36%; animation-delay:.6s; }
+@keyframes voiceRecWave { from { transform:scaleY(.45); } to { transform:scaleY(1.05); } }
+.voice-time {
+font-size:27px; font-weight:700; color:var(--ink); letter-spacing:1px;
+font-variant-numeric:tabular-nums; line-height:1;
+}
+.voice-preview {
+flex-shrink:0; display:flex; align-items:center; gap:10px;
+padding:8px 14px; margin:10px 2px 0;
+background:rgba(0,0,0,.04); border:1px solid rgba(0,0,0,.08); border-radius:16px;
+align-self:flex-start;
+}
+.voice-preview[hidden] { display:none; }
+.voice-preview-txt { font-size:12px; font-weight:600; color:var(--muted); white-space:nowrap; }
+.voice-foot { flex-shrink:0; display:flex; gap:8px; padding-top:14px; }
+.voice-rec-btn {
+flex-shrink:0; min-width:104px; padding:12px 16px; border-radius:24px; border:none;
+background:var(--btn-bg,#111); color:var(--btn-ink,#fff); font-size:13px; font-weight:700;
+cursor:pointer; font-family:inherit; -webkit-tap-highlight-color:transparent;
+}
+.voice-rec-btn:active { opacity:.85; }
+.voice-rec-btn.rec {
+background:#e5484d; color:#fff;
+animation:voiceRecPulse 1.15s ease-in-out infinite;
+}
+@keyframes voiceRecPulse {
+0%,100% { box-shadow:0 0 0 0 rgba(229,72,77,.35); }
+50% { box-shadow:0 0 0 7px rgba(229,72,77,0); }
+}
+.voice-send-big[disabled] { opacity:.4; pointer-events:none; }
+.msg-out .msg-voice-play { background:rgba(255,255,255,.16); border-color:rgba(255,255,255,.35); color:#fff; }
+.msg-out .msg-voice-play.playing { background:#fff; color:#111; border-color:#fff; }
+.msg-out .msg-voice-wave i { background:#fff; opacity:.55; }
+@media (prefers-reduced-motion: reduce) {
+.voice-card .voice-wave i, .voice-rec-btn.rec { animation:none !important; transition:none !important; }
+}
+[data-theme="dark"] .voice-preview { background:rgba(255,255,255,.07); border-color:rgba(255,255,255,.12); }
+[data-theme="dark"] .voice-wave i { opacity:.4; }
+[data-theme="dark"] .voice-card.recording .voice-wave i { opacity:.9; }
+[data-theme="dark"] .msg-voice-play.voice-play-btn { background:rgba(255,255,255,.1); border-color:rgba(255,255,255,.16); }
 #page-chatcard { scrollbar-width:none; -ms-overflow-style:none; }
 #page-chatcard::-webkit-scrollbar { display:none; }
 .chat-title { font-size:22px; font-weight:700; padding:4px 2px 8px; letter-spacing:1px; }
@@ -4568,6 +4629,7 @@ border-radius:12px;
 .brick-lives { letter-spacing:1px; font-size:13px; color:#ff5f7a; }
 .brick-lives .brick-hlost { opacity:.22; filter:grayscale(1); }
 #brick-canvas { display:block; width:100%; height:auto; border-radius:10px; background:#101625; touch-action:none; user-select:none; -webkit-user-select:none; }
+#chat-brick-panel #brick-balls { max-width:70px; min-width:0; padding-left:7px; padding-right:18px; }
 .brick-info span { background:rgba(0,0,0,.05); border-radius:9px; padding:2px 8px; }
 .brick-info .brick-lives { background:none !important; padding:2px 2px !important; }
 .brick-info .brick-combo { background:rgba(232,89,12,.14) !important; }
@@ -7681,7 +7743,7 @@ transition-duration: .01ms !important;
       </div>
       <div class="splash-dots"><i></i><i></i><i></i></div>
       <div class="splash-brand">小红书@言序（1842523578）</div>
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787750409947">Mochi 字卡传讯 v3.6.247 · 部署于 2026-08-26 21:20</div>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787753211528">Mochi 字卡传讯 v3.6.248 · 部署于 2026-08-26 22:06</div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
       <div class="splash-loading" id="splash-loading">正在加载数据…</div>
@@ -8049,9 +8111,10 @@ transition-duration: .01ms !important;
       </div>
       </div>
       <div class="cc-sect-body" id="cc-sect-preset" hidden>
+      <div class="sm-set-hint" style="padding:2px 16px 10px">说明：本站「系统预设字卡」均为自搓字卡（作者原创），按分类/分组展示，可逐张开启或关闭。</div>
       <div class="chat-item glass" id="li-default-cards">
         <div class="av"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1L3.2 9.4l6.1-.9z"/></svg></div>
-        <div class="ci"><div class="n">默认聊天字卡</div><div class="m">日常默认回复字卡</div></div>
+        <div class="ci"><div class="n">默认聊天字卡</div><div class="m">日常默认回复字卡（自搓）</div></div>
         <div class="t">3260</div>
       </div>
       <div class="chat-item glass" id="li-mood-cards">
@@ -8741,7 +8804,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.6.247</div>
+      <div class="ver">Mochi 字卡传讯 v3.6.248</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -8883,7 +8946,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.6.247</span>
+              <span class="lic-ver">v3.6.248</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -8934,7 +8997,7 @@ transition-duration: .01ms !important;
           <div class="lic-li">新功能专属字卡：TA 的邀请（猜拳 / Pong / 贪吃蛇 / 贴贴）、经期关心、喝水、花园、房间、漂流瓶、位置卡等，逐条开关 + 自定义添加</div>
           <div class="lic-li">字卡库页入口：公用字卡（全桌面联系人共享）、专属字卡（仅当前桌面联系人）、寻踪日常字卡、桌面今日情话、聊天默认字卡、聊天情绪字卡、聊天回应字卡及各功能专属字卡统一管理</div>
           <div class="lic-li">字卡管理：去重复、导出数据、一键清空所有分类</div>
-          <div class="lic-li">兼容导入 milk 字卡库导出的 json；系统预设字卡可逐句开关</div>
+          <div class="lic-li">兼容导入 milk 字卡库导出的 json；系统预设字卡（自搓）可逐句开关</div>
             </div>
           </details>
 
@@ -9622,6 +9685,7 @@ transition-duration: .01ms !important;
         </span>
         <span class="ch-name">聊天默认字卡</span>
       </div>
+      <div class="sm-set-hint" style="padding:8px 16px 0">说明：以下系统预设字卡为本站自搓字卡（作者原创），可逐张开启或关闭。</div>
       <div class="dc-toggle glass">
         <div class="dc-toggle-txt">
           <div class="dc-toggle-name">使用默认字卡</div>
@@ -10235,6 +10299,8 @@ transition-duration: .01ms !important;
         <button class="fav-tab" data-htab="fish">每日摸鱼值</button>
         <button class="fav-tab" data-htab="work">每日打工值</button>
         <button class="fav-tab" data-htab="catch">摸鱼抓包</button>
+        <button class="fav-tab" data-htab="coinearn">心意币赚钱记录</button>
+        <button class="fav-tab" data-htab="coinask">心意币申请记录</button>
       </div>
       <div class="cal-scroll">
         <div class="cal-card glass" data-hpanel="av">
@@ -10256,6 +10322,15 @@ transition-duration: .01ms !important;
         <div class="cal-card glass" data-hpanel="catch" hidden>
           <div class="cal-card-title">摸鱼抓包记录</div>
           <div id="home-catch"></div>
+        </div>
+        <!-- v3.16.x：心意币流水（赚钱/申请），分列我和当前联系人的入账 -->
+        <div class="cal-card glass" data-hpanel="coinearn" hidden>
+          <div class="cal-card-title">心意币赚钱记录</div>
+          <div id="home-coinearn"></div>
+        </div>
+        <div class="cal-card glass" data-hpanel="coinask" hidden>
+          <div class="cal-card-title">心意币申请记录</div>
+          <div id="home-coinask"></div>
         </div>
       </div>
     </div>
@@ -10916,7 +10991,7 @@ transition-duration: .01ms !important;
           </div>
         </div>
       </div>
-      <!-- 双人打砖块：聊天页底部半框（合作清砖：玩家左挡板 / 梦角右挡板由代码控制，共接一球） -->
+      <!-- 双人打砖块：聊天页底部半框（合作清砖：玩家右挡板 / 梦角左挡板由代码控制，球数 1~3 可设） -->
       <div class="poke-card" id="chat-brick-panel" hidden>
         <div class="poke-card-head">
           <span>双人打砖块 · <b id="brick-partner-name">TA</b></span>
@@ -10925,6 +11000,11 @@ transition-duration: .01ms !important;
               <option value="easy" selected>轻松</option>
               <option value="normal">普通</option>
               <option value="hard">困难</option>
+            </select>
+            <select class="snake-diff" id="brick-balls" title="球数量（下次发球生效）">
+              <option value="1" selected>1 球</option>
+              <option value="2">2 球</option>
+              <option value="3">3 球</option>
             </select>
             <button class="snake-icon-btn" id="brick-pause" title="暂停/继续">⏸</button>
             <button class="snake-icon-btn" id="brick-sound" title="音效开关">🔊</button>
@@ -11236,8 +11316,8 @@ transition-duration: .01ms !important;
              每个功能只归属一个分类、分类间互不重复（v3.16.x 起移除「常用」页签，原常用默认项并入所属分类） -->
         <div class="more-tabs" id="more-tabs">
           <button class="more-tab sel" type="button" data-mcat="chat">互动</button>
-          <button class="more-tab" type="button" data-mcat="game">小游戏</button>
           <button class="more-tab" type="button" data-mcat="tool">工具</button>
+          <button class="more-tab" type="button" data-mcat="game">小游戏</button>
           <button class="more-tab" type="button" data-mcat="ask">TA的提问</button>
         </div>
         <div class="more-grid" id="more-grid-fun">
@@ -20686,10 +20766,10 @@ const rpsWinFen = Math.random() < 0.3 ? 1314 : 520;
 const real = rpGameCoinGrant('rps', judge > 0 ? rpsWinFen : judge < 0 ? 520 : 130, 2600);
 if (real > 0) {
 const w = rpWalletGet();
-if (judge < 0) w.systemBalance += real; else w.myBalance += real;
+w.myBalance += real; w.systemBalance += real;
 rpWalletSet(w);
-const coinMsg = rpCoinTxt(real, judge < 0);
-setTimeout(() => addIn(coinMsg, { special: 'poke' }), randInt(800, 1600));
+try { if (window.giftCoinLedgerAdd) window.giftCoinLedgerAdd('earn', real, real, '石头剪刀布'); } catch (e2) {}
+setTimeout(() => addIn('🪙 双方心意币各 +¥' + (real / 100).toFixed(2), { special: 'poke' }), randInt(800, 1600));
 }
 } catch (e) {}
 if (window.logFish) window.logFish();
@@ -20924,6 +21004,7 @@ askDailyIncr();
 const wallet = rpWalletGet();
 wallet.systemBalance += amtFen;
 rpWalletSet(wallet);
+try { if (window.giftCoinLedgerAdd) window.giftCoinLedgerAdd('ask', 0, amtFen, 'TA自动申请'); } catch (e) {}
 const myCid = window.__activeCid || 'default';
 setTimeout(() => {
 if ((window.__activeCid || 'default') !== myCid) return;
@@ -21049,6 +21130,7 @@ const w = rpWalletGet();
 if (target === 'my') w.myBalance += fen;
 else w.systemBalance += fen;
 rpWalletSet(w); rpRenderBalance();
+try { if (window.giftCoinLedgerAdd) window.giftCoinLedgerAdd('ask', target === 'my' ? fen : 0, target === 'ta' ? fen : 0, '聊天申请'); } catch (e) {}
 toast('Mochi 已打款，' + LBL[target] + ' +¥' + fmtYuan(fen / 100));
 doneAny = true;
 side = target === 'my' ? 'ta' : 'my';
@@ -21995,11 +22077,10 @@ const snkWinFen = Math.random() < 0.2 ? 5200 : 1314;
 const real = rpGameCoinGrant('snake', d.result === 'draw' ? 520 : snkWinFen, 10400);
 if (real > 0) {
 const w = rpWalletGet();
-const toTa = d.result === 'lose';
-if (toTa) w.systemBalance += real; else w.myBalance += real;
+w.myBalance += real; w.systemBalance += real;
 rpWalletSet(w);
-const coinMsg = rpCoinTxt(real, toTa);
-setTimeout(() => addIn(coinMsg, { special: 'poke' }), randInt(800, 1600));
+try { if (window.giftCoinLedgerAdd) window.giftCoinLedgerAdd('earn', real, real, '贪吃蛇'); } catch (e2) {}
+setTimeout(() => addIn('🪙 双方心意币各 +¥' + (real / 100).toFixed(2), { special: 'poke' }), randInt(800, 1600));
 }
 } catch (e) {}
 if (window.logFish) window.logFish();
@@ -38985,9 +39066,15 @@ showSysNotification(name, { body: '你不在的时候收到 ' + inc + ' 条新�
 });
 let lastResumeNotifyAt = 0; // v3.5.154：回前台汇总通知去重
 let lastVisibleAt = Date.now();
+let lastHiddenAt = 0; // v3.16.x：最近一次切后台时刻（修复过渡期闸门失效）
 (function () {
 const markVisible = function () {
-if (document.visibilityState === 'visible') lastVisibleAt = Date.now();
+if (document.visibilityState === 'visible') {
+lastVisibleAt = Date.now();
+lastHiddenAt = 0;
+} else if (document.visibilityState === 'hidden') {
+lastHiddenAt = Date.now();
+}
 };
 document.addEventListener('visibilitychange', markVisible);
 window.addEventListener('pageshow', markVisible);
@@ -39097,7 +39184,7 @@ window.bgNotifyGateInfo = function (text, img, refTs) {
 const nkey = msgFingerprint(text, img);
 return {
 hiddenForMs: Date.now() - lastVisibleAt,
-tooFreshHidden: Date.now() - lastVisibleAt < NOTIFY_HIDDEN_MIN_MS,
+tooFreshHidden: lastHiddenAt > 0 && Date.now() - lastHiddenAt < NOTIFY_HIDDEN_MIN_MS,
 dupNotified: notifiedDup(nkey),
 dupSeen: seenDup(nkey),
 dupInChat: recentChatDup(nkey, refTs),
@@ -39111,7 +39198,7 @@ const nkey = msgFingerprint(text, extra.img);
 if (document.visibilityState === 'visible') { markSeen(nkey); return; }
 if (!('Notification' in window) || Notification.permission !== 'granted') return;
 gateStats.total++;
-if (Date.now() - lastVisibleAt < NOTIFY_HIDDEN_MIN_MS) { gateStats.tooFresh++; return; }
+if (lastHiddenAt > 0 && Date.now() - lastHiddenAt < NOTIFY_HIDDEN_MIN_MS) { gateStats.tooFresh++; return; }
 if (notifiedDup(nkey) || seenDup(nkey)) { gateStats.dup++; return; }
 if (recentChatDup(nkey, ts)) { gateStats.dup++; return; }
 gateStats.sent++;
@@ -39389,6 +39476,36 @@ el.innerHTML = list.length
 ).join('')
 : '<div class="ta-empty">暂无摸鱼抓包记录（桌面浮字可点击抓包 TA；点太快会被 TA 反向抓包）</div>';
 }
+function renderCoinPanel(kind) {
+const el = document.getElementById(kind === 'ask' ? 'home-coinask' : 'home-coinearn');
+if (!el) return;
+const list = (window.giftCoinLedgerLoad ? window.giftCoinLedgerLoad(kind) : []) || [];
+const name = store.get('lbl-partner') || (window.taWord ? window.taWord() : 'TA');
+const myName = store.get('lbl-user') || '我';
+const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+if (!list.length) {
+el.innerHTML = '<div class="ta-empty">' + (kind === 'ask' ? '暂无申请记录（可点心意币余额行向 Mochi 申请）' : '暂无赚钱记录（玩游戏、种花、钓鱼都能赚心意币）') + '</div>';
+return;
+}
+const yuan = (fen) => (fen / 100).toFixed(2);
+el.innerHTML = list.map(x => {
+let line;
+if (x.myFen && x.taFen && x.myFen === x.taFen) line = '双方各 +¥' + yuan(x.myFen);
+else {
+const parts = [];
+if (x.myFen) parts.push(myName + ' +¥' + yuan(x.myFen));
+if (x.taFen) parts.push(name + ' +¥' + yuan(x.taFen));
+line = parts.join(' · ') || '—';
+}
+const src = x.src ? esc(x.src) : (kind === 'ask' ? '向 Mochi 申请' : '赚钱');
+return '<div class="tc-listitem"><div class="tc-li-top"><span class="tc-li-q">🪙 ' + src + '</span><span class="tc-li-time">' + fmtDT(x.ts) + '</span></div>' +
+'<div class="tc-li-line">' + line + '</div></div>';
+}).join('');
+}
+window.__renderHomeCoin = function () {
+if (htab === 'coinearn') renderCoinPanel('earn');
+else if (htab === 'coinask') renderCoinPanel('ask');
+};
 function histList(key) { try { return JSON.parse(store.get(key) || '[]'); } catch (e) { return []; } }
 let htab = 'av';
 window.renderFishHistory = function () {
@@ -39441,6 +39558,12 @@ window.renderFishHistory();
 }
 if (showOnly === 'catch') {
 renderCatch();
+}
+if (showOnly === 'coinearn') {
+renderCoinPanel('earn');
+}
+if (showOnly === 'coinask') {
+renderCoinPanel('ask');
 }
 if (showOnly === 'av') {
 const avEl = document.getElementById('home-av');
@@ -46719,13 +46842,39 @@ const el = document.getElementById(id);
 if (el) el.textContent = walletText();
 });
 }
-window.giftWalletChange = function (dMy, dTa) {
+window.giftWalletChange = function (dMy, dTa, src) {
 const w = walletGet();
 if (dMy) w.myBalance += dMy;
 if (dTa) w.systemBalance += dTa;
 walletSet(w); renderGiftBalances();
+if (src) coinLedgerAdd('earn', dMy || 0, dTa || 0, src);
 return { myBalance: w.myBalance, systemBalance: w.systemBalance };
 };
+function coinLedgerLoad(kind) {
+try {
+const s = window.activeStore ? window.activeStore() : null;
+if (!s) return [];
+const arr = JSON.parse(s.get(kind === 'ask' ? 'records-coin-ask' : 'records-coin-earn') || '[]');
+return Array.isArray(arr) ? arr : [];
+} catch (e) { return []; }
+}
+function coinLedgerAdd(kind, myFen, taFen, src) {
+try {
+const s = window.activeStore ? window.activeStore() : null;
+if (!s) return;
+if (!myFen && !taFen) return;
+const key = kind === 'ask' ? 'records-coin-ask' : 'records-coin-earn';
+const list = coinLedgerLoad(kind);
+list.unshift({ ts: Date.now(), myFen: myFen || 0, taFen: taFen || 0, src: src || '' });
+s.set(key, JSON.stringify(list.slice(0, 100)));
+try {
+const hp = document.getElementById('page-home');
+if (hp && !hp.hidden && window.__renderHomeCoin) window.__renderHomeCoin();
+} catch (e) {}
+} catch (e) {}
+}
+window.giftCoinLedgerAdd = coinLedgerAdd;
+window.giftCoinLedgerLoad = coinLedgerLoad;
 function giftEditWallet() {
 if (!window.openModal) return;
 var pn = partnerName();
@@ -46752,6 +46901,7 @@ var w = walletGet();
 if (target === 'my') w.myBalance += fen;
 else w.systemBalance += fen;
 walletSet(w); renderGiftBalances();
+coinLedgerAdd('ask', target === 'my' ? fen : 0, target === 'ta' ? fen : 0, '市集申请');
 toast('Mochi 已打款，' + LBL[target] + ' +¥' + fmtYuan(fen / 100));
 doneAny = true;
 side = target === 'my' ? 'ta' : 'my';
@@ -51977,11 +52127,11 @@ var cap = 52000;
 if (cur >= cap) return null;
 var fen = Math.min(harvestCoinFen(q, wilted), cap - cur);
 s.set(ck, String(cur + fen));
-window.giftWalletChange(fen, 0);
+window.giftWalletChange(fen, fen, "花园收花");
 return fen;
 } catch (e) { return null; }
 }
-function coinTxt(fen) { return "🪙 我的心意币 +¥" + (fen / 100).toFixed(2); }
+function coinTxt(fen) { return "🪙 双方心意币各 +¥" + (fen / 100).toFixed(2); }
 var HYBRIDS = [
 { a: "rose", b: "sakura", r: "flameRose" },
 { a: "rose", b: "clover", r: "blueRose" },
@@ -53977,13 +54127,8 @@ ensureDaily();
 if (d.day.coin >= DAILY_COIN_CAP) return false;
 const real = Math.min(fen, DAILY_COIN_CAP - d.day.coin);
 try {
-const ws = window.xyStore ? window.xyStore('xy-home-v2') : null; // v3.15.x：全局一本账根键
-if (!ws) return false;
-let w = null;
-try { w = JSON.parse(ws.get('gift-wallet') || ''); } catch (e) {}
-if (!w || typeof w.myBalance !== 'number' || typeof w.systemBalance !== 'number') w = { myBalance: 52000, systemBalance: 52000 }; // v3.15.x：默认对齐 ¥520/¥520
-w.myBalance += real;
-ws.set('gift-wallet', JSON.stringify(w));
+if (typeof window.giftWalletChange !== 'function') return false;
+window.giftWalletChange(real, real, '漂流瓶');
 d.day.coin += real;
 save();
 return true;
@@ -55499,9 +55644,8 @@ var pongWinFen = Math.random() < 0.2 ? 5200 : 1314;
 var real = Math.min(draw ? 520 : pongWinFen, COIN_CAP - cur);
 try { localStorage.setItem(ck, String(cur + real)); } catch (e2) {}
 if (real > 0 && typeof window.giftWalletChange === 'function') {
-var toTa = !draw && !playerWin;
-if (window.giftWalletChange(toTa ? 0 : real, toTa ? real : 0)) {
-coinLine = '🪙 ' + (toTa ? fit('TA') + ' 的心意币' : '我的心意币') + ' +¥' + (real / 100).toFixed(2);
+if (window.giftWalletChange(real, real, '乒乓')) {
+coinLine = '🪙 双方心意币各 +¥' + (real / 100).toFixed(2);
 }
 }
 }
@@ -56807,6 +56951,7 @@ const overlayBodyEl = document.getElementById('brick-overlay-body');
 const overlayBtnEl = document.getElementById('brick-overlay-btn');
 const overlayCloseBtn = document.getElementById('brick-overlay-close');
 const diffSel = document.getElementById('brick-diff');
+const ballsSel = document.getElementById('brick-balls');
 const soundBtn = document.getElementById('brick-sound');
 const pauseBtn = document.getElementById('brick-pause');
 const fsBtn = document.getElementById('brick-fs');
@@ -56831,6 +56976,11 @@ easy:   { think: [250, 430], maxV: 2.35, err: 30, fumble: 0.17 },
 normal: { think: [135, 240], maxV: 3.5,  err: 16, fumble: 0.08 },
 hard:   { think: [80, 160],  maxV: 4.8,  err: 8,  fumble: 0.03 }
 };
+function targetBallCount() {
+const n = parseInt(ballsSel && ballsSel.value, 10);
+return n >= 1 && n <= 3 ? n : 1;
+}
+function ballsPrefKey() { return (window.activePrefix && window.activePrefix() || 'xy-home-v2') + ':brick-balls'; }
 function rollPerformance() {
 const r = Math.random();
 if (r < 0.02) {
@@ -56916,12 +57066,15 @@ const levelSpeed = (lv) => Math.min(3.0 + 0.32 * (lv - 1), 5.0);
 let state = null;
 let running = false, paused = false;
 let rafId = null, lastTs = 0, acc = 0;
+function newBallObj() { return { x: W / 2, y: BALL_HOME_Y, vx: 0, vy: 0, trail: [] }; }
 function newState(diffKey) {
 const d = DIFFS[diffKey] || DIFFS.easy;
-return {
+const st = {
 diff: diffKey, params: d,
 perf: rollPerformance(),
-ball: { x: W / 2, y: BALL_HOME_Y, vx: 0, vy: 0 },
+ball: null,
+balls: [],                 // 场上所有球；恒有 s.ball === s.balls[0]（调试口/用例依赖）
+respawns: [],              // 掉球补发队列（时间戳，按球数上限补足）
 player: { x: PLAYER_HOME_X, targetX: PLAYER_HOME_X },
 dream: { x: DREAM_HOME_X, targetX: DREAM_HOME_X, nextThinkAt: 0 },
 bricks: buildBricks(1),
@@ -56929,6 +57082,8 @@ status: 'serve',           // serve | rally | clearing | over
 serveAt: 0,
 score: 0, combo: 0, maxCombo: 0, bricksCleared: 0, level: 1, lives: 3,
 prevVy: 0,
+aiBall: null,              // 梦角当前锁定的目标球（多球时选最快落地的）
+prevAiVy: 0,               // 目标球上一帧 vy（判定「转为下落」）
 dreamErr: 0,               // 锁定式误差：每次球向下飞只掷一次，整段保持
 fumbleOffset: null,        // 放水：本次下落故意偏离（非 null 即武装）
 slipArmed: false,          // 特殊发挥·slip 的必失球
@@ -56936,7 +57091,6 @@ hotUntil: 0,               // 特殊发挥·hot 生效期
 rallyHits: 0,              // 双方连续接球数（合作默契反馈用）
 floaters: [],              // {x,y,text,until}
 taBubble: null,            // {text,until}
-trail: [],                 // 球拖尾采样点
 parts: [],                 // 砖块碎裂粒子
 comboPopUntil: 0, comboPopVal: 0,   // COMBO 中央弹跳动画
 playerFlashAt: 0, dreamFlashAt: 0,  // 挡板命中白闪时刻
@@ -56945,23 +57099,39 @@ cardGlobalAt: 0,
 lastBrickAt: 0,            // 上次碰到砖的时间（防僵局看门狗用，newState 后由 startGame 补齐）
 endReplied: false
 };
+st.ball = newBallObj();
+st.balls.push(st.ball);
+return st;
 }
-function serve(s, now) {
+function spawnX(i, n) { return clamp(W / 2 + (i - (n - 1) / 2) * 34, BALL_R + 2, W - BALL_R - 2); }
+function launchBall(s, bl, i, n, now) {
 const sp = levelSpeed(s.level);
-let sa = Math.sin(rand(-38, 38) * Math.PI / 180);
+let deg;
+if (n <= 1) deg = rand(-38, 38);
+else {
+const t = n === 2 ? (i === 0 ? -1 : 1) : (i - 1);   // 3球：-1/0/1 → 左中右
+deg = t * rand(24, 36);
+}
+let sa = Math.sin(deg * Math.PI / 180);
 const MIN_SX = 0.22;
 if (Math.abs(sa) < MIN_SX) sa = (Math.random() < 0.5 ? -MIN_SX : MIN_SX);   // 与挡板反弹同款防纯垂直
-s.ball.x = W / 2; s.ball.y = BALL_HOME_Y;
-s.ball.vx = sa * sp;
-s.ball.vy = -Math.sqrt(Math.max(0, 1 - sa * sa)) * sp;
+bl.x = spawnX(i, n); bl.y = BALL_HOME_Y;
+bl.vx = sa * sp;
+bl.vy = -Math.sqrt(Math.max(0, 1 - sa * sa)) * sp;
+bl.trail.length = 0;   // 新球清空旧尾迹
+}
+function serve(s, now) {
+const n = targetBallCount();
+s.balls.length = 1;   // 只保留主球对象，保证 s.ball === s.balls[0] 恒成立
+launchBall(s, s.ball, 0, n, now);
+for (let i = 1; i < n; i++) { const nb = newBallObj(); launchBall(s, nb, i, n, now); s.balls.push(nb); }
 s.prevVy = s.ball.vy;
 s.status = 'rally';
-s.trail.length = 0;    // 新球清空旧尾迹
 s.lastBrickAt = now;   // 看门狗重新计时（每次发球=新的无进度窗口）
 s.dreamErr = 0; s.fumbleOffset = null; s.slipArmed = false;
+s.respawns.length = 0;
 }
-function predictLandingX(s) {
-const b = s.ball;
+function predictLandingX(b) {
 if (b.vy <= 0.05) return null;
 const planeY = PADDLE_Y - BALL_R;
 const t = (planeY - b.y) / b.vy;
@@ -56973,9 +57143,22 @@ const pf = s.perf;
 if (!pf || pf.kind !== 'special' || pf.used) return;
 if (pf.variant === 'hot') { pf.used = true; s.hotUntil = now + 10000; }
 }
+function aiTargetBall(s) {
+let best = null, bestT = Infinity;
+for (const b of s.balls) {
+const pred = predictLandingX(b);
+if (pred == null) continue;
+const t = (PADDLE_Y - BALL_R - b.y) / b.vy;
+if (t < 0) continue;
+const w = (b === s.aiBall) ? t * 0.78 : t;
+if (w < bestT) { bestT = w; best = b; }
+}
+return best;
+}
 function planDescent(s, now) {
-const b = s.ball;
-if (b.vy > 0 && s.prevVy <= 0) {
+const tb = aiTargetBall(s);
+if (!tb) { s.aiBall = null; s.prevAiVy = 0; return; }
+if (tb !== s.aiBall || (tb.vy > 0 && s.prevAiVy <= 0)) {
 const pf = s.perf;
 const p = effectiveParams(s, now);
 s.dreamErr = tri(p.err);
@@ -56996,6 +57179,8 @@ s.lapseUntil = now + rand(450, 850);
 }
 }
 }
+s.aiBall = tb;
+s.prevAiVy = tb.vy;
 }
 function effectiveParams(s, now) {
 const base = s.params;
@@ -57013,10 +57198,9 @@ maxV: base.maxV * vMul, fumble: base.fumble * fumbleMul
 }
 function dreamAI(s, now) {
 const d = s.dream;
-const b = s.ball;
 const p = effectiveParams(s, now);
-const pred = predictLandingX(s);
-const comingDown = b.vy > 0 && pred != null;
+const pred = s.aiBall ? predictLandingX(s.aiBall) : null;
+const comingDown = !!(s.aiBall && s.aiBall.vy > 0 && pred != null);
 if (comingDown) {
 let target = pred + s.dreamErr + (s.fumbleOffset || 0);
 if (pred > W * 0.58) target = W / 2 - PADDLE_W / 2 - 6;
@@ -57040,8 +57224,7 @@ s.cardGlobalAt = now;
 s.cardLast[type] = now;
 s.taBubble = { text: pick(SAY_POOLS[type]), until: now + 1500 };
 }
-function bouncePaddle(s, px, isPlayer, now) {
-const b = s.ball;
+function bouncePaddle(s, px, isPlayer, now, b) {
 const hit = clamp((b.x - px) / (PADDLE_W / 2 + BALL_R), -1, 1);
 const sp = levelSpeed(s.level);
 const ang = hit * (Math.PI / 3);   // 最大 60°
@@ -57065,8 +57248,7 @@ else trySay(s, 'catch', 0.10, now);
 if (s.rallyHits >= 10) trySay(s, 'coop', 0.06, now);
 }
 }
-function brickCollide(s) {
-const b = s.ball;
+function brickCollide(s, b) {
 for (let i = 0; i < s.bricks.length; i++) {
 const k = s.bricks[i];
 if (k.hp <= 0) continue;
@@ -57075,7 +57257,7 @@ const cy = clamp(b.y, k.y, k.y + k.h);
 const dx = b.x - cx, dy = b.y - cy;
 if (dx * dx + dy * dy > BALL_R * BALL_R) continue;
 const overlapX = BALL_R - Math.abs(dx), overlapY = BALL_R - Math.abs(dy);
-if (dx === 0 && dy === 0) { s.ball.vy = -s.ball.vy; }
+if (dx === 0 && dy === 0) { b.vy = -b.vy; }
 else if (overlapY <= overlapX) { b.vy = dy < 0 ? -Math.abs(b.vy) : Math.abs(b.vy); b.y = dy < 0 ? k.y - BALL_R : cy + BALL_R; }
 else { b.vx = dx < 0 ? -Math.abs(b.vx) : Math.abs(b.vx); b.x = dx < 0 ? k.x - BALL_R : cx + BALL_R; }
 s.lastBrickAt = performance.now();
@@ -57109,7 +57291,7 @@ if (s.status === 'clearing') {
 if (now >= s.serveAt) {
 s.level++;
 s.bricks = buildBricks(s.level);
-s.ball.vx = 0; s.ball.vy = 0;
+for (const bl of s.balls) { bl.vx = 0; bl.vy = 0; }
 s.status = 'serve'; s.serveAt = now + 900;
 hintEl.textContent = '第 ' + s.level + ' 层';
 }
@@ -57123,8 +57305,8 @@ if (pv !== 0) s.player.targetX = clampPlayerX(s.player.targetX + pv);
 const pdx = clamp(s.player.targetX - s.player.x, -PLAYER_V, PLAYER_V);
 s.player.x = clampPlayerX(s.player.x + pdx);
 planDescent(s, now);
-const b = s.ball;
-const urgent = b.vy > 0 && b.y > H * 0.55;
+let urgent = false;
+for (const bl of s.balls) { if (bl.vy > 0 && bl.y > H * 0.55) { urgent = true; break; } }
 if (now >= s.dream.nextThinkAt) {
 dreamAI(s, now);
 const p = effectiveParams(s, now);
@@ -57133,16 +57315,26 @@ s.dream.nextThinkAt = now + th;
 } else {
 dreamAI(s, now);   // 目标不变也要继续朝目标移动（限速在 dreamAI 内）
 }
+for (let ri = s.respawns.length - 1; ri >= 0; ri--) {
+if (now < s.respawns[ri]) continue;
+s.respawns.splice(ri, 1);
+if (s.status === 'rally' && s.lives > 0 && s.balls.length < targetBallCount()) {
+const nb = newBallObj();
+launchBall(s, nb, s.balls.length, targetBallCount(), now);
+s.balls.push(nb);
+}
+}
+for (let bi = s.balls.length - 1; bi >= 0; bi--) {
+const b = s.balls[bi];
 b.x += b.vx; b.y += b.vy;
 if (b.x - BALL_R < 0) { b.x = BALL_R; b.vx = Math.abs(b.vx); sfxWall(); }
 if (b.x + BALL_R > W) { b.x = W - BALL_R; b.vx = -Math.abs(b.vx); sfxWall(); }
 if (b.y - BALL_R < 0) { b.y = BALL_R; b.vy = Math.abs(b.vy); sfxWall(); }
-brickCollide(s);
+brickCollide(s, b);
 if (b.vy > 0 && b.y + BALL_R >= PADDLE_Y && b.y - BALL_R <= PADDLE_Y + PADDLE_H + 6) {
-if (Math.abs(b.x - s.player.x) <= PADDLE_W / 2 + BALL_R && b.x > W / 2 - PADDLE_W) bouncePaddle(s, s.player.x, true, now);
-else if (Math.abs(b.x - s.dream.x) <= PADDLE_W / 2 + BALL_R && b.x <= W / 2 + PADDLE_W) bouncePaddle(s, s.dream.x, false, now);
+if (Math.abs(b.x - s.player.x) <= PADDLE_W / 2 + BALL_R && b.x > W / 2 - PADDLE_W) bouncePaddle(s, s.player.x, true, now, b);
+else if (Math.abs(b.x - s.dream.x) <= PADDLE_W / 2 + BALL_R && b.x <= W / 2 + PADDLE_W) bouncePaddle(s, s.dream.x, false, now, b);
 }
-s.prevVy = b.vy;
 if (now - (s.lastBrickAt || 0) > 12000) {
 s.lastBrickAt = now;
 const sp2 = Math.hypot(b.vx, b.vy) || levelSpeed(s.level);
@@ -57153,7 +57345,10 @@ b.vy = (b.vy >= 0 ? 1 : -1) * 0.3 * sp2;
 b.vx = (b.vx >= 0 ? 1 : -1) * Math.sqrt(Math.max(0, sp2 * sp2 - b.vy * b.vy));
 }
 }
-if (b.y - BALL_R > H) loseLife(s, now);
+if (b.y - BALL_R > H) loseLife(s, b, now);
+if (s.status !== 'rally') break;
+}
+s.prevVy = s.ball.vy;
 if (s.status === 'rally' && !s.bricks.some(k => k.hp > 0)) {
 s.status = 'clearing';
 s.serveAt = now + 1300;
@@ -57162,20 +57357,36 @@ sfxClear();
 trySay(s, 'clear', 0.4, now);
 }
 }
-function loseLife(s, now) {
+function loseLife(s, b, now) {
+const idx = s.balls.indexOf(b);
+if (idx >= 0) {
+if (idx === 0 && s.balls.length > 1) {
+const o = s.balls[1];
+s.ball.x = o.x; s.ball.y = o.y; s.ball.vx = o.vx; s.ball.vy = o.vy; s.ball.trail = o.trail;
+s.balls.splice(1, 1);
+} else {
+s.balls.splice(idx, 1);
+}
+}
+if (s.aiBall && s.balls.indexOf(s.aiBall) < 0) { s.aiBall = null; s.prevAiVy = 0; }
 s.lives--;
 s.combo = 0;
 s.rallyHits = 0;
 sfxLose();
-if (s.ball.x <= W / 2) trySay(s, 'nearmiss', 0.22, now);
-if (s.lives > 0) {
+if (b.x <= W / 2) trySay(s, 'nearmiss', 0.22, now);
+if (s.lives <= 0) {
+endGame(s, now);
+return;
+}
 hintEl.textContent = T('差一点！还剩 ') + s.lives + T(' 次');
+trySay(s, 'fail', 0.3, now);
+if (!s.balls.length) {
 s.ball.vx = 0; s.ball.vy = 0;
 s.status = 'serve';
 s.serveAt = now + 1000;
-trySay(s, 'fail', 0.3, now);
 } else {
-endGame(s, now);
+const deficit = targetBallCount() - s.balls.length;
+for (let i = 0; i < deficit; i++) s.respawns.push(now + 1100 + i * 700);
 }
 }
 function bestKey() { return (window.activePrefix && window.activePrefix() || 'xy-home-v2') + ':brick-best'; }
@@ -57199,7 +57410,7 @@ if (cur < COIN_CAP) {
 var real = Math.min([520, 1314, 5200][stars - 1], COIN_CAP - cur);
 try { localStorage.setItem(ck, String(cur + real)); } catch (e2) {}
 if (real > 0 && typeof window.giftWalletChange === 'function') {
-if (window.giftWalletChange(real, real)) {
+if (window.giftWalletChange(real, real, '双人打砖块')) {
 coinLineBrick = '🪙 双方心意币各 +¥' + (real / 100).toFixed(2);
 }
 }
@@ -57227,7 +57438,6 @@ try { if (window.chatAddIn) window.chatAddIn(pick(['还玩吗？', '再来一局
 }
 let _bgGrad = null, _rowGrads = null;
 function render(s, now) {
-const b = s.ball;
 ctx.save();
 ctx.clearRect(0, 0, W, H);
 if (!_bgGrad) {
@@ -57244,10 +57454,15 @@ ctx.globalAlpha = 0.2 + 0.16 * Math.sin(now * st.s + st.p);
 ctx.fillRect(st.x, st.y, st.r, st.r);
 }
 ctx.globalAlpha = 1;
-if (s.status === 'rally' && b.vy > 0 && b.y > H * 0.6) {
-const predX = predictLandingX(s);
-if (predX != null && predX > W * 0.58) {
-const inten = Math.min(1, (b.y / H - 0.6) / 0.4);
+if (s.status === 'rally') {
+let worst = null, worstY = -1;
+for (const bl of s.balls) {
+if (bl.vy <= 0 || bl.y <= H * 0.6) continue;
+const predX = predictLandingX(bl);
+if (predX != null && predX > W * 0.58 && bl.y > worstY) { worstY = bl.y; worst = bl; }
+}
+if (worst) {
+const inten = Math.min(1, (worst.y / H - 0.6) / 0.4);
 const dg = ctx.createLinearGradient(0, H - 36, 0, H);
 dg.addColorStop(0, 'rgba(255,95,122,0)');
 dg.addColorStop(1, 'rgba(255,95,122,' + (0.08 + 0.26 * inten).toFixed(3) + ')');
@@ -57296,11 +57511,13 @@ ctx.fillStyle = pt.c;
 ctx.fillRect(pt.x - pt.sz / 2, pt.y - pt.sz / 2, pt.sz, pt.sz);
 }
 ctx.globalAlpha = 1;
-for (let ti = 0; ti < s.trail.length; ti++) {
-const tp = s.trail[ti], f = (ti + 1) / s.trail.length;
+for (const bl of s.balls) {
+for (let ti = 0; ti < bl.trail.length; ti++) {
+const tp = bl.trail[ti], f = (ti + 1) / bl.trail.length;
 ctx.globalAlpha = f * 0.25;
 ctx.fillStyle = '#ffd9e2';
 ctx.beginPath(); ctx.arc(tp.x, tp.y, BALL_R * (0.35 + 0.65 * f), 0, Math.PI * 2); ctx.fill();
+}
 }
 ctx.globalAlpha = 1;
 ctx.fillStyle = '#6ea8ff';
@@ -57323,18 +57540,27 @@ ctx.fillText('你', s.player.x, PADDLE_Y - 5);
 ctx.fillStyle = 'rgba(255,178,125,0.85)';
 ctx.fillText(taName(), s.dream.x, PADDLE_Y - 5);
 }
+if (s.status !== 'serve') {
+for (const bl of s.balls) {
 ctx.fillStyle = 'rgba(255,255,255,0.22)';
-ctx.beginPath(); ctx.arc(b.x, b.y, BALL_R + 3, 0, Math.PI * 2); ctx.fill();
+ctx.beginPath(); ctx.arc(bl.x, bl.y, BALL_R + 3, 0, Math.PI * 2); ctx.fill();
 ctx.fillStyle = '#ffffff';
-ctx.beginPath(); ctx.arc(b.x, b.y, BALL_R, 0, Math.PI * 2); ctx.fill();
-if (s.status === 'serve') {
+ctx.beginPath(); ctx.arc(bl.x, bl.y, BALL_R, 0, Math.PI * 2); ctx.fill();
+}
+} else {
+const nServe = targetBallCount();
 const pu = 0.5 + 0.5 * Math.sin(now / 170);
 ctx.strokeStyle = 'rgba(110,168,255,' + (0.35 + 0.45 * pu).toFixed(3) + ')';
 ctx.lineWidth = 2;
-ctx.beginPath(); ctx.arc(b.x, b.y, BALL_R + 6 + 3 * pu, 0, Math.PI * 2); ctx.stroke();
+for (let i = 0; i < nServe; i++) {
+const hx = spawnX(i, nServe), hy = BALL_HOME_Y;
+ctx.fillStyle = '#ffffff';
+ctx.beginPath(); ctx.arc(hx, hy, BALL_R, 0, Math.PI * 2); ctx.fill();
+ctx.beginPath(); ctx.arc(hx, hy, BALL_R + 6 + 3 * pu, 0, Math.PI * 2); ctx.stroke();
 ctx.beginPath();
-ctx.moveTo(b.x - 7, b.y - 15); ctx.lineTo(b.x, b.y - 22); ctx.lineTo(b.x + 7, b.y - 15);
+ctx.moveTo(hx - 7, hy - 15); ctx.lineTo(hx, hy - 22); ctx.lineTo(hx + 7, hy - 15);
 ctx.stroke();
+}
 }
 for (const f of s.floaters) {
 const left = (f.until - now) / 750;
@@ -57424,8 +57650,10 @@ while (acc >= frame && guard < 5) { step(state, ts); acc -= frame; guard++; }
 const fxDt = Math.min(50, dt) / 16.7;
 const nowFx = performance.now();
 if (state.status === 'rally') {
-state.trail.push({ x: state.ball.x, y: state.ball.y });
-if (state.trail.length > 9) state.trail.shift();
+for (const bl of state.balls) {
+bl.trail.push({ x: bl.x, y: bl.y });
+if (bl.trail.length > 9) bl.trail.shift();
+}
 }
 for (let i = state.parts.length - 1; i >= 0; i--) {
 const pt = state.parts[i];
@@ -57638,6 +57866,9 @@ if (dir) keys[dir] = false;
 if (diffSel) diffSel.addEventListener('change', () => {
 if (state && state.status !== 'over') state.params = DIFFS[diffSel.value] || DIFFS.easy;
 });
+if (ballsSel) ballsSel.addEventListener('change', () => {
+try { localStorage.setItem(ballsPrefKey(), String(targetBallCount())); } catch (e) {}
+});
 if (soundBtn) soundBtn.addEventListener('click', (e) => {
 e.stopPropagation();
 soundOn = !soundOn;
@@ -57661,7 +57892,9 @@ if (document.visibilityState === 'hidden' && running && !paused && state && stat
 window.__brickDebug = {
 get state() { return state; },
 get running() { return running; },
-get paused() { return paused; }
+get paused() { return paused; },
+get W() { return W; },
+get H() { return H; }
 };
 window.openBrickPanel = function () {
 if (!panel) return;
@@ -57693,8 +57926,13 @@ return;
 }
 const best = loadBest();
 armResume(null);
+try {
+const savedBalls = Number(localStorage.getItem(ballsPrefKey()));
+if (savedBalls >= 1 && savedBalls <= 3 && ballsSel) ballsSel.value = String(savedBalls);
+} catch (e) {}
+const bn = targetBallCount();
 showOverlay(T('双人打砖块'),
-'<div class="pong-start-tip">你和' + T('TA') + '各守半场接同一颗球<br>清光砖块进入下一层 · 共 3 次失误机会</div>' +
+'<div class="pong-start-tip">你和' + T('TA') + '各守半场共接' + (bn > 1 ? bn + ' 颗球' : '同一颗球') + '<br>清光砖块进入下一层 · 共 3 次失误机会</div>' +
 '<div class="pong-start-ctrl">手机：按住画面左右拖动<br>电脑：A/D 或 ← →</div>' +
 (best > 0 ? '<div class="pong-end-stat">历史最佳 ' + best + ' 分</div>' : ''),
 '开始');
@@ -58022,9 +58260,8 @@ var c4WinFen = Math.random() < 0.2 ? 5200 : 1314;
 var real4 = Math.min(winner === 0 ? 520 : c4WinFen, COIN_CAP - cur4);
 try { localStorage.setItem(ck4, String(cur4 + real4)); } catch (e2) {}
 if (real4 > 0 && typeof window.giftWalletChange === 'function') {
-var toTa4 = winner === 2;
-if (window.giftWalletChange(toTa4 ? 0 : real4, toTa4 ? real4 : 0)) {
-coinLine4 = '🪙 ' + (toTa4 ? T('TA') + ' 的心意币' : '我的心意币') + ' +¥' + (real4 / 100).toFixed(2);
+if (window.giftWalletChange(real4, real4, '四子棋')) {
+coinLine4 = '🪙 双方心意币各 +¥' + (real4 / 100).toFixed(2);
 }
 }
 }
@@ -58240,7 +58477,7 @@ try { cur = Number(localStorage.getItem(coinDayKey())) || 0; } catch (e) {}
 const real = Math.min(fen, MS_COIN_CAP - cur);
 if (real <= 0) return 0;
 try { localStorage.setItem(coinDayKey(), String(cur + real)); } catch (e2) {}
-try { if (typeof window.giftWalletChange === 'function') window.giftWalletChange(real, 0); } catch (e3) {}
+try { if (typeof window.giftWalletChange === 'function') window.giftWalletChange(real, real, '合作扫雷'); } catch (e3) {}
 return real;
 }
 let st = null;
@@ -59184,10 +59421,10 @@ if (t.rewarded) return;
 t.sec += 1; saveTogether(t);
 if (t.sec >= TOGETHER_GOAL) {
 t.rewarded = true; saveTogether(t);
-const w = walletGet(); w.myBalance += 1314; walletSet(w);
+if (window.giftWalletChange) window.giftWalletChange(1314, 1314, '钓鱼陪伴奖励');
 sfxGift();
-toast('💕 陪伴奖励：一起钓鱼 5 分钟，心意币 +¥13.14');
-if (window.chatAddIn) { try { window.chatAddIn(fit('陪了我这么久，鱼都知道你不走了。') + '（陪伴奖励 +¥13.14）', { silent: true }); } catch (e) {} }
+toast('💕 陪伴奖励：一起钓鱼 5 分钟，心意币各 +¥13.14');
+if (window.chatAddIn) { try { window.chatAddIn(fit('陪了我这么久，鱼都知道你不走了。') + '（陪伴奖励各 +¥13.14）', { silent: true }); } catch (e) {} }
 }
 }, 1000);
 }
@@ -59204,19 +59441,19 @@ total += it.price * n; count += n;
 });
 });
 if (count === 0) { toast('还没有可出售的收获'); return; }
-const w = walletGet(); w.myBalance += total; walletSet(w);
+if (window.giftWalletChange) window.giftWalletChange(total, total, '钓鱼出售');
 t.mine = {}; t.ta = {}; saveToday(t);
 sfxSell();
-toast('已出售 ' + count + ' 件，心意币 +' + fenToStr(total));
+toast('已出售 ' + count + ' 件，心意币各 +' + fenToStr(total));
 render();
 }
 function exchangeGift(idx) {
 const g = loadGifts();
 const item = g[idx]; if (!item) return;
 g.splice(idx, 1); saveGifts(g);
-const w = walletGet(); w.myBalance += 520; walletSet(w);
+if (window.giftWalletChange) window.giftWalletChange(520, 520, '纪念品兑换');
 sfxSell();
-toast('已兑换心意币 +¥5.2');
+toast('已兑换心意币各 +¥5.2');
 render();
 }
 function statusText(t) { if (statusEl) statusEl.textContent = t; }
@@ -59443,7 +59680,7 @@ const COIN_ALL = 2;        // 全部完成 +2
 const COIN_FIRST = 5;      // 首次通关某难度 +5
 const COIN_DAILY_CAP = 30; // 每日奖励上限（元）
 function walletGet() {
-const s = window.activeStore && window.activeStore();
+const s = window.xyStore && window.xyStore('xy-home-v2');
 if (!s) return { myBalance: 52000, systemBalance: 52000 };
 try {
 const w = JSON.parse(s.get('gift-wallet') || '');
@@ -59457,7 +59694,7 @@ if (typeof o.myBalance === 'number' && typeof o.systemBalance === 'number') seed
 try { s.set('gift-wallet', JSON.stringify(seed)); } catch (e) {}
 return seed;
 }
-function walletSet(w) { const s = window.activeStore && window.activeStore(); if (s) s.set('gift-wallet', JSON.stringify(w)); }
+function walletSet(w) { const s = window.xyStore && window.xyStore('xy-home-v2'); if (s) s.set('gift-wallet', JSON.stringify(w)); }
 function readDaily() {
 try { const o = JSON.parse(localStorage.getItem(storeKey('memory-coin-day')) || ''); if (o && typeof o.total === 'number') return o; } catch (e) {}
 return { date: todayKey(), total: 0 };
@@ -59474,9 +59711,12 @@ const capFen = COIN_DAILY_CAP * YUAN;
 const remain = Math.max(0, capFen - daily.total);
 const grantFen = Math.min(Math.round(yuan * YUAN), remain);
 if (grantFen > 0) {
+if (window.giftWalletChange) window.giftWalletChange(grantFen, grantFen, '记忆翻牌');
+else {
 const w = walletGet();
 w.myBalance = (w.myBalance || 0) + grantFen;
 walletSet(w);
+}
 daily.total += grantFen;
 writeDaily(daily);
 }
@@ -61531,6 +61771,70 @@ return (c && c.name) || '默认';
 }
 function toast(t) { if (typeof window.toast === 'function') window.toast(t); }
 function rand(min, max) { return min + Math.floor(Math.random() * (max - min + 1)); }
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+function showSlotPicker(selIdx, onDone, onCancel, onSkip) {
+try {
+const old = document.getElementById('cj-slot-mask');
+if (old) old.remove();
+} catch (e) {}
+const m = document.createElement('div');
+m.id = 'cj-slot-mask';
+m.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(10,10,20,.52);display:flex;align-items:center;justify-content:center;padding:18px;';
+const box = document.createElement('div');
+box.style.cssText = 'width:100%;max-width:330px;background:var(--card-bg);border:1px solid var(--card-border);border-radius:16px;padding:18px 16px 14px;box-shadow:0 12px 40px var(--shadow-strong);';
+const h = document.createElement('div');
+h.style.cssText = 'font-weight:700;font-size:15px;margin-bottom:4px;text-align:center;color:var(--ink);';
+h.textContent = 'TA 常在哪些时辰出现？';
+const sub = document.createElement('div');
+sub.style.cssText = 'font-size:12px;color:var(--muted);margin-bottom:10px;text-align:center;';
+sub.textContent = '可多选 · 至少选一个 · 世界时间只在这些时辰里随机';
+const grid = document.createElement('div');
+grid.style.cssText = 'display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px;';
+const st = {};
+selIdx.forEach(i => { st[i] = true; });
+const chipBase = 'padding:9px 0;border-radius:999px;border:1px solid var(--pill-border);background:var(--static-bg);color:var(--soft-ink);font-size:13px;';
+const chipOn = 'padding:9px 0;border-radius:999px;border:1px solid #ffb454;background:#ffe1a8;color:#5a3d00;font-size:13px;font-weight:700;';
+SHICHEN.forEach((name, i) => {
+const b = document.createElement('button');
+b.type = 'button';
+b.textContent = name + '时';
+b.style.cssText = st[i] ? chipOn : chipBase;
+b.addEventListener('click', () => {
+if (st[i]) { delete st[i]; b.style.cssText = chipBase; }
+else { st[i] = true; b.style.cssText = chipOn; }
+});
+grid.appendChild(b);
+});
+const btns = document.createElement('div');
+btns.style.cssText = 'display:flex;gap:10px;';
+const cn = document.createElement('button');
+cn.type = 'button';
+cn.textContent = '取消';
+cn.style.cssText = 'flex:1;padding:10px 0;border-radius:10px;border:1px solid var(--pill-border);background:var(--btn-cancel-bg);color:var(--btn-cancel-ink);font-size:14px;';
+cn.addEventListener('click', () => { try { m.remove(); } catch (e) {} if (onCancel) onCancel(); });
+const ok = document.createElement('button');
+ok.type = 'button';
+ok.textContent = '确定';
+ok.style.cssText = 'flex:1;padding:10px 0;border-radius:10px;border:none;background:#ff9f43;color:#fff;font-size:14px;font-weight:700;';
+ok.addEventListener('click', () => {
+const idxs = Object.keys(st).map(Number).sort((a, b) => a - b);
+if (!idxs.length) { const w = document.createElement('div'); w.style.cssText = 'font-size:12px;color:#d9534f;margin:-8px 0 10px;text-align:center;'; w.textContent = '至少选一个时辰'; box.insertBefore(w, btns); return; }
+try { m.remove(); } catch (e) {}
+if (onDone) onDone(idxs);
+});
+btns.appendChild(cn); btns.appendChild(ok);
+box.appendChild(h); box.appendChild(sub); box.appendChild(grid); box.appendChild(btns);
+if (onSkip) {
+const skip = document.createElement('button');
+skip.type = 'button';
+skip.textContent = '不限定 · 用时间偏移';
+skip.style.cssText = 'margin-top:10px;width:100%;padding:8px 0;border:none;background:none;color:var(--soft-ink);font-size:12px;text-align:center;text-decoration:underline;';
+skip.addEventListener('click', () => { try { m.remove(); } catch (e) {} if (onSkip) onSkip(); });
+box.appendChild(skip);
+}
+m.appendChild(box);
+document.body.appendChild(m);
+}
 function cjLine(group, fallbackArr) {
 let pool = fallbackArr;
 try {
@@ -61541,9 +61845,29 @@ if (arr.length) pool = arr;
 return pool[Math.floor(Math.random() * pool.length)];
 }
 const SHICHEN = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
-function shichenStartHour(i) { return (2 * i + 23) % 24; }
+const SHICHEN_START = [23, 1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21];
+function shichenStartHour(i) { return SHICHEN_START[i % 12]; }
 function shichenAt(hour) { return Math.floor(((hour + 1) % 24) / 2); }
 function pad(n) { return (n < 10 ? '0' : '') + n; }
+function slotMinuteRange(startH) {
+return (startH * 60) + Math.floor(Math.random() * 120); // 时辰起始整点 + 0..119 分钟（覆盖初/正）
+}
+function slotLabel(arr) {
+arr = Array.isArray(arr) ? arr : [];
+if (!arr.length) return '';
+const sorted = arr.slice().sort((a, b) => a - b);
+return sorted.map(h => SHICHEN[shichenAt(h)] + '时').join('·');
+}
+function worldMinuteOf(c) {
+const slots = c && c.slots;
+if (Array.isArray(slots) && slots.length) {
+const s = slots[Math.floor(Math.random() * slots.length)];
+return slotMinuteRange(s);
+}
+const off = (c && c.offsetMin) || 0;
+const d = new Date(Date.now() + off * 60000);
+return d.getHours() * 60 + d.getMinutes();
+}
 function timeInfo(ts) {
 const d = new Date(ts);
 const hour = d.getHours();
@@ -61564,11 +61888,32 @@ range = pad((startH + 1) % 24) + ':30–' + pad((startH + 1) % 24) + ':59';
 return { idx: idx, half: half, range: range, hhmm: pad(hour) + ':' + pad(d.getMinutes()) };
 }
 function worldNow(offsetMin) { return Date.now() + ((offsetMin || 0) * 60000); }
+function worldNowFor(c) {
+const slots = c && c.slots;
+if (Array.isArray(slots) && slots.length) {
+const s = slots[Math.floor(Math.random() * slots.length)];
+const mm = slotMinuteRange(s);
+const d = new Date();
+d.setHours(Math.floor(mm / 60), mm % 60, 0, 0);
+return d.getTime();
+}
+return worldNow(c && c.offsetMin);
+}
 function offsetLabel(off) {
 if (!off) return '与现实同步';
 if (off % 60 === 0) return off > 0 ? ('比现实快' + (off / 60) + '小时') : ('比现实慢' + (-off / 60) + '小时');
 return '独立时间流';
 }
+function worldTagLabel(c) {
+if (Array.isArray(c && c.slots) && c.slots.length) {
+const sd = slotLabel(c.slots);
+return c.offsetMin ? (sd + ' · ' + offsetLabel(c.offsetMin)) : sd;
+}
+return offsetLabel(c.offsetMin);
+}
+window.cjianWorldMinuteOf = worldMinuteOf;
+window.cjianWorldNowFor = worldNowFor;
+window.cjianShichenAt = shichenAt;
 const PRESENCE = {
 near:   { label: '很近',     desc: '感觉就在身边' },
 nearby: { label: '附近',     desc: 'TA可能就在附近' },
@@ -61797,7 +62142,7 @@ return pickWeighted(activityWeights(worldHour));
 function ensureState(c, st, now) {
 const s = st[c.id] || (st[c.id] = {});
 if (!s.p) {
-const h = new Date(worldNow(c.offsetMin)).getHours();
+const h = Math.floor(worldMinuteOf(c) / 60);
 s.p = rollPresence(h, false);
 s.a = rollActivity(h);
 }
@@ -61819,7 +62164,7 @@ roster.forEach(c => {
 const isNew = !st[c.id];
 const s = ensureState(c, st, now);
 if (isNew) dirty = true;
-const worldHour = new Date(worldNow(c.offsetMin)).getHours();
+const worldHour = Math.floor(worldMinuteOf(c) / 60);
 const boost = recentBoost(s, now);
 if (now - s.sinceA >= s.cdA) {
 s.a = rollActivity(worldHour);
@@ -61981,7 +62326,7 @@ for (let k = 0; k < 12; k++) {
 const idx = (curIdx + k) % 12;
 const realStartH = shichenStartHour(idx);
 const parts = entries.map(en => {
-const worldHour = (((realStartH * 60 + (en.c.offsetMin || 0)) / 60) % 24 + 24) % 24;
+const worldHour = Math.floor(worldMinuteOf(en.c) / 60);
 const pr = rollPresence(worldHour, false);
 const ac = rollActivity(worldHour);
 return en.c.name + ' · ' + predictPhrase(pr, ac);
@@ -62079,7 +62424,7 @@ const main = document.getElementById('cj-main');
 if (main) main.scrollTop = 0;
 }
 function cardEl(c, cid, s) {
-const t = timeInfo(worldNow(c.offsetMin));
+const t = timeInfo(worldNowFor(c));
 const card = el('div', 'cj-card');
 card.setAttribute('data-id', c.id);
 const head = el('div', 'cj-card-head');
@@ -62100,6 +62445,7 @@ tags.appendChild(aTag);
 card.appendChild(tags);
 if (s.a === 'sleep') card.appendChild(el('div', 'cj-card-note', 'TA那边似乎已经睡了。'));
 if (s.a === 'rest') card.appendChild(el('div', 'cj-card-note', 'TA正在休息。'));
+if (Array.isArray(c.slots) && c.slots.length) card.appendChild(el('div', 'cj-card-note', '常在 ' + slotLabel(c.slots) + ' 出现'));
 const goBtn = el('button', 'cj-go', '去找TA');
 goBtn.type = 'button';
 goBtn.addEventListener('click', (e) => {
@@ -62174,9 +62520,9 @@ if (!c) { window.cjianCloseDetail(); return; }
 const now = Date.now();
 const st = loadState(detailCid);
 const s = ensureState(c, st, now);
-const t = timeInfo(worldNow(c.offsetMin));
+const t = timeInfo(worldNowFor(c));
 body.appendChild(el('div', 'cj-d-name', c.name));
-body.appendChild(el('div', 'cj-d-offset', offsetLabel(c.offsetMin)));
+body.appendChild(el('div', 'cj-d-offset', worldTagLabel(c)));
 body.appendChild(el('div', 'cj-d-src', '来自「' + contactName(detailCid) + '」的此间'));
 const timeBig = el('div', 'cj-d-time');
 timeBig.appendChild(el('span', 'cj-d-half', t.half));
@@ -62193,6 +62539,7 @@ tags.appendChild(aTag);
 body.appendChild(tags);
 if (s.a === 'sleep') body.appendChild(el('div', 'cj-d-note', 'TA那边似乎已经睡了。'));
 if (s.a === 'rest') body.appendChild(el('div', 'cj-d-note', 'TA正在休息。'));
+if (Array.isArray(c.slots) && c.slots.length) body.appendChild(el('div', 'cj-d-note', '常在 ' + slotLabel(c.slots) + ' 出现 · 世界时间只在这些时辰里随机'));
 body.appendChild(el('div', 'cj-d-today-title', 'TA的今日'));
 const traj = el('div', 'cj-d-today');
 for (let k = 0; k < 12; k++) {
@@ -62202,8 +62549,12 @@ row.appendChild(el('span', 'cj-d-row-name', SHICHEN[idx] + '时'));
 let pr, ac;
 if (k === 0) { pr = s.p; ac = s.a; }
 else {
-pr = rollPresence((t.idx + k) % 24, false);
-ac = rollActivity((t.idx + k) % 24);
+const rowStartH = shichenStartHour(idx);
+const wh = (Array.isArray(c.slots) && c.slots.length)
+? rowStartH
+: (Math.floor((rowStartH * 60 + ((c.offsetMin || 0))) / 60) % 24 + 24) % 24;
+pr = rollPresence(wh, false);
+ac = rollActivity(wh);
 }
 row.appendChild(el('span', 'cj-d-row-p', trajectoryPhrase(pr, ac)));
 traj.appendChild(row);
@@ -62277,6 +62628,7 @@ const OFFSET_PILLS = [
 ];
 const ACTION_PILLS = [
 { label: '添加梦角', value: 'add' },
+{ label: '时辰区间', value: 'slots' },
 { label: '改名', value: 'rename' },
 { label: '删除梦角', value: 'del' }
 ];
@@ -62288,7 +62640,7 @@ return (Math.random() < 0.5 ? -1 : 1) * off;
 window.cjianManage = function () {
 if (!window.openModal) return;
 let mCid = (viewCid === ALL) ? '' : (viewCid || curCid());
-let phase = mCid ? 'action' : 'pickGroup', pendingName = '', renameTarget = null;
+let phase = mCid ? 'action' : 'pickGroup', pendingName = '', pendingOffset = 0, renameTarget = null;
 const ctl = window.openModal('梦角管理', '', function (v) {
 if (!v) return;
 if (phase === 'pickGroup') {
@@ -62313,12 +62665,22 @@ ctl.okText('下一步');
 } else {
 const list = loadRoster(mCid);
 if (!list.length) { toast('这个桌面还没有梦角，先添加一个吧'); return; }
+if (v === 'slots') {
+phase = 'pickSlot';
+ctl.stay();
+ctl.title('给谁设时辰区间');
+ctl.hint('TA 的世界时间会只在这些时辰里随机');
+ctl.input(false);
+ctl.pills(list.map(c => ({ label: c.name + ((Array.isArray(c.slots) && c.slots.length) ? ' · ' + slotLabel(c.slots) : ''), value: c.id })));
+ctl.okText('设置');
+} else {
 phase = v === 'rename' ? 'pickRename' : 'pickDel';
 ctl.stay();
 ctl.title(v === 'rename' ? '改谁的称呼' : '删除梦角');
 ctl.input(false);
 ctl.pills(list.map(c => ({ label: c.name, value: c.id })));
 ctl.okText(v === 'rename' ? '改名' : '删除');
+}
 }
 return;
 }
@@ -62329,21 +62691,73 @@ pendingName = name;
 phase = 'offset';
 ctl.stay();
 ctl.title('设定「' + name + '」的世界时间');
+ctl.hint('先选时间偏移，下一步还能限定 TA 常在的时辰区间');
 ctl.input(false);
 ctl.pills(OFFSET_PILLS);
-ctl.okText('添加');
+ctl.okText('下一步');
 return;
 }
 if (phase === 'offset') {
 const off = v === 'rand' ? randomOffset() : parseInt(v, 10);
 if (v !== 'rand' && isNaN(off)) return;
+pendingOffset = off;
+phase = '';
+setTimeout(function () {
+showSlotPicker(
+[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+function (idxs) {
 const list = loadRoster(mCid);
-list.push({ id: makeId(), name: pendingName, offsetMin: off });
+list.push({ id: makeId(), name: pendingName, offsetMin: pendingOffset, slots: idxs.map(i => SHICHEN_START[i]) });
 saveRoster(list, mCid);
 toast('已加入此间：「' + pendingName + '」');
-phase = ''; pendingName = '';
+pendingName = ''; pendingOffset = 0;
 todayCacheMap = {}; // 名单变了，各视图的今日预测全部作废
 window.renderCjian(true);
+},
+function () { pendingName = ''; pendingOffset = 0; }, // 取消：不创建
+function () {
+const list = loadRoster(mCid);
+list.push({ id: makeId(), name: pendingName, offsetMin: pendingOffset });
+saveRoster(list, mCid);
+toast('已加入此间：「' + pendingName + '」');
+pendingName = ''; pendingOffset = 0;
+todayCacheMap = {}; // 名单变了，各视图的今日预测全部作废
+window.renderCjian(true);
+}
+);
+}, 0);
+return;
+}
+if (phase === 'pickSlot') {
+const list = loadRoster(mCid);
+const c = list.find(x => x.id === v);
+if (!c) return;
+setTimeout(function () {
+showSlotPicker(
+(Array.isArray(c.slots) && c.slots.length) ? c.slots.map(h => shichenAt(h)) : [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+function (idxs) {
+const l2 = loadRoster(mCid);
+const cc = l2.find(x => x.id === c.id);
+if (!cc) return;
+cc.slots = idxs.map(i => SHICHEN_START[i]);
+saveRoster(l2, mCid);
+toast('已设时辰区间：' + slotLabel(cc.slots));
+todayCacheMap = {};
+window.renderCjian(true);
+},
+function () {}, // 取消：不改
+function () {
+const l2 = loadRoster(mCid);
+const cc = l2.find(x => x.id === c.id);
+if (!cc) return;
+delete cc.slots;
+saveRoster(l2, mCid);
+toast('已改回：按时间偏移流动');
+todayCacheMap = {};
+window.renderCjian(true);
+}
+);
+}, 0);
 return;
 }
 if (phase === 'pickRename') {
@@ -63019,12 +63433,13 @@ var _aTextFocused = null;
 var _aFocusAt = 0, _aProv = false, _aIH = window.innerHeight;
 var _aLastAct = Date.now();
 var _aLastVVH = 0;
+var _aBurstUntil = 0;
 function _aWinY() {
 try { return window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0; } catch (e) { return 0; }
 }
 function _aPinPan() {
 try {
-if (!_aKb && !_aProv) return;
+if (!_aKb && !_aProv && Date.now() > _aBurstUntil) return;
 var offT = _aVV.offsetTop || 0;
 var winY = _aWinY();
 if (offT <= 8 && winY <= 8) return;
@@ -63163,6 +63578,13 @@ if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA'
 try { syncAndroidKb(); } catch (e3) {}
 setTimeout(syncAndroidKb, 120);
 setTimeout(syncAndroidKb, 350);
+_aBurstUntil = Date.now() + 850;
+var _burstCnt = 0;
+function _burstTick() {
+try { syncAndroidKb(); _aPinPan(); nudgeInputVisible(); } catch (ee) {}
+if (++_burstCnt < 10) setTimeout(_burstTick, 80);
+}
+setTimeout(_burstTick, 40);
 setTimeout(_aProvCheck, 950);
 setTimeout(_aProvCheck, 1700);
 try { startAWatch(); } catch (e4) {}

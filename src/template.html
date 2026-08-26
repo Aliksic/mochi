@@ -422,9 +422,10 @@
       </div>
       </div>
       <div class="cc-sect-body" id="cc-sect-preset" hidden>
+      <div class="sm-set-hint" style="padding:2px 16px 10px">说明：本站「系统预设字卡」均为自搓字卡（作者原创），按分类/分组展示，可逐张开启或关闭。</div>
       <div class="chat-item glass" id="li-default-cards">
         <div class="av"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1L3.2 9.4l6.1-.9z"/></svg></div>
-        <div class="ci"><div class="n">默认聊天字卡</div><div class="m">日常默认回复字卡</div></div>
+        <div class="ci"><div class="n">默认聊天字卡</div><div class="m">日常默认回复字卡（自搓）</div></div>
         <div class="t">3260</div>
       </div>
       <div class="chat-item glass" id="li-mood-cards">
@@ -1307,7 +1308,7 @@
           <div class="lic-li">新功能专属字卡：TA 的邀请（猜拳 / Pong / 贪吃蛇 / 贴贴）、经期关心、喝水、花园、房间、漂流瓶、位置卡等，逐条开关 + 自定义添加</div>
           <div class="lic-li">字卡库页入口：公用字卡（全桌面联系人共享）、专属字卡（仅当前桌面联系人）、寻踪日常字卡、桌面今日情话、聊天默认字卡、聊天情绪字卡、聊天回应字卡及各功能专属字卡统一管理</div>
           <div class="lic-li">字卡管理：去重复、导出数据、一键清空所有分类</div>
-          <div class="lic-li">兼容导入 milk 字卡库导出的 json；系统预设字卡可逐句开关</div>
+          <div class="lic-li">兼容导入 milk 字卡库导出的 json；系统预设字卡（自搓）可逐句开关</div>
             </div>
           </details>
 
@@ -1995,6 +1996,7 @@
         </span>
         <span class="ch-name">聊天默认字卡</span>
       </div>
+      <div class="sm-set-hint" style="padding:8px 16px 0">说明：以下系统预设字卡为本站自搓字卡（作者原创），可逐张开启或关闭。</div>
       <div class="dc-toggle glass">
         <div class="dc-toggle-txt">
           <div class="dc-toggle-name">使用默认字卡</div>
@@ -2608,6 +2610,8 @@
         <button class="fav-tab" data-htab="fish">每日摸鱼值</button>
         <button class="fav-tab" data-htab="work">每日打工值</button>
         <button class="fav-tab" data-htab="catch">摸鱼抓包</button>
+        <button class="fav-tab" data-htab="coinearn">心意币赚钱记录</button>
+        <button class="fav-tab" data-htab="coinask">心意币申请记录</button>
       </div>
       <div class="cal-scroll">
         <div class="cal-card glass" data-hpanel="av">
@@ -2629,6 +2633,15 @@
         <div class="cal-card glass" data-hpanel="catch" hidden>
           <div class="cal-card-title">摸鱼抓包记录</div>
           <div id="home-catch"></div>
+        </div>
+        <!-- v3.16.x：心意币流水（赚钱/申请），分列我和当前联系人的入账 -->
+        <div class="cal-card glass" data-hpanel="coinearn" hidden>
+          <div class="cal-card-title">心意币赚钱记录</div>
+          <div id="home-coinearn"></div>
+        </div>
+        <div class="cal-card glass" data-hpanel="coinask" hidden>
+          <div class="cal-card-title">心意币申请记录</div>
+          <div id="home-coinask"></div>
         </div>
       </div>
     </div>
@@ -3289,7 +3302,7 @@
           </div>
         </div>
       </div>
-      <!-- 双人打砖块：聊天页底部半框（合作清砖：玩家左挡板 / 梦角右挡板由代码控制，共接一球） -->
+      <!-- 双人打砖块：聊天页底部半框（合作清砖：玩家右挡板 / 梦角左挡板由代码控制，球数 1~3 可设） -->
       <div class="poke-card" id="chat-brick-panel" hidden>
         <div class="poke-card-head">
           <span>双人打砖块 · <b id="brick-partner-name">TA</b></span>
@@ -3298,6 +3311,11 @@
               <option value="easy" selected>轻松</option>
               <option value="normal">普通</option>
               <option value="hard">困难</option>
+            </select>
+            <select class="snake-diff" id="brick-balls" title="球数量（下次发球生效）">
+              <option value="1" selected>1 球</option>
+              <option value="2">2 球</option>
+              <option value="3">3 球</option>
             </select>
             <button class="snake-icon-btn" id="brick-pause" title="暂停/继续">⏸</button>
             <button class="snake-icon-btn" id="brick-sound" title="音效开关">🔊</button>
@@ -3609,8 +3627,8 @@
              每个功能只归属一个分类、分类间互不重复（v3.16.x 起移除「常用」页签，原常用默认项并入所属分类） -->
         <div class="more-tabs" id="more-tabs">
           <button class="more-tab sel" type="button" data-mcat="chat">互动</button>
-          <button class="more-tab" type="button" data-mcat="game">小游戏</button>
           <button class="more-tab" type="button" data-mcat="tool">工具</button>
+          <button class="more-tab" type="button" data-mcat="game">小游戏</button>
           <button class="more-tab" type="button" data-mcat="ask">TA的提问</button>
         </div>
         <div class="more-grid" id="more-grid-fun">

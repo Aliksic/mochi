@@ -1,3 +1,14 @@
+### 2026-08-26 21:5x（✅ 完成·用户需求「原版功能里缺少说明：网站里的系统预设字卡为自搓字卡」）
+- [本会话·完成]（**已改 src/template.html 三处补说明——①字卡库页【系统预设字卡】分区顶部加提示「本站『系统预设字卡』均为自搓字卡（作者原创），按分类/分组展示，可逐张开启或关闭」；②「默认聊天字卡」列表项副标题改为「日常默认回复字卡（自搓）」；③聊天默认字卡页（page-default-cards）头部下方加同款说明条；④关于页功能列表「兼容导入 milk 字卡库导出的 json；系统预设字卡（自搓）可逐句开关」**；**未构建未提交**——cjian.js/breakout.js 有并行会话进行中改动（21:5x 刚落盘），请构建者待其收尾后统一 `node build.mjs` 收口）。无 JS/样式改动，纯文案；不影响任何 verify 断言（未动既有文案字符串）。
+
+### 2026-08-26 21:4x（✅ 完成·用户需求「主页新增分组【心意币赚钱记录】【心意币申请记录】+ 游戏/花园赚钱双方同步同额」）
+- [本会话·完成]（**已改 src：template.html（主页 #page-home 新增 2 个 fav-tab/panel：coinearn 心意币赚钱记录 + coinask 心意币申请记录）+ records.js（renderCoinPanel(kind) 渲染流水——分列「我/TA」各自入账，双方同额时显示「双方各 +¥x」；__renderHomeCoin 供记账后即时重绘 + render() 两个新 tab 分支）+ gift-shop.js（新增统一流水记账 coinLedgerAdd/coinLedgerLoad，存 records-coin-earn / records-coin-ask 按联系人桌面前缀隔离；giftWalletChange 增第三参 src 来源标签自动记赚钱流水；市集申请入口记申请流水）+ 各赚钱入口改双方同步同额并带来源：breakout(双人打砖块)/pong(乒乓)/connect-four(四子棋)/coop-mine(合作扫雷)/garden(花园收花)/drift-bottle(漂流瓶)/memory-game(记忆翻牌)/fishing(钓鱼陪伴/出售/纪念品兑换)/chat.js 石头剪刀布+贪吃蛇（原只给赢家/只加我的，现均 dMy=dTa 同步）+ chat.js 两个申请入口（聊天申请/TA自动申请）记申请流水**；已构建（21:42, sw: mochi-mta58j1h）+ 新专项 tools/verify-coin-ledger.mjs（webkit 390×844：7 tabs 渲染/两 panel 空态/模拟入账后文案「双方各 +¥13.14」「TA +¥13.14」「我 +¥52.00」/钱包双方同额 53314=53314）全绿；未提交**）。
+  - 设计口径：赚钱=游戏互动+花园+钓鱼等所有「赚」的入账；申请=向 Mochi 申请打款（聊天/市集余额行 + TA 自动申请）。流水按当前联系人桌面隔离（records.js 同款 activeStore），切换联系人各看各的。钱包仍是全局一本账 gift-wallet 不动。
+  - 改的口径变化：四子棋/乒乓/石头剪刀布/贪吃蛇原「赢家单方得币」→ 现双方同额（与双人打砖块/扫雷一致）；花园/钓鱼/漂流瓶/记忆翻牌原「只加我」→ 现双方同额。各日封顶计数键未变。
+  - 真机确认点：①桌面主页 → 顶部 tab 横向滑到最后两个新 tab；②玩一局四子棋/乒乓/扫雷/花园收花后回主页赚钱记录见「双方各 +¥xx」；③点余额行向 Mochi 申请后申请记录见对应一方入账；④切换联系人各自流水独立。
+
+### 2026-08-26 21:4x（🔍 诊断·用户反馈「聊天里【用了你建的字卡】/【摸鱼抓包】标签右侧仍重复字卡内容（红米K80 Chrome）」——结论：当前构建已修复，用户端为旧版缓存）
+- [本会话·诊断]（**未改任何 src/ 产物**；新增 tools/diag-tacc-dup.mjs + tools/diag-catch-dup.mjs 运行时验证，均全绿：①ta-ask 第五触发器「用了你建的字卡」（TACC）确定性触发后气泡正文仅渲染 1 次、标签行只剩胶囊；②摸鱼抓包当前发送路径（p2-features.js:3675 mood 空 label）正文 1 次；③模拟 v3.14.x 旧存量记录（mood label=正文）经 chatReRenderTime 重渲后被 renderMsg dupBody（chat.js:1512）去重。两层保险都在 v3.16.x 已构建产物内）。用户端复现=设备仍在跑旧 SW 缓存版本：指引=联网完全关闭页面/PWA 后重开、停留约半分钟等 version.json 轮询自动 reload；⚠️ 勿清站点数据/应用存储（会连 localStorage 聊天记录一起丢）；旧消息更新后自动恢复正常（去重在渲染层，不依赖消息保存时间）。两个 diag 脚本未提交，构建者收口时随批处理即可。
 
 ### 2026-08-26 20:5x（🐛 修复·记忆翻牌打开后 UI 塌缩、开始按钮不可见不可点——用户反馈「打开ui完全不正常，无法点击玩」）
 - [本会话·完成]（**已改 src/js/memory-game.js（①新增 buildPreview()：打开面板/换难度时先铺一面背面牌墙预览——撑起舞台高度，开始覆盖层浮在其上，未开始点击无效；openMemoryPanel 与 diffSel change 都改走它，换难度即放弃当前对局回覆盖层）+ src/css/chat-pages.css（.mgm-stage 加 min-height:200px 兜底 + 矮屏(≤700px)收紧 gap/牌比例 + .mgm-turn:empty 隐藏空回合胶囊 + 面板头 nowrap/难度选择限宽防折行）**；已构建（20:51, sw: mochi-mta3epi0）+ verify-memory-flip 25/25 + 布局 verify 10/10 + verify-connect-four 30/30 + 新增 tools/diag-memory-ui.mjs 截图诊断（390×844/360×644 双视口）全绿；未提交**）。
@@ -134,21 +145,22 @@
   - 真机确认点：①我的档案页右上角应为空白（无按钮），去共同记录走总览末行桥接行；②全新环境（或从没用过此间的桌面）进梦角档案，顶部应直接出现以 TA 名命名的 chip 与档案总览，不再是「此间还没有梦角」空态；③删光梦角后重开不复活。
 
 
-### 2026-08-26 18:1x→19:0x（✅ 完成·桌面 1/2/3 页「整列对齐」——三页统一 [190 hero][77 中卡][66 横幅][图标区同顶] 节奏——用户需求两轮迭代）
-- [本会话·完成]（**已改 src/css/home.css + src/template.html + src/css/memo.css + src/js/memo-app.js + src/js/personalize.js（除 home.css/template.html 外 memo.css/memo-app.js 不在 AGENTS 分工清单、personalize.js 为 AI-B 域；memo-app.js 仅徽标挂载点与延迟重跑两处小改）+ 新增 tools/verify-desk-align.mjs 16/16 + tools/verify-memo.mjs T20 断言同步新结构 20/20；已构建（18:27/19:0x, sw: mochi-mt9y9ops）+ 布局 verify 10/10 + desk-reset-period 10/10 + desk-visuals-restore 5/5 + desk-persist 4/4 + music-ta-control 16/16 + fish-play 33/33 全绿；home.css/memo.css 已随后续 v3.16.x 提交入库，其余未提交**）。
-  - **用户需求**：从每页顶部组件到最下方图标按钮，1/2/3 页整列对齐；通过调桌面小组件大小实现。
-  - **最终对齐结构（390×844 实测，三页逐像素一致）**：首卡 190（14→204）｜第二档 77（218→295）｜第三档横幅 66（309→375）｜图标区顶部全部 y=389（Δ0）。
+### 2026-08-26 18:1x→20:4x（✅ 完成·桌面 1/2/3 页「整列对齐」最终版——三页统一 [190 hero][77 中卡][66 横幅] 节奏；第三页备忘/心情改上下整宽卡；备忘录状态横幅按用户要求删除——用户需求三轮迭代）
+- [本会话·完成]（**已改 src/css/home.css + src/template.html + src/css/memo.css + src/js/memo-app.js + src/js/personalize.js（memo.css/memo-app.js 不在 AGENTS 分工清单、personalize.js 为 AI-B 域；memo-app.js 仅删徽标注入）+ 新增 tools/verify-desk-align.mjs 18/18 + tools/verify-memo.mjs T17/T20/T21 断言同步 20/20；已构建（20:26, sw: mochi-mta2igvd；其后并行会话 20:51/21:0x 再构建已收口）+ 布局 verify 10/10 + desk-persist 4/4 + desk-reset-period 10/10 + desk-visuals-restore 5/5 + music-ta-control 16/16 + fish-play 33/33 全绿；home.css/memo.css/personalize.js 已随后续 v3.16.x 提交入库，其余未提交**）。
+  - **用户需求（三轮迭代收敛）**：从每页顶部组件到最下方图标按钮，1/2/3 页整列对齐；通过调桌面小组件大小实现；第三页「备忘录 记一件想做的事」横幅删掉。
+  - **最终对齐结构（390×844 实测，三页逐档一致）**：首卡 190（14→204）｜第二档 77（218→295）｜第三档 66（309→375）｜图标区顶部 y=389（三页 Δ≤0.8）。
     - 第一页：纪念日卡 190（不变）→ 今日情话/已摸鱼 min-height:77 → 打卡横幅 min-height:66 → 图标。
     - 第二页：音乐卡 min-height:190 + flex 居中 → 本周日常压缩+min-height:77（padding 8、日期格 4px、b 13px，101→77）→ 摸鱼卡重构 66（`.we-top` 标题+副题同行、值行收紧、按钮垂直居中，86→66）→ 图标。
-    - 第三页：经期卡升级 190 hero（flex 居中、天数 34→50px）→ 备忘/心情 77（min-height）→ **备忘录状态行升级为整宽横幅 66**（自半卡内移出，memo-app.js 挂到 memo-row 之后跟随移动，与打卡/摸鱼同款卡片外观）→ 图标。
+    - 第三页：经期卡升级 190 hero（flex 居中、天数 34→50px）→ **今日备忘/今天的心情改上下两张整宽卡**（`.page-slide.third .mini-row{flex-direction:column;gap:14px}`：备忘卡 min-height:77 对应本周日常档、心情卡 min-height:66 对应打卡/摸鱼档；原左右半卡行高 112.7px）→ 图标。
+  - **备忘录状态横幅已删**（用户要求）：memo-app.js 移除 memoUpdateBadge 注入函数及全部调用点；memo.css 删 .memo-app-badge 规则、dark.css 删暗色覆盖；备忘录入口保留第三页图标 + 聊天更多功能。verify-memo T17（临期断言去徽标项）/T20（断言横幅不存在）/T21（改验第三页图标直达备忘录页）同步更新。
   - **横向统一**：checkin/weekend-box/desk-period 去 `0 2px` 内缩全宽；间距统一 14px（`.app-grid{margin-top:0}`+`.app-grid.p2-grid` 提特异性压 chat-pages.css；第三页 flex 容器不折叠故必须归零）；新增 `.page-slide > [data-desk-widget]:first-child{margin-top:14px}`。
   - **修复 fresh 冷启动 desk-period 流失隐藏池**：buildDeskPages 按默认 2 页收缩删静态第三页 → ensureP3 50ms 后重建，而 ensureDeskPeriod 0ms 同步跑一次扑空 → 经期卡永留池里、第三页缺首卡。personalize.js 增 `ensureDeskPeriodP3Order` 200/600ms 补位（!lay 分支才移回，不破坏已装修用户删除意图）+ 顺序校正（memo-row 150ms 先落位时校正回「经期卡→备忘心情→p3apps」）。
-  - **memo-app.js 徽标跟随**：memoUpdateBadge 改挂 memo-row 后（previousElementSibling 校验幂等重插，装修移动/落池后自动跟随）+ 300/700ms 延迟重跑（冷启动时 memo-row 尚在池中，init 首跑会把横幅插进池里）。
-  - **验证**：verify-desk-align.mjs 16 项几何断言（三页同宽/14px 节奏/三档同高/图标区同顶 Δ0/横幅整宽/无 JS 异常/经期卡在位）——只读几何不写存储，结果稳定；verify-memo T20 断言同步横幅新结构。
-  - ⚠️ **归属说明**：memo.css/memo-app.js 不在 AGENTS.md 分工清单，本轮按「谁先开工谁负责」接手（memo-app.js 仅 memoUpdateBadge 挂载点 + 两行延迟重跑，请原归属方复核）；verify-memo.mjs T20 断言随新结构更新。
+  - **验证**：verify-desk-align.mjs 18 项几何断言（三页同宽 354/14px 节奏/三档同高/图标区同顶 Δ0.7/备忘心情叠放 77+66/横幅已删/无 JS 异常/经期卡在位）——只读几何不写存储，结果稳定。
+  - ⚠️ **归属说明**：memo.css/memo-app.js 不在 AGENTS.md 分工清单，本轮按「谁先开工谁负责」接手（memo-app.js 仅删徽标注入，无新增逻辑，请原归属方复核）；verify-memo.mjs 断言随新结构更新。
   - ⚠️ **事故记录（16:18）**：本轮第一轮 src 改动曾被并行会话 checkout/编辑器旧缓冲整包回写清掉（同 WORKLOG 既有事故模式），已重做；当时并行会话自身未提交 src 也一并被清，请该会话自查。
   - ⚠️ **预存问题（非本轮引入，worktree 纯 HEAD 隔离复现）**：tools/verify-memo-p3.mjs B2/B3/D2/E2 在纯 HEAD 上同样失败——种子布局 `['p2apps','week','weekend']` 被 ensureP2AppsBelowWeekend 的 v3.13 迁移改写 + 跨组 IDB 回填竞态；请脚本所有者把种子更新为已迁移形态或隔离每组 IndexedDB。另 verify-desk-persist T1 前置（elementFromPoint 命中测试）偶发被浮层遮挡，重跑即过，属环境 flaky。
-  - 真机确认点：①横滑 1→2→3 页，三页首卡（纪念日/音乐/经期）上下边缘齐平，第二档（情话/本周日常/备忘心情）齐平，第三档（打卡/摸鱼/备忘录横幅）齐平，图标区第一行同一高度起步；②卡片左右边缘三页一致；③第三页备忘录横幅点击直达备忘录、待办数正常；④全新用户第三页顶部有经期大卡；⑤装修模式移动组件后各页首卡仍距顶 14px。
+  - **已知内容差异**：第三页图标 12 个（3 行）比 1/2 页（8 个 2 行）多一行，图标区第一行三页同高起步、第三页多出的行在其下方——应用数量差异，非对齐问题。
+  - 真机确认点：①横滑 1→2→3 页，三页首卡（纪念日/音乐/经期）上下边缘齐平，第二档齐平，第三档齐平，图标区第一行同一高度起步；②第三页「今日备忘」「今天的心情」为上下两张整宽卡；③「备忘录」状态横幅不再出现；④全新用户第三页顶部有经期大卡；⑤装修模式移动组件后各页首卡仍距顶 14px。
 
 
 ### 2026-08-26 18:2x（✅ 完成·心意币与【小游戏】+桌面【花园】联动——用户需求）
