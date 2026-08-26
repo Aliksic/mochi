@@ -221,18 +221,17 @@
           statsInfoCard('<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="20" x2="6" y2="14"/><line x1="12" y1="20" x2="12" y2="8"/><line x1="18" y1="20" x2="18" y2="11"/></svg>', '平均每日消息', Math.round(total / totalDays) + ' 条') +
           statsInfoCard('<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c1 3-3 4-3 7a3 3 0 006 0c0-1-.3-2-.8-3 1.8 1 3 3 3 5a6 6 0 11-12 0c0-4 3-6 4.5-8.5z"/></svg>', '最长连续聊天', calcStreak(Object.keys(dateCount)) + ' 天') +
           statsInfoCard('<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>', '单日最高消息', maxSingle + ' 条') +
-          // v3.15.x：联系人发红包记录（side=in 的 redpacket 消息）
-          coinRecordSection('🧧', name + '发红包记录', '笔',
-            msgs.filter(m => m && m.special === 'redpacket' && m.side === 'in').map(m => {
-              const stMap = { pending: '待领取', received: '已领取', expired: '已过期·退回', returned: '已退回' };
-              const st = stMap[m.rpStatus || 'pending'] || '';
-              const wish = m.rpWish ? '「' + m.rpWish + '」' : '';
-              return {
-                main: '¥' + Number(m.rpAmount || 0).toFixed(2) + escH(wish) + ' · ' + escH(st),
-                sub: fmtMDHM(m.rpTs || m.ts)
-              };
-            }),
-            '还没有 ' + escH(name) + ' 发的红包') +
+          // v3.16.x：联系人发红包——改为摘要（累计金额 + 次数），明细已移至主页「心意币红包记录」
+          (function () {
+            const rps = msgs.filter(m => m && m.special === 'redpacket' && m.side === 'in');
+            let sum = 0; rps.forEach(m => { sum += Number(m.rpAmount || 0); });
+            const sec = '<div class="stats-sec"><div class="stats-sec-head"><span class="stats-sec-title">🧧 ' + escH(name) + ' 发红包</span>' +
+              '<span class="stats-sec-count">' + rps.length + ' 笔</span></div>' +
+              (rps.length ? '<div class="stats-top"><div class="stats-top-tag">累计心意币</div><div class="stats-top-name">¥' + sum.toFixed(2) + '</div><div class="stats-top-num">共 ' + rps.length + ' 次</div></div>'
+                : '<div class="ta-empty">还没有 ' + escH(name) + ' 发的红包</div>') +
+              '</div>';
+            return sec;
+          })() +
           // v3.15.x：联系人申请心意币记录（askcoin 卡片）
           coinRecordSection('🪙', name + '申请心意币记录', '笔',
             msgs.filter(m => m && m.special === 'askcoin').map(m => ({

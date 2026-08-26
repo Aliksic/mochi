@@ -5171,7 +5171,7 @@ to { filter:brightness(1.25) drop-shadow(0 0 7px rgba(255,224,138,.9)); }
 .ms-wrap { display:flex; flex-direction:column; align-items:center; gap:8px; padding:6px 4px 4px; width:100%; }
 .ms-topbar { display:flex; align-items:center; justify-content:space-between; width:100%; max-width:352px; padding:0 2px; min-height:20px; }
 .ms-hearts { font-size:14px; letter-spacing:2px; line-height:1; }
-.ms-prog { font-size:11.5px; color:var(--muted,#999); font-variant-numeric:tabular-nums; }
+.ms-prog { font-size:11.5px; color:var(--muted,#777); font-variant-numeric:tabular-nums; }
 .ms-stage { position:relative; width:100%; max-width:352px; margin:0 auto; min-height:170px; }
 .ms-board { display:grid; gap:3px; margin:0 auto; background:rgba(127,127,127,.12); border:1px solid rgba(127,127,127,.15); border-radius:10px; padding:5px; user-select:none; -webkit-user-select:none; touch-action:manipulation; width:max-content; }
 .ms-cell { position:relative; box-sizing:border-box; border-radius:6px; background:linear-gradient(150deg, rgba(255,255,255,.92), rgba(0,0,0,.07)); box-shadow:inset 0 -2px 3px rgba(0,0,0,.13), inset 0 2px 2px rgba(255,255,255,.6), 0 1px 2px rgba(0,0,0,.08); cursor:pointer; display:flex; align-items:center; justify-content:center; font-weight:700; line-height:1; -webkit-tap-highlight-color:transparent; }
@@ -5187,11 +5187,12 @@ to { filter:brightness(1.25) drop-shadow(0 0 7px rgba(255,224,138,.9)); }
 @keyframes mspop { 0% { transform:scale(.5); opacity:.25; } 100% { transform:scale(1); opacity:1; } }
 .ms-n1 { color:#3a7fd5; } .ms-n2 { color:#2e8b57; } .ms-n3 { color:#d9534f; } .ms-n4 { color:#7a4fd9; }
 .ms-n5 { color:#b7791f; } .ms-n6 { color:#2aa198; } .ms-n7 { color:#666; } .ms-n8 { color:#999; }
-.ms-status { min-height:20px; font-size:13px; color:var(--muted,#888); text-align:center; width:100%; }
-.ms-foot { font-size:11px; color:var(--muted,#aaa); text-align:center; line-height:1.7; width:100%; }
+.ms-status { min-height:20px; font-size:13.5px; font-weight:600; color:var(--ink,#333); text-align:center; width:100%; }
+.ms-foot { font-size:11.5px; color:var(--muted,#666); text-align:center; line-height:1.7; width:100%; }
 .ms-shake { animation:msshake .26s ease-in-out; }
 @keyframes msshake { 0%,100% { transform:translateX(0); } 25% { transform:translateX(-3px); } 50% { transform:translateX(3px); } 75% { transform:translateX(-2px); } }
-.ms-overlay { border-radius:12px; }
+.ms-cur { font-size:12px; font-weight:700; color:#ffd76a; background:rgba(255,215,106,.12); border:1px solid rgba(255,215,106,.4); border-radius:14px; padding:4px 12px; margin-bottom:6px; flex-shrink:0; }
+.ms-overlay { border-radius:12px; overflow-x:hidden; overflow-y:auto; overscroll-behavior:contain; }
 .ms-diffs { display:flex; flex-wrap:wrap; gap:6px; justify-content:center; margin-bottom:8px; }
 .ms-diff { font-size:12px; font-family:inherit; border:1px solid rgba(255,255,255,.35); background:rgba(255,255,255,.12); color:rgba(255,255,255,.85); border-radius:14px; padding:6px 12px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
 .ms-diff.on { background:#e8533d; border-color:#e8533d; color:#fff; font-weight:700; }
@@ -7746,7 +7747,7 @@ transition-duration: .01ms !important;
       </div>
       <div class="splash-dots"><i></i><i></i><i></i></div>
       <div class="splash-brand">小红书@言序（1842523578）</div>
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787754063193">Mochi 字卡传讯 v3.6.250 · 部署于 2026-08-26 22:21</div>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787754514695">Mochi 字卡传讯 v3.6.253 · 部署于 2026-08-26 22:28</div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
       <div class="splash-loading" id="splash-loading">正在加载数据…</div>
@@ -8812,7 +8813,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.6.250</div>
+      <div class="ver">Mochi 字卡传讯 v3.6.253</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -8954,7 +8955,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.6.250</span>
+              <span class="lic-ver">v3.6.253</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -10338,6 +10339,7 @@ transition-duration: .01ms !important;
         <button class="fav-tab" data-htab="catch">摸鱼抓包</button>
         <button class="fav-tab" data-htab="coinearn">心意币赚钱记录</button>
         <button class="fav-tab" data-htab="coinask">心意币申请记录</button>
+        <button class="fav-tab" data-htab="coinrp">心意币红包记录</button>
       </div>
       <div class="cal-scroll">
         <div class="cal-card glass" data-hpanel="av">
@@ -10368,6 +10370,11 @@ transition-duration: .01ms !important;
         <div class="cal-card glass" data-hpanel="coinask" hidden>
           <div class="cal-card-title">心意币申请记录</div>
           <div id="home-coinask"></div>
+        </div>
+        <!-- v3.16.x：心意币红包记录（双向：我发 + 联系人发；红包即心意币） -->
+        <div class="cal-card glass" data-hpanel="coinrp" hidden>
+          <div class="cal-card-title">心意币红包记录</div>
+          <div id="home-coinrp"></div>
         </div>
       </div>
     </div>
@@ -40010,6 +40017,27 @@ window.__renderHomeCoin = function () {
 if (htab === 'coinearn') renderCoinPanel('earn');
 else if (htab === 'coinask') renderCoinPanel('ask');
 };
+function renderRpPanel() {
+const el = document.getElementById('home-coinrp');
+if (!el) return;
+const name = store.get('lbl-partner') || (window.taWord ? window.taWord() : 'TA');
+const myName = store.get('lbl-user') || '我';
+const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+let msgs = [];
+try { msgs = (window.getChatMsgs ? window.getChatMsgs() : JSON.parse(store.get('chat-msgs') || '[]')); } catch (e) {}
+const list = (msgs || []).filter(m => m && m.special === 'redpacket');
+if (!list.length) { el.innerHTML = '<div class="ta-empty">暂无红包记录（红包也是心意币，快去发一个试试）</div>'; return; }
+const stMap = { pending: '待领取', received: '已领取', expired: '已过期·退回', returned: '已退回' };
+el.innerHTML = list.slice().reverse().map(m => {
+const out = m.side === 'out';
+const st = stMap[m.rpStatus || 'pending'] || '';
+const amt = Number(m.rpAmount || 0).toFixed(2);
+const sub = (out ? myName + ' 发给 ' + name : name + ' 发给 ' + myName) + ' · ' + (st || '待领取') +
+(m.rpWish ? ' · 「' + esc(m.rpWish) + '」' : '');
+return '<div class="tc-listitem"><div class="tc-li-top"><span class="tc-li-q">' + (out ? '🧧 我发红包 ¥' + amt : '🧧 ' + esc(name) + ' 发红包 ¥' + amt) + '</span><span class="tc-li-time">' + fmtDT(m.rpTs || m.ts) + '</span></div>' +
+'<div class="tc-li-line">' + sub + '</div></div>';
+}).join('');
+}
 function histList(key) { try { return JSON.parse(store.get(key) || '[]'); } catch (e) { return []; } }
 let htab = 'av';
 window.renderFishHistory = function () {
@@ -40068,6 +40096,9 @@ renderCoinPanel('earn');
 }
 if (showOnly === 'coinask') {
 renderCoinPanel('ask');
+}
+if (showOnly === 'coinrp') {
+renderRpPanel();
 }
 if (showOnly === 'av') {
 const avEl = document.getElementById('home-av');
@@ -44148,17 +44179,16 @@ statsInfoCard('<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="curre
 statsInfoCard('<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="20" x2="6" y2="14"/><line x1="12" y1="20" x2="12" y2="8"/><line x1="18" y1="20" x2="18" y2="11"/></svg>', '平均每日消息', Math.round(total / totalDays) + ' 条') +
 statsInfoCard('<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c1 3-3 4-3 7a3 3 0 006 0c0-1-.3-2-.8-3 1.8 1 3 3 3 5a6 6 0 11-12 0c0-4 3-6 4.5-8.5z"/></svg>', '最长连续聊天', calcStreak(Object.keys(dateCount)) + ' 天') +
 statsInfoCard('<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>', '单日最高消息', maxSingle + ' 条') +
-coinRecordSection('🧧', name + '发红包记录', '笔',
-msgs.filter(m => m && m.special === 'redpacket' && m.side === 'in').map(m => {
-const stMap = { pending: '待领取', received: '已领取', expired: '已过期·退回', returned: '已退回' };
-const st = stMap[m.rpStatus || 'pending'] || '';
-const wish = m.rpWish ? '「' + m.rpWish + '」' : '';
-return {
-main: '¥' + Number(m.rpAmount || 0).toFixed(2) + escH(wish) + ' · ' + escH(st),
-sub: fmtMDHM(m.rpTs || m.ts)
-};
-}),
-'还没有 ' + escH(name) + ' 发的红包') +
+(function () {
+const rps = msgs.filter(m => m && m.special === 'redpacket' && m.side === 'in');
+let sum = 0; rps.forEach(m => { sum += Number(m.rpAmount || 0); });
+const sec = '<div class="stats-sec"><div class="stats-sec-head"><span class="stats-sec-title">🧧 ' + escH(name) + ' 发红包</span>' +
+'<span class="stats-sec-count">' + rps.length + ' 笔</span></div>' +
+(rps.length ? '<div class="stats-top"><div class="stats-top-tag">累计心意币</div><div class="stats-top-name">¥' + sum.toFixed(2) + '</div><div class="stats-top-num">共 ' + rps.length + ' 次</div></div>'
+: '<div class="ta-empty">还没有 ' + escH(name) + ' 发的红包</div>') +
+'</div>';
+return sec;
+})() +
 coinRecordSection('🪙', name + '申请心意币记录', '笔',
 msgs.filter(m => m && m.special === 'askcoin').map(m => ({
 main: '+¥' + (Number(m.askFen || 0) / 100).toFixed(2),
@@ -59423,10 +59453,9 @@ if (endBtn) endBtn.hidden = false;
 try {
 if (window.chatAddSystem) window.chatAddSystem(T('合作扫雷') + ' · ' + (win ? '完成 ' + DIFFS[s.diffKey].name : '差一点（' + DIFFS[s.diffKey].name + '）'));
 const fb = win
-? ['一起找完了。', '我们配合得不错嘛。', '全部清完啦，开心。']
+? ['一起找完了。', '我们配合得不错嘛。', '全部清完啦，开心。', '这一片雷区都清理干净了。']
 : ['差一点点而已，再来！', '下次小心一点就好。', '没事，再来一次？'];
-const pool = window.getInteractPool ? window.getInteractPool(win ? '游戏平局·回应' : '游戏失败·回应', fb) : fb;
-const say = (pool && pool.length ? pick(pool) : fb[0]) || fb[0];
+const say = (fb.length ? pick(fb) : fb[0]) || 'ok';
 setTimeout(() => { try { if (window.chatAddIn) window.chatAddIn(T(say), { silent: true }); } catch (e) {} }, 900);
 } catch (e) {}
 }
@@ -59446,6 +59475,7 @@ overlayEl.hidden = false;
 function showStartOverlay() {
 const s = loadStats();
 let body = pillsHtml();
+body += '<div class="ms-cur" id="ms-cur">当前：' + curHint() + '</div>';
 body += '<div class="ms-tip">轮流挖掘 · 你们共用 ' + heartsStrStatic() + '<br>数字 = 周围雷数 · 长按格子插旗<br>🪙🎁🌸 藏在格子里，一起找找看</div>';
 body += '<div class="ms-note">🎲 ' + T('TA') + '会推理也会失误——偶尔也需要你救场</div>';
 if (s.play > 0) body += '<div class="pong-end-stat">合作 ' + s.play + ' 局 · 完成 ' + s.win + ' 次</div>';
@@ -59453,6 +59483,11 @@ showOverlay('合作扫雷', body, s.play > 0 ? '继续探索' : '开始探索');
 if (endBtn) endBtn.hidden = true;
 }
 function heartsStrStatic() { return '❤️❤️❤️'; }
+function curHint() {
+const d = DIFFS[selDiff];
+return d.name + ' · ' + d.n + '×' + d.n
++ (d.mines ? ' · ' + d.mines + ' 颗雷' : ' · 本局无雷，纯挖宝藏');
+}
 function hideOverlay() { if (overlayEl) overlayEl.hidden = true; if (endBtn) endBtn.hidden = true; }
 function newGame() {
 clearTimeout(taT); taT = null;
@@ -59461,7 +59496,9 @@ st.started = true;
 buildBoardDom();
 hideOverlay();
 updateHud();
-setStatus(st.mineTotal === 0 ? '轮到你了，慢慢挖～' : '你的回合，点一格开始探索');
+setStatus(st.mineTotal === 0
+? '✅ 本局没有雷，一起挖宝找🪙🎁🌸'
+: '你的回合 · 本局 ' + st.mineTotal + ' 颗雷，点一格开始探索');
 }
 try {
 st = newState(selDiff);
@@ -59542,6 +59579,8 @@ stat.lastDiff = k;
 saveStats(stat);
 const pills = ovBodyEl.querySelectorAll('.ms-diff');
 pills.forEach((p) => { p.classList.toggle('on', p.getAttribute('data-diff') === k); });
+const curEl = document.getElementById('ms-cur');
+if (curEl) curEl.textContent = '当前：' + curHint();
 });
 function setNames() {
 let name = T('TA');

@@ -3293,7 +3293,7 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + env(safe-area-inset-bott
 .ms-wrap { display:flex; flex-direction:column; align-items:center; gap:8px; padding:6px 4px 4px; width:100%; }
 .ms-topbar { display:flex; align-items:center; justify-content:space-between; width:100%; max-width:352px; padding:0 2px; min-height:20px; }
 .ms-hearts { font-size:14px; letter-spacing:2px; line-height:1; }
-.ms-prog { font-size:11.5px; color:var(--muted,#999); font-variant-numeric:tabular-nums; }
+.ms-prog { font-size:11.5px; color:var(--muted,#777); font-variant-numeric:tabular-nums; }
 .ms-stage { position:relative; width:100%; max-width:352px; margin:0 auto; min-height:170px; }
 .ms-board { display:grid; gap:3px; margin:0 auto; background:rgba(127,127,127,.12); border:1px solid rgba(127,127,127,.15); border-radius:10px; padding:5px; user-select:none; -webkit-user-select:none; touch-action:manipulation; width:max-content; }
 .ms-cell { position:relative; box-sizing:border-box; border-radius:6px; background:linear-gradient(150deg, rgba(255,255,255,.92), rgba(0,0,0,.07)); box-shadow:inset 0 -2px 3px rgba(0,0,0,.13), inset 0 2px 2px rgba(255,255,255,.6), 0 1px 2px rgba(0,0,0,.08); cursor:pointer; display:flex; align-items:center; justify-content:center; font-weight:700; line-height:1; -webkit-tap-highlight-color:transparent; }
@@ -3309,12 +3309,13 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + env(safe-area-inset-bott
 @keyframes mspop { 0% { transform:scale(.5); opacity:.25; } 100% { transform:scale(1); opacity:1; } }
 .ms-n1 { color:#3a7fd5; } .ms-n2 { color:#2e8b57; } .ms-n3 { color:#d9534f; } .ms-n4 { color:#7a4fd9; }
 .ms-n5 { color:#b7791f; } .ms-n6 { color:#2aa198; } .ms-n7 { color:#666; } .ms-n8 { color:#999; }
-.ms-status { min-height:20px; font-size:13px; color:var(--muted,#888); text-align:center; width:100%; }
-.ms-foot { font-size:11px; color:var(--muted,#aaa); text-align:center; line-height:1.7; width:100%; }
+.ms-status { min-height:20px; font-size:13.5px; font-weight:600; color:var(--ink,#333); text-align:center; width:100%; }
+.ms-foot { font-size:11.5px; color:var(--muted,#666); text-align:center; line-height:1.7; width:100%; }
 .ms-shake { animation:msshake .26s ease-in-out; }
 @keyframes msshake { 0%,100% { transform:translateX(0); } 25% { transform:translateX(-3px); } 50% { transform:translateX(3px); } 75% { transform:translateX(-2px); } }
 /* 覆盖层内：难度胶囊 / 提示（覆盖层深底白字） */
-.ms-overlay { border-radius:12px; }
+.ms-cur { font-size:12px; font-weight:700; color:#ffd76a; background:rgba(255,215,106,.12); border:1px solid rgba(255,215,106,.4); border-radius:14px; padding:4px 12px; margin-bottom:6px; flex-shrink:0; }
+.ms-overlay { border-radius:12px; overflow-x:hidden; overflow-y:auto; overscroll-behavior:contain; }
 .ms-diffs { display:flex; flex-wrap:wrap; gap:6px; justify-content:center; margin-bottom:8px; }
 .ms-diff { font-size:12px; font-family:inherit; border:1px solid rgba(255,255,255,.35); background:rgba(255,255,255,.12); color:rgba(255,255,255,.85); border-radius:14px; padding:6px 12px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
 .ms-diff.on { background:#e8533d; border-color:#e8533d; color:#fff; font-weight:700; }

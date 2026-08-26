@@ -34,6 +34,7 @@
     if (!soundOn) return;
     try {
       if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
       const o = audioCtx.createOscillator(), g = audioCtx.createGain();
       o.frequency.value = freq; o.type = type || 'sine';
       g.gain.value = vol || 0.08;
@@ -133,17 +134,7 @@
   function loadTogether() { const t = readJSON(togetherKey(), null); if (t && t.date === todayKey()) return t; return { date: todayKey(), sec: 0, rewarded: false }; }
   function saveTogether(t) { writeJSON(togetherKey(), t); }
 
-  // ---- 心意币钱包（全局一本账：根键 xy-home-v2:gift-wallet，跨桌面共用，单位分）----
-  // v3.15.x 二轮：默认对齐新用户 ¥520/¥520，读写切根命名空间；v3.16.x 发币已改走 giftWalletChange
-  function walletGet() {
-    const s = window.xyStore ? window.xyStore('xy-home-v2') : null;
-    if (!s) return { myBalance: 52000, systemBalance: 52000 };
-    try { const w = JSON.parse(s.get('gift-wallet') || ''); if (typeof w.myBalance === 'number' && typeof w.systemBalance === 'number') return w; } catch (e) {}
-    const seed = { myBalance: 52000, systemBalance: 52000 };
-    s.set('gift-wallet', JSON.stringify(seed));
-    return seed;
-  }
-  function walletSet(w) { const s = window.xyStore ? window.xyStore('xy-home-v2') : null; if (s) s.set('gift-wallet', JSON.stringify(w)); }
+  // ---- 心意币钱包：读写统一走 window.giftWalletGet / window.giftWalletChange（gift-shop.js 维护，根键 xy-home-v2:gift-wallet，单位分）----
 
   // ---- DOM ----
   const partnerNameEl = document.getElementById('fish-partner-name');
@@ -326,7 +317,7 @@
     }
   }
   function sendTaLine(text, glow) {
-    try { if (window.chatAddIn) window.chatAddIn(text, { silent: true }); } catch (e) {}
+    try { if (window.chatAddIn) window.chatAddIn(glow ? '💝 ' + text : text, { silent: true }); } catch (e) {}
   }
 
   // ---- 一起钓鱼陪伴奖励（双方同时在场累计 5 分钟，每日一次） ----
@@ -479,7 +470,7 @@
       '<div class="fish-sub">TA 送我的东西</div>' +
       (g.length ? g.map(function (item, idx) {
         const it = ITEM_MAP[item.id]; if (!it) return '';
-        return '<div class="fish-row"><span class="fish-ico">' + it.icon + '</span><span class="fish-name">' + esc(it.name) + '</span><span class="fish-gift-ts">' + esc(fmtTs(item.ts)) + '</span><button class="fish-exch" data-idx="' + idx + '">兑换 +3</button></div>';
+        return '<div class="fish-row"><span class="fish-ico">' + it.icon + '</span><span class="fish-name">' + esc(it.name) + '</span><span class="fish-gift-ts">' + esc(fmtTs(item.ts)) + '</span><button class="fish-exch" data-idx="' + idx + '">兑换 ¥5.20</button></div>';
       }).join('') : '<div class="fish-empty">TA 还没送你东西，继续一起钓鱼吧～</div>');
     return html;
   }
@@ -557,7 +548,7 @@
 
   // ---- 只读/驯化测试钩子（tools/verify-fishing-ui.mjs 专用；不影响正常玩法） ----
   window.__fishDebug = {
-    state: function () { return { open: open, mine: mine && mine.phase, ta: ta && ta.phase, today: loadToday(), dex: loadDex(), gifts: loadGifts(), together: loadTogether(), wallet: walletGet() }; },
+    state: function () { return { open: open, mine: mine && mine.phase, ta: ta && ta.phase, today: loadToday(), dex: loadDex(), gifts: loadGifts(), together: loadTogether(), wallet: (window.giftWalletGet ? window.giftWalletGet() : null) }; },
     forceBite: function () { if (mine.phase === 'waiting') { clearTimeout(mine._tm); startBiting(); } return mine.phase; },
     // 以指定进度收竿（p∈0..1，0.5=完美区间中心）；force=true 跳过成功概率必命中（仅测试）
     reelAt: function (p, force) {

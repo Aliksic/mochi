@@ -1,3 +1,18 @@
+### 2026-08-26 22:3x（🐛 修复·iOS Safari 公用/专属字卡语音无法上传「梦角语音文件」）
+- [本会话·完成]（**已改 src/js/chatcard.js（AI-A 域）+ 已构建（22:16, sw: mochi-mta6gpi8）+ 新专项 tools/verify-voice-ios-upload.mjs **8/8 全绿** + 布局 verify 10/10；已提交 d071e83（含并行会话已保存改动收口），推送待凭据**）。
+  - **根因**：iOS Safari「文件」选择器按 `accept="audio/*"` 过滤文件——只放行系统识别为音频的文件，amr/silk/无扩展名等语音导出文件（用户手里的「梦角语音」）在文件列表里**灰显不可选**，公用/专属字卡语音分类都传不上去。
+  - **修复**：语音分类 `pickFiles` 的 accept 放宽为空（全文件可选，参照 data-backup.js 不设 accept 先例），选完后在上传回调按 MIME/扩展名校验——MIME 非 audio/ 且扩展名推导不出音频 MIME 的非音频（图片/文档/视频）一律跳过并提示，绝不当作音频存库；`audioMimeFromName` 补 caf。图片/表情包分类 accept 仍为 `image/*` 不受影响。
+  - **验证**：verify-voice-ios-upload.mjs 8/8——公用/专属语音上传 accept 均放宽为空；amr（MIME 归一 data:audio/amr）+ mp3 正常入库；png/txt/mp4 全跳过不污染库；图片分类 accept 仍 image/*。npm run verify 10/10。
+  - ⚠️ 同类问题提示：sfx.js 自定义音效上传同样是 `accept="audio/*"`（AI-B 域），iOS 下选「梦角语音」也会灰显，需要时同法处理。
+
+### 2026-08-26 22:2x（✅ 完成·用户需求「桌面三页长度对齐 + 第三页备忘/心情同行缩小」）
+- [本会话·完成]（**已改 src/css/home.css（AI-B 域）+ 已构建（22:21, sw: mochi-mta6hylc）+ 更新 tools/verify-desk-align.mjs 断言 **19/19 全绿** + 常规布局 verify 10/10；未提交**）。
+  - **背景**：第三页 经期卡190 + 备忘77 + 心情66（上下整宽叠放）+ 12 个图标 3×96=324 → 总长 747 超出桌面容器 714，且比 1/2 页功能图标底部（636）长出 111px（用户反馈「第三页依旧没和前两页对齐」）。
+  - **修复①**：第三页备忘/心情改回左右两半卡同行（`.page-slide.third .mini-row` 从 column 改回 row，两卡各宽 171/高 77，与首页小卡行同档）。
+  - **修复②**：第三页图标组行高压 96→86（`.app-grid.p3-grid { grid-auto-rows:86px }` + 图标 58→52 居中）——3×86+2×14gap+8padding=294，第三页 total 636 与 1/2 页功能图标底部完全对齐（误差 0.0px）。图标内容 52+8+14=74 ≤ 86 不裁剪；≥4 行自定义布局不强制对齐、内容完整。
+  - **验证**：verify-desk-align 19/19（C7 两半卡同行 / C9 心情卡 77 / C10 半宽 171 / C11 三页图标组底部对齐 Δ=0）；npm run verify 10/10；verify-desk-icon-decor 7/7。verify-desk-click 5 项中触摸合成 click FAIL 为改动前既有（干净树同结果，headless 触摸合成不稳定，与本次无关）。
+  - ⚠️ 跨域说明：home.css 归 AI-B 域，本次因桌面布局需求由本会话修改并登记；未动 AI-A 功能文件。提交前请按协议 git diff 自查。
+
 ### 2026-08-26 22:2x（🐛 修复·头像互动换头像聊天页不更新——红米 Note 11T Pro + Edge「换不过来，有几个头像换了但聊天里还是没反应」）
 - [本会话·完成]（**已改 src/js/idb.js（AI-B 域·跨域登记请知悉：存储层根因）+ src/js/chat.js（AI-A 域 refreshChatAvatars 强制清渲染缓存）+ 已构建（22:20, sw: mochi-mta6l9jd，收口含并行会话已保存的 ta-mood/撤回分支顺序等改动）+ 新专项 tools/verify-avatar-store.mjs **9/9 全绿** + 常规布局 verify 10/10；未提交**）。
   - **根因三层**：① `xyStore.get` 原优先读 localStorage——localStorage 配额满/写失败时 setItem 静默失败残留旧值，memoryCache/IDB 里的新值被**永久遮蔽**（换头像只进内存+IDB，聊天页 fillAvatar 读 localStorage 旧头像；刷新、回前台 convergeAvatars 重刷都不恢复）。修复：get 改 **memoryCache 优先**（memoryCache 只在本会话写入：set 无条件写最新值、idbRestore/idbHydrateKey 回填 IDB 权威值且跳过已有键，新鲜度恒 >= localStorage）。② 双开上下文（PWA+标签页）另一侧写入 localStorage 的新值会被本侧 memoryCache 旧值遮蔽。修复：idb.js 挂 `storage` 事件，到达时删除对应 memoryCache 键，get 自然回退读 localStorage 新值。③ `avatarBatchCache` 批量渲染缓存异常残留（渲染窗口内 renderMsg 抛异常会跳过末尾 appendAvatarBatch(false)）→ refreshChatAvatars 永远读缓存旧值。修复：refreshChatAvatars 开头 `avatarBatchCache=null` 强制失效。

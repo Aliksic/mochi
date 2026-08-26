@@ -569,11 +569,12 @@
     if (endBtn) endBtn.hidden = false;
     try {
       if (window.chatAddSystem) window.chatAddSystem(T('合作扫雷') + ' · ' + (win ? '完成 ' + DIFFS[s.diffKey].name : '差一点（' + DIFFS[s.diffKey].name + '）'));
+      // 合作模式：完成/差一点点都不是「平局」也不是「我赢/你赢」——直接走合作文案，
+      // 不再接对抗/平局的互动回应池（避免 TA 说出「平局！」「赢你了」这类不符合合作语境的话）
       const fb = win
-        ? ['一起找完了。', '我们配合得不错嘛。', '全部清完啦，开心。']
+        ? ['一起找完了。', '我们配合得不错嘛。', '全部清完啦，开心。', '这一片雷区都清理干净了。']
         : ['差一点点而已，再来！', '下次小心一点就好。', '没事，再来一次？'];
-      const pool = window.getInteractPool ? window.getInteractPool(win ? '游戏平局·回应' : '游戏失败·回应', fb) : fb;
-      const say = (pool && pool.length ? pick(pool) : fb[0]) || fb[0];
+      const say = (fb.length ? pick(fb) : fb[0]) || 'ok';
       setTimeout(() => { try { if (window.chatAddIn) window.chatAddIn(T(say), { silent: true }); } catch (e) {} }, 900);
     } catch (e) {}
   }
@@ -595,6 +596,7 @@
   function showStartOverlay() {
     const s = loadStats();
     let body = pillsHtml();
+    body += '<div class="ms-cur" id="ms-cur">当前：' + curHint() + '</div>';
     body += '<div class="ms-tip">轮流挖掘 · 你们共用 ' + heartsStrStatic() + '<br>数字 = 周围雷数 · 长按格子插旗<br>🪙🎁🌸 藏在格子里，一起找找看</div>';
     body += '<div class="ms-note">🎲 ' + T('TA') + '会推理也会失误——偶尔也需要你救场</div>';
     if (s.play > 0) body += '<div class="pong-end-stat">合作 ' + s.play + ' 局 · 完成 ' + s.win + ' 次</div>';
@@ -602,6 +604,12 @@
     if (endBtn) endBtn.hidden = true;
   }
   function heartsStrStatic() { return '❤️❤️❤️'; }
+  // 当前难度提示：把「这局到底有没有雷」讲清楚，避免「感觉挖不倒雷」的困惑
+  function curHint() {
+    const d = DIFFS[selDiff];
+    return d.name + ' · ' + d.n + '×' + d.n
+      + (d.mines ? ' · ' + d.mines + ' 颗雷' : ' · 本局无雷，纯挖宝藏');
+  }
   function hideOverlay() { if (overlayEl) overlayEl.hidden = true; if (endBtn) endBtn.hidden = true; }
 
   // ---- 开局 ----
@@ -612,7 +620,9 @@
     buildBoardDom();
     hideOverlay();
     updateHud();
-    setStatus(st.mineTotal === 0 ? '轮到你了，慢慢挖～' : '你的回合，点一格开始探索');
+    setStatus(st.mineTotal === 0
+      ? '✅ 本局没有雷，一起挖宝找🪙🎁🌸'
+      : '你的回合 · 本局 ' + st.mineTotal + ' 颗雷，点一格开始探索');
   }
 
   // 预建棋盘（c4 同款）：面板首开时舞台上就有未翻开的格子撑起高度，
@@ -701,6 +711,8 @@
     saveStats(stat);
     const pills = ovBodyEl.querySelectorAll('.ms-diff');
     pills.forEach((p) => { p.classList.toggle('on', p.getAttribute('data-diff') === k); });
+    const curEl = document.getElementById('ms-cur');
+    if (curEl) curEl.textContent = '当前：' + curHint();
   });
 
   // ---- 打开 / 关闭 ----

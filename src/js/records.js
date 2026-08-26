@@ -97,6 +97,28 @@
     if (htab === 'coinearn') renderCoinPanel('earn');
     else if (htab === 'coinask') renderCoinPanel('ask');
   };
+  // ---- 心意币红包记录（v3.16.x：双向——我发 + 联系人发；红包即心意币，读当前桌面聊天记录） ----
+  function renderRpPanel() {
+    const el = document.getElementById('home-coinrp');
+    if (!el) return;
+    const name = store.get('lbl-partner') || (window.taWord ? window.taWord() : 'TA');
+    const myName = store.get('lbl-user') || '我';
+    const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    let msgs = [];
+    try { msgs = (window.getChatMsgs ? window.getChatMsgs() : JSON.parse(store.get('chat-msgs') || '[]')); } catch (e) {}
+    const list = (msgs || []).filter(m => m && m.special === 'redpacket');
+    if (!list.length) { el.innerHTML = '<div class="ta-empty">暂无红包记录（红包也是心意币，快去发一个试试）</div>'; return; }
+    const stMap = { pending: '待领取', received: '已领取', expired: '已过期·退回', returned: '已退回' };
+    el.innerHTML = list.slice().reverse().map(m => {
+      const out = m.side === 'out';
+      const st = stMap[m.rpStatus || 'pending'] || '';
+      const amt = Number(m.rpAmount || 0).toFixed(2);
+      const sub = (out ? myName + ' 发给 ' + name : name + ' 发给 ' + myName) + ' · ' + (st || '待领取') +
+        (m.rpWish ? ' · 「' + esc(m.rpWish) + '」' : '');
+      return '<div class="tc-listitem"><div class="tc-li-top"><span class="tc-li-q">' + (out ? '🧧 我发红包 ¥' + amt : '🧧 ' + esc(name) + ' 发红包 ¥' + amt) + '</span><span class="tc-li-time">' + fmtDT(m.rpTs || m.ts) + '</span></div>' +
+        '<div class="tc-li-line">' + sub + '</div></div>';
+    }).join('');
+  }
   // ---- 渲染主页记录 ----
   function histList(key) { try { return JSON.parse(store.get(key) || '[]'); } catch (e) { return []; } }
   // v3.9.x：联系人今日情话 / 我的备忘 / 我的心情记录已迁移到日历页按天查看，主页不再保留
@@ -166,6 +188,10 @@
     }
     if (showOnly === 'coinask') {
       renderCoinPanel('ask');
+    }
+    // 心意币红包记录（v3.16.x：双向）
+    if (showOnly === 'coinrp') {
+      renderRpPanel();
     }
     // 换头像记录（全部事件：直接换 / 邀请同意 / 邀请拒绝 / 我手动更换）
     if (showOnly === 'av') {
