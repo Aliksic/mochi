@@ -3987,17 +3987,15 @@
         <!-- v3.15.x：功能增多后改为顶部分类 chips 切换（互动/小游戏/工具/TA的提问）。
              功能按钮元素与 ID 全部保留（各功能模块按 ID 接线），仅加 data-mcat 由 JS 过滤显示；
              每个功能只归属一个分类、分类间互不重复（v3.16.x 起移除「常用」页签，原常用默认项并入所属分类） -->
-        <!-- v3.16.x：群聊页打开更多面板时，顶部栏最右显示「@群成员」（仅群聊有，聊天页隐藏） -->
-        <div class="more-topbar" id="more-topbar" hidden>
-          <button class="gc-more-at-top" id="gc-more-at" title="@群成员">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 006 0v-1a10 10 0 10-20 0v1a10 10 0 0010 10"/></svg>@群成员
-          </button>
-        </div>
+        <!-- v3.16.x：群聊页打开更多面板时，@群成员 显示在分类 tabs 行最右（仅群聊有，聊天页隐藏） -->
         <div class="more-tabs" id="more-tabs">
           <button class="more-tab sel" type="button" data-mcat="chat">互动</button>
           <button class="more-tab" type="button" data-mcat="tool">工具</button>
           <button class="more-tab" type="button" data-mcat="game">小游戏</button>
           <button class="more-tab" type="button" data-mcat="ask">TA的提问</button>
+          <button class="gc-more-at-top" id="gc-more-at" title="@群成员" hidden>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 006 0v-1a10 10 0 10-20 0v1a10 10 0 0010 10"/></svg>@群成员
+          </button>
         </div>
         <div class="more-grid" id="more-grid-fun">
           <button class="more-item" id="more-decide" data-mcat="tool" title="帮我决定">

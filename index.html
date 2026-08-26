@@ -5496,6 +5496,25 @@ font-size:var(--mgm-fs,27px); line-height:1;
 .fish-keep input { width:13px; height:13px; margin:0; accent-color:#5aa7e6; }
 .fish-keep span { line-height:1; }
 [data-theme="dark"] .fish-stats { background:rgba(255,255,255,.06); color:#bcd6e8; }
+.fish-cook-row { display:flex; align-items:center; gap:8px; padding:8px 11px; margin-bottom:6px; border-radius:12px; background:rgba(127,160,190,.09); font-size:13px; }
+.fish-cook-row.done { background:rgba(143,212,139,.12); }
+.fish-cook-tag { font-style:normal; font-size:9.5px; color:#3d9a5f; background:rgba(143,212,139,.2); border-radius:99px; padding:1px 6px; margin-left:5px; vertical-align:1px; }
+.fish-cook-bar { flex:1; height:8px; border-radius:99px; background:rgba(90,140,190,.15); overflow:hidden; min-width:40px; }
+.fish-cook-fill { height:100%; border-radius:99px; background:linear-gradient(90deg,#f2b04a,#e8683a); transition:width .3s; }
+.fish-cook-btn, .fish-cook-sell, .fish-cook-send, .fish-eat-btn {
+flex-shrink:0; padding:6px 11px; border:none; border-radius:99px; font-size:11.5px; font-weight:700;
+font-family:inherit; cursor:pointer; color:#fff; -webkit-tap-highlight-color:transparent;
+}
+.fish-cook-btn { background:linear-gradient(135deg,#f2b04a,#e88a3a); box-shadow:0 2px 5px rgba(232,138,58,.3); }
+.fish-cook-sell { background:linear-gradient(135deg,#5aa7e6,#3d7fc4); box-shadow:0 2px 5px rgba(61,127,196,.3); }
+.fish-cook-send { background:linear-gradient(135deg,#f08bb0,#e05a8a); box-shadow:0 2px 5px rgba(224,90,138,.3); margin-left:4px; }
+.fish-eat-btn { background:linear-gradient(135deg,#8ec9f5,#5aa7e6); box-shadow:0 2px 5px rgba(90,167,230,.3); }
+.fish-cook-btn:active, .fish-cook-sell:active, .fish-cook-send:active, .fish-eat-btn:active { transform:translateY(1px); }
+.dish-stars { color:#f2b04a; font-size:11px; letter-spacing:1px; }
+.msg-dish-card { border:1px solid rgba(232,138,58,.25); }
+[data-theme="dark"] .fish-cook-row { background:rgba(255,255,255,.05); }
+[data-theme="dark"] .fish-cook-row.done { background:rgba(143,212,139,.1); }
+[data-theme="dark"] .fish-cook-bar { background:rgba(255,255,255,.1); }
 .msg-gift { align-self: center; width: 100%; display: flex; justify-content: center; margin: 8px 0; }
 .msg-gift-card {
 width: min(260px, 80vw); padding: 22px 18px 14px; border-radius: 20px; box-sizing: border-box;
@@ -5714,16 +5733,15 @@ display: block; max-width: 64px; overflow: hidden; text-overflow: ellipsis; whit
 content: attr(data-ph); color: #aaa; pointer-events: none;
 }
 .gc-head { position: relative; }
-.gc-more-bar {
-display: flex; align-items: center; justify-content: flex-end;
-min-height: 30px;
-}
+.more-tabs { align-items: center; }
 .gc-more-at-top {
 display: inline-flex; align-items: center; gap: 5px;
-padding: 6px 12px; font-size: 12px; font-weight: 600; color: #444;
+margin-left: auto; padding: 6px 12px; font-size: 12px; font-weight: 600; color: #444;
 background: rgba(0,0,0,.04); border: none; border-radius: 99px;
 cursor: pointer; font-family: inherit; -webkit-tap-highlight-color: transparent;
+flex-shrink: 0;
 }
+.gc-more-at-top[hidden] { display: none; }
 .gc-more-at-top svg { width: 15px; height: 15px; flex-shrink: 0; }
 .gc-more-at-top:active { background: rgba(0,0,0,.09); }
 .gc-more-menu {
@@ -7764,7 +7782,7 @@ transition-duration: .01ms !important;
       </div>
       <div class="splash-dots"><i></i><i></i><i></i></div>
       <div class="splash-brand">小红书@言序（1842523578）</div>
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787760460842">Mochi 字卡传讯 v3.6.257 · 部署于 2026-08-27 00:07</div>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787761352655">Mochi 字卡传讯 v3.6.258 · 部署于 2026-08-27 00:22</div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
       <div class="splash-loading" id="splash-loading">正在加载数据…</div>
@@ -8835,7 +8853,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.6.257</div>
+      <div class="ver">Mochi 字卡传讯 v3.6.258</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -8977,7 +8995,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.6.257</span>
+              <span class="lic-ver">v3.6.258</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -11639,9 +11657,15 @@ transition-duration: .01ms !important;
       <div class="chat-draft" id="gc-draft" hidden>
         <div class="chat-draft-items" id="gc-draft-items"></div>
       </div>
-      <!-- v3.11.x：输入栏与普通聊天页统一（更多功能 / 表情包 / 输入框 / 插入图片 / 发送）；
-           原 @群成员 独立按钮移入「更多功能」面板 -->
+      <!-- 输入栏与聊天页完全对齐（语音/继续说/更多/表情/输入框/图片/批量发送/发送）；
+           语音/继续说/批量发送三个按钮的显隐跟随当前桌面的聊天设置（同 chat-mic-btn/chat-continue-btn/chat-batch-btn） -->
       <div class="chat-input-row gc-input-row">
+        <button class="ch-input-btn" id="gc-mic-btn" title="录制语音" style="display:none">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg>
+        </button>
+        <button class="ch-input-btn" id="gc-continue-btn" title="让对方继续说" style="display:none">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/><path d="M9 11h6M9 14h4"/></svg>
+        </button>
         <button class="ch-input-btn" id="gc-input-more-btn" title="更多功能">
           <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
         </button>
@@ -11652,16 +11676,10 @@ transition-duration: .01ms !important;
         <button class="ch-input-btn" id="gc-img-btn" title="插入图片">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5-9 9"/></svg>
         </button>
+        <button class="ch-input-btn" id="gc-batch-btn" title="批量发送" style="display:none">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6h.01M3 12h.01M3 18h.01"/></svg>
+        </button>
         <button class="chat-send gc-send" id="gc-send">发送</button>
-      </div>
-      <!-- 更多功能面板（与聊天页 #chat-more-panel 同款悬浮面板；@群成员 入口在这里） -->
-      <div class="more-panel" id="gc-more-panel" hidden>
-        <div class="more-grid">
-          <button class="more-item" id="gc-more-at" title="@群成员">
-            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 006 0v-1a10 10 0 10-20 0v1a10 10 0 0010 10"/></svg></span>
-            <span>@群成员</span>
-          </button>
-        </div>
       </div>
       <!-- 群成员列表面板 -->
       <div class="gc-members-panel" id="gc-members-panel" hidden>
@@ -11697,11 +11715,15 @@ transition-duration: .01ms !important;
         <!-- v3.15.x：功能增多后改为顶部分类 chips 切换（互动/小游戏/工具/TA的提问）。
              功能按钮元素与 ID 全部保留（各功能模块按 ID 接线），仅加 data-mcat 由 JS 过滤显示；
              每个功能只归属一个分类、分类间互不重复（v3.16.x 起移除「常用」页签，原常用默认项并入所属分类） -->
+        <!-- v3.16.x：群聊页打开更多面板时，@群成员 显示在分类 tabs 行最右（仅群聊有，聊天页隐藏） -->
         <div class="more-tabs" id="more-tabs">
           <button class="more-tab sel" type="button" data-mcat="chat">互动</button>
           <button class="more-tab" type="button" data-mcat="tool">工具</button>
           <button class="more-tab" type="button" data-mcat="game">小游戏</button>
           <button class="more-tab" type="button" data-mcat="ask">TA的提问</button>
+          <button class="gc-more-at-top" id="gc-more-at" title="@群成员" hidden>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 006 0v-1a10 10 0 10-20 0v1a10 10 0 0010 10"/></svg>@群成员
+          </button>
         </div>
         <div class="more-grid" id="more-grid-fun">
           <button class="more-item" id="more-decide" data-mcat="tool" title="帮我决定">
@@ -20584,6 +20606,7 @@ it.hidden = it.dataset.mcat !== cat;
 }
 store.set('more-cat', cat);
 }
+window.applyMoreCat = applyMoreCat;
 document.querySelectorAll('#more-tabs .more-tab').forEach(t => t.addEventListener('click', (e) => { e.stopPropagation(); applyMoreCat(t.dataset.mcat); }));
 moreBtn.addEventListener('click', (e) => {
 e.stopPropagation();
@@ -20596,6 +20619,8 @@ else if (store.get('more-tab') === 'ask') tab = 'ask'; // 旧两页签记忆迁�
 } catch (err) {}
 applyMoreCat(tab);
 closeIme(); // v3.5.116：收起输入法，面板不被键盘遮挡
+const tb = document.getElementById('gc-more-at');
+if (tb) tb.hidden = true;
 }
 morePanel.hidden = !morePanel.hidden;
 });
@@ -24311,7 +24336,7 @@ const membersBody = document.getElementById('gc-mp-body');
 const atPanel = document.getElementById('gc-at-panel');
 const atBody = document.getElementById('gc-at-body');
 const gcMoreBtn = document.getElementById('gc-input-more-btn');
-const gcMorePanel = document.getElementById('gc-more-panel');
+const gcMorePanel = document.getElementById('chat-more-panel');   // 共享浮层（.phone 级，聊天页也用它）
 const gcMoreAt = document.getElementById('gc-more-at');
 const gcEmojiBtn = document.getElementById('gc-emoji-btn');
 const gcImgBtn = document.getElementById('gc-img-btn');
@@ -25552,11 +25577,6 @@ if (atPanel) atPanel.hidden = true;
 atBody.appendChild(row);
 });
 }
-if (gcMoreAt) gcMoreAt.addEventListener('click', () => {
-if (gcMorePanel) gcMorePanel.hidden = true;
-renderAtPanel();
-if (atPanel) atPanel.hidden = false;
-});
 function gcSettingOn(key) {
 try { return window.activeStore().get(key) === '1'; } catch (e) { return false; }
 }
@@ -25622,13 +25642,13 @@ if (gcContinueBtn) gcContinueBtn.addEventListener('click', (e) => { e.stopPropag
 if (gcMicBtn) gcMicBtn.addEventListener('click', (e) => {
 e.stopPropagation();
 if (!window.openVoicePanelFor) return;
-if (gcMorePanel) gcMorePanel.hidden = true;
+if (gcMorePanel) { gcMorePanel.hidden = true; gcSetMoreTopbar(false); }
 window.openVoicePanelFor(gcSendVoice);
 });
 if (gcBatchBtn) gcBatchBtn.addEventListener('click', (e) => {
 e.stopPropagation();
 if (!window.openBatchPanelFor) return;
-if (gcMorePanel) gcMorePanel.hidden = true;
+if (gcMorePanel) { gcMorePanel.hidden = true; gcSetMoreTopbar(false); }
 window.openBatchPanelFor(gcSendBatch);
 });
 syncGcInputBtns();
@@ -25636,21 +25656,50 @@ document.addEventListener('voice-send-changed', syncGcInputBtns);
 document.addEventListener('batch-send-changed', syncGcInputBtns);
 document.addEventListener('continue-say-changed', syncGcInputBtns);
 document.addEventListener('contact-switched', syncGcInputBtns);
+function gcSetMoreTopbar(show) {
+if (gcMoreAt) gcMoreAt.hidden = !show;
+}
 if (gcMoreBtn && gcMorePanel) {
 gcMoreBtn.addEventListener('click', (e) => {
-e.stopPropagation();
+e.stopPropagation(); // 阻止冒泡到 document（chat.js 有面板外关闭监听，避免 toggle 冲突）
 if (gcMorePanel.hidden) {
 try { if (window.closeIme) window.closeIme(); } catch (err) {}
 try { input.blur(); } catch (err) {}
+gcSetMoreTopbar(true);
+try {
+if (window.applyMoreCat) {
+let tab = 'chat';
+try {
+const saved = window.activeStore().get('more-cat');
+if (saved && ['chat', 'game', 'tool', 'ask'].indexOf(saved) >= 0) tab = saved;
+} catch (err2) {}
+window.applyMoreCat(tab);
+}
+} catch (err3) {}
 }
 gcMorePanel.hidden = !gcMorePanel.hidden;
+if (gcMorePanel.hidden) gcSetMoreTopbar(false);
 });
-document.addEventListener('click', (e) => {
-if (!gcMorePanel.hidden && !gcMorePanel.contains(e.target) && e.target !== gcMoreBtn && !gcMoreBtn.contains(e.target)) {
+gcMorePanel.addEventListener('click', (e) => {
+const item = e.target.closest('.more-item');
+if (!item) return;
+if (gcMoreAt && (item === gcMoreAt || item.contains(gcMoreAt))) return;
 gcMorePanel.hidden = true;
+gcSetMoreTopbar(false);
+const chatPage = document.getElementById('page-chat');
+if (chatPage && chatPage.hidden) {
+document.querySelectorAll('.page').forEach(p => p.hidden = true);
+chatPage.hidden = false;
 }
+}, true);
+}
+if (gcMoreAt) gcMoreAt.addEventListener('click', (e) => {
+e.stopPropagation();
+if (gcMorePanel) gcMorePanel.hidden = true;
+gcSetMoreTopbar(false);
+renderAtPanel();
+if (atPanel) atPanel.hidden = false;
 });
-}
 if (gcEmojiBtn) gcEmojiBtn.addEventListener('click', (e) => {
 e.stopPropagation();
 if (!window.openEmojiPanelForInsert) return;
@@ -60795,6 +60844,52 @@ return '<div class="fish-row"><span class="fish-ico">' + it.icon + '</span><span
 }).join('') : '<div class="fish-empty">TA 还没送你东西，继续一起钓鱼吧～</div>');
 return html;
 }
+function renderCook() {
+const c = loadCook();
+let html = '<div class="fish-sub">厨房</div>';
+html += '<div class="fish-subhead">我的灶台</div>';
+if (!c.mine.length) html += '<div class="fish-empty">灶台空着，从下面选鱼烹饪</div>';
+c.mine.forEach(function (entry, idx) {
+const st = cookStatus(entry); if (!st) return;
+const it = ITEM_MAP[entry.fishId];
+if (st.done) {
+const price = dishPrice(entry.fishId, entry.quality);
+html += '<div class="fish-cook-row done"><span class="fish-ico">' + st.dish.emoji + '</span><span class="fish-name">' + esc(st.dish.name) + '<i class="fish-cook-tag">已出锅</i></span><span class="fish-price">¥' + fenToStr(price) + '</span><button class="fish-cook-sell" data-idx="' + idx + '">出售</button><button class="fish-cook-send" data-idx="' + idx + '">送TA</button></div>';
+} else {
+const pct = Math.round(st.progress * 100);
+html += '<div class="fish-cook-row"><span class="fish-ico">' + (it ? it.icon : '🐟') + '</span><span class="fish-name">烹饪 ' + esc(st.dish.name) + '</span><div class="fish-cook-bar"><div class="fish-cook-fill" style="width:' + pct + '%"></div></div><span class="fish-cnt">' + (st.remainSec >= 60 ? Math.ceil(st.remainSec / 60) + '分' : st.remainSec + '秒') + '</span></div>';
+}
+});
+html += '<div class="fish-subhead">' + esc(taWord()) + ' 的灶台</div>';
+if (!c.ta.length) html += '<div class="fish-empty">' + esc(taWord()) + ' 没在烹饪</div>';
+c.ta.forEach(function (entry) {
+const st = cookStatus(entry); if (!st) return;
+const it = ITEM_MAP[entry.fishId];
+if (st.done) {
+html += '<div class="fish-cook-row done"><span class="fish-ico">' + st.dish.emoji + '</span><span class="fish-name">' + esc(st.dish.name) + '<i class="fish-cook-tag">已出锅</i></span></div>';
+} else {
+const pct = Math.round(st.progress * 100);
+html += '<div class="fish-cook-row"><span class="fish-ico">' + (it ? it.icon : '🐟') + '</span><span class="fish-name">' + esc(taWord()) + ' 在烹饪 ' + esc(st.dish.name) + '</span><div class="fish-cook-bar"><div class="fish-cook-fill" style="width:' + pct + '%"></div></div><span class="fish-cnt">' + (st.remainSec >= 60 ? Math.ceil(st.remainSec / 60) + '分' : st.remainSec + '秒') + '</span></div>';
+}
+});
+const t = loadToday();
+const cookable = Object.keys(t.mine).filter(function (id) { return dishOf(id) && t.mine[id] > 0; });
+if (cookable.length) {
+html += '<div class="fish-subhead">可烹饪的鱼</div>';
+cookable.forEach(function (id) {
+const it = ITEM_MAP[id]; const d = dishOf(id);
+html += '<div class="fish-cook-row"><span class="fish-ico">' + it.icon + '</span><span class="fish-name">' + esc(it.name) + ' → ' + esc(d.name) + '</span><span class="fish-cnt">×' + t.mine[id] + '</span><button class="fish-cook-btn" data-fish="' + id + '">烹饪' + Math.round(d.cookSec / 60) + '分</button></div>';
+});
+}
+const box = loadBox(); const dishes = box.map(function (b, i) { return Object.assign({}, b, { _idx: i }); }).filter(function (b) { return b.side === 'in' && b.cat === '菜肴'; });
+if (dishes.length) {
+html += '<div class="fish-subhead">收到的菜（可吃掉换币）</div>';
+dishes.forEach(function (b) {
+html += '<div class="fish-cook-row"><span class="fish-ico">' + (b.emoji || '🍽️') + '</span><span class="fish-name">' + esc(b.name) + '</span><span class="fish-price">吃+¥' + fenToStr(Math.round((b.price || 0) * 100 * 0.5)) + '</span><button class="fish-eat-btn" data-idx="' + b._idx + '">吃掉</button></div>';
+});
+}
+return html;
+}
 function fmtTs(ts) { const d = new Date(ts); return (d.getMonth() + 1) + '/' + d.getDate() + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
 if (castBtn) castBtn.addEventListener('click', function (e) { e.stopPropagation(); castMine(); });
 if (reelBtn) reelBtn.addEventListener('click', function (e) { e.stopPropagation(); reelMine(); });
@@ -60804,6 +60899,14 @@ const sell = e.target.closest && e.target.closest('#fish-sell-btn');
 if (sell) { e.stopPropagation(); sellAll(); return; }
 const exch = e.target.closest && e.target.closest('.fish-exch');
 if (exch) { e.stopPropagation(); exchangeGift(parseInt(exch.getAttribute('data-idx'), 10)); return; }
+const cookBtn = e.target.closest && e.target.closest('.fish-cook-btn');
+if (cookBtn) { e.stopPropagation(); cookMine(cookBtn.getAttribute('data-fish')); return; }
+const cookSell = e.target.closest && e.target.closest('.fish-cook-sell');
+if (cookSell) { e.stopPropagation(); sellDish(parseInt(cookSell.getAttribute('data-idx'), 10)); return; }
+const cookSend = e.target.closest && e.target.closest('.fish-cook-send');
+if (cookSend) { e.stopPropagation(); sendDishToTa(parseInt(cookSend.getAttribute('data-idx'), 10)); return; }
+const eatBtn = e.target.closest && e.target.closest('.fish-eat-btn');
+if (eatBtn) { e.stopPropagation(); eatDish(parseInt(eatBtn.getAttribute('data-idx'), 10)); return; }
 });
 if (pageEl) pageEl.addEventListener('change', function (e) {
 const cb = e.target.closest && e.target.closest('.fish-keep-cb');

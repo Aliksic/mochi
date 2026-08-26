@@ -22,11 +22,10 @@
   const atBody = document.getElementById('gc-at-body');
   // v3.11.x：输入栏与普通聊天页统一——更多功能/表情包/插入图片按钮 + 待发送图片草稿条
   // v3.16.x：群聊「更多功能」直接打开共享面板 #chat-more-panel（与聊天页同一套分类+功能按钮），
-  // @群成员 收进该面板顶部栏最右（#more-topbar #gc-more-at，仅群聊打开时显示）
+  // @群成员 收进共享面板分类 tabs 行最右（仅群聊打开时显示）
   const gcMoreBtn = document.getElementById('gc-input-more-btn');
   const gcMorePanel = document.getElementById('chat-more-panel');   // 共享浮层（.phone 级，聊天页也用它）
   const gcMoreAt = document.getElementById('gc-more-at');
-  const gcMoreTopbar = document.getElementById('more-topbar');
   const gcEmojiBtn = document.getElementById('gc-emoji-btn');
   const gcImgBtn = document.getElementById('gc-img-btn');
   // v3.16.x：输入栏与聊天页对齐——语音「麦克风」/「继续说」/「批量发送」三个按钮
@@ -1513,7 +1512,7 @@
   // @群成员 顶部栏仅在群聊打开面板时显示；面板里的功能按钮是聊天页的（handler 在 chat.js），
   // 群聊里点击任功能按钮 → 自动切到聊天页并打开对应功能（双人互动功能在聊天页使用）
   function gcSetMoreTopbar(show) {
-    if (gcMoreTopbar) gcMoreTopbar.hidden = !show;
+    if (gcMoreAt) gcMoreAt.hidden = !show;
   }
   if (gcMoreBtn && gcMorePanel) {
     gcMoreBtn.addEventListener('click', (e) => {
@@ -1523,27 +1522,38 @@
         try { if (window.closeIme) window.closeIme(); } catch (err) {}
         try { input.blur(); } catch (err) {}
         gcSetMoreTopbar(true);
+        // 与聊天页一致：按上次分类过滤功能按钮（否则全部功能堆在一起、没有分组）
+        try {
+          if (window.applyMoreCat) {
+            let tab = 'chat';
+            try {
+              const saved = window.activeStore().get('more-cat');
+              if (saved && ['chat', 'game', 'tool', 'ask'].indexOf(saved) >= 0) tab = saved;
+            } catch (err2) {}
+            window.applyMoreCat(tab);
+          }
+        } catch (err3) {}
       }
       gcMorePanel.hidden = !gcMorePanel.hidden;
       if (gcMorePanel.hidden) gcSetMoreTopbar(false);
     });
-    // 群聊里点面板内的功能按钮（.more-item）→ 收起面板 + @顶部栏 + 切到聊天页打开功能
-    // （面板外关闭由 chat.js 的 document 监听统一处理，这里不重复绑定）
+    // 群聊里点面板内的功能按钮（.more-item）→ 切到聊天页打开功能
+    // 用捕获阶段：功能按钮的 handler（chat.js）里都有 e.stopPropagation()，冒泡阶段监听不到；
+    // 捕获阶段先切页，随后按钮 handler 在聊天页上下文执行（打开半框）。
     gcMorePanel.addEventListener('click', (e) => {
       const item = e.target.closest('.more-item');
       if (!item) return;
       // @群成员 不走切换，保留群聊内打开
-      if (item === gcMoreAt || gcMoreAt && item.contains(gcMoreAt)) return;
-      e.stopPropagation();
+      if (gcMoreAt && (item === gcMoreAt || item.contains(gcMoreAt))) return;
       gcMorePanel.hidden = true;
       gcSetMoreTopbar(false);
       // 切到聊天页（面板功能按钮的 handler 都在聊天页上下文；半框也在聊天页内）
       const chatPage = document.getElementById('page-chat');
-      if (chatPage) {
+      if (chatPage && chatPage.hidden) {
         document.querySelectorAll('.page').forEach(p => p.hidden = true);
         chatPage.hidden = false;
       }
-    });
+    }, true);
   }
   // @群成员：从共享面板顶部栏打开成员选择（仅群聊有）
   if (gcMoreAt) gcMoreAt.addEventListener('click', (e) => {

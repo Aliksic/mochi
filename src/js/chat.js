@@ -2720,6 +2720,8 @@ it.hidden = it.dataset.mcat !== cat;
 }
 store.set('more-cat', cat);
 }
+// v3.16.x：群聊页打开共享更多面板时复用同一分类过滤
+window.applyMoreCat = applyMoreCat;
 document.querySelectorAll('#more-tabs .more-tab').forEach(t => t.addEventListener('click', (e) => { e.stopPropagation(); applyMoreCat(t.dataset.mcat); }));
 moreBtn.addEventListener('click', (e) => {
 e.stopPropagation();
@@ -2732,8 +2734,8 @@ else if (store.get('more-tab') === 'ask') tab = 'ask'; // 旧两页签记忆迁�
 } catch (err) {}
 applyMoreCat(tab);
 closeIme(); // v3.5.116：收起输入法，面板不被键盘遮挡
-// v3.16.x：聊天页打开共享更多面板时隐藏 @群成员 顶部栏（仅群聊打开时显示）
-const tb = document.getElementById('more-topbar');
+// v3.16.x：聊天页打开共享更多面板时隐藏 @群成员 按钮（仅群聊打开时显示）
+const tb = document.getElementById('gc-more-at');
 if (tb) tb.hidden = true;
 }
 morePanel.hidden = !morePanel.hidden;
