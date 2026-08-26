@@ -125,3 +125,35 @@ if (!sw.includes('const BUILD_INFO')) {
 }
 writeFileSync(swPath, sw);
 console.log('已复制 PWA 文件 → ' + pwaFiles.join(', ') + '（sw 缓存版本: mochi-' + buildStamp + '）');
+
+// ===== 关键修复哨兵（v3.16.x） =====
+// 历史教训：修复被并行会话覆盖 / 编辑器旧缓冲回写 / 新文件漏接入 build.mjs，
+// 都会让「已修复的问题在新版本复发」，且构建/布局检查照常通过、无人发现。
+// 构建完成后对产物做特征检查——每个曾用户反馈过的关键修复对应一个代码特征
+// （函数名/常量/选择器）。特征缺失 = 修复可能被覆盖 → 醒目警告（不阻断构建，
+// 构建者自行判断；有对应 verify-xxx.mjs 的可补跑确认）。
+// 维护：新增关键修复时在此登记一行 { name, file, needle }（needle 为产物中的特征串）。
+const FIX_SENTINELS = [
+  { name: 'iOS 键盘输入栏停靠（_ensureInputDocked）', file: 'js/mobile-adapt.js', needle: '_ensureInputDocked' },
+  { name: 'iOS 保活音频静音（kaIsIOS/0.002）', file: 'js/bg-keep.js', needle: 'kaIsIOS' },
+  { name: '批量导入按行拆分（\\r\\n|\\r|\\n）', file: 'js/chatcard.js', needle: 'split(/\\r\\n|\\r|\\n/)' },
+  { name: 'GIF 动图直存（跳过压缩）', file: 'js/chatcard.js', needle: 'isGif' },
+  { name: '新文件接入产物（钓鱼/记忆翻牌/我的档案）', file: 'index.html', needle: 'fishing' },
+  { name: '新文件接入产物（漂流瓶）', file: 'index.html', needle: 'drift-bottle' },
+  { name: '多联系人切换渲染修复（applyAvatars）', file: 'js/contacts.js', needle: 'applyAvatars' },
+  { name: '信箱数据丢失防护（mailDbReady）', file: 'js/mail.js', needle: 'mailDbReady' },
+  { name: '大图崩溃防护（>8MB 拦截）', file: 'js/personalize.js', needle: '8 * 1024 * 1024' },
+  { name: '情绪字卡总开关（triggerEmotionChain 总闸）', file: 'js/mood-reply-cards.js', needle: 'if (!enabled(\'mood\')) return null' },
+  { name: '通知图标降级（noMedia）', file: 'js/bg-keep.js', needle: 'noMedia' },
+];
+try {
+  const built = readFileSync(join(root, 'index.html'), 'utf8');
+  const missing = FIX_SENTINELS.filter(s => !built.includes(s.needle));
+  if (missing.length) {
+    console.warn('⚠️  关键修复哨兵检查：以下 ' + missing.length + ' 项特征在产物中缺失（修复可能被覆盖/未接入）：');
+    missing.forEach(s => console.warn('   · [' + s.name + '] 应含 "' + s.needle + '"（' + s.file + '）'));
+    console.warn('   请确认这些修复是否仍有效——对应 verify-xxx.mjs 可补跑复核，或检查是否被并行改动覆盖。');
+  } else {
+    console.log('✅ 关键修复哨兵 ' + FIX_SENTINELS.length + '/' + FIX_SENTINELS.length + ' 全部在位（修复无丢失）');
+  }
+} catch (e) { /* 产物未生成/读取失败：跳过 */ }
