@@ -2768,7 +2768,10 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + env(safe-area-inset-bott
 .snake-dp[data-dir="down"] { grid-column:2; grid-row:2; }
 .snake-dp[data-dir="right"] { grid-column:3; grid-row:2; }
 /* 全屏：面板占满视口，canvas + UI 按视口等比放大铺满 */
-#chat-snake-panel.snake-fs { position:fixed; inset:0; z-index:9999; border-radius:0; max-height:none; height:100vh; background:#fff; }
+#chat-snake-panel.snake-fs { position:fixed; inset:0; z-index:9999; border-radius:0; max-height:none; height:100vh; height:100dvh; background:#fff; padding-top:max(env(safe-area-inset-top,0px),8px); padding-bottom:max(env(safe-area-inset-bottom,0px),8px); overscroll-behavior:none; }
+#chat-snake-panel.snake-fs .poke-card-scroll { overflow:hidden; padding:min(2vh,2vw) 8px; }
+/* 全屏隐藏方向键：滑动/键盘已覆盖全部输入，把空间让给更大的地图 */
+#chat-snake-panel.snake-fs .snake-dpad { display:none; }
 #chat-snake-panel.snake-fs .poke-card-head { border-bottom-color:rgba(0,0,0,.08); padding:8px 14px; }
 #chat-snake-panel.snake-fs .poke-card-head span { font-size:min(4.5vw, 3.6vh); }
 #chat-snake-panel.snake-fs .snake-icon-btn { width:min(9vw, 7vh); height:min(9vw, 7vh); font-size:min(4vw, 3.2vh); }
@@ -3240,3 +3243,44 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + env(safe-area-inset-bott
 }
 .cj-d-nav-btn:active { background: rgba(0,0,0,.07); }
 .cj-d-nav-pos { flex-shrink: 0; min-width: 36px; text-align: center; font-size: 11px; color: rgba(0,0,0,.4); }
+
+/* ===== 四子棋（聊天页底部半框，复用 .poke-card 容器与 .pong-overlay 组件） ===== */
+#chat-c4-panel { height:auto; max-height:86%; }
+#chat-c4-panel .poke-card-scroll { min-height:0; max-height:none; }
+.c4-wrap { display:flex; flex-direction:column; align-items:center; gap:10px; padding:6px 4px 4px; }
+.c4-players { display:flex; align-items:center; justify-content:center; gap:10px; width:100%; }
+.c4-side { display:inline-flex; align-items:center; gap:5px; font-size:13px; font-weight:600; color:var(--ink); background:rgba(127,127,127,.1); border-radius:14px; padding:4px 12px; }
+.c4-vs { font-size:11px; color:var(--muted); letter-spacing:1px; }
+.c4-stage { position:relative; width:100%; max-width:352px; margin:0 auto; }
+.c4-board { display:flex; gap:2px; margin:0 auto; user-select:none; -webkit-user-select:none; touch-action:manipulation; }
+.c4-col { flex:1; display:flex; flex-direction:column; border-radius:7px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+@media (hover:hover) {
+  .c4-col:hover { background:rgba(127,127,127,.09); }
+}
+.c4-cell { position:relative; }
+.c4-cell::before { content:''; position:absolute; inset:9%; border-radius:50%; background:rgba(127,127,127,.15); box-shadow:inset 0 2px 4px rgba(0,0,0,.12), inset 0 -1px 2px rgba(255,255,255,.35); }
+.c4-disc { position:absolute; inset:7%; border-radius:50%; z-index:1; transition-property:transform; transition-timing-function:cubic-bezier(.55,0,.85,.6); box-shadow:0 2px 4px rgba(0,0,0,.18); }
+.c4-you { background:radial-gradient(circle at 34% 28%, #86b6ff 0%, #3a7fd5 55%, #275ea8 100%); }
+.c4-ta { background:radial-gradient(circle at 34% 28%, #ffe59a 0%, #f2b63c 55%, #cf951d 100%); }
+.c4-land { animation:c4land .18s ease-out; }
+@keyframes c4land { 0% { transform:scale(1,1); } 45% { transform:scale(1.06,.88); } 100% { transform:scale(1,1); } }
+.c4-wincol::before { background:rgba(127,127,127,.06); }
+.c4-win { animation:c4win .9s ease-in-out infinite alternate; }
+@keyframes c4win {
+  from { filter:brightness(1) drop-shadow(0 0 0 rgba(255,255,255,0)); }
+  to { filter:brightness(1.25) drop-shadow(0 0 7px rgba(255,224,138,.9)); }
+}
+.c4-shake { animation:c4shake .26s ease-in-out; }
+@keyframes c4shake { 0%,100% { transform:translateX(0); } 25% { transform:translateX(-3px); } 50% { transform:translateX(3px); } 75% { transform:translateX(-2px); } }
+.c4-overlay { border-radius:12px; }
+.c4-start-tip { font-size:13.5px; color:#fff; line-height:1.7; margin-bottom:2px; }
+.c4-start-note { font-size:11.5px; color:rgba(255,255,255,.75); margin-bottom:4px; }
+.c4-status { min-height:20px; font-size:13px; color:var(--muted); text-align:center; }
+.c4-dot { display:inline-block; width:11px; height:11px; border-radius:50%; vertical-align:-1px; margin-right:5px; box-shadow:0 1px 2px rgba(0,0,0,.15); }
+.c4-dot-you { background:radial-gradient(circle at 34% 28%, #86b6ff 0%, #3a7fd5 60%, #275ea8 100%); }
+.c4-dot-ta { background:radial-gradient(circle at 34% 28%, #ffe59a 0%, #f2b63c 60%, #cf951d 100%); }
+/* 弱动效偏好：落子/庆祝动画关闭（布局不受影响） */
+@media (prefers-reduced-motion: reduce) {
+  .c4-disc { transition-duration:0s !important; }
+  .c4-land, .c4-win, .c4-shake { animation:none; }
+}

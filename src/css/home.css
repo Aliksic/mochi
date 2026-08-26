@@ -100,10 +100,12 @@
 .mc-b { font-size:13px; font-weight:600; color:var(--ink); margin-top:6px; line-height:1.45; }
 .mc-b b { font-size:16px; }
 
-/* 打卡横幅 */
+/* 打卡横幅
+   v3.15.x：去掉 0 2px 左右内缩——与 deco/mini-row 等卡片同宽（左右边缘跨页对齐）；
+   下边距 16→14 与全站卡片间距节奏统一 */
 .checkin {
   display:flex; align-items:center; gap:10px;
-  border-radius:18px; padding:12px 14px; margin:0 2px 16px; flex-shrink:0;
+  border-radius:18px; padding:12px 14px; margin:0 0 14px; flex-shrink:0;
   background:var(--widget-bg);
   box-shadow:0 4px 14px rgba(0,0,0,.05);
   opacity:var(--widget-opacity);
@@ -127,11 +129,13 @@
 }
 .ck-btn.done { background:#e2e2e2; color:#777; box-shadow:none; }
 
-/* 离周末还有几天（摸鱼小组件，v3.5.35 整体压缩：更矮更紧凑） */
+/* 离周末还有几天（摸鱼小组件）
+   v3.15.x：与首页打卡横幅同档高度——去掉 2px 内缩全宽、padding 6→10 更透气，
+   标题与副题合并同一行（.we-top），摸鱼值/工作值两行收紧，整体 ~86px→~70px */
 .weekend-box {
   position:relative; /* v3.13.x：连击角标 .we-combo 绝对定位锚点 */
   display:flex; align-items:center; justify-content:space-between; gap:8px;
-  border-radius:16px; padding:6px 12px; margin:0 2px 10px; flex-shrink:0;
+  border-radius:16px; padding:10px 12px; margin:0 0 14px; flex-shrink:0;
   background:var(--widget-bg);
   box-shadow:0 4px 14px rgba(0,0,0,.05);
   opacity:var(--widget-opacity);
@@ -147,13 +151,19 @@
   transition:opacity .18s ease, transform .18s ease;
 }
 .we-combo.on { opacity:1; transform:translateY(0) scale(1); }
-.we-left { display:flex; flex-direction:column; gap:1px; }
-.we-days { font-size:13px; font-weight:700; color:var(--ink); letter-spacing:.5px; }
-.we-sub { font-size:9px; color:var(--muted); letter-spacing:1px; }
-/* v3.5.75 两行 grid 两列：摸鱼值列/工作值列 列宽一致完美对齐，间距清晰 */
+.we-left { display:flex; flex-direction:column; gap:0; min-width:0; }
+/* v3.15.x：标题行——「离周末还有 N 天」+ 副题同一行基线对齐（副题超长省略） */
+.we-top {
+  display:flex; align-items:baseline; gap:8px; min-width:0;
+  line-height:1.2;
+}
+.we-days { font-size:13px; font-weight:700; color:var(--ink); letter-spacing:.5px; white-space:nowrap; flex-shrink:0; }
+.we-sub { font-size:9px; color:var(--muted); letter-spacing:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
+/* v3.5.75 两行 grid 两列：摸鱼值列/工作值列 列宽一致完美对齐，间距清晰
+   v3.15.x：行距收紧（mt 4→1、行高 1.2）配合整卡压缩到与首页打卡横幅同档 */
 .we-ta {
-  display:grid; grid-template-columns:1fr 1fr; gap:16px;
-  margin-top:4px; font-size:10px; color:#555; font-weight:600;
+  display:grid; grid-template-columns:1fr 1fr; gap:2px 16px;
+  margin-top:1px; font-size:10px; line-height:1.2; color:#555; font-weight:600;
 }
 .we-ta .pair { display:flex; align-items:baseline; gap:5px; white-space:nowrap; }
 .we-ta .pair i { font-style:normal; }
@@ -165,7 +175,7 @@
   margin:0 10px; font-size:10px;
 }
 .we-btn {
-  flex-shrink:0; align-self:flex-start; margin-top:2px;
+  flex-shrink:0;
   border:none; cursor:pointer; font-family:inherit;
   background:var(--widget-btn); color:var(--widget-btn-text); font-size:12px; font-weight:700;
   padding:6px 11px; border-radius:99px; box-shadow:0 3px 8px rgba(0,0,0,.25);
@@ -208,8 +218,16 @@
 /* v3.7.x：单个功能图标移出 app-grid 作为独立组件时居中显示 */
 .page-slide .app[data-desk-widget^="app-"] { align-self:center; margin:8px 0; }
 
-/* 桌面功能区（直接显示） */
-.app-grid { margin-top:8px; }
+/* 桌面功能区（直接显示）
+   v3.15.x：网格上边距归零——图标组与上方卡片的间距统一由卡片 14px 下边距提供
+   （第三页 .desk-page 是 flex 容器边距不折叠，此前 14+8=22px 与其他页不一致）；
+   .app-grid.p2-grid 提特异性压过 chat-pages.css 的 .p2-grid{margin-top:14px} */
+.app-grid { margin-top:0; }
+.app-grid.p2-grid { margin-top:0; }
+/* v3.15.x：任意组件排到页首时统一距顶 14px（与 deco/music 首卡同节奏；
+   第三页无经期卡时 mini-row 首位不再贴顶）。装修页 hint/add 在首位时不匹配，
+   保持原状（用户自建页边缘场景） */
+.page-slide > [data-desk-widget]:first-child { margin-top:14px; }
 
 /* 桌面分页（横向滚动翻页，scroll-snap 原生吸附，不用 transform 避免毛玻璃渲染 bug） */
 .desktop-pages {
@@ -320,11 +338,12 @@
 }
 .desk-lib-item .dl-btn:disabled { background:#ddd; color:#999; }
 
-/* v3.7.x：新增桌面小组件（时钟 / 月历 / 计时器 / 纪念日倒计时） */
-.desk-clock { padding:14px 16px; text-align:center; }
+/* v3.7.x：新增桌面小组件（时钟 / 月历 / 计时器 / 纪念日倒计时）
+   v3.15.x：补 14px 下边距——被用户添加到页面时与相邻卡片保持全站统一间距 */
+.desk-clock { padding:14px 16px; margin:0 0 14px; text-align:center; }
 .desk-clock .dc-time { font-size:32px; font-weight:700; letter-spacing:2px; color:var(--ink,#111); line-height:1.1; }
 .desk-clock .dc-date { font-size:12px; color:var(--muted,#888); margin-top:4px; }
-.desk-cal { padding:12px 14px; }
+.desk-cal { padding:12px 14px; margin:0 0 14px; }
 .desk-cal .dcal-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
 .desk-cal .dcal-title { font-size:13px; font-weight:600; color:var(--ink,#111); }
 .desk-cal .dcal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:2px; }
@@ -335,38 +354,42 @@
 .desk-cal .dcal-cell.has-msg::after { content:''; position:absolute; bottom:2px; left:50%; transform:translateX(-50%); width:4px; height:4px; border-radius:50%; background:#e88; }
 .desk-cal .dcal-cell.today.has-msg::after { background:#fff; }
 .desk-cal .dcal-cell:not(.empty):active { background:rgba(0,0,0,.08); }
-.desk-timer { padding:14px 16px; text-align:center; }
+.desk-timer { padding:14px 16px; margin:0 0 14px; text-align:center; }
 .desk-timer .dt-disp { font-size:28px; font-weight:700; letter-spacing:1px; color:var(--ink,#111); line-height:1.1; font-variant-numeric:tabular-nums; }
 .desk-timer .dt-mode-label { font-size:11px; color:var(--muted,#888); margin-top:4px; }
 .desk-timer .dt-controls { display:flex; gap:6px; margin-top:10px; }
 .desk-timer .dt-btn { flex:1; font-size:12px; padding:6px 0; border:1px solid rgba(0,0,0,.12); border-radius:8px; background:rgba(0,0,0,.03); color:var(--ink,#111); cursor:pointer; font-family:inherit; }
 .desk-timer .dt-btn:active { background:rgba(0,0,0,.08); }
-.desk-anniv { padding:14px 16px; text-align:center; }
+.desk-anniv { padding:14px 16px; margin:0 0 14px; text-align:center; }
 .desk-anniv .da-label { font-size:11px; color:var(--muted,#888); }
 .desk-anniv .da-days { font-size:26px; font-weight:700; color:var(--ink,#111); margin:2px 0; }
 .desk-anniv .da-name { font-size:12px; color:var(--muted,#666); }
+/* v3.15.x：经期卡去 2px 内缩全宽 + 下边距 16→14 与全站统一；
+   距顶 14px 由上方 [data-desk-widget]:first-child 规则提供（置于页首时），
+   被移到页中时不再叠加出 28px 大缝 */
 .desk-period { padding:18px 18px; text-align:center; cursor:pointer; white-space:nowrap;
-  margin:0 2px 16px; /* v3.13.x：经期卡底部加间隙，与下方 今日备忘/今天的心情（及他页组件节奏）对齐 */ }
+  margin:0 0 14px; }
 .desk-period .dpd-label { font-size:13px; color:#e85a8f; }
 .desk-period .dpd-days { font-size:34px; font-weight:700; color:#e85a8f; margin:4px 0; line-height:1.1; }
 .desk-period .dpd-sub { font-size:13px; color:var(--muted,#666); }
 
-/* v3.6.x：桌面图片组件——用户可上传多张图片到任意页，点击全屏查看 */
+/* v3.6.x：桌面图片组件——用户可上传多张图片到任意页，点击全屏查看
+   v3.15.x：上下边距 10→14 与卡片节奏统一 */
 .desk-image-widget {
-  position:relative; margin:10px 0; border-radius:var(--desk-card-radius,20px);
+  position:relative; margin:14px 0; border-radius:var(--desk-card-radius,20px);
   overflow:hidden; cursor:pointer; background:rgba(0,0,0,.04);
   box-shadow:0 4px 14px rgba(0,0,0,.06);
 }
 /* v3.7.x：自定义文字组件 */
 .desk-text-widget {
-  margin:10px 0; padding:14px 16px; text-align:center;
+  margin:14px 0; padding:14px 16px; text-align:center;
   background:var(--widget-bg,#fff); opacity:var(--widget-opacity,1);
   box-shadow:0 4px 14px rgba(0,0,0,.06); cursor:pointer;
 }
 .desk-text-widget p { margin:0; line-height:1.5; word-break:break-word; }
 /* v3.7.x：通用倒计时组件 */
 .desk-countdown-widget {
-  margin:10px 0; padding:14px 16px; text-align:center;
+  margin:14px 0; padding:14px 16px; text-align:center;
   background:var(--widget-bg,#fff); opacity:var(--widget-opacity,1);
   box-shadow:0 4px 14px rgba(0,0,0,.06); cursor:pointer;
 }
@@ -399,8 +422,12 @@
   background:rgba(255,255,255,.15); border-radius:50%;
 }
 
-/* ---- 音乐播放器小组件（第二页） ---- */
+/* ---- 音乐播放器小组件（第二页） ----
+   v3.15.x：min-height 190px 与首页纪念日卡（.deco-widget）同档——横滑翻页时
+   两页首卡上下边缘对齐；内容不足时 flex 垂直居中，不顶死 */
 .music-widget {
+  display:flex; flex-direction:column; justify-content:center;
+  min-height:190px;
   border-radius:22px; padding:13px; margin-top:14px; margin-bottom:14px;
   box-shadow:0 8px 20px rgba(0,0,0,.07);
   background:var(--widget-bg);
@@ -516,14 +543,16 @@
 /* ===== 第二页补充：今日备忘 / 今天的心情 / 本周日常 ===== */
 .memo-card, .mood-card { cursor:pointer; }
 .memo-card .mc-b, .mood-card .mc-b { font-size:12px; }
-.week-card { border-radius:20px; padding:14px; margin-bottom:14px; }
-.week-days { display:flex; gap:6px; margin-top:10px; }
+/* v3.15.x：本周日常压缩（padding 14→8、日期格 7→4）——高度 ~101px→~77px，
+   与首页「今日情话/已摸鱼」小卡行（~73px）同档，横滑时上下边缘基本对齐 */
+.week-card { border-radius:20px; padding:8px 14px; margin-bottom:14px; }
+.week-days { display:flex; gap:6px; margin-top:5px; }
 .week-day {
-  flex:1; text-align:center; padding:7px 0; border-radius:10px;
+  flex:1; text-align:center; padding:4px 0; border-radius:10px;
   background:rgba(0,0,0,.04); color:var(--muted); font-size:11px;
   cursor:pointer; -webkit-tap-highlight-color:transparent;
 }
-.week-day b { display:block; font-size:14px; color:var(--ink); margin-bottom:2px; }
+.week-day b { display:block; font-size:13px; color:var(--ink); margin-bottom:1px; }
 .week-day.today { background:var(--ink); color:#fff; cursor:default; }
 .week-day.today b { color:#fff; }
 .week-day:not(.today):active { background:rgba(0,0,0,.10); }

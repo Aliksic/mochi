@@ -2238,6 +2238,9 @@
     groups = loadGroups();
     refreshLibCounts(false);
     try { renderGroupsBar(); render(); } catch (e) {}
+    // v3.15.x：新桌面两把字卡键若被启动回填挂起，这里按需取回（用户正在切换查看
+    // 的场景才拉数据；见下方 hydrateScope 注释——绝不在启动链路/后台自动取回）
+    hydrateLibScopes(['public', 'own']);
   });
   // v3.11.x：For 系列同样合并公用字卡——朋友圈/信箱/群聊等按联系人取池时，
   // 公用字卡对该联系人生效（专属部分仍读各自桌面）
@@ -2408,7 +2411,8 @@
     if (!deferred || !window.idbHydrateKey) return Promise.resolve(false);
     try { if (curStore().get(curKey())) return Promise.resolve(false); } catch (e) {}
     try { toast('字卡较多，正在加载…'); } catch (e) {}
-    return window.idbHydrateKey(fullKey).catch(() => false);
+    // v3.15.x：统一走 hydrateScope（成功后自动清缓存/刷新角标与界面）
+    return hydrateScope(ccScope === 'public' ? 'public' : 'own');
   }
   function openCcPage(scope) {
     ccScope = scope === 'public' ? 'public' : 'own';
@@ -2426,6 +2430,7 @@
     hydrateCurScope().then(() => {
       groups = loadGroups();
       try { renderGroupsBar(); render(); } catch (e) {}
+      refreshLibCounts(false); // v3.15.x：懒加载取回后同步刷新列表页两行角标（此前停留 0 像「丢失」）
     });
   }
   // v3.11.x：离开自定义字卡管理页一律恢复专属作用域——回复池（getCustomCards/
@@ -2485,4 +2490,120 @@
       });
     });
   });
+
+  // v3.15.x：顶部两大分类 tab 显示字卡总数徽标——
+  // 汇总各自分区里全部条目的 .t 计数。各模块（quote-cards/p2-features/ta-ask/
+  // ck-question/ta-invite/loc-lib 及本文件公用·专属角标）会在加载与数据变化时
+  // 直写 .t 文本且时序不一（部分在 idbRestore 回填后），这里不逐个模块接线：
+  // MutationObserver 监听两个分区容器（subtree+childList+characterData），
+  // 防抖重算总和；徽标复用既有 .cc-tab-n 样式（含 dark.css 暗色适配与 .zero 灰化）。
+  (function ccTopTabTotals() {
+    if (!ccSectBtns.length) return;
+    function sectSum(el) {
+      if (!el) return 0;
+      let n = 0;
+      el.querySelectorAll('.chat-item .t').forEach(t => {
+        const v = parseInt(String(t.textContent == null ? '' : t.textContent).replace(/[^\d]/g, ''), 10);
+        if (!isNaN(v) && v > 0) n += v;
+      });
+      return n;
+    }
+    function renderTotals() {
+      ccSectBtns.forEach(btn => {
+        const k = btn.getAttribute('data-ccsect');
+        let em = btn.querySelector('.cc-tab-n');
+        if (!em) { em = document.createElement('em'); em.className = 'cc-tab-n'; btn.appendChild(em); }
+        const n = sectSum(ccSectBodies[k]);
+        em.textContent = n;
+        em.classList.toggle('zero', n <= 0);
+      });
+    }
+    let totalsTm = null;
+    if (typeof MutationObserver !== 'undefined') {
+      const mo = new MutationObserver(() => {
+        if (totalsTm) clearTimeout(totalsTm);
+        totalsTm = setTimeout(renderTotals, 120);
+      });
+      Object.keys(ccSectBodies).forEach(key => {
+        const el = ccSectBodies[key];
+        if (el) mo.observe(el, { subtree: true, childList: true, characterData: true });
+      });
+    }
+    renderTotals();
+    // 数据就绪后再刷一次（部分模块在 IDB 回填完成后才写计数）
+    document.addEventListener('mochi-restore-done', renderTotals);
+  })();
+
+  // ================= v3.15.x：挂起大键懒加载统一收口（修「公用字卡丢失」） =================
+  // 启动回填预算（idb.js v3.14.x OOM 防线）把大字卡库键挂起在 IndexedDB
+  // （__xyIdbDeferredKeys）时，store.get 三路（LS/内存/已驻留缓存）全空：
+  // 回复池、列表页角标、管理页在取回前一律读成空库——公用字卡看起来「丢了」，
+  // 尤其冷启动后切换桌面联系人再进字卡库（diag-public-cards-switch.mjs S2 复现：
+  // 角标停在 0，等 20s 也不会自己回来）。此前唯一取回路径是 openCcPage 的
+  // hydrateCurScope；列表页角标与回复池永远等不到数据。这里收口成一处：
+  //   ① 用户打开字卡库列表页（page-chatcard 显示）→ 顺序取回 公用键 + 当前桌面专属键；
+  //   ② 切换桌面联系人 → 同上（用户正在查看新桌面的场景）；
+  //   ③ 取回成功 → pubInvalidate + 按当前作用域重载界面 + 刷新列表页角标。
+  // 红线：绝不在启动链路/后台定时器自动取回——v3.14.x 预算系统就是为了防几十 MB
+  // 大键在无人查看时被拉进堆压崩低端机（27MB 公用库真机案例）；只在用户正在看的
+  // 场景按需拉一把，且多键顺序执行避免叠加峰值。会话内取回一次后常驻内存零开销。
+  const hydInflight = {};
+  function hydFullKey(scope) {
+    return scope === 'public' ? (PUB_PREFIX + ':' + PUB_KEY) : (window.activePrefix() + ':cc-groups');
+  }
+  function hydrateScope(scope) {
+    let fullKey = '', deferred = false;
+    try {
+      fullKey = hydFullKey(scope);
+      deferred = Array.isArray(window.__xyIdbDeferredKeys) && window.__xyIdbDeferredKeys.indexOf(fullKey) >= 0;
+    } catch (e) {}
+    // 不在挂起名单：要么已驻留（有数据），要么 IDB 本就没有此键——都不必取回
+    if (!deferred || !window.idbHydrateKey) return Promise.resolve(false);
+    if (hydInflight[fullKey]) return hydInflight[fullKey];
+    hydInflight[fullKey] = window.idbHydrateKey(fullKey).then(ok => {
+      delete hydInflight[fullKey];
+      if (!ok) return false;
+      pubInvalidate();
+      libCounts.pub = -1; libCounts.own = -1;
+      const scopeLive = (scope === 'public') ? (ccScope === 'public') : (ccScope === 'own');
+      if (scopeLive) {
+        try { groups = loadGroups(); renderGroupsBar(); render(); } catch (e) {}
+      }
+      refreshLibCounts(false);
+      return true;
+    }).catch(() => { delete hydInflight[fullKey]; return false; });
+    return hydInflight[fullKey];
+  }
+  function hydrateScopeIfEmpty(scope) {
+    try {
+      const has = scope === 'public' ? !!pubStore().get(PUB_KEY) : !!store.get('cc-groups');
+      if (has) return Promise.resolve(false); // 已有数据，无需取回
+    } catch (e) {}
+    return hydrateScope(scope);
+  }
+  let libHydChain = Promise.resolve();
+  function hydrateLibScopes(scopes) {
+    // 顺序链式取回（避免多把 MB 级大键同时进内存叠加峰值）
+    scopes.forEach(s => { libHydChain = libHydChain.then(() => hydrateScopeIfEmpty(s)).catch(() => {}); });
+    return libHydChain;
+  }
+  function libScopesDeferred(scopes) {
+    try {
+      const list = window.__xyIdbDeferredKeys;
+      if (!Array.isArray(list)) return false;
+      return scopes.some(s => list.indexOf(hydFullKey(s)) >= 0);
+    } catch (e) { return false; }
+  }
+  // 字卡库列表页每次显示时兜底取回（覆盖「冷启动直接进字卡库」「切完桌面进字卡库」）
+  (function () {
+    const libPage = document.getElementById('page-chatcard');
+    if (libPage && typeof MutationObserver !== 'undefined') {
+      new MutationObserver(() => {
+        if (!libPage.hidden && libScopesDeferred(['public', 'own'])) {
+          try { toast('字卡较多，正在加载…'); } catch (e) {}
+          hydrateLibScopes(['public', 'own']);
+        }
+      }).observe(libPage, { attributes: true, attributeFilter: ['hidden'] });
+    }
+  })();
 })();

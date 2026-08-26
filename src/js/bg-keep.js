@@ -131,12 +131,27 @@
   // 关键机制：Chrome 安卓的媒体通知条（通知栏"正在播放"）绑定到 HTMLMediaElement
   // （<audio>/<video>），Web Audio 的 AudioContext 振荡器【不触发媒体条】——这正是
   // 之前"音乐能显示媒体条、保活看不到"的原因。改用 <audio> 后媒体条正常显示、
-  // 后台不冻结。合成 1 秒极轻正弦波 WAV（220Hz，幅度 0.02，人耳几乎听不到）
+  // 后台不冻结。合成 1 秒极轻正弦波 WAV（220Hz）。
+  // v3.15.x：幅度按平台自适应——原固定幅度 0.02 × volume 0.05 ≈ -60dBFS，是按安卓
+  // Chrome「近零音量会被无声检测节流」调的下限；但 iPhone 扬声器灵敏、夜间环境安静，
+  // 实听是明显的周期性「嘟嘟嘟嘟」（1 秒 loop 接缝 + 持续低频纯音），用户报修
+  // 「不是静音音频」。iOS 无安卓那套无声节流，保活只要求「有非零样本在播」：
+  // iOS 把幅度降到 ±3 LSB 级（0.002 × 0.05 ≈ -80dBFS，任何扬声器物理不可闻，
+  // 但样本非零不构成数字静音）；安卓保持原值不动，防回归无声节流。
   let KEEP_AUDIO_DATAURL = '';
+  function kaIsIOS() {
+    try {
+      const ua = navigator.userAgent || '';
+      if (/iphone|ipad|ipod/i.test(ua) && !/android/i.test(ua)) return true;
+      if (/Macintosh/i.test(ua) && (navigator.maxTouchPoints || 0) > 1) return true; // iPadOS 桌面 UA
+    } catch (e) {}
+    return false;
+  }
   function ensureKeepAudioDataUrl() {
     if (KEEP_AUDIO_DATAURL) return KEEP_AUDIO_DATAURL;
     try {
       const sr = 44100, sec = 1, n = sr * sec;
+      const amp = kaIsIOS() ? 0.002 : 0.02;
       const buf = new ArrayBuffer(44 + n * 2);
       const dv = new DataView(buf);
       const ws = function (o, s) { for (let i = 0; i < s.length; i++) dv.setUint8(o + i, s.charCodeAt(i)); };
@@ -145,7 +160,7 @@
       dv.setUint32(24, sr, true); dv.setUint32(28, sr * 2, true); dv.setUint16(32, 2, true); dv.setUint16(34, 16, true);
       ws(36, 'data'); dv.setUint32(40, n * 2, true);
       for (let i = 0; i < n; i++) {
-        const v = Math.sin(2 * Math.PI * 220 * (i / sr)) * 0.02;
+        const v = Math.sin(2 * Math.PI * 220 * (i / sr)) * amp;
         dv.setInt16(44 + i * 2, Math.round(v * 32767), true);
       }
       const bytes = new Uint8Array(buf);

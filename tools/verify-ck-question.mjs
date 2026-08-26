@@ -125,8 +125,8 @@ const card1 = await evalJs(`(function(){
     idx: parent ? parent.dataset.idx : ''
   };
 })()`);
-check('查岗提示语进聊天', (await evalJs("(function(){return Array.from(document.querySelectorAll('#chat-body *')).some(function(el){return el.childNodes.length===1&&el.childNodes[0].nodeType===3&&el.textContent.trim()==='TA 来查岗了。';});})()")) === true);
-check('单选查岗卡渲染（含选项提示）', !!card1 && card1.tip === '点击选择你的答案', card1 ? 'idx=' + card1.idx + ' tip=' + card1.tip : 'card not found');
+check('寻踪提示语进聊天', (await evalJs("(function(){return Array.from(document.querySelectorAll('#chat-body *')).some(function(el){return el.childNodes.length===1&&el.childNodes[0].nodeType===3&&el.textContent.trim()==='TA 来寻踪了。';});})()")) === true);
+check('单选寻踪卡渲染（含选项提示）', !!card1 && card1.tip === '点击选择你的答案', card1 ? 'idx=' + card1.idx + ' tip=' + card1.tip : 'card not found');
 
 // ---- 2. 单选卡就地点选 ----
 const optTxt = await evalJs(`(function(){
@@ -231,7 +231,7 @@ const modal1 = await evalJs(`(function(){
     noInput: !(document.querySelector('#modal-mask input[type=text], .modal input[type=text]'))
   };
 })()`);
-check('查岗自动弹窗出现（标题+问题+选项）', !!modal1 && modal1.title === '查岗回答' && modal1.static.indexOf('现在在哪里呀') >= 0 && modal1.pills.length === 5, modal1 ? JSON.stringify(modal1) : 'modal not shown');
+check('寻踪自动弹窗出现（标题+问题+选项）', !!modal1 && modal1.title === '寻踪回答' && modal1.static.indexOf('现在在哪里呀') >= 0 && modal1.pills.length === 5, modal1 ? JSON.stringify(modal1) : 'modal not shown');
 await evalJs(`(function(){
   const b = Array.from(document.querySelectorAll('.pill')).find(x => x.textContent.trim() === '在被窝里');
   if (b) b.click();

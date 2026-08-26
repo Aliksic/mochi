@@ -2,6 +2,132 @@
 
 两个 AI 不能直接对话，开工/完工时在这里各留一行，让对方打开仓库就知道当前状态。
 
+### 2026-08-26 17:1x（✅ 完成·心意币余额行改「向 Mochi 申请」申请制——打款累加入账，不再直接改数值——用户需求）
+- [本会话·完成]（**已改 src/js/chat.js rpEditWallet + src/js/gift-shop.js walletText/giftEditWallet（两处同构，纯文案+累加逻辑，无存储结构变化）；tools/verify-unified-heart-wallet.mjs 同步更新到申请制口径 13/13；已构建（17:09, index.html 2,823,067 字节）+ 布局 verify 10/10 + verify-gift-market-v3 回归 0 FAIL 全绿；未提交**）。
+  - **交互变化**：红包面板余额行 / 市集 hero 余额行 / 送礼面板余额行点击后不再是「修改心意币（元）直接设置」，改为弹「向 Mochi 申请心意币」——胶囊选收款方（我的心意币 / TA 的心意币），输入申请金额点【申请】即模拟 Mochi 打款并**累加**进共用账本 gift-wallet（toast「Mochi 已打款，XX的心意币 +¥66.66」），保存一侧不关窗自动翻转到另一侧连填（ctl.stay 两阶段同前），留空点【完成】结束；非法金额（≤0）拦截提示「申请金额需大于 0」。余额行尾部提示同步改「点此向 Mochi 申请」。**只能加不能减**：如需调小余额暂无入口（用户明确要求非直接修改）。
+  - 验证：verify-unified-heart-wallet.mjs 13/13（E 组断言标题/【申请】按钮/50000+6666=56666、60000+8888=68888 累加落库且 rp-wallet 不动/+¥88.88 toast/留空关闭/N 组 ≤0 拦截/S 组发红包仍从同一账本扣减/F2 断言产物已无「修改心意币（元）」「修改钱包金额（元）」等旧直改文案）。真机确认点：红包与市集任一入口申请后另一侧余额同步增加；TA 名胶囊显示正常。
+  - ⚠️ tools/verify-wallet-edit.mjs 自此 FAIL（其静态断言要求存在「修改钱包金额（元）」直改弹窗）——属预期作废，回归以 verify-unified-heart-wallet.mjs 为准；verify-gift-wallet-split / verify-rp-wallet-edit 同前条一样已被推翻。
+  - ⚠️ **构建扫入说明**：17:09 构建整体收口工作区现状，含并行会话已保存改动（漂流瓶 drift-bottle.js/.css + template/build/tabs/default-cards 接线、四子棋 connect-four.js、心意柜 more-giftbox 等）；构建前全仓 src/js node --check 通过。此后各会话若有改动请重新 build 收口。
+
+### 2026-08-26 17:0x（✅ 新功能·聊天更多功能【互动】新增「漂流瓶」——两个世界之间的海）
+- [本会话·完成]（**已改 src：新增 src/js/drift-bottle.js + src/css/drift-bottle.css（均 AI-A 业务域）；跨域登记/接线小改请构建者知悉：src/template.html（more-drift 按钮归 data-mcat="chat" 互动类 + page-drift 页面锚点）、build.mjs（cssFiles/jsFiles 各注册一项）、src/js/tabs.js（FULL_PAGES 加 page-drift 一词）；default-cards-data.js 尾部独立语句 DEFAULT_CARD_DATA.drift 三组 + default-cards.js 功能 tab 数组加 ['drift','漂流瓶'] 一项（同文件并行改动互不重叠，只动了自己那几行）；新专项 tools/verify-drift-bottle.mjs **31/31 全绿**；回归 verify-group-decision 13/13 全绿。**未构建未提交**——按协议留给构建者统一收口（memo-arc.js 等并行会话文件静默后执行 node build.mjs）。**
+  - **玩法（对齐用户设计文档，无 AI、纯字卡库+代码随机）**：捡一个 → 概率出瓶（普通60/空瓶·小物25/特殊10/TA5）→ 开瓶纸条卡（TA 瓶带「—— TA名」签名+头像语义、特殊瓶 ✨+🪙+5、小物瓶 🌸🐚🪶 等、漂回瓶 🕰「这是你以前写下的话」）；【我也放一个】openModal textarea → 排期 36~96h 后 70% 概率「漂回来」进下一瓶队列 + 45% 概率 6~40h 后生成「TA的回应」瓶并给聊天发一次性轻提示（chatAddIn tag:'漂流瓶'，stub 验证恰好一次）。
+  - **防刷机制**：TA 瓶每日上限 3；今天聊天互动多→TA 概率 5→9%；距上次来访 ≥48h 且当日还没见过 TA 瓶→首捡 TA 权重提到 26（"很久没来，TA刚漂来一只"）；捡瓶 20s 冷却倒计时；心意币=每日首捡+2/特殊+5/每日上限10，直接写 gift-wallet 同一本账（与心意集市/红包共用，只加我的余额）。
+  - **字卡库联动**：【系统预设字卡】新增「漂流瓶」tab（TA的话14/TA的回应10/海风16 张可逐张开关 dc-off-drift:*），getLibPool('drift',分组,兜底) 同源抽取＋isDefaultCardOff 过滤，全关回退内置兜底。
+  - **页面结构**：海面场景（昼夜切换 19:00~6:00 夜色+🌙、双层错速波浪 CSS 动画、随浪起伏小瓶、捡瓶时 dsArrive 漂近动画）+ 统计行（我放入 X · TA漂来 Y · 收藏 Z）+ 三 tab 记录列表（我的瓶子/捡到的/收藏，行内 ♡ 收藏切换）+ 右上 info 说明弹窗；prefers-reduced-motion 全关动画；dark 模式自带兜底覆盖。
+  - **数据**：`xy-home-v2:<cid>:drift-data` 按联系人桌面隔离（activeStore + idbSet 镜像回填，room/garden 同款；键带冒号命名空间，无需 contacts.js EXCLUDE 登记）；mine cap 50 / got cap 120。
+  - chat.js **零改动**（入口绑定在 drift-bottle.js 内自完成，more-room 同款先例）；mobile-adapt.js 零改动（整页 .page 非浮层，不需 FLOAT_SELECTORS/kbDockPanels 登记）。
+  - 测试钩子（极小面）：window.__driftNext(kind) 强制下一瓶类型 / __driftState() 只读快照，供专项脚本驯化随机。
+  - 真机确认点：①聊天更多功能【互动】出现「漂流瓶」，进入见海面场景、返回回聊天；②捡一个出各色瓶子、首捡 +2 心意币、20s 冷却；③放一个瓶子后等回应/漂回排期到点再开页可见；④字卡库→系统预设字卡有「漂流瓶」tab 可逐张关；⑤夜晚（19点后）海面变夜色有月亮。
+
+
+### 2026-08-26 16:5x（✅ 用户需求·更多功能【小游戏】里新增【四子棋】——梦角行为随机化双人棋盘）
+- [本会话·完成]（**已改 src：新增 src/js/connect-four.js + src/css/chat-pages.css 末尾追加 .c4-* 样式段（均 AI-A 业务域）+ 跨域登记三处请知悉：src/template.html（more-grid 加 #more-c4 按钮 data-mcat=game + 打砖块面板后插 #chat-c4-panel 半框，纯静态锚点）、build.mjs（jsFiles 注册 'connect-four.js' 一词，紧跟 breakout.js）、src/js/mobile-adapt.js（FLOAT_PANEL_SELECTORS/FLOAT_SELECTORS 两列表各加 '#chat-c4-panel'）；**chat.js 零改动**——入口绑定与兄弟浮层互斥 MutationObserver 都在本文件内完成（group-decision 同款模式）。新增专项 tools/verify-connect-four.mjs **30/30 连跑 4 次全绿**；未构建未提交**）。
+  - **玩法**：7×6 经典落子棋盘（点列落子+下落动画+落子期锁输入），你执🔵 TA 执🟡，四连（横/竖/斜）即胜；满列点击抖动提示；结束覆盖层=结果+本局手数+累计战绩+下一局先手，【再来一局】【结束游戏】双按钮。
+  - **梦角行为随机系统（核心需求，无难度选择无 AI 搜索）**：每回合掷一次行为状态——正常50%/认真20%/放水15%/失误15%（verify 断言分布±6%）；认真≈必赢+90%堵、正常≈60%赢/62%堵（普通人）、放水=把能赢/该堵的列从候选剔除(80%/75%)、失误=纯随机+35%概率往上次落点相近列凑。只有一步判断，无 Minimax/预测。
+  - **底线保护（随机≠乱下）**：玩家「将四」威胁被连续无视满 3 次 → 第 4 次任何状态必堵；且强制堵不重置计数（同列叠子威胁持续时不装看不见），真实堵上才清零。
+  - **其他约定落地**：不做难度选择 UI，只提示「TA今天的状态是随机的」；先手规则=首局玩家先手→之后上局输家先手→平局随机；战绩按联系人桌面存 `:c4-stats`（w/l/d/nextFirst）；结果写聊天系统消息「四子棋 · 你赢/TA赢/平局」+ TA 随机回应（复用字卡库 游戏胜利/失败/平局·回应 分组，同贪吃蛇语义）；音效 Web Audio 合成（0.12~0.2，v3.15 音量标准）可静音；关闭半框保留对局、重开接着玩；切联系人自动关。
+  - **实现注意**：棋子下落动画用元素级 transform 过渡（非整页缩放，红线无违反）；格子尺寸 JS 计算（不依赖 aspect-ratio，兼容旧 webview）；`__c4Debug` 只读调试口（st/pick/floor/rollMode/fast），pick 为纯函数、底线在 taMove 里 applyFloor——改逻辑别把状态又塞回 pick。
+  - ⚠️ **构建扫入说明**：本会话未构建。工作区仍有并行会话大量未提交 src 改动（snake-game.js 16:38、template.html 16:32、mobile-adapt.js 16:31 等仍在活动），构建者收口前请按协议 git status/diff 确认对方保存完整后统一 `node build.mjs` + `npm run verify` 布局回归，随本批一起 v3.16.x 提交。
+  - 真机确认点：①聊天→更多功能→小游戏分类出现「四子棋」，点开底部半框开始对局正常；②手机竖屏棋盘 7 列铺满不溢出、棋子下落动画流畅；③多玩几局感受 TA 忽好忽坏（会突然放水/失误但不会整局装死）；④结束后聊天里出现「四子棋 · …」系统卡片和 TA 回应；⑤暗色模式棋盘/弹层可读。
+
+### 2026-08-26 17:1x（✅ 修复·字卡库【可自定义字卡】的【桌面今日情话】【查岗日常】把系统预设错误显示进「我的添加」——用户反馈）
+- [本会话·完成]（**已改 src/js/quote-cards.js + src/js/p2-features.js（均 AI-A 域，各加一段启动清洗 IIFE）；新增 tools/verify-cc-mine-clean.mjs 14/14 全绿；未构建未提交——请构建者随本批一起 node build.mjs 收口**）。
+  - **根因（存量数据，非现行为）**：无头复现确认——当前代码的「我的添加」页/入口计数/双 tab 全部正确（干净数据下为空）；但更早版本的管理页在删除/编辑时会把「默认 46 句情话 / 默认地点·在做什么·说的话」整库回写进自定义键（getQuotes/ckList 空 fallback 的"转正"问题）。v3.6.x 已堵住新产生，**但没清存量**——老用户自定义键里永久躺着系统预设，【可自定义字卡】的「今日情话·我的添加」「查岗日常·我的添加」即错误显示预设字卡、入口计数虚高。
+  - **修复**：两文件各加一段启动一次性清洗（幂等标记 `quote-mine-clean-v1` / `ck-mine-clean-v1`，存联系人命名空间=按桌面各清一次）：按文本匹配把 DEFAULT_QUOTES / DEF_PLACES / DEF_ACTIONS / DEF_CHECK_MSGS 从 `quote-cards`、`checkin-cards-place/action/msg` 剔除，用户自建句与分组字段（grp）原样保留。store.set 三写 memoryCache/LS/IDB + idbRestore 的 memoryCache 守卫 → 回填不会复活已清洗旧值；标记为命名空间键，无需 contacts.js EXCLUDE 登记。按文本认预设与全站既有模型一致（isCkCardOff/genCheckin/isDefaultQuote 均按文本）。
+  - 验证：verify-cc-mine-clean.mjs **14/14**（A 组污染清洗 6 项：预设剔除/用户句保留/标记落盘/计数恢复/两页只剩用户句含查岗三分类；B 组回归 4 项：预设池 46 句与查岗 10 句完整、getQuoteOfDay/查岗生成不受影响；C 组刷新幂等不复活；D 组干净用户与全新用户零扰动；E 无 JS 异常）。测试脚本自组装 src 页（注意 read 路径要带 src/css/、src/js/ 前缀；场景隔离要 localStorage.clear()+indexedDB.deleteDatabase 一并做）。
+  - 真机确认点：升级后进字卡库→可自定义字卡，「今日情话·我的添加」「查岗日常·我的添加」应只剩用户自己添加的条目、计数恢复真实值；系统预设字卡区的「桌面今日情话」「查岗日常字卡」照常 46/26 句可开关。若手机仍见旧现象，先杀掉 PWA 重开触发 SW 更新。
+
+
+### 2026-08-26 17:0x（✅ 修复·切换桌面联系人后字卡库【公用字卡】显示丢失——用户反馈）
+- [本会话·完成]（**已改 src/js/chatcard.js（AI-A 域，仅此一个功能文件）；新增 tools/diag-public-cards-switch.mjs 20/20 全绿；未构建未提交——请构建者随本批一起 node build.mjs 收口**）。
+  - **根因（大库懒加载盲区，非数据丢失）**：公用字卡键 xy-home-v2:cc-groups-public 超过启动回填内存预算时被 idb.js v3.14.x OOM 防线挂起在 IDB（__xyIdbDeferredKeys），此时 store.get 三路全空——回复池、列表页「公用字卡」角标、管理页全部读成空库，看起来像「切了桌面公用字卡就没了」。此前唯一取回路径是 openCcPage 的 hydrateCurScope：列表页角标停在 0 等 20s 也不会自己回来（diag S2 复现）、TA 回复池也一直缺公用卡；小库用户不受影响（diag S1 全绿）。重度用户（如 vivo Edge 27MB 公用语音库）每次冷启动都命中。
+  - **修复**：chatcard.js 末尾新增挂起大键懒加载统一收口——①hydrateScope(scope) 带去重 in-flight，成功后 pubInvalidate+按当前作用域重载界面+刷新列表页两行角标；②触发点=字卡库列表页每次显示（MutationObserver）+ contact-switched（覆盖用户原始路径「冷启动→直接切桌面」）+ openCcPage（原有路径改走同一收口）；③多键顺序链式取回防叠加峰值。红线遵守：绝不在启动链路/后台定时器自动取回——只在用户正在看的场景按需拉一把，不破坏 v3.14.x 预算系统（27MB 大库真机崩溃前科）。
+  - 验证：diag-public-cards-switch **20/20**（S1 小库双桌面互切无回归 / S2 大库挂起→列表页自动水合角标0→260+回复池补齐+切桌面不丢 / S3 冷启动挂起期直接切桌面 0.5s 补齐）；回归 verify-cc-scope 27/27、verify-data-loss 11/11、verify-poke-emoji-tabs 15/15、verify-gc-pool-scope 10/10、diag-pool-scope 5/5 全绿。真机确认点：大字卡库设备冷启动后进字卡库/切桌面，「公用字卡」角标与内容应在一两秒内出现（会有「字卡较多，正在加载…」提示）；TA 自动回复应能用公用字卡。
+  - ⚠️ 构建者注意：16:33/16:35 两笔构建产物曾整页 JS 挂掉（SyntaxError @ memo-arc.js 段）——系保存瞬间读到半截文件（与下方 16:4x 条目排查备注同因），本轮 diag 改从 src 自组装页面绕开；提交前请务必重新 node build.mjs 并跑一次布局 verify 确认产物健康。
+
+### 2026-08-26（✅ 完成·【梦角档案】v2 重构为 9 分区——用户详细规格；与【我的档案】形成镜像关系）
+- [本会话·完成]（**已改 src/js/memo-arc.js（全量重写，927 行）+ src/css/memo-arc.css（追加 v2 样式段）；删除 tools/verify-memo-arc.mjs（旧 IA 断言全部失效，由新脚本取代）；新增 tools/verify-narc-v2.mjs 59/59 全绿；未构建未提交，请构建者随并行改动统一收口**）。
+  - **新结构（9 分区总览菜单替代原横滑 navchip）**：TA是谁 / TA的喜好 / TA的习惯 / TA与我的相处 / **我对TA的了解（核心徽章）** / TA的位置感 / TA的物品 / 我们的共同记录 / 当前IF世界。定位：【我的档案】=认识自己；梦角档案=认识TA——「TA是谁，以及我逐渐了解到TA什么」。
+  - **数据零迁移丢失**：键仍 `xy-home-v2:narc-<rosterId>`；旧 `loves`（了解卡）/`wonders`/`history`/`bonds`/`moments`/`records` 全部原地沿用——loves 惰性规范化补 `src`(我认为/TA告诉我的/我观察到的/已确认)+`dots`(●●●○○ 五格了解程度，非好感度)，level/why 原字段保留；wonders→还不了解、history→理解变化 并入「我对TA的了解」子标签；bonds 扩展 cat（first/habit/secret/day/thing/place）+ 新增「时间线」合并视图（bonds+moments+records 按 created 倒序，相处记录保留⭐切换）。新容器 who/tastes/habits/relate/pos/things/ifw/ifchanges 由 ensureArc 惰性补齐。
+  - **发现卡片（核心特色）**：5 阶段弹窗链路 类型→内容→备注→来源→程度（程度预选随来源联动：think2/told4/seen3/confirmed5）；10 个新类型词表（我发现TA喜欢…/TA只在我面前…/让我意外的地方…等），旧 13 类映射保留照常渲染。
+  - **⚠️ 弹窗机制要点（对方写多阶段弹窗必读）**：离开胶囊阶段必须显式 `ctl.pills([])`——personalize 的 fire() pills 分支按 pillClicked 判断，胶囊残留会让下一阶段点确定收到旧值（旧版 addKnow 存在此隐患，本版已修并有 P3c 回归断言）；solveWonder「也记为了解」链式开新弹窗改 setTimeout(0)（外层 finally close 清 cb，room.js 同款教训）。
+  - **给【我的档案】会话的对接说明**：当前仓库尚无【我的档案】，本档案已按镜像预留——TA是谁↔关于我、TA的喜好↔我的喜好、TA的习惯↔我的习惯、TA与我的相处↔我和TA、我对TA的了解↔我对自己的描述、当前IF世界只记「TA在这一侧」（世界母档预期放【我的档案·IF世界】，页面文案已如此引导）；双向记录不自动互写。对方落地后如需本侧读取母档再对接。
+  - 验证：verify-narc-v2.mjs **59/59**（S 组静态 3 + P1 总览菜单顺序/核心徽章 + P2 字段编辑 + P3 分类两阶段 + P4 习惯 + P5 旧数据兼容渲染（类型标签/src 规范化/圆点 ●●●○○）+ P6 五阶段全链路含 ctl.pills([]) 回归 + P7 还不了解/理解变化 + P8 位置感 + P9 物品 + P10 时间线合并与特别日子 + P11 IF世界 + P12 刷新持久化 + P13 零 JS 异常 + P14 暂不适用/恢复）。
+  - 真机确认点：①第三页进梦角档案应为「英雄区+9 行分区菜单」，进分区后左上「‹ 返回总览」；②TA是谁三组 17 个字段点击即改、空态显示灰色引导语；③喜好·喜欢走分类胶囊→内容两步；④发现卡片新增五步流程、卡片右上来源徽章+●○圆点；⑤共同记录·时间线能看到旧的第一次/重要时刻/相处记录合并排序；⑥IF世界四字段+变化列表；⑦老用户升级后原有了解卡/疑问/历史一条不少。
+
+### 2026-08-26 16:5x（✅ 完成·红包金额与心意集市心意币统一为同一个数值 + 红包侧的钱改叫「心意币」——用户需求）
+- [本会话·完成]（**已改 src/js/chat.js（红包账本切共用键+全套文案）+ src/template.html（红包自定义金额占位一处）+ src/js/gift-shop.js（仅头部拆分注释更新为统一说明，零逻辑改动）；新增 tools/verify-unified-heart-wallet.mjs 13/13；已构建（16:48, sw: mochi-mt9uqd9v）+ 布局 verify 10/10 + 回归 verify-gift-market-v3 23/23 全绿；未提交**）。
+  - **①账本重新统一**：红包钱包从独立键 `rp-wallet` 切回与市集共用的 `gift-wallet`（chat.js `RP_WALLET_KEY='gift-wallet'`；rpWalletGet 首次读取 gift-wallet 缺失时一次性继承 rp-wallet 当前余额并落盘，与 gift-shop.js walletGet 同构）——发/收/退回/过期红包、TA 自动红包与送礼物全部读写同一本心意币账，任一侧变动另一侧立即可见。注意：若拆分期间（v3.12.x~本版前）两本账各自变过，统一后以 gift-wallet（心意币）为准，rp-wallet 仅作老数据迁移种子、不再被读写更新。
+  - **②文案改口径**：红包面板余额行 →「心意币 ¥.. · <联系人名> ¥.. · 点此设置金额」（对齐市集 walletText）；编辑弹窗「修改钱包金额（元）」→「修改心意币（元）」、胶囊「我的心意币 / <TA> 的心意币」、toast「XX已更新」；余额不足提示「我/TA 的心意币不足」；红包消息卡片标签「红包 · 心意币」；领取/退回系统消息改「你领取了红包（心意币 ¥5.20）」格式；自定义金额占位「输入金额（心意币），0 为心意红包」。template.html 其余改动（more-giftbox 按钮）属并行会话，本会话只动了 rp-custom 一行。
+  - 验证：verify-unified-heart-wallet.mjs **13/13**（老数据迁移继承落盘/红包读共用账本且忽略 rp-wallet 残值/编辑弹窗双胶囊连填写 gift-wallet 且 rp-wallet 不动/负数拦截/发红包扣减共用账本 myBalance/卡片新标签/领取新格式消息/产物静态断言×2/全程无 JS 异常）+ 布局 verify 10/10 + verify-gift-market-v3 回归 23/23。真机确认点：红包面板与心意市集显示同一余额，任一侧收发/设置金额另一侧打开即同步；发红包扣的是心意币；升级后红包侧余额=心意币余额。
+  - ⚠️ 旧专项 tools/verify-rp-wallet-edit.mjs、verify-gift-wallet-split.mjs、verify-wallet-edit.mjs 断言的「拆分/钱包」口径已被本需求推翻，回归以 verify-unified-heart-wallet.mjs 为准。
+  - ⚠️ **构建扫入说明**：16:48 构建按工作区现状整体收口，包含并行会话已保存改动（iOS 键盘停靠+保活音修复 base.css/mobile-adapt.js/bg-keep.js、心意柜快捷入口 template.html/gift-shop.js、snake-game/home.css/chat-pages.css/memo-arc/cjian/ck-question 等 27 文件）。构建前全仓 src/js node --check 通过；此后若各会话仍有改动请重新 build 收口。
+
+### 2026-08-26 16:4x（✅ 用户需求·聊天更多功能【互动】新增【心意柜】快捷按钮，放在【心意集市】右边）
+- [本会话·完成]（**已改 src/template.html（more-giftbox 按钮，接上一条心意集市改名）+ src/js/gift-shop.js 三处接线；新增 tools/verify-giftbox-more.mjs 16/16 全绿；未构建未提交——请构建者随本批一起 `node build.mjs` 收口**）。
+  - 入口：`#more-giftbox`（data-mcat=chat，图标沿用桌面心意柜 BOX_SVG 同款礼盒线稿）。点击收起更多面板 → `window.__giftboxFrom='chat'` → 复用 gift-shop 的 openPage 打开心意柜全屏页（room.js __roomFrom 同款模式）。
+  - 返回键分流：聊天入口进入→返回回 page-chat（syncChrome 自动恢复聊天页全屏 chrome：tabbar 隐藏+无状态栏，属 FULL_PAGES 正常态）；桌面图标进入→照旧 backHome 回主页；桌面图标点击时清 __giftboxFrom 防串。
+  - chat.js 零改动（绑定在 gift-shop.js init 内自完成）；verify-market-desk/wallet 系列脚本断言均不受影响（无「送礼物」字样断言，走 more-gift/app-giftbox id）。
+  - ⚠️ 给并行会话/构建者知悉：git diff 里 gift-shop.js 顶部 v3.12.x→v3.15.x 钱包注释改动与 template.html rp-custom placeholder 改动是**对方会话更早已在工作区的未提交内容**（我开工前已存在），非本轮所改，提交时按协议一并自查。
+  - 排查备注：首轮冒烟曾整页 JS 挂掉（SyntaxError: Unexpected token 'catch'）——复现为**并行会话保存文件的瞬间读到了半截 memo-arc.js**（WORKLOG 既有同类前科），稍后重读即恢复正常，非代码问题。真机确认点：①聊天→更多功能→互动 tab，「心意柜」应显示在「心意集市」右侧，点开是心意柜全屏页（收到/送出统计正常）；②左上角返回应回到聊天页而不是手机主页；③从桌面第三页点心意柜图标进入，返回仍回主页。
+
+### 2026-08-26 17:1x（✅ 用户反馈·【系统预设字卡】喝水/房间/同频/伸手/花园 找不到 + 此间 从未入库——功能类 tab 连排最前 + 新增「此间」分组）
+- [本会话·完成]（**已改 src/js/default-cards.js + src/js/default-cards-data.js + src/js/cjian.js（均 AI-A 域）+ 新专项 tools/verify-cjian-lib.mjs 13/13 + tools/verify-period-care.mjs A3/C10 更新后复跑 32/32；未构建未提交**）。
+  - **排查**：喝水(water)/房间(room)/同频(sync)/伸手(reach)/花园(garden) 五个 tab **早已存在且已随 HEAD 部署**，用户端看不到大概率仍是旧版 SW 缓存未更新；「此间(cjian)」则确实从未有预设池入库。另上一轮对 default-cards.js 的 摸鱼/吃饭/经期 改名**曾被并行会话旧缓冲整包回写覆盖丢失一次**（既有横幅同款事故），本轮已重打并升级。
+  - **改动①（default-cards.js）**：全部功能触发字卡 tab 合并为一个连排块、紧跟四大基础分类最先注入——顺序：主字卡 颜文字 emoji 拍一拍 | **摸鱼 吃饭 经期 喝水 花园 同频 伸手 此间 房间 存钱罐** | 互动回应（末位），共 15 个 tab；打开页面第一屏即可看到所有功能分类。
+  - **改动②（default-cards-data.js）**：新增 `DEFAULT_CARD_DATA.cjian` 四组 17 条——「在场感知」5 /「空闲状态」6（此间固定状态说明文案，供查看）/「感知·气息」4 /「感知·落空」2（感应随机播报句）。
+  - **改动③（cjian.js）**：新增 `cjLine(分组, 兜底)` 助手——点「感应」的播报句改走库内池（getLibPool('cjian',…) 同源抽取 + isDefaultCardOff('cjian',…) 过滤已关卡片，全关回退内置兜底），与 room/garden 同模式；状态机零改动。
+  - 验证：verify-cjian-lib.mjs **13/13**（静态 6 + 运行时 7：此间 tab 渲染四组 17 张/单卡开关写 dc-off-cjian/感应输出走库内探针句/逐张关闭后回退内置兜底句/落空分支同源）；verify-period-care.mjs 复跑 **32/32**（C10 改按新 15-tab 全序比对且全部在 390px 视口内）。⚠️ verify-eat-remind.mjs 的 S 组读构建产物，需重新 node build.mjs 后复跑（预期 12/12）。
+  - ⚠️ **给提交者**：① 提交前请 git diff 自查 src/js/default-cards.js 确认含功能 tab 连排块（防再次被旧缓冲覆盖）；② 工作区 memo-arc.js 曾出现截断半成品态导致拼接页整包 JS 失效（已恢复），构建前请再跑一轮全量 node --check；③ build.mjs 占位符 replace bug 已由对方会话修复，本会话验证脚本组装不受影响。
+  - 真机确认点：字卡库→【系统预设字卡】第一屏折行区应直接看到 摸鱼/吃饭/经期/喝水/花园/同频/伸手/此间/房间/存钱罐 全部胶囊；「此间」tab 可查看 17 张并可逐张开关（关掉「感知·气息」某句后感应不再抽到它，全关回退原句）；若手机仍缺这些分类，杀掉 PWA 重开触发 SW 更新。
+
+### 🚨 2026-08-26 16:1x→17:0x（✅ 完成·iPhone 主屏幕 standalone 键盘盖输入栏 + 保活音频嘟嘟声 两项修复；⚠️ 本会话改动曾被旧缓冲回写覆盖一次）
+- [本会话·完成]（**已改 src/css/base.css + src/js/mobile-adapt.js + src/js/bg-keep.js（均 AI-B 域）；breakout.js 未改（并行会话版本已自行修 TDZ）；新增 tools/verify-ios-pwa-kbd.mjs 16/16×2；已构建（16:41, sw: mochi-mt9uhbr6）+ 布局 verify 10/10 + verify-ios-typing-flash 9/9 + verify-bg-notify-dedup 13/13 全绿；未提交**）。
+  - **②键盘根因（只有主屏幕打开才坏）**：base.css `.ios-pwa-standalone .phone { min-height:100vh }` 把 syncIosKb 键盘期内联 height 钳在全屏高（内联赢得 height、赢不了 min-height）→ standalone 模式 .phone 永不收缩 → 键盘整块盖住聊天输入栏；普通 Safari 标签页无此类所以正常。修复三件套：① base.css 去掉该 min-height（默认占满由 height:100vh 保证）；② mobile-adapt.js 停靠时内联 minHeight='0' 双保险（restoreKb/_iProvClear 还原）；③ 新增 _ensureInputDocked() 停靠结果验收自愈——250ms 轮询发现聚焦输入栏 bottom 仍在 vv.height 之下就按超出量追加收缩（+2px 容差防打架、45% 基准防压瘪），未来任何来源的高度钳制都兜得住。
+  - **①保活音频**：bg-keep.js 幅度平台自适应 kaIsIOS()：iOS 0.002（±3LSB≈-80dBFS 物理不可闻，样本非零不构成数字静音、保活语义不变）、安卓保持 0.02 不动（防回归 Chrome 无声节流）。
+  - **顺带发现**：HEAD 部署产物 breakout.js 有 TDZ「Cannot access 'clamp' before initialization」→ 线上打砖块加载即死；当前工作区版本已自行修复（R2 用例哨兵）。
+  - ⚠️ **留给对方（memo-arc/snake/brick 动态场地域）**：tools/verify-brick.mjs 当前约 20~21/24，失败集中在 T4 拖动挡板、T-FS4/4b/5 全屏场地铺满与恢复——本会话未触碰 breakout.js，请收口时自查。
+  - **⚠️ 覆盖事故记录**：16:2x 本会话上述三个文件曾被编辑器旧缓冲整文件保存回退成 HEAD 版（同 00:05/12:05 事故模式），已重放修复；A1-A5 静态断言即覆盖哨兵，提交前请复跑确认全绿。另本条目首次写入后曾被并行会话 WORKLOG 整文件覆盖丢失，此为重插版——各方保存 WORKLOG 前先从磁盘重读、追加而非整文件替换。
+  - 真机确认点：①iPhone 主屏幕图标打开 → 聊天打字，输入栏应停在键盘正上方、不闪跳不卡；②Safari 普通标签页同样回归；③夜间安静环境开保活听不到任何嘟嘟声、通知栏媒体条仍在；④安卓保活/音乐共存行为不变。脚本含「解析守卫」（单 script 中语法不完整的并行 WIP 文件显式 skip 并 WARN），终跑零跳过。
+
+### 2026-08-26 16:5x（✅ 用户需求·【查岗】功能全局更名【寻踪】 + 🐛 build.mjs 占位符注入根因修复）
+- [本会话·完成]（**已改 src：template.html / p2-features.js / ck-question.js / personalize.js 全部用户可见「查岗」→「寻踪」（含桌面图标名、页面标题、更多功能入口、聊天头像半框标题、字卡库两管理页、回复设置面板、license 介绍页）；records.js 为上一任务摸鱼抓包记录文件未动改名。**ID/存储键全部不变**（ck-*、checkin-history、ckq-*、dc-off-* 等），存量数据与开关联动零影响；预设题库句子内容不动（dc-off 键含文案）。tools/verify-ck-question.mjs（提示语/弹窗标题断言）+ tools/verify-ta-checkin.mjs（__cardSearchFns 名字过滤）已同步更新。**已构建（16:4x~16:5x, sw: mochi-mt9u7eet 之后又一版）+ verify-ck-question 18/18 + verify-ta-checkin 30/30 + 布局 verify 10/10 + 回归 verify-fish-catch-record 16/16、verify-group-decision 13/13 全绿；未提交**）。
+  - **🐛 build.mjs 根因修复（重要，所有会话受益）**：`html.replace('/*__SCRIPTS__*/', scripts)` 用字符串作替换值时，包内字面量 `$&`/$'/$\` 会被当特殊模式 → 产物被静默撑爆到 ~3MB、占位符残留、脚本区被 HTML 尾部重写（页面完全不启动且 `__jsErrors` 为空，极难排查）。本轮并行改动引入触发序列后连续 3 次构建损坏。已改为函数返回值注入 `replace(marker, () => styles)`（两处），产物恢复 ~2.7MB 且启动正常。
+  - **⚠️ 并发构建事故记录**：16:27~16:35 本会话与并行会话的 build 进程交叠写入 index.html（AGENTS.md 红线），曾产生 3MB Frankenstein 产物；最终以本会话最后一次单独构建收口为准。**提交前请再跑一次 node build.mjs 确认产物干净**（判据：size≈2.74MB、grep 无 __SCRIPTS__ 残留）。
+  - **stash 事故说明**：排查期间本会话曾 `git stash`（为验证改名前 HEAD 是否 18/18），pop 时与并行会话新保存的 home.css/memo-arc/cjian/default-cards-data 冲突中止；已从 stash@{0} 精确恢复本会话全部文件后 drop。**若并行会话在 16:17 后写过 WORKLOG 或 src，请自查是否需要重新保存**（WORKLOG 以当前文件为准，本条之前最近两条为 16:13 心意集市 / 16:0x 字卡tab改名）。
+  - 遗留：p2-features.js:556 注释里残留一个「查岗」（并行会话 16:28 重存该文件的区域，为避免再次写冲突未追改）；bg-keep/mobile-adapt/idb/data-backup/css 等文件的注释性「查岗」未动（均非用户可见）。真机确认点：①桌面第二页图标显示「寻踪」、进页标题/状态/记录空态均为「寻踪」；②聊天点头像半框标题「寻踪 · TA的日常」、更多功能入口「寻踪」；③聊天里 TA 推卡提示语变「TA 来寻踪了。」、回答弹窗标题「寻踪回答」；④回复设置→寻踪 开关概率冷却正常；⑤老用户的查岗开关/题库开关/记录全部原样保留。
+
+### 2026-08-26 16:13（✅ 用户需求·更多功能【互动】里【送礼物】更名为【心意集市】）
+- [本会话·完成]（**已改 src/template.html 4 处纯文案（AI-B 域跨域小改请知悉）：more-gift 按钮 title+span、送礼半框 poke-card-head 标题、区块注释；JS 零改动，#more-gift/#gift-partner-name 等 id 不变，gift-shop.js/verify 脚本均不受影响。未构建未提交——请构建者随本批一起 `node build.mjs` 收口**）。
+  - 说明：入口与半框标题统一用「心意集市」（按用户原话）；市集页本体（gift-shop.js 的「心意市集」hero/桌面图标名「心意市集」）本轮未动，如需全局统一为「集市」请另行确认。真机确认点：聊天→更多功能→互动 tab 第 5 个图标应显示「心意集市」，点开底部半框标题为「心意集市 · TA名」。
+
+
+### 2026-08-26 16:0x（✅ 用户反馈·【系统预设字卡】摸鱼/吃饭/经期 三类功能触发字卡分类「依旧看不到」——tab 按用户词汇改名+排最前）
+- [本会话·完成]（**已改 src/js/default-cards.js（AI-A 域）+ tools/verify-period-care.mjs A3/C10、tools/verify-eat-remind.mjs S2/T4 断言同步；verify-period-care 复跑 32/32 全绿；未构建未提交**）。
+  - **排查结论**：三类功能触发字卡的预设池与 tab **早已存在**（fish/eat/period，数据 DEFAULT_CARD_DATA 三组齐全，C9/C10 无溢出几何断言全过，HEAD(020ea7f) 与线上产物均含），用户仍找不到的剩余原因=**用词不一致 + 排列靠后**：旧 tab 标签叫「摸鱼浮字/吃什么/经期关心」，用户按「摸鱼/吃饭/经期」找，「吃饭」二字在页面上根本不存在；且三者原排在 互动回应/花园/同频/伸手/喝水/存钱罐 之后，首屏折行区不显眼。另不排除部分用户手机 SW 仍缓存旧单行滑动条版本（上一条 12:2x 修复后的真机确认点仍请留意）。
+  - **修复**：① 三 tab 改名与功能同名短标签：fish→「摸鱼」、eat→「吃饭」、period→「经期」；② 注入顺序提到最前（紧跟 主字卡/颜文字/emoji/拍一拍，先于 互动回应/花园…），打开页面第一行即可见。数据/开关联动零改动（dc-off-fish/eat/period:* 键、getLibPool/getFishPool 分组名「摸鱼浮字/抓包回应」等均不变，p2-features/period.js 抽取侧不受影响）。
+  - 新 tab 全序（14 个）：主字卡 颜文字 emoji 拍一拍 **摸鱼 吃饭 经期** 互动回应 花园 同频 伸手 喝水 存钱罐 房间。
+  - 验证：verify-period-care.mjs **32/32**（A3 改锚定三连元组 ['fish','摸鱼'],['eat','吃饭'],['period','经期']+dc-off-period；C10 改按新序全量比对且 14 tab 全部在 390px 视口内）。⚠️ verify-eat-remind.mjs 的 S 组静态断言读**构建产物**，需**重新 node build.mjs 后复跑**（预期 12/12）——请构建者随本批一起收口。
+  - 真机确认点：字卡库→【系统预设字卡】，顶部分类第一行应直接看到「摸鱼 / 吃饭 / 经期」三个胶囊；点开分别可见 浮字+抓包回应 / 提醒吃饭+追问关心 / 经期关心 20 张，逐张开关有效。若手机仍显示旧版（无这三个词），杀掉 PWA 重开触发 SW 更新。
+
+### 2026-08-26 15:5x（✅ 修复·装修模式第2/3页图标点不开换图菜单——vivo Edge 真机反馈）
+- [本会话·完成]（**已改 src/js/personalize.js 两处（AI-B 域）+ 新增 tools/verify-desk-icon-decor.mjs；已构建（15:48, sw: mochi-mt9sl5pb）+ 专项 7/7 + 布局 verify 10/10 + 回归 verify-desk-move-swipe 8/8、verify-desk-persist 4/4 全绿；未提交**）。
+  - **根因①（主因，"又"字对上旧账）**：装修模式换图靠 `.app-grid` 的 click 监听器（editing 时 openIconMenu），但被移出网格的**单个功能图标**（装修库「添加到此页」/拖拽移页后的 `[data-desk-widget^="app-"]` 独立组件，第2/3页装修用户常见）不在任何网格内 → 网格监听器不触发；而这类图标自身 handler 按约定在 editing 时 `return` 等网格兜底 → **谁都不处理，点了没反应**。v3.14.x 把 openIconMenu 提取成全局函数时只给占卜接了兜底，其余图标没接。
+  - **修复①**：personalize.js 在 #page-phone 上加事件委托（与 data-card-bg 同款模式）：decor-on 且点击目标 .app 不在编辑态网格内 → stopPropagation + window.openIconMenu(app)；网格内路径已有 stopPropagation 冒泡不到这里，不会重复弹。退出装修（decor-on 移除）自动失效。
+  - **根因②（顺手加固）**：openIconMenu.pickFile 的 `<input type=file>` 未挂 DOM 就 click()——部分内核（iOS Safari 已知，vivo Edge 疑似同款）不弹选择器。已按 v3.8.x chatcard pickFiles 教训改为先 appendChild 到 body（offscreen）→ change 后清理。头像/壁纸等其他上传点本轮未动（未被反馈），如真机再现同款「点了没反应」按同模式处理。
+  - 验证：verify-desk-icon-decor.mjs 7/7——构造独立图标状态→进装修→点它弹「图标设置」（修复前 FAIL）→第三页网格内图标回归正常→选图 input 确认挂载 body 且 accept=image/*→退出装修后不再误弹。
+  - ⚠️ **构建扫入说明（提交者必读）**：15:48 构建收口了当时工作区全部已保存改动——除本会话 personalize.js 外，还包含并行会话的 group-decision.js（15:17 ×关闭修复）、以及 15:44~15:47 刚写入的 base.css / bg-keep.js / mobile-adapt.js / p2-features.js / records.js / template.html（该会话仍在活动中）。提交前请 git diff 自查并等对方会话收尾确认无半成品；tools/*.mjs 验证脚本勿随产物提交。
+  - 备注：verify-desk-click.mjs 的 T3（触摸合成 click）在本轮两次 FAIL——排查为**启动窗口期 ta-ask/modal 自动弹层抢吃合成触摸**所致（elementFromPoint 命中 .tc-opt/#modal-mask），与本修复无关（T1 直接 click 与监听绑定均 PASS；本修复的委托监听首行即 decor-on 守卫，非装修模式零介入）。属测试脚本环境脆弱性，后续可在其 harness 里先清浮层再测。
+  - 真机确认点（vivo Edge 优先）：①设置→自定义手机桌面图标进装修模式，点第2/3页上**不在四列网格里**的独立功能图标 → 应弹「上传图片/更换图片」菜单，选图后图标生效；②网格内图标换图照旧；③非装修模式点图标功能照常。
+
+### 2026-08-26 15:5x（✅ 完成·主页新增「摸鱼抓包」双向记录——用户需求）
+- [本会话·完成]（**已改 src：records.js（新增 addFishCatchRecord 存储+渲染，AI-A 域）+ p2-features.js（抓包成功 onClick 写 'me' 记录，1 处）+ personalize.js（被 TA 反向抓包写 'ta' 记录，1 处）+ template.html（主页 fav-tabs 加「摸鱼抓包」tab + catch 面板锚点 + 功能介绍页主页统计文案补摸鱼抓包）；新增 tools/verify-fish-catch-record.mjs 16/16 全绿；已构建两次（终版 15:59, sw: mochi-mt9sz1x1，含「抓包记录不设上限」追加需求）+ 布局 verify 10/10 + 回归 verify-group-decision 13/13 全绿；未提交**）。
+  - 双向事件落库：`records-fishcatch` 键（按桌面命名空间隔离），条目 {type:'me'|'ta', text, ts}，最新在前、**全量保留不设上限（用户明确要求，追加确认）**。'me'=桌面浮字点击抓包成功（文案含双方摸鱼值加成）；'ta'=摸鱼+1 点太快被反向抓包（存调侃原文，渲染时 taFit）。渲染行含方向图标+昵称动态适配+时间戳。
+  - 接线均为运行时惰性调用 `window.addFishCatchRecord`（personalize.js 在 records.js 之前加载也没问题），主页开着时写入即实时重绘。
+  - ⚠️ **构建扫入说明**：15:47 首次构建收口了并行会话当时已保存的 base.css/bg-keep.js 改动；15:59 二次构建（不设上限追加需求）按当时磁盘现状整体收口（含对方 mobile-adapt.js 15:49 版）。**对方会话 15:48/15:49 仍在活动并各自构建过一次（index.html 曾被 15:48 构建）——最终提交前请统一再跑一次 `node build.mjs` 确保产物为最新收口**。另：期间跑 verify-group-decision 出现过一次 1/13 假失败（对方会话正在保存 mobile-adapt.js 时测试服务器读到了半截文件），稍后复跑 13/13 全绿，非代码问题。
+  - 真机确认点：①桌面摸鱼浮字 6 秒内点抓包成功 → 主页「摸鱼抓包」出现「抓到 XX 摸鱼」含 +加成；②摸鱼+1 狂点到被反向抓包 → 出现「XX 抓到我摸鱼」含调侃语；③记录按联系人桌面隔离、全量保留不裁剪。
+
 ### 2026-08-26（新功能两项：①离线消息提醒 PeriodicSync 免后端 ②TA 主动分享用户自建字卡）
 - [本会话·完成]（**已改 src/pwa/sw.js + src/js/bg-keep.js + contacts.js EXCLUDE 三键（AI-B 域）+ src/js/ta-ask.js 第五触发器 + src/js/reply-settings.js DEFAULTS/三数组 + src/template.html 两处锚点行（AI-A 域）；新增 tools/verify-psync-cc.mjs 19/19；已构建（11:32, sw: mochi-mt9jg4xy）+ 布局 verify 10/10 + 回归 verify-invite-settings 28/28、verify-ta-invite 36/36、verify-data-loss 11/11 全绿；未提交**）。chat.js 零改动（保持只读）。
   - **① 离线消息提醒（Periodic Background Sync，零后端）**：补「页面全关/浏览器标签不在了就完全没消息」的空档。页面端 bg-keep.js 新增 psync 段——设置页全局开关 `psync-en`+状态行 `psync-status`（如实标注边界：仅安卓 Chromium、需添加到桌面、频率系统决定通常数小时一次、进程被杀仍收不到）；开启后注册 periodicsync tag mochi-ta-msg（minInterval 6h 请求，浏览器按自身策略钳制），并把可发文案快照写 IDB 根键 `xy-home-v2:psync-snap`（当前联系人 cid/昵称 + ≤12 条：自建纯文本卡抽样 + 内置 8 句兜底想念语 PSYNC_BUILTIN，7 天未刷新不再打扰）。SW 端（src/pwa/sw.js）：periodicsync 唤醒→自写 indexedDB('mochi-db',1)/kv 读快照→随机抽一条→showNotification(tag+renotify 防连堆)→同时把该条追加进 `xy-home-v2:psync-queue`（cap 20）；notificationclick 聚焦/openWindow。回开应用后 drainPsyncQueue 补投递：开屏 12s/27s/47s 三次+回前台+切桌面(+3s)，只投 entry.cid===当前桌面的条目（异桌面保留待其激活），走 **window.chatAddIn 内存链路绝不直写 chat-msgs**（遵守切桌面覆盖事故教训），带防重守卫（最近 10 条同文本且 30 分钟内视为已投递）。EXCLUDE 登记三根键防 migrateLegacy 迁走。
@@ -2750,3 +2876,27 @@ ode tools/patch-chat-cuddle.mjs**（幂等断言，仅在文件未被锁定时�
   - **⚠️ 跨域说明**：本次在 template.html（AI-B 域）追加了一个音乐页按钮（音乐功能本体在 AI-A 域；上个会话也曾按用户要求改过 template.html，先例一致）。其余改动均限 music-player.js。
   - **验证**：新增 `tools/verify-music-vip-clean.mjs` **6/6**（T1 首轮合并并入共享库+清源键+置标记；T2 删歌后重启不复活；T3 旧备份恢复源键后重启仍不复活；T4 会员歌列出并移除、免费歌保留；T5 全免费提示不弹面板不误删；T6 无网易云歌提示不弹面板）；`npm run verify` 布局 **10/10**；node --check 通过。
   - **给构建者**：本次只动 music-player.js + template.html + 新增 tools 脚本；工作区有其他会话并发改动（chat.js/chatcard.js/breakout.js 等，git status 可见），收口提交前请按协议确认对方已完成。
+
+### 2026-08-26 16:0x（用户反馈：双人打砖块全屏不是真·手机满屏、还有很多空隙）
+- [本会话·完成]（**已改 src/js/breakout.js + src/css/chat-pages.css（打砖块全屏块）；已构建两次收口（最终 16:02, sw: mochi-mt9t3bcm）+ verify-brick 24/24（新增 T-FS4/T-FS4b/T-FS5 满屏断言）+ 布局 verify 10/10 + 临时 CDP 专项（rally 中进/出全屏缩放）5+1 全过（1 项为脚本自身暂停态误判）；未提交**）。
+  - **根因**：fitCanvas 全屏分支仍按固定 400:340 画面比例适配——竖屏手机（390×844）画布只占约 40% 屏高，加上头部/信息栏/底注/内边距占位，四周大片空隙＝「不是真全屏」的观感来源。
+  - **修复①场地动态化（breakout.js）**：W/H 由 const 改 let，新增 layoutField()（按当前 W/H 重算砖区/挡板/球半径/发球点等全部派生几何 + 星点/渐变缓存重建）与 setFieldSize(w,h)（对进行中对局整体等比缩放：球位/速度、双方挡板、砖块矩形、拖尾/粒子/飘字，球局无缝继续）；半框保持 400×340 基准不变。物理与渲染全部接入 hs/vs 缩放系数：梦角速度/误差/游走、玩家键盘速度、球速（×clamp(√(hs·vs),1,1.9) 防大场地节奏拖沓）、危险光带/字号/箭头/气泡随场地放大。
+  - **修复②满铺适配（fitCanvas）**：全屏时可用区=面板内容区（头部已悬浮不占位），setFieldSize(400, 400·availH/availW) 后画布 CSS 尺寸精确=可用区 → 零空隙；退出全屏 setFieldSize(400,340) 还原。进入后 80ms+420ms 双重适配（等地址栏收起后的最终尺寸），新增 orientationchange 与 visualViewport.resize 防抖重适配（CSS 兜底全屏下地址栏收展也能跟手）。
+  - **修复③全屏 UI 重构（chat-pages.css brick-fs 块）**：头部改 absolute 悬浮渐变控制条（标题隐藏只留按钮，pointer-events 穿透仅按钮可点）、信息药丸悬浮左上毛玻璃半透明、底注隐藏、画布零圆角无阴影铺满、横屏药丸变顶部一行。视觉上整个屏幕都是游戏画面。
+  - **修复④真全屏成功率**：面板级 requestFullscreen 被拒/不可用时自动降级 documentElement 再试（部分 WebView 只允许根元素全屏，同样能隐藏浏览器栏）；竖屏锁逻辑保留。
+  - **验证**：verify-brick 扩至 24/24——T-FS4 断言画布 357×827 完全铺满可视区 gapL/gapT=0 且场地逻辑高 340→927、T-FS4b 头部悬浮/标题隐藏/底注不显示、T-FS5 退出还原 400×340；临时 CDP 脚本证实 rally 中进全屏球位精确等比缩放（170→463.5）、砖宽同比例放大、退出后对局继续、全程无 JS 异常（脚本已删）。npm run verify 布局 10/10。
+  - **给构建者/提交者**：本次构建按工作区现状整体扫入并行会话改动（base.css/home.css/bg-keep/default-cards/memo-arc/mobile-adapt/p2-features/personalize/records/template.html 等，git status 可见）；提交前请按协议 git diff 自查全部范围，确认各会话已保存完整后统一提交。未提交。
+
+### 2026-08-26 16:5x（用户反馈：双人贪吃蛇地图不够大）
+- [本会话·完成]（**已改 src/js/snake-game.js + src/css/chat-pages.css（snake-fs 两行）；已构建多次收口（最终 16:49, sw: mochi-mt9uru9s）+ verify-snake-features 8/8 + 布局 verify 10/10 + 新增临时 CDP 专项（全屏大地图/跨全屏续玩）9/9 全绿，临时脚本已删；未提交**）。
+  - **根因**：地图固定 GRID=15×15，且全屏画布只是 min(94vw,94vh) 的正方形——竖屏手机上全屏与半框地图完全一样大、上下大片留白，「地图不够大」的观感来源。
+  - **修复①格数动态化**：GRID → GW/GH 双向动态；新增 gW()/gH()（进行中对局读 state.gw/gh 自带尺寸，空闲态读视口推算的下一局尺寸 GW/GH），物理（穿墙取模/撞墙边界）、食物生成、TA AI（候选评估/启发式分 (GW+GH-dist)/floodFill 上限 50→100）全部接入。半框保持 15×15 基准不变。
+  - **修复②setupCanvas 全屏量测**：按滚动区真实剩余空间（逐个扣除计分/提示/结算/按钮等兄弟块高度 + 安全区 padding）；空闲/结束态把「下一局」地图按 FS_CELL=21px/格放大到接近满屏（390×844 实测 **15×29 ≈ 原 15×15 面积 2 倍**），画布 CSS 尺寸精确=格子总数×cell；进行中不改格数只适配画布（蛇身坐标始终有效）。startGame 时按钮收起会再 fitCanvasBox() 吸附腾出空间。
+  - **修复③存档兼容**：state 序列化天然携带 gw/gh；validState 按存档自身尺寸校验坐标（旧档无尺寸补 15×15 标记）→ 半框存的档在全屏恢复、全屏存的档在半框恢复都不丢档不越界；resumeGame/重开面板恢复路径均先 setupCanvas 重适配。
+  - **修复④全屏 UI**：隐藏方向键（滑动+键盘已覆盖全部输入，让位给地图）；面板加 safe-area 上下 padding + 100dvh + overflow:hidden；scroll 左右 padding 收窄到 8px。
+  - **验证**：临时 CDP 专项 9/9——打开即全屏、画布填充率宽 0.90/高 0.82（开始后重适配 0.86+）、对局 15×29 且蛇身/食物全部界内、对局中退全屏格数不变游戏继续、关闭→重开自动回全屏并续玩原 15×29 对局、半框新开一局回 15×15、全程无 JS 异常；verify-snake-features 8/8（穿墙/安全/结算/最高分回归）+ npm run verify 布局 10/10。
+  - **给构建者**：本次只动 snake-game.js + chat-pages.css（snake-fs 两行）；工作区含上一条打砖块满屏改造与本日其他并行改动（base.css/home.css/bg-keep/default-cards/memo-arc/mobile-adapt/p2-features/personalize/records/template.html 等），提交前请 git diff 统一自查后一并提交。未提交。
+
+### 2026-08-26 17:0x���û�������ץ���ɹ���������Ϣ�����ظ������������� + ��ǩchip�ִ�һ��ͬ�����ģ�
+- [���Ự����ɡ�δ����]**�Ѹ� src/js/p2-features.js��ץ����Ӧ���ʹ����� 1 �е��ã�**��`chatAddIn(r, { tag: '����ץ��' })` ��Ϊ `chatAddIn(r, { mood: [{ tag: '����ץ��', label: '' }] })`����addIn �� opts.tag ������ĸ��ƽ� chip label��_tagMood�������¡�����ץ���ֿ�������һ�С���ǩ+�ظ��ֿ������Ĵ��Զ��� mood �� label ��chip ֻʣ������ץ������ǩ�����������������ظ�����Ⱦ/�־û�/�ղ���·�Կ� label ��Ȼ���ݣ�ֻ��һ������� span�����Ӿ�Ӱ�죩��
+- **��������**������ֻ�� p2-features.js һ�������������д������лỰ�Ķ���git status �ɼ������밴Э���տڹ����ύ��

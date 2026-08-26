@@ -849,10 +849,16 @@ try {
     const ico = app.querySelector('.app-ico');
     const hasCustom = !!store.get('app-icon-' + key);
     const pickFile = () => {
+      // v3.15.x：input 先挂 body 再 click——未挂 DOM 的 <input type=file>.click() 在
+      // 部分内核（iOS Safari / vivo Edge 等真机）不弹选择器（v3.8.x chatcard pickFiles
+      // 同款教训），选完/取消后移除防残留
       const input = document.createElement('input');
       input.type = 'file'; input.accept = 'image/*';
+      input.style.cssText = 'position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0;';
+      document.body.appendChild(input);
       input.onchange = () => {
         const f = input.files && input.files[0];
+        try { if (input.parentNode) input.remove(); } catch (e) {}
         if (!f) { return; }
         const reader = new FileReader();
         reader.onload = () => {
@@ -870,7 +876,8 @@ try {
         };
         reader.readAsDataURL(f);
       };
-      input.click();
+      input.onblur = () => { setTimeout(() => { try { if (input.parentNode) input.remove(); } catch (e) {} }, 1500); };
+      try { input.click(); } catch (e) { try { input.remove(); } catch (e2) {} }
     };
     const moveApp = (dir) => {
       if (!grid) return;
@@ -917,6 +924,25 @@ try {
       window.openIconMenu(app);
     });
   });
+  // v3.15.x：装修模式点「独立组件图标」换图兜底——被移出 .app-grid 的单个功能图标
+  //（装修库「添加到此页」/拖拽换页后的 app-* 图标，第2/3页装修用户常见）不在任何
+  // 网格内，上面的网格监听器不触发；而这类图标自身 handler 在 editing 时按约定
+  // 直接 return 等网格兜底 → 谁都不处理，表现为「装修模式点图标没反应、换不了图」
+  // （vivo Edge 真机反馈）。在 #page-phone 上委托：decor-on 且 .app 不在编辑态
+  // 网格内时直接开图标菜单；网格内路径已 stopPropagation 冒泡不到这里，不会重复弹。
+  const phoneDecorEl = document.getElementById('page-phone');
+  if (phoneDecorEl) {
+    phoneDecorEl.addEventListener('click', (e) => {
+      if (!phoneDecorEl.classList.contains('decor-on')) return;
+      if (e.target.closest('.desk-lib') || e.target.closest('.decor-bar') || e.target.closest('.desk-page-add')) return;
+      const app = e.target.closest('.app');
+      if (!app) return;
+      const grid = app.closest('.app-grid');
+      if (grid && grid.classList.contains('editing')) return;
+      e.stopPropagation();
+      window.openIconMenu(app);
+    });
+  }
 
   const iconRow = document.getElementById('row-custom-icon');
   // v3.6.x：进入装修模式的公共逻辑（自定义桌面图标 / 卡片背景两个入口共用）：
@@ -2266,7 +2292,7 @@ try {
     'desk-clock': '时钟', 'desk-calendar': '月历', 'desk-timer': '计时器', 'desk-anniv': '纪念日倒计时', 'desk-period': '经期倒计时',
     'app-chat': '聊天图标', 'app-group-chat': '群聊图标', 'app-home': '主页图标', 'app-mail': '信箱图标', 'app-feed': '朋友圈图标',
     'app-calendar': '日历图标', 'app-memory': '纪念图标', 'app-divination': '占卜图标', 'app-note': '收藏图标',
-    'app-music': '音乐图标', 'app-stats': '聊天统计图标', 'app-interact': '提问记录图标', 'app-checkin': '查岗图标',
+    'app-music': '音乐图标', 'app-stats': '聊天统计图标', 'app-interact': '提问记录图标', 'app-checkin': '寻踪图标',
     'p3apps': '第三页功能图标(整组)', 'app-period': '经期记录图标', 'app-accounting': '记账图标', 'app-garden': '花园图标',     'app-tongpin': '同频图标', 'app-shenshou': '伸手图标', 'app-water': '喝水图标', 'app-eat': '吃什么图标', 'app-pomo': '番茄钟图标',
   };
   // v3.7.x：装修模式组件库静态预览缩略图（glass 质感 + 真实 SVG 图标，不依赖真实数据/事件）
@@ -2303,7 +2329,7 @@ try {
     'desk-period': '<span style="display:flex;flex-direction:column;align-items:center;gap:1px"><span style="font-size:7px;color:#e85a8f">距下次经期</span><span style="font-size:15px;font-weight:700;color:#e85a8f">5 天</span><span style="font-size:6px;color:#999">周期第 23 天</span></span>',
     'app-chat': _appIcoPrev('聊天'), 'app-group-chat': _appIcoPrev('群聊'), 'app-home': _appIcoPrev('主页'), 'app-mail': _appIcoPrev('信箱'), 'app-feed': _appIcoPrev('朋友圈'),
     'app-calendar': _appIcoPrev('日历'), 'app-memory': _appIcoPrev('纪念'), 'app-divination': _appIcoPrev('占卜'), 'app-note': _appIcoPrev('收藏'),
-    'app-music': _appIcoPrev('音乐'), 'app-stats': _appIcoPrev('统计'), 'app-interact': _appIcoPrev('提问'), 'app-checkin': _appIcoPrev('查岗'),
+    'app-music': _appIcoPrev('音乐'), 'app-stats': _appIcoPrev('统计'), 'app-interact': _appIcoPrev('提问'), 'app-checkin': _appIcoPrev('寻踪'),
     'app-period': _appIcoPrev('经期'), 'app-accounting': _appIcoPrev('记账'), 'app-garden': _appIcoPrev('花园'),     'app-tongpin': _appIcoPrev('同频'), 'app-shenshou': _appIcoPrev('伸手'), 'app-water': _appIcoPrev('喝水'), 'app-eat': _appIcoPrev('吃什么'), 'app-pomo': _appIcoPrev('番茄钟'), 'p3apps': _appIcoPrev('经期'),
   };
   // 隐藏池：被移除的组件暂存（display:none），可从组件库重新添加
@@ -2490,7 +2516,7 @@ try {
   document.addEventListener('contact-switched', ensureMemoRowP3);
 
   // ===== v3.13.x：第二页改版迁移（仿 ensureMemoRowP3 先例） =====
-  // ① 功能图标组（p2apps：音乐/聊天统计/提问记录/查岗/花园/此间 + 动态注入的同频/伸手）
+  // ① 功能图标组（p2apps：音乐/聊天统计/提问记录/寻踪/花园/此间 + 动态注入的同频/伸手）
   //    默认位置改为「周末倒计时」（摸鱼组件）下方——template 已移；
   //    老用户 desk-layout 里 p2apps 排在 weekend 前面的自动换序到其后（DOM+存储同步改写），
   //    已在其后的不动；两组件不在同一页 / weekend 已被用户移除进池的尊重现状不强行挪。
@@ -4213,6 +4239,10 @@ try {
           '『你刚才是不是在疯狂点？』——嗯，被看见了。这次记工作值。',
           '摸鱼要有节奏感。连续猛点会被抓的，这条算你打工。'
         ][Math.floor(Math.random() * 4)];
+        // v3.15.x：被抓包事件写入主页「摸鱼抓包」记录（双向之一：TA 抓到我）
+        if (window.addFishCatchRecord) {
+          try { window.addFishCatchRecord('ta', tease); } catch (e) {}
+        }
         window.openModal('被 ' + taName + ' 抓包了！', '', () => {}, {
           noInput: true,
           staticText: (window.taFit ? window.taFit(tease) : tease) + '\n\n本次点击已改为 工作值 +1'

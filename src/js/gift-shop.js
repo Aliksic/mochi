@@ -19,8 +19,9 @@
   function fmtTime(tm) { const d = new Date(tm); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0') + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
   function fenToYuan(fen) { const y = fen / 100; if (y >= 100000) return (y / 10000).toFixed(1) + '万'; if (y >= 1000) return y.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ','); return y.toFixed(2); }
 
-  // v3.12.x：心意币账本与红包拆分——红包保留 rp-wallet 键，市集独立用 gift-wallet 键；
-  // 首次读取时继承原共账本（rp-wallet）的当前余额（老用户余额无缝延续），落盘后两本账各自独立互不影响
+  // v3.12.x：心意币账本曾与红包拆分；v3.15.x 起重新统一——红包（chat.js rpWallet*）
+  // 与市集共用 gift-wallet 同一本账，红包金额即心意币；
+  // rp-wallet 仅作老数据一次性迁移种子（首次读取 gift-wallet 缺失时继承其当前余额并落盘）
   const WALLET_KEY = 'gift-wallet';
   const LEGACY_WALLET_KEY = 'rp-wallet';
   function walletGet() {
@@ -33,41 +34,44 @@
     return seed;
   }
   function walletSet(w) { const s = store(); if (s) s.set(WALLET_KEY, JSON.stringify(w)); }
-  function walletText() { const w = walletGet(); return '心意币 ¥' + fenToYuan(w.myBalance) + ' · ' + partnerName() + ' ¥' + fenToYuan(w.systemBalance) + ' · 点此设置金额'; }
+  function walletText() { const w = walletGet(); return '心意币 ¥' + fenToYuan(w.myBalance) + ' · ' + partnerName() + ' ¥' + fenToYuan(w.systemBalance) + ' · 点此向 Mochi 申请'; }
   function renderGiftBalances() {
     ['gift-balance', 'market-balance'].forEach(function (id) {
       const el = document.getElementById(id);
       if (el) el.textContent = walletText();
     });
   }
-  // 心意币金额设置：点余额行出单个多阶段弹窗——胶囊选「我的 / TA」，保存一侧后
-  // 弹窗不关（ctl.stay），自动切到另一侧继续输入；留空点【完成】/取消随时结束。
-  // v3.13.x 二轮：与 chat.js rpEditWallet 同款，去掉「60ms 再开第二层」嵌套竞态。
+  // 心意币申请（向 Mochi 打款入账，非直接改数值）：点余额行出单个多阶段弹窗——
+  // 胶囊选收款方「我的 / TA」，输入申请金额确定后模拟 Mochi 打款累加进账；
+  // 弹窗不关（ctl.stay）自动切到另一侧继续申请；留空点【完成】/取消随时结束。
+  // v3.15.x：与 chat.js rpEditWallet 同款申请制口径（原为直接设置金额）。
   function giftEditWallet() {
     if (!window.openModal) return;
     var pn = partnerName();
     var LBL = { my: '我的心意币', ta: pn + '的心意币' };
     var side = 'my';
     var doneAny = false;
+    function fmtYuan(n) { return (Math.round(n * 100) / 100).toFixed(2); }
     function hintTxt() {
       var w = walletGet();
       return '当前：心意币 ¥' + fenToYuan(w.myBalance) + ' · ' + pn + ' ¥' + fenToYuan(w.systemBalance) +
-        (doneAny ? '\n已保存，可继续输入' + LBL[side] + '金额；留空点【完成】结束' : '\n输入新金额后点【保存】；留空确定 = 不改动');
+        (doneAny ? '\n已到账，可继续为' + LBL[side] + '申请；留空点【完成】结束' : '\n选择收款方，输入申请金额点【申请】，Mochi 打款后自动入账；留空点【完成】结束');
     }
     var ctl = null;
-    ctl = window.openModal('修改心意币（元）', '', function (arg) {
+    ctl = window.openModal('向 Mochi 申请心意币', '', function (arg) {
       var picked = (arg === 'my' || arg === 'ta');
       var el = document.getElementById('modal-input');
       var raw = String(picked ? ((el && el.value) || '') : (arg == null ? '' : arg)).trim();
       var target = picked ? arg : side;
-      if (raw === '') return; // 留空 = 不改动并结束
+      if (raw === '') return; // 留空确定 = 结束本次申请
       var n = parseFloat(raw);
-      if (isNaN(n) || n < 0) { toast('金额无效，未修改'); return; }
+      if (isNaN(n) || n <= 0) { toast('申请金额需大于 0'); return; }
+      var fen = Math.round(n * 100);
       var w = walletGet();
-      if (target === 'my') w.myBalance = Math.round(n * 100);
-      else w.systemBalance = Math.round(n * 100);
+      if (target === 'my') w.myBalance += fen;
+      else w.systemBalance += fen;
       walletSet(w); renderGiftBalances();
-      toast(LBL[target] + '已更新');
+      toast('Mochi 已打款，' + LBL[target] + ' +¥' + fmtYuan(fen / 100));
       doneAny = true;
       side = target === 'my' ? 'ta' : 'my';
       if (ctl) {
@@ -83,10 +87,11 @@
       staticText: hintTxt(),
       pills: [{ value: 'my', label: '我的心意币' }, { value: 'ta', label: pn + ' 的心意币' }],
       pill: 'my',
-      placeholder: '输入新金额（元），留空结束',
+      placeholder: '输入申请金额（元），留空结束',
       inputmode: 'decimal',
       maxlength: 9
     });
+    if (ctl) ctl.okText('申请');
   }
 
   // v3 扩库新增「两个世界」分类（世界观商品：字卡沟通 / 隔空陪伴 / 体感 / 梦境）；
@@ -1026,7 +1031,20 @@
       '</div>' +
       '<div class="giftbox-scroll"><div class="giftbox-list" id="giftbox-list"></div></div>';
     host.appendChild(giftboxPage);
-    document.getElementById('giftbox-back').addEventListener('click', backHome);
+    document.getElementById('giftbox-back').addEventListener('click', function () {
+      // v3.15.x：聊天更多功能入口进入时返回回聊天页（room.js __roomFrom 同款），桌面图标进入仍回主页
+      const fromChat = window.__giftboxFrom === 'chat';
+      window.__giftboxFrom = '';
+      if (fromChat) {
+        document.querySelectorAll('.page').forEach(function (p) { p.hidden = true; });
+        const chat = document.getElementById('page-chat'); if (chat) chat.hidden = false;
+        const tabbar = document.querySelector('.tabbar'); if (tabbar) tabbar.hidden = false;
+        const phone = document.querySelector('.phone'); if (phone) phone.classList.remove('no-statusbar');
+        if (giftboxPage) giftboxPage.classList.remove('full');
+      } else {
+        backHome();
+      }
+    });
     giftboxPage.querySelectorAll('.gb-tab').forEach(function (t) {
       t.addEventListener('click', function () { boxTab = t.dataset.btab; renderBox(); });
     });
@@ -1052,7 +1070,7 @@
     const giftboxApp = makeApp('giftbox', '心意柜', BOX_SVG);
     injectDeskApps([{ el: marketApp, id: 'app-market' }, { el: giftboxApp, id: 'app-giftbox' }]);
     if (marketApp) marketApp.addEventListener('click', function () { if (editingNow()) return; marketManage = false; panelCat = '全部'; openPage(marketPage); renderMarket(); });
-    if (giftboxApp) giftboxApp.addEventListener('click', function () { if (editingNow()) return; boxTab = 'in'; openPage(giftboxPage); renderBox(); });
+    if (giftboxApp) giftboxApp.addEventListener('click', function () { if (editingNow()) return; window.__giftboxFrom = ''; boxTab = 'in'; openPage(giftboxPage); renderBox(); });
 
     const gp = document.getElementById('chat-gift-panel');
     if (gp) {
@@ -1067,6 +1085,17 @@
     }
     const moreGift = document.getElementById('more-gift');
     if (moreGift) moreGift.addEventListener('click', function (e) { e.stopPropagation(); openGiftPanel(); });
+    // v3.15.x：聊天更多功能 → 心意柜快捷按钮（打开全屏心意柜页，返回键回聊天）
+    const moreGiftbox = document.getElementById('more-giftbox');
+    if (moreGiftbox) moreGiftbox.addEventListener('click', function (e) {
+      e.stopPropagation();
+      const mp = document.getElementById('chat-more-panel');
+      if (mp) mp.hidden = true;
+      window.__giftboxFrom = 'chat';
+      boxTab = 'in';
+      openPage(giftboxPage);
+      renderBox();
+    });
   }
 
   if (document.readyState === 'loading') {

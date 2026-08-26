@@ -3,7 +3,11 @@
 // 难度（速度）+ 暂停 + 全屏 + 保存/继续对局（localStorage）
 (function () {
   'use strict';
-  const GRID = 15;
+  // v3.15.x：地图格数动态化——半框固定 15×15 基准；全屏时按可视区实际剩余空间放大
+  // （约 24px 一格，竖屏约 15×31），对局自身尺寸存在 state.gw/gh，跨全屏/半框恢复不丢档。
+  // 物理与 AI 一律读 gW()/gH()（进行中对局用 state 尺寸，空闲态用下一局尺寸 GW/GH）。
+  let GW = 15, GH = 15;
+  const FS_CELL = 21;                  // 全屏地图目标格子尺寸（逻辑 px）——偏小让地图更大
   const INIT_LEN = 3;
   const FOOD_TARGET = 2;
   const PREFIX = (window.activePrefix && window.activePrefix()) || 'xy-home-v2';
@@ -43,9 +47,13 @@
   let paused = false;
   let isFs = false;
   let pauseAt = 0;
-  let logicSize = 300, dpr = 1;
+  let cssW = 360, cssH = 360, dpr = 1;   // 画布 CSS 尺寸（全屏由 setupCanvas 按剩余空间计算）
   let particles = [], floaters = [], renderLastTime = 0;
   const BEST_KEY = PREFIX + ':snake-best';
+
+  // 当前生效的地图格数：进行中对局用自己的尺寸，空闲/下一局用视口推算的 GW/GH
+  function gW() { return (state && state.gw) || GW; }
+  function gH() { return (state && state.gh) || GH; }
 
   function vib(pattern) { try { if (navigator.vibrate) navigator.vibrate(pattern); } catch (e) {} }
 
@@ -109,17 +117,58 @@
     if (name === 'safe' && hintEl && state.status === 'idle') hintEl.textContent = state.flags.safe ? '安全模式 · 点开始' : '点开始 · 滑动控制方向';
   }
 
+  // 全屏滚动区可用空间量测（扣除计分/提示/结算/按钮等兄弟块与安全区内边距）
+  function fsAvail() {
+    const sc = panel.querySelector('.poke-card-scroll');
+    let availW = (sc && sc.clientWidth) || window.innerWidth || 360;
+    let availH = (sc && sc.clientHeight) || window.innerHeight || 360;
+    if (sc && sc.clientHeight > 0) {
+      sc.querySelectorAll('.snake-score,.snake-best,.snake-hint,.snake-result:not([hidden]),.snake-controls,.snake-dpad').forEach(function (el) {
+        if (el.hidden) return;
+        const st = getComputedStyle(el);
+        availH -= el.offsetHeight + (parseFloat(st.marginTop) || 0) + (parseFloat(st.marginBottom) || 0);
+      });
+      const st = getComputedStyle(sc);
+      availW -= (parseFloat(st.paddingLeft) || 0) + (parseFloat(st.paddingRight) || 0);
+      availH -= (parseFloat(st.paddingTop) || 0) + (parseFloat(st.paddingBottom) || 0) + 16;   // gap 余量
+    }
+    return { w: Math.max(240, availW), h: Math.max(260, availH) };
+  }
+  // 按当前地图把画布贴合到剩余空间（不改格数；开始对局按钮收起后调用可放大格子）
+  function fitCanvasBox() {
+    if (!canvas || !isFs || !ctx) return;
+    const av = fsAvail();
+    const cell = Math.max(9, Math.min(av.w / gW(), av.h / gH()));
+    cssW = Math.round(cell * gW()); cssH = Math.round(cell * gH());
+    canvas.style.width = cssW + 'px';
+    canvas.style.height = cssH + 'px';
+    canvas.width = Math.round(cssW * dpr);
+    canvas.height = Math.round(cssH * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
   function setupCanvas() {
     if (!canvas) return;
-    if (isFs) {
-      // 全屏：跟随视口（匹配 CSS min(94vw,94vh)），PC 大屏也铺满
-      logicSize = Math.round(Math.min(window.innerWidth, window.innerHeight) * 0.94);
-    } else {
-      logicSize = 360;
-    }
     dpr = Math.min(window.devicePixelRatio || 1, 3);
-    canvas.width = logicSize * dpr;
-    canvas.height = logicSize * dpr;
+    if (isFs) {
+      // 全屏：空闲/结束态顺便把「下一局」地图按 FS_CELL 放大到接近满屏；
+      // 进行中/暂停/倒计时不改格数（蛇身坐标仍有效），只适配画布。
+      const av = fsAvail();
+      if (!state || state.status === 'idle' || state.status === 'over') {
+        GW = Math.max(12, Math.min(34, Math.floor(av.w / FS_CELL)));
+        GH = Math.max(12, Math.min(46, Math.floor(av.h / FS_CELL)));
+      }
+      const cell = Math.max(9, Math.min(av.w / gW(), av.h / gH()));
+      cssW = Math.round(cell * gW()); cssH = Math.round(cell * gH());
+      canvas.style.width = cssW + 'px';
+      canvas.style.height = cssH + 'px';
+    } else {
+      GW = 15; GH = 15;                // 半框固定 15×15 基准
+      cssW = 360; cssH = 360;
+      canvas.style.width = '';
+      canvas.style.height = '';
+    }
+    canvas.width = Math.round(cssW * dpr);
+    canvas.height = Math.round(cssH * dpr);
     ctx = canvas.getContext('2d');
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
@@ -235,14 +284,15 @@
   }
 
   function newGame(diff) {
-    const py = Math.floor(GRID / 2);
+    const py = Math.floor(GH / 2);
     const playerBody = [];
     for (let i = 0; i < INIT_LEN; i++) playerBody.push({ x: 4 - i, y: py });
     const oppBody = [];
-    for (let i = 0; i < INIT_LEN; i++) oppBody.push({ x: (GRID - 5) + i, y: py });
+    for (let i = 0; i < INIT_LEN; i++) oppBody.push({ x: (GW - 5) + i, y: py });
     const prevFlags = state && state.flags || { wall: false, safe: false };
     state = {
       diff: diff || 'normal',
+      gw: GW, gh: GH,
       player: { body: playerBody, dir: { x: 1, y: 0 }, nextDir: { x: 1, y: 0 }, alive: true, score: 0, foodCount: 0 },
       opp:    { body: oppBody,    dir: { x: -1, y: 0 }, nextDir: { x: -1, y: 0 }, alive: true, score: 0, foodCount: 0 },
       foods: [],
@@ -268,6 +318,7 @@
     if (resumeBtn) resumeBtn.hidden = true;
     if (resultEl) { resultEl.hidden = true; resultEl.innerHTML = ''; }
     newGame(diff);
+    fitCanvasBox();   // 开始按钮随即隐藏，重适配画布吸收腾出的空间（不改格数）
     render(0);
     let n = 3;
     state.status = 'countdown';
@@ -396,8 +447,8 @@
     let pNew = { x: ph.x + p.dir.x, y: ph.y + p.dir.y };
     let oNew = { x: oh.x + o.dir.x, y: oh.y + o.dir.y };
     if (wall) {
-      pNew.x = (pNew.x + GRID) % GRID; pNew.y = (pNew.y + GRID) % GRID;
-      oNew.x = (oNew.x + GRID) % GRID; oNew.y = (oNew.y + GRID) % GRID;
+      pNew.x = (pNew.x + gW()) % gW(); pNew.y = (pNew.y + gH()) % gH();
+      oNew.x = (oNew.x + gW()) % gW(); oNew.y = (oNew.y + gH()) % gH();
     }
     const pEat = state.foods.some(function (f) { return f.x === pNew.x && f.y === pNew.y; });
     const oEat = state.foods.some(function (f) { return f.x === oNew.x && f.y === oNew.y; });
@@ -405,8 +456,8 @@
     const oSelf = bodySet(o.body, !oEat);
     let pDie = false, oDie = false;
     if (!wall) {
-      if (pNew.x < 0 || pNew.x >= GRID || pNew.y < 0 || pNew.y >= GRID) pDie = true;
-      if (oNew.x < 0 || oNew.x >= GRID || oNew.y < 0 || oNew.y >= GRID) oDie = true;
+      if (pNew.x < 0 || pNew.x >= gW() || pNew.y < 0 || pNew.y >= gH()) pDie = true;
+      if (oNew.x < 0 || oNew.x >= gW() || oNew.y < 0 || oNew.y >= gH()) oDie = true;
     }
     if (!pDie && !safe && pSelf[pNew.x + ',' + pNew.y]) pDie = true; // 碰自己身（安全模式跳过）
     if (!oDie && !safe && oSelf[oNew.x + ',' + oNew.y]) oDie = true;
@@ -422,7 +473,7 @@
     state.opp.body.forEach(function (s) { occ[s.x + ',' + s.y] = true; });
     state.foods.forEach(function (f) { occ[f.x + ',' + f.y] = true; });
     const empty = [];
-    for (let x = 0; x < GRID; x++) for (let y = 0; y < GRID; y++) if (!occ[x + ',' + y]) empty.push({ x: x, y: y });
+    for (let x = 0; x < gW(); x++) for (let y = 0; y < gH(); y++) if (!occ[x + ',' + y]) empty.push({ x: x, y: y });
     if (!empty.length) return null;
     return empty[Math.floor(Math.random() * empty.length)];
   }
@@ -449,13 +500,13 @@
     const pHead = state.player.body[0];
     const wall = state.flags && state.flags.wall;
     const pNew = { x: pHead.x + state.player.dir.x, y: pHead.y + state.player.dir.y };
-    if (wall) { pNew.x = (pNew.x + GRID) % GRID; pNew.y = (pNew.y + GRID) % GRID; }
+    if (wall) { pNew.x = (pNew.x + gW()) % gW(); pNew.y = (pNew.y + gH()) % gH(); }
     const candidates = [];
     dirs.forEach(function (d) {
       if (d.x === -o.dir.x && d.y === -o.dir.y) return;
       let nx = head.x + d.x, ny = head.y + d.y;
-      if (wall) { nx = (nx + GRID) % GRID; ny = (ny + GRID) % GRID; }
-      else if (nx < 0 || nx >= GRID || ny < 0 || ny >= GRID) return;
+      if (wall) { nx = (nx + gW()) % gW(); ny = (ny + gH()) % gH(); }
+      else if (nx < 0 || nx >= gW() || ny < 0 || ny >= gH()) return;
       const eat = state.foods.some(function (f) { return f.x === nx && f.y === ny; });
       for (let i = 0; i < o.body.length - (eat ? 0 : 1); i++) if (o.body[i].x === nx && o.body[i].y === ny) return;
       for (let i = 0; i < state.player.body.length - 1; i++) if (state.player.body[i].x === nx && state.player.body[i].y === ny) return;
@@ -481,7 +532,7 @@
     if (target) {
       const dist = Math.abs(nx - target.x) + Math.abs(ny - target.y);
       const w = behavior.speedUp ? 4 : 2;
-      score += (GRID * 2 - dist) * w;
+      score += (gW() + gH() - dist) * w;
     }
     score += floodFillSize(nx, ny) * 0.6;
     const o = state.opp;
@@ -505,13 +556,13 @@
     const q = [[sx, sy]];
     visited[sx + ',' + sy] = true;
     let count = 0;
-    while (q.length && count < 50) {
+    while (q.length && count < 100) {
       const cur = q.shift();
       count++;
       const adj = [[0, -1], [0, 1], [-1, 0], [1, 0]];
       for (let i = 0; i < 4; i++) {
         const nx = cur[0] + adj[i][0], ny = cur[1] + adj[i][1], k = nx + ',' + ny;
-        if (nx < 0 || nx >= GRID || ny < 0 || ny >= GRID) continue;
+        if (nx < 0 || nx >= gW() || ny < 0 || ny >= gH()) continue;
         if (visited[k] || blocked[k]) continue;
         visited[k] = true; q.push([nx, ny]);
       }
@@ -677,8 +728,8 @@
   function render(alpha) {
     if (!ctx || !state) return;
     if (alpha == null) alpha = 0;
-    const W = logicSize, H = logicSize;
-    const cell = W / GRID;
+    const W = cssW, H = cssH;
+    const cw = W / gW(), ch = H / gH(), cs = Math.min(cw, ch);
     const now = performance.now();
     const dt = renderLastTime ? Math.min(50, now - renderLastTime) : 16;
     renderLastTime = now;
@@ -687,16 +738,14 @@
     ctx.fillRect(0, 0, W, H);
     ctx.strokeStyle = 'rgba(0,0,0,0.04)';
     ctx.lineWidth = 1;
-    for (let i = 1; i < GRID; i++) {
-      ctx.beginPath(); ctx.moveTo(i * cell, 0); ctx.lineTo(i * cell, H); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(0, i * cell); ctx.lineTo(W, i * cell); ctx.stroke();
-    }
+    for (let i = 1; i < gW(); i++) { ctx.beginPath(); ctx.moveTo(i * cw, 0); ctx.lineTo(i * cw, H); ctx.stroke(); }
+    for (let j = 1; j < gH(); j++) { ctx.beginPath(); ctx.moveTo(0, j * ch); ctx.lineTo(W, j * ch); ctx.stroke(); }
     // 食物：呼吸脉动
     const pulse = 1 + 0.12 * Math.sin(now / 220);
     state.foods.forEach(function (f) {
       ctx.fillStyle = '#ff6b6b';
       ctx.beginPath();
-      ctx.arc(f.x * cell + cell / 2, f.y * cell + cell / 2, cell * 0.32 * pulse, 0, Math.PI * 2);
+      ctx.arc(f.x * cw + cw / 2, f.y * ch + ch / 2, cs * 0.32 * pulse, 0, Math.PI * 2);
       ctx.fill();
     });
     drawSnake(state.player, prevPlayerBody, alpha, '#34c759', '#28a745');
@@ -710,7 +759,7 @@
       ctx.globalAlpha = p.life / p.maxLife;
       ctx.fillStyle = p.color;
       ctx.beginPath();
-      ctx.arc(p.x * cell, p.y * cell, cell * 0.12, 0, Math.PI * 2);
+      ctx.arc(p.x * cw, p.y * ch, cs * 0.12, 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.globalAlpha = 1;
@@ -722,16 +771,16 @@
       f.y -= dt / 280;
       ctx.globalAlpha = Math.min(1, f.life / 300);
       ctx.fillStyle = '#ff6b6b';
-      ctx.font = 'bold ' + Math.floor(cell * 0.72) + 'px sans-serif';
+      ctx.font = 'bold ' + Math.floor(cs * 0.72) + 'px sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(f.text, f.x * cell, f.y * cell);
+      ctx.fillText(f.text, f.x * cw, f.y * ch);
     }
     ctx.globalAlpha = 1;
   }
   function drawSnake(snake, prevBody, alpha, headColor, bodyColor) {
     if (!snake.body.length) return;
-    const cell = logicSize / GRID;
+    const cw = cssW / gW(), ch = cssH / gH(), cs = Math.min(cw, ch);
     const dead = !snake.alive;
     const bodyC = dead ? '#cfcfd4' : bodyColor;
     const headC = dead ? '#cfcfd4' : headColor;
@@ -744,19 +793,19 @@
         x = prevBody[i].x + (s.x - prevBody[i].x) * alpha;
         y = prevBody[i].y + (s.y - prevBody[i].y) * alpha;
       }
-      pts.push({ x: x * cell + cell / 2, y: y * cell + cell / 2 });
+      pts.push({ x: x * cw + cw / 2, y: y * ch + ch / 2 });
     }
     // 身体：粗线段连续绘制（圆角端），穿墙跨边界时断开
     if (pts.length >= 2) {
       ctx.strokeStyle = bodyC;
-      ctx.lineWidth = cell * 0.82;
+      ctx.lineWidth = cs * 0.82;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
       ctx.beginPath();
       ctx.moveTo(pts[1].x, pts[1].y);
       for (let i = 2; i < pts.length; i++) {
         const ddx = pts[i].x - pts[i - 1].x, ddy = pts[i].y - pts[i - 1].y;
-        if (Math.abs(ddx) > cell * 2 || Math.abs(ddy) > cell * 2) {
+        if (Math.abs(ddx) > cw * 2 || Math.abs(ddy) > ch * 2) {
           ctx.stroke(); ctx.beginPath(); ctx.moveTo(pts[i].x, pts[i].y);
         } else ctx.lineTo(pts[i].x, pts[i].y);
       }
@@ -765,12 +814,12 @@
     // 头：稍大圆 + 高光
     ctx.fillStyle = headC;
     ctx.beginPath();
-    ctx.arc(pts[0].x, pts[0].y, cell * 0.46, 0, Math.PI * 2);
+    ctx.arc(pts[0].x, pts[0].y, cs * 0.46, 0, Math.PI * 2);
     ctx.fill();
     if (!dead) {
       ctx.fillStyle = 'rgba(255,255,255,0.45)';
       ctx.beginPath();
-      ctx.arc(pts[0].x - cell * 0.13, pts[0].y - cell * 0.13, cell * 0.15, 0, Math.PI * 2);
+      ctx.arc(pts[0].x - cs * 0.13, pts[0].y - cs * 0.13, cs * 0.15, 0, Math.PI * 2);
       ctx.fill();
     }
   }
@@ -811,11 +860,15 @@
       localStorage.setItem(SAVE_KEY, JSON.stringify(state));
     } catch (e) {}
   }
-  function validCoord(p) { return p && p.x >= 0 && p.x < GRID && p.y >= 0 && p.y < GRID; }
+  function validCoord(p, w, h) { return p && p.x >= 0 && p.x < w && p.y >= 0 && p.y < h; }
   function validState(s) {
     if (!s || !s.player || !s.opp) return false;
-    if (!s.player.body.every(validCoord) || !s.opp.body.every(validCoord)) return false;
-    if (s.foods && !s.foods.every(validCoord)) return false;
+    // 存档自带地图尺寸（旧档无尺寸按 15×15），坐标必须落在该地图内
+    const w = Math.max(10, Math.min(42, s.gw || 15));
+    const h = Math.max(10, Math.min(48, s.gh || 15));
+    s.gw = w; s.gh = h;
+    if (!s.player.body.every(function (p) { return validCoord(p, w, h); }) || !s.opp.body.every(function (p) { return validCoord(p, w, h); })) return false;
+    if (s.foods && !s.foods.every(function (p) { return validCoord(p, w, h); })) return false;
     return true;
   }
   function loadSaved() {
@@ -837,6 +890,7 @@
     if (wallBtn) wallBtn.classList.toggle('on', state.flags.wall);
     if (safeBtn) safeBtn.classList.toggle('on', state.flags.safe);
     behavior = { current: null, until: 0, stepLeft: 0, cooldowns: {}, targetFood: null, speedUp: false, speedUpUntil: 0 };
+    setupCanvas();   // 按存档自带地图尺寸重新适配画布（可能与当前视口推算尺寸不同）
     state.status = 'playing';
     state.startTime = Date.now() - state.elapsed;
     if (startBtn) { startBtn.hidden = true; startBtn.textContent = '开始'; }
@@ -859,11 +913,12 @@
     const mp = $('chat-more-panel'); if (mp) mp.hidden = true;
     const nameEl = $('snake-partner-name');
     if (nameEl) nameEl.textContent = (typeof localStorage !== 'undefined' && localStorage.getItem(PARTNER_KEY)) || 'TA';
-    // 手机端默认全屏（占满视口，格子更大好操作）；桌面端重置全屏
+    // 先显示面板再切全屏：隐藏状态下量不到布局尺寸，setupCanvas 会拿到 0
+    panel.hidden = false;
+    // 手机端默认全屏（占满视口、地图按屏幕放大更好玩）；桌面端重置全屏
     const mobile = window.innerWidth < 900;
     if (mobile) { if (!isFs) toggleFs(); }
     else { if (isFs) toggleFs(); }
-    panel.hidden = false;
     paused = false;
     if (pauseBtn) pauseBtn.textContent = '⏸';
     renderScore();
@@ -871,6 +926,7 @@
     if (canSave(state) && validState(state)) {
       state.status = 'playing';
       state.startTime = Date.now() - state.elapsed;
+      setupCanvas();   // 恢复对局可能带自己的地图尺寸，重新适配画布
       if (startBtn) { startBtn.hidden = true; startBtn.textContent = '开始'; }
       if (restartBtn) restartBtn.hidden = true;
       if (resumeBtn) resumeBtn.hidden = true;
@@ -915,6 +971,18 @@
 
   window.openSnakePanel = openSnakePanel;
   window.closeSnakePanel = closeSnakePanel;
+  // 只读调试口（tools 专项验证用：地图尺寸/对局状态/蛇身食物坐标）
+  window.__snakeState = function () {
+    if (!state) return null;
+    return {
+      status: state.status, diff: state.diff, gw: state.gw, gh: state.gh,
+      running: !!(rafId || countdownTimer),
+      player: { body: cloneBody(state.player.body), alive: state.player.alive, score: Math.floor(state.player.score) },
+      opp: { body: cloneBody(state.opp.body), alive: state.opp.alive, score: Math.floor(state.opp.score) },
+      foods: state.foods.map(function (f) { return { x: f.x, y: f.y }; }),
+      elapsed: state.elapsed
+    };
+  };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initEls);
   else initEls();

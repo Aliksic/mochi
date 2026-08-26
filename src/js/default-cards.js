@@ -69,6 +69,18 @@
   // 数据（提取自星言 08_default_cards_data.js）
   const DATA = (window.DEFAULT_CARD_DATA) || { main: [], kaomoji: [], emoji: [] };
 
+  // v3.16.x：字卡库入口角标数量动态化——template.html 里写死的「3260」早已过期
+  //（主字卡现 4621，全库含互动回应/摸鱼/吃什么/经期/喝水/花园等同源功能池共 5800+），
+  // 改为按 DEFAULT_CARD_DATA 全部分类实时合计；后续新增分类角标自动跟上不再写死。
+  function refreshLibCount() {
+    const el = document.querySelector('#li-default-cards .t');
+    if (!el) return;
+    let n = 0;
+    Object.keys(DATA).forEach(k => { (DATA[k] || []).forEach(g => { n += Array.isArray(g[1]) ? g[1].length : 0; }); });
+    el.textContent = String(n);
+  }
+  refreshLibCount();
+
   // v3.6.x：单卡开关——系统预设字卡可逐张开启/关闭使用
   //   存 localStorage 键：dc-off-<分类>:<字卡内容>，关闭为 '1'
   function isCardOff(cat, c) { return api.isOff(cat, c); }
@@ -211,29 +223,16 @@
     toastCard(rec.c, nowOff);
   });
 
-  // v3.7.x：互动回应 tab（JS 注入，避免改 template.html）——展示互动卡片预设话术池
-  // （邀请TA 接受/拒绝、问问TA 回应、小问题/好奇/吐槽/询问 的预设回应，数据在
-  // DEFAULT_CARD_DATA.interact）；逐张开关（dc-off-interact-*）与互动回复抽取联动，
-  // ta-ask.js pickAskCardReply / chat.js chatChooseReply 会读取该开关过滤已关闭话术
-  if (!tabsWrap.querySelector('[data-type="interact"]')) {
-    const b = document.createElement('button');
-    b.className = 'cc-tab';
-    b.dataset.type = 'interact';
-    b.textContent = '互动回应';
-    tabsWrap.appendChild(b);
-  }
-  // v3.13.x：摸鱼浮字 tab（JS 注入）——TA 摸鱼值上涨时的桌面浮字与抓包回应预设池
-  //（DEFAULT_CARD_DATA.fish）；逐张开关（dc-off-fish:*）与 p2-features.js 实际抽取联动
-  if (!tabsWrap.querySelector('[data-type="fish"]')) {
-    const b = document.createElement('button');
-    b.className = 'cc-tab';
-    b.dataset.type = 'fish';
-    b.textContent = '摸鱼浮字';
-    tabsWrap.appendChild(b);
-  }
-  // v3.13.x：花园/同频/伸手/喝水/存钱罐 tab（JS 注入）——各功能预设话术池
-  //（DEFAULT_CARD_DATA.garden/sync/reach/water/piggy）；逐张开关与实际抽取联动
-  [['garden', '花园'], ['sync', '同频'], ['reach', '伸手'], ['water', '喝水'], ['piggy', '存钱罐']].forEach(([k, label]) => {
+  // v3.15.x：功能触发字卡 tab 统一连排（JS 注入）——用户反馈按功能名找不到分类，
+  // 全部功能池紧跟四大基础分类最先注入、命名与功能同名，打开页面第一眼即可见：
+  // 摸鱼(fish)/吃饭(eat)/经期(period)/喝水(water)/花园(garden)/同频(sync)/
+  // 伸手(reach)/此间(cjian)/房间(room)/存钱罐(piggy)。
+  // 各池数据与开关联动不变：DEFAULT_CARD_DATA.<分类>（dc-off-<分类>:*），
+  // 消费侧 p2-features/period/room/cjian 等经 getLibPool(分类,分组,兜底) 同源抽取；
+  // 其中 此间(cjian) 为本轮新增——感知播报句与状态说明文案入库可查看。
+  [['fish', '摸鱼'], ['eat', '吃饭'], ['period', '经期'], ['water', '喝水'], ['garden', '花园'],
+   ['sync', '同频'], ['reach', '伸手'], ['cjian', '此间'], ['room', '房间'], ['piggy', '存钱罐'],
+   ['drift', '漂流瓶']].forEach(([k, label]) => {
     if (!tabsWrap.querySelector('[data-type="' + k + '"]')) {
       const b = document.createElement('button');
       b.className = 'cc-tab';
@@ -242,31 +241,16 @@
       tabsWrap.appendChild(b);
     }
   });
-  // v3.15.x：房间 tab（JS 注入）——双人小屋互动话术池（DEFAULT_CARD_DATA.room，
-  // 进门/打招呼/靠近/坐到旁边等分组）；逐张开关（dc-off-room:*）与 room.js 实际抽取联动
-  if (!tabsWrap.querySelector('[data-type="room"]')) {
+  // v3.7.x：互动回应 tab（JS 注入，避免改 template.html）——展示互动卡片预设话术池
+  // （邀请TA 接受/拒绝、问问TA 回应、小问题/好奇/吐槽/询问 的预设回应，数据在
+  // DEFAULT_CARD_DATA.interact）；逐张开关（dc-off-interact-*）与互动回复抽取联动，
+  // ta-ask.js pickAskCardReply / chat.js chatChooseReply 会读取该开关过滤已关闭话术。
+  // v3.15.x 移到功能池之后末位（功能分类优先露出）
+  if (!tabsWrap.querySelector('[data-type="interact"]')) {
     const b = document.createElement('button');
     b.className = 'cc-tab';
-    b.dataset.type = 'room';
-    b.textContent = '房间';
-    tabsWrap.appendChild(b);
-  }
-  // v3.14.x：经期关心 tab（JS 注入）——period.js 梦角关心触发同源预设池
-  //（DEFAULT_CARD_DATA.period）；逐张开关（dc-off-period:*）与 period.js pickCareLine 联动
-  if (!tabsWrap.querySelector('[data-type="period"]')) {
-    const b = document.createElement('button');
-    b.className = 'cc-tab';
-    b.dataset.type = 'period';
-    b.textContent = '经期关心';
-    tabsWrap.appendChild(b);
-  }
-  // v3.14.x：吃什么 tab（JS 注入）——TA 饭点概率提醒话术池（DEFAULT_CARD_DATA.eat，
-  // 分组「提醒吃饭/追问关心」）；逐张开关（dc-off-eat:*）与 p2-features.js 实际抽取联动
-  if (!tabsWrap.querySelector('[data-type="eat"]')) {
-    const b = document.createElement('button');
-    b.className = 'cc-tab';
-    b.dataset.type = 'eat';
-    b.textContent = '吃什么';
+    b.dataset.type = 'interact';
+    b.textContent = '互动回应';
     tabsWrap.appendChild(b);
   }
 

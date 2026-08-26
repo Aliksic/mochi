@@ -32,6 +32,38 @@
     callsSave(list);
     if (!document.getElementById('page-home').hidden) render();
   };
+  // ---- 摸鱼抓包记录（v3.15.x：双向） ----
+  // type='me'：我抓到联系人摸鱼（p2-features.js 桌面浮字点击抓包成功时写入）
+  // type='ta'：被联系人抓到我摸鱼（personalize.js 摸鱼+1 点太频被反向抓包时写入）
+  function catchesLoad() {
+    try { return JSON.parse(store.get('records-fishcatch') || '[]'); } catch (e) { return []; }
+  }
+  function catchesSave(list) { store.set('records-fishcatch', JSON.stringify(list)); } // v3.15.x：用户要求保留全部历史，不设上限（事件本身低频，量级可控）
+  window.addFishCatchRecord = function (type, text) {
+    const list = catchesLoad();
+    list.unshift({ type: type, text: text || '', ts: Date.now() });
+    catchesSave(list);
+    if (!document.getElementById('page-home').hidden) render();
+  };
+  // 摸鱼抓包记录渲染（最新在前，全部保留；文案按当前联系人昵称动态适配）
+  function renderCatch() {
+    const el = document.getElementById('home-catch');
+    if (!el) return;
+    const name = store.get('lbl-partner') || (window.taWord ? window.taWord() : 'TA');
+    const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    const list = catchesLoad();
+    el.innerHTML = list.length
+      ? list.map(x =>
+          '<div class="tc-listitem"><div class="tc-li-top"><span class="tc-li-q">' +
+          (x.type === 'ta'
+            ? '<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>' + name + ' 抓到我摸鱼'
+            : '<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>' + '抓到 ' + name + ' 摸鱼') +
+          '</span><span class="tc-li-time">' + fmtDT(x.ts) + '</span></div>' +
+          (x.text ? '<div class="tc-li-line">' + (window.taFit ? window.taFit(esc(x.text)) : esc(x.text)) + '</div>' : '') +
+          '</div>'
+        ).join('')
+      : '<div class="ta-empty">暂无摸鱼抓包记录（桌面浮字可点击抓包 TA；点太快会被 TA 反向抓包）</div>';
+  }
   // ---- 渲染主页记录 ----
   function histList(key) { try { return JSON.parse(store.get(key) || '[]'); } catch (e) { return []; } }
   // v3.9.x：联系人今日情话 / 我的备忘 / 我的心情记录已迁移到日历页按天查看，主页不再保留
@@ -90,6 +122,10 @@
     // 每日摸鱼值记录
     if (showOnly === 'fish') {
       window.renderFishHistory();
+    }
+    // 摸鱼抓包记录（双向：我抓到 TA / 被 TA 抓到）
+    if (showOnly === 'catch') {
+      renderCatch();
     }
     // 换头像记录（全部事件：直接换 / 邀请同意 / 邀请拒绝 / 我手动更换）
     if (showOnly === 'av') {

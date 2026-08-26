@@ -899,8 +899,8 @@ w.systemBalance += Math.round((rpRec.rpAmount || 0) * 100);
 rpWalletSet(w);
 saveMsgsNow();
 renderWindow(true, true);
-const amtTxt = '¥' + Number(rpRec.rpAmount || 0).toFixed(2);
-setTimeout(() => addIn('你退回了红包 ' + amtTxt, { special: 'poke' }), randInt(300, 800));
+const amtTxt = '（心意币 ¥' + Number(rpRec.rpAmount || 0).toFixed(2) + '）';
+setTimeout(() => addIn('你退回了红包' + amtTxt, { special: 'poke' }), randInt(300, 800));
 }, { okText: '退回', cancelText: '取消' });
 }
 }, 500);
@@ -937,10 +937,10 @@ const wallet = rpWalletGet();
 wallet.myBalance += Math.round((rpRec.rpAmount || 0) * 100);
 rpWalletSet(wallet);
 saveMsgsNow();
-const amtTxt = '¥' + Number(rpRec.rpAmount || 0).toFixed(2);
-toast('已领取 ' + amtTxt);
+const amtTxt = '（心意币 ¥' + Number(rpRec.rpAmount || 0).toFixed(2) + '）';
+toast('已领取' + amtTxt);
 renderWindow(true, true);
-setTimeout(() => addIn('你领取了红包 ' + amtTxt, { special: 'poke' }), randInt(400, 1000));
+setTimeout(() => addIn('你领取了红包' + amtTxt, { special: 'poke' }), randInt(400, 1000));
 return;
 }
 if (e.target.closest('.msg-inplace')) return;
@@ -1273,7 +1273,7 @@ const sideTxt = rec.side === 'out' ? '我' : chatPartnerName();
 const cls = rpStatusCls(rec);
 const rpIco = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9c3 2 6 3 9 3s6-1 9-3"/><circle cx="12" cy="9" r="1.4"/></svg>';
 m.innerHTML = '<div class="msg-rp-card' + (cls ? ' ' + cls : '') + '">' +
-'<div class="msg-rp-top"><span class="msg-rp-ico">' + rpIco + '</span><span class="msg-rp-label">红包</span></div>' +
+'<div class="msg-rp-top"><span class="msg-rp-ico">' + rpIco + '</span><span class="msg-rp-label">红包 · 心意币</span></div>' +
 '<div class="msg-rp-amt">¥' + escTxt(Number(rec.rpAmount || 0).toFixed(2)) + '</div>' +
 '<div class="msg-rp-wish">' + escTxt(rec.rpWish || '心意') + '</div>' +
 '<div class="msg-rp-foot">' +
@@ -1498,12 +1498,15 @@ mm.className = 'msg-moods';
 const recalled = [];
 rec.mood.forEach((md, mi) => {
 if (rec.retractedMood && rec.retractedMood.indexOf(mi) >= 0) { recalled.push(md); return; }
-const mt = escTxt(T(md.tag)), ml = escTxt(T(md.label));
-if (md.tag === '交流意图') {
-mm.innerHTML += '<div class="msg-mood msg-intent"><span class="msg-mood-tag">' + mt + '</span><span>' + ml + '</span></div>';
-} else {
-mm.innerHTML += '<div class="msg-mood"><span class="msg-mood-tag">' + mt + '</span><span>' + ml + '</span></div>';
-}
+      const mt = escTxt(T(md.tag)), ml = escTxt(T(md.label));
+      // v3.16.x：来源标签 chip（opts.tag 生成）的 label 恒等于气泡正文，不再重复渲染右侧文案，
+      // 否则「字卡一行 + 标签行同文」内容重复（摸鱼抓包等）；真实情绪字卡 label≠正文不受影响
+      const dupBody = md.label != null && String(md.label) !== '' && String(md.label) === String(rec.text == null ? '' : rec.text);
+      if (md.tag === '交流意图') {
+        mm.innerHTML += '<div class="msg-mood msg-intent"><span class="msg-mood-tag">' + mt + '</span>' + (dupBody ? '' : '<span>' + ml + '</span>') + '</div>';
+      } else {
+        mm.innerHTML += '<div class="msg-mood"><span class="msg-mood-tag">' + mt + '</span>' + (dupBody ? '' : '<span>' + ml + '</span>') + '</div>';
+      }
 });
 if (recalled.length) {
 mm.innerHTML += '<div style="margin-top:2px">' +
@@ -1872,10 +1875,12 @@ return el;
 }
 function addIn(text, opts) {
 opts = opts || {};
-// v3.14.x：opts.tag = 来源标注（如「经期关心/喝水提醒/吃饭提醒」）——系统功能直接发进
-// 聊天的字卡带一枚标签 chip（复用 rec.mood 渲染与持久化链路，重进聊天仍在），
-// 用户能看出这条消息是哪个功能触发的，不再是无来由的普通气泡
-const _tagMood = opts.tag ? [{ tag: String(opts.tag), label: String(text) }] : null;
+  // v3.14.x：opts.tag = 来源标注（如「经期关心/喝水提醒/吃饭提醒」）——系统功能直接发进
+  // 聊天的字卡带一枚标签 chip（复用 rec.mood 渲染与持久化链路，重进聊天仍在），
+  // 用户能看出这条消息是哪个功能触发的，不再是无来由的普通气泡
+  // v3.15.x：opts.tagNoDup = 只留来源 chip，不把正文重复写进 mood label（摸鱼抓包回应用：
+  // 正文本身就是一张完整字卡，label 再渲染一遍会上下两行内容重复）
+  const _tagMood = opts.tag ? [{ tag: String(opts.tag), label: opts.tagNoDup ? '' : String(text) }] : null;
 return addRec({ side: 'in', text: text, initiative: opts.initiative, special: opts.special, quote: opts.quote, qidx: opts.qidx, type: opts.type, img: opts.img, parts: opts.parts, mailNotice: opts.mailNotice, askQuestion: opts.askQuestion, askStatus: opts.askStatus, askOptions: opts.askOptions, askType: opts.askType, choiceQuestion: opts.choiceQuestion, choiceOptions: opts.choiceOptions, choicePref: opts.choicePref, choiceCat: opts.choiceCat, choiceStatus: opts.choiceStatus, choiceAnswer: opts.choiceAnswer, choiceReply: opts.choiceReply, choiceMatch: opts.choiceMatch, curiousQuestion: opts.curiousQuestion, curiousQuick: opts.curiousQuick, curiousReplies: opts.curiousReplies, curiousFollowup: opts.curiousFollowup, curiousQid: opts.curiousQid, curiousCat: opts.curiousCat, curiousStatus: opts.curiousStatus, curiousAnswer: opts.curiousAnswer, curiousReply: opts.curiousReply, roastText: opts.roastText, roastCat: opts.roastCat, roastStatus: opts.roastStatus, roastAnswer: opts.roastAnswer, roastReply: opts.roastReply, rpAmount: opts.rpAmount, rpWish: opts.rpWish, rpStatus: opts.rpStatus, rpTs: opts.rpTs, rpCover: opts.rpCover, mood: opts.mood || _tagMood || undefined });
 }
 function addOut(text) {
@@ -3203,7 +3208,10 @@ if (rpRandVal) rpRandVal.textContent = '';
 });
 }
 }
-const RP_WALLET_KEY = 'rp-wallet';
+// v3.15.x：红包金额与心意市集心意币统一为同一本账（gift-wallet），红包里的钱=心意币；
+// rp-wallet 仅作老数据一次性迁移种子（首次读取 gift-wallet 缺失时继承其余额并落盘）
+const RP_WALLET_KEY = 'gift-wallet';
+const RP_LEGACY_WALLET_KEY = 'rp-wallet';
 const RP_DAILY_PREFIX = 'ml2_rp_daily_';
 const RP_EXPIRY_MS = 24 * 60 * 60 * 1000;
 const RP_SPECIAL_FEN = [520, 5200, 52000, 520000, 1314, 131400]; // 5.2/52/520/5200/13.14/1314 元
@@ -3212,7 +3220,13 @@ try {
 const w = JSON.parse(store.get(RP_WALLET_KEY) || '');
 if (typeof w.myBalance === 'number' && typeof w.systemBalance === 'number') return w;
 } catch (e) {}
-return { myBalance: 99999999, systemBalance: 99999999 };
+let seed = { myBalance: 99999999, systemBalance: 99999999 };
+try {
+const o = JSON.parse(store.get(RP_LEGACY_WALLET_KEY) || '');
+if (typeof o.myBalance === 'number' && typeof o.systemBalance === 'number') seed = { myBalance: o.myBalance, systemBalance: o.systemBalance };
+} catch (e) {}
+store.set(RP_WALLET_KEY, JSON.stringify(seed));
+return seed;
 }
 function rpWalletSet(w) { store.set(RP_WALLET_KEY, JSON.stringify(w)); }
 function rpDailyCount() {
@@ -3315,7 +3329,7 @@ wallet.myBalance += amtFen;
 rpWalletSet(wallet);
 saveMsgsNow();
 renderWindow(false, true);
-setTimeout(() => { if ((window.__activeCid || 'default') !== myCid) return; addIn('TA 退回了你的红包 ¥' + Number(rec.rpAmount || 0).toFixed(2), { special: 'poke' }); }, randInt(500, 1200));
+setTimeout(() => { if ((window.__activeCid || 'default') !== myCid) return; addIn('TA 退回了你的红包（心意币 ¥' + Number(rec.rpAmount || 0).toFixed(2) + '）', { special: 'poke' }); }, randInt(500, 1200));
 } else if (r < 0.9) {
 rec.rpStatus = 'received';
 rec.rpOpenedAt = Date.now();
@@ -3323,8 +3337,8 @@ wallet.systemBalance += amtFen;
 rpWalletSet(wallet);
 saveMsgsNow();
 renderWindow(false, true);
-const amtTxt = '¥' + Number(rec.rpAmount || 0).toFixed(2);
-setTimeout(() => { if ((window.__activeCid || 'default') !== myCid) return; addIn('TA 领取了你的红包 ' + amtTxt, { special: 'poke' }); }, randInt(400, 1000));
+const amtTxt = '（心意币 ¥' + Number(rec.rpAmount || 0).toFixed(2) + '）';
+setTimeout(() => { if ((window.__activeCid || 'default') !== myCid) return; addIn('TA 领取了你的红包' + amtTxt, { special: 'poke' }); }, randInt(400, 1000));
 rpCollectFeedback();
 }
 }
@@ -3340,9 +3354,9 @@ wallet.systemBalance += Math.round((rec.rpAmount || 0) * 100);
 rpWalletSet(wallet);
 saveMsgsNow();
 renderWindow(false, true);
-const amtTxt = '¥' + Number(rec.rpAmount || 0).toFixed(2);
+const amtTxt = '（心意币 ¥' + Number(rec.rpAmount || 0).toFixed(2) + '）';
 const myCid = window.__activeCid || 'default';
-setTimeout(() => { if ((window.__activeCid || 'default') !== myCid) return; addIn('TA 领取了你的红包 ' + amtTxt, { special: 'poke' }); }, randInt(400, 1000));
+setTimeout(() => { if ((window.__activeCid || 'default') !== myCid) return; addIn('TA 领取了你的红包' + amtTxt, { special: 'poke' }); }, randInt(400, 1000));
 rpCollectFeedback();
 }
 function rpExpireCheck() {
@@ -3368,33 +3382,37 @@ function rpRenderBalance() {
 const el = document.getElementById('rp-balance');
 if (!el) return;
 const w = rpWalletGet();
-el.textContent = '我的 ¥' + (w.myBalance / 100).toFixed(2) + ' · TA ¥' + (w.systemBalance / 100).toFixed(2) + ' · 点此设置金额';
+el.textContent = '心意币 ¥' + (w.myBalance / 100).toFixed(2) + ' · ' + chatPartnerName() + ' ¥' + (w.systemBalance / 100).toFixed(2) + ' · 点此向 Mochi 申请';
 }
+// v3.15.x：余额行改为「向 Mochi 申请心意币」——不再直接改账本数值；
+// 选收款方（我/TA）输入申请金额，确定即模拟 Mochi 打款并入账（累加），留空点【完成】结束
 function rpEditWallet() {
 if (!window.openModal) return;
 const taName = window.taFit ? window.taFit('TA') : 'TA';
-const LBL = { my: '我的', ta: taName };
+const LBL = { my: '我的心意币', ta: taName + '的心意币' };
 let side = 'my';
 let doneAny = false;
+const fmtYuan = (n) => (Math.round(n * 100) / 100).toFixed(2);
 const hintTxt = () => {
 const w = rpWalletGet();
-return '当前：我的 ¥' + (w.myBalance / 100).toFixed(2) + ' · ' + taName + ' ¥' + (w.systemBalance / 100).toFixed(2) +
-(doneAny ? '\n已保存，可继续输入' + LBL[side] + '的金额；留空点【完成】结束' : '\n输入新金额后点【保存】；留空确定 = 不改动');
+return '当前：心意币 ¥' + (w.myBalance / 100).toFixed(2) + ' · ' + taName + ' ¥' + (w.systemBalance / 100).toFixed(2) +
+(doneAny ? '\n已到账，可继续为' + LBL[side] + '申请；留空点【完成】结束' : '\n选择收款方，输入申请金额点【申请】，Mochi 打款后自动入账；留空点【完成】结束');
 };
 let ctl = null;
-ctl = window.openModal('修改钱包金额（元）', '', (arg) => {
+ctl = window.openModal('向 Mochi 申请心意币', '', (arg) => {
 const picked = (arg === 'my' || arg === 'ta');
 const el = document.getElementById('modal-input');
 const raw = String(picked ? ((el && el.value) || '') : (arg == null ? '' : arg)).trim();
 const target = picked ? arg : side;
-if (raw === '') return; // 留空 = 不改动并结束（stay 未置位，本次确定正常关闭）
+if (raw === '') return; // 留空确定 = 结束本次申请（stay 未置位，正常关闭）
 const n = parseFloat(raw);
-if (isNaN(n) || n < 0) { toast('金额无效，未修改'); return; }
+if (isNaN(n) || n <= 0) { toast('申请金额需大于 0'); return; }
+const fen = Math.round(n * 100);
 const w = rpWalletGet();
-if (target === 'my') w.myBalance = Math.round(n * 100);
-else w.systemBalance = Math.round(n * 100);
+if (target === 'my') w.myBalance += fen;
+else w.systemBalance += fen;
 rpWalletSet(w); rpRenderBalance();
-toast(LBL[target] + '钱包金额已更新');
+toast('Mochi 已打款，' + LBL[target] + ' +¥' + fmtYuan(fen / 100));
 doneAny = true;
 side = target === 'my' ? 'ta' : 'my';
 if (ctl) {
@@ -3408,12 +3426,13 @@ ctl.okText('完成');
 }
 }, {
 staticText: hintTxt(),
-pills: [{ value: 'my', label: '我的' }, { value: 'ta', label: taName }],
+pills: [{ value: 'my', label: '我的心意币' }, { value: 'ta', label: taName + ' 的心意币' }],
 pill: 'my',
-placeholder: '输入新金额（元），留空结束',
+placeholder: '输入申请金额（元），留空结束',
 inputmode: 'decimal',
 maxlength: 9
 });
+if (ctl) ctl.okText('申请');
 }
 const rpBalanceEl = document.getElementById('rp-balance');
 if (rpBalanceEl) rpBalanceEl.addEventListener('click', (e) => { e.stopPropagation(); rpEditWallet(); });
@@ -3511,10 +3530,10 @@ const wish = (rpWishInput && rpWishInput.value || '').trim() || (isQixiToday() ?
 const amtFen = Math.round(amt * 100);
 const wallet = rpWalletGet();
 if (rpSide === 'out') {
-if (amtFen > wallet.myBalance) { toast('我的余额不足'); return; }
+if (amtFen > wallet.myBalance) { toast('我的心意币不足'); return; }
 wallet.myBalance -= amtFen;
 } else {
-if (amtFen > wallet.systemBalance) { toast(window.taFit ? window.taFit('TA 余额不足') : 'TA 余额不足'); return; }
+if (amtFen > wallet.systemBalance) { toast(window.taFit ? window.taFit('TA 的心意币不足') : 'TA 的心意币不足'); return; }
 wallet.systemBalance -= amtFen;
 }
 rpWalletSet(wallet);
@@ -4765,13 +4784,14 @@ b.innerHTML = '<span style="opacity:.85">' + escTxtBr(f.text) + '</span>';
 }
 }
 if (f.mood && f.mood.length) {
-f.mood.forEach(md => {
-if (md.tag === '交流意图') {
-b.innerHTML += '<div class="msg-mood msg-intent"><span class="msg-mood-tag">' + md.tag + '</span><span>' + md.label + '</span></div>';
-} else {
-b.innerHTML += '<div class="msg-mood"><span class="msg-mood-tag">' + md.tag + '</span><span>' + md.label + '</span></div>';
-}
-});
+  f.mood.forEach(md => {
+    const dupFav = md.label != null && String(md.label) !== '' && String(md.label) === String(f.text == null ? '' : f.text);
+    if (md.tag === '交流意图') {
+      b.innerHTML += '<div class="msg-mood msg-intent"><span class="msg-mood-tag">' + md.tag + '</span>' + (dupFav ? '' : '<span>' + md.label + '</span>') + '</div>';
+    } else {
+      b.innerHTML += '<div class="msg-mood"><span class="msg-mood-tag">' + md.tag + '</span>' + (dupFav ? '' : '<span>' + md.label + '</span>') + '</div>';
+    }
+  });
 }
 fillAvatar(m.querySelector('.msg-av'), f.side === 'out' ? 'cs-avatar-user' : 'cs-avatar-partner');
 }

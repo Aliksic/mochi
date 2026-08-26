@@ -44,6 +44,17 @@
   }
   function toast(t) { if (typeof window.toast === 'function') window.toast(t); }
   function rand(min, max) { return min + Math.floor(Math.random() * (max - min + 1)); }
+  // v3.15.x：感知播报句走字卡库【系统预设字卡→此间】同源池（DEFAULT_CARD_DATA.cjian，
+  // dc-off-cjian:* 过滤已关卡片，全关回退内置兜底）——与 room/garden 同模式
+  function cjLine(group, fallbackArr) {
+    let pool = fallbackArr;
+    try {
+      const lib = window.getLibPool ? window.getLibPool('cjian', group, null) : null;
+      const arr = (lib || []).filter(t => !(window.isDefaultCardOff && window.isDefaultCardOff('cjian', t)));
+      if (arr.length) pool = arr;
+    } catch (e) {}
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
 
   // ---- 十二时辰 ----
   const SHICHEN = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
@@ -483,10 +494,10 @@
     if (nearOnes.length) {
       if (nearOnes.length === 1) lines.push('你安静了一会儿。\n好像有人就在附近。');
       else lines.push('似乎有' + nearOnes.length + '个人。\n有的离得很近。');
-      nearOnes.forEach(n => lines.push('「' + n.name + '」\n可以感觉到一点熟悉的气息。'));
+      nearOnes.forEach(n => lines.push('「' + n.name + '」\n' + cjLine('感知·气息', ['可以感觉到一点熟悉的气息。'])));
       if (farOnes.length) lines.push('还有谁……在很远的地方。');
     } else {
-      lines.push('没有感觉到谁。');
+      lines.push(cjLine('感知·落空', ['没有感觉到谁。']));
       lines.push('但这并不代表他们不在。');
     }
     // 一次感知最多产生一次状态变化，且需过 15 分钟状态冷却

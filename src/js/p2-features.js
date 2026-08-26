@@ -223,6 +223,8 @@
           (m.mood || []).forEach(md => {
             // v3.6.x：脏数据防御——mood 条目非对象（导入/损坏数据）时跳过，避免统计页中断
             if (!md || typeof md !== 'object') return;
+            // v3.15.x：来源 chip 型 mood（tagNoDup）无正文 label，跳过避免统计出空名条目
+            if (!md.label) return;
             if (md.tag === '交流意图') intent[md.label] = (intent[md.label] || 0) + 1;
             else if (md.tag === '心意') heart[md.label] = (heart[md.label] || 0) + 1;
             else emotion[md.label] = (emotion[md.label] || 0) + 1;
@@ -270,12 +272,12 @@
     });
   }
 
-// ================= 查岗（TA 的日常）=================
+// ================= 寻踪（TA 的日常）=================
 const DEF_PLACES = ['在家', '在公司', '在咖啡店', '在公园', '在图书馆', '在路上', '在朋友家', '在健身房', '在超市', '在电影院'];
 const DEF_ACTIONS = ['刷手机', '看书', '发呆', '听歌', '写东西', '吃零食', '喝奶茶', '散步', '玩游戏', '想你'];
 const DEF_CHECK_MSGS = ['想你了', '记得按时吃饭', '今天也很喜欢你', '早点休息', '有空给我回消息', '别太累'];
-// 查岗日常字卡（可自定义，localStorage 持久化；空则用默认）
-// v3.6.x：是否使用系统预设字卡（默认开启；关闭后查岗只从用户添加的字卡里抽）
+// 寻踪日常字卡（可自定义，localStorage 持久化；空则用默认）
+// v3.6.x：是否使用系统预设字卡（默认开启；关闭后寻踪只从用户添加的字卡里抽）
 const CK_DEF_KEY = 'checkin-cards-default';
 function getCkDefault() {
   const v = store.get(CK_DEF_KEY);
@@ -298,7 +300,7 @@ function ckList(k, def) {
     } catch (e) {}
     return [];
   }
-  // v3.7.x：查岗字卡统一返回对象数组 [{t, grp}]（旧字符串数据自动转对象）——管理页/批量添加用
+  // v3.7.x：寻踪字卡统一返回对象数组 [{t, grp}]（旧字符串数据自动转对象）——管理页/批量添加用
   function ckItems(k) {
     try {
       const v = JSON.parse(store.get('checkin-cards-' + k) || 'null');
@@ -306,9 +308,9 @@ function ckList(k, def) {
     } catch (e) {}
     return [];
   }
-  // v3.7.x：查岗字卡保存（统一对象数组）
+  // v3.7.x：寻踪字卡保存（统一对象数组）
   function ckSaveItems(k, items) { store.set('checkin-cards-' + k, JSON.stringify(items)); }
-  // v3.7.x：查岗自定义分组（按 地点/在做什么/说的话 分类各自独立）——只用于管理页整理，抽取不分组
+  // v3.7.x：寻踪自定义分组（按 地点/在做什么/说的话 分类各自独立）——只用于管理页整理，抽取不分组
   function ckGroups(k) {
     try {
       const v = JSON.parse(store.get('checkin-cards-groups-' + k) || 'null');
@@ -317,7 +319,7 @@ function ckList(k, def) {
     return [];
   }
   function ckSaveGroups(k, groups) { store.set('checkin-cards-groups-' + k, JSON.stringify(groups)); }
-// v3.6.x：查岗系统预设字卡单卡开关——逐张开启/关闭（关闭后查岗不再抽取该条）
+// v3.6.x：寻踪系统预设字卡单卡开关——逐张开启/关闭（关闭后寻踪不再抽取该条）
 function isCkCardOff(k, x) { return store.get('ck-off-' + k + ':' + x) === '1'; }
 function setCkCardOff(k, x, off) { store.set('ck-off-' + k + ':' + x, off ? '1' : '0'); }
 function genCheckin() {
@@ -328,7 +330,7 @@ function genCheckin() {
   let msgs = ckItems('msg');
   // v3.7.x 修复：ckItems 只读自定义字卡（管理页要显示真实自定义，不 fallback），
   // 但 genCheckin 抽取时必须有字卡——自定义空时补系统预设（转 {t} 对象格式），
-  // 否则 out.place/action/msg 全 undefined → 查岗页空白/记录不显示/聊天不发消息
+  // 否则 out.place/action/msg 全 undefined → 寻踪页空白/记录不显示/聊天不发消息
   if (!places.length) places = DEF_PLACES.map(t => ({ t }));
   if (!actions.length) actions = DEF_ACTIONS.map(t => ({ t }));
   if (!msgs.length) msgs = DEF_CHECK_MSGS.map(t => ({ t }));
@@ -338,7 +340,7 @@ function genCheckin() {
   let place = useDefault ? places.filter(p => !isCkCardOff('place', p.t)) : places.filter(p => DEF_PLACES.indexOf(p.t) < 0 && !isCkCardOff('place', p.t));
   let action = useDefault ? actions.filter(a => !isCkCardOff('action', a.t)) : actions.filter(a => DEF_ACTIONS.indexOf(a.t) < 0 && !isCkCardOff('action', a.t));
   let msg = useDefault ? msgs.filter(m => !isCkCardOff('msg', m.t)) : msgs.filter(m => DEF_CHECK_MSGS.indexOf(m.t) < 0 && !isCkCardOff('msg', m.t));
-  // 兜底：关闭预设且完全没有用户自定义时回退使用系统预设（避免查岗空白/undefined）
+  // 兜底：关闭预设且完全没有用户自定义时回退使用系统预设（避免寻踪空白/undefined）
   if (!place.length && !action.length && !msg.length) {
     place = places; action = actions; msg = msgs;
   }
@@ -360,10 +362,10 @@ function renderCheckinHistory() {
             const parts = [x.t, x.place, x.action].filter(Boolean);
             return '<div class="ck-location"><div class="ck-value" style="font-size:13px">' + parts.join(' · ') + '</div><div class="ck-label">' + (x.msg || '') + '</div></div>';
           }).join('')
-        : '<div class="div-result-empty">暂无查岗记录</div>';
+        : '<div class="div-result-empty">暂无寻踪记录</div>';
     } catch (e) {}
   }
-  // 初始化：从 IndexedDB 恢复全部查岗记录
+  // 初始化：从 IndexedDB 恢复全部寻踪记录
   (function () {
     if (window.idbGet) {
       const myPrefix = window.activePrefix();
@@ -426,14 +428,14 @@ function renderCheckinHistory() {
       const line = [ck.place, ck.action, ck.msg].filter(Boolean).join(' · ');
       if (line) window.chatAddIn(line);
     }
-    // 概率触发「提醒你来查岗」
+    // 概率触发「提醒你来寻踪」
     if (Math.random() * 100 < 30) {
-      window.chatAddIn(name + ' 提醒你快来查岗');
+      window.chatAddIn(name + ' 提醒你快来寻踪');
     }
     recordCheckin(ck);
     store.set('checkin-last', String(Date.now()));
     store.set('checkin-next', String(1 + Math.random() * 7));
-    // 同步聊天里打开的查岗半框
+    // 同步聊天里打开的寻踪半框
     const p = document.getElementById('ck-p-place');
     const a = document.getElementById('ck-p-action');
     const m = document.getElementById('ck-p-msg');
@@ -441,7 +443,7 @@ function renderCheckinHistory() {
     if (a) a.textContent = ck.action || '';
     if (m) m.textContent = ck.msg || '';
   }
-  // 供聊天页「点联系人头像打开查岗半框」使用
+  // 供聊天页「点联系人头像打开寻踪半框」使用
   window.openCkPanel = function () {
     // 关闭其他底部半框（拍一拍/表情包/头像互动）
     const pc = document.getElementById('poke-card');
@@ -481,14 +483,14 @@ function renderCheckinHistory() {
   // 否则启动瞬间 doCheckin→chatAddIn 会在聊天记录权威数据（导入后只在 IDB）
   // 读回前写入新消息，触发 saveMsgs 用 1 条覆盖 IDB 里的全部历史（导入后聊天记录丢失）
   let ckBootDone = false;
-  // v3.5.128：回前台冷静期——后台切回时多个模块（发动态/来电/来信/询问/查岗）
+  // v3.5.128：回前台冷静期——后台切回时多个模块（发动态/来电/来信/询问/寻踪）
   // 会同时判定，错峰 90 秒避免连环弹窗+连发消息
   let ckWakeAt = 0;
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') ckWakeAt = Date.now() + 90000;
   });
   function checkAutoCheckin() {
-    if (document.hidden) return; // v3.5.127：后台不自动查岗
+    if (document.hidden) return; // v3.5.127：后台不自动寻踪
     if (Date.now() < ckWakeAt) return; // 回前台冷静期
     if (!ckBootDone) return; // 首次：等数据就绪标志
     try {
@@ -502,7 +504,7 @@ function renderCheckinHistory() {
   setInterval(checkAutoCheckin, 60000);
   function bootCheckin() {
     // v3.5.129：数据未就绪不启动——3s 兜底在慢设备（分批恢复 >3s）上会
-    // 绕过门控提前生成日常，导致导入后首启多出一条"日常更新"且查岗节奏被重置
+    // 绕过门控提前生成日常，导致导入后首启多出一条"日常更新"且寻踪节奏被重置
     if (!window.__mochiDataReady) { setTimeout(bootCheckin, 500); return; }
     ckBootDone = true;
     checkAutoCheckin();
@@ -544,15 +546,39 @@ if (ckRefresh) {
   });
 }
 
-  // ================= 查岗日常字卡（管理页 + 字卡库入口） =================
+  // ================= 寻踪日常字卡（管理页 + 字卡库入口） =================
   const CK_DEFS = [
     ['place', DEF_PLACES],
     ['action', DEF_ACTIONS],
     ['msg', DEF_CHECK_MSGS]
   ];
   const CK_LABEL = { place: '地点', action: '在做什么', msg: '说的话' };
+  // v3.15.x：存量清洗——更早版本的管理页在删除/编辑时会把「默认地点/在做什么/说的话」
+  // 整库回写进自定义键（ckList 空 fallback 的"转正"问题，v3.6.x 已堵住新产生但没清存量），
+  // 导致【查岗日常·我的添加】里错误显示系统预设字卡、库入口计数虚高。
+  // 按文本匹配一次性剔除（幂等标记防重跑；ckSaveItems→store.set 三写
+  // memoryCache/LS/IDB，idbRestore 的 memoryCache 守卫保证回填不会复活已清洗的旧值）。
+  // 按桌面各清一次（标记存联系人命名空间）；与全站「按文本认预设」的模型一致。
+  (function cleanLegacyPresetInCk() {
+    try {
+      const MK = 'ck-mine-clean-v1';
+      if (store.get(MK) === '1') return;
+      const defMap = { place: DEF_PLACES, action: DEF_ACTIONS, msg: DEF_CHECK_MSGS };
+      Object.keys(defMap).forEach(k => {
+        let raw = null;
+        try { raw = JSON.parse(store.get('checkin-cards-' + k) || 'null'); } catch (e) { raw = null; }
+        if (!Array.isArray(raw)) return;
+        const cleaned = raw.filter(x => {
+          const t = x && typeof x === 'object' ? x.t : x;
+          return !(t != null && defMap[k].indexOf(String(t)) >= 0);
+        });
+        if (cleaned.length !== raw.length) ckSaveItems(k, cleaned);
+      });
+      store.set(MK, '1');
+    } catch (e) {}
+  })();
   let ckTab = 'place';
-  // v3.6.x：是否有用户自定义的查岗列表（有则默认项按内容匹配标【系统】；无则整库为系统预设）
+  // v3.6.x：是否有用户自定义的寻踪列表（有则默认项按内容匹配标【系统】；无则整库为系统预设）
   function ckHasCustom(k) {
     try {
       const v = JSON.parse(store.get('checkin-cards-' + k) || 'null');
@@ -572,7 +598,7 @@ if (ckRefresh) {
     if (!useDefault) {
       const tip = document.createElement('div');
       tip.className = 'ta-empty';
-      tip.textContent = '系统预设字卡已关闭（查岗只从「我的添加」里抽取）。开启上方开关即可恢复使用。';
+      tip.textContent = '系统预设字卡已关闭（寻踪只从「我的添加」里抽取）。开启上方开关即可恢复使用。';
       listEl.appendChild(tip);
       return;
     }
@@ -680,7 +706,7 @@ if (ckRefresh) {
       '<button class="ta-mv" data-idx="' + idx + '" title="移动分组"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px"><path d="M3 7h13a4 4 0 014 4v0a4 4 0 01-4 4H7"/><path d="M7 11l-4 4 4 4"/></svg></button>' +
       '<button class="ta-del" data-idx="' + idx + '">✕</button></div>';
   }
-  // 查岗 分组管理事件（新建 / 重命名 / 删除，按当前分类独立）
+  // 寻踪 分组管理事件（新建 / 重命名 / 删除，按当前分类独立）
   function bindCkGroupOps() {
     const wrap = document.getElementById('cck-mine-list');
     if (!wrap) return;
@@ -844,7 +870,7 @@ if (ckRefresh) {
     switchCkTab2(ckTab2);
     updateCkCount();
   }
-  // v3.6.x：使用系统预设字卡开关（默认开启；关闭后查岗只从用户添加的字卡里抽）
+  // v3.6.x：使用系统预设字卡开关（默认开启；关闭后寻踪只从用户添加的字卡里抽）
   const ckDefaultEl = document.getElementById('ck-default');
   if (ckDefaultEl) {
     ckDefaultEl.addEventListener('change', () => {
@@ -906,7 +932,7 @@ if (ckRefresh) {
       });
     });
   }
-  // 入口：字卡库「查岗日常字卡」→ 管理页
+  // 入口：字卡库「寻踪日常字卡」→ 管理页
   const liCK = document.getElementById('li-checkin-cards');
   const ckCardsPage = document.getElementById('page-checkin-cards');
   if (liCK && ckCardsPage) {
@@ -918,7 +944,7 @@ if (ckRefresh) {
       renderCheckinCards();
     });
   }
-  // v3.9.x：「查岗日常·我的添加」入口——只看自定义
+  // v3.9.x：「寻踪日常·我的添加」入口——只看自定义
   const liCKMine = document.getElementById('li-checkin-cards-mine');
   if (liCKMine && ckCardsPage) {
     liCKMine.addEventListener('click', () => {
@@ -938,9 +964,9 @@ if (ckRefresh) {
     });
   }
   renderCheckinCards();
-  // v3.9.x：注册查岗日常字卡跨分类搜索
+  // v3.9.x：注册寻踪日常字卡跨分类搜索
   window.__cardSearchFns = window.__cardSearchFns || [];
-  window.__cardSearchFns.push({ name: '查岗日常字卡', fn: function (kw) {
+  window.__cardSearchFns.push({ name: '寻踪日常字卡', fn: function (kw) {
     const out = [];
     try {
       CK_DEFS.forEach(function (pair) {
@@ -1090,7 +1116,7 @@ if (ckRefresh) {
       if (moodEl2) {
         moodEl2.textContent = todayMoodText() || '点一下选心情';
       }
-      // v3.7.x：关闭查岗半框——否则切换后仍浮在新桌面显示旧桌面日常（数据串桌面）
+      // v3.7.x：关闭寻踪半框——否则切换后仍浮在新桌面显示旧桌面日常（数据串桌面）
       const ckPanel = document.getElementById('ck-panel');
       if (ckPanel) ckPanel.hidden = true;
     } catch (e) {}
@@ -1113,7 +1139,7 @@ if (ckRefresh) {
   })();
 })();
 
-// ===== 功能：TA在身边·位置（查岗半框内入口，位置面板独立词库） =====
+// ===== 功能：TA在身边·位置（寻踪半框内入口，位置面板独立词库） =====
 // 位置卡 = 普通聊天消息（TA 发的 side=in），位置面板单独维护当前位置/时间线
 // 收到位置卡时屏幕光点动效
 (function () {
@@ -1390,7 +1416,7 @@ if (ckRefresh) {
 
   const entry = document.getElementById('ck-loc-entry');
   if (entry) entry.addEventListener('click', openLocPanel);
-  // 桌面查岗页同款入口（点「TA在身边 · 看看 TA 在哪」打开同一位置面板）
+  // 桌面寻踪页同款入口（点「TA在身边 · 看看 TA 在哪」打开同一位置面板）
   const entryDesk = document.getElementById('ck-loc-entry-desk');
   if (entryDesk) entryDesk.addEventListener('click', openLocPanel);
   const closeBtn = document.getElementById('loc-close');
@@ -3591,11 +3617,16 @@ if (ckRefresh) {
               const dk = (function () { const d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); })();
               if (!rec || rec.date !== dk) rec = { date: dk, n: 0 };
               rec.n++; s.set('fish-catch-day', JSON.stringify(rec));
+              // v3.15.x：抓包事件写入主页「摸鱼抓包」记录（双向之一：我抓到 TA）
+              if (window.addFishCatchRecord) {
+                try { window.addFishCatchRecord('me', '抓包成功！双方摸鱼值 +' + bonus); } catch (e) {}
+              }
               if (window.toast) window.toast(window.taFit ? window.taFit('抓包成功！双方摸鱼值 +' + bonus) : ('抓包成功！双方摸鱼值 +' + bonus));
               if (window.chatAddIn) {
                 const r = pick(fishPool('抓包回应', CATCH_REPLIES));
                 // v3.14.x：带「摸鱼抓包」标签 chip（addIn opts.tag），用户能看出这是抓包后的回应
-                setTimeout(() => { try { window.chatAddIn(window.taFit ? window.taFit(r) : r, { tag: '摸鱼抓包' }); } catch (e) {} }, 900);
+                // v3.15.x：正文已在气泡里，chip 不再重复一遍 label——mood 自定义空 label，只留「摸鱼抓包」标签
+                setTimeout(() => { try { window.chatAddIn(window.taFit ? window.taFit(r) : r, { mood: [{ tag: '摸鱼抓包', label: '' }] }); } catch (e) {} }, 900);
               }
             } catch (e) {}
           }

@@ -42,6 +42,31 @@
   // v3.6.x：完整 HTML 转义（只转 < 可被 `&lt;…&gt;` 实体绕过注入）
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
 
+  // v3.15.x：存量清洗——更早版本的管理页在删除/编辑时会把「默认 46 句」整库回写进自定义键
+  //（getQuotes 空 fallback 的"转正"问题，v3.6.x 已堵住新产生但没清存量），
+  // 导致【今日情话·我的添加】里错误显示系统预设情话、库入口计数虚高。
+  // 这里按文本匹配一次性剔除自定义库里的预设句（幂等标记防重跑；store.set 三写
+  // memoryCache/LS/IDB，idbRestore 的 memoryCache 守卫保证回填不会复活已清洗的旧值）。
+  // 按桌面各清一次（标记存联系人命名空间）；用户手输与预设同文的句子会被一并移除，
+  // 该文本仍可通过系统预设池使用，与全站「按文本认预设」的模型一致。
+  (function cleanLegacyPresetInCustom() {
+    try {
+      const MK = 'quote-mine-clean-v1';
+      if (store.get(MK) === '1') return;
+      let raw = null;
+      try { raw = JSON.parse(store.get(KEY) || 'null'); } catch (e) { raw = null; }
+      if (Array.isArray(raw)) {
+        const cleaned = raw.filter(x => {
+          const t = x && typeof x === 'object' ? x.t : x;
+          return !(t != null && DEFAULT_QUOTES.indexOf(String(t)) >= 0);
+        });
+        if (cleaned.length !== raw.length) store.set(KEY, JSON.stringify(cleaned));
+      }
+      store.set(MK, '1');
+    } catch (e) {}
+  })();
+
+
   // v3.7.x：自定义分组——用户添加的情话可归入自定义分组（只用于管理页整理，抽取不分组）
   const GRP_KEY = 'quote-cards-groups';
   function getGroups() {

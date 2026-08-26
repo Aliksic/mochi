@@ -134,7 +134,7 @@
   // 仅 .phone 内部、无内部滚动体（fixed 停靠后滚动区 height 仍由面板自身收缩，
   // 内部 scroll 正常）的底半框才需要；全屏遮罩（#call-mask 等 fixed/inset 或
   // 自带滚动）不在列。
-  const FLOAT_PANEL_SELECTORS = ['#chat-more-panel', '#chat-decision-panel', '#chat-gdecision-panel', '#chat-divine-panel', '#chat-ask-panel', '#poke-card', '#emoji-panel', '#chat-rp-panel', '#chat-rps-panel', '#chat-pong-panel', '#chat-snake-panel', '#chat-brick-panel', '#chat-gift-panel', '#ck-panel', '#chat-search', '#gc-more-panel'];
+  const FLOAT_PANEL_SELECTORS = ['#chat-more-panel', '#chat-decision-panel', '#chat-gdecision-panel', '#chat-divine-panel', '#chat-ask-panel', '#poke-card', '#emoji-panel', '#chat-rp-panel', '#chat-rps-panel', '#chat-pong-panel', '#chat-snake-panel', '#chat-brick-panel', '#chat-c4-panel', '#chat-gift-panel', '#ck-panel', '#chat-search', '#gc-more-panel'];
 
   // v3.10.x：iOS 用 interactive-widget=resizes-content，安卓用 resizes-visual。
   // template.html 默认 resizes-visual（安卓：visualViewport 收缩可检测键盘 + layout
@@ -686,12 +686,43 @@
           if (shifted) pinScrollTop();
         } catch (e) {}
       }
+      // v3.15.x：「停靠结果」验收自愈（iPhone 主屏幕 standalone 键盘盖输入栏修复的
+      // 兜底层）——以上机制全部基于「收缩 .phone 就能把输入栏顶到可视区内」这一假设，
+      // 真机上任何一环出偏差（样式表 min-height/height 钳制、内核不按预期收缩等），
+      // 表现都是同一个：聚焦的输入栏仍停在可视区下沿之下被键盘盖住。这里不再猜原因、
+      // 直接验收结果：键盘开启且聚焦期间，若聚焦元素的 getBoundingClientRect().bottom
+      // 仍在 vv.height 之下（= 被键盘遮挡），按超出量对 .phone 追加收缩（下限 45%
+      // 基准防压瘪；收缩同时压掉内联 min-height）。由 250ms 轮询调用；输入框已在
+      // 可视区时零写入 no-op，稳态打字无开销。
+      function _ensureInputDocked() {
+        try {
+          if (!_kbActive || !_vv || !_phone) return;
+          if (Date.now() < _pinUntil) return; // 开合动画窗口内不干预，交给 syncIosKb
+          var tgt = (isTextEl(_textFocused) ? _textFocused : null) ||
+            (isTextEl(document.activeElement) ? document.activeElement : null);
+          if (!tgt || !tgt.getBoundingClientRect) return;
+          var r = tgt.getBoundingClientRect();
+          var vh = _vv.height;
+          // +2px 容差：正常停靠时输入栏底边恰好贴可视下沿（bottom==vh）属达标，
+          // 不收紧、零写入——防止与 syncIosKb 的稳态收缩互相改写高度造成打字重排
+          if (r.bottom <= vh + 2) return; // 已停在键盘上方，达标
+          var pr = _phone.getBoundingClientRect();
+          var cut = Math.ceil(r.bottom - vh) + 12; // 超出量 + 12px 余量
+          var nh = Math.max(Math.round(_noKbH * 0.45), Math.round(pr.height - cut));
+          var hs = nh + 'px';
+          if (_phone.style.height !== hs) {
+            _phone.style.height = hs;
+            try { _phone.style.minHeight = '0'; } catch (e2) {}
+          }
+        } catch (e) {}
+      }
       // v3.6.x：恢复 .phone 到自然高度（键盘收起）。统一入口——避免多处重复；
       // 恢复后若键盘又弹出，syncIosKb 会重新收缩
       function restoreKb() {
         if (!_kbActive) return;
         _kbActive = false;
         _phone.style.height = '';
+        try { _phone.style.minHeight = ''; } catch (e) {} // v3.15.x：还原键盘期压掉的 min-height
         _phone.style.alignSelf = '';
         kbUndockPanels();
         unlockDocScroll();
@@ -731,6 +762,10 @@
         if (_open && !_kbActive) {
           _kbActive = true;
           lockDocScroll(); // 禁文档根滚动：iOS 无法再把页面滚走露灰底（Edge 关键）
+          // v3.15.x：清内联 min-height——任何样式表来源的 min-height（如 iOS PWA
+          // standalone 的全屏规则）都会把下面的内联 height 钳在更高值，.phone 永不
+          // 收缩 → 键盘盖住输入栏。键盘期压到 0，restoreKb 时还原
+          try { _phone.style.minHeight = '0'; } catch (e5) {}
           // 顶对齐（替代 position:fixed）——避免 iOS contenteditable 在 fixed
           // 容器内无法输入的已知问题；水平居中交给 body flex 原有规则
           _phone.style.alignSelf = 'flex-start';
@@ -782,6 +817,8 @@
               healKbScroll();
               // v3.12.x：悬浮键盘推定停靠复查（vv 不反映键盘的内核走这里兜底）
               _iProvCheck();
+              // v3.15.x：停靠结果验收自愈（输入栏仍被键盘盖住时按超出量追加收缩）
+              _ensureInputDocked();
             } else if (_kbActive) {
               // 失焦但键盘仍开着（含收起动画窗口 / vv resize 漏触发的收起）：
               // 只做「键盘真的收了吗」复原，不调 syncIosKb——它会在键盘收起动画
@@ -817,6 +854,7 @@
         var ph = Math.min(Math.max(Math.round(base * 0.58), 240), Math.round(base * 0.62));
         _iProv = true;
         lockDocScroll();
+        try { _phone.style.minHeight = '0'; } catch (e) {} // v3.15.x：同 syncIosKb，防 min-height 钳制
         _phone.style.alignSelf = 'flex-start';
         if (_phone.style.height !== ph + 'px') _phone.style.height = ph + 'px';
         kbDockPanels();
@@ -828,6 +866,7 @@
         if (_kbActive) return; // 正常机制已接管 .phone 高度，交回原逻辑管理
         unlockDocScroll();
         _phone.style.height = '';
+        try { _phone.style.minHeight = ''; } catch (e) {} // v3.15.x：还原
         _phone.style.alignSelf = '';
         kbUndockPanels();
         pinScrollTop();
@@ -1186,7 +1225,7 @@
   //   #img-view-mask 聊天/字卡大图查看全屏遮罩（chatcard.js 动态创建，打开时背景聊天页可继续滚动）；
   //   #chat-rp-panel 红包底部半框、#batch-panel 消息批量操作面板（与 poke-card/emoji-panel 同族底半框）
   // v3.14.x：补 #chat-gdecision-panel 多人决定底部半框（group-decision.js，与帮我决定同族）
-  const FLOAT_SELECTORS = ['#tc-mask', '#cc-export-mask', '#cc-scope-mask', '#call-mask', '#feed-notice-panel', '#feed-comment-panel', '#poke-card', '#emoji-panel', '#chat-ask-panel', '#qa-mask', '#chat-more-panel', '#gc-more-panel', '#chat-search', '#chat-decision-panel', '#chat-gdecision-panel', '#chat-divine-panel', '#chat-rps-panel', '#chat-call-panel', '#chat-pong-panel', '#chat-snake-panel', '#chat-brick-panel', '#chat-gift-panel', '#avlib-card', '#ck-panel', '#loc-panel', '.mg-mask', '#modal-mask', '#msg-actions', '#desk-image-viewer', '.desk-lib', '#gc-members-panel', '#gc-at-panel', '#gc-settings-panel', '#img-view-mask', '#chat-rp-panel', '#batch-panel', '#eat-switch-overlay'];
+  const FLOAT_SELECTORS = ['#tc-mask', '#cc-export-mask', '#cc-scope-mask', '#call-mask', '#feed-notice-panel', '#feed-comment-panel', '#poke-card', '#emoji-panel', '#chat-ask-panel', '#qa-mask', '#chat-more-panel', '#gc-more-panel', '#chat-search', '#chat-decision-panel', '#chat-gdecision-panel', '#chat-divine-panel', '#chat-rps-panel', '#chat-call-panel', '#chat-pong-panel', '#chat-snake-panel', '#chat-brick-panel', '#chat-c4-panel', '#chat-gift-panel', '#avlib-card', '#ck-panel', '#loc-panel', '.mg-mask', '#modal-mask', '#msg-actions', '#desk-image-viewer', '.desk-lib', '#gc-members-panel', '#gc-at-panel', '#gc-settings-panel', '#img-view-mask', '#chat-rp-panel', '#batch-panel', '#eat-switch-overlay'];
   // v3.15.x：键盘弹起时把锚定在 .phone 底部的悬浮面板（更多功能/帮我决定/占卜/
   // 问问TA/红包/拍一拍等）重新锚定到可视区底部=输入栏上方。背景（用户反馈
   // 「更多功能里的小功能输入框一点，功能页面被错误挤压到屏幕输入栏一行的下方，
