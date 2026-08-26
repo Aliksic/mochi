@@ -6397,13 +6397,11 @@ try { window.__replyOnceDiag = 0; console.log('[mochi-reply] addMsg 发送, 重�
 scheduleReply();
 };
 if (send) send.addEventListener('click', () => addMsg(input.innerText));
-if (send) send.addEventListener('pointerup', function (e) {
-try {
-if (e.button !== undefined && e.button !== 0) return;
-const t = (input ? input.innerText : '').trim();
-if (t && t === lastSendTxt) lastSendTs = Date.now();
-} catch (err) {}
-});
+// v3.17.x：删除了此前的 pointerup 监听——它在 click 之前把 lastSendTs 刷新为当前时间，
+// 使 addMsg 的防重发守卫（t0===lastSendTxt 且间隔<2.5s）对「用户重新输入相同文本后
+// 再点发送」必然命中：消息被吞、输入框被清空（红米 K80 Chrome 反馈「点发送无法发送」，
+// 发「嗯/好的/在吗」等重复短句必现）。双击防重仍由守卫承担：真实双击时第二次 click
+// 距上次发送 <2.5s 且文本相同，同样会命中守卫，不会重复发送。
 if (input) {
 input.addEventListener('input', () => {
 if (!input._mClearTxt) return;

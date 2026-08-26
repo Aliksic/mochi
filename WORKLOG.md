@@ -1,3 +1,9 @@
+### 2026-08-27 00:2x（✅ 完成·群聊「更多功能」与聊天页共享面板：分类 tabs + 全部功能 + @群成员放分类行最右）
+- [本会话·完成]（**已改 src/template.html（#chat-more-panel 提升为 .phone 级共享浮层，群聊/聊天页共用；@群成员 移入分类 tabs 行最右 #gc-more-at，默认 hidden）+ src/js/chat.js（applyMoreCat 导出 window.applyMoreCat；聊天页打开面板时隐藏 @群成员）+ src/js/group-chat.js（群聊更多按钮打开共享 chat-more-panel 并调 applyMoreCat 分组；@群成员 显示/隐藏；点功能按钮捕获阶段先切聊天页再触发功能）+ src/css/group-chat.css（@ 按钮 margin-left:auto 推到分类行最右）**；已构建（00:24, sw: mochi-mtab0gbd）+ 新增 tools/verify-gc-more.mjs 15/15 + verify-gc-input.mjs 更新 12/12 + verify-gc-send 5/5 + 布局 verify 10/10；未提交——源码改动已在 7e4de37 由并行会话提交，仅需同步构建产物）。
+  - **用户反馈链路**：①群聊更多功能不显示分类和功能（只有@群成员）→ 改为共享聊天页更多面板；②没有分组 → 群聊打开时调 applyMoreCat 按分类过滤；③@群成员要放分组最右 → 从顶部栏移到分类 tabs 行内 margin-left:auto。
+  - **真机确认点**：①群聊输入栏「更多功能」打开后显示 互动/工具/小游戏/TA的提问 分类 + 各分类功能按钮；②分类行最右是「@群成员」胶囊（聊天页打开面板时不显示）；③点分类 tab 切换功能分组；④点功能按钮自动切到聊天页打开对应功能；⑤点 @群成员 直接在群聊内打开成员选择。
+  - 说明：本次构建按工作区现状整体收口（源码已在 7e4de37 提交），构建产物 index.html/sw.js/version.json 待与源码同步提交。
+
 ### 2026-08-26 23:3x（✅ 完成·红米K80 Chrome 点聊天输入栏键盘弹出时输入栏飞上面+中间全灰——第四轮修复）
 - [本会话·完成]（**已改 src/js/mobile-adapt.js（AI-B 域）+ tools/verify-kb-pinpan-late.mjs（新专项）+ tools/verify-scroll-lock-ghost.mjs（jsFiles 同步 build.mjs 补 device.js 等）；已构建（23:36, sw: mochi-mta9ak8i）+ verify-kb-pinpan-late 5/5 + verify-morekb-pan 7/7 + verify-android-kb 3/3 + verify-more-panel-kb 5/5 + verify-kb-dock 12/12 + verify-kb-overlay-kernel 10/10 + verify-kb-overlays 8/8 + verify-scroll-lock-ghost 9/9 + verify-ios-kb-edge-scroll 16/16 + verify-ios-pwa-kbd 18/18 + verify-ios-typing-flash 9/9 + verify-chat-scroll-bottom 7/7 + 布局 verify 10/10；未提交**）。
   - **用户再报**（红米 K80 Chrome）：点聊天输入栏，输入法弹出时输入栏一行飞上面、输入栏与键盘之间全灰，无法正常使用。此前已修三轮（v3.10 resizes-visual / v3.15 `_aPinPan` / v3.16 `_aBurstUntil` 宽限），且产物确认含修复，仍复现 → 第四轮漏洞。
