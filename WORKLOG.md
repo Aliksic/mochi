@@ -1,4 +1,24 @@
-### 2026-08-26 21:5x（✅ 完成·用户需求「原版功能里缺少说明：网站里的系统预设字卡为自搓字卡」）
+### 2026-08-26 22:2x（🐛 修复·头像互动换头像聊天页不更新——红米 Note 11T Pro + Edge「换不过来，有几个头像换了但聊天里还是没反应」）
+- [本会话·完成]（**已改 src/js/idb.js（AI-B 域·跨域登记请知悉：存储层根因）+ src/js/chat.js（AI-A 域 refreshChatAvatars 强制清渲染缓存）+ 已构建（22:20, sw: mochi-mta6l9jd，收口含并行会话已保存的 ta-mood/撤回分支顺序等改动）+ 新专项 tools/verify-avatar-store.mjs **9/9 全绿** + 常规布局 verify 10/10；未提交**）。
+  - **根因三层**：① `xyStore.get` 原优先读 localStorage——localStorage 配额满/写失败时 setItem 静默失败残留旧值，memoryCache/IDB 里的新值被**永久遮蔽**（换头像只进内存+IDB，聊天页 fillAvatar 读 localStorage 旧头像；刷新、回前台 convergeAvatars 重刷都不恢复）。修复：get 改 **memoryCache 优先**（memoryCache 只在本会话写入：set 无条件写最新值、idbRestore/idbHydrateKey 回填 IDB 权威值且跳过已有键，新鲜度恒 >= localStorage）。② 双开上下文（PWA+标签页）另一侧写入 localStorage 的新值会被本侧 memoryCache 旧值遮蔽。修复：idb.js 挂 `storage` 事件，到达时删除对应 memoryCache 键，get 自然回退读 localStorage 新值。③ `avatarBatchCache` 批量渲染缓存异常残留（渲染窗口内 renderMsg 抛异常会跳过末尾 appendAvatarBatch(false)）→ refreshChatAvatars 永远读缓存旧值。修复：refreshChatAvatars 开头 `avatarBatchCache=null` 强制失效。
+  - **回归验证（verify-avatar-store.mjs）**：A 组模拟配额满（填 5066 键）→ 写新头像 localStorage 仍残留旧值（写失败真实发生）→ 读接口+聊天页渲染都取新值；B 组手动派发 storage 事件后跨上下文新值可读回；C 组正常路径小头像同步+渲染不回归。
+  - 真机确认点：①头像互动换几张头像（含大图）后聊天顶栏/气泡立即跟随；②换完刷新页面、切后台回前台仍保持新头像；③PWA 与浏览器标签双开，一侧换头像另一侧半分钟内跟随。
+  - ⚠️ 跨域说明：idb.js 归 AI-B 域，本次因根因在存储层 get 读取优先级，由本会话修复并登记，请知悉；get 语义变更已全量评估（memoryCache 无键时行为完全不变，仅「localStorage 旧值 + 内存/IDB 新值」冲突时取新值）。
+
+### 2026-08-26 22:2x（✅ 完成·用户需求「字卡库【系统预设字卡】新增【TA的心情】字卡库」）
+- [本会话·完成]（**已改 src：新增 src/js/ta-mood-data.js（15 类 235 张心情字卡，用户设计文档原文落地）+ src/js/ta-mood.js（AI-A 业务域：页面渲染/分组 chips/搜索/逐张开关/总开关/概率 stepper + 触发函数 tryTaMoodShare）+ src/template.html（AI-B 域·跨域登记请知悉：系统预设字卡列表 聊天情绪字卡 下方新增 li-ta-mood 入口 + 独立页 page-ta-mood（插在 page-mood-cards 与 page-reply-cards 之间）+ 关于页功能清单加一条说明）+ src/js/chat.js（replyOnce 正常回复后小概率追加一条独立分享：addIn(initiative+tag「TA的心情」+tagNoDup)）+ build.mjs（jsFiles 注册 ta-mood-data.js/ta-mood.js + 哨兵 +1）+ .gitignore（删除废弃的 `src/js/ta-mood-data.js` 忽略规则——旧预留条目，功能已实现应入库）**；已构建（22:16, sw: mochi-mta6ftkp）+ 新专项 tools/verify-ta-mood.mjs **39/39** + 布局 verify 10/10 + verify:webkit 22/22 + verify:device 37/37 + verify-ta-checkin 30/30 + verify-ck-question 18/18 全绿；未提交**）。
+  - **设计口径（对齐用户设计文档）**：TA 的心情 = 梦角在正常聊天中低概率主动分享心情/近况/状态（非情绪链、非"报告情绪"、不索取回应）。发送方式与普通聊天字卡一致——每次正常回复后 `tryTaMoodShare()` 判定，命中则 1.5~3.5s 后追加一条独立消息（正文即字卡 + 来源 tag chip「TA的心情」，tagNoDup 防正文重复渲染）。
+  - **触发规则**：①总开关 tm-enabled（默认开）；②分享概率 tm-prob（5~30%，默认 15%，页面 stepper 可调）；③总冷却 tm-cd-left（触发后 3 条正常聊天内不触发，调用递减）；④同类冷却 tm-history（最近触发过的 3 个分组不重复抽）；⑤分组权重（用户文档核心比例：平静+今日近况+不太想说 40% / 开心+轻松+满足 20% / 疲惫+困倦+烦躁+低落 20% / 想你+想陪你 15% / 突然的感觉+小期待+情绪变化 5%）；⑥单卡开关 tm-off-<组>:<内容>（逐张可关）。所有 tm-* 键按桌面（联系人）独立，切换联系人冷却/历史互不影响。
+  - **数据**：用户文档 241 条中 6 条为逐字重复（不太想说 类内 2 条、平静/满足、今日近况/疲惫、今日近况/平静、突然的感觉/想你 跨类各 1 条），去重后 235 张；各分组权重即 groups[].weight，页面 header 展示权重徽标。
+  - ⚠️ **给构建者/后来者**：a) ta-mood-data.js 之前被 .gitignore 忽略（旧预留规则），本次已删除该规则，需随本批提交入库，否则线上缺数据（build 哨兵 12/12 已含 ta-mood 特征）；b) 情绪字卡页（page-mood-cards）的 mc-list 计数「209」是硬编码、未动；c) 触发接入在 chat.js replyOnce 的 `rep.type==='text'||sticker||image` 分支内，紧邻 triggerEmotionChain，两套独立不互斥（概率各自判定），TA 的心情不参与情绪/心意/意图链。
+  - 真机确认点：①字卡库 → 系统预设字卡 → 聊天情绪字卡下方出现「TA的心情」入口（计数 235）；②进入后 15 个分组 chips + 235 行卡（逐张可开关）+ 顶部「使用心情分享」开关 + 分享概率 stepper（默认 15%）；③正常聊天几轮后 TA 有概率额外弹一条「今天有点累。」之类独立消息（带「TA的心情」小标签）；④连续触发后间隔几条才再触发，同类心情不会连续出现。
+
+### 2026-08-26 22:1x（✅ 完成·用户需求「双人打砖块可设定游戏里使用的球的数量 1~3」）
+- [本会话·完成]（**已改 src/js/breakout.js（AI-A 域·多球化改造）+ src/template.html（AI-B 域·跨域登记请知悉：头部难度选择框后新增球数选择框 `#brick-balls`，1/2/3 球）+ src/css/chat-pages.css（#brick-balls 压窄样式，AI-A 域）+ tools/verify-brick.mjs（新增 A6 + T-B1/T-B2/T-B2b/T-B3）**；**src 已被并行会话 22:08 的提交（20fb45b）连带 git add -A 扫进 HEAD（含修复后版本），但 index.html 为 22:06:51 构建（早于我 22:07:39 的 loseLife 修复）→ 产物缺失 `hadMulti` 修复标记，线上带回归，⚠️ 需重新 `node build.mjs` 收口**；verify-brick.mjs 未跟踪未提交（随构建者批次即可）。
+  - **玩法**：头部选 1/2/3 球，下次发球生效（不打断当前对局）；2/3 球时各球独立物理、梦角 AI 锁「最快落地的威胁球」（带迟滞防抖）、掉一颗扣 1 命且其余球不中断、约 1.1s 后按设定数量自动补发；单球=经典模式（掉球等重发）；球数偏好按联系人记忆（localStorage `:brick-balls`）。
+  - **实现要点**：`s.balls[]` 数组 + 恒有 `s.ball === s.balls[0]`（调试口/既有用例依赖）；`loseLife` 关键：**最后一颗球永不移除**（serve 等待期冻结在场内）——曾踩坑：单球局掉球移出数组后，用例强切 rally 但数组空 → 物理失效（T5/T5b/T7 回归，已修复）。
+  - **验证**：临时拼装产物（未动仓库 index.html）跑 verify-brick：新增 T-B 系列 5 项全绿×多次；T5/T5b/T6/T7/T7b/T7c/T8/T-FS1/2/3/5/T9/T10 全绿；**仅剩 T-FS4/T-FS4b（既有缺口：本工作区 breakout.js 无动态场地、chat-pages.css 无全屏悬浮头部——WORKLOG 已登记留给对方）+ T4（已知 headless 触摸抖动，inputX 代码未动）**。T-FS5 由本次补的 `__brickDebug.W/H` getter 顺带转绿。
+- ⚠️ **给构建者**：当前 HEAD 的 src/js/breakout.js 已是修复后版本，但 index.html 是 22:06:51 旧构建（缺 loseLife 修复）——**请直接 `node build.mjs` 重新构建收口并提交一次**（含 verify-brick.mjs）；本次跨域改了 `src/template.html`（仅加一个 select 锚点，chat-brick-panel 内部，不影响其他锚点）；未动 build.mjs/mobile-adapt.js（无需新增登记，面板与浮层清单沿用既有）。
 - [本会话·完成]（**已改 src/template.html 三处补说明——①字卡库页【系统预设字卡】分区顶部加提示「本站『系统预设字卡』均为自搓字卡（作者原创），按分类/分组展示，可逐张开启或关闭」；②「默认聊天字卡」列表项副标题改为「日常默认回复字卡（自搓）」；③聊天默认字卡页（page-default-cards）头部下方加同款说明条；④关于页功能列表「兼容导入 milk 字卡库导出的 json；系统预设字卡（自搓）可逐句开关」**；**未构建未提交**——cjian.js/breakout.js 有并行会话进行中改动（21:5x 刚落盘），请构建者待其收尾后统一 `node build.mjs` 收口）。无 JS/样式改动，纯文案；不影响任何 verify 断言（未动既有文案字符串）。
 
 ### 2026-08-26 21:4x（✅ 完成·用户需求「主页新增分组【心意币赚钱记录】【心意币申请记录】+ 游戏/花园赚钱双方同步同额」）
