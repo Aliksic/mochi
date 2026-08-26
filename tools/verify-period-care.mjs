@@ -38,9 +38,11 @@ function check(desc, ok, detail) {
   check('A2 预设池含代表性文案（红糖水/热水袋/情绪低落）',
     lib.includes('记得喝点红糖水') && lib.includes('热水袋') && lib.includes('情绪低落'));
 
+  const tplSrc = readFileSync(join(root, 'src', 'template.html'), 'utf8');
   const cardsSrc = readFileSync(join(root, 'src', 'js', 'default-cards.js'), 'utf8');
-  check('A3 default-cards.js 注册「经期」tab（data-type=period，v3.15.x 与 摸鱼/吃饭 按用户词汇命名并排最前）',
-    /\['fish',\s*'摸鱼'],\s*\['eat',\s*'吃饭'],\s*\['period',\s*'经期']/.test(cardsSrc) && /dc-off-<分类>:\*/.test(cardsSrc));
+  // v3.16.x：功能 tab 拆到独立页 #fc-tabs，模板静态预置（data-type=period 等）
+  check('A3 template.html #fc-tabs 预置「经期」tab（data-type=period，与 摸鱼/吃饭 按用户词汇命名连排）',
+    /data-type="fish">摸鱼<\/button>[\s\S]*?data-type="eat">吃饭<\/button>[\s\S]*?data-type="period">经期<\/button>/.test(tplSrc) && /dc-off-<分类>:\*/.test(cardsSrc));
 
   // chat.js 曾事故重建为 minified（注释丢失），断言锚定调用点本身：唯一调用 + 邻域无预掷门控
   const chatSrc = readFileSync(join(root, 'src', 'js', 'chat.js'), 'utf8');
@@ -356,16 +358,16 @@ await navigate();
   check('C5 柱体全部收在 32px 绘图区内（barOut=0）', ui.barOut === 0, { barOut: ui.barOut });
 }
 
-// C6：字卡库【系统预设字卡】出现「经期关心」tab，20 张可查看、逐张开关写库
+// C6：字卡库【其他互动功能字卡】出现「经期关心」tab，20 张可查看、逐张开关写库
 await navigate();
 {
-  await evalJs("(function(){var li=document.getElementById('li-default-cards');if(li)li.click();return 1;})()");
+  await evalJs("(function(){var li=document.getElementById('li-fun-cards');if(li)li.click();return 1;})()");
   await sleep(600);
-  const tab = await evalJs("(function(){var b=document.querySelector('#dc-tabs [data-type=\"period\"]');if(!b)return 'no-tab';b.click();return 'ok';})()");
+  const tab = await evalJs("(function(){var b=document.querySelector('#fc-tabs [data-type=\"period\"]');if(!b)return 'no-tab';b.click();return 'ok';})()");
   await sleep(700);
   const lib = JSON.parse(await evalJs(`(function(){
-    var heads=[].slice.call(document.querySelectorAll('#dc-list .cc-group-header')).map(function(h){return h.textContent;});
-    var items=[].slice.call(document.querySelectorAll('#dc-list .cc-item'));
+    var heads=[].slice.call(document.querySelectorAll('#fc-list .cc-group-header')).map(function(h){return h.textContent;});
+    var items=[].slice.call(document.querySelectorAll('#fc-list .cc-item'));
     var first=items[0]?items[0].querySelector('.t'):null;
     var line=first?first.textContent.replace('系统','').trim():'';
     var inp=items[0]?items[0].querySelector('input'):{checked:true};
@@ -382,13 +384,13 @@ await navigate();
   check('C8 逐张开关写入 dc-off-period 键（关=1/开=0）', lib.offKey === '1' && lib.onKey === '0', { off: lib.offKey, on: lib.onKey });
 }
 
-// C9：390px 视口下【系统预设字卡】12 个 tab 全部可见（换行铺开，不再横向滑出屏幕）
+// C9：390px 视口下【其他互动功能字卡】12 个 tab 全部可见（换行铺开，不再横向滑出屏幕）
 await navigate();
 {
-  await evalJs("(function(){var li=document.getElementById('li-default-cards');if(li)li.click();return 1;})()");
+  await evalJs("(function(){var li=document.getElementById('li-fun-cards');if(li)li.click();return 1;})()");
   await sleep(600);
   const tabs = JSON.parse(await evalJs(`(function(){
-    var bar=document.getElementById('dc-tabs');
+    var bar=document.getElementById('fc-tabs');
     if(!bar)return JSON.stringify({err:'no-bar'});
     var cs=getComputedStyle(bar);
     var items=[].slice.call(bar.querySelectorAll('.cc-tab'));
@@ -398,11 +400,11 @@ await navigate();
     return JSON.stringify({n:items.length,wrap:cs.flexWrap,overflowX:cs.overflowX,offscreen:out,rows:Object.keys(ys).length,
       labels:items.map(function(t){return t.textContent;})});
   })()` ) || '{}');
-  // v3.15.x：字卡库功能 tab 随并行会话新增「漂流瓶」（存钱罐与互动回应之间），计数 15→16
-  const want = ['主字卡','颜文字','emoji','拍一拍','摸鱼','吃饭','经期','喝水','花园','同频','伸手','此间','房间','存钱罐','漂流瓶','互动回应'];
+  // v3.16.x：功能触发字卡独立成页（#fc-tabs），12 个功能 tab 全量预置在模板
+  const want = ['摸鱼','吃饭','经期','喝水','花园','同频','伸手','此间','房间','存钱罐','漂流瓶','互动回应'];
   check('C9 tab 条换行铺开（flex-wrap=wrap、无溢出）', tabs.wrap === 'wrap' && (tabs.offscreen || []).length === 0 && tabs.overflowX !== 'auto',
     { wrap: tabs.wrap, off: tabs.offscreen });
-  check('C10 全部分类 tab 存在且在屏内（功能触发 tab 按用户词汇命名连排最前，含此间/漂流瓶，共16个）',
+  check('C10 全部分类 tab 存在且在屏内（功能触发 tab 按用户词汇命名连排，含此间/漂流瓶，共12个）',
     tabs.n === want.length && (tabs.labels || []).join(',') === want.join(','),
     { n: tabs.n, labels: tabs.labels });
 }

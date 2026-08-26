@@ -5714,6 +5714,18 @@ display: block; max-width: 64px; overflow: hidden; text-overflow: ellipsis; whit
 content: attr(data-ph); color: #aaa; pointer-events: none;
 }
 .gc-head { position: relative; }
+.gc-more-bar {
+display: flex; align-items: center; justify-content: flex-end;
+min-height: 30px;
+}
+.gc-more-at-top {
+display: inline-flex; align-items: center; gap: 5px;
+padding: 6px 12px; font-size: 12px; font-weight: 600; color: #444;
+background: rgba(0,0,0,.04); border: none; border-radius: 99px;
+cursor: pointer; font-family: inherit; -webkit-tap-highlight-color: transparent;
+}
+.gc-more-at-top svg { width: 15px; height: 15px; flex-shrink: 0; }
+.gc-more-at-top:active { background: rgba(0,0,0,.09); }
 .gc-more-menu {
 position: absolute; top: 42px; right: 2px; z-index: 60;
 min-width: 148px; padding: 4px;
@@ -7752,7 +7764,7 @@ transition-duration: .01ms !important;
       </div>
       <div class="splash-dots"><i></i><i></i><i></i></div>
       <div class="splash-brand">小红书@言序（1842523578）</div>
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787756706769">Mochi 字卡传讯 v3.6.255 · 部署于 2026-08-26 23:05</div>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787760460842">Mochi 字卡传讯 v3.6.257 · 部署于 2026-08-27 00:07</div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
       <div class="splash-loading" id="splash-loading">正在加载数据…</div>
@@ -8823,7 +8835,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.6.255</div>
+      <div class="ver">Mochi 字卡传讯 v3.6.257</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -8965,7 +8977,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.6.255</span>
+              <span class="lic-ver">v3.6.257</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -11404,137 +11416,7 @@ transition-duration: .01ms !important;
           <span>删除</span>
         </button>
       </div>
-      <div class="more-panel" id="chat-more-panel" hidden>
-        <!-- v3.15.x：功能增多后改为顶部分类 chips 切换（互动/小游戏/工具/TA的提问）。
-             功能按钮元素与 ID 全部保留（各功能模块按 ID 接线），仅加 data-mcat 由 JS 过滤显示；
-             每个功能只归属一个分类、分类间互不重复（v3.16.x 起移除「常用」页签，原常用默认项并入所属分类） -->
-        <div class="more-tabs" id="more-tabs">
-          <button class="more-tab sel" type="button" data-mcat="chat">互动</button>
-          <button class="more-tab" type="button" data-mcat="tool">工具</button>
-          <button class="more-tab" type="button" data-mcat="game">小游戏</button>
-          <button class="more-tab" type="button" data-mcat="ask">TA的提问</button>
-        </div>
-        <div class="more-grid" id="more-grid-fun">
-          <button class="more-item" id="more-decide" data-mcat="tool" title="帮我决定">
-            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg></span>
-            <span>帮我决定</span>
-          </button>
-          <button class="more-item" id="more-gdecide" data-mcat="tool" title="多人决定">
-            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H7a4 4 0 00-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M21 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></span>
-            <span>多人决定</span>
-          </button>
-          <button class="more-item" id="more-invite" data-mcat="chat" title="邀请TA">
-            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg></span>
-            <span>邀请TA</span>
-          </button>
-          <button class="more-item" id="more-ask" data-mcat="tool" title="问问TA">
-            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.6a2.4 2.4 0 114.8.4c0 1.7-2.4 2.1-2.4 3.3"/><path d="M12 16.7h.01"/></svg></span>
-            <span>问问TA</span>
-          </button>
-          <button class="more-item" id="more-search" data-mcat="tool" title="搜索聊天记录">
-            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span>
-            <span>搜索记录</span>
-          </button>
-          <button class="more-item" id="more-call" data-mcat="chat" title="通话">
-            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg></span>
-            <span>通话</span>
-          </button>
-          <button class="more-item" id="more-poke" data-mcat="chat" title="打开拍一拍页面">
-            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V12"/><path d="M11 12V4.5a1.5 1.5 0 0 1 3 0V12.5"/><path d="M14 12.5V7a1.5 1.5 0 0 1 3 0v6c0 3-2.5 5.5-5.5 5.5-1.7 0-3-.6-4-1.6L5 14.3"/></svg></span>
-            <span>拍一拍</span>
-          </button>
-          <button class="more-item" id="more-rps" data-mcat="game" title="猜拳">
-            <span class="mi-ico"><svg viewBox="0 0 256 256"><path fill="currentColor" d="M200 80h-16V64a32 32 0 0 0-56-21.13a32 32 0 0 0-55.79 17.55A32 32 0 0 0 24 88v40a104 104 0 0 0 208 0v-16a32 32 0 0 0-32-32m-48-32a16 16 0 0 1 16 16v16h-32V64a16 16 0 0 1 16-16M88 64a16 16 0 0 1 32 0v40a16 16 0 0 1-32 0ZM40 88a16 16 0 0 1 32 0v16a16 16 0 0 1-32 0Zm176 40a88 88 0 0 1-175.92 3.75A31.93 31.93 0 0 0 80 125.13a31.93 31.93 0 0 0 44.58 3.35a32.2 32.2 0 0 0 11.8 11.44A47.88 47.88 0 0 0 120 176a8 8 0 0 0 16 0a32 32 0 0 1 32-32a8 8 0 0 0 0-16h-16a16 16 0 0 1-16-16V96h64a16 16 0 0 1 16 16Z"/></svg></span>
-            <span>猜拳</span>
-          </button>
-          <button class="more-item" id="more-rp" data-mcat="chat" title="发红包">
-            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9c3 2 6 3 9 3s6-1 9-3"/><circle cx="12" cy="9" r="1.4"/></svg></span>
-            <span>红包</span>
-          </button>
-          <button class="more-item" id="more-gift" data-mcat="chat" title="心意集市">
-            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M5 12v8a1 1 0 001 1h12a1 1 0 001-1v-8"/><path d="M12 8v13"/>            <path d="M12 8S10.5 4 8 4 5 6 5 8"/><path d="M12 8s1.5-4 4-4 3 2 3 4"/></svg></span>
-            <span>心意集市</span>
-          </button>
-          <button class="more-item" id="more-giftbox" data-mcat="chat" title="心意柜">
-            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="13" rx="2"/><path d="M3 12h18"/><path d="M12 8V5"/><path d="M9 5h6"/></svg></span>
-            <span>心意柜</span>
-          </button>
-          <button class="more-item" id="more-avatar" data-mcat="chat" title="头像互动">
-            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.5-6 8-6s8 2 8 6"/></svg></span>
-            <span>头像互动</span>
-          </button>
-          <button class="more-item" id="more-drift" data-mcat="chat" title="漂流瓶（两个世界之间的海）">
-            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2.5h4v3.2l1.5 2A7.2 7.2 0 0117 11.6V19a2 2 0 01-2 2H9a2 2 0 01-2-2v-7.4c0-1.4.46-2.77 1.5-3.9L10 5.7z"/><path d="M10.4 12.6h3.2"/><path d="M2.5 18.6c1.5 1.1 3 1.1 4.5 0s3-1.1 4.5 0 3 1.1 4.5 0 3-1.1 4.5 0"/></svg></span>
-            <span>漂流瓶</span>
-          </button>
-          <button class="more-item" id="more-divine" data-mcat="tool" title="占卜">
-            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="1.5"/><path d="M12 8.5l1.15 2.4 2.4 1.15-2.4 1.15L12 15.6l-1.15-2.4-2.4-1.15 2.4-1.15z"/></svg></span>
-            <span>占卜</span>
-          </button>
-          <button class="more-item" id="more-pong" data-mcat="game" title="双人Pong">
-            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="18" rx="2"/><rect x="4" y="8" width="2" height="8" rx="1" fill="currentColor"/><rect x="18" y="8" width="2" height="8" rx="1" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/></svg></span>
-            <span>Pong</span>
-          </button>
-          <button class="more-item" id="more-snake" data-mcat="game" title="双人贪吃蛇">
-            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 7h3v3H7zM14 14h3v3h-3z"/></svg></span>
-            <span>贪吃蛇</span>
-          </button>
-          <button class="more-item" id="more-brick" data-mcat="game" title="双人打砖块（合作）">
-            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="1.5"/><path d="M3 9.3h18M3 14.6h18"/><path d="M12 4v5.3M7.5 9.3v5.3M16.5 9.3v5.3M12 14.6V20"/></svg></span>
-            <span>打砖块</span>
-          </button>
-          <button class="more-item" id="more-fish" data-mcat="game" title="双人钓鱼">
-            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 3l-3.2.6c-2 .4-3.8 1.4-5.3 2.9-1.4 1.4-2.4 3.2-3 5.1L4.5 16.5"/><path d="M19 3c-.4 2.8.5 5.6 2.4 7.5"/><path d="M8 14.5a2.3 2.3 0 115.3 0 6 6 0 01-4.8 5c0-1 .2-3 .4-4.5l-.9-.5z"/><path d="M11.5 15l-.9-2.4M7 16.8l1.4-1.2"/></svg></span>
-            <span>钓鱼</span>
-          </button>
-          <button class="more-item" id="more-c4" data-mcat="game" title="四子棋">
-            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="3.2"/><circle cx="16" cy="8" r="3.2"/><circle cx="8" cy="16" r="3.2"/><circle cx="16" cy="16" r="3.2"/></svg></span>
-            <span>四子棋</span>
-          </button>
-          <button class="more-item" id="more-ms" data-mcat="game" title="合作扫雷（和TA一起探索雷区）">
-            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="10" cy="14" r="4"/><path d="M13.2 10.8L15.5 8.5"/><path d="M17.5 5.5h3"/><path d="M19 4v3"/></svg></span>
-            <span>扫雷</span>
-          </button>
-          <button class="more-item" id="more-memory" data-mcat="game" title="记忆翻牌（和TA合作）">
-            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="12.5" height="17" rx="2"/><path d="M9.5 2.5H19a2 2 0 012 2v14"/><path d="M9.25 12.6l1.05 2.15 2.15 1.05-2.15 1.05-1.05 2.15-1.05-2.15-2.15-1.05 2.15-1.05z"/></svg></span>
-            <span>记忆翻牌</span>
-          </button>
-          <button class="more-item" id="more-ck" data-mcat="tool" title="寻踪（打开 TA 的日常）">
-            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/><path d="M12 3a9 9 0 000 18"/></svg></span>
-            <span>寻踪</span>
-          </button>
-          <button class="more-item" id="more-cjian" data-mcat="tool" title="此间（梦角世界时间与在场感知）">
-            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 010 18"/><circle cx="12" cy="12" r="2.2"/></svg></span>
-            <span>此间</span>
-          </button>
-          <button class="more-item" id="more-room" data-mcat="tool" title="房间（双人小屋）">
-            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 11L12 4l8.5 7"/><path d="M5.8 9.6V20h12.4V9.6"/><path d="M10 20v-5.4h4V20"/></svg></span>
-            <span>房间</span>
-          </button>
-        </div>
-        <div class="more-grid" id="more-grid-ask" hidden>
-          <button class="more-item" id="more-ask-now" title="让TA现在问一次（TA的询问）">
-            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>
-            <span>询问</span>
-          </button>
-          <button class="more-item" id="more-choose-now" title="让TA现在问一次（TA的小问题）">
-            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></span>
-            <span>小问题</span>
-          </button>
-          <button class="more-item" id="more-curious-now" title="让TA现在好奇一次（TA的好奇）">
-            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 000 18"/><circle cx="12" cy="12" r="2"/></svg></span>
-            <span>好奇</span>
-          </button>
-          <button class="more-item" id="more-roast-now" title="让TA现在吐槽一次（TA的吐槽）">
-            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 5.4 5.7.3-4.4 3.6 1.5 5.5-4.6-3.3-4.6 3.3 1.5-5.5-4.4-3.6 5.7-.3z"/></svg></span>
-            <span>吐槽</span>
-          </button>
-          <button class="more-item" id="more-invite-now" title="让TA现在邀请一次（猜拳/Pong/贪吃蛇/贴贴，话术来自字卡库「TA的邀请」）">
-            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="11" rx="5"/><path d="M7 10.5v3M5.5 12h3"/><path d="M15.5 11h.01M18.5 13h.01"/></svg></span>
-            <span>邀请</span>
-          </button>
-        </div>
-      </div>
+      
     </div>
 
     <!-- 头像互动（聊天页内底部半框，复用 poke-card 容器，露出聊天消息） -->
@@ -11810,6 +11692,138 @@ transition-duration: .01ms !important;
         <div class="gc-set-body" id="gc-set-body"></div>
       </div>
     </div>
+
+<div class="more-panel" id="chat-more-panel" hidden>
+        <!-- v3.15.x：功能增多后改为顶部分类 chips 切换（互动/小游戏/工具/TA的提问）。
+             功能按钮元素与 ID 全部保留（各功能模块按 ID 接线），仅加 data-mcat 由 JS 过滤显示；
+             每个功能只归属一个分类、分类间互不重复（v3.16.x 起移除「常用」页签，原常用默认项并入所属分类） -->
+        <div class="more-tabs" id="more-tabs">
+          <button class="more-tab sel" type="button" data-mcat="chat">互动</button>
+          <button class="more-tab" type="button" data-mcat="tool">工具</button>
+          <button class="more-tab" type="button" data-mcat="game">小游戏</button>
+          <button class="more-tab" type="button" data-mcat="ask">TA的提问</button>
+        </div>
+        <div class="more-grid" id="more-grid-fun">
+          <button class="more-item" id="more-decide" data-mcat="tool" title="帮我决定">
+            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg></span>
+            <span>帮我决定</span>
+          </button>
+          <button class="more-item" id="more-gdecide" data-mcat="tool" title="多人决定">
+            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H7a4 4 0 00-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M21 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></span>
+            <span>多人决定</span>
+          </button>
+          <button class="more-item" id="more-invite" data-mcat="chat" title="邀请TA">
+            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg></span>
+            <span>邀请TA</span>
+          </button>
+          <button class="more-item" id="more-ask" data-mcat="tool" title="问问TA">
+            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.6a2.4 2.4 0 114.8.4c0 1.7-2.4 2.1-2.4 3.3"/><path d="M12 16.7h.01"/></svg></span>
+            <span>问问TA</span>
+          </button>
+          <button class="more-item" id="more-search" data-mcat="tool" title="搜索聊天记录">
+            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span>
+            <span>搜索记录</span>
+          </button>
+          <button class="more-item" id="more-call" data-mcat="chat" title="通话">
+            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg></span>
+            <span>通话</span>
+          </button>
+          <button class="more-item" id="more-poke" data-mcat="chat" title="打开拍一拍页面">
+            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V12"/><path d="M11 12V4.5a1.5 1.5 0 0 1 3 0V12.5"/><path d="M14 12.5V7a1.5 1.5 0 0 1 3 0v6c0 3-2.5 5.5-5.5 5.5-1.7 0-3-.6-4-1.6L5 14.3"/></svg></span>
+            <span>拍一拍</span>
+          </button>
+          <button class="more-item" id="more-rps" data-mcat="game" title="猜拳">
+            <span class="mi-ico"><svg viewBox="0 0 256 256"><path fill="currentColor" d="M200 80h-16V64a32 32 0 0 0-56-21.13a32 32 0 0 0-55.79 17.55A32 32 0 0 0 24 88v40a104 104 0 0 0 208 0v-16a32 32 0 0 0-32-32m-48-32a16 16 0 0 1 16 16v16h-32V64a16 16 0 0 1 16-16M88 64a16 16 0 0 1 32 0v40a16 16 0 0 1-32 0ZM40 88a16 16 0 0 1 32 0v16a16 16 0 0 1-32 0Zm176 40a88 88 0 0 1-175.92 3.75A31.93 31.93 0 0 0 80 125.13a31.93 31.93 0 0 0 44.58 3.35a32.2 32.2 0 0 0 11.8 11.44A47.88 47.88 0 0 0 120 176a8 8 0 0 0 16 0a32 32 0 0 1 32-32a8 8 0 0 0 0-16h-16a16 16 0 0 1-16-16V96h64a16 16 0 0 1 16 16Z"/></svg></span>
+            <span>猜拳</span>
+          </button>
+          <button class="more-item" id="more-rp" data-mcat="chat" title="发红包">
+            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9c3 2 6 3 9 3s6-1 9-3"/><circle cx="12" cy="9" r="1.4"/></svg></span>
+            <span>红包</span>
+          </button>
+          <button class="more-item" id="more-gift" data-mcat="chat" title="心意集市">
+            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M5 12v8a1 1 0 001 1h12a1 1 0 001-1v-8"/><path d="M12 8v13"/>            <path d="M12 8S10.5 4 8 4 5 6 5 8"/><path d="M12 8s1.5-4 4-4 3 2 3 4"/></svg></span>
+            <span>心意集市</span>
+          </button>
+          <button class="more-item" id="more-giftbox" data-mcat="chat" title="心意柜">
+            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="13" rx="2"/><path d="M3 12h18"/><path d="M12 8V5"/><path d="M9 5h6"/></svg></span>
+            <span>心意柜</span>
+          </button>
+          <button class="more-item" id="more-avatar" data-mcat="chat" title="头像互动">
+            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.5-6 8-6s8 2 8 6"/></svg></span>
+            <span>头像互动</span>
+          </button>
+          <button class="more-item" id="more-drift" data-mcat="chat" title="漂流瓶（两个世界之间的海）">
+            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2.5h4v3.2l1.5 2A7.2 7.2 0 0117 11.6V19a2 2 0 01-2 2H9a2 2 0 01-2-2v-7.4c0-1.4.46-2.77 1.5-3.9L10 5.7z"/><path d="M10.4 12.6h3.2"/><path d="M2.5 18.6c1.5 1.1 3 1.1 4.5 0s3-1.1 4.5 0 3 1.1 4.5 0 3-1.1 4.5 0"/></svg></span>
+            <span>漂流瓶</span>
+          </button>
+          <button class="more-item" id="more-divine" data-mcat="tool" title="占卜">
+            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="1.5"/><path d="M12 8.5l1.15 2.4 2.4 1.15-2.4 1.15L12 15.6l-1.15-2.4-2.4-1.15 2.4-1.15z"/></svg></span>
+            <span>占卜</span>
+          </button>
+          <button class="more-item" id="more-pong" data-mcat="game" title="双人Pong">
+            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="18" rx="2"/><rect x="4" y="8" width="2" height="8" rx="1" fill="currentColor"/><rect x="18" y="8" width="2" height="8" rx="1" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/></svg></span>
+            <span>Pong</span>
+          </button>
+          <button class="more-item" id="more-snake" data-mcat="game" title="双人贪吃蛇">
+            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 7h3v3H7zM14 14h3v3h-3z"/></svg></span>
+            <span>贪吃蛇</span>
+          </button>
+          <button class="more-item" id="more-brick" data-mcat="game" title="双人打砖块（合作）">
+            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="1.5"/><path d="M3 9.3h18M3 14.6h18"/><path d="M12 4v5.3M7.5 9.3v5.3M16.5 9.3v5.3M12 14.6V20"/></svg></span>
+            <span>打砖块</span>
+          </button>
+          <button class="more-item" id="more-fish" data-mcat="game" title="双人钓鱼">
+            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 3l-3.2.6c-2 .4-3.8 1.4-5.3 2.9-1.4 1.4-2.4 3.2-3 5.1L4.5 16.5"/><path d="M19 3c-.4 2.8.5 5.6 2.4 7.5"/><path d="M8 14.5a2.3 2.3 0 115.3 0 6 6 0 01-4.8 5c0-1 .2-3 .4-4.5l-.9-.5z"/><path d="M11.5 15l-.9-2.4M7 16.8l1.4-1.2"/></svg></span>
+            <span>钓鱼</span>
+          </button>
+          <button class="more-item" id="more-c4" data-mcat="game" title="四子棋">
+            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="3.2"/><circle cx="16" cy="8" r="3.2"/><circle cx="8" cy="16" r="3.2"/><circle cx="16" cy="16" r="3.2"/></svg></span>
+            <span>四子棋</span>
+          </button>
+          <button class="more-item" id="more-ms" data-mcat="game" title="合作扫雷（和TA一起探索雷区）">
+            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="10" cy="14" r="4"/><path d="M13.2 10.8L15.5 8.5"/><path d="M17.5 5.5h3"/><path d="M19 4v3"/></svg></span>
+            <span>扫雷</span>
+          </button>
+          <button class="more-item" id="more-memory" data-mcat="game" title="记忆翻牌（和TA合作）">
+            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="12.5" height="17" rx="2"/><path d="M9.5 2.5H19a2 2 0 012 2v14"/><path d="M9.25 12.6l1.05 2.15 2.15 1.05-2.15 1.05-1.05 2.15-1.05-2.15-2.15-1.05 2.15-1.05z"/></svg></span>
+            <span>记忆翻牌</span>
+          </button>
+          <button class="more-item" id="more-ck" data-mcat="tool" title="寻踪（打开 TA 的日常）">
+            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/><path d="M12 3a9 9 0 000 18"/></svg></span>
+            <span>寻踪</span>
+          </button>
+          <button class="more-item" id="more-cjian" data-mcat="tool" title="此间（梦角世界时间与在场感知）">
+            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 010 18"/><circle cx="12" cy="12" r="2.2"/></svg></span>
+            <span>此间</span>
+          </button>
+          <button class="more-item" id="more-room" data-mcat="tool" title="房间（双人小屋）">
+            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 11L12 4l8.5 7"/><path d="M5.8 9.6V20h12.4V9.6"/><path d="M10 20v-5.4h4V20"/></svg></span>
+            <span>房间</span>
+          </button>
+        </div>
+        <div class="more-grid" id="more-grid-ask" hidden>
+          <button class="more-item" id="more-ask-now" title="让TA现在问一次（TA的询问）">
+            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>
+            <span>询问</span>
+          </button>
+          <button class="more-item" id="more-choose-now" title="让TA现在问一次（TA的小问题）">
+            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></span>
+            <span>小问题</span>
+          </button>
+          <button class="more-item" id="more-curious-now" title="让TA现在好奇一次（TA的好奇）">
+            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 000 18"/><circle cx="12" cy="12" r="2"/></svg></span>
+            <span>好奇</span>
+          </button>
+          <button class="more-item" id="more-roast-now" title="让TA现在吐槽一次（TA的吐槽）">
+            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 5.4 5.7.3-4.4 3.6 1.5 5.5-4.6-3.3-4.6 3.3 1.5-5.5-4.4-3.6 5.7-.3z"/></svg></span>
+            <span>吐槽</span>
+          </button>
+          <button class="more-item" id="more-invite-now" title="让TA现在邀请一次（猜拳/Pong/贪吃蛇/贴贴，话术来自字卡库「TA的邀请」）">
+            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="11" rx="5"/><path d="M7 10.5v3M5.5 12h3"/><path d="M15.5 11h.01M18.5 13h.01"/></svg></span>
+            <span>邀请</span>
+          </button>
+        </div>
+      </div>
 
     <!-- TA在身边·位置面板（聊天寻踪半框 / 桌面寻踪页「TA在身边」入口共用，必须放在所有 .page 之外——
          position:fixed 弹层若嵌在 .page 内，页面切换时会被父级 hidden 隐藏，桌面寻踪页点开就会"跑到聊天页"） -->
@@ -12646,6 +12660,25 @@ if (_bigIdx[key] !== v.length) { _bigIdx[key] = v.length; bigIdxSave(); }
 delete _bigIdx[key]; bigIdxSave();
 }
 }
+const LS_DIRTY_KEY = 'xy-home-v2:__ls-dirty';
+let _lsDirtyKeys = null;
+try {
+const s = sessionStorage.getItem(LS_DIRTY_KEY);
+if (s) { const arr = JSON.parse(s); if (Array.isArray(arr)) _lsDirtyKeys = new Set(arr); }
+} catch (e) {}
+function lsDirtySave() {
+const arr = _lsDirtyKeys ? Array.from(_lsDirtyKeys) : [];
+try { sessionStorage.setItem(LS_DIRTY_KEY, JSON.stringify(arr)); } catch (e) {}
+try { if (window.idbSet) window.idbSet(LS_DIRTY_KEY, JSON.stringify(arr)); } catch (e) {}
+}
+function lsDirtyAdd(k) {
+if (!_lsDirtyKeys) _lsDirtyKeys = new Set();
+_lsDirtyKeys.add(k);
+lsDirtySave();
+}
+function lsDirtyDel(k) {
+if (_lsDirtyKeys && _lsDirtyKeys.delete(k)) lsDirtySave();
+}
 window.xyStore = function (prefix) {
 return {
 get(k) {
@@ -12661,7 +12694,12 @@ memoryCache[key] = v;
 try { bigIdxTrack(key, v); } catch (e) {}
 const big = typeof v === 'string' && v.length > LS_BIG_LIMIT;
 if (!big) {
-try { localStorage.setItem(key, v); } catch (e) {}
+try {
+localStorage.setItem(key, v);
+lsDirtyDel(key); // 写成功 → 清除脏标记
+} catch (e) {
+lsDirtyAdd(key); // 写失败 → 标记：回填时该键以 IDB 为准
+}
 } else {
 try { localStorage.removeItem(key); } catch (e) {}
 }
@@ -12701,10 +12739,20 @@ const safety = setTimeout(function () {
 if (finished) return;
 sendReady(); // 放行开屏，不阻塞用户
 }, 12000);
-window.idbGetAllKeys().then(keys => {
+Promise.all([window.idbGetAllKeys(), window.idbGet(LS_DIRTY_KEY)]).then(res => {
+const keys = res[0];
+try {
+const arr = JSON.parse(res[1] || '[]');
+if (Array.isArray(arr) && arr.length) {
+if (!_lsDirtyKeys) _lsDirtyKeys = new Set();
+arr.forEach(k => { if (k) _lsDirtyKeys.add(k); });
+try { sessionStorage.setItem(LS_DIRTY_KEY, JSON.stringify(Array.from(_lsDirtyKeys))); } catch (e) {}
+}
+} catch (e) {}
 if (!keys || !keys.length) { finish(); return; }
 const need = (keys || []).filter(k =>
 k.indexOf(uidPrefix) === 0 &&
+k !== LS_DIRTY_KEY && // 脏键索引自身不回填
 k.indexOf(uidPrefix + 'music-file:') !== 0 &&
 !isChatMsgsKey(k) &&
 k !== 'xy-home-v2:__auto-backup-snapshot' &&
@@ -12731,7 +12779,12 @@ try { console.info('[mochi] 启动回填：' + neverRead.length + ' 个超大键
 function retainValue(k, v) {
 if (v === undefined || v === null) return false;
 if (memoryCache && (k in memoryCache)) return false;
-const str = typeof v === 'string' ? v : JSON.stringify(v);
+let str = typeof v === 'string' ? v : JSON.stringify(v);
+let lsVal = null;
+try { lsVal = localStorage.getItem(k); } catch (e) {}
+if (lsVal !== null && !(_lsDirtyKeys && _lsDirtyKeys.has(k))) {
+str = lsVal;
+}
 try { if (str.length > LS_BIG_LIMIT) { if (_bigIdx[k] !== str.length) { _bigIdx[k] = str.length; bigIdxSave(); } } else if (_bigIdx[k] !== undefined) { delete _bigIdx[k]; bigIdxSave(); } } catch (e) {}
 if (str.length > LS_BIG_LIMIT) {
 if (str.length > BIG_BUDGET || bigBudgetUsed + str.length > BIG_BUDGET) {
@@ -12794,7 +12847,12 @@ req.onerror = () => { if (!done) { done = true; clearTimeout(t); resolve(undefin
 })).then(v => {
 if (v === undefined || v === null) return false;
 if (!(memoryCache && (key in memoryCache))) {
-const str = typeof v === 'string' ? v : JSON.stringify(v);
+let str = typeof v === 'string' ? v : JSON.stringify(v);
+let lsVal = null;
+try { lsVal = localStorage.getItem(key); } catch (e) {}
+if (lsVal !== null && !(_lsDirtyKeys && _lsDirtyKeys.has(key))) {
+str = lsVal;
+}
 if (!memoryCache) memoryCache = {};
 memoryCache[key] = str;
 try { if (str.length > LS_BIG_LIMIT) { if (_bigIdx[key] !== str.length) { _bigIdx[key] = str.length; bigIdxSave(); } } } catch (e) {}
@@ -12848,6 +12906,7 @@ if (e && e.key && memoryCache && e.key in memoryCache) delete memoryCache[e.key]
 (function () {
 const G = 'xy-home-v2';
 const EXCLUDE = ['contacts', 'active-contact', 'feed-posts', 'migrated-v1', 'js-errors', 'theme-mode', 'accent-color',
+'fish-log', 'fish-log-global-migrated',
 'group-chat-msgs',
 'bg-keepalive', 'bg-notify',
 'gift-wallet', 'wallet-global-migrated',
@@ -19099,6 +19158,16 @@ appendMsg(m);
 maybeScrollChatBottom(rec.side);
 return m;
 }
+if (rec.special === 'memory') {
+m.className = 'msg-pong';
+m.innerHTML = '<div class="msg-pong-card">' +
+'<div class="msg-pong-label">🧠 ' + T('记忆翻牌') + '</div>' +
+'<div class="msg-pong-result">' + escTxt(T(rec.text || '')) + '</div>' +
+'</div>';
+appendMsg(m);
+maybeScrollChatBottom(rec.side);
+return m;
+}
 if (rec.special === 'snake') {
 m.className = 'msg-rps';
 const snkResTxt = rec.snkResult === 'win' ? '你赢了' : rec.snkResult === 'lose' ? T('TA 赢了') : '平局';
@@ -19177,6 +19246,23 @@ m.innerHTML = '<div class="msg-gift-card">' +
 '<div class="msg-gift-wish">\u201C' + escTxt(rec.giftWish || '心意') + '\u201D</div>' +
 '<div class="msg-gift-foot"><span class="mg-side">' + escTxt(sideTxt) + '</span>' +
 '<span class="msg-gift-price">\u00A5' + escTxt(Number(rec.giftPrice || 0).toFixed(2)) + '</span></div>' +
+favHeartHtml() +
+'</div>';
+appendMsg(m);
+maybeScrollChatBottom(rec.side);
+return m;
+}
+if (rec.special === 'dish') {
+m.className = 'msg-gift msg-dish';
+const sideTxt = rec.side === 'out' ? '我 烹饪送出' : (chatPartnerName() + ' 烹饪送来');
+const stars = rec.dishQuality === 'perfect' ? '★★★' : rec.dishQuality === 'good' ? '★★' : '★';
+m.innerHTML = '<div class="msg-gift-card msg-dish-card">' +
+'<div class="msg-gift-emoji" style="background:#fff3e0">' + escTxt(rec.dishEmoji || '\uD83C\uDF7D\uFE0F') + '</div>' +
+'<div class="msg-gift-name">' + escTxt(rec.dishName || '菜肴') + ' <span class="dish-stars">' + stars + '</span></div>' +
+'<div class="msg-gift-divider"></div>' +
+'<div class="msg-gift-wish">\u201C' + escTxt(rec.dishWish || '尝尝手艺') + '\u201D</div>' +
+'<div class="msg-gift-foot"><span class="mg-side">' + escTxt(sideTxt) + '</span>' +
+'<span class="msg-gift-price">\u00A5' + escTxt(Number(rec.dishPrice || 0).toFixed(2)) + '</span></div>' +
 favHeartHtml() +
 '</div>';
 appendMsg(m);
@@ -19728,14 +19814,14 @@ return el;
 function addIn(text, opts) {
 opts = opts || {};
 const _tagMood = opts.tag ? [{ tag: String(opts.tag), label: opts.tagNoDup ? '' : String(text) }] : null;
-return addRec({ side: 'in', text: text, initiative: opts.initiative, special: opts.special, quote: opts.quote, qidx: opts.qidx, type: opts.type, img: opts.img, parts: opts.parts, mailNotice: opts.mailNotice, gInv: opts.gInv, askQuestion: opts.askQuestion, askStatus: opts.askStatus, askOptions: opts.askOptions, askType: opts.askType, choiceQuestion: opts.choiceQuestion, choiceOptions: opts.choiceOptions, choicePref: opts.choicePref, choiceCat: opts.choiceCat, choiceStatus: opts.choiceStatus, choiceAnswer: opts.choiceAnswer, choiceReply: opts.choiceReply, choiceMatch: opts.choiceMatch, curiousQuestion: opts.curiousQuestion, curiousQuick: opts.curiousQuick, curiousReplies: opts.curiousReplies, curiousFollowup: opts.curiousFollowup, curiousQid: opts.curiousQid, curiousCat: opts.curiousCat, curiousStatus: opts.curiousStatus, curiousAnswer: opts.curiousAnswer, curiousReply: opts.curiousReply, roastText: opts.roastText, roastCat: opts.roastCat, roastStatus: opts.roastStatus, roastAnswer: opts.roastAnswer, roastReply: opts.roastReply, rpAmount: opts.rpAmount, rpWish: opts.rpWish, rpStatus: opts.rpStatus, rpTs: opts.rpTs, rpCover: opts.rpCover, askFen: opts.askFen, askTs: opts.askTs, mood: opts.mood || _tagMood || undefined });
+return addRec({ side: 'in', text: text, initiative: opts.initiative, special: opts.special, quote: opts.quote, qidx: opts.qidx, type: opts.type, img: opts.img, parts: opts.parts, mailNotice: opts.mailNotice, gInv: opts.gInv, askQuestion: opts.askQuestion, askStatus: opts.askStatus, askOptions: opts.askOptions, askType: opts.askType, choiceQuestion: opts.choiceQuestion, choiceOptions: opts.choiceOptions, choicePref: opts.choicePref, choiceCat: opts.choiceCat, choiceStatus: opts.choiceStatus, choiceAnswer: opts.choiceAnswer, choiceReply: opts.choiceReply, choiceMatch: opts.choiceMatch, curiousQuestion: opts.curiousQuestion, curiousQuick: opts.curiousQuick, curiousReplies: opts.curiousReplies, curiousFollowup: opts.curiousFollowup, curiousQid: opts.curiousQid, curiousCat: opts.curiousCat, curiousStatus: opts.curiousStatus, curiousAnswer: opts.curiousAnswer, curiousReply: opts.curiousReply, roastText: opts.roastText, roastCat: opts.roastCat, roastStatus: opts.roastStatus, roastAnswer: opts.roastAnswer, roastReply: opts.roastReply, rpAmount: opts.rpAmount, rpWish: opts.rpWish, rpStatus: opts.rpStatus, rpTs: opts.rpTs, rpCover: opts.rpCover, askFen: opts.askFen, askTs: opts.askTs, deskCk: opts.deskCk, mood: opts.mood || _tagMood || undefined });
 }
 function addOut(text) {
 return addRec({ side: 'out', text: text });
 }
 window.chatAddSystem = function (text, opts) {
 opts = opts || {};
-return addIn(text, { special: opts.special || 'poke', img: opts.img, mailNotice: opts.mailNotice, askQuestion: opts.askQuestion, askStatus: opts.askStatus, askOptions: opts.askOptions, askType: opts.askType, choiceQuestion: opts.choiceQuestion, choiceOptions: opts.choiceOptions, choicePref: opts.choicePref, choiceCat: opts.choiceCat, curiousQuestion: opts.curiousQuestion, curiousQuick: opts.curiousQuick, curiousReplies: opts.curiousReplies, curiousFollowup: opts.curiousFollowup, curiousQid: opts.curiousQid, curiousCat: opts.curiousCat, roastText: opts.roastText, roastCat: opts.roastCat });
+return addIn(text, { special: opts.special || 'poke', img: opts.img, mailNotice: opts.mailNotice, askQuestion: opts.askQuestion, askStatus: opts.askStatus, askOptions: opts.askOptions, askType: opts.askType, choiceQuestion: opts.choiceQuestion, choiceOptions: opts.choiceOptions, choicePref: opts.choicePref, choiceCat: opts.choiceCat, curiousQuestion: opts.curiousQuestion, curiousQuick: opts.curiousQuick, curiousReplies: opts.curiousReplies, curiousFollowup: opts.curiousFollowup, curiousQid: opts.curiousQid, curiousCat: opts.curiousCat, roastText: opts.roastText, roastCat: opts.roastCat, deskCk: opts.deskCk });
 };
 window.chatAddIn = function (text, opts) {
 const r = addIn(text, opts);
@@ -19868,17 +19954,41 @@ preset = reply.trim();
 const taReply = preset
 ? (window.pickAskCardReply ? window.pickAskCardReply([preset]) : preset)
 : (window.pickAskCardReply ? window.pickAskCardReply() : '收到你的回答。');
-rec.askReply = taReply;
+let deskReply = '';
+if (rec && rec.deskCk) {
+try {
+const pool = (window.getDeskCheckPool ? window.getDeskCheckPool() : []).concat(
+(window.getCustomCardsFor ? window.getCustomCardsFor(window.__activeCid || 'default') : []).filter(function (c) {
+return typeof c === 'string' && c.trim() && c.indexOf('data:') !== 0;
+})
+);
+if (pool.length && Math.random() * 100 < 50) {
+const n = 1 + Math.floor(Math.random() * Math.min(5, pool.length));
+const used = {};
+const picked = [];
+let guard = 0;
+while (picked.length < n && guard++ < 50) {
+const c = pool[Math.floor(Math.random() * pool.length)];
+if (used[c]) continue;
+used[c] = true;
+picked.push(c);
+}
+if (picked.length) deskReply = picked.join(' ');
+}
+} catch (e) {}
+}
+const finalReply = deskReply || taReply;
+rec.askReply = finalReply;
 saveMsgs();
 saveMsgsNow();
 addOut(answer);
-addIn(taReply);
+addIn(finalReply);
 taFavCard(rec);
 const el = body.querySelector('.msg-ask[data-idx="' + msgIdx + '"]');
 if (el) {
-el.innerHTML = '<div class="msg-ask-card answered"><div class="msg-ask-q">' + escTxt(rec.askQuestion || '') + '</div><div class="msg-ask-a">✓ 已回答：' + escTxt(answer) + '</div><div class="msg-choose-r">' + (window.taFit ? window.taFit('TA：') : 'TA：') + escTxt(window.taFit ? window.taFit(taReply) : taReply) + '</div>' + favHeartHtml() + '</div>';
+el.innerHTML = '<div class="msg-ask-card answered"><div class="msg-ask-q">' + escTxt(rec.askQuestion || '') + '</div><div class="msg-ask-a">✓ 已回答：' + escTxt(answer) + '</div><div class="msg-choose-r">' + (window.taFit ? window.taFit('TA：') : 'TA：') + escTxt(window.taFit ? window.taFit(finalReply) : finalReply) + '</div>' + favHeartHtml() + '</div>';
 }
-return taReply;
+return finalReply;
 };
 function retractMsg(msgEl, side) {
 const idx = parseInt(msgEl.dataset.idx, 10);
@@ -20168,6 +20278,7 @@ try {
 const c = cfg();
 if (pname) pname.title = c['cs-trigger-name'] === 1 ? '点击让对方继续说' : '';
 if (csBtn) csBtn.style.display = c['cs-trigger-bar'] === 1 ? '' : 'none';
+document.dispatchEvent(new Event('continue-say-changed')); // 群聊输入栏「继续说」按钮跟随同一开关
 } catch (e) {}
 };
 window.applyContinueSayUI();
@@ -20283,6 +20394,7 @@ else addOut(pick(declinePool || INVITE_DECLINE));
 noInput: true,
 lock: true,
 pills: [{ label: '同意', value: '1' }, { label: '拒绝', value: '0' }],
+pill: '1', // v3.16.x：邀请弹窗默认选中「同意」，无需手动点选直接确定
 staticText: staticText
 });
 }
@@ -23171,8 +23283,9 @@ function closeBatchPanel() {
 if (batchPanel) batchPanel.hidden = true;
 try { if (batchText && document.activeElement === batchText) batchText.blur(); } catch (e) {}
 }
-function openBatchPanel() {
+function openBatchPanel(opts) {
 if (!batchPanel) return;
+if (opts && typeof opts.onSend === 'function') batchSendTarget = opts.onSend; else batchSendTarget = null;
 const pc = document.getElementById('poke-card');
 if (pc) pc.hidden = true;
 closeEmojiPanel();
@@ -23184,6 +23297,7 @@ scrollChatBottom();
 const morePanel = document.getElementById('chat-more-panel');
 if (morePanel) morePanel.hidden = true;
 }
+window.openBatchPanelFor = function (onSend) { openBatchPanel({ onSend: onSend }); };
 function renderBatchList() {
 if (!batchList) return;
 if (batchCount) batchCount.textContent = batchItems.length + ' 条';
@@ -23271,6 +23385,7 @@ lastMineText = it.src;
 addRec({ side: 'out', text: it.src, type: 'sticker', parts: [{ k: 'img', v: it.src }] });
 }
 }
+let batchSendTarget = null; // 群聊等外部页面打开批量面板时设置：function(items) 负责把条目发到自己的消息列表
 function sendBatchAll() {
 if (!batchItems.length) { toast('还没有要发送的消息'); return; }
 const items = batchItems.slice();
@@ -23278,6 +23393,7 @@ batchItems = [];
 renderBatchList();
 closeBatchPanel();
 if (window.playSfx) window.playSfx('out');
+if (batchSendTarget) { batchSendTarget(items); if (window.logFish) window.logFish(); toast('已批量发送 ' + items.length + ' 条消息'); return; }
 items.forEach(sendBatchItem);
 if (window.logFish) window.logFish();
 scheduleReply();
@@ -23402,8 +23518,9 @@ voiceDataUrl = ''; voiceDur = 0;
 voicePanel.hidden = true;
 renderVoiceIdle();
 }
-function openVoicePanel() {
+function openVoicePanel(opts) {
 if (!voicePanel) return;
+if (opts && typeof opts.onSend === 'function') voiceSendTarget = opts.onSend; else voiceSendTarget = null;
 const pc = document.getElementById('poke-card');
 if (pc) pc.hidden = true;
 closeEmojiPanel();
@@ -23417,6 +23534,7 @@ renderVoiceIdle();
 voicePanel.hidden = false;
 scrollChatBottom();
 }
+window.openVoicePanelFor = function (onSend) { openVoicePanel({ onSend: onSend }); };
 function pickVoiceMime() {
 if (typeof MediaRecorder === 'undefined' || !MediaRecorder.isTypeSupported) return '';
 const list = ['audio/mp4', 'audio/aac', 'audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus'];
@@ -23534,8 +23652,15 @@ a.addEventListener('ended', voiceStopPreview);
 a.addEventListener('error', () => { voiceStopPreview(); toast('语音播放失败'); });
 a.play().catch(() => { voiceStopPreview(); toast('语音播放失败'); });
 }
+let voiceSendTarget = null; // 群聊等外部页面打开语音面板时设置：function(dataUrl, durSec) 把录好的语音发到自己的消息列表
 function sendVoiceMsg() {
 if (!voiceDataUrl) { toast('还没有录音'); return; }
+if (voiceSendTarget) {
+const dataUrl = voiceDataUrl, dur = voiceDur;
+closeVoicePanel();
+voiceSendTarget(dataUrl, dur);
+return;
+}
 const name = '语音 ' + voiceDur + '″';
 lastMineText = '[语音]';
 addRec({ side: 'out', text: name + '|||' + voiceDataUrl, type: 'voice' });
@@ -24128,6 +24253,13 @@ if (window.replyCfg) scheduleAutoSend();
 else setTimeout(bootAutoSend, 500);
 }
 window.enterChat = enterChat;
+window.__chatDbReady = function () { return chatDbReady === true; };
+window.__chatDbLoadedPrefix = function () {
+try {
+const p = lastIdbLoadPrefix || '';
+return p.indexOf('xy-home-v2:') === 0 ? p.slice('xy-home-v2:'.length) : '';
+} catch (e) { return ''; }
+};
 bootAutoSend();
 loadMsgs();
 setTimeout(rpExpireCheck, 2000);
@@ -24183,6 +24315,9 @@ const gcMorePanel = document.getElementById('gc-more-panel');
 const gcMoreAt = document.getElementById('gc-more-at');
 const gcEmojiBtn = document.getElementById('gc-emoji-btn');
 const gcImgBtn = document.getElementById('gc-img-btn');
+const gcMicBtn = document.getElementById('gc-mic-btn');
+const gcContinueBtn = document.getElementById('gc-continue-btn');
+const gcBatchBtn = document.getElementById('gc-batch-btn');
 const gcDraftBar = document.getElementById('gc-draft');
 const gcDraftItems = document.getElementById('gc-draft-items');
 const FALLBACK_REPLIES = ['好的～', '嗯嗯', '收到', '哈哈', '在的', '我知道啦', '是吗', '然后呢', '有意思', '同意', '哈哈哈', '对的', '没错', '我也觉得', '确实', '哇'];
@@ -24995,6 +25130,7 @@ if (page) page.hidden = false;
 updateGroupName();
 loadMsgs();
 renderAll();
+syncGcInputBtns(); // 进入群聊时按当前桌面设置刷新语音/继续说/批量按钮显隐
 }
 if (backBtn) backBtn.addEventListener('click', () => {
 saveNow();
@@ -25421,6 +25557,85 @@ if (gcMorePanel) gcMorePanel.hidden = true;
 renderAtPanel();
 if (atPanel) atPanel.hidden = false;
 });
+function gcSettingOn(key) {
+try { return window.activeStore().get(key) === '1'; } catch (e) { return false; }
+}
+function syncGcInputBtns() {
+if (gcMicBtn) gcMicBtn.style.display = gcSettingOn('cs-voice-send') ? '' : 'none';
+if (gcContinueBtn) gcContinueBtn.style.display = gcSettingOn('cs-trigger-bar') ? '' : 'none';
+if (gcBatchBtn) gcBatchBtn.style.display = gcSettingOn('cs-batch-send') ? '' : 'none';
+}
+function gcContinueSay() {
+const members = getMembers();
+if (!members.length) return;
+const mentioned = [];
+if (input) {
+const t = (input.innerText || '').trim();
+members.forEach(m => { if (t.indexOf('@' + memberName(m.id)) >= 0) mentioned.push(m.id); });
+}
+const chosen = mentioned.length
+? mentioned.slice()
+: members.slice(0, Math.max(1, Math.min(2, members.length))).map(m => m.id);
+chosen.forEach((cid, i) => {
+setTimeout(() => memberReply(cid, ''), i * (1200 + Math.random() * 1600));
+});
+if (window.playSfx) window.playSfx('in');
+}
+function gcSendVoice(dataUrl, durSec) {
+const name = '语音 ' + durSec + '″';
+const rec = { side: 'out', text: name + '|||' + dataUrl, type: 'voice', ts: Date.now() };
+msgs.push(rec);
+saveMsgs();
+renderMsg(rec, msgs.length - 1);
+followGcBottom(true);
+if (window.playSfx) window.playSfx('out');
+scheduleReply('');
+toast('语音已发送');
+}
+function gcSendBatch(items) {
+(items || []).forEach(it => {
+if (!it) return;
+if (it.type === 'text') {
+const t = (it.text || '').trim();
+if (!t) return;
+const rec = { side: 'out', text: t, ts: Date.now() };
+msgs.push(rec);
+saveMsgs();
+renderMsg(rec, msgs.length - 1);
+} else if (it.type === 'img') {
+const rec = { side: 'out', text: it.src, parts: [{ k: 'img', v: it.src, sub: 'image' }], ts: Date.now() };
+msgs.push(rec);
+saveMsgs();
+renderMsg(rec, msgs.length - 1);
+} else if (it.type === 'sticker') {
+const rec = { side: 'out', type: 'sticker', text: it.src, ts: Date.now() };
+msgs.push(rec);
+saveMsgs();
+renderMsg(rec, msgs.length - 1);
+}
+});
+followGcBottom(true);
+if (window.playSfx) window.playSfx('out');
+scheduleReply('');
+}
+if (gcContinueBtn) gcContinueBtn.addEventListener('click', (e) => { e.stopPropagation(); gcContinueSay(); });
+if (gcMicBtn) gcMicBtn.addEventListener('click', (e) => {
+e.stopPropagation();
+if (!window.openVoicePanelFor) return;
+if (gcMorePanel) gcMorePanel.hidden = true;
+window.openVoicePanelFor(gcSendVoice);
+});
+if (gcBatchBtn) gcBatchBtn.addEventListener('click', (e) => {
+e.stopPropagation();
+if (!window.openBatchPanelFor) return;
+if (gcMorePanel) gcMorePanel.hidden = true;
+window.openBatchPanelFor(gcSendBatch);
+});
+syncGcInputBtns();
+document.addEventListener('voice-send-changed', syncGcInputBtns);
+document.addEventListener('batch-send-changed', syncGcInputBtns);
+document.addEventListener('continue-say-changed', syncGcInputBtns);
+document.addEventListener('contact-switched', syncGcInputBtns);
 if (gcMoreBtn && gcMorePanel) {
 gcMoreBtn.addEventListener('click', (e) => {
 e.stopPropagation();
@@ -28681,6 +28896,18 @@ out[k] = n;
 return out;
 }
 window.replyCfg = getCfg;
+window.replyCfgFor = function (cid) {
+const out = {};
+let s = null;
+try { s = (cid && window.storeFor) ? window.storeFor(cid) : ls; } catch (e) { s = ls; }
+Object.keys(DEFAULTS).forEach(k => {
+const v = k.indexOf('gc-') === 0 ? gcRead(k) : (s ? s.get('reply-' + k) : null);
+let n = (v === null || v === undefined || v === '') ? DEFAULTS[k] : Number(v);
+if (isNaN(n)) n = DEFAULTS[k];
+out[k] = n;
+});
+return out;
+};
 window.groupChatCfg = function () {
 try {
 const c = getCfg();
@@ -29317,6 +29544,22 @@ window.DEFAULT_CARD_DATA.drift = [
 "潮水带走了字，留下了心意。"
 ]]
 ];
+window.DEFAULT_CARD_DATA.deskcheck = [
+["桌面查岗·回应", [
+"你来查岗，我正好也想你了。",
+"被抓到了，我正在想你呀。",
+"在呀在呀，一直在等你。",
+"被你发现了，我确实有点想你。",
+"查岗成功，奖励你一个亲亲。",
+"老实交代，我刚刚在想你。",
+"你一来，我就有空了。",
+"报告，我正在想你，请你查收。",
+"查吧查吧，我的心都是你的。",
+"被你查到心坎里了。",
+"这么想我呀，那我过去找你。",
+"收到你的关心，心里暖暖的。"
+]]
+];
 } catch (__e) { try { console.error("[JS] default-cards-data.js", __e && __e.message || __e); } catch (x) {} if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
 (function () { try {
 (function () {
@@ -29370,7 +29613,7 @@ window.defaultCardCat = function (k) { return getCat(k); };
 window.defaultCardCfg = function () { return api.cfg(); };
 window.defaultCardApiFor = apiFor;
 const DATA = (window.DEFAULT_CARD_DATA) || { main: [], kaomoji: [], emoji: [] };
-const FUNC_KEYS = ['fish', 'eat', 'period', 'water', 'garden', 'sync', 'reach', 'cjian', 'room', 'piggy', 'drift', 'interact'];
+const FUNC_KEYS = ['fish', 'eat', 'period', 'water', 'garden', 'sync', 'reach', 'cjian', 'room', 'piggy', 'drift', 'interact', 'deskcheck'];
 const BASE_KEYS = ['main', 'kaomoji', 'emoji', 'touch'];
 function sumKeys(keys) {
 let n = 0;
@@ -29547,6 +29790,19 @@ list: 'dc-list', tabs: 'dc-tabs', groupsBar: 'dc-groups-bar', search: 'dc-search
 const fcView = mountCardView({
 list: 'fc-list', tabs: 'fc-tabs', groupsBar: 'fc-groups-bar', search: 'fc-search-input', page: 'page-fun-cards'
 }, FUNC_KEYS, '暂无功能触发字卡');
+(function () {
+const tabs = document.getElementById('fc-tabs');
+if (!tabs) return;
+const known = Array.prototype.map.call(tabs.querySelectorAll('.cc-tab'), t => t.dataset.type);
+FUNC_KEYS.forEach(function (k) {
+if (known.indexOf(k) >= 0) return;
+const b = document.createElement('button');
+b.className = 'cc-tab';
+b.dataset.type = k;
+b.textContent = k === 'deskcheck' ? '桌面查岗' : k;
+tabs.appendChild(b);
+});
+})();
 const li = document.getElementById('li-default-cards');
 if (li) {
 li.addEventListener('click', () => {
@@ -29619,6 +29875,10 @@ return window.getLibPool('interact', name, fallback);
 };
 window.getFishPool = function (name, fallback) {
 return window.getLibPool('fish', name, fallback);
+};
+window.getDeskCheckPool = function (fallback) {
+const arr = window.getLibPool('deskcheck', '桌面查岗·回应', fallback);
+return arr.filter(c => !(window.isDefaultCardOff && window.isDefaultCardOff('deskcheck', c)));
 };
 })();
 } catch (__e) { try { console.error("[JS] default-cards.js", __e && __e.message || __e); } catch (x) {} if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
@@ -34971,6 +35231,7 @@ replyMeInvite(false, null);
 noInput: true,
 lock: true,
 pills: [{ label: '同意', value: '1' }, { label: '拒绝', value: '0' }],
+pill: '1',
 staticText: name + ' 邀请你换上这张头像'
 });
 const se = document.getElementById('modal-static');
@@ -38240,6 +38501,27 @@ if (ckMerge(d)) { try { store.set(KEY, JSON.stringify(d)); } catch (e) {} }
 if (!Array.isArray(d.groups)) d.groups = [];
 return d;
 }
+function ckLoadFrom(s) {
+let d = null;
+try { d = JSON.parse(s.get(KEY) || 'null'); } catch (e) { d = null; }
+if (!d || typeof d !== 'object' || Array.isArray(d)) d = {};
+if (!d.settings || typeof d.settings !== 'object') d.settings = {};
+if (d.settings.useDefault === undefined) d.settings.useDefault = true;
+if (!Array.isArray(d.questions) || !d.questions.length) {
+const isNew = !s.get(KEY);
+d.questions = DEFAULT_QUESTIONS.map(q => {
+const nq = Object.assign({}, q);
+nq.isPreset = true;
+return nq;
+});
+d.mergedIds = DEFAULT_QUESTIONS.map(q => q.id);
+if (!isNew) { try { s.set(KEY, JSON.stringify(d)); } catch (e) {} }
+} else {
+if (ckMerge(d)) { try { s.set(KEY, JSON.stringify(d)); } catch (e) {} }
+}
+if (!Array.isArray(d.groups)) d.groups = [];
+return d;
+}
 function ckSave(d) { try { store.set(KEY, JSON.stringify(d)); } catch (e) {} }
 function pickQ() {
 const d = ckLoad();
@@ -38277,7 +38559,7 @@ pills: isSingle ? q.options.map(function (o) { return { label: o.t, value: o.t }
 noInput: isSingle
 });
 }
-function pushCkQuestion(cfg, forceQ) {
+function pushCkQuestion(cfg, forceQ, opts) {
 if (!window.chatAddSystem) return false;
 const q = forceQ || pickQ();
 if (!q || !q.text) return false;
@@ -38285,7 +38567,7 @@ const pickedId = String(q.id || '');
 try { if (pickedId) store.set('ckq-last-id', pickedId); } catch (e) {}
 const isSingle = q.type === 'single' && Array.isArray(q.options) && q.options.length;
 window.chatAddSystem('TA 来查岗了。', { special: 'ask-msg' });
-const el = window.chatAddSystem(q.text, { special: 'ask-card', askQuestion: q.text, askOptions: isSingle ? q.options : null, askType: isSingle ? 'single' : 'text' });
+const el = window.chatAddSystem(q.text, { special: 'ask-card', askQuestion: q.text, askOptions: isSingle ? q.options : null, askType: isSingle ? 'single' : 'text', deskCk: !!(opts && opts.deskCk) });
 const msgIdx = el ? Number(el.dataset.idx) : -1;
 if (window.bgNotifyCheck) window.bgNotifyCheck('TA 来查岗了：' + q.text, Date.now(), { name: 'TA查岗' });
 let popupProb = 70;
@@ -38327,6 +38609,27 @@ if (d.questions[forceIdx]) q = d.questions[forceIdx];
 if (!q) q = pickQ();
 if (!q) { toast('TA的查岗题库没有可用的问题'); return false; }
 return pushCkQuestion(window.replyCfg ? window.replyCfg() : null, q);
+};
+window.ckQuestionPickFor = function (cid) {
+try {
+const s = (cid && window.storeFor) ? window.storeFor(cid) : store;
+const d = ckLoadFrom(s);
+const useDefault = (d.settings || {}).useDefault !== false;
+const qs = (d.questions || []).filter(q => q && q.enabled !== false && q.text && (useDefault || q.isPreset !== true));
+if (!qs.length) return null;
+let last = '';
+try { last = String(s.get('ckq-last-id') || ''); } catch (e) {}
+let pool = qs;
+if (qs.length > 1) {
+const f = qs.filter(q => String(q.id || '') !== last);
+if (f.length) pool = f;
+}
+return pool[Math.floor(Math.random() * pool.length)];
+} catch (e) { return null; }
+};
+window.ckQuestionFire = function (q, cfg) {
+if (!q || !q.text) return false;
+return pushCkQuestion(cfg || (window.replyCfg ? window.replyCfg() : null), q, { deskCk: true });
 };
 window.__ckBankInfo = function () {
 try {
@@ -39484,7 +39787,11 @@ const v = target[k];
 if (typeof v === 'string' && v.indexOf('data:') === 0) {
 pending++;
 dataUrlToBlob(v, function (b) {
-if (b) target[k] = b; else delete target[k];
+if (b) {
+try { target[k] = URL.createObjectURL(b); } catch (e) { delete target[k]; }
+} else {
+delete target[k];
+}
 if (--pending === 0) finish();
 });
 }
@@ -40182,12 +40489,22 @@ caresSave(list);
 const hp = document.getElementById('page-home');
 if (hp && !hp.hidden && htab === 'care') renderCarePanel();
 };
+window.addCareRecordFor = function (cid, kind, text, ts) {
+try {
+const s = (cid && window.storeFor) ? window.storeFor(cid) : store;
+let list = [];
+try { list = JSON.parse(s.get('records-care') || '[]'); } catch (e) { list = []; }
+if (!Array.isArray(list)) list = [];
+list.unshift({ kind: kind, text: text || '', ts: ts || Date.now() });
+s.set('records-care', JSON.stringify(list.slice(0, 100)));
+} catch (e) {}
+};
 function renderCarePanel() {
 const el = document.getElementById('home-care');
 if (!el) return;
 const name = store.get('lbl-partner') || (window.taWord ? window.taWord() : 'TA');
 const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-const KIND_ICON = { checkin: '📋', period: '🌸', water: '💧', eat: '🍚', pomo: '🍅' };
+const KIND_ICON = { checkin: '📋', period: '🌸', water: '💧', eat: '🍚', pomo: '🍅', deskcheck: '🏠' };
 const rows = [];
 caresLoad().forEach(r => { if (r.kind === 'pomo') rows.push({ icon: '🍅', main: '番茄钟陪伴', sub: fmtDT(r.ts), ts: r.ts }); });
 let msgs = [];
@@ -40205,6 +40522,20 @@ const nearCard = (msgs || []).some(o => o && o.special === 'ask-card' && o.askQu
 if (!nearCard) rows.push({ icon: KIND_ICON.checkin, main: '查岗', sub: fmtDT(t), ts: t });
 }
 });
+if (window.getContacts) {
+(window.getContacts() || []).forEach(function (c) {
+let care = [];
+try {
+const s = (c.id && window.storeFor) ? window.storeFor(c.id) : store;
+care = JSON.parse(s.get('records-care') || '[]');
+} catch (e) { care = []; }
+(Array.isArray(care) ? care : []).forEach(function (r) {
+if (!r || r.kind !== 'desk-checkin') return;
+const cname = (c && c.name) || 'TA';
+rows.push({ icon: KIND_ICON.deskcheck, main: '桌面查岗 · ' + esc(cname) + ' · ' + esc(r.text || ''), sub: fmtDT(r.ts || 0), ts: r.ts || 0 });
+});
+});
+}
 if (!rows.length) { el.innerHTML = '<div class="ta-empty">暂无联系人的关心记录（TA 会主动查岗、提醒你喝水吃饭、关心经期、陪你专注）</div>'; return; }
 rows.sort((a, b) => (b.ts || 0) - (a.ts || 0));
 el.innerHTML = rows.map(r => '<div class="tc-listitem"><div class="tc-li-top"><span class="tc-li-q">' + r.icon + ' ' + r.main + '</span><span class="tc-li-time">' + r.sub + '</span></div></div>').join('');
@@ -44492,9 +44823,9 @@ const home = document.getElementById('page-phone');
 if (home) home.hidden = false;
 });
 }
-const DEF_PLACES = ['在家', '在公司', '在咖啡店', '在公园', '在图书馆', '在路上', '在朋友家', '在健身房', '在超市', '在电影院'];
-const DEF_ACTIONS = ['刷手机', '看书', '发呆', '听歌', '写东西', '吃零食', '喝奶茶', '散步', '玩游戏', '想你'];
-const DEF_CHECK_MSGS = ['想你了', '记得按时吃饭', '今天也很喜欢你', '早点休息', '有空给我回消息', '别太累'];
+const DEF_PLACES = ['在家', '在公司', '在咖啡店', '在公园', '在图书馆', '在路上', '在朋友家', '在健身房', '在超市', '在电影院', '在便利店', '在书店', '在地铁上', '在阳台', '在河边', '在小区楼下', '在面包店', '在车站', '在自习室'];
+const DEF_ACTIONS = ['刷手机', '看书', '发呆', '听歌', '写东西', '吃零食', '喝奶茶', '散步', '玩游戏', '想你', '看电影', '追剧', '刷视频', '等快递', '收拾房间', '洗衣服', '做饭', '泡茶', '吃水果', '拍照'];
+const DEF_CHECK_MSGS = ['想你了', '记得按时吃饭', '今天也很喜欢你', '早点休息', '有空给我回消息', '别太累', '喝水了吗', '今天开心吗', '我今天有点累', '我今天很开心', '我今天有点想你', '我今天有点无聊', '今天过得怎么样', '记得多穿点', '路上注意安全', '晚安'];
 const CK_DEF_KEY = 'checkin-cards-default';
 function getCkDefault() {
 const v = store.get(CK_DEF_KEY);
@@ -47610,6 +47941,10 @@ if (el) el.textContent = walletText();
 });
 }
 window.giftWalletChange = function (dMy, dTa, src) {
+if (src) {
+if (dMy < 0) dMy = 0;
+if (dTa < 0) dTa = 0;
+}
 const w = walletGet();
 if (dMy) w.myBalance += dMy;
 if (dTa) w.systemBalance += dTa;
@@ -48104,6 +48439,7 @@ const box = boxLoad();
 box.unshift({ id: 'gb_' + Date.now() + '_' + Math.floor(Math.random() * 1000), giftId: gift.id, name: gift.name, emoji: gift.emoji, img: gift.img || '', price: gift.price, cat: gift.cat, wish: wish, side: side, tm: Date.now() });
 boxSave(box);
 }
+window.recordGiftBox = recordBox;
 function buyAndSend(gift, side, wish) {
 const priceFen = Math.round((gift.price || 0) * 100);
 const w = walletGet();
@@ -59965,6 +60301,21 @@ const ITEMS = [
 { id: 'gift_trinket',  name: '小饰品', icon: '🎀', cat: 'gift',    price: 0, giftNote: 'trinket' }
 ];
 const ITEM_MAP = {}; ITEMS.forEach(function (it) { ITEM_MAP[it.id] = it; });
+const DISHES = {
+fish_small:   { name: '烤小鱼',   emoji: '🐟', cookSec: 180,  mult: 1.8 },
+fish_blue:    { name: '清蒸蓝鱼', emoji: '🍽️', cookSec: 300,  mult: 1.8 },
+fish_puffer:  { name: '河豚刺身', emoji: '🍣', cookSec: 300,  mult: 1.9 },
+fish_crab:    { name: '清蒸蟹',   emoji: '🦀', cookSec: 360,  mult: 1.8 },
+fish_big:     { name: '红烧大鱼', emoji: '🍲', cookSec: 480,  mult: 1.9 },
+fish_octopus: { name: '章鱼烧',   emoji: '🐙', cookSec: 480,  mult: 1.9 },
+fish_rare:    { name: '稀有鱼宴', emoji: '🍱', cookSec: 720,  mult: 2.0 },
+fish_gold:    { name: '金鱼浓汤', emoji: '🍜', cookSec: 1080, mult: 2.2 },
+fish_koi:     { name: '锦鲤御膳', emoji: '👑', cookSec: 1800, mult: 2.5 },
+fish_moon:    { name: '月光鱼露', emoji: '🌙', cookSec: 1800, mult: 2.5 },
+fish_abyss:   { name: '深渊王宴', emoji: '🐲', cookSec: 1800, mult: 3.0 }
+};
+function dishOf(fishId) { return DISHES[fishId] || null; }
+function dishPrice(fishId, quality) { const it = ITEM_MAP[fishId]; const d = dishOf(fishId); if (!it || !d) return 0; const qm = quality === 'perfect' ? 1.15 : quality === 'good' ? 1.0 : 0.85; return Math.round(it.price * d.mult * qm); }
 const FISH_POOL = ITEMS.filter(function (it) { return it.cat === 'fish' || it.cat === 'special'; });
 const GIFT_POOL = ITEMS.filter(function (it) { return it.cat === 'gift'; });
 function qualityWeights(quality) {
@@ -60188,6 +60539,7 @@ const t = loadToday();
 t.ta[item.id] = (t.ta[item.id] || 0) + 1; saveToday(t);
 markDex(item);
 statusText(taWord() + ' 钓到了 ' + item.icon + ' ' + item.name);
+maybeTaCook(item.id);
 if (item.giftNote === 'flower' && Math.random() < 0.5) {
 const note = giftNoteFor(item);
 setTimeout(function () { sendTaLine(fit('TA：') + note, false); }, 700);
@@ -60263,6 +60615,80 @@ sfxSell();
 toast('已兑换心意币各 +¥5.2');
 render();
 }
+function cookKey() { return 'fishing-cook'; }
+function loadCook() { const c = readJSON(cookKey(), null); return c && typeof c === 'object' ? c : { mine: [], ta: [], taWeek: { weekKey: '', count: 0 } }; }
+function saveCook(c) { writeJSON(cookKey(), c); }
+function weekKey() { const d = new Date(); const thu = new Date(d.getFullYear(), d.getMonth(), d.getDate() + (4 - (d.getDay() || 7))); const wk = Math.ceil((((thu - new Date(thu.getFullYear(), 0, 1)) / 86400000) + 1) / 7); return d.getFullYear() + '-W' + wk; }
+function taCookCountThisWeek() { const c = loadCook(); return (c.taWeek && c.taWeek.weekKey === weekKey()) ? c.taWeek.count : 0; }
+function cookStatus(entry) {
+const d = dishOf(entry.fishId); if (!d) return null;
+const now = Math.floor(Date.now() / 1000), elapsed = now - entry.startedAt;
+return { dish: d, done: elapsed >= d.cookSec, progress: Math.min(1, elapsed / d.cookSec), remainSec: Math.max(0, d.cookSec - elapsed), elapsed: elapsed };
+}
+function loadBox() { const s = store(); if (!s) return []; try { const a = JSON.parse(s.get('giftbox-items') || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
+function saveBox(a) { const s = store(); if (s) s.set('giftbox-items', JSON.stringify(a)); }
+const TA_COOK_WISH = ['给你尝尝。', '刚做好的，趁热吃。', '这道菜想让你试试。', '用心做的，希望你喜欢。'];
+function cookMine(fishId) {
+const d = dishOf(fishId); if (!d) { toast('这种鱼不能烹饪'); return; }
+const t = loadToday();
+if (!t.mine[fishId] || t.mine[fishId] < 1) { toast('今日没有这种鱼'); return; }
+t.mine[fishId]--; if (t.mine[fishId] <= 0) delete t.mine[fishId]; saveToday(t);
+const c = loadCook();
+c.mine.push({ fishId: fishId, startedAt: Math.floor(Date.now() / 1000), quality: 'good' });
+saveCook(c); sfxCast();
+toast('开始烹饪 ' + d.emoji + ' ' + d.name + '，约 ' + Math.round(d.cookSec / 60) + ' 分钟');
+render();
+}
+function sellDish(idx) {
+const c = loadCook(); const entry = c.mine[idx]; if (!entry) return;
+const st = cookStatus(entry); if (!st || !st.done) { toast('还没烹饪好'); return; }
+const price = dishPrice(entry.fishId, entry.quality);
+c.mine.splice(idx, 1); saveCook(c);
+if (window.giftWalletChange) window.giftWalletChange(price, price, '烹饪出售');
+addStats({ totalEarned: price }); sfxSell();
+toast('出售 ' + st.dish.name + '，心意币各 +¥' + fenToStr(price)); render();
+}
+function sendDishToTa(idx) {
+const c = loadCook(); const entry = c.mine[idx]; if (!entry) return;
+const st = cookStatus(entry); if (!st || !st.done) { toast('还没烹饪好'); return; }
+const price = dishPrice(entry.fishId, entry.quality);
+c.mine.splice(idx, 1); saveCook(c);
+if (window.recordGiftBox) window.recordGiftBox({ id: 'dish_' + entry.fishId, name: st.dish.name, emoji: st.dish.emoji, price: price / 100, cat: '菜肴' }, 'out', '给你尝尝我的手艺');
+if (window.chatAddGift) window.chatAddGift({ side: 'out', special: 'dish', dishName: st.dish.name, dishEmoji: st.dish.emoji, dishWish: '给你尝尝', dishQuality: entry.quality, dishPrice: price / 100, ts: Date.now() });
+sfxGift(); toast('已把 ' + st.dish.name + ' 送给 ' + taWord()); render();
+}
+function maybeTaCook(fishId) {
+const d = dishOf(fishId); if (!d) return;
+if (taCookCountThisWeek() >= 3) return;
+if (Math.random() >= 0.08) return;
+const c = loadCook();
+if (c.taWeek.weekKey !== weekKey()) c.taWeek = { weekKey: weekKey(), count: 0 };
+c.taWeek.count++;
+c.ta.push({ fishId: fishId, startedAt: Math.floor(Date.now() / 1000), quality: 'good' });
+saveCook(c); statusText(taWord() + ' 开始烹饪 ' + d.emoji + ' ' + d.name + '…');
+}
+function checkTaCookDone() {
+const c = loadCook(); if (!c.ta.length) return;
+let changed = false;
+for (let i = c.ta.length - 1; i >= 0; i--) {
+const entry = c.ta[i]; const st = cookStatus(entry); if (!st || !st.done) continue;
+const d = st.dish; const price = dishPrice(entry.fishId, entry.quality);
+c.ta.splice(i, 1); changed = true;
+if (Math.random() < 0.8) {
+if (window.recordGiftBox) window.recordGiftBox({ id: 'dish_' + entry.fishId, name: d.name, emoji: d.emoji, price: price / 100, cat: '菜肴' }, 'in', pick(TA_COOK_WISH));
+if (window.chatAddGift) window.chatAddGift({ side: 'in', special: 'dish', dishName: d.name, dishEmoji: d.emoji, dishWish: pick(TA_COOK_WISH), dishQuality: entry.quality, dishPrice: price / 100, ts: Date.now() });
+sfxGift(); toast('💕 ' + taWord() + ' 烹饪了 ' + d.emoji + ' ' + d.name + ' 送给你！');
+} else { statusText(taWord() + ' 烹饪了 ' + d.name + '，自己吃了'); }
+}
+if (changed) saveCook(c);
+}
+function eatDish(boxIdx) {
+const box = loadBox(); const item = box[boxIdx]; if (!item) return;
+const eatPrice = Math.round((item.price || 0) * 100 * 0.5);
+box.splice(boxIdx, 1); saveBox(box);
+if (window.giftWalletChange) window.giftWalletChange(eatPrice, 0, '吃掉收到的菜');
+sfxSell(); toast('吃掉 ' + item.name + '，心意币 +¥' + fenToStr(eatPrice)); render();
+}
 function statusText(t) { if (statusEl) statusEl.textContent = t; }
 function updateTimingVisual(p) {
 if (!timingWrapEl) return;
@@ -60270,6 +60696,7 @@ timingWrapEl.hidden = false;
 if (timingCursorEl) timingCursorEl.style.left = (p * 100).toFixed(1) + '%';
 }
 function render() {
+checkTaCookDone();
 if (partnerNameEl) partnerNameEl.textContent = taWord();
 const sc = sceneEl;
 if (sc) {
@@ -60308,11 +60735,13 @@ if (!pageEl) return;
 let key;
 if (curTab === 'today') key = 'today:' + JSON.stringify(loadToday());
 else if (curTab === 'dex') key = 'dex:' + JSON.stringify(loadDex()) + ':' + JSON.stringify(loadStats());
+else if (curTab === 'cook') key = 'cook:' + Math.floor(Date.now() / 1000) + JSON.stringify(loadCook()) + JSON.stringify(loadToday()) + JSON.stringify(loadBox());
 else key = 'gifts:' + JSON.stringify(loadGifts());
 if (key === _lastPageKey) return;
 _lastPageKey = key;
 if (curTab === 'today') pageEl.innerHTML = renderToday();
 else if (curTab === 'dex') pageEl.innerHTML = renderDex();
+else if (curTab === 'cook') pageEl.innerHTML = renderCook();
 else if (curTab === 'gifts') pageEl.innerHTML = renderGifts();
 }
 function renderToday() {
@@ -64276,9 +64705,17 @@ try { return window.scrollY || document.documentElement.scrollTop || document.bo
 }
 function _aPinPan() {
 try {
-if (!_aKb && !_aProv && Date.now() > _aBurstUntil) return;
 var offT = _aVV.offsetTop || 0;
 var winY = _aWinY();
+if (offT > 160 || winY > 160) {
+if (winY) {
+try { window.scrollTo(0, 0); } catch (e2) {}
+try { document.documentElement.scrollTop = 0; document.body.scrollTop = 0; } catch (e3) {}
+}
+if (offT && _aVV.scrollTo) { try { _aVV.scrollTo(0, 0); } catch (e4) {} }
+return;
+}
+if (!_aKb && !_aProv && Date.now() > _aBurstUntil) return;
 if (offT <= 8 && winY <= 8) return;
 var need = offT > 160 || winY > 160;
 if (!need) {
@@ -64331,6 +64768,7 @@ _aWatch = setInterval(function () {
 try {
 var foc = _aIsText(_aTextFocused) || _aIsText(document.activeElement);
 if (foc) {
+_aBurstUntil = Date.now() + 850;
 syncAndroidKb();
 nudgeInputVisible();
 _aProvCheck();

@@ -20,6 +20,22 @@
 
 /* ---- 右上角三点下拉菜单（v3.9.x） ---- */
 .gc-head { position: relative; }
+
+/* ---- 共享更多面板顶部栏（v3.16.x：@群成员 收进这里最右，仅群聊打开时显示） ---- */
+.more-topbar {
+  display: flex; align-items: center; justify-content: flex-end;
+  margin-bottom: 10px;
+}
+.more-topbar[hidden] { display: none; }
+.gc-more-at-top {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 12px; font-size: 12px; font-weight: 600; color: #444;
+  background: rgba(0,0,0,.04); border: none; border-radius: 99px;
+  cursor: pointer; font-family: inherit; -webkit-tap-highlight-color: transparent;
+}
+.gc-more-at-top svg { width: 15px; height: 15px; flex-shrink: 0; }
+.gc-more-at-top:active { background: rgba(0,0,0,.09); }
+
 .gc-more-menu {
   position: absolute; top: 42px; right: 2px; z-index: 60;
   min-width: 148px; padding: 4px;

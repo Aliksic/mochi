@@ -1,3 +1,35 @@
+### 2026-08-26 23:3x（✅ 完成·红米K80 Chrome 点聊天输入栏键盘弹出时输入栏飞上面+中间全灰——第四轮修复）
+- [本会话·完成]（**已改 src/js/mobile-adapt.js（AI-B 域）+ tools/verify-kb-pinpan-late.mjs（新专项）+ tools/verify-scroll-lock-ghost.mjs（jsFiles 同步 build.mjs 补 device.js 等）；已构建（23:36, sw: mochi-mta9ak8i）+ verify-kb-pinpan-late 5/5 + verify-morekb-pan 7/7 + verify-android-kb 3/3 + verify-more-panel-kb 5/5 + verify-kb-dock 12/12 + verify-kb-overlay-kernel 10/10 + verify-kb-overlays 8/8 + verify-scroll-lock-ghost 9/9 + verify-ios-kb-edge-scroll 16/16 + verify-ios-pwa-kbd 18/18 + verify-ios-typing-flash 9/9 + verify-chat-scroll-bottom 7/7 + 布局 verify 10/10；未提交**）。
+  - **用户再报**（红米 K80 Chrome）：点聊天输入栏，输入法弹出时输入栏一行飞上面、输入栏与键盘之间全灰，无法正常使用。此前已修三轮（v3.10 resizes-visual / v3.15 `_aPinPan` / v3.16 `_aBurstUntil` 宽限），且产物确认含修复，仍复现 → 第四轮漏洞。
+  - **根因（时序窗口）**：`_aPinPan` 第一行守卫 `if (!_aKb && !_aProv && Date.now() > _aBurstUntil) return;`——`_aKb` 仅在 vv.height 收缩后置位、`_aBurstUntil` 仅在 focusin 时设一次 850ms。K80 Chrome（resizes-visual）聚焦聊天输入栏（contenteditable）时键盘动画慢，Chrome 的「平移(vv.offsetTop>160)+收缩(vv.height↓)」可能发生在 850ms 宽限【之后】：此时 _aKb/_aProv 未置位、宽限已过 → `_aPinPan` 直接 return → 平移残留不归零 → .phone 整页上移、输入栏飞走露灰。此前 `verify-morekb-pan` 只覆盖「focusin 后 150ms 内平移+收缩」的早时序，未覆盖晚到时序。
+  - **修复两处**：① `_aPinPan` 头部加**无条件「大偏移必归零」**分支——任何时刻 vv.offsetTop/window 滚动 >160px（远超 caret 微滚 <60px，不误伤）立即归零，不依赖键盘状态；非键盘期 vv.offsetTop 恒 0、本应用 window 不滚动（滚动都在 .phone 内层），归零只修正异常不打断交互。② `_aWatch` 聚焦期间**持续续期 `_aBurstUntil`**（每 250ms 顺延 850ms）——整个键盘会话 `_aPinPan` 恒活跃，任何时刻的平移残留都会被归零。
+  - **验证**：新专项 `verify-kb-pinpan-late.mjs` 5/5——场景A（focusin 后等 1000ms 宽限已过才平移+收缩，聊天输入栏）归零 + .phone 完整在可视区 + 输入栏贴底；场景B（原早时序）回归通过；场景C（非键盘期异常大偏移）也归零修正。verify-morekb-pan 7/7 及全部键盘/布局套件回归通过。
+  - **⚠️ 顺带修复**：`verify-scroll-lock-ghost.mjs` jsFiles 漏了 device.js（v3.16 设备判定收口后 mobile-adapt 读不到 mochiDevice 整个 IIFE 提前 return → scrollLockInfo 未定义 → 9 项全挂），已同步 build.mjs 完整 jsFiles 列表恢复 9/9。此为该脚本维护滞后，与本轮改动无因果。
+  - 真机确认点（红米 K80 Chrome）：①点聊天输入栏弹键盘，输入栏应停在键盘正上方不飞走、无灰条；②打字过程中屏幕稳定不闪跳；③收键盘后输入栏回底；④更多功能小功能面板输入框同场景回归。
+
+### 2026-08-26 23:2x（本会话·进行中｜跨桌面「来消息」弹窗功能：其他桌面联系人来查岗/求聊天 + 桌面查岗记录 + 字卡库新分组）
+- [本会话·AI-A]（**已改 src/js/ck-question.js（新增 window.ckQuestionPickFor(cid) 按指定桌面抽题 + window.ckQuestionFire(q,cfg) 切桌面后当场发卡（带 deskCk 标记）+ ckLoadFrom 按指定 store 读题库）+ src/js/chat.js（window.__chatDbReady() 探针 + chatAddSystem/addIn 透传 deskCk + chatAskReply 桌面查岗卡回答后按 50% 概率从桌面查岗回应字卡池抽 1~5 张空格分隔作 TA 回应）+ src/js/reply-settings.js（window.replyCfgFor(cid) 跨桌面读回复设置）+ 新增 src/js/incoming-requests.js（跨桌面调度+全局根键 incoming-requests 队列+openModal 弹窗「现在回TA/稍后」；触发→弹窗→切桌面→TA 当场发话，不写任何桌面 chat-msgs）+ src/js/default-cards-data.js（新增 deskcheck 桌面查岗·回应 12 张预设卡）+ src/js/default-cards.js（FUNC_KEYS 加 deskcheck + 动态补 tab + getDeskCheckPool）+ src/js/records.js（window.addCareRecordFor(cid) 跨桌面写 records-care + renderCarePanel 新增「桌面查岗·联系人昵称·问题」聚合区块）**；未构建未提交）。
+  - **功能链路**：B 桌面联系人在你 A 桌面时按各自 ckq-*/as-* 设置触发查岗/求聊天 → 全局弹窗（标题=联系人昵称）→ 「现在回TA」切到 B + 进聊天，等 chatDbReady 后 TA 当场发查岗卡（可回答，带 deskCk 标记）；回答后按概率触发桌面查岗回应字卡（公用字卡 + 该桌面专属字卡合并）。查岗记录写进**该联系人自己桌面**的 records-care（kind=desk-checkin），主页「TA的关心」→「桌面查岗」按联系人聚合显示（🏠 桌面查岗 · 小B · 问题）。
+  - **请 AI-B 配合（三处，均 AI-B 域）**：
+    ① `contacts.js` 的 EXCLUDE 数组加 `'incoming-requests'` 与 `'desk-checkin-en'`（跨桌面来消息全局根键 + 全局开关键，防 migrateLegacy 每次刷新搬进 default 桌面——同 bg-*/feed-* 既有处理）；
+    ② `build.mjs` 的 jsFiles 里把 `incoming-requests.js` 加进（建议放 `ck-question.js` 之后，依赖 idb/contacts/personalize(openModal)/chat 均已先加载）；
+    ③ 设置页开关行由 incoming-requests.js 动态插入（插在「开启群聊」行 #sf-group-chat-row 之后，复用 .set-row/.toggle 样式，不动 template.html），请 AI-B 构建时留意无样式异常。
+  - **v3.17.x 补：全局开关「桌面查岗」**——默认开启，设置页可关闭，键 `xy-home-v2:desk-checkin-en` 存根命名空间（全桌面通，不随联系人隔离）；关闭后调度器/手动入口均不触发。设置行动态插入设置页（紧跟开启群聊），样式复用现有 .toggle。**验证 9/9**：设置行出现/默认开/关闭拦截/无入队/切桌面仍关/重开恢复。
+  - **验证**：源码级临时构建（不碰 index.html 产物）+ 临时 CDP 专项 20/20——弹窗昵称正确、弹窗题=发卡题=记录题一致、B 的 chat-msgs 零污染、回复前无记录/切过去才写 desk-checkin、ask-card 带 deskCk 标记、回答后回应来自桌面查岗字卡池且≤5张空格分隔、pending 去重；主页 TA 的关心区块显示「🏠 桌面查岗 · 小B · 问题」2/2。临时脚本已删。**注意：records.js 桌面查岗聚合用 rows.push 而非 rows.concat（rows 是 const，concat 赋值会抛异常，已修）**。
+  - 真机确认点：①其他桌面联系人来查岗时弹出带昵称的窗，点「现在回TA」切过去当场出可回答卡；②主页→TA的关心→桌面查岗 出现该记录；③字卡库→其他互动功能字卡→桌面查岗 tab 可逐张开关；④回答桌面查岗卡后 TA 按概率回 1~5 张字卡。
+
+### 2026-08-26 23:2x（✅ 完成·群聊输入栏与聊天页对齐 + @群成员收进更多功能顶部栏最右）
+- [本会话·完成]（**已改 src/template.html（群聊输入栏加 麦克风/继续说/批量发送 三按钮，与聊天页同序同款；更多功能面板改为顶部栏结构 #gc-more-bar，@群成员 放最右 #gc-more-at-top）+ src/js/chat.js（语音/批量面板发送目标可配置：新增 window.openVoicePanelFor(onSend)/window.openBatchPanelFor(onSend)，voiceSendTarget/batchSendTarget 支持外部页面接管发送；applyContinueSayUI 增加广播 continue-say-changed 事件）+ src/js/group-chat.js（绑定 gc-mic-btn/gc-continue-btn/gc-batch-btn：显隐跟随当前桌面聊天设置 cs-voice-send/cs-trigger-bar/cs-batch-send，进入群聊时刷新；继续说=强制随机1-2成员回复、语音=复用聊天页录音面板发到群聊、批量=复用聊天页批量面板条目发到群聊）+ src/css/group-chat.css（顶部栏样式）**；已构建（23:25, sw: mochi-mta8xada）+ 新增 tools/verify-gc-input.mjs 12/12 + tools/verify-gc-send.mjs 5/5 + tools/verify-gc-continue.mjs 2/2 + 布局 verify 10/10；未提交）。
+  - **用户需求**：群聊页输入栏左边缺聊天页输入栏的功能（页面不一样），希望对齐；群聊独有 @功能收进更多功能顶部栏最右。
+  - **实测确认差异**：聊天页输入栏 = [麦克风/继续说/更多/表情/图片/批量发送/发送]（前三个默认隐藏由设置控制）；群聊原 = [更多/表情/图片/发送]。
+  - **验证**：①群聊输入栏按钮与聊天页同序同集；②开启聊天设置后三按钮显示（默认隐藏）；③@群成员在更多面板顶部栏最右（justify flex-end）且聊天页更多面板无此入口；④群聊批量发送全链路（按钮→面板→条目→落库 side=out）⑤群聊麦克风打开录音面板 ⑥继续说点击后成员回复 ⑦布局贴底/顶栏。
+  - 真机确认点：①群聊页输入栏左侧出现与聊天页相同的 麦克风/继续说 按钮（若聊天设置已开）；②更多功能面板顶部最右出现「@群成员」胶囊，点开选人 @ 进输入框；③录音/批量发送在群聊页可用且消息进群聊。
+  - 说明：本次构建扫入并行会话改动（incoming-requests.js 等 git status 可见），提交前请按协议统一 git diff 自查。
+    ① `contacts.js` 的 EXCLUDE 数组加 `'incoming-requests'`（跨桌面来消息全局根键，防 migrateLegacy 每次刷新搬进 default 桌面——同 bg-*/feed-* 既有处理）；
+    ② `build.mjs` 的 jsFiles 里把 `incoming-requests.js` 加进（建议放 `ck-question.js` 之后，依赖 idb/contacts/personalize(openModal)/chat 均已先加载）。
+  - **设计**：调度仿 feed.js maybeAutoPost（定时遍历 getContacts，非激活桌面按各自 ckq-*/as-* 设置掷概率）；申请只存根键 incoming-requests（[{cid,kind,text,ts,status}]，上限 20 条，pending 未处理不重复，页面隐藏走 bgNotifyCheck）；点「现在回TA」→ setActiveContact+enterChat+轮询 __chatDbReady→查岗走 ckQuestionFire 当场发可回答 ask-card、求聊天发一句开场白。聊天记录零污染。
+  - **验证**：待构建后临时 CDP 脚本（用完删）：A 桌面强制 triggerIncomingCheckin(B) → 弹窗出现/昵称=B 的 contacts 名、B 的 chat-msgs 未变、切过去后 B 聊天出现可回答 ask-card、「稍后」冷却内不重发；npm run verify 布局回归。
+
 ### 2026-08-26 23:1x（✅ 完成·用户需求「字卡库【系统预设字卡】里新增分组【其他互动功能字卡】，功能触发字卡不放在聊天默认字卡里」）
 - [本会话·完成]（**已改 src/template.html（字卡库 preset 区新增入口「其他互动功能字卡」#li-fun-cards + 独立页 #page-fun-cards：12 个功能 tab 全量静态预置 #fc-tabs、#fc-groups-bar/#fc-search-input/#fc-list 齐全）+ src/js/default-cards.js（把 11 功能 tab + 互动回应从 page-default-cards 拆出：渲染内核抽成 mountCardView 双页共用——默认页只留 主字卡/颜文字/emoji/拍一拍 4 基础分类，功能页只渲染 FUNC_KEYS 12 功能分类；数据/开关键 dc-off-<分类>:*、池 API getLibPool/getInteractPool/getFishPool/getDefaultCards 全部不变；两入口角标分别动态统计基础/功能总数）+ src/js/tabs.js（FULL_PAGES 登记 page-fun-cards）+ src/css/chat-pages.css（#fc-tabs 与 #dc-tabs 同款换行铺开防横向溢出）**；**未构建未提交**——device.js/base.css 等并行会话刚改动（23:0x 已构建收口过一次，之后我改了 src），请构建者待并行会话再收尾后统一 `node build.mjs` 收口）。
   - **UI 变更**：聊天默认字卡页只剩 4 个基础分类 tab；摸鱼/吃饭/经期/喝水/花园/同频/伸手/此间/房间/存钱罐/漂流瓶/互动回应 移到新入口「其他互动功能字卡」（字卡库→系统预设字卡 列表顶部第 1 项，副标题「各功能触发的系统预设字卡·如摸鱼/吃饭/经期等」，角标=功能分类总数 558）。这些字卡不是聊天通用回复，是触发对应功能时联系人才会用，符合用户语义。
@@ -3234,3 +3266,20 @@ return m;
 ```
 - **我本轮已落地（memory-game.js，已验证 25/25）**：①每日心意币达上限时显示「（今日奖励已达上限 +30）」而非令人困惑的 +0；②新增历史最佳默契/累计完成局数统计（key memory-stats），结算 overlay 末尾显示「累计完成 N 局 · 历史最佳默契 X」。
 - **未构建**：等 chat.js memory 分支补上后，由构建者统一 node build.mjs。
+
+### 2026-08-26 23:1x（AI-A 留话：请正在改 chat.js 的 AI 顺手补邀请弹窗默认选中）
+- **背景**：用户要求所有"同意/拒绝"邀请弹窗默认选中"同意"（当前两个 pill 都未选，需手动点再确定）。openModal 支持 opts.pill 初始选中值（buildPills 里 pillVal=initVal）。
+- **我已改**：avatar-lib.js showMeAvatarInvite（换头像邀请）pills 行后已加 `pill: '1',`，语法 OK。
+- **请帮忙在 chat.js openInviteConfirm（约 2471 行附近）pills 行后加一行**：
+```js
+pills: [{ label: '同意', value: '1' }, { label: '拒绝', value: '0' }],
+pill: '1',
+staticText: staticText
+```
+- **未构建**：等 chat.js 补上后由构建者统一 node build.mjs。
+
+### 2026-08-27 00:1x（AI-B）：修复桌面摸鱼天数回退（vivo X 浏览器反馈：玩 4 天显示第 2 天）
+- 根因①：contacts.js migrateLegacy 把全局 fish-log 当旧顶层业务键迁进 default 并删全局键；default 已有旧值时幂等检查直接删全局新值（cleanupOld 只删 LS 不删 IDB）→ 每次刷新天数回退到 default 旧值。修复：EXCLUDE 加 fish-log / fish-log-global-migrated（全局根键不迁移）。IDB 副本仍在 → 用户刷新后自动恢复真实天数。
+- 根因②：idb.js idbRestore 回填用 IDB 旧值写 memoryCache（idbSet 异步 fire-and-forget，页面被杀时 IDB 落后于 LS）→ 遮蔽新值且后续读改写丢数据。修复：retainValue/idbHydrateKey LS 有值且未标记「LS 写失败」→ 以 LS 为准；LS 写失败键记 __ls-dirty（sessionStorage+IDB 双持久化），回填信 IDB（不破坏 v3.16.x 配额满场景语义）。
+- 顺带：chat.js 补 memory 结算卡片分支（brick 后、snake 前）+ 邀请弹窗 pills 加 pill:1 默认选中「同意」（AI-A WORKLOG 留言待办）。
+- 回归：新增 tools/verify-fish-days-restore.mjs 5/5 通过（含用户场景复现）+ npm run verify 10/10。已构建提交推送。

@@ -21,12 +21,19 @@
   const atPanel = document.getElementById('gc-at-panel');
   const atBody = document.getElementById('gc-at-body');
   // v3.11.x：输入栏与普通聊天页统一——更多功能/表情包/插入图片按钮 + 待发送图片草稿条
-  // （原 @群成员 独立按钮移入「更多功能」面板 #gc-more-panel）
+  // v3.16.x：群聊「更多功能」直接打开共享面板 #chat-more-panel（与聊天页同一套分类+功能按钮），
+  // @群成员 收进该面板顶部栏最右（#more-topbar #gc-more-at，仅群聊打开时显示）
   const gcMoreBtn = document.getElementById('gc-input-more-btn');
-  const gcMorePanel = document.getElementById('gc-more-panel');
+  const gcMorePanel = document.getElementById('chat-more-panel');   // 共享浮层（.phone 级，聊天页也用它）
   const gcMoreAt = document.getElementById('gc-more-at');
+  const gcMoreTopbar = document.getElementById('more-topbar');
   const gcEmojiBtn = document.getElementById('gc-emoji-btn');
   const gcImgBtn = document.getElementById('gc-img-btn');
+  // v3.16.x：输入栏与聊天页对齐——语音「麦克风」/「继续说」/「批量发送」三个按钮
+  // （显隐跟随当前桌面的聊天设置，与聊天页 cs-voice-send/cs-trigger-bar/cs-batch-send 一致）
+  const gcMicBtn = document.getElementById('gc-mic-btn');
+  const gcContinueBtn = document.getElementById('gc-continue-btn');
+  const gcBatchBtn = document.getElementById('gc-batch-btn');
   const gcDraftBar = document.getElementById('gc-draft');
   const gcDraftItems = document.getElementById('gc-draft-items');
 
@@ -952,6 +959,7 @@
     updateGroupName();
     loadMsgs();
     renderAll();
+    syncGcInputBtns(); // 进入群聊时按当前桌面设置刷新语音/继续说/批量按钮显隐
   }
   if (backBtn) backBtn.addEventListener('click', () => {
     saveNow();
@@ -1414,31 +1422,137 @@
       atBody.appendChild(row);
     });
   }
-  // v3.11.x：@群成员 入口移到输入栏「更多功能」面板（原独立按钮已删）
-  if (gcMoreAt) gcMoreAt.addEventListener('click', () => {
-    if (gcMorePanel) gcMorePanel.hidden = true;
-    renderAtPanel();
-    if (atPanel) atPanel.hidden = false;
-  });
 
-  // ---- 输入栏「更多功能」面板（与聊天页 chat-more-panel 同款交互）----
+  // ---- v3.16.x：输入栏与聊天页对齐的左侧/右侧功能按钮 ----
+  // 显隐跟随当前桌面聊天设置（与聊天页 syncMicBtn/syncBatchBtn/applyContinueSayUI 同源）
+  function gcSettingOn(key) {
+    try { return window.activeStore().get(key) === '1'; } catch (e) { return false; }
+  }
+  function syncGcInputBtns() {
+    if (gcMicBtn) gcMicBtn.style.display = gcSettingOn('cs-voice-send') ? '' : 'none';
+    if (gcContinueBtn) gcContinueBtn.style.display = gcSettingOn('cs-trigger-bar') ? '' : 'none';
+    if (gcBatchBtn) gcBatchBtn.style.display = gcSettingOn('cs-batch-send') ? '' : 'none';
+  }
+  // 「继续说」：和聊天页 continueChat 同语义——强制让成员回复（无 @ 时随机 1-2 个，不按回复概率过滤）
+  function gcContinueSay() {
+    const members = getMembers();
+    if (!members.length) return;
+    const mentioned = [];
+    if (input) {
+      const t = (input.innerText || '').trim();
+      members.forEach(m => { if (t.indexOf('@' + memberName(m.id)) >= 0) mentioned.push(m.id); });
+    }
+    const chosen = mentioned.length
+      ? mentioned.slice()
+      : members.slice(0, Math.max(1, Math.min(2, members.length))).map(m => m.id);
+    chosen.forEach((cid, i) => {
+      setTimeout(() => memberReply(cid, ''), i * (1200 + Math.random() * 1600));
+    });
+    if (window.playSfx) window.playSfx('in');
+  }
+  // 语音：复用聊天页录音半框，录完发到群聊
+  function gcSendVoice(dataUrl, durSec) {
+    const name = '语音 ' + durSec + '″';
+    const rec = { side: 'out', text: name + '|||' + dataUrl, type: 'voice', ts: Date.now() };
+    msgs.push(rec);
+    saveMsgs();
+    renderMsg(rec, msgs.length - 1);
+    followGcBottom(true);
+    if (window.playSfx) window.playSfx('out');
+    scheduleReply('');
+    toast('语音已发送');
+  }
+  // 批量发送：复用聊天页批量面板，条目发到群聊（文字/图片/表情各成一条）
+  function gcSendBatch(items) {
+    (items || []).forEach(it => {
+      if (!it) return;
+      if (it.type === 'text') {
+        const t = (it.text || '').trim();
+        if (!t) return;
+        const rec = { side: 'out', text: t, ts: Date.now() };
+        msgs.push(rec);
+        saveMsgs();
+        renderMsg(rec, msgs.length - 1);
+      } else if (it.type === 'img') {
+        const rec = { side: 'out', text: it.src, parts: [{ k: 'img', v: it.src, sub: 'image' }], ts: Date.now() };
+        msgs.push(rec);
+        saveMsgs();
+        renderMsg(rec, msgs.length - 1);
+      } else if (it.type === 'sticker') {
+        const rec = { side: 'out', type: 'sticker', text: it.src, ts: Date.now() };
+        msgs.push(rec);
+        saveMsgs();
+        renderMsg(rec, msgs.length - 1);
+      }
+    });
+    followGcBottom(true);
+    if (window.playSfx) window.playSfx('out');
+    scheduleReply('');
+  }
+  if (gcContinueBtn) gcContinueBtn.addEventListener('click', (e) => { e.stopPropagation(); gcContinueSay(); });
+  if (gcMicBtn) gcMicBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (!window.openVoicePanelFor) return;
+    if (gcMorePanel) { gcMorePanel.hidden = true; gcSetMoreTopbar(false); }
+    window.openVoicePanelFor(gcSendVoice);
+  });
+  if (gcBatchBtn) gcBatchBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (!window.openBatchPanelFor) return;
+    if (gcMorePanel) { gcMorePanel.hidden = true; gcSetMoreTopbar(false); }
+    window.openBatchPanelFor(gcSendBatch);
+  });
+  syncGcInputBtns();
+  document.addEventListener('voice-send-changed', syncGcInputBtns);
+  document.addEventListener('batch-send-changed', syncGcInputBtns);
+  document.addEventListener('continue-say-changed', syncGcInputBtns);
+  // 切换桌面后（群聊成员/设置可能变化）刷新按钮显隐
+  document.addEventListener('contact-switched', syncGcInputBtns);
+
+  // ---- 输入栏「更多功能」面板：群聊打开共享面板 #chat-more-panel（与聊天页同款交互）----
+  // @群成员 顶部栏仅在群聊打开面板时显示；面板里的功能按钮是聊天页的（handler 在 chat.js），
+  // 群聊里点击任功能按钮 → 自动切到聊天页并打开对应功能（双人互动功能在聊天页使用）
+  function gcSetMoreTopbar(show) {
+    if (gcMoreTopbar) gcMoreTopbar.hidden = !show;
+  }
   if (gcMoreBtn && gcMorePanel) {
     gcMoreBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
+      e.stopPropagation(); // 阻止冒泡到 document（chat.js 有面板外关闭监听，避免 toggle 冲突）
       if (gcMorePanel.hidden) {
         // 收起输入法，面板不被键盘遮挡（与聊天页 moreBtn 行为一致）
         try { if (window.closeIme) window.closeIme(); } catch (err) {}
         try { input.blur(); } catch (err) {}
+        gcSetMoreTopbar(true);
       }
       gcMorePanel.hidden = !gcMorePanel.hidden;
+      if (gcMorePanel.hidden) gcSetMoreTopbar(false);
     });
-    // 点击面板外部关闭
-    document.addEventListener('click', (e) => {
-      if (!gcMorePanel.hidden && !gcMorePanel.contains(e.target) && e.target !== gcMoreBtn && !gcMoreBtn.contains(e.target)) {
-        gcMorePanel.hidden = true;
+    // 群聊里点面板内的功能按钮（.more-item）→ 收起面板 + @顶部栏 + 切到聊天页打开功能
+    // （面板外关闭由 chat.js 的 document 监听统一处理，这里不重复绑定）
+    gcMorePanel.addEventListener('click', (e) => {
+      const item = e.target.closest('.more-item');
+      if (!item) return;
+      // @群成员 不走切换，保留群聊内打开
+      if (item === gcMoreAt || gcMoreAt && item.contains(gcMoreAt)) return;
+      e.stopPropagation();
+      gcMorePanel.hidden = true;
+      gcSetMoreTopbar(false);
+      // 切到聊天页（面板功能按钮的 handler 都在聊天页上下文；半框也在聊天页内）
+      const chatPage = document.getElementById('page-chat');
+      if (chatPage) {
+        document.querySelectorAll('.page').forEach(p => p.hidden = true);
+        chatPage.hidden = false;
       }
     });
   }
+  // @群成员：从共享面板顶部栏打开成员选择（仅群聊有）
+  if (gcMoreAt) gcMoreAt.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (gcMorePanel) gcMorePanel.hidden = true;
+    gcSetMoreTopbar(false);
+    renderAtPanel();
+    if (atPanel) atPanel.hidden = false;
+  });
 
   // ---- 表情包按钮：复用聊天页同一个表情包面板（写信/回信同款插入模式回调）----
   if (gcEmojiBtn) gcEmojiBtn.addEventListener('click', (e) => {

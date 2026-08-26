@@ -494,8 +494,13 @@
       }, function () { cb(null); });
     } catch (e) { cb(null); }
   }
-  // 把 target 里 data: 形式的 icon/badge/image 原地换成 Blob；http(s)/blob URL 原样保留，
-  // 单个转换失败仅删该字段（宁缺图，不缺整条通知）
+  // 把 target 里 data: 形式的 icon/badge/image 原地换成 blob: URL 字符串；
+  // http(s)/blob URL 原样保留，单个转换失败仅删该字段（宁缺图，不缺整条通知）
+  // v3.18.x：修复「右侧无头像 + 有时通知发不出」——此前把 Blob 对象直接赋给
+  // icon/badge/image 传给 showNotification，而 NotificationOptions 这些字段规范要求
+  // URL 字符串（USVString），Chrome 收到 Blob 对象会失败/忽略 → 触发降级链剥掉图标
+  // （右侧无头像），降级重发仍带 Blob 对象字段反复失败（有时整条通知发不出）。
+  // 改用 URL.createObjectURL(blob) 生成 blob: URL 字符串，是合法 URL，Chrome 可靠渲染
   function prepMediaBlobs(target, done) {
     const keys = ['icon', 'badge', 'image'];
     let pending = 0;
@@ -505,7 +510,11 @@
       if (typeof v === 'string' && v.indexOf('data:') === 0) {
         pending++;
         dataUrlToBlob(v, function (b) {
-          if (b) target[k] = b; else delete target[k];
+          if (b) {
+            try { target[k] = URL.createObjectURL(b); } catch (e) { delete target[k]; }
+          } else {
+            delete target[k];
+          }
           if (--pending === 0) finish();
         });
       }

@@ -1257,6 +1257,17 @@ appendMsg(m);
 maybeScrollChatBottom(rec.side);
 return m;
 }
+// v3.16.x：记忆翻牌结算卡片（memory-game.js endGame 调用 chatAddSystem special:'memory'）
+if (rec.special === 'memory') {
+m.className = 'msg-pong';
+m.innerHTML = '<div class="msg-pong-card">' +
+'<div class="msg-pong-label">🧠 ' + T('记忆翻牌') + '</div>' +
+'<div class="msg-pong-result">' + escTxt(T(rec.text || '')) + '</div>' +
+'</div>';
+appendMsg(m);
+maybeScrollChatBottom(rec.side);
+return m;
+}
 if (rec.special === 'snake') {
 m.className = 'msg-rps';
 const snkResTxt = rec.snkResult === 'win' ? '你赢了' : rec.snkResult === 'lose' ? T('TA 赢了') : '平局';
@@ -1342,7 +1353,25 @@ appendMsg(m);
 maybeScrollChatBottom(rec.side);
 return m;
 }
+if (rec.special === 'dish') {
+m.className = 'msg-gift msg-dish';
+const sideTxt = rec.side === 'out' ? '我 烹饪送出' : (chatPartnerName() + ' 烹饪送来');
+const stars = rec.dishQuality === 'perfect' ? '★★★' : rec.dishQuality === 'good' ? '★★' : '★';
+m.innerHTML = '<div class="msg-gift-card msg-dish-card">' +
+'<div class="msg-gift-emoji" style="background:#fff3e0">' + escTxt(rec.dishEmoji || '\uD83C\uDF7D\uFE0F') + '</div>' +
+'<div class="msg-gift-name">' + escTxt(rec.dishName || '菜肴') + ' <span class="dish-stars">' + stars + '</span></div>' +
+'<div class="msg-gift-divider"></div>' +
+'<div class="msg-gift-wish">\u201C' + escTxt(rec.dishWish || '尝尝手艺') + '\u201D</div>' +
+'<div class="msg-gift-foot"><span class="mg-side">' + escTxt(sideTxt) + '</span>' +
+'<span class="msg-gift-price">\u00A5' + escTxt(Number(rec.dishPrice || 0).toFixed(2)) + '</span></div>' +
+favHeartHtml() +
+'</div>';
+appendMsg(m);
+maybeScrollChatBottom(rec.side);
+return m;
+}
 if (rec.special === 'ask-choose') {
+
 m.className = 'msg-ask';
 m.dataset.idx = msgs.length - 1;
 const answered = rec.choiceStatus === 'answered';
@@ -1898,14 +1927,14 @@ opts = opts || {};
   // 正文本身就是一张完整字卡，label 再渲染一遍会上下两行内容重复）
   const _tagMood = opts.tag ? [{ tag: String(opts.tag), label: opts.tagNoDup ? '' : String(text) }] : null;
   // v3.16.x：gInv = 联系人主动邀请的游戏类型（pong/snake/rps），随消息持久化供小游戏记录识别
-return addRec({ side: 'in', text: text, initiative: opts.initiative, special: opts.special, quote: opts.quote, qidx: opts.qidx, type: opts.type, img: opts.img, parts: opts.parts, mailNotice: opts.mailNotice, gInv: opts.gInv, askQuestion: opts.askQuestion, askStatus: opts.askStatus, askOptions: opts.askOptions, askType: opts.askType, choiceQuestion: opts.choiceQuestion, choiceOptions: opts.choiceOptions, choicePref: opts.choicePref, choiceCat: opts.choiceCat, choiceStatus: opts.choiceStatus, choiceAnswer: opts.choiceAnswer, choiceReply: opts.choiceReply, choiceMatch: opts.choiceMatch, curiousQuestion: opts.curiousQuestion, curiousQuick: opts.curiousQuick, curiousReplies: opts.curiousReplies, curiousFollowup: opts.curiousFollowup, curiousQid: opts.curiousQid, curiousCat: opts.curiousCat, curiousStatus: opts.curiousStatus, curiousAnswer: opts.curiousAnswer, curiousReply: opts.curiousReply, roastText: opts.roastText, roastCat: opts.roastCat, roastStatus: opts.roastStatus, roastAnswer: opts.roastAnswer, roastReply: opts.roastReply, rpAmount: opts.rpAmount, rpWish: opts.rpWish, rpStatus: opts.rpStatus, rpTs: opts.rpTs, rpCover: opts.rpCover, askFen: opts.askFen, askTs: opts.askTs, mood: opts.mood || _tagMood || undefined });
+return addRec({ side: 'in', text: text, initiative: opts.initiative, special: opts.special, quote: opts.quote, qidx: opts.qidx, type: opts.type, img: opts.img, parts: opts.parts, mailNotice: opts.mailNotice, gInv: opts.gInv, askQuestion: opts.askQuestion, askStatus: opts.askStatus, askOptions: opts.askOptions, askType: opts.askType, choiceQuestion: opts.choiceQuestion, choiceOptions: opts.choiceOptions, choicePref: opts.choicePref, choiceCat: opts.choiceCat, choiceStatus: opts.choiceStatus, choiceAnswer: opts.choiceAnswer, choiceReply: opts.choiceReply, choiceMatch: opts.choiceMatch, curiousQuestion: opts.curiousQuestion, curiousQuick: opts.curiousQuick, curiousReplies: opts.curiousReplies, curiousFollowup: opts.curiousFollowup, curiousQid: opts.curiousQid, curiousCat: opts.curiousCat, curiousStatus: opts.curiousStatus, curiousAnswer: opts.curiousAnswer, curiousReply: opts.curiousReply, roastText: opts.roastText, roastCat: opts.roastCat, roastStatus: opts.roastStatus, roastAnswer: opts.roastAnswer, roastReply: opts.roastReply, rpAmount: opts.rpAmount, rpWish: opts.rpWish, rpStatus: opts.rpStatus, rpTs: opts.rpTs, rpCover: opts.rpCover, askFen: opts.askFen, askTs: opts.askTs, deskCk: opts.deskCk, mood: opts.mood || _tagMood || undefined });
 }
 function addOut(text) {
 return addRec({ side: 'out', text: text });
 }
 window.chatAddSystem = function (text, opts) {
 opts = opts || {};
-return addIn(text, { special: opts.special || 'poke', img: opts.img, mailNotice: opts.mailNotice, askQuestion: opts.askQuestion, askStatus: opts.askStatus, askOptions: opts.askOptions, askType: opts.askType, choiceQuestion: opts.choiceQuestion, choiceOptions: opts.choiceOptions, choicePref: opts.choicePref, choiceCat: opts.choiceCat, curiousQuestion: opts.curiousQuestion, curiousQuick: opts.curiousQuick, curiousReplies: opts.curiousReplies, curiousFollowup: opts.curiousFollowup, curiousQid: opts.curiousQid, curiousCat: opts.curiousCat, roastText: opts.roastText, roastCat: opts.roastCat });
+return addIn(text, { special: opts.special || 'poke', img: opts.img, mailNotice: opts.mailNotice, askQuestion: opts.askQuestion, askStatus: opts.askStatus, askOptions: opts.askOptions, askType: opts.askType, choiceQuestion: opts.choiceQuestion, choiceOptions: opts.choiceOptions, choicePref: opts.choicePref, choiceCat: opts.choiceCat, curiousQuestion: opts.curiousQuestion, curiousQuick: opts.curiousQuick, curiousReplies: opts.curiousReplies, curiousFollowup: opts.curiousFollowup, curiousQid: opts.curiousQid, curiousCat: opts.curiousCat, roastText: opts.roastText, roastCat: opts.roastCat, deskCk: opts.deskCk });
 };
 window.chatAddIn = function (text, opts) {
 const r = addIn(text, opts);
@@ -2049,17 +2078,45 @@ preset = reply.trim();
 const taReply = preset
 ? (window.pickAskCardReply ? window.pickAskCardReply([preset]) : preset)
 : (window.pickAskCardReply ? window.pickAskCardReply() : '收到你的回答。');
-rec.askReply = taReply;
+// v3.17.x：桌面查岗卡（跨桌面「来消息」触发，带 deskCk 标记）回答后——
+// 按概率从「桌面查岗」回应字卡池抽 1~5 张、空格分隔，作为 TA 的回应。
+//（用户要求：回复后概率触发查岗我的那个联系人的回复字卡，最多 5 张、每张中间空一格；
+//  字卡池用 公用字卡 + 该联系人桌面的专属字卡 合并，见 getCustomCardsFor。）
+let deskReply = '';
+if (rec && rec.deskCk) {
+try {
+const pool = (window.getDeskCheckPool ? window.getDeskCheckPool() : []).concat(
+  (window.getCustomCardsFor ? window.getCustomCardsFor(window.__activeCid || 'default') : []).filter(function (c) {
+    return typeof c === 'string' && c.trim() && c.indexOf('data:') !== 0;
+  })
+);
+if (pool.length && Math.random() * 100 < 50) {
+const n = 1 + Math.floor(Math.random() * Math.min(5, pool.length));
+const used = {};
+const picked = [];
+let guard = 0;
+while (picked.length < n && guard++ < 50) {
+const c = pool[Math.floor(Math.random() * pool.length)];
+if (used[c]) continue;
+used[c] = true;
+picked.push(c);
+}
+if (picked.length) deskReply = picked.join(' ');
+}
+} catch (e) {}
+}
+const finalReply = deskReply || taReply;
+rec.askReply = finalReply;
 saveMsgs();
 saveMsgsNow();
 addOut(answer);
-addIn(taReply);
+addIn(finalReply);
 taFavCard(rec);
 const el = body.querySelector('.msg-ask[data-idx="' + msgIdx + '"]');
 if (el) {
-el.innerHTML = '<div class="msg-ask-card answered"><div class="msg-ask-q">' + escTxt(rec.askQuestion || '') + '</div><div class="msg-ask-a">✓ 已回答：' + escTxt(answer) + '</div><div class="msg-choose-r">' + (window.taFit ? window.taFit('TA：') : 'TA：') + escTxt(window.taFit ? window.taFit(taReply) : taReply) + '</div>' + favHeartHtml() + '</div>';
+el.innerHTML = '<div class="msg-ask-card answered"><div class="msg-ask-q">' + escTxt(rec.askQuestion || '') + '</div><div class="msg-ask-a">✓ 已回答：' + escTxt(answer) + '</div><div class="msg-choose-r">' + (window.taFit ? window.taFit('TA：') : 'TA：') + escTxt(window.taFit ? window.taFit(finalReply) : finalReply) + '</div>' + favHeartHtml() + '</div>';
 }
-return taReply;
+return finalReply;
 };
 function retractMsg(msgEl, side) {
 const idx = parseInt(msgEl.dataset.idx, 10);
@@ -2352,6 +2409,7 @@ try {
 const c = cfg();
 if (pname) pname.title = c['cs-trigger-name'] === 1 ? '点击让对方继续说' : '';
 if (csBtn) csBtn.style.display = c['cs-trigger-bar'] === 1 ? '' : 'none';
+document.dispatchEvent(new Event('continue-say-changed')); // 群聊输入栏「继续说」按钮跟随同一开关
 } catch (e) {}
 };
 window.applyContinueSayUI();
@@ -2469,6 +2527,7 @@ else addOut(pick(declinePool || INVITE_DECLINE));
 noInput: true,
 lock: true,
 pills: [{ label: '同意', value: '1' }, { label: '拒绝', value: '0' }],
+pill: '1', // v3.16.x：邀请弹窗默认选中「同意」，无需手动点选直接确定
 staticText: staticText
 });
 }
@@ -2673,6 +2732,9 @@ else if (store.get('more-tab') === 'ask') tab = 'ask'; // 旧两页签记忆迁�
 } catch (err) {}
 applyMoreCat(tab);
 closeIme(); // v3.5.116：收起输入法，面板不被键盘遮挡
+// v3.16.x：聊天页打开共享更多面板时隐藏 @群成员 顶部栏（仅群聊打开时显示）
+const tb = document.getElementById('more-topbar');
+if (tb) tb.hidden = true;
 }
 morePanel.hidden = !morePanel.hidden;
 });
@@ -5380,8 +5442,9 @@ function closeBatchPanel() {
 if (batchPanel) batchPanel.hidden = true;
 try { if (batchText && document.activeElement === batchText) batchText.blur(); } catch (e) {}
 }
-function openBatchPanel() {
+function openBatchPanel(opts) {
 if (!batchPanel) return;
+if (opts && typeof opts.onSend === 'function') batchSendTarget = opts.onSend; else batchSendTarget = null;
 const pc = document.getElementById('poke-card');
 if (pc) pc.hidden = true;
 closeEmojiPanel();
@@ -5393,6 +5456,8 @@ scrollChatBottom();
 const morePanel = document.getElementById('chat-more-panel');
 if (morePanel) morePanel.hidden = true;
 }
+// 外部（群聊等）打开批量面板并把条目发到自己的消息列表：window.openBatchPanelFor(onSend)
+window.openBatchPanelFor = function (onSend) { openBatchPanel({ onSend: onSend }); };
 function renderBatchList() {
 if (!batchList) return;
 if (batchCount) batchCount.textContent = batchItems.length + ' 条';
@@ -5480,6 +5545,7 @@ lastMineText = it.src;
 addRec({ side: 'out', text: it.src, type: 'sticker', parts: [{ k: 'img', v: it.src }] });
 }
 }
+let batchSendTarget = null; // 群聊等外部页面打开批量面板时设置：function(items) 负责把条目发到自己的消息列表
 function sendBatchAll() {
 if (!batchItems.length) { toast('还没有要发送的消息'); return; }
 const items = batchItems.slice();
@@ -5487,6 +5553,7 @@ batchItems = [];
 renderBatchList();
 closeBatchPanel();
 if (window.playSfx) window.playSfx('out');
+if (batchSendTarget) { batchSendTarget(items); if (window.logFish) window.logFish(); toast('已批量发送 ' + items.length + ' 条消息'); return; }
 items.forEach(sendBatchItem);
 if (window.logFish) window.logFish();
 scheduleReply();
@@ -5615,8 +5682,9 @@ voiceDataUrl = ''; voiceDur = 0;
 voicePanel.hidden = true;
 renderVoiceIdle();
 }
-function openVoicePanel() {
+function openVoicePanel(opts) {
 if (!voicePanel) return;
+if (opts && typeof opts.onSend === 'function') voiceSendTarget = opts.onSend; else voiceSendTarget = null;
 const pc = document.getElementById('poke-card');
 if (pc) pc.hidden = true;
 closeEmojiPanel();
@@ -5630,6 +5698,8 @@ renderVoiceIdle();
 voicePanel.hidden = false;
 scrollChatBottom();
 }
+// 外部（群聊等）打开录音面板并把语音发到自己的消息列表：window.openVoicePanelFor(onSend)
+window.openVoicePanelFor = function (onSend) { openVoicePanel({ onSend: onSend }); };
 function pickVoiceMime() {
 if (typeof MediaRecorder === 'undefined' || !MediaRecorder.isTypeSupported) return '';
 const list = ['audio/mp4', 'audio/aac', 'audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus'];
@@ -5747,8 +5817,15 @@ a.addEventListener('ended', voiceStopPreview);
 a.addEventListener('error', () => { voiceStopPreview(); toast('语音播放失败'); });
 a.play().catch(() => { voiceStopPreview(); toast('语音播放失败'); });
 }
+let voiceSendTarget = null; // 群聊等外部页面打开语音面板时设置：function(dataUrl, durSec) 把录好的语音发到自己的消息列表
 function sendVoiceMsg() {
 if (!voiceDataUrl) { toast('还没有录音'); return; }
+if (voiceSendTarget) {
+  const dataUrl = voiceDataUrl, dur = voiceDur;
+  closeVoicePanel();
+  voiceSendTarget(dataUrl, dur);
+  return;
+}
 const name = '语音 ' + voiceDur + '″';
 lastMineText = '[语音]';
 addRec({ side: 'out', text: name + '|||' + voiceDataUrl, type: 'voice' });
@@ -6348,6 +6425,22 @@ if (window.replyCfg) scheduleAutoSend();
 else setTimeout(bootAutoSend, 500);
 }
 window.enterChat = enterChat;
+// v3.17.x：跨桌面「来消息」用——incoming-requests.js 切桌面后轮询等待本桌面聊天
+// 加载就绪（contact-switched 会把 msgs=[]、chatDbReady=false，loadMsgs 异步读完才置 true），
+// 就绪后再让 TA 发话，保证消息落进刚加载好的记录里。
+// v3.17.x：跨桌面「来消息」用——本桌面聊天是否已从 IDB 加载完成。
+// 只依赖 chatDbReady（contact-switched 会置 false，loadMsgs 读完/保险丝到期才置 true），
+// 不再比对 lastIdbLoadPrefix：无历史桌面（新联系人）走 confirmMiss 分支只置 chatDbReady、
+// 不更新 lastIdbLoadPrefix，比对会误判「未就绪」导致跨桌面发卡永远等超时。
+window.__chatDbReady = function () { return chatDbReady === true; };
+// v3.17.x：跨桌面「来消息」用——返回最近一次成功加载聊天记录的桌面 id
+//（lastIdbLoadPrefix 是 'xy-home-v2:<cid>' 形式，这里剥成 cid 供 goReply 比对当前桌面）
+window.__chatDbLoadedPrefix = function () {
+  try {
+    const p = lastIdbLoadPrefix || '';
+    return p.indexOf('xy-home-v2:') === 0 ? p.slice('xy-home-v2:'.length) : '';
+  } catch (e) { return ''; }
+};
 bootAutoSend();
 loadMsgs();
 setTimeout(rpExpireCheck, 2000);

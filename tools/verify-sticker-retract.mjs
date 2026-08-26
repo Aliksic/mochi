@@ -34,8 +34,9 @@ function check(desc, ok, detail) {
 
 const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
 const engine = process.env.BROWSER || 'chromium';
+const channel = process.env.CHANNEL || undefined; // 例如 msedge / chrome（用系统浏览器）
 const { chromium, webkit } = await import('playwright');
-const browser = engine === 'webkit' ? await webkit.launch() : await chromium.launch();
+const browser = engine === 'webkit' ? await webkit.launch() : await chromium.launch(channel ? { channel } : undefined);
 const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
 const page = await ctx.newPage();
 const pageErrors = [];
@@ -120,31 +121,21 @@ const t2b = JSON.parse(await page.evaluate(`(function(){
 check('T2 实时撤回：bubble 立即变为「我撤回了一条消息」且无 img', t2b.hasImg === false && t2b.txt.indexOf('我撤回了一条消息') >= 0, t2b.txt);
 
 // ---- T3：点击撤回文案展开原文（查看撤回的消息），再点击收回 ----
-const t3diag = await page.evaluate(`(function(){
-  const m0 = document.querySelector('#page-chat .msg[data-idx="0"] .msg-bubble');
-  const before = { html: m0.innerHTML.slice(0, 40), showing: m0.dataset.showing };
-  window.__probeOnclick = 0;
-  const old = m0.onclick;
-  m0.onclick = function (e) { window.__probeOnclick = (window.__probeOnclick || 0) + 1; return old.apply(this, arguments); };
-  m0.click();
-  const after = { html: m0.innerHTML.slice(0, 40), showing: m0.dataset.showing, probe: window.__probeOnclick };
-  m0.onclick = old;
-  return JSON.stringify({ before, after, txt: m0.textContent.slice(0, 30) });
-})()`);
-console.log('  [T3 diag]', t3diag);
+// 注意 bindToggle 是 toggle：先确保从收起态（showing!=="1"）出发再断言
 const t3 = await page.evaluate(`(function(){
   const m0 = document.querySelector('#page-chat .msg[data-idx="0"] .msg-bubble');
-  m0.click();
-  const expanded = !!m0.querySelector('img.msg-img-sm');
-  const after1 = { html: m0.innerHTML.slice(0, 40), showing: m0.dataset.showing };
-  m0.click();
-  const collapsed = !m0.querySelector('img') && m0.textContent.indexOf('我撤回了一条消息') >= 0;
-  const after2 = { html: m0.innerHTML.slice(0, 40), showing: m0.dataset.showing, txt: m0.textContent.slice(0, 20) };
-  return JSON.stringify({ expanded, collapsed, after1, after2 });
+  if (m0.dataset.showing === '1') m0.click(); // 重置为收起态
+  const startCollapsed = !m0.querySelector('img') && m0.textContent.indexOf('我撤回了一条消息') >= 0;
+  m0.click(); // 第一次点击：展开查看原文
+  const expanded = m0.dataset.showing === '1' && !!m0.querySelector('img.msg-img-sm');
+  m0.click(); // 第二次点击：收回
+  const collapsed = m0.dataset.showing !== '1' && !m0.querySelector('img') && m0.textContent.indexOf('我撤回了一条消息') >= 0;
+  return JSON.stringify({ startCollapsed, expanded, collapsed });
 })()`);
-console.log('  [T3 result]', t3);
-check('T3 点击展开可查看原文表情包', t3.expanded === true);
-check('T3 再点击收回恢复撤回态', t3.collapsed === true);
+const j3 = JSON.parse(t3);
+check('T3 撤回态初始为收起（无 img）', j3.startCollapsed === true);
+check('T3 点击展开可查看原文表情包', j3.expanded === true);
+check('T3 再点击收回恢复撤回态', j3.collapsed === true);
 
 // ---- T4：【核心回归】撤回后 reload（全量重加载渲染）→ 表情包不得复活 ----
 await sleep(900); // 等 saveMsgs 防抖把 retracted 落盘 IDB

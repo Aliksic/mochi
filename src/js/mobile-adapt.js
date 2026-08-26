@@ -889,9 +889,25 @@
         }
         function _aPinPan() {
           try {
-            if (!_aKb && !_aProv && Date.now() > _aBurstUntil) return;
             var offT = _aVV.offsetTop || 0;
             var winY = _aWinY();
+            // v3.16.x（第四轮）：无条件「大偏移必归零」——K80 Chrome 在 resizes-visual
+            // 下聚焦聊天输入栏（contenteditable）时，键盘动画可能晚于 850ms 宽限期才
+            // 完成平移+收缩（_aKb 未置位、_aBurstUntil 已过）→ 下方守卫直接 return，
+            // 平移残留不归零 → .phone 整页上移、输入栏飞走、中间露灰。
+            // 这里先兜底：任何时刻只要视觉视口偏移/文档滚动达到「必然露灰」量级
+            //（>160px，远超 caret 微滚 <60px，不误伤）就立即归零，不依赖键盘状态。
+            // 非键盘期 vv.offsetTop 恒为 0、window 本不该滚（滚动都在 .phone 内层），
+            // 异常偏移归零只会修正不会打断正常交互。
+            if (offT > 160 || winY > 160) {
+              if (winY) {
+                try { window.scrollTo(0, 0); } catch (e2) {}
+                try { document.documentElement.scrollTop = 0; document.body.scrollTop = 0; } catch (e3) {}
+              }
+              if (offT && _aVV.scrollTo) { try { _aVV.scrollTo(0, 0); } catch (e4) {} }
+              return;
+            }
+            if (!_aKb && !_aProv && Date.now() > _aBurstUntil) return;
             if (offT <= 8 && winY <= 8) return;
             var need = offT > 160 || winY > 160;
             if (!need) {
@@ -953,6 +969,12 @@
             try {
               var foc = _aIsText(_aTextFocused) || _aIsText(document.activeElement);
               if (foc) {
+                // v3.16.x（第四轮）：聚焦期间持续续期 _aBurstUntil——键盘会话内
+                // _aPinPan 恒活跃，任何时刻的 vv 平移残留都会被归零。此前只在
+                // focusin 设一次 850ms 宽限，K80 Chrome 键盘动画慢/平移晚到时
+                // 宽限已过 → 平移不归零（输入栏飞走露灰）。250ms 轮询不断续期，
+                // 每次顺延 850ms；打字（caret 微滚 <160px）不会触发归零，无闪烁。
+                _aBurstUntil = Date.now() + 850;
                 syncAndroidKb();
                 nudgeInputVisible();
                 // v3.12.x：悬浮键盘推定停靠复查（vv 不反映键盘的内核走这里兜底）

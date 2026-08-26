@@ -155,20 +155,20 @@ await sleep(2300);
 await evalJs("(function(){var m=document.getElementById('cc-scope-mask');if(m&&!m.hidden){var b=document.getElementById('csn-ok');if(b)b.click();}return true;})()");
 await sleep(400);
 
-// ---- B1：字卡库【系统预设字卡】→ 喝水 tab 出现新分组「梦角催喝水」 ----
+// ---- B1：字卡库【其他互动功能字卡】→ 喝水 tab 出现新分组「梦角催喝水」 ----
 const b1 = await evalJs(`(async function(){
   try {
-    var li = document.getElementById('li-default-cards');
+    var li = document.getElementById('li-fun-cards');
     if (!li) return 'no-entry';
     li.click();
     await new Promise(function(r){ setTimeout(r, 500); });
-    var tab = document.querySelector('#dc-tabs [data-type="water"]');
+    var tab = document.querySelector('#fc-tabs [data-type="water"]');
     if (!tab) return 'no-tab';
     tab.click();
     await new Promise(function(r){ setTimeout(r, 600); });
-    var chips = [].map.call(document.querySelectorAll('#dc-groups-bar .cc-g-chip'), function(c){ return c.textContent; });
-    var headers = [].map.call(document.querySelectorAll('#dc-list .cc-group-header .ccg-name'), function(h){ return h.textContent; });
-    var items = document.querySelectorAll('#dc-list .cc-item').length;
+    var chips = [].map.call(document.querySelectorAll('#fc-groups-bar .cc-g-chip'), function(c){ return c.textContent; });
+    var headers = [].map.call(document.querySelectorAll('#fc-list .cc-group-header .ccg-name'), function(h){ return h.textContent; });
+    var items = document.querySelectorAll('#fc-list .cc-item').length;
     return JSON.stringify({ chips: chips, headers: headers, items: items,
       grpInData: !!(window.DEFAULT_CARD_DATA && (window.DEFAULT_CARD_DATA.water||[]).some(function(g){ return g[0]==='梦角催喝水'; })) });
   } catch(e) { return 'err:' + e.message; }
@@ -176,7 +176,7 @@ const b1 = await evalJs(`(async function(){
 try {
   const o = JSON.parse(b1);
   check('B1 数据层含「梦角催喝水」分组', o && o.grpInData === true, o && o.grpInData);
-  check('B2 字卡库喝水 tab 分组条出现「梦角催喝水」', o && Array.isArray(o.chips) && o.chips.indexOf('梦角催喝水') >= 0, o && o.chips);
+  check('B2 功能字卡喝水 tab 分组条出现「梦角催喝水」', o && Array.isArray(o.chips) && o.chips.indexOf('梦角催喝水') >= 0, o && o.chips);
   check('B3 卡片列表渲染出「梦角催喝水」组头与卡片', o && Array.isArray(o.headers) && o.headers.indexOf('梦角催喝水') >= 0 && o.items >= 8, o && { headers: o.headers, items: o.items });
 } catch (e) { check('B1-B3 字卡库新分组', false, b1); }
 

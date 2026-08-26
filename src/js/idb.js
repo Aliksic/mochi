@@ -265,6 +265,31 @@
     }
   }
 
+  // v3.16.x：localStorage「写失败脏键」集合——set 时 localStorage.setItem 抛异常
+  // （配额满/隐私模式）说明 LS 快照残留旧值，回填时这些键必须信 IndexedDB 而不是 LS。
+  // 持久化双份：sessionStorage（同标签页刷新有效）+ IndexedDB 的 __ls-dirty 键
+  // （跨浏览器重启仍有效——配额满/隐私模式通常持续，只有 IDB 是可靠源，用它记住
+  // 哪些键的 LS 是坏的，回填时避开，不破坏 v3.16.x「IDB 权威」语义）。
+  const LS_DIRTY_KEY = 'xy-home-v2:__ls-dirty';
+  let _lsDirtyKeys = null;
+  try {
+    const s = sessionStorage.getItem(LS_DIRTY_KEY);
+    if (s) { const arr = JSON.parse(s); if (Array.isArray(arr)) _lsDirtyKeys = new Set(arr); }
+  } catch (e) {}
+  function lsDirtySave() {
+    const arr = _lsDirtyKeys ? Array.from(_lsDirtyKeys) : [];
+    try { sessionStorage.setItem(LS_DIRTY_KEY, JSON.stringify(arr)); } catch (e) {}
+    try { if (window.idbSet) window.idbSet(LS_DIRTY_KEY, JSON.stringify(arr)); } catch (e) {}
+  }
+  function lsDirtyAdd(k) {
+    if (!_lsDirtyKeys) _lsDirtyKeys = new Set();
+    _lsDirtyKeys.add(k);
+    lsDirtySave();
+  }
+  function lsDirtyDel(k) {
+    if (_lsDirtyKeys && _lsDirtyKeys.delete(k)) lsDirtySave();
+  }
+
   window.xyStore = function (prefix) {
     return {
       get(k) {
@@ -289,7 +314,12 @@
         // 大键跳过 localStorage（只进 IDB + 内存缓存）
         const big = typeof v === 'string' && v.length > LS_BIG_LIMIT;
         if (!big) {
-          try { localStorage.setItem(key, v); } catch (e) {}
+          try {
+            localStorage.setItem(key, v);
+            lsDirtyDel(key); // 写成功 → 清除脏标记
+          } catch (e) {
+            lsDirtyAdd(key); // 写失败 → 标记：回填时该键以 IDB 为准
+          }
         } else {
           try { localStorage.removeItem(key); } catch (e) {}
         }
@@ -354,10 +384,22 @@
       sendReady(); // 放行开屏，不阻塞用户
       // 不置 finished：processBatch 继续恢复剩余键
     }, 12000);
-    window.idbGetAllKeys().then(keys => {
+    // v3.16.x：先恢复「LS 写失败脏键」集合（持久化在 IDB，跨浏览器重启仍有效）——
+    // 必须在业务键回填之前读，回填时才能避开 LS 已损坏（残留旧值）的键、信 IDB 权威值
+    Promise.all([window.idbGetAllKeys(), window.idbGet(LS_DIRTY_KEY)]).then(res => {
+      const keys = res[0];
+      try {
+        const arr = JSON.parse(res[1] || '[]');
+        if (Array.isArray(arr) && arr.length) {
+          if (!_lsDirtyKeys) _lsDirtyKeys = new Set();
+          arr.forEach(k => { if (k) _lsDirtyKeys.add(k); });
+          try { sessionStorage.setItem(LS_DIRTY_KEY, JSON.stringify(Array.from(_lsDirtyKeys))); } catch (e) {}
+        }
+      } catch (e) {}
       if (!keys || !keys.length) { finish(); return; }
       const need = (keys || []).filter(k =>
         k.indexOf(uidPrefix) === 0 &&
+        k !== LS_DIRTY_KEY && // 脏键索引自身不回填
         k.indexOf(uidPrefix + 'music-file:') !== 0 &&
         // v3.6.x：聊天记录不回填 localStorage——chat.js 已改为只写 IndexedDB，
         // 恢复到这里会重新占满 5MB 配额（几千条带图记录是几十 MB），且读取
@@ -403,7 +445,21 @@
         // 回填未完成时收到的新数据（大键只进 IDB+内存）若被 IDB 旧快照覆盖，
         // 会出现来信弹窗已提示、信箱列表却是旧数据的错位——memoryCache 有值即最新。
         if (memoryCache && (k in memoryCache)) return false;
-        const str = typeof v === 'string' ? v : JSON.stringify(v);
+        let str = typeof v === 'string' ? v : JSON.stringify(v);
+        // v3.16.x 修复（摸鱼天数回退等）：idbSet 是异步 fire-and-forget，页面被杀/
+        // 快速退出时 IDB 事务可能未完成 → IDB 值落后于 localStorage。若回填直接用
+        // IDB 旧值写 memoryCache（get 优先读它），会把用户已写入的新值遮蔽——桌面
+        // 摸鱼天数等显示旧值，且后续 logFish 等「读-改-写」基于旧值追加 → 真实丢数据。
+        // 规则：localStorage 有该键且未标记「LS 写失败」→ 以 LS 为准（它是最新一次
+        // 同步写成功的快照）；否则（LS 缺失 / LS 写失败过）→ 用 IDB 值（v3.16.x 语义）。
+        // 注意：不回写 IDB——LS 写失败场景（配额满/隐私模式）IDB 是唯一新值源，
+        // 回写会把 IDB 新值覆盖成旧值造成数据回退；IDB 落后会在下次业务 set
+        // （logFish 等读-改-写）双写时自然追平。
+        let lsVal = null;
+        try { lsVal = localStorage.getItem(k); } catch (e) {}
+        if (lsVal !== null && !(_lsDirtyKeys && _lsDirtyKeys.has(k))) {
+          str = lsVal;
+        }
         try { if (str.length > LS_BIG_LIMIT) { if (_bigIdx[k] !== str.length) { _bigIdx[k] = str.length; bigIdxSave(); } } else if (_bigIdx[k] !== undefined) { delete _bigIdx[k]; bigIdxSave(); } } catch (e) {}
         if (str.length > LS_BIG_LIMIT) {
           if (str.length > BIG_BUDGET || bigBudgetUsed + str.length > BIG_BUDGET) {
@@ -476,7 +532,14 @@
     })).then(v => {
       if (v === undefined || v === null) return false;
       if (!(memoryCache && (key in memoryCache))) {
-        const str = typeof v === 'string' ? v : JSON.stringify(v);
+        let str = typeof v === 'string' ? v : JSON.stringify(v);
+        // 与 retainValue 同规则（v3.16.x 摸鱼天数回退修复）：LS 有值且未写失败 →
+        // 以 LS 为准（IDB 异步写可能未落地）；LS 缺失/写失败 → 用 IDB 值；不回写 IDB
+        let lsVal = null;
+        try { lsVal = localStorage.getItem(key); } catch (e) {}
+        if (lsVal !== null && !(_lsDirtyKeys && _lsDirtyKeys.has(key))) {
+          str = lsVal;
+        }
         if (!memoryCache) memoryCache = {};
         memoryCache[key] = str;
         try { if (str.length > LS_BIG_LIMIT) { if (_bigIdx[key] !== str.length) { _bigIdx[key] = str.length; bigIdxSave(); } } } catch (e) {}

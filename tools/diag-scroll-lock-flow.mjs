@@ -113,6 +113,12 @@ try {
   await evalJs("(function(){var b=document.getElementById('dc-back');if(b)b.click();return true;})()");
   await checkpoint('默认字卡返回');
 
+  // 其他互动功能字卡页（v3.16.x 新增独立页）
+  await evalJs("(function(){var e=document.getElementById('li-fun-cards');if(e)e.click();return true;})()");
+  await checkpoint('其他互动功能字卡页');
+  await evalJs("(function(){var b=document.getElementById('fc-back');if(b)b.click();return true;})()");
+  await checkpoint('功能字卡返回');
+
   // 聊天页浮层：更多面板 / 表情包 / 拍一拍
   await evalJs("(function(){document.querySelectorAll('.page').forEach(function(p){p.hidden=true});var t=document.querySelector('.tab[data-page=\"page-chat\"]');if(t)t.click();return true;})()");
   await sleep(300);

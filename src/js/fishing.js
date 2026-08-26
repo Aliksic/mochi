@@ -73,6 +73,22 @@
     { id: 'gift_trinket',  name: '小饰品', icon: '🎀', cat: 'gift',    price: 0, giftNote: 'trinket' }
   ];
   const ITEM_MAP = {}; ITEMS.forEach(function (it) { ITEM_MAP[it.id] = it; });
+  // ---- 烹饪：每种鱼对应一道菜（cookSec=烹饪秒，mult=售价倍率） ----
+  const DISHES = {
+    fish_small:   { name: '烤小鱼',   emoji: '🐟', cookSec: 180,  mult: 1.8 },
+    fish_blue:    { name: '清蒸蓝鱼', emoji: '🍽️', cookSec: 300,  mult: 1.8 },
+    fish_puffer:  { name: '河豚刺身', emoji: '🍣', cookSec: 300,  mult: 1.9 },
+    fish_crab:    { name: '清蒸蟹',   emoji: '🦀', cookSec: 360,  mult: 1.8 },
+    fish_big:     { name: '红烧大鱼', emoji: '🍲', cookSec: 480,  mult: 1.9 },
+    fish_octopus: { name: '章鱼烧',   emoji: '🐙', cookSec: 480,  mult: 1.9 },
+    fish_rare:    { name: '稀有鱼宴', emoji: '🍱', cookSec: 720,  mult: 2.0 },
+    fish_gold:    { name: '金鱼浓汤', emoji: '🍜', cookSec: 1080, mult: 2.2 },
+    fish_koi:     { name: '锦鲤御膳', emoji: '👑', cookSec: 1800, mult: 2.5 },
+    fish_moon:    { name: '月光鱼露', emoji: '🌙', cookSec: 1800, mult: 2.5 },
+    fish_abyss:   { name: '深渊王宴', emoji: '🐲', cookSec: 1800, mult: 3.0 }
+  };
+  function dishOf(fishId) { return DISHES[fishId] || null; }
+  function dishPrice(fishId, quality) { const it = ITEM_MAP[fishId]; const d = dishOf(fishId); if (!it || !d) return 0; const qm = quality === 'perfect' ? 1.15 : quality === 'good' ? 1.0 : 0.85; return Math.round(it.price * d.mult * qm); }
   // 可钓到的鱼池（按稀有度 r 加权，供玩家与 TA 共用）
   const FISH_POOL = ITEMS.filter(function (it) { return it.cat === 'fish' || it.cat === 'special'; });
   // TA 专属纪念池（小贝壳/小石头/漂流瓶/小饰品）——只有 TA 会钓到并主动送给你收藏
@@ -330,6 +346,7 @@
       t.ta[item.id] = (t.ta[item.id] || 0) + 1; saveToday(t);
       markDex(item);
       statusText(taWord() + ' 钓到了 ' + item.icon + ' ' + item.name);
+      maybeTaCook(item.id);
       // 漂流花：概率触发赠送互动（花仍可出售）
       if (item.giftNote === 'flower' && Math.random() < 0.5) {
         const note = giftNoteFor(item);
@@ -415,6 +432,82 @@
     render();
   }
 
+  // ---- 烹饪系统（玩家 + TA；时间戳现算，仿 garden 离线友好） ----
+  function cookKey() { return 'fishing-cook'; }
+  function loadCook() { const c = readJSON(cookKey(), null); return c && typeof c === 'object' ? c : { mine: [], ta: [], taWeek: { weekKey: '', count: 0 } }; }
+  function saveCook(c) { writeJSON(cookKey(), c); }
+  function weekKey() { const d = new Date(); const thu = new Date(d.getFullYear(), d.getMonth(), d.getDate() + (4 - (d.getDay() || 7))); const wk = Math.ceil((((thu - new Date(thu.getFullYear(), 0, 1)) / 86400000) + 1) / 7); return d.getFullYear() + '-W' + wk; }
+  function taCookCountThisWeek() { const c = loadCook(); return (c.taWeek && c.taWeek.weekKey === weekKey()) ? c.taWeek.count : 0; }
+  function cookStatus(entry) {
+    const d = dishOf(entry.fishId); if (!d) return null;
+    const now = Math.floor(Date.now() / 1000), elapsed = now - entry.startedAt;
+    return { dish: d, done: elapsed >= d.cookSec, progress: Math.min(1, elapsed / d.cookSec), remainSec: Math.max(0, d.cookSec - elapsed), elapsed: elapsed };
+  }
+  function loadBox() { const s = store(); if (!s) return []; try { const a = JSON.parse(s.get('giftbox-items') || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
+  function saveBox(a) { const s = store(); if (s) s.set('giftbox-items', JSON.stringify(a)); }
+  const TA_COOK_WISH = ['给你尝尝。', '刚做好的，趁热吃。', '这道菜想让你试试。', '用心做的，希望你喜欢。'];
+  function cookMine(fishId) {
+    const d = dishOf(fishId); if (!d) { toast('这种鱼不能烹饪'); return; }
+    const t = loadToday();
+    if (!t.mine[fishId] || t.mine[fishId] < 1) { toast('今日没有这种鱼'); return; }
+    t.mine[fishId]--; if (t.mine[fishId] <= 0) delete t.mine[fishId]; saveToday(t);
+    const c = loadCook();
+    c.mine.push({ fishId: fishId, startedAt: Math.floor(Date.now() / 1000), quality: 'good' });
+    saveCook(c); sfxCast();
+    toast('开始烹饪 ' + d.emoji + ' ' + d.name + '，约 ' + Math.round(d.cookSec / 60) + ' 分钟');
+    render();
+  }
+  function sellDish(idx) {
+    const c = loadCook(); const entry = c.mine[idx]; if (!entry) return;
+    const st = cookStatus(entry); if (!st || !st.done) { toast('还没烹饪好'); return; }
+    const price = dishPrice(entry.fishId, entry.quality);
+    c.mine.splice(idx, 1); saveCook(c);
+    if (window.giftWalletChange) window.giftWalletChange(price, price, '烹饪出售');
+    addStats({ totalEarned: price }); sfxSell();
+    toast('出售 ' + st.dish.name + '，心意币各 +¥' + fenToStr(price)); render();
+  }
+  function sendDishToTa(idx) {
+    const c = loadCook(); const entry = c.mine[idx]; if (!entry) return;
+    const st = cookStatus(entry); if (!st || !st.done) { toast('还没烹饪好'); return; }
+    const price = dishPrice(entry.fishId, entry.quality);
+    c.mine.splice(idx, 1); saveCook(c);
+    if (window.recordGiftBox) window.recordGiftBox({ id: 'dish_' + entry.fishId, name: st.dish.name, emoji: st.dish.emoji, price: price / 100, cat: '菜肴' }, 'out', '给你尝尝我的手艺');
+    if (window.chatAddGift) window.chatAddGift({ side: 'out', special: 'dish', dishName: st.dish.name, dishEmoji: st.dish.emoji, dishWish: '给你尝尝', dishQuality: entry.quality, dishPrice: price / 100, ts: Date.now() });
+    sfxGift(); toast('已把 ' + st.dish.name + ' 送给 ' + taWord()); render();
+  }
+  function maybeTaCook(fishId) {
+    const d = dishOf(fishId); if (!d) return;
+    if (taCookCountThisWeek() >= 3) return;
+    if (Math.random() >= 0.08) return;
+    const c = loadCook();
+    if (c.taWeek.weekKey !== weekKey()) c.taWeek = { weekKey: weekKey(), count: 0 };
+    c.taWeek.count++;
+    c.ta.push({ fishId: fishId, startedAt: Math.floor(Date.now() / 1000), quality: 'good' });
+    saveCook(c); statusText(taWord() + ' 开始烹饪 ' + d.emoji + ' ' + d.name + '…');
+  }
+  function checkTaCookDone() {
+    const c = loadCook(); if (!c.ta.length) return;
+    let changed = false;
+    for (let i = c.ta.length - 1; i >= 0; i--) {
+      const entry = c.ta[i]; const st = cookStatus(entry); if (!st || !st.done) continue;
+      const d = st.dish; const price = dishPrice(entry.fishId, entry.quality);
+      c.ta.splice(i, 1); changed = true;
+      if (Math.random() < 0.8) {
+        if (window.recordGiftBox) window.recordGiftBox({ id: 'dish_' + entry.fishId, name: d.name, emoji: d.emoji, price: price / 100, cat: '菜肴' }, 'in', pick(TA_COOK_WISH));
+        if (window.chatAddGift) window.chatAddGift({ side: 'in', special: 'dish', dishName: d.name, dishEmoji: d.emoji, dishWish: pick(TA_COOK_WISH), dishQuality: entry.quality, dishPrice: price / 100, ts: Date.now() });
+        sfxGift(); toast('💕 ' + taWord() + ' 烹饪了 ' + d.emoji + ' ' + d.name + ' 送给你！');
+      } else { statusText(taWord() + ' 烹饪了 ' + d.name + '，自己吃了'); }
+    }
+    if (changed) saveCook(c);
+  }
+  function eatDish(boxIdx) {
+    const box = loadBox(); const item = box[boxIdx]; if (!item) return;
+    const eatPrice = Math.round((item.price || 0) * 100 * 0.5);
+    box.splice(boxIdx, 1); saveBox(box);
+    if (window.giftWalletChange) window.giftWalletChange(eatPrice, 0, '吃掉收到的菜');
+    sfxSell(); toast('吃掉 ' + item.name + '，心意币 +¥' + fenToStr(eatPrice)); render();
+  }
+
   // ---- 渲染 ----
   function statusText(t) { if (statusEl) statusEl.textContent = t; }
   function updateTimingVisual(p) {
@@ -423,6 +516,7 @@
     if (timingCursorEl) timingCursorEl.style.left = (p * 100).toFixed(1) + '%';
   }
   function render() {
+    checkTaCookDone();
     // 标题
     if (partnerNameEl) partnerNameEl.textContent = taWord();
     // 场景 class（反映双方状态）
@@ -465,11 +559,13 @@
     let key;
     if (curTab === 'today') key = 'today:' + JSON.stringify(loadToday());
     else if (curTab === 'dex') key = 'dex:' + JSON.stringify(loadDex()) + ':' + JSON.stringify(loadStats());
+    else if (curTab === 'cook') key = 'cook:' + Math.floor(Date.now() / 1000) + JSON.stringify(loadCook()) + JSON.stringify(loadToday()) + JSON.stringify(loadBox());
     else key = 'gifts:' + JSON.stringify(loadGifts());
     if (key === _lastPageKey) return;
     _lastPageKey = key;
     if (curTab === 'today') pageEl.innerHTML = renderToday();
     else if (curTab === 'dex') pageEl.innerHTML = renderDex();
+    else if (curTab === 'cook') pageEl.innerHTML = renderCook();
     else if (curTab === 'gifts') pageEl.innerHTML = renderGifts();
   }
   function renderToday() {
@@ -523,6 +619,52 @@
       }).join('') : '<div class="fish-empty">TA 还没送你东西，继续一起钓鱼吧～</div>');
     return html;
   }
+  function renderCook() {
+    const c = loadCook();
+    let html = '<div class="fish-sub">厨房</div>';
+    html += '<div class="fish-subhead">我的灶台</div>';
+    if (!c.mine.length) html += '<div class="fish-empty">灶台空着，从下面选鱼烹饪</div>';
+    c.mine.forEach(function (entry, idx) {
+      const st = cookStatus(entry); if (!st) return;
+      const it = ITEM_MAP[entry.fishId];
+      if (st.done) {
+        const price = dishPrice(entry.fishId, entry.quality);
+        html += '<div class="fish-cook-row done"><span class="fish-ico">' + st.dish.emoji + '</span><span class="fish-name">' + esc(st.dish.name) + '<i class="fish-cook-tag">已出锅</i></span><span class="fish-price">¥' + fenToStr(price) + '</span><button class="fish-cook-sell" data-idx="' + idx + '">出售</button><button class="fish-cook-send" data-idx="' + idx + '">送TA</button></div>';
+      } else {
+        const pct = Math.round(st.progress * 100);
+        html += '<div class="fish-cook-row"><span class="fish-ico">' + (it ? it.icon : '🐟') + '</span><span class="fish-name">烹饪 ' + esc(st.dish.name) + '</span><div class="fish-cook-bar"><div class="fish-cook-fill" style="width:' + pct + '%"></div></div><span class="fish-cnt">' + (st.remainSec >= 60 ? Math.ceil(st.remainSec / 60) + '分' : st.remainSec + '秒') + '</span></div>';
+      }
+    });
+    html += '<div class="fish-subhead">' + esc(taWord()) + ' 的灶台</div>';
+    if (!c.ta.length) html += '<div class="fish-empty">' + esc(taWord()) + ' 没在烹饪</div>';
+    c.ta.forEach(function (entry) {
+      const st = cookStatus(entry); if (!st) return;
+      const it = ITEM_MAP[entry.fishId];
+      if (st.done) {
+        html += '<div class="fish-cook-row done"><span class="fish-ico">' + st.dish.emoji + '</span><span class="fish-name">' + esc(st.dish.name) + '<i class="fish-cook-tag">已出锅</i></span></div>';
+      } else {
+        const pct = Math.round(st.progress * 100);
+        html += '<div class="fish-cook-row"><span class="fish-ico">' + (it ? it.icon : '🐟') + '</span><span class="fish-name">' + esc(taWord()) + ' 在烹饪 ' + esc(st.dish.name) + '</span><div class="fish-cook-bar"><div class="fish-cook-fill" style="width:' + pct + '%"></div></div><span class="fish-cnt">' + (st.remainSec >= 60 ? Math.ceil(st.remainSec / 60) + '分' : st.remainSec + '秒') + '</span></div>';
+      }
+    });
+    const t = loadToday();
+    const cookable = Object.keys(t.mine).filter(function (id) { return dishOf(id) && t.mine[id] > 0; });
+    if (cookable.length) {
+      html += '<div class="fish-subhead">可烹饪的鱼</div>';
+      cookable.forEach(function (id) {
+        const it = ITEM_MAP[id]; const d = dishOf(id);
+        html += '<div class="fish-cook-row"><span class="fish-ico">' + it.icon + '</span><span class="fish-name">' + esc(it.name) + ' → ' + esc(d.name) + '</span><span class="fish-cnt">×' + t.mine[id] + '</span><button class="fish-cook-btn" data-fish="' + id + '">烹饪' + Math.round(d.cookSec / 60) + '分</button></div>';
+      });
+    }
+    const box = loadBox(); const dishes = box.map(function (b, i) { return Object.assign({}, b, { _idx: i }); }).filter(function (b) { return b.side === 'in' && b.cat === '菜肴'; });
+    if (dishes.length) {
+      html += '<div class="fish-subhead">收到的菜（可吃掉换币）</div>';
+      dishes.forEach(function (b) {
+        html += '<div class="fish-cook-row"><span class="fish-ico">' + (b.emoji || '🍽️') + '</span><span class="fish-name">' + esc(b.name) + '</span><span class="fish-price">吃+¥' + fenToStr(Math.round((b.price || 0) * 100 * 0.5)) + '</span><button class="fish-eat-btn" data-idx="' + b._idx + '">吃掉</button></div>';
+      });
+    }
+    return html;
+  }
   function fmtTs(ts) { const d = new Date(ts); return (d.getMonth() + 1) + '/' + d.getDate() + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
 
   // ---- 事件 ----
@@ -534,6 +676,14 @@
     if (sell) { e.stopPropagation(); sellAll(); return; }
     const exch = e.target.closest && e.target.closest('.fish-exch');
     if (exch) { e.stopPropagation(); exchangeGift(parseInt(exch.getAttribute('data-idx'), 10)); return; }
+    const cookBtn = e.target.closest && e.target.closest('.fish-cook-btn');
+    if (cookBtn) { e.stopPropagation(); cookMine(cookBtn.getAttribute('data-fish')); return; }
+    const cookSell = e.target.closest && e.target.closest('.fish-cook-sell');
+    if (cookSell) { e.stopPropagation(); sellDish(parseInt(cookSell.getAttribute('data-idx'), 10)); return; }
+    const cookSend = e.target.closest && e.target.closest('.fish-cook-send');
+    if (cookSend) { e.stopPropagation(); sendDishToTa(parseInt(cookSend.getAttribute('data-idx'), 10)); return; }
+    const eatBtn = e.target.closest && e.target.closest('.fish-eat-btn');
+    if (eatBtn) { e.stopPropagation(); eatDish(parseInt(eatBtn.getAttribute('data-idx'), 10)); return; }
   });
   if (pageEl) pageEl.addEventListener('change', function (e) {
     const cb = e.target.closest && e.target.closest('.fish-keep-cb');

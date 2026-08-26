@@ -78,7 +78,8 @@
   // v3.16.x：拆页后「聊天默认字卡」角标只统计四大基础分类；
   // 「其他互动功能字卡」入口角标统计全部功能分类（fish/eat/period/water/garden/
   // sync/reach/cjian/room/piggy/drift/interact）。
-  const FUNC_KEYS = ['fish', 'eat', 'period', 'water', 'garden', 'sync', 'reach', 'cjian', 'room', 'piggy', 'drift', 'interact'];
+  // v3.17.x：新增 deskcheck——跨桌面「来消息」查岗回复字卡。
+  const FUNC_KEYS = ['fish', 'eat', 'period', 'water', 'garden', 'sync', 'reach', 'cjian', 'room', 'piggy', 'drift', 'interact', 'deskcheck'];
   const BASE_KEYS = ['main', 'kaomoji', 'emoji', 'touch'];
   function sumKeys(keys) {
     let n = 0;
@@ -280,6 +281,22 @@
     list: 'fc-list', tabs: 'fc-tabs', groupsBar: 'fc-groups-bar', search: 'fc-search-input', page: 'page-fun-cards'
   }, FUNC_KEYS, '暂无功能触发字卡');
 
+  // v3.17.x：新功能分类（deskcheck 桌面查岗）不在 template 静态 tab 里，动态补一个。
+  // mountCardView 的 tab 点击是委托在 #fc-tabs 上的，动态追加的按钮同样生效。
+  (function () {
+    const tabs = document.getElementById('fc-tabs');
+    if (!tabs) return;
+    const known = Array.prototype.map.call(tabs.querySelectorAll('.cc-tab'), t => t.dataset.type);
+    FUNC_KEYS.forEach(function (k) {
+      if (known.indexOf(k) >= 0) return;
+      const b = document.createElement('button');
+      b.className = 'cc-tab';
+      b.dataset.type = k;
+      b.textContent = k === 'deskcheck' ? '桌面查岗' : k;
+      tabs.appendChild(b);
+    });
+  })();
+
   // 入口/返回
   const li = document.getElementById('li-default-cards');
   if (li) {
@@ -367,5 +384,10 @@
   };
   window.getFishPool = function (name, fallback) {
     return window.getLibPool('fish', name, fallback);
+  };
+  // v3.17.x：桌面查岗回应字卡池（跨桌面「来消息」查岗——回复后按概率抽取，见 chat.js）
+  window.getDeskCheckPool = function (fallback) {
+    const arr = window.getLibPool('deskcheck', '桌面查岗·回应', fallback);
+    return arr.filter(c => !(window.isDefaultCardOff && window.isDefaultCardOff('deskcheck', c)));
   };
 })();

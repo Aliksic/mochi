@@ -5,6 +5,13 @@
 (function () {
   const G = 'xy-home-v2';
   const EXCLUDE = ['contacts', 'active-contact', 'feed-posts', 'migrated-v1', 'js-errors', 'theme-mode', 'accent-color',
+    // v3.16.x：摸鱼天数 fish-log 是全局根键（v3.9.x 起跨所有联系人按自然日去重累计，
+    // personalize.js logFish 走 gStore / migrateFishLogGlobal 从各联系人合并进全局）。
+    // 此前漏排除，migrateLegacy 每次刷新把全局 fish-log 迁进 default 并删全局键——
+    // 幂等检查命中 default 已有旧值时不迁移直接删全局新值 → 天数永久回退到 default
+    // 旧值（用户反馈：玩 4 天桌面「已摸鱼」显示第 2 天）。fish-log-global-migrated 为
+    // 合并幂等标记键，同为全局根键。二者都不随联系人隔离，绝不能迁移。
+    'fish-log', 'fish-log-global-migrated',
     // v3.12.x：group-chat-msgs（群聊消息，v3.8 起全局存储于根命名空间）——同 bg-* 道理，
     // 不是旧顶层业务键。此前漏排除导致每次刷新 migrateLegacy 把群聊记录搬进 default:
     // 并删根键，群聊页读根键为空 → 历史看似清空（数据滞留 default: 副本）+ 迁移循环空转。

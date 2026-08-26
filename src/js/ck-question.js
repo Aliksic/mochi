@@ -158,6 +158,29 @@
     if (!Array.isArray(d.groups)) d.groups = [];
     return d;
   }
+  // v3.17.x：按指定 store 读查岗题库（无键时用默认题库补齐——跨桌面「来消息」抽题
+  // 的目标桌面可能从未打开过字卡库，没有 ta-checkin 键；与 ckLoad 同款初始化，只写目标桌面）
+  function ckLoadFrom(s) {
+    let d = null;
+    try { d = JSON.parse(s.get(KEY) || 'null'); } catch (e) { d = null; }
+    if (!d || typeof d !== 'object' || Array.isArray(d)) d = {};
+    if (!d.settings || typeof d.settings !== 'object') d.settings = {};
+    if (d.settings.useDefault === undefined) d.settings.useDefault = true;
+    if (!Array.isArray(d.questions) || !d.questions.length) {
+      const isNew = !s.get(KEY);
+      d.questions = DEFAULT_QUESTIONS.map(q => {
+        const nq = Object.assign({}, q);
+        nq.isPreset = true;
+        return nq;
+      });
+      d.mergedIds = DEFAULT_QUESTIONS.map(q => q.id);
+      if (!isNew) { try { s.set(KEY, JSON.stringify(d)); } catch (e) {} }
+    } else {
+      if (ckMerge(d)) { try { s.set(KEY, JSON.stringify(d)); } catch (e) {} }
+    }
+    if (!Array.isArray(d.groups)) d.groups = [];
+    return d;
+  }
   function ckSave(d) { try { store.set(KEY, JSON.stringify(d)); } catch (e) {} }
 
   // ---------- 抽题：已启用池内随机，避免与上一题相同 ----------
@@ -202,7 +225,9 @@
   }
 
   // 推一张查岗问题卡：提示语 + ask-card 互动卡 + 系统通知 + 概率自动弹窗
-  function pushCkQuestion(cfg, forceQ) {
+  // v3.17.x：opts.deskCk=true 表示跨桌面「来消息」触发的桌面查岗卡——chat.js 回答后
+  // 会按概率从 deskcheck 回应字卡池抽 1~5 张作 TA 回应（见 chatAskReply）。
+  function pushCkQuestion(cfg, forceQ, opts) {
     if (!window.chatAddSystem) return false;
     const q = forceQ || pickQ();
     if (!q || !q.text) return false;
@@ -211,7 +236,7 @@
     const isSingle = q.type === 'single' && Array.isArray(q.options) && q.options.length;
     // 提示语标记 ask-msg（渲染同 poke 但不算 notable，避免通知重复成两条）
     window.chatAddSystem('TA 来查岗了。', { special: 'ask-msg' });
-    const el = window.chatAddSystem(q.text, { special: 'ask-card', askQuestion: q.text, askOptions: isSingle ? q.options : null, askType: isSingle ? 'single' : 'text' });
+    const el = window.chatAddSystem(q.text, { special: 'ask-card', askQuestion: q.text, askOptions: isSingle ? q.options : null, askType: isSingle ? 'single' : 'text', deskCk: !!(opts && opts.deskCk) });
     const msgIdx = el ? Number(el.dataset.idx) : -1;
     if (window.bgNotifyCheck) window.bgNotifyCheck('TA 来查岗了：' + q.text, Date.now(), { name: 'TA查岗' });
     // 自动弹窗：后台不弹 / 正在输入不弹 / 已有互动弹窗不弹（卡片仍在聊天里可点）
@@ -267,6 +292,33 @@
     if (!q) q = pickQ();
     if (!q) { toast('TA的查岗题库没有可用的问题'); return false; }
     return pushCkQuestion(window.replyCfg ? window.replyCfg() : null, q);
+  };
+  // v3.17.x：跨桌面「来消息」用——按指定桌面抽一题（不推卡、不改当前桌面状态）。
+  // 抽题逻辑与 pickQ 一致，只是题库从 storeFor(cid) 读（pickQ 读当前激活桌面）。
+  // 供 incoming-requests.js 弹窗显示问题；用户切过去后由 ckQuestionFire 当场发卡。
+  window.ckQuestionPickFor = function (cid) {
+    try {
+      const s = (cid && window.storeFor) ? window.storeFor(cid) : store;
+      const d = ckLoadFrom(s);
+      const useDefault = (d.settings || {}).useDefault !== false;
+      const qs = (d.questions || []).filter(q => q && q.enabled !== false && q.text && (useDefault || q.isPreset !== true));
+      if (!qs.length) return null;
+      let last = '';
+      try { last = String(s.get('ckq-last-id') || ''); } catch (e) {}
+      let pool = qs;
+      if (qs.length > 1) {
+        const f = qs.filter(q => String(q.id || '') !== last);
+        if (f.length) pool = f;
+      }
+      return pool[Math.floor(Math.random() * pool.length)];
+    } catch (e) { return null; }
+  };
+  // 跨桌面「来消息」用：切到目标桌面后当场发指定查岗卡。store 动态绑定当前桌面，
+  // 所以必须在 setActiveContact(cid) 之后调用，卡会发进该桌面的聊天记录（自然产生）。
+  // v3.17.x：跨桌面触发的卡带 deskCk 标记（回答后走桌面查岗回应字卡，见 chat.js chatAskReply）
+  window.ckQuestionFire = function (q, cfg) {
+    if (!q || !q.text) return false;
+    return pushCkQuestion(cfg || (window.replyCfg ? window.replyCfg() : null), q, { deskCk: true });
   };
   // 只读探针（回归测试 / 诊断用）
   window.__ckBankInfo = function () {

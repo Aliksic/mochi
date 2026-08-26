@@ -28,7 +28,7 @@ check('A3 build.mjs 已注册 drift-bottle.css 与 drift-bottle.js', bld.include
 check('A4 tabs.js FULL_PAGES 含 page-drift', read('js/tabs.js').includes("'page-drift'"));
 const dcd = read('js/default-cards-data.js');
 check('A5 DEFAULT_CARD_DATA.drift 三组话术（TA的话/TA的回应/海风）', ['["TA的话"', '["TA的回应"', '["海风"'].every(s => dcd.includes(s)));
-check('A6 字卡库注册「漂流瓶」tab', /\['drift',\s*'漂流瓶'\]/.test(read('js/default-cards.js')));
+check('A6 字卡库注册「漂流瓶」tab', /data-type="drift">漂流瓶<\/button>/.test(read('template.html')));
 
 // ---- 从当前 src 临时组装 index.html（顺序与 build.mjs 一致，不做压缩） ----
 const cssFiles = ['base.css', 'home.css', 'chat-main.css', 'chat-pages.css', 'market.css', 'group-chat.css', 'setting.css', 'tabbar.css', 'dark.css', 'garden.css', 'memo.css', 'memo-arc.css', 'room.css', 'drift-bottle.css'];
@@ -137,7 +137,7 @@ const jsErrCountExpr = '((window.__jsErrors&&window.__jsErrors.length)||0)';
 check('B1 页面加载无 JS 异常', await evalJs(jsErrCountExpr) === 0,
   JSON.stringify(await evalJs('(window.__jsErrors||[])')));
 check('B2 getLibPool 三组池同源可读（TA的话/TA的回应/海风）', await evalJs("(function(){try{return [window.getLibPool('drift','TA的话',[]).length>3, window.getLibPool('drift','TA的回应',[]).length>3, window.getLibPool('drift','海风',[]).length>5].every(Boolean);}catch(e){return false;}})()"));
-check('B3 字卡库注入「漂流瓶」tab chip', await evalJs("!!document.querySelector('#dc-tabs [data-type=\"drift\"]')"));
+check('B3 字卡库「其他互动功能字卡」页有「漂流瓶」tab chip', await evalJs("!!document.querySelector('#fc-tabs [data-type=\"drift\"]')"));
 
 // 清空漂流瓶数据后重载，保证确定性
 await evalJs("(function(){try{window.activeStore().remove('drift-data');}catch(e){}return true;})()");

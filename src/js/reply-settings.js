@@ -112,6 +112,21 @@
     return out;
   }
   window.replyCfg = getCfg;
+  // v3.17.x：跨桌面「来消息」用——读取【指定联系人桌面】的回复设置（非当前桌面）。
+  // getCfg 用 activeStore() 读当前激活桌面，这里改用 storeFor(cid)；gc-* 群聊设置
+  // 仍是全局（与 getCfg 同）。供 incoming-requests.js 按各桌面自己的开关/概率/冷却调度。
+  window.replyCfgFor = function (cid) {
+    const out = {};
+    let s = null;
+    try { s = (cid && window.storeFor) ? window.storeFor(cid) : ls; } catch (e) { s = ls; }
+    Object.keys(DEFAULTS).forEach(k => {
+      const v = k.indexOf('gc-') === 0 ? gcRead(k) : (s ? s.get('reply-' + k) : null);
+      let n = (v === null || v === undefined || v === '') ? DEFAULTS[k] : Number(v);
+      if (isNaN(n)) n = DEFAULTS[k];
+      out[k] = n;
+    });
+    return out;
+  };
   // v3.9.x：群聊页/群聊回复逻辑读取群聊回复设置（含默认值）
   window.groupChatCfg = function () {
     try {

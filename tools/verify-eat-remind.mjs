@@ -81,7 +81,7 @@ function check(desc, ok, detail) { results.push({ desc, ok: !!ok }); console.log
 // ---- S 组：静态接线（读构建产物） ----
 const built = readFileSync(join(root, 'index.html'), 'utf8');
 check('S1 构建产物含 DEFAULT_CARD_DATA.eat（提醒吃饭/追问关心 两组）', built.indexOf('DEFAULT_CARD_DATA.eat') >= 0 && built.indexOf('"提醒吃饭"') >= 0 && built.indexOf('"追问关心"') >= 0);
-check('S2 字卡库注册【吃饭】tab（v3.15.x 由「吃什么」改名并排最前）', /'eat',\s*'吃饭'/.test(built) && /data-type="eat"/.test(built));
+check('S2 字卡库注册【吃饭】tab（v3.16.x 独立页 #fc-tabs 静态预置）', /data-type="eat">吃饭<\/button>/.test(readFileSync(join(root, 'src', 'template.html'), 'utf8')) && /data-type="eat"/.test(built));
 check('S3 吃什么页含 TA 提醒开关/概率按钮 + 饭点窗口表', built.indexOf('eat-remind-toggle') >= 0 && built.indexOf('eat-remind-prob') >= 0 && built.indexOf('EAT_REMIND_WINDOWS') >= 0);
 check('S4 触发链路 chatAddIn + bgNotifyCheck（TA的吃饭提醒）+ done 去重键', built.indexOf("name: 'TA的吃饭提醒'") >= 0 && built.indexOf("'eat-remind-done:'") >= 0 && /eatRemindFire[\s\S]{0,900}window\.chatAddIn/.test(built));
 check('S5 启动即查一次（打开应用恰在窗口内可立即触发）', /eatRemindMaybe\(\);\s*\/\/\s*启动即查一次/.test(built));
@@ -159,26 +159,26 @@ await readyPage();
 let t3 = await countRemindMsgs();
 check('T3 关闭「TA 提醒」后清掉 done 也不触发', t3.remind === 1, JSON.stringify(t3));
 
-// ---- T4 字卡库【系统预设字卡】新增「吃什么」tab + 分组渲染 + 逐张开关联动抽取池 ----
+// ---- T4 字卡库【其他互动功能字卡】新增「吃什么」tab + 分组渲染 + 逐张开关联动抽取池 ----
 await readyPage(); // en 仍为 '0'，调度器不触发，计数不受 UI 操作影响
-await evalJs("(function(){document.querySelectorAll('.page').forEach(function(p){p.hidden=true;});var li=document.getElementById('li-default-cards');if(li)li.click();return true;})()");
+await evalJs("(function(){document.querySelectorAll('.page').forEach(function(p){p.hidden=true;});var li=document.getElementById('li-fun-cards');if(li)li.click();return true;})()");
 await sleep(800);
 let tabInfo = JSON.parse(await evalJs(`(function(){
-  var b = document.querySelector('#dc-tabs [data-type="eat"]');
+  var b = document.querySelector('#fc-tabs [data-type="eat"]');
   if (!b) return JSON.stringify({ has: false });
   b.click();
   return JSON.stringify({ has: true, label: b.textContent });
 })()`) || '{}');
 await sleep(700);
-check('T4 【系统预设字卡】出现「吃饭」tab 且可切换', tabInfo.has && tabInfo.label === '吃饭', JSON.stringify(tabInfo));
+check('T4 【其他互动功能字卡】出现「吃饭」tab 且可切换', tabInfo.has && tabInfo.label === '吃饭', JSON.stringify(tabInfo));
 let grp = JSON.parse(await evalJs(`(function(){
-  var hs = Array.prototype.slice.call(document.querySelectorAll('#dc-list .cc-group-header'));
-  return JSON.stringify({ names: hs.map(function (h) { return (h.querySelector('.ccg-name') || {}).textContent || ''; }), items: document.querySelectorAll('#dc-list .cc-item').length });
+  var hs = Array.prototype.slice.call(document.querySelectorAll('#fc-list .cc-group-header'));
+  return JSON.stringify({ names: hs.map(function (h) { return (h.querySelector('.ccg-name') || {}).textContent || ''; }), items: document.querySelectorAll('#fc-list .cc-item').length });
 })()`) || '{}');
 check('T4 「吃什么」tab 渲染 提醒吃饭/追问关心 两分组 + 卡片列表', grp.names.indexOf('提醒吃饭') >= 0 && grp.names.indexOf('追问关心') >= 0 && grp.items > 0, JSON.stringify(grp));
 let offRes = JSON.parse(await evalJs(`(function(){
   try {
-    var it = document.querySelector('#dc-list .cc-item');
+    var it = document.querySelector('#fc-list .cc-item');
     if (!it) return JSON.stringify({ err: 'no item' });
     var txtEl = it.querySelector('.t');
     var txt = txtEl ? txtEl.textContent.replace(/\\s*系统$/, '').trim() : '';

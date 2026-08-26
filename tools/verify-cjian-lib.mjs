@@ -36,17 +36,16 @@ function check(desc, ok, detail) {
   check('A3 播报池含内置兜底原句（气息/落空 各至少含一句与 cjian.js 兜底一致）',
     lib.includes('可以感觉到一点熟悉的气息。') && lib.includes('没有感觉到谁。'));
 
-  const cardsSrc = readFileSync(join(root, 'src', 'js', 'default-cards.js'), 'utf8');
-  const orderM = cardsSrc.match(/\[\['fish',[\s\S]*?\]\]\.forEach/);
-  const orderTxt = orderM ? orderM[0] : '';
-  const wantOrder = ['fish', 'eat', 'period', 'water', 'garden', 'sync', 'reach', 'cjian', 'room', 'piggy'];
-  const gotOrder = wantOrder.map(k => orderTxt.indexOf("'" + k + "'"));
-  check('A4 功能类 tab 合一连排且顺序正确（摸鱼 吃饭 经期 喝水 花园 同频 伸手 此间 房间 存钱罐，互动回应移末位）',
-    !!orderM && gotOrder.every((v, i) => v >= 0 && (i === 0 || v > gotOrder[i - 1])) &&
-    cardsSrc.indexOf("data-type=\"interact\"") > orderTxt.length + cardsSrc.indexOf(orderM[0]) - 1,
-    { gotOrder: gotOrder });
+  const tplSrc = readFileSync(join(root, 'src', 'template.html'), 'utf8');
+  // v3.16.x：功能触发字卡已从「聊天默认字卡」拆到独立页 page-fun-cards（#fc-tabs），
+  // 摸鱼/吃饭/经期/喝水/花园/同频/伸手/此间/房间/存钱罐/漂流瓶/互动回应 全量预置
+  const fcTabs = (tplSrc.match(/<div class="card-tabs" id="fc-tabs">([\s\S]*?)<\/div>/) || [])[1] || '';
+  const fcOrder = (fcTabs.match(/data-type="([^"]+)"/g) || []).map(s => s.replace(/data-type="/, '').replace(/"/, ''));
+  const wantOrder = ['fish', 'eat', 'period', 'water', 'garden', 'sync', 'reach', 'cjian', 'room', 'piggy', 'drift', 'interact'];
+  check('A4 功能类 tab 独立成页（#fc-tabs）且顺序正确（摸鱼…存钱罐，漂流瓶，互动回应末位）',
+    fcOrder.join(',') === wantOrder.join(','), { fcOrder: fcOrder });
   check('A5 三类改名仍在（摸鱼/吃饭/经期 短标签）',
-    /\['fish',\s*'摸鱼'],\s*\['eat',\s*'吃饭'],\s*\['period',\s*'经期']/.test(cardsSrc));
+    /data-type="fish">摸鱼<\/button>[\s\S]*?data-type="eat">吃饭<\/button>[\s\S]*?data-type="period">经期<\/button>/.test(fcTabs));
 
   const cjSrc = readFileSync(join(root, 'src', 'js', 'cjian.js'), 'utf8');
   check('A6 cjian.js 感知播报接同源池：cjLine 助手 + getLibPool(cjian,group) + isDefaultCardOff 过滤，两处调用点',
@@ -150,38 +149,44 @@ await cdp('Page.navigate', { url: baseUrl + '/index.html' });
 await sleep(2600);
 
 // ---- B 组：运行时 UI 与联动 ----
-// B1/B2/B3：【系统预设字卡】出现「此间」tab、渲染四组 17 张、单卡开关写入 dc-off-cjian
-await evalJs("(function(){var li=document.getElementById('li-default-cards');document.querySelectorAll('.page').forEach(function(p){p.hidden=true;});if(li)li.click();return 1;})()");
+// B1/B2/B3：字卡库【其他互动功能字卡】出现「此间」tab、渲染四组 17 张、单卡开关写入 dc-off-cjian
+await evalJs("(function(){var li=document.getElementById('li-fun-cards');document.querySelectorAll('.page').forEach(function(p){p.hidden=true;});if(li)li.click();return 1;})()");
 await sleep(700);
-// B0 入口角标动态化（用户反馈：写死「3260」数量不对）——角标应等于 DEFAULT_CARD_DATA 全库实际总数
+// B0 入口角标动态化——「聊天默认字卡」角标=四大基础分类总数；
+// 「其他互动功能字卡」角标=功能分类总数（动态统计，不再写死 3260）
 const badge = JSON.parse(await evalJs(`(function(){
-  var D=window.DEFAULT_CARD_DATA||{},n=0;Object.keys(D).forEach(function(k){(D[k]||[]).forEach(function(g){n+=(g[1]||[]).length;});});
+  var D=window.DEFAULT_CARD_DATA||{};
+  var BASE=['main','kaomoji','emoji','touch'];
+  var FUNC=['fish','eat','period','water','garden','sync','reach','cjian','room','piggy','drift','interact'];
+  function sum(keys){var n=0;keys.forEach(function(k){(D[k]||[]).forEach(function(g){n+=(g[1]||[]).length;});});return n;}
   var el=document.querySelector('#li-default-cards .t');
-  return JSON.stringify({badge:el?el.textContent:'',total:n});
+  var fel=document.getElementById('fc-lib-count');
+  return JSON.stringify({badge:el?el.textContent:'',base:sum(BASE),funBadge:fel?fel.textContent:'',fun:sum(FUNC)});
 })()`) || '{}');
-check('B0 字卡库入口角标=全库实际总数（动态统计，不再写死 3260）',
-  badge.badge === String(badge.total) && Number(badge.total) > 5000, badge);
+check('B0 两个入口角标分别=基础/功能分类实际总数（动态统计，不再写死 3260）',
+  badge.badge === String(badge.base) && Number(badge.base) > 4000 &&
+  badge.funBadge === String(badge.fun) && Number(badge.fun) > 500, badge);
 const tabInfo = JSON.parse(await evalJs(`(function(){
-  var b=document.querySelector('#dc-tabs [data-type="cjian"]');
+  var b=document.querySelector('#fc-tabs [data-type="cjian"]');
   if(!b)return JSON.stringify({has:false});
-  document.querySelectorAll('#dc-tabs .cc-tab').forEach(function(t){t.classList.remove('sel');});
+  document.querySelectorAll('#fc-tabs .cc-tab').forEach(function(t){t.classList.remove('sel');});
   b.classList.add('sel');b.click();
   return JSON.stringify({has:true,label:b.textContent});
 })()`) || '{}');
-check('B1 【系统预设字卡】出现「此间」tab 且可点击', tabInfo.has && tabInfo.label === '此间', tabInfo);
+check('B1 【其他互动功能字卡】出现「此间」tab 且可点击', tabInfo.has && tabInfo.label === '此间', tabInfo);
 await sleep(600);
 const grp = JSON.parse(await evalJs(`(function(){
-  var hs=[].slice.call(document.querySelectorAll('#dc-list .cc-group-header'));
+  var hs=[].slice.call(document.querySelectorAll('#fc-list .cc-group-header'));
   return JSON.stringify({names:hs.map(function(h){return (h.querySelector('.ccg-name')||{}).textContent||'';}),
     counts:hs.map(function(h){return (h.querySelector('.ccg-count')||{}).textContent||'';}),
-    items:document.querySelectorAll('#dc-list .cc-item').length});
+    items:document.querySelectorAll('#fc-list .cc-item').length});
 })()`) || '{}');
 check('B2 「此间」tab 渲染四组 17 张（在场感知5/空闲状态6/感知·气息4/感知·落空2）',
   grp.names.join(',') === '在场感知,空闲状态,感知·气息,感知·落空' && grp.counts.join(',') === '5,6,4,2' && grp.items === 17,
   grp);
 const tog = JSON.parse(await evalJs(`(function(){
   try{
-    var it=[].slice.call(document.querySelectorAll('#dc-list .cc-item')).find(function(x){return (x.textContent||'').indexOf('没有感觉到谁。')>=0;});
+    var it=[].slice.call(document.querySelectorAll('#fc-list .cc-item')).find(function(x){return (x.textContent||'').indexOf('没有感觉到谁。')>=0;});
     if(!it)return JSON.stringify({err:'no-item'});
     var input=it.querySelector('input');
     input.checked=false;input.dispatchEvent(new Event('change',{bubbles:true}));

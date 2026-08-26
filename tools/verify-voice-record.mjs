@@ -40,6 +40,9 @@ check('A6 chat.js syncMicBtn 读同一键控制显隐', chatSrc.includes("store.
 check('A7 chat.js 发送走既有语音格式（type:\'voice\' + 名称|||dataURL）', /addRec\(\{ side: 'out', text: name \+ '\|\|\|' \+ voiceDataUrl, type: 'voice' \}\)/.test(chatSrc));
 check('A8 mobile-adapt 两浮层列表均已登记 #voice-panel', maSrc.includes("'#voice-panel'") && (maSrc.match(/'#voice-panel'/g) || []).length >= 2);
 check('A9 chat-main.css 有 .voice-* 样式段 + 深色兜底 + reduced-motion', cmCss.includes('.voice-card') && cmCss.includes('[data-theme="dark"] .voice-preview') && cmCss.includes('prefers-reduced-motion'));
+check('A10 录音过短保护（<800ms 丢弃 + toast）', chatSrc.includes("Date.now() - voiceStartTs < 800") && chatSrc.includes("录音太短"));
+check('A11 到 60 秒自动停止提示', chatSrc.includes("已达最长 60 秒"));
+check('A12 录音中途切后台停止（visibilitychange 监听 + 清理）', chatSrc.includes('voiceVisHandler') && chatSrc.includes("addEventListener('visibilitychange', voiceVisHandler)") && chatSrc.includes("removeEventListener('visibilitychange', voiceVisHandler)"));
 
 if (!results.every(r => r.ok)) { console.log('\n静态断言未全绿，停止运行时验证'); process.exit(1); }
 
@@ -212,6 +215,30 @@ await evalJs("(function(){window.activeStore().set('cs-voice-send','0');document
 await sleep(300);
 let b10 = await evalJs("(function(){var b=document.getElementById('chat-mic-btn');var p=document.getElementById('voice-panel');return JSON.stringify({mic:getComputedStyle(b).display,panelHidden:p.hidden});})()");
 check('B10 关闭后按钮隐藏、半框收起', /none/.test(String(b10)) && /true/.test(String(b10)), b10);
+
+// ---- B12 录音过短保护（<800ms 丢弃，发送按钮仍禁用） ----
+await evalJs("(function(){window.activeStore().set('cs-voice-send','1');document.dispatchEvent(new Event('voice-send-changed'));document.getElementById('chat-mic-btn').click();return 1;})()");
+await sleep(400);
+await evalJs("(function(){document.getElementById('voice-record-btn').click();return 1;})()"); // 开始
+await sleep(150);
+await evalJs("(function(){document.getElementById('voice-record-btn').click();return 1;})()"); // 立即停止（~150ms < 800ms）
+await sleep(1200);
+const b12 = JSON.parse(await evalJs("(function(){var sb=document.getElementById('voice-send-btn');var pv=document.getElementById('voice-preview');return JSON.stringify({sendDis:sb.disabled,pvHidden:pv.hidden,btn:document.getElementById('voice-record-btn').textContent});})()") || '{}');
+check('B12 录音过短被丢弃（发送仍禁用/试听行不显示）', b12.sendDis === true && b12.pvHidden === true, JSON.stringify(b12));
+await evalJs("(function(){document.getElementById('voice-close').click();return 1;})()");
+await sleep(250);
+
+// ---- B13 录音中途切后台停止（visibilitychange→hidden） ----
+await evalJs("(function(){document.getElementById('chat-mic-btn').click();return 1;})()");
+await sleep(400);
+await evalJs("(function(){document.getElementById('voice-record-btn').click();return 1;})()");
+await sleep(800);
+await evalJs("(function(){Object.defineProperty(document,'visibilityState',{value:'hidden',configurable:true});document.dispatchEvent(new Event('visibilitychange'));return 1;})()");
+await sleep(600);
+const b13 = JSON.parse(await evalJs("(function(){var p=document.getElementById('voice-panel');var rb=document.getElementById('voice-record-btn');return JSON.stringify({recording:p.className.indexOf('recording')>=0,btn:rb.textContent});})()") || '{}');
+check('B13 切后台后录音停止（退出 recording 态/按钮变重新录音）', b13.recording === false && b13.btn === '重新录音', JSON.stringify(b13));
+await evalJs("(function(){document.getElementById('voice-close').click();window.activeStore().set('cs-voice-send','0');document.dispatchEvent(new Event('voice-send-changed'));return 1;})()");
+await sleep(250);
 
 // ---- B11 全程零 JS 异常 ----
 const errs = await evalJs('window.__jsErrors ? window.__jsErrors.length : 0');

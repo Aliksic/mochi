@@ -104,6 +104,8 @@
   }
   function caresSave(list) { store.set('records-care', JSON.stringify(list.slice(0, 100))); }
   // kind: checkin=查岗 / period=经期关心 / water=喝水提醒 / eat=吃饭提醒 / pomo=番茄陪伴
+  // v3.17.x：desk-checkin=桌面查岗（跨桌面「来消息」触发的查岗，记到【该联系人自己桌面】的
+  // records-care，主页关心记录按联系人聚合展示；与聊天里触发的 checkin 区分，见 renderCarePanel）
   window.addCareRecord = function (kind, text, ts) {
     const list = caresLoad();
     list.unshift({ kind: kind, text: text || '', ts: ts || Date.now() });
@@ -111,13 +113,24 @@
     const hp = document.getElementById('page-home');
     if (hp && !hp.hidden && htab === 'care') renderCarePanel();
   };
+  // v3.17.x：写【指定联系人桌面】的关心记录——跨桌面查岗落在该桌面自己的命名空间
+  window.addCareRecordFor = function (cid, kind, text, ts) {
+    try {
+      const s = (cid && window.storeFor) ? window.storeFor(cid) : store;
+      let list = [];
+      try { list = JSON.parse(s.get('records-care') || '[]'); } catch (e) { list = []; }
+      if (!Array.isArray(list)) list = [];
+      list.unshift({ kind: kind, text: text || '', ts: ts || Date.now() });
+      s.set('records-care', JSON.stringify(list.slice(0, 100)));
+    } catch (e) {}
+  };
   // 查岗/经期/喝水/吃饭从聊天记录回溯（带 tag 或 ask-card），番茄陪伴读 records-care
   function renderCarePanel() {
     const el = document.getElementById('home-care');
     if (!el) return;
     const name = store.get('lbl-partner') || (window.taWord ? window.taWord() : 'TA');
     const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-    const KIND_ICON = { checkin: '📋', period: '🌸', water: '💧', eat: '🍚', pomo: '🍅' };
+    const KIND_ICON = { checkin: '📋', period: '🌸', water: '💧', eat: '🍚', pomo: '🍅', deskcheck: '🏠' };
     const rows = [];
     // 1) 番茄陪伴：records-care 里的 pomo 记录（只记时间）
     caresLoad().forEach(r => { if (r.kind === 'pomo') rows.push({ icon: '🍅', main: '番茄钟陪伴', sub: fmtDT(r.ts), ts: r.ts }); });
@@ -138,6 +151,23 @@
         if (!nearCard) rows.push({ icon: KIND_ICON.checkin, main: '查岗', sub: fmtDT(t), ts: t });
       }
     });
+    // 3) 桌面查岗（v3.17.x）：跨桌面「来消息」触发的查岗——记在各联系人自己桌面的
+    //    records-care（addCareRecordFor 写入），这里按联系人聚合展示。
+    //    与聊天触发的查岗（上一节 checkin）分开列：主文案「桌面查岗 · <联系人昵称>」。
+    if (window.getContacts) {
+      (window.getContacts() || []).forEach(function (c) {
+        let care = [];
+        try {
+          const s = (c.id && window.storeFor) ? window.storeFor(c.id) : store;
+          care = JSON.parse(s.get('records-care') || '[]');
+        } catch (e) { care = []; }
+        (Array.isArray(care) ? care : []).forEach(function (r) {
+          if (!r || r.kind !== 'desk-checkin') return;
+          const cname = (c && c.name) || 'TA';
+          rows.push({ icon: KIND_ICON.deskcheck, main: '桌面查岗 · ' + esc(cname) + ' · ' + esc(r.text || ''), sub: fmtDT(r.ts || 0), ts: r.ts || 0 });
+        });
+      });
+    }
     if (!rows.length) { el.innerHTML = '<div class="ta-empty">暂无联系人的关心记录（TA 会主动查岗、提醒你喝水吃饭、关心经期、陪你专注）</div>'; return; }
     rows.sort((a, b) => (b.ts || 0) - (a.ts || 0));
     el.innerHTML = rows.map(r => '<div class="tc-listitem"><div class="tc-li-top"><span class="tc-li-q">' + r.icon + ' ' + r.main + '</span><span class="tc-li-time">' + r.sub + '</span></div></div>').join('');

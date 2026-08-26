@@ -529,6 +529,7 @@
       // v3.6.x：锁定弹窗——点遮罩/取消都不关闭，必须点同意/拒绝
       lock: true,
       pills: [{ label: '同意', value: '1' }, { label: '拒绝', value: '0' }],
+      pill: '1',
       staticText: name + ' 邀请你换上这张头像'
     });
     // 弹窗里附上新头像预览（openModal 只支持文字，预览图追加进 static 区）

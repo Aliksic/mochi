@@ -179,7 +179,7 @@ if (p0 && p1) {
   check('C5 band2 起点跨页误差 ≤4px', d2 <= 4, 'Δ=' + d2.toFixed(1));
 } else check('C 组前置：三页存在', false, 'pages=' + pages.length);
 
-// ---- C' 组：第三页与 1/2 页整列同节奏（hero 190 / 备忘心情同行 77 / 图标组底部对齐） ----
+// ---- C' 组：第三页与 1/2 页整列同节奏（hero 160 / 备忘心情同行 77 / 图标组全一致底部对齐） ----
 const p2 = pages[2];
 if (p2) {
   const period = find(p2, 'desk-period');
@@ -188,10 +188,10 @@ if (p2) {
   const ck0 = p0 ? find(p0, 'checkin') : null;
   const grid0 = p0 ? find(p0, 'apps') : null;
   const grid2 = find(p2, 'p3apps');
-  check('C6 第三页首卡=经期卡 190 hero 档（不流失隐藏池）',
-    !!period && Math.abs(period.H - 190) <= 2 && Math.abs(period.T - 14) <= 1,
+  check('C6 第三页首卡=经期卡 160 hero 档（比 1/2 页首卡矮 30，为 3 行图标让位；不流失隐藏池）',
+    !!period && Math.abs(period.H - 160) <= 2 && Math.abs(period.T - 14) <= 1,
     period ? 'H=' + period.H.toFixed(1) + ' T=' + period.T.toFixed(1) : 'desk-period 不在第三页');
-  // 备忘/心情已改左右两半卡同行（缩小）：行高 77 与本周日常档一致，两张卡各宽半行
+  // 备忘/心情左右两半卡同行（缩小）：行高 77 与本周日常档一致，两张卡各宽半行
   const cc = await evalJs(`(function(){
     var row=document.querySelector('.page-slide.third .mini-row');
     if(!row)return {};
@@ -206,16 +206,36 @@ if (p2) {
   check('C9 心情卡 77（与备忘同高，同行两半卡）', Math.abs((cc.moodH || 0) - 77) <= 2, 'moodH=' + cc.moodH);
   check('C10 两卡各半行宽 171', Math.abs((cc.memoW || 0) - 171) <= 2 && Math.abs((cc.moodW || 0) - 171) <= 2,
     'memoW=' + cc.memoW + ' moodW=' + cc.moodW);
-  // v3.16.x：三页功能图标底部对齐——第三页图标组底部与 1/2 页图标组底部误差 ≤2px
+  // v3.16.x：三页功能图标完全一致——图标大小 58、行高 96、图标下沿与 grid 底部全部对齐
   const grid1 = p1 ? find(p1, 'p2apps') : null;
-  const dBottom = grid0 && grid2 ? Math.abs(grid0.B - grid2.B) : 999;
-  const dBottom12 = grid0 && grid1 ? Math.abs(grid0.B - grid1.B) : 999;
-  check('C11 三页功能图标组底部对齐（P1↔P3 ≤2px）', dBottom <= 2, 'ΔP1P3=' + dBottom.toFixed(1) +
-    ' P1B=' + (grid0 && grid0.B.toFixed(1)) + ' P2B=' + (grid1 && grid1.B.toFixed(1)) + ' P3B=' + (grid2 && grid2.B.toFixed(1)));
-  check('C11b P1↔P2 图标组底部对齐（回归）', dBottom12 <= 2, 'Δ=' + dBottom12.toFixed(1));
+  const iconStats = await evalJs(`(function(){
+    var slides=document.querySelectorAll('#desktop-pages .page-slide');
+    var res=[];
+    slides.forEach(function(sl){
+      var g=sl.querySelector('.app-grid');
+      if(!g)return;
+      var ico=g.querySelector('.app-ico'), first=g.querySelector('.app'), last=Array.prototype.slice.call(g.querySelectorAll('.app')).pop();
+      var gr=g.getBoundingClientRect();
+      res.push({icoH:Math.round(ico.getBoundingClientRect().height*10)/10,
+        rowGap:getComputedStyle(g).rowGap,
+        gridB:Math.round(gr.bottom*10)/10,
+        lastAppB:Math.round(last.getBoundingClientRect().bottom*10)/10});
+    });
+    return JSON.stringify(res);
+  })()`) || '[]';
+  const ics = JSON.parse(iconStats);
+  const iconSame = ics.length === 3 && ics.every(x => x.icoH === ics[0].icoH && x.rowGap === ics[0].rowGap);
+  const bottomSame = ics.length === 3 && ics.every(x => Math.abs(x.gridB - ics[0].gridB) <= 0.6);
+  const lastSame = ics.length === 3 && ics.every(x => Math.abs(x.lastAppB - ics[0].lastAppB) <= 0.6);
+  check('C11 三页图标大小/行距一致（58px / 14px）', iconSame,
+    ics.map(x => x.icoH + 'px/' + x.rowGap).join(' '));
+  check('C11b 三页图标组底部对齐（grid 底 ±0.6px）', bottomSame,
+    ics.map(x => 'B=' + x.gridB).join(' '));
+  check('C11c 三页最后一行图标下沿对齐（±0.6px）', lastSame,
+    ics.map(x => '下沿=' + x.lastAppB).join(' '));
   check('C12 备忘录横幅已删除（#memo-app-badge 不存在）',
     await evalJs("!document.getElementById('memo-app-badge')") === true, '');
-  void memoRow; void ck0;
+  void memoRow; void ck0; void grid0; void grid2; void grid1;
 } else check("C' 组前置：第三页存在", false, '');
 
 // ---- D 组：摸鱼卡结构 + 无 JS 异常 ----
