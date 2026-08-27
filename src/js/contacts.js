@@ -461,6 +461,13 @@
       document.body.appendChild(m);
       m.addEventListener('click', (e) => { if (e.target === m) hideContactModal(m); });
     }
+    // v3.x：列表 overflow-y:auto 在部分设备（如红米 K80 Chrome）会露出灰色滚动条，
+    // 与全站其余滚动容器「隐藏滚动条」的观感不一致——隐藏但保留滚动能力。
+    if (!document.getElementById('cm-scrollbar-hide')) {
+      const st = document.createElement('style'); st.id = 'cm-scrollbar-hide';
+      st.textContent = '.cm-list{scrollbar-width:none;-ms-overflow-style:none}.cm-list::-webkit-scrollbar{display:none}';
+      document.head.appendChild(st);
+    }
     return m;
   }
   window.openContactManager = function () {
@@ -470,7 +477,7 @@
     // v3.11.x：颜色改主题变量（内联硬编码浅色在深色模式下白底白字不可见）
     box.style.cssText = 'width:min(92vw,420px);max-height:80vh;display:flex;flex-direction:column;background:var(--card-bg,#fff);color:var(--ink,#111);border-radius:16px;padding:18px;box-shadow:0 8px 30px rgba(0,0,0,.2)';
     box.appendChild(el('div', '', '<div style="font-size:16px;font-weight:600;margin-bottom:4px">联系人 / 桌面</div><div style="font-size:12px;color:var(--muted,#888);margin-bottom:12px">每个联系人数据独立；仅朋友圈互通<br>「称呼」可设置消息里 TA 的性别叫法（他 / 她 / 不设置）</div>'));
-    const list = el('div'); list.style.cssText = 'display:flex;flex-direction:column;gap:8px;margin-bottom:12px;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;flex:1;min-height:0';
+    const list = el('div', 'cm-list'); list.style.cssText = 'display:flex;flex-direction:column;gap:8px;margin-bottom:12px;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;flex:1;min-height:0';
     getContacts().forEach(c => {
       const row = el('div');
       row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px;border:1px solid var(--card-border,#eee);border-radius:10px';

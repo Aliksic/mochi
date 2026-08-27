@@ -5785,13 +5785,10 @@ scrollChatBottom();
 window.openVoicePanelFor = function (onSend) { openVoicePanel({ onSend: onSend }); };
 function pickVoiceMime() {
 if (typeof MediaRecorder === 'undefined' || !MediaRecorder.isTypeSupported) return '';
-// v3.16.x 修复：MIME 优先级按平台区分——iOS Safari 只有 mp4/aac 能播/能录，优先 mp4；
-// 安卓 WebView（vivo/iQOO 等的第三方浏览器）对音频 mp4 常「报支持却录不出数据」，
-// 必须优先 webm/opus 才稳，否则会拿到录音为空的坏音频。
-const dev = window.mochiDevice || {};
-const list = dev.isIOS
-  ? ['audio/mp4', 'audio/aac', 'audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus']
-  : ['audio/webm;codecs=opus', 'audio/ogg;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/aac'];
+// 优先级：mp4/aac 在最前——这是本机「能录又能播」的稳妥格式（字卡里 mp3/caf/amr/aac 都能播，
+// mp4/aac 覆盖面最广，也是 iOS Safari 唯一可录可播的格式）。webm/opus 只做兜底：
+// 部分安卓 WebView（vivo/iQOO 的雨见等）对 webm/opus 能录却解不了——录出来试听/播放没声。
+const list = ['audio/mp4', 'audio/aac', 'audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus'];
 for (let i = 0; i < list.length; i++) {
 try { if (MediaRecorder.isTypeSupported(list[i])) return list[i]; } catch (e) {}
 }
@@ -5919,16 +5916,22 @@ if (voiceRec && voiceRec.state === 'recording') stopVoiceRec(false);
 else await startVoiceRec();
 }
 function toggleVoicePlay() {
-if (!voiceDataUrl) return;
+if (!voiceDataUrl) { toast('还没有录音'); return; }
 if (voicePreviewAudio && !voicePreviewAudio.paused) { voiceStopPreview(); return; }
 voiceStopPreview();
 const a = new Audio(voiceDataUrl);
 voicePreviewAudio = a;
+// v3.16.x 修复：把 Audio 元素挂到 DOM 再播——部分安卓 WebView（雨见等）对未挂载的
+// Audio 会静默空放（play() 走完却不出声），挂进 DOM 走标准解码管线更稳；播完/出错即卸
+a.style.display = 'none';
+document.body.appendChild(a);
+const detached = () => { try { if (a.parentNode) a.parentNode.removeChild(a); } catch (e) {} if (voicePreviewAudio === a) voicePreviewAudio = null; };
 const pb = document.getElementById('voice-play-btn');
 if (pb) pb.classList.add('playing');
-a.addEventListener('ended', voiceStopPreview);
-a.addEventListener('error', () => { voiceStopPreview(); toast('语音播放失败'); });
-a.play().catch(() => { voiceStopPreview(); toast('语音播放失败'); });
+const cleanup = () => { detached(); voiceStopPreview(); };
+a.addEventListener('ended', () => { detached(); voiceStopPreview(); });
+a.addEventListener('error', () => { cleanup(); toast('语音播放失败'); });
+a.play().then(() => {}).catch(() => { cleanup(); toast('语音播放失败'); });
 }
 let voiceSendTarget = null; // 群聊等外部页面打开语音面板时设置：function(dataUrl, durSec) 把录好的语音发到自己的消息列表
 function sendVoiceMsg() {

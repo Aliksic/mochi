@@ -1069,6 +1069,9 @@
     const cropAvatarToSquare = function (dataUrl, cb) {
       try {
         const img = new Image();
+        // v3.20.x：http(s) 头像也尝试裁剪（安卓通知 icon 位会强制拉伸填充，非 1:1 图必变形）；
+        // 跨域图会污染 canvas，toDataURL 抛错走 cb('') 回退原图，不影响通知发送
+        if (/^https?:\/\//i.test(dataUrl)) { img.crossOrigin = 'anonymous'; }
         img.onload = function () {
           try {
             const size = Math.min(img.width, img.height);
@@ -1094,9 +1097,10 @@
         if (ok) markNotified(nkey);
       });
     };
-    if (bigIcon && bigIcon.indexOf('data:') === 0) {
-      // v3.15.x：裁剪失败不再丢弃头像——回退原 dataURL 交给 showSysNotification 的
+    if (bigIcon) {
+      // v3.15.x：裁剪失败不再丢弃头像——回退原图交给 showSysNotification 的
       // prepMediaBlobs 转 Blob；此前裁剪失败 cb('') 会直接丢头像导致通知无头像
+      // v3.20.x：data: 与 http(s) 头像都走 1:1 裁剪，杜绝通知 icon 位拉伸变形
       cropAvatarToSquare(bigIcon, function (u) { sendFinal(u || bigIcon); });
     } else {
       sendFinal(bigIcon);

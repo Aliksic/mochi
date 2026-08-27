@@ -294,6 +294,11 @@ try {
     let pillClicked = false;
     window.openModal = function (t, v, fn, opts) {
       opts = opts || {};
+      // v3.20.x：每次打开弹窗重置底部确认按钮文案为默认「确定」——此前只在调用方显式
+      // ctl.okText() 时才会写，若某次弹窗（如心意币「申请」）设过、下一个弹窗
+      // （如跨桌面通话/查岗的 pill 弹窗）没设，按钮就残留显示上一个弹窗文案。
+      // 需要定制文案的调用方在 openModal 返回后调 ctl.okText() 覆盖即可。
+      if (okBtn) okBtn.textContent = '确定';
       stayOnce = false;
       pillsOnOk = opts.pillsOnOk || null;
       noInput = !!(opts.noInput);
@@ -1673,7 +1678,7 @@ try {
     const head = document.createElement('div');
     head.innerHTML = '<div style="font-size:16px;font-weight:600;margin-bottom:4px">美化方案</div><div style="font-size:12px;color:var(--muted,#888);margin-bottom:12px">方案在所有联系人桌面通用，点「应用」一键切换当前桌面外观</div>';
     box.appendChild(head);
-    const list = document.createElement('div');
+    const list = document.createElement('div'); list.className = 'cm-list';
     list.style.cssText = 'display:flex;flex-direction:column;gap:8px;margin-bottom:12px;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;flex:1;min-height:0';
     const schemes = getSchemes();
     if (!schemes.length) {

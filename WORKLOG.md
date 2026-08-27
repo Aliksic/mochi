@@ -1,3 +1,10 @@
+### 2026-08-27 21:5x（✅ 完成·联系人/桌面切换弹窗列表隐藏灰色滚动条）
+- [本会话]（**已改 src/js/contacts.js + src/js/personalize.js**；已构建（21:54, sw: mochi-mtbl3ikv）+ verify 10/10 + 浏览器实测：列表可滚动但滚动条已隐藏；**未提交**）。
+  - **用户反馈**：切换桌面联系人的页面右边有莫名的灰色滚动条；补充说明是联系人很多、需要滑动时出现。
+  - **根因**：联系人/桌面弹窗（openContactManager）的列表用内联 `overflow-y:auto`，是全站唯一没隐藏滚动条的滚动容器（其余全用 `::-webkit-scrollbar{display:none}`）；联系人一多列表超限滚动，安卓 Chrome（红米K80）等就露出灰色滚动条。
+  - **修复**：contacts.js 的 ensureModal 注入一次性 `<style id=cm-scrollbar-hide>`（`.cm-list{scrollbar-width:none;...::-webkit-scrollbar{display:none}}`），列表加 `cm-list` 类；personalize.js 的「美化方案」弹窗列表（同款内联样式、从联系人弹窗进入）同步加 `cm-list` 复用同一规则。滚动能力保留。
+  - 验证：node tools/verify.mjs 10/10；无头浏览器复现确认列表内容(421px)>容器(260px)可滚动、修复后 scrollbar-width=none 且无可见滚动条。
+
 ### 2026-08-27 20:5x（✅ 完成·桌面三页底部功能图标彻底对齐——修复全部错位根因）
 - [本会话·完成]（**已改 src/css/home.css + src/css/base.css（AI-B 域）+ 已构建（20:57, sw: mochi-mta6hylc）+ tools/verify-desk-align.mjs 扩到 **23/23 全绿**（新增 E1 长情话不撑高 / E2 卡片缩放对齐 / E3 字号缩放对齐）+ npm run verify 10/10 + desk-icon-decor 7/7；未提交**）。
   - **用户三连反馈**「底部图标位置还是没对齐」——逐层排查出 3 个真实根因并全部修复：
@@ -7,12 +14,14 @@
   - **验证**：5 场景全对齐——手机 390×844 / 360×640 / 414×896 默认，桌面 1000×800 字号 115% / 卡片 115%，三页图标组底部全 636.3、末行图标下沿全 622.3。verify-desk-align 23/23；npm run verify 10/10；desk-icon-decor 7/7；desk-reset-period 9/10（FAIL 为脚本前置断言期望旧 bug 复现，改动前既有，非回归）。
   - ⚠️ 跨域说明：home.css/base.css 归 AI-B 域；未动 AI-A 功能文件。提交前请按协议 git diff 自查。
 
-### 2026-08-27（🐛 修复·vivo/iQOO 系浏览器「麦克风权限开着但语音录不了/录到空」）
-- [本会话]（**已改 src/js/chat.js（AI-A 域）+ tools/verify-voice-record.mjs**；已在临时目录构建验证 30/30 全绿；**未提交**；**请构建者（默认 AI-B）执行 node build.mjs 收口**）。
-  - **用户上报**：iQOO 手机 · 雨见浏览器，麦克风权限已开，但无法录音发送到聊天。
-  - **根因**：录音链路本身正确，但 iQOO（Vivo 系）安卓 WebView 有两个已知坑导致「权限开着却录不了/录出来是空」：①默认 `{audio:true}` 拿到的轨道被 AEC(回声消除)/降噪/自动增益处理，部分机型直接静音/空数据；②当前 MIME 列表把 `audio/mp4` 排第一（为 iOS），安卓 WebView 对音频 mp4 常「报支持却录不出数据」。
-  - **修复**（chat.js）：①新增 `acquireVoiceStream()`——先以「echoCancellation/noiseSuppression/autoGainControl=false + channelCount:1」请求，失败自动回退 `{audio:true}`，不堵死报障机型；②`pickVoiceMime()` 按平台拆分——iOS 优先 `audio/mp4`/`audio/aac`，安卓优先 `audio/webm;codecs=opus`/`ogg`；③MediaRecorder 挂 `onerror`，出错时清理定时器/轨道并把面板复位到初始态，不再卡「正在录音」。
-  - 验证：verify-voice-record.mjs 30/30（新增 A13/A14/A15 静态断言）。**需 iQOO 真机确认（雨见浏览器）：开启「我可发送语音」→ 点麦克风 → 录音应正常走表、试听、发送语音气泡。**
+### 2026-08-27（🐛 修复·vivo/iQOO 系浏览器「麦克风权限开着但语音录不了/录到空」+「录完点试听没反应」）
+- [本会话]（**已改 src/js/chat.js（AI-A 域）+ tools/verify-voice-record.mjs**；已在临时目录构建验证两轮均 30/30 全绿；**未提交**；**请构建者（默认 AI-B）执行 node build.mjs 收口**）。
+  - **用户上报①**：iQOO 手机 · 雨见浏览器，麦克风权限已开，但无法录音发送到聊天。
+  - **用户上报②**：录音能录了（①修复后），但发送录制语音面板里**点「试听」没反应**（非字卡库播放）。
+  - **根因①**：录音链路正确，但 iQOO（Vivo 系）安卓 WebView 默认 `{audio:true}` 拿到的轨道被 AEC（回声消除）/降噪/自动增益处理，部分机型直接静音/空数据。
+  - **根因②**：①修复时把安卓录音 MIME 顺手改成 webm/opus 优先，但雨见等安卓 WebView 的 `<audio>` 解码器对 webm/opus **能录却解不了**——录音能出却试听/播放没声；而 mp4/aac 是"能录又能播"的稳妥格式（字卡里 mp3/caf/amr/aac 都能播的同类）。
+  - **修复**（chat.js）：①新增 `acquireVoiceStream()`——先以「echoCancellation/noiseSuppression/autoGainControl=false + channelCount:1」请求麦克风，失败自动回退 `{audio:true}`；②`pickVoiceMime()` 恢复 **mp4/aac 最优先**（覆盖面最广 + iOS 唯一可录可播），webm/opus 仅兜底；③MediaRecorder 挂 `onerror` 复位面板不卡「正在录音」；④`toggleVoicePlay()` 试听把 `Audio` 元素挂到 DOM 再播、播完/出错即卸并复位，防安卓 WebView 对未挂载 Audio 静默空放。
+  - 验证：verify-voice-record.mjs 30/30（A13/A14/A15 静态断言更新）。**需 iQOO 真机确认（雨见）：开启「我可发送语音」→ 点麦克风 → 录音走表 → 试听出声音 → 发送成语音气泡。**
 ### 2026-08-27（🐛 修复·iOS 桌面美化模式「此间」「房间」图标无法更换图片）
 - [本会话]（**已改 src/js/cjian.js + src/js/room.js（AI-A 域）**；已构建（20:29, sw: mochi-mtbi2xs7）+ verify 通过；**未提交**；**请 AI-A 复核**）。
   - **用户上报**：iOS 默认浏览器 → 手机桌面美化模式，点「此间」(cjian)、「房间」(room) 图标弹不出「更换图片」菜单，其余图标正常。

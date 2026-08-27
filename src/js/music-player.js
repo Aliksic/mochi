@@ -47,6 +47,8 @@
   let reqData = null;        // 待确认的 TA 请求 {trackId}
   let curTab = 'lib';
   let playQueue = [];        // 播放队列：用户点「下一首播放」加入的歌曲 id 列表，播完当前手动/自动切歌时优先按序播放
+  let localPlId = 'default'; // 本地上传的目标播放列表（歌单），单选歌曲时由弹窗决定
+  let failMap = {};          // 连续播放失败计数（songId→次数），每次成功播放清零；用于区分临时/网络失败与真坏链
 
   function loadArr(k) { try { const v = JSON.parse(store.get(k) || 'null'); return Array.isArray(v) ? v : []; } catch(e){ return []; } }
   function saveArr(k, a) { store.set(k, JSON.stringify(a)); }
@@ -938,12 +940,27 @@
   // v3.6.x：改存 Blob（不再存 base64 dataURL 字符串）——夸克等浏览器对
   // `<audio src="data:...">`（尤其大段 base64）播放失效，Blob + 对象 URL 是标准播放方案
   function triggerUpload() {
-    const inp = document.createElement('input');
-    inp.type = 'file';
-    inp.accept = 'audio/*,.mp3,.m4a,.aac,.ogg,.wav,.flac';
-    inp.multiple = true;
-    inp.onchange = function () { if (this.files && this.files.length) uploadFiles(this.files); };
-    inp.click();
+    if (!window.openTCPanel) { localPlId = 'default'; }
+    // v3.x：本地上传前先选目标「播放列表（歌单）」——不再一律存进默认「我的音乐库」
+    window.openTCPanel('添加本地音乐', '' +
+      '<div class="sm-form">' +
+      '<div class="sm-fld"><label>上传到播放列表</label><select class="tc-input" id="sm-local-pl">' + targetPlOptions() + '</select></div>' +
+      '<div class="sm-fld-hint">选择一首或多首本地音频（mp3 / m4a / aac / ogg / wav / flac）存放进上面的歌单；选「新建歌单」可先建一个歌单再上传。</div>' +
+      '</div>' +
+      '<div class="mail-actions"><button class="cc-tool" id="sm-local-cancel">取消</button><button class="cc-tool" id="sm-local-ok">选择文件上传</button></div>');
+    document.getElementById('sm-local-cancel').addEventListener('click', () => { document.getElementById('tc-mask').hidden = true; });
+    document.getElementById('sm-local-ok').addEventListener('click', () => {
+      resolveTargetPlSel('sm-local-pl', (pid) => {
+        localPlId = pid || 'default';
+        document.getElementById('tc-mask').hidden = true;
+        const inp = document.createElement('input');
+        inp.type = 'file';
+        inp.accept = 'audio/*,.mp3,.m4a,.aac,.ogg,.wav,.flac';
+        inp.multiple = true;
+        inp.onchange = function () { if (this.files && this.files.length) uploadFiles(this.files); };
+        inp.click();
+      });
+    });
   }
   function uploadFiles(files) {
     const list = Array.from(files);
@@ -1025,7 +1042,7 @@
       readFile(file, function (buf) {
         const id = 'sm_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
         const name = file.name.replace(/\.[^.]+$/, '');
-        const item = { id: id, name: name, artist: '', url: '', source: 'local', duration: 0, playlistId: 'default', addedAt: Date.now() };
+        const item = { id: id, name: name, artist: '', url: '', source: 'local', duration: 0, playlistId: localPlId || 'default', addedAt: Date.now() };
         library.push(item);
         const payload = buf instanceof ArrayBuffer ? new Blob([buf], { type: file.type || 'audio/mpeg' }) : buf;
         // 尝试读取时长（读不到也能播放；3s 超时兜底，不阻塞队列）
@@ -1095,6 +1112,25 @@
   // 解析目标歌单：选"新建"时弹窗输入歌单名，创建后回调新歌单 id；否则直接回调选中 id
   function resolveTargetPlaylist(cb) {
     const sel = document.getElementById('sm-target-pl');
+    if (!sel) { cb('default'); return; }
+    const pid = sel.value;
+    if (pid === '__new__') {
+      if (!window.openModal) { cb('default'); return; }
+      window.openModal('新建歌单', '', (name) => {
+        name = (name || '').trim();
+        if (!name) { toast('请输入歌单名称'); return; }
+        const newId = 'spl_' + Date.now();
+        playlists.push({ id: newId, name: name, createdAt: Date.now() });
+        savePlaylists();
+        cb(newId);
+      });
+    } else {
+      cb(pid);
+    }
+  }
+  // 解析指定下拉（按 id）的目标歌单：选"新建"时弹窗建歌单，否则回调所选 id（本地上传用）
+  function resolveTargetPlSel(selId, cb) {
+    const sel = document.getElementById(selId);
     if (!sel) { cb('default'); return; }
     const pid = sel.value;
     if (pid === '__new__') {
@@ -2188,6 +2224,14 @@
     wantPlay = false; clearBgResume(); // v3.10.x：真失败＝停止意图，不再自动续播
     try { if (audio) audio.pause(); } catch (e) {}
     try { syncPlayIcons(false); } catch (e) {}
+    // v3.x：修复误报——播放失败不一定就是会员/付费歌曲。首次失败只有轻提示、不弹「移出」窗，
+    // 否则会把网络/链接临时失效的普通歌曲误判成会员并催删。连续失败才确认为坏链再提示移除。
+    const cnt = (failMap[m.id] || 0) + 1;
+    failMap[m.id] = cnt;
+    if (cnt < 2) {
+      try { toast('播放失败：可能是会员/付费歌曲或链接失效，可再点一次重试'); } catch (e) {}
+      return;
+    }
     if (!window.openModal) return;
     try {
       window.openModal('「' + (m.name || '这首歌') + '」播放失败', '', () => {
@@ -2196,7 +2240,7 @@
         saveLibrary();
         renderPage();
         toast('已移出音乐库');
-      }, { noInput: true, staticText: '链接可能已失效，或为会员/付费歌曲。要把它移出音乐库吗？' });
+      }, { noInput: true, staticText: '连续播放失败，可能是链接失效或会员/付费歌曲（也可能是网络临时问题）。确定把它移出音乐库吗？' });
     } catch (e) {}
   }
   function demoFallbackOrError(m) {
@@ -2299,7 +2343,7 @@
         } else { armAutoResume(); }
       }
     };
-    audio.onplay = function () { playRejected = false; bgResumeFails = 0; clearStallGuard(); disarmAutoResume(); clearBgResume(); wantPlay = true; syncPlayIcons(true); try { if (navigator.mediaSession) navigator.mediaSession.playbackState = 'playing'; } catch (e) {} try { window.__musicPlaying = true; } catch (e) {} };
+    audio.onplay = function () { playRejected = false; bgResumeFails = 0; clearStallGuard(); disarmAutoResume(); clearBgResume(); wantPlay = true; syncPlayIcons(true); if (m) failMap[m.id] = 0; try { if (navigator.mediaSession) navigator.mediaSession.playbackState = 'playing'; } catch (e) {} try { window.__musicPlaying = true; } catch (e) {} };
     audio.onpause = function () { syncPlayIcons(false); try { if (navigator.mediaSession) navigator.mediaSession.playbackState = 'paused'; } catch (e) {} try { window.__musicPlaying = false; } catch (e) {} // v3.10.x：非用户暂停（后台省电/音频焦点抢占/系统打断）→ 定时补播反击
       if (wantPlay && !callHoldPending) scheduleBgResume(); };
   }
@@ -2484,12 +2528,14 @@
     renderQueueBadge();
   }
   function renderQueueBadge() {
-    const btn = document.getElementById('sm-queue');
-    if (!btn) return;
-    let b = btn.querySelector('.sm-pb-badge');
-    if (!b) { b = document.createElement('span'); b.className = 'sm-pb-badge'; btn.appendChild(b); }
-    b.textContent = playQueue.length ? String(playQueue.length) : '';
-    b.hidden = !playQueue.length;
+    ['sm-queue', 'sm-f-queue'].forEach(function (id) {
+      const btn = document.getElementById(id);
+      if (!btn) return;
+      let b = btn.querySelector('.sm-pb-badge');
+      if (!b) { b = document.createElement('span'); b.className = 'sm-pb-badge'; btn.appendChild(b); }
+      b.textContent = playQueue.length ? String(playQueue.length) : '';
+      b.hidden = !playQueue.length;
+    });
   }
   function openQueuePanel() {
     if (!window.openTCPanel) return;
@@ -3459,6 +3505,8 @@
   if (fPrev) fPrev.addEventListener('click', prev);
   const fNext = document.getElementById('sm-f-next');
   if (fNext) fNext.addEventListener('click', next);
+  const fQueue = document.getElementById('sm-f-queue');
+  if (fQueue) fQueue.addEventListener('click', openQueuePanel);
   const fToggle = document.getElementById('music-float-en');
   if (fToggle) {
     fToggle.addEventListener('change', () => {

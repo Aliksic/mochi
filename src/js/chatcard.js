@@ -2177,7 +2177,22 @@
 
   // ---- 回复池：给聊天页提供「自定义聊天字卡（公用+专属合并）」里所有字卡 ----
   // v3.11.x：公用字卡对所有桌面联系人生效——各回复池一律取当前作用域+公用合并视图
+  // v3.22.x：修复「自定义字卡不被聊天回复使用」——启动回填预算把大字卡库键挂起在
+  // IDB（__xyIdbDeferredKeys）时，回复池读成空库。此前只有打开字卡库列表页/表情包
+  // 拍一拍面板才按需取回，聊天自动回复路径从不触发，联系人因此不再用我加的字卡。
+  // 这里在各回复池 getter 里检测到挂起键即按需取回（用户正在聊天=正在查看该字卡，
+  // 与表情包面板同一口径；hydrateLibScopes 内部带 in-flight 去重+链式排队），
+  // 取回后 store/memoryCache 立即可读，后续回复即用上字卡。
+  function maybeHydrateReplyPool() {
+    try {
+      if (window.libScopesDeferred && window.hydrateLibScopes &&
+          window.libScopesDeferred(['public', 'own'])) {
+        window.hydrateLibScopes(['public', 'own']);
+      }
+    } catch (e) {}
+  }
   window.getCustomCards = function () {
+    maybeHydrateReplyPool();
     const g = mergeWithPublic(groups);
     const out = [];
     Object.keys(g).forEach(t => g[t].forEach(([name, arr]) => arr.forEach(c => out.push(c))));
@@ -2185,6 +2200,7 @@
   };
   // 拍一拍字卡（自定义字卡里【拍一拍】分类）
   window.getPokeCards = function () {
+    maybeHydrateReplyPool();
     const g = mergeWithPublic(groups);
     const out = [];
     (g['poke'] || []).forEach(([name, arr]) => arr.forEach(c => out.push(c)));
@@ -2201,6 +2217,7 @@
     return typeof c === 'string' && (c.indexOf('data:image') === 0 || /^https?:\/\/[^\s"'<>]+$/i.test(c));
   }
   window.getMediaCards = function (type) {
+    maybeHydrateReplyPool();
     const g = mergeWithPublic(groups);
     const out = [];
     (g[type] || []).forEach(([name, arr]) => arr.forEach(c => {
@@ -2254,6 +2271,7 @@
   // v3.11.x：For 系列同样合并公用字卡——朋友圈/信箱/群聊等按联系人取池时，
   // 公用字卡对该联系人生效（专属部分仍读各自桌面）
   window.getCustomCardsFor = function (cid) {
+    maybeHydrateReplyPool();
     const raw = (window.storeFor && window.storeFor(cid) || window.xyStore('xy-home-v2:' + cid)).get('cc-groups');
     const g = mergeWithPublic(buildGroupsFrom(raw));
     const out = [];
@@ -2261,6 +2279,7 @@
     return out;
   };
   window.getPokeCardsFor = function (cid) {
+    maybeHydrateReplyPool();
     const raw = (window.storeFor && window.storeFor(cid) || window.xyStore('xy-home-v2:' + cid)).get('cc-groups');
     const g = mergeWithPublic(buildGroupsFrom(raw));
     const out = [];
@@ -2268,6 +2287,7 @@
     return out;
   };
   window.getMediaCardsFor = function (cid, type) {
+    maybeHydrateReplyPool();
     const raw = (window.storeFor && window.storeFor(cid) || window.xyStore('xy-home-v2:' + cid)).get('cc-groups');
     const g = mergeWithPublic(buildGroupsFrom(raw));
     const out = [];

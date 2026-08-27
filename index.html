@@ -4276,6 +4276,7 @@ white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 .sm-f-fill { height:100%; width:0; background:#111; border-radius:2px; }
 .sm-f-ctrl { display:flex; align-items:center; gap:1px; }
 .sm-f-btn {
+position:relative;
 width:26px; height:26px; border:none; background:transparent; color:#333;
 display:flex; align-items:center; justify-content:center; padding:0; cursor:pointer;
 }
@@ -7842,7 +7843,7 @@ transition-duration: .01ms !important;
       </div>
       <div class="splash-dots"><i></i><i></i><i></i></div>
       <div class="splash-brand">小红书@言序（1842523578）</div>
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787838112410">Mochi 字卡传讯 v3.6.272 · 部署于 2026-08-27 21:41</div>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787839586848">Mochi 字卡传讯 v3.6.273 · 部署于 2026-08-27 22:06</div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
       <div class="splash-loading" id="splash-loading">正在加载数据…</div>
@@ -8918,7 +8919,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.6.272</div>
+      <div class="ver">Mochi 字卡传讯 v3.6.273</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -9070,7 +9071,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.6.272</span>
+              <span class="lic-ver">v3.6.273</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -12256,6 +12257,7 @@ transition-duration: .01ms !important;
     <button class="sm-f-btn sm-f-heart" id="sm-f-heart" title="收藏">
       <svg id="sm-f-heart-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.5S4.5 15.2 4.5 9.9A4.9 4.9 0 0112 7.1a4.9 4.9 0 017.5 2.8c0 5.3-7.5 10.6-7.5 10.6z"/></svg>
     </button>
+    <button class="sm-f-btn" id="sm-f-queue" title="播放队列"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h13M3 12h13M3 18h7"/><path d="M18 15l3-3"/><path d="M15 21l3-3 3 3"/></svg><span class="sm-pb-badge"></span></button>
     <button class="sm-f-btn" id="sm-f-prev" title="上一首"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg></button>
     <button class="sm-f-btn sm-f-play" id="sm-f-play" title="播放/暂停"><svg id="sm-f-play-ico" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>
     <button class="sm-f-btn" id="sm-f-next" title="下一首"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg></button>
@@ -13342,6 +13344,11 @@ m.style.cssText = 'position:fixed;inset:0;z-index:89;align-items:center;justify-
 document.body.appendChild(m);
 m.addEventListener('click', (e) => { if (e.target === m) hideContactModal(m); });
 }
+if (!document.getElementById('cm-scrollbar-hide')) {
+const st = document.createElement('style'); st.id = 'cm-scrollbar-hide';
+st.textContent = '.cm-list{scrollbar-width:none;-ms-overflow-style:none}.cm-list::-webkit-scrollbar{display:none}';
+document.head.appendChild(st);
+}
 return m;
 }
 window.openContactManager = function () {
@@ -13350,7 +13357,7 @@ m.innerHTML = '';
 const box = el('div');
 box.style.cssText = 'width:min(92vw,420px);max-height:80vh;display:flex;flex-direction:column;background:var(--card-bg,#fff);color:var(--ink,#111);border-radius:16px;padding:18px;box-shadow:0 8px 30px rgba(0,0,0,.2)';
 box.appendChild(el('div', '', '<div style="font-size:16px;font-weight:600;margin-bottom:4px">联系人 / 桌面</div><div style="font-size:12px;color:var(--muted,#888);margin-bottom:12px">每个联系人数据独立；仅朋友圈互通<br>「称呼」可设置消息里 TA 的性别叫法（他 / 她 / 不设置）</div>'));
-const list = el('div'); list.style.cssText = 'display:flex;flex-direction:column;gap:8px;margin-bottom:12px;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;flex:1;min-height:0';
+const list = el('div', 'cm-list'); list.style.cssText = 'display:flex;flex-direction:column;gap:8px;margin-bottom:12px;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;flex:1;min-height:0';
 getContacts().forEach(c => {
 const row = el('div');
 row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px;border:1px solid var(--card-border,#eee);border-radius:10px';
@@ -14285,6 +14292,7 @@ let sliderInitPill = null;
 let pillClicked = false;
 window.openModal = function (t, v, fn, opts) {
 opts = opts || {};
+if (okBtn) okBtn.textContent = '确定';
 stayOnce = false;
 pillsOnOk = opts.pillsOnOk || null;
 noInput = !!(opts.noInput);
@@ -15513,7 +15521,7 @@ box.style.cssText = 'width:min(92vw,420px);max-height:80vh;display:flex;flex-dir
 const head = document.createElement('div');
 head.innerHTML = '<div style="font-size:16px;font-weight:600;margin-bottom:4px">美化方案</div><div style="font-size:12px;color:var(--muted,#888);margin-bottom:12px">方案在所有联系人桌面通用，点「应用」一键切换当前桌面外观</div>';
 box.appendChild(head);
-const list = document.createElement('div');
+const list = document.createElement('div'); list.className = 'cm-list';
 list.style.cssText = 'display:flex;flex-direction:column;gap:8px;margin-bottom:12px;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;flex:1;min-height:0';
 const schemes = getSchemes();
 if (!schemes.length) {
@@ -23906,10 +23914,7 @@ scrollChatBottom();
 window.openVoicePanelFor = function (onSend) { openVoicePanel({ onSend: onSend }); };
 function pickVoiceMime() {
 if (typeof MediaRecorder === 'undefined' || !MediaRecorder.isTypeSupported) return '';
-const dev = window.mochiDevice || {};
-const list = dev.isIOS
-? ['audio/mp4', 'audio/aac', 'audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus']
-: ['audio/webm;codecs=opus', 'audio/ogg;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/aac'];
+const list = ['audio/mp4', 'audio/aac', 'audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus'];
 for (let i = 0; i < list.length; i++) {
 try { if (MediaRecorder.isTypeSupported(list[i])) return list[i]; } catch (e) {}
 }
@@ -24034,16 +24039,20 @@ if (voiceRec && voiceRec.state === 'recording') stopVoiceRec(false);
 else await startVoiceRec();
 }
 function toggleVoicePlay() {
-if (!voiceDataUrl) return;
+if (!voiceDataUrl) { toast('还没有录音'); return; }
 if (voicePreviewAudio && !voicePreviewAudio.paused) { voiceStopPreview(); return; }
 voiceStopPreview();
 const a = new Audio(voiceDataUrl);
 voicePreviewAudio = a;
+a.style.display = 'none';
+document.body.appendChild(a);
+const detached = () => { try { if (a.parentNode) a.parentNode.removeChild(a); } catch (e) {} if (voicePreviewAudio === a) voicePreviewAudio = null; };
 const pb = document.getElementById('voice-play-btn');
 if (pb) pb.classList.add('playing');
-a.addEventListener('ended', voiceStopPreview);
-a.addEventListener('error', () => { voiceStopPreview(); toast('语音播放失败'); });
-a.play().catch(() => { voiceStopPreview(); toast('语音播放失败'); });
+const cleanup = () => { detached(); voiceStopPreview(); };
+a.addEventListener('ended', () => { detached(); voiceStopPreview(); });
+a.addEventListener('error', () => { cleanup(); toast('语音播放失败'); });
+a.play().then(() => {}).catch(() => { cleanup(); toast('语音播放失败'); });
 }
 let voiceSendTarget = null; // 群聊等外部页面打开语音面板时设置：function(dataUrl, durSec) 把录好的语音发到自己的消息列表
 function sendVoiceMsg() {
@@ -28035,13 +28044,23 @@ playingAudio.play().catch(() => { stopPlay(); toast('播放失败'); });
 });
 renderGroupsBar();
 render();
+function maybeHydrateReplyPool() {
+try {
+if (window.libScopesDeferred && window.hydrateLibScopes &&
+window.libScopesDeferred(['public', 'own'])) {
+window.hydrateLibScopes(['public', 'own']);
+}
+} catch (e) {}
+}
 window.getCustomCards = function () {
+maybeHydrateReplyPool();
 const g = mergeWithPublic(groups);
 const out = [];
 Object.keys(g).forEach(t => g[t].forEach(([name, arr]) => arr.forEach(c => out.push(c))));
 return out;
 };
 window.getPokeCards = function () {
+maybeHydrateReplyPool();
 const g = mergeWithPublic(groups);
 const out = [];
 (g['poke'] || []).forEach(([name, arr]) => arr.forEach(c => out.push(c)));
@@ -28054,6 +28073,7 @@ function isMediaImg(c) {
 return typeof c === 'string' && (c.indexOf('data:image') === 0 || /^https?:\/\/[^\s"'<>]+$/i.test(c));
 }
 window.getMediaCards = function (type) {
+maybeHydrateReplyPool();
 const g = mergeWithPublic(groups);
 const out = [];
 (g[type] || []).forEach(([name, arr]) => arr.forEach(c => {
@@ -28094,6 +28114,7 @@ try { renderGroupsBar(); render(); } catch (e) {}
 hydrateLibScopes(['public', 'own']);
 });
 window.getCustomCardsFor = function (cid) {
+maybeHydrateReplyPool();
 const raw = (window.storeFor && window.storeFor(cid) || window.xyStore('xy-home-v2:' + cid)).get('cc-groups');
 const g = mergeWithPublic(buildGroupsFrom(raw));
 const out = [];
@@ -28101,6 +28122,7 @@ Object.keys(g).forEach(t => (g[t] || []).forEach(([name, arr]) => (arr || []).fo
 return out;
 };
 window.getPokeCardsFor = function (cid) {
+maybeHydrateReplyPool();
 const raw = (window.storeFor && window.storeFor(cid) || window.xyStore('xy-home-v2:' + cid)).get('cc-groups');
 const g = mergeWithPublic(buildGroupsFrom(raw));
 const out = [];
@@ -28108,6 +28130,7 @@ const out = [];
 return out;
 };
 window.getMediaCardsFor = function (cid, type) {
+maybeHydrateReplyPool();
 const raw = (window.storeFor && window.storeFor(cid) || window.xyStore('xy-home-v2:' + cid)).get('cc-groups');
 const g = mergeWithPublic(buildGroupsFrom(raw));
 const out = [];
@@ -31212,6 +31235,8 @@ let cooldownAt = 0;        // TA 音乐请求冷却时间戳
 let reqData = null;        // 待确认的 TA 请求 {trackId}
 let curTab = 'lib';
 let playQueue = [];        // 播放队列：用户点「下一首播放」加入的歌曲 id 列表，播完当前手动/自动切歌时优先按序播放
+let localPlId = 'default'; // 本地上传的目标播放列表（歌单），单选歌曲时由弹窗决定
+let failMap = {};          // 连续播放失败计数（songId→次数），每次成功播放清零；用于区分临时/网络失败与真坏链
 function loadArr(k) { try { const v = JSON.parse(store.get(k) || 'null'); return Array.isArray(v) ? v : []; } catch(e){ return []; } }
 function saveArr(k, a) { store.set(k, JSON.stringify(a)); }
 function partnerName() { return window.activeStore().get('lbl-partner') || 'TA'; }
@@ -31962,12 +31987,26 @@ next(i + 1);
 next(0);
 }
 function triggerUpload() {
+if (!window.openTCPanel) { localPlId = 'default'; }
+window.openTCPanel('添加本地音乐', '' +
+'<div class="sm-form">' +
+'<div class="sm-fld"><label>上传到播放列表</label><select class="tc-input" id="sm-local-pl">' + targetPlOptions() + '</select></div>' +
+'<div class="sm-fld-hint">选择一首或多首本地音频（mp3 / m4a / aac / ogg / wav / flac）存放进上面的歌单；选「新建歌单」可先建一个歌单再上传。</div>' +
+'</div>' +
+'<div class="mail-actions"><button class="cc-tool" id="sm-local-cancel">取消</button><button class="cc-tool" id="sm-local-ok">选择文件上传</button></div>');
+document.getElementById('sm-local-cancel').addEventListener('click', () => { document.getElementById('tc-mask').hidden = true; });
+document.getElementById('sm-local-ok').addEventListener('click', () => {
+resolveTargetPlSel('sm-local-pl', (pid) => {
+localPlId = pid || 'default';
+document.getElementById('tc-mask').hidden = true;
 const inp = document.createElement('input');
 inp.type = 'file';
 inp.accept = 'audio/*,.mp3,.m4a,.aac,.ogg,.wav,.flac';
 inp.multiple = true;
 inp.onchange = function () { if (this.files && this.files.length) uploadFiles(this.files); };
 inp.click();
+});
+});
 }
 function uploadFiles(files) {
 const list = Array.from(files);
@@ -32031,7 +32070,7 @@ if (file.size > 50 * 1024 * 1024) { toast('「' + file.name + '」超过 50MB，
 readFile(file, function (buf) {
 const id = 'sm_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
 const name = file.name.replace(/\.[^.]+$/, '');
-const item = { id: id, name: name, artist: '', url: '', source: 'local', duration: 0, playlistId: 'default', addedAt: Date.now() };
+const item = { id: id, name: name, artist: '', url: '', source: 'local', duration: 0, playlistId: localPlId || 'default', addedAt: Date.now() };
 library.push(item);
 const payload = buf instanceof ArrayBuffer ? new Blob([buf], { type: file.type || 'audio/mpeg' }) : buf;
 const tmp = document.createElement('audio');
@@ -32091,6 +32130,24 @@ playlists.map(p => '<option value="' + p.id + '">' + esc(p.name) + '</option>').
 }
 function resolveTargetPlaylist(cb) {
 const sel = document.getElementById('sm-target-pl');
+if (!sel) { cb('default'); return; }
+const pid = sel.value;
+if (pid === '__new__') {
+if (!window.openModal) { cb('default'); return; }
+window.openModal('新建歌单', '', (name) => {
+name = (name || '').trim();
+if (!name) { toast('请输入歌单名称'); return; }
+const newId = 'spl_' + Date.now();
+playlists.push({ id: newId, name: name, createdAt: Date.now() });
+savePlaylists();
+cb(newId);
+});
+} else {
+cb(pid);
+}
+}
+function resolveTargetPlSel(selId, cb) {
+const sel = document.getElementById(selId);
 if (!sel) { cb('default'); return; }
 const pid = sel.value;
 if (pid === '__new__') {
@@ -33023,6 +33080,12 @@ if (!m) return;
 wantPlay = false; clearBgResume(); // v3.10.x：真失败＝停止意图，不再自动续播
 try { if (audio) audio.pause(); } catch (e) {}
 try { syncPlayIcons(false); } catch (e) {}
+const cnt = (failMap[m.id] || 0) + 1;
+failMap[m.id] = cnt;
+if (cnt < 2) {
+try { toast('播放失败：可能是会员/付费歌曲或链接失效，可再点一次重试'); } catch (e) {}
+return;
+}
 if (!window.openModal) return;
 try {
 window.openModal('「' + (m.name || '这首歌') + '」播放失败', '', () => {
@@ -33031,7 +33094,7 @@ if (currentId === m.id) { teardownAudio(); currentId = null; }
 saveLibrary();
 renderPage();
 toast('已移出音乐库');
-}, { noInput: true, staticText: '链接可能已失效，或为会员/付费歌曲。要把它移出音乐库吗？' });
+}, { noInput: true, staticText: '连续播放失败，可能是链接失效或会员/付费歌曲（也可能是网络临时问题）。确定把它移出音乐库吗？' });
 } catch (e) {}
 }
 function demoFallbackOrError(m) {
@@ -33121,7 +33184,7 @@ armAutoResume();
 } else { armAutoResume(); }
 }
 };
-audio.onplay = function () { playRejected = false; bgResumeFails = 0; clearStallGuard(); disarmAutoResume(); clearBgResume(); wantPlay = true; syncPlayIcons(true); try { if (navigator.mediaSession) navigator.mediaSession.playbackState = 'playing'; } catch (e) {} try { window.__musicPlaying = true; } catch (e) {} };
+audio.onplay = function () { playRejected = false; bgResumeFails = 0; clearStallGuard(); disarmAutoResume(); clearBgResume(); wantPlay = true; syncPlayIcons(true); if (m) failMap[m.id] = 0; try { if (navigator.mediaSession) navigator.mediaSession.playbackState = 'playing'; } catch (e) {} try { window.__musicPlaying = true; } catch (e) {} };
 audio.onpause = function () { syncPlayIcons(false); try { if (navigator.mediaSession) navigator.mediaSession.playbackState = 'paused'; } catch (e) {} try { window.__musicPlaying = false; } catch (e) {} // v3.10.x：非用户暂停（后台省电/音频焦点抢占/系统打断）→ 定时补播反击
 if (wantPlay && !callHoldPending) scheduleBgResume(); };
 }
@@ -33273,12 +33336,14 @@ playQueue.push(id);
 renderQueueBadge();
 }
 function renderQueueBadge() {
-const btn = document.getElementById('sm-queue');
+['sm-queue', 'sm-f-queue'].forEach(function (id) {
+const btn = document.getElementById(id);
 if (!btn) return;
 let b = btn.querySelector('.sm-pb-badge');
 if (!b) { b = document.createElement('span'); b.className = 'sm-pb-badge'; btn.appendChild(b); }
 b.textContent = playQueue.length ? String(playQueue.length) : '';
 b.hidden = !playQueue.length;
+});
 }
 function openQueuePanel() {
 if (!window.openTCPanel) return;
@@ -34160,6 +34225,8 @@ const fPrev = document.getElementById('sm-f-prev');
 if (fPrev) fPrev.addEventListener('click', prev);
 const fNext = document.getElementById('sm-f-next');
 if (fNext) fNext.addEventListener('click', next);
+const fQueue = document.getElementById('sm-f-queue');
+if (fQueue) fQueue.addEventListener('click', openQueuePanel);
 const fToggle = document.getElementById('music-float-en');
 if (fToggle) {
 fToggle.addEventListener('change', () => {
@@ -41203,6 +41270,7 @@ if (extra.img && (extra.img.indexOf('data:') === 0 || /^https?:\/\//i.test(extra
 const cropAvatarToSquare = function (dataUrl, cb) {
 try {
 const img = new Image();
+if (/^https?:\/\//i.test(dataUrl)) { img.crossOrigin = 'anonymous'; }
 img.onload = function () {
 try {
 const size = Math.min(img.width, img.height);
@@ -41225,7 +41293,7 @@ showSysNotification(name, opts).then(function (ok) {
 if (ok) markNotified(nkey);
 });
 };
-if (bigIcon && bigIcon.indexOf('data:') === 0) {
+if (bigIcon) {
 cropAvatarToSquare(bigIcon, function (u) { sendFinal(u || bigIcon); });
 } else {
 sendFinal(bigIcon);
