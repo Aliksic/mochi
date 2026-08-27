@@ -649,7 +649,7 @@ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0;
 .checkin {
 display:flex; align-items:center; gap:10px;
 border-radius:18px; padding:12px 14px; margin:0 0 14px; flex-shrink:0;
-min-height:66px;
+height:66px; box-sizing:border-box; overflow:hidden;
 background:var(--widget-bg);
 box-shadow:0 4px 14px rgba(0,0,0,.05);
 opacity:var(--widget-opacity);
@@ -675,7 +675,7 @@ font-family:inherit; -webkit-tap-highlight-color:transparent;
 .weekend-box {
 position:relative; display:flex; align-items:center; justify-content:space-between; gap:8px;
 border-radius:16px; padding:9px 12px; margin:0 0 14px; flex-shrink:0;
-min-height:66px; box-sizing:border-box;
+height:66px; box-sizing:border-box; overflow:hidden;
 background:var(--widget-bg);
 box-shadow:0 4px 14px rgba(0,0,0,.05);
 opacity:var(--widget-opacity);
@@ -851,10 +851,13 @@ background:#111; color:#fff; cursor:pointer; font-family:inherit; flex-shrink:0;
 .desk-anniv .da-label { font-size:11px; color:var(--muted,#888); }
 .desk-anniv .da-days { font-size:26px; font-weight:700; color:var(--ink,#111); margin:2px 0; }
 .desk-anniv .da-name { font-size:12px; color:var(--muted,#666); }
-.desk-period { padding:18px; text-align:center; cursor:pointer; white-space:nowrap;
-display:flex; flex-direction:column; align-items:center; justify-content:center;
-min-height:160px;
+.desk-period { position:relative; padding:18px; text-align:center; cursor:pointer; white-space:nowrap;
+height:160px; box-sizing:border-box; overflow:hidden;
 margin:0 0 14px; }
+.desk-period .dpd-inner {
+position:absolute; left:0; right:0; top:0; bottom:0;
+display:flex; flex-direction:column; align-items:center; justify-content:center;
+}
 .desk-period .dpd-label { font-size:13px; color:#e85a8f; }
 .desk-period .dpd-days { font-size:50px; font-weight:700; color:#e85a8f; margin:10px 0; line-height:1.1; }
 .desk-period .dpd-sub { font-size:13px; color:var(--muted,#666); }
@@ -902,7 +905,7 @@ background:rgba(255,255,255,.15); border-radius:50%;
 }
 .music-widget {
 display:flex; flex-direction:column; justify-content:center;
-min-height:190px;
+height:190px; overflow:hidden; box-sizing:border-box;
 border-radius:22px; padding:13px; margin-top:14px; margin-bottom:14px;
 box-shadow:0 8px 20px rgba(0,0,0,.07);
 background:var(--widget-bg);
@@ -1010,7 +1013,7 @@ color:var(--ink); display:flex; align-items:center; justify-content:center;
 .page-slide.third .mini-row { flex-direction:row; gap:12px; }
 .page-slide.third .mini-row .memo-card,
 .page-slide.third .mini-row .mood-card { height:77px; }
-.week-card { border-radius:20px; padding:8px 14px; margin-bottom:14px; min-height:77px; box-sizing:border-box; display:flex; flex-direction:column; justify-content:center; }
+.week-card { border-radius:20px; padding:8px 14px; margin-bottom:14px; height:77px; overflow:hidden; box-sizing:border-box; display:flex; flex-direction:column; justify-content:center; }
 .week-days { display:flex; gap:6px; margin-top:5px; }
 .week-day {
 flex:1; text-align:center; padding:4px 0; border-radius:10px;
@@ -7851,7 +7854,7 @@ transition-duration: .01ms !important;
       </div>
       <div class="splash-dots"><i></i><i></i><i></i></div>
       <div class="splash-brand">小红书@言序（1842523578）</div>
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787844817372">Mochi 字卡传讯 v3.6.276 · 部署于 2026-08-27 23:33</div>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787845773874">Mochi 字卡传讯 v3.6.277 · 部署于 2026-08-27 23:49</div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
       <div class="splash-loading" id="splash-loading">正在加载数据…</div>
@@ -8073,9 +8076,11 @@ transition-duration: .01ms !important;
       <!-- 第三页：经期记录等健康记录 -->
       <div class="page-slide third">
 <div class="desk-period glass" data-desk-widget="desk-period" data-card-bg="desk-period">
-  <div class="dpd-label" id="dpd-label">经期</div>
-  <div class="dpd-days" id="dpd-days">—</div>
-  <div class="dpd-sub" id="dpd-sub">未记录</div>
+  <div class="dpd-inner">
+    <div class="dpd-label" id="dpd-label">经期</div>
+    <div class="dpd-days" id="dpd-days">—</div>
+    <div class="dpd-sub" id="dpd-sub">未记录</div>
+  </div>
 </div>
 <!-- v3.13.x：今日备忘 + 今天的心情（自第二页移入，放经期卡下方） -->
 <div class="mini-row" data-desk-widget="memo-row">
@@ -8927,7 +8932,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.6.276</div>
+      <div class="ver">Mochi 字卡传讯 v3.6.277</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -9079,7 +9084,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.6.276</span>
+              <span class="lic-ver">v3.6.277</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -34064,7 +34069,7 @@ return; // 「一起去听」已触发，本次调用不再判断「预订下一
 }
 }
 const rProb = probOf(settings.taReserveProb, 6);
-if (!(now - cooldownAt < settings.cooldownMs) && Math.random() * 100 < rProb && library.length) {
+if (currentId && !(now - cooldownAt < settings.cooldownMs) && Math.random() * 100 < rProb && library.length) {
 let candidate = null;
 for (let i = 0; i < 8; i++) {
 const c = library[Math.floor(Math.random() * library.length)];
@@ -40128,7 +40133,13 @@ const okText = req.kind === 'chat' ? '同意' : (req.kind === 'call' ? '接听' 
 const staticText = req.kind === 'call'
 ? '想听听你的声音，接一下好吗？'
 : (req.kind === 'chat' ? '想和你聊聊天，忙完记得过来。' : '想看看你在做什么，来陪陪我呀。') + '\n' + (req.text || '');
-window.openModal(title, '', function (v) {
+let modalCtl = null;
+modalCtl = window.openModal(title, '', function (v) {
+if (v === null || v === undefined) {
+try { if (modalCtl && modalCtl.stay) modalCtl.stay(); } catch (e) {}
+try { if (typeof window.toast === 'function') window.toast('请先选择「' + okText + '」或「稍后」'); } catch (e) {}
+return;
+}
 if (v === 'later') {
 setStatus(req.cid, 'seen');
 return;
@@ -40138,9 +40149,9 @@ goReply(req);
 noInput: true,
 lock: true,
 staticText: staticText,
-pillSubmit: true,
 pills: [{ label: '稍后', value: 'later' }, { label: okText, value: 'reply' }]
 });
+try { if (modalCtl && modalCtl.okText) modalCtl.okText('确认'); } catch (e) {}
 return true;
 }
 function goReply(req) {

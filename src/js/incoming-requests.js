@@ -249,7 +249,18 @@
     const staticText = req.kind === 'call'
       ? '想听听你的声音，接一下好吗？'
       : (req.kind === 'chat' ? '想和你聊聊天，忙完记得过来。' : '想看看你在做什么，来陪陪我呀。') + '\n' + (req.text || '');
-    window.openModal(title, '', function (v) {
+    // 两段式确认：点胶囊只选中（不高亮即执行），点底部【确认】才切桌面/来电。
+    // v3.20.x 曾用 pillSubmit「点选即提交」，用户反馈「还没点确认就跳转桌面」——
+    // 点「现在回TA」胶囊瞬间就执行了，缺明确确认步骤。改回：选项 + 底部确认按钮。
+    // 未选任何选项就点【确认】→ 保持弹窗并提示先选（pillVal 为 null，绝不误跳转）。
+    let modalCtl = null;
+    modalCtl = window.openModal(title, '', function (v) {
+      if (v === null || v === undefined) {
+        // 没点选项就点确定：不执行、不跳转，保持弹窗提示先选
+        try { if (modalCtl && modalCtl.stay) modalCtl.stay(); } catch (e) {}
+        try { if (typeof window.toast === 'function') window.toast('请先选择「' + okText + '」或「稍后」'); } catch (e) {}
+        return;
+      }
       if (v === 'later') {
         setStatus(req.cid, 'seen');
         return;
@@ -260,11 +271,9 @@
       noInput: true,
       lock: true,
       staticText: staticText,
-      // v3.20.x：跨桌面查岗/通话/求聊天弹窗——点选即提交（点「现在回TA/接听/同意」
-      // 立即执行，点「稍后」立即关闭），避免此前点选项后还得再点底部确定才生效
-      pillSubmit: true,
       pills: [{ label: '稍后', value: 'later' }, { label: okText, value: 'reply' }]
     });
+    try { if (modalCtl && modalCtl.okText) modalCtl.okText('确认'); } catch (e) {}
     return true;
   }
 
