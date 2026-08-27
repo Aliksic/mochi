@@ -925,7 +925,7 @@ body.cs-time-divider .msg-time-divider { display:flex; }
   white-space:nowrap;
 }
 .msg-mood span { font-weight:600; }
-.msg-intent { opacity:.6; }
+
 
 /* 鎯呯华/蹇冩剰/鎰忓浘瀛楀崱鏍囩 */
 .msg-mood .msg-mood-tag {

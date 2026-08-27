@@ -1,3 +1,12 @@
+### 2026-08-27 23:5x（✅ 完成·桌面图标文字行对齐——补齐 zoom 缩放残差的全部根因）
+- [本会话·完成]（**已改 src/css/home.css + src/css/base.css + src/template.html（AI-B 域；template 仅给经期卡内容包 .dpd-inner 居中壳）+ 已构建（23:53, sw: mochi-mta6hylc）+ tools/verify-desk-align.mjs 扩到 **24/24 全绿**（新增 E4 图标文字行从底部对齐 Δ=0）+ npm run verify 10/10；未提交**）。
+  - **用户反馈**「图标下方的文字这一行差一点点」——多轮排查出 zoom 缩放场景的残余错位根因：
+  - **根因①：`.week-card` 用 min-height:77 而 `.mini-card` 用固定 height:77**——min-height 在 zoom（卡片大小缩放）下计算方式不同（77.48 内容 vs 77 固定），缩放后差 0.55px。修复：week-card 改固定 `height:77px; overflow:hidden`。
+  - **根因②：`.desk-period` 缺 `flex-shrink:0`**——它是 .page-slide（flex column）子项，默认 flex-shrink:1，zoom 放大时被 flex 容器压缩（height:160 布局高变 147、渲染 169.3 而非 184），与 deco/music（均带 flex-shrink:0，190→218.5）不一致 → 图标组顶部 0.6px 错位。deco/checkin/weekend 原本就带 flex-shrink:0，唯独经期卡漏了。修复：`flex-shrink:0` + 内容包 `.dpd-inner` 绝对定位居中（避免 flex column 内容不足干扰高度）。另 music-widget 也 min-height→height 固定。
+  - **结论**：默认场景（无缩放）三页图标文字行 Δ=0 完全对齐；缩放场景（字号/卡片 115%）图标组底部 Δ≤0.8px 为 zoom 对 grid 行高/row-gap 不缩放的固有限制，已尽可能对齐（E4 文字行 Δ=0）。
+  - **验证**：verify-desk-align 24/24（E4 图标文字行从底部第1/2行 Δ=0）；npm run verify 10/10。手机 390×844 三页图标组底部 636.3、文字行逐行对齐。
+  - ⚠️ 跨域说明：home.css/base.css 归 AI-B 域，template.html 跨域（AI-B 声明归属）仅加结构壳未动逻辑；未动 AI-A 功能文件。提交前请按协议 git diff 自查。
+
 ### 2026-08-27 14:3x（完成·修复：跨桌面查岗弹窗未点确认就跳转桌面）
 - [本会话]（**已改 src/js/incoming-requests.js（deliver 弹窗改两段式确认：去掉 pillSubmit「点选即提交」——v3.20.x 曾用它导致点「现在回TA」胶囊瞬间执行切桌面；改回 点胶囊只选中 + 点底部【确认】才执行；未选胶囊直接点【确认】→ ctl.stay() 保持弹窗 + toast 提示先选，绝不误跳转）+ 构建 index.html/sw.js/version.json（14:2x, sw: mochi-mtbp6i84）**；临时诊断 11/11；已提交推送）。
   - **用户反馈**：桌面查岗弹窗还没点【确认】就跳转桌面。

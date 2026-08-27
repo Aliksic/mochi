@@ -122,11 +122,13 @@
 /* 打卡横幅
    v3.15.x：去掉 0 2px 左右内缩——与 deco/mini-row 等卡片同宽（左右边缘跨页对齐）；
    下边距 16→14 与全站卡片间距节奏统一；min-height 66px 与摸鱼横幅/备忘录横幅
-   统一第三档 band 高（内容不足时 flex 居中） */
+   统一第三档 band 高（内容不足时 flex 居中）。
+   v3.16.x：min-height 改 height 固定——与 weekend-box 在「卡片大小」缩放（zoom）下
+   计算方式一致，避免缩放后第三档差 0.5px（图标组顶部错位累积）。 */
 .checkin {
   display:flex; align-items:center; gap:10px;
   border-radius:18px; padding:12px 14px; margin:0 0 14px; flex-shrink:0;
-  min-height:66px;
+  height:66px; box-sizing:border-box; overflow:hidden;
   background:var(--widget-bg);
   box-shadow:0 4px 14px rgba(0,0,0,.05);
   opacity:var(--widget-opacity);
@@ -152,12 +154,14 @@
 
 /* 离周末还有几天（摸鱼小组件）
    v3.15.x：与首页打卡横幅同档（min-height 66、padding 9px 12px）——去掉 2px 内缩全宽，
-   标题与副题合并同一行（.we-top），摸鱼值/工作值两行收紧，整体 ~86px→~66px */
+   标题与副题合并同一行（.we-top），摸鱼值/工作值两行收紧，整体 ~86px→~66px。
+   v3.16.x：min-height 改 height 固定——与 checkin 在缩放（zoom）下计算方式一致，
+   避免缩放后第三档差 0.5px（图标组顶部错位累积）。 */
 .weekend-box {
   position:relative; /* v3.13.x：连击角标 .we-combo 绝对定位锚点 */
   display:flex; align-items:center; justify-content:space-between; gap:8px;
   border-radius:16px; padding:9px 12px; margin:0 0 14px; flex-shrink:0;
-  min-height:66px; box-sizing:border-box;
+  height:66px; box-sizing:border-box; overflow:hidden;
   background:var(--widget-bg);
   box-shadow:0 4px 14px rgba(0,0,0,.05);
   opacity:var(--widget-opacity);
@@ -396,13 +400,20 @@
    被移到页中时不再叠加出 28px 大缝。
    同轮升级为 190px hero 档（与首页纪念日卡/第二页音乐卡同高）——flex 垂直居中，
    天数数字放大，横滑 1→2→3 页首卡上下边缘对齐。
-   v3.16.x：min-height 190→160——第三页 12 个图标 3 行（与 1/2 页 2 行图标完全一致
-   的 96px 行高/58px 图标）需要 110px 空间，经期卡让出 30px 后三页图标区底部
-   精确对齐 636.3（内容 标签+天数+副题 ≈100px，160 高度 flex 居中仍富余） */
-.desk-period { padding:18px; text-align:center; cursor:pointer; white-space:nowrap;
-  display:flex; flex-direction:column; align-items:center; justify-content:center;
-  min-height:160px;
+   v3.16.x：min-height 190→160 且改固定 height——第三页 12 个图标 3 行（与 1/2 页
+   2 行图标完全一致的 96px 行高/58px 图标）需要 110px 空间，经期卡让出 30px 后三页
+   图标区底部精确对齐 636.3（内容 标签+天数+副题 ≈136px，160 高度居中仍富余）。
+   ⚠️ 必须有 flex-shrink:0——经期卡是 .page-slide（flex column）的子项，缺它时默认
+   flex-shrink:1，「卡片大小」缩放（zoom）放大时被 flex 容器压缩（160→147 布局高、
+   渲染 169.3 而非 184），与 deco/music 的 190→218.5 不一致 → 图标组顶部 0.6px 错位。
+   其它卡片（deco/checkin/weekend）均已带 flex-shrink:0。 */
+.desk-period { position:relative; padding:18px; text-align:center; cursor:pointer; white-space:nowrap;
+  height:160px; box-sizing:border-box; overflow:hidden; flex-shrink:0;
   margin:0 0 14px; }
+.desk-period .dpd-inner {
+  position:absolute; left:0; right:0; top:0; bottom:0;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+}
 .desk-period .dpd-label { font-size:13px; color:#e85a8f; }
 .desk-period .dpd-days { font-size:50px; font-weight:700; color:#e85a8f; margin:10px 0; line-height:1.1; }
 .desk-period .dpd-sub { font-size:13px; color:var(--muted,#666); }
@@ -458,10 +469,12 @@
 
 /* ---- 音乐播放器小组件（第二页） ----
    v3.15.x：min-height 190px 与首页纪念日卡（.deco-widget）同档——横滑翻页时
-   两页首卡上下边缘对齐；内容不足时 flex 垂直居中，不顶死 */
+   两页首卡上下边缘对齐；内容不足时 flex 垂直居中，不顶死。
+   v3.16.x：min-height 改 height 固定——与 deco-widget 固定 190 在「卡片大小」缩放
+   （zoom）下计算方式一致，避免缩放后两页首卡差 0.55px（图标组顶部错位）。 */
 .music-widget {
   display:flex; flex-direction:column; justify-content:center;
-  min-height:190px;
+  height:190px; overflow:hidden; box-sizing:border-box;
   border-radius:22px; padding:13px; margin-top:14px; margin-bottom:14px;
   box-shadow:0 8px 20px rgba(0,0,0,.07);
   background:var(--widget-bg);
@@ -585,8 +598,12 @@
 .page-slide.third .mini-row .memo-card,
 .page-slide.third .mini-row .mood-card { height:77px; }
 /* v3.15.x：本周日常定高 77px（与首页小卡行/第三页备忘心情行统一第二档 band），
-   日期格 7→4 压缩内容——横滑三页第二档上下边缘对齐 */
-.week-card { border-radius:20px; padding:8px 14px; margin-bottom:14px; min-height:77px; box-sizing:border-box; display:flex; flex-direction:column; justify-content:center; }
+   日期格 7→4 压缩内容——横滑三页第二档上下边缘对齐。
+   v3.16.x：min-height 改 height 固定——内容实际 75.3px，min-height 与 mini-card 的
+   固定 height 在「卡片大小」缩放（zoom）下计算方式不同（77×1.15=88.55 vs 77.48×1.15=89.1），
+   造成三页第二档缩放后差 0.55px，图标组顶部的 0.55px 差异直接体现在图标下方文字行错位。
+   固定 height + overflow:hidden 与 mini-card 一致，缩放后三页完全同步。 */
+.week-card { border-radius:20px; padding:8px 14px; margin-bottom:14px; height:77px; overflow:hidden; box-sizing:border-box; display:flex; flex-direction:column; justify-content:center; }
 .week-days { display:flex; gap:6px; margin-top:5px; }
 .week-day {
   flex:1; text-align:center; padding:4px 0; border-radius:10px;

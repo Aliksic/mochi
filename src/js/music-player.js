@@ -3300,8 +3300,11 @@
     }
     // v3.x：「预订下一首」——聊天中 TA 按独立概率把一首歌排进播放队列并发系统消息；
     // 与「一起去听」共用冷却（同一冷却窗内互斥，任一生效即进入冷却，不会同一条消息里同时发生）
+    // v3.24.x：只有正在播放时才允许「预订下一首」——没播放时预订下一首无意义，
+    // 且会让用户看到"预订下一首"系统消息却以为本该是"邀请一起听"弹窗（用户反馈）。
+    // 没播放时只走上面的「一起去听」弹窗分支（switching=false，"想和你一起听"）。
     const rProb = probOf(settings.taReserveProb, 6);
-    if (!(now - cooldownAt < settings.cooldownMs) && Math.random() * 100 < rProb && library.length) {
+    if (currentId && !(now - cooldownAt < settings.cooldownMs) && Math.random() * 100 < rProb && library.length) {
       // 挑一首「既没在播、也不在播放队列」的歌作为下一首目标（重试若干次）
       let candidate = null;
       for (let i = 0; i < 8; i++) {
