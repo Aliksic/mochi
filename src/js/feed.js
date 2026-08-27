@@ -194,7 +194,36 @@
     const p = (n) => (n < 10 ? '0' + n : '' + n);
     return (d.getMonth() + 1) + '月' + d.getDate() + '日 ' + p(d.getHours()) + ':' + p(d.getMinutes());
   }
-  function normPost(p) { if (p.by && !p.role) { p.role = p.by; if (!p.owner) p.owner = 'default'; } return p; }
+  function normPost(p) {
+    if (p.by && !p.role) { p.role = p.by; if (!p.owner) p.owner = 'default'; }
+    // v3.20.x：评论/回复去重——历史数据（iOS 键盘/重复触发等）可能把同一内容重复入库，
+    //   load() 若不合并，评论区每条评论就会显示成两条（两端重复）。按 ts+身份+作者+内容
+    //   精确去重，仅折叠完全相同的重复副本；不同评论不受影响。merge 路径已有 deeperList，
+    //   这里补上常规 load/render 路径，任何来源的重复都被消除。
+    const dedupArrBy = (arr, keyFn) => {
+      if (!Array.isArray(arr)) return arr;
+      const seen = {}, out = [];
+      for (let i = 0; i < arr.length; i++) {
+        const o = arr[i];
+        if (!o || typeof o !== 'object') { out.push(o); continue; }
+        const k = keyFn(o);
+        if (k != null && seen[k]) continue;
+        if (k != null) seen[k] = 1;
+        out.push(o);
+      }
+      return out;
+    };
+    if (Array.isArray(p.comments)) {
+      p.comments = dedupArrBy(p.comments, c => (c && c.ts ? c.ts : 0) + '|' + (c.role || c.by || '') + '|' + (c.authorName || '') + '|' + (c.content || ''));
+      for (let i = 0; i < p.comments.length; i++) {
+        const c = p.comments[i];
+        if (c && Array.isArray(c.replies)) {
+          c.replies = dedupArrBy(c.replies, r => (r && r.ts ? r.ts : 0) + '|' + (r.role || r.by || '') + '|' + (r.authorName || '') + '|' + (r.content || ''));
+        }
+      }
+    }
+    return p;
+  }
   // v3.7.x：feedDbReady 门槛——对齐 mail.js mailDbReady。Edge/OPPO 上 IndexedDB 打开/
   //   读取慢或挂起时，启动早期 store.get(KEY) 返回 null（大键不在 LS、memoryCache 未回填）、
   //   快照也缺失 → load() 返回 []。此时任何 save（maybeAutoPost 定时器/用户发布/点赞）都会

@@ -4104,6 +4104,7 @@ color:#666; border-radius:999px; cursor:pointer;
 -webkit-tap-highlight-color:transparent;
 }
 .mlf-chip .mlf-cnt { font-size:11px; font-weight:500; opacity:.6; }
+.mlf-chip svg { width:15px; height:15px; flex:0 0 auto; }
 .mlf-chip.sel { background:var(--ink); color:#fff; border-color:var(--ink); }
 .mlf-chip.sel .mlf-cnt { opacity:.85; }
 .sm-song {
@@ -4251,11 +4252,6 @@ display:flex; align-items:center; justify-content:center; cursor:pointer; paddin
 box-shadow:0 2px 8px rgba(0,0,0,.18);
 }
 .sm-pb-play svg { width:19px; height:19px; }
-.sm-pb-btn .sm-pb-badge {
-position:absolute; top:-4px; right:-4px; min-width:16px; height:16px;
-padding:0 4px; border-radius:8px; background:var(--ink); color:#fff;
-font-size:10px; font-weight:700; display:flex; align-items:center; justify-content:center;
-}
 .sm-pb-btn { position:relative; }
 .sm-quick-actions { display:flex; gap:8px; }
 .sm-float {
@@ -4274,10 +4270,10 @@ white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
 .sm-f-progress { height:2px; background:rgba(0,0,0,.1); border-radius:2px; overflow:hidden; margin-top:4px; }
 .sm-f-fill { height:100%; width:0; background:#111; border-radius:2px; }
-.sm-f-ctrl { display:flex; align-items:center; gap:1px; }
+.sm-f-ctrl { display:flex; align-items:center; gap:0; }
 .sm-f-btn {
 position:relative;
-width:26px; height:26px; border:none; background:transparent; color:#333;
+width:22px; height:22px; border:none; background:transparent; color:#333;
 display:flex; align-items:center; justify-content:center; padding:0; cursor:pointer;
 }
 .sm-f-btn svg { width:13px; height:13px; }
@@ -5936,6 +5932,10 @@ display: flex; align-items: center; justify-content: center; overflow: hidden; f
 .set-row .ico svg { width:20px; height:20px; stroke:var(--ink); }
 .set-row .txt { flex:1; font-size:14px; line-height:1.45; }
 .set-row .txt .sub { display:block; font-size:11.5px; color:var(--muted); font-weight:400; margin-top:2px; letter-spacing:.2px; }
+.set-row .txt .tag { display:inline-block; margin-top:4px; font-size:11px; color:var(--muted); font-weight:400; letter-spacing:.2px; border:1px solid rgba(0,0,0,.08); background:rgba(0,0,0,.03); border-radius:9px; padding:2px 9px; cursor:pointer; line-height:1.4; }
+.set-row .txt .tag:hover, .set-row .txt .tag:focus-visible { background:rgba(0,0,0,.06); border-color:rgba(0,0,0,.12); outline:none; }
+[data-theme="dark"] .set-row .txt .tag { color:#aaa; border-color:rgba(255,255,255,.14); background:rgba(255,255,255,.06); }
+[data-theme="dark"] .set-row .txt .tag:hover, [data-theme="dark"] .set-row .txt .tag:focus-visible { background:rgba(255,255,255,.1); border-color:rgba(255,255,255,.2); }
 .set-row .val { font-size:12px; color:var(--muted); }
 .set-row .date-val {
 font-size:12px; color:var(--muted); background:transparent;
@@ -7843,7 +7843,7 @@ transition-duration: .01ms !important;
       </div>
       <div class="splash-dots"><i></i><i></i><i></i></div>
       <div class="splash-brand">小红书@言序（1842523578）</div>
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787839586848">Mochi 字卡传讯 v3.6.273 · 部署于 2026-08-27 22:06</div>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787841931806">Mochi 字卡传讯 v3.6.274 · 部署于 2026-08-27 22:45</div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
       <div class="splash-loading" id="splash-loading">正在加载数据…</div>
@@ -8919,7 +8919,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.6.273</div>
+      <div class="ver">Mochi 字卡传讯 v3.6.274</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -9071,7 +9071,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.6.273</span>
+              <span class="lic-ver">v3.6.274</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -10430,7 +10430,7 @@ transition-duration: .01ms !important;
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.5S4.5 15.2 4.5 9.9A4.9 4.9 0 0112 7.1a4.9 4.9 0 017.5 2.8c0 5.3-7.5 10.6-7.5 10.6z"/></svg>
           </button>
           <button class="sm-pb-btn" id="sm-queue" title="播放队列">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h13M3 12h13M3 18h7"/><path d="M18 15l3-3"/><path d="M15 21l3-3 3 3"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M3 12h18M3 18h9"/></svg>
           </button>
         </div>
       </div>
@@ -12254,13 +12254,14 @@ transition-duration: .01ms !important;
     <div class="sm-f-progress"><div class="sm-f-fill" id="sm-f-fill"></div></div>
   </div>
   <div class="sm-f-ctrl">
-    <button class="sm-f-btn sm-f-heart" id="sm-f-heart" title="收藏">
-      <svg id="sm-f-heart-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.5S4.5 15.2 4.5 9.9A4.9 4.9 0 0112 7.1a4.9 4.9 0 017.5 2.8c0 5.3-7.5 10.6-7.5 10.6z"/></svg>
-    </button>
-    <button class="sm-f-btn" id="sm-f-queue" title="播放队列"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h13M3 12h13M3 18h7"/><path d="M18 15l3-3"/><path d="M15 21l3-3 3 3"/></svg><span class="sm-pb-badge"></span></button>
+    <button class="sm-f-btn" id="sm-f-mode" title="播放模式"><svg id="sm-f-mode-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6h.01M3 12h.01M3 18h.01"/></svg></button>
+    <button class="sm-f-btn" id="sm-f-queue" title="播放队列"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M3 12h18M3 18h9"/></svg></button>
     <button class="sm-f-btn" id="sm-f-prev" title="上一首"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg></button>
     <button class="sm-f-btn sm-f-play" id="sm-f-play" title="播放/暂停"><svg id="sm-f-play-ico" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>
     <button class="sm-f-btn" id="sm-f-next" title="下一首"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg></button>
+    <button class="sm-f-btn sm-f-heart" id="sm-f-heart" title="收藏">
+      <svg id="sm-f-heart-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.5S4.5 15.2 4.5 9.9A4.9 4.9 0 0112 7.1a4.9 4.9 0 017.5 2.8c0 5.3-7.5 10.6-7.5 10.6z"/></svg>
+    </button>
   </div>
 </div>
 
@@ -32582,12 +32583,18 @@ wrap.hidden = !library.length;
 const chip = (key, name, count) =>
 '<button class="mlf-chip' + (libFilter === key ? ' sel' : '') + '" data-mlf="' + key + '">' +
 '<span class="mlf-name">' + name + '</span><span class="mlf-cnt">' + count + '</span></button>';
-let html = chip('all', '全部音乐', library.length);
+let html = '<button class="mlf-chip mlf-queue" id="sm-lib-queue" title="查看播放队列">' +
+'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M3 12h18M3 18h9"/></svg>' +
+'<span class="mlf-name">播放列表</span>' + (playQueue.length ? '<span class="mlf-cnt">' + playQueue.length + '</span>' : '') + '</button>';
+html += chip('all', '全部音乐', library.length);
 if (unclassified.length) html += chip('default', '未分类音乐', unclassified.length);
 html += playlists.map(p => chip(p.id, esc(p.name), library.filter(m => m.playlistId === p.id).length)).join('');
 wrap.innerHTML = html;
+const libQueue = document.getElementById('sm-lib-queue');
+if (libQueue) libQueue.addEventListener('click', openQueuePanel);
 wrap.querySelectorAll('.mlf-chip').forEach(b => {
 b.addEventListener('click', () => {
+if (!b.dataset.mlf) return;
 if (libFilter === b.dataset.mlf) return;
 libFilter = b.dataset.mlf;
 if (musicBatch) batchSel.clear();
@@ -32968,10 +32975,12 @@ if (p && p.catch) p.catch(function () { bgResumeFails++; });
 ['visibilitychange', 'focus'].forEach(function (ev) {
 document.addEventListener(ev, function () {
 if (document.visibilityState !== 'visible') return;
+failMap = {}; // v3.x：从别的应用切回浏览器时，后台停滞触发的播放失败不算连续失败，避免误报"会员/移出"
 setTimeout(function () { try { tryResumePlayback(); } catch (e) {} }, 200);
 });
 });
 window.addEventListener('pageshow', function () {
+failMap = {};
 setTimeout(function () { try { tryResumePlayback(); } catch (e) {} }, 200);
 });
 setInterval(function () {
@@ -33196,6 +33205,7 @@ currentId = id;
 ensureSongCover(m);
 teardownAudio();
 if (progressTimer) { clearInterval(progressTimer); progressTimer = null; }
+updatePlayerBar();
 if (m.source === 'local' || (!m.url && m.source !== 'url')) {
 const key = MUSIC_PREFIX + ':music-file:' + m.id;
 const loadLocal = (v) => {
@@ -33335,28 +33345,33 @@ if (currentId === id) { toast('这就是正在播放的歌'); return; }
 playQueue.push(id);
 renderQueueBadge();
 }
-function renderQueueBadge() {
-['sm-queue', 'sm-f-queue'].forEach(function (id) {
-const btn = document.getElementById(id);
-if (!btn) return;
-let b = btn.querySelector('.sm-pb-badge');
-if (!b) { b = document.createElement('span'); b.className = 'sm-pb-badge'; btn.appendChild(b); }
-b.textContent = playQueue.length ? String(playQueue.length) : '';
-b.hidden = !playQueue.length;
-});
-}
+function renderQueueBadge() {}
 function openQueuePanel() {
 if (!window.openTCPanel) return;
-let rows = playQueue.map(id => {
-const m = findTrack(id);
-if (!m) return '';
-return '<div class="sm-song" data-qid="' + id + '">' + songIcoHtml(m) +
+const rowFor = (m, extra, withRm) => '<div class="sm-song' + (extra || '') + '" data-qid="' + m.id + '">' + songIcoHtml(m) +
 '<div class="sm-song-info"><div class="sm-song-name">' + esc(m.name || '未知歌曲') + '</div>' +
 '<div class="sm-song-sub">' + esc(m.artist || '未知歌手') + '</div></div>' +
-'<button class="sm-song-more" data-qrm="' + id + '" title="移除"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg></button></div>';
-}).join('');
-if (!playQueue.length) rows = '<div class="sm-req-hint" style="padding:8px 0">播放队列为空——在歌曲上点「⋯」选「下一首播放」即可加入</div>';
-window.openTCPanel('播放队列 (' + playQueue.length + ')', rows +
+(withRm ? '<button class="sm-song-more" data-qrm="' + m.id + '" title="移出队列"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg></button>' : '') + '</div>';
+let html = '';
+html += '<div class="sm-req-hint" style="padding:2px 0;font-weight:700">待播队列</div>';
+if (playQueue.length) {
+html += playQueue.map(id => { const m = findTrack(id); return m ? rowFor(m, '', true) : ''; }).join('');
+} else {
+html += '<div class="sm-req-hint" style="padding:4px 0 2px">还没有排队的歌——在歌曲上点「⋯」选「下一首播放」即可加入</div>';
+}
+const queuedId = {};
+playQueue.forEach(id => { queuedId[id] = true; });
+let list = playableList();
+if (playQueue.length) list = list.filter(m => !queuedId[m.id]);
+html += '<div class="sm-req-hint" style="padding:10px 0 2px;font-weight:700">当前播放列表</div>';
+if (!list.length && !currentId) {
+html += '<div class="sm-req-hint" style="padding:4px 0 2px">音乐库暂无歌曲</div>';
+} else if (!list.length) {
+html += '<div class="sm-req-hint" style="padding:4px 0 2px">当前正在播放《' + esc(findTrack(currentId) ? findTrack(currentId).name : '') + '》，其余歌曲正在其他歌单</div>';
+} else {
+html += list.map(m => rowFor(m, m.id === currentId ? ' active' : '', false)).join('');
+}
+window.openTCPanel('音乐播放列表', html +
 '<div class="mail-actions">' +
 (playQueue.length ? '<button class="cc-tool" id="sm-q-clear">清空队列</button>' : '') +
 '<button class="cc-tool" id="sm-q-close">关闭</button></div>');
@@ -33416,11 +33431,11 @@ saveSettings();
 }
 function updateModeIcon() {
 const paths = {
-list: '<path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 014-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 01-4 4H3"/>',
-shuffle: '<path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 014-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 01-4 4H3"/>',
+list: '<path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6h.01M3 12h.01M3 18h.01"/>',
+shuffle: '<path d="M2 11a5 5 0 0 1 5-5h13"/><path d="m16 3 4 3-4 3"/><path d="M22 13a5 5 0 0 1-5 5H4"/><path d="m8 21-4-3 4-3"/>',
 single: '<circle cx="12" cy="12" r="9"/><path d="M12 8v8M9.5 8.5h5"/>'
 };
-document.querySelectorAll('#sm-mode-ico').forEach(el => { el.innerHTML = paths[mode] || paths.list; });
+document.querySelectorAll('#sm-mode-ico, #sm-f-mode-ico').forEach(el => { el.innerHTML = paths[mode] || paths.list; });
 }
 function syncPlayIcons(playing) {
 const playPath = playing
@@ -34213,6 +34228,8 @@ const playBtn = document.getElementById('sm-play');
 if (playBtn) playBtn.addEventListener('click', toggle);
 const modeBtn = document.getElementById('sm-mode');
 if (modeBtn) modeBtn.addEventListener('click', cycleMode);
+const fModeBtn = document.getElementById('sm-f-mode');
+if (fModeBtn) fModeBtn.addEventListener('click', cycleMode);
 const prevBtn = document.getElementById('sm-prev');
 if (prevBtn) prevBtn.addEventListener('click', prev);
 const nextBtn = document.getElementById('sm-next');
@@ -39792,10 +39809,26 @@ if (!anchor) return;
 const row = document.createElement('div');
 row.className = 'set-row';
 row.id = conf.id + '-row';
+const subHtml = conf.subTag
+? '<span class="tag" id="' + conf.id + '-tag" role="button" tabindex="0" aria-haspopup="dialog">' + conf.subTag + '</span>'
+: (conf.sub ? '<span class="sub">' + conf.sub + '</span>' : '');
 row.innerHTML =
 '<div class="ico">' + conf.ico + '</div>' +
-'<div class="txt">' + conf.title + '<span class="sub">' + conf.sub + '</span></div>' +
+'<div class="txt">' + conf.title + subHtml + '</div>' +
 '<label class="toggle"><input type="checkbox" id="' + conf.id + '"><span class="tk"></span></label>';
+if (conf.subTag && conf.detail && typeof window.openModal === 'function') {
+const tagEl = row.querySelector('#' + conf.id + '-tag');
+if (tagEl) {
+const showDetail = function (e) {
+if (e) { e.stopPropagation(); e.preventDefault(); }
+window.openModal(conf.tagTitle || '功能说明', '', function () {}, { noInput: true, staticText: conf.detail });
+};
+tagEl.addEventListener('click', showDetail);
+tagEl.addEventListener('keydown', function (e) {
+if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); showDetail(); }
+});
+}
+}
 anchor.parentNode.insertBefore(row, anchor.nextSibling);
 const input = row.querySelector('input');
 const sync = function () { const v = conf.get(); if (v !== input.checked) input.checked = v; };
@@ -39813,9 +39846,11 @@ return row;
 (function () {
 addSettingToggle({
 id: 'sf-desk-checkin',
-ico: '<svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v3M4.2 4.2l2.2 2.2M2 12h3M19 12h3M4.2 19.8l2.2-2.2M17.6 17.6l2.2 2.2"/><path d="M12 6a6 6 0 016 6v4h-3v-4a3 3 0 00-6 0v4H6v-4a6 6 0 016-6z"/><path d="M9 20h6"/></svg>',
+ico: '<svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21a9 9 0 1 0-9-9"/><path d="M12 12l3.4-2.8"/><circle cx="7.4" cy="7.4" r="1.05" fill="#111111" stroke="none"/><g transform="translate(4.9,3.5) scale(0.52)"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></g></svg>',
 title: '开启 联系人跨桌面查岗',
-sub: '其他桌面的联系人是各自独立触发，互不影响：每 60 秒轮询一次，每人按各自概率（默认约 2%，可逐联系人调整）触发；每个联系人触发后 30 分钟内冷却、不再重复。你回复后 TA 会现场回应。关闭后不再打扰',
+subTag: '功能说明',
+tagTitle: '联系人跨桌面查岗',
+detail: '其他桌面的联系人是各自独立触发、互不影响：TA 每 60 秒「探测」一次你是否还醒着，每人按自己的概率触发（默认约 2%，可在 设置→回复速度→跨桌面查岗概率 里逐联系人调整）；同一联系人触发后会有 30 分钟冷却、不重复打扰。你回复后 TA 会现场回应。关闭后其他桌面的 TA 不再来查岗、也不再找你聊天。',
 get: deskCheckinEn,
 set: window.setDeskCheckinEn,
 toast: function (en) { return en ? '已开启：其他桌面的TA会来查岗、找你聊天' : '已关闭：其他桌面的TA不再来查岗打扰'; }
@@ -39824,7 +39859,9 @@ addSettingToggle({
 id: 'sf-desk-call',
 ico: '<svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>',
 title: '开启 联系人跨桌面打电话',
-sub: '其他桌面的联系人会主动给你打语音电话，你接听后即可通话；关闭后不再有跨桌面来电',
+subTag: '功能说明',
+tagTitle: '联系人跨桌面打电话',
+detail: '开启后，其他桌面的联系人会按各自的来电概率（默认约 2%，可在 设置→回复速度→跨桌面来电概率 里逐联系人调整）主动给你打语音电话；同一联系人触发后会有 30 分钟冷却、不重复来电。你接听后即可正常通话，接听会自动挂断当前通话、且不会跳到对方的桌面。关闭后不再有跨桌面来电。',
 get: deskCallEn,
 set: window.setDeskCallEn,
 toast: function (en) { return en ? '已开启：其他桌面的TA会主动给你打电话' : '已关闭：其他桌面的TA不再主动来电'; }
@@ -39858,6 +39895,31 @@ a = window.xyStore('xy-home-v2').get('feed-ta-avatar') || '';
 return (a && (a.indexOf('data:') === 0 || /^https?:\/\//i.test(a))) ? a : '';
 } catch (e) { return ''; }
 }
+function deskQSeenRecently(cid, text) {
+if (!text) return false;
+try {
+const raw = localStorage.getItem('xy-home-v2:' + cid + ':chat-msgs');
+if (!raw) return false;
+const arr = JSON.parse(raw);
+if (!Array.isArray(arr)) return false;
+const cutoff = Date.now() - 60 * 60000; // 1 小时窗口（超出则视为新的正常查岗）
+const norm = String(text || '').replace(/\[[^\]]*\]/g, '').replace(/\s+/g, '');
+if (norm.length < 2) return false;
+for (let i = arr.length - 1, n = 0; i >= 0 && n < 150; i--, n++) {
+const m = arr[i];
+if (!m) continue;
+const mts = m.ts || 0;
+if (mts && mts < cutoff) break;
+let t = String(m.text || '');
+if (t.indexOf('|||') >= 0) t = t.split('|||')[0];
+t = t.replace(/\|[^|]*$/, '').replace(/<[^>]*>/g, '').replace(/\[[^\]]*\]/g, '').replace(/\s+/g, '');
+if (!t) continue;
+if (t.length >= 6 && norm.length >= 6 && (t.indexOf(norm) >= 0 || norm.indexOf(t) >= 0)) return true;
+if (norm === t) return true;
+}
+} catch (e) {}
+return false;
+}
 function cfgFor(cid) {
 try {
 if (window.replyCfgFor) return window.replyCfgFor(cid);
@@ -39890,8 +39952,10 @@ const av = cAvatar(req.cid);
 if (req.kind === 'call') {
 if (window.bgNotifyCheck) window.bgNotifyCheck(title + (req.kind === 'call' ? '' : '：' + (req.text || '')), Date.now(), { name: name + '来电', av: av, avFixed: true });
 } else if (req.kind === 'checkin') {
+if (!deskQSeenRecently(req.cid, req.text)) {
 if (window.chatAppendDeskCkTo) window.chatAppendDeskCkTo(req.cid, req.q);
 if (window.bgNotifyCheck) window.bgNotifyCheck(title + '：' + (req.text || ''), Date.now(), { name: name + '查岗', av: av, avFixed: true });
+}
 } else { // chat 求聊天
 if (window.chatAppendDeskTextTo) window.chatAppendDeskTextTo(req.cid, req.text || '想你了，来聊聊天吧。');
 if (window.bgNotifyCheck) window.bgNotifyCheck(title + '：来陪我聊聊天吧', Date.now(), { name: name + '来聊天', av: av, avFixed: true });
@@ -43523,7 +43587,32 @@ const d = new Date(ts);
 const p = (n) => (n < 10 ? '0' + n : '' + n);
 return (d.getMonth() + 1) + '月' + d.getDate() + '日 ' + p(d.getHours()) + ':' + p(d.getMinutes());
 }
-function normPost(p) { if (p.by && !p.role) { p.role = p.by; if (!p.owner) p.owner = 'default'; } return p; }
+function normPost(p) {
+if (p.by && !p.role) { p.role = p.by; if (!p.owner) p.owner = 'default'; }
+const dedupArrBy = (arr, keyFn) => {
+if (!Array.isArray(arr)) return arr;
+const seen = {}, out = [];
+for (let i = 0; i < arr.length; i++) {
+const o = arr[i];
+if (!o || typeof o !== 'object') { out.push(o); continue; }
+const k = keyFn(o);
+if (k != null && seen[k]) continue;
+if (k != null) seen[k] = 1;
+out.push(o);
+}
+return out;
+};
+if (Array.isArray(p.comments)) {
+p.comments = dedupArrBy(p.comments, c => (c && c.ts ? c.ts : 0) + '|' + (c.role || c.by || '') + '|' + (c.authorName || '') + '|' + (c.content || ''));
+for (let i = 0; i < p.comments.length; i++) {
+const c = p.comments[i];
+if (c && Array.isArray(c.replies)) {
+c.replies = dedupArrBy(c.replies, r => (r && r.ts ? r.ts : 0) + '|' + (r.role || r.by || '') + '|' + (r.authorName || '') + '|' + (r.content || ''));
+}
+}
+}
+return p;
+}
 let feedDbReady = false;
 let feedPending = null;
 function itemKey(o) { return (o && o.ts ? o.ts : 0) + '|' + (o.role || o.by || '') + '|' + (o.authorName || '') + '|' + (o.content || ''); }

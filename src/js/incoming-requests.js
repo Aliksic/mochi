@@ -62,10 +62,27 @@
       const row = document.createElement('div');
       row.className = 'set-row';
       row.id = conf.id + '-row';
+      const subHtml = conf.subTag
+        ? '<span class="tag" id="' + conf.id + '-tag" role="button" tabindex="0" aria-haspopup="dialog">' + conf.subTag + '</span>'
+        : (conf.sub ? '<span class="sub">' + conf.sub + '</span>' : '');
       row.innerHTML =
         '<div class="ico">' + conf.ico + '</div>' +
-        '<div class="txt">' + conf.title + '<span class="sub">' + conf.sub + '</span></div>' +
+        '<div class="txt">' + conf.title + subHtml + '</div>' +
         '<label class="toggle"><input type="checkbox" id="' + conf.id + '"><span class="tk"></span></label>';
+      // v3.20.x：conf.subTag+conf.detail —— 长解释收进可点击标签，点开弹窗看详情
+      if (conf.subTag && conf.detail && typeof window.openModal === 'function') {
+        const tagEl = row.querySelector('#' + conf.id + '-tag');
+        if (tagEl) {
+          const showDetail = function (e) {
+            if (e) { e.stopPropagation(); e.preventDefault(); }
+            window.openModal(conf.tagTitle || '功能说明', '', function () {}, { noInput: true, staticText: conf.detail });
+          };
+          tagEl.addEventListener('click', showDetail);
+          tagEl.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); showDetail(); }
+          });
+        }
+      }
       anchor.parentNode.insertBefore(row, anchor.nextSibling);
       const input = row.querySelector('input');
       const sync = function () { const v = conf.get(); if (v !== input.checked) input.checked = v; };
@@ -83,9 +100,11 @@
   (function () {
     addSettingToggle({
       id: 'sf-desk-checkin',
-      ico: '<svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v3M4.2 4.2l2.2 2.2M2 12h3M19 12h3M4.2 19.8l2.2-2.2M17.6 17.6l2.2 2.2"/><path d="M12 6a6 6 0 016 6v4h-3v-4a3 3 0 00-6 0v4H6v-4a6 6 0 016-6z"/><path d="M9 20h6"/></svg>',
+      ico: '<svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21a9 9 0 1 0-9-9"/><path d="M12 12l3.4-2.8"/><circle cx="7.4" cy="7.4" r="1.05" fill="#111111" stroke="none"/><g transform="translate(4.9,3.5) scale(0.52)"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></g></svg>',
       title: '开启 联系人跨桌面查岗',
-      sub: '其他桌面的联系人是各自独立触发，互不影响：每 60 秒轮询一次，每人按各自概率（默认约 2%，可逐联系人调整）触发；每个联系人触发后 30 分钟内冷却、不再重复。你回复后 TA 会现场回应。关闭后不再打扰',
+      subTag: '功能说明',
+      tagTitle: '联系人跨桌面查岗',
+      detail: '其他桌面的联系人是各自独立触发、互不影响：TA 每 60 秒「探测」一次你是否还醒着，每人按自己的概率触发（默认约 2%，可在 设置→回复速度→跨桌面查岗概率 里逐联系人调整）；同一联系人触发后会有 30 分钟冷却、不重复打扰。你回复后 TA 会现场回应。关闭后其他桌面的 TA 不再来查岗、也不再找你聊天。',
       get: deskCheckinEn,
       set: window.setDeskCheckinEn,
       toast: function (en) { return en ? '已开启：其他桌面的TA会来查岗、找你聊天' : '已关闭：其他桌面的TA不再来查岗打扰'; }
@@ -94,7 +113,9 @@
       id: 'sf-desk-call',
       ico: '<svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>',
       title: '开启 联系人跨桌面打电话',
-      sub: '其他桌面的联系人会主动给你打语音电话，你接听后即可通话；关闭后不再有跨桌面来电',
+      subTag: '功能说明',
+      tagTitle: '联系人跨桌面打电话',
+      detail: '开启后，其他桌面的联系人会按各自的来电概率（默认约 2%，可在 设置→回复速度→跨桌面来电概率 里逐联系人调整）主动给你打语音电话；同一联系人触发后会有 30 分钟冷却、不重复来电。你接听后即可正常通话，接听会自动挂断当前通话、且不会跳到对方的桌面。关闭后不再有跨桌面来电。',
       get: deskCallEn,
       set: window.setDeskCallEn,
       toast: function (en) { return en ? '已开启：其他桌面的TA会主动给你打电话' : '已关闭：其他桌面的TA不再主动来电'; }
@@ -137,6 +158,36 @@
       return (a && (a.indexOf('data:') === 0 || /^https?:\/\//i.test(a))) ? a : '';
     } catch (e) { return ''; }
   }
+  // 该联系人桌面聊天里，最近是否已出现过这一道查岗题——跨桌面后台通知去重依据。
+  // 卡写入的是「触发联系人自己桌面」的聊天（xy-home-v2:<cid>:chat-msgs），而 bg-keep 的
+  // recentChatDup 只扫当前桌面聊天，看不到这张卡 → 同一道题再次被抽中时会重复弹系统通知
+  //（用户反馈：刚在聊天里看过又重弹）。这里同步读该桌面的聊天记录（本地存储，同步可用），
+  // 命中同文则说明用户已看过/答过这道题 → 后台不再重复追问、也不再重复弹通知。
+  function deskQSeenRecently(cid, text) {
+    if (!text) return false;
+    try {
+      const raw = localStorage.getItem('xy-home-v2:' + cid + ':chat-msgs');
+      if (!raw) return false;
+      const arr = JSON.parse(raw);
+      if (!Array.isArray(arr)) return false;
+      const cutoff = Date.now() - 60 * 60000; // 1 小时窗口（超出则视为新的正常查岗）
+      const norm = String(text || '').replace(/\[[^\]]*\]/g, '').replace(/\s+/g, '');
+      if (norm.length < 2) return false;
+      for (let i = arr.length - 1, n = 0; i >= 0 && n < 150; i--, n++) {
+        const m = arr[i];
+        if (!m) continue;
+        const mts = m.ts || 0;
+        if (mts && mts < cutoff) break;
+        let t = String(m.text || '');
+        if (t.indexOf('|||') >= 0) t = t.split('|||')[0];
+        t = t.replace(/\|[^|]*$/, '').replace(/<[^>]*>/g, '').replace(/\[[^\]]*\]/g, '').replace(/\s+/g, '');
+        if (!t) continue;
+        if (t.length >= 6 && norm.length >= 6 && (t.indexOf(norm) >= 0 || norm.indexOf(t) >= 0)) return true;
+        if (norm === t) return true;
+      }
+    } catch (e) {}
+    return false;
+  }
   // 各桌面专属设置：回复设置随联系人隔离（replyCfg(cid) 读取 storeFor(cid) 的 rc-*），
   // 这里用与 chat.js cfgn 同款读取，避免依赖未暴露的内部结构
   function cfgFor(cid) {
@@ -178,8 +229,12 @@
         if (req.kind === 'call') {
           if (window.bgNotifyCheck) window.bgNotifyCheck(title + (req.kind === 'call' ? '' : '：' + (req.text || '')), Date.now(), { name: name + '来电', av: av, avFixed: true });
         } else if (req.kind === 'checkin') {
-          if (window.chatAppendDeskCkTo) window.chatAppendDeskCkTo(req.cid, req.q);
-          if (window.bgNotifyCheck) window.bgNotifyCheck(title + '：' + (req.text || ''), Date.now(), { name: name + '查岗', av: av, avFixed: true });
+          // 同一道题最近已在该联系人桌面聊天里出现过（用户看过/答过）→ 后台不再重复
+          // 追问、也不再重复弹系统通知（仅释放 pending 防占用队列）。
+          if (!deskQSeenRecently(req.cid, req.text)) {
+            if (window.chatAppendDeskCkTo) window.chatAppendDeskCkTo(req.cid, req.q);
+            if (window.bgNotifyCheck) window.bgNotifyCheck(title + '：' + (req.text || ''), Date.now(), { name: name + '查岗', av: av, avFixed: true });
+          }
         } else { // chat 求聊天
           if (window.chatAppendDeskTextTo) window.chatAppendDeskTextTo(req.cid, req.text || '想你了，来聊聊天吧。');
           if (window.bgNotifyCheck) window.bgNotifyCheck(title + '：来陪我聊聊天吧', Date.now(), { name: name + '来聊天', av: av, avFixed: true });

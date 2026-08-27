@@ -2118,6 +2118,7 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + env(safe-area-inset-bott
   -webkit-tap-highlight-color:transparent;
 }
 .mlf-chip .mlf-cnt { font-size:11px; font-weight:500; opacity:.6; }
+.mlf-chip svg { width:15px; height:15px; flex:0 0 auto; }
 .mlf-chip.sel { background:var(--ink); color:#fff; border-color:var(--ink); }
 .mlf-chip.sel .mlf-cnt { opacity:.85; }
 /* 歌曲行 */
@@ -2276,12 +2277,7 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + env(safe-area-inset-bott
   box-shadow:0 2px 8px rgba(0,0,0,.18);
 }
 .sm-pb-play svg { width:19px; height:19px; }
-/* 播放队列角标（底部播放条「播放队列」按钮上的数量） */
-.sm-pb-btn .sm-pb-badge {
-  position:absolute; top:-4px; right:-4px; min-width:16px; height:16px;
-  padding:0 4px; border-radius:8px; background:var(--ink); color:#fff;
-  font-size:10px; font-weight:700; display:flex; align-items:center; justify-content:center;
-}
+/* 播放队列数量角标已在用户要求下移除（原 .sm-pb-btn .sm-pb-badge 黑色圆点） */
 .sm-pb-btn { position:relative; }
 /* 管理音乐弹窗快捷操作（下一首播放 / 加入播放列表） */
 .sm-quick-actions { display:flex; gap:8px; }
@@ -2302,10 +2298,10 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + env(safe-area-inset-bott
 }
 .sm-f-progress { height:2px; background:rgba(0,0,0,.1); border-radius:2px; overflow:hidden; margin-top:4px; }
 .sm-f-fill { height:100%; width:0; background:#111; border-radius:2px; }
-.sm-f-ctrl { display:flex; align-items:center; gap:1px; }
+.sm-f-ctrl { display:flex; align-items:center; gap:0; }
 .sm-f-btn {
   position:relative;
-  width:26px; height:26px; border:none; background:transparent; color:#333;
+  width:22px; height:22px; border:none; background:transparent; color:#333;
   display:flex; align-items:center; justify-content:center; padding:0; cursor:pointer;
 }
 .sm-f-btn svg { width:13px; height:13px; }

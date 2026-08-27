@@ -1599,12 +1599,18 @@
     const chip = (key, name, count) =>
       '<button class="mlf-chip' + (libFilter === key ? ' sel' : '') + '" data-mlf="' + key + '">' +
       '<span class="mlf-name">' + name + '</span><span class="mlf-cnt">' + count + '</span></button>';
-    let html = chip('all', '全部音乐', library.length);
+    let html = '<button class="mlf-chip mlf-queue" id="sm-lib-queue" title="查看播放队列">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M3 12h18M3 18h9"/></svg>' +
+      '<span class="mlf-name">播放列表</span>' + (playQueue.length ? '<span class="mlf-cnt">' + playQueue.length + '</span>' : '') + '</button>';
+    html += chip('all', '全部音乐', library.length);
     if (unclassified.length) html += chip('default', '未分类音乐', unclassified.length);
     html += playlists.map(p => chip(p.id, esc(p.name), library.filter(m => m.playlistId === p.id).length)).join('');
     wrap.innerHTML = html;
+    const libQueue = document.getElementById('sm-lib-queue');
+    if (libQueue) libQueue.addEventListener('click', openQueuePanel);
     wrap.querySelectorAll('.mlf-chip').forEach(b => {
       b.addEventListener('click', () => {
+        if (!b.dataset.mlf) return;
         if (libFilter === b.dataset.mlf) return;
         libFilter = b.dataset.mlf;
         if (musicBatch) batchSel.clear();
@@ -2058,10 +2064,12 @@
   ['visibilitychange', 'focus'].forEach(function (ev) {
     document.addEventListener(ev, function () {
       if (document.visibilityState !== 'visible') return;
+      failMap = {}; // v3.x：从别的应用切回浏览器时，后台停滞触发的播放失败不算连续失败，避免误报"会员/移出"
       setTimeout(function () { try { tryResumePlayback(); } catch (e) {} }, 200);
     });
   });
   window.addEventListener('pageshow', function () {
+    failMap = {};
     setTimeout(function () { try { tryResumePlayback(); } catch (e) {} }, 200);
   });
   // 后台看门狗：hidden 下若有「想播却被暂停」的元素，周期性尝试拉起
@@ -2360,6 +2368,12 @@
     ensureSongCover(m);
     teardownAudio();
     if (progressTimer) { clearInterval(progressTimer); progressTimer = null; }
+    // v3.22.x：切歌瞬间立即同步所有音乐 UI（聊天悬浮小框 / 音乐页底部播放条 / 桌面
+    // 音乐小组件）。此前悬浮小框/小组件只在音频真正 onplay(或本地歌异步加载完成后)
+    // 才刷新——从通知栏/后台切歌、或播放本地歌时，UI 会停留在旧歌直到出声。
+    // 这里提前刷新歌曲名/封面/小组件，与后续 startPlayback 内的刷新互相幂等；此时
+    // audio 已 teardown 置空，syncPlayIcons 显示暂停态，待起播再由 onplay 纠正。
+    updatePlayerBar();
     if (m.source === 'local' || (!m.url && m.source !== 'url')) {
       // 本地文件：从 IndexedDB 读取 Blob（新版）或 dataURL 字符串（旧版数据）
       const key = MUSIC_PREFIX + ':music-file:' + m.id;
@@ -2527,35 +2541,43 @@
     playQueue.push(id);
     renderQueueBadge();
   }
-  function renderQueueBadge() {
-    ['sm-queue', 'sm-f-queue'].forEach(function (id) {
-      const btn = document.getElementById(id);
-      if (!btn) return;
-      let b = btn.querySelector('.sm-pb-badge');
-      if (!b) { b = document.createElement('span'); b.className = 'sm-pb-badge'; btn.appendChild(b); }
-      b.textContent = playQueue.length ? String(playQueue.length) : '';
-      b.hidden = !playQueue.length;
-    });
-  }
+  // v3.x：队列数量黑色小圆点角标已按用户要求移除，保留调用点以兼容后续扩展
+  function renderQueueBadge() {}
   function openQueuePanel() {
     if (!window.openTCPanel) return;
-    let rows = playQueue.map(id => {
-      const m = findTrack(id);
-      if (!m) return '';
-      return '<div class="sm-song" data-qid="' + id + '">' + songIcoHtml(m) +
-        '<div class="sm-song-info"><div class="sm-song-name">' + esc(m.name || '未知歌曲') + '</div>' +
-        '<div class="sm-song-sub">' + esc(m.artist || '未知歌手') + '</div></div>' +
-        '<button class="sm-song-more" data-qrm="' + id + '" title="移除"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg></button></div>';
-    }).join('');
-    if (!playQueue.length) rows = '<div class="sm-req-hint" style="padding:8px 0">播放队列为空——在歌曲上点「⋯」选「下一首播放」即可加入</div>';
-    window.openTCPanel('播放队列 (' + playQueue.length + ')', rows +
+    const rowFor = (m, extra, withRm) => '<div class="sm-song' + (extra || '') + '" data-qid="' + m.id + '">' + songIcoHtml(m) +
+      '<div class="sm-song-info"><div class="sm-song-name">' + esc(m.name || '未知歌曲') + '</div>' +
+      '<div class="sm-song-sub">' + esc(m.artist || '未知歌手') + '</div></div>' +
+      (withRm ? '<button class="sm-song-more" data-qrm="' + m.id + '" title="移出队列"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg></button>' : '') + '</div>';
+    let html = '';
+    // 一、待播队列（歌曲上点「⋯ → 下一首播放」加入，依次优先播放）
+    html += '<div class="sm-req-hint" style="padding:2px 0;font-weight:700">待播队列</div>';
+    if (playQueue.length) {
+      html += playQueue.map(id => { const m = findTrack(id); return m ? rowFor(m, '', true) : ''; }).join('');
+    } else {
+      html += '<div class="sm-req-hint" style="padding:4px 0 2px">还没有排队的歌——在歌曲上点「⋯」选「下一首播放」即可加入</div>';
+    }
+    // 二、当前播放列表（正在听的歌单，正在播放的歌高亮）
+    const queuedId = {};
+    playQueue.forEach(id => { queuedId[id] = true; });
+    let list = playableList();
+    if (playQueue.length) list = list.filter(m => !queuedId[m.id]);
+    html += '<div class="sm-req-hint" style="padding:10px 0 2px;font-weight:700">当前播放列表</div>';
+    if (!list.length && !currentId) {
+      html += '<div class="sm-req-hint" style="padding:4px 0 2px">音乐库暂无歌曲</div>';
+    } else if (!list.length) {
+      html += '<div class="sm-req-hint" style="padding:4px 0 2px">当前正在播放《' + esc(findTrack(currentId) ? findTrack(currentId).name : '') + '》，其余歌曲正在其他歌单</div>';
+    } else {
+      html += list.map(m => rowFor(m, m.id === currentId ? ' active' : '', false)).join('');
+    }
+    window.openTCPanel('音乐播放列表', html +
       '<div class="mail-actions">' +
       (playQueue.length ? '<button class="cc-tool" id="sm-q-clear">清空队列</button>' : '') +
       '<button class="cc-tool" id="sm-q-close">关闭</button></div>');
     document.getElementById('sm-q-close').addEventListener('click', function () { document.getElementById('tc-mask').hidden = true; });
     const clr = document.getElementById('sm-q-clear');
     if (clr) clr.addEventListener('click', function () { playQueue = []; renderQueueBadge(); toast('已清空播放队列'); openQueuePanel(); });
-    // 点整行＝立刻播放并从队列移除；点 × 仅移除
+    // 点待播队列整行＝立刻播放并从队列移除；点 × 仅移除；点当前播放列表任一行＝直接切到这首歌
     document.querySelectorAll('#tc-body .sm-song[data-qid]').forEach(function (row) {
       row.addEventListener('click', function (e) {
         if (e.target.closest('[data-qrm]')) return;
@@ -2612,11 +2634,11 @@
   }
   function updateModeIcon() {
     const paths = {
-      list: '<path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 014-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 01-4 4H3"/>',
-      shuffle: '<path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 014-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 01-4 4H3"/>',
+      list: '<path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6h.01M3 12h.01M3 18h.01"/>',
+      shuffle: '<path d="M2 11a5 5 0 0 1 5-5h13"/><path d="m16 3 4 3-4 3"/><path d="M22 13a5 5 0 0 1-5 5H4"/><path d="m8 21-4-3 4-3"/>',
       single: '<circle cx="12" cy="12" r="9"/><path d="M12 8v8M9.5 8.5h5"/>'
     };
-    document.querySelectorAll('#sm-mode-ico').forEach(el => { el.innerHTML = paths[mode] || paths.list; });
+    document.querySelectorAll('#sm-mode-ico, #sm-f-mode-ico').forEach(el => { el.innerHTML = paths[mode] || paths.list; });
   }
   function syncPlayIcons(playing) {
     const playPath = playing
@@ -3492,6 +3514,8 @@
   if (playBtn) playBtn.addEventListener('click', toggle);
   const modeBtn = document.getElementById('sm-mode');
   if (modeBtn) modeBtn.addEventListener('click', cycleMode);
+  const fModeBtn = document.getElementById('sm-f-mode');
+  if (fModeBtn) fModeBtn.addEventListener('click', cycleMode);
   const prevBtn = document.getElementById('sm-prev');
   if (prevBtn) prevBtn.addEventListener('click', prev);
   const nextBtn = document.getElementById('sm-next');

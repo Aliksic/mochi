@@ -1,3 +1,9 @@
+### 2026-08-27 22:4x（✅ 完成·iOS 朋友圈评论重复显示）
+- [本会话·已构建]（改 src/js/feed.js，AI-A 域）+ node build.mjs（sw mochi-mtbmu3h5）+ verify.mjs 10/10 + node --check 通过；**未提交**。
+  - **用户反馈**：iOS 朋友圈评论区，我和联系人发的评论全部重复显示成两条。
+  - **根因**：评论区去重只在 IDB 合并路径（deeperList）有，常规 load/render 路径的 normPost 从不去重。历史数据（iOS 键盘/重复触发等把同一条评论重复入库存过）里 p.comments 已含重复副本，渲染端直接 map 输出 → 每条都显示成两条。
+  - **修复**：normPost 内对每条动态的 comments 及 replies 按「ts+身份+作者+内容」精确去重，仅折叠完全相同副本、不伤不同评论；load() 全路径（主列表 / 全部朋友圈 / 单卡刷新）生效，既有重复即时消除，后续任一 save 会顺带把去重后的干净数据落盘。以我为准构建。
+
 ### 2026-08-27 21:5x（✅ 完成·联系人/桌面切换弹窗列表隐藏灰色滚动条）
 - [本会话]（**已改 src/js/contacts.js + src/js/personalize.js**；已构建（21:54, sw: mochi-mtbl3ikv）+ verify 10/10 + 浏览器实测：列表可滚动但滚动条已隐藏；**未提交**）。
   - **用户反馈**：切换桌面联系人的页面右边有莫名的灰色滚动条；补充说明是联系人很多、需要滑动时出现。
@@ -3388,3 +3394,6 @@ staticText: staticText
 - **验证**：node build.mjs 成功(sw mochi-mtbhughj)，node tools/verify.mjs 布局 10/10。
 - **给构建者/提交者**：本会话改动含并行会话未提交内容，请统一 git diff 自查后收口提交。未提交。
 
+
+### 2026-08-27（用户反馈：通知栏切歌与聊天悬浮小框/桌面音乐不同步）
+- [AI-A·本会话·已构建] 根因：playTrack 先改 currentId，但悬浮小框/音乐页底部播放条/桌面音乐小组件只在音频真正 onplay（或本地歌异步加载完成后）才刷新；从手机通知栏/后台切歌、或播放本地歌时 UI 停留旧歌直到出声。修复：在 playTrack 里 teardownAudio() 之后立即调用 updatePlayerBar()（同步刷新悬浮小框/底部播放条/桌面小组件的歌名/封面/图标），对网络歌幂等、本地歌不再依赖起播。仅改 src/js/music-player.js（AI-A 域）。已 node build.mjs（sw mochi-mtbmn1ro）。未提交。
