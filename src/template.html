@@ -1921,6 +1921,18 @@
             <div class="gs-row"><span>分享字卡概率</span><div class="stepper" data-k="ai-cc-prob" data-min="0" data-max="100" data-step="1"><button class="stp-min">−</button><input class="stp-val" id="ai-cc-prob-val" readonly><button class="stp-max">+</button></div></div>
           </div>
           <div class="gs-sub" style="padding:0 14px 14px">TA 主动找你的消息会按概率变成猜拳/游戏/贴贴邀请（游戏在 Pong、贪吃蛇中随机；贴贴同意后 TA 会回应一句），自动打开对应半框或回应，不想玩直接关掉即可；仅在你在聊天页时触发，需开启「主动发送」。邀请话术可在 字卡库 →「TA的邀请」里逐句开关或自定义添加；「分享你的字卡」从你在 字卡库 自建的纯文本卡（含公用）里随机抽一张当 TA 的悄悄话，冷却 90 分钟</div>
+          <!-- v3.20.x：联系人跨桌面查岗 / 跨桌面来电——其他桌面的联系人按各自概率/冷却主动来查岗、来电 -->
+          <div class="gs-title" style="margin-top:6px">联系人跨桌面查岗</div>
+          <div class="set-group glass">
+            <div class="gs-row"><span>跨桌面查岗概率</span><div class="stepper" data-k="ckq-prob" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="ckq-prob-val2" readonly><button class="stp-max">+</button></div></div>
+            <div class="gs-row"><span>查岗冷却（分钟）</span><div class="stepper" data-k="ckq-cool" data-min="0" data-max="240" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="ckq-cool-val2" readonly><button class="stp-max">+</button></div></div>
+          </div>
+          <div class="gs-sub" style="padding:0 14px 2px">其他桌面的联系人会按各自概率（默认 2%，可在此逐联系人调整）主动来查你的岗，每个触发后 30 分钟内不重复。全局开关在 设置 →「开启 联系人跨桌面查岗」，回应字卡可在 字卡库 →「联系人跨桌面查岗」里逐张开关</div>
+          <div class="gs-title" style="margin-top:10px">联系人跨桌面打电话</div>
+          <div class="set-group glass">
+            <div class="gs-row"><span>跨桌面来电概率</span><div class="stepper" data-k="desk-call-prob" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="desk-call-prob-val" readonly><button class="stp-max">+</button></div></div>
+          </div>
+          <div class="gs-sub" style="padding:0 14px 2px">其他桌面的联系人会按各自概率（默认 2%，可在此逐联系人调整）主动给你来电，冷却与查岗一致 30 分钟。全局开关在 设置 →「开启 联系人跨桌面打电话」</div>
         </div>
         <!-- v3.6.x：保存设置按钮——点击把当前所有概率/开关写入本地并提示 -->
         <button class="ta-add-btn gs-save-btn" id="reply-save-btn" style="width:100%;margin:6px 0 18px">

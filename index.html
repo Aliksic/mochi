@@ -3328,7 +3328,7 @@ padding:3px 6px; font-family:inherit;
 }
 .div-chat-hist-clear:active { color:#a33; }
 .div-chat-hist-list { margin-top:6px; display:flex; flex-direction:column; gap:6px; }
-.div-chat-hist-item { border:1px solid rgba(0,0,0,.09); border-radius:10px; padding:8px 10px; background:rgba(255,255,255,.6); }
+.div-chat-hist-list[hidden] { display:none; } .div-chat-hist-item { border:1px solid rgba(0,0,0,.09); border-radius:10px; padding:8px 10px; background:rgba(255,255,255,.6); }
 .div-chat-hist-q { font-size:12px; font-weight:700; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .div-chat-hist-meta { font-size:10px; color:var(--muted); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .div-chat-hist-acts { display:flex; gap:8px; margin-top:6px; }
@@ -5459,10 +5459,10 @@ backface-visibility:hidden; -webkit-backface-visibility:hidden;
 border-radius:10px; display:flex; align-items:center; justify-content:center; overflow:hidden;
 }
 .mgm-back {
-background:linear-gradient(145deg,#5b7cfa 0%,#8a63d2 55%,#b163b8 100%);
-box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.3), inset 0 0 14px rgba(255,255,255,.12), 0 2px 5px rgba(60,60,120,.22);
+background:linear-gradient(145deg,#3a3a3a 0%,#1a1a1a 58%,#2b2b2b 100%);
+box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.16), 0 2px 5px rgba(0,0,0,.22);
 }
-.mgm-back i { font-style:normal; color:rgba(255,255,255,.92); font-size:calc(var(--mgm-fs,27px) * .62); text-shadow:0 1px 2px rgba(0,0,0,.2); }
+.mgm-back i { font-style:normal; color:rgba(255,255,255,.94); font-size:calc(var(--mgm-fs,27px) * .62); text-shadow:0 1px 2px rgba(0,0,0,.25); }
 .mgm-face {
 transform:rotateY(180deg);
 background:rgba(255,255,255,.96); border:1px solid rgba(0,0,0,.08);
@@ -5470,8 +5470,8 @@ box-shadow:0 1px 3px rgba(0,0,0,.08);
 font-size:var(--mgm-fs,27px); line-height:1;
 }
 .mgm-card.matched { cursor:default; }
-.mgm-own-p .mgm-face { background:#eaf3ff; box-shadow:inset 0 0 0 2px #3a7fd5; }
-.mgm-own-t .mgm-face { background:#fff7e6; box-shadow:inset 0 0 0 2px #f0b03c; }
+.mgm-own-p .mgm-face { background:#f4f4f4; box-shadow:inset 0 0 0 2px #1a1a1a; }
+.mgm-own-t .mgm-face { background:#fafafa; box-shadow:inset 0 0 0 2px #bdbdbd; }
 .mgm-card.matched .mgm-in { animation:mgmpop .34s ease-out; }
 @keyframes mgmpop {
 0% { transform:rotateY(180deg) scale(1); }
@@ -5491,8 +5491,12 @@ font-size:var(--mgm-fs,27px); line-height:1;
 [data-theme="dark"] .mgm-turn { background:rgba(255,255,255,.08); }
 [data-theme="dark"] .mgm-chem, [data-theme="dark"] .mgm-coin, [data-theme="dark"] .mgm-hint { color:#9aa3ad; }
 [data-theme="dark"] .mgm-face { background:var(--dark-card-92); border-color:var(--dark-border); }
-[data-theme="dark"] .mgm-own-p .mgm-face { background:rgba(58,127,213,.24); }
-[data-theme="dark"] .mgm-own-t .mgm-face { background:rgba(240,176,60,.2); }
+[data-theme="dark"] .mgm-own-p .mgm-face { background:rgba(255,255,255,.16); box-shadow:inset 0 0 0 2px #e8e8e8; }
+[data-theme="dark"] .mgm-own-t .mgm-face { background:rgba(255,255,255,.05); box-shadow:inset 0 0 0 2px #8f959c; }
+#chat-memory-panel .pong-overlay { background:rgba(22,22,22,.92); }
+#chat-memory-panel .pong-overlay-btn { background:#1a1a1a; }
+#chat-memory-panel .pong-overlay-btn:active { background:#000; }
+#chat-memory-panel .pong-overlay-btn2 { background:rgba(255,255,255,.16); }
 .fish-stats { margin:8px 4px 0; padding:9px 11px; border-radius:12px; background:rgba(90,140,190,.08); font-size:11.5px; color:#5a7c95; text-align:center; }
 .fish-stats b { color:#e8963a; font-weight:700; }
 .fish-keep { display:flex; align-items:center; gap:2px; font-size:10px; color:#9aa; cursor:pointer; flex-shrink:0; margin-right:2px; -webkit-tap-highlight-color:transparent; }
@@ -7831,7 +7835,7 @@ transition-duration: .01ms !important;
       </div>
       <div class="splash-dots"><i></i><i></i><i></i></div>
       <div class="splash-brand">小红书@言序（1842523578）</div>
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787836052206">Mochi 字卡传讯 v3.6.270 · 部署于 2026-08-27 21:07</div>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787837158772">Mochi 字卡传讯 v3.6.271 · 部署于 2026-08-27 21:25</div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
       <div class="splash-loading" id="splash-loading">正在加载数据…</div>
@@ -8907,7 +8911,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.6.270</div>
+      <div class="ver">Mochi 字卡传讯 v3.6.271</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -9059,7 +9063,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.6.270</span>
+              <span class="lic-ver">v3.6.271</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -9698,6 +9702,18 @@ transition-duration: .01ms !important;
             <div class="gs-row"><span>分享字卡概率</span><div class="stepper" data-k="ai-cc-prob" data-min="0" data-max="100" data-step="1"><button class="stp-min">−</button><input class="stp-val" id="ai-cc-prob-val" readonly><button class="stp-max">+</button></div></div>
           </div>
           <div class="gs-sub" style="padding:0 14px 14px">TA 主动找你的消息会按概率变成猜拳/游戏/贴贴邀请（游戏在 Pong、贪吃蛇中随机；贴贴同意后 TA 会回应一句），自动打开对应半框或回应，不想玩直接关掉即可；仅在你在聊天页时触发，需开启「主动发送」。邀请话术可在 字卡库 →「TA的邀请」里逐句开关或自定义添加；「分享你的字卡」从你在 字卡库 自建的纯文本卡（含公用）里随机抽一张当 TA 的悄悄话，冷却 90 分钟</div>
+          <!-- v3.20.x：联系人跨桌面查岗 / 跨桌面来电——其他桌面的联系人按各自概率/冷却主动来查岗、来电 -->
+          <div class="gs-title" style="margin-top:6px">联系人跨桌面查岗</div>
+          <div class="set-group glass">
+            <div class="gs-row"><span>跨桌面查岗概率</span><div class="stepper" data-k="ckq-prob" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="ckq-prob-val2" readonly><button class="stp-max">+</button></div></div>
+            <div class="gs-row"><span>查岗冷却（分钟）</span><div class="stepper" data-k="ckq-cool" data-min="0" data-max="240" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="ckq-cool-val2" readonly><button class="stp-max">+</button></div></div>
+          </div>
+          <div class="gs-sub" style="padding:0 14px 2px">其他桌面的联系人会按各自概率（默认 2%，可在此逐联系人调整）主动来查你的岗，每个触发后 30 分钟内不重复。全局开关在 设置 →「开启 联系人跨桌面查岗」，回应字卡可在 字卡库 →「联系人跨桌面查岗」里逐张开关</div>
+          <div class="gs-title" style="margin-top:10px">联系人跨桌面打电话</div>
+          <div class="set-group glass">
+            <div class="gs-row"><span>跨桌面来电概率</span><div class="stepper" data-k="desk-call-prob" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="desk-call-prob-val" readonly><button class="stp-max">+</button></div></div>
+          </div>
+          <div class="gs-sub" style="padding:0 14px 2px">其他桌面的联系人会按各自概率（默认 2%，可在此逐联系人调整）主动给你来电，冷却与查岗一致 30 分钟。全局开关在 设置 →「开启 联系人跨桌面打电话」</div>
         </div>
         <!-- v3.6.x：保存设置按钮——点击把当前所有概率/开关写入本地并提示 -->
         <button class="ta-add-btn gs-save-btn" id="reply-save-btn" style="width:100%;margin:6px 0 18px">
@@ -29244,6 +29260,7 @@ const DEFAULTS = {
 'ai-cuddle-en': 1, 'ai-cuddle-prob': 5,
 'ai-cc-en': 1, 'ai-cc-prob': 4,
 'ckq-en': 1, 'ckq-prob': 2, 'ckq-popup-prob': 70, 'ckq-cool': 30,
+'desk-call-prob': 2,
 'ml-min-cards': 20, 'ml-max-cards': 50,
 'ml-write-prob': 30, 'ml-write-min': 1, 'ml-write-max': 120,
 'ml-write-daily-max': 3,
@@ -39636,7 +39653,10 @@ return cid === 'default' ? 'TA' : 'TA';
 function cAvatar(cid) {
 try {
 const s = (cid && window.storeFor) ? window.storeFor(cid) : window.activeStore;
-const a = s.get('cs-avatar-partner') || s.get('avatar-partner') || '';
+let a = s.get('cs-avatar-partner') || s.get('feed-ta-avatar') || s.get('avatar-partner') || '';
+if (!a && cid === 'default' && window.xyStore) {
+a = window.xyStore('xy-home-v2').get('feed-ta-avatar') || '';
+}
 return (a && (a.indexOf('data:') === 0 || /^https?:\/\//i.test(a))) ? a : '';
 } catch (e) { return ''; }
 }
@@ -39670,13 +39690,13 @@ if (document.hidden) {
 try {
 const av = cAvatar(req.cid);
 if (req.kind === 'call') {
-if (window.bgNotifyCheck) window.bgNotifyCheck(title + (req.kind === 'call' ? '' : '：' + (req.text || '')), Date.now(), { name: name + '来电', av: av });
+if (window.bgNotifyCheck) window.bgNotifyCheck(title + (req.kind === 'call' ? '' : '：' + (req.text || '')), Date.now(), { name: name + '来电', av: av, avFixed: true });
 } else if (req.kind === 'checkin') {
 if (window.chatAppendDeskCkTo) window.chatAppendDeskCkTo(req.cid, req.q);
-if (window.bgNotifyCheck) window.bgNotifyCheck(title + '：' + (req.text || ''), Date.now(), { name: name + '查岗', av: av });
+if (window.bgNotifyCheck) window.bgNotifyCheck(title + '：' + (req.text || ''), Date.now(), { name: name + '查岗', av: av, avFixed: true });
 } else { // chat 求聊天
 if (window.chatAppendDeskTextTo) window.chatAppendDeskTextTo(req.cid, req.text || '想你了，来聊聊天吧。');
-if (window.bgNotifyCheck) window.bgNotifyCheck(title + '：来陪我聊聊天吧', Date.now(), { name: name + '来聊天', av: av });
+if (window.bgNotifyCheck) window.bgNotifyCheck(title + '：来陪我聊聊天吧', Date.now(), { name: name + '来聊天', av: av, avFixed: true });
 }
 } catch (e) {}
 setStatus(req.cid, 'seen');
@@ -41043,7 +41063,9 @@ const bodyFitted = window.taFit ? window.taFit(body) : body;
 const opts = { body: (t ? t + '  ' : '') + (bodyFitted && bodyFitted.length > 40 ? bodyFitted.slice(0, 40) + '…' : bodyFitted) };
 let bigIcon = '';   // 右侧大图标：联系人头像；无头像时兜底 mochi 字母图标（见下）
 let previewImg = ''; // 展开大图：消息图片
-const avatar = extra.av || store.get('cs-avatar-partner') || store.get('avatar-partner') || '';
+const avatar = extra.avFixed
+? (extra.av || '')
+: (extra.av || store.get('cs-avatar-partner') || store.get('avatar-partner') || '');
 if (avatar && (avatar.indexOf('data:') === 0 || /^https?:\/\//i.test(avatar))) bigIcon = avatar;
 if (!bigIcon) bigIcon = NOTIFY_ICON;
 if (extra.img && (extra.img.indexOf('data:') === 0 || /^https?:\/\//i.test(extra.img))) previewImg = extra.img;
@@ -42914,8 +42936,11 @@ textarea.value += s;
 function mailUploadImage(textarea) {
 const fi = document.createElement('input');
 fi.type = 'file'; fi.accept = 'image/*'; fi.multiple = true;
+fi.style.cssText = 'position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0;';
+document.body.appendChild(fi);
 fi.onchange = () => {
 const files = Array.prototype.slice.call(fi.files || []);
+fi.remove();
 if (!files.length) return;
 files.forEach(f => {
 const reader = new FileReader();
@@ -42949,7 +42974,7 @@ if (!root || !textarea) return;
 const stickerBtn = root.querySelector('.mail-tb-sticker');
 if (stickerBtn) stickerBtn.addEventListener('click', (e) => {
 e.stopPropagation();
-if (window.openEmojiPanelForInsert) window.openEmojiPanelForInsert((src) => mailInsertInto(textarea, 'sticker:' + src));
+if (window.openEmojiPanelForInsert) window.openEmojiPanelForInsert((src) => mailInsertInto(textarea, 'sticker:' + src), { allowUrl: true });
 });
 const upImg = root.querySelector('.mail-tb-image');
 if (upImg) upImg.addEventListener('click', () => mailUploadImage(textarea));

@@ -122,12 +122,18 @@
     } catch (e) {}
     return cid === 'default' ? 'TA' : 'TA';
   }
-  // 该桌面联系人自己的 partner 头像（cs-avatar-partner 优先，回退 avatar-partner）——
-  // 跨桌面查岗/求聊天/来电通知必须用它，否则 bg-keep 会回退当前桌面头像导致头像错
+  // 该桌面联系人自己的 partner 头像（聊天头像 cs-avatar-partner 优先，回退该桌面
+  // 的身份图标 feed-ta-avatar，再回退桌面装饰 avatar-partner）——
+  // 跨桌面查岗/求聊天/来电通知必须用它，否则 bg-keep 会回退当前桌面头像导致头像错。
+  // 非 default 联系人的身份图标存在各自桌面命名空间 feed-ta-avatar；default 的联系人
+  // 身份图存在根键，额外回退一次（与 feed.js taAvFor 同口径）。
   function cAvatar(cid) {
     try {
       const s = (cid && window.storeFor) ? window.storeFor(cid) : window.activeStore;
-      const a = s.get('cs-avatar-partner') || s.get('avatar-partner') || '';
+      let a = s.get('cs-avatar-partner') || s.get('feed-ta-avatar') || s.get('avatar-partner') || '';
+      if (!a && cid === 'default' && window.xyStore) {
+        a = window.xyStore('xy-home-v2').get('feed-ta-avatar') || '';
+      }
       return (a && (a.indexOf('data:') === 0 || /^https?:\/\//i.test(a))) ? a : '';
     } catch (e) { return ''; }
   }
@@ -165,15 +171,18 @@
       // v3.19.x：后台命中时不再只是通知——查岗/求聊天直接把卡写入对应联系人桌面聊天，
       // 切回前台到该联系人即可看到并回答；来电无法后台接听，只保留系统通知。
       try {
+        // avFixed：明示大头像由本页面的 cAvatar(req.cid) 权威决定（该联系人自己桌面的头像）。
+        // 若不传，bg-keep 会在 av 为空时回退当前桌面头像 → 把「当前桌面的联系人头像」错当成
+        // 跨桌面联系人头像显示。传了 avFixed 后空值走中立 mochi 图标，绝不再借用当前桌面。
         const av = cAvatar(req.cid);
         if (req.kind === 'call') {
-          if (window.bgNotifyCheck) window.bgNotifyCheck(title + (req.kind === 'call' ? '' : '：' + (req.text || '')), Date.now(), { name: name + '来电', av: av });
+          if (window.bgNotifyCheck) window.bgNotifyCheck(title + (req.kind === 'call' ? '' : '：' + (req.text || '')), Date.now(), { name: name + '来电', av: av, avFixed: true });
         } else if (req.kind === 'checkin') {
           if (window.chatAppendDeskCkTo) window.chatAppendDeskCkTo(req.cid, req.q);
-          if (window.bgNotifyCheck) window.bgNotifyCheck(title + '：' + (req.text || ''), Date.now(), { name: name + '查岗', av: av });
+          if (window.bgNotifyCheck) window.bgNotifyCheck(title + '：' + (req.text || ''), Date.now(), { name: name + '查岗', av: av, avFixed: true });
         } else { // chat 求聊天
           if (window.chatAppendDeskTextTo) window.chatAppendDeskTextTo(req.cid, req.text || '想你了，来聊聊天吧。');
-          if (window.bgNotifyCheck) window.bgNotifyCheck(title + '：来陪我聊聊天吧', Date.now(), { name: name + '来聊天', av: av });
+          if (window.bgNotifyCheck) window.bgNotifyCheck(title + '：来陪我聊聊天吧', Date.now(), { name: name + '来聊天', av: av, avFixed: true });
         }
       } catch (e) {}
       // 卡已入库聊天，释放 pending（避免占用队列挡住下一次正常弹窗查岗）

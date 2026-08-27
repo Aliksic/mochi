@@ -1227,6 +1227,7 @@
 }
 .div-chat-hist-clear:active { color:#a33; }
 .div-chat-hist-list { margin-top:6px; display:flex; flex-direction:column; gap:6px; }
+.div-chat-hist-list[hidden] { display:none; } /* display:flex 会覆盖 hidden，需补此规则才能折叠 */
 .div-chat-hist-item { border:1px solid rgba(0,0,0,.09); border-radius:10px; padding:8px 10px; background:rgba(255,255,255,.6); }
 .div-chat-hist-q { font-size:12px; font-weight:700; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .div-chat-hist-meta { font-size:10px; color:var(--muted); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -3616,12 +3617,12 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + env(safe-area-inset-bott
   backface-visibility:hidden; -webkit-backface-visibility:hidden;
   border-radius:10px; display:flex; align-items:center; justify-content:center; overflow:hidden;
 }
-/* 牌背：全站统一的星语渐变 + ✦，简单牌面也不显廉价 */
+/* 牌背：黑白简约高级黑渐变 + ✦，与全局黑白灰配色统一 */
 .mgm-back {
-  background:linear-gradient(145deg,#5b7cfa 0%,#8a63d2 55%,#b163b8 100%);
-  box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.3), inset 0 0 14px rgba(255,255,255,.12), 0 2px 5px rgba(60,60,120,.22);
+  background:linear-gradient(145deg,#3a3a3a 0%,#1a1a1a 58%,#2b2b2b 100%);
+  box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.16), 0 2px 5px rgba(0,0,0,.22);
 }
-.mgm-back i { font-style:normal; color:rgba(255,255,255,.92); font-size:calc(var(--mgm-fs,27px) * .62); text-shadow:0 1px 2px rgba(0,0,0,.2); }
+.mgm-back i { font-style:normal; color:rgba(255,255,255,.94); font-size:calc(var(--mgm-fs,27px) * .62); text-shadow:0 1px 2px rgba(0,0,0,.25); }
 .mgm-face {
   transform:rotateY(180deg);
   background:rgba(255,255,255,.96); border:1px solid rgba(0,0,0,.08);
@@ -3629,8 +3630,8 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + env(safe-area-inset-bott
   font-size:var(--mgm-fs,27px); line-height:1;
 }
 .mgm-card.matched { cursor:default; }
-.mgm-own-p .mgm-face { background:#eaf3ff; box-shadow:inset 0 0 0 2px #3a7fd5; }
-.mgm-own-t .mgm-face { background:#fff7e6; box-shadow:inset 0 0 0 2px #f0b03c; }
+.mgm-own-p .mgm-face { background:#f4f4f4; box-shadow:inset 0 0 0 2px #1a1a1a; }
+.mgm-own-t .mgm-face { background:#fafafa; box-shadow:inset 0 0 0 2px #bdbdbd; }
 .mgm-card.matched .mgm-in { animation:mgmpop .34s ease-out; }
 @keyframes mgmpop {
   0% { transform:rotateY(180deg) scale(1); }
@@ -3652,8 +3653,13 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + env(safe-area-inset-bott
 [data-theme="dark"] .mgm-turn { background:rgba(255,255,255,.08); }
 [data-theme="dark"] .mgm-chem, [data-theme="dark"] .mgm-coin, [data-theme="dark"] .mgm-hint { color:#9aa3ad; }
 [data-theme="dark"] .mgm-face { background:var(--dark-card-92); border-color:var(--dark-border); }
-[data-theme="dark"] .mgm-own-p .mgm-face { background:rgba(58,127,213,.24); }
-[data-theme="dark"] .mgm-own-t .mgm-face { background:rgba(240,176,60,.2); }
+[data-theme="dark"] .mgm-own-p .mgm-face { background:rgba(255,255,255,.16); box-shadow:inset 0 0 0 2px #e8e8e8; }
+[data-theme="dark"] .mgm-own-t .mgm-face { background:rgba(255,255,255,.05); box-shadow:inset 0 0 0 2px #8f959c; }
+/* 记忆翻牌覆盖层：黑白简约（独立覆盖 pong 共享的深蓝底/蓝按钮，不牵连其他小游戏） */
+#chat-memory-panel .pong-overlay { background:rgba(22,22,22,.92); }
+#chat-memory-panel .pong-overlay-btn { background:#1a1a1a; }
+#chat-memory-panel .pong-overlay-btn:active { background:#000; }
+#chat-memory-panel .pong-overlay-btn2 { background:rgba(255,255,255,.16); }
 .fish-stats { margin:8px 4px 0; padding:9px 11px; border-radius:12px; background:rgba(90,140,190,.08); font-size:11.5px; color:#5a7c95; text-align:center; }
 .fish-stats b { color:#e8963a; font-weight:700; }
 .fish-keep { display:flex; align-items:center; gap:2px; font-size:10px; color:#9aa; cursor:pointer; flex-shrink:0; margin-right:2px; -webkit-tap-highlight-color:transparent; }

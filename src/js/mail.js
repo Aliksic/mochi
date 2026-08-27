@@ -1003,8 +1003,11 @@
   function mailUploadImage(textarea) {
     const fi = document.createElement('input');
     fi.type = 'file'; fi.accept = 'image/*'; fi.multiple = true;
+    fi.style.cssText = 'position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0;';
+    document.body.appendChild(fi);
     fi.onchange = () => {
       const files = Array.prototype.slice.call(fi.files || []);
+      fi.remove();
       if (!files.length) return;
       files.forEach(f => {
         const reader = new FileReader();
@@ -1041,7 +1044,7 @@
       // stopPropagation：防止冒泡到 document 的「面板外点击关闭」把刚打开的面板又关掉
       e.stopPropagation();
       // 复用聊天同一个表情包面板（插入模式：点击表情插入信纸）
-      if (window.openEmojiPanelForInsert) window.openEmojiPanelForInsert((src) => mailInsertInto(textarea, 'sticker:' + src));
+      if (window.openEmojiPanelForInsert) window.openEmojiPanelForInsert((src) => mailInsertInto(textarea, 'sticker:' + src), { allowUrl: true });
     });
     const upImg = root.querySelector('.mail-tb-image');
     if (upImg) upImg.addEventListener('click', () => mailUploadImage(textarea));

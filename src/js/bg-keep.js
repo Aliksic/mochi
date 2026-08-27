@@ -1056,7 +1056,11 @@
     //（https URL，SW 随时可取）。media 不再各自转 blob URL，dataURL 原样上交
     // showSysNotification 统一 Blob 化直传（页面冻结后 blob: URL 取不到图是左侧
     // 回退浏览器默认图标的根因）
-    const avatar = extra.av || store.get('cs-avatar-partner') || store.get('avatar-partner') || '';
+    // avFixed：调用方已给出权威头像（如跨桌面联系人头像），即使为空也不再回退当前桌面头像，
+    // 避免把「当前桌面的联系人头像」错当成跨桌面联系人头像显示；空值由下方兜底 mochi 图标。
+    const avatar = extra.avFixed
+      ? (extra.av || '')
+      : (extra.av || store.get('cs-avatar-partner') || store.get('avatar-partner') || '');
     if (avatar && (avatar.indexOf('data:') === 0 || /^https?:\/\//i.test(avatar))) bigIcon = avatar;
     if (!bigIcon) bigIcon = NOTIFY_ICON;
     if (extra.img && (extra.img.indexOf('data:') === 0 || /^https?:\/\//i.test(extra.img))) previewImg = extra.img;
