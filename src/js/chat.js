@@ -4569,6 +4569,20 @@ document.addEventListener('contact-switched', function () {
 try { closeChatCall(); } catch (e) {}
 });
 if (pokeClose) pokeClose.addEventListener('click', (e) => { e.stopPropagation(); closePokeCard(); });
+// 冷启动回填预算把字卡库大键挂起在 IDB（__xyIdbDeferredKeys）时，聊天页表情包/拍一拍
+// 面板会读成空库。这里在面板打开时按需取回（复用字卡库同一套 hydrateLibScopes），
+// 完成后若面板仍打开则重绘——不启动自动拉取，遵守「用户正在看的场景才拉」红线。
+function hydrateCcForChatPanels(done) {
+try {
+if (window.libScopesDeferred && window.hydrateLibScopes &&
+window.libScopesDeferred(['public', 'own'])) {
+try { toast('字卡较多，正在加载…'); } catch (e) {}
+window.hydrateLibScopes(['public', 'own'], done);
+return true;
+}
+} catch (e) {}
+return false;
+}
 function openPokeCard() {
 if (!pokeCard) return;
 const ep = document.getElementById('emoji-panel');
@@ -4581,6 +4595,7 @@ if (pokeInput) pokeInput.value = '';
 try { const p = store.get('poke-tab'); if (p === 'mine') pokeMode = 'mine'; else if (p === 'ta') pokeMode = 'ta'; } catch (e) {}
 try { const g = store.get('poke-group-' + pokeMode); if (typeof g === 'string' && g) pokeCurGroup = g; } catch (e) {}
 renderPokeCard();
+hydrateCcForChatPanels(() => { if (pokeCard && !pokeCard.hidden) renderPokeCard(); });
 }
 document.addEventListener('click', (e) => {
 if (pokeCard && !pokeCard.hidden && !pokeCard.contains(e.target)) closePokeCard();
@@ -5379,6 +5394,7 @@ renderEmojiPanel();
 emojiPanel.hidden = false;
 scrollChatBottom();
 if (morePanel) morePanel.hidden = true;
+hydrateCcForChatPanels(() => { if (emojiPanel && !emojiPanel.hidden) renderEmojiPanel(); });
 }
 function closeEmojiPanel() {
 if (emojiPanel) emojiPanel.hidden = true;

@@ -1,4 +1,40 @@
-### 2026-08-27 00:2x（✅ 完成·群聊「更多功能」与聊天页共享面板：分类 tabs + 全部功能 + @群成员放分类行最右）
+### 2026-08-27（✅ 完成·【问问TA】功能打开时输入的文字不在输入框内、会飞出去——ce-box 合成层通用刷新）
+- [本会话·完成]（**已改 src/js/mobile-adapt.js（AI-B 域）**；已构建（12:47, sw: mochi-mtb1knxl）+ npm run verify 10/10 + tools/verify-kb-pinpan-late 5/5 回归通过；**未提交**）。
+  - **用户再报**：聊天「更多功能」里【问问TA】半框打开，点输入框打字，输入的文字不在输入框里、会飞出去（与占卜半框同类）。此为 08-23 合入 AI-B 的通用问题（见下）在问问TA 半框的复现——ta-ask.js 的 `_reflowAskCeBoxes` 只覆盖 `page-ta-ask .ta-add .ce-box`，**未覆盖 inline 半框（#chat-ask-panel）里的 ce-box**。
+  - **根因**：ceConvert 把文本输入框转成 contenteditable `.ce-box`，输入文字渲染在独立合成层。安卓键盘弹起致 `.phone` 平移（`_aPanComp` position:relative+top）/高度收缩、或半框被 `kbDockPanels` 改成 fixed 停靠时，该合成层停在旧位不跟随布局 → 文字与输入框框分离（飞出）。ta-ask.js 的局部缓解只治 `page-ta-ask`，inline 半框不受益。
+  - **修复（AI-B 域通用化）**：mobile-adapt.js 新增 `_aRefreshCe()`/`_aSchedCe()`——对缓存可见 `.ce-box` 强制 reflow + toggle `transform:translateZ(0)` 触发合成层重新提交到当前位置（随即还原，不改变布局），与 ta-ask.js 同法、合并该局部缓解的通用覆盖。三个挂点：①`_aPanComp` 平移/复位后；②`kbDockPanels` 面板 fixed 停靠后；③安卓 `visualViewport.resize` + `window.resize` 防抖（键盘开合即重排 .phone 与面板的补齐）。仅安卓启用（iOS 不转 ce-box）。
+  - 验证：npm run verify 10/10 无布局回归；verify-kb-pinpan-late 5/5 键盘平移回归通过；`node --check` 通过。**需真机确认（安卓 Chrome，红米K80/小米15Pro）：【问问TA】/【占卜】半框打字文字应稳稳待输入框内、不再飞出。**
+  - 注：`_aRefreshCe` 与 ta-ask.js 的 `.ta-add` 缓解对同一批 `.ce-box` 幂等重复无害，未改动 ta-ask.js（AI-A 域）。
+### 2026-08-27（✅ 完成·「更多功能 → 钓鱼 / 扫雷 / 记忆翻牌」三个矢量图标重设计）
+- [本会话]（**已改 src/template.html 三处**（AI-B 域，仅换 #more-fish / #more-ms / #more-memory 的 SVG path）；**未构建、未提交**；预览：tools/_game-icons-preview.html）。
+  - **用户两轮反馈后定稿**：第一版（鱼竿+鱼）被评「丑、和旁边画风不搭」，第二版（纯几何）被评「还不如没改前」。第三轮对照邻座图标真实画风（占卜=卡片+星、房间=房子、搜索=放大镜、四子棋=4 圆、贪吃蛇=框+格）——**邻座全是"单个可辨认物件"的干净线条**，重做并给出每功能 A/B/C 三版让用户挑选，最终选定**全部用推荐版 A**：
+  - **钓鱼 A**：椭圆鱼身 + V 尾 + 眼点 + 底部三连水波，一条鱼横向构图。
+  - **扫雷 A**：3×3 雷区方格（rx2 圆角框 + 中竖线两条 + 中横线两条）+ 中心雷点 r2.3，与贪吃蛇/打砖块的框格语言一致。
+  - **记忆翻牌 A**：倾斜背卡（平行四边形）浮在正面圆角卡左上 + 卡心五角星（与占卜单卡区分叠卡感）。
+  - 几何验证（headless Chrome getBBox）：三图内容均在 24×24 viewBox 内、居中无裁剪；预览页含 A/B/C 三版 + 原版对比（tools/_game-icons-preview.html）。
+  - **给构建者**：本次只动 src/template.html（三处 SVG path）；工作区另有并行会话未提交改动，请 git diff 自查后统一构建提交。
+### 2026-08-27（✅ 完成·「更多功能 → 拍一拍」矢量图标重设计：修复左手边「断指」截断感）
+- [本会话]（**已改 src/template.html 两处**（AI-B 域，仅改 SVG path）：①「更多功能 → 拍一拍」图标（#more-poke）；②收藏页「触碰」tab 图标（[data-loctab=touch]）——两者共用同一份手型 SVG，一并替换保持一致）；**未构建、未提交**。
+  - **问题**：原图标手掌左端斜线画到 x=5，比最左手指（x=8）还靠左，且手指底部与手掌弧线不连接，视觉上像左手边多出一截断指。
+  - **重设计**：三根手指对齐底边（y=14.5）立在横掌带上，掌带下方圆角收口；上方加一道拍动弧线表达「拍一拍」动作。几何验证（headless Chrome getBBox）：新图 x 6.0–18.5 / y 2.52–20.5，含描边半宽仍完全落在 24×24 viewBox 内、居中，无任何截断。
+  - **给构建者**：本次只动 src/template.html（两处 SVG path）；工作区另有并行会话未提交改动（chat.js/chatcard.js/connect-four.js/mobile-adapt.js + 多人决定图标等），请 git diff 自查后统一构建提交。
+### 2026-08-27 12:3x（✅ 完成·红米K80 Chrome 点聊天输入栏键盘弹出时输入栏飞上面+中间全灰——第五轮修复）
+- [本会话·完成]（**已改 src/js/mobile-adapt.js（AI-B 域）**；已构建（12:28, sw: mochi-mtb0wd7u）+ verify-kb-pinpan-late 5/5 回归通过；**未提交**）。
+  - **用户再报**（红米 K80 Chrome）：点聊天输入栏，输入法弹出时输入栏一行又飞到上面，输入栏与键盘之间全是灰、无法正常使用。此前四轮（v3.10 resizes-visual / v3.15 `_aPinPan` / v3.16 `_aBurstUntil` / 第四轮无条件大偏移归零+持续续期）已修仍复现。
+  - **根因（本轮定位）**：前几轮全靠 `vv.scrollTo(0,0)` 把视觉视口平移（vv.offsetTop）归零；红米 K80 Chrome（resizes-visual）上该 API 归零不可靠（read-only/归零后被重新置位）→ 平移残留 → .phone 被推上移，输入栏飞顶、其下到键盘之间露 body 灰底。
+  - **修复**：不依赖归零能否生效，新增 `_aPanComp()`——键盘开启期（_aKb/_aProv）内把 .phone 用 `position:relative; top:残余offsetTop` 做**正向补偿**，使 .phone 恰好填满可视区（布局 [offT, offT+vv.height] = 可视区），输入栏停靠键盘上沿、灰条被 .phone 内容盖死。用 relative+top 而非 transform（transform 会变成 .phone 内 position:fixed 悬浮面板的包含块、打断键盘期 fixed 停靠）；relative+top 不构成包含块，emoji/poke-card/更多功能等停靠不受影响。保留 vv.scrollTo 归零（能归零的内核 offT→0、comp=0 不偏移）。已在 5 处键盘关闭还原点（syncAndroidKb 关闭 / _aWatch 关闭 / _aProvClear / focusout 兜底 / visibilitychange 隐藏）补 `_aPanComp()` 清除补偿，避免残留。
+  - **追加（同一问题在浮层面板）**：用户再报【问问TA】/【占卜】面板内点输入栏，键盘弹出时**面板页面也飞走、其下露灰**。根因是这些面板（#chat-ask-panel/#chat-divine-panel，均位于 .phone 内）键盘期被 kbDockPanels 置为 position:fixed——fixed 忽略 .phone 的 relative 偏移，照旧被视觉视口平移整体上移 → 飞出。`_aPanComp()` 追加第 2 段：对**每个已停靠的可见面板自身**加 `transform: translateY(残余offT)` 撤销上移（transform 只作用叶子面板自身，不构成其内部 fixed 子级包含块、不影响布局；offT=0 时清除）。语义：先把 .phone / 面板恢复到「无平移」时原本正确的停靠位置，再统一补偿，主页面与面板视角一致、不再飞走。
+  - 真机确认点（红米 K80 Chrome）：①点聊天输入栏弹键盘，输入栏停键盘正上方不飞走、无灰条；②打字期间屏幕稳定；③收键盘输入栏回底；④更多功能小功能面板输入框同场景回归。
+  - ⚠️ 注意：工作区另有并行会话未提交改动 src/js/chat.js、src/js/chatcard.js（群聊相关），本轮构建已含，但**未纳入任何提交**，留给对应方确认提交。
+
+### 2026-08-27 12:3x（✅ 完成·冷启动后聊天页 表情包/拍一拍 读成空库，需先开字卡库才加载——按需取回修复）
+- [本会话·AI-A]（**已改 src/js/chatcard.js（对外暴露 window.hydrateLibScopes(scopes,done) / window.libScopesDeferred(scopes)，复用既有链式 hydrateLibScopes，不启动自动拉取）+ src/js/chat.js（新增 hydrateCcForChatPanels 助手：打开拍一拍面板 openPokeCard / 表情包面板 openEmojiPanel 时，若两把字卡库键在 __xyIdbDeferredKeys 挂起名单则按需取回，完成后若面板仍打开则重绘）**；已构建（12:27, sw: mochi-mtb0v4yv）+ 新增 tools/verify-cc-hydrate-panels.mjs 9/9 + 布局 verify 10/10 + 关键修复哨兵 12/12；未提交）。
+  - **用户反馈**：开屏加载完进入后点聊天页，表情包/拍一拍是空的，需先点字卡库加载完数据才能用。
+  - **根因**：启动回填预算（idb.js v3.14.x OOM 防线）把大字卡库键（xy-home-v2:cc-groups-public + 当前桌面 :cc-groups）挂起在 IndexedDB（__xyIdbDeferredKeys）时，聊天页表情包/拍一拍面板 store.get 读成空库；此前唯一取回路径是字卡库列表页显示（MutationObserver）或切换联系人，聊天页面板永远等不到数据。
+  - **修复**：chatcard.js 把内部 hydrateLibScopes/libScopesDeferred 暴露到 window（回调在链式取回完成后触发，与列表页共用同一套排队+去重）；chat.js 在 openPokeCard/openEmojiPanel 打开时判定挂起 → 按需取回 → 面板仍打开则重绘。遵守「用户正在看的场景才拉」红线，不在启动链路/后台定时器自动取回。
+  - **验证**：verify-cc-hydrate-panels 9/9——构造挂起现场（两键进 deferred、LS 空、IDB 有权威数据）→ 取回前读空库（复现条件）→ 打开拍一拍面板自动取回并显示专属拍一拍 → deferred 名单清空 → 表情包面板显示字卡库表情 → 公用拍一拍在公用 tab 可见；布局 verify 10/10、哨兵 12/12。
+  - 真机确认点：①冷启动后直接进聊天 → 点拍一拍/表情包应直接显示字卡库内容（无需先开字卡库）；②打开时若有「字卡较多，正在加载…」提示属正常，稍候自动补全。
+
 - [本会话·完成]（**已改 src/template.html（#chat-more-panel 提升为 .phone 级共享浮层，群聊/聊天页共用；@群成员 移入分类 tabs 行最右 #gc-more-at，默认 hidden）+ src/js/chat.js（applyMoreCat 导出 window.applyMoreCat；聊天页打开面板时隐藏 @群成员）+ src/js/group-chat.js（群聊更多按钮打开共享 chat-more-panel 并调 applyMoreCat 分组；@群成员 显示/隐藏；点功能按钮捕获阶段先切聊天页再触发功能）+ src/css/group-chat.css（@ 按钮 margin-left:auto 推到分类行最右）**；已构建（00:24, sw: mochi-mtab0gbd）+ 新增 tools/verify-gc-more.mjs 15/15 + verify-gc-input.mjs 更新 12/12 + verify-gc-send 5/5 + 布局 verify 10/10；未提交——源码改动已在 7e4de37 由并行会话提交，仅需同步构建产物）。
   - **用户反馈链路**：①群聊更多功能不显示分类和功能（只有@群成员）→ 改为共享聊天页更多面板；②没有分组 → 群聊打开时调 applyMoreCat 按分类过滤；③@群成员要放分组最右 → 从顶部栏移到分类 tabs 行内 margin-left:auto。
   - **真机确认点**：①群聊输入栏「更多功能」打开后显示 互动/工具/小游戏/TA的提问 分类 + 各分类功能按钮；②分类行最右是「@群成员」胶囊（聊天页打开面板时不显示）；③点分类 tab 切换功能分组；④点功能按钮自动切到聊天页打开对应功能；⑤点 @群成员 直接在群聊内打开成员选择。

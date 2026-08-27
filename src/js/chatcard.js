@@ -2603,6 +2603,19 @@
       return scopes.some(s => list.indexOf(hydFullKey(s)) >= 0);
     } catch (e) { return false; }
   }
+  // 对外暴露给聊天页表情包/拍一拍面板等场景：与字卡库列表页共用同一套链式取回
+  // （复用 libHydChain 排队+去重），取回完成后回调，供面板重绘。
+  // 仍是「用户正在看的场景按需拉一把」，不在启动链路/后台定时器自动取回。
+  window.hydrateLibScopes = function (scopes, done) {
+    if (!Array.isArray(scopes) || !scopes.length) scopes = ['public', 'own'];
+    return hydrateLibScopes(scopes).then(function () {
+      if (done) { try { done(); } catch (e) {} }
+      return true;
+    });
+  };
+  window.libScopesDeferred = function (scopes) {
+    return libScopesDeferred(Array.isArray(scopes) && scopes.length ? scopes : ['public', 'own']);
+  };
   // 字卡库列表页每次显示时兜底取回（覆盖「冷启动直接进字卡库」「切完桌面进字卡库」）
   (function () {
     const libPage = document.getElementById('page-chatcard');

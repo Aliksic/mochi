@@ -379,6 +379,35 @@
     }
   } catch (e) {}
 
+  // v3.16.x：ce-box 合成层通用刷新（AI-B 域，通用化 ta-ask.js 的 .ta-add 局部缓解，
+  // 合入 AI-A 留言：见 WORKLOG 2026-08-23 问 TA 管理页「文字与输入框边框分离」）。
+  // ceConvert 把文本输入框转成 contenteditable .ce-box，输入文字渲染在独立合成层；
+  // 安卓键盘弹起致 .phone 平移（_aPanComp position:relative+top）/高度收缩、或半框
+  // 面板被 kbDockPanels 改成 fixed 停靠时，该合成层停在旧位不跟随布局 → 表现=
+  // 「输入的文字飞出输入框 / 文字与框分离」（问问TA 半框、占卜、page-ta-ask 通用）。
+  // 与 ta-ask.js 同法：对可见 .ce-box 强制 reflow + toggle transform:translateZ(0)
+  // 触发合成层重新提交到当前位置，随即还原（不带位移动，不改变布局）。仅安卓启用。
+  function _aRefreshCe() {
+    try {
+      var list = document.querySelectorAll('.ce-box');
+      if (!list || !list.length) return;
+      for (var i = 0; i < list.length; i++) {
+        var b = list[i];
+        if (b.offsetParent === null) continue; // display:none/隐藏祖先 跳过
+        var prev = b.style.transform;
+        b.style.transform = 'translateZ(0)';
+        void b.offsetHeight;
+        b.style.transform = prev;
+      }
+    } catch (e) {}
+  }
+  var _aCeT = null;
+  function _aSchedCe() {
+    if (isIOS) return;
+    clearTimeout(_aCeT);
+    _aCeT = setTimeout(_aRefreshCe, 60);
+  }
+
   // v3.5.128：readonly 起手方案已删除——它会被本转换器完全替代：
   // 文本输入框已统一变为 contenteditable div（Chrome 不对其弹自动填充条），
   // 原 input 退场为幽灵锚点不可交互，readonly 不再有任何作用且会干扰动态转换。
@@ -887,45 +916,84 @@
         function _aWinY() {
           try { return window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0; } catch (e) { return 0; }
         }
+        // v3.16.x（第五轮）：视觉视口平移的「正向补偿」——红米 K80 Chrome 键盘弹出时
+        // 为露焦点把视觉视口往下平移（vv.offsetTop>0），整页被推上移：输入栏飞顶、其下到
+        // 键盘之间露 body 灰底。前几轮全靠 vv.scrollTo(0,0) 归零，但部分安卓内核 read-only
+        // 又不可归零（或归零后被重新置位），平移残留 → 症状反复出现。
+        // 改成不依赖归零能否生效的硬兜底：键盘开启期内，把 .phone 用 position:relative
+        // 按残余偏移 offT 正向平移（top=offT）。此时 .phone 恰好填满整个可视区
+        //（布局 [offT, offT+vv.height] = 可视区 [offT, offT+vv.height]），输入栏停在
+        // .phone 底部 = 键盘上沿，灰条被 .phone 内容盖死、不飞顶。
+        // 用 position:relative+top 而非 transform：transform 会变成 position:fixed
+        // 悬浮面板（emoji-panel/poke-card/更多功能等均位于 .phone 内）的包含块、打断
+        // 键盘期 fixed 停靠；relative+top 不构成包含块，停靠不受影响。
+        // 归零（vv.scrollTo）仍然保留：能归零的内核 offsetTop→0、comp=0 自然不偏移。
+        function _aPanComp() {
+          try {
+            var o = Math.round(_aVV.offsetTop || 0);
+            // 1) .phone（主内容）补偿：relative 平移，恰好填满可视区
+            if (o > 0) {
+              if (_aPhone.style.position !== 'relative') _aPhone.style.position = 'relative';
+              if (_aPhone.style.top !== o + 'px') _aPhone.style.top = o + 'px';
+            } else {
+              if (_aPhone.style.top) _aPhone.style.removeProperty('top');
+              // 保留 position:relative——.phone 需作为「停靠态 absolute 面板」（见
+              // kbDockPanels）的包含块，配合平移补偿让面板跟随主内容一起下移；
+              // 该 position 由键盘关闭路径（kbUndockPanels）统一清理。
+            }
+            // 不再对面板使用 transform 补偿：translateY 会让面板生成新合成层，
+            // 触发 .ce-box（contenteditable 输入框）文字渲染停在旧位置=输入的文字
+            // 飞出输入框外的已知问题。改为 kbDockPanels 把 .phone 内面板锚定为
+            // absolute，自动继承 .phone 的平移补偿（见下），此处无需再处理面板。
+            // v3.16.x：无论如何 .phone（及面板内的 ce-box）被布局移动后，其文字
+            // 合成层需刷新跟随（见 _aRefreshCe 注释）。统一防抖调度一次。
+            _aSchedCe();
+          } catch (e) {}
+        }
         function _aPinPan() {
           try {
+            // 1) 先尝试把视觉视口平移 / 文档滚动归零（能归零的内核 offsetTop 会归 0）
             var offT = _aVV.offsetTop || 0;
             var winY = _aWinY();
-            // v3.16.x（第四轮）：无条件「大偏移必归零」——K80 Chrome 在 resizes-visual
-            // 下聚焦聊天输入栏（contenteditable）时，键盘动画可能晚于 850ms 宽限期才
-            // 完成平移+收缩（_aKb 未置位、_aBurstUntil 已过）→ 下方守卫直接 return，
-            // 平移残留不归零 → .phone 整页上移、输入栏飞走、中间露灰。
-            // 这里先兜底：任何时刻只要视觉视口偏移/文档滚动达到「必然露灰」量级
-            //（>160px，远超 caret 微滚 <60px，不误伤）就立即归零，不依赖键盘状态。
-            // 非键盘期 vv.offsetTop 恒为 0、window 本不该滚（滚动都在 .phone 内层），
-            // 异常偏移归零只会修正不会打断正常交互。
-            if (offT > 160 || winY > 160) {
-              if (winY) {
+            if (offT > 0 && _aVV.scrollTo) { try { _aVV.scrollTo(0, 0); } catch (e4) {} }
+            if (winY > 0) {
+              try { window.scrollTo(0, 0); } catch (e2) {}
+              try { document.documentElement.scrollTop = 0; document.body.scrollTop = 0; } catch (e3) {}
+            }
+            // 2) 归零后再读一次真实偏移，判定「必然露灰」量级（不依赖键盘状态）兜底
+            var offT2 = _aVV.offsetTop || 0;
+            var winY2 = _aWinY();
+            if (offT2 > 160 || winY2 > 160) {
+              if (winY2) {
                 try { window.scrollTo(0, 0); } catch (e2) {}
                 try { document.documentElement.scrollTop = 0; document.body.scrollTop = 0; } catch (e3) {}
               }
-              if (offT && _aVV.scrollTo) { try { _aVV.scrollTo(0, 0); } catch (e4) {} }
-              return;
+              if (offT2 && _aVV.scrollTo) { try { _aVV.scrollTo(0, 0); } catch (e4) {} }
             }
+            // 3) 键盘开启期内无条件做正向补偿（不管归零成功与否，硬把 .phone 填满可视区）
+            if (_aKb || _aProv) {
+              _aPanComp();
+            }
+            // 4) 原有守卫：非键盘期不干预；键盘内小偏移(<8) 且输入已可见不误伤
             if (!_aKb && !_aProv && Date.now() > _aBurstUntil) return;
-            if (offT <= 8 && winY <= 8) return;
-            var need = offT > 160 || winY > 160;
+            if (offT2 <= 8 && winY2 <= 8) return;
+            var need = offT2 > 160 || winY2 > 160;
             if (!need) {
               var tgt = (_aIsText(_aTextFocused) ? _aTextFocused : null) ||
                 (_aIsText(document.activeElement) ? document.activeElement : null);
               if (tgt && tgt.getBoundingClientRect) {
                 var r = tgt.getBoundingClientRect(); // 布局坐标；可视区=[offT, offT+vv.height]
-                if (r.top >= offT - 8 && r.bottom <= offT + _aVV.height - 8) need = true;
+                if (r.top >= offT2 - 8 && r.bottom <= offT2 + _aVV.height - 8) need = true;
               } else {
                 need = true;
               }
             }
             if (!need) return;
-            if (winY) {
+            if (winY2) {
               try { window.scrollTo(0, 0); } catch (e2) {}
               try { document.documentElement.scrollTop = 0; document.body.scrollTop = 0; } catch (e3) {}
             }
-            if (offT && _aVV.scrollTo) { try { _aVV.scrollTo(0, 0); } catch (e4) {} }
+            if (offT2 && _aVV.scrollTo) { try { _aVV.scrollTo(0, 0); } catch (e4) {} }
           } catch (e) {}
         }
         function _aBump() { _aLastAct = Date.now(); }
@@ -944,6 +1012,7 @@
             _aKb = false;
             _aPhone.style.height = '';
             _aPhone.style.alignSelf = '';
+            _aPanComp();
             kbUndockPanels();
             return;
           }
@@ -1001,6 +1070,7 @@
                   _aKb = false;
                   _aPhone.style.height = '';
                   _aPhone.style.alignSelf = '';
+                  _aPanComp();
                   kbUndockPanels();
                 }
               } else {
@@ -1044,6 +1114,7 @@
           if (_aKb) return; // 正常机制已接管 .phone 高度，交回原逻辑管理
           _aPhone.style.height = '';
           _aPhone.style.alignSelf = '';
+          _aPanComp();
           kbUndockPanels();
         }
         function _aProvCheck() {
@@ -1079,6 +1150,12 @@
           document.addEventListener('keydown', _aBump, true);
         } catch (e) {}
         _aVV.addEventListener('resize', syncAndroidKb);
+        // v3.16.x：键盘弹起/收起（vv 高度变化）即重排 .phone 与面板 → 其中的 ce-box
+        // 合成层需刷新跟随（见 _aRefreshCe）。与 syncAndroidKb 并行防抖监听，覆盖
+        // 半框（问问TA/占卜/page-ta-ask）在键盘会话内重排但 _aPanComp/kbDockPanels
+        // 未同步触发的补齐。
+        _aVV.addEventListener('resize', _aSchedCe);
+        window.addEventListener('resize', _aSchedCe);
         // 首次聚焦兜底：键盘弹出的 resize 偶发前置/漏触发，紧跟一次判定
         document.addEventListener('focusin', function (e) {
           try {
@@ -1123,6 +1200,7 @@
               _aKb = false;
               _aPhone.style.height = '';
               _aPhone.style.alignSelf = '';
+              _aPanComp();
               kbUndockPanels();
             }
           }, 400);
@@ -1137,6 +1215,7 @@
                 _aKb = false;
                 _aPhone.style.height = '';
                 _aPhone.style.alignSelf = '';
+                _aPanComp();
                 kbUndockPanels();
               }
               _aLastVVH = 0;
@@ -1191,6 +1270,7 @@
         el.style.top = 'auto';
         el.style.bottom = 'calc(96px + env(safe-area-inset-bottom, 0px))';
       });
+      _aSchedCe(); // v3.16.x：面板被 fixed 停靠后，内部 ce-box 合成层需刷新跟随
     } catch (e) {}
   }
   function kbUndockPanels() {

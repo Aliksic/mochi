@@ -29,12 +29,34 @@
   const sideNameEl = document.getElementById('c4-side-name');
 
   const COLS = 7, ROWS = 6;
-  // 行为权重与一步判断概率（认真几乎必堵；正常像普通人；放水/失误明显松懈）
-  const MODE_W = { normal: 0.5, serious: 0.2, sandbag: 0.15, blunder: 0.15 };
-  const TAKE_WIN_P = { serious: 0.95, normal: 0.6, sandbag: 0.25, blunder: 0.3 };
-  const BLOCK_P = { serious: 0.9, normal: 0.62, sandbag: 0.22, blunder: 0.18 };
-  const MISS_FLOOR = 3;          // 玩家威胁被连续无视次数达到该值 → 下次必堵
   const THINK_MIN = 550, THINK_VAR = 600;
+  // ---- 难度档（TA 行为权重 / 一步判断概率 / 底线阈值） ----
+  // casual 休闲：TA 多放水/失误，轻松玩；daily 日常：像普通人时好时坏；serious 认真：TA 想赢
+  const DIFFS = {
+    casual: {
+      label: '休闲', tip: 'TA 让着你，轻松玩',
+      w: { normal: 0.35, serious: 0.05, sandbag: 0.35, blunder: 0.25 },
+      take: { serious: 0.7, normal: 0.4, sandbag: 0.2, blunder: 0.25 },
+      block: { serious: 0.6, normal: 0.4, sandbag: 0.15, blunder: 0.12 },
+      floor: 4
+    },
+    daily: {
+      label: '日常', tip: 'TA 像普通人，时好时坏',
+      w: { normal: 0.5, serious: 0.2, sandbag: 0.15, blunder: 0.15 },
+      take: { serious: 0.95, normal: 0.6, sandbag: 0.25, blunder: 0.3 },
+      block: { serious: 0.9, normal: 0.62, sandbag: 0.22, blunder: 0.18 },
+      floor: 3
+    },
+    serious: {
+      label: '认真', tip: 'TA 想赢，有挑战',
+      w: { normal: 0.35, serious: 0.55, sandbag: 0.05, blunder: 0.05 },
+      take: { serious: 0.98, normal: 0.8, sandbag: 0.4, blunder: 0.5 },
+      block: { serious: 0.96, normal: 0.82, sandbag: 0.4, blunder: 0.45 },
+      floor: 2
+    }
+  };
+  const DIFF_ORDER = ['casual', 'daily', 'serious'];
+  let selDiff = 'daily';
 
   const T = window.taFit || function (x) { return x; };
   function prefix() { return (window.activePrefix && window.activePrefix()) || 'xy-home-v2'; }
@@ -91,7 +113,7 @@
   // ---- 战绩（每联系人独立） ----
   function statsKey() { return prefix() + ':c4-stats'; }
   function loadStats() {
-    const d = { w: 0, l: 0, d: 0, nextFirst: 'you' };
+    const d = { w: 0, l: 0, d: 0, nextFirst: 'you', lastDiff: 'daily' };
     try {
       const raw = localStorage.getItem(statsKey());
       if (raw) { const v = JSON.parse(raw); if (v && typeof v === 'object') return Object.assign(d, v); }
@@ -158,12 +180,13 @@
     const pThreats = winningCols(grid, 1);
     let col = null;
 
+    const take = DIFFS[selDiff].take, blk = DIFFS[selDiff].block;
     if (mode === 'serious') {
-      if (myWins.length && Math.random() < TAKE_WIN_P.serious) col = randOf(myWins);
-      else if (pThreats.length && Math.random() < BLOCK_P.serious) col = randOf(pThreats);
+      if (myWins.length && Math.random() < take.serious) col = randOf(myWins);
+      else if (pThreats.length && Math.random() < blk.serious) col = randOf(pThreats);
     } else if (mode === 'normal') {
-      if (myWins.length && Math.random() < TAKE_WIN_P.normal) col = randOf(myWins);
-      else if (pThreats.length && Math.random() < BLOCK_P.normal) col = randOf(pThreats);
+      if (myWins.length && Math.random() < take.normal) col = randOf(myWins);
+      else if (pThreats.length && Math.random() < blk.normal) col = randOf(pThreats);
     } else if (mode === 'sandbag') {
       // 放水：把「能赢」「该堵」的好棋从候选里剔掉（各自有概率放行一次）
       let pool = legal.slice();
@@ -189,16 +212,17 @@
     const isWin = myWins.indexOf(col) >= 0;
     if (!isBlock && !isWin && pThreats.length) {
       st.missedBlocks++;
-      if (st.missedBlocks > MISS_FLOOR) return pThreats[Math.floor(Math.random() * pThreats.length)];
+      if (st.missedBlocks > DIFFS[selDiff].floor) return pThreats[Math.floor(Math.random() * pThreats.length)];
     }
     if (isBlock) st.missedBlocks = 0;
     return col;
   }
   function rollMode() {
+    const w = DIFFS[selDiff].w;
     const r = Math.random();
-    if (r < MODE_W.normal) return 'normal';
-    if (r < MODE_W.normal + MODE_W.serious) return 'serious';
-    if (r < MODE_W.normal + MODE_W.serious + MODE_W.sandbag) return 'sandbag';
+    if (r < w.normal) return 'normal';
+    if (r < w.normal + w.serious) return 'serious';
+    if (r < w.normal + w.serious + w.sandbag) return 'sandbag';
     return 'blunder';
   }
 
@@ -366,7 +390,9 @@
       '<div class="pong-end-stat">本局共 ' + st.moves + ' 手</div>' +
       '<div class="pong-end-stat">' + statsLine() + '</div>' +
       '<div class="pong-end-stat">下一局 ' + (s.nextFirst === 'you' ? '你' : T('TA')) + '先手</div>' +
-      (coinLine4 ? '<div class="pong-end-stat">' + coinLine4 + '</div>' : '');
+      (coinLine4 ? '<div class="pong-end-stat">' + coinLine4 + '</div>' : '') +
+      pillsHtml() +
+      '<div class="ms-cur">' + diffHint() + '</div>';
     showOverlay(title, body, '再来一局');
     if (startBtn) startBtn.textContent = '再来一局';
     if (endBtn) endBtn.hidden = false;
@@ -396,12 +422,21 @@
   function showStartOverlay() {
     const s = loadStats();
     showOverlay('四子棋',
+      pillsHtml() +
+      '<div class="ms-cur" id="c4-cur">' + diffHint() + '</div>' +
       '<div class="c4-start-tip">你执 🔵 · ' + T('TA') + '执 🟡<br>轮流点击一列落子，先连成四子的一方获胜</div>' +
-      '<div class="c4-start-note">🎲 ' + T('TA') + '今天的状态是随机的——可能认真、可能随手</div>' +
+      '<div class="c4-start-note">🎲 ' + T('TA') + '每回合状态随机——认真/正常/放水/失误</div>' +
       (s.w + s.l + s.d > 0 ? '<div class="pong-end-stat">' + statsLine() + '</div>' : ''),
       s.w + s.l + s.d > 0 ? '再来一局' : '开始对局');
     if (endBtn) endBtn.hidden = true;
   }
+  function pillsHtml() {
+    return '<div class="ms-diffs">' + DIFF_ORDER.map((k) => {
+      const d = DIFFS[k];
+      return '<button class="ms-diff' + (k === selDiff ? ' on' : '') + '" data-diff="' + k + '" type="button" title="' + d.tip + '">' + d.label + '</button>';
+    }).join('') + '</div>';
+  }
+  function diffHint() { return '当前：' + DIFFS[selDiff].label + ' · ' + DIFFS[selDiff].tip; }
   function hideOverlay() { if (overlayEl) overlayEl.hidden = true; if (endBtn) endBtn.hidden = true; }
 
   // ---- 输入 ----
@@ -416,6 +451,22 @@
   if (startBtn) startBtn.addEventListener('click', (e) => { e.stopPropagation(); newGame(); });
   if (endBtn) endBtn.addEventListener('click', (e) => { e.stopPropagation(); closeC4Panel(); });
   if (closeBtn) closeBtn.addEventListener('click', (e) => { e.stopPropagation(); closeC4Panel(); });
+  if (ovBodyEl) ovBodyEl.addEventListener('click', (e) => {
+    const pill = e.target.closest('.ms-diff');
+    if (!pill) return;
+    e.stopPropagation();
+    const k = pill.getAttribute('data-diff');
+    if (!DIFFS[k]) return;
+    selDiff = k;
+    const stat = loadStats();
+    stat.lastDiff = k;
+    saveStats(stat);
+    const pills = ovBodyEl.querySelectorAll('.ms-diff');
+    pills.forEach((p) => { p.classList.toggle('on', p.getAttribute('data-diff') === k); });
+    const curEl = document.getElementById('c4-cur');
+    if (curEl) curEl.textContent = diffHint();
+    else { const c2 = ovBodyEl.querySelector('.ms-cur'); if (c2) c2.textContent = diffHint(); }
+  });
   if (soundBtn) soundBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     soundOn = !soundOn;
@@ -437,6 +488,7 @@
     // 先亮面板再做次要初始化：任何一步异常都不影响半框本身弹出
     if (!boardEl.children.length) { try { buildBoard(); } catch (e) {} }
     panel.hidden = false;
+    try { const s = loadStats(); if (DIFFS[s.lastDiff]) selDiff = s.lastDiff; } catch (e) {}
     try { setNames(); } catch (e) {}
     try { fitBoard(); } catch (e) {}
     // 有进行中的对局 → 接着玩（关面板期间轮到 TA 的补调度）
