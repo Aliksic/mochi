@@ -783,12 +783,19 @@
   //   你【看过消息前】的旧未读累计（进聊天页才清零），回前台会把前几分钟看过的
   //   消息当新消息重弹。改为：切后台时记录未读基数（resumeUnreadBase），回前台
   //   只提示【后台期间新增】的未读增量；无增量则完全不弹。
-  let resumeUnreadBase = -1; // 切后台时的未读基数；-1=未初始化（本次会话没切过后台）
+  // v3.19.x：回前台汇总改用「本次后台实际发送的通知数」——不再用 chat-unread 差值：
+  //   chat-unread 是当前桌面未读数，跨桌面/psync 补投递会污染它，导致回前台
+  //   弹「错误联系人名 + 错误条数」（用户实测：切换桌面后弹窗显示旧桌面昵称、没收到
+  //   消息却说收到1条）。hiddenSentCount 只在 bgNotifyCheck 真正发送系统通知时累加，
+  //   回前台时据此弹一条汇总，准确反映"后台真收到了几条、来自谁"。
+  let hiddenSentCount = 0;
+  let hiddenSentName = '';
   document.addEventListener('visibilitychange', function () {
     const vis = document.visibilityState;
     if (vis === 'hidden') {
-      // 切后台：记录当前未读数，作为本次后台会话的基数
-      try { resumeUnreadBase = parseInt(store.get('chat-unread'), 10) || 0; } catch (e) { resumeUnreadBase = 0; }
+      // 切后台：重置本次后台会话的发送计数（bgNotifyCheck 发送时累加）
+      hiddenSentCount = 0;
+      hiddenSentName = '';
       return;
     }
     if (vis !== 'visible') return;
@@ -799,24 +806,22 @@
         toast('提醒：后台保活已关闭，后台消息到不了，通知不会弹（设置里开启）');
       }
     }
-    // 补弹应用内横幅 + 汇总系统通知：仅当【本次后台期间】未读有增量。
-    // v3.5.161：用增量（当前未读 - 切后台时基数）而非总量，避免重弹看过消息；
-    // 基数未初始化（本次会话没切过后台）时跳过，不弹旧未读
+    // 补弹汇总：仅当本次后台【真的发送过系统通知】时，用实际发送数与发送者名
     try {
-      if (resumeUnreadBase < 0) return;
       const chatPage = document.getElementById('page-chat');
       const inChat = chatPage && !chatPage.hidden;
-      const unreadNow = parseInt(store.get('chat-unread'), 10) || 0;
-      const inc = unreadNow - resumeUnreadBase;
-      if (!inChat && inc > 0 && window.showDeskPopup) {
-        const name = store.get('lbl-partner') || (window.taWord ? window.taWord() : 'TA');
+      const n = hiddenSentCount;
+      const who = hiddenSentName || store.get('lbl-partner') || (window.taWord ? window.taWord() : 'TA');
+      hiddenSentCount = 0;
+      hiddenSentName = '';
+      if (!inChat && n > 0 && window.showDeskPopup) {
         // visibilitychange 为 visible 时触发，isHidden=false 显示应用内横幅
-        window.showDeskPopup({ name: name, text: '你不在的时候收到 ' + inc + ' 条新消息', isHidden: false });
+        window.showDeskPopup({ name: who, text: '你不在的时候收到 ' + n + ' 条新消息', isHidden: false });
         const now = Date.now();
         if (saved === '1' && 'Notification' in window && Notification.permission === 'granted' &&
             (!lastResumeNotifyAt || now - lastResumeNotifyAt > 30000)) {
           lastResumeNotifyAt = now;
-          showSysNotification(name, { body: '你不在的时候收到 ' + inc + ' 条新消息' });
+          showSysNotification(who, { body: '你不在的时候收到 ' + n + ' 条新消息' });
         }
       }
     } catch (e) {}
@@ -1020,6 +1025,10 @@
     if (notifiedDup(nkey) || seenDup(nkey)) { gateStats.dup++; return; }
     if (recentChatDup(nkey, ts)) { gateStats.dup++; return; }
     gateStats.sent++;
+    // v3.19.x：累加「本次后台实际发送的通知数」——回前台汇总用它（见 visibilitychange
+    // 处理器），发送者名取本次通知标题
+    hiddenSentCount++;
+    hiddenSentName = extra.name || store.get('lbl-partner') || (window.taWord ? window.taWord() : 'TA');
     const name = extra.name || store.get('lbl-partner') || (window.taWord ? window.taWord() : 'TA');
     let t = '';
     if (ts) {
@@ -1064,22 +1073,23 @@
     if (avatar && (avatar.indexOf('data:') === 0 || /^https?:\/\//i.test(avatar))) bigIcon = avatar;
     if (!bigIcon) bigIcon = NOTIFY_ICON;
     if (extra.img && (extra.img.indexOf('data:') === 0 || /^https?:\/\//i.test(extra.img))) previewImg = extra.img;
-    // v3.9.x 修复：头像裁剪为正方形，防止安卓通知拉伸变形
-    // 通知的 icon 字段在安卓上会被强制拉伸填充，需预先裁剪为 1:1
+    // v3.21.x：头像改为「等比缩略图」——canvas 尺寸跟随图片本身的宽高比，
+    // 只整体缩放到最长边 96px，不裁切、不填充、不改变比例，避免原图在
+    // 通知上被拉长/裁掉边缘；跨域图污染 canvas 时 toDataURL 抛错走 cb('')
+    // 回退原图，不影响通知发送。
     const cropAvatarToSquare = function (dataUrl, cb) {
       try {
         const img = new Image();
-        // v3.20.x：http(s) 头像也尝试裁剪（安卓通知 icon 位会强制拉伸填充，非 1:1 图必变形）；
-        // 跨域图会污染 canvas，toDataURL 抛错走 cb('') 回退原图，不影响通知发送
         if (/^https?:\/\//i.test(dataUrl)) { img.crossOrigin = 'anonymous'; }
         img.onload = function () {
           try {
-            const size = Math.min(img.width, img.height);
-            const sx = (img.width - size) / 2;
-            const sy = (img.height - size) / 2;
+            const maxSide = 96;
+            const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+            const w = Math.max(1, Math.round(img.width * scale));
+            const h = Math.max(1, Math.round(img.height * scale));
             const c = document.createElement('canvas');
-            c.width = size; c.height = size;
-            c.getContext('2d').drawImage(img, sx, sy, size, size);
+            c.width = w; c.height = h;
+            c.getContext('2d').drawImage(img, 0, 0, w, h);
             cb(c.toDataURL('image/jpeg', 0.85));
           } catch (e) { cb(''); }
         };
@@ -1232,7 +1242,7 @@
           }
         }
       } catch (e) {}
-      if (!dup) { try { window.chatAddIn(it.t, { initiative: 1 }); delivered++; } catch (e) {} }
+      if (!dup) { try { window.chatAddIn(it.t, { initiative: 1, silent: true }); delivered++; } catch (e) {} }
     }
     try { await window.idbSet(PSYNC_QUEUE_KEY, remain); } catch (e) {}
     return delivered;

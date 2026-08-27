@@ -3894,6 +3894,9 @@ flex:1; min-width:0; font-size:12px; color:#555;
 white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:left;
 }
 .stats-item-num { width:30px; flex-shrink:0; font-size:11px; color:var(--ink); text-align:right; font-weight:600; }
+.stats-item-num.dt { width:auto; margin-left:auto; font-size:10px; font-weight:400; color:var(--muted); white-space:nowrap; }
+.stats-more { text-align:center; font-size:12px; color:var(--ink); font-weight:600; padding:10px 0 2px; cursor:pointer; }
+.stats-more:active { opacity:.55; }
 .mail-item {
 display:flex; align-items:center; gap:10px;
 background:rgba(255,255,255,.92); border:1px solid rgba(0,0,0,.1);
@@ -4113,6 +4116,11 @@ border-radius:10px; cursor:pointer;
 }
 .sm-song:active { background:rgba(0,0,0,.04); }
 .sm-song.active { background:rgba(0,0,0,.05); }
+.sm-song.draggable { cursor:grab; -webkit-user-select:none; user-select:none; }
+.sm-song.draggable:active { cursor:grabbing; }
+.sm-song.dragging { opacity:.55; background:rgba(0,0,0,.05); cursor:grabbing; }
+.sm-q-drag-hint { font-weight:400; font-size:10px; color:var(--muted); }
+.sm-q-drag-hint::after { content:'（长按拖动可调整播放顺序）'; }
 .sm-song-ico {
 width:34px; height:34px; border-radius:8px; background:rgba(0,0,0,.06); flex-shrink:0;
 display:flex; align-items:center; justify-content:center; color:#555;
@@ -7843,7 +7851,7 @@ transition-duration: .01ms !important;
       </div>
       <div class="splash-dots"><i></i><i></i><i></i></div>
       <div class="splash-brand">小红书@言序（1842523578）</div>
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787842590685">Mochi 字卡传讯 v3.6.275 · 部署于 2026-08-27 22:56</div>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787844817372">Mochi 字卡传讯 v3.6.276 · 部署于 2026-08-27 23:33</div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
       <div class="splash-loading" id="splash-loading">正在加载数据…</div>
@@ -8919,7 +8927,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.6.275</div>
+      <div class="ver">Mochi 字卡传讯 v3.6.276</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -9071,7 +9079,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.6.275</span>
+              <span class="lic-ver">v3.6.276</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -10447,6 +10455,7 @@ transition-duration: .01ms !important;
       <div class="fav-tabs">
         <button class="fav-tab sel" data-stab="record">相处记录</button>
         <button class="fav-tab" data-stab="chat">聊天记录</button>
+        <button class="fav-tab" data-stab="cc">文字字卡</button>
         <button class="fav-tab" data-stab="expr">情绪表达</button>
       </div>
       <div class="cal-scroll">
@@ -10459,6 +10468,9 @@ transition-duration: .01ms !important;
         </div>
         <div class="cal-card glass" data-stpanel="chat" hidden>
           <div id="st-chat-content"></div>
+        </div>
+        <div class="cal-card glass" data-stpanel="cc" hidden>
+          <div id="st-cc-content"></div>
         </div>
         <div class="cal-card glass" data-stpanel="expr" hidden>
           <div id="st-expr-content"></div>
@@ -11853,10 +11865,7 @@ transition-duration: .01ms !important;
             <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8.6" cy="8.8" r="2.4"/><path d="M3.4 19c.6-3.3 2.8-5 5.2-5s4.6 1.7 5.2 5"/><circle cx="15.4" cy="8.8" r="2.4"/><path d="M10.2 19c.6-3.3 2.8-5 5.2-5s4.6 1.7 5.2 5"/></svg></span>
             <span>多人决定</span>
           </button>
-          <button class="more-item" id="more-invite" data-mcat="chat" title="邀请TA">
-            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg></span>
-            <span>邀请TA</span>
-          </button>
+
           <button class="more-item" id="more-ask" data-mcat="tool" title="问问TA">
             <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.6a2.4 2.4 0 114.8.4c0 1.7-2.4 2.1-2.4 3.3"/><path d="M12 16.7h.01"/></svg></span>
             <span>问问TA</span>
@@ -11880,6 +11889,10 @@ transition-duration: .01ms !important;
           <button class="more-item" id="more-rp" data-mcat="chat" title="发红包">
             <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9c3 2 6 3 9 3s6-1 9-3"/><circle cx="12" cy="9" r="1.4"/></svg></span>
             <span>红包</span>
+          </button>
+          <button class="more-item" id="more-invite" data-mcat="chat" title="邀请TA">
+            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg></span>
+            <span>邀请TA</span>
           </button>
           <button class="more-item" id="more-gift" data-mcat="chat" title="心意集市">
             <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M5 12v8a1 1 0 001 1h12a1 1 0 001-1v-8"/><path d="M12 8v13"/>            <path d="M12 8S10.5 4 8 4 5 6 5 8"/><path d="M12 8s1.5-4 4-4 3 2 3 4"/></svg></span>
@@ -14278,12 +14291,16 @@ Array.prototype.forEach.call(pillsEl.children, c => c.classList.remove('on'));
 b.classList.add('on');
 pillVal = p.value;
 pillClicked = true;
+if (pillSubmit) {
+setTimeout(function () { try { fire(); } finally { close(); } }, 0);
+}
 });
 pillsEl.appendChild(b);
 });
 }
 }
 let pillsOnOk = null;
+let pillSubmit = false;
 let noInput = false;
 let picked = -1;
 let customVal = null;
@@ -14299,6 +14316,7 @@ opts = opts || {};
 if (okBtn) okBtn.textContent = '确定';
 stayOnce = false;
 pillsOnOk = opts.pillsOnOk || null;
+pillSubmit = !!(opts.pillSubmit);
 noInput = !!(opts.noInput);
 pillClicked = false;
 lock = !!(opts.lock);
@@ -20106,9 +20124,11 @@ if (dts >= 0 && dts <= 1200) { saveMsgs(); return null; }
 msgs.push(rec);
 saveMsgs();
 const notable = rec.side === 'in' && (!rec.special || rec.special === 'poke' || rec.special === 'gift');
-if (notable && (!chatVisible() || document.visibilityState === 'hidden')) {
+if (notable && !rec.silent && (!chatVisible() || document.visibilityState === 'hidden')) {
 if (!chatVisible()) incChatUnread();
 showDeskMsg(rec);
+} else if (notable && rec.silent && !chatVisible()) {
+incChatUnread();
 }
 if (renderStart > 0 && msgs.length - renderStart > RENDER_MAX &&
 (rec.side === 'out' || chatNearBottom())) {
@@ -20124,7 +20144,7 @@ return el;
 function addIn(text, opts) {
 opts = opts || {};
 const _tagMood = opts.tag ? [{ tag: String(opts.tag), label: opts.tagNoDup ? '' : String(text) }] : null;
-return addRec({ side: 'in', text: text, initiative: opts.initiative, special: opts.special, quote: opts.quote, qidx: opts.qidx, type: opts.type, img: opts.img, parts: opts.parts, mailNotice: opts.mailNotice, gInv: opts.gInv, askQuestion: opts.askQuestion, askStatus: opts.askStatus, askOptions: opts.askOptions, askType: opts.askType, choiceQuestion: opts.choiceQuestion, choiceOptions: opts.choiceOptions, choicePref: opts.choicePref, choiceCat: opts.choiceCat, choiceStatus: opts.choiceStatus, choiceAnswer: opts.choiceAnswer, choiceReply: opts.choiceReply, choiceMatch: opts.choiceMatch, curiousQuestion: opts.curiousQuestion, curiousQuick: opts.curiousQuick, curiousReplies: opts.curiousReplies, curiousFollowup: opts.curiousFollowup, curiousQid: opts.curiousQid, curiousCat: opts.curiousCat, curiousStatus: opts.curiousStatus, curiousAnswer: opts.curiousAnswer, curiousReply: opts.curiousReply, roastText: opts.roastText, roastCat: opts.roastCat, roastStatus: opts.roastStatus, roastAnswer: opts.roastAnswer, roastReply: opts.roastReply, rpAmount: opts.rpAmount, rpWish: opts.rpWish, rpStatus: opts.rpStatus, rpTs: opts.rpTs, rpCover: opts.rpCover, askFen: opts.askFen, askTs: opts.askTs, deskCk: opts.deskCk, deskCkDir: opts.deskCkDir, mood: opts.mood || _tagMood || undefined });
+return addRec({ side: 'in', text: text, initiative: opts.initiative, special: opts.special, quote: opts.quote, qidx: opts.qidx, type: opts.type, img: opts.img, parts: opts.parts, mailNotice: opts.mailNotice, gInv: opts.gInv, silent: opts.silent, askQuestion: opts.askQuestion, askStatus: opts.askStatus, askOptions: opts.askOptions, askType: opts.askType, choiceQuestion: opts.choiceQuestion, choiceOptions: opts.choiceOptions, choicePref: opts.choicePref, choiceCat: opts.choiceCat, choiceStatus: opts.choiceStatus, choiceAnswer: opts.choiceAnswer, choiceReply: opts.choiceReply, choiceMatch: opts.choiceMatch, curiousQuestion: opts.curiousQuestion, curiousQuick: opts.curiousQuick, curiousReplies: opts.curiousReplies, curiousFollowup: opts.curiousFollowup, curiousQid: opts.curiousQid, curiousCat: opts.curiousCat, curiousStatus: opts.curiousStatus, curiousAnswer: opts.curiousAnswer, curiousReply: opts.curiousReply, roastText: opts.roastText, roastCat: opts.roastCat, roastStatus: opts.roastStatus, roastAnswer: opts.roastAnswer, roastReply: opts.roastReply, rpAmount: opts.rpAmount, rpWish: opts.rpWish, rpStatus: opts.rpStatus, rpTs: opts.rpTs, rpCover: opts.rpCover, askFen: opts.askFen, askTs: opts.askTs, deskCk: opts.deskCk, deskCkDir: opts.deskCkDir, mood: opts.mood || _tagMood || undefined });
 }
 function addOut(text) {
 return addRec({ side: 'out', text: text });
@@ -33336,9 +33356,52 @@ callHoldFloatShown = false;
 };
 function playableList() {
 const m = findTrack(currentId);
-let list = library.filter(x => x.playlistId === (m ? m.playlistId : 'default'));
+const pid = m ? m.playlistId : 'default';
+let list = library.filter(x => x.playlistId === pid);
 if (!list.length) list = library.slice();
+const order = loadPlayOrder(pid);
+if (order && order.length) {
+const byId = {};
+list.forEach(x => { byId[x.id] = x; });
+const seen = {};
+const sorted = [];
+order.forEach(id => { if (byId[id] && !seen[id]) { sorted.push(byId[id]); seen[id] = true; } });
+list.forEach(x => { if (!seen[x.id]) sorted.push(x); });
+list = sorted;
+}
 return list;
+}
+function loadPlayOrder(pid) {
+try { const o = JSON.parse(store.get('music-playorder') || '{}'); return (o && Array.isArray(o[pid])) ? o[pid] : null; } catch (e) { return null; }
+}
+function sessionPlayListId() {
+const m = findTrack(currentId);
+return (m && (m.playlistId || 'default')) || 'default';
+}
+function naturalPlayOrder() {
+const pid = sessionPlayListId();
+let list = library.filter(x => x.playlistId === pid);
+if (!list.length) list = library.slice();
+return list.map(x => x.id);
+}
+function setPlayOrderView(newView) {
+const pid = sessionPlayListId();
+const queued = {};
+playQueue.forEach(id => { queued[id] = true; });
+let full = loadPlayOrder(pid) || naturalPlayOrder();
+const newFull = [];
+let vi = 0;
+for (let o = 0; o < full.length; o++) {
+const id = full[o];
+if (queued[id]) newFull.push(id);
+else { if (vi < newView.length) newFull.push(newView[vi]); vi++; }
+}
+for (; vi < newView.length; vi++) newFull.push(newView[vi]);
+try {
+const o = JSON.parse(store.get('music-playorder') || '{}');
+o[pid] = newFull;
+store.set('music-playorder', JSON.stringify(o));
+} catch (e) {}
 }
 function addToQueue(id) {
 const m = findTrack(id);
@@ -33349,6 +33412,94 @@ playQueue.push(id);
 renderQueueBadge();
 }
 function renderQueueBadge() {}
+const qd = { active: null, timer: null, dragging: false, section: null, sx: 0, sy: 0, notMoved: false, bound: false, suppressClick: false };
+function qdBindGlobals() {
+if (qd.bound) return; qd.bound = true;
+document.addEventListener('touchmove', qdOnMove, { passive: false });
+document.addEventListener('mousemove', qdOnMove);
+document.addEventListener('touchend', qdOnEnd);
+document.addEventListener('touchcancel', qdOnEnd);
+document.addEventListener('mouseup', qdOnEnd);
+}
+function qdPoint(e) { return (e.touches && e.touches[0]) || e; }
+function qdOnMove(e) {
+if (!qd.dragging) {
+if (qd.notMoved && qd.active) {
+const p = qdPoint(e);
+if (Math.abs(p.clientX - qd.sx) > 10 || Math.abs(p.clientY - qd.sy) > 10) {
+qd.notMoved = false;
+if (qd.timer) { clearTimeout(qd.timer); qd.timer = null; }
+}
+}
+return;
+}
+e.preventDefault();
+const sec = qd.section;
+if (!sec || !qd.active) return;
+const p = qdPoint(e);
+const rows = sec.querySelectorAll('.sm-song[data-qid]');
+for (const r of rows) {
+if (r === qd.active) continue;
+const b = r.getBoundingClientRect();
+if (p.clientY >= b.top && p.clientY <= b.bottom) { qdSwap(qd.active, r); break; }
+}
+}
+function qdSwap(a, b) {
+const pa = a.parentNode;
+if (!pa) return;
+const children = Array.from(pa.children);
+const ai = children.indexOf(a), bi = children.indexOf(b);
+if (ai < 0 || bi < 0) return;
+if (ai < bi) pa.insertBefore(b, a); else pa.insertBefore(a, b);
+}
+function qdOnEnd() {
+if (qd.timer) { clearTimeout(qd.timer); qd.timer = null; }
+if (qd.dragging && qd.active) {
+qd.active.classList.remove('dragging');
+try { document.removeAttribute('aria-grabbed'); } catch (e) {}
+const sec = qd.section;
+if (sec) {
+const view = Array.from(sec.querySelectorAll('.sm-song[data-qid]')).map(r => r.dataset.qid);
+setPlayOrderView(view);
+}
+qd.suppressClick = true;
+}
+qd.dragging = false; qd.active = null; qd.notMoved = false;
+document.body.style.userSelect = '';
+}
+function qdStart(e, row) {
+if (e.target.closest('[data-qrm]')) return;
+const p = qdPoint(e);
+qd.sx = p.clientX; qd.sy = p.clientY; qd.notMoved = true;
+qd.active = row;
+if (qd.timer) clearTimeout(qd.timer);
+qd.timer = setTimeout(function () {
+qd.dragging = true;
+try { document.setAttribute('aria-grabbed', 'true'); } catch (err) {}
+row.classList.add('dragging');
+document.body.style.userSelect = 'none';
+}, 320);
+}
+function setupQueueDrag() {
+const sec = document.getElementById('td-qlist');
+if (!sec) return;
+qd.suppressClick = false;
+qd.section = sec;
+sec.querySelectorAll('.sm-song[data-qid]').forEach(function (row) {
+row.classList.add('draggable');
+row.addEventListener('touchstart', function (e) { qdStart(e, row); }, { passive: true });
+row.addEventListener('mousedown', function (e) { qdStart(e, row); });
+});
+}
+function scrollToCurrentSong() {
+const tcb = document.getElementById('tc-body');
+if (!tcb) return;
+const act = tcb.querySelector('.sm-song.active');
+if (!act) return;
+const tr = tcb.getBoundingClientRect(), ar = act.getBoundingClientRect();
+const top = (ar.top - tr.top) - tcb.clientHeight / 2 + ar.height / 2;
+tcb.scrollTop = Math.max(0, Math.min(top, tcb.scrollHeight - tcb.clientHeight));
+}
 function openQueuePanel() {
 if (!window.openTCPanel) return;
 const rowFor = (m, extra, withRm) => '<div class="sm-song' + (extra || '') + '" data-qid="' + m.id + '">' + songIcoHtml(m) +
@@ -33366,23 +33517,27 @@ const queuedId = {};
 playQueue.forEach(id => { queuedId[id] = true; });
 let list = playableList();
 if (playQueue.length) list = list.filter(m => !queuedId[m.id]);
-html += '<div class="sm-req-hint" style="padding:10px 0 2px;font-weight:700">当前播放列表</div>';
+html += '<div class="sm-req-hint" style="padding:10px 0 2px;font-weight:700;display:flex;align-items:center;gap:4px">当前播放列表<span class="sm-q-drag-hint"></span></div>';
 if (!list.length && !currentId) {
 html += '<div class="sm-req-hint" style="padding:4px 0 2px">音乐库暂无歌曲</div>';
 } else if (!list.length) {
 html += '<div class="sm-req-hint" style="padding:4px 0 2px">当前正在播放《' + esc(findTrack(currentId) ? findTrack(currentId).name : '') + '》，其余歌曲正在其他歌单</div>';
 } else {
-html += list.map(m => rowFor(m, m.id === currentId ? ' active' : '', false)).join('');
+html += '<div id="td-qlist">' + list.map(m => rowFor(m, m.id === currentId ? ' active' : '', false)).join('') + '</div>';
 }
 window.openTCPanel('音乐播放列表', html +
 '<div class="mail-actions">' +
 (playQueue.length ? '<button class="cc-tool" id="sm-q-clear">清空队列</button>' : '') +
 '<button class="cc-tool" id="sm-q-close">关闭</button></div>');
+qdBindGlobals();
+setupQueueDrag();
+scrollToCurrentSong();
 document.getElementById('sm-q-close').addEventListener('click', function () { document.getElementById('tc-mask').hidden = true; });
 const clr = document.getElementById('sm-q-clear');
 if (clr) clr.addEventListener('click', function () { playQueue = []; renderQueueBadge(); toast('已清空播放队列'); openQueuePanel(); });
 document.querySelectorAll('#tc-body .sm-song[data-qid]').forEach(function (row) {
 row.addEventListener('click', function (e) {
+if (qd.suppressClick) { qd.suppressClick = false; return; }
 if (e.target.closest('[data-qrm]')) return;
 const id = row.dataset.qid;
 playQueue = playQueue.filter(function (x) { return x !== id; });
@@ -39297,7 +39452,8 @@ if (window.chatAskReply) window.chatAskReply(msgIdx, answer, preset);
 }, {
 staticText: isAction ? ('TA 想跟你互动：' + q.text) : ('TA 问你：' + q.text),
 pills: isSingle ? (isAction ? actionOpts : q.options).map(function (o) { return { label: o.t, value: o.t }; }) : null,
-noInput: isSingle
+noInput: isSingle,
+pillSubmit: true
 });
 }
 window.buildDeskCkCard = function (q) {
@@ -39982,6 +40138,7 @@ goReply(req);
 noInput: true,
 lock: true,
 staticText: staticText,
+pillSubmit: true,
 pills: [{ label: '稍后', value: 'later' }, { label: okText, value: 'reply' }]
 });
 return true;
@@ -41144,11 +41301,13 @@ toast('发送失败：\n' + env.join('\n'));
 }
 }
 }
-let resumeUnreadBase = -1; // 切后台时的未读基数；-1=未初始化（本次会话没切过后台）
+let hiddenSentCount = 0;
+let hiddenSentName = '';
 document.addEventListener('visibilitychange', function () {
 const vis = document.visibilityState;
 if (vis === 'hidden') {
-try { resumeUnreadBase = parseInt(store.get('chat-unread'), 10) || 0; } catch (e) { resumeUnreadBase = 0; }
+hiddenSentCount = 0;
+hiddenSentName = '';
 return;
 }
 if (vis !== 'visible') return;
@@ -41160,19 +41319,19 @@ toast('提醒：后台保活已关闭，后台消息到不了，通知不会弹�
 }
 }
 try {
-if (resumeUnreadBase < 0) return;
 const chatPage = document.getElementById('page-chat');
 const inChat = chatPage && !chatPage.hidden;
-const unreadNow = parseInt(store.get('chat-unread'), 10) || 0;
-const inc = unreadNow - resumeUnreadBase;
-if (!inChat && inc > 0 && window.showDeskPopup) {
-const name = store.get('lbl-partner') || (window.taWord ? window.taWord() : 'TA');
-window.showDeskPopup({ name: name, text: '你不在的时候收到 ' + inc + ' 条新消息', isHidden: false });
+const n = hiddenSentCount;
+const who = hiddenSentName || store.get('lbl-partner') || (window.taWord ? window.taWord() : 'TA');
+hiddenSentCount = 0;
+hiddenSentName = '';
+if (!inChat && n > 0 && window.showDeskPopup) {
+window.showDeskPopup({ name: who, text: '你不在的时候收到 ' + n + ' 条新消息', isHidden: false });
 const now = Date.now();
 if (saved === '1' && 'Notification' in window && Notification.permission === 'granted' &&
 (!lastResumeNotifyAt || now - lastResumeNotifyAt > 30000)) {
 lastResumeNotifyAt = now;
-showSysNotification(name, { body: '你不在的时候收到 ' + inc + ' 条新消息' });
+showSysNotification(who, { body: '你不在的时候收到 ' + n + ' 条新消息' });
 }
 }
 } catch (e) {}
@@ -41315,6 +41474,8 @@ if (lastHiddenAt > 0 && Date.now() - lastHiddenAt < NOTIFY_HIDDEN_MIN_MS) { gate
 if (notifiedDup(nkey) || seenDup(nkey)) { gateStats.dup++; return; }
 if (recentChatDup(nkey, ts)) { gateStats.dup++; return; }
 gateStats.sent++;
+hiddenSentCount++;
+hiddenSentName = extra.name || store.get('lbl-partner') || (window.taWord ? window.taWord() : 'TA');
 const name = extra.name || store.get('lbl-partner') || (window.taWord ? window.taWord() : 'TA');
 let t = '';
 if (ts) {
@@ -41340,12 +41501,13 @@ const img = new Image();
 if (/^https?:\/\//i.test(dataUrl)) { img.crossOrigin = 'anonymous'; }
 img.onload = function () {
 try {
-const size = Math.min(img.width, img.height);
-const sx = (img.width - size) / 2;
-const sy = (img.height - size) / 2;
+const maxSide = 96;
+const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+const w = Math.max(1, Math.round(img.width * scale));
+const h = Math.max(1, Math.round(img.height * scale));
 const c = document.createElement('canvas');
-c.width = size; c.height = size;
-c.getContext('2d').drawImage(img, sx, sy, size, size);
+c.width = w; c.height = h;
+c.getContext('2d').drawImage(img, 0, 0, w, h);
 cb(c.toDataURL('image/jpeg', 0.85));
 } catch (e) { cb(''); }
 };
@@ -41480,7 +41642,7 @@ if (m && m.side === 'in' && m.text === it.t && Math.abs((m.ts || 0) - it.ts) < 3
 }
 }
 } catch (e) {}
-if (!dup) { try { window.chatAddIn(it.t, { initiative: 1 }); delivered++; } catch (e) {} }
+if (!dup) { try { window.chatAddIn(it.t, { initiative: 1, silent: true }); delivered++; } catch (e) {} }
 }
 try { await window.idbSet(PSYNC_QUEUE_KEY, remain); } catch (e) {}
 return delivered;
@@ -45780,7 +45942,7 @@ for (let i = rows.length - 1; i >= 0; i--) {
 const r = rows[i];
 html += '<div class="stats-item">' +
 '<span class="stats-item-name">' + r.main + '</span>' +
-'<span class="stats-item-num">' + r.sub + '</span></div>';
+'<span class="stats-item-num dt">' + r.sub + '</span></div>';
 }
 html += '</div>';
 }
@@ -45819,7 +45981,104 @@ html += '</div>';
 }
 return html + '</div>';
 }
+function ccCardSet() {
+const set = {};
+try {
+const rawOwn = (window.storeFor && window.storeFor(window.__activeCid || 'default') || store).get('cc-groups');
+const rawPub = (window.xyStore ? window.xyStore('xy-home-v2').get('cc-groups-public') : null);
+[rawOwn, rawPub].forEach(raw => {
+if (!raw) return;
+const g = JSON.parse(raw);
+if (!g || !g.text) return;
+(g.text || []).forEach(([gname, arr]) => (arr || []).forEach(c => {
+if (typeof c === 'string' && c.indexOf('|||') < 0 && c.indexOf('data:') !== 0) set[c] = 1;
+}));
+});
+} catch (e) {}
+return set;
+}
+function ccTextRankSection(icon, title, countMap, topLabel, emptyText, max, dataKey) {
+const entries = [];
+for (const k in countMap) if (countMap.hasOwnProperty(k)) entries.push({ name: k, count: countMap[k] });
+entries.sort((a, b) => b.count - a.count);
+let html = '<div class="stats-sec">' +
+'<div class="stats-sec-head"><span class="stats-sec-title">' + icon + title + '</span>' +
+'<span class="stats-sec-count">' + entries.length + ' 种</span></div>';
+if (!entries.length) {
+html += '<div class="ta-empty">' + emptyText + '</div>';
+} else {
+const top = entries[0].name;
+const topCount = entries[0].count;
+html += '<div class="stats-top">' +
+'<div class="stats-top-tag">' + topLabel + '</div>' +
+'<div class="stats-top-name">「' + String(top).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;') + '」</div>' +
+'<div class="stats-top-num">' + topCount + ' 次</div></div>';
+html += '<div class="stats-list">';
+const shown = Math.min(max || 5, entries.length);
+for (let i = 0; i < shown; i++) {
+const e = entries[i];
+html += '<div class="stats-item">' +
+'<span class="stats-item-name">' + String(e.name).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;') + '</span>' +
+'<span class="stats-item-num">' + e.count + ' 次</span></div>';
+}
+html += '</div>';
+if (entries.length > shown) {
+html += '<div class="stats-more" data-cc-more="' + title + '" data-cc-key="' + dataKey + '">查看更多 ' + entries.length + ' 种字卡 ▾</div>';
+}
+}
+return html + '</div>';
+}
+function openCcTopModal(title, entries, emptyText) {
+if (!entries || !entries.length) { toast(emptyText || '暂无使用记录'); return; }
+const sorted = entries.slice().sort((a, b) => b.count - a.count);
+const top = sorted.slice(0, 100);
+let txt = '共 ' + sorted.length + ' 张自定义字卡使用过，按次数从高到低\n\n';
+top.forEach((e, i) => {
+txt += (i + 1) + '. ' + String(e.name) + '  ×' + e.count + '\n';
+});
+if (sorted.length > 100) txt += '\n… 仅显示前 100 名';
+if (window.openModal) window.openModal(title, '', function () {}, { staticText: txt, noInput: true, okText: '知道了' });
+}
+function renderCcStats() {
+const ccEl = document.getElementById('st-cc-content');
+if (!ccEl) return;
+let msgs2 = [];
+try { msgs2 = (window.getChatMsgs ? window.getChatMsgs() : JSON.parse(store.get('chat-msgs') || '[]')); } catch (e) {}
+if (!msgs2.length || !msgs2.some(m => m && m.side && m.text)) {
+ccEl.innerHTML = '<div class="ta-empty">暂无聊天记录</div>';
+return;
+}
+const cardSet = ccCardSet();
+const mineCount = {}, taCount = {};
+const name = store.get('lbl-partner') || 'TA';
+const myName = store.get('lbl-user') || '我';
+const EXPR_CORE_RE = /[^0-9A-Za-z\u00C0-\u024F\u0370-\u03FF\u0400-\u04FF\u3040-\u30FF\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF\uAC00-\uD7AF]/g;
+msgs2.forEach(m => {
+if (!m || typeof m.text !== 'string' || !m.side) return;
+if (m.special || m.retracted) return;
+if (m.text.indexOf('data:') === 0 || m.text.indexOf('http') === 0) return;
+const core = m.text.replace(EXPR_CORE_RE, '');
+if (!core) return;
+if (!(m.text in cardSet)) return;
+if (m.side === 'out') mineCount[m.text] = (mineCount[m.text] || 0) + 1;
+else taCount[m.text] = (taCount[m.text] || 0) + 1;
+});
+const mineN = Object.keys(mineCount).length, taN = Object.keys(taCount).length;
+ccEl.innerHTML =
+'<div style="margin-bottom:16px"><div style="font-size:13px;font-weight:700;color:#555;margin-bottom:8px">自定义字卡（公用 + 专属）使用统计</div>' +
+'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><div style="font-size:12px;color:var(--muted);width:28px">' + escH(myName) + '</div>' +
+'<div style="flex:1;height:8px;background:rgba(0,0,0,.06);border-radius:4px;overflow:hidden"><div style="height:100%;background:var(--ink);width:' + ((mineN + taN) ? Math.round(mineN / (mineN + taN) * 100) : 0) + '%;border-radius:4px"></div></div>' +
+'<div style="font-size:12px;color:var(--ink);width:auto;text-align:right;white-space:nowrap">' + mineN + ' 种</div></div>' +
+'<div style="display:flex;align-items:center;gap:8px"><div style="font-size:12px;color:var(--muted);width:28px">' + escH(name) + '</div>' +
+'<div style="flex:1;height:8px;background:rgba(0,0,0,.06);border-radius:4px;overflow:hidden"><div style="height:100%;background:#999;width:' + ((mineN + taN) ? Math.round(taN / (mineN + taN) * 100) : 0) + '%;border-radius:4px"></div></div>' +
+'<div style="font-size:12px;color:var(--ink);width:auto;text-align:right;white-space:nowrap">' + taN + ' 种</div></div></div>' +
+ccTextRankSection('<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>', escH(myName) + ' 发的文字字卡', mineCount, '常用文字', '你还用过自定义字卡里的文字卡', 5, 'mine') +
+ccTextRankSection('<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>', escH(name) + ' 发的文字字卡', taCount, '常用文字', '联系人还没用过自定义字卡里的文字卡', 5, 'ta');
+ccEl.__ccMine = []; for (const k in mineCount) if (mineCount.hasOwnProperty(k)) ccEl.__ccMine.push({ name: k, count: mineCount[k] });
+ccEl.__ccTa = []; for (const k in taCount) if (taCount.hasOwnProperty(k)) ccEl.__ccTa.push({ name: k, count: taCount[k] });
+}
 function renderStats() {
+renderCcStats();
 let msgs = [];
 try { msgs = (window.getChatMsgs ? window.getChatMsgs() : JSON.parse(store.get('chat-msgs') || '[]')); } catch (e) {}
 const real = msgs.filter(m => m && m.side && m.text);
@@ -45890,14 +46149,17 @@ statsInfoCard('<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="curre
 statsInfoCard('<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c1 3-3 4-3 7a3 3 0 006 0c0-1-.3-2-.8-3 1.8 1 3 3 3 5a6 6 0 11-12 0c0-4 3-6 4.5-8.5z"/></svg>', '最长连续聊天', calcStreak(Object.keys(dateCount)) + ' 天') +
 statsInfoCard('<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>', '单日最高消息', maxSingle + ' 条') +
 (function () {
-const rps = msgs.filter(m => m && m.special === 'redpacket' && m.side === 'in');
-let sum = 0; rps.forEach(m => { sum += Number(m.rpAmount || 0); });
-const sec = '<div class="stats-sec"><div class="stats-sec-head"><span class="stats-sec-title">🧧 ' + escH(name) + ' 发红包</span>' +
-'<span class="stats-sec-count">' + rps.length + ' 笔</span></div>' +
-(rps.length ? '<div class="stats-top"><div class="stats-top-tag">累计心意币</div><div class="stats-top-name">¥' + sum.toFixed(2) + '</div><div class="stats-top-num">共 ' + rps.length + ' 次</div></div>'
-: '<div class="ta-empty">还没有 ' + escH(name) + ' 发的红包</div>') +
+const myName = store.get('lbl-user') || '我';
+function rpSec(title, list, emptyTxt) {
+let sum = 0; list.forEach(m => { sum += Number(m.rpAmount || 0); });
+return '<div class="stats-sec"><div class="stats-sec-head"><span class="stats-sec-title">🧧 ' + title + '</span>' +
+'<span class="stats-sec-count">' + list.length + ' 笔</span></div>' +
+(list.length ? '<div class="stats-top"><div class="stats-top-tag">累计心意币</div><div class="stats-top-name">¥' + sum.toFixed(2) + '</div><div class="stats-top-num">共 ' + list.length + ' 次</div></div>'
+: '<div class="ta-empty">' + emptyTxt + '</div>') +
 '</div>';
-return sec;
+}
+return rpSec(myName + ' 发红包', msgs.filter(m => m && m.special === 'redpacket' && m.side === 'out'), '我还没有发过红包（红包也是心意币，去发一个试试）') +
+rpSec(escH(name) + ' 发红包', msgs.filter(m => m && m.special === 'redpacket' && m.side === 'in'), '还没有 ' + escH(name) + ' 发的红包');
 })() +
 coinRecordSection('🪙', name + '申请心意币记录', '笔',
 msgs.filter(m => m && m.special === 'askcoin').map(m => ({
@@ -45936,7 +46198,7 @@ html += '<div class="ta-empty">还没有小游戏记录（更多功能 → 小�
 html += '<div class="stats-list">';
 uniq.forEach(r => {
 html += '<div class="stats-item"><span class="stats-item-name">' + r.main + '</span>' +
-'<span class="stats-item-num">' + r.sub + '</span></div>';
+'<span class="stats-item-num dt">' + r.sub + '</span></div>';
 });
 html += '</div>';
 }
@@ -45948,19 +46210,8 @@ const exprEl = document.getElementById('st-expr-content');
 if (exprEl) {
 if (!real.length) { exprEl.innerHTML = '<div class="ta-empty">暂无聊天记录</div>'; }
 else {
-const textCount = {}, emotion = {}, heart = {}, intent = {};
-const EXPR_CORE_RE = /[^0-9A-Za-z\u00C0-\u024F\u0370-\u03FF\u0400-\u04FF\u3040-\u30FF\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF\uAC00-\uD7AF]/g;
+const emotion = {}, heart = {}, intent = {};
 real.forEach(m => {
-if (typeof m.text === 'string' && m.text.indexOf('data:') !== 0 && !m.special && !m.retracted) {
-const t = m.text;
-const isMediaMsg = m.type === 'sticker' || m.type === 'image' || m.type === 'voice';
-const core = t.replace(EXPR_CORE_RE, '');
-const kaomojiShape = /[\(（｡◕(◕)(づ｡(¬]/.test(t) && /[\)）】)]/.test(t) &&
-/^[\u3040-\u30FF\u31F0-\u31FF\uFF66-\uFF9D]*$/.test(core);
-if (!isMediaMsg && t.indexOf('http') !== 0 && t.indexOf('|||') < 0 && core && !kaomojiShape) {
-textCount[t] = (textCount[t] || 0) + 1;
-}
-}
 (m.mood || []).forEach(md => {
 if (!md || typeof md !== 'object') return;
 if (!md.label) return;
@@ -45970,7 +46221,6 @@ else emotion[md.label] = (emotion[md.label] || 0) + 1;
 });
 });
 exprEl.innerHTML =
-statsBarSection('<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>', '文字字卡', textCount, '常用文字', '暂无使用记录') +
 statsBarSection('<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9.5l.01.01M15 9.5l.01.01"/></svg>', '情绪字卡', emotion, '常见情绪', '暂无使用记录') +
 statsBarSection('<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.5S4.5 15.2 4.5 9.9A4.9 4.9 0 0112 7.1a4.9 4.9 0 017.5 2.8c0 5.3-7.5 10.6-7.5 10.6z"/><path d="M19 3.5l.6 1.9 1.9.6-1.9.6-.6 1.9-.6-1.9-1.9-.6 1.9-.6z"/></svg>', '心意字卡', heart, '常传递心意', '暂无使用记录') +
 statsBarSection('<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8.5 8.5 0 01-12.6 7.4L4 21l1.5-4.4A8.5 8.5 0 1121 12z"/><path d="M8.5 10h7M8.5 13h4.5"/></svg>', '交流意图', intent, '常用交流', '暂无使用记录');
@@ -45986,7 +46236,22 @@ const k = tab.dataset.stab;
 document.querySelectorAll('#page-stats .cal-card').forEach(c => {
 c.hidden = c.dataset.stpanel !== k;
 });
+if (k === 'cc') renderCcStats();
 });
+});
+document.addEventListener('click', function (e) {
+const more = e.target.closest('[data-cc-more]');
+if (!more) return;
+const title = more.getAttribute('data-cc-more');
+const key = more.getAttribute('data-cc-key');
+if (!title || !key) return;
+const ccEl = document.getElementById('st-cc-content');
+if (!ccEl) return;
+const prop = key === 'mine' ? '__ccMine' : '__ccTa';
+const entries = ccEl[prop] || [];
+if (entries.length) {
+openCcTopModal(title, entries, '暂无使用记录');
+}
 });
 const interactApp = document.querySelector('.app[data-app="interact"]');
 const interactPage = document.getElementById('page-interact');

@@ -1877,6 +1877,11 @@
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:left;
 }
 .stats-item-num { width:30px; flex-shrink:0; font-size:11px; color:var(--ink); text-align:right; font-weight:600; }
+/* 聊天记录 tab 的日期时间格：单行不换行，宽度自适应（避免时间竖排错位） */
+.stats-item-num.dt { width:auto; margin-left:auto; font-size:10px; font-weight:400; color:var(--muted); white-space:nowrap; }
+/* 文字字卡 tab 的「查看更多」入口 */
+.stats-more { text-align:center; font-size:12px; color:var(--ink); font-weight:600; padding:10px 0 2px; cursor:pointer; }
+.stats-more:active { opacity:.55; }
 
 /* ===== 信箱 ===== */
 .mail-item {
@@ -2128,6 +2133,11 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + env(safe-area-inset-bott
 }
 .sm-song:active { background:rgba(0,0,0,.04); }
 .sm-song.active { background:rgba(0,0,0,.05); }
+.sm-song.draggable { cursor:grab; -webkit-user-select:none; user-select:none; }
+.sm-song.draggable:active { cursor:grabbing; }
+.sm-song.dragging { opacity:.55; background:rgba(0,0,0,.05); cursor:grabbing; }
+.sm-q-drag-hint { font-weight:400; font-size:10px; color:var(--muted); }
+.sm-q-drag-hint::after { content:'（长按拖动可调整播放顺序）'; }
 .sm-song-ico {
   width:34px; height:34px; border-radius:8px; background:rgba(0,0,0,.06); flex-shrink:0;
   display:flex; align-items:center; justify-content:center; color:#555;

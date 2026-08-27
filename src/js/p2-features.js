@@ -108,7 +108,7 @@
         const r = rows[i];
         html += '<div class="stats-item">' +
           '<span class="stats-item-name">' + r.main + '</span>' +
-          '<span class="stats-item-num">' + r.sub + '</span></div>';
+          '<span class="stats-item-num dt">' + r.sub + '</span></div>';
       }
       html += '</div>';
     }
@@ -147,7 +147,113 @@
     }
     return html + '</div>';
   }
+  // v3.24.x：文字字卡统计——只统计自定义字卡（公用 + 专属）里的内容，按「我发 / TA发」分开。
+  // 记录侧用「分类 + 分组 + 卡原文」识别（历史消息未存卡 id，只能按内容匹配）：
+  // ① 取当前桌面的 公用字卡(cc-groups-public) + 专属字卡(cc-groups) 合并，只取 text 分类的文字卡；
+  // ② 遍历聊天消息，只统计在字卡库里真实存在的卡（同一内容反复发也算多次）；
+  // ③ 侧边按 side 分：out = 我发的，in = 联系人发的（含自动回复池抽取的自定义文字卡）。
+  function ccCardSet() {
+    const set = {};
+    try {
+      const rawOwn = (window.storeFor && window.storeFor(window.__activeCid || 'default') || store).get('cc-groups');
+      const rawPub = (window.xyStore ? window.xyStore('xy-home-v2').get('cc-groups-public') : null);
+      [rawOwn, rawPub].forEach(raw => {
+        if (!raw) return;
+        const g = JSON.parse(raw);
+        if (!g || !g.text) return;
+        (g.text || []).forEach(([gname, arr]) => (arr || []).forEach(c => {
+          if (typeof c === 'string' && c.indexOf('|||') < 0 && c.indexOf('data:') !== 0) set[c] = 1;
+        }));
+      });
+    } catch (e) {}
+    return set;
+  }
+  function ccTextRankSection(icon, title, countMap, topLabel, emptyText, max, dataKey) {
+    const entries = [];
+    for (const k in countMap) if (countMap.hasOwnProperty(k)) entries.push({ name: k, count: countMap[k] });
+    entries.sort((a, b) => b.count - a.count);
+    let html = '<div class="stats-sec">' +
+      '<div class="stats-sec-head"><span class="stats-sec-title">' + icon + title + '</span>' +
+      '<span class="stats-sec-count">' + entries.length + ' 种</span></div>';
+    if (!entries.length) {
+      html += '<div class="ta-empty">' + emptyText + '</div>';
+    } else {
+      const top = entries[0].name;
+      const topCount = entries[0].count;
+      html += '<div class="stats-top">' +
+        '<div class="stats-top-tag">' + topLabel + '</div>' +
+        '<div class="stats-top-name">「' + String(top).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;') + '」</div>' +
+        '<div class="stats-top-num">' + topCount + ' 次</div></div>';
+      html += '<div class="stats-list">';
+      const shown = Math.min(max || 5, entries.length);
+      for (let i = 0; i < shown; i++) {
+        const e = entries[i];
+        html += '<div class="stats-item">' +
+          '<span class="stats-item-name">' + String(e.name).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;') + '</span>' +
+          '<span class="stats-item-num">' + e.count + ' 次</span></div>';
+      }
+      html += '</div>';
+      if (entries.length > shown) {
+        html += '<div class="stats-more" data-cc-more="' + title + '" data-cc-key="' + dataKey + '">查看更多 ' + entries.length + ' 种字卡 ▾</div>';
+      }
+    }
+    return html + '</div>';
+  }
+  // v3.24.x：自定义字卡（公用+专属）文字卡 Top100 全量弹层——内容只来自合并字卡库，
+  // 上榜的都是字卡库里存在的卡，点「查看更多」弹出完整排名（上限 100）。
+  function openCcTopModal(title, entries, emptyText) {
+    if (!entries || !entries.length) { toast(emptyText || '暂无使用记录'); return; }
+    const sorted = entries.slice().sort((a, b) => b.count - a.count);
+    const top = sorted.slice(0, 100);
+    let txt = '共 ' + sorted.length + ' 张自定义字卡使用过，按次数从高到低\n\n';
+    top.forEach((e, i) => {
+      txt += (i + 1) + '. ' + String(e.name) + '  ×' + e.count + '\n';
+    });
+    if (sorted.length > 100) txt += '\n… 仅显示前 100 名';
+    if (window.openModal) window.openModal(title, '', function () {}, { staticText: txt, noInput: true, okText: '知道了' });
+  }
+  // v3.24.x：渲染「文字字卡」tab——自定义字卡（公用+专属）使用统计，我发 / TA发 分开
+  function renderCcStats() {
+    const ccEl = document.getElementById('st-cc-content');
+    if (!ccEl) return;
+    let msgs2 = [];
+    try { msgs2 = (window.getChatMsgs ? window.getChatMsgs() : JSON.parse(store.get('chat-msgs') || '[]')); } catch (e) {}
+    if (!msgs2.length || !msgs2.some(m => m && m.side && m.text)) {
+      ccEl.innerHTML = '<div class="ta-empty">暂无聊天记录</div>';
+      return;
+    }
+    const cardSet = ccCardSet();
+    const mineCount = {}, taCount = {};
+    const name = store.get('lbl-partner') || 'TA';
+    const myName = store.get('lbl-user') || '我';
+    const EXPR_CORE_RE = /[^0-9A-Za-z\u00C0-\u024F\u0370-\u03FF\u0400-\u04FF\u3040-\u30FF\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF\uAC00-\uD7AF]/g;
+    msgs2.forEach(m => {
+      if (!m || typeof m.text !== 'string' || !m.side) return;
+      if (m.special || m.retracted) return;
+      if (m.text.indexOf('data:') === 0 || m.text.indexOf('http') === 0) return;
+      const core = m.text.replace(EXPR_CORE_RE, '');
+      if (!core) return;
+      if (!(m.text in cardSet)) return;
+      if (m.side === 'out') mineCount[m.text] = (mineCount[m.text] || 0) + 1;
+      else taCount[m.text] = (taCount[m.text] || 0) + 1;
+    });
+    const mineN = Object.keys(mineCount).length, taN = Object.keys(taCount).length;
+    ccEl.innerHTML =
+      '<div style="margin-bottom:16px"><div style="font-size:13px;font-weight:700;color:#555;margin-bottom:8px">自定义字卡（公用 + 专属）使用统计</div>' +
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><div style="font-size:12px;color:var(--muted);width:28px">' + escH(myName) + '</div>' +
+      '<div style="flex:1;height:8px;background:rgba(0,0,0,.06);border-radius:4px;overflow:hidden"><div style="height:100%;background:var(--ink);width:' + ((mineN + taN) ? Math.round(mineN / (mineN + taN) * 100) : 0) + '%;border-radius:4px"></div></div>' +
+      '<div style="font-size:12px;color:var(--ink);width:auto;text-align:right;white-space:nowrap">' + mineN + ' 种</div></div>' +
+      '<div style="display:flex;align-items:center;gap:8px"><div style="font-size:12px;color:var(--muted);width:28px">' + escH(name) + '</div>' +
+      '<div style="flex:1;height:8px;background:rgba(0,0,0,.06);border-radius:4px;overflow:hidden"><div style="height:100%;background:#999;width:' + ((mineN + taN) ? Math.round(taN / (mineN + taN) * 100) : 0) + '%;border-radius:4px"></div></div>' +
+      '<div style="font-size:12px;color:var(--ink);width:auto;text-align:right;white-space:nowrap">' + taN + ' 种</div></div></div>' +
+      ccTextRankSection('<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>', escH(myName) + ' 发的文字字卡', mineCount, '常用文字', '你还用过自定义字卡里的文字卡', 5, 'mine') +
+      ccTextRankSection('<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>', escH(name) + ' 发的文字字卡', taCount, '常用文字', '联系人还没用过自定义字卡里的文字卡', 5, 'ta');
+    // 供「查看更多」弹层读取完整数据
+    ccEl.__ccMine = []; for (const k in mineCount) if (mineCount.hasOwnProperty(k)) ccEl.__ccMine.push({ name: k, count: mineCount[k] });
+    ccEl.__ccTa = []; for (const k in taCount) if (taCount.hasOwnProperty(k)) ccEl.__ccTa.push({ name: k, count: taCount[k] });
+  }
   function renderStats() {
+    renderCcStats();
     let msgs = [];
     try { msgs = (window.getChatMsgs ? window.getChatMsgs() : JSON.parse(store.get('chat-msgs') || '[]')); } catch (e) {}
     const real = msgs.filter(m => m && m.side && m.text);
@@ -221,16 +327,19 @@
           statsInfoCard('<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="20" x2="6" y2="14"/><line x1="12" y1="20" x2="12" y2="8"/><line x1="18" y1="20" x2="18" y2="11"/></svg>', '平均每日消息', Math.round(total / totalDays) + ' 条') +
           statsInfoCard('<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c1 3-3 4-3 7a3 3 0 006 0c0-1-.3-2-.8-3 1.8 1 3 3 3 5a6 6 0 11-12 0c0-4 3-6 4.5-8.5z"/></svg>', '最长连续聊天', calcStreak(Object.keys(dateCount)) + ' 天') +
           statsInfoCard('<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>', '单日最高消息', maxSingle + ' 条') +
-          // v3.16.x：联系人发红包——改为摘要（累计金额 + 次数），明细已移至主页「心意币红包记录」
+          // v3.16.x：红包记录——双向摘要（我发 + 联系人发，红包即心意币；累计金额 + 次数，明细已移至主页「心意币红包记录」）
           (function () {
-            const rps = msgs.filter(m => m && m.special === 'redpacket' && m.side === 'in');
-            let sum = 0; rps.forEach(m => { sum += Number(m.rpAmount || 0); });
-            const sec = '<div class="stats-sec"><div class="stats-sec-head"><span class="stats-sec-title">🧧 ' + escH(name) + ' 发红包</span>' +
-              '<span class="stats-sec-count">' + rps.length + ' 笔</span></div>' +
-              (rps.length ? '<div class="stats-top"><div class="stats-top-tag">累计心意币</div><div class="stats-top-name">¥' + sum.toFixed(2) + '</div><div class="stats-top-num">共 ' + rps.length + ' 次</div></div>'
-                : '<div class="ta-empty">还没有 ' + escH(name) + ' 发的红包</div>') +
-              '</div>';
-            return sec;
+            const myName = store.get('lbl-user') || '我';
+            function rpSec(title, list, emptyTxt) {
+              let sum = 0; list.forEach(m => { sum += Number(m.rpAmount || 0); });
+              return '<div class="stats-sec"><div class="stats-sec-head"><span class="stats-sec-title">🧧 ' + title + '</span>' +
+                '<span class="stats-sec-count">' + list.length + ' 笔</span></div>' +
+                (list.length ? '<div class="stats-top"><div class="stats-top-tag">累计心意币</div><div class="stats-top-name">¥' + sum.toFixed(2) + '</div><div class="stats-top-num">共 ' + list.length + ' 次</div></div>'
+                  : '<div class="ta-empty">' + emptyTxt + '</div>') +
+                '</div>';
+            }
+            return rpSec(myName + ' 发红包', msgs.filter(m => m && m.special === 'redpacket' && m.side === 'out'), '我还没有发过红包（红包也是心意币，去发一个试试）') +
+              rpSec(escH(name) + ' 发红包', msgs.filter(m => m && m.special === 'redpacket' && m.side === 'in'), '还没有 ' + escH(name) + ' 发的红包');
           })() +
           // v3.15.x：联系人申请心意币记录（askcoin 卡片）
           coinRecordSection('🪙', name + '申请心意币记录', '笔',
@@ -274,7 +383,7 @@
               html += '<div class="stats-list">';
               uniq.forEach(r => {
                 html += '<div class="stats-item"><span class="stats-item-name">' + r.main + '</span>' +
-                  '<span class="stats-item-num">' + r.sub + '</span></div>';
+                  '<span class="stats-item-num dt">' + r.sub + '</span></div>';
               });
               html += '</div>';
             }
@@ -287,25 +396,8 @@
     if (exprEl) {
       if (!real.length) { exprEl.innerHTML = '<div class="ta-empty">暂无聊天记录</div>'; }
       else {
-        const textCount = {}, emotion = {}, heart = {}, intent = {};
-        // v3.12.x：文字字卡排名剔除表情和颜文字——emoji/颜文字字卡发出时 type 就是 'text'
-        //   （chat.js 的分类只在发送端选卡用），只能按内容过滤：去掉符号后不含任何
-        //   可读文字（汉字/假名/字母/数字）的消息视为纯表情/颜文字，不入榜；
-        //   「常用文字」前五名才能反映联系人平时说得最多的话。
-        //   同时排除媒体消息（表情包/图片/语音）与链接，避免占位/乱码进榜。
-        const EXPR_CORE_RE = /[^0-9A-Za-z\u00C0-\u024F\u0370-\u03FF\u0400-\u04FF\u3040-\u30FF\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF\uAC00-\uD7AF]/g;
+        const emotion = {}, heart = {}, intent = {};
         real.forEach(m => {
-          if (typeof m.text === 'string' && m.text.indexOf('data:') !== 0 && !m.special && !m.retracted) {
-            const t = m.text;
-            const isMediaMsg = m.type === 'sticker' || m.type === 'image' || m.type === 'voice';
-            const core = t.replace(EXPR_CORE_RE, '');
-            // 颜文字兜底：带括号特征且可读部分只剩假名（ヾノ等装饰符）的也算颜文字
-            const kaomojiShape = /[\(（｡◕(◕)(づ｡(¬]/.test(t) && /[\)）】)]/.test(t) &&
-              /^[\u3040-\u30FF\u31F0-\u31FF\uFF66-\uFF9D]*$/.test(core);
-            if (!isMediaMsg && t.indexOf('http') !== 0 && t.indexOf('|||') < 0 && core && !kaomojiShape) {
-              textCount[t] = (textCount[t] || 0) + 1;
-            }
-          }
           (m.mood || []).forEach(md => {
             // v3.6.x：脏数据防御——mood 条目非对象（导入/损坏数据）时跳过，避免统计页中断
             if (!md || typeof md !== 'object') return;
@@ -317,7 +409,6 @@
           });
         });
         exprEl.innerHTML =
-          statsBarSection('<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>', '文字字卡', textCount, '常用文字', '暂无使用记录') +
           statsBarSection('<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9.5l.01.01M15 9.5l.01.01"/></svg>', '情绪字卡', emotion, '常见情绪', '暂无使用记录') +
           statsBarSection('<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.5S4.5 15.2 4.5 9.9A4.9 4.9 0 0112 7.1a4.9 4.9 0 017.5 2.8c0 5.3-7.5 10.6-7.5 10.6z"/><path d="M19 3.5l.6 1.9 1.9.6-1.9.6-.6 1.9-.6-1.9-1.9-.6 1.9-.6z"/></svg>', '心意字卡', heart, '常传递心意', '暂无使用记录') +
           statsBarSection('<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8.5 8.5 0 01-12.6 7.4L4 21l1.5-4.4A8.5 8.5 0 1121 12z"/><path d="M8.5 10h7M8.5 13h4.5"/></svg>', '交流意图', intent, '常用交流', '暂无使用记录');
@@ -334,7 +425,24 @@
       document.querySelectorAll('#page-stats .cal-card').forEach(c => {
         c.hidden = c.dataset.stpanel !== k;
       });
+      // v3.24.x：文字字卡 tab 每次进入时重算（字卡库/聊天可能刚变）
+      if (k === 'cc') renderCcStats();
     });
+  });
+  // v3.24.x：「查看更多」→ 弹出 Top100 完整排名
+  document.addEventListener('click', function (e) {
+    const more = e.target.closest('[data-cc-more]');
+    if (!more) return;
+    const title = more.getAttribute('data-cc-more');
+    const key = more.getAttribute('data-cc-key');
+    if (!title || !key) return;
+    const ccEl = document.getElementById('st-cc-content');
+    if (!ccEl) return;
+    const prop = key === 'mine' ? '__ccMine' : '__ccTa';
+    const entries = ccEl[prop] || [];
+    if (entries.length) {
+      openCcTopModal(title, entries, '暂无使用记录');
+    }
   });
 
   // ================= 提问记录页（原小互动页） =================

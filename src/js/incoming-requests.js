@@ -260,6 +260,9 @@
       noInput: true,
       lock: true,
       staticText: staticText,
+      // v3.20.x：跨桌面查岗/通话/求聊天弹窗——点选即提交（点「现在回TA/接听/同意」
+      // 立即执行，点「稍后」立即关闭），避免此前点选项后还得再点底部确定才生效
+      pillSubmit: true,
       pills: [{ label: '稍后', value: 'later' }, { label: okText, value: 'reply' }]
     });
     return true;

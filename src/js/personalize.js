@@ -269,12 +269,21 @@ try {
             b.classList.add('on');
             pillVal = p.value;
             pillClicked = true;
+            // v3.20.x：pillSubmit——点选即提交（单坎作答等纯单选弹窗），
+            // 用定时器让选中态先渲染一帧再走 fire()/close()（与 okBtn 同一回调路径）
+            if (pillSubmit) {
+              setTimeout(function () { try { fire(); } finally { close(); } }, 0);
+            }
           });
           pillsEl.appendChild(b);
         });
       }
     }
     let pillsOnOk = null;
+    // v3.20.x：pillSubmit——纯单选胶囊弹窗（查岗作答等）点选即提交，无需再点底部
+    // 确定按钮。此前点胶囊又得再点确认，配合确认按钮曾残留错误文案，用户以为
+    // 点选项即选上，实际未提交 → 作答完全不落地（卡片不更新、无回答气泡）。
+    let pillSubmit = false;
     let noInput = false;
     let picked = -1;
     let customVal = null;
@@ -301,6 +310,7 @@ try {
       if (okBtn) okBtn.textContent = '确定';
       stayOnce = false;
       pillsOnOk = opts.pillsOnOk || null;
+      pillSubmit = !!(opts.pillSubmit);
       noInput = !!(opts.noInput);
       pillClicked = false;
       // v3.6.x：opts.lock——锁定弹窗（换头像邀请等必须做出选择）：

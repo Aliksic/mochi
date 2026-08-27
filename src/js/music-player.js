@@ -2528,9 +2528,56 @@
   function playableList() {
     // 当前歌曲所在歌单优先，否则默认列表
     const m = findTrack(currentId);
-    let list = library.filter(x => x.playlistId === (m ? m.playlistId : 'default'));
+    const pid = m ? m.playlistId : 'default';
+    let list = library.filter(x => x.playlistId === pid);
     if (!list.length) list = library.slice();
+    // v3.22.x：按用户在播放列表面板里长按拖动保存的播放顺序重排（顺序播放/自动切歌遵循）
+    const order = loadPlayOrder(pid);
+    if (order && order.length) {
+      const byId = {};
+      list.forEach(x => { byId[x.id] = x; });
+      const seen = {};
+      const sorted = [];
+      order.forEach(id => { if (byId[id] && !seen[id]) { sorted.push(byId[id]); seen[id] = true; } });
+      list.forEach(x => { if (!seen[x.id]) sorted.push(x); });
+      list = sorted;
+    }
     return list;
+  }
+  // ================= 播放顺序（自定义顺序播放） =================
+  // 播放列表面板「当前播放列表」长按拖动后保存每歌单的播放顺序，键 music-playorder
+  function loadPlayOrder(pid) {
+    try { const o = JSON.parse(store.get('music-playorder') || '{}'); return (o && Array.isArray(o[pid])) ? o[pid] : null; } catch (e) { return null; }
+  }
+  function sessionPlayListId() {
+    const m = findTrack(currentId);
+    return (m && (m.playlistId || 'default')) || 'default';
+  }
+  function naturalPlayOrder() {
+    const pid = sessionPlayListId();
+    let list = library.filter(x => x.playlistId === pid);
+    if (!list.length) list = library.slice();
+    return list.map(x => x.id);
+  }
+  // 面板里的可见行只包含「未排队的」当前列表；把拖完的可见顺序按排队位合并回完整歌单顺序再保存
+  function setPlayOrderView(newView) {
+    const pid = sessionPlayListId();
+    const queued = {};
+    playQueue.forEach(id => { queued[id] = true; });
+    let full = loadPlayOrder(pid) || naturalPlayOrder();
+    const newFull = [];
+    let vi = 0;
+    for (let o = 0; o < full.length; o++) {
+      const id = full[o];
+      if (queued[id]) newFull.push(id);
+      else { if (vi < newView.length) newFull.push(newView[vi]); vi++; }
+    }
+    for (; vi < newView.length; vi++) newFull.push(newView[vi]);
+    try {
+      const o = JSON.parse(store.get('music-playorder') || '{}');
+      o[pid] = newFull;
+      store.set('music-playorder', JSON.stringify(o));
+    } catch (e) {}
   }
   // ================= 播放队列（下一首播放） =================
   function addToQueue(id) {
@@ -2543,6 +2590,95 @@
   }
   // v3.x：队列数量黑色小圆点角标已按用户要求移除，保留调用点以兼容后续扩展
   function renderQueueBadge() {}
+  // ================= 播放列表面板：长按拖动排序 + 自动定位当前歌 =================
+  const qd = { active: null, timer: null, dragging: false, section: null, sx: 0, sy: 0, notMoved: false, bound: false, suppressClick: false };
+  function qdBindGlobals() {
+    if (qd.bound) return; qd.bound = true;
+    document.addEventListener('touchmove', qdOnMove, { passive: false });
+    document.addEventListener('mousemove', qdOnMove);
+    document.addEventListener('touchend', qdOnEnd);
+    document.addEventListener('touchcancel', qdOnEnd);
+    document.addEventListener('mouseup', qdOnEnd);
+  }
+  function qdPoint(e) { return (e.touches && e.touches[0]) || e; }
+  function qdOnMove(e) {
+    if (!qd.dragging) {
+      if (qd.notMoved && qd.active) {
+        const p = qdPoint(e);
+        if (Math.abs(p.clientX - qd.sx) > 10 || Math.abs(p.clientY - qd.sy) > 10) {
+          qd.notMoved = false;
+          if (qd.timer) { clearTimeout(qd.timer); qd.timer = null; }
+        }
+      }
+      return;
+    }
+    e.preventDefault();
+    const sec = qd.section;
+    if (!sec || !qd.active) return;
+    const p = qdPoint(e);
+    const rows = sec.querySelectorAll('.sm-song[data-qid]');
+    for (const r of rows) {
+      if (r === qd.active) continue;
+      const b = r.getBoundingClientRect();
+      if (p.clientY >= b.top && p.clientY <= b.bottom) { qdSwap(qd.active, r); break; }
+    }
+  }
+  function qdSwap(a, b) {
+    const pa = a.parentNode;
+    if (!pa) return;
+    const children = Array.from(pa.children);
+    const ai = children.indexOf(a), bi = children.indexOf(b);
+    if (ai < 0 || bi < 0) return;
+    if (ai < bi) pa.insertBefore(b, a); else pa.insertBefore(a, b);
+  }
+  function qdOnEnd() {
+    if (qd.timer) { clearTimeout(qd.timer); qd.timer = null; }
+    if (qd.dragging && qd.active) {
+      qd.active.classList.remove('dragging');
+      try { document.removeAttribute('aria-grabbed'); } catch (e) {}
+      const sec = qd.section;
+      if (sec) {
+        const view = Array.from(sec.querySelectorAll('.sm-song[data-qid]')).map(r => r.dataset.qid);
+        setPlayOrderView(view);
+      }
+      qd.suppressClick = true;
+    }
+    qd.dragging = false; qd.active = null; qd.notMoved = false;
+    document.body.style.userSelect = '';
+  }
+  function qdStart(e, row) {
+    if (e.target.closest('[data-qrm]')) return;
+    const p = qdPoint(e);
+    qd.sx = p.clientX; qd.sy = p.clientY; qd.notMoved = true;
+    qd.active = row;
+    if (qd.timer) clearTimeout(qd.timer);
+    qd.timer = setTimeout(function () {
+      qd.dragging = true;
+      try { document.setAttribute('aria-grabbed', 'true'); } catch (err) {}
+      row.classList.add('dragging');
+      document.body.style.userSelect = 'none';
+    }, 320);
+  }
+  function setupQueueDrag() {
+    const sec = document.getElementById('td-qlist');
+    if (!sec) return;
+    qd.suppressClick = false;
+    qd.section = sec;
+    sec.querySelectorAll('.sm-song[data-qid]').forEach(function (row) {
+      row.classList.add('draggable');
+      row.addEventListener('touchstart', function (e) { qdStart(e, row); }, { passive: true });
+      row.addEventListener('mousedown', function (e) { qdStart(e, row); });
+    });
+  }
+  function scrollToCurrentSong() {
+    const tcb = document.getElementById('tc-body');
+    if (!tcb) return;
+    const act = tcb.querySelector('.sm-song.active');
+    if (!act) return;
+    const tr = tcb.getBoundingClientRect(), ar = act.getBoundingClientRect();
+    const top = (ar.top - tr.top) - tcb.clientHeight / 2 + ar.height / 2;
+    tcb.scrollTop = Math.max(0, Math.min(top, tcb.scrollHeight - tcb.clientHeight));
+  }
   function openQueuePanel() {
     if (!window.openTCPanel) return;
     const rowFor = (m, extra, withRm) => '<div class="sm-song' + (extra || '') + '" data-qid="' + m.id + '">' + songIcoHtml(m) +
@@ -2562,24 +2698,28 @@
     playQueue.forEach(id => { queuedId[id] = true; });
     let list = playableList();
     if (playQueue.length) list = list.filter(m => !queuedId[m.id]);
-    html += '<div class="sm-req-hint" style="padding:10px 0 2px;font-weight:700">当前播放列表</div>';
+    html += '<div class="sm-req-hint" style="padding:10px 0 2px;font-weight:700;display:flex;align-items:center;gap:4px">当前播放列表<span class="sm-q-drag-hint"></span></div>';
     if (!list.length && !currentId) {
       html += '<div class="sm-req-hint" style="padding:4px 0 2px">音乐库暂无歌曲</div>';
     } else if (!list.length) {
       html += '<div class="sm-req-hint" style="padding:4px 0 2px">当前正在播放《' + esc(findTrack(currentId) ? findTrack(currentId).name : '') + '》，其余歌曲正在其他歌单</div>';
     } else {
-      html += list.map(m => rowFor(m, m.id === currentId ? ' active' : '', false)).join('');
+      html += '<div id="td-qlist">' + list.map(m => rowFor(m, m.id === currentId ? ' active' : '', false)).join('') + '</div>';
     }
     window.openTCPanel('音乐播放列表', html +
       '<div class="mail-actions">' +
       (playQueue.length ? '<button class="cc-tool" id="sm-q-clear">清空队列</button>' : '') +
       '<button class="cc-tool" id="sm-q-close">关闭</button></div>');
+    qdBindGlobals();
+    setupQueueDrag();
+    scrollToCurrentSong();
     document.getElementById('sm-q-close').addEventListener('click', function () { document.getElementById('tc-mask').hidden = true; });
     const clr = document.getElementById('sm-q-clear');
     if (clr) clr.addEventListener('click', function () { playQueue = []; renderQueueBadge(); toast('已清空播放队列'); openQueuePanel(); });
     // 点待播队列整行＝立刻播放并从队列移除；点 × 仅移除；点当前播放列表任一行＝直接切到这首歌
     document.querySelectorAll('#tc-body .sm-song[data-qid]').forEach(function (row) {
       row.addEventListener('click', function (e) {
+        if (qd.suppressClick) { qd.suppressClick = false; return; }
         if (e.target.closest('[data-qrm]')) return;
         const id = row.dataset.qid;
         playQueue = playQueue.filter(function (x) { return x !== id; });

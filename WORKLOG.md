@@ -1,3 +1,15 @@
+### 2026-08-27 23:4x（✅ 完成·音乐播放列表：打开自动定位当前歌 + 长按拖动调整播放顺序持久化）
+- [本会话·已构建]（改 src/js/music-player.js + src/css/chat-pages.css，音乐域 AI-A，本次为构建者）+ node build.mjs（sw mochi-mtbo1uyx）+ verify.mjs 10/10；**未提交**。
+  - **用户需求**：打开【播放列表】面板要自动跳转到当前播放歌曲所在位置；歌曲需可长按拖动移动播放列表里的播放顺序。
+  - **改动**：① 面板「当前播放列表」改为包 `#td-qlist` 容器 + 标题加「长按拖动可调整播放顺序」小灰字提示；打开后 `scrollToCurrentSong()` 把正在播放的 `.sm-song.active` 滚动到面板中部；② 新增长按(320ms)拖动排序——`qdBindGlobals`(全局 move/up 一次绑定) + `qdStart/qdOnMove/qdSwap/qdOnEnd`，仅「当前播放列表」行可拖（带删除按钮的待播队列行不参与），拖完 `setPlayOrderView()` 按新可见顺序合并排队位存 `music-playorder`，`playableList()` 已按该顺序重排供顺序播放/自动切歌；③ 拖后抑制误触发的点击播放；新 `.sm-song.draggable/.dragging` + `.sm-q-drag-hint` 样式。
+
+### 2026-08-27 23:0x（✅ 完成·聊天统计「聊天记录」页：补「我发红包」累计 + 修复时间竖排错位）
+- [本会话]（**已改 src/js/p2-features.js + src/css/chat-pages.css（均 AI-A 域）**；node --check 通过 + 无头 Chrome 复现/验证 + npm run verify 10/10；**已构建（23:03, sw: mochi-mtbnkpns）+ 未提交**）。
+  - **用户反馈**：聊天统计 → 聊天记录 tab，从「联系人发红包记录」往下 UI 不正常、页面不对齐；且没有「我的发红包累计金额」。
+  - **根因**：①红包区块只算了联系人（side='in'）的摘要，没有「我发红包」；②申请心意币记录/小游戏记录把日期时间塞进固定宽 30px 的 `.stats-item-num`，时间「08-27 19:01」被挤成三行竖排 → 区块高度暴增、整页错位。
+  - **修复**：①红包区块改为双向摘要——新增「🧧 我 发红包」+「🧧 小A 发红包」两个 stats-top 卡片（各自累计心意币 + 次数，空态各配文案）；②新增 `.stats-item-num.dt`（width 自适应 + white-space:nowrap + 10px muted），申请心意币/小游戏记录的日期时间格改用该 class，单行显示、对齐恢复（区块高 69→43）。
+  - **效果**：我发红包/联系人发红包累计金额并排展示；从红包区往下的申请心意币、小游戏记录日期时间全部单行，页面不再错位。情绪表达 tab 的次数格（仍用原 stats-item-num）不受影响。
+
 ### 2026-08-27 23:0x（✅ 完成·系统预设字卡「他」改中性占位 ta + 称呼跟随）
 - [本会话]（**已改 src/js/default-cards-data.js + src/js/p2-features.js + src/js/contacts.js**；node --check 通过 + taFit 逻辑用例 7/7 全绿；**已构建（22:56, sw: mochi-mtbnbftp）+ verify 10/10，本次提交一并收口**）。
   - **用户需求**：字卡库【系统预设字卡】里字卡的「他」全部改为「ta」；发送到聊天或其他功能使用该字卡时，「ta」随切换联系人桌面【称呼】调整（他/她），不选就是「ta」。
@@ -3404,3 +3416,13 @@ staticText: staticText
 
 ### 2026-08-27（用户反馈：通知栏切歌与聊天悬浮小框/桌面音乐不同步）
 - [AI-A·本会话·已构建] 根因：playTrack 先改 currentId，但悬浮小框/音乐页底部播放条/桌面音乐小组件只在音频真正 onplay（或本地歌异步加载完成后）才刷新；从手机通知栏/后台切歌、或播放本地歌时 UI 停留旧歌直到出声。修复：在 playTrack 里 teardownAudio() 之后立即调用 updatePlayerBar()（同步刷新悬浮小框/底部播放条/桌面小组件的歌名/封面/图标），对网络歌幂等、本地歌不再依赖起播。仅改 src/js/music-player.js（AI-A 域）。已 node build.mjs（sw mochi-mtbmn1ro）。未提交。
+
+### 2026-08-27（用户反馈：聊天统计·文字字卡只统计了联系人，没有统计我；情绪表达页里的「文字字卡」显示不对）
+- [本会话·已构建] 根因①：聊天统计原来只有「情绪表达」tab 里的一个「文字字卡」榜单，且遍历全部消息不按 side 区分（主要统计到 TA 自动回复的文字），「我发的文字字卡」没被单独统计。根因②：该榜单统计的是全部文本消息（含非字卡的手打/系统内容），不是用户要求的「自定义字卡（公用+专属）」里的字卡使用情况。
+- 改动（AI-A 域：src/template.html + src/js/p2-features.js + src/css/chat-pages.css）：
+  1. 聊天统计顶部新增独立 tab「文字字卡」（data-stab=cc，位于 聊天记录 / 情绪表达 之间），渲染 st-cc-content 面板。
+  2. 面板统计「自定义字卡（公用 cc-groups-public + 专属 cc-groups）里的文字卡」使用情况，按「我发（out）/ 联系人发（in）」分开两个榜单，各自顶部常用文字 + 前 5 名 + 顶部比例条（我 N 种 / TA N 种）。
+  3. 每榜超过 5 种出现「查看更多 N 种字卡 ▾」（按钮带 data-cc-key=mine/ta，与显示名无关），点击弹出 Top100 完整排名（openModal noInput + staticText 纯文本）。
+  4. 情绪表达 tab 移除原「文字字卡」榜单（textCount 逻辑删掉），只保留 情绪字卡/心意字卡/交流意图。
+- 口径说明：按「分类+分组+卡原文」内容匹配（历史消息未存卡 id）；消息需无 special/retracted、非 dataURL/http、去除符号后含可读文字；聊天页输入/自动回复/表情面板发送都会进这条统计。
+- 验证：node build.mjs 成功（sw mochi-mtbnx2d7），node tools/verify.mjs 布局 10/10；新增 tools/diag-cc-stats.mjs 无头 Chrome 实测 8/8（我发/TA发分榜、只统计库内卡、查看更多 Top100 弹层）。未提交（含并行会话未提交内容，请构建者/提交者统一收口）。

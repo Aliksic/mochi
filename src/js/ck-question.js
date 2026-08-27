@@ -252,7 +252,10 @@
     }, {
       staticText: isAction ? ('TA 想跟你互动：' + q.text) : ('TA 问你：' + q.text),
       pills: isSingle ? (isAction ? actionOpts : q.options).map(function (o) { return { label: o.t, value: o.t }; }) : null,
-      noInput: isSingle
+      noInput: isSingle,
+      // v3.20.x：查岗/互动单选作答——点选即提交（无需再点底部确定），避免用户点选项
+      // 后误以为已选上实则未提交，导致卡片不更新、无回答气泡
+      pillSubmit: true
     });
   }
 
