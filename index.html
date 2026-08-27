@@ -7828,7 +7828,7 @@ transition-duration: .01ms !important;
       </div>
       <div class="splash-dots"><i></i><i></i><i></i></div>
       <div class="splash-brand">小红书@言序（1842523578）</div>
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787811727329">Mochi 字卡传讯 v3.6.264 · 部署于 2026-08-27 14:22</div>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787813102080">Mochi 字卡传讯 v3.6.265 · 部署于 2026-08-27 14:45</div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
       <div class="splash-loading" id="splash-loading">正在加载数据…</div>
@@ -8904,7 +8904,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.6.264</div>
+      <div class="ver">Mochi 字卡传讯 v3.6.265</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -9056,7 +9056,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.6.264</span>
+              <span class="lic-ver">v3.6.265</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -9873,9 +9873,9 @@ transition-duration: .01ms !important;
         </span>
         <span class="ch-name">联系人跨桌面查岗</span>
       </div>
-      <div class="sm-set-hint" style="padding:8px 16px 0">说明：其他桌面的联系人来查岗时，TA 回答后按概率从以下回应字卡抽取回复，可逐张开启或关闭。</div>
+      <div class="sm-set-hint" style="padding:8px 16px 0">说明：联系人跨桌面查岗分两种方向——「联系人对我查岗」是 TA 主动来查我、我回答后 TA 的回应；「联系人申请我对联系人查岗」是 TA 请我去查 TA、TA 被查时的回应。可逐张开启或关闭。</div>
       <div class="card-tabs" id="dk-tabs">
-        <button class="cc-tab sel" data-type="deskcheck">联系人跨桌面查岗·回应</button>
+        <button class="cc-tab sel" data-type="deskcheck">联系人跨桌面查岗</button>
       </div>
       <div class="cc-groups-bar" id="dk-groups-bar"></div>
       <div class="card-search glass">
@@ -20059,6 +20059,10 @@ if (dts >= 0 && dts <= 1200) { saveMsgs(); return null; }
 msgs.push(rec);
 saveMsgs();
 const notable = rec.side === 'in' && (!rec.special || rec.special === 'poke' || rec.special === 'gift');
+if (notable && chatVisible() && document.visibilityState === 'visible') {
+const _mi = extractDeskMsg(rec);
+try { if (window.bgMarkSeenContent) window.bgMarkSeenContent(_mi.text, _mi.img); } catch (e) {}
+}
 if (notable && (!chatVisible() || document.visibilityState === 'hidden')) {
 if (!chatVisible()) incChatUnread();
 showDeskMsg(rec);
@@ -20077,14 +20081,14 @@ return el;
 function addIn(text, opts) {
 opts = opts || {};
 const _tagMood = opts.tag ? [{ tag: String(opts.tag), label: opts.tagNoDup ? '' : String(text) }] : null;
-return addRec({ side: 'in', text: text, initiative: opts.initiative, special: opts.special, quote: opts.quote, qidx: opts.qidx, type: opts.type, img: opts.img, parts: opts.parts, mailNotice: opts.mailNotice, gInv: opts.gInv, askQuestion: opts.askQuestion, askStatus: opts.askStatus, askOptions: opts.askOptions, askType: opts.askType, choiceQuestion: opts.choiceQuestion, choiceOptions: opts.choiceOptions, choicePref: opts.choicePref, choiceCat: opts.choiceCat, choiceStatus: opts.choiceStatus, choiceAnswer: opts.choiceAnswer, choiceReply: opts.choiceReply, choiceMatch: opts.choiceMatch, curiousQuestion: opts.curiousQuestion, curiousQuick: opts.curiousQuick, curiousReplies: opts.curiousReplies, curiousFollowup: opts.curiousFollowup, curiousQid: opts.curiousQid, curiousCat: opts.curiousCat, curiousStatus: opts.curiousStatus, curiousAnswer: opts.curiousAnswer, curiousReply: opts.curiousReply, roastText: opts.roastText, roastCat: opts.roastCat, roastStatus: opts.roastStatus, roastAnswer: opts.roastAnswer, roastReply: opts.roastReply, rpAmount: opts.rpAmount, rpWish: opts.rpWish, rpStatus: opts.rpStatus, rpTs: opts.rpTs, rpCover: opts.rpCover, askFen: opts.askFen, askTs: opts.askTs, deskCk: opts.deskCk, mood: opts.mood || _tagMood || undefined });
+return addRec({ side: 'in', text: text, initiative: opts.initiative, special: opts.special, quote: opts.quote, qidx: opts.qidx, type: opts.type, img: opts.img, parts: opts.parts, mailNotice: opts.mailNotice, gInv: opts.gInv, askQuestion: opts.askQuestion, askStatus: opts.askStatus, askOptions: opts.askOptions, askType: opts.askType, choiceQuestion: opts.choiceQuestion, choiceOptions: opts.choiceOptions, choicePref: opts.choicePref, choiceCat: opts.choiceCat, choiceStatus: opts.choiceStatus, choiceAnswer: opts.choiceAnswer, choiceReply: opts.choiceReply, choiceMatch: opts.choiceMatch, curiousQuestion: opts.curiousQuestion, curiousQuick: opts.curiousQuick, curiousReplies: opts.curiousReplies, curiousFollowup: opts.curiousFollowup, curiousQid: opts.curiousQid, curiousCat: opts.curiousCat, curiousStatus: opts.curiousStatus, curiousAnswer: opts.curiousAnswer, curiousReply: opts.curiousReply, roastText: opts.roastText, roastCat: opts.roastCat, roastStatus: opts.roastStatus, roastAnswer: opts.roastAnswer, roastReply: opts.roastReply, rpAmount: opts.rpAmount, rpWish: opts.rpWish, rpStatus: opts.rpStatus, rpTs: opts.rpTs, rpCover: opts.rpCover, askFen: opts.askFen, askTs: opts.askTs, deskCk: opts.deskCk, deskCkDir: opts.deskCkDir, mood: opts.mood || _tagMood || undefined });
 }
 function addOut(text) {
 return addRec({ side: 'out', text: text });
 }
 window.chatAddSystem = function (text, opts) {
 opts = opts || {};
-return addIn(text, { special: opts.special || 'poke', img: opts.img, mailNotice: opts.mailNotice, askQuestion: opts.askQuestion, askStatus: opts.askStatus, askOptions: opts.askOptions, askType: opts.askType, choiceQuestion: opts.choiceQuestion, choiceOptions: opts.choiceOptions, choicePref: opts.choicePref, choiceCat: opts.choiceCat, curiousQuestion: opts.curiousQuestion, curiousQuick: opts.curiousQuick, curiousReplies: opts.curiousReplies, curiousFollowup: opts.curiousFollowup, curiousQid: opts.curiousQid, curiousCat: opts.curiousCat, roastText: opts.roastText, roastCat: opts.roastCat, deskCk: opts.deskCk });
+return addIn(text, { special: opts.special || 'poke', img: opts.img, mailNotice: opts.mailNotice, askQuestion: opts.askQuestion, askStatus: opts.askStatus, askOptions: opts.askOptions, askType: opts.askType, choiceQuestion: opts.choiceQuestion, choiceOptions: opts.choiceOptions, choicePref: opts.choicePref, choiceCat: opts.choiceCat, curiousQuestion: opts.curiousQuestion, curiousQuick: opts.curiousQuick, curiousReplies: opts.curiousReplies, curiousFollowup: opts.curiousFollowup, curiousQid: opts.curiousQid, curiousCat: opts.curiousCat, roastText: opts.roastText, roastCat: opts.roastCat, deskCk: opts.deskCk, deskCkDir: opts.deskCkDir });
 };
 window.chatAddIn = function (text, opts) {
 const r = addIn(text, opts);
@@ -20220,12 +20224,16 @@ const taReply = preset
 let deskReply = '';
 if (rec && rec.deskCk) {
 try {
-const pool = (window.getDeskCheckPool ? window.getDeskCheckPool() : []).concat(
+const dir = rec.deskCkDir === 'meToTa' ? 'meToTa' : 'toMe';
+const pool = (window.getDeskCheckPool ? window.getDeskCheckPool(dir) : []).concat(
 (window.getCustomCardsFor ? window.getCustomCardsFor(window.__activeCid || 'default') : []).filter(function (c) {
 return typeof c === 'string' && c.trim() && c.indexOf('data:') !== 0;
 })
 );
-if (pool.length && Math.random() * 100 < 50) {
+if (dir === 'meToTa' && /不要|不用|下次|不了|算了|no/i.test(String(answer))
+&& (Math.random() * 100 < 50)) {
+deskReply = ['那好吧，下次想查随时来呀。', '没事，那我把自己交给你保管。', '不查也行，反正我总是会来找你。'][Math.floor(Math.random() * 3)];
+} else if (pool.length && Math.random() * 100 < 50) {
 const n = 1 + Math.floor(Math.random() * Math.min(5, pool.length));
 const used = {};
 const picked = [];
@@ -29851,7 +29859,7 @@ window.DEFAULT_CARD_DATA.drift = [
 ]]
 ];
 window.DEFAULT_CARD_DATA.deskcheck = [
-["联系人跨桌面查岗·回应", [
+["联系人对我查岗", [
 "你来查岗，我正好也想你了。",
 "被抓到了，我正在想你呀。",
 "在呀在呀，一直在等你。",
@@ -29863,7 +29871,27 @@ window.DEFAULT_CARD_DATA.deskcheck = [
 "查吧查吧，我的心都是你的。",
 "被你查到心坎里了。",
 "这么想我呀，那我过去找你。",
-"收到你的关心，心里暖暖的。"
+"收到你的关心，心里暖暖的。",
+"你查我，我当然条条秒回。",
+"那你继续查，我全都交代。",
+"被你惦记着，我很安心。"
+]],
+["联系人申请我对联系人查岗", [
+"你来啦，我什么都交代。",
+"等你的查岗，等好久了。",
+"查吧查吧，我的行程表全是你。",
+"被你查岗，我心甘情愿。",
+"这一查，把我的心也查走了吧？",
+"老实交代，我一直等着你来查。",
+"查到什么了？反正全是关于你。",
+"欢迎来查岗，我早就向你坦白啦。",
+"我的秘密就是随时随地想见你。",
+"你一问，我就全招了。",
+"被你盯着的感觉，很安心。",
+"查岗成功，恭喜你正式拥有我了。",
+"你查我，我还挺开心的。",
+"那我就乖乖躺在你的监视范围里吧。",
+"被喜欢的人查岗，是件幸福的事。"
 ]]
 ];
 } catch (__e) { try { console.error("[JS] default-cards-data.js", __e && __e.message || __e); } catch (x) {} if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
@@ -30204,8 +30232,10 @@ return window.getLibPool('interact', name, fallback);
 window.getFishPool = function (name, fallback) {
 return window.getLibPool('fish', name, fallback);
 };
-window.getDeskCheckPool = function (fallback) {
-const arr = window.getLibPool('deskcheck', '联系人跨桌面查岗·回应', fallback);
+window.getDeskCheckPool = function (dir, fallback) {
+const group = dir === 'meToTa' ? '联系人申请我对联系人查岗' : '联系人对我查岗';
+let arr = window.getLibPool('deskcheck', group, fallback);
+if (!arr.length && Array.isArray(fallback) && fallback.length) arr = fallback.slice();
 return arr.filter(c => !(window.isDefaultCardOff && window.isDefaultCardOff('deskcheck', c)));
 };
 })();
@@ -32808,10 +32838,7 @@ demoFallbackBusy = true;
 toast('外链播放失败，已改用内置示例旋律');
 playDemoFor(m, idx);
 } else if (idx < 0) {
-toast('播放失败：网络链接可能已失效，或该歌曲为VIP付费歌曲');
-wantPlay = false; clearBgResume(); // v3.10.x：真失败＝停止意图，不再自动续播
-try { audio.pause(); } catch (e) {}
-try { syncPlayIcons(false); } catch (e) {}
+offerRemoveDamagedSong(m);
 }
 } catch (e) {}
 }, 12000);
@@ -32863,6 +32890,22 @@ startPlayback(m);
 });
 return true;
 }
+function offerRemoveDamagedSong(m) {
+if (!m) return;
+wantPlay = false; clearBgResume(); // v3.10.x：真失败＝停止意图，不再自动续播
+try { if (audio) audio.pause(); } catch (e) {}
+try { syncPlayIcons(false); } catch (e) {}
+if (!window.openModal) return;
+try {
+window.openModal('「' + (m.name || '这首歌') + '」播放失败', '', () => {
+library = library.filter(function (x) { return x.id !== m.id; });
+if (currentId === m.id) { teardownAudio(); currentId = null; }
+saveLibrary();
+renderPage();
+toast('已移出音乐库');
+}, { noInput: true, staticText: '链接可能已失效，或为会员/付费歌曲。要把它移出音乐库吗？' });
+} catch (e) {}
+}
 function demoFallbackOrError(m) {
 const idx = seedIdxOf(m);
 if (idx >= 0 && !demoFallbackBusy) {
@@ -32872,8 +32915,7 @@ playDemoFor(m, idx);
 return;
 }
 if (idx >= 0) return; // 兜底合成/播放进行中，静默等待结果
-toast('播放失败：网络链接可能已失效，或该歌曲为VIP付费歌曲');
-wantPlay = false; clearBgResume(); // v3.10.x：真失败＝停止意图，不再自动续播
+offerRemoveDamagedSong(m);
 }
 let endedHandled = false;
 function handleEnded() {
@@ -35959,9 +36001,16 @@ if (idx < 0) return;
 _pendingPops.push({ idx: idx, fn: openFnName, t: Date.now() });
 if (_pendingPops.length > 4) _pendingPops.shift();
 }
+function _chatPageOpen() {
+try {
+const cp = document.getElementById('page-chat');
+return cp ? !cp.hidden : false;
+} catch (e) { return false; }
+}
 function _flushPendingPops() {
 if (!_pendingPops.length) return;
 if (cardPopupBusy() || chatInputFocused()) return;
+if (_chatPageOpen()) { _pendingPops.length = 0; return; } // 在聊天页就不补弹，卡片聊天里看得见
 const item = _pendingPops[_pendingPops.length - 1];
 _pendingPops.length = 0;
 const fn = window[item.fn];
@@ -38923,8 +38972,10 @@ if (!q || !q.text) return false;
 const pickedId = String(q.id || '');
 try { if (pickedId) store.set('ckq-last-id', pickedId); } catch (e) {}
 const isSingle = q.type === 'single' && Array.isArray(q.options) && q.options.length;
-const isAction = q.type === 'action';
-let actionOpts = null, actionText = q.text, actionHint = 'TA 来查岗了。';
+const isDeskCk = !!(opts && opts.deskCk);
+const deskCkDir = isDeskCk ? (Math.random() < 0.5 ? 'toMe' : 'meToTa') : null;
+const isAction = !isDeskCk && q.type === 'action';
+let actionOpts = null, actionText = q.text, actionHint = 'TA 来查岗了。', askOpts = null, askType;
 if (isAction) {
 const dir = Math.random() < 0.5 ? 'ta-to-me' : 'me-to-ta';
 actionText = (dir === 'me-to-ta' ? (q.meToTa || q.text) : (q.taToMe || q.text));
@@ -38932,9 +38983,18 @@ actionHint = 'TA 想跟你互动。';
 const acc = Array.isArray(q.accept) && q.accept.length ? q.accept : ['乖，过来。'];
 const rej = Array.isArray(q.reject) && q.reject.length ? q.reject : ['下次吧。'];
 actionOpts = [{ t: '好呀', reply: acc }, { t: '不要', reply: rej }];
+askType = 'single';
+} else if (isDeskCk && deskCkDir === 'meToTa') {
+actionText = '要不要来查查我呀？';
+actionHint = '联系人想让你来查岗 TA。';
+actionOpts = [{ t: '好呀', reply: null }, { t: '不要', reply: null }];
+askType = 'single';
+} else {
+askOpts = isSingle ? q.options : null;
+askType = isSingle ? 'single' : 'text';
 }
 window.chatAddSystem(actionHint, { special: 'ask-msg' });
-const el = window.chatAddSystem(actionText, { special: 'ask-card', askQuestion: actionText, askOptions: isAction ? actionOpts : (isSingle ? q.options : null), askType: (isAction || isSingle) ? 'single' : 'text', deskCk: !!(opts && opts.deskCk) });
+const el = window.chatAddSystem(actionText, { special: 'ask-card', askQuestion: actionText, askOptions: actionOpts ? actionOpts : askOpts, askType: askType, deskCk: isDeskCk, deskCkDir: deskCkDir });
 const msgIdx = el ? Number(el.dataset.idx) : -1;
 if (window.bgNotifyCheck) window.bgNotifyCheck(actionHint + actionText, Date.now(), { name: 'TA查岗' });
 let popupProb = 70;
@@ -40359,7 +40419,11 @@ setTimeout(function () { if (keepEnabled) requestWakeLockTop(); }, 1000);
 }
 } catch (e) {}
 }
+let _fgResumeAt = 0;
 function _onFgVisible() {
+const now = Date.now();
+if (now - _fgResumeAt < 1000) return;
+_fgResumeAt = now;
 healKeepAlive();
 try { document.dispatchEvent(new Event('mochi-fg-resume')); } catch (e) {}
 }
@@ -40821,6 +40885,12 @@ if (!key) return false;
 const last = seenRecently.get(key);
 return !!(last && Date.now() - last < NOTIFY_CHAT_DUP_MS);
 }
+window.bgMarkSeenContent = function (text, img) {
+try {
+const nkey = msgFingerprint(text, img);
+if (nkey) markSeen(nkey);
+} catch (e) {}
+};
 let gateStats = { total: 0, tooFresh: 0, dup: 0, sent: 0 };
 window.bgNotifyGateStats = function () { return Object.assign({}, gateStats); };
 window.bgNotifyGateInfo = function (text, img, refTs) {

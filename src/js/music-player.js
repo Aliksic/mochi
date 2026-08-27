@@ -2096,10 +2096,7 @@
           toast('外链播放失败，已改用内置示例旋律');
           playDemoFor(m, idx);
         } else if (idx < 0) {
-          toast('播放失败：网络链接可能已失效，或该歌曲为VIP付费歌曲');
-          wantPlay = false; clearBgResume(); // v3.10.x：真失败＝停止意图，不再自动续播
-          try { audio.pause(); } catch (e) {}
-          try { syncPlayIcons(false); } catch (e) {}
+          offerRemoveDamagedSong(m);
         }
       } catch (e) {}
     }, 12000);
@@ -2181,6 +2178,26 @@
     return true;
   }
 
+  // v3.14.x：外链/会员歌曲播放失败 → 弹窗让用户一键把它移出音乐库。
+  // 背景：会员状态检测依赖的第三方 CORS 代理（proxy.cors.sh / allorigins / corsproxy.io）
+  // 已整体失效，「清理会员歌曲」批量检测删不掉会员歌。播放失败这个时刻本身就是最可信
+  // 的判定——见一次弹一次「是否移除」，替代原来只弹 toast 却无处删除的困境。
+  function offerRemoveDamagedSong(m) {
+    if (!m) return;
+    wantPlay = false; clearBgResume(); // v3.10.x：真失败＝停止意图，不再自动续播
+    try { if (audio) audio.pause(); } catch (e) {}
+    try { syncPlayIcons(false); } catch (e) {}
+    if (!window.openModal) return;
+    try {
+      window.openModal('「' + (m.name || '这首歌') + '」播放失败', '', () => {
+        library = library.filter(function (x) { return x.id !== m.id; });
+        if (currentId === m.id) { teardownAudio(); currentId = null; }
+        saveLibrary();
+        renderPage();
+        toast('已移出音乐库');
+      }, { noInput: true, staticText: '链接可能已失效，或为会员/付费歌曲。要把它移出音乐库吗？' });
+    } catch (e) {}
+  }
   function demoFallbackOrError(m) {
     const idx = seedIdxOf(m);
     if (idx >= 0 && !demoFallbackBusy) {
@@ -2190,8 +2207,7 @@
       return;
     }
     if (idx >= 0) return; // 兜底合成/播放进行中，静默等待结果
-    toast('播放失败：网络链接可能已失效，或该歌曲为VIP付费歌曲');
-    wantPlay = false; clearBgResume(); // v3.10.x：真失败＝停止意图，不再自动续播
+    offerRemoveDamagedSong(m);
   }
   // v3.9.x：onended 兜底——网易云 meting 外链某些流不触发 ended 事件（duration=Infinity
   // 或 chunked 流无 Content-Length），导致自动下一首/循环/随机全失效，只能手动切歌。

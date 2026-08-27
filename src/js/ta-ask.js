@@ -347,9 +347,19 @@
     _pendingPops.push({ idx: idx, fn: openFnName, t: Date.now() });
     if (_pendingPops.length > 4) _pendingPops.shift();
   }
+  // v3.18.x：补弹前判断用户是否正停在聊天页——后台新卡本来就会渲染进聊天列表，
+  // 若用户切回时正停在聊天页，卡片就在眼前，再用弹窗重复弹出就是「已看过的消息又弹窗」。
+  // 只在用户不在聊天页（如回到桌面）时才补弹，真正需要提醒的场景。
+  function _chatPageOpen() {
+    try {
+      const cp = document.getElementById('page-chat');
+      return cp ? !cp.hidden : false;
+    } catch (e) { return false; }
+  }
   function _flushPendingPops() {
     if (!_pendingPops.length) return;
     if (cardPopupBusy() || chatInputFocused()) return;
+    if (_chatPageOpen()) { _pendingPops.length = 0; return; } // 在聊天页就不补弹，卡片聊天里看得见
     const item = _pendingPops[_pendingPops.length - 1];
     _pendingPops.length = 0;
     const fn = window[item.fn];

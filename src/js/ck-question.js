@@ -267,8 +267,13 @@
     try { if (pickedId) store.set('ckq-last-id', pickedId); } catch (e) {}
     const isSingle = q.type === 'single' && Array.isArray(q.options) && q.options.length;
     // v3.18.x：互动动作——随机方向 + 单选 ask-card（好呀/不要 → accept/reject 回应）
-    const isAction = q.type === 'action';
-    let actionOpts = null, actionText = q.text, actionHint = 'TA 来查岗了。';
+    const isDeskCk = !!(opts && opts.deskCk);
+    // v3.19.x：跨桌面查岗双方向——deskCk 时随机「联系人对我查岗 toMe」/「联系人申请
+    // 我对联系人查岗 meToTa」；meToTa 发「要不要来查查我呀？」申请单选卡，回答后 TA 从
+    // 对应方向字卡分组回应（见 getDeskCheckPool）。跨桌面查岗不走互动 action，避免方向冲突。
+    const deskCkDir = isDeskCk ? (Math.random() < 0.5 ? 'toMe' : 'meToTa') : null;
+    const isAction = !isDeskCk && q.type === 'action';
+    let actionOpts = null, actionText = q.text, actionHint = 'TA 来查岗了。', askOpts = null, askType;
     if (isAction) {
       const dir = Math.random() < 0.5 ? 'ta-to-me' : 'me-to-ta';
       actionText = (dir === 'me-to-ta' ? (q.meToTa || q.text) : (q.taToMe || q.text));
@@ -276,10 +281,21 @@
       const acc = Array.isArray(q.accept) && q.accept.length ? q.accept : ['乖，过来。'];
       const rej = Array.isArray(q.reject) && q.reject.length ? q.reject : ['下次吧。'];
       actionOpts = [{ t: '好呀', reply: acc }, { t: '不要', reply: rej }];
+      askType = 'single';
+    } else if (isDeskCk && deskCkDir === 'meToTa') {
+      // TA 申请我去查 TA：一张申请单选卡，我同意后 TA 从「联系人申请我对联系人查岗」抽回应
+      actionText = '要不要来查查我呀？';
+      actionHint = '联系人想让你来查岗 TA。';
+      actionOpts = [{ t: '好呀', reply: null }, { t: '不要', reply: null }];
+      askType = 'single';
+    } else {
+      // 普通查岗 / deskCk toMe：沿用题库问题（TA 问我在干嘛 → 「联系人对我查岗」抽回应）
+      askOpts = isSingle ? q.options : null;
+      askType = isSingle ? 'single' : 'text';
     }
     // 提示语标记 ask-msg（渲染同 poke 但不算 notable，避免通知重复成两条）
     window.chatAddSystem(actionHint, { special: 'ask-msg' });
-    const el = window.chatAddSystem(actionText, { special: 'ask-card', askQuestion: actionText, askOptions: isAction ? actionOpts : (isSingle ? q.options : null), askType: (isAction || isSingle) ? 'single' : 'text', deskCk: !!(opts && opts.deskCk) });
+    const el = window.chatAddSystem(actionText, { special: 'ask-card', askQuestion: actionText, askOptions: actionOpts ? actionOpts : askOpts, askType: askType, deskCk: isDeskCk, deskCkDir: deskCkDir });
     const msgIdx = el ? Number(el.dataset.idx) : -1;
     if (window.bgNotifyCheck) window.bgNotifyCheck(actionHint + actionText, Date.now(), { name: 'TA查岗' });
     // 自动弹窗：后台不弹 / 正在输入不弹 / 已有互动弹窗不弹（卡片仍在聊天里可点）

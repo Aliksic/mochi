@@ -410,8 +410,12 @@
     return window.getLibPool('fish', name, fallback);
   };
   // v3.17.x：桌面查岗回应字卡池（跨桌面「来消息」查岗——回复后按概率抽取，见 chat.js）
-  window.getDeskCheckPool = function (fallback) {
-    const arr = window.getLibPool('deskcheck', '联系人跨桌面查岗·回应', fallback);
+  // v3.18.x：按方向取池——dir 'meToTa'（联系人申请我对联系人查岗）抽「联系人申请我对
+  // 联系人查岗」分组，否则（toMe / 未指定）抽「联系人对我查岗」分组，过滤已关卡片
+  window.getDeskCheckPool = function (dir, fallback) {
+    const group = dir === 'meToTa' ? '联系人申请我对联系人查岗' : '联系人对我查岗';
+    let arr = window.getLibPool('deskcheck', group, fallback);
+    if (!arr.length && Array.isArray(fallback) && fallback.length) arr = fallback.slice();
     return arr.filter(c => !(window.isDefaultCardOff && window.isDefaultCardOff('deskcheck', c)));
   };
 })();

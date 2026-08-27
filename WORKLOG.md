@@ -3336,3 +3336,11 @@ staticText: staticText
 - 根因②：idb.js idbRestore 回填用 IDB 旧值写 memoryCache（idbSet 异步 fire-and-forget，页面被杀时 IDB 落后于 LS）→ 遮蔽新值且后续读改写丢数据。修复：retainValue/idbHydrateKey LS 有值且未标记「LS 写失败」→ 以 LS 为准；LS 写失败键记 __ls-dirty（sessionStorage+IDB 双持久化），回填信 IDB（不破坏 v3.16.x 配额满场景语义）。
 - 顺带：chat.js 补 memory 结算卡片分支（brick 后、snake 前）+ 邀请弹窗 pills 加 pill:1 默认选中「同意」（AI-A WORKLOG 留言待办）。
 - 回归：新增 tools/verify-fish-days-restore.mjs 5/5 通过（含用户场景复现）+ npm run verify 10/10。已构建提交推送。
+
+### 2026-08-27（用户反馈：清理会员歌曲没真正删除）
+- [AI-A·本会话·进行中·**已改 src/js/music-player.js，未构建**；请构建者收口时统一 node build.mjs]
+  - **问题根因**：「清理会员歌曲」（openVipClean）要删会员歌，前提是用第三方 CORS 代理查网易云 `fee` 标记。实测 3 个写死的代理全失效——corsproxy.io 对 GitHub Pages 生产域名要求 API key（返回营销页）、api.allorigins.win 直接超时、proxy.cors.sh 无免费额度需 apikey → `fetchNeteaseFees` 拿不到 fee，走「未发现会员/付费歌曲」/「检测失败」分支，音乐库一个都不删。已上传的网易云外链歌（source:'url'）其实在候选里，是检测这步废了，不是筛选漏。
+  - **修复（方案一：播放失败时一键移除）**：新增 `offerRemoveDamagedSong(m)`（demoFallbackOrError 前）——外链/会员歌播放失败（onerror / 12s 停滞守卫，对非种子用户歌 `idx<0`）时，把原来只会 to 的 toast 换成 openModal 确认弹窗（noInput + staticText「链接可能已失效，或为会员/付费歌曲。要把它移出音乐库吗？」），点确定即 `library` 过滤 + 若为当前播放歌 teardownAudio + saveLibrary + renderPage。「播放失败」这个时刻是最可信判定，见一次移一次，不依赖任何检测代理。种子歌（内置示例旋律兜底）仍走原 demo 回退，不受影响。
+  - **改动**：仅 music-player.js（AI-A 域）；armStallGuard 与 demoFallbackOrError 两处失败分支改调 offerRemoveDamagedSong。node --check 通过。
+  - **建议**：openVipClean 依赖的失效代理可保留不改（它仍会如实提示检测失败），或以后另行更换稳定检测源；本次以「播放失败移除」为主修，待构建验证。
+  - **未构建**：请构建者收口时统一 node build.mjs（此条之前可能有其他并行会话未保存改动，构建前 git status 确认）。
