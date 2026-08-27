@@ -223,10 +223,11 @@ html.force-mobile #page-chat { background: var(--page-bg-grad); }
 html.force-mobile button, html.force-mobile .app, html.force-mobile .set-row,
 html.force-mobile .tab, html.force-mobile .msg, html.force-mobile .feed-post,
 html.force-mobile .mail-item { -webkit-tap-highlight-color:transparent; }
-html.force-mobile .page-slide.desk-page,
+html.force-mobile .page-slide,
 html.force-mobile .deco-widget, html.force-mobile .mini-card, html.force-mobile .checkin,
 html.force-mobile .weekend-box, html.force-mobile .music-widget,
-html.force-mobile .memo-card, html.force-mobile .mood-card, html.force-mobile .week-card { zoom:1; }
+html.force-mobile .memo-card, html.force-mobile .mood-card, html.force-mobile .week-card,
+html.force-mobile .desk-period, html.force-mobile .app-grid, html.force-mobile .mini-row { zoom:1; }
 .fs-active .phone, .fs-css-active .phone {
 width:100vw; height:100vh; height:100svh; height:100dvh;
 max-width:none; border-radius:0; box-shadow:none;
@@ -313,10 +314,10 @@ html.tablet .phone .page.full .chat-head { padding-top:calc(10px + env(safe-area
 html.tablet .phone .page.full { padding-bottom:0; }
 html.tablet #page-chat { background:var(--page-bg-grad); }
 html.tablet .tabbar { margin-bottom:env(safe-area-inset-bottom, 0px); }
-html.tablet .page-slide.desk-page { zoom:1; }
+html.tablet .page-slide { zoom:1; }
 html.tablet .deco-widget, html.tablet .mini-card, html.tablet .checkin,
 html.tablet .weekend-box, html.tablet .music-widget, html.tablet .memo-card,
-html.tablet .mood-card, html.tablet .week-card { zoom:1; }
+html.tablet .mood-card, html.tablet .week-card, html.tablet .desk-period, html.tablet .app-grid, html.tablet .mini-row { zoom:1; }
 html.tablet .app .app-ico { width:64px; height:64px; }
 html.tablet .app .app-name { font-size:12px; }
 html.tablet .msg:not(.msg-ask):not(.msg-center) { max-width:70%; }
@@ -583,13 +584,13 @@ border-radius:inherit;
 backdrop-filter:blur(var(--desk-bg-blur,0px));
 -webkit-backdrop-filter:blur(var(--desk-bg-blur,0px));
 }
-.page-slide.desk-page { zoom:var(--desk-font-scale, 1); }
-.deco-widget, .mini-card, .checkin, .weekend-box, .music-widget,
-.memo-card, .mood-card, .week-card { zoom:var(--desk-card-scale, 1); }
+.page-slide { zoom:var(--desk-font-scale, 1); }
+.deco-widget, .mini-row, .checkin, .weekend-box, .music-widget,
+.week-card, .desk-period, .app-grid { zoom:var(--desk-card-scale, 1); }
 @media (max-width: 900px) {
-.page-slide.desk-page,
-.deco-widget, .mini-card, .checkin, .weekend-box, .music-widget,
-.memo-card, .mood-card, .week-card { zoom:1; }
+.page-slide,
+.deco-widget, .mini-row, .checkin, .weekend-box, .music-widget,
+.week-card, .desk-period, .app-grid { zoom:1; }
 }
 .deco-widget {
 position:relative; height:190px; border-radius:26px;
@@ -640,10 +641,11 @@ font-size:11px; color:var(--muted); letter-spacing:.5px;
 white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0;
 }
 .mini-row { display:flex; gap:12px; margin-bottom:14px; flex-shrink:0; }
-.mini-card { flex:1; min-height:77px; border-radius:20px; padding:14px; box-shadow:0 6px 16px rgba(0,0,0,.06); background:var(--widget-bg); opacity:var(--widget-opacity); border:1px solid var(--widget-border); display:flex; flex-direction:column; justify-content:center; }
+.mini-card { flex:1; height:77px; overflow:hidden; box-sizing:border-box; border-radius:20px; padding:14px; box-shadow:0 6px 16px rgba(0,0,0,.06); background:var(--widget-bg); opacity:var(--widget-opacity); border:1px solid var(--widget-border); display:flex; flex-direction:column; justify-content:center; }
 .mc-top { font-size:11px; color:var(--muted); letter-spacing:1px; }
 .mc-b { font-size:13px; font-weight:600; color:var(--ink); margin-top:6px; line-height:1.45; }
 .mc-b b { font-size:16px; }
+.mini-card .mc-b { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; height:18.85px; line-height:18.85px; }
 .checkin {
 display:flex; align-items:center; gap:10px;
 border-radius:18px; padding:12px 14px; margin:0 0 14px; flex-shrink:0;
@@ -1006,9 +1008,8 @@ color:var(--ink); display:flex; align-items:center; justify-content:center;
 .memo-card, .mood-card { cursor:pointer; }
 .memo-card .mc-b, .mood-card .mc-b { font-size:12px; }
 .page-slide.third .mini-row { flex-direction:row; gap:12px; }
-.page-slide.third .mini-row .mini-card { min-height:0; }
 .page-slide.third .mini-row .memo-card,
-.page-slide.third .mini-row .mood-card { min-height:77px; }
+.page-slide.third .mini-row .mood-card { height:77px; }
 .week-card { border-radius:20px; padding:8px 14px; margin-bottom:14px; min-height:77px; box-sizing:border-box; display:flex; flex-direction:column; justify-content:center; }
 .week-days { display:flex; gap:6px; margin-top:5px; }
 .week-day {
@@ -7830,7 +7831,7 @@ transition-duration: .01ms !important;
       </div>
       <div class="splash-dots"><i></i><i></i><i></i></div>
       <div class="splash-brand">小红书@言序（1842523578）</div>
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787834639177">Mochi 字卡传讯 v3.6.269 · 部署于 2026-08-27 20:43</div>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787836052206">Mochi 字卡传讯 v3.6.270 · 部署于 2026-08-27 21:07</div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
       <div class="splash-loading" id="splash-loading">正在加载数据…</div>
@@ -8906,7 +8907,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.6.269</div>
+      <div class="ver">Mochi 字卡传讯 v3.6.270</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -9058,7 +9059,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.6.269</span>
+              <span class="lic-ver">v3.6.270</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -35648,7 +35649,7 @@ else { store.remove('cs-avatar-partner'); store.remove('avatar-lib-cur-hash'); }
 applyAvatarImg(before || null, false, true);
 renderGrid();
 noteApplied('partner', before || '');
-replyInvite(false, before || null); // 消息带换回的头像图
+replyInvite(false, fit);
 }
 } else {
 toast('头像已切换');

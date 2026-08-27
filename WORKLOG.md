@@ -1,3 +1,12 @@
+### 2026-08-27 20:5x（✅ 完成·桌面三页底部功能图标彻底对齐——修复全部错位根因）
+- [本会话·完成]（**已改 src/css/home.css + src/css/base.css（AI-B 域）+ 已构建（20:57, sw: mochi-mta6hylc）+ tools/verify-desk-align.mjs 扩到 **23/23 全绿**（新增 E1 长情话不撑高 / E2 卡片缩放对齐 / E3 字号缩放对齐）+ npm run verify 10/10 + desk-icon-decor 7/7；未提交**）。
+  - **用户三连反馈**「底部图标位置还是没对齐」——逐层排查出 3 个真实根因并全部修复：
+  - **根因①（图标区）**：上一轮为强行对齐第三页 grid 底部把 p3 图标压到 52px/86px 行高 → 图标大小与间隙和三页不一致。修复：移除 p3 专属行高覆盖，三页统一 58px 图标/96px 行高/14px 行距；第三页多一行的 110px 由经期卡让出（min-height 190→160）。
+  - **根因②（动态情话换行）**：「今日情话」是每天随机文本，超长时把页0 第二档卡撑高（77→86.5），页0 图标组随之下沉错位。修复：`.mini-card` 固定 `height:77px` + `overflow:hidden` + `.mc-b` 单行省略（`white-space:nowrap` + 固定 `height/line-height:18.85px`）。注意：仅 nowrap+overflow 不够——超长 line box 仍按两行参与 flex 布局，必须锁死盒高。
+  - **根因③（缩放设置只作用部分元素）**：桌面端「桌面字号/卡片大小」用 zoom 实现，原规则只作用于 `.page-slide.desk-page`（仅第三页）和部分卡片类 → 缩放时三页不同步错位。修复：字号缩放改为三页全部 `.page-slide`；卡片缩放改为含 `.desk-period`/`.mini-row`/`.app-grid` 全部卡片类。⚠️ `.mini-card`/`.memo-card`/`.mood-card` 不单独 zoom（嵌套在 `.mini-row` 内会双重缩放 77→101.8），由容器统一缩放一次。base.css 的 force-mobile/tablet 兜底选择器同步。
+  - **验证**：5 场景全对齐——手机 390×844 / 360×640 / 414×896 默认，桌面 1000×800 字号 115% / 卡片 115%，三页图标组底部全 636.3、末行图标下沿全 622.3。verify-desk-align 23/23；npm run verify 10/10；desk-icon-decor 7/7；desk-reset-period 9/10（FAIL 为脚本前置断言期望旧 bug 复现，改动前既有，非回归）。
+  - ⚠️ 跨域说明：home.css/base.css 归 AI-B 域；未动 AI-A 功能文件。提交前请按协议 git diff 自查。
+
 ### 2026-08-27（🐛 修复·vivo/iQOO 系浏览器「麦克风权限开着但语音录不了/录到空」）
 - [本会话]（**已改 src/js/chat.js（AI-A 域）+ tools/verify-voice-record.mjs**；已在临时目录构建验证 30/30 全绿；**未提交**；**请构建者（默认 AI-B）执行 node build.mjs 收口**）。
   - **用户上报**：iQOO 手机 · 雨见浏览器，麦克风权限已开，但无法录音发送到聊天。

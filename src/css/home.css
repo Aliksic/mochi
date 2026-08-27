@@ -28,14 +28,22 @@
    ⚠️ iOS 卡顿红线（AGENTS.md / WORKLOG）：zoom 是 WebKit 已知卡顿源，会把元素踢出
    GPU 合成路径、滚动时每帧 CPU 重排重绘——只在桌面（>900px 模拟器/浏览器）生效，
    手机端强制 zoom:1 禁用缩放（设置仍可保存，手机端不应用）。手机端如需缩放请用
-   字号/间距方案重做，勿恢复 zoom。 */
-.page-slide.desk-page { zoom:var(--desk-font-scale, 1); }
-.deco-widget, .mini-card, .checkin, .weekend-box, .music-widget,
-.memo-card, .mood-card, .week-card { zoom:var(--desk-card-scale, 1); }
+   字号/间距方案重做，勿恢复 zoom。
+   v3.16.x：三页统一应用缩放——原规则只作用于 .page-slide.desk-page（仅第三页）和
+   部分卡片类（不含经期卡/图标组），桌面端调「桌面字号」时第三页整体放大/缩小而
+   1/2 页不动、调「卡片大小」时经期卡和图标组不缩放，三页底部图标位置必然错位。
+   现改为：字号缩放作用于三页全部 .page-slide，卡片缩放作用于三页全部卡片类
+   （含 .desk-period 经期卡、.mini-row 容器、.app-grid 图标组）——缩放时三页同步变化。
+   ⚠️ .mini-card/.memo-card/.mood-card 不单独 zoom：它们嵌套在 .mini-row 内，
+   若与容器都 zoom 会双重缩放（77→88.55→101.8），与单层缩放的 .week-card（89.1）
+   不一致；由 .mini-row 容器统一缩放一次。 */
+.page-slide { zoom:var(--desk-font-scale, 1); }
+.deco-widget, .mini-row, .checkin, .weekend-box, .music-widget,
+.week-card, .desk-period, .app-grid { zoom:var(--desk-card-scale, 1); }
 @media (max-width: 900px) {
-  .page-slide.desk-page,
-  .deco-widget, .mini-card, .checkin, .weekend-box, .music-widget,
-  .memo-card, .mood-card, .week-card { zoom:1; }
+  .page-slide,
+  .deco-widget, .mini-row, .checkin, .weekend-box, .music-widget,
+  .week-card, .desk-period, .app-grid { zoom:1; }
 }
 
 /* 纪念日卡片（纯装饰：头像 + 爱心 + 纪念日；已禁止上传背景图）
@@ -94,12 +102,22 @@
 }
 
 /* 小卡片行：今日情话 / 纪念日倒计时
-   v3.15.x：min-height 77px——三页第二档（情话/本周日常/备忘心情）统一 band 高 */
+   v3.15.x：min-height 77px——三页第二档（情话/本周日常/备忘心情）统一 band 高。
+   v3.16.x：height:77px 固定（非 min-height）——超长情话在 nowrap+overflow 下 line box
+   溢出会把卡片撑到 81+px（flex 布局按溢出 line box 计算高度），三页第二档错位。
+   固定高 + overflow:hidden 让卡片高度恒定，内容 flex 居中、超长文字裁剪。 */
 .mini-row { display:flex; gap:12px; margin-bottom:14px; flex-shrink:0; }
-.mini-card { flex:1; min-height:77px; border-radius:20px; padding:14px; box-shadow:0 6px 16px rgba(0,0,0,.06); background:var(--widget-bg); opacity:var(--widget-opacity); border:1px solid var(--widget-border); display:flex; flex-direction:column; justify-content:center; }
+.mini-card { flex:1; height:77px; overflow:hidden; box-sizing:border-box; border-radius:20px; padding:14px; box-shadow:0 6px 16px rgba(0,0,0,.06); background:var(--widget-bg); opacity:var(--widget-opacity); border:1px solid var(--widget-border); display:flex; flex-direction:column; justify-content:center; }
 .mc-top { font-size:11px; color:var(--muted); letter-spacing:1px; }
 .mc-b { font-size:13px; font-weight:600; color:var(--ink); margin-top:6px; line-height:1.45; }
 .mc-b b { font-size:16px; }
+/* v3.16.x：迷你卡正文强制单行省略——「今日情话」是动态文本，长度不定，换行会把
+   页0 第二档卡撑高（77→87+），页0 图标组随之下沉，三页底部图标位置错位。
+   white-space:nowrap + overflow:hidden 只裁剪视觉，超长内容的 line box 仍按完整
+   两行高参与 flex 布局（卡片被撑到 86.5）；必须用固定 line-height + height 锁死
+   单行盒高，卡片高度恒定 77px，与第二页「本周日常」/第三页「备忘+心情」同档对齐。
+   长情话末尾显示省略号，完整内容点卡片弹窗可看（迷你卡点击有查看逻辑）。 */
+.mini-card .mc-b { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; height:18.85px; line-height:18.85px; }
 
 /* 打卡横幅
    v3.15.x：去掉 0 2px 左右内缩——与 deco/mini-row 等卡片同宽（左右边缘跨页对齐）；
@@ -562,12 +580,10 @@
 /* v3.16.x：第三页「今日备忘 / 今天的心情」改回左右两张半卡同行（原为上下整宽卡）——
    第三页内容总长 747 超出桌面容器 714，且 1/2 页功能图标底部在 636；上下整宽布局
    让第三页比 1/2 页长出 111px（用户反馈「第三页没有和前两页对齐」）。
-   改回两半卡同行（宽度 171/张、与首页小卡行同档），并把第三页图标行高压缩到与
-   1/2 页相同的 107px/行，第三页总长 636 与 1/2 页底部对齐 */
+   改回两半卡同行（宽度 171/张、与首页小卡行同档），高度继承 .mini-card 固定 77px */
 .page-slide.third .mini-row { flex-direction:row; gap:12px; }
-.page-slide.third .mini-row .mini-card { min-height:0; }
 .page-slide.third .mini-row .memo-card,
-.page-slide.third .mini-row .mood-card { min-height:77px; }
+.page-slide.third .mini-row .mood-card { height:77px; }
 /* v3.15.x：本周日常定高 77px（与首页小卡行/第三页备忘心情行统一第二档 band），
    日期格 7→4 压缩内容——横滑三页第二档上下边缘对齐 */
 .week-card { border-radius:20px; padding:8px 14px; margin-bottom:14px; min-height:77px; box-sizing:border-box; display:flex; flex-direction:column; justify-content:center; }

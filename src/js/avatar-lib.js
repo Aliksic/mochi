@@ -466,7 +466,8 @@
           applyAvatarImg(before || null, false, true);
           renderGrid();
           noteApplied('partner', before || '');
-          replyInvite(false, before || null); // 消息带换回的头像图
+          // 消息带的是「申请换的那张」头像图（联系人当前已换回原头像，但消息应展示申请换的那张）
+          replyInvite(false, fit);
         }
       } else {
         // 直接切换成功：轻提示 + 聊天里显示"我的昵称 更换了 联系人昵称 的头像"+ 新头像图片
