@@ -256,6 +256,19 @@
     });
   }
 
+  // v3.19.x：跨桌面查岗卡字段构造——返回 {deskCkDir,text,hint,opts,askType}。
+  // 两种方向：toMe（联系人对我查岗，沿用题库问题）/ meToTa（联系人申请我查 TA，
+  // 发「要不要来查查我呀？」申请单选卡）。前台 pushCkQuestion 与后台
+  // chatAppendDeskCkTo（写入对应联系人桌面聊天）共用，保证方向逻辑一致。
+  window.buildDeskCkCard = function (q) {
+    const dir = Math.random() < 0.5 ? 'toMe' : 'meToTa';
+    if (dir === 'meToTa') {
+      return { deskCkDir: dir, text: '要不要来查查我呀？', hint: '联系人想让你来查岗 TA。', opts: [{ t: '好呀', reply: null }, { t: '不要', reply: null }], askType: 'single' };
+    }
+    const isSingle = q && q.type === 'single' && Array.isArray(q.options) && q.options.length;
+    return { deskCkDir: dir, text: (q && q.text) ? q.text : '在干嘛呢？想你了。', hint: 'TA 来查岗了。', opts: isSingle ? q.options : null, askType: isSingle ? 'single' : 'text' };
+  };
+
   // 推一张查岗问题卡：提示语 + ask-card 互动卡 + 系统通知 + 概率自动弹窗
   // v3.17.x：opts.deskCk=true 表示跨桌面「来消息」触发的桌面查岗卡——chat.js 回答后
   // 会按概率从 deskcheck 回应字卡池抽 1~5 张作 TA 回应（见 chatAskReply）。
@@ -268,25 +281,24 @@
     const isSingle = q.type === 'single' && Array.isArray(q.options) && q.options.length;
     // v3.18.x：互动动作——随机方向 + 单选 ask-card（好呀/不要 → accept/reject 回应）
     const isDeskCk = !!(opts && opts.deskCk);
-    // v3.19.x：跨桌面查岗双方向——deskCk 时随机「联系人对我查岗 toMe」/「联系人申请
-    // 我对联系人查岗 meToTa」；meToTa 发「要不要来查查我呀？」申请单选卡，回答后 TA 从
-    // 对应方向字卡分组回应（见 getDeskCheckPool）。跨桌面查岗不走互动 action，避免方向冲突。
-    const deskCkDir = isDeskCk ? (Math.random() < 0.5 ? 'toMe' : 'meToTa') : null;
+    // v3.19.x：跨桌面查岗双方向——卡字段统一由 buildDeskCkCard 生成（前台 push 发卡 /
+    // 后台 chatAppendDeskCkTo 入库共用同一方向逻辑，避免两处方向不一致）
+    const deskCkCard = isDeskCk ? window.buildDeskCkCard(q) : null;
+    const deskCkDir = deskCkCard ? deskCkCard.deskCkDir : null;
     const isAction = !isDeskCk && q.type === 'action';
     let actionOpts = null, actionText = q.text, actionHint = 'TA 来查岗了。', askOpts = null, askType;
-    if (isAction) {
+    if (isDeskCk) {
+      actionText = deskCkCard.text;
+      actionHint = deskCkCard.hint;
+      actionOpts = deskCkCard.opts;
+      askType = deskCkCard.askType;
+    } else if (isAction) {
       const dir = Math.random() < 0.5 ? 'ta-to-me' : 'me-to-ta';
       actionText = (dir === 'me-to-ta' ? (q.meToTa || q.text) : (q.taToMe || q.text));
       actionHint = 'TA 想跟你互动。';
       const acc = Array.isArray(q.accept) && q.accept.length ? q.accept : ['乖，过来。'];
       const rej = Array.isArray(q.reject) && q.reject.length ? q.reject : ['下次吧。'];
       actionOpts = [{ t: '好呀', reply: acc }, { t: '不要', reply: rej }];
-      askType = 'single';
-    } else if (isDeskCk && deskCkDir === 'meToTa') {
-      // TA 申请我去查 TA：一张申请单选卡，我同意后 TA 从「联系人申请我对联系人查岗」抽回应
-      actionText = '要不要来查查我呀？';
-      actionHint = '联系人想让你来查岗 TA。';
-      actionOpts = [{ t: '好呀', reply: null }, { t: '不要', reply: null }];
       askType = 'single';
     } else {
       // 普通查岗 / deskCk toMe：沿用题库问题（TA 问我在干嘛 → 「联系人对我查岗」抽回应）

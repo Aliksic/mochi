@@ -1995,6 +1995,61 @@ else if (tries < 3) setTimeout(attempt, 1500);
 };
 attempt();
 };
+// v3.19.x：安全的「非当前桌面」追加任意 rec（含 ask-card 互动卡）。先读后写，读到
+// undefined 时用 idbGetAllKeys 复核是「确认无历史」还是「读取失败」——失败则重试
+//（最多 3 次），绝不冒覆盖整个聊天记录的风险（与 chatAppendToDeskMsg 同款安全逻辑）。
+// 当前桌面直接走内存链路 addRec（实时渲染 + 统一落盘）。
+window.chatAppendDeskRec = function (cid, rec) {
+  const cur = window.__activeCid || 'default';
+  rec = rec || {};
+  if (!rec.ts) rec.ts = Date.now();
+  if (cid === cur) return addRec(rec);
+  if (!window.idbGet || !window.idbSet) return;
+  const key = 'xy-home-v2:' + cid + ':chat-msgs';
+  let tries = 0;
+  const writeArr = function (arr) {
+    try { window.idbSet(key, JSON.stringify(arr)); } catch (e) {}
+    try { localStorage.setItem(key, JSON.stringify(arr)); } catch (e) {}
+  };
+  const attempt = function () {
+    tries++;
+    window.idbGet(key).then(function (v) {
+      if (v !== undefined && v !== null) {
+        let arr = [];
+        try { arr = typeof v === 'string' ? JSON.parse(v) : v; } catch (e) { arr = []; }
+        if (!Array.isArray(arr)) arr = [];
+        arr.push(rec);
+        writeArr(arr);
+        return;
+      }
+      const confirmMiss = window.idbGetAllKeys
+        ? window.idbGetAllKeys().then(function (keys) {
+            return !(keys || []).some(function (k) { return k === key; });
+          }).catch(function () { return false; })
+        : Promise.resolve(true);
+      confirmMiss.then(function (isMiss) {
+        if (isMiss) writeArr([rec]);
+        else if (tries < 3) setTimeout(attempt, 1500);
+      });
+    }).catch(function () { if (tries < 3) setTimeout(attempt, 1500); });
+  };
+  attempt();
+};
+// v3.19.x：把一张跨桌面查岗卡（带 deskCk + deskCkDir 双方向）写入指定联系人桌面聊天。
+// 后台收到查岗通知切回浏览器后，到该联系人即可看到并回答（incoming-requests 后台分支调用）。
+window.chatAppendDeskCkTo = function (cid, q) {
+  const field = (window.buildDeskCkCard ? window.buildDeskCkCard(q) : null)
+    || { deskCkDir: 'toMe', text: '在干嘛呢？想你了。', hint: 'TA 来查岗了。', opts: null, askType: 'text' };
+  window.chatAppendDeskRec(cid, {
+    side: 'in', special: 'ask-card', text: field.text,
+    askQuestion: field.text, askOptions: field.opts, askType: field.askType,
+    deskCk: true, deskCkDir: field.deskCkDir
+  });
+};
+// v3.19.x：把一句「求聊天」开场白写入指定联系人桌面聊天（后台命中求聊天时调用）。
+window.chatAppendDeskTextTo = function (cid, text) {
+  window.chatAppendDeskRec(cid, { side: 'in', special: 'poke', text: text || '想你了，来聊聊天吧。' });
+};
 function saveMsgsNow() {
 // v3.14.x：空记录落盘守卫（同 saveMsgs）——调用方都是作答/回应后触发，
 // msgs 必非空；真出现空+权威未读过时绝不写盘（防覆盖全部历史）
@@ -2437,7 +2492,11 @@ if (moreCk) {
 moreCk.addEventListener('click', (e) => {
 e.stopPropagation();
 if (morePanel) morePanel.hidden = true;
-if (window.openCkPanel) window.openCkPanel();
+// 聊天「更多功能」寻踪：全屏打开寻踪页（返回时回聊天）
+if (window.openCheckinPage) {
+window.__ckFrom = 'chat';
+window.openCheckinPage();
+} else toast('寻踪加载失败');
 });
 }
 const moreCjian = document.getElementById('more-cjian');

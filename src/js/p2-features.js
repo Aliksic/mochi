@@ -516,7 +516,7 @@ function renderCheckinHistory() {
     }
     // 概率触发「提醒你来寻踪」
     if (Math.random() * 100 < 30) {
-      window.chatAddIn(name + ' 提醒你快来寻踪');
+      window.chatAddIn(name + ' 提醒你来寻踪.查岗');
     }
     recordCheckin(ck);
     store.set('checkin-last', String(Date.now()));
@@ -598,26 +598,40 @@ function renderCheckinHistory() {
   // 数据就绪（IDB 回填完成）后启动；无事件兜底 3 秒（空数据场景 idbRestore 也会派发）
   document.addEventListener('mochi-restore-done', bootCheckin);
   setTimeout(bootCheckin, 3000);
+  // 全屏打开寻踪页：渲染当前日常（或生成一条）+ 记录；供桌面/聊天「更多功能」共用
+  window.openCheckinPage = function () {
+    if (!checkinPage) return;
+    document.querySelectorAll('.page').forEach(p => p.hidden = true);
+    checkinPage.hidden = false;
+    // 显示当前日常；从未生成过则立即生成一条
+    let cur = null;
+    try { cur = JSON.parse(store.get('checkin-current') || 'null'); } catch (e) {}
+    if (cur && cur.place) renderCheckinUI(cur);
+    else doCheckin();
+    renderCheckinHistory();
+  };
   if (checkinApp && checkinPage) {
     checkinApp.addEventListener('click', () => {
       const editing = Array.from(document.querySelectorAll('.app-grid')).some(g => g.classList.contains('editing'));
       if (editing) return;
-      document.querySelectorAll('.page').forEach(p => p.hidden = true);
-      checkinPage.hidden = false;
-      // 显示当前日常；从未生成过则立即生成一条
-      let cur = null;
-      try { cur = JSON.parse(store.get('checkin-current') || 'null'); } catch (e) {}
-      if (cur && cur.place) renderCheckinUI(cur);
-      else doCheckin();
-      renderCheckinHistory();
+      // 桌面进入：返回时回桌面（避免残留聊天来源）
+      window.__ckFrom = '';
+      window.openCheckinPage();
     });
   }
   const checkinBack = document.getElementById('checkin-back');
   if (checkinBack) {
     checkinBack.addEventListener('click', () => {
       document.querySelectorAll('.page').forEach(p => p.hidden = true);
-      const home = document.getElementById('page-phone');
-      if (home) home.hidden = false;
+      // 聊天「更多功能」进入则返回聊天，否则返回桌面
+      if (window.__ckFrom === 'chat') {
+        const chatPage = document.getElementById('page-chat');
+        if (chatPage) chatPage.hidden = false;
+      } else {
+        const home = document.getElementById('page-phone');
+        if (home) home.hidden = false;
+      }
+      window.__ckFrom = '';
     });
   }
 const ckRefresh = document.getElementById('ck-refresh');

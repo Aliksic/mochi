@@ -85,7 +85,7 @@
       id: 'sf-desk-checkin',
       ico: '<svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v3M4.2 4.2l2.2 2.2M2 12h3M19 12h3M4.2 19.8l2.2-2.2M17.6 17.6l2.2 2.2"/><path d="M12 6a6 6 0 016 6v4h-3v-4a3 3 0 00-6 0v4H6v-4a6 6 0 016-6z"/><path d="M9 20h6"/></svg>',
       title: '开启 联系人跨桌面查岗',
-      sub: '其他桌面的联系人会主动来查岗、找你聊天，你回复后 TA 会现场回应；关闭后不再打扰',
+      sub: '其他桌面的联系人是各自独立触发，互不影响：每 60 秒轮询一次，每人按各自概率（默认约 2%，可逐联系人调整）触发；每个联系人触发后 30 分钟内冷却、不再重复。你回复后 TA 会现场回应。关闭后不再打扰',
       get: deskCheckinEn,
       set: window.setDeskCheckinEn,
       toast: function (en) { return en ? '已开启：其他桌面的TA会来查岗、找你聊天' : '已关闭：其他桌面的TA不再来查岗打扰'; }
@@ -153,7 +153,21 @@
     const name = cName(req.cid);
     const title = req.kind === 'chat' ? name + ' 想找你聊天' : (req.kind === 'call' ? name + ' 来电了' : name + ' 来查岗了');
     if (document.hidden) {
-      if (window.bgNotifyCheck) window.bgNotifyCheck(title + (req.kind === 'call' ? '' : '：' + (req.text || '')), Date.now(), { name: name + (req.kind === 'chat' ? '来聊天' : req.kind === 'call' ? '来电' : '查岗') });
+      // v3.19.x：后台命中时不再只是通知——查岗/求聊天直接把卡写入对应联系人桌面聊天，
+      // 切回前台到该联系人即可看到并回答；来电无法后台接听，只保留系统通知。
+      try {
+        if (req.kind === 'call') {
+          if (window.bgNotifyCheck) window.bgNotifyCheck(title + (req.kind === 'call' ? '' : '：' + (req.text || '')), Date.now(), { name: name + '来电' });
+        } else if (req.kind === 'checkin') {
+          if (window.chatAppendDeskCkTo) window.chatAppendDeskCkTo(req.cid, req.q);
+          if (window.bgNotifyCheck) window.bgNotifyCheck(title + '：' + (req.text || ''), Date.now(), { name: name + '查岗' });
+        } else { // chat 求聊天
+          if (window.chatAppendDeskTextTo) window.chatAppendDeskTextTo(req.cid, req.text || '想你了，来聊聊天吧。');
+          if (window.bgNotifyCheck) window.bgNotifyCheck(title + '：来陪我聊聊天吧', Date.now(), { name: name + '来聊天' });
+        }
+      } catch (e) {}
+      // 卡已入库聊天，释放 pending（避免占用队列挡住下一次正常弹窗查岗）
+      setStatus(req.cid, 'seen');
       return true;
     }
     if (!window.openModal) return true;
@@ -292,7 +306,7 @@
         // 查岗：开关 + 概率 + 冷却（ckq-*）
         if (deskCheckinEn() && num(cfg, 'ckq-en', 0) === 1) {
           const cool = num(cfg, 'ckq-cool', 30);
-          const prob = num(cfg, 'ckq-prob', 8);
+          const prob = num(cfg, 'ckq-prob', 2);
           if (Date.now() - lastAt(cid, 'checkin') >= cool * 60000 && Math.random() * 100 < prob) {
             const q = window.ckQuestionPickFor ? window.ckQuestionPickFor(cid) : null;
             if (q && q.text) {

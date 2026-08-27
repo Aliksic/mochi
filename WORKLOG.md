@@ -1,3 +1,9 @@
+### 2026-08-27（✅ 完成·【帮我决定】/更多功能里所有带输入框的半框，键盘弹出时面板被输入法挤压/飞动）
+- [本会话·AI-B]（**已改 src/js/mobile-adapt.js（AI-B 域）**；已构建（15:10, sw: mochi-mtb6oe84）+ verify-kb-dock 12/12 + verify-kb-pinpan-late 5/5 + verify 10/10 均通过；**未提交**）。
+  - **用户再报**：聊天「更多功能」里【帮我决定】等任何需要点输入框弹输入法的半框，键盘弹出时页面弹窗会飞、被输入法窗口挤压，每次点击都这样（同域：邀请TA/问问TA/占卜/搜索记录…）。
+  - **根因**：kbDockPanels 键盘期把面板改成 `position:fixed` 停靠可视区底部=输入栏上方.py K80 Chrome 等内核 fixed 恒锚【布局视口】底——.phone 虽已收缩、fixed 面板却仍停在全页底部=输入法后方，肉眼即「面板被挤压/飞动」。本来自检 kbDockEnsureVisible 会把这类面板摘回 absolute，但自检在 250ms 轮询里才有延迟 → 每次点输入弹键盘面板都先飞再归位。
+  - **修复**：kbDockPanels 直接 `position:absolute` 锚「已收缩+relative 的 .phone」底部（bottom:96px），一步到位、安卓/iOS 双端通用；移除已失效的内核自检链路（kbFixedTracksVV / kbDockEnsureVisible）。CSS `.poke-card` 本就 absolute bottom:96，与本次对齐。
+  - 验证：verify-kb-dock 12/12（邀请TA/问问TA/搜索记录/**帮我决定** 键盘弹出后面板均在输入栏上方且为 absolute）；verify-kb-pinpan-late 5/5；verify 10/10。**需真机确认（安卓 Chrome，红米K80）：帮我决定/更多功能里各带输入框半框，点输入弹键盘面板应稳停输入栏上方、不再被挤压/飞动。**
 ### 2026-08-27（✅ 完成·桌面美化导入导出可选文件/文字 + 全局美化方案保存切换）
 - [本会话]（**已改 src/js/personalize.js + src/js/contacts.js + src/template.html**；已构建（13:14, sw: mochi-mtb2jehq）+ node tools/verify.mjs 10/10 + 临时功能自测 6/6；**未提交**）。
   - **用户需求**：①桌面美化导入导出有问题——需可选「导出文件」还是「复制文字」；②桌面美化和联系人设置里需「保存美化方案直接切换」，且保存的方案在切换不同桌面联系人后依然可见（全局通用）。

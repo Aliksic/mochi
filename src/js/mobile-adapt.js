@@ -1048,9 +1048,8 @@
                 nudgeInputVisible();
                 // v3.12.x：悬浮键盘推定停靠复查（vv 不反映键盘的内核走这里兜底）
                 _aProvCheck();
-                // v3.15.x：平移残留归零 + fixed 停靠结果自检（不随可视区上移的内核摘回 absolute）
+                // v3.15.x：平移残留归零
                 _aPinPan();
-                kbDockEnsureVisible();
                 // v3.14.x：vv 从小变大=键盘收回动画（摩托罗拉G100/雨见 focusout/
                 // vv.resize 漏触发，但轮询能读到 vv.height 回升）→ 立即清除推顶，
                 // 不等 2200ms。悬浮键盘 vv 恒接近 _aH，_aLastVVH 不会小于 _aH-60，不误清除
@@ -1242,41 +1241,34 @@
   // v3.16.x：补 #voice-panel 语音录制半框（聊天设置「我可发送语音」的麦克风按钮打开，跨域一词登记请知悉）
   const FLOAT_SELECTORS = ['#tc-mask', '#cc-export-mask', '#cc-scope-mask', '#call-mask', '#feed-notice-panel', '#feed-comment-panel', '#poke-card', '#emoji-panel', '#chat-ask-panel', '#qa-mask', '#chat-more-panel', '#gc-more-panel', '#chat-search', '#chat-decision-panel', '#chat-gdecision-panel', '#chat-divine-panel', '#chat-rps-panel', '#chat-call-panel', '#chat-pong-panel', '#chat-snake-panel', '#chat-brick-panel', '#chat-c4-panel', '#chat-ms-panel', '#chat-fish-panel', '#chat-memory-panel', '#chat-gift-panel', '#avlib-card', '#ck-panel', '#loc-panel', '.mg-mask', '#modal-mask', '#msg-actions', '#gc-msg-actions', '#desk-image-viewer', '.desk-lib', '#gc-members-panel', '#gc-at-panel', '#gc-settings-panel', '#img-view-mask', '#chat-rp-panel', '#batch-panel', '#eat-switch-overlay', '#voice-panel'];
   // v3.15.x：键盘弹起时把锚定在 .phone 底部的悬浮面板（更多功能/帮我决定/占卜/
-  // 问问TA/红包/拍一拍等）重新锚定到可视区底部=输入栏上方。背景（用户反馈
-  // 「更多功能里的小功能输入框一点，功能页面被错误挤压到屏幕输入栏一行的下方，
-  // 中间出现大面积无用灰色」）：面板是 absolute 锚定 .phone 底部（bottom:96px），
-  // 键盘弹出时 JS 把 .phone 收缩到可视高度（vv 或 58% 推定停靠）——面板 bottom 锚
-  // 点已退出可视区，面板整体被推到可视区外（视觉=被挤压到输入栏下方），输入框
-  // 完全消失，输入栏下露出的 .phone 底色呈现为「大面积无用灰色」。绝对定位的
-  // 面板不会自动收缩，必须 JS 干预：键盘期间给面板设 fixed 底部停靠（=可视区
-  // 底部），与输入栏同位。两分支（syncAndroidKb / syncIosKb 及各自的推定停靠
-  // _aProvDock / _iProvDock）在收缩 .phone 时统一触发，restore 时解除。
+  // 问问TA/红包/拍一拍等）重新锚定到可视区底部=输入栏上方。关键前提：键盘开启时
+  // syncAndroidKb / syncIosKb（及各自的推定停靠 _aProvDock / _iProvDock）先把 .phone
+  // 收缩到可视高度并顶对齐（alignSelf:flex-start）+ position:relative（_aPanComp），
+  // 于是 absolute 锚 .phone 底部（bottom:96px）的面板必然停在输入栏上方、双端通用。
+  // v3.18.x 前这里把面板改为 position:fixed（锚可视区底=输入栏上方）；但 K80 Chrome
+  // 等内核 fixed 恒锚【布局视口】底——.phone 虽已收缩、fixed 面板却仍停在全页底部
+  // =输入法后方，肉眼即「面板被输入法窗口挤压/飞动」。本来的自检（kbDockEnsureVisible）
+  // 会把这类面板摘回 absolute，但自检在 250ms 轮询里才有延迟，导致【每次点击输入上
+  // 去键盘弹出时面板都先飞再归位】。现直接 absolute 锚收缩后的 .phone，一步到位。
   let kbPanelDocked = false;
-  // v3.15.x：内核自检开关——position:fixed 在键盘期是否随 visualViewport 上移。
-  // 多数安卓内核会（_probe-fixed-kb 真机实测 pb=vv 底），但部分内核/无头环境 fixed
-  // 恒锚定【布局视口】底：停靠后面板仍整体在可视区外=被键盘盖住（「帮我决定输入框
-  // 不弹到屏幕上方」）。kbDockEnsureVisible 检测到一次即置 false，本会话键盘期改用
-  // absolute 兜底；收键盘 kbUndockPanels 复位，下次会话重新按 fixed 停靠探测。
-  let kbFixedTracksVV = true;
   function kbDockPanels() {
-    if (kbPanelDocked || !kbFixedTracksVV) return;
+    if (kbPanelDocked) return;
     kbPanelDocked = true;
     try {
       document.querySelectorAll(FLOAT_PANEL_SELECTORS.join(',')).forEach(function (el) {
         if (el.hidden || el.getClientRects().length === 0) return;
-        if (el.style.position !== 'fixed') el.dataset.kbPrevPos = el.style.position || '';
-        el.style.position = 'fixed';
+        if (el.style.position !== 'absolute') el.dataset.kbPrevPos = el.style.position || '';
+        el.style.position = 'absolute';
         el.style.left = '18px'; el.style.right = '18px';
         el.style.top = 'auto';
         el.style.bottom = 'calc(96px + env(safe-area-inset-bottom, 0px))';
       });
-      _aSchedCe(); // v3.16.x：面板被 fixed 停靠后，内部 ce-box 合成层需刷新跟随
+      _aSchedCe(); // v3.16.x：面板被 absolute 停靠后，内部 ce-box 合成层需刷新跟随
     } catch (e) {}
   }
   function kbUndockPanels() {
     if (!kbPanelDocked) return;
     kbPanelDocked = false;
-    kbFixedTracksVV = true; // v3.15.x：下次键盘会话重新探测 fixed 是否随可视区上移
     try {
       document.querySelectorAll(FLOAT_PANEL_SELECTORS.join(',')).forEach(function (el) {
         if (el.dataset.kbPrevPos !== undefined) {
@@ -1290,36 +1282,6 @@
         el.style.removeProperty('right');
         el.style.removeProperty('top');
       });
-    } catch (e) {}
-  }
-  // v3.15.x：fixed 停靠结果自检（_aWatch 轮询调用，幂等）——停靠中的可见面板若
-  // 【整体】仍滞留在可视区下沿之外（bottom 越过可视区底=被键盘盖住），说明该内核
-  // position:fixed 不随 visualViewport 上移、仍锚定布局视口。把这类面板摘回 absolute：
-  // .phone 已收缩顶对齐到可视高度，absolute bottom:96 必然停在输入栏上方——两种内核
-  // 行为下面板/输入框都可见。摘回后置 kbFixedTracksVV=false，本会话不再 fixed 重挂。
-  function kbDockEnsureVisible() {
-    if (!kbPanelDocked) return;
-    try {
-      var vv = window.visualViewport; if (!vv) return;
-      var offT = vv.offsetTop || 0, vh = vv.height;
-      var swapped = false;
-      document.querySelectorAll(FLOAT_PANEL_SELECTORS.join(',')).forEach(function (el) {
-        if (el.hidden || el.getClientRects().length === 0) return;
-        if (el.style.position !== 'fixed') return;
-        var r = el.getBoundingClientRect();
-        if (r.height > 10 && r.bottom - offT > vh + 4) {
-          var prev = el.dataset.kbPrevPos;
-          if (prev) el.style.position = prev;
-          else el.style.removeProperty('position');
-          delete el.dataset.kbPrevPos;
-          el.style.removeProperty('bottom');
-          el.style.removeProperty('left');
-          el.style.removeProperty('right');
-          el.style.removeProperty('top');
-          swapped = true;
-        }
-      });
-      if (swapped) kbFixedTracksVV = false;
     } catch (e) {}
   }
   // 键盘期间「新打开的面板」也会自动停靠（kbDockPanels 只锚定当时可见的面板）

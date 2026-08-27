@@ -7828,7 +7828,7 @@ transition-duration: .01ms !important;
       </div>
       <div class="splash-dots"><i></i><i></i><i></i></div>
       <div class="splash-brand">小红书@言序（1842523578）</div>
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787813102080">Mochi 字卡传讯 v3.6.265 · 部署于 2026-08-27 14:45</div>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787814928016">Mochi 字卡传讯 v3.6.266 · 部署于 2026-08-27 15:15</div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
       <div class="splash-loading" id="splash-loading">正在加载数据…</div>
@@ -8904,7 +8904,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.6.265</div>
+      <div class="ver">Mochi 字卡传讯 v3.6.266</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -9056,7 +9056,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.6.265</span>
+              <span class="lic-ver">v3.6.266</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -11814,7 +11814,7 @@ transition-duration: .01ms !important;
             <span>帮我决定</span>
           </button>
           <button class="more-item" id="more-gdecide" data-mcat="tool" title="多人决定">
-            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="6.5" r="3"/><path d="M10.2 6.5l1.3 1.3L14 5"/><circle cx="5" cy="14.5" r="2.5"/><path d="M8.5 22v-1a3.5 3.5 0 00-3.5-3.5H5a3.5 3.5 0 00-3.5 3.5v1"/><circle cx="19" cy="14.5" r="2.5"/><path d="M22.5 22v-1a3.5 3.5 0 00-3.5-3.5H19a3.5 3.5 0 00-3.5 3.5v1"/></svg></span>
+            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="5.5" cy="9" r="2.5"/><circle cx="12" cy="7" r="2.8"/><circle cx="18.5" cy="9" r="2.5"/><path d="M8 20.5 11 23l4.8-6.5"/></svg></span>
             <span>多人决定</span>
           </button>
           <button class="more-item" id="more-invite" data-mcat="chat" title="邀请TA">
@@ -20134,6 +20134,54 @@ else if (tries < 3) setTimeout(attempt, 1500);
 };
 attempt();
 };
+window.chatAppendDeskRec = function (cid, rec) {
+const cur = window.__activeCid || 'default';
+rec = rec || {};
+if (!rec.ts) rec.ts = Date.now();
+if (cid === cur) return addRec(rec);
+if (!window.idbGet || !window.idbSet) return;
+const key = 'xy-home-v2:' + cid + ':chat-msgs';
+let tries = 0;
+const writeArr = function (arr) {
+try { window.idbSet(key, JSON.stringify(arr)); } catch (e) {}
+try { localStorage.setItem(key, JSON.stringify(arr)); } catch (e) {}
+};
+const attempt = function () {
+tries++;
+window.idbGet(key).then(function (v) {
+if (v !== undefined && v !== null) {
+let arr = [];
+try { arr = typeof v === 'string' ? JSON.parse(v) : v; } catch (e) { arr = []; }
+if (!Array.isArray(arr)) arr = [];
+arr.push(rec);
+writeArr(arr);
+return;
+}
+const confirmMiss = window.idbGetAllKeys
+? window.idbGetAllKeys().then(function (keys) {
+return !(keys || []).some(function (k) { return k === key; });
+}).catch(function () { return false; })
+: Promise.resolve(true);
+confirmMiss.then(function (isMiss) {
+if (isMiss) writeArr([rec]);
+else if (tries < 3) setTimeout(attempt, 1500);
+});
+}).catch(function () { if (tries < 3) setTimeout(attempt, 1500); });
+};
+attempt();
+};
+window.chatAppendDeskCkTo = function (cid, q) {
+const field = (window.buildDeskCkCard ? window.buildDeskCkCard(q) : null)
+|| { deskCkDir: 'toMe', text: '在干嘛呢？想你了。', hint: 'TA 来查岗了。', opts: null, askType: 'text' };
+window.chatAppendDeskRec(cid, {
+side: 'in', special: 'ask-card', text: field.text,
+askQuestion: field.text, askOptions: field.opts, askType: field.askType,
+deskCk: true, deskCkDir: field.deskCkDir
+});
+};
+window.chatAppendDeskTextTo = function (cid, text) {
+window.chatAppendDeskRec(cid, { side: 'in', special: 'poke', text: text || '想你了，来聊聊天吧。' });
+};
 function saveMsgsNow() {
 if (!msgs.length && authLoadedPrefix !== window.activePrefix()) return;
 const data = JSON.stringify(msgs);
@@ -20565,7 +20613,10 @@ if (moreCk) {
 moreCk.addEventListener('click', (e) => {
 e.stopPropagation();
 if (morePanel) morePanel.hidden = true;
-if (window.openCkPanel) window.openCkPanel();
+if (window.openCheckinPage) {
+window.__ckFrom = 'chat';
+window.openCheckinPage();
+} else toast('寻踪加载失败');
 });
 }
 const moreCjian = document.getElementById('more-cjian');
@@ -38965,6 +39016,14 @@ pills: isSingle ? (isAction ? actionOpts : q.options).map(function (o) { return 
 noInput: isSingle
 });
 }
+window.buildDeskCkCard = function (q) {
+const dir = Math.random() < 0.5 ? 'toMe' : 'meToTa';
+if (dir === 'meToTa') {
+return { deskCkDir: dir, text: '要不要来查查我呀？', hint: '联系人想让你来查岗 TA。', opts: [{ t: '好呀', reply: null }, { t: '不要', reply: null }], askType: 'single' };
+}
+const isSingle = q && q.type === 'single' && Array.isArray(q.options) && q.options.length;
+return { deskCkDir: dir, text: (q && q.text) ? q.text : '在干嘛呢？想你了。', hint: 'TA 来查岗了。', opts: isSingle ? q.options : null, askType: isSingle ? 'single' : 'text' };
+};
 function pushCkQuestion(cfg, forceQ, opts) {
 if (!window.chatAddSystem) return false;
 const q = forceQ || pickQ();
@@ -38973,21 +39032,22 @@ const pickedId = String(q.id || '');
 try { if (pickedId) store.set('ckq-last-id', pickedId); } catch (e) {}
 const isSingle = q.type === 'single' && Array.isArray(q.options) && q.options.length;
 const isDeskCk = !!(opts && opts.deskCk);
-const deskCkDir = isDeskCk ? (Math.random() < 0.5 ? 'toMe' : 'meToTa') : null;
+const deskCkCard = isDeskCk ? window.buildDeskCkCard(q) : null;
+const deskCkDir = deskCkCard ? deskCkCard.deskCkDir : null;
 const isAction = !isDeskCk && q.type === 'action';
 let actionOpts = null, actionText = q.text, actionHint = 'TA 来查岗了。', askOpts = null, askType;
-if (isAction) {
+if (isDeskCk) {
+actionText = deskCkCard.text;
+actionHint = deskCkCard.hint;
+actionOpts = deskCkCard.opts;
+askType = deskCkCard.askType;
+} else if (isAction) {
 const dir = Math.random() < 0.5 ? 'ta-to-me' : 'me-to-ta';
 actionText = (dir === 'me-to-ta' ? (q.meToTa || q.text) : (q.taToMe || q.text));
 actionHint = 'TA 想跟你互动。';
 const acc = Array.isArray(q.accept) && q.accept.length ? q.accept : ['乖，过来。'];
 const rej = Array.isArray(q.reject) && q.reject.length ? q.reject : ['下次吧。'];
 actionOpts = [{ t: '好呀', reply: acc }, { t: '不要', reply: rej }];
-askType = 'single';
-} else if (isDeskCk && deskCkDir === 'meToTa') {
-actionText = '要不要来查查我呀？';
-actionHint = '联系人想让你来查岗 TA。';
-actionOpts = [{ t: '好呀', reply: null }, { t: '不要', reply: null }];
 askType = 'single';
 } else {
 askOpts = isSingle ? q.options : null;
@@ -39491,7 +39551,7 @@ addSettingToggle({
 id: 'sf-desk-checkin',
 ico: '<svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v3M4.2 4.2l2.2 2.2M2 12h3M19 12h3M4.2 19.8l2.2-2.2M17.6 17.6l2.2 2.2"/><path d="M12 6a6 6 0 016 6v4h-3v-4a3 3 0 00-6 0v4H6v-4a6 6 0 016-6z"/><path d="M9 20h6"/></svg>',
 title: '开启 联系人跨桌面查岗',
-sub: '其他桌面的联系人会主动来查岗、找你聊天，你回复后 TA 会现场回应；关闭后不再打扰',
+sub: '其他桌面的联系人是各自独立触发，互不影响：每 60 秒轮询一次，每人按各自概率（默认约 2%，可逐联系人调整）触发；每个联系人触发后 30 分钟内冷却、不再重复。你回复后 TA 会现场回应。关闭后不再打扰',
 get: deskCheckinEn,
 set: window.setDeskCheckinEn,
 toast: function (en) { return en ? '已开启：其他桌面的TA会来查岗、找你聊天' : '已关闭：其他桌面的TA不再来查岗打扰'; }
@@ -39551,7 +39611,18 @@ markLast(req.cid, req.kind);
 const name = cName(req.cid);
 const title = req.kind === 'chat' ? name + ' 想找你聊天' : (req.kind === 'call' ? name + ' 来电了' : name + ' 来查岗了');
 if (document.hidden) {
-if (window.bgNotifyCheck) window.bgNotifyCheck(title + (req.kind === 'call' ? '' : '：' + (req.text || '')), Date.now(), { name: name + (req.kind === 'chat' ? '来聊天' : req.kind === 'call' ? '来电' : '查岗') });
+try {
+if (req.kind === 'call') {
+if (window.bgNotifyCheck) window.bgNotifyCheck(title + (req.kind === 'call' ? '' : '：' + (req.text || '')), Date.now(), { name: name + '来电' });
+} else if (req.kind === 'checkin') {
+if (window.chatAppendDeskCkTo) window.chatAppendDeskCkTo(req.cid, req.q);
+if (window.bgNotifyCheck) window.bgNotifyCheck(title + '：' + (req.text || ''), Date.now(), { name: name + '查岗' });
+} else { // chat 求聊天
+if (window.chatAppendDeskTextTo) window.chatAppendDeskTextTo(req.cid, req.text || '想你了，来聊聊天吧。');
+if (window.bgNotifyCheck) window.bgNotifyCheck(title + '：来陪我聊聊天吧', Date.now(), { name: name + '来聊天' });
+}
+} catch (e) {}
+setStatus(req.cid, 'seen');
 return true;
 }
 if (!window.openModal) return true;
@@ -39667,7 +39738,7 @@ return;
 }
 if (deskCheckinEn() && num(cfg, 'ckq-en', 0) === 1) {
 const cool = num(cfg, 'ckq-cool', 30);
-const prob = num(cfg, 'ckq-prob', 8);
+const prob = num(cfg, 'ckq-prob', 2);
 if (Date.now() - lastAt(cid, 'checkin') >= cool * 60000 && Math.random() * 100 < prob) {
 const q = window.ckQuestionPickFor ? window.ckQuestionPickFor(cid) : null;
 if (q && q.text) {
@@ -45693,7 +45764,7 @@ const line = [ck.place, ck.action, ck.msg].filter(Boolean).join(' · ');
 if (line) window.chatAddIn(line);
 }
 if (Math.random() * 100 < 30) {
-window.chatAddIn(name + ' 提醒你快来寻踪');
+window.chatAddIn(name + ' 提醒你来寻踪.查岗');
 }
 recordCheckin(ck);
 store.set('checkin-last', String(Date.now()));
@@ -45761,10 +45832,8 @@ checkAutoCheckin();
 }
 document.addEventListener('mochi-restore-done', bootCheckin);
 setTimeout(bootCheckin, 3000);
-if (checkinApp && checkinPage) {
-checkinApp.addEventListener('click', () => {
-const editing = Array.from(document.querySelectorAll('.app-grid')).some(g => g.classList.contains('editing'));
-if (editing) return;
+window.openCheckinPage = function () {
+if (!checkinPage) return;
 document.querySelectorAll('.page').forEach(p => p.hidden = true);
 checkinPage.hidden = false;
 let cur = null;
@@ -45772,14 +45841,27 @@ try { cur = JSON.parse(store.get('checkin-current') || 'null'); } catch (e) {}
 if (cur && cur.place) renderCheckinUI(cur);
 else doCheckin();
 renderCheckinHistory();
+};
+if (checkinApp && checkinPage) {
+checkinApp.addEventListener('click', () => {
+const editing = Array.from(document.querySelectorAll('.app-grid')).some(g => g.classList.contains('editing'));
+if (editing) return;
+window.__ckFrom = '';
+window.openCheckinPage();
 });
 }
 const checkinBack = document.getElementById('checkin-back');
 if (checkinBack) {
 checkinBack.addEventListener('click', () => {
 document.querySelectorAll('.page').forEach(p => p.hidden = true);
+if (window.__ckFrom === 'chat') {
+const chatPage = document.getElementById('page-chat');
+if (chatPage) chatPage.hidden = false;
+} else {
 const home = document.getElementById('page-phone');
 if (home) home.hidden = false;
+}
+window.__ckFrom = '';
 });
 }
 const ckRefresh = document.getElementById('ck-refresh');
@@ -65661,7 +65743,6 @@ syncAndroidKb();
 nudgeInputVisible();
 _aProvCheck();
 _aPinPan();
-kbDockEnsureVisible();
 var _hNow = _aVV.height;
 if (_aProv && _aLastVVH && _aLastVVH < _aH - 60 && _hNow >= _aH - 60) {
 _aProvClear();
@@ -65794,26 +65875,24 @@ _aLastVVH = 0;
 }
 const FLOAT_SELECTORS = ['#tc-mask', '#cc-export-mask', '#cc-scope-mask', '#call-mask', '#feed-notice-panel', '#feed-comment-panel', '#poke-card', '#emoji-panel', '#chat-ask-panel', '#qa-mask', '#chat-more-panel', '#gc-more-panel', '#chat-search', '#chat-decision-panel', '#chat-gdecision-panel', '#chat-divine-panel', '#chat-rps-panel', '#chat-call-panel', '#chat-pong-panel', '#chat-snake-panel', '#chat-brick-panel', '#chat-c4-panel', '#chat-ms-panel', '#chat-fish-panel', '#chat-memory-panel', '#chat-gift-panel', '#avlib-card', '#ck-panel', '#loc-panel', '.mg-mask', '#modal-mask', '#msg-actions', '#gc-msg-actions', '#desk-image-viewer', '.desk-lib', '#gc-members-panel', '#gc-at-panel', '#gc-settings-panel', '#img-view-mask', '#chat-rp-panel', '#batch-panel', '#eat-switch-overlay', '#voice-panel'];
 let kbPanelDocked = false;
-let kbFixedTracksVV = true;
 function kbDockPanels() {
-if (kbPanelDocked || !kbFixedTracksVV) return;
+if (kbPanelDocked) return;
 kbPanelDocked = true;
 try {
 document.querySelectorAll(FLOAT_PANEL_SELECTORS.join(',')).forEach(function (el) {
 if (el.hidden || el.getClientRects().length === 0) return;
-if (el.style.position !== 'fixed') el.dataset.kbPrevPos = el.style.position || '';
-el.style.position = 'fixed';
+if (el.style.position !== 'absolute') el.dataset.kbPrevPos = el.style.position || '';
+el.style.position = 'absolute';
 el.style.left = '18px'; el.style.right = '18px';
 el.style.top = 'auto';
 el.style.bottom = 'calc(96px + env(safe-area-inset-bottom, 0px))';
 });
-_aSchedCe(); // v3.16.x：面板被 fixed 停靠后，内部 ce-box 合成层需刷新跟随
+_aSchedCe(); // v3.16.x：面板被 absolute 停靠后，内部 ce-box 合成层需刷新跟随
 } catch (e) {}
 }
 function kbUndockPanels() {
 if (!kbPanelDocked) return;
 kbPanelDocked = false;
-kbFixedTracksVV = true; // v3.15.x：下次键盘会话重新探测 fixed 是否随可视区上移
 try {
 document.querySelectorAll(FLOAT_PANEL_SELECTORS.join(',')).forEach(function (el) {
 if (el.dataset.kbPrevPos !== undefined) {
@@ -65826,31 +65905,6 @@ el.style.removeProperty('left');
 el.style.removeProperty('right');
 el.style.removeProperty('top');
 });
-} catch (e) {}
-}
-function kbDockEnsureVisible() {
-if (!kbPanelDocked) return;
-try {
-var vv = window.visualViewport; if (!vv) return;
-var offT = vv.offsetTop || 0, vh = vv.height;
-var swapped = false;
-document.querySelectorAll(FLOAT_PANEL_SELECTORS.join(',')).forEach(function (el) {
-if (el.hidden || el.getClientRects().length === 0) return;
-if (el.style.position !== 'fixed') return;
-var r = el.getBoundingClientRect();
-if (r.height > 10 && r.bottom - offT > vh + 4) {
-var prev = el.dataset.kbPrevPos;
-if (prev) el.style.position = prev;
-else el.style.removeProperty('position');
-delete el.dataset.kbPrevPos;
-el.style.removeProperty('bottom');
-el.style.removeProperty('left');
-el.style.removeProperty('right');
-el.style.removeProperty('top');
-swapped = true;
-}
-});
-if (swapped) kbFixedTracksVV = false;
 } catch (e) {}
 }
 try {
