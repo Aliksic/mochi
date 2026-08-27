@@ -12,6 +12,11 @@
     // 旧值（用户反馈：玩 4 天桌面「已摸鱼」显示第 2 天）。fish-log-global-migrated 为
     // 合并幂等标记键，同为全局根键。二者都不随联系人隔离，绝不能迁移。
     'fish-log', 'fish-log-global-migrated',
+    // v3.17.x：跨桌面「来消息」全局根键——incoming-requests（申请队列）、
+    // desk-checkin-en（桌面查岗全局开关）与 desk-call-en（跨桌面来电全局开关）都存
+    // 根命名空间、全桌面通，绝不随联系人隔离，防 migrateLegacy 每次刷新搬进 default
+    // 桌面（同 bg-*/feed-* 既有处理）。
+    'incoming-requests', 'desk-checkin-en', 'desk-call-en',
     // v3.12.x：group-chat-msgs（群聊消息，v3.8 起全局存储于根命名空间）——同 bg-* 道理，
     // 不是旧顶层业务键。此前漏排除导致每次刷新 migrateLegacy 把群聊记录搬进 default:
     // 并删根键，群聊页读根键为空 → 历史看似清空（数据滞留 default: 副本）+ 迁移循环空转。
@@ -514,6 +519,11 @@
       });
     });
     box.appendChild(add);
+    // v3.17.x：联系人/桌面管理器内直达「美化方案」——保存的方案所有桌面通用，点应用一键切换
+    const scheme = el('button', '', '美化方案（一键切换外观）');
+    scheme.style.cssText = 'width:100%;margin-top:8px;padding:10px;border:1px solid var(--card-border,#eee);border-radius:10px;background:var(--btn-cancel-bg,#fafafa);color:var(--ink,#111)';
+    scheme.addEventListener('click', () => { if (window.openBeautySchemes) window.openBeautySchemes(); });
+    box.appendChild(scheme);
     const close = el('button', '', '关闭');
     close.style.cssText = 'width:100%;margin-top:8px;padding:10px;border:1px solid var(--card-border,#eee);border-radius:10px;background:var(--btn-cancel-bg,#fafafa);color:var(--btn-cancel-ink,#555)';
     close.addEventListener('click', () => { hideContactModal(m); });

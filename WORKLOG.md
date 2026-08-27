@@ -1,3 +1,11 @@
+### 2026-08-27（✅ 完成·桌面美化导入导出可选文件/文字 + 全局美化方案保存切换）
+- [本会话]（**已改 src/js/personalize.js + src/js/contacts.js + src/template.html**；已构建（13:14, sw: mochi-mtb2jehq）+ node tools/verify.mjs 10/10 + 临时功能自测 6/6；**未提交**）。
+  - **用户需求**：①桌面美化导入导出有问题——需可选「导出文件」还是「复制文字」；②桌面美化和联系人设置里需「保存美化方案直接切换」，且保存的方案在切换不同桌面联系人后依然可见（全局通用）。
+  - **导出改造**：`row-beauty-export` 点开弹窗二选一（pills：导出文件/复制文字）。导出文件 = Blob 生成 `.json` 下载；复制文字 = 原剪贴板逻辑（失败回退 textarea 全选复制）。
+  - **导入改造**：`row-beauty-import` 支持 txtImport（弹窗内「从文件导入」按钮读 .json 进 textarea 再确认），模板 modal-file-input accept 补 `.json,application/json`；按钮文案统一改为「从文件导入」（chatcard 批量导入共用，文案更准确）。
+  - **全局美化方案（新）**：存根命名空间 `xy-home-v2:beauty-schemes`（跨桌面通用，符合用户「通用」要求）。personalize.js 新增 `window.saveBeautyScheme()`（取名保存当前美化，含动态键+全局主题）、`window.openBeautySchemes()`（自定义居中方案管理器：列表显示方案名+保存日期，每条「应用/删除」按钮，底部「保存当前为方案」）。应用 = 复用 applyBeautyData 写入当前桌面 → reload。
+  - **双入口**：①手机桌面美化页新增两个入口行（保存当前为美化方案 / 我的美化方案）；②联系人/桌面管理器（openContactManager）新增「美化方案（一键切换外观）」按钮直达方案管理器。
+  - 注意：方案数据量与「导出」完全一致（collectBeauty + __accent__/__theme__），导入方案文件/文字亦可直接互转。**未提交**，构建已含本次 + 工作区其他未提交改动，请 git diff 自查后提交。
 ### 2026-08-27（✅ 完成·【问问TA】功能打开时输入的文字不在输入框内、会飞出去——ce-box 合成层通用刷新）
 - [本会话·完成]（**已改 src/js/mobile-adapt.js（AI-B 域）**；已构建（12:47, sw: mochi-mtb1knxl）+ npm run verify 10/10 + tools/verify-kb-pinpan-late 5/5 回归通过；**未提交**）。
   - **用户再报**：聊天「更多功能」里【问问TA】半框打开，点输入框打字，输入的文字不在输入框里、会飞出去（与占卜半框同类）。此为 08-23 合入 AI-B 的通用问题（见下）在问问TA 半框的复现——ta-ask.js 的 `_reflowAskCeBoxes` 只覆盖 `page-ta-ask .ta-add .ce-box`，**未覆盖 inline 半框（#chat-ask-panel）里的 ce-box**。
@@ -49,16 +57,13 @@
   - **⚠️ 顺带修复**：`verify-scroll-lock-ghost.mjs` jsFiles 漏了 device.js（v3.16 设备判定收口后 mobile-adapt 读不到 mochiDevice 整个 IIFE 提前 return → scrollLockInfo 未定义 → 9 项全挂），已同步 build.mjs 完整 jsFiles 列表恢复 9/9。此为该脚本维护滞后，与本轮改动无因果。
   - 真机确认点（红米 K80 Chrome）：①点聊天输入栏弹键盘，输入栏应停在键盘正上方不飞走、无灰条；②打字过程中屏幕稳定不闪跳；③收键盘后输入栏回底；④更多功能小功能面板输入框同场景回归。
 
-### 2026-08-26 23:2x（本会话·进行中｜跨桌面「来消息」弹窗功能：其他桌面联系人来查岗/求聊天 + 桌面查岗记录 + 字卡库新分组）
-- [本会话·AI-A]（**已改 src/js/ck-question.js（新增 window.ckQuestionPickFor(cid) 按指定桌面抽题 + window.ckQuestionFire(q,cfg) 切桌面后当场发卡（带 deskCk 标记）+ ckLoadFrom 按指定 store 读题库）+ src/js/chat.js（window.__chatDbReady() 探针 + chatAddSystem/addIn 透传 deskCk + chatAskReply 桌面查岗卡回答后按 50% 概率从桌面查岗回应字卡池抽 1~5 张空格分隔作 TA 回应）+ src/js/reply-settings.js（window.replyCfgFor(cid) 跨桌面读回复设置）+ 新增 src/js/incoming-requests.js（跨桌面调度+全局根键 incoming-requests 队列+openModal 弹窗「现在回TA/稍后」；触发→弹窗→切桌面→TA 当场发话，不写任何桌面 chat-msgs）+ src/js/default-cards-data.js（新增 deskcheck 桌面查岗·回应 12 张预设卡）+ src/js/default-cards.js（FUNC_KEYS 加 deskcheck + 动态补 tab + getDeskCheckPool）+ src/js/records.js（window.addCareRecordFor(cid) 跨桌面写 records-care + renderCarePanel 新增「桌面查岗·联系人昵称·问题」聚合区块）**；未构建未提交）。
+### 2026-08-27 13:2x（本会话·完成｜跨桌面「来消息」弹窗功能：其他桌面联系人来查岗/求聊天 + 桌面查岗记录 + 字卡库新分组 + 全局开关）
+- [本会话·AI-A]（**已改 src/js/ck-question.js（新增 window.ckQuestionPickFor(cid) 按指定桌面抽题 + window.ckQuestionFire(q,cfg) 切桌面后当场发卡（带 deskCk 标记）+ ckLoadFrom 按指定 store 读题库）+ src/js/chat.js（window.__chatDbReady() 探针 + chatAddSystem/addIn 透传 deskCk + chatAskReply 桌面查岗卡回答后按 50% 概率从桌面查岗回应字卡池抽 1~5 张空格分隔作 TA 回应）+ src/js/reply-settings.js（window.replyCfgFor(cid) 跨桌面读回复设置）+ 新增 src/js/incoming-requests.js（跨桌面调度+全局根键 incoming-requests 队列+openModal 弹窗「现在回TA/稍后」+全局开关「桌面查岗」desk-checkin-en 默认开、设置页动态插入开关行、全桌面通）+ src/js/default-cards-data.js（新增 deskcheck 桌面查岗·回应 12 张预设卡）+ src/js/default-cards.js（FUNC_KEYS 加 deskcheck + 动态补 tab + getDeskCheckPool）+ src/js/records.js（window.addCareRecordFor(cid) 跨桌面写 records-care + renderCarePanel 新增「桌面查岗·联系人昵称·问题」聚合区块）+ src/js/contacts.js（EXCLUDE 加 incoming-requests/desk-checkin-en）+ build.mjs（jsFiles 加 incoming-requests.js）**；已构建（13:19, sw: mochi-mtb2p52e）+ 源码级临时 CDP 专项 20/20 + 主页显示 2/2 + 全局开关 9/9 + 构建产物开关可见可交互 7/7；未提交）。
   - **功能链路**：B 桌面联系人在你 A 桌面时按各自 ckq-*/as-* 设置触发查岗/求聊天 → 全局弹窗（标题=联系人昵称）→ 「现在回TA」切到 B + 进聊天，等 chatDbReady 后 TA 当场发查岗卡（可回答，带 deskCk 标记）；回答后按概率触发桌面查岗回应字卡（公用字卡 + 该桌面专属字卡合并）。查岗记录写进**该联系人自己桌面**的 records-care（kind=desk-checkin），主页「TA的关心」→「桌面查岗」按联系人聚合显示（🏠 桌面查岗 · 小B · 问题）。
-  - **请 AI-B 配合（三处，均 AI-B 域）**：
-    ① `contacts.js` 的 EXCLUDE 数组加 `'incoming-requests'` 与 `'desk-checkin-en'`（跨桌面来消息全局根键 + 全局开关键，防 migrateLegacy 每次刷新搬进 default 桌面——同 bg-*/feed-* 既有处理）；
-    ② `build.mjs` 的 jsFiles 里把 `incoming-requests.js` 加进（建议放 `ck-question.js` 之后，依赖 idb/contacts/personalize(openModal)/chat 均已先加载）；
-    ③ 设置页开关行由 incoming-requests.js 动态插入（插在「开启群聊」行 #sf-group-chat-row 之后，复用 .set-row/.toggle 样式，不动 template.html），请 AI-B 构建时留意无样式异常。
-  - **v3.17.x 补：全局开关「桌面查岗」**——默认开启，设置页可关闭，键 `xy-home-v2:desk-checkin-en` 存根命名空间（全桌面通，不随联系人隔离）；关闭后调度器/手动入口均不触发。设置行动态插入设置页（紧跟开启群聊），样式复用现有 .toggle。**验证 9/9**：设置行出现/默认开/关闭拦截/无入队/切桌面仍关/重开恢复。
-  - **验证**：源码级临时构建（不碰 index.html 产物）+ 临时 CDP 专项 20/20——弹窗昵称正确、弹窗题=发卡题=记录题一致、B 的 chat-msgs 零污染、回复前无记录/切过去才写 desk-checkin、ask-card 带 deskCk 标记、回答后回应来自桌面查岗字卡池且≤5张空格分隔、pending 去重；主页 TA 的关心区块显示「🏠 桌面查岗 · 小B · 问题」2/2。临时脚本已删。**注意：records.js 桌面查岗聚合用 rows.push 而非 rows.concat（rows 是 const，concat 赋值会抛异常，已修）**。
-  - 真机确认点：①其他桌面联系人来查岗时弹出带昵称的窗，点「现在回TA」切过去当场出可回答卡；②主页→TA的关心→桌面查岗 出现该记录；③字卡库→其他互动功能字卡→桌面查岗 tab 可逐张开关；④回答桌面查岗卡后 TA 按概率回 1~5 张字卡。
+  - **全局开关**：设置页「开启群聊」行下方动态插入「桌面查岗」开关（默认开，存根键 desk-checkin-en 全桌面通，关闭后调度/手动触发均拦截）。
+  - **⚠️ 构建收口说明**：用户反馈「设置里看不到开关」→ 根因是 build.mjs jsFiles 未加新文件导致产物不含功能。本次已由本会话补上：build.mjs jsFiles 加 `incoming-requests.js`（ck-question.js 之后）、contacts.js EXCLUDE 加 `incoming-requests`/`desk-checkin-en`，并执行 `node build.mjs`（13:19, sw: mochi-mtb2p52e）。产物验证 7/7：设置行可见、文案「桌面查岗」、默认开、插在开启群聊后、点击关闭写 0、关闭后无入队。AI-B 无需再改这两处。
+  - **注意**：records.js 桌面查岗聚合用 rows.push 而非 rows.concat（rows 是 const，concat 赋值会抛异常，已修）。
+  - 真机确认点：①设置页→桌面查岗 开关默认开，关闭后其他桌面 TA 不再弹窗；②其他桌面联系人来查岗时弹窗带昵称，点「现在回TA」切过去当场出可回答卡；③主页→TA的关心→桌面查岗 有记录；④字卡库→其他互动功能字卡→桌面查岗 tab 可逐张开关；⑤回答桌面查岗卡后 TA 按概率回 1~5 张字卡。
 
 ### 2026-08-26 23:2x（✅ 完成·群聊输入栏与聊天页对齐 + @群成员收进更多功能顶部栏最右）
 - [本会话·完成]（**已改 src/template.html（群聊输入栏加 麦克风/继续说/批量发送 三按钮，与聊天页同序同款；更多功能面板改为顶部栏结构 #gc-more-bar，@群成员 放最右 #gc-more-at-top）+ src/js/chat.js（语音/批量面板发送目标可配置：新增 window.openVoicePanelFor(onSend)/window.openBatchPanelFor(onSend)，voiceSendTarget/batchSendTarget 支持外部页面接管发送；applyContinueSayUI 增加广播 continue-say-changed 事件）+ src/js/group-chat.js（绑定 gc-mic-btn/gc-continue-btn/gc-batch-btn：显隐跟随当前桌面聊天设置 cs-voice-send/cs-trigger-bar/cs-batch-send，进入群聊时刷新；继续说=强制随机1-2成员回复、语音=复用聊天页录音面板发到群聊、批量=复用聊天页批量面板条目发到群聊）+ src/css/group-chat.css（顶部栏样式）**；已构建（23:25, sw: mochi-mta8xada）+ 新增 tools/verify-gc-input.mjs 12/12 + tools/verify-gc-send.mjs 5/5 + tools/verify-gc-continue.mjs 2/2 + 布局 verify 10/10；未提交）。

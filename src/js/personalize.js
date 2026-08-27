@@ -533,10 +533,28 @@ try {
         if (!f) return;
         const reader = new FileReader();
         reader.onload = () => {
-          const txt = String(reader.result || '');
+          // v3.18.x：修复 txt 乱码——readAsText 默认按 UTF-8 解码，中文 txt 常为
+          // GBK/GB2312（ANSI）编码（Windows 记事本等保存），会被解成乱码。
+          // 改为读 ArrayBuffer 探测编码：能按 UTF-8 严格解（合法序列+自动去 BOM）就用 UTF-8，
+          // 解不了说明是 GBK 系，回退用 gb18030（GBK 超集）解码。
+          let txt = '';
+          try {
+            const buf = reader.result;
+            if (buf) {
+              try {
+                txt = new TextDecoder('utf-8', { fatal: true }).decode(buf);
+              } catch (e) {
+                try {
+                  txt = new TextDecoder('gb18030').decode(buf);
+                } catch (e2) {
+                  txt = new TextDecoder('utf-8').decode(buf); // 兜底
+                }
+              }
+            }
+          } catch (e) { txt = String(reader.result || ''); }
           if (textarea) textarea.value = txt; // 填入文本框，由用户确认
         };
-        reader.readAsText(f);
+        reader.readAsArrayBuffer(f);
         fileInput.value = '';
       });
     }
@@ -1515,6 +1533,8 @@ try {
       textareaPlaceholder: '长按/全选复制，发给对方粘贴导入',
     });
   };
+  // v3.17.x：导出改为可选「导出文件 / 复制文字」——此前只复制文本，剪贴板在部分
+  // 浏览器不可用且大 JSON（含壁纸 dataURL）复制不便；现在弹窗二选一。
   const beautyExportRow = document.getElementById('row-beauty-export');
   if (beautyExportRow) {
     beautyExportRow.addEventListener('click', () => {
@@ -1522,13 +1542,49 @@ try {
       try { const ac = localStorage.getItem('xy-home-v2:accent-color'); if (ac) data['__accent__'] = ac; } catch (e) {}
       try { const tm = localStorage.getItem('xy-home-v2:theme-mode'); if (tm) data['__theme__'] = tm; } catch (e) {}
       const json = JSON.stringify(data);
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(json).then(() => toast('已复制到剪贴板，发给对方粘贴导入')).catch(() => showBeautyFallback(json));
-      } else {
-        showBeautyFallback(json);
-      }
+      if (!window.openModal) { showBeautyFallback(json); return; }
+      window.openModal('导出美化方案', '', (v) => {
+        if (v === 'file') {
+          try {
+            const blob = new Blob([json], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'mochi美化方案-' + new Date().toISOString().slice(0, 10) + '.json';
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => { try { document.body.removeChild(a); URL.revokeObjectURL(url); } catch (e) {} }, 1000);
+            toast('已导出美化方案文件');
+          } catch (e) { toast('导出文件失败'); }
+        } else if (v === 'text') {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(json).then(() => toast('已复制到剪贴板，发给对方粘贴导入')).catch(() => showBeautyFallback(json));
+          } else {
+            showBeautyFallback(json);
+          }
+        }
+      }, {
+        noInput: true,
+        staticText: '选择导出方式：\n· 导出文件：生成 .json 文件，可保存或发送\n· 复制文字：复制配置文本，发给对方粘贴导入',
+        pills: [
+          { label: '导出文件', value: 'file' },
+          { label: '复制文字', value: 'text' },
+        ],
+      });
     });
   }
+  // v3.17.x：美化数据写入当前桌面（导入 / 应用方案共用），含动态键与全局主题
+  const applyBeautyData = (data) => {
+    BEAUTY_KEYS.forEach(k => { if (data[k] !== undefined) store.set(k, data[k]); });
+    // 动态键导入：自定义图标 / 图标顺序 / 图片组件本体
+    Object.keys(data).forEach(k => {
+      if ((k.indexOf('app-icon-') === 0 || k.indexOf('desk-image-src-') === 0) && data[k] !== undefined) {
+        store.set(k, data[k]);
+      }
+    });
+    if (data['__accent__']) { try { localStorage.setItem('xy-home-v2:accent-color', data['__accent__']); } catch (e) {} }
+    if (data['__theme__']) { try { localStorage.setItem('xy-home-v2:theme-mode', data['__theme__']); } catch (e) {} }
+  };
   const beautyImportRow = document.getElementById('row-beauty-import');
   if (beautyImportRow) {
     beautyImportRow.addEventListener('click', () => {
@@ -1538,21 +1594,131 @@ try {
         try {
           const data = JSON.parse(v.trim());
           if (typeof data !== 'object' || Array.isArray(data)) { toast('格式错误'); return; }
-          BEAUTY_KEYS.forEach(k => { if (data[k] !== undefined) store.set(k, data[k]); });
-          // 动态键导入：自定义图标 / 图标顺序 / 图片组件本体
-          Object.keys(data).forEach(k => {
-            if ((k.indexOf('app-icon-') === 0 || k.indexOf('desk-image-src-') === 0) && data[k] !== undefined) {
-              store.set(k, data[k]);
-            }
-          });
-          if (data['__accent__']) { try { localStorage.setItem('xy-home-v2:accent-color', data['__accent__']); } catch (e) {} }
-          if (data['__theme__']) { try { localStorage.setItem('xy-home-v2:theme-mode', data['__theme__']); } catch (e) {} }
+          applyBeautyData(data);
           toast('已导入，刷新生效');
           setTimeout(() => location.reload(), 800);
         } catch (e) { toast('解析失败，请检查文本'); }
-      }, { textarea: true, textareaPlaceholder: '粘贴对方导出的美化方案文本' });
+      }, { textarea: true, textareaPlaceholder: '粘贴对方导出的美化方案文本，或点下方「从文件导入」选择 .json 文件', txtImport: true });
     });
   }
+
+  // ===== v3.17.x：美化方案（全局保存，所有联系人桌面通用） =====
+  // 方案数据与导出一致（collectBeauty + 全局主题），存根命名空间 xy-home-v2:beauty-schemes，
+  // 切换联系人桌面后依然可见、可一键应用——满足「通用」需求。
+  const SCHEMES_KEY = 'beauty-schemes';
+  const getSchemes = () => {
+    try { const a = JSON.parse(gStore.get(SCHEMES_KEY) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; }
+  };
+  const saveSchemesList = (arr) => { try { gStore.set(SCHEMES_KEY, JSON.stringify(arr)); } catch (e) {} };
+  const collectBeautyFull = () => {
+    const data = collectBeauty();
+    try { const ac = localStorage.getItem('xy-home-v2:accent-color'); if (ac) data['__accent__'] = ac; } catch (e) {}
+    try { const tm = localStorage.getItem('xy-home-v2:theme-mode'); if (tm) data['__theme__'] = tm; } catch (e) {}
+    return data;
+  };
+  // 保存当前为方案：取名后入库（全局）；若方案管理器开着则重绘列表
+  window.saveBeautyScheme = function () {
+    if (!window.openModal) return;
+    const ctl = window.openModal('保存当前为美化方案', '', (name) => {
+      name = (name || '').trim();
+      if (!name) { ctl.hint('请输入方案名称'); ctl.stay(); return; }
+      const list = getSchemes();
+      list.push({ name, time: Date.now(), data: collectBeautyFull() });
+      saveSchemesList(list);
+      toast('已保存方案「' + name + '」，所有桌面通用');
+      const m = document.getElementById('beauty-scheme-manager');
+      if (m && !m.hidden) window.openBeautySchemes();
+    }, { maxlength: 20, placeholder: '例如：情侣粉、简约黑白…' });
+  };
+  // 方案管理器弹窗（自定义居中框，与联系人管理器同风格）
+  function schemeModalEl() {
+    let m = document.getElementById('beauty-scheme-manager');
+    if (!m) {
+      m = document.createElement('div'); m.id = 'beauty-scheme-manager'; m.hidden = true;
+      m.style.cssText = 'position:fixed;inset:0;z-index:89;align-items:center;justify-content:center;background:rgba(0,0,0,.4)';
+      document.body.appendChild(m);
+      m.addEventListener('click', (e) => { if (e.target === m) hideSchemeModal(m); });
+    }
+    return m;
+  }
+  function showSchemeModal(m) { m.style.display = 'flex'; m.hidden = false; }
+  function hideSchemeModal(m) { m.style.display = 'none'; m.hidden = true; }
+  function applyScheme(idx, m) {
+    const s = getSchemes()[idx];
+    if (!s || !window.openModal) return;
+    window.openModal('应用方案「' + s.name + '」？', '', (v) => {
+      if (v !== 'ok') return;
+      applyBeautyData(s.data || {});
+      toast('已应用「' + s.name + '」，刷新生效');
+      setTimeout(() => location.reload(), 800);
+    }, { noInput: true, staticText: '将覆盖当前桌面的美化设置，刷新生效', pills: [{ label: '应用', value: 'ok' }] });
+  }
+  function deleteScheme(idx, m) {
+    const s = getSchemes()[idx];
+    if (!s || !window.openModal) return;
+    window.openModal('删除方案「' + s.name + '」？', '', (v) => {
+      if (v !== 'ok') return;
+      const list = getSchemes();
+      list.splice(idx, 1);
+      saveSchemesList(list);
+      toast('已删除方案');
+      window.openBeautySchemes();
+    }, { noInput: true, staticText: '删除后不可恢复', pills: [{ label: '删除', value: 'ok' }] });
+  }
+  window.openBeautySchemes = function () {
+    const m = schemeModalEl();
+    m.innerHTML = '';
+    const box = document.createElement('div');
+    box.style.cssText = 'width:min(92vw,420px);max-height:80vh;display:flex;flex-direction:column;background:var(--card-bg,#fff);color:var(--ink,#111);border-radius:16px;padding:18px;box-shadow:0 8px 30px rgba(0,0,0,.2)';
+    const head = document.createElement('div');
+    head.innerHTML = '<div style="font-size:16px;font-weight:600;margin-bottom:4px">美化方案</div><div style="font-size:12px;color:var(--muted,#888);margin-bottom:12px">方案在所有联系人桌面通用，点「应用」一键切换当前桌面外观</div>';
+    box.appendChild(head);
+    const list = document.createElement('div');
+    list.style.cssText = 'display:flex;flex-direction:column;gap:8px;margin-bottom:12px;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;flex:1;min-height:0';
+    const schemes = getSchemes();
+    if (!schemes.length) {
+      const empty = document.createElement('div');
+      empty.innerHTML = '<div style="font-size:13px;color:var(--muted,#999);text-align:center;padding:20px 0">还没有保存的方案<br>先点下方「保存当前为方案」</div>';
+      list.appendChild(empty);
+    }
+    schemes.forEach((s, i) => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px;border:1px solid var(--card-border,#eee);border-radius:10px';
+      const nm = document.createElement('div');
+      const t = new Date(s.time || Date.now());
+      const ds = (t.getMonth() + 1) + '-' + t.getDate();
+      nm.innerHTML = '<div style="font-size:14px;font-weight:500;word-break:break-all">' + s.name + '</div><div style="font-size:11px;color:var(--muted,#999)">保存于 ' + ds + ' · 点「应用」切换</div>';
+      nm.style.flex = '1';
+      row.appendChild(nm);
+      const applyBtn = document.createElement('button');
+      applyBtn.textContent = '应用';
+      applyBtn.style.cssText = 'font-size:12px;padding:4px 10px;border:none;border-radius:8px;background:var(--ink,#111);color:var(--bg-b,#fff)';
+      applyBtn.addEventListener('click', () => applyScheme(i, m));
+      const delBtn = document.createElement('button');
+      delBtn.textContent = '删除';
+      delBtn.style.cssText = 'font-size:12px;padding:4px 8px;border:1px solid rgba(163,45,45,.35);border-radius:8px;background:var(--danger-soft,#fff5f5);color:var(--danger-ink,#a32d2d)';
+      delBtn.addEventListener('click', () => deleteScheme(i, m));
+      row.appendChild(applyBtn); row.appendChild(delBtn);
+      list.appendChild(row);
+    });
+    box.appendChild(list);
+    const save = document.createElement('button');
+    save.textContent = '+ 保存当前为方案';
+    save.style.cssText = 'width:100%;padding:12px;border:none;border-radius:10px;background:var(--ink,#111);color:var(--bg-b,#fff);font-size:14px;font-weight:600';
+    save.addEventListener('click', () => { window.saveBeautyScheme(); });
+    box.appendChild(save);
+    const close = document.createElement('button');
+    close.textContent = '关闭';
+    close.style.cssText = 'width:100%;margin-top:8px;padding:10px;border:1px solid var(--card-border,#eee);border-radius:10px;background:var(--btn-cancel-bg,#fafafa);color:var(--btn-cancel-ink,#555)';
+    close.addEventListener('click', () => hideSchemeModal(m));
+    box.appendChild(close);
+    m.appendChild(box);
+    showSchemeModal(m);
+  };
+  const beautySaveRow = document.getElementById('row-beauty-save');
+  if (beautySaveRow) beautySaveRow.addEventListener('click', () => window.saveBeautyScheme());
+  const beautySchemesRow = document.getElementById('row-beauty-schemes');
+  if (beautySchemesRow) beautySchemesRow.addEventListener('click', () => window.openBeautySchemes());
 
   // ===== v3.6.x：深色模式（两档手动开关：浅色/深色，不跟随系统） =====
   // 全局设置（不按联系人隔离），存储键 xy-home-v2:theme-mode

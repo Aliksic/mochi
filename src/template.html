@@ -486,7 +486,7 @@
       <div class="chat-item glass" id="li-ta-checkin">
         <div class="av"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/><path d="M12 3a9 9 0 000 18"/></svg></div>
         <div class="ci"><div class="n">TA的查岗</div><div class="m">TA 来查你的岗 · 随机出查岗问题卡</div><div class="note">开关/概率在 回复设置 → 查岗</div></div>
-        <div class="t" id="cc-ta-checkin-count">17</div>
+        <div class="t" id="cc-ta-checkin-count">23</div>
       </div>
       <div class="chat-item glass" id="li-ta-invite">
         <div class="av"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="11" rx="5"/><path d="M7 10.5v3M5.5 12h3"/><path d="M15.5 11h.01M18.5 13h.01"/></svg></div>
@@ -1245,11 +1245,21 @@
       <div class="set-group glass">
         <div class="set-row" id="row-beauty-export">
           <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 8l5-5 5 5M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg></div>
-          <div class="txt">导出美化方案<span class="sub">复制配置文本，发给对方粘贴导入</span></div>
+          <div class="txt">导出美化方案<span class="sub">可选导出文件或复制文字</span></div>
         </div>
         <div class="set-row" id="row-beauty-import">
           <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21V9M7 16l5 5 5-5M4 7V5a2 2 0 012-2h12a2 2 0 012 2v2"/></svg></div>
-          <div class="txt">导入美化方案<span class="sub">粘贴对方导出的配置文本</span></div>
+          <div class="txt">导入美化方案<span class="sub">粘贴文字或选择文件导入</span></div>
+        </div>
+      </div>
+      <div class="set-group glass">
+        <div class="set-row" id="row-beauty-save">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17V9M9 11l3-3 3 3"/><path d="M5 4h11l3 3v13a1 1 0 01-1 1H5a1 1 0 01-1-1V5a1 1 0 011-1z"/></svg></div>
+          <div class="txt">保存当前为美化方案<span class="sub">方案全局通用，切换联系人桌面也可用</span></div>
+        </div>
+        <div class="set-row" id="row-beauty-schemes">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></div>
+          <div class="txt">我的美化方案<span class="sub">保存的方案一键切换，跨桌面通用</span></div>
         </div>
       </div>
     </div>
@@ -2179,8 +2189,8 @@
         <input type="color" id="modal-color" value="#111111" hidden>
         <button class="modal-custom" id="modal-custom" hidden>自定义颜色</button>
         <select class="modal-select" id="modal-select" hidden></select>
-        <button class="modal-file" id="modal-file" hidden>从 txt 文件导入</button>
-        <input type="file" id="modal-file-input" accept=".txt,text/plain" style="display:none">
+        <button class="modal-file" id="modal-file" hidden>从文件导入</button>
+        <input type="file" id="modal-file-input" accept=".txt,.json,text/plain,application/json" style="display:none">
         <div class="modal-btns">
           <button class="modal-btn copy" id="modal-copy" hidden>复制</button>
           <button class="modal-btn cancel" id="modal-cancel">取消</button>

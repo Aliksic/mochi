@@ -6761,6 +6761,52 @@ radial-gradient(circle at calc(100% - 5px) calc(100% - 5px), rgba(255,255,255,.1
 [data-theme="dark"] .fh-cell.l2 { background:#7d413a; }
 [data-theme="dark"] .fh-cell.l3 { background:#a85046; }
 [data-theme="dark"] .fh-cell.l4 { background:#cf6155; }
+[data-theme="dark"] .msg-center-card { background:var(--dark-card); border-color:var(--dark-border); }
+[data-theme="dark"] .msg-pong-card { background:var(--dark-card-92); border-color:var(--dark-border); }
+[data-theme="dark"] {
+.cj-hero { background:linear-gradient(150deg,#252530 0%,#1e1e26 60%,#1a1a22 100%); border-color:var(--dark-border); }
+.cj-hero-sub { color:#b9b6b0; }
+.cj-hero-range { color:#9a978f; }
+.cj-card-range { color:#9a978f; }
+.cj-tag-a { background:var(--dark-hover); color:#bfbfbf; border-color:var(--dark-border-12); }
+.cj-card-note { color:#9a978f; }
+.cj-empty { background:var(--dark-card); border-color:rgba(255,255,255,.16); color:#9a978f; }
+.cj-empty-sub { color:#7d7d7d; }
+.cj-perceive-result { background:var(--dark-hover); color:#c9c6c0; }
+.cj-perceive-result .cj-p-note { color:#ffc97e; }
+.cj-today-note { color:#9a978f; }
+.cj-today-row { border-bottom-color:rgba(255,255,255,.07); }
+.cj-today-range { color:#9a978f; }
+.cj-today-chars { color:#c9c6c0; }
+.cj-today-mute { color:rgba(255,255,255,.35); }
+.cj-card-hint { color:#8a8a8a; }
+.cj-detail-back { background:var(--dark-card); border-color:var(--dark-border-12); color:#eaeaea; }
+.cj-d-range { color:#9a978f; }
+.cj-d-real { color:#8a8a8a; }
+.cj-d-note { color:#9a978f; }
+.cj-d-row { border-bottom-color:rgba(255,255,255,.07); }
+.cj-d-row-p { color:#c9c6c0; }
+.cj-d-foot { color:#8a8a8a; }
+.cj-groups.stuck { background:#22222a; border-bottom-color:rgba(255,255,255,.08); box-shadow:0 4px 14px rgba(0,0,0,.4); }
+.cj-gchip { background:var(--dark-hover); border-color:var(--dark-border-12); color:#aaa; }
+.cj-gchip.on { color:#111; }
+.cj-group-empty { color:#8a8a8a; }
+.cj-all-tip { color:#9a978f; }
+.cj-d-src { color:#9a978f; }
+.cj-d-nav-btn { background:var(--dark-card); border-color:var(--dark-border-12); color:#eaeaea; }
+.cj-d-nav-pos { color:#8a8a8a; }
+}
+[data-theme="dark"] .batch-item-idx,
+[data-theme="dark"] .lic-badge,
+[data-theme="dark"] .gd-btn-sm:active,
+[data-theme="dark"] .cal-mood-ico,
+[data-theme="dark"] .narc-empty .ne-btn,
+[data-theme="dark"] .nm-core,
+[data-theme="dark"] .narc-chip.on,
+[data-theme="dark"] .narc-navchip.on,
+[data-theme="dark"] .narc-btab.on {
+color: var(--card-bg, #1e1e1e);
+}
 .garden-weather-bar {
 display:flex; align-items:center; gap:8px;
 padding:10px 18px; font-size:13px; color:var(--muted);
@@ -7782,7 +7828,7 @@ transition-duration: .01ms !important;
       </div>
       <div class="splash-dots"><i></i><i></i><i></i></div>
       <div class="splash-brand">小红书@言序（1842523578）</div>
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787807088411">Mochi 字卡传讯 v3.6.261 · 部署于 2026-08-27 13:04</div>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787808471483">Mochi 字卡传讯 v3.6.263 · 部署于 2026-08-27 13:27</div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
       <div class="splash-loading" id="splash-loading">正在加载数据…</div>
@@ -8214,7 +8260,7 @@ transition-duration: .01ms !important;
       <div class="chat-item glass" id="li-ta-checkin">
         <div class="av"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/><path d="M12 3a9 9 0 000 18"/></svg></div>
         <div class="ci"><div class="n">TA的查岗</div><div class="m">TA 来查你的岗 · 随机出查岗问题卡</div><div class="note">开关/概率在 回复设置 → 查岗</div></div>
-        <div class="t" id="cc-ta-checkin-count">17</div>
+        <div class="t" id="cc-ta-checkin-count">23</div>
       </div>
       <div class="chat-item glass" id="li-ta-invite">
         <div class="av"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="11" rx="5"/><path d="M7 10.5v3M5.5 12h3"/><path d="M15.5 11h.01M18.5 13h.01"/></svg></div>
@@ -8853,7 +8899,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.6.261</div>
+      <div class="ver">Mochi 字卡传讯 v3.6.263</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -8973,11 +9019,21 @@ transition-duration: .01ms !important;
       <div class="set-group glass">
         <div class="set-row" id="row-beauty-export">
           <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 8l5-5 5 5M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg></div>
-          <div class="txt">导出美化方案<span class="sub">复制配置文本，发给对方粘贴导入</span></div>
+          <div class="txt">导出美化方案<span class="sub">可选导出文件或复制文字</span></div>
         </div>
         <div class="set-row" id="row-beauty-import">
           <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21V9M7 16l5 5 5-5M4 7V5a2 2 0 012-2h12a2 2 0 012 2v2"/></svg></div>
-          <div class="txt">导入美化方案<span class="sub">粘贴对方导出的配置文本</span></div>
+          <div class="txt">导入美化方案<span class="sub">粘贴文字或选择文件导入</span></div>
+        </div>
+      </div>
+      <div class="set-group glass">
+        <div class="set-row" id="row-beauty-save">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17V9M9 11l3-3 3 3"/><path d="M5 4h11l3 3v13a1 1 0 01-1 1H5a1 1 0 01-1-1V5a1 1 0 011-1z"/></svg></div>
+          <div class="txt">保存当前为美化方案<span class="sub">方案全局通用，切换联系人桌面也可用</span></div>
+        </div>
+        <div class="set-row" id="row-beauty-schemes">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></div>
+          <div class="txt">我的美化方案<span class="sub">保存的方案一键切换，跨桌面通用</span></div>
         </div>
       </div>
     </div>
@@ -8995,7 +9051,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.6.261</span>
+              <span class="lic-ver">v3.6.263</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -9907,8 +9963,8 @@ transition-duration: .01ms !important;
         <input type="color" id="modal-color" value="#111111" hidden>
         <button class="modal-custom" id="modal-custom" hidden>自定义颜色</button>
         <select class="modal-select" id="modal-select" hidden></select>
-        <button class="modal-file" id="modal-file" hidden>从 txt 文件导入</button>
-        <input type="file" id="modal-file-input" accept=".txt,text/plain" style="display:none">
+        <button class="modal-file" id="modal-file" hidden>从文件导入</button>
+        <input type="file" id="modal-file-input" accept=".txt,.json,text/plain,application/json" style="display:none">
         <div class="modal-btns">
           <button class="modal-btn copy" id="modal-copy" hidden>复制</button>
           <button class="modal-btn cancel" id="modal-cancel">取消</button>
@@ -12929,6 +12985,7 @@ if (e && e.key && memoryCache && e.key in memoryCache) delete memoryCache[e.key]
 const G = 'xy-home-v2';
 const EXCLUDE = ['contacts', 'active-contact', 'feed-posts', 'migrated-v1', 'js-errors', 'theme-mode', 'accent-color',
 'fish-log', 'fish-log-global-migrated',
+'incoming-requests', 'desk-checkin-en', 'desk-call-en',
 'group-chat-msgs',
 'bg-keepalive', 'bg-notify',
 'gift-wallet', 'wallet-global-migrated',
@@ -13280,6 +13337,10 @@ const id = window.createContact(name); window.setActiveContact(id); hideContactM
 });
 });
 box.appendChild(add);
+const scheme = el('button', '', '美化方案（一键切换外观）');
+scheme.style.cssText = 'width:100%;margin-top:8px;padding:10px;border:1px solid var(--card-border,#eee);border-radius:10px;background:var(--btn-cancel-bg,#fafafa);color:var(--ink,#111)';
+scheme.addEventListener('click', () => { if (window.openBeautySchemes) window.openBeautySchemes(); });
+box.appendChild(scheme);
 const close = el('button', '', '关闭');
 close.style.cssText = 'width:100%;margin-top:8px;padding:10px;border:1px solid var(--card-border,#eee);border-radius:10px;background:var(--btn-cancel-bg,#fafafa);color:var(--btn-cancel-ink,#555)';
 close.addEventListener('click', () => { hideContactModal(m); });
@@ -14362,10 +14423,24 @@ const f = fileInput.files && fileInput.files[0];
 if (!f) return;
 const reader = new FileReader();
 reader.onload = () => {
-const txt = String(reader.result || '');
+let txt = '';
+try {
+const buf = reader.result;
+if (buf) {
+try {
+txt = new TextDecoder('utf-8', { fatal: true }).decode(buf);
+} catch (e) {
+try {
+txt = new TextDecoder('gb18030').decode(buf);
+} catch (e2) {
+txt = new TextDecoder('utf-8').decode(buf); // 兜底
+}
+}
+}
+} catch (e) { txt = String(reader.result || ''); }
 if (textarea) textarea.value = txt; // 填入文本框，由用户确认
 };
-reader.readAsText(f);
+reader.readAsArrayBuffer(f);
 fileInput.value = '';
 });
 }
@@ -15253,13 +15328,47 @@ const data = collectBeauty();
 try { const ac = localStorage.getItem('xy-home-v2:accent-color'); if (ac) data['__accent__'] = ac; } catch (e) {}
 try { const tm = localStorage.getItem('xy-home-v2:theme-mode'); if (tm) data['__theme__'] = tm; } catch (e) {}
 const json = JSON.stringify(data);
+if (!window.openModal) { showBeautyFallback(json); return; }
+window.openModal('导出美化方案', '', (v) => {
+if (v === 'file') {
+try {
+const blob = new Blob([json], { type: 'application/json' });
+const url = URL.createObjectURL(blob);
+const a = document.createElement('a');
+a.href = url;
+a.download = 'mochi美化方案-' + new Date().toISOString().slice(0, 10) + '.json';
+document.body.appendChild(a);
+a.click();
+setTimeout(() => { try { document.body.removeChild(a); URL.revokeObjectURL(url); } catch (e) {} }, 1000);
+toast('已导出美化方案文件');
+} catch (e) { toast('导出文件失败'); }
+} else if (v === 'text') {
 if (navigator.clipboard && navigator.clipboard.writeText) {
 navigator.clipboard.writeText(json).then(() => toast('已复制到剪贴板，发给对方粘贴导入')).catch(() => showBeautyFallback(json));
 } else {
 showBeautyFallback(json);
 }
+}
+}, {
+noInput: true,
+staticText: '选择导出方式：\n· 导出文件：生成 .json 文件，可保存或发送\n· 复制文字：复制配置文本，发给对方粘贴导入',
+pills: [
+{ label: '导出文件', value: 'file' },
+{ label: '复制文字', value: 'text' },
+],
+});
 });
 }
+const applyBeautyData = (data) => {
+BEAUTY_KEYS.forEach(k => { if (data[k] !== undefined) store.set(k, data[k]); });
+Object.keys(data).forEach(k => {
+if ((k.indexOf('app-icon-') === 0 || k.indexOf('desk-image-src-') === 0) && data[k] !== undefined) {
+store.set(k, data[k]);
+}
+});
+if (data['__accent__']) { try { localStorage.setItem('xy-home-v2:accent-color', data['__accent__']); } catch (e) {} }
+if (data['__theme__']) { try { localStorage.setItem('xy-home-v2:theme-mode', data['__theme__']); } catch (e) {} }
+};
 const beautyImportRow = document.getElementById('row-beauty-import');
 if (beautyImportRow) {
 beautyImportRow.addEventListener('click', () => {
@@ -15269,20 +15378,125 @@ if (!v || !v.trim()) return;
 try {
 const data = JSON.parse(v.trim());
 if (typeof data !== 'object' || Array.isArray(data)) { toast('格式错误'); return; }
-BEAUTY_KEYS.forEach(k => { if (data[k] !== undefined) store.set(k, data[k]); });
-Object.keys(data).forEach(k => {
-if ((k.indexOf('app-icon-') === 0 || k.indexOf('desk-image-src-') === 0) && data[k] !== undefined) {
-store.set(k, data[k]);
-}
-});
-if (data['__accent__']) { try { localStorage.setItem('xy-home-v2:accent-color', data['__accent__']); } catch (e) {} }
-if (data['__theme__']) { try { localStorage.setItem('xy-home-v2:theme-mode', data['__theme__']); } catch (e) {} }
+applyBeautyData(data);
 toast('已导入，刷新生效');
 setTimeout(() => location.reload(), 800);
 } catch (e) { toast('解析失败，请检查文本'); }
-}, { textarea: true, textareaPlaceholder: '粘贴对方导出的美化方案文本' });
+}, { textarea: true, textareaPlaceholder: '粘贴对方导出的美化方案文本，或点下方「从文件导入」选择 .json 文件', txtImport: true });
 });
 }
+const SCHEMES_KEY = 'beauty-schemes';
+const getSchemes = () => {
+try { const a = JSON.parse(gStore.get(SCHEMES_KEY) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; }
+};
+const saveSchemesList = (arr) => { try { gStore.set(SCHEMES_KEY, JSON.stringify(arr)); } catch (e) {} };
+const collectBeautyFull = () => {
+const data = collectBeauty();
+try { const ac = localStorage.getItem('xy-home-v2:accent-color'); if (ac) data['__accent__'] = ac; } catch (e) {}
+try { const tm = localStorage.getItem('xy-home-v2:theme-mode'); if (tm) data['__theme__'] = tm; } catch (e) {}
+return data;
+};
+window.saveBeautyScheme = function () {
+if (!window.openModal) return;
+const ctl = window.openModal('保存当前为美化方案', '', (name) => {
+name = (name || '').trim();
+if (!name) { ctl.hint('请输入方案名称'); ctl.stay(); return; }
+const list = getSchemes();
+list.push({ name, time: Date.now(), data: collectBeautyFull() });
+saveSchemesList(list);
+toast('已保存方案「' + name + '」，所有桌面通用');
+const m = document.getElementById('beauty-scheme-manager');
+if (m && !m.hidden) window.openBeautySchemes();
+}, { maxlength: 20, placeholder: '例如：情侣粉、简约黑白…' });
+};
+function schemeModalEl() {
+let m = document.getElementById('beauty-scheme-manager');
+if (!m) {
+m = document.createElement('div'); m.id = 'beauty-scheme-manager'; m.hidden = true;
+m.style.cssText = 'position:fixed;inset:0;z-index:89;align-items:center;justify-content:center;background:rgba(0,0,0,.4)';
+document.body.appendChild(m);
+m.addEventListener('click', (e) => { if (e.target === m) hideSchemeModal(m); });
+}
+return m;
+}
+function showSchemeModal(m) { m.style.display = 'flex'; m.hidden = false; }
+function hideSchemeModal(m) { m.style.display = 'none'; m.hidden = true; }
+function applyScheme(idx, m) {
+const s = getSchemes()[idx];
+if (!s || !window.openModal) return;
+window.openModal('应用方案「' + s.name + '」？', '', (v) => {
+if (v !== 'ok') return;
+applyBeautyData(s.data || {});
+toast('已应用「' + s.name + '」，刷新生效');
+setTimeout(() => location.reload(), 800);
+}, { noInput: true, staticText: '将覆盖当前桌面的美化设置，刷新生效', pills: [{ label: '应用', value: 'ok' }] });
+}
+function deleteScheme(idx, m) {
+const s = getSchemes()[idx];
+if (!s || !window.openModal) return;
+window.openModal('删除方案「' + s.name + '」？', '', (v) => {
+if (v !== 'ok') return;
+const list = getSchemes();
+list.splice(idx, 1);
+saveSchemesList(list);
+toast('已删除方案');
+window.openBeautySchemes();
+}, { noInput: true, staticText: '删除后不可恢复', pills: [{ label: '删除', value: 'ok' }] });
+}
+window.openBeautySchemes = function () {
+const m = schemeModalEl();
+m.innerHTML = '';
+const box = document.createElement('div');
+box.style.cssText = 'width:min(92vw,420px);max-height:80vh;display:flex;flex-direction:column;background:var(--card-bg,#fff);color:var(--ink,#111);border-radius:16px;padding:18px;box-shadow:0 8px 30px rgba(0,0,0,.2)';
+const head = document.createElement('div');
+head.innerHTML = '<div style="font-size:16px;font-weight:600;margin-bottom:4px">美化方案</div><div style="font-size:12px;color:var(--muted,#888);margin-bottom:12px">方案在所有联系人桌面通用，点「应用」一键切换当前桌面外观</div>';
+box.appendChild(head);
+const list = document.createElement('div');
+list.style.cssText = 'display:flex;flex-direction:column;gap:8px;margin-bottom:12px;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;flex:1;min-height:0';
+const schemes = getSchemes();
+if (!schemes.length) {
+const empty = document.createElement('div');
+empty.innerHTML = '<div style="font-size:13px;color:var(--muted,#999);text-align:center;padding:20px 0">还没有保存的方案<br>先点下方「保存当前为方案」</div>';
+list.appendChild(empty);
+}
+schemes.forEach((s, i) => {
+const row = document.createElement('div');
+row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px;border:1px solid var(--card-border,#eee);border-radius:10px';
+const nm = document.createElement('div');
+const t = new Date(s.time || Date.now());
+const ds = (t.getMonth() + 1) + '-' + t.getDate();
+nm.innerHTML = '<div style="font-size:14px;font-weight:500;word-break:break-all">' + s.name + '</div><div style="font-size:11px;color:var(--muted,#999)">保存于 ' + ds + ' · 点「应用」切换</div>';
+nm.style.flex = '1';
+row.appendChild(nm);
+const applyBtn = document.createElement('button');
+applyBtn.textContent = '应用';
+applyBtn.style.cssText = 'font-size:12px;padding:4px 10px;border:none;border-radius:8px;background:var(--ink,#111);color:var(--bg-b,#fff)';
+applyBtn.addEventListener('click', () => applyScheme(i, m));
+const delBtn = document.createElement('button');
+delBtn.textContent = '删除';
+delBtn.style.cssText = 'font-size:12px;padding:4px 8px;border:1px solid rgba(163,45,45,.35);border-radius:8px;background:var(--danger-soft,#fff5f5);color:var(--danger-ink,#a32d2d)';
+delBtn.addEventListener('click', () => deleteScheme(i, m));
+row.appendChild(applyBtn); row.appendChild(delBtn);
+list.appendChild(row);
+});
+box.appendChild(list);
+const save = document.createElement('button');
+save.textContent = '+ 保存当前为方案';
+save.style.cssText = 'width:100%;padding:12px;border:none;border-radius:10px;background:var(--ink,#111);color:var(--bg-b,#fff);font-size:14px;font-weight:600';
+save.addEventListener('click', () => { window.saveBeautyScheme(); });
+box.appendChild(save);
+const close = document.createElement('button');
+close.textContent = '关闭';
+close.style.cssText = 'width:100%;margin-top:8px;padding:10px;border:1px solid var(--card-border,#eee);border-radius:10px;background:var(--btn-cancel-bg,#fafafa);color:var(--btn-cancel-ink,#555)';
+close.addEventListener('click', () => hideSchemeModal(m));
+box.appendChild(close);
+m.appendChild(box);
+showSchemeModal(m);
+};
+const beautySaveRow = document.getElementById('row-beauty-save');
+if (beautySaveRow) beautySaveRow.addEventListener('click', () => window.saveBeautyScheme());
+const beautySchemesRow = document.getElementById('row-beauty-schemes');
+if (beautySchemesRow) beautySchemesRow.addEventListener('click', () => window.openBeautySchemes());
 const THEME_KEY = 'xy-home-v2:theme-mode';
 const themeModeRow = document.getElementById('row-theme-mode');
 const themeModeVal = document.getElementById('theme-mode-val');
@@ -38501,9 +38715,33 @@ const DEFAULT_QUESTIONS = [
 { id: 'k_t4', cat: 'text', text: '猜猜我现在在干什么？', enabled: true },
 { id: 'k_t5', cat: 'text', text: '现在最想做的一件事是什么？', enabled: true },
 { id: 'k_t6', cat: 'text', text: '今天有什么开心的小事吗？', enabled: true },
-{ id: 'k_t7', cat: 'text', text: '如果我现在就在你身边，你想做什么？', enabled: true }
+{ id: 'k_t7', cat: 'text', text: '如果我现在就在你身边，你想做什么？', enabled: true },
+{ id: 'k_a1', cat: 'action', type: 'action', text: '摸摸头', enabled: true,
+taToMe: 'TA 想摸摸你的头', meToTa: 'TA 想让你摸摸 TA 的头',
+accept: ['乖，过来。', '嗯，轻轻的。', '闭上眼，我轻一点。'],
+reject: ['哼，不要。', '下次吧。', '现在不行，等下。'] },
+{ id: 'k_a2', cat: 'action', type: 'action', text: '拍拍肩', enabled: true,
+taToMe: 'TA 想拍拍你的肩', meToTa: 'TA 想让你拍拍 TA 的肩',
+accept: ['嗯，辛苦了。', '正好有点累。', '被你拍到了。'],
+reject: ['别拍，痒。', '不要，自己来。', '肩膀没空。'] },
+{ id: 'k_a3', cat: 'action', type: 'action', text: '揉揉头', enabled: true,
+taToMe: 'TA 想揉揉你的头发', meToTa: 'TA 想让你揉揉 TA 的头发',
+accept: ['嗯，舒服。', '再来一下。', '头发都被你揉乱了。'],
+reject: ['发型会乱。', '不要揉。', '刚整理好的。'] },
+{ id: 'k_a4', cat: 'action', type: 'action', text: '抱抱', enabled: true,
+taToMe: 'TA 想抱抱你', meToTa: 'TA 想让你抱抱 TA',
+accept: ['过来，抱紧。', '嗯，再久一点。', '被你抱住了。'],
+reject: ['现在不方便。', '等下再抱。', '人多，不要。'] },
+{ id: 'k_a5', cat: 'action', type: 'action', text: '牵手', enabled: true,
+taToMe: 'TA 想牵你的手', meToTa: 'TA 想让你牵 TA 的手',
+accept: ['嗯，牵着。', '手伸过来。', '一直牵着好不好。'],
+reject: ['手心出汗了。', '不要，痒。', '现在没空。'] },
+{ id: 'k_a6', cat: 'action', type: 'action', text: '贴贴', enabled: true,
+taToMe: 'TA 想跟你贴贴', meToTa: 'TA 想让你跟 TA 贴贴',
+accept: ['嗯，贴着。', '脸凑过来。', '贴着好暖。'],
+reject: ['脸会红。', '不要贴。', '太近了。'] }
 ];
-const CATS_CKQ = [['single', '单选查岗'], ['text', '文字查岗']];
+const CATS_CKQ = [['single', '单选查岗'], ['text', '文字查岗'], ['action', '互动动作']];
 function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
 function toast(t) { if (typeof window.toast === 'function') window.toast(t); }
 function cardPopupBusy() {
@@ -38604,12 +38842,17 @@ return pool[Math.floor(Math.random() * pool.length)];
 }
 function openCkReply(msgIdx, q) {
 if (!window.openModal) return;
-const isSingle = q.type === 'single' && Array.isArray(q.options) && q.options.length;
-window.openModal('查岗回答', '', function (v) {
+const isAction = q.type === 'action';
+const actionOpts = isAction ? [{ t: '好呀', reply: q.accept || ['乖，过来。'] }, { t: '不要', reply: q.reject || ['下次吧。'] }] : null;
+const isSingle = isAction || (q.type === 'single' && Array.isArray(q.options) && q.options.length);
+window.openModal(isAction ? '互动回应' : '查岗回答', '', function (v) {
 const answer = (v || '').trim();
 if (!answer) { toast(isSingle ? '请选择一个答案' : '请输入回答'); return; }
 let preset = null;
-if (isSingle) {
+if (isAction) {
+const o = (actionOpts || []).filter(function (x) { return String(x.t) === answer; })[0];
+if (o) preset = o.reply;
+} else if (isSingle) {
 const o = (q.options || []).filter(function (x) { return String(x.t) === answer; })[0];
 if (o) preset = o.reply;
 } else {
@@ -38619,8 +38862,8 @@ preset = pool[Math.floor(Math.random() * pool.length)];
 }
 if (window.chatAskReply) window.chatAskReply(msgIdx, answer, preset);
 }, {
-staticText: 'TA 问你：' + q.text,
-pills: isSingle ? q.options.map(function (o) { return { label: o.t, value: o.t }; }) : null,
+staticText: isAction ? ('TA 想跟你互动：' + q.text) : ('TA 问你：' + q.text),
+pills: isSingle ? (isAction ? actionOpts : q.options).map(function (o) { return { label: o.t, value: o.t }; }) : null,
 noInput: isSingle
 });
 }
@@ -38631,10 +38874,20 @@ if (!q || !q.text) return false;
 const pickedId = String(q.id || '');
 try { if (pickedId) store.set('ckq-last-id', pickedId); } catch (e) {}
 const isSingle = q.type === 'single' && Array.isArray(q.options) && q.options.length;
-window.chatAddSystem('TA 来查岗了。', { special: 'ask-msg' });
-const el = window.chatAddSystem(q.text, { special: 'ask-card', askQuestion: q.text, askOptions: isSingle ? q.options : null, askType: isSingle ? 'single' : 'text', deskCk: !!(opts && opts.deskCk) });
+const isAction = q.type === 'action';
+let actionOpts = null, actionText = q.text, actionHint = 'TA 来查岗了。';
+if (isAction) {
+const dir = Math.random() < 0.5 ? 'ta-to-me' : 'me-to-ta';
+actionText = (dir === 'me-to-ta' ? (q.meToTa || q.text) : (q.taToMe || q.text));
+actionHint = 'TA 想跟你互动。';
+const acc = Array.isArray(q.accept) && q.accept.length ? q.accept : ['乖，过来。'];
+const rej = Array.isArray(q.reject) && q.reject.length ? q.reject : ['下次吧。'];
+actionOpts = [{ t: '好呀', reply: acc }, { t: '不要', reply: rej }];
+}
+window.chatAddSystem(actionHint, { special: 'ask-msg' });
+const el = window.chatAddSystem(actionText, { special: 'ask-card', askQuestion: actionText, askOptions: isAction ? actionOpts : (isSingle ? q.options : null), askType: (isAction || isSingle) ? 'single' : 'text', deskCk: !!(opts && opts.deskCk) });
 const msgIdx = el ? Number(el.dataset.idx) : -1;
-if (window.bgNotifyCheck) window.bgNotifyCheck('TA 来查岗了：' + q.text, Date.now(), { name: 'TA查岗' });
+if (window.bgNotifyCheck) window.bgNotifyCheck(actionHint + actionText, Date.now(), { name: 'TA查岗' });
 let popupProb = 70;
 if (cfg && typeof cfg['ckq-popup-prob'] === 'number' && cfg['ckq-popup-prob'] >= 0) popupProb = cfg['ckq-popup-prob'];
 if (Math.random() * 100 < popupProb) {
@@ -38731,12 +38984,16 @@ d.questions.forEach(q => {
 if (!(hit(q) && q.cat === ckSysCat)) return;
 const idx = d.questions.indexOf(q);
 const isSingle = q.type === 'single' && Array.isArray(q.options) && q.options.length;
+const isAction = q.type === 'action';
+const tag = isAction ? '互动动作' : (isSingle ? '单选·' + q.options.length + '选项' : '文字');
 html += '<div class="ta-row' + (!useDefault ? ' off' : '') + '">' +
 '<label class="toggle"><input type="checkbox"' + (q.enabled !== false ? ' checked' : '') + ' data-idx="' + idx + '"><span class="tk"></span></label>' +
-'<span class="ta-txt">' + esc(q.text) + (isSingle ? ' <span class="tc-known">单选·' + q.options.length + '选项</span>' : ' <span class="tc-known">文字</span>') + ' <span class="tc-known">系统</span></span>' +
+'<span class="ta-txt">' + esc(q.text) + ' <span class="tc-known">' + tag + '</span> <span class="tc-known">系统</span></span>' +
 '</div>';
 if (isSingle) {
 html += '<div class="tc-qopts">选项：' + q.options.map(o => esc(o.t)).join(' / ') + '</div>';
+} else if (isAction) {
+html += '<div class="tc-qopts">TA对我：' + esc(q.taToMe || q.text) + ' / 我对TA：' + esc(q.meToTa || q.text) + '</div>';
 }
 });
 container.innerHTML = html;
@@ -38754,21 +39011,29 @@ ckSave(d2);
 }
 function ckItemHtml(q, idx) {
 const isSingle = q.type === 'single' && Array.isArray(q.options) && q.options.length;
-return '<div class="ta-row">' +
+const isAction = q.type === 'action';
+const tag = isAction ? '互动动作' : (isSingle ? '单选·' + q.options.length + '选项' : '');
+let html = '<div class="ta-row">' +
 '<label class="toggle"><input type="checkbox"' + (q.enabled !== false ? ' checked' : '') + ' data-idx="' + idx + '"><span class="tk"></span></label>' +
-'<span class="ta-txt">' + esc(q.text) + (isSingle ? ' <span class="tc-known">单选·' + q.options.length + '选项</span>' : '') + '</span>' +
+'<span class="ta-txt">' + esc(q.text) + (tag ? ' <span class="tc-known">' + tag + '</span>' : '') + '</span>' +
 '<button class="ta-del" data-idx="' + idx + '">✕</button>' +
 '</div>';
+if (isAction) {
+html += '<div class="tc-qopts">TA对我：' + esc(q.taToMe || q.text) + ' / 我对TA：' + esc(q.meToTa || q.text) + '</div>';
+}
+return html;
 }
 function ckAddFormHtml(blockKey, grp, cat) {
+const isActionCat = cat === 'action';
 return '<div class="ta-add">' +
 '<select class="ta-type tc-input" data-key="' + blockKey + '">' +
-'<option value="text">文字回复</option>' +
-'<option value="single">单选题</option>' +
+(isActionCat ? '<option value="action">互动动作</option>' : '<option value="text">文字回复</option><option value="single">单选题</option>') +
 '</select>' +
-'<input id="ckq-new-' + blockKey + '" type="text" placeholder="添加问题…">' +
+'<input id="ckq-new-' + blockKey + '" type="text" placeholder="' + (isActionCat ? '动作名，如 摸摸头' : '添加问题…') + '">' +
 '<button class="ta-add-btn" data-key="' + blockKey + '" data-cat="' + (cat || 'text') + '" data-grp="' + (grp || '') + '">添加</button>' +
-'<textarea id="ckq-opts-' + blockKey + '" class="ta-opts tc-input" rows="3" placeholder="每行一个选项。可写 选项~TA回应；多条回应用 ; 分隔，如 在想你~就知道。;嗯，这次信你。" hidden></textarea>' +
+(isActionCat
+? '<textarea id="ckq-opts-' + blockKey + '" class="ta-opts tc-input" rows="4" placeholder="两行文案（TA对我 / 我对TA），如&#10;TA 想摸摸你的头&#10;TA 想让你摸摸 TA 的头&#10;——下面再写回应，accept~回应;回应 换行 reject~回应;回应"></textarea>'
+: '<textarea id="ckq-opts-' + blockKey + '" class="ta-opts tc-input" rows="3" placeholder="每行一个选项。可写 选项~TA回应；多条回应用 ; 分隔，如 在想你~就知道。;嗯，这次信你。" hidden></textarea>') +
 '</div>';
 }
 function renderCkMineInto(container, search) {
@@ -38829,7 +39094,7 @@ container.querySelectorAll('.ta-type').forEach(sel => {
 const toggleOpts = () => {
 const o = document.getElementById('ckq-opts-' + sel.dataset.key);
 if (!o) return;
-o.hidden = sel.value !== 'single';
+o.hidden = sel.value === 'text';
 if (o.__ceBox) o.__ceBox.hidden = o.hidden;
 else if (o.nextElementSibling && o.nextElementSibling.classList && o.nextElementSibling.classList.contains('ce-box')) o.nextElementSibling.hidden = o.hidden;
 };
@@ -38847,6 +39112,7 @@ const type = typeSel ? typeSel.value : 'text';
 const d2 = ckLoad();
 const q = { id: 'k_' + Date.now() + '_' + Math.floor(Math.random() * 999), text: v, cat: type, enabled: true, isPreset: false };
 if (type === 'single') q.type = 'single';
+if (type === 'action') q.type = 'action';
 if (b.dataset.grp) q.grp = b.dataset.grp;
 if (type === 'single') {
 const optsEl = document.getElementById('ckq-opts-' + key);
@@ -38859,12 +39125,29 @@ return { t: t, reply: replies.length > 1 ? replies : (replies[0] || '') };
 });
 if (!opts.length) { toast('单选题请填写选项，每行一个'); return; }
 q.options = opts;
+} else if (type === 'action') {
+const optsEl = document.getElementById('ckq-opts-' + key);
+const lines = (optsEl ? optsEl.value : '').split(/\r?\n/).map(s => s.trim());
+q.taToMe = lines[0] || ('TA 想' + v + '你');
+q.meToTa = lines[1] || ('TA 想让你' + v + ' TA');
+const acc = [], rej = [];
+for (let i = 2; i < lines.length; i++) {
+const ln = lines[i]; if (!ln) continue;
+const j = ln.indexOf('~');
+if (j < 0) continue;
+const tag = ln.slice(0, j).trim().toLowerCase();
+const reps = ln.slice(j + 1).split(';').map(s => s.trim()).filter(Boolean);
+if (tag === 'accept') reps.forEach(r => acc.push(r));
+else if (tag === 'reject') reps.forEach(r => rej.push(r));
+}
+q.accept = acc.length ? acc : ['乖，过来。'];
+q.reject = rej.length ? rej : ['下次吧。'];
 }
 d2.questions.push(q);
 ckSave(d2);
 renderCkMineInto(container, search);
 refreshCkCardCounts();
-toast(type === 'single' ? '已添加单选查岗问题' : '已添加文字查岗问题');
+toast(type === 'single' ? '已添加单选查岗问题' : (type === 'action' ? '已添加互动动作' : '已添加文字查岗问题'));
 });
 });
 bindCkGroupOps();
@@ -39036,6 +39319,280 @@ try { window.refreshCkCardCounts(); } catch (e) {}
 })();
 })();
 } catch (__e) { try { console.error("[JS] ck-question.js", __e && __e.message || __e); } catch (x) {} if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
+(function () { try {
+(function () {
+if (!window.activeStore || !window.getContacts) return;
+const ROOT = 'xy-home-v2';
+const KEY = 'incoming-requests';
+const EN_KEY = 'desk-checkin-en';
+const CALL_EN_KEY = 'desk-call-en';
+const MAX = 20;                       // 队列上限，防膨胀
+const CHECK_MS = 60 * 1000;           // 轮询间隔
+const chatCoolMs = 3 * 60 * 60 * 1000; // 求聊天冷却（3 小时，比查岗久）
+const seenKeepMs = 24 * 60 * 60 * 1000; // seen 记录保留 24h 后清理
+const POKE_MSGS = ['在干嘛呢？', '忙完了吗？', '想我了没有？', '我来看看你。'];
+function deskCheckinEn() {
+try {
+const v = window.xyStore(ROOT).get(EN_KEY);
+if (v === null || v === undefined || v === '') return true; // 默认开
+return v === '1';
+} catch (e) { return true; }
+}
+window.setDeskCheckinEn = function (en) {
+try { window.xyStore(ROOT).set(EN_KEY, en ? '1' : '0'); } catch (e) {}
+};
+function deskCallEn() {
+try {
+const v = window.xyStore(ROOT).get(CALL_EN_KEY);
+if (v === null || v === undefined || v === '') return true; // 默认开
+return v === '1';
+} catch (e) { return true; }
+}
+window.setDeskCallEn = function (en) {
+try { window.xyStore(ROOT).set(CALL_EN_KEY, en ? '1' : '0'); } catch (e) {}
+};
+function addSettingToggle(conf) {
+try {
+if (document.getElementById(conf.id + '-row')) return;
+const anchor = document.getElementById('sf-group-chat-row');
+if (!anchor) return;
+const row = document.createElement('div');
+row.className = 'set-row';
+row.id = conf.id + '-row';
+row.innerHTML =
+'<div class="ico">' + conf.ico + '</div>' +
+'<div class="txt">' + conf.title + '<span class="sub">' + conf.sub + '</span></div>' +
+'<label class="toggle"><input type="checkbox" id="' + conf.id + '"><span class="tk"></span></label>';
+anchor.parentNode.insertBefore(row, anchor.nextSibling);
+const input = row.querySelector('input');
+const sync = function () { const v = conf.get(); if (v !== input.checked) input.checked = v; };
+sync();
+input.addEventListener('change', function () {
+if (input.checked === conf.get()) return;
+conf.set(input.checked);
+if (typeof window.toast === 'function') window.toast(conf.toast(input.checked));
+});
+document.addEventListener('contact-switched', sync);
+document.addEventListener('mochi-restore-done', sync);
+return row;
+} catch (e) { return null; }
+}
+(function () {
+addSettingToggle({
+id: 'sf-desk-checkin',
+ico: '<svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v3M4.2 4.2l2.2 2.2M2 12h3M19 12h3M4.2 19.8l2.2-2.2M17.6 17.6l2.2 2.2"/><path d="M12 6a6 6 0 016 6v4h-3v-4a3 3 0 00-6 0v4H6v-4a6 6 0 016-6z"/><path d="M9 20h6"/></svg>',
+title: '开启 联系人跨桌面查岗',
+sub: '其他桌面的联系人会主动来查岗、找你聊天，你回复后 TA 会现场回应；关闭后不再打扰',
+get: deskCheckinEn,
+set: window.setDeskCheckinEn,
+toast: function (en) { return en ? '已开启：其他桌面的TA会来查岗、找你聊天' : '已关闭：其他桌面的TA不再来查岗打扰'; }
+});
+addSettingToggle({
+id: 'sf-desk-call',
+ico: '<svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>',
+title: '开启 联系人跨桌面打电话',
+sub: '其他桌面的联系人会主动给你打语音电话，你接听后即可通话；关闭后不再有跨桌面来电',
+get: deskCallEn,
+set: window.setDeskCallEn,
+toast: function (en) { return en ? '已开启：其他桌面的TA会主动给你打电话' : '已关闭：其他桌面的TA不再主动来电'; }
+});
+})();
+function rootGet(k) { try { return window.xyStore(ROOT).get(k); } catch (e) { return null; } }
+function rootSet(k, v) { try { window.xyStore(ROOT).set(k, v); } catch (e) {} }
+function queue() {
+let q = [];
+try { const v = rootGet(KEY); if (v) { const a = JSON.parse(v); if (Array.isArray(a)) q = a; } } catch (e) {}
+const now = Date.now();
+const filtered = q.filter(x => x.status !== 'seen' || now - (x.ts || 0) < seenKeepMs);
+if (filtered.length !== q.length) { rootSet(KEY, JSON.stringify(filtered)); q = filtered; }
+return q;
+}
+function saveQ(q) { rootSet(KEY, JSON.stringify(q.slice(-MAX))); }
+function cName(cid) {
+try {
+const c = (window.getContacts() || []).find(x => x.id === cid);
+if (c && c.name) return c.name;
+} catch (e) {}
+return cid === 'default' ? 'TA' : 'TA';
+}
+function cfgFor(cid) {
+try {
+if (window.replyCfgFor) return window.replyCfgFor(cid);
+} catch (e) {}
+return {};
+}
+function num(c, k, def) { const v = c && c[k]; if (typeof v === 'number' && v >= 0) return v; return def; }
+function lastKey(cid, kind) { return 'incoming-last:' + kind + ':' + cid; }
+function lastAt(cid, kind) { try { const v = rootGet(lastKey(cid, kind)); return parseInt(v, 10) || 0; } catch (e) { return 0; } }
+function markLast(cid, kind) { try { rootSet(lastKey(cid, kind), String(Date.now())); } catch (e) {} }
+function hasPending(cid) { return queue().some(x => x.cid === cid && x.status === 'pending'); }
+function setStatus(cid, status) {
+const q = queue();
+let hit = false;
+q.forEach(x => { if (x.cid === cid && x.status === 'pending') { x.status = status; x.ts = Date.now(); hit = true; } });
+if (hit) saveQ(q);
+return hit;
+}
+function deliver(req) {
+const q = queue();
+if (q.some(x => x.cid === req.cid && x.status === 'pending')) return false; // 未处理不重复
+q.push(req);
+saveQ(q);
+markLast(req.cid, req.kind);
+const name = cName(req.cid);
+const title = req.kind === 'chat' ? name + ' 想找你聊天' : (req.kind === 'call' ? name + ' 来电了' : name + ' 来查岗了');
+if (document.hidden) {
+if (window.bgNotifyCheck) window.bgNotifyCheck(title + (req.kind === 'call' ? '' : '：' + (req.text || '')), Date.now(), { name: name + (req.kind === 'chat' ? '来聊天' : req.kind === 'call' ? '来电' : '查岗') });
+return true;
+}
+if (!window.openModal) return true;
+const okText = req.kind === 'chat' ? '同意' : (req.kind === 'call' ? '接听' : '现在回TA');
+const staticText = req.kind === 'call'
+? '想听听你的声音，接一下好吗？'
+: (req.kind === 'chat' ? '想和你聊聊天，忙完记得过来。' : '想看看你在做什么，来陪陪我呀。') + '\n' + (req.text || '');
+window.openModal(title, '', function (v) {
+if (v === 'later') {
+setStatus(req.cid, 'seen');
+return;
+}
+goReply(req);
+}, {
+noInput: true,
+lock: true,
+staticText: staticText,
+pills: [{ label: '稍后', value: 'later' }, { label: okText, value: 'reply' }]
+});
+return true;
+}
+function goReply(req) {
+const cid = req.cid;
+try {
+if (window.setActiveContact && cid !== (window.__activeCid || 'default')) window.setActiveContact(cid);
+} catch (e) {}
+setStatus(cid, 'accepted');
+if (req.kind === 'call') {
+setTimeout(function () { fire(req); }, 300);
+return;
+}
+try {
+if (window.enterChat) window.enterChat();
+} catch (e) {}
+const once = { done: false };
+const tries = { n: 0 };
+const poll = function () {
+tries.n++;
+const ready = !!(window.__chatDbReady && window.__chatDbReady());
+if (ready || tries.n > 120) {
+if (once.done) return;
+once.done = true;
+fire(req);
+return;
+}
+setTimeout(poll, 250);
+};
+setTimeout(poll, 300);
+}
+function ensureTaName(cid) {
+try {
+const s = (cid && window.storeFor) ? window.storeFor(cid) : null;
+if (!s) return;
+const cur = s.get('lbl-partner');
+if (cur) return;
+const c = (window.getContacts() || []).find(x => x.id === cid);
+if (c && c.name) s.set('lbl-partner', c.name);
+} catch (e) {}
+}
+function fire(req) {
+try {
+if (req.kind === 'call') {
+ensureTaName(req.cid);
+if (window.triggerIncomingCall) window.triggerIncomingCall();
+return;
+}
+if (req.kind === 'checkin') {
+ensureTaName(req.cid);
+if (window.addCareRecordFor) {
+try { window.addCareRecordFor(req.cid, 'desk-checkin', req.text, Date.now()); } catch (e) {}
+}
+let q = (req.q && req.q.text) ? req.q : (window.ckQuestionPickFor ? window.ckQuestionPickFor(req.cid) : null);
+if (!q || !q.text) q = window.ckQuestionPickFor ? window.ckQuestionPickFor(req.cid) : null;
+if (q && q.text) {
+if (window.ckQuestionFire) window.ckQuestionFire(q, cfgFor(req.cid));
+else if (window.triggerCkQuestion) window.triggerCkQuestion();
+return;
+}
+}
+const text = req.kind === 'chat'
+? (req.text || '想你了，来聊聊天吧。')
+: '我来找你了。';
+if (window.chatAddIn) {
+window.chatAddIn(text, { initiative: true });
+if (window.showTyping) { try { window.showTyping(); } catch (e) {} }
+}
+} catch (e) {}
+}
+function maybeIncoming() {
+try {
+const cur = window.__activeCid || 'default';
+const list = window.getContacts() || [];
+if (list.length < 2) return; // 只有当前桌面：无需跨桌面打扰
+list.forEach(function (c) {
+const cid = c.id;
+if (cid === cur) return; // 激活桌面不跨桌面打扰（由原 tryAutoSend 正常触发）
+if (hasPending(cid)) return; // 已有未处理申请，不重复
+const cfg = cfgFor(cid);
+if (deskCallEn() && !document.hidden) {
+const callProb = num(cfg, 'call-incoming', 15);
+const lastCall = (function () {
+try {
+const s = (cid && window.storeFor) ? window.storeFor(cid) : null;
+if (!s) return 0;
+const v = parseInt(s.get('records-call-last'), 10);
+return isNaN(v) ? 0 : v;
+} catch (e) { return 0; }
+})();
+if (Date.now() - lastCall >= 5 * 60000 && Math.random() * 100 < callProb) {
+deliver({ cid: cid, kind: 'call', text: '', ts: Date.now(), status: 'pending' });
+return;
+}
+}
+if (deskCheckinEn() && num(cfg, 'ckq-en', 0) === 1) {
+const cool = num(cfg, 'ckq-cool', 30);
+const prob = num(cfg, 'ckq-prob', 8);
+if (Date.now() - lastAt(cid, 'checkin') >= cool * 60000 && Math.random() * 100 < prob) {
+const q = window.ckQuestionPickFor ? window.ckQuestionPickFor(cid) : null;
+if (q && q.text) {
+const showText = q.type === 'action' ? (q.taToMe || q.text) : q.text;
+deliver({ cid: cid, kind: 'checkin', text: showText, q: q, ts: Date.now(), status: 'pending' });
+return;
+}
+}
+}
+if (deskCheckinEn() && num(cfg, 'as-en', 0) === 1) {
+const prob = num(cfg, 'as-prob', 30);
+if (Date.now() - lastAt(cid, 'chat') >= chatCoolMs && Math.random() * 100 < prob) {
+deliver({ cid: cid, kind: 'chat', text: '想和你聊聊天，你有空吗？', ts: Date.now(), status: 'pending' });
+}
+}
+});
+} catch (e) {}
+}
+window.triggerIncomingCheckin = function (cid) {
+if (!deskCheckinEn()) { try { if (window.toast) window.toast('联系人跨桌面查岗已关闭（可在设置里开启）'); } catch (e) {} return false; }
+const q = window.ckQuestionPickFor ? window.ckQuestionPickFor(cid || 'default') : null;
+if (!q || !q.text) return false;
+return deliver({ cid: cid || 'default', kind: 'checkin', text: q.text, q: q, ts: Date.now(), status: 'pending' });
+};
+window.triggerIncomingCallReq = function (cid) {
+if (!deskCallEn()) { try { if (window.toast) window.toast('联系人跨桌面打电话已关闭（可在设置里开启）'); } catch (e) {} return false; }
+return deliver({ cid: cid || 'default', kind: 'call', text: '', ts: Date.now(), status: 'pending' });
+};
+setTimeout(function () {
+maybeIncoming();
+setInterval(maybeIncoming, CHECK_MS);
+}, (30 + Math.random() * 60) * 1000);
+})();
+} catch (__e) { try { console.error("[JS] incoming-requests.js", __e && __e.message || __e); } catch (x) {} if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
 (function () { try {
 (function () {
 const store = window.activeStore();

@@ -854,3 +854,75 @@
 [data-theme="dark"] .fh-cell.l2 { background:#7d413a; }
 [data-theme="dark"] .fh-cell.l3 { background:#a85046; }
 [data-theme="dark"] .fh-cell.l4 { background:#cf6155; }
+
+/* ======================================================================
+   深色模式补漏（AI-A 会话代改，请知悉）：聊天内置卡片 + 此间（cjian）页面
+   ——此前深色下白底白字/黑字黑卡看不见，以下覆盖补齐。
+   ====================================================================== */
+
+/* 聊天里居中的轻型内容卡（通话/心意币回执/感知等见 .msg-center）：
+   浅色是白底 + var(--ink)（深色下 --ink 变白）→ 白字白底。背景改深即可，文字是变量 */
+[data-theme="dark"] .msg-center-card { background:var(--dark-card); border-color:var(--dark-border); }
+/* 游戏结算卡（记忆翻牌/双人 Pong/打砖块）：同白底白字问题 */
+[data-theme="dark"] .msg-pong-card { background:var(--dark-card-92); border-color:var(--dark-border); }
+
+/* ---- 此间（梦角世界时间与在场感知）页面全面深色覆盖 ----
+   该页背景随 var(--card-bg) 变深，但内文多是硬编码 rgba(0,0,0,.x) 黑字
+   读不清楚，本地浅底块也照抄为深色。var(--ink)/var(--muted) 的无需重复。 */
+[data-theme="dark"] {
+  .cj-hero { background:linear-gradient(150deg,#252530 0%,#1e1e26 60%,#1a1a22 100%); border-color:var(--dark-border); }
+  .cj-hero-sub { color:#b9b6b0; }
+  .cj-hero-range { color:#9a978f; }
+
+  .cj-card-range { color:#9a978f; }
+  .cj-tag-a { background:var(--dark-hover); color:#bfbfbf; border-color:var(--dark-border-12); }
+  .cj-card-note { color:#9a978f; }
+
+  .cj-empty { background:var(--dark-card); border-color:rgba(255,255,255,.16); color:#9a978f; }
+  .cj-empty-sub { color:#7d7d7d; }
+
+  .cj-perceive-result { background:var(--dark-hover); color:#c9c6c0; }
+  .cj-perceive-result .cj-p-note { color:#ffc97e; }
+
+  .cj-today-note { color:#9a978f; }
+  .cj-today-row { border-bottom-color:rgba(255,255,255,.07); }
+  .cj-today-range { color:#9a978f; }
+  .cj-today-chars { color:#c9c6c0; }
+  .cj-today-mute { color:rgba(255,255,255,.35); }
+
+  .cj-card-hint { color:#8a8a8a; }
+  .cj-detail-back { background:var(--dark-card); border-color:var(--dark-border-12); color:#eaeaea; }
+  .cj-d-range { color:#9a978f; }
+  .cj-d-real { color:#8a8a8a; }
+  .cj-d-note { color:#9a978f; }
+  .cj-d-row { border-bottom-color:rgba(255,255,255,.07); }
+  .cj-d-row-p { color:#c9c6c0; }
+  .cj-d-foot { color:#8a8a8a; }
+
+  .cj-groups.stuck { background:#22222a; border-bottom-color:rgba(255,255,255,.08); box-shadow:0 4px 14px rgba(0,0,0,.4); }
+  .cj-gchip { background:var(--dark-hover); border-color:var(--dark-border-12); color:#aaa; }
+  .cj-gchip.on { color:#111; }
+  .cj-group-empty { color:#8a8a8a; }
+  .cj-all-tip { color:#9a978f; }
+  .cj-d-src { color:#9a978f; }
+  .cj-d-nav-btn { background:var(--dark-card); border-color:var(--dark-border-12); color:#eaeaea; }
+  .cj-d-nav-pos { color:#8a8a8a; }
+}
+
+/* ======================================================================
+   深色模式补漏（AI-A）：全部是「background:var(--ink) + color:#fff」型
+   元素，深色下 --ink 变白 → 白底白字看不见。统一改深色下为白底深字
+   （与 garden-tool/cj-gchip.on 的反色约定一致）。
+   涉及：梦角档案(memo-arc)、批量发送序号、字卡版本徽章、日历心情、按钮按下态。
+   ====================================================================== */
+[data-theme="dark"] .batch-item-idx,
+[data-theme="dark"] .lic-badge,
+[data-theme="dark"] .gd-btn-sm:active,
+[data-theme="dark"] .cal-mood-ico,
+[data-theme="dark"] .narc-empty .ne-btn,
+[data-theme="dark"] .nm-core,
+[data-theme="dark"] .narc-chip.on,
+[data-theme="dark"] .narc-navchip.on,
+[data-theme="dark"] .narc-btab.on {
+  color: var(--card-bg, #1e1e1e);
+}

@@ -85,9 +85,36 @@
     { id: 'k_t4', cat: 'text', text: '猜猜我现在在干什么？', enabled: true },
     { id: 'k_t5', cat: 'text', text: '现在最想做的一件事是什么？', enabled: true },
     { id: 'k_t6', cat: 'text', text: '今天有什么开心的小事吗？', enabled: true },
-    { id: 'k_t7', cat: 'text', text: '如果我现在就在你身边，你想做什么？', enabled: true }
+    { id: 'k_t7', cat: 'text', text: '如果我现在就在你身边，你想做什么？', enabled: true },
+    // v3.18.x：互动动作——TA 申请对"我"做动作 / TA 申请"我"对 TA 做动作；
+    // taToMe=TA 对我做（显示"TA 想摸摸你的头"），meToTa=TA 让我对 TA 做（显示"TA 想让你摸摸 TA 的头"）；
+    // 触发时随机选一个方向，作答走 ask-card 单选链路（好呀/不要 → accept/reject 回应）
+    { id: 'k_a1', cat: 'action', type: 'action', text: '摸摸头', enabled: true,
+      taToMe: 'TA 想摸摸你的头', meToTa: 'TA 想让你摸摸 TA 的头',
+      accept: ['乖，过来。', '嗯，轻轻的。', '闭上眼，我轻一点。'],
+      reject: ['哼，不要。', '下次吧。', '现在不行，等下。'] },
+    { id: 'k_a2', cat: 'action', type: 'action', text: '拍拍肩', enabled: true,
+      taToMe: 'TA 想拍拍你的肩', meToTa: 'TA 想让你拍拍 TA 的肩',
+      accept: ['嗯，辛苦了。', '正好有点累。', '被你拍到了。'],
+      reject: ['别拍，痒。', '不要，自己来。', '肩膀没空。'] },
+    { id: 'k_a3', cat: 'action', type: 'action', text: '揉揉头', enabled: true,
+      taToMe: 'TA 想揉揉你的头发', meToTa: 'TA 想让你揉揉 TA 的头发',
+      accept: ['嗯，舒服。', '再来一下。', '头发都被你揉乱了。'],
+      reject: ['发型会乱。', '不要揉。', '刚整理好的。'] },
+    { id: 'k_a4', cat: 'action', type: 'action', text: '抱抱', enabled: true,
+      taToMe: 'TA 想抱抱你', meToTa: 'TA 想让你抱抱 TA',
+      accept: ['过来，抱紧。', '嗯，再久一点。', '被你抱住了。'],
+      reject: ['现在不方便。', '等下再抱。', '人多，不要。'] },
+    { id: 'k_a5', cat: 'action', type: 'action', text: '牵手', enabled: true,
+      taToMe: 'TA 想牵你的手', meToTa: 'TA 想让你牵 TA 的手',
+      accept: ['嗯，牵着。', '手伸过来。', '一直牵着好不好。'],
+      reject: ['手心出汗了。', '不要，痒。', '现在没空。'] },
+    { id: 'k_a6', cat: 'action', type: 'action', text: '贴贴', enabled: true,
+      taToMe: 'TA 想跟你贴贴', meToTa: 'TA 想让你跟 TA 贴贴',
+      accept: ['嗯，贴着。', '脸凑过来。', '贴着好暖。'],
+      reject: ['脸会红。', '不要贴。', '太近了。'] }
   ];
-  const CATS_CKQ = [['single', '单选查岗'], ['text', '文字查岗']];
+  const CATS_CKQ = [['single', '单选查岗'], ['text', '文字查岗'], ['action', '互动动作']];
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
   function toast(t) { if (typeof window.toast === 'function') window.toast(t); }
 
@@ -203,12 +230,17 @@
   //（点击聊天里的卡片走 chat.js 通用链路：就地展开 → openCkReply 兜底）
   function openCkReply(msgIdx, q) {
     if (!window.openModal) return;
-    const isSingle = q.type === 'single' && Array.isArray(q.options) && q.options.length;
-    window.openModal('查岗回答', '', function (v) {
+    const isAction = q.type === 'action';
+    const actionOpts = isAction ? [{ t: '好呀', reply: q.accept || ['乖，过来。'] }, { t: '不要', reply: q.reject || ['下次吧。'] }] : null;
+    const isSingle = isAction || (q.type === 'single' && Array.isArray(q.options) && q.options.length);
+    window.openModal(isAction ? '互动回应' : '查岗回答', '', function (v) {
       const answer = (v || '').trim();
       if (!answer) { toast(isSingle ? '请选择一个答案' : '请输入回答'); return; }
       let preset = null;
-      if (isSingle) {
+      if (isAction) {
+        const o = (actionOpts || []).filter(function (x) { return String(x.t) === answer; })[0];
+        if (o) preset = o.reply;
+      } else if (isSingle) {
         const o = (q.options || []).filter(function (x) { return String(x.t) === answer; })[0];
         if (o) preset = o.reply;
       } else {
@@ -218,8 +250,8 @@
       }
       if (window.chatAskReply) window.chatAskReply(msgIdx, answer, preset);
     }, {
-      staticText: 'TA 问你：' + q.text,
-      pills: isSingle ? q.options.map(function (o) { return { label: o.t, value: o.t }; }) : null,
+      staticText: isAction ? ('TA 想跟你互动：' + q.text) : ('TA 问你：' + q.text),
+      pills: isSingle ? (isAction ? actionOpts : q.options).map(function (o) { return { label: o.t, value: o.t }; }) : null,
       noInput: isSingle
     });
   }
@@ -234,11 +266,22 @@
     const pickedId = String(q.id || '');
     try { if (pickedId) store.set('ckq-last-id', pickedId); } catch (e) {}
     const isSingle = q.type === 'single' && Array.isArray(q.options) && q.options.length;
+    // v3.18.x：互动动作——随机方向 + 单选 ask-card（好呀/不要 → accept/reject 回应）
+    const isAction = q.type === 'action';
+    let actionOpts = null, actionText = q.text, actionHint = 'TA 来查岗了。';
+    if (isAction) {
+      const dir = Math.random() < 0.5 ? 'ta-to-me' : 'me-to-ta';
+      actionText = (dir === 'me-to-ta' ? (q.meToTa || q.text) : (q.taToMe || q.text));
+      actionHint = 'TA 想跟你互动。';
+      const acc = Array.isArray(q.accept) && q.accept.length ? q.accept : ['乖，过来。'];
+      const rej = Array.isArray(q.reject) && q.reject.length ? q.reject : ['下次吧。'];
+      actionOpts = [{ t: '好呀', reply: acc }, { t: '不要', reply: rej }];
+    }
     // 提示语标记 ask-msg（渲染同 poke 但不算 notable，避免通知重复成两条）
-    window.chatAddSystem('TA 来查岗了。', { special: 'ask-msg' });
-    const el = window.chatAddSystem(q.text, { special: 'ask-card', askQuestion: q.text, askOptions: isSingle ? q.options : null, askType: isSingle ? 'single' : 'text', deskCk: !!(opts && opts.deskCk) });
+    window.chatAddSystem(actionHint, { special: 'ask-msg' });
+    const el = window.chatAddSystem(actionText, { special: 'ask-card', askQuestion: actionText, askOptions: isAction ? actionOpts : (isSingle ? q.options : null), askType: (isAction || isSingle) ? 'single' : 'text', deskCk: !!(opts && opts.deskCk) });
     const msgIdx = el ? Number(el.dataset.idx) : -1;
-    if (window.bgNotifyCheck) window.bgNotifyCheck('TA 来查岗了：' + q.text, Date.now(), { name: 'TA查岗' });
+    if (window.bgNotifyCheck) window.bgNotifyCheck(actionHint + actionText, Date.now(), { name: 'TA查岗' });
     // 自动弹窗：后台不弹 / 正在输入不弹 / 已有互动弹窗不弹（卡片仍在聊天里可点）
     // v3.12.x：迟到弹窗守卫——后台冻结的定时器回前台会被一次性补跑，补跑时页面已可见、
     // document.hidden 守卫失效 → 弹出几分钟前已在聊天里看过的旧查岗卡。
@@ -360,12 +403,16 @@
       if (!(hit(q) && q.cat === ckSysCat)) return;
       const idx = d.questions.indexOf(q);
       const isSingle = q.type === 'single' && Array.isArray(q.options) && q.options.length;
+      const isAction = q.type === 'action';
+      const tag = isAction ? '互动动作' : (isSingle ? '单选·' + q.options.length + '选项' : '文字');
       html += '<div class="ta-row' + (!useDefault ? ' off' : '') + '">' +
         '<label class="toggle"><input type="checkbox"' + (q.enabled !== false ? ' checked' : '') + ' data-idx="' + idx + '"><span class="tk"></span></label>' +
-        '<span class="ta-txt">' + esc(q.text) + (isSingle ? ' <span class="tc-known">单选·' + q.options.length + '选项</span>' : ' <span class="tc-known">文字</span>') + ' <span class="tc-known">系统</span></span>' +
+        '<span class="ta-txt">' + esc(q.text) + ' <span class="tc-known">' + tag + '</span> <span class="tc-known">系统</span></span>' +
         '</div>';
       if (isSingle) {
         html += '<div class="tc-qopts">选项：' + q.options.map(o => esc(o.t)).join(' / ') + '</div>';
+      } else if (isAction) {
+        html += '<div class="tc-qopts">TA对我：' + esc(q.taToMe || q.text) + ' / 我对TA：' + esc(q.meToTa || q.text) + '</div>';
       }
     });
     container.innerHTML = html;
@@ -385,21 +432,29 @@
   // ---- 我的添加 tab：分组区块置顶 + 未分组按分类 + 行内添加表单（ta-ask 同款） ----
   function ckItemHtml(q, idx) {
     const isSingle = q.type === 'single' && Array.isArray(q.options) && q.options.length;
-    return '<div class="ta-row">' +
+    const isAction = q.type === 'action';
+    const tag = isAction ? '互动动作' : (isSingle ? '单选·' + q.options.length + '选项' : '');
+    let html = '<div class="ta-row">' +
       '<label class="toggle"><input type="checkbox"' + (q.enabled !== false ? ' checked' : '') + ' data-idx="' + idx + '"><span class="tk"></span></label>' +
-      '<span class="ta-txt">' + esc(q.text) + (isSingle ? ' <span class="tc-known">单选·' + q.options.length + '选项</span>' : '') + '</span>' +
+      '<span class="ta-txt">' + esc(q.text) + (tag ? ' <span class="tc-known">' + tag + '</span>' : '') + '</span>' +
       '<button class="ta-del" data-idx="' + idx + '">✕</button>' +
       '</div>';
+    if (isAction) {
+      html += '<div class="tc-qopts">TA对我：' + esc(q.taToMe || q.text) + ' / 我对TA：' + esc(q.meToTa || q.text) + '</div>';
+    }
+    return html;
   }
   function ckAddFormHtml(blockKey, grp, cat) {
+    const isActionCat = cat === 'action';
     return '<div class="ta-add">' +
       '<select class="ta-type tc-input" data-key="' + blockKey + '">' +
-      '<option value="text">文字回复</option>' +
-      '<option value="single">单选题</option>' +
+      (isActionCat ? '<option value="action">互动动作</option>' : '<option value="text">文字回复</option><option value="single">单选题</option>') +
       '</select>' +
-      '<input id="ckq-new-' + blockKey + '" type="text" placeholder="添加问题…">' +
+      '<input id="ckq-new-' + blockKey + '" type="text" placeholder="' + (isActionCat ? '动作名，如 摸摸头' : '添加问题…') + '">' +
       '<button class="ta-add-btn" data-key="' + blockKey + '" data-cat="' + (cat || 'text') + '" data-grp="' + (grp || '') + '">添加</button>' +
-      '<textarea id="ckq-opts-' + blockKey + '" class="ta-opts tc-input" rows="3" placeholder="每行一个选项。可写 选项~TA回应；多条回应用 ; 分隔，如 在想你~就知道。;嗯，这次信你。" hidden></textarea>' +
+      (isActionCat
+        ? '<textarea id="ckq-opts-' + blockKey + '" class="ta-opts tc-input" rows="4" placeholder="两行文案（TA对我 / 我对TA），如&#10;TA 想摸摸你的头&#10;TA 想让你摸摸 TA 的头&#10;——下面再写回应，accept~回应;回应 换行 reject~回应;回应"></textarea>'
+        : '<textarea id="ckq-opts-' + blockKey + '" class="ta-opts tc-input" rows="3" placeholder="每行一个选项。可写 选项~TA回应；多条回应用 ; 分隔，如 在想你~就知道。;嗯，这次信你。" hidden></textarea>') +
       '</div>';
   }
   function renderCkMineInto(container, search) {
@@ -463,7 +518,7 @@
       const toggleOpts = () => {
         const o = document.getElementById('ckq-opts-' + sel.dataset.key);
         if (!o) return;
-        o.hidden = sel.value !== 'single';
+        o.hidden = sel.value === 'text';
         if (o.__ceBox) o.__ceBox.hidden = o.hidden;
         else if (o.nextElementSibling && o.nextElementSibling.classList && o.nextElementSibling.classList.contains('ce-box')) o.nextElementSibling.hidden = o.hidden;
       };
@@ -481,6 +536,7 @@
         const d2 = ckLoad();
         const q = { id: 'k_' + Date.now() + '_' + Math.floor(Math.random() * 999), text: v, cat: type, enabled: true, isPreset: false };
         if (type === 'single') q.type = 'single';
+        if (type === 'action') q.type = 'action';
         if (b.dataset.grp) q.grp = b.dataset.grp;
         if (type === 'single') {
           const optsEl = document.getElementById('ckq-opts-' + key);
@@ -493,12 +549,30 @@
           });
           if (!opts.length) { toast('单选题请填写选项，每行一个'); return; }
           q.options = opts;
+        } else if (type === 'action') {
+          // 互动动作：opts 文本域前两行=文案（TA对我 / 我对TA），之后 accept~回应;回应 / reject~回应;回应
+          const optsEl = document.getElementById('ckq-opts-' + key);
+          const lines = (optsEl ? optsEl.value : '').split(/\r?\n/).map(s => s.trim());
+          q.taToMe = lines[0] || ('TA 想' + v + '你');
+          q.meToTa = lines[1] || ('TA 想让你' + v + ' TA');
+          const acc = [], rej = [];
+          for (let i = 2; i < lines.length; i++) {
+            const ln = lines[i]; if (!ln) continue;
+            const j = ln.indexOf('~');
+            if (j < 0) continue;
+            const tag = ln.slice(0, j).trim().toLowerCase();
+            const reps = ln.slice(j + 1).split(';').map(s => s.trim()).filter(Boolean);
+            if (tag === 'accept') reps.forEach(r => acc.push(r));
+            else if (tag === 'reject') reps.forEach(r => rej.push(r));
+          }
+          q.accept = acc.length ? acc : ['乖，过来。'];
+          q.reject = rej.length ? rej : ['下次吧。'];
         }
         d2.questions.push(q);
         ckSave(d2);
         renderCkMineInto(container, search);
         refreshCkCardCounts();
-        toast(type === 'single' ? '已添加单选查岗问题' : '已添加文字查岗问题');
+        toast(type === 'single' ? '已添加单选查岗问题' : (type === 'action' ? '已添加互动动作' : '已添加文字查岗问题'));
       });
     });
     bindCkGroupOps();
