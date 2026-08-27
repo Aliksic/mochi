@@ -317,7 +317,7 @@ window.DEFAULT_CARD_DATA.drift = [
   ]]
 ];
 window.DEFAULT_CARD_DATA.deskcheck = [
-  ["桌面查岗·回应", [
+  ["联系人跨桌面查岗·回应", [
     "你来查岗，我正好也想你了。",
     "被抓到了，我正在想你呀。",
     "在呀在呀，一直在等你。",

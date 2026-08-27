@@ -7828,7 +7828,7 @@ transition-duration: .01ms !important;
       </div>
       <div class="splash-dots"><i></i><i></i><i></i></div>
       <div class="splash-brand">小红书@言序（1842523578）</div>
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787808471483">Mochi 字卡传讯 v3.6.263 · 部署于 2026-08-27 13:27</div>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787811727329">Mochi 字卡传讯 v3.6.264 · 部署于 2026-08-27 14:22</div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
       <div class="splash-loading" id="splash-loading">正在加载数据…</div>
@@ -8206,6 +8206,11 @@ transition-duration: .01ms !important;
         <div class="av"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1L3.2 9.4l6.1-.9z"/></svg></div>
         <div class="ci"><div class="n">其他互动功能字卡</div><div class="m">各功能触发的系统预设字卡 · 如摸鱼/吃饭/经期等</div></div>
         <div class="t" id="fc-lib-count">0</div>
+      </div>
+      <div class="chat-item glass" id="li-deskcheck">
+        <div class="av"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/><path d="M8 3.2a9 9 0 108 0"/></svg></div>
+        <div class="ci"><div class="n">联系人跨桌面查岗</div><div class="m">其他桌面的联系人来查岗时 TA 的回应字卡</div></div>
+        <div class="t" id="dk-lib-count">0</div>
       </div>
       <div class="chat-item glass" id="li-mood-cards">
         <div class="av"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7.5-4.7-9.3-9A5.3 5.3 0 0112 6.4 5.3 5.3 0 0121.3 12c-1.8 4.3-9.3 9-9.3 9z"/></svg></div>
@@ -8899,7 +8904,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.6.263</div>
+      <div class="ver">Mochi 字卡传讯 v3.6.264</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -9051,7 +9056,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.6.263</span>
+              <span class="lic-ver">v3.6.264</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -9857,6 +9862,28 @@ transition-duration: .01ms !important;
       </div>
       <div class="card-list" id="fc-list">
         <!-- 功能触发字卡由 JS 按分类/分组渲染 -->
+      </div>
+    </div>
+
+    <!-- 联系人跨桌面查岗（独立页面，可开关使用） -->
+    <div class="page" id="page-deskcheck" hidden>
+      <div class="chat-head">
+        <span class="ch-back" id="dk-back">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        </span>
+        <span class="ch-name">联系人跨桌面查岗</span>
+      </div>
+      <div class="sm-set-hint" style="padding:8px 16px 0">说明：其他桌面的联系人来查岗时，TA 回答后按概率从以下回应字卡抽取回复，可逐张开启或关闭。</div>
+      <div class="card-tabs" id="dk-tabs">
+        <button class="cc-tab sel" data-type="deskcheck">联系人跨桌面查岗·回应</button>
+      </div>
+      <div class="cc-groups-bar" id="dk-groups-bar"></div>
+      <div class="card-search glass">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input class="card-search-input" id="dk-search-input" placeholder="搜索查岗回应字卡" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+      </div>
+      <div class="card-list" id="dk-list">
+        <!-- 联系人跨桌面查岗回应字卡由 JS 渲染 -->
       </div>
     </div>
 
@@ -29824,7 +29851,7 @@ window.DEFAULT_CARD_DATA.drift = [
 ]]
 ];
 window.DEFAULT_CARD_DATA.deskcheck = [
-["桌面查岗·回应", [
+["联系人跨桌面查岗·回应", [
 "你来查岗，我正好也想你了。",
 "被抓到了，我正在想你呀。",
 "在呀在呀，一直在等你。",
@@ -29892,7 +29919,7 @@ window.defaultCardCat = function (k) { return getCat(k); };
 window.defaultCardCfg = function () { return api.cfg(); };
 window.defaultCardApiFor = apiFor;
 const DATA = (window.DEFAULT_CARD_DATA) || { main: [], kaomoji: [], emoji: [] };
-const FUNC_KEYS = ['fish', 'eat', 'period', 'water', 'garden', 'sync', 'reach', 'cjian', 'room', 'piggy', 'drift', 'interact', 'deskcheck'];
+const FUNC_KEYS = ['fish', 'eat', 'period', 'water', 'garden', 'sync', 'reach', 'cjian', 'room', 'piggy', 'drift', 'interact'];
 const BASE_KEYS = ['main', 'kaomoji', 'emoji', 'touch'];
 function sumKeys(keys) {
 let n = 0;
@@ -29904,6 +29931,8 @@ const el = document.querySelector('#li-default-cards .t');
 if (el) el.textContent = String(sumKeys(BASE_KEYS));
 const fel = document.getElementById('fc-lib-count');
 if (fel) fel.textContent = String(sumKeys(FUNC_KEYS));
+const dkel = document.getElementById('dk-lib-count');
+if (dkel) dkel.textContent = String(sumKeys(['deskcheck']));
 }
 refreshLibCount();
 function isCardOff(cat, c) { return api.isOff(cat, c); }
@@ -30078,10 +30107,13 @@ if (known.indexOf(k) >= 0) return;
 const b = document.createElement('button');
 b.className = 'cc-tab';
 b.dataset.type = k;
-b.textContent = k === 'deskcheck' ? '桌面查岗' : k;
+b.textContent = k === 'deskcheck' ? '联系人跨桌面查岗' : k;
 tabs.appendChild(b);
 });
 })();
+const dkView = mountCardView({
+list: 'dk-list', tabs: 'dk-tabs', groupsBar: 'dk-groups-bar', search: 'dk-search-input', page: 'page-deskcheck'
+}, ['deskcheck'], '暂无联系人跨桌面查岗字卡');
 const li = document.getElementById('li-default-cards');
 if (li) {
 li.addEventListener('click', () => {
@@ -30111,6 +30143,23 @@ if (fcView) fcView.ensureRendered();
 const fcBack = document.getElementById('fc-back');
 if (fcBack) {
 fcBack.addEventListener('click', () => {
+document.querySelectorAll('.page').forEach(p => p.hidden = true);
+const home = document.getElementById('page-chatcard');
+if (home) home.hidden = false;
+});
+}
+const liDk = document.getElementById('li-deskcheck');
+if (liDk) {
+liDk.addEventListener('click', () => {
+document.querySelectorAll('.page').forEach(p => p.hidden = true);
+const page = document.getElementById('page-deskcheck');
+if (page) page.hidden = false;
+if (dkView) dkView.ensureRendered();
+});
+}
+const dkBack = document.getElementById('dk-back');
+if (dkBack) {
+dkBack.addEventListener('click', () => {
 document.querySelectorAll('.page').forEach(p => p.hidden = true);
 const home = document.getElementById('page-chatcard');
 if (home) home.hidden = false;
@@ -30156,7 +30205,7 @@ window.getFishPool = function (name, fallback) {
 return window.getLibPool('fish', name, fallback);
 };
 window.getDeskCheckPool = function (fallback) {
-const arr = window.getLibPool('deskcheck', '桌面查岗·回应', fallback);
+const arr = window.getLibPool('deskcheck', '联系人跨桌面查岗·回应', fallback);
 return arr.filter(c => !(window.isDefaultCardOff && window.isDefaultCardOff('deskcheck', c)));
 };
 })();

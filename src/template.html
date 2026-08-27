@@ -433,6 +433,11 @@
         <div class="ci"><div class="n">其他互动功能字卡</div><div class="m">各功能触发的系统预设字卡 · 如摸鱼/吃饭/经期等</div></div>
         <div class="t" id="fc-lib-count">0</div>
       </div>
+      <div class="chat-item glass" id="li-deskcheck">
+        <div class="av"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/><path d="M8 3.2a9 9 0 108 0"/></svg></div>
+        <div class="ci"><div class="n">联系人跨桌面查岗</div><div class="m">其他桌面的联系人来查岗时 TA 的回应字卡</div></div>
+        <div class="t" id="dk-lib-count">0</div>
+      </div>
       <div class="chat-item glass" id="li-mood-cards">
         <div class="av"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7.5-4.7-9.3-9A5.3 5.3 0 0112 6.4 5.3 5.3 0 0121.3 12c-1.8 4.3-9.3 9-9.3 9z"/></svg></div>
         <div class="ci"><div class="n">聊天情绪字卡</div><div class="m">按情绪分类的字卡</div></div>
@@ -2083,6 +2088,28 @@
       </div>
       <div class="card-list" id="fc-list">
         <!-- 功能触发字卡由 JS 按分类/分组渲染 -->
+      </div>
+    </div>
+
+    <!-- 联系人跨桌面查岗（独立页面，可开关使用） -->
+    <div class="page" id="page-deskcheck" hidden>
+      <div class="chat-head">
+        <span class="ch-back" id="dk-back">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        </span>
+        <span class="ch-name">联系人跨桌面查岗</span>
+      </div>
+      <div class="sm-set-hint" style="padding:8px 16px 0">说明：其他桌面的联系人来查岗时，TA 回答后按概率从以下回应字卡抽取回复，可逐张开启或关闭。</div>
+      <div class="card-tabs" id="dk-tabs">
+        <button class="cc-tab sel" data-type="deskcheck">联系人跨桌面查岗·回应</button>
+      </div>
+      <div class="cc-groups-bar" id="dk-groups-bar"></div>
+      <div class="card-search glass">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input class="card-search-input" id="dk-search-input" placeholder="搜索查岗回应字卡" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+      </div>
+      <div class="card-list" id="dk-list">
+        <!-- 联系人跨桌面查岗回应字卡由 JS 渲染 -->
       </div>
     </div>
 

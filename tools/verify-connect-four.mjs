@@ -250,6 +250,46 @@ r = J(await evalJs("(function(){return JSON.stringify({c4Hidden:document.getElem
 await evalJs("(function(){document.getElementById('poke-card').hidden=true;return true;})()");
 check('B8b 兄弟浮层打开时自动收起本面板（互斥兜底）', r.c4Hidden === true, JSON.stringify(r));
 
+// B10 难度选择：开始覆盖层有三档胶囊 + 切换后持久化 + 影响权重
+await evalJs("(function(){window.closeC4Panel();var s=window.__c4Debug.st();if(s){s.over=true;s.started=false;}window.openC4Panel();return true;})()");
+await sleep(150);
+r = J(await evalJs("(function(){var pills=Array.prototype.map.call(document.querySelectorAll('#c4-ov-body .ms-diff'),function(p){return p.getAttribute('data-diff')+(p.classList.contains('on')?'*':'');});var cur=document.getElementById('c4-cur');return JSON.stringify({pills:pills,cur:cur?cur.textContent:''});})()"));
+check('B10a 开始覆盖层有三档难度胶囊（休闲/日常/认真），日常默认选中', Array.isArray(r.pills) && r.pills.length === 3 && r.pills.indexOf('daily*') >= 0 && r.pills.indexOf('casual') >= 0 && r.pills.indexOf('serious') >= 0, JSON.stringify(r));
+// 切到认真 → 应持久化到 stats.lastDiff
+await evalJs("(function(){var p=document.querySelector('#c4-ov-body .ms-diff[data-diff=\"serious\"]');if(p)p.click();return true;})()");
+await sleep(80);
+r = J(await evalJs("(function(){var k=(window.activePrefix&&window.activePrefix()||'xy-home-v2')+':c4-stats';var s=JSON.parse(localStorage.getItem(k)||'{}');var on=document.querySelector('#c4-ov-body .ms-diff.on');var cur=document.getElementById('c4-cur');return JSON.stringify({lastDiff:s.lastDiff,on:on?on.getAttribute('data-diff'):'',cur:cur?cur.textContent:''});})()"));
+check('B10b 切到「认真」后持久化到 stats.lastDiff 且胶囊高亮/提示更新', r.lastDiff === 'serious' && r.on === 'serious' && /认真/.test(r.cur), JSON.stringify(r));
+// 认真档权重：rollMode 4000 次，serious 应 ≥40%（DIFFS.serious.w.serious=0.55）
+r = J(await evalJs("(function(){var c={normal:0,serious:0,sandbag:0,blunder:0};for(var i=0;i<4000;i++){c[window.__c4Debug.rollMode()]++;}return JSON.stringify(c);})()"));
+check('B10c 认真档 rollMode 权重偏向 serious（≥40%/4000）', r.serious >= 1600, JSON.stringify(r));
+// 切到休闲 → 权重应偏向 sandbag+blunder
+await evalJs("(function(){var p=document.querySelector('#c4-ov-body .ms-diff[data-diff=\"casual\"]');if(p)p.click();return true;})()");
+await sleep(80);
+r = J(await evalJs("(function(){var c={normal:0,serious:0,sandbag:0,blunder:0};for(var i=0;i<4000;i++){c[window.__c4Debug.rollMode()]++;}return JSON.stringify(c);})()"));
+check('B10d 休闲档 rollMode 权重偏向 sandbag+blunder（≥50%/4000）', (r.sandbag + r.blunder) >= 2000, JSON.stringify(r));
+// 重开面板应恢复上次选的难度（休闲）
+await evalJs("(function(){window.closeC4Panel();return true;})()");
+await sleep(120);
+await evalJs("(function(){window.openC4Panel();return true;})()");
+await sleep(150);
+r = J(await evalJs("(function(){var on=document.querySelector('#c4-ov-body .ms-diff.on');return JSON.stringify({on:on?on.getAttribute('data-diff'):''});})()"));
+check('B10e 关闭重开恢复上次难度（休闲）', r.on === 'casual', JSON.stringify(r));
+// 结束覆盖层也应有难度胶囊（再来一局前可换档）
+await evalJs("(function(){document.getElementById('c4-btn-start').click();return true;})()");
+await sleep(100);
+// 快速模式下一局打完
+await evalJs("(function(){window.__c4Debug.fast=true;return true;})()");
+for (let i = 0; i < 60; i++) {
+  const x = J(await evalJs("(function(){var s=window.__c4Debug.st();return JSON.stringify({over:s.over});})()"));
+  if (x.over) break;
+  await evalJs("(function(){var b=document.querySelectorAll('#c4-board .c4-col');if(b.length){b[Math.floor(Math.random()*b.length)].click();}return true;})()");
+  await sleep(60);
+}
+r = J(await evalJs("(function(){var ov=document.getElementById('c4-overlay');var pills=document.querySelectorAll('#c4-ov-body .ms-diff');return JSON.stringify({ovShown:!ov.hidden,pills:pills.length});})()"));
+check('B10f 结束覆盖层也显示难度胶囊（3 个）', r.ovShown === true && r.pills === 3, JSON.stringify(r));
+await evalJs("(function(){window.__c4Debug.fast=false;return true;})()");
+
 // 无 JS 异常
 const errs = J(await evalJs("(function(){return JSON.stringify(window.__jsErrors||[]);})()"));
 check('B9 全程无 JS 运行时异常', Array.isArray(errs) && errs.length === 0, JSON.stringify(errs));

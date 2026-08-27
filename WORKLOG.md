@@ -57,6 +57,12 @@
   - **⚠️ 顺带修复**：`verify-scroll-lock-ghost.mjs` jsFiles 漏了 device.js（v3.16 设备判定收口后 mobile-adapt 读不到 mochiDevice 整个 IIFE 提前 return → scrollLockInfo 未定义 → 9 项全挂），已同步 build.mjs 完整 jsFiles 列表恢复 9/9。此为该脚本维护滞后，与本轮改动无因果。
   - 真机确认点（红米 K80 Chrome）：①点聊天输入栏弹键盘，输入栏应停在键盘正上方不飞走、无灰条；②打字过程中屏幕稳定不闪跳；③收键盘后输入栏回底；④更多功能小功能面板输入框同场景回归。
 
+### 2026-08-27 13:3x（本会话·完成｜跨桌面「来消息」收口：开关改名+小字说明+跨桌面打电话）
+- [本会话·AI-A]（**在 13:2x 条目的基础上收口：①设置页开关改名「开启 联系人跨桌面查岗」+小字说明（.sub）；②新增跨桌面打电话——incoming-requests.js 加 kind:'call' 调度（非激活桌面按各自 call-incoming 概率 + records-call-last 独立冷却）、弹窗「小B 来电了」[接听/稍后]、接听切桌面→ensureTaName 兜底 TA 昵称→triggerIncomingCall（通话归属该桌面）+ 全局开关 desk-call-en（默认开，设置页第二行「开启 联系人跨桌面打电话」+小字，全桌面通）；contacts.js EXCLUDE 加 desk-call-en；.gitignore 移除 incoming-requests.js 忽略（功能已完成接入 build.mjs）**；已构建（13:25, sw: mochi-mtb2yzsw）+ 跨桌面来电专项 12/12；未提交）。
+  - **验证 12/12**：查岗/通话两开关行+文案+小字+默认开、手动触发 B 来电弹窗「小B 来电了」含「接听」、接听→切到 B→来电面板出现→名称=小B→状态对方来电、关闭通话开关后触发被拦截。
+  - **真机确认**：①设置页两个开关（查岗/打电话）都默认开、带小字说明；②其他桌面联系人弹窗来电，接听切过去进通话面板；③关闭开关后不再触发。
+  - **未提交清单（本会话增量）**：.gitignore、build.mjs、src/js/ck-question.js、src/js/contacts.js、新文件 src/js/incoming-requests.js、产物 index.html/sw.js/version.json。注意 chat.js/records.js/default-cards* 等主体的改动已被并行会话提交进 HEAD（git show HEAD 已含 addCareRecordFor/deskCk/deskcheck）。
+
 ### 2026-08-27 13:2x（本会话·完成｜跨桌面「来消息」弹窗功能：其他桌面联系人来查岗/求聊天 + 桌面查岗记录 + 字卡库新分组 + 全局开关）
 - [本会话·AI-A]（**已改 src/js/ck-question.js（新增 window.ckQuestionPickFor(cid) 按指定桌面抽题 + window.ckQuestionFire(q,cfg) 切桌面后当场发卡（带 deskCk 标记）+ ckLoadFrom 按指定 store 读题库）+ src/js/chat.js（window.__chatDbReady() 探针 + chatAddSystem/addIn 透传 deskCk + chatAskReply 桌面查岗卡回答后按 50% 概率从桌面查岗回应字卡池抽 1~5 张空格分隔作 TA 回应）+ src/js/reply-settings.js（window.replyCfgFor(cid) 跨桌面读回复设置）+ 新增 src/js/incoming-requests.js（跨桌面调度+全局根键 incoming-requests 队列+openModal 弹窗「现在回TA/稍后」+全局开关「桌面查岗」desk-checkin-en 默认开、设置页动态插入开关行、全桌面通）+ src/js/default-cards-data.js（新增 deskcheck 桌面查岗·回应 12 张预设卡）+ src/js/default-cards.js（FUNC_KEYS 加 deskcheck + 动态补 tab + getDeskCheckPool）+ src/js/records.js（window.addCareRecordFor(cid) 跨桌面写 records-care + renderCarePanel 新增「桌面查岗·联系人昵称·问题」聚合区块）+ src/js/contacts.js（EXCLUDE 加 incoming-requests/desk-checkin-en）+ build.mjs（jsFiles 加 incoming-requests.js）**；已构建（13:19, sw: mochi-mtb2p52e）+ 源码级临时 CDP 专项 20/20 + 主页显示 2/2 + 全局开关 9/9 + 构建产物开关可见可交互 7/7；未提交）。
   - **功能链路**：B 桌面联系人在你 A 桌面时按各自 ckq-*/as-* 设置触发查岗/求聊天 → 全局弹窗（标题=联系人昵称）→ 「现在回TA」切到 B + 进聊天，等 chatDbReady 后 TA 当场发查岗卡（可回答，带 deskCk 标记）；回答后按概率触发桌面查岗回应字卡（公用字卡 + 该桌面专属字卡合并）。查岗记录写进**该联系人自己桌面**的 records-care（kind=desk-checkin），主页「TA的关心」→「桌面查岗」按联系人聚合显示（🏠 桌面查岗 · 小B · 问题）。

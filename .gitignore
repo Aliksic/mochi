@@ -25,5 +25,3 @@ codebase-structure.md
 *.jpg
 memo-shot-*.png
 
-# 未完成功能（接入 build.mjs 前不提交）
-src/js/incoming-requests.js
