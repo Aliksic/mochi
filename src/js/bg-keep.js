@@ -1233,12 +1233,22 @@
   function psyncSyncStatus(state) {
     const el = document.getElementById('psync-status');
     if (!el) return;
-    if (!psyncSupported()) { el.textContent = '此浏览器不支持离线提醒（需安卓 Chromium 并添加到桌面）'; return; }
+    const isIOS = !!(window.mochiDevice || {}).isIOS;
+    if (!psyncSupported()) {
+      el.textContent = isIOS
+        ? '此浏览器不支持离线提醒（iPhone 只能靠系统通知/保活；安卓请用 Chrome/Edge，并把应用添加到主屏幕）'
+        : '此浏览器不支持离线提醒（请用安卓 Chrome/Edge，并把应用添加到主屏幕后重开此开关）';
+      return;
+    }
     if (!psyncEnabled()) { el.textContent = '已关闭 · 页面全关后不再收到 TA 的消息提醒'; return; }
-    if (!psyncStandalone()) { el.textContent = '需先把应用添加到手机桌面（安装为应用）才会调度'; return; }
-    if (state === 'denied') { el.textContent = '系统拒绝了后台调度权限，暂无法离线提醒'; return; }
+    if (!psyncStandalone()) { el.textContent = '需先添加到主屏生效：浏览器菜单「添加到主屏幕」，再从桌面图标打开本应用，然后重新打开此开关'; return; }
+    if (state === 'denied') { el.textContent = '系统拒绝了后台调度：请去 系统设置→应用→浏览器 里允许通知，并关闭「省电/后台清理」后重试'; return; }
+    if ('Notification' in window && Notification.permission !== 'granted') {
+      el.textContent = '已开启 · 还需允许系统通知（会弹授权，点「允许」才能收到提醒弹窗）';
+      return;
+    }
     let n = (typeof window.__psyncSnapCount === 'number') ? window.__psyncSnapCount : 0;
-    el.textContent = '已开启 · 待发文案 ' + n + ' 条 · 频率由系统决定（通常数小时一次），进程被杀仍收不到';
+    el.textContent = '已开启 · 待发文案 ' + n + ' 条 · 后台频率由系统定（约数小时一次）；收不到请检查：系统设置允许本浏览器通知，且不限制其后台运行/省电';
   }
   // 设置开关（全局键 psync-en，与保活/通知同款 gGet/gSet）
   const psBtn = document.getElementById('psync-en');

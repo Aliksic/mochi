@@ -7828,7 +7828,7 @@ transition-duration: .01ms !important;
       </div>
       <div class="splash-dots"><i></i><i></i><i></i></div>
       <div class="splash-brand">小红书@言序（1842523578）</div>
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787816280893">Mochi 字卡传讯 v3.6.267 · 部署于 2026-08-27 15:38</div>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787817876126">Mochi 字卡传讯 v3.6.268 · 部署于 2026-08-27 16:04</div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
       <div class="splash-loading" id="splash-loading">正在加载数据…</div>
@@ -8904,7 +8904,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.6.267</div>
+      <div class="ver">Mochi 字卡传讯 v3.6.268</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -9056,7 +9056,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.6.267</span>
+              <span class="lic-ver">v3.6.268</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -41147,12 +41147,22 @@ window.__psyncDrain = function (force) { return drainPsyncQueue(force === true);
 function psyncSyncStatus(state) {
 const el = document.getElementById('psync-status');
 if (!el) return;
-if (!psyncSupported()) { el.textContent = '此浏览器不支持离线提醒（需安卓 Chromium 并添加到桌面）'; return; }
+const isIOS = !!(window.mochiDevice || {}).isIOS;
+if (!psyncSupported()) {
+el.textContent = isIOS
+? '此浏览器不支持离线提醒（iPhone 只能靠系统通知/保活；安卓请用 Chrome/Edge，并把应用添加到主屏幕）'
+: '此浏览器不支持离线提醒（请用安卓 Chrome/Edge，并把应用添加到主屏幕后重开此开关）';
+return;
+}
 if (!psyncEnabled()) { el.textContent = '已关闭 · 页面全关后不再收到 TA 的消息提醒'; return; }
-if (!psyncStandalone()) { el.textContent = '需先把应用添加到手机桌面（安装为应用）才会调度'; return; }
-if (state === 'denied') { el.textContent = '系统拒绝了后台调度权限，暂无法离线提醒'; return; }
+if (!psyncStandalone()) { el.textContent = '需先添加到主屏生效：浏览器菜单「添加到主屏幕」，再从桌面图标打开本应用，然后重新打开此开关'; return; }
+if (state === 'denied') { el.textContent = '系统拒绝了后台调度：请去 系统设置→应用→浏览器 里允许通知，并关闭「省电/后台清理」后重试'; return; }
+if ('Notification' in window && Notification.permission !== 'granted') {
+el.textContent = '已开启 · 还需允许系统通知（会弹授权，点「允许」才能收到提醒弹窗）';
+return;
+}
 let n = (typeof window.__psyncSnapCount === 'number') ? window.__psyncSnapCount : 0;
-el.textContent = '已开启 · 待发文案 ' + n + ' 条 · 频率由系统决定（通常数小时一次），进程被杀仍收不到';
+el.textContent = '已开启 · 待发文案 ' + n + ' 条 · 后台频率由系统定（约数小时一次）；收不到请检查：系统设置允许本浏览器通知，且不限制其后台运行/省电';
 }
 const psBtn = document.getElementById('psync-en');
 function syncPsyncUI() { if (psBtn) psBtn.checked = psyncEnabled(); }
@@ -43168,6 +43178,7 @@ try {
 const o = owner || 'default';
 const s = window.storeFor(o);
 let v = s.get('feed-ta-avatar') || s.get('avatar-partner') || '';
+if (!v && o === 'default') v = store.get('feed-ta-avatar') || store.get('avatar-partner') || '';
 if (v && typeof v === 'string' && v.length > 500 * 1024) return '';
 return v || '';
 } catch (e) { return ''; }
@@ -43176,7 +43187,8 @@ function taFeedNameFor(owner) {
 try {
 const o = owner || 'default';
 const s = window.storeFor(o);
-const v = s.get('feed-ta-name') || s.get('lbl-partner') || '';
+let v = s.get('feed-ta-name') || s.get('lbl-partner') || '';
+if (!v && o === 'default') v = store.get('feed-ta-name') || store.get('lbl-partner') || '';
 if (v) return v;
 if (window.getContacts) {
 const c = window.getContacts().find(x => x.id === o);

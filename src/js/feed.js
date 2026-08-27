@@ -108,7 +108,12 @@
     try {
       const o = owner || 'default';
       const s = window.storeFor(o);
+      // v3.20.x：与 taFeedAv()/feedAllStore 渲染保持一致——default 联系人的朋友圈 TA
+      // 头像历史标准归属是根命名空间 store，storeFor('default') 读「default 桌面」会取不到，
+      // 导致「联系人发送朋友圈」的通知弹窗右侧不显示发布者头像（用户反馈）。未取到且为
+      // default 时补根键回退；非 default 联系人仍只读各自桌面，不串头像。
       let v = s.get('feed-ta-avatar') || s.get('avatar-partner') || '';
+      if (!v && o === 'default') v = store.get('feed-ta-avatar') || store.get('avatar-partner') || '';
       if (v && typeof v === 'string' && v.length > 500 * 1024) return '';
       return v || '';
     } catch (e) { return ''; }
@@ -118,7 +123,9 @@
     try {
       const o = owner || 'default';
       const s = window.storeFor(o);
-      const v = s.get('feed-ta-name') || s.get('lbl-partner') || '';
+      // v3.20.x：与 taFeedName() 一致补根键回退（default 联系人昵称历史在根命名空间）
+      let v = s.get('feed-ta-name') || s.get('lbl-partner') || '';
+      if (!v && o === 'default') v = store.get('feed-ta-name') || store.get('lbl-partner') || '';
       if (v) return v;
       // 回退：该联系人的注册名（联系人管理里设的名字），避免 lbl-partner 空时显示"TA"
       if (window.getContacts) {

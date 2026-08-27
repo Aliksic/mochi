@@ -38,7 +38,9 @@
     // v3.13.x：互动卡整体降频第二轮——五类卡加全局闸门（任一卡发出后 60 分钟内其余类型不再自动触发，
     // 见 ta-ask.js interactGateOk）+ 存量旧默认概率一次性迁移到 5%；本文件 ckq-prob 默认 8 保持不变，
     // ck-question.js 的兜底默认已从 15 对齐为 8
-    'ckq-en': 1, 'ckq-prob': 8, 'ckq-popup-prob': 70, 'ckq-cool': 30,
+    // v3.20.x：跨桌面查岗默认概率 8% → 2%（用户要求降低，含把已写盘的旧值 8 一并迁移为 2，
+    // 见文件尾的旧值迁移逻辑）
+    'ckq-en': 1, 'ckq-prob': 2, 'ckq-popup-prob': 70, 'ckq-cool': 30,
     // 信箱（星言信箱设置）
     // v3.5.99：最长写信/回信时间默认 480 分钟（8 小时）太久，容易让用户误以为 TA 不写信，改为 120 分钟
     // v3.6.x：默认最多字卡条数 100 → 50（信太长反而像刷屏）；新增最少字卡条数默认 20
@@ -367,4 +369,27 @@
       showPage('page-setting');
     });
   }
+  // v3.20.x：跨桌面查岗默认概率 8% → 2% 的旧值迁移——把已写盘的旧默认 8 强改成 2。
+  // 扫描全部桌面联系人（含默认桌面）的 reply-ckq-prob，只要精确等于旧默认 8 就改写为 2；
+  // 用户自己调过（非 8）的值不动，避免误伤自定义。挂载点放文件尾，依赖 getContacts/storeFor 已就绪。
+  function migrateCkqProbOld() {
+    try {
+      if (!window.getContacts || !window.storeFor) return;
+      const cids = [window.__activeCid || 'default'];
+      (window.getContacts() || []).forEach(c => { if (c.id && cids.indexOf(c.id) === -1) cids.push(c.id); });
+      let changed = false;
+      cids.forEach(cid => {
+        try {
+          const s = window.storeFor(cid);
+          if (!s) return;
+          const v = s.get('reply-ckq-prob');
+          if (String(v) === '8') { s.set('reply-ckq-prob', '2'); changed = true; }
+        } catch (e) {}
+      });
+      if (changed) {
+        try { if (window.console && console.log) console.log('[reply-settings] 已迁移跨桌面查岗旧概率 8→2'); } catch (e) {}
+      }
+    } catch (e) {}
+  }
+  migrateCkqProbOld();
 })();
