@@ -2276,6 +2276,15 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + env(safe-area-inset-bott
   box-shadow:0 2px 8px rgba(0,0,0,.18);
 }
 .sm-pb-play svg { width:19px; height:19px; }
+/* 播放队列角标（底部播放条「播放队列」按钮上的数量） */
+.sm-pb-btn .sm-pb-badge {
+  position:absolute; top:-4px; right:-4px; min-width:16px; height:16px;
+  padding:0 4px; border-radius:8px; background:var(--ink); color:#fff;
+  font-size:10px; font-weight:700; display:flex; align-items:center; justify-content:center;
+}
+.sm-pb-btn { position:relative; }
+/* 管理音乐弹窗快捷操作（下一首播放 / 加入播放列表） */
+.sm-quick-actions { display:flex; gap:8px; }
 /* 悬浮小框 */
 .sm-float {
   position:fixed; left:12px; top:80px; z-index:9999;

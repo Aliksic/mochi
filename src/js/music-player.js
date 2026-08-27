@@ -33,7 +33,7 @@
   // v3.14.x：梦角主动控制概率可调——taNextProb/taRandProb/taModeProb=歌曲播完时
   // 梦角接动作（切下一首/随机挑一首/换播放模式）的概率；taFavProb=我播放歌曲时
   // 联系人把歌收进「TA的收藏」的概率。默认值与原硬编码行为一致（15/10/5）。
-  const DEF_SETTINGS = { floatEn: true, reqProb: 5, cooldownMs: 600000, widgetCoverMode: 'song', taNextProb: 15, taRandProb: 10, taModeProb: 5, taFavProb: 20 };
+  const DEF_SETTINGS = { floatEn: true, reqProb: 5, cooldownMs: 600000, widgetCoverMode: 'song', taNextProb: 15, taRandProb: 10, taModeProb: 5, taFavProb: 20, taReserveProb: 6 };
   let settings = Object.assign({}, DEF_SETTINGS);
   // 概率取值兜底：非数字/越界时回退默认值并夹在 0~100
   function probOf(v, def) { const n = (typeof v === 'number' && !isNaN(v)) ? v : def; return Math.max(0, Math.min(100, n)); }
@@ -46,6 +46,7 @@
   let cooldownAt = 0;        // TA 音乐请求冷却时间戳
   let reqData = null;        // 待确认的 TA 请求 {trackId}
   let curTab = 'lib';
+  let playQueue = [];        // 播放队列：用户点「下一首播放」加入的歌曲 id 列表，播完当前手动/自动切歌时优先按序播放
 
   function loadArr(k) { try { const v = JSON.parse(store.get(k) || 'null'); return Array.isArray(v) ? v : []; } catch(e){ return []; } }
   function saveArr(k, a) { store.set(k, JSON.stringify(a)); }
@@ -2217,6 +2218,8 @@
     if (endedHandled) return;
     endedHandled = true;
     revokeObjectUrl();
+    // v3.x：播放队列优先——用户排好「下一首」时直接按序切，TA 不抢播
+    if (playQueue.length) { next(); return; }
     let handled = false;
     try { handled = maybeTAAutoAction(); } catch(e) {}
     if (!handled) next();
@@ -2471,7 +2474,68 @@
     if (!list.length) list = library.slice();
     return list;
   }
+  // ================= 播放队列（下一首播放） =================
+  function addToQueue(id) {
+    const m = findTrack(id);
+    if (!m) return;
+    if (playQueue.indexOf(id) >= 0) { toast('这首歌已在播放队列'); return; }
+    if (currentId === id) { toast('这就是正在播放的歌'); return; }
+    playQueue.push(id);
+    renderQueueBadge();
+  }
+  function renderQueueBadge() {
+    const btn = document.getElementById('sm-queue');
+    if (!btn) return;
+    let b = btn.querySelector('.sm-pb-badge');
+    if (!b) { b = document.createElement('span'); b.className = 'sm-pb-badge'; btn.appendChild(b); }
+    b.textContent = playQueue.length ? String(playQueue.length) : '';
+    b.hidden = !playQueue.length;
+  }
+  function openQueuePanel() {
+    if (!window.openTCPanel) return;
+    let rows = playQueue.map(id => {
+      const m = findTrack(id);
+      if (!m) return '';
+      return '<div class="sm-song" data-qid="' + id + '">' + songIcoHtml(m) +
+        '<div class="sm-song-info"><div class="sm-song-name">' + esc(m.name || '未知歌曲') + '</div>' +
+        '<div class="sm-song-sub">' + esc(m.artist || '未知歌手') + '</div></div>' +
+        '<button class="sm-song-more" data-qrm="' + id + '" title="移除"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg></button></div>';
+    }).join('');
+    if (!playQueue.length) rows = '<div class="sm-req-hint" style="padding:8px 0">播放队列为空——在歌曲上点「⋯」选「下一首播放」即可加入</div>';
+    window.openTCPanel('播放队列 (' + playQueue.length + ')', rows +
+      '<div class="mail-actions">' +
+      (playQueue.length ? '<button class="cc-tool" id="sm-q-clear">清空队列</button>' : '') +
+      '<button class="cc-tool" id="sm-q-close">关闭</button></div>');
+    document.getElementById('sm-q-close').addEventListener('click', function () { document.getElementById('tc-mask').hidden = true; });
+    const clr = document.getElementById('sm-q-clear');
+    if (clr) clr.addEventListener('click', function () { playQueue = []; renderQueueBadge(); toast('已清空播放队列'); openQueuePanel(); });
+    // 点整行＝立刻播放并从队列移除；点 × 仅移除
+    document.querySelectorAll('#tc-body .sm-song[data-qid]').forEach(function (row) {
+      row.addEventListener('click', function (e) {
+        if (e.target.closest('[data-qrm]')) return;
+        const id = row.dataset.qid;
+        playQueue = playQueue.filter(function (x) { return x !== id; });
+        renderQueueBadge();
+        document.getElementById('tc-mask').hidden = true;
+        playTrack(id);
+      });
+    });
+    document.querySelectorAll('#tc-body [data-qrm]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        playQueue = playQueue.filter(function (x) { return x !== btn.dataset.qrm; });
+        renderQueueBadge();
+        openQueuePanel();
+      });
+    });
+  }
   function next() {
+    // v3.x：播放队列优先——用户点「下一首播放」加入的歌先播，逐首弹出直至清空，
+    // 才回到按播放模式切歌。队列里的歌被删则跳过继续取下一首。
+    while (playQueue.length) {
+      const qid = playQueue.shift();
+      if (findTrack(qid)) { playTrack(qid); return; }
+    }
+    renderQueueBadge();
     const list = playableList();
     if (!list.length) return;
     let idx = list.findIndex(x => x.id === currentId);
@@ -2536,6 +2600,7 @@
     document.getElementById('sm-pb-cur').textContent = '00:00';
     syncPlayIcons(audio && !audio.paused);
     updateModeIcon();
+    renderQueueBadge();
     // 桌面小部件同步
     const wSong = document.getElementById('mw-song');
     const wArtist = document.getElementById('mw-artist');
@@ -2850,6 +2915,10 @@
     if (!window.openTCPanel) return;
     const plOpts = playlists.map(p => '<option value="' + p.id + '"' + (m.playlistId === p.id ? ' selected' : '') + '>' + esc(p.name) + '</option>').join('');
     window.openTCPanel('管理音乐', '' +
+      '<div class="sm-fld"><label>快捷操作</label><div class="sm-quick-actions">' +
+      '<button class="cc-tool" id="sm-e-qnext">下一首播放</button>' +
+      '<button class="cc-tool" id="sm-e-qpl">加入播放列表</button>' +
+      '</div></div>' +
       // v3.6.x：回填值做属性级转义——歌名/歌手含 " 会提前闭合 value 属性破坏表单（esc 只转义 <）
       '<div class="sm-fld"><label>歌曲名称</label><input class="tc-input" id="sm-e-name" value="' + String(m.name || '').replace(/"/g, '&quot;').replace(/</g, '&lt;') + '"></div>' +
       '<div class="sm-fld"><label>歌手</label><input class="tc-input" id="sm-e-artist" value="' + String(m.artist || '').replace(/"/g, '&quot;').replace(/</g, '&lt;') + '"></div>' +
@@ -2897,6 +2966,28 @@
       toast('已清除封面');
     });
     document.getElementById('sm-e-cancel').addEventListener('click', () => { document.getElementById('tc-mask').hidden = true; });
+    // v3.x：快捷操作——下一首播放（加入播放队列）/ 加入播放列表（移动到所选歌单）
+    const qnext = document.getElementById('sm-e-qnext');
+    if (qnext) qnext.addEventListener('click', () => {
+      addToQueue(id);
+      document.getElementById('tc-mask').hidden = true;
+      toast('已加入播放队列，播完当前将播放');
+    });
+    const qpl = document.getElementById('sm-e-qpl');
+    if (qpl) qpl.addEventListener('click', () => {
+      if (!window.openTCPanel) return;
+      const opts = playlists.map(p => '<option value="' + p.id + '">' + esc(p.name) + '</option>').join('');
+      window.openTCPanel('加入播放列表', '<div class="sm-fld"><label>选择歌单</label><select class="tc-input" id="sm-qpl-sel"><option value="default">我的音乐库</option>' + opts + '</select></div>' +
+        '<div class="mail-actions"><button class="cc-tool" id="sm-qpl-cancel">取消</button><button class="cc-tool" id="sm-qpl-ok">加入</button></div>');
+      document.getElementById('sm-qpl-cancel').addEventListener('click', () => { document.getElementById('tc-mask').hidden = true; });
+      document.getElementById('sm-qpl-ok').addEventListener('click', () => {
+        m.playlistId = document.getElementById('sm-qpl-sel').value;
+        saveLibrary();
+        document.getElementById('tc-mask').hidden = true;
+        renderPage();
+        toast('已加入播放列表');
+      });
+    });
     document.getElementById('sm-e-ok').addEventListener('click', () => {
       m.name = (document.getElementById('sm-e-name').value || '').trim() || m.name;
       m.artist = (document.getElementById('sm-e-artist').value || '').trim();
@@ -2940,29 +3031,37 @@
       console.log('[music-req] called', { libLen: library.length, cooldownAt: cooldownAt, cooldownMs: settings.cooldownMs, reqProb: settings.reqProb, prob: prob, now: Date.now() });
       if (!library.length) { console.log('[music-req] return: library empty'); return; }
       const now = Date.now();
-      if (now - cooldownAt < settings.cooldownMs) { console.log('[music-req] return: cooldown', { remain: settings.cooldownMs - (now - cooldownAt) }); return; }
-      if (Math.random() * 100 >= prob) { console.log('[music-req] return: prob miss', { prob: prob }); return; }
-      console.log('[music-req] TRIGGER');
-      cooldownAt = now;
+      const cooling = now - cooldownAt < settings.cooldownMs;
+      // v3.x：「一起去听」请求（弹窗）——触发后直接 return，同一次调用不再判断「预订下一首」
+      if (!cooling) {
+        const prob = (typeof settings.reqProb === 'number' ? settings.reqProb : 5);
+        if (Math.random() * 100 < prob) {
+          console.log('[music-req] TRIGGER');
+          cooldownAt = now;
       const candidates = library.slice();
       if (!candidates.length) return;
       const track = candidates[Math.floor(Math.random() * candidates.length)];
       // 多桌面：弹窗期间切换联系人后点按钮会把接受/拒绝写到新桌面 → 捕获 cid 校验
       const myCid = window.__activeCid || 'default';
-      reqData = { trackId: track.id };
+      // v3.x：正有音乐在播时，邀请语义＝「切换去听这首歌」；无播放时＝「开始一起听这首歌」
+      const switching = !!currentId;
+      reqData = { trackId: track.id, switching: switching };
       taActive = true;
       const name = partnerName();
       const trackName = track.name || '未知歌曲';
       const artist = track.artist ? ' - ' + track.artist : '';
-      if (window.chatAddSystem) window.chatAddSystem(name + ' 想和你一起听《' + trackName + '》' + artist);
+      const askMsg = switching
+        ? name + ' 想邀请你切换到《' + trackName + '》' + artist
+        : name + ' 想和你一起听《' + trackName + '》' + artist;
+      if (window.chatAddSystem) window.chatAddSystem(askMsg);
       if (window.openTCPanel) {
         window.openTCPanel('音乐', '' +
           '<div class="sm-req">' +
           '<div class="sm-req-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>' +
-          '<div class="sm-req-hint">' + (window.taFit ? window.taFit(name + ' 想和你一起听：') : (name + ' 想和你一起听：')) + '</div>' +
+          '<div class="sm-req-hint">' + (window.taFit ? window.taFit(name + (switching ? ' 想邀请你切到这首歌：' : ' 想和你一起听：')) : (name + (switching ? ' 想邀请你切到这首歌：' : ' 想和你一起听：'))) + '</div>' +
           '<div class="sm-req-name">《' + esc(trackName) + '》</div>' +
           '</div>' +
-          '<div class="mail-actions"><button class="cc-tool" id="sm-req-no">稍后</button><button class="cc-tool" id="sm-req-yes">一起听</button></div>');
+          '<div class="mail-actions"><button class="cc-tool" id="sm-req-no">稍后</button><button class="cc-tool" id="sm-req-yes">' + (switching ? '切过去' : '一起听') + '</button></div>');
         document.getElementById('sm-req-no').addEventListener('click', () => {
           document.getElementById('tc-mask').hidden = true;
           if ((window.__activeCid || 'default') !== myCid) { reqData = null; return; }
@@ -2977,13 +3076,41 @@
           document.getElementById('tc-mask').hidden = true;
           if ((window.__activeCid || 'default') !== myCid) { reqData = null; return; }
           if (!reqData) return;
+          const switchNow = !!reqData.switching;
           playTrack(reqData.trackId);
           addRecord(reqData.trackId, '接受了 TA 的听歌邀请');
-          if (window.chatAddSystem) window.chatAddSystem('你接受了 ' + name + ' 的听歌邀请，一起听《' + (track.name || '未知歌曲') + '》');
+          const accMsg = switchNow
+            ? '你接受了邀请，已切换到《' + (track.name || '未知歌曲') + '》'
+            : '你接受了 ' + name + ' 的听歌邀请，一起听《' + (track.name || '未知歌曲') + '》';
+          if (window.chatAddSystem) window.chatAddSystem(accMsg);
           reqData = null;
           toast('开始播放');
         });
       }
+        return; // 「一起去听」已触发，本次调用不再判断「预订下一首」
+      }
+    }
+    // v3.x：「预订下一首」——聊天中 TA 按独立概率把一首歌排进播放队列并发系统消息；
+    // 与「一起去听」共用冷却（同一冷却窗内互斥，任一生效即进入冷却，不会同一条消息里同时发生）
+    const rProb = probOf(settings.taReserveProb, 6);
+    if (!(now - cooldownAt < settings.cooldownMs) && Math.random() * 100 < rProb && library.length) {
+      // 挑一首「既没在播、也不在播放队列」的歌作为下一首目标（重试若干次）
+      let candidate = null;
+      for (let i = 0; i < 8; i++) {
+        const c = library[Math.floor(Math.random() * library.length)];
+        if (c && c.id !== currentId && playQueue.indexOf(c.id) < 0) { candidate = c; break; }
+      }
+      if (candidate) {
+        cooldownAt = now;
+        playQueue.push(candidate.id);
+        renderQueueBadge();
+        const name = partnerName();
+        const trackName = candidate.name || '未知歌曲';
+        const artist = candidate.artist ? ' - ' + candidate.artist : '';
+        if (window.chatAddSystem) window.chatAddSystem(name + ' 预订了下一首要听的歌：《' + trackName + '》' + artist);
+        addRecord(candidate.id, 'TA 预订了下一首');
+      }
+    }
     } catch (e) {}
   };
   // 歌曲结束：TA 可能接动作（切歌/随机/换模式）
@@ -3117,6 +3244,8 @@
       '<div class="gs-row"><span>请求冷却时间</span><select class="tc-input" id="sm-set-cool" style="width:110px">' + cooldownOpts + '</select></div>' +
       '<div class="gs-row"><span>桌面小组件封面</span><select class="tc-input" id="sm-set-wcov" style="width:120px"><option value="song"' + (settings.widgetCoverMode !== 'playlist' ? ' selected' : '') + '>歌曲封面</option><option value="playlist"' + (settings.widgetCoverMode === 'playlist' ? ' selected' : '') + '>歌单封面</option></select></div>' +
       '<div class="sm-set-hint">聊天过程中 TA 会按概率请求和你一起听歌；播放时右上角出现可拖动的悬浮小框</div>' +
+      '<div class="gs-row"><span>预订下一首概率</span><div class="stepper" id="sm-set-reserve" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="sm-set-reserve-val" readonly><button class="stp-max">+</button></div></div>' +
+      '<div class="sm-set-hint">聊天过程中 TA 有概率「预订」下一首要播的音乐：把这首歌排进播放队列（底部播放条的「播放队列」里可见），并在聊天里发送系统消息；被预订的歌会按你排的顺序先播（设 0 = TA 从不预订下一首）</div>' +
       '<div class="gs-row"><span>歌曲播完·切下一首概率</span><div class="stepper" id="sm-set-next" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="sm-set-next-val" readonly><button class="stp-max">+</button></div></div>' +
       '<div class="gs-row"><span>歌曲播完·随机挑歌概率</span><div class="stepper" id="sm-set-rand" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="sm-set-rand-val" readonly><button class="stp-max">+</button></div></div>' +
       '<div class="gs-row"><span>歌曲播完·换播放模式概率</span><div class="stepper" id="sm-set-modep" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="sm-set-modep-val" readonly><button class="stp-max">+</button></div></div>' +
@@ -3175,6 +3304,7 @@
       });
     };
     bindProbStep('sm-set-prob', 'reqProb', 5, 30);
+    bindProbStep('sm-set-reserve', 'taReserveProb', 6, 100);
     bindProbStep('sm-set-next', 'taNextProb', 15, 100);
     bindProbStep('sm-set-rand', 'taRandProb', 10, 100);
     bindProbStep('sm-set-modep', 'taModeProb', 5, 100);
@@ -3320,6 +3450,8 @@
   if (prevBtn) prevBtn.addEventListener('click', prev);
   const nextBtn = document.getElementById('sm-next');
   if (nextBtn) nextBtn.addEventListener('click', next);
+  const queueBtn = document.getElementById('sm-queue');
+  if (queueBtn) queueBtn.addEventListener('click', openQueuePanel);
   // 悬浮小框控制
   const fPlay = document.getElementById('sm-f-play');
   if (fPlay) fPlay.addEventListener('click', toggle);

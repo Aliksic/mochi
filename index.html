@@ -4251,6 +4251,13 @@ display:flex; align-items:center; justify-content:center; cursor:pointer; paddin
 box-shadow:0 2px 8px rgba(0,0,0,.18);
 }
 .sm-pb-play svg { width:19px; height:19px; }
+.sm-pb-btn .sm-pb-badge {
+position:absolute; top:-4px; right:-4px; min-width:16px; height:16px;
+padding:0 4px; border-radius:8px; background:var(--ink); color:#fff;
+font-size:10px; font-weight:700; display:flex; align-items:center; justify-content:center;
+}
+.sm-pb-btn { position:relative; }
+.sm-quick-actions { display:flex; gap:8px; }
 .sm-float {
 position:fixed; left:12px; top:80px; z-index:9999;
 width:210px; padding:9px 10px; background:rgba(255,255,255,.97);
@@ -7835,7 +7842,7 @@ transition-duration: .01ms !important;
       </div>
       <div class="splash-dots"><i></i><i></i><i></i></div>
       <div class="splash-brand">小红书@言序（1842523578）</div>
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787837158772">Mochi 字卡传讯 v3.6.271 · 部署于 2026-08-27 21:25</div>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787838112410">Mochi 字卡传讯 v3.6.272 · 部署于 2026-08-27 21:41</div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
       <div class="splash-loading" id="splash-loading">正在加载数据…</div>
@@ -8911,7 +8918,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.6.271</div>
+      <div class="ver">Mochi 字卡传讯 v3.6.272</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -9063,7 +9070,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.6.271</span>
+              <span class="lic-ver">v3.6.272</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -10420,6 +10427,9 @@ transition-duration: .01ms !important;
           </button>
           <button class="sm-pb-btn" id="sm-pb-heart" title="收藏">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.5S4.5 15.2 4.5 9.9A4.9 4.9 0 0112 7.1a4.9 4.9 0 017.5 2.8c0 5.3-7.5 10.6-7.5 10.6z"/></svg>
+          </button>
+          <button class="sm-pb-btn" id="sm-queue" title="播放队列">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h13M3 12h13M3 18h7"/><path d="M18 15l3-3"/><path d="M15 21l3-3 3 3"/></svg>
           </button>
         </div>
       </div>
@@ -31189,7 +31199,7 @@ let playlists = [];        // {id,name,createdAt}
 let history = [];          // {id,trackId,trackName,triggerType,ts} —— TA 邀请听歌记录
 let myHistory = [];        // {id,trackId,trackName,ts} —— 我的听歌记录（自己点击播放）
 let hisSubTab = 'ta';      // 听歌记录二级子 tab：ta（TA 邀请）/ mine（我的）；默认 ta 与原 tab 语义一致
-const DEF_SETTINGS = { floatEn: true, reqProb: 5, cooldownMs: 600000, widgetCoverMode: 'song', taNextProb: 15, taRandProb: 10, taModeProb: 5, taFavProb: 20 };
+const DEF_SETTINGS = { floatEn: true, reqProb: 5, cooldownMs: 600000, widgetCoverMode: 'song', taNextProb: 15, taRandProb: 10, taModeProb: 5, taFavProb: 20, taReserveProb: 6 };
 let settings = Object.assign({}, DEF_SETTINGS);
 function probOf(v, def) { const n = (typeof v === 'number' && !isNaN(v)) ? v : def; return Math.max(0, Math.min(100, n)); }
 let currentId = null;
@@ -31201,6 +31211,7 @@ let taActive = false;      // TA 请求过一起听歌后置 true，歌曲结束
 let cooldownAt = 0;        // TA 音乐请求冷却时间戳
 let reqData = null;        // 待确认的 TA 请求 {trackId}
 let curTab = 'lib';
+let playQueue = [];        // 播放队列：用户点「下一首播放」加入的歌曲 id 列表，播完当前手动/自动切歌时优先按序播放
 function loadArr(k) { try { const v = JSON.parse(store.get(k) || 'null'); return Array.isArray(v) ? v : []; } catch(e){ return []; } }
 function saveArr(k, a) { store.set(k, JSON.stringify(a)); }
 function partnerName() { return window.activeStore().get('lbl-partner') || 'TA'; }
@@ -33039,6 +33050,7 @@ function handleEnded() {
 if (endedHandled) return;
 endedHandled = true;
 revokeObjectUrl();
+if (playQueue.length) { next(); return; }
 let handled = false;
 try { handled = maybeTAAutoAction(); } catch(e) {}
 if (!handled) next();
@@ -33252,7 +33264,64 @@ let list = library.filter(x => x.playlistId === (m ? m.playlistId : 'default'));
 if (!list.length) list = library.slice();
 return list;
 }
+function addToQueue(id) {
+const m = findTrack(id);
+if (!m) return;
+if (playQueue.indexOf(id) >= 0) { toast('这首歌已在播放队列'); return; }
+if (currentId === id) { toast('这就是正在播放的歌'); return; }
+playQueue.push(id);
+renderQueueBadge();
+}
+function renderQueueBadge() {
+const btn = document.getElementById('sm-queue');
+if (!btn) return;
+let b = btn.querySelector('.sm-pb-badge');
+if (!b) { b = document.createElement('span'); b.className = 'sm-pb-badge'; btn.appendChild(b); }
+b.textContent = playQueue.length ? String(playQueue.length) : '';
+b.hidden = !playQueue.length;
+}
+function openQueuePanel() {
+if (!window.openTCPanel) return;
+let rows = playQueue.map(id => {
+const m = findTrack(id);
+if (!m) return '';
+return '<div class="sm-song" data-qid="' + id + '">' + songIcoHtml(m) +
+'<div class="sm-song-info"><div class="sm-song-name">' + esc(m.name || '未知歌曲') + '</div>' +
+'<div class="sm-song-sub">' + esc(m.artist || '未知歌手') + '</div></div>' +
+'<button class="sm-song-more" data-qrm="' + id + '" title="移除"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg></button></div>';
+}).join('');
+if (!playQueue.length) rows = '<div class="sm-req-hint" style="padding:8px 0">播放队列为空——在歌曲上点「⋯」选「下一首播放」即可加入</div>';
+window.openTCPanel('播放队列 (' + playQueue.length + ')', rows +
+'<div class="mail-actions">' +
+(playQueue.length ? '<button class="cc-tool" id="sm-q-clear">清空队列</button>' : '') +
+'<button class="cc-tool" id="sm-q-close">关闭</button></div>');
+document.getElementById('sm-q-close').addEventListener('click', function () { document.getElementById('tc-mask').hidden = true; });
+const clr = document.getElementById('sm-q-clear');
+if (clr) clr.addEventListener('click', function () { playQueue = []; renderQueueBadge(); toast('已清空播放队列'); openQueuePanel(); });
+document.querySelectorAll('#tc-body .sm-song[data-qid]').forEach(function (row) {
+row.addEventListener('click', function (e) {
+if (e.target.closest('[data-qrm]')) return;
+const id = row.dataset.qid;
+playQueue = playQueue.filter(function (x) { return x !== id; });
+renderQueueBadge();
+document.getElementById('tc-mask').hidden = true;
+playTrack(id);
+});
+});
+document.querySelectorAll('#tc-body [data-qrm]').forEach(function (btn) {
+btn.addEventListener('click', function () {
+playQueue = playQueue.filter(function (x) { return x !== btn.dataset.qrm; });
+renderQueueBadge();
+openQueuePanel();
+});
+});
+}
 function next() {
+while (playQueue.length) {
+const qid = playQueue.shift();
+if (findTrack(qid)) { playTrack(qid); return; }
+}
+renderQueueBadge();
 const list = playableList();
 if (!list.length) return;
 let idx = list.findIndex(x => x.id === currentId);
@@ -33315,6 +33384,7 @@ document.getElementById('sm-pb-dur').textContent = fmtDur(m.duration);
 document.getElementById('sm-pb-cur').textContent = '00:00';
 syncPlayIcons(audio && !audio.paused);
 updateModeIcon();
+renderQueueBadge();
 const wSong = document.getElementById('mw-song');
 const wArtist = document.getElementById('mw-artist');
 if (wSong) wSong.textContent = m.name || '未知歌曲';
@@ -33594,6 +33664,10 @@ if (!m) return;
 if (!window.openTCPanel) return;
 const plOpts = playlists.map(p => '<option value="' + p.id + '"' + (m.playlistId === p.id ? ' selected' : '') + '>' + esc(p.name) + '</option>').join('');
 window.openTCPanel('管理音乐', '' +
+'<div class="sm-fld"><label>快捷操作</label><div class="sm-quick-actions">' +
+'<button class="cc-tool" id="sm-e-qnext">下一首播放</button>' +
+'<button class="cc-tool" id="sm-e-qpl">加入播放列表</button>' +
+'</div></div>' +
 '<div class="sm-fld"><label>歌曲名称</label><input class="tc-input" id="sm-e-name" value="' + String(m.name || '').replace(/"/g, '&quot;').replace(/</g, '&lt;') + '"></div>' +
 '<div class="sm-fld"><label>歌手</label><input class="tc-input" id="sm-e-artist" value="' + String(m.artist || '').replace(/"/g, '&quot;').replace(/</g, '&lt;') + '"></div>' +
 '<div class="sm-fld"><label>所属歌单</label><select class="tc-input" id="sm-e-pl"><option value="default">我的音乐库</option>' + plOpts + '</select></div>' +
@@ -33639,6 +33713,27 @@ covClear.hidden = true;
 toast('已清除封面');
 });
 document.getElementById('sm-e-cancel').addEventListener('click', () => { document.getElementById('tc-mask').hidden = true; });
+const qnext = document.getElementById('sm-e-qnext');
+if (qnext) qnext.addEventListener('click', () => {
+addToQueue(id);
+document.getElementById('tc-mask').hidden = true;
+toast('已加入播放队列，播完当前将播放');
+});
+const qpl = document.getElementById('sm-e-qpl');
+if (qpl) qpl.addEventListener('click', () => {
+if (!window.openTCPanel) return;
+const opts = playlists.map(p => '<option value="' + p.id + '">' + esc(p.name) + '</option>').join('');
+window.openTCPanel('加入播放列表', '<div class="sm-fld"><label>选择歌单</label><select class="tc-input" id="sm-qpl-sel"><option value="default">我的音乐库</option>' + opts + '</select></div>' +
+'<div class="mail-actions"><button class="cc-tool" id="sm-qpl-cancel">取消</button><button class="cc-tool" id="sm-qpl-ok">加入</button></div>');
+document.getElementById('sm-qpl-cancel').addEventListener('click', () => { document.getElementById('tc-mask').hidden = true; });
+document.getElementById('sm-qpl-ok').addEventListener('click', () => {
+m.playlistId = document.getElementById('sm-qpl-sel').value;
+saveLibrary();
+document.getElementById('tc-mask').hidden = true;
+renderPage();
+toast('已加入播放列表');
+});
+});
 document.getElementById('sm-e-ok').addEventListener('click', () => {
 m.name = (document.getElementById('sm-e-name').value || '').trim() || m.name;
 m.artist = (document.getElementById('sm-e-artist').value || '').trim();
@@ -33675,28 +33770,34 @@ const prob = (typeof settings.reqProb === 'number' ? settings.reqProb : 5);
 console.log('[music-req] called', { libLen: library.length, cooldownAt: cooldownAt, cooldownMs: settings.cooldownMs, reqProb: settings.reqProb, prob: prob, now: Date.now() });
 if (!library.length) { console.log('[music-req] return: library empty'); return; }
 const now = Date.now();
-if (now - cooldownAt < settings.cooldownMs) { console.log('[music-req] return: cooldown', { remain: settings.cooldownMs - (now - cooldownAt) }); return; }
-if (Math.random() * 100 >= prob) { console.log('[music-req] return: prob miss', { prob: prob }); return; }
+const cooling = now - cooldownAt < settings.cooldownMs;
+if (!cooling) {
+const prob = (typeof settings.reqProb === 'number' ? settings.reqProb : 5);
+if (Math.random() * 100 < prob) {
 console.log('[music-req] TRIGGER');
 cooldownAt = now;
 const candidates = library.slice();
 if (!candidates.length) return;
 const track = candidates[Math.floor(Math.random() * candidates.length)];
 const myCid = window.__activeCid || 'default';
-reqData = { trackId: track.id };
+const switching = !!currentId;
+reqData = { trackId: track.id, switching: switching };
 taActive = true;
 const name = partnerName();
 const trackName = track.name || '未知歌曲';
 const artist = track.artist ? ' - ' + track.artist : '';
-if (window.chatAddSystem) window.chatAddSystem(name + ' 想和你一起听《' + trackName + '》' + artist);
+const askMsg = switching
+? name + ' 想邀请你切换到《' + trackName + '》' + artist
+: name + ' 想和你一起听《' + trackName + '》' + artist;
+if (window.chatAddSystem) window.chatAddSystem(askMsg);
 if (window.openTCPanel) {
 window.openTCPanel('音乐', '' +
 '<div class="sm-req">' +
 '<div class="sm-req-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>' +
-'<div class="sm-req-hint">' + (window.taFit ? window.taFit(name + ' 想和你一起听：') : (name + ' 想和你一起听：')) + '</div>' +
+'<div class="sm-req-hint">' + (window.taFit ? window.taFit(name + (switching ? ' 想邀请你切到这首歌：' : ' 想和你一起听：')) : (name + (switching ? ' 想邀请你切到这首歌：' : ' 想和你一起听：'))) + '</div>' +
 '<div class="sm-req-name">《' + esc(trackName) + '》</div>' +
 '</div>' +
-'<div class="mail-actions"><button class="cc-tool" id="sm-req-no">稍后</button><button class="cc-tool" id="sm-req-yes">一起听</button></div>');
+'<div class="mail-actions"><button class="cc-tool" id="sm-req-no">稍后</button><button class="cc-tool" id="sm-req-yes">' + (switching ? '切过去' : '一起听') + '</button></div>');
 document.getElementById('sm-req-no').addEventListener('click', () => {
 document.getElementById('tc-mask').hidden = true;
 if ((window.__activeCid || 'default') !== myCid) { reqData = null; return; }
@@ -33710,12 +33811,37 @@ document.getElementById('sm-req-yes').addEventListener('click', () => {
 document.getElementById('tc-mask').hidden = true;
 if ((window.__activeCid || 'default') !== myCid) { reqData = null; return; }
 if (!reqData) return;
+const switchNow = !!reqData.switching;
 playTrack(reqData.trackId);
 addRecord(reqData.trackId, '接受了 TA 的听歌邀请');
-if (window.chatAddSystem) window.chatAddSystem('你接受了 ' + name + ' 的听歌邀请，一起听《' + (track.name || '未知歌曲') + '》');
+const accMsg = switchNow
+? '你接受了邀请，已切换到《' + (track.name || '未知歌曲') + '》'
+: '你接受了 ' + name + ' 的听歌邀请，一起听《' + (track.name || '未知歌曲') + '》';
+if (window.chatAddSystem) window.chatAddSystem(accMsg);
 reqData = null;
 toast('开始播放');
 });
+}
+return; // 「一起去听」已触发，本次调用不再判断「预订下一首」
+}
+}
+const rProb = probOf(settings.taReserveProb, 6);
+if (!(now - cooldownAt < settings.cooldownMs) && Math.random() * 100 < rProb && library.length) {
+let candidate = null;
+for (let i = 0; i < 8; i++) {
+const c = library[Math.floor(Math.random() * library.length)];
+if (c && c.id !== currentId && playQueue.indexOf(c.id) < 0) { candidate = c; break; }
+}
+if (candidate) {
+cooldownAt = now;
+playQueue.push(candidate.id);
+renderQueueBadge();
+const name = partnerName();
+const trackName = candidate.name || '未知歌曲';
+const artist = candidate.artist ? ' - ' + candidate.artist : '';
+if (window.chatAddSystem) window.chatAddSystem(name + ' 预订了下一首要听的歌：《' + trackName + '》' + artist);
+addRecord(candidate.id, 'TA 预订了下一首');
+}
 }
 } catch (e) {}
 };
@@ -33835,6 +33961,8 @@ window.openTCPanel('音乐设置', '' +
 '<div class="gs-row"><span>请求冷却时间</span><select class="tc-input" id="sm-set-cool" style="width:110px">' + cooldownOpts + '</select></div>' +
 '<div class="gs-row"><span>桌面小组件封面</span><select class="tc-input" id="sm-set-wcov" style="width:120px"><option value="song"' + (settings.widgetCoverMode !== 'playlist' ? ' selected' : '') + '>歌曲封面</option><option value="playlist"' + (settings.widgetCoverMode === 'playlist' ? ' selected' : '') + '>歌单封面</option></select></div>' +
 '<div class="sm-set-hint">聊天过程中 TA 会按概率请求和你一起听歌；播放时右上角出现可拖动的悬浮小框</div>' +
+'<div class="gs-row"><span>预订下一首概率</span><div class="stepper" id="sm-set-reserve" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="sm-set-reserve-val" readonly><button class="stp-max">+</button></div></div>' +
+'<div class="sm-set-hint">聊天过程中 TA 有概率「预订」下一首要播的音乐：把这首歌排进播放队列（底部播放条的「播放队列」里可见），并在聊天里发送系统消息；被预订的歌会按你排的顺序先播（设 0 = TA 从不预订下一首）</div>' +
 '<div class="gs-row"><span>歌曲播完·切下一首概率</span><div class="stepper" id="sm-set-next" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="sm-set-next-val" readonly><button class="stp-max">+</button></div></div>' +
 '<div class="gs-row"><span>歌曲播完·随机挑歌概率</span><div class="stepper" id="sm-set-rand" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="sm-set-rand-val" readonly><button class="stp-max">+</button></div></div>' +
 '<div class="gs-row"><span>歌曲播完·换播放模式概率</span><div class="stepper" id="sm-set-modep" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="sm-set-modep-val" readonly><button class="stp-max">+</button></div></div>' +
@@ -33891,6 +34019,7 @@ valEl.value = nv; settings[key] = nv; saveSettings();
 });
 };
 bindProbStep('sm-set-prob', 'reqProb', 5, 30);
+bindProbStep('sm-set-reserve', 'taReserveProb', 6, 100);
 bindProbStep('sm-set-next', 'taNextProb', 15, 100);
 bindProbStep('sm-set-rand', 'taRandProb', 10, 100);
 bindProbStep('sm-set-modep', 'taModeProb', 5, 100);
@@ -34023,6 +34152,8 @@ const prevBtn = document.getElementById('sm-prev');
 if (prevBtn) prevBtn.addEventListener('click', prev);
 const nextBtn = document.getElementById('sm-next');
 if (nextBtn) nextBtn.addEventListener('click', next);
+const queueBtn = document.getElementById('sm-queue');
+if (queueBtn) queueBtn.addEventListener('click', openQueuePanel);
 const fPlay = document.getElementById('sm-f-play');
 if (fPlay) fPlay.addEventListener('click', toggle);
 const fPrev = document.getElementById('sm-f-prev');
