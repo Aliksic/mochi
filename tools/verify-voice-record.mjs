@@ -43,6 +43,9 @@ check('A9 chat-main.css 有 .voice-* 样式段 + 深色兜底 + reduced-motion',
 check('A10 录音过短保护（<800ms 丢弃 + toast）', chatSrc.includes("Date.now() - voiceStartTs < 800") && chatSrc.includes("录音太短"));
 check('A11 到 60 秒自动停止提示', chatSrc.includes("已达最长 60 秒"));
 check('A12 录音中途切后台停止（visibilitychange 监听 + 清理）', chatSrc.includes('voiceVisHandler') && chatSrc.includes("addEventListener('visibilitychange', voiceVisHandler)") && chatSrc.includes("removeEventListener('visibilitychange', voiceVisHandler)"));
+check('A13 麦克风约束优先关回声消除（vivo/iQOO 安静音修复）且带 {audio:true} 兜底 + recorder.onerror 复位', /echoCancellation:\s*false/.test(chatSrc) && /\{ audio: true \}/.test(chatSrc) && chatSrc.includes('acquireVoiceStream') && chatSrc.includes('rec.onerror') && chatSrc.includes('renderVoiceIdle'));
+check('A14 录音 MIME 优先 mp4/aac（本机能录又能播）', /const list = \['audio\/mp4', 'audio\/aac', 'audio\/webm;codecs=opus'/.test(chatSrc));
+check('A15 试听把 Audio 挂到 DOM 再播 + 出错清理（防止雨见等静默空放）', chatSrc.includes('document.body.appendChild(a)') && /a\.addEventListener\('error'/.test(chatSrc) && chatSrc.includes('语音播放失败'));
 
 if (!results.every(r => r.ok)) { console.log('\n静态断言未全绿，停止运行时验证'); process.exit(1); }
 

@@ -2325,7 +2325,7 @@ if (ckRefresh) {
       // 世界观：偶尔他视角浮层（灵体在身边提醒），否则原系统语态
       if (window.taChimeAllow && window.taChimeAllow('water-ta', { cooldown: 30 * 60 * 1000, dailyMax: 3 }) && Math.random() < 0.5) {
         window.taChimeUse('water-ta');
-        const gentle = libPool('water', '他视角温柔提醒', DEF_WATER_TA_GENTLE);
+        const gentle = libPool('water', 'ta视角温柔提醒', DEF_WATER_TA_GENTLE);
         const m = gentle[Math.floor(Math.random() * gentle.length)];
         const miss = Math.random() < 0.2 ? '（字卡有限，他想说的比这张多）' : null;
         if (window.taChimeShow) window.taChimeShow(m, { miss: miss });
@@ -3682,7 +3682,7 @@ if (ckRefresh) {
   let lastTa = null;
   // v3.13.x：浮字/抓包回应改走系统预设字卡池（DEFAULT_CARD_DATA.fish，字卡库「摸鱼浮字」
   // tab 同源可查看/逐张开关）；过滤用户已关闭的卡片，池缺失时回退内置兜底
-  const FISH_NOTE_FALLBACK = ['他在那边也偷了个懒'];
+  const FISH_NOTE_FALLBACK = ['ta在那边也偷了个懒'];
   const CATCH_REPLIES = [
     '呀…被你看到了',
     '才、才没有偷懒…好吧，被抓到了',

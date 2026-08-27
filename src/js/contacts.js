@@ -173,7 +173,7 @@
 
   // ---- 联系人性别 / TA 称呼跟随 ----
   // 存储键：<cid>:partner-gender = 'he' | 'she' | ''（未设置 → 默认「TA」），随联系人命名空间隔离。
-  // 各模块在【显示层】调 window.taFit(text[, cid]) 把指代联系人的「他/TA」替换为「他/她/TA」；
+  // 各模块在【显示层】调 window.taFit(text[, cid]) 把指代联系人的「他/TA/ta」替换为「他/她/TA/ta」；
   // 只改显示不改存储原文，历史消息重新渲染即自动跟随。
   window.partnerGenderFor = function (cid) {
     try { return window.xyStore(G + ':' + (cid || 'default')).get('partner-gender') || ''; } catch (e) { return ''; }
@@ -185,19 +185,25 @@
     return 'TA';
   };
   window.taWord = function () { return window.taWordFor(window.__activeCid || 'default'); };
-  // 人称替换：TA/他 → 性别称呼。保护「其他」（非人称）、base64 段（dataURL 不能动，
+  // 人称替换：TA/他/ta → 性别称呼。保护「其他」（非人称）、base64 段（dataURL 不能动，
   // 大写 TA 可能出现在 base64 字符里）与 <svg>…</svg> 图标段（系统消息带图标前缀）；
   // 不用正则 lookbehind（旧版 iOS Safari 不支持）。
   window.taFit = function (text, cid) {
     if (text === null || text === undefined) return text;
     const s = String(text);
-    if (s.indexOf('他') < 0 && s.indexOf('TA') < 0) return s;
+    if (s.indexOf('他') < 0 && s.indexOf('TA') < 0 && s.indexOf('ta') < 0) return s;
     const w = window.taWordFor(cid || window.__activeCid || 'default');
+    // 字卡库系统预设字卡用「ta」作中性占位：未设置称呼时保留「ta」，
+    // 已设置（他/她）才把独立 token 的「ta」替换成对应性别词（\b 词边界
+    // 防误伤 table/data 等英文词内的 ta；\b 不受旧版 iOS 限制）。
+    const taw = w === 'TA' ? 'ta' : w;
     const segs = s.split(/(<svg[\s\S]*?<\/svg>)/);
     for (let i = 0; i < segs.length; i += 2) {
       const parts = segs[i].split(/(data:[a-zA-Z0-9.+-]+\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+)/);
       for (let j = 0; j < parts.length; j += 2) {
-        parts[j] = parts[j].split('其他').join('\u0001').split('TA').join(w).split('他').join(w).split('\u0001').join('其他');
+        let p = parts[j].split('其他').join('\u0001').split('TA').join(w).split('他').join(w);
+        if (taw !== 'ta') p = p.replace(/\bta\b/g, taw);
+        parts[j] = p.split('\u0001').join('其他');
       }
       segs[i] = parts.join('');
     }

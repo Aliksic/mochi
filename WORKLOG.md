@@ -1,3 +1,10 @@
+### 2026-08-27 23:0x（✅ 完成·系统预设字卡「他」改中性占位 ta + 称呼跟随）
+- [本会话]（**已改 src/js/default-cards-data.js + src/js/p2-features.js + src/js/contacts.js**；node --check 通过 + taFit 逻辑用例 7/7 全绿；**已构建（22:56, sw: mochi-mtbnbftp）+ verify 10/10，本次提交一并收口**）。
+  - **用户需求**：字卡库【系统预设字卡】里字卡的「他」全部改为「ta」；发送到聊天或其他功能使用该字卡时，「ta」随切换联系人桌面【称呼】调整（他/她），不选就是「ta」。
+  - **改动**：① default-cards-data.js 全部 11 处「他」→「ta」（摸鱼浮字 10 张 + 喝水分组名「ta视角温柔提醒」）；② p2-features.js 同步两处硬编码引用（FISH_NOTE_FALLBACK「ta在那边也偷了个懒」+ water 分组名「ta视角温柔提醒」）；③ contacts.js 的 taFit 扩展——独立 token 的「ta」在称呼已设置（他/她）时替换为性别词，未设置时保留「ta」（\b 词边界防误伤 table/data 等英文词），大写 TA/他 旧行为不变。
+  - **效果**：桌面浮字（taChimeShow）、聊天/信箱/朋友圈等显示层（已走 taFit）自动跟随当前联系人性别；字卡库内仍按原文显示「ta…」（查看态不改）。
+  - ⚠️ 跨域说明：contacts.js（称呼跟随/taFit）原属 AI-B 全局域，本次因功能耦合一并改动，请复核。存量已关单卡键（dc-off-fish:他在…）因文案变更不再命中，极少数关闭过单卡的用户对应卡会恢复开启（内容已变，属预期）。
+
 ### 2026-08-27 22:4x（✅ 完成·iOS 朋友圈评论重复显示）
 - [本会话·已构建]（改 src/js/feed.js，AI-A 域）+ node build.mjs（sw mochi-mtbmu3h5）+ verify.mjs 10/10 + node --check 通过；**未提交**。
   - **用户反馈**：iOS 朋友圈评论区，我和联系人发的评论全部重复显示成两条。

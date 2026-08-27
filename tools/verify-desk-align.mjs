@@ -235,6 +235,52 @@ if (p2) {
     ics.map(x => '下沿=' + x.lastAppB).join(' '));
   check('C12 备忘录横幅已删除（#memo-app-badge 不存在）',
     await evalJs("!document.getElementById('memo-app-badge')") === true, '');
+  // ---- E' 组：长情话不撑高页0 + 卡片/字号缩放下三页仍对齐 ----
+  // v3.16.x：情话是动态文本，换行会把页0 mini-row 撑高→图标组下沉；单行省略后恒定 77。
+  const longQuote = JSON.parse(await evalJs(`(function(){
+    var el=document.getElementById('love-quote');
+    if(!el)return '{}';
+    var old=el.textContent;
+    el.textContent='这是一条非常非常长的今日情话测试文本看看会不会把卡片撑高导致页面错位';
+    var row=document.querySelector('.page-slide .mini-row');
+    var h=row?Math.round(row.getBoundingClientRect().height*10)/10:0;
+    var clipped=getComputedStyle(el).textOverflow==='ellipsis';
+    var sW=el.scrollWidth, cW=el.clientWidth;
+    el.textContent=old;
+    return JSON.stringify({h:h, clipped:clipped, overflow:sW>cW});
+  })()`) || '{}');
+  check('E1 长情话单行省略不撑高页0 mini-row（77±2）', Math.abs((longQuote.h || 0) - 77) <= 2,
+    JSON.stringify(longQuote));
+  const scaleAligned = JSON.parse(await evalJs(`(function(){
+    var r=document.documentElement.style;
+    r.setProperty('--desk-card-scale','1.15');
+    var slides=document.querySelectorAll('#desktop-pages .page-slide');
+    var bs=[];
+    slides.forEach(function(sl){
+      var g=sl.querySelector('.app-grid');
+      if(g)bs.push(Math.round(g.getBoundingClientRect().bottom*10)/10);
+    });
+    r.setProperty('--desk-card-scale','1');
+    if(bs.length<3)return '{}';
+    return JSON.stringify({bs:bs, aligned:bs.every(b=>Math.abs(b-bs[0])<=1.2)});
+  })()`) || '{}');
+  check('E2 卡片大小 115% 缩放下三页图标组底部仍对齐（≤1.2px）', scaleAligned.aligned === true,
+    JSON.stringify(scaleAligned));
+  const fontAligned = JSON.parse(await evalJs(`(function(){
+    var r=document.documentElement.style;
+    r.setProperty('--desk-font-scale','1.15');
+    var slides=document.querySelectorAll('#desktop-pages .page-slide');
+    var bs=[];
+    slides.forEach(function(sl){
+      var g=sl.querySelector('.app-grid');
+      if(g)bs.push(Math.round(g.getBoundingClientRect().bottom*10)/10);
+    });
+    r.setProperty('--desk-font-scale','1');
+    if(bs.length<3)return '{}';
+    return JSON.stringify({bs:bs, aligned:bs.every(b=>Math.abs(b-bs[0])<=1.2)});
+  })()`) || '{}');
+  check('E3 桌面字号 115% 缩放下三页图标组底部仍对齐（≤1.2px）', fontAligned.aligned === true,
+    JSON.stringify(fontAligned));
   void memoRow; void ck0; void grid0; void grid2; void grid1;
 } else check("C' 组前置：第三页存在", false, '');
 
