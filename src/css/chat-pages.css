@@ -1924,6 +1924,10 @@
 /* 信箱：写信/回信独立页面 */
 .mail-write-hint { font-size:12px; color:var(--muted); text-align:center; padding:10px 0; }
 .mail-compose { padding:4px 0; }
+/* v3.19.x：写信/回信「寄出」固定底部栏——钉在页底、键盘弹起时钉在键盘上方，
+   不再随滚动区消失（红米 K70 QQ 浏览器反馈：回信时寄出键消失，需刷新才重现） */
+.mail-send-bar { flex-shrink:0; padding:10px 0 calc(6px + env(safe-area-inset-bottom, 0px)); }
+.mail-send-bar .ta-add-btn { width:100%; }
 /* 写信/回信：工具栏（v3.6.x 只留 表情包/图片） */
 .mail-toolbar {
   display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap;

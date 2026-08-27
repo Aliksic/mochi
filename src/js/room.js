@@ -774,8 +774,8 @@
     });
     const icon = document.querySelector('.app[data-app="room"]');
     if (icon) icon.addEventListener('click', function (e) {
+      if (guardEditing()) return; // 装修模式：不拦截，让 .app-grid 监听器弹「更换图标」菜单
       e.stopPropagation();
-      if (guardEditing()) return;
       window.__roomFrom = '';
       openRoom();
     });

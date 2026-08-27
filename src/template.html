@@ -2826,10 +2826,13 @@
             <div class="mail-paper-head"><span class="mail-paper-author">我</span><span class="mail-paper-date">正在写…</span></div>
             <textarea id="mail-input" class="mail-compose-input" rows="12" placeholder="亲爱的，&#10;&#10;今天想跟你说..."></textarea>
           </div>
-          <button class="ta-add-btn" style="width:100%;margin-top:12px" id="mail-send">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-2px;margin-right:4px"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>封 · 寄出
-          </button>
         </div>
+      </div>
+      <!-- v3.19.x：寄出按钮从滚动区移到固定底部栏，键盘弹起/页面收缩时不再被顶出视口而消失 -->
+      <div class="mail-send-bar">
+        <button class="ta-add-btn" id="mail-send">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-2px;margin-right:4px"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>封 · 寄出
+        </button>
       </div>
     </div>
 
@@ -2852,10 +2855,13 @@
             <div class="mail-paper-head"><span class="mail-paper-author">我的回信</span><span class="mail-paper-date">正在写…</span></div>
             <textarea id="mail-reply-input" class="mail-compose-input" rows="10" placeholder="亲爱的，&#10;&#10;今天想跟你说..."></textarea>
           </div>
-          <button class="ta-add-btn" style="width:100%;margin-top:12px" id="mail-reply-send">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-2px;margin-right:4px"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>封 · 寄出
-          </button>
         </div>
+      </div>
+      <!-- v3.19.x：寄出按钮移到固定底部栏，避免键盘弹起时从滚动区消失（红米 K70 QQ 反馈） -->
+      <div class="mail-send-bar">
+        <button class="ta-add-btn" id="mail-reply-send">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-2px;margin-right:4px"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>封 · 寄出
+        </button>
       </div>
     </div>
 

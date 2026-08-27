@@ -1,3 +1,16 @@
+### 2026-08-27（🐛 修复·vivo/iQOO 系浏览器「麦克风权限开着但语音录不了/录到空」）
+- [本会话]（**已改 src/js/chat.js（AI-A 域）+ tools/verify-voice-record.mjs**；已在临时目录构建验证 30/30 全绿；**未提交**；**请构建者（默认 AI-B）执行 node build.mjs 收口**）。
+  - **用户上报**：iQOO 手机 · 雨见浏览器，麦克风权限已开，但无法录音发送到聊天。
+  - **根因**：录音链路本身正确，但 iQOO（Vivo 系）安卓 WebView 有两个已知坑导致「权限开着却录不了/录出来是空」：①默认 `{audio:true}` 拿到的轨道被 AEC(回声消除)/降噪/自动增益处理，部分机型直接静音/空数据；②当前 MIME 列表把 `audio/mp4` 排第一（为 iOS），安卓 WebView 对音频 mp4 常「报支持却录不出数据」。
+  - **修复**（chat.js）：①新增 `acquireVoiceStream()`——先以「echoCancellation/noiseSuppression/autoGainControl=false + channelCount:1」请求，失败自动回退 `{audio:true}`，不堵死报障机型；②`pickVoiceMime()` 按平台拆分——iOS 优先 `audio/mp4`/`audio/aac`，安卓优先 `audio/webm;codecs=opus`/`ogg`；③MediaRecorder 挂 `onerror`，出错时清理定时器/轨道并把面板复位到初始态，不再卡「正在录音」。
+  - 验证：verify-voice-record.mjs 30/30（新增 A13/A14/A15 静态断言）。**需 iQOO 真机确认（雨见浏览器）：开启「我可发送语音」→ 点麦克风 → 录音应正常走表、试听、发送语音气泡。**
+### 2026-08-27（🐛 修复·iOS 桌面美化模式「此间」「房间」图标无法更换图片）
+- [本会话]（**已改 src/js/cjian.js + src/js/room.js（AI-A 域）**；已构建（20:29, sw: mochi-mtbi2xs7）+ verify 通过；**未提交**；**请 AI-A 复核**）。
+  - **用户上报**：iOS 默认浏览器 → 手机桌面美化模式，点「此间」(cjian)、「房间」(room) 图标弹不出「更换图片」菜单，其余图标正常。
+  - **根因**：cjian.js / room.js 各自给 `.app[data-app="cjian"/"room"]` 挂了 `.click`，且**先** `e.stopPropagation()` **再**判断编辑态（`editing`/`guardEditing()`）。装修模式下它们命中编辑态后 `return`，但传播早已被 stopPropagation 截断 → 永远冒泡不到 `.app-grid` 的换图菜单监听器（该监听器依赖于事件冒泡，见 personalize.js grids foreach）。其余图标（garden/calendar 等）在编辑态直接 return、不 stopPropagation，故正常。
+  - **修复**：把 `e.stopPropagation()` 移到编辑态判断**之后**——装修模式正常 return（不拦截，让网格弹出换图菜单）；非装修模式才 stopPropagation 再进功能页。两处各一行，交互不变。
+  - 验证：桌面美化模式进入后点 cjian/room 图标应弹「图标设置」菜单（上传/更换/清除/移动/隐藏），非装修模式点击仍正常进对应功能页。**需 iOS 真机确认。**
+
 ### 2026-08-27（✅ 完成·【帮我决定】/更多功能里所有带输入框的半框，键盘弹出时面板被输入法挤压/飞动）
 - [本会话·AI-B]（**已改 src/js/mobile-adapt.js（AI-B 域）**；已构建（15:10, sw: mochi-mtb6oe84）+ verify-kb-dock 12/12 + verify-kb-pinpan-late 5/5 + verify 10/10 均通过；**未提交**）。
   - **用户再报**：聊天「更多功能」里【帮我决定】等任何需要点输入框弹输入法的半框，键盘弹出时页面弹窗会飞、被输入法窗口挤压，每次点击都这样（同域：邀请TA/问问TA/占卜/搜索记录…）。
@@ -3350,3 +3363,10 @@ staticText: staticText
   - **改动**：仅 music-player.js（AI-A 域）；armStallGuard 与 demoFallbackOrError 两处失败分支改调 offerRemoveDamagedSong。node --check 通过。
   - **建议**：openVipClean 依赖的失效代理可保留不改（它仍会如实提示检测失败），或以后另行更换稳定检测源；本次以「播放失败移除」为主修，待构建验证。
   - **未构建**：请构建者收口时统一 node build.mjs（此条之前可能有其他并行会话未保存改动，构建前 git status 确认）。
+
+### 2026-08-27（用户反馈：红米 K70 QQ 浏览器回信时寄出键消失，需刷新）
+- **根因**：写信/回信页的「寄出」按钮位于滚动区 .cal-scroll 底部。QQ(true X5 悬浮键盘)弹出时 .phone 收缩/残留，按钮被顶出可视区且无法滚回→看起来消失,刷新重置后才重现。
+- **修复（AI-A 域，只改 template.html + chat-pages.css）**：把写信(mail-send)与回信(mail-reply-send)的「寄出」按钮从滚动区移到页底的固定底部栏 .mail-send-bar，钉在页底、键盘弹起钉在键盘上方,任何页面收缩都不再消失。
+- **验证**：node build.mjs 成功(sw mochi-mtbhughj)，node tools/verify.mjs 布局 10/10。
+- **给构建者/提交者**：本会话改动含并行会话未提交内容，请统一 git diff 自查后收口提交。未提交。
+

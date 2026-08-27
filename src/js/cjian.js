@@ -1262,12 +1262,12 @@
     const cjianApp = document.querySelector('.app[data-app="cjian"]');
     if (cjianApp) {
       cjianApp.addEventListener('click', function (e) {
-        e.stopPropagation();
         try {
           const editing = Array.from(document.querySelectorAll('.app-grid'))
             .some(g => g.classList.contains('editing'));
-          if (editing) return;
+          if (editing) return; // 装修模式：不拦截，让 .app-grid 监听器弹「更换图标」菜单
         } catch (err) {}
+        e.stopPropagation();
         window.__cjianFrom = '';
         window.openCjian();
       });

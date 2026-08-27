@@ -3934,6 +3934,8 @@ padding:10px 14px 0;
 .mail-reply-hint { font-size:12px; color:var(--muted); text-align:center; margin-bottom:10px; }
 .mail-write-hint { font-size:12px; color:var(--muted); text-align:center; padding:10px 0; }
 .mail-compose { padding:4px 0; }
+.mail-send-bar { flex-shrink:0; padding:10px 0 calc(6px + env(safe-area-inset-bottom, 0px)); }
+.mail-send-bar .ta-add-btn { width:100%; }
 .mail-toolbar {
 display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap;
 }
@@ -7828,7 +7830,7 @@ transition-duration: .01ms !important;
       </div>
       <div class="splash-dots"><i></i><i></i><i></i></div>
       <div class="splash-brand">小红书@言序（1842523578）</div>
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787817876126">Mochi 字卡传讯 v3.6.268 · 部署于 2026-08-27 16:04</div>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787834639177">Mochi 字卡传讯 v3.6.269 · 部署于 2026-08-27 20:43</div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
       <div class="splash-loading" id="splash-loading">正在加载数据…</div>
@@ -8904,7 +8906,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.6.268</div>
+      <div class="ver">Mochi 字卡传讯 v3.6.269</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -9056,7 +9058,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.6.268</span>
+              <span class="lic-ver">v3.6.269</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -10600,10 +10602,13 @@ transition-duration: .01ms !important;
             <div class="mail-paper-head"><span class="mail-paper-author">我</span><span class="mail-paper-date">正在写…</span></div>
             <textarea id="mail-input" class="mail-compose-input" rows="12" placeholder="亲爱的，&#10;&#10;今天想跟你说..."></textarea>
           </div>
-          <button class="ta-add-btn" style="width:100%;margin-top:12px" id="mail-send">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-2px;margin-right:4px"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>封 · 寄出
-          </button>
         </div>
+      </div>
+      <!-- v3.19.x：寄出按钮从滚动区移到固定底部栏，键盘弹起/页面收缩时不再被顶出视口而消失 -->
+      <div class="mail-send-bar">
+        <button class="ta-add-btn" id="mail-send">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-2px;margin-right:4px"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>封 · 寄出
+        </button>
       </div>
     </div>
 
@@ -10626,10 +10631,13 @@ transition-duration: .01ms !important;
             <div class="mail-paper-head"><span class="mail-paper-author">我的回信</span><span class="mail-paper-date">正在写…</span></div>
             <textarea id="mail-reply-input" class="mail-compose-input" rows="10" placeholder="亲爱的，&#10;&#10;今天想跟你说..."></textarea>
           </div>
-          <button class="ta-add-btn" style="width:100%;margin-top:12px" id="mail-reply-send">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-2px;margin-right:4px"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>封 · 寄出
-          </button>
         </div>
+      </div>
+      <!-- v3.19.x：寄出按钮移到固定底部栏，避免键盘弹起时从滚动区消失（红米 K70 QQ 反馈） -->
+      <div class="mail-send-bar">
+        <button class="ta-add-btn" id="mail-reply-send">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-2px;margin-right:4px"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>封 · 寄出
+        </button>
       </div>
     </div>
 
@@ -23871,11 +23879,25 @@ scrollChatBottom();
 window.openVoicePanelFor = function (onSend) { openVoicePanel({ onSend: onSend }); };
 function pickVoiceMime() {
 if (typeof MediaRecorder === 'undefined' || !MediaRecorder.isTypeSupported) return '';
-const list = ['audio/mp4', 'audio/aac', 'audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus'];
+const dev = window.mochiDevice || {};
+const list = dev.isIOS
+? ['audio/mp4', 'audio/aac', 'audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus']
+: ['audio/webm;codecs=opus', 'audio/ogg;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/aac'];
 for (let i = 0; i < list.length; i++) {
 try { if (MediaRecorder.isTypeSupported(list[i])) return list[i]; } catch (e) {}
 }
 return '';
+}
+async function acquireVoiceStream() {
+const tries = [
+{ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 1 } },
+{ audio: true }
+];
+let lastErr = null;
+for (let i = 0; i < tries.length; i++) {
+try { return await navigator.mediaDevices.getUserMedia(tries[i]); } catch (e) { lastErr = e; }
+}
+throw lastErr;
 }
 async function startVoiceRec() {
 if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || typeof MediaRecorder === 'undefined') {
@@ -23883,7 +23905,7 @@ toast('当前浏览器不支持录音'); return;
 }
 let stream = null;
 try {
-stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+stream = await acquireVoiceStream();
 } catch (e) {
 toast(e && e.name === 'NotAllowedError' ? '麦克风权限被拒绝，请在浏览器设置里允许后重试' : '无法访问麦克风');
 return;
@@ -23898,6 +23920,16 @@ rec = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(s
 } catch (e) {}
 if (!rec) { voiceStopStream(); toast('当前浏览器不支持录音'); return; }
 rec.ondataavailable = (ev) => { if (ev.data && ev.data.size) voiceChunks.push(ev.data); };
+rec.onerror = (ev) => {
+try {
+if (voiceTimer) { clearInterval(voiceTimer); voiceTimer = null; }
+if (voiceVisHandler) { document.removeEventListener('visibilitychange', voiceVisHandler); voiceVisHandler = null; }
+voiceStopStream();
+voiceRec = null;
+renderVoiceIdle();
+} catch (e) {}
+toast('录音设备出错，请检查麦克风后重试');
+};
 rec.onstop = onVoiceRecStop;
 voiceRec = rec;
 voiceStartTs = Date.now();
@@ -29210,7 +29242,7 @@ const DEFAULTS = {
 'ai-rps-en': 1, 'ai-rps-prob': 8, 'ai-game-en': 1, 'ai-game-prob': 5,
 'ai-cuddle-en': 1, 'ai-cuddle-prob': 5,
 'ai-cc-en': 1, 'ai-cc-prob': 4,
-'ckq-en': 1, 'ckq-prob': 8, 'ckq-popup-prob': 70, 'ckq-cool': 30,
+'ckq-en': 1, 'ckq-prob': 2, 'ckq-popup-prob': 70, 'ckq-cool': 30,
 'ml-min-cards': 20, 'ml-max-cards': 50,
 'ml-write-prob': 30, 'ml-write-min': 1, 'ml-write-max': 120,
 'ml-write-daily-max': 3,
@@ -29463,6 +29495,26 @@ calsBack.addEventListener('click', () => {
 showPage('page-setting');
 });
 }
+function migrateCkqProbOld() {
+try {
+if (!window.getContacts || !window.storeFor) return;
+const cids = [window.__activeCid || 'default'];
+(window.getContacts() || []).forEach(c => { if (c.id && cids.indexOf(c.id) === -1) cids.push(c.id); });
+let changed = false;
+cids.forEach(cid => {
+try {
+const s = window.storeFor(cid);
+if (!s) return;
+const v = s.get('reply-ckq-prob');
+if (String(v) === '8') { s.set('reply-ckq-prob', '2'); changed = true; }
+} catch (e) {}
+});
+if (changed) {
+try { if (window.console && console.log) console.log('[reply-settings] 已迁移跨桌面查岗旧概率 8→2'); } catch (e) {}
+}
+} catch (e) {}
+}
+migrateCkqProbOld();
 })();
 } catch (__e) { try { console.error("[JS] reply-settings.js", __e && __e.message || __e); } catch (x) {} if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
 (function () { try {
@@ -39580,6 +39632,13 @@ if (c && c.name) return c.name;
 } catch (e) {}
 return cid === 'default' ? 'TA' : 'TA';
 }
+function cAvatar(cid) {
+try {
+const s = (cid && window.storeFor) ? window.storeFor(cid) : window.activeStore;
+const a = s.get('cs-avatar-partner') || s.get('avatar-partner') || '';
+return (a && (a.indexOf('data:') === 0 || /^https?:\/\//i.test(a))) ? a : '';
+} catch (e) { return ''; }
+}
 function cfgFor(cid) {
 try {
 if (window.replyCfgFor) return window.replyCfgFor(cid);
@@ -39608,14 +39667,15 @@ const name = cName(req.cid);
 const title = req.kind === 'chat' ? name + ' 想找你聊天' : (req.kind === 'call' ? name + ' 来电了' : name + ' 来查岗了');
 if (document.hidden) {
 try {
+const av = cAvatar(req.cid);
 if (req.kind === 'call') {
-if (window.bgNotifyCheck) window.bgNotifyCheck(title + (req.kind === 'call' ? '' : '：' + (req.text || '')), Date.now(), { name: name + '来电' });
+if (window.bgNotifyCheck) window.bgNotifyCheck(title + (req.kind === 'call' ? '' : '：' + (req.text || '')), Date.now(), { name: name + '来电', av: av });
 } else if (req.kind === 'checkin') {
 if (window.chatAppendDeskCkTo) window.chatAppendDeskCkTo(req.cid, req.q);
-if (window.bgNotifyCheck) window.bgNotifyCheck(title + '：' + (req.text || ''), Date.now(), { name: name + '查岗' });
+if (window.bgNotifyCheck) window.bgNotifyCheck(title + '：' + (req.text || ''), Date.now(), { name: name + '查岗', av: av });
 } else { // chat 求聊天
 if (window.chatAppendDeskTextTo) window.chatAppendDeskTextTo(req.cid, req.text || '想你了，来聊聊天吧。');
-if (window.bgNotifyCheck) window.bgNotifyCheck(title + '：来陪我聊聊天吧', Date.now(), { name: name + '来聊天' });
+if (window.bgNotifyCheck) window.bgNotifyCheck(title + '：来陪我聊聊天吧', Date.now(), { name: name + '来聊天', av: av });
 }
 } catch (e) {}
 setStatus(req.cid, 'seen');
@@ -39718,16 +39778,9 @@ if (cid === cur) return; // 激活桌面不跨桌面打扰（由原 tryAutoSend 
 if (hasPending(cid)) return; // 已有未处理申请，不重复
 const cfg = cfgFor(cid);
 if (deskCallEn() && !document.hidden) {
-const callProb = num(cfg, 'call-incoming', 15);
-const lastCall = (function () {
-try {
-const s = (cid && window.storeFor) ? window.storeFor(cid) : null;
-if (!s) return 0;
-const v = parseInt(s.get('records-call-last'), 10);
-return isNaN(v) ? 0 : v;
-} catch (e) { return 0; }
-})();
-if (Date.now() - lastCall >= 5 * 60000 && Math.random() * 100 < callProb) {
+const callCool = num(cfg, 'ckq-cool', 30);
+const callProb = num(cfg, 'desk-call-prob', 2);
+if (Date.now() - lastAt(cid, 'call') >= callCool * 60000 && Math.random() * 100 < callProb) {
 deliver({ cid: cid, kind: 'call', text: '', ts: Date.now(), status: 'pending' });
 return;
 }
@@ -55855,8 +55908,8 @@ window.__roomFrom = '';
 });
 const icon = document.querySelector('.app[data-app="room"]');
 if (icon) icon.addEventListener('click', function (e) {
+if (guardEditing()) return; // 装修模式：不拦截，让 .app-grid 监听器弹「更换图标」菜单
 e.stopPropagation();
-if (guardEditing()) return;
 window.__roomFrom = '';
 openRoom();
 });
@@ -65081,12 +65134,12 @@ window.cjianManage();
 const cjianApp = document.querySelector('.app[data-app="cjian"]');
 if (cjianApp) {
 cjianApp.addEventListener('click', function (e) {
-e.stopPropagation();
 try {
 const editing = Array.from(document.querySelectorAll('.app-grid'))
 .some(g => g.classList.contains('editing'));
-if (editing) return;
+if (editing) return; // 装修模式：不拦截，让 .app-grid 监听器弹「更换图标」菜单
 } catch (err) {}
+e.stopPropagation();
 window.__cjianFrom = '';
 window.openCjian();
 });
@@ -65364,6 +65417,7 @@ ceMo.observe(document.body, { childList: true, subtree: true });
 }
 } catch (e) {}
 function _aRefreshCe() {
+try { if (Date.now() - _aUserTypos < 500) return; } catch (e) {}
 try {
 var list = document.querySelectorAll('.ce-box');
 if (!list || !list.length) return;
@@ -65383,6 +65437,10 @@ if (isIOS) return;
 clearTimeout(_aCeT);
 _aCeT = setTimeout(_aRefreshCe, 60);
 }
+var _aUserTypos = Date.now();
+try {
+document.addEventListener('keydown', function () { _aUserTypos = Date.now(); }, true);
+} catch (e) {}
 function isTextEl(el) {
 return el && ((el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')
 ? (el.type !== 'checkbox' && el.type !== 'range' && el.type !== 'file' && el.type !== 'color' && !el.readOnly)

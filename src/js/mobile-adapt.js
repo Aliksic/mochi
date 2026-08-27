@@ -388,6 +388,10 @@
   // 与 ta-ask.js 同法：对可见 .ce-box 强制 reflow + toggle transform:translateZ(0)
   // 触发合成层重新提交到当前位置，随即还原（不带位移动，不改变布局）。仅安卓启用。
   function _aRefreshCe() {
+    // 摩托罗拉G100/雨见：用户刚敲了键、正在输入时，禁止对其它/自身 ce-box
+    // toggle transform。正在被输入的元素在 WebKit 内核里被强制重排/重建合成层，
+    // 会丢掉当前键入/组合的第一段输入（症状：打完字框里没字，重打一遍才好）。
+    try { if (Date.now() - _aUserTypos < 500) return; } catch (e) {}
     try {
       var list = document.querySelectorAll('.ce-box');
       if (!list || !list.length) return;
@@ -407,6 +411,15 @@
     clearTimeout(_aCeT);
     _aCeT = setTimeout(_aRefreshCe, 60);
   }
+
+  // 摩托罗拉G100/雨见「首次键入丢失」：记录用户最近一次真实按键时间戳——
+  // 键盘会话内任意按键（含中文输入法 229 组合键、英文直接键入）都会刷新它，
+  // 供 _aRefreshCe 在用户正在敲键时跳过「toggle 输入元素 transform」的合成层刷新
+  // （该 toggle 在部分 WebKit 内核上会丢掉当前键入/组合的第一段输入）。
+  var _aUserTypos = Date.now();
+  try {
+    document.addEventListener('keydown', function () { _aUserTypos = Date.now(); }, true);
+  } catch (e) {}
 
   // v3.5.128：readonly 起手方案已删除——它会被本转换器完全替代：
   // 文本输入框已统一变为 contenteditable div（Chrome 不对其弹自动填充条），

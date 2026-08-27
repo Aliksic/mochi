@@ -122,6 +122,15 @@
     } catch (e) {}
     return cid === 'default' ? 'TA' : 'TA';
   }
+  // 该桌面联系人自己的 partner 头像（cs-avatar-partner 优先，回退 avatar-partner）——
+  // 跨桌面查岗/求聊天/来电通知必须用它，否则 bg-keep 会回退当前桌面头像导致头像错
+  function cAvatar(cid) {
+    try {
+      const s = (cid && window.storeFor) ? window.storeFor(cid) : window.activeStore;
+      const a = s.get('cs-avatar-partner') || s.get('avatar-partner') || '';
+      return (a && (a.indexOf('data:') === 0 || /^https?:\/\//i.test(a))) ? a : '';
+    } catch (e) { return ''; }
+  }
   // 各桌面专属设置：回复设置随联系人隔离（replyCfg(cid) 读取 storeFor(cid) 的 rc-*），
   // 这里用与 chat.js cfgn 同款读取，避免依赖未暴露的内部结构
   function cfgFor(cid) {
@@ -156,14 +165,15 @@
       // v3.19.x：后台命中时不再只是通知——查岗/求聊天直接把卡写入对应联系人桌面聊天，
       // 切回前台到该联系人即可看到并回答；来电无法后台接听，只保留系统通知。
       try {
+        const av = cAvatar(req.cid);
         if (req.kind === 'call') {
-          if (window.bgNotifyCheck) window.bgNotifyCheck(title + (req.kind === 'call' ? '' : '：' + (req.text || '')), Date.now(), { name: name + '来电' });
+          if (window.bgNotifyCheck) window.bgNotifyCheck(title + (req.kind === 'call' ? '' : '：' + (req.text || '')), Date.now(), { name: name + '来电', av: av });
         } else if (req.kind === 'checkin') {
           if (window.chatAppendDeskCkTo) window.chatAppendDeskCkTo(req.cid, req.q);
-          if (window.bgNotifyCheck) window.bgNotifyCheck(title + '：' + (req.text || ''), Date.now(), { name: name + '查岗' });
+          if (window.bgNotifyCheck) window.bgNotifyCheck(title + '：' + (req.text || ''), Date.now(), { name: name + '查岗', av: av });
         } else { // chat 求聊天
           if (window.chatAppendDeskTextTo) window.chatAppendDeskTextTo(req.cid, req.text || '想你了，来聊聊天吧。');
-          if (window.bgNotifyCheck) window.bgNotifyCheck(title + '：来陪我聊聊天吧', Date.now(), { name: name + '来聊天' });
+          if (window.bgNotifyCheck) window.bgNotifyCheck(title + '：来陪我聊聊天吧', Date.now(), { name: name + '来聊天', av: av });
         }
       } catch (e) {}
       // 卡已入库聊天，释放 pending（避免占用队列挡住下一次正常弹窗查岗）
@@ -287,18 +297,14 @@
         if (cid === cur) return; // 激活桌面不跨桌面打扰（由原 tryAutoSend 正常触发）
         if (hasPending(cid)) return; // 已有未处理申请，不重复
         const cfg = cfgFor(cid);
-        // 跨桌面来电：开关 + 该桌面来电概率 + 该桌面独立冷却（records-call-last，与 call.js 同键）
+        // v3.20.x：跨桌面来电——与跨桌面查岗对齐：触发概率 + 每人独立冷却。
+        // 概率读 desk-call-prob（默认 2%，与查岗 ckq-prob 对齐）；冷却用独立键
+        // incoming-last:call:<cid>（与查岗同套 lastAt/markLast，不与 call.js 的
+        // records-call-last 共用，普通来电不受影响）；冷却时长沿用查岗 ckq-cool（默认 30 分钟）。
         if (deskCallEn() && !document.hidden) {
-          const callProb = num(cfg, 'call-incoming', 15);
-          const lastCall = (function () {
-            try {
-              const s = (cid && window.storeFor) ? window.storeFor(cid) : null;
-              if (!s) return 0;
-              const v = parseInt(s.get('records-call-last'), 10);
-              return isNaN(v) ? 0 : v;
-            } catch (e) { return 0; }
-          })();
-          if (Date.now() - lastCall >= 5 * 60000 && Math.random() * 100 < callProb) {
+          const callCool = num(cfg, 'ckq-cool', 30);
+          const callProb = num(cfg, 'desk-call-prob', 2);
+          if (Date.now() - lastAt(cid, 'call') >= callCool * 60000 && Math.random() * 100 < callProb) {
             deliver({ cid: cid, kind: 'call', text: '', ts: Date.now(), status: 'pending' });
             return;
           }

@@ -5785,11 +5785,31 @@ scrollChatBottom();
 window.openVoicePanelFor = function (onSend) { openVoicePanel({ onSend: onSend }); };
 function pickVoiceMime() {
 if (typeof MediaRecorder === 'undefined' || !MediaRecorder.isTypeSupported) return '';
-const list = ['audio/mp4', 'audio/aac', 'audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus'];
+// v3.16.x 修复：MIME 优先级按平台区分——iOS Safari 只有 mp4/aac 能播/能录，优先 mp4；
+// 安卓 WebView（vivo/iQOO 等的第三方浏览器）对音频 mp4 常「报支持却录不出数据」，
+// 必须优先 webm/opus 才稳，否则会拿到录音为空的坏音频。
+const dev = window.mochiDevice || {};
+const list = dev.isIOS
+  ? ['audio/mp4', 'audio/aac', 'audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus']
+  : ['audio/webm;codecs=opus', 'audio/ogg;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/aac'];
 for (let i = 0; i < list.length; i++) {
 try { if (MediaRecorder.isTypeSupported(list[i])) return list[i]; } catch (e) {}
 }
 return '';
+}
+// 获取麦克风轨道：先以「关闭回声消除/降噪/自动增益 + 单声道」请求——这是 vivo/iQOO 等
+// 安卓机上「权限开了却录不到声/录出来为空」的已知根因；若该约束组合不被设备支持
+//（OverconstrainedError 等）则回退到最普通的 {audio:true}，绝不让报障机型彻底录不了。
+async function acquireVoiceStream() {
+const tries = [
+  { audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 1 } },
+  { audio: true }
+];
+let lastErr = null;
+for (let i = 0; i < tries.length; i++) {
+try { return await navigator.mediaDevices.getUserMedia(tries[i]); } catch (e) { lastErr = e; }
+}
+throw lastErr;
 }
 async function startVoiceRec() {
 if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || typeof MediaRecorder === 'undefined') {
@@ -5797,7 +5817,7 @@ toast('当前浏览器不支持录音'); return;
 }
 let stream = null;
 try {
-stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+stream = await acquireVoiceStream();
 } catch (e) {
 toast(e && e.name === 'NotAllowedError' ? '麦克风权限被拒绝，请在浏览器设置里允许后重试' : '无法访问麦克风');
 return;
@@ -5812,6 +5832,16 @@ rec = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(s
 } catch (e) {}
 if (!rec) { voiceStopStream(); toast('当前浏览器不支持录音'); return; }
 rec.ondataavailable = (ev) => { if (ev.data && ev.data.size) voiceChunks.push(ev.data); };
+rec.onerror = (ev) => {
+  try {
+    if (voiceTimer) { clearInterval(voiceTimer); voiceTimer = null; }
+    if (voiceVisHandler) { document.removeEventListener('visibilitychange', voiceVisHandler); voiceVisHandler = null; }
+    voiceStopStream();
+    voiceRec = null;
+    renderVoiceIdle();
+  } catch (e) {}
+  toast('录音设备出错，请检查麦克风后重试');
+};
 rec.onstop = onVoiceRecStop;
 voiceRec = rec;
 voiceStartTs = Date.now();
