@@ -981,18 +981,6 @@
     const last = seenRecently.get(key);
     return !!(last && Date.now() - last < NOTIFY_CHAT_DUP_MS);
   }
-  // v3.18.x：供 chat.js 在人正在聊天页看到联系人消息时登记「已看过」指纹——
-  // 普通聊天回复/字卡气泡走 addIn→showDeskMsg 只会弹桌面横幅，从不走 bgNotifyCheck，
-  // 前台看到的内容根本没记进 seenRecently；切后台后保活定时器再产出相同内容时仅靠
-  // recentChatDup 扫聊天记录去重，一旦指纹/自排除有偏差就漏网 → 已看过4分钟的消息又弹系统通知。
-  // 这里补一道：任何在聊天页展示过的联系人消息都按同口径指纹记入 seenRecently(15min TTL)，
-  // 后续背景再触发同文案即被 seenDup 拦下。
-  window.bgMarkSeenContent = function (text, img) {
-    try {
-      const nkey = msgFingerprint(text, img);
-      if (nkey) markSeen(nkey);
-    } catch (e) {}
-  };
   // v3.13.x：拦截统计——诊断"只听见声音不弹窗"时一屏看出每条消息卡在哪道闸门
   let gateStats = { total: 0, tooFresh: 0, dup: 0, sent: 0 };
   window.bgNotifyGateStats = function () { return Object.assign({}, gateStats); };

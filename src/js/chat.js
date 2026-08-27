@@ -1903,12 +1903,6 @@ if (dts >= 0 && dts <= 1200) { saveMsgs(); return null; }
 msgs.push(rec);
 saveMsgs();
 const notable = rec.side === 'in' && (!rec.special || rec.special === 'poke' || rec.special === 'gift');
-// v3.18.x：人正在聊天页看到这条联系人消息 → 登记「已看过」指纹，避免切后台后
-// 保活定时器再产出相同内容时重复弹系统通知（bg-keep.bgMarkSeenContent，见其注释）。
-if (notable && chatVisible() && document.visibilityState === 'visible') {
-const _mi = extractDeskMsg(rec);
-try { if (window.bgMarkSeenContent) window.bgMarkSeenContent(_mi.text, _mi.img); } catch (e) {}
-}
 if (notable && (!chatVisible() || document.visibilityState === 'hidden')) {
 if (!chatVisible()) incChatUnread();
 showDeskMsg(rec);

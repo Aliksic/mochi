@@ -7828,7 +7828,7 @@ transition-duration: .01ms !important;
       </div>
       <div class="splash-dots"><i></i><i></i><i></i></div>
       <div class="splash-brand">小红书@言序（1842523578）</div>
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787814928016">Mochi 字卡传讯 v3.6.266 · 部署于 2026-08-27 15:15</div>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787816280893">Mochi 字卡传讯 v3.6.267 · 部署于 2026-08-27 15:38</div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
       <div class="splash-loading" id="splash-loading">正在加载数据…</div>
@@ -8904,7 +8904,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.6.266</div>
+      <div class="ver">Mochi 字卡传讯 v3.6.267</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -9056,7 +9056,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.6.266</span>
+              <span class="lic-ver">v3.6.267</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -11814,7 +11814,7 @@ transition-duration: .01ms !important;
             <span>帮我决定</span>
           </button>
           <button class="more-item" id="more-gdecide" data-mcat="tool" title="多人决定">
-            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="5.5" cy="9" r="2.5"/><circle cx="12" cy="7" r="2.8"/><circle cx="18.5" cy="9" r="2.5"/><path d="M8 20.5 11 23l4.8-6.5"/></svg></span>
+            <span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8.6" cy="8.8" r="2.4"/><path d="M3.4 19c.6-3.3 2.8-5 5.2-5s4.6 1.7 5.2 5"/><circle cx="15.4" cy="8.8" r="2.4"/><path d="M10.2 19c.6-3.3 2.8-5 5.2-5s4.6 1.7 5.2 5"/></svg></span>
             <span>多人决定</span>
           </button>
           <button class="more-item" id="more-invite" data-mcat="chat" title="邀请TA">
@@ -20059,10 +20059,6 @@ if (dts >= 0 && dts <= 1200) { saveMsgs(); return null; }
 msgs.push(rec);
 saveMsgs();
 const notable = rec.side === 'in' && (!rec.special || rec.special === 'poke' || rec.special === 'gift');
-if (notable && chatVisible() && document.visibilityState === 'visible') {
-const _mi = extractDeskMsg(rec);
-try { if (window.bgMarkSeenContent) window.bgMarkSeenContent(_mi.text, _mi.img); } catch (e) {}
-}
 if (notable && (!chatVisible() || document.visibilityState === 'hidden')) {
 if (!chatVisible()) incChatUnread();
 showDeskMsg(rec);
@@ -40956,12 +40952,6 @@ if (!key) return false;
 const last = seenRecently.get(key);
 return !!(last && Date.now() - last < NOTIFY_CHAT_DUP_MS);
 }
-window.bgMarkSeenContent = function (text, img) {
-try {
-const nkey = msgFingerprint(text, img);
-if (nkey) markSeen(nkey);
-} catch (e) {}
-};
 let gateStats = { total: 0, tooFresh: 0, dup: 0, sent: 0 };
 window.bgNotifyGateStats = function () { return Object.assign({}, gateStats); };
 window.bgNotifyGateInfo = function (text, img, refTs) {
