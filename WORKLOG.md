@@ -1,6 +1,12 @@
-# 本次构建者：AI-B（本会话，2026-08-28，仅改 src 未构建，待构建者收口）
+# 本次构建者：AI-B（本会话，2026-08-28 20:02，音效图标重设计已构建收口 sw: mochi-mtcwjx2b，哨兵 23/23，待提交）
+### 2026-08-28 20:02（音效设置「TA发来消息/我发送消息」图标重设计为气泡+喇叭；已构建）
+- [AI-B 域]（**已改 src/template.html（仅 sfx-in-row / sfx-out-row 两处 SVG 图标）；构建状态：已构建 sw: mochi-mtcwjx2b，哨兵 23/23，待提交**）。
+- 需求：用户反馈音效设置页 TA 发来消息 / 我发送消息 左侧矢量图太丑，需重新设计；并说明音效应每桌面独立。
+- 方案：提供 A 气泡+声波 / B 气泡+音符 / C 气泡+喇叭 三候选，用户选定 C（气泡+喇叭）。TA 发来 = 气泡尾在左、喇叭靠左发声波向右；我发送 = 气泡尾在右、喇叭靠右发声波向左（方向镜像区分收发）。描边沿用全站 1.8 圆头圆角风格。
+- 音效每桌面独立：核实 sfx.js 顶部 `const store = window.activeStore()`（contacts.js 动态绑定当前 __activeCid），读写均在 `xy-home-v2:<cid>:sfx-*` 命名空间；`contact-switched` 事件触发 renderAllSfx 重渲染当前桌面选择——已满足「每桌面独立」，无需改代码。
+- 验证：node build.mjs 通过；哨兵 23/23；产物 index.html 10243/10252 行确认新图标在位、旧图标路径已消失。
 ### 2026-08-28（修复：设置页「复制诊断信息」点【复制】显示 undefined）
-- [AI-B 域]（**已改 src/js/personalize.js；构建状态：未构建（node --check 已过）**）。
+- [AI-B 域]（**已改 src/js/personalize.js；构建状态：已随 20:02 构建收口（sw mochi-mtcwjx2b）**）。
 - 需求/根因：弹窗控制器 ctl.text 只有 setter 语义，device.js 的「复制/导出」按钮用 ctl.text()（无参）想读诊断文本，实得 undefined → copyText(undefined) 复制出「undefined」。给 ctl.text 加无参 getter（textarea/input 当前值），有参保持 setter，零影响既有调用方。
 - 验证：node --check 通过，未跑构建。
 

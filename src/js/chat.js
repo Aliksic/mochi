@@ -5034,20 +5034,28 @@ if (tIdx < 0 || !jumpToMsg(tIdx)) toast('未找到原消息');
 });
 }
 if (body) {
-body.addEventListener('click', (e) => {
-const b = e.target.closest('.msg-bubble');
-if (!b) { closeMsgActions(); return; }
-if (e.target.closest('.msg-quote')) return;
+// v3.26.x：消息操作菜单（引用/收藏/撤回/编辑/删除）支持「长按 + 轻点」双手势。
+// 长按气泡弹出菜单，松开时抑制随之而来的轻点，避免菜单被立刻关闭；统一复用 openMsgActionsAt 打开逻辑。
+let msgHoldTimer = null;
+let msgHoldEl = null;
+let msgHoldFired = false;
+let msgSuppressClickUntil = 0;
+function msgActionEligible(t) {
+// 沿用原「点气泡弹菜单」的判定规则：可弹返回 {item, b}，不可弹返回 null（引用气泡/拍一拍/撤回/已读不回等）
+const b = t.closest('.msg-bubble');
+if (!b) return null;
+if (t.closest('.msg-quote')) return null;
 const item = b.closest('.msg');
-if (!item) return;
-const special = item.classList.contains('msg-poke');
-if (special) return;
-if (e.target.closest('.msg-poke-seg')) return;
-if (b.textContent.indexOf('撤回了一条消息') >= 0 || b.textContent.indexOf('已读不回') >= 0) return;
-e.stopPropagation();
+if (!item || item.classList.contains('msg-poke')) return null;
+if (t.closest('.msg-poke-seg')) return null;
+const txt = b.textContent;
+if (txt.indexOf('撤回了一条消息') >= 0 || txt.indexOf('已读不回') >= 0) return null;
+return { item, b };
+}
+function openMsgActionsAt(item, b) {
 activeMsgEl = item;
 activeSide = item.classList.contains('msg-out') ? 'out' : 'in';
-if (msgActions) {
+if (!msgActions) return;
 msgActions.querySelectorAll('.ma-mine').forEach(b2 => b2.hidden = activeSide !== 'out');
 const delBtn = msgActions.querySelector('.ma-del-ta');
 if (delBtn) {
@@ -5072,6 +5080,35 @@ y = aboveFits || !belowFits ? y : below;
 msgActions.style.left = x + 'px';
 msgActions.style.top = y + 'px';
 }
+body.addEventListener('contextmenu', (e) => {
+// 长按/右键由应用接管：抑制系统默认菜单与文本选中，但不吞掉「引用气泡跳原消息」等其它元素自身行为
+if (e.target.closest('.msg-bubble') && !e.target.closest('.msg-quote')) e.preventDefault();
+});
+body.addEventListener('touchstart', (e) => {
+const r = msgActionEligible(e.target);
+if (!r) return;
+msgHoldEl = r.item;
+msgHoldTimer = setTimeout(() => {
+msgHoldTimer = null;
+msgHoldFired = true;
+msgSuppressClickUntil = Date.now() + 800; // 松开后抑制随之而来的轻点，防菜单被刚弹即关
+if (window.getSelection) { try { const s = window.getSelection(); if (s && s.removeAllRanges) s.removeAllRanges(); } catch (err) {} }
+openMsgActionsAt(msgHoldEl, r.b);
+}, 500);
+}, { passive: true });
+function endMsgHold() { if (msgHoldTimer) { clearTimeout(msgHoldTimer); msgHoldTimer = null; } }
+body.addEventListener('touchmove', endMsgHold, { passive: true });   // 手指滑动=滚动，取消长按
+body.addEventListener('touchend', endMsgHold);
+body.addEventListener('touchcancel', endMsgHold);
+body.addEventListener('click', (e) => {
+if (msgSuppressClickUntil && Date.now() < msgSuppressClickUntil) { e.preventDefault(); e.stopPropagation(); return; }
+const r = msgActionEligible(e.target);
+if (!r) {
+if (!e.target.closest('.msg-bubble') && !e.target.closest('.msg-quote')) closeMsgActions();
+return;
+}
+e.stopPropagation();
+openMsgActionsAt(r.item, r.b);
 });
 document.addEventListener('click', (e) => {
 if (msgActions && !msgActions.hidden && !msgActions.contains(e.target)) closeMsgActions();

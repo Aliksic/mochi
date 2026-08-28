@@ -1649,15 +1649,8 @@
     return { text: qtext, imgs: qimgs, idx: msgs.indexOf(rec) };
   }
   if (body && gcMsgActions) {
-    body.addEventListener('click', (e) => {
-      const bk = e.target.closest('.msg-bubble');
-      if (!bk) return;
-      const item = bk.closest('.msg');
-      if (!item) return;
-      if (item.classList.contains('msg-poke')) return;          // 拍一拍居中条不弹
-      if (e.target.closest('.msg-quote')) return;               // 引用块点击留给后续跳原消息
-      if ((bk.textContent || '').indexOf('撤回了一条消息') >= 0) return; // 撤回提示有专属点击（查看原文）
-      e.stopPropagation();
+    // v3.26.x：群聊消息操作菜单（引用）同样支持「长按 + 轻点」双手势，与聊天页保持一致
+    function gcOpenMsgActions(item, bk) {
       gcActiveMsgEl = item;
       gcMsgActions.hidden = false;
       // 定位：气泡上方居中，放不下换下方；clamp 在视口内（与聊天页同款算法）
@@ -1678,6 +1671,43 @@
         gcMsgActions.style.left = x + 'px';
         gcMsgActions.style.top = y + 'px';
       } catch (err) {}
+    }
+    let gcHoldTimer = null;
+    let gcHoldEl = null;
+    let gcSuppressClickUntil = 0;
+    body.addEventListener('contextmenu', (e) => {
+      if (e.target.closest('.msg-bubble') && !e.target.closest('.msg-quote')) e.preventDefault();
+    });
+    body.addEventListener('touchstart', (e) => {
+      const bk = e.target.closest('.msg-bubble');
+      if (!bk) return;
+      if (e.target.closest('.msg-quote')) return;               // 引用块点击留给后续跳原消息
+      const item = bk.closest('.msg');
+      if (!item || item.classList.contains('msg-poke')) return; // 拍一拍居中条不弹
+      if ((bk.textContent || '').indexOf('撤回了一条消息') >= 0) return; // 撤回提示有专属点击
+      gcHoldEl = item;
+      gcHoldTimer = setTimeout(() => {
+        gcHoldTimer = null;
+        gcSuppressClickUntil = Date.now() + 800; // 松开后抑制随之而来的轻点，防菜单被刚弹即关
+        if (window.getSelection) { try { const s = window.getSelection(); if (s && s.removeAllRanges) s.removeAllRanges(); } catch (err) {} }
+        gcOpenMsgActions(gcHoldEl, bk);
+      }, 500);
+    }, { passive: true });
+    function endGcHold() { if (gcHoldTimer) { clearTimeout(gcHoldTimer); gcHoldTimer = null; } }
+    body.addEventListener('touchmove', endGcHold, { passive: true }); // 手指滑动=滚动，取消长按
+    body.addEventListener('touchend', endGcHold);
+    body.addEventListener('touchcancel', endGcHold);
+    body.addEventListener('click', (e) => {
+      if (gcSuppressClickUntil && Date.now() < gcSuppressClickUntil) { e.preventDefault(); e.stopPropagation(); return; }
+      const bk = e.target.closest('.msg-bubble');
+      if (!bk) return;
+      const item = bk.closest('.msg');
+      if (!item) return;
+      if (item.classList.contains('msg-poke')) return;          // 拍一拍居中条不弹
+      if (e.target.closest('.msg-quote')) return;               // 引用块点击留给后续跳原消息
+      if ((bk.textContent || '').indexOf('撤回了一条消息') >= 0) return; // 撤回提示有专属点击（查看原文）
+      e.stopPropagation();
+      gcOpenMsgActions(item, bk);
     });
     document.addEventListener('click', (e) => {
       if (!gcMsgActions.hidden && !gcMsgActions.contains(e.target)) closeGcMsgActions();
