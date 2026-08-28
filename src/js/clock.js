@@ -51,6 +51,9 @@
   const seenKey = 'xy-home-v2:splash-seen:' + today;
   let seenToday = false;
   try { seenToday = localStorage.getItem(seenKey) === '1'; } catch (e) {}
+  // v3.8.z2：每日首次打开强制展开全文阅读（今日未读过 → 各章节初始展开），
+  //   当日已读后再次打开才保持折叠——forceExpand 供在线/离线渲染统一读取。
+  window.__splashForceExpand = !seenToday;
   // v3.8.z：全折叠+必读摘要——各章节默认收起、靠目录跳转；摘要承担必读。
   //   "每日首次强读"仍然生效（首次须滑到底才可进入），但不再展开全部章节。
   //   移除首开 forceExpand 全展开逻辑（默认折叠即可）。
@@ -114,12 +117,14 @@
 function renderSplashSections(container, sections, opt) {
   if (!container || !Array.isArray(sections)) return;
   const collapsible = !!(opt && opt.collapsible);
+  // 首次打开强制展开：今日未读过 → 本章节初始不收起（全文可读）
+  const forceExpand = !!(opt && opt.expandFirst) && !!window.__splashForceExpand;
   sections.forEach(function (sec) {
     const wrap = document.createElement('div');
-    // v3.8.z：全折叠——各章节默认收起，靠目录跳转（不再按日期强制展开）
+    // v3.8.z：全折叠（已读后） / v3.8.z2：首次打开展开全文
     wrap.className = 'splash-sec-wrap'
       + (collapsible ? ' splash-sec-collapsible' : '')
-      + (collapsible ? ' is-collapsed' : '');
+      + (collapsible && !forceExpand ? ' is-collapsed' : '');
     let h = null;
     if (sec && sec.h) {
       h = document.createElement('p');
@@ -247,7 +252,9 @@ function buildSplashToc(list) {
           // 前置提示块（App 说明 / 系统预设字卡等引导内容，非必读 → 收进折叠条目，避免首屏一上来就一大片字）
           if (Array.isArray(data.tip) && data.tip.length) {
             const gwrap = document.createElement('div');
-            gwrap.className = 'splash-sec-wrap splash-sec-collapsible is-collapsed';
+            // 首次打开强制展开阅读；已读后再次打开才折叠
+            gwrap.className = 'splash-sec-wrap splash-sec-collapsible'
+              + (window.__splashForceExpand ? '' : ' is-collapsed');
             const gh = document.createElement('p');
             gh.className = 'splash-sec';
             gh.textContent = '其他说明与常见问题';
@@ -283,7 +290,7 @@ function buildSplashToc(list) {
           }
           // 章节：字符串=自动编号条目；{h}=子标题；{b}=子列表项
           // v3.8.y：开屏公告折叠成章节索引，点标题展开细节
-          renderSplashSections(list, data.sections, { collapsible: true });
+          renderSplashSections(list, data.sections, { collapsible: true, expandFirst: true });
           // v3.8.y：添加「书签目录」横向可跳转（需要等 renderSplashSections 生成 DOM 后再注入）
           buildSplashToc(list);
         }
@@ -322,7 +329,9 @@ window.addEventListener('DOMContentLoaded', function () {
     if (wrap.classList.contains('splash-sec-collapsible')) return; // 在线已处理
     const head = wrap.querySelector(':scope > .splash-sec');
     if (!head) return;
-    wrap.classList.add('splash-sec-collapsible', 'is-collapsed');
+    wrap.classList.add('splash-sec-collapsible');
+    // 首次打开强制展开全文阅读；已读后再次打开才折叠
+    if (!window.__splashForceExpand) wrap.classList.add('is-collapsed');
     let content = wrap.querySelector(':scope > .splash-sec-content');
     if (!content) {
       content = document.createElement('div');

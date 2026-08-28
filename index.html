@@ -8109,9 +8109,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787906742048">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.6.285</b></span>
-        <span class="sv-deploy">部署于 2026-08-28 16:45<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787907224490">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.6.286</b></span>
+        <span class="sv-deploy">部署于 2026-08-28 16:53<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9176,7 +9176,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.6.285</div>
+      <div class="ver">Mochi 字卡传讯 v3.6.286</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -9331,7 +9331,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.6.285</span>
+              <span class="lic-ver">v3.6.286</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -14224,6 +14224,7 @@ return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
 const seenKey = 'xy-home-v2:splash-seen:' + today;
 let seenToday = false;
 try { seenToday = localStorage.getItem(seenKey) === '1'; } catch (e) {}
+window.__splashForceExpand = !seenToday;
 const enterEl = document.getElementById('splash-enter');
 const loadingEl = document.getElementById('splash-loading');
 const hintEl = document.getElementById('splash-enter-hint');
@@ -14268,11 +14269,12 @@ setTimeout(() => { if (!ready()) hide(); }, 20000);
 function renderSplashSections(container, sections, opt) {
 if (!container || !Array.isArray(sections)) return;
 const collapsible = !!(opt && opt.collapsible);
+const forceExpand = !!(opt && opt.expandFirst) && !!window.__splashForceExpand;
 sections.forEach(function (sec) {
 const wrap = document.createElement('div');
 wrap.className = 'splash-sec-wrap'
 + (collapsible ? ' splash-sec-collapsible' : '')
-+ (collapsible ? ' is-collapsed' : '');
++ (collapsible && !forceExpand ? ' is-collapsed' : '');
 let h = null;
 if (sec && sec.h) {
 h = document.createElement('p');
@@ -14380,7 +14382,8 @@ list.appendChild(sum);
 }
 if (Array.isArray(data.tip) && data.tip.length) {
 const gwrap = document.createElement('div');
-gwrap.className = 'splash-sec-wrap splash-sec-collapsible is-collapsed';
+gwrap.className = 'splash-sec-wrap splash-sec-collapsible'
++ (window.__splashForceExpand ? '' : ' is-collapsed');
 const gh = document.createElement('p');
 gh.className = 'splash-sec';
 gh.textContent = '其他说明与常见问题';
@@ -14414,7 +14417,7 @@ gwrap.appendChild(gh);
 gwrap.appendChild(gbody);
 list.appendChild(gwrap);
 }
-renderSplashSections(list, data.sections, { collapsible: true });
+renderSplashSections(list, data.sections, { collapsible: true, expandFirst: true });
 buildSplashToc(list);
 }
 } else if (Array.isArray(data.list)) {
@@ -14442,7 +14445,8 @@ Array.prototype.forEach.call(nl.querySelectorAll('.splash-sec-wrap'), function (
 if (wrap.classList.contains('splash-sec-collapsible')) return; // 在线已处理
 const head = wrap.querySelector(':scope > .splash-sec');
 if (!head) return;
-wrap.classList.add('splash-sec-collapsible', 'is-collapsed');
+wrap.classList.add('splash-sec-collapsible');
+if (!window.__splashForceExpand) wrap.classList.add('is-collapsed');
 let content = wrap.querySelector(':scope > .splash-sec-content');
 if (!content) {
 content = document.createElement('div');
