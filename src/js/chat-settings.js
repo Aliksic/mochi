@@ -759,7 +759,8 @@
   function deleteChatScheme(idx, m) {
     const s = getChatSchemes()[idx];
     if (!s || !window.openModal) return;
-    window.openModal('删除方案「' + s.name + '」？', '', (v) => {
+    // v3.26.x：预选中唯一「删除」pill——否则用户只点底部「确定」时传 null → 静默不删除（反馈"没反应"）
+    const ctl = window.openModal('删除方案「' + s.name + '」？', '', (v) => {
       if (v !== 'ok') return;
       const list = getChatSchemes();
       list.splice(idx, 1);
@@ -767,6 +768,7 @@
       toast('已删除方案');
       window.openChatBeautySchemes();
     }, { noInput: true, staticText: '删除后不可恢复', pills: [{ label: '删除', value: 'ok' }] });
+    if (ctl && ctl.pills) ctl.pills([{ label: '删除', value: 'ok' }], 'ok');
   }
   // 小按钮构造器
   function mkBtn(label, css, fn) {

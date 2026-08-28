@@ -1,4 +1,9 @@
 # 本次构建者：AI-B（本会话，2026-08-29，收口【查看存储】+ 累积未构建项：设置查看存储/诊断IndexedDB大键/收到~兜底/更新条ack-ts 等；sw: mochi-mtd1qpft，待用户确认提交推送）
+### 2026-08-29（聊天美化方案删除：已修复+重构建+已提交推送；sw: mochi-mtd2qu8r，哨兵27/27，verify 10/10）
+- [AI-A 域 + 跨域 personalize.js]（**已改 src/js/chat-settings.js（AI-A）+ src/js/personalize.js（AI-B，跨域桌面删除同因同修）；构建状态：已构建 sw: mochi-mtd2qu8r，已提交并推送**）。
+- 需求/反馈：用户再报「聊天美化方案里 删除方案，点删除无反应没删除」。
+- 根因与方案：删除确认是 noInput 单 pill 弹窗，用户只点底部【确定】时 fire() 走 pills 分支传 pillVal=null → v!=='ok' → 静默不删。修复：openModal 返回 ctl 后 `ctl.pills([{label:'删除',value:'ok'}], 'ok')` 预选中唯一删除 pill（noInput 分支必传 'ok'），点确定即删。
+- 验证：无头回归 diag-chat-scheme-delete.mjs 确认真实行为——只点【确定】方案数 2→1、再删 1→0，删除生效；本次部署后用户端应看到修复（旧部署/缓存才表现为无反应）。
 ### 2026-08-28 22:42（【查看存储】分类补全：覆盖全部功能 + 分类行可展开看键名；已改源码，未构建）
 - [AI-B 域]（**已改 src/js/personalize.js（catOf 全量归类 + lsStats/idbStats 收集键名 + renderCatTable 可展开行 + 点击事件委托）+ src/css/setting.css（.storage-cat-line/.storage-cat-keys 展开样式）+ src/template.html（明细卡提示文案加「点击分类行可展开查看键名」）；构建状态：未构建（node --check 已过、工具脚本 162 个代表键分类全过），待构建者收口**）。
 - 需求/反馈：用户问「我的功能非常多啊，你确定是全部」——担心【查看存储】各功能占用明细没覆盖到全部功能。

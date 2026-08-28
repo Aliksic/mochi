@@ -1807,7 +1807,8 @@ try {
   function deleteScheme(idx, m) {
     const s = getSchemes()[idx];
     if (!s || !window.openModal) return;
-    window.openModal('删除方案「' + s.name + '」？', '', (v) => {
+    // v3.26.x：预选中唯一「删除」pill——否则只点底部「确定」传 null → 静默不删除（反馈"没反应"）
+    const ctl = window.openModal('删除方案「' + s.name + '」？', '', (v) => {
       if (v !== 'ok') return;
       const list = getSchemes();
       list.splice(idx, 1);
@@ -1815,6 +1816,7 @@ try {
       toast('已删除方案');
       window.openBeautySchemes();
     }, { noInput: true, staticText: '删除后不可恢复', pills: [{ label: '删除', value: 'ok' }] });
+    if (ctl && ctl.pills) ctl.pills([{ label: '删除', value: 'ok' }], 'ok');
   }
   window.openBeautySchemes = function () {
     const m = schemeModalEl();
