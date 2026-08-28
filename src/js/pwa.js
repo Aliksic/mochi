@@ -26,6 +26,8 @@
   // 优先仍可能超时回退旧缓存 → 永远卡旧版。SW 回执或 2.5s 兜底超时后刷新。
   let _prMsg = null;
   function refreshNow() {
+    // v3.26.x：用户主动刷新 → 本日不再重复提醒（避免 SW 交接期 reload 后新页面再弹一次）
+    verMarkSnooze();
     const doReload = function () { try { location.reload(); } catch (e) {} };
     try {
       if (navigator.serviceWorker && navigator.serviceWorker.controller) {
@@ -43,6 +45,45 @@
     } catch (e) { doReload(); }
   }
 
+  // ================= v3.26.x：更新条防重复（版本轮询 + SW 检测两通道共享） =================
+  // 用户反馈「刷新到新版后顶部还提醒」：根因是 SW 交接期（新 SW 刚装完接管）与弱网
+  // 旧缓存场景下，版本轮询 / SW updatefound 两条通道会在新页面上再次触发弹条。
+  // 这里统一收口：① 点「刷新使用新版」或「稍后」后，本日（自然日）不再重复弹；
+  // ② 弹条前若页面 data-build-ts 已等于线上 version.json ts，说明已是最新，跳过。
+  const VER_SNOOZE_KEY = 'xy-home-v2:ver-update-snooze-day';
+  let _verBarShown = false;
+  function verToday() {
+    const d = new Date(), p = (n) => (n < 10 ? '0' + n : '' + n);
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  }
+  function verSnoozed() {
+    try { return localStorage.getItem(VER_SNOOZE_KEY) === verToday(); } catch (e) { return false; }
+  }
+  function verMarkSnooze() {
+    try { localStorage.setItem(VER_SNOOZE_KEY, verToday()); } catch (e) {}
+  }
+  // v3.10.x：带超时的 fetch（5s），弱网不挂起；失败由调用方快速重试
+  function fetchJson(url, ms) {
+    const ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    const timer = ctrl ? setTimeout(function () { ctrl.abort(); }, ms) : null;
+    return fetch(url, { cache: 'no-store', signal: ctrl ? ctrl.signal : undefined })
+      .then(function (r) { if (timer) clearTimeout(timer); if (!r.ok) throw new Error('bad'); return r.json(); })
+      .catch(function (err) { if (timer) clearTimeout(timer); throw err; });
+  }
+  // 显示更新条（版本轮询 + SW 检测共用）：跨通道一次性去重 + 关闭即本日免打扰
+  function showVerBar() {
+    if (_verBarShown || verSnoozed()) return;
+    _verBarShown = true;
+    const barEl = document.getElementById('ver-update-bar');
+    if (!barEl) { toast('已检测到新版本，刷新页面即可更新'); return; }
+    barEl.hidden = false;
+    const actEl = document.getElementById('ver-update-refresh');
+    if (actEl) actEl.onclick = refreshNow;
+    // v3.5.134：可关闭（"稍后"）——不挡用户当前操作；v3.26.x：关闭记本日免打扰
+    const closeBtn = document.getElementById('ver-update-close');
+    if (closeBtn) closeBtn.onclick = function () { verMarkSnooze(); barEl.hidden = true; };
+  }
+
   // ================= v3.6.x：新版本检测（版本文件轮询，iOS/安卓均可靠） =================
   // 纯 Service Worker 检测不可靠：sw 只在页面加载/导航时检查、iOS Safari 对 sw 更新
   // 事件支持差——用户开着旧页面永远收不到「新版本」提醒。
@@ -52,10 +93,8 @@
   (function () {
     const bar = document.getElementById('ver-update-bar');
     if (!bar) return;
-    const act = document.getElementById('ver-update-refresh');
     let baseTs = null;      // 当前页面的版本时间戳（基线）
     let baseGot = false;
-    let noticed = false;
     // v3.7.x：基线在页面加载时直接从 splash-ver data-build-ts 确定（构建时注入），
     // 不依赖「首次 fetch 的 version.json」——旧逻辑首次 fetch 只设基线就 return，
     // 必须等 30 秒后第二次轮询才会比较；且旧缓存页面 + 网络拿到最新 version.json
@@ -65,25 +104,8 @@
       const t = sv && Number(sv.getAttribute('data-build-ts'));
       if (t > 0) { baseTs = t; baseGot = true; }
     })();
-    // 防抖：检查到新版本后只提示一次，避免每次轮询都闪
+    // 防抖：检查到新版本后只提示一次，避免每次轮询都闪（跨通道去重在主作用域 showVerBar）
     let lastCheck = 0;
-    function showBar() {
-      if (noticed) return;
-      noticed = true;
-      bar.hidden = false;
-      if (act) act.onclick = refreshNow;
-      // v3.5.134：可关闭（"稍后"）——不挡用户当前操作；关闭后本会话不再提示
-      const closeBtn = document.getElementById('ver-update-close');
-      if (closeBtn) closeBtn.onclick = function () { bar.hidden = true; };
-    }
-    // v3.10.x：带超时的 fetch（5s），弱网不挂起；失败由调用方快速重试
-    function fetchJson(url, ms) {
-      const ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
-      const timer = ctrl ? setTimeout(function () { ctrl.abort(); }, ms) : null;
-      return fetch(url, { cache: 'no-store', signal: ctrl ? ctrl.signal : undefined })
-        .then(function (r) { if (timer) clearTimeout(timer); if (!r.ok) throw new Error('bad'); return r.json(); })
-        .catch(function (err) { if (timer) clearTimeout(timer); throw err; });
-    }
     let failCount = 0;
     function checkVersion() {
       const now = Date.now();
@@ -100,7 +122,7 @@
           if (!ts || isNaN(ts)) return;
           // 老版本页面无 data-build-ts 注入时回退旧逻辑（首次 fetch 当基线）
           if (!baseGot) { baseTs = ts; baseGot = true; return; }
-          if (ts > baseTs) showBar();
+          if (ts > baseTs) showVerBar();
         })
         .catch(function () { failCount++; });
     }
@@ -177,17 +199,19 @@
             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
               // v3.10.x：检测到新 SW 直接显示常驻更新条（原逻辑只 toast 一闪而过，
               // 用户容易看不到）；与版本轮询（version.json）双通道互补，任一命中即提示。
+              // v3.26.x：防「刷新到新版后还提醒」——① 本日已刷新/稍后过不再弹；
+              // ② 页面已是线上最新（data-build-ts 等于 version.json ts）时，SW 交接期的
+              // updatefound 不再误报（新 SW 刚装完接管，页面其实已是最新）。
               try {
-                const barEl = document.getElementById('ver-update-bar');
-                if (barEl) {
-                  barEl.hidden = false;
-                  const actEl = document.getElementById('ver-update-refresh');
-                  if (actEl) actEl.onclick = refreshNow;
-                  const closeBtn = document.getElementById('ver-update-close');
-                  if (closeBtn) closeBtn.onclick = function () { barEl.hidden = true; };
-                } else {
-                  toast('已检测到新版本，刷新页面即可更新');
-                }
+                if (verSnoozed()) return;
+                const sv = document.getElementById('splash-ver');
+                const localTs = (sv && Number(sv.getAttribute('data-build-ts'))) || 0;
+                fetchJson('./version.json?v=' + Date.now(), 5000)
+                  .then(function (d) {
+                    const ts = Number(d && d.ts);
+                    if (!ts || isNaN(ts) || ts > localTs) showVerBar();
+                  })
+                  .catch(function () { showVerBar(); }); // 拉不到版本文件也照弹（宁多勿漏）
               } catch (e) {}
             }
           });

@@ -8322,9 +8322,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787923320070">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.302</b></span>
-        <span class="sv-deploy">部署于 2026-08-28 21:22<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787926120275">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.303</b></span>
+        <span class="sv-deploy">部署于 2026-08-28 22:08<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9407,7 +9407,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.302</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.303</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -9579,7 +9579,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.302</span>
+              <span class="lic-ver">v3.26.303</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -13060,6 +13060,17 @@ return out;
 const row = document.getElementById('row-diagnostics');
 if (!row) return;
 const ua = String(navigator.userAgent || '');
+let verCache = '', localTsCache = 0;
+try {
+const sv = document.getElementById('splash-ver');
+if (sv) {
+const vb = sv.querySelector('.sv-app b');
+const verTxt = (vb && vb.textContent ? String(vb.textContent).trim() : '') || (sv.getAttribute('data-version') || '');
+const ts = sv.getAttribute('data-build-ts');
+verCache = verTxt + (ts ? ' 构建 ts=' + ts : '');
+localTsCache = Number(ts) || 0;
+}
+} catch (e) {}
 const ERR_KEY = 'xy-home-v2:__diag-errs';
 function errSnap() {
 const d = window.mochiDevice || {};
@@ -13094,8 +13105,22 @@ if (last && last.msg === ent.msg && ent.t - (last.t || 0) < 5000) return;
 arr.push(ent);
 if (arr.length > 5) arr = arr.slice(arr.length - 5);
 try { localStorage.setItem(ERR_KEY, JSON.stringify(arr)); } catch (e) {}
+try { if (window.idbSet) window.idbSet(ERR_KEY, JSON.stringify(arr)); } catch (e) {}
 try { refreshBadge(); } catch (e) {}
 } catch (e) {}
+}
+function readErrs(cb) {
+let arr = [];
+try {
+const raw = localStorage.getItem(ERR_KEY);
+if (raw) { const o = JSON.parse(raw); if (Array.isArray(o)) arr = o; }
+} catch (e) {}
+if (arr.length || !window.idbGet) { try { cb(arr); } catch (e) {} return; }
+window.idbGet(ERR_KEY).then(function (raw) {
+let o = [];
+try { if (raw) { const p = JSON.parse(raw); if (Array.isArray(p)) o = p; } } catch (e) {}
+try { cb(o); } catch (e) {}
+}).catch(function () { try { cb([]); } catch (e) {} });
 }
 try {
 window.addEventListener('error', function (e) {
@@ -13336,14 +13361,7 @@ return new Promise(function (resolve) {
 const d = window.mochiDevice || {};
 const L = [];
 const jobs = []; // 所有异步采集（配额/persisted/远端版本/SW 状态）进这里，最后 Promise.all
-let ver = '', localTs = 0;
-try {
-const sv = document.getElementById('splash-ver');
-if (sv) {
-ver = (sv.getAttribute('data-version') || '') + (sv.getAttribute('data-build-ts') ? ' (构建 ts=' + sv.getAttribute('data-build-ts') + ')' : '');
-localTs = Number(sv.getAttribute('data-build-ts')) || 0;
-}
-} catch (e) {}
+let ver = verCache || '', localTs = localTsCache || 0;
 if (!ver) { try { ver = window.APP_VERSION || ''; } catch (e) {} }
 L.push('Mochi 诊断信息（' + ver + '）');
 L.push('时间：' + new Date().toLocaleString());
@@ -13511,6 +13529,54 @@ L.push('数据总占用≈' + usageStr(total));
 const tops = items.slice(0, 8).map(function (it) { return it.k + '=' + usageStr(it.size); }).join('、');
 if (tops) L.push('最大键：' + tops);
 } catch (e) {}
+try {
+const idbIdx = L.length; L.push('IndexedDB 大键明细：读取中…');
+jobs.push(new Promise(function (res) {
+if (!window.idbGetAllKeys) { L[idbIdx] = 'IndexedDB 大键明细：接口不可用'; res(); return; }
+window.idbGetAllKeys().then(function (keys) {
+const cand = (keys || []).filter(function (k) {
+k = String(k || '');
+if (k.indexOf('xy-home-v2:') !== 0) return false;
+if (k.indexOf('music-file:') >= 0) return true;
+if (/:chat-msgs$/.test(k)) return true;
+if (/avatar-(lib|me-lib)$/.test(k)) return true;
+if (/:(phone-bg|wallpaper|chat-bg|page-bg|desk-bg|bg)$/.test(k)) return true;
+if (k.indexOf('__auto-backup-snapshot') >= 0) return true;
+return false;
+});
+if (!cand.length) { L[idbIdx] = 'IndexedDB 大键明细：无大键候选'; res(); return; }
+const out = [];
+(function loop(i) {
+if (i >= cand.length) {
+try {
+const real = out.filter(function (it) { return it.size >= 0; });
+real.sort(function (a, b) { return b.size - a.size; });
+const total = real.reduce(function (s, it) { return s + it.size; }, 0);
+const lines = ['IndexedDB 大键明细：' + cand.length + ' 个候选，合计≈' + usageStr(total) + '（设置小键未计）'];
+real.slice(0, 10).forEach(function (it) {
+lines.push('· ' + String(it.k).slice('xy-home-v2:'.length) + '=' + (it.size >= 0 ? usageStr(it.size) : '?'));
+});
+L[idbIdx] = lines.join('\n');
+} catch (e) { L[idbIdx] = 'IndexedDB 大键明细：统计失败'; }
+res(); return;
+}
+const k = cand[i];
+if (!window.idbGet) { out.push({ k: k, size: -1 }); loop(i + 1); return; }
+window.idbGet(k).then(function (v) {
+let sz = -1;
+try {
+if (v instanceof Blob) sz = v.size;
+else if (v instanceof ArrayBuffer) sz = v.byteLength;
+else if (typeof v === 'string') sz = v.length * 2;
+else if (v !== undefined && v !== null) sz = JSON.stringify(v).length * 2;
+} catch (e) { sz = -1; }
+out.push({ k: k, size: sz });
+loop(i + 1);
+}).catch(function () { out.push({ k: k, size: -1 }); loop(i + 1); });
+})(0);
+}).catch(function () { L[idbIdx] = 'IndexedDB 大键明细：读取失败'; res(); });
+}));
+} catch (e) { try { L.push('IndexedDB 大键明细：读取失败'); } catch (e2) {} }
 let quotaIdx = -1, persistedIdx = -1;
 try { L.push('存储配额：读取中…'); quotaIdx = L.length - 1; } catch (e) {}
 try { L.push('navigator.onLine=' + navigator.onLine); } catch (e) {}
@@ -13539,19 +13605,27 @@ if (persistedIdx >= 0) L[persistedIdx] = 'storage.persisted=读取失败';
 }
 } catch (e) {}
 try {
-const errs = JSON.parse(localStorage.getItem(ERR_KEY) || '[]');
+const errIdx = L.length; L.push('最近错误：读取中…');
+jobs.push(new Promise(function (res) {
+readErrs(function (errs) {
+try {
 if (Array.isArray(errs) && errs.length) {
-L.push('最近错误 ' + errs.length + ' 条：');
+const lines = ['最近错误 ' + errs.length + ' 条：'];
 errs.forEach(function (it) {
 const dt = it.t ? new Date(it.t).toLocaleString() : '?';
-L.push('· ' + dt + ' [' + (it.dev || '') + '] ' + (it.msg || '').slice(0, 180) + (it.page ? '（页面 ' + it.page + '）' : ''));
+lines.push('· ' + dt + ' [' + (it.dev || '') + '] ' + (it.msg || '').slice(0, 180) + (it.page ? '（页面 ' + it.page + '）' : ''));
 const st = String(it.stack || '');
-if (st) L.push('    ' + st.split('\n').slice(0, 4).join('\n    '));
+if (st) lines.push('    ' + st.split('\n').slice(0, 4).join('\n    '));
 });
+L[errIdx] = lines.join('\n');
 } else {
-L.push('最近错误：无');
+L[errIdx] = '最近错误：无';
 }
-} catch (e) {}
+} catch (e) { L[errIdx] = '最近错误：读取失败'; }
+res();
+});
+}));
+} catch (e) { L.push('最近错误：读取失败'); }
 try {
 const envs = JSON.parse(localStorage.getItem(ENV_KEY) || '[]');
 if (Array.isArray(envs) && envs.length) {
@@ -13643,22 +13717,24 @@ return b;
 }
 function refreshBadge() {
 try {
-const errs = JSON.parse(localStorage.getItem(ERR_KEY) || '[]');
+readErrs(function (errs) {
+try {
 const n = Array.isArray(errs) ? errs.length : 0;
 const seen = Number(localStorage.getItem(SEEN_KEY)) || 0;
 const b = badgeEl();
 if (n > seen) { b.textContent = String(n); b.style.display = ''; }
 else b.style.display = 'none';
 } catch (e) {}
+});
+} catch (e) {}
 }
 try { refreshBadge(); } catch (e) {}
 row.addEventListener('click', function () {
 collectDiag().then(function (text) {
-try {
-const errsNow = JSON.parse(localStorage.getItem(ERR_KEY) || '[]');
-localStorage.setItem(SEEN_KEY, String(Array.isArray(errsNow) ? errsNow.length : 0));
-} catch (e) {}
+readErrs(function (errsNow) {
+try { localStorage.setItem(SEEN_KEY, String(Array.isArray(errsNow) ? errsNow.length : 0)); } catch (e) {}
 try { refreshBadge(); } catch (e) {}
+});
 copyText(text).then(function (ok) {
 const tip = ok
 ? '诊断信息已复制到剪贴板，直接粘贴发给开发者即可。\n（下方内容可再核对）'
@@ -16831,12 +16907,7 @@ textarea: true,
 textareaPlaceholder: '长按/全选复制，发给对方粘贴导入',
 });
 };
-const beautyExportRow = document.getElementById('row-beauty-export');
-if (beautyExportRow) {
-beautyExportRow.addEventListener('click', () => {
-const data = collectBeauty();
-try { const ac = localStorage.getItem('xy-home-v2:accent-color'); if (ac) data['__accent__'] = ac; } catch (e) {}
-try { const tm = localStorage.getItem('xy-home-v2:theme-mode'); if (tm) data['__theme__'] = tm; } catch (e) {}
+const startBeautyExport = (data) => {
 const json = JSON.stringify(data);
 if (!window.openModal) { showBeautyFallback(json); return; }
 window.openModal('导出美化方案', '', (v) => {
@@ -16866,6 +16937,30 @@ pills: [
 { label: '导出文件', value: 'file' },
 { label: '复制文字', value: 'text' },
 ],
+});
+};
+const beautyExportRow = document.getElementById('row-beauty-export');
+if (beautyExportRow) {
+beautyExportRow.addEventListener('click', () => {
+const schemes = getSchemes();
+if (!schemes.length || !window.openModal) { startBeautyExport(collectBeautyFull()); return; }
+const pills = [{ label: '当前设置', value: 'current' }]
+.concat(schemes.map((s, i) => ({ label: s.name || ('方案' + (i + 1)), value: 'sch_' + i })));
+window.openModal('导出美化方案', '', (v) => {
+let data;
+if (v && v.indexOf('sch_') === 0) {
+const i = parseInt(String(v).slice(4), 10);
+const s = schemes[i];
+if (!s) { toast('未找到该方案'); return; }
+data = s.data || {};
+} else {
+data = collectBeautyFull();
+}
+startBeautyExport(data);
+}, {
+noInput: true,
+staticText: '选择要导出的美化方案：\n· 当前设置：导出当前正在使用的美化\n· 已保存方案：导出对应方案（含其壁纸/配色）',
+pills: pills,
 });
 });
 }
@@ -67184,6 +67279,7 @@ t._timer = setTimeout(() => { t.className = 'cc-toast'; }, 3000);
 }
 let _prMsg = null;
 function refreshNow() {
+verMarkSnooze();
 const doReload = function () { try { location.reload(); } catch (e) {} };
 try {
 if (navigator.serviceWorker && navigator.serviceWorker.controller) {
@@ -67200,26 +67296,17 @@ doReload();
 }
 } catch (e) { doReload(); }
 }
-(function () {
-const bar = document.getElementById('ver-update-bar');
-if (!bar) return;
-const act = document.getElementById('ver-update-refresh');
-let baseTs = null;      // 当前页面的版本时间戳（基线）
-let baseGot = false;
-let noticed = false;
-(function () {
-const sv = document.getElementById('splash-ver');
-const t = sv && Number(sv.getAttribute('data-build-ts'));
-if (t > 0) { baseTs = t; baseGot = true; }
-})();
-let lastCheck = 0;
-function showBar() {
-if (noticed) return;
-noticed = true;
-bar.hidden = false;
-if (act) act.onclick = refreshNow;
-const closeBtn = document.getElementById('ver-update-close');
-if (closeBtn) closeBtn.onclick = function () { bar.hidden = true; };
+const VER_SNOOZE_KEY = 'xy-home-v2:ver-update-snooze-day';
+let _verBarShown = false;
+function verToday() {
+const d = new Date(), p = (n) => (n < 10 ? '0' + n : '' + n);
+return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+}
+function verSnoozed() {
+try { return localStorage.getItem(VER_SNOOZE_KEY) === verToday(); } catch (e) { return false; }
+}
+function verMarkSnooze() {
+try { localStorage.setItem(VER_SNOOZE_KEY, verToday()); } catch (e) {}
 }
 function fetchJson(url, ms) {
 const ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
@@ -67228,6 +67315,28 @@ return fetch(url, { cache: 'no-store', signal: ctrl ? ctrl.signal : undefined })
 .then(function (r) { if (timer) clearTimeout(timer); if (!r.ok) throw new Error('bad'); return r.json(); })
 .catch(function (err) { if (timer) clearTimeout(timer); throw err; });
 }
+function showVerBar() {
+if (_verBarShown || verSnoozed()) return;
+_verBarShown = true;
+const barEl = document.getElementById('ver-update-bar');
+if (!barEl) { toast('已检测到新版本，刷新页面即可更新'); return; }
+barEl.hidden = false;
+const actEl = document.getElementById('ver-update-refresh');
+if (actEl) actEl.onclick = refreshNow;
+const closeBtn = document.getElementById('ver-update-close');
+if (closeBtn) closeBtn.onclick = function () { verMarkSnooze(); barEl.hidden = true; };
+}
+(function () {
+const bar = document.getElementById('ver-update-bar');
+if (!bar) return;
+let baseTs = null;      // 当前页面的版本时间戳（基线）
+let baseGot = false;
+(function () {
+const sv = document.getElementById('splash-ver');
+const t = sv && Number(sv.getAttribute('data-build-ts'));
+if (t > 0) { baseTs = t; baseGot = true; }
+})();
+let lastCheck = 0;
 let failCount = 0;
 function checkVersion() {
 const now = Date.now();
@@ -67241,7 +67350,7 @@ failCount = 0;
 const ts = Number(d && d.ts);
 if (!ts || isNaN(ts)) return;
 if (!baseGot) { baseTs = ts; baseGot = true; return; }
-if (ts > baseTs) showBar();
+if (ts > baseTs) showVerBar();
 })
 .catch(function () { failCount++; });
 }
@@ -67303,16 +67412,15 @@ if (!newWorker) return;
 newWorker.addEventListener('statechange', () => {
 if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
 try {
-const barEl = document.getElementById('ver-update-bar');
-if (barEl) {
-barEl.hidden = false;
-const actEl = document.getElementById('ver-update-refresh');
-if (actEl) actEl.onclick = refreshNow;
-const closeBtn = document.getElementById('ver-update-close');
-if (closeBtn) closeBtn.onclick = function () { barEl.hidden = true; };
-} else {
-toast('已检测到新版本，刷新页面即可更新');
-}
+if (verSnoozed()) return;
+const sv = document.getElementById('splash-ver');
+const localTs = (sv && Number(sv.getAttribute('data-build-ts'))) || 0;
+fetchJson('./version.json?v=' + Date.now(), 5000)
+.then(function (d) {
+const ts = Number(d && d.ts);
+if (!ts || isNaN(ts) || ts > localTs) showVerBar();
+})
+.catch(function () { showVerBar(); }); // 拉不到版本文件也照弹（宁多勿漏）
 } catch (e) {}
 }
 });

@@ -1,4 +1,36 @@
 # 本次构建者：AI-A（本会话，2026-08-28 20:35，桌面/聊天美化 Tab 黑白化+方案保存预览+聊天设置分类Tab 已构建收口 sw: mochi-mtcxpruj，哨兵 25/25，待提交）
+### 2026-08-29（诊断新增 IndexedDB 大键明细：定位"存储已用 1.x GB"是哪类数据占空间；已改源码，未构建）
+- [AI-B 域]（**已改 src/js/device.js collectDiag 新增「IndexedDB 大键明细」节；构建状态：未构建（node --check 已过），待构建者收口**）。
+- 需求/反馈：用户问"存储配额已用 1239MB 怎么会那么大，是不是有数据被重复写入"。原诊断只有 localStorage 最大键 + navigator.storage.estimate() 总量，看不到 IndexedDB 里是哪类数据占空间。
+- 方案：collectDiag 新增异步 job「IndexedDB 大键明细」——idbGetAllKeys 只取键清单，筛出候选大键（chat-msgs / music-file / avatar-lib / 背景图 / __auto-backup-snapshot），逐键 idbGet 取大小（Blob/ArrayBuffer 只读元数据，字符串读完即弃，峰值=最大单键，读失败跳过），列出前 10 大。重点可暴露：__auto-backup-snapshot（手动导出会把全量数据复制一份进 IDB，最常见的"数据翻倍"来源）、跨桌面 music-file/avatar-lib/chat-msgs 重复副本。
+- 验证：node --check 通过；未构建，待构建者收口后实测：设置→复制诊断信息，【数据】节出现「IndexedDB 大键明细」列出前 10 大键。
+### 2026-08-29（顶部「刷新使用新版」条：刷新到新版后仍反复提醒的修复；已改源码，未构建）
+- [跨域改动 src/js/pwa.js（AI-B 文件），理由：用户反馈「刷新到新版后顶部还提醒刷新使用新版」，pwa.js 属 AI-B 域由用户直接指定修改；构建状态：未构建（node --check pwa.js 已过），待构建者收口**。
+- 根因：更新条有两条触发通道——版本轮询（version.json ts > 页面 data-build-ts）与 SW updatefound（发现并安装新 SW 即弹）；「刷新到新版后还提醒」= SW 交接期（新 SW 刚装完接管、reload 后新页面又触发 updatefound）+ 弱网旧缓存页面（version.json 永远最新、页面还是旧 ts 恒弹）。
+- 方案：① 新增本日免打扰标记 `xy-home-v2:ver-update-snooze-day`：点「刷新使用新版」或「稍后」即写入，当日不再弹；② 弹条收敛为单一 `showVerBar()`（两通道共用，跨通道一次性去重）；③ SW 通道弹条前先比对页面 data-build-ts 与线上 version.json ts，页面已是最新则跳过（交接期不再误报）。
+- 验证：node --check pwa.js 通过；未构建。待构建者收口后实测：刷新到新版后当天不再弹条、「稍后」当日免打扰、第二天有新版仍会正常提示。
+- 待构建者：收口时把 pwa.js 一并进本轮构建。
+### 2026-08-29（诊断错误记录无法保存→双写 IndexedDB：清空/恢复后错误线索不再丢；已改源码，未构建）
+- [AI-B 域]（**已改 src/js/device.js（错误记录双写 IDB + readErrs 回退读取）+ build.mjs（FIX_SENTINELS 加一行哨兵）+ FIX-REGRESSION.md（清单 #27）；构建状态：未构建（node --check device.js / build.mjs 已过），待构建者收口**）。
+- 需求/反馈：诊断【复制诊断信息】处显示红点（有错误）但导出正文却是「最近错误：无」——错误记录没有可靠保存机制，用户认为这是缺陷。
+- 根因：错误记录只写 localStorage（键 xy-home-v2:__diag-errs，环形 5 条）；备份导入会清空所有 xy-home-v2:* 前缀的 LS 键、配额满/隐私模式也会静默丢 LS 数据 → 错误线索凭空消失。
+- 方案：① pushErr 双写 IndexedDB（window.idbSet(ERR_KEY, …)）；② 新增 readErrs（LS 为空时异步回退 IDB）；③ collectDiag / refreshBadge / 点击已读计数统一走 readErrs；④ 启动时 idbRestore 会把该键从 IDB 回填 LS，备份导出也会带出该键（export 收集 LS+IDB），闭环。
+- 验证：node --check 通过；未构建，待构建者收口后实测：触发一个错误→备份导入（清空 xy-home-v2:*）→刷新→复制诊断信息仍显示最近错误；哨兵 idbSet(ERR_KEY 应命中。
+### 2026-08-29（复制诊断信息版本比对修复：此前任何手机永远「本机无构建时间戳」；已改源码，未构建）
+- [跨域改动 src/js/device.js（AI-B 文件），理由：用户反馈诊断里「Mochi 诊断信息（）」空白+「比对结论：无法比较（本机无构建时间戳）」，排查为诊断代码 bug；构建状态：未构建（node --check 已过），待构建者收口**。
+- 根因：开屏版本/构建时间戳存在 `#splash-ver`（data-build-ts），但进入应用 400ms 后 clock.js 会把开屏整个从 DOM 移除；诊断要等用户点进设置页才执行，此时 getElementById('splash-ver')=null → 版本号与 localTs 恒为空、兜底 window.APP_VERSION 又从未被赋值。
+- 方案：诊断 IIFE 启动时（开屏还在）先缓存版本号+构建时间戳（verCache/localTsCache，版本号取自 .sv-app b），collectDiag 改读缓存，不再现读 #splash-ver。修复后标题显示「Mochi 诊断信息（v3.26.x 构建 ts=…）」，比对可正常判断旧缓存。
+- 验证：node --check device.js 通过；未构建，待构建者收口后实测：进入应用→设置→复制诊断信息，标题带版本号与构建 ts、比对不再是「本机无构建时间戳」。
+
+### 2026-08-29（桌面【导出美化方案】改为可选导出当前设置/某个已保存方案；已改源码，未构建）
+- [跨域改动 src/js/personalize.js（AI-B 文件），理由：用户反馈导出时无法选择导出哪个方案；构建状态：未构建（node --check 已过），待构建者收口**。
+- 需求：手机桌面美化里【导出美化方案】目前只能导出当前设置，需可选是导出哪个已保存方案。
+- 方案：把导出拆成「先选方案 → 再选导出方式」两步——抽出 `startBeautyExport(data)` 复用原文件/文字二选一；点击行后如有保存方案，先弹窗列出「当前设置 + 各已保存方案」（方案名作胶囊），选定后回调，无保存方案时直接走当前设置导出（`collectBeautyFull()`）。方案数据 `s.data` 已含 accent/theme，导出与"保存方案"用的同一份完整数据。
+- 验证：node --check personalize.js 通过；未构建，待构建者收口后实测：点击导出→有方案时出现方案选择弹窗、选某方案后进入文件/文字导出、无方案时直接导出当前设置。
+### 2026-08-29（漂流瓶【我也放一个】按钮重叠：确认已随 HEAD 0130783 提交，无新增待构建改动）
+- [AI-A 域核对]（**src/css/drift-bottle.css + src/template.html 的 .d-actions 并排动作行方案已存在于 HEAD 0130783（把 #d-put 从列表底部上移与 #drift-pick 并排，.d-list 补 flex:none）；工作区与 HEAD 一致（git diff 为空），无需再构建**）。
+- 复核：tools/verify-drift-bottle.mjs **38/38 无回归**；无头 390×844 确认 put 底=310 < list 顶=387 无重叠、长列表可完整滚动到底。
+- 需求确认：联系人放瓶被我捡到的概率——已有：我【我也放一个】后 45% 概率（海上最多 2 个未回应）排期 6~40h 生成「TA 的回应」瓶进我捡瓶队列（kind=reply 来自 TA）；另有我捡瓶时 TA 25% 从我发过的话捞一句（新分类「TA捡到的漂流瓶」）、捡瓶池 TA 漂来瓶按状态概率（基础 5%）。无独立「TA 主动放瓶」概率，需要可再议。
 ### 2026-08-28（悬浮音乐小框改两行：上行歌名+歌手，下行控制按钮；已构建）
 - [AI-A 域 + 跨域 template.html]（**已改 src/js/music-player.js（AI-A）+ src/css/chat-pages.css（AI-A）+ src/css/dark.css（AI-B，跨域：仅补 .sm-f-artist 暗色）+ src/template.html（AI-B，跨域：悬浮小框结构改两行）；构建状态：已构建 sw: mochi-mtcza6v9，哨兵 25/25**）。
 - 需求：悬浮音乐小框原来只有一行（歌名和按钮挤一起），歌名只能显示一点点；改为两行——上方放歌名/歌手，下方放控制按钮。

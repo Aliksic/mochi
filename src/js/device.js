@@ -275,6 +275,22 @@
   // 诊断模块自己读 navigator 即可
   const ua = String(navigator.userAgent || '');
 
+  // v3.26.x 修复：开屏版本/构建时间戳在进入应用 400ms 后被 clock.js 从 DOM 移除
+  //（#splash-ver 随之消失），诊断要等用户点进设置页才执行 → 版本号永远读不到、
+  // 比对永远「本机无构建时间戳」。这里在 IIFE 启动时（开屏还在）先缓存一份，
+  // collectDiag 改读缓存，不再依赖仍在 DOM 里的 #splash-ver。
+  let verCache = '', localTsCache = 0;
+  try {
+    const sv = document.getElementById('splash-ver');
+    if (sv) {
+      const vb = sv.querySelector('.sv-app b');
+      const verTxt = (vb && vb.textContent ? String(vb.textContent).trim() : '') || (sv.getAttribute('data-version') || '');
+      const ts = sv.getAttribute('data-build-ts');
+      verCache = verTxt + (ts ? ' 构建 ts=' + ts : '');
+      localTsCache = Number(ts) || 0;
+    }
+  } catch (e) {}
+
   // ===== 错误自动采集（v3.16.x） =====
   // 报障文本自带最近错误栈：window.onerror / unhandledrejection 采集最近 5 条
   //（含 UA + 设备判定 + 页面），存 localStorage（键 __diag-errs）。纯本地、
@@ -314,8 +330,29 @@
       arr.push(ent);
       if (arr.length > 5) arr = arr.slice(arr.length - 5);
       try { localStorage.setItem(ERR_KEY, JSON.stringify(arr)); } catch (e) {}
+      // v3.26.x：错误记录同时写 IndexedDB——备份导入会清空 xy-home-v2:* 前缀的
+      // localStorage 键、配额满/隐私模式也会静默丢 LS 数据，错误线索就这样"没记录"。
+      // 双写后 IDB 始终有副本：启动时 idbRestore 会回填，collectDiag/refreshBadge
+      // 读 LS 为空时也回退 IDB，报障错误不再凭空消失。
+      try { if (window.idbSet) window.idbSet(ERR_KEY, JSON.stringify(arr)); } catch (e) {}
       try { refreshBadge(); } catch (e) {}
     } catch (e) {}
+  }
+  // v3.26.x：错误记录读取（LS 优先，读不到回退 IndexedDB）。
+  // LS 有值直接同步返回（快路径，不触发异步）；LS 为空/解析失败才查 IDB——
+  // 本地数据恢复/清空后 IDB 仍保留副本，错误记录得以找回。
+  function readErrs(cb) {
+    let arr = [];
+    try {
+      const raw = localStorage.getItem(ERR_KEY);
+      if (raw) { const o = JSON.parse(raw); if (Array.isArray(o)) arr = o; }
+    } catch (e) {}
+    if (arr.length || !window.idbGet) { try { cb(arr); } catch (e) {} return; }
+    window.idbGet(ERR_KEY).then(function (raw) {
+      let o = [];
+      try { if (raw) { const p = JSON.parse(raw); if (Array.isArray(p)) o = p; } } catch (e) {}
+      try { cb(o); } catch (e) {}
+    }).catch(function () { try { cb([]); } catch (e) {} });
   }
   // v3.25.x：改捕获阶段监听——资源加载失败（script/css/图片 404，白屏元凶）的
   // error 事件不冒泡，只有 capture 才抓得到；JS 异常在 window 上派发，capture
@@ -592,15 +629,9 @@
     const d = window.mochiDevice || {};
     const L = [];
     const jobs = []; // 所有异步采集（配额/persisted/远端版本/SW 状态）进这里，最后 Promise.all
-    // 版本号：开屏注入（构建时 __APP_VERSION__ 替换），取不到时留空
-    let ver = '', localTs = 0;
-    try {
-      const sv = document.getElementById('splash-ver');
-      if (sv) {
-        ver = (sv.getAttribute('data-version') || '') + (sv.getAttribute('data-build-ts') ? ' (构建 ts=' + sv.getAttribute('data-build-ts') + ')' : '');
-        localTs = Number(sv.getAttribute('data-build-ts')) || 0;
-      }
-    } catch (e) {}
+    // 版本号：开屏注入（构建时 __APP_VERSION__ 替换）。不能现读 #splash-ver——
+    // 进入应用后它已被 clock.js 从 DOM 移除；用 IIFE 启动时缓存的 verCache/localTsCache
+    let ver = verCache || '', localTs = localTsCache || 0;
     if (!ver) { try { ver = window.APP_VERSION || ''; } catch (e) {} }
     L.push('Mochi 诊断信息（' + ver + '）');
     L.push('时间：' + new Date().toLocaleString());
@@ -784,6 +815,60 @@
       const tops = items.slice(0, 8).map(function (it) { return it.k + '=' + usageStr(it.size); }).join('、');
       if (tops) L.push('最大键：' + tops);
     } catch (e) {}
+    // v3.26.x：IndexedDB 大键明细——「存储配额已用 1.x GB」类报障一眼定位哪类数据在占空间：
+    // 聊天图片（chat-msgs）/ 本地音乐（music-file）/ 头像库（avatar-lib）/ 备份快照
+    // （__auto-backup-snapshot：手动导出时把全部数据复制一份进 IDB，是最常见的"数据翻倍"
+    // 来源）/ 跨桌面副本（各联系人命名空间下的 music-file、avatar-lib、chat-msgs）。
+    // 安全策略：只读候选大键（跳过几百个设置小键）；Blob/ArrayBuffer 只取 .size/.byteLength
+    // 元数据不读数据；字符串逐键读后立即弃用，峰值内存=最大单键；单键读失败/超时跳过不阻塞。
+    try {
+      const idbIdx = L.length; L.push('IndexedDB 大键明细：读取中…');
+      jobs.push(new Promise(function (res) {
+        if (!window.idbGetAllKeys) { L[idbIdx] = 'IndexedDB 大键明细：接口不可用'; res(); return; }
+        window.idbGetAllKeys().then(function (keys) {
+          const cand = (keys || []).filter(function (k) {
+            k = String(k || '');
+            if (k.indexOf('xy-home-v2:') !== 0) return false;
+            if (k.indexOf('music-file:') >= 0) return true;
+            if (/:chat-msgs$/.test(k)) return true;
+            if (/avatar-(lib|me-lib)$/.test(k)) return true;
+            if (/:(phone-bg|wallpaper|chat-bg|page-bg|desk-bg|bg)$/.test(k)) return true;
+            if (k.indexOf('__auto-backup-snapshot') >= 0) return true;
+            return false;
+          });
+          if (!cand.length) { L[idbIdx] = 'IndexedDB 大键明细：无大键候选'; res(); return; }
+          const out = [];
+          (function loop(i) {
+            if (i >= cand.length) {
+              try {
+                const real = out.filter(function (it) { return it.size >= 0; });
+                real.sort(function (a, b) { return b.size - a.size; });
+                const total = real.reduce(function (s, it) { return s + it.size; }, 0);
+                const lines = ['IndexedDB 大键明细：' + cand.length + ' 个候选，合计≈' + usageStr(total) + '（设置小键未计）'];
+                real.slice(0, 10).forEach(function (it) {
+                  lines.push('· ' + String(it.k).slice('xy-home-v2:'.length) + '=' + (it.size >= 0 ? usageStr(it.size) : '?'));
+                });
+                L[idbIdx] = lines.join('\n');
+              } catch (e) { L[idbIdx] = 'IndexedDB 大键明细：统计失败'; }
+              res(); return;
+            }
+            const k = cand[i];
+            if (!window.idbGet) { out.push({ k: k, size: -1 }); loop(i + 1); return; }
+            window.idbGet(k).then(function (v) {
+              let sz = -1;
+              try {
+                if (v instanceof Blob) sz = v.size;
+                else if (v instanceof ArrayBuffer) sz = v.byteLength;
+                else if (typeof v === 'string') sz = v.length * 2;
+                else if (v !== undefined && v !== null) sz = JSON.stringify(v).length * 2;
+              } catch (e) { sz = -1; }
+              out.push({ k: k, size: sz });
+              loop(i + 1);
+            }).catch(function () { out.push({ k: k, size: -1 }); loop(i + 1); });
+          })(0);
+        }).catch(function () { L[idbIdx] = 'IndexedDB 大键明细：读取失败'; res(); });
+      }));
+    } catch (e) { try { L.push('IndexedDB 大键明细：读取失败'); } catch (e2) {} }
     // v3.16.x：存储配额/持久化/在线状态——「数据写不进去/丢失」类报障的关键字段：
     // 配额满写失败曾是本项目真实根因（localStorage setItem 静默失败）。
     // v3.25.x：改用 jobs + 占位行下标替换（原 L.indexOf 找占位串有误配风险，
@@ -816,21 +901,31 @@
       }
     } catch (e) {}
     // v3.16.x：最近错误（onerror/unhandledrejection/console.error 自动采集）
+    // v3.26.x：错误记录双写 IDB，这里 LS 读不到时异步回退 IndexedDB——
+    // 备份导入/恢复清空 xy-home-v2:* 键后错误线索仍能找回，不再"最近错误：无"
     try {
-      const errs = JSON.parse(localStorage.getItem(ERR_KEY) || '[]');
-      if (Array.isArray(errs) && errs.length) {
-        L.push('最近错误 ' + errs.length + ' 条：');
-        errs.forEach(function (it) {
-          const dt = it.t ? new Date(it.t).toLocaleString() : '?';
-          L.push('· ' + dt + ' [' + (it.dev || '') + '] ' + (it.msg || '').slice(0, 180) + (it.page ? '（页面 ' + it.page + '）' : ''));
-          // v3.25.x：带调用栈（只取前 4 行，够定位文件+行号又不刷屏）
-          const st = String(it.stack || '');
-          if (st) L.push('    ' + st.split('\n').slice(0, 4).join('\n    '));
+      const errIdx = L.length; L.push('最近错误：读取中…');
+      jobs.push(new Promise(function (res) {
+        readErrs(function (errs) {
+          try {
+            if (Array.isArray(errs) && errs.length) {
+              const lines = ['最近错误 ' + errs.length + ' 条：'];
+              errs.forEach(function (it) {
+                const dt = it.t ? new Date(it.t).toLocaleString() : '?';
+                lines.push('· ' + dt + ' [' + (it.dev || '') + '] ' + (it.msg || '').slice(0, 180) + (it.page ? '（页面 ' + it.page + '）' : ''));
+                // v3.25.x：带调用栈（只取前 4 行，够定位文件+行号又不刷屏）
+                const st = String(it.stack || '');
+                if (st) lines.push('    ' + st.split('\n').slice(0, 4).join('\n    '));
+              });
+              L[errIdx] = lines.join('\n');
+            } else {
+              L[errIdx] = '最近错误：无';
+            }
+          } catch (e) { L[errIdx] = '最近错误：读取失败'; }
+          res();
         });
-      } else {
-        L.push('最近错误：无');
-      }
-    } catch (e) {}
+      }));
+    } catch (e) { L.push('最近错误：读取失败'); }
     // v3.25.x：环境变化记录（旋转/键盘/前后台）——手机端 bug 的触发现场
     try {
       const envs = JSON.parse(localStorage.getItem(ENV_KEY) || '[]');
@@ -936,23 +1031,25 @@
   }
   function refreshBadge() {
     try {
-      const errs = JSON.parse(localStorage.getItem(ERR_KEY) || '[]');
-      const n = Array.isArray(errs) ? errs.length : 0;
-      const seen = Number(localStorage.getItem(SEEN_KEY)) || 0;
-      const b = badgeEl();
-      if (n > seen) { b.textContent = String(n); b.style.display = ''; }
-      else b.style.display = 'none';
+      readErrs(function (errs) {
+        try {
+          const n = Array.isArray(errs) ? errs.length : 0;
+          const seen = Number(localStorage.getItem(SEEN_KEY)) || 0;
+          const b = badgeEl();
+          if (n > seen) { b.textContent = String(n); b.style.display = ''; }
+          else b.style.display = 'none';
+        } catch (e) {}
+      });
     } catch (e) {}
   }
   try { refreshBadge(); } catch (e) {}
   row.addEventListener('click', function () {
     collectDiag().then(function (text) {
-      // v3.25.x：看过诊断 = 已知错误，角标归零
-      try {
-        const errsNow = JSON.parse(localStorage.getItem(ERR_KEY) || '[]');
-        localStorage.setItem(SEEN_KEY, String(Array.isArray(errsNow) ? errsNow.length : 0));
-      } catch (e) {}
-      try { refreshBadge(); } catch (e) {}
+      // v3.25.x：看过诊断 = 已知错误，角标归零（v3.26.x：按 IDB 回退后的记录数计）
+      readErrs(function (errsNow) {
+        try { localStorage.setItem(SEEN_KEY, String(Array.isArray(errsNow) ? errsNow.length : 0)); } catch (e) {}
+        try { refreshBadge(); } catch (e) {}
+      });
       copyText(text).then(function (ok) {
         const tip = ok
           ? '诊断信息已复制到剪贴板，直接粘贴发给开发者即可。\n（下方内容可再核对）'

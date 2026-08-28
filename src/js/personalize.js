@@ -1583,41 +1583,63 @@ try {
   };
   // v3.17.x：导出改为可选「导出文件 / 复制文字」——此前只复制文本，剪贴板在部分
   // 浏览器不可用且大 JSON（含壁纸 dataURL）复制不便；现在弹窗二选一。
+  // v3.26.x：导出前先选「当前设置 / 某个已保存方案」，再走文件/文字二选一。
+  // 全局主题延续右侧方案保存逻辑（collectBeautyFull），方案的 data 里已含 accent/theme。
+  const startBeautyExport = (data) => {
+    const json = JSON.stringify(data);
+    if (!window.openModal) { showBeautyFallback(json); return; }
+    window.openModal('导出美化方案', '', (v) => {
+      if (v === 'file') {
+        try {
+          const blob = new Blob([json], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'mochi美化方案-' + new Date().toISOString().slice(0, 10) + '.json';
+          document.body.appendChild(a);
+          a.click();
+          setTimeout(() => { try { document.body.removeChild(a); URL.revokeObjectURL(url); } catch (e) {} }, 1000);
+          toast('已导出美化方案文件');
+        } catch (e) { toast('导出文件失败'); }
+      } else if (v === 'text') {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(json).then(() => toast('已复制到剪贴板，发给对方粘贴导入')).catch(() => showBeautyFallback(json));
+        } else {
+          showBeautyFallback(json);
+        }
+      }
+    }, {
+      noInput: true,
+      staticText: '选择导出方式：\n· 导出文件：生成 .json 文件，可保存或发送\n· 复制文字：复制配置文本，发给对方粘贴导入',
+      pills: [
+        { label: '导出文件', value: 'file' },
+        { label: '复制文字', value: 'text' },
+      ],
+    });
+  };
   const beautyExportRow = document.getElementById('row-beauty-export');
   if (beautyExportRow) {
     beautyExportRow.addEventListener('click', () => {
-      const data = collectBeauty();
-      try { const ac = localStorage.getItem('xy-home-v2:accent-color'); if (ac) data['__accent__'] = ac; } catch (e) {}
-      try { const tm = localStorage.getItem('xy-home-v2:theme-mode'); if (tm) data['__theme__'] = tm; } catch (e) {}
-      const json = JSON.stringify(data);
-      if (!window.openModal) { showBeautyFallback(json); return; }
+      const schemes = getSchemes();
+      // 第一步：选择要导出「当前设置」还是某个已保存方案；无保存方案时直接导出当前设置
+      if (!schemes.length || !window.openModal) { startBeautyExport(collectBeautyFull()); return; }
+      const pills = [{ label: '当前设置', value: 'current' }]
+        .concat(schemes.map((s, i) => ({ label: s.name || ('方案' + (i + 1)), value: 'sch_' + i })));
       window.openModal('导出美化方案', '', (v) => {
-        if (v === 'file') {
-          try {
-            const blob = new Blob([json], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'mochi美化方案-' + new Date().toISOString().slice(0, 10) + '.json';
-            document.body.appendChild(a);
-            a.click();
-            setTimeout(() => { try { document.body.removeChild(a); URL.revokeObjectURL(url); } catch (e) {} }, 1000);
-            toast('已导出美化方案文件');
-          } catch (e) { toast('导出文件失败'); }
-        } else if (v === 'text') {
-          if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(json).then(() => toast('已复制到剪贴板，发给对方粘贴导入')).catch(() => showBeautyFallback(json));
-          } else {
-            showBeautyFallback(json);
-          }
+        let data;
+        if (v && v.indexOf('sch_') === 0) {
+          const i = parseInt(String(v).slice(4), 10);
+          const s = schemes[i];
+          if (!s) { toast('未找到该方案'); return; }
+          data = s.data || {};
+        } else {
+          data = collectBeautyFull();
         }
+        startBeautyExport(data);
       }, {
         noInput: true,
-        staticText: '选择导出方式：\n· 导出文件：生成 .json 文件，可保存或发送\n· 复制文字：复制配置文本，发给对方粘贴导入',
-        pills: [
-          { label: '导出文件', value: 'file' },
-          { label: '复制文字', value: 'text' },
-        ],
+        staticText: '选择要导出的美化方案：\n· 当前设置：导出当前正在使用的美化\n· 已保存方案：导出对应方案（含其壁纸/配色）',
+        pills: pills,
       });
     });
   }
