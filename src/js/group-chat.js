@@ -387,18 +387,31 @@
   function attrEsc(s) { return escapeHtml(s).replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
   // 引用块（复用聊天页 .msg-quote 样式；图片/表情包引用只显示缩略图）
   // v3.16.x：支持 { t, imgs } 对象格式（气泡点「引用」后发送的组合引用，与聊天页 quoteValue 同构）
+  // v3.26.x：与聊天页 quoteTextSafe 对齐的清理——历史/导入数据里语音引用存的是原始
+  //   「名称|||data:audio;base64…」字符串（群聊早期版本成员回复引用直接存 userText 原文），
+  //   直出会整串 base64 铺满屏幕。渲染前统一还原成可读标签，新数据本已是标签、原样通过。
+  function gcQuoteTextSafe(s) {
+    let str = String(s == null ? '' : s);
+    const bar = str.indexOf('|||');
+    if (bar >= 0) str = bar > 0 ? '[语音] ' + str.slice(0, bar) : '';
+    const di = str.indexOf('data:');
+    if (di > 0 && str.length - di > 120) str = str.slice(0, di).trim();
+    return str;
+  }
   function gcQuoteHtml(q) {
     if (q && typeof q === 'object' && Array.isArray(q.imgs) && q.imgs.length) {
-      const tOk = typeof q.t === 'string' && q.t && q.t.indexOf('data:') !== 0;
+      const tRaw = gcQuoteTextSafe(q.t);
+      const tOk = typeof tRaw === 'string' && tRaw && tRaw.indexOf('data:') !== 0;
       return '<div class="msg-quote"><span class="msg-quote-imgs">' +
         q.imgs.map(s => '<img class="msg-quote-img" src="' + attrEsc(s) + '" alt="图片">').join('') +
-        '</span>' + (tOk ? '<span class="msg-quote-text">' + escTxtBr(q.t) + '</span>' : '') + '</div>';
+        '</span>' + (tOk ? '<span class="msg-quote-text">' + escTxtBr(tRaw) + '</span>' : '') + '</div>';
     }
     if (q && typeof q === 'string') {
-      if (q.indexOf('data:') === 0) {
-        return '<div class="msg-quote"><img class="msg-quote-img" src="' + attrEsc(q) + '" alt="图片"></div>';
+      const qs = gcQuoteTextSafe(q);
+      if (qs.indexOf('data:') === 0) {
+        return '<div class="msg-quote"><img class="msg-quote-img" src="' + attrEsc(qs) + '" alt="图片"></div>';
       }
-      return '<div class="msg-quote"><span class="msg-quote-text">' + escTxtBr(q) + '</span></div>';
+      return '<div class="msg-quote"><span class="msg-quote-text">' + escTxtBr(qs) + '</span></div>';
     }
     return '';
   }

@@ -1389,28 +1389,40 @@ body.cs-time-divider .msg-time-divider { display:flex; }
 }
 .voice-preview {
   flex-shrink:0; display:flex; align-items:center; gap:10px;
-  padding:8px 14px; margin:10px 2px 0;
-  background:rgba(0,0,0,.04); border:1px solid rgba(0,0,0,.08); border-radius:16px;
+  padding:8px 14px; margin:10px 0 0;
+  background:rgba(0,0,0,.04); border:1px solid rgba(0,0,0,.08); border-radius:14px;
   align-self:flex-start;
 }
 /* display:flex 会压过 UA 的 [hidden]{display:none}（fish 时机条同款坑），必须显式补回 */
 .voice-preview[hidden] { display:none; }
 .voice-preview-txt { font-size:12px; font-weight:600; color:var(--muted); white-space:nowrap; }
-.voice-foot { flex-shrink:0; display:flex; gap:8px; padding-top:14px; }
-.voice-rec-btn {
-  flex-shrink:0; min-width:104px; padding:12px 16px; border-radius:24px; border:none;
-  background:var(--btn-bg,#111); color:var(--btn-ink,#fff); font-size:13px; font-weight:700;
-  cursor:pointer; font-family:inherit; -webkit-tap-highlight-color:transparent;
+.voice-foot { flex-shrink:0; display:flex; gap:10px; padding-top:14px; }
+/* v3.26.x 重设计：两按钮统一尺寸/圆角/字号——此前 rec 是 24px 圆角/13px 字/最小宽 104 的胶囊，
+   send 复用 .poke-big（14px 圆角/14px 字 + margin-top:12px），一高一低大小不一。
+   现在 rec=描边次按钮、send=主题色主按钮，同高 44px 同圆角，等宽对齐。 */
+.voice-rec-btn, .voice-send-big {
+  flex:1; min-width:0; height:44px; padding:0 12px; margin-top:0;
+  display:flex; align-items:center; justify-content:center;
+  border-radius:14px; font-size:14px; font-weight:700; font-family:inherit;
+  cursor:pointer; -webkit-tap-highlight-color:transparent;
+  transition:opacity .15s ease, background .15s ease, border-color .15s ease;
 }
-.voice-rec-btn:active { opacity:.85; }
+.voice-rec-btn {
+  border:1.5px solid rgba(0,0,0,.18); background:transparent; color:var(--ink);
+}
+.voice-rec-btn:active { opacity:.7; }
 .voice-rec-btn.rec {
-  background:#e5484d; color:#fff;
+  background:#e5484d; border-color:transparent; color:#fff;
   animation:voiceRecPulse 1.15s ease-in-out infinite;
 }
 @keyframes voiceRecPulse {
   0%,100% { box-shadow:0 0 0 0 rgba(229,72,77,.35); }
   50% { box-shadow:0 0 0 7px rgba(229,72,77,0); }
 }
+.voice-send-big {
+  border:none; background:var(--btn-bg,#111); color:var(--btn-ink,#fff);
+}
+.voice-send-big:active { opacity:.85; }
 .voice-send-big[disabled] { opacity:.4; pointer-events:none; }
 /* 我发出的语音气泡落在深色 out 气泡上：播放钮/波形原是浅底深色系（为 in 侧设计），黑底上不可见 */
 .msg-out .msg-voice-play { background:rgba(255,255,255,.16); border-color:rgba(255,255,255,.35); color:#fff; }
@@ -1424,3 +1436,4 @@ body.cs-time-divider .msg-time-divider { display:flex; }
 [data-theme="dark"] .voice-wave i { opacity:.4; }
 [data-theme="dark"] .voice-card.recording .voice-wave i { opacity:.9; }
 [data-theme="dark"] .msg-voice-play.voice-play-btn { background:rgba(255,255,255,.1); border-color:rgba(255,255,255,.16); }
+[data-theme="dark"] .voice-rec-btn { border-color:rgba(255,255,255,.28); color:#fff; }

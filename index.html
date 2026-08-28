@@ -2358,27 +2358,36 @@ font-variant-numeric:tabular-nums; line-height:1;
 }
 .voice-preview {
 flex-shrink:0; display:flex; align-items:center; gap:10px;
-padding:8px 14px; margin:10px 2px 0;
-background:rgba(0,0,0,.04); border:1px solid rgba(0,0,0,.08); border-radius:16px;
+padding:8px 14px; margin:10px 0 0;
+background:rgba(0,0,0,.04); border:1px solid rgba(0,0,0,.08); border-radius:14px;
 align-self:flex-start;
 }
 .voice-preview[hidden] { display:none; }
 .voice-preview-txt { font-size:12px; font-weight:600; color:var(--muted); white-space:nowrap; }
-.voice-foot { flex-shrink:0; display:flex; gap:8px; padding-top:14px; }
-.voice-rec-btn {
-flex-shrink:0; min-width:104px; padding:12px 16px; border-radius:24px; border:none;
-background:var(--btn-bg,#111); color:var(--btn-ink,#fff); font-size:13px; font-weight:700;
-cursor:pointer; font-family:inherit; -webkit-tap-highlight-color:transparent;
+.voice-foot { flex-shrink:0; display:flex; gap:10px; padding-top:14px; }
+.voice-rec-btn, .voice-send-big {
+flex:1; min-width:0; height:44px; padding:0 12px; margin-top:0;
+display:flex; align-items:center; justify-content:center;
+border-radius:14px; font-size:14px; font-weight:700; font-family:inherit;
+cursor:pointer; -webkit-tap-highlight-color:transparent;
+transition:opacity .15s ease, background .15s ease, border-color .15s ease;
 }
-.voice-rec-btn:active { opacity:.85; }
+.voice-rec-btn {
+border:1.5px solid rgba(0,0,0,.18); background:transparent; color:var(--ink);
+}
+.voice-rec-btn:active { opacity:.7; }
 .voice-rec-btn.rec {
-background:#e5484d; color:#fff;
+background:#e5484d; border-color:transparent; color:#fff;
 animation:voiceRecPulse 1.15s ease-in-out infinite;
 }
 @keyframes voiceRecPulse {
 0%,100% { box-shadow:0 0 0 0 rgba(229,72,77,.35); }
 50% { box-shadow:0 0 0 7px rgba(229,72,77,0); }
 }
+.voice-send-big {
+border:none; background:var(--btn-bg,#111); color:var(--btn-ink,#fff);
+}
+.voice-send-big:active { opacity:.85; }
 .voice-send-big[disabled] { opacity:.4; pointer-events:none; }
 .msg-out .msg-voice-play { background:rgba(255,255,255,.16); border-color:rgba(255,255,255,.35); color:#fff; }
 .msg-out .msg-voice-play.playing { background:#fff; color:#111; border-color:#fff; }
@@ -2390,6 +2399,7 @@ animation:voiceRecPulse 1.15s ease-in-out infinite;
 [data-theme="dark"] .voice-wave i { opacity:.4; }
 [data-theme="dark"] .voice-card.recording .voice-wave i { opacity:.9; }
 [data-theme="dark"] .msg-voice-play.voice-play-btn { background:rgba(255,255,255,.1); border-color:rgba(255,255,255,.16); }
+[data-theme="dark"] .voice-rec-btn { border-color:rgba(255,255,255,.28); color:#fff; }
 #page-chatcard { scrollbar-width:none; -ms-overflow-style:none; }
 #page-chatcard::-webkit-scrollbar { display:none; }
 .chat-title { font-size:22px; font-weight:700; padding:4px 2px 8px; letter-spacing:1px; }
@@ -8240,9 +8250,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787913674693">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.290</b></span>
-        <span class="sv-deploy">部署于 2026-08-28 18:41<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787914593907">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.291</b></span>
+        <span class="sv-deploy">部署于 2026-08-28 18:56<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9319,7 +9329,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.290</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.291</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -9491,7 +9501,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.290</span>
+              <span class="lic-ver">v3.26.291</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -11183,7 +11193,7 @@ transition-duration: .01ms !important;
         </div>
         <div class="voice-foot">
           <button class="voice-rec-btn" id="voice-record-btn">开始录音</button>
-          <button class="poke-big voice-send-big" id="voice-send-btn" disabled>发送到聊天</button>
+          <button class="voice-send-big" id="voice-send-btn" disabled>发送到聊天</button>
         </div>
       </div>
 
@@ -26507,18 +26517,28 @@ return String(s == null ? '' : s)
 }
 function escTxtBr(s) { return escTxt(s).replace(/\n/g, '<br>'); }
 function attrEsc(s) { return escapeHtml(s).replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+function gcQuoteTextSafe(s) {
+let str = String(s == null ? '' : s);
+const bar = str.indexOf('|||');
+if (bar >= 0) str = bar > 0 ? '[语音] ' + str.slice(0, bar) : '';
+const di = str.indexOf('data:');
+if (di > 0 && str.length - di > 120) str = str.slice(0, di).trim();
+return str;
+}
 function gcQuoteHtml(q) {
 if (q && typeof q === 'object' && Array.isArray(q.imgs) && q.imgs.length) {
-const tOk = typeof q.t === 'string' && q.t && q.t.indexOf('data:') !== 0;
+const tRaw = gcQuoteTextSafe(q.t);
+const tOk = typeof tRaw === 'string' && tRaw && tRaw.indexOf('data:') !== 0;
 return '<div class="msg-quote"><span class="msg-quote-imgs">' +
 q.imgs.map(s => '<img class="msg-quote-img" src="' + attrEsc(s) + '" alt="图片">').join('') +
-'</span>' + (tOk ? '<span class="msg-quote-text">' + escTxtBr(q.t) + '</span>' : '') + '</div>';
+'</span>' + (tOk ? '<span class="msg-quote-text">' + escTxtBr(tRaw) + '</span>' : '') + '</div>';
 }
 if (q && typeof q === 'string') {
-if (q.indexOf('data:') === 0) {
-return '<div class="msg-quote"><img class="msg-quote-img" src="' + attrEsc(q) + '" alt="图片"></div>';
+const qs = gcQuoteTextSafe(q);
+if (qs.indexOf('data:') === 0) {
+return '<div class="msg-quote"><img class="msg-quote-img" src="' + attrEsc(qs) + '" alt="图片"></div>';
 }
-return '<div class="msg-quote"><span class="msg-quote-text">' + escTxtBr(q) + '</span></div>';
+return '<div class="msg-quote"><span class="msg-quote-text">' + escTxtBr(qs) + '</span></div>';
 }
 return '';
 }

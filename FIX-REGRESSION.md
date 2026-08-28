@@ -37,6 +37,7 @@
 | 21 | iOS 收藏页缺条目（收藏5条只显示3条 / 提示已收藏过却没显示） | chat 收藏判重按归属+时间戳；启动回填只补不覆盖 | `verify-fav-dedup.mjs` / 哨兵 `(f.by \|\| 'me') !== 'ta'` |
 | 22 | 语音播放矢量图标点击无互动变化（录制面板试听钮 + 聊天语音气泡） | 播放/暂停双 SVG + `.playing` 换暂停竖条 + `:active` 按压缩放（chat.js/group-chat.js/template.html + chat-main.css） | `verify-voice-play-icon.mjs` / 哨兵 `voice-ico-pause`、`.msg-voice-play:active` |
 | 23 | 单聊联系人发消息无音效（红米 Turbo4 Pro / Via：选了内置音效不响，其他音效正常） | chat.js addIn 统一播 `playSfx('in')`（silent 与已读回执 `special:'read'` 不播）；sfx.js playBuiltin 等 AudioContext resume 完成再 start | `verify-sfx-in-chat.mjs` / 哨兵 `opts.special !== 'read'`、`p.then(start)` |
+| 24 | 群聊里语音被引用时整串 base64 代码霸屏（vivo Y35 + Edge 反馈） | group-chat.js `gcQuoteHtml` 增 `gcQuoteTextSafe` 清理（与聊天页 quoteTextSafe 同构）：历史/导入数据里语音引用存的是原始「名称\|\|\|data:audio;base64…」，字符串分支直出会霸屏；对象分支的 `q.t` 同样清理 | 哨兵 `gcQuoteTextSafe` / `verify-voice-quote-gc.mjs` |
 
 ## 维护
 
