@@ -87,6 +87,10 @@ html { margin:0; padding:0; }
 .splash-title { font-size:17px; font-weight:800; letter-spacing:1px; color:var(--ink); }
 /* v3.8.y：署名移到顶部，紧跟标题下方的小字 */
 .splash-brand { margin-top:6px; font-size:10.5px; color:var(--hint-ink); letter-spacing:.3px; }
+/* v3.8.y：原作/部署信息（署名下方）——小灰字低调展示使用网站/GitHub 库 */
+.splash-source { margin-top:6px; text-align:center; }
+.splash-source-line { font-size:10px; color:var(--hint-ink); line-height:1.7; letter-spacing:.2px; }
+.splash-source-url { color:var(--soft-ink); }
 /* v3.8.y：底部版本块重新设计——两行：名称+版本(加粗) / 部署时间+实时秒数，去等宽字体、字号加大适配手机 */
 .splash-ver {
   margin-top:10px;

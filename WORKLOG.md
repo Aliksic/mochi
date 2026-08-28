@@ -1,3 +1,9 @@
+### 2026-08-28（✅ 完成·开屏顶部新增原作/部署信息：使用网站 + GitHub 库）
+- [本会话·AI-B 域]（**已改 src/template.html + src/css/base.css；已构建 index.html/sw.js/version.json（13:53, sw: mochi-mtcjcq9n）+ verify.mjs 10/10 + 无头截图核验；提交 v3.25.x 追加，未推送**）。
+  - **用户需求**：开屏顶部署名下方新增「本人原作，本人部署。使用网站为：https://ling233330-star.github.io/mochi/」+「github库为：https://github.com/ling233330-star/mochi」。
+  - **改动**：template.html 署名下方新增 `.splash-source`（3 行小灰字：本人原作本人部署 / 使用网站 / github库）；base.css 新增 `.splash-source` 样式（10px 小灰字、链接略深色、居中）。首行原与 URL 连写过长会换行难看 → 拆分每条单行完整显示。
+  - **验证**：node tools/verify.mjs 10/10；无头 Chrome 截图确认 3 行均完整单行、无溢出。
+
 ### 2026-08-28（✅ 完成·FAQ 浮层排版优化：紧凑化 + 重点突出）
 - [本会话·AI-B 域]（**已改 src/css/base.css；已构建 index.html/sw.js/version.json（13:41, sw: mochi-mtcixinf）+ verify.mjs 10/10 + 无头截图核验；提交 v3.25.x 追加，未推送**）。
   - **用户反馈**：【其他常见问题解答】浮层字体间距太大、页面丑、重点看不清楚。
