@@ -2485,6 +2485,10 @@ return;
 }
 retractMsg(target, side);
 }
+// v3.26.x：字卡池为空的最终兜底——原单条硬编码「收到～」会让联系人在没有可用
+// 字卡时每条回复都一模一样（用户反馈联系人一直/重复发【收到~】）。改用一个小型
+// 通用池随机抽，避免机械复读；真实的根因仍要查该联系人的字卡库是否为 & 默认字卡开关。
+const FALLBACK_REPLY_POOL = ['收到～', '好呀', '好～', '嗯嗯', '知道啦', '好哒', '嗯嗯，我在听'];
 function genReplyText(c) {
 const pool = getPool();
 let reply = '', type = 'text';
@@ -2497,7 +2501,7 @@ reply = pick(pool.image); type = 'image';
 } else if (pool.voice.length && hit(c['voice-prob'])) {
 reply = pick(pool.voice); type = 'voice';
 } else {
-reply = pick(pool.text) || '收到～';
+reply = pick(pool.text) || pick(FALLBACK_REPLY_POOL);
 }
 if (type === 'text' && pool.kaomoji.length && hit(c['kaomoji-prob'])) {
 reply += ' ' + pick(pool.kaomoji);

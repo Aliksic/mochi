@@ -4828,6 +4828,214 @@ try {
     });
   }
 
+  // ===== v3.26.x：查看存储——看全站功能占用空间 + 手动清理错误诊断记录 =====
+  // 用户反馈「存储已用 1.x GB」：这里把 localStorage + IndexedDB 按功能归类展示占用，
+  // 并提供「清理错误诊断记录」一键清掉诊断缓存（__diag-*）。只读统计 + 定向清理，
+  // 不提供清业务数据（避免误删聊天记录等关键内容）。统计为异步（IDB 逐键读体积），
+  // 打开页面时先渲染 localStorage，IndexedDB 边读边补齐。
+  (function () {
+    const page = document.getElementById('page-storage');
+    if (!page) return;
+    const row = document.getElementById('row-storage-view');
+    const back = document.getElementById('storage-back');
+    const G = 'xy-home-v2:';
+    const DIAG_KEYS = [
+      'xy-home-v2:__diag-errs',
+      'xy-home-v2:__diag-errs-seen',
+      'xy-home-v2:__diag-env',
+      'xy-home-v2:__diag-lt',
+      'xy-home-v2:__diag-net',
+      'xy-home-v2:__diag-tap'
+    ];
+
+    function fmtBytes(n) {
+      if (n == null || isNaN(n)) return '(未知)';
+      if (n >= 1048576) return (n / 1048576).toFixed(1) + ' MB';
+      if (n >= 1024) return (n / 1024).toFixed(1) + ' KB';
+      return n + ' B';
+    }
+    // 键名（去掉 xy-home-v2: 前缀，可能带 cid 命名空间）→ 功能分类
+    function catOf(tail) {
+      if (!tail) return '其他';
+      if (tail.indexOf('__diag-') === 0) return '错误诊断记录';
+      if (tail.indexOf('music-file:') >= 0) return '本地音乐';
+      if (tail.indexOf('__auto-backup-snapshot') >= 0) return '自动备份快照';
+      const m = /^(?:[^:]+:)?(.*)$/.exec(tail);
+      const base = m ? m[1] : tail;
+      if (base === 'chat-msgs') return '聊天记录';
+      if (/^avatar-(lib|me-lib)$/.test(base)) return '头像库';
+      if (/^(phone-bg|wallpaper|chat-bg|page-bg|desk-bg|bg)$/.test(base)) return '壁纸/背景';
+      if (/^(cc-groups|default-cards|quote-cards|mood-|reply-|fav-|ta-)/.test(base)) return '字卡/回复';
+      return '设置与其他';
+    }
+    function lsStats() {
+      const cats = {};
+      let total = 0, count = 0;
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (!k || k.indexOf(G) !== 0) continue;
+          const sz = (k.length + String(localStorage.getItem(k) || '').length) * 2;
+          total += sz; count++;
+          const c = catOf(k.slice(G.length));
+          if (!cats[c]) cats[c] = { n: 0, size: 0 };
+          cats[c].n++; cats[c].size += sz;
+        }
+      } catch (e) {}
+      return { cats: cats, total: total, count: count };
+    }
+    // IndexedDB：列出键后分批读取体积（用 idbGetMany 批量事务，比逐键快得多；
+    // Blob/ArrayBuffer 只取 size 不读数据，字符串读完即弃，峰值内存=最大单键）
+    function idbStats(onProgress, cb) {
+      if (!window.idbGetAllKeys) { cb(null); return; }
+      window.idbGetAllKeys().then(function (keys) {
+        const cats = {};
+        const list = (keys || []).filter(function (k) { return String(k || '').indexOf(G) === 0; });
+        list.forEach(function (k) {
+          const c = catOf(String(k).slice(G.length));
+          if (!cats[c]) cats[c] = { n: 0, size: 0 };
+          cats[c].n++;
+        });
+        const measure = function (v) {
+          let sz = 0;
+          try {
+            if (v instanceof Blob) sz = v.size;
+            else if (v instanceof ArrayBuffer) sz = v.byteLength;
+            else if (typeof v === 'string') sz = v.length * 2;
+            else if (v !== undefined && v !== null) sz = JSON.stringify(v).length * 2;
+          } catch (e) { sz = 0; }
+          return sz;
+        };
+        if (!window.idbGetMany) { cb({ cats: cats, count: list.length, total: 0 }); return; }
+        const BATCH = 80;
+        let pos = 0, total = 0, done = 0;
+        function nextBatch() {
+          if (pos >= list.length) { cb({ cats: cats, count: list.length, total: total }); return; }
+          const batch = list.slice(pos, pos + BATCH);
+          pos += batch.length;
+          window.idbGetMany(batch).then(function (map) {
+            batch.forEach(function (k) {
+              const sz = measure(map[k]);
+              const c = catOf(String(k).slice(G.length));
+              if (cats[c]) cats[c].size += sz;
+              total += sz;
+            });
+            done += batch.length;
+            try { if (onProgress) onProgress(done, list.length); } catch (e) {}
+            setTimeout(nextBatch, 0);
+          }).catch(function () { done += batch.length; setTimeout(nextBatch, 0); });
+        }
+        setTimeout(nextBatch, 0);
+      }).catch(function () { cb(null); });
+    }
+    function renderCatTable(lsCats, idbCats) {
+      const el = document.getElementById('st-cat');
+      if (!el) return;
+      const all = {};
+      const add = function (map) {
+        if (!map) return;
+        Object.keys(map).forEach(function (c) {
+          if (!all[c]) all[c] = { n: 0, size: 0 };
+          all[c].n += map[c].n; all[c].size += map[c].size;
+        });
+      };
+      add(lsCats); add(idbCats);
+      const rows = Object.keys(all).map(function (c) {
+        return { name: c, n: all[c].n, size: all[c].size };
+      }).sort(function (a, b) { return b.size - a.size; });
+      el.innerHTML = '';
+      if (!rows.length) { el.innerHTML = '<div class="storage-hint">暂未统计到数据。</div>'; return; }
+      rows.forEach(function (r) {
+        const d = document.createElement('div');
+        d.className = 'storage-cat-row';
+        d.innerHTML = '<span class="storage-cat-name"></span><span class="storage-cat-num"></span><span class="storage-cat-size"></span>';
+        d.querySelector('.storage-cat-name').textContent = r.name;
+        d.querySelector('.storage-cat-num').textContent = r.n + ' 键';
+        d.querySelector('.storage-cat-size').textContent = fmtBytes(r.size);
+        el.appendChild(d);
+      });
+    }
+    function diagSummary() {
+      let items = 0, bytes = 0, errs = 0;
+      try {
+        DIAG_KEYS.forEach(function (k) {
+          const v = localStorage.getItem(k);
+          if (v) { items++; bytes += (k.length + v.length) * 2; }
+        });
+        const o = JSON.parse(localStorage.getItem(DIAG_KEYS[0]) || '[]');
+        if (Array.isArray(o)) errs = o.length;
+      } catch (e) {}
+      return { items: items, bytes: bytes, errs: errs };
+    }
+    function renderDiagCount() {
+      const el = document.getElementById('st-err');
+      if (!el) return;
+      const d = diagSummary();
+      el.textContent = (d.items ? d.items + ' 项缓存' : '无缓存') + (d.errs ? ' · ' + d.errs + ' 条错误' : '') + (d.items ? ' · 约 ' + fmtBytes(d.bytes) : '');
+    }
+    function renderStorage() {
+      const quotaEl = document.getElementById('st-quota');
+      if (quotaEl && navigator.storage && navigator.storage.estimate) {
+        navigator.storage.estimate().then(function (r) {
+          if (quotaEl) quotaEl.textContent = '已用 ' + fmtBytes(r && r.usage) + ' / 共 ' + fmtBytes(r && r.quota);
+        }).catch(function () { if (quotaEl) quotaEl.textContent = '读取失败'; });
+      } else if (quotaEl) quotaEl.textContent = '接口不可用';
+      const ls = lsStats();
+      const lsEl = document.getElementById('st-ls');
+      if (lsEl) lsEl.textContent = fmtBytes(ls.total) + '（' + ls.count + ' 键）';
+      const idbEl = document.getElementById('st-idb');
+      if (idbEl) idbEl.textContent = '统计中…';
+      // 先渲染 localStorage 明细，IndexedDB 异步补齐
+      renderCatTable(ls.cats, null);
+      idbStats(function (done, totalN) {
+        if (idbEl) idbEl.textContent = '统计中…（' + done + '/' + totalN + '）';
+      }, function (res) {
+        if (idbEl) idbEl.textContent = res ? fmtBytes(res.total) + '（' + res.count + ' 键）' : '不可用';
+        renderCatTable(ls.cats, res ? res.cats : null);
+      });
+      renderDiagCount();
+    }
+    function clearDiag() {
+      DIAG_KEYS.forEach(function (k) {
+        try { localStorage.removeItem(k); } catch (e) {}
+        try { if (window.idbDelete) window.idbDelete(k); } catch (e) {}
+      });
+      // 诊断角标归零（device.js 暴露的刷新接口）
+      try { if (window.mochiRefreshDiagBadge) window.mochiRefreshDiagBadge(); } catch (e) {}
+      renderDiagCount();
+      try { if (typeof toast === 'function') toast('错误诊断记录已清理'); } catch (e) {}
+    }
+    const clearBtn = document.getElementById('st-clear-err');
+    if (clearBtn) {
+      clearBtn.addEventListener('click', function () {
+        if (window.openModal) {
+          window.openModal('确认清理错误诊断记录？', '', function () {
+            clearDiag();
+          }, {
+            noInput: true,
+            staticText: '将删除最近错误、环境变化、长任务卡顿、网络失败、交互轨迹等诊断缓存（__diag-*）。清理后诊断角标归零，不影响聊天、字卡、头像、音乐等任何业务数据。'
+          });
+        } else {
+          clearDiag();
+        }
+      });
+    }
+    if (row) {
+      row.addEventListener('click', function () {
+        document.querySelectorAll('.page').forEach(function (p) { p.hidden = true; });
+        page.hidden = false;
+        renderStorage();
+      });
+    }
+    if (back) {
+      back.addEventListener('click', function () {
+        document.querySelectorAll('.page').forEach(function (p) { p.hidden = true; });
+        const setPage = document.getElementById('page-setting');
+        if (setPage) setPage.hidden = false;
+      });
+    }
+  })();
+
   // 通话设置：点设置行 → 全屏设置页
   const callSettingsRow = document.getElementById('row-call-settings');
   if (callSettingsRow) {

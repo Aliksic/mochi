@@ -1043,6 +1043,8 @@
     } catch (e) {}
   }
   try { refreshBadge(); } catch (e) {}
+  // v3.26.x：暴露给「查看存储」页——手动清理错误诊断记录后角标同步归零
+  try { window.mochiRefreshDiagBadge = refreshBadge; } catch (e) {}
   row.addEventListener('click', function () {
     collectDiag().then(function (text) {
       // v3.25.x：看过诊断 = 已知错误，角标归零（v3.26.x：按 IDB 回退后的记录数计）

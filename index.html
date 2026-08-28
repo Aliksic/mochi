@@ -6314,6 +6314,16 @@ background:#fff; color:#333; font-size:12px; font-weight:600;
 font-family:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent;
 }
 .bg-notify-test:active { background:rgba(0,0,0,.06); }
+.storage-row { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:7px 0; font-size:13px; color:var(--ink); }
+.storage-row b { font-weight:600; font-size:12.5px; text-align:right; flex-shrink:0; }
+.storage-hint { font-size:11px; color:var(--muted); line-height:1.6; margin-top:8px; }
+.storage-cat-row { display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid rgba(0,0,0,.05); font-size:13px; }
+.storage-cat-row:last-child { border-bottom:none; }
+.storage-cat-name { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--ink); }
+.storage-cat-num { font-size:11px; color:var(--muted); flex-shrink:0; }
+.storage-cat-size { font-weight:600; font-size:12.5px; flex-shrink:0; color:var(--ink); }
+.storage-clear { display:block; width:100%; margin-top:12px; padding:12px; border:none; border-radius:14px; background:var(--ink); color:var(--bg-b,#fff); font-size:14px; font-weight:600; font-family:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+.storage-clear:active { opacity:.85; }
 .tabbar {
 margin-top:10px; display:flex; justify-content:space-around;
 flex-shrink:0; background:#ffffff;
@@ -8322,9 +8332,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787926473977">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.304</b></span>
-        <span class="sv-deploy">部署于 2026-08-28 22:14<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787927283785">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.305</b></span>
+        <span class="sv-deploy">部署于 2026-08-28 22:28<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9400,6 +9410,13 @@ transition-duration: .01ms !important;
           <div class="txt">复制诊断信息<span class="sub">遇到兼容问题发给开发者</span></div>
           <div class="arrow"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div>
         </div>
+        <!-- v3.26.x：查看存储——用户反馈「存储已用 1.x GB」时，能一眼看出各功能占多少空间，
+             并提供「清理错误诊断记录」手动清掉诊断缓存（__diag-*，不影响任何业务数据） -->
+        <div class="set-row" id="row-storage-view">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.66 3.58 3 8 3s8-1.34 8-3V5"/><path d="M4 12c0 1.66 3.58 3 8 3s8-1.34 8-3"/></svg></div>
+          <div class="txt">查看存储<span class="sub">查看各功能占用空间，可手动清理错误诊断记录</span></div>
+          <div class="arrow"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div>
+        </div>
       </div>
       <div class="set-group glass">
         <div class="set-row" id="row-reset">
@@ -9407,8 +9424,37 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.304</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.305</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
+    </div>
+
+    <!-- 查看存储（独立页面，v3.26.x） -->
+    <div class="page" id="page-storage" hidden>
+      <div class="chat-head">
+        <span class="ch-back" id="storage-back">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        </span>
+        <span class="ch-name">查看存储</span>
+      </div>
+      <div class="cal-scroll">
+        <div class="cal-card glass">
+          <div class="cal-card-title">总占用</div>
+          <div class="storage-row"><span>浏览器存储配额</span><b id="st-quota">读取中…</b></div>
+          <div class="storage-row"><span>localStorage 占用</span><b id="st-ls">读取中…</b></div>
+          <div class="storage-row"><span>IndexedDB 占用</span><b id="st-idb">读取中…</b></div>
+        </div>
+        <div class="cal-card glass">
+          <div class="cal-card-title">各功能占用明细</div>
+          <div id="st-cat"><div class="storage-hint">正在统计，请稍候…</div></div>
+          <div class="storage-hint">大小按 UTF-8 字节估算；聊天/头像/背景等大键会在 IndexedDB 与 localStorage 双写，两处之和为该功能实际占用。</div>
+        </div>
+        <div class="cal-card glass">
+          <div class="cal-card-title">错误诊断记录</div>
+          <div class="storage-row"><span>当前错误 / 诊断缓存</span><b id="st-err">读取中…</b></div>
+          <button class="storage-clear" id="st-clear-err" type="button">清理错误诊断记录</button>
+          <div class="storage-hint">包括最近报错、环境变化、长任务卡顿、网络失败、交互轨迹等诊断缓存（__diag-*）。清理后诊断角标归零，不影响聊天、字卡、头像、音乐等任何业务数据。</div>
+        </div>
+      </div>
     </div>
 
     <!-- 外观与主题（独立页面） -->
@@ -9579,7 +9625,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.304</span>
+              <span class="lic-ver">v3.26.305</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -13729,6 +13775,7 @@ else b.style.display = 'none';
 } catch (e) {}
 }
 try { refreshBadge(); } catch (e) {}
+try { window.mochiRefreshDiagBadge = refreshBadge; } catch (e) {}
 row.addEventListener('click', function () {
 collectDiag().then(function (text) {
 readErrs(function (errsNow) {
@@ -19713,6 +19760,202 @@ const setPage = document.getElementById('page-setting');
 if (setPage) setPage.hidden = false;
 });
 }
+(function () {
+const page = document.getElementById('page-storage');
+if (!page) return;
+const row = document.getElementById('row-storage-view');
+const back = document.getElementById('storage-back');
+const G = 'xy-home-v2:';
+const DIAG_KEYS = [
+'xy-home-v2:__diag-errs',
+'xy-home-v2:__diag-errs-seen',
+'xy-home-v2:__diag-env',
+'xy-home-v2:__diag-lt',
+'xy-home-v2:__diag-net',
+'xy-home-v2:__diag-tap'
+];
+function fmtBytes(n) {
+if (n == null || isNaN(n)) return '(未知)';
+if (n >= 1048576) return (n / 1048576).toFixed(1) + ' MB';
+if (n >= 1024) return (n / 1024).toFixed(1) + ' KB';
+return n + ' B';
+}
+function catOf(tail) {
+if (!tail) return '其他';
+if (tail.indexOf('__diag-') === 0) return '错误诊断记录';
+if (tail.indexOf('music-file:') >= 0) return '本地音乐';
+if (tail.indexOf('__auto-backup-snapshot') >= 0) return '自动备份快照';
+const m = /^(?:[^:]+:)?(.*)$/.exec(tail);
+const base = m ? m[1] : tail;
+if (base === 'chat-msgs') return '聊天记录';
+if (/^avatar-(lib|me-lib)$/.test(base)) return '头像库';
+if (/^(phone-bg|wallpaper|chat-bg|page-bg|desk-bg|bg)$/.test(base)) return '壁纸/背景';
+if (/^(cc-groups|default-cards|quote-cards|mood-|reply-|fav-|ta-)/.test(base)) return '字卡/回复';
+return '设置与其他';
+}
+function lsStats() {
+const cats = {};
+let total = 0, count = 0;
+try {
+for (let i = 0; i < localStorage.length; i++) {
+const k = localStorage.key(i);
+if (!k || k.indexOf(G) !== 0) continue;
+const sz = (k.length + String(localStorage.getItem(k) || '').length) * 2;
+total += sz; count++;
+const c = catOf(k.slice(G.length));
+if (!cats[c]) cats[c] = { n: 0, size: 0 };
+cats[c].n++; cats[c].size += sz;
+}
+} catch (e) {}
+return { cats: cats, total: total, count: count };
+}
+function idbStats(onProgress, cb) {
+if (!window.idbGetAllKeys) { cb(null); return; }
+window.idbGetAllKeys().then(function (keys) {
+const cats = {};
+const list = (keys || []).filter(function (k) { return String(k || '').indexOf(G) === 0; });
+list.forEach(function (k) {
+const c = catOf(String(k).slice(G.length));
+if (!cats[c]) cats[c] = { n: 0, size: 0 };
+cats[c].n++;
+});
+const measure = function (v) {
+let sz = 0;
+try {
+if (v instanceof Blob) sz = v.size;
+else if (v instanceof ArrayBuffer) sz = v.byteLength;
+else if (typeof v === 'string') sz = v.length * 2;
+else if (v !== undefined && v !== null) sz = JSON.stringify(v).length * 2;
+} catch (e) { sz = 0; }
+return sz;
+};
+if (!window.idbGetMany) { cb({ cats: cats, count: list.length, total: 0 }); return; }
+const BATCH = 80;
+let pos = 0, total = 0, done = 0;
+function nextBatch() {
+if (pos >= list.length) { cb({ cats: cats, count: list.length, total: total }); return; }
+const batch = list.slice(pos, pos + BATCH);
+pos += batch.length;
+window.idbGetMany(batch).then(function (map) {
+batch.forEach(function (k) {
+const sz = measure(map[k]);
+const c = catOf(String(k).slice(G.length));
+if (cats[c]) cats[c].size += sz;
+total += sz;
+});
+done += batch.length;
+try { if (onProgress) onProgress(done, list.length); } catch (e) {}
+setTimeout(nextBatch, 0);
+}).catch(function () { done += batch.length; setTimeout(nextBatch, 0); });
+}
+setTimeout(nextBatch, 0);
+}).catch(function () { cb(null); });
+}
+function renderCatTable(lsCats, idbCats) {
+const el = document.getElementById('st-cat');
+if (!el) return;
+const all = {};
+const add = function (map) {
+if (!map) return;
+Object.keys(map).forEach(function (c) {
+if (!all[c]) all[c] = { n: 0, size: 0 };
+all[c].n += map[c].n; all[c].size += map[c].size;
+});
+};
+add(lsCats); add(idbCats);
+const rows = Object.keys(all).map(function (c) {
+return { name: c, n: all[c].n, size: all[c].size };
+}).sort(function (a, b) { return b.size - a.size; });
+el.innerHTML = '';
+if (!rows.length) { el.innerHTML = '<div class="storage-hint">暂未统计到数据。</div>'; return; }
+rows.forEach(function (r) {
+const d = document.createElement('div');
+d.className = 'storage-cat-row';
+d.innerHTML = '<span class="storage-cat-name"></span><span class="storage-cat-num"></span><span class="storage-cat-size"></span>';
+d.querySelector('.storage-cat-name').textContent = r.name;
+d.querySelector('.storage-cat-num').textContent = r.n + ' 键';
+d.querySelector('.storage-cat-size').textContent = fmtBytes(r.size);
+el.appendChild(d);
+});
+}
+function diagSummary() {
+let items = 0, bytes = 0, errs = 0;
+try {
+DIAG_KEYS.forEach(function (k) {
+const v = localStorage.getItem(k);
+if (v) { items++; bytes += (k.length + v.length) * 2; }
+});
+const o = JSON.parse(localStorage.getItem(DIAG_KEYS[0]) || '[]');
+if (Array.isArray(o)) errs = o.length;
+} catch (e) {}
+return { items: items, bytes: bytes, errs: errs };
+}
+function renderDiagCount() {
+const el = document.getElementById('st-err');
+if (!el) return;
+const d = diagSummary();
+el.textContent = (d.items ? d.items + ' 项缓存' : '无缓存') + (d.errs ? ' · ' + d.errs + ' 条错误' : '') + (d.items ? ' · 约 ' + fmtBytes(d.bytes) : '');
+}
+function renderStorage() {
+const quotaEl = document.getElementById('st-quota');
+if (quotaEl && navigator.storage && navigator.storage.estimate) {
+navigator.storage.estimate().then(function (r) {
+if (quotaEl) quotaEl.textContent = '已用 ' + fmtBytes(r && r.usage) + ' / 共 ' + fmtBytes(r && r.quota);
+}).catch(function () { if (quotaEl) quotaEl.textContent = '读取失败'; });
+} else if (quotaEl) quotaEl.textContent = '接口不可用';
+const ls = lsStats();
+const lsEl = document.getElementById('st-ls');
+if (lsEl) lsEl.textContent = fmtBytes(ls.total) + '（' + ls.count + ' 键）';
+const idbEl = document.getElementById('st-idb');
+if (idbEl) idbEl.textContent = '统计中…';
+renderCatTable(ls.cats, null);
+idbStats(function (done, totalN) {
+if (idbEl) idbEl.textContent = '统计中…（' + done + '/' + totalN + '）';
+}, function (res) {
+if (idbEl) idbEl.textContent = res ? fmtBytes(res.total) + '（' + res.count + ' 键）' : '不可用';
+renderCatTable(ls.cats, res ? res.cats : null);
+});
+renderDiagCount();
+}
+function clearDiag() {
+DIAG_KEYS.forEach(function (k) {
+try { localStorage.removeItem(k); } catch (e) {}
+try { if (window.idbDelete) window.idbDelete(k); } catch (e) {}
+});
+try { if (window.mochiRefreshDiagBadge) window.mochiRefreshDiagBadge(); } catch (e) {}
+renderDiagCount();
+try { if (typeof toast === 'function') toast('错误诊断记录已清理'); } catch (e) {}
+}
+const clearBtn = document.getElementById('st-clear-err');
+if (clearBtn) {
+clearBtn.addEventListener('click', function () {
+if (window.openModal) {
+window.openModal('确认清理错误诊断记录？', '', function () {
+clearDiag();
+}, {
+noInput: true,
+staticText: '将删除最近错误、环境变化、长任务卡顿、网络失败、交互轨迹等诊断缓存（__diag-*）。清理后诊断角标归零，不影响聊天、字卡、头像、音乐等任何业务数据。'
+});
+} else {
+clearDiag();
+}
+});
+}
+if (row) {
+row.addEventListener('click', function () {
+document.querySelectorAll('.page').forEach(function (p) { p.hidden = true; });
+page.hidden = false;
+renderStorage();
+});
+}
+if (back) {
+back.addEventListener('click', function () {
+document.querySelectorAll('.page').forEach(function (p) { p.hidden = true; });
+const setPage = document.getElementById('page-setting');
+if (setPage) setPage.hidden = false;
+});
+}
+})();
 const callSettingsRow = document.getElementById('row-call-settings');
 if (callSettingsRow) {
 callSettingsRow.addEventListener('click', () => {
@@ -22315,6 +22558,7 @@ return;
 }
 retractMsg(target, side);
 }
+const FALLBACK_REPLY_POOL = ['收到～', '好呀', '好～', '嗯嗯', '知道啦', '好哒', '嗯嗯，我在听'];
 function genReplyText(c) {
 const pool = getPool();
 let reply = '', type = 'text';
@@ -22327,7 +22571,7 @@ reply = pick(pool.image); type = 'image';
 } else if (pool.voice.length && hit(c['voice-prob'])) {
 reply = pick(pool.voice); type = 'voice';
 } else {
-reply = pick(pool.text) || '收到～';
+reply = pick(pool.text) || pick(FALLBACK_REPLY_POOL);
 }
 if (type === 'text' && pool.kaomoji.length && hit(c['kaomoji-prob'])) {
 reply += ' ' + pick(pool.kaomoji);
@@ -67279,7 +67523,6 @@ t._timer = setTimeout(() => { t.className = 'cc-toast'; }, 3000);
 }
 let _prMsg = null;
 function refreshNow() {
-verMarkSnooze();
 const doReload = function () { try { location.reload(); } catch (e) {} };
 try {
 if (navigator.serviceWorker && navigator.serviceWorker.controller) {
@@ -67296,17 +67539,22 @@ doReload();
 }
 } catch (e) { doReload(); }
 }
-const VER_SNOOZE_KEY = 'xy-home-v2:ver-update-snooze-day';
+const VER_ACK_KEY = 'xy-home-v2:ver-update-ack-ts';
 let _verBarShown = false;
-function verToday() {
-const d = new Date(), p = (n) => (n < 10 ? '0' + n : '' + n);
-return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+function verAckTs() {
+try {
+const v = localStorage.getItem(VER_ACK_KEY);
+const n = Number(v);
+return (v && !isNaN(n) && n > 0) ? n : 0;
+} catch (e) { return 0; }
 }
-function verSnoozed() {
-try { return localStorage.getItem(VER_SNOOZE_KEY) === verToday(); } catch (e) { return false; }
+function verMarkAck(ts) {
+try { localStorage.setItem(VER_ACK_KEY, String(ts > 0 ? ts : Date.now())); } catch (e) {}
 }
-function verMarkSnooze() {
-try { localStorage.setItem(VER_SNOOZE_KEY, verToday()); } catch (e) {}
+function verShouldNotify(ts) {
+const n = Number(ts);
+if (!n || isNaN(n)) return true;
+return n > verAckTs();
 }
 function fetchJson(url, ms) {
 const ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
@@ -67315,16 +67563,16 @@ return fetch(url, { cache: 'no-store', signal: ctrl ? ctrl.signal : undefined })
 .then(function (r) { if (timer) clearTimeout(timer); if (!r.ok) throw new Error('bad'); return r.json(); })
 .catch(function (err) { if (timer) clearTimeout(timer); throw err; });
 }
-function showVerBar() {
-if (_verBarShown || verSnoozed()) return;
+function showVerBar(onlineTs) {
+if (_verBarShown || !verShouldNotify(onlineTs)) return;
 _verBarShown = true;
 const barEl = document.getElementById('ver-update-bar');
 if (!barEl) { toast('已检测到新版本，刷新页面即可更新'); return; }
 barEl.hidden = false;
 const actEl = document.getElementById('ver-update-refresh');
-if (actEl) actEl.onclick = refreshNow;
+if (actEl) actEl.onclick = function () { verMarkAck(onlineTs); refreshNow(); };
 const closeBtn = document.getElementById('ver-update-close');
-if (closeBtn) closeBtn.onclick = function () { verMarkSnooze(); barEl.hidden = true; };
+if (closeBtn) closeBtn.onclick = function () { verMarkAck(onlineTs); barEl.hidden = true; };
 }
 (function () {
 const bar = document.getElementById('ver-update-bar');
@@ -67350,7 +67598,7 @@ failCount = 0;
 const ts = Number(d && d.ts);
 if (!ts || isNaN(ts)) return;
 if (!baseGot) { baseTs = ts; baseGot = true; return; }
-if (ts > baseTs) showVerBar();
+if (ts > baseTs) showVerBar(ts);
 })
 .catch(function () { failCount++; });
 }
@@ -67412,13 +67660,12 @@ if (!newWorker) return;
 newWorker.addEventListener('statechange', () => {
 if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
 try {
-if (verSnoozed()) return;
 const sv = document.getElementById('splash-ver');
 const localTs = (sv && Number(sv.getAttribute('data-build-ts'))) || 0;
 fetchJson('./version.json?v=' + Date.now(), 5000)
 .then(function (d) {
 const ts = Number(d && d.ts);
-if (!ts || isNaN(ts) || ts > localTs) showVerBar();
+if (!ts || isNaN(ts) || ts > localTs) showVerBar(ts);
 })
 .catch(function () { showVerBar(); }); // 拉不到版本文件也照弹（宁多勿漏）
 } catch (e) {}

@@ -1,4 +1,18 @@
-# 本次构建者：AI-A（本会话，2026-08-29 00:5x，顶部更新条防重复修复收口：pwa.js 防重复 + 哨兵 27/27 + verify 10/10 + FIX-REGRESSION#28，sw: mochi-mtd19cl5，已提交已推送）
+# 本次构建者：AI-B（本会话，2026-08-29，收口【查看存储】+ 累积未构建项：设置查看存储/诊断IndexedDB大键/收到~兜底/更新条ack-ts 等；sw: mochi-mtd1qpft，待用户确认提交推送）
+### 2026-08-29（构建收口【查看存储】+ 累积未构建项）
+- [AI-B 域]（**已构建·sw 版本 mochi-mtd1qpft：哨兵 27/27 全部在位、verify 10/10 通过、index.html 含 row-storage-view/page-storage/st-clear-err/mochiRefreshDiagBadge；本次构建包含累积的「查看存储」「诊断IndexedDB大键」「收到~兜底」「更新条ack-ts」等已完成改动；未提交，待用户确认提交/推送**）。
+### 2026-08-29（联系人一直/重复发【收到~】：聊天回复硬编码兜底改小型通用池；已改源码，未构建）
+- [AI-A 域]（**已改 src/js/chat.js（聊天回复最后兜底——原 `pick(pool.text) || '收到～'` 改为 `|| pick(FALLBACK_REPLY_POOL)`，新增 8 句通用兜底池随机抽）；构建状态：未构建（node --check chat.js 通过），未提交**）。
+- 需求/反馈：用户反馈某联系人突然一直发同一个字卡【收到~】，退出重进也不管用。
+- 根因：该联系人的 `pool.text` 为空（该桌面自定义字卡库无字卡 + 默认字卡「主字卡/聊天使用」开关关闭）时，`genReplyText` 每句回复都命中单条硬编码「收到～」，故机械复读；且 `getDefaultCards` 也因开关关掉每次返回空，无法覆盖。
+- 方案：兜底不再用单条常量，改用小型通用回复池随机抽（收到～/好呀/好～/嗯嗯/知道啦/好哒/嗯嗯，我在听），避免复读同句。
+- 验证：node --check chat.js 通过；未构建。待收口实测：某联系人无可用字卡时回复变多样、不再只发「收到～」。
+- 待用户自理：该联系人字卡空是数据/设置问题而非仅代码——请检查该联系人的【字卡库】是否有字卡、默认字卡【聊天使用/主字卡】是否被关。
+### 2026-08-29（设置新增【查看存储】：查看全站功能占用 + 手动清理错误诊断记录；已改源码，未构建）
+- [AI-B 域]（**已改 src/template.html（设置页新增「查看存储」行 + 独立页 page-storage）+ src/css/setting.css（.storage-* 样式）+ src/js/personalize.js（统计/明细/清理/导航逻辑）+ src/js/device.js（暴露 window.mochiRefreshDiagBadge 供清理后角标归零）；构建状态：未构建（node --check personalize.js / device.js 已过、template 标签配平 OK），待构建者收口**）。
+- 需求/反馈：用户问「存储配额已用 1.x GB 怎么会那么大」，要求设置里新增【查看存储】：查看网站全部功能使用的内存，并可手动清理错误内存信息。
+- 方案：设置页「导出数据/导入数据/复制诊断信息」组下新增「查看存储」行 → 独立页。页内三卡：① 总占用（navigator.storage.estimate 配额 + localStorage/IndexedDB 各占多少）；② 各功能占用明细（按键名归类：聊天记录/头像库/壁纸背景/本地音乐/自动备份快照/错误诊断记录/字卡回复/设置与其他，localStorage 同步统计 + IndexedDB 逐键串行读体积边读边补，峰值内存=最大单键）；③ 错误诊断记录（当前缓存条数/错误数/体积 + 「清理错误诊断记录」按钮，确认弹窗后删除 __diag-* 6 键的 LS+IDB 并刷新诊断角标，不动任何业务数据）。
+- 验证：node --check 通过；未构建，待构建者收口后实测：设置→查看存储，配额/明细正确显示；清理错误诊断记录后红点角标归零、错误缓存清空、聊天/字卡数据不受影响。
 ### 2026-08-29（诊断新增 IndexedDB 大键明细：定位"存储已用 1.x GB"是哪类数据占空间；已改源码，未构建）
 - [AI-B 域]（**已改 src/js/device.js collectDiag 新增「IndexedDB 大键明细」节；构建状态：未构建（node --check 已过），待构建者收口**）。
 - 需求/反馈：用户问"存储配额已用 1239MB 怎么会那么大，是不是有数据被重复写入"。原诊断只有 localStorage 最大键 + navigator.storage.estimate() 总量，看不到 IndexedDB 里是哪类数据占空间。
@@ -7,8 +21,8 @@
 ### 2026-08-29（顶部「刷新使用新版」条：刷新到新版后仍反复提醒的修复；已改源码，未构建）
 - [跨域改动 src/js/pwa.js（AI-B 文件），理由：用户反馈「刷新到新版后顶部还提醒刷新使用新版」，pwa.js 属 AI-B 域由用户直接指定修改；构建状态：未构建（node --check pwa.js 已过），待构建者收口**。
 - 根因：更新条有两条触发通道——版本轮询（version.json ts > 页面 data-build-ts）与 SW updatefound（发现并安装新 SW 即弹）；「刷新到新版后还提醒」= SW 交接期（新 SW 刚装完接管、reload 后新页面又触发 updatefound）+ 弱网旧缓存页面（version.json 永远最新、页面还是旧 ts 恒弹）。
-- 方案：① 新增本日免打扰标记 `xy-home-v2:ver-update-snooze-day`：点「刷新使用新版」或「稍后」即写入，当日不再弹；② 弹条收敛为单一 `showVerBar()`（两通道共用，跨通道一次性去重）；③ SW 通道弹条前先比对页面 data-build-ts 与线上 version.json ts，页面已是最新则跳过（交接期不再误报）。
-- 验证：node --check pwa.js 通过；未构建。待构建者收口后实测：刷新到新版后当天不再弹条、「稍后」当日免打扰、第二天有新版仍会正常提示。
+- 方案：① 新增**按版本**免打扰标记 `xy-home-v2:ver-update-ack-ts`：点「刷新使用新版」或「稍后」时记为当时线上 version.json 的 ts，之后只对**比这更新的版本**再提醒——一天多次部署每次都会提醒一次，不会一天只弹一次；② 弹条收敛为单一 `showVerBar(onlineTs)`（两通道共用，跨通道一次性去重）；③ SW 通道弹条前先比对页面 data-build-ts 与线上 version.json ts，页面已是最新则跳过（交接期不再误报）。
+- 验证：node --check pwa.js 通过；未构建。待构建者收口后实测：刷新到新版后该版本不再弹；同日再部署新版仍会提示。
 - 待构建者：收口时把 pwa.js 一并进本轮构建。
 ### 2026-08-29（诊断错误记录无法保存→双写 IndexedDB：清空/恢复后错误线索不再丢；已改源码，未构建）
 - [AI-B 域]（**已改 src/js/device.js（错误记录双写 IDB + readErrs 回退读取）+ build.mjs（FIX_SENTINELS 加一行哨兵）+ FIX-REGRESSION.md（清单 #27）；构建状态：未构建（node --check device.js / build.mjs 已过），待构建者收口**）。

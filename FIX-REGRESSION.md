@@ -41,7 +41,7 @@
 | 25 | 三星 S24 / Chrome 进聊天页卡顿后页面崩溃（旧账号大数据 OOM） | chat.js 全量 migration/去重 pass 改**分批延迟归一化**（`runDeferredNormalization` 后台 2500 条/片 setTimeout 跑）；读库后先出首屏；无本地待合并数据时跳过全量签名 Set（hasLocal 短路）——主线程阻塞从数秒降到约百毫秒 | 哨兵 `scheduleDeferredNormalization` / `diag-oom-chat-load.mjs`（seed 4万条，同步段≈107ms、无崩溃、__jsErrors=0） |
 | 26 | 消息长按打不开引用/操作菜单 | chat.js `msgActionEligible`+`openMsgActionsAt`：轻点保留，**新增长按**(touchstart 500ms) 弹菜单；`contextmenu`/`preventDefault` 抑制系统选中与默认菜单，`msgSuppressClickUntil` 抑制松开后误触发轻点（防弹即关）；群聊 group-chat.js `gcOpenMsgActions` 同步 | 哨兵 `openMsgActionsAt` / `gcOpenMsgActions` |
 | 27 | 诊断角标显示有错误、导出却「最近错误：无」（错误记录无法保存） | device.js 错误记录双写 IndexedDB：`pushErr` 同步写 LS + `idbSet(ERR_KEY)`；新增 `readErrs`（LS 为空回退 IDB），collectDiag / refreshBadge / 已读计数统一走它；备份导入清空 `xy-home-v2:*` 键后启动时 idbRestore 自动回填，错误线索不再丢 | 哨兵 `idbSet(ERR_KEY` / 验证：记录错误→清空 xy-home-v2 前缀→刷新→诊断仍显示最近错误 |
-| 28 | 已刷新到新版、顶部仍反复提示「刷新使用新版」 | pwa.js 更新条防重复：① 新增本日免打扰标记 `xy-home-v2:ver-update-snooze-day`（点「刷新使用新版」`refreshNow` 或「稍后」关闭时写入，当日不再弹）；② 版本轮询 + SW updatefound 两通道收敛共用 `showVerBar()` 跨通道一次性去重；③ SW 通道弹条前比对页面 data-build-ts 与线上 version.json ts，页面已最新则跳过（SW 交接期 reload 后新页面不再误报） | 哨兵 `ver-update-snooze-day` / `showVerBar` / 验证：刷新到新版后当天不再弹条 |
+| 28 | 已刷新到新版、顶部仍反复提示「刷新使用新版」 | pwa.js 更新条防重复：① 新增**按版本**免打扰标记 `xy-home-v2:ver-update-ack-ts`（点「刷新使用新版」/「稍后」时记为当时线上 version.json 的 ts，之后只对**比这更新的版本**再提醒——一天多次部署每次都会提醒一次，不会一天只弹一次）；② 版本轮询 + SW updatefound 两通道收敛共用 `showVerBar(onlineTs)` 跨通道一次性去重；③ SW 通道弹条前比对页面 data-build-ts 与线上 version.json ts，页面已最新则跳过（SW 交接期 reload 后新页面不再误报） | 哨兵 `ver-update-ack-ts` / `showVerBar` / 验证：刷新到新版后该版本不再弹；同日再部署新版仍会提示 |
 
 ## 维护
 
