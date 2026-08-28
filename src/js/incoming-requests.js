@@ -52,6 +52,31 @@
     try { window.xyStore(ROOT).set(CALL_EN_KEY, en ? '1' : '0'); } catch (e) {}
   };
 
+  // ---- 跨桌面查岗/来电频率模式（全局统一，全桌面通） v3.26.x ----
+  // 原逻辑：每个桌面读各自 reply 设置的 ckq-prob / ckq-cool / desk-call-prob（默认 2%+30min）。
+  // 这三档模式是权威值：无论各桌面回复设置里概率/冷却怎么改，跨桌面查岗与来电都按当前模式算；
+  // 只作用于「跨桌面」查岗/来电，不影响桌面上 TA 主动查岗（ck-question.js 仍读各自 ckq-prob/ckq-cool）。
+  const DMODE_KEY = 'desk-freq-mode';
+  const DMODES = {
+    freq:  { label: '频繁', prob: 6,  cool: 15 },   // 概率 6% · 冷却 15 分钟
+    std:   { label: '标准', prob: 2,  cool: 30 },   // 概率 2% · 冷却 30 分钟
+    quiet: { label: '安静', prob: 1,  cool: 180 }   // 概率 1% · 冷却 3 小时（默认，最低打扰）
+  };
+  function deskFreqMode() {
+    try {
+      const v = window.xyStore(ROOT).get(DMODE_KEY);
+      if (v && DMODES[v]) return v;
+    } catch (e) {}
+    return 'quiet';
+  }
+  window.setDeskFreqMode = function (m) {
+    try { window.xyStore(ROOT).set(DMODE_KEY, DMODES[m] ? m : 'quiet'); } catch (e) {}
+  };
+  function deskDMode() {
+    try { return DMODES[deskFreqMode()]; } catch (e) {}
+    return DMODES.quiet;
+  }
+
   // 设置页开关行（动态插入「开启群聊」行之后；样式复用 .set-row/.toggle/.txt .sub）
   // 全桌面通：根键不随联系人隔离，切桌面/回填后只需同步一次勾选态。
   function addSettingToggle(conf) {
@@ -104,7 +129,7 @@
       title: '联系人跨桌面查岗',
       subTag: '功能说明',
       tagTitle: '联系人跨桌面查岗',
-      detail: '其他桌面的联系人是各自独立触发、互不影响：TA 每 60 秒「探测」一次你是否还醒着，每人按自己的概率触发（默认约 2%，可在 设置→回复速度→跨桌面查岗概率 里逐联系人调整）；同一联系人触发后会有 30 分钟冷却、不重复打扰。你回复后 TA 会现场回应。关闭后其他桌面的 TA 不再来查岗、也不再找你聊天。',
+      detail: '其他桌面的联系人是各自独立触发、互不影响：TA 每 60 秒「探测」一次你是否还醒着，触发频率按「跨桌面查岗频率」三档模式全局统一控制（频繁/标准/安静，下方可选，含来电）；同一联系人触发后有冷却、不重复打扰。你回复后 TA 会现场回应。关闭后其他桌面的 TA 不再来查岗、也不再找你聊天。',
       get: deskCheckinEn,
       set: window.setDeskCheckinEn,
       toast: function (en) { return en ? '已开启：其他桌面的TA会来查岗、找你聊天' : '已关闭：其他桌面的TA不再来查岗打扰'; }
@@ -120,7 +145,90 @@
       set: window.setDeskCallEn,
       toast: function (en) { return en ? '已开启：其他桌面的TA会主动给你打电话' : '已关闭：其他桌面的TA不再主动来电'; }
     });
+    // 跨桌面查岗/来电频率模式（三档全局预设，插在跨桌面开关之后）
+    addFreqModeRow();
   })();
+
+  // 频率模式选择行：三档 pill（频繁/标准/安静），全局统一生效；点击即切换并存根键。
+  // 复用 .set-row + .pill/.pill.on（base.css/setting.css 既有样式），不新增全局 CSS。
+  var freqDetail = '「跨桌面查岗 / 来电」的频率按全局档位统一生效（对所有桌面联系人同时生效）：' +
+    '\n· 频繁：概率 6%、冷却 15 分钟；' +
+    '\n· 标准：概率 2%、冷却 30 分钟；' +
+    '\n· 安静：概率 1%、冷却 3 小时（默认）。' +
+    '\n\n选档后立即对所有桌面的联系人生效，改一次全绿。只影响「联系人跨桌面查岗 / 来电」的触发频率，不影响桌面上 TA 主动查岗（主动查岗仍按回复设置里各自的概率/冷却）。';
+  function syncFreqPills() {
+    try {
+      const cur = deskFreqMode();
+      const wrap = document.getElementById('sf-desk-freq');
+      if (!wrap) return;
+      wrap.querySelectorAll('.pill').forEach(function (b) {
+        b.classList.toggle('on', b.dataset.m === cur);
+        b.setAttribute('aria-pressed', b.dataset.m === cur ? 'true' : 'false');
+      });
+    } catch (e) {}
+  }
+  function addFreqModeRow() {
+    try {
+      if (document.getElementById('sf-desk-freq')) return;
+      const anchor = document.getElementById('sf-desk-call-row') ||
+        document.getElementById('sf-desk-checkin-row') ||
+        document.getElementById('sf-group-chat-row');
+      if (!anchor) return;
+      const row = document.createElement('div');
+      row.className = 'set-row';
+      row.id = 'sf-desk-freq';
+      // 两行式布局避免窄屏换行：第一行标题+功能说明，第二行三个档位按钮横排铺满
+      row.style.cssText = 'flex-direction:column;align-items:stretch;gap:10px;';
+      row.innerHTML =
+        '<div class="freq-head" style="display:flex;align-items:center;gap:12px;min-width:0;">' +
+        '<div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>' +
+        '<div class="txt">跨桌面查岗频率<span class="tag" id="sf-desk-freq-tag" role="button" tabindex="0" aria-haspopup="dialog">功能说明</span></div>' +
+        '</div>' +
+        '<div class="freq-pills" style="display:flex;gap:8px;flex-wrap:nowrap;padding-left:34px;"></div>';
+      const wrap = row.querySelector('.freq-pills');
+      ['freq', 'std', 'quiet'].forEach(function (m) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'pill';
+        b.dataset.m = m;
+        b.setAttribute('aria-pressed', 'false');
+        b.style.cssText = 'flex:1;padding:8px 0;text-align:center;min-width:0;';
+        b.textContent = DMODES[m].label;
+        b.addEventListener('click', function () {
+          window.setDeskFreqMode(m);
+          syncFreqPills();
+          try { if (typeof window.openModal === 'function') window.openModal('跨桌面查岗频率', '', function () {}, { noInput: true, staticText: '已切换为「' + DMODES[m].label + '」频率：概率 ' + DMODES[m].prob + '%、冷却 ' + (DMODES[m].cool < 60 ? DMODES[m].cool + ' 分钟' : (DMODES[m].cool / 60) + ' 小时') + '。已对所有桌面联系人生效。' }); } catch (e) {}
+        });
+        wrap.appendChild(b);
+      });
+      anchor.parentNode.insertBefore(row, anchor.nextSibling);
+      // 显式固定这三行的顺序：查岗 → 打电话 → 频率（频率最下）。
+      // 不能依赖 addSettingToggle 的 insertBefore 顺序（anchor 固定为 group-chat 行时，
+      // 第二次插入会被插到第一次前面 → 打电话/查岗顺序颠倒），这里用 appendChild 按期望顺序统一重排。
+      try {
+        const setGroup = row.parentNode;
+        ['sf-desk-checkin-row', 'sf-desk-call-row', 'sf-desk-freq'].forEach(function (id) {
+          const el = setGroup.querySelector('#' + id);
+          if (el) setGroup.appendChild(el);
+        });
+      } catch (e) {}
+      // 长解释收进「功能说明」标签弹窗（与跨桌面查岗/来电开关同款交互）
+      const tagEl = row.querySelector('#sf-desk-freq-tag');
+      if (tagEl && typeof window.openModal === 'function') {
+        const showDetail = function (e) {
+          if (e) { e.stopPropagation(); e.preventDefault(); }
+          window.openModal('跨桌面查岗频率', '', function () {}, { noInput: true, staticText: freqDetail });
+        };
+        tagEl.addEventListener('click', showDetail);
+        tagEl.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); showDetail(); }
+        });
+      }
+      syncFreqPills();
+      document.addEventListener('contact-switched', syncFreqPills);
+      document.addEventListener('mochi-restore-done', syncFreqPills);
+    } catch (e) {}
+  }
 
   function rootGet(k) { try { return window.xyStore(ROOT).get(k); } catch (e) { return null; } }
   function rootSet(k, v) { try { window.xyStore(ROOT).set(k, v); } catch (e) {} }
@@ -383,21 +491,23 @@
         if (hasPending(cid)) return; // 已有未处理申请，不重复
         const cfg = cfgFor(cid);
         // v3.20.x：跨桌面来电——与跨桌面查岗对齐：触发概率 + 每人独立冷却。
-        // 概率读 desk-call-prob（默认 2%，与查岗 ckq-prob 对齐）；冷却用独立键
-        // incoming-last:call:<cid>（与查岗同套 lastAt/markLast，不与 call.js 的
-        // records-call-last 共用，普通来电不受影响）；冷却时长沿用查岗 ckq-cool（默认 30 分钟）。
+        // 概率/冷却 v3.26.x 起改读「跨桌面查岗频率」全局模式（deskDMode），不再读各桌面
+        // 回复设置的 desk-call-prob/ckq-cool；冷却仍用独立键 incoming-last:call:<cid>。
         if (deskCallEn() && !document.hidden) {
-          const callCool = num(cfg, 'ckq-cool', 30);
-          const callProb = num(cfg, 'desk-call-prob', 2);
+          const dm = deskDMode();
+          const callCool = dm.cool;
+          const callProb = dm.prob;
           if (Date.now() - lastAt(cid, 'call') >= callCool * 60000 && Math.random() * 100 < callProb) {
             deliver({ cid: cid, kind: 'call', text: '', ts: Date.now(), status: 'pending' });
             return;
           }
         }
-        // 查岗：开关 + 概率 + 冷却（ckq-*）
+        // 查岗：开关 + 概率 + 冷却（v3.26.x 起概率/冷却读全局频率模式 deskDMode，
+        //        各桌面 ckq-prob/ckq-cool 改为只影响桌面上 TA 主动查岗）
         if (deskCheckinEn() && num(cfg, 'ckq-en', 0) === 1) {
-          const cool = num(cfg, 'ckq-cool', 30);
-          const prob = num(cfg, 'ckq-prob', 2);
+          const dm = deskDMode();
+          const cool = dm.cool;
+          const prob = dm.prob;
           if (Date.now() - lastAt(cid, 'checkin') >= cool * 60000 && Math.random() * 100 < prob) {
             const q = window.ckQuestionPickFor ? window.ckQuestionPickFor(cid) : null;
             if (q && q.text) {

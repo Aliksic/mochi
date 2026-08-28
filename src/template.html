@@ -1226,6 +1226,15 @@
         <div class="gs-row"><span>后台保活</span><label class="toggle"><input type="checkbox" id="bg-keepalive"><span class="tk"></span></label></div>
         <div class="gs-row"><span>后台通知</span><label class="toggle"><input type="checkbox" id="bg-notify"><span class="tk"></span></label><button class="bg-notify-test" id="bg-notify-test">测试</button></div>
         <div class="gs-row"><span>全屏模式（隐藏手机状态栏）</span><label class="toggle"><input type="checkbox" id="sf-fullscreen"><span class="tk"></span></label></div>
+        <!-- v3.26.x：布局手动兜底——浏览器「桌面版网站」模式会把 UA / screen / 触摸能力 /
+             视口整套伪装成桌面，指纹识别必有漏网（vivo Y35 + Edge 连栽三轮）。识别失手时
+             用户自己掰回来：本开关（或地址栏 ?mobile=1 / ?pc=1），持久存 localStorage，
+             状态文案与绑定见 device.js（window.mochiDevice.setLayoutPref） -->
+        <div class="set-row">
+          <div class="txt">手机布局（强制）<span class="tag" id="sf-force-mobile-help" role="button" tabindex="0" aria-haspopup="dialog">为什么需要</span></div>
+          <label class="toggle"><input type="checkbox" id="sf-force-mobile"><span class="tk"></span></label>
+        </div>
+        <div class="gs-sub" id="sf-force-mobile-sub">…</div>
         <!-- v3.9.x：全屏边缘防误触——部分国产浏览器（雨见/UC/QQ 等）全屏下左右边缘上下滑
              会调节音量/亮度（浏览器自带手势，网页拦不住）。开启后用边缘拦截层+touchstart
              兜底尝试阻挡；对系统级手势可能无效，最可靠仍是浏览器设置关闭边缘滑动调节。 -->
@@ -2145,46 +2154,35 @@
         <span class="ch-name">音效设置</span>
       </div>
       <div class="gs-scroll">
+        <!-- v3.26.x：音效设置页重设计——三类音效各一张独立卡片（头部=图标+名称+当前状态，中部=预设胶囊，底部=动态操作行） -->
         <div class="gs-title">联系人来电</div>
-        <div class="set-group glass">
+        <div class="set-group glass sfx-card">
           <div class="set-row" id="sfx-ring-row">
             <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.2a5.2 5.2 0 00-5.2 5.2c0 3.3-1.4 4.9-2.5 5.9a.85.85 0 00.6 1.4h14.2a.85.85 0 00.6-1.4c-1.1-1-2.5-2.6-2.5-5.9A5.2 5.2 0 0012 4.2z"/><path d="M10 18.8a2 2 0 004 0"/></svg></div>
-            <div class="txt">来电铃声</div>
-            <div class="val" id="sfx-ring-val"></div>
-          </div>
-          <div class="set-row sub" id="sfx-ring-tools">
-            <button class="cc-tool" id="sfx-ring-upload">自定义音频</button>
-            <button class="cc-tool" id="sfx-ring-play">试听</button>
-            <button class="cc-tool" id="sfx-ring-clear">清除</button>
+            <div class="txt">来电铃声<span class="sub" id="sfx-ring-val"></span></div>
           </div>
           <div class="sfx-presets" id="sfx-ring-presets"></div>
+          <div class="sfx-tools" id="sfx-ring-tools"></div>
         </div>
-        <div class="gs-title">聊天音效</div>
-        <div class="set-group glass">
+        <div class="gs-title">联系人消息</div>
+        <div class="set-group glass sfx-card">
           <div class="set-row" id="sfx-in-row">
             <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4.5h9.5A2.5 2.5 0 0119 7v4.9a2.5 2.5 0 01-2.5 2.5h-6.1l-3.2 3.5v-3.5H7.5A2.5 2.5 0 015 11.9V7a2.5 2.5 0 012.5-2.5z"/><path d="M8.8 8.6v3"/><path d="M10.6 7.4v5.6"/><path d="M12.4 8.2v4"/></svg></div>
-            <div class="txt">联系人发送和回复消息</div>
-            <div class="val" id="sfx-in-val"></div>
-          </div>
-          <div class="set-row sub" id="sfx-in-tools">
-            <button class="cc-tool" id="sfx-in-upload">自定义音频</button>
-            <button class="cc-tool" id="sfx-in-play">试听</button>
-            <button class="cc-tool" id="sfx-in-clear">清除</button>
+            <div class="txt">TA 发来消息<span class="sub" id="sfx-in-val"></span></div>
           </div>
           <div class="sfx-presets" id="sfx-in-presets"></div>
+          <div class="sfx-tools" id="sfx-in-tools"></div>
+        </div>
+        <div class="gs-title">我的消息</div>
+        <div class="set-group glass sfx-card">
           <div class="set-row" id="sfx-out-row">
             <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 4.5H16.5A2.5 2.5 0 0119 7v4.9a2.5 2.5 0 01-2.5 2.5h-2.9l3.2 3.5v-3.5H7.5A2.5 2.5 0 015 11.9V7a2.5 2.5 0 012.5-2.5z"/><path d="M11.6 8.6v3"/><path d="M13.4 7.4v5.6"/><path d="M15.2 8.2v4"/></svg></div>
-            <div class="txt">我发送和回复的消息</div>
-            <div class="val" id="sfx-out-val"></div>
-          </div>
-          <div class="set-row sub" id="sfx-out-tools">
-            <button class="cc-tool" id="sfx-out-upload">自定义音频</button>
-            <button class="cc-tool" id="sfx-out-play">试听</button>
-            <button class="cc-tool" id="sfx-out-clear">清除</button>
+            <div class="txt">我发送消息<span class="sub" id="sfx-out-val"></span></div>
           </div>
           <div class="sfx-presets" id="sfx-out-presets"></div>
+          <div class="sfx-tools" id="sfx-out-tools"></div>
         </div>
-        <div class="sm-set-hint" style="padding:0 16px 8px">内置音效开箱即用：点击下方音效即可切换并试听；也可上传自定义音频（mp3 / wav / ogg / m4a）。选择内置音效会替换自定义音频；「静音」关闭该类音效。</div>
+        <div class="sm-set-hint" style="padding:0 16px 8px">点击下方音效即可应用并试听；「静音」关闭该类音效。也可上传自定义音频（mp3 / wav / ogg / m4a），上传后可在底部试听或清除。</div>
       </div>
     </div>
 
@@ -2695,6 +2693,8 @@
             <button class="div-mode sel" data-count="3">3 张</button>
             <button class="div-mode" data-count="1">1 张</button>
           </div>
+          <!-- v3.26.x：占卜对象（可选全部桌面联系人，也可不选；选了对象结果存入主页「占卜记录」） -->
+          <div class="div-modes div-targets" id="div-targets"></div>
         </div>
 
         <div class="div-card glass">
@@ -2907,6 +2907,8 @@
         <button class="fav-tab" data-htab="coinask">心意币申请记录</button>
         <button class="fav-tab" data-htab="coinrp">心意币红包记录</button>
         <button class="fav-tab" data-htab="care">TA的关心</button>
+        <!-- v3.26.x：占卜记录（占卜页抽牌选了对象，牌面与解读存入该联系人桌面 records-divine） -->
+        <button class="fav-tab" data-htab="divine">占卜记录</button>
       </div>
       <div class="cal-scroll">
         <div class="cal-card glass" data-hpanel="av">
@@ -2947,6 +2949,11 @@
         <div class="cal-card glass" data-hpanel="care" hidden>
           <div class="cal-card-title">TA 的关心记录</div>
           <div id="home-care"></div>
+        </div>
+        <!-- v3.26.x：占卜记录（占卜页抽牌选了对象 → 存该联系人桌面 records-divine） -->
+        <div class="cal-card glass" data-hpanel="divine" hidden>
+          <div class="cal-card-title">占卜记录</div>
+          <div id="home-divine"></div>
         </div>
       </div>
     </div>
@@ -3124,7 +3131,9 @@
         </div>
         <div class="voice-preview" id="voice-preview" hidden>
           <button class="msg-voice-play voice-play-btn" id="voice-play-btn" title="试听">
-            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            <!-- 播放/暂停双图标：playing 时 CSS 切换显示（试听播放中有互动态，与聊天语音气泡同款） -->
+            <svg class="voice-ico-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            <svg class="voice-ico-pause" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
           </button>
           <span class="voice-preview-txt" id="voice-preview-txt"></span>
         </div>
@@ -3654,7 +3663,7 @@
                 </div>
               </div>
             </div>
-            <div class="pong-foot">你控制右挡板 · <span id="brick-foot-name">TA</span> 控制左挡板 · 手机按住拖动 · 电脑 A/D 或 ← →</div>
+            <div class="pong-foot">你控制右挡板 · <span id="brick-foot-name">TA</span> 控制左挡板 · 按住拖动</div>
           </div>
         </div>
       </div>
@@ -3759,6 +3768,7 @@
                 </div>
               </div>
             </div>
+            <div class="ms-talk" id="ms-talk" hidden><div class="ms-talk-bubble"></div></div>
             <div class="ms-status" id="ms-status">选择难度开始探索</div>
             <div class="ms-foot">点击挖开 · 长按插旗 · 数字=周围雷数 · 🪙🎁🌸 藏在格子里</div>
           </div>
@@ -4347,20 +4357,33 @@
       </div>
 
     <!-- TA在身边·位置面板（聊天寻踪半框 / 桌面寻踪页「TA在身边」入口共用，必须放在所有 .page 之外——
-         position:fixed 弹层若嵌在 .page 内，页面切换时会被父级 hidden 隐藏，桌面寻踪页点开就会"跑到聊天页"） -->
+         position:fixed 弹层若嵌在 .page 内，页面切换时会被父级 hidden 隐藏，桌面寻踪页点开就会"跑到聊天页"；
+         v3.26.x：桌面寻踪页入口以 .loc-full 全屏打开，聊天寻踪半框入口保持底部半屏） -->
     <div class="loc-panel" id="loc-panel" hidden>
       <div class="loc-head">
-        <span>TA在身边 · <b id="loc-name">TA</b> 的位置</span>
-        <button class="loc-close" id="loc-close">✕</button>
+        <button class="loc-back" id="loc-back" aria-label="返回">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <span class="loc-title">TA在身边 · <b id="loc-name">TA</b> 的位置</span>
+        <button class="loc-close" id="loc-close" aria-label="关闭">✕</button>
       </div>
-      <!-- 方位感知（v3.13.x：模糊感知，不是精确定位） -->
-      <div class="fw-sense" id="fw-sense">
-        <div class="fw-circle" id="fw-circle"></div>
-        <div class="fw-detail" id="fw-detail"></div>
-        <button class="fw-perceive" id="fw-perceive" type="button">感知一下</button>
-        <div class="fw-result" id="fw-result" hidden></div>
+      <div class="loc-scroll">
+        <!-- 方位感知（v3.13.x：模糊感知，不是精确定位） -->
+        <div class="fw-sense" id="fw-sense">
+          <div class="fw-title">
+            <span class="fw-title-t">方位感知</span>
+            <span class="fw-title-s">不是精确定位 · 是你对 TA 的模糊感觉</span>
+          </div>
+          <div class="fw-circle" id="fw-circle"></div>
+          <div class="fw-detail" id="fw-detail"></div>
+          <button class="fw-perceive" id="fw-perceive" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/><circle cx="12" cy="12" r="4"/></svg>
+            感知一下
+          </button>
+          <div class="fw-result" id="fw-result" hidden></div>
+        </div>
+        <div class="loc-body" id="loc-body"></div>
       </div>
-      <div class="loc-body" id="loc-body"></div>
     </div>
 
     <!-- 位置卡光点动效层（全局，同样须在 .page 外） -->

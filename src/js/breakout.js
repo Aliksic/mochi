@@ -881,8 +881,16 @@
       const cs = getComputedStyle(panel);
       const availW = window.innerWidth - 20 - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
       const availH = Math.max(160, window.innerHeight - used - (parseFloat(cs.paddingTop) || 0) - (parseFloat(cs.paddingBottom) || 0) - 14);
-      let cw = availW, ch = Math.round(cw * H / W);
-      if (ch > availH) { ch = availH; cw = Math.round(ch * W / H); }
+      // 竖屏：优先按可用高度放大（纵向吃满、横向居中），超宽时回退宽度主导；
+      // 横屏：维持宽度主导（横向吃满）。保证画布尽量铺满且不变形。
+      let cw, ch;
+      if (window.innerHeight >= window.innerWidth) {
+        ch = availH; cw = Math.round(ch * W / H);
+        if (cw > availW) { cw = availW; ch = Math.round(cw * H / W); }
+      } else {
+        cw = availW; ch = Math.round(cw * H / W);
+        if (ch > availH) { ch = availH; cw = Math.round(ch * W / H); }
+      }
       canvas.style.width = cw + 'px';
       canvas.style.height = ch + 'px';
       if (box) { box.style.width = cw + 'px'; box.style.height = ch + 'px'; }
@@ -1159,7 +1167,7 @@
     const bn = targetBallCount();
     showOverlay(T('双人打砖块'),
       '<div class="pong-start-tip">你和' + T('TA') + '各守半场共接' + (bn > 1 ? bn + ' 颗球' : '同一颗球') + '<br>清光砖块进入下一层 · 共 3 次失误机会</div>' +
-      '<div class="pong-start-ctrl">手机：按住画面左右拖动<br>电脑：A/D 或 ← →</div>' +
+      '<div class="pong-start-ctrl">按住画面左右拖动</div>' +
       (best > 0 ? '<div class="pong-end-stat">历史最佳 ' + best + ' 分</div>' : ''),
       '开始');
     if (overlayCloseBtn) overlayCloseBtn.hidden = true;

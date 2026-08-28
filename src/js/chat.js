@@ -48,6 +48,7 @@ authLoadedPrefix = null;
 armReadyFuse();
 try { lastQuote = null; } catch (e) {}
 try { lastMineText = ''; } catch (e) {}
+try { lastMineQuote = ''; } catch (e) {}
 try { lastQuotedText = ''; } catch (e) {}
 try {
 draftImgs = [];
@@ -743,13 +744,45 @@ a.addEventListener('ended', stopChatVoice);
 a.addEventListener('error', () => { stopChatVoice(); toast('语音播放失败'); });
 a.play().catch(() => { stopChatVoice(); toast('语音播放失败'); });
 }
+function voicePartsOf(text) {
+const p = String(text || '').split('|||');
+return { name: (p[0] || '语音消息').replace(/\.[^.]+$/, ''), src: p[1] || '' };
+}
+function fillVoiceBubble(b, text, prefixHtml) {
+const v = voicePartsOf(text);
+b.innerHTML = (prefixHtml || '') + '<div class="msg-voice" data-src="' + attrEsc(v.src) + '">' +
+'<button class="msg-voice-play" title="播放">' +
+// 播放/暂停双图标：playing 时 CSS 切换显示，点按三角↔双竖条有互动态（录制面板试听钮同款）
+'<svg class="voice-ico-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>' +
+'<svg class="voice-ico-pause" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>' +
+'</button>' +
+'<div class="msg-voice-wave"><i></i><i></i><i></i><i></i><i></i></div>' +
+'<span class="msg-voice-name">' + escTxt(v.name) + '</span>' +
+'</div>';
+const btn = b.querySelector('.msg-voice-play');
+if (btn) btn.addEventListener('click', function (e) {
+e.stopPropagation();
+if (v.src) playVoiceInChat(btn, v.src);
+else toast('语音数据缺失');
+});
+}
 const QUOTE_PLACEHOLDER = /^(图片|表情包|\[图片\]|\[表情包\])$/;
+// 旧数据兜底：修复前 TA 自动引用存的是原始 text（语音为「名称|||data:audio;base64…」），
+// 直出会整串 base64 铺满屏幕。渲染前统一还原成可读标签，新数据本已是标签、原样通过。
+function quoteTextSafe(s) {
+let str = String(s == null ? '' : s);
+const bar = str.indexOf('|||');
+if (bar >= 0) str = bar > 0 ? '[语音] ' + str.slice(0, bar) : '';
+const di = str.indexOf('data:');
+if (di > 0 && str.length - di > 120) str = str.slice(0, di).trim();
+return str;
+}
 function quoteHtml(q, side) {
 const __fitQ = (side !== 'out') && !!window.taFit;
 const FQ = (s) => (__fitQ ? window.taFit(s) : s);
 if (q && typeof q === 'object') {
 const imgs = (q.imgs || []).filter(s => typeof s === 'string' && s.indexOf('data:') === 0).slice(0, 3);
-const t = String(q.t || '');
+const t = quoteTextSafe(q.t);
 const tHtml = (t && t.indexOf('data:') !== 0 && !(imgs.length && QUOTE_PLACEHOLDER.test(t))) ? escTxtBr(FQ(t)) : '';
 let inner = '';
 if (imgs.length) inner += '<span class="msg-quote-imgs">' + imgs.map(s => '<img class="msg-quote-img" src="' + attrEsc(s) + '" alt="图片" loading="lazy" decoding="async">').join('') + '</span>';
@@ -759,7 +792,8 @@ return '<div class="msg-quote">' + inner + '</div>';
 if (typeof q === 'string' && q.indexOf('data:') === 0) {
 return '<div class="msg-quote"><img class="msg-quote-img" src="' + attrEsc(q) + '" alt="图片" loading="lazy" decoding="async"></div>';
 }
-return '<div class="msg-quote"><span class="msg-quote-text">' + escTxtBr(FQ(q)) + '</span></div>';
+const qs = quoteTextSafe(q);
+return '<div class="msg-quote"><span class="msg-quote-text">' + escTxtBr(FQ(qs)) + '</span></div>';
 }
 let inplaceDrafts = {};
 function inplaceTypeOf(rec) {
@@ -1330,7 +1364,7 @@ return m;
 }
 // v3.16.x：记忆翻牌结算卡片（memory-game.js endGame 调用 chatAddSystem special:'memory'）
 if (rec.special === 'memory') {
-m.className = 'msg-pong';
+m.className = 'msg-pong msg-memory';
 m.innerHTML = '<div class="msg-pong-card">' +
 '<div class="msg-pong-label">🧠 ' + T('记忆翻牌') + '</div>' +
 '<div class="msg-pong-result">' + escTxt(T(rec.text || '')) + '</div>' +
@@ -1539,20 +1573,7 @@ b.style.padding = '8px 10px';
 b.style.background = '';
 b.style.border = '';
 b.style.boxShadow = '';
-const vparts = String(rec.text || '').split('|||');
-const vname = (vparts[0] || '语音消息').replace(/\.[^.]+$/, '');
-const vsrc = vparts[1] || '';
-b.innerHTML = '<div class="msg-voice" data-src="' + attrEsc(vsrc) + '">' +
-'<button class="msg-voice-play" title="播放">' +
-'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>' +
-'</button>' +
-'<div class="msg-voice-wave"><i></i><i></i><i></i><i></i><i></i></div>' +
-'<span class="msg-voice-name">' + escTxt(vname) + '</span>' +
-'</div>';
-b.querySelector('.msg-voice-play').addEventListener('click', function (e) {
-e.stopPropagation();
-playVoiceInChat(this, vsrc);
-});
+fillVoiceBubble(b, rec.text, rec.quote ? quoteHtml(rec.quote, rec.qside) : '');
 } else if (rec.parts && rec.parts.length) {
 const imgs = rec.parts.filter(p => p.k === 'img').map(p => p);
 const textPart = rec.parts.filter(p => p.k === 'text').map(p => p.v).join(' ');
@@ -1996,6 +2017,12 @@ return el;
 }
 function addIn(text, opts) {
 opts = opts || {};
+  // v3.26.x：联系人发消息音效——TA 主动消息/系统通知统一在 addIn 触发「联系人发送和回复消息」音效
+  // （sfx-in）。此前只有群聊播 in 音效、单聊从未触发，所有手机单聊收 TA 消息都静音（红米 Turbo4Pro
+  // + Via 反馈）。silent（小游戏互动/后台批量/静默通知）与已读回执（special:'read'）不打扰，不播放。
+  if (window.playSfx && !opts.silent && opts.special !== 'read') {
+    try { window.playSfx('in'); } catch (e) {}
+  }
   // v3.14.x：opts.tag = 来源标注（如「经期关心/喝水提醒/吃饭提醒」）——系统功能直接发进
   // 聊天的字卡带一枚标签 chip（复用 rec.mood 渲染与持久化链路，重进聊天仍在），
   // 用户能看出这条消息是哪个功能触发的，不再是无来由的普通气泡
@@ -2408,8 +2435,9 @@ function scheduleReply() {
 const myCid = window.__activeCid || 'default';
 const sameCid = () => (window.__activeCid || 'default') === myCid;
 syncLastMineText();
-const quoteSrc = lastMineText;
+const quoteSrc = lastMineQuote;
 const quoteSrcIdx = lastMineIdx;
+const quoteKey = quoteSrc && typeof quoteSrc === 'object' ? String(quoteSrc.t || '') + '\n' + (quoteSrc.imgs || []).join() : String(quoteSrc || '');
 const c = cfg();
 if (hit(c['rn-prob'])) {
 setTimeout(() => { if (!sameCid()) return; addIn('', { special: 'read' }); }, randInt(1000, 4000));
@@ -2433,8 +2461,8 @@ for (let i = 0; i < count; i++) {
 setTimeout(() => {
 if (!sameCid()) return;
 hideTyping();
-const q = (wantQuote && i === 0 && quoteSrc !== lastQuotedText) ? quoteSrc : null;
-if (q) lastQuotedText = q;
+const q = (wantQuote && i === 0 && quoteKey && quoteKey !== lastQuotedText) ? quoteSrc : null;
+if (q) lastQuotedText = quoteKey;
 replyOnce(c, q, i > 0, q ? quoteSrcIdx : -1);
 if (i < count - 1) showTyping();
 if (i === count - 1) {
@@ -2456,12 +2484,17 @@ const m = addIn(rep.text, { quote: quote, qside: 'out', qidx: quote ? quoteIdx :
 const _favProbMsg = (window.favCfg ? window.favCfg().taMsg : 30);
 if (lastMineText && Math.random() * 100 < _favProbMsg) {
 const fav = getFav();
-if (!fav.some(f => f.side === 'out' && f.text === lastMineText)) {
-const favType = lastMineText.indexOf('data:') === 0 ? 'image' : 'text';
+// v3.26.x：只与 TA 自己的收藏判重——「我」收藏过同一条不应挡住 TA 的自动收藏（两个 tab 独立）
+if (!fav.some(f => f.by === 'ta' && f.side === 'out' && f.text === lastMineText)) {
+let favType = lastMineText.indexOf('data:') === 0 ? 'image' : 'text';
 let favParts = undefined;
 for (let i = msgs.length - 1; i >= 0; i--) {
 const mm = msgs[i];
-if (mm && mm.side === 'out' && mm.text === lastMineText && mm.parts && mm.parts.length) { favParts = mm.parts.map(p => ({ k: p.k, v: p.v, sub: p.sub })); break; }
+if (mm && mm.side === 'out' && mm.text === lastMineText) {
+if (mm.type && mm.type !== 'text') favType = mm.type;
+if (mm.parts && mm.parts.length) favParts = mm.parts.map(p => ({ k: p.k, v: p.v, sub: p.sub }));
+break;
+}
 }
 fav.push({ side: 'out', text: lastMineText, type: favType, ts: Date.now(), by: 'ta', parts: favParts });
 saveFav(fav);
@@ -2604,17 +2637,20 @@ window.openCjian();
 }
 let lastMineText = '';
 let lastMineIdx = -1;
+let lastMineQuote = '';
 let lastQuotedText = '';
 function syncLastMineText() {
 for (let i = msgs.length - 1; i >= 0; i--) {
 const m = msgs[i];
 if (m && m.side === 'out' && !m.retracted && typeof m.text === 'string' && m.text) {
 lastMineText = m.text;
+lastMineQuote = quoteSnapOf(m);
 lastMineIdx = i;
 return;
 }
 }
 lastMineText = '';
+lastMineQuote = '';
 lastMineIdx = -1;
 }
 function genOneReply(c) {
@@ -2925,13 +2961,20 @@ if (Array.isArray(v)) return v.filter(g => Array.isArray(g) && Array.isArray(g[1
 } catch (e) {}
 return null;
 }
+// 用户改过分组后置位：防止启动期 IDB 兜底恢复把会话内的修改回滚掉（如删光后又复活）
+const pokeDirty = { ta: false, mine: false };
 function pokeUserGroupsSave(kind) {
+pokeDirty[kind] = true;
 try {
 const data = JSON.stringify(pokeUserGroups[kind]);
 store.set('poke-groups-' + kind, data);
 if (window.idbSet) window.idbSet(pokeUserGroupsKey(kind), data);
 } catch (e) {}
 }
+// v3.26.x：初始化只读不写。手机端 LS 缺键（iOS 系统清理/quota 写失败脏键/启动回填
+// 未完成）时，旧实现会用「默认空数据」同步回写 LS+IDB，把 IDB 备份覆盖掉——
+// 「我的拍一拍」新增条目永久丢失，版本更新刷新重开即复现。数据落库只在用户
+// 实际改动时发生（pokeUserGroupsSave），空默认不落盘。
 function pokeUserGroupsInit(kind) {
 const loaded = pokeUserGroupsLoad(kind);
 if (loaded) return loaded;
@@ -2940,26 +2983,37 @@ try {
 const v = JSON.parse(store.get('poke-user-' + kind) || 'null');
 if (Array.isArray(v)) legacy = v.filter(x => typeof x === 'string' && x.trim());
 } catch (e) {}
-const g = [['我的新增', legacy]];
-try {
-store.set('poke-groups-' + kind, JSON.stringify(g));
-if (window.idbSet) window.idbSet(pokeUserGroupsKey(kind), JSON.stringify(g));
-} catch (e) {}
-return g;
+return [['我的新增', legacy]];
 }
 const pokeUserGroups = { ta: pokeUserGroupsInit('ta'), mine: pokeUserGroupsInit('mine') };
-(function () {
-if (!window.idbGet) return;
-['ta', 'mine'].forEach(kind => {
-window.idbGet(pokeUserGroupsKey(kind)).then(v => {
-if (!v) return;
-try {
-const arr = JSON.parse(v);
-if (Array.isArray(arr) && arr.length > pokeUserGroups[kind].length) pokeUserGroups[kind] = arr;
-} catch (e) {}
-}).catch(() => {});
+function pokeGroupsCardCount(groups) {
+let n = 0;
+(groups || []).forEach(g => { if (Array.isArray(g) && Array.isArray(g[1])) n += g[1].length; });
+return n;
+}
+// IDB 兜底恢复：备份条目总数多于内存时采用。旧条件「分组数更多」在单分组数据下
+// 永不成立，救不回 1 组 N 条的常见数据。会话内已改过（pokeDirty）则跳过防回滚。
+function pokeAdoptFromIdb(kind) {
+if (pokeDirty[kind] || !window.idbGet) return Promise.resolve(false);
+return window.idbGet(pokeUserGroupsKey(kind)).then(v => {
+if (!v || pokeDirty[kind]) return false;
+let arr = null;
+try { arr = JSON.parse(v); } catch (e) { return false; }
+if (!Array.isArray(arr)) return false;
+if (pokeGroupsCardCount(arr) > pokeGroupsCardCount(pokeUserGroups[kind])) {
+pokeUserGroups[kind] = arr.filter(g => Array.isArray(g) && Array.isArray(g[1]));
+return true;
+}
+return false;
+}).catch(() => false);
+}
+function pokeAdoptAllRerender() {
+Promise.all([pokeAdoptFromIdb('ta'), pokeAdoptFromIdb('mine')]).then(adopted => {
+if ((adopted[0] || adopted[1]) && pokeCard && !pokeCard.hidden) renderPokeCard();
 });
-})();
+}
+if (window.__mochiDataReady) pokeAdoptAllRerender();
+else document.addEventListener('mochi-restore-done', pokeAdoptAllRerender);
 function pokeKindOf(card) {
 if (typeof card !== 'string') return 'mine';
 if (card.indexOf('你') >= 0) return 'mine';
@@ -3308,7 +3362,7 @@ toast('已新建分组「' + v + '」');
 });
 }
 document.addEventListener('contact-switched', function () {
-try { pokeUserGroups.ta = pokeUserGroupsInit('ta'); pokeUserGroups.mine = pokeUserGroupsInit('mine'); } catch (e) {}
+try { pokeDirty.ta = false; pokeDirty.mine = false; pokeUserGroups.ta = pokeUserGroupsInit('ta'); pokeUserGroups.mine = pokeUserGroupsInit('mine'); pokeAdoptAllRerender(); } catch (e) {}
 try { if (pokeCard) pokeCard.hidden = true; } catch (e) {}
 });
 const morePoke = document.getElementById('more-poke');
@@ -4758,6 +4812,7 @@ return false;
 }
 function openPokeCard() {
 if (!pokeCard) return;
+pokeAdoptAllRerender(); // 慢 IDB（iOS 挂后台杀连接）下 restore-done 兜底可能落空，开面板再补一次
 const ep = document.getElementById('emoji-panel');
 if (ep) ep.hidden = true;
 if (window.closeAvlib) window.closeAvlib();
@@ -4792,20 +4847,22 @@ changed = true;
 });
 if (changed) saveFav(fav);
 }
-function favDup(list, f) {
-return list.some(x => (x.kind || 'msg') === (f.kind || 'msg') &&
+function favDup(list, f, by) {
+// v3.26.x：按归属判重——「我的收藏」与「联系人的收藏」是两个独立 tab，
+// TA 自动收藏的副本不应挡住用户收藏同一内容（反之亦然）
+return list.some(x => (x.by || 'me') === by && (x.kind || 'msg') === (f.kind || 'msg') &&
 (x.q || '') === (f.q || '') && (x.text || '') === (f.text || '') && x.ts === f.ts);
 }
 window.addMyFavItem = function (f) {
 const fav = getFav();
-if (favDup(fav, f)) return false;
+if (favDup(fav, f, 'me')) return false;
 fav.push(Object.assign({ by: 'me' }, f));
 saveFav(fav);
 return true;
 };
 window.addTaFavItem = function (f) {
 const fav = getFav();
-if (favDup(fav, f)) return false;
+if (favDup(fav, f, 'ta')) return false;
 fav.push(Object.assign({ by: 'ta' }, f));
 saveFav(fav);
 return true;
@@ -4843,8 +4900,8 @@ function closeMsgActions() {
 if (msgActions) msgActions.hidden = true;
 activeMsgEl = null;
 }
-function quoteSnapOf(m) {
-let qi = (m.parts || []).filter(p => p.k === 'img').map(p => p.v).slice(0, 3);
+function quoteTextOf(m) {
+const qi = (m.parts || []).filter(p => p.k === 'img').map(p => p.v).slice(0, 3);
 if (!qi.length && (m.type === 'sticker' || m.type === 'image')
 && typeof m.text === 'string'
 && (m.text.indexOf('data:') === 0 || /^https?:\/\//i.test(m.text))) {
@@ -4854,7 +4911,13 @@ let qt = m.text;
 if (m.type === 'voice') qt = '[语音] ' + String(qt || '').split('|||')[0];
 else if (m.type === 'sticker') qt = '表情包';
 else if (qi.length && (String(qt || '').indexOf('data:') === 0 || /^https?:\/\//i.test(String(qt || '')))) qt = '图片';
-return qi.length ? { t: qt, imgs: qi } : qt;
+// 兜底：type 仍是 text 却夹带 |||data: 载荷的记录（导入的字卡音频/历史数据）
+else if (typeof qt === 'string' && qt.indexOf('|||') > 0 && qt.indexOf('data:') > 0) qt = qt.split('|||')[0];
+return { text: qt, imgs: qi };
+}
+function quoteSnapOf(m) {
+const q = quoteTextOf(m);
+return q.imgs.length ? { t: q.text, imgs: q.imgs } : q.text;
 }
 function quoteEq(a, b) {
 if (a === b) return true;
@@ -4952,28 +5015,18 @@ const idx = activeMsgEl ? Number(activeMsgEl.dataset.idx) : -1;
 const rec = (idx >= 0 && msgs[idx]) ? msgs[idx] : null;
 if (act === 'quote') {
 if (rec) {
-const qimgs = (rec.parts || []).filter(p => p.k === 'img').map(p => p.v).slice(0, 3);
-if (!qimgs.length && (rec.type === 'sticker' || rec.type === 'image')
-&& typeof rec.text === 'string'
-&& (rec.text.indexOf('data:') === 0 || /^https?:\/\//i.test(rec.text))) {
-qimgs.push(rec.text);
-}
-let qtext = rec.text;
-if (rec.type === 'voice') {
-qtext = '[语音] ' + String(rec.text || '').split('|||')[0];
-} else if (rec.type === 'sticker') {
-qtext = '表情包';
-} else if (qimgs.length && (String(qtext || '').indexOf('data:') === 0 || /^https?:\/\//i.test(String(qtext || '')))) {
-qtext = '图片';
-}
-lastQuote = { side: rec.side, text: qtext, type: rec.type, imgs: qimgs, idx: idx };
+const qsnap = quoteTextOf(rec);
+lastQuote = { side: rec.side, text: qsnap.text, type: rec.type, imgs: qsnap.imgs, idx: idx };
 renderDraft();
 }
 closeMsgActions();
 } else if (act === 'fav') {
 if (rec) {
 const fav = getFav();
-if (fav.some(f => f.side === rec.side && f.text === rec.text)) {
+// v3.26.x 修复（iOS 反馈：收藏 5 条页面只显示 3 条、再收藏提示已收藏过却没显示）：
+// 判重只限「我的」收藏（TA 自动收藏的 by:'ta' 副本在另一个 tab，不应挡住我的收藏），
+// 且加 ts 比较——同文案的不同消息（时间戳不同）允许分别收藏，仅拦截同一条消息重复点收藏
+if (fav.some(f => (f.by || 'me') !== 'ta' && f.side === rec.side && (f.text || '') === (rec.text || '') && (!rec.ts || f.ts === rec.ts))) {
 toast('已收藏过这条消息');
 } else {
 fav.push({ side: rec.side, text: rec.text, type: rec.type || 'text', ts: rec.ts || Date.now(), by: 'me', mood: (rec.mood || []).slice(), parts: rec.parts && rec.parts.length ? rec.parts.map(p => ({ k: p.k, v: p.v, sub: p.sub })) : undefined });
@@ -5155,10 +5208,14 @@ if (window.viewChatImage) window.viewChatImage(img.src);
 });
 });
 } else {
+const isVoice = f.type === 'voice' || (typeof f.text === 'string' && f.text.indexOf('|||data:audio/') > 0);
 const isImg = f.type === 'sticker' || f.type === 'image' || (typeof f.text === 'string' && f.text.indexOf('data:') === 0);
-if (isImg) {
+if (isVoice) {
+b.style.padding = '8px 10px';
+fillVoiceBubble(b, f.text);
+} else if (isImg) {
 b.style.padding = '6px';
-b.innerHTML = '<img class="msg-img" src="' + f.text + '" alt="表情">';
+b.innerHTML = '<img class="msg-img" src="' + attrEsc(f.text) + '" alt="表情">';
 } else {
 b.innerHTML = '<span style="opacity:.85">' + escTxtBr(f.text) + '</span>';
 }
@@ -6459,7 +6516,7 @@ bar.appendChild(img);
 }
 const t = document.createElement('span');
 t.className = 'chat-draft-quote-text';
-const raw = lastQuote.text || '';
+const raw = quoteTextSafe(lastQuote.text || '');
 const hidePh = !!(thumb && QUOTE_PLACEHOLDER.test(raw));
 t.textContent = (raw.indexOf('data:') === 0 && raw.length > 64)
 ? (lastQuote.type === 'sticker' ? '表情包' : '图片')
@@ -6685,7 +6742,14 @@ if (window.idbGet) {
 const myPrefix = window.activePrefix();
 window.idbGet(myPrefix + ':fav-msgs').then(v => {
 if (window.activePrefix() !== myPrefix) return;
-if (v && typeof v === 'string' && v.length > 2) store.set('fav-msgs', v);
+if (v && typeof v === 'string' && v.length > 2) {
+// v3.26.x 修复（iOS 收藏丢失）：只在本地无收藏时从 IDB 补入，不再无条件覆盖——
+// idbSet 是异步 fire-and-forget，iOS 杀后台时 IDB 可能落后于 localStorage，
+// 无条件覆盖会把最新收藏回滚成旧快照（收藏 5 条重开后只剩 3 条）
+let cur = null;
+try { cur = store.get('fav-msgs'); } catch (e) {}
+if (!cur || cur.length <= 2) store.set('fav-msgs', v);
+}
 });
 }
 } catch (e) {}

@@ -930,6 +930,10 @@ body.cs-time-divider .msg-time-divider { display:flex; }
 }
 .msg-quote-text {
   color:inherit; opacity:.8; word-break:break-word;
+  /* 超长内容（旧数据里的 base64 引用）最多两行，不铺满整屏；
+     inline-block 而非 -webkit-box，保持与 .msg-quote-imgs 同行排布 */
+  display:inline-block; vertical-align:top; max-width:100%;
+  max-height:2.8em; overflow:hidden;
 }
 
 /* 鎯呯华/蹇冩剰/鎰忓浘瀛楀崱锛氭墍鏈夊瓧鍗″寘鍦?.msg-moods 瀹瑰櫒鍐咃紝
@@ -1084,9 +1088,15 @@ body.cs-time-divider .msg-time-divider { display:flex; }
   border:1px solid rgba(0,0,0,.15); background:rgba(0,0,0,.05);
   color:var(--ink); cursor:pointer;
   display:flex; align-items:center; justify-content:center;
+  transition:transform .12s ease, background .15s ease, border-color .15s ease, color .15s ease;
 }
 .msg-voice-play svg { width:13px; height:13px; }
 .msg-voice-play.playing { background:var(--ink); color:#fff; border-color:var(--ink); }
+/* 点按互动反馈：按下微缩；播放中三角换暂停双竖条（录制面板试听钮/群聊语音同款双图标） */
+.msg-voice-play:active { transform:scale(.85); }
+.msg-voice-play .voice-ico-pause { display:none; }
+.msg-voice-play.playing .voice-ico-play { display:none; }
+.msg-voice-play.playing .voice-ico-pause { display:block; }
 .msg-voice-wave {
   display:flex; align-items:flex-end; gap:2px; height:18px; flex:1;
 }
@@ -1407,7 +1417,7 @@ body.cs-time-divider .msg-time-divider { display:flex; }
 .msg-out .msg-voice-play.playing { background:#fff; color:#111; border-color:#fff; }
 .msg-out .msg-voice-wave i { background:#fff; opacity:.55; }
 @media (prefers-reduced-motion: reduce) {
-  .voice-card .voice-wave i, .voice-rec-btn.rec { animation:none !important; transition:none !important; }
+  .voice-card .voice-wave i, .voice-rec-btn.rec, .msg-voice-play { animation:none !important; transition:none !important; }
 }
 /* ---- 深色模式兜底（dark.css 未覆盖本功能自定义元素时保持可读，fish/drift/room 同款惯例） ---- */
 [data-theme="dark"] .voice-preview { background:rgba(255,255,255,.07); border-color:rgba(255,255,255,.12); }

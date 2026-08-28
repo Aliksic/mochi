@@ -204,26 +204,38 @@
   // 播放内置音效（Web Audio）；loop=true 用于来电铃声循环（可被 stopSfx 停止）
   let ringSrc = null;
   let ringAudio = null; // 自定义上传铃声的 Audio 单例（长铃循环可停止）
+  // v3.26.x：等待 AudioContext 真正 running 再 start——ensureCtx 的 resume() 是异步的，
+  // 定时器触发的音效（如 TA 回复消息）若在 resume 完成前 start，部分 WebView 内核
+  // （Via/部分安卓 WebView）会静默无声；这里统一「resume 成功后播」，失败（非手势上下文）
+  // 则静默放弃，与旧行为一致、不会更糟。
   function playBuiltin(id, loop) {
     const ctx = ensureCtx();
     if (!ctx) return;
     const buf = builtinBuffer(ctx, id);
     if (!buf) return;
-    let src;
+    const start = () => {
+      let src;
+      try {
+        src = ctx.createBufferSource();
+        src.buffer = buf;
+        src.loop = !!loop;
+        const g = ctx.createGain();
+        g.gain.value = 0.9;
+        src.connect(g);
+        g.connect(ctx.destination);
+        src.start();
+      } catch (e) { return; }
+      if (loop) {
+        if (ringSrc) { try { ringSrc.stop(); } catch (e) {} }
+        ringSrc = src;
+      }
+    };
+    if (ctx.state === 'running') { start(); return; }
     try {
-      src = ctx.createBufferSource();
-      src.buffer = buf;
-      src.loop = !!loop;
-      const g = ctx.createGain();
-      g.gain.value = 0.9;
-      src.connect(g);
-      g.connect(ctx.destination);
-      src.start();
-    } catch (e) { return; }
-    if (loop) {
-      if (ringSrc) { try { ringSrc.stop(); } catch (e) {} }
-      ringSrc = src;
-    }
+      const p = ctx.resume();
+      if (p && p.then) p.then(start).catch(function () {});
+      else start();
+    } catch (e) { start(); }
   }
 
   // 播放音效：自定义上传（dataURL）优先，其次内置音效（'none'=静音，缺省=默认内置）
@@ -288,51 +300,56 @@
     return { custom: false, id: bid, label: PRESET_NAMES[bid] };
   }
 
-  // 上传音频：FileReader → dataURL（超 3MB 提示可能过大）；上传即替换内置，内置键清除
-  function bindUpload(key, id) {
-    const btn = document.getElementById(id);
-    if (!btn) return;
-    btn.addEventListener('click', () => {
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.accept = 'audio/*';
-      input.onchange = () => {
-        const f = input.files && input.files[0];
-        if (!f) return;
-        if (f.size > 3 * 1024 * 1024) { toast('音频较大（>3MB），可能占用较多存储空间'); }
-        toast('正在读取音频…');
-        const reader = new FileReader();
-        reader.onload = () => {
-          store.set(KEYS[key], reader.result);
-          store.remove(BKEYS[key]); // 切换到自定义，清掉内置选择避免胶囊高亮歧义
-          updateVals();
-          renderPresets(key, PRESET_CONTAINERS[key]);
-          toast(NAMES[key] + '已设置为自定义音频');
-        };
-        reader.onerror = () => { toast('音频读取失败'); };
-        reader.readAsDataURL(f);
+  // —— 卡片操作行（v3.26.x UI 重设计：按钮由 JS 动态渲染，替代原来常驻的三连按钮）——
+  // 无自定义音频：仅显示「上传自定义音频」；有自定义：显示「试听自定义 / 清除自定义」。
+  // 上传：FileReader → dataURL（超 3MB 提示可能过大）；上传即替换内置，内置键清除
+  function handleUpload(type) {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'audio/*';
+    input.onchange = () => {
+      const f = input.files && input.files[0];
+      if (!f) return;
+      if (f.size > 3 * 1024 * 1024) { toast('音频较大（>3MB），可能占用较多存储空间'); }
+      toast('正在读取音频…');
+      const reader = new FileReader();
+      reader.onload = () => {
+        store.set(KEYS[type], reader.result);
+        store.remove(BKEYS[type]); // 切换到自定义，清掉内置选择避免胶囊高亮歧义
+        renderAllSfx();
+        toast(NAMES[type] + '已设置为自定义音频');
       };
-      input.click();
-    });
-  }
-  // 试听：内置/自定义均可直接试听（不循环）
-  function bindPlay(key, id) {
-    const btn = document.getElementById(id);
-    if (!btn) return;
-    btn.addEventListener('click', () => {
-      window.playSfx(key, { loop: false });
-    });
+      reader.onerror = () => { toast('音频读取失败'); };
+      reader.readAsDataURL(f);
+    };
+    input.click();
   }
   // 清除：仅移除自定义上传音频，回落到内置音效（或保持用户选的静音）
-  function bindClear(key, id) {
-    const btn = document.getElementById(id);
-    if (!btn) return;
-    btn.addEventListener('click', () => {
-      store.remove(KEYS[key]);
-      updateVals();
-      renderPresets(key, PRESET_CONTAINERS[key]);
-      toast(NAMES[key] + '自定义音频已清除');
-    });
+  function handleClear(type) {
+    store.remove(KEYS[type]);
+    renderAllSfx();
+    toast(NAMES[type] + '自定义音频已清除');
+  }
+  // 动态渲染每张卡片底部的操作行
+  function renderTools(type, containerId) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    el.innerHTML = '';
+    const st = sfxState(type);
+    const mk = (cls, label, cb) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = cls;
+      b.textContent = label;
+      b.addEventListener('click', cb);
+      el.appendChild(b);
+    };
+    if (st.custom) {
+      mk('cc-tool', '试听自定义', () => { window.playSfx(type, { loop: false }); });
+      mk('cc-tool cc-tool-danger', '清除自定义', () => handleClear(type));
+    } else {
+      mk('cc-tool', '上传自定义音频', () => handleUpload(type));
+    }
   }
   // 状态显示
   function updateVals() {
@@ -357,29 +374,23 @@
         // 选择内置/静音 → 清除自定义上传，避免播放优先级歧义
         if (store.get(KEYS[type])) store.remove(KEYS[type]);
         store.set(BKEYS[type], id);
-        updateVals();
-        renderPresets(type, containerId);
+        renderAllSfx();
         if (id === 'none') toast(NAMES[type] + '音效已静音');
         else window.playSfx(type, { loop: false });
       });
       el.appendChild(b);
     });
   }
-  function renderAllPresets() {
+  // v3.26.x：统一重渲染——胶囊 + 底部操作行 + 状态值（每张卡片三要素一次到位）
+  function renderAllSfx() {
     renderPresets('ring', PRESET_CONTAINERS.ring);
     renderPresets('in', PRESET_CONTAINERS.in);
     renderPresets('out', PRESET_CONTAINERS.out);
+    renderTools('ring', 'sfx-ring-tools');
+    renderTools('in', 'sfx-in-tools');
+    renderTools('out', 'sfx-out-tools');
+    updateVals();
   }
-
-  bindUpload('ring', 'sfx-ring-upload');
-  bindPlay('ring', 'sfx-ring-play');
-  bindClear('ring', 'sfx-ring-clear');
-  bindUpload('in', 'sfx-in-upload');
-  bindPlay('in', 'sfx-in-play');
-  bindClear('in', 'sfx-in-clear');
-  bindUpload('out', 'sfx-out-upload');
-  bindPlay('out', 'sfx-out-play');
-  bindClear('out', 'sfx-out-clear');
 
   // v3.5.94：音效音频（dataURL）可能只存在 IndexedDB → 启动补读
   // v3.7.x：补读扩展到内置音效选择键（sfx-*-b），并统一兜底刷新界面
@@ -392,19 +403,16 @@
           if (v && typeof v === 'string' && v.length > 2 && !store.get(key)) {
             store.set(key, v);
           }
-          updateVals();
-          renderAllPresets();
+          renderAllSfx();
         });
       });
     }
   } catch (e) {}
-  renderAllPresets();
-  updateVals();
+  renderAllSfx();
 
   // 切桌面：音效每桌面独立，重渲染当前桌面的选择状态
   document.addEventListener('contact-switched', () => {
-    updateVals();
-    renderAllPresets();
+    renderAllSfx();
   });
 
   // 设置页入口：点行 → 独立音效设置页；返回回设置页

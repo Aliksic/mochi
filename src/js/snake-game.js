@@ -146,6 +146,36 @@
     canvas.height = Math.round(cssH * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
+  // 非全屏：画布贴齐滚动区剩余高度（扣除计分/提示/结算/按钮/方向键等兄弟块与安全垫），
+  // 保证「再来一局」按钮下方的方向键在小屏也一屏可见，无需再下拉滚动。
+  function fitNonFsCanvas() {
+    GW = 15; GH = 15;                // 半框固定 15×15 基准
+    const sc = panel.querySelector('.poke-card-scroll');
+    let availH = window.innerHeight || 200;   // 面板隐藏/未布局时拿不到可用高度，退回足够大
+    if (sc && sc.clientHeight > 0) {
+      availH = sc.clientHeight;
+      sc.querySelectorAll('.snake-score,.snake-best,.snake-hint,.snake-result:not([hidden]),.snake-controls,.snake-dpad').forEach(function (el) {
+        if (el.hidden) return;
+        const st = getComputedStyle(el);
+        availH -= el.offsetHeight + (parseFloat(st.marginTop) || 0) + (parseFloat(st.marginBottom) || 0);
+      });
+      const st = getComputedStyle(sc);
+      availH -= (parseFloat(st.paddingTop) || 0) + (parseFloat(st.paddingBottom) || 0) + 16;   // gap 余量
+    }
+    const availW = (sc && sc.clientWidth) || 360;
+    const size = Math.round(Math.min(360, Math.max(160, Math.min(availW, availH))));
+    cssW = size; cssH = size;
+    canvas.style.width = cssW + 'px';
+    canvas.style.height = cssH + 'px';
+  }
+  function refitNonFs() {
+    if (!canvas || !panel || panel.hidden || isFs) return;
+    fitNonFsCanvas();
+    canvas.width = Math.round(cssW * dpr);
+    canvas.height = Math.round(cssH * dpr);
+    if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    render(0);
+  }
   function setupCanvas() {
     if (!canvas) return;
     dpr = Math.min(window.devicePixelRatio || 1, 3);
@@ -162,10 +192,7 @@
       canvas.style.width = cssW + 'px';
       canvas.style.height = cssH + 'px';
     } else {
-      GW = 15; GH = 15;                // 半框固定 15×15 基准
-      cssW = 360; cssH = 360;
-      canvas.style.width = '';
-      canvas.style.height = '';
+      fitNonFsCanvas();
     }
     canvas.width = Math.round(cssW * dpr);
     canvas.height = Math.round(cssH * dpr);
@@ -318,6 +345,7 @@
     if (resumeBtn) resumeBtn.hidden = true;
     if (resultEl) { resultEl.hidden = true; resultEl.innerHTML = ''; }
     newGame(diff);
+    refitNonFs();   // 结算块/开始按钮收起后，画布放回一米可见的尺寸
     fitCanvasBox();   // 开始按钮随即隐藏，重适配画布吸收腾出的空间（不改格数）
     render(0);
     let n = 3;
@@ -723,6 +751,7 @@
     resultEl.classList.add('snake-res-pop');
     if (restartBtn) restartBtn.hidden = false;
     if (hintEl) hintEl.textContent = '再来一局？';
+    refitNonFs();   // 结算块+再来一局出现后，重新收小画布让下方方向键一屏可见
   }
 
   function render(alpha) {

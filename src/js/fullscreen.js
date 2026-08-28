@@ -56,6 +56,26 @@
   function isFullscreen() {
     return !!(document.fullscreenElement || document.webkitFullscreenElement);
   }
+  // v3.26.x：横屏判定不能只看视口宽高。手机开「桌面版网站」模式后 layout viewport
+  // 被拉成 980×≈500（横宽竖窄），竖着拿也满足 innerWidth>innerHeight，于是全屏开关
+  // 被「已是横屏」分支拦下、永远进不去全屏。物理屏幕方向才反映真实持握且不受视口
+  // 伪装影响：系统明确 portrait 即「伪装横屏」，不算横屏。真转横屏（Via/视频式全屏）
+  // 时系统方向同步变 landscape，原有横屏兜底路径不受影响。
+  function viewportLandscape() {
+    if (!(window.innerWidth > window.innerHeight)) return false;
+    try {
+      const t = screen.orientation && screen.orientation.type;
+      if (typeof t === 'string' && t) {
+        if (/^portrait/i.test(t)) return false;
+        if (/^landscape/i.test(t)) return true;
+      }
+    } catch (e) {}
+    try {
+      const o = window.orientation;
+      if (typeof o === 'number' && !isNaN(o) && Math.abs(o) % 180 === 0) return false;
+    } catch (e) {}
+    return true;
+  }
   // v3.6.x：开关的「视觉激活」判定——原生全屏 / CSS 兜底全屏 / iOS 兜底 /
   // display-mode 全屏（display_override fullscreen 直启）任一成立即视为开启。
   // 修复：Via 等浏览器走 CSS 兜底后开关被 fullscreenchange 误关（syncToggle 只看
@@ -165,7 +185,7 @@
       left -= 300;
       // 已退出全屏（用户手动/系统）→ 停止监视
       if (!isFullscreen() && !document.documentElement.classList.contains('fs-active')) { stopFsMonitor(); return; }
-      if (window.innerWidth > window.innerHeight) { onLandscapeDetected(); return; }
+      if (viewportLandscape()) { onLandscapeDetected(); return; }
       if (left <= 0) stopFsMonitor();
     };
     _fsMonTimer = setInterval(tick, 300);
@@ -379,7 +399,9 @@
         }
         // v3.6.x：点开关时视口已是横屏（多为上次全屏遗留的方向）——先自动尝试
         // 恢复竖屏，恢复失败再提示，本次不进入全屏
-        if (window.innerWidth > window.innerHeight) {
+        // v3.26.x：改判物理方向——桌面版网站模式的 980×≈500 伪装横宽视口会把
+        // 这条误触发成「永远开不了全屏」
+        if (viewportLandscape()) {
           forcePortrait(4, showRotateTip);
           return;
         }
@@ -420,7 +442,7 @@
         // 完成可能超过 900ms，过早回滚会把开关改回关闭并经 MutationObserver
         // 持久化 FS_KEY='0'（用户意图被覆盖，下次进入不再自动恢复）。
         setTimeout(() => {
-          if (isFullscreen() && window.innerWidth > window.innerHeight) {
+          if (isFullscreen() && viewportLandscape()) {
             store.set(FB_KEY, '1');
             handleLandscapeForced();
             return;

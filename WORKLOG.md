@@ -1,3 +1,40 @@
+# 本次构建者：AI-B（2026-08-28 18:45，用户要求立即生效音效修复；收口本会话及 AI-A 未构建改动）
+### 2026-08-28 18:45（修复：单聊联系人发消息无音效 + 音效设置页 UI 重设计；已构建，待提交）
+- [AI-B 域]（**已改 src/js/sfx.js + src/js/chat.js（跨域：AI-A 文件，理由：单聊 in 音效缺失，入口在 chat.js addIn）+ src/template.html + src/css/base.css + build.mjs（哨兵 +2）+ FIX-REGRESSION.md（清单 #23）+ 新增 tools/verify-sfx-in-chat.mjs；构建状态：已构建**）。
+- 用户反馈（红米 Turbo4 Pro + Via）：开了音效、选了系统自带（内置）音效，联系人发消息不响，其他音效正常。
+- 根因：**sfx-in（联系人发送和回复消息）只在群聊 group-chat.js 触发，chat.js 单聊 addIn 从未调用 playSfx('in')**——所有手机单聊收 TA 消息都静音，非设备特有（Via 只是用户测试机）。
+- 修复：①chat.js addIn 统一播 `playSfx('in')`，silent（小游戏互动/后台批量/静默通知）与已读回执 `special:'read'` 不播；多连发只响第一条（replyOnce 的 i>0 silent 既有逻辑）。②sfx.js playBuiltin 等 AudioContext resume 完成再 start（原 ensureCtx resume 是异步的，定时器触发在 resume 前 start 会被部分 WebView 静默吞掉），resume 失败静默放弃不更糟。③音效设置页重设计：原「9 行内容（3 类 × 标题行+三连按钮行+胶囊行）挤两卡片」→ 三张对称卡片（联系人来电/联系人消息/我的消息），每卡片 = 头部(图标+名称+当前状态) + 预设胶囊 + 底部动态操作行（无自定义→仅「上传自定义音频」；有自定义→「试听自定义/清除自定义」）；sfx.js 抽 handleUpload/handleClear + 新增 renderTools 动态渲染，删 bindUpload/bindPlay/bindClear 静态绑定与模板里的常驻按钮。
+- 验证：node --check 全过；`node tools/verify-sfx-in-chat.mjs`（含修复产物）**12/12 全绿**：加载不误播 / addIn 普通消息触发 in / silent 不播 / 已读回执不播 / 拍一拍播 / 三卡片结构 / 操作行动态切换（上传↔试听+清除）/ 胶囊选择写入+高亮 / 清除回落内置。哨兵新增 2 条（addIn 特征 + resume 等待特征）。
+- 待 AI-A 注意：chat.js 被我加了一段 addIn 音效逻辑（含注释），若并行编辑该文件注意合并；构建已收口本工作区全部未提交改动（含 AI-A 18:34 占卜可选对象等），提交时整体入库。
+
+# 本次构建者：AI-A（本会话，2026-08-28 晚间，用户要求立即生效跨桌面查岗频率模式）
+### 2026-08-28（寻踪功能「TA在身边 · 看看ta在哪里」改为全屏打开 + 页面 UI 重新设计）
+- [AI-A 域]（**已改 src/js/p2-features.js + src/css/chat-pages.css；跨域改动 src/template.html + src/css/dark.css（先留言后改，见下）；构建状态：未构建（node --check 已过），待构建者收口**）。
+- 需求：用户在寻踪功能页点击【ta在身边 看看ta在哪里】打开的页面依旧不是全屏，且 UI 需要重新设计。
+- 方案：①桌面寻踪页入口 `openLocPanel(true)` 切 `.loc-full` 全屏（inset:0 无圆角，头部固定+返回按钮+滚动容器）；聊天寻踪半框入口保持 `openLocPanel(false)` 底部半屏不变。②template.html 重构 #loc-panel：头部改返回按钮（#loc-back，仅全屏显示）+ 标题（TA在身边 · TA 的位置）+ 关闭按钮；内容区套 .loc-scroll 整体滚动，方位感知 .fw-sense 与位置列表 .loc-body 并列。③chat-pages.css 全量重设计：头部/返回/关闭按钮、感知圆呼吸光点、此刻位置卡片（金色定位图标）、感知描述卡片（呼吸光点标题）、位置时间线卡片化、问 TA 一声/发位置卡按钮统一圆角卡片风格。④dark.css 补全屏位置页暗色适配（面板/头部/返回按钮 svg 描边/卡片/时间线分隔/方位感知底色）。
+- 验证：node --check 通过；未跑构建，未登记哨兵（UI 重设计非回归修复）。功能/视觉需构建后实测：全屏打开、返回按钮、暗色模式。
+- 跨域留言：template.html / dark.css 属 AI-B 域，本次因任务需要先行改动，请 AI-B 复核；若对模板头部结构或暗色样式有异议可在 WORKLOG 指出。
+### 2026-08-28 18:34（新功能：占卜可选对象（全部桌面联系人/不选），选了对象的结果存入主页新增「占卜记录」）
+- [AI-A 域]（**已改 src/template.html + src/js/divination.js + src/js/records.js + src/css/chat-pages.css；构建状态：未构建（node --check 已过），待构建者收口**）。
+- 需求：占卜时可选择全部桌面联系人的名字，也可不选对象；选了对象时，抽出的牌与历史记录存入【主页】新增的【占卜记录】面板。
+- 方案：①占卜页 `div-setup` 新增 `#div-targets` 对象 chips 行（「不选对象」+ `window.getContacts()` 全部联系人，点击切换；对象被删自动回「不选」；`contact-switched` 重渲染）。②抽牌 onDone 按点击时快照 `snapTarget` 分流：选了对象 → 记录 `{ts,mode,count,question,cards,summary,target}` 写入**该联系人桌面**的 `records-divine`（上限 100 条，按 ts 去重排序；沿用 divine-history 的 mochi-restore-done 恢复窗口保护——未就绪先暂存 recPendings，恢复后与 IDB 权威值合并再落盘）；不选 → 原行为存本页 divine-history 不变。③主页新增 tab/panel（data-htab/hpanel=divine，`records-divine` 命中备份键尾白名单 `records-` 无需改 data-backup）：列表展示模式/张数/对象/问题/牌面名（含逆位）/综合解读/时间，「查看牌面」跳占卜页并经新暴露的 `window.divineRenderResult` 渲染完整结果。④chat-pages.css：`.div-targets` 可换行 chips（复用 .div-mode/.div-h-view，dark.css 既有适配自动生效）。
+- 验证：`node --check` 两 JS 通过；未跑构建（并行会话构建者收口）。未登记哨兵（新功能非回归修复）；功能介绍页/开屏公告文案未补（checklist 第 5 条，待构建者定夺是否随下版补）。
+- 注意：chat.js 聊天页占卜半框未加对象选择（维持原样，仅桌面占卜页支持选对象）。
+### 2026-08-28（✅ 验证通过·无需改 src·音乐「联系人预订下一首」已正确显示在待播队列）
+- [AI-A 域·验证]（**仅新增 tools/verify-music-reserve-queue.mjs，未改任何 src；功能已随既有构建在 index.html 内，产物含 taReserveProb/待播队列 逻辑已核；未提交待收口**）。
+  - 用户需求：联系人预订的下一首歌曲，也要显示在音乐播放列表的【待播队列】里。
+  - 核验结论：music-player.js 的 maybeMusicRequest「预订下一首」分支（v3.24.x：仅播放中触发）会 `playQueue.push(candidate.id)` + 发系统消息；openQueuePanel 的【待播队列】分区遍历 playQueue 渲染；播完切歌 next() 优先按 playQueue 依次播放。功能链路完整、已随既有构建进产物。
+  - 验证：新增 tools/verify-music-reserve-queue.mjs（无头 390×844，种子两首歌 + taReserveProb=100/reqProb=0/cooldownMs=0）**6/6 全绿**：点歌开播 / 聊天出现「TA 预订了下一首要听的歌：《被预订的歌》」系统消息 / 【待播队列】显示被预订的歌 / 待播队列不含正在播的歌 / 面板同时显示当前播放列表 / 再次预订仍入列。chat.js 两处聊天交互后 2s 调 maybeMusicRequest 也已在位。
+  - 备注：初版脚本两次失败均为测试脚本自身问题（①about:blank 时 activeStore 不存在导致种子写库静默失败 → 先 openMusic 加载页面再种子再重载；②A2 读 DOM #chat-msgs 不可靠 → 改读 chat-msgs 存储），与产品功能无关。
+
+### 2026-08-28 18:25（修复：iOS 收藏页缺条目——判重按归属+时间戳 / 启动回填只补不覆盖；已改 src·18:14 并行构建已带入产物·未提交）
+- [AI-A 域]（**已改 src/js/chat.js + build.mjs（跨域：FIX_SENTINELS 加 2 条哨兵，先留言后改，见本条）+ FIX-REGRESSION.md（清单 #21）+ 新增 tools/verify-fav-dedup.mjs（可提交 verify-* 资产）；构建状态：未自行构建（本轮构建者为并行会话），chat.js 修复已随其 18:14 构建进产物——四处特征 grep 产物全命中，哨兵特征亦在位**）。
+- 用户反馈（iPhone 12 Pro / Safari）：收藏了 5 条联系人消息，收藏页只显示 3 条；返回聊天再次收藏，提示「已收藏过这条消息」，但收藏页确实没有。
+- 根因：①长按收藏判重只比 side+text 且不分归属——TA 自动收藏（by:'ta'，显示在「联系人」tab）会挡住「我」收藏同一条；同文案不同时间戳的消息也只能存一条（favDup 卡片/信件/朋友圈判重、TA 自动收藏判重同样不分归属）。②进聊天时 idbGet(prefix:':fav-msgs') 无条件覆盖本地收藏——idbSet 是异步 fire-and-forget，iOS 杀后台时 IDB 落后于 localStorage，旧快照把新收藏回滚掉（「5 条变 3 条」的直接诱因；idb.js retainValue 早有 LS 优先规则，此处独立路径没跟上）。
+- 修复（chat.js 四处）：fav action 判重限定 (by||'me')!=='ta' + ts 比较（同一条消息仍拦截）；favDup 增加 by 参数，addMyFavItem/addTaFavItem 各自归属内判重；TA 自动收藏判重限定 by==='ta'；启动回填改为本地无收藏才从 IDB 补入。
+- 验证：node --check 通过；新增 tools/verify-fav-dedup.mjs（无头 390×844，注入受控 idbGet/idbSet 桩，完整复现用户场景）对含修复产物 **11/11 全绿**：启动不回滚 / TA 收藏过的消息我可再收藏 / 同文案不同消息可分别收藏 / 同一条重复收藏仍拦截 / 收藏页渲染数=存储数 / addMyFavItem·addTaFavItem 归属互不挡 / 本地清空后回填仍生效。
+- 待构建者注意：下次构建后哨兵应 14/14（含新增 2 条）；若用编辑器旧缓冲回写 chat.js 会触发哨兵报警。本修复进产物后建议用户 iPhone 实测：重新收藏此前「已收藏过却没显示」的消息确认入列。
+
 ### 2026-08-28（协作文档修订：AGENTS.md 全面更新 + build.mjs 版本前缀对齐 v3.26；未构建，下次构建生效）
 - [共享域·文档]（**已改 AGENTS.md + build.mjs；未跑 node build.mjs，请构建者下次构建统一收口**）。
 - AGENTS.md 修订要点：①补全文件归属——此前 29 个 JS / 8 个 CSS 无主，现 AI-A 45 JS + 12 CSS、AI-B 14 JS + 2 CSS + 构建产物，全 59 JS / 14 CSS 有主；②修正构建顺序——CSS 实际 14 个文件（原只写 6 个）、JS 首位是 device.js 不是 idb.js；③新增「新增功能 checklist」「回归防线（build.mjs FIX_SENTINELS + FIX-REGRESSION.md 登记）」「工具脚本分类（verify-* 可提交 / diag-*/tmp-* 用完即删）」「WORKLOG 条目模板 + 归档上限（20 条 / 1MB）」；④跨域改文件改为「先在 WORKLOG 留言再改」（原规则与实际做法矛盾）；⑤构建者改为每次开工在 WORKLOG 首行声明。
@@ -28,10 +65,12 @@
   - 改动：挖宝/礼物话术（scheduleTaGiftChat）与游戏结束合作回应（finish）由 `window.chatAddIn` 改为 `taTalk()` 仅显示在游戏内；游戏结束系统消息「合作扫雷 · 完成 …」（chatAddSystem）保留写入聊天。
   - TA 昵称经 HTML 转义防注入；气泡样式随 --card-bg/--ink/--accent 适配明暗。
 
-### 2026-08-28（✅ 完成·未构建·跨桌面查岗/来电新增全局三档频率模式）
-- [本会话·AI-A 域]（**已改 src/js/incoming-requests.js；node --check 通过；未构建、未提交**）。
+### 2026-08-28（✅ 完成·已构建·跨桌面查岗/来电新增全局三档频率模式）
+- [本会话·AI-A 域]（**已改 src/js/incoming-requests.js；已构建 18:18, sw: mochi-mtcstwex，哨兵 15/15；未提交待收口**）。
+  - v3（根因修复+排序）：① 发现真实 DOM 顺序为「打电话→频率→查岗」——因 addSettingToggle 用 insertBefore(row, anchor.nextSibling) 且 anchor 固定 group-chat 行，第二个开关被插到第一个前面；已在 addFreqModeRow 末尾用 appendChild 显式重排为「查岗→打电话→频率」（频率最下，用户确认）。
   - 用户反馈：跨桌面查岗过于频繁。
   - 方案（已与用户确认：3 档 · 查岗+来电一起 · 全局统一）：新增「跨桌面查岗频率」三档预设 频繁(6%/15min)·标准(2%/30min)·安静(1%/3h)，根键 `xy-home-v2:desk-freq-mode` 全局生效；设置页开关行之后动态插入 pill 选择行（复用 .set-row/.pill，不动 template.html）。
+  - v2（用户反馈迭代）：① 默认档改为最低「安静」(1%/3h)，未设置时 deskFreqMode/setDeskFreqMode/deskDMode 均回退 quiet；② 切换档位弹窗确认（openModal 显示新档概率/冷却，替代原 toast）；③ UI 换行修复——原因是最初 `.freq-pills` 用 `max-width:56% + flex-wrap:wrap` 在窄屏放不下三档按钮导致换行；改为两行式布局（第一行图标+标题+功能说明 tag，第二行三按钮 flex:1 nowrap 横排铺满），窄屏不换行。
   - 权威值在 incoming-requests.js 的 maybeIncoming 用 deskDMode() 读取；各桌面回复设置 ckq-prob/ckq-cool/desk-call-prob 改为只影响桌面上 TA 主动查岗，跨桌面查岗/来电不再读它们。安全性：共用键 ckq-prob/cool 不被模式直接覆盖，正常主动查岗频率不受本次改动影响。
   - ⚠️ 请构建者（默认 AI-B）执行 `node build.mjs` 收口；提交前 git diff 自查，勿夹带 B 端未提交改动。
 

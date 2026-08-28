@@ -564,7 +564,7 @@ padding:8px 16px; font-size:13px; border-radius:99px;
 border:1px solid var(--pill-border); background:var(--card-bg); color:var(--soft-ink);
 cursor:pointer; font-family:inherit; font-weight:600;
 }
-.pill.on { background:var(--btn-bg); color:var(--btn-ink); border-color:var(--btn-bg); }
+.pill.on { background:var(--card-bg); color:var(--btn-ink); border-color:var(--btn-bg); }
 .sw {
 width:42px; height:42px; border-radius:50%; cursor:pointer;
 border:2px solid transparent; box-shadow:0 2px 6px rgba(0,0,0,.1);
@@ -655,7 +655,8 @@ overscroll-behavior: contain;
 word-break: break-word;
 overflow-wrap: anywhere;
 }
-.sfx-presets { display:flex; flex-wrap:wrap; gap:8px; padding:2px 16px 14px 28px; }
+.sfx-card .set-row { border-bottom:none; padding-bottom:6px; }
+.sfx-presets { display:flex; flex-wrap:wrap; gap:8px; padding:6px 16px 12px; }
 .sfx-preset {
 padding:6px 13px; border-radius:99px; font-size:12px; font-weight:600;
 border:1px solid rgba(0,0,0,.12); background:#fff; color:#444;
@@ -664,6 +665,7 @@ transition:background .15s ease, color .15s ease, border-color .15s ease;
 }
 .sfx-preset:active { background:rgba(0,0,0,.07); }
 .sfx-preset.on { background:var(--ink); color:#fff; border-color:var(--ink); }
+.sfx-tools { display:flex; gap:8px; flex-wrap:wrap; padding:0 16px 14px; }
 :root {
 --widget-bg:#ffffff;
 --widget-border:rgba(0,0,0,.1);
@@ -1951,6 +1953,8 @@ color:inherit; opacity:.6; margin-bottom:2px;
 }
 .msg-quote-text {
 color:inherit; opacity:.8; word-break:break-word;
+display:inline-block; vertical-align:top; max-width:100%;
+max-height:2.8em; overflow:hidden;
 }
 .msg-moods {
 display:flex; flex-wrap:wrap; align-items:center;
@@ -2080,9 +2084,14 @@ flex-shrink:0; width:30px; height:30px; border-radius:50%;
 border:1px solid rgba(0,0,0,.15); background:rgba(0,0,0,.05);
 color:var(--ink); cursor:pointer;
 display:flex; align-items:center; justify-content:center;
+transition:transform .12s ease, background .15s ease, border-color .15s ease, color .15s ease;
 }
 .msg-voice-play svg { width:13px; height:13px; }
 .msg-voice-play.playing { background:var(--ink); color:#fff; border-color:var(--ink); }
+.msg-voice-play:active { transform:scale(.85); }
+.msg-voice-play .voice-ico-pause { display:none; }
+.msg-voice-play.playing .voice-ico-play { display:none; }
+.msg-voice-play.playing .voice-ico-pause { display:block; }
 .msg-voice-wave {
 display:flex; align-items:flex-end; gap:2px; height:18px; flex:1;
 }
@@ -2375,7 +2384,7 @@ animation:voiceRecPulse 1.15s ease-in-out infinite;
 .msg-out .msg-voice-play.playing { background:#fff; color:#111; border-color:#fff; }
 .msg-out .msg-voice-wave i { background:#fff; opacity:.55; }
 @media (prefers-reduced-motion: reduce) {
-.voice-card .voice-wave i, .voice-rec-btn.rec { animation:none !important; transition:none !important; }
+.voice-card .voice-wave i, .voice-rec-btn.rec, .msg-voice-play { animation:none !important; transition:none !important; }
 }
 [data-theme="dark"] .voice-preview { background:rgba(255,255,255,.07); border-color:rgba(255,255,255,.12); }
 [data-theme="dark"] .voice-wave i { opacity:.4; }
@@ -3241,6 +3250,8 @@ border:1px solid rgba(0,0,0,.1); background:rgba(255,255,255,.92);
 color:#666; border-radius:12px; cursor:pointer; font-family:inherit;
 }
 .div-mode.sel { background:var(--ink); color:#fff; border-color:var(--ink); }
+.div-targets { flex-wrap:wrap; }
+.div-targets .div-mode { flex:0 0 auto; padding:8px 12px; border-radius:99px; }
 .div-input {
 width:100%; border:1px solid rgba(0,0,0,.1); border-radius:12px;
 padding:12px 14px; font-size:13px; font-family:inherit; outline:none;
@@ -3323,6 +3334,7 @@ flex-shrink:0; border:none; border-radius:99px; padding:5px 12px; font-size:11px
 background:rgba(0,0,0,.06); color:var(--ink); cursor:pointer; font-family:inherit;
 }
 .div-h-view:active { opacity:.7; }
+.hd-view { margin-top:6px; }
 .div-h-del {
 flex-shrink:0; width:22px; height:22px; border:none; border-radius:50%;
 background:transparent; color:#bbb; font-size:11px; cursor:pointer; padding:0;
@@ -3523,29 +3535,109 @@ box-shadow:0 -6px 28px rgba(0,0,0,.18); animation:locSlideUp .25s ease;
 }
 .loc-panel[hidden] { display:none; }
 @keyframes locSlideUp { from { transform:translateY(100%); } to { transform:translateY(0); } }
+.loc-panel.loc-full {
+inset:0; max-height:none; border-radius:0;
+background:#fff;
+animation:locFadeIn .22s ease;
+}
+@keyframes locFadeIn { from { opacity:0; transform:scale(.985); } to { opacity:1; transform:none; } }
 .loc-head {
-display:flex; align-items:center; justify-content:space-between;
-padding:14px 16px; border-bottom:1px solid rgba(0,0,0,.06);
-font-size:15px; font-weight:700; color:var(--ink); flex-shrink:0;
+display:flex; align-items:center; gap:6px; flex-shrink:0;
+padding:12px 14px; border-bottom:1px solid rgba(0,0,0,.06);
+background:rgba(255,255,255,.96);
 }
-.loc-close { border:none; background:transparent; font-size:16px; color:var(--muted); cursor:pointer; padding:4px 8px; font-family:inherit; }
-.loc-body { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:12px 16px 20px; }
-.loc-section { padding:8px 0; border-bottom:1px solid rgba(0,0,0,.05); }
-.loc-section:last-of-type { border-bottom:none; }
-.loc-sec-title { font-size:11px; color:var(--muted); letter-spacing:1px; }
-.loc-sec-value { font-size:16px; font-weight:700; color:var(--ink); margin-top:5px; line-height:1.6; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
-.loc-sec-sub { font-size:11px; font-weight:400; color:var(--muted); margin-left:4px; }
+.loc-panel.loc-full .loc-head { padding:max(calc(10px + env(safe-area-inset-top, 0px)), 14px) 16px 12px; }
+.loc-back {
+display:none; align-items:center; justify-content:center; flex-shrink:0;
+width:34px; height:34px; border-radius:50%;
+border:1px solid rgba(0,0,0,.1); background:rgba(255,255,255,.95);
+cursor:pointer; padding:0;
+}
+.loc-panel.loc-full .loc-back { display:flex; }
+.loc-back svg { width:18px; height:18px; }
+.loc-back:active { background:rgba(0,0,0,.06); }
+.loc-title {
+flex:1; min-width:0; font-size:16px; font-weight:700; color:var(--ink);
+white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.loc-title b { font-weight:800; }
+.loc-close {
+width:30px; height:30px; border-radius:50%; flex-shrink:0;
+border:none; background:rgba(0,0,0,.06); color:var(--muted);
+font-size:13px; line-height:1; cursor:pointer; font-family:inherit;
+}
+.loc-close:active { background:rgba(0,0,0,.12); }
+.loc-scroll {
+flex:1; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch;
+}
+.loc-body {
+padding:14px 16px calc(18px + var(--mochi-safe-bottom, env(safe-area-inset-bottom, 0px)));
+}
+.loc-panel.loc-full .loc-body { padding-top:2px; }
+.loc-section {
+background:rgba(255,255,255,.85);
+border:1px solid rgba(0,0,0,.06);
+border-radius:14px; padding:12px 14px; margin-bottom:14px;
+}
+.loc-sec-title {
+display:flex; align-items:center; gap:6px;
+font-size:11px; color:var(--muted); letter-spacing:1.5px; font-weight:700;
+margin-bottom:8px;
+}
+.loc-sec-title::before {
+content:''; width:4px; height:12px; border-radius:2px;
+background:linear-gradient(180deg, #f0ad4e, #d98a26);
+}
+.loc-sec-value { font-size:16px; font-weight:800; color:var(--ink); line-height:1.5; }
+.loc-sec-sub { font-size:11px; font-weight:600; color:var(--muted); margin-top:2px; }
 .loc-empty { color:var(--muted); font-weight:400; font-size:13px; }
-.loc-timeline { margin-top:6px; }
-.loc-tl-item { display:flex; gap:10px; padding:5px 0; font-size:13px; align-items:baseline; }
-.loc-tl-time { color:var(--muted); font-size:11px; flex-shrink:0; min-width:38px; }
-.loc-tl-text { color:var(--ink); font-weight:600; }
-.loc-ask-btn {
-display:block; width:100%; margin:14px 0 10px; padding:12px;
-border:none; border-radius:12px; background:var(--ink); color:#fff;
-font-size:14px; font-weight:700; cursor:pointer; font-family:inherit;
+.loc-now { display:flex; align-items:center; gap:11px; }
+.loc-now-pin {
+width:40px; height:40px; border-radius:50%; flex-shrink:0;
+display:flex; align-items:center; justify-content:center;
+background:linear-gradient(135deg, #ffd9a0, #f5b25c); color:#7a4a10;
+box-shadow:0 2px 8px rgba(245,178,92,.35);
 }
-.loc-ask-btn:active { opacity:.85; }
+.loc-now-pin svg { width:20px; height:20px; }
+.loc-now-main { flex:1; min-width:0; }
+.loc-sense-box {
+background:linear-gradient(135deg, rgba(255,240,210,.5), rgba(255,225,180,.32));
+border:1px solid rgba(255,180,80,.18);
+border-radius:14px; padding:12px 14px; margin-bottom:14px;
+}
+.loc-sense-head { display:flex; align-items:center; gap:6px; margin-bottom:5px; }
+.loc-sense-dot {
+width:8px; height:8px; border-radius:50%;
+background:#e8a33d; box-shadow:0 0 0 3px rgba(232,163,61,.18);
+animation:locPulse 2.4s ease-in-out infinite;
+}
+@keyframes locPulse { 0%,100% { transform:scale(1); opacity:1; } 50% { transform:scale(1.4); opacity:.65; } }
+.loc-sense-title { font-size:11px; color:#b8742a; letter-spacing:1px; font-weight:700; }
+.loc-sense-text { font-size:15px; font-weight:700; color:var(--ink); margin-top:2px; line-height:1.6; }
+.loc-timeline { margin-top:2px; }
+.loc-tl-item {
+display:flex; align-items:center; gap:10px; padding:7px 0; font-size:13px;
+border-bottom:1px dashed rgba(0,0,0,.06);
+}
+.loc-tl-item:last-child { border-bottom:none; }
+.loc-tl-time { color:var(--muted); font-size:11px; font-weight:600; flex-shrink:0; min-width:40px; }
+.loc-tl-text { color:var(--ink); font-weight:600; flex:1; min-width:0; }
+.loc-tl-tag { font-size:10px; font-weight:600; color:var(--muted); background:rgba(0,0,0,.05); border-radius:6px; padding:1px 7px; flex-shrink:0; }
+.loc-tl-auto { font-size:10px; font-weight:700; color:#b8742a; background:rgba(255,240,210,.7); border-radius:6px; padding:1px 6px; flex-shrink:0; }
+.loc-day-switch { display:flex; align-items:center; justify-content:center; gap:12px; margin:6px 0 2px; }
+.loc-day-btn { border:1px solid rgba(0,0,0,.1); border-radius:10px; width:32px; height:32px; background:rgba(255,255,255,.9); color:var(--ink); font-size:16px; font-weight:700; cursor:pointer; font-family:inherit; display:flex; align-items:center; justify-content:center; }
+.loc-day-btn:active { background:rgba(0,0,0,.06); }
+.loc-day-btn:disabled { opacity:.35; cursor:default; }
+.loc-day-label { font-size:14px; font-weight:800; color:var(--ink); min-width:56px; text-align:center; }
+.loc-day-count { font-size:11px; color:var(--muted); text-align:center; margin-top:6px; }
+.loc-ask-btn {
+display:flex; align-items:center; justify-content:center; gap:6px;
+width:100%; margin:2px 0 10px; padding:13px;
+border:none; border-radius:14px; background:var(--ink); color:#fff;
+font-size:14px; font-weight:700; cursor:pointer; font-family:inherit;
+box-shadow:0 3px 12px rgba(0,0,0,.1);
+}
+.loc-ask-btn:active { opacity:.85; transform:scale(.99); }
 .loc-send-area { margin-top:10px; padding-top:12px; border-top:1px solid rgba(0,0,0,.06); }
 .loc-send-tip { font-size:11px; color:var(--muted); line-height:1.6; margin-bottom:10px; }
 .loc-grp { margin-bottom:12px; }
@@ -3562,56 +3654,75 @@ transition:background .15s, transform .1s;
 .loc-card-egg { border-color:rgba(255,180,80,.6); background:rgba(255,240,210,.9); color:#b8742a; }
 .loc-card-egg:active { background:rgba(255,220,160,.9); }
 .fw-sense {
-padding:14px 16px 12px; border-bottom:1px solid rgba(0,0,0,.06);
-background:linear-gradient(160deg, rgba(250,247,242,.6) 0%, rgba(244,238,228,.5) 100%);
+padding:16px 16px 14px;
+border-bottom:1px solid rgba(0,0,0,.06);
+background:
+radial-gradient(120% 100% at 50% 0%, rgba(255,214,150,.26) 0%, rgba(255,255,255,0) 62%),
+rgba(255,255,255,.6);
 }
+.loc-panel.loc-full .fw-sense { border-bottom:none; }
+.fw-title { display:flex; align-items:baseline; gap:8px; margin-bottom:14px; flex-wrap:wrap; }
+.fw-title-t { font-size:15px; font-weight:800; color:var(--ink); letter-spacing:1px; }
+.fw-title-s { font-size:11px; color:var(--muted); }
 .fw-circle {
-position:relative; width:170px; height:170px; margin:0 auto;
+position:relative; width:188px; height:188px; margin:0 auto;
 border-radius:50%;
-border:1px dashed rgba(0,0,0,.18);
-background:radial-gradient(circle, rgba(255,255,255,.9) 0%, rgba(255,255,255,.4) 60%, rgba(255,255,255,0) 75%);
+border:1px dashed rgba(0,0,0,.14);
+background:radial-gradient(circle, rgba(255,255,255,.95) 0%, rgba(255,255,255,.5) 55%, rgba(255,255,255,0) 75%);
+box-shadow:
+inset 0 0 0 27px rgba(255,180,80,.05),
+inset 0 0 0 54px rgba(255,180,80,.028);
 }
 .fw-dir {
 position:absolute; transform:translate(-50%,-50%);
 width:26px; height:26px; border-radius:50%;
-border:1px solid rgba(0,0,0,.1); background:rgba(255,255,255,.85);
+border:1px solid rgba(0,0,0,.1); background:rgba(255,255,255,.9);
 color:var(--muted); font-size:14px; font-weight:700; cursor:pointer;
 display:flex; align-items:center; justify-content:center;
 font-family:inherit; padding:0;
+transition:background .15s, transform .1s;
 }
 .fw-dir.on {
 background:#b7791f; border-color:#b7791f; color:#fff;
 box-shadow:0 2px 10px rgba(183,121,31,.4);
+transform:translate(-50%,-50%) scale(1.12);
 }
 .fw-me {
 position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
-width:44px; height:44px; border-radius:50%;
+width:46px; height:46px; border-radius:50%;
 background:var(--ink); color:#fff;
 font-size:14px; font-weight:800; display:flex; align-items:center; justify-content:center;
+box-shadow:0 2px 8px rgba(0,0,0,.15);
 }
 .fw-cur-dir {
-position:absolute; left:50%; top:50%; transform:translate(-50%, -50%) translateY(30px);
+position:absolute; left:50%; top:50%; transform:translate(-50%, -50%) translateY(31px);
 font-size:12px; font-weight:700; color:#b7791f; white-space:nowrap;
 }
-.fw-detail { margin-top:34px; display:flex; flex-direction:column; gap:6px; }
+.fw-detail { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:16px; }
 .fw-row {
-display:flex; align-items:center; justify-content:space-between;
-padding:7px 12px; border-radius:10px;
-background:rgba(255,255,255,.8); border:1px solid rgba(0,0,0,.06);
+display:flex; flex-direction:column; align-items:center; gap:3px;
+padding:9px 4px; border-radius:12px;
+background:rgba(255,255,255,.9); border:1px solid rgba(0,0,0,.07);
 }
-.fw-row-label { font-size:12px; color:var(--muted); font-weight:600; }
-.fw-row-val { font-size:14px; font-weight:800; color:var(--ink); }
+.fw-row-label { font-size:10px; color:var(--muted); font-weight:600; letter-spacing:1px; }
+.fw-row-val { font-size:13px; font-weight:800; color:var(--ink); text-align:center; }
 .fw-perceive {
-display:block; width:100%; margin:12px 0 4px; padding:11px 0;
-border:none; border-radius:12px; background:var(--ink); color:#fff;
-font-size:14px; font-weight:800; letter-spacing:2px; cursor:pointer; font-family:inherit;
+display:flex; align-items:center; justify-content:center; gap:7px;
+width:100%; margin:16px 0 2px; padding:13px 0;
+border:none; border-radius:14px; background:var(--ink); color:#fff;
+font-size:14px; font-weight:800; letter-spacing:1px; cursor:pointer; font-family:inherit;
+box-shadow:0 3px 12px rgba(0,0,0,.1);
 }
-.fw-perceive:active { opacity:.85; }
+.fw-perceive svg { width:17px; height:17px; }
+.fw-perceive:active { opacity:.85; transform:scale(.99); }
 .fw-perceive.busy, .fw-perceive:disabled { opacity:.45; }
 .fw-result {
-margin-top:10px; padding:10px 14px; border-radius:12px;
-background:rgba(183,121,31,.08); border:1px solid rgba(183,121,31,.22);
+margin-top:12px; padding:12px 14px; border-radius:14px;
+background:linear-gradient(135deg, rgba(255,240,210,.6), rgba(255,225,180,.4));
+border:1px solid rgba(255,180,80,.28);
+animation:locResultIn .25s ease;
 }
+@keyframes locResultIn { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:none; } }
 .fw-result[hidden] { display:none; }
 .fw-p-line { font-size:13px; line-height:1.8; color:rgba(0,0,0,.75); }
 .fw-result .fw-p-line:first-child { font-weight:800; color:#b7791f; }
@@ -3624,12 +3735,6 @@ transition:opacity .5s ease, transform .5s ease; box-shadow:0 0 24px rgba(255,20
 .loc-fx[hidden] { display:none; }
 .loc-fx.loc-fx-show { opacity:1; transform:translate(-50%,-50%) scale(1); }
 .loc-fx.loc-fx-center { width:90px; height:90px; box-shadow:0 0 60px rgba(255,200,120,.9); }
-.loc-day-switch { display:flex; align-items:center; justify-content:center; gap:14px; margin:8px 0 4px; }
-.loc-day-btn { border:1px solid rgba(0,0,0,.12); border-radius:8px; width:30px; height:30px; background:rgba(255,255,255,.9); color:var(--ink); font-size:15px; font-weight:700; cursor:pointer; font-family:inherit; display:flex; align-items:center; justify-content:center; }
-.loc-day-btn:active { background:rgba(0,0,0,.06); }
-.loc-day-btn:disabled { opacity:.35; cursor:default; }
-.loc-day-label { font-size:14px; font-weight:700; color:var(--ink); min-width:56px; text-align:center; }
-.loc-day-count { font-size:11px; color:var(--muted); text-align:center; margin-top:6px; }
 .loc-combo-toggle { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
 .loc-combo-label { font-size:12px; font-weight:600; color:var(--ink); }
 .loc-switch { position:relative; display:inline-block; width:38px; height:22px; flex-shrink:0; }
@@ -3642,16 +3747,11 @@ transition:opacity .5s ease, transform .5s ease; box-shadow:0 0 24px rgba(255,20
 .loc-combo-pending b { color:#b8742a; }
 .loc-combo-clear { color:#e05555; cursor:pointer; margin-left:6px; font-weight:600; }
 .loc-card-sel { outline:2px solid var(--ink); outline-offset:-2px; border-color:transparent; background:rgba(0,0,0,.04); }
-.loc-sense-box { background:linear-gradient(135deg, rgba(255,240,210,.6), rgba(255,225,180,.4)); border-radius:12px; padding:10px 14px; margin-bottom:12px; }
-.loc-sense-title { font-size:11px; color:#b8742a; letter-spacing:1px; }
-.loc-sense-text { font-size:15px; font-weight:700; color:var(--ink); margin-top:4px; line-height:1.6; }
 .loc-card-custom { position:relative; }
 .loc-card-del { position:absolute; top:-5px; right:-5px; width:17px; height:17px; border-radius:50%; background:rgba(224,85,85,.85); color:#fff; font-size:9px; display:flex; align-items:center; justify-content:center; cursor:pointer; }
 .loc-card-del:active { background:rgba(224,85,85,1); }
 .loc-add-custom { display:block; width:100%; padding:8px; border:1px dashed rgba(0,0,0,.2); border-radius:10px; background:transparent; color:var(--muted); font-size:12px; font-weight:600; cursor:pointer; font-family:inherit; margin-bottom:12px; }
 .loc-add-custom:active { background:rgba(0,0,0,.04); }
-.loc-tl-tag { font-size:10px; color:var(--muted); background:rgba(0,0,0,.05); border-radius:6px; padding:1px 6px; flex-shrink:0; }
-.loc-tl-auto { font-size:10px; font-weight:700; color:#b8742a; background:rgba(255,240,210,.7); border-radius:6px; padding:1px 5px; flex-shrink:0; }
 .loc-change-bubble {
 position:fixed; top:72px; left:50%; transform:translateX(-50%) translateY(-20px);
 z-index:200; max-width:88vw; padding:10px 18px;
@@ -4731,6 +4831,7 @@ border-radius:12px;
 .msg-pong-card { background:rgba(255,255,255,.92); border:1px solid rgba(0,0,0,.08); border-radius:14px; padding:10px 18px; text-align:center; max-width:80%; box-shadow:0 1px 3px rgba(0,0,0,.06); }
 .msg-pong-label { font-size:11px; color:var(--muted); margin-bottom:2px; }
 .msg-pong-result { font-size:15px; font-weight:600; color:var(--ink); }
+.msg-memory .msg-pong-result { font-size:13px; }
 .pong-bar-right { display:flex; align-items:center; gap:6px; }
 .pong-icon-btn { width:32px; height:32px; border-radius:50%; border:none; background:rgba(0,0,0,.06); font-size:15px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; line-height:1; }
 .pong-icon-btn:active { transform:scale(.92); }
@@ -4775,14 +4876,14 @@ border-radius:12px;
 #chat-brick-panel:not(.brick-fs) #brick-canvas { box-shadow:0 6px 22px rgba(0,0,0,.28); }
 .brick-rate { font-size:17px; letter-spacing:2px; margin:2px 0; color:#ff5f7a; font-weight:700; }
 .brick-rate span { opacity:.4; }
-#chat-brick-panel.brick-fs { position:fixed; inset:0; z-index:9999; border-radius:0; max-height:none; height:100vh; height:100dvh; background:#101625; padding-top:max(env(safe-area-inset-top,0px),8px); padding-bottom:max(var(--mochi-safe-bottom,env(safe-area-inset-bottom,0px)),8px); overscroll-behavior:none; }
+#chat-brick-panel.brick-fs { position:fixed; inset:0; z-index:9999; border-radius:0; max-height:none; height:100vh; height:100dvh; background:#101625; padding-left:0; padding-right:0; padding-top:max(env(safe-area-inset-top,0px),8px); padding-bottom:max(var(--mochi-safe-bottom,env(safe-area-inset-bottom,0px)),8px); overscroll-behavior:none; }
 #chat-brick-panel.brick-fs .poke-card-scroll { max-height:none; flex:1; overflow:hidden; display:flex; flex-direction:column; padding:0; }
 #chat-brick-panel.brick-fs .poke-card-head { background:transparent; color:#fff; border-bottom-color:rgba(255,255,255,.12); padding:10px 16px; flex-shrink:0; }
 #chat-brick-panel.brick-fs .poke-card-head b { color:#fff; font-size:19px; }
 #chat-brick-panel.brick-fs .poke-card-close { color:#fff; font-size:24px; }
 #chat-brick-panel.brick-fs .snake-icon-btn { background:rgba(255,255,255,.12); color:#fff; width:42px; height:42px; font-size:20px; }
 #chat-brick-panel.brick-fs .snake-diff { background:rgba(255,255,255,.1); color:#fff; border-color:rgba(255,255,255,.2); font-size:15px; padding:6px 12px; }
-#chat-brick-panel.brick-fs .brick-wrap { flex:1; display:flex; max-width:none; gap:10px; padding:6px 8px; }
+#chat-brick-panel.brick-fs .brick-wrap { flex:1; display:flex; flex-direction:column; max-width:none; gap:10px; padding:6px 8px; }
 #chat-brick-panel.brick-fs .brick-info { color:rgba(255,255,255,.78); font-size:15px; flex-shrink:0; max-width:none; flex-wrap:wrap; justify-content:center; gap:6px 12px; }
 #chat-brick-panel.brick-fs .brick-info b { color:#fff; font-size:19px; }
 #chat-brick-panel.brick-fs .brick-info > span { background:rgba(255,255,255,.07); border-radius:10px; padding:3px 10px; }
@@ -5324,6 +5425,11 @@ to { filter:brightness(1.25) drop-shadow(0 0 7px rgba(255,224,138,.9)); }
 .ms-n1 { color:#3a7fd5; } .ms-n2 { color:#2e8b57; } .ms-n3 { color:#d9534f; } .ms-n4 { color:#7a4fd9; }
 .ms-n5 { color:#b7791f; } .ms-n6 { color:#2aa198; } .ms-n7 { color:#666; } .ms-n8 { color:#999; }
 .ms-status { min-height:20px; font-size:13.5px; font-weight:600; color:var(--ink,#333); text-align:center; width:100%; }
+.ms-talk { width:100%; max-width:352px; padding:0 4px; }
+.ms-talk[hidden] { display:none; }
+.ms-talk-bubble { display:inline-flex; flex-wrap:wrap; gap:2px 6px; align-items:baseline; max-width:100%; padding:7px 11px; border-radius:14px; border-top-left-radius:4px; background:var(--card-bg,#fff); color:var(--ink,#222); border:1px solid var(--card-border,rgba(0,0,0,.08)); font-size:13px; line-height:1.55; word-break:break-word; overflow-wrap:anywhere; box-shadow:0 1px 4px rgba(0,0,0,.05); animation:mstalkin .22s ease-out; }
+.ms-talk-name { font-weight:700; color:var(--accent,#8b7cf6); white-space:nowrap; }
+@keyframes mstalkin { 0% { opacity:0; transform:translateY(4px); } 100% { opacity:1; transform:translateY(0); } }
 .ms-foot { font-size:11.5px; color:var(--muted,#666); text-align:center; line-height:1.7; width:100%; }
 .ms-shake { animation:msshake .26s ease-in-out; }
 @keyframes msshake { 0%,100% { transform:translateX(0); } 25% { transform:translateX(-3px); } 50% { transform:translateX(3px); } 75% { transform:translateX(-2px); } }
@@ -5628,9 +5734,9 @@ font-size:var(--mgm-fs,27px); line-height:1;
 [data-theme="dark"] .mgm-own-p .mgm-face { background:rgba(255,255,255,.16); box-shadow:inset 0 0 0 2px #e8e8e8; }
 [data-theme="dark"] .mgm-own-t .mgm-face { background:rgba(255,255,255,.05); box-shadow:inset 0 0 0 2px #8f959c; }
 #chat-memory-panel .pong-overlay { background:rgba(22,22,22,.92); }
-#chat-memory-panel .pong-overlay-btn { background:#1a1a1a; }
-#chat-memory-panel .pong-overlay-btn:active { background:#000; }
-#chat-memory-panel .pong-overlay-btn2 { background:rgba(255,255,255,.16); }
+#chat-memory-panel .pong-overlay-btn { background:#1a1a1a; border:1.5px solid rgba(255,255,255,.82); color:#fff; }
+#chat-memory-panel .pong-overlay-btn:active { background:#000; border-color:rgba(255,255,255,.6); }
+#chat-memory-panel .pong-overlay-btn2 { background:rgba(255,255,255,.16); border:1.5px solid rgba(255,255,255,.55); color:#fff; }
 .fish-stats { margin:8px 4px 0; padding:9px 11px; border-radius:12px; background:rgba(90,140,190,.08); font-size:11.5px; color:#5a7c95; text-align:center; }
 .fish-stats b { color:#e8963a; font-weight:700; }
 .fish-keep { display:flex; align-items:center; gap:2px; font-size:10px; color:#9aa; cursor:pointer; flex-shrink:0; margin-right:2px; -webkit-tap-highlight-color:transparent; }
@@ -6731,6 +6837,19 @@ radial-gradient(circle at calc(100% - 5px) calc(100% - 5px), rgba(255,255,255,.1
 .fw-result { background:rgba(255,180,80,.1); border-color:rgba(255,180,80,.35); }
 .fw-p-line { color:rgba(255,255,255,.75); }
 .fw-result .fw-p-line:first-child { color:#ffc97e; }
+.loc-panel.loc-full { background:var(--dark-card-97); }
+.loc-head { background:rgba(30,30,30,.96); }
+.loc-back { border-color:rgba(255,255,255,.14); background:rgba(255,255,255,.06); }
+.loc-back svg { stroke:#f0f0f0; }
+.loc-back:active { background:rgba(255,255,255,.12); }
+.loc-close { background:rgba(255,255,255,.1); }
+.loc-close:active { background:rgba(255,255,255,.16); }
+.loc-section { background:var(--dark-card-92); border-color:rgba(255,255,255,.07); }
+.loc-tl-item { border-bottom-color:rgba(255,255,255,.07); }
+.loc-tl-tag { background:var(--dark-hover); }
+.loc-send-area { border-top-color:rgba(255,255,255,.07); }
+.fw-sense { background:linear-gradient(160deg, rgba(255,180,80,.08), rgba(255,160,60,.04)), rgba(30,30,30,.5); }
+.fw-row { background:var(--dark-card-92); border-color:rgba(255,255,255,.08); }
 .mg-panel { background:var(--dark-card-97); border-color:var(--dark-border); }
 .mg-close { background:var(--dark-hover); color:#aaa; }
 .mg-close:active { background:rgba(255,255,255,.12); }
@@ -8121,9 +8240,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787909889038">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.6.287</b></span>
-        <span class="sv-deploy">部署于 2026-08-28 17:38<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787913674693">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.290</b></span>
+        <span class="sv-deploy">部署于 2026-08-28 18:41<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9151,6 +9270,15 @@ transition-duration: .01ms !important;
         <div class="gs-row"><span>后台保活</span><label class="toggle"><input type="checkbox" id="bg-keepalive"><span class="tk"></span></label></div>
         <div class="gs-row"><span>后台通知</span><label class="toggle"><input type="checkbox" id="bg-notify"><span class="tk"></span></label><button class="bg-notify-test" id="bg-notify-test">测试</button></div>
         <div class="gs-row"><span>全屏模式（隐藏手机状态栏）</span><label class="toggle"><input type="checkbox" id="sf-fullscreen"><span class="tk"></span></label></div>
+        <!-- v3.26.x：布局手动兜底——浏览器「桌面版网站」模式会把 UA / screen / 触摸能力 /
+             视口整套伪装成桌面，指纹识别必有漏网（vivo Y35 + Edge 连栽三轮）。识别失手时
+             用户自己掰回来：本开关（或地址栏 ?mobile=1 / ?pc=1），持久存 localStorage，
+             状态文案与绑定见 device.js（window.mochiDevice.setLayoutPref） -->
+        <div class="set-row">
+          <div class="txt">手机布局（强制）<span class="tag" id="sf-force-mobile-help" role="button" tabindex="0" aria-haspopup="dialog">为什么需要</span></div>
+          <label class="toggle"><input type="checkbox" id="sf-force-mobile"><span class="tk"></span></label>
+        </div>
+        <div class="gs-sub" id="sf-force-mobile-sub">…</div>
         <!-- v3.9.x：全屏边缘防误触——部分国产浏览器（雨见/UC/QQ 等）全屏下左右边缘上下滑
              会调节音量/亮度（浏览器自带手势，网页拦不住）。开启后用边缘拦截层+touchstart
              兜底尝试阻挡；对系统级手势可能无效，最可靠仍是浏览器设置关闭边缘滑动调节。 -->
@@ -9191,7 +9319,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.6.287</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.290</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -9363,7 +9491,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.6.287</span>
+              <span class="lic-ver">v3.26.290</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -10070,46 +10198,35 @@ transition-duration: .01ms !important;
         <span class="ch-name">音效设置</span>
       </div>
       <div class="gs-scroll">
+        <!-- v3.26.x：音效设置页重设计——三类音效各一张独立卡片（头部=图标+名称+当前状态，中部=预设胶囊，底部=动态操作行） -->
         <div class="gs-title">联系人来电</div>
-        <div class="set-group glass">
+        <div class="set-group glass sfx-card">
           <div class="set-row" id="sfx-ring-row">
             <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.2a5.2 5.2 0 00-5.2 5.2c0 3.3-1.4 4.9-2.5 5.9a.85.85 0 00.6 1.4h14.2a.85.85 0 00.6-1.4c-1.1-1-2.5-2.6-2.5-5.9A5.2 5.2 0 0012 4.2z"/><path d="M10 18.8a2 2 0 004 0"/></svg></div>
-            <div class="txt">来电铃声</div>
-            <div class="val" id="sfx-ring-val"></div>
-          </div>
-          <div class="set-row sub" id="sfx-ring-tools">
-            <button class="cc-tool" id="sfx-ring-upload">自定义音频</button>
-            <button class="cc-tool" id="sfx-ring-play">试听</button>
-            <button class="cc-tool" id="sfx-ring-clear">清除</button>
+            <div class="txt">来电铃声<span class="sub" id="sfx-ring-val"></span></div>
           </div>
           <div class="sfx-presets" id="sfx-ring-presets"></div>
+          <div class="sfx-tools" id="sfx-ring-tools"></div>
         </div>
-        <div class="gs-title">聊天音效</div>
-        <div class="set-group glass">
+        <div class="gs-title">联系人消息</div>
+        <div class="set-group glass sfx-card">
           <div class="set-row" id="sfx-in-row">
             <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4.5h9.5A2.5 2.5 0 0119 7v4.9a2.5 2.5 0 01-2.5 2.5h-6.1l-3.2 3.5v-3.5H7.5A2.5 2.5 0 015 11.9V7a2.5 2.5 0 012.5-2.5z"/><path d="M8.8 8.6v3"/><path d="M10.6 7.4v5.6"/><path d="M12.4 8.2v4"/></svg></div>
-            <div class="txt">联系人发送和回复消息</div>
-            <div class="val" id="sfx-in-val"></div>
-          </div>
-          <div class="set-row sub" id="sfx-in-tools">
-            <button class="cc-tool" id="sfx-in-upload">自定义音频</button>
-            <button class="cc-tool" id="sfx-in-play">试听</button>
-            <button class="cc-tool" id="sfx-in-clear">清除</button>
+            <div class="txt">TA 发来消息<span class="sub" id="sfx-in-val"></span></div>
           </div>
           <div class="sfx-presets" id="sfx-in-presets"></div>
+          <div class="sfx-tools" id="sfx-in-tools"></div>
+        </div>
+        <div class="gs-title">我的消息</div>
+        <div class="set-group glass sfx-card">
           <div class="set-row" id="sfx-out-row">
             <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 4.5H16.5A2.5 2.5 0 0119 7v4.9a2.5 2.5 0 01-2.5 2.5h-2.9l3.2 3.5v-3.5H7.5A2.5 2.5 0 015 11.9V7a2.5 2.5 0 012.5-2.5z"/><path d="M11.6 8.6v3"/><path d="M13.4 7.4v5.6"/><path d="M15.2 8.2v4"/></svg></div>
-            <div class="txt">我发送和回复的消息</div>
-            <div class="val" id="sfx-out-val"></div>
-          </div>
-          <div class="set-row sub" id="sfx-out-tools">
-            <button class="cc-tool" id="sfx-out-upload">自定义音频</button>
-            <button class="cc-tool" id="sfx-out-play">试听</button>
-            <button class="cc-tool" id="sfx-out-clear">清除</button>
+            <div class="txt">我发送消息<span class="sub" id="sfx-out-val"></span></div>
           </div>
           <div class="sfx-presets" id="sfx-out-presets"></div>
+          <div class="sfx-tools" id="sfx-out-tools"></div>
         </div>
-        <div class="sm-set-hint" style="padding:0 16px 8px">内置音效开箱即用：点击下方音效即可切换并试听；也可上传自定义音频（mp3 / wav / ogg / m4a）。选择内置音效会替换自定义音频；「静音」关闭该类音效。</div>
+        <div class="sm-set-hint" style="padding:0 16px 8px">点击下方音效即可应用并试听；「静音」关闭该类音效。也可上传自定义音频（mp3 / wav / ogg / m4a），上传后可在底部试听或清除。</div>
       </div>
     </div>
 
@@ -10620,6 +10737,8 @@ transition-duration: .01ms !important;
             <button class="div-mode sel" data-count="3">3 张</button>
             <button class="div-mode" data-count="1">1 张</button>
           </div>
+          <!-- v3.26.x：占卜对象（可选全部桌面联系人，也可不选；选了对象结果存入主页「占卜记录」） -->
+          <div class="div-modes div-targets" id="div-targets"></div>
         </div>
 
         <div class="div-card glass">
@@ -10832,6 +10951,8 @@ transition-duration: .01ms !important;
         <button class="fav-tab" data-htab="coinask">心意币申请记录</button>
         <button class="fav-tab" data-htab="coinrp">心意币红包记录</button>
         <button class="fav-tab" data-htab="care">TA的关心</button>
+        <!-- v3.26.x：占卜记录（占卜页抽牌选了对象，牌面与解读存入该联系人桌面 records-divine） -->
+        <button class="fav-tab" data-htab="divine">占卜记录</button>
       </div>
       <div class="cal-scroll">
         <div class="cal-card glass" data-hpanel="av">
@@ -10872,6 +10993,11 @@ transition-duration: .01ms !important;
         <div class="cal-card glass" data-hpanel="care" hidden>
           <div class="cal-card-title">TA 的关心记录</div>
           <div id="home-care"></div>
+        </div>
+        <!-- v3.26.x：占卜记录（占卜页抽牌选了对象 → 存该联系人桌面 records-divine） -->
+        <div class="cal-card glass" data-hpanel="divine" hidden>
+          <div class="cal-card-title">占卜记录</div>
+          <div id="home-divine"></div>
         </div>
       </div>
     </div>
@@ -11049,7 +11175,9 @@ transition-duration: .01ms !important;
         </div>
         <div class="voice-preview" id="voice-preview" hidden>
           <button class="msg-voice-play voice-play-btn" id="voice-play-btn" title="试听">
-            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            <!-- 播放/暂停双图标：playing 时 CSS 切换显示（试听播放中有互动态，与聊天语音气泡同款） -->
+            <svg class="voice-ico-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            <svg class="voice-ico-pause" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
           </button>
           <span class="voice-preview-txt" id="voice-preview-txt"></span>
         </div>
@@ -11579,7 +11707,7 @@ transition-duration: .01ms !important;
                 </div>
               </div>
             </div>
-            <div class="pong-foot">你控制右挡板 · <span id="brick-foot-name">TA</span> 控制左挡板 · 手机按住拖动 · 电脑 A/D 或 ← →</div>
+            <div class="pong-foot">你控制右挡板 · <span id="brick-foot-name">TA</span> 控制左挡板 · 按住拖动</div>
           </div>
         </div>
       </div>
@@ -11684,6 +11812,7 @@ transition-duration: .01ms !important;
                 </div>
               </div>
             </div>
+            <div class="ms-talk" id="ms-talk" hidden><div class="ms-talk-bubble"></div></div>
             <div class="ms-status" id="ms-status">选择难度开始探索</div>
             <div class="ms-foot">点击挖开 · 长按插旗 · 数字=周围雷数 · 🪙🎁🌸 藏在格子里</div>
           </div>
@@ -12272,20 +12401,33 @@ transition-duration: .01ms !important;
       </div>
 
     <!-- TA在身边·位置面板（聊天寻踪半框 / 桌面寻踪页「TA在身边」入口共用，必须放在所有 .page 之外——
-         position:fixed 弹层若嵌在 .page 内，页面切换时会被父级 hidden 隐藏，桌面寻踪页点开就会"跑到聊天页"） -->
+         position:fixed 弹层若嵌在 .page 内，页面切换时会被父级 hidden 隐藏，桌面寻踪页点开就会"跑到聊天页"；
+         v3.26.x：桌面寻踪页入口以 .loc-full 全屏打开，聊天寻踪半框入口保持底部半屏） -->
     <div class="loc-panel" id="loc-panel" hidden>
       <div class="loc-head">
-        <span>TA在身边 · <b id="loc-name">TA</b> 的位置</span>
-        <button class="loc-close" id="loc-close">✕</button>
+        <button class="loc-back" id="loc-back" aria-label="返回">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <span class="loc-title">TA在身边 · <b id="loc-name">TA</b> 的位置</span>
+        <button class="loc-close" id="loc-close" aria-label="关闭">✕</button>
       </div>
-      <!-- 方位感知（v3.13.x：模糊感知，不是精确定位） -->
-      <div class="fw-sense" id="fw-sense">
-        <div class="fw-circle" id="fw-circle"></div>
-        <div class="fw-detail" id="fw-detail"></div>
-        <button class="fw-perceive" id="fw-perceive" type="button">感知一下</button>
-        <div class="fw-result" id="fw-result" hidden></div>
+      <div class="loc-scroll">
+        <!-- 方位感知（v3.13.x：模糊感知，不是精确定位） -->
+        <div class="fw-sense" id="fw-sense">
+          <div class="fw-title">
+            <span class="fw-title-t">方位感知</span>
+            <span class="fw-title-s">不是精确定位 · 是你对 TA 的模糊感觉</span>
+          </div>
+          <div class="fw-circle" id="fw-circle"></div>
+          <div class="fw-detail" id="fw-detail"></div>
+          <button class="fw-perceive" id="fw-perceive" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/><circle cx="12" cy="12" r="4"/></svg>
+            感知一下
+          </button>
+          <div class="fw-result" id="fw-result" hidden></div>
+        </div>
+        <div class="loc-body" id="loc-body"></div>
       </div>
-      <div class="loc-body" id="loc-body"></div>
     </div>
 
     <!-- 位置卡光点动效层（全局，同样须在 .page 外） -->
@@ -12623,29 +12765,69 @@ transition-duration: .01ms !important;
 (function () {
 let isMobile = false;
 try { isMobile = window.matchMedia && window.matchMedia('(max-width: 900px)').matches; } catch (e) {}
+let mobileRule = isMobile ? 'viewport<=900' : '';
 const ua = String(navigator.userAgent || '');
+const LAYOUT_KEY = 'xy-home-v2:__layout-pref';
+let layoutPref = '';
+try { layoutPref = localStorage.getItem(LAYOUT_KEY) || ''; } catch (e) {}
+try {
+const pq = /[?&](mobile|pc)=(\d)/.exec(location.search || '');
+if (pq) {
+const want = pq[2] === '1' ? pq[1] : '';
+if (want !== layoutPref) {
+layoutPref = want;
+try {
+if (want) localStorage.setItem(LAYOUT_KEY, want);
+else localStorage.removeItem(LAYOUT_KEY);
+} catch (e2) {}
+}
+}
+} catch (e) {}
 let isTablet = false;
 try {
 const plat = String(navigator.platform || '');
 isTablet = (/iPad/i.test(ua) || plat === 'iPad') && !/android/i.test(ua) ||
 ((plat === 'MacIntel' || /Macintosh/i.test(ua)) && navigator.maxTouchPoints > 1 && 'ontouchstart' in window);
 } catch (e) {}
-if (isTablet) { try { document.documentElement.classList.add('tablet'); } catch (e) {} }
-if (!isMobile && !isTablet) {
+const sig = {
+sw: 0, sh: 0, touch: false, uaDesk: false, uaMobile: false, oriApi: false,
+coarse: false, hoverNone: false, vvW: 0, uchMobile: false, uchAndroid: false
+};
 try {
-const sw = screen.width || screen.availWidth || 0;
-const touch = (navigator.maxTouchPoints || 0) > 0 || 'ontouchstart' in window;
-let uaDesk = false, oriApi = false, coarsePtr = false, hoverNone = false;
-try { uaDesk = /Windows NT|Macintosh|X11|CrOS/i.test(ua); } catch (e) {}
-try { oriApi = typeof window.orientation !== 'undefined'; } catch (e) {}
-try { coarsePtr = window.matchMedia && window.matchMedia('(pointer: coarse)').matches; } catch (e) {}
-try { hoverNone = window.matchMedia && window.matchMedia('(hover: none)').matches; } catch (e) {}
-let vvW = 0;
-try { vvW = (window.visualViewport && window.visualViewport.width) || 0; } catch (e) {}
-if ((sw > 0 && sw < 900 && touch) ||
-(touch && vvW > 0 && vvW <= 900) ||
-(touch && uaDesk && (oriApi || (coarsePtr && hoverNone)))) {
-isMobile = true;
+sig.sw = screen.width || screen.availWidth || 0;
+sig.sh = screen.height || screen.availHeight || 0;
+sig.touch = (navigator.maxTouchPoints || 0) > 0 || 'ontouchstart' in window;
+sig.uaDesk = /Windows NT|Macintosh|X11|CrOS/i.test(ua);
+sig.uaMobile = /Android|iPhone|iPod|Mobile/i.test(ua);
+sig.oriApi = typeof window.orientation !== 'undefined';
+if (window.matchMedia) {
+sig.coarse = !!window.matchMedia('(pointer: coarse)').matches;
+sig.hoverNone = !!window.matchMedia('(hover: none)').matches;
+}
+sig.vvW = (window.visualViewport && window.visualViewport.width) || 0;
+const uch = navigator.userAgentData;
+if (uch) {
+sig.uchMobile = uch.mobile === true;
+sig.uchAndroid = /android/i.test(String(uch.platform || ''));
+}
+} catch (e) {}
+const narrowScreen = sig.sw > 0 && sig.sw < 900;
+const phoneShaped = narrowScreen && sig.sh >= sig.sw * 1.25;
+const mobileInput = sig.coarse && sig.hoverNone;
+const RULES = [
+['narrow-screen+touch', sig.touch && narrowScreen],
+['vv<=900+touch', sig.touch && sig.vvW > 0 && sig.vvW <= 900],
+['desktop-ua+touch', sig.touch && sig.uaDesk && (sig.oriApi || mobileInput)],
+['mobile-ua+narrow-screen', sig.uaMobile && narrowScreen],
+['desktop-ua+phone-screen', sig.uaDesk && phoneShaped],
+['desktop-ua+coarse-pointer', sig.uaDesk && mobileInput],
+['desktop-ua+mobile-uch', sig.uaDesk && (sig.uchMobile || sig.uchAndroid)],
+['desktop-ua+vv<=900+mobile-input', sig.uaDesk && sig.vvW > 0 && sig.vvW <= 900 && (sig.oriApi || mobileInput)]
+];
+let viewportFixed = false;
+function applyViewportFix() {
+if (viewportFixed) return;
+viewportFixed = true;
 try {
 document.querySelectorAll('meta[name="viewport"]').forEach(function (m) {
 m.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-visual');
@@ -12681,17 +12863,46 @@ document.documentElement.classList.add('force-mobile');
 });
 } catch (e) {}
 }
-} catch (e) {}
+if (!isMobile && !isTablet) {
+for (let ri = 0; ri < RULES.length; ri++) {
+if (RULES[ri][1]) {
+isMobile = true;
+mobileRule = RULES[ri][0];
+break;
 }
+}
+if (isMobile) applyViewportFix();
+} else if (isTablet) {
+mobileRule = 'tablet';
+}
+if (layoutPref === 'mobile') {
+isMobile = true; isTablet = false; mobileRule = 'pref:mobile';
+applyViewportFix();
+} else if (layoutPref === 'pc') {
+isMobile = false; isTablet = false; mobileRule = 'pref:pc';
+}
+if (isTablet) { try { document.documentElement.classList.add('tablet'); } catch (e) {} }
 const isIOS = /iphone|ipad|ipod/i.test(ua) && !/android/i.test(ua) && !window.MSStream;
 const isAndroid = /android/i.test(ua);
 const isVia = /via/i.test(ua);
+function setLayoutPref(v) {
+layoutPref = v || '';
+try {
+if (layoutPref) localStorage.setItem(LAYOUT_KEY, layoutPref);
+else localStorage.removeItem(LAYOUT_KEY);
+} catch (e) {}
+return layoutPref;
+}
 window.mochiDevice = {
 isMobile: !!isMobile,
 isTablet: !!isTablet,
 isIOS: !!isIOS,
 isAndroid: !!isAndroid,
-isVia: !!isVia
+isVia: !!isVia,
+mobileRule: mobileRule,
+layoutPref: layoutPref,
+signals: sig,
+setLayoutPref: setLayoutPref
 };
 window.mochiVvDiag = function () {
 try {
@@ -13044,6 +13255,14 @@ jobs.push(swStateText().then(function (t) { L[swIdx] = 'SW：' + t; }));
 L.push('');
 L.push('【设备判定】');
 L.push('手机=' + !!d.isMobile + '  平板=' + !!d.isTablet + '  iOS=' + !!d.isIOS + '  安卓=' + !!d.isAndroid + '  Via=' + !!d.isVia);
+L.push('判定依据：' + (d.mobileRule || '(未命中任何兜底规则→按桌面)') + '  手动布局设置=' + (d.layoutPref || '自动')
++ '  视口=' + Math.round(window.innerWidth || 0) + '×' + Math.round(window.innerHeight || 0));
+const _sg = d.signals || {};
+L.push('识别信号快照：screen=' + _sg.sw + '×' + _sg.sh + '  触摸=' + _sg.touch + '  coarse=' + _sg.coarse
++ '  hoverNone=' + _sg.hoverNone + '  orientationAPI=' + _sg.oriApi
++ '  UA谎称桌面=' + _sg.uaDesk + '  UA含移动标识=' + _sg.uaMobile
++ '  visualViewport宽=' + Math.round(_sg.vvW || 0)
++ '  UA-CH(mobile=' + _sg.uchMobile + ' android=' + _sg.uchAndroid + ')');
 L.push('html 类：' + (document.documentElement.className || '(空)'));
 const vp = document.querySelector('meta[name="viewport"]');
 L.push('viewport：' + (vp ? vp.content : '(无)'));
@@ -13367,6 +13586,59 @@ ctl.hint(okDl ? '已开始下载 txt 文件（见浏览器下载列表），直�
 });
 });
 });
+})();
+(function () {
+const d = window.mochiDevice;
+const box = document.getElementById('sf-force-mobile');
+if (!d || !box) return;
+const sub = document.getElementById('sf-force-mobile-sub');
+box.checked = d.layoutPref === 'mobile';
+function renderSub() {
+if (!sub) return;
+const sig = d.signals || {};
+if (d.layoutPref === 'mobile') {
+sub.textContent = '已强制手机布局。关闭本开关恢复自动判定；想在手机上改用电脑外壳，地址栏加 ?pc=1。';
+} else if (d.layoutPref === 'pc') {
+sub.textContent = '已强制电脑外壳（地址栏 ?pc=1）。打开上方开关或去掉该参数即恢复自动判定。';
+} else if (d.isMobile) {
+sub.textContent = '自动判定：手机布局（依据 ' + (d.mobileRule || 'viewport<=900') + '）。'
++ (sig.uaDesk ? '检测到浏览器正以「桌面版网站」模式伪装成电脑，本页已自动纠正为手机布局。' : '');
+} else {
+sub.textContent = '自动判定：电脑外壳（当前是电脑，或浏览器把手机伪装成了桌面）。手机上看不到满屏布局时打开上方开关。';
+}
+}
+renderSub();
+box.addEventListener('change', function () {
+d.setLayoutPref(box.checked ? 'mobile' : '');
+try { location.reload(); } catch (e) {}
+});
+const help = document.getElementById('sf-force-mobile-help');
+const openHelp = function (e) {
+if (e) { try { e.stopPropagation(); e.preventDefault(); } catch (er) {} }
+if (!window.openModal) return;
+const sig = d.signals || {};
+const txt = [
+'为什么需要这个开关\n',
+'浏览器（Edge / Chrome / Via 等）的「桌面版网站」模式会把手机的浏览器标识、屏幕尺寸、触摸能力整套伪装成电脑。本应用因此显示成电脑上的「小手机框 + 两侧灰底」，全屏模式也连带失灵——伪装出来的宽视口会被当成横屏，开关直接被「请先转竖屏」的判断拦下。\n',
+'推荐做法：关掉浏览器桌面模式（一步解决大小 + 全屏）\n',
+'· Edge（安卓）：右上角 ⋯ 菜单 → 取消勾选「桌面版网站」；若长期开着，Edge 设置 → 浏览/内容 → 关闭「始终请求桌面版网站」；',
+'· Chrome：⋮ 菜单 → 取消勾选「电脑版网站」；',
+'· 其他浏览器：菜单里通常叫「电脑版网页 / 桌面版网站」。\n',
+'关掉后仍是电脑布局，说明本应用没认出这台手机 —— 打开本开关强制切回手机布局（长期生效，随时可关）。\n',
+'\n当前判定：' + (d.isMobile ? '手机布局' : '电脑外壳')
++ '（依据 ' + (d.mobileRule || '—') + '）',
+'浏览器伪装桌面标识：' + (sig.uaDesk ? '是' : '否')
++ '　手动设置：' + (d.layoutPref || '自动')
++ '　视口：' + Math.round(window.innerWidth || 0) + '×' + Math.round(window.innerHeight || 0)
+].join('\n');
+window.openModal('手机布局（强制）', '', function () {}, { noInput: true, staticText: txt });
+};
+if (help) {
+help.addEventListener('click', openHelp);
+help.addEventListener('keydown', function (e) {
+if (e.key === 'Enter' || e.key === ' ') openHelp(e);
+});
+}
 })();
 } catch (__e) { try { console.error("[JS] device.js", __e && __e.message || __e); } catch (x) {} if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
 (function () { try {
@@ -19370,6 +19642,7 @@ authLoadedPrefix = null;
 armReadyFuse();
 try { lastQuote = null; } catch (e) {}
 try { lastMineText = ''; } catch (e) {}
+try { lastMineQuote = ''; } catch (e) {}
 try { lastQuotedText = ''; } catch (e) {}
 try {
 draftImgs = [];
@@ -20035,13 +20308,42 @@ a.addEventListener('ended', stopChatVoice);
 a.addEventListener('error', () => { stopChatVoice(); toast('语音播放失败'); });
 a.play().catch(() => { stopChatVoice(); toast('语音播放失败'); });
 }
+function voicePartsOf(text) {
+const p = String(text || '').split('|||');
+return { name: (p[0] || '语音消息').replace(/\.[^.]+$/, ''), src: p[1] || '' };
+}
+function fillVoiceBubble(b, text, prefixHtml) {
+const v = voicePartsOf(text);
+b.innerHTML = (prefixHtml || '') + '<div class="msg-voice" data-src="' + attrEsc(v.src) + '">' +
+'<button class="msg-voice-play" title="播放">' +
+'<svg class="voice-ico-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>' +
+'<svg class="voice-ico-pause" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>' +
+'</button>' +
+'<div class="msg-voice-wave"><i></i><i></i><i></i><i></i><i></i></div>' +
+'<span class="msg-voice-name">' + escTxt(v.name) + '</span>' +
+'</div>';
+const btn = b.querySelector('.msg-voice-play');
+if (btn) btn.addEventListener('click', function (e) {
+e.stopPropagation();
+if (v.src) playVoiceInChat(btn, v.src);
+else toast('语音数据缺失');
+});
+}
 const QUOTE_PLACEHOLDER = /^(图片|表情包|\[图片\]|\[表情包\])$/;
+function quoteTextSafe(s) {
+let str = String(s == null ? '' : s);
+const bar = str.indexOf('|||');
+if (bar >= 0) str = bar > 0 ? '[语音] ' + str.slice(0, bar) : '';
+const di = str.indexOf('data:');
+if (di > 0 && str.length - di > 120) str = str.slice(0, di).trim();
+return str;
+}
 function quoteHtml(q, side) {
 const __fitQ = (side !== 'out') && !!window.taFit;
 const FQ = (s) => (__fitQ ? window.taFit(s) : s);
 if (q && typeof q === 'object') {
 const imgs = (q.imgs || []).filter(s => typeof s === 'string' && s.indexOf('data:') === 0).slice(0, 3);
-const t = String(q.t || '');
+const t = quoteTextSafe(q.t);
 const tHtml = (t && t.indexOf('data:') !== 0 && !(imgs.length && QUOTE_PLACEHOLDER.test(t))) ? escTxtBr(FQ(t)) : '';
 let inner = '';
 if (imgs.length) inner += '<span class="msg-quote-imgs">' + imgs.map(s => '<img class="msg-quote-img" src="' + attrEsc(s) + '" alt="图片" loading="lazy" decoding="async">').join('') + '</span>';
@@ -20051,7 +20353,8 @@ return '<div class="msg-quote">' + inner + '</div>';
 if (typeof q === 'string' && q.indexOf('data:') === 0) {
 return '<div class="msg-quote"><img class="msg-quote-img" src="' + attrEsc(q) + '" alt="图片" loading="lazy" decoding="async"></div>';
 }
-return '<div class="msg-quote"><span class="msg-quote-text">' + escTxtBr(FQ(q)) + '</span></div>';
+const qs = quoteTextSafe(q);
+return '<div class="msg-quote"><span class="msg-quote-text">' + escTxtBr(FQ(qs)) + '</span></div>';
 }
 let inplaceDrafts = {};
 function inplaceTypeOf(rec) {
@@ -20621,7 +20924,7 @@ maybeScrollChatBottom(rec.side);
 return m;
 }
 if (rec.special === 'memory') {
-m.className = 'msg-pong';
+m.className = 'msg-pong msg-memory';
 m.innerHTML = '<div class="msg-pong-card">' +
 '<div class="msg-pong-label">🧠 ' + T('记忆翻牌') + '</div>' +
 '<div class="msg-pong-result">' + escTxt(T(rec.text || '')) + '</div>' +
@@ -20825,20 +21128,7 @@ b.style.padding = '8px 10px';
 b.style.background = '';
 b.style.border = '';
 b.style.boxShadow = '';
-const vparts = String(rec.text || '').split('|||');
-const vname = (vparts[0] || '语音消息').replace(/\.[^.]+$/, '');
-const vsrc = vparts[1] || '';
-b.innerHTML = '<div class="msg-voice" data-src="' + attrEsc(vsrc) + '">' +
-'<button class="msg-voice-play" title="播放">' +
-'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>' +
-'</button>' +
-'<div class="msg-voice-wave"><i></i><i></i><i></i><i></i><i></i></div>' +
-'<span class="msg-voice-name">' + escTxt(vname) + '</span>' +
-'</div>';
-b.querySelector('.msg-voice-play').addEventListener('click', function (e) {
-e.stopPropagation();
-playVoiceInChat(this, vsrc);
-});
+fillVoiceBubble(b, rec.text, rec.quote ? quoteHtml(rec.quote, rec.qside) : '');
 } else if (rec.parts && rec.parts.length) {
 const imgs = rec.parts.filter(p => p.k === 'img').map(p => p);
 const textPart = rec.parts.filter(p => p.k === 'text').map(p => p.v).join(' ');
@@ -21277,6 +21567,9 @@ return el;
 }
 function addIn(text, opts) {
 opts = opts || {};
+if (window.playSfx && !opts.silent && opts.special !== 'read') {
+try { window.playSfx('in'); } catch (e) {}
+}
 const _tagMood = opts.tag ? [{ tag: String(opts.tag), label: opts.tagNoDup ? '' : String(text) }] : null;
 return addRec({ side: 'in', text: text, initiative: opts.initiative, special: opts.special, quote: opts.quote, qidx: opts.qidx, type: opts.type, img: opts.img, parts: opts.parts, mailNotice: opts.mailNotice, gInv: opts.gInv, silent: opts.silent, askQuestion: opts.askQuestion, askStatus: opts.askStatus, askOptions: opts.askOptions, askType: opts.askType, choiceQuestion: opts.choiceQuestion, choiceOptions: opts.choiceOptions, choicePref: opts.choicePref, choiceCat: opts.choiceCat, choiceStatus: opts.choiceStatus, choiceAnswer: opts.choiceAnswer, choiceReply: opts.choiceReply, choiceMatch: opts.choiceMatch, curiousQuestion: opts.curiousQuestion, curiousQuick: opts.curiousQuick, curiousReplies: opts.curiousReplies, curiousFollowup: opts.curiousFollowup, curiousQid: opts.curiousQid, curiousCat: opts.curiousCat, curiousStatus: opts.curiousStatus, curiousAnswer: opts.curiousAnswer, curiousReply: opts.curiousReply, roastText: opts.roastText, roastCat: opts.roastCat, roastStatus: opts.roastStatus, roastAnswer: opts.roastAnswer, roastReply: opts.roastReply, rpAmount: opts.rpAmount, rpWish: opts.rpWish, rpStatus: opts.rpStatus, rpTs: opts.rpTs, rpCover: opts.rpCover, askFen: opts.askFen, askTs: opts.askTs, deskCk: opts.deskCk, deskCkDir: opts.deskCkDir, mood: opts.mood || _tagMood || undefined });
 }
@@ -21652,8 +21945,9 @@ function scheduleReply() {
 const myCid = window.__activeCid || 'default';
 const sameCid = () => (window.__activeCid || 'default') === myCid;
 syncLastMineText();
-const quoteSrc = lastMineText;
+const quoteSrc = lastMineQuote;
 const quoteSrcIdx = lastMineIdx;
+const quoteKey = quoteSrc && typeof quoteSrc === 'object' ? String(quoteSrc.t || '') + '\n' + (quoteSrc.imgs || []).join() : String(quoteSrc || '');
 const c = cfg();
 if (hit(c['rn-prob'])) {
 setTimeout(() => { if (!sameCid()) return; addIn('', { special: 'read' }); }, randInt(1000, 4000));
@@ -21677,8 +21971,8 @@ for (let i = 0; i < count; i++) {
 setTimeout(() => {
 if (!sameCid()) return;
 hideTyping();
-const q = (wantQuote && i === 0 && quoteSrc !== lastQuotedText) ? quoteSrc : null;
-if (q) lastQuotedText = q;
+const q = (wantQuote && i === 0 && quoteKey && quoteKey !== lastQuotedText) ? quoteSrc : null;
+if (q) lastQuotedText = quoteKey;
 replyOnce(c, q, i > 0, q ? quoteSrcIdx : -1);
 if (i < count - 1) showTyping();
 if (i === count - 1) {
@@ -21700,12 +21994,16 @@ const m = addIn(rep.text, { quote: quote, qside: 'out', qidx: quote ? quoteIdx :
 const _favProbMsg = (window.favCfg ? window.favCfg().taMsg : 30);
 if (lastMineText && Math.random() * 100 < _favProbMsg) {
 const fav = getFav();
-if (!fav.some(f => f.side === 'out' && f.text === lastMineText)) {
-const favType = lastMineText.indexOf('data:') === 0 ? 'image' : 'text';
+if (!fav.some(f => f.by === 'ta' && f.side === 'out' && f.text === lastMineText)) {
+let favType = lastMineText.indexOf('data:') === 0 ? 'image' : 'text';
 let favParts = undefined;
 for (let i = msgs.length - 1; i >= 0; i--) {
 const mm = msgs[i];
-if (mm && mm.side === 'out' && mm.text === lastMineText && mm.parts && mm.parts.length) { favParts = mm.parts.map(p => ({ k: p.k, v: p.v, sub: p.sub })); break; }
+if (mm && mm.side === 'out' && mm.text === lastMineText) {
+if (mm.type && mm.type !== 'text') favType = mm.type;
+if (mm.parts && mm.parts.length) favParts = mm.parts.map(p => ({ k: p.k, v: p.v, sub: p.sub }));
+break;
+}
 }
 fav.push({ side: 'out', text: lastMineText, type: favType, ts: Date.now(), by: 'ta', parts: favParts });
 saveFav(fav);
@@ -21844,17 +22142,20 @@ window.openCjian();
 }
 let lastMineText = '';
 let lastMineIdx = -1;
+let lastMineQuote = '';
 let lastQuotedText = '';
 function syncLastMineText() {
 for (let i = msgs.length - 1; i >= 0; i--) {
 const m = msgs[i];
 if (m && m.side === 'out' && !m.retracted && typeof m.text === 'string' && m.text) {
 lastMineText = m.text;
+lastMineQuote = quoteSnapOf(m);
 lastMineIdx = i;
 return;
 }
 }
 lastMineText = '';
+lastMineQuote = '';
 lastMineIdx = -1;
 }
 function genOneReply(c) {
@@ -22158,7 +22459,9 @@ if (Array.isArray(v)) return v.filter(g => Array.isArray(g) && Array.isArray(g[1
 } catch (e) {}
 return null;
 }
+const pokeDirty = { ta: false, mine: false };
 function pokeUserGroupsSave(kind) {
+pokeDirty[kind] = true;
 try {
 const data = JSON.stringify(pokeUserGroups[kind]);
 store.set('poke-groups-' + kind, data);
@@ -22173,26 +22476,35 @@ try {
 const v = JSON.parse(store.get('poke-user-' + kind) || 'null');
 if (Array.isArray(v)) legacy = v.filter(x => typeof x === 'string' && x.trim());
 } catch (e) {}
-const g = [['我的新增', legacy]];
-try {
-store.set('poke-groups-' + kind, JSON.stringify(g));
-if (window.idbSet) window.idbSet(pokeUserGroupsKey(kind), JSON.stringify(g));
-} catch (e) {}
-return g;
+return [['我的新增', legacy]];
 }
 const pokeUserGroups = { ta: pokeUserGroupsInit('ta'), mine: pokeUserGroupsInit('mine') };
-(function () {
-if (!window.idbGet) return;
-['ta', 'mine'].forEach(kind => {
-window.idbGet(pokeUserGroupsKey(kind)).then(v => {
-if (!v) return;
-try {
-const arr = JSON.parse(v);
-if (Array.isArray(arr) && arr.length > pokeUserGroups[kind].length) pokeUserGroups[kind] = arr;
-} catch (e) {}
-}).catch(() => {});
+function pokeGroupsCardCount(groups) {
+let n = 0;
+(groups || []).forEach(g => { if (Array.isArray(g) && Array.isArray(g[1])) n += g[1].length; });
+return n;
+}
+function pokeAdoptFromIdb(kind) {
+if (pokeDirty[kind] || !window.idbGet) return Promise.resolve(false);
+return window.idbGet(pokeUserGroupsKey(kind)).then(v => {
+if (!v || pokeDirty[kind]) return false;
+let arr = null;
+try { arr = JSON.parse(v); } catch (e) { return false; }
+if (!Array.isArray(arr)) return false;
+if (pokeGroupsCardCount(arr) > pokeGroupsCardCount(pokeUserGroups[kind])) {
+pokeUserGroups[kind] = arr.filter(g => Array.isArray(g) && Array.isArray(g[1]));
+return true;
+}
+return false;
+}).catch(() => false);
+}
+function pokeAdoptAllRerender() {
+Promise.all([pokeAdoptFromIdb('ta'), pokeAdoptFromIdb('mine')]).then(adopted => {
+if ((adopted[0] || adopted[1]) && pokeCard && !pokeCard.hidden) renderPokeCard();
 });
-})();
+}
+if (window.__mochiDataReady) pokeAdoptAllRerender();
+else document.addEventListener('mochi-restore-done', pokeAdoptAllRerender);
 function pokeKindOf(card) {
 if (typeof card !== 'string') return 'mine';
 if (card.indexOf('你') >= 0) return 'mine';
@@ -22538,7 +22850,7 @@ toast('已新建分组「' + v + '」');
 });
 }
 document.addEventListener('contact-switched', function () {
-try { pokeUserGroups.ta = pokeUserGroupsInit('ta'); pokeUserGroups.mine = pokeUserGroupsInit('mine'); } catch (e) {}
+try { pokeDirty.ta = false; pokeDirty.mine = false; pokeUserGroups.ta = pokeUserGroupsInit('ta'); pokeUserGroups.mine = pokeUserGroupsInit('mine'); pokeAdoptAllRerender(); } catch (e) {}
 try { if (pokeCard) pokeCard.hidden = true; } catch (e) {}
 });
 const morePoke = document.getElementById('more-poke');
@@ -23966,6 +24278,7 @@ return false;
 }
 function openPokeCard() {
 if (!pokeCard) return;
+pokeAdoptAllRerender(); // 慢 IDB（iOS 挂后台杀连接）下 restore-done 兜底可能落空，开面板再补一次
 const ep = document.getElementById('emoji-panel');
 if (ep) ep.hidden = true;
 if (window.closeAvlib) window.closeAvlib();
@@ -24000,20 +24313,20 @@ changed = true;
 });
 if (changed) saveFav(fav);
 }
-function favDup(list, f) {
-return list.some(x => (x.kind || 'msg') === (f.kind || 'msg') &&
+function favDup(list, f, by) {
+return list.some(x => (x.by || 'me') === by && (x.kind || 'msg') === (f.kind || 'msg') &&
 (x.q || '') === (f.q || '') && (x.text || '') === (f.text || '') && x.ts === f.ts);
 }
 window.addMyFavItem = function (f) {
 const fav = getFav();
-if (favDup(fav, f)) return false;
+if (favDup(fav, f, 'me')) return false;
 fav.push(Object.assign({ by: 'me' }, f));
 saveFav(fav);
 return true;
 };
 window.addTaFavItem = function (f) {
 const fav = getFav();
-if (favDup(fav, f)) return false;
+if (favDup(fav, f, 'ta')) return false;
 fav.push(Object.assign({ by: 'ta' }, f));
 saveFav(fav);
 return true;
@@ -24051,8 +24364,8 @@ function closeMsgActions() {
 if (msgActions) msgActions.hidden = true;
 activeMsgEl = null;
 }
-function quoteSnapOf(m) {
-let qi = (m.parts || []).filter(p => p.k === 'img').map(p => p.v).slice(0, 3);
+function quoteTextOf(m) {
+const qi = (m.parts || []).filter(p => p.k === 'img').map(p => p.v).slice(0, 3);
 if (!qi.length && (m.type === 'sticker' || m.type === 'image')
 && typeof m.text === 'string'
 && (m.text.indexOf('data:') === 0 || /^https?:\/\//i.test(m.text))) {
@@ -24062,7 +24375,12 @@ let qt = m.text;
 if (m.type === 'voice') qt = '[语音] ' + String(qt || '').split('|||')[0];
 else if (m.type === 'sticker') qt = '表情包';
 else if (qi.length && (String(qt || '').indexOf('data:') === 0 || /^https?:\/\//i.test(String(qt || '')))) qt = '图片';
-return qi.length ? { t: qt, imgs: qi } : qt;
+else if (typeof qt === 'string' && qt.indexOf('|||') > 0 && qt.indexOf('data:') > 0) qt = qt.split('|||')[0];
+return { text: qt, imgs: qi };
+}
+function quoteSnapOf(m) {
+const q = quoteTextOf(m);
+return q.imgs.length ? { t: q.text, imgs: q.imgs } : q.text;
 }
 function quoteEq(a, b) {
 if (a === b) return true;
@@ -24160,28 +24478,15 @@ const idx = activeMsgEl ? Number(activeMsgEl.dataset.idx) : -1;
 const rec = (idx >= 0 && msgs[idx]) ? msgs[idx] : null;
 if (act === 'quote') {
 if (rec) {
-const qimgs = (rec.parts || []).filter(p => p.k === 'img').map(p => p.v).slice(0, 3);
-if (!qimgs.length && (rec.type === 'sticker' || rec.type === 'image')
-&& typeof rec.text === 'string'
-&& (rec.text.indexOf('data:') === 0 || /^https?:\/\//i.test(rec.text))) {
-qimgs.push(rec.text);
-}
-let qtext = rec.text;
-if (rec.type === 'voice') {
-qtext = '[语音] ' + String(rec.text || '').split('|||')[0];
-} else if (rec.type === 'sticker') {
-qtext = '表情包';
-} else if (qimgs.length && (String(qtext || '').indexOf('data:') === 0 || /^https?:\/\//i.test(String(qtext || '')))) {
-qtext = '图片';
-}
-lastQuote = { side: rec.side, text: qtext, type: rec.type, imgs: qimgs, idx: idx };
+const qsnap = quoteTextOf(rec);
+lastQuote = { side: rec.side, text: qsnap.text, type: rec.type, imgs: qsnap.imgs, idx: idx };
 renderDraft();
 }
 closeMsgActions();
 } else if (act === 'fav') {
 if (rec) {
 const fav = getFav();
-if (fav.some(f => f.side === rec.side && f.text === rec.text)) {
+if (fav.some(f => (f.by || 'me') !== 'ta' && f.side === rec.side && (f.text || '') === (rec.text || '') && (!rec.ts || f.ts === rec.ts))) {
 toast('已收藏过这条消息');
 } else {
 fav.push({ side: rec.side, text: rec.text, type: rec.type || 'text', ts: rec.ts || Date.now(), by: 'me', mood: (rec.mood || []).slice(), parts: rec.parts && rec.parts.length ? rec.parts.map(p => ({ k: p.k, v: p.v, sub: p.sub })) : undefined });
@@ -24363,10 +24668,14 @@ if (window.viewChatImage) window.viewChatImage(img.src);
 });
 });
 } else {
+const isVoice = f.type === 'voice' || (typeof f.text === 'string' && f.text.indexOf('|||data:audio/') > 0);
 const isImg = f.type === 'sticker' || f.type === 'image' || (typeof f.text === 'string' && f.text.indexOf('data:') === 0);
-if (isImg) {
+if (isVoice) {
+b.style.padding = '8px 10px';
+fillVoiceBubble(b, f.text);
+} else if (isImg) {
 b.style.padding = '6px';
-b.innerHTML = '<img class="msg-img" src="' + f.text + '" alt="表情">';
+b.innerHTML = '<img class="msg-img" src="' + attrEsc(f.text) + '" alt="表情">';
 } else {
 b.innerHTML = '<span style="opacity:.85">' + escTxtBr(f.text) + '</span>';
 }
@@ -25652,7 +25961,7 @@ bar.appendChild(img);
 }
 const t = document.createElement('span');
 t.className = 'chat-draft-quote-text';
-const raw = lastQuote.text || '';
+const raw = quoteTextSafe(lastQuote.text || '');
 const hidePh = !!(thumb && QUOTE_PLACEHOLDER.test(raw));
 t.textContent = (raw.indexOf('data:') === 0 && raw.length > 64)
 ? (lastQuote.type === 'sticker' ? '表情包' : '图片')
@@ -25857,7 +26166,11 @@ if (window.idbGet) {
 const myPrefix = window.activePrefix();
 window.idbGet(myPrefix + ':fav-msgs').then(v => {
 if (window.activePrefix() !== myPrefix) return;
-if (v && typeof v === 'string' && v.length > 2) store.set('fav-msgs', v);
+if (v && typeof v === 'string' && v.length > 2) {
+let cur = null;
+try { cur = store.get('fav-msgs'); } catch (e) {}
+if (!cur || cur.length <= 2) store.set('fav-msgs', v);
+}
 });
 }
 } catch (e) {}
@@ -26285,7 +26598,8 @@ const vname = (vparts[0] || '语音消息').replace(/\.[^.]+$/, '');
 const vsrc = vparts[1] || '';
 b.innerHTML = quoteStr + '<div class="msg-voice" data-src="' + attrEsc(vsrc) + '">' +
 '<button class="msg-voice-play" title="播放">' +
-'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>' +
+'<svg class="voice-ico-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>' +
+'<svg class="voice-ico-pause" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>' +
 '</button>' +
 '<div class="msg-voice-wave"><i></i><i></i><i></i><i></i><i></i></div>' +
 '<span class="msg-voice-name">' + escTxt(vname) + '</span>' +
@@ -36628,6 +36942,38 @@ if (window.__divActiveDraw) { try { window.__divActiveDraw(); } catch (e) {} win
 const r = document.getElementById('div-result');
 if (r) r.innerHTML = '<div class="div-result-empty">点击上方按钮开始抽牌</div>';
 }
+let divineTarget = '';
+function escHtml(s) {
+return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function contactsList() {
+try { return (window.getContacts ? window.getContacts() : []) || []; } catch (e) { return []; }
+}
+function targetName(cid) {
+const c = contactsList().filter(x => x && x.id === cid)[0];
+return c ? (c.name || '未命名') : '';
+}
+function renderTargets() {
+const wrap = document.getElementById('div-targets');
+if (!wrap) return;
+const list = contactsList();
+if (divineTarget && !list.some(c => c && c.id === divineTarget)) divineTarget = '';
+let html = '<button class="div-mode div-target' + (divineTarget ? '' : ' sel') + '" data-tcid="">不选对象</button>';
+list.forEach(c => {
+if (!c) return;
+html += '<button class="div-mode div-target' + (divineTarget === c.id ? ' sel' : '') + '" data-tcid="' + escHtml(c.id) + '">' + escHtml(c.name || '未命名') + '</button>';
+});
+wrap.innerHTML = html;
+}
+const targetsWrap = document.getElementById('div-targets');
+if (targetsWrap) {
+targetsWrap.addEventListener('click', (e) => {
+const b = e.target.closest('.div-target');
+if (!b) return;
+divineTarget = b.dataset.tcid || '';
+renderTargets();
+});
+}
 function autoSendGet() { try { return store.get('divine-send-auto') === '1'; } catch (e) { return false; } }
 function autoSendSet(on) { try { store.set('divine-send-auto', on ? '1' : '0'); } catch (e) {} }
 function syncAutoToggle() {
@@ -36839,11 +37185,50 @@ merge(base);
 merge([]);
 }
 }
+let recPendings = [];
+function targetHistSave(cid, rec) {
+if (!cid) return;
+if (!histReady) { recPendings.push({ cid: cid, rec: rec }); return; }
+targetHistMerge(cid, [rec]);
+}
+function targetHistMerge(cid, recs) {
+const targetPrefix = 'xy-home-v2:' + cid;
+const finish = (base) => {
+const merged = base.concat(recs.filter(r => r && r.ts !== undefined));
+merged.sort((a, b) => (b.ts || 0) - (a.ts || 0));
+const have = {};
+const out = [];
+merged.forEach(x => {
+if (!x || x.ts === undefined || have[x.ts]) return;
+have[x.ts] = true; out.push(x);
+});
+try { window.storeFor(cid).set('records-divine', JSON.stringify(out.slice(0, 100))); } catch (e) {}
+};
+if (window.idbGet) {
+window.idbGet(targetPrefix + ':records-divine').then(v => {
+let base = [];
+try { const p = typeof v === 'string' ? JSON.parse(v) : v; if (Array.isArray(p)) base = p; } catch (e) {}
+finish(base);
+}).catch(() => finish([]));
+} else {
+let base = [];
+try { const p = JSON.parse(window.storeFor(cid).get('records-divine') || '[]'); if (Array.isArray(p)) base = p; } catch (e) {}
+finish(base);
+}
+}
+function flushPendingRecs() {
+if (!recPendings.length) return;
+const pendings = recPendings; recPendings = [];
+const byCid = {};
+pendings.forEach(p => { (byCid[p.cid] || (byCid[p.cid] = [])).push(p.rec); });
+Object.keys(byCid).forEach(cid => { try { targetHistMerge(cid, byCid[cid]); } catch (e) {} });
+}
 try {
 document.addEventListener('mochi-restore-done', function () {
 histReady = true;
 migrateLegacyHist();
 flushPendingHist();
+flushPendingRecs();
 try { renderHistory(); } catch (e) {}
 });
 } catch (e) {}
@@ -36972,7 +37357,7 @@ return;
 }
 if (window.__divActiveDraw) { try { window.__divActiveDraw(); } catch (e) {} window.__divActiveDraw = null; }
 const question = ((document.getElementById('div-question') || {}).value || '').trim();
-const snapMode = mode, snapCount = count;
+const snapMode = mode, snapCount = count, snapTarget = divineTarget;
 const deck = snapMode === 'tarot' ? TAROT : LENO;
 if (!deck.length) { r.innerHTML = '<div class="div-result-empty">占卜牌库加载中…</div>'; return; }
 const labels = (MODE_LABELS[snapMode] && MODE_LABELS[snapMode][snapCount]) || [];
@@ -36987,10 +37372,15 @@ window.__divActiveDraw = null;
 drawBtn.textContent = '重新抽牌';
 const summary = buildSummary(cards, snapMode, question);
 renderDrawResult(cards, snapMode, question, summary);
+if (snapTarget) {
+targetHistSave(snapTarget, { ts: Date.now(), mode: snapMode, count: snapCount, question: question, cards: cards, summary: summary, target: targetName(snapTarget) });
+toast('已存入主页 · 占卜记录（' + (targetName(snapTarget) || '对象') + '）');
+} else {
 const list = histLoad();
 list.unshift({ ts: Date.now(), mode: snapMode, count: snapCount, question: question, cards: cards, summary: summary });
 histSave(list);
 renderHistory();
+}
 if (autoSendGet()) {
 const myCid = window.__activeCid || 'default';
 setTimeout(() => { if ((window.__activeCid || 'default') !== myCid) return; sendToChat(snapMode, cards, summary, question); }, 500);
@@ -37024,6 +37414,7 @@ if (phonePage) phonePage.hidden = false;
 }
 function renderHistOnOpen() {
 try { renderHistory(); } catch (e) {}
+try { renderTargets(); } catch (e) {}
 try { syncAutoToggle(); } catch (e) {}
 }
 renderHistOnOpen();
@@ -37047,6 +37438,7 @@ window.divineHistSave = histSave;
 window.divineAutoGet = autoSendGet;
 window.divineAutoSet = autoSendSet;
 window.divineBuildSummary = buildSummary;
+window.divineRenderResult = renderDrawResult;
 window.divineBuildResultText = buildResultText;
 window.divineCopyResultText = copyResultText;
 window.divineSendResult = function (m, cards, summary, question) { sendToChat(m, cards, summary, question); };
@@ -41343,6 +41735,26 @@ return v === '1';
 window.setDeskCallEn = function (en) {
 try { window.xyStore(ROOT).set(CALL_EN_KEY, en ? '1' : '0'); } catch (e) {}
 };
+const DMODE_KEY = 'desk-freq-mode';
+const DMODES = {
+freq:  { label: '频繁', prob: 6,  cool: 15 },   // 概率 6% · 冷却 15 分钟
+std:   { label: '标准', prob: 2,  cool: 30 },   // 概率 2% · 冷却 30 分钟
+quiet: { label: '安静', prob: 1,  cool: 180 }   // 概率 1% · 冷却 3 小时（默认，最低打扰）
+};
+function deskFreqMode() {
+try {
+const v = window.xyStore(ROOT).get(DMODE_KEY);
+if (v && DMODES[v]) return v;
+} catch (e) {}
+return 'quiet';
+}
+window.setDeskFreqMode = function (m) {
+try { window.xyStore(ROOT).set(DMODE_KEY, DMODES[m] ? m : 'quiet'); } catch (e) {}
+};
+function deskDMode() {
+try { return DMODES[deskFreqMode()]; } catch (e) {}
+return DMODES.quiet;
+}
 function addSettingToggle(conf) {
 try {
 if (document.getElementById(conf.id + '-row')) return;
@@ -41392,7 +41804,7 @@ ico: '<svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" s
 title: '联系人跨桌面查岗',
 subTag: '功能说明',
 tagTitle: '联系人跨桌面查岗',
-detail: '其他桌面的联系人是各自独立触发、互不影响：TA 每 60 秒「探测」一次你是否还醒着，每人按自己的概率触发（默认约 2%，可在 设置→回复速度→跨桌面查岗概率 里逐联系人调整）；同一联系人触发后会有 30 分钟冷却、不重复打扰。你回复后 TA 会现场回应。关闭后其他桌面的 TA 不再来查岗、也不再找你聊天。',
+detail: '其他桌面的联系人是各自独立触发、互不影响：TA 每 60 秒「探测」一次你是否还醒着，触发频率按「跨桌面查岗频率」三档模式全局统一控制（频繁/标准/安静，下方可选，含来电）；同一联系人触发后有冷却、不重复打扰。你回复后 TA 会现场回应。关闭后其他桌面的 TA 不再来查岗、也不再找你聊天。',
 get: deskCheckinEn,
 set: window.setDeskCheckinEn,
 toast: function (en) { return en ? '已开启：其他桌面的TA会来查岗、找你聊天' : '已关闭：其他桌面的TA不再来查岗打扰'; }
@@ -41408,7 +41820,81 @@ get: deskCallEn,
 set: window.setDeskCallEn,
 toast: function (en) { return en ? '已开启：其他桌面的TA会主动给你打电话' : '已关闭：其他桌面的TA不再主动来电'; }
 });
+addFreqModeRow();
 })();
+var freqDetail = '「跨桌面查岗 / 来电」的频率按全局档位统一生效（对所有桌面联系人同时生效）：' +
+'\n· 频繁：概率 6%、冷却 15 分钟；' +
+'\n· 标准：概率 2%、冷却 30 分钟；' +
+'\n· 安静：概率 1%、冷却 3 小时（默认）。' +
+'\n\n选档后立即对所有桌面的联系人生效，改一次全绿。只影响「联系人跨桌面查岗 / 来电」的触发频率，不影响桌面上 TA 主动查岗（主动查岗仍按回复设置里各自的概率/冷却）。';
+function syncFreqPills() {
+try {
+const cur = deskFreqMode();
+const wrap = document.getElementById('sf-desk-freq');
+if (!wrap) return;
+wrap.querySelectorAll('.pill').forEach(function (b) {
+b.classList.toggle('on', b.dataset.m === cur);
+b.setAttribute('aria-pressed', b.dataset.m === cur ? 'true' : 'false');
+});
+} catch (e) {}
+}
+function addFreqModeRow() {
+try {
+if (document.getElementById('sf-desk-freq')) return;
+const anchor = document.getElementById('sf-desk-call-row') ||
+document.getElementById('sf-desk-checkin-row') ||
+document.getElementById('sf-group-chat-row');
+if (!anchor) return;
+const row = document.createElement('div');
+row.className = 'set-row';
+row.id = 'sf-desk-freq';
+row.style.cssText = 'flex-direction:column;align-items:stretch;gap:10px;';
+row.innerHTML =
+'<div class="freq-head" style="display:flex;align-items:center;gap:12px;min-width:0;">' +
+'<div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>' +
+'<div class="txt">跨桌面查岗频率<span class="tag" id="sf-desk-freq-tag" role="button" tabindex="0" aria-haspopup="dialog">功能说明</span></div>' +
+'</div>' +
+'<div class="freq-pills" style="display:flex;gap:8px;flex-wrap:nowrap;padding-left:34px;"></div>';
+const wrap = row.querySelector('.freq-pills');
+['freq', 'std', 'quiet'].forEach(function (m) {
+const b = document.createElement('button');
+b.type = 'button';
+b.className = 'pill';
+b.dataset.m = m;
+b.setAttribute('aria-pressed', 'false');
+b.style.cssText = 'flex:1;padding:8px 0;text-align:center;min-width:0;';
+b.textContent = DMODES[m].label;
+b.addEventListener('click', function () {
+window.setDeskFreqMode(m);
+syncFreqPills();
+try { if (typeof window.openModal === 'function') window.openModal('跨桌面查岗频率', '', function () {}, { noInput: true, staticText: '已切换为「' + DMODES[m].label + '」频率：概率 ' + DMODES[m].prob + '%、冷却 ' + (DMODES[m].cool < 60 ? DMODES[m].cool + ' 分钟' : (DMODES[m].cool / 60) + ' 小时') + '。已对所有桌面联系人生效。' }); } catch (e) {}
+});
+wrap.appendChild(b);
+});
+anchor.parentNode.insertBefore(row, anchor.nextSibling);
+try {
+const setGroup = row.parentNode;
+['sf-desk-checkin-row', 'sf-desk-call-row', 'sf-desk-freq'].forEach(function (id) {
+const el = setGroup.querySelector('#' + id);
+if (el) setGroup.appendChild(el);
+});
+} catch (e) {}
+const tagEl = row.querySelector('#sf-desk-freq-tag');
+if (tagEl && typeof window.openModal === 'function') {
+const showDetail = function (e) {
+if (e) { e.stopPropagation(); e.preventDefault(); }
+window.openModal('跨桌面查岗频率', '', function () {}, { noInput: true, staticText: freqDetail });
+};
+tagEl.addEventListener('click', showDetail);
+tagEl.addEventListener('keydown', function (e) {
+if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); showDetail(); }
+});
+}
+syncFreqPills();
+document.addEventListener('contact-switched', syncFreqPills);
+document.addEventListener('mochi-restore-done', syncFreqPills);
+} catch (e) {}
+}
 function rootGet(k) { try { return window.xyStore(ROOT).get(k); } catch (e) { return null; } }
 function rootSet(k, v) { try { window.xyStore(ROOT).set(k, v); } catch (e) {} }
 function queue() {
@@ -41615,16 +42101,18 @@ if (cid === cur) return; // 激活桌面不跨桌面打扰（由原 tryAutoSend 
 if (hasPending(cid)) return; // 已有未处理申请，不重复
 const cfg = cfgFor(cid);
 if (deskCallEn() && !document.hidden) {
-const callCool = num(cfg, 'ckq-cool', 30);
-const callProb = num(cfg, 'desk-call-prob', 2);
+const dm = deskDMode();
+const callCool = dm.cool;
+const callProb = dm.prob;
 if (Date.now() - lastAt(cid, 'call') >= callCool * 60000 && Math.random() * 100 < callProb) {
 deliver({ cid: cid, kind: 'call', text: '', ts: Date.now(), status: 'pending' });
 return;
 }
 }
 if (deskCheckinEn() && num(cfg, 'ckq-en', 0) === 1) {
-const cool = num(cfg, 'ckq-cool', 30);
-const prob = num(cfg, 'ckq-prob', 2);
+const dm = deskDMode();
+const cool = dm.cool;
+const prob = dm.prob;
 if (Date.now() - lastAt(cid, 'checkin') >= cool * 60000 && Math.random() * 100 < prob) {
 const q = window.ckQuestionPickFor ? window.ckQuestionPickFor(cid) : null;
 if (q && q.text) {
@@ -43317,6 +43805,34 @@ return '<div class="tc-listitem"><div class="tc-li-top"><span class="tc-li-q">' 
 '<div class="tc-li-line">' + sub + '</div></div>';
 }).join('');
 }
+function renderDivinePanel() {
+const el = document.getElementById('home-divine');
+if (!el) return;
+const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+const list = histList('records-divine');
+if (!list.length) {
+el.innerHTML = '<div class="ta-empty">暂无占卜记录（在「占卜」页选择对象抽牌后，牌面与解读自动存入这里）</div>';
+return;
+}
+el.innerHTML = list.map((h, i) => {
+const n = Array.isArray(h.cards) ? h.cards.length : (h.count || 0);
+const cardsTxt = Array.isArray(h.cards) ? h.cards.map(c => ((c && c.name) || '') + (c && c.rev ? '(逆)' : '')).join('、') : '';
+const title = (h.mode === 'tarot' ? '塔罗' : '雷诺曼') + ' · ' + n + ' 张' + (h.target ? ' · 为 ' + esc(h.target) + ' 占卜' : '');
+return '<div class="tc-listitem"><div class="tc-li-top"><span class="tc-li-q">🔮 ' + title +
+(h.question ? ' · 问：' + esc(h.question) : '') + '</span><span class="tc-li-time">' + fmtDT(h.ts) + '</span></div>' +
+(cardsTxt ? '<div class="tc-li-line">' + esc(cardsTxt) + '</div>' : '') +
+(h.summary ? '<div class="tc-li-line">' + (window.taFit ? window.taFit(esc(h.summary)) : esc(h.summary)) + '</div>' : '') +
+'<button class="div-h-view hd-view" data-di="' + i + '">查看牌面</button></div>';
+}).join('');
+el.querySelectorAll('.hd-view').forEach(b => b.addEventListener('click', () => {
+const h = histList('records-divine')[parseInt(b.dataset.di, 10)];
+if (!h || !Array.isArray(h.cards) || !window.divineRenderResult) return;
+document.querySelectorAll('.page').forEach(p => p.hidden = true);
+const dp = document.getElementById('page-divine');
+if (dp) dp.hidden = false;
+try { window.divineRenderResult(h.cards, h.mode, h.question || '', h.summary || ''); } catch (e) {}
+}));
+}
 function histList(key) { try { return JSON.parse(store.get(key) || '[]'); } catch (e) { return []; } }
 let htab = 'av';
 window.renderFishHistory = function () {
@@ -43381,6 +43897,9 @@ renderRpPanel();
 }
 if (showOnly === 'care') {
 renderCarePanel();
+}
+if (showOnly === 'divine') {
+renderDivinePanel();
 }
 if (showOnly === 'av') {
 const avEl = document.getElementById('home-av');
@@ -48695,12 +49214,15 @@ const dayHist = allHist.filter(h => { try { return dayStr(new Date(h.ts)) === lo
 const dayIdx = days.indexOf(locViewDate);
 let html = '';
 const LOC_LABEL = window.locLibLabel || function (t) { return t; };
-html += '<div class="loc-sense-box"><div class="loc-sense-title">你感觉到的</div><div class="loc-sense-text">' + esc(senseDesc(cur)) + '</div></div>';
-html += '<div class="loc-section"><div class="loc-sec-title">TA 此刻的位置</div>';
-html += '<div class="loc-sec-value">' + (cur
-? esc(cur.text) + '<span class="loc-sec-sub">' + (LOC_LABEL[cur.type] || (cur.type === 'combo' ? '组合' : '')) + ' · ' + fmtT(cur.ts) + '</span>'
-: '— 还没有位置卡') + '</div></div>';
-html += '<div class="loc-section"><div class="loc-sec-title">位置时间线（按日查看）</div>';
+html += '<div class="loc-sense-box"><div class="loc-sense-head"><span class="loc-sense-dot"></span><span class="loc-sense-title">你感觉到的</span></div><div class="loc-sense-text">' + esc(senseDesc(cur)) + '</div></div>';
+html += '<div class="loc-section"><div class="loc-sec-title">此刻的位置</div>';
+if (cur) {
+html += '<div class="loc-now"><span class="loc-now-pin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-5.5-7-11a7 7 0 0114 0c0 5.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.6"/></svg></span><div class="loc-now-main"><div class="loc-sec-value">' + esc(cur.text) + '</div><div class="loc-sec-sub">' + (LOC_LABEL[cur.type] || (cur.type === 'combo' ? '组合' : '位置卡')) + ' · ' + fmtT(cur.ts) + '</div></div></div>';
+} else {
+html += '<div class="loc-sec-value loc-empty">— 还没有位置卡</div>';
+}
+html += '</div>';
+html += '<div class="loc-section"><div class="loc-sec-title">位置时间线</div>';
 html += '<div class="loc-day-switch"><button class="loc-day-btn" id="loc-day-prev"' + (dayIdx >= days.length - 1 ? ' disabled' : '') + '>‹</button><span class="loc-day-label">' + dayLabel(locViewDate) + '</span><button class="loc-day-btn" id="loc-day-next"' + (dayIdx <= 0 ? ' disabled' : '') + '>›</button></div>';
 if (dayHist.length) {
 html += '<div class="loc-timeline">' + dayHist.map(h => {
@@ -48722,10 +49244,11 @@ if (prevBtn) prevBtn.addEventListener('click', () => { if (dayIdx < days.length 
 const nextBtn = document.getElementById('loc-day-next');
 if (nextBtn) nextBtn.addEventListener('click', () => { if (dayIdx > 0) { locViewDate = days[dayIdx - 1]; renderLocPanel(); } });
 }
-function openLocPanel() {
+function openLocPanel(full) {
 const panel = document.getElementById('loc-panel');
 const nameEl = document.getElementById('loc-name');
 if (nameEl) nameEl.textContent = store.get('lbl-partner') || 'TA';
+if (panel) panel.classList.toggle('loc-full', !!full);
 if (window.refreshSense) window.refreshSense();
 renderLocPanel();
 if (panel) panel.hidden = false;
@@ -48734,14 +49257,16 @@ if (ck) ck.hidden = true;
 }
 function closeLocPanel() {
 const panel = document.getElementById('loc-panel');
-if (panel) panel.hidden = true;
+if (panel) { panel.hidden = true; panel.classList.remove('loc-full'); }
 }
 const entry = document.getElementById('ck-loc-entry');
-if (entry) entry.addEventListener('click', openLocPanel);
+if (entry) entry.addEventListener('click', () => openLocPanel(false));
 const entryDesk = document.getElementById('ck-loc-entry-desk');
-if (entryDesk) entryDesk.addEventListener('click', openLocPanel);
+if (entryDesk) entryDesk.addEventListener('click', () => openLocPanel(true));
 const closeBtn = document.getElementById('loc-close');
 if (closeBtn) closeBtn.addEventListener('click', closeLocPanel);
+const locBack = document.getElementById('loc-back');
+if (locBack) locBack.addEventListener('click', closeLocPanel);
 try {
 if (window.idbGet && !store.get('loc-history')) {
 const myPrefix = window.activePrefix();
@@ -56681,7 +57206,7 @@ var dexSearch = "", dexSeason = -1;
 var TABS = [
 { id: "garden", n: "\u82B1\u56ED", e: "\uD83C\uDF31" },
 { id: "dex", n: "\u56FE\u9274", e: "\uD83D\uDCD6" },
-{ id: "craft", n: "\u5DE5\u574A", e: "\uD83D\uDC83" },
+{ id: "craft", n: "\u5DE5\u574A", e: "\uD83E\uDDE4" },
 { id: "shop", n: "\u88C5\u9970", e: "\uD83C\uDFE0" },
 { id: "achv", n: "\u6210\u5C31", e: "\uD83C\uDFC6" },
 { id: "report", n: "\u5E74\u62A5", e: "\uD83D\uDCCA" }
@@ -60173,6 +60698,34 @@ canvas.width = Math.round(cssW * dpr);
 canvas.height = Math.round(cssH * dpr);
 ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
+function fitNonFsCanvas() {
+GW = 15; GH = 15;                // 半框固定 15×15 基准
+const sc = panel.querySelector('.poke-card-scroll');
+let availH = window.innerHeight || 200;   // 面板隐藏/未布局时拿不到可用高度，退回足够大
+if (sc && sc.clientHeight > 0) {
+availH = sc.clientHeight;
+sc.querySelectorAll('.snake-score,.snake-best,.snake-hint,.snake-result:not([hidden]),.snake-controls,.snake-dpad').forEach(function (el) {
+if (el.hidden) return;
+const st = getComputedStyle(el);
+availH -= el.offsetHeight + (parseFloat(st.marginTop) || 0) + (parseFloat(st.marginBottom) || 0);
+});
+const st = getComputedStyle(sc);
+availH -= (parseFloat(st.paddingTop) || 0) + (parseFloat(st.paddingBottom) || 0) + 16;   // gap 余量
+}
+const availW = (sc && sc.clientWidth) || 360;
+const size = Math.round(Math.min(360, Math.max(160, Math.min(availW, availH))));
+cssW = size; cssH = size;
+canvas.style.width = cssW + 'px';
+canvas.style.height = cssH + 'px';
+}
+function refitNonFs() {
+if (!canvas || !panel || panel.hidden || isFs) return;
+fitNonFsCanvas();
+canvas.width = Math.round(cssW * dpr);
+canvas.height = Math.round(cssH * dpr);
+if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+render(0);
+}
 function setupCanvas() {
 if (!canvas) return;
 dpr = Math.min(window.devicePixelRatio || 1, 3);
@@ -60187,10 +60740,7 @@ cssW = Math.round(cell * gW()); cssH = Math.round(cell * gH());
 canvas.style.width = cssW + 'px';
 canvas.style.height = cssH + 'px';
 } else {
-GW = 15; GH = 15;                // 半框固定 15×15 基准
-cssW = 360; cssH = 360;
-canvas.style.width = '';
-canvas.style.height = '';
+fitNonFsCanvas();
 }
 canvas.width = Math.round(cssW * dpr);
 canvas.height = Math.round(cssH * dpr);
@@ -60336,6 +60886,7 @@ if (restartBtn) restartBtn.hidden = true;
 if (resumeBtn) resumeBtn.hidden = true;
 if (resultEl) { resultEl.hidden = true; resultEl.innerHTML = ''; }
 newGame(diff);
+refitNonFs();   // 结算块/开始按钮收起后，画布放回一米可见的尺寸
 fitCanvasBox();   // 开始按钮随即隐藏，重适配画布吸收腾出的空间（不改格数）
 render(0);
 let n = 3;
@@ -60714,6 +61265,7 @@ void resultEl.offsetWidth;
 resultEl.classList.add('snake-res-pop');
 if (restartBtn) restartBtn.hidden = false;
 if (hintEl) hintEl.textContent = '再来一局？';
+refitNonFs();   // 结算块+再来一局出现后，重新收小画布让下方方向键一屏可见
 }
 function render(alpha) {
 if (!ctx || !state) return;
@@ -61715,8 +62267,14 @@ if (el && el.offsetHeight) used += el.offsetHeight;
 const cs = getComputedStyle(panel);
 const availW = window.innerWidth - 20 - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
 const availH = Math.max(160, window.innerHeight - used - (parseFloat(cs.paddingTop) || 0) - (parseFloat(cs.paddingBottom) || 0) - 14);
-let cw = availW, ch = Math.round(cw * H / W);
+let cw, ch;
+if (window.innerHeight >= window.innerWidth) {
+ch = availH; cw = Math.round(ch * W / H);
+if (cw > availW) { cw = availW; ch = Math.round(cw * H / W); }
+} else {
+cw = availW; ch = Math.round(cw * H / W);
 if (ch > availH) { ch = availH; cw = Math.round(ch * W / H); }
+}
 canvas.style.width = cw + 'px';
 canvas.style.height = ch + 'px';
 if (box) { box.style.width = cw + 'px'; box.style.height = ch + 'px'; }
@@ -61960,7 +62518,7 @@ if (savedBalls >= 1 && savedBalls <= 3 && ballsSel) ballsSel.value = String(save
 const bn = targetBallCount();
 showOverlay(T('双人打砖块'),
 '<div class="pong-start-tip">你和' + T('TA') + '各守半场共接' + (bn > 1 ? bn + ' 颗球' : '同一颗球') + '<br>清光砖块进入下一层 · 共 3 次失误机会</div>' +
-'<div class="pong-start-ctrl">手机：按住画面左右拖动<br>电脑：A/D 或 ← →</div>' +
+'<div class="pong-start-ctrl">按住画面左右拖动</div>' +
 (best > 0 ? '<div class="pong-end-stat">历史最佳 ' + best + ' 分</div>' : ''),
 '开始');
 if (overlayCloseBtn) overlayCloseBtn.hidden = true;
@@ -62787,6 +63345,21 @@ if (livesEl) livesEl.textContent = st.started ? heartsStr() : '';
 if (progEl) progEl.textContent = st.started ? '已探索 ' + openCount() + ' / ' + safeTotal() : '';
 }
 function setStatus(html) { if (statusEl) statusEl.innerHTML = html; }
+const talkEl = document.getElementById('ms-talk');
+let talkHideT = null;
+function taTalk(text) {
+if (!talkEl) return;
+const bubble = talkEl.querySelector('.ms-talk-bubble');
+if (bubble) {
+bubble.innerHTML = '<span class="ms-talk-name">' + taName().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</span>' + text;
+talkEl.hidden = false;
+bubble.style.animation = 'none';
+void bubble.offsetWidth;
+bubble.style.animation = '';
+}
+clearTimeout(talkHideT);
+talkHideT = setTimeout(() => { if (talkEl) talkEl.hidden = true; }, 4000);
+}
 function shakeCell(i) {
 const cell = cellAt(i);
 if (!cell) return;
@@ -62817,7 +63390,7 @@ const lines = kind === 'flower'
 ? ['挖到一朵小花，「这个给你。」', '发现了这个，觉得很适合你。']
 : ['挖到了一个小礼物，「这个给你。」', '发现了这个，「送你呀。」'];
 const say = pick(lines) || lines[0];
-if (window.chatAddIn) window.chatAddIn(T(say), { silent: true });
+if (say) taTalk(say);
 } catch (e) {}
 }, 700);
 }
@@ -62999,7 +63572,7 @@ const fb = win
 ? ['一起找完了。', '我们配合得不错嘛。', '全部清完啦，开心。', '这一片雷区都清理干净了。']
 : ['差一点点而已，再来！', '下次小心一点就好。', '没事，再来一次？'];
 const say = (fb.length ? pick(fb) : fb[0]) || 'ok';
-setTimeout(() => { try { if (window.chatAddIn) window.chatAddIn(T(say), { silent: true }); } catch (e) {} }, 900);
+setTimeout(() => { try { if (say) taTalk(say); } catch (e) {} }, 900);
 } catch (e) {}
 }
 function pillsHtml() {
@@ -64569,6 +65142,7 @@ const ctx = ensureCtx();
 if (!ctx) return;
 const buf = builtinBuffer(ctx, id);
 if (!buf) return;
+const start = () => {
 let src;
 try {
 src = ctx.createBufferSource();
@@ -64584,6 +65158,13 @@ if (loop) {
 if (ringSrc) { try { ringSrc.stop(); } catch (e) {} }
 ringSrc = src;
 }
+};
+if (ctx.state === 'running') { start(); return; }
+try {
+const p = ctx.resume();
+if (p && p.then) p.then(start).catch(function () {});
+else start();
+} catch (e) { start(); }
 }
 window.playSfx = function (type, opts) {
 try {
@@ -64631,10 +65212,7 @@ return { custom: false, id: 'none', label: '静音' };
 }
 return { custom: false, id: bid, label: PRESET_NAMES[bid] };
 }
-function bindUpload(key, id) {
-const btn = document.getElementById(id);
-if (!btn) return;
-btn.addEventListener('click', () => {
+function handleUpload(type) {
 const input = document.createElement('input');
 input.type = 'file';
 input.accept = 'audio/*';
@@ -64645,34 +65223,40 @@ if (f.size > 3 * 1024 * 1024) { toast('音频较大（>3MB），可能占用较�
 toast('正在读取音频…');
 const reader = new FileReader();
 reader.onload = () => {
-store.set(KEYS[key], reader.result);
-store.remove(BKEYS[key]); // 切换到自定义，清掉内置选择避免胶囊高亮歧义
-updateVals();
-renderPresets(key, PRESET_CONTAINERS[key]);
-toast(NAMES[key] + '已设置为自定义音频');
+store.set(KEYS[type], reader.result);
+store.remove(BKEYS[type]); // 切换到自定义，清掉内置选择避免胶囊高亮歧义
+renderAllSfx();
+toast(NAMES[type] + '已设置为自定义音频');
 };
 reader.onerror = () => { toast('音频读取失败'); };
 reader.readAsDataURL(f);
 };
 input.click();
-});
 }
-function bindPlay(key, id) {
-const btn = document.getElementById(id);
-if (!btn) return;
-btn.addEventListener('click', () => {
-window.playSfx(key, { loop: false });
-});
+function handleClear(type) {
+store.remove(KEYS[type]);
+renderAllSfx();
+toast(NAMES[type] + '自定义音频已清除');
 }
-function bindClear(key, id) {
-const btn = document.getElementById(id);
-if (!btn) return;
-btn.addEventListener('click', () => {
-store.remove(KEYS[key]);
-updateVals();
-renderPresets(key, PRESET_CONTAINERS[key]);
-toast(NAMES[key] + '自定义音频已清除');
-});
+function renderTools(type, containerId) {
+const el = document.getElementById(containerId);
+if (!el) return;
+el.innerHTML = '';
+const st = sfxState(type);
+const mk = (cls, label, cb) => {
+const b = document.createElement('button');
+b.type = 'button';
+b.className = cls;
+b.textContent = label;
+b.addEventListener('click', cb);
+el.appendChild(b);
+};
+if (st.custom) {
+mk('cc-tool', '试听自定义', () => { window.playSfx(type, { loop: false }); });
+mk('cc-tool cc-tool-danger', '清除自定义', () => handleClear(type));
+} else {
+mk('cc-tool', '上传自定义音频', () => handleUpload(type));
+}
 }
 function updateVals() {
 [['ring', 'sfx-ring-val'], ['in', 'sfx-in-val'], ['out', 'sfx-out-val']].forEach((pair) => {
@@ -64694,28 +65278,22 @@ b.textContent = (id === 'none') ? '静音' : (PRESET_NAMES[id] || id);
 b.addEventListener('click', () => {
 if (store.get(KEYS[type])) store.remove(KEYS[type]);
 store.set(BKEYS[type], id);
-updateVals();
-renderPresets(type, containerId);
+renderAllSfx();
 if (id === 'none') toast(NAMES[type] + '音效已静音');
 else window.playSfx(type, { loop: false });
 });
 el.appendChild(b);
 });
 }
-function renderAllPresets() {
+function renderAllSfx() {
 renderPresets('ring', PRESET_CONTAINERS.ring);
 renderPresets('in', PRESET_CONTAINERS.in);
 renderPresets('out', PRESET_CONTAINERS.out);
+renderTools('ring', 'sfx-ring-tools');
+renderTools('in', 'sfx-in-tools');
+renderTools('out', 'sfx-out-tools');
+updateVals();
 }
-bindUpload('ring', 'sfx-ring-upload');
-bindPlay('ring', 'sfx-ring-play');
-bindClear('ring', 'sfx-ring-clear');
-bindUpload('in', 'sfx-in-upload');
-bindPlay('in', 'sfx-in-play');
-bindClear('in', 'sfx-in-clear');
-bindUpload('out', 'sfx-out-upload');
-bindPlay('out', 'sfx-out-play');
-bindClear('out', 'sfx-out-clear');
 try {
 if (window.idbGet) {
 const myPrefix = window.activePrefix();
@@ -64725,17 +65303,14 @@ if (window.activePrefix() !== myPrefix) return;
 if (v && typeof v === 'string' && v.length > 2 && !store.get(key)) {
 store.set(key, v);
 }
-updateVals();
-renderAllPresets();
+renderAllSfx();
 });
 });
 }
 } catch (e) {}
-renderAllPresets();
-updateVals();
+renderAllSfx();
 document.addEventListener('contact-switched', () => {
-updateVals();
-renderAllPresets();
+renderAllSfx();
 });
 document.addEventListener('click', (e) => {
 if (e.target && e.target.closest && e.target.closest('#row-sfx-settings')) {
@@ -64781,6 +65356,21 @@ return typeof document.documentElement.requestFullscreen === 'function'
 }
 function isFullscreen() {
 return !!(document.fullscreenElement || document.webkitFullscreenElement);
+}
+function viewportLandscape() {
+if (!(window.innerWidth > window.innerHeight)) return false;
+try {
+const t = screen.orientation && screen.orientation.type;
+if (typeof t === 'string' && t) {
+if (/^portrait/i.test(t)) return false;
+if (/^landscape/i.test(t)) return true;
+}
+} catch (e) {}
+try {
+const o = window.orientation;
+if (typeof o === 'number' && !isNaN(o) && Math.abs(o) % 180 === 0) return false;
+} catch (e) {}
+return true;
 }
 function fsVisualActive() {
 const d = document.documentElement;
@@ -64873,7 +65463,7 @@ let left = 4000;
 const tick = () => {
 left -= 300;
 if (!isFullscreen() && !document.documentElement.classList.contains('fs-active')) { stopFsMonitor(); return; }
-if (window.innerWidth > window.innerHeight) { onLandscapeDetected(); return; }
+if (viewportLandscape()) { onLandscapeDetected(); return; }
 if (left <= 0) stopFsMonitor();
 };
 _fsMonTimer = setInterval(tick, 300);
@@ -65038,7 +65628,7 @@ if (fsSupported()) iosTryNativeFs();
 else { if (!inIosStandalone) fsToggle.checked = false; showIosGuide(); }
 return;
 }
-if (window.innerWidth > window.innerHeight) {
+if (viewportLandscape()) {
 forcePortrait(4, showRotateTip);
 return;
 }
@@ -65061,7 +65651,7 @@ applyFsCss(false, false);
 enterFs();
 syncFsClass();
 setTimeout(() => {
-if (isFullscreen() && window.innerWidth > window.innerHeight) {
+if (isFullscreen() && viewportLandscape()) {
 store.set(FB_KEY, '1');
 handleLandscapeForced();
 return;
@@ -67970,6 +68560,11 @@ var open = h < _aH - 60; // 可视高度明显变小 = 键盘弹出
 if (!open && h > _aH) _aH = h; // 无键盘时更新基准，地址栏变化不误判
 if (open && !_aKb) { _aKb = true; _aPhone.style.alignSelf = 'flex-start'; kbDockPanels(); }
 if (!open && _aKb) {
+if (h < _aH - 12) {
+if (_aPhone.style.height !== h + 'px') _aPhone.style.height = h + 'px';
+_aPinPan();
+return;
+}
 _aKb = false;
 _aPhone.style.height = '';
 _aPhone.style.alignSelf = '';
@@ -68004,7 +68599,7 @@ if (_aProv && _aVV.height >= _aH - 60 && Date.now() - _aLastAct > 2200) {
 _aProvClear();
 }
 } else if (_aKb) {
-if (_aVV.height >= _aH - 60) {
+if (_aVV.height >= _aH - 12) {
 _aKb = false;
 _aPhone.style.height = '';
 _aPhone.style.alignSelf = '';

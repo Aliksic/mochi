@@ -11,7 +11,30 @@
   // 原 768px 上限会误判为桌面（显示 390px 小手机框 + 两侧灰底）
   let isMobile = false;
   try { isMobile = window.matchMedia && window.matchMedia('(max-width: 900px)').matches; } catch (e) {}
+  let mobileRule = isMobile ? 'viewport<=900' : '';
   const ua = String(navigator.userAgent || '');
+
+  // ===== v3.26.x：手动布局偏好（识别失手时用户自救）=====
+  // 「桌面版网站」模式会把 UA / screen / 触摸能力 / layout viewport 整套仿真成桌面，
+  // 纯指纹识别必有漏网。留一条不依赖判定的通道：设置页「手机布局（强制）」开关，
+  // 或地址栏 ?mobile=1（强制手机）/ ?pc=1（强制桌面外壳），落 localStorage 长期生效。
+  // 空值 = 跟随自动判定。
+  const LAYOUT_KEY = 'xy-home-v2:__layout-pref';
+  let layoutPref = '';
+  try { layoutPref = localStorage.getItem(LAYOUT_KEY) || ''; } catch (e) {}
+  try {
+    const pq = /[?&](mobile|pc)=(\d)/.exec(location.search || '');
+    if (pq) {
+      const want = pq[2] === '1' ? pq[1] : '';
+      if (want !== layoutPref) {
+        layoutPref = want;
+        try {
+          if (want) localStorage.setItem(LAYOUT_KEY, want);
+          else localStorage.removeItem(LAYOUT_KEY);
+        } catch (e2) {}
+      }
+    }
+  } catch (e) {}
 
   // v3.7.x：iPad/平板检测——iPad 竖屏（768-834px CSS 视口）命中 isMobile 走手机全屏
   // 布局，内容被整屏拉宽（桌面图标间距巨大、气泡过宽）；iPad 横屏（≥1024px）走
@@ -28,99 +51,135 @@
     isTablet = (/iPad/i.test(ua) || plat === 'iPad') && !/android/i.test(ua) ||
       ((plat === 'MacIntel' || /Macintosh/i.test(ua)) && navigator.maxTouchPoints > 1 && 'ontouchstart' in window);
   } catch (e) {}
-  if (isTablet) { try { document.documentElement.classList.add('tablet'); } catch (e) {} }
 
-  // v3.9.x：UA 桌面伪装兜底——Edge/Via 等浏览器「桌面站点」模式把 UA 改成
-  // Windows 桌面、layout viewport 拉到 980px，上面 matchMedia('(max-width:900px)')
-  // 误判为桌面，走桌面模拟器外壳（390px 小框 + 两侧灰底），手机上显示「变小/
-  // PC 端布局」，且全屏开关成了「恢复正常大小」的开关（熄屏/重开又变小）。
-  // 物理特征兜底：触摸屏 + 窄 screen.width（设备物理 CSS 宽度，不随 UA/layout
-  // viewport 变）→ 实为手机伪装桌面，强制走手机布局。真桌面 PC 无触摸屏不命中；
-  // 平板 screen.width≥900 或已走 isTablet 分支不命中。
-  // v3.11.x：vivo Y35 + Edge 用户报修「打开仍是 PC 端，只能手动关桌面版网站」
-  // ——该场景下内核连 screen.width 都伪装成桌面大屏（≥900），上面的窄屏判断
-  // 失效。补一组不受 UA/视口/screen 伪装影响的输入特征信号：
-  //   · (pointer: coarse) / (hover: none)：主输入是手指。触屏笔电/一体机的主
-  //     指针仍是鼠标 → fine/hover，不会命中；手机开桌面模式后这两条媒体查询
-  //     反映真实硬件输入能力，不受伪装影响。
-  //   · window.orientation !== undefined：移动端内核专属 API，桌面浏览器不存在；
-  //     安卓内核即使整套伪装 UA 也保留此 API。
-  //   · UA 谎称桌面系统（Windows NT/Macintosh/X11/CrOS）。安卓/iOS 正常 UA 不含。
-  // 命中组合：触摸 + 谎称桌面系统 + （有 orientation API 或 主输入 coarse 且无
-  // hover）→ 判定手机伪装桌面。误伤面只剩「安卓平板开桌面模式」被强制手机布局
-  // （内容拉宽但可交互，优于 PC 外壳）；iPad 已在上方 isTablet 分支拦截。
-  if (!isMobile && !isTablet) {
+  // ===== 伪装桌面兜底判定（v3.9.x 起逐轮补强；v3.26.x 收进规则表）=====
+  // 场景：Edge/Via 等浏览器「桌面版网站」模式把 UA 改成 Windows 桌面、layout
+  // viewport 拉到 980px → 上面 matchMedia('(max-width:900px)') 误判为桌面，手机
+  // 显示成「390px 小框 + 两侧灰底」的 PC 外壳，且连带全屏判定失效。
+  // v3.26.x 的关键修正：前三条规则都要求触摸信号为真（maxTouchPoints>0 或
+  // ontouchstart），而 Edge 安卓桌面模式会把触摸能力一并仿真掉 → 四条全落空。
+  // 现补一组不依赖触摸的规则（下列 4~8），并保留原规则不动。
+  const sig = {
+    sw: 0, sh: 0, touch: false, uaDesk: false, uaMobile: false, oriApi: false,
+    coarse: false, hoverNone: false, vvW: 0, uchMobile: false, uchAndroid: false
+  };
+  try {
+    sig.sw = screen.width || screen.availWidth || 0;
+    sig.sh = screen.height || screen.availHeight || 0;
+    sig.touch = (navigator.maxTouchPoints || 0) > 0 || 'ontouchstart' in window;
+    sig.uaDesk = /Windows NT|Macintosh|X11|CrOS/i.test(ua);
+    sig.uaMobile = /Android|iPhone|iPod|Mobile/i.test(ua);
+    sig.oriApi = typeof window.orientation !== 'undefined';
+    if (window.matchMedia) {
+      sig.coarse = !!window.matchMedia('(pointer: coarse)').matches;
+      sig.hoverNone = !!window.matchMedia('(hover: none)').matches;
+    }
+    sig.vvW = (window.visualViewport && window.visualViewport.width) || 0;
+    // UA-CH（Chromium 系 client hints）：桌面模式改的多是 UA 字符串本身，
+    // 低熵值 platform/mobile 常与真实内核保持一致，作为附加信号（不做唯一依据）
+    const uch = navigator.userAgentData;
+    if (uch) {
+      sig.uchMobile = uch.mobile === true;
+      sig.uchAndroid = /android/i.test(String(uch.platform || ''));
+    }
+  } catch (e) {}
+  // screen.width<900：设备物理 CSS 宽，桌面显示器 ≥1024，不随窗口缩放
+  const narrowScreen = sig.sw > 0 && sig.sw < 900;
+  // 竖屏手机外形：窄 + 明显高过宽。真桌面即便窄也横向居多
+  const phoneShaped = narrowScreen && sig.sh >= sig.sw * 1.25;
+  // 移动端内核/手指输入特征（这两条媒体查询反映硬件，桌面模式改不掉）
+  const mobileInput = sig.coarse && sig.hoverNone;
+  const RULES = [
+    ['narrow-screen+touch', sig.touch && narrowScreen],
+    ['vv<=900+touch', sig.touch && sig.vvW > 0 && sig.vvW <= 900],
+    ['desktop-ua+touch', sig.touch && sig.uaDesk && (sig.oriApi || mobileInput)],
+    ['mobile-ua+narrow-screen', sig.uaMobile && narrowScreen],
+    ['desktop-ua+phone-screen', sig.uaDesk && phoneShaped],
+    ['desktop-ua+coarse-pointer', sig.uaDesk && mobileInput],
+    ['desktop-ua+mobile-uch', sig.uaDesk && (sig.uchMobile || sig.uchAndroid)],
+    ['desktop-ua+vv<=900+mobile-input', sig.uaDesk && sig.vvW > 0 && sig.vvW <= 900 && (sig.oriApi || mobileInput)]
+  ];
+  let viewportFixed = false;
+  // 把 layout viewport 拉回设备宽度：改 viewport meta → 不奏效再改显式像素宽度 →
+  // 仍不奏效才加 html.force-mobile 类作 CSS 保底（base.css 复刻手机端关键规则）。
+  function applyViewportFix() {
+    if (viewportFixed) return;
+    viewportFixed = true;
+    // 改 viewport meta 把 layout viewport 拉回设备宽度——让 CSS
+    // @media(max-width:900px) 自然命中，所有手机端规则生效。桌面站点
+    // 模式浏览器可能忽略 meta，下方加 force-mobile 类作 CSS 保底。
     try {
-      const sw = screen.width || screen.availWidth || 0;
-      const touch = (navigator.maxTouchPoints || 0) > 0 || 'ontouchstart' in window;
-      let uaDesk = false, oriApi = false, coarsePtr = false, hoverNone = false;
-      try { uaDesk = /Windows NT|Macintosh|X11|CrOS/i.test(ua); } catch (e) {}
-      try { oriApi = typeof window.orientation !== 'undefined'; } catch (e) {}
-      try { coarsePtr = window.matchMedia && window.matchMedia('(pointer: coarse)').matches; } catch (e) {}
-      try { hoverNone = window.matchMedia && window.matchMedia('(hover: none)').matches; } catch (e) {}
-      // v3.13.x：vivo Y35 + Edge 仍被强制 PC 端——上面的 screen.width / UA / orientation
-      // 指纹 Edge「桌面站点」模式能一并伪装。补真机最可靠、无法伪装的信号：
-      // visualViewport.width 反映屏幕真实可见宽（真机 CSS 宽 ~360-412），无论 layout
-      // viewport 被拉成 980 还是 UA 谎报 Windows 都不变；但仅限触摸屏（触碰笔电的
-      // 窄窗口 innerWidth<900 与之耦合度极低，且触摸窄窗口本就更适合手机布局）。
-      let vvW = 0;
-      try { vvW = (window.visualViewport && window.visualViewport.width) || 0; } catch (e) {}
-      if ((sw > 0 && sw < 900 && touch) ||
-          (touch && vvW > 0 && vvW <= 900) ||
-          (touch && uaDesk && (oriApi || (coarsePtr && hoverNone)))) {
-        isMobile = true;
-        // 改 viewport meta 把 layout viewport 拉回设备宽度——让 CSS
-        // @media(max-width:900px) 自然命中，所有手机端规则生效。桌面站点
-        // 模式浏览器可能忽略 meta，下方加 force-mobile 类作 CSS 保底。
+      document.querySelectorAll('meta[name="viewport"]').forEach(function (m) {
+        m.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-visual');
+      });
+    } catch (e) {}
+    // 等一帧看媒体查询是否命中；未命中说明该内核「桌面站点」模式下连
+    // device-width 都被仿真成桌面大屏（980）→ 改写 viewport 为【显式像素
+    // 宽度】再试：真实设备 CSS 宽用 visualViewport 反推（vv.width×vv.scale
+    // ≈ 物理 CSS 宽，桌面模式初始缩小显示时 scale<1、两者乘积恒为真宽）。
+    // 数字宽度不依赖 device-width 仿真，多数内核会直接采纳 → 媒体查询全量
+    // 生效（force-mobile 类只复刻关键规则，覆盖不了各功能页的手机端样式）。
+    // 再等两帧复查，仍未命中才加 force-mobile 类作最终保底。
+    try {
+      requestAnimationFrame(function () {
         try {
-          document.querySelectorAll('meta[name="viewport"]').forEach(function (m) {
-            m.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-visual');
-          });
-        } catch (e) {}
-        // 等一帧看媒体查询是否命中；未命中说明该内核「桌面站点」模式下连
-        // device-width 都被仿真成桌面大屏（980）→ 改写 viewport 为【显式像素
-        // 宽度】再试：真实设备 CSS 宽用 visualViewport 反推（vv.width×vv.scale
-        // ≈ 物理 CSS 宽，桌面模式初始缩小显示时 scale<1、两者乘积恒为真宽）。
-        // 数字宽度不依赖 device-width 仿真，多数内核会直接采纳 → 媒体查询全量
-        // 生效（force-mobile 类只复刻关键规则，覆盖不了各功能页的手机端样式）。
-        // 再等两帧复查，仍未命中才加 force-mobile 类作最终保底。
-        try {
-          requestAnimationFrame(function () {
+          if (!(window.matchMedia && window.matchMedia('(max-width: 900px)').matches)) {
+            var vw = 0;
             try {
-              if (!(window.matchMedia && window.matchMedia('(max-width: 900px)').matches)) {
-                var vw = 0;
+              var vv = window.visualViewport;
+              // v3.13.x：优先采信 vv.width（桌面站点模式下 = 真机 CSS 宽 ~360-412，
+              // 不会被 980 伪装）；vv.width×vv.scale 在桌面模式会算出伪装的 980
+              // 而被下方区间过滤掉 → viewport 改写静默失败只能退 force-mobile，
+              // 故仅在 vv.width 缺失时才用乘积兜底。
+              var est = vv && vv.width > 0 ? Math.round(vv.width)
+                : (vv && vv.scale > 0 && vv.width > 0 ? Math.round(vv.width * vv.scale) : 0);
+              // 合理区间过滤：缩放中/异常值不采信（手机 CSS 宽 200-899）
+              if (est >= 200 && est < 900) vw = est;
+            } catch (e2) {}
+            if (vw) {
+              document.querySelectorAll('meta[name="viewport"]').forEach(function (m) {
+                m.setAttribute('content', 'width=' + vw + ', initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-visual');
+              });
+            }
+            requestAnimationFrame(function () {
+              requestAnimationFrame(function () {
                 try {
-                  var vv = window.visualViewport;
-                  // v3.13.x：优先采信 vv.width（桌面站点模式下 = 真机 CSS 宽 ~360-412，
-                  // 不会被 980 伪装）；vv.width×vv.scale 在桌面模式会算出伪装的 980
-                  // 而被下方区间过滤掉 → viewport 改写静默失败只能退 force-mobile，
-                  // 故仅在 vv.width 缺失时才用乘积兜底。
-                  var est = vv && vv.width > 0 ? Math.round(vv.width)
-                    : (vv && vv.scale > 0 && vv.width > 0 ? Math.round(vv.width * vv.scale) : 0);
-                  // 合理区间过滤：缩放中/异常值不采信（手机 CSS 宽 200-899）
-                  if (est >= 200 && est < 900) vw = est;
-                } catch (e2) {}
-                if (vw) {
-                  document.querySelectorAll('meta[name="viewport"]').forEach(function (m) {
-                    m.setAttribute('content', 'width=' + vw + ', initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-visual');
-                  });
-                }
-                requestAnimationFrame(function () {
-                  requestAnimationFrame(function () {
-                    try {
-                      if (!(window.matchMedia && window.matchMedia('(max-width: 900px)').matches)) {
-                        document.documentElement.classList.add('force-mobile');
-                      }
-                    } catch (e3) {}
-                  });
-                });
-              }
-            } catch (e) {}
-          });
+                  if (!(window.matchMedia && window.matchMedia('(max-width: 900px)').matches)) {
+                    document.documentElement.classList.add('force-mobile');
+                  }
+                } catch (e3) {}
+              });
+            });
+          }
         } catch (e) {}
-      }
+      });
     } catch (e) {}
   }
+  if (!isMobile && !isTablet) {
+    for (let ri = 0; ri < RULES.length; ri++) {
+      if (RULES[ri][1]) {
+        isMobile = true;
+        mobileRule = RULES[ri][0];
+        break;
+      }
+    }
+    if (isMobile) applyViewportFix();
+  } else if (isTablet) {
+    mobileRule = 'tablet';
+  }
+
+  // 手动偏好最后覆盖（识别失手也不至于把用户锁死在错误形态里）
+  if (layoutPref === 'mobile') {
+    isMobile = true; isTablet = false; mobileRule = 'pref:mobile';
+    applyViewportFix();
+  } else if (layoutPref === 'pc') {
+    isMobile = false; isTablet = false; mobileRule = 'pref:pc';
+  }
+  if (isTablet) { try { document.documentElement.classList.add('tablet'); } catch (e) {} }
+
+  // 历史沿革：v3.9.x 触摸屏+窄 screen → v3.11.x orientation/pointer 输入特征 →
+  // v3.13.x visualViewport.width → 均在 vivo Y35 + Edge「桌面版网站」模式前失手，
+  // 根因是这组规则都要求触摸信号为真。已统一收进上方 RULES + applyViewportFix。
 
   // 平台判定（含 UA 伪装排除——OPPO/Via/夸克等浏览器可把 UA 伪装成 iPhone）
   // v3.7.x：/iphone|ipad|ipod/ 分支加 Android 排除（多数 UA 切换不彻底会保留
@@ -132,12 +191,25 @@
   const isVia = /via/i.test(ua);
 
   // 唯一判定源：全模块统一从这里读
+  // mobileRule = 本次判定依据（诊断信息/设置页文案用），signals = 参与判定的原始信号
+  function setLayoutPref(v) {
+    layoutPref = v || '';
+    try {
+      if (layoutPref) localStorage.setItem(LAYOUT_KEY, layoutPref);
+      else localStorage.removeItem(LAYOUT_KEY);
+    } catch (e) {}
+    return layoutPref;
+  }
   window.mochiDevice = {
     isMobile: !!isMobile,
     isTablet: !!isTablet,
     isIOS: !!isIOS,
     isAndroid: !!isAndroid,
-    isVia: !!isVia
+    isVia: !!isVia,
+    mobileRule: mobileRule,
+    layoutPref: layoutPref,
+    signals: sig,
+    setLayoutPref: setLayoutPref
   };
 
   // ===== v3.26.x：视口 / 键盘 / 全屏现场探针（只读）window.mochiVvDiag() =====
@@ -552,6 +624,16 @@
     L.push('');
     L.push('【设备判定】');
     L.push('手机=' + !!d.isMobile + '  平板=' + !!d.isTablet + '  iOS=' + !!d.isIOS + '  安卓=' + !!d.isAndroid + '  Via=' + !!d.isVia);
+    L.push('判定依据：' + (d.mobileRule || '(未命中任何兜底规则→按桌面)') + '  手动布局设置=' + (d.layoutPref || '自动')
+      + '  视口=' + Math.round(window.innerWidth || 0) + '×' + Math.round(window.innerHeight || 0));
+    // v3.26.x：启动瞬间的识别信号快照（判定就是按这份下的结论）——历轮修 vivo Edge
+    // 都在猜哪条指纹被「桌面版网站」模式仿真掉了，报障文本直接给出全部输入值
+    const _sg = d.signals || {};
+    L.push('识别信号快照：screen=' + _sg.sw + '×' + _sg.sh + '  触摸=' + _sg.touch + '  coarse=' + _sg.coarse
+      + '  hoverNone=' + _sg.hoverNone + '  orientationAPI=' + _sg.oriApi
+      + '  UA谎称桌面=' + _sg.uaDesk + '  UA含移动标识=' + _sg.uaMobile
+      + '  visualViewport宽=' + Math.round(_sg.vvW || 0)
+      + '  UA-CH(mobile=' + _sg.uchMobile + ' android=' + _sg.uchAndroid + ')');
     L.push('html 类：' + (document.documentElement.className || '(空)'));
     const vp = document.querySelector('meta[name="viewport"]');
     L.push('viewport：' + (vp ? vp.content : '(无)'));
@@ -912,4 +994,64 @@
       });
     });
   });
+})();
+
+// ===== 功能：布局手动兜底 UI（v3.26.x，设置页「手机布局（强制）」） =====
+// 设备判定纯靠指纹，而浏览器「桌面版网站」模式能把指纹整套仿真掉（vivo Y35 + Edge
+// 连栽 v3.9/3.11/3.13 三轮）。这里给一条不依赖判定的自救通道：开关写 __layout-pref
+// 后整页重载——布局形态在启动时就定死，运行中改类名不足以复原各模块读到的 isMobile。
+// 说明弹窗同时给出浏览器侧的正解（关掉桌面模式），那才是「页面大小 + 全屏不可用」
+// 两个症状共同的根因。
+(function () {
+  const d = window.mochiDevice;
+  const box = document.getElementById('sf-force-mobile');
+  if (!d || !box) return;
+  const sub = document.getElementById('sf-force-mobile-sub');
+  box.checked = d.layoutPref === 'mobile';
+  function renderSub() {
+    if (!sub) return;
+    const sig = d.signals || {};
+    if (d.layoutPref === 'mobile') {
+      sub.textContent = '已强制手机布局。关闭本开关恢复自动判定；想在手机上改用电脑外壳，地址栏加 ?pc=1。';
+    } else if (d.layoutPref === 'pc') {
+      sub.textContent = '已强制电脑外壳（地址栏 ?pc=1）。打开上方开关或去掉该参数即恢复自动判定。';
+    } else if (d.isMobile) {
+      sub.textContent = '自动判定：手机布局（依据 ' + (d.mobileRule || 'viewport<=900') + '）。'
+        + (sig.uaDesk ? '检测到浏览器正以「桌面版网站」模式伪装成电脑，本页已自动纠正为手机布局。' : '');
+    } else {
+      sub.textContent = '自动判定：电脑外壳（当前是电脑，或浏览器把手机伪装成了桌面）。手机上看不到满屏布局时打开上方开关。';
+    }
+  }
+  renderSub();
+  box.addEventListener('change', function () {
+    d.setLayoutPref(box.checked ? 'mobile' : '');
+    try { location.reload(); } catch (e) {}
+  });
+  const help = document.getElementById('sf-force-mobile-help');
+  const openHelp = function (e) {
+    if (e) { try { e.stopPropagation(); e.preventDefault(); } catch (er) {} }
+    if (!window.openModal) return;
+    const sig = d.signals || {};
+    const txt = [
+      '为什么需要这个开关\n',
+      '浏览器（Edge / Chrome / Via 等）的「桌面版网站」模式会把手机的浏览器标识、屏幕尺寸、触摸能力整套伪装成电脑。本应用因此显示成电脑上的「小手机框 + 两侧灰底」，全屏模式也连带失灵——伪装出来的宽视口会被当成横屏，开关直接被「请先转竖屏」的判断拦下。\n',
+      '推荐做法：关掉浏览器桌面模式（一步解决大小 + 全屏）\n',
+      '· Edge（安卓）：右上角 ⋯ 菜单 → 取消勾选「桌面版网站」；若长期开着，Edge 设置 → 浏览/内容 → 关闭「始终请求桌面版网站」；',
+      '· Chrome：⋮ 菜单 → 取消勾选「电脑版网站」；',
+      '· 其他浏览器：菜单里通常叫「电脑版网页 / 桌面版网站」。\n',
+      '关掉后仍是电脑布局，说明本应用没认出这台手机 —— 打开本开关强制切回手机布局（长期生效，随时可关）。\n',
+      '\n当前判定：' + (d.isMobile ? '手机布局' : '电脑外壳')
+        + '（依据 ' + (d.mobileRule || '—') + '）',
+      '浏览器伪装桌面标识：' + (sig.uaDesk ? '是' : '否')
+        + '　手动设置：' + (d.layoutPref || '自动')
+        + '　视口：' + Math.round(window.innerWidth || 0) + '×' + Math.round(window.innerHeight || 0)
+    ].join('\n');
+    window.openModal('手机布局（强制）', '', function () {}, { noInput: true, staticText: txt });
+  };
+  if (help) {
+    help.addEventListener('click', openHelp);
+    help.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') openHelp(e);
+    });
+  }
 })();

@@ -1568,16 +1568,19 @@ if (ckRefresh) {
     let html = '';
     // v3.13.x：分类标签统一走字卡库 loc-lib
     const LOC_LABEL = window.locLibLabel || function (t) { return t; };
-    // 感知描述
-    html += '<div class="loc-sense-box"><div class="loc-sense-title">你感觉到的</div><div class="loc-sense-text">' + esc(senseDesc(cur)) + '</div></div>';
+    // 感知描述（v3.26.x：加呼吸光点标题，卡片化）
+    html += '<div class="loc-sense-box"><div class="loc-sense-head"><span class="loc-sense-dot"></span><span class="loc-sense-title">你感觉到的</span></div><div class="loc-sense-text">' + esc(senseDesc(cur)) + '</div></div>';
     // 此刻位置
-    html += '<div class="loc-section"><div class="loc-sec-title">TA 此刻的位置</div>';
-    html += '<div class="loc-sec-value">' + (cur
-      ? esc(cur.text) + '<span class="loc-sec-sub">' + (LOC_LABEL[cur.type] || (cur.type === 'combo' ? '组合' : '')) + ' · ' + fmtT(cur.ts) + '</span>'
-      : '— 还没有位置卡') + '</div></div>';
+    html += '<div class="loc-section"><div class="loc-sec-title">此刻的位置</div>';
+    if (cur) {
+      html += '<div class="loc-now"><span class="loc-now-pin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-5.5-7-11a7 7 0 0114 0c0 5.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.6"/></svg></span><div class="loc-now-main"><div class="loc-sec-value">' + esc(cur.text) + '</div><div class="loc-sec-sub">' + (LOC_LABEL[cur.type] || (cur.type === 'combo' ? '组合' : '位置卡')) + ' · ' + fmtT(cur.ts) + '</div></div></div>';
+    } else {
+      html += '<div class="loc-sec-value loc-empty">— 还没有位置卡</div>';
+    }
+    html += '</div>';
 
     // 时间线（按日切换）
-    html += '<div class="loc-section"><div class="loc-sec-title">位置时间线（按日查看）</div>';
+    html += '<div class="loc-section"><div class="loc-sec-title">位置时间线</div>';
     html += '<div class="loc-day-switch"><button class="loc-day-btn" id="loc-day-prev"' + (dayIdx >= days.length - 1 ? ' disabled' : '') + '>‹</button><span class="loc-day-label">' + dayLabel(locViewDate) + '</span><button class="loc-day-btn" id="loc-day-next"' + (dayIdx <= 0 ? ' disabled' : '') + '>›</button></div>';
     if (dayHist.length) {
       html += '<div class="loc-timeline">' + dayHist.map(h => {
@@ -1606,10 +1609,12 @@ if (ckRefresh) {
   }
 
   // ---- 打开/关闭 ----
-  function openLocPanel() {
+  // v3.26.x：full=true 以全屏打开（桌面寻踪页「TA在身边」入口），false 保持底部半屏（聊天寻踪半框入口）
+  function openLocPanel(full) {
     const panel = document.getElementById('loc-panel');
     const nameEl = document.getElementById('loc-name');
     if (nameEl) nameEl.textContent = store.get('lbl-partner') || 'TA';
+    if (panel) panel.classList.toggle('loc-full', !!full);
     // v3.13.x：刷新方位感知（含漂移检查）+ 渲染感知圆
     if (window.refreshSense) window.refreshSense();
     renderLocPanel();
@@ -1619,16 +1624,19 @@ if (ckRefresh) {
   }
   function closeLocPanel() {
     const panel = document.getElementById('loc-panel');
-    if (panel) panel.hidden = true;
+    if (panel) { panel.hidden = true; panel.classList.remove('loc-full'); }
   }
 
   const entry = document.getElementById('ck-loc-entry');
-  if (entry) entry.addEventListener('click', openLocPanel);
-  // 桌面寻踪页同款入口（点「TA在身边 · 看看 TA 在哪」打开同一位置面板）
+  if (entry) entry.addEventListener('click', () => openLocPanel(false));
+  // 桌面寻踪页同款入口（点「TA在身边 · 看看 TA 在哪」全屏打开同一位置面板）
   const entryDesk = document.getElementById('ck-loc-entry-desk');
-  if (entryDesk) entryDesk.addEventListener('click', openLocPanel);
+  if (entryDesk) entryDesk.addEventListener('click', () => openLocPanel(true));
   const closeBtn = document.getElementById('loc-close');
   if (closeBtn) closeBtn.addEventListener('click', closeLocPanel);
+  // v3.26.x：全屏模式返回按钮（回寻踪页，与 ✕ 等效）
+  const locBack = document.getElementById('loc-back');
+  if (locBack) locBack.addEventListener('click', closeLocPanel);
 
   try {
     if (window.idbGet && !store.get('loc-history')) {

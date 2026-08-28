@@ -34,6 +34,9 @@
 | 18 | 字卡库打开卡顿/白屏（iOS） | chatcard 分批渲染 + 去阴影 | `verify-cc-tab-totals.mjs` |
 | 19 | 后台收不到消息（小米） | bg-keep 回前台 dispatch mochi-fg-resume | `verify-bg-keep-retry.mjs` |
 | 20 | 数据丢失（OPPO Chrome 三连） | migrateLegacy 全局键排除 + IDB 权威 | `verify-data-loss.mjs` |
+| 21 | iOS 收藏页缺条目（收藏5条只显示3条 / 提示已收藏过却没显示） | chat 收藏判重按归属+时间戳；启动回填只补不覆盖 | `verify-fav-dedup.mjs` / 哨兵 `(f.by \|\| 'me') !== 'ta'` |
+| 22 | 语音播放矢量图标点击无互动变化（录制面板试听钮 + 聊天语音气泡） | 播放/暂停双 SVG + `.playing` 换暂停竖条 + `:active` 按压缩放（chat.js/group-chat.js/template.html + chat-main.css） | `verify-voice-play-icon.mjs` / 哨兵 `voice-ico-pause`、`.msg-voice-play:active` |
+| 23 | 单聊联系人发消息无音效（红米 Turbo4 Pro / Via：选了内置音效不响，其他音效正常） | chat.js addIn 统一播 `playSfx('in')`（silent 与已读回执 `special:'read'` 不播）；sfx.js playBuiltin 等 AudioContext resume 完成再 start | `verify-sfx-in-chat.mjs` / 哨兵 `opts.special !== 'read'`、`p.then(start)` |
 
 ## 维护
 

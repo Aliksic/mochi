@@ -487,7 +487,9 @@
       const vsrc = vparts[1] || '';
       b.innerHTML = quoteStr + '<div class="msg-voice" data-src="' + attrEsc(vsrc) + '">' +
         '<button class="msg-voice-play" title="播放">' +
-        '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>' +
+        // 播放/暂停双图标：playing 时 CSS 切换显示（与 chat.js 聊天页语音气泡同款互动态）
+        '<svg class="voice-ico-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>' +
+        '<svg class="voice-ico-pause" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>' +
         '</button>' +
         '<div class="msg-voice-wave"><i></i><i></i><i></i><i></i><i></i></div>' +
         '<span class="msg-voice-name">' + escTxt(vname) + '</span>' +

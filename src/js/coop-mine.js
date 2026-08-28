@@ -352,6 +352,22 @@
     if (progEl) progEl.textContent = st.started ? '已探索 ' + openCount() + ' / ' + safeTotal() : '';
   }
   function setStatus(html) { if (statusEl) statusEl.innerHTML = html; }
+  // 游戏内说话气泡：TA 在游戏里说的话直接显示在扫雷面板里，不再发到聊天
+  const talkEl = document.getElementById('ms-talk');
+  let talkHideT = null;
+  function taTalk(text) {
+    if (!talkEl) return;
+    const bubble = talkEl.querySelector('.ms-talk-bubble');
+    if (bubble) {
+      bubble.innerHTML = '<span class="ms-talk-name">' + taName().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</span>' + text;
+      talkEl.hidden = false;
+      bubble.style.animation = 'none';
+      void bubble.offsetWidth;
+      bubble.style.animation = '';
+    }
+    clearTimeout(talkHideT);
+    talkHideT = setTimeout(() => { if (talkEl) talkEl.hidden = true; }, 4000);
+  }
   function shakeCell(i) {
     const cell = cellAt(i);
     if (!cell) return;
@@ -386,7 +402,8 @@
           ? ['挖到一朵小花，「这个给你。」', '发现了这个，觉得很适合你。']
           : ['挖到了一个小礼物，「这个给你。」', '发现了这个，「送你呀。」'];
         const say = pick(lines) || lines[0];
-        if (window.chatAddIn) window.chatAddIn(T(say), { silent: true });
+        // 送礼话术直接显示在游戏面板的说话气泡里，不再发到聊天
+        if (say) taTalk(say);
       } catch (e) {}
     }, 700);
   }
@@ -575,7 +592,8 @@
         ? ['一起找完了。', '我们配合得不错嘛。', '全部清完啦，开心。', '这一片雷区都清理干净了。']
         : ['差一点点而已，再来！', '下次小心一点就好。', '没事，再来一次？'];
       const say = (fb.length ? pick(fb) : fb[0]) || 'ok';
-      setTimeout(() => { try { if (window.chatAddIn) window.chatAddIn(T(say), { silent: true }); } catch (e) {} }, 900);
+      // 合作回应直接显示在游戏面板的说话气泡里，不再发到聊天（结束记录仍写入聊天）
+      setTimeout(() => { try { if (say) taTalk(say); } catch (e) {} }, 900);
     } catch (e) {}
   }
 

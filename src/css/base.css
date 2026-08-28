@@ -809,7 +809,7 @@ input.ce-ghost, textarea.ce-ghost {
   border:1px solid var(--pill-border); background:var(--card-bg); color:var(--soft-ink);
   cursor:pointer; font-family:inherit; font-weight:600;
 }
-.pill.on { background:var(--btn-bg); color:var(--btn-ink); border-color:var(--btn-bg); }
+.pill.on { background:var(--card-bg); color:var(--btn-ink); border-color:var(--btn-bg); }
 .sw {
   width:42px; height:42px; border-radius:50%; cursor:pointer;
   border:2px solid transparent; box-shadow:0 2px 6px rgba(0,0,0,.1);
@@ -922,7 +922,9 @@ input.ce-ghost, textarea.ce-ghost {
 }
 
 /* ===== v3.7.x：音效设置——内置音效预设胶囊 ===== */
-.sfx-presets { display:flex; flex-wrap:wrap; gap:8px; padding:2px 16px 14px 28px; }
+/* v3.26.x：UI 重设计——每类音效一张卡片：头部行 + 胶囊区 + 底部操作行 */
+.sfx-card .set-row { border-bottom:none; padding-bottom:6px; }
+.sfx-presets { display:flex; flex-wrap:wrap; gap:8px; padding:6px 16px 12px; }
 .sfx-preset {
   padding:6px 13px; border-radius:99px; font-size:12px; font-weight:600;
   border:1px solid rgba(0,0,0,.12); background:#fff; color:#444;
@@ -931,3 +933,5 @@ input.ce-ghost, textarea.ce-ghost {
 }
 .sfx-preset:active { background:rgba(0,0,0,.07); }
 .sfx-preset.on { background:var(--ink); color:#fff; border-color:var(--ink); }
+/* 卡片底部操作行：无自定义只显示上传，有自定义显示试听/清除 */
+.sfx-tools { display:flex; gap:8px; flex-wrap:wrap; padding:0 16px 14px; }

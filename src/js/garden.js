@@ -1048,7 +1048,7 @@ var dexSearch = "", dexSeason = -1;
 var TABS = [
   { id: "garden", n: "\u82B1\u56ED", e: "\uD83C\uDF31" },
   { id: "dex", n: "\u56FE\u9274", e: "\uD83D\uDCD6" },
-  { id: "craft", n: "\u5DE5\u574A", e: "\uD83D\uDC83" },
+  { id: "craft", n: "\u5DE5\u574A", e: "\uD83E\uDDE4" },
   { id: "shop", n: "\u88C5\u9970", e: "\uD83C\uDFE0" },
   { id: "achv", n: "\u6210\u5C31", e: "\uD83C\uDFC6" },
   { id: "report", n: "\u5E74\u62A5", e: "\uD83D\uDCCA" }

@@ -1164,6 +1164,16 @@
           if (!open && h > _aH) _aH = h; // 无键盘时更新基准，地址栏变化不误判
           if (open && !_aKb) { _aKb = true; _aPhone.style.alignSelf = 'flex-start'; kbDockPanels(); }
           if (!open && _aKb) {
+            // v3.27.x：键盘收起——动画期 visualViewport 还没回到无键盘基准（_aH）时，
+            // 不要提前把 .phone 撑回全高 + 面板摘停靠。否则键盘收起动画中途就恢复：
+            // 底部半框/输入行会骤然下沉一整帧（用户报障「关闭输入法时我的拍一拍
+            // 底部输入行整行飞」）。改为动画期持续跟随 vv 平滑上浮、面板保持停靠，
+            // 等 vv 回到基准附近（≤12px 误差）才真正恢复，杜绝中途下沉跳变。
+            if (h < _aH - 12) {
+              if (_aPhone.style.height !== h + 'px') _aPhone.style.height = h + 'px';
+              _aPinPan();
+              return;
+            }
             _aKb = false;
             _aPhone.style.height = '';
             _aPhone.style.alignSelf = '';
@@ -1220,7 +1230,9 @@
                   _aProvClear();
                 }
               } else if (_aKb) {
-                if (_aVV.height >= _aH - 60) {
+                // v3.27.x：收起也等 vv 回到基准附近（≤12px）再复原，避免动画期
+                // 提前把 .phone 撑回全高导致面板/输入行下沉跳变（与 syncAndroidKb 同判据）
+                if (_aVV.height >= _aH - 12) {
                   _aKb = false;
                   _aPhone.style.height = '';
                   _aPhone.style.alignSelf = '';

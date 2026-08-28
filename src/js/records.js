@@ -200,6 +200,37 @@
         '<div class="tc-li-line">' + sub + '</div></div>';
     }).join('');
   }
+  // ---- 占卜记录（v3.26.x：占卜页抽牌时选了对象 → 存入该联系人桌面的 records-divine） ----
+  // 记录结构 { ts, mode, count, question, cards, summary, target }，写入方在 divination.js
+  function renderDivinePanel() {
+    const el = document.getElementById('home-divine');
+    if (!el) return;
+    const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    const list = histList('records-divine');
+    if (!list.length) {
+      el.innerHTML = '<div class="ta-empty">暂无占卜记录（在「占卜」页选择对象抽牌后，牌面与解读自动存入这里）</div>';
+      return;
+    }
+    el.innerHTML = list.map((h, i) => {
+      const n = Array.isArray(h.cards) ? h.cards.length : (h.count || 0);
+      const cardsTxt = Array.isArray(h.cards) ? h.cards.map(c => ((c && c.name) || '') + (c && c.rev ? '(逆)' : '')).join('、') : '';
+      const title = (h.mode === 'tarot' ? '塔罗' : '雷诺曼') + ' · ' + n + ' 张' + (h.target ? ' · 为 ' + esc(h.target) + ' 占卜' : '');
+      return '<div class="tc-listitem"><div class="tc-li-top"><span class="tc-li-q">🔮 ' + title +
+        (h.question ? ' · 问：' + esc(h.question) : '') + '</span><span class="tc-li-time">' + fmtDT(h.ts) + '</span></div>' +
+        (cardsTxt ? '<div class="tc-li-line">' + esc(cardsTxt) + '</div>' : '') +
+        (h.summary ? '<div class="tc-li-line">' + (window.taFit ? window.taFit(esc(h.summary)) : esc(h.summary)) + '</div>' : '') +
+        '<button class="div-h-view hd-view" data-di="' + i + '">查看牌面</button></div>';
+    }).join('');
+    // 查看牌面：跳转到占卜页并渲染完整结果（复用 divineRenderResult）
+    el.querySelectorAll('.hd-view').forEach(b => b.addEventListener('click', () => {
+      const h = histList('records-divine')[parseInt(b.dataset.di, 10)];
+      if (!h || !Array.isArray(h.cards) || !window.divineRenderResult) return;
+      document.querySelectorAll('.page').forEach(p => p.hidden = true);
+      const dp = document.getElementById('page-divine');
+      if (dp) dp.hidden = false;
+      try { window.divineRenderResult(h.cards, h.mode, h.question || '', h.summary || ''); } catch (e) {}
+    }));
+  }
   // ---- 渲染主页记录 ----
   function histList(key) { try { return JSON.parse(store.get(key) || '[]'); } catch (e) { return []; } }
   // v3.9.x：联系人今日情话 / 我的备忘 / 我的心情记录已迁移到日历页按天查看，主页不再保留
@@ -277,6 +308,10 @@
     // 联系人的关心/提醒记录（v3.16.x）
     if (showOnly === 'care') {
       renderCarePanel();
+    }
+    // 占卜记录（v3.26.x：抽牌选了对象，存该联系人桌面 records-divine）
+    if (showOnly === 'divine') {
+      renderDivinePanel();
     }
     // 换头像记录（全部事件：直接换 / 邀请同意 / 邀请拒绝 / 我手动更换）
     if (showOnly === 'av') {
