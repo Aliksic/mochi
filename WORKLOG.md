@@ -1,4 +1,62 @@
 # 本次构建者：AI-A（本会话，2026-08-28 20:35，桌面/聊天美化 Tab 黑白化+方案保存预览+聊天设置分类Tab 已构建收口 sw: mochi-mtcxpruj，哨兵 25/25，待提交）
+### 2026-08-28（悬浮音乐小框改两行：上行歌名+歌手，下行控制按钮；已构建）
+- [AI-A 域 + 跨域 template.html]（**已改 src/js/music-player.js（AI-A）+ src/css/chat-pages.css（AI-A）+ src/css/dark.css（AI-B，跨域：仅补 .sm-f-artist 暗色）+ src/template.html（AI-B，跨域：悬浮小框结构改两行）；构建状态：已构建 sw: mochi-mtcza6v9，哨兵 25/25**）。
+- 需求：悬浮音乐小框原来只有一行（歌名和按钮挤一起），歌名只能显示一点点；改为两行——上方放歌名/歌手，下方放控制按钮。
+- 方案：.sm-float 改 `flex-direction:column`（宽 230px），上行 .sm-f-info＝歌名(12px)+新增 .sm-f-artist 歌手行(10px)+进度条，下行 .sm-f-ctrl 用 space-between 铺开 6 个按钮；renderFloat 拆开写 sm-f-name / sm-f-artist（不再拼「歌名 · 歌手」一栏）。
+- 验证：node --check 通过；构建哨兵 25/25。需构建后实测：悬浮框两行显示、歌名可显示更多字符、歌手单独一行、明暗色正常。
+### 2026-08-28（桌面音乐小组件：新增【播放模式】【播放列表】图标，与悬浮小框统一；已构建）
+- [AI-A 域 + 跨域 template.html]（**已改 src/js/music-player.js（AI-A）+ src/template.html（AI-B，跨域：仅在桌面音乐小组件 .mw-controls 加两个按钮锚点，理由：用户要求小组件与悬浮小框图标布局统一）；构建状态：已构建 sw: mochi-mtcza6v9，哨兵 25/25**）。
+- 需求：桌面的音乐小组件里，播放音乐的【播放列表】矢量图要放在【播放模式】矢量图右边，和音乐悬浮小框统一（悬浮小框顺序＝模式→队列→上一首→播放→下一首→收藏）。
+- 方案：.mw-controls 在上一首前插入 `#mw-mode`（播放模式，图标 `#mw-mode-ico`）与 `#mw-queue`（播放列表），顺序＝模式→播放列表→上一首→播放→下一首→收藏；`updateModeIcon` 图标同步选择器加入 `#mw-mode-ico`（三处模式图标同源）；`bindWidget` 绑定 `mw-mode→cycleMode`、`mw-queue→openQueuePanel`（与音乐页/悬浮框同一入口，标题即「音乐播放列表」）。
+- 验证：node --check music-player.js 通过；构建哨兵 25/25。需构建后实测：桌面音乐小组件出现 模式/播放列表 两个图标、点模式弹 toast 切换、点播放列表弹出「音乐播放列表」面板、切歌后图标与悬浮框同步。
+### 2026-08-29（去电拨打结果无弹窗告知用户（接通/未接/忙线）；已改源码，未构建）
+- [跨域改动 src/js/call.js（AI-B 文件），理由：用户反馈拨打电话后无弹窗显示接通/未接/忙线；原实现去电结果只在 endCall 静默关面板并写入聊天系统消息，无任何提示；构建状态：未构建（node --check call.js 已过），待构建者收口**。
+- 方案：在 placeCall 去电结果回调，按结果分别 toast：`对方忙线中` / `对方已拒绝` / `通话已接通` / `对方未接通`（复用函数内已有 toast #cc-toast）。
+- 待对方/构建者处理：收口时把 call.js 纳入本轮构建；如有每个号码各自反馈样式，可统一替换为 `window.openModal` 弹窗。
+- 待构建者：收口时把 call.js 一并进本轮构建。
+### 2026-08-28 20:55（漂流瓶新增分类「联系人昵称捡到的漂流瓶」；已改源码，未构建）
+- [AI-A 域 + 跨域 template.html]（**已改 src/js/drift-bottle.js + src/css/drift-bottle.css（AI-A）+ src/template.html（AI-B，跨域：仅在漂流瓶页 d-tabs 加一个空 tab 锚点 #d-tab-theirs，理由：新分类入口需静态锚点，名称由 JS 按联系人昵称动态填）；构建状态：未构建（node --check drift-bottle.js 已过），待构建者收口**）。
+- 需求：漂流瓶新增分类「联系人昵称捡到的漂流瓶」；当我捡漂流瓶时，联系人也有概率从当前桌面【聊天】里我发送过的文字消息中抽取一句作为捡瓶内容。
+- 方案：
+  - 新分类 tab（`data-t="theirs"`）置于「捡到的」「收藏」之间，标签=昵称+「捡到的漂流瓶」（`updateTheirsTab` 每次 renderAll 按 pn() 刷新）。
+  - 新数据数组 `d.theirs`（上限 60，key 仍存原 `drift-data`，fix 兜底兼容旧数据）＋ `d.mySeen` 去重游标。
+  - 我捡瓶时 `maybeContactPick()`：25% 概率触发，从当前桌面聊天记录**我方发送**（side:'out'）文字消息中抽一句（`myHistMsgOk`/`myHistCandidates`/`mySampleLine`，形态过滤与 TA 瓶同构：纯文本+混合气泡逐段拆，语音/图片/红包/系统/撤回/超长不收）；无合适内容则不出。
+  - 触发后开瓶卡下方显示虚线副卡「💌 <昵称>也捡到一个瓶子 + 内容 + —— 你在聊天里说过的话」；记录进新分类，列表/统计行/收藏 tab 均纳入，支持收藏。
+  - 说明弹窗补一段新玩法文案。
+- 验证：node --check 通过；`tools/verify-drift-bottle.mjs` **38/38 无回归**；临时 `tools/diag-drift-theirs.mjs`（已删）确定性钉 random 验证 7/7：新 tab 渲染、theirs 记录内容=我方文字、副卡显示、分类列表渲染、0.9 不触发不新增、无 JS 异常。需构建后真机/无头实测：捡瓶偶现「💌 昵称也捡到一个瓶子」副卡，新分类可切换查看。
+- 待构建者：收口时把 drift-bottle.js + drift-bottle.css + template.html（仅漂流瓶 tab 锚点）一并进本轮构建。
+### 2026-08-28（切换桌面加【功能说明】按钮：说明除朋友圈外还有哪些数据全桌面互通；已改源码，未构建）
+- [AI-A 域]（**跨域改动 src/js/contacts.js（AI-B 文件），理由：切换桌面面板在 contacts.js，用户要求在此面板补【功能说明】；构建状态：未构建（node --check 已过），待下一轮收口**）。
+- 需求：切换桌面面板原来只写「仅朋友圈互通」，实际还有群聊/存钱罐/心意币/市集商品/表情包/公用字卡/经期/摸鱼/决定/梦角/音乐/后台通知/跨桌面来消息等也是全桌面共用，用户要求加按钮说明清楚。
+- 方案：面板头部描述行改为「除朋友圈外，还有部分功能数据在所有桌面共用」，追加紫色可点【功能说明】；点开 `window.openFuncExplain()` 弹窗，分「所有桌面共用的数据」/「按桌面独立的数据」两栏列出（共用 12 组、独立 6 组），底部补充“共用=切换桌面仍延续 / 独立=各桌面各一份”。
+- 验证：node --check 通过；未跑构建。需构建后实测：切换桌面面板出现【功能说明】、点开能滚动查看完整清单、深色模式配色正常。
+- 待构建者：收口时把 contacts.js 一并进本轮构建。
+### 2026-08-28（番茄钟陪伴模式：加设置·可切联系人·数据全局互通·倒计时放大；已改源码，未构建）
+- [AI-A 域]（**已改 src/js/p2-features.js、src/css/chat-pages.css、src/js/chat.js（仅暴露 window.getPool 一行给陪伴复用）；构建状态：未构建（node --check p2-features.js/chat.js 已过），待构建者收口**）。
+- 需求：①陪伴模式缺设置按钮，无法设置 TA 是否用【聊天】字卡回复；②陪伴中无法切换联系人；③番茄钟数据应每桌面互通；④陪伴模式倒计时数字放大、聊天只是辅助。
+- 方案：
+  - ①陪伴菜单（聊天页状态条 ⋯ + 专属窗 ⋯）新增「陪伴设置」项 → 弹窗「用【聊天】字卡回复（开/关）」，key `pomo-cmp-usecards`。开启时 pmpCReply 70% 从 `window.getPool().text`（与普通聊天一致的字卡池）抽取，否则用陪伴自带常回话。chat.js 暴露 `window.getPool=getPool`。
+  - ②陪伴会话改存全局（根命名空间 xy-home-v2），移除 `contact-switched → pmpDetach`，切联系人不再退出陪伴。
+  - ③番茄钟数据全部改全局共享（`pomoStore()` 取 `xy-home-v2`）：pomo-cfg 时长 / 今日·累计🍅 / 夸夸字卡 / 发到聊天 / 铃声 / 陪伴会话 / 陪伴聊天记录 / 陪伴设置，替换原 per-contact 的 curStore()。
+  - ④专属陪伴窗顶部改为大号倒计时卡 `.pmp-cd`（.pmp-cd-time 58px），聊天收进 `.pmp-c-chat` 辅助区并缩小气泡/标题。
+- 验证：node --check 通过；未跑构建。需构建后实测：陪伴菜单出现「陪伴设置」、开关生效、陪伴中切换联系人不断、各桌面番茄数一致、专属窗大号倒计时。
+- 待构建者：收口时把 p2-features.js + chat-pages.css + chat.js 一并进本轮构建。
+### 2026-08-28（心愿单独立入口 + 与存钱罐互绑；已改源码，未构建）
+- [AI-A 域]（**已改 src/js/p2-features.js + src/css/chat-pages.css；未改任何 AI-B 文件；构建状态：未构建（node --check 已过），待构建者收口**）。
+- 需求：存钱罐此前「心愿」只作为罐内多目标区块，用户反馈「不能新建多个存钱目标、心愿单与存钱罐没绑定、功能阉割」。
+- 约定（已与用户确认「独立心愿单入口+可互绑」）：新增独立桌面入口「心愿单」；心愿单里添加心愿；存钱罐每个存钱目标可绑定一个心愿；心愿进度随存钱余额联动。
+- 方案：
+  - 新增 `makeApp('wishlist','心愿单',<心形勾svg>)` 图标，注入三页网格（第三页 p3-grid / 装修 new-page / desk-layout push 同步加入 `app-wishlist`）。
+  - 新增独立页 `#page-wishlist` 与数据层 `wishlist`（**按桌面独立**：键 `xy-home-v2:<cid>:wishlist`，经 `window.activeStore()` 动态绑定当前联系人，[] 缺省）：每心愿 {id,n,a,goal,done}；心愿行支持新增(两阶段弹窗 名→可选金额)/达成/取消达成/删除(确认)/绑定存钱目标(chip 面板)。
+  - 存钱罐目标行(`#piggy-goals`)新增「+心愿/心愿」绑定钮(打开 `#piggy-wbind` chip 面板)；已绑定目标显示「· 心愿：xxx」。绑定数据存在心愿侧 `wish.goal`=piggy-goals 下标，双向 UI 统一读取；绑定只列当前桌面可见的目标(piggyGoalVisible)，存钱罐金额仍全局共享。
+  - 联动：存钱达到目标额→piggyAdd 使绑定心愿自动 done；删除存钱目标→解除绑定它的心愿；删除心愿不影响存钱目标。
+- 验证：node --check 通过；未跑构建。需构建后实测：桌面出现颗心形「心愿单」入口、能新增多个心愿、能在双端互相绑定、存满自动达成。
+- 待构建者：收口时把 p2-features.js + chat-pages.css 一并进本轮构建。
+### 2026-08-28（日历【摸鱼热力图】改为「当日统计」条状图，跟随选中日期；已改源码，未构建）
+- [AI-A 域 + 跨域 dark.css]（**已改 src/js/calendar.js + src/css/chat-pages.css（AI-A）+ src/css/dark.css（AI-B，跨域：仅新增当日条形图黑白色的暗色适配）；构建状态：未构建（node --check 已过），待构建者收口**）。
+- 反馈：日历里的【摸鱼热力图】原为近一年 GitHub 贡献格子图，用户认为是「按月/整年」而非「日」，要求改为跟随日历切换日期的完整日统计。
+- 方案：卡片更名为「摸鱼 · 工作（日统计）」，改为 4 条横条图（摸鱼·我 / 摸鱼·TA / 工作·我 / 工作·TA）；选中日期不同则实时刷新；今天读实时 day-fish-*/day-work-*，历史读 fish-day-add/work-day-add（键无补零已归一化匹配 selDate）；未来/首用日前显示空态。移除旧 .fh-grid-wrap/.fh-cell/.fh-legend 样式，新增 .fh-bars/.fh-bar-row/.fh-track/.fh-fill/.fh-empty 黑白样式并补 dark 适配。
+- 验证：node --check 通过；未跑构建。需构建后实测：点日历不同日期，热力图卡随当日摸鱼/工作值变化。
 ### 2026-08-28 20:35（✅ 完成·已构建·桌面/聊天美化 Tab 去灰改黑白 + 两者保存方案加可视化预览&列表缩略图 + 聊天设置加分类Tab）
 - [本会话·AI-A]（**已改 src/css/setting.css、src/js/chat-settings.js、src/template.html、src/js/personalize.js（跨域改 AI-B 文件：桌面保存/方案列表新增缩略函数的宿主，改前先留言）；构建状态：已构建 sw: mochi-mtcxpruj，哨兵 25/25**）。
 - 用户反馈：①手机桌面美化顶部切换有「多余灰色」，与简约黑白 UI 不符；②保存当前(聊天/桌面)美化方案时无法确认/预览当前设置，方案列表也无缩略图；③聊天设置页缺少像手机桌面美化一样顶部分类可点击切换。

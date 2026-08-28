@@ -2778,7 +2778,7 @@
       shuffle: '<path d="M2 11a5 5 0 0 1 5-5h13"/><path d="m16 3 4 3-4 3"/><path d="M22 13a5 5 0 0 1-5 5H4"/><path d="m8 21-4-3 4-3"/>',
       single: '<circle cx="12" cy="12" r="9"/><path d="M12 8v8M9.5 8.5h5"/>'
     };
-    document.querySelectorAll('#sm-mode-ico, #sm-f-mode-ico').forEach(el => { el.innerHTML = paths[mode] || paths.list; });
+    document.querySelectorAll('#sm-mode-ico, #sm-f-mode-ico, #mw-mode-ico').forEach(el => { el.innerHTML = paths[mode] || paths.list; });
   }
   function syncPlayIcons(playing) {
     const playPath = playing
@@ -2857,7 +2857,9 @@
     const m = findTrack(currentId);
     el.hidden = !(settings.floatEn && !floatClosed && currentId && audio && m);
     if (!m) return;
-    document.getElementById('sm-f-name').textContent = (m.name || '未知歌曲') + (m.artist ? ' · ' + m.artist : '');
+    document.getElementById('sm-f-name').textContent = m.name || '未知歌曲';
+    const fArtist = document.getElementById('sm-f-artist');
+    if (fArtist) fArtist.textContent = m.artist || '';
     syncPlayIcons(audio && !audio.paused);
     syncHeartIcons();
   }
@@ -3539,12 +3541,16 @@
     const prevBtn = document.getElementById('mw-prev');
     const nextBtn = document.getElementById('mw-next');
     const heartBtn = document.getElementById('mw-heart');
+    const modeBtn = document.getElementById('mw-mode');
+    const queueBtn = document.getElementById('mw-queue');
     const bar = document.getElementById('mw-bar');
     const fill = document.getElementById('mw-fill');
     const knob = document.getElementById('mw-knob');
     const curEl = document.getElementById('mw-cur');
     const durEl = document.getElementById('mw-dur');
     if (playBtn) playBtn.addEventListener('click', toggle);
+    if (modeBtn) modeBtn.addEventListener('click', cycleMode);
+    if (queueBtn) queueBtn.addEventListener('click', openQueuePanel);
     if (prevBtn) prevBtn.addEventListener('click', prev);
     if (nextBtn) nextBtn.addEventListener('click', next);
     if (heartBtn) {

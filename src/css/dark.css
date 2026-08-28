@@ -738,6 +738,7 @@
   .sm-pb-btn { background:var(--dark-hover); color:#ddd; }
   .sm-float { background:var(--dark-card-97); border-color:rgba(255,255,255,.09); }
   .sm-f-name, .sm-f-btn { color:#ddd; }
+  .sm-f-artist { color:#9a9a9a; }
   .sm-f-progress { background:rgba(255,255,255,.12); }
   .sm-f-fill { background:#f0f0f0; }
   .sm-f-play { color:#f0f0f0; }
@@ -862,12 +863,10 @@
   .memo-send-btn:active { background:rgba(255,255,255,.08); }
 }
 
-/* ===== v3.13.x：日历页·摸鱼热力图 深色适配（AI-A 会话代改，请知悉） ===== */
-[data-theme="dark"] .fh-cell { background:rgba(255,255,255,.09); }
-[data-theme="dark"] .fh-cell.l1 { background:#57332f; }
-[data-theme="dark"] .fh-cell.l2 { background:#7d413a; }
-[data-theme="dark"] .fh-cell.l3 { background:#a85046; }
-[data-theme="dark"] .fh-cell.l4 { background:#cf6155; }
+/* ===== 日历页·摸鱼/工作「当日统计」条状图 深色适配 ===== */
+[data-theme="dark"] .fh-track { background:rgba(255,255,255,.1); }
+[data-theme="dark"] .fh-fill { background:var(--ink,#e6e6e6); }
+[data-theme="dark"] .fh-bar-row.work .fh-fill { background:rgba(255,255,255,.4); }
 
 /* ======================================================================
    深色模式补漏（AI-A 会话代改，请知悉）：聊天内置卡片 + 此间（cjian）页面

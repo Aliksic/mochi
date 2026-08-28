@@ -103,6 +103,58 @@
     return t;
   }
 
+  // ---- 从当前桌面聊天记录抽「我发送过」的文字消息（联系人捡瓶的内容来源）----
+  // 与 TA 瓶同构但方向相反：只看 side:'out'（我说过的话），形态过滤规则一致
+  // （纯文本 / 混合气泡按 k:'text' 逐段拆；表情包/图片/语音/互动组件/系统提示不收）
+  function myHistMsgOk(m) {
+    if (!m || m.side !== 'out' || m.retracted) return false;
+    if (m.type && m.type !== 'text') return false;
+    if (m.voice || m.img || m.gift) return false;
+    if (m.special || m.mailNotice) return false;
+    if (m.askQuestion != null || m.askStatus != null || m.choiceQuestion != null || m.choiceStatus != null ||
+        m.curiousQuestion != null || m.curiousStatus != null || m.roastStatus != null ||
+        m.rpAmount != null || m.rpWish != null) return false;
+    return true;
+  }
+  function myHistCandidates() {
+    try {
+      const cid = window.__activeCid || 'default';
+      const raw = localStorage.getItem('xy-home-v2:' + cid + ':chat-msgs');
+      if (!raw || raw.length > 600000) return [];                   // 超大记录守卫
+      const arr = JSON.parse(raw);
+      if (!Array.isArray(arr)) return [];
+      const out = [];
+      const scan = Math.min(arr.length, 400);                       // 只看最近约 400 条
+      for (let i = arr.length - 1; i >= arr.length - scan && out.length < 80; i--) {
+        const m = arr[i];
+        if (!myHistMsgOk(m)) continue;
+        if (Array.isArray(m.parts) && m.parts.length) {
+          for (let j = 0; j < m.parts.length && out.length < 80; j++) {
+            const p = m.parts[j];
+            if (!p || p.k !== 'text') continue;
+            const s = candText(p.v);
+            if (s) out.push(s);
+          }
+        } else {
+          const s = candText(m.text);
+          if (s) out.push(s);
+        }
+      }
+      return out;
+    } catch (e) { return []; }
+  }
+  function mySampleLine() {
+    const cands = myHistCandidates();
+    if (!cands.length) return '';
+    const seen = Array.isArray(d.mySeen) ? d.mySeen : [];
+    let pool = cands.filter(c => seen.indexOf(c) < 0);              // 近期捡过的先避开
+    if (!pool.length) pool = cands.slice();
+    const t = rnd(pool);
+    d.mySeen = seen.concat([t]).slice(-8);
+    save();
+    return t;
+  }
+
   // ---- 字卡池（与字卡库【漂流瓶】tab 同源；逐张开关过滤；全关回退内置兜底） ----
   const FB = {
     ta: ['过来一点。', '我在。', '今天也陪着你。', '别急，慢慢来。'],
@@ -138,10 +190,10 @@
   ];
 
   // ---- 数据 ----
-  const MINE_CAP = 50, GOT_CAP = 120, PICK_CD = 20000;
+  const MINE_CAP = 50, GOT_CAP = 120, THEIRS_CAP = 60, PICK_CD = 20000;
   function fresh() {
     return {
-      mine: [], got: [], histSeen: [], dry: 0,
+      mine: [], got: [], theirs: [], histSeen: [], mySeen: [], dry: 0,
       day: { date: '', picks: 0, coin: 0, taGot: 0 },
       lastVisit: 0, cdUntil: 0
     };
@@ -150,15 +202,19 @@
   function fix(o) {
     if (!Array.isArray(o.mine)) o.mine = [];
     if (!Array.isArray(o.got)) o.got = [];
+    if (!Array.isArray(o.theirs)) o.theirs = [];
     if (!Array.isArray(o.histSeen)) o.histSeen = [];
+    if (!Array.isArray(o.mySeen)) o.mySeen = [];
     if (typeof o.dry !== 'number' || o.dry < 0 || !isFinite(o.dry)) o.dry = 0;
     if (!o.day || typeof o.day !== 'object') o.day = { date: '', picks: 0, coin: 0, taGot: 0 };
     o.mine.forEach(m => { if (typeof m.fav !== 'number') m.fav = 0; });
     o.got.forEach(g => { if (typeof g.fav !== 'number') g.fav = 0; });
+    o.theirs.forEach(g => { if (typeof g.fav !== 'number') g.fav = 0; });
     if (!isFinite(o.lastVisit)) o.lastVisit = 0;
     if (!isFinite(o.cdUntil)) o.cdUntil = 0;
     if (o.mine.length > MINE_CAP) o.mine = o.mine.slice(-MINE_CAP);
     if (o.got.length > GOT_CAP) o.got = o.got.slice(-GOT_CAP);
+    if (o.theirs.length > THEIRS_CAP) o.theirs = o.theirs.slice(-THEIRS_CAP);
   }
   function load() {
     try {
@@ -307,6 +363,25 @@
     save();
     return rec;
   }
+  function pushTheirs(rec) {
+    rec.id = rec.id || uid();
+    rec.ts = rec.ts || Date.now();
+    if (typeof rec.fav !== 'number') rec.fav = 0;
+    d.theirs.push(rec);
+    if (d.theirs.length > THEIRS_CAP) d.theirs = d.theirs.slice(-THEIRS_CAP);
+    save();
+    return rec;
+  }
+
+  // ---- 联系人捡瓶：我捡瓶时，联系人也有概率从我发送过的文字消息里捡起一句 ----
+  // 与新分类 tab「<昵称>捡到的漂流瓶」联动；无合适内容（没发过话/全是图片语音）就不出
+  const CONTACT_PICK_CHANCE = 0.25;
+  function maybeContactPick() {
+    if (Math.random() >= CONTACT_PICK_CHANCE) return null;
+    const line = mySampleLine();
+    if (!line) return null;
+    return pushTheirs({ text: line });
+  }
 
   // ---- 捡一个 ----
   function pickBottle() {
@@ -358,8 +433,9 @@
     d.day.picks++;
     d.cdUntil = Date.now() + PICK_CD;
     const rec = pushGot({ kind: kind, from: kind === 'ta' || kind === 'reply' ? 'ta' : 'sea', text: note, gift: gift ? gift.e + ' ' + gift.n : '', coinFen: coin });
+    const theirsRec = maybeContactPick();
     save();
-    renderPickAnim(head, note, sig, gift, coinMsg, rec);
+    renderPickAnim(head, note, sig, gift, coinMsg, rec, theirsRec);
     renderStats(); renderList();
     tickCd();
   }
@@ -392,7 +468,7 @@
   // ---- 渲染 ----
   const $ = (id) => document.getElementById(id);
   let openRecId = '';
-  function renderPickAnim(head, note, sig, gift, coinMsg, rec) {
+  function renderPickAnim(head, note, sig, gift, coinMsg, rec, theirs) {
     const box = $('d-open');
     if (!box) return;
     openRecId = rec.id;
@@ -401,6 +477,9 @@
     setTimeout(() => {
       if (!rec || rec.id !== openRecId) return;
       const fav = rec.fav ? ' ♡已收藏' : ' ♡ 收藏';
+      const theirsHtml = theirs ?
+        '<div class="do-theirs"><div class="do-theirs-head"></div>' +
+        '<div class="do-theirs-txt"></div><div class="do-theirs-sig"></div></div>' : '';
       box.innerHTML =
         '<div class="do-head">' + taFit(head) + '</div>' +
         '<div class="do-paper"><div class="do-txt"></div>' +
@@ -409,6 +488,7 @@
         (gift ? '<span class="do-gift">' + gift.e + ' ' + taFit(gift.n) + '</span>' : '') +
         (coinMsg ? '<span class="do-coin">' + coinMsg + '</span>' : '') +
         '</div>' +
+        theirsHtml +
         '<div class="do-btns">' +
         (kindCanFav(rec.kind) ? '<button class="do-fav" id="d-fav">' + (rec.fav ? '♥ 已收藏' : '♡ 收藏') + '</button>' : '') +
         '<button class="do-ok" id="d-ok">收好</button>' +
@@ -416,6 +496,11 @@
       box.querySelector('.do-txt').textContent = note;
       const sigEl = box.querySelector('.do-sig');
       if (sigEl) sigEl.textContent = sig;
+      if (theirs) {
+        box.querySelector('.do-theirs-head').textContent = '💌 ' + pn() + '也捡到一个瓶子';
+        box.querySelector('.do-theirs-txt').textContent = theirs.text;
+        box.querySelector('.do-theirs-sig').textContent = '—— 你在聊天里说过的话';
+      }
       box.hidden = false;
       box.classList.remove('pop'); void box.offsetWidth; box.classList.add('pop');
       const favBtn = $('d-fav');
@@ -436,8 +521,8 @@
     const el = $('d-stats');
     if (!el) return;
     const taCnt = d.got.filter(g => g.from === 'ta').length;
-    const favCnt = d.got.filter(g => g.fav).length + d.mine.filter(m => m.fav).length;
-    el.textContent = '我放入 ' + d.mine.length + ' · ' + pn() + '漂来 ' + taCnt + ' · 收藏 ' + favCnt;
+    const favCnt = d.got.filter(g => g.fav).length + d.mine.filter(m => m.fav).length + d.theirs.filter(t => t.fav).length;
+    el.textContent = '我放入 ' + d.mine.length + ' · ' + pn() + '漂来 ' + taCnt + ' · ' + pn() + '捡到 ' + d.theirs.length + ' · 收藏 ' + favCnt;
   }
 
   function renderList() {
@@ -457,15 +542,22 @@
       sub: (g.from === 'ta' ? '来自 ' + pn() : '海边') + (g.coinFen ? ' · 🪙+' + Math.round(g.coinFen / 100) : ''),
       key: 'g:' + g.id, rec: g, mine: false
     }));
+    else if (tab === 'theirs') rows = d.theirs.slice().reverse().map(t => ({
+      ts: t.ts, ico: '💌', text: t.text,
+      sub: pn() + '捡到的 · 你聊天里的话',
+      key: 't:' + t.id, rec: t, mine: false
+    }));
     else rows = d.got.filter(g => g.fav).slice().reverse().map(g => ({
       ts: g.ts, ico: KIND_ICO[g.kind] || '🫙', text: g.text,
       sub: g.from === 'ta' ? '来自 ' + pn() : '海边',
       key: 'gf:' + g.id, rec: g, mine: false
-    })).concat(d.mine.filter(m => m.fav).slice().reverse().map(m => ({
+    })).concat(d.theirs.filter(t => t.fav).slice().reverse().map(t => ({
+      ts: t.ts, ico: '💌', text: t.text, sub: pn() + '捡到的', key: 'tf:' + t.id, rec: t, mine: false
+    }))).concat(d.mine.filter(m => m.fav).slice().reverse().map(m => ({
       ts: m.ts, ico: '🌊', text: m.text, sub: '我放入的', key: 'mf:' + m.id, rec: m, mine: true
     }))).sort((a, b) => b.ts - a.ts);
     if (!rows.length) {
-      el.innerHTML = '<div class="dl-empty">' + (tab === 'mine' ? '还没有放过的瓶子。写一句话放进海里吧。' : tab === 'got' ? '还没有捡到的瓶子。去海边捡一个试试。' : '还没有收藏的瓶子。') + '</div>';
+      el.innerHTML = '<div class="dl-empty">' + (tab === 'mine' ? '还没有放过的瓶子。写一句话放进海里吧。' : tab === 'got' ? '还没有捡到的瓶子。去海边捡一个试试。' : tab === 'theirs' ? '还没有捡到过你说的话。多去捡几次，说不定就被 TA 捞起来了。' : '还没有收藏的瓶子。') + '</div>';
       return;
     }
     rows.slice(0, 60).forEach(r => {
@@ -498,7 +590,11 @@
   }
   function isNight() { const h = new Date().getHours(); return h >= 19 || h < 6; }
 
-  function renderAll() { renderSea(); renderStats(); renderList(); tickCd(); }
+  function renderAll() { renderSea(); renderStats(); renderList(); tickCd(); updateTheirsTab(); }
+  function updateTheirsTab() {
+    const t = $('d-tab-theirs');
+    if (t) t.textContent = pn() + '捡到的漂流瓶';
+  }
 
   function ensureDaily() {
     const tk = todayKey();
@@ -531,7 +627,7 @@
     if (!window.openModal) return;
     window.openModal('漂流瓶 · 关于这片海', '', function () {}, {
       noInput: true,
-      staticText: '你写下的话会漂到两个世界之间：过几天它可能自己漂回来，也可能收到一句回应。\n\n有时候，也会捡到「' + pn() + '」漂来的瓶子——TA以前在聊天里说过的字卡，都可能单独漂回来；没有合适的话时，才从字卡库的漂流瓶分组里取一句。\n\n每日首次捡瓶送 2 心意币，特殊瓶 +5（每天最多 10）。瓶子是偶尔的惊喜，不用一直守着海。'
+      staticText: '你写下的话会漂到两个世界之间：过几天它可能自己漂回来，也可能收到一句回应。\n\n有时候，也会捡到「' + pn() + '」漂来的瓶子——TA以前在聊天里说过的字卡，都可能单独漂回来；没有合适的话时，才从字卡库的漂流瓶分组里取一句。\n\n我捡瓶的时候，' + pn() + '偶尔也会从我在聊天里说过的话中捞起一句——它们会收进「' + pn() + '捡到的漂流瓶」分类里。\n\n每日首次捡瓶送 2 心意币，特殊瓶 +5（每天最多 10）。瓶子是偶尔的惊喜，不用一直守着海。'
     });
   }
 

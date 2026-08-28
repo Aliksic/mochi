@@ -497,7 +497,7 @@
     const box = el('div');
     // v3.11.x：颜色改主题变量（内联硬编码浅色在深色模式下白底白字不可见）
     box.style.cssText = 'width:min(92vw,420px);max-height:80vh;display:flex;flex-direction:column;background:var(--card-bg,#fff);color:var(--ink,#111);border-radius:16px;padding:18px;box-shadow:0 8px 30px rgba(0,0,0,.2)';
-    box.appendChild(el('div', '', '<div style="font-size:16px;font-weight:600;margin-bottom:4px">联系人 / 桌面</div><div style="font-size:12px;color:var(--muted,#888);margin-bottom:12px">每个联系人数据独立；仅朋友圈互通<br>「称呼」可设置消息里 TA 的性别叫法（他 / 她 / 不设置）</div>'));
+    box.appendChild(el('div', '', '<div style="font-size:16px;font-weight:600;margin-bottom:4px">联系人 / 桌面</div><div style="font-size:12px;color:var(--muted,#888);margin-bottom:12px">每个联系人数据独立；除朋友圈外，还有部分功能数据在所有桌面共用。<b id="cm-fn-explain" style="color:#7a6ad8;font-weight:600;cursor:pointer">【功能说明】</b><br>「称呼」可设置消息里 TA 的性别叫法（他 / 她 / 不设置）</div>'));
     const list = el('div', 'cm-list'); list.style.cssText = 'display:flex;flex-direction:column;gap:8px;margin-bottom:12px;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;flex:1;min-height:0';
     getContacts().forEach(c => {
       const row = el('div');
@@ -550,6 +550,49 @@
     // v3.18.x：「美化方案」已收拢到【手机桌面美化】页（保存/我的方案/导入导出同组），此处不再重复放入口
     const close = el('button', '', '关闭');
     close.style.cssText = 'width:100%;margin-top:8px;padding:10px;border:1px solid var(--card-border,#eee);border-radius:10px;background:var(--btn-cancel-bg,#fafafa);color:var(--btn-cancel-ink,#555)';
+    close.addEventListener('click', () => { hideContactModal(m); });
+    box.appendChild(close);
+    m.appendChild(box);
+    // v3.26.x：「功能说明」——点开弹窗列出所有跨桌面共用的数据
+    document.getElementById('cm-fn-explain') && document.getElementById('cm-fn-explain').addEventListener('click', function (e) { e.stopPropagation(); if (window.openFuncExplain) window.openFuncExplain(); });
+    showContactModal(m);
+  };
+  // 切换桌面「功能说明」：说明哪些数据在所有桌面共用 / 哪些按桌面独立
+  window.openFuncExplain = function () {
+    const m = ensureModal();
+    m.innerHTML = '';
+    const box = el('div');
+    box.style.cssText = 'width:min(92vw,420px);max-height:80vh;display:flex;flex-direction:column;background:var(--card-bg,#fff);color:var(--ink,#111);border-radius:16px;padding:18px;box-shadow:0 8px 30px rgba(0,0,0,.2);overflow-y:auto;-webkit-overflow-scrolling:touch';
+    const txt =
+      '<div style="font-size:16px;font-weight:600;margin-bottom:8px">数据互通说明</div>' +
+      '<div style="font-size:13px;font-weight:600;color:var(--danger-ink,#a32d2d);margin-bottom:6px">所有桌面共用的数据</div>' +
+      '<ul style="margin:0;padding-left:18px;font-size:12px;line-height:1.9;color:var(--muted,#666)">' +
+      '<li>朋友圈（动态、通知、双方昵称/头像/封面）</li>' +
+      '<li>群聊（消息、成员形象、美化、回复设置、开关）</li>' +
+      '<li>存钱罐（金额与存钱目标，两人共同金库）</li>' +
+      '<li>心意币 / 红包 / 市集余额</li>' +
+      '<li>心意市集自定义商品</li>' +
+      '<li>我的表情包</li>' +
+      '<li>字卡库公用字卡</li>' +
+      '<li>经期记录、摸鱼天数</li>' +
+      '<li>帮我决定 / 多人决定（历史与设置）</li>' +
+      '<li>梦角世界·此间（名单与状态）、梦角档案 / 我的档案</li>' +
+      '<li>音乐文件、后台保活、通知、离线消息提醒</li>' +
+      '<li>跨桌面「来消息」（查岗 / 来电申请与开关）</li>' +
+      '</ul>' +
+      '<div style="font-size:13px;font-weight:600;color:#1a8a5f;margin:12px 0 6px">按桌面独立的数据</div>' +
+      '<ul style="margin:0;padding-left:18px;font-size:12px;line-height:1.9;color:var(--muted,#666)">' +
+      '<li>聊天记录与未读数</li>' +
+      '<li>字卡库专属字卡 / 专属回复 / 收藏</li>' +
+      '<li>桌面布局与美化（壁纸 / 气泡 / 字号等）</li>' +
+      '<li>称呼性别（TA / 他 / 她）</li>' +
+      '<li>日历、信箱、备忘录、心愿单</li>' +
+      '<li>占卜、记录、收藏、统计、记账</li>' +
+      '</ul>' +
+      '<div style="font-size:12px;color:var(--muted,#999);margin-top:12px;line-height:1.7">「共用」指切换桌面后数据仍延续；「独立」指各桌面各留一份、互不影响。</div>';
+    box.appendChild(el('div', '', txt));
+    const close = el('button', '', '关闭');
+    close.style.cssText = 'width:100%;margin-top:14px;padding:10px;border:1px solid var(--card-border,#eee);border-radius:10px;background:var(--btn-cancel-bg,#fafafa);color:var(--btn-cancel-ink,#555)';
     close.addEventListener('click', () => { hideContactModal(m); });
     box.appendChild(close);
     m.appendChild(box);

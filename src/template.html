@@ -161,7 +161,7 @@
             <p class="splash-bullet">帮我决定、多人决定功能：借鉴自小红书 @FelixFelicis（9416318007）</p>
             <p class="splash-bullet">公用字卡+专享字卡模式：借鉴自 @默玉（8012400317）</p>
             <p class="splash-item">以下功能源于网络上已有的类似想法，但设计均由我独立完成：</p>
-            <p class="splash-bullet">情绪字卡：源于早期网络上的类似提议（小红书 @心沄是颗彩虹多宝糖（9725312970）也提过这个模式）</p>
+            <p class="splash-bullet">情绪字卡：源于早期网络上的类似提议（小红书 @心汋是颗彩虹多宝糖（9725312970）也提过这个模式）</p>
             <p class="splash-bullet">换头像：灵感来自看到网络上有人提议小手机想要 chat 自己换头像</p>
             <p class="splash-item">其余功能和 UI 均为我独立设计。</p>
             <p class="splash-item">若使用代码或借鉴功能，必须标注灵感来源。标注来源是对创作者最基本的尊重，未标注来源的使用将视为违反本许可协议。</p>
@@ -341,6 +341,12 @@
           </div>
 
           <div class="mw-controls">
+            <button class="mw-btn" id="mw-mode" title="播放模式">
+              <svg id="mw-mode-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6h.01M3 12h.01M3 18h.01"/></svg>
+            </button>
+            <button class="mw-btn" id="mw-queue" title="播放列表">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M3 12h18M3 18h9"/></svg>
+            </button>
             <button class="mw-btn" id="mw-prev" title="上一首">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 20L9 12l10-8z"/><path d="M5 19V5"/></svg>
             </button>
@@ -4096,16 +4102,19 @@
           <div class="ds-bob" id="drift-bob">🫙</div>
           <div class="ds-cap" id="drift-sea-cap">两个世界之间的海</div>
         </div>
-        <button class="d-pick" id="drift-pick" type="button">捡一个</button>
+        <div class="d-actions">
+          <button class="d-pick" id="drift-pick" type="button">捡一个</button>
+          <button class="d-put" id="d-put" type="button">🌊 我也放一个</button>
+        </div>
         <div class="d-open glass" id="d-open" hidden></div>
         <div class="d-stats" id="d-stats"></div>
         <div class="d-tabs">
           <button class="d-tab sel" data-t="mine" type="button">我的瓶子</button>
           <button class="d-tab" data-t="got" type="button">捡到的</button>
+          <button class="d-tab" data-t="theirs" id="d-tab-theirs" type="button"></button>
           <button class="d-tab" data-t="fav" type="button">收藏</button>
         </div>
         <div class="d-list" id="d-list"></div>
-        <button class="d-put" id="d-put" type="button">🌊 我也放一个</button>
       </div>
     </div>
 
@@ -4675,10 +4684,11 @@
   </div>
 </div>
 
-<!-- 悬浮音乐播放小框（播放时显示，可拖动） -->
+<!-- 悬浮音乐播放小框（播放时显示，可拖动；两行布局：上行歌名/歌手，下行控制按钮） -->
 <div class="sm-float" id="sm-float" hidden>
   <div class="sm-f-info">
-    <span class="sm-f-name" id="sm-f-name">正在播放</span>
+    <div class="sm-f-name" id="sm-f-name">正在播放</div>
+    <div class="sm-f-artist" id="sm-f-artist">音乐</div>
     <div class="sm-f-progress"><div class="sm-f-fill" id="sm-f-fill"></div></div>
   </div>
   <div class="sm-f-ctrl">

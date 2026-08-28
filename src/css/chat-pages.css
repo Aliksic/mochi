@@ -2397,24 +2397,29 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + var(--mochi-safe-bottom,
 .sm-pb-btn { position:relative; }
 /* 管理音乐弹窗快捷操作（下一首播放 / 加入播放列表） */
 .sm-quick-actions { display:flex; gap:8px; }
-/* 悬浮小框 */
+/* 悬浮小框（两行布局：上行 歌名/歌手/进度，下行 控制按钮） */
 .sm-float {
   position:fixed; left:12px; top:80px; z-index:9999;
-  width:210px; padding:9px 10px; background:rgba(255,255,255,.97);
+  width:230px; padding:10px 12px; background:rgba(255,255,255,.97);
   border-radius:12px; box-shadow:0 4px 16px rgba(0,0,0,.16);
   border:1px solid rgba(0,0,0,.08);
-  display:flex; align-items:center; gap:8px; user-select:none; cursor:grab;
+  display:flex; flex-direction:column; gap:7px; user-select:none; cursor:grab;
 }
 .sm-float[hidden] { display:none; }
-.sm-f-info { flex:1; min-width:0; }
+.sm-f-info { width:100%; min-width:0; }
 .sm-f-name {
   display:block;
-  font-size:11px; font-weight:600; color:#333;
+  font-size:12px; font-weight:600; color:#333; line-height:1.3;
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
-.sm-f-progress { height:2px; background:rgba(0,0,0,.1); border-radius:2px; overflow:hidden; margin-top:4px; }
+.sm-f-artist {
+  display:block;
+  font-size:10px; color:#999; margin-top:2px;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.sm-f-progress { height:2px; background:rgba(0,0,0,.1); border-radius:2px; overflow:hidden; margin-top:6px; }
 .sm-f-fill { height:100%; width:0; background:#111; border-radius:2px; }
-.sm-f-ctrl { display:flex; align-items:center; gap:0; }
+.sm-f-ctrl { display:flex; align-items:center; justify-content:space-between; gap:0; }
 .sm-f-btn {
   position:relative;
   width:22px; height:22px; border:none; background:transparent; color:#333;
@@ -3121,6 +3126,24 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + var(--mochi-safe-bottom,
 .pmp-c-in { flex:1; min-width:0; border:1px solid var(--input-border,#ddd); background:var(--input-bg,#fff); color:var(--ink,#222); border-radius:18px; padding:9px 14px; font-size:15px; font-family:inherit; outline:none; }
 .pmp-c-send { flex-shrink:0; border:none; background:#e8533d; color:#fff; font-size:13px; font-weight:600; font-family:inherit; border-radius:18px; padding:9px 16px; -webkit-tap-highlight-color:transparent; }
 
+/* —— 陪伴模式：大号倒计时 + 辅助聊天（倒计时为主，聊天为辅）——
+   v3.27.x：专属窗顶部改为大号倒计时卡，聊天折叠为下方辅助区，缩小气泡与标题 */
+#page-pmp-chat .chat-head { flex-shrink:0; }
+.pmp-cd { flex-shrink:0; position:relative; overflow:hidden; margin:8px 12px 6px; padding:20px 14px 18px; border-radius:18px; display:flex; flex-direction:column; align-items:center; gap:7px; background:rgba(232,83,61,.07); border:1px solid rgba(232,83,61,.16); }
+.pmp-cd-time { font-size:58px; font-weight:800; line-height:1.04; color:#e8533d; font-variant-numeric:tabular-nums; letter-spacing:1px; }
+.pmp-cd-label { font-size:13px; color:var(--ink-soft,#888); }
+.pmp-cd-ctrls { display:flex; align-items:center; gap:12px; margin-top:2px; }
+.pmp-cd-ctrls .pmp-bar-toggle { font-size:13px; padding:6px 20px; }
+.pmp-cd-ctrls .pmp-bar-more { font-size:18px; }
+.pmp-cd-progress { position:absolute; left:14px; right:14px; bottom:6px; height:3px; border-radius:2px; background:rgba(232,83,61,.15); overflow:hidden; }
+.pmp-cd-progress .pmp-progress-fill { height:100%; width:0; background:#e8533d; transition:width .3s linear; }
+.pmp-c-chat { flex:1; min-height:0; display:flex; flex-direction:column; }
+.pmp-c-chat-title { flex-shrink:0; text-align:center; font-size:11px; color:var(--hint-ink,#999); padding:2px 0 6px; letter-spacing:1px; }
+.pmp-c-chat .pmp-c-list { padding-top:6px; }
+.pmp-c-chat .pmp-c-bub { padding:6px 10px; font-size:13px; border-radius:14px; border-top-left-radius:4px; }
+.pmp-c-chat .pmp-c-row.me .pmp-c-bub { border-radius:14px; border-top-right-radius:4px; }
+.pmp-c-chat .pmp-c-empty { font-size:11px; line-height:1.8; }
+
 /* ===== 存钱罐（桌面第三页）：金色小金库 ===== */
 .piggy-body { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; box-sizing:border-box; padding:14px 14px 40px; }
 .piggy-hero { padding:22px 18px 20px; border-radius:14px; text-align:center; margin-bottom:16px; }
@@ -3181,6 +3204,28 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + var(--mochi-safe-bottom,
 .piggy-more { border:none; background:none; font-size:12px; color:#b7791f; font-family:inherit; padding:2px 4px; -webkit-tap-highlight-color:transparent; }
 .pr-month { font-size:11px; color:var(--ink-soft,#999); margin:8px 0 2px; font-weight:600; }
 .pr-sub { font-size:11px; color:#b7791f; text-align:right; padding:4px 0 8px; opacity:.85; }
+/* 心愿单（独立功能 · 与存钱罐互绑） */
+.piggy-reply .pgwg { font-style:normal; font-size:10px; color:#c9a86a; opacity:.95; }
+.pg-wish { border:1px dashed rgba(0,0,0,.15); background:none; color:var(--ink-soft,#888); font-size:11px; border-radius:8px; padding:3px 7px; flex-shrink:0; -webkit-tap-highlight-color:transparent; }
+.pg-wish.on { border-style:solid; border-color:#e0a94c; color:#b7791f; }
+.wish-body { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; box-sizing:border-box; padding:14px 14px 40px; }
+.wish-hint { font-size:12px; line-height:1.7; color:var(--ink-soft,#777); padding:12px 14px; border-radius:14px; margin-bottom:14px; text-align:left; }
+.wish-list { border-radius:14px; padding:12px 14px 6px; margin-bottom:16px; }
+.wish-empty { text-align:center; font-size:13px; color:var(--ink-soft,#aaa); padding:14px 0; line-height:1.8; }
+.wl-row { display:flex; align-items:center; gap:8px; padding:9px 0; flex-wrap:wrap; font-size:13px; }
+.wl-row + .wl-row { border-top:1px solid rgba(0,0,0,.05); }
+.wl-name { font-weight:600; color:var(--ink,#333); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.wl-row.done .wl-name { text-decoration:line-through; color:var(--ink-soft,#aaa); font-weight:400; }
+.wl-amt { font-size:11px; color:var(--ink-soft,#999); font-variant-numeric:tabular-nums; }
+.wl-state { font-size:11px; color:#b7791f; }
+.wl-row.done .wl-state { color:var(--ink-soft,#aaa); }
+.wl-link { font-size:11px; color:#c9a86a; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; min-width:60px; }
+.wl-bind { border:1px dashed rgba(0,0,0,.18); background:none; color:#b7791f; font-size:11px; border-radius:8px; padding:3px 8px; -webkit-tap-highlight-color:transparent; }
+.wl-done { border:none; background:rgba(0,0,0,.06); color:var(--ink-soft,#666); font-size:11px; border-radius:8px; padding:3px 8px; -webkit-tap-highlight-color:transparent; }
+.wl-done:active { background:rgba(0,0,0,.12); }
+.wl-del { border:none; background:none; color:#ccc; font-size:13px; padding:2px 4px; -webkit-tap-highlight-color:transparent; flex-shrink:0; }
+.wish-manage { text-align:center; }
+.wish-add { font-size:13px; color:var(--ink-soft,#888); background:none; border:1px dashed rgba(0,0,0,.15); border-radius:10px; padding:8px 16px; margin:0 4px; }
 
 /* ===== 世界观·他偶发浮层（灵体在身边，字卡传讯） ===== */
 .ta-chime-note { position:fixed; left:50%; bottom:22%; transform:translate(-50%,8px); z-index:60; display:flex; align-items:center; gap:8px; max-width:86%; padding:10px 16px; border-radius:14px; background:rgba(255,255,255,.94); border:1px solid rgba(232,83,61,.22); box-shadow:0 6px 22px rgba(0,0,0,.10); font-size:14px; color:var(--ink,#444); opacity:0; pointer-events:none; transition:opacity .4s, transform .4s; }
@@ -3194,19 +3239,16 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + var(--mochi-safe-bottom,
 @keyframes ta-chime-grab { 0%,100%{ transform:translate(-50%,0) scale(1);} 50%{ transform:translate(-50%,0) scale(1.03);} }
 .ta-chime-grab-tip { flex-shrink:0; font-size:11px; font-weight:700; color:#fff; background:#e8533d; padding:3px 8px; border-radius:99px; }
 
-/* ===== v3.13.x：日历页·摸鱼热力图（近一年 GitHub 贡献格样式） ===== */
+/* ===== 日历页·摸鱼/工作「当日统计」条状图（跟随选中日期，完整日统计） ===== */
 .fh-range { font-size:10px; color:var(--ink-soft,#bbb); }
-.fh-scroll { overflow-x:auto; -webkit-overflow-scrolling:touch; padding:2px 0 4px; }
-.fh-grid-wrap { display:grid; grid-template-rows:repeat(7,11px); grid-auto-flow:column; grid-auto-columns:11px; gap:3px; width:max-content; }
-.fh-cell { display:block; border-radius:2.5px; background:rgba(17,17,17,.07); }
-.fh-cell.fut { opacity:.35; }
-.fh-cell.l1 { background:#f3c1ba; }
-.fh-cell.l2 { background:#ea968c; }
-.fh-cell.l3 { background:#dd6a5e; }
-.fh-cell.l4 { background:#b23a30; }
-.fh-legend { margin-top:8px; font-size:10px; color:var(--ink-soft,#999); display:flex; align-items:center; gap:3px; }
-.fh-legend .fh-cell { width:10px; height:10px; }
-.fh-tip { margin-left:auto; color:var(--ink-soft,#bbb); }
+.fh-bars { display:flex; flex-direction:column; gap:9px; }
+.fh-bar-row { display:flex; align-items:center; gap:8px; font-size:12px; }
+.fh-bar-row .fh-label { width:88px; flex:none; color:var(--ink-soft,#999); text-align:right; white-space:nowrap; }
+.fh-bar-row .fh-val { width:32px; flex:none; text-align:left; color:var(--ink,#222); font-weight:600; font-size:12px; }
+.fh-track { flex:1; height:12px; background:rgba(17,17,17,.08); border-radius:6px; overflow:hidden; }
+.fh-fill { height:100%; border-radius:6px; background:var(--ink,#1a1a1a); transition:width .3s; }
+.fh-bar-row.work .fh-fill { background:rgba(17,17,17,.4); }
+.fh-empty { font-size:12px; color:var(--ink-soft,#999); padding:2px 0 6px; }
 
 /* ===== v3.13.x：主页记录·摸鱼连击纪录行 ===== */
 .fish-combo-line { font-size:11px; color:#b7791f; padding:6px 2px 2px; letter-spacing:.3px; }

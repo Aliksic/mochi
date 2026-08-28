@@ -443,7 +443,7 @@
   }
 
   function render() {
-    try { ensureFishHeat(); } catch (e) {} // v3.13.x：热力图与选中日期无关，进页即刷
+    try { ensureFishHeat(); } catch (e) {} // 摸鱼/工作「当日统计」随 selDate 切换刷新
     const parts = selDate.split('-');
     const dd = new Date(+parts[0], +parts[1] - 1, +parts[2]);
     const n2 = new Date();
@@ -490,9 +490,10 @@
     renderGrid();
   }
 
-  // ===== v3.13.x：摸鱼热力图（近一年 GitHub 贡献格样式，双方当日合计） =====
-  // 数据源 fish-day-add（与桌面周末面板/主页记录/信箱周报同源）。与选中日期无关，
-  // 卡片动态创建、插在 #cal-empty-card 之后；render() 每次进入页面时刷新数据。
+  // ===== 日历页·摸鱼/工作「当日统计」条状图 =====
+  // 数据源 fish-day-add / work-day-add（历史通过）+ 当天实时 day-fish-*/day-work-*。
+  // 跟随日历选中日期（selDate）：日历上切到哪一天，本卡片就展示那一整天的完整统计。
+  // 卡片动态创建、插在 #cal-empty-card 之后；render() 每次进入页面 / 切换日期时刷新。
   let _heatCard = null;
   function heatNorm(s) {
     const p = String(s || '').split('-');
@@ -512,48 +513,77 @@
       _heatCard.id = 'cal-fish-heat';
       _heatCard.innerHTML =
         '<div class="cal-sec">' +
-          '<div class="cal-sec-head"><div class="cal-sec-title">摸鱼热力图</div><span class="fh-range" id="fh-range"></span></div>' +
-          '<div class="fh-scroll"><div class="fh-grid-wrap" id="fh-wrap"></div></div>' +
-          '<div class="fh-legend">少 <i class="fh-cell l0"></i><i class="fh-cell l1"></i><i class="fh-cell l2"></i><i class="fh-cell l3"></i><i class="fh-cell l4"></i> 多' +
-          '<span class="fh-tip">格子 = 双方当日合计</span></div>' +
+          '<div class="cal-sec-head"><div class="cal-sec-title">摸鱼 · 工作（日统计）</div><span class="fh-range" id="fh-range"></span></div>' +
+          '<div class="fh-bars" id="fh-wrap"></div>' +
         '</div>';
       anchor.parentNode.insertBefore(_heatCard, anchor.nextSibling);
     }
     const rangeEl = document.getElementById('fh-range');
     const wrap = document.getElementById('fh-wrap');
     if (!wrap) return;
-    // 汇总每日合计（键 Y-M-D 与 fishDayKey 同格式）
-    const map = {};
-    try {
-      JSON.parse(store.get('fish-day-add') || '[]').forEach(x => {
-        const d = heatNorm(x && x.date);
-        if (!d || isNaN(d.getTime())) return;
-        const k = d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate();
-        const ex = map[k] || { m: 0, t: 0 };
-        ex.m += x.mine || 0; ex.t += x.ta || 0;
-        map[k] = ex;
-      });
-    } catch (e) {}
-    // 53 列（周）× 7 行：从本周周六往前推，今天之后的格子置灰
-    const now = new Date();
-    const today0 = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const end = new Date(today0); end.setDate(end.getDate() + (6 - end.getDay())); // 本周周六
-    const start = new Date(end); start.setDate(start.getDate() - 53 * 7 + 1);
+    const parts = selDate.split('-');
+    const dd = new Date(+parts[0], +parts[1] - 1, +parts[2]);
+    const n2 = new Date();
+    const today0 = new Date(n2.getFullYear(), n2.getMonth(), n2.getDate());
+    const isFuture = dd > today0;
+    const isBefore = !isFuture && selDate < firstUseDate();
+    // 空态（未来 / 首用日之前）：与日历其余卡片同口径
+    if (isFuture || isBefore) {
+      if (rangeEl) rangeEl.textContent = isFuture ? '这一天还没到来' : '开始使用之前没有记录';
+      wrap.innerHTML = '<div class="fh-empty">' + (isFuture ? '等到了那一天再来看看吧' : '开始使用之前的日子没有摸鱼 / 工作记录') + '</div>';
+      return;
+    }
+    if (rangeEl) rangeEl.textContent = (dd.getMonth() + 1) + ' 月 ' + dd.getDate() + ' 日 · 完整日统计';
+    // 读取当天数值：今天读实时键，历史读按天记录（日期键无补零，需归一化匹配 selDate）
+    const isToday = selDate === todayStr();
+    const dayKey = (d) => d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
+    const norm = (s) => {
+      const p = String(s).split('-');
+      if (p.length !== 3) return String(s);
+      return p[0] + '-' + String(+p[1]).padStart(2, '0') + '-' + String(+p[2]).padStart(2, '0');
+    };
+    const pickDay = (logKey) => {
+      try {
+        const list = JSON.parse(store.get(logKey) || '[]');
+        return list.find(x => x && norm(x.date) === selDate) || null;
+      } catch (e) { return null; }
+    };
+    let fm = 0, ft = 0, wm = 0, wt = 0;
+    if (isToday) {
+      const k = dayKey(dd);
+      fm = parseInt(store.get('day-fish-' + k) || '0', 10) || 0;
+      ft = parseInt(store.get('day-fish-ta-' + k) || '0', 10) || 0;
+      wm = parseInt(store.get('day-work-' + k) || '0', 10) || 0;
+      wt = parseInt(store.get('day-work-ta-' + k) || '0', 10) || 0;
+    } else {
+      const f = pickDay('fish-day-add');
+      const w = pickDay('work-day-add');
+      if (f) { fm = f.mine || 0; ft = f.ta || 0; }
+      if (w) { wm = w.mine || 0; wt = w.ta || 0; }
+    }
+    const myName = store.get('lbl-user') || '我';
+    const taName = store.get('lbl-partner') || 'TA';
+    if (!fm && !ft && !wm && !wt) {
+      wrap.innerHTML = '<div class="fh-empty">这一天没有摸鱼 / 工作记录</div>';
+      return;
+    }
+    const maxV = Math.max(fm, ft, wm, wt, 1);
+    const pct = (v) => Math.max(4, Math.round(v / maxV * 100));
+    const bars = [
+      { label: '摸鱼 · ' + myName, v: fm, cls: 'fish' },
+      { label: '摸鱼 · ' + taName, v: ft, cls: 'fish' },
+      { label: '工作 · ' + myName, v: wm, cls: 'work' },
+      { label: '工作 · ' + taName, v: wt, cls: 'work' }
+    ];
     let html = '';
-    const cur = new Date(start);
-    while (cur <= end) {
-      const k = cur.getFullYear() + '-' + cur.getMonth() + '-' + cur.getDate();
-      const v = map[k];
-      const sum = v ? (v.m + v.t) : 0;
-      const lv = sum >= 60 ? 4 : sum >= 30 ? 3 : sum >= 10 ? 2 : sum >= 1 ? 1 : 0;
-      const fut = cur > today0 ? ' fut' : '';
-      html += '<i class="fh-cell l' + lv + fut + '" title="' + (cur.getMonth() + 1) + ' 月 ' + cur.getDate() + ' 日 · 摸鱼 ' + sum + ' 点"></i>';
-      cur.setDate(cur.getDate() + 1);
-    }
+    bars.forEach(b => {
+      html += '<div class="fh-bar-row ' + b.cls + '">' +
+        '<span class="fh-label">' + b.label + '</span>' +
+        '<div class="fh-track"><div class="fh-fill" style="width:' + pct(b.v) + '%"></div></div>' +
+        '<span class="fh-val">+' + b.v + '</span>' +
+      '</div>';
+    });
     wrap.innerHTML = html;
-    if (rangeEl) {
-      rangeEl.textContent = '近一年 · ' + (start.getMonth() + 1) + '.' + start.getDate() + ' - ' + (today0.getMonth() + 1) + '.' + today0.getDate();
-    }
   }
 
   // 桌面【日历】图标进入

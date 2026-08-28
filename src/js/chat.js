@@ -777,6 +777,8 @@ eg.forEach(g => (g[1] || []).forEach(c => { if (isOff && isOff('emoji', c)) retu
 } catch (e) {}
 return { text, kaomoji, emoji, sticker, image, voice, poke };
 }
+// v3.27.x：暴露给番茄钟陪伴模式复用——让陪伴中的 TA 使用与普通聊天一致的字卡池回复
+window.getPool = getPool;
 function fmtTime(ts) {
 if (!ts) return '';
 const d = new Date(ts);

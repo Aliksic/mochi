@@ -515,14 +515,17 @@
     setTimeout(() => {
       // v3.6.x：必须是本次通话仍在呼叫中才执行（挂断后重拨不套用旧结果）
       if (currentCall !== callRef || callRef.status !== 'calling') return;
+      // v3.x.x：去电结果提示——原每次拨打只静默关面板、结果仅写聊天系统消息，
+      // 用户看不到接通/未接/忙线；改为各结果分别 toast 明确提示
       if (r < cc.busy) {
-        callRef.status = 'ended'; endCall('忙线中');
+        callRef.status = 'ended'; toast('对方忙线中'); endCall('忙线中');
       } else if (r < cc.busy + cc.reject) {
-        callRef.status = 'ended'; endCall('对方已拒绝');
+        callRef.status = 'ended'; toast('对方已拒绝'); endCall('对方已拒绝');
       } else if (r < cc.busy + cc.reject + cc.pickup) {
         callRef.status = 'connected';
         // 对方接通即恢复音乐播放（与来电接听一致）
         if (window.musicHoldForCall) window.musicHoldForCall(false);
+        toast('通话已接通');
         if (statusEl) statusEl.textContent = '正在通话...';
         startCallDuration();
         // v3.7.x：小框开关隐藏时接通后保持大面板常驻（不自动最小化）
@@ -535,7 +538,7 @@
           }
         }, 2000);
       } else {
-        callRef.status = 'ended'; endCall('未接通');
+        callRef.status = 'ended'; toast('对方未接通'); endCall('未接通');
       }
     }, 1800 + Math.random() * 1500);
   };
