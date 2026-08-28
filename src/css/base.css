@@ -102,11 +102,11 @@ html { margin:0; padding:0; }
 /* v3.8.y：底部统一卡片框——版本/加载/提示/按钮装进一个白卡片，与顶部品牌卡片呼应 */
 .splash-footcard {
   width:min(322px, 100%); box-sizing:border-box;
-  padding:14px 18px calc(14px + env(safe-area-inset-bottom, 0px));
+  padding:14px 18px calc(14px + var(--mochi-safe-bottom,env(safe-area-inset-bottom,0px)));
   background:var(--card-bg); border:1px solid rgba(0,0,0,.07);
   border-radius:20px;
   display:flex; flex-direction:column; align-items:center;
-  margin-bottom:calc(env(safe-area-inset-bottom,0px) + 18px);
+  margin-bottom:calc(var(--mochi-safe-bottom,env(safe-area-inset-bottom,0px)) + 18px);
   animation:splash-fade-up .6s ease .4s backwards;
 }
 /* v3.8.y：底部版本块——两行：名称+版本(加粗) / 部署时间+实时秒数，去等宽字体、字号加大适配手机 */
@@ -350,12 +350,12 @@ html.force-mobile .phone select,
 html.force-mobile .phone [contenteditable="true"] { font-size:16px; }
 html.force-mobile, html.force-mobile body, html.force-mobile * { touch-action: manipulation; }
 html.force-mobile, html.force-mobile body, html.force-mobile .phone, html.force-mobile img { -webkit-touch-callout:none; }
-html.force-mobile .tabbar { margin-bottom:env(safe-area-inset-bottom, 0px); }
+html.force-mobile .tabbar { margin-bottom:var(--mochi-safe-bottom,env(safe-area-inset-bottom,0px)); }
 html.force-mobile .phone .page.full .chat-input-row {
   margin: 0; border-radius: 0;
   border-left: none; border-right: none; border-bottom: none;
   padding-left: 12px; padding-right: 12px; padding-top: 10px;
-  padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(10px + var(--mochi-safe-bottom,env(safe-area-inset-bottom,0px)));
 }
 html.force-mobile .phone .page.full .chat-head { padding-top: calc(10px + env(safe-area-inset-top, 0px)); }
 html.force-mobile .phone .page.full { padding-bottom: 0; }
@@ -405,6 +405,17 @@ html.force-mobile .desk-period, html.force-mobile .app-grid, html.force-mobile .
    iPhone 主屏幕打开打字看不见输入框；普通 Safari 标签页无此类所以正常，
    正好解释「只有桌面打开才坏」）。默认态占满由 height:100vh 保证；
    JS 侧收缩时另写内联 minHeight:'0' 双保险（防其他来源的 min-height 钳制） */
+/* v3.26.x：iOS 浏览器态（含 Edge 桌面快捷方式）高度改由实测视觉视口决定——
+   100dvh 在「布局视口停在浏览器工具条上沿」时本就等于工具条上沿，但部分版本/
+   时机（工具条收起动画中、display-mode 切换）下与可视区不一致，输入栏下方留一条
+   点不到的死带（用户报修：聊天输入栏下面空着一大块）。
+   mobile-adapt.js syncVvFit 用 vv.height*scale 实测写 --mochi-ios-h 并加 ios-vv-fit
+   类；键盘会话期间该属性摘除（那段时间 .phone 高度由 _setPhoneH 的内联值接管）。
+   :not(.ios-pwa-standalone) 是必需的：本选择器特异性 (0,2,1) 高于下方
+   .ios-pwa-standalone .phone 的 (0,2,0)，不加守卫会把 v3.15.x 的 standalone 100vh
+   修复压回去；standalone 没有浏览器工具条，本就不需要这条 */
+html.ios-vv-fit:not(.ios-pwa-standalone) .phone,
+html.tablet.ios-vv-fit:not(.ios-pwa-standalone) .phone { height:var(--mochi-ios-h, 100dvh); }
 .ios-pwa-standalone .phone,
 html.tablet.ios-pwa-standalone .phone { height:100vh; }
 /* v3.7.x：iPhone 12 mini 实测反馈「桌面底部导航栏下面有灰色图形」——iOS 部分版本
@@ -467,7 +478,7 @@ html.ios-pwa-standalone body { background: var(--bg-b); }
 /* iOS 全面屏底部安全区：底部 tabbar（桌面页）+ 聊天输入栏不被 Home 指示条遮挡 */
 @media (max-width: 900px) {
   .tabbar {
-    margin-bottom:env(safe-area-inset-bottom, 0px);
+    margin-bottom:var(--mochi-safe-bottom,env(safe-area-inset-bottom,0px));
   }
   /* v3.5.119：聊天页底部输入栏改通栏贴底（微信式）——不再悬浮留白：
      去 margin/圆角/侧底边框，底部只留系统安全区；顶部栏同步收紧。
@@ -478,7 +489,7 @@ html.ios-pwa-standalone body { background: var(--bg-b); }
     border-left: none; border-right: none; border-bottom: none;
     padding-left: 12px; padding-right: 12px;
     padding-top: 10px;
-    padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(10px + var(--mochi-safe-bottom,env(safe-area-inset-bottom,0px)));
   }
   .phone .page.full .chat-head { padding-top: calc(10px + env(safe-area-inset-top, 0px)); }
   .phone .page.full { padding-bottom: 0; }
@@ -565,12 +576,12 @@ html.tablet .phone .page.full .chat-input-row {
   border-left:none; border-right:none; border-bottom:none;
   padding-left:12px; padding-right:12px;
   padding-top:10px;
-  padding-bottom:calc(10px + env(safe-area-inset-bottom, 0px));
+  padding-bottom:calc(10px + var(--mochi-safe-bottom,env(safe-area-inset-bottom,0px)));
 }
 html.tablet .phone .page.full .chat-head { padding-top:calc(10px + env(safe-area-inset-top, 0px)); }
 html.tablet .phone .page.full { padding-bottom:0; }
 html.tablet #page-chat { background:var(--page-bg-grad); }
-html.tablet .tabbar { margin-bottom:env(safe-area-inset-bottom, 0px); }
+html.tablet .tabbar { margin-bottom:var(--mochi-safe-bottom,env(safe-area-inset-bottom,0px)); }
 /* 平板不应用桌面缩放（zoom 是 iOS 卡顿红线；平板按手机端体验处理，与竖屏一致） */
 html.tablet .page-slide { zoom:1; }
 html.tablet .deco-widget, html.tablet .mini-card, html.tablet .checkin,
@@ -751,6 +762,15 @@ input.ce-ghost, textarea.ce-ghost {
   -webkit-overflow-scrolling:touch;
   overscroll-behavior:contain;
 }
+/* v3.25.x：长文只读弹窗（诊断信息）——宽版 + 放大多行框，避免窄小而难核对；
+   同时隐藏滚动条（与 .page 隐藏灰色滚动条的用户偏好一致，诊断长文仍可滑动查看） */
+.modal, .modal-textarea.ce-box {
+  scrollbar-width:none; -ms-overflow-style:none;
+}
+.modal::-webkit-scrollbar, .modal-textarea.ce-box::-webkit-scrollbar { display:none; }
+.modal.modal--big { width:min(330px, 94vw); }
+.modal.modal--big .modal-textarea,
+.modal.modal--big .modal-textarea.ce-box { max-height:52vh; }
 .modal-swatches { display:flex; flex-wrap:wrap; gap:12px; margin-top:4px; }
 .modal-swatches[hidden] { display:none; }
 .modal-pills { display:flex; flex-wrap:wrap; gap:8px; margin-top:4px; }
@@ -848,7 +868,7 @@ input.ce-ghost, textarea.ce-ghost {
 
 /* ===== PWA 安装按钮 / iOS 提示 ===== */
 .pwa-install {
-  position:fixed; right:16px; bottom:calc(16px + env(safe-area-inset-bottom, 0px)); z-index:900;
+  position:fixed; right:16px; bottom:calc(16px + var(--mochi-safe-bottom,env(safe-area-inset-bottom,0px))); z-index:900;
   display:flex; align-items:center; gap:6px;
   background:var(--btn-bg); color:var(--btn-ink); border:none; border-radius:99px;
   padding:11px 18px; font-size:13px; font-family:inherit; font-weight:600;
@@ -857,7 +877,7 @@ input.ce-ghost, textarea.ce-ghost {
 .pwa-install svg { width:16px; height:16px; }
 .pwa-install[hidden] { display:none; }
 .pwa-ios-hint {
-  position:fixed; right:16px; bottom:calc(16px + env(safe-area-inset-bottom, 0px)); z-index:900;
+  position:fixed; right:16px; bottom:calc(16px + var(--mochi-safe-bottom,env(safe-area-inset-bottom,0px))); z-index:900;
   background:rgba(17,17,17,.92); color:#fff; border-radius:14px;
   padding:12px 16px; font-size:12px; line-height:1.5; max-width:240px;
   box-shadow:0 6px 20px rgba(0,0,0,.25); cursor:pointer;

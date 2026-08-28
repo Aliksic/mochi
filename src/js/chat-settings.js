@@ -977,6 +977,39 @@
     try { applyFont(); } catch (e) {}
   });
 
+  // ===== v3.26.x：镜像开关轮询合并为单一 ticker（iOS 卡顿收口）=====
+  // 下方六处「聊天设置页 ⇄ 设置页/存储」镜像开关各写了一个 setInterval(sync,500)，
+  // 且句柄全部丢弃（永不可清）——boot 起常驻 6 个定时器，每秒 12 次读 checkbox /
+  // localStorage，不管用户在不在这一页。合并成一个共享 ticker：
+  //   · 仅在 #page-chat-settings 未 hidden 且文档 visible 时运行，离页/切后台即停；
+  //   · 进页当帧先跑一次（不等 500ms，避免开关显示滞后）；
+  //   · contact-switched（按桌面存的值会变）立即补跑一次。
+  const _csTicker = { fns: [], timer: 0 };
+  function csAddSync(fn) { _csTicker.fns.push(fn); }
+  function _csRun() {
+    for (let i = 0; i < _csTicker.fns.length; i++) { try { _csTicker.fns[i](); } catch (e) {} }
+  }
+  function _csTickOn() {
+    if (_csTicker.timer) return;
+    _csRun();
+    _csTicker.timer = setInterval(_csRun, 500);
+  }
+  function _csTickOff() {
+    if (_csTicker.timer) { clearInterval(_csTicker.timer); _csTicker.timer = 0; }
+  }
+  (function () {
+    const page = document.getElementById('page-chat-settings');
+    if (!page) return;
+    const want = () => {
+      if (!page.hidden && document.visibilityState === 'visible') _csTickOn();
+      else _csTickOff();
+    };
+    try { new MutationObserver(want).observe(page, { attributes: true, attributeFilter: ['hidden'] }); } catch (e) {}
+    document.addEventListener('visibilitychange', want);
+    document.addEventListener('contact-switched', function () { if (_csTicker.timer) _csRun(); });
+    want();
+  })();
+
   // v3.7.x：聊天设置顶部的「全屏模式」开关——镜像设置页 #sf-fullscreen（同一状态）。
   // 本页切换 → 代理到设置页开关并派发 change（走 fullscreen.js 全流程：原生全屏/CSS
   // 兜底/iOS 分支/失败回滚）；设置页或系统（fullscreenchange/切后台恢复/失败回滚）
@@ -992,7 +1025,7 @@
       sfFs.checked = csFs.checked;
       sfFs.dispatchEvent(new Event('change', { bubbles: true }));
     });
-    setInterval(syncCsFs, 500);
+    csAddSync(syncCsFs);
   }
 
   // v3.9.x：聊天设置「全屏边缘防误触」开关——镜像设置页 #sf-edge-guard（同一状态双向同步）。
@@ -1008,7 +1041,7 @@
       sfEg.checked = csEg.checked;
       sfEg.dispatchEvent(new Event('change', { bubbles: true }));
     });
-    setInterval(syncCsEg, 500);
+    csAddSync(syncCsEg);
   }
 
   // v3.7.x：聊天设置「隐藏音乐悬浮小窗」开关——与音乐页 #music-float-en / 音乐设置
@@ -1041,7 +1074,7 @@
       toast(csMf.checked ? '音乐悬浮小窗已隐藏：播放时不再显示右上角悬浮小框' : '音乐悬浮小窗已恢复显示：播放时右上角出现悬浮小框');
     });
     // 音乐页/音乐设置/桌面部件改动或切桌面后 500ms 内同步回本页开关
-    setInterval(syncCsMf, 500);
+    csAddSync(syncCsMf);
     document.addEventListener('contact-switched', syncCsMf);
   }
 
@@ -1066,7 +1099,7 @@
       cmhSet(csCmh.checked);
       toast(csCmh.checked ? '通话小框已隐藏：接通后保持通话面板，不弹出悬浮小框' : '通话小框已开启：接通后自动最小化为悬浮小框');
     });
-    setInterval(syncCsCmh, 500);
+    csAddSync(syncCsCmh);
     document.addEventListener('contact-switched', syncCsCmh);
   }
 
@@ -1092,7 +1125,7 @@
       try { document.dispatchEvent(new Event('group-chat-mode-changed')); } catch (e) {}
       toast(sfGc.checked ? '群聊已开启：桌面新增群聊按钮，占卜按钮已隐藏（可在美化装修模式添加到其他页面）' : '群聊已关闭，占卜按钮已恢复');
     });
-    setInterval(syncGc, 500);
+    csAddSync(syncGc);
     document.addEventListener('contact-switched', syncGc);
   }
 
@@ -1171,7 +1204,7 @@
       try { document.dispatchEvent(new Event('hide-ta-sticker-changed')); } catch (e) {}
       toast(csHts.checked ? '已隐藏：聊天和朋友圈的表情包面板只显示「我的表情包」' : '已恢复显示 TA 的和公用表情包');
     });
-    setInterval(syncHts, 500);
+    csAddSync(syncHts);
     document.addEventListener('contact-switched', syncHts);
   }
 })();

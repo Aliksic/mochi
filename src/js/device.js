@@ -139,6 +139,55 @@
     isAndroid: !!isAndroid,
     isVia: !!isVia
   };
+
+  // ===== v3.26.x：视口 / 键盘 / 全屏现场探针（只读）window.mochiVvDiag() =====
+  // iOS 三项报障（输入栏下空一块、页面突然上移点不动、全屏开关没反应）在无头
+  // Chrome 里都拿不到 WebKit 的真实几何，只能把现场数据随诊断文本一起回收。
+  // 组合两路：本函数从 DOM/计算样式实测 + mobile-adapt.js 的 iOS 键盘内部状态
+  // （window.__mochiIosKb，安卓/桌面下不存在）——后者才知道棘轮基线/文档锁到底残留没有。
+  window.mochiVvDiag = function () {
+    try {
+      const d = document.documentElement;
+      const cs = window.getComputedStyle(d);
+      const vv = window.visualViewport || null;
+      const phone = document.querySelector('.phone');
+      const ps = phone ? window.getComputedStyle(phone) : null;
+      const pr = phone ? phone.getBoundingClientRect() : null;
+      let fsMode = '关闭';
+      if (document.fullscreenElement || document.webkitFullscreenElement) fsMode = '原生全屏';
+      else if (d.classList.contains('fs-css-active')) fsMode = 'CSS兜底全屏';
+      else if (d.classList.contains('ios-fs-active')) fsMode = 'iOS隐藏模拟状态栏';
+      else if (window.matchMedia && window.matchMedia('(display-mode: fullscreen)').matches) fsMode = '系统级全屏(display_override)';
+      const out = {
+        innerH: window.innerHeight || 0,
+        innerW: window.innerWidth || 0,
+        vvH: vv ? Math.round(vv.height) : null,
+        vvW: vv ? Math.round(vv.width) : null,
+        vvOffsetTop: vv ? Math.round(vv.offsetTop || 0) : null,
+        vvScale: vv ? vv.scale : null,
+        screenH: (window.screen && screen.height) || 0,
+        docScrollY: Math.round(window.scrollY || window.pageYOffset || 0),
+        safeBottom: cs.getPropertyValue('--mochi-safe-bottom').trim() || '(未设→env)',
+        iosH: cs.getPropertyValue('--mochi-ios-h').trim() || '(未设)',
+        phoneH: ps ? Math.round(parseFloat(ps.height) || 0) : 0,
+        phoneTop: pr ? Math.round(pr.top) : null,
+        phoneBottom: pr ? Math.round(pr.bottom) : null,
+        phoneInlineH: phone && phone.style.height ? phone.style.height : '',
+        phoneAlignSelf: phone && phone.style.alignSelf ? phone.style.alignSelf : '',
+        htmlInlineOverflow: d.style.overflow || '',
+        bodyScrollLock: !!(document.body && document.body.classList.contains('scroll-lock')),
+        vvFit: d.classList.contains('ios-vv-fit'),
+        standalone: d.classList.contains('ios-pwa-standalone'),
+        fsMode: fsMode,
+        kb: null
+      };
+      // 底部空隙实测：可视区底边到 .phone 底边的差（>8px 即用户说的「下面空一块」）
+      if (pr && vv) out.gapBottom = Math.round(vv.height - pr.bottom);
+      try { if (typeof window.__mochiIosKb === 'function') out.kb = window.__mochiIosKb(); } catch (e2) {}
+      try { if (typeof window.scrollLockInfo === 'function') out.lock = window.scrollLockInfo(); } catch (e3) {}
+      return out;
+    } catch (e) { return null; }
+  };
 })();
 
 // ===== 复制诊断信息（设置页入口，v3.16.x；v3.25.x 扩充） =====
@@ -536,6 +585,26 @@
     L.push('matchMedia(≤900px)=' + mq('(max-width: 900px)') + '  coarse=' + mq('(pointer: coarse)') + '  hoverNone=' + mq('(hover: none)'));
     L.push('display-mode: standalone=' + mq('(display-mode: standalone)') + '  fullscreen=' + mq('(display-mode: fullscreen)'));
     L.push('iOS 主屏幕打开(standalone)=' + (navigator.standalone === true));
+    // v3.26.x：视口/键盘/全屏现场（iOS 三项报障的唯一可靠证据通道）——
+    // 底部空隙 = 可视区底边到 .phone 底边的差；「残留」行专门抓
+    // 「页面突然上移点不动」（收缩/文档锁/基线没复原）与全屏到底走了哪条路
+    try {
+      const vg = (typeof window.mochiVvDiag === 'function') ? window.mochiVvDiag() : null;
+      if (vg) {
+        L.push('视口实测：全屏=' + vg.fsMode + '  vv高=' + vg.vvH + '  .phone高=' + vg.phoneH
+          + '（顶' + vg.phoneTop + '/底' + vg.phoneBottom + '）  底部空隙=' + vg.gapBottom
+          + '  --mochi-ios-h=' + vg.iosH + '  --mochi-safe-bottom=' + vg.safeBottom
+          + '  vv-fit=' + vg.vvFit);
+        L.push('键盘/锁残留：kbActive=' + (vg.kb ? vg.kb.kbActive : 'n/a')
+          + '  推定停靠=' + (vg.kb ? vg.kb.prov : 'n/a')
+          + '  基线 inner/vv=' + (vg.kb ? vg.kb.fullInner + '/' + vg.kb.fullVv : 'n/a')
+          + '  文档锁=' + (vg.kb ? vg.kb.docLocked : 'n/a')
+          + '  html.overflow内联=' + (vg.htmlInlineOverflow || '(空)')
+          + '  body.scroll-lock=' + vg.bodyScrollLock
+          + '  .phone内联高=' + (vg.phoneInlineH || '(空)') + ' align-self=' + (vg.phoneAlignSelf || '(空)')
+          + '  平移 vv.offsetTop=' + vg.vvOffsetTop + ' docY=' + vg.docScrollY);
+      }
+    } catch (e) {}
     L.push('');
     L.push('【能力】');
     L.push('Fullscreen API=' + !!(document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen));
@@ -811,6 +880,9 @@
             noInput: true,
             textarea: true,
             textareaRows: 14,
+            // v3.25.x：宽版弹窗——默认弹窗 272px 太窄、多行框 3 行装不下诊断长文，
+            // 加宽加高便于核对；配合 openModal 的 opts.big / css .modal--big
+            big: true,
             placeholder: '',
             staticText: tip,
             // v3.16.x：弹窗内「复制」按钮——自动复制失败/想再复制时直接点它重试，

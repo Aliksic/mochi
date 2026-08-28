@@ -3681,3 +3681,11 @@ staticText: staticText
   · 改名：openModal 预填原名，保存后重绘列表（chat renameChatScheme / desktop renameScheme）。
 - 验证：node --check 两张源码通过；index.html 已含 chatStartPreview/desktopStartPreview；node build.mjs 成功（哨兵 12/12）；node tools/verify.mjs 10/10。
 - 提交：工作区多轮累积 src 改动（含对方已保存的 LICENSE/README/chat-main/chatcard/contacts/feed/fullscreen/idb/mobile-adapt 等）+ 构建产物一并收口提交（未推送）。
+
+### 2026-08-28（构建收口：手机桌面美化页 顶部标签切换分区）
+- 手机桌面美化页功能太杂，新增顶部标签切换：颜色 / 尺寸 / 背景 / 图标 / 方案 五个分区互斥显示，点标签即切换（标签 sticky 置顶）。
+- 结构：template.html #page-theme 内原 5 个 .cg-title 区块各包一层 .them-sec（data-sec=color/size/bg/icon/scheme），顶部加 .them-tabs 5 个 .them-tab。
+- 样式：setting.css 增 .them-tabs/.them-tab/.them-tab.active（active 黑色高亮，黑色/白色极简风）；.them-sec 不写 display:block，靠 hidden 属性原生隐藏。
+- 逻辑：personalize.js initThemeTabs 绑定点击切换 + 默认显示「颜色」。
+- 验证：node build.mjs 成功（哨兵 12/12）；thems-sec x5、them-tab x5 就位；node tools/verify.mjs 10/10。
+- 提交：本次工作区累积 src 改动（含对方已保存文件）+ 构建产物收口提交（未推送）。

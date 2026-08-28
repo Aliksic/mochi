@@ -632,9 +632,13 @@
       }
       function unlockDocScroll() {
         try {
-          if (!_docLocked) return;
           _docLocked = false;
-          document.documentElement.style.overflow = _docPrevOverflow;
+          // v3.26.x：按「实际内联值」对账，不再只看 _docLocked——本模块是 html{overflow}
+          // 的唯一写者（已全库 grep 确认），键盘会话外残留的 hidden 一定是漏解锁，
+          // 也就是用户报的「页面突然上移、什么都点不动」。旧实现 if(!_docLocked) return
+          // 一旦标志与样式失步（异常路径），残留就永远清不掉。
+          var d = document.documentElement;
+          if (d.style.overflow) d.style.overflow = _docPrevOverflow;
         } catch (e) {}
       }
       function healKbScroll() {
@@ -936,7 +940,7 @@
             if (_kbActive) restoreKb();
             else {
               if (_iProv) _iProvClear();
-              if (_docLocked) unlockDocScroll();
+              unlockDocScroll();
               if (_phone && _phone.style.height) _setPhoneH(null, 'heal');
               if (_phone && _phone.style.alignSelf) _phone.style.alignSelf = '';
               pinScrollTop();
@@ -966,6 +970,20 @@
         _vv.addEventListener('resize', onIosVvEvent);
       }
       try { syncVvFit(); syncSafeBottom(); } catch (e) {}
+      // v3.26.x：只读现场探针（device.js window.mochiVvDiag() 合并进诊断文本）。
+      // 「页面突然上移点不动」的元凶是内部状态残留（收缩 + 文档锁 + 基线），
+      // 光看 DOM 判断不了，必须把这份状态随报障一起回收。
+      window.__mochiIosKb = function () {
+        return {
+          kbActive: !!_kbActive,
+          prov: !!_iProv,
+          docLocked: !!_docLocked,
+          fullInner: _fullInner,
+          fullVv: _fullVv,
+          pinLeft: Math.max(0, _pinUntil - Date.now()),
+          focusTag: _textFocused ? String(_textFocused.tagName || '').toLowerCase() : ''
+        };
+      };
       document.addEventListener('focusin', function (e) {
         try { if (isTextEl(e.target)) { _textFocused = e.target; _iFocusAt = Date.now(); } } catch (e2) {}
         // v3.10.x：立即同步一次——键盘弹出动画期间 vv.height 开始明显收缩，
@@ -1398,7 +1416,7 @@
         el.style.position = 'absolute';
         el.style.left = '18px'; el.style.right = '18px';
         el.style.top = 'auto';
-        el.style.bottom = 'calc(96px + env(safe-area-inset-bottom, 0px))';
+        el.style.bottom = 'calc(96px + var(--mochi-safe-bottom,env(safe-area-inset-bottom,0px)))';
         // v3.25.x：键盘期面板高度上限=「输入栏以上全部空间」（.phone 已收缩为可视高度，
         // 100% 即可视高）。此前面板沿用各自 CSS 的 max-height（如 .poke-card 48%），键盘
         // 弹起后 48% 跟着收缩后的包含块缩水，面板固定行（我的拍一拍 tab 的 tabs+分组+输入
@@ -1494,12 +1512,21 @@
   // v3.6.x：滚动锁触摸兜底——极端情况下浮层已关闭但锁未解除（iOS Safari 上会
   // 表现为整个页面无法滚动/点击无响应、像"卡死"）。每次触摸时复查一次：
   // 若实际没有任何浮层打开就立即解锁，避免锁残留。
+  // v3.26.x：仅「已上锁」时才复查——本兜底的职责是清残留锁；未锁时 applyLock
+  // 只可能补挂锁，而补挂有 MutationObserver + 1s 看门狗覆盖。applyLock 要扫
+  // 43 个选择器并逐个 getClientRects（强制布局），此前每次 touchstart 全量跑
+  // 一遍是 iOS 滑动/打字卡顿的直接来源之一。
   document.addEventListener('touchstart', function () {
+    if (!locked) return;
     try { applyLock(); } catch (e) {}
   }, { passive: true });
   // v3.13.x：滚动锁自愈看门狗——触摸兜底之外每秒对账一次（覆盖无触摸场景与
   // 「漏跑关闭路径后再也没有相关 mutation 事件」的残留锁；有浮层视觉可见时同样补挂）
-  setInterval(function () { try { applyLock(); } catch (e) {} }, 1000);
+  // v3.26.x：页面不可见（切后台）时跳过——隐藏期没有任何用户可见症状，白跑全量扫描
+  setInterval(function () {
+    if (document.visibilityState !== 'visible') return;
+    try { applyLock(); } catch (e) {}
+  }, 1000);
   // v3.13.x：只读探针（诊断「滑不动」时看哪个浮层挂着锁）window.scrollLockInfo()
   window.scrollLockInfo = function () {
     try {

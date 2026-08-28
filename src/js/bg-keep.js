@@ -1281,6 +1281,40 @@
     let n = (typeof window.__psyncSnapCount === 'number') ? window.__psyncSnapCount : 0;
     el.textContent = '已开启 · 待发文案 ' + n + ' 条 · 后台频率由系统定（约数小时一次）；收不到请检查：系统设置允许本浏览器通知，且不限制其后台运行/省电';
   }
+  // 使用说明弹窗（见 psync-help 功能说明标签）：怎么开 / 为什么开不了 / 有什么用
+  const psHelp = document.getElementById('psync-help');
+  if (psHelp) {
+    const openPsyncHelp = function (e) {
+      if (e) { try { e.stopPropagation(); e.preventDefault(); } catch (er) {} }
+      const txt = [
+        '离线消息提醒（零后端）\n',
+        '🌟 有什么用',
+        '页面全部关闭后，TA 也会在后台「留话」提醒你，营造陪伴感。系统每隔几小时唤醒一次，随机抽一条你准备（或内置）的想念字卡，以 TA 的名义弹出系统通知；回来后这条消息也会补进聊天记录。\n',
+        '🔗 它和「后台弹窗」无关',
+        '两者是完全独立的功能，互不影响。后台弹窗要的是「页面还在后台时」TA 发消息、靠后台保活+通知权限弹横幅。不开离线消息提醒，后台弹窗照常工作；反之亦然。想收到后台弹窗时，只需：后台保活+桌面消息弹窗开关开着+系统通知允许。\n',
+        '🔓 怎么开（安卓）',
+        '1. 用 Chrome 或 Edge（安卓）打开本应用；',
+        '2. 浏览器菜单 →「添加到主屏幕」，再从桌面图标打开；',
+        '3. 打开本开关，系统弹通知授权时点「允许」；',
+        '4. 到手机 系统设置→应用→浏览器，确认「通知」允许、且未限制后台/省电。\n',
+        '⚠️ 为什么有人开不了',
+        '· iPhone：iOS 不支持此技术，只能靠系统通知/保活；',
+        '· 非 Chrome/Edge 的安卓浏览器：不支持，请换用；',
+        '· 没添加到主屏：需先从桌面图标打开才能调度；',
+        '· 开了却收不到：多半是系统关了通知，或浏览器被省电/后台清理。\n',
+        '📌 注意',
+        '它不是真推送，频率由系统决定（约数小时一次）、只随机抽一条；也不代表对方真实在线。'
+      ].join('\n');
+      window.openModal('离线消息提醒 · 功能说明', '', function () {}, {
+        noInput: true, okText: '知道了',
+        staticText: txt
+      });
+    };
+    psHelp.addEventListener('click', openPsyncHelp);
+    psHelp.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPsyncHelp(); }
+    });
+  }
   // 设置开关（全局键 psync-en，与保活/通知同款 gGet/gSet）
   const psBtn = document.getElementById('psync-en');
   function syncPsyncUI() { if (psBtn) psBtn.checked = psyncEnabled(); }

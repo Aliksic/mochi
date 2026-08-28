@@ -752,12 +752,12 @@ const imgs = (q.imgs || []).filter(s => typeof s === 'string' && s.indexOf('data
 const t = String(q.t || '');
 const tHtml = (t && t.indexOf('data:') !== 0 && !(imgs.length && QUOTE_PLACEHOLDER.test(t))) ? escTxtBr(FQ(t)) : '';
 let inner = '';
-if (imgs.length) inner += '<span class="msg-quote-imgs">' + imgs.map(s => '<img class="msg-quote-img" src="' + attrEsc(s) + '" alt="图片">').join('') + '</span>';
+if (imgs.length) inner += '<span class="msg-quote-imgs">' + imgs.map(s => '<img class="msg-quote-img" src="' + attrEsc(s) + '" alt="图片" loading="lazy" decoding="async">').join('') + '</span>';
 if (tHtml) inner += '<span class="msg-quote-text">' + tHtml + '</span>';
 return '<div class="msg-quote">' + inner + '</div>';
 }
 if (typeof q === 'string' && q.indexOf('data:') === 0) {
-return '<div class="msg-quote"><img class="msg-quote-img" src="' + attrEsc(q) + '" alt="图片"></div>';
+return '<div class="msg-quote"><img class="msg-quote-img" src="' + attrEsc(q) + '" alt="图片" loading="lazy" decoding="async"></div>';
 }
 return '<div class="msg-quote"><span class="msg-quote-text">' + escTxtBr(FQ(q)) + '</span></div>';
 }
@@ -5090,7 +5090,7 @@ const re = /((?:sticker|image):)?(data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+
 let last = 0, mm;
 while ((mm = re.exec(str))) {
 html += escTxt(str.slice(last, mm.index));
-html += '<img class="fav-item-img" src="' + mm[2] + '" alt="图片">';
+html += '<img class="fav-item-img" src="' + mm[2] + '" alt="图片" loading="lazy" decoding="async">';
 last = mm.index + mm[0].length;
 }
 html += escTxt(str.slice(last));
@@ -5126,7 +5126,7 @@ fillAvatar(m.querySelector('.msg-av'), 'cs-avatar-user');
 let html = '<div class="fav-item-card">' +
 '<span class="fav-item-tag">朋友圈动态</span>' +
 (f.text ? '<div class="fav-item-body">' + favTextHtml(f.text) + '</div>' : '') +
-((f.imgs && f.imgs.length) ? '<div class="fav-item-imgs">' + f.imgs.map(u => '<img src="' + attrEsc(u) + '" alt="图片">').join('') + '</div>' : '') +
+((f.imgs && f.imgs.length) ? '<div class="fav-item-imgs">' + f.imgs.map(u => '<img src="' + attrEsc(u) + '" alt="图片" loading="lazy" decoding="async">').join('') + '</div>' : '') +
 '</div>';
 m.innerHTML = html + side;
 fillAvatar(m.querySelector('.msg-av'), 'cs-avatar-user');

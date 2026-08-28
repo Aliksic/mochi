@@ -212,6 +212,7 @@ try {
   // 通用弹层：IAB 不支持 prompt/confirm，用页面内模态框替代；支持输入 / 色板
   (function () {
     const mask = document.getElementById('modal-mask');
+    const modalBox = mask ? mask.querySelector('.modal') : null;
     const title = document.getElementById('modal-title');
     const staticEl = document.getElementById('modal-static');
     const input = document.getElementById('modal-input');
@@ -304,6 +305,9 @@ try {
     let pillClicked = false;
     window.openModal = function (t, v, fn, opts) {
       opts = opts || {};
+      // v3.25.x：opts.big——宽版弹窗（诊断信息等长文只读展示），配合 CSS
+      // .modal.modal--big 加宽 + 放大输入框；每次开弹窗按 opts.big 重设类，天然复位。
+      if (modalBox) modalBox.classList.toggle('modal--big', !!opts.big);
       // v3.20.x：每次打开弹窗重置底部确认按钮文案为默认「确定」——此前只在调用方显式
       // ctl.okText() 时才会写，若某次弹窗（如心意币「申请」）设过、下一个弹窗
       // （如跨桌面通话/查岗的 pill 弹窗）没设，按钮就残留显示上一个弹窗文案。
@@ -345,6 +349,9 @@ try {
         if (opts.textarea) {
           textarea.value = v || '';
           textarea.placeholder = opts.textareaPlaceholder || '多行内容';
+          // v3.25.x：opts.textareaRows——指定多行框行数（诊断信息等长文只读展示，
+          // 默认模板 rows="3" 装不下 14 行诊断内容，iOS 原生框不随内容增高会显得很小）
+          if (opts.textareaRows) { try { textarea.rows = opts.textareaRows; } catch (e) {} }
         }
       }
       // 目标分组下拉
@@ -1806,6 +1813,22 @@ try {
     });
     bar.appendChild(tx); bar.appendChild(re); bar.appendChild(keep);
     bar.style.display = 'flex';
+  })();
+
+  // 手机桌面美化页：顶部标签切换分区（颜色/尺寸/背景/图标/方案），互斥显示
+  (function initThemeTabs() {
+    const tabsEl = document.getElementById('them-tabs');
+    const page = document.getElementById('page-theme');
+    if (!tabsEl || !page) return;
+    const tabs = tabsEl.querySelectorAll('.them-tab');
+    const secs = page.querySelectorAll('.them-sec');
+    function show(name) {
+      secs.forEach(s => { s.hidden = (s.dataset.sec !== name); });
+      tabs.forEach(t => { t.classList.toggle('active', t.dataset.tab === name); });
+    }
+    tabs.forEach(t => t.addEventListener('click', () => show(t.dataset.tab)));
+    // 默认显示第一个省区（颜色）
+    show(tabs[0] ? tabs[0].dataset.tab : 'color');
   })();
 
   // ===== v3.6.x：深色模式（两档手动开关：浅色/深色，不跟随系统） =====

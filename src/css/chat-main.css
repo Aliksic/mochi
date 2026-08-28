@@ -438,7 +438,7 @@ body.cs-time-divider .msg-time-divider { display:flex; }
    v3.5.110锛歜ottom 鍔?safe-area锛屽叏闈㈠睆鍏ㄥ睆妯″紡涓嬩笌杈撳叆鏍忓悓姝ヤ笂绉伙紝涓嶉敊浣?   v3.10.x锛歠ixed 鈫?absolute鈥斺€斿畨鍗?resizes-visual 涓嬮敭鐩樺彧缂?visualViewport锛?   fixed 闈㈡澘閿氬畾鍏ㄩ珮 layout viewport 涓嶅姩锛沘bsolute 閿氬畾 .phone/#page-chat锛?   閿洏寮瑰嚭鏃跺鍣ㄨ syncAndroidKb 鏀剁缉銆侀潰鏉胯窡鐫€鍋滈潬杈撳叆鏍忎笂鏂癸紙鍚﹀垯鎵撳紑鍗?   鑷姩鑱氱劍鐨勫崐妗嗕細鏁翠綋鎺夊埌鍗囪捣鍚庣殑杈撳叆鏍忎笅鏂?閿洏鍚庨潰锛夈€傛墜鏈虹 .phone
    婊″睆鏃朵袱鑰呭嚑浣曠瓑浠凤紱妗岄潰瀹藉睆鏈氨鐢辨枃鏈?@media 鏀?absolute锛屾澶勭粺涓€銆?*/
 .more-panel {
-  position:absolute; left:18px; right:18px; bottom:calc(96px + env(safe-area-inset-bottom, 0px)); z-index:60;
+  position:absolute; left:18px; right:18px; bottom:calc(96px + var(--mochi-safe-bottom,env(safe-area-inset-bottom,0px))); z-index:60;
   background:rgba(255,255,255,.97);
   border:1px solid rgba(0,0,0,.1);
   border-radius:20px; box-shadow:0 12px 32px rgba(0,0,0,.1);
@@ -566,7 +566,7 @@ body.cs-time-divider .msg-time-divider { display:flex; }
 
 /* 鎷嶄竴鎷嶆诞灞傚崱鐗囷紙搴曢儴鍗婃锛岄湶鍑洪《閮ㄨ亰澶╂秷鎭紝鏂逛究杈圭湅杈圭帺锛?   搴曢儴 96px锛氭偓鍋滃湪杈撳叆鏍忎笂鏂癸紝涓嶅帇浣?涓嶈鐩栬緭鍏ユ爮锛堣緭鍏ユ爮椤堕儴绾?82px锛?   v3.5.110锛歜ottom 鍔?safe-area锛屽叏闈㈠睆鍏ㄥ睆妯″紡涓嬩笌杈撳叆鏍忓悓姝ヤ笂绉伙紝涓嶉敊浣?   v3.10.x锛歠ixed 鈫?absolute鈥斺€旈敭鐩樺脊鍑烘椂闅忔敹缂╁悗鐨?.phone/#page-chat 鍋滈潬锛?   涓嶅啀閿氬畾鍏ㄩ珮 layout viewport 鎺夊埌杈撳叆鏍忎笅鏂癸紙璇﹁ .more-panel 澶勬敞閲婏級 */
 .poke-card {
-  position:absolute; top:auto; bottom:calc(96px + env(safe-area-inset-bottom, 0px)); left:18px; right:18px;
+  position:absolute; top:auto; bottom:calc(96px + var(--mochi-safe-bottom,env(safe-area-inset-bottom,0px))); left:18px; right:18px;
   height:auto; max-height:48%;
   display:flex; flex-direction:column;
   background:rgba(255,255,255,.97);
@@ -714,7 +714,7 @@ body.cs-time-divider .msg-time-divider { display:flex; }
 /* 琛ㄦ儏鍖呴潰鏉匡細搴曢儴鍗婃锛岄湶鍑洪《閮ㄨ亰澶╂秷鎭紝楂樺害闅忓唴瀹硅嚜閫傚簲锛堟渶澶氬崐灞忥紝绌烘€佺揣鍑戯級
    v3.5.110锛歜ottom 鍔?safe-area锛屽叏闈㈠睆鍏ㄥ睆妯″紡涓嬩笌杈撳叆鏍忓悓姝ヤ笂绉伙紝涓嶉敊浣?   v3.10.x锛歠ixed 鈫?absolute锛堝悓 .poke-card鈥斺€旈敭鐩樺脊鍑烘椂闅忓鍣ㄥ仠闈犺緭鍏ユ爮涓婃柟锛?*/
 .emoji-card {
-  position:absolute; top:auto; bottom:calc(96px + env(safe-area-inset-bottom, 0px)); left:18px; right:18px;
+  position:absolute; top:auto; bottom:calc(96px + var(--mochi-safe-bottom,env(safe-area-inset-bottom,0px))); left:18px; right:18px;
   height:auto; max-height:55%;
   display:flex; flex-direction:column;
   background:rgba(255,255,255,.97);
@@ -1172,7 +1172,7 @@ body.cs-time-divider .msg-time-divider { display:flex; }
 
 /* 閫氳瘽灏忔锛堟帴閫氬悗鏈€灏忓寲锛涚櫧鑹层€佸彲鎷栧姩锛涗綅浜庤緭鍏ユ爮涓婃柟锛?   v3.5.110锛歜ottom 鍔?safe-area锛屽叏闈㈠睆鍏ㄥ睆妯″紡涓嬩笌杈撳叆鏍忓悓姝ヤ笂绉伙紝涓嶉敊浣?*/
 .call-mini {
-  position:fixed; left:50%; bottom:calc(96px + env(safe-area-inset-bottom, 0px)); transform:translateX(-50%);
+  position:fixed; left:50%; bottom:calc(96px + var(--mochi-safe-bottom,env(safe-area-inset-bottom,0px))); transform:translateX(-50%);
   /* v3.5.127锛歾 90 鈫?95鈥斺€斾笌 modal-mask 鍚屽眰鏃朵細琚脊绐楃洊浣忥紙閫氳瘽涓墦寮€寮圭獥锛?     閫氳瘽灏忔/鎸傛柇鍏ュ彛涓嶅彲瑙侊級 */
   z-index:95;
   display:flex; align-items:center; gap:10px;

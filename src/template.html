@@ -1218,7 +1218,7 @@
         </div>
         <div class="set-row" id="row-about">
           <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M18.5 14.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z"/></svg></div>
-          <div class="txt">功能介绍与二传二改说明</div>
+          <div class="txt">功能介绍与可二传二改许可</div>
           <div class="arrow"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div>
         </div>
       </div>
@@ -1235,7 +1235,10 @@
         <!-- v3.15.x：离线消息提醒（Periodic Background Sync）——页面全关后浏览器定期唤醒
              Service Worker，用本地快照弹一条 TA 的消息（零后端）；仅安卓 Chromium 且
              添加到桌面后生效，调度频率由系统决定；状态见下方说明行 -->
-        <div class="gs-row"><span>离线消息提醒</span><label class="toggle"><input type="checkbox" id="psync-en"><span class="tk"></span></label></div>
+        <div class="set-row">
+          <div class="txt">离线消息提醒<span class="tag" id="psync-help" role="button" tabindex="0" aria-haspopup="dialog">功能说明</span></div>
+          <label class="toggle"><input type="checkbox" id="psync-en"><span class="tk"></span></label>
+        </div>
         <div class="gs-row" style="display:block"><span id="psync-status" style="font-size:11px;color:var(--muted,#999);line-height:1.5;white-space:normal">…</span></div>
       </div>
       <div class="set-group glass">
@@ -1275,6 +1278,14 @@
         </span>
         <span class="ch-name">手机桌面美化</span>
       </div>
+      <div class="them-tabs" id="them-tabs">
+        <div class="them-tab active" data-tab="color">颜色</div>
+        <div class="them-tab" data-tab="size">尺寸</div>
+        <div class="them-tab" data-tab="bg">背景</div>
+        <div class="them-tab" data-tab="icon">图标</div>
+        <div class="them-tab" data-tab="scheme">方案</div>
+      </div>
+      <div class="them-sec" data-sec="color">
       <div class="cg-title">颜色与透明度</div>
       <div class="set-group glass">
         <div class="set-row" id="row-accent-color">
@@ -1283,7 +1294,7 @@
           <div class="val" id="accent-color-val">默认</div>
         </div>
         <div class="set-row" id="row-widget-color">
-          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c1.7 0 3-1.3 3-3 0-.8-.3-1.5-.8-2-.5-.5-.8-1.2-.8-2 0-1.7 1.3-3 3-3h2c2.8 0 5-2.2 5-5 0-4.4-4.5-8-10-8z"/><circle cx="7" cy="10" r="1.2" fill="#111111" stroke="none"/><circle cx="12" cy="7" r="1.2" fill="#111111" stroke="none"/><circle cx="17" cy="10" r="1.2" fill="#111111" stroke="none"/></svg></div>
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="4"/><circle cx="9" cy="12" r="1.5" fill="#111111" stroke="none"/><circle cx="15" cy="12" r="1.5" fill="#111111" stroke="none"/></svg></div>
           <div class="txt">小组件颜色</div>
           <div class="val" id="widget-color-val"></div>
         </div>
@@ -1313,6 +1324,8 @@
           <div class="val" id="widget-opacity-val"></div>
         </div>
       </div>
+      </div>
+      <div class="them-sec" data-sec="size">
       <div class="cg-title">尺寸与圆角</div>
       <div class="set-group glass">
         <div class="set-row" id="row-desk-font-size">
@@ -1336,6 +1349,8 @@
           <div class="val" id="ico-shape-val"></div>
         </div>
       </div>
+      </div>
+      <div class="them-sec" data-sec="bg">
       <div class="cg-title">背景与壁纸</div>
       <div class="set-group glass">
         <div class="set-row" id="row-bg-upload">
@@ -1364,6 +1379,8 @@
         </div>
         <div id="desk-page-bgs"></div>
       </div>
+      </div>
+      <div class="them-sec" data-sec="icon">
       <div class="cg-title">图标与页面</div>
       <div class="set-group glass">
         <div class="set-row" id="row-custom-icon">
@@ -1384,6 +1401,8 @@
           <div class="txt">恢复默认桌面<span class="sub">恢复默认布局与页数</span></div>
         </div>
       </div>
+      </div>
+      <div class="them-sec" data-sec="scheme">
       <div class="cg-title">美化方案 · 保存 / 切换 / 备份</div>
       <div class="set-group glass">
         <div class="set-row" id="row-beauty-save">
@@ -1403,13 +1422,14 @@
           <div class="txt">导入美化方案<span class="sub">粘贴文字或选择文件导入</span></div>
         </div>
       </div>
+      </div>
     </div>
     <div class="page" id="page-about" hidden>
       <div class="chat-head">
         <span class="ch-back" id="about-back">
           <svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
         </span>
-        <span class="ch-name">功能介绍与二传二改说明</span>
+        <span class="ch-name">功能介绍与可二传二改许可</span>
       </div>
       <div class="cal-scroll">
         <!-- 原版信息卡 -->

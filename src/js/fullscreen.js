@@ -357,7 +357,9 @@
     if (!span) return;
     span.textContent = inIosStandalone
       ? '全屏模式（隐藏模拟状态栏，系统状态栏不可隐藏）'
-      : '全屏模式（iOS 需添加到主屏幕）';
+      : // v3.26.x：浏览器标签态现在真的去请求原生全屏（不再一律拒绝），文案照实描述；
+        // 个别 iOS 浏览器（iOS <16.4 的 Safari）不放开该 API，失败时会弹说明并回滚开关
+        '全屏模式（iOS 浏览器全屏，不支持时会弹说明）';
   }
   const fsToggle = document.getElementById('sf-fullscreen');
   if (fsToggle) {

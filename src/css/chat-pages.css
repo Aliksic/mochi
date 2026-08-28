@@ -153,7 +153,7 @@
 /* 轻提示
    v3.5.110：bottom 加 safe-area，全面屏全屏模式下不撞 Home 条 */
 #cc-toast {
-  position:fixed; left:50%; bottom:calc(120px + env(safe-area-inset-bottom, 0px)); transform:translate(-50%, 10px);
+  position:fixed; left:50%; bottom:calc(120px + var(--mochi-safe-bottom,env(safe-area-inset-bottom,0px))); transform:translate(-50%, 10px);
   background:rgba(17,17,17,.9); color:#fff; font-size:13px;
   padding:10px 18px; border-radius:99px; z-index:99;
   opacity:0; pointer-events:none; transition:opacity .25s ease, transform .25s ease;
@@ -336,7 +336,7 @@
 
 /* 管理操作条（固定底部） */
 .cc-manage-bar {
-  position:fixed; left:18px; right:18px; bottom:calc(18px + env(safe-area-inset-bottom, 0px)); z-index:55;
+  position:fixed; left:18px; right:18px; bottom:calc(18px + var(--mochi-safe-bottom,env(safe-area-inset-bottom,0px))); z-index:55;
   display:flex; align-items:center; gap:8px;
   background:#fff; border:1px solid rgba(0,0,0,.12);
   border-radius:18px; padding:10px 12px;
@@ -1937,7 +1937,7 @@
 .mail-compose { padding:4px 0; }
 /* v3.19.x：写信/回信「寄出」固定底部栏——钉在页底、键盘弹起时钉在键盘上方，
    不再随滚动区消失（红米 K70 QQ 浏览器反馈：回信时寄出键消失，需刷新才重现） */
-.mail-send-bar { flex-shrink:0; padding:10px 0 calc(6px + env(safe-area-inset-bottom, 0px)); }
+.mail-send-bar { flex-shrink:0; padding:10px 0 calc(6px + var(--mochi-safe-bottom,env(safe-area-inset-bottom,0px))); }
 .mail-send-bar .ta-add-btn { width:100%; }
 /* 写信/回信：工具栏（v3.6.x 只留 表情包/图片） */
 .mail-toolbar {
@@ -1958,7 +1958,7 @@
 .mail-tb svg { width:18px; height:18px; }
 .mail-tb:active { background:rgba(0,0,0,.08); }
 /* 写信/回信时打开的表情包面板（与聊天同一个面板）：悬在底部「寄出」按钮上方（聊天版 bottom 96px 在此偏高） */
-body.mail-emoji-mode #emoji-panel { bottom: calc(64px + env(safe-area-inset-bottom, 0px)); }
+body.mail-emoji-mode #emoji-panel { bottom: calc(64px + var(--mochi-safe-bottom,env(safe-area-inset-bottom,0px))); }
 .mail-compose .mail-paper { background:#fff; }
 .mail-compose-input {
   width:100%; min-height:220px; padding:14px; border:none; outline:none;
@@ -2202,7 +2202,7 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + env(safe-area-inset-bott
   position:fixed; left:0; right:0; bottom:0; z-index:9998;
   display:flex; align-items:center; gap:8px;
   padding:10px 14px;
-  padding-bottom:calc(10px + env(safe-area-inset-bottom, 0px));
+  padding-bottom:calc(10px + var(--mochi-safe-bottom,env(safe-area-inset-bottom,0px)));
   background:rgba(255,255,255,.98); border-top:1px solid rgba(0,0,0,.1);
 }
 .music-batch-bar[hidden] { display:none; }
@@ -2271,7 +2271,7 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + env(safe-area-inset-bott
   padding:10px 14px; background:rgba(255,255,255,.97);
   border-top:1px solid rgba(0,0,0,.08);
   /* v3.5.138：Android 手势导航安全区（PWA 全屏时按钮不被手势条压住） */
-  padding-bottom:calc(10px + env(safe-area-inset-bottom, 0px));
+  padding-bottom:calc(10px + var(--mochi-safe-bottom,env(safe-area-inset-bottom,0px)));
 }
 .sm-player-bar[hidden] { display:none; }
 .sm-pb-info { flex:1; min-width:0; }
@@ -2511,7 +2511,7 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + env(safe-area-inset-bott
 #page-feed { position:relative; }
 /* 评论表情/图片面板容器：absolute 定位在评论条上方，紧贴输入栏
    v3.5.110：bottom 加 safe-area，全面屏全屏模式下与评论条同步上移 */
-.feed-comment-panel { position:absolute; left:14px; right:14px; bottom:calc(56px + env(safe-area-inset-bottom, 0px)); z-index:80; touch-action:pan-y; }
+.feed-comment-panel { position:absolute; left:14px; right:14px; bottom:calc(56px + var(--mochi-safe-bottom,env(safe-area-inset-bottom,0px))); z-index:80; touch-action:pan-y; }
 .feed-comment-panel[hidden] { display:none; }
 .feed-comment-bar {
   flex-shrink:0; display:flex; flex-direction:column; gap:6px;
@@ -2654,7 +2654,7 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + env(safe-area-inset-bott
 .set-row.danger .ico svg { stroke:#d64545; }
 
 /* ===== 双人 Pong 小游戏（聊天页底部半框） ===== */
-#chat-pong-panel { padding-bottom:env(safe-area-inset-bottom); }
+#chat-pong-panel { padding-bottom:var(--mochi-safe-bottom,env(safe-area-inset-bottom,0px)); }
 .pong-wrap { display:flex; flex-direction:column; align-items:center; gap:10px; padding:6px 4px 4px; }
 .pong-bar { display:flex; align-items:center; justify-content:space-between; width:100%; gap:8px; }
 .pong-bar-left { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--muted); }
@@ -2738,7 +2738,7 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + env(safe-area-inset-bott
 .brick-rate span { opacity:.4; }
 /* 打砖块全屏：面板占满视口（对齐 pong-fs 布局方案） */
 /* 打砖块全屏：面板占满视口（真·Fullscreen API 或 CSS 兜底），UI 单独设计 */
-#chat-brick-panel.brick-fs { position:fixed; inset:0; z-index:9999; border-radius:0; max-height:none; height:100vh; height:100dvh; background:#101625; padding-top:max(env(safe-area-inset-top,0px),8px); padding-bottom:max(env(safe-area-inset-bottom,0px),8px); overscroll-behavior:none; }
+#chat-brick-panel.brick-fs { position:fixed; inset:0; z-index:9999; border-radius:0; max-height:none; height:100vh; height:100dvh; background:#101625; padding-top:max(env(safe-area-inset-top,0px),8px); padding-bottom:max(var(--mochi-safe-bottom,env(safe-area-inset-bottom,0px)),8px); overscroll-behavior:none; }
 #chat-brick-panel.brick-fs .poke-card-scroll { max-height:none; flex:1; overflow:hidden; display:flex; flex-direction:column; padding:0; }
 #chat-brick-panel.brick-fs .poke-card-head { background:transparent; color:#fff; border-bottom-color:rgba(255,255,255,.12); padding:10px 16px; flex-shrink:0; }
 #chat-brick-panel.brick-fs .poke-card-head b { color:#fff; font-size:19px; }
@@ -2797,7 +2797,7 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + env(safe-area-inset-bott
 .snake-dp[data-dir="down"] { grid-column:2; grid-row:2; }
 .snake-dp[data-dir="right"] { grid-column:3; grid-row:2; }
 /* 全屏：面板占满视口，canvas + UI 按视口等比放大铺满 */
-#chat-snake-panel.snake-fs { position:fixed; inset:0; z-index:9999; border-radius:0; max-height:none; height:100vh; height:100dvh; background:#fff; padding-top:max(env(safe-area-inset-top,0px),8px); padding-bottom:max(env(safe-area-inset-bottom,0px),8px); overscroll-behavior:none; }
+#chat-snake-panel.snake-fs { position:fixed; inset:0; z-index:9999; border-radius:0; max-height:none; height:100vh; height:100dvh; background:#fff; padding-top:max(env(safe-area-inset-top,0px),8px); padding-bottom:max(var(--mochi-safe-bottom,env(safe-area-inset-bottom,0px)),8px); overscroll-behavior:none; }
 #chat-snake-panel.snake-fs .poke-card-scroll { overflow:hidden; padding:min(2vh,2vw) 8px; }
 /* 全屏隐藏方向键：滑动/键盘已覆盖全部输入，把空间让给更大的地图 */
 #chat-snake-panel.snake-fs .snake-dpad { display:none; }
@@ -3015,7 +3015,7 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + env(safe-area-inset-bott
 .pmp-c-row.me .pmp-c-bub { background:#e8533d; color:#fff; border-color:transparent; border-radius:16px; border-top-right-radius:5px; }
 .pmp-c-empty { margin:auto; text-align:center; font-size:12px; line-height:1.9; color:var(--hint-ink,#999); }
 #page-pmp-chat .chat-head .ch-back svg { stroke:var(--ink,#111); }
-.pmp-c-inputbar { flex-shrink:0; display:flex; align-items:center; gap:8px; padding:8px 12px; padding-bottom:calc(8px + env(safe-area-inset-bottom, 0px)); background:var(--card-bg,#fff); border-top:1px solid var(--card-border,rgba(0,0,0,.06)); }
+.pmp-c-inputbar { flex-shrink:0; display:flex; align-items:center; gap:8px; padding:8px 12px; padding-bottom:calc(8px + var(--mochi-safe-bottom,env(safe-area-inset-bottom,0px))); background:var(--card-bg,#fff); border-top:1px solid var(--card-border,rgba(0,0,0,.06)); }
 .pmp-c-in { flex:1; min-width:0; border:1px solid var(--input-border,#ddd); background:var(--input-bg,#fff); color:var(--ink,#222); border-radius:18px; padding:9px 14px; font-size:15px; font-family:inherit; outline:none; }
 .pmp-c-send { flex-shrink:0; border:none; background:#e8533d; color:#fff; font-size:13px; font-weight:600; font-family:inherit; border-radius:18px; padding:9px 16px; -webkit-tap-highlight-color:transparent; }
 

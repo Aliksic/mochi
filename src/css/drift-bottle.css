@@ -6,7 +6,7 @@
 .drift-scroll {
   flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
   display: flex; flex-direction: column; gap: 10px;
-  padding: 10px 14px calc(16px + env(safe-area-inset-bottom, 0px));
+  padding: 10px 14px calc(16px + var(--mochi-safe-bottom,env(safe-area-inset-bottom,0px)));
   min-height: 0;
 }
 
