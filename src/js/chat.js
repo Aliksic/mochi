@@ -6222,7 +6222,6 @@ closeVoicePanel();
 if (window.playSfx) window.playSfx('out');
 if (window.logFish) window.logFish();
 scheduleReply();
-toast('语音已发送');
 }
 if (micBtn) micBtn.addEventListener('click', (e) => {
 e.stopPropagation();

@@ -1474,7 +1474,6 @@
     followGcBottom(true);
     if (window.playSfx) window.playSfx('out');
     scheduleReply('');
-    toast('语音已发送');
   }
   // 批量发送：复用聊天页批量面板，条目发到群聊（文字/图片/表情各成一条）
   function gcSendBatch(items) {

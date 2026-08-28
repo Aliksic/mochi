@@ -140,7 +140,7 @@
     const pn = BUBBLE_SIZES.find(p => p.value === pad);
     set('cs-bubble-size-val', pn ? pn.label : '自定义');
     const rn = BUBBLE_RADII.find(p => p.value === rad);
-    set('cs-bubble-radius-val', rn ? rn.label : '自定义');
+    set('cs-bubble-radius-val', rn ? rn.label : (rad === '0px' ? '方形' : rad));
     set('cs-bg-val', bg ? '已设置' : '');
     const rm = document.getElementById('cs-bg-remove');
     if (rm) rm.hidden = !bg;
@@ -506,14 +506,26 @@
       });
     });
   }
-  // v3.25.x：聊天气泡边缘（四角圆角大小）
+  // v3.25.x：聊天气泡边缘（四角圆角大小）——滑块自由调节 + 预设胶囊，实时预览
   const csRadius = row('cs-bubble-radius');
   if (csRadius) {
     csRadius.addEventListener('click', () => {
       if (!window.openModal) return;
-      window.openModal('聊天气泡边缘圆角', '', (v) => { store.set('cs-bubble-radius', v); applySettings(); }, {
+      const curStr = store.get('cs-bubble-radius') || BUBBLE_RADIUS_DEFAULT;
+      const curNum = (parseInt(curStr, 10) || 0);
+      window.openModal('聊天气泡边缘圆角', '', (v) => {
+        const px = typeof v === 'number' ? v : (parseInt(v, 10) || 0);
+        store.set('cs-bubble-radius', px + 'px');
+        applySettings();
+      }, {
+        noInput: true,
+        slider: {
+          min: 0, max: 40, step: 1, value: Math.max(0, Math.min(40, curNum)),
+          label: '拖动调整气泡圆角', unit: 'px', preview: true,
+          onChange: (val) => { root.style.setProperty('--chat-bubble-radius', val + 'px'); }
+        },
         pills: BUBBLE_RADII,
-        pill: store.get('cs-bubble-radius') || BUBBLE_RADIUS_DEFAULT
+        pill: curStr
       });
     });
   }

@@ -1545,7 +1545,7 @@
     var ph = { txt: '', cls: '' };
     if (st.inPeriod) ph = { txt: '经期', cls: 'phase-period' };
     else if (st.phase === 'fertile') ph = { txt: '排卵期', cls: 'phase-fertile' };
-    else if (st.dayOfCycle) ph = { txt: '安全期', cls: 'phase-safe' };
+    // 其余（安全期/正常）不显示阶段标签
     if (phaseEl) {
       if (ph.txt) { phaseEl.textContent = ph.txt; phaseEl.className = 'dpd-phase ' + ph.cls; phaseEl.hidden = false; }
       else { phaseEl.className = 'dpd-phase'; phaseEl.hidden = true; }

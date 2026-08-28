@@ -1,4 +1,9 @@
 # 本次构建者：AI-B（本会话，2026-08-28 20:02，音效图标重设计已构建收口 sw: mochi-mtcwjx2b，哨兵 23/23，待提交）
+### 2026-08-28（桌面第三页经期组件：删安全期标签 + 黑白配色；已改源码，未构建）
+- [AI-A 域]（**已改 src/js/period.js + src/css/home.css；构建状态：未构建（node --check 已过），待构建者收口**）。
+- 需求：经期组件只留经期/排卵期，正常（安全期）状态不显示阶段标签；组件配色由粉色改为桌面统一黑白。
+- 方案：period.js renderDeskWidget 去掉安全期分支（其余状态标签隐藏）；home.css `.dpd-label/.dpd-days/.dpd-bar-fill` 粉色 #e85a8f 改 `var(--ink)` 黑白、`.phase-period` 改黑、`.phase-fertile` 改灰，删 `.phase-safe` 规则。
+- 验证：node --check 通过；未跑构建。
 ### 2026-08-28 20:10（✅ 完成·已构建·语音播放矢量图无互动 + 录制半框 UI 对齐重设计）
 - [AI-A 域]（**已改 src/js/chat.js、src/js/group-chat.js、src/css/chat-main.css；跨域改 src/template.html（试听钮双图标 + 发送钮摘 .poke-big，先留言）+ build.mjs（哨兵 +2）+ FIX-REGRESSION.md（#22）；新增 tools/verify-voice-play-icon.mjs（可提交资产）；构建状态：已构建（18:52 与 20:02 各一次，与 AI-B 20:02 收口同工作区，产物已核含本修复全部特征）·未提交**）。
 - 用户反馈：①录制语音面板点试听矢量图无互动变化；②聊天里点语音播放矢量图无互动变化；③录制半框 UI 没对齐、按钮大小不一致，需重设计。

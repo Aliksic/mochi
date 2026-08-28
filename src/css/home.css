@@ -426,8 +426,8 @@
   position:absolute; left:0; right:0; top:0; bottom:0;
   display:flex; flex-direction:column; align-items:center; justify-content:center;
 }
-.desk-period .dpd-label { font-size:13px; color:#e85a8f; }
-.desk-period .dpd-days { font-size:50px; font-weight:700; color:#e85a8f; margin:10px 0; line-height:1.1; }
+.desk-period .dpd-label { font-size:13px; color:var(--ink,#1a1a1a); }
+.desk-period .dpd-days { font-size:50px; font-weight:700; color:var(--ink,#111); margin:10px 0; line-height:1.1; }
 .desk-period .dpd-sub { font-size:13px; color:var(--muted,#666); }
 /* v3.26.x：经期卡内容补充——左上角阶段标签 + 底部周期进度条。
    已在 160px 高度内（居中三行 + 顶部标签 + 底部进度条均不重叠），
@@ -438,9 +438,8 @@
   padding:4px 8px; border-radius:99px;
 }
 .desk-period .dpd-phase[hidden] { display:none; }
-.desk-period .phase-period  { background:#e85a8f; }
-.desk-period .phase-fertile { background:#f29c6b; }
-.desk-period .phase-safe    { background:#7fb79a; }
+.desk-period .phase-period  { background:var(--ink,#111); }
+.desk-period .phase-fertile { background:#8b8b8b; }
 .desk-period .dpd-bar-wrap {
   position:absolute; left:16px; right:16px; bottom:10px;
   text-align:center;
@@ -450,7 +449,7 @@
 .desk-period .dpd-bar {
   height:4px; background:var(--card-border, rgba(0,0,0,.12)); border-radius:99px; overflow:hidden;
 }
-.desk-period .dpd-bar-fill { height:100%; width:0; background:#e85a8f; border-radius:99px; transition:width .4s ease; }
+.desk-period .dpd-bar-fill { height:100%; width:0; background:var(--ink,#111); border-radius:99px; transition:width .4s ease; }
 
 /* v3.6.x：桌面图片组件——用户可上传多张图片到任意页，点击全屏查看
    v3.15.x：上下边距 10→14 与卡片节奏统一 */
