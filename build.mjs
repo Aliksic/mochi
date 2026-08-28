@@ -161,6 +161,7 @@ const FIX_SENTINELS = [
   { name: '消息长按打开操作菜单（openMsgActionsAt 长按+轻点）', file: 'js/chat.js', needle: 'openMsgActionsAt' },
   { name: '群聊消息长按打开引用菜单（gcOpenMsgActions 长按+轻点）', file: 'js/group-chat.js', needle: 'gcOpenMsgActions' },
   { name: '错误记录双写 IndexedDB（readErrs 回退读取，防"最近错误：无"丢线索）', file: 'js/device.js', needle: 'idbSet(ERR_KEY' },
+  { name: '更新条防重复（ver-update-snooze-day 本日免打扰 + showVerBar 跨通道收口）', file: 'js/pwa.js', needle: 'ver-update-snooze-day' },
 ];
 try {
   const built = readFileSync(join(root, 'index.html'), 'utf8');

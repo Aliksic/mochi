@@ -1,4 +1,4 @@
-# 本次构建者：AI-A（本会话，2026-08-28 20:35，桌面/聊天美化 Tab 黑白化+方案保存预览+聊天设置分类Tab 已构建收口 sw: mochi-mtcxpruj，哨兵 25/25，待提交）
+# 本次构建者：AI-A（本会话，2026-08-29 00:5x，顶部更新条防重复修复收口：pwa.js 防重复 + 哨兵 27/27 + verify 10/10 + FIX-REGRESSION#28，sw: mochi-mtd19cl5，已提交已推送）
 ### 2026-08-29（诊断新增 IndexedDB 大键明细：定位"存储已用 1.x GB"是哪类数据占空间；已改源码，未构建）
 - [AI-B 域]（**已改 src/js/device.js collectDiag 新增「IndexedDB 大键明细」节；构建状态：未构建（node --check 已过），待构建者收口**）。
 - 需求/反馈：用户问"存储配额已用 1239MB 怎么会那么大，是不是有数据被重复写入"。原诊断只有 localStorage 最大键 + navigator.storage.estimate() 总量，看不到 IndexedDB 里是哪类数据占空间。
