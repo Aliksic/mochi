@@ -1,3 +1,9 @@
+# 本次构建者：AI-B（本会话，2026-08-28，仅改 src 未构建，待构建者收口）
+### 2026-08-28（修复：设置页「复制诊断信息」点【复制】显示 undefined）
+- [AI-B 域]（**已改 src/js/personalize.js；构建状态：未构建（node --check 已过）**）。
+- 需求/根因：弹窗控制器 ctl.text 只有 setter 语义，device.js 的「复制/导出」按钮用 ctl.text()（无参）想读诊断文本，实得 undefined → copyText(undefined) 复制出「undefined」。给 ctl.text 加无参 getter（textarea/input 当前值），有参保持 setter，零影响既有调用方。
+- 验证：node --check 通过，未跑构建。
+
 # 本次构建者：Phanthy Code（2026-08-28 19:45，用户要求立即部署修复 iPhone 15 Safari 崩溃；重建收口本工作区全部未提交改动并推送远程 main）
 ### 2026-08-28 19:45（部署：重建+推送远程 main——把聊天加载 OOM 修复等全部未提交改动上线，修 iPhone 15 Safari「网页重复出现问题+持续自动刷新」崩溃循环）
 - [本会话·构建+部署]（**未改任何 src；重跑 node build.mjs（sw: mochi-mtcvxr1k，index.html 3241114 字节/68902 行，关键修复哨兵 23/23）+ 提交推送；verify-* 回归资产（verify-fav-dedup / verify-music-reserve-queue / verify-voice-play-icon）一并入库，diag-*/临时文件按 AGENTS.md 未入库**）。
@@ -3799,3 +3805,10 @@ staticText: staticText
 - 逻辑：personalize.js initThemeTabs 绑定点击切换 + 默认显示「颜色」。
 - 验证：node build.mjs 成功（哨兵 12/12）；thems-sec x5、them-tab x5 就位；node tools/verify.mjs 10/10。
 - 提交：本次工作区累积 src 改动（含对方已保存文件）+ 构建产物收口提交（未推送）。
+
+### 2026-08-28（构建收口：聊天设置新增 聊天气泡边缘圆角）
+- 聊天设置「气泡样式」组新增「聊天气泡边缘圆角」（气泡四角圆润程度）；放在「聊天气泡框大小」下一行。
+- 预设 小圆角6px/标准12px/大圆角18px/特圆28px（默认值保持原 18px 视觉不变），openModal pills 选择即生效；也要跟随美化方案一并保存/预览。
+- 实现：template.html 新增 #cs-bubble-radius 行；chat-settings.js 增 BUBBLE_RADII + _.chat-bubble-radius 应用/取值/点击绑定 +  入 CHAT_BEAUTY_KEYS；chat-main.css .msg-bubble 改 var(--chat-bubble-radius,18px)。
+- 验证：node build.mjs 成功（哨兵 23/23，含对方已保存改动）；node tools/verify.mjs 10/10；node --check 通过。
+- 提交：本次改动 + 工作区累积已存改动（含他人 personalize.js 等）一并收口提交（未推送）。

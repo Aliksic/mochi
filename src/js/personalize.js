@@ -444,7 +444,19 @@ try {
         stay: function () { stayOnce = true; },
         title: function (s) { title.textContent = String(s == null ? '' : s); },
         hint: function (s) { if (staticEl) { staticEl.hidden = !s; staticEl.textContent = s || ''; } },
-        text: function (s) { try { input.value = s || ''; } catch (e) {} },
+        text: function (s) {
+          // v3.26.x：无参时作为 getter 返回当前文本——诊断信息等只读弹窗的
+          // 「复制/导出」按钮用 ctl.text() 拿最新内容（此前只有 setter 语义，
+          // 传空参返回 undefined，导致复制出「undefined」）。有参时维持 setter。
+          if (arguments.length === 0) {
+            try {
+              if (textarea && !textarea.hidden) return textarea.value;
+              if (!input.hidden) return input.value;
+            } catch (e) {}
+            return '';
+          }
+          try { input.value = s || ''; } catch (e) {}
+        },
         maxLen: function (n) { try { if (n) input.maxLength = n; else input.removeAttribute('maxlength'); } catch (e) {} },
         ph: function (s) { try { input.placeholder = s || ''; } catch (e) {} },
         okText: function (s) { if (okBtn) okBtn.textContent = s || '确定'; },

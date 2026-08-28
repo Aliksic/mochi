@@ -70,7 +70,7 @@
   position:relative;
   padding: var(--chat-bubble-pad, 11px 14px);
   font-size: var(--chat-font-size, 14px);
-  border-radius:18px; line-height:1.5; word-break:break-word;
+  border-radius: var(--chat-bubble-radius, 18px); line-height:1.5; word-break:break-word;
   background:#fff; border:1px solid rgba(255,255,255,.9); box-shadow:0 2px 8px rgba(0,0,0,.05);
   /* v3.5.107锛氬厑璁告皵娉℃敹缂╋紝闃叉鍥剧墖/闀垮唴瀹规妸鍙充晶澶村儚鍒楁尋鍑哄睆澶栵紙flex 榛樿 min-width:auto锛?*/
   min-width:0;
@@ -1420,7 +1420,9 @@ body.cs-time-divider .msg-time-divider { display:flex; }
   50% { box-shadow:0 0 0 7px rgba(229,72,77,0); }
 }
 .voice-send-big {
-  border:none; background:var(--btn-bg,#111); color:var(--btn-ink,#fff);
+  /* border 同 rec 保持 1.5px（透明）：Chromium 对 basis 0% 的 flex 按钮，一方有 border
+     一方无 border 时宽度分配不等（实测差 2.67px），两边同 border 即等宽 */
+  border:1.5px solid transparent; background:var(--btn-bg,#111); color:var(--btn-ink,#fff);
 }
 .voice-send-big:active { opacity:.85; }
 .voice-send-big[disabled] { opacity:.4; pointer-events:none; }

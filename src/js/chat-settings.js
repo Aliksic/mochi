@@ -28,6 +28,14 @@
     { label: '标准', value: '11px 14px' },
     { label: '宽松', value: '14px 18px' }
   ];
+  // v3.25.x：聊天气泡边缘（四角圆角大小）
+  const BUBBLE_RADII = [
+    { label: '小圆角', value: '6px' },
+    { label: '标准', value: '12px' },
+    { label: '大圆角', value: '18px' },
+    { label: '特圆', value: '28px' }
+  ];
+  const BUBBLE_RADIUS_DEFAULT = '18px';
   // v3.9.x：时间轴样式（默认头像下方，与原实现一致）
   // under-av=头像下方  under-bubble=气泡下方  bubble=时间气泡  float=气泡外侧悬浮
   // center=消息上方居中  divider=时间分隔线（微信式，消息间隔大时插居中胶囊）  hidden=隐藏
@@ -66,6 +74,9 @@
     root.style.setProperty('--msg-out-ink', outInk);
     root.style.setProperty('--chat-font-size', fs);
     root.style.setProperty('--chat-bubble-pad', pad);
+    // 聊天气泡边缘（四角圆角大小）
+    const rad = store.get('cs-bubble-radius') || BUBBLE_RADIUS_DEFAULT;
+    root.style.setProperty('--chat-bubble-radius', rad);
     // 时间轴颜色（默认黑/深色模式灰）
     const timeInk = store.get('cs-time-ink') || DEF.timeInk;
     root.style.setProperty('--msg-time-ink', timeInk);
@@ -128,6 +139,8 @@
     set('cs-font-size-val', fs);
     const pn = BUBBLE_SIZES.find(p => p.value === pad);
     set('cs-bubble-size-val', pn ? pn.label : '自定义');
+    const rn = BUBBLE_RADII.find(p => p.value === rad);
+    set('cs-bubble-radius-val', rn ? rn.label : '自定义');
     set('cs-bg-val', bg ? '已设置' : '');
     const rm = document.getElementById('cs-bg-remove');
     if (rm) rm.hidden = !bg;
@@ -493,6 +506,17 @@
       });
     });
   }
+  // v3.25.x：聊天气泡边缘（四角圆角大小）
+  const csRadius = row('cs-bubble-radius');
+  if (csRadius) {
+    csRadius.addEventListener('click', () => {
+      if (!window.openModal) return;
+      window.openModal('聊天气泡边缘圆角', '', (v) => { store.set('cs-bubble-radius', v); applySettings(); }, {
+        pills: BUBBLE_RADII,
+        pill: store.get('cs-bubble-radius') || BUBBLE_RADIUS_DEFAULT
+      });
+    });
+  }
 
   // ================= 全局字体（上传本地字体 / 输入字体名或链接，v3.5.34 起全局应用） =================
   const csFontRow = row('cs-font');
@@ -682,7 +706,7 @@
   const CHAT_SCHEMES_KEY = 'chat-beauty-schemes';
   const CHAT_BEAUTY_KEYS = [
     'cs-bg', 'cs-bubble-css', 'cs-font', 'cs-font-size', 'cs-bubble-size',
-    'cs-av-shape', 'cs-time-style', 'cs-time-ink', 'cs-typing-ink',
+    'cs-bubble-radius', 'cs-av-shape', 'cs-time-style', 'cs-time-ink', 'cs-typing-ink',
     'cs-out-bg', 'cs-out-ink', 'cs-in-bg', 'cs-in-ink',
     'cs-send-bg', 'cs-send-ink', 'cs-send-show'
   ];
