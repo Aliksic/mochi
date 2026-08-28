@@ -969,6 +969,21 @@
   const chatBeautySchemesRow = document.getElementById('row-chat-beauty-schemes');
   if (chatBeautySchemesRow) chatBeautySchemesRow.addEventListener('click', () => window.openChatBeautySchemes());
 
+  // 聊天设置页：顶部标签切换（美化 / 功能 / 数据），复用 .them-tabs/.them-sec 结构互斥显示
+  (function initChatSettingsTabs() {
+    const tabsEl = document.getElementById('cs-tabs');
+    const page = document.getElementById('page-chat-settings');
+    if (!tabsEl || !page) return;
+    const tabs = tabsEl.querySelectorAll('.them-tab');
+    const secs = page.querySelectorAll('.them-sec');
+    function show(name) {
+      secs.forEach(s => { s.hidden = (s.dataset.sec !== name); });
+      tabs.forEach(t => { t.classList.toggle('active', t.dataset.tab === name); });
+    }
+    tabs.forEach(t => t.addEventListener('click', () => show(t.dataset.tab)));
+    show(tabs[0] ? tabs[0].dataset.tab : 'beautify');
+  })();
+
   // ================= 导出 / 导入聊天记录（数据，与清空同组） =================
   // 导出：打包为独立 JSON 下载（聊天记录可能含图片 dataURL，体积大也直接下载，不走 localStorage）
   const csExport = row('cs-export-msgs');

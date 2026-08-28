@@ -2978,20 +2978,33 @@ const moreGridAsk = document.getElementById('more-grid-ask');
 // v3.15.x：功能增多后顶部改为分类 chips（互动/小游戏/工具/TA的提问），
 // 按钮元素与 ID 全部保留只做过滤显示；每个功能只归属一个分类、分类间不重复
 const MORE_CATS = ['chat', 'game', 'tool', 'ask'];
-function applyMoreCat(cat) {
+// v3.26.x：群聊打开共享面板时进入「群聊模式」——只保留【工具】分类，且只留 帮我决定/多人决定/搜索记录/占卜；
+// 禁止在群聊里使用【小游戏】【TA的提问】【互动】功能。聊天页打开时关闭该模式、恢复全部分类。
+let moreGroupMode = false;
+const GROUP_MORE_ITEM_IDS = new Set(['more-decide', 'more-gdecide', 'more-search', 'more-divine']);
+function applyMoreCat(cat, group) {
+if (group === true || group === false) moreGroupMode = group;
+if (moreGroupMode) cat = 'tool'; // 群聊模式强制锁定「工具」分类
 if (MORE_CATS.indexOf(cat) < 0) cat = 'chat';
-document.querySelectorAll('#more-tabs .more-tab').forEach(t => t.classList.toggle('sel', t.dataset.mcat === cat));
+document.querySelectorAll('#more-tabs .more-tab').forEach(t => {
+const showTab = !moreGroupMode || t.dataset.mcat === 'tool'; // 群聊模式隐藏其余分类 tab
+t.hidden = !showTab;
+t.classList.toggle('sel', t.dataset.mcat === cat);
+});
 if (moreGridAsk) moreGridAsk.hidden = cat !== 'ask';
 if (moreGridFun) {
 moreGridFun.hidden = cat === 'ask';
 moreGridFun.querySelectorAll('.more-item').forEach(it => {
-it.hidden = it.dataset.mcat !== cat;
+if (moreGroupMode) it.hidden = !GROUP_MORE_ITEM_IDS.has(it.id); // 群聊模式只显允许的 4 项
+else it.hidden = it.dataset.mcat !== cat;
 });
 }
-store.set('more-cat', cat);
+if (!moreGroupMode) store.set('more-cat', cat);
 }
 // v3.16.x：群聊页打开共享更多面板时复用同一分类过滤
 window.applyMoreCat = applyMoreCat;
+// v3.26.x：群聊打开/关闭共享面板时切换群聊过滤模式
+window.setMoreGroupMode = (on) => { moreGroupMode = !!on; applyMoreCat('tool', !!on); };
 document.querySelectorAll('#more-tabs .more-tab').forEach(t => t.addEventListener('click', (e) => { e.stopPropagation(); applyMoreCat(t.dataset.mcat); }));
 moreBtn.addEventListener('click', (e) => {
 e.stopPropagation();
@@ -3002,7 +3015,7 @@ const saved = store.get('more-cat');
 if (saved && MORE_CATS.indexOf(saved) >= 0) tab = saved;
 else if (store.get('more-tab') === 'ask') tab = 'ask'; // 旧两页签记忆迁移
 } catch (err) {}
-applyMoreCat(tab);
+applyMoreCat(tab, false); // v3.26.x：聊天页打开面板关闭群聊过滤模式，恢复全部分类
 closeIme(); // v3.5.116：收起输入法，面板不被键盘遮挡
 // v3.16.x：聊天页打开共享更多面板时隐藏 @群成员 按钮（仅群聊打开时显示）
 const tb = document.getElementById('gc-more-at');

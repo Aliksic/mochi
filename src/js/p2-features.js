@@ -2557,7 +2557,7 @@ if (ckRefresh) {
   function eatSaveMenus(a) { const s = curStore(); if (s) try { s.set('eat-menus', JSON.stringify(a)); } catch (e) {} }
   function eatMenus() {
     const s = curStore();
-    try { const a = JSON.parse((s && s.get('eat-menus')) || '[]'); if (Array.isArray(a) && a.length) { const out = a.filter(m => m && m.name && Array.isArray(m.dishes) && m.dishes.length).map(m => ({ name: String(m.name), dishes: m.dishes.filter(d => d) })); if (out.length) return out; } } catch (e) {}
+    try { const a = JSON.parse((s && s.get('eat-menus')) || '[]'); if (Array.isArray(a) && a.length) { const out = a.filter(m => m && m.name && Array.isArray(m.dishes)).map(m => ({ name: String(m.name), dishes: m.dishes.filter(d => d) })); if (out.length) return out; } } catch (e) {}
     const oldMenu = eatMenu();
     if (oldMenu) { const migrated = [{ name: '我的菜单', dishes: oldMenu }]; eatSaveMenus(migrated); if (s) try { s.set('eat-menu', '[]'); } catch (e) {} return migrated; }
     let oldCards = []; try { const a = JSON.parse((s && s.get('eat-cards')) || '[]'); if (Array.isArray(a)) oldCards = a.filter(d => d); } catch (e) {}
@@ -2600,6 +2600,7 @@ if (ckRefresh) {
   function eatDrawWheel(dishes, hlIdx) { const c = document.getElementById('eat-wheel'); if (!c) return; eatDrawWheelCore(c, dishes, hlIdx, eatSpinAngle); }
   function eatSpinWheel(dishes, cb) {
     if (eatSpinning) return;
+    if (!dishes.length) { toast('当前菜单是空的，先添加菜名'); return; }
     eatSpinning = true; eatSetBtns(true);
     const totalAngle = eatSpinAngle + (3 + Math.random() * 4) * Math.PI * 2 + Math.random() * Math.PI * 2;
     const startAngle = eatSpinAngle; const duration = 3200; const startTime = Date.now();
@@ -2690,7 +2691,14 @@ if (ckRefresh) {
     eatSwTimer = requestAnimationFrame(tick);
   }
   function eatPick() {
-    const dishes = eatDishes(); const dish = dishes[Math.floor(Math.random() * dishes.length)];
+    const dishes = eatDishes();
+    if (!dishes.length) {
+      const de2 = document.getElementById('eat-dish'); const ce2 = document.getElementById('eat-comment');
+      if (de2) { de2.classList.add('fade'); setTimeout(() => { de2.textContent = '空菜单，先添加菜名'; de2.classList.remove('fade'); }, 200); }
+      if (ce2) { ce2.classList.add('fade'); setTimeout(() => { ce2.textContent = ''; ce2.classList.remove('fade'); }, 200); }
+      return '';
+    }
+    const dish = dishes[Math.floor(Math.random() * dishes.length)];
     const comments = DEF_EAT_COMMENTS; const comment = comments[Math.floor(Math.random() * comments.length)];
     const de = document.getElementById('eat-dish'); const ce = document.getElementById('eat-comment');
     if (de) { de.classList.add('fade'); setTimeout(() => { de.textContent = dish; de.classList.remove('fade'); }, 200); }
@@ -2728,7 +2736,7 @@ if (ckRefresh) {
   document.getElementById('eat-send').addEventListener('click', () => { if (editingNow() || eatSpinning) return; if (eatLastPick && window.chatAddIn) { try { window.chatAddIn(eatLastPick); } catch (e) {} toast('已发送'); } });
   document.getElementById('eat-add').addEventListener('click', () => { if (!window.openModal) return; window.openModal('添加菜名', '', (v) => { if (!v) return; const cur = eatCurMenu(); if (cur.menu.dishes.indexOf(v) >= 0) { toast('当前菜单已有「' + v + '」'); return; } cur.menu.dishes.push(v); cur.menus[cur.idx] = cur.menu; eatSaveMenus(cur.menus); eatDrawWheel(eatDishes()); toast('已添加到「' + cur.menu.name + '」'); }); });
   document.getElementById('eat-spin').addEventListener('click', () => { if (editingNow() || eatSpinning) return; const dishes = eatDishes(); eatSpinWheel(dishes, (dish) => { const de = document.getElementById('eat-dish'); if (de) { de.classList.add('fade'); setTimeout(() => { de.textContent = dish; de.classList.remove('fade'); }, 200); } const ce = document.getElementById('eat-comment'); const comments = DEF_EAT_COMMENTS; const comment = comments[Math.floor(Math.random() * comments.length)]; if (ce) { ce.classList.add('fade'); setTimeout(() => { ce.textContent = '\u201c' + comment + '\u201d'; ce.classList.remove('fade'); }, 200); } eatLastPick = dish + ' · ' + comment; eatPushHistory(dish); }); });
-  document.getElementById('eat-askta').addEventListener('click', () => { if (editingNow() || eatSpinning) return; if (!eatLastPick) { eatLastPick = eatPick(); } const m = eatLastPick.match(/^(.+?) ·/); const dish = m ? m[1] : eatLastPick; const msg = EAT_ASK_MSGS[Math.floor(Math.random() * EAT_ASK_MSGS.length)].replace('{0}', dish); if (window.chatAddIn) { try { window.chatAddIn(msg); } catch (e) {} toast('已发送'); } });
+  document.getElementById('eat-askta').addEventListener('click', () => { if (editingNow() || eatSpinning) return; if (!eatLastPick) { eatLastPick = eatPick(); } if (!eatLastPick) { toast('当前菜单是空的，先添加菜名'); return; } const m = eatLastPick.match(/^(.+?) ·/); const dish = m ? m[1] : eatLastPick; const msg = EAT_ASK_MSGS[Math.floor(Math.random() * EAT_ASK_MSGS.length)].replace('{0}', dish); if (window.chatAddIn) { try { window.chatAddIn(msg); } catch (e) {} toast('已发送'); } });
   let eatEditIdx = 0;
   function eatEsc(s) { return String(s).replace(/[<>&"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c])); }
   function eatRenderMenuChips() {
@@ -2766,8 +2774,8 @@ if (ckRefresh) {
     window.openModal('新建菜单', '', (v) => {
       if (!v) return; const menus = eatMenus();
       if (menus.some(m => m.name === v)) { toast('已有同名菜单'); return; }
-      menus.push({ name: v, dishes: DEF_EAT_DISHES.slice() }); eatSaveMenus(menus);
-      eatEditIdx = menus.length - 1; eatEditFill(); toast('已新建「' + v + '」（含默认菜品，可编辑）');
+      menus.push({ name: v, dishes: [] }); eatSaveMenus(menus);
+      eatEditIdx = menus.length - 1; eatEditFill(); toast('已新建「' + v + '」（空菜单，可在下方添加菜名）');
     }, { placeholder: '如：家常菜 / 外卖 / 夜宵' });
   });
   document.getElementById('eat-menu-rename').addEventListener('click', () => {
@@ -2905,9 +2913,13 @@ if (ckRefresh) {
     '</div>';
   host.appendChild(pomoPage);
 
+  // 番茄钟数据全局共享（pomo-cfg 时长 / 今日·累计 🍅 / 夸夸字卡 / 发到聊天 / 铃声 / 陪伴会话 / 陪伴聊天记录
+  // 与陪伴设置都存根命名空间 xy-home-v2:*，所有桌面读写同一份——陪伴模式可跨联系人继续、不随桌面切换重置）
+  function pomoStore() { try { return window.xyStore('xy-home-v2'); } catch (e) { return null; } }
+
   function pomoCfg() {
     let c = null;
-    try { c = JSON.parse((curStore() && curStore().get('pomo-cfg')) || '{}'); } catch (e) {}
+    try { c = JSON.parse((pomoStore() && pomoStore().get('pomo-cfg')) || '{}'); } catch (e) {}
     const ok = (n, d) => (n && n >= 1 && n <= 180 ? n : d);
     return {
       f: ok(c && c.f, POMO_MODES.focus.def),
@@ -2915,23 +2927,23 @@ if (ckRefresh) {
       l: ok(c && c.l, POMO_MODES.long.def)
     };
   }
-  function pomoSetCfg(c) { const s = curStore(); if (s) try { s.set('pomo-cfg', JSON.stringify(c)); } catch (e) {} }
+  function pomoSetCfg(c) { const s = pomoStore(); if (s) try { s.set('pomo-cfg', JSON.stringify(c)); } catch (e) {} }
   function pomoModeMin(m) { const c = pomoCfg(); return m === 'focus' ? c.f : m === 'short' ? c.s : c.l; }
   function pomoTodayKey() { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
   function pomoToday() {
-    const s = curStore();
+    const s = pomoStore();
     try { const o = JSON.parse((s && s.get('pomo-today')) || '{}'); if (o.date === pomoTodayKey()) return { date: o.date, count: o.count || 0 }; } catch (e) {}
     return { date: pomoTodayKey(), count: 0 };
   }
-  function pomoSaveToday(t) { const s = curStore(); if (s) try { s.set('pomo-today', JSON.stringify(t)); } catch (e) {} }
-  function pomoTotal() { const s = curStore(); try { return parseInt((s && s.get('pomo-total')) || '0', 10) || 0; } catch (e) { return 0; } }
-  function pomoSaveTotal(n) { const s = curStore(); if (s) try { s.set('pomo-total', '' + n); } catch (e) {} }
-  function pomoCustomMsgs() { const s = curStore(); try { const a = JSON.parse((s && s.get('pomo-msgs')) || '[]'); if (Array.isArray(a)) return a; } catch (e) {} return []; }
-  function pomoSaveMsgs(a) { const s = curStore(); if (s) try { s.set('pomo-msgs', JSON.stringify(a)); } catch (e) {} }
+  function pomoSaveToday(t) { const s = pomoStore(); if (s) try { s.set('pomo-today', JSON.stringify(t)); } catch (e) {} }
+  function pomoTotal() { const s = pomoStore(); try { return parseInt((s && s.get('pomo-total')) || '0', 10) || 0; } catch (e) { return 0; } }
+  function pomoSaveTotal(n) { const s = pomoStore(); if (s) try { s.set('pomo-total', '' + n); } catch (e) {} }
+  function pomoCustomMsgs() { const s = pomoStore(); try { const a = JSON.parse((s && s.get('pomo-msgs')) || '[]'); if (Array.isArray(a)) return a; } catch (e) {} return []; }
+  function pomoSaveMsgs(a) { const s = pomoStore(); if (s) try { s.set('pomo-msgs', JSON.stringify(a)); } catch (e) {} }
   function pomoPool() { return DEF_POMO_PRAISE.concat(pomoCustomMsgs()); }
-  function pomoSendOn() { const s = curStore(); try { return s.get('pomo-send-chat') !== '0'; } catch (e) { return true; } }
-  // 结束铃声开关（每桌面独立，默认开；关了只静音、震动与本地通知保留）
-  function pomoBellOn() { const s = curStore(); try { return s.get('pomo-bell') !== '0'; } catch (e) { return true; } }
+  function pomoSendOn() { const s = pomoStore(); try { return s.get('pomo-send-chat') !== '0'; } catch (e) { return true; } }
+  // 结束铃声开关（全局共享，默认开；关了只静音、震动与本地通知保留）
+  function pomoBellOn() { const s = pomoStore(); try { return s.get('pomo-bell') !== '0'; } catch (e) { return true; } }
   // 到点本地通知（period.js notifyAssist 先例）：页面在后台/熄屏时 Web Audio 会挂起、
   // iOS 又没有 navigator.vibrate——系统通知是唯一可靠的到点提醒。只看通知权限，
   // 不受「TA 消息通知」开关影响（番茄钟是用户主动启动的闹钟类功能）。

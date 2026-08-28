@@ -1,4 +1,19 @@
-# 本次构建者：AI-B（本会话，2026-08-28 20:02，音效图标重设计已构建收口 sw: mochi-mtcwjx2b，哨兵 23/23，待提交）
+# 本次构建者：AI-A（本会话，2026-08-28 20:35，桌面/聊天美化 Tab 黑白化+方案保存预览+聊天设置分类Tab 已构建收口 sw: mochi-mtcxpruj，哨兵 25/25，待提交）
+### 2026-08-28 20:35（✅ 完成·已构建·桌面/聊天美化 Tab 去灰改黑白 + 两者保存方案加可视化预览&列表缩略图 + 聊天设置加分类Tab）
+- [本会话·AI-A]（**已改 src/css/setting.css、src/js/chat-settings.js、src/template.html、src/js/personalize.js（跨域改 AI-B 文件：桌面保存/方案列表新增缩略函数的宿主，改前先留言）；构建状态：已构建 sw: mochi-mtcxpruj，哨兵 25/25**）。
+- 用户反馈：①手机桌面美化顶部切换有「多余灰色」，与简约黑白 UI 不符；②保存当前(聊天/桌面)美化方案时无法确认/预览当前设置，方案列表也无缩略图；③聊天设置页缺少像手机桌面美化一样顶部分类可点击切换。
+- 根因与方案：
+  - ①桌面 Tab 原本 `.them-tabs` 背景用 `var(--page-bg,#e9e9e9)` 灰条 + `.them-tab` 灰底块、选中黑底白字 —— 与纯白页面（`--bg-b` #fff）冲突=「多余灰色」。改为 `background:var(--bg-b)`（白，深色模式自动深）去灰条、Tab 透明底，选中项黑色文字+2px 黑色下划线，暗色下白描边。桌面+聊天复用同一套 `.them-tabs`。
+  - ②桌面 `saveBeautyScheme` 原走 `openModal` 无预览 → 改为自定义确认弹窗（`beauty-save-modal`）：迷你手机屏缩略图 `desktopSchemeThumb` + 设置摘要 chips `desktopBeautySummary`（主题/强调色/壁纸/字号/圆角等）+ 命名输入 + 取消/保存。桌面方案列表 `openBeautySchemes` 每项上方插入缩略图（同聊天方案一致）。
+  - ③聊天设置页 `#page-chat-settings` 在头部下加 `.them-tabs`（美化/功能/数据三分类），把原长列表按「美化」（美化方案/壁纸/气泡样式/气泡颜色CSS/字体）、「功能」（昵称头像/发送按钮/批量发送/语音消息/表情包/全屏）、「数据」（导出/导入/清空/允许删除）分组包裹进 `.them-sec`，`chat-settings.js` 新增 `initChatSettingsTabs` 互斥切换（复用 theme 切换逻辑）。
+- 验证：node --check chat-settings.js/personalize.js 通过；构建哨兵 25/25；无头浏览器实测 4 项 PASS——①桌面 Tab 无灰底块、选中黑字黑下划线；②桌面保存弹窗显示手机缩略图+摘要chips；③桌面方案列表打开（空态）；④聊天设置 美化/功能/数据 三个标签点击切换正常；控制台无报错。聊天方案列表缩略图此前实现已实测可渲染。
+- 待 AI-B 复核：personalize.js（跨域）新增 desktopSchemeThumb/desktopBeautySummary/beautySaveModalEl 并改写 saveBeautyScheme、openBeautySchemes 加缩略图；如需回滚请告知。
+### 2026-08-28（吃什么页菜单：新建从空开始 + 空菜单兜底；已改源码，未构建）
+- [AI-A 域]（**已改 src/js/p2-features.js；构建状态：未构建（node --check 已过），待构建者收口**）。
+- 用户反馈：吃什么页「编辑菜单」里新建菜单仍带默认菜品；切换菜单看着没效果。
+- 根因：`eat-menu-new` 新建时 `dishes: DEF_EAT_DISHES.slice()` 填默认 20 道 → 所有新菜单内容雷同，切换转盘/卡片看起来一样＝「切换无效」；`eatMenus()` 还会把空菜单过滤掉，无法做成空菜单。
+- 方案：新建菜单 `dishes: []`（从空开始）；`eatMenus()` 过滤去掉 `.dishes.length` 限制以保留空菜单；`eatPick`/`eatSpinWheel`/`eat-askta` 对空菜单加「空菜单，先添加菜名」兜底（避免显示 undefined 或崩溃）。
+- 验证：node --check 通过；未跑构建。切换现有默认菜单与新建空菜单后效果即可见差异。
 ### 2026-08-28（桌面第三页经期组件：删安全期标签 + 黑白配色；已改源码，未构建）
 - [AI-A 域]（**已改 src/js/period.js + src/css/home.css；构建状态：未构建（node --check 已过），待构建者收口**）。
 - 需求：经期组件只留经期/排卵期，正常（安全期）状态不显示阶段标签；组件配色由粉色改为桌面统一黑白。

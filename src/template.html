@@ -4397,6 +4397,13 @@
         </span>
         <span class="ch-name">聊天设置</span>
       </div>
+      <!-- 聊天设置页顶部标签切换：美化 / 功能 / 数据（复用 .them-tabs/.them-sec，交互在 chat-settings.js） -->
+      <div class="them-tabs" id="cs-tabs">
+        <div class="them-tab active" data-tab="beautify">美化</div>
+        <div class="them-tab" data-tab="function">功能</div>
+        <div class="them-tab" data-tab="data">数据</div>
+      </div>
+      <div class="them-sec" data-sec="beautify">
       <div class="gs-title" style="padding-top:2px">聊天美化方案</div>
       <div class="set-group glass">
         <div class="set-row" id="row-chat-beauty-save">
@@ -4484,6 +4491,8 @@
           <div class="val" id="cs-font-val">默认</div>
         </div>
       </div>
+      </div>
+      <div class="them-sec" data-sec="function" hidden>
       <!-- v3.8.x：聊天专用昵称/头像（与桌面 deco-widget 的 lbl-*/avatar-* 完全独立，
            桌面只能在桌面改，聊天只能在聊天设置改；未设时聊天页显示默认占位 TA/我 + 人形图标） -->
       <div class="gs-title">昵称与头像</div>
@@ -4592,6 +4601,8 @@
           <label class="toggle"><input type="checkbox" id="cs-call-mini-hide"><span class="tk"></span></label>
         </div>
       </div>
+      </div>
+      <div class="them-sec" data-sec="data" hidden>
       <div class="gs-title">数据</div>
       <div class="set-group glass">
         <div class="set-row" id="cs-export-msgs">
@@ -4612,6 +4623,7 @@
           <div class="txt">允许删除联系人消息<span class="sub">点击消息气泡可弹出删除按钮，消息是真的会删除无法回复</span></div>
           <label class="toggle"><input type="checkbox" id="cs-del-ta-msg"><span class="tk"></span></label>
         </div>
+      </div>
       </div>
     </div>
 

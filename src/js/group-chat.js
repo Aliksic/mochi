@@ -1536,17 +1536,10 @@
         try { if (window.closeIme) window.closeIme(); } catch (err) {}
         try { input.blur(); } catch (err) {}
         gcSetMoreTopbar(true);
-        // 与聊天页一致：按上次分类过滤功能按钮（否则全部功能堆在一起、没有分组）
-        try {
-          if (window.applyMoreCat) {
-            let tab = 'chat';
-            try {
-              const saved = window.activeStore().get('more-cat');
-              if (saved && ['chat', 'game', 'tool', 'ask'].indexOf(saved) >= 0) tab = saved;
-            } catch (err2) {}
-            window.applyMoreCat(tab);
-          }
-        } catch (err3) {}
+        // v3.26.x：群聊打开更多面板 → 进入「群聊模式」：只保留【工具】分类，且只留 帮我决定/多人决定/搜索记录/占卜，
+        // 禁止使用【小游戏】【TA的提问】【互动】功能（其余分类 tab 与功能按钮在群聊模式中被隐藏）。
+        if (window.setMoreGroupMode) window.setMoreGroupMode(true);
+        else if (window.applyMoreCat) window.applyMoreCat('tool');
       }
       gcMorePanel.hidden = !gcMorePanel.hidden;
       if (gcMorePanel.hidden) gcSetMoreTopbar(false);

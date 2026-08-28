@@ -1664,19 +1664,100 @@ try {
     try { const tm = localStorage.getItem('xy-home-v2:theme-mode'); if (tm) data['__theme__'] = tm; } catch (e) {}
     return data;
   };
-  // 保存当前为方案：取名后入库（全局）；若方案管理器开着则重绘列表
+  // ---- 桌面美化方案缩略图 + 保存确认（预览+摘要），同聊天方案一致 ----
+  // 迷你手机屏幕：强调色状态栏/底栏 + 页面底色/壁纸 + 强调色图标点，便于识别每个方案
+  function desktopSchemeThumb(data) {
+    data = data || {};
+    const dark = data['__theme__'] === 'dark';
+    const accent = data['__accent__'] || (dark ? '#ffffff' : '#111111');
+    const pgBg = data['page-bg-0'] || (dark ? '#1c1c1e' : '#f2f3f5');
+    const ink = dark ? '#ffffff' : '#111111';
+    const soft = dark ? 'rgba(255,255,255,.6)' : 'rgba(0,0,0,.45)';
+    let wallStyle = 'background:' + pgBg;
+    const bgv = data['phone-bg'];
+    if (bgv && typeof bgv === 'string' && (bgv.indexOf('data:') === 0 || bgv.indexOf('http') === 0)) {
+      wallStyle += ';background-image:url(&quot;' + bgv + '&quot;);background-size:cover;background-position:center';
+    } else if (bgv && typeof bgv === 'string') {
+      wallStyle += ';background:' + bgv;
+    }
+    let dots = '';
+    for (let _d = 0; _d < 4; _d++) dots += '<div style="flex:1;height:9px;border-radius:4px;background:' + soft + ';opacity:.7"></div>';
+    return '' +
+      '<div style="position:relative;width:100%;height:74px;border-radius:9px;overflow:hidden;background:#e6e9ee;display:flex;align-items:center;justify-content:center;box-sizing:border-box">' +
+        '<div style="position:relative;width:58px;height:100%;border-radius:8px;overflow:hidden;border:1.5px solid ' + ink + ';box-sizing:border-box;background:#fff">' +
+          '<div style="height:10px;background:' + accent + '"></div>' +
+          '<div style="height:16px;display:flex;align-items:center;padding:0 5px;box-sizing:border-box"><div style="flex:1;height:5px;border-radius:3px;background:' + ink + '"></div><div style="width:5px;height:5px;border-radius:2px;background:' + accent + ';margin-left:2px"></div></div>' +
+          '<div style="height:35px;' + wallStyle + ';display:flex;align-items:center;justify-content:center;gap:4px;padding:0 5px;box-sizing:border-box">' + dots + '</div>' +
+          '<div style="height:9px;background:' + accent + ';opacity:.85"></div>' +
+        '</div>' +
+      '</div>';
+  }
+  function desktopBeautySummary(data) {
+    data = data || {};
+    const out = [];
+    out.push('主题 ' + (data['__theme__'] === 'dark' ? '深色' : '浅色'));
+    if (data['__accent__']) out.push('强调色 ' + data['__accent__']);
+    if (data['phone-bg'] || data['phone-bg-preset']) out.push('壁纸');
+    if (data['page-bg-0']) out.push('页面配色已设');
+    const fs = data['desk-font-size'];
+    if (fs) out.push('桌面字号 ' + fs);
+    const is = data['ico-shape'];
+    if (is) out.push('图标 ' + ({ square: '方形', circle: '圆形', round: '圆角' }[is] || is));
+    const rad = data['desk-card-radius'];
+    if (rad) out.push('卡片圆角 ' + rad);
+    return out;
+  }
+  function beautySaveModalEl() {
+    let m = document.getElementById('beauty-save-modal');
+    if (!m) {
+      m = document.createElement('div'); m.id = 'beauty-save-modal'; m.hidden = true;
+      m.style.cssText = 'position:fixed;inset:0;z-index:90;align-items:center;justify-content:center;background:rgba(0,0,0,.4);display:none';
+      document.body.appendChild(m);
+      m.addEventListener('click', (e) => { if (e.target === m) { m.style.display = 'none'; m.hidden = true; } });
+    }
+    return m;
+  }
+  // 保存当前为方案：可视确认（缩略预览 + 设置摘要）再取名入库（全局）
   window.saveBeautyScheme = function () {
-    if (!window.openModal) return;
-    const ctl = window.openModal('保存当前为美化方案', '', (name) => {
-      name = (name || '').trim();
-      if (!name) { ctl.hint('请输入方案名称'); ctl.stay(); return; }
+    const x = beautySaveModalEl();
+    x.innerHTML = '';
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'box-sizing:border-box;width:min(84vw,340px);max-height:84vh;overflow-y:auto;background:var(--card-bg,#fff);color:var(--ink,#111);border-radius:16px;padding:16px;box-shadow:0 14px 40px rgba(0,0,0,.25)';
+    const hd = document.createElement('div');
+    hd.style.cssText = 'font-size:15px;font-weight:700;text-align:center;margin-bottom:12px';
+    hd.textContent = '保存当前为桌面美化方案';
+    const data = collectBeautyFull();
+    const pv = document.createElement('div');
+    pv.innerHTML = desktopSchemeThumb(data);
+    const sub = document.createElement('div');
+    sub.style.cssText = 'font-size:10.5px;color:var(--muted,#999);margin:8px 0 6px';
+    sub.textContent = '正在保存的当前设置：';
+    const sum = document.createElement('div');
+    sum.style.cssText = 'display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px';
+    const chips = desktopBeautySummary(data);
+    chips.forEach(c => { const el = document.createElement('span'); el.textContent = c; el.style.cssText = 'font-size:10.5px;color:var(--muted,#666);background:var(--card-soft,#f2f3f5);border:1px solid var(--card-border,#eee);padding:2px 8px;border-radius:999px'; sum.appendChild(el); });
+    const inp = document.createElement('input');
+    inp.placeholder = '例如：情侣粉、简约黑白…'; inp.maxLength = 20;
+    inp.style.cssText = 'width:100%;box-sizing:border-box;padding:9px 11px;font-size:13px;border:1px solid var(--card-border,#ddd);border-radius:9px;background:var(--bg-b,#fff);color:var(--ink,#111)';
+    const act = document.createElement('div');
+    act.style.cssText = 'display:flex;gap:8px;margin-top:13px;justify-content:flex-end';
+    const cancel = mkBtn('取消', 'font-size:12.5px;padding:7px 14px;border:1px solid var(--card-border,#eee);border-radius:9px;background:var(--btn-cancel-bg,#fafafa);color:var(--btn-cancel-ink,#555)', () => { x.style.display = 'none'; x.hidden = true; });
+    const ok = mkBtn('保存方案', 'font-size:12.5px;padding:7px 14px;border:none;border-radius:9px;background:var(--ink,#111);color:#fff', () => {
+      const name = (inp.value || '').trim();
+      if (!name) { inp.style.borderColor = '#e05a5a'; return; }
       const list = getSchemes();
-      list.push({ name, time: Date.now(), data: collectBeautyFull() });
+      list.push({ name, time: Date.now(), data });
       saveSchemesList(list);
+      x.style.display = 'none'; x.hidden = true;
       toast('已保存方案「' + name + '」，所有桌面通用');
       const m = document.getElementById('beauty-scheme-manager');
       if (m && !m.hidden) window.openBeautySchemes();
-    }, { maxlength: 20, placeholder: '例如：情侣粉、简约黑白…' });
+    });
+    act.appendChild(cancel); act.appendChild(ok);
+    wrap.appendChild(hd); wrap.appendChild(pv); wrap.appendChild(sub); wrap.appendChild(sum); wrap.appendChild(inp); wrap.appendChild(act);
+    x.appendChild(wrap);
+    x.style.display = 'flex'; x.hidden = false;
+    setTimeout(() => { try { inp.focus(); } catch (e) {} }, 60);
   };
   // 方案管理器弹窗（自定义居中框，与联系人管理器同风格）
   function schemeModalEl() {
@@ -1732,6 +1813,9 @@ try {
     schemes.forEach((s, i) => {
       const row = document.createElement('div');
       row.style.cssText = 'display:flex;flex-direction:column;gap:8px;padding:10px;border:1px solid var(--card-border,#eee);border-radius:10px';
+      const th = document.createElement('div');
+      th.innerHTML = desktopSchemeThumb(s.data || {});
+      row.appendChild(th);
       const nm = document.createElement('div');
       const t = new Date(s.time || Date.now());
       const ds = (t.getMonth() + 1) + '-' + t.getDate();
