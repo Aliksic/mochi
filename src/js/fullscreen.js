@@ -208,7 +208,11 @@
     try {
       unlockFsOrient();
       stopFsMonitor();
-      if (document.exitFullscreen) document.exitFullscreen();
+      // 安卓切后台/换页瞬间文档可能已非全屏态，exitFullscreen 的 promise 会 reject，需兜住避免误报错误
+      if (document.exitFullscreen) {
+        const p = document.exitFullscreen();
+        if (p && p.catch) p.catch(() => {});
+      }
       else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
     } catch (e) {}
   }

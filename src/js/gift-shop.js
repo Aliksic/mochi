@@ -97,7 +97,7 @@
   // 供 chat.js 红包侧委托同一本全局账（避免两套实现漂移）
   window.giftWalletGet = walletGet;
   window.giftWalletSet = walletSet;
-  function walletText() { const w = walletGet(); return '心意币 ¥' + fenToYuan(w.myBalance) + ' · ' + partnerName() + ' ¥' + fenToYuan(w.systemBalance) + ' · 点此向 Mochi 申请'; }
+  function walletText() { const w = walletGet(); return '心意币 ¥' + fenToYuan(w.myBalance) + ' · ' + partnerName() + ' ¥' + fenToYuan(w.systemBalance) + ' · 向 Mochi 申请心意币'; }
   function renderGiftBalances() {
     ['gift-balance', 'market-balance'].forEach(function (id) {
       const el = document.getElementById(id);
@@ -200,8 +200,7 @@
       pills: [{ value: 'my', label: '我的心意币' }, { value: 'ta', label: pn + ' 的心意币' }],
       pill: 'my',
       placeholder: '输入申请金额（元），留空结束',
-      inputmode: 'decimal',
-      maxlength: 9
+      inputmode: 'decimal'
     });
     if (ctl) ctl.okText('申请');
   }

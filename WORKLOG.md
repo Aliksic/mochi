@@ -1,3 +1,29 @@
+### 2026-08-28（✅ 完成·【手机桌面美化】页分组小标题重排 + 「美化方案」入口收拢到美化页）
+- [本会话·完成]（**已改 src/template.html + src/css/setting.css + src/js/contacts.js；已构建 index.html/sw.js/version.json（12:54, sw: mochi-mtch904y）+ verify.mjs 10/10；未提交**）。
+  - **用户需求**：①「美化外观保存」（联系人/桌面管理器里的「美化方案一键切换外观」按钮）应放在【手机桌面美化】页面里；②该页功能多、排序杂，要求分组清楚、好懂好用，并加分组小标题。
+  - **改动**：① 新增 `.cg-title` 分组小标题（11.5px 灰字 + 左侧竖条），把 page-theme 上部原来的 6 组打散重排为 5 组：`颜色与透明度`（主题色/小组件颜色/边框/按钮/按钮文字/爱心外框/透明度）、`尺寸与圆角`（桌面字号/卡片大小/组件圆角/图标圆角）、`背景与壁纸`（上传背景/壁纸预设/模糊/遮罩/移除/每页背景 desk-page-bgs）、`图标与页面`（自定义图标/新增页/删除最后一页/恢复默认桌面）、`美化方案·保存/切换/备份`（保存当前/我的方案/导出/导入）；所有 row id 与交互不变，仅归组与顺序调整。② contacts.js 删除联系人/桌面管理器里的「美化方案（一键切换外观）」按钮——功能已完整收拢到美化页（保存/我的方案/导入导出同组），避免重复入口。
+  - **验证**：node tools/verify.mjs 10/10；构建产物已含 cg-title、不含被删按钮。
+
+### 2026-08-28（✅ 完成·开屏署名移到顶部 + 底部版本/时间块重新设计）
+- [本会话·AI-B 域]（**已改 src/template.html + src/js/clock.js + src/css/base.css；已构建 index.html/sw.js/version.json（12:48, sw: mochi-mtcgsuf7）+ 无头 Chrome 截图核验；未提交**）。
+  - **① 署名上移**：`小红书@言序（1842523578）` 从底部移到标题下方（`.splash-brand` 改为顶部小字，margin-top 14→6px、10.5px 灰字）。
+  - **② 底部版本块重新设计**：原单行等宽 10px 太挤 → 改两行：`Mochi 字卡传讯 v3.6.279`（11.5px 加粗黑）+ `部署于 … · 12:49:07`（10.5px 灰）；去等宽字体、字号加大适配手机；clock.js 实时秒数只写入 `#splash-ver-live` 不再整块重写。
+  - **验证**：无头 Chrome 390×844 截图——标题下显示署名；底部版本两行清晰；滑到底进入交互仍 4 项全通过（顶部置灰 opacity .3 + 提示 → 滑到底恢复可点 → 未到底点击不进入/到底进入）。
+
+### 2026-08-28（✅ 完成·开屏必须滑到底才能进入 + 公告免费说明）
+- [本会话·AI-B 域]（**已改 src/template.html + src/js/clock.js + src/css/base.css + src/pwa/notice.json；已构建 index.html/sw.js/version.json（12:42, sw: mochi-mtcgsuf7）+ 无头 Chrome 验证；未提交**）。
+  - **① 开屏交互**：必须把公告滑到底才能点【点击进入】——未到底按钮置灰（`.splash-enter.is-disabled`：opacity .3 + pointer-events none，div 上设 disabled 属性不落 DOM 故用 class）+ 显示灰色提示「请滑到底部后进入」；滑到底（`scrollHeight-scrollTop-clientHeight<=8`）后按钮恢复可点。数据未就绪仍先显示「正在加载数据…」。20s 保险丝改为仅数据异常未就绪时兜底放行，不再自动跳过滑动。notice.json 异步渲染后派发 `mochi-notice-rendered` 重判，滚动事件 + 轮询双保险。
+  - **② 公告新增免费说明**：顶部新增 tip 块「本站完全免费，没有收过任何人一分钱，个人出资和花费时间搭建的。开放二传二改但禁止以盈利为目的」；【三、使用规范】章节首条同步添加同文（notice.json 远程源 + template.html 离线兜底一致）。
+  - **验证**：无头 Chrome 390×844 —— 顶部 `disabledClass=true opacity=0.3`、提示显示；滑到底 `disabledClass=false opacity=1`、提示隐藏；未到底点击不进入、到底点击进入。tip 块 4 个、免费文案在位。
+
+### 2026-08-28 开屏两页改1页（✅ 完成·开屏即公告：原「开屏公告 + 点进入后的报修确认层」合并为一页）
+- [追加]（**已改 src/template.html + src/js/clock.js + src/css/base.css + src/pwa/notice.json + 构建（12:20, sw: mochi-mtcg1g6k）+ verify 10/10 + 截图核验版式；未提交**）。公告改分层版式：前置 tip 提示块（系统预设字卡说明，紫色高亮）+ 章节标题（星言紫竖条）> 子标题（加粗）> 自动编号条目（紫圆标，章节内从 1 重排）> 子列表项（紫 · 前缀）；notice.json 增加 tip 字段与 {h}/{b} 条目类型，clock.js sections 渲染同步支持（字符串=编号、{h}=子标题、{b}=子列表项），template.html 静态兜底同构。标题/子标题/正文/子列表字号 12/11.5/11/11，间距章节间 15px、条目间 8px。结构核验：tip+4章节+22编号+2子标题+9子列表。
+- [本会话·AI-B 域]（**已改 src/template.html + src/js/clock.js + src/css/base.css + src/pwa/notice.json + 根 notice.json；已构建 index.html/sw.js/version.json + verify.mjs 10/10；未提交**）。
+  - **用户需求**：把「开屏公告」和「开屏点击进入后的强制点【我已知晓】确认层」两页合并为开屏1页，全部说明直接展示在开屏上。
+  - **改动**：① template.html 删掉 `#splash-confirm` 确认层 + `#splash-dots` 装饰点，公告全文（一/二/三/四章节）直接铺进开屏公告卡；② clock.js 去掉确认层逻辑——`enter()` 只在数据就绪时点【点击进入】直接 `hide()`（点击即视为已阅读知晓），只允许按钮进入避免误触跳过；notice 远程渲染支持 `sections:[{h,p:[...]}]` 章节结构（优先于旧 list），空/`hide:true` 时隐藏公告区；③ base.css 开屏改整屏 flex 纵向布局：logo/标题固定顶部、公告卡中间可滚动、版本号+按钮固定底部；新增 `.splash-sec` 章节标题样式；删确认层/装饰点样式；④ notice.json 换成本次新版公告内容（sections 结构）。
+  - **验证**：grep 确认 src 与构建产物均无 `splash-confirm`/`splash-dots` 残留；`node tools/verify.mjs` 10/10（390×844 / 360×640）。tools/ 下旧测试脚本对已删元素的引用多为守卫式（`if(b)b.click()`）不会报错，暂未逐一清理。
+  - ⚠️ 涉及 AI-B 域文件（template/base.css/clock.js），请按协议 git diff 自查；根目录 notice.json 为构建同步产物。
+
 ### 2026-08-27 23:5x（✅ 完成·桌面图标文字行对齐——补齐 zoom 缩放残差的全部根因）
 - [本会话·完成]（**已改 src/css/home.css + src/css/base.css + src/template.html（AI-B 域；template 仅给经期卡内容包 .dpd-inner 居中壳）+ 已构建（23:53, sw: mochi-mta6hylc）+ tools/verify-desk-align.mjs 扩到 **24/24 全绿**（新增 E4 图标文字行从底部对齐 Δ=0）+ npm run verify 10/10；未提交**）。
   - **用户反馈**「图标下方的文字这一行差一点点」——多轮排查出 zoom 缩放场景的残余错位根因：
@@ -3442,3 +3468,15 @@ staticText: staticText
   4. 情绪表达 tab 移除原「文字字卡」榜单（textCount 逻辑删掉），只保留 情绪字卡/心意字卡/交流意图。
 - 口径说明：按「分类+分组+卡原文」内容匹配（历史消息未存卡 id）；消息需无 special/retracted、非 dataURL/http、去除符号后含可读文字；聊天页输入/自动回复/表情面板发送都会进这条统计。
 - 验证：node build.mjs 成功（sw mochi-mtbnx2d7），node tools/verify.mjs 布局 10/10；新增 tools/diag-cc-stats.mjs 无头 Chrome 实测 8/8（我发/TA发分榜、只统计库内卡、查看更多 Top100 弹层）。未提交（含并行会话未提交内容，请构建者/提交者统一收口）。
+
+- [2026-08-28 AI-A] 设置页「联系人跨桌面查岗 / 联系人跨桌面打电话」开关行左侧矢量图标重做（src/js/incoming-requests.js：sf-desk-checkin / sf-desk-call 的 ico）：
+  1. 查岗：旧版「残缺表盘弧+漂浮圆点+缩小爱心」→ 新版「表盘(10,14 r6.5)+指针 + 右上迷你手机角标(16.2,2 5.8×8.2 rx1.7)」。
+  2. 打电话：旧版「虚线圆圈+满尺寸听筒」→ 新版「听筒(与设置页通话设置行同款 path) + 同款迷你手机角标」；两图标成对，角标统一表意「来自另一个桌面」，描边统一 1.8 与设置页其它行一致。
+  3. 候选对比页 tools/_desk-icon-preview.html（A1-A3 / B1-B3，20px 实机 + 88px 放大），浏览器截图验证后选定 A1/B1。
+- 未构建：仅改 src 源文件，待构建者 node build.mjs 后生效。
+
+### 2026-08-28（用户诊断反馈：wallet 未定义 + exitFullscreen promise 报错）
+- [本会话·已改 src·未构建] 两处修复：
+  1. chat.js `trySystemAutoSend()`（TA 自动发红包）漏声明钱包变量，随机触发即抛 `Uncaught ReferenceError: wallet is not defined` 且红包丢失——补 `const wallet = rpWalletGet();`（对齐 trySystemAskMochi/handleSendResponse 写法）。
+  2. fullscreen.js `exitFs()` 未接住 `document.exitFullscreen()` 的 promise 拒绝（安卓切后台/换页瞬间文档非全屏态时 reject），加 `p.catch(() => {})` 兜底，仅消误报、不改行为。
+- node --check 均通过。仅改 src/js/chat.js + src/js/fullscreen.js，待构建者 node build.mjs 收口。

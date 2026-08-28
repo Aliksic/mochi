@@ -532,11 +532,7 @@
       });
     });
     box.appendChild(add);
-    // v3.17.x：联系人/桌面管理器内直达「美化方案」——保存的方案所有桌面通用，点应用一键切换
-    const scheme = el('button', '', '美化方案（一键切换外观）');
-    scheme.style.cssText = 'width:100%;margin-top:8px;padding:10px;border:1px solid var(--card-border,#eee);border-radius:10px;background:var(--btn-cancel-bg,#fafafa);color:var(--ink,#111)';
-    scheme.addEventListener('click', () => { if (window.openBeautySchemes) window.openBeautySchemes(); });
-    box.appendChild(scheme);
+    // v3.18.x：「美化方案」已收拢到【手机桌面美化】页（保存/我的方案/导入导出同组），此处不再重复放入口
     const close = el('button', '', '关闭');
     close.style.cssText = 'width:100%;margin-top:8px;padding:10px;border:1px solid var(--card-border,#eee);border-radius:10px;background:var(--btn-cancel-bg,#fafafa);color:var(--btn-cancel-ink,#555)';
     close.addEventListener('click', () => { hideContactModal(m); });

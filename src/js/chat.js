@@ -3488,6 +3488,7 @@ amtFen = genRpAmount(5200000);
 wish = pick(['心意', '给你花', '小礼物', '辛苦啦', '开心一下']);
 }
 if (amtFen < 1) return;
+const wallet = rpWalletGet();
 wallet.systemBalance -= amtFen;
 rpWalletSet(wallet);
 rpDailyIncr();
@@ -3621,7 +3622,7 @@ function rpRenderBalance() {
 const el = document.getElementById('rp-balance');
 if (!el) return;
 const w = rpWalletGet();
-el.textContent = '心意币 ¥' + (w.myBalance / 100).toFixed(2) + ' · ' + chatPartnerName() + ' ¥' + (w.systemBalance / 100).toFixed(2) + ' · 点此向 Mochi 申请';
+el.textContent = '心意币 ¥' + (w.myBalance / 100).toFixed(2) + ' · ' + chatPartnerName() + ' ¥' + (w.systemBalance / 100).toFixed(2) + ' · 向 Mochi 申请心意币';
 }
 // v3.15.x：余额行改为「向 Mochi 申请心意币」——不再直接改账本数值；
 // 选收款方（我/TA）输入申请金额，确定即模拟 Mochi 打款并入账（累加），留空点【完成】结束
@@ -3670,8 +3671,7 @@ staticText: hintTxt(),
 pills: [{ value: 'my', label: '我的心意币' }, { value: 'ta', label: taName + ' 的心意币' }],
 pill: 'my',
 placeholder: '输入申请金额（元），留空结束',
-inputmode: 'decimal',
-maxlength: 9
+inputmode: 'decimal'
 });
 if (ctl) ctl.okText('申请');
 }

@@ -72,7 +72,12 @@ transition:opacity .4s ease;
 cursor:pointer;
 }
 .splash.hide { opacity:0; pointer-events:none; display:none; }
-.splash-box { text-align:center; max-height:100%; overflow-y:auto; padding:24px 20px; scrollbar-width:none; -ms-overflow-style:none; }
+.splash-box {
+display:flex; flex-direction:column; align-items:center;
+width:100%; height:100%; max-height:100%; box-sizing:border-box;
+text-align:center; padding:20px 20px 22px;
+scrollbar-width:none; -ms-overflow-style:none;
+}
 .splash-box::-webkit-scrollbar { display:none; }
 .splash-logo {
 width:74px; height:74px; margin:0 auto 16px;
@@ -84,90 +89,78 @@ animation:splash-pop .7s ease;
 }
 .splash-logo svg { width:34px; height:34px; }
 .splash-title { font-size:17px; font-weight:800; letter-spacing:1px; color:var(--ink); }
-.splash-dots { display:flex; gap:6px; justify-content:center; margin-top:14px; }
-.splash-dots i {
-width:7px; height:7px; border-radius:50%; background:var(--ink);
-animation:splash-bounce 1.2s infinite ease-in-out;
+.splash-brand { margin-top:6px; font-size:10.5px; color:var(--hint-ink); letter-spacing:.3px; }
+.splash-ver {
+margin-top:10px;
+display:flex; flex-direction:column; align-items:center; gap:2px;
+line-height:1.5;
 }
-.splash-dots i:nth-child(2) { animation-delay:.15s; }
-.splash-dots i:nth-child(3) { animation-delay:.3s; }
-.splash-brand { margin-top:18px; font-size:11px; color:var(--hint-ink); letter-spacing:.5px; }
-.splash-ver { margin-top:6px; font-size:10px; color:var(--hint-ink); letter-spacing:.5px; font-family:monospace; }
+.splash-ver .sv-app { font-size:11.5px; font-weight:700; color:var(--ink); letter-spacing:.3px; }
+.splash-ver .sv-deploy { font-size:10.5px; color:var(--hint-ink); }
 .splash-notice {
-margin:16px auto 4px; max-width:320px; text-align:left;
+flex:1; min-height:0; overflow-y:auto;
+margin:14px auto 0; width:min(320px, 100%); text-align:left;
 background:var(--card-bg); border:1px solid var(--card-border);
 border-radius:16px; padding:14px 16px;
 box-shadow:0 6px 20px rgba(0,0,0,.05);
+scrollbar-width:none; -ms-overflow-style:none;
 }
-.splash-notice-title { font-size:13px; font-weight:800; color:var(--ink); text-align:center; margin-bottom:8px; }
+.splash-notice::-webkit-scrollbar { display:none; }
+.splash-notice-title { font-size:13px; font-weight:800; color:var(--ink); text-align:center; margin-bottom:6px; }
 .splash-notice-sub { font-size:11px; font-weight:700; color:#c0392b; text-align:center; margin-bottom:10px; }
-.splash-notice-list p { font-size:11px; line-height:1.7; color:var(--soft-ink); margin:0 0 6px; }
-.splash-notice-list p:last-child { margin-bottom:0; }
+.splash-notice-list p { font-size:11px; line-height:1.7; color:var(--soft-ink); }
+.splash { --sp-ink:#111111; --sp-soft:rgba(17,17,17,.07); }
+[data-theme="dark"] .splash { --sp-ink:#e8e8e8; --sp-soft:rgba(255,255,255,.09); }
+.splash-tip {
+margin:0 0 12px; padding:9px 12px 9px 13px;
+background:var(--sp-soft); border-left:3px solid var(--sp-ink); border-radius:8px;
+}
+.splash-tip p { color:var(--soft-ink); }
+.splash-tip p + p { margin-top:4px; }
+.splash-tip .splash-tip-h { color:var(--ink); font-weight:800; font-size:11.5px; }
+.splash-sec-wrap { counter-reset: notice; }
+.splash-sec-wrap + .splash-sec-wrap { margin-top:15px; }
+.splash-sec {
+display:flex; align-items:center; gap:7px;
+margin-bottom:9px; font-size:12px; font-weight:800; color:var(--ink); letter-spacing:.3px;
+}
+.splash-sec::before { content:""; width:3px; height:12px; border-radius:2px; background:var(--sp-ink); flex-shrink:0; }
+.splash-sub { margin:11px 0 5px; font-size:11.5px; font-weight:800; color:var(--ink); }
+.splash-item { counter-increment:notice; position:relative; padding-left:23px; margin-bottom:8px; }
+.splash-item:last-child { margin-bottom:0; }
+.splash-item::before {
+content:counter(notice);
+position:absolute; left:0; top:2px;
+min-width:16px; height:16px; line-height:16px; text-align:center;
+box-sizing:border-box; padding:0 2px; border-radius:8px;
+background:var(--sp-soft); color:var(--sp-ink);
+font-size:10px; font-weight:800;
+}
+.splash-bullet { position:relative; padding-left:23px; margin-bottom:5px; }
+.splash-bullet::before {
+content:"·"; position:absolute; left:8px; top:-1px;
+font-size:15px; font-weight:800; color:var(--sp-ink); line-height:1.6;
+}
 .splash-enter {
-display:inline-block; margin-top:16px; padding:10px 36px;
+display:inline-block; margin-top:14px; padding:10px 36px;
 background:var(--btn-bg); color:var(--btn-ink); font-size:13px; font-weight:700;
 border-radius:99px; letter-spacing:1px; cursor:pointer;
 -webkit-tap-highlight-color:transparent; user-select:none;
 }
 .splash-enter:active { opacity:.75; }
+.splash-enter.is-disabled { opacity:.3; pointer-events:none; }
 .splash-enter[hidden] { display:none; }
+.splash-enter-hint {
+margin-top:16px; font-size:11px; color:var(--hint-ink); letter-spacing:1px;
+}
+.splash-enter-hint[hidden] { display:none; }
 .splash-loading {
-margin-top:18px; font-size:12px; color:var(--hint-ink); letter-spacing:1px;
+margin-top:16px; font-size:12px; color:var(--hint-ink); letter-spacing:1px;
 }
 .splash-loading[hidden] { display:none; }
-.splash-confirm {
-position:absolute; inset:0; z-index:5;
-background:var(--card-bg);
-display:flex; align-items:center; justify-content:center;
-padding:24px 20px;
-}
-.splash-confirm[hidden] { display:none; }
-.splash-confirm-card {
-display:flex; flex-direction:column;
-width:min(300px, 100%); height:min(560px, 100%); max-height:100%;
-overflow:hidden; scrollbar-width:none; -ms-overflow-style:none;
-background:var(--card-bg); border:1px solid var(--card-border);
-border-radius:16px; padding:18px 18px 16px;
-box-shadow:0 6px 20px rgba(0,0,0,.05);
-}
-.splash-confirm-card::-webkit-scrollbar { display:none; }
-.splash-confirm-title {
-font-size:15px; font-weight:800; color:var(--ink); text-align:center;
-margin-bottom:12px; letter-spacing:.5px;
-}
-.splash-confirm-top {
-font-size:13px; font-weight:800; color:#c0392b; text-align:center;
-margin-bottom:10px; letter-spacing:.5px;
-}
-.splash-confirm-sec {
-margin-top:12px; font-weight:800; color:var(--ink); font-size:12.5px;
-}
-.splash-confirm-lbl { font-weight:800; color:var(--ink); }
-.splash-confirm-text {
-flex:1; min-height:0; overflow-y:auto;
-font-size:12px; line-height:1.7; color:var(--soft-ink); text-align:left;
-scrollbar-width:none; -ms-overflow-style:none;
-}
-.splash-confirm-text::-webkit-scrollbar { display:none; }
-.splash-confirm-text p { margin:0 0 8px; }
-.splash-confirm-text p:last-child { margin-bottom:0; }
-.splash-confirm-btn {
-display:block; margin:16px auto 0; padding:10px 16px; width:fit-content; max-width:100%;
-flex-shrink:0; align-self:center;
-box-sizing:border-box;
-background:var(--btn-bg); color:var(--btn-ink); font-size:13px; font-weight:700;
-border-radius:99px; letter-spacing:.5px; text-align:center; line-height:1.5;
-white-space:normal; word-break:break-word; cursor:pointer;
--webkit-tap-highlight-color:transparent; user-select:none;
-}
-.splash-confirm-btn:active { opacity:.75; }
 @keyframes splash-pop {
 0% { transform:scale(.8); opacity:0; }
 100% { transform:scale(1); opacity:1; }
-}
-@keyframes splash-bounce {
-0%, 60%, 100% { transform:translateY(0); opacity:.35; }
-30% { transform:translateY(-6px); opacity:1; }
 }
 .phone {
 box-sizing:border-box;
@@ -5935,6 +5928,9 @@ display: flex; align-items: center; justify-content: center; overflow: hidden; f
 .gc-at-item span { font-size: 14px; }
 .set-title { font-size:22px; font-weight:700; padding:4px 2px 16px; letter-spacing:1px; }
 .set-group { border-radius:20px; overflow:hidden; margin-bottom:12px; }
+.cg-title { display:flex; align-items:center; gap:7px; margin:16px 6px 7px; font-size:11.5px; font-weight:600; color:var(--muted,#999); letter-spacing:.6px; }
+.cg-title::before { content:""; width:3px; height:11px; border-radius:2px; background:var(--ink,#111); opacity:.8; }
+.cg-title:first-of-type, .cg-title:first-child { margin-top:8px; }
 .set-group, .gs-title, .set-title { flex-shrink:0; }
 .set-row { display:flex; align-items:center; gap:12px; padding:15px 16px; border-bottom:1px solid rgba(0,0,0,.05); cursor:pointer; }
 .set-row:last-child { border-bottom:none; }
@@ -7832,50 +7828,97 @@ transition-duration: .01ms !important;
         <svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7.5-4.7-9.3-9A5.3 5.3 0 0112 6.4a5.3 5.3 0 019.3 5.6c-1.8 4.3-9.3 9-9.3 9z"/></svg>
       </div>
       <div class="splash-title">mochi 摸鱼字卡</div>
+      <!-- v3.8.y：署名（小红书）移到顶部，紧跟标题下方 -->
+      <div class="splash-brand">小红书@言序（1842523578）</div>
       <!-- v3.5.112：开屏公告（发布说明） -->
       <!-- v3.6.x：公告内容可由 notice.json 远程覆盖（clock.js 拉取），此处写死内容为离线兜底 -->
+      <!-- v3.8.x：开屏即公告1页——原「开屏公告 + 点进入后的报修确认层」两页合并为一页：
+           全部说明直接展示在开屏上，点底部【点击进入】即进入（点击即视为已阅读知晓），无二次确认层 -->
       <div class="splash-notice" id="splash-notice">
-        <div class="splash-notice-sub">【8.12开搓三十个小时，8.15发布，目前还在日更修，暂时不建议开始二传二改】</div>
+        <div class="splash-notice-title">Mochi字卡 · 开屏说明</div>
+        <div class="splash-notice-sub">（点击查看 · 请认真阅读）</div>
         <div class="splash-notice-list">
-          <p>1. 感谢内测反馈：大家的每条反馈我都有认真看，谢谢参与内测的各位</p>
-          <p>2. mochi字卡内测时间已定8.15～8.29（链接已在GitHub，但内测时间内暂不公开宣传）</p>
-          <p>3. mochi字卡8.30完全公开后可二传二改。在边修边部署网站，有问题可以报修，使用时如果有问题也可以重新刷新用新版试试，修一天我会部署一天</p>
-          <p>4. 不开测试群，有问题直接评论和私信</p>
-          <p>5. 反馈问题请附上手机型号和浏览器，因为很多问题不是代码本身出错，大部分问题是因为不同设备差异出现的特定bug</p>
-          <p>6. 关于bug：如果参与测试的人较多，不同设备差异导致的bug我可能无法全部修完——如果需要二传二改和自行部署，建议等我公开发帖后的版本，自己拿最新版代码让AI协助修复。</p>
-          <p>7. 使用规范（8.30完全公开后适用）：支持二传、二改和自行部署，但要遵守——转载要署名（小红书@言序（1842523578））、二次修改要注明原作者、禁止商用。</p>
-          <p>8. 网站与我更新修复问题是同步的，可查看开屏最新部署时间。如果浏览器还没进入新版，可以关掉浏览器再打开多试几次流量刷新，或者过一段时间再打开</p>
-          <p>9. Mochi字卡虽然是以我的另一个字卡「星言」为基础修改的，但字卡基础回复逻辑和灵感来源：小红书@milk（2777299956）；帮我决定功能参考：小红书@FelixFelicis（9416318007）。</p>
-          <p>10. 新增可导入milk字卡库的【主字卡】【emoji】【拍一拍】</p>
-          <p>11. 关于数据丢失：有可能有bug，也有可能是浏览器触发丢失。如果不是高频率丢失，就是正常情况，浏览器自身正常概率丢失数据，所以需要备份。目前还在内测更新多，也有可能更新的时候出现问题，建议提示有新版本需要刷新使用的时候备份一下数据</p>
-          <p>12. 关于更新和bug修复：其实灵感是有的，就是修改和修设备bug要花的时间太多，所以会比较慢，这点确实很力竭。网站一直有部署更新，跟我反馈的每个问题都修了，但是否修好只能用自己的设备验证，我没有设备，无法验证修复程度。反馈问题后都可以晚点刷新到新版试试（消息太多，反馈的问题修完后不会一一回复已修，可以晚一些刷新新版本后再试）。另外开屏是无法跳过的，只能等加载完后点击进入</p>
+          <div class="splash-tip">
+            <p>本站完全免费，没有收过任何人一分钱，个人出资和花费时间搭建的。开放二传二改但禁止以盈利为目的。</p>
+          </div>
+          <div class="splash-tip">
+            <p class="splash-tip-h">关于“会不会做成 App”</p>
+            <p>暂不考虑。原因是网站功能非常多——如果功能少还好说，功能太多的情况下，做成 App 可能出现的 Bug 只会更多，而且和设备、浏览器一样存在适配问题：不同手机的屏幕、系统、性能都不一样，要做到所有手机都适配，Bug 可能需要全部重写一遍。我没有这种精力和金钱。</p>
+          </div>
+          <div class="splash-tip">
+            <p class="splash-tip-h">关于“自己转 App 使用”</p>
+            <p>类似“一个木函”那种链接转应用的方式，没有我的原代码，本质是浏览器套壳，不是真正的 App，反而可能出现非常多的适配问题。所以不如直接浏览器使用，体验更稳定。</p>
+          </div>
+          <div class="splash-tip">
+            <p>本站的系统预设字卡都是补充类和小功能衍生字卡，关于个人使用得根据个人情况添加mj聊天字卡。</p>
+            <p>聊天、写信、朋友圈 添加 自定义字卡里的【公用字卡】和【专享字卡】即可</p>
+          </div>
+          <div class="splash-sec-wrap">
+            <p class="splash-sec">【一、当前状态】</p>
+            <p class="splash-item">8.12开搓，感谢内测反馈：大家的每条反馈我都有认真看，谢谢参与内测的各位。</p>
+            <p class="splash-item">Mochi字卡内测时间：8.15~8.29（链接已在GitHub，内测期间暂不公开宣传）。</p>
+            <p class="splash-item">Mochi字卡 8.30 完全公开，公开后可二传二改。</p>
+            <p class="splash-item">网站与我更新修复问题是同步的：边修边部署，修一天部署一天；开屏有最新部署时间。</p>
+            <p class="splash-item">内测是这样每天修一整天，公开后不会更新这么频繁了，个人精力有限且功能已完整。</p>
+            <p class="splash-item">如果浏览器还没进入新版，可以关掉浏览器再打开，多试几次流量刷新，或者过一段时间再打开。</p>
+          </div>
+          <div class="splash-sec-wrap">
+            <p class="splash-sec">【二、关于 Bug 与报修】</p>
+            <p class="splash-item">内测期在持续更新，存在 Bug 是正常现象；公开后也会继续修复，但不可能一次清零。</p>
+            <p class="splash-item">不同手机型号和不同浏览器都有可能出现不同的适配问题，我只能按我自己的手机保证基本没有bug，因为我自己的手机使用发现问题可以及时修。</p>
+            <p class="splash-item">反馈问题请务必附上【手机型号 + 浏览器】，缺一不回。</p>
+            <p class="splash-bullet">例：小米14 / 自带浏览器 / 点击字卡没反应</p>
+            <p class="splash-sub">为什么必须附上型号和浏览器：</p>
+            <p class="splash-bullet">很多问题不是代码本身出错，而是不同设备差异出现的特定bug；</p>
+            <p class="splash-bullet">不同手机型号和浏览器都有可能出现不同的适配问题；</p>
+            <p class="splash-bullet">我自己的设备一直在用，发现bug会自己修，但我没有其他人的手机，无法验证其他设备上的问题。</p>
+            <p class="splash-bullet">所以光说"用不了""点不动""好多bug"是不够的，没有型号和浏览器我这边真的没法查，我也很为难。</p>
+            <p class="splash-item">反馈后不需要等我回复：消息太多，修完会直接部署，可以晚些刷新到新版再试。反馈的每个问题都修了，但能否修好只能用自己的设备验证，我没有其他设备，无法验证修复程度。</p>
+            <p class="splash-item">如果有设备问题bug一直修不好，我建议可以拿我的代码自行部署和修缮，有自己的手机自己验证bug是否修复会方便很多。</p>
+            <p class="splash-item">8.29公开会开群友互助群，但我不一定有时间看，只是群友互助群，有问题直接评论或群里艾特，个人精力有限也不一定及时回复。</p>
+            <p class="splash-item">关于数据丢失：有可能有bug，也有可能是浏览器触发丢失。如果不是高频率丢失，就是正常情况（浏览器自身正常概率丢失数据），需要定期备份。内测期更新多，建议提示有新版本需要刷新时先备份数据。</p>
+          </div>
+          <div class="splash-sec-wrap">
+            <p class="splash-sec">【三、使用规范（8.30 完全公开后适用）】</p>
+            <p class="splash-item">本站完全免费，没有收过任何人一分钱，个人出资和花费时间搭建的。开放二传二改但禁止以盈利为目的。</p>
+            <p class="splash-sub">许可与署名：</p>
+            <p class="splash-item">Mochi字卡为原创独立作品（即原版），代码已在GitHub完全公开，支持私人部署，与网站同步更新</p>
+            <p class="splash-item">可自由二传、二改、自行部署；必须保留署名：小红书 @言序（1842523578）（禁止删除或修改）</p>
+            <p class="splash-item">二次修改要注明原作者；借鉴功能或代码，希望标注灵感来源</p>
+            <p class="splash-item">禁止商用</p>
+            <p class="splash-item">本站并非复刻他人网站，代码均从零编写</p>
+            <p class="splash-item">星言字卡为同一作者的另一部独立作品，其本体禁止二传二改</p>
+            <p class="splash-sub">二传二改说明：</p>
+            <p class="splash-bullet">二传：可自由转发、转载、分享本站链接与文件，传播方式不限</p>
+            <p class="splash-bullet">二改：可自由修改、二次开发、自行部署，代码已在 GitHub 完全公开、与网站同步更新</p>
+            <p class="splash-bullet">8.30 完全公开后即可二传二改（内测期间暂不公开宣传）</p>
+            <p class="splash-bullet">必须保留署名：小红书 @言序（1842523578），禁止删除或修改</p>
+            <p class="splash-bullet">二次修改要注明原作者；借鉴功能或代码，希望标注灵感来源</p>
+            <p class="splash-bullet">禁止商用、禁止以盈利为目的</p>
+          </div>
+          <div class="splash-sec-wrap">
+            <p class="splash-sec">【四、灵感来源与致谢】</p>
+            <p class="splash-item">除随机回复的基础逻辑、基础框架外（灵感来源为 milk 字卡 · 小红书 @milk 2777299956），以下功能为借鉴：</p>
+            <p class="splash-bullet">帮我决定、多人决定功能：借鉴自小红书 @FelixFelicis（9416318007）</p>
+            <p class="splash-bullet">公用字卡+专享字卡模式：借鉴自 @默玉（8012400317）</p>
+            <p class="splash-item">以下功能源于网络上已有的类似想法，但设计均由我独立完成：</p>
+            <p class="splash-bullet">情绪字卡：源于早期网络上的类似提议（小红书 @心沄是颗彩虹多宝糖 9725312970 也提过这个模式）</p>
+            <p class="splash-bullet">换头像：灵感来自看到网络上有人提议小手机想要 chat 自己换头像</p>
+            <p class="splash-item">其余功能和UI均为我独立设计，代码全部开源，支持二传二改。若使用代码或借鉴功能，请注明灵感来源，这是对创作者最基本的尊重。</p>
+          </div>
         </div>
       </div>
-      <div class="splash-dots"><i></i><i></i><i></i></div>
-      <div class="splash-brand">小红书@言序（1842523578）</div>
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787846245937">Mochi 字卡传讯 v3.6.278 · 部署于 2026-08-27 23:57</div>
+      <!-- v3.8.y：底部版本块重新设计——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787892965104">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.6.279</b></span>
+        <span class="sv-deploy">部署于 2026-08-28 12:56<span id="splash-ver-live"></span></span>
+      </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
       <div class="splash-loading" id="splash-loading">正在加载数据…</div>
+      <!-- v3.8.y：必须把公告滑到底才能进入——未到底时按钮置灰不可点，下方提示滑动 -->
+      <div class="splash-enter-hint" id="splash-enter-hint" hidden>请滑到底部后进入</div>
       <div class="splash-enter" id="splash-enter" hidden>点击进入</div>
-    </div>
-    <!-- v3.7.x：点「点击进入」后先弹「关于 bug 报修」确认层，点【确认我已知晓】才关闭进入——
-         开屏 z-index(999) 高于全局弹窗 modal-mask(90)，所以在开屏内做独立确认层，
-         内容为内测 bug 报修须知（写死兜底，报修要求是固定文案，不随公告远程化） -->
-    <div class="splash-confirm" id="splash-confirm" hidden>
-      <div class="splash-confirm-card">
-        <div class="splash-confirm-title">关于 bug 报修</div>
-        <div class="splash-confirm-top">【报修必填】机型 + 浏览器，缺一不回。</div>
-        <div class="splash-confirm-text">
-          <p>说实话我有点无语，关于bug和数据的问题开屏公告里其实写过，但是很多人还是不看，就上来问为什么有好多bug，实际还真不一定是代码本身原因，有很多问题是设备兼容出现的。</p>
-          <p>麻烦配合一下，不然我这边真的没法查，我也很为难。而且我后台的消息堆的非常多，麻烦说明清楚避免无效沟通。</p>
-          <p class="splash-confirm-sec">关于bug【mochi字卡因为在内测一直在更新，无可避免有bug】</p>
-          <p><span class="splash-confirm-lbl">简单说明：</span>有的问题，有人碰到的bug不是代码本身的原因，是只有在某个特定机型出现问题，所以要报修。我自己手机用是正常的，不报修我测不出来的也修不了。</p>
-          <p><span class="splash-confirm-lbl">详细说明：</span>除了我这边能复现的问题外，光说"用不了"点不动"这种是不够的，问题最好也描述清楚具体是什么情况。另外不同手机和浏览器表现本来就不一样，有的问题是特定设备才触发的，不是我开发造成的。</p>
-          <p><span class="splash-confirm-lbl">要修得先知道：</span>什么手机型号，什么浏览器（自带/Chrome等）<br>不说清楚我这边没法查，因为我自己的设备上是正常的，复现不了就修不了。</p>
-        </div>
-        <div class="splash-confirm-btn" id="splash-confirm-ok">确认我已知晓，我已知道如何报修设备bug</div>
-      </div>
     </div>
   </div>
   <div class="phone">
@@ -8931,7 +8974,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.6.278</div>
+      <div class="ver">Mochi 字卡传讯 v3.6.279</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -8943,75 +8986,13 @@ transition-duration: .01ms !important;
         </span>
         <span class="ch-name">手机桌面美化</span>
       </div>
+      <div class="cg-title">颜色与透明度</div>
       <div class="set-group glass">
         <div class="set-row" id="row-accent-color">
           <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4" fill="#111111" stroke="none"/></svg></div>
           <div class="txt">主题色</div>
           <div class="val" id="accent-color-val">默认</div>
         </div>
-        <div class="set-row" id="row-desk-font-size">
-          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg></div>
-          <div class="txt">桌面字号<span class="sub">仅桌面/大屏生效 · 手机端为 iOS 性能保持默认</span></div>
-          <div class="val" id="desk-font-size-val">默认</div>
-        </div>
-        <div class="set-row" id="row-desk-card-scale">
-          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9z" fill="none" stroke-dasharray="2 2"/></svg></div>
-          <div class="txt">卡片大小<span class="sub">仅桌面/大屏生效 · 手机端为 iOS 性能保持默认</span></div>
-          <div class="val" id="desk-card-scale-val">默认</div>
-        </div>
-        <div class="set-row" id="row-desk-card-radius">
-          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="7"/></svg></div>
-          <div class="txt">组件圆角</div>
-          <div class="val" id="desk-card-radius-val">默认</div>
-        </div>
-        <div class="set-row" id="row-custom-icon">
-          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></div>
-          <div class="txt">自定义手机桌面图标<span class="sub">自定义图标图片 · 桌面组件卡片位置 · 卡片背景图片</span></div>
-        </div>
-      </div>
-      <div class="set-group glass">
-        <div class="set-row" id="row-desk-add-page">
-          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M12 8v8M8 12h8"/></svg></div>
-          <div class="txt">新增桌面页<span class="sub">最多 5 页 · 新页空白可放卡片/图片</span></div>
-          <div class="val" id="desk-pages-val">共 2 页</div>
-        </div>
-        <div class="set-row" id="row-desk-del-page" hidden>
-          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M8 12h8"/></svg></div>
-          <div class="txt">删除最后一页<span class="sub">核心页不可删 · 卡片移回隐藏池</span></div>
-        </div>
-        <div class="set-row" id="row-desk-reset">
-          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 12c0-5.5 3.5-10 10-10 3.7 0 7 2 8.8 5M22 12c0 5.5-3.5 10-10 10-3.7 0-7-2-8.8-5"/></svg></div>
-          <div class="txt">恢复默认桌面<span class="sub">恢复默认布局与页数</span></div>
-        </div>
-        <div id="desk-page-bgs"></div>
-      </div>
-      <div class="set-group glass">
-        <div class="set-row" id="row-bg-upload">
-          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5-9 9"/></svg></div>
-          <div class="txt">上传手机背景图片</div>
-          <div class="val" id="bg-val"></div>
-        </div>
-        <div class="set-row" id="row-bg-preset">
-          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 12l5-5 4 4 5-5 4 4"/></svg></div>
-          <div class="txt">内置壁纸预设</div>
-          <div class="val" id="bg-preset-val">默认</div>
-        </div>
-        <div class="set-row" id="row-bg-blur">
-          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5" stroke-dasharray="2 2"/></svg></div>
-          <div class="txt">背景模糊</div>
-          <div class="val" id="bg-blur-val">关闭</div>
-        </div>
-        <div class="set-row" id="row-bg-mask-op">
-          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><rect x="3" y="3" width="18" height="9" rx="3" fill="#111111" stroke="none" opacity=".3"/></svg></div>
-          <div class="txt">背景遮罩</div>
-          <div class="val" id="bg-mask-op-val">关闭</div>
-        </div>
-        <div class="set-row sub" id="row-bg-remove" hidden>
-          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6"/><path d="M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12"/><path d="M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2"/></svg></div>
-          <div class="txt">移除背景图片</div>
-        </div>
-      </div>
-      <div class="set-group glass">
         <div class="set-row" id="row-widget-color">
           <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c1.7 0 3-1.3 3-3 0-.8-.3-1.5-.8-2-.5-.5-.8-1.2-.8-2 0-1.7 1.3-3 3-3h2c2.8 0 5-2.2 5-5 0-4.4-4.5-8-10-8z"/><circle cx="7" cy="10" r="1.2" fill="#111111" stroke="none"/><circle cx="12" cy="7" r="1.2" fill="#111111" stroke="none"/><circle cx="17" cy="10" r="1.2" fill="#111111" stroke="none"/></svg></div>
           <div class="txt">小组件颜色</div>
@@ -9042,22 +9023,79 @@ transition-duration: .01ms !important;
           <div class="txt">小组件透明度</div>
           <div class="val" id="widget-opacity-val"></div>
         </div>
+      </div>
+      <div class="cg-title">尺寸与圆角</div>
+      <div class="set-group glass">
+        <div class="set-row" id="row-desk-font-size">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg></div>
+          <div class="txt">桌面字号<span class="sub">仅桌面/大屏生效 · 手机端为 iOS 性能保持默认</span></div>
+          <div class="val" id="desk-font-size-val">默认</div>
+        </div>
+        <div class="set-row" id="row-desk-card-scale">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9z" fill="none" stroke-dasharray="2 2"/></svg></div>
+          <div class="txt">卡片大小<span class="sub">仅桌面/大屏生效 · 手机端为 iOS 性能保持默认</span></div>
+          <div class="val" id="desk-card-scale-val">默认</div>
+        </div>
+        <div class="set-row" id="row-desk-card-radius">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="7"/></svg></div>
+          <div class="txt">组件圆角</div>
+          <div class="val" id="desk-card-radius-val">默认</div>
+        </div>
         <div class="set-row" id="row-ico-shape">
           <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="6"/></svg></div>
           <div class="txt">图标圆角</div>
           <div class="val" id="ico-shape-val"></div>
         </div>
       </div>
+      <div class="cg-title">背景与壁纸</div>
       <div class="set-group glass">
-        <div class="set-row" id="row-beauty-export">
-          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 8l5-5 5 5M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg></div>
-          <div class="txt">导出美化方案<span class="sub">可选导出文件或复制文字</span></div>
+        <div class="set-row" id="row-bg-upload">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5-9 9"/></svg></div>
+          <div class="txt">上传手机背景图片</div>
+          <div class="val" id="bg-val"></div>
         </div>
-        <div class="set-row" id="row-beauty-import">
-          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21V9M7 16l5 5 5-5M4 7V5a2 2 0 012-2h12a2 2 0 012 2v2"/></svg></div>
-          <div class="txt">导入美化方案<span class="sub">粘贴文字或选择文件导入</span></div>
+        <div class="set-row" id="row-bg-preset">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 12l5-5 4 4 5-5 4 4"/></svg></div>
+          <div class="txt">内置壁纸预设</div>
+          <div class="val" id="bg-preset-val">默认</div>
+        </div>
+        <div class="set-row" id="row-bg-blur">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5" stroke-dasharray="2 2"/></svg></div>
+          <div class="txt">背景模糊</div>
+          <div class="val" id="bg-blur-val">关闭</div>
+        </div>
+        <div class="set-row" id="row-bg-mask-op">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><rect x="3" y="3" width="18" height="9" rx="3" fill="#111111" stroke="none" opacity=".3"/></svg></div>
+          <div class="txt">背景遮罩</div>
+          <div class="val" id="bg-mask-op-val">关闭</div>
+        </div>
+        <div class="set-row sub" id="row-bg-remove" hidden>
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6"/><path d="M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12"/><path d="M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2"/></svg></div>
+          <div class="txt">移除背景图片</div>
+        </div>
+        <div id="desk-page-bgs"></div>
+      </div>
+      <div class="cg-title">图标与页面</div>
+      <div class="set-group glass">
+        <div class="set-row" id="row-custom-icon">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></div>
+          <div class="txt">自定义手机桌面图标<span class="sub">自定义图标图片 · 桌面组件卡片位置 · 卡片背景图片</span></div>
+        </div>
+        <div class="set-row" id="row-desk-add-page">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M12 8v8M8 12h8"/></svg></div>
+          <div class="txt">新增桌面页<span class="sub">最多 5 页 · 新页空白可放卡片/图片</span></div>
+          <div class="val" id="desk-pages-val">共 2 页</div>
+        </div>
+        <div class="set-row" id="row-desk-del-page" hidden>
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M8 12h8"/></svg></div>
+          <div class="txt">删除最后一页<span class="sub">核心页不可删 · 卡片移回隐藏池</span></div>
+        </div>
+        <div class="set-row" id="row-desk-reset">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 12c0-5.5 3.5-10 10-10 3.7 0 7 2 8.8 5M22 12c0 5.5-3.5 10-10 10-3.7 0-7-2-8.8-5"/></svg></div>
+          <div class="txt">恢复默认桌面<span class="sub">恢复默认布局与页数</span></div>
         </div>
       </div>
+      <div class="cg-title">美化方案 · 保存 / 切换 / 备份</div>
       <div class="set-group glass">
         <div class="set-row" id="row-beauty-save">
           <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17V9M9 11l3-3 3 3"/><path d="M5 4h11l3 3v13a1 1 0 01-1 1H5a1 1 0 01-1-1V5a1 1 0 011-1z"/></svg></div>
@@ -9066,6 +9104,14 @@ transition-duration: .01ms !important;
         <div class="set-row" id="row-beauty-schemes">
           <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></div>
           <div class="txt">我的美化方案<span class="sub">保存的方案一键切换，跨桌面通用</span></div>
+        </div>
+        <div class="set-row" id="row-beauty-export">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 8l5-5 5 5M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg></div>
+          <div class="txt">导出美化方案<span class="sub">可选导出文件或复制文字</span></div>
+        </div>
+        <div class="set-row" id="row-beauty-import">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21V9M7 16l5 5 5-5M4 7V5a2 2 0 012-2h12a2 2 0 012 2v2"/></svg></div>
+          <div class="txt">导入美化方案<span class="sub">粘贴文字或选择文件导入</span></div>
         </div>
       </div>
     </div>
@@ -9083,7 +9129,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.6.278</span>
+              <span class="lic-ver">v3.6.279</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -9116,7 +9162,7 @@ transition-duration: .01ms !important;
           <div class="lic-li">小游戏类——猜拳、Pong、贪吃蛇、打砖块、钓鱼、四子棋、扫雷、记忆翻牌；工具类——帮我决定、多人决定、问问TA、搜索记录、占卜、寻踪、此间、房间</div>
           <div class="lic-li">「TA 的提问」面板：让 TA 现在问一次（询问 / 小问题 / 好奇 / 吐槽 / 邀请）</div>
           <div class="lic-li">贴贴邀请：TA 会主动发来贴贴 / 抱抱 / 牵手 / 靠着的邀请，同意有轻震回应，婉拒也有专属台阶文案</div>
-          <div class="lic-li">TA 的查岗：温柔关心式查岗问题卡（单选 / 文字作答），作答后 TA 会回应</div>
+          <div class="lic-li">TA 的查岗：温柔关心式查岗问题卡（单选 / 文字作答 / 互动动作），作答后 TA 会回应</div>
             </div>
           </details>
 
@@ -9126,7 +9172,7 @@ transition-duration: .01ms !important;
           <div class="lic-li">字卡库：浏览全部字卡，支持搜索与自定义分组管理</div>
           <div class="lic-li">聊天字卡分类可上传：【主字卡】【颜文字】【emoji】【表情包】【图片】【拍一拍】【语音】分类</div>
           <div class="lic-li">互动卡片可自定义内容，概率触发互动（在字卡库里）</div>
-          <div class="lic-li">TA 的询问 / 小问题 / 好奇 / 吐槽 / 查岗 / 邀请：题库内容均可自定义</div>
+          <div class="lic-li">TA 的询问 / 小问题 / 好奇 / 吐槽 / 查岗（含互动动作）/ 邀请：题库内容均可自定义</div>
           <div class="lic-li">寻踪日常字卡：地点、在做什么、说的话，均可自定义</div>
           <div class="lic-li">情绪回复：按你当前的心情自动匹配相应字卡</div>
           <div class="lic-li">内置词库规模：情绪 11 组 → 心意 9 组 + 特殊心意 4 组 → 交流意图 8 组三级链路，整类与单张均可开关</div>
@@ -9173,7 +9219,7 @@ transition-duration: .01ms !important;
           <div class="lic-li">入口：聊天更多功能 → 小游戏，共 8 款——猜拳 / Pong / 贪吃蛇 / 打砖块 / 钓鱼 / 四子棋 / 扫雷 / 记忆翻牌</div>
           <div class="lic-li">对战三款：猜拳、Pong（四档难度）、四子棋（TA 每局状态随机：认真 / 放水 / 失误），累计战绩记录</div>
           <div class="lic-li">双人贪吃蛇同场抢食：三档速度分段提速 + 穿墙 / 安全模式开关，手机端打开自动全屏放大地图</div>
-          <div class="lic-li">双人打砖块合作：各守半场共同清砖，COMBO 连击与危险预警，结算按 ❤ 给出合作评级</div>
+          <div class="lic-li">双人打砖块合作：各守半场共同清砖，球数可设 1~3，COMBO 连击与危险预警，结算按 ❤ 给出合作评级</div>
           <div class="lic-li">合作扫雷：轮流挖完整张地图的安全格，共用 3 颗❤；TA 会推理插旗也会失误，格子藏心意币 / 礼物彩蛋</div>
           <div class="lic-li">记忆翻牌和 TA 合作找配对：三档难度记「默契分」，完成 / 连击 / 首通均有心意币奖励</div>
           <div class="lic-li">双人钓鱼：抛竿等咬钩，时机条蓝区收竿最佳；14 种收集物鱼图鉴，TA 会钓到纪念品送你并可兑换</div>
@@ -9232,12 +9278,12 @@ transition-duration: .01ms !important;
             <div class="lg-body">
           <div class="lic-li">桌面【寻踪】包含：TA 的日常、TA 在哪里、TA 在做什么、TA 想对你说——为【TA 的日常】字卡库内容随机刷新，可自由添加字卡</div>
           <div class="lic-li">联系人更新日常时，聊天消息里会发送一条【联系人昵称 更新了一条日常】，且有概率触发联系人提醒你寻踪的消息</div>
-          <div class="lic-li">「TA 在身边」位置感知：模糊感知 TA 的方位与距离，文案来自位置卡字卡库，可自定义</div>
+          <div class="lic-li">「TA 在身边」位置感知：模糊感知 TA 的方位与距离，文案来自字卡库「TA在身边位置卡」——含系统预设（方位 / 距离 / 状态 / 感知 / 彩蛋分类，总开关 + 单卡开关）与自定义位置卡（可分组 / 批量添加），组合发送与彩蛋冷却</div>
             </div>
           </details>
 
           <details class="lic-grp">
-            <summary><span class="lg-num">10</span><span class="lg-name">音乐</span><span class="lg-count">9</span></summary>
+            <summary><span class="lg-num">10</span><span class="lg-name">音乐</span><span class="lg-count">10</span></summary>
             <div class="lg-body">
           <div class="lic-li">音乐功能可本地上传音乐，也可链接上传网易云免费歌曲</div>
           <div class="lic-li">桌面组件与【音乐】功能同步显示播放状态</div>
@@ -9248,6 +9294,7 @@ transition-duration: .01ms !important;
           <div class="lic-li">自定义歌曲封面（上传图片压缩）、批量导入歌曲</div>
           <div class="lic-li">TA 想和你一起听歌：聊天弹窗邀请（一起听 / 稍后），接受即开始播放并记入记录</div>
           <div class="lic-li">歌曲播完 TA 可能接动作：切下一首 / 随机挑一首 / 更换播放模式（概率可调）；还会按概率把你在听的歌收进「TA的收藏」</div>
+          <div class="lic-li">播放队列：歌曲上「⋯」选「下一首播放」加入待播队列（可清空 / 移出 / 长按拖动调整播放顺序），播完当前按队列依次播放；TA 也会按概率「预订下一首」把歌排进队列并发系统消息（概率可调）</div>
             </div>
           </details>
 
@@ -9385,10 +9432,10 @@ transition-duration: .01ms !important;
             <summary><span class="lg-num">22</span><span class="lg-name">记录统计</span><span class="lg-count">6</span></summary>
             <div class="lg-body">
           <div class="lic-li">桌面【提问记录】统计历史：提问记录、TA 的询问、TA 的小问题、TA 的好奇、TA 的吐槽、我的邀请 / 问问</div>
-          <div class="lic-li">桌面【主页】统计以下历史：联系人换头像、通话记录、每日摸鱼值、每日打工值、摸鱼抓包（我抓到 TA / 被 TA 抓到 双向记录）</div>
+          <div class="lic-li">桌面【主页】多 tab 统计：联系人换头像、通话记录、每日摸鱼值 / 每日打工值、摸鱼抓包（我抓到 TA / 被 TA 抓到 双向记录）、TA 的关心（查岗 / 经期 / 喝水 / 吃饭 / 番茄陪伴聚合）、心意币红包 / 赚钱 / 申请记录</div>
           <div class="lic-li">联系人今日情话、我的备忘、我的心情的历史可在【日历】里按天切换查看</div>
           <div class="lic-li">桌面【聊天统计】统计：相处记录（第一次聊天时间、最近聊天时间、聊天消息条数、文字数量、收藏记录）、聊天记录（消息比例、最常聊天时间段、最常聊天日期、平均每日消息、最长连续聊天、单日最高消息）、情绪表达（文字字卡 / 情绪 / 心意 / 交流意图使用次数排行）</div>
-          <div class="lic-li">聊天统计含两条完整流水：「TA 发红包记录」「TA 申请心意币记录」，全量保存按时间倒序</div>
+          <div class="lic-li">聊天统计含多个流水区块：「我发红包」「TA 发红包」（双向摘要）、「TA 申请心意币记录」「小游戏记录」，全量保存按时间倒序</div>
           <div class="lic-li">占卜记录、帮我决定 / 多人决定记录、听歌记录（TA 邀请 / 我的）、小游戏战绩与钓鱼图鉴单独留存</div>
             </div>
           </details>
@@ -9454,7 +9501,7 @@ transition-duration: .01ms !important;
             <summary><span class="lg-num">27</span><span class="lg-name">占卜</span><span class="lg-count">5</span></summary>
             <div class="lg-body">
           <div class="lic-li">两种模式：塔罗（22 张大阿卡纳，带正逆位与详细解读）/ 雷诺曼（40 张）</div>
-          <div class="lic-li">抽取张数：1 张（运势）/ 3 张（过去 · 现在 · 未来）</div>
+          <div class="lic-li">抽取张数：1 张（运势）/ 3 张（过去 · 现在 · 未来）/ 7 张（完整牌阵）</div>
           <div class="lic-li">洗牌动画 → 牌面滑动 → 抽取 → 翻牌动画，综合解读（一句话总运势 + 问题呼应）</div>
           <div class="lic-li">历史记录（查看 / 删除 / 清空），可把结果发给 TA</div>
           <div class="lic-li">桌面占卜页入口 + 聊天页半框入口，自动发送开关（每个联系人独立记忆）</div>
@@ -13427,10 +13474,6 @@ const id = window.createContact(name); window.setActiveContact(id); hideContactM
 });
 });
 box.appendChild(add);
-const scheme = el('button', '', '美化方案（一键切换外观）');
-scheme.style.cssText = 'width:100%;margin-top:8px;padding:10px;border:1px solid var(--card-border,#eee);border-radius:10px;background:var(--btn-cancel-bg,#fafafa);color:var(--ink,#111)';
-scheme.addEventListener('click', () => { if (window.openBeautySchemes) window.openBeautySchemes(); });
-box.appendChild(scheme);
 const close = el('button', '', '关闭');
 close.style.cssText = 'width:100%;margin-top:8px;padding:10px;border:1px solid var(--card-border,#eee);border-radius:10px;background:var(--btn-cancel-bg,#fafafa);color:var(--btn-cancel-ink,#555)';
 close.addEventListener('click', () => { hideContactModal(m); });
@@ -13504,14 +13547,13 @@ setInterval(update, 15000); // 每 15 秒校准一次
 const splash = document.getElementById('splash');
 if (!splash) return;
 const verEl = document.getElementById('splash-ver');
+const verLiveEl = document.getElementById('splash-ver-live');
 let _verIv = null;
-if (verEl) {
-const base = (verEl.textContent || '').trim();
+if (verEl && verLiveEl) {
 const pad2 = (n) => (n < 10 ? '0' + n : '' + n);
 const fill = () => {
 const d = new Date();
-const t = d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()) + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ':' + pad2(d.getSeconds());
-verEl.textContent = (base ? base + ' · ' : '') + t;
+verLiveEl.textContent = ' · ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ':' + pad2(d.getSeconds());
 };
 fill();
 _verIv = setInterval(fill, 1000);
@@ -13525,43 +13567,41 @@ setTimeout(() => { if (splash.parentNode) splash.parentNode.removeChild(splash);
 const ready = () => !!(window.__mochiDataReady);
 const enterEl = document.getElementById('splash-enter');
 const loadingEl = document.getElementById('splash-loading');
-const confirmEl = document.getElementById('splash-confirm');
-const confirmOk = document.getElementById('splash-confirm-ok');
+const hintEl = document.getElementById('splash-enter-hint');
 const noticeEl = document.getElementById('splash-notice');
-const hasNotice = () => {
-if (!noticeEl) return false;
-if (noticeEl.style.display === 'none') return false; // notice.json 隐藏公告
-return true;
-};
+let scrolledBottom = false;
+function checkScrolled() {
+let bottom = true;
+if (noticeEl) {
+bottom = noticeEl.scrollHeight - noticeEl.scrollTop - noticeEl.clientHeight <= 8;
+}
+if (bottom !== scrolledBottom) { scrolledBottom = bottom; updateEnterState(); }
+}
 function updateEnterState() {
-const ok = ready();
-if (enterEl) enterEl.hidden = !ok;
-if (loadingEl) loadingEl.hidden = ok;
+const ok = ready() && scrolledBottom;
+if (loadingEl) loadingEl.hidden = ready();
+if (hintEl) hintEl.hidden = !ready() || ok;
+if (enterEl) {
+enterEl.hidden = !ready();
+enterEl.classList.toggle('is-disabled', !ok); // div 上设 disabled 属性不落 DOM，用 class 控制置灰
+}
 }
 const enter = () => {
 if (splash.classList.contains('hide')) return;
-if (!ready()) return; // 数据未就绪：禁止进入
-if (confirmEl && hasNotice()) { confirmEl.hidden = false; return; } // 先弹确认层
+if (!ready() || !scrolledBottom) return; // 数据未就绪或未滑到底：禁止进入
 hide();
 };
 updateEnterState();
+if (noticeEl) noticeEl.addEventListener('scroll', checkScrolled, { passive: true });
 if (enterEl) enterEl.addEventListener('click', (e) => { e.stopPropagation(); enter(); });
-splash.addEventListener('click', enter);
-if (confirmEl) {
-confirmEl.addEventListener('click', (e) => { e.stopPropagation(); });
-if (confirmOk) {
-confirmOk.addEventListener('click', (e) => {
-e.stopPropagation();
-confirmEl.hidden = true;
-hide();
-});
-}
-}
 document.addEventListener('mochi-restore-done', updateEnterState);
+document.addEventListener('mochi-notice-rendered', checkScrolled);
 const readyPoll = setInterval(() => {
-if (ready()) { clearInterval(readyPoll); updateEnterState(); }
+if (ready() && scrolledBottom) { clearInterval(readyPoll); return; }
+updateEnterState();
+checkScrolled();
 }, 300);
-setTimeout(() => { if (ready()) enter(); else hide(); }, 20000);
+setTimeout(() => { if (!ready()) hide(); }, 20000);
 })();
 (function () {
 const notice = document.getElementById('splash-notice');
@@ -13575,12 +13615,69 @@ const sub = notice.querySelector('.splash-notice-sub');
 const list = notice.querySelector('.splash-notice-list');
 if (data.title !== undefined && title) title.textContent = String(data.title);
 if (data.sub !== undefined && sub) sub.textContent = String(data.sub);
-if (Array.isArray(data.list)) {
+if (Array.isArray(data.sections)) {
+if (!data.sections.length || data.hide) { notice.style.display = 'none'; return; }
+if (list) {
+list.innerHTML = '';
+if (Array.isArray(data.tip) && data.tip.length) {
+data.tip.forEach(function (t) {
+const tip = document.createElement('div');
+tip.className = 'splash-tip';
+if (t && typeof t === 'object') {
+if (t.h !== undefined) {
+const h = document.createElement('p');
+h.className = 'splash-tip-h';
+h.textContent = String(t.h);
+tip.appendChild(h);
+}
+if (Array.isArray(t.p)) {
+t.p.forEach(function (txt) {
+const p = document.createElement('p');
+p.textContent = String(txt);
+tip.appendChild(p);
+});
+}
+} else {
+const p = document.createElement('p');
+p.textContent = String(t);
+tip.appendChild(p);
+}
+list.appendChild(tip);
+});
+}
+data.sections.forEach(function (sec) {
+const wrap = document.createElement('div');
+wrap.className = 'splash-sec-wrap';
+if (sec && sec.h) {
+const h = document.createElement('p');
+h.className = 'splash-sec';
+h.textContent = String(sec.h);
+wrap.appendChild(h);
+}
+if (sec && Array.isArray(sec.p)) {
+sec.p.forEach(function (it) {
+const p = document.createElement('p');
+if (it && typeof it === 'object') {
+if (it.h !== undefined) { p.className = 'splash-sub'; p.textContent = String(it.h); }
+else if (it.b !== undefined) { p.className = 'splash-bullet'; p.textContent = String(it.b); }
+else { p.className = 'splash-item'; p.textContent = String(it.t !== undefined ? it.t : ''); }
+} else {
+p.className = 'splash-item';
+p.textContent = String(it);
+}
+wrap.appendChild(p);
+});
+}
+list.appendChild(wrap);
+});
+}
+} else if (Array.isArray(data.list)) {
 if (!data.list.length || data.hide) { notice.style.display = 'none'; return; }
 if (list) {
 list.innerHTML = '';
 data.list.forEach(function (t) {
 const p = document.createElement('p');
+p.className = 'splash-item';
 p.textContent = String(t);
 list.appendChild(p);
 });
@@ -13588,6 +13685,7 @@ list.appendChild(p);
 } else if (data.hide) {
 notice.style.display = 'none';
 }
+document.dispatchEvent(new Event('mochi-notice-rendered'));
 })
 .catch(function () { /* 失败：保留模板默认公告 */ });
 })();
@@ -21661,6 +21759,7 @@ amtFen = genRpAmount(5200000);
 wish = pick(['心意', '给你花', '小礼物', '辛苦啦', '开心一下']);
 }
 if (amtFen < 1) return;
+const wallet = rpWalletGet();
 wallet.systemBalance -= amtFen;
 rpWalletSet(wallet);
 rpDailyIncr();
@@ -21790,7 +21889,7 @@ function rpRenderBalance() {
 const el = document.getElementById('rp-balance');
 if (!el) return;
 const w = rpWalletGet();
-el.textContent = '心意币 ¥' + (w.myBalance / 100).toFixed(2) + ' · ' + chatPartnerName() + ' ¥' + (w.systemBalance / 100).toFixed(2) + ' · 点此向 Mochi 申请';
+el.textContent = '心意币 ¥' + (w.myBalance / 100).toFixed(2) + ' · ' + chatPartnerName() + ' ¥' + (w.systemBalance / 100).toFixed(2) + ' · 向 Mochi 申请心意币';
 }
 function rpEditWallet() {
 if (!window.openModal) return;
@@ -21836,8 +21935,7 @@ staticText: hintTxt(),
 pills: [{ value: 'my', label: '我的心意币' }, { value: 'ta', label: taName + ' 的心意币' }],
 pill: 'my',
 placeholder: '输入申请金额（元），留空结束',
-inputmode: 'decimal',
-maxlength: 9
+inputmode: 'decimal'
 });
 if (ctl) ctl.okText('申请');
 }
@@ -40009,7 +40107,7 @@ return row;
 (function () {
 addSettingToggle({
 id: 'sf-desk-checkin',
-ico: '<svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21a9 9 0 1 0-9-9"/><path d="M12 12l3.4-2.8"/><circle cx="7.4" cy="7.4" r="1.05" fill="#111111" stroke="none"/><g transform="translate(4.9,3.5) scale(0.52)"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></g></svg>',
+ico: '<svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="14" r="6.5"/><path d="M10 10.8v3.2l2.2 1.3"/><rect x="16.2" y="2" width="5.8" height="8.2" rx="1.7"/></svg>',
 title: '联系人跨桌面查岗',
 subTag: '功能说明',
 tagTitle: '联系人跨桌面查岗',
@@ -40020,7 +40118,7 @@ toast: function (en) { return en ? '已开启：其他桌面的TA会来查岗、
 });
 addSettingToggle({
 id: 'sf-desk-call',
-ico: '<svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7" stroke-dasharray="2 3"/><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>',
+ico: '<svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/><rect x="16.2" y="2" width="5.8" height="8.2" rx="1.7"/></svg>',
 title: '联系人跨桌面打电话',
 subTag: '功能说明',
 tagTitle: '联系人跨桌面打电话',
@@ -49403,7 +49501,7 @@ return n;
 function walletSet(w) { const s = wstore(); if (s) s.set(WALLET_KEY, JSON.stringify(w)); }
 window.giftWalletGet = walletGet;
 window.giftWalletSet = walletSet;
-function walletText() { const w = walletGet(); return '心意币 ¥' + fenToYuan(w.myBalance) + ' · ' + partnerName() + ' ¥' + fenToYuan(w.systemBalance) + ' · 点此向 Mochi 申请'; }
+function walletText() { const w = walletGet(); return '心意币 ¥' + fenToYuan(w.myBalance) + ' · ' + partnerName() + ' ¥' + fenToYuan(w.systemBalance) + ' · 向 Mochi 申请心意币'; }
 function renderGiftBalances() {
 ['gift-balance', 'market-balance'].forEach(function (id) {
 const el = document.getElementById(id);
@@ -49491,8 +49589,7 @@ staticText: hintTxt(),
 pills: [{ value: 'my', label: '我的心意币' }, { value: 'ta', label: pn + ' 的心意币' }],
 pill: 'my',
 placeholder: '输入申请金额（元），留空结束',
-inputmode: 'decimal',
-maxlength: 9
+inputmode: 'decimal'
 });
 if (ctl) ctl.okText('申请');
 }
@@ -63460,7 +63557,10 @@ function exitFs() {
 try {
 unlockFsOrient();
 stopFsMonitor();
-if (document.exitFullscreen) document.exitFullscreen();
+if (document.exitFullscreen) {
+const p = document.exitFullscreen();
+if (p && p.catch) p.catch(() => {});
+}
 else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
 } catch (e) {}
 }
