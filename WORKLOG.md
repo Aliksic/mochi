@@ -1,3 +1,9 @@
+### 2026-08-28（✅ 完成·FAQ 浮层排版优化：紧凑化 + 重点突出）
+- [本会话·AI-B 域]（**已改 src/css/base.css；已构建 index.html/sw.js/version.json（13:41, sw: mochi-mtcixinf）+ verify.mjs 10/10 + 无头截图核验；提交 v3.25.x 追加，未推送**）。
+  - **用户反馈**：【其他常见问题解答】浮层字体间距太大、页面丑、重点看不清楚。
+  - **改动**：base.css 新增 `.splash-faq-body` 专属紧凑排版（不污染开屏公告宽松版式）——正文 12px/行高 1.6；编号小标题 `.splash-item` 12.5px 加粗黑色突出=重点；`.splash-bullet` 11.5px 灰色小字；段距收紧（item 5px / bullet 3px）、编号徽标缩小 14px。
+  - **验证**：node tools/verify.mjs 10/10；无头 Chrome 截图确认编号加粗黑字 + 正文灰字、间距紧凑。
+
 ### 2026-08-28（✅ 完成·开屏公告【一、当前状态】新增【关于反馈与建议】内容）
 - [本会话·AI-B 域]（**已改 src/pwa/notice.json + src/template.html；已构建 index.html/sw.js/version.json/notice.json（13:39, sw: mochi-mtcivcx4）+ verify.mjs 10/10；提交 v3.25.x 追加，未推送**）。
   - **用户需求**：【一、当前状态】里新增【关于反馈与建议】（评论区/互助群艾特但精力有限、网站做给自己用不一定采纳建议、免费非客服/提建议欢迎指手画脚免谈）。

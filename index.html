@@ -195,6 +195,19 @@ overflow-y:auto; padding:14px 16px; text-align:left;
 scrollbar-width:none; -ms-overflow-style:none;
 }
 .splash-faq-body::-webkit-scrollbar { display:none; }
+.splash-faq-body { font-size:12px; line-height:1.6; color:var(--soft-ink); }
+.splash-faq-body .splash-sec { margin-bottom:8px; font-size:13px; }
+.splash-faq-body .splash-item {
+margin-bottom:5px; padding-left:20px;
+font-size:12.5px; font-weight:800; color:var(--ink); line-height:1.5;
+}
+.splash-faq-body .splash-item::before { min-width:14px; height:14px; line-height:14px; font-size:9px; }
+.splash-faq-body .splash-sub { margin:8px 0 3px; font-size:12.5px; }
+.splash-faq-body .splash-bullet {
+margin-bottom:3px; padding-left:20px;
+font-size:11.5px; color:var(--soft-ink); line-height:1.6;
+}
+.splash-faq-body .splash-bullet:last-child { margin-bottom:0; }
 .splash-loading {
 margin-top:16px; font-size:12px; color:var(--hint-ink); letter-spacing:1px;
 }
@@ -7988,9 +8001,9 @@ transition-duration: .01ms !important;
         </div>
       </div>
       <!-- v3.8.y：底部版本块重新设计——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787895588136">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.6.281</b></span>
-        <span class="sv-deploy">部署于 2026-08-28 13:39<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787895688875">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.6.282</b></span>
+        <span class="sv-deploy">部署于 2026-08-28 13:41<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9083,7 +9096,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.6.281</div>
+      <div class="ver">Mochi 字卡传讯 v3.6.282</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -9238,7 +9251,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.6.281</span>
+              <span class="lic-ver">v3.6.282</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
