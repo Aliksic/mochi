@@ -38,6 +38,7 @@
 | 22 | 语音播放矢量图标点击无互动变化（录制面板试听钮 + 聊天语音气泡） | 播放/暂停双 SVG + `.playing` 换暂停竖条 + `:active` 按压缩放（chat.js/group-chat.js/template.html + chat-main.css） | `verify-voice-play-icon.mjs` / 哨兵 `voice-ico-pause`、`.msg-voice-play:active` |
 | 23 | 单聊联系人发消息无音效（红米 Turbo4 Pro / Via：选了内置音效不响，其他音效正常） | chat.js addIn 统一播 `playSfx('in')`（silent 与已读回执 `special:'read'` 不播）；sfx.js playBuiltin 等 AudioContext resume 完成再 start | `verify-sfx-in-chat.mjs` / 哨兵 `opts.special !== 'read'`、`p.then(start)` |
 | 24 | 群聊里语音被引用时整串 base64 代码霸屏（vivo Y35 + Edge 反馈） | group-chat.js `gcQuoteHtml` 增 `gcQuoteTextSafe` 清理（与聊天页 quoteTextSafe 同构）：历史/导入数据里语音引用存的是原始「名称\|\|\|data:audio;base64…」，字符串分支直出会霸屏；对象分支的 `q.t` 同样清理 | 哨兵 `gcQuoteTextSafe` / `verify-voice-quote-gc.mjs` |
+| 25 | 三星 S24 / Chrome 进聊天页卡顿后页面崩溃（旧账号大数据 OOM） | chat.js 全量 migration/去重 pass 改**分批延迟归一化**（`runDeferredNormalization` 后台 2500 条/片 setTimeout 跑）；读库后先出首屏；无本地待合并数据时跳过全量签名 Set（hasLocal 短路）——主线程阻塞从数秒降到约百毫秒 | 哨兵 `scheduleDeferredNormalization` / `diag-oom-chat-load.mjs`（seed 4万条，同步段≈107ms、无崩溃、__jsErrors=0） |
 
 ## 维护
 

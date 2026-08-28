@@ -1,4 +1,30 @@
-# 本次构建者：AI-B（2026-08-28 18:55，用户报障 vivo Y35 Edge 全屏/PC 端 + 群聊语音引用霸屏；收口本会话改动）
+# 本次构建者：Phanthy Code（2026-08-28 19:45，用户要求立即部署修复 iPhone 15 Safari 崩溃；重建收口本工作区全部未提交改动并推送远程 main）
+### 2026-08-28 19:45（部署：重建+推送远程 main——把聊天加载 OOM 修复等全部未提交改动上线，修 iPhone 15 Safari「网页重复出现问题+持续自动刷新」崩溃循环）
+- [本会话·构建+部署]（**未改任何 src；重跑 node build.mjs（sw: mochi-mtcvxr1k，index.html 3241114 字节/68902 行，关键修复哨兵 23/23）+ 提交推送；verify-* 回归资产（verify-fav-dedup / verify-music-reserve-queue / verify-voice-play-icon）一并入库，diag-*/临时文件按 AGENTS.md 未入库**）。
+- 背景：用户反馈 iPhone 15 / Safari 开 GitHub Pages「总是显示网页重复出现问题」+ 浏览器持续自动刷新（做什么动作都可能触发）+ 非常卡。排查：应用自身无自动 reload 逻辑（pwa.js 只显示更新条不自动刷新；device.js/personalize.js/data-backup.js 的 reload 均为用户操作触发）——症状是 **iOS 标签页 OOM 崩溃循环**：旧账号数万条聊天记录时 loadMsgs 主线程同步全量 pass 阻塞 8s+ → WebKit 渲染进程崩溃 → Safari 自动重载 → 开屏又走同路径 → 再崩（与 WORKLOG「三星 S24 / Chrome 进入聊天页大数据 OOM 崩溃」条目同根因）。
+- 关键断层（本次部署原因）：该 OOM 修复（scheduleDeferredNormalization）此前只存在于本地未提交构建；远程 main（1c5a1a6 / sw mtcu6pv7）grep 证实 0 处——线上一直是崩溃版。本次重建顺带收口 19:27 的 home.css+period.js 经期卡配套改动（dpd-phase/dpd-bar 已核配套完整），推送后 ls-remote 核实远程已含修复。
+- 待用户实测：iPhone 15 完全关闭 Safari 标签页/主屏应用 → 重开等几秒（触发 SW 换缓存 mochi-mtcvxr1k）→ 再完全关闭重开一次；进聊天不再崩溃刷新即生效。若仍崩，回报崩溃时所在页面与操作。
+
+# 本次构建者：AI-A（本会话，2026-08-28 19:14，跨域改 base.css 修复全局 .pill.on 白框；已构建 sw: mochi-mtcut9p3，哨兵 22/22）
+### 2026-08-28（桌面第三页经期小组件内容补充：阶段标签+预计日期+周期进度条；未构建，待构建者收口）
+- [AI-A 域]（**已改 src/js/period.js + src/css/home.css；未改 template.html（阶段标签/进度条元素由 JS 动态创建，避开 AI-B 文件）；构建状态：未构建（node --check 已过），待构建者收口**）。
+- 需求：桌面第三页经期小组件内容单薄，只突出天数。用户选定补充方案：①左上角阶段标签（经期/排卵期/安全期，按 status().phase 配色）；②副行「距下次经期」下显示「预计 9/3 开始」具体日期（原仅显示几天前数）；③底部周期进度条 + 标注「周期第 X/总 天」。
+- 方案：period.js 新增 ensureWidgetExtras（按需生成 dpd-phase 标签 + dpd-bar-wrap 进度条）与 mdLabel（日期串→M/D）；renderDeskWidget 重写，复用 status() 的 inPeriod/phase/dayOfCycle/cycleLen/nextStart，按需显隐：无记录隐藏标签与进度条，无进度数据隐藏进度条。home.css 补 .dpd-phase（phase-period/fertile/safe 三配色，白字）、.dpd-bar-wrap/.dpd-bar-cap/.dpd-bar/.dpd-bar-fill；进度条轨道用 var(--card-border) 自适应明暗，宽度 JS 内联设置（≥3% 兜底可见），均在 160px 卡内不重叠。
+- 验证：node --check 通过；未跑构建（并行构建者收口）。未登记哨兵（UI 内容补充非回归修复）。
+### 2026-08-28 19:13（修复：全局 .pill.on 选中态白底白字——桌面装修/美化等所有 pill 选择点选后白框无文字）
+- [本会话·AI-A 域]（**跨域改动 src/css/base.css（AI-B 文件，理由：.pill.on 浅色主题白底白字，全站唯一定义，改一处修所有 pill 选择）+ src/js/incoming-requests.js（仅更新注释，内联防御保留）；构建状态：已构建 19:14, sw: mochi-mtcut9p3，哨兵 22/22，未提交待收口**）。
+- 用户反馈：跨桌面查岗频率 pill 白框修好后，其他功能也这样——如桌面装修模式点小组件按钮选择后（小组件透明度/组件圆角/卡片背景菜单等）只显示白框、不显示原文字。
+- 根因：base.css `.pill.on { background:var(--card-bg); color:var(--btn-ink) }`——浅色主题 --card-bg=白、--btn-ink=白 → 白底白字；深色主题 --card-bg=#1e1e1e、--btn-ink=#111 → 深底深字。两档都不可读（此前只在 incoming-requests.js 内联修了跨桌面查岗频率一处）。
+- 方案：base.css `.pill.on` color 由 var(--btn-ink) 改 var(--ink)（浅色深字/暗色浅字，与边框 var(--btn-bg) 高亮一致），一处修复全站所有 openModal pill 选中态（卡片背景菜单/小组件透明度/组件圆角/恢复隐藏图标/聊天设置等）；incoming-requests.js 内联覆盖保留作防御冗余。
+- 验证：node --check 通过；已构建，产物核对 `.pill.on` 特征 `color:var(--ink);border-color:var(--btn-bg)` 在位，哨兵 22/22。
+- 待 AI-B 处理：本次构建已由本会话收口（含 base.css + chat.js OOM 修复等全部未提交改动）；如你另有未保存的 chat.js 改动，请改完后再构建一次覆盖，避免 OOM 修复与产物不一致。
+### 2026-08-28 21:30（修复：三星 S24 / Chrome 进入聊天页大数据 OOM 崩溃；跨域改动 src/js/chat.js，已构建 sw: mochi-mtcuu1da，待提交）
+- [AI-B 域]（**跨域改动 src/js/chat.js（AI-A 文件，理由：聊天加载主线程同步跑全量 pass 导致大数据 OOM 崩溃）+ build.mjs（哨兵 +1：scheduleDeferredNormalization）+ FIX-REGRESSION.md（清单 #25）+ tools/diag-oom-chat-load.mjs（临时，已删）；构建状态：已构建 sentinel 23/23**）。
+- 根因：旧账号积累数万条聊天记录时，loadMsgs 读库后在主线程**同步**跑完所有全量数组 pass（collapseRapidDups / 图标迁移 / 媒体迁移 / 转义还原 / ts 回填 / sysNick 清扫），主线程阻塞数秒 → 渲染进程 OOM 页面崩溃，三星 S24 Chrome 点进聊天即崩。
+- 方案：**分批/延迟归一化**（用户选定重治本方向）——①无本地待合并数据时跳过全量签名 Set 构建（启动最常见场景直接 merged=idbArr）；②把上述全量 pass 挪到 `runDeferredNormalization` 后台按 2500 条/片 setTimeout 分批跑，先出首屏，全部跑完再合并渲染 + 落盘；幂等可重入。
+- 改动点（chat.js）：新增 `normCell/normCollapseRange/scheduleDeferredNormalization/runDeferredNormalization + ICON_* 常量`；loadMsgs 顶部去掉同步 migrateLegacyMediaMsgs/collapseRapidDups；合并分支改为 hasLocal 短路 + 后台调度；loadMsgs 末尾 4 个同步全量迁移块改为一处兜底调度。
+- 验证：`node --check` 通过；`node tools/verify.mjs` 10/10；**headless 复现 seed 4万条消息 → 读库+合并同步段仅 ≈107ms（此前 8s+）**，无 OOM 崩溃、`__jsErrors=0`、getChatMsgs().length=40000 完整入库。
+- 待用户实测：三星 S24 / Chrome 用旧账号重进聊天页，是否仍卡顿崩溃。
 ### 2026-08-28 18:55（修复：群聊语音被引用时整串 base64 霸屏 + 核实 vivo Y35/Edge 全屏修复上线；已构建 sw: mochi-mtcu3oan，待提交）
 - [AI-B 域]（**跨域改动 src/js/group-chat.js（AI-A 文件，理由：群聊 gcQuoteHtml 缺 quoteTextSafe 等价清理，语音引用直出 base64）+ build.mjs（哨兵 +1：gcQuoteTextSafe）+ FIX-REGRESSION.md（清单 #24）+ 新增 tools/verify-voice-quote-gc.mjs；构建状态：已构建**）。
 - 用户反馈①：vivo Y35 / Edge，页面大小问题（显示成 PC 外壳）+ 全屏模式打不开 + 「Edge 显示我是 PC 端」。
@@ -73,7 +99,8 @@
   - TA 昵称经 HTML 转义防注入；气泡样式随 --card-bg/--ink/--accent 适配明暗。
 
 ### 2026-08-28（✅ 完成·已构建·跨桌面查岗/来电新增全局三档频率模式）
-- [本会话·AI-A 域]（**已改 src/js/incoming-requests.js；已构建 18:18, sw: mochi-mtcstwex，哨兵 15/15；未提交待收口**）。
+- [本会话·AI-A 域]（**已改 src/js/incoming-requests.js；已构建 19:00, sw: mochi-mtcuc6y0，哨兵 22/22；未提交待收口**）。
+  - v4（选中态白框修复）：用户反馈点击切换后「标准/安静」字不显示只显示白框。根因：base.css `.pill.on { background:var(--card-bg); color:var(--btn-ink) }`，浅色主题下 --card-bg=白、--btn-ink=白 → 白底白字（dark.css 记录过的同类问题）。修复：syncFreqPills 对选中按钮设内联 style.color=var(--ink)（浅色深字/暗色浅字），非选中清空；不改 base.css。已用本地服务器 + 无头浏览器实测验证：默认「安静」及点击「标准/频繁」后文字均 rgb(17,17,17) 可读、弹窗正常。
   - v3（根因修复+排序）：① 发现真实 DOM 顺序为「打电话→频率→查岗」——因 addSettingToggle 用 insertBefore(row, anchor.nextSibling) 且 anchor 固定 group-chat 行，第二个开关被插到第一个前面；已在 addFreqModeRow 末尾用 appendChild 显式重排为「查岗→打电话→频率」（频率最下，用户确认）。
   - 用户反馈：跨桌面查岗过于频繁。
   - 方案（已与用户确认：3 档 · 查岗+来电一起 · 全局统一）：新增「跨桌面查岗频率」三档预设 频繁(6%/15min)·标准(2%/30min)·安静(1%/3h)，根键 `xy-home-v2:desk-freq-mode` 全局生效；设置页开关行之后动态插入 pill 选择行（复用 .set-row/.pill，不动 template.html）。

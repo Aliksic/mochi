@@ -209,6 +209,98 @@ else if (deskMsgEl && !deskMsgEl.hidden) hideDeskMsg();
 });
 } catch (e) {}
 window.getChatMsgs = function () { return msgs; };
+try { window.__mochiProf = window.__mochiProf || {}; } catch (e) {}
+function __prof(t) { try { window.__mochiProf[t] = performance.now(); } catch (e) {} }
+// ===== v3.26.x OOM 防线：聊天大数据量分批/延迟归一化 =====
+// 根因：三星 S24 等真机上，旧账号积累数万条聊天记录时，启动读库后在主线程同步
+// 跑完所有「全量数组」pass（collapseRapidDups / 图表迁移 / 媒体迁移 / 转义还原 /
+// ts 回填 / sysNick 清扫），主线程阻塞数秒 → 渲染进程 OOM、页面崩溃。
+// 方案：IDB 解析/合并后先出首屏，把这些 pass 挪到后台按片 setTimeout 分批跑，
+// 单帧只耗几毫秒；全部跑完再合并渲染 + 落盘。各 pass 均按对象引用改属性、幂等可重入。
+const ICON_BELL = '<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v3M4.2 4.2l2.2 2.2M2 12h3M19 12h3M4.2 19.8l2.2-2.2M17.6 17.6l2.2 2.2"/><path d="M12 6a6 6 0 016 6v4h-3v-4a3 3 0 00-6 0v4H6v-4a6 6 0 016-6z"/><path d="M9 20h6"/></svg>';
+const ICON_TEL = '<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>';
+const ICON_ENV = '<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>';
+const ICON_CQ_FIX = { '再等等，会遇到我': '再等等，会遇到你', '你身边': '我身边', '只给我看': '只给你看' };
+const NORM_CHUNK = 2500;
+let normTimer = null, normPrefix = null;
+function normCell(r) {
+  let c = false;
+  if (!r) return false;
+  try {
+    if (typeof r.text === 'string' && r.text.indexOf(ICON_BELL) >= 0) { r.text = r.text.split(ICON_BELL).join(ICON_TEL); c = true; }
+    if (r.special === 'poke' && typeof r.text === 'string') {
+      const t = r.text.replace(/✉️\s*/g, '').replace(/✉\s*/g, '');
+      if (t !== r.text) { r.text = ICON_ENV + t; c = true; }
+    }
+    if ((r.type === 'text' || !r.type) && typeof r.text === 'string' && r.text.indexOf('data:image/') === 0) { r.type = 'image'; c = true; }
+    if (r.special === 'poke' && typeof r.text === 'string' && r.text.indexOf('&lt;svg class=&quot;st-ico&quot;') === 0) {
+      const mm = r.text.match(/^(&lt;svg class=&quot;st-ico&quot;[\s\S]*?&lt;\/svg&gt;)([\s\S]*)$/);
+      if (mm) { r.text = mm[1].replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&amp;/g, '&') + mm[2]; c = true; }
+    }
+    if (r.special === 'ask-curious' && Array.isArray(r.curiousQuick)) {
+      const f = r.curiousQuick.map(o => ICON_CQ_FIX[o] || o);
+      if (f.some((o, i) => o !== r.curiousQuick[i])) { r.curiousQuick = f; c = true; }
+    }
+    if (r.special === 'ask-curious' && typeof r.curiousAnswer === 'string' && ICON_CQ_FIX[r.curiousAnswer]) { r.curiousAnswer = ICON_CQ_FIX[r.curiousAnswer]; c = true; }
+    if (!r.ts) { r.ts = Date.now(); c = true; }
+  } catch (e) {}
+  return c;
+}
+function normCollapseRange(from, to) {
+  let removed = 0;
+  const GAP_TEXT = 2500, GAP_MEDIA = 60000;
+  try {
+    const n = msgs.length;
+    for (let i = Math.min(to, n) - 1; i > from; i--) {
+      const a = msgs[i], b = msgs[i - 1];
+      if (!a || !b || !a.side || a.side !== b.side) continue;
+      if (dupSig(a) !== dupSig(b)) continue;
+      const hasContent = (a.text && a.text.length) || a.img || a.voice || !!a.special || (a.parts && a.parts.length);
+      if (!hasContent) continue;
+      const isMedia = !!a.img || !!a.voice || !!a.special;
+      const dts = (a.ts || 0) - (b.ts || 0);
+      if (dts < 0 || dts > (isMedia ? GAP_MEDIA : GAP_TEXT)) continue;
+      msgs.splice(i, 1); removed++;
+    }
+  } catch (e) {}
+  return removed;
+}
+function scheduleDeferredNormalization() {
+  if (normTimer) return;
+  let pre;
+  try { pre = window.activePrefix(); } catch (e) { pre = ''; }
+  if (pre === normPrefix) return;
+  normPrefix = pre;
+  normTimer = setTimeout(runDeferredNormalization, 80);
+}
+function runDeferredNormalization() {
+  normTimer = null;
+  let myPre;
+  try { myPre = window.activePrefix(); } catch (e) { myPre = ''; }
+  if (myPre !== normPrefix) { normPrefix = null; return; }
+  let idx = 0, changed = false;
+  const N = msgs.length;
+  if (!N) { normPrefix = null; return; }
+  const finish = () => {
+    try { if (sysNickCatchup()) changed = true; } catch (e) {}
+    normPrefix = null;
+    if (!changed) return;
+    try { if (window.idbSet) window.idbSet(myPre + ':chat-msgs', JSON.stringify(msgs)); } catch (e) {}
+    try { writeLsSnapshot(JSON.stringify(msgs), myPre, true); } catch (e) {}
+    try { if (chatVisible() && msgs.length) { renderWindow(false, true); scrollChatBottom(); } } catch (e) {}
+  };
+  const tick = () => {
+    let nowPre;
+    try { nowPre = window.activePrefix(); } catch (e) { nowPre = ''; }
+    if (nowPre !== normPrefix) { normPrefix = null; return; }
+    const end = Math.min(N, idx + NORM_CHUNK);
+    for (let i = idx; i < end; i++) { if (normCell(msgs[i])) changed = true; }
+    if (normCollapseRange(idx, end + 1, msgs)) changed = true;
+    if (end < N) { idx = end; setTimeout(tick, 0); }
+    else finish();
+  };
+  setTimeout(tick, 0);
+}
 function migrateLegacyMediaMsgs() {
 let migrated = false;
 msgs.forEach(r => {
@@ -268,8 +360,7 @@ try { msgs = JSON.parse(store.get('chat-msgs') || '[]'); } catch (e) { msgs = []
 if (!Array.isArray(msgs)) msgs = [];
 try { syncLastMineText(); } catch (e) {}
 }
-migrateLegacyMediaMsgs();
-try { if (collapseRapidDups(msgs)) saveMsgs(); } catch (e) {}
+// v3.26.x：全量 migration/去重 pass 移到 runDeferredNormalization 后台分批跑，防大数据主线程卡死
 const nowT = Date.now();
 const skipRead = chatDbReady &&
 lastIdbLoadPrefix === window.activePrefix() &&
@@ -318,42 +409,54 @@ writeLsSnapshot(JSON.stringify(msgs), myPrefix, true);
 return;
 }
 try {
+__prof('ch0_enter');
 const idbArr = typeof v === 'string' ? JSON.parse(v) : v;
+__prof('ch1_parsed');
 if (!Array.isArray(idbArr)) { chatDbReady = true; return; }
 const sigOf = (m) => { try { return JSON.stringify({ t: m && m.text, s: m && m.side, ts: m && m.ts, i: m && m.img ? (typeof m.img === 'string' ? m.img.slice(0, 32) : String(m.img.length)) : 0 }); } catch (e) { return ''; } };
-const idbSigs = new Set();
-idbArr.forEach(x => { if (x) idbSigs.add(sigOf(x)); });
-const idbTsSide = new Set(idbArr.map(x => (((x && x.ts) || 0) + '|' + ((x && x.side) || ''))));
-const liteResidue = (m) => !!(m && (m._lsLite || m.img === '' || m.voice === ''));
-const localNew = (pendingLocal || msgs || []).filter(m => m && !idbSigs.has(sigOf(m))).filter(m => {
-if (!liteResidue(m)) return true;
-return !idbTsSide.has((((m && m.ts) || 0)) + '|' + ((m && m.side) || ''));
-});
-localNew.forEach(m => { try { delete m._lsLite; } catch (e) {} });
-const merged = idbArr.concat(localNew).sort((a, b) => ((a && a.ts || 0) - (b && b.ts || 0)));
-const curArr = pendingLocal || msgs || [];
-if (merged.length === curArr.length) {
-curArr.forEach((m, i) => {
-if (!m || i >= merged.length) return;
-if (sessionChangedIdx.has(i)) merged[i] = m;
-});
-}
-curArr.forEach((m, i) => {
-if (!m || i >= merged.length) return;
-if (!answeredRec(m) || answeredRec(merged[i])) return;
-merged[i] = m;
-});
-let changed = localNew.length > 0 || merged.length !== msgs.length;
-if (!changed && merged.length === msgs.length && msgs.length) {
-changed = msgs.some(m => m && (m.img === '' || m.voice === ''));
+const hasLocal = !!((pendingLocal && pendingLocal.length) || (msgs && msgs.length));
+let merged, curArr = pendingLocal || msgs || [];
+let changed = false;
+// v3.26.x OOM：无本地待合并数据时跳过全量签名 Set 构建（旧大数据账号最常见的启动场景）
+if (!hasLocal) {
+  merged = idbArr;
+} else {
+  const idbSigs = new Set();
+  idbArr.forEach(x => { if (x) idbSigs.add(sigOf(x)); });
+  __prof('ch2_sigset');
+  const idbTsSide = new Set(idbArr.map(x => (((x && x.ts) || 0) + '|' + ((x && x.side) || ''))));
+  __prof('ch3_tsside');
+  const liteResidue = (m) => !!(m && (m._lsLite || m.img === '' || m.voice === ''));
+  const localNew = curArr.filter(m => m && !idbSigs.has(sigOf(m))).filter(m => {
+    if (!liteResidue(m)) return true;
+    return !idbTsSide.has((((m && m.ts) || 0)) + '|' + ((m && m.side) || ''));
+  });
+  localNew.forEach(m => { try { delete m._lsLite; } catch (e) {} });
+  merged = idbArr.concat(localNew).sort((a, b) => ((a && a.ts || 0) - (b && b.ts || 0)));
+  if (merged.length === curArr.length) {
+    curArr.forEach((m, i) => {
+      if (!m || i >= merged.length) return;
+      if (sessionChangedIdx.has(i)) merged[i] = m;
+    });
+  }
+  curArr.forEach((m, i) => {
+    if (!m || i >= merged.length) return;
+    if (!answeredRec(m) || answeredRec(merged[i])) return;
+    merged[i] = m;
+  });
+  changed = localNew.length > 0 || merged.length !== msgs.length;
+  if (!changed && merged.length === msgs.length && msgs.length) {
+    changed = msgs.some(m => m && (m.img === '' || m.voice === ''));
+  }
 }
 msgs = merged;
-if (merged.length !== curArr.length) sessionChangedIdx.clear();
-if (collapseRapidDups(msgs)) { changed = true; sessionChangedIdx.clear(); }
-migrateLegacyMediaMsgs();
+__prof('ch4_merged');
+if (hasLocal && merged.length !== curArr.length) sessionChangedIdx.clear();
+// v3.26.x：原同步全量 normalization（collapseRapidDups/migrateLegacyMediaMsgs/
+// restoreEscapedPokeIcons/sysNickCatchup/图标迁移/ts 回填）移入后台分批归一化，
+// 首屏即时可交互，防大数据 OOM 崩溃。此处仅本次合并产生的 changed 落盘。
 try { syncLastMineText(); } catch (e) {}
-if (restoreEscapedPokeIcons()) changed = true;
-try { if (sysNickCatchup()) changed = true; } catch (e) {}
+__prof('ch5_passes');
 pendingLocal = null;
 chatDbReady = true;
 // v3.14.x：本命名空间已读到权威（此后空数组落盘才被允许——内存已含全部历史）
@@ -365,58 +468,26 @@ lastIdbLoadAt = Date.now();
 } catch (e) {}
 try { localStorage.removeItem('xy-home-v2:chat-msgs'); } catch (e) {}
 if (changed) {
+__prof('ch6_save');
 try { if (window.idbSet) window.idbSet(myPrefix + ':chat-msgs', JSON.stringify(msgs)); } catch (e) {}
 try { writeLsSnapshot(JSON.stringify(msgs), myPrefix, true); } catch (e) {}
+__prof('ch7_end');
 if (chatVisible() && chatNearBottom()) {
 renderWindow(false, true);
 scrollChatBottom();
 }
 }
+// v3.26.x：读库完成后调度后台分批归一化（幂等，仅对当前联系跑一次）
+scheduleDeferredNormalization();
 } catch (e) { /* 解析失败：不置 chatDbReady，下次进入再重试 */ }
 });
 }
 } catch (e) {}
 } // v3.13.x：时间闸跳过全量重读的关闭括号
-{
-const bellSvg = '<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v3M4.2 4.2l2.2 2.2M2 12h3M19 12h3M4.2 19.8l2.2-2.2M17.6 17.6l2.2 2.2"/><path d="M12 6a6 6 0 016 6v4h-3v-4a3 3 0 00-6 0v4H6v-4a6 6 0 016-6z"/><path d="M9 20h6"/></svg>';
-const telSvg = '<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>';
-let iconMigrated = false;
-msgs.forEach(r => {
-if (r && typeof r.text === 'string' && r.text.indexOf(bellSvg) >= 0) {
-r.text = r.text.split(bellSvg).join(telSvg);
-iconMigrated = true;
-}
-});
-if (iconMigrated) saveMsgs();
-}
-{
-const envSvg = '<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>';
-let envMigrated = false;
-msgs.forEach(r => {
-if (r && r.special === 'poke' && typeof r.text === 'string') {
-const t = r.text.replace(/✉️\s*/g, '').replace(/✉\s*/g, '');
-if (t !== r.text) { r.text = envSvg + t; envMigrated = true; }
-}
-});
-if (envMigrated) saveMsgs();
-}
-{
-const CQ_FIX = { '再等等，会遇到我': '再等等，会遇到你', '你身边': '我身边', '只给我看': '只给你看' };
-let cqMigrated = false;
-msgs.forEach(r => {
-if (!r || r.special !== 'ask-curious') return;
-if (Array.isArray(r.curiousQuick)) {
-const fixed = r.curiousQuick.map(o => CQ_FIX[o] || o);
-if (fixed.some((o, i) => o !== r.curiousQuick[i])) { r.curiousQuick = fixed; cqMigrated = true; }
-}
-if (typeof r.curiousAnswer === 'string' && CQ_FIX[r.curiousAnswer]) { r.curiousAnswer = CQ_FIX[r.curiousAnswer]; cqMigrated = true; }
-});
-if (cqMigrated) saveMsgs();
-}
-if (restoreEscapedPokeIcons()) saveMsgs();
-let changed = false;
-msgs.forEach(r => { if (r && !r.ts) { r.ts = Date.now(); changed = true; } });
-if (changed) saveMsgs();
+// v3.26.x：全部全量 migration/去重已移入 runDeferredNormalization 后台分批执行
+// （见本文件顶部 OOM 防线注释）。此处兜底：无权威读库（IDB 缺键/读取失败回溯）
+// 场景也补一次归一化调度；scheduleDeferredNormalization 按当前联系幂等去重。
+if (chatDbReady && msgs.length) scheduleDeferredNormalization();
 }
 function escTxt(s) {
 return String(s == null ? '' : s)

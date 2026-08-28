@@ -187,43 +187,6 @@
     if (r) r.innerHTML = '<div class="div-result-empty">点击上方按钮开始抽牌</div>';
   }
 
-  // ---- v3.26.x：占卜对象（可选全部桌面联系人，也可不选对象） ----
-  // 不选 → 记录只存本页历史 divine-history（原行为）；
-  // 选了 → 抽牌结果存入【该联系人桌面】的 records-divine（主页「占卜记录」面板展示）
-  let divineTarget = '';
-  function escHtml(s) {
-    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-  }
-  function contactsList() {
-    try { return (window.getContacts ? window.getContacts() : []) || []; } catch (e) { return []; }
-  }
-  function targetName(cid) {
-    const c = contactsList().filter(x => x && x.id === cid)[0];
-    return c ? (c.name || '未命名') : '';
-  }
-  function renderTargets() {
-    const wrap = document.getElementById('div-targets');
-    if (!wrap) return;
-    const list = contactsList();
-    // 选中对象已被删除 → 回到不选对象
-    if (divineTarget && !list.some(c => c && c.id === divineTarget)) divineTarget = '';
-    let html = '<button class="div-mode div-target' + (divineTarget ? '' : ' sel') + '" data-tcid="">不选对象</button>';
-    list.forEach(c => {
-      if (!c) return;
-      html += '<button class="div-mode div-target' + (divineTarget === c.id ? ' sel' : '') + '" data-tcid="' + escHtml(c.id) + '">' + escHtml(c.name || '未命名') + '</button>';
-    });
-    wrap.innerHTML = html;
-  }
-  const targetsWrap = document.getElementById('div-targets');
-  if (targetsWrap) {
-    targetsWrap.addEventListener('click', (e) => {
-      const b = e.target.closest('.div-target');
-      if (!b) return;
-      divineTarget = b.dataset.tcid || '';
-      renderTargets();
-    });
-  }
-
   // ---- v3.7.x：自动发送开关（每个联系人独立记忆，走动态 store） ----
   function autoSendGet() { try { return store.get('divine-send-auto') === '1'; } catch (e) { return false; } }
   function autoSendSet(on) { try { store.set('divine-send-auto', on ? '1' : '0'); } catch (e) {} }
@@ -460,53 +423,11 @@
       merge([]);
     }
   }
-  // ---- v3.26.x：对象占卜记录（写入【被占卜联系人桌面】的 records-divine，主页「占卜记录」读取） ----
-  // 与 divine-history 同款恢复窗口保护：mochi-restore-done 前不落盘，暂存后与
-  // IDB 权威值按 ts 去重合并（防恢复未完成读到空数组直接覆盖丢记录）
-  let recPendings = [];
-  function targetHistSave(cid, rec) {
-    if (!cid) return;
-    if (!histReady) { recPendings.push({ cid: cid, rec: rec }); return; }
-    targetHistMerge(cid, [rec]);
-  }
-  function targetHistMerge(cid, recs) {
-    const targetPrefix = 'xy-home-v2:' + cid;
-    const finish = (base) => {
-      const merged = base.concat(recs.filter(r => r && r.ts !== undefined));
-      merged.sort((a, b) => (b.ts || 0) - (a.ts || 0));
-      const have = {};
-      const out = [];
-      merged.forEach(x => {
-        if (!x || x.ts === undefined || have[x.ts]) return;
-        have[x.ts] = true; out.push(x);
-      });
-      try { window.storeFor(cid).set('records-divine', JSON.stringify(out.slice(0, 100))); } catch (e) {}
-    };
-    if (window.idbGet) {
-      window.idbGet(targetPrefix + ':records-divine').then(v => {
-        let base = [];
-        try { const p = typeof v === 'string' ? JSON.parse(v) : v; if (Array.isArray(p)) base = p; } catch (e) {}
-        finish(base);
-      }).catch(() => finish([]));
-    } else {
-      let base = [];
-      try { const p = JSON.parse(window.storeFor(cid).get('records-divine') || '[]'); if (Array.isArray(p)) base = p; } catch (e) {}
-      finish(base);
-    }
-  }
-  function flushPendingRecs() {
-    if (!recPendings.length) return;
-    const pendings = recPendings; recPendings = [];
-    const byCid = {};
-    pendings.forEach(p => { (byCid[p.cid] || (byCid[p.cid] = [])).push(p.rec); });
-    Object.keys(byCid).forEach(cid => { try { targetHistMerge(cid, byCid[cid]); } catch (e) {} });
-  }
   try {
     document.addEventListener('mochi-restore-done', function () {
       histReady = true;
       migrateLegacyHist();
       flushPendingHist();
-      flushPendingRecs();
       // v3.9.x：IDB 回填完成后补渲染历史区——文件加载时 renderHistOnOpen 可能在
       // idbRestore 完成前调用，此时 store.get('divine-history') 读到空（LS/memoryCache
       // 均无），历史区渲染空白；恢复完成后必须补渲染一次，否则已有历史记录显示不出来
@@ -648,8 +569,7 @@
       if (window.__divActiveDraw) { try { window.__divActiveDraw(); } catch (e) {} window.__divActiveDraw = null; }
       const question = ((document.getElementById('div-question') || {}).value || '').trim();
       // v3.5.130：快照点击时的模式/张数——流程期间切换设置不再影响本次结果
-      // v3.26.x：对象同样快照（流程期间切换对象不影响本次记录归属）
-      const snapMode = mode, snapCount = count, snapTarget = divineTarget;
+      const snapMode = mode, snapCount = count;
       const deck = snapMode === 'tarot' ? TAROT : LENO;
       if (!deck.length) { r.innerHTML = '<div class="div-result-empty">占卜牌库加载中…</div>'; return; }
       const labels = (MODE_LABELS[snapMode] && MODE_LABELS[snapMode][snapCount]) || [];
@@ -664,18 +584,11 @@
           drawBtn.textContent = '重新抽牌';
           const summary = buildSummary(cards, snapMode, question);
           renderDrawResult(cards, snapMode, question, summary);
-          // 保存记录：v3.26.x 选了占卜对象 → 存入该联系人桌面的 records-divine
-          // （主页「占卜记录」面板展示）；不选对象 → 存本页历史 divine-history（原行为，
-          // 每个联系人桌面独立，store 动态绑定当前桌面）
-          if (snapTarget) {
-            targetHistSave(snapTarget, { ts: Date.now(), mode: snapMode, count: snapCount, question: question, cards: cards, summary: summary, target: targetName(snapTarget) });
-            toast('已存入主页 · 占卜记录（' + (targetName(snapTarget) || '对象') + '）');
-          } else {
-            const list = histLoad();
-            list.unshift({ ts: Date.now(), mode: snapMode, count: snapCount, question: question, cards: cards, summary: summary });
-            histSave(list);
-            renderHistory();
-          }
+          // 保存记录（v3.7.x：每个联系人桌面独立，store 动态绑定当前桌面）
+          const list = histLoad();
+          list.unshift({ ts: Date.now(), mode: snapMode, count: snapCount, question: question, cards: cards, summary: summary });
+          histSave(list);
+          renderHistory();
           // v3.7.x：自动发送开关——开启后抽牌完成自动把结果发到聊天
           if (autoSendGet()) {
             const myCid = window.__activeCid || 'default';
@@ -715,7 +628,6 @@
   // 多桌面：切换联系人后重新渲染，记录随当前桌面独立展示 ----
   function renderHistOnOpen() {
     try { renderHistory(); } catch (e) {}
-    try { renderTargets(); } catch (e) {}
     try { syncAutoToggle(); } catch (e) {}
   }
   renderHistOnOpen();
@@ -747,8 +659,6 @@
   window.divineAutoGet = autoSendGet;
   window.divineAutoSet = autoSendSet;
   window.divineBuildSummary = buildSummary;
-  // v3.26.x：主页「占卜记录」查看牌面复用（records.js 跳转到占卜页后渲染历史结果）
-  window.divineRenderResult = renderDrawResult;
   window.divineBuildResultText = buildResultText;
   window.divineCopyResultText = copyResultText;
   window.divineSendResult = function (m, cards, summary, question) { sendToChat(m, cards, summary, question); };

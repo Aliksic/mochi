@@ -1509,12 +1509,48 @@
   // contact-switched 无需处理；进页面时 app click handler 已重读全局同一份数据。
 
   // ---- 桌面经期倒计时小组件 ----
+  // v3.26.x：内容补充——左上角阶段标签 + 副行预计下次日期 + 底部周期进度条。
+  // 阶段标签 dpd-phase / 进度条 dpd-bar-wrap 由 ensureWidgetExtras 按需创建，
+  // 避免改 AI-B 的 template.html（desk-period 卡整体归 AI-A，内层元素可由 JS 生成）。
+  function ensureWidgetExtras() {
+    var card = document.querySelector('[data-desk-widget="desk-period"]');
+    if (!card) return;
+    if (!document.getElementById('dpd-phase')) {
+      var b = document.createElement('div'); b.id = 'dpd-phase'; b.className = 'dpd-phase';
+      b.hidden = true; card.insertBefore(b, card.firstChild);
+    }
+    if (!document.getElementById('dpd-bar-wrap')) {
+      var wrap = document.createElement('div');
+      wrap.id = 'dpd-bar-wrap'; wrap.className = 'dpd-bar-wrap'; wrap.hidden = true;
+      var cap = document.createElement('div'); cap.className = 'dpd-bar-cap';
+      var track = document.createElement('div'); track.className = 'dpd-bar';
+      var fill = document.createElement('div'); fill.id = 'dpd-bar-fill'; fill.className = 'dpd-bar-fill';
+      track.appendChild(fill); wrap.appendChild(cap); wrap.appendChild(track);
+      card.appendChild(wrap);
+    }
+  }
+  // 日期串 "2026-9-3" → "9/3"
+  function mdLabel(s) { if (!s) return ''; var p = s.split('-'); return (+p[1]) + '/' + (+p[2]); }
   function renderDeskWidget() {
+    ensureWidgetExtras();
+    var phaseEl = document.getElementById('dpd-phase');
     var labelEl = document.getElementById('dpd-label');
     var daysEl = document.getElementById('dpd-days');
     var subEl = document.getElementById('dpd-sub');
+    var barWrap = document.getElementById('dpd-bar-wrap');
+    var barFill = document.getElementById('dpd-bar-fill');
     if (!labelEl || !daysEl || !subEl) return;
     var st = status();
+    // 阶段标签（左上角）
+    var ph = { txt: '', cls: '' };
+    if (st.inPeriod) ph = { txt: '经期', cls: 'phase-period' };
+    else if (st.phase === 'fertile') ph = { txt: '排卵期', cls: 'phase-fertile' };
+    else if (st.dayOfCycle) ph = { txt: '安全期', cls: 'phase-safe' };
+    if (phaseEl) {
+      if (ph.txt) { phaseEl.textContent = ph.txt; phaseEl.className = 'dpd-phase ' + ph.cls; phaseEl.hidden = false; }
+      else { phaseEl.className = 'dpd-phase'; phaseEl.hidden = true; }
+    }
+    // 主内容
     if (st.inPeriod) {
       labelEl.textContent = '经期第 ' + st.dayOfCycle + ' 天';
       daysEl.textContent = st.dayOfCycle;
@@ -1523,11 +1559,21 @@
       var d = diffDays(todayStr(), st.nextStart);
       labelEl.textContent = '距下次经期';
       daysEl.textContent = d + ' 天';
-      subEl.textContent = st.dayOfCycle ? '周期第 ' + st.dayOfCycle + ' 天' : '即将开始';
+      subEl.textContent = '预计 ' + mdLabel(st.nextStart) + ' 开始';
     } else {
       labelEl.textContent = '经期';
       daysEl.textContent = '—';
       subEl.textContent = '未记录';
+    }
+    // 周期进度条（第 X/总 天；无周期数据则隐藏，填充宽度不少于 3% 以便可见）
+    if (barWrap && barFill && st.dayOfCycle && st.cycleLen) {
+      var cap = barWrap.querySelector('.dpd-bar-cap');
+      if (cap) cap.textContent = '周期第 ' + st.dayOfCycle + '/' + st.cycleLen + ' 天';
+      barWrap.hidden = false;
+      var pct = Math.max(3, Math.min(100, st.dayOfCycle / st.cycleLen * 100));
+      barFill.style.width = pct + '%';
+    } else if (barWrap) {
+      barWrap.hidden = true;
     }
   }
   window.periodRenderDeskWidget = renderDeskWidget;

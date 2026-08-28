@@ -162,8 +162,13 @@
       const wrap = document.getElementById('sf-desk-freq');
       if (!wrap) return;
       wrap.querySelectorAll('.pill').forEach(function (b) {
-        b.classList.toggle('on', b.dataset.m === cur);
-        b.setAttribute('aria-pressed', b.dataset.m === cur ? 'true' : 'false');
+        const on = b.dataset.m === cur;
+        b.classList.toggle('on', on);
+        // 修复 base.css `.pill.on` 在浅色主题下白底白字（--card-bg 白 + --btn-ink 白）→ 选中态文字变白框。
+        // base.css 已全局改为 color:var(--ink)（浅色深字/暗色浅字）；此处内联覆盖作防御冗余，
+        // 防止个别主题/旧产物仍白底白字。非选中时清空内联色恢复 --soft-ink。
+        b.style.color = on ? 'var(--ink)' : '';
+        b.setAttribute('aria-pressed', on ? 'true' : 'false');
       });
     } catch (e) {}
   }

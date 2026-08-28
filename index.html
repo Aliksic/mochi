@@ -564,7 +564,7 @@ padding:8px 16px; font-size:13px; border-radius:99px;
 border:1px solid var(--pill-border); background:var(--card-bg); color:var(--soft-ink);
 cursor:pointer; font-family:inherit; font-weight:600;
 }
-.pill.on { background:var(--card-bg); color:var(--btn-ink); border-color:var(--btn-bg); }
+.pill.on { background:var(--card-bg); color:var(--ink); border-color:var(--btn-bg); }
 .sw {
 width:42px; height:42px; border-radius:50%; cursor:pointer;
 border:2px solid transparent; box-shadow:0 2px 6px rgba(0,0,0,.1);
@@ -968,6 +968,25 @@ display:flex; flex-direction:column; align-items:center; justify-content:center;
 .desk-period .dpd-label { font-size:13px; color:#e85a8f; }
 .desk-period .dpd-days { font-size:50px; font-weight:700; color:#e85a8f; margin:10px 0; line-height:1.1; }
 .desk-period .dpd-sub { font-size:13px; color:var(--muted,#666); }
+.desk-period .dpd-phase {
+position:absolute; top:10px; left:12px; z-index:2;
+font-size:10px; line-height:1; font-weight:700; color:#fff;
+padding:4px 8px; border-radius:99px;
+}
+.desk-period .dpd-phase[hidden] { display:none; }
+.desk-period .phase-period  { background:#e85a8f; }
+.desk-period .phase-fertile { background:#f29c6b; }
+.desk-period .phase-safe    { background:#7fb79a; }
+.desk-period .dpd-bar-wrap {
+position:absolute; left:16px; right:16px; bottom:10px;
+text-align:center;
+}
+.desk-period .dpd-bar-wrap[hidden] { display:none; }
+.desk-period .dpd-bar-cap { font-size:10px; color:var(--muted,#888); margin-bottom:3px; line-height:1; }
+.desk-period .dpd-bar {
+height:4px; background:var(--card-border, rgba(0,0,0,.12)); border-radius:99px; overflow:hidden;
+}
+.desk-period .dpd-bar-fill { height:100%; width:0; background:#e85a8f; border-radius:99px; transition:width .4s ease; }
 .desk-image-widget {
 position:relative; margin:14px 0; border-radius:var(--desk-card-radius,20px);
 overflow:hidden; cursor:pointer; background:rgba(0,0,0,.04);
@@ -8250,9 +8269,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787914593907">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.291</b></span>
-        <span class="sv-deploy">部署于 2026-08-28 18:56<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787917534760">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.294</b></span>
+        <span class="sv-deploy">部署于 2026-08-28 19:45<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9329,7 +9348,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.291</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.294</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -9501,7 +9520,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.291</span>
+              <span class="lic-ver">v3.26.294</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -19798,6 +19817,92 @@ else if (deskMsgEl && !deskMsgEl.hidden) hideDeskMsg();
 });
 } catch (e) {}
 window.getChatMsgs = function () { return msgs; };
+try { window.__mochiProf = window.__mochiProf || {}; } catch (e) {}
+function __prof(t) { try { window.__mochiProf[t] = performance.now(); } catch (e) {} }
+const ICON_BELL = '<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v3M4.2 4.2l2.2 2.2M2 12h3M19 12h3M4.2 19.8l2.2-2.2M17.6 17.6l2.2 2.2"/><path d="M12 6a6 6 0 016 6v4h-3v-4a3 3 0 00-6 0v4H6v-4a6 6 0 016-6z"/><path d="M9 20h6"/></svg>';
+const ICON_TEL = '<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>';
+const ICON_ENV = '<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>';
+const ICON_CQ_FIX = { '再等等，会遇到我': '再等等，会遇到你', '你身边': '我身边', '只给我看': '只给你看' };
+const NORM_CHUNK = 2500;
+let normTimer = null, normPrefix = null;
+function normCell(r) {
+let c = false;
+if (!r) return false;
+try {
+if (typeof r.text === 'string' && r.text.indexOf(ICON_BELL) >= 0) { r.text = r.text.split(ICON_BELL).join(ICON_TEL); c = true; }
+if (r.special === 'poke' && typeof r.text === 'string') {
+const t = r.text.replace(/✉️\s*/g, '').replace(/✉\s*/g, '');
+if (t !== r.text) { r.text = ICON_ENV + t; c = true; }
+}
+if ((r.type === 'text' || !r.type) && typeof r.text === 'string' && r.text.indexOf('data:image/') === 0) { r.type = 'image'; c = true; }
+if (r.special === 'poke' && typeof r.text === 'string' && r.text.indexOf('&lt;svg class=&quot;st-ico&quot;') === 0) {
+const mm = r.text.match(/^(&lt;svg class=&quot;st-ico&quot;[\s\S]*?&lt;\/svg&gt;)([\s\S]*)$/);
+if (mm) { r.text = mm[1].replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&amp;/g, '&') + mm[2]; c = true; }
+}
+if (r.special === 'ask-curious' && Array.isArray(r.curiousQuick)) {
+const f = r.curiousQuick.map(o => ICON_CQ_FIX[o] || o);
+if (f.some((o, i) => o !== r.curiousQuick[i])) { r.curiousQuick = f; c = true; }
+}
+if (r.special === 'ask-curious' && typeof r.curiousAnswer === 'string' && ICON_CQ_FIX[r.curiousAnswer]) { r.curiousAnswer = ICON_CQ_FIX[r.curiousAnswer]; c = true; }
+if (!r.ts) { r.ts = Date.now(); c = true; }
+} catch (e) {}
+return c;
+}
+function normCollapseRange(from, to) {
+let removed = 0;
+const GAP_TEXT = 2500, GAP_MEDIA = 60000;
+try {
+const n = msgs.length;
+for (let i = Math.min(to, n) - 1; i > from; i--) {
+const a = msgs[i], b = msgs[i - 1];
+if (!a || !b || !a.side || a.side !== b.side) continue;
+if (dupSig(a) !== dupSig(b)) continue;
+const hasContent = (a.text && a.text.length) || a.img || a.voice || !!a.special || (a.parts && a.parts.length);
+if (!hasContent) continue;
+const isMedia = !!a.img || !!a.voice || !!a.special;
+const dts = (a.ts || 0) - (b.ts || 0);
+if (dts < 0 || dts > (isMedia ? GAP_MEDIA : GAP_TEXT)) continue;
+msgs.splice(i, 1); removed++;
+}
+} catch (e) {}
+return removed;
+}
+function scheduleDeferredNormalization() {
+if (normTimer) return;
+let pre;
+try { pre = window.activePrefix(); } catch (e) { pre = ''; }
+if (pre === normPrefix) return;
+normPrefix = pre;
+normTimer = setTimeout(runDeferredNormalization, 80);
+}
+function runDeferredNormalization() {
+normTimer = null;
+let myPre;
+try { myPre = window.activePrefix(); } catch (e) { myPre = ''; }
+if (myPre !== normPrefix) { normPrefix = null; return; }
+let idx = 0, changed = false;
+const N = msgs.length;
+if (!N) { normPrefix = null; return; }
+const finish = () => {
+try { if (sysNickCatchup()) changed = true; } catch (e) {}
+normPrefix = null;
+if (!changed) return;
+try { if (window.idbSet) window.idbSet(myPre + ':chat-msgs', JSON.stringify(msgs)); } catch (e) {}
+try { writeLsSnapshot(JSON.stringify(msgs), myPre, true); } catch (e) {}
+try { if (chatVisible() && msgs.length) { renderWindow(false, true); scrollChatBottom(); } } catch (e) {}
+};
+const tick = () => {
+let nowPre;
+try { nowPre = window.activePrefix(); } catch (e) { nowPre = ''; }
+if (nowPre !== normPrefix) { normPrefix = null; return; }
+const end = Math.min(N, idx + NORM_CHUNK);
+for (let i = idx; i < end; i++) { if (normCell(msgs[i])) changed = true; }
+if (normCollapseRange(idx, end + 1, msgs)) changed = true;
+if (end < N) { idx = end; setTimeout(tick, 0); }
+else finish();
+};
+setTimeout(tick, 0);
+}
 function migrateLegacyMediaMsgs() {
 let migrated = false;
 msgs.forEach(r => {
@@ -19857,8 +19962,6 @@ try { msgs = JSON.parse(store.get('chat-msgs') || '[]'); } catch (e) { msgs = []
 if (!Array.isArray(msgs)) msgs = [];
 try { syncLastMineText(); } catch (e) {}
 }
-migrateLegacyMediaMsgs();
-try { if (collapseRapidDups(msgs)) saveMsgs(); } catch (e) {}
 const nowT = Date.now();
 const skipRead = chatDbReady &&
 lastIdbLoadPrefix === window.activePrefix() &&
@@ -19903,20 +20006,29 @@ writeLsSnapshot(JSON.stringify(msgs), myPrefix, true);
 return;
 }
 try {
+__prof('ch0_enter');
 const idbArr = typeof v === 'string' ? JSON.parse(v) : v;
+__prof('ch1_parsed');
 if (!Array.isArray(idbArr)) { chatDbReady = true; return; }
 const sigOf = (m) => { try { return JSON.stringify({ t: m && m.text, s: m && m.side, ts: m && m.ts, i: m && m.img ? (typeof m.img === 'string' ? m.img.slice(0, 32) : String(m.img.length)) : 0 }); } catch (e) { return ''; } };
+const hasLocal = !!((pendingLocal && pendingLocal.length) || (msgs && msgs.length));
+let merged, curArr = pendingLocal || msgs || [];
+let changed = false;
+if (!hasLocal) {
+merged = idbArr;
+} else {
 const idbSigs = new Set();
 idbArr.forEach(x => { if (x) idbSigs.add(sigOf(x)); });
+__prof('ch2_sigset');
 const idbTsSide = new Set(idbArr.map(x => (((x && x.ts) || 0) + '|' + ((x && x.side) || ''))));
+__prof('ch3_tsside');
 const liteResidue = (m) => !!(m && (m._lsLite || m.img === '' || m.voice === ''));
-const localNew = (pendingLocal || msgs || []).filter(m => m && !idbSigs.has(sigOf(m))).filter(m => {
+const localNew = curArr.filter(m => m && !idbSigs.has(sigOf(m))).filter(m => {
 if (!liteResidue(m)) return true;
 return !idbTsSide.has((((m && m.ts) || 0)) + '|' + ((m && m.side) || ''));
 });
 localNew.forEach(m => { try { delete m._lsLite; } catch (e) {} });
-const merged = idbArr.concat(localNew).sort((a, b) => ((a && a.ts || 0) - (b && b.ts || 0)));
-const curArr = pendingLocal || msgs || [];
+merged = idbArr.concat(localNew).sort((a, b) => ((a && a.ts || 0) - (b && b.ts || 0)));
 if (merged.length === curArr.length) {
 curArr.forEach((m, i) => {
 if (!m || i >= merged.length) return;
@@ -19928,17 +20040,16 @@ if (!m || i >= merged.length) return;
 if (!answeredRec(m) || answeredRec(merged[i])) return;
 merged[i] = m;
 });
-let changed = localNew.length > 0 || merged.length !== msgs.length;
+changed = localNew.length > 0 || merged.length !== msgs.length;
 if (!changed && merged.length === msgs.length && msgs.length) {
 changed = msgs.some(m => m && (m.img === '' || m.voice === ''));
 }
+}
 msgs = merged;
-if (merged.length !== curArr.length) sessionChangedIdx.clear();
-if (collapseRapidDups(msgs)) { changed = true; sessionChangedIdx.clear(); }
-migrateLegacyMediaMsgs();
+__prof('ch4_merged');
+if (hasLocal && merged.length !== curArr.length) sessionChangedIdx.clear();
 try { syncLastMineText(); } catch (e) {}
-if (restoreEscapedPokeIcons()) changed = true;
-try { if (sysNickCatchup()) changed = true; } catch (e) {}
+__prof('ch5_passes');
 pendingLocal = null;
 chatDbReady = true;
 authLoadedPrefix = myPrefix;
@@ -19949,58 +20060,22 @@ lastIdbLoadAt = Date.now();
 } catch (e) {}
 try { localStorage.removeItem('xy-home-v2:chat-msgs'); } catch (e) {}
 if (changed) {
+__prof('ch6_save');
 try { if (window.idbSet) window.idbSet(myPrefix + ':chat-msgs', JSON.stringify(msgs)); } catch (e) {}
 try { writeLsSnapshot(JSON.stringify(msgs), myPrefix, true); } catch (e) {}
+__prof('ch7_end');
 if (chatVisible() && chatNearBottom()) {
 renderWindow(false, true);
 scrollChatBottom();
 }
 }
+scheduleDeferredNormalization();
 } catch (e) { /* 解析失败：不置 chatDbReady，下次进入再重试 */ }
 });
 }
 } catch (e) {}
 } // v3.13.x：时间闸跳过全量重读的关闭括号
-{
-const bellSvg = '<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v3M4.2 4.2l2.2 2.2M2 12h3M19 12h3M4.2 19.8l2.2-2.2M17.6 17.6l2.2 2.2"/><path d="M12 6a6 6 0 016 6v4h-3v-4a3 3 0 00-6 0v4H6v-4a6 6 0 016-6z"/><path d="M9 20h6"/></svg>';
-const telSvg = '<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>';
-let iconMigrated = false;
-msgs.forEach(r => {
-if (r && typeof r.text === 'string' && r.text.indexOf(bellSvg) >= 0) {
-r.text = r.text.split(bellSvg).join(telSvg);
-iconMigrated = true;
-}
-});
-if (iconMigrated) saveMsgs();
-}
-{
-const envSvg = '<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>';
-let envMigrated = false;
-msgs.forEach(r => {
-if (r && r.special === 'poke' && typeof r.text === 'string') {
-const t = r.text.replace(/✉️\s*/g, '').replace(/✉\s*/g, '');
-if (t !== r.text) { r.text = envSvg + t; envMigrated = true; }
-}
-});
-if (envMigrated) saveMsgs();
-}
-{
-const CQ_FIX = { '再等等，会遇到我': '再等等，会遇到你', '你身边': '我身边', '只给我看': '只给你看' };
-let cqMigrated = false;
-msgs.forEach(r => {
-if (!r || r.special !== 'ask-curious') return;
-if (Array.isArray(r.curiousQuick)) {
-const fixed = r.curiousQuick.map(o => CQ_FIX[o] || o);
-if (fixed.some((o, i) => o !== r.curiousQuick[i])) { r.curiousQuick = fixed; cqMigrated = true; }
-}
-if (typeof r.curiousAnswer === 'string' && CQ_FIX[r.curiousAnswer]) { r.curiousAnswer = CQ_FIX[r.curiousAnswer]; cqMigrated = true; }
-});
-if (cqMigrated) saveMsgs();
-}
-if (restoreEscapedPokeIcons()) saveMsgs();
-let changed = false;
-msgs.forEach(r => { if (r && !r.ts) { r.ts = Date.now(); changed = true; } });
-if (changed) saveMsgs();
+if (chatDbReady && msgs.length) scheduleDeferredNormalization();
 }
 function escTxt(s) {
 return String(s == null ? '' : s)
@@ -36962,38 +37037,6 @@ if (window.__divActiveDraw) { try { window.__divActiveDraw(); } catch (e) {} win
 const r = document.getElementById('div-result');
 if (r) r.innerHTML = '<div class="div-result-empty">点击上方按钮开始抽牌</div>';
 }
-let divineTarget = '';
-function escHtml(s) {
-return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-}
-function contactsList() {
-try { return (window.getContacts ? window.getContacts() : []) || []; } catch (e) { return []; }
-}
-function targetName(cid) {
-const c = contactsList().filter(x => x && x.id === cid)[0];
-return c ? (c.name || '未命名') : '';
-}
-function renderTargets() {
-const wrap = document.getElementById('div-targets');
-if (!wrap) return;
-const list = contactsList();
-if (divineTarget && !list.some(c => c && c.id === divineTarget)) divineTarget = '';
-let html = '<button class="div-mode div-target' + (divineTarget ? '' : ' sel') + '" data-tcid="">不选对象</button>';
-list.forEach(c => {
-if (!c) return;
-html += '<button class="div-mode div-target' + (divineTarget === c.id ? ' sel' : '') + '" data-tcid="' + escHtml(c.id) + '">' + escHtml(c.name || '未命名') + '</button>';
-});
-wrap.innerHTML = html;
-}
-const targetsWrap = document.getElementById('div-targets');
-if (targetsWrap) {
-targetsWrap.addEventListener('click', (e) => {
-const b = e.target.closest('.div-target');
-if (!b) return;
-divineTarget = b.dataset.tcid || '';
-renderTargets();
-});
-}
 function autoSendGet() { try { return store.get('divine-send-auto') === '1'; } catch (e) { return false; } }
 function autoSendSet(on) { try { store.set('divine-send-auto', on ? '1' : '0'); } catch (e) {} }
 function syncAutoToggle() {
@@ -37205,50 +37248,11 @@ merge(base);
 merge([]);
 }
 }
-let recPendings = [];
-function targetHistSave(cid, rec) {
-if (!cid) return;
-if (!histReady) { recPendings.push({ cid: cid, rec: rec }); return; }
-targetHistMerge(cid, [rec]);
-}
-function targetHistMerge(cid, recs) {
-const targetPrefix = 'xy-home-v2:' + cid;
-const finish = (base) => {
-const merged = base.concat(recs.filter(r => r && r.ts !== undefined));
-merged.sort((a, b) => (b.ts || 0) - (a.ts || 0));
-const have = {};
-const out = [];
-merged.forEach(x => {
-if (!x || x.ts === undefined || have[x.ts]) return;
-have[x.ts] = true; out.push(x);
-});
-try { window.storeFor(cid).set('records-divine', JSON.stringify(out.slice(0, 100))); } catch (e) {}
-};
-if (window.idbGet) {
-window.idbGet(targetPrefix + ':records-divine').then(v => {
-let base = [];
-try { const p = typeof v === 'string' ? JSON.parse(v) : v; if (Array.isArray(p)) base = p; } catch (e) {}
-finish(base);
-}).catch(() => finish([]));
-} else {
-let base = [];
-try { const p = JSON.parse(window.storeFor(cid).get('records-divine') || '[]'); if (Array.isArray(p)) base = p; } catch (e) {}
-finish(base);
-}
-}
-function flushPendingRecs() {
-if (!recPendings.length) return;
-const pendings = recPendings; recPendings = [];
-const byCid = {};
-pendings.forEach(p => { (byCid[p.cid] || (byCid[p.cid] = [])).push(p.rec); });
-Object.keys(byCid).forEach(cid => { try { targetHistMerge(cid, byCid[cid]); } catch (e) {} });
-}
 try {
 document.addEventListener('mochi-restore-done', function () {
 histReady = true;
 migrateLegacyHist();
 flushPendingHist();
-flushPendingRecs();
 try { renderHistory(); } catch (e) {}
 });
 } catch (e) {}
@@ -37377,7 +37381,7 @@ return;
 }
 if (window.__divActiveDraw) { try { window.__divActiveDraw(); } catch (e) {} window.__divActiveDraw = null; }
 const question = ((document.getElementById('div-question') || {}).value || '').trim();
-const snapMode = mode, snapCount = count, snapTarget = divineTarget;
+const snapMode = mode, snapCount = count;
 const deck = snapMode === 'tarot' ? TAROT : LENO;
 if (!deck.length) { r.innerHTML = '<div class="div-result-empty">占卜牌库加载中…</div>'; return; }
 const labels = (MODE_LABELS[snapMode] && MODE_LABELS[snapMode][snapCount]) || [];
@@ -37392,15 +37396,10 @@ window.__divActiveDraw = null;
 drawBtn.textContent = '重新抽牌';
 const summary = buildSummary(cards, snapMode, question);
 renderDrawResult(cards, snapMode, question, summary);
-if (snapTarget) {
-targetHistSave(snapTarget, { ts: Date.now(), mode: snapMode, count: snapCount, question: question, cards: cards, summary: summary, target: targetName(snapTarget) });
-toast('已存入主页 · 占卜记录（' + (targetName(snapTarget) || '对象') + '）');
-} else {
 const list = histLoad();
 list.unshift({ ts: Date.now(), mode: snapMode, count: snapCount, question: question, cards: cards, summary: summary });
 histSave(list);
 renderHistory();
-}
 if (autoSendGet()) {
 const myCid = window.__activeCid || 'default';
 setTimeout(() => { if ((window.__activeCid || 'default') !== myCid) return; sendToChat(snapMode, cards, summary, question); }, 500);
@@ -37434,7 +37433,6 @@ if (phonePage) phonePage.hidden = false;
 }
 function renderHistOnOpen() {
 try { renderHistory(); } catch (e) {}
-try { renderTargets(); } catch (e) {}
 try { syncAutoToggle(); } catch (e) {}
 }
 renderHistOnOpen();
@@ -37458,7 +37456,6 @@ window.divineHistSave = histSave;
 window.divineAutoGet = autoSendGet;
 window.divineAutoSet = autoSendSet;
 window.divineBuildSummary = buildSummary;
-window.divineRenderResult = renderDrawResult;
 window.divineBuildResultText = buildResultText;
 window.divineCopyResultText = copyResultText;
 window.divineSendResult = function (m, cards, summary, question) { sendToChat(m, cards, summary, question); };
@@ -41853,8 +41850,10 @@ const cur = deskFreqMode();
 const wrap = document.getElementById('sf-desk-freq');
 if (!wrap) return;
 wrap.querySelectorAll('.pill').forEach(function (b) {
-b.classList.toggle('on', b.dataset.m === cur);
-b.setAttribute('aria-pressed', b.dataset.m === cur ? 'true' : 'false');
+const on = b.dataset.m === cur;
+b.classList.toggle('on', on);
+b.style.color = on ? 'var(--ink)' : '';
+b.setAttribute('aria-pressed', on ? 'true' : 'false');
 });
 } catch (e) {}
 }
@@ -55513,12 +55512,42 @@ nb.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-wid
 nb.addEventListener('click', openNotifyPop);
 cogEl.parentNode.insertBefore(nb, cogEl);
 }
+function ensureWidgetExtras() {
+var card = document.querySelector('[data-desk-widget="desk-period"]');
+if (!card) return;
+if (!document.getElementById('dpd-phase')) {
+var b = document.createElement('div'); b.id = 'dpd-phase'; b.className = 'dpd-phase';
+b.hidden = true; card.insertBefore(b, card.firstChild);
+}
+if (!document.getElementById('dpd-bar-wrap')) {
+var wrap = document.createElement('div');
+wrap.id = 'dpd-bar-wrap'; wrap.className = 'dpd-bar-wrap'; wrap.hidden = true;
+var cap = document.createElement('div'); cap.className = 'dpd-bar-cap';
+var track = document.createElement('div'); track.className = 'dpd-bar';
+var fill = document.createElement('div'); fill.id = 'dpd-bar-fill'; fill.className = 'dpd-bar-fill';
+track.appendChild(fill); wrap.appendChild(cap); wrap.appendChild(track);
+card.appendChild(wrap);
+}
+}
+function mdLabel(s) { if (!s) return ''; var p = s.split('-'); return (+p[1]) + '/' + (+p[2]); }
 function renderDeskWidget() {
+ensureWidgetExtras();
+var phaseEl = document.getElementById('dpd-phase');
 var labelEl = document.getElementById('dpd-label');
 var daysEl = document.getElementById('dpd-days');
 var subEl = document.getElementById('dpd-sub');
+var barWrap = document.getElementById('dpd-bar-wrap');
+var barFill = document.getElementById('dpd-bar-fill');
 if (!labelEl || !daysEl || !subEl) return;
 var st = status();
+var ph = { txt: '', cls: '' };
+if (st.inPeriod) ph = { txt: '经期', cls: 'phase-period' };
+else if (st.phase === 'fertile') ph = { txt: '排卵期', cls: 'phase-fertile' };
+else if (st.dayOfCycle) ph = { txt: '安全期', cls: 'phase-safe' };
+if (phaseEl) {
+if (ph.txt) { phaseEl.textContent = ph.txt; phaseEl.className = 'dpd-phase ' + ph.cls; phaseEl.hidden = false; }
+else { phaseEl.className = 'dpd-phase'; phaseEl.hidden = true; }
+}
 if (st.inPeriod) {
 labelEl.textContent = '经期第 ' + st.dayOfCycle + ' 天';
 daysEl.textContent = st.dayOfCycle;
@@ -55527,11 +55556,20 @@ subEl.textContent = '注意保暖休息';
 var d = diffDays(todayStr(), st.nextStart);
 labelEl.textContent = '距下次经期';
 daysEl.textContent = d + ' 天';
-subEl.textContent = st.dayOfCycle ? '周期第 ' + st.dayOfCycle + ' 天' : '即将开始';
+subEl.textContent = '预计 ' + mdLabel(st.nextStart) + ' 开始';
 } else {
 labelEl.textContent = '经期';
 daysEl.textContent = '—';
 subEl.textContent = '未记录';
+}
+if (barWrap && barFill && st.dayOfCycle && st.cycleLen) {
+var cap = barWrap.querySelector('.dpd-bar-cap');
+if (cap) cap.textContent = '周期第 ' + st.dayOfCycle + '/' + st.cycleLen + ' 天';
+barWrap.hidden = false;
+var pct = Math.max(3, Math.min(100, st.dayOfCycle / st.cycleLen * 100));
+barFill.style.width = pct + '%';
+} else if (barWrap) {
+barWrap.hidden = true;
 }
 }
 window.periodRenderDeskWidget = renderDeskWidget;
