@@ -2419,6 +2419,10 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + var(--mochi-safe-bottom,
 }
 .sm-f-progress { height:2px; background:rgba(0,0,0,.1); border-radius:2px; overflow:hidden; margin-top:6px; }
 .sm-f-fill { height:100%; width:0; background:#111; border-radius:2px; }
+.sm-f-times {
+  display:flex; justify-content:space-between; margin-top:4px;
+  font-size:10px; color:#999;
+}
 .sm-f-ctrl { display:flex; align-items:center; justify-content:space-between; gap:0; }
 .sm-f-btn {
   position:relative;

@@ -4533,6 +4533,10 @@ white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
 .sm-f-progress { height:2px; background:rgba(0,0,0,.1); border-radius:2px; overflow:hidden; margin-top:6px; }
 .sm-f-fill { height:100%; width:0; background:#111; border-radius:2px; }
+.sm-f-times {
+display:flex; justify-content:space-between; margin-top:4px;
+font-size:10px; color:#999;
+}
 .sm-f-ctrl { display:flex; align-items:center; justify-content:space-between; gap:0; }
 .sm-f-btn {
 position:relative;
@@ -6996,6 +7000,7 @@ radial-gradient(circle at calc(100% - 5px) calc(100% - 5px), rgba(255,255,255,.1
 .sm-float { background:var(--dark-card-97); border-color:rgba(255,255,255,.09); }
 .sm-f-name, .sm-f-btn { color:#ddd; }
 .sm-f-artist { color:#9a9a9a; }
+.sm-f-times { color:#9a9a9a; }
 .sm-f-progress { background:rgba(255,255,255,.12); }
 .sm-f-fill { background:#f0f0f0; }
 .sm-f-play { color:#f0f0f0; }
@@ -8337,9 +8342,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787929019751">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.307</b></span>
-        <span class="sv-deploy">部署于 2026-08-28 22:56<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787929491403">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.308</b></span>
+        <span class="sv-deploy">部署于 2026-08-28 23:04<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9429,7 +9434,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.307</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.308</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -9630,7 +9635,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.307</span>
+              <span class="lic-ver">v3.26.308</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -12867,6 +12872,7 @@ transition-duration: .01ms !important;
     <div class="sm-f-name" id="sm-f-name">正在播放</div>
     <div class="sm-f-artist" id="sm-f-artist">音乐</div>
     <div class="sm-f-progress"><div class="sm-f-fill" id="sm-f-fill"></div></div>
+    <div class="sm-f-times"><span id="sm-f-cur">0:00</span><span id="sm-f-dur">0:00</span></div>
   </div>
   <div class="sm-f-ctrl">
     <button class="sm-f-btn" id="sm-f-mode" title="播放模式"><svg id="sm-f-mode-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6h.01M3 12h.01M3 18h.01"/></svg></button>
@@ -35981,6 +35987,10 @@ const cur = document.getElementById('sm-pb-cur');
 if (cur) cur.textContent = fmtDur(audio.currentTime);
 const fill = document.getElementById('sm-f-fill');
 if (fill) fill.style.width = Math.min(100, audio.currentTime / audio.duration * 100) + '%';
+const fCur = document.getElementById('sm-f-cur');
+if (fCur) fCur.textContent = fmtDur(audio.currentTime);
+const fDur = document.getElementById('sm-f-dur');
+if (fDur) fDur.textContent = fmtDur(audio.duration);
 }, 500);
 }
 function toggle() {
@@ -36354,6 +36364,10 @@ if (!m) return;
 document.getElementById('sm-f-name').textContent = m.name || '未知歌曲';
 const fArtist = document.getElementById('sm-f-artist');
 if (fArtist) fArtist.textContent = m.artist || '';
+const fDur = document.getElementById('sm-f-dur');
+if (fDur) fDur.textContent = fmtDur(m.duration || (audio && audio.duration) || 0);
+const fCur = document.getElementById('sm-f-cur');
+if (fCur) fCur.textContent = '00:00';
 syncPlayIcons(audio && !audio.paused);
 syncHeartIcons();
 }

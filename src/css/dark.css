@@ -739,6 +739,7 @@
   .sm-float { background:var(--dark-card-97); border-color:rgba(255,255,255,.09); }
   .sm-f-name, .sm-f-btn { color:#ddd; }
   .sm-f-artist { color:#9a9a9a; }
+  .sm-f-times { color:#9a9a9a; }
   .sm-f-progress { background:rgba(255,255,255,.12); }
   .sm-f-fill { background:#f0f0f0; }
   .sm-f-play { color:#f0f0f0; }

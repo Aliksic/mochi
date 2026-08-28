@@ -2449,6 +2449,10 @@
       if (cur) cur.textContent = fmtDur(audio.currentTime);
       const fill = document.getElementById('sm-f-fill');
       if (fill) fill.style.width = Math.min(100, audio.currentTime / audio.duration * 100) + '%';
+      const fCur = document.getElementById('sm-f-cur');
+      if (fCur) fCur.textContent = fmtDur(audio.currentTime);
+      const fDur = document.getElementById('sm-f-dur');
+      if (fDur) fDur.textContent = fmtDur(audio.duration);
     }, 500);
   }
   function toggle() {
@@ -2860,6 +2864,10 @@
     document.getElementById('sm-f-name').textContent = m.name || '未知歌曲';
     const fArtist = document.getElementById('sm-f-artist');
     if (fArtist) fArtist.textContent = m.artist || '';
+    const fDur = document.getElementById('sm-f-dur');
+    if (fDur) fDur.textContent = fmtDur(m.duration || (audio && audio.duration) || 0);
+    const fCur = document.getElementById('sm-f-cur');
+    if (fCur) fCur.textContent = '00:00';
     syncPlayIcons(audio && !audio.paused);
     syncHeartIcons();
   }
