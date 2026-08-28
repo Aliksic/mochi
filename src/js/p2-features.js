@@ -2417,7 +2417,7 @@ if (ckRefresh) {
   }
   // 概率触发入口——应用在前台期间每 8 分钟掷一次骰子：
   // 页面可见 + 频率控制（冷却 50 分钟 / 每日最多 4 次，taChime 统一管）
-  // + 基础 22% 概率（深夜 0-6 点降到 8%、清晨 6-9 点 15%，半夜不吵人）；
+  // + 基础 22% 概率（清晨 6-9 点 15%、其余白天 22%；23:00-06:00 静默期直接不发，深更半夜不吵人）；
   // 已打卡达标只按 1/4 概率改发夸奖（偶尔来夸一句不打扰）。实际节奏≈活跃
   // 半小时内第一催、之后至少隔 50 分钟一条、一天最多 4 条。
   // 打开喝水页时 waterMaybeRemind 里还有一次独立判定。
@@ -2425,6 +2425,7 @@ if (ckRefresh) {
   window.waterChimeTick = function () {
     if (document.hidden || editingNow()) return;
     const h = new Date().getHours();
+    if (h >= 23 || h < 6) return; // v3.26.x：23:00-06:00 静默期整天休息，不催喝水
     const base = h < 6 ? 0.08 : (h < 9 ? 0.15 : 0.22);
     const p = waterChatDone() ? base * 0.25 : base;
     if (Math.random() >= p) return;
@@ -2434,6 +2435,7 @@ if (ckRefresh) {
   };
   setInterval(window.waterChimeTick, 8 * 60 * 1000);
   function waterMaybeRemind() {
+    const h = new Date().getHours(); if (h >= 23 || h < 6) return; // v3.26.x：23:00-06:00 静默期，进页面也不催
     const s = curStore(); if (!s) return;
     let last = 0; try { last = parseInt(s.get('water-last-visit') || '0', 10) || 0; } catch (e) {}
     try { s.set('water-last-visit', '' + Date.now()); } catch (e) {}
@@ -2541,7 +2543,9 @@ if (ckRefresh) {
       '</div>' +
       '<div class="eat-switch-overlay" id="eat-switch-overlay" hidden>' +
         '<div class="eat-switch-card glass">' +
-          '<div class="eat-switch-title">转盘选菜单</div>' +
+          '<div class="eat-switch-title">切换菜单</div>' +
+          '<div class="eat-switch-chips" id="eat-switch-chips"></div>' +
+          '<div class="eat-switch-or">或转盘随机选</div>' +
           '<div class="eat-wheel-wrap eat-wheel-wrap-sm"><canvas class="eat-wheel" id="eat-switch-wheel"></canvas><div class="eat-pointer" id="eat-switch-pointer"><svg viewBox="0 0 20 20" width="20" height="20"><polygon points="10,18 3,2 17,2" fill="#e8533d"/></svg></div></div>' +
           '<div class="eat-switch-name" id="eat-switch-name">点下方按钮开始转</div>' +
           '<div class="eat-switch-acts"><button class="eat-switch-cancel" id="eat-switch-cancel">取消</button><button class="eat-switch-go" id="eat-switch-go">开始转</button></div>' +
@@ -2645,9 +2649,30 @@ if (ckRefresh) {
     if (menus.length < 2) { toast('只有 1 个菜单，先在「编辑菜单」里新建更多菜单吧'); return; }
     eatSwitchClear(); eatSwitchInitCanvas(); ov.hidden = false; eatSwAngle = 0;
     eatSwitchDraw(menus.map(m => m.name));
+    eatSwitchRenderChips();
     const nameEl = document.getElementById('eat-switch-name'); if (nameEl) nameEl.textContent = '点下方按钮开始转';
     const goBtn = document.getElementById('eat-switch-go'); if (goBtn) { goBtn.disabled = false; goBtn.textContent = '开始转'; }
   }
+  // 切换浮层·直接选菜单：点 chip 立即切到指定菜单（不用转盘随机）
+  function eatSwitchRenderChips() {
+    const box = document.getElementById('eat-switch-chips'); if (!box) return;
+    const menus = eatMenus(); const cur = eatCurMenuIdx();
+    box.innerHTML = menus.map((m, i) => '<span class="eat-chip' + (i === cur ? ' on' : '') + '" data-i="' + i + '">' + eatEsc(m.name) + '</span>').join('');
+  }
+  function eatSwitchTo(i) {
+    const menus = eatMenus(); if (i < 0 || i >= menus.length) return;
+    if (i === eatCurMenuIdx()) { eatSwitchClose(); return; }
+    const name = menus[i].name;
+    eatSwitchClose();
+    eatSaveCurMenuIdx(i); eatClearSpin(); eatSpinAngle = 0;
+    eatRenderCurName(); eatDrawWheel(eatDishes()); eatLastPick = eatPick(); eatRenderHistory();
+    toast('已切换到「' + name + '」');
+  }
+  document.getElementById('eat-switch-chips').addEventListener('click', (e) => {
+    const t = e.target.closest('.eat-chip'); if (!t) return;
+    const i = parseInt(t.getAttribute('data-i'), 10); if (isNaN(i)) return;
+    eatSwitchTo(i);
+  });
   function eatSwitchClose() { eatSwitchClear(); const ov = document.getElementById('eat-switch-overlay'); if (ov) ov.hidden = true; }
   function eatSwitchSpin() {
     if (eatSwSpinning) return;
@@ -2854,6 +2879,7 @@ if (ckRefresh) {
   function eatRemindMaybe() {
     try {
       if (!window.chatAddIn) return;
+      const h = new Date().getHours(); if (h >= 23 || h < 6) return; // v3.26.x：23:00-06:00 静默期，不提醒吃饭（深更半夜吃饭提醒离谱）
       if (!eatRemindEn()) return;
       const now = new Date(); const mins = now.getHours() * 60 + now.getMinutes();
       const w = EAT_REMIND_WINDOWS.find(x => mins >= x[1] && mins <= x[2]);

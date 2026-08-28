@@ -4720,8 +4720,11 @@
   </div>
 </div>
 
-<!-- 悬浮音乐播放小框（播放时显示，可拖动；两行布局：上行歌名/歌手，下行控制按钮） -->
+<!-- 悬浮音乐播放小框（播放时显示，可拖动；两行布局：上行歌名/歌手，下行控制按钮；右上角可收起为最初版最小单行小框） -->
 <div class="sm-float" id="sm-float" hidden>
+  <button class="sm-f-collapse" id="sm-f-collapse" title="收起为最小小框">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v4a4 4 0 0 1-4 4H3"/><path d="M21 3v4a4 4 0 0 1-4 4h-4"/><path d="M3 21v-4a4 4 0 0 1 4-4h4"/><path d="M21 21v-4a4 4 0 0 0-4-4h-4"/></svg>
+  </button>
   <div class="sm-f-info">
     <div class="sm-f-name" id="sm-f-name">正在播放</div>
     <div class="sm-f-artist" id="sm-f-artist">音乐</div>
@@ -4736,6 +4739,14 @@
     <button class="sm-f-btn" id="sm-f-next" title="下一首"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg></button>
     <button class="sm-f-btn sm-f-heart" id="sm-f-heart" title="收藏">
       <svg id="sm-f-heart-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.5S4.5 15.2 4.5 9.9A4.9 4.9 0 0112 7.1a4.9 4.9 0 017.5 2.8c0 5.3-7.5 10.6-7.5 10.6z"/></svg>
+    </button>
+  </div>
+  <!-- 最小态：最初版最小单行小框（收起后显示，点播放/展开按钮恢复互动） -->
+  <div class="sm-f-mini" id="sm-f-mini">
+    <button class="sm-f-mini-play" id="sm-f-mini-play" title="播放/暂停"><svg id="sm-f-mini-play-ico" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>
+    <div class="sm-f-mini-name" id="sm-f-mini-name">正在播放</div>
+    <button class="sm-f-mini-expand" id="sm-f-mini-expand" title="展开新版小框">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
     </button>
   </div>
 </div>

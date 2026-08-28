@@ -5492,7 +5492,10 @@ function saveEmojiGroupPref() {
 // v3.15.x：mode 一并持久化——每次打开表情包直接落在上次用的模式+分组，不用重复点
 store.set('emoji-last', JSON.stringify({ mode: emojiMode, ta: emojiCurGroup, mine: myCurGroup, pub: pubCurGroup }));
 }
-(function () {
+// v3.26.x：把上次 tab/分组偏好恢复抽成函数，在模块初始化 + 每次打开面板 + 切换联系人时
+// 都用 store 里的 emoji-last 重新落位——确保打开表情包永远落在「上次用的顶部分组 + 上次打开的表情包分组」，
+// 不再因为 idbRestore 晚于模块初始化（回填前读空）或切换联系人后没重读而回退到默认「TA 的表情包」。
+function loadEmojiPref() {
 try {
 const pref = JSON.parse(store.get('emoji-last') || 'null');
 if (pref && typeof pref === 'object') {
@@ -5502,7 +5505,8 @@ if (typeof pref.mine === 'string') myCurGroup = pref.mine;
 if (typeof pref.pub === 'string') pubCurGroup = pref.pub;
 }
 } catch (e) {}
-})();
+}
+loadEmojiPref();
 function myEmojiLoad() {
 try { const v = JSON.parse(myEmojiStore().get('my-emoji-groups') || 'null'); if (Array.isArray(v)) return v; } catch (e) {}
 return [];
@@ -5761,6 +5765,7 @@ updateBatchCount();
 }
 function openEmojiPanel() {
 if (!emojiPanel) return;
+loadEmojiPref(); // v3.26.x：打开即按上次用的顶部分组+分组落位（覆盖 idbRestore 晚到 / 切换联系人未重读的场景）
 reloadMyEmojiFromIdb();
 const pc = document.getElementById('poke-card');
 if (pc) pc.hidden = true;
@@ -5800,6 +5805,7 @@ if (!emojiPanel.hidden) renderEmojiPanel();
 }
 document.addEventListener('contact-switched', function () {
 myGroups = myEmojiLoad();
+loadEmojiPref(); // v3.26.x：切换联系人后按该桌面的上次 tab/分组偏好落位，不复用上一桌面状态
 if (!emojiPanel.hidden) renderEmojiPanel();
 reloadMyEmojiFromIdb();
 });

@@ -42,6 +42,7 @@
   let audio = null;
   let progressTimer = null;
   let floatClosed = false;   // 悬浮小框手动收起
+  let floatMin = false;      // 悬浮小框是否处于最小（最初版最小单行小框）状态
   let taActive = false;      // TA 请求过一起听歌后置 true，歌曲结束 TA 可能接动作
   let cooldownAt = 0;        // TA 音乐请求冷却时间戳
   let reqData = null;        // 待确认的 TA 请求 {trackId}
@@ -2788,7 +2789,7 @@
     const playPath = playing
       ? '<path d="M7 5.5h3.5v13H7zM13.5 5.5H17v13h-3.5z"/>'
       : '<path d="M8 5.5v13l11-6.5z"/>';
-    ['sm-play-ico', 'sm-f-play-ico'].forEach(id => {
+    ['sm-play-ico', 'sm-f-play-ico', 'sm-f-mini-play-ico'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.innerHTML = playPath;
     });
@@ -2855,13 +2856,26 @@
 
   // ================= 悬浮小框 =================
   function isFloatOn() { return settings.floatEn && !floatClosed && currentId && audio; }
+  // 悬浮小框 收起/展开：在新版多行小框 与 最初版最小单行小框 之间切换
+  function applyFloatMin() {
+    const el = document.getElementById('sm-float');
+    if (el) el.classList.toggle('min', floatMin);
+  }
+  function toggleFloatMin() {
+    floatMin = !floatMin;
+    applyFloatMin();
+    syncPlayIcons(audio && !audio.paused);
+  }
   function renderFloat() {
     const el = document.getElementById('sm-float');
     if (!el) return;
     const m = findTrack(currentId);
     el.hidden = !(settings.floatEn && !floatClosed && currentId && audio && m);
+    applyFloatMin();
     if (!m) return;
     document.getElementById('sm-f-name').textContent = m.name || '未知歌曲';
+    const miniName = document.getElementById('sm-f-mini-name');
+    if (miniName) miniName.textContent = m.name || '未知歌曲';
     const fArtist = document.getElementById('sm-f-artist');
     if (fArtist) fArtist.textContent = m.artist || '';
     const fDur = document.getElementById('sm-f-dur');
@@ -3688,6 +3702,13 @@
   if (fNext) fNext.addEventListener('click', next);
   const fQueue = document.getElementById('sm-f-queue');
   if (fQueue) fQueue.addEventListener('click', openQueuePanel);
+  // 悬浮小框 收起/展开（新版多行 ⇄ 最初版最小单行）
+  const fCollapse = document.getElementById('sm-f-collapse');
+  if (fCollapse) fCollapse.addEventListener('click', toggleFloatMin);
+  const fMiniExpand = document.getElementById('sm-f-mini-expand');
+  if (fMiniExpand) fMiniExpand.addEventListener('click', toggleFloatMin);
+  const fMiniPlay = document.getElementById('sm-f-mini-play');
+  if (fMiniPlay) fMiniPlay.addEventListener('click', toggle);
   const fToggle = document.getElementById('music-float-en');
   if (fToggle) {
     fToggle.addEventListener('change', () => {

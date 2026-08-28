@@ -679,10 +679,10 @@ body.cs-time-divider .msg-time-divider { display:flex; }
 .poke-tabs-row .poke-tab.poke-tab-mine.sel {
   background:var(--ink); color:var(--card-bg, #fff); border-color:var(--ink); font-weight:800;
 }
-/* v3.11.x锛氬叕鐢ㄦ媿涓€鎷?tab锛堜笁鍒嗗尯锛夆€斺€旇櫄绾挎弿杈癸紙瀛楀崱搴?鍏变韩璇箟锛屽尯鍒簬鑱旂郴浜?鎴戯級 */
+/* v3.26.x: public poke tab selected - solid fill, unified with mine tab */
 .poke-tabs-row .poke-tab.poke-tab-pub.sel {
-  background:rgba(255,255,255,.92); color:var(--ink); border-color:var(--ink);
-  border-style:dashed; border-width:1.5px; font-weight:800;
+  background:var(--ink); color:var(--card-bg, #fff); border-color:var(--ink); font-weight:800;
+}
 }
 .poke-add-btn {
   flex:0 0 auto; padding:9px 12px; border-radius:11px;

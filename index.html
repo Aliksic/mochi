@@ -1754,8 +1754,8 @@ border-width:1.5px; font-weight:800;
 background:var(--ink); color:var(--card-bg, #fff); border-color:var(--ink); font-weight:800;
 }
 .poke-tabs-row .poke-tab.poke-tab-pub.sel {
-background:rgba(255,255,255,.92); color:var(--ink); border-color:var(--ink);
-border-style:dashed; border-width:1.5px; font-weight:800;
+background:var(--ink); color:var(--card-bg, #fff); border-color:var(--ink); font-weight:800;
+}
 }
 .poke-add-btn {
 flex:0 0 auto; padding:9px 12px; border-radius:11px;
@@ -4520,7 +4520,7 @@ border:1px solid rgba(0,0,0,.08);
 display:flex; flex-direction:column; gap:7px; user-select:none; cursor:grab;
 }
 .sm-float[hidden] { display:none; }
-.sm-f-info { width:100%; min-width:0; }
+.sm-f-info { width:100%; min-width:0; padding-right:18px; }
 .sm-f-name {
 display:block;
 font-size:12px; font-weight:600; color:#333; line-height:1.3;
@@ -4548,6 +4548,34 @@ display:flex; align-items:center; justify-content:center; padding:0; cursor:poin
 .sm-f-play svg { width:15px; height:15px; }
 .sm-f-heart.liked svg { fill:#111; stroke:#111; }
 .sm-f-heart svg { width:15px; height:15px; }
+.sm-f-collapse {
+position:absolute; top:6px; right:6px;
+width:20px; height:20px; border:none; background:transparent; color:#999;
+display:flex; align-items:center; justify-content:center; padding:0; cursor:pointer;
+border-radius:50%;
+}
+.sm-f-collapse:hover { background:rgba(0,0,0,.06); color:#333; }
+.sm-f-collapse svg { width:12px; height:12px; }
+.sm-f-mini { display:none; align-items:center; gap:6px; width:100%; min-width:0; }
+.sm-float.min { flex-direction:row; width:auto; max-width:230px; padding:6px 8px; gap:6px; }
+.sm-float.min .sm-f-info, .sm-float.min .sm-f-ctrl, .sm-float.min .sm-f-collapse { display:none; }
+.sm-float.min .sm-f-mini { display:flex; }
+.sm-f-mini-play {
+flex:0 0 auto; width:22px; height:22px; border:none; background:transparent; color:#333;
+display:flex; align-items:center; justify-content:center; padding:0; cursor:pointer;
+}
+.sm-f-mini-play svg { width:15px; height:15px; }
+.sm-f-mini-name {
+flex:1 1 auto; min-width:0;
+font-size:12px; font-weight:600; color:#333; line-height:1.3;
+white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.sm-f-mini-expand {
+flex:0 0 auto; width:22px; height:22px; border:none; background:transparent; color:#999;
+display:flex; align-items:center; justify-content:center; padding:0; cursor:pointer; border-radius:50%;
+}
+.sm-f-mini-expand:hover { background:rgba(0,0,0,.06); color:#333; }
+.sm-f-mini-expand svg { width:13px; height:13px; }
 .sm-form { margin-bottom:8px; }
 .sm-fld { margin-bottom:10px; }
 .sm-fld label { display:block; font-size:11px; color:var(--muted); margin-bottom:4px; }
@@ -5109,6 +5137,9 @@ border-radius:12px;
 .eat-switch-overlay[hidden] { display:none; }
 .eat-switch-card { width:100%; max-width:300px; padding:20px 18px; border-radius:16px; text-align:center; }
 .eat-switch-title { font-size:16px; font-weight:600; color:var(--ink,#222); margin-bottom:14px; }
+.eat-switch-chips { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-bottom:6px; }
+.eat-switch-chips .eat-chip.on { background:#e8533d; color:#fff; }
+.eat-switch-or { font-size:12px; color:var(--ink-soft,#aaa); margin:2px 0 8px; }
 .eat-switch-name { font-size:20px; font-weight:700; color:var(--ink,#222); min-height:28px; margin:12px 0; transition:opacity .2s; }
 .eat-switch-name.fade { opacity:0; }
 .eat-switch-acts { display:flex; gap:12px; justify-content:center; }
@@ -6745,7 +6776,7 @@ body.cs-time-float .msg-side .msg-time { background:rgba(255,255,255,.10); }
 .rp-send { background:var(--btn-bg); color:var(--btn-ink); }
 .rp-side.sel, .rp-amt.sel { background:var(--btn-bg); color:var(--btn-ink); border-color:var(--btn-bg); }
 .poke-tabs-row .poke-tab { border-color:var(--dark-border-12); background:var(--dark-hover); color:var(--dark-soft); }
-.poke-tabs-row .poke-tab.poke-tab-pub.sel { background:var(--dark-card); }
+.poke-tabs-row .poke-tab.poke-tab-pub.sel { background:var(--ink); color:#111; border-color:var(--ink); }
 .poke-add-btn { border-color:rgba(255,255,255,.3); background:var(--dark-hover); color:var(--dark-soft); }
 .my-mg-panel .mg-row .mg-rn { border-color:var(--dark-border-12); background:var(--dark-card); color:var(--dark-soft); }
 .emoji-grid, #emoji-list .emoji-grid { background:rgba(40,40,40,.92); border-color:rgba(255,255,255,.08); }
@@ -7005,6 +7036,12 @@ radial-gradient(circle at calc(100% - 5px) calc(100% - 5px), rgba(255,255,255,.1
 .sm-f-fill { background:#f0f0f0; }
 .sm-f-play { color:#f0f0f0; }
 .sm-f-heart.liked svg { fill:#ff8ab3; stroke:#ff8ab3; }
+.sm-f-collapse { color:#9a9a9a; }
+.sm-f-collapse:hover { background:var(--dark-hover); color:#ddd; }
+.sm-f-mini-play { color:#f0f0f0; }
+.sm-f-mini-name { color:#ddd; }
+.sm-f-mini-expand { color:#9a9a9a; }
+.sm-f-mini-expand:hover { background:var(--dark-hover); color:#ddd; }
 .sm-req-ico { background:var(--static-bg); color:#ccc; }
 .pong-diff, .snake-diff { border-color:var(--dark-border-12); background:var(--static-bg); }
 .pong-sound, .pong-icon-btn, .snake-icon-btn { background:var(--dark-hover); }
@@ -8342,9 +8379,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787929491403">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.308</b></span>
-        <span class="sv-deploy">部署于 2026-08-28 23:04<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787932058685">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.309</b></span>
+        <span class="sv-deploy">部署于 2026-08-28 23:47<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9434,7 +9471,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.308</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.309</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -9635,7 +9672,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.308</span>
+              <span class="lic-ver">v3.26.309</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -12866,8 +12903,11 @@ transition-duration: .01ms !important;
   </div>
 </div>
 
-<!-- 悬浮音乐播放小框（播放时显示，可拖动；两行布局：上行歌名/歌手，下行控制按钮） -->
+<!-- 悬浮音乐播放小框（播放时显示，可拖动；两行布局：上行歌名/歌手，下行控制按钮；右上角可收起为最初版最小单行小框） -->
 <div class="sm-float" id="sm-float" hidden>
+  <button class="sm-f-collapse" id="sm-f-collapse" title="收起为最小小框">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v4a4 4 0 0 1-4 4H3"/><path d="M21 3v4a4 4 0 0 1-4 4h-4"/><path d="M3 21v-4a4 4 0 0 1 4-4h4"/><path d="M21 21v-4a4 4 0 0 0-4-4h-4"/></svg>
+  </button>
   <div class="sm-f-info">
     <div class="sm-f-name" id="sm-f-name">正在播放</div>
     <div class="sm-f-artist" id="sm-f-artist">音乐</div>
@@ -12882,6 +12922,14 @@ transition-duration: .01ms !important;
     <button class="sm-f-btn" id="sm-f-next" title="下一首"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg></button>
     <button class="sm-f-btn sm-f-heart" id="sm-f-heart" title="收藏">
       <svg id="sm-f-heart-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.5S4.5 15.2 4.5 9.9A4.9 4.9 0 0112 7.1a4.9 4.9 0 017.5 2.8c0 5.3-7.5 10.6-7.5 10.6z"/></svg>
+    </button>
+  </div>
+  <!-- 最小态：最初版最小单行小框（收起后显示，点播放/展开按钮恢复互动） -->
+  <div class="sm-f-mini" id="sm-f-mini">
+    <button class="sm-f-mini-play" id="sm-f-mini-play" title="播放/暂停"><svg id="sm-f-mini-play-ico" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>
+    <div class="sm-f-mini-name" id="sm-f-mini-name">正在播放</div>
+    <button class="sm-f-mini-expand" id="sm-f-mini-expand" title="展开新版小框">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
     </button>
   </div>
 </div>
@@ -25564,7 +25612,7 @@ myGroups = myEmojiLoad();
 function saveEmojiGroupPref() {
 store.set('emoji-last', JSON.stringify({ mode: emojiMode, ta: emojiCurGroup, mine: myCurGroup, pub: pubCurGroup }));
 }
-(function () {
+function loadEmojiPref() {
 try {
 const pref = JSON.parse(store.get('emoji-last') || 'null');
 if (pref && typeof pref === 'object') {
@@ -25574,7 +25622,8 @@ if (typeof pref.mine === 'string') myCurGroup = pref.mine;
 if (typeof pref.pub === 'string') pubCurGroup = pref.pub;
 }
 } catch (e) {}
-})();
+}
+loadEmojiPref();
 function myEmojiLoad() {
 try { const v = JSON.parse(myEmojiStore().get('my-emoji-groups') || 'null'); if (Array.isArray(v)) return v; } catch (e) {}
 return [];
@@ -25833,6 +25882,7 @@ updateBatchCount();
 }
 function openEmojiPanel() {
 if (!emojiPanel) return;
+loadEmojiPref(); // v3.26.x：打开即按上次用的顶部分组+分组落位（覆盖 idbRestore 晚到 / 切换联系人未重读的场景）
 reloadMyEmojiFromIdb();
 const pc = document.getElementById('poke-card');
 if (pc) pc.hidden = true;
@@ -25872,6 +25922,7 @@ if (!emojiPanel.hidden) renderEmojiPanel();
 }
 document.addEventListener('contact-switched', function () {
 myGroups = myEmojiLoad();
+loadEmojiPref(); // v3.26.x：切换联系人后按该桌面的上次 tab/分组偏好落位，不复用上一桌面状态
 if (!emojiPanel.hidden) renderEmojiPanel();
 reloadMyEmojiFromIdb();
 });
@@ -33948,6 +33999,7 @@ let mode = 'list';         // list / shuffle / single
 let audio = null;
 let progressTimer = null;
 let floatClosed = false;   // 悬浮小框手动收起
+let floatMin = false;      // 悬浮小框是否处于最小（最初版最小单行小框）状态
 let taActive = false;      // TA 请求过一起听歌后置 true，歌曲结束 TA 可能接动作
 let cooldownAt = 0;        // TA 音乐请求冷却时间戳
 let reqData = null;        // 待确认的 TA 请求 {trackId}
@@ -36297,7 +36349,7 @@ function syncPlayIcons(playing) {
 const playPath = playing
 ? '<path d="M7 5.5h3.5v13H7zM13.5 5.5H17v13h-3.5z"/>'
 : '<path d="M8 5.5v13l11-6.5z"/>';
-['sm-play-ico', 'sm-f-play-ico'].forEach(id => {
+['sm-play-ico', 'sm-f-play-ico', 'sm-f-mini-play-ico'].forEach(id => {
 const el = document.getElementById(id);
 if (el) el.innerHTML = playPath;
 });
@@ -36355,13 +36407,25 @@ cover.classList.remove('has-cover');
 if (m && m.neteaseId && !m.cover) ensureSongCover(m);
 }
 function isFloatOn() { return settings.floatEn && !floatClosed && currentId && audio; }
+function applyFloatMin() {
+const el = document.getElementById('sm-float');
+if (el) el.classList.toggle('min', floatMin);
+}
+function toggleFloatMin() {
+floatMin = !floatMin;
+applyFloatMin();
+syncPlayIcons(audio && !audio.paused);
+}
 function renderFloat() {
 const el = document.getElementById('sm-float');
 if (!el) return;
 const m = findTrack(currentId);
 el.hidden = !(settings.floatEn && !floatClosed && currentId && audio && m);
+applyFloatMin();
 if (!m) return;
 document.getElementById('sm-f-name').textContent = m.name || '未知歌曲';
+const miniName = document.getElementById('sm-f-mini-name');
+if (miniName) miniName.textContent = m.name || '未知歌曲';
 const fArtist = document.getElementById('sm-f-artist');
 if (fArtist) fArtist.textContent = m.artist || '';
 const fDur = document.getElementById('sm-f-dur');
@@ -37110,6 +37174,12 @@ const fNext = document.getElementById('sm-f-next');
 if (fNext) fNext.addEventListener('click', next);
 const fQueue = document.getElementById('sm-f-queue');
 if (fQueue) fQueue.addEventListener('click', openQueuePanel);
+const fCollapse = document.getElementById('sm-f-collapse');
+if (fCollapse) fCollapse.addEventListener('click', toggleFloatMin);
+const fMiniExpand = document.getElementById('sm-f-mini-expand');
+if (fMiniExpand) fMiniExpand.addEventListener('click', toggleFloatMin);
+const fMiniPlay = document.getElementById('sm-f-mini-play');
+if (fMiniPlay) fMiniPlay.addEventListener('click', toggle);
 const fToggle = document.getElementById('music-float-en');
 if (fToggle) {
 fToggle.addEventListener('change', () => {
@@ -50985,6 +51055,7 @@ return false;
 window.waterChimeTick = function () {
 if (document.hidden || editingNow()) return;
 const h = new Date().getHours();
+if (h >= 23 || h < 6) return; // v3.26.x：23:00-06:00 静默期整天休息，不催喝水
 const base = h < 6 ? 0.08 : (h < 9 ? 0.15 : 0.22);
 const p = waterChatDone() ? base * 0.25 : base;
 if (Math.random() >= p) return;
@@ -50994,6 +51065,7 @@ waterTaChatSend();
 };
 setInterval(window.waterChimeTick, 8 * 60 * 1000);
 function waterMaybeRemind() {
+const h = new Date().getHours(); if (h >= 23 || h < 6) return; // v3.26.x：23:00-06:00 静默期，进页面也不催
 const s = curStore(); if (!s) return;
 let last = 0; try { last = parseInt(s.get('water-last-visit') || '0', 10) || 0; } catch (e) {}
 try { s.set('water-last-visit', '' + Date.now()); } catch (e) {}
@@ -51092,7 +51164,9 @@ eatPage.innerHTML =
 '</div>' +
 '<div class="eat-switch-overlay" id="eat-switch-overlay" hidden>' +
 '<div class="eat-switch-card glass">' +
-'<div class="eat-switch-title">转盘选菜单</div>' +
+'<div class="eat-switch-title">切换菜单</div>' +
+'<div class="eat-switch-chips" id="eat-switch-chips"></div>' +
+'<div class="eat-switch-or">或转盘随机选</div>' +
 '<div class="eat-wheel-wrap eat-wheel-wrap-sm"><canvas class="eat-wheel" id="eat-switch-wheel"></canvas><div class="eat-pointer" id="eat-switch-pointer"><svg viewBox="0 0 20 20" width="20" height="20"><polygon points="10,18 3,2 17,2" fill="#e8533d"/></svg></div></div>' +
 '<div class="eat-switch-name" id="eat-switch-name">点下方按钮开始转</div>' +
 '<div class="eat-switch-acts"><button class="eat-switch-cancel" id="eat-switch-cancel">取消</button><button class="eat-switch-go" id="eat-switch-go">开始转</button></div>' +
@@ -51194,9 +51268,29 @@ const menus = eatMenus();
 if (menus.length < 2) { toast('只有 1 个菜单，先在「编辑菜单」里新建更多菜单吧'); return; }
 eatSwitchClear(); eatSwitchInitCanvas(); ov.hidden = false; eatSwAngle = 0;
 eatSwitchDraw(menus.map(m => m.name));
+eatSwitchRenderChips();
 const nameEl = document.getElementById('eat-switch-name'); if (nameEl) nameEl.textContent = '点下方按钮开始转';
 const goBtn = document.getElementById('eat-switch-go'); if (goBtn) { goBtn.disabled = false; goBtn.textContent = '开始转'; }
 }
+function eatSwitchRenderChips() {
+const box = document.getElementById('eat-switch-chips'); if (!box) return;
+const menus = eatMenus(); const cur = eatCurMenuIdx();
+box.innerHTML = menus.map((m, i) => '<span class="eat-chip' + (i === cur ? ' on' : '') + '" data-i="' + i + '">' + eatEsc(m.name) + '</span>').join('');
+}
+function eatSwitchTo(i) {
+const menus = eatMenus(); if (i < 0 || i >= menus.length) return;
+if (i === eatCurMenuIdx()) { eatSwitchClose(); return; }
+const name = menus[i].name;
+eatSwitchClose();
+eatSaveCurMenuIdx(i); eatClearSpin(); eatSpinAngle = 0;
+eatRenderCurName(); eatDrawWheel(eatDishes()); eatLastPick = eatPick(); eatRenderHistory();
+toast('已切换到「' + name + '」');
+}
+document.getElementById('eat-switch-chips').addEventListener('click', (e) => {
+const t = e.target.closest('.eat-chip'); if (!t) return;
+const i = parseInt(t.getAttribute('data-i'), 10); if (isNaN(i)) return;
+eatSwitchTo(i);
+});
 function eatSwitchClose() { eatSwitchClear(); const ov = document.getElementById('eat-switch-overlay'); if (ov) ov.hidden = true; }
 function eatSwitchSpin() {
 if (eatSwSpinning) return;
@@ -51393,6 +51487,7 @@ if (care.length && window.chatAddIn) { try { window.chatAddIn(care[Math.floor(Ma
 function eatRemindMaybe() {
 try {
 if (!window.chatAddIn) return;
+const h = new Date().getHours(); if (h >= 23 || h < 6) return; // v3.26.x：23:00-06:00 静默期，不提醒吃饭（深更半夜吃饭提醒离谱）
 if (!eatRemindEn()) return;
 const now = new Date(); const mins = now.getHours() * 60 + now.getMinutes();
 const w = EAT_REMIND_WINDOWS.find(x => mins >= x[1] && mins <= x[2]);

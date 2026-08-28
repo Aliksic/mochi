@@ -1,4 +1,34 @@
-# 本次构建者：AI-A（本会话，2026-08-29，用户指示强制刷新部署：重建+推送含 AI-B 未提交的 查看存储/删除方案预选 等 pending 改动；sw: mochi-mtd2rwx3，version.json ts=1787929019751，哨兵27/27+verify10/10，已提交推送）
+# 本次构建者：AI-A（本会话，2026-08-29，吃什么切菜单直选 + 喝水/吃饭 23:00-06:00 静默期；sw: mochi-mtd3e495，哨兵29/29 + verify-eat-menus 14/14，已构建，未提交）
+### 2026-08-29（音乐悬浮小框：右上角新增「继续缩小」按钮，可在「新版多行小框 ⇄ 最初版最小单行小框」间切换；已随最新构建 mochi-mtd3e495 收口）
+- [AI-A 域 + 跨域 template.html/dark.css/build.mjs（AI-B，理由：悬浮小框结构加最小态 + 暗色同步 + 哨兵 needle 修正）]（**已改 src/template.html + src/js/music-player.js（AI-A）+ src/css/chat-pages.css（AI-A）+ src/css/dark.css（AI-B，跨域：补最小态暗色）+ build.mjs（修正 poke-tab-pub.sel 哨兵 needle 的空格匹配）；构建状态：源码已保存，已被并行构建 sw: mochi-mtd3e495 包含，哨兵 29/29**）。
+- 需求：悬浮音乐小框右上角增加「继续缩小」按钮，收起为最初版最小单行小框；在最小小框里点按钮恢复新版多行小框。
+- 方案：`.sm-float` 右上角新增收起按钮 `#sm-f-collapse`（minimize 图标）；内部新增最小态 `.sm-f-mini`（播放/暂停 + 歌名 + 展开按钮 `#sm-f-mini-expand`）。`.sm-float.min` 时隐藏新版 info/ctrl、改为单行最小态。JS 增 `floatMin` 状态 + `toggleFloatMin/applyFloatMin`，renderFloat 同步最小态歌名，syncPlayIcons 覆盖最小态播放图标。
+- 验证：node --check 通过；本会话构建哨兵 28/28、verify 10/10；临时无头功能测试 9/9（收起→.min 类 + 最小态 flex + 新版隐藏；展开→恢复）。临时脚本已删。
+- 待对方处理：无。
+### 2026-08-29（表情包面板打开时回退到「TA 的表情包」；已改源码，未构建）
+- [跨域改动 src/js/chat.js（AI-A 文件），理由：用户报「每次打开聊天表情包都显示在 ta 的表情包，应落在上次用的顶部分组+上次打开的表情包分组」；构建状态：未构建，待构建者收口**。
+- 根因：`emoji-last` 偏好只在模块初始化读一次（idbRestore 晚到会读空→默认 ta），且切换联系人后不重读，导致常回退到「TA 的表情包」tab。
+- 方案：把偏好恢复抽成 `loadEmojiPref()`，除模块初始化外，`openEmojiPanel()` 每次打开前、`contact-switched` 切换联系人时都重新从 `store` 的 `emoji-last` 落位（mode + ta/mine/pub 分组），保证打开永远落在上次 tab+分组。
+- 验证：node --check chat.js 通过；未构建，待收口实测：切到某 tab 选某分组→关掉再开落在该 tab+分组；切联系人后按该桌面各自偏好。
+### 2026-08-29（吃什么「切换菜单」可直接选指定菜单，不再只能转盘随机；已构建 sw: mochi-mtd3e495，未提交）
+- [AI-A 域 + 跨域 build.mjs/FIX-REGRESSION.md（双方可写，理由：回归哨兵 + 清单）]（**已改 src/js/p2-features.js（切换浮层新增 chips 直选）+ src/css/chat-pages.css（.eat-switch-chips/.eat-switch-or）+ build.mjs（FIX_SENTINELS 第 167 行）+ FIX-REGRESSION.md（第 30 条）+ tools/verify-eat-menus.mjs（新增 T8）；已构建 sw: mochi-mtd3e495，node --check + verify-eat-menus 14/14 通过，未提交**）。
+- 需求/反馈：「吃什么功能里 无法切换菜单，切换菜单是转盘，无法切换到我要选的菜单再使用转盘」。
+- 根因：`#eat-switch-menu` 只打开「转盘选菜单」浮层，只能随机转选菜单，无法直接选到指定菜单再用转盘抽菜。
+- 方案：切换浮层（`eat-switch-overlay`）标题改「切换菜单」，转盘上方新增 `#eat-switch-chips` 菜单 chip 列表（当前菜单高亮）；点任一 chip 即 `eatSwitchTo(i)` 直接切到该菜单（取消残留旋转、重画该菜单转盘、重抽今日菜），转盘保留为「或转盘随机选」。`.eat-chip.on` 在该浮层内用主题红 `#e8533d`。
+- 验证：verify-eat-menus 14/14（T8 覆盖直选 chips 渲染+点 chip 切换）；未提交，待用户确认提交/推送。
+### 2026-08-29（拍一拍「公用拍一拍」tab 选中态去虚线，与旁边 tab 统一；已改源码，未构建）
+- [AI-A 域 + 跨域 dark.css/build.mjs（AI-B，理由：dark 模式同规则同步 + 回归哨兵）]（**已改 src/css/chat-main.css + src/css/dark.css + build.mjs（FIX_SENTINELS 加哨兵）+ FIX-REGRESSION.md（加第29行）；构建状态：未构建，待构建者收口**）。
+- 需求/反馈：用户再报「聊天里的拍一拍页面，公用拍一拍依旧是虚线的 ui，和旁边不一样」。
+- 根因：`chat-main.css` `.poke-tabs-row .poke-tab.poke-tab-pub.sel` 是 v3.11.x 有意加的虚线描边（字卡库/共享语义），与「我的/TA」两个 tab 的实心选中不一致；dark.css 对应只改了背景，仍沿用虚线。
+- 方案：pub 选中态去掉 `border-style:dashed`，改实心填充（与「我的拍一拍」`.sel` 同款 `--ink` 底+白字）；dark.css 同步实心（`--ink` 底 + 深字 `#111`）。build.mjs 新增哨兵 `poke-tab-pub.sel{background:var(--ink)`；FIX-REGRESSION 增第 29 条。
+- 验证：CSS 语法与 mine.sel 规则一致；未构建，待收口后实测：拍一拍面板选中「公用拍一拍」时不显示虚线、观感与「我的拍一拍」一致（另见 WORKLOG 底部 2026-08-25 神态：表情包面板虚线系浏览器聚焦框非样式，已单独修；本次是拍一拍面板特意设计的虚线，用户明确要求取消）。
+### 2026-08-29（喝水/吃饭提醒：23:00-06:00 静默期统一禁止触发；已构建 sw: mochi-mtd38ij4，未提交）
+- [AI-A 域]（**已改 src/js/p2-features.js；构建状态：已构建 sw: mochi-mtd38ij4，未提交待用户确认**）。
+- 需求/反馈：① 喝水提醒在晚上十一点到早上六点不应触发（没人这个点喝水）；② 吃饭提醒也会在晚上十一点触发，离谱。
+- 根因：喝水侧 `waterChimeTick`/`waterMaybeRemind` 没有时间硬闸（深夜只降概率仍会发）；吃饭侧 `EAT_REMIND_WINDOWS` 含「宵夜」窗 [21:30, 23:30]，23:00 落在窗内概率触发。
+- 方案：两功能统一加 `const h = new Date().getHours(); if (h >= 23 || h < 6) return;` 静默硬闸——`waterChimeTick`（前台定时掷骰）、`waterMaybeRemind`（进喝水页独立判定）、`eatRemindMaybe`（饭点窗口轮询，靨夜宵窗只保留 21:30-23:00，23:00 后不再清奇）。同步更新概率注释。
+- 验证：node --check 通过；构建哨兵 27/27；verify-eat-remind 16/16（运行时补丁定格 18:30 晚餐窗，不在静默期内，触发/去重/开关/UI 全正常）。未提交，待用户提交推送。
+- 待对方处理：无。⚠️本次构建顺带把另一 pending `M src/css/chat-main.css`（对方未提交改动）一并打进了产物，若该项未完成请留意。
 ### 2026-08-29（强制刷新部署：重建并推送最新构建，覆盖荣耀200pro/Edge 上报"系统字卡朋友圈/写信使用、我方发语音不保存"。—— 职责核查结论：当前源码与线上发布的持久化逻辑均正常（无头 Edge 复现：刷新/完全关浏览器重开/预污染IDB+丢LS 三场景均正确保存）；判为设备 PWA/SW 缓存停留在旧包，故仅重建换新 sw 缓存名 mochi-mtd2rwx3 + 新 version.json 时间戳强制设备拉新，无需改源码。若强刷后仍复现，需用户提供设备上"版本/构建时间"进一步定位）
 ### 2026-08-29（聊天美化方案删除：已修复+重构建+已提交推送；sw: mochi-mtd2qu8r，哨兵27/27，verify 10/10）
 - [AI-A 域 + 跨域 personalize.js]（**已改 src/js/chat-settings.js（AI-A）+ src/js/personalize.js（AI-B，跨域桌面删除同因同修）；构建状态：已构建 sw: mochi-mtd2qu8r，已提交并推送**）。

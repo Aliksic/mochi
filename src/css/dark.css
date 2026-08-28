@@ -463,7 +463,7 @@
   .rp-send { background:var(--btn-bg); color:var(--btn-ink); }
   .rp-side.sel, .rp-amt.sel { background:var(--btn-bg); color:var(--btn-ink); border-color:var(--btn-bg); }
   .poke-tabs-row .poke-tab { border-color:var(--dark-border-12); background:var(--dark-hover); color:var(--dark-soft); }
-  .poke-tabs-row .poke-tab.poke-tab-pub.sel { background:var(--dark-card); }
+  .poke-tabs-row .poke-tab.poke-tab-pub.sel { background:var(--ink); color:#111; border-color:var(--ink); }
   .poke-add-btn { border-color:rgba(255,255,255,.3); background:var(--dark-hover); color:var(--dark-soft); }
   .my-mg-panel .mg-row .mg-rn { border-color:var(--dark-border-12); background:var(--dark-card); color:var(--dark-soft); }
   .emoji-grid, #emoji-list .emoji-grid { background:rgba(40,40,40,.92); border-color:rgba(255,255,255,.08); }
@@ -744,6 +744,12 @@
   .sm-f-fill { background:#f0f0f0; }
   .sm-f-play { color:#f0f0f0; }
   .sm-f-heart.liked svg { fill:#ff8ab3; stroke:#ff8ab3; }
+  .sm-f-collapse { color:#9a9a9a; }
+  .sm-f-collapse:hover { background:var(--dark-hover); color:#ddd; }
+  .sm-f-mini-play { color:#f0f0f0; }
+  .sm-f-mini-name { color:#ddd; }
+  .sm-f-mini-expand { color:#9a9a9a; }
+  .sm-f-mini-expand:hover { background:var(--dark-hover); color:#ddd; }
   .sm-req-ico { background:var(--static-bg); color:#ccc; }
 
   /* ---- chat-pages.css 补齐：小游戏/桌面浮字/喝水/吃饭/番茄钟/存钱罐 ---- */
