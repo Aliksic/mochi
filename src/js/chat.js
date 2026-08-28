@@ -779,6 +779,28 @@ return { text, kaomoji, emoji, sticker, image, voice, poke };
 }
 // v3.27.x：暴露给番茄钟陪伴模式复用——让陪伴中的 TA 使用与普通聊天一致的字卡池回复
 window.getPool = getPool;
+// v3.26.x：回复字卡池诊断——「联系人一直只发【收到～】」报障时直接定位：池子各类型数量、
+// 自定义字卡总数、默认字卡三个开关，打进设置→复制诊断信息的【数据】节。省去依赖用户手数。
+window.__replyPoolDiag = function () {
+  try {
+    const P = getPool();
+    const cfg = (window.defaultCardCfg && window.defaultCardCfg()) || {};
+    const customRaw = (window.getCustomCards && window.getCustomCards()) || [];
+    return [
+      '池text=' + P.text.length,
+      'kaomoji=' + P.kaomoji.length,
+      'emoji=' + P.emoji.length,
+      'sticker=' + P.sticker.length,
+      'image=' + P.image.length,
+      'voice=' + P.voice.length,
+      'poke=' + P.poke.length,
+      '自定义字卡=' + customRaw.length,
+      '默认总开关=' + cfg.enabled,
+      '聊天使用=' + (window.defaultCardUse ? window.defaultCardUse('chat') : '?'),
+      '主字卡=' + (window.defaultCardCat ? window.defaultCardCat('main') : '?')
+    ].join(' / ');
+  } catch (e) { return '诊断出错:' + e.message; }
+};
 function fmtTime(ts) {
 if (!ts) return '';
 const d = new Date(ts);

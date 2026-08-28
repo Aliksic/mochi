@@ -1,13 +1,24 @@
 # 本次构建者：AI-B（本会话，2026-08-29，收口【查看存储】+ 累积未构建项：设置查看存储/诊断IndexedDB大键/收到~兜底/更新条ack-ts 等；sw: mochi-mtd1qpft，待用户确认提交推送）
+### 2026-08-28 22:42（【查看存储】分类补全：覆盖全部功能 + 分类行可展开看键名；已改源码，未构建）
+- [AI-B 域]（**已改 src/js/personalize.js（catOf 全量归类 + lsStats/idbStats 收集键名 + renderCatTable 可展开行 + 点击事件委托）+ src/css/setting.css（.storage-cat-line/.storage-cat-keys 展开样式）+ src/template.html（明细卡提示文案加「点击分类行可展开查看键名」）；构建状态：未构建（node --check 已过、工具脚本 162 个代表键分类全过），待构建者收口**）。
+- 需求/反馈：用户问「我的功能非常多啊，你确定是全部」——担心【查看存储】各功能占用明细没覆盖到全部功能。
+- 方案：① catOf 从 8 类扩到约 30 类，逐一覆盖 45+ 个 JS 文件里的所有业务键：聊天记录/群聊记录/备忘录/查岗TA互动/定位轨迹/日历每日留言/字卡回复收藏/占卜/信箱/朋友圈/本地音乐/纪念统计档案/帮我决定/记账/经期/花园/房间/漂流瓶/礼物红包/梦角档案/钓鱼/小游戏/头像昵称/聊天设置/桌面美化壁纸/通话音效/全屏/后台保持通知/后台同步缓存/自动备份快照/数据索引/错误诊断记录/联系人桌面/系统设置/设置与其他；全局诊断/备份/索引/系统键（__diag-*、__auto-backup-snapshot、__big-idx、psync-*、ver-update-ack-ts 等）与 cid 命名空间（default:xxx）都归位；特殊处理 incoming-last: 根键多段名与 memo-app-（须先于日历 memo- 规则）。② 各分类行点击可展开，列出该分类下前 20 个具体存储键名，用于用户核对是否覆盖到位。
+- 验证：node --check personalize.js 通过；临时脚本 tools/tmp-catof-test.mjs 对 162 个代表键断言全部通过（已删除）。待构建者收口后实测：设置→查看存储→各功能占用明细出现 30+ 分类；点击任一分行走展开键名；清理错误诊断记录不受影响。
+### 2026-08-29（占卜抽牌支持选择对象：可选桌面联系人/不选，选了存进该对象主页「占卜记录」；已改源码，未构建）
+- [AI-A 域]（**已改 src/js/divination.js + src/css/chat-pages.css（.div-targets 样式已存在无需新增）；构建状态：未构建（node --check 已过），待构建者收口**）。
+- 需求/反馈：塔罗抽牌还是无法选择对象。要求①抽牌可选现有桌面联系人，或**不选**；②选了对象后，对该联系人的占卜记录存入该联系人的主页「占卜记录」。
+- 方案：启用模板里已存在的 `#div-targets` 占卜对象选择器——`renderTargets()` 渲染「不选对象」+全部联系人按钮（`getContacts()`），选中态走 `store` 动态键 `divine-target` 随桌面独立记忆；抽牌完成 `onDone` 里：记录对象快照 `snapTarget`（防流程中切换跑偏），记录补 `target` 名，并 `saveToHomeHistory(record, snapTarget)`（选中→写该对象 `storeFor(cid)` 的 `records-divine`，不选→写当前桌面），主页页签 `divine` 读取 `records-divine` 已由 records.js 就绪。切换/改名联系人时刷新选择器。
+- 验证：node --check divination.js 通过；未构建，待构建者收口后实测：占卜页出现「不选对象+联系人」行并可点击选中；抽牌后切到对应联系人桌面→主页→占卜记录可见「为 X 占卜」。
+- 需构建者：本轮收口时把 divination.js 一并纳入。
 ### 2026-08-29（构建收口【查看存储】+ 累积未构建项）
 - [AI-B 域]（**已构建·sw 版本 mochi-mtd1qpft：哨兵 27/27 全部在位、verify 10/10 通过、index.html 含 row-storage-view/page-storage/st-clear-err/mochiRefreshDiagBadge；本次构建包含累积的「查看存储」「诊断IndexedDB大键」「收到~兜底」「更新条ack-ts」等已完成改动；未提交，待用户确认提交/推送**）。
 ### 2026-08-29（联系人一直/重复发【收到~】：聊天回复硬编码兜底改小型通用池；已改源码，未构建）
-- [AI-A 域]（**已改 src/js/chat.js（聊天回复最后兜底——原 `pick(pool.text) || '收到～'` 改为 `|| pick(FALLBACK_REPLY_POOL)`，新增 8 句通用兜底池随机抽）；构建状态：未构建（node --check chat.js 通过），未提交**）。
+- [AI-A 域]（**已改 src/js/chat.js：① 兜底单条「收到～」改小型通用池随机抽（FALLBACK_REPLY_POOL）；② 新增 window.__replyPoolDiag 回复字卡池诊断；【跨域改动 src/js/device.js:802 在【数据】节追加一行读 __replyPoolDiag（device.js 归 AI-B，理由：诊断信息是唯一用户可回传的报障面，需要把回复池为空原因带进来）；另已改 src/js/default-cards-data.js 尾部：把 7 句兜底通用语入「系统预设字卡→主字卡」新增分组『兜底通用语』，node+沙箱验证 main=275 分组含该组；文件归属、node --check 均通过；构建状态：未构建，未提交**）。
 - 需求/反馈：用户反馈某联系人突然一直发同一个字卡【收到~】，退出重进也不管用。
-- 根因：该联系人的 `pool.text` 为空（该桌面自定义字卡库无字卡 + 默认字卡「主字卡/聊天使用」开关关闭）时，`genReplyText` 每句回复都命中单条硬编码「收到～」，故机械复读；且 `getDefaultCards` 也因开关关掉每次返回空，无法覆盖。
+- 根因：TA 每次回复都命中文档硬编码「收到～」兜底，说明回复时 `pool.text` 为空。初步判定为设置/数据问题，但用户反馈该联系人【字卡库有字卡】且默认字卡「主字卡/聊天使用」都开着——与「池为空」矛盾，指向加载/读取路径不一致（groups 缓存或作用域 desync），待 __replyPoolDiag 诊断确凿定位后再修。
 - 方案：兜底不再用单条常量，改用小型通用回复池随机抽（收到～/好呀/好～/嗯嗯/知道啦/好哒/嗯嗯，我在听），避免复读同句。
 - 验证：node --check chat.js 通过；未构建。待收口实测：某联系人无可用字卡时回复变多样、不再只发「收到～」。
-- 待用户自理：该联系人字卡空是数据/设置问题而非仅代码——请检查该联系人的【字卡库】是否有字卡、默认字卡【聊天使用/主字卡】是否被关。
+- 待用户自理：已确认该联系人字卡库有字卡且默认字卡开关均开，无需再自查；请等版本更新后复制诊断信息（含新增的「回复字卡池」字段）回传，据此定位加载不一致的真因。
 ### 2026-08-29（设置新增【查看存储】：查看全站功能占用 + 手动清理错误诊断记录；已改源码，未构建）
 - [AI-B 域]（**已改 src/template.html（设置页新增「查看存储」行 + 独立页 page-storage）+ src/css/setting.css（.storage-* 样式）+ src/js/personalize.js（统计/明细/清理/导航逻辑）+ src/js/device.js（暴露 window.mochiRefreshDiagBadge 供清理后角标归零）；构建状态：未构建（node --check personalize.js / device.js 已过、template 标签配平 OK），待构建者收口**）。
 - 需求/反馈：用户问「存储配额已用 1.x GB 怎么会那么大」，要求设置里新增【查看存储】：查看网站全部功能使用的内存，并可手动清理错误内存信息。
@@ -41,6 +52,13 @@
 - 需求：手机桌面美化里【导出美化方案】目前只能导出当前设置，需可选是导出哪个已保存方案。
 - 方案：把导出拆成「先选方案 → 再选导出方式」两步——抽出 `startBeautyExport(data)` 复用原文件/文字二选一；点击行后如有保存方案，先弹窗列出「当前设置 + 各已保存方案」（方案名作胶囊），选定后回调，无保存方案时直接走当前设置导出（`collectBeautyFull()`）。方案数据 `s.data` 已含 accent/theme，导出与"保存方案"用的同一份完整数据。
 - 验证：node --check personalize.js 通过；未构建，待构建者收口后实测：点击导出→有方案时出现方案选择弹窗、选某方案后进入文件/文字导出、无方案时直接导出当前设置。
+### 2026-08-29（聊天设置→聊天美化方案 新增导出/导入；导出可选导出哪个方案；已改源码，未构建）
+- [AI-A 域]（**已改 src/js/chat-settings.js；构建状态：未构建（node --check 已过），待构建者收口**）。
+- 需求：聊天设置的美化→聊天美化方案里也要能导出/导入美化方案，且【导出美化方案】需可选是导出哪个方案。
+- 方案：在聊天美化方案管理器（openChatBeautySchemes）列表下方加「导出方案 / 导入方案」两个并排按钮。
+  - 导出：`chatSchemeExport()` 先弹窗选「当前设置 / 各已保存方案」，选定后再走文件/文字二选一（`doExport`，JSON=纯数据键）；无方案时直接导出当前设置（`collectChatBeauty()`）。与桌面美化导出一致。
+  - 导入：`chatSchemeImport()` 复用 openModal textarea + txtImport，JSON.parse 校验后 `applyChatBeautyData(data)` 应用到当前聊天并刷新管理器。
+- 验证：node --check chat-settings.js 通过；未构建，待构建者收口后实测：管理器出现导出/导入按钮、导出可选方案、导入粘贴/选文件后聊天立即生效。
 ### 2026-08-29（漂流瓶【我也放一个】按钮重叠：确认已随 HEAD 0130783 提交，无新增待构建改动）
 - [AI-A 域核对]（**src/css/drift-bottle.css + src/template.html 的 .d-actions 并排动作行方案已存在于 HEAD 0130783（把 #d-put 从列表底部上移与 #drift-pick 并排，.d-list 补 flex:none）；工作区与 HEAD 一致（git diff 为空），无需再构建**）。
 - 复核：tools/verify-drift-bottle.mjs **38/38 无回归**；无头 390×844 确认 put 底=310 < list 顶=387 无重叠、长列表可完整滚动到底。

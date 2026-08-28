@@ -776,6 +776,73 @@
     b.addEventListener('click', fn);
     return b;
   }
+  // v3.26.x：聊天美化方案导出——先选「当前设置 / 某个已保存方案」，再走文件/文字（与桌面美化导出一致）
+  function chatSchemeExport() {
+    const schemes = getChatSchemes();
+    const doExport = (data) => {
+      const json = JSON.stringify(data);
+      if (!window.openModal) { toast('导出失败'); return; }
+      window.openModal('导出聊天美化方案', '', (v) => {
+        if (v === 'file') {
+          try {
+            const blob = new Blob([json], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'mochi聊天美化方案-' + new Date().toISOString().slice(0, 10) + '.json';
+            document.body.appendChild(a); a.click();
+            setTimeout(() => { try { document.body.removeChild(a); URL.revokeObjectURL(url); } catch (e) {} }, 1000);
+            toast('已导出聊天美化方案文件');
+          } catch (e) { toast('导出文件失败'); }
+        } else if (v === 'text') {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(json).then(() => toast('已复制到剪贴板，发给对方粘贴导入')).catch(() => toast('复制失败，请改用导出文件'));
+          } else { toast('剪贴板不可用，请改用导出文件'); }
+        }
+      }, {
+        noInput: true,
+        staticText: '选择导出方式：\n· 导出文件：生成 .json 文件，可保存或发送\n· 复制文字：复制配置文本，发给对方粘贴导入',
+        pills: [
+          { label: '导出文件', value: 'file' },
+          { label: '复制文字', value: 'text' },
+        ],
+      });
+    };
+    // 无已保存方案时直接导出当前设置
+    if (!schemes.length || !window.openModal) { doExport(collectChatBeauty()); return; }
+    const pills = [{ label: '当前设置', value: 'current' }]
+      .concat(schemes.map((s, i) => ({ label: s.name || ('方案' + (i + 1)), value: 'sch_' + i })));
+    window.openModal('导出聊天美化方案', '', (v) => {
+      let data;
+      if (v && v.indexOf('sch_') === 0) {
+        const i = parseInt(String(v).slice(4), 10);
+        const s = schemes[i];
+        if (!s) { toast('未找到该方案'); return; }
+        data = s.data || {};
+      } else {
+        data = collectChatBeauty();
+      }
+      doExport(data);
+    }, {
+      noInput: true,
+      staticText: '选择要导出的聊天美化方案：\n· 当前设置：导出当前正在使用的聊天美化\n· 已保存方案：导出对应方案（含气泡/壁纸/字体）',
+      pills: pills,
+    });
+  }
+  // v3.26.x：聊天美化方案导入——粘贴文本/选文件 → 校验 → 应用到当前聊天（与桌面美化导入一致）
+  function chatSchemeImport() {
+    if (!window.openModal) return;
+    window.openModal('导入聊天美化方案', '', (v) => {
+      if (!v || !v.trim()) return;
+      try {
+        const data = JSON.parse(v.trim());
+        if (typeof data !== 'object' || Array.isArray(data)) { toast('格式错误'); return; }
+        applyChatBeautyData(data);
+        toast('已导入，当前聊天立即生效');
+        window.openChatBeautySchemes();
+      } catch (e) { toast('解析失败，请检查文本'); }
+    }, { textarea: true, textareaPlaceholder: '粘贴对方导出的聊天美化方案文本，或点下方「从文件导入」选择 .json 文件', txtImport: true });
+  }
   // v3.25.x：方案缩略图——按方案数据渲染迷你聊天气泡预览
   function chatSchemeThumb(data) {
     data = data || {};
@@ -951,6 +1018,13 @@
       list.appendChild(row);
     });
     box.appendChild(list);
+    // v3.26.x：导出/导入聊天美化方案
+    const opera = document.createElement('div');
+    opera.style.cssText = 'display:flex;gap:8px;margin-bottom:8px';
+    const exBtn = mkBtn('导出方案', 'flex:1;padding:10px;border:1px solid var(--card-border,#ddd);border-radius:10px;background:var(--btn-cancel-bg,#fafafa);color:var(--ink,#111);font-size:13px;font-weight:600', () => chatSchemeExport());
+    const imBtn = mkBtn('导入方案', 'flex:1;padding:10px;border:1px solid var(--card-border,#ddd);border-radius:10px;background:var(--btn-cancel-bg,#fafafa);color:var(--ink,#111);font-size:13px;font-weight:600', () => chatSchemeImport());
+    opera.appendChild(exBtn); opera.appendChild(imBtn);
+    box.appendChild(opera);
     const save = document.createElement('button');
     save.textContent = '+ 保存当前为方案';
     save.style.cssText = 'width:100%;padding:12px;border:none;border-radius:10px;background:var(--ink,#111);color:var(--bg-b,#fff);font-size:14px;font-weight:600';

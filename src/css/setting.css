@@ -113,10 +113,15 @@
 .storage-row { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:7px 0; font-size:13px; color:var(--ink); }
 .storage-row b { font-weight:600; font-size:12.5px; text-align:right; flex-shrink:0; }
 .storage-hint { font-size:11px; color:var(--muted); line-height:1.6; margin-top:8px; }
-.storage-cat-row { display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid rgba(0,0,0,.05); font-size:13px; }
+.storage-cat-row { padding:9px 0; border-bottom:1px solid rgba(0,0,0,.05); font-size:13px; }
 .storage-cat-row:last-child { border-bottom:none; }
+.storage-cat-line { display:flex; align-items:center; gap:10px; }
 .storage-cat-name { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--ink); }
 .storage-cat-num { font-size:11px; color:var(--muted); flex-shrink:0; }
 .storage-cat-size { font-weight:600; font-size:12.5px; flex-shrink:0; color:var(--ink); }
+.storage-cat-row.has-keys { cursor:pointer; -webkit-tap-highlight-color:transparent; }
+.storage-cat-row.has-keys:active { opacity:.7; }
+.storage-cat-keys { display:none; margin:6px 0 2px; font-size:10.5px; color:var(--muted); line-height:1.7; word-break:break-all; }
+.storage-cat-row.open .storage-cat-keys { display:block; }
 .storage-clear { display:block; width:100%; margin-top:12px; padding:12px; border:none; border-radius:14px; background:var(--ink); color:var(--bg-b,#fff); font-size:14px; font-weight:600; font-family:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent; }
 .storage-clear:active { opacity:.85; }

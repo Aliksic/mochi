@@ -6317,11 +6317,16 @@ font-family:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent;
 .storage-row { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:7px 0; font-size:13px; color:var(--ink); }
 .storage-row b { font-weight:600; font-size:12.5px; text-align:right; flex-shrink:0; }
 .storage-hint { font-size:11px; color:var(--muted); line-height:1.6; margin-top:8px; }
-.storage-cat-row { display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid rgba(0,0,0,.05); font-size:13px; }
+.storage-cat-row { padding:9px 0; border-bottom:1px solid rgba(0,0,0,.05); font-size:13px; }
 .storage-cat-row:last-child { border-bottom:none; }
+.storage-cat-line { display:flex; align-items:center; gap:10px; }
 .storage-cat-name { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--ink); }
 .storage-cat-num { font-size:11px; color:var(--muted); flex-shrink:0; }
 .storage-cat-size { font-weight:600; font-size:12.5px; flex-shrink:0; color:var(--ink); }
+.storage-cat-row.has-keys { cursor:pointer; -webkit-tap-highlight-color:transparent; }
+.storage-cat-row.has-keys:active { opacity:.7; }
+.storage-cat-keys { display:none; margin:6px 0 2px; font-size:10.5px; color:var(--muted); line-height:1.7; word-break:break-all; }
+.storage-cat-row.open .storage-cat-keys { display:block; }
 .storage-clear { display:block; width:100%; margin-top:12px; padding:12px; border:none; border-radius:14px; background:var(--ink); color:var(--bg-b,#fff); font-size:14px; font-weight:600; font-family:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent; }
 .storage-clear:active { opacity:.85; }
 .tabbar {
@@ -8332,9 +8337,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787927283785">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.305</b></span>
-        <span class="sv-deploy">部署于 2026-08-28 22:28<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787928258291">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.306</b></span>
+        <span class="sv-deploy">部署于 2026-08-28 22:44<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9424,7 +9429,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.305</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.306</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -9446,7 +9451,7 @@ transition-duration: .01ms !important;
         <div class="cal-card glass">
           <div class="cal-card-title">各功能占用明细</div>
           <div id="st-cat"><div class="storage-hint">正在统计，请稍候…</div></div>
-          <div class="storage-hint">大小按 UTF-8 字节估算；聊天/头像/背景等大键会在 IndexedDB 与 localStorage 双写，两处之和为该功能实际占用。</div>
+          <div class="storage-hint">大小按 UTF-8 字节估算；聊天/头像/背景等大键会在 IndexedDB 与 localStorage 双写，两处之和为该功能实际占用。<b>点击任一分类行可展开查看该分类下的具体存储键名</b>，用于核对是否覆盖到所有功能。</div>
         </div>
         <div class="cal-card glass">
           <div class="cal-card-title">错误诊断记录</div>
@@ -9625,7 +9630,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.305</span>
+              <span class="lic-ver">v3.26.306</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -13560,6 +13565,7 @@ if (k && k.indexOf(G) === 0) n++;
 }
 L.push('localStorage 数据键=' + n + ' 个');
 } catch (e) { L.push('localStorage 不可访问'); }
+try { if (window.__replyPoolDiag) L.push('回复字卡池：' + window.__replyPoolDiag()); } catch (e2) {}
 try {
 let total = 0;
 const items = [];
@@ -19785,12 +19791,44 @@ if (!tail) return '其他';
 if (tail.indexOf('__diag-') === 0) return '错误诊断记录';
 if (tail.indexOf('music-file:') >= 0) return '本地音乐';
 if (tail.indexOf('__auto-backup-snapshot') >= 0) return '自动备份快照';
+if (tail.indexOf('__last-backup-remind') >= 0) return '系统设置';
+if (tail.indexOf('__last-backup') >= 0) return '自动备份快照';
+if (tail.indexOf('psync-') >= 0) return '后台同步缓存';
+if (tail.indexOf('__big-idx') >= 0 || tail.indexOf('__ls-dirty') >= 0) return '数据索引';
+if (/^(__layout-pref|ver-update-ack-ts|__edge-backup-hint-done|__quota_probe__)$/.test(tail)) return '系统设置';
+if (/^(contacts|active-contact|migrated-v1)$/.test(tail)) return '联系人/桌面';
+if (/^incoming-last:/.test(tail)) return '查岗/TA互动';
 const m = /^(?:[^:]+:)?(.*)$/.exec(tail);
 const base = m ? m[1] : tail;
 if (base === 'chat-msgs') return '聊天记录';
-if (/^avatar-(lib|me-lib)$/.test(base)) return '头像库';
-if (/^(phone-bg|wallpaper|chat-bg|page-bg|desk-bg|bg)$/.test(base)) return '壁纸/背景';
-if (/^(cc-groups|default-cards|quote-cards|mood-|reply-|fav-|ta-)/.test(base)) return '字卡/回复';
+if (base === 'group-chat-msgs') return '群聊记录';
+if (/^memo-app-/.test(base)) return '备忘录';
+if (base === 'reply-settings' || base === 'chat-settings') return '聊天设置';
+if (/^(ta-checkin|checkin-|ckq-|incoming-|desk-checkin-en|desk-call-en|desk-freq-mode|ta-ask|ta-invite|ti-last-id|ta-cc-state|interact-card-last|invite-ask-history|reply-gc-)/.test(base)) return '查岗/TA互动';
+if (/^(loc-|loc-lib-|loc-sense)/.test(base)) return '定位/轨迹';
+if (/^(cal-|first-use-date|quote-history|memo-|today-mood-|mood-history|memo-history|day-fish-|day-work-)/.test(base)) return '日历/每日留言';
+if (/^(cc-groups|cc-groups-public|default-cards|quote-cards|reply-|fav-|ta-mood|poke-|emoji-|my-emoji-groups|rps-score|mh-|rc-enabled|mc-enabled|chat-count)/.test(base)) return '字卡/回复/收藏';
+if (/^divine-/.test(base)) return '占卜';
+if (/^mail-/.test(base)) return '信箱';
+if (/^feed-/.test(base)) return '朋友圈';
+if (/^(records-|anniversary|myarc|myarc-cur)/.test(base)) return '纪念/统计/档案';
+if (/^(decision-|gdec-)/.test(base)) return '帮我决定';
+if (/^accounting-/.test(base)) return '记账';
+if (/^period-/.test(base)) return '经期';
+if (/^(garden-|plant-)/.test(base)) return '花园';
+if (base === 'room-data') return '房间';
+if (/^drift-/.test(base)) return '漂流瓶';
+if (/^(gift-|giftbox|rp-|market-|wallet)/.test(base)) return '礼物/红包';
+if (/^cjian-/.test(base)) return '梦角档案';
+if (/^fishing-/.test(base)) return '钓鱼';
+if (/^(brick-|c4-|ms-|ml2_coin|pong-|snake-|memory-|breakout-)/.test(base)) return '小游戏';
+if (/^music-/.test(base)) return '音乐';
+if (/^(avatar-|cs-avatar-|lbl-)/.test(base)) return '头像/昵称';
+if (/^(cs-|sysmsg-|more-|desk-msg-en|chat-unread|hide-ta-sticker)/.test(base)) return '聊天设置';
+if (/^(phone-bg|page-bg|card-bg|desk-bg|desk-image-src-|chat-bg|wallpaper|widget-|bg-blur|bg-mask-op|beauty-|chat-beauty-schemes|theme-mode|accent-color|desk-images|desk-texts|desk-countdowns)/.test(base)) return '桌面美化/壁纸';
+if (/^(call-|sfx-)/.test(base)) return '通话/音效';
+if (/^(fullscreen-|fs-edge-guard)/.test(base)) return '全屏';
+if (/^(bg-keepalive|bg-notify)/.test(base)) return '后台保持/通知';
 return '设置与其他';
 }
 function lsStats() {
@@ -19803,8 +19841,9 @@ if (!k || k.indexOf(G) !== 0) continue;
 const sz = (k.length + String(localStorage.getItem(k) || '').length) * 2;
 total += sz; count++;
 const c = catOf(k.slice(G.length));
-if (!cats[c]) cats[c] = { n: 0, size: 0 };
+if (!cats[c]) cats[c] = { n: 0, size: 0, keys: [] };
 cats[c].n++; cats[c].size += sz;
+if (cats[c].keys.length < 20) cats[c].keys.push(k);
 }
 } catch (e) {}
 return { cats: cats, total: total, count: count };
@@ -19816,8 +19855,9 @@ const cats = {};
 const list = (keys || []).filter(function (k) { return String(k || '').indexOf(G) === 0; });
 list.forEach(function (k) {
 const c = catOf(String(k).slice(G.length));
-if (!cats[c]) cats[c] = { n: 0, size: 0 };
+if (!cats[c]) cats[c] = { n: 0, size: 0, keys: [] };
 cats[c].n++;
+if (cats[c].keys.length < 20) cats[c].keys.push(String(k));
 });
 const measure = function (v) {
 let sz = 0;
@@ -19858,23 +19898,30 @@ const all = {};
 const add = function (map) {
 if (!map) return;
 Object.keys(map).forEach(function (c) {
-if (!all[c]) all[c] = { n: 0, size: 0 };
+if (!all[c]) all[c] = { n: 0, size: 0, keys: [] };
 all[c].n += map[c].n; all[c].size += map[c].size;
+(map[c].keys || []).forEach(function (kk) { if (all[c].keys.length < 20) all[c].keys.push(kk); });
 });
 };
 add(lsCats); add(idbCats);
 const rows = Object.keys(all).map(function (c) {
-return { name: c, n: all[c].n, size: all[c].size };
+return { name: c, n: all[c].n, size: all[c].size, keys: all[c].keys };
 }).sort(function (a, b) { return b.size - a.size; });
 el.innerHTML = '';
 if (!rows.length) { el.innerHTML = '<div class="storage-hint">暂未统计到数据。</div>'; return; }
 rows.forEach(function (r) {
 const d = document.createElement('div');
-d.className = 'storage-cat-row';
-d.innerHTML = '<span class="storage-cat-name"></span><span class="storage-cat-num"></span><span class="storage-cat-size"></span>';
+d.className = 'storage-cat-row' + (r.keys && r.keys.length ? ' has-keys' : '');
+d.innerHTML = '<div class="storage-cat-line"><span class="storage-cat-name"></span><span class="storage-cat-num"></span><span class="storage-cat-size"></span></div>';
 d.querySelector('.storage-cat-name').textContent = r.name;
 d.querySelector('.storage-cat-num').textContent = r.n + ' 键';
 d.querySelector('.storage-cat-size').textContent = fmtBytes(r.size);
+if (r.keys && r.keys.length) {
+const sub = document.createElement('div');
+sub.className = 'storage-cat-keys';
+sub.textContent = r.keys.join('、');
+d.appendChild(sub);
+}
 el.appendChild(d);
 });
 }
@@ -19953,6 +20000,14 @@ back.addEventListener('click', function () {
 document.querySelectorAll('.page').forEach(function (p) { p.hidden = true; });
 const setPage = document.getElementById('page-setting');
 if (setPage) setPage.hidden = false;
+});
+}
+const stCat = document.getElementById('st-cat');
+if (stCat) {
+stCat.addEventListener('click', function (ev) {
+const row = ev.target && ev.target.closest ? ev.target.closest('.storage-cat-row.has-keys') : null;
+if (!row) return;
+row.classList.toggle('open');
 });
 }
 })();
@@ -20906,6 +20961,26 @@ eg.forEach(g => (g[1] || []).forEach(c => { if (isOff && isOff('emoji', c)) retu
 return { text, kaomoji, emoji, sticker, image, voice, poke };
 }
 window.getPool = getPool;
+window.__replyPoolDiag = function () {
+try {
+const P = getPool();
+const cfg = (window.defaultCardCfg && window.defaultCardCfg()) || {};
+const customRaw = (window.getCustomCards && window.getCustomCards()) || [];
+return [
+'池text=' + P.text.length,
+'kaomoji=' + P.kaomoji.length,
+'emoji=' + P.emoji.length,
+'sticker=' + P.sticker.length,
+'image=' + P.image.length,
+'voice=' + P.voice.length,
+'poke=' + P.poke.length,
+'自定义字卡=' + customRaw.length,
+'默认总开关=' + cfg.enabled,
+'聊天使用=' + (window.defaultCardUse ? window.defaultCardUse('chat') : '?'),
+'主字卡=' + (window.defaultCardCat ? window.defaultCardCat('main') : '?')
+].join(' / ');
+} catch (e) { return '诊断出错:' + e.message; }
+};
 function fmtTime(ts) {
 if (!ts) return '';
 const d = new Date(ts);
@@ -31353,6 +31428,70 @@ b.style.cssText = css;
 b.addEventListener('click', fn);
 return b;
 }
+function chatSchemeExport() {
+const schemes = getChatSchemes();
+const doExport = (data) => {
+const json = JSON.stringify(data);
+if (!window.openModal) { toast('导出失败'); return; }
+window.openModal('导出聊天美化方案', '', (v) => {
+if (v === 'file') {
+try {
+const blob = new Blob([json], { type: 'application/json' });
+const url = URL.createObjectURL(blob);
+const a = document.createElement('a');
+a.href = url;
+a.download = 'mochi聊天美化方案-' + new Date().toISOString().slice(0, 10) + '.json';
+document.body.appendChild(a); a.click();
+setTimeout(() => { try { document.body.removeChild(a); URL.revokeObjectURL(url); } catch (e) {} }, 1000);
+toast('已导出聊天美化方案文件');
+} catch (e) { toast('导出文件失败'); }
+} else if (v === 'text') {
+if (navigator.clipboard && navigator.clipboard.writeText) {
+navigator.clipboard.writeText(json).then(() => toast('已复制到剪贴板，发给对方粘贴导入')).catch(() => toast('复制失败，请改用导出文件'));
+} else { toast('剪贴板不可用，请改用导出文件'); }
+}
+}, {
+noInput: true,
+staticText: '选择导出方式：\n· 导出文件：生成 .json 文件，可保存或发送\n· 复制文字：复制配置文本，发给对方粘贴导入',
+pills: [
+{ label: '导出文件', value: 'file' },
+{ label: '复制文字', value: 'text' },
+],
+});
+};
+if (!schemes.length || !window.openModal) { doExport(collectChatBeauty()); return; }
+const pills = [{ label: '当前设置', value: 'current' }]
+.concat(schemes.map((s, i) => ({ label: s.name || ('方案' + (i + 1)), value: 'sch_' + i })));
+window.openModal('导出聊天美化方案', '', (v) => {
+let data;
+if (v && v.indexOf('sch_') === 0) {
+const i = parseInt(String(v).slice(4), 10);
+const s = schemes[i];
+if (!s) { toast('未找到该方案'); return; }
+data = s.data || {};
+} else {
+data = collectChatBeauty();
+}
+doExport(data);
+}, {
+noInput: true,
+staticText: '选择要导出的聊天美化方案：\n· 当前设置：导出当前正在使用的聊天美化\n· 已保存方案：导出对应方案（含气泡/壁纸/字体）',
+pills: pills,
+});
+}
+function chatSchemeImport() {
+if (!window.openModal) return;
+window.openModal('导入聊天美化方案', '', (v) => {
+if (!v || !v.trim()) return;
+try {
+const data = JSON.parse(v.trim());
+if (typeof data !== 'object' || Array.isArray(data)) { toast('格式错误'); return; }
+applyChatBeautyData(data);
+toast('已导入，当前聊天立即生效');
+window.openChatBeautySchemes();
+} catch (e) { toast('解析失败，请检查文本'); }
+}, { textarea: true, textareaPlaceholder: '粘贴对方导出的聊天美化方案文本，或点下方「从文件导入」选择 .json 文件', txtImport: true });
+}
 function chatSchemeThumb(data) {
 data = data || {};
 const inBg = data['cs-in-bg'] || '#ffffff';
@@ -31523,6 +31662,12 @@ row.appendChild(btns);
 list.appendChild(row);
 });
 box.appendChild(list);
+const opera = document.createElement('div');
+opera.style.cssText = 'display:flex;gap:8px;margin-bottom:8px';
+const exBtn = mkBtn('导出方案', 'flex:1;padding:10px;border:1px solid var(--card-border,#ddd);border-radius:10px;background:var(--btn-cancel-bg,#fafafa);color:var(--ink,#111);font-size:13px;font-weight:600', () => chatSchemeExport());
+const imBtn = mkBtn('导入方案', 'flex:1;padding:10px;border:1px solid var(--card-border,#ddd);border-radius:10px;background:var(--btn-cancel-bg,#fafafa);color:var(--ink,#111);font-size:13px;font-weight:600', () => chatSchemeImport());
+opera.appendChild(exBtn); opera.appendChild(imBtn);
+box.appendChild(opera);
 const save = document.createElement('button');
 save.textContent = '+ 保存当前为方案';
 save.style.cssText = 'width:100%;padding:12px;border:none;border-radius:10px;background:var(--ink,#111);color:var(--bg-b,#fff);font-size:14px;font-weight:600';
@@ -32605,6 +32750,10 @@ window.DEFAULT_CARD_DATA.deskcheck = [
 "被喜欢的人查岗，是件幸福的事。"
 ]]
 ];
+if (window.DEFAULT_CARD_DATA && Array.isArray(window.DEFAULT_CARD_DATA.main) &&
+!window.DEFAULT_CARD_DATA.main.some(function (g) { return g && g[0] === '兜底通用语'; })) {
+window.DEFAULT_CARD_DATA.main.push(['兜底通用语', ['收到～', '好呀', '好～', '嗯嗯', '知道啦', '好哒', '嗯嗯，我在听']]);
+}
 } catch (__e) { try { console.error("[JS] default-cards-data.js", __e && __e.message || __e); } catch (x) {} if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
 (function () { try {
 (function () {
@@ -37821,6 +37970,59 @@ function syncAutoToggle() {
 const el = document.getElementById('div-auto-send');
 if (el) el.checked = autoSendGet();
 }
+let targetCid = '';
+function escDiv(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+function targetGet() {
+try {
+const cid = store.get('divine-target') || '';
+if (!cid || cid === 'default') return '';
+const contacts = (window.getContacts ? window.getContacts() : []) || [];
+return contacts.some(c => c && c.id === cid) ? cid : '';
+} catch (e) { return ''; }
+}
+function targetSet(cid) { try { store.set('divine-target', cid || ''); } catch (e) {} }
+function targetNameOf(cid) {
+try {
+const contacts = (window.getContacts ? window.getContacts() : []) || [];
+const c = contacts.find(x => x && x.id === cid);
+return c ? (c.name || c.id || '') : '';
+} catch (e) { return ''; }
+}
+function renderTargets() {
+const wrap = document.getElementById('div-targets');
+if (!wrap) return;
+targetCid = targetGet();
+const contacts = (window.getContacts ? window.getContacts() : []) || [];
+let html = '<button class="div-mode' + (targetCid ? '' : ' sel') + '" data-cid="">不选对象</button>';
+contacts.forEach(c => {
+const id = (c && c.id) || '';
+if (!id) return;
+html += '<button class="div-mode' + (targetCid === id ? ' sel' : '') + '" data-cid="' + escDiv(id) + '">' + escDiv(c.name || id) + '</button>';
+});
+wrap.innerHTML = html;
+wrap.querySelectorAll('.div-mode').forEach(b => {
+b.addEventListener('click', () => {
+wrap.querySelectorAll('.div-mode').forEach(x => x.classList.remove('sel'));
+b.classList.add('sel');
+targetCid = b.dataset.cid || '';
+targetSet(targetCid);
+});
+});
+}
+function saveToHomeHistory(record, targetCid2) {
+try {
+const targetStore = targetCid2 ? (window.storeFor ? window.storeFor(targetCid2) : null) : null;
+const st = targetStore || store;
+let list = [];
+try { list = JSON.parse(st.get('records-divine') || '[]'); } catch (e) { list = []; }
+if (!Array.isArray(list)) list = [];
+list.unshift(record);
+try { st.set('records-divine', JSON.stringify(list)); } catch (e) {}
+if (targetStore === store) {
+try { if (window.renderDivinePanel) window.renderDivinePanel(); } catch (e) {}
+}
+} catch (e) {}
+}
 function startDivineDraw(stageEl, opts) {
 const deck = shuf(opts.deck || []);
 const count = Math.max(1, parseInt(opts.count, 10) || 1);
@@ -38160,6 +38362,7 @@ return;
 if (window.__divActiveDraw) { try { window.__divActiveDraw(); } catch (e) {} window.__divActiveDraw = null; }
 const question = ((document.getElementById('div-question') || {}).value || '').trim();
 const snapMode = mode, snapCount = count;
+const snapTarget = targetCid;
 const deck = snapMode === 'tarot' ? TAROT : LENO;
 if (!deck.length) { r.innerHTML = '<div class="div-result-empty">占卜牌库加载中…</div>'; return; }
 const labels = (MODE_LABELS[snapMode] && MODE_LABELS[snapMode][snapCount]) || [];
@@ -38175,9 +38378,12 @@ drawBtn.textContent = '重新抽牌';
 const summary = buildSummary(cards, snapMode, question);
 renderDrawResult(cards, snapMode, question, summary);
 const list = histLoad();
-list.unshift({ ts: Date.now(), mode: snapMode, count: snapCount, question: question, cards: cards, summary: summary });
+const record = { ts: Date.now(), mode: snapMode, count: snapCount, question: question, cards: cards, summary: summary };
+if (snapTarget) record.target = targetNameOf(snapTarget);
+list.unshift(record);
 histSave(list);
 renderHistory();
+saveToHomeHistory(record, snapTarget);
 if (autoSendGet()) {
 const myCid = window.__activeCid || 'default';
 setTimeout(() => { if ((window.__activeCid || 'default') !== myCid) return; sendToChat(snapMode, cards, summary, question); }, 500);
@@ -38212,9 +38418,11 @@ if (phonePage) phonePage.hidden = false;
 function renderHistOnOpen() {
 try { renderHistory(); } catch (e) {}
 try { syncAutoToggle(); } catch (e) {}
+try { renderTargets(); } catch (e) {}
 }
 renderHistOnOpen();
 document.addEventListener('contact-switched', renderHistOnOpen);
+try { document.addEventListener('contact-renamed', renderTargets); } catch (e) {}
 const autoEl = document.getElementById('div-auto-send');
 if (autoEl) autoEl.addEventListener('change', () => { autoSendSet(autoEl.checked); });
 document.querySelectorAll('#page-divine .dec-inp-clear').forEach(btn => {

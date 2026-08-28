@@ -195,6 +195,66 @@
     if (el) el.checked = autoSendGet();
   }
 
+  // ---- v3.26.x：占卜对象选择（可选全部桌面联系人，也可不选；选了对象，抽牌记录存入该联系人桌面的主页「占卜记录」）----
+  // 每个桌面独立记忆所选对象（走动态 store，键 divine-target，作用范围随当前桌面隔离）
+  let targetCid = '';
+  function escDiv(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+  function targetGet() {
+    try {
+      const cid = store.get('divine-target') || '';
+      if (!cid || cid === 'default') return '';
+      const contacts = (window.getContacts ? window.getContacts() : []) || [];
+      return contacts.some(c => c && c.id === cid) ? cid : '';
+    } catch (e) { return ''; }
+  }
+  function targetSet(cid) { try { store.set('divine-target', cid || ''); } catch (e) {} }
+  function targetNameOf(cid) {
+    try {
+      const contacts = (window.getContacts ? window.getContacts() : []) || [];
+      const c = contacts.find(x => x && x.id === cid);
+      return c ? (c.name || c.id || '') : '';
+    } catch (e) { return ''; }
+  }
+  function renderTargets() {
+    const wrap = document.getElementById('div-targets');
+    if (!wrap) return;
+    targetCid = targetGet();
+    const contacts = (window.getContacts ? window.getContacts() : []) || [];
+    let html = '<button class="div-mode' + (targetCid ? '' : ' sel') + '" data-cid="">不选对象</button>';
+    contacts.forEach(c => {
+      const id = (c && c.id) || '';
+      if (!id) return;
+      html += '<button class="div-mode' + (targetCid === id ? ' sel' : '') + '" data-cid="' + escDiv(id) + '">' + escDiv(c.name || id) + '</button>';
+    });
+    wrap.innerHTML = html;
+    wrap.querySelectorAll('.div-mode').forEach(b => {
+      b.addEventListener('click', () => {
+        wrap.querySelectorAll('.div-mode').forEach(x => x.classList.remove('sel'));
+        b.classList.add('sel');
+        targetCid = b.dataset.cid || '';
+        targetSet(targetCid);
+      });
+    });
+  }
+  // ---- 把抽牌记录写入「主页·占卜记录」（records-divine，按对象所在桌面隔离）----
+  // 选了对象 → 写入该对象桌面的 records-divine；不选 → 写入当前桌面 records-divine
+  function saveToHomeHistory(record, targetCid2) {
+    try {
+      const targetStore = targetCid2 ? (window.storeFor ? window.storeFor(targetCid2) : null) : null;
+      const st = targetStore || store;
+      let list = [];
+      try { list = JSON.parse(st.get('records-divine') || '[]'); } catch (e) { list = []; }
+      if (!Array.isArray(list)) list = [];
+      list.unshift(record);
+      try { st.set('records-divine', JSON.stringify(list)); } catch (e) {}
+      // 删除旧版同记录（v3.6.x 前占卜历史存无前缀裸键 divine-history，成长于旧桌面，与主页记录无关，无需迁移）
+      // 若当前正处于目标对象桌面，尽量让主页占卜记录面板即时刷新
+      if (targetStore === store) {
+        try { if (window.renderDivinePanel) window.renderDivinePanel(); } catch (e) {}
+      }
+    } catch (e) {}
+  }
+
   // ---- v3.7.x：星言式抽牌流程（洗牌动画 → 两行牌面自由滑动 → 点击抽取） ----
   // 桌面占卜页与聊天页占卜半框共用；返回 cancel 函数（连点/切换设置时取消进行中的流程）
   function startDivineDraw(stageEl, opts) {
@@ -570,6 +630,8 @@
       const question = ((document.getElementById('div-question') || {}).value || '').trim();
       // v3.5.130：快照点击时的模式/张数——流程期间切换设置不再影响本次结果
       const snapMode = mode, snapCount = count;
+      // v3.26.x：快照点击时的占卜对象——流程期间切换对象不影响本次记录归属
+      const snapTarget = targetCid;
       const deck = snapMode === 'tarot' ? TAROT : LENO;
       if (!deck.length) { r.innerHTML = '<div class="div-result-empty">占卜牌库加载中…</div>'; return; }
       const labels = (MODE_LABELS[snapMode] && MODE_LABELS[snapMode][snapCount]) || [];
@@ -586,9 +648,13 @@
           renderDrawResult(cards, snapMode, question, summary);
           // 保存记录（v3.7.x：每个联系人桌面独立，store 动态绑定当前桌面）
           const list = histLoad();
-          list.unshift({ ts: Date.now(), mode: snapMode, count: snapCount, question: question, cards: cards, summary: summary });
+          const record = { ts: Date.now(), mode: snapMode, count: snapCount, question: question, cards: cards, summary: summary };
+          // v3.26.x：选了占卜对象 → 记录写上 target，并存入该对象桌面的主页「占卜记录」（records-divine）
+          if (snapTarget) record.target = targetNameOf(snapTarget);
+          list.unshift(record);
           histSave(list);
           renderHistory();
+          saveToHomeHistory(record, snapTarget);
           // v3.7.x：自动发送开关——开启后抽牌完成自动把结果发到聊天
           if (autoSendGet()) {
             const myCid = window.__activeCid || 'default';
@@ -629,9 +695,13 @@
   function renderHistOnOpen() {
     try { renderHistory(); } catch (e) {}
     try { syncAutoToggle(); } catch (e) {}
+    // v3.26.x：渲染占卜对象选择器（随当前桌面重新读取记忆的所选对象）
+    try { renderTargets(); } catch (e) {}
   }
   renderHistOnOpen();
   document.addEventListener('contact-switched', renderHistOnOpen);
+  // v3.26.x：联系人改名后刷新对象选择器上的名字
+  try { document.addEventListener('contact-renamed', renderTargets); } catch (e) {}
   // 自动发送开关（桌面占卜页）
   const autoEl = document.getElementById('div-auto-send');
   if (autoEl) autoEl.addEventListener('change', () => { autoSendSet(autoEl.checked); });

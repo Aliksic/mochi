@@ -354,3 +354,12 @@ window.DEFAULT_CARD_DATA.deskcheck = [
     "被喜欢的人查岗，是件幸福的事。"
   ]]
 ];
+
+// v3.26.x：把聊天回复代码里写死的兜底通用语并入「系统预设字卡 → 主字卡（聊天）」，
+// 使其成为字卡库里可查看、可按单卡开关的系统预设字卡，而不再只是 chat.js 里的硬编码兜底。
+// 兜底逻辑（FALLBACK_REPLY_POOL / pick(pool.text)||pick(...)，chat.js）仍保留，
+// 供系统/自定义聊天字卡全部不可用时的最后兜底；这里的入池遵循正常默认字卡开关与概率。
+if (window.DEFAULT_CARD_DATA && Array.isArray(window.DEFAULT_CARD_DATA.main) &&
+    !window.DEFAULT_CARD_DATA.main.some(function (g) { return g && g[0] === '兜底通用语'; })) {
+  window.DEFAULT_CARD_DATA.main.push(['兜底通用语', ['收到～', '好呀', '好～', '嗯嗯', '知道啦', '好哒', '嗯嗯，我在听']]);
+}

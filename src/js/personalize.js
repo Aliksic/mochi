@@ -4857,15 +4857,59 @@ try {
     // 键名（去掉 xy-home-v2: 前缀，可能带 cid 命名空间）→ 功能分类
     function catOf(tail) {
       if (!tail) return '其他';
+      // —— 全局系统 / 诊断 / 索引前缀（无 cid 命名空间）——
       if (tail.indexOf('__diag-') === 0) return '错误诊断记录';
       if (tail.indexOf('music-file:') >= 0) return '本地音乐';
       if (tail.indexOf('__auto-backup-snapshot') >= 0) return '自动备份快照';
+      if (tail.indexOf('__last-backup-remind') >= 0) return '系统设置';
+      if (tail.indexOf('__last-backup') >= 0) return '自动备份快照';
+      if (tail.indexOf('psync-') >= 0) return '后台同步缓存';
+      if (tail.indexOf('__big-idx') >= 0 || tail.indexOf('__ls-dirty') >= 0) return '数据索引';
+      if (/^(__layout-pref|ver-update-ack-ts|__edge-backup-hint-done|__quota_probe__)$/.test(tail)) return '系统设置';
+      if (/^(contacts|active-contact|migrated-v1)$/.test(tail)) return '联系人/桌面';
+      // 根键里的「功能:子键」多段名（无 cid 前缀），先于 cid 剥离判断
+      if (/^incoming-last:/.test(tail)) return '查岗/TA互动';
+      // 剥离第一段 cid 命名空间（如 default:xxx、<cid>:xxx）
       const m = /^(?:[^:]+:)?(.*)$/.exec(tail);
       const base = m ? m[1] : tail;
+      // —— 聊天 / 群聊 ——
       if (base === 'chat-msgs') return '聊天记录';
-      if (/^avatar-(lib|me-lib)$/.test(base)) return '头像库';
-      if (/^(phone-bg|wallpaper|chat-bg|page-bg|desk-bg|bg)$/.test(base)) return '壁纸/背景';
-      if (/^(cc-groups|default-cards|quote-cards|mood-|reply-|fav-|ta-)/.test(base)) return '字卡/回复';
+      if (base === 'group-chat-msgs') return '群聊记录';
+      // —— 备忘录（必须在日历 memo- 规则之前）——
+      if (/^memo-app-/.test(base)) return '备忘录';
+      // —— 聊天设置全局键 ——
+      if (base === 'reply-settings' || base === 'chat-settings') return '聊天设置';
+      // —— 查岗 / TA 互动 ——
+      if (/^(ta-checkin|checkin-|ckq-|incoming-|desk-checkin-en|desk-call-en|desk-freq-mode|ta-ask|ta-invite|ti-last-id|ta-cc-state|interact-card-last|invite-ask-history|reply-gc-)/.test(base)) return '查岗/TA互动';
+      // —— 定位 / 轨迹 ——
+      if (/^(loc-|loc-lib-|loc-sense)/.test(base)) return '定位/轨迹';
+      // —— 日历 / 每日留言 / 心情 ——
+      if (/^(cal-|first-use-date|quote-history|memo-|today-mood-|mood-history|memo-history|day-fish-|day-work-)/.test(base)) return '日历/每日留言';
+      // —— 字卡 / 回复 / 收藏 / 拍一拍 / 表情 ——
+      if (/^(cc-groups|cc-groups-public|default-cards|quote-cards|reply-|fav-|ta-mood|poke-|emoji-|my-emoji-groups|rps-score|mh-|rc-enabled|mc-enabled|chat-count)/.test(base)) return '字卡/回复/收藏';
+      // —— 各业务功能 ——
+      if (/^divine-/.test(base)) return '占卜';
+      if (/^mail-/.test(base)) return '信箱';
+      if (/^feed-/.test(base)) return '朋友圈';
+      if (/^(records-|anniversary|myarc|myarc-cur)/.test(base)) return '纪念/统计/档案';
+      if (/^(decision-|gdec-)/.test(base)) return '帮我决定';
+      if (/^accounting-/.test(base)) return '记账';
+      if (/^period-/.test(base)) return '经期';
+      if (/^(garden-|plant-)/.test(base)) return '花园';
+      if (base === 'room-data') return '房间';
+      if (/^drift-/.test(base)) return '漂流瓶';
+      if (/^(gift-|giftbox|rp-|market-|wallet)/.test(base)) return '礼物/红包';
+      if (/^cjian-/.test(base)) return '梦角档案';
+      if (/^fishing-/.test(base)) return '钓鱼';
+      if (/^(brick-|c4-|ms-|ml2_coin|pong-|snake-|memory-|breakout-)/.test(base)) return '小游戏';
+      if (/^music-/.test(base)) return '音乐';
+      // —— 形象 / 设置 / 外观 / 通话 ——
+      if (/^(avatar-|cs-avatar-|lbl-)/.test(base)) return '头像/昵称';
+      if (/^(cs-|sysmsg-|more-|desk-msg-en|chat-unread|hide-ta-sticker)/.test(base)) return '聊天设置';
+      if (/^(phone-bg|page-bg|card-bg|desk-bg|desk-image-src-|chat-bg|wallpaper|widget-|bg-blur|bg-mask-op|beauty-|chat-beauty-schemes|theme-mode|accent-color|desk-images|desk-texts|desk-countdowns)/.test(base)) return '桌面美化/壁纸';
+      if (/^(call-|sfx-)/.test(base)) return '通话/音效';
+      if (/^(fullscreen-|fs-edge-guard)/.test(base)) return '全屏';
+      if (/^(bg-keepalive|bg-notify)/.test(base)) return '后台保持/通知';
       return '设置与其他';
     }
     function lsStats() {
@@ -4878,8 +4922,9 @@ try {
           const sz = (k.length + String(localStorage.getItem(k) || '').length) * 2;
           total += sz; count++;
           const c = catOf(k.slice(G.length));
-          if (!cats[c]) cats[c] = { n: 0, size: 0 };
+          if (!cats[c]) cats[c] = { n: 0, size: 0, keys: [] };
           cats[c].n++; cats[c].size += sz;
+          if (cats[c].keys.length < 20) cats[c].keys.push(k);
         }
       } catch (e) {}
       return { cats: cats, total: total, count: count };
@@ -4893,8 +4938,9 @@ try {
         const list = (keys || []).filter(function (k) { return String(k || '').indexOf(G) === 0; });
         list.forEach(function (k) {
           const c = catOf(String(k).slice(G.length));
-          if (!cats[c]) cats[c] = { n: 0, size: 0 };
+          if (!cats[c]) cats[c] = { n: 0, size: 0, keys: [] };
           cats[c].n++;
+          if (cats[c].keys.length < 20) cats[c].keys.push(String(k));
         });
         const measure = function (v) {
           let sz = 0;
@@ -4935,23 +4981,30 @@ try {
       const add = function (map) {
         if (!map) return;
         Object.keys(map).forEach(function (c) {
-          if (!all[c]) all[c] = { n: 0, size: 0 };
+          if (!all[c]) all[c] = { n: 0, size: 0, keys: [] };
           all[c].n += map[c].n; all[c].size += map[c].size;
+          (map[c].keys || []).forEach(function (kk) { if (all[c].keys.length < 20) all[c].keys.push(kk); });
         });
       };
       add(lsCats); add(idbCats);
       const rows = Object.keys(all).map(function (c) {
-        return { name: c, n: all[c].n, size: all[c].size };
+        return { name: c, n: all[c].n, size: all[c].size, keys: all[c].keys };
       }).sort(function (a, b) { return b.size - a.size; });
       el.innerHTML = '';
       if (!rows.length) { el.innerHTML = '<div class="storage-hint">暂未统计到数据。</div>'; return; }
       rows.forEach(function (r) {
         const d = document.createElement('div');
-        d.className = 'storage-cat-row';
-        d.innerHTML = '<span class="storage-cat-name"></span><span class="storage-cat-num"></span><span class="storage-cat-size"></span>';
+        d.className = 'storage-cat-row' + (r.keys && r.keys.length ? ' has-keys' : '');
+        d.innerHTML = '<div class="storage-cat-line"><span class="storage-cat-name"></span><span class="storage-cat-num"></span><span class="storage-cat-size"></span></div>';
         d.querySelector('.storage-cat-name').textContent = r.name;
         d.querySelector('.storage-cat-num').textContent = r.n + ' 键';
         d.querySelector('.storage-cat-size').textContent = fmtBytes(r.size);
+        if (r.keys && r.keys.length) {
+          const sub = document.createElement('div');
+          sub.className = 'storage-cat-keys';
+          sub.textContent = r.keys.join('、');
+          d.appendChild(sub);
+        }
         el.appendChild(d);
       });
     }
@@ -5032,6 +5085,15 @@ try {
         document.querySelectorAll('.page').forEach(function (p) { p.hidden = true; });
         const setPage = document.getElementById('page-setting');
         if (setPage) setPage.hidden = false;
+      });
+    }
+    // 点击分类行展开/收起该分类下的存储键名（事件委托，行是动态渲染的）
+    const stCat = document.getElementById('st-cat');
+    if (stCat) {
+      stCat.addEventListener('click', function (ev) {
+        const row = ev.target && ev.target.closest ? ev.target.closest('.storage-cat-row.has-keys') : null;
+        if (!row) return;
+        row.classList.toggle('open');
       });
     }
   })();

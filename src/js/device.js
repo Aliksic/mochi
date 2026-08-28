@@ -798,6 +798,8 @@
       }
       L.push('localStorage 数据键=' + n + ' 个');
     } catch (e) { L.push('localStorage 不可访问'); }
+    // v3.26.x：跨域名（device.js=AI-B）——回复字卡池诊断，报障「联系人只发【收到～】」直接定位
+    try { if (window.__replyPoolDiag) L.push('回复字卡池：' + window.__replyPoolDiag()); } catch (e2) {}
     // v3.25.x：键明细——数据丢失类报障（键被清/写入失败/快照剥离）一眼定位：
     // 哪些键还在、各占多大。UTF-16 双字节估算，看量级够用。
     try {
