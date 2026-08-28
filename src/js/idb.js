@@ -30,6 +30,21 @@
     dbPromise.catch(() => { dbPromise = null; });
     return dbPromise;
   }
+  // v3.25.x（修 iOS「字卡数据没有加载」高发）：iOS Safari/PWA 挂后台后会杀掉
+  // IndexedDB 服务进程，原连接之后所有事务同步抛 InvalidStateError（"The database
+  // connection is closing"）或 UnknownError（"Connection to Indexed Database server
+  // lost"），而 open() 永久缓存旧连接 → 整个会话读写全废且永不自愈；若启动回填
+  // 恰被打断，字卡库等大键本会话空载（字卡库空、TA 回复没有自定义字卡）。
+  // 各事务入口检测到连接级错误时置 dbPromise=null，下一次 open() 重建连接
+  //（新连接会按需拉起 IDB 服务，通常当场恢复）。
+  function connLost(e) {
+    try {
+      if (!e) return false;
+      if (e.name === 'InvalidStateError') return true;
+      const m = String((e && e.message) || e);
+      return /connection\s+(is\s+)?(closed|lost|closing)|server\s+lost|database\s+connection/i.test(m);
+    } catch (err) { return false; }
+  }
 
   // 写入（key: 完整键名，如 'xy-home-v2:cc-groups'）
   // v3.7.0：写入失败重试 2 次（间隔 100ms），累计失败超 5 次 openModal 告警。
@@ -59,8 +74,8 @@
           const tx = db.transaction(STORE, 'readwrite');
           tx.objectStore(STORE).put(value, key);
           tx.oncomplete = () => resolve(true);
-          tx.onerror = () => resolve(false);
-        } catch (e) { resolve(false); }
+          tx.onerror = () => { if (connLost(tx.error)) dbPromise = null; resolve(false); };
+        } catch (e) { if (connLost(e)) dbPromise = null; resolve(false); }
       })).catch(() => false);
     }
     return (async () => {
@@ -103,13 +118,25 @@
           const tx = db.transaction(STORE, 'readonly');
           const req = tx.objectStore(STORE).get(key);
           req.onsuccess = () => finish(req.result);
-          req.onerror = () => finish(undefined);
-        } catch (e) { finish(undefined); }
+          req.onerror = () => { if (connLost(req.error)) dbPromise = null; finish(undefined); };
+        } catch (e) { if (connLost(e)) dbPromise = null; finish(undefined); }
       }
       let retried = false;
       timer = setTimeout(function () {
         if (done) return;
-        if (!retried) { retried = true; run(); timer = setTimeout(function () { finish(undefined); }, 4000); return; }
+        if (!retried) {
+          retried = true;
+          // v3.25.x：重建连接再试——挂起超时多因连接已死（iOS 挂后台杀 IDB 服务），
+          // 原地重试只会再等 4 秒；重开后新连接通常当场返回
+          dbPromise = null;
+          open().then(function (db2) {
+            db = db2;
+            run();
+            timer = setTimeout(function () { dbPromise = null; finish(undefined); }, 4000);
+          }).catch(function () { finish(undefined); });
+          return;
+        }
+        dbPromise = null;
         finish(undefined);
       }, 4000);
       run();
@@ -141,11 +168,11 @@
           ks.forEach(k => {
             const req = os.get(k);
             req.onsuccess = () => { out[k] = req.result; if (--pending <= 0) finish(); };
-            req.onerror = () => { if (--pending <= 0) finish(); };
+            req.onerror = () => { if (connLost(req.error)) dbPromise = null; if (--pending <= 0) finish(); };
           });
-          tx.onerror = finish;
-          tx.onabort = finish;
-        } catch (e) { finish(); }
+          tx.onerror = () => { if (connLost(tx.error)) dbPromise = null; finish(); };
+          tx.onabort = () => { if (connLost(tx.error)) dbPromise = null; finish(); };
+        } catch (e) { if (connLost(e)) dbPromise = null; finish(); }
       }
       timer = setTimeout(function () {
         if (done) return;
@@ -154,9 +181,10 @@
           const miss = list.filter(k => !(k in out));
           if (!miss.length) { finish(); return; }
           run(miss);
-          timer = setTimeout(finish, 4000);
+          timer = setTimeout(function () { dbPromise = null; finish(); }, 4000);
           return;
         }
+        dbPromise = null;
         finish();
       }, 4000);
       run(list);
@@ -170,8 +198,8 @@
         const tx = db.transaction(STORE, 'readonly');
         const req = tx.objectStore(STORE).getAllKeys();
         req.onsuccess = () => resolve(req.result || []);
-        req.onerror = () => resolve([]);
-      } catch (e) { resolve([]); }
+        req.onerror = () => { if (connLost(req.error)) dbPromise = null; resolve([]); };
+      } catch (e) { if (connLost(e)) dbPromise = null; resolve([]); }
     })).catch(() => []);
   };
 
@@ -502,6 +530,10 @@
         window.idbGetMany(unit).then(map => {
           let bytes = 0, allSmall = true;
           unit.forEach(k => { const v = map[k]; if (typeof v === 'string') { bytes += v.length; if (v.length > 65536) allSmall = false; } });
+          // v3.25.x：本批没读到的键登记进挂起名单——事务部分超时/失败时这些键读丢了
+          // 又不在名单里，下游所有按需取回路径（回复池/字卡库）都以名单为门槛，
+          // 会整会话空载（iOS 挂后台打断回填时的高发症状）
+          try { unit.forEach(function (k) { if (!(k in map) && window.__xyIdbDeferredKeys.indexOf(k) < 0) window.__xyIdbDeferredKeys.push(k); }); } catch (e0) {}
           unit.forEach(k => { retainValue(k, map[k]); map[k] = null; });
           // 自适应批次：本单元偏大 → 保持/回到单键探路；连续 10 个全小键单元 → 恢复批量
           if (bytes > 2 * 1048576) { curBatch = 1; smallStreak = 0; }
@@ -510,6 +542,8 @@
         }).catch(() => {
           // v3.5.132：批次失败继续下一批（原实现 finish() 会截断剩余全部键——
           // 低端机偶发事务失败时几百个键本会话不恢复）
+          // v3.25.x：失败批次整组登记挂起名单（留痕给按需取回路径，见上）
+          try { unit.forEach(function (k) { if (window.__xyIdbDeferredKeys.indexOf(k) < 0) window.__xyIdbDeferredKeys.push(k); }); } catch (e0) {}
           setTimeout(processBatch, 0);
         });
       }
@@ -519,18 +553,22 @@
   // v3.14.x：按需恢复单个键（含被预算挂起的大键）——显式调用不受预算限制，
   // 成功后自动移出 __xyIdbDeferredKeys。供各功能模块对"用户正在看的"大数据
   // 做懒加载兜底（如打开字卡面板前先 idbHydrateKey('xy-home-v2:cc-groups')）。
+  // v3.25.x：返回值区分三种结果——true=取回成功；null=健康连接确认 IDB 无此键
+  //（新装/新联系人的正常空库，调用方可以缓存「确实没有」避免反复空读）；
+  // false=读取失败/超时（如 iOS 挂后台连接被杀），调用方保持可重试。
   window.idbHydrateKey = function (key) {
     return open().then(db => new Promise((resolve) => {
       let done = false;
-      const t = setTimeout(function () { if (!done) { done = true; resolve(undefined); } }, 8000);
+      const t = setTimeout(function () { if (!done) { done = true; dbPromise = null; resolve(undefined); } }, 8000);
       try {
         const tx = db.transaction(STORE, 'readonly');
         const req = tx.objectStore(STORE).get(key);
-        req.onsuccess = () => { if (!done) { done = true; clearTimeout(t); resolve(req.result); } };
-        req.onerror = () => { if (!done) { done = true; clearTimeout(t); resolve(undefined); } };
-      } catch (e) { if (!done) { done = true; clearTimeout(t); resolve(undefined); } }
+        req.onsuccess = () => { if (!done) { done = true; clearTimeout(t); resolve(req.result === undefined ? null : req.result); } };
+        req.onerror = () => { if (!done) { done = true; clearTimeout(t); if (connLost(req.error)) dbPromise = null; resolve(undefined); } };
+      } catch (e) { if (!done) { done = true; clearTimeout(t); if (connLost(e)) dbPromise = null; resolve(undefined); } }
     })).then(v => {
-      if (v === undefined || v === null) return false;
+      if (v === null) return null;
+      if (v === undefined) return false;
       if (!(memoryCache && (key in memoryCache))) {
         let str = typeof v === 'string' ? v : JSON.stringify(v);
         // 与 retainValue 同规则（v3.16.x 摸鱼天数回退修复）：LS 有值且未写失败 →

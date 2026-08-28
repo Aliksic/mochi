@@ -599,13 +599,25 @@
   }
   function refreshLibCounts(force) {
     if (force) { libCounts.pub = -1; libCounts.own = -1; pubInvalidate(); }
-    if (libCounts.pub < 0) libCounts.pub = countOf(buildGroupsFrom(pubStore().get(PUB_KEY)));
-    if (libCounts.own < 0) libCounts.own = countOf(ownGroupsRaw());
+    // v3.25.x：计数 0 不再缓存——iOS 慢回填场景角标先算成 0 并缓存，之后数据落进
+    // 内存缓存也没人失效它，列表页两行角标永远 0（点进作用域页却能看到字卡，真机反馈）。
+    // 空库重复 countOf 只是解析 null 零负担；大库计数 >0 仍走缓存，不会反复 JSON.parse。
+    if (libCounts.pub < 0) {
+      const n = countOf(buildGroupsFrom(pubStore().get(PUB_KEY)));
+      libCounts.pub = n > 0 ? n : -1;
+    }
+    if (libCounts.own < 0) {
+      const n = countOf(ownGroupsRaw());
+      libCounts.own = n > 0 ? n : -1;
+    }
     const pe = document.getElementById('cc-pub-count');
-    if (pe) pe.textContent = libCounts.pub;
+    if (pe) pe.textContent = libCounts.pub < 0 ? 0 : libCounts.pub;
     const oe = document.getElementById('cc-list-count');
-    if (oe) oe.textContent = libCounts.own;
+    if (oe) oe.textContent = libCounts.own < 0 ? 0 : libCounts.own;
   }
+  // v3.25.x：数据迟到重算——restore-done 时内存缓存才刚有数据（iOS 上常晚于首屏渲染），
+  // 此前没有任何时点会重算两行角标，0 就一直挂着。启动回填完成即强制重算一次。
+  document.addEventListener('mochi-restore-done', function () { refreshLibCounts(true); });
 
   // v3.6.x：只更新各类计数（tab 徽标/分组栏/总数），不重建列表 DOM——
   // 删除字卡/删除分组等高频操作改局部移除 DOM + 本函数，替代整页 render()
@@ -2226,15 +2238,14 @@
   // v3.22.x：修复「自定义字卡不被聊天回复使用」——启动回填预算把大字卡库键挂起在
   // IDB（__xyIdbDeferredKeys）时，回复池读成空库。此前只有打开字卡库列表页/表情包
   // 拍一拍面板才按需取回，聊天自动回复路径从不触发，联系人因此不再用我加的字卡。
-  // 这里在各回复池 getter 里检测到挂起键即按需取回（用户正在聊天=正在查看该字卡，
+  // 这里在各回复池 getter 里检测到数据缺失即按需取回（用户正在聊天=正在查看该字卡，
   // 与表情包面板同一口径；hydrateLibScopes 内部带 in-flight 去重+链式排队），
   // 取回后 store/memoryCache 立即可读，后续回复即用上字卡。
+  // v3.25.x：不再以挂起名单为前置条件（名单外的读丢键取不回，iOS 高发）——
+  // hydrateScope 已自带「有数据/已确认无键就跳过」，每次调用只多两次同步判断。
   function maybeHydrateReplyPool() {
     try {
-      if (window.libScopesDeferred && window.hydrateLibScopes &&
-          window.libScopesDeferred(['public', 'own'])) {
-        window.hydrateLibScopes(['public', 'own']);
-      }
+      if (window.hydrateLibScopes) window.hydrateLibScopes(['public', 'own']);
     } catch (e) {}
   }
   window.getCustomCards = function () {
@@ -2478,14 +2489,14 @@
   // 像「数据丢了」。打开管理页=用户正在看这份数据，先按需取回再渲染列表；
   // 只对「被挂起且确实读不到」的键生效，正常设备零等待。
   function hydrateCurScope() {
-    let fullKey = '', deferred = false;
-    try {
-      fullKey = ccScope === 'public' ? PUB_PREFIX + ':' + PUB_KEY : (window.activePrefix() + ':cc-groups');
-      deferred = Array.isArray(window.__xyIdbDeferredKeys) && window.__xyIdbDeferredKeys.indexOf(fullKey) >= 0;
-    } catch (e) {}
-    if (!deferred || !window.idbHydrateKey) return Promise.resolve(false);
+    if (!window.idbHydrateKey) return Promise.resolve(false);
     try { if (curStore().get(curKey())) return Promise.resolve(false); } catch (e) {}
-    try { toast('字卡较多，正在加载…'); } catch (e) {}
+    // v3.25.x：不再要求键在挂起名单——回填链被打断（iOS 挂后台杀 IDB 连接等）时
+    // 键读丢了也不在名单里，此前在这里被直接放行返回，字卡库永远空载。
+    // 统一交给 hydrateScope 判断（健康确认无键的 absent 缓存也在那边）。
+    let fk = '';
+    try { fk = ccScope === 'public' ? (PUB_PREFIX + ':' + PUB_KEY) : (window.activePrefix() + ':cc-groups'); } catch (e) {}
+    if (!hydAbsent[fk]) { try { toast('字卡较多，正在加载…'); } catch (e) {} }
     // v3.15.x：统一走 hydrateScope（成功后自动清缓存/刷新角标与界面）
     return hydrateScope(ccScope === 'public' ? 'public' : 'own');
   }
@@ -2623,21 +2634,33 @@
   // 大键在无人查看时被拉进堆压崩低端机（27MB 公用库真机案例）；只在用户正在看的
   // 场景按需拉一把，且多键顺序执行避免叠加峰值。会话内取回一次后常驻内存零开销。
   const hydInflight = {};
+  // v3.25.x：本会话已用健康连接确认「IDB 确实无此键」的键（新装/新联系人的正常空库）
+  // ——命中则不再空读，避免每次构建回复池都发一次 IDB get
+  const hydAbsent = {};
   function hydFullKey(scope) {
     return scope === 'public' ? (PUB_PREFIX + ':' + PUB_KEY) : (window.activePrefix() + ':cc-groups');
   }
   function hydrateScope(scope) {
+    if (!window.idbHydrateKey) return Promise.resolve(false);
     let fullKey = '', deferred = false;
     try {
       fullKey = hydFullKey(scope);
       deferred = Array.isArray(window.__xyIdbDeferredKeys) && window.__xyIdbDeferredKeys.indexOf(fullKey) >= 0;
     } catch (e) {}
-    // 不在挂起名单：要么已驻留（有数据），要么 IDB 本就没有此键——都不必取回
-    if (!deferred || !window.idbHydrateKey) return Promise.resolve(false);
+    // v3.25.x（修「字卡数据没有加载」iOS 高发）：此前只认挂起名单——回填链在 iOS
+    // 挂后台/事务失败被打断时，键读丢了也不进名单，三路读全空且永不取回，字卡库
+    // 空载、TA 回复没有自定义字卡。改为：数据读不到就取回（用户正在看的场景，
+    // 显式读不受回填预算限制）；健康连接确认 IDB 无此键才记 absent，此后跳过。
+    if (!deferred && hydAbsent[fullKey]) return Promise.resolve(false);
+    if (!deferred) {
+      let hasData = false;
+      try { hasData = scope === 'public' ? !!pubStore().get(PUB_KEY) : !!store.get('cc-groups'); } catch (e) {}
+      if (hasData) return Promise.resolve(false);
+    }
     if (hydInflight[fullKey]) return hydInflight[fullKey];
     hydInflight[fullKey] = window.idbHydrateKey(fullKey).then(ok => {
       delete hydInflight[fullKey];
-      if (!ok) return false;
+      if (ok === null) { hydAbsent[fullKey] = true; return false; }
       pubInvalidate();
       libCounts.pub = -1; libCounts.own = -1;
       const scopeLive = (scope === 'public') ? (ccScope === 'public') : (ccScope === 'own');
@@ -2649,17 +2672,11 @@
     }).catch(() => { delete hydInflight[fullKey]; return false; });
     return hydInflight[fullKey];
   }
-  function hydrateScopeIfEmpty(scope) {
-    try {
-      const has = scope === 'public' ? !!pubStore().get(PUB_KEY) : !!store.get('cc-groups');
-      if (has) return Promise.resolve(false); // 已有数据，无需取回
-    } catch (e) {}
-    return hydrateScope(scope);
-  }
   let libHydChain = Promise.resolve();
   function hydrateLibScopes(scopes) {
     // 顺序链式取回（避免多把 MB 级大键同时进内存叠加峰值）
-    scopes.forEach(s => { libHydChain = libHydChain.then(() => hydrateScopeIfEmpty(s)).catch(() => {}); });
+    // v3.25.x：hydrateScope 自带「有数据/已确认无键就跳过」判断，直接排队即可
+    scopes.forEach(s => { libHydChain = libHydChain.then(() => hydrateScope(s)).catch(() => {}); });
     return libHydChain;
   }
   function libScopesDeferred(scopes) {
@@ -2683,14 +2700,19 @@
     return libScopesDeferred(Array.isArray(scopes) && scopes.length ? scopes : ['public', 'own']);
   };
   // 字卡库列表页每次显示时兜底取回（覆盖「冷启动直接进字卡库」「切完桌面进字卡库」）
+  // v3.25.x：显示时无条件 hydrateLibScopes（内部自判断：有数据/已确认无键都是零开销跳过，
+  // 只对真缺数据的键取回）+ 强制重算两行角标——iOS 慢回填/读丢恢复后，进列表页是用户
+  // 最直观的查看时点，角标必须反映最新数据而不是首屏时的缓存 0。
   (function () {
     const libPage = document.getElementById('page-chatcard');
     if (libPage && typeof MutationObserver !== 'undefined') {
       new MutationObserver(() => {
-        if (!libPage.hidden && libScopesDeferred(['public', 'own'])) {
+        if (libPage.hidden) return;
+        refreshLibCounts(true);
+        if (libScopesDeferred(['public', 'own'])) {
           try { toast('字卡较多，正在加载…'); } catch (e) {}
-          hydrateLibScopes(['public', 'own']);
         }
+        hydrateLibScopes(['public', 'own']);
       }).observe(libPage, { attributes: true, attributeFilter: ['hidden'] });
     }
   })();

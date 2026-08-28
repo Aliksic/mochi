@@ -232,6 +232,7 @@ try {
     const okBtn = document.getElementById('modal-ok');
     const cancelBtn = document.getElementById('modal-cancel');
     const copyBtn = document.getElementById('modal-copy');
+    const exportBtn = document.getElementById('modal-export');
     if (!mask || !input) return;
     // v3.10.x：vivo/OPPO Edge 等安卓内核对 ce-box（mobile-adapt 输入转换器）的
     // value 代理支持不完整——弹窗里明明打完字，点确定读 input.value 却是空，
@@ -468,6 +469,19 @@ try {
           if (cfg.label) copyBtn.textContent = cfg.label;
           if (typeof cfg.fn === 'function') {
             copyBtn.onclick = function () { try { cfg.fn(ctl); } catch (e) {} };
+          }
+        }
+      }
+      // v3.25.x：opts.exportBtn——与 copyBtn 同机制的第二个自定义按钮（诊断信息
+      // 「导出txt」等：大文本剪贴板可能截断，下载文件兜底）。不传则隐藏，零影响。
+      if (exportBtn) {
+        const cfg2 = opts.exportBtn || null;
+        exportBtn.hidden = !cfg2;
+        exportBtn.onclick = null;
+        if (cfg2) {
+          if (cfg2.label) exportBtn.textContent = cfg2.label;
+          if (typeof cfg2.fn === 'function') {
+            exportBtn.onclick = function () { try { cfg2.fn(ctl); } catch (e) {} };
           }
         }
       }
@@ -1698,22 +1712,19 @@ try {
     }
     schemes.forEach((s, i) => {
       const row = document.createElement('div');
-      row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px;border:1px solid var(--card-border,#eee);border-radius:10px';
+      row.style.cssText = 'display:flex;flex-direction:column;gap:8px;padding:10px;border:1px solid var(--card-border,#eee);border-radius:10px';
       const nm = document.createElement('div');
       const t = new Date(s.time || Date.now());
       const ds = (t.getMonth() + 1) + '-' + t.getDate();
-      nm.innerHTML = '<div style="font-size:14px;font-weight:500;word-break:break-all">' + s.name + '</div><div style="font-size:11px;color:var(--muted,#999)">保存于 ' + ds + ' · 点「应用」切换</div>';
-      nm.style.flex = '1';
+      nm.innerHTML = '<div style="font-size:14px;font-weight:600;word-break:break-all">' + s.name + '</div><div style="font-size:11px;color:var(--muted,#999)">保存于 ' + ds + '</div>';
       row.appendChild(nm);
-      const applyBtn = document.createElement('button');
-      applyBtn.textContent = '应用';
-      applyBtn.style.cssText = 'font-size:12px;padding:4px 10px;border:none;border-radius:8px;background:var(--ink,#111);color:var(--bg-b,#fff)';
-      applyBtn.addEventListener('click', () => applyScheme(i, m));
-      const delBtn = document.createElement('button');
-      delBtn.textContent = '删除';
-      delBtn.style.cssText = 'font-size:12px;padding:4px 8px;border:1px solid rgba(163,45,45,.35);border-radius:8px;background:var(--danger-soft,#fff5f5);color:var(--danger-ink,#a32d2d)';
-      delBtn.addEventListener('click', () => deleteScheme(i, m));
-      row.appendChild(applyBtn); row.appendChild(delBtn);
+      const btns = document.createElement('div');
+      btns.style.cssText = 'display:flex;align-items:center;gap:7px;flex-wrap:wrap';
+      btns.appendChild(mkBtn('预览', 'font-size:12px;padding:4px 10px;border:1px solid var(--card-border,#ddd);border-radius:8px;background:var(--btn-cancel-bg,#fafafa);color:var(--ink,#111)', () => desktopStartPreview(s, m)));
+      btns.appendChild(mkBtn('应用', 'font-size:12px;padding:4px 10px;border:none;border-radius:8px;background:var(--ink,#111);color:var(--bg-b,#fff)', () => applyScheme(i, m)));
+      btns.appendChild(mkBtn('改名', 'font-size:12px;padding:4px 10px;border:1px solid var(--card-border,#ddd);border-radius:8px;background:var(--btn-cancel-bg,#fafafa);color:var(--ink,#111)', () => renameScheme(i, m)));
+      btns.appendChild(mkBtn('删除', 'font-size:12px;padding:4px 10px;border:1px solid rgba(163,45,45,.35);border-radius:8px;background:var(--danger-soft,#fff5f5);color:var(--danger-ink,#a32d2d)', () => deleteScheme(i, m)));
+      row.appendChild(btns);
       list.appendChild(row);
     });
     box.appendChild(list);
@@ -1734,6 +1745,68 @@ try {
   if (beautySaveRow) beautySaveRow.addEventListener('click', () => window.saveBeautyScheme());
   const beautySchemesRow = document.getElementById('row-beauty-schemes');
   if (beautySchemesRow) beautySchemesRow.addEventListener('click', () => window.openBeautySchemes());
+
+  // ---- v3.25.x：桌面方案 预览 / 重命名（预览跨 reload 保持，可还原） ----
+  const PREVIEW_BACKUP_KEY = 'beauty-preview-backup';
+  const PREVIEW_NAME_KEY = 'beauty-preview-name';
+  function mkBtn(label, css, fn) {
+    const b = document.createElement('button');
+    b.textContent = label;
+    b.style.cssText = css;
+    b.addEventListener('click', fn);
+    return b;
+  }
+  function beautyPreviewBarEl() {
+    let bar = document.getElementById('beauty-preview-bar');
+    if (!bar) {
+      bar = document.createElement('div'); bar.id = 'beauty-preview-bar';
+      bar.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:96;margin:12px;padding:12px 14px;background:var(--card-bg,#fff);color:var(--ink,#111);border:1px solid var(--card-border,#eee);border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,.25);display:none;align-items:center;gap:10px';
+      document.body.appendChild(bar);
+    }
+    return bar;
+  }
+  function desktopStartPreview(s, m) {
+    if (!s) return;
+    try {
+      localStorage.setItem(PREVIEW_BACKUP_KEY, JSON.stringify({ data: collectBeautyFull() }));
+      localStorage.setItem(PREVIEW_NAME_KEY, s.name);
+    } catch (e) {}
+    hideSchemeModal(m);
+    applyBeautyData(s.data || {});
+    toast('正在预览「' + s.name + '」…');
+    setTimeout(() => location.reload(), 350);
+  }
+  function renameScheme(idx, m) {
+    const list = getSchemes();
+    const s = list[idx];
+    if (!s || !window.openModal) return;
+    const ctl = window.openModal('编辑方案名称', s.name, (name) => {
+      name = (name || '').trim();
+      if (!name) { ctl.hint('名称不能为空'); ctl.stay(); return; }
+      s.name = name; saveSchemesList(list); toast('已重命名');
+      window.openBeautySchemes();
+    }, { maxlength: 20, placeholder: '输入方案名称' });
+  }
+  // 打开页面时若有进行中的预览，显示浮条（「使用」/「还原」）
+  (function initBeautyPreview() {
+    let backup = null, name = '';
+    try { backup = JSON.parse(localStorage.getItem(PREVIEW_BACKUP_KEY) || 'null'); } catch (e) {}
+    try { name = localStorage.getItem(PREVIEW_NAME_KEY) || ''; } catch (e) {}
+    if (!backup || !backup.data || !name) return;
+    const bar = beautyPreviewBarEl();
+    bar.innerHTML = '';
+    const tx = document.createElement('div'); tx.style.flex = '1'; tx.style.fontSize = '13px';
+    tx.innerHTML = '正在预览「<b>' + name + '</b>」<div style="font-size:11px;color:var(--muted,#999)">点「使用」保存 / 「还原」恢复</div>';
+    const clearP = () => { try { localStorage.removeItem(PREVIEW_BACKUP_KEY); localStorage.removeItem(PREVIEW_NAME_KEY); } catch (e) {} };
+    const re = mkBtn('还原', 'font-size:12px;padding:6px 12px;border:1px solid var(--card-border,#eee);border-radius:8px;background:var(--btn-cancel-bg,#fafafa);color:var(--btn-cancel-ink,#555)', () => {
+      clearP(); applyBeautyData(backup.data); bar.style.display = 'none'; toast('已还原'); setTimeout(() => location.reload(), 350);
+    });
+    const keep = mkBtn('使用这个方案', 'font-size:12px;padding:6px 12px;border:none;border-radius:8px;background:var(--ink,#111);color:var(--bg-b,#fff)', () => {
+      clearP(); bar.style.display = 'none'; toast('已应用「' + name + '」');
+    });
+    bar.appendChild(tx); bar.appendChild(re); bar.appendChild(keep);
+    bar.style.display = 'flex';
+  })();
 
   // ===== v3.6.x：深色模式（两档手动开关：浅色/深色，不跟随系统） =====
   // 全局设置（不按联系人隔离），存储键 xy-home-v2:theme-mode

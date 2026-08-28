@@ -242,7 +242,22 @@
       try {
         const s = window.xyStore(G + ':' + id);
         const cur = s.get('lbl-partner');
+        // v3.25.x：有效昵称（cs-lbl-partner 优先）变化时接入系统消息昵称跟随——当前桌面
+        //   立即清扫+重渲染（chat.js chatSysNickChanged）；非当前桌面只记 hist，等该桌面
+        //   下次 loadMsgs 惰性补扫。
+        const csLbl = s.get('cs-lbl-partner');
+        const oldEff = csLbl || cur || 'TA';
         if (!cur || cur === oldName) s.set('lbl-partner', c.name);
+        const newEff = csLbl || s.get('lbl-partner') || 'TA';
+        if (newEff !== oldEff) {
+          if (id === (window.__activeCid || 'default') && window.chatSysNickChanged) {
+            try { window.chatSysNickChanged(oldEff); } catch (e) {}
+          } else {
+            let h = [];
+            try { const v = JSON.parse(s.get('sysmsg-nick-hist') || '[]'); if (Array.isArray(v)) h = v; } catch (e) {}
+            if (h.indexOf(oldEff) < 0) { h.push(oldEff); s.set('sysmsg-nick-hist', JSON.stringify(h)); }
+          }
+        }
       } catch (e) {}
       // 广播联系人重命名事件，通知通话模块等实时同步昵称
       try { document.dispatchEvent(new CustomEvent('contact-renamed', { detail: { id, name: c.name, oldName } })); } catch (e) {}

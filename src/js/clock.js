@@ -43,6 +43,17 @@
     setTimeout(() => { if (splash.parentNode) splash.parentNode.removeChild(splash); }, 400);
   };
   const ready = () => !!(window.__mochiDataReady);
+  // v3.8.y：每日首次打开强制展开全文阅读；当日再次打开则保持折叠（内容短→无需滚动即可进入）
+  const today = (function () {
+    const d = new Date(), p = (n) => (n < 10 ? '0' + n : '' + n);
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  })();
+  const seenKey = 'xy-home-v2:splash-seen:' + today;
+  let seenToday = false;
+  try { seenToday = localStorage.getItem(seenKey) === '1'; } catch (e) {}
+  // v3.8.z：全折叠+必读摘要——各章节默认收起、靠目录跳转；摘要承担必读。
+  //   "每日首次强读"仍然生效（首次须滑到底才可进入），但不再展开全部章节。
+  //   移除首开 forceExpand 全展开逻辑（默认折叠即可）。
   const enterEl = document.getElementById('splash-enter');
   const loadingEl = document.getElementById('splash-loading');
   const hintEl = document.getElementById('splash-enter-hint');
@@ -74,6 +85,10 @@
   const enter = () => {
     if (splash.classList.contains('hide')) return;
     if (!ready() || !scrolledBottom) return; // 数据未就绪或未滑到底：禁止进入
+    // 今日首次进入（本次仍强制通读）→ 记下已读，当日再次打开不再展开全文
+    if (!seenToday) {
+      try { localStorage.setItem(seenKey, '1'); seenToday = true; } catch (e) {}
+    }
     hide();
   };
   updateEnterState();
@@ -92,32 +107,30 @@
   // 20 秒保险丝：数据极端异常未就绪时兜底放行（不自动跳过滑动）；
   //   idbRestore 自身 12 秒必置就绪，正常不触发
   setTimeout(() => { if (!ready()) hide(); }, 20000);
-  // v3.8.y：其他常见问题解答 浮层——点击按钮打开，点 ✕ / 遮罩关闭
-  const faqEl = document.getElementById('splash-faq');
-  const faqOpen = document.getElementById('splash-faq-open');
-  const faqClose = document.getElementById('splash-faq-close');
-  if (faqEl && faqOpen) {
-    faqOpen.addEventListener('click', (e) => { e.stopPropagation(); faqEl.hidden = false; });
-    if (faqClose) faqClose.addEventListener('click', (e) => { e.stopPropagation(); faqEl.hidden = true; });
-    faqEl.addEventListener('click', (e) => { if (e.target === faqEl) faqEl.hidden = true; });
-  }
 })();
 
-// v3.8.y：通用章节渲染（公告 + FAQ 浮层共用）
+// v3.8.y：章节渲染
 // 条目支持三种：字符串=自动编号条目；{h:"子标题"}；{b:"子列表项"}
-function renderSplashSections(container, sections) {
+function renderSplashSections(container, sections, opt) {
   if (!container || !Array.isArray(sections)) return;
-  container.innerHTML = '';
+  const collapsible = !!(opt && opt.collapsible);
   sections.forEach(function (sec) {
     const wrap = document.createElement('div');
-    wrap.className = 'splash-sec-wrap';
+    // v3.8.z：全折叠——各章节默认收起，靠目录跳转（不再按日期强制展开）
+    wrap.className = 'splash-sec-wrap'
+      + (collapsible ? ' splash-sec-collapsible' : '')
+      + (collapsible ? ' is-collapsed' : '');
+    let h = null;
     if (sec && sec.h) {
-      const h = document.createElement('p');
+      h = document.createElement('p');
       h.className = 'splash-sec';
       h.textContent = String(sec.h);
       wrap.appendChild(h);
     }
     if (sec && Array.isArray(sec.p)) {
+      // 折叠模式：细节内容包进 .splash-sec-content，点击标题切换显隐
+      const body = collapsible ? document.createElement('div') : null;
+      if (body) { body.className = 'splash-sec-content'; }
       sec.p.forEach(function (it) {
         const p = document.createElement('p');
         if (it && typeof it === 'object') {
@@ -128,11 +141,69 @@ function renderSplashSections(container, sections) {
           p.className = 'splash-item';
           p.textContent = String(it);
         }
-        wrap.appendChild(p);
+        if (body) body.appendChild(p); else wrap.appendChild(p);
       });
+      if (body) wrap.appendChild(body);
     }
     container.appendChild(wrap);
   });
+}
+
+// v3.8.y：开屏公告「书签目录」——顶部可折叠入口（点击展开竖排章节索引，点击即展开并跳转对应章节）
+// 复用 renderSplashSections 生成的 .splash-sec-wrap，在线/离线兜底两套 DOM 都生效
+function buildSplashToc(list) {
+  if (!list) return;
+  if (list.querySelector('.splash-toc')) return; // 已注入则跳过（防重复）
+  const headers = list.querySelectorAll('.splash-sec-wrap .splash-sec');
+  if (!headers.length) return;
+  const toc = document.createElement('div');
+  toc.className = 'splash-toc';
+  // 折叠入口头：显示章节数量，点击展开/收起
+  const head = document.createElement('button');
+  head.type = 'button';
+  head.className = 'splash-toc-head';
+  head.setAttribute('aria-expanded', 'false');
+  const headText = document.createElement('span');
+  headText.className = 'splash-toc-head-text';
+  headText.textContent = '目录（' + headers.length + ' 章）';
+  const chevron = document.createElement('span');
+  chevron.className = 'splash-toc-chev';
+  chevron.textContent = '▾';
+  head.appendChild(headText);
+  head.appendChild(chevron);
+  head.addEventListener('click', function () {
+    toc.classList.toggle('open');
+    head.setAttribute('aria-expanded', String(toc.classList.contains('open')));
+  });
+  toc.appendChild(head);
+  // 可致的正文行
+  const body = document.createElement('div');
+  body.className = 'splash-toc-body';
+  headers.forEach(function (h) {
+    const wrap = h.parentNode; // .splash-sec-wrap
+    // 标签去【】取正文；竖排整行有足够宽度，仅极长标题截断
+    let label = String(h.textContent).replace(/^【|】$/g, '').trim() || '章节';
+    if (label.length > 18) label = label.slice(0, 18) + '…';
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'splash-toc-chip';
+    chip.textContent = label;
+    chip.addEventListener('click', function (e) {
+      e.stopPropagation();
+      // 点击正文后自动收起目录，减少遮挡
+      toc.classList.remove('open');
+      head.setAttribute('aria-expanded', 'false');
+      Array.prototype.forEach.call(body.children, function (c) { c.classList.remove('active'); });
+      chip.classList.add('active');
+      // 折叠章节默认收起 → 从书签跳转时展开细节
+      if (wrap.classList.contains('is-collapsed')) wrap.classList.remove('is-collapsed');
+      // 滚动到该章节（#splash-box 是整页滚动容器，scrollIntoView 会滚动到它）
+      wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    body.appendChild(chip);
+  });
+  toc.appendChild(body);
+  list.insertBefore(toc, list.firstChild);
 }
 
 // ===== 开屏公告远程化：notice.json 在线覆盖公告文案 =====
@@ -158,8 +229,30 @@ function renderSplashSections(container, sections) {
         if (!data.sections.length || data.hide) { notice.style.display = 'none'; return; }
         if (list) {
           list.innerHTML = '';
-          // 前置提示块（App 说明 / 系统预设字卡等引导内容，浅灰高亮）
+          // v3.8.z：必读摘要——固定展示在公告最顶部，承担"强读必读"内容，各章节折叠靠目录跳转
+          if (Array.isArray(data.summary) && data.summary.length) {
+            const sum = document.createElement('div');
+            sum.className = 'splash-summary';
+            const sumTitle = document.createElement('p');
+            sumTitle.className = 'splash-summary-title';
+            sumTitle.textContent = '必读摘要';
+            sum.appendChild(sumTitle);
+            data.summary.forEach(function (s) {
+              const p = document.createElement('p');
+              p.textContent = String(s);
+              sum.appendChild(p);
+            });
+            list.appendChild(sum);
+          }
+          // 前置提示块（App 说明 / 系统预设字卡等引导内容，非必读 → 收进折叠条目，避免首屏一上来就一大片字）
           if (Array.isArray(data.tip) && data.tip.length) {
+            const gwrap = document.createElement('div');
+            gwrap.className = 'splash-sec-wrap splash-sec-collapsible is-collapsed';
+            const gh = document.createElement('p');
+            gh.className = 'splash-sec';
+            gh.textContent = '其他说明与常见问题';
+            const gbody = document.createElement('div');
+            gbody.className = 'splash-sec-content';
             data.tip.forEach(function (t) {
               const tip = document.createElement('div');
               tip.className = 'splash-tip';
@@ -182,11 +275,17 @@ function renderSplashSections(container, sections) {
                 p.textContent = String(t);
                 tip.appendChild(p);
               }
-              list.appendChild(tip);
+              gbody.appendChild(tip);
             });
+            gwrap.appendChild(gh);
+            gwrap.appendChild(gbody);
+            list.appendChild(gwrap);
           }
           // 章节：字符串=自动编号条目；{h}=子标题；{b}=子列表项
-          renderSplashSections(list, data.sections);
+          // v3.8.y：开屏公告折叠成章节索引，点标题展开细节
+          renderSplashSections(list, data.sections, { collapsible: true });
+          // v3.8.y：添加「书签目录」横向可跳转（需要等 renderSplashSections 生成 DOM 后再注入）
+          buildSplashToc(list);
         }
       } else if (Array.isArray(data.list)) {
         if (!data.list.length || data.hide) { notice.style.display = 'none'; return; }
@@ -202,18 +301,47 @@ function renderSplashSections(container, sections) {
       } else if (data.hide) {
         notice.style.display = 'none';
       }
-      // v3.8.y：其他常见问题解答 浮层——notice.json 的 faq 字段在线覆盖（无则保留模板兜底）
-      const faqBody = document.getElementById('splash-faq-body');
-      if (faqBody && data.faq && typeof data.faq === 'object') {
-        const fTitle = document.getElementById('splash-faq-title');
-        if (fTitle && data.faq.title !== undefined) fTitle.textContent = String(data.faq.title);
-        if (Array.isArray(data.faq.sections)) {
-          if (data.faq.sections.length) renderSplashSections(faqBody, data.faq.sections);
-          else faqBody.innerHTML = '';
-        }
-      }
       // 公告渲染完成（或隐藏）→ 通知开屏重新判定"是否已滑到底"
       document.dispatchEvent(new Event('mochi-notice-rendered'));
     })
     .catch(function () { /* 失败：保留模板默认公告 */ });
 })();
+// v3.8.y：离线兜底（notice.json 加载失败时）公告用 template.html 里的静态章节，同样补一份「书签目录」。
+// 在线路径已由上方 .then 内 buildSplashToc 注入（<button> 选择器会先序跳过已存在的 .splash-toc，不会重复）。
+// v3.8.z：静态（离线/模板）章节原本是平铺展开，这里统一升级成「可折叠 + 默认收起」；折叠交互走
+//   一次事件委托完成（在线 renderSplashSections 已带 splash-sec-collapsible 类，会跳过；点击由同委托处理，
+//   两者统一，不重复绑定）。
+window.addEventListener('DOMContentLoaded', function () {
+  const nl = document.querySelector('.splash-notice-list');
+  if (!nl) return;
+  // 1) 离线平铺章节 → 折叠章节（默认收起），与在线折叠结构一致
+  //    仅当渲染时序为「先 DOMContentLoaded 后 notice 异步填充」时才会动到模板静态 DOM；
+  //    若 notice 已先行渲染（各节都已带 splash-sec-collapsible 类）则整体跳过。移动只允许
+  //    把标题后的兄弟节点收进 content，绝不移入 content 自身/子孙，杜绝 "父节点塞进自身"。
+  Array.prototype.forEach.call(nl.querySelectorAll('.splash-sec-wrap'), function (wrap) {
+    if (wrap.classList.contains('splash-sec-collapsible')) return; // 在线已处理
+    const head = wrap.querySelector(':scope > .splash-sec');
+    if (!head) return;
+    wrap.classList.add('splash-sec-collapsible', 'is-collapsed');
+    let content = wrap.querySelector(':scope > .splash-sec-content');
+    if (!content) {
+      content = document.createElement('div');
+      content.className = 'splash-sec-content';
+      wrap.appendChild(content);
+    }
+    // 把标题之后的所有兄弟节点收进 content
+    while (head.nextSibling && !content.contains(head.nextSibling)) content.appendChild(head.nextSibling);
+  });
+  // 2) 折叠/展开交互：事件委托，一次注册，在线/离线都生效
+  nl.addEventListener('click', function (e) {
+    var t = e.target;
+    while (t && t !== nl && !(t.classList && t.classList.contains('splash-sec'))) t = t.parentNode;
+    if (!t || t === nl || !t.parentNode) return;
+    const wrap = t.parentNode;
+    if (wrap.classList && wrap.classList.contains('splash-sec-collapsible')) {
+      wrap.classList.toggle('is-collapsed');
+    }
+  });
+  buildSplashToc(nl);
+  document.dispatchEvent(new Event('mochi-notice-rendered'));
+});

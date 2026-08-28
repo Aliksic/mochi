@@ -30,6 +30,12 @@
     const d = window.mochiDevice;
     if (d) { isIOS = !!d.isIOS; isVia = !!d.isVia; }
   } catch (e) {}
+  // v3.26.x：iOS 全屏引导需分浏览器（Edge iOS 的「添加到主屏幕」只建快捷方式、
+  // 打开仍是浏览器标签，而 Safari 那条才是无浏览器栏的独立应用）。device.js 只
+  // 导出平台判定、不含浏览器名，这里单独读 UA
+  const _ua = String((navigator && navigator.userAgent) || '');
+  const isEdgeIOS = isIOS && /edg/i.test(_ua);
+  const isSafariIOS = isIOS && /safari/i.test(_ua) && !/edg|chrome|opt|fxios|via|quark|micromessenger/i.test(_ua);
   const inIosStandalone = isIOS && (
     window.navigator.standalone === true ||
     (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches)
@@ -279,15 +285,59 @@
   }
   // v3.6.x：iOS 全屏说明弹窗——用应用内 openModal（原 Notification 在无权限时直接
   // 抛异常且不检查，用户点了开关毫无反馈，看起来像「不能用」）
+  // v3.26.x：按现状三态出文案。旧文案的「点底部分享→添加到主屏幕」在 Edge iOS 里
+  // 根本不存在（Edge 用右上 ⋯ 菜单，且它建的只是快捷方式，打开仍是浏览器标签），
+  // 用户照做也拿不到全屏——现在明确指向 Safari 那条真独立应用路径。
   function showIosGuide() {
-    const msg = inIosStandalone
-      ? '已进入全屏模式。iOS 的系统状态栏（时间/电量）由系统控制，任何网页都无法隐藏，这是所有 iPhone 应用的共同限制。\n\n本开关已隐藏应用内的模拟状态栏，内容顶到系统状态栏下方，屏幕利用更满。'
-      : 'iOS Safari 不支持网页隐藏系统状态栏（Fullscreen API 仅对视频生效）。\n\n真正全屏的方法：点底部「分享」→「添加到主屏幕」，再从主屏幕图标打开 Mochi，即可全屏（无浏览器栏）。';
+    let msg;
+    if (isFullscreen()) {
+      msg = '已进入全屏模式，浏览器工具栏已隐藏。\n\niOS 顶部系统状态栏（时间/电量）由系统控制，任何网页都无法隐藏，这是所有 iPhone 网页的共同限制。';
+    } else if (inIosStandalone) {
+      msg = '已进入全屏模式。iOS 的系统状态栏（时间/电量）由系统控制，任何网页都无法隐藏，这是所有 iPhone 应用的共同限制。\n\n本开关已隐藏应用内的模拟状态栏，内容顶到系统状态栏下方，屏幕利用更满。';
+    } else {
+      msg = '当前浏览器未允许本页进入全屏，开关已回滚。\n\niPhone 上想真正隐藏浏览器栏，只有：\n· 【推荐】改用 Safari 打开本站 → 底部「分享」→「添加到主屏幕」→ 点桌面图标打开，即无浏览器栏的独立应用；'
+        + (isEdgeIOS ? '\n· Edge 菜单「添加到主屏幕」只会创建快捷方式，打开后仍是带工具栏的网页（就是现在的状态），这条路拿不到全屏。' : '')
+        + '\n\n另外：iOS 顶部系统状态栏（时间/电量）永远无法由网页隐藏。';
+    }
     if (window.openModal) {
       window.openModal('iOS 全屏说明', '', () => {}, { noInput: true, staticText: msg });
     } else {
       try { new Notification('iOS 全屏说明', { body: msg }); } catch (e) {}
     }
+  }
+  // v3.26.x：iOS 真全屏——旧实现在 isIOS 分支直接拒绝调用 Fullscreen API（注释写的
+  // 「iOS 无 Fullscreen API」在 2026 年的 iOS 上已不成立：Safari/Edge 对 documentElement
+  // 已开放），导致浏览器态下开关结构性无效。现改为在用户手势内真试一次：
+  //   · 成功 → 走既有 .fs-active（真全屏，浏览器栏消失）
+  //   · reject / 1.5s 复核未进全屏 → 回滚开关 + 分浏览器说明
+  //   · standalone 且此前已应用「隐藏模拟状态栏」→ 不回滚（那部分效果仍然有效）
+  // 不做方向锁（iOS 无该 API），也不走安卓的 CSS 伪全屏兜底。
+  let _iosFsSettled = false;
+  function iosFsFailed() {
+    if (_iosFsSettled) return;
+    _iosFsSettled = true;
+    if (isFullscreen()) return;
+    const t = document.getElementById('sf-fullscreen');
+    if (inIosStandalone) { if (t) t.checked = true; showIosGuide(); return; }
+    if (t) t.checked = false;
+    showIosGuide();
+  }
+  function iosTryNativeFs() {
+    _iosFsSettled = false;
+    let p = null;
+    try {
+      const el = document.documentElement;
+      if (el.requestFullscreen) p = el.requestFullscreen({ navigationUI: 'hide' });
+      else if (el.webkitRequestFullscreen) p = el.webkitRequestFullscreen();
+    } catch (e) {}
+    if (p && p.catch) p.catch(() => { iosFsFailed(); });
+    syncFsClass();
+    // 复核窗口沿用安卓同款 1500ms（低端机/重载页面上 requestFullscreen 完成可能慢于
+    // 一个宏任务，过早回滚会把用户意图覆盖成关闭）
+    setTimeout(() => {
+      if (isFullscreen()) { _iosFsSettled = true; applyFsInputHacks(); return; }
+      iosFsFailed();
+    }, 1500);
   }
   // v3.6.x：iOS standalone「全屏模式」= 隐藏应用内模拟状态栏（系统状态栏不可隐藏，
   // 交给 base.css 的 .ios-fs-active 规则处理安全区）；与 Fullscreen API 互斥
@@ -315,9 +365,14 @@
       if (fsToggle.checked) {
         _userFsOff = false;
         // v3.6.x：iOS 分支优先——standalone 走隐藏模拟状态栏，浏览器内引导安装
+        // v3.26.x：不再「iOS 一律不试原生全屏」。Edge/Safari iOS 已对 documentElement
+        // 开放 Fullscreen API，浏览器态点开关就该真去申请全屏（旧代码直接拒绝，开关
+        // 结构性无效）。注意本分支必须留在 isVia / !orientLockable() 的安卓横屏兜底
+        // 之前 return——iOS 没有方向锁 API，落到那些分支会被误判成伪全屏。
         if (isIOS) {
-          if (inIosStandalone) { applyIosFs(true); showIosGuide(); }
-          else { fsToggle.checked = false; showIosGuide(); }
+          if (inIosStandalone) applyIosFs(true);
+          if (fsSupported()) iosTryNativeFs();
+          else { if (!inIosStandalone) fsToggle.checked = false; showIosGuide(); }
           return;
         }
         // v3.6.x：点开关时视口已是横屏（多为上次全屏遗留的方向）——先自动尝试
@@ -518,12 +573,20 @@
   // v3.11.x：监听改捕获阶段——部分面板/按钮会对 click 调 stopPropagation，
   // 冒泡阶段监听可能收不到首次触摸导致重试被吞（每次进入全屏都失效的方向之一）
   function armRetry() {
+    // v3.26.x：iOS 永不武装手势重试——这个 capture touchstart/click 会让「之后任意
+    // 一次触摸」补交全屏请求，用户实测表现为「卡了一下突然自己变全屏」，且与开关
+    // 状态无关（FS_KEY 残留为 1 就中招）。iOS 没有安卓那种切后台被系统退出全屏、
+    // 需要手势重入的场景，重入在 iOS 上没有任何正当用途。
+    if (isIOS) return;
     disarmRetry();
     _retryArmed = true;
     document.addEventListener('click', retryClick, true);
     document.addEventListener('touchstart', retryTouch, true);
   }
   function reenterFs() {
+    // v3.26.x：iOS 一律不自动重入全屏（含手势重试路径）——见 armRetry 同名注释。
+    // iOS 的全屏只能由用户亲手点开关那一下申请（fullscreen.js 的 change 分支）。
+    if (isIOS) return;
     // v3.7.x：浏览器标签模式不自动重入全屏——每次打开页面就弹「退出全屏」提示条，
     // 用户无法正常使用；用户主动退出（Esc/提示条）会经 handleFsExit 清掉标记，
     // 此处 FS_KEY !== '1' 即视为已放弃，直接返回（仅 PWA 安装态 / 仍在全屏中保持）。

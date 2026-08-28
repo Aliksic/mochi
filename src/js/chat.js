@@ -352,6 +352,7 @@ if (collapseRapidDups(msgs)) { changed = true; sessionChangedIdx.clear(); }
 migrateLegacyMediaMsgs();
 try { syncLastMineText(); } catch (e) {}
 if (restoreEscapedPokeIcons()) changed = true;
+try { if (sysNickCatchup()) changed = true; } catch (e) {}
 pendingLocal = null;
 chatDbReady = true;
 // v3.14.x：本命名空间已读到权威（此后空数组落盘才被允许——内存已含全部历史）
@@ -460,6 +461,71 @@ return v || fb;
 function chatPartnerName() { return chatLabel('cs-lbl-partner', 'lbl-partner', 'TA'); }
 window.chatPartnerName = chatPartnerName;
 function chatUserName() { return chatLabel('cs-lbl-user', 'lbl-user', '我'); }
+// v3.25.x：系统消息昵称动态化——改名后历史系统消息称呼跟随当前昵称。
+// 存储：改名时把旧昵称从系统标记记录的 text 清扫成 {ta} 占位符（白名单=renderMsg 里走
+//   T(rec.text) 的分支，普通气泡 text 永不扫、永不换）；渲染：T() 把 {ta} 换回当前昵称。
+// {ta} 含花括号，不可能出现在 base64 字母表/svg 文本里；但被清扫的旧名可能撞上 base64/svg
+// 段（如默认名 TA），清扫按 taFit 同款分段保护。hist/swept 每桌面各存一份，loadMsgs 惰性补扫。
+function sysNickCur() { return chatPartnerName(); }
+function sysNickHistGet(st) {
+try {
+const v = JSON.parse(st.get('sysmsg-nick-hist') || '[]');
+if (Array.isArray(v)) return v.filter(x => typeof x === 'string' && x);
+} catch (e) {}
+return [];
+}
+function sysNickSweepText(s, oldName) {
+const segs = String(s).split(/(<svg[\s\S]*?<\/svg>)/);
+for (let i = 0; i < segs.length; i += 2) {
+const parts = segs[i].split(/(data:[a-zA-Z0-9.+-]+\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+)/);
+for (let j = 0; j < parts.length; j += 2) {
+if (parts[j].indexOf(oldName) >= 0) parts[j] = parts[j].split(oldName).join('{ta}');
+}
+segs[i] = parts.join('');
+}
+return segs.join('');
+}
+function sysNickSweepable(r) {
+if (!r || typeof r.text !== 'string' || !r.text) return false;
+if (r.mailNotice) return true;
+return r.special === 'poke' || r.special === 'ask-msg' || r.special === 'call' ||
+r.special === 'call-reply' || r.special === 'invite-reply' || r.special === 'pong' ||
+r.special === 'brick' || r.special === 'memory';
+}
+function sysNickSweepMsgs(arr, oldName) {
+let changed = false;
+for (let i = 0; i < arr.length; i++) {
+const r = arr[i];
+if (!sysNickSweepable(r) || r.text.indexOf(oldName) < 0) continue;
+const t = sysNickSweepText(r.text, oldName);
+if (t !== r.text) { r.text = t; changed = true; }
+}
+return changed;
+}
+function sysNickCatchup() {
+const cur = sysNickCur();
+const hist = sysNickHistGet(store);
+if (!hist.length) {
+try { store.set('sysmsg-nick-hist', JSON.stringify([cur])); store.set('sysmsg-nick-swept', '1'); } catch (e) {}
+return false;
+}
+let changed = false;
+if (hist[hist.length - 1] !== cur) {
+// 名字在上次会话后被改动（含绕过钩子的外部写入，如备份导入）：旧尾名清扫成 {ta}，与改名钩子同效
+if (sysNickSweepMsgs(msgs, hist[hist.length - 1])) changed = true;
+hist.push(cur);
+try { store.set('sysmsg-nick-hist', JSON.stringify(hist)); } catch (e) {}
+}
+let swept = 0;
+try { swept = parseInt(store.get('sysmsg-nick-swept'), 10) || 0; } catch (e) {}
+if (swept < hist.length) {
+for (let i = swept; i < hist.length; i++) {
+if (hist[i] && hist[i] !== cur && sysNickSweepMsgs(msgs, hist[i])) changed = true;
+}
+try { store.set('sysmsg-nick-swept', String(hist.length)); } catch (e) {}
+}
+return changed;
+}
 let avatarBatchCache = null;
 function fillAvatar(el, key) {
 if (typeof el === 'string') el = document.getElementById(el);
@@ -1166,7 +1232,12 @@ loadNewerIncremental();
 function renderMsg(rec) {
 const m = document.createElement('div');
 const __fit = rec.side !== 'out' && !!window.taFit;
-const T = (s) => (__fit ? window.taFit(s) : s);
+const __taNm = chatPartnerName();
+const T = (s) => {
+let t = s;
+if (typeof t === 'string' && t.indexOf('{ta}') >= 0) t = t.split('{ta}').join(__taNm);
+return __fit ? window.taFit(t) : t;
+};
 if (rec.special === 'invite') {
 m.className = 'msg-ask';
 m.dataset.idx = msgs.length - 1;
@@ -1937,6 +2008,28 @@ opts = opts || {};
 function addOut(text) {
 return addRec({ side: 'out', text: text });
 }
+// v3.25.x：改名钩子（chat-settings 联系人昵称 / contacts 联系人改名同步 lbl-partner）。
+// 记录 hist 并立即清扫当前桌面内存 msgs + 重渲染聊天窗；非当前桌面由 contacts 只记
+// hist（chatSysNickChanged 不感知），等该桌面下次 loadMsgs 惰性补扫。
+window.chatSysNickChanged = function (oldName) {
+try {
+if (typeof oldName !== 'string' || !oldName) return;
+const cur = sysNickCur();
+const hist = sysNickHistGet(store);
+if (hist.indexOf(oldName) < 0) hist.push(oldName);
+if (hist.indexOf(cur) < 0) hist.push(cur);
+store.set('sysmsg-nick-hist', JSON.stringify(hist));
+if (oldName === cur) { store.set('sysmsg-nick-swept', String(hist.length)); return; }
+// 权威未就绪（开屏极早期）：只记 hist 不动 msgs、不推进 swept——否则清扫后的文本
+// 与 IDB 权威里的原文本签名不同，finalize 合并会当成两条重复记录；交给补扫。
+if (!chatDbReady) return;
+store.set('sysmsg-nick-swept', String(hist.length));
+// 改名后无论清扫是否有改动都要重渲染：系统消息显示走 {ta}→当前名替换，有改动时旧名
+// 已换成 {ta}、无改动（连续改名）时旧渲染缓存的名字已过期——不重渲染 DOM 会停留在旧名
+if (sysNickSweepMsgs(msgs, oldName)) saveMsgs();
+try { if (chatVisible()) renderWindow(true); } catch (e) {}
+} catch (e) {}
+};
 window.chatAddSystem = function (text, opts) {
 opts = opts || {};
 return addIn(text, { special: opts.special || 'poke', img: opts.img, mailNotice: opts.mailNotice, askQuestion: opts.askQuestion, askStatus: opts.askStatus, askOptions: opts.askOptions, askType: opts.askType, choiceQuestion: opts.choiceQuestion, choiceOptions: opts.choiceOptions, choicePref: opts.choicePref, choiceCat: opts.choiceCat, curiousQuestion: opts.curiousQuestion, curiousQuick: opts.curiousQuick, curiousReplies: opts.curiousReplies, curiousFollowup: opts.curiousFollowup, curiousQid: opts.curiousQid, curiousCat: opts.curiousCat, roastText: opts.roastText, roastCat: opts.roastCat, deskCk: opts.deskCk, deskCkDir: opts.deskCkDir });
@@ -2904,18 +2997,6 @@ pokeTabMine.dataset.ptab = 'mine';
 pokeTabsRow.appendChild(pokeTabPub);
 pokeTabsRow.appendChild(pokeTabTa);
 pokeTabsRow.appendChild(pokeTabMine);
-const pokeToolsRow = document.createElement('div');
-pokeToolsRow.className = 'poke-tools';
-const pokeNewGroupBtn = document.createElement('button');
-pokeNewGroupBtn.className = 'emoji-tool poke-tool';
-pokeNewGroupBtn.type = 'button';
-pokeNewGroupBtn.textContent = '＋ 新建分组';
-const pokeAddBtn = document.createElement('button');
-pokeAddBtn.className = 'emoji-tool poke-tool';
-pokeAddBtn.type = 'button';
-pokeAddBtn.textContent = '＋ 新增拍一拍';
-pokeToolsRow.appendChild(pokeNewGroupBtn);
-pokeToolsRow.appendChild(pokeAddBtn);
 const pokeGroupsBar = document.createElement('div');
 pokeGroupsBar.className = 'poke-groups';
 const pokeInputRow = document.createElement('div');
@@ -2928,10 +3009,35 @@ pokeInput.setAttribute('autocomplete', 'off');
 pokeInput.setAttribute('autocorrect', 'off');
 pokeInput.setAttribute('autocapitalize', 'off');
 pokeInput.setAttribute('spellcheck', 'false');
+const pokeInputSave = document.createElement('button');
+pokeInputSave.className = 'poke-input-save';
+pokeInputSave.type = 'button';
+pokeInputSave.textContent = '存入';
+pokeInputSave.title = '存到当前选中的分组';
 const pokeInputGo = document.createElement('button');
 pokeInputGo.className = 'poke-input-go';
 pokeInputGo.type = 'button';
-pokeInputGo.textContent = '拍一拍';
+pokeInputGo.textContent = '发送';
+// 存入：把输入的文字保存到当前选中分组（预设分组不可写，自动落到第一个用户分组）
+function pokeTargetGroup() {
+const groups = pokeUserGroups.mine;
+let target = groups.find(g => g[0] === pokeCurGroup) || groups[0];
+if (!target) { target = ['我的新增', []]; groups.push(target); }
+return target;
+}
+function savePokeInput() {
+const v = (pokeInput && pokeInput.value || '').trim();
+if (!v) { toast('先输入拍一拍文字'); return; }
+const target = pokeTargetGroup();
+if (target[1].indexOf(v) >= 0) { toast('「' + target[0] + '」已有相同的拍一拍'); return; }
+target[1].push(v);
+pokeUserGroupsSave('mine');
+pokeCurGroup = target[0];
+savePokePref();
+renderPokeCard();
+if (pokeInput) pokeInput.value = '';
+toast('已存入「' + target[0] + '」');
+}
 function doPokeInput() {
 const v = (pokeInput && pokeInput.value || '').trim();
 if (!v) { toast('先输入拍一拍文字'); return; }
@@ -2939,6 +3045,10 @@ sendPoke(v);
 if (pokeInput) pokeInput.value = '';
 closePokeCard();
 }
+pokeInputSave.addEventListener('click', (e) => {
+e.stopPropagation();
+savePokeInput();
+});
 pokeInputGo.addEventListener('click', (e) => {
 e.stopPropagation();
 doPokeInput();
@@ -2950,12 +3060,13 @@ doPokeInput();
 }
 });
 pokeInputRow.appendChild(pokeInput);
+pokeInputRow.appendChild(pokeInputSave);
 pokeInputRow.appendChild(pokeInputGo);
 if (pokeCard) {
 pokeCard.insertBefore(pokeTabsRow, pokeList);
-pokeCard.insertBefore(pokeToolsRow, pokeList);
 pokeCard.insertBefore(pokeGroupsBar, pokeList);
-pokeCard.insertBefore(pokeInputRow, pokeList);
+// 输入行放面板最底部（footer）：键盘弹起面板收缩时它是最后一行，离键盘最近、不会被盖住
+pokeCard.appendChild(pokeInputRow);
 }
 function sendPoke(action) {
 const name = chatPartnerName();
@@ -3117,6 +3228,17 @@ renderPokeCard();
 });
 pokeGroupsBar.appendChild(c);
 });
+if (pokeMode === 'mine') {
+const add = document.createElement('span');
+add.className = 'emoji-g-chip poke-g-add';
+add.textContent = '＋ 分组';
+add.title = '新建拍一拍分组';
+add.addEventListener('click', (e) => {
+e.stopPropagation();
+pokeNewGroupAction();
+});
+pokeGroupsBar.appendChild(add);
+}
 }
 function renderPokeCard() {
 const name = chatPartnerName();
@@ -3127,7 +3249,6 @@ pokeTabMine.textContent = pokeTabLabel('mine');
 pokeTabPub.classList.toggle('sel', pokeMode === 'public');
 pokeTabTa.classList.toggle('sel', pokeMode === 'ta');
 pokeTabMine.classList.toggle('sel', pokeMode === 'mine');
-if (pokeToolsRow) pokeToolsRow.hidden = pokeMode !== 'mine';
 if (pokeInputRow) pokeInputRow.hidden = pokeMode !== 'mine';
 pokeInput.placeholder = '输入拍一拍文字，如：拍了拍你的脸蛋';
 const groups = pokeTabGroups(pokeMode);
@@ -3139,7 +3260,7 @@ pokeList.innerHTML = pokeMode === 'public'
 ? '<div class="cc-empty">暂无公用拍一拍<br>请到 字卡库 → 公用字卡 → 拍一拍 添加</div>'
 : pokeMode === 'ta'
 ? '<div class="cc-empty">暂无拍一拍字卡<br>请到 字卡库 → 专属字卡 → 拍一拍 添加</div>'
-: '<div class="cc-empty">暂无拍一拍字卡<br>点击「＋ 新增拍一拍」添加，或直接输入拍一拍文字</div>';
+: '<div class="cc-empty">暂无拍一拍字卡<br>在下方输入文字，点「存入」添加</div>';
 return;
 }
 const cur = groups.find(g => g.key === pokeCurGroup) || groups[0];
@@ -3148,7 +3269,7 @@ pokeList.innerHTML = pokeMode === 'public'
 ? '<div class="cc-empty">该分组暂无公用拍一拍<br>请到 字卡库 → 公用字卡 → 拍一拍 添加</div>'
 : pokeMode === 'ta'
 ? '<div class="cc-empty">该分组暂无拍一拍字卡<br>请到 字卡库 → 专属字卡 → 拍一拍 添加</div>'
-: '<div class="cc-empty">该分组暂无拍一拍<br>点击「＋ 新增拍一拍」添加到该分组</div>';
+: '<div class="cc-empty">该分组暂无拍一拍<br>在下方输入文字，点「存入」添加到该分组</div>';
 return;
 }
 cur.cards.forEach((c, i) => {
@@ -3171,8 +3292,8 @@ pokeTabMine.addEventListener('click', (e) => {
 e.stopPropagation();
 if (pokeMode !== 'mine') { pokeMode = 'mine'; savePokePref(); renderPokeCard(); }
 });
-pokeNewGroupBtn.addEventListener('click', (e) => {
-e.stopPropagation();
+// 新建分组：入口在分组栏尾部的「＋ 分组」chip（renderPokeGroupsBar），仅我的拍一拍显示
+function pokeNewGroupAction() {
 window.openModal('新建拍一拍分组（当前为「' + pokeTabLabel(pokeMode) + '」）', '', (v) => {
 v = (v || '').trim();
 if (!v) { toast('请输入分组名'); return; }
@@ -3185,25 +3306,7 @@ savePokePref();
 renderPokeCard();
 toast('已新建分组「' + v + '」');
 });
-});
-pokeAddBtn.addEventListener('click', (e) => {
-e.stopPropagation();
-const kind = pokeMode; // 工具行仅在我的拍一拍显示，kind 恒为 'mine'
-const groups = pokeUserGroups[kind];
-let target = groups.find(g => g[0] === pokeCurGroup) || groups[0];
-if (!target) { target = ['我的新增', []]; groups.push(target); }
-const hint = '（将添加到「' + target[0] + '」，作为你的拍一拍）';
-window.openModal('新增拍一拍' + hint, '', (v) => {
-v = (v || '').trim();
-if (!v) { toast('请输入拍一拍文字'); return; }
-target[1].push(v);
-pokeUserGroupsSave(kind);
-pokeCurGroup = target[0];
-savePokePref();
-renderPokeCard();
-toast('已添加到「' + target[0] + '」');
-});
-});
+}
 document.addEventListener('contact-switched', function () {
 try { pokeUserGroups.ta = pokeUserGroupsInit('ta'); pokeUserGroups.mine = pokeUserGroupsInit('mine'); } catch (e) {}
 try { if (pokeCard) pokeCard.hidden = true; } catch (e) {}

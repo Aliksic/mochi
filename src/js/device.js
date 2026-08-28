@@ -144,7 +144,8 @@
 // ===== 复制诊断信息（设置页入口，v3.16.x；v3.25.x 扩充） =====
 // 用户报障时拿数据，别靠来回猜：一键复制设备判定 / 视口 / 特性检测 / 存储配额 /
 // 更新状态（远端 version.json 时间戳比对，判断「TA 手机是不是旧缓存」）/
-// 最近错误（含调用栈 + 资源加载失败 + console.error）/ 环境变化（旋转/键盘/前后台）。
+// 最近错误（含调用栈 + 资源加载失败 + console.error）/ 环境变化（旋转/键盘/前后台）/
+// 长任务卡顿记录 / 网络失败 / 存储键明细 / 交互轨迹。
 // 贴进 openModal 的多行文本框，剪贴板可用时自动写入（GitHub Pages https 环境可用）。
 (function () {
   const row = document.getElementById('row-diagnostics');
@@ -244,25 +245,65 @@
       };
     }
   } catch (e) {}
+  // ===== 网络失败记录（v3.25.x） =====
+  // 包一层 fetch（device.js 是首个脚本，先于所有业务模块执行），失败（网络错/
+  // ≥400）记环形 6 条；1 分钟内同址同状态去重——pwa.js 弱网下每 15s 轮询
+  // version.json 会连续失败，不去重会刷屏。AbortError（调用方主动超时）不算失败。
+  function fetchFail(url, status) {
+    try {
+      var ent = { t: Date.now(), u: String(url || '').slice(0, 90), s: status || 0 };
+      var last = null;
+      try {
+        var a = JSON.parse(localStorage.getItem(NET_KEY) || '[]');
+        if (Array.isArray(a) && a.length) last = a[a.length - 1];
+      } catch (e) {}
+      if (last && last.u === ent.u && last.s === ent.s && ent.t - (last.t || 0) < 60000) return;
+      ringPush(NET_KEY, ent, 6);
+    } catch (e) {}
+  }
+  try {
+    var origFetch = window.fetch;
+    if (typeof origFetch === 'function') {
+      window.fetch = function () {
+        var args = arguments;
+        var url = '';
+        try { url = String((args[0] && args[0].url) || args[0] || ''); } catch (e) {}
+        return origFetch.apply(this, args).then(function (r) {
+          try { if (r && r.status >= 400) fetchFail(url, r.status); } catch (e) {}
+          return r;
+        }).catch(function (err) {
+          try { if (!err || err.name !== 'AbortError') fetchFail(url, 0); } catch (e) {}
+          throw err;
+        });
+      };
+    }
+  } catch (e) {}
   // ===== 环境变化记录（v3.25.x） =====
   // 手机端 bug 常由「旋转 / 键盘弹起 / 切后台」触发，点开诊断那一刻的静态快照
   // 看不到。把最近 10 次环境变化（视口尺寸 / 前后台）带时间戳存 localStorage
   // （键 __diag-env），诊断信息末尾输出。resize 高度差 <100px 不记录：iOS Safari
   // 工具栏收展约 55-60px 且随滚动反复触发，全记会刷屏。
   const ENV_KEY = 'xy-home-v2:__diag-env';
-  function envPush(k, x) {
+  const LT_KEY = 'xy-home-v2:__diag-lt';
+  const NET_KEY = 'xy-home-v2:__diag-net';
+  const TAP_KEY = 'xy-home-v2:__diag-tap';
+  // 通用环形缓冲写入（环境变化/长任务/网络失败/交互轨迹共用）
+  function ringPush(key, ent, cap) {
     try {
       var arr = [];
       try {
-        var old = localStorage.getItem(ENV_KEY);
+        var old = localStorage.getItem(key);
         if (old) { var o = JSON.parse(old); if (Array.isArray(o)) arr = o; }
       } catch (e) {}
-      var ent = { t: Date.now(), k: String(k || '').slice(0, 20) };
-      if (x) ent.x = String(x).slice(0, 120);
       arr.push(ent);
-      if (arr.length > 10) arr = arr.slice(arr.length - 10);
-      try { localStorage.setItem(ENV_KEY, JSON.stringify(arr)); } catch (e) {}
+      if (arr.length > cap) arr = arr.slice(arr.length - cap);
+      try { localStorage.setItem(key, JSON.stringify(arr)); } catch (e) {}
     } catch (e) {}
+  }
+  function envPush(k, x) {
+    var ent = { t: Date.now(), k: String(k || '').slice(0, 20) };
+    if (x) ent.x = String(x).slice(0, 120);
+    ringPush(ENV_KEY, ent, 10);
   }
   var lastW = window.innerWidth || 0, lastH = window.innerHeight || 0;
   try {
@@ -288,6 +329,43 @@
     document.addEventListener('visibilitychange', function () {
       envPush('前后台', document.hidden ? '切到后台' : '回到前台');
     });
+  } catch (e) {}
+  // ===== 长任务监测（v3.25.x） =====
+  // 帧率采样只能测「打开诊断那一刻」；长任务 Observer 常驻记录 >50ms 主线程
+  // 阻塞（掉帧元凶），TA 说「刚才卡了」时无需复现。环形 8 条存 localStorage
+  // 跨刷新保留（靠时间戳辨新旧）。内核不支持时 ltSupported=false，输出处注明。
+  var ltSupported = false;
+  try {
+    if ('PerformanceObserver' in window) {
+      var ltObs = new PerformanceObserver(function (list) {
+        try {
+          var es = list.getEntries() || [];
+          for (var i = 0; i < es.length; i++) {
+            if (es[i] && es[i].duration >= 50) {
+              ringPush(LT_KEY, { t: Date.now(), d: Math.round(es[i].duration) }, 8);
+            }
+          }
+        } catch (e2) {}
+      });
+      try { ltObs.observe({ type: 'longtask', buffered: true }); ltSupported = true; } catch (e) {}
+    }
+  } catch (e) {}
+  // ===== 交互轨迹（v3.25.x） =====
+  // 捕获级点击委托，记最近 6 次点在哪个元素（标签#id.类名，最多向上 3 层）——
+  // 「异常残留态」类 bug（如上轮房间取消标卡死）靠它还原用户操作路径。
+  try {
+    document.addEventListener('click', function (ev) {
+      try {
+        var desc = '', n = ev.target;
+        for (var depth = 0; n && n !== document && depth < 3; depth++, n = n.parentNode) {
+          var seg = n.tagName ? String(n.tagName).toLowerCase() : '';
+          if (n.id) seg += '#' + n.id;
+          if (typeof n.className === 'string' && n.className) seg += '.' + n.className.split(/\s+/).slice(0, 2).join('.');
+          desc = desc ? seg + '>' + desc : seg;
+        }
+        if (desc) ringPush(TAP_KEY, { t: Date.now(), x: desc.slice(0, 80) }, 6);
+      } catch (e) {}
+    }, true);
   } catch (e) {}
   function mq(q) { try { return !!(window.matchMedia && window.matchMedia(q).matches); } catch (e) { return false; } }
   function cssSupports(decl) {
@@ -406,21 +484,22 @@
     L.push('Mochi 诊断信息（' + ver + '）');
     L.push('时间：' + new Date().toLocaleString());
     L.push('');
-    // v3.25.x：【更新状态】放最前——「TA 手机是不是旧缓存」是远端排障第一问
-    let remoteTxt = '获取中…', cmpTxt = '', swTxt = '读取中…';
-    jobs.push(fetchRemoteVer().then(function (r) {
-      if (!r || !r.ok) { remoteTxt = '获取失败（离线或网络受限）'; cmpTxt = '无法比较'; return; }
-      remoteTxt = (r.info ? r.info + '，' : '') + 'ts=' + r.ts + '（' + tsStr(r.ts) + '）';
-      if (!localTs) { cmpTxt = '无法比较（本机无构建时间戳）'; return; }
-      cmpTxt = r.ts > localTs
-        ? '不一致——TA 手机上跑的是旧版（对方点顶部更新条刷新，或关掉全部标签页重开）'
-        : (r.ts === localTs ? '一致（已是最新）' : '远端比本机还旧（GitHub Pages CDN 延迟？一般可忽略）');
-    }));
-    jobs.push(swStateText().then(function (t) { swTxt = t; }));
+    // v3.25.x：【更新状态】放最前——「TA 手机是不是旧缓存」是远端排障第一问。
+    // 注意：L 是字符串数组，job 回调里改局部变量改不了已 push 的行，必须像
+    // quotaIdx 一样记下标回写 L[...]——否则这三行永远停在「获取中/读取中」。
     L.push('【更新状态】');
-    L.push('远端 version.json：' + remoteTxt);
-    L.push('比对结论：' + cmpTxt);
-    L.push('SW：' + swTxt);
+    const remoteIdx = L.length; L.push('远端 version.json：获取中…');
+    const cmpIdx = L.length; L.push('比对结论：');
+    const swIdx = L.length; L.push('SW：读取中…');
+    jobs.push(fetchRemoteVer().then(function (r) {
+      if (!r || !r.ok) { L[remoteIdx] = '远端 version.json：获取失败（离线或网络受限）'; L[cmpIdx] = '比对结论：无法比较'; return; }
+      L[remoteIdx] = '远端 version.json：' + (r.info ? r.info + '，' : '') + 'ts=' + r.ts + '（' + tsStr(r.ts) + '）';
+      if (!localTs) { L[cmpIdx] = '比对结论：无法比较（本机无构建时间戳）'; return; }
+      L[cmpIdx] = '比对结论：' + (r.ts > localTs
+        ? '不一致——TA 手机上跑的是旧版（对方点顶部更新条刷新，或关掉全部标签页重开）'
+        : (r.ts === localTs ? '一致（已是最新）' : '远端比本机还旧（GitHub Pages CDN 延迟？一般可忽略）'));
+    }));
+    jobs.push(swStateText().then(function (t) { L[swIdx] = 'SW：' + t; }));
     L.push('');
     L.push('【设备判定】');
     L.push('手机=' + !!d.isMobile + '  平板=' + !!d.isTablet + '  iOS=' + !!d.isIOS + '  安卓=' + !!d.isAndroid + '  Via=' + !!d.isVia);
@@ -489,9 +568,46 @@
       if (pm && pm.usedJSHeapSize) memTxt = 'JS堆 ' + (pm.usedJSHeapSize / 1048576).toFixed(1) + ' MB / 上限 ' + Math.round(pm.jsHeapSizeLimit / 1048576) + ' MB';
     } catch (e) {}
     L.push('JS 内存：' + memTxt);
+    // v3.25.x：启动耗时 + 电量——「打开转圈久」与「低电量降频伪装成卡顿」的线索
+    try {
+      const nav = performance.getEntriesByType ? performance.getEntriesByType('navigation')[0] : null;
+      if (nav && nav.domContentLoadedEventEnd > 0) {
+        L.push('启动：首字节 ' + Math.round(nav.responseStart) + 'ms → DOM就绪 ' + Math.round(nav.domContentLoadedEventEnd) + 'ms → 加载完成 ' + (nav.loadEventEnd > 0 ? Math.round(nav.loadEventEnd) + 'ms' : '未完成'));
+      }
+    } catch (e) {}
+    try {
+      const lts = JSON.parse(localStorage.getItem(LT_KEY) || '[]');
+      if (Array.isArray(lts) && lts.length) {
+        L.push('长任务>50ms（掉帧元凶）最近 ' + lts.length + ' 条（旧→新）：');
+        lts.forEach(function (it) {
+          const dt = it.t ? new Date(it.t).toLocaleTimeString() : '?';
+          L.push('· ' + dt + ' 阻塞 ' + (it.d || '?') + 'ms');
+        });
+      } else {
+        L.push('长任务>50ms：无' + (ltSupported ? '' : '（内核不支持观测）'));
+      }
+    } catch (e) {}
+    try {
+      if (navigator.getBattery) {
+        let batIdx = -1;
+        try { L.push('电量：读取中…'); batIdx = L.length - 1; } catch (e2) {}
+        jobs.push(navigator.getBattery().then(function (b) {
+          if (batIdx < 0) return;
+          L[batIdx] = '电量=' + Math.round(b.level * 100) + '%' + (b.charging ? '（充电中）' : (b.level <= 0.2 ? '（低电量，省电降频可能伪装成卡顿）' : ''));
+        }).catch(function () {
+          if (batIdx >= 0) L[batIdx] = '电量：读取失败';
+        }));
+      }
+    } catch (e) {}
     L.push('');
     L.push('【数据】');
     const G = 'xy-home-v2:';
+    const usageStr = function (u) {
+      if (u == null) return '(未知)';
+      if (u >= 1048576) return (u / 1048576).toFixed(1) + ' MB';
+      if (u >= 1024) return (u / 1024).toFixed(1) + ' KB';
+      return u + ' B';
+    };
     try {
       let n = 0;
       for (let i = 0; i < localStorage.length; i++) {
@@ -500,6 +616,23 @@
       }
       L.push('localStorage 数据键=' + n + ' 个');
     } catch (e) { L.push('localStorage 不可访问'); }
+    // v3.25.x：键明细——数据丢失类报障（键被清/写入失败/快照剥离）一眼定位：
+    // 哪些键还在、各占多大。UTF-16 双字节估算，看量级够用。
+    try {
+      let total = 0;
+      const items = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k2 = localStorage.key(i);
+        if (!k2 || k2.indexOf(G) !== 0) continue;
+        const sz = (k2.length + String(localStorage.getItem(k2) || '').length) * 2;
+        total += sz;
+        items.push({ k: k2.slice(G.length), size: sz });
+      }
+      items.sort(function (a, b) { return b.size - a.size; });
+      L.push('数据总占用≈' + usageStr(total));
+      const tops = items.slice(0, 8).map(function (it) { return it.k + '=' + usageStr(it.size); }).join('、');
+      if (tops) L.push('最大键：' + tops);
+    } catch (e) {}
     // v3.16.x：存储配额/持久化/在线状态——「数据写不进去/丢失」类报障的关键字段：
     // 配额满写失败曾是本项目真实根因（localStorage setItem 静默失败）。
     // v3.25.x：改用 jobs + 占位行下标替换（原 L.indexOf 找占位串有误配风险，
@@ -507,12 +640,6 @@
     let quotaIdx = -1, persistedIdx = -1;
     try { L.push('存储配额：读取中…'); quotaIdx = L.length - 1; } catch (e) {}
     try { L.push('navigator.onLine=' + navigator.onLine); } catch (e) {}
-    const usageStr = function (u) {
-      if (u == null) return '(未知)';
-      if (u >= 1048576) return (u / 1048576).toFixed(1) + ' MB';
-      if (u >= 1024) return (u / 1024).toFixed(1) + ' KB';
-      return u + ' B';
-    };
     try {
       const est = navigator.storage && navigator.storage.estimate;
       if (est) {
@@ -566,6 +693,31 @@
         L.push('环境变化：无');
       }
     } catch (e) { L.push('环境变化：读取失败'); }
+    // v3.25.x：网络失败 + 交互轨迹
+    try {
+      const nets = JSON.parse(localStorage.getItem(NET_KEY) || '[]');
+      if (Array.isArray(nets) && nets.length) {
+        L.push('网络失败 ' + nets.length + ' 条（旧→新，1 分钟内同址去重）：');
+        nets.forEach(function (it) {
+          const dt = it.t ? new Date(it.t).toLocaleTimeString() : '?';
+          L.push('· ' + dt + ' ' + (it.u || '?') + (it.s ? ' HTTP ' + it.s : '（网络错误/断网）'));
+        });
+      } else {
+        L.push('网络失败：无');
+      }
+    } catch (e) { L.push('网络失败：读取失败'); }
+    try {
+      const taps = JSON.parse(localStorage.getItem(TAP_KEY) || '[]');
+      if (Array.isArray(taps) && taps.length) {
+        L.push('交互轨迹 ' + taps.length + ' 条（旧→新）：');
+        taps.forEach(function (it) {
+          const dt = it.t ? new Date(it.t).toLocaleTimeString() : '?';
+          L.push('· ' + dt + ' ' + (it.x || '?'));
+        });
+      } else {
+        L.push('交互轨迹：无');
+      }
+    } catch (e) { L.push('交互轨迹：读取失败'); }
     // 全部异步结果（配额/persisted/远端版本/SW）就绪后再 join；3s 兜底保证弹窗必弹
     let finished = false;
     const finish = function () { if (finished) return; finished = true; resolve(L.join('\n')); };
@@ -590,6 +742,28 @@
       if (!started) { finish(false); return; }
       try { setTimeout(function () { finish(false); }, 1500); } catch (e) {}
     });
+  }
+  // ===== v3.25.x：导出 txt =====
+  // 诊断文本变长后，部分安卓 IAB/WebView 剪贴板对大文本静默截断或失败——
+  // 下载成文件再经聊天 App 发送最稳。Blob + a[download]（iOS 13+/安卓 Chrome
+  // 均支持）；个别内核无下载行为时 hint 里给「用复制/长按选字」兜底提示。
+  function exportTxt(text) {
+    try {
+      const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'mochi-diag-' + new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-') + '.txt';
+      document.body.appendChild(a);
+      a.click();
+      try {
+        setTimeout(function () {
+          try { document.body.removeChild(a); } catch (e2) {}
+          try { URL.revokeObjectURL(url); } catch (e2) {}
+        }, 800);
+      } catch (e2) {}
+      return true;
+    } catch (e) { return false; }
   }
   // ===== v3.25.x：诊断入口角标 =====
   // 报障的人不知道去哪拿诊断数据：采集到新错误后，「复制诊断信息」行上挂
@@ -649,6 +823,16 @@
                     ctl.hint(ok2 ? '已复制到剪贴板，直接粘贴发给开发者即可。' : '复制失败，请长按选字手动复制。');
                   }
                 });
+              }
+            },
+            // v3.25.x：导出 txt——复制失败/截断时的兜底，下载后经聊天 App 发送
+            exportBtn: {
+              label: '导出txt',
+              fn: function (ctl) {
+                const okDl = exportTxt(ctl ? ctl.text() : text);
+                if (ctl && ctl.hint) {
+                  ctl.hint(okDl ? '已开始下载 txt 文件（见浏览器下载列表），直接发送该文件即可。' : '当前内核不支持下载，请用【复制】或长按选字手动复制。');
+                }
               }
             }
           });

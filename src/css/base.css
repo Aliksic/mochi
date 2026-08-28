@@ -74,26 +74,43 @@ html { margin:0; padding:0; }
   scrollbar-width:none; -ms-overflow-style:none;
 }
 .splash-box::-webkit-scrollbar { display:none; }
-.splash-logo {
-  width:78px; height:78px; margin:0 auto 18px;
-  /* v3.8.y：正方形里显示爱心——圆角收紧为小圆角(18%)，避免此前大圆角(32%)略显圆/近圆 */
-  border-radius:16px;
+/* v3.8.y：顶部品牌区卡片框——logo/标题/署名/原作信息统一装进一个精致白卡片 */
+.splash-brandcard {
+  width:min(322px, 100%); box-sizing:border-box;
+  padding:24px 20px 20px;
   background:var(--card-bg); border:1px solid rgba(0,0,0,.07);
-  box-shadow:0 6px 18px rgba(0,0,0,.05);
+  border-radius:20px;
+  display:flex; flex-direction:column; align-items:center;
+  animation:splash-fade-up .6s ease .04s backwards;
+}
+.splash-brandcard .splash-logo {
+  width:74px; height:74px; margin:0 auto 16px;
+  /* v3.8.y：正方形里显示爱心——圆角收紧为小圆角(18%)，避免此前大圆角(32%)略显圆/近圆 */
+  border-radius:18px;
+  background:var(--card-bg); border:1px solid rgba(0,0,0,.08);
   display:flex; align-items:center; justify-content:center;
-  animation:splash-pop .7s ease;
+  animation:splash-pop .7s ease .1s backwards;
 }
 .splash-logo svg { width:38px; height:38px; }
-.splash-title { font-size:18px; font-weight:800; letter-spacing:2px; color:var(--ink); animation:splash-fade-up .6s ease .08s backwards; }
+.splash-title { font-size:18px; font-weight:800; letter-spacing:2px; color:var(--ink); }
 /* v3.8.y：署名移到顶部，紧跟标题下方的小字 */
-.splash-brand { margin-top:8px; font-size:11px; color:var(--muted); letter-spacing:1px; animation:splash-fade-up .6s ease .16s backwards; }
+.splash-brand { margin-top:8px; font-size:11px; color:var(--muted); letter-spacing:1px; }
 /* v3.8.y：原作/部署信息（署名下方）——小灰字低调展示使用网站/GitHub 库 */
-.splash-source { margin-top:8px; text-align:center; animation:splash-fade-up .6s ease .24s backwards; }
-.splash-source-line { font-size:10px; color:var(--hint-ink); line-height:1.8; letter-spacing:.3px; }
+.splash-source { margin-top:12px; padding-top:12px; border-top:1px dashed var(--line); text-align:center; width:100%; }
+.splash-source-line { font-size:9px; color:var(--hint-ink); line-height:1.8; letter-spacing:0; white-space:nowrap; }
 .splash-source-url { color:var(--ink); font-weight:600; }
-/* v3.8.y：底部版本块重新设计——两行：名称+版本(加粗) / 部署时间+实时秒数，去等宽字体、字号加大适配手机 */
+/* v3.8.y：底部统一卡片框——版本/加载/提示/按钮装进一个白卡片，与顶部品牌卡片呼应 */
+.splash-footcard {
+  width:min(322px, 100%); box-sizing:border-box;
+  padding:14px 18px calc(14px + env(safe-area-inset-bottom, 0px));
+  background:var(--card-bg); border:1px solid rgba(0,0,0,.07);
+  border-radius:20px;
+  display:flex; flex-direction:column; align-items:center;
+  margin-bottom:calc(env(safe-area-inset-bottom,0px) + 18px);
+  animation:splash-fade-up .6s ease .4s backwards;
+}
+/* v3.8.y：底部版本块——两行：名称+版本(加粗) / 部署时间+实时秒数，去等宽字体、字号加大适配手机 */
 .splash-ver {
-  margin-top:12px;
   display:flex; flex-direction:column; align-items:center; gap:3px;
   line-height:1.5;
 }
@@ -101,36 +118,109 @@ html { margin:0; padding:0; }
 .splash-ver .sv-deploy { font-size:10.5px; color:var(--hint-ink); }
 /* v3.5.111：开屏公告卡片（白纸卡片，与全局简约风格一致）；v3.8.y：不再自滚，随 .splash-box 整页滚动 */
 .splash-notice {
-  margin:18px auto 0; width:min(322px, 100%); text-align:left;
-  background:var(--card-bg); border:1px solid rgba(0,0,0,.06);
-  border-radius:18px; padding:16px 18px;
-  box-shadow:0 8px 26px rgba(0,0,0,.05);
+  margin:14px auto 0; width:min(322px, 100%); text-align:left;
+  background:var(--card-bg); border:1px solid rgba(0,0,0,.07);
+  border-radius:20px; padding:18px 18px 20px;
   animation:splash-fade-up .6s ease .32s backwards;
 }
-.splash-notice-title { font-size:13.5px; font-weight:800; color:var(--ink); text-align:center; margin-bottom:4px; letter-spacing:1px; }
-.splash-notice-sub { font-size:10.5px; font-weight:600; color:var(--muted); text-align:center; margin-bottom:14px; letter-spacing:2px; }
-.splash-notice-list p { font-size:11px; line-height:1.7; color:var(--soft-ink); }
+.splash-notice-title { font-size:14px; font-weight:800; color:var(--ink); text-align:center; margin-bottom:5px; letter-spacing:1.5px; }
+.splash-notice-sub { font-size:10.5px; font-weight:600; color:var(--muted); text-align:center; margin-bottom:16px; letter-spacing:1.5px; }
+.splash-notice-list p { font-size:11.5px; line-height:1.75; color:var(--soft-ink); }
 /* v3.8.x：公告版式层级——黑白简约语义变量（明/暗主题分别取值）：
    章节标题(黑竖条+加粗) > 子标题 > 编号条目(浅灰圆标) > 子列表项(·前缀) */
 .splash { --sp-ink:#111111; --sp-soft:rgba(17,17,17,.07); }
 [data-theme="dark"] .splash { --sp-ink:#e8e8e8; --sp-soft:rgba(255,255,255,.09); }
 /* 顶部提示块（App 说明 / 系统预设字卡等引导内容） */
 .splash-tip {
-  margin:0 0 12px; padding:9px 12px 9px 13px;
+  margin:0 0 12px; padding:10px 14px 11px 16px;
   background:var(--sp-soft); border-left:3px solid var(--sp-ink); border-radius:8px;
 }
-.splash-tip p { color:var(--soft-ink); }
-.splash-tip p + p { margin-top:4px; }
-.splash-tip .splash-tip-h { color:var(--ink); font-weight:800; font-size:11.5px; }
-/* 章节容器：编号在章节内重新从 1 开始；章节间拉开间距 */
+.splash-tip p { color:var(--soft-ink); line-height:1.75; }
+.splash-tip p + p { margin-top:6px; }
+.splash-tip .splash-tip-h { color:var(--ink); font-weight:800; font-size:12px; }
+/* v3.8.z：必读摘要——深色卡片置顶，承载必读内容，视觉上最醒目 */
+.splash-summary {
+  margin:0 0 14px; padding:12px 14px 13px 14px;
+  background:var(--sp-soft); border-left:3px solid var(--sp-ink); border-radius:8px;
+}
+.splash-summary-title { font-size:12px; font-weight:800; color:var(--ink); margin-bottom:7px; letter-spacing:.6px; }
+.splash-summary p { font-size:11.5px; line-height:1.75; color:var(--soft-ink); }
+.splash-summary p + p { margin-top:6px; }
+/* 章节容器：编号在章节内重新从 1 开始；章节间拉开间距；折叠章节样式 */
 .splash-sec-wrap { counter-reset: notice; }
-.splash-sec-wrap + .splash-sec-wrap { margin-top:16px; }
+.splash-sec-wrap + .splash-sec-wrap { margin-top:12px; }
+/* v3.8.y：开屏公告「书签目录」——可折叠入口：默认收起，点头展开竖排章节索引 */
+.splash-toc {
+  margin:0 0 14px;
+  border:1px solid var(--line); border-radius:12px; overflow:hidden;
+  background:var(--card-bg);
+}
+.splash-toc-head {
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
+  width:100%; padding:12px 14px;
+  font-size:13px; font-weight:800; letter-spacing:.5px;
+  color:var(--ink); background:transparent; border:0; text-align:left;
+  cursor:pointer; user-select:none; -webkit-tap-highlight-color:transparent;
+  transition:background .2s ease;
+}
+.splash-toc-head:active { background:var(--sp-soft); }
+.splash-toc-chev {
+  display:inline-block; width:auto; padding:2px 2px 0; text-align:center;
+  font-size:11px; line-height:1; color:var(--muted); transition:transform .25s ease;
+}
+.splash-toc.open .splash-toc-chev { transform:rotate(180deg); }
+.splash-toc-body { display:none; border-top:1px solid var(--line); counter-reset: toc; }
+.splash-toc.open .splash-toc-body { display:block; }
+.splash-toc-chip {
+  display:flex; align-items:center; gap:10px;
+  width:100%; padding:11px 14px;
+  font-size:12px; font-weight:700; line-height:1.2; letter-spacing:.4px;
+  color:var(--muted); background:transparent; border:0; border-bottom:1px solid var(--line);
+  text-align:left; cursor:pointer; user-select:none; -webkit-tap-highlight-color:transparent;
+  transition:color .2s ease, background .2s ease;
+}
+.splash-toc-chip::before {
+  counter-increment:toc; content:counter(toc, decimal-leading-zero);
+  display:inline-block; min-width:20px;
+  font-size:10px; font-weight:800; letter-spacing:0; color:var(--hint-ink);
+  font-variant-numeric:tabular-nums;
+}
+.splash-toc-chip:last-child { border-bottom:0; }
+.splash-toc-chip:active { background:var(--sp-soft); }
+/* 激活项：加粗高亮 + 淡灰底（明暗主题都清晰） */
+.splash-toc-chip.active { color:var(--ink); font-weight:800; background:var(--sp-soft); }
+.splash-toc-chip.active::before { color:var(--sp-ink); }
+/* v3.8.y：可折叠章节：标题可点击，点击展开/折叠细节内容 */
+.splash-sec-collapsible {
+  border-radius:12px; overflow:hidden;
+  background:var(--sp-soft); border:1px solid rgba(0,0,0,.05);
+  scroll-margin-top:10px; /* 书签跳转时顶部留白，避免贴边 */
+}
+[data-theme="dark"] .splash-sec-collapsible { border-color:rgba(255,255,255,.06); }
+.splash-sec-collapsible .splash-sec {
+  margin:0; padding:13px 14px; cursor:pointer; /* 右侧加内边距，避免折叠箭头贴边被圆角裁切 */
+  user-select:none; -webkit-tap-highlight-color:transparent;
+}
+.splash-sec-collapsible .splash-sec::after {
+  content:""; margin-left:auto;
+  width:7px; height:7px; border-right:1.5px solid var(--sp-ink);
+  border-bottom:1.5px solid var(--sp-ink);
+  transform:rotate(-45deg); transition:transform .2s ease;
+  flex-shrink:0; opacity:.55;
+}
+.splash-sec-collapsible.is-collapsed .splash-sec-content { display:none; }
+.splash-sec-collapsible:not(.is-collapsed) .splash-sec::after { transform:rotate(45deg); }
+.splash-sec-collapsible .splash-sec-content {
+  padding:4px 16px 14px;
+  background:var(--card-bg);
+  border-top:1px solid rgba(127,127,127,.1);
+}
 /* 章节标题：黑色竖条 + 加粗 */
 .splash-sec {
-  display:flex; align-items:center; gap:8px;
-  margin-bottom:9px; font-size:12.5px; font-weight:800; color:var(--ink); letter-spacing:.4px;
+  display:flex; align-items:center; gap:9px;
+  margin-bottom:9px; font-size:13px; font-weight:800; color:var(--ink); letter-spacing:.5px;
 }
-.splash-sec::before { content:""; width:3px; height:13px; border-radius:2px; background:var(--sp-ink); flex-shrink:0; }
+.splash-sec::before { content:""; width:3px; height:14px; border-radius:2px; background:var(--sp-ink); flex-shrink:0; }
 /* 子标题（如「为什么必须附上型号和浏览器：」） */
 .splash-sub { margin:12px 0 6px; font-size:11.5px; font-weight:800; color:var(--ink); letter-spacing:.5px; }
 /* 编号条目：浅灰圆角数字标 */
@@ -170,69 +260,12 @@ html { margin:0; padding:0; }
   margin-top:16px; font-size:11px; color:var(--hint-ink); letter-spacing:1px;
 }
 .splash-enter-hint[hidden] { display:none; }
-/* v3.8.y：底部操作区——「点击进入」+「其他常见问题解答」并排一行 */
+/* v3.8.y：底部操作区——「点击进入」按钮（居中，间距由卡片 padding 控制） */
 .splash-btns {
-  /* v3.8.y：底部常驻区，下边距含安全区，避免遮挡 iPhone 底部横条 */
   display:flex; align-items:center; justify-content:center; gap:10px;
-  margin:16px 0 calc(env(safe-area-inset-bottom,0px) + 22px);
-  animation:splash-fade-up .6s ease .4s backwards;
+  margin-top:14px;
 }
 .splash-btns .splash-enter { margin-top:0; }
-/* v3.8.y：常见问题解答按钮（描边次要按钮，黑白简约风） */
-.splash-faq-open {
-  display:inline-block; padding:10px 18px;
-  background:transparent; color:var(--ink); font-size:12.5px; font-weight:700;
-  border:1px solid var(--ink); border-radius:99px; letter-spacing:.5px; cursor:pointer;
-  -webkit-tap-highlight-color:transparent; user-select:none;
-  transition:background .2s ease, color .2s ease;
-}
-.splash-faq-open:active { background:var(--static-bg); }
-/* v3.8.y：其他常见问题解答 浮层（开屏内全屏遮罩 + 卡片，内容可滚动） */
-.splash-faq {
-  position:fixed; inset:0; z-index:20;
-  background:rgba(0,0,0,.35);
-  display:flex; align-items:center; justify-content:center;
-  padding:24px;
-}
-.splash-faq[hidden] { display:none; }
-.splash-faq-card {
-  width:min(340px, 100%); max-height:78%;
-  background:var(--card-bg); border:1px solid var(--card-border);
-  border-radius:16px; display:flex; flex-direction:column;
-  overflow:hidden; box-shadow:0 10px 30px rgba(0,0,0,.12);
-  animation:splash-pop .25s ease;
-}
-.splash-faq-head {
-  display:flex; align-items:center; justify-content:space-between;
-  padding:12px 14px 10px; border-bottom:1px solid var(--card-border); flex-shrink:0;
-}
-.splash-faq-title { font-size:13px; font-weight:800; color:var(--ink); letter-spacing:.5px; }
-.splash-faq-close {
-  width:24px; height:24px; line-height:24px; text-align:center;
-  font-size:14px; color:var(--soft-ink); cursor:pointer; border-radius:50%;
-  -webkit-tap-highlight-color:transparent; user-select:none;
-}
-.splash-faq-close:active { background:var(--static-bg); }
-.splash-faq-body {
-  overflow-y:auto; padding:14px 16px; text-align:left;
-  scrollbar-width:none; -ms-overflow-style:none;
-}
-.splash-faq-body::-webkit-scrollbar { display:none; }
-/* v3.8.y：FAQ 浮层排版——紧凑、层次分明（不污染开屏公告的宽松版式）：
-   编号小标题加粗黑色突出=重点；正文灰字略小；行距/段距整体收紧 */
-.splash-faq-body { font-size:12px; line-height:1.6; color:var(--soft-ink); }
-.splash-faq-body .splash-sec { margin-bottom:8px; font-size:13px; }
-.splash-faq-body .splash-item {
-  margin-bottom:5px; padding-left:20px;
-  font-size:12.5px; font-weight:800; color:var(--ink); line-height:1.5;
-}
-.splash-faq-body .splash-item::before { min-width:14px; height:14px; line-height:14px; font-size:9px; }
-.splash-faq-body .splash-sub { margin:8px 0 3px; font-size:12.5px; }
-.splash-faq-body .splash-bullet {
-  margin-bottom:3px; padding-left:20px;
-  font-size:11.5px; color:var(--soft-ink); line-height:1.6;
-}
-.splash-faq-body .splash-bullet:last-child { margin-bottom:0; }
 /* 加载提示（非按钮，不可点） */
 .splash-loading {
   margin-top:16px; font-size:12px; color:var(--hint-ink); letter-spacing:1px;

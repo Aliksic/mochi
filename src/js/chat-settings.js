@@ -306,7 +306,12 @@
       const cur = store.get('cs-lbl-partner') || '';
       window.openModal('联系人昵称', cur, (v) => {
         const val = (v || '').trim();
+        // v3.25.x：有效昵称变化时触发系统消息昵称清扫（chat.js），历史系统消息称呼跟随
+        const oldEff = store.get('cs-lbl-partner') || store.get('lbl-partner') || 'TA';
         if (val) store.set('cs-lbl-partner', val); else store.remove('cs-lbl-partner');
+        if (oldEff !== (val || store.get('lbl-partner') || 'TA')) {
+          try { if (window.chatSysNickChanged) window.chatSysNickChanged(oldEff); } catch (e) {}
+        }
         applyProfile();
         try { if (window.renderChatHeader) window.renderChatHeader(); } catch (e) {}
       }, { maxlength: 30 });
@@ -740,6 +745,56 @@
       window.openChatBeautySchemes();
     }, { noInput: true, staticText: '删除后不可恢复', pills: [{ label: '删除', value: 'ok' }] });
   }
+  // 小按钮构造器
+  function mkBtn(label, css, fn) {
+    const b = document.createElement('button');
+    b.textContent = label;
+    b.style.cssText = css;
+    b.addEventListener('click', fn);
+    return b;
+  }
+  // v3.25.x：聊天方案预览——暂存当前聊天美化 → 应用所选方案（即时生效，可还原）
+  let chatPreviewBackup = null;
+  function chatPreviewBarEl() {
+    let bar = document.getElementById('chat-beauty-preview-bar');
+    if (!bar) {
+      bar = document.createElement('div'); bar.id = 'chat-beauty-preview-bar';
+      bar.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:96;margin:12px;padding:12px 14px;background:var(--card-bg,#fff);color:var(--ink,#111);border:1px solid var(--card-border,#eee);border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,.25);display:none;align-items:center;gap:10px';
+      document.body.appendChild(bar);
+    }
+    return bar;
+  }
+  function chatStartPreview(s, m) {
+    if (!s) return;
+    chatPreviewBackup = collectChatBeauty();
+    hideChatSchemeModal(m);
+    applyChatBeautyData(s.data || {});
+    const bar = chatPreviewBarEl();
+    bar.innerHTML = '';
+    const tx = document.createElement('div'); tx.style.flex = '1'; tx.style.fontSize = '13px';
+    tx.innerHTML = '正在预览「<b>' + s.name + '</b>」<div style="font-size:11px;color:var(--muted,#999)">去聊天页查看效果，点「使用」保存 / 「还原」恢复</div>';
+    const re = mkBtn('还原', 'font-size:12px;padding:6px 12px;border:1px solid var(--card-border,#eee);border-radius:8px;background:var(--btn-cancel-bg,#fafafa);color:var(--btn-cancel-ink,#555)', () => {
+      if (chatPreviewBackup) applyChatBeautyData(chatPreviewBackup);
+      chatPreviewBackup = null; bar.style.display = 'none'; toast('已还原');
+    });
+    const keep = mkBtn('使用这个方案', 'font-size:12px;padding:6px 12px;border:none;border-radius:8px;background:var(--ink,#111);color:var(--bg-b,#fff)', () => {
+      chatPreviewBackup = null; bar.style.display = 'none'; toast('已应用「' + s.name + '」');
+    });
+    bar.appendChild(tx); bar.appendChild(re); bar.appendChild(keep);
+    bar.style.display = 'flex';
+  }
+  // v3.25.x：重命名聊天方案
+  function renameChatScheme(idx, m) {
+    const list = getChatSchemes();
+    const s = list[idx];
+    if (!s || !window.openModal) return;
+    const ctl = window.openModal('编辑方案名称', s.name, (name) => {
+      name = (name || '').trim();
+      if (!name) { ctl.hint('名称不能为空'); ctl.stay(); return; }
+      s.name = name; saveChatSchemesList(list); toast('已重命名');
+      window.openChatBeautySchemes();
+    }, { maxlength: 20, placeholder: '输入方案名称' });
+  }
   window.openChatBeautySchemes = function () {
     const m = chatSchemeModalEl();
     m.innerHTML = '';
@@ -758,22 +813,19 @@
     }
     schemes.forEach((s, i) => {
       const row = document.createElement('div');
-      row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px;border:1px solid var(--card-border,#eee);border-radius:10px';
+      row.style.cssText = 'display:flex;flex-direction:column;gap:8px;padding:10px;border:1px solid var(--card-border,#eee);border-radius:10px';
       const nm = document.createElement('div');
       const t = new Date(s.time || Date.now());
       const ds = (t.getMonth() + 1) + '-' + t.getDate();
-      nm.innerHTML = '<div style="font-size:14px;font-weight:500;word-break:break-all">' + s.name + '</div><div style="font-size:11px;color:var(--muted,#999)">保存于 ' + ds + ' · 点「应用」切换</div>';
-      nm.style.flex = '1';
+      nm.innerHTML = '<div style="font-size:14px;font-weight:600;word-break:break-all">' + s.name + '</div><div style="font-size:11px;color:var(--muted,#999)">保存于 ' + ds + '</div>';
       row.appendChild(nm);
-      const applyBtn = document.createElement('button');
-      applyBtn.textContent = '应用';
-      applyBtn.style.cssText = 'font-size:12px;padding:4px 10px;border:none;border-radius:8px;background:var(--ink,#111);color:var(--bg-b,#fff)';
-      applyBtn.addEventListener('click', () => applyChatScheme(i, m));
-      const delBtn = document.createElement('button');
-      delBtn.textContent = '删除';
-      delBtn.style.cssText = 'font-size:12px;padding:4px 8px;border:1px solid rgba(163,45,45,.35);border-radius:8px;background:var(--danger-soft,#fff5f5);color:var(--danger-ink,#a32d2d)';
-      delBtn.addEventListener('click', () => deleteChatScheme(i, m));
-      row.appendChild(applyBtn); row.appendChild(delBtn);
+      const btns = document.createElement('div');
+      btns.style.cssText = 'display:flex;align-items:center;gap:7px;flex-wrap:wrap';
+      btns.appendChild(mkBtn('预览', 'font-size:12px;padding:4px 10px;border:1px solid var(--card-border,#ddd);border-radius:8px;background:var(--btn-cancel-bg,#fafafa);color:var(--ink,#111)', () => chatStartPreview(s, m)));
+      btns.appendChild(mkBtn('应用', 'font-size:12px;padding:4px 10px;border:none;border-radius:8px;background:var(--ink,#111);color:var(--bg-b,#fff)', () => applyChatScheme(i, m)));
+      btns.appendChild(mkBtn('改名', 'font-size:12px;padding:4px 10px;border:1px solid var(--card-border,#ddd);border-radius:8px;background:var(--btn-cancel-bg,#fafafa);color:var(--ink,#111)', () => renameChatScheme(i, m)));
+      btns.appendChild(mkBtn('删除', 'font-size:12px;padding:4px 10px;border:1px solid rgba(163,45,45,.35);border-radius:8px;background:var(--danger-soft,#fff5f5);color:var(--danger-ink,#a32d2d)', () => deleteChatScheme(i, m)));
+      row.appendChild(btns);
       list.appendChild(row);
     });
     box.appendChild(list);

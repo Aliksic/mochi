@@ -1,3 +1,42 @@
+### 2026-08-28（✅ 完成·已构建·功能说明页补全 5 个遗漏功能）
+- [本会话·AI-B 域]（**已改 src/template.html；已构建 15:57, sw: mochi-mtcnrvji，verify 10/10 + 关于页专项 6/6；未提交待收口**）。
+  - 用户反馈：功能介绍页仍不全，很多功能没写。逐项核对应用入口（设置页/聊天设置/更多面板/收藏页）后，补进「01 聊天传讯」（16→21 条）：批量发送消息、语音消息（录音60s）、桌面【收藏】页+收藏设置自动收藏概率、隐藏联系人的表情包、允许删除联系人消息。
+  - 待确认：诊断（设置页）、主动分享你的字卡（回复设置-其他）、删除全部聊天记录（聊天设置危险项）、底部聊天栏「让对方继续说」按钮 等更小项是否需要补写。
+
+### 2026-08-28（✅ 完成·已构建·「功能介绍与二传二改说明」页重设计：许可/灵感来源置顶 + LICENSE/README 文案同步）
+- [本会话·AI-B 域]（**已改 src/template.html + tools/verify-about-license.mjs + LICENSE + README.md；已构建 15:46, sw: mochi-mtcnea2k，verify 10/10 + 关于页专项 6/6；未提交待收口**）。
+  - 用户需求：该页 LICENSE（# 许可）与 README.md（# 关于星言字卡与灵感来源）内容原在底部，应放顶部；按重写版文案同步（「必须保留署名」「必须标注灵感来源」等措辞统一）。
+  - 实现：页面结构改为 原版信息卡 → 许可卡（LICENSE # 许可）→ 关于星言字卡与灵感来源卡（README.md）→ 功能清单；删除底部旧「许可与署名」卡与「README 配文」折叠块；LICENSE/README.md 两文件已按重写版文案更新（README 移除旧项目简介）。
+  - 验证：tools/verify-about-license.mjs 更新 T4/T5 断言后 6/6 通过（许可/灵感来源卡置顶且先于功能清单、旧块已删）；npm run verify（node tools/verify.mjs）10/10。
+
+### 2026-08-28（✅ 完成·已构建·开屏书签目录改为可折叠入口「目录（8 章）」）
+
+### 2026-08-28（✅ 完成·已构建·开屏书签目录由横向改为竖排）
+
+### 2026-08-28（✅ 完成·已构建·开屏公告新增「书签目录」：顶部横向可点章节索引，点击即展开+跳转）
+- [本会话·AI-B 域]（**已改 src/js/clock.js + src/css/base.css；已构建 15:39, sw: mochi-mtcn4piz，verify 10/10 + headless TOC 8 章节跳转/展开实测通过；未提交待收口**）。
+  - 用户需求：开屏要能像点书签一样「选择章节直接跳转查看」（此前只有折叠，需滑动找）。
+  - 实现：新增 `buildSplashToc()`（clock.js）——公告顶部注入一条横向可滚动的 `.splash-toc` 索引条，每个章节一个 `.splash-toc-chip` 按钮（标签取章节标题去【】、超 8 字截断）。点书签：高亮当前项 + 若是收起章节则展开 + `scrollIntoView` 跳转到该章节。在线路径在 `renderSplashSections` 后注入；离线兜底 DOMContentLoaded 时补一份（幂等，防重复）。base.css 新增 `.splash-toc/.splash-toc-chip`（黑边圆角描边，激活态用 --ink/--card-bg 保证明暗主题对比）+ 章节 `scroll-margin-top` 防贴边。
+  - 验证：headless（390×844）8 个 chapter 标签正确、点最后一个书签 → 激活 1 项、该章节由收起变展开（8/8→7/8）、scrollTop 0→310、__jsErrors 空；npm run verify 10/10；关键修复哨兵 12/12。临时 _toc-check.mjs 已删除。
+
+### 2026-08-28（✅ 完成·已构建·开屏【二、关于 Bug 与报修】章节文案重写）
+
+### 2026-08-28（✅ 完成·已构建·取消「其他常见问题解答」按钮/浮层，FAQ 内容并入开屏章节）
+- [本会话·AI-B 域]（**已改 src/pwa/notice.json + src/template.html + src/js/clock.js + src/css/base.css；已构建 15:20, sw: mochi-mtcmh3v4，verify.mjs 10/10 + _verify-collapse 8 章节折叠/展开 通过；未提交待收口**）。
+  - 用户需求：取消开屏「其他常见问题解答」按钮与浮层页面，把该浮层内容并入开屏公告章节。
+  - 改动：①notice.json 删除顶部 `faq` 字段，新增两个章节注入 `sections` 尾部：`【关于字卡传讯与梦角连接】`（梦角字卡添加/是否连上/使用建议/网络灵异传闻四块）与 `【6. 关于系统预设字卡和功能设置】`（默认全开建议）——沿用 collapsible 折叠章节（字符串=编号条目，{b}=子列表项）；②template.html 删除 `#splash-faq-open` 按钮 + 整块 `#splash-faq` 浮层；③clock.js 删除开屏 FAQ 事件绑定与 notice.json faq 渲染块，注释去 FAQ 字样；④base.css 删除 .splash-faq* 与 .splash-faq-open 全部样式，.splash-btns 保留（仅剩「点击进入」居中）。
+  - 验证：notice.json JSON 合法、grep 全仓 src 无 faq 残留；构建后 tool/_verify-collapse 显示折叠章节数 6→8、点击展开正常；npm run verify 10/10；关键修复哨兵 12/12。
+
+### 2026-08-28（✅ 完成·已构建·系统消息昵称动态化：改昵称后历史系统消息称呼跟随）
+- [本会话·AI-A 域]（**已改 src/js/chat.js + src/js/chat-settings.js + src/js/contacts.js；新增 tools/diag-sysnick.mjs；已构建 16:08（sw: mochi-mtco6ye3，含另一会话改动同车），npm run verify 10/10 + 关键修复哨兵 12/12 + 功能诊断 diag-sysnick 21/21 全通过（__jsErrors 空）；未提交待收口**）。
+  - 用户需求：聊天设置改联系人昵称后，历史系统消息（拍一拍/信件/通话/音乐通知等）里的称呼也要一起变；用户发的普通消息永不改写；不得引入卡顿。
+  - 方案（集中式，不动各生成方文件）：①渲染层 T()（renderMsg 内，所有走 T(rec.text) 的系统分支）显示前把 `{ta}`→当前昵称（转义前替换，无注入面）；②改名时把旧有效名（cs-lbl-partner||lbl-partner||'TA'）从系统标记记录的 text 清扫成 `{ta}`（白名单：poke/ask-msg/call/call-reply/invite-reply/pong/brick/memory + mailNotice；普通气泡、invite/ask 等用户内容字段不扫）；清扫按 taFit 同款 svg/base64 分段保护（默认名 TA 会撞 base64 字符）。
+  - 改动点：chat.js ①chatUserName 后新增 sysNick* 助手组（hist/swept 每桌面各存一份 sysmsg-nick-hist/sysmsg-nick-swept）②T() 加 {ta} 替换 ③loadMsgs IDB 权威终点 sysNickCatchup 惰性补扫（首跑只建档不清扫；补扫含尾名清扫——hist 尾 ≠ 当前名时先扫旧尾名再入档，覆盖备份导入等绕过钩子的改名；另按 sysmsg-nick-swept 指针补扫漏项）④window.chatSysNickChanged 钩子（记 hist+即时清扫+saveMsgs+renderWindow(true)；权威未就绪时只记 hist 不动 msgs——防与 IDB 合并产生重复记录。二次修复：清扫无匹配（连续改名、文本已是 {ta}）也必须重渲染，否则 DOM 停留旧渲染缓存的名字）；chat-settings.js 联系人昵称保存/清除时算有效名新旧对比后触发；contacts.js renameContact 同步 lbl-partner 时同样接入（当前桌面即时清扫，非当前桌面只记 hist 等下次 loadMsgs 补扫）。
+  - 行为：改昵称后新旧系统消息称呼全部跟随；从未改名则数据零写入。边界：本特性上线前用过且后来又改掉的更早昵称无法识别（对应更老系统消息保持原样）；之后每次改名全部跟随。
+  - 性能：渲染替换仅窗口内消息每条一次 split/join（微秒级）；清扫仅在名字变化时一次线性遍历+单次防抖落盘；无全量扫库、无整包重写、DOM 数量不变。
+  - ⚠️ 并行说明：本会话开工时发现 chat.js 拍一拍区（~2904-3303）已有另一会话未提交改动（分组按钮迁移等），与本次四处改动（~352/461/1229/2005）无文本重叠、可同车构建；提交前请 git diff 自查两批改动都在预期内。
+  - 诊断：tools/diag-sysnick.mjs（无头 390×844）21/21 全通过——建档零写入、基线原文保留、改名后存储 text={ta}+DOM 显示新名、普通气泡含昵称子串不被改、DOM 无 {ta} 残留、顶栏新名、刷新持久化、恰 1 条拍一拍（无 IDB 合并重复）；性能段（批量 800 条：402 系统含旧名 + 401 普通含旧名）实测：最重一次改名（清扫 402 条+窗口重渲染）同步 22.8ms、纯重渲染基线 16.9ms（清扫本身约 +6ms），远低于可感知卡顿阈值。
+
 ### 2026-08-28（✅ 完成·开屏顶部新增原作/部署信息：使用网站 + GitHub 库）
 - [本会话·AI-B 域]（**已改 src/template.html + src/css/base.css；已构建 index.html/sw.js/version.json（13:53, sw: mochi-mtcjcq9n）+ verify.mjs 10/10 + 无头截图核验；提交 v3.25.x 追加，未推送**）。
   - **用户需求**：开屏顶部署名下方新增「本人原作，本人部署。使用网站为：https://ling233330-star.github.io/mochi/」+「github库为：https://github.com/ling233330-star/mochi」。
@@ -3564,3 +3603,81 @@ staticText: staticText
 - 同步：手机桌面美化页已按 颜色与透明度/尺寸与圆角/背景与壁纸/图标与页面/美化方案 分组加 .cg-title 小标题；联系人管理里的「美化方案」按钮已移除，统一入口在手机桌面美化页。
 - 验证：node build.mjs 成功（sw 关键修复哨兵 12/12）；index.html 已含 row-chat-beauty-save / saveChatBeautyScheme；node tools/verify.mjs 10/10。
 - 提交：本次将工作区多轮累积 src 改动 + 构建产物(index.html/sw.js/version.json/notice.json)一并收口提交（未推送）。
+- 【第四轮续2】A-E 补全（仍只在 src/js/device.js，node --check 通过）：A 长任务监测——PerformanceObserver(longtask, buffered) 常驻记 >50ms 主线程阻塞，环形 8 条（键 __diag-lt）跨刷新保留，【性能】区输出「阻塞 Nms」时间线，内核不支持时注明；B 网络失败——包裹 window.fetch（device.js 最先加载，先于全部业务模块），网络错/≥400 记环形 6 条（键 __diag-net），1 分钟同址同状态去重（防 pwa.js 轮询刷屏），AbortError 不算失败，输出区在环境变化之后；C 存储键明细——【数据】区新增「数据总占用≈X + 最大键前 8」（UTF-16 估算）；D 交互轨迹——document 捕获级点击委托记最近 6 次落点元素（标签#id.类名 3 层，键 __diag-tap）；E 启动耗时（navigation timing 首字节→DOM就绪→加载完成）+ 电量（getBattery，低电量标注省电降频可能伪装卡顿）。环形缓冲抽公共 ringPush(key,ent,cap)。
+
+### 2026-08-28（第五轮：桌面今日情话长句省略号显示不全，已改 src·已随 14:31 构建入库·未提交）
+- 反馈：桌面第一页「今日情话」字卡字数多一点就省略号显示不全（v3.23.x 两行 clamp 后仍不够）。
+- 方案：第二档 band 三页同步 77→92px（home.css 的 .mini-card / .week-card / 第三页 memo+mood 显式高度），情话放开 3 行 line-clamp（45px 盒）；personalize.js renderQuoteOfDay 加自动缩字号兜底——3 行仍放不下时 13→10px 逐级缩，10px 下限后仍超出的极端长句保留省略号（完整内容日历页按天可查）。
+- 对齐说明：三页统一 +15px，跨页相对对齐保持；第三页 band bottom 本就比 1/2 页高 30px——v3.16.x 既定设计（经期卡 190→160 换第三页图标区底部对齐 636.3），非本轮回归。
+- 跨域说明：home.css 属 AI-A、personalize.js 属 AI-B，本轮按用户报告一并处理。
+- 验证：新 tools/diag-quote-widget.mjs（390×844 无头，用法 `node tools/diag-quote-widget.mjs`）：基线 13px/3 行/卡片 92px ✓；40 字真实链路（LS 播种→reload→自动缩 11.5px→scrollHeight=clientHeight=45 无截断）✓；57 字页面内直测 10px 下限 ✓（3 行 10px 容量 ≈43 字，超出仍省略属预期兜底）；三页 band 卡高一致 ✓；__jsErrors 无；npm run verify 10/10（当前 14:31 构建产物，含本轮+并行会话改动）。
+- ⚠️ 构建说明：本轮 src 保存后未自行构建——检测到并行会话正在改 device.js（第四轮续2 A-E 尚未构建），避免打包半成品；本轮改动已包含在 14:31 构建产物中（diag/verify 均在该产物实测通过）。请构建者收口 device.js 后统一构建提交。
+- diag 播种坑（后续脚本注意）：raw localStorage.setItem 播种 xy-home-v2:quote-cards 会在下一次 boot 被 app 启动迁移吸收（LS 键消失、值走 IDB/store 路径），跨 boot 播种测试要么每轮重播、要么页面内直测。
+
+### 2026-08-28（第六轮：诊断弹窗「导出txt」+ 修【更新状态】永远「获取中」的 bug，已改 src·未构建）
+- 导出txt（用户指示：手机剪贴板可能复制不全长文本）：template.html 的 .modal-btns 新增 #modal-export 按钮（hidden，v3.25.x 注释）、personalize.js openModal 新增 opts.exportBtn{label,fn(ctl)}（与 opts.copyBtn 同款接线，对既有弹窗零影响）、device.js exportTxt()（Blob+a[download]，文件名 mochi-diag-日期时间.txt，iOS13+/安卓Chrome 可用）+ 诊断弹窗 opts.exportBtn：点后 ctl.hint 反馈「已开始下载…」/内核不支持时提示改用复制。
+- ⚠️ 修复【更新状态】区永远显示占位符的 bug（真机同样存在，非无头特有）：collectDiag 的 L 是字符串数组，`L.push('远端 version.json：'+remoteTxt)` 在 push 瞬间已把「获取中…」拼死进数组；job 回调里 `remoteTxt=…` 只改局部变量，永远改不了已 push 的行——【远端/比对结论/SW】三行自 v3.25.x 扩充以来从未真正显示过。已改成与 quotaIdx 同款下标回写（remoteIdx/cmpIdx/swIdx）。存储配额行一直正常正是反面印证（它走 L[quotaIdx] 回写）。
+- tools/diag-diagnostics.mjs 加固：Chrome 无头有个内置扩展页 chrome-extension://…/audio.html 也是 page 类型且可能排在真标签页前，`list.find(t=>t.type==='page')` 连上它会让所有 eval 跑进扩展上下文（fetch 全 ERR_FILE_NOT_FOUND，症状酷似页面 bug）。现在优先选 about:blank/127.0.0.1 的 target。
+- ⚠️ 系统性隐患（未改，待统一处理）：tools/ 下 27+ 个 diag-*.mjs 均用同一 `list.find(t=>t.type==='page')` 选 target 模式，存在同样的连错扩展页风险（时序性偶发，audio.html 晚出现时侥幸避开）。建议后续统一套用 diag-diagnostics 的过滤写法。
+- 验证状态：device.js/personalize.js/template.html 已 node --check 通过；上一轮 diag-diagnostics 22/23（唯一 FAIL「版本比对出结论」即上述 bug，已修源码）；**本轮 device.js 改动未构建**——请构建者执行 node build.mjs 后跑 `node tools/diag-diagnostics.mjs` 应 23/23。
+
+### 2026-08-28（第七轮：聊天设置「气泡 CSS」并入「气泡颜色」分组，已改 src·未构建）
+- 用户反馈：聊天设置里「气泡 CSS」单独一个「气泡」分组，离气泡颜色太远、太杂。template.html：cs-css 行原样移入「气泡颜色」分组末尾（紧跟联系人消息文字颜色），分组标题改「气泡颜色 / CSS」，删除原独立的「气泡」分组；仅 DOM 位置移动，id/值/绑定不变（chat-settings.js 按 id 取行，零影响）。
+- 验证状态：grep 确认 cs-css 全仓仅一处且在「气泡颜色 / CSS」组内；纯 HTML 移动未构建——请构建者与第六轮 device.js/personalize.js 改动一并统一构建提交。
+
+### 2026-08-28（第八轮：聊天设置页 12 个分组按使用频率重排，已改 src·未构建）
+- 用户要求聊天设置按方便使用重新排序。template.html 仅移动 DOM 位置，id/绑定零改动：新顺序=聊天美化方案(置顶，一键切换最常用)→壁纸→气泡样式→气泡颜色/CSS→字体→昵称与头像→发送按钮→批量发送→语音消息→表情包→全屏→数据(含删除记录等危险操作置底)。即外观美化类最前、一次性配置居中、系统开关靠后、数据操作最后。
+- 技术细节：全屏组从页首移至表情包后；首组标题保留 padding-top:2px，移动后的组标题去掉该内联样式；grep 验证 12 组顺序正确、所有 cs-* 行 id 全仓唯一；chat-settings.js 无位置依赖（全按 id 绑定）。
+- 验证状态：未构建——请构建者与第六/七轮改动一并统一构建提交。
+
+### 2026-08-28（第六轮：拍一拍「我的拍一拍」键盘弹起整页飞修复 + 输入区重设计，已改 src·已 15:07 构建·未提交）
+- 反馈：手机上拍一拍面板切「我的拍一拍」tab，点输入栏弹键盘后整页飞、UI 错乱；输入区 UI 需重设计。
+- 根因：.poke-card 是底部半框（max-height:48%），键盘弹起 .phone 收缩后 48% 上限跟着缩水；「我的拍一拍」tab 比其他 tab 多三行固定行（工具行+分组栏+输入行，固定行不可压缩）→ 内容溢出面板底边、输入框被顶到输入栏/键盘后面 → 浏览器为露焦点平移视口，与 mobile-adapt 键盘补偿打架=整页飞。其他 tab 无输入行故无事。
+- 修复（chat.js/chat-main.css AI-A 域 + mobile-adapt.js AI-B 域跨域一词，按用户报障一并处理）：
+  1. mobile-adapt.js kbDockPanels：键盘停靠期给面板加 inline max-height:calc(100% - 104px)（100%=收缩后的 .phone 可视高；96 底部锚点+8 顶部缝隙），kbUndockPanels 摘除——从根上保证键盘期所有底半框的固定行不再溢出上限（对帮我决定/问问TA 等带输入框的面板同样受益）。
+  2. chat.js 面板重排：输入行移到面板最底部（footer，列表之后）；删除「＋ 新建分组/＋ 新增拍一拍」工具行——「＋ 分组」改为分组栏尾部 chip（仅我的拍一拍显示，弹层不变）；footer 新增「存入」按钮（文字直接存入当前选中分组，存后自动切到该分组；预设分组自动落到第一个用户分组），「发送」按钮语义不变（原「拍一拍」按钮改名）。空态文案同步更新。原「＋ 新增拍一拍」弹层路径被 footer 存入取代（少一步、目标分组可见）。
+  3. chat-main.css：footer 输入行样式（上分隔线+存入描边按钮+发送实心按钮）；.poke-tools 规则删除；横屏/矮视口（max-height:560px，小米15 Pro 横屏全屏 CSS 高≈384）.poke-card max-height 48%→76%——旧值下我的拍一拍 tab 固定行常态就溢出。
+- 验证：新 tools/diag-poke-input.mjs（390×844 无头 + 伪造 visualViewport 驱动真实 syncAndroidKb/kbDockPanels/_aPinPan 路径）19 项全过：结构 footer/无工具行/chip、常态与键盘期面板 overflow=0、输入框完整在可视区、footer 悬在输入栏上方 111px、vv 平移残留归零、停靠样式收起后全摘除、存入/发送链路、公用 tab 输入行隐藏；__jsErrors 空；npm run verify 10/10（15:07 构建，sw mochi-mtclzkl4，含并行会话 device.js A-E）。
+- diag 脚本坑（新增）：CDP Runtime.evaluate returnByValue:true 下页面返回值已是解析后的对象，不要再过 JSON.parse（对象会变 "[object Object]"→null，造成全项假失败）；聊天页不在底部 tab（FULL_PAGES），进聊天页直接按 tabs.js 的 hidden 属性直切。
+- 未提交：请提交者 git diff 自查后统一收口（工作区含 device.js A-E 等并行改动，本次 15:07 构建一并打包）。
+
+### 2026-08-28（字卡库「读丢后永不取回」自愈修复：iOS 挂后台高发，已改 src·未构建主仓库）
+- 反馈：不同手机端反复出现「字卡数据没有加载，联系人聊天无法使用」，iOS 尤其频繁。
+- 根因（两层）：
+  1. chatcard.js 取回门槛缺陷——字卡库大键（>200KB 只存 IDB）冷启动由 idbRestore 回填，回填批次一旦失败/超时（iOS 挂后台杀 IDB 服务进程是常态），键读丢了却**不在** `__xyIdbDeferredKeys` 挂起名单；而 hydrateScope/hydrateCurScope/回复池 maybeHydrateReplyPool 全部以「在名单里」为前置门槛 → 三路读（内存/LS/IDB已驻留缓存）全空且**永不取回**，直到刷新。刷新后 iOS 又可能再次打断=「总是有出现」。
+  2. idb.js 连接死亡不自愈——iOS Safari/PWA 挂后台会杀 IndexedDB 服务进程，原连接之后所有事务抛 InvalidStateError（"connection is closing"/"server lost"），而 `open()` 永久缓存 dbPromise → 整个会话 IDB 读写全废且启动恢复重试全部落空。
+- 修复（idb.js AI-B 域 + chatcard.js AI-A 域，按用户报障一并处理）：
+  1. idb.js：新增 `connLost()` 连接级错误检测，idbSet/idbGet/idbGetMany/idbGetAllKeys/idbHydrateKey 的事务入口命中即 `dbPromise=null`（下次 open 重建连接，通常当场恢复）；idbGet 超时重试前也重建连接、终超时重置；idbRestore 批次失败/部分超时缺读的键登记进挂起名单（留痕给下游取回路径）；idbHydrateKey 返回值三态：true=取回成功 / null=健康连接确认 IDB 无此键 / false=读取失败可重试。
+  2. chatcard.js：hydrateScope 门槛放宽为「数据读不到就取回」（用户正在看的场景显式读，不受回填预算限制，红线不变：仍无启动链路/后台定时器自动取回）；健康确认无键记 `hydAbsent` 会话缓存，避免新装/新联系人每次回复空读；hydrateScopeIfEmpty 并入 hydrateScope 删除；maybeHydrateReplyPool 去掉名单前置（hydrateScope 自带跳过判断，每次仅两次同步检查）。
+- 需对方处理（chat.js 属并行会话在改，未动）：chat.js 表情包/拍一拍面板入口（原 4652-4660 行附近）仍以 `libScopesDeferred(['public','own'])` 为前置才调 hydrateLibScopes——名单外的读丢键在该面板打不开取回链。建议同样去掉前置条件（chatcard 端已自判断，直接调用零开销）。
+- 验证：node --check 两文件通过；新 tools/diag-cards-hydrate.mjs（390×844 无头，支持 MOCHI_ROOT 指向构建副本）6/6：absent 缓存不空读 ✓、IDB 直写 2941 张字卡大键（>220KB）+ 三路全空 + 不在名单 → getCustomCards/getCustomCardsFor 按需取回 ✓（旧实现此处永不恢复）、真实发消息 TA 回复直接用了取回后的种子字卡 ✓、全程 __jsErrors 空 ✓。npm run verify 10/10（临时副本构建产物）。diag 坑：回复延迟 rs-max 默认 40s、rn-prob 20%，回复轮询窗口必须 ≥55s 且允许补发，否则假失败。
+- ⚠️ 构建说明：主仓库工作区有并行会话 15:07 构建后仍在改的 chat.js/contacts.js/chat-settings.js/template.html（15:11-15:14，无 WORKLOG 记录），本轮**未动主仓库产物**——在临时副本（%TEMP%/mochi-verify-hydrate-*，已清理）构建验证后删除。请构建者收口并行改动后统一构建提交（含本轮 idb.js/chatcard.js/diag 脚本）。
+- 局限：无头 Chrome 无法真复现 iOS 杀 IDB 连接（connLost 路径仅逻辑接线+语法验证），iOS 真机效果需实测：复现步骤=开 App 后立刻切后台几秒再回来进聊天。
+- ✅ 构建（2026-08-28 15:37，本轮用户指定由本会话执行）：node build.mjs 已收口第六/七/八轮+并行会话全部累积改动（index.html 3183984 字节 / sw 缓存 mochi-mtcn2br7 / 哨兵 12/12）。验证：npm run verify 10/10；diag-diagnostics 23/23（第六轮修的「更新状态」确认通过）+ __jsErrors 空；产物内聊天设置 12 组新顺序确认在位。**尚未 git 提交**，等用户指示。
+
+### 2026-08-28 15:57（朋友圈「每天最多发布（条）」对默认桌面失效，已改 src·已被并行 15:49 构建带入产物·未提交）
+- 反馈：回复设置里能设联系人每天最多发几条朋友圈，但联系人发朋友圈实际没有限制；要求每个桌面联系人受这个限制各自独立。
+- 根因（src/js/feed.js 的 feedRootRescue，不在设置项也不在发帖调度本身）：v3.7.x 起 TA 发帖调度三键 feed-last / feed-next / feed-day-count 按【联系人桌面】存取（maybeAutoPostFor 全程 storeFor(cid)，日上限判定 dayCount.n >= fd-post-daily-max 也在该命名空间）。但 v3.13.x 的「朋友圈根键回收」清单仍带着这三个键 → 每次 restore-done 把 default 桌面的当日计数/上次发帖时间搬进根命名空间并删本地副本（根键已有值时更是直接删副本），而根命名空间自 v3.7.x 起已无任何读取方 → 主联系人每次刷新都从 0 重新计数、发帖间隔同时清零（可立刻再发）。表现即「只有默认桌面的 TA 无限发，其他联系人正常」，与用户描述吻合。
+- 修复：三键移出 KEYS 回收清单；新增 deskSchedRescue 反向一次性归位（default 缺值→搬回；两边都有值→当日计数取较大者 / feed-last 取更近时间 / feed-next 保留 default 现用值；随后删根键），幂等。顺带删除读根键的死函数 feedLast/feedNext/feedDayCount（全仓无调用方）。
+- 验证：新 tools/diag-feed-daily-limit.mjs（390×844 无头；从 setInterval 注册表按函数名取真实 maybeAutoPost 直接驱动，虚拟时钟每次 +2min 放行间隔闸门，__diag-base 基线只统计本轮新帖）。预修复对照产物（HEAD feed.js 的临时副本构建）5/10：default 计数刷新后为 null、第二轮 default 帖数 2→4 越限、根键残留、历史值不归位；修复后产物 10/10：default=2 / 联系人「限流角」=3 各自停在自己的上限、跨刷新零新增、根键历史值归位后当天不再多发。npm run verify 10/10、__jsErrors 空。
+- 构建状态：本轮只改 src/js/feed.js（AI-A 域），未自行构建。提醒：并行会话 15:49 的 node build.mjs 已把工作区当前 src（含本修复）打进 index.html（产物内 grep deskSchedRescue 命中）——产物带未提交改动，提交请由构建者统一收口。
+- 备注：该设置项 data-min="1"，想「当天完全不让 TA 发朋友圈」目前需另把「主动发朋友圈概率」调 0；若要把日上限允许调到 0，一行改动即可，等用户拍板。
+
+### 2026-08-28 16:05（字卡库列表页角标「显示 0 实际有卡」修复，已改 src·15:59 并行构建已带入产物·未提交）
+- 反馈：iOS 上字卡库的「公用字卡 / 专属字卡」两行右边数字显示 0，点进作用域页实际有卡。
+- 根因（chatcard.js 角标缓存）：`libCounts={pub:-1,own:-1}`，refreshLibCounts 只在 <0 时重算。首算若发生在回填完成前（iOS 慢回填/大键预算挂起是常态），把 0 缓存后**无任何失效路径** → 角标永远 0；而作用域页打开时是实时读库（有卡）→ 与描述完全吻合。own 侧另有 hydrate 取回时序问题，任务一~四已一并修。
+- 修复（chatcard.js，AI-A 域）：
+  1. refreshLibCounts(force) 重写：**0 不缓存**（n>0 才落缓存否则保持 -1 下次再试）；force 时清缓存 + pubInvalidate。
+  2. 监听 mochi-restore-done → refreshLibCounts(true)：回填就绪后强制重算，覆盖「首算过早」。
+  3. page-chatcard 页面显示时（MutationObserver）→ refreshLibCounts(true) + 无条件 hydrateLibScopes(['public','own'])（内部自判断，健康且有数据时零开销；键未驻留时顺路取回）。
+- 诊断发现（顺带记录）：v3.11.x 存量归属迁移是**整库覆盖写**公用键（单联系人资料库升级时把专属库搬进 cc-groups-public 并删专属键）——幂等标记保证只跑一次，无持续风险；若日后用户反馈「升级后公用字卡数量对不上」，先查这条迁移。
+- 验证：tools/diag-cards-hydrate.mjs 新增 Phase B3：预置迁移幂等标记（关闭迁移，否则种子被搬走环境不稳）+ 公用/专属双 IDB 直写种子（100 张/2941 张）→ boot 后角标 公用=100 专属=2941 ✓；全套 7/7（含任务一~四的取回/回复回归：真实发消息 TA 直接用取回后的种子字卡回复）；npm run verify 10/10；__jsErrors 空。
+- 构建状态：本轮 src 只动 chatcard.js；并行会话 15:59 的 node build.mjs 已把它打进 index.html（产物内 grep `refreshLibCounts(force)` 命中确认）。**尚未 git 提交**，请提交者 diff 自查后统一收口。
+- 局限：角标时序在无头 Chrome 验证的是「IDB 有数据 + 回填后重算」路径；iOS 真机的慢回填/挂后台场景建议实测：杀 App 重开 → 直接进 字卡库 看两行角标。
+
+### 2026-08-28（构建收口：桌面/聊天美化方案支持 预览+改名，含多轮累积改动）
+- 桌面美化 + 聊天美化方案管理器：每个方案新增「预览 / 应用 / 改名 / 删除」四个按钮（改为两行卡片布局）。
+  · 预览：先备份当前美化 → 应用所选方案。聊天即时生效，桌面经 location.reload 真预览；预览时底部浮条「使用这个方案 / 还原」，还原回滚备份（桌面预览备份存 localStorage 键 beauty-preview-backup/beauty-preview-name，跨 reload 保持，页面加载时自动弹浮条）。
+  · 改名：openModal 预填原名，保存后重绘列表（chat renameChatScheme / desktop renameScheme）。
+- 验证：node --check 两张源码通过；index.html 已含 chatStartPreview/desktopStartPreview；node build.mjs 成功（哨兵 12/12）；node tools/verify.mjs 10/10。
+- 提交：工作区多轮累积 src 改动（含对方已保存的 LICENSE/README/chat-main/chatcard/contacts/feed/fullscreen/idb/mobile-adapt 等）+ 构建产物一并收口提交（未推送）。

@@ -29,17 +29,20 @@
   <!-- 开屏加载动画 -->
   <div class="splash" id="splash">
     <div class="splash-box" id="splash-box">
-      <div class="splash-logo">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7.5-4.7-9.3-9A5.3 5.3 0 0112 6.4a5.3 5.3 0 019.3 5.6c-1.8 4.3-9.3 9-9.3 9z"/></svg>
-      </div>
-      <div class="splash-title">mochi 摸鱼字卡</div>
-      <!-- v3.8.y：署名（小红书）移到顶部，紧跟标题下方 -->
-      <div class="splash-brand">小红书@言序（1842523578）</div>
-      <!-- v3.8.y：原作/部署信息——本人原作本人部署，使用网站 + GitHub 库（每条单行完整显示） -->
-      <div class="splash-source">
-        <div class="splash-source-line">本人原作，本人部署。</div>
-        <div class="splash-source-line">使用网站为：<span class="splash-source-url">https://ling233330-star.github.io/mochi/</span></div>
-        <div class="splash-source-line">github库为：<span class="splash-source-url">https://github.com/ling233330-star/mochi</span></div>
+      <!-- v3.8.y：顶部品牌区统一装进一个卡片框（logo/标题/署名/原作信息成一个整体，更端庄精致） -->
+      <div class="splash-brandcard">
+        <div class="splash-logo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7.5-4.7-9.3-9A5.3 5.3 0 0112 6.4a5.3 5.3 0 019.3 5.6c-1.8 4.3-9.3 9-9.3 9z"/></svg>
+        </div>
+        <div class="splash-title">mochi 摸鱼字卡</div>
+        <!-- v3.8.y：署名（小红书）移到顶部，紧跟标题下方 -->
+        <div class="splash-brand">小红书@言序（1842523578）</div>
+        <!-- v3.8.y：原作/部署信息——本人原作本人部署，使用网站 + GitHub 库（每条单行完整显示） -->
+        <div class="splash-source">
+          <div class="splash-source-line">本人原作，本人部署。</div>
+          <div class="splash-source-line">使用网站为：<span class="splash-source-url">https://ling233330-star.github.io/mochi/</span></div>
+          <div class="splash-source-line">github库为：<span class="splash-source-url">https://github.com/ling233330-star/mochi</span></div>
+        </div>
       </div>
       <!-- v3.5.112：开屏公告（发布说明） -->
       <!-- v3.6.x：公告内容可由 notice.json 远程覆盖（clock.js 拉取），此处写死内容为离线兜底 -->
@@ -49,20 +52,33 @@
         <div class="splash-notice-title">Mochi字卡 · 开屏说明</div>
         <div class="splash-notice-sub">（请认真阅读）</div>
         <div class="splash-notice-list">
-          <div class="splash-tip">
-            <p>本站完全免费，没有收过任何人一分钱，个人出资和花费时间搭建的。开放二传二改但禁止以盈利为目的。</p>
+          <div class="splash-summary">
+            <p class="splash-summary-title">必读摘要</p>
+            <p>本站完全免费，开放二传二改，但禁止商用、禁止以盈利为目的。</p>
+            <p>报修 / 反馈请按【手机型号 + 浏览器 + 具体现象】提交，缺一不回；基础疑问可直接问 AI，比我回复快。</p>
+            <p>系统或浏览器版本不同，适配表现可能不同，属正常现象。</p>
+            <p>数据丢失属浏览器正常概率，请定期备份。</p>
+            <p>完整说明在各章节内，可点上方目录跳转查看。</p>
           </div>
-          <div class="splash-tip">
-            <p class="splash-tip-h">关于“会不会做成 App”</p>
-            <p>暂不考虑。原因是网站功能非常多——如果功能少还好说，功能太多的情况下，做成 App 可能出现的 Bug 只会更多，而且和设备、浏览器一样存在适配问题：不同手机的屏幕、系统、性能都不一样，要做到所有手机都适配，Bug 可能需要全部重写一遍。我没有这种精力和金钱。</p>
-          </div>
-          <div class="splash-tip">
-            <p class="splash-tip-h">关于“自己转 App 使用”</p>
-            <p>类似“一个木函”那种链接转应用的方式，没有我的原代码，本质是浏览器套壳，不是真正的 App，反而可能出现非常多的适配问题。所以不如直接浏览器使用，体验更稳定。</p>
-          </div>
-          <div class="splash-tip">
-            <p>本站的系统预设字卡都是补充类和小功能衍生字卡，关于个人使用得根据个人情况添加mj聊天字卡。</p>
-            <p>聊天、写信、朋友圈 添加 自定义字卡里的【公用字卡】和【专享字卡】即可</p>
+          <div class="splash-sec-wrap splash-sec-collapsible is-collapsed">
+            <p class="splash-sec">其他说明与常见问题</p>
+            <div class="splash-sec-content">
+              <div class="splash-tip">
+                <p>本站完全免费，没有收过任何人一分钱，个人出资和花费时间搭建的。开放二传二改但禁止以盈利为目的。</p>
+              </div>
+              <div class="splash-tip">
+                <p class="splash-tip-h">关于“会不会做成 App”</p>
+                <p>暂不考虑。原因是网站功能非常多——如果功能少还好说，功能太多的情况下，做成 App 可能出现的 Bug 只会更多，而且和设备、浏览器一样存在适配问题：不同手机的屏幕、系统、性能都不一样，要做到所有手机都适配，Bug 可能需要全部重写一遍。我没有这种精力和金钱。</p>
+              </div>
+              <div class="splash-tip">
+                <p class="splash-tip-h">关于“自己转 App 使用”</p>
+                <p>类似“一个木函”那种链接转应用的方式，没有我的原代码，本质是浏览器套壳，不是真正的 App，反而可能出现非常多的适配问题。所以不如直接浏览器使用，体验更稳定。</p>
+              </div>
+              <div class="splash-tip">
+                <p>本站的系统预设字卡都是补充类和小功能衍生字卡，关于个人使用得根据个人情况添加mj聊天字卡。</p>
+                <p>聊天、写信、朋友圈 添加 自定义字卡里的【公用字卡】和【专享字卡】即可</p>
+              </div>
+            </div>
           </div>
           <div class="splash-sec-wrap">
             <p class="splash-sec">【一、当前状态】</p>
@@ -77,20 +93,23 @@
             <p class="splash-bullet">另外小红书可能会吞消息，如果没收到回复，可以重复艾特我。</p>
             <p class="splash-item">网站首先是做给我自己用的，不需要的细节不做，所以不一定采纳建议。</p>
             <p class="splash-bullet">个人精力有限，许愿的功能不一定做，按我自己的节奏和需求调整。</p>
+            <p class="splash-item">做这个网站花了我非常多的时间、精力和心血，自己做过网站的都能明白。</p>
             <p class="splash-item">本站完全免费，用不用随你。我不是客服，没有义务按任何人的标准修改。</p>
-            <p class="splash-bullet">提建议欢迎，指手画脚免谈。无法接受的请使用其他网站。或自行修改代码，本站已公开全部代码且开了二传二改权限。</p>
+            <p class="splash-bullet">提建议欢迎，指手画脚免谈。无法接受的请使用其他网站。或自行修改代码，本站已公开全部代码且开了二传二改权限。谢谢配合。</p>
           </div>
           <div class="splash-sec-wrap">
             <p class="splash-sec">【二、关于 Bug 与报修】</p>
             <p class="splash-item">内测期在持续更新，存在 Bug 是正常现象；公开后也会继续修复，但不可能一次清零。</p>
-            <p class="splash-item">不同手机型号和不同浏览器都有可能出现不同的适配问题，我只能按我自己的手机保证基本没有bug，因为我自己的手机使用发现问题可以及时修。</p>
-            <p class="splash-item">反馈问题请务必附上【手机型号 + 浏览器】，缺一不回。</p>
-            <p class="splash-bullet">例：小米14 / 自带浏览器 / 点击字卡没反应</p>
-            <p class="splash-sub">为什么必须附上型号和浏览器：</p>
-            <p class="splash-bullet">很多问题不是代码本身出错，而是不同设备差异出现的特定bug；</p>
+            <p class="splash-sub">为什么不同设备表现不一样：</p>
             <p class="splash-bullet">不同手机型号和浏览器都有可能出现不同的适配问题；</p>
-            <p class="splash-bullet">我自己的设备一直在用，发现bug会自己修，但我没有其他人的手机，无法验证其他设备上的问题。</p>
-            <p class="splash-bullet">所以光说"用不了""点不动""好多bug"是不够的，没有型号和浏览器我这边真的没法查，我也很为难。</p>
+            <p class="splash-bullet">即使是同一个手机、同一个浏览器，系统版本不同、浏览器版本不同，也可能出现不同表现；</p>
+            <p class="splash-bullet">我自己的设备一直在用，发现bug会自己修，但我没有其他人的手机，无法验证其他设备上的问题；</p>
+            <p class="splash-bullet">所以光说"用不了""点不动""好多bug"是不够的——没有【手机型号 + 浏览器 + 具体现象】，我这边真的没法查。</p>
+            <p class="splash-sub">Bug 报修格式：</p>
+            <p class="splash-item">请按【手机型号 + 浏览器 + 具体现象】提交，缺一不回。</p>
+            <p class="splash-bullet">例：小米14 / 自带浏览器 / 点击字卡没反应</p>
+            <p class="splash-sub">问「为什么会出现这个问题」这类基础疑问：</p>
+            <p class="splash-item">建议直接问 AI，比我回复快。</p>
             <p class="splash-item">反馈后不需要等我回复：消息太多，修完会直接部署，可以晚些刷新到新版再试。反馈的每个问题都修了，但能否修好只能用自己的设备验证，我没有其他设备，无法验证修复程度。</p>
             <p class="splash-item">如果有设备问题bug一直修不好，我建议可以拿我的代码自行部署和修缮，有自己的手机自己验证bug是否修复会方便很多。</p>
             <p class="splash-item">8.29公开会开群友互助群，但我不一定有时间看，只是群友互助群，有问题直接评论或群里艾特，个人精力有限也不一定及时回复。</p>
@@ -130,43 +149,25 @@
             <p class="splash-bullet">禁止商用、禁止以盈利为目的</p>
           </div>
           <div class="splash-sec-wrap">
-            <p class="splash-sec">【六、灵感来源与致谢】</p>
-            <p class="splash-item">除随机回复的基础逻辑、基础数值设置、基础框架外（灵感来源和参考为 milk 字卡 · 小红书 @milk 2777299956），以下功能为借鉴：</p>
+            <p class="splash-sec">【六、版权与灵感来源】</p>
+            <p class="splash-sub">许可</p>
+            <p class="splash-item">Mochi 字卡为原创独立作品（原版），代码已完全开源。可自由二传、二改，支持私人部署，禁止商用。</p>
+            <p class="splash-bullet">必须保留署名：小红书 @言序（1842523578）。</p>
+            <p class="splash-bullet">借鉴功能或代码，必须标注灵感来源：Mochi 字卡 · 小红书 @言序（1842523578）。</p>
+            <p class="splash-sub">关于星言字卡</p>
+            <p class="splash-item">星言字卡为同一作者的另一部独立作品，其本体禁止二传二改。</p>
+            <p class="splash-sub">灵感来源</p>
+            <p class="splash-item">本站并非复刻他人网站，代码均从零编写。除随机回复的基础逻辑、基础框架外（灵感来源为 milk 字卡 · 小红书 @milk（2777299956）），以下功能为借鉴：</p>
             <p class="splash-bullet">帮我决定、多人决定功能：借鉴自小红书 @FelixFelicis（9416318007）</p>
             <p class="splash-bullet">公用字卡+专享字卡模式：借鉴自 @默玉（8012400317）</p>
             <p class="splash-item">以下功能源于网络上已有的类似想法，但设计均由我独立完成：</p>
-            <p class="splash-bullet">情绪字卡：源于早期网络上的类似提议（小红书 @心沄是颗彩虹多宝糖 9725312970 也提过这个模式）</p>
+            <p class="splash-bullet">情绪字卡：源于早期网络上的类似提议（小红书 @心沄是颗彩虹多宝糖（9725312970）也提过这个模式）</p>
             <p class="splash-bullet">换头像：灵感来自看到网络上有人提议小手机想要 chat 自己换头像</p>
-            <p class="splash-item">其余功能和UI均为我独立设计，代码全部开源，支持二传二改。若使用代码或借鉴功能，请注明灵感来源，这是对创作者最基本的尊重。</p>
+            <p class="splash-item">其余功能和 UI 均为我独立设计。</p>
+            <p class="splash-item">若使用代码或借鉴功能，必须标注灵感来源。标注来源是对创作者最基本的尊重，未标注来源的使用将视为违反本许可协议。</p>
           </div>
-        </div>
-      </div>
-    </div>
-    <!-- v3.8.y：底部操作区（版本 + 进入/FAQ 按钮）固定不随内容滚动；.splash-box 为整页滚动容器 -->
-    <!-- v3.8.y：底部版本块重新设计——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="__BUILD_TS__">
-        <span class="sv-app">Mochi 字卡传讯 <b>__APP_VERSION__</b></span>
-        <span class="sv-deploy">__BUILD_INFO__<span id="splash-ver-live"></span></span>
-      </div>
-      <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
-           只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
-      <div class="splash-loading" id="splash-loading">正在加载数据…</div>
-      <!-- v3.8.y：必须把公告滑到底才能进入——未到底时按钮置灰不可点，下方提示滑动 -->
-      <div class="splash-enter-hint" id="splash-enter-hint" hidden>请滑到底部后进入</div>
-      <div class="splash-btns">
-        <div class="splash-enter" id="splash-enter" hidden>点击进入</div>
-        <div class="splash-faq-open" id="splash-faq-open">其他常见问题解答</div>
-      </div>
-    <!-- v3.8.y：其他常见问题解答 浮层（开屏内全屏卡片，可滚动、可关闭） -->
-    <div class="splash-faq" id="splash-faq" hidden>
-      <div class="splash-faq-card">
-        <div class="splash-faq-head">
-          <span class="splash-faq-title" id="splash-faq-title">其他常见问题解答</span>
-          <div class="splash-faq-close" id="splash-faq-close">✕</div>
-        </div>
-        <div class="splash-faq-body" id="splash-faq-body">
           <div class="splash-sec-wrap">
-            <p class="splash-sec">关于字卡传讯与梦角连接</p>
+            <p class="splash-sec">【七、关于字卡传讯与梦角连接】</p>
             <p class="splash-item">怎么添加梦角字卡：</p>
             <p class="splash-bullet">系统预设的都是大众字卡，只有你才知道你的梦角是什么性格。</p>
             <p class="splash-bullet">请自行添加相关人设字卡：底部导航栏 → 字卡库 → 【公用字卡】或【专属字卡】添加。</p>
@@ -181,7 +182,31 @@
             <p class="splash-bullet">字卡只是工具，效果取决于个人如何使用。对于无根据的传闻和造谣，不接受、不回应。</p>
             <p class="splash-bullet">另外，不同人的说法可能不一样，有些是吓唬人的，也有些说法无法证实真假。如果担心或害怕，或在使用中感到不适，建议停止使用字卡传讯。</p>
           </div>
+          <div class="splash-sec-wrap">
+            <p class="splash-sec">【八、关于系统预设字卡和功能设置】</p>
+            <p class="splash-item">建议打开使用。（我自己用是默认全开）</p>
+            <p class="splash-item">初衷就是为了不限制梦角表达，如果关掉，反而限制了它，和基础传讯网站没什么差别——正是因为以前接触的字卡传讯类型太简单才做的。</p>
+            <p class="splash-item">虽然 Mochi字卡相比我做的第一个星言字卡传讯已经是简约了一点的版本，实际功能还是设置得比较复杂，并不是一个非常简单的字卡传讯。</p>
+            <p class="splash-item">建议先全部打开使用，再根据个人适应情况调整。</p>
+          </div>
         </div>
+      </div>
+    </div>
+    <!-- v3.8.y：底部操作区固定不随内容滚动；.splash-box 为整页滚动容器 -->
+    <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
+    <div class="splash-footcard">
+      <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
+      <div class="splash-ver" id="splash-ver" data-build-ts="__BUILD_TS__">
+        <span class="sv-app">Mochi 字卡传讯 <b>__APP_VERSION__</b></span>
+        <span class="sv-deploy">__BUILD_INFO__<span id="splash-ver-live"></span></span>
+      </div>
+      <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
+           只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
+      <div class="splash-loading" id="splash-loading">正在加载数据…</div>
+      <!-- v3.8.y：必须把公告滑到底才能进入——未到底时按钮置灰不可点，下方提示滑动 -->
+      <div class="splash-enter-hint" id="splash-enter-hint" hidden>请滑到底部后进入</div>
+      <div class="splash-btns">
+        <div class="splash-enter" id="splash-enter" hidden>点击进入</div>
       </div>
     </div>
   </div>
@@ -1405,10 +1430,40 @@
           </div>
         </div>
 
+        <!-- 许可（LICENSE） -->
+        <div class="cal-card glass">
+          <div class="lic-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;vertical-align:-2px;margin-right:4px"><path d="M12 3l7 4v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V7z"/><path d="M9 12l2 2 4-4"/></svg>许可</div>
+          <div class="lic-pills" style="margin:0 0 10px">
+            <span class="lic-pill">可二传二改</span>
+            <span class="lic-pill">支持私人部署</span>
+            <span class="lic-pill">禁止商用</span>
+            <span class="lic-pill">需保留署名</span>
+            <span class="lic-pill">注明灵感来源</span>
+          </div>
+          <div class="lic-p">Mochi 字卡为<b>原创独立作品（即原版）</b>，代码已在 GitHub 完全公开，支持私人部署，与网站同步更新。</div>
+          <div class="lic-li" style="margin-top:6px">- 可自由二传、二改，支持私人部署，<b>禁止商用</b>，必须保留署名：<b>小红书 @言序（1842523578）</b>（禁止删除或修改）</div>
+          <div class="lic-li">- 借鉴功能或代码，必须标注灵感来源：Mochi 字卡 · 小红书 @言序（1842523578）</div>
+        </div>
+
+        <!-- 关于星言字卡与灵感来源（README.md） -->
+        <div class="cal-card glass">
+          <div class="lic-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;vertical-align:-2px;margin-right:4px"><path d="M13 2 3 14h7l-1 8 10-12h-7z"/></svg>关于星言字卡与灵感来源</div>
+          <div class="lic-p">星言字卡为同一作者的另一部独立作品，其本体禁止二传二改。</div>
+          <div class="lic-p">本站并非复刻他人网站，代码均从零编写：</div>
+          <div class="lic-li" style="margin-top:6px">- 除随机回复的基础逻辑、基础框架外（灵感来源为 milk 字卡 · 小红书 @milk（2777299956）），以下功能为借鉴：</div>
+          <div class="lic-li">- 帮我决定、多人决定功能：借鉴自小红书 @FelixFelicis（9416318007）</div>
+          <div class="lic-li">- 公用字卡+专享字卡模式：借鉴自 @默玉（8012400317）</div>
+          <div class="lic-p" style="margin-top:10px">以下功能源于网络上已有的类似想法，但设计均由我独立完成：</div>
+          <div class="lic-li">- 情绪字卡：源于早期网络上的类似提议（有人建议在聊天中加入情绪字卡以方便交流，小红书 @心汋是颗彩虹多宝糖（9725312970）也提过这个模式）</div>
+          <div class="lic-li">- 换头像：灵感来自看到网络上有人提议小手机想要 chat 自己换头像</div>
+          <div class="lic-p" style="margin-top:10px">其余功能和 UI 均为我独立设计，代码全部开源，支持二传二改。</div>
+          <div class="lic-p" style="margin-top:10px">若使用代码或借鉴功能，必须标注灵感来源。标注来源是对创作者最基本的尊重，未标注来源的使用将视为违反本许可协议。</div>
+        </div>
+
         <!-- 功能清单：分组折叠 -->
         <div class="cal-card glass">
           <details class="lic-grp" open>
-            <summary><span class="lg-num">01</span><span class="lg-name">聊天传讯</span><span class="lg-count">16</span></summary>
+            <summary><span class="lg-num">01</span><span class="lg-name">聊天传讯</span><span class="lg-count">21</span></summary>
             <div class="lg-body">
           <div class="lic-li">字卡交流：文字、情绪、心意、交流意图四种字卡回复，联系人所有内容均为字卡回复</div>
           <div class="lic-li">每条消息使用多字卡回复：可开启、调触发概率与最少/最多条数</div>
@@ -1427,6 +1482,11 @@
           <div class="lic-li">「TA 的提问」面板：让 TA 现在问一次（询问 / 小问题 / 好奇 / 吐槽 / 邀请）</div>
           <div class="lic-li">贴贴邀请：TA 会主动发来贴贴 / 抱抱 / 牵手 / 靠着的邀请，同意有轻震回应，婉拒也有专属台阶文案</div>
           <div class="lic-li">TA 的查岗：温柔关心式查岗问题卡（单选 / 文字作答 / 互动动作），作答后 TA 会回应</div>
+          <div class="lic-li">批量发送消息：聊天输入栏「批量发送」按钮，可插入表情包 / 图片 / 文字，每条单独一条，多条按顺序一次性发送</div>
+          <div class="lic-li">语音消息：聊天输入栏「麦克风」按钮录音，最长 60 秒可试听后发送为语音消息</div>
+          <div class="lic-li">桌面【收藏】：我的收藏 / 联系人的收藏 分页浏览，收藏设置里可调联系人自动收藏概率（聊天消息 / 互动卡片 / 我的回信 / 朋友圈动态）</div>
+          <div class="lic-li">隐藏联系人的表情包：开启后聊天与朋友圈的表情包面板只显示「我的表情包」</div>
+          <div class="lic-li">允许删除联系人消息：默认关闭，开启后长按 TA 的消息可永久删除</div>
             </div>
           </details>
 
@@ -1812,36 +1872,6 @@
           <div class="lic-li">底部 tab：桌面 / 字卡库 / 设置，独立全屏页导航与状态栏隐藏</div>
           <div class="lic-li">安卓返回键：弹层优先关闭 → 回上一页 → 最后退出应用</div>
           <div class="lic-li">IndexedDB 存储：大键值存 IDB，localStorage 缓存，启动时回填；请求持久化存储防清理</div>
-            </div>
-          </details>
-        </div>
-
-        <!-- 许可与署名 -->
-        <div class="cal-card glass">
-          <div class="lic-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;vertical-align:-2px;margin-right:4px"><path d="M12 3l7 4v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V7z"/><path d="M9 12l2 2 4-4"/></svg>许可与署名</div>
-          <div class="lic-pills" style="margin:0 0 10px">
-            <span class="lic-pill">可二传二改</span>
-            <span class="lic-pill">支持私人部署</span>
-            <span class="lic-pill">禁止商用</span>
-            <span class="lic-pill">需保留署名</span>
-            <span class="lic-pill">注明灵感来源</span>
-          </div>
-          <div class="lic-p">Mochi 字卡为<b>原创独立作品（即原版）</b>，代码已在 GitHub 完全公开，支持私人部署，与网站同步更新。</div>
-          <div class="lic-li" style="margin-top:6px">- 可自由二传、二改；必须保留署名：<b>小红书 @言序（1842523578）</b>（禁止删除或修改）</div>
-          <div class="lic-li">- 借鉴功能或代码，希望标注灵感来源：Mochi 字卡 · 小红书 @言序（1842523578）</div>
-          <div class="lic-li">- 本站并非复刻他人网站，代码均从零编写</div>
-          <div class="lic-li">- 星言字卡为同一作者的另一部独立作品，其本体禁止二传二改</div>
-          <div class="lic-p" style="margin-top:10px">除随机回复的基础逻辑、基础数值设置、基础框架外（灵感来源和参考为 <b>milk 字卡 · 小红书 @milk（2777299956）</b>），以下功能为借鉴：</div>
-          <div class="lic-li">- 帮我决定、多人决定功能：借鉴自小红书 <b>@FelixFelicis（9416318007）</b></div>
-          <div class="lic-li">- 公用字卡+专享字卡模式：借鉴自 <b>@默玉（8012400317）</b></div>
-          <div class="lic-p" style="margin-top:10px">另有以下功能源于网络上已有的类似想法，但设计均由我独立完成：</div>
-          <div class="lic-li">- 情绪字卡：源于早期网络上的类似提议（有人建议在聊天中加入情绪字卡以方便交流，小红书 @心汋是颗彩虹多宝糖（9725312970）也提过这个模式）</div>
-          <div class="lic-li">- 换头像：灵感来自看到网络上有人提议小手机想要 chat 自己换头像</div>
-          <div class="lic-p" style="margin-top:10px">其余功能和 UI 均为我独立设计，代码全部开源，支持二传二改。若使用代码或借鉴功能，请注明灵感来源，这是对创作者最基本的尊重。</div>
-          <details class="lic-grp" style="margin-top:12px;border-top:1px dashed rgba(0,0,0,.08);padding-top:4px">
-            <summary><span class="lg-name">README 配文</span></summary>
-            <div class="lg-body" style="padding-left:0">
-              <div class="lic-code">## 许可<br>Mochi 字卡为原创独立作品（原版），代码已完全开源。可自由二传、二改，<b>支持私人部署</b>，<b>禁止商用</b>，必须保留署名：<b>小红书 @言序（1842523578）</b>。借鉴功能或代码的话，希望可以标注灵感来源：<b>Mochi 字卡 · 小红书 @言序（1842523578）</b>。<br>星言字卡为同一作者的另一部独立作品，其本体禁止二传二改。本站并非复刻他人网站，代码均从零编写。除随机回复的基础逻辑、基础框架外（灵感来源为 <b>milk 字卡 · 小红书 @milk（2777299956）</b>），以下功能为借鉴：帮我决定、多人决定功能 借鉴自<b>小红书 @FelixFelicis（9416318007）</b>；公用字卡+专享字卡模式 借鉴自<b>@默玉（8012400317）</b>。另有以下功能源于网络上已有的类似想法，但设计均由我独立完成：情绪字卡 源于早期网络上的类似提议（有人建议在聊天中加入情绪字卡以方便交流，<b>小红书 @心汋是颗彩虹多宝糖（9725312970）</b>也提过这个模式）；换头像 灵感来自看到网络上有人提议小手机想要 chat 自己换头像。其余功能和 UI 均为我独立设计。若使用代码或借鉴功能，请注明灵感来源，这是对创作者最基本的尊重。</div>
             </div>
           </details>
         </div>
@@ -2343,6 +2373,8 @@
         <button class="modal-file" id="modal-file" hidden>从文件导入</button>
         <input type="file" id="modal-file-input" accept=".txt,.json,text/plain,application/json" style="display:none">
         <div class="modal-btns">
+          <!-- v3.25.x：导出txt——诊断文本变长后部分手机剪贴板复制不全，下载文件兜底（opts.exportBtn） -->
+          <button class="modal-btn copy" id="modal-export" hidden>导出txt</button>
           <button class="modal-btn copy" id="modal-copy" hidden>复制</button>
           <button class="modal-btn cancel" id="modal-cancel">取消</button>
           <button class="modal-btn ok" id="modal-ok">确定</button>
@@ -4322,64 +4354,15 @@
         </span>
         <span class="ch-name">聊天设置</span>
       </div>
-      <!-- v3.7.x：全屏模式（镜像设置页 #sf-fullscreen，同一状态双向同步） -->
-      <div class="gs-title" style="padding-top:2px">全屏</div>
+      <div class="gs-title" style="padding-top:2px">聊天美化方案</div>
       <div class="set-group glass">
-        <div class="set-row" id="cs-fullscreen-row">
-          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 00-2 2v3M16 3h3a2 2 0 012 2v3M8 21H5a2 2 0 01-2-2v-3M16 21h3a2 2 0 002-2v-3"/></svg></div>
-          <div class="txt">全屏模式（隐藏手机状态栏）</div>
-          <label class="toggle"><input type="checkbox" id="cs-fullscreen"><span class="tk"></span></label>
+        <div class="set-row" id="row-chat-beauty-save">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17V9M9 11l3-3 3 3"/><path d="M5 4h11l3 3v13a1 1 0 01-1 1H5a1 1 0 01-1-1V5a1 1 0 011-1z"/></svg></div>
+          <div class="txt">保存当前为聊天美化方案<span class="sub">含气泡颜色/CSS、壁纸、字体、时间轴等，全桌面通用</span></div>
         </div>
-        <!-- v3.9.x：全屏边缘防误触（镜像设置页 #sf-edge-guard，同一状态双向同步） -->
-        <div class="set-row" id="cs-edge-guard-row">
-          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M3 12h18"/></svg></div>
-          <div class="txt">全屏边缘防误触</div>
-          <label class="toggle"><input type="checkbox" id="cs-edge-guard"><span class="tk"></span></label>
-        </div>
-        <!-- v3.10.x：「隐藏音乐悬浮小窗」开关（同源 music-global.floatEn，每桌面独立；语义反转：勾选=隐藏，与下方「隐藏通话小框」一致。音乐页 #music-float-en / 音乐设置 #sm-set-float 仍保持勾选=开启） -->
-        <div class="set-row" id="cs-music-float-row">
-          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
-          <div class="txt">隐藏音乐悬浮小窗</div>
-          <label class="toggle"><input type="checkbox" id="cs-music-float"><span class="tk"></span></label>
-        </div>
-        <!-- v3.7.x：隐藏通话小框开关（同源 call-mini-enabled，每桌面独立；勾选=接通后不弹出悬浮小框，保持通话大面板常驻） -->
-        <div class="set-row" id="cs-call-mini-hide-row">
-          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg></div>
-          <div class="txt">隐藏通话小框</div>
-          <label class="toggle"><input type="checkbox" id="cs-call-mini-hide"><span class="tk"></span></label>
-        </div>
-      </div>
-      <!-- v3.8.x：聊天专用昵称/头像（与桌面 deco-widget 的 lbl-*/avatar-* 完全独立，
-           桌面只能在桌面改，聊天只能在聊天设置改；未设时聊天页显示默认占位 TA/我 + 人形图标） -->
-      <div class="gs-title" style="padding-top:2px">昵称与头像</div>
-      <div class="set-group glass">
-        <div class="set-row" id="cs-lbl-partner">
-          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.5-6 8-6s8 2 8 6"/></svg></div>
-          <div class="txt">联系人昵称</div>
-          <div class="val" id="cs-lbl-partner-val"></div>
-        </div>
-        <div class="set-row" id="cs-lbl-user">
-          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.5-6 8-6s8 2 8 6"/></svg></div>
-          <div class="txt">我的昵称</div>
-          <div class="val" id="cs-lbl-user-val"></div>
-        </div>
-        <div class="set-row" id="cs-avatar-partner">
-          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5-9 9"/></svg></div>
-          <div class="txt">联系人头像</div>
-          <div class="val" id="cs-avatar-partner-val"></div>
-        </div>
-        <div class="set-row" id="cs-avatar-partner-remove" hidden>
-          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6"/><path d="M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12"/><path d="M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2"/></svg></div>
-          <div class="txt">清空联系人头像</div>
-        </div>
-        <div class="set-row" id="cs-avatar-user">
-          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5-9 9"/></svg></div>
-          <div class="txt">我的头像</div>
-          <div class="val" id="cs-avatar-user-val"></div>
-        </div>
-        <div class="set-row" id="cs-avatar-user-remove" hidden>
-          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6"/><path d="M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12"/><path d="M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2"/></svg></div>
-          <div class="txt">清空我的头像</div>
+        <div class="set-row" id="row-chat-beauty-schemes">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></div>
+          <div class="txt">我的聊天美化方案<span class="sub">保存的方案一键切换，跨桌面通用</span></div>
         </div>
       </div>
       <div class="gs-title" style="padding-top:2px">壁纸</div>
@@ -4417,7 +4400,7 @@
           <div class="val" id="cs-time-style-val">头像下方</div>
         </div>
       </div>
-      <div class="gs-title">气泡颜色</div>
+      <div class="gs-title">气泡颜色 / CSS</div>
       <div class="set-group glass">
         <div class="set-row" id="cs-out-bg">
           <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21a9 9 0 110-18"/><path d="M12 3a9 9 0 019 9"/><path d="M21 12a9 9 0 01-9 9"/><circle cx="12" cy="12" r="2"/></svg></div>
@@ -4438,6 +4421,52 @@
           <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20L10 6h4l5 14"/><path d="M7.5 14.5h9"/></svg></div>
           <div class="txt">联系人消息文字颜色</div>
           <div class="val" id="cs-in-ink-val">默认 #111111</div>
+        </div>
+        <div class="set-row" id="cs-css">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg></div>
+          <div class="txt">气泡 CSS</div>
+          <div class="val" id="cs-css-val">默认</div>
+        </div>
+      </div>
+      <div class="gs-title">字体</div>
+      <div class="set-group glass">
+        <div class="set-row" id="cs-font">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div>
+          <div class="txt">全局字体</div>
+          <div class="val" id="cs-font-val">默认</div>
+        </div>
+      </div>
+      <!-- v3.8.x：聊天专用昵称/头像（与桌面 deco-widget 的 lbl-*/avatar-* 完全独立，
+           桌面只能在桌面改，聊天只能在聊天设置改；未设时聊天页显示默认占位 TA/我 + 人形图标） -->
+      <div class="gs-title">昵称与头像</div>
+      <div class="set-group glass">
+        <div class="set-row" id="cs-lbl-partner">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.5-6 8-6s8 2 8 6"/></svg></div>
+          <div class="txt">联系人昵称</div>
+          <div class="val" id="cs-lbl-partner-val"></div>
+        </div>
+        <div class="set-row" id="cs-lbl-user">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.5-6 8-6s8 2 8 6"/></svg></div>
+          <div class="txt">我的昵称</div>
+          <div class="val" id="cs-lbl-user-val"></div>
+        </div>
+        <div class="set-row" id="cs-avatar-partner">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5-9 9"/></svg></div>
+          <div class="txt">联系人头像</div>
+          <div class="val" id="cs-avatar-partner-val"></div>
+        </div>
+        <div class="set-row" id="cs-avatar-partner-remove" hidden>
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6"/><path d="M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12"/><path d="M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2"/></svg></div>
+          <div class="txt">清空联系人头像</div>
+        </div>
+        <div class="set-row" id="cs-avatar-user">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5-9 9"/></svg></div>
+          <div class="txt">我的头像</div>
+          <div class="val" id="cs-avatar-user-val"></div>
+        </div>
+        <div class="set-row" id="cs-avatar-user-remove" hidden>
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6"/><path d="M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12"/><path d="M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2"/></svg></div>
+          <div class="txt">清空我的头像</div>
         </div>
       </div>
       <div class="gs-title">发送按钮</div>
@@ -4488,31 +4517,31 @@
           <label class="toggle"><input type="checkbox" id="cs-hide-ta-sticker"><span class="tk"></span></label>
         </div>
       </div>
-      <div class="gs-title">字体</div>
+      <!-- v3.7.x：全屏模式（镜像设置页 #sf-fullscreen，同一状态双向同步） -->
+      <div class="gs-title">全屏</div>
       <div class="set-group glass">
-        <div class="set-row" id="cs-font">
-          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div>
-          <div class="txt">全局字体</div>
-          <div class="val" id="cs-font-val">默认</div>
+        <div class="set-row" id="cs-fullscreen-row">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 00-2 2v3M16 3h3a2 2 0 012 2v3M8 21H5a2 2 0 01-2-2v-3M16 21h3a2 2 0 002-2v-3"/></svg></div>
+          <div class="txt">全屏模式（隐藏手机状态栏）</div>
+          <label class="toggle"><input type="checkbox" id="cs-fullscreen"><span class="tk"></span></label>
         </div>
-      </div>
-      <div class="gs-title">气泡</div>
-      <div class="set-group glass">
-        <div class="set-row" id="cs-css">
-          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg></div>
-          <div class="txt">气泡 CSS</div>
-          <div class="val" id="cs-css-val">默认</div>
+        <!-- v3.9.x：全屏边缘防误触（镜像设置页 #sf-edge-guard，同一状态双向同步） -->
+        <div class="set-row" id="cs-edge-guard-row">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M3 12h18"/></svg></div>
+          <div class="txt">全屏边缘防误触</div>
+          <label class="toggle"><input type="checkbox" id="cs-edge-guard"><span class="tk"></span></label>
         </div>
-      </div>
-      <div class="gs-title">聊天美化方案</div>
-      <div class="set-group glass">
-        <div class="set-row" id="row-chat-beauty-save">
-          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17V9M9 11l3-3 3 3"/><path d="M5 4h11l3 3v13a1 1 0 01-1 1H5a1 1 0 01-1-1V5a1 1 0 011-1z"/></svg></div>
-          <div class="txt">保存当前为聊天美化方案<span class="sub">含气泡颜色/CSS、壁纸、字体、时间轴等，全桌面通用</span></div>
+        <!-- v3.10.x：「隐藏音乐悬浮小窗」开关（同源 music-global.floatEn，每桌面独立；语义反转：勾选=隐藏，与下方「隐藏通话小框」一致。音乐页 #music-float-en / 音乐设置 #sm-set-float 仍保持勾选=开启） -->
+        <div class="set-row" id="cs-music-float-row">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
+          <div class="txt">隐藏音乐悬浮小窗</div>
+          <label class="toggle"><input type="checkbox" id="cs-music-float"><span class="tk"></span></label>
         </div>
-        <div class="set-row" id="row-chat-beauty-schemes">
-          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></div>
-          <div class="txt">我的聊天美化方案<span class="sub">保存的方案一键切换，跨桌面通用</span></div>
+        <!-- v3.7.x：隐藏通话小框开关（同源 call-mini-enabled，每桌面独立；勾选=接通后不弹出悬浮小框，保持通话大面板常驻） -->
+        <div class="set-row" id="cs-call-mini-hide-row">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg></div>
+          <div class="txt">隐藏通话小框</div>
+          <label class="toggle"><input type="checkbox" id="cs-call-mini-hide"><span class="tk"></span></label>
         </div>
       </div>
       <div class="gs-title">数据</div>

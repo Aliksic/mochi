@@ -12,7 +12,9 @@
   // 副本一次性搬回根命名空间（根键已有值不覆盖，搬完删副本），幂等；等 restore-done
   // 后跑（大键已从 IDB 回填再搬，避免读到空）。EXCLUDE 已补，此后不会再产生新滞留。
   (function feedRootRescue() {
-    const KEYS = ['feed-notices', 'feed-app-unread', 'feed-cover-bg', 'feed-ta-cover', 'feed-ta-name', 'feed-ta-avatar', 'feed-user-name', 'feed-user-avatar', 'feed-last', 'feed-next', 'feed-day-count'];
+    // v3.25.x：feed-last/feed-next/feed-day-count 不在此列——它们是【按联系人桌面】
+    // 独立存取的 TA 发帖调度状态（见 deskSchedRescue 与 maybeAutoPostFor），不是全局共享键
+    const KEYS = ['feed-notices', 'feed-app-unread', 'feed-cover-bg', 'feed-ta-cover', 'feed-ta-name', 'feed-ta-avatar', 'feed-user-name', 'feed-user-avatar'];
     function run() {
       try {
         const root = window.xyStore('xy-home-v2');
@@ -28,6 +30,39 @@
             try { def.remove(k); } catch (e) {}
           }
         });
+        // v3.25.x：TA 发帖调度键反向归位（修复用户反馈「回复设置里设了联系人每天最多发
+        // N 条朋友圈，联系人照样无限发」）——上面 KEYS 的回收逻辑曾把 default 桌面命名
+        // 空间里的这三个键当滞留旧键搬去根键并删本地副本（根键已有值时更是直接删副本），
+        // 而它们自 v3.7.x 起只按 storeFor(cid) 存取、根命名空间没有任何读取方 →
+        // 主联系人的「今日已发条数 + 上次发帖时间 + 下次间隔」每次刷新清零，日上限和
+        // 发帖间隔对 default 桌面完全失效（其他联系人桌面正常，表现为「只有默认桌面的
+        // TA 无限发」）。改为一次性归位：default 缺值时把根键历史值搬回 default，随后
+        // 删根键（无读取方，留着只会被反复回收），幂等。
+        (function deskSchedRescue() {
+          const today = feedToday();
+          ['feed-last', 'feed-next', 'feed-day-count'].forEach(function (k) {
+            let rv = null, dv = null;
+            try { rv = root.get(k); } catch (e) {}
+            if (rv === null || rv === undefined || rv === '') return;
+            try { dv = def.get(k); } catch (e) {}
+            if (dv === null || dv === undefined || dv === '') {
+              try { def.set(k, rv); } catch (e) {}
+            } else if (k === 'feed-day-count') {
+              // 两边都有值 = 归位前 default 已被本轮调度写过一条——保守取「今天已发条数」
+              // 较大者（宁多少发，不可无限重发）；非今天的陈旧根键值直接丢弃
+              try {
+                const ro = JSON.parse(rv), dfo = JSON.parse(dv);
+                const rn = ro && ro.t === today ? (ro.n || 0) : -1;
+                const dn = dfo && dfo.t === today ? (dfo.n || 0) : -1;
+                if (rn > dn) def.set(k, rv);
+              } catch (e) {}
+            } else if (k === 'feed-last') {
+              // 上次发帖时间取更近的一次（feed-next 与该时间配对，保留 default 现用值）
+              try { if (parseFloat(rv) > parseFloat(dv)) def.set(k, rv); } catch (e) {}
+            }
+            try { root.remove(k); } catch (e) {}
+          });
+        })();
         try { renderNoticeBadge(); } catch (e) {}
       } catch (e) {}
     }
@@ -1644,9 +1679,6 @@ if (comInput) comInput.addEventListener('keydown', (e) => { if (e.key === 'Enter
   function feedCfg() {
     return feedCfgFor(window.__activeCid || 'default');
   }
-  function feedLast() { const v = parseInt(store.get('feed-last'), 10); return isNaN(v) ? 0 : v; }
-  function feedNext() { const v = parseFloat(store.get('feed-next')); return isNaN(v) ? 0 : v; }
-  function feedDayCount() { try { return JSON.parse(store.get('feed-day-count') || '0'); } catch (e) { return 0; } }
   function feedToday() {
     const d = new Date();
     return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();

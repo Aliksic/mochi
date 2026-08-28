@@ -527,7 +527,47 @@
       var _vv = window.visualViewport;
       var _kbActive = false;
       var _pinUntil = 0; // v3.7.x：键盘开合动画窗口，窗口内才 pinScrollTop
-      var _noKbH = _vv ? _vv.height : window.innerHeight;
+      // ===== v3.26.x：键盘检测改「实测基线」，废除只涨不落的 _noKbH 棘轮 =====
+      // 旧实现：_noKbH 在模块加载时取 vv.height，之后只允许向上更新
+      //（`: if (!_kbActive && _h > _noKbH) _noKbH = _h;`），键盘开启判定是
+      //  vv.height < _noKbH-60。Edge iOS 底部工具条显隐会让真实可视高度反复变化，
+      //  一旦被瞬时大值抬上去就永不回落 → 之后【没有键盘】时聚焦任意输入框，
+      //  _kbStill 恒真 → 走「键盘开启」全链路：收缩 .phone + align-self:flex-start +
+      //  lockDocScroll(内联 html{overflow:hidden}) + 每 250ms pinScrollTop(vv.scrollTo(0,0))
+      //  → 用户报修「页面突然上移、什么都点不动」「输入栏下面空一大块」。
+      // 新实现：两条基线在【没有任何文本框聚焦】期间双向跟随（可涨可落），
+      //  键盘开启 = 相对基线明显收缩，两者都不成立即判「无键盘」并复原。
+      //  同时兼容两种键盘模型（iOS 版本/内核行为不一致，不靠猜）：
+      //   · overlay 模型（WebKit 传统行为，忽略 interactive-widget）：布局视口不变、
+      //     只有 visualViewport 收缩 → 需要我们手动把 .phone 收到 vv.height。
+      //   · resizes-content 模型（本文件 :39-45 给 iOS 改写的 viewport meta，新版
+      //     WebKit 已认）：布局视口自身收缩、.phone 的 100dvh 自动跟随 → 此时
+      //     【绝不能再收一次】，否则就是双重收缩（输入栏下方凭空多一块空白）。
+      var _fullInner = window.innerHeight || 0;
+      var _fullVv = _vv ? Math.round(_vv.height) : _fullInner;
+      function _syncFullBase() {
+        // 仅在无文本框聚焦时调用：跟随当前真实视口（允许变小）
+        var ih = window.innerHeight || 0;
+        var vh = _vv ? Math.round(_vv.height) : ih;
+        if (ih > 0) _fullInner = ih;
+        if (vh > 0) _fullVv = vh;
+      }
+      // .phone 高度唯一写入口（syncIosKb / _ensureInputDocked / _iProvDock 三处
+      // 原来各自直写内联 height，互相改写→反复重排）。迟滞 ≥6px 才提交，
+      // null 表示清回样式表值（100dvh / standalone 的 100vh）。
+      function _setPhoneH(px, reason) {
+        try {
+          if (px === null || px === undefined) {
+            if (_phone.style.height !== '') _phone.style.height = '';
+            return;
+          }
+          var floor = Math.round(_fullInner * 0.4); // 输入法最多占屏 60%，再小必是异常读数
+          var nh = Math.max(floor, Math.round(px));
+          var cur = parseFloat(_phone.style.height);
+          if (_phone.style.height && Math.abs((isNaN(cur) ? nh + 99 : cur) - nh) < 6) return;
+          if (_phone.style.height !== nh + 'px') _phone.style.height = nh + 'px';
+        } catch (e) {}
+      }
       // v3.10.x：当前聚焦的文本元素（focusin/focusout 可靠上报）。iOS Safari 在
       // contenteditable（聊天输入栏就是 contenteditable div）聚焦/编辑时常返回
       // document.activeElement === <body>，isTextEl 判不出来 → 下方 _open 恒为 false
@@ -647,12 +687,8 @@
           if (r.bottom <= vh + 2) return; // 已停在键盘上方，达标
           var pr = _phone.getBoundingClientRect();
           var cut = Math.ceil(r.bottom - vh) + 12; // 超出量 + 12px 余量
-          var nh = Math.max(Math.round(_noKbH * 0.45), Math.round(pr.height - cut));
-          var hs = nh + 'px';
-          if (_phone.style.height !== hs) {
-            _phone.style.height = hs;
-            try { _phone.style.minHeight = '0'; } catch (e2) {}
-          }
+          try { _phone.style.minHeight = '0'; } catch (e2) {}
+          _setPhoneH(Math.round(pr.height - cut), 'ensure'); // 下限保护交给 _setPhoneH
         } catch (e) {}
       }
       // v3.6.x：恢复 .phone 到自然高度（键盘收起）。统一入口——避免多处重复；
@@ -660,13 +696,15 @@
       function restoreKb() {
         if (!_kbActive) return;
         _kbActive = false;
-        _phone.style.height = '';
+        _setPhoneH(null, 'restore');
         try { _phone.style.minHeight = ''; } catch (e) {} // v3.15.x：还原键盘期压掉的 min-height
         _phone.style.alignSelf = '';
         kbUndockPanels();
         unlockDocScroll();
         pinScrollTop();
         stopKbWatch();
+        _syncFullBase(); // v3.26.x：此刻没有键盘，当前视口即新的无键盘基线
+        syncSafeBottom();
       }
       function syncIosKb() {
         if (!_vv || !_phone) return;
@@ -674,31 +712,30 @@
         // 聚焦时 activeElement 常是 <body>，只看它会把键盘误判为「未聚焦」→ 不收缩
         var _focused = isTextEl(_textFocused) || isTextEl(document.activeElement);
         var _h = _vv.height;
-        // v3.10.x：下限保护——iOS Safari 在 interactive-widget=resizes-visual 下，
-        // 键盘弹出 transition 中间态 visualViewport.height 可能瞬时异常小（或 layout
-        // viewport 双重收缩），直接设 .phone.height=该值会把 .phone 压成一条缝→
-        // "所有页面挤压不见、输入栏跑到顶部、其他页面灰底露出"。
-        // v3.13.x：下限从基准 30% 收紧到 45%、兜底从 50% 提到 55%——iOS Edge 键盘
-        // 动画期间 vv.height 曾读到远小于真实可视区的值且之后不再更新，.phone 被
-        // 钉在过矮高度整页挤压。主流机型键盘+工具条最大约占屏 50%（SE 级小屏
-        // 可视约剩 56%），低于无键盘基准 45% 必是异常读数。
-        var _safeH = (_h >= _noKbH * 0.45) ? _h : Math.round(_noKbH * 0.55);
-
-        // 键盘是否仍开——按可视高度判定，不依赖焦点。
-        //   点击字卡/按钮时焦点短暂离开输入框但键盘未必收，靠焦点判断会误 restore
-        //   → _phone 高度收缩↔回落反复 reflow → 每点一下闪一下（iOS 15 PWA 复现）
-        var _kbStill = _h < _noKbH - 60;
+        var _ih = window.innerHeight || _h;
+        // v3.26.x：基线吸收窗口——没有聚焦输入框、也没在停靠（含推定停靠）时，
+        // 当前视口就是「无键盘真实高度」，双向写回基线（可涨可落）。旧实现只允许
+        // 向上更新，Edge 工具条显隐留下的大基线永不回落 → 无键盘也误判键盘开启。
+        if (!_focused && !_kbActive && !_iProv) { _fullInner = _ih; _fullVv = Math.round(_h); }
+        // v3.26.x：键盘是否开启——两条独立实测信号任一成立即算开启：
+        //   · 视觉视口相对「无键盘基线」收缩（overlay 模型：布局视口不动）
+        //   · 布局视口自身收缩（resizes-content 模型：本文件给 iOS 改的 viewport meta
+        //     被新版 WebKit 采信时走这条，此时 vv.height 与 innerHeight 一起缩）
+        // 都不成立 = 没有键盘。旧实现用加载时快照、且只涨不落的 _noKbH 做唯一基准，
+        // 基线被工具条瞬时高度抬大后「无键盘」也会误判成键盘开启（详见文件头注释）。
+        var _kbNow = _h < _fullVv - 60 || _ih < _fullInner - 60;
+        // 高度直接取 vv.height：两种模型下它都等于真实可视高，写同一个值不会双重收缩。
+        // 只做一道异常读数保护（键盘最多占屏 60%，再小按下限兜），不再乘旧基线比例。
+        var _safeH = (_h >= _fullInner * 0.4) ? _h : Math.round(_fullInner * 0.55);
+        // 键盘真的收了（不看焦点，防点击字卡/按钮误 restore 闪屏）→ 复原
+        if (_kbActive && !_kbNow) { restoreKb(); return; }
         // 稳态早退：键盘已开 + 仍在输入框 + 已过开合动画窗口 → height 已设对，
         //   不做开合判定/pin。打字时 vv resize 偶发触发，早退防任何 reflow 闪屏
-        if (_kbActive && _focused && _kbStill && Date.now() > _pinUntil) {
-          var _hs0 = _safeH + 'px';
-          if (_phone.style.height !== _hs0) _phone.style.height = _hs0;
+        if (_kbActive && _focused && Date.now() > _pinUntil) {
+          _setPhoneH(_safeH, 'steady');
           return;
         }
-        // 无键盘时跟随可视高度更新基准（地址栏显隐变化不误判）
-        if (!_kbActive && _h > _noKbH) _noKbH = _h;
-        var _open = _focused && _kbStill;
-        if (_open && !_kbActive) {
+        if (_focused && _kbNow && !_kbActive) {
           _kbActive = true;
           lockDocScroll(); // 禁文档根滚动：iOS 无法再把页面滚走露灰底（Edge 关键）
           // v3.15.x：清内联 min-height——任何样式表来源的 min-height（如 iOS PWA
@@ -719,13 +756,10 @@
           startKbWatch();
         }
         if (_kbActive) {
-          var _hs = _safeH + 'px';
-          if (_phone.style.height !== _hs) _phone.style.height = _hs; // 值不变不重排
+          _setPhoneH(_safeH, 'open');
           // 仅在键盘开合动画窗口内钉顶；稳态打字期不 pin，避免 caret 微滚↔归零闪屏
           if (Date.now() < _pinUntil) pinScrollTop();
         }
-        // 键盘真的收了（可视高度回升）才 restore——不看焦点，防点击字卡误 restore 闪屏
-        if (!_kbStill && _kbActive) restoreKb();
       }
       // v3.6.x：键盘状态自愈——iOS Safari 键盘收起时**偶发不派发 visualViewport
       // resize**（程序化 blur / 键盘下滑收起 / 完成键收起等路径，聊天发送时
@@ -763,7 +797,7 @@
               // 只做「键盘真的收了吗」复原，不调 syncIosKb——它会在键盘收起动画
               // 期间每 250ms 反复写 .phone 高度（跟随 vv 爬升）+ 重排，
               // 每个键盘收起都闪屏（用户反馈），改回一次性复原判断
-              if (_vv && _vv.height >= _noKbH - 60) restoreKb();
+              if (_vv && _vv.height >= _fullVv - 60) restoreKb();
             } else {
               // v3.12.x：停表前做一次兜底清理（保底停靠残留时复原 .phone）
               _iProvCheck();
@@ -787,7 +821,7 @@
       // 命中后按无键盘基准的 58% 保底收缩（主流输入法连工具栏约占屏 35%~45%，
       // 58% 可视区必在其上方）；失焦 / 出现真实 resize 即由原机制接管恢复。
       function _iProvDock() {
-        var base = Math.min(_noKbH, _iIH);
+        var base = Math.min(_fullInner, _iIH);
         // v3.13.x：矮视口保护——原 Math.max(240, base*0.58) 在 base<414 时绝对值
         // 240 会占掉近六成以上屏高加重挤压；改纯比例 + 基准 62% 封顶（最多压四成）
         var ph = Math.min(Math.max(Math.round(base * 0.58), 240), Math.round(base * 0.62));
@@ -795,7 +829,7 @@
         lockDocScroll();
         try { _phone.style.minHeight = '0'; } catch (e) {} // v3.15.x：同 syncIosKb，防 min-height 钳制
         _phone.style.alignSelf = 'flex-start';
-        if (_phone.style.height !== ph + 'px') _phone.style.height = ph + 'px';
+        _setPhoneH(ph, 'prov'); // v3.26.x：改走唯一写入口
         kbDockPanels();
         pinScrollTop();
       }
@@ -804,11 +838,13 @@
         _iProv = false;
         if (_kbActive) return; // 正常机制已接管 .phone 高度，交回原逻辑管理
         unlockDocScroll();
-        _phone.style.height = '';
+        _setPhoneH(null, 'prov-clear'); // v3.26.x：还原样式表高度
         try { _phone.style.minHeight = ''; } catch (e) {} // v3.15.x：还原
         _phone.style.alignSelf = '';
         kbUndockPanels();
         pinScrollTop();
+        _syncFullBase(); // v3.26.x：复原时刻即无键盘真实视口
+        syncSafeBottom();
       }
       function _iProvCheck() {
         try {
@@ -819,7 +855,7 @@
           if (!tgt) {
             // 无键盘态基线跟随（地址栏显隐等整体变化不误判；键盘开着时不更新）
             if (!_kbActive && !_iProv) _iIH = ih;
-            if (_iProv && _vv.height >= _noKbH - 60) _iProvClear();
+            if (_iProv && _vv.height >= _fullVv - 60) _iProvClear();
             return;
           }
           if (!_kbActive && !_iProv &&
@@ -827,26 +863,109 @@
               Date.now() - kbLastTouchAt < 1500 &&
               kbTouchArmed(tgt) &&
               Date.now() > kbHardKeyUntil &&
-              Math.abs(_vv.height - _noKbH) <= 2 &&
+              Math.abs(_vv.height - _fullVv) <= 2 &&
               Math.abs(ih - _iIH) <= 2) {
             _iProvDock();
           }
         } catch (e) {}
       }
-      // v3.7.x：vv scroll 独立处理——打字时系统微滚 caret 触发高频 vv scroll，
-      //   若走 syncIosKb 会在稳态期反复读 vv.height/比较字符串（JS 开销→打字卡顿），
-      //   且任何 DOM 写入都会 reflow 闪屏。scroll 只在键盘开合动画窗口内钉顶防灰底；
-      //   v3.13.x：窗口外仅当文档滚动超阈值才自愈（Edge iOS 延迟滚动修复），
-      //   caret 微滚（<阈值）仍是 no-op，不闪屏。
-      function onIosKbScroll() {
-        if (!_kbActive) return;
-        if (Date.now() < _pinUntil) { pinScrollTop(); return; }
-        healKbScroll();
+      // ===== v3.26.x：可视区实测变量（iOS 专属）=====
+      // --mochi-ios-h：.phone 静止态高度直接取实测 visualViewport.height。
+      //   样式表的 100dvh 在个别 iOS 版本/第三方浏览器下并不等于真实可视高，
+      //   差出来的那一条正落在聊天输入栏下面（用户报修「下面空着一大块」，
+      //   且那段空白没有可点内容）。键盘期仍由内联 height 覆盖（内联赢选择器）。
+      // --mochi-safe-bottom：底部被浏览器工具条占据时归零。见下方 CSS 侧
+      //   var(--mochi-safe-bottom, env(safe-area-inset-bottom, 0px)) 的 27 处替换。
+      var _vvFitOn = false;
+      function syncVvFit() {
+        try {
+          var d = document.documentElement;
+          // 键盘会话期间不写（摘除属性）：那段时间 .phone 高度由 _setPhoneH 内联值
+          // 负责，两套写高度会互相改写
+          if (_kbActive || _iProv || _kbNowLike()) {
+            if (d.style.getPropertyValue('--mochi-ios-h')) d.style.removeProperty('--mochi-ios-h');
+            return;
+          }
+          var ih = window.innerHeight || 0;
+          var vh = _vv ? Math.round(_vv.height * ((_vv.scale && _vv.scale > 0.5) ? _vv.scale : 1)) : ih;
+          if (!vh) return;
+          if (!_vvFitOn) { _vvFitOn = true; d.classList.add('ios-vv-fit'); }
+          var px = vh + 'px';
+          if (d.style.getPropertyValue('--mochi-ios-h') !== px) d.style.setProperty('--mochi-ios-h', px);
+        } catch (e) {}
       }
+      function syncSafeBottom() {
+        try {
+          var d = document.documentElement;
+          var ih = window.innerHeight || 0;
+          var sh = (window.screen && window.screen.height) || 0;
+          // 屏幕高 - 布局视口高 > 60 → 浏览器自身 UI（顶部状态条 + 底部工具条）占了
+          // 一段，底部那段空间根本不在可视区内，env() 再叠一次就是死带；
+          // 铺满物理屏（standalone / 真全屏 / 桌面 F11）→ 摘除属性让 CSS 回落 env()
+          if (sh && ih && sh - ih > 60) d.style.setProperty('--mochi-safe-bottom', '0px');
+          else d.style.removeProperty('--mochi-safe-bottom');
+        } catch (e) {}
+      }
+      // 键盘是否仍有实测证据（供常驻自愈复用，判据与 syncIosKb 一致）
+      function _kbNowLike() {
+        try {
+          if (!_vv) return false;
+          return _vv.height < _fullVv - 60 || (window.innerHeight || 0) < _fullInner - 60;
+        } catch (e) { return false; }
+      }
+      // ===== v3.26.x：常驻视口自愈（rAF 合并，不新增定时器）=====
+      // 旧实现把自愈挂在 `_kbActive` 上（且只在 250ms 轮询的 if(_foc) 分支里跑）：
+      // Edge iOS 在【失焦之后】才发生的视口平移无人处理；而键盘期写入的内联
+      // html{overflow:hidden} 只要有一次异常没走到 unlock，用户连自己滚回来都做不到
+      // ——就是报修的「页面突然上移，什么都点不动」。改为事件驱动 + 每帧一次读布局。
+      var _healRaf = 0;
+      function scheduleHeal() {
+        if (_healRaf) return;
+        _healRaf = requestAnimationFrame(function () {
+          _healRaf = 0;
+          healViewport();
+        });
+      }
+      function healViewport() {
+        try {
+          syncVvFit();
+          syncSafeBottom();
+          var foc = isTextEl(_textFocused) || isTextEl(document.activeElement);
+          if (!foc && !_kbNowLike()) {
+            // 键盘会话其实已经结束，却还残留收缩/顶对齐/文档锁/推定停靠 → 无条件复原
+            if (_kbActive) restoreKb();
+            else {
+              if (_iProv) _iProvClear();
+              if (_docLocked) unlockDocScroll();
+              if (_phone && _phone.style.height) _setPhoneH(null, 'heal');
+              if (_phone && _phone.style.alignSelf) _phone.style.alignSelf = '';
+              pinScrollTop();
+            }
+          } else if (_kbActive) {
+            // 键盘会话内：沿用原阈值逻辑（动画窗口钉顶 / 稳态只治大位移）
+            if (Date.now() < _pinUntil) pinScrollTop();
+            else healKbScroll();
+          } else if (!foc) {
+            // 键盘会话外的大平移（Edge iOS 失焦后补做的「让焦点可见」平移）→ 归零
+            var shifted = winScrollY() > KB_SCROLL_HEAL;
+            if (!shifted && _phone) {
+              var pr = _phone.getBoundingClientRect();
+              shifted = pr.top < -KB_SCROLL_HEAL || pr.bottom > (_vv ? _vv.height : window.innerHeight) + 24;
+            }
+            if (!shifted && _vv && (Math.abs(_vv.offsetTop) > KB_SCROLL_HEAL || Math.abs(_vv.offsetLeft) > KB_SCROLL_HEAL)) shifted = true;
+            if (shifted) pinScrollTop();
+          }
+        } catch (e) {}
+      }
+      function onIosVvEvent() { scheduleHeal(); }
       if (_vv) {
         _vv.addEventListener('resize', syncIosKb);
-        _vv.addEventListener('scroll', onIosKbScroll);
+        // v3.26.x：scroll 不再直连 syncIosKb/healKbScroll，改进常驻 rAF 自愈入口
+        //（原 onIosKbScroll 只在 _kbActive 时动作，失焦后的平移漏治）
+        _vv.addEventListener('scroll', onIosVvEvent);
+        _vv.addEventListener('resize', onIosVvEvent);
       }
+      try { syncVvFit(); syncSafeBottom(); } catch (e) {}
       document.addEventListener('focusin', function (e) {
         try { if (isTextEl(e.target)) { _textFocused = e.target; _iFocusAt = Date.now(); } } catch (e2) {}
         // v3.10.x：立即同步一次——键盘弹出动画期间 vv.height 开始明显收缩，
@@ -873,11 +992,13 @@
         // 400ms 后若可视高度已回升（键盘真的收了）才恢复——不靠焦点判断，
         //   防点击字卡/按钮时焦点短暂离开但键盘未收就误 restore→reflow 闪屏
         setTimeout(function () {
-          if (_kbActive && _vv && _vv.height >= _noKbH - 60) restoreKb();
+          if (_kbActive && _vv && _vv.height >= _fullVv - 60) restoreKb();
         }, 400);
         // v3.13.x：快速开合键盘时 Edge iOS 的焦点滚动可能残留（_kbActive 从未
-        // 置位、无人归零）——失焦稳定后复查一次，文档仍滚超阈值就拉回顶部
-        setTimeout(function () { if (!_kbActive && winScrollY() > KB_SCROLL_HEAL) pinScrollTop(); }, 650);
+        // 置位、无人归零）——失焦稳定后复查一次。
+        // v3.26.x：改走常驻自愈入口，除归零滚动外还会清掉残留的内联 height /
+        // html{overflow:hidden} / 推定停靠（旧版只治滚动，锁定残留时用户点不动）
+        setTimeout(healViewport, 650);
       });
     } catch (e) {}
   }
@@ -1278,6 +1399,12 @@
         el.style.left = '18px'; el.style.right = '18px';
         el.style.top = 'auto';
         el.style.bottom = 'calc(96px + env(safe-area-inset-bottom, 0px))';
+        // v3.25.x：键盘期面板高度上限=「输入栏以上全部空间」（.phone 已收缩为可视高度，
+        // 100% 即可视高）。此前面板沿用各自 CSS 的 max-height（如 .poke-card 48%），键盘
+        // 弹起后 48% 跟着收缩后的包含块缩水，面板固定行（我的拍一拍 tab 的 tabs+分组+输入
+        // footer）比上限还高 → 内容溢出面板底边、输入框被顶到键盘后面 → 浏览器为露焦点
+        // 平移视口与 _aPinPan 打架=整页飞（用户报障）。96px 底部锚点 + 8px 顶部缝隙=104。
+        el.style.maxHeight = 'calc(100% - 104px)';
       });
       _aSchedCe(); // v3.16.x：面板被 absolute 停靠后，内部 ce-box 合成层需刷新跟随
     } catch (e) {}
@@ -1297,6 +1424,7 @@
         el.style.removeProperty('left');
         el.style.removeProperty('right');
         el.style.removeProperty('top');
+        el.style.removeProperty('max-height');
       });
     } catch (e) {}
   }
