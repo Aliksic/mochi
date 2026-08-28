@@ -1,3 +1,34 @@
+### 2026-08-28（✅ 完成·iOS 三报障收口：真全屏 / 键盘视口单一事实源 / 底部死带 / 卡顿）
+- [本会话·AI-B 域]（**已改 fullscreen.js / mobile-adapt.js / device.js / base.css / chat-pages.css / chat-main.css / room.css / drift-bottle.css；跨域授权改 chat-settings.js / chat.js；随 17:44 构建收口进 7450521，产物已核**）。
+- 用户反馈（iPhone 17 + Edge 桌面快捷方式，即浏览器标签态）：①「全屏模式」点了没反应、有时卡一下自己变全屏；②聊天输入栏下面空一大块、有时页面突然上移点不动；③时不时卡顿。
+- ①根因：`fullscreen.js` iOS 分支无条件拒绝 Fullscreen API（只弹「添加到主屏幕」再回滚开关），快捷方式打开时开关是死路；「卡一下变全屏」来自 `armRetry()`/`reenterFs()` 注册的 capture touchstart/click——之后任意触摸都可能补交迟到全屏。修复：浏览器态在**用户手势内同步** `requestFullscreen({navigationUI:'hide'})`（iOS 判断排在 `!orientLockable()` CSS 兜底之前，避免被误判成 Via 走伪全屏）+ 1500ms 复核失败回滚；iOS 下两条重试路径首行 `return` 消灭迟到全屏；`showIosGuide()` 改分浏览器双路线（Edge ⋯→主屏幕仍有浏览器栏；要真全屏用 Safari 分享→添加到主屏幕）。开关文案照实改为「iOS 浏览器全屏，不支持时会弹说明」。
+- ②根因（结构性）：`.phone` 高度被 4 处内联写入互相改写，且旧 `_noKbH` 是**只涨不落的棘轮**——Edge 工具条瞬时状态把基线抬大后 `kbStill` 在**无键盘时也恒真** → 永久收缩 + 键盘期内联 `html{overflow:hidden}` 永久残留 + 反复 `vv.scrollTo(0,0)` = 「上移且什么都点不动」。底部死带=100dvh/100vh 与「已被工具条裁掉的视觉视口」不一致，再叠 `.phone` padding + 输入行 padding + tabbar margin ≈52px。修复：双向自校准基线 `_fullInner/_fullVv`、唯一写入口 `_setPhoneH(px,reason)`（≥6px 迟滞 + 下限）、双信号键盘判据（vv 或 innerHeight 任一缩 >60）、常驻 rAF 合并自愈（不新增 setInterval）、JS 实测写 `--mochi-ios-h`（配 `html.ios-vv-fit:not(.ios-pwa-standalone) .phone{height:var(--mochi-ios-h,100dvh)}`，`:not` 守卫防压回 v3.15.x standalone 100vh）与 `--mochi-safe-bottom`（工具条态 0px，满屏态**摘除属性**让 CSS 回落 env()），27 处底部 inset 全量改走 `var(--mochi-safe-bottom,env(...))` 链（22 处 inset-top 不动），仅 iOS 分支生效，安卓零影响。
+- ③已收口：`applyLock()` 的 43 选择器 + getClientRects 全量扫描改为「仅在已上锁时于 touchstart 复查」+ 页面不可见时跳过 1s 看门狗；chat-settings.js 六个句柄丢失的 500ms `setInterval` 合并为**一个**共享 ticker（进页启动/离页清理）；chat.js 引用缩略图/收藏 base64 图补 `loading="lazy" decoding="async"`。
+- 计划项核对（按事实取舍，非漏做）：`mochi:fs-change` 事件**未加**——全屏进出本就会触发 `visualViewport` resize，`syncVvFit/syncSafeBottom` 已被该事件驱动，加事件是重复通路；`.fs-active .phone` 底部内衬规则**未加**——tabbar margin + 输入行 padding 已承担，再加会双算；黑胶 `spin infinite` **无需改**——`#mw-cover .mw-vinyl{animation:none}` 已使其常态不转；聊天主图已有 lazy（仅引用/收藏缺）。
+- 真机数据回捞通道：`window.mochiVvDiag()` + `window.__mochiIosKb()`，「复制诊断信息」新增两行（视口实测：全屏模式/vv高/.phone高低边/底部空隙/--mochi-ios-h/--mochi-safe-bottom；键盘/锁残留：kbActive/推定停靠/基线/文档锁/html.overflow内联/scroll-lock/内联高/align-self/offsetTop）。**需要用户在 iPhone 上抓三次诊断文本**：①平时 ②键盘弹起打字中 ③「上移点不动」发生当下。
+- 验证：`node --check` 全过；构建哨兵 12/12、`npm run verify` 10/10；新增三条 diag 全绿——`tools/diag-ios-fs-switch.mjs` 16 项（含「触摸后零次迟到 requestFullscreen」回归门）、`tools/diag-ios-kb-latch.mjs` 17 项（无键盘聚焦不再收缩/不再留 overflow 残留 + 注入残留 900ms 内自愈）、`tools/diag-ios-safebottom.mjs` 10 项（含 standalone 级联守卫）；`diag-poke-input.mjs` 复跑无回归；各次 `__jsErrors` 空。diag 期间查出的真 bug：`unlockDocScroll()` 旧实现 `if(!_docLocked) return`，标志与样式失步后残留的 `html{overflow:hidden}` 永远清不掉——已改为按实际内联值对账，`healViewport` 无条件调用。
+- ⚠️ 无头 Chrome 无法证明的部分（需真机）：Edge iOS 是否放开 `requestFullscreen`、WebKit 真实键盘几何、`env()` 实值、真机帧率。
+
+### 2026-08-28（✅ 完成·已入构建·修复「关闭输入法时拍一拍底部输入行整行飞」）
+- [本会话·AI-B 域]（**仅改 src/js/mobile-adapt.js 的 syncAndroidKb + 安卓键盘轮询恢复分支；未自行构建，靠另一会话并行构建（17:44 之后）把此修复带进 index.html（已核产物含 `h < _aH - 12`）；未提交待收口**）。
+  - 用户反馈：拍一拍面板【我的拍一拍】点开输入栏弹出输入法，关闭输入法时底部输入行整行飞。
+  - 根因（tools 无头 390×844 逐帧复现）：安卓 syncAndroidKb 收键盘时用 `h < _aH - 60` 判「键盘已收」，于是在 visualViewport 回升到 784px（键盘其实还有约 1/4 没收完、输入还聚焦）就提前把 .phone 撑回全高 + kbUndockPanels 摘面板停靠 → 底部面板/输入行骤然下沉一整帧（键盘. 770→795 一帧输入行 bottom 660→733 跳 73px）=「飞」。
+  - 修复：收起也等 vv 回到无键盘基准（_aH）附近（≤12px）才真正复原；动画期持续跟随 vv 平滑上浮、面板保持停靠。轮询分支（未聚焦但 _aKb）同判据（60→12）。改后逐帧输入行 bottom 660→684→709→733（每步 +24/+25，无跳变）；diag-poke-input 22/22 全过、__jsErrors 空。
+
+### 2026-08-28（✅ 完成·已构建·合作扫雷互动字卡改为游戏内气泡显示）
+- [本会话·AI-A 域]（**已改 src/js/coop-mine.js + src/template.html + src/css/chat-pages.css；已构建 17:45, sw: mochi-mtcrm4cc；未提交待收口**）。
+  - 用户反馈：扫雷游戏互动里 TA 发送的互动字卡会发到聊天，应直接显示在游戏里。
+  - 方案（已与用户确认：只去掉互动字卡、保留结束记录；TA 的话显示在游戏内新增气泡区）：扫雷面板新增说话气泡 `.ms-talk/#ms-talk`（.ms-talk-bubble，左对齐 TA 发言观感）；新增 `taTalk()` 显示气泡 4s 后自动隐藏。
+  - 改动：挖宝/礼物话术（scheduleTaGiftChat）与游戏结束合作回应（finish）由 `window.chatAddIn` 改为 `taTalk()` 仅显示在游戏内；游戏结束系统消息「合作扫雷 · 完成 …」（chatAddSystem）保留写入聊天。
+  - TA 昵称经 HTML 转义防注入；气泡样式随 --card-bg/--ink/--accent 适配明暗。
+
+### 2026-08-28（✅ 完成·未构建·跨桌面查岗/来电新增全局三档频率模式）
+- [本会话·AI-A 域]（**已改 src/js/incoming-requests.js；node --check 通过；未构建、未提交**）。
+  - 用户反馈：跨桌面查岗过于频繁。
+  - 方案（已与用户确认：3 档 · 查岗+来电一起 · 全局统一）：新增「跨桌面查岗频率」三档预设 频繁(6%/15min)·标准(2%/30min)·安静(1%/3h)，根键 `xy-home-v2:desk-freq-mode` 全局生效；设置页开关行之后动态插入 pill 选择行（复用 .set-row/.pill，不动 template.html）。
+  - 权威值在 incoming-requests.js 的 maybeIncoming 用 deskDMode() 读取；各桌面回复设置 ckq-prob/ckq-cool/desk-call-prob 改为只影响桌面上 TA 主动查岗，跨桌面查岗/来电不再读它们。安全性：共用键 ckq-prob/cool 不被模式直接覆盖，正常主动查岗频率不受本次改动影响。
+  - ⚠️ 请构建者（默认 AI-B）执行 `node build.mjs` 收口；提交前 git diff 自查，勿夹带 B 端未提交改动。
+
 ### 2026-08-28（✅ 完成·已构建·功能说明页补全 5 个遗漏功能）
 - [本会话·AI-B 域]（**已改 src/template.html；已构建 15:57, sw: mochi-mtcnrvji，verify 10/10 + 关于页专项 6/6；未提交待收口**）。
   - 用户反馈：功能介绍页仍不全，很多功能没写。逐项核对应用入口（设置页/聊天设置/更多面板/收藏页）后，补进「01 聊天传讯」（16→21 条）：批量发送消息、语音消息（录音60s）、桌面【收藏】页+收藏设置自动收藏概率、隐藏联系人的表情包、允许删除联系人消息。
