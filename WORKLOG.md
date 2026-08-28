@@ -1,3 +1,15 @@
+### 2026-08-28（✅ 完成·开屏公告【一、当前状态】新增【关于反馈与建议】内容）
+- [本会话·AI-B 域]（**已改 src/pwa/notice.json + src/template.html；已构建 index.html/sw.js/version.json/notice.json（13:39, sw: mochi-mtcivcx4）+ verify.mjs 10/10；提交 v3.25.x 追加，未推送**）。
+  - **用户需求**：【一、当前状态】里新增【关于反馈与建议】（评论区/互助群艾特但精力有限、网站做给自己用不一定采纳建议、免费非客服/提建议欢迎指手画脚免谈）。
+  - **改动**：section 一 `p` 追加 `{h:"【关于反馈与建议】"}` 子标题 + 3 条编号主条目 + 2 条子列表 `{b}`（反馈/建议/免费三组）；template.html 离线兜底同步（splash-sub + splash-item + splash-bullet）。
+  - **验证**：node tools/verify.mjs 10/10；构建产物 notice.json / index.html 已含新内容。
+
+### 2026-08-28（✅ 完成·开屏新增「其他常见问题解答」按钮 + 浮层，notice.json 远程可更新）
+- [本会话·AI-B 域]（**已改 src/template.html + src/js/clock.js + src/css/base.css + src/pwa/notice.json；已构建 index.html/sw.js/version.json/notice.json（13:32, sw: mochi-mtcim8q8）+ verify.mjs 10/10；已提交 a02f866 v3.25.x，未推送**）。
+  - **用户需求**：「点击进入」旁新增【其他常见问题解答】按钮，点击可查看「关于字卡传讯与梦角连接」四节 FAQ 内容。
+  - **改动**：① `.splash-btns` 让【点击进入】+【其他常见问题解答】描边按钮并排一行（黑白简约风）；② 新增 `.splash-faq` 全屏遮罩卡片浮层（`.splash-faq-card` 可滚动、点 ✕ / 遮罩关闭、splash-pop 动画）；③ clock.js 抽 `renderSplashSections()` 供公告+FAQ 共用渲染（字符串=编号条目 / {h}=子标题 / {b}=子列表项），监听按钮开关浮层；④ notice.json 新增 `faq` 字段（title + sections）支持远程覆盖，无则保留模板兜底。
+  - **验证**：node tools/verify.mjs 10/10；构建产物已含 splash-faq-open / renderSplashSections。
+
 ### 2026-08-28（✅ 完成·【手机桌面美化】页分组小标题重排 + 「美化方案」入口收拢到美化页）
 - [本会话·完成]（**已改 src/template.html + src/css/setting.css + src/js/contacts.js；已构建 index.html/sw.js/version.json（12:54, sw: mochi-mtch904y）+ verify.mjs 10/10；未提交**）。
   - **用户需求**：①「美化外观保存」（联系人/桌面管理器里的「美化方案一键切换外观」按钮）应放在【手机桌面美化】页面里；②该页功能多、排序杂，要求分组清楚、好懂好用，并加分组小标题。
