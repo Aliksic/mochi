@@ -1,3 +1,9 @@
+### 2026-08-28（协作文档修订：AGENTS.md 全面更新 + build.mjs 版本前缀对齐 v3.26；未构建，下次构建生效）
+- [共享域·文档]（**已改 AGENTS.md + build.mjs；未跑 node build.mjs，请构建者下次构建统一收口**）。
+- AGENTS.md 修订要点：①补全文件归属——此前 29 个 JS / 8 个 CSS 无主，现 AI-A 45 JS + 12 CSS、AI-B 14 JS + 2 CSS + 构建产物，全 59 JS / 14 CSS 有主；②修正构建顺序——CSS 实际 14 个文件（原只写 6 个）、JS 首位是 device.js 不是 idb.js；③新增「新增功能 checklist」「回归防线（build.mjs FIX_SENTINELS + FIX-REGRESSION.md 登记）」「工具脚本分类（verify-* 可提交 / diag-*/tmp-* 用完即删）」「WORKLOG 条目模板 + 归档上限（20 条 / 1MB）」；④跨域改文件改为「先在 WORKLOG 留言再改」（原规则与实际做法矛盾）；⑤构建者改为每次开工在 WORKLOG 首行声明。
+- build.mjs：`APP_VERSION` 前缀 v3.6 → v3.26（与提交 message 对齐，注释已提示升级系列时同步改）；**下次构建起**设置页/开屏版本号显示 v3.26.<提交数>。
+- 本提交只含 AGENTS.md / build.mjs / 本条记录，**未包含任何 src 改动**（工作区有并行会话未提交的 src 改动，避免夹带半成品）；产物版本号变更随下次构建生效。
+
 ### 2026-08-28（✅ 完成·iOS 三报障收口：真全屏 / 键盘视口单一事实源 / 底部死带 / 卡顿）
 - [本会话·AI-B 域]（**已改 fullscreen.js / mobile-adapt.js / device.js / base.css / chat-pages.css / chat-main.css / room.css / drift-bottle.css；跨域授权改 chat-settings.js / chat.js；随 17:44 构建收口进 7450521，产物已核**）。
 - 用户反馈（iPhone 17 + Edge 桌面快捷方式，即浏览器标签态）：①「全屏模式」点了没反应、有时卡一下自己变全屏；②聊天输入栏下面空一大块、有时页面突然上移点不动；③时不时卡顿。
