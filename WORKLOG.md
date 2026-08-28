@@ -1,4 +1,11 @@
-# 本次构建者：AI-B（2026-08-28 18:45，用户要求立即生效音效修复；收口本会话及 AI-A 未构建改动）
+# 本次构建者：AI-B（2026-08-28 18:55，用户报障 vivo Y35 Edge 全屏/PC 端 + 群聊语音引用霸屏；收口本会话改动）
+### 2026-08-28 18:55（修复：群聊语音被引用时整串 base64 霸屏 + 核实 vivo Y35/Edge 全屏修复上线；已构建 sw: mochi-mtcu3oan，待提交）
+- [AI-B 域]（**跨域改动 src/js/group-chat.js（AI-A 文件，理由：群聊 gcQuoteHtml 缺 quoteTextSafe 等价清理，语音引用直出 base64）+ build.mjs（哨兵 +1：gcQuoteTextSafe）+ FIX-REGRESSION.md（清单 #24）+ 新增 tools/verify-voice-quote-gc.mjs；构建状态：已构建**）。
+- 用户反馈①：vivo Y35 / Edge，页面大小问题（显示成 PC 外壳）+ 全屏模式打不开 + 「Edge 显示我是 PC 端」。
+- 根因核查：v3.26.x 已有完整修复（device.js 规则表 desktop-ua+mobile-uch 等 + applyViewportFix + 设置页「手机布局（强制）」开关 + fullscreen.js viewportLandscape 改判物理方向），**但 origin/main（用户线上）还是 17:38 旧产物、不含这些修复**——本次构建+推送后刷新生效。若刷新后仍异常，让用户设置页「复制诊断信息」回传（含判定依据/识别信号快照）。
+- 用户反馈②：聊天里语音被引用时整串代码霸屏。根因：群聊 group-chat.js `gcQuoteHtml` 没有 quoteTextSafe 等价清理——历史/导入数据里引用存的是原始「名称|||data:audio;base64…」，字符串分支 escTxtBr 直出整串 base64。修复：新增 `gcQuoteTextSafe`（与聊天页同构），字符串/对象 `q.t` 分支都清理；新数据（`[语音] 名称`）原样通过不误伤。聊天页 chat.js 本身 v3.16.x 已有 quoteTextSafe 兜底（哨兵在位），本次回归验证确认。
+- 验证：build 哨兵 22/22；`verify-voice-quote-gc.mjs` 7/7（群聊坏字符串/坏对象/新数据/普通文本 + 聊天页回归）；`verify-desktop-mode-force.mjs` 8/8；`npm run verify` 10/10。
+- 待办：用户端需刷新/重开页面拿到新版本（SW 更新机制会自动弹更新条）。vivo Y35 如仍异常 → 抓诊断信息回传。
 ### 2026-08-28 18:45（修复：单聊联系人发消息无音效 + 音效设置页 UI 重设计；已构建，待提交）
 - [AI-B 域]（**已改 src/js/sfx.js + src/js/chat.js（跨域：AI-A 文件，理由：单聊 in 音效缺失，入口在 chat.js addIn）+ src/template.html + src/css/base.css + build.mjs（哨兵 +2）+ FIX-REGRESSION.md（清单 #23）+ 新增 tools/verify-sfx-in-chat.mjs；构建状态：已构建**）。
 - 用户反馈（红米 Turbo4 Pro + Via）：开了音效、选了系统自带（内置）音效，联系人发消息不响，其他音效正常。
