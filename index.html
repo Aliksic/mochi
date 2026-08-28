@@ -8269,9 +8269,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787918568995">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.296</b></span>
-        <span class="sv-deploy">部署于 2026-08-28 20:02<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787919692992">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.298</b></span>
+        <span class="sv-deploy">部署于 2026-08-28 20:21<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9348,7 +9348,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.296</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.298</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -9520,7 +9520,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.296</span>
+              <span class="lic-ver">v3.26.298</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -24525,20 +24525,25 @@ if (tIdx < 0 || !jumpToMsg(tIdx)) toast('未找到原消息');
 });
 }
 if (body) {
-body.addEventListener('click', (e) => {
-const b = e.target.closest('.msg-bubble');
-if (!b) { closeMsgActions(); return; }
-if (e.target.closest('.msg-quote')) return;
+let msgHoldTimer = null;
+let msgHoldEl = null;
+let msgHoldFired = false;
+let msgSuppressClickUntil = 0;
+function msgActionEligible(t) {
+const b = t.closest('.msg-bubble');
+if (!b) return null;
+if (t.closest('.msg-quote')) return null;
 const item = b.closest('.msg');
-if (!item) return;
-const special = item.classList.contains('msg-poke');
-if (special) return;
-if (e.target.closest('.msg-poke-seg')) return;
-if (b.textContent.indexOf('撤回了一条消息') >= 0 || b.textContent.indexOf('已读不回') >= 0) return;
-e.stopPropagation();
+if (!item || item.classList.contains('msg-poke')) return null;
+if (t.closest('.msg-poke-seg')) return null;
+const txt = b.textContent;
+if (txt.indexOf('撤回了一条消息') >= 0 || txt.indexOf('已读不回') >= 0) return null;
+return { item, b };
+}
+function openMsgActionsAt(item, b) {
 activeMsgEl = item;
 activeSide = item.classList.contains('msg-out') ? 'out' : 'in';
-if (msgActions) {
+if (!msgActions) return;
 msgActions.querySelectorAll('.ma-mine').forEach(b2 => b2.hidden = activeSide !== 'out');
 const delBtn = msgActions.querySelector('.ma-del-ta');
 if (delBtn) {
@@ -24563,6 +24568,34 @@ y = aboveFits || !belowFits ? y : below;
 msgActions.style.left = x + 'px';
 msgActions.style.top = y + 'px';
 }
+body.addEventListener('contextmenu', (e) => {
+if (e.target.closest('.msg-bubble') && !e.target.closest('.msg-quote')) e.preventDefault();
+});
+body.addEventListener('touchstart', (e) => {
+const r = msgActionEligible(e.target);
+if (!r) return;
+msgHoldEl = r.item;
+msgHoldTimer = setTimeout(() => {
+msgHoldTimer = null;
+msgHoldFired = true;
+msgSuppressClickUntil = Date.now() + 800; // 松开后抑制随之而来的轻点，防菜单被刚弹即关
+if (window.getSelection) { try { const s = window.getSelection(); if (s && s.removeAllRanges) s.removeAllRanges(); } catch (err) {} }
+openMsgActionsAt(msgHoldEl, r.b);
+}, 500);
+}, { passive: true });
+function endMsgHold() { if (msgHoldTimer) { clearTimeout(msgHoldTimer); msgHoldTimer = null; } }
+body.addEventListener('touchmove', endMsgHold, { passive: true });   // 手指滑动=滚动，取消长按
+body.addEventListener('touchend', endMsgHold);
+body.addEventListener('touchcancel', endMsgHold);
+body.addEventListener('click', (e) => {
+if (msgSuppressClickUntil && Date.now() < msgSuppressClickUntil) { e.preventDefault(); e.stopPropagation(); return; }
+const r = msgActionEligible(e.target);
+if (!r) {
+if (!e.target.closest('.msg-bubble') && !e.target.closest('.msg-quote')) closeMsgActions();
+return;
+}
+e.stopPropagation();
+openMsgActionsAt(r.item, r.b);
 });
 document.addEventListener('click', (e) => {
 if (msgActions && !msgActions.hidden && !msgActions.contains(e.target)) closeMsgActions();
@@ -27732,15 +27765,7 @@ else if (qimgs.length && String(qtext || '').indexOf('data:') === 0) qtext = '�
 return { text: qtext, imgs: qimgs, idx: msgs.indexOf(rec) };
 }
 if (body && gcMsgActions) {
-body.addEventListener('click', (e) => {
-const bk = e.target.closest('.msg-bubble');
-if (!bk) return;
-const item = bk.closest('.msg');
-if (!item) return;
-if (item.classList.contains('msg-poke')) return;          // 拍一拍居中条不弹
-if (e.target.closest('.msg-quote')) return;               // 引用块点击留给后续跳原消息
-if ((bk.textContent || '').indexOf('撤回了一条消息') >= 0) return; // 撤回提示有专属点击（查看原文）
-e.stopPropagation();
+function gcOpenMsgActions(item, bk) {
 gcActiveMsgEl = item;
 gcMsgActions.hidden = false;
 try {
@@ -27760,6 +27785,43 @@ y = aboveFits || !belowFits ? y : below;
 gcMsgActions.style.left = x + 'px';
 gcMsgActions.style.top = y + 'px';
 } catch (err) {}
+}
+let gcHoldTimer = null;
+let gcHoldEl = null;
+let gcSuppressClickUntil = 0;
+body.addEventListener('contextmenu', (e) => {
+if (e.target.closest('.msg-bubble') && !e.target.closest('.msg-quote')) e.preventDefault();
+});
+body.addEventListener('touchstart', (e) => {
+const bk = e.target.closest('.msg-bubble');
+if (!bk) return;
+if (e.target.closest('.msg-quote')) return;               // 引用块点击留给后续跳原消息
+const item = bk.closest('.msg');
+if (!item || item.classList.contains('msg-poke')) return; // 拍一拍居中条不弹
+if ((bk.textContent || '').indexOf('撤回了一条消息') >= 0) return; // 撤回提示有专属点击
+gcHoldEl = item;
+gcHoldTimer = setTimeout(() => {
+gcHoldTimer = null;
+gcSuppressClickUntil = Date.now() + 800; // 松开后抑制随之而来的轻点，防菜单被刚弹即关
+if (window.getSelection) { try { const s = window.getSelection(); if (s && s.removeAllRanges) s.removeAllRanges(); } catch (err) {} }
+gcOpenMsgActions(gcHoldEl, bk);
+}, 500);
+}, { passive: true });
+function endGcHold() { if (gcHoldTimer) { clearTimeout(gcHoldTimer); gcHoldTimer = null; } }
+body.addEventListener('touchmove', endGcHold, { passive: true }); // 手指滑动=滚动，取消长按
+body.addEventListener('touchend', endGcHold);
+body.addEventListener('touchcancel', endGcHold);
+body.addEventListener('click', (e) => {
+if (gcSuppressClickUntil && Date.now() < gcSuppressClickUntil) { e.preventDefault(); e.stopPropagation(); return; }
+const bk = e.target.closest('.msg-bubble');
+if (!bk) return;
+const item = bk.closest('.msg');
+if (!item) return;
+if (item.classList.contains('msg-poke')) return;          // 拍一拍居中条不弹
+if (e.target.closest('.msg-quote')) return;               // 引用块点击留给后续跳原消息
+if ((bk.textContent || '').indexOf('撤回了一条消息') >= 0) return; // 撤回提示有专属点击（查看原文）
+e.stopPropagation();
+gcOpenMsgActions(item, bk);
 });
 document.addEventListener('click', (e) => {
 if (!gcMsgActions.hidden && !gcMsgActions.contains(e.target)) closeGcMsgActions();
@@ -30701,19 +30763,6 @@ const applyChatBeautyData = (data) => {
 CHAT_BEAUTY_KEYS.forEach(k => { if (data[k] !== undefined) store.set(k, data[k]); });
 try { applySettings(); applyCss(); applyFont(); } catch (e) {}
 };
-window.saveChatBeautyScheme = function () {
-if (!window.openModal) return;
-const ctl = window.openModal('保存当前为聊天美化方案', '', (name) => {
-name = (name || '').trim();
-if (!name) { ctl.hint('请输入方案名称'); ctl.stay(); return; }
-const list = getChatSchemes();
-list.push({ name, time: Date.now(), data: collectChatBeauty() });
-saveChatSchemesList(list);
-toast('已保存方案「' + name + '」，所有桌面通用');
-const m = document.getElementById('chat-beauty-scheme-manager');
-if (m && !m.hidden) window.openChatBeautySchemes();
-}, { maxlength: 20, placeholder: '例如：简约白、情侣粉气泡…' });
-};
 function chatSchemeModalEl() {
 let m = document.getElementById('chat-beauty-scheme-manager');
 if (!m) {
@@ -30754,6 +30803,99 @@ b.style.cssText = css;
 b.addEventListener('click', fn);
 return b;
 }
+function chatSchemeThumb(data) {
+data = data || {};
+const inBg = data['cs-in-bg'] || '#ffffff';
+const inInk = data['cs-in-ink'] || '#111111';
+const outBg = data['cs-out-bg'] || '#111111';
+const outInk = data['cs-out-ink'] || '#ffffff';
+const r = (parseInt(data['cs-bubble-radius'] || '18px', 10) || 18) / 2;
+const tl = Math.max(0, Math.min(9, Math.round(r)));
+const bg = data['cs-bg'] || '';
+const hasCss = !!data['cs-bubble-css'];
+const wall = bg
+? '<div style="position:absolute;inset:0;background-image:url(&quot;' + bg + '&quot;);background-size:cover;background-position:center;opacity:.4"></div>'
+: '';
+const cssChip = hasCss
+? '<div style="position:absolute;left:5px;bottom:4px;font-size:9px;color:#fff;background:rgba(0,0,0,.5);padding:1px 5px;border-radius:5px">CSS</div>'
+: '';
+return '' +
+'<div style="position:relative;width:100%;height:64px;border-radius:9px;overflow:hidden;background:#e6e9ee;display:flex;align-items:center;padding:8px 10px;box-sizing:border-box;gap:5px">' +
+wall +
+'<div style="position:relative;align-self:flex-end;padding:4px 8px;border-radius:' + tl + 'px;font-size:10px;line-height:1.2;color:' + inInk + ';background:' + inBg + ';box-shadow:0 1px 2px rgba(0,0,0,.08);max-width:56%">对方</div>' +
+'<div style="margin-left:auto;position:relative;align-self:flex-start;padding:4px 8px;border-radius:' + tl + 'px;font-size:10px;line-height:1.2;color:' + outInk + ';background:' + outBg + ';box-shadow:0 1px 2px rgba(0,0,0,.08);max-width:56%">我的</div>' +
+cssChip +
+'</div>';
+}
+function chatBeautySummary(data) {
+data = data || {};
+const out = [];
+const inBg = data['cs-in-bg'], outBg = data['cs-out-bg'];
+if (inBg || outBg) out.push('气泡色 ' + (inBg || '默认') + ' / ' + (outBg || '默认'));
+const rad = data['cs-bubble-radius'] || '18px';
+const rn = BUBBLE_RADII.find(p => p.value === rad);
+out.push('圆角 ' + (rn ? rn.label : rad));
+const fs = data['cs-font-size'] || '14px';
+const fnl = FONT_SIZES.find(p => p.value === fs);
+out.push('字号 ' + (fnl ? fnl.label : fs));
+if (data['cs-bubble-css']) out.push('自定义CSS');
+if (data['cs-bg']) out.push('壁纸');
+const av = data['cs-av-shape'];
+if (av) out.push('头像 ' + ({ circle: '圆形', round: '圆角', square: '方形' }[av] || av));
+return out;
+}
+function chatSaveModalEl() {
+let m = document.getElementById('chat-beauty-save-modal');
+if (!m) {
+m = document.createElement('div'); m.id = 'chat-beauty-save-modal'; m.hidden = true;
+m.style.cssText = 'position:fixed;inset:0;z-index:90;align-items:center;justify-content:center;background:rgba(0,0,0,.4);display:none';
+document.body.appendChild(m);
+m.addEventListener('click', (e) => { if (e.target === m) { m.style.display = 'none'; m.hidden = true; } });
+}
+return m;
+}
+window.saveChatBeautyScheme = function () {
+const x = chatSaveModalEl();
+x.innerHTML = '';
+const wrap = document.createElement('div');
+wrap.style.cssText = 'box-sizing:border-box;width:min(84vw,340px);max-height:84vh;overflow-y:auto;background:var(--card-bg,#fff);color:var(--ink,#111);border-radius:16px;padding:16px;box-shadow:0 14px 40px rgba(0,0,0,.25)';
+const hd = document.createElement('div');
+hd.style.cssText = 'font-size:15px;font-weight:700;text-align:center;margin-bottom:12px';
+hd.textContent = '保存当前为聊天美化方案';
+const data = collectChatBeauty();
+const pv = document.createElement('div');
+pv.innerHTML = chatSchemeThumb(data);
+const sub = document.createElement('div');
+sub.style.cssText = 'font-size:10.5px;color:var(--muted,#999);margin:8px 0 6px';
+sub.textContent = '正在保存的当前设置：';
+const sum = document.createElement('div');
+sum.style.cssText = 'display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px';
+const chips = chatBeautySummary(data);
+if (!chips.length) { const e = document.createElement('span'); e.textContent = '以上传壁纸/气泡等设置为主'; e.style.cssText = 'font-size:10.5px;color:var(--muted,#999)'; sum.appendChild(e); }
+else chips.forEach(c => { const el = document.createElement('span'); el.textContent = c; el.style.cssText = 'font-size:10.5px;color:var(--muted,#666);background:var(--card-soft,#f2f3f5);border:1px solid var(--card-border,#eee);padding:2px 8px;border-radius:999px'; sum.appendChild(el); });
+const inp = document.createElement('input');
+inp.placeholder = '例如：简约白、情侣粉气泡…'; inp.maxLength = 20;
+inp.style.cssText = 'width:100%;box-sizing:border-box;padding:9px 11px;font-size:13px;border:1px solid var(--card-border,#ddd);border-radius:9px;background:var(--bg-b,#fff);color:var(--ink,#111)';
+const act = document.createElement('div');
+act.style.cssText = 'display:flex;gap:8px;margin-top:13px;justify-content:flex-end';
+const cancel = mkBtn('取消', 'font-size:12.5px;padding:7px 14px;border:1px solid var(--card-border,#eee);border-radius:9px;background:var(--btn-cancel-bg,#fafafa);color:var(--btn-cancel-ink,#555)', () => { x.style.display = 'none'; x.hidden = true; });
+const ok = mkBtn('保存方案', 'font-size:12.5px;padding:7px 14px;border:none;border-radius:9px;background:var(--ink,#111);color:#fff', () => {
+const name = (inp.value || '').trim();
+if (!name) { inp.style.borderColor = '#e05a5a'; return; }
+const list = getChatSchemes();
+list.push({ name, time: Date.now(), data });
+saveChatSchemesList(list);
+x.style.display = 'none'; x.hidden = true;
+toast('已保存方案「' + name + '」，所有桌面通用');
+const m = document.getElementById('chat-beauty-scheme-manager');
+if (m && !m.hidden) window.openChatBeautySchemes();
+});
+act.appendChild(cancel); act.appendChild(ok);
+wrap.appendChild(hd); wrap.appendChild(pv); wrap.appendChild(sub); wrap.appendChild(sum); wrap.appendChild(inp); wrap.appendChild(act);
+x.appendChild(wrap);
+x.style.display = 'flex'; x.hidden = false;
+setTimeout(() => { try { inp.focus(); } catch (e) {} }, 60);
+};
 let chatPreviewBackup = null;
 function chatPreviewBarEl() {
 let bar = document.getElementById('chat-beauty-preview-bar');
@@ -30813,6 +30955,9 @@ list.appendChild(empty);
 schemes.forEach((s, i) => {
 const row = document.createElement('div');
 row.style.cssText = 'display:flex;flex-direction:column;gap:8px;padding:10px;border:1px solid var(--card-border,#eee);border-radius:10px';
+const th = document.createElement('div');
+th.innerHTML = chatSchemeThumb(s.data || {});
+row.appendChild(th);
 const nm = document.createElement('div');
 const t = new Date(s.time || Date.now());
 const ds = (t.getMonth() + 1) + '-' + t.getDate();

@@ -3834,3 +3834,10 @@ staticText: staticText
 - 实现：template.html 新增 #cs-bubble-radius 行；chat-settings.js 增 BUBBLE_RADII + _.chat-bubble-radius 应用/取值/点击绑定 +  入 CHAT_BEAUTY_KEYS；chat-main.css .msg-bubble 改 var(--chat-bubble-radius,18px)。
 - 验证：node build.mjs 成功（哨兵 23/23，含对方已保存改动）；node tools/verify.mjs 10/10；node --check 通过。
 - 提交：本次改动 + 工作区累积已存改动（含他人 personalize.js 等）一并收口提交（未推送）。
+
+### 2026-08-28（构建收口：聊天美化方案 保存可确认+列表缩略图预览）
+- 保存当前聊天美化方案：由纯输入改名弹窗改为可视化确认弹窗——顶部实时缩略图预览（迷你聊天气泡 对方/我的，按当前气泡色/圆角/壁纸渲染）+ 当前设置摘要 chips（气泡色/圆角/字号/CSS/壁纸/头像形状）+ 命名输入框 + 保存/取消，保存前可确认所存内容；z-index 90。
+- 我的聊天美化方案列表：每个方案卡片顶部新增缩略图预览（同款渲染，含壁纸/CSS 标识），下方名称/日期 + 预览/应用/改名/删除 按钮。
+- 新增 chatSchemeThumb(data)/chatBeautySummary(data)/chatSaveModalEl 与新版 saveChatBeautyScheme；移除旧的 openModal 版保存。
+- 验证：node build.mjs 成功（哨兵 25/25）；node tools/verify.mjs 10/10；node --check 通过。
+- 提交：本次改动 + 构建产物收口提交（未推送）。

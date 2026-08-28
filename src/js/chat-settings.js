@@ -723,19 +723,6 @@
     CHAT_BEAUTY_KEYS.forEach(k => { if (data[k] !== undefined) store.set(k, data[k]); });
     try { applySettings(); applyCss(); applyFont(); } catch (e) {}
   };
-  window.saveChatBeautyScheme = function () {
-    if (!window.openModal) return;
-    const ctl = window.openModal('保存当前为聊天美化方案', '', (name) => {
-      name = (name || '').trim();
-      if (!name) { ctl.hint('请输入方案名称'); ctl.stay(); return; }
-      const list = getChatSchemes();
-      list.push({ name, time: Date.now(), data: collectChatBeauty() });
-      saveChatSchemesList(list);
-      toast('已保存方案「' + name + '」，所有桌面通用');
-      const m = document.getElementById('chat-beauty-scheme-manager');
-      if (m && !m.hidden) window.openChatBeautySchemes();
-    }, { maxlength: 20, placeholder: '例如：简约白、情侣粉气泡…' });
-  };
   function chatSchemeModalEl() {
     let m = document.getElementById('chat-beauty-scheme-manager');
     if (!m) {
@@ -777,6 +764,102 @@
     b.addEventListener('click', fn);
     return b;
   }
+  // v3.25.x：方案缩略图——按方案数据渲染迷你聊天气泡预览
+  function chatSchemeThumb(data) {
+    data = data || {};
+    const inBg = data['cs-in-bg'] || '#ffffff';
+    const inInk = data['cs-in-ink'] || '#111111';
+    const outBg = data['cs-out-bg'] || '#111111';
+    const outInk = data['cs-out-ink'] || '#ffffff';
+    const r = (parseInt(data['cs-bubble-radius'] || '18px', 10) || 18) / 2;
+    const tl = Math.max(0, Math.min(9, Math.round(r)));
+    const bg = data['cs-bg'] || '';
+    const hasCss = !!data['cs-bubble-css'];
+    const wall = bg
+      ? '<div style="position:absolute;inset:0;background-image:url(&quot;' + bg + '&quot;);background-size:cover;background-position:center;opacity:.4"></div>'
+      : '';
+    const cssChip = hasCss
+      ? '<div style="position:absolute;left:5px;bottom:4px;font-size:9px;color:#fff;background:rgba(0,0,0,.5);padding:1px 5px;border-radius:5px">CSS</div>'
+      : '';
+    return '' +
+      '<div style="position:relative;width:100%;height:64px;border-radius:9px;overflow:hidden;background:#e6e9ee;display:flex;align-items:center;padding:8px 10px;box-sizing:border-box;gap:5px">' +
+      wall +
+      '<div style="position:relative;align-self:flex-end;padding:4px 8px;border-radius:' + tl + 'px;font-size:10px;line-height:1.2;color:' + inInk + ';background:' + inBg + ';box-shadow:0 1px 2px rgba(0,0,0,.08);max-width:56%">对方</div>' +
+      '<div style="margin-left:auto;position:relative;align-self:flex-start;padding:4px 8px;border-radius:' + tl + 'px;font-size:10px;line-height:1.2;color:' + outInk + ';background:' + outBg + ';box-shadow:0 1px 2px rgba(0,0,0,.08);max-width:56%">我的</div>' +
+      cssChip +
+      '</div>';
+  }
+  // v3.25.x：当前聊天美化的文字摘要 chips（气泡色/圆角/字号/CSS/壁纸/头像形状/时间轴）
+  function chatBeautySummary(data) {
+    data = data || {};
+    const out = [];
+    const inBg = data['cs-in-bg'], outBg = data['cs-out-bg'];
+    if (inBg || outBg) out.push('气泡色 ' + (inBg || '默认') + ' / ' + (outBg || '默认'));
+    const rad = data['cs-bubble-radius'] || '18px';
+    const rn = BUBBLE_RADII.find(p => p.value === rad);
+    out.push('圆角 ' + (rn ? rn.label : rad));
+    const fs = data['cs-font-size'] || '14px';
+    const fnl = FONT_SIZES.find(p => p.value === fs);
+    out.push('字号 ' + (fnl ? fnl.label : fs));
+    if (data['cs-bubble-css']) out.push('自定义CSS');
+    if (data['cs-bg']) out.push('壁纸');
+    const av = data['cs-av-shape'];
+    if (av) out.push('头像 ' + ({ circle: '圆形', round: '圆角', square: '方形' }[av] || av));
+    return out;
+  }
+  // 保存方案的确认弹窗：实时预览 + 当前设置摘要 + 命名（可视可确认再存）
+  function chatSaveModalEl() {
+    let m = document.getElementById('chat-beauty-save-modal');
+    if (!m) {
+      m = document.createElement('div'); m.id = 'chat-beauty-save-modal'; m.hidden = true;
+      m.style.cssText = 'position:fixed;inset:0;z-index:90;align-items:center;justify-content:center;background:rgba(0,0,0,.4);display:none';
+      document.body.appendChild(m);
+      m.addEventListener('click', (e) => { if (e.target === m) { m.style.display = 'none'; m.hidden = true; } });
+    }
+    return m;
+  }
+  window.saveChatBeautyScheme = function () {
+    const x = chatSaveModalEl();
+    x.innerHTML = '';
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'box-sizing:border-box;width:min(84vw,340px);max-height:84vh;overflow-y:auto;background:var(--card-bg,#fff);color:var(--ink,#111);border-radius:16px;padding:16px;box-shadow:0 14px 40px rgba(0,0,0,.25)';
+    const hd = document.createElement('div');
+    hd.style.cssText = 'font-size:15px;font-weight:700;text-align:center;margin-bottom:12px';
+    hd.textContent = '保存当前为聊天美化方案';
+    const data = collectChatBeauty();
+    const pv = document.createElement('div');
+    pv.innerHTML = chatSchemeThumb(data);
+    const sub = document.createElement('div');
+    sub.style.cssText = 'font-size:10.5px;color:var(--muted,#999);margin:8px 0 6px';
+    sub.textContent = '正在保存的当前设置：';
+    const sum = document.createElement('div');
+    sum.style.cssText = 'display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px';
+    const chips = chatBeautySummary(data);
+    if (!chips.length) { const e = document.createElement('span'); e.textContent = '以上传壁纸/气泡等设置为主'; e.style.cssText = 'font-size:10.5px;color:var(--muted,#999)'; sum.appendChild(e); }
+    else chips.forEach(c => { const el = document.createElement('span'); el.textContent = c; el.style.cssText = 'font-size:10.5px;color:var(--muted,#666);background:var(--card-soft,#f2f3f5);border:1px solid var(--card-border,#eee);padding:2px 8px;border-radius:999px'; sum.appendChild(el); });
+    const inp = document.createElement('input');
+    inp.placeholder = '例如：简约白、情侣粉气泡…'; inp.maxLength = 20;
+    inp.style.cssText = 'width:100%;box-sizing:border-box;padding:9px 11px;font-size:13px;border:1px solid var(--card-border,#ddd);border-radius:9px;background:var(--bg-b,#fff);color:var(--ink,#111)';
+    const act = document.createElement('div');
+    act.style.cssText = 'display:flex;gap:8px;margin-top:13px;justify-content:flex-end';
+    const cancel = mkBtn('取消', 'font-size:12.5px;padding:7px 14px;border:1px solid var(--card-border,#eee);border-radius:9px;background:var(--btn-cancel-bg,#fafafa);color:var(--btn-cancel-ink,#555)', () => { x.style.display = 'none'; x.hidden = true; });
+    const ok = mkBtn('保存方案', 'font-size:12.5px;padding:7px 14px;border:none;border-radius:9px;background:var(--ink,#111);color:#fff', () => {
+      const name = (inp.value || '').trim();
+      if (!name) { inp.style.borderColor = '#e05a5a'; return; }
+      const list = getChatSchemes();
+      list.push({ name, time: Date.now(), data });
+      saveChatSchemesList(list);
+      x.style.display = 'none'; x.hidden = true;
+      toast('已保存方案「' + name + '」，所有桌面通用');
+      const m = document.getElementById('chat-beauty-scheme-manager');
+      if (m && !m.hidden) window.openChatBeautySchemes();
+    });
+    act.appendChild(cancel); act.appendChild(ok);
+    wrap.appendChild(hd); wrap.appendChild(pv); wrap.appendChild(sub); wrap.appendChild(sum); wrap.appendChild(inp); wrap.appendChild(act);
+    x.appendChild(wrap);
+    x.style.display = 'flex'; x.hidden = false;
+    setTimeout(() => { try { inp.focus(); } catch (e) {} }, 60);
+  };
   // v3.25.x：聊天方案预览——暂存当前聊天美化 → 应用所选方案（即时生效，可还原）
   let chatPreviewBackup = null;
   function chatPreviewBarEl() {
@@ -838,6 +921,9 @@
     schemes.forEach((s, i) => {
       const row = document.createElement('div');
       row.style.cssText = 'display:flex;flex-direction:column;gap:8px;padding:10px;border:1px solid var(--card-border,#eee);border-radius:10px';
+      const th = document.createElement('div');
+      th.innerHTML = chatSchemeThumb(s.data || {});
+      row.appendChild(th);
       const nm = document.createElement('div');
       const t = new Date(s.time || Date.now());
       const ds = (t.getMonth() + 1) + '-' + t.getDate();
