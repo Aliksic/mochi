@@ -1,4 +1,20 @@
 # 本次构建者：AI-B（本会话，2026-08-28 20:02，音效图标重设计已构建收口 sw: mochi-mtcwjx2b，哨兵 23/23，待提交）
+### 2026-08-28 20:10（✅ 完成·已构建·语音播放矢量图无互动 + 录制半框 UI 对齐重设计）
+- [AI-A 域]（**已改 src/js/chat.js、src/js/group-chat.js、src/css/chat-main.css；跨域改 src/template.html（试听钮双图标 + 发送钮摘 .poke-big，先留言）+ build.mjs（哨兵 +2）+ FIX-REGRESSION.md（#22）；新增 tools/verify-voice-play-icon.mjs（可提交资产）；构建状态：已构建（18:52 与 20:02 各一次，与 AI-B 20:02 收口同工作区，产物已核含本修复全部特征）·未提交**）。
+- 用户反馈：①录制语音面板点试听矢量图无互动变化；②聊天里点语音播放矢量图无互动变化；③录制半框 UI 没对齐、按钮大小不一致，需重设计。
+- 根因与方案：
+  - ①②播放钮此前只有底色变化、图标本身从不变化。三处语音播放钮（chat.js `fillVoiceBubble` 聊天气泡 / group-chat.js 群聊语音气泡 / template.html 试听钮 `#voice-play-btn`）统一改为「播放三角 + 暂停双竖条」双 SVG，`.playing` 时 CSS 切换（三角隐、暂停显），另加 `:active` scale(.85) 按压反馈与颜色过渡（reduced-motion 下禁过渡）；播放逻辑（playVoiceInChat/gcPlayVoice/toggleVoicePlay）本就切换 .playing，零 JS 逻辑改动。
+  - ③发送钮复用 `.poke-big`（14px 圆角/14px 字/**margin-top:12px**）与自绘 rec 钮（24px 圆角/13px 字/最小宽 104）一高一低大小不一＝「没对齐、大小不一致」主因；试听行另有 margin 左 2px 错位。重设计：两钮统一 44px 高/14px 圆角/14px 字/flex:1 等宽，rec=描边次按钮（录制中红底脉冲保留）、send=`--btn-bg` 主按钮（深色随主题翻色），试听行左边距归零，dark 兜底补 rec 描边色。
+  - ④B 组验证揪出 Chromium flex 特性：`flex-basis:0%` 的两个按钮「一方有 border 一方无 border」宽度分配不等（实测差 2.67px，border/min-width/文本对调四组实验定位）——send 补 `1.5px solid transparent` 后等宽 155.33/155.33。
+- 验证：node --check 全过；`tools/verify-voice-play-icon.mjs` **20/20 全绿**（静态 9 + 运行时 11：双图标渲染 / 播放中三角↔暂停切换 / 再点停止复位 / ended 自动回落 / :active 入 CSSOM / 试听钮同款互动 / 两钮等高同顶等宽 wDiff=0 / 圆角字号统一 / 试听行 0 边距 / 零 JS 异常）；既有 `verify-voice-record.mjs` **30/30 无回归**；哨兵 23/23 在位（含本修复 2 条）。临时 `tools/diag-voice-btn-flex.mjs` 已删。建议用户真机（vivo/iPhone）实测：聊天语音播放中图标变暂停、录制半框两按钮等大对齐。
+
+### 2026-08-28（修复：聊天消息无法「长按」打开引用/操作菜单；已改源码，未构建）
+- [本会话·AI-A 域]（**已改 src/js/chat.js + src/js/group-chat.js（AI-A 文件）+ build.mjs + FIX-REGRESSION.md（哨兵 +2：#26）；构建状态：未构建（node --check 已过），待构建者收口**）。
+- 用户反馈：聊天里长按聊天消息打不开「引用消息」的窗口。
+- 根因：消息操作菜单（引用/收藏/撤回/编辑/删除）原本只绑**轻点**(body click)，代码里没有长按（touchstart 计时）监听 → 长按无效。
+- 方案（用户确认「长按+轻点都打开」）：chat.js 抽出 `msgActionEligible`（弹不弹的判定，沿用原规则）+ `openMsgActionsAt`（打开+定位），保留轻点；新增 touchstart 长按 500ms 打开；`contextmenu/preventDefault` 抑制系统选中与默认菜单；`msgSuppressClickUntil`(800ms) 抑制长按松开后误触发的轻点（防「刚弹即关」）；touchmove 取消长按（不挡滚动）。群聊 group-chat.js `gcOpenMsgActions` 同款改造，保持一致。
+- 验证：node --check 两 JS 通过；未跑构建，需构建后实测：长按与轻点均弹菜单、长按不触发系统选中/菜单、松开不立刻关闭。
+- 待 AI-B/AI-A 注意：chat.js / group-chat.js 为 AI-A 文件，本次跨域因任务需要先行改动，请在构建收口前复核无冲突。
 ### 2026-08-28 20:02（音效设置「TA发来消息/我发送消息」图标重设计为气泡+喇叭；已构建）
 - [AI-B 域]（**已改 src/template.html（仅 sfx-in-row / sfx-out-row 两处 SVG 图标）；构建状态：已构建 sw: mochi-mtcwjx2b，哨兵 23/23，待提交**）。
 - 需求：用户反馈音效设置页 TA 发来消息 / 我发送消息 左侧矢量图太丑，需重新设计；并说明音效应每桌面独立。
