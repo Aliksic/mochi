@@ -135,6 +135,12 @@
     // 1) 番茄陪伴：records-care 里的 pomo 记录（只记时间）
     caresLoad().forEach(r => { if (r.kind === 'pomo') rows.push({ icon: '🍅', main: '番茄钟陪伴', sub: fmtDT(r.ts), ts: r.ts }); });
     // 2) 查岗 / 经期 / 喝水 / 吃饭：从聊天记录回溯
+    // v3.25.x：跨桌面查岗卡（deskCk）与该联系人 records-care 里的 desk-checkin 记录是
+    // 同一次事件（记录随卡同刻写入；同联系人冷却 30 分钟，90s 窗口内不会误合并）——
+    // 已有对应记录的卡不再按「查岗」重复列，防同一次查岗在来源桌面出两行；
+    // 无记录的旧卡（历史数据/仅聊天触发）仍照列。
+    let careTs = [];
+    try { caresLoad().forEach(r => { if (r && r.kind === 'desk-checkin') careTs.push(r.ts || 0); }); } catch (e) {}
     let msgs = [];
     try { msgs = (window.getChatMsgs ? window.getChatMsgs() : JSON.parse(store.get('chat-msgs') || '[]')); } catch (e) {}
     (msgs || []).forEach(m => {
@@ -145,7 +151,7 @@
       else if (tag === '喝水提醒') rows.push({ icon: KIND_ICON.water, main: '提醒喝水 · ' + esc(m.text || ''), sub: fmtDT(t), ts: t });
       else if (tag === '吃饭提醒') rows.push({ icon: KIND_ICON.eat, main: '提醒吃饭 · ' + esc(m.text || ''), sub: fmtDT(t), ts: t });
       // 查岗：ask-card 是问题卡本体；ask-msg 提示语只作补充（若 30s 内已有问卡则不重复列）
-      else if (m.special === 'ask-card' && m.askQuestion) rows.push({ icon: KIND_ICON.checkin, main: '查岗 · ' + esc(m.askQuestion), sub: fmtDT(t), ts: t });
+      else if (m.special === 'ask-card' && m.askQuestion && !(m.deskCk && careTs.some(ct => Math.abs(ct - t) <= 90000))) rows.push({ icon: KIND_ICON.checkin, main: '查岗 · ' + esc(m.askQuestion), sub: fmtDT(t), ts: t });
       else if (m.special === 'ask-msg' && /查岗/.test(m.text || '')) {
         const nearCard = (msgs || []).some(o => o && o.special === 'ask-card' && o.askQuestion && Math.abs((o.ts || 0) - t) < 30000);
         if (!nearCard) rows.push({ icon: KIND_ICON.checkin, main: '查岗', sub: fmtDT(t), ts: t });

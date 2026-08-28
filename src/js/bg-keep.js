@@ -821,7 +821,19 @@
         if (saved === '1' && 'Notification' in window && Notification.permission === 'granted' &&
             (!lastResumeNotifyAt || now - lastResumeNotifyAt > 30000)) {
           lastResumeNotifyAt = now;
-          showSysNotification(who, { body: '你不在的时候收到 ' + n + ' 条新消息' });
+          // v3.21.x：汇总通知也带联系人头像（右位大图标）——此前只发文字，通知右侧无头像。
+          // 取当前桌面聊天头像（与 bgNotifyCheck 同口径），等比缩略后作 icon，失败回退原文。
+          const notiIcon = (store.get('cs-avatar-partner') || store.get('avatar-partner') || '');
+          const sendNoti = function (iconVal) {
+            const o = { body: '你不在的时候收到 ' + n + ' 条新消息' };
+            if (iconVal) o.icon = iconVal;
+            showSysNotification(who, o);
+          };
+          if (notiIcon && (notiIcon.indexOf('data:') === 0 || /^https?:\/\//i.test(notiIcon))) {
+            makeAvatarThumb(notiIcon, function (u) { sendNoti(u || notiIcon); });
+          } else {
+            sendNoti('');
+          }
         }
       }
     } catch (e) {}
@@ -1073,30 +1085,8 @@
     if (avatar && (avatar.indexOf('data:') === 0 || /^https?:\/\//i.test(avatar))) bigIcon = avatar;
     if (!bigIcon) bigIcon = NOTIFY_ICON;
     if (extra.img && (extra.img.indexOf('data:') === 0 || /^https?:\/\//i.test(extra.img))) previewImg = extra.img;
-    // v3.21.x：头像改为「等比缩略图」——canvas 尺寸跟随图片本身的宽高比，
-    // 只整体缩放到最长边 96px，不裁切、不填充、不改变比例，避免原图在
-    // 通知上被拉长/裁掉边缘；跨域图污染 canvas 时 toDataURL 抛错走 cb('')
-    // 回退原图，不影响通知发送。
-    const cropAvatarToSquare = function (dataUrl, cb) {
-      try {
-        const img = new Image();
-        if (/^https?:\/\//i.test(dataUrl)) { img.crossOrigin = 'anonymous'; }
-        img.onload = function () {
-          try {
-            const maxSide = 96;
-            const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
-            const w = Math.max(1, Math.round(img.width * scale));
-            const h = Math.max(1, Math.round(img.height * scale));
-            const c = document.createElement('canvas');
-            c.width = w; c.height = h;
-            c.getContext('2d').drawImage(img, 0, 0, w, h);
-            cb(c.toDataURL('image/jpeg', 0.85));
-          } catch (e) { cb(''); }
-        };
-        img.onerror = function () { cb(''); };
-        img.src = dataUrl;
-      } catch (e) { cb(''); }
-    };
+    // v3.21.x：头像为「等比缩略图」，统一走模块级 makeAvatarThumb
+    const cropAvatarToSquare = makeAvatarThumb;
     // v3.14.x：发送链路收敛——icon 裁剪完成后连同消息图一次性交
     // showSysNotification（内部统一 dataURL→Blob 直传 + 逐级降级重发）
     const sendFinal = function (iconVal) {
@@ -1116,6 +1106,29 @@
       sendFinal(bigIcon);
     }
   };
+  // v3.21.x：头像「等比缩略图」——canvas 尺寸跟随图片本身宽高比，只整体缩放到
+  // 最长边 96px，不裁切、不填充、不改变比例，避免原图在通知上被拉长/裁掉边缘；
+  // 跨域图污染 canvas 时 toDataURL 抛错走 cb('') 回退原图，不影响通知发送。
+  function makeAvatarThumb(dataUrl, cb) {
+    try {
+      const img = new Image();
+      if (/^https?:\/\//i.test(dataUrl)) { img.crossOrigin = 'anonymous'; }
+      img.onload = function () {
+        try {
+          const maxSide = 96;
+          const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+          const w = Math.max(1, Math.round(img.width * scale));
+          const h = Math.max(1, Math.round(img.height * scale));
+          const c = document.createElement('canvas');
+          c.width = w; c.height = h;
+          c.getContext('2d').drawImage(img, 0, 0, w, h);
+          cb(c.toDataURL('image/jpeg', 0.85));
+        } catch (e) { cb(''); }
+      };
+      img.onerror = function () { cb(''); };
+      img.src = dataUrl;
+    } catch (e) { cb(''); }
+  }
   // v3.5.147：通知缩略图压缩——canvas 把图片 dataURL 压到最长边 96px JPEG。
   // 压缩失败返回空串（调用方不带图发送，保证文字通知不丢）
   function compressNotifyImg(dataUrl, cb) {

@@ -105,9 +105,13 @@
    v3.15.x：min-height 77px——三页第二档（情话/本周日常/备忘心情）统一 band 高。
    v3.16.x：height:77px 固定（非 min-height）——超长情话在 nowrap+overflow 下 line box
    溢出会把卡片撑到 81+px（flex 布局按溢出 line box 计算高度），三页第二档错位。
-   固定高 + overflow:hidden 让卡片高度恒定，内容 flex 居中、超长文字裁剪。 */
+   固定高 + overflow:hidden 让卡片高度恒定，内容 flex 居中、超长文字裁剪。
+   v3.25.x：第二档 77→92px——用户反馈长情话两行仍省略显示不全，放开 3 行
+   （mc-top 16 + margin 2 + 3×15=45 + padding 28 = 91）。三页 band 同步加高
+   （week-card / memo+mood 同改），页内容整体下移 15px 但页可竖滚、跨页对齐不变；
+   固定 height 的缩放一致性约束（v3.16.x）保持。 */
 .mini-row { display:flex; gap:12px; margin-bottom:14px; flex-shrink:0; }
-.mini-card { flex:1; height:77px; overflow:hidden; box-sizing:border-box; border-radius:20px; padding:14px; box-shadow:0 6px 16px rgba(0,0,0,.06); background:var(--widget-bg); opacity:var(--widget-opacity); border:1px solid var(--widget-border); display:flex; flex-direction:column; justify-content:center; }
+.mini-card { flex:1; height:92px; overflow:hidden; box-sizing:border-box; border-radius:20px; padding:14px; box-shadow:0 6px 16px rgba(0,0,0,.06); background:var(--widget-bg); opacity:var(--widget-opacity); border:1px solid var(--widget-border); display:flex; flex-direction:column; justify-content:center; }
 .mc-top { font-size:11px; color:var(--muted); letter-spacing:1px; }
 .mc-b { font-size:13px; font-weight:600; color:var(--ink); margin-top:6px; line-height:1.45; }
 .mc-b b { font-size:16px; }
@@ -118,13 +122,13 @@
    单行盒高，卡片高度恒定 77px，与第二页「本周日常」/第三页「备忘+心情」同档对齐。
    长情话末尾显示省略号，完整内容点卡片弹窗可看（迷你卡点击有查看逻辑）。 */
 .mini-card .mc-b { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; height:18.85px; line-height:18.85px; }
-/* v3.23.x：今日情话放开单行省略——定高内两行截断（line-clamp）。卡片仍锁 77px，
-   三页第二档 band 对齐不受影响（v3.16.x 约束保住）；13px/15px 两行 30px 与
-   mc-top/内边距合计 ≈77.6px，flex 居中 + 卡片 overflow:hidden 吸收 0.6px 误差。
-   超两行仍省略，完整内容点卡片弹窗可看。 */
+/* v3.23.x：今日情话放开单行省略——定高内两行截断（line-clamp）。
+   v3.25.x：两行仍不够（用户反馈自添加长句省略号显示不全）——卡片 band 77→92px
+   后放开 3 行 line-clamp（3×15=45px）；再配合 personalize.js renderQuoteOfDay
+   的自动缩字号兜底（10px 下限），绝大多数长句可卡内显示全文。 */
 .mini-card #love-quote {
-  white-space:normal; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2;
-  overflow:hidden; text-overflow:clip; height:30px; line-height:15px; margin-top:2px;
+  white-space:normal; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:3;
+  overflow:hidden; text-overflow:clip; height:45px; line-height:15px; margin-top:2px;
 }
 
 /* 打卡横幅
@@ -602,16 +606,18 @@
    第三页内容总长 747 超出桌面容器 714，且 1/2 页功能图标底部在 636；上下整宽布局
    让第三页比 1/2 页长出 111px（用户反馈「第三页没有和前两页对齐」）。
    改回两半卡同行（宽度 171/张、与首页小卡行同档），高度继承 .mini-card 固定 77px */
+/* v3.25.x：显式高度随第二档 band 77→92 同步（与 .mini-card 继承值一致，缩放口径不变） */
 .page-slide.third .mini-row { flex-direction:row; gap:12px; }
 .page-slide.third .mini-row .memo-card,
-.page-slide.third .mini-row .mood-card { height:77px; }
+.page-slide.third .mini-row .mood-card { height:92px; }
 /* v3.15.x：本周日常定高 77px（与首页小卡行/第三页备忘心情行统一第二档 band），
    日期格 7→4 压缩内容——横滑三页第二档上下边缘对齐。
    v3.16.x：min-height 改 height 固定——内容实际 75.3px，min-height 与 mini-card 的
    固定 height 在「卡片大小」缩放（zoom）下计算方式不同（77×1.15=88.55 vs 77.48×1.15=89.1），
    造成三页第二档缩放后差 0.55px，图标组顶部的 0.55px 差异直接体现在图标下方文字行错位。
-   固定 height + overflow:hidden 与 mini-card 一致，缩放后三页完全同步。 */
-.week-card { border-radius:20px; padding:8px 14px; margin-bottom:14px; height:77px; overflow:hidden; box-sizing:border-box; display:flex; flex-direction:column; justify-content:center; }
+   固定 height + overflow:hidden 与 mini-card 一致，缩放后三页完全同步。
+   v3.25.x：随第二档 band 77→92px 同步加高（今日情话放开 3 行），三页对齐保持。 */
+.week-card { border-radius:20px; padding:8px 14px; margin-bottom:14px; height:92px; overflow:hidden; box-sizing:border-box; display:flex; flex-direction:column; justify-content:center; }
 .week-days { display:flex; gap:6px; margin-top:5px; }
 .week-day {
   flex:1; text-align:center; padding:4px 0; border-radius:10px;

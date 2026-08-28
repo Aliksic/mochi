@@ -3923,6 +3923,17 @@ try {
     if (!el) return;
     const text = (window.getQuoteOfDay && window.getQuoteOfDay()) || '我偏爱你。';
     el.textContent = window.taFit ? window.taFit(text) : text;
+    // v3.25.x：3 行（45px 盒）仍放不下时逐级缩字号（13→10px 下限），尽量卡内显示全文；
+    // 超过 10px 也装不下的极端长句保留省略号（完整内容日历页按天可查）。
+    // rAF 等一帧布局稳定后再量，避免启动早期量到 0 高。
+    requestAnimationFrame(function () {
+      var fs = 13;
+      el.style.fontSize = fs + 'px';
+      while (el.scrollHeight > el.clientHeight + 1 && fs > 10) {
+        fs -= 0.5;
+        el.style.fontSize = fs + 'px';
+      }
+    });
     // 今日情话存档：每天一条，全部历史保存在主页（同一天不重复）
     try {
       const today = fishToday();

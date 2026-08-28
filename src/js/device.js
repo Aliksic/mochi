@@ -141,10 +141,11 @@
   };
 })();
 
-// ===== 复制诊断信息（设置页入口，v3.16.x） =====
-// 用户报障时拿数据，别靠来回猜：一键复制 UA / 视口 / 特性检测 / 设备判定结果，
-// 用户发给开发者即可定位「哪条设备分支生效」。贴进 openModal 的多行文本框，
-// 剪贴板可用时自动写入（GitHub Pages https 环境可用）。
+// ===== 复制诊断信息（设置页入口，v3.16.x；v3.25.x 扩充） =====
+// 用户报障时拿数据，别靠来回猜：一键复制设备判定 / 视口 / 特性检测 / 存储配额 /
+// 更新状态（远端 version.json 时间戳比对，判断「TA 手机是不是旧缓存」）/
+// 最近错误（含调用栈 + 资源加载失败 + console.error）/ 环境变化（旋转/键盘/前后台）。
+// 贴进 openModal 的多行文本框，剪贴板可用时自动写入（GitHub Pages https 环境可用）。
 (function () {
   const row = document.getElementById('row-diagnostics');
   if (!row) return;
@@ -175,31 +176,117 @@
       href: (location.pathname || '').slice(0, 80)
     };
   }
-  function pushErr(msg) {
+  function pushErr(msg, stack) {
     try {
       var arr = [];
       try {
         var old = localStorage.getItem(ERR_KEY);
         if (old) { var o = JSON.parse(old); if (Array.isArray(o)) arr = o; }
       } catch (e) {}
-      arr.push(Object.assign({ msg: String(msg).slice(0, 300) }, errSnap()));
+      var ent = Object.assign({ msg: String(msg).slice(0, 300) }, errSnap());
+      var st = String(stack || '').slice(0, 400);
+      if (st) ent.stack = st;
+      // 5s 内同文去重：定时器/轮询里的重复报错会刷掉环形缓冲里其他线索
+      var last = arr.length ? arr[arr.length - 1] : null;
+      if (last && last.msg === ent.msg && ent.t - (last.t || 0) < 5000) return;
+      arr.push(ent);
       if (arr.length > 5) arr = arr.slice(arr.length - 5);
       try { localStorage.setItem(ERR_KEY, JSON.stringify(arr)); } catch (e) {}
+      try { refreshBadge(); } catch (e) {}
     } catch (e) {}
   }
+  // v3.25.x：改捕获阶段监听——资源加载失败（script/css/图片 404，白屏元凶）的
+  // error 事件不冒泡，只有 capture 才抓得到；JS 异常在 window 上派发，capture
+  // 同样收到，一个监听覆盖两类。JS 异常带 e.error.stack 定位到文件+行号。
   try {
     window.addEventListener('error', function (e) {
-      var m = '';
-      try { m = (e && e.message) ? e.message : String(e); } catch (e2) {}
-      if (m) pushErr(m);
-    });
+      var m = '', st = '';
+      try {
+        if (e && e.message) {
+          m = e.message;
+          try { st = (e.error && e.error.stack) ? String(e.error.stack) : ''; } catch (e3) {}
+        } else if (e && e.target && e.target !== window && (e.target.src || e.target.href)) {
+          m = '资源加载失败 <' + String(e.target.tagName || '').toLowerCase() + '> ' + String(e.target.src || e.target.href || '').slice(0, 120);
+        }
+      } catch (e2) {}
+      if (m) pushErr(m, st);
+    }, true);
   } catch (e) {}
   try {
     window.addEventListener('unhandledrejection', function (e) {
       var r = e && e.reason;
       var m = '';
       try { m = (r && r.message) ? r.message : String(r); } catch (e2) {}
-      if (m && String(m).indexOf('ResizeObserver') < 0) pushErr('(promise) ' + m);
+      if (m && String(m).indexOf('ResizeObserver') < 0) pushErr('(promise) ' + m, r && r.stack ? String(r.stack) : '');
+    });
+  } catch (e) {}
+  // v3.25.x：console.error 也收进错误缓冲——代码里主动打的错误日志（如存储/
+  // 接口失败）用户看不到，报障时一并带出来。包裹只转发不吞，原行为不变。
+  try {
+    var origCE = console.error;
+    if (typeof origCE === 'function') {
+      console.error = function () {
+        try {
+          var a = arguments, f = a[0], m = '', st = '';
+          if (f instanceof Error) {
+            m = f.message || String(f);
+            try { st = f.stack ? String(f.stack) : ''; } catch (e3) {}
+          } else if (a.length) {
+            var parts = [];
+            for (var i = 0; i < a.length; i++) {
+              try { parts.push(typeof a[i] === 'object' && a[i] !== null ? JSON.stringify(a[i]) : String(a[i])); } catch (e4) {}
+            }
+            m = parts.join(' ');
+          }
+          if (m) pushErr('(console.error) ' + m.slice(0, 280), st);
+        } catch (e2) {}
+        return origCE.apply(console, arguments);
+      };
+    }
+  } catch (e) {}
+  // ===== 环境变化记录（v3.25.x） =====
+  // 手机端 bug 常由「旋转 / 键盘弹起 / 切后台」触发，点开诊断那一刻的静态快照
+  // 看不到。把最近 10 次环境变化（视口尺寸 / 前后台）带时间戳存 localStorage
+  // （键 __diag-env），诊断信息末尾输出。resize 高度差 <100px 不记录：iOS Safari
+  // 工具栏收展约 55-60px 且随滚动反复触发，全记会刷屏。
+  const ENV_KEY = 'xy-home-v2:__diag-env';
+  function envPush(k, x) {
+    try {
+      var arr = [];
+      try {
+        var old = localStorage.getItem(ENV_KEY);
+        if (old) { var o = JSON.parse(old); if (Array.isArray(o)) arr = o; }
+      } catch (e) {}
+      var ent = { t: Date.now(), k: String(k || '').slice(0, 20) };
+      if (x) ent.x = String(x).slice(0, 120);
+      arr.push(ent);
+      if (arr.length > 10) arr = arr.slice(arr.length - 10);
+      try { localStorage.setItem(ENV_KEY, JSON.stringify(arr)); } catch (e) {}
+    } catch (e) {}
+  }
+  var lastW = window.innerWidth || 0, lastH = window.innerHeight || 0;
+  try {
+    var rsT = null;
+    window.addEventListener('resize', function () {
+      if (rsT) clearTimeout(rsT);
+      rsT = setTimeout(function () {
+        rsT = null;
+        try {
+          var w = window.innerWidth || 0, h = window.innerHeight || 0;
+          if (w === lastW && Math.abs(h - lastH) < 100) return;
+          var x;
+          if (Math.abs(w - lastW) > 20) x = w + 'x' + h + '（宽变了 ' + (w - lastW) + '，疑似旋转/分屏）';
+          else if (h < lastH) x = w + 'x' + h + '（矮了 ' + (lastH - h) + 'px，疑似键盘弹起）';
+          else x = w + 'x' + h + '（高了 ' + (h - lastH) + 'px，疑似键盘收起）';
+          envPush('视口', x);
+          lastW = w; lastH = h;
+        } catch (e) {}
+      }, 300);
+    });
+  } catch (e) {}
+  try {
+    document.addEventListener('visibilitychange', function () {
+      envPush('前后台', document.hidden ? '切到后台' : '回到前台');
     });
   } catch (e) {}
   function mq(q) { try { return !!(window.matchMedia && window.matchMedia(q).matches); } catch (e) { return false; } }
@@ -209,21 +296,131 @@
       return CSS.supports(decl) ? '支持' : '不支持';
     } catch (e) { return '不支持'; }
   }
+  function tsStr(t) { try { return t > 0 ? new Date(t).toLocaleString() : String(t); } catch (e) { return String(t); } }
+  // v3.25.x：cache-bust 拉远端 version.json 与本机构建时间戳比对——GitHub Pages
+  // PWA 最大类报障是「SW 缓存没更新，TA 手机跑的还是旧版」，让诊断直接给结论。
+  // 与 pwa.js 轮询同口径：比 ts（构建时间戳），不比版本字符串。2s 超时兜底弱网。
+  function fetchRemoteVer() {
+    return new Promise(function (resolve) {
+      try {
+        fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) {
+          if (!r.ok) return resolve({ ok: false });
+          return r.json().then(function (j) {
+            var ts = Number(j && j.ts);
+            resolve({ ok: ts > 0, ts: ts > 0 ? ts : 0, info: String((j && j.info) || '') });
+          }).catch(function () { resolve({ ok: false }); });
+        }).catch(function () { resolve({ ok: false }); });
+      } catch (e) { resolve({ ok: false }); }
+      try { setTimeout(function () { resolve({ ok: false }); }, 2000); } catch (e) {}
+    });
+  }
+  // SW 生命周期状态：waiting/installing 是「有新版没生效」的直接证据
+  function swStateText() {
+    return new Promise(function (resolve) {
+      var out = '不支持';
+      try {
+        if ('serviceWorker' in navigator && navigator.serviceWorker && navigator.serviceWorker.getRegistration) {
+          navigator.serviceWorker.getRegistration().then(function (reg) {
+            try {
+              if (!reg) { out = '未注册'; }
+              else {
+                var parts = [];
+                if (reg.installing) parts.push('新版本安装中');
+                if (reg.waiting) parts.push('有新版待激活（关掉本页全部标签重开生效）');
+                if (reg.active) parts.push(navigator.serviceWorker.controller ? '当前版已生效' : '已激活但未控制本页（刷新一次接管）');
+                out = parts.join('；') || '已注册（无活动状态）';
+              }
+            } catch (e2) { out = '读取失败'; }
+            resolve(out);
+          }).catch(function () { resolve('读取失败'); });
+          try { setTimeout(function () { resolve('读取超时'); }, 2000); } catch (e) {}
+          return;
+        }
+      } catch (e) {}
+      resolve(out);
+    });
+  }
+  // v3.25.x：高熵 UA 数据——国产浏览器/桌面模式常把 UA 里的机型抹成「K」，
+  // Chromium 的 getHighEntropyValues 能拿到真实机型/系统版本/完整内核列表，
+  // 用于判断「是不是特定机型才有的 bug」。不支持或超时 resolve('')。
+  function uaDataModel() {
+    return new Promise(function (resolve) {
+      try {
+        navigator.userAgentData.getHighEntropyValues(['model', 'platformVersion', 'fullVersionList']).then(function (v) {
+          var parts = [];
+          try {
+            if (v && v.model) parts.push('机型=' + v.model);
+            if (v && v.platformVersion) parts.push('系统版本=' + v.platformVersion);
+            if (v && Array.isArray(v.fullVersionList)) {
+              var brands = [];
+              v.fullVersionList.forEach(function (b) {
+                if (b && b.brand && !/^not/i.test(b.brand)) brands.push(b.brand + ' ' + b.version);
+              });
+              if (brands.length) parts.push('内核=' + brands.join('/'));
+            }
+          } catch (e2) {}
+          resolve(parts.join('  '));
+        }).catch(function () { resolve(''); });
+      } catch (e) { resolve(''); }
+      try { setTimeout(function () { resolve(''); }, 2000); } catch (e) {}
+    });
+  }
+  // v3.25.x：500ms requestAnimationFrame 计数测实际帧率（「卡顿」类报障的实测
+  // 线索）；后台页 rAF 被节流/暂停 → resolve(-1)，输出时注明。
+  function fpsProbe() {
+    return new Promise(function (resolve) {
+      var n = 0, t0 = 0, done = false;
+      var fin = function (v) { if (done) return; done = true; resolve(v); };
+      try {
+        var tick = function (t) {
+          if (!t0) t0 = t;
+          n++;
+          if (t - t0 >= 500) { fin(Math.round(n * 1000 / (t - t0))); return; }
+          requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      } catch (e) { fin(-1); return; }
+      try { setTimeout(function () { fin(-1); }, 1200); } catch (e) {}
+    });
+  }
   function collectDiag() {
-    // v3.16.x：storage.estimate 是异步 API，整个采集改为 Promise 返回，调用方 .then 拿文本。
-    // 内部同步段先拼行，配额占位行在异步回调里就地替换（保持【数据】区行序）。
+    // v3.16.x：整个采集为 Promise 返回，调用方 .then 拿文本。
+    // v3.25.x 修复：原实现在 Promise 构造器里同步 resolve，estimate()/persisted()
+    // 的异步替换永远赶不上 join——配额行恒为「读取中…」、persisted 行永不出现。
+    // 现改为 jobs 收集全部异步结果，Promise.all 后再 resolve；3s 兜底超时防个别
+    // 内核异步 API 悬空导致弹窗永远不弹。
     return new Promise(function (resolve) {
     const d = window.mochiDevice || {};
     const L = [];
+    const jobs = []; // 所有异步采集（配额/persisted/远端版本/SW 状态）进这里，最后 Promise.all
     // 版本号：开屏注入（构建时 __APP_VERSION__ 替换），取不到时留空
-    let ver = '';
+    let ver = '', localTs = 0;
     try {
       const sv = document.getElementById('splash-ver');
-      if (sv) ver = (sv.getAttribute('data-version') || '') + (sv.getAttribute('data-build-ts') ? ' (构建 ts=' + sv.getAttribute('data-build-ts') + ')' : '');
+      if (sv) {
+        ver = (sv.getAttribute('data-version') || '') + (sv.getAttribute('data-build-ts') ? ' (构建 ts=' + sv.getAttribute('data-build-ts') + ')' : '');
+        localTs = Number(sv.getAttribute('data-build-ts')) || 0;
+      }
     } catch (e) {}
     if (!ver) { try { ver = window.APP_VERSION || ''; } catch (e) {} }
     L.push('Mochi 诊断信息（' + ver + '）');
     L.push('时间：' + new Date().toLocaleString());
+    L.push('');
+    // v3.25.x：【更新状态】放最前——「TA 手机是不是旧缓存」是远端排障第一问
+    let remoteTxt = '获取中…', cmpTxt = '', swTxt = '读取中…';
+    jobs.push(fetchRemoteVer().then(function (r) {
+      if (!r || !r.ok) { remoteTxt = '获取失败（离线或网络受限）'; cmpTxt = '无法比较'; return; }
+      remoteTxt = (r.info ? r.info + '，' : '') + 'ts=' + r.ts + '（' + tsStr(r.ts) + '）';
+      if (!localTs) { cmpTxt = '无法比较（本机无构建时间戳）'; return; }
+      cmpTxt = r.ts > localTs
+        ? '不一致——TA 手机上跑的是旧版（对方点顶部更新条刷新，或关掉全部标签页重开）'
+        : (r.ts === localTs ? '一致（已是最新）' : '远端比本机还旧（GitHub Pages CDN 延迟？一般可忽略）');
+    }));
+    jobs.push(swStateText().then(function (t) { swTxt = t; }));
+    L.push('【更新状态】');
+    L.push('远端 version.json：' + remoteTxt);
+    L.push('比对结论：' + cmpTxt);
+    L.push('SW：' + swTxt);
     L.push('');
     L.push('【设备判定】');
     L.push('手机=' + !!d.isMobile + '  平板=' + !!d.isTablet + '  iOS=' + !!d.isIOS + '  安卓=' + !!d.isAndroid + '  Via=' + !!d.isVia);
@@ -235,6 +432,17 @@
     L.push('UA：' + ua);
     L.push('platform=' + (navigator.platform || '') + '  language=' + (navigator.language || '') + '  vendor=' + (navigator.vendor || ''));
     L.push('maxTouchPoints=' + (navigator.maxTouchPoints || 0) + '  有触摸事件=' + ('ontouchstart' in window));
+    // v3.25.x：高熵 UA——UA 被抹成「K」之类时，Chromium 这里仍拿得到真实机型
+    // 与内核版本（iOS 无此接口，整行不输出）
+    try {
+      if (navigator.userAgentData && navigator.userAgentData.getHighEntropyValues) {
+        let uadIdx = -1;
+        try { L.push('uaData：读取中…'); uadIdx = L.length - 1; } catch (e2) {}
+        jobs.push(uaDataModel().then(function (s) {
+          if (uadIdx >= 0) L[uadIdx] = s ? 'uaData：' + s : 'uaData：无数据';
+        }));
+      }
+    } catch (e) {}
     L.push('');
     L.push('【视口 / 屏幕】');
     L.push('innerWidth x Height=' + window.innerWidth + ' x ' + window.innerHeight);
@@ -265,6 +473,23 @@
     L.push('CSS dvh=' + cssSupports('height: 1dvh') + '  svh=' + cssSupports('height: 1svh') + '  env(safe-area)=' + cssSupports('padding-top: env(safe-area-inset-top)'));
     L.push('安卓输入框已转 ce-box=' + !!document.querySelector('.ce-box'));
     L.push('');
+    // v3.25.x：【性能】——「卡顿」类报障的实测线索。帧率是打开诊断那一刻的
+    // 现场采样（静态设置页满帧 ≠ 无卡顿，但静态页都掉帧说明系统性问题）；
+    // 高刷屏（90/120Hz）读数 >60 属正常。JS 堆仅 Chrome 系提供，iOS 无。
+    let fpsIdx = -1;
+    L.push('【性能】');
+    try { L.push('实测帧率：采样中…'); fpsIdx = L.length - 1; } catch (e) {}
+    jobs.push(fpsProbe().then(function (fps) {
+      if (fpsIdx < 0) return;
+      L[fpsIdx] = fps > 0 ? '实测帧率≈' + fps + ' fps（500ms 现场采样，高刷屏>60 正常）' : '实测帧率：rAF 未触发（页面在后台被节流）';
+    }));
+    let memTxt = '不支持（仅 Chrome 系）';
+    try {
+      const pm = performance.memory;
+      if (pm && pm.usedJSHeapSize) memTxt = 'JS堆 ' + (pm.usedJSHeapSize / 1048576).toFixed(1) + ' MB / 上限 ' + Math.round(pm.jsHeapSizeLimit / 1048576) + ' MB';
+    } catch (e) {}
+    L.push('JS 内存：' + memTxt);
+    L.push('');
     L.push('【数据】');
     const G = 'xy-home-v2:';
     try {
@@ -276,43 +501,43 @@
       L.push('localStorage 数据键=' + n + ' 个');
     } catch (e) { L.push('localStorage 不可访问'); }
     // v3.16.x：存储配额/持久化/在线状态——「数据写不进去/丢失」类报障的关键字段：
-    // 配额满写失败曾是本项目真实根因（localStorage setItem 静默失败），
-    // estimate() 是异步 API，先放占位行，回调里就地替换。
-    try {
-      L.push('存储配额：读取中…');
-    } catch (e) {}
+    // 配额满写失败曾是本项目真实根因（localStorage setItem 静默失败）。
+    // v3.25.x：改用 jobs + 占位行下标替换（原 L.indexOf 找占位串有误配风险，
+    // 且 resolve 时机问题见函数头注释）。
+    let quotaIdx = -1, persistedIdx = -1;
+    try { L.push('存储配额：读取中…'); quotaIdx = L.length - 1; } catch (e) {}
     try { L.push('navigator.onLine=' + navigator.onLine); } catch (e) {}
+    const usageStr = function (u) {
+      if (u == null) return '(未知)';
+      if (u >= 1048576) return (u / 1048576).toFixed(1) + ' MB';
+      if (u >= 1024) return (u / 1024).toFixed(1) + ' KB';
+      return u + ' B';
+    };
     try {
       const est = navigator.storage && navigator.storage.estimate;
       if (est) {
-        const usageStr = function (u) {
-          if (u == null) return '(未知)';
-          if (u >= 1048576) return (u / 1048576).toFixed(1) + ' MB';
-          if (u >= 1024) return (u / 1024).toFixed(1) + ' KB';
-          return u + ' B';
-        };
-        try {
-          est.call(navigator.storage).then(function (r) {
-            const s = r || {};
-            const idx = L.indexOf('存储配额：读取中…');
-            const line = '存储配额：已用 ' + usageStr(s.usage) + ' / ' + usageStr(s.quota);
-            if (idx >= 0) L[idx] = line; else L.push(line);
-          }).catch(function () {
-            const idx = L.indexOf('存储配额：读取中…');
-            if (idx >= 0) L[idx] = '存储配额：读取失败';
-          });
-        } catch (e) {}
-      } else {
-        const idx = L.indexOf('存储配额：读取中…');
-        if (idx >= 0) L[idx] = '存储配额：接口不可用';
+        jobs.push(est.call(navigator.storage).then(function (r) {
+          const s = r || {};
+          if (quotaIdx >= 0) L[quotaIdx] = '存储配额：已用 ' + usageStr(s.usage) + ' / ' + usageStr(s.quota);
+        }).catch(function () {
+          if (quotaIdx >= 0) L[quotaIdx] = '存储配额：读取失败';
+        }));
+      } else if (quotaIdx >= 0) {
+        L[quotaIdx] = '存储配额：接口不可用';
+      }
+    } catch (e) { if (quotaIdx >= 0) L[quotaIdx] = '存储配额：读取失败'; }
+    try {
+      const per = navigator.storage && navigator.storage.persisted;
+      if (per) {
+        try { L.push('storage.persisted=读取中…'); persistedIdx = L.length - 1; } catch (e2) {}
+        jobs.push(per.call(navigator.storage).then(function (p) {
+          if (persistedIdx >= 0) L[persistedIdx] = 'storage.persisted=' + p;
+        }).catch(function () {
+          if (persistedIdx >= 0) L[persistedIdx] = 'storage.persisted=读取失败';
+        }));
       }
     } catch (e) {}
-    try {
-      navigator.storage && navigator.storage.persisted && navigator.storage.persisted().then(function (p) {
-        L.push('storage.persisted=' + p);
-      }).catch(function () {});
-    } catch (e) {}
-    // v3.16.x：最近错误（onerror/unhandledrejection 自动采集）
+    // v3.16.x：最近错误（onerror/unhandledrejection/console.error 自动采集）
     try {
       const errs = JSON.parse(localStorage.getItem(ERR_KEY) || '[]');
       if (Array.isArray(errs) && errs.length) {
@@ -320,12 +545,32 @@
         errs.forEach(function (it) {
           const dt = it.t ? new Date(it.t).toLocaleString() : '?';
           L.push('· ' + dt + ' [' + (it.dev || '') + '] ' + (it.msg || '').slice(0, 180) + (it.page ? '（页面 ' + it.page + '）' : ''));
+          // v3.25.x：带调用栈（只取前 4 行，够定位文件+行号又不刷屏）
+          const st = String(it.stack || '');
+          if (st) L.push('    ' + st.split('\n').slice(0, 4).join('\n    '));
         });
       } else {
         L.push('最近错误：无');
       }
     } catch (e) {}
-    resolve(L.join('\n'));
+    // v3.25.x：环境变化记录（旋转/键盘/前后台）——手机端 bug 的触发现场
+    try {
+      const envs = JSON.parse(localStorage.getItem(ENV_KEY) || '[]');
+      if (Array.isArray(envs) && envs.length) {
+        L.push('环境变化 ' + envs.length + ' 条（旧→新）：');
+        envs.forEach(function (it) {
+          const dt = it.t ? new Date(it.t).toLocaleTimeString() : '?';
+          L.push('· ' + dt + ' ' + (it.k || '') + '：' + (it.x || ''));
+        });
+      } else {
+        L.push('环境变化：无');
+      }
+    } catch (e) { L.push('环境变化：读取失败'); }
+    // 全部异步结果（配额/persisted/远端版本/SW）就绪后再 join；3s 兜底保证弹窗必弹
+    let finished = false;
+    const finish = function () { if (finished) return; finished = true; resolve(L.join('\n')); };
+    try { Promise.all(jobs).then(finish).catch(finish); } catch (e) { finish(); }
+    try { setTimeout(finish, 3000); } catch (e) {}
     });
   }
   function copyText(t) {
@@ -346,8 +591,43 @@
       try { setTimeout(function () { finish(false); }, 1500); } catch (e) {}
     });
   }
+  // ===== v3.25.x：诊断入口角标 =====
+  // 报障的人不知道去哪拿诊断数据：采集到新错误后，「复制诊断信息」行上挂
+  // 红色数字角标（未看过的错误数），点开诊断后归零，把报障动线推到眼前。
+  // 样式内联自包含（仅此一处使用，不为此动 setting.css）；红底白字明暗主题都可读。
+  const SEEN_KEY = 'xy-home-v2:__diag-errs-seen';
+  function badgeEl() {
+    let b = null;
+    try { b = row.querySelector('.diag-err-badge'); } catch (e) {}
+    if (!b) {
+      b = document.createElement('span');
+      b.className = 'diag-err-badge';
+      b.style.cssText = 'flex-shrink:0;background:#e5484d;color:#fff;font-size:11px;line-height:16px;min-width:16px;box-sizing:border-box;text-align:center;border-radius:9px;padding:0 5px;font-weight:600;letter-spacing:.3px;';
+      const arrow = row.querySelector('.arrow');
+      if (arrow) { try { row.insertBefore(b, arrow); } catch (e2) { row.appendChild(b); } }
+      else row.appendChild(b);
+    }
+    return b;
+  }
+  function refreshBadge() {
+    try {
+      const errs = JSON.parse(localStorage.getItem(ERR_KEY) || '[]');
+      const n = Array.isArray(errs) ? errs.length : 0;
+      const seen = Number(localStorage.getItem(SEEN_KEY)) || 0;
+      const b = badgeEl();
+      if (n > seen) { b.textContent = String(n); b.style.display = ''; }
+      else b.style.display = 'none';
+    } catch (e) {}
+  }
+  try { refreshBadge(); } catch (e) {}
   row.addEventListener('click', function () {
     collectDiag().then(function (text) {
+      // v3.25.x：看过诊断 = 已知错误，角标归零
+      try {
+        const errsNow = JSON.parse(localStorage.getItem(ERR_KEY) || '[]');
+        localStorage.setItem(SEEN_KEY, String(Array.isArray(errsNow) ? errsNow.length : 0));
+      } catch (e) {}
+      try { refreshBadge(); } catch (e) {}
       copyText(text).then(function (ok) {
         const tip = ok
           ? '诊断信息已复制到剪贴板，直接粘贴发给开发者即可。\n（下方内容可再核对）'

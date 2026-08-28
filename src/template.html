@@ -28,7 +28,7 @@
 <body>
   <!-- 开屏加载动画 -->
   <div class="splash" id="splash">
-    <div class="splash-box">
+    <div class="splash-box" id="splash-box">
       <div class="splash-logo">
         <svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7.5-4.7-9.3-9A5.3 5.3 0 0112 6.4a5.3 5.3 0 019.3 5.6c-1.8 4.3-9.3 9-9.3 9z"/></svg>
       </div>
@@ -47,7 +47,7 @@
            全部说明直接展示在开屏上，点底部【点击进入】即进入（点击即视为已阅读知晓），无二次确认层 -->
       <div class="splash-notice" id="splash-notice">
         <div class="splash-notice-title">Mochi字卡 · 开屏说明</div>
-        <div class="splash-notice-sub">（点击查看 · 请认真阅读）</div>
+        <div class="splash-notice-sub">（请认真阅读）</div>
         <div class="splash-notice-list">
           <div class="splash-tip">
             <p>本站完全免费，没有收过任何人一分钱，个人出资和花费时间搭建的。开放二传二改但禁止以盈利为目的。</p>
@@ -141,7 +141,9 @@
           </div>
         </div>
       </div>
-      <!-- v3.8.y：底部版本块重新设计——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
+    </div>
+    <!-- v3.8.y：底部操作区（版本 + 进入/FAQ 按钮）固定不随内容滚动；.splash-box 为整页滚动容器 -->
+    <!-- v3.8.y：底部版本块重新设计——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
       <div class="splash-ver" id="splash-ver" data-build-ts="__BUILD_TS__">
         <span class="sv-app">Mochi 字卡传讯 <b>__APP_VERSION__</b></span>
         <span class="sv-deploy">__BUILD_INFO__<span id="splash-ver-live"></span></span>
@@ -155,7 +157,6 @@
         <div class="splash-enter" id="splash-enter" hidden>点击进入</div>
         <div class="splash-faq-open" id="splash-faq-open">其他常见问题解答</div>
       </div>
-    </div>
     <!-- v3.8.y：其他常见问题解答 浮层（开屏内全屏卡片，可滚动、可关闭） -->
     <div class="splash-faq" id="splash-faq" hidden>
       <div class="splash-faq-card">
@@ -4501,6 +4502,17 @@
           <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg></div>
           <div class="txt">气泡 CSS</div>
           <div class="val" id="cs-css-val">默认</div>
+        </div>
+      </div>
+      <div class="gs-title">聊天美化方案</div>
+      <div class="set-group glass">
+        <div class="set-row" id="row-chat-beauty-save">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17V9M9 11l3-3 3 3"/><path d="M5 4h11l3 3v13a1 1 0 01-1 1H5a1 1 0 01-1-1V5a1 1 0 011-1z"/></svg></div>
+          <div class="txt">保存当前为聊天美化方案<span class="sub">含气泡颜色/CSS、壁纸、字体、时间轴等，全桌面通用</span></div>
+        </div>
+        <div class="set-row" id="row-chat-beauty-schemes">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></div>
+          <div class="txt">我的聊天美化方案<span class="sub">保存的方案一键切换，跨桌面通用</span></div>
         </div>
       </div>
       <div class="gs-title">数据</div>

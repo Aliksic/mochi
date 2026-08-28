@@ -3741,12 +3741,11 @@
     });
   }
 
-  // v3.9.x：音乐数据全局共享 default 桌面，切联系人无需 loadAll（数据不变）；
-  // 仅停止正在播放的旧桌面歌曲（防止串桌面继续放）+ 重置 TA 互动状态
+  // v3.9.x：音乐数据全局共享 default 桌面，切联系人无需 loadAll（数据不变）。
+  // 播放跨桌面延续（v3.25.x：不再因切桌面停歌——旧逻辑按桌面隔离音乐，库合并后停歌已无必要）；
+  // 仅重置 TA 互动状态（旧桌面的互动不带到新桌面）
   document.addEventListener('contact-switched', function () {
     try {
-      if (audio) { try { audio.pause(); } catch (e) {} audio = null; }
-      currentId = null;
       // 多桌面：TA 互动状态是模块级，残留会让新桌面误以为 TA 在一起听/冷却中/有待确认请求
       taActive = false;
       cooldownAt = 0;

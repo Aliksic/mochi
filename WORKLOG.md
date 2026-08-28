@@ -3532,3 +3532,35 @@ staticText: staticText
 - bug9 打字/翻页卡顿：未排查，留待下轮。
 - 语法检查：本轮 5 个 js 文件 node --check 全过；diag-room-cancel 复跑 3/3 通过（脚本已加 dismissOverlays 抗 TA 随机弹层）。
 - 未构建：请构建者 git diff 自查后 node build.mjs 收口（工作区含前几轮多个会话的未提交改动，会一并打入）。
+
+### 2026-08-28（第三轮：切桌面打断音乐，已改 src·未构建）
+- 反馈：切换桌面（联系人桌面）会打断音乐播放。原因：music-player.js 的 contact-switched 监听还是音乐按桌面隔离时代的逻辑——切桌面直接 audio.pause()+audio=null+currentId=null；v3.9 库全局合并后停歌已无必要。
+- 修复：music-player.js —— contact-switched 移除停播（播放跨桌面延续，悬浮窗/桌面部件/播放栏不动）；保留 TA 互动状态重置（taActive/cooldownAt/reqData/libFilter/clearTaFavTimer/renderFloat/syncTaFavTab/renderTaFavList）。
+- 自查：node --check 通过；排查 bg-keep.js（contact-switched 只做 psync 快照）、call.js（仅通话 musicHoldForCall）、desktop-slider/p2-features/tabs/mobile-adapt（无停歌路径）——切桌面停歌仅此一处。
+- 未构建：请构建者连同前几轮改动一并 node build.mjs 收口。
+
+### 2026-08-28（第四轮：「复制诊断信息」扩充，已改 src·未构建）
+- 反馈：优化设置页「复制诊断信息」，帮远端定位他人手机 bug。改动全部在 src/js/device.js 诊断 IIFE，node --check 通过。
+- 修存量 bug：collectDiag 原在 Promise 构造器里同步 resolve，「存储配额」恒显示「读取中…」、storage.persisted 永不出现；改为 jobs 收集全部异步结果 → Promise.all 后再 resolve，另加 3s 兜底超时防弹窗卡死。
+- 新增【更新状态】区（放文首）：cache-bust fetch 远端 version.json，与 splash-ver data-build-ts 按 ts 比对（与 pwa.js 轮询同口径），直接给出「TA 手机是否旧缓存」结论；SW waiting/installing 状态一并输出。
+- 错误采集增强：window error 改捕获阶段监听（能抓 script/css/图片资源加载失败）；JS 异常带 e.error.stack（诊断输出前 4 行）；unhandledrejection 带 reason.stack；console.error 包裹入缓冲（只转发不吞原行为）；5s 内同文去重防定时器报错刷屏。
+- 新增环境变化记录（键 xy-home-v2:__diag-env，环形 10 条）：resize 防抖 300ms 记视口变化并推测「旋转/键盘弹起」（高度差 <100px 视为 iOS 工具栏抖动不记录）、visibilitychange 记前后台；诊断文末新增「环境变化」区。
+- 未构建：请构建者连同前三轮改动一并 node build.mjs 收口。
+- 【第四轮续】④⑤⑥ 全做齐，仍只在 src/js/device.js：④【浏览器】区新增 uaData 高熵行（getHighEntropyValues 拿真实机型/系统版本/内核，国产浏览器 UA 抹机型时靠它；iOS 无接口不输出该行）；⑤ 新增【性能】区（打开诊断时 500ms rAF 实测帧率，后台节流时注明 rAF 未触发；performance.memory JS 堆，仅 Chrome 系；高刷屏 >60 正常）；⑥ 诊断行角标——新错误采集后在「复制诊断信息」行 txt 与 arrow 之间挂红色数字角标（span.diag-err-badge，内联样式自包含未动 setting.css/template.html），键 xy-home-v2:__diag-errs-seen 记已看数，点开诊断归零，pushErr 时实时刷新。
+
+### 2026-08-28（第四轮：主页缺「跨桌面查岗/ta的查岗」记录，已改 src·已构建·未提交）
+- 反馈：主页「TA的关心」里没有【联系人跨桌面查岗】的记录、也没有【ta的查岗】的记录。
+- 复现（tools/diag-checkin-records.mjs，新构建产物实测）：根因＝跨桌面查岗只在「前台弹窗点现在回TA」路径写 records-care（incoming-requests.js fire()），两条高频路径漏写：①后台 document.hidden 命中（卡落到联系人桌面聊天+系统通知，但不写记录）→ 主页「桌面查岗」区块空；②前台弹窗点「稍后」（卡和记录都不落，事件完全蒸发）。同桌面 ta的查岗（ask-card 聊天回溯）本身正常。
+- 修复（均在 AI-A 域）：
+  1. incoming-requests.js deliver() 后台分支：chatAppendDeskCkTo 落卡同刻补 addCareRecordFor(cid,'desk-checkin',...)（deskQSeenRecently 去重命中时仍不落不记，口径不变）。
+  2. incoming-requests.js deliver() 「稍后」分支：查岗点稍后改为与后台同口径——卡落到该联系人桌面聊天（稍后进聊天仍可作答）+ 写记录；求聊天/来电的「稍后」行为不变。
+  3. records.js renderCarePanel：deskCk 卡与 desk-checkin 记录按 ts 90s 窗口判定为同一次事件（同联系人冷却 30 分钟保证不误合并），有记录的卡不再按「查岗」重复列——修掉修复后来源桌面同事件出两行（🏠+📋）；无记录的旧卡仍照列（历史兜底，也顺带修了此前「现在回TA」路径记录+卡双列的老重复）。
+- 已知未修（预存在）：互动动作题的记录文案取 deliver 时的 showText（taToMe 方向文案），聊天卡实际方向 buildDeskCkCard 现抽——meToTa 时记录文字与卡面可能不一致，仅文案差异不影响功能，待后续统一。
+- 验证：node --check 过；node build.mjs 成功（sw mochi-mtckb854）；diag-checkin-records 5 项全过（A 接受/D 稍后/B 后台三条路径 records-care 均落 desk-checkin，C 同桌面回溯正常且不重复，E 跨桌面聚合出「桌面查岗 · 小B」行）；npm run verify 10/10。
+- 未提交：请提交者 git diff 自查后统一收口（工作区含此前多轮会话改动，本次一并打包进 index.html）。
+
+### 2026-08-28（构建收口：聊天美化方案，含多轮累积改动）
+- 聊天设置新增「聊天美化方案」：在聊天设置页「气泡 CSS」下方新增「保存当前为聊天美化方案」+「我的聊天美化方案」两入口；把气泡颜色/CSS(cs-bubble-css)、壁纸(cs-bg)、字体(cs-font)、字号、气泡大小、头像形状、时间轴样式/颜色、正在输入色、发送按钮全套(cs-send-*)存成命名方案，存到全局键 chat-beauty-schemes，所有联系人桌面通用，可一键应用/删除（应用后立即生效）。
+- 同步：手机桌面美化页已按 颜色与透明度/尺寸与圆角/背景与壁纸/图标与页面/美化方案 分组加 .cg-title 小标题；联系人管理里的「美化方案」按钮已移除，统一入口在手机桌面美化页。
+- 验证：node build.mjs 成功（sw 关键修复哨兵 12/12）；index.html 已含 row-chat-beauty-save / saveChatBeautyScheme；node tools/verify.mjs 10/10。
+- 提交：本次将工作区多轮累积 src 改动 + 构建产物(index.html/sw.js/version.json/notice.json)一并收口提交（未推送）。

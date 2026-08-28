@@ -233,6 +233,9 @@
           // 追问、也不再重复弹系统通知（仅释放 pending 防占用队列）。
           if (!deskQSeenRecently(req.cid, req.text)) {
             if (window.chatAppendDeskCkTo) window.chatAppendDeskCkTo(req.cid, req.q);
+            // v3.25.x：后台落卡同样要写主页关心记录——此前只有前台「现在回TA」路径
+            // （fire()）写 records-care，后台触发的跨桌面查岗在主页「桌面查岗」区块消失。
+            try { if (window.addCareRecordFor) window.addCareRecordFor(req.cid, 'desk-checkin', req.text, Date.now()); } catch (e) {}
             if (window.bgNotifyCheck) window.bgNotifyCheck(title + '：' + (req.text || ''), Date.now(), { name: name + '查岗', av: av, avFixed: true });
           }
         } else { // chat 求聊天
@@ -262,6 +265,12 @@
         return;
       }
       if (v === 'later') {
+        // v3.25.x：查岗点「稍后」不再凭空消失——与后台路径同口径，把卡落到该联系人
+        // 桌面聊天（稍后进聊天仍可作答）并写主页「桌面查岗」关心记录，事件留痕。
+        if (req.kind === 'checkin' && !deskQSeenRecently(req.cid, req.text)) {
+          try { if (window.chatAppendDeskCkTo) window.chatAppendDeskCkTo(req.cid, req.q); } catch (e) {}
+          try { if (window.addCareRecordFor) window.addCareRecordFor(req.cid, 'desk-checkin', req.text, Date.now()); } catch (e) {}
+        }
         setStatus(req.cid, 'seen');
         return;
       }

@@ -46,18 +46,19 @@
   const enterEl = document.getElementById('splash-enter');
   const loadingEl = document.getElementById('splash-loading');
   const hintEl = document.getElementById('splash-enter-hint');
-  const noticeEl = document.getElementById('splash-notice');
+  // v3.8.y：整页一体滚动——滚动判定用 .splash-box（顶部+公告一起滚，需滚到整页底部）
+  const splashBox = document.getElementById('splash-box');
   // v3.8.x：开屏即公告1页——原「开屏公告 + 进入后的报修确认层」两页合并为一页，
   //   全部说明已直接展示在开屏上，点【点击进入】即进入（点击即视为已阅读知晓），不再弹二次确认层。
   //   只允许点按钮进入（长公告需滚动阅读，避免误触整屏直接跳过）。
-  // v3.8.y：必须把公告滑到底才能进入——未到底时按钮置灰不可点（无法跳过阅读）。
+  // v3.8.y：必须把整页滑到底才能进入——未到底时按钮置灰不可点（无法跳过阅读）。
   let scrolledBottom = false;
   function checkScrolled() {
     let bottom = true;
-    if (noticeEl) {
-      // 公告内容可能由 notice.json 异步填充：未溢出/尚未渲染时视为已到底，
+    if (splashBox) {
+      // 内容可能由 notice.json 异步填充：未溢出/尚未渲染时视为已到底，
       // 渲染后高度变化由轮询 + 「mochi-notice-rendered」事件重新判定
-      bottom = noticeEl.scrollHeight - noticeEl.scrollTop - noticeEl.clientHeight <= 8;
+      bottom = splashBox.scrollHeight - splashBox.scrollTop - splashBox.clientHeight <= 8;
     }
     if (bottom !== scrolledBottom) { scrolledBottom = bottom; updateEnterState(); }
   }
@@ -76,7 +77,7 @@
     hide();
   };
   updateEnterState();
-  if (noticeEl) noticeEl.addEventListener('scroll', checkScrolled, { passive: true });
+  if (splashBox) splashBox.addEventListener('scroll', checkScrolled, { passive: true });
   if (enterEl) enterEl.addEventListener('click', (e) => { e.stopPropagation(); enter(); });
   // 数据回填完成 → 刷新状态（事件 + 轮询双保险：空数据场景只置标志不派发事件）
   document.addEventListener('mochi-restore-done', updateEnterState);

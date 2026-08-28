@@ -1314,8 +1314,8 @@ return m;
 }
 // v3.15.x：TA 向 Mochi 申请心意币的回执卡（金额与红包同款随机分布）
 if (rec.special === 'askcoin') {
-m.className = 'msg-center';
-m.innerHTML = '<div class="msg-center-card">🪙 ' + escTxt(chatPartnerName()) + ' 向 Mochi 申请了心意币 ¥' + (Number(rec.askFen || 0) / 100).toFixed(2) + '</div>';
+m.className = 'msg-poke';
+m.innerHTML = '<span>🪙 ' + escTxt(chatPartnerName()) + ' 向 Mochi 申请了心意币 ¥' + (Number(rec.askFen || 0) / 100).toFixed(2) + '</span>';
 appendMsg(m);
 maybeScrollChatBottom(rec.side);
 return m;

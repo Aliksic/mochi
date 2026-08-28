@@ -670,6 +670,131 @@
   }
   applyCss();
 
+  // ================= v3.18.x：聊天美化方案（全局保存，所有联系人桌面通用） =================
+  // 用户需求：聊天设置里也能像手机桌面美化一样，把气泡颜色/CSS、壁纸、字体、时间轴等
+  // 全部美化保存成方案；保存后切换联系人/桌面依然可见，可一键应用（读当前桌面的 activeStore）。
+  const gStoreChat = window.xyStore('xy-home-v2');
+  const CHAT_SCHEMES_KEY = 'chat-beauty-schemes';
+  const CHAT_BEAUTY_KEYS = [
+    'cs-bg', 'cs-bubble-css', 'cs-font', 'cs-font-size', 'cs-bubble-size',
+    'cs-av-shape', 'cs-time-style', 'cs-time-ink', 'cs-typing-ink',
+    'cs-out-bg', 'cs-out-ink', 'cs-in-bg', 'cs-in-ink',
+    'cs-send-bg', 'cs-send-ink', 'cs-send-show'
+  ];
+  const getChatSchemes = () => {
+    try { const a = JSON.parse(gStoreChat.get(CHAT_SCHEMES_KEY) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; }
+  };
+  const saveChatSchemesList = (arr) => { try { gStoreChat.set(CHAT_SCHEMES_KEY, JSON.stringify(arr)); } catch (e) {} };
+  const collectChatBeauty = () => {
+    const data = {};
+    CHAT_BEAUTY_KEYS.forEach(k => { const v = store.get(k); if (v !== null && v !== undefined && v !== '') data[k] = v; });
+    return data;
+  };
+  const applyChatBeautyData = (data) => {
+    CHAT_BEAUTY_KEYS.forEach(k => { if (data[k] !== undefined) store.set(k, data[k]); });
+    try { applySettings(); applyCss(); applyFont(); } catch (e) {}
+  };
+  window.saveChatBeautyScheme = function () {
+    if (!window.openModal) return;
+    const ctl = window.openModal('保存当前为聊天美化方案', '', (name) => {
+      name = (name || '').trim();
+      if (!name) { ctl.hint('请输入方案名称'); ctl.stay(); return; }
+      const list = getChatSchemes();
+      list.push({ name, time: Date.now(), data: collectChatBeauty() });
+      saveChatSchemesList(list);
+      toast('已保存方案「' + name + '」，所有桌面通用');
+      const m = document.getElementById('chat-beauty-scheme-manager');
+      if (m && !m.hidden) window.openChatBeautySchemes();
+    }, { maxlength: 20, placeholder: '例如：简约白、情侣粉气泡…' });
+  };
+  function chatSchemeModalEl() {
+    let m = document.getElementById('chat-beauty-scheme-manager');
+    if (!m) {
+      m = document.createElement('div'); m.id = 'chat-beauty-scheme-manager'; m.hidden = true;
+      m.style.cssText = 'position:fixed;inset:0;z-index:89;align-items:center;justify-content:center;background:rgba(0,0,0,.4)';
+      document.body.appendChild(m);
+      m.addEventListener('click', (e) => { if (e.target === m) { m.style.display = 'none'; m.hidden = true; } });
+    }
+    return m;
+  }
+  function hideChatSchemeModal(m) { if (m) { m.style.display = 'none'; m.hidden = true; } }
+  function applyChatScheme(idx, m) {
+    const s = getChatSchemes()[idx];
+    if (!s || !window.openModal) return;
+    window.openModal('应用方案「' + s.name + '」？', '', (v) => {
+      if (v !== 'ok') return;
+      applyChatBeautyData(s.data || {});
+      hideChatSchemeModal(m);
+      toast('已应用「' + s.name + '」，当前聊天立即生效');
+    }, { noInput: true, staticText: '将覆盖当前联系人桌面的聊天美化设置，立即生效', pills: [{ label: '应用', value: 'ok' }] });
+  }
+  function deleteChatScheme(idx, m) {
+    const s = getChatSchemes()[idx];
+    if (!s || !window.openModal) return;
+    window.openModal('删除方案「' + s.name + '」？', '', (v) => {
+      if (v !== 'ok') return;
+      const list = getChatSchemes();
+      list.splice(idx, 1);
+      saveChatSchemesList(list);
+      toast('已删除方案');
+      window.openChatBeautySchemes();
+    }, { noInput: true, staticText: '删除后不可恢复', pills: [{ label: '删除', value: 'ok' }] });
+  }
+  window.openChatBeautySchemes = function () {
+    const m = chatSchemeModalEl();
+    m.innerHTML = '';
+    const box = document.createElement('div');
+    box.style.cssText = 'width:min(92vw,420px);max-height:80vh;display:flex;flex-direction:column;background:var(--card-bg,#fff);color:var(--ink,#111);border-radius:16px;padding:18px;box-shadow:0 8px 30px rgba(0,0,0,.2)';
+    const head = document.createElement('div');
+    head.innerHTML = '<div style="font-size:16px;font-weight:600;margin-bottom:4px">聊天美化方案</div><div style="font-size:12px;color:var(--muted,#888);margin-bottom:12px">方案在所有联系人桌面通用（含气泡颜色/CSS、背景图、字体、时间轴等），点「应用」一键切换当前聊天外观</div>';
+    box.appendChild(head);
+    const list = document.createElement('div'); list.className = 'cm-list';
+    list.style.cssText = 'display:flex;flex-direction:column;gap:8px;margin-bottom:12px;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;flex:1;min-height:0';
+    const schemes = getChatSchemes();
+    if (!schemes.length) {
+      const empty = document.createElement('div');
+      empty.innerHTML = '<div style="font-size:13px;color:var(--muted,#999);text-align:center;padding:20px 0">还没有保存的聊天美化方案<br>先点下方「保存当前为方案」</div>';
+      list.appendChild(empty);
+    }
+    schemes.forEach((s, i) => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px;border:1px solid var(--card-border,#eee);border-radius:10px';
+      const nm = document.createElement('div');
+      const t = new Date(s.time || Date.now());
+      const ds = (t.getMonth() + 1) + '-' + t.getDate();
+      nm.innerHTML = '<div style="font-size:14px;font-weight:500;word-break:break-all">' + s.name + '</div><div style="font-size:11px;color:var(--muted,#999)">保存于 ' + ds + ' · 点「应用」切换</div>';
+      nm.style.flex = '1';
+      row.appendChild(nm);
+      const applyBtn = document.createElement('button');
+      applyBtn.textContent = '应用';
+      applyBtn.style.cssText = 'font-size:12px;padding:4px 10px;border:none;border-radius:8px;background:var(--ink,#111);color:var(--bg-b,#fff)';
+      applyBtn.addEventListener('click', () => applyChatScheme(i, m));
+      const delBtn = document.createElement('button');
+      delBtn.textContent = '删除';
+      delBtn.style.cssText = 'font-size:12px;padding:4px 8px;border:1px solid rgba(163,45,45,.35);border-radius:8px;background:var(--danger-soft,#fff5f5);color:var(--danger-ink,#a32d2d)';
+      delBtn.addEventListener('click', () => deleteChatScheme(i, m));
+      row.appendChild(applyBtn); row.appendChild(delBtn);
+      list.appendChild(row);
+    });
+    box.appendChild(list);
+    const save = document.createElement('button');
+    save.textContent = '+ 保存当前为方案';
+    save.style.cssText = 'width:100%;padding:12px;border:none;border-radius:10px;background:var(--ink,#111);color:var(--bg-b,#fff);font-size:14px;font-weight:600';
+    save.addEventListener('click', () => { window.saveChatBeautyScheme(); });
+    box.appendChild(save);
+    const close = document.createElement('button');
+    close.textContent = '关闭';
+    close.style.cssText = 'width:100%;margin-top:8px;padding:10px;border:1px solid var(--card-border,#eee);border-radius:10px;background:var(--btn-cancel-bg,#fafafa);color:var(--btn-cancel-ink,#555)';
+    close.addEventListener('click', () => hideChatSchemeModal(m));
+    box.appendChild(close);
+    m.appendChild(box);
+    m.style.display = 'flex'; m.hidden = false;
+  };
+  const chatBeautySaveRow = document.getElementById('row-chat-beauty-save');
+  if (chatBeautySaveRow) chatBeautySaveRow.addEventListener('click', () => window.saveChatBeautyScheme());
+  const chatBeautySchemesRow = document.getElementById('row-chat-beauty-schemes');
+  if (chatBeautySchemesRow) chatBeautySchemesRow.addEventListener('click', () => window.openChatBeautySchemes());
+
   // ================= 导出 / 导入聊天记录（数据，与清空同组） =================
   // 导出：打包为独立 JSON 下载（聊天记录可能含图片 dataURL，体积大也直接下载，不走 localStorage）
   const csExport = row('cs-export-msgs');
