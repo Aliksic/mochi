@@ -71,7 +71,7 @@ try {
   await sleep(4500);
   await evalJs("(function(){var s=document.getElementById('splash');if(s&&!s.classList.contains('hide'))s.click();return true;})()");
   await sleep(300);
-  await evalJs("(function(){var b=document.getElementById('splash-confirm-ok');if(b&&b.offsetParent!==null)b.click();return true;})()");
+  await evalJs("(function(){var e=document.getElementById('splash-enter');if(e&&!e.hidden)e.click();var s=document.getElementById('splash');if(s&&!s.classList.contains('hide')){s.classList.add('hide');s.hidden=true;}return true;})()");
   await sleep(600);
   const splashGone = await evalJs("(function(){ var s=document.getElementById('splash'); var c=document.getElementById('splash-confirm'); return { splashHidden: !s || s.classList.contains('hide') || getComputedStyle(s).display==='none', confirmVisible: !!c && c.offsetParent !== null }; })()");
   console.log('开屏状态:', JSON.stringify(splashGone));

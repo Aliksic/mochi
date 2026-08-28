@@ -114,7 +114,7 @@ await gotoApp();
 await openRpPanel();
 await sleep(500);
 let sD = await evalJs(`document.getElementById('rp-balance') ? document.getElementById('rp-balance').textContent : ''`);
-check('D1 新用户默认心意币双方各 ¥520（我爱你起步价）', sD && sD.indexOf('心意币 ¥520.00') >= 0 && sD.indexOf('¥520.00 · 点此向 Mochi 申请') >= 0, JSON.stringify(sD));
+check('D1 新用户默认心意币双方各 ¥520（我爱你起步价）', sD && sD.indexOf('心意币 ¥520.00') >= 0 && sD.indexOf('¥520.00 · 向 Mochi 申请心意币') >= 0, JSON.stringify(sD));
 let wD = await walletRaw();
 check('D2 默认值落盘 gift-wallet（52000/52000 分）', wD && wD.gift && wD.gift.myBalance === 52000 && wD.gift.systemBalance === 52000, JSON.stringify(wD));
 await evalJs(`localStorage.setItem('xy-home-v2:gift-wallet', JSON.stringify({ myBalance: 99999999, systemBalance: 99999999 })); 'seeded'`);

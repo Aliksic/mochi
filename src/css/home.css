@@ -118,6 +118,14 @@
    单行盒高，卡片高度恒定 77px，与第二页「本周日常」/第三页「备忘+心情」同档对齐。
    长情话末尾显示省略号，完整内容点卡片弹窗可看（迷你卡点击有查看逻辑）。 */
 .mini-card .mc-b { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; height:18.85px; line-height:18.85px; }
+/* v3.23.x：今日情话放开单行省略——定高内两行截断（line-clamp）。卡片仍锁 77px，
+   三页第二档 band 对齐不受影响（v3.16.x 约束保住）；13px/15px 两行 30px 与
+   mc-top/内边距合计 ≈77.6px，flex 居中 + 卡片 overflow:hidden 吸收 0.6px 误差。
+   超两行仍省略，完整内容点卡片弹窗可看。 */
+.mini-card #love-quote {
+  white-space:normal; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2;
+  overflow:hidden; text-overflow:clip; height:30px; line-height:15px; margin-top:2px;
+}
 
 /* 打卡横幅
    v3.15.x：去掉 0 2px 左右内缩——与 deco/mini-row 等卡片同宽（左右边缘跨页对齐）；

@@ -500,6 +500,16 @@
     // v3.8.x：非 PWA（浏览器标签）也允许恢复——FS_KEY=1 即用户明确开启过全屏
     // 且未主动关闭（主动退出会在 handleFsExit 清掉标记），切后台系统退出后
     // 恢复符合用户意图，不会造成「退出后被拉回」的死循环
+    // v3.23.x：FB_KEY=1（历史横屏兜底）不再永久走兜底——手势时刻优先试原生全屏：
+    // 成功则撤掉 CSS 兜底并清 FB_KEY；1.5s 复核仍失败则保底恢复兜底
+    if (store.get(FB_KEY) === '1' && !isVia && orientLockable() && fsSupported()) {
+      enterFs();
+      setTimeout(() => {
+        if (isFullscreen()) { applyFsCss(false, false); return; }
+        if (!document.documentElement.classList.contains('fs-css-active')) applyFsCss(true);
+      }, 1500);
+      return;
+    }
     enterFs();
   }
   // v3.8.x：立即武装手势重试（原实现延迟 600ms 才装监听）——用户切后台回来
@@ -522,7 +532,11 @@
     if (store.get(FS_KEY) !== '1') return;
     if (isFullscreen()) return;
     // v3.6.x：上次走的是 CSS 兜底（浏览器转横屏）→ 直接恢复兜底，不再请求原生全屏
-    if (store.get(FB_KEY) === '1') { applyFsCss(true); return; }
+    // v3.23.x：兜底不再一票否决——FB_KEY 一旦置 1 就永不自动清除，之后每次进站
+    // 都只恢复 CSS 兜底（伪全屏），用户必须手动关开开关才能回到原生全屏
+    //（小米15 Pro Chrome 实测「每次进入都要关开全屏」）。改为：先给兜底保底视觉，
+    // 同时武装手势重试——首次触摸再试原生全屏（doRetry 成功会撤掉兜底）
+    if (store.get(FB_KEY) === '1') { applyFsCss(true); try { syncToggle(false); } catch (e) {} armRetry(); return; }
     // v3.6.x：Via / 无锁 API 的浏览器原生全屏必横屏，恢复时同样直接走兜底
     if (isVia || !orientLockable()) { applyFsCss(true); return; }
     if (!fsSupported()) return;

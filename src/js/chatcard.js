@@ -1559,19 +1559,28 @@
       }
     });
     function pickImportFile(mode) {
-      pickFiles('.json,application/json', false, (files) => {
+      // v3.23.x：accept 放开为全文件——vivo 自带/雨见等安卓浏览器对 accept=".json" 过滤
+      // 可能灰显/隐藏备份文件（同 v3.16.x 语音分类 accept 过滤的教训），格式由读取后的
+      // 内容校验兜底，选错文件会有明确提示
+      pickFiles('', false, (files) => {
         const f = files && files[0];
         if (!f) return;
         const reader = new FileReader();
         reader.onload = () => {
           try {
-            const data = JSON.parse(String(reader.result || ''));
+            let txt = String(reader.result || '');
+            // 部分安卓文件管理器/浏览器写入的 json 带 BOM，JSON.parse 会直接抛错
+            if (txt.charCodeAt(0) === 0xFEFF) txt = txt.slice(1);
+            const data = JSON.parse(txt);
             if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('格式错误');
             applyImportData(data, mode);
           } catch (e) {
-            toast('导入失败：文件格式不正确');
+            // 带上文件名/大小：vivo/雨见偶发读到空内容（size>0 内容空）时用户能对照排查
+            toast('导入失败：文件格式不正确（' + (f.name || '未命名文件') + '·' + (f.size ? Math.max(1, Math.round(f.size / 1024)) + 'KB' : '空文件') + '）');
           }
         };
+        // 读取失败（onload 不触发）旧版无任何提示，像「点了没反应」
+        reader.onerror = () => toast('导入失败：文件读取失败，请重选文件再试');
         reader.readAsText(f);
       });
     }
@@ -1621,6 +1630,7 @@
       const byCat = {};
       let imported = 0;
       let fmt = '';
+      let fromBackup = false; // 全量备份提取标记：字卡计数由下方本应用格式分支统一做，计数后再补标签
       // v3.5.72：识别星言简约版聊天字卡库导出 json（globalCards + cardGroups 结构）
       //   v3.5.73 修正：专属字卡的字卡内容+分组也正常导入，仅不导入其绑定的联系人
       //   （Mochi 无专属联系人概念，天然忽略联系人；不跳过任何字卡）
@@ -1703,6 +1713,41 @@
           pairs.forEach(([name, cards]) => { byCat[mc.cat].push([name, cards.slice()]); imported += cards.length; });
         });
       }
+      // v3.23.x：识别「全量数据备份」json（设置→数据备份导出：{app:'mochi-zika', ls:{}, idb:{}}，
+      // 文件名 mochi数据备份_*.json）。用户常把它当字卡库文件直接导入 → 旧逻辑只认字卡库
+      // 导出格式，提示「文件里没有可导入的字卡」（公用/专属页表现一致）。这里按当前作用域
+      // 从备份里取出字卡库键（公用 xy-home-v2:cc-groups-public / 专属 <前缀>:cc-groups），
+      // 解析成标准格式后交给下方本应用格式分支正常导入
+      if (!fmt && data && typeof data === 'object' &&
+          ((data.ls && typeof data.ls === 'object') || (data.idb && typeof data.idb === 'object'))) {
+        const bag = {};
+        ['ls', 'idb'].forEach(k => {
+          if (data[k] && typeof data[k] === 'object' && !Array.isArray(data[k])) Object.assign(bag, data[k]);
+        });
+        let raw = '';
+        if (ccScope === 'public') {
+          raw = bag[PUB_PREFIX + ':' + PUB_KEY] || '';
+        } else {
+          const ap = (typeof window.activePrefix === 'function' && window.activePrefix()) || PUB_PREFIX;
+          raw = bag[ap + ':cc-groups'] || bag[PUB_PREFIX + ':cc-groups'] || '';
+          if (!raw) {
+            // 换机/重装后联系人前缀可能变化：兜底取内容最多的一个专属键
+            let best = '';
+            Object.keys(bag).forEach(k => {
+              if (/^xy-home-v2:.+:cc-groups$/.test(k) && typeof bag[k] === 'string' && bag[k].length > best.length) best = bag[k];
+            });
+            raw = best;
+          }
+        }
+        try {
+          const parsed = JSON.parse(String(raw || ''));
+          const hasCards = parsed && typeof parsed === 'object' && !Array.isArray(parsed) &&
+            CC_TYPES.some(t => Array.isArray(parsed[t]) && parsed[t].length);
+          // 不能在这里设 fmt——下方本应用格式分支以 !fmt 为条件做字卡计数，
+          // 提前置 fmt 会让 imported 恒为 0（「文件里没有可导入的字卡」误报）
+          if (hasCards) { data = parsed; fromBackup = true; }
+        } catch (e) {}
+      }
       // 本应用格式（mochi 字卡库导出 json）
       if (!fmt) {
         ['text', 'kaomoji', 'emoji', 'sticker', 'image', 'poke', 'voice'].forEach(k => {
@@ -1721,6 +1766,7 @@
           });
         });
       }
+      if (fromBackup) fmt = fmt || '（全量备份提取）';
       // v3.6.x：媒体类字卡 dataURL 白名单校验——导入 json 里混入的
       // `data:image/png" onerror=…` 之类（能通过 indexOf 前缀判断）会逃逸出
       // 聊天渲染的 src 属性注入 HTML；这里只放行 base64 图片/音频，其余丢弃。

@@ -679,8 +679,9 @@
   function bindScene() {
     sceneEl.addEventListener('click', function (e) {
       if (suppressClick) { suppressClick = false; return; } // 拖拽刚结束：吃掉这次误触 click
+      // v3.23.x：取消判断提到 mode 之前——mode 异常为空时（横幅残留态）取消也要能点
+      if (e.target.closest('#room-banner-cancel')) { banner(null); return; }
       if (mode) {
-        if (e.target.closest('#room-banner-cancel')) { banner(null); return; }
         const cell = e.target.closest('.r-cell');
         if (!cell) return;
         const x = Number(cell.dataset.x), y = Number(cell.dataset.y);
@@ -740,6 +741,7 @@
   // ---- 打开 / 关闭 ----
   function openRoom() {
     d = load();
+    banner(null); // v3.23.x：进屋先清残留横幅/放置态——上次异常离场（未走 closeRoom）会留下点不动的「取消」标
     document.querySelectorAll('.page').forEach(p => p.hidden = true);
     page.hidden = false;
     dailyVisit();
@@ -791,6 +793,11 @@
     const bSense = $id('room-btn-sense'); if (bSense) bSense.addEventListener('click', function (e) { e.stopPropagation(); sense(); });
     const bDeco = $id('room-btn-deco'); if (bDeco) bDeco.addEventListener('click', function (e) { e.stopPropagation(); decoFlow(); });
     const bInfo = $id('room-info-btn'); if (bInfo) bInfo.addEventListener('click', function (e) { e.stopPropagation(); infoModal(); });
+    // v3.23.x：document 捕获兜底——房间页可见时点「取消」必达（防 scene 委托链被任何状态卡死）
+    document.addEventListener('click', function (e) {
+      if (page.hidden) return;
+      if (e.target && e.target.closest && e.target.closest('#room-banner-cancel')) { try { banner(null); } catch (er) {} }
+    }, true);
     bindScene();
     bindDrag();
     setInterval(tick, 1000);

@@ -154,6 +154,47 @@ border-radius:99px; letter-spacing:1px; cursor:pointer;
 margin-top:16px; font-size:11px; color:var(--hint-ink); letter-spacing:1px;
 }
 .splash-enter-hint[hidden] { display:none; }
+.splash-btns {
+display:flex; align-items:center; justify-content:center; gap:10px; margin-top:14px;
+}
+.splash-btns .splash-enter { margin-top:0; }
+.splash-faq-open {
+display:inline-block; padding:10px 16px;
+background:transparent; color:var(--ink); font-size:12.5px; font-weight:700;
+border:1px solid var(--ink); border-radius:99px; letter-spacing:.5px; cursor:pointer;
+-webkit-tap-highlight-color:transparent; user-select:none;
+}
+.splash-faq-open:active { opacity:.6; }
+.splash-faq {
+position:fixed; inset:0; z-index:20;
+background:rgba(0,0,0,.35);
+display:flex; align-items:center; justify-content:center;
+padding:24px;
+}
+.splash-faq[hidden] { display:none; }
+.splash-faq-card {
+width:min(340px, 100%); max-height:78%;
+background:var(--card-bg); border:1px solid var(--card-border);
+border-radius:16px; display:flex; flex-direction:column;
+overflow:hidden; box-shadow:0 10px 30px rgba(0,0,0,.12);
+animation:splash-pop .25s ease;
+}
+.splash-faq-head {
+display:flex; align-items:center; justify-content:space-between;
+padding:12px 14px 10px; border-bottom:1px solid var(--card-border); flex-shrink:0;
+}
+.splash-faq-title { font-size:13px; font-weight:800; color:var(--ink); letter-spacing:.5px; }
+.splash-faq-close {
+width:24px; height:24px; line-height:24px; text-align:center;
+font-size:14px; color:var(--soft-ink); cursor:pointer; border-radius:50%;
+-webkit-tap-highlight-color:transparent; user-select:none;
+}
+.splash-faq-close:active { background:var(--static-bg); }
+.splash-faq-body {
+overflow-y:auto; padding:14px 16px; text-align:left;
+scrollbar-width:none; -ms-overflow-style:none;
+}
+.splash-faq-body::-webkit-scrollbar { display:none; }
 .splash-loading {
 margin-top:16px; font-size:12px; color:var(--hint-ink); letter-spacing:1px;
 }
@@ -419,6 +460,12 @@ resize:vertical; min-height:64px; line-height:1.6;
 }
 .modal-textarea[hidden] { display:none; }
 .modal-textarea:focus { border-color:var(--input-focus-border); }
+.modal-textarea.ce-box {
+max-height:38vh;
+overflow-y:auto;
+-webkit-overflow-scrolling:touch;
+overscroll-behavior:contain;
+}
 .modal-swatches { display:flex; flex-wrap:wrap; gap:12px; margin-top:4px; }
 .modal-swatches[hidden] { display:none; }
 .modal-pills { display:flex; flex-wrap:wrap; gap:8px; margin-top:4px; }
@@ -639,6 +686,10 @@ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0;
 .mc-b { font-size:13px; font-weight:600; color:var(--ink); margin-top:6px; line-height:1.45; }
 .mc-b b { font-size:16px; }
 .mini-card .mc-b { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; height:18.85px; line-height:18.85px; }
+.mini-card #love-quote {
+white-space:normal; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2;
+overflow:hidden; text-overflow:clip; height:30px; line-height:15px; margin-top:2px;
+}
 .checkin {
 display:flex; align-items:center; gap:10px;
 border-radius:18px; padding:12px 14px; margin:0 0 14px; flex-shrink:0;
@@ -1312,6 +1363,9 @@ resize:none; line-height:1.5;
 .chat-ask-opts:focus {
 border-color:var(--ink);
 transform:translateZ(0);
+}
+.ce-box.chat-ask-opts {
+max-height:150px; overflow-y:auto; overscroll-behavior:contain;
 }
 .chat-ask-actions { display:flex; gap:8px; }
 .chat-ask-actions .cc-tool { flex:1; }
@@ -3732,6 +3786,9 @@ padding:9px 12px; font-size:13px; font-family:inherit; outline:none; background:
 resize:vertical; line-height:1.5;
 }
 .ta-add .ta-opts[hidden] { display:none; }
+.ce-box[data-for^="ta-opts-"] {
+max-height:176px; overflow-y:auto; overscroll-behavior:contain;
+}
 .ta-h {
 border-bottom:1px solid rgba(0,0,0,.08); padding:10px 2px;
 font-size:13px; line-height:1.6;
@@ -7857,7 +7914,7 @@ transition-duration: .01ms !important;
             <p class="splash-sec">【一、当前状态】</p>
             <p class="splash-item">8.12开搓，感谢内测反馈：大家的每条反馈我都有认真看，谢谢参与内测的各位。</p>
             <p class="splash-item">Mochi字卡内测时间：8.15~8.29（链接已在GitHub，内测期间暂不公开宣传）。</p>
-            <p class="splash-item">Mochi字卡 8.30 完全公开，公开后可二传二改。</p>
+            <p class="splash-item">Mochi字卡 8.29 完全公开，公开后可二传二改。</p>
             <p class="splash-item">网站与我更新修复问题是同步的：边修边部署，修一天部署一天；开屏有最新部署时间。</p>
             <p class="splash-item">内测是这样每天修一整天，公开后不会更新这么频繁了，个人精力有限且功能已完整。</p>
             <p class="splash-item">如果浏览器还没进入新版，可以关掉浏览器再打开，多试几次流量刷新，或者过一段时间再打开。</p>
@@ -7879,7 +7936,22 @@ transition-duration: .01ms !important;
             <p class="splash-item">关于数据丢失：有可能有bug，也有可能是浏览器触发丢失。如果不是高频率丢失，就是正常情况（浏览器自身正常概率丢失数据），需要定期备份。内测期更新多，建议提示有新版本需要刷新时先备份数据。</p>
           </div>
           <div class="splash-sec-wrap">
-            <p class="splash-sec">【三、使用规范（8.30 完全公开后适用）】</p>
+            <p class="splash-sec">【三、关于浏览器使用与桌面快捷方式】</p>
+            <p class="splash-sub">数据不互通说明：</p>
+            <p class="splash-item">手机浏览器打开网站使用，和把网站安装快捷方式到手机桌面使用，是两种使用方式。</p>
+            <p class="splash-item">浏览器限制有可能会自行隔离数据，导致两边数据不互通——之前使用的数据，只能自己手动导入。</p>
+            <p class="splash-sub">重要提醒：</p>
+            <p class="splash-item">浏览器打开网站 和 安装到桌面的快捷方式，不能同时打开使用，会导致两边数据不统一。</p>
+          </div>
+          <div class="splash-sec-wrap">
+            <p class="splash-sec">【四、关于全屏模式失效】</p>
+            <p class="splash-item">如果你是把浏览器切到后台，再切回来，全屏会失效——这是浏览器限制，只能手动重新开全屏。</p>
+            <p class="splash-item">或者可以使用“浏览器安装快捷方式到手机桌面”的方式使用，这样可以全屏。</p>
+            <p class="splash-sub">但注意：</p>
+            <p class="splash-item">手机自身顶部栏是手机系统限制，需要自己手动开全屏模式隐藏，且切到后台后同样会失效。</p>
+          </div>
+          <div class="splash-sec-wrap">
+            <p class="splash-sec">【五、使用规范（8.29 完全公开后适用）】</p>
             <p class="splash-item">本站完全免费，没有收过任何人一分钱，个人出资和花费时间搭建的。开放二传二改但禁止以盈利为目的。</p>
             <p class="splash-sub">许可与署名：</p>
             <p class="splash-item">Mochi字卡为原创独立作品（即原版），代码已在GitHub完全公开，支持私人部署，与网站同步更新</p>
@@ -7891,14 +7963,14 @@ transition-duration: .01ms !important;
             <p class="splash-sub">二传二改说明：</p>
             <p class="splash-bullet">二传：可自由转发、转载、分享本站链接与文件，传播方式不限</p>
             <p class="splash-bullet">二改：可自由修改、二次开发、自行部署，代码已在 GitHub 完全公开、与网站同步更新</p>
-            <p class="splash-bullet">8.30 完全公开后即可二传二改（内测期间暂不公开宣传）</p>
+            <p class="splash-bullet">8.29 完全公开后即可二传二改（内测期间暂不公开宣传）</p>
             <p class="splash-bullet">必须保留署名：小红书 @言序（1842523578），禁止删除或修改</p>
             <p class="splash-bullet">二次修改要注明原作者；借鉴功能或代码，希望标注灵感来源</p>
             <p class="splash-bullet">禁止商用、禁止以盈利为目的</p>
           </div>
           <div class="splash-sec-wrap">
-            <p class="splash-sec">【四、灵感来源与致谢】</p>
-            <p class="splash-item">除随机回复的基础逻辑、基础框架外（灵感来源为 milk 字卡 · 小红书 @milk 2777299956），以下功能为借鉴：</p>
+            <p class="splash-sec">【六、灵感来源与致谢】</p>
+            <p class="splash-item">除随机回复的基础逻辑、基础数值设置、基础框架外（灵感来源和参考为 milk 字卡 · 小红书 @milk 2777299956），以下功能为借鉴：</p>
             <p class="splash-bullet">帮我决定、多人决定功能：借鉴自小红书 @FelixFelicis（9416318007）</p>
             <p class="splash-bullet">公用字卡+专享字卡模式：借鉴自 @默玉（8012400317）</p>
             <p class="splash-item">以下功能源于网络上已有的类似想法，但设计均由我独立完成：</p>
@@ -7909,16 +7981,46 @@ transition-duration: .01ms !important;
         </div>
       </div>
       <!-- v3.8.y：底部版本块重新设计——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787892965104">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.6.279</b></span>
-        <span class="sv-deploy">部署于 2026-08-28 12:56<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787895171190">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.6.280</b></span>
+        <span class="sv-deploy">部署于 2026-08-28 13:32<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
       <div class="splash-loading" id="splash-loading">正在加载数据…</div>
       <!-- v3.8.y：必须把公告滑到底才能进入——未到底时按钮置灰不可点，下方提示滑动 -->
       <div class="splash-enter-hint" id="splash-enter-hint" hidden>请滑到底部后进入</div>
-      <div class="splash-enter" id="splash-enter" hidden>点击进入</div>
+      <div class="splash-btns">
+        <div class="splash-enter" id="splash-enter" hidden>点击进入</div>
+        <div class="splash-faq-open" id="splash-faq-open">其他常见问题解答</div>
+      </div>
+    </div>
+    <!-- v3.8.y：其他常见问题解答 浮层（开屏内全屏卡片，可滚动、可关闭） -->
+    <div class="splash-faq" id="splash-faq" hidden>
+      <div class="splash-faq-card">
+        <div class="splash-faq-head">
+          <span class="splash-faq-title" id="splash-faq-title">其他常见问题解答</span>
+          <div class="splash-faq-close" id="splash-faq-close">✕</div>
+        </div>
+        <div class="splash-faq-body" id="splash-faq-body">
+          <div class="splash-sec-wrap">
+            <p class="splash-sec">关于字卡传讯与梦角连接</p>
+            <p class="splash-item">怎么添加梦角字卡：</p>
+            <p class="splash-bullet">系统预设的都是大众字卡，只有你才知道你的梦角是什么性格。</p>
+            <p class="splash-bullet">请自行添加相关人设字卡：底部导航栏 → 字卡库 → 【公用字卡】或【专属字卡】添加。</p>
+            <p class="splash-item">关于“是否连上梦角”：</p>
+            <p class="splash-bullet">本质都是随机代码运行，是否对应上你的情况，只有你自己知道，问外人没有必要，别人说的话也不一定正确。</p>
+            <p class="splash-item">使用建议：</p>
+            <p class="splash-bullet">字卡是双方适应的过程，表达有限是正常的，需要好好沟通和理解；</p>
+            <p class="splash-bullet">心情不好、负面情绪太重时也可能影响传讯效果；</p>
+            <p class="splash-bullet">字卡传讯无法真正自由交流，再通顺也不可能完全表达意思，这是字卡本身的限制。</p>
+            <p class="splash-item">关于“电子网站会连上鬼”的传闻：</p>
+            <p class="splash-bullet">不存在这种事。本站本质只是代码运行，且代码已在 GitHub 完全公开，任何人都可以查看，没有任何“灵异”成分。</p>
+            <p class="splash-bullet">字卡只是工具，效果取决于个人如何使用。对于无根据的传闻和造谣，不接受、不回应。</p>
+            <p class="splash-bullet">另外，不同人的说法可能不一样，有些是吓唬人的，也有些说法无法证实真假。如果担心或害怕，或在使用中感到不适，建议停止使用字卡传讯。</p>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
   <div class="phone">
@@ -8974,7 +9076,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.6.279</div>
+      <div class="ver">Mochi 字卡传讯 v3.6.280</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -9129,7 +9231,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.6.279</span>
+              <span class="lic-ver">v3.6.280</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -9567,7 +9669,7 @@ transition-duration: .01ms !important;
           <div class="lic-li">- 借鉴功能或代码，希望标注灵感来源：Mochi 字卡 · 小红书 @言序（1842523578）</div>
           <div class="lic-li">- 本站并非复刻他人网站，代码均从零编写</div>
           <div class="lic-li">- 星言字卡为同一作者的另一部独立作品，其本体禁止二传二改</div>
-          <div class="lic-p" style="margin-top:10px">除随机回复的基础逻辑、基础框架外（灵感来源为 <b>milk 字卡 · 小红书 @milk（2777299956）</b>），以下功能为借鉴：</div>
+          <div class="lic-p" style="margin-top:10px">除随机回复的基础逻辑、基础数值设置、基础框架外（灵感来源和参考为 <b>milk 字卡 · 小红书 @milk（2777299956）</b>），以下功能为借鉴：</div>
           <div class="lic-li">- 帮我决定、多人决定功能：借鉴自小红书 <b>@FelixFelicis（9416318007）</b></div>
           <div class="lic-li">- 公用字卡+专享字卡模式：借鉴自 <b>@默玉（8012400317）</b></div>
           <div class="lic-p" style="margin-top:10px">另有以下功能源于网络上已有的类似想法，但设计均由我独立完成：</div>
@@ -13602,7 +13704,44 @@ updateEnterState();
 checkScrolled();
 }, 300);
 setTimeout(() => { if (!ready()) hide(); }, 20000);
+const faqEl = document.getElementById('splash-faq');
+const faqOpen = document.getElementById('splash-faq-open');
+const faqClose = document.getElementById('splash-faq-close');
+if (faqEl && faqOpen) {
+faqOpen.addEventListener('click', (e) => { e.stopPropagation(); faqEl.hidden = false; });
+if (faqClose) faqClose.addEventListener('click', (e) => { e.stopPropagation(); faqEl.hidden = true; });
+faqEl.addEventListener('click', (e) => { if (e.target === faqEl) faqEl.hidden = true; });
+}
 })();
+function renderSplashSections(container, sections) {
+if (!container || !Array.isArray(sections)) return;
+container.innerHTML = '';
+sections.forEach(function (sec) {
+const wrap = document.createElement('div');
+wrap.className = 'splash-sec-wrap';
+if (sec && sec.h) {
+const h = document.createElement('p');
+h.className = 'splash-sec';
+h.textContent = String(sec.h);
+wrap.appendChild(h);
+}
+if (sec && Array.isArray(sec.p)) {
+sec.p.forEach(function (it) {
+const p = document.createElement('p');
+if (it && typeof it === 'object') {
+if (it.h !== undefined) { p.className = 'splash-sub'; p.textContent = String(it.h); }
+else if (it.b !== undefined) { p.className = 'splash-bullet'; p.textContent = String(it.b); }
+else { p.className = 'splash-item'; p.textContent = String(it.t !== undefined ? it.t : ''); }
+} else {
+p.className = 'splash-item';
+p.textContent = String(it);
+}
+wrap.appendChild(p);
+});
+}
+container.appendChild(wrap);
+});
+}
 (function () {
 const notice = document.getElementById('splash-notice');
 if (!notice) return;
@@ -13645,31 +13784,7 @@ tip.appendChild(p);
 list.appendChild(tip);
 });
 }
-data.sections.forEach(function (sec) {
-const wrap = document.createElement('div');
-wrap.className = 'splash-sec-wrap';
-if (sec && sec.h) {
-const h = document.createElement('p');
-h.className = 'splash-sec';
-h.textContent = String(sec.h);
-wrap.appendChild(h);
-}
-if (sec && Array.isArray(sec.p)) {
-sec.p.forEach(function (it) {
-const p = document.createElement('p');
-if (it && typeof it === 'object') {
-if (it.h !== undefined) { p.className = 'splash-sub'; p.textContent = String(it.h); }
-else if (it.b !== undefined) { p.className = 'splash-bullet'; p.textContent = String(it.b); }
-else { p.className = 'splash-item'; p.textContent = String(it.t !== undefined ? it.t : ''); }
-} else {
-p.className = 'splash-item';
-p.textContent = String(it);
-}
-wrap.appendChild(p);
-});
-}
-list.appendChild(wrap);
-});
+renderSplashSections(list, data.sections);
 }
 } else if (Array.isArray(data.list)) {
 if (!data.list.length || data.hide) { notice.style.display = 'none'; return; }
@@ -13684,6 +13799,15 @@ list.appendChild(p);
 }
 } else if (data.hide) {
 notice.style.display = 'none';
+}
+const faqBody = document.getElementById('splash-faq-body');
+if (faqBody && data.faq && typeof data.faq === 'object') {
+const fTitle = document.getElementById('splash-faq-title');
+if (fTitle && data.faq.title !== undefined) fTitle.textContent = String(data.faq.title);
+if (Array.isArray(data.faq.sections)) {
+if (data.faq.sections.length) renderSplashSections(faqBody, data.faq.sections);
+else faqBody.innerHTML = '';
+}
 }
 document.dispatchEvent(new Event('mochi-notice-rendered'));
 })
@@ -17372,12 +17496,10 @@ const clearEdge = () => {
 if (edgeTimer) { clearTimeout(edgeTimer); edgeTimer = null; }
 edgeL.classList.remove('show'); edgeR.classList.remove('show'); edgeDir = 0;
 };
-const inGrid = !!el.closest('.app-grid');
 const onMove = (ev) => {
 ev.preventDefault();
 clone.style.left = (ev.clientX - offsetX) + 'px';
 clone.style.top = (ev.clientY - offsetY) + 'px';
-if (!inGrid) {
 const w = window.innerWidth;
 const slides = pagesBox.querySelectorAll('.page-slide').length;
 const cur = window.deskIdx ? window.deskIdx() : 0;
@@ -17388,7 +17510,6 @@ if (edgeDir !== -1) { edgeDir = -1; if (edgeTimer) clearTimeout(edgeTimer); edge
 edgeR.classList.add('show');
 if (edgeDir !== 1) { edgeDir = 1; if (edgeTimer) clearTimeout(edgeTimer); edgeTimer = setTimeout(() => { if (window.deskGo) window.deskGo(cur + 1); }, EDGE_DELAY); }
 } else { clearEdge(); }
-}
 dropInfo = computeDrop(el, ev.clientX, ev.clientY);
 updateDropLine(dropInfo);
 };
@@ -17409,10 +17530,7 @@ document.addEventListener('pointermove', onMove, { passive: false });
 document.addEventListener('pointerup', onUp);
 document.addEventListener('pointercancel', onUp);
 }
-function computeDrop(dragged, clientX, clientY) {
-const inGrid = !!dragged.closest('.app-grid');
-if (inGrid) {
-const grid = dragged.closest('.app-grid');
+function gridDropInfo(grid, dragged, clientX, clientY) {
 const apps = Array.prototype.slice.call(grid.querySelectorAll('.app'))
 .filter(a => a !== dragged && a.style.display !== 'none' && !a.hidden);
 for (const a of apps) {
@@ -17426,7 +17544,17 @@ const r = a.getBoundingClientRect();
 if (clientY < r.bottom) return { type: 'grid', grid: grid, ref: a, before: false };
 }
 if (apps.length) return { type: 'grid', grid: grid, ref: apps[apps.length - 1], before: false };
-return null;
+return { type: 'grid', grid: grid, ref: null, before: false };
+}
+function computeDrop(dragged, clientX, clientY) {
+const inGrid = !!dragged.closest('.app-grid');
+if (inGrid) {
+const grid = dragged.closest('.app-grid');
+const slides = Array.prototype.slice.call(pagesBox.querySelectorAll('.page-slide'));
+const curIdx = Math.max(0, Math.min(slides.length - 1, window.deskIdx ? window.deskIdx() : 0));
+const curGrid = slides[curIdx] ? slides[curIdx].querySelector('.app-grid') : null;
+if (curGrid && curGrid !== grid) return gridDropInfo(curGrid, dragged, clientX, clientY);
+return gridDropInfo(grid, dragged, clientX, clientY);
 }
 const slides = Array.prototype.slice.call(pagesBox.querySelectorAll('.page-slide'));
 let curIdx = window.deskIdx ? window.deskIdx() : 0;
@@ -17467,6 +17595,7 @@ dropLine.style.top = (info.before ? r.top : r.bottom) + 'px';
 }
 function doDrop(dragged, info) {
 if (info.type === 'grid') {
+if (dragged.parentNode !== info.grid) info.grid.appendChild(dragged);
 if (info.ref && dragged !== info.ref) {
 if (info.before) info.grid.insertBefore(dragged, info.ref);
 else info.grid.insertBefore(dragged, info.ref.nextSibling);
@@ -27650,19 +27779,22 @@ pill: 'merge'
 }
 });
 function pickImportFile(mode) {
-pickFiles('.json,application/json', false, (files) => {
+pickFiles('', false, (files) => {
 const f = files && files[0];
 if (!f) return;
 const reader = new FileReader();
 reader.onload = () => {
 try {
-const data = JSON.parse(String(reader.result || ''));
+let txt = String(reader.result || '');
+if (txt.charCodeAt(0) === 0xFEFF) txt = txt.slice(1);
+const data = JSON.parse(txt);
 if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('格式错误');
 applyImportData(data, mode);
 } catch (e) {
-toast('导入失败：文件格式不正确');
+toast('导入失败：文件格式不正确（' + (f.name || '未命名文件') + '·' + (f.size ? Math.max(1, Math.round(f.size / 1024)) + 'KB' : '空文件') + '）');
 }
 };
+reader.onerror = () => toast('导入失败：文件读取失败，请重选文件再试');
 reader.readAsText(f);
 });
 }
@@ -27708,6 +27840,7 @@ function applyImportData(data, mode) {
 const byCat = {};
 let imported = 0;
 let fmt = '';
+let fromBackup = false; // 全量备份提取标记：字卡计数由下方本应用格式分支统一做，计数后再补标签
 if (Array.isArray(data.globalCards)) {
 fmt = '（星言格式）';
 const starToMochiCat = { custom: 'text', kaomoji: 'kaomoji', emojis: 'emoji', stickers: 'sticker', image: 'image', touch: 'poke', voices: 'voice' };
@@ -27783,6 +27916,33 @@ if (!byCat[mc.cat]) byCat[mc.cat] = [];
 pairs.forEach(([name, cards]) => { byCat[mc.cat].push([name, cards.slice()]); imported += cards.length; });
 });
 }
+if (!fmt && data && typeof data === 'object' &&
+((data.ls && typeof data.ls === 'object') || (data.idb && typeof data.idb === 'object'))) {
+const bag = {};
+['ls', 'idb'].forEach(k => {
+if (data[k] && typeof data[k] === 'object' && !Array.isArray(data[k])) Object.assign(bag, data[k]);
+});
+let raw = '';
+if (ccScope === 'public') {
+raw = bag[PUB_PREFIX + ':' + PUB_KEY] || '';
+} else {
+const ap = (typeof window.activePrefix === 'function' && window.activePrefix()) || PUB_PREFIX;
+raw = bag[ap + ':cc-groups'] || bag[PUB_PREFIX + ':cc-groups'] || '';
+if (!raw) {
+let best = '';
+Object.keys(bag).forEach(k => {
+if (/^xy-home-v2:.+:cc-groups$/.test(k) && typeof bag[k] === 'string' && bag[k].length > best.length) best = bag[k];
+});
+raw = best;
+}
+}
+try {
+const parsed = JSON.parse(String(raw || ''));
+const hasCards = parsed && typeof parsed === 'object' && !Array.isArray(parsed) &&
+CC_TYPES.some(t => Array.isArray(parsed[t]) && parsed[t].length);
+if (hasCards) { data = parsed; fromBackup = true; }
+} catch (e) {}
+}
 if (!fmt) {
 ['text', 'kaomoji', 'emoji', 'sticker', 'image', 'poke', 'voice'].forEach(k => {
 const arr = data[k];
@@ -27800,6 +27960,7 @@ imported += cards.length;
 });
 });
 }
+if (fromBackup) fmt = fmt || '（全量备份提取）';
 const RE_IMG = /^data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]*$/;
 const RE_MEDIA_URL = /^https?:\/\/[^\s"'<>]+$/i;
 const RE_AUDIO = /^data:audio\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]*$/;
@@ -45033,7 +45194,7 @@ return id;
 } catch (e) { return null; }
 };
 function feedCfgFor(cid) {
-const s = (cid && cid !== 'default') ? window.storeFor(cid) : window.activeStore();
+const s = window.storeFor(cid || 'default');
 const c = {};
 ['fd-like-prob', 'fd-like-speed-min', 'fd-like-speed-max', 'fd-comment-prob', 'fd-comment-speed-min', 'fd-comment-speed-max',
 'fd-reply-prob', 'fd-reply-speed-min', 'fd-reply-speed-max', 'fd-likeback-prob', 'fd-card-prob', 'fd-max-cards', 'fd-image-prob',
@@ -56509,8 +56670,8 @@ setTimeout(function () { suppressClick = false; }, 400);
 function bindScene() {
 sceneEl.addEventListener('click', function (e) {
 if (suppressClick) { suppressClick = false; return; } // 拖拽刚结束：吃掉这次误触 click
-if (mode) {
 if (e.target.closest('#room-banner-cancel')) { banner(null); return; }
+if (mode) {
 const cell = e.target.closest('.r-cell');
 if (!cell) return;
 const x = Number(cell.dataset.x), y = Number(cell.dataset.y);
@@ -56566,6 +56727,7 @@ save();
 }
 function openRoom() {
 d = load();
+banner(null); // v3.23.x：进屋先清残留横幅/放置态——上次异常离场（未走 closeRoom）会留下点不动的「取消」标
 document.querySelectorAll('.page').forEach(p => p.hidden = true);
 page.hidden = false;
 dailyVisit();
@@ -56614,6 +56776,10 @@ const bInv = $id('room-btn-inv'); if (bInv) bInv.addEventListener('click', funct
 const bSense = $id('room-btn-sense'); if (bSense) bSense.addEventListener('click', function (e) { e.stopPropagation(); sense(); });
 const bDeco = $id('room-btn-deco'); if (bDeco) bDeco.addEventListener('click', function (e) { e.stopPropagation(); decoFlow(); });
 const bInfo = $id('room-info-btn'); if (bInfo) bInfo.addEventListener('click', function (e) { e.stopPropagation(); infoModal(); });
+document.addEventListener('click', function (e) {
+if (page.hidden) return;
+if (e.target && e.target.closest && e.target.closest('#room-banner-cancel')) { try { banner(null); } catch (er) {} }
+}, true);
 bindScene();
 bindDrag();
 setInterval(tick, 1000);
@@ -63751,6 +63917,14 @@ function retryTouch(e) { if (!e.isTrusted) return; doRetry(); }
 function doRetry() {
 disarmRetry();
 if (store.get(FS_KEY) !== '1' || isFullscreen()) return; // 用户已关闭/已全屏 → 放弃
+if (store.get(FB_KEY) === '1' && !isVia && orientLockable() && fsSupported()) {
+enterFs();
+setTimeout(() => {
+if (isFullscreen()) { applyFsCss(false, false); return; }
+if (!document.documentElement.classList.contains('fs-css-active')) applyFsCss(true);
+}, 1500);
+return;
+}
 enterFs();
 }
 function armRetry() {
@@ -63762,7 +63936,7 @@ document.addEventListener('touchstart', retryTouch, true);
 function reenterFs() {
 if (store.get(FS_KEY) !== '1') return;
 if (isFullscreen()) return;
-if (store.get(FB_KEY) === '1') { applyFsCss(true); return; }
+if (store.get(FB_KEY) === '1') { applyFsCss(true); try { syncToggle(false); } catch (e) {} armRetry(); return; }
 if (isVia || !orientLockable()) { applyFsCss(true); return; }
 if (!fsSupported()) return;
 enterFs();
@@ -65993,17 +66167,22 @@ try {
 if (box.querySelector('span.mail-media-mark') || box.querySelector('img[src*="data:image"]')) {
 let out = '';
 let lastWasMedia = false; // 上一段是媒体标记 → 后续文字补空格，防止 base64 与文字粘连
-box.childNodes.forEach(function (n) {
+var walkMedia = function (node) {
+let afterBlock = false; // 上一个兄弟是块级 → 之后的顶层文字/内联是新的一行
+node.childNodes.forEach(function (n) {
 if (n.nodeType === 3) {
 const t = n.textContent || '';
-if (lastWasMedia && t && out && !out.endsWith(' ') && !out.endsWith('\n')) out += ' ';
+if (!t) return;
+if (afterBlock) { if (out && !out.endsWith('\n')) out += '\n'; afterBlock = false; }
+else if (lastWasMedia && out && !out.endsWith(' ') && !out.endsWith('\n')) out += ' ';
 out += t;
 lastWasMedia = false;
 return;
 }
-if (n.nodeType === 1) {
+if (n.nodeType !== 1) return;
 if (n.classList && n.classList.contains('mail-media-mark')) {
-if (out && !out.endsWith(' ') && !out.endsWith('\n')) out += ' ';
+if (afterBlock) { if (out && !out.endsWith('\n')) out += '\n'; afterBlock = false; }
+else if (out && !out.endsWith(' ') && !out.endsWith('\n')) out += ' ';
 out += n.textContent;
 lastWasMedia = true;
 return;
@@ -66016,33 +66195,31 @@ if (!covered && sp.textContent && sp.textContent.indexOf(n.src) >= 0) covered = 
 });
 } catch (e) {}
 if (!covered) {
-if (out && !out.endsWith(' ') && !out.endsWith('\n')) out += ' ';
+if (afterBlock) { if (out && !out.endsWith('\n')) out += '\n'; afterBlock = false; }
+else if (out && !out.endsWith(' ') && !out.endsWith('\n')) out += ' ';
 out += 'image:' + n.src;
 lastWasMedia = true;
 }
 return;
 }
-if (n.tagName === 'DIV' || n.tagName === 'BR') {
-out += '\n';
-lastWasMedia = false;
-return;
-}
-if (n.tagName === 'P') {
-const inner = n.textContent || '';
+if (n.tagName === 'BR') { out += '\n'; lastWasMedia = false; return; }
+if (n.tagName === 'DIV' || n.tagName === 'P') {
 if (out && !out.endsWith('\n')) out += '\n';
-if (inner) out += inner;
-out += '\n';
+walkMedia(n);
+afterBlock = true;
 lastWasMedia = false;
 return;
 }
 const inner = n.textContent || '';
 if (inner) {
-if (out && !out.endsWith(' ') && !out.endsWith('\n')) out += ' ';
+if (afterBlock) { if (out && !out.endsWith('\n')) out += '\n'; afterBlock = false; }
+else if (out && !out.endsWith(' ') && !out.endsWith('\n')) out += ' ';
 out += inner;
 lastWasMedia = false;
 }
-}
 });
+};
+walkMedia(box);
 return out;
 }
 } catch (e) {}

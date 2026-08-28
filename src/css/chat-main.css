@@ -317,6 +317,11 @@ body.cs-time-divider .msg-time-divider { display:flex; }
   /* 鍚屼笂锛氬崟閫夐€夐」杈撳叆妗嗗悓鏍峰湪 fixed 鍗婃鍐咃紝鑱氱劍鏈熼棿寤虹嫭绔嬪悎鎴愬眰闃叉枃鏈敊浣?*/
   transform:translateZ(0);
 }
+/* v3.23.x：单选题选项框（安卓转 .ce-box 后带同类名）随行数无限增高，把「发送」
+   顶出半框屏外=「选项太多无法发送」；限高 + 框内滚动（同帮我决定 dec-opts 修法） */
+.ce-box.chat-ask-opts {
+  max-height:150px; overflow-y:auto; overscroll-behavior:contain;
+}
 .chat-ask-actions { display:flex; gap:8px; }
 .chat-ask-actions .cc-tool { flex:1; }
 

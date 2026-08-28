@@ -281,6 +281,41 @@ if (p2) {
   })()`) || '{}');
   check('E3 桌面字号 115% 缩放下三页图标组底部仍对齐（≤1.2px）', fontAligned.aligned === true,
     JSON.stringify(fontAligned));
+  // v3.16.x：图标文字行对齐（用户反馈「图标下方文字这一行差一点点」）——第三页有 3 行图标
+  // 比 1/2 页多 1 行，需按「从底部数」对比：页2 第2/3行应对齐页0/1 第1/2行。
+  const rowAlign = JSON.parse(await evalJs(`(function(){
+    var slides=document.querySelectorAll('#desktop-pages .page-slide');
+    var pages=[];
+    slides.forEach(function(sl,pi){
+      var g=sl.querySelector('.app-grid');
+      if(!g)return;
+      var rows=[];
+      var apps=Array.prototype.slice.call(g.querySelectorAll('.app'));
+      var byTop={};
+      apps.forEach(function(a){
+        var nm=a.querySelector('.app-name'), ico=a.querySelector('.app-ico');
+        var t=Math.round(a.getBoundingClientRect().top*10)/10;
+        if(!byTop[t]) byTop[t]={nmT:Math.round(nm.getBoundingClientRect().top*10)/10};
+      });
+      Object.keys(byTop).forEach(function(t){ rows.push(byTop[t]); });
+      pages.push({idx:pi, rows:rows});
+    });
+    // 从底部数第 1/2 行对比
+    var out={};
+    [1,2].forEach(function(fb){
+      var items=[];
+      pages.forEach(function(pg){
+        var row=pg.rows[pg.rows.length-fb];
+        if(row) items.push(row.nmT);
+      });
+      if(items.length===3) out['row'+fb]=Math.max.apply(null,items)-Math.min.apply(null,items);
+    });
+    return JSON.stringify(out);
+  })()`) || '{}');
+  const rowOK = (rowAlign.row1 !== undefined && rowAlign.row1 <= 0.6) &&
+                (rowAlign.row2 !== undefined && rowAlign.row2 <= 0.6);
+  check('E4 图标文字行从底部对齐（第1/2行 ≤0.6px）', rowOK,
+    '第1行Δ=' + rowAlign.row1 + ' 第2行Δ=' + rowAlign.row2);
   void memoRow; void ck0; void grid0; void grid2; void grid1;
 } else check("C' 组前置：第三页存在", false, '');
 

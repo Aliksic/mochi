@@ -226,17 +226,26 @@
           if (box.querySelector('span.mail-media-mark') || box.querySelector('img[src*="data:image"]')) {
             let out = '';
             let lastWasMedia = false; // 上一段是媒体标记 → 后续文字补空格，防止 base64 与文字粘连
-            box.childNodes.forEach(function (n) {
-              if (n.nodeType === 3) {
-                const t = n.textContent || '';
-                if (lastWasMedia && t && out && !out.endsWith(' ') && !out.endsWith('\n')) out += ' ';
-                out += t;
-                lastWasMedia = false;
-                return;
-              }
-              if (n.nodeType === 1) {
+            // v3.23.x：改递归提取——Chrome 安卓按回车会把后续文字包进顶层 <div>（嵌套亦常见），
+            // 旧实现顶层扁平遍历遇 DIV 只补 \n 不取字，第二行起全部丢失：插入表情包/图片后
+            // 再写的信件内容在【发送取值那一刻】就被截掉，重开只剩第一行（真机实测 bug）。
+            // 递归版：DIV/P 视为块级换行并取其内文字与媒体；块级之后的顶层文字/内联另起一行。
+            var walkMedia = function (node) {
+              let afterBlock = false; // 上一个兄弟是块级 → 之后的顶层文字/内联是新的一行
+              node.childNodes.forEach(function (n) {
+                if (n.nodeType === 3) {
+                  const t = n.textContent || '';
+                  if (!t) return;
+                  if (afterBlock) { if (out && !out.endsWith('\n')) out += '\n'; afterBlock = false; }
+                  else if (lastWasMedia && out && !out.endsWith(' ') && !out.endsWith('\n')) out += ' ';
+                  out += t;
+                  lastWasMedia = false;
+                  return;
+                }
+                if (n.nodeType !== 1) return;
                 if (n.classList && n.classList.contains('mail-media-mark')) {
-                  if (out && !out.endsWith(' ') && !out.endsWith('\n')) out += ' ';
+                  if (afterBlock) { if (out && !out.endsWith('\n')) out += '\n'; afterBlock = false; }
+                  else if (out && !out.endsWith(' ') && !out.endsWith('\n')) out += ' ';
                   out += n.textContent;
                   lastWasMedia = true;
                   return;
@@ -256,39 +265,33 @@
                   if (!covered) {
                     // img 的标记 span 被用户退格删掉时，从 src 重建标记——
                     // 否则该图片在保存时丢失（数据丢失风险）
-                    if (out && !out.endsWith(' ') && !out.endsWith('\n')) out += ' ';
+                    if (afterBlock) { if (out && !out.endsWith('\n')) out += '\n'; afterBlock = false; }
+                    else if (out && !out.endsWith(' ') && !out.endsWith('\n')) out += ' ';
                     out += 'image:' + n.src;
                     lastWasMedia = true;
                   }
                   return;
                 }
-                if (n.tagName === 'DIV' || n.tagName === 'BR') {
-                  out += '\n';
-                  lastWasMedia = false;
-                  return;
-                }
-                // v3.9.x：粘贴富文本的 <p> 段落标签——块级元素，前后补换行 +
-                //   输出其文字（childNodes 扁平遍历不递归子节点，需用 textContent
-                //   取段内文字，否则多段粘贴粘连成一行）
-                if (n.tagName === 'P') {
-                  const inner = n.textContent || '';
+                if (n.tagName === 'BR') { out += '\n'; lastWasMedia = false; return; }
+                if (n.tagName === 'DIV' || n.tagName === 'P') {
                   if (out && !out.endsWith('\n')) out += '\n';
-                  if (inner) out += inner;
-                  out += '\n';
+                  walkMedia(n);
+                  afterBlock = true;
                   lastWasMedia = false;
                   return;
                 }
-                // v3.6.x：其它内联元素（粘贴富文本产生的 <span>/<b>/<i> 等）——
-                // 补充其文字，否则插入过图片后粘贴带格式文本，这些文字在保存时
-                // 会静默丢失（信寄出去正文缺字）
+                // v3.9.x：粘贴富文本产生的 <span>/<b>/<i> 等内联元素——补充其文字，
+                // 否则插入过图片后粘贴带格式文本，这些文字在保存时会静默丢失
                 const inner = n.textContent || '';
                 if (inner) {
-                  if (out && !out.endsWith(' ') && !out.endsWith('\n')) out += ' ';
+                  if (afterBlock) { if (out && !out.endsWith('\n')) out += '\n'; afterBlock = false; }
+                  else if (out && !out.endsWith(' ') && !out.endsWith('\n')) out += ' ';
                   out += inner;
                   lastWasMedia = false;
                 }
-              }
-            });
+              });
+            };
+            walkMedia(box);
             return out;
           }
         } catch (e) {}

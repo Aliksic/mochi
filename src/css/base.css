@@ -166,6 +166,50 @@ html { margin:0; padding:0; }
   margin-top:16px; font-size:11px; color:var(--hint-ink); letter-spacing:1px;
 }
 .splash-enter-hint[hidden] { display:none; }
+/* v3.8.y：底部操作区——「点击进入」+「其他常见问题解答」并排一行 */
+.splash-btns {
+  display:flex; align-items:center; justify-content:center; gap:10px; margin-top:14px;
+}
+.splash-btns .splash-enter { margin-top:0; }
+/* v3.8.y：常见问题解答按钮（描边次要按钮，黑白简约风） */
+.splash-faq-open {
+  display:inline-block; padding:10px 16px;
+  background:transparent; color:var(--ink); font-size:12.5px; font-weight:700;
+  border:1px solid var(--ink); border-radius:99px; letter-spacing:.5px; cursor:pointer;
+  -webkit-tap-highlight-color:transparent; user-select:none;
+}
+.splash-faq-open:active { opacity:.6; }
+/* v3.8.y：其他常见问题解答 浮层（开屏内全屏遮罩 + 卡片，内容可滚动） */
+.splash-faq {
+  position:fixed; inset:0; z-index:20;
+  background:rgba(0,0,0,.35);
+  display:flex; align-items:center; justify-content:center;
+  padding:24px;
+}
+.splash-faq[hidden] { display:none; }
+.splash-faq-card {
+  width:min(340px, 100%); max-height:78%;
+  background:var(--card-bg); border:1px solid var(--card-border);
+  border-radius:16px; display:flex; flex-direction:column;
+  overflow:hidden; box-shadow:0 10px 30px rgba(0,0,0,.12);
+  animation:splash-pop .25s ease;
+}
+.splash-faq-head {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:12px 14px 10px; border-bottom:1px solid var(--card-border); flex-shrink:0;
+}
+.splash-faq-title { font-size:13px; font-weight:800; color:var(--ink); letter-spacing:.5px; }
+.splash-faq-close {
+  width:24px; height:24px; line-height:24px; text-align:center;
+  font-size:14px; color:var(--soft-ink); cursor:pointer; border-radius:50%;
+  -webkit-tap-highlight-color:transparent; user-select:none;
+}
+.splash-faq-close:active { background:var(--static-bg); }
+.splash-faq-body {
+  overflow-y:auto; padding:14px 16px; text-align:left;
+  scrollbar-width:none; -ms-overflow-style:none;
+}
+.splash-faq-body::-webkit-scrollbar { display:none; }
 /* 加载提示（非按钮，不可点） */
 .splash-loading {
   margin-top:16px; font-size:12px; color:var(--hint-ink); letter-spacing:1px;
@@ -636,6 +680,16 @@ input.ce-ghost, textarea.ce-ghost {
 }
 .modal-textarea[hidden] { display:none; }
 .modal-textarea:focus { border-color:var(--input-focus-border); }
+/* v3.23.x：多行弹窗输入框（批量导入/链接导入等）安卓被转成 .ce-box 后随内容无限增高，
+   弹窗被撑满后触摸手势被 contenteditable 吃掉、内容多时无法上滑查看（vivo 自带/雨见
+   用户反馈）。同 #chat-decision-body dec-opts 的成熟做法：高度上限 + 框内滚动，
+   标题/按钮始终可见，内容在框内上滑查看 */
+.modal-textarea.ce-box {
+  max-height:38vh;
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain;
+}
 .modal-swatches { display:flex; flex-wrap:wrap; gap:12px; margin-top:4px; }
 .modal-swatches[hidden] { display:none; }
 .modal-pills { display:flex; flex-wrap:wrap; gap:8px; margin-top:4px; }

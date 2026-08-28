@@ -25,7 +25,7 @@ await sleep(2500);
 for (let i = 0; i < 40; i++) { if (await evalJs('!!window.__mochiDataReady')) break; await sleep(300); }
 await evalJs("(function(){var s=document.getElementById('splash');if(s&&!s.classList.contains('hide'))s.click();return true;})()");
 await sleep(900);
-await evalJs("(function(){var b=document.getElementById('splash-confirm-ok');if(b)b.click();return true;})()");
+await evalJs("(function(){var e=document.getElementById('splash-enter');if(e&&!e.hidden)e.click();var s=document.getElementById('splash');if(s&&!s.classList.contains('hide')){s.classList.add('hide');s.hidden=true;}return true;})()");
 await sleep(800);
 console.log('init:', await evalJs('!!window.__giftShopInit'));
 console.log('marketApp:', await evalJs("(function(){var a=document.querySelector('.app[data-app=market]');return a?('found, parent='+a.closest('.page-slide')?.dataset.desk):'missing';})()"));

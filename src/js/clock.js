@@ -91,7 +91,48 @@
   // 20 秒保险丝：数据极端异常未就绪时兜底放行（不自动跳过滑动）；
   //   idbRestore 自身 12 秒必置就绪，正常不触发
   setTimeout(() => { if (!ready()) hide(); }, 20000);
+  // v3.8.y：其他常见问题解答 浮层——点击按钮打开，点 ✕ / 遮罩关闭
+  const faqEl = document.getElementById('splash-faq');
+  const faqOpen = document.getElementById('splash-faq-open');
+  const faqClose = document.getElementById('splash-faq-close');
+  if (faqEl && faqOpen) {
+    faqOpen.addEventListener('click', (e) => { e.stopPropagation(); faqEl.hidden = false; });
+    if (faqClose) faqClose.addEventListener('click', (e) => { e.stopPropagation(); faqEl.hidden = true; });
+    faqEl.addEventListener('click', (e) => { if (e.target === faqEl) faqEl.hidden = true; });
+  }
 })();
+
+// v3.8.y：通用章节渲染（公告 + FAQ 浮层共用）
+// 条目支持三种：字符串=自动编号条目；{h:"子标题"}；{b:"子列表项"}
+function renderSplashSections(container, sections) {
+  if (!container || !Array.isArray(sections)) return;
+  container.innerHTML = '';
+  sections.forEach(function (sec) {
+    const wrap = document.createElement('div');
+    wrap.className = 'splash-sec-wrap';
+    if (sec && sec.h) {
+      const h = document.createElement('p');
+      h.className = 'splash-sec';
+      h.textContent = String(sec.h);
+      wrap.appendChild(h);
+    }
+    if (sec && Array.isArray(sec.p)) {
+      sec.p.forEach(function (it) {
+        const p = document.createElement('p');
+        if (it && typeof it === 'object') {
+          if (it.h !== undefined) { p.className = 'splash-sub'; p.textContent = String(it.h); }
+          else if (it.b !== undefined) { p.className = 'splash-bullet'; p.textContent = String(it.b); }
+          else { p.className = 'splash-item'; p.textContent = String(it.t !== undefined ? it.t : ''); }
+        } else {
+          p.className = 'splash-item';
+          p.textContent = String(it);
+        }
+        wrap.appendChild(p);
+      });
+    }
+    container.appendChild(wrap);
+  });
+}
 
 // ===== 开屏公告远程化：notice.json 在线覆盖公告文案 =====
 // 用法：改 src/pwa/notice.json 内容 → 构建部署，开屏公告即更新（无需改代码）。
@@ -144,31 +185,7 @@
             });
           }
           // 章节：字符串=自动编号条目；{h}=子标题；{b}=子列表项
-          data.sections.forEach(function (sec) {
-            const wrap = document.createElement('div');
-            wrap.className = 'splash-sec-wrap';
-            if (sec && sec.h) {
-              const h = document.createElement('p');
-              h.className = 'splash-sec';
-              h.textContent = String(sec.h);
-              wrap.appendChild(h);
-            }
-            if (sec && Array.isArray(sec.p)) {
-              sec.p.forEach(function (it) {
-                const p = document.createElement('p');
-                if (it && typeof it === 'object') {
-                  if (it.h !== undefined) { p.className = 'splash-sub'; p.textContent = String(it.h); }
-                  else if (it.b !== undefined) { p.className = 'splash-bullet'; p.textContent = String(it.b); }
-                  else { p.className = 'splash-item'; p.textContent = String(it.t !== undefined ? it.t : ''); }
-                } else {
-                  p.className = 'splash-item';
-                  p.textContent = String(it);
-                }
-                wrap.appendChild(p);
-              });
-            }
-            list.appendChild(wrap);
-          });
+          renderSplashSections(list, data.sections);
         }
       } else if (Array.isArray(data.list)) {
         if (!data.list.length || data.hide) { notice.style.display = 'none'; return; }
@@ -183,6 +200,16 @@
         }
       } else if (data.hide) {
         notice.style.display = 'none';
+      }
+      // v3.8.y：其他常见问题解答 浮层——notice.json 的 faq 字段在线覆盖（无则保留模板兜底）
+      const faqBody = document.getElementById('splash-faq-body');
+      if (faqBody && data.faq && typeof data.faq === 'object') {
+        const fTitle = document.getElementById('splash-faq-title');
+        if (fTitle && data.faq.title !== undefined) fTitle.textContent = String(data.faq.title);
+        if (Array.isArray(data.faq.sections)) {
+          if (data.faq.sections.length) renderSplashSections(faqBody, data.faq.sections);
+          else faqBody.innerHTML = '';
+        }
       }
       // 公告渲染完成（或隐藏）→ 通知开屏重新判定"是否已滑到底"
       document.dispatchEvent(new Event('mochi-notice-rendered'));

@@ -3716,23 +3716,21 @@ try {
         if (edgeTimer) { clearTimeout(edgeTimer); edgeTimer = null; }
         edgeL.classList.remove('show'); edgeR.classList.remove('show'); edgeDir = 0;
       };
-      const inGrid = !!el.closest('.app-grid');
+      // v3.23.x：小图标（.app-grid 内）拖到屏幕边缘同样自动翻页——跨页移动的前提
       const onMove = (ev) => {
         ev.preventDefault();
         clone.style.left = (ev.clientX - offsetX) + 'px';
         clone.style.top = (ev.clientY - offsetY) + 'px';
-        if (!inGrid) {
-          const w = window.innerWidth;
-          const slides = pagesBox.querySelectorAll('.page-slide').length;
-          const cur = window.deskIdx ? window.deskIdx() : 0;
-          if (ev.clientX < EDGE && cur > 0) {
-            edgeL.classList.add('show');
-            if (edgeDir !== -1) { edgeDir = -1; if (edgeTimer) clearTimeout(edgeTimer); edgeTimer = setTimeout(() => { if (window.deskGo) window.deskGo(cur - 1); }, EDGE_DELAY); }
-          } else if (ev.clientX > w - EDGE && cur < slides - 1) {
-            edgeR.classList.add('show');
-            if (edgeDir !== 1) { edgeDir = 1; if (edgeTimer) clearTimeout(edgeTimer); edgeTimer = setTimeout(() => { if (window.deskGo) window.deskGo(cur + 1); }, EDGE_DELAY); }
-          } else { clearEdge(); }
-        }
+        const w = window.innerWidth;
+        const slides = pagesBox.querySelectorAll('.page-slide').length;
+        const cur = window.deskIdx ? window.deskIdx() : 0;
+        if (ev.clientX < EDGE && cur > 0) {
+          edgeL.classList.add('show');
+          if (edgeDir !== -1) { edgeDir = -1; if (edgeTimer) clearTimeout(edgeTimer); edgeTimer = setTimeout(() => { if (window.deskGo) window.deskGo(cur - 1); }, EDGE_DELAY); }
+        } else if (ev.clientX > w - EDGE && cur < slides - 1) {
+          edgeR.classList.add('show');
+          if (edgeDir !== 1) { edgeDir = 1; if (edgeTimer) clearTimeout(edgeTimer); edgeTimer = setTimeout(() => { if (window.deskGo) window.deskGo(cur + 1); }, EDGE_DELAY); }
+        } else { clearEdge(); }
         dropInfo = computeDrop(el, ev.clientX, ev.clientY);
         updateDropLine(dropInfo);
       };
@@ -3754,24 +3752,34 @@ try {
       document.addEventListener('pointercancel', onUp);
     }
 
+    function gridDropInfo(grid, dragged, clientX, clientY) {
+      const apps = Array.prototype.slice.call(grid.querySelectorAll('.app'))
+        .filter(a => a !== dragged && a.style.display !== 'none' && !a.hidden);
+      for (const a of apps) {
+        const r = a.getBoundingClientRect();
+        if (clientX < r.left + r.width / 2 && clientY < r.top + r.height / 2) {
+          return { type: 'grid', grid: grid, ref: a, before: true };
+        }
+      }
+      for (const a of apps) {
+        const r = a.getBoundingClientRect();
+        if (clientY < r.bottom) return { type: 'grid', grid: grid, ref: a, before: false };
+      }
+      if (apps.length) return { type: 'grid', grid: grid, ref: apps[apps.length - 1], before: false };
+      // v3.23.x：空网格返回 ref:null（配合 doDrop append），原实现返回 null=整格不可落
+      return { type: 'grid', grid: grid, ref: null, before: false };
+    }
     function computeDrop(dragged, clientX, clientY) {
       const inGrid = !!dragged.closest('.app-grid');
       if (inGrid) {
         const grid = dragged.closest('.app-grid');
-        const apps = Array.prototype.slice.call(grid.querySelectorAll('.app'))
-          .filter(a => a !== dragged && a.style.display !== 'none' && !a.hidden);
-        for (const a of apps) {
-          const r = a.getBoundingClientRect();
-          if (clientX < r.left + r.width / 2 && clientY < r.top + r.height / 2) {
-            return { type: 'grid', grid: grid, ref: a, before: true };
-          }
-        }
-        for (const a of apps) {
-          const r = a.getBoundingClientRect();
-          if (clientY < r.bottom) return { type: 'grid', grid: grid, ref: a, before: false };
-        }
-        if (apps.length) return { type: 'grid', grid: grid, ref: apps[apps.length - 1], before: false };
-        return null;
+        // v3.23.x：跨页——贴边翻页后当前页（deskIdx 立即更新）与图标原页不同，
+        // 落点改算【目标页网格】，返回 grid 型落点（doDrop 会把图标挪入该网格）
+        const slides = Array.prototype.slice.call(pagesBox.querySelectorAll('.page-slide'));
+        const curIdx = Math.max(0, Math.min(slides.length - 1, window.deskIdx ? window.deskIdx() : 0));
+        const curGrid = slides[curIdx] ? slides[curIdx].querySelector('.app-grid') : null;
+        if (curGrid && curGrid !== grid) return gridDropInfo(curGrid, dragged, clientX, clientY);
+        return gridDropInfo(grid, dragged, clientX, clientY);
       }
       const slides = Array.prototype.slice.call(pagesBox.querySelectorAll('.page-slide'));
       // 用 deskIdx()（go() 立即更新）而非 scrollLeft——翻页中途 scrollLeft 在两页之间会算错页
@@ -3815,6 +3823,8 @@ try {
 
     function doDrop(dragged, info) {
       if (info.type === 'grid') {
+        // v3.23.x：跨页移动——目标网格不是图标当前网格时先挪入目标网格（空网格 append）
+        if (dragged.parentNode !== info.grid) info.grid.appendChild(dragged);
         if (info.ref && dragged !== info.ref) {
           if (info.before) info.grid.insertBefore(dragged, info.ref);
           else info.grid.insertBefore(dragged, info.ref.nextSibling);

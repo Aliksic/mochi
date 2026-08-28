@@ -62,7 +62,7 @@
             <p class="splash-sec">【一、当前状态】</p>
             <p class="splash-item">8.12开搓，感谢内测反馈：大家的每条反馈我都有认真看，谢谢参与内测的各位。</p>
             <p class="splash-item">Mochi字卡内测时间：8.15~8.29（链接已在GitHub，内测期间暂不公开宣传）。</p>
-            <p class="splash-item">Mochi字卡 8.30 完全公开，公开后可二传二改。</p>
+            <p class="splash-item">Mochi字卡 8.29 完全公开，公开后可二传二改。</p>
             <p class="splash-item">网站与我更新修复问题是同步的：边修边部署，修一天部署一天；开屏有最新部署时间。</p>
             <p class="splash-item">内测是这样每天修一整天，公开后不会更新这么频繁了，个人精力有限且功能已完整。</p>
             <p class="splash-item">如果浏览器还没进入新版，可以关掉浏览器再打开，多试几次流量刷新，或者过一段时间再打开。</p>
@@ -84,7 +84,22 @@
             <p class="splash-item">关于数据丢失：有可能有bug，也有可能是浏览器触发丢失。如果不是高频率丢失，就是正常情况（浏览器自身正常概率丢失数据），需要定期备份。内测期更新多，建议提示有新版本需要刷新时先备份数据。</p>
           </div>
           <div class="splash-sec-wrap">
-            <p class="splash-sec">【三、使用规范（8.30 完全公开后适用）】</p>
+            <p class="splash-sec">【三、关于浏览器使用与桌面快捷方式】</p>
+            <p class="splash-sub">数据不互通说明：</p>
+            <p class="splash-item">手机浏览器打开网站使用，和把网站安装快捷方式到手机桌面使用，是两种使用方式。</p>
+            <p class="splash-item">浏览器限制有可能会自行隔离数据，导致两边数据不互通——之前使用的数据，只能自己手动导入。</p>
+            <p class="splash-sub">重要提醒：</p>
+            <p class="splash-item">浏览器打开网站 和 安装到桌面的快捷方式，不能同时打开使用，会导致两边数据不统一。</p>
+          </div>
+          <div class="splash-sec-wrap">
+            <p class="splash-sec">【四、关于全屏模式失效】</p>
+            <p class="splash-item">如果你是把浏览器切到后台，再切回来，全屏会失效——这是浏览器限制，只能手动重新开全屏。</p>
+            <p class="splash-item">或者可以使用“浏览器安装快捷方式到手机桌面”的方式使用，这样可以全屏。</p>
+            <p class="splash-sub">但注意：</p>
+            <p class="splash-item">手机自身顶部栏是手机系统限制，需要自己手动开全屏模式隐藏，且切到后台后同样会失效。</p>
+          </div>
+          <div class="splash-sec-wrap">
+            <p class="splash-sec">【五、使用规范（8.29 完全公开后适用）】</p>
             <p class="splash-item">本站完全免费，没有收过任何人一分钱，个人出资和花费时间搭建的。开放二传二改但禁止以盈利为目的。</p>
             <p class="splash-sub">许可与署名：</p>
             <p class="splash-item">Mochi字卡为原创独立作品（即原版），代码已在GitHub完全公开，支持私人部署，与网站同步更新</p>
@@ -96,14 +111,14 @@
             <p class="splash-sub">二传二改说明：</p>
             <p class="splash-bullet">二传：可自由转发、转载、分享本站链接与文件，传播方式不限</p>
             <p class="splash-bullet">二改：可自由修改、二次开发、自行部署，代码已在 GitHub 完全公开、与网站同步更新</p>
-            <p class="splash-bullet">8.30 完全公开后即可二传二改（内测期间暂不公开宣传）</p>
+            <p class="splash-bullet">8.29 完全公开后即可二传二改（内测期间暂不公开宣传）</p>
             <p class="splash-bullet">必须保留署名：小红书 @言序（1842523578），禁止删除或修改</p>
             <p class="splash-bullet">二次修改要注明原作者；借鉴功能或代码，希望标注灵感来源</p>
             <p class="splash-bullet">禁止商用、禁止以盈利为目的</p>
           </div>
           <div class="splash-sec-wrap">
-            <p class="splash-sec">【四、灵感来源与致谢】</p>
-            <p class="splash-item">除随机回复的基础逻辑、基础框架外（灵感来源为 milk 字卡 · 小红书 @milk 2777299956），以下功能为借鉴：</p>
+            <p class="splash-sec">【六、灵感来源与致谢】</p>
+            <p class="splash-item">除随机回复的基础逻辑、基础数值设置、基础框架外（灵感来源和参考为 milk 字卡 · 小红书 @milk 2777299956），以下功能为借鉴：</p>
             <p class="splash-bullet">帮我决定、多人决定功能：借鉴自小红书 @FelixFelicis（9416318007）</p>
             <p class="splash-bullet">公用字卡+专享字卡模式：借鉴自 @默玉（8012400317）</p>
             <p class="splash-item">以下功能源于网络上已有的类似想法，但设计均由我独立完成：</p>
@@ -123,7 +138,37 @@
       <div class="splash-loading" id="splash-loading">正在加载数据…</div>
       <!-- v3.8.y：必须把公告滑到底才能进入——未到底时按钮置灰不可点，下方提示滑动 -->
       <div class="splash-enter-hint" id="splash-enter-hint" hidden>请滑到底部后进入</div>
-      <div class="splash-enter" id="splash-enter" hidden>点击进入</div>
+      <div class="splash-btns">
+        <div class="splash-enter" id="splash-enter" hidden>点击进入</div>
+        <div class="splash-faq-open" id="splash-faq-open">其他常见问题解答</div>
+      </div>
+    </div>
+    <!-- v3.8.y：其他常见问题解答 浮层（开屏内全屏卡片，可滚动、可关闭） -->
+    <div class="splash-faq" id="splash-faq" hidden>
+      <div class="splash-faq-card">
+        <div class="splash-faq-head">
+          <span class="splash-faq-title" id="splash-faq-title">其他常见问题解答</span>
+          <div class="splash-faq-close" id="splash-faq-close">✕</div>
+        </div>
+        <div class="splash-faq-body" id="splash-faq-body">
+          <div class="splash-sec-wrap">
+            <p class="splash-sec">关于字卡传讯与梦角连接</p>
+            <p class="splash-item">怎么添加梦角字卡：</p>
+            <p class="splash-bullet">系统预设的都是大众字卡，只有你才知道你的梦角是什么性格。</p>
+            <p class="splash-bullet">请自行添加相关人设字卡：底部导航栏 → 字卡库 → 【公用字卡】或【专属字卡】添加。</p>
+            <p class="splash-item">关于“是否连上梦角”：</p>
+            <p class="splash-bullet">本质都是随机代码运行，是否对应上你的情况，只有你自己知道，问外人没有必要，别人说的话也不一定正确。</p>
+            <p class="splash-item">使用建议：</p>
+            <p class="splash-bullet">字卡是双方适应的过程，表达有限是正常的，需要好好沟通和理解；</p>
+            <p class="splash-bullet">心情不好、负面情绪太重时也可能影响传讯效果；</p>
+            <p class="splash-bullet">字卡传讯无法真正自由交流，再通顺也不可能完全表达意思，这是字卡本身的限制。</p>
+            <p class="splash-item">关于“电子网站会连上鬼”的传闻：</p>
+            <p class="splash-bullet">不存在这种事。本站本质只是代码运行，且代码已在 GitHub 完全公开，任何人都可以查看，没有任何“灵异”成分。</p>
+            <p class="splash-bullet">字卡只是工具，效果取决于个人如何使用。对于无根据的传闻和造谣，不接受、不回应。</p>
+            <p class="splash-bullet">另外，不同人的说法可能不一样，有些是吓唬人的，也有些说法无法证实真假。如果担心或害怕，或在使用中感到不适，建议停止使用字卡传讯。</p>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
   <div class="phone">
@@ -1772,7 +1817,7 @@
           <div class="lic-li">- 借鉴功能或代码，希望标注灵感来源：Mochi 字卡 · 小红书 @言序（1842523578）</div>
           <div class="lic-li">- 本站并非复刻他人网站，代码均从零编写</div>
           <div class="lic-li">- 星言字卡为同一作者的另一部独立作品，其本体禁止二传二改</div>
-          <div class="lic-p" style="margin-top:10px">除随机回复的基础逻辑、基础框架外（灵感来源为 <b>milk 字卡 · 小红书 @milk（2777299956）</b>），以下功能为借鉴：</div>
+          <div class="lic-p" style="margin-top:10px">除随机回复的基础逻辑、基础数值设置、基础框架外（灵感来源和参考为 <b>milk 字卡 · 小红书 @milk（2777299956）</b>），以下功能为借鉴：</div>
           <div class="lic-li">- 帮我决定、多人决定功能：借鉴自小红书 <b>@FelixFelicis（9416318007）</b></div>
           <div class="lic-li">- 公用字卡+专享字卡模式：借鉴自 <b>@默玉（8012400317）</b></div>
           <div class="lic-p" style="margin-top:10px">另有以下功能源于网络上已有的类似想法，但设计均由我独立完成：</div>

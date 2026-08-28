@@ -3480,3 +3480,31 @@ staticText: staticText
   1. chat.js `trySystemAutoSend()`（TA 自动发红包）漏声明钱包变量，随机触发即抛 `Uncaught ReferenceError: wallet is not defined` 且红包丢失——补 `const wallet = rpWalletGet();`（对齐 trySystemAskMochi/handleSendResponse 写法）。
   2. fullscreen.js `exitFs()` 未接住 `document.exitFullscreen()` 的 promise 拒绝（安卓切后台/换页瞬间文档非全屏态时 reject），加 `p.catch(() => {})` 兜底，仅消误报、不改行为。
 - node --check 均通过。仅改 src/js/chat.js + src/js/fullscreen.js，待构建者 node build.mjs 收口。
+
+### 2026-08-28（用户反馈：vivo自带/雨见 字卡批量导入没法上滑查看 + 公用/专属「导入数据」报文件未导入）
+- [本会话·已改 src·已构建·未提交] 两处修复：
+  1. **批量导入弹窗内容多时无法上滑**（主字卡/颜文字/emoji/拍一拍共用的 openModal 多行弹窗）：根因=安卓下 textarea 被转成 .ce-box 后随内容无限增高，弹窗撑满后触摸手势被 contenteditable 吃掉，.modal 自身滚动救不了。修复：base.css（**AI-B 域，跨域改动请 AI-B 审阅**）给 `.modal-textarea.ce-box` 加 `max-height:38vh + overflow-y:auto + overscroll-behavior:contain`，复用「帮我决定」dec-opts 的成熟方案（chat-main.css 同款）；标题/按钮恒可见，内容框内上滑。链接导入/全站 openModal 多行弹窗一并受益。
+  2. **公用/专属「导入数据」提示「文件里没有可导入的字卡」**：用户拿的是「设置→数据备份」导出的全量备份 json（mochi数据备份_*.json），旧逻辑只认字卡库导出格式 → 解析成功但识别不出字卡。修复（chatcard.js，AI-A 域）：① applyImportData 新增全量备份识别——按当前作用域从备份 ls/idb 里取 `xy-home-v2:cc-groups-public`（公用）/ `<activePrefix>:cc-groups`（专属，前缀失配时兜底取内容最多的专属键），解析成标准格式走正常导入，toast 带「（全量备份提取）」；② pickImportFile 的 accept 从 `.json` 放开为全文件（vivo/雨见对 accept 过滤会灰显/隐藏备份文件，同 v3.16.x 语音分类教训），读取后按内容校验；③ 剥 BOM + FileReader onerror 明确提示 + 失败 toast 带文件名/大小便于排查。
+- node --check 通过；node build.mjs 成功。真机（vivo/雨见）待用户回归：批量导入粘贴 100+ 行后框内上滑查看；全量备份 json 在公用/专属页「导入数据」应提示「已导入 N 张字卡（全量备份提取）」。
+- 未提交：请提交者/构建者 git diff 自查后统一收口（工作区另有此前会话遗留的 tools/*.mjs 改动与未跟踪诊断文件，非本会话产物）。
+
+### 2026-08-28（接上条：字卡导入修复收口，新增无头诊断）
+- 补充：新增 tools/diag-cc-import-backup.mjs（构建后无头 Chrome 实测，11/11 通过）——拦截动态 file input 注入备份 File，全链路走真实 pickFiles→FileReader→applyImportData：
+  A 专属导入全量备份→提取 <prefix>:cc-groups 且 merge 保留原有卡 ✓；B 公用导入同一备份→提取 cc-groups-public ✓；C 无关 json→「没有可导入的字卡」✓；D 带 BOM 字卡库 json 正常导入 ✓；E 批量导入弹窗 .ce-box max-height=38vh + overflow-y:auto ✓（390×844 实测 320.72px）。
+- 诊断曾抓到一版实现 bug：备份提取分支提前设 fmt 会让下方 `if (!fmt)` 字卡计数分支被跳过（imported 恒 0 → 误报「文件里没有可导入的字卡」），已改为 fromBackup 标记、计数后再补「（全量备份提取）」标签。
+- 注意：诊断脚本在全新 profile 需等 v3.11 首装迁移（cc-scope-migrated）落定后再播种，否则种子的专属键会被迁移搬进公用键（真机老用户无此问题，仅测试环境时序）。
+- 最终产物：node build.mjs 成功（sw mochi-mtchtkgg），npm run verify 10/10。未提交，请提交者统一收口。
+
+### 2026-08-28（第二轮：小米15Pro 九项 bug 清单，8 项已改 src·未构建）
+- 反馈来源：用户贴图（小米笔记 9 项 bug）。本轮 AI 改动均为 src 源文件，未 build、未提交。
+- bug1 桌面小图标不能跨页拖动（大插件可以）：personalize.js —— startDeskDrag 去掉 inGrid 门槛（小图标也吃边缘自动翻页）；新增 gridDropInfo()，computeDrop 对 .app-grid 内图标计算目标页网格落点；doDrop 网格分支先把 dragged appendChild 到目标网格再按序插入，按 app-icon-order-<data-app> 落盘。
+- bug2 每次进站都要关/开一次全屏：fullscreen.js —— FB_KEY（横屏兜底 CSS 全屏）是「永不自动清除」的闩，之前直接 applyFsCss(true) 后 return，用户永远停在 CSS 兜底。现改为：FB_KEY 命中时 applyFsCss(true) 后仍 syncToggle(false)+armRetry()；doRetry 的 FB_KEY 分支先尝试真全屏 enterFs()，1.5s 后按结果决定是否留在 CSS 兜底。首次手势即尝试原生全屏。
+- bug3 信件带表情/图片发送后重开只剩第一行：mobile-adapt.js —— 安卓 ce-box 值提取在媒体分支只平铺 childNodes，Chrome 把回车后内容包 <div> 导致第 2 行起全部丢失；改为递归 walker（DIV/P 换行+递归、IMG 对照 mail-media-mark 重建 image: 标记、文本节点按块前补 \n）。
+- bug4 TA 朋友圈远超每日上限：feed.js feedCfgFor —— 默认桌面 cid 走了 activeStore()（当前桌面联系人的配置），改为恒 storeFor(cid||'default')，消除跨桌面配置串扰导致的 dailyMax 失效。
+- bug5 房间「取消」标卡死点不动：无头复现（tools/diag-room-cancel.mjs）干净环境三条路径全通过 → 判定为异常残留态。room.js 三处防御：openRoom 先 banner(null) 清残留放置态；scene 委托点击把 #room-banner-cancel 判断挪到 if(mode) 之前；boot 加 document 捕获级兜底点击。注意：pickAction 可能随机弹 qa-mask 盖住按钮，真机上先关弹层再点。
+- bug6 问问TA单选题：选项框变形/文字出界/选项多时无法发送 —— #chat-ask-opts 的 ce-box 无限长把发送键顶出屏幕。chat-main.css 给 .ce-box.chat-ask-opts、chat-pages.css 给 .ce-box[data-for^="ta-opts-"] 加 max-height+overflow-y:auto+overscroll-behavior:contain。
+- bug8 每日情话省略号截断：home.css 新增 .mini-card #love-quote 两行 -webkit-line-clamp（卡片保持 77px 对齐带，不缩放）。
+- bug7 回复图片只显示「[图片]」：已定位未修 —— 键 >200KB 转 IDB-only + 快照剥离（feed/mail 快照把 dataURL 换成 [图片]）+ idbRestore 不稳定 + mailMergeFromIdb 本地(可能被剥离的)快照按 id 覆盖 IDB 全量记录。需要数据层专项，下轮处理。
+- bug9 打字/翻页卡顿：未排查，留待下轮。
+- 语法检查：本轮 5 个 js 文件 node --check 全过；diag-room-cancel 复跑 3/3 通过（脚本已加 dismissOverlays 抗 TA 随机弹层）。
+- 未构建：请构建者 git diff 自查后 node build.mjs 收口（工作区含前几轮多个会话的未提交改动，会一并打入）。

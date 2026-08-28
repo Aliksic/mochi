@@ -1696,6 +1696,11 @@
   resize:vertical; line-height:1.5;
 }
 .ta-add .ta-opts[hidden] { display:none; }
+/* v3.23.x：设置页添加表单的选项框（安卓转 .ce-box）同样限高 + 框内滚动，
+   防止选项多时把「添加」按钮顶出屏外（对齐 #chat-ask-opts / dec-opts 修法） */
+.ce-box[data-for^="ta-opts-"] {
+  max-height:176px; overflow-y:auto; overscroll-behavior:contain;
+}
 /* 问答历史 */
 .ta-h {
   border-bottom:1px solid rgba(0,0,0,.08); padding:10px 2px;

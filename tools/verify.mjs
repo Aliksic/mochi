@@ -108,7 +108,7 @@ async function runViewport(w, h) {
   await cdp('Page.navigate', { url: baseUrl + '/index.html' });
   await sleep(2500);
   for (let i = 0; i < 40; i++) { if (await evalJs('!!window.__mochiDataReady')) break; await sleep(300); }
-  await evalJs("(function(){var s=document.getElementById('splash');if(s&&!s.classList.contains('hide'))s.click();return true;})()");
+  await evalJs("(function(){var e=document.getElementById('splash-enter');if(e&&!e.hidden)e.click();var s=document.getElementById('splash');if(s&&!s.classList.contains('hide')){s.classList.add('hide');s.hidden=true;}return true;})()");
   await sleep(900);
 
   const home = JSON.parse(await evalJs("(function(){var ph=document.querySelector('.phone');var pr=ph.getBoundingClientRect();var st=document.querySelector('.statusbar');return JSON.stringify({zoom:getComputedStyle(ph).zoom,statusbar:getComputedStyle(st).display,phoneW:Math.round(pr.width),innerW:innerWidth});})()") || '{}');

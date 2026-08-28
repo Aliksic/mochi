@@ -1610,8 +1610,11 @@ if (comInput) comInput.addEventListener('keydown', (e) => { if (e.key === 'Enter
   // ================= TA 自动发布（定时机制，概率在回复设置-朋友圈调整，星言朋友圈机制） =================
   // v3.7.x：按「指定联系人桌面」读朋友圈回复设置（fd-*）——多桌面下各联系人
   // TA 用各自桌面的设置回应我的动态/回复；feedCfg() = 当前桌面
+  // v3.23.x：default 也固定读 default 桌面——原实现 default 走 activeStore()，
+  // 人停在别的桌面时 maybeAutoPostFor('default') 会拿【别桌】的 fd-* 设置
+  // （fd-post-daily-max 日上限串台回默认 5 条，表现为「设了 2 条照样狂发」）
   function feedCfgFor(cid) {
-    const s = (cid && cid !== 'default') ? window.storeFor(cid) : window.activeStore();
+    const s = window.storeFor(cid || 'default');
     const c = {};
     ['fd-like-prob', 'fd-like-speed-min', 'fd-like-speed-max', 'fd-comment-prob', 'fd-comment-speed-min', 'fd-comment-speed-max',
      'fd-reply-prob', 'fd-reply-speed-min', 'fd-reply-speed-max', 'fd-likeback-prob', 'fd-card-prob', 'fd-max-cards', 'fd-image-prob',
