@@ -103,6 +103,9 @@
   // v3.5.97：不受任何大小限制——按 IndexedDB / localStorage 实际数据全量导出。
   //   音乐文件、图片、聊天记录全部包含；导入时大键进 IndexedDB、小键进 localStorage，完整还原。
   async function doExport() {
+    // v3.xx：导出进度遮罩——大备份（音乐/语音/图片全量）读取+打包要花时间，
+    // 不能只弹一个 toast 让用户干等。复用 import 的进度遮罩，结束再隐藏。
+    impShow('正在导出…', '正在读取全部数据', 3);
     const data = { version: '1.0', app: 'mochi-zika', exportTime: new Date().toISOString(), ls: {}, idb: {} };
     const add = (k, v) => {
       // 大键只进 data.idb（单镜像，导入进 IndexedDB）；小键进 data.ls
@@ -124,7 +127,11 @@
     if (window.idbGetAllKeys) {
       let idbKeys = [];
       try { idbKeys = await window.idbGetAllKeys() || []; } catch (e) {}
+      const idbTotal = idbKeys.length;
+      let idbDone = 0;
       for (const k of idbKeys) {
+        idbDone++;
+        if (idbTotal) impShow('正在导出…', '正在读取全部数据 ' + idbDone + ' / ' + idbTotal, 8 + Math.round(idbDone / idbTotal * 60));
         try {
           if (k.indexOf('xy-home-v2:') !== 0) continue;
           if (k === SNAPSHOT_KEY) continue; // v3.7.0：副本键不进导出文件
@@ -149,6 +156,7 @@
         } catch (e) {} // 单键失败跳过，继续导出其余键
       }
     }
+    impShow('正在导出…', '正在打包数据文件', 72);
     const json = JSON.stringify(data);
     const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
     // v3.9.x：文件名用本地日期（原 toISOString 是 UTC，凌晨导出文件名会是前一天）
@@ -158,26 +166,26 @@
     try { localStorage.setItem('xy-home-v2:__last-backup', String(Date.now())); } catch (e) {}
     // v3.7.0：同步把导出 JSON 写入 IndexedDB 副本键——启动时若检测到数据丢失，
     // 可从此副本恢复。写入失败不提示（不影响导出本身，下次导出再尝试）。
+    impShow('正在导出…', '正在写入自动备份副本', 84);
     if (window.idbSet) {
       try { window.idbSet(SNAPSHOT_KEY, json); } catch (e) {}
     }
-    // v3.9.x：修复真我手机 Edge（Android Chromium）导出完全没反应——
-    // 直接合成 a.click() 下载在该环境下会被浏览器静默拦截（需用户激活且下载行为受限）。
-    // 三级降级保存 + 被拦截时给一次「带新用户手势」的重试：
-    // ① 系统分享面板 navigator.share（Android 上可存到文件管理 / 发微信、QQ，最直观）
-    // ② 系统保存框 showSaveFilePicker（File System Access API，Android Chrome/Edge 86+ 支持）
-    // ③ 传统 a[download] 下载（必须先挂载 DOM 再 click，未挂载时部分浏览器不触发）
+    // v3.9.x：修复真我手机 Edge（Android Chromium）导出完全没反应……
+    // 三级降级保存：① 系统分享面板 navigator.share ② 系统保存框 showSaveFilePicker
+    // ③ 传统 a[download] 下载。前两者会弹系统原生界面由用户确认保存位置；
+    // 第三种不再静默自动下载——统一改为先弹「备份已打包完成」确认框，用户点「确定」
+    // 后才真正触发下载，避免"文件还没经用户同意就悄悄存好了"。
+    impShow('正在导出…', '正在准备保存文件', 92);
     const saveRes = await saveBackupFile(blob, fname);
+    impHide();
     if (saveRes === 'ok') { toast('数据已导出（' + sizeKB + ' KB，全部数据完整）'); return; }
     if (saveRes === 'cancel') { toast('已取消保存'); return; }
-    // 被拦截 / 无法确认：数据已打包好，给用户一次新鲜手势的重试机会
+    // 原生分享/保存框不可用或未成功：数据已打包好，需要用户点「确定」才真正下载
     if (window.openModal) {
-      window.openModal('备份已打包完成（' + sizeKB + ' KB）', '', async () => {
-        const retry = await saveBackupFile(blob, fname);
-        if (retry === 'ok') toast('数据已导出（' + sizeKB + ' KB，全部数据完整）');
-        else if (retry === 'cancel') toast('已取消保存');
-        else toast('仍未弹出保存面板。备份已自动存到本机缓存，可稍后从「导入数据」恢复');
-      }, { noInput: true, staticText: '系统没有自动弹出分享/保存面板，通常是浏览器下载限制或系统权限导致。\n点「确定」再试一次（数据已打包好，无需重新等待）。\n若仍不行：\n· 检查系统设置-应用-浏览器，打开「后台弹出界面」权限\n· 或从「导入数据」用本机缓存副本恢复（备份已自动存好）' });
+      window.openModal('备份已打包完成（' + sizeKB + ' KB）', '', () => {
+        if (anchorDownload(blob, fname)) toast('数据已导出（' + sizeKB + ' KB，全部数据完整）');
+        else toast('仍未触发下载。备份已自动存到本机缓存，可稍后从「导入数据」恢复');
+      }, { noInput: true, staticText: '数据已经打包好，还没开始保存。\n点「确定」开始下载保存到本机，点「取消」放弃本次保存。\n（自动备份副本已额外存入本机缓存，随时可从「导入数据」恢复）' });
     } else {
       toast('备份已存到本机缓存（' + sizeKB + ' KB），可从「导入数据」恢复');
     }
@@ -213,7 +221,16 @@
         if (e && e.name === 'AbortError') return 'cancel';
       }
     }
-    // ③ 传统下载（挂 DOM 再 click）
+    // ③ 传统 a[download] 下载：不再在本函数里静默触发——合成 a.click() 在部分浏览器
+    // 会未经用户同意就悄悄下载。统一交给调用方在「备份已打包完成」确认弹窗点「确定」后
+    // 调用 anchorDownload(blob, fname)（此时是有效用户手势，Android Chromium 也不再被拦截），
+    // 返回 'blocked' 表示需要用户确认后才下载。
+    return 'blocked';
+  }
+
+  // v3.xx：真正执行 <a download> 下载。只在用户点「确定」（有效用户手势）后调用，
+  // 保证下载前一定有用户同意，同时解决此前"自动 a.click() 静默下载/被拦截"的问题。
+  function anchorDownload(blob, fname) {
     try {
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
@@ -221,9 +238,8 @@
       document.body.appendChild(a);
       a.click();
       setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
-    } catch (e) {}
-    // 无法确认是否真触发了下载（被拦截会静默失败）→ 交给调用方提示重试/兜底
-    return 'blocked';
+      return true;
+    } catch (e) { return false; }
   }
 
   // v3.5.101：导入前预览备份摘要——显示导出时间/键数/聊天条数/头像/摸鱼累计，

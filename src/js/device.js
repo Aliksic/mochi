@@ -977,20 +977,44 @@
     // v3.16.x：clipboard.writeText 在权限被拒/WebView 剪贴板不可用时可能永不 settle
     //（headless、部分 IAB 实测 Promise 悬空），会导致「复制诊断信息」弹窗永远不弹。
     // 加 1.5s 超时兜底：超时按复制失败处理，流程照常走到弹窗。
+    //
+    // v3.26.x：用户反馈「点【复制】没弹窗、还把网页刷了」。根因两类：
+    // ① 复制结果只写回弹窗顶部提示行，且内容与打开时几乎相同 → 看不出有反馈；
+    // ② 部分安卓 WebView 对 navigator.clipboard.writeText 会弹系统权限/卡死甚至
+    //    整页重载。改：复制优先走原生 document.execCommand('copy')（divination.js
+    //    长期在用，无权限体系、不重载），失败再回退 clipboard API；bottom toast 兜底反馈。
     return new Promise(function (resolve) {
       let done = false;
       const finish = function (ok) { if (done) return; done = true; resolve(ok); };
-      let started = false;
+      // 回退 1：clipboard API（execCommand 不可用/返回 false 时）
+      function fallbackClipboard() {
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(t).then(function () { finish(true); }).catch(function () { finish(false); });
+          } else { finish(false); }
+        } catch (e) { finish(false); }
+      }
       try {
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          started = true;
-          navigator.clipboard.writeText(t).then(function () { finish(true); }).catch(function () { finish(false); });
-        }
-      } catch (e) {}
-      if (!started) { finish(false); return; }
+        const ta = document.createElement('textarea');
+        ta.value = t;
+        ta.setAttribute('readonly', '');
+        ta.style.cssText = 'position:fixed;left:-9999px;top:0;width:10px;height:10px;opacity:0;';
+        document.body.appendChild(ta);
+        ta.focus();
+        try { ta.select(); } catch (e) {}
+        let ok = false;
+        try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+        setTimeout(function () { try { document.body.removeChild(ta); } catch (e2) {} }, 800);
+        if (ok) { finish(true); return; }
+        fallbackClipboard();
+      } catch (e) { fallbackClipboard(); }
+      // 回退 2：1.5s 超时兜底（async 路径永不 settle 时）
       try { setTimeout(function () { finish(false); }, 1500); } catch (e) {}
     });
   }
+  // v3.26.x：复制/导出按钮的可见反馈——bottom toast（全站统一反馈），
+  // 复制结果不再只写进弹窗顶部提示行（那行内容与打开时几乎一样，用户看不出变化）。
+  function diagToast(msg) { try { if (typeof window.toast === 'function') window.toast(msg); } catch (e) {} }
   // ===== v3.25.x：导出 txt =====
   // 诊断文本变长后，部分安卓 IAB/WebView 剪贴板对大文本静默截断或失败——
   // 下载成文件再经聊天 App 发送最稳。Blob + a[download]（iOS 13+/安卓 Chrome
@@ -1055,6 +1079,9 @@
         try { refreshBadge(); } catch (e) {}
       });
       copyText(text).then(function (ok) {
+        // v3.26.x：自动复制结果连同 bottom toast 一起给，避免「打开时提示&复制后提示
+        // 长得几乎一样、点了没反应」的观感。
+        diagToast(ok ? '诊断信息已复制，可直接粘贴发给开发者' : '自动复制失败，请点下方【复制】重试');
         const tip = ok
           ? '诊断信息已复制到剪贴板，直接粘贴发给开发者即可。\n（下方内容可再核对）'
           : '自动复制失败，请点下方【复制】按钮重试，或长按选字手动复制。';
@@ -1074,9 +1101,9 @@
               label: '复制',
               fn: function (ctl) {
                 copyText(ctl ? ctl.text() : text).then(function (ok2) {
-                  if (ctl && ctl.hint) {
-                    ctl.hint(ok2 ? '已复制到剪贴板，直接粘贴发给开发者即可。' : '复制失败，请长按选字手动复制。');
-                  }
+                  const m2 = ok2 ? '已复制到剪贴板，直接粘贴发给开发者即可。' : '复制失败，请长按选字手动复制。';
+                  if (ctl && ctl.hint) ctl.hint(m2);
+                  diagToast(ok2 ? '已复制到剪贴板' : '复制失败，请长按选字手动复制');
                 });
               }
             },
@@ -1085,9 +1112,9 @@
               label: '导出txt',
               fn: function (ctl) {
                 const okDl = exportTxt(ctl ? ctl.text() : text);
-                if (ctl && ctl.hint) {
-                  ctl.hint(okDl ? '已开始下载 txt 文件（见浏览器下载列表），直接发送该文件即可。' : '当前内核不支持下载，请用【复制】或长按选字手动复制。');
-                }
+                const m3 = okDl ? '已开始下载 txt 文件（见浏览器下载列表），直接发送该文件即可。' : '当前内核不支持下载，请用【复制】或长按选字手动复制。';
+                if (ctl && ctl.hint) ctl.hint(m3);
+                diagToast(okDl ? '已开始下载 txt 文件' : '当前内核不支持下载，请用【复制】复制');
               }
             }
           });

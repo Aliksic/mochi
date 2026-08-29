@@ -43,6 +43,7 @@
   let progressTimer = null;
   let floatClosed = false;   // 悬浮小框手动收起
   let floatMin = false;      // 悬浮小框是否处于最小（最初版最小单行小框）状态
+  let floatHideByWidget = false; // 桌面小组件触发播放时抑制悬浮小框自动唤出（小组件本身就是控制器，避免重复弹出）
   let taActive = false;      // TA 请求过一起听歌后置 true，歌曲结束 TA 可能接动作
   let cooldownAt = 0;        // TA 音乐请求冷却时间戳
   let reqData = null;        // 待确认的 TA 请求 {trackId}
@@ -2356,9 +2357,10 @@
     audio.onpause = function () { syncPlayIcons(false); try { if (navigator.mediaSession) navigator.mediaSession.playbackState = 'paused'; } catch (e) {} try { window.__musicPlaying = false; } catch (e) {} // v3.10.x：非用户暂停（后台省电/音频焦点抢占/系统打断）→ 定时补播反击
       if (wantPlay && !callHoldPending) scheduleBgResume(); };
   }
-  function playTrack(id) {
+  function playTrack(id, fromWidget) {
     const m = findTrack(id);
     if (!m) return;
+    markFloatSource(fromWidget);
     // v3.6.x：重置 https 重试标记——_httpsRetried 在 retryWithHttpsUrl 里设 true 后
     // 永不重置，导致后续每次播放都先尝试失败的原始 URL 被混合内容拦截，
     // catch 不区分错误类型当"自动播放拦截"处理 → toast"被浏览器拦截"。
@@ -2456,10 +2458,11 @@
       if (fDur) fDur.textContent = fmtDur(audio.duration);
     }, 500);
   }
-  function toggle() {
+  function toggle(fromWidget) {
+    markFloatSource(fromWidget);
     if (!audio || !currentId) {
       const songs = library.filter(m => !m.playlistId || m.playlistId === 'default');
-      if (songs.length) { playTrack(songs[0].id); return; }
+      if (songs.length) { playTrack(songs[0].id, fromWidget); return; }
       toast('音乐库还没有歌曲');
       return;
     }
@@ -2741,7 +2744,8 @@
       });
     });
   }
-  function next() {
+  function next(fromWidget) {
+    markFloatSource(fromWidget);
     // v3.x：播放队列优先——用户点「下一首播放」加入的歌先播，逐首弹出直至清空，
     // 才回到按播放模式切歌。队列里的歌被删则跳过继续取下一首。
     while (playQueue.length) {
@@ -2759,15 +2763,16 @@
       idx = idx < 0 ? -1 : idx;
       nid = list[(idx + 1) % list.length].id;
     }
-    playTrack(nid);
+    playTrack(nid, fromWidget);
   }
-  function prev() {
+  function prev(fromWidget) {
+    markFloatSource(fromWidget);
     const list = playableList();
     if (!list.length) return;
     const idx = list.findIndex(x => x.id === currentId);
     // v3.6.x：当前歌不在可播列表（idx=-1）时取最后一首，而不是 (idx-1+len)%len=len-2 的倒数第二首
-    if (idx < 0) { playTrack(list[list.length - 1].id); return; }
-    playTrack(list[(idx - 1 + list.length) % list.length].id);
+    if (idx < 0) { playTrack(list[list.length - 1].id, fromWidget); return; }
+    playTrack(list[(idx - 1 + list.length) % list.length].id, fromWidget);
   }
   function cycleMode() {
     const order = ['list', 'shuffle', 'single'];
@@ -2856,6 +2861,13 @@
 
   // ================= 悬浮小框 =================
   function isFloatOn() { return settings.floatEn && !floatClosed && currentId && audio; }
+  // 播放入口标记：桌面小组件本身就是播放控制器，凡由小组件触发的播放/暂停/切歌，
+  // 一律抑制悬浮小框自动唤出（无论当前小框是否可见），避免「在桌面第二页小组件上点
+  // 播放，还叠加弹出一个小浮窗」的重复控制；来自其他任何入口（音乐页/底部播放条/
+  // 队列/列表/小框本身）→ 清除抑制，恢复正常显隐
+  function markFloatSource(fromWidget) {
+    floatHideByWidget = !!fromWidget;
+  }
   // 悬浮小框 收起/展开：在新版多行小框 与 最初版最小单行小框 之间切换
   function applyFloatMin() {
     const el = document.getElementById('sm-float');
@@ -2870,7 +2882,7 @@
     const el = document.getElementById('sm-float');
     if (!el) return;
     const m = findTrack(currentId);
-    el.hidden = !(settings.floatEn && !floatClosed && currentId && audio && m);
+    el.hidden = !(settings.floatEn && !floatClosed && currentId && audio && m) || floatHideByWidget;
     applyFloatMin();
     if (!m) return;
     document.getElementById('sm-f-name').textContent = m.name || '未知歌曲';
@@ -2892,6 +2904,7 @@
   window.musicFloatSet = function (en) {
     settings.floatEn = !!en;
     floatClosed = false;
+    floatHideByWidget = false; // 用户显式操作悬浮小窗开关 → 清除小组件抑制
     saveSettings();
     syncFloatToggle();
     renderFloat();
@@ -3547,7 +3560,7 @@
     const cool = document.getElementById('sm-set-cool');
     if (cool) cool.addEventListener('change', () => { settings.cooldownMs = Number(cool.value); saveSettings(); });
     const floatCb = document.getElementById('sm-set-float');
-    if (floatCb) floatCb.addEventListener('change', () => { settings.floatEn = floatCb.checked; saveSettings(); syncFloatToggle(); renderFloat(); });
+    if (floatCb) floatCb.addEventListener('change', () => { settings.floatEn = floatCb.checked; floatHideByWidget = false; saveSettings(); syncFloatToggle(); renderFloat(); });
     const wcov = document.getElementById('sm-set-wcov');
     if (wcov) wcov.addEventListener('change', () => {
       settings.widgetCoverMode = wcov.value;
@@ -3570,11 +3583,11 @@
     const knob = document.getElementById('mw-knob');
     const curEl = document.getElementById('mw-cur');
     const durEl = document.getElementById('mw-dur');
-    if (playBtn) playBtn.addEventListener('click', toggle);
+    if (playBtn) playBtn.addEventListener('click', () => toggle(true));
     if (modeBtn) modeBtn.addEventListener('click', cycleMode);
     if (queueBtn) queueBtn.addEventListener('click', openQueuePanel);
-    if (prevBtn) prevBtn.addEventListener('click', prev);
-    if (nextBtn) nextBtn.addEventListener('click', next);
+    if (prevBtn) prevBtn.addEventListener('click', () => prev(true));
+    if (nextBtn) nextBtn.addEventListener('click', () => next(true));
     if (heartBtn) {
       heartBtn.addEventListener('click', () => {
         const m = findTrack(currentId);
@@ -3714,6 +3727,7 @@
     fToggle.addEventListener('change', () => {
       settings.floatEn = fToggle.checked;
       floatClosed = false;
+      floatHideByWidget = false; // 用户显式操作悬浮小窗开关 → 清除小组件抑制
       saveSettings();
       renderFloat();
     });

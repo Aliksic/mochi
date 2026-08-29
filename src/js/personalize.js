@@ -631,12 +631,19 @@ try {
         window.openModal('修改昵称', el.textContent, (v) => {
           const val = (v || '').trim();
           if (val) {
+            // v3.26.x：改前先记有效昵称（聊天独立昵称 cs-lbl-partner 优先）——变化时接入
+            // 系统消息昵称清扫，与 chat-settings / contacts 改名路径行为一致
+            let oldEff = '';
+            if (key === 'lbl-partner') oldEff = store.get('cs-lbl-partner') || store.get('lbl-partner') || 'TA';
             el.textContent = val;
             store.set(key, val);
-            // 同步聊天页顶部标题（联系人的昵称）
+            // 同步聊天页顶部标题——必须走 renderChatHeader（按 cs-lbl-partner 优先解析）：
+            // 直写 textContent 会把已设置的「聊天独立昵称」顶掉（反馈：设置了独立仍显示桌面名）
             if (key === 'lbl-partner') {
-              const pname = document.getElementById('chat-partner-name');
-              if (pname) pname.textContent = val;
+              if (window.renderChatHeader) { try { window.renderChatHeader(); } catch (e) {} }
+              else { const pname = document.getElementById('chat-partner-name'); if (pname) pname.textContent = val; }
+              const newEff = store.get('cs-lbl-partner') || store.get('lbl-partner') || 'TA';
+              if (newEff !== oldEff) { try { if (window.chatSysNickChanged) window.chatSysNickChanged(oldEff); } catch (e) {} }
             }
           }
         }, { maxlength: 12 });
@@ -794,17 +801,30 @@ try {
 
   // 壁纸只在桌面显示：桌面时铺满全屏，切到字卡库/设置/聊天时隐藏（数据保留）
   const bgData = () => sanitizeBg('phone-bg', BG_SAFE_LIMIT);
+  const bgPresetCss = () => {
+    const n = getBgPresetName();
+    if (!n) return '';
+    const p = BG_PRESETS.find(b => b.name === n);
+    return p ? p.css : '';
+  };
   const applyBgVisibility = () => {
     if (!phoneEl) return;
     const home = document.getElementById('page-phone');
-    const show = home && !home.hidden && bgData();
-    if (show) {
-      phoneEl.style.backgroundImage = 'url("' + bgData() + '")';
-      phoneEl.style.backgroundSize = 'cover';
-      phoneEl.style.backgroundPosition = 'center';
-      phoneEl.style.backgroundAttachment = 'scroll';
-      applyBodyBg(bgData());
-    } else {
+    const show = home && !home.hidden;
+    if (!show) {
+      phoneEl.style.backgroundImage = '';
+      applyBodyBg(null);
+      return;
+    }
+    // v3.26.x：修复「内置壁纸预设没应用到桌面」——此前只判断自定义 phone-bg，
+    // 预设（phone-bg-preset）只靠加载时 applyPhoneBgPreset 一次性铺上，任何
+    // tab 切换触发 applyBgVisibility 都会因 bgData() 为空把预设壁纸清掉。
+    // 现在自定义图优先、其次内置预设，都没有才清空。
+    const customBg = bgData();
+    const presetCss = bgPresetCss();
+    if (customBg) applyPhoneBg(customBg);
+    else if (presetCss) applyPhoneBgPreset(presetCss);
+    else {
       phoneEl.style.backgroundImage = '';
       applyBodyBg(null);
     }
@@ -1797,12 +1817,16 @@ try {
   function applyScheme(idx, m) {
     const s = getSchemes()[idx];
     if (!s || !window.openModal) return;
-    window.openModal('应用方案「' + s.name + '」？', '', (v) => {
+    // v3.26.x：预选中唯一「应用」pill——noInput 弹窗只点底部「确定」时 fire() 传
+    // pillVal=null → v!=='ok' 静默不应用（与「恢复默认桌面/删除方案」同因同修）
+    const ctl = window.openModal('应用方案「' + s.name + '」？', '', (v) => {
       if (v !== 'ok') return;
       applyBeautyData(s.data || {});
+      hideSchemeModal(m); // 与聊天方案 applyChatScheme 一致：应用成功先关管理弹层，避免残留到刷新
       toast('已应用「' + s.name + '」，刷新生效');
       setTimeout(() => location.reload(), 800);
     }, { noInput: true, staticText: '将覆盖当前桌面的美化设置，刷新生效', pills: [{ label: '应用', value: 'ok' }] });
+    if (ctl && ctl.pills) ctl.pills([{ label: '应用', value: 'ok' }], 'ok');
   }
   function deleteScheme(idx, m) {
     const s = getSchemes()[idx];
@@ -2559,7 +2583,9 @@ try {
   const resetDeskRow = document.getElementById('row-desk-reset');
   if (resetDeskRow) {
     resetDeskRow.addEventListener('click', () => {
-      window.openModal('恢复默认桌面', '将恢复桌面卡片布局与页数，桌面恢复为默认三页（每页已设置的背景图与图标不受影响）。确定继续？', (v) => {
+      // v3.26.x：预选中唯一「确定恢复默认」pill——noInput 弹窗只点底部「确定」时
+      // fire() 传 pillVal=null → 静默不执行（反馈"点了没反应"）。与删除方案同因同修。
+      const ctl = window.openModal('恢复默认桌面', '将恢复桌面卡片布局与页数，桌面恢复为默认三页（每页已设置的背景图与图标不受影响）。确定继续？', (v) => {
         if (v !== '1') return;
         // v3.10.x 修复：恢复默认后第三页「经期」小组件消失——原先 remove 掉
         // desk-page-count 后按默认 2 页收缩，静态第三页被整页删除，desk-period
@@ -2654,6 +2680,7 @@ try {
         }, 100);
         toast('已恢复默认桌面');
       }, { noInput: true, pills: [{ label: '确定恢复默认', value: '1' }] });
+      if (ctl && ctl.pills) ctl.pills([{ label: '确定恢复默认', value: '1' }], '1');
     });
   }
   buildDeskPages();

@@ -2248,9 +2248,30 @@
       if (window.hydrateLibScopes) window.hydrateLibScopes(['public', 'own']);
     } catch (e) {}
   }
+  // v3.28.x（修「还有手机没解决」第二层根因）：groups 变量在脚本加载期用 store 初始化，
+  // 而冷启动时 idbRestore 尚未把大键写进 memoryCache → groups 停在空值；restore 完成后
+  // applyRestored 只在「IDB 内容严格多于本地」时刷新 groups（本地已被回填、数量相等时
+  // 跳过）→ groups 整会话空、回复池 getter 只读得到公用字卡，自定义字卡（尤其专属库）
+  // 在用户没开过字卡库页前永不进入回复池，联系人只会发默认/兜底那几条系统预设字卡。
+  // 这里在回复池 getter 里兜底：groups 为空但当前作用域 store 已有数据时按需重载一次
+  //（重载后仍走缓存，不每次重新解析大键；编辑中 groups 非空时不动它，不打断未保存编辑）。
+  function replyScopeGroups() {
+    try {
+      let hasAny = false;
+      for (let i = 0; i < CC_TYPES.length; i++) { if ((groups[CC_TYPES[i]] || []).length) { hasAny = true; break; } }
+      if (!hasAny) {
+        const raw = curStore().get(curKey());
+        if (raw) {
+          const g = buildGroupsFrom(raw);
+          for (let i = 0; i < CC_TYPES.length; i++) { if ((g[CC_TYPES[i]] || []).length) { groups = g; break; } }
+        }
+      }
+    } catch (e) {}
+    return groups;
+  }
   window.getCustomCards = function () {
     maybeHydrateReplyPool();
-    const g = mergeWithPublic(groups);
+    const g = mergeWithPublic(replyScopeGroups());
     const out = [];
     Object.keys(g).forEach(t => g[t].forEach(([name, arr]) => arr.forEach(c => out.push(c))));
     return out;
@@ -2258,14 +2279,14 @@
   // 拍一拍字卡（自定义字卡里【拍一拍】分类）
   window.getPokeCards = function () {
     maybeHydrateReplyPool();
-    const g = mergeWithPublic(groups);
+    const g = mergeWithPublic(replyScopeGroups());
     const out = [];
     (g['poke'] || []).forEach(([name, arr]) => arr.forEach(c => out.push(c)));
     return out;
   };
   // 拍一拍分组（分组名 + 字卡数组），供拍一拍页面展示
   window.getPokeGroups = function () {
-    return (mergeWithPublic(groups)['poke'] || []).slice();
+    return (mergeWithPublic(replyScopeGroups())['poke'] || []).slice();
   };
   // 媒体字卡：表情包/图片 的图片 dataURL 列表、语音（文件名|||音频）列表（供回复/表情面板）
   // v3.11.x：链接导入的 http(s) 图片字卡同样放行（聊天气泡按 type 渲染 <img src>，
@@ -2275,7 +2296,7 @@
   }
   window.getMediaCards = function (type) {
     maybeHydrateReplyPool();
-    const g = mergeWithPublic(groups);
+    const g = mergeWithPublic(replyScopeGroups());
     const out = [];
     (g[type] || []).forEach(([name, arr]) => arr.forEach(c => {
       if (type === 'voice') {
@@ -2289,7 +2310,7 @@
   };
   // 媒体分组：表情包/图片 的分组结构（供表情面板展示）
   window.getMediaGroups = function (type) {
-    const g = mergeWithPublic(groups);
+    const g = mergeWithPublic(replyScopeGroups());
     return (g[type] || []).map(([name, arr]) => [name, arr.filter(isMediaImg)]);
   };
   // v3.11.x：按作用域取分组（不合并）——聊天页拍一拍/表情包面板三分区展示：
@@ -2328,7 +2349,7 @@
   // v3.11.x：For 系列同样合并公用字卡——朋友圈/信箱/群聊等按联系人取池时，
   // 公用字卡对该联系人生效（专属部分仍读各自桌面）
   window.getCustomCardsFor = function (cid) {
-    maybeHydrateReplyPool();
+    try { if (window.hydrateLibForCid) window.hydrateLibForCid(cid); } catch (e) {}
     const raw = (window.storeFor && window.storeFor(cid) || window.xyStore('xy-home-v2:' + cid)).get('cc-groups');
     const g = mergeWithPublic(buildGroupsFrom(raw));
     const out = [];
@@ -2336,7 +2357,7 @@
     return out;
   };
   window.getPokeCardsFor = function (cid) {
-    maybeHydrateReplyPool();
+    try { if (window.hydrateLibForCid) window.hydrateLibForCid(cid); } catch (e) {}
     const raw = (window.storeFor && window.storeFor(cid) || window.xyStore('xy-home-v2:' + cid)).get('cc-groups');
     const g = mergeWithPublic(buildGroupsFrom(raw));
     const out = [];
@@ -2344,7 +2365,7 @@
     return out;
   };
   window.getMediaCardsFor = function (cid, type) {
-    maybeHydrateReplyPool();
+    try { if (window.hydrateLibForCid) window.hydrateLibForCid(cid); } catch (e) {}
     const raw = (window.storeFor && window.storeFor(cid) || window.xyStore('xy-home-v2:' + cid)).get('cc-groups');
     const g = mergeWithPublic(buildGroupsFrom(raw));
     const out = [];
@@ -2640,11 +2661,14 @@
   function hydFullKey(scope) {
     return scope === 'public' ? (PUB_PREFIX + ':' + PUB_KEY) : (window.activePrefix() + ':cc-groups');
   }
-  function hydrateScope(scope) {
+  // v3.27.x：按指定联系人取回其字卡键——群聊/跨桌面取池时各成员桌面的 cc-groups
+  // 大键可能被启动回填挂起，For 系列 getter 此前只触发当前桌面取回，群聊成员回复
+  // 池因此读成空库落 FALLBACK_REPLIES。cid 传空时按当前桌面语义（hydrateScope）。
+  function hydrateScope(scope, cid) {
     if (!window.idbHydrateKey) return Promise.resolve(false);
     let fullKey = '', deferred = false;
     try {
-      fullKey = hydFullKey(scope);
+      fullKey = cid ? ('xy-home-v2:' + cid + ':cc-groups') : hydFullKey(scope);
       deferred = Array.isArray(window.__xyIdbDeferredKeys) && window.__xyIdbDeferredKeys.indexOf(fullKey) >= 0;
     } catch (e) {}
     // v3.25.x（修「字卡数据没有加载」iOS 高发）：此前只认挂起名单——回填链在 iOS
@@ -2654,7 +2678,11 @@
     if (!deferred && hydAbsent[fullKey]) return Promise.resolve(false);
     if (!deferred) {
       let hasData = false;
-      try { hasData = scope === 'public' ? !!pubStore().get(PUB_KEY) : !!store.get('cc-groups'); } catch (e) {}
+      try {
+        hasData = cid
+          ? !!(window.storeFor && window.storeFor(cid).get('cc-groups'))
+          : (scope === 'public' ? !!pubStore().get(PUB_KEY) : !!store.get('cc-groups'));
+      } catch (e) {}
       if (hasData) return Promise.resolve(false);
     }
     if (hydInflight[fullKey]) return hydInflight[fullKey];
@@ -2698,6 +2726,38 @@
   };
   window.libScopesDeferred = function (scopes) {
     return libScopesDeferred(Array.isArray(scopes) && scopes.length ? scopes : ['public', 'own']);
+  };
+  // v3.28.x：回复路径专用取回——单发聊天回复池只依赖 当前联系人专属字卡 + 公用字卡。
+  // hydrateLibScopes 按「公用→专属」串行链式排队，公用大键在慢 IDB（iOS 挂后台杀连接、
+  // 大图字卡库）上会拖住后续专属键，回复路径等不到专属键就绪，池子一直读空落兜底
+  // 预设卡（用户反馈「还是有手机没解决」）。这里直取指定作用域（own 优先），不等公用，
+  // 公用由调用方随后后台补取。仍走 hydrateScope 的 in-flight 去重 + absent 缓存。
+  window.hydrateReplyScope = function (scope, done) {
+    return hydrateScope(scope === 'public' ? 'public' : 'own').then(function (ok) {
+      if (done) { try { done(ok); } catch (e) {} }
+      return true;
+    });
+  };
+  // v3.27.x：按指定联系人取回其字卡键（群聊/跨桌面取池用）——某成员桌面 cc-groups
+  // 大键被启动回填挂起时，群聊成员回复池会读成空库落 FALLBACK_REPLIES。目标 cid
+  // 不是当前桌面时，只取回 公用键 + 该 cid 专属键（不扰动当前桌面）；是当前桌面
+  // 则与 hydrateLibScopes 同一语义。仍按需拉一把，不在启动链路/后台自动取回。
+  window.hydrateLibForCid = function (cid, done) {
+    const cur = window.__activeCid || 'default';
+    let p;
+    if (!cid || cid === cur) {
+      p = hydrateLibScopes(['public', 'own']);
+    } else {
+      libHydChain = libHydChain
+        .then(() => hydrateScope('public'))
+        .then(() => hydrateScope('own', cid))
+        .catch(() => {});
+      p = libHydChain;
+    }
+    return p.then(function () {
+      if (done) { try { done(); } catch (e) {} }
+      return true;
+    });
   };
   // 字卡库列表页每次显示时兜底取回（覆盖「冷启动直接进字卡库」「切完桌面进字卡库」）
   // v3.25.x：显示时无条件 hydrateLibScopes（内部自判断：有数据/已确认无键都是零开销跳过，

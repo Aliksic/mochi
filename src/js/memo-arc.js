@@ -1,4 +1,4 @@
-﻿// ===== 梦角档案 v2（重构：与【我的档案】互为镜像的「认识TA」档案） =====
+// ===== 梦角档案 v2（重构：与【我的档案】互为镜像的「认识TA」档案） =====
 // 入口：桌面第三页「梦角档案」图标。
 // 定位：【我的档案】=认识自己；【梦角档案】=认识TA——记录「TA是谁，以及我逐渐了解到TA什么」。
 // 结构（9 个分区）：
@@ -696,7 +696,7 @@
       const i = arr.findIndex(x => x.id === id);
       if (i >= 0) arr.splice(i, 1);
       saveArc(cur, arc); toast('已删除'); render();
-    }, { noInput: true, pills: [{ label: '取消', value: 'no' }, { label: '删除', value: 'del' }] });
+    }, { noInput: true, pill: 'del', pills: [{ label: '取消', value: 'no' }, { label: '删除', value: 'del' }] });
   }
   // ---- 了解卡片（核心）流程 ----
   function addKnow(prefill) {
@@ -804,7 +804,7 @@
         arc.history.push({ time: it.updated, text: '「' + typeLabel(it.type) + '」暂时不再适用：' + short(it.text) });
         saveArc(cur, arc); toast('已暂不适用'); render();
       }
-    }, { noInput: true, pills: [{ label: '取消', value: 'no' }, { label: '暂不适用', value: 'yes' }] });
+    }, { noInput: true, pill: 'yes', pills: [{ label: '取消', value: 'no' }, { label: '暂不适用', value: 'yes' }] });
   }
   function restoreKnow(id) {
     const arc = ensureArc(cur); const it = arc.loves.find(x => x.id === id); if (!it) return;
@@ -819,7 +819,7 @@
       const arc = ensureArc(cur);
       arc.loves = arc.loves.filter(x => x.id !== id);
       saveArc(cur, arc); toast('已删除'); render();
-    }, { noInput: true, pills: [{ label: '取消', value: 'no' }, { label: '删除', value: 'del' }] });
+    }, { noInput: true, pill: 'del', pills: [{ label: '取消', value: 'no' }, { label: '删除', value: 'del' }] });
   }
 
   // ---- 共同记录流程 ----
@@ -887,7 +887,7 @@
       else if (kind === 'moment') arc.moments = arc.moments.filter(x => x.id !== id);
       else arc.records = arc.records.filter(x => x.id !== id);
       saveArc(cur, arc); toast('已删除'); render();
-    }, { noInput: true, pills: [{ label: '取消', value: 'no' }, { label: '删除', value: 'del' }] });
+    }, { noInput: true, pill: 'del', pills: [{ label: '取消', value: 'no' }, { label: '删除', value: 'del' }] });
   }
   function toggleMoment(recId) {
     const arc = ensureArc(cur); const rec = arc.records.find(x => x.id === recId); if (!rec) return;
@@ -919,7 +919,7 @@
         w.solved = true; w.solvedAt = Date.now(); saveArc(cur, arc); render();
         setTimeout(function () { addKnow(w.text); }, 0); // 链式开新弹窗必须延后一拍（外层 finally close 会清 cb）
       }
-    }, { noInput: true, pills: [{ label: '只是已了解', value: 'only' }, { label: '已了解 · 也记为了解', value: 'convert' }] });
+    }, { noInput: true, pill: 'only', pills: [{ label: '只是已了解', value: 'only' }, { label: '已了解 · 也记为了解', value: 'convert' }] });
   }
   function reopenWonder(id) {
     const arc = ensureArc(cur); const w = arc.wonders.find(x => x.id === id); if (!w) return;
@@ -932,7 +932,7 @@
       const arc = ensureArc(cur);
       arc.wonders = arc.wonders.filter(x => x.id !== id);
       saveArc(cur, arc); toast('已删除'); render();
-    }, { noInput: true, pills: [{ label: '取消', value: 'no' }, { label: '删除', value: 'del' }] });
+    }, { noInput: true, pill: 'del', pills: [{ label: '取消', value: 'no' }, { label: '删除', value: 'del' }] });
   }
 
   // ---- 事件分发 ----

@@ -1,4 +1,52 @@
-# 本次构建者：AI-A（本会话，2026-08-29，吃什么切菜单直选 + 喝水/吃饭 23:00-06:00 静默期；sw: mochi-mtd3e495，哨兵29/29 + verify-eat-menus 14/14，已构建，未提交）
+# 本次构建者：AI-A（本会话，2026-08-29，编辑消息重渲染回退修复；sw: mochi-mtdub6ti，哨兵 40/40，已构建，未提交）
+### 2026-08-29（修复：编辑聊天文字消息，发送新消息后编辑内容变回原文；红米 K80 Chrome）
+- [AI-A 域]（**改动文件：src/js/chat.js + build.mjs + FIX-REGRESSION.md + index.html(构建产物)；构建状态：已构建 sw: mochi-mtdub6ti，哨兵 40/40，未提交**）。
+- 需求/反馈：编辑一条聊天文字消息后，再发送一条新消息，编辑内容会变回编辑前的原文字（"编辑个寂寞"）。
+- 根因：单聊普通文字消息经 `buildParts` 生成 `rec.parts`，renderMsg 渲染时 **parts 分支（chat.js L1777）优先于 rec.text**。旧编辑逻辑只改 `rec.text` + 直接热替换气泡内文，`rec.parts` 里仍是原文；一旦发送新消息/滚动触发该气泡重渲染（renderWindow），就从 parts 把原文重新渲染出来。
+- 方案：编辑确认回调内同步重建 `rec.parts`——保留非 text 段（如图片），文字段替换为新值；`rec.text` 与 `rec.parts` 一并持久化，重渲染即取新值。
+- 验证：node --check 通过；哨兵 40/40；需真机复测：编辑一条文字→发送新消息→编辑内容保持；再编辑仍显示当前值。
+- 注：本构入构建时顺带包含此前 AI-B 未构建改动（device.js/avatar/chat-main.css 等，见上方构建器输出的 M 清单），已确认一并收口。
+### 2026-08-29（vivo S20 系统自带浏览器「头像互动」不显示已上传头像，只显示数量）
+- [AI-A 域]（**改动文件：src/css/chat-pages.css + index.html(构建产物)；构建状态：已构建 sw: mochi-mtdu5slt，哨兵 39/39，未提交**）。
+### 2026-08-29（排查「聊天设置联系人昵称设置后仍显示跟随桌面」：代码无 bug，未改源码；排查会话 AI-B）
+- [AI-B 域]（**无源码改动；无头链路诊断 设置→cs-lbl-partner 写入→行值回显→刷新持久化 全 PASS**）。
+- 结论：当前版本链路正常；已排除美化方案覆盖（CHAT_BEAUTY_KEYS 不含昵称键）与快照自动恢复。最可能是多联系人设计（昵称按桌面隔离，A 桌面设置后 B 桌面仍显示「跟随桌面」）或设备 SW 旧包缓存。待用户确认设备/联系人场景。
+- 需求/反馈：换头像时能看到上传的数字、可以上传/清除，但原头像图显示不出来、滑动也看不到，页面空白。
+- 根因：`.avlib-cell` 依赖 `aspect-ratio:1` 撑高，vivo 系统自带浏览器 X5 内核较旧不支持该属性 → 格子高度塌陷为 0，img(height:100%) 也随之塌陷，仅页签上的计数文本正常显示。
+- 方案：弃用 aspect-ratio，改 `padding-bottom:100%` 撑高 + img 绝对定位填满（兼容老内核，现代浏览器正方形+4列效果一致）。
+- 验证：node --check 无需(CSS)；需构建后真机验证 vivo 系统浏览器头像互动页头像正常显示。
+### 2026-08-29（修复：设置页「复制诊断信息」点【复制】没弹窗反馈 + 把网页刷了；已改源码，未构建，待构建者收口）
+- [AI-B 域]（**已改 src/js/device.js + src/template.html + build.mjs + FIX-REGRESSION.md；node --check 通过；构建状态：未构建，待构建者收口**）。
+- 需求/反馈：设置页「复制诊断信息」弹出框里点【复制】没任何成功/失败提示，且一点把浏览器网页刷新了。
+- 根因：① 复制结果只写回弹窗顶部提示行（`ctl.hint`→staticEl），且文案与打开时几乎相同 → 用户看不出有反馈；② 弹窗底部 4 个按钮（复制/导出txt/取消/确定）是全站唯一漏写 `type`、默认 `submit` 的按钮组，个别 webview 点按触发默认行为整页刷新；③ `navigator.clipboard.writeText` 在部分安卓 WebView 会弹系统权限/卡住甚至重载。
+- 方案：① device.js `copyText` 优先走原生 `document.execCommand('copy')`（divination.js 长期在用，无权限体系、不重载），失败回退 clipboard API + 1.5s 超时；② 复制/导出/自动复制结果都补 `window.toast` 底部气泡反馈（不再只写顶部提示行）；③ template.html 弹窗 4 按钮补 `type="button"`。
+- 验证：node --check device.js 通过；新增哨兵 2 条。未构建，待收口后实测：点【复制】底部弹「已复制到剪贴板」toast、页面不刷新；点【导出txt】弹「已开始下载 txt」toast。
+- 待对方处理：需构建者 `node build.mjs` 收口并实测。
+### 2026-08-29（音乐悬浮小框两处微调：桌面小组件播放不再弹出悬浮小框 + 右上角缩小按钮矢量图重绘；已改源码，未构建，待构建者收口）
+- [AI-A 域]（**已改 src/js/music-player.js + src/template.html（AI-A）；构建状态：未构建，待构建者收口**）。
+- 需求/反馈：① 桌面第二页音乐小组件点播放，也会弹出音乐悬浮小框（小组件本身就是控制器，重复弹出烦人）；② 悬浮小框缩小后的最小小框只需显示歌名 + 播放/暂停 + 放大按钮；③ 右上角缩小按钮的矢量图需重设计。
+- 根因/方案：① `markFloatSource` 原逻辑只在「小框当前 hidden」时才抑制唤出，改为凡由小组件触发（fromWidget=true）一律抑制（`floatHideByWidget=!!fromWidget`），其他入口恢复正常。② 最小态 `.sm-f-mini` 本就只含 播放/歌名/展开 三元素，维持现状。③ `.sm-f-collapse` 图标由「四角括号 minimize」改为「向下箭头收进一条细栏」（下 V 箭头 + 底栏），语义更贴合「收起为最小单行小框」。
+- 验证：node --check music-player.js 通过。未构建，待收口后实测：第二页小组件点播放/切歌不再弹悬浮小框；悬浮小框右上角缩小矢量图新样式。
+### 2026-08-29 20:xx（导出：加进度遮罩 + 去掉「未确认就静默下载」，改确认后下载；已构建 sw: mochi-mtdu2k1b，未提交）
+- [AI-B 域 跨域改动 src/js/data-backup.js（理由：用户反馈导出问题；含 build.mjs 哨兵 + FIX-REGRESSION 第37条）]（**已改 src/js/data-backup.js + build.mjs + FIX-REGRESSION.md；node --check 通过；已构建 sw: mochi-mtdu2k1b，哨兵 37/37，未提交**）。
+- 需求/反馈：导出数据没进度提示；文件没经我点下载就自己存好了（弹出来的框我还没点就下载了）。
+- 根因：`doExport` 只弹 toast；`saveBackupFile` 兜底分支无条件 `a.click()` 静默自动下载，之后再弹「已打包完成」重试框，既多此一举又造成"未经同意已下载"。
+- 方案：`doExport` 复用 impShow 加导出进度遮罩（读取全部数据 n/total→打包→写自动备份副本→准备保存），结束 impHide；`saveBackupFile` 删除静默 `a.click()`，返回 'blocked' 后弹「备份已打包完成」确认框，点「确定」（有效手势）才调新增 `anchorDownload(blob,fname)` 真正下载。
+- 验证：node --check 通过；构建哨兵 37/37 在位；临时无头验证「导出→进度遮罩出现、无提前下载、点确定触发下载」建议上线前实测。
+- 待对方处理：需构建者 `node build.mjs` 收口并实测导出流程。
+### 2026-08-29（再排查：档案/番茄钟「取消/确认」型弹窗只点底部确定没反应——与恢复默认/应用方案同根因，9 处同修；已改源码，未构建）
+- [AI-A 域]（**已改 src/js/memo-arc.js + src/js/my-arc.js + src/js/p2-features.js + build.mjs（FIX_SENTINELS 增 3 条）+ FIX-REGRESSION.md（新增 #36）；构建状态：未构建，待构建者收口**）。
+- 需求/反馈：用户要求「检查有没有别的问题」——全面审计 openModal 的 noInput+pills 弹窗，发现一批与「恢复默认桌面/应用方案/删除方案」同根因的弹窗：noInput 带 pills 但无 `pill` 预设时，只点底部「确定」→ fire() 传 pillVal=null → 回调 `v!=='xxx'` 静默不执行（点了没反应）。
+- 根因/方案：给确认动作预选 `pill` 预设。memo-arc.js delLi/delKnow/delEntry/delWonder（删除这条/了解/疑问，`pill:'del'`）、retireKnow（暂不适用，`pill:'yes'`）、solveWonder（已了解，`pill:'only'`）；my-arc.js delLi/delSelf（删除这条/描述卡，`pill:'del'`）；p2-features.js pmpQuitAsk（提前结束番茄，`pill:'1'`）。共 9 处。
+- 验证：node --check 三文件通过；新增哨兵 3 条（memo-arc/my-arc `noInput: true, pill: 'del', pills`、p2-features `noInput: true, lock: true, pill: '1', pills`）。未构建，待收口后实测：删除档案条目只点确定即删、番茄钟提前结束只点确定即结束。
+- 待对方处理：无。
+
+### 2026-08-29（桌面美化三处回归修复：恢复默认桌面 / 装修点图标换图 / 内置壁纸预设；已构建 sw: mochi-mtdswlu4，未提交）
+- [AI-A 域 + 跨域 personalize.js/build.mjs/FIX-REGRESSION.md（AI-B，理由：桌面美化相关逻辑在 AI-B 的 personalize.js，跨域改动；另有 AI-A 文件累积改动同批构建）]（**已改 src/js/personalize.js + build.mjs（FIX_SENTINELS 增 2 条）+ FIX-REGRESSION.md（新增 #32/#33）+ tools/verify-desk-beauty.mjs（新增，可提交回归脚本，删除临时 diag-desk-beauty.mjs）；构建状态：已构建 sw: mochi-mtdswlu4，哨兵 31/31，verify 10/10 + verify-desk-beauty 10/10 通过，未提交**）。
+- 需求/反馈：① 桌面美化【恢复默认布局桌面】点了没反应；② 装修模式点桌面图标无法上传图片换图；③ 【内置壁纸预设】没应用到桌面。
+- 根因/方案：① 恢复默认弹窗是 noInput 单 pill，只点底部「确定」时 fire() 传 pillVal=null → 静默不执行；同「删除美化方案」同因同修：`ctl.pills([{label:'确定恢复默认',value:'1'}],'1')` 预选中。② 图标菜单路径（grid editing + #page-phone decor-on 委托 + file input 挂 DOM）v3.15.x 已在位，本次回归确认：装修模式点图标弹「图标设置」、点「上传图片」确认后 pickFile 触发（file input 创建）均正常，无代码改动（verify-desk-icon-decor.mjs 已覆盖）。③ `applyBgVisibility` 只认自定义 phone-bg，预设 phone-bg-preset 只在加载时铺一次，任何 tab 切换都把它清掉；抽出 `bgPresetCss()`，可见性改为「自定义图优先、其次内置预设」。
+- 验证：node --check 通过；构建哨兵 31/31；`node tools/verify-desk-beauty.mjs` 10/10（刷新应用预设、切 tab 后预设仍在、只点确定恢复生效、图标菜单弹出+上传触发）；`node tools/verify.mjs` 布局 10/10。未提交，待用户确认提交/推送。
+- 待对方处理：无。
 ### 2026-08-29（音乐悬浮小框：右上角新增「继续缩小」按钮，可在「新版多行小框 ⇄ 最初版最小单行小框」间切换；已随最新构建 mochi-mtd3e495 收口）
 - [AI-A 域 + 跨域 template.html/dark.css/build.mjs（AI-B，理由：悬浮小框结构加最小态 + 暗色同步 + 哨兵 needle 修正）]（**已改 src/template.html + src/js/music-player.js（AI-A）+ src/css/chat-pages.css（AI-A）+ src/css/dark.css（AI-B，跨域：补最小态暗色）+ build.mjs（修正 poke-tab-pub.sel 哨兵 needle 的空格匹配）；构建状态：源码已保存，已被并行构建 sw: mochi-mtd3e495 包含，哨兵 29/29**）。
 - 需求：悬浮音乐小框右上角增加「继续缩小」按钮，收起为最初版最小单行小框；在最小小框里点按钮恢复新版多行小框。
@@ -40,12 +88,12 @@
 - 需求/反馈：用户问「我的功能非常多啊，你确定是全部」——担心【查看存储】各功能占用明细没覆盖到全部功能。
 - 方案：① catOf 从 8 类扩到约 30 类，逐一覆盖 45+ 个 JS 文件里的所有业务键：聊天记录/群聊记录/备忘录/查岗TA互动/定位轨迹/日历每日留言/字卡回复收藏/占卜/信箱/朋友圈/本地音乐/纪念统计档案/帮我决定/记账/经期/花园/房间/漂流瓶/礼物红包/梦角档案/钓鱼/小游戏/头像昵称/聊天设置/桌面美化壁纸/通话音效/全屏/后台保持通知/后台同步缓存/自动备份快照/数据索引/错误诊断记录/联系人桌面/系统设置/设置与其他；全局诊断/备份/索引/系统键（__diag-*、__auto-backup-snapshot、__big-idx、psync-*、ver-update-ack-ts 等）与 cid 命名空间（default:xxx）都归位；特殊处理 incoming-last: 根键多段名与 memo-app-（须先于日历 memo- 规则）。② 各分类行点击可展开，列出该分类下前 20 个具体存储键名，用于用户核对是否覆盖到位。
 - 验证：node --check personalize.js 通过；临时脚本 tools/tmp-catof-test.mjs 对 162 个代表键断言全部通过（已删除）。待构建者收口后实测：设置→查看存储→各功能占用明细出现 30+ 分类；点击任一分行走展开键名；清理错误诊断记录不受影响。
-### 2026-08-29（占卜抽牌支持选择对象：可选桌面联系人/不选，选了存进该对象主页「占卜记录」；已改源码，未构建）
-- [AI-A 域]（**已改 src/js/divination.js + src/css/chat-pages.css（.div-targets 样式已存在无需新增）；构建状态：未构建（node --check 已过），待构建者收口**）。
-- 需求/反馈：塔罗抽牌还是无法选择对象。要求①抽牌可选现有桌面联系人，或**不选**；②选了对象后，对该联系人的占卜记录存入该联系人的主页「占卜记录」。
-- 方案：启用模板里已存在的 `#div-targets` 占卜对象选择器——`renderTargets()` 渲染「不选对象」+全部联系人按钮（`getContacts()`），选中态走 `store` 动态键 `divine-target` 随桌面独立记忆；抽牌完成 `onDone` 里：记录对象快照 `snapTarget`（防流程中切换跑偏），记录补 `target` 名，并 `saveToHomeHistory(record, snapTarget)`（选中→写该对象 `storeFor(cid)` 的 `records-divine`，不选→写当前桌面），主页页签 `divine` 读取 `records-divine` 已由 records.js 就绪。切换/改名联系人时刷新选择器。
-- 验证：node --check divination.js 通过；未构建，待构建者收口后实测：占卜页出现「不选对象+联系人」行并可点击选中；抽牌后切到对应联系人桌面→主页→占卜记录可见「为 X 占卜」。
-- 需构建者：本轮收口时把 divination.js 一并纳入。
+### 2026-08-29（占卜抽牌支持选择对象：桌面页 + 聊天页半框都可选联系人/不选，选了存进该对象主页「占卜记录」；已改源码，未构建）
+- [AI-A 域]（**已改 src/js/divination.js + src/template.html（新增聊天页 #div-chat-targets 锚点）+ src/js/chat.js（半框挂对象选择 + 记录写入主页）+ src/css/chat-main.css（.div-chat-targets pill 样式）；构建状态：未构建（node --check 均过），待构建者收口**）。
+- 需求/反馈：①塔罗抽牌能否选择对象（可据现桌面联系人/不选）；②选了对象后该对象的占卜记录存入该联系人主页「占卜记录」；③上版只做了桌面占卜页，**聊天里打开的占卜半框仍不能选对象**——本次补齐半框。
+- 方案：divination.js 抽出 `renderTargetsInto(wrap)` 通用渲染（「不选对象」+全部联系人按钮，选中态走动态键 `divine-target` 随桌面记忆），并暴露 `window.divineRenderTargets / divineGetTarget / divineTargetName / divineSaveToHomeHistory` 供 chat.js 复用；抽牌完成 `onDone` 用对象快照 `snapTarget` 防切换跑偏，记录补 `target` 名，`saveToHomeHistory(record, snapTarget)`（选中→写该对象 `storeFor(cid)` 的 `records-divine`，不选→写当前桌面），主页 `divine` 页签读取 `records-divine` 已由 records.js 就绪。桌面页 + 聊天半框都生效。
+- 验证：node --check divination.js / chat.js 通过；未构建，待构建者收口后实测：⑴桌面占卜页出现「不选对象+联系人」可选中；⑵聊天「+」→占卜半框同样出现对象行可选中；⑶任一处抽牌后切到对应联系人桌面→主页→占卜记录可见「为 X 占卜」。
+- 需构建者：本轮收口时把 divination.js / template.html / chat.js / chat-main.css 一并纳入。
 ### 2026-08-29（构建收口【查看存储】+ 累积未构建项）
 - [AI-B 域]（**已构建·sw 版本 mochi-mtd1qpft：哨兵 27/27 全部在位、verify 10/10 通过、index.html 含 row-storage-view/page-storage/st-clear-err/mochiRefreshDiagBadge；本次构建包含累积的「查看存储」「诊断IndexedDB大键」「收到~兜底」「更新条ack-ts」等已完成改动；未提交，待用户确认提交/推送**）。
 ### 2026-08-29（联系人一直/重复发【收到~】：聊天回复硬编码兜底改小型通用池；已改源码，未构建）
@@ -247,6 +295,12 @@
 - 待 AI-A 注意：chat.js 被我加了一段 addIn 音效逻辑（含注释），若并行编辑该文件注意合并；构建已收口本工作区全部未提交改动（含 AI-A 18:34 占卜可选对象等），提交时整体入库。
 
 # 本次构建者：AI-A（本会话，2026-08-28 晚间，用户要求立即生效跨桌面查岗频率模式）
+### 2026-08-28（位置页三点收口：去右侧叉 / 感知一下写入位置时间线 / 感知方向与位置卡对齐）
+- [AI-A 域]（**已改 src/js/p2-features.js + src/css/chat-pages.css；跨域改动 src/template.html + src/css/dark.css（先留言后改）；构建状态：未构建（node --check 已过），待构建者收口**）。
+- 需求：①位置页头部右侧 ✕ 按钮删除；②【感知一下】结果没存进【位置时间线】；③方位感知显示「↙ 左后方」但【此刻的位置】显示「在你右边 一直在原地等你」——方位矛盾。
+- 方案：①template.html 删 #loc-close 按钮 + p2-features.js 删对应事件绑定 + chat-pages/dark.css 删 .loc-close 样式（返回按钮保留，半屏聊天入口同样走返回关闭）。②p2-features.js 新增 window.locAddHist 写入 loc-history（type='sense'，时间线标签「感知」），perceive() 完成后写入结果文本（方向箭头+方向+距离感+强度，未判断方向时写「暂时无法判断方向」，触碰则追加）并 window.locRefreshBody 刷新时间线。③感知方向与最近位置卡对齐：新增 dirFromText（左/右/后/前 → 8方向），getSense 在有位置卡时方向以位置卡为准（消除既有矛盾状态，打开面板即纠正）；NEAR_WORDS 增「原地等你」（「一直在原地等你」按近处理，距离感出「很近/明显」不再「很远/微弱」）；sendLocCard/sendComboCard 发新卡后 refreshSense 让感知圆即时跟随。
+- 验证：node --check 通过；未跑构建、未登记哨兵（UI/逻辑修复非回归）。构建后实测：头部无 ✕、感知一下后时间线多一条「感知」记录、感知圆方向与此刻位置一致、暗色模式正常。
+- 跨域留言：template.html / dark.css 属 AI-B 域，本次先行改动，请复核。
 ### 2026-08-28（寻踪功能「TA在身边 · 看看ta在哪里」改为全屏打开 + 页面 UI 重新设计）
 - [AI-A 域]（**已改 src/js/p2-features.js + src/css/chat-pages.css；跨域改动 src/template.html + src/css/dark.css（先留言后改，见下）；构建状态：未构建（node --check 已过），待构建者收口**）。
 - 需求：用户在寻踪功能页点击【ta在身边 看看ta在哪里】打开的页面依旧不是全屏，且 UI 需要重新设计。

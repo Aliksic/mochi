@@ -337,6 +337,9 @@ body.cs-time-divider .msg-time-divider { display:flex; }
   -webkit-tap-highlight-color:transparent;
 }
 #chat-divine-body .div-mode.sel { background:var(--ink); color:#fff; border-color:var(--ink); }
+/* v3.26.x：占卜对象选择（聊天页半框）——按钮换行自适应、跟随桌面 pill 样式，覆盖上面 flex:1 全宽 */
+#chat-divine-body .div-chat-targets { flex-wrap:wrap; }
+#chat-divine-body .div-chat-targets .div-mode { flex:0 0 auto; padding:8px 12px; border-radius:99px; }
 #chat-divine-body .div-draw {
   width:100%; margin-top:4px;
 }

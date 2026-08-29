@@ -215,8 +215,7 @@
       return c ? (c.name || c.id || '') : '';
     } catch (e) { return ''; }
   }
-  function renderTargets() {
-    const wrap = document.getElementById('div-targets');
+  function renderTargetsInto(wrap) {
     if (!wrap) return;
     targetCid = targetGet();
     const contacts = (window.getContacts ? window.getContacts() : []) || [];
@@ -235,6 +234,9 @@
         targetSet(targetCid);
       });
     });
+  }
+  function renderTargets() {
+    try { renderTargetsInto(document.getElementById('div-targets')); } catch (e) {}
   }
   // ---- 把抽牌记录写入「主页·占卜记录」（records-divine，按对象所在桌面隔离）----
   // 选了对象 → 写入该对象桌面的 records-divine；不选 → 写入当前桌面 records-divine
@@ -732,4 +734,13 @@
   window.divineBuildResultText = buildResultText;
   window.divineCopyResultText = copyResultText;
   window.divineSendResult = function (m, cards, summary, question) { sendToChat(m, cards, summary, question); };
+  // v3.26.x：聊天页占卜半框复用研究对象选择 + 主页记录写入
+  window.divineRenderTargets = function (el) {
+    const wrap = (el && el.nodeType === 1) ? el : (typeof el === 'string' ? document.getElementById(el) : null);
+    if (wrap) renderTargetsInto(wrap);
+    return targetCid;
+  };
+  window.divineGetTarget = function () { return targetCid; };
+  window.divineTargetName = targetNameOf;
+  window.divineSaveToHomeHistory = saveToHomeHistory;
 })();

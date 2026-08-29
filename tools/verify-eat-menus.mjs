@@ -174,6 +174,19 @@ await openEat();
 let r7 = JSON.parse(await evalJs("(function(){var c=document.getElementById('eat-wheel');try{var cid=window.__activeCid||'default';var a=JSON.parse(localStorage.getItem('xy-home-v2:'+cid+':eat-menus')||'[]');return JSON.stringify({dishes:a[0].dishes.length,hasNew:a[0].dishes.indexOf('新加菜')>=0,canvasW:c?c.width:0});}catch(e){return '{}';}})()") || '{}');
 check('T7 当前菜单含新加菜 + 转盘重画', r7.dishes === 3 && r7.hasNew && r7.canvasW > 0, JSON.stringify(r7));
 
+// T8 切换浮层新增「直接选菜单」chips：渲染 + 点 chip 立即切换
+await setEat('eat-menus', JSON.stringify([{ name: '家常菜', dishes: ['番茄炒蛋', '红烧肉'] }, { name: '外卖', dishes: ['披萨', '汉堡'] }, { name: '夜宵', dishes: ['串串', '凉皮'] }]));
+await setEat('eat-cur-idx', '0');
+await readyPage();
+await openEat();
+await clickEl('eat-switch-menu');
+let r8a = JSON.parse(await evalJs("(function(){var c=document.getElementById('eat-switch-chips');if(!c)return JSON.stringify({count:-1});var arr=[].slice.call(c.querySelectorAll('.eat-chip')).map(function(el){return {t:el.textContent,on:el.classList.contains('on')};});return JSON.stringify({count:arr.length,arr:arr});})()") || '{}');
+check('T8 切换浮层渲染 3 个菜单 chip（当前菜单高亮）', r8a.count === 3 && r8a.arr && r8a.arr[0] && r8a.arr[0].t === '家常菜' && r8a.arr[0].on, JSON.stringify(r8a));
+await evalJs("(function(){var c=document.getElementById('eat-switch-chips');if(!c)return;var chip=c.querySelector('.eat-chip');for(var i=0;i<chip.parentNode.children.length;i++){if(chip.parentNode.children[i].textContent==='外卖'){chip.parentNode.children[i].click();break;}}return true;})()");
+await sleep(500);
+let r8b = JSON.parse(await evalJs("(function(){var o=document.getElementById('eat-switch-overlay');var n=document.getElementById('eat-cur-name');var c=document.getElementById('eat-wheel');var cid=window.__activeCid||'default';var a=JSON.parse(localStorage.getItem('xy-home-v2:'+cid+':eat-menus')||'[]');var idx=localStorage.getItem('xy-home-v2:'+cid+':eat-cur-idx');return JSON.stringify({overlayClosed:o?o.hidden:false,name:n?n.textContent:'',idx:idx,dishes:a[1]?a[1].dishes:[],canvasW:c?c.width:0});})()") || '{}');
+check('T8 点「外卖」chip 后：浮层关闭 + 切到外卖 + 转盘重画', r8b.overlayClosed && r8b.name === '外卖' && r8b.idx === '1' && JSON.stringify(r8b.dishes) === JSON.stringify(['披萨', '汉堡']) && r8b.canvasW > 0, JSON.stringify(r8b));
+
 try { if (ws) ws.close(); } catch (e) {}
 try { chrome.kill(); } catch (e) {}
 try { server.close(); } catch (e) {}

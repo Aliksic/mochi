@@ -881,6 +881,10 @@
       for (let i = 0; i < count; i++) {
         setTimeout(() => {
           hideTyping();
+          (async () => {
+          // v3.27.x：生成前先确保该成员字卡池就绪——成员桌面大键可能被启动回填
+          // 挂起，同步读池是空库会让成员一直发 FALLBACK_REPLIES 兜底（上限 2.5s）
+          try { if (window.hydrateLibForCid) await new Promise(res => window.hydrateLibForCid(cid, res)); } catch (e) {}
           const rep = gcGenReply(cid, c);
           const q = (wantQuote && i === 0) ? quoteText : null;
           const rec = { side: 'in', cid: cid, name: name, text: rep.text, type: rep.type, parts: rep.parts, ts: Date.now() };
@@ -912,6 +916,8 @@
                 showTyping(name);
                 setTimeout(() => {
                   hideTyping();
+                  (async () => {
+                  try { if (window.hydrateLibForCid) await new Promise(res => window.hydrateLibForCid(cid, res)); } catch (e) {}
                   const rep2 = gcGenReply(cid, c);
                   const rec2 = { side: 'in', cid: cid, name: name, text: rep2.text, type: rep2.type, parts: rep2.parts, ts: Date.now() };
                   if (rep2.type === 'text' || rep2.type === 'sticker' || rep2.type === 'image') {
@@ -928,10 +934,12 @@
                   renderMsg(rec2, msgs.length - 1);
                   followGcBottom();
                   if (window.playSfx) window.playSfx('in');
+                  })();
                 }, 700);
               }
             }, 900);
           }
+          })();
         }, i * randInt(1200, 2800));
       }
     }, delay);

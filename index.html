@@ -1461,6 +1461,8 @@ color:#666; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit
 -webkit-tap-highlight-color:transparent;
 }
 #chat-divine-body .div-mode.sel { background:var(--ink); color:#fff; border-color:var(--ink); }
+#chat-divine-body .div-chat-targets { flex-wrap:wrap; }
+#chat-divine-body .div-chat-targets .div-mode { flex:0 0 auto; padding:8px 12px; border-radius:99px; }
 #chat-divine-body .div-draw {
 width:100%; margin-top:4px;
 }
@@ -3589,12 +3591,6 @@ flex:1; min-width:0; font-size:16px; font-weight:700; color:var(--ink);
 white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
 .loc-title b { font-weight:800; }
-.loc-close {
-width:30px; height:30px; border-radius:50%; flex-shrink:0;
-border:none; background:rgba(0,0,0,.06); color:var(--muted);
-font-size:13px; line-height:1; cursor:pointer; font-family:inherit;
-}
-.loc-close:active { background:rgba(0,0,0,.12); }
 .loc-scroll {
 flex:1; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch;
 }
@@ -3835,10 +3831,11 @@ transition:background .15s, color .15s;
 display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; padding:4px 0 8px;
 }
 .avlib-cell {
-aspect-ratio:1; border-radius:14px; overflow:hidden; position:relative;
+position:relative; padding-bottom:100%;
+border-radius:14px; overflow:hidden;
 background:rgba(255,255,255,.92); border:1px solid rgba(0,0,0,.1);
 }
-.avlib-cell img { width:100%; height:100%; object-fit:cover; display:block; }
+.avlib-cell img { position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; display:block; }
 .avlib-cell.avlib-now { outline:2px solid var(--ink); outline-offset:-2px; border-color:transparent; }
 .avlib-del {
 position:absolute; top:4px; right:4px; width:22px; height:22px; border-radius:50%;
@@ -6961,8 +6958,6 @@ radial-gradient(circle at calc(100% - 5px) calc(100% - 5px), rgba(255,255,255,.1
 .loc-back { border-color:rgba(255,255,255,.14); background:rgba(255,255,255,.06); }
 .loc-back svg { stroke:#f0f0f0; }
 .loc-back:active { background:rgba(255,255,255,.12); }
-.loc-close { background:rgba(255,255,255,.1); }
-.loc-close:active { background:rgba(255,255,255,.16); }
 .loc-section { background:var(--dark-card-92); border-color:rgba(255,255,255,.07); }
 .loc-tl-item { border-bottom-color:rgba(255,255,255,.07); }
 .loc-tl-tag { background:var(--dark-hover); }
@@ -8265,11 +8260,9 @@ transition-duration: .01ms !important;
           </div>
           <div class="splash-sec-wrap">
             <p class="splash-sec">【一、当前状态】</p>
-            <p class="splash-item">8.12开搓，感谢内测反馈：大家的每条反馈我都有认真看，谢谢参与内测的各位。</p>
-            <p class="splash-item">Mochi字卡内测时间：8.15~8.29（链接已在GitHub，内测期间暂不公开宣传）。</p>
-            <p class="splash-item">Mochi字卡 8.29 完全公开，公开后可二传二改。</p>
+            <p class="splash-item">8.12开搓，8.15~8.29内测，谢谢参与内测的各位。</p>
+            <p class="splash-item">Mochi字卡 8.29 已完全公开，可二传二改。</p>
             <p class="splash-item">网站与我更新修复问题是同步的：边修边部署，修一天部署一天；开屏有最新部署时间。</p>
-            <p class="splash-item">内测是这样每天修一整天，公开后不会更新这么频繁了，个人精力有限且功能已完整。</p>
             <p class="splash-item">如果浏览器还没进入新版，可以关掉浏览器再打开，多试几次流量刷新，或者过一段时间再打开。</p>
             <p class="splash-sub">【关于反馈与建议】</p>
             <p class="splash-item">有问题可以在评论区或互助群艾特我，但我精力有限，不一定全部回复也不一定及时回复。</p>
@@ -8282,7 +8275,6 @@ transition-duration: .01ms !important;
           </div>
           <div class="splash-sec-wrap">
             <p class="splash-sec">【二、关于 Bug 与报修】</p>
-            <p class="splash-item">内测期在持续更新，存在 Bug 是正常现象；公开后也会继续修复，但不可能一次清零。</p>
             <p class="splash-sub">为什么不同设备表现不一样：</p>
             <p class="splash-bullet">不同手机型号和浏览器都有可能出现不同的适配问题；</p>
             <p class="splash-bullet">即使是同一个手机、同一个浏览器，系统版本不同、浏览器版本不同，也可能出现不同表现；</p>
@@ -8295,8 +8287,8 @@ transition-duration: .01ms !important;
             <p class="splash-item">建议直接问 AI，比我回复快。</p>
             <p class="splash-item">反馈后不需要等我回复：消息太多，修完会直接部署，可以晚些刷新到新版再试。反馈的每个问题都修了，但能否修好只能用自己的设备验证，我没有其他设备，无法验证修复程度。</p>
             <p class="splash-item">如果有设备问题bug一直修不好，我建议可以拿我的代码自行部署和修缮，有自己的手机自己验证bug是否修复会方便很多。</p>
-            <p class="splash-item">8.29公开会开群友互助群，但我不一定有时间看，只是群友互助群，有问题直接评论或群里艾特，个人精力有限也不一定及时回复。</p>
-            <p class="splash-item">关于数据丢失：有可能有bug，也有可能是浏览器触发丢失。如果不是高频率丢失，就是正常情况（浏览器自身正常概率丢失数据），需要定期备份。内测期更新多，建议提示有新版本需要刷新时先备份数据。</p>
+            <p class="splash-item">8.29公开已开群友互助群，但我不一定有时间看，只是群友互助群，有问题直接评论或群里艾特，个人精力有限也不一定及时回复。</p>
+            <p class="splash-item">关于数据丢失：有可能有bug，也有可能是浏览器触发丢失。如果不是高频率丢失，就是正常情况（浏览器自身正常概率丢失数据），需要定期备份。建议提示有新版本需要刷新时先备份数据。</p>
           </div>
           <div class="splash-sec-wrap">
             <p class="splash-sec">【三、关于浏览器使用与桌面快捷方式】</p>
@@ -8323,10 +8315,11 @@ transition-duration: .01ms !important;
             <p class="splash-item">禁止商用</p>
             <p class="splash-item">本站并非复刻他人网站，代码均从零编写</p>
             <p class="splash-item">星言字卡为同一作者的另一部独立作品，其本体禁止二传二改</p>
+            <p class="splash-item">开屏公告为本站内容，不可删除或修改</p>
             <p class="splash-sub">二传二改说明：</p>
             <p class="splash-bullet">二传：可自由转发、转载、分享本站链接与文件，传播方式不限</p>
             <p class="splash-bullet">二改：可自由修改、二次开发、自行部署，代码已在 GitHub 完全公开、与网站同步更新</p>
-            <p class="splash-bullet">8.29 完全公开后即可二传二改（内测期间暂不公开宣传）</p>
+            <p class="splash-bullet">8.29 完全公开后即可二传二改</p>
             <p class="splash-bullet">必须保留署名：小红书 @言序（1842523578），禁止删除或修改</p>
             <p class="splash-bullet">二次修改要注明原作者；借鉴功能或代码，希望标注灵感来源</p>
             <p class="splash-bullet">禁止商用、禁止以盈利为目的</p>
@@ -8337,6 +8330,7 @@ transition-duration: .01ms !important;
             <p class="splash-item">Mochi 字卡为原创独立作品（原版），代码已完全开源。可自由二传、二改，支持私人部署，禁止商用。</p>
             <p class="splash-bullet">必须保留署名：小红书 @言序（1842523578）。</p>
             <p class="splash-bullet">借鉴功能或代码，必须标注灵感来源：Mochi 字卡 · 小红书 @言序（1842523578）。</p>
+            <p class="splash-bullet">开屏公告不可删除或修改。</p>
             <p class="splash-sub">关于星言字卡</p>
             <p class="splash-item">星言字卡为同一作者的另一部独立作品，其本体禁止二传二改。</p>
             <p class="splash-sub">灵感来源</p>
@@ -8379,9 +8373,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787932058685">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.309</b></span>
-        <span class="sv-deploy">部署于 2026-08-28 23:47<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787975268678">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.310</b></span>
+        <span class="sv-deploy">部署于 2026-08-29 11:47<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9471,7 +9465,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.309</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.310</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -9672,7 +9666,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.309</span>
+              <span class="lic-ver">v3.26.310</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -10617,10 +10611,11 @@ transition-duration: .01ms !important;
         <input type="file" id="modal-file-input" accept=".txt,.json,text/plain,application/json" style="display:none">
         <div class="modal-btns">
           <!-- v3.25.x：导出txt——诊断文本变长后部分手机剪贴板复制不全，下载文件兜底（opts.exportBtn） -->
-          <button class="modal-btn copy" id="modal-export" hidden>导出txt</button>
-          <button class="modal-btn copy" id="modal-copy" hidden>复制</button>
-          <button class="modal-btn cancel" id="modal-cancel">取消</button>
-          <button class="modal-btn ok" id="modal-ok">确定</button>
+          <!-- v3.26.x：补 type="button"——全站唯一漏写类型的按钮组；缺 type 默认是 submit，在个别 webview 里点【复制/导出/取消/确定】可能触发表单默认行为导致整页刷新（用户反馈） -->
+          <button type="button" class="modal-btn copy" id="modal-export" hidden>导出txt</button>
+          <button type="button" class="modal-btn copy" id="modal-copy" hidden>复制</button>
+          <button type="button" class="modal-btn cancel" id="modal-cancel">取消</button>
+          <button type="button" class="modal-btn ok" id="modal-ok">确定</button>
         </div>
       </div>
     </div>
@@ -11697,6 +11692,8 @@ transition-duration: .01ms !important;
             <span class="div-mode sel" data-chatcount="3">3 张</span>
             <span class="div-mode" data-chatcount="1">1 张</span>
           </div>
+          <!-- v3.26.x：占卜对象（聊天页半框，可选全部桌面联系人，也可不选；选了对象结果存入该联系人主页「占卜记录」） -->
+          <div class="div-modes-wrap div-chat-targets" id="div-chat-targets"></div>
           <div class="dec-inp-wrap"><input type="text" class="tc-input" id="div-chat-question" placeholder="心中默念的问题（可选）" style="margin:8px 0" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"><button class="dec-inp-clear" data-clear="div-chat-question" aria-label="清空" title="清空">✕</button></div>
           <label class="div-switch-row div-chat-switch">
             <span class="div-switch-t">自动发送到聊天</span>
@@ -12593,7 +12590,6 @@ transition-duration: .01ms !important;
           <svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
         </button>
         <span class="loc-title">TA在身边 · <b id="loc-name">TA</b> 的位置</span>
-        <button class="loc-close" id="loc-close" aria-label="关闭">✕</button>
       </div>
       <div class="loc-scroll">
         <!-- 方位感知（v3.13.x：模糊感知，不是精确定位） -->
@@ -12906,7 +12902,7 @@ transition-duration: .01ms !important;
 <!-- 悬浮音乐播放小框（播放时显示，可拖动；两行布局：上行歌名/歌手，下行控制按钮；右上角可收起为最初版最小单行小框） -->
 <div class="sm-float" id="sm-float" hidden>
   <button class="sm-f-collapse" id="sm-f-collapse" title="收起为最小小框">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v4a4 4 0 0 1-4 4H3"/><path d="M21 3v4a4 4 0 0 1-4 4h-4"/><path d="M3 21v-4a4 4 0 0 1 4-4h4"/><path d="M21 21v-4a4 4 0 0 0-4-4h-4"/></svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/><path d="M6 19h12"/></svg>
   </button>
   <div class="sm-f-info">
     <div class="sm-f-name" id="sm-f-name">正在播放</div>
@@ -13778,17 +13774,31 @@ function copyText(t) {
 return new Promise(function (resolve) {
 let done = false;
 const finish = function (ok) { if (done) return; done = true; resolve(ok); };
-let started = false;
+function fallbackClipboard() {
 try {
 if (navigator.clipboard && navigator.clipboard.writeText) {
-started = true;
 navigator.clipboard.writeText(t).then(function () { finish(true); }).catch(function () { finish(false); });
+} else { finish(false); }
+} catch (e) { finish(false); }
 }
-} catch (e) {}
-if (!started) { finish(false); return; }
+try {
+const ta = document.createElement('textarea');
+ta.value = t;
+ta.setAttribute('readonly', '');
+ta.style.cssText = 'position:fixed;left:-9999px;top:0;width:10px;height:10px;opacity:0;';
+document.body.appendChild(ta);
+ta.focus();
+try { ta.select(); } catch (e) {}
+let ok = false;
+try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+setTimeout(function () { try { document.body.removeChild(ta); } catch (e2) {} }, 800);
+if (ok) { finish(true); return; }
+fallbackClipboard();
+} catch (e) { fallbackClipboard(); }
 try { setTimeout(function () { finish(false); }, 1500); } catch (e) {}
 });
 }
+function diagToast(msg) { try { if (typeof window.toast === 'function') window.toast(msg); } catch (e) {} }
 function exportTxt(text) {
 try {
 const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
@@ -13843,6 +13853,7 @@ try { localStorage.setItem(SEEN_KEY, String(Array.isArray(errsNow) ? errsNow.len
 try { refreshBadge(); } catch (e) {}
 });
 copyText(text).then(function (ok) {
+diagToast(ok ? '诊断信息已复制，可直接粘贴发给开发者' : '自动复制失败，请点下方【复制】重试');
 const tip = ok
 ? '诊断信息已复制到剪贴板，直接粘贴发给开发者即可。\n（下方内容可再核对）'
 : '自动复制失败，请点下方【复制】按钮重试，或长按选字手动复制。';
@@ -13858,9 +13869,9 @@ copyBtn: {
 label: '复制',
 fn: function (ctl) {
 copyText(ctl ? ctl.text() : text).then(function (ok2) {
-if (ctl && ctl.hint) {
-ctl.hint(ok2 ? '已复制到剪贴板，直接粘贴发给开发者即可。' : '复制失败，请长按选字手动复制。');
-}
+const m2 = ok2 ? '已复制到剪贴板，直接粘贴发给开发者即可。' : '复制失败，请长按选字手动复制。';
+if (ctl && ctl.hint) ctl.hint(m2);
+diagToast(ok2 ? '已复制到剪贴板' : '复制失败，请长按选字手动复制');
 });
 }
 },
@@ -13868,9 +13879,9 @@ exportBtn: {
 label: '导出txt',
 fn: function (ctl) {
 const okDl = exportTxt(ctl ? ctl.text() : text);
-if (ctl && ctl.hint) {
-ctl.hint(okDl ? '已开始下载 txt 文件（见浏览器下载列表），直接发送该文件即可。' : '当前内核不支持下载，请用【复制】或长按选字手动复制。');
-}
+const m3 = okDl ? '已开始下载 txt 文件（见浏览器下载列表），直接发送该文件即可。' : '当前内核不支持下载，请用【复制】或长按选字手动复制。';
+if (ctl && ctl.hint) ctl.hint(m3);
+diagToast(okDl ? '已开始下载 txt 文件' : '当前内核不支持下载，请用【复制】复制');
 }
 }
 });
@@ -14339,13 +14350,29 @@ setTimeout(processBatch, 0);
 window.idbHydrateKey = function (key) {
 return open().then(db => new Promise((resolve) => {
 let done = false;
-const t = setTimeout(function () { if (!done) { done = true; dbPromise = null; resolve(undefined); } }, 8000);
+let timer = null;
+function finish(val) { if (done) return; done = true; if (timer) clearTimeout(timer); resolve(val); }
+function run() {
 try {
 const tx = db.transaction(STORE, 'readonly');
 const req = tx.objectStore(STORE).get(key);
-req.onsuccess = () => { if (!done) { done = true; clearTimeout(t); resolve(req.result === undefined ? null : req.result); } };
-req.onerror = () => { if (!done) { done = true; clearTimeout(t); if (connLost(req.error)) dbPromise = null; resolve(undefined); } };
-} catch (e) { if (!done) { done = true; clearTimeout(t); if (connLost(e)) dbPromise = null; resolve(undefined); } }
+req.onsuccess = () => finish(req.result === undefined ? null : req.result);
+req.onerror = () => { if (connLost(req.error)) dbPromise = null; finish(undefined); };
+} catch (e) { if (connLost(e)) dbPromise = null; finish(undefined); }
+}
+let retried = false;
+timer = setTimeout(function () {
+if (done) return;
+if (!retried) {
+retried = true;
+dbPromise = null;
+open().then(function (db2) { db = db2; run(); timer = setTimeout(function () { dbPromise = null; finish(undefined); }, 4000); }).catch(function () { finish(undefined); });
+return;
+}
+dbPromise = null;
+finish(undefined);
+}, 4000);
+run();
 })).then(v => {
 if (v === null) return null;
 if (v === undefined) return false;
@@ -16157,11 +16184,15 @@ if (window.openModal) {
 window.openModal('修改昵称', el.textContent, (v) => {
 const val = (v || '').trim();
 if (val) {
+let oldEff = '';
+if (key === 'lbl-partner') oldEff = store.get('cs-lbl-partner') || store.get('lbl-partner') || 'TA';
 el.textContent = val;
 store.set(key, val);
 if (key === 'lbl-partner') {
-const pname = document.getElementById('chat-partner-name');
-if (pname) pname.textContent = val;
+if (window.renderChatHeader) { try { window.renderChatHeader(); } catch (e) {} }
+else { const pname = document.getElementById('chat-partner-name'); if (pname) pname.textContent = val; }
+const newEff = store.get('cs-lbl-partner') || store.get('lbl-partner') || 'TA';
+if (newEff !== oldEff) { try { if (window.chatSysNickChanged) window.chatSysNickChanged(oldEff); } catch (e) {} }
 }
 }
 }, { maxlength: 12 });
@@ -16299,17 +16330,26 @@ if (bgRemove) {
 bgRemove.addEventListener('click', () => clearPhoneBg());
 }
 const bgData = () => sanitizeBg('phone-bg', BG_SAFE_LIMIT);
+const bgPresetCss = () => {
+const n = getBgPresetName();
+if (!n) return '';
+const p = BG_PRESETS.find(b => b.name === n);
+return p ? p.css : '';
+};
 const applyBgVisibility = () => {
 if (!phoneEl) return;
 const home = document.getElementById('page-phone');
-const show = home && !home.hidden && bgData();
-if (show) {
-phoneEl.style.backgroundImage = 'url("' + bgData() + '")';
-phoneEl.style.backgroundSize = 'cover';
-phoneEl.style.backgroundPosition = 'center';
-phoneEl.style.backgroundAttachment = 'scroll';
-applyBodyBg(bgData());
-} else {
+const show = home && !home.hidden;
+if (!show) {
+phoneEl.style.backgroundImage = '';
+applyBodyBg(null);
+return;
+}
+const customBg = bgData();
+const presetCss = bgPresetCss();
+if (customBg) applyPhoneBg(customBg);
+else if (presetCss) applyPhoneBgPreset(presetCss);
+else {
 phoneEl.style.backgroundImage = '';
 applyBodyBg(null);
 }
@@ -17215,12 +17255,14 @@ function hideSchemeModal(m) { m.style.display = 'none'; m.hidden = true; }
 function applyScheme(idx, m) {
 const s = getSchemes()[idx];
 if (!s || !window.openModal) return;
-window.openModal('应用方案「' + s.name + '」？', '', (v) => {
+const ctl = window.openModal('应用方案「' + s.name + '」？', '', (v) => {
 if (v !== 'ok') return;
 applyBeautyData(s.data || {});
+hideSchemeModal(m); // 与聊天方案 applyChatScheme 一致：应用成功先关管理弹层，避免残留到刷新
 toast('已应用「' + s.name + '」，刷新生效');
 setTimeout(() => location.reload(), 800);
 }, { noInput: true, staticText: '将覆盖当前桌面的美化设置，刷新生效', pills: [{ label: '应用', value: 'ok' }] });
+if (ctl && ctl.pills) ctl.pills([{ label: '应用', value: 'ok' }], 'ok');
 }
 function deleteScheme(idx, m) {
 const s = getSchemes()[idx];
@@ -17900,7 +17942,7 @@ buildDeskPages();
 const resetDeskRow = document.getElementById('row-desk-reset');
 if (resetDeskRow) {
 resetDeskRow.addEventListener('click', () => {
-window.openModal('恢复默认桌面', '将恢复桌面卡片布局与页数，桌面恢复为默认三页（每页已设置的背景图与图标不受影响）。确定继续？', (v) => {
+const ctl = window.openModal('恢复默认桌面', '将恢复桌面卡片布局与页数，桌面恢复为默认三页（每页已设置的背景图与图标不受影响）。确定继续？', (v) => {
 if (v !== '1') return;
 try { store.set('desk-page-count', '3'); } catch (e) {}
 try { store.remove('desk-layout'); } catch (e) {}
@@ -17978,6 +18020,7 @@ else rt2.appendChild(mr);
 }, 100);
 toast('已恢复默认桌面');
 }, { noInput: true, pills: [{ label: '确定恢复默认', value: '1' }] });
+if (ctl && ctl.pills) ctl.pills([{ label: '确定恢复默认', value: '1' }], '1');
 });
 }
 buildDeskPages();
@@ -21016,6 +21059,79 @@ eg.forEach(g => (g[1] || []).forEach(c => { if (isOff && isOff('emoji', c)) retu
 return { text, kaomoji, emoji, sticker, image, voice, poke };
 }
 window.getPool = getPool;
+function hasCustomReplyCards() {
+try {
+const cc = (window.getCustomCards && window.getCustomCards()) || [];
+return cc.length > 0;
+} catch (e) { return false; }
+}
+let lastHydFailAt = 0;
+const HYDR_FAIL_COOLDOWN = 30000;
+let _replyWatcherTimer = null;
+let _replyWatcherLeft = 0;
+const _REPLY_WATCHER_MAX = 12;
+const _REPLY_WATCHER_INTERVAL = 5000;
+function _replyWatcherStop() {
+if (_replyWatcherTimer) { clearTimeout(_replyWatcherTimer); _replyWatcherTimer = null; }
+_replyWatcherLeft = 0;
+}
+function _replyWatcherTick() {
+_replyWatcherTimer = null;
+if (hasCustomReplyCards()) { _replyWatcherStop(); return; }
+let done = false;
+const settle = function () {
+if (done) return; done = true;
+if (hasCustomReplyCards()) { _replyWatcherStop(); return; }
+_replyWatcherKick();
+};
+try {
+window.hydrateReplyScope('own', function () {
+if (hasCustomReplyCards()) { settle(); return; }
+window.hydrateReplyScope('public', function () { settle(); });
+});
+} catch (e) { settle(); }
+}
+function _replyWatcherKick() {
+try {
+if (hasCustomReplyCards()) { _replyWatcherStop(); return; }
+if (!window.hydrateReplyScope || _replyWatcherTimer || _replyWatcherLeft <= 0) return;
+_replyWatcherLeft--;
+_replyWatcherTimer = setTimeout(_replyWatcherTick, _REPLY_WATCHER_INTERVAL);
+} catch (e) {}
+}
+function _replyWatcherStart() {
+try {
+if (hasCustomReplyCards() || _replyWatcherTimer || _replyWatcherLeft > 0) return;
+_replyWatcherLeft = _REPLY_WATCHER_MAX;
+_replyWatcherKick();
+} catch (e) {}
+}
+function ensureReplyCardsReady(capMs) {
+const cap = capMs || 20000;
+try {
+if (hasCustomReplyCards()) { lastHydFailAt = 0; _replyWatcherStop(); return Promise.resolve(true); }
+if (!window.hydrateReplyScope) return Promise.resolve(false);
+if (Date.now() - lastHydFailAt < HYDR_FAIL_COOLDOWN) { _replyWatcherStart(); return Promise.resolve(false); }
+return new Promise((res) => {
+let settled = false;
+const tm = setTimeout(() => { if (!settled) { settled = true; lastHydFailAt = Date.now(); _replyWatcherStart(); res(false); } }, cap);
+const finish = (ok) => { if (!settled) { settled = true; clearTimeout(tm); res(ok); } };
+window.hydrateReplyScope('own', () => {
+if (hasCustomReplyCards()) {
+try { if (window.hydrateLibScopes) window.hydrateLibScopes(['public']); } catch (e) {}
+_replyWatcherStop();
+finish(true);
+return;
+}
+window.hydrateReplyScope('public', () => {
+if (!hasCustomReplyCards()) _replyWatcherStart(); // 池仍空 → 后台自愈重试
+finish(true);
+});
+});
+});
+} catch (e) { return Promise.resolve(false); }
+}
+window.ensureReplyCardsReady = ensureReplyCardsReady;
 window.__replyPoolDiag = function () {
 try {
 const P = getPool();
@@ -22749,8 +22865,9 @@ setTimeout(() => { if (!sameCid()) return; if (window.maybeMusicRequest) window.
 }
 }, delay);
 }
-function replyOnce(c, quote, silent, quoteIdx) {
+async function replyOnce(c, quote, silent, quoteIdx) {
 try { console.log('[mochi-reply] replyOnce #%s quote=%s silent=%s', (window.__replyOnceDiag=(window.__replyOnceDiag||0)+1), !!quote, !!silent); } catch(e){}
+try { await ensureReplyCardsReady(); } catch (e) {}
 const myCid = window.__activeCid || 'default';
 const sameCid = () => (window.__activeCid || 'default') === myCid;
 const rep = genOneReply(c);
@@ -23068,6 +23185,8 @@ if (!hit(prob)) return;
 if (hit(cfgn(c, 'touch-prob', 5))) { performPoke(); return; }
 if (tryActiveInvite(c)) return;
 if (window.ckQuestionTry && window.ckQuestionTry(c)) return;
+(async () => {
+try { await ensureReplyCardsReady(); } catch (e) {}
 const pool = getPool();
 const autoMsg = () => {
 const r = Math.random() * 100;
@@ -23100,6 +23219,7 @@ if (i < count - 1) showTyping();
 }
 setTimeout(() => { if (window.callMaybeTrigger) window.callMaybeTrigger(); }, count * 2600 + 3500);
 setTimeout(() => { trySystemAutoSend(); trySystemAskMochi(); tryCollectPending(); if (window.maybeAutoGift) window.maybeAutoGift(); }, count * 2600 + 2500);
+})();
 } catch (e) {
 try {
 const errArr = (window.__jsErrors = window.__jsErrors || []);
@@ -23118,6 +23238,7 @@ const phoneTab = document.querySelector('.tab[data-page="page-phone"]');
 if (phoneTab) phoneTab.classList.add('active');
 document.querySelectorAll('.page').forEach(p => p.hidden = true);
 chatPage.hidden = false;
+try { if (window.hydrateLibScopes) window.hydrateLibScopes(['own', 'public']); } catch (e) {}
 fillAvatar('chat-user-av', 'cs-avatar-user');
 fillAvatar('chat-partner-av', 'cs-avatar-partner');
 if (window.applyChatSettings) window.applyChatSettings();
@@ -24223,6 +24344,7 @@ try {
 const histList = document.getElementById('div-chat-history');
 if (histList && !histList.hidden && window.divineHistLoad) renderChatHistory();
 } catch (err) {}
+try { if (window.divineRenderTargets) window.divineRenderTargets('div-chat-targets'); } catch (err) {}
 }
 const moreDivine = document.getElementById('more-divine');
 if (moreDivine) {
@@ -24395,6 +24517,7 @@ return;
 if (chatDrawCancel) { try { chatDrawCancel(); } catch (err) {} chatDrawCancel = null; }
 const question = (document.getElementById('div-chat-question') || {}).value || '';
 const snapMode = chatDivineMode, snapCount = chatDivineCount;
+const snapTarget = (window.divineGetTarget && window.divineGetTarget()) || '';
 const deck = snapMode === 'tarot' ? (window.__TAROT__ || []) : (window.__LENO__ || []);
 if (!window.startDivineDraw || !deck.length) { r.innerHTML = '<div class="div-result-empty">占卜牌库加载中…</div>'; return; }
 divDraw.textContent = '抽牌中…';
@@ -24414,12 +24537,15 @@ setTimeout(() => { try { window.divineSendResult(snapMode, cards, summary, quest
 }
 if (window.divineHistSave && window.divineHistLoad) {
 try {
+const record = { ts: Date.now(), mode: snapMode, count: snapCount, question: question, cards: cards, summary: summary };
+if (snapTarget && window.divineTargetName) record.target = window.divineTargetName(snapTarget);
 const list = window.divineHistLoad();
 if (!Array.isArray(list)) { if (window.divineHistSave) window.divineHistSave([]); }
 else {
-list.unshift({ ts: Date.now(), mode: snapMode, count: snapCount, question: question, cards: cards, summary: summary });
+list.unshift(record);
 window.divineHistSave(list);
 }
+if (window.divineSaveToHomeHistory) { try { window.divineSaveToHomeHistory(record, snapTarget); } catch (err2) {} }
 } catch (err) {}
 try { renderChatHistory(); } catch (err) {
 try { if (window.__jsErrors) window.__jsErrors.push('divineHist: ' + (err && err.message)); } catch (e2) {}
@@ -25317,6 +25443,8 @@ const val = (v || '').trim();
 if (!val) return;
 rec.text = val;
 rec.type = 'text';
+rec.parts = (Array.isArray(rec.parts) ? rec.parts.filter(p => p && p.k !== 'text') : []);
+rec.parts.push({ k: 'text', v: val });
 syncFavMsgText(orig, val); // v3.7.x：编辑后收藏夹里同一条消息快照同步更新（含 TA 收藏）
 sessionChangedIdx.add(idx); // v3.6.x：标记本会话变更，防 loadMsgs 合并回滚编辑
 saveMsgs();
@@ -27757,6 +27885,8 @@ const wantQuote = hit(c['gc-quote-prob']) && !!quoteText;
 for (let i = 0; i < count; i++) {
 setTimeout(() => {
 hideTyping();
+(async () => {
+try { if (window.hydrateLibForCid) await new Promise(res => window.hydrateLibForCid(cid, res)); } catch (e) {}
 const rep = gcGenReply(cid, c);
 const q = (wantQuote && i === 0) ? quoteText : null;
 const rec = { side: 'in', cid: cid, name: name, text: rep.text, type: rep.type, parts: rep.parts, ts: Date.now() };
@@ -27785,6 +27915,8 @@ if (hit(c['gc-rc-refix'])) {
 showTyping(name);
 setTimeout(() => {
 hideTyping();
+(async () => {
+try { if (window.hydrateLibForCid) await new Promise(res => window.hydrateLibForCid(cid, res)); } catch (e) {}
 const rep2 = gcGenReply(cid, c);
 const rec2 = { side: 'in', cid: cid, name: name, text: rep2.text, type: rep2.type, parts: rep2.parts, ts: Date.now() };
 if (rep2.type === 'text' || rep2.type === 'sticker' || rep2.type === 'image') {
@@ -27801,10 +27933,12 @@ saveMsgs();
 renderMsg(rec2, msgs.length - 1);
 followGcBottom();
 if (window.playSfx) window.playSfx('in');
+})();
 }, 700);
 }
 }, 900);
 }
+})();
 }, i * randInt(1200, 2800));
 }
 }, delay);
@@ -30424,29 +30558,43 @@ try {
 if (window.hydrateLibScopes) window.hydrateLibScopes(['public', 'own']);
 } catch (e) {}
 }
+function replyScopeGroups() {
+try {
+let hasAny = false;
+for (let i = 0; i < CC_TYPES.length; i++) { if ((groups[CC_TYPES[i]] || []).length) { hasAny = true; break; } }
+if (!hasAny) {
+const raw = curStore().get(curKey());
+if (raw) {
+const g = buildGroupsFrom(raw);
+for (let i = 0; i < CC_TYPES.length; i++) { if ((g[CC_TYPES[i]] || []).length) { groups = g; break; } }
+}
+}
+} catch (e) {}
+return groups;
+}
 window.getCustomCards = function () {
 maybeHydrateReplyPool();
-const g = mergeWithPublic(groups);
+const g = mergeWithPublic(replyScopeGroups());
 const out = [];
 Object.keys(g).forEach(t => g[t].forEach(([name, arr]) => arr.forEach(c => out.push(c))));
 return out;
 };
 window.getPokeCards = function () {
 maybeHydrateReplyPool();
-const g = mergeWithPublic(groups);
+const g = mergeWithPublic(replyScopeGroups());
 const out = [];
 (g['poke'] || []).forEach(([name, arr]) => arr.forEach(c => out.push(c)));
 return out;
 };
 window.getPokeGroups = function () {
-return (mergeWithPublic(groups)['poke'] || []).slice();
+return (mergeWithPublic(replyScopeGroups())['poke'] || []).slice();
 };
 function isMediaImg(c) {
 return typeof c === 'string' && (c.indexOf('data:image') === 0 || /^https?:\/\/[^\s"'<>]+$/i.test(c));
 }
 window.getMediaCards = function (type) {
 maybeHydrateReplyPool();
-const g = mergeWithPublic(groups);
+const g = mergeWithPublic(replyScopeGroups());
 const out = [];
 (g[type] || []).forEach(([name, arr]) => arr.forEach(c => {
 if (type === 'voice') {
@@ -30458,7 +30606,7 @@ out.push(c);
 return out;
 };
 window.getMediaGroups = function (type) {
-const g = mergeWithPublic(groups);
+const g = mergeWithPublic(replyScopeGroups());
 return (g[type] || []).map(([name, arr]) => [name, arr.filter(isMediaImg)]);
 };
 window.getScopedGroups = function (type, scope) {
@@ -30486,7 +30634,7 @@ try { renderGroupsBar(); render(); } catch (e) {}
 hydrateLibScopes(['public', 'own']);
 });
 window.getCustomCardsFor = function (cid) {
-maybeHydrateReplyPool();
+try { if (window.hydrateLibForCid) window.hydrateLibForCid(cid); } catch (e) {}
 const raw = (window.storeFor && window.storeFor(cid) || window.xyStore('xy-home-v2:' + cid)).get('cc-groups');
 const g = mergeWithPublic(buildGroupsFrom(raw));
 const out = [];
@@ -30494,7 +30642,7 @@ Object.keys(g).forEach(t => (g[t] || []).forEach(([name, arr]) => (arr || []).fo
 return out;
 };
 window.getPokeCardsFor = function (cid) {
-maybeHydrateReplyPool();
+try { if (window.hydrateLibForCid) window.hydrateLibForCid(cid); } catch (e) {}
 const raw = (window.storeFor && window.storeFor(cid) || window.xyStore('xy-home-v2:' + cid)).get('cc-groups');
 const g = mergeWithPublic(buildGroupsFrom(raw));
 const out = [];
@@ -30502,7 +30650,7 @@ const out = [];
 return out;
 };
 window.getMediaCardsFor = function (cid, type) {
-maybeHydrateReplyPool();
+try { if (window.hydrateLibForCid) window.hydrateLibForCid(cid); } catch (e) {}
 const raw = (window.storeFor && window.storeFor(cid) || window.xyStore('xy-home-v2:' + cid)).get('cc-groups');
 const g = mergeWithPublic(buildGroupsFrom(raw));
 const out = [];
@@ -30734,17 +30882,21 @@ const hydAbsent = {};
 function hydFullKey(scope) {
 return scope === 'public' ? (PUB_PREFIX + ':' + PUB_KEY) : (window.activePrefix() + ':cc-groups');
 }
-function hydrateScope(scope) {
+function hydrateScope(scope, cid) {
 if (!window.idbHydrateKey) return Promise.resolve(false);
 let fullKey = '', deferred = false;
 try {
-fullKey = hydFullKey(scope);
+fullKey = cid ? ('xy-home-v2:' + cid + ':cc-groups') : hydFullKey(scope);
 deferred = Array.isArray(window.__xyIdbDeferredKeys) && window.__xyIdbDeferredKeys.indexOf(fullKey) >= 0;
 } catch (e) {}
 if (!deferred && hydAbsent[fullKey]) return Promise.resolve(false);
 if (!deferred) {
 let hasData = false;
-try { hasData = scope === 'public' ? !!pubStore().get(PUB_KEY) : !!store.get('cc-groups'); } catch (e) {}
+try {
+hasData = cid
+? !!(window.storeFor && window.storeFor(cid).get('cc-groups'))
+: (scope === 'public' ? !!pubStore().get(PUB_KEY) : !!store.get('cc-groups'));
+} catch (e) {}
 if (hasData) return Promise.resolve(false);
 }
 if (hydInflight[fullKey]) return hydInflight[fullKey];
@@ -30783,6 +30935,29 @@ return true;
 };
 window.libScopesDeferred = function (scopes) {
 return libScopesDeferred(Array.isArray(scopes) && scopes.length ? scopes : ['public', 'own']);
+};
+window.hydrateReplyScope = function (scope, done) {
+return hydrateScope(scope === 'public' ? 'public' : 'own').then(function (ok) {
+if (done) { try { done(ok); } catch (e) {} }
+return true;
+});
+};
+window.hydrateLibForCid = function (cid, done) {
+const cur = window.__activeCid || 'default';
+let p;
+if (!cid || cid === cur) {
+p = hydrateLibScopes(['public', 'own']);
+} else {
+libHydChain = libHydChain
+.then(() => hydrateScope('public'))
+.then(() => hydrateScope('own', cid))
+.catch(() => {});
+p = libHydChain;
+}
+return p.then(function () {
+if (done) { try { done(); } catch (e) {} }
+return true;
+});
 };
 (function () {
 const libPage = document.getElementById('page-chatcard');
@@ -31460,12 +31635,13 @@ function hideChatSchemeModal(m) { if (m) { m.style.display = 'none'; m.hidden = 
 function applyChatScheme(idx, m) {
 const s = getChatSchemes()[idx];
 if (!s || !window.openModal) return;
-window.openModal('应用方案「' + s.name + '」？', '', (v) => {
+const ctl = window.openModal('应用方案「' + s.name + '」？', '', (v) => {
 if (v !== 'ok') return;
 applyChatBeautyData(s.data || {});
 hideChatSchemeModal(m);
 toast('已应用「' + s.name + '」，当前聊天立即生效');
 }, { noInput: true, staticText: '将覆盖当前联系人桌面的聊天美化设置，立即生效', pills: [{ label: '应用', value: 'ok' }] });
+if (ctl && ctl.pills) ctl.pills([{ label: '应用', value: 'ok' }], 'ok');
 }
 function deleteChatScheme(idx, m) {
 const s = getChatSchemes()[idx];
@@ -34000,6 +34176,7 @@ let audio = null;
 let progressTimer = null;
 let floatClosed = false;   // 悬浮小框手动收起
 let floatMin = false;      // 悬浮小框是否处于最小（最初版最小单行小框）状态
+let floatHideByWidget = false; // 桌面小组件触发播放时抑制悬浮小框自动唤出（小组件本身就是控制器，避免重复弹出）
 let taActive = false;      // TA 请求过一起听歌后置 true，歌曲结束 TA 可能接动作
 let cooldownAt = 0;        // TA 音乐请求冷却时间戳
 let reqData = null;        // 待确认的 TA 请求 {trackId}
@@ -35966,9 +36143,10 @@ audio.onplay = function () { playRejected = false; bgResumeFails = 0; clearStall
 audio.onpause = function () { syncPlayIcons(false); try { if (navigator.mediaSession) navigator.mediaSession.playbackState = 'paused'; } catch (e) {} try { window.__musicPlaying = false; } catch (e) {} // v3.10.x：非用户暂停（后台省电/音频焦点抢占/系统打断）→ 定时补播反击
 if (wantPlay && !callHoldPending) scheduleBgResume(); };
 }
-function playTrack(id) {
+function playTrack(id, fromWidget) {
 const m = findTrack(id);
 if (!m) return;
+markFloatSource(fromWidget);
 if (m) m._httpsRetried = false;
 currentId = id;
 ensureSongCover(m);
@@ -36045,10 +36223,11 @@ const fDur = document.getElementById('sm-f-dur');
 if (fDur) fDur.textContent = fmtDur(audio.duration);
 }, 500);
 }
-function toggle() {
+function toggle(fromWidget) {
+markFloatSource(fromWidget);
 if (!audio || !currentId) {
 const songs = library.filter(m => !m.playlistId || m.playlistId === 'default');
-if (songs.length) { playTrack(songs[0].id); return; }
+if (songs.length) { playTrack(songs[0].id, fromWidget); return; }
 toast('音乐库还没有歌曲');
 return;
 }
@@ -36304,7 +36483,8 @@ openQueuePanel();
 });
 });
 }
-function next() {
+function next(fromWidget) {
+markFloatSource(fromWidget);
 while (playQueue.length) {
 const qid = playQueue.shift();
 if (findTrack(qid)) { playTrack(qid); return; }
@@ -36320,14 +36500,15 @@ else {
 idx = idx < 0 ? -1 : idx;
 nid = list[(idx + 1) % list.length].id;
 }
-playTrack(nid);
+playTrack(nid, fromWidget);
 }
-function prev() {
+function prev(fromWidget) {
+markFloatSource(fromWidget);
 const list = playableList();
 if (!list.length) return;
 const idx = list.findIndex(x => x.id === currentId);
-if (idx < 0) { playTrack(list[list.length - 1].id); return; }
-playTrack(list[(idx - 1 + list.length) % list.length].id);
+if (idx < 0) { playTrack(list[list.length - 1].id, fromWidget); return; }
+playTrack(list[(idx - 1 + list.length) % list.length].id, fromWidget);
 }
 function cycleMode() {
 const order = ['list', 'shuffle', 'single'];
@@ -36407,6 +36588,9 @@ cover.classList.remove('has-cover');
 if (m && m.neteaseId && !m.cover) ensureSongCover(m);
 }
 function isFloatOn() { return settings.floatEn && !floatClosed && currentId && audio; }
+function markFloatSource(fromWidget) {
+floatHideByWidget = !!fromWidget;
+}
 function applyFloatMin() {
 const el = document.getElementById('sm-float');
 if (el) el.classList.toggle('min', floatMin);
@@ -36420,7 +36604,7 @@ function renderFloat() {
 const el = document.getElementById('sm-float');
 if (!el) return;
 const m = findTrack(currentId);
-el.hidden = !(settings.floatEn && !floatClosed && currentId && audio && m);
+el.hidden = !(settings.floatEn && !floatClosed && currentId && audio && m) || floatHideByWidget;
 applyFloatMin();
 if (!m) return;
 document.getElementById('sm-f-name').textContent = m.name || '未知歌曲';
@@ -36439,6 +36623,7 @@ window.musicFloatGet = function () { return !!settings.floatEn; };
 window.musicFloatSet = function (en) {
 settings.floatEn = !!en;
 floatClosed = false;
+floatHideByWidget = false; // 用户显式操作悬浮小窗开关 → 清除小组件抑制
 saveSettings();
 syncFloatToggle();
 renderFloat();
@@ -37033,7 +37218,7 @@ bindProbStep('sm-set-favprob', 'taFavProb', 20, 100);
 const cool = document.getElementById('sm-set-cool');
 if (cool) cool.addEventListener('change', () => { settings.cooldownMs = Number(cool.value); saveSettings(); });
 const floatCb = document.getElementById('sm-set-float');
-if (floatCb) floatCb.addEventListener('change', () => { settings.floatEn = floatCb.checked; saveSettings(); syncFloatToggle(); renderFloat(); });
+if (floatCb) floatCb.addEventListener('change', () => { settings.floatEn = floatCb.checked; floatHideByWidget = false; saveSettings(); syncFloatToggle(); renderFloat(); });
 const wcov = document.getElementById('sm-set-wcov');
 if (wcov) wcov.addEventListener('change', () => {
 settings.widgetCoverMode = wcov.value;
@@ -37054,11 +37239,11 @@ const fill = document.getElementById('mw-fill');
 const knob = document.getElementById('mw-knob');
 const curEl = document.getElementById('mw-cur');
 const durEl = document.getElementById('mw-dur');
-if (playBtn) playBtn.addEventListener('click', toggle);
+if (playBtn) playBtn.addEventListener('click', () => toggle(true));
 if (modeBtn) modeBtn.addEventListener('click', cycleMode);
 if (queueBtn) queueBtn.addEventListener('click', openQueuePanel);
-if (prevBtn) prevBtn.addEventListener('click', prev);
-if (nextBtn) nextBtn.addEventListener('click', next);
+if (prevBtn) prevBtn.addEventListener('click', () => prev(true));
+if (nextBtn) nextBtn.addEventListener('click', () => next(true));
 if (heartBtn) {
 heartBtn.addEventListener('click', () => {
 const m = findTrack(currentId);
@@ -37185,6 +37370,7 @@ if (fToggle) {
 fToggle.addEventListener('change', () => {
 settings.floatEn = fToggle.checked;
 floatClosed = false;
+floatHideByWidget = false; // 用户显式操作悬浮小窗开关 → 清除小组件抑制
 saveSettings();
 renderFloat();
 });
@@ -38074,8 +38260,7 @@ const c = contacts.find(x => x && x.id === cid);
 return c ? (c.name || c.id || '') : '';
 } catch (e) { return ''; }
 }
-function renderTargets() {
-const wrap = document.getElementById('div-targets');
+function renderTargetsInto(wrap) {
 if (!wrap) return;
 targetCid = targetGet();
 const contacts = (window.getContacts ? window.getContacts() : []) || [];
@@ -38094,6 +38279,9 @@ targetCid = b.dataset.cid || '';
 targetSet(targetCid);
 });
 });
+}
+function renderTargets() {
+try { renderTargetsInto(document.getElementById('div-targets')); } catch (e) {}
 }
 function saveToHomeHistory(record, targetCid2) {
 try {
@@ -38531,6 +38719,14 @@ window.divineBuildSummary = buildSummary;
 window.divineBuildResultText = buildResultText;
 window.divineCopyResultText = copyResultText;
 window.divineSendResult = function (m, cards, summary, question) { sendToChat(m, cards, summary, question); };
+window.divineRenderTargets = function (el) {
+const wrap = (el && el.nodeType === 1) ? el : (typeof el === 'string' ? document.getElementById(el) : null);
+if (wrap) renderTargetsInto(wrap);
+return targetCid;
+};
+window.divineGetTarget = function () { return targetCid; };
+window.divineTargetName = targetNameOf;
+window.divineSaveToHomeHistory = saveToHomeHistory;
 })();
 } catch (__e) { try { console.error("[JS] divination.js", __e && __e.message || __e); } catch (x) {} if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
 (function () { try {
@@ -50173,6 +50369,14 @@ const s = JSON.stringify(list);
 store.set('loc-history', s);
 try { if (window.idbSet) window.idbSet(window.activePrefix() + ':loc-history', s); } catch (e) {}
 }
+window.locAddHist = function (text, type, auto) {
+try {
+const hist = loadHist();
+hist.unshift({ text: String(text == null ? '' : text), type: type || 'sense', ts: Date.now(), auto: !!auto });
+saveHist(hist);
+} catch (e) {}
+};
+window.locRefreshBody = function () { try { renderLocPanel(); } catch (e) {} };
 function eggLastTs() { return parseInt(store.get('loc-egg-last') || '0', 10) || 0; }
 function eggUsed() { return Date.now() - eggLastTs() < EGG_COOLDOWN; }
 function loadCustom() { return window.locLibGetCustomCards ? window.locLibGetCustomCards() : []; }
@@ -50229,6 +50433,7 @@ if (type === 'egg') store.set('loc-egg-last', String(ts));
 playLocFx(text, type);
 locViewDate = dayStr(new Date());
 renderLocPanel();
+if (window.refreshSense) window.refreshSense();
 }
 function dayStr(d) { const p = (n) => (n < 10 ? '0' + n : '' + n); return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()); }
 function dayLabel(s) {
@@ -50259,6 +50464,7 @@ playLocFx(dirText, 'dir');
 pendingDir = null;
 locViewDate = dayStr(new Date());
 renderLocPanel();
+if (window.refreshSense) window.refreshSense();
 }
 let asking = false;
 function locLibGroup(k) {
@@ -50355,8 +50561,6 @@ const entry = document.getElementById('ck-loc-entry');
 if (entry) entry.addEventListener('click', () => openLocPanel(false));
 const entryDesk = document.getElementById('ck-loc-entry-desk');
 if (entryDesk) entryDesk.addEventListener('click', () => openLocPanel(true));
-const closeBtn = document.getElementById('loc-close');
-if (closeBtn) closeBtn.addEventListener('click', closeLocPanel);
 const locBack = document.getElementById('loc-back');
 if (locBack) locBack.addEventListener('click', closeLocPanel);
 try {
@@ -50423,8 +50627,16 @@ const DIRS = [
 { k: '左侧',   arrow: '←', angle: 180 },
 { k: '左前方', arrow: '↖', angle: 225 }
 ];
-const NEAR_WORDS = ['在你身边', '一直没走远', '隔着世界在你身边', '能摸到我吗', '陪你走着', '停下来等你', '抬头就能看到', '在你前面'];
+const NEAR_WORDS = ['在你身边', '一直没走远', '隔着世界在你身边', '能摸到我吗', '陪你走着', '停下来等你', '抬头就能看到', '在你前面', '原地等你'];
 const FAR_WORDS = ['在你看不到的地方', '在你看不到的地方偷看你', '再远一点', '就停这儿'];
+function dirFromText(t) {
+if (!t) return '';
+if (t.indexOf('左边') >= 0) return '左侧';
+if (t.indexOf('右边') >= 0) return '右侧';
+if (t.indexOf('身后') >= 0 || t.indexOf('后面') >= 0) return '后方';
+if (t.indexOf('前面') >= 0 || t.indexOf('抬头') >= 0) return '正前方';
+return '';
+}
 function load() {
 try {
 const v = JSON.parse(store.get(KEY) || 'null');
@@ -50491,7 +50703,16 @@ function getSense(force) {
 const s = load();
 const now = Date.now();
 let dirty = false;
-if (!s.dir || (s.nextDirAt && now >= s.nextDirAt)) {
+let cur = null;
+try { cur = JSON.parse(store.get('loc-current') || 'null'); } catch (e) {}
+const fixedDir = cur ? dirFromText(cur.text) : '';
+if (fixedDir) {
+if (s.dir !== fixedDir) {
+s.dir = fixedDir;
+s.nextDirAt = now + (15 + Math.floor(Math.random() * 31)) * 60000; // 15~45 分钟
+dirty = true;
+}
+} else if (!s.dir || (s.nextDirAt && now >= s.nextDirAt)) {
 s.dir = rollDir();
 s.nextDirAt = now + (15 + Math.floor(Math.random() * 31)) * 60000; // 15~45 分钟
 dirty = true;
@@ -50587,6 +50808,18 @@ result.appendChild(p);
 });
 }
 render();
+try {
+const arrows2 = DIRS.find(d => d.k === s.dir);
+let tlText;
+if (isUndirected(s.dir)) {
+tlText = '方位感知：暂时无法判断方向';
+} else {
+tlText = '方位感知：' + (arrows2 ? arrows2.arrow + ' ' : '') + s.dir + ' · ' + s.rangef + ' · ' + s.power;
+}
+if (touched) tlText += ' · 好像有什么轻轻碰了你一下';
+if (window.locAddHist) window.locAddHist(tlText, 'sense', false);
+if (window.locRefreshBody) window.locRefreshBody();
+} catch (e) {}
 setTimeout(() => {
 if (btn) { btn.classList.remove('busy'); btn.disabled = false; }
 }, 4000);
@@ -52475,7 +52708,7 @@ const inWin = !pmpCPage.hidden;
 try { pmpCAdd('ta', '没事，休息一下也可以'); } catch (e) {}
 pmpDetach(); pomoRender();
 if (inWin) { openPage(pomoPage); pomoRender(); }
-}, { noInput: true, lock: true, pills: [{ label: '结束', value: '1' }, { label: '再撑一会儿', value: '0' }], staticText: '提前结束的话，这个 🍅 就不计入今天啦' });
+}, { noInput: true, lock: true, pill: '1', pills: [{ label: '结束', value: '1' }, { label: '再撑一会儿', value: '0' }], staticText: '提前结束的话，这个 🍅 就不计入今天啦' });
 }
 const pmpGoBtn = document.getElementById('pomo-companion');
 if (pmpGoBtn) pmpGoBtn.addEventListener('click', () => {
@@ -54648,7 +54881,7 @@ const arr = listOf(kind, arc);
 const i = arr.findIndex(x => x.id === id);
 if (i >= 0) arr.splice(i, 1);
 saveArc(cur, arc); toast('已删除'); render();
-}, { noInput: true, pills: [{ label: '取消', value: 'no' }, { label: '删除', value: 'del' }] });
+}, { noInput: true, pill: 'del', pills: [{ label: '取消', value: 'no' }, { label: '删除', value: 'del' }] });
 }
 function addKnow(prefill) {
 if (!window.openModal) return;
@@ -54754,7 +54987,7 @@ it.status = 'retired'; it.updated = Date.now();
 arc.history.push({ time: it.updated, text: '「' + typeLabel(it.type) + '」暂时不再适用：' + short(it.text) });
 saveArc(cur, arc); toast('已暂不适用'); render();
 }
-}, { noInput: true, pills: [{ label: '取消', value: 'no' }, { label: '暂不适用', value: 'yes' }] });
+}, { noInput: true, pill: 'yes', pills: [{ label: '取消', value: 'no' }, { label: '暂不适用', value: 'yes' }] });
 }
 function restoreKnow(id) {
 const arc = ensureArc(cur); const it = arc.loves.find(x => x.id === id); if (!it) return;
@@ -54769,7 +55002,7 @@ if (v !== 'del') return;
 const arc = ensureArc(cur);
 arc.loves = arc.loves.filter(x => x.id !== id);
 saveArc(cur, arc); toast('已删除'); render();
-}, { noInput: true, pills: [{ label: '取消', value: 'no' }, { label: '删除', value: 'del' }] });
+}, { noInput: true, pill: 'del', pills: [{ label: '取消', value: 'no' }, { label: '删除', value: 'del' }] });
 }
 function addBond(cat) {
 if (!window.openModal) return;
@@ -54835,7 +55068,7 @@ if (kind === 'bond') arc.bonds = arc.bonds.filter(x => x.id !== id);
 else if (kind === 'moment') arc.moments = arc.moments.filter(x => x.id !== id);
 else arc.records = arc.records.filter(x => x.id !== id);
 saveArc(cur, arc); toast('已删除'); render();
-}, { noInput: true, pills: [{ label: '取消', value: 'no' }, { label: '删除', value: 'del' }] });
+}, { noInput: true, pill: 'del', pills: [{ label: '取消', value: 'no' }, { label: '删除', value: 'del' }] });
 }
 function toggleMoment(recId) {
 const arc = ensureArc(cur); const rec = arc.records.find(x => x.id === recId); if (!rec) return;
@@ -54866,7 +55099,7 @@ if (v === 'convert') {
 w.solved = true; w.solvedAt = Date.now(); saveArc(cur, arc); render();
 setTimeout(function () { addKnow(w.text); }, 0); // 链式开新弹窗必须延后一拍（外层 finally close 会清 cb）
 }
-}, { noInput: true, pills: [{ label: '只是已了解', value: 'only' }, { label: '已了解 · 也记为了解', value: 'convert' }] });
+}, { noInput: true, pill: 'only', pills: [{ label: '只是已了解', value: 'only' }, { label: '已了解 · 也记为了解', value: 'convert' }] });
 }
 function reopenWonder(id) {
 const arc = ensureArc(cur); const w = arc.wonders.find(x => x.id === id); if (!w) return;
@@ -54879,7 +55112,7 @@ if (v !== 'del') return;
 const arc = ensureArc(cur);
 arc.wonders = arc.wonders.filter(x => x.id !== id);
 saveArc(cur, arc); toast('已删除'); render();
-}, { noInput: true, pills: [{ label: '取消', value: 'no' }, { label: '删除', value: 'del' }] });
+}, { noInput: true, pill: 'del', pills: [{ label: '取消', value: 'no' }, { label: '删除', value: 'del' }] });
 }
 function dispatch(op, el) {
 const id = el.getAttribute('data-id');
@@ -55344,7 +55577,7 @@ const arr = listOf(kind, arc);
 const i = arr.findIndex(x => x.id === id);
 if (i >= 0) arr.splice(i, 1);
 save(arc); toast('已删除'); render();
-}, { noInput: true, pills: [{ label: '取消', value: 'no' }, { label: '删除', value: 'del' }] });
+}, { noInput: true, pill: 'del', pills: [{ label: '取消', value: 'no' }, { label: '删除', value: 'del' }] });
 }
 function addSelf() {
 if (!window.openModal) return;
@@ -55395,7 +55628,7 @@ if (v !== 'del') return;
 const arc = ensureArc();
 arc.selfs = arc.selfs.filter(x => x.id !== id);
 save(arc); toast('已删除'); render();
-}, { noInput: true, pills: [{ label: '取消', value: 'no' }, { label: '删除', value: 'del' }] });
+}, { noInput: true, pill: 'del', pills: [{ label: '取消', value: 'no' }, { label: '删除', value: 'del' }] });
 }
 function dispatch(op, el) {
 const id = el.getAttribute('data-id');
@@ -67362,6 +67595,7 @@ r.readAsText(file, 'utf-8');
 });
 }
 async function doExport() {
+impShow('正在导出…', '正在读取全部数据', 3);
 const data = { version: '1.0', app: 'mochi-zika', exportTime: new Date().toISOString(), ls: {}, idb: {} };
 const add = (k, v) => {
 if (byteLen(v) > 20 * 1024) data.idb[k] = v;
@@ -67378,7 +67612,11 @@ add(k, localStorage.getItem(k));
 if (window.idbGetAllKeys) {
 let idbKeys = [];
 try { idbKeys = await window.idbGetAllKeys() || []; } catch (e) {}
+const idbTotal = idbKeys.length;
+let idbDone = 0;
 for (const k of idbKeys) {
+idbDone++;
+if (idbTotal) impShow('正在导出…', '正在读取全部数据 ' + idbDone + ' / ' + idbTotal, 8 + Math.round(idbDone / idbTotal * 60));
 try {
 if (k.indexOf('xy-home-v2:') !== 0) continue;
 if (k === SNAPSHOT_KEY) continue; // v3.7.0：副本键不进导出文件
@@ -67401,24 +67639,26 @@ add(k, v);
 } catch (e) {} // 单键失败跳过，继续导出其余键
 }
 }
+impShow('正在导出…', '正在打包数据文件', 72);
 const json = JSON.stringify(data);
 const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
 const fname = 'mochi数据备份_' + localDateStr(new Date()) + '.json';
 const sizeKB = Math.round(json.length / 1024);
 try { localStorage.setItem('xy-home-v2:__last-backup', String(Date.now())); } catch (e) {}
+impShow('正在导出…', '正在写入自动备份副本', 84);
 if (window.idbSet) {
 try { window.idbSet(SNAPSHOT_KEY, json); } catch (e) {}
 }
+impShow('正在导出…', '正在准备保存文件', 92);
 const saveRes = await saveBackupFile(blob, fname);
+impHide();
 if (saveRes === 'ok') { toast('数据已导出（' + sizeKB + ' KB，全部数据完整）'); return; }
 if (saveRes === 'cancel') { toast('已取消保存'); return; }
 if (window.openModal) {
-window.openModal('备份已打包完成（' + sizeKB + ' KB）', '', async () => {
-const retry = await saveBackupFile(blob, fname);
-if (retry === 'ok') toast('数据已导出（' + sizeKB + ' KB，全部数据完整）');
-else if (retry === 'cancel') toast('已取消保存');
-else toast('仍未弹出保存面板。备份已自动存到本机缓存，可稍后从「导入数据」恢复');
-}, { noInput: true, staticText: '系统没有自动弹出分享/保存面板，通常是浏览器下载限制或系统权限导致。\n点「确定」再试一次（数据已打包好，无需重新等待）。\n若仍不行：\n· 检查系统设置-应用-浏览器，打开「后台弹出界面」权限\n· 或从「导入数据」用本机缓存副本恢复（备份已自动存好）' });
+window.openModal('备份已打包完成（' + sizeKB + ' KB）', '', () => {
+if (anchorDownload(blob, fname)) toast('数据已导出（' + sizeKB + ' KB，全部数据完整）');
+else toast('仍未触发下载。备份已自动存到本机缓存，可稍后从「导入数据」恢复');
+}, { noInput: true, staticText: '数据已经打包好，还没开始保存。\n点「确定」开始下载保存到本机，点「取消」放弃本次保存。\n（自动备份副本已额外存入本机缓存，随时可从「导入数据」恢复）' });
 } else {
 toast('备份已存到本机缓存（' + sizeKB + ' KB），可从「导入数据」恢复');
 }
@@ -67447,6 +67687,9 @@ return 'ok';
 if (e && e.name === 'AbortError') return 'cancel';
 }
 }
+return 'blocked';
+}
+function anchorDownload(blob, fname) {
 try {
 const a = document.createElement('a');
 a.href = URL.createObjectURL(blob);
@@ -67454,8 +67697,8 @@ a.download = fname;
 document.body.appendChild(a);
 a.click();
 setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
-} catch (e) {}
-return 'blocked';
+return true;
+} catch (e) { return false; }
 }
 function backupSummary(data) {
 const fmtMB = (n) => (n / 1048576).toFixed(1) + ' MB';

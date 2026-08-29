@@ -779,6 +779,111 @@ return { text, kaomoji, emoji, sticker, image, voice, poke };
 }
 // v3.27.x：暴露给番茄钟陪伴模式复用——让陪伴中的 TA 使用与普通聊天一致的字卡池回复
 window.getPool = getPool;
+// v3.27.x：生成回复前确保字卡池就绪——冷启动挂起大键（__xyIdbDeferredKeys，见 idb.js
+// v3.14.x OOM 防线）时同步读回复池是空库，此前首条回复直接落 FALLBACK_REPLY_POOL，
+// 某些手机上联系人因此一直发兜底那几条系统预设字卡（用户反馈）。
+// v3.28.x：修「还有手机没解决」——① 等待上限 2.5s 对慢 IDB（iOS 挂后台杀连接、
+// 大图字卡库）太短，放宽到与 idbHydrateKey 自身 8s 超时对齐；② 回复池主源是当前
+// 联系人的专属字卡，此前走「公用→专属」共享链，公用大键慢会拖住专属，改为专属优先
+// 直取（hydrateReplyScope），就绪即放行、公用随后后台补；③ 取回失败/超时记冷却，
+// 冷却期内池子仍空时不再每条回复干等，避免坏 IDB 手机每次回复都白等；④ 始终不阻塞
+//（超时保留原兜底，下次回复重试；池子一旦就绪立即走自定义字卡）。
+// v3.28.x（根因收口）：就绪判定以「自定义字卡是否就位」为准，不用合并池——合并池含
+// 系统默认字卡，默认字卡开关开着时池子恒非空，旧判定直接放行，挂起大键里的自定义
+// 字卡永不取回，联系人只发默认/兜底那几条系统预设字卡（Phase E 复现：池 4728 张
+// 系统卡但自定义 MARKER 不在内）。取回完成或确认无自定义字卡（用户确实没加）即放行，
+// 靠默认字卡/兜底回复，不阻塞。
+function hasCustomReplyCards() {
+  try {
+    const cc = (window.getCustomCards && window.getCustomCards()) || [];
+    return cc.length > 0;
+  } catch (e) { return false; }
+}
+let lastHydFailAt = 0;
+const HYDR_FAIL_COOLDOWN = 30000;
+// v3.28.x（第三层收口）：回复池后台自愈——坏/慢 IDB 手机上单次取回可能整体失败
+//（idbHydrateKey 8s 内两次尝试仍挂，事务队列被占/连接反复被断），此前每次回复只
+// 干等一次、失败后进冷却不再取 → 池子整会话读空，联系人一直发兜底那几条系统预设字卡。
+// 这里在「池仍空」时安排有界低频后台重试：每 5s 一次、上限 12 次，一旦自定义字卡
+// 就绪立即停；只要设备 IDB 恢复/启动回填落定，池子取回后【后续所有回复】马上用上
+// 自定义字卡，不再一直兜底。内存成本与现有回复路径一致（回复本来就会触发取回），
+// 不会额外把大库拉进堆；每次尝试走 hydrateReplyScope（in-flight 去重 + absent 缓存）。
+let _replyWatcherTimer = null;
+let _replyWatcherLeft = 0;
+const _REPLY_WATCHER_MAX = 12;
+const _REPLY_WATCHER_INTERVAL = 5000;
+function _replyWatcherStop() {
+  if (_replyWatcherTimer) { clearTimeout(_replyWatcherTimer); _replyWatcherTimer = null; }
+  _replyWatcherLeft = 0;
+}
+function _replyWatcherTick() {
+  _replyWatcherTimer = null;
+  if (hasCustomReplyCards()) { _replyWatcherStop(); return; }
+  let done = false;
+  const settle = function () {
+    if (done) return; done = true;
+    if (hasCustomReplyCards()) { _replyWatcherStop(); return; }
+    _replyWatcherKick();
+  };
+  try {
+    // 专属优先（回复池主源）；就绪即停，公用后台补
+    window.hydrateReplyScope('own', function () {
+      if (hasCustomReplyCards()) { settle(); return; }
+      window.hydrateReplyScope('public', function () { settle(); });
+    });
+  } catch (e) { settle(); }
+}
+function _replyWatcherKick() {
+  try {
+    if (hasCustomReplyCards()) { _replyWatcherStop(); return; }
+    if (!window.hydrateReplyScope || _replyWatcherTimer || _replyWatcherLeft <= 0) return;
+    _replyWatcherLeft--;
+    _replyWatcherTimer = setTimeout(_replyWatcherTick, _REPLY_WATCHER_INTERVAL);
+  } catch (e) {}
+}
+function _replyWatcherStart() {
+  try {
+    if (hasCustomReplyCards() || _replyWatcherTimer || _replyWatcherLeft > 0) return;
+    _replyWatcherLeft = _REPLY_WATCHER_MAX;
+    _replyWatcherKick();
+  } catch (e) {}
+}
+function ensureReplyCardsReady(capMs) {
+  // v3.28.x：等待上限 8s→20s——专属+公用双键串行取回最坏 16s（每键对齐 idbHydrateKey
+  // 内部 4s+4s 重试），8s 会切断慢 IDB 手机（真我/荣耀 Edge 事务偶发挂起、MB 级大键读取
+  // 耗时长的真机）的取回完成点，回复池整会话读空落兜底卡。20s 让双键都能跑完；超时后
+  // 冷却期内池子仍空时不再每条回复干等（坏 IDB 手机直接快出兜底），池子一旦就绪立即走
+  // 自定义字卡（就绪判定在冷却检查之前，冷却不会挡住已就绪的池子）。
+  // 取回失败/超时/完成后池仍空 → 启动后台自愈重试（_replyWatcherStart），等设备恢复。
+  const cap = capMs || 20000;
+  try {
+    if (hasCustomReplyCards()) { lastHydFailAt = 0; _replyWatcherStop(); return Promise.resolve(true); }
+    if (!window.hydrateReplyScope) return Promise.resolve(false);
+    // 取回失败/超时冷却：自定义字卡仍缺且刚失败过，不再干等（直接回兜底路径，等下次回复重试）
+    if (Date.now() - lastHydFailAt < HYDR_FAIL_COOLDOWN) { _replyWatcherStart(); return Promise.resolve(false); }
+    return new Promise((res) => {
+      let settled = false;
+      const tm = setTimeout(() => { if (!settled) { settled = true; lastHydFailAt = Date.now(); _replyWatcherStart(); res(false); } }, cap);
+      const finish = (ok) => { if (!settled) { settled = true; clearTimeout(tm); res(ok); } };
+      // 专属字卡优先取回（回复池主源）；就绪即放行，公用字卡后台补
+      window.hydrateReplyScope('own', () => {
+        if (hasCustomReplyCards()) {
+          try { if (window.hydrateLibScopes) window.hydrateLibScopes(['public']); } catch (e) {}
+          _replyWatcherStop();
+          finish(true);
+          return;
+        }
+        // 专属取回完成仍无自定义字卡 → 再取公用；取回完成（或确认无此键）即放行，
+        // 避免没加自定义字卡的用户每条回复都干等
+        window.hydrateReplyScope('public', () => {
+          if (!hasCustomReplyCards()) _replyWatcherStart(); // 池仍空 → 后台自愈重试
+          finish(true);
+        });
+      });
+    });
+  } catch (e) { return Promise.resolve(false); }
+}
+window.ensureReplyCardsReady = ensureReplyCardsReady;
 // v3.26.x：回复字卡池诊断——「联系人一直只发【收到～】」报障时直接定位：池子各类型数量、
 // 自定义字卡总数、默认字卡三个开关，打进设置→复制诊断信息的【数据】节。省去依赖用户手数。
 window.__replyPoolDiag = function () {
@@ -2571,8 +2676,9 @@ setTimeout(() => { if (!sameCid()) return; if (window.maybeMusicRequest) window.
 }
 }, delay);
 }
-function replyOnce(c, quote, silent, quoteIdx) {
+async function replyOnce(c, quote, silent, quoteIdx) {
 try { console.log('[mochi-reply] replyOnce #%s quote=%s silent=%s', (window.__replyOnceDiag=(window.__replyOnceDiag||0)+1), !!quote, !!silent); } catch(e){}
+try { await ensureReplyCardsReady(); } catch (e) {}
 const myCid = window.__activeCid || 'default';
 const sameCid = () => (window.__activeCid || 'default') === myCid;
 const rep = genOneReply(c);
@@ -2898,6 +3004,10 @@ if (!hit(prob)) return;
 if (hit(cfgn(c, 'touch-prob', 5))) { performPoke(); return; }
 if (tryActiveInvite(c)) return;
 if (window.ckQuestionTry && window.ckQuestionTry(c)) return;
+// v3.27.x：主动发送前先确保字卡池就绪——冷启动挂起大键时同步读池是空库，
+// 主动消息也会落「在吗？」兜底；等待取回完成再构建 pool（专属优先、上限 8s 对齐 IDB）
+(async () => {
+try { await ensureReplyCardsReady(); } catch (e) {}
 const pool = getPool();
 const autoMsg = () => {
 const r = Math.random() * 100;
@@ -2930,6 +3040,7 @@ if (i < count - 1) showTyping();
 }
 setTimeout(() => { if (window.callMaybeTrigger) window.callMaybeTrigger(); }, count * 2600 + 3500);
 setTimeout(() => { trySystemAutoSend(); trySystemAskMochi(); tryCollectPending(); if (window.maybeAutoGift) window.maybeAutoGift(); }, count * 2600 + 2500);
+})();
 } catch (e) {
 try {
 const errArr = (window.__jsErrors = window.__jsErrors || []);
@@ -2948,6 +3059,9 @@ const phoneTab = document.querySelector('.tab[data-page="page-phone"]');
 if (phoneTab) phoneTab.classList.add('active');
 document.querySelectorAll('.page').forEach(p => p.hidden = true);
 chatPage.hidden = false;
+// v3.28.x：进入聊天页即按需取回字卡库（冷启动挂起大键）——专属字卡优先（回复池主源），
+// 公用随后；配合 replyOnce 内的等待，避免首条/持续回复落兜底卡。
+try { if (window.hydrateLibScopes) window.hydrateLibScopes(['own', 'public']); } catch (e) {}
 fillAvatar('chat-user-av', 'cs-avatar-user');
 fillAvatar('chat-partner-av', 'cs-avatar-partner');
 if (window.applyChatSettings) window.applyChatSettings();
@@ -4086,6 +4200,7 @@ try {
 const histList = document.getElementById('div-chat-history');
 if (histList && !histList.hidden && window.divineHistLoad) renderChatHistory();
 } catch (err) {}
+try { if (window.divineRenderTargets) window.divineRenderTargets('div-chat-targets'); } catch (err) {}
 }
 const moreDivine = document.getElementById('more-divine');
 if (moreDivine) {
@@ -4258,6 +4373,8 @@ return;
 if (chatDrawCancel) { try { chatDrawCancel(); } catch (err) {} chatDrawCancel = null; }
 const question = (document.getElementById('div-chat-question') || {}).value || '';
 const snapMode = chatDivineMode, snapCount = chatDivineCount;
+// v3.26.x：快照点击时的占卜对象——流程期间切换对象不影响本次记录归属
+const snapTarget = (window.divineGetTarget && window.divineGetTarget()) || '';
 const deck = snapMode === 'tarot' ? (window.__TAROT__ || []) : (window.__LENO__ || []);
 if (!window.startDivineDraw || !deck.length) { r.innerHTML = '<div class="div-result-empty">占卜牌库加载中…</div>'; return; }
 divDraw.textContent = '抽牌中…';
@@ -4277,12 +4394,16 @@ setTimeout(() => { try { window.divineSendResult(snapMode, cards, summary, quest
 }
 if (window.divineHistSave && window.divineHistLoad) {
 try {
+const record = { ts: Date.now(), mode: snapMode, count: snapCount, question: question, cards: cards, summary: summary };
+if (snapTarget && window.divineTargetName) record.target = window.divineTargetName(snapTarget);
 const list = window.divineHistLoad();
 if (!Array.isArray(list)) { if (window.divineHistSave) window.divineHistSave([]); }
 else {
-list.unshift({ ts: Date.now(), mode: snapMode, count: snapCount, question: question, cards: cards, summary: summary });
+list.unshift(record);
 window.divineHistSave(list);
 }
+// v3.26.x：选了对象（或不选）→ 同步写入该对象/当前桌面的主页「占卜记录」
+if (window.divineSaveToHomeHistory) { try { window.divineSaveToHomeHistory(record, snapTarget); } catch (err2) {} }
 } catch (err) {}
 try { renderChatHistory(); } catch (err) {
 try { if (window.__jsErrors) window.__jsErrors.push('divineHist: ' + (err && err.message)); } catch (e2) {}
@@ -5196,6 +5317,12 @@ const val = (v || '').trim();
 if (!val) return;
 rec.text = val;
 rec.type = 'text';
+// v3.26.x 修复（红米 K80 Chrome）：普通文字消息渲染走 rec.parts（renderMsg 的
+// parts 分支优先于 rec.text）。旧逻辑只改 rec.text，发送新消息触发该气泡重渲染时，
+// 老 parts 里的原文被重新渲染出来 → 编辑内容「变回编辑前」。重建 parts：保留图片段，
+// 文字段替换为新值。
+rec.parts = (Array.isArray(rec.parts) ? rec.parts.filter(p => p && p.k !== 'text') : []);
+rec.parts.push({ k: 'text', v: val });
 syncFavMsgText(orig, val); // v3.7.x：编辑后收藏夹里同一条消息快照同步更新（含 TA 收藏）
 sessionChangedIdx.add(idx); // v3.6.x：标记本会话变更，防 loadMsgs 合并回滚编辑
 saveMsgs();

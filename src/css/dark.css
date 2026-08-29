@@ -661,8 +661,6 @@
   .loc-back { border-color:rgba(255,255,255,.14); background:rgba(255,255,255,.06); }
   .loc-back svg { stroke:#f0f0f0; }
   .loc-back:active { background:rgba(255,255,255,.12); }
-  .loc-close { background:rgba(255,255,255,.1); }
-  .loc-close:active { background:rgba(255,255,255,.16); }
   .loc-section { background:var(--dark-card-92); border-color:rgba(255,255,255,.07); }
   .loc-tl-item { border-bottom-color:rgba(255,255,255,.07); }
   .loc-tl-tag { background:var(--dark-hover); }

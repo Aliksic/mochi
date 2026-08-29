@@ -749,12 +749,15 @@
   function applyChatScheme(idx, m) {
     const s = getChatSchemes()[idx];
     if (!s || !window.openModal) return;
-    window.openModal('应用方案「' + s.name + '」？', '', (v) => {
+    // v3.26.x：预选中唯一「应用」pill——noInput 弹窗只点底部「确定」时 fire() 传
+    // pillVal=null → v!=='ok' 静默不应用（与桌面「应用方案/恢复默认桌面」同因同修）
+    const ctl = window.openModal('应用方案「' + s.name + '」？', '', (v) => {
       if (v !== 'ok') return;
       applyChatBeautyData(s.data || {});
       hideChatSchemeModal(m);
       toast('已应用「' + s.name + '」，当前聊天立即生效');
     }, { noInput: true, staticText: '将覆盖当前联系人桌面的聊天美化设置，立即生效', pills: [{ label: '应用', value: 'ok' }] });
+    if (ctl && ctl.pills) ctl.pills([{ label: '应用', value: 'ok' }], 'ok');
   }
   function deleteChatScheme(idx, m) {
     const s = getChatSchemes()[idx];

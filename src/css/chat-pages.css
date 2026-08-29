@@ -1349,12 +1349,6 @@
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
 .loc-title b { font-weight:800; }
-.loc-close {
-  width:30px; height:30px; border-radius:50%; flex-shrink:0;
-  border:none; background:rgba(0,0,0,.06); color:var(--muted);
-  font-size:13px; line-height:1; cursor:pointer; font-family:inherit;
-}
-.loc-close:active { background:rgba(0,0,0,.12); }
 /* 滚动容器（头部固定，内容整体滚动） */
 .loc-scroll {
   flex:1; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch;
@@ -1622,10 +1616,14 @@
   display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; padding:4px 0 8px;
 }
 .avlib-cell {
-  aspect-ratio:1; border-radius:14px; overflow:hidden; position:relative;
+  /* v3.26.x：不用 aspect-ratio —— vivo 系统自带浏览器(X5 内核较旧)不支持，
+     格子高度塌陷为0 → 头像互动页只显示计数不显示头像图。改 padding-bottom 撑高 +
+     img 绝对定位填满，兼容老内核，现代浏览器效果一致(正方形+4列) */
+  position:relative; padding-bottom:100%;
+  border-radius:14px; overflow:hidden;
   background:rgba(255,255,255,.92); border:1px solid rgba(0,0,0,.1);
 }
-.avlib-cell img { width:100%; height:100%; object-fit:cover; display:block; }
+.avlib-cell img { position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; display:block; }
 /* 当前正在使用的联系人头像：高亮描边 */
 .avlib-cell.avlib-now { outline:2px solid var(--ink); outline-offset:-2px; border-color:transparent; }
 .avlib-del {

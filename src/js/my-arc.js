@@ -1,4 +1,4 @@
-﻿// ===== 我的档案（v3.16.x：与【梦角档案】互为镜像——这里记录「我是谁，以及我希望怎样被理解」） =====
+// ===== 我的档案（v3.16.x：与【梦角档案】互为镜像——这里记录「我是谁，以及我希望怎样被理解」） =====
 // 入口：桌面第三页「我的档案」图标（梦角档案右边）。
 // 定位：我的档案=认识自己；梦角档案=认识TA；共同记录=记录我们（在梦角档案内维护，本页只做桥接入口）。
 // 数据键 xy-home-v2:<cid>:myarc——按桌面联系人各存一份（我和不同 TA 的相处期望可能不同，
@@ -446,7 +446,7 @@
       const i = arr.findIndex(x => x.id === id);
       if (i >= 0) arr.splice(i, 1);
       save(arc); toast('已删除'); render();
-    }, { noInput: true, pills: [{ label: '取消', value: 'no' }, { label: '删除', value: 'del' }] });
+    }, { noInput: true, pill: 'del', pills: [{ label: '取消', value: 'no' }, { label: '删除', value: 'del' }] });
   }
 
   // ---- 描述卡流程：类型→内容→备注 ----
@@ -499,7 +499,7 @@
       const arc = ensureArc();
       arc.selfs = arc.selfs.filter(x => x.id !== id);
       save(arc); toast('已删除'); render();
-    }, { noInput: true, pills: [{ label: '取消', value: 'no' }, { label: '删除', value: 'del' }] });
+    }, { noInput: true, pill: 'del', pills: [{ label: '取消', value: 'no' }, { label: '删除', value: 'del' }] });
   }
 
   // ---- 事件分发 ----

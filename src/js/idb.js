@@ -557,15 +557,36 @@
   //（新装/新联系人的正常空库，调用方可以缓存「确实没有」避免反复空读）；
   // false=读取失败/超时（如 iOS 挂后台连接被杀），调用方保持可重试。
   window.idbHydrateKey = function (key) {
+    // v3.28.x：修「还有手机没解决」第三层——原实现单次 8s 超时，对「慢但可用」的 IDB
+    //（真我/荣耀 Edge 等内核事务偶发挂起；MB 级字卡库读取耗时可能 >8s）会直接判失败，
+    // 且不重试。字卡回复池整会话取不回自定义字卡，联系人一直发兜底那几条系统预设卡。
+    // 与 idbGet 同款 4s+4s：4s 未返回先重建连接重试一次（挂起多因连接已死，重开后通常
+    // 当场返回），再 4s 仍无返回才放弃——总上限仍 8s，但成功率大幅提升。
     return open().then(db => new Promise((resolve) => {
       let done = false;
-      const t = setTimeout(function () { if (!done) { done = true; dbPromise = null; resolve(undefined); } }, 8000);
-      try {
-        const tx = db.transaction(STORE, 'readonly');
-        const req = tx.objectStore(STORE).get(key);
-        req.onsuccess = () => { if (!done) { done = true; clearTimeout(t); resolve(req.result === undefined ? null : req.result); } };
-        req.onerror = () => { if (!done) { done = true; clearTimeout(t); if (connLost(req.error)) dbPromise = null; resolve(undefined); } };
-      } catch (e) { if (!done) { done = true; clearTimeout(t); if (connLost(e)) dbPromise = null; resolve(undefined); } }
+      let timer = null;
+      function finish(val) { if (done) return; done = true; if (timer) clearTimeout(timer); resolve(val); }
+      function run() {
+        try {
+          const tx = db.transaction(STORE, 'readonly');
+          const req = tx.objectStore(STORE).get(key);
+          req.onsuccess = () => finish(req.result === undefined ? null : req.result);
+          req.onerror = () => { if (connLost(req.error)) dbPromise = null; finish(undefined); };
+        } catch (e) { if (connLost(e)) dbPromise = null; finish(undefined); }
+      }
+      let retried = false;
+      timer = setTimeout(function () {
+        if (done) return;
+        if (!retried) {
+          retried = true;
+          dbPromise = null;
+          open().then(function (db2) { db = db2; run(); timer = setTimeout(function () { dbPromise = null; finish(undefined); }, 4000); }).catch(function () { finish(undefined); });
+          return;
+        }
+        dbPromise = null;
+        finish(undefined);
+      }, 4000);
+      run();
     })).then(v => {
       if (v === null) return null;
       if (v === undefined) return false;

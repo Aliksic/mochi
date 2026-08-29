@@ -1408,6 +1408,16 @@ if (ckRefresh) {
     store.set('loc-history', s);
     try { if (window.idbSet) window.idbSet(window.activePrefix() + ':loc-history', s); } catch (e) {}
   }
+  // v3.26.x：供方位感知「感知一下」把感知结果写入位置时间线（类型 sense，标签「感知」）
+  window.locAddHist = function (text, type, auto) {
+    try {
+      const hist = loadHist();
+      hist.unshift({ text: String(text == null ? '' : text), type: type || 'sense', ts: Date.now(), auto: !!auto });
+      saveHist(hist);
+    } catch (e) {}
+  };
+  // v3.26.x：感知写入后刷新位置面板（时间线/此刻位置）
+  window.locRefreshBody = function () { try { renderLocPanel(); } catch (e) {} };
   function eggLastTs() { return parseInt(store.get('loc-egg-last') || '0', 10) || 0; }
   function eggUsed() { return Date.now() - eggLastTs() < EGG_COOLDOWN; }
   // ---- 自定义位置卡（v3.13.x：存储并入字卡库 loc-lib「我的添加」，旧 loc-custom 首次读取自动迁移） ----
@@ -1471,6 +1481,8 @@ if (ckRefresh) {
     playLocFx(text, type);
     locViewDate = dayStr(new Date());
     renderLocPanel();
+    // v3.26.x：感知方向与位置卡对齐（新卡带方向时，感知圆立刻跟随）
+    if (window.refreshSense) window.refreshSense();
 
   }
 
@@ -1506,6 +1518,8 @@ if (ckRefresh) {
     pendingDir = null;
     locViewDate = dayStr(new Date());
     renderLocPanel();
+    // v3.26.x：感知方向与位置卡对齐（新卡带方向时，感知圆立刻跟随）
+    if (window.refreshSense) window.refreshSense();
 
   }
 
@@ -1632,9 +1646,7 @@ if (ckRefresh) {
   // 桌面寻踪页同款入口（点「TA在身边 · 看看 TA 在哪」全屏打开同一位置面板）
   const entryDesk = document.getElementById('ck-loc-entry-desk');
   if (entryDesk) entryDesk.addEventListener('click', () => openLocPanel(true));
-  const closeBtn = document.getElementById('loc-close');
-  if (closeBtn) closeBtn.addEventListener('click', closeLocPanel);
-  // v3.26.x：全屏模式返回按钮（回寻踪页，与 ✕ 等效）
+  // v3.26.x：全屏/半屏共用返回按钮（关闭位置面板；已移除右侧 ✕ 关闭按钮）
   const locBack = document.getElementById('loc-back');
   if (locBack) locBack.addEventListener('click', closeLocPanel);
 
@@ -1715,8 +1727,17 @@ if (ckRefresh) {
     { k: '左侧',   arrow: '←', angle: 180 },
     { k: '左前方', arrow: '↖', angle: 225 }
   ];
-  const NEAR_WORDS = ['在你身边', '一直没走远', '隔着世界在你身边', '能摸到我吗', '陪你走着', '停下来等你', '抬头就能看到', '在你前面'];
+  const NEAR_WORDS = ['在你身边', '一直没走远', '隔着世界在你身边', '能摸到我吗', '陪你走着', '停下来等你', '抬头就能看到', '在你前面', '原地等你'];
   const FAR_WORDS = ['在你看不到的地方', '在你看不到的地方偷看你', '再远一点', '就停这儿'];
+  // v3.26.x：从位置卡文本推导 8 方向（消除「感知↗ 位置↘」矛盾——感知方向与最近位置卡对齐）
+  function dirFromText(t) {
+    if (!t) return '';
+    if (t.indexOf('左边') >= 0) return '左侧';
+    if (t.indexOf('右边') >= 0) return '右侧';
+    if (t.indexOf('身后') >= 0 || t.indexOf('后面') >= 0) return '后方';
+    if (t.indexOf('前面') >= 0 || t.indexOf('抬头') >= 0) return '正前方';
+    return '';
+  }
   function load() {
     try {
       const v = JSON.parse(store.get(KEY) || 'null');
@@ -1784,12 +1805,22 @@ if (ckRefresh) {
     }
     return { rangef: rf, power: pw };
   }
-  // 感知状态（懒初始化 + 漂移）
+  // 感知状态（懒初始化 + 漂移；v3.26.x：有位置卡时方向以位置卡为准，消除感知/位置矛盾）
   function getSense(force) {
     const s = load();
     const now = Date.now();
     let dirty = false;
-    if (!s.dir || (s.nextDirAt && now >= s.nextDirAt)) {
+    // 最近位置卡带方向 → 感知方向跟随（此刻的位置说右边，感知圆就显示右侧）
+    let cur = null;
+    try { cur = JSON.parse(store.get('loc-current') || 'null'); } catch (e) {}
+    const fixedDir = cur ? dirFromText(cur.text) : '';
+    if (fixedDir) {
+      if (s.dir !== fixedDir) {
+        s.dir = fixedDir;
+        s.nextDirAt = now + (15 + Math.floor(Math.random() * 31)) * 60000; // 15~45 分钟
+        dirty = true;
+      }
+    } else if (!s.dir || (s.nextDirAt && now >= s.nextDirAt)) {
       s.dir = rollDir();
       s.nextDirAt = now + (15 + Math.floor(Math.random() * 31)) * 60000; // 15~45 分钟
       dirty = true;
@@ -1889,6 +1920,19 @@ if (ckRefresh) {
       });
     }
     render();
+    // v3.26.x：感知结果写入位置时间线（类型「感知」，与位置卡分开标记）
+    try {
+      const arrows2 = DIRS.find(d => d.k === s.dir);
+      let tlText;
+      if (isUndirected(s.dir)) {
+        tlText = '方位感知：暂时无法判断方向';
+      } else {
+        tlText = '方位感知：' + (arrows2 ? arrows2.arrow + ' ' : '') + s.dir + ' · ' + s.rangef + ' · ' + s.power;
+      }
+      if (touched) tlText += ' · 好像有什么轻轻碰了你一下';
+      if (window.locAddHist) window.locAddHist(tlText, 'sense', false);
+      if (window.locRefreshBody) window.locRefreshBody();
+    } catch (e) {}
     setTimeout(() => {
       if (btn) { btn.classList.remove('busy'); btn.disabled = false; }
     }, 4000);
@@ -3948,7 +3992,7 @@ if (ckRefresh) {
       try { pmpCAdd('ta', '没事，休息一下也可以'); } catch (e) {}
       pmpDetach(); pomoRender();
       if (inWin) { openPage(pomoPage); pomoRender(); }
-    }, { noInput: true, lock: true, pills: [{ label: '结束', value: '1' }, { label: '再撑一会儿', value: '0' }], staticText: '提前结束的话，这个 🍅 就不计入今天啦' });
+    }, { noInput: true, lock: true, pill: '1', pills: [{ label: '结束', value: '1' }, { label: '再撑一会儿', value: '0' }], staticText: '提前结束的话，这个 🍅 就不计入今天啦' });
   }
   // 入口：番茄钟页「陪伴模式」按钮——未在跑则开一个新专注并挂上陪伴；进入/返回的都是专属聊天窗
   const pmpGoBtn = document.getElementById('pomo-companion');
