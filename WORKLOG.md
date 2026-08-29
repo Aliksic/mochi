@@ -1,6 +1,6 @@
-# 本次构建者：AI-A（本会话 2026-08-29，收口「小米15Pro Chrome 卡顿止血」聊天持久化空闲调度；构建状态：本次构建）
+# 本次构建者：AI-A（本会话 2026-08-29 16:21，收口「经期温柔动作字卡六条全部进字卡库」；构建状态：本次构建，提交 e20f5d5，推送待凭据）
 ### 2026-08-29 16:20（经期温柔动作后缀只登记 1 条：字卡库经期 tab 写全 WARM_SUFFIX 六条 + 独立「温柔动作」分组）
-- [AI-A 域·经期字卡]（**改动文件：src/js/default-cards-data.js + src/js/period.js（注释）+ build.mjs（哨兵）+ FIX-REGRESSION.md（#56）；node --check 通过；构建状态：未构建，待构建者收口**）。
+- [AI-A 域·经期字卡]（**改动文件：src/js/default-cards-data.js + src/js/period.js（注释）+ build.mjs（哨兵）+ FIX-REGRESSION.md（#56）+ WORKLOG.md；node --check 通过；构建状态：已构建，sw: mochi-mte43e7l，提交 e20f5d5（含产物），推送待 GitHub 凭据**）。
 - 需求/反馈：上一轮把「（轻轻抵着你的额头）」加进字卡库经期 tab 后，用户反馈只有这一条、没把全部字卡写进去——period.js WARM_SUFFIX 六条动作后缀（把你往怀里带了带/轻轻抵着你的额头/握紧你的手/摸了摸你发顶/语气柔下来/把热牛奶推到你手边）只有一条有字卡库开关，其余五条搜不到也关不掉。
 - 根因：v3.14.x 只把 WARM_SUFFIX 的一条「（轻轻抵着你的额头）」登记进 DEFAULT_CARD_DATA.period「经期关心」分组末位；抽取侧 warmSuffix() 本就对六条全量按 isDefaultCardOff('period', x) 过滤，但展示侧缺数据 → 字卡库只有 1 条开关。
 - 方案：①「（轻轻抵着你的额头）」从「经期关心」分组移出（顺带修复 PERIOD_CARE_LINES=g[0][1] 会把动作后缀当关心语发出的隐患）；②新增「温柔动作」分组写全 WARM_SUFFIX 六条（与 period.js 同源，开关键即文案本身，dc-off-period:<文案> 逐张开关与 warmSuffix 抽取联动）。
