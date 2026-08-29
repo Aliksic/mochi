@@ -1,3 +1,10 @@
+### 2026-08-29 20:45（新增：音乐「TA 暂停再播放」互动——小概率触发 + 聊天发字卡 + 字卡进系统预设【其他功能字卡】）
+- [本会话·音乐域]（**改动文件：src/js/music-player.js（互动逻辑 + 设置项 taPauseProb）+ src/js/default-cards-data.js（新增 DEFAULT_CARD_DATA.music 两组字卡）+ src/js/default-cards.js（FUNC_KEYS + music）+ src/template.html（fc-tabs + 音乐 tab）+ build.mjs（哨兵 +2）+ FIX-REGRESSION.md（#71）+ WORKLOG.md；构建状态：本次构建，待提交**）。
+- 需求/反馈：用户问「音乐有联系人暂停播放后然后点击播放的功能吗」，要求新增设置、小概率触发、在聊天里发送字卡，字卡写进系统预设字卡的【其他功能字卡】里。
+- 方案：①music-player.js 新增 `taPauseProb`（默认 3%，音乐设置「播放中·TA 暂停再播放概率」步进器可调 0~100，设 0 关闭）；每次开始播放一首歌（startPlayback 末尾）掷一次骰子，命中则在播放 10~25s 后触发互动：TA 暂停（保留 wantPlay，聊天发「TA 暂停播放」字卡）→ 3.5s 后 TA 点播放恢复（保留进度，非手势被拒走 muted 解锁兜底）→ 发「TA 恢复播放」字卡；②TA 暂停期间短路后台补播（onpause 的 scheduleBgResume 与 tryResumePlayback 均加 `!taPauseActive` 守卫）；用户手动播放/暂停/切歌（playTrack/toggle）、来电 hold、停止（teardownAudio）一律 cancelTaPause 取消互动，互不打架；③字卡数据在 default-cards-data.js 新增 `DEFAULT_CARD_DATA.music`（「TA 暂停播放」「TA 恢复播放」两组各 6 条），经 getLibPool('music', 分组, 兜底) + isDefaultCardOff 过滤抽取、taFit 称呼适配、chatAddIn 发进聊天；default-cards.js FUNC_KEYS + template.html fc-tabs 注册「音乐」tab → 字卡库【其他互动功能字卡 → 音乐】可查看/逐张开关（dc-off-music:*，全关回退内置兜底）。
+- 验证：node --check 三个源文件通过；构建哨兵 +2（`taPauseProb` / `TA 暂停播放`）77/77 全绿；新增 tools/verify-ta-pause.mjs 19/19（静态：设置键/步进器/两组字卡 12 条/FUNC_KEYS/音乐 tab）与 tools/verify-ta-pause-live.mjs 12/12（无头 Chrome 行为链路：mock audio 驱动真实逻辑——播放后 23s 出现暂停字卡 → 3.5s 后出现恢复字卡 → 互动结束恢复播放；UI 集成：设置步进器初值 100、字卡库音乐 tab 两组 6+6 渲染）；npm run verify 10/10（布局无回归）。
+- 真机确认点：音乐设置出现「播放中·TA 暂停再播放概率」步进器；连续听几首歌时偶发 TA 暂停（聊天出现「先暂停一下，听我说句话」类字卡）→ 几秒后恢复（再出现「好啦，继续听吧」类字卡）；暂停期间切后台再回前台不会自动补播打断互动；用户手动暂停/切歌后 TA 不再强行恢复。
+# 本次构建者：本会话（2026-08-29 20:45 构建，sw 见 version.json，待提交）
 ### 2026-08-29 20:35（修复：打砖块切换球数无效 + 进行中无法重新开局选球——FIX-REGRESSION #69）
 - [本会话·游戏域]（**改动文件：src/js/breakout.js（3 处）+ src/template.html（1 行 title，跨域改动：球数提示改「随时调整」）+ build.mjs（哨兵 +2）+ FIX-REGRESSION.md（#69）+ tools/verify-brick.mjs（+T-B4/5/6）；构建状态：本次构建，待提交**）。
 - 需求/反馈：用户反馈「打砖块小游戏开启无法选多个球啊，已经在玩的时候切换2个球无效」。

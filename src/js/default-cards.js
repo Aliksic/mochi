@@ -79,7 +79,7 @@
   // 「其他互动功能字卡」入口角标统计全部功能分类（fish/eat/period/water/garden/
   // sync/reach/cjian/room/piggy/drift/interact）。
   // deskcheck（联系人跨桌面查岗）独立成系统预设字卡里的单独入口，见 page-deskcheck。
-  const FUNC_KEYS = ['fish', 'eat', 'period', 'water', 'garden', 'sync', 'reach', 'cjian', 'room', 'piggy', 'drift', 'interact'];
+  const FUNC_KEYS = ['fish', 'eat', 'period', 'water', 'garden', 'sync', 'reach', 'cjian', 'room', 'piggy', 'drift', 'interact', 'music'];
   const BASE_KEYS = ['main', 'kaomoji', 'emoji', 'touch'];
   // v3.26.x：搜索跨全库（聊天默认字卡页 + 其他互动功能字卡页全部 tab），
   // 不再局限于当前 tab——用户搜「轻轻抵着」在任意页面都能找到经期温柔动作字卡。

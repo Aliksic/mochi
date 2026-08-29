@@ -33,7 +33,7 @@
   // v3.14.x：梦角主动控制概率可调——taNextProb/taRandProb/taModeProb=歌曲播完时
   // 梦角接动作（切下一首/随机挑一首/换播放模式）的概率；taFavProb=我播放歌曲时
   // 联系人把歌收进「TA的收藏」的概率。默认值与原硬编码行为一致（15/10/5）。
-  const DEF_SETTINGS = { floatEn: true, reqProb: 5, cooldownMs: 600000, widgetCoverMode: 'song', taNextProb: 15, taRandProb: 10, taModeProb: 5, taFavProb: 20, taReserveProb: 6 };
+  const DEF_SETTINGS = { floatEn: true, reqProb: 5, cooldownMs: 600000, widgetCoverMode: 'song', taNextProb: 15, taRandProb: 10, taModeProb: 5, taFavProb: 20, taReserveProb: 6, taPauseProb: 3 };
   let settings = Object.assign({}, DEF_SETTINGS);
   // 概率取值兜底：非数字/越界时回退默认值并夹在 0~100
   function probOf(v, def) { const n = (typeof v === 'number' && !isNaN(v)) ? v : def; return Math.max(0, Math.min(100, n)); }
@@ -1888,6 +1888,8 @@
     clearStallGuard();
     // v3.14.x：停止/切歌后不再判定联系人收藏（新播放会重新调度）
     clearTaFavTimer();
+    // v3.27.x：停止/切歌取消 TA 暂停互动（未触发的延迟计划、进行中的恢复计划一并清）
+    cancelTaPause();
     if (progressTimer) { clearInterval(progressTimer); progressTimer = null; }
     // v3.9.x：真正停止（非切歌）后让 bg-keep 恢复"后台保活"媒体会话条；
     // 切歌时 currentId 已指向新歌，此处不触发
@@ -1962,6 +1964,8 @@
     addMyRecord(m.id);
     // v3.14.x：联系人按概率收藏正在播的歌（听 10~25s 后判定，切歌/暂停即取消）
     scheduleTaFavCheck(m);
+    // v3.27.x：TA 暂停再播放互动掷骰子（taPauseProb 概率，每首歌一次）
+    scheduleTaPauseIfLucky();
     updateMediaSession(true);
   }
   // v3.6.x：自动播放被拒后的手势恢复——移动端 play() 被拒（异步链丢手势）后，
@@ -2027,6 +2031,8 @@
   }
   function tryResumePlayback() {
     if (!wantPlay || callHoldPending || bgResumeFails >= 6) return;
+    // v3.27.x：TA 暂停再播放互动进行中不补播（暂停 3.5s 由 TA 自己恢复）
+    if (taPauseActive) return;
     // v3.10.x：换源/兜底窗口期不补播——!audio 分支会用旧 URL 造野元素，
     // 与即将回来的直链播放形成双声（弱网双播放器根因之一），还抢弱网带宽
     if (httpsRetrying || demoFallbackBusy) return;
@@ -2361,12 +2367,15 @@
     };
     audio.onplay = function () { playRejected = false; bgResumeFails = 0; clearStallGuard(); disarmAutoResume(); clearBgResume(); wantPlay = true; syncPlayIcons(true); if (m) failMap[m.id] = 0; try { if (navigator.mediaSession) navigator.mediaSession.playbackState = 'playing'; } catch (e) {} try { window.__musicPlaying = true; } catch (e) {} };
     audio.onpause = function () { syncPlayIcons(false); try { if (navigator.mediaSession) navigator.mediaSession.playbackState = 'paused'; } catch (e) {} try { window.__musicPlaying = false; } catch (e) {} // v3.10.x：非用户暂停（后台省电/音频焦点抢占/系统打断）→ 定时补播反击
-      if (wantPlay && !callHoldPending) scheduleBgResume(); };
+      // v3.27.x：TA 暂停再播放互动进行中不补播（TA 稍后会自己点播放恢复）
+      if (wantPlay && !callHoldPending && !taPauseActive) scheduleBgResume(); };
   }
   function playTrack(id, fromWidget) {
     const m = findTrack(id);
     if (!m) return;
     markFloatSource(fromWidget);
+    // v3.27.x：用户切歌取消 TA 暂停互动（未触发的计划 / 进行中的恢复一并作废）
+    cancelTaPause();
     // v3.6.x：重置 https 重试标记——_httpsRetried 在 retryWithHttpsUrl 里设 true 后
     // 永不重置，导致后续每次播放都先尝试失败的原始 URL 被混合内容拦截，
     // catch 不区分错误类型当"自动播放拦截"处理 → toast"被浏览器拦截"。
@@ -2473,6 +2482,8 @@
       return;
     }
     if (audio.paused) {
+      // v3.27.x：用户手动点播放——TA 的暂停互动作废（避免 TA 恢复计划重复播放/重复字卡）
+      cancelTaPause();
       // v3.6.x：按钮点击本身是用户手势，正常可播；个别浏览器仍拒 → muted 静音解锁
       const p = audio.play();
       if (p && p.catch) p.catch(() => {
@@ -2489,7 +2500,7 @@
         } else { armAutoResume(); }
       });
     }
-    else { wantPlay = false; clearBgResume(); audio.pause(); } // v3.10.x：用户主动暂停＝清除意图，后台补播不得打扰
+    else { wantPlay = false; clearBgResume(); cancelTaPause(); audio.pause(); } // v3.10.x：用户主动暂停＝清除意图，后台补播不得打扰；v3.27.x：TA 暂停互动一并作废
   }
   // v3.5.129：来电联动——暂停音乐 + 隐藏悬浮小框（否则铃声和音乐同时响、
   // 悬浮小框 z-index 9999 会盖在通话面板上遮挡接听按钮）；通话结束恢复
@@ -2512,6 +2523,8 @@
         // 有当前曲目但 audio 还没创建（本地文件异步从 IDB 读取中）→ 标记，
         // startPlayback 时检查并跳过播放，避免通话期间音频加载完自动响起
         callHoldPending = !audio && !!currentId;
+        // v3.27.x：来电打断 TA 暂停互动（通话中不恢复播放）
+        cancelTaPause();
         if (audio && !audio.paused) { wantPlay = false; clearBgResume(); audio.pause(); } // v3.10.x：来电 hold＝清除意图，通话期间不自动续播
         if (el) el.hidden = true;
       } else {
@@ -3414,6 +3427,63 @@
     return false;
   }
 
+  // ================= v3.27.x：TA 暂停再播放互动 =================
+  // 播放中按 taPauseProb 小概率触发：TA 突然暂停播放 → 聊天发「TA 暂停播放」字卡，
+  // 约 3.5 秒后 TA 又帮你点播放恢复 → 再发「TA 恢复播放」字卡（保留播放进度）。
+  // 字卡文案来自系统预设字卡【其他互动功能字卡 → 音乐】tab（dc-off-music:* 逐张可关）。
+  const DEF_TA_PAUSE_CARDS = ['先暂停一下，听我说句话', '嘘——让音乐停一会儿', '（TA 按下了暂停键）'];
+  const DEF_TA_RESUME_CARDS = ['好啦，继续听吧', '又帮你按了播放，接着听', '（TA 又按下了播放键）'];
+  let taPauseActive = false;      // TA 暂停进行中（禁止后台补播/手势补播打扰）
+  let taPauseTimer = null;        // 掷骰子命中后的延迟触发定时器
+  let taPauseResumeTimer = null;  // TA 恢复播放定时器
+  function cancelTaPause() {
+    taPauseActive = false;
+    if (taPauseTimer) { clearTimeout(taPauseTimer); taPauseTimer = null; }
+    if (taPauseResumeTimer) { clearTimeout(taPauseResumeTimer); taPauseResumeTimer = null; }
+  }
+  // 从系统预设字卡「音乐」分类抽字卡发进聊天（过滤已关闭单卡，全关回退内置兜底）
+  function taPauseSendCard(group, fallback) {
+    try {
+      let arr = window.getLibPool ? window.getLibPool('music', group, fallback) : (fallback || []);
+      if (window.isDefaultCardOff) arr = arr.filter(c => !window.isDefaultCardOff('music', c));
+      if (!arr.length) arr = (fallback || []).slice();
+      if (!arr.length) return;
+      let m = arr[Math.floor(Math.random() * arr.length)];
+      if (window.taFit) m = window.taFit(m);
+      if (window.chatAddIn) window.chatAddIn(m);
+    } catch (e) {}
+  }
+  // 开始播放一首歌时掷一次骰子；命中则在该歌播放 10~25s 后执行「暂停→恢复」互动
+  function scheduleTaPauseIfLucky() {
+    cancelTaPause();
+    const p = probOf(settings.taPauseProb, 3);
+    if (p <= 0 || Math.random() * 100 >= p) return;
+    if (!currentId || !audio) return;
+    const endedId = currentId;
+    taPauseTimer = setTimeout(function () {
+      taPauseTimer = null;
+      if (taPauseActive || !audio || !currentId || currentId !== endedId || audio.paused) return;
+      if (callHoldPending || document.hidden) return; // 通话/后台不打扰
+      taPauseActive = true;
+      wantPlay = true; // 保留播放意图（TA 稍后会恢复，不按「用户主动暂停」处理）
+      try { audio.pause(); } catch (e) {}
+      taPauseSendCard('TA 暂停播放', DEF_TA_PAUSE_CARDS);
+      // 3.5s 后 TA 点播放恢复（校验仍是同一首歌；非手势播放被拒走 muted 解锁兜底）
+      taPauseResumeTimer = setTimeout(function () {
+        taPauseResumeTimer = null;
+        if (!taPauseActive || !audio || !currentId || currentId !== endedId) { taPauseActive = false; return; }
+        taPauseActive = false;
+        const p2 = audio.play();
+        if (p2 && p2.catch) p2.catch(function () {
+          try { audio.muted = true; } catch (e) {}
+          const p3 = audio.play();
+          if (p3 && p3.then) p3.then(function () { try { if (audio) audio.muted = false; } catch (e) {} }).catch(function () {});
+        });
+        taPauseSendCard('TA 恢复播放', DEF_TA_RESUME_CARDS);
+      }, 3500);
+    }, 10000 + Math.floor(Math.random() * 15000));
+  }
+
   // ================= 星音设置 =================
   // v3.6.x：音乐本地缓存统计与清理——音频文件本体存 IndexedDB（music-file:<id>），
   // 这里按 IDB 键名统计占用、提供一键清理（删本地音频 + 移出歌单，外链/种子歌保留）
@@ -3504,6 +3574,8 @@
       '<div class="gs-row"><span>歌曲播完·随机挑歌概率</span><div class="stepper" id="sm-set-rand" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="sm-set-rand-val" readonly><button class="stp-max">+</button></div></div>' +
       '<div class="gs-row"><span>歌曲播完·换播放模式概率</span><div class="stepper" id="sm-set-modep" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="sm-set-modep-val" readonly><button class="stp-max">+</button></div></div>' +
       '<div class="sm-set-hint">一起听完一首歌时，TA 按上面三个概率主动控制播放：切到下一首 / 随机挑一首 / 把播放模式换成顺序播放·列表循环·随机播放·单曲循环；三个都不中就正常自动切下一首（全设 0 = TA 从不主动控制）</div>' +
+      '<div class="gs-row"><span>播放中·TA 暂停再播放概率</span><div class="stepper" id="sm-set-pauseprob" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="sm-set-pauseprob-val" readonly><button class="stp-max">+</button></div></div>' +
+      '<div class="sm-set-hint">播放歌曲时 TA 有小概率突然暂停播放（聊天里发一张字卡），几秒后再帮你点播放恢复（再发一张字卡）；字卡文案在【字卡库 → 其他互动功能字卡 → 音乐】可逐张开关（设 0 = TA 从不暂停再播放）</div>' +
       '<div class="gs-row"><span>TA 收藏歌曲概率</span><div class="stepper" id="sm-set-favprob" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="sm-set-favprob-val" readonly><button class="stp-max">+</button></div></div>' +
       '<div class="sm-set-hint">你播放歌曲听一会儿后，TA 有概率把这首歌收进「TA的收藏」（音乐页收藏 tab 右边可查看；已收藏过的歌不重复判定，两次收藏间隔至少 90 秒）</div>' +
       '<div class="sm-set-row"><span>本地音频缓存</span><span id="sm-storage-use" style="color:var(--muted);font-size:12px">计算中…</span></div>' +
@@ -3562,6 +3634,7 @@
     bindProbStep('sm-set-next', 'taNextProb', 15, 100);
     bindProbStep('sm-set-rand', 'taRandProb', 10, 100);
     bindProbStep('sm-set-modep', 'taModeProb', 5, 100);
+    bindProbStep('sm-set-pauseprob', 'taPauseProb', 3, 100);
     bindProbStep('sm-set-favprob', 'taFavProb', 20, 100);
     const cool = document.getElementById('sm-set-cool');
     if (cool) cool.addEventListener('change', () => { settings.cooldownMs = Number(cool.value); saveSettings(); });
