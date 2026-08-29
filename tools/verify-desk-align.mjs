@@ -338,6 +338,23 @@ if (p2) {
   void memoRow; void ck0; void grid0; void grid2; void grid1;
 } else check("C' 组前置：第三页存在", false, '');
 
+// ---- F 组：今日情话 / 已摸鱼 两卡「标题行 / 正文行」水平对齐 ----
+// v3.26.x：两 mini-card 都是 justify-content:center，但情话正文固定高 45px、
+// 已摸鱼仅单行，内容总高不一致 → 各自居中后标题/正文偏移。已摸鱼 .mc-b 与情话
+// 同构（高 45 / line-height15 / margin-top2 / 顶对齐）后应完全对齐。
+const twoCard = await evalJs(`(function(){
+  var q=document.querySelector('.mini-card[data-card-bg="quote"]');
+  var f=document.querySelector('.mini-card[data-card-bg="fish"]');
+  if(!q||!f)return null;
+  var g=function(el){return el?Math.round(el.getBoundingClientRect().top*10)/10:null;};
+  return {qTop:g(q.querySelector('.mc-top')), fTop:g(f.querySelector('.mc-top')),
+          qB:g(q.querySelector('.mc-b')), fB:g(f.querySelector('.mc-b'))};
+})()`) || {};
+check('F1 今日情话/已摸鱼两卡标题行 top 对齐（≤0.6px）',
+  twoCard.qTop!=null && twoCard.fTop!=null && Math.abs(twoCard.qTop-twoCard.fTop)<=0.6, JSON.stringify(twoCard));
+check('F2 今日情话/已摸鱼两卡正文行 top 对齐（≤0.6px）',
+  twoCard.qB!=null && twoCard.fB!=null && Math.abs(twoCard.qB-twoCard.fB)<=0.6, JSON.stringify(twoCard));
+
 // ---- D 组：摸鱼卡结构 + 无 JS 异常 ----
 const weTop = await evalJs(`(function(){
   var box=document.getElementById('weekend-box');

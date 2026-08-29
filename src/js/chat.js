@@ -20,20 +20,42 @@ let lastIdbLoadPrefix = null;
 let lastIdbLoadAt = 0;
 const IDB_RELOAD_MIN_GAP = 8000;
 let pendingLocal = null; // 权威就绪前暂存的内存消息（绝不落盘，防止污染读取/覆盖 IDB）
-let saveTimer = null;
+// ===== v3.26.x 止血：聊天大包（含图片 base64）避免「每个交互同步全量写」 =====
+// 根因：chat-msgs 单键可达数百 MB（图片 base64 内联），saveMsgs/saveMsgsNow 每次
+// 都对整包同步 JSON.stringify + idbSet → 数百 ms~数秒长任务（发消息/来消息打断、
+// 打字缓冲、收键盘卡、上滑卡、切页卡）。方案：把这个整包串化+落盘改为「合并 + 低频
+// + 空闲窗口」执行——requestIdleCallback 空闲期或 ≥PERSIST_MIN_GAP 才写一次，
+// 不与交互/帧率争主线程；数据语义不变（仍写整包最新，不丢数据），离页仍强制兜底。
+const PERSIST_MIN_GAP = 2500;   // 两次实际落盘的最小间隔（ms）
+let lastPersistAt = 0;          // 上次实际落盘时间（performance.now()）
+let persistTimer = null;        // 排队中标记（rIdle/timeout）
+let persistRun = null;          // 待执行落盘闭包（tail 只保留最新一次）
+function runPersist() {
+  persistTimer = null;
+  const run = persistRun;
+  persistRun = null;
+  if (!run) return;
+  const wait = PERSIST_MIN_GAP - (performance.now() - lastPersistAt);
+  if (wait > 0) { persistTimer = setTimeout(runPersist, wait); return; }
+  try { run(); lastPersistAt = performance.now(); } catch (e) {}
+}
+function schedulePersist(writer) {
+  persistRun = writer;
+  if (persistTimer) return;
+  if (window.requestIdleCallback) persistTimer = window.requestIdleCallback(runPersist, { timeout: 4000 });
+  else persistTimer = setTimeout(runPersist, 2500);
+}
+function flushPersistNow() {
+  const run = persistRun;
+  persistRun = null;
+  persistTimer = null;
+  if (run) { try { run(); lastPersistAt = performance.now(); } catch (e) {} }
+}
+function cancelPersist() { persistRun = null; persistTimer = null; }
 document.addEventListener('contact-switched', function () {
 try {
-if (saveTimer) {
-clearTimeout(saveTimer);
-saveTimer = null;
-if (pendingSaveData && pendingSavePrefix) {
-const snap = JSON.stringify(pendingSaveData);
-try { if (window.idbSet) window.idbSet(pendingSavePrefix + ':chat-msgs', snap); } catch (e) {}
-try { writeLsSnapshot(snap, pendingSavePrefix, true); } catch (e) {}
-}
-pendingSaveData = null;
-pendingSavePrefix = null;
-}
+// 切走前强制落盘待写（persistRun 闭包已捕获旧命名空间前缀，切桌面后仍写对桌面）
+flushPersistNow();
 try { hideTyping(); } catch (e) {}
 msgs = [];
 pendingLocal = null;
@@ -157,7 +179,6 @@ scrollChatBottom();
 } catch (e) {}
 }, 15000);
 }
-let pendingSaveData = null, pendingSavePrefix = null;
 function saveMsgs() {
 if (!chatDbReady) {
 try { pendingLocal = msgs.slice(); } catch (e) {}
@@ -166,39 +187,22 @@ try { pendingLocal = msgs.slice(); } catch (e) {}
 if (msgs.length) writeLsSnapshot(JSON.stringify(msgs), undefined, true);
 return;
 }
-if (saveTimer) clearTimeout(saveTimer);
+// v3.26.x 止血：改为合并+低频+空闲落盘（见上方调度器），不再每个动作同步写整包
 const myPrefix = window.activePrefix();
-pendingSaveData = msgs;
-pendingSavePrefix = myPrefix;
-    saveTimer = setTimeout(() => {
-      saveTimer = null;
-      pendingSaveData = null;
-      pendingSavePrefix = null;
-      // v3.14.x：空记录落盘守卫——本会话从未成功读过该桌面的权威数据时，
-      // 禁止把空数组写进 IDB（极端场景：权威读取失败+内存被重置后任何模块
-      // 触发保存，会把全部历史覆盖成 []）。清空聊天记录走 clearChatHistory
-      // 的 store.remove 直删，不依赖空数组落盘。
-      if (!msgs.length && authLoadedPrefix !== myPrefix) return;
-      const data = JSON.stringify(msgs);
-try { if (window.idbSet) window.idbSet(myPrefix + ':chat-msgs', data); } catch (e) {}
-writeLsSnapshot(data, myPrefix);
-}, 400);
+schedulePersist(() => {
+  // v3.14.x：空记录落盘守卫——本会话从未成功读过该桌面的权威数据时，
+  // 禁止把空数组写进 IDB。清空聊天记录走 clearChatHistory 的 store.remove 直删。
+  if (!msgs.length && authLoadedPrefix !== myPrefix) return;
+  const data = JSON.stringify(msgs);
+  try { if (window.idbSet) window.idbSet(myPrefix + ':chat-msgs', data); } catch (e) {}
+  writeLsSnapshot(data, myPrefix);
+});
 }
 function flushSave() {
 if (window.__resetting) return;
-    if (saveTimer) {
-      clearTimeout(saveTimer);
-      saveTimer = null;
-      const myPrefix = window.activePrefix();
-      // v3.14.x：空记录落盘守卫（同 saveMsgs 防抖回调）——权威未读过前不写空数组
-      if (!msgs.length && authLoadedPrefix !== myPrefix) return;
-      const data = JSON.stringify(msgs);
-      try { if (window.idbSet) window.idbSet(myPrefix + ':chat-msgs', data); } catch (e) {}
-      // v3.13.x：页面离开前强制立即写快照（不节流），防退出时窗口内最新消息只进内存
-      writeLsSnapshot(data, myPrefix, true);
-} else if (!chatDbReady && msgs.length) {
-writeLsSnapshot(JSON.stringify(msgs), undefined, true);
-}
+// v3.26.x 止血：立即落盘待写（离页/切走兜底）；未就绪则仅写 LS 有损快照
+flushPersistNow();
+if (!chatDbReady && msgs.length) writeLsSnapshot(JSON.stringify(msgs), undefined, true);
 }
 window.chatFlushSave = flushSave;
 try {
@@ -355,7 +359,7 @@ return false;
 }
 function loadMsgs(forceIdb) {
 armReadyFuse();
-if (!saveTimer && !msgs.length && !chatDbReady) {
+if (!persistTimer && !msgs.length && !chatDbReady) {
 try { msgs = JSON.parse(store.get('chat-msgs') || '[]'); } catch (e) { msgs = []; }
 if (!Array.isArray(msgs)) msgs = [];
 try { syncLastMineText(); } catch (e) {}
@@ -1958,7 +1962,7 @@ pendingLocal = null;
 sessionChangedIdx.clear();
 chatDbReady = true;
 renderStart = 0; // v3.6.x：分页窗口起点复位（消息已清空）
-if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+cancelPersist();
 try { store.remove('chat-msgs'); } catch (e) {}
 if (body) body.innerHTML = '';
 clearChatUnread();
@@ -1974,7 +1978,7 @@ pendingLocal = null;
 sessionChangedIdx.clear();
 chatDbReady = true;
 renderStart = 0;
-if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+cancelPersist();
 const importedData = JSON.stringify(msgs);
 try { if (window.idbSet) window.idbSet(window.activePrefix() + ':chat-msgs', importedData); } catch (e) {}
 writeLsSnapshot(importedData, undefined, true);
@@ -2378,9 +2382,14 @@ function saveMsgsNow() {
 // v3.14.x：空记录落盘守卫（同 saveMsgs）——调用方都是作答/回应后触发，
 // msgs 必非空；真出现空+权威未读过时绝不写盘（防覆盖全部历史）
 if (!msgs.length && authLoadedPrefix !== window.activePrefix()) return;
-const data = JSON.stringify(msgs);
-try { if (window.idbSet) window.idbSet(window.activePrefix() + ':chat-msgs', data); } catch (e) {}
-writeLsSnapshot(data, undefined, true);
+// v3.26.x 止血：合并到低频空闲落盘（不再立即同步写整包），离页 flushSave 兜底
+const myPrefix = window.activePrefix();
+schedulePersist(() => {
+  if (!msgs.length && authLoadedPrefix !== myPrefix) return;
+  const data = JSON.stringify(msgs);
+  try { if (window.idbSet) window.idbSet(myPrefix + ':chat-msgs', data); } catch (e) {}
+  writeLsSnapshot(data, myPrefix, true);
+});
 }
 window.chatChooseReply = function (msgIdx, answer, opt, match) {
 const rec = msgs[msgIdx];

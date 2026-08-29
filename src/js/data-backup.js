@@ -179,8 +179,10 @@
     const saveRes = await saveBackupFile(blob, fname);
     impHide();
     if (saveRes === 'ok') { toast('数据已导出（' + sizeKB + ' KB，全部数据完整）'); return; }
-    if (saveRes === 'cancel') { toast('已取消保存'); return; }
-    // 原生分享/保存框不可用或未成功：数据已打包好，需要用户点「确定」才真正下载
+    // v3.9.x：'cancel' 不再直接放弃——华为/夸克等浏览器分享面板会立刻 AbortError
+    //（分享面板不弹、直接返回「已取消保存」），数据其实已打包好，统一走「确定后下载」
+    // 兜底，保证任何浏览器都能导出成功；用户仍可点「取消」放弃本次保存。
+    // 原生分享/保存框不可用、被取消或未成功：数据已打包好，需要用户点「确定」才真正下载
     if (window.openModal) {
       window.openModal('备份已打包完成（' + sizeKB + ' KB）', '', () => {
         if (anchorDownload(blob, fname)) toast('数据已导出（' + sizeKB + ' KB，全部数据完整）');
@@ -197,7 +199,12 @@
   async function saveBackupFile(blob, fname) {
     const file = new File([blob], fname, { type: 'application/json;charset=utf-8' });
     // ① 系统分享面板
-    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+    // v3.9.x：华为（Mate20 默认浏览器）与夸克对 navigator.share({files}) 支持不稳定——
+    // canShare 返回 true 但实际调用立刻抛 AbortError（分享面板不弹、直接「已取消保存」），
+    // 用户完全无法导出。检测到这些浏览器直接跳过分享面板，走「确定后下载」流程。
+    const ua = (navigator.userAgent || '').toLowerCase();
+    const brokenFileShare = /huaweibrowser|quark/.test(ua);
+    if (!brokenFileShare && navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
       try {
         await navigator.share({ files: [file], title: 'mochi 数据备份' });
         return 'ok';

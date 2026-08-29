@@ -600,7 +600,11 @@ try {
               }
             }
           } catch (e) { txt = String(reader.result || ''); }
-          if (textarea) textarea.value = txt; // 填入文本框，由用户确认
+          if (textarea) textarea.value = txt;
+          // v3.27.x：文件导入直接生效——否则选完文件还需再点一次「确定」，
+          // 手机上用户以为选了文件就导入、没点确定，导致「导入了却没应用」。
+          // 仅 opts.txtImportAuto 的弹窗开启自动提交。
+          if (opts.txtImportAuto) { try { fire(); } catch (e) {} try { close(); } catch (e) {} }
         };
         reader.readAsArrayBuffer(f);
         fileInput.value = '';
@@ -1711,7 +1715,7 @@ try {
           toast('已导入，刷新生效');
           setTimeout(() => location.reload(), 800);
         } catch (e) { toast('解析失败，请检查文本'); }
-      }, { textarea: true, textareaPlaceholder: '导入前会自动把当前美化保存为「导入前备份」方案；可粘贴文本，或点下方「从文件导入」选择 .json 文件', txtImport: true });
+      }, { textarea: true, textareaPlaceholder: '导入前会自动把当前美化保存为「导入前备份」方案；可粘贴文本，或点下方「从文件导入」选择 .json 文件', txtImport: true, txtImportAuto: true });
     });
   }
 

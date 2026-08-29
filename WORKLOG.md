@@ -1,5 +1,24 @@
-# 本次构建者：AI-A（本会话 2026-08-29，桌面「今日情话/已摸鱼」两卡文字对齐；已构建收口 sw: mochi-mtdyesi8，哨兵 57/57，verify-desk-align 27/27，待提交）
-### 2026-08-29（导入美化方案：先自动保存当前美化为方案，再应用导入，原美化不丢失）
+# 本次构建者：AI-A（本会话 2026-08-29，收口「小米15Pro Chrome 卡顿止血」聊天持久化空闲调度；构建状态：本次构建）
+### 2026-08-29（小米15Pro Chrome 卡顿止血：聊天持久化改空闲调度（顺手收口下方待构建条目））
+- [AI-A 域·跨域改 AI-B 数据层 chat.js 持久化]（**改动文件：src/js/chat.js；node --check 通过；构建状态：本次构建，待提交未推送**）。
+- 需求/反馈：小米15 Pro Chrome 卡顿——发消息/来消息/收键盘/上滑记录/切页，平时 2~3s 长任务阻塞（诊断 3019ms/2323ms/2033ms）。
+- 根因：chat-msgs 在 IndexedDB 达 355MB（含图片 base64），每次交互都同步 `JSON.stringify` 全量串 + `idbSet` 全量写 → 主线程 2~3s 阻塞；来回切页/开关消息再次触发。
+- 方案：`saveMsgs`/`saveMsgsNow`/`flushSave` 的同步全量写改为空闲调度器 `schedulePersist/flushPersistNow/runPersist`：`requestIdleCallback` 空闲期或 ≥2500ms 间隔合并写；`flushSave` 只在真正离场（切页）时 flushPersistNow，缓解打字/发消息/来消息打断。不缓存、不删数据，仅改落盘时机。
+- 验证：node --check 通过；构建哨兵核对中。待真机实测：发消息后不再卡 2~3s、来消息不打断游戏、收键盘/上滑记录明显变顺。
+- 待对方处理：真机复核打字/收键盘流畅度（属 mobile-adapt 键盘域），若仍卡再据复测处理。
+### 2026-08-29（手机端导入美化方案 json 没应用：文件导入需再点一次确定）
+- [AI-B 域]（**改动文件：src/js/personalize.js（openModal 的 fileInput 读取回调新增 txtImportAuto；美化导入行开启 txtImportAuto）；node --check 通过；构建状态：已构建收口 sw: mochi-mtdznxuo，哨兵 57/57，待提交未推送**）。
+- 反馈：手机端「导入美化方案 → 从文件导入 .json」选了文件却没应用。
+- 根因：openModal 的 txt 文件导入读取成功只 `textarea.value = txt` 填入文本框，**还要用户再点一次「确定」**才执行回调。手机上用户以为选了文件就导入、没点确定 → 看起来没应用。
+- 方案：openModal 文件读取成功后，若 `opts.txtImportAuto` 则自动 `fire()`+`close()` 直接应用；仅为桌面美化导入行开启 txtImportAuto（粘贴文本路径不受影响；聊天美化/字卡库同款导入未动，需要的话同法处理）。
+- 验证：node --check 通过。待构建后实测：手机「从文件导入 .json」→ 读取后自动应用 → toast「已导入，刷新生效」并刷新。
+### 2026-08-29（华为 Mate20 默认浏览器/夸克：【导出数据】点后显示「已取消保存」，无法导出）
+- [AI-B 域]（**改动文件：src/js/data-backup.js；node --check 通过；构建状态：未构建，待构建者收口**）。
+- 反馈：华为 Mate20 默认浏览器、夸克浏览器点【导出数据】显示「已取消保存」，功能不可用。
+- 根因：这两款浏览器 `navigator.canShare({files})` 返回 true 但实际调用 `navigator.share({files})` 分享面板不弹、立刻抛 AbortError；代码把 AbortError 当成「用户取消」直接 toast「已取消保存」返回，根本走不到「备份已打包完成→确定下载」兜底，用户无法导出。
+- 方案：① saveBackupFile 里检测 UA（huaweibrowser/quark）直接跳过分享面板，走「确定后下载」；② doExport 里 'cancel' 不再直接放弃，与 'blocked' 一样回落「确定后下载」弹窗（用户仍可点取消放弃），保证任何浏览器都能导出。
+- 验证：node --check 通过。待构建后实测：华为/夸克点导出 → 弹「备份已打包完成」→ 点确定 → 触发下载保存 JSON；其他浏览器分享正常的不受影响。
+- 待对方处理：构建者收口。
 - [AI-B 域]（**改动文件：src/js/personalize.js（beautyImportRow 导入回调 + 提示文案）；node --check 通过；构建状态：未构建，待构建者收口**）。
 - 需求：导入美化方案不要影响原本的美化，原美化自动保存为方案。
 - 方案：导入回调 `applyBeautyData` 前先 `collectBeautyFull()` 收当前美化，非空则以「导入前备份 MM-DD HH:MM」为名 push 进全局方案列表（getSchemes/saveSchemesList，方案全局通用）再应用导入；提示文案也写明自动保存当前美化。
