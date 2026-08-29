@@ -1,3 +1,11 @@
+### 2026-08-29 20:35（修复：iOS 15 Pro Max 所有浏览器打开 GitHub Pages 链接开屏一直自己刷新然后白屏，完全打不开——FIX-REGRESSION #70）
+- [AI-B 域·构建/离线层]（**改动文件：build.mjs（script 拆块 + 哨兵 +1）+ src/pwa/sw.js（导航兜底）+ tools/verify-ios15-white-screen.mjs（新增专项验证）；构建状态：已构建并收口（sw 见 version.json，20:39 构建由 20:41 并行会话 b689867 收口入库）**）。
+- 需求/反馈：用户报「iOS 15 Pro Max 手机所有浏览器打开 GitHub 部署链接，开屏一直自己刷新然后白屏，完全打不开无法使用」。
+- 根因（双链路叠加）：①**产物主脚本单块达 2.85MB**——iOS 15 WebKit(615)/JavaScriptCore 对超大单块内联 script 解析触发内存限制 → WebContent 进程崩溃 → Safari「此页面出现问题」自动重新加载 → 每加载必崩 → 无限刷新循环 → 白屏（iOS 上所有浏览器都是 WebKit 内核，故「所有浏览器」现象一致）；②GitHub Pages 国内访问慢（实测 ~30KB/s，3.7MB 单文件 120s 都下不完），sw.js 网络优先 3.5s 必超时，若预缓存失败/旧缓存被清，导航回退命中空缓存 → Response.error() → 白屏。
+- 方案：①build.mjs 把主 bundle 按 ≤600KB 拆成多个 <script> 块（块间保持 jsFiles 顺序、每文件仍是独立 IIFE+try/catch，全局共享不受影响；单块远小于 iOS 15 解析上限）；②sw.js 导航兜底：网络超时且缓存为空时改发不带超时的 fetch(req)（成功照常写入缓存），不再直接 Response.error() 白屏；SW 内部 fetch 不会再次触发本 SW 拦截，无死循环风险。
+- 验证：node tools/verify-ios15-white-screen.mjs 10/10（产物 script 块数 ≥3 且每块 <700KB、关键功能在位、sw.js 含缓存空兜底 fetch(req) 且无 Response.error 白屏）；主 bundle 全部块 node --check 通过；WebKit 加载 __mochiDataReady=true；npm run verify 10/10；构建哨兵 75/75。
+- 真机确认点：iOS 15 打开不再无限刷新白屏；首次慢加载（GitHub Pages 国内）完成后再次打开走 SW 缓存秒开。
+
 ### 2026-08-29 20:53（补充：音乐「TA 暂停再播放」——权限总开关 + 防连发加固，落实"不要一直暂停又继续 / 概率可调 / 可关闭暂停权限"）
 - [本会话·音乐域]（**改动文件：src/js/music-player.js（taPauseEn 开关 + 防连发三重守卫 + 设置面板开关联动）+ build.mjs（哨兵 +1：taPauseEn）+ FIX-REGRESSION.md（#71 更新）+ tools/verify-ta-pause.mjs（+4 断言）+ tools/verify-ta-pause-live.mjs（+L6/L7 用例）+ WORKLOG.md；构建状态：本次构建，待提交**）。
 - 需求/反馈：用户追加要求：①不要出现联系人一直点击暂停又点击继续播放的 bug；②暂停概率要写进音乐设置可自调，且可关闭联系人暂停的权限。
