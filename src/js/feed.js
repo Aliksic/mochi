@@ -1638,20 +1638,33 @@ if (comInput) comInput.addEventListener('keydown', (e) => { if (e.key === 'Enter
         }, (ccfg.commentSpeedMin + Math.random() * Math.max(1, ccfg.commentSpeedMax - ccfg.commentSpeedMin)) * 1000);
       }
     });
-    // v3.6.x：TA 收藏我发布的动态（概率可调，与聊天消息收藏一致，延迟同点赞节奏）——
-    // 收藏写入当前桌面（各桌面收藏隔离），保持只由当前桌面 TA 触发
-    // v3.7.x：概率由收藏设置页控制，默认 30%
-    if (Math.random() * 100 < (window.favCfg ? window.favCfg().taFeed : 30) && window.addTaFavItem) {
-      const cfg = feedCfg();
-      setTimeout(() => {
-        const list2 = load();
-        const p2 = list2.find(x => x.id === id);
-        if (!p2) return;
-        if (window.addTaFavItem({ kind: 'feed', text: p2.content || '', imgs: (p2.imgs || []).slice(), ts: Date.now() })) {
-          toast(window.taFit ? window.taFit('TA 收藏了你的朋友圈动态') : 'TA 收藏了你的朋友圈动态');
-        }
-      }, (cfg.likeSpeedMin + Math.random() * Math.max(1, cfg.likeSpeedMax - cfg.likeSpeedMin)) * 1000);
-    }
+    // v3.26.x：TA 收藏我的朋友圈动态——朋友圈数据全局互通（feed-posts 全局共享层），
+    // 我【任意一条】动态（含历史）都可能被收藏，不限于刚发布的这条；遍历所有桌面
+    // 联系人，各桌面 TA 按自己桌面的 taFeed 概率触发，收藏写入【该桌面自己】的
+    // 收藏（by:'ta'，各桌面收藏隔离）；收藏 ts 用动态发布时间便于按动态判重。
+    allContacts.forEach(ct => {
+      const cid = ct && ct.id ? ct.id : 'default';
+      const ccfg = feedCfgFor(cid);
+      if (Math.random() * 100 < favFeedProbFor(cid)) {
+        setTimeout(() => {
+          const list2 = load();
+          const mine = list2.filter(x => (x.role || x.by) === 'me');
+          if (!mine.length) return;
+          const pick = mine[Math.floor(Math.random() * mine.length)];
+          const f = { kind: 'feed', text: pick.content || '', imgs: (pick.imgs || []).slice(), ts: pick.ts || Date.now() };
+          const s = window.storeFor(cid);
+          let fav = [];
+          try { fav = JSON.parse(s.get('fav-msgs') || '[]'); } catch (e) { fav = []; }
+          if (!Array.isArray(fav)) fav = [];
+          if (fav.some(x => (x.by || 'me') === 'ta' && (x.kind || 'msg') === 'feed' && x.ts === f.ts)) return;
+          fav.push(Object.assign({ by: 'ta' }, f));
+          s.set('fav-msgs', JSON.stringify(fav));
+          if (cid === (window.__activeCid || 'default')) {
+            toast(window.taFit ? window.taFit('TA 收藏了你的朋友圈动态') : 'TA 收藏了你的朋友圈动态');
+          }
+        }, (ccfg.likeSpeedMin + Math.random() * Math.max(1, ccfg.likeSpeedMax - ccfg.likeSpeedMin)) * 1000);
+      }
+    });
   }
   // 暴露给外部模块发帖（period.js 月度报告分享等）
   window.feedAddPost = function (text, imgs) {
@@ -1706,6 +1719,17 @@ if (comInput) comInput.addEventListener('keydown', (e) => { if (e.key === 'Enter
   }
   function feedCfg() {
     return feedCfgFor(window.__activeCid || 'default');
+  }
+  // v3.26.x：按指定桌面读 TA 收藏我动态的概率（fav-ta-feed，收藏设置页每桌面独立），
+  // 供跨桌面遍历时各桌面的 TA 按各自设置掷概率，默认 30%
+  function favFeedProbFor(cid) {
+    try {
+      const s = window.storeFor(cid);
+      const v = s.get('fav-ta-feed');
+      if (v === null || v === undefined || v === '') return 30;
+      const n = Number(v);
+      return isNaN(n) ? 30 : n;
+    } catch (e) { return 30; }
   }
   function feedToday() {
     const d = new Date();
