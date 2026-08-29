@@ -8385,9 +8385,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787990552096">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.328</b></span>
-        <span class="sv-deploy">部署于 2026-08-29 16:02<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787991127869">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.329</b></span>
+        <span class="sv-deploy">部署于 2026-08-29 16:12<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9477,7 +9477,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.328</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.329</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -9685,7 +9685,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.328</span>
+              <span class="lic-ver">v3.26.329</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -14923,7 +14923,11 @@ m.addEventListener('click', (e) => { if (e.target === m) hideContactModal(m); })
 }
 if (!document.getElementById('cm-scrollbar-hide')) {
 const st = document.createElement('style'); st.id = 'cm-scrollbar-hide';
-st.textContent = '.cm-list{scrollbar-width:none;-ms-overflow-style:none}.cm-list::-webkit-scrollbar{display:none}';
+st.textContent = '.cm-list{scrollbar-width:none;-ms-overflow-style:none}.cm-list::-webkit-scrollbar{display:none}' +
+'#cm-fn-explain{display:inline-block;margin-left:4px;font-size:11px;color:var(--muted,#888);font-weight:400;letter-spacing:.2px;border:1px solid rgba(0,0,0,.08);background:rgba(0,0,0,.03);border-radius:9px;padding:2px 9px;cursor:pointer;line-height:1.4}' +
+'#cm-fn-explain:hover,#cm-fn-explain:focus-visible{background:rgba(0,0,0,.06);border-color:rgba(0,0,0,.12);outline:none}' +
+'[data-theme="dark"] #cm-fn-explain{color:#aaa;border-color:rgba(255,255,255,.14);background:rgba(255,255,255,.06)}' +
+'[data-theme="dark"] #cm-fn-explain:hover,[data-theme="dark"] #cm-fn-explain:focus-visible{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.2)}';
 document.head.appendChild(st);
 }
 return m;
@@ -14933,7 +14937,7 @@ const m = ensureModal();
 m.innerHTML = '';
 const box = el('div');
 box.style.cssText = 'width:min(92vw,420px);max-height:80vh;display:flex;flex-direction:column;background:var(--card-bg,#fff);color:var(--ink,#111);border-radius:16px;padding:18px;box-shadow:0 8px 30px rgba(0,0,0,.2)';
-box.appendChild(el('div', '', '<div style="font-size:16px;font-weight:600;margin-bottom:4px">联系人 / 桌面</div><div style="font-size:12px;color:var(--muted,#888);margin-bottom:12px">每个联系人数据独立；除朋友圈外，还有部分功能数据在所有桌面共用。<b id="cm-fn-explain" style="color:#7a6ad8;font-weight:600;cursor:pointer">【功能说明】</b><br>「称呼」可设置消息里 TA 的性别叫法（他 / 她 / 不设置）</div>'));
+box.appendChild(el('div', '', '<div style="font-size:16px;font-weight:600;margin-bottom:4px">联系人 / 桌面</div><div style="font-size:12px;color:var(--muted,#888);margin-bottom:12px">每个联系人数据独立；除朋友圈外，还有部分功能数据在所有桌面共用。<b id="cm-fn-explain">【功能说明】</b><br>「称呼」可设置消息里 TA 的性别叫法（他 / 她 / 不设置）</div>'));
 const list = el('div', 'cm-list'); list.style.cssText = 'display:flex;flex-direction:column;gap:8px;margin-bottom:12px;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;flex:1;min-height:0';
 getContacts().forEach(c => {
 const row = el('div');

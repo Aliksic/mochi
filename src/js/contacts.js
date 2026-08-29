@@ -518,7 +518,12 @@
     // 与全站其余滚动容器「隐藏滚动条」的观感不一致——隐藏但保留滚动能力。
     if (!document.getElementById('cm-scrollbar-hide')) {
       const st = document.createElement('style'); st.id = 'cm-scrollbar-hide';
-      st.textContent = '.cm-list{scrollbar-width:none;-ms-overflow-style:none}.cm-list::-webkit-scrollbar{display:none}';
+      // v3.26.x：「功能说明」统一为设置页 .tag 同款中性胶囊（此前内联 #7a6ad8 紫色，黑白/深色主题下突兀）
+      st.textContent = '.cm-list{scrollbar-width:none;-ms-overflow-style:none}.cm-list::-webkit-scrollbar{display:none}' +
+        '#cm-fn-explain{display:inline-block;margin-left:4px;font-size:11px;color:var(--muted,#888);font-weight:400;letter-spacing:.2px;border:1px solid rgba(0,0,0,.08);background:rgba(0,0,0,.03);border-radius:9px;padding:2px 9px;cursor:pointer;line-height:1.4}' +
+        '#cm-fn-explain:hover,#cm-fn-explain:focus-visible{background:rgba(0,0,0,.06);border-color:rgba(0,0,0,.12);outline:none}' +
+        '[data-theme="dark"] #cm-fn-explain{color:#aaa;border-color:rgba(255,255,255,.14);background:rgba(255,255,255,.06)}' +
+        '[data-theme="dark"] #cm-fn-explain:hover,[data-theme="dark"] #cm-fn-explain:focus-visible{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.2)}';
       document.head.appendChild(st);
     }
     return m;
@@ -529,7 +534,7 @@
     const box = el('div');
     // v3.11.x：颜色改主题变量（内联硬编码浅色在深色模式下白底白字不可见）
     box.style.cssText = 'width:min(92vw,420px);max-height:80vh;display:flex;flex-direction:column;background:var(--card-bg,#fff);color:var(--ink,#111);border-radius:16px;padding:18px;box-shadow:0 8px 30px rgba(0,0,0,.2)';
-    box.appendChild(el('div', '', '<div style="font-size:16px;font-weight:600;margin-bottom:4px">联系人 / 桌面</div><div style="font-size:12px;color:var(--muted,#888);margin-bottom:12px">每个联系人数据独立；除朋友圈外，还有部分功能数据在所有桌面共用。<b id="cm-fn-explain" style="color:#7a6ad8;font-weight:600;cursor:pointer">【功能说明】</b><br>「称呼」可设置消息里 TA 的性别叫法（他 / 她 / 不设置）</div>'));
+    box.appendChild(el('div', '', '<div style="font-size:16px;font-weight:600;margin-bottom:4px">联系人 / 桌面</div><div style="font-size:12px;color:var(--muted,#888);margin-bottom:12px">每个联系人数据独立；除朋友圈外，还有部分功能数据在所有桌面共用。<b id="cm-fn-explain">【功能说明】</b><br>「称呼」可设置消息里 TA 的性别叫法（他 / 她 / 不设置）</div>'));
     const list = el('div', 'cm-list'); list.style.cssText = 'display:flex;flex-direction:column;gap:8px;margin-bottom:12px;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;flex:1;min-height:0';
     getContacts().forEach(c => {
       const row = el('div');
