@@ -130,6 +130,14 @@
   white-space:normal; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:3;
   overflow:hidden; text-overflow:clip; height:45px; line-height:15px; margin-top:2px;
 }
+/* v3.26.x：「已摸鱼」卡与「今日情话」卡内容对齐——两卡都是 justify-content:center
+   垂直居中，但情话正文高 45px、已摸鱼正文仅单行，内容总高不一致导致各自居中后
+   两卡的「标题行 / 正文行」水平错位。给已摸鱼正文区同 45px 固定高 + 顶对齐，
+   与情话卡结构一致，标题与正文首行即完全对齐。 */
+.mini-card[data-card-bg="fish"] .mc-b {
+  height:45px; line-height:15px; margin-top:2px; overflow:hidden;
+}
+.mini-card[data-card-bg="fish"] .mc-b b { line-height:inherit; }
 
 /* 打卡横幅
    v3.15.x：去掉 0 2px 左右内缩——与 deco/mini-row 等卡片同宽（左右边缘跨页对齐）；

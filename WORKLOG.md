@@ -1,4 +1,11 @@
 # 本次构建者：AI-A（本会话 2026-08-29，吃饭提醒夜宵专属字卡；已构建收口 sw: mochi-mtdx6joz，哨兵 55/55，verify-eat-remind 20/20，待提交）
+### 2026-08-29（房间功能底部【取消】弹窗一直不消失）
+- [AI-B 域·跨域改 AI-A 文件 src/css/room.css]（**改动文件：src/css/room.css + build.mjs（FIX_SENTINELS 哨兵 +1）+ FIX-REGRESSION.md #50；node --check 通过；构建状态：未构建，待构建者收口**）。
+- 反馈（小米 15 Pro / Chrome）：房间底部【取消】弹窗一直不会自己消失。
+- 根因：放置/移动横幅 `.r-banner` 设了 `display:flex`，会压过 UA 默认的 `[hidden]{display:none}`；`banner(null)` 里 `b.hidden=true` 加了 hidden 属性但样式裁决后横幅照样显示 → 点【取消】能退出放置态（格子高亮消失）但横幅永远留在底部。这是 fish 时机条 / 位置面板同款「display:flex 压过 [hidden]」坑（chat-main.css L1399 先例注释）。
+- 方案：room.css 给 `.r-banner` 补 `.r-banner[hidden]{display:none}`。JS 逻辑本就有多处 `banner(null)` 清理，无需改动。
+- 验证：node --check 通过（改的是 CSS/build 数组，JS 无语法改动）。待构建后实测：进房间点家具【移动】或家具仓兑换/摆放后底部出现【取消】横幅，点【取消】或操作完成后横幅应自动消失；再进屋也清残留横幅。
+- 待对方处理：构建者 `node build.mjs` 收口。
 ### 2026-08-29（桌面「恢复默认桌面」点了没反应：单选确认 pill 点选不提交）
 - [AI-B 域]（**改动文件：src/js/personalize.js；node --check 通过；构建状态：未构建，待构建者收口**）。
 - 反馈：手机桌面「恢复默认桌面」点击无反应（想恢复组件卡片与图标的默认布局）。

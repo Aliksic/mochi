@@ -317,6 +317,8 @@
   border: 0; border-radius: 999px; padding: 4px 12px;
   font-size: 12px; background: rgba(255,255,255,.92); color: #333; font-weight: 600;
 }
+/* display:flex 会压过 UA 的 [hidden]{display:none}（fish 时机条同款坑）：横幅必须显式补回才能真正隐藏/自己消失 */
+.r-banner[hidden] { display: none; }
 
 /* ---- TA 状态行 / 感应输出 ---- */
 .r-status {
