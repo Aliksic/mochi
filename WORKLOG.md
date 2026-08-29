@@ -1,4 +1,12 @@
-# 本次构建者：AI-A（本会话 2026-08-29 16:30，收口「华为 Mate40 Pro 桌面图标横拖/恢复默认」；构建状态：本次构建，待提交）
+# 本次构建者：AI-A（本会话 2026-08-29 16:45，收口「桌面美化导入文件无反应」；构建状态：本次构建，待提交）
+### 2026-08-29 16:45（桌面美化【导入美化方案】从文件导入选 .json 依旧没反应、没应用）
+- [AI-A 域·跨域改 AI-B 文件 src/js/personalize.js + build.mjs（哨兵）+ FIX-REGRESSION.md（#59）+ WORKLOG.md；node --check 通过；构建状态：本次构建，sw: mochi-mte4tqhg，待提交]。
+- 需求/反馈：手机桌面美化【导入美化方案】从文件导入选了 .json 依旧没有任何反应、没有应用（此前 txtImportAuto 修过一次仍无效）。
+- 根因：`opts` 是 `window.openModal` 的函数参数（函数体在 `return ctl;` 处结束），而文件导入的 change 监听器定义在 **IIFE 作用域**——`if (opts.txtImportAuto)` 抛 **ReferenceError: opts is not defined**，onload 在 `textarea.value = txt` 后中断 → fire()/close() 永不执行 → 弹窗不关、数据不应用。此前 txtImportAuto 修复从未真正生效（构建不查运行时作用域）。
+- 方案：IIFE 级新增 `_modalOpts`，`window.openModal` 每次打开时 `_modalOpts = opts`，change 监听器改读 `_modalOpts.txtImportAuto`（修复对所有 txtImport 弹窗生效：桌面美化/聊天美化/字卡库文件导入）。
+- 回归防线：哨兵 `_modalOpts`（存在）；FIX-REGRESSION #59；verify-desk-longpress 新增场景6（DataTransfer 注入 .json → page-bg-0/__accent__ 应用 + 弹窗自动关闭）。
+- 验证：verify-desk-longpress 22/22（场景1-6 全绿）；verify-desk-beauty 14/14；verify.mjs 10/10；哨兵 64/64。
+- 待对方处理：推送待 GitHub 凭据（历史同款 GCM 非交互终端问题，本地已有 e20f5d5/27496af 等未推送提交）。
 ### 2026-08-29 16:45（系统预设字卡搜索跨全库：任意页面可搜到经期温柔动作等全部字卡）
 - [AI-A 域·字卡库]（**改动文件：src/js/default-cards.js + FIX-REGRESSION.md（#58）+ WORKLOG.md；node --check 通过；构建状态：已构建，sw: mochi-mte4s3bm，已提交 e9a8e2e（含产物），推送待 GitHub 凭据**）。
 - 需求/反馈：用户确认「所有字卡都要能搜索、显示在字卡库」——此前搜索只限当前 tab，经期温柔动作字卡在别的页面搜不到。

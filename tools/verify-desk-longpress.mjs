@@ -253,6 +253,51 @@ await sleep(900);
 const idbVal = await ev(`(function(){return window.__idbDeskCheck || 'pending';})()`);
 check('IDB desk-layout 已被删除（恢复持久，不会被回填）', idbVal === 'null', 'idb=' + idbVal);
 
+// ============ 场景6：导入美化方案（文件导入自动应用，txtImportAuto） ============
+console.log('\n===== 场景6 导入美化方案（从文件导入自动应用） =====');
+await freshLoad();
+const impState = await ev(`(function(){
+  var r = document.getElementById('row-beauty-import');
+  if (!r) return { err: 'no-row' };
+  r.click();
+  return true;
+})()`);
+if (impState && impState.err) { console.error('FAIL  ' + impState.err); process.exit(1); }
+await sleep(350);
+const impModal = await ev(`(function(){return !document.getElementById('modal-mask').hidden;})()`);
+check('点【导入美化方案】弹窗打开', impModal === true, 'modal=' + impModal);
+const setFile = await ev(`(function(){
+  var inp = document.getElementById('modal-file-input');
+  if (!inp) return { err: 'no-input' };
+  var dt = new DataTransfer();
+  var content = JSON.stringify({ 'page-bg-0': '#ff0000', '__accent__': '#123456' });
+  dt.items.add(new File([content], 'beauty.json', { type: 'application/json' }));
+  try { inp.files = dt.files; } catch (e) { return { err: String(e) }; }
+  inp.dispatchEvent(new Event('change'));
+  return { ok: true };
+})()`);
+check('fileInput 可注入 .json 文件', setFile && setFile.ok === true, setFile && setFile.err ? setFile.err : '');
+await sleep(600);
+const impDiag = await ev(`(function(){
+  var ta = document.querySelector('#modal-mask textarea');
+  return {
+    hasTa: !!ta,
+    taVal: ta ? (ta.value !== undefined ? ta.value : ta.textContent) : null,
+    taHidden: ta ? ta.hidden : null,
+    inpFiles: (function(){try{var i=document.getElementById('modal-file-input');return i.files ? i.files.length : -1;}catch(e){return -2;}})()
+  };
+})()`);
+console.log('  [diag] textarea 状态:', JSON.stringify(impDiag).slice(0, 200));
+const impApplied = await ev(`(function(){
+  var s = window.activeStore();
+  var ac = null;
+  try { ac = localStorage.getItem('xy-home-v2:accent-color'); } catch (e) {}
+  return { bg: s.get('page-bg-0'), accent: ac, modalClosed: document.getElementById('modal-mask').hidden };
+})()`);
+check('导入数据已应用（page-bg-0=#ff0000）', impApplied.bg === '#ff0000', 'bg=' + impApplied.bg);
+check('强调色已应用（accent-color）', impApplied.accent === '#123456', 'accent=' + impApplied.accent);
+check('弹窗已自动关闭（txtImportAuto）', impApplied.modalClosed === true, 'closed=' + impApplied.modalClosed);
+
 // ============ 汇总 ============
 console.log('\n===== 汇总 =====');
 const fails = results.filter((r) => !r.ok);

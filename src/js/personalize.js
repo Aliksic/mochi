@@ -212,6 +212,11 @@ try {
   // 通用弹层：IAB 不支持 prompt/confirm，用页面内模态框替代；支持输入 / 色板
   (function () {
     const mask = document.getElementById('modal-mask');
+    // v3.27.x：opts 是 window.openModal 的函数参数（函数体在 return ctl 处结束），
+    // IIFE 作用域里的 change 监听器（txtImportAuto 自动提交）直接引用 opts 会抛
+    // ReferenceError → 文件导入静默失败（"导入美化方案选完文件没反应"）。
+    // 每次打开时把 opts 存到 IIFE 级变量供监听器读取。
+    let _modalOpts = null;
     const modalBox = mask ? mask.querySelector('.modal') : null;
     const title = document.getElementById('modal-title');
     const staticEl = document.getElementById('modal-static');
@@ -305,6 +310,7 @@ try {
     let pillClicked = false;
     window.openModal = function (t, v, fn, opts) {
       opts = opts || {};
+      _modalOpts = opts;
       // v3.25.x：opts.big——宽版弹窗（诊断信息等长文只读展示），配合 CSS
       // .modal.modal--big 加宽 + 放大输入框；每次开弹窗按 opts.big 重设类，天然复位。
       if (modalBox) modalBox.classList.toggle('modal--big', !!opts.big);
@@ -603,8 +609,9 @@ try {
           if (textarea) textarea.value = txt;
           // v3.27.x：文件导入直接生效——否则选完文件还需再点一次「确定」，
           // 手机上用户以为选了文件就导入、没点确定，导致「导入了却没应用」。
-          // 仅 opts.txtImportAuto 的弹窗开启自动提交。
-          if (opts.txtImportAuto) { try { fire(); } catch (e) {} try { close(); } catch (e) {} }
+          // 仅 opts.txtImportAuto 的弹窗开启自动提交（opts 经 _modalOpts 引用，
+          // 直接引用函数参数 opts 会 ReferenceError，见 IIFE 顶部注释）。
+          if (_modalOpts && _modalOpts.txtImportAuto) { try { fire(); } catch (e) {} try { close(); } catch (e) {} }
         };
         reader.readAsArrayBuffer(f);
         fileInput.value = '';
