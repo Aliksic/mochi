@@ -54,6 +54,7 @@
 
   function loadArr(k) { try { const v = JSON.parse(store.get(k) || 'null'); return Array.isArray(v) ? v : []; } catch(e){ return []; } }
   function saveArr(k, a) { store.set(k, JSON.stringify(a)); }
+
   function partnerName() { return window.activeStore().get('lbl-partner') || 'TA'; }
   function findTrack(id) { return library.find(m => m.id === id) || null; }
   function fmtDur(sec) {
@@ -863,7 +864,8 @@
     } catch (e) { finish(0); }
   }
   function probeAllMissingDurations() {
-    library.forEach(m => { if (m && m.neteaseId && !m.duration) enqueueDurProbe(m); });
+    // v3.26.x：只探测已渲染（窗口化）歌曲的时长，避免对几千首歌发起网络请求导致 ERR_INSUFFICIENT_RESOURCES
+    libSongsFor(libFilter).slice(0, libRenderShown).forEach(m => { if (m && m.neteaseId && !m.duration) enqueueDurProbe(m); });
   }
   // ================= 网易云歌曲封面补全（列表/小组件共用，并发节流） =================
   // v3.9.x：链接添加/批量导入的单曲没有封面 → 导入后/播放时/打开音乐页时后台拉取
@@ -903,7 +905,8 @@
   }
   function ensureSongCover(m) { enqueueCoverFetch(m); }
   function ensureMissingCovers() {
-    library.forEach(m => { if (m && m.neteaseId && !m.cover) enqueueCoverFetch(m); });
+    // v3.26.x：只补已渲染（窗口化）歌曲的封面，避免对几千首歌发起网络请求导致 ERR_INSUFFICIENT_RESOURCES
+    libSongsFor(libFilter).slice(0, libRenderShown).forEach(m => { if (m && m.neteaseId && !m.cover) enqueueCoverFetch(m); });
   }
   // 局部刷新某首歌曲在列表/歌单面板里的封面图标（has-cov 与正常渲染一致，图标丢弃）
   function updateCoverUI(id) {
@@ -1007,19 +1010,19 @@
       // 播放读取路径（store.get('music-file:'+id)）会查 localStorage，数据不丢。
       // 超 5MB 配额时写失败 → 明确提示，用户知道原因而不是无声失败
       const saveToLocal = (dv) => {
-        if (!dv) { saveLibrary(); return; }
+        if (!dv) { saveLibrarySoon(); return; }
         try {
           localStorage.setItem(key, dv);
         } catch (e) {
           try { toast('存储空间不足，部分音乐可能无法播放'); } catch (e2) {}
         }
-        saveLibrary();
+        saveLibrarySoon();
       };
       // dataURL 字符串 → 先试 IDB，失败再落 localStorage
       const saveStrFallback = (dv) => {
-        if (!dv) { saveLibrary(); return; }
+        if (!dv) { saveLibrarySoon(); return; }
         if (window.idbSet) {
-          window.idbSet(key, dv).then(ok2 => { if (ok2) saveLibrary(); else saveToLocal(dv); }).catch(() => saveToLocal(dv));
+          window.idbSet(key, dv).then(ok2 => { if (ok2) saveLibrarySoon(); else saveToLocal(dv); }).catch(() => saveToLocal(dv));
         } else {
           saveToLocal(dv);
         }
@@ -1030,7 +1033,7 @@
         return;
       }
       window.idbSet(key, payload).then(ok => {
-        if (ok) { saveLibrary(); return; }
+        if (ok) { saveLibrarySoon(); return; }
         // Blob 写入失败（老内核不支持 Blob 克隆）→ 转 dataURL 字符串重存
         toDataUrl(saveStrFallback);
       }).catch(() => {
@@ -1533,6 +1536,11 @@
   const batchSel = new Set();
   // v3.9.x：我的音乐库分类筛选——'all' 全部 / 'default' 未分类 / 具体歌单 id
   let libFilter = 'all';
+  // v3.26.x：窗口化渲染——大量歌曲时一次性 innerHTML 全量渲染会创建海量 DOM 节点 + 逐节点
+  // 绑定事件监听器，内存峰值激增触发 ERR_INSUFFICIENT_RESOURCES 资源耗尽导致闪退。
+  // 默认只渲染前 LIB_RENDER_LIMIT 首，超出部分显示"加载更多"按钮按需追加。
+  const LIB_RENDER_LIMIT = 300;
+  let libRenderShown = LIB_RENDER_LIMIT;
   function libSongsFor(filter) {
     if (filter === 'default') return library.filter(m => !m.playlistId || m.playlistId === 'default');
     if (filter && filter !== 'all') return library.filter(m => m.playlistId === filter);
@@ -1551,8 +1559,10 @@
           : (libFilter === 'default' ? '还没有未分类的音乐' : '这个歌单还没有歌曲');
       }
     }
-    listEl.innerHTML = songs.length
-      ? songs.map(m => {
+    // v3.26.x：窗口化渲染——只渲染前 libRenderShown 首，避免一次性 innerHTML 海量 DOM 节点导致闪退
+    const renderSongs = songs.slice(0, libRenderShown);
+    listEl.innerHTML = renderSongs.length
+      ? renderSongs.map(m => {
           const active = m.id === currentId;
           const icon = active && audio && !audio.paused
             ? '<path d="M7 5.5h3.5v13H7zM13.5 5.5H17v13h-3.5z"/>'
@@ -1572,6 +1582,15 @@
             '</div>';
         }).join('')
       : '';
+    // 还有更多歌曲 → 追加"加载更多"按钮，按需追加渲染而非一次性全量
+    if (songs.length > renderSongs.length) {
+      const more = document.createElement('div');
+      more.className = 'sm-load-more';
+      more.style.cssText = 'text-align:center;padding:14px;color:var(--accent,#e74c5e);font-size:14px;cursor:pointer;border-radius:8px;margin:6px 0;background:rgba(255,255,255,.06)';
+      more.textContent = '还有 ' + (songs.length - renderSongs.length) + ' 首，点击加载更多';
+      more.addEventListener('click', () => { libRenderShown += LIB_RENDER_LIMIT; renderLibrary(); });
+      listEl.appendChild(more);
+    }
     listEl.querySelectorAll('.sm-song').forEach(row => {
       row.addEventListener('click', (e) => {
         if (musicBatch) {
@@ -1615,6 +1634,7 @@
         if (!b.dataset.mlf) return;
         if (libFilter === b.dataset.mlf) return;
         libFilter = b.dataset.mlf;
+        libRenderShown = LIB_RENDER_LIMIT; // 切换分类时重置窗口化渲染计数
         if (musicBatch) batchSel.clear();
         renderLibFilter();
         renderLibrary();
@@ -3910,6 +3930,7 @@
       cooldownAt = 0;
       reqData = null;
       libFilter = 'all';
+      libRenderShown = LIB_RENDER_LIMIT; // 切联系人时重置窗口化渲染计数
       // v3.14.x：取消待判定的联系人收藏（旧桌面的歌不带到新桌面）
       clearTaFavTimer();
       try { renderFloat(); } catch (e) {}
