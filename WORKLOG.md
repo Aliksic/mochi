@@ -1,4 +1,34 @@
-# 本次构建者：AI-A（本会话 2026-08-29，吃饭提醒夜宵专属字卡；已构建收口 sw: mochi-mtdx6joz，哨兵 55/55，verify-eat-remind 20/20，待提交）
+# 本次构建者：AI-A（本会话 2026-08-29，桌面「今日情话/已摸鱼」两卡文字对齐；已构建收口 sw: mochi-mtdyesi8，哨兵 57/57，verify-desk-align 27/27，待提交）
+### 2026-08-29（导入美化方案：先自动保存当前美化为方案，再应用导入，原美化不丢失）
+- [AI-B 域]（**改动文件：src/js/personalize.js（beautyImportRow 导入回调 + 提示文案）；node --check 通过；构建状态：未构建，待构建者收口**）。
+- 需求：导入美化方案不要影响原本的美化，原美化自动保存为方案。
+- 方案：导入回调 `applyBeautyData` 前先 `collectBeautyFull()` 收当前美化，非空则以「导入前备份 MM-DD HH:MM」为名 push 进全局方案列表（getSchemes/saveSchemesList，方案全局通用）再应用导入；提示文案也写明自动保存当前美化。
+- 验证：node --check 通过。待构建后实测：有美化时导入 → toast「已自动保存原美化 → 方案『导入前备份 …』」→ 应用导入刷新；打开「美化方案」可见该备份可一键还原。
+### 2026-08-29（朋友圈评论表情包「有时缩略图、有时只剩图片二字」）
+- [AI-A 域]（**改动文件：src/js/feed.js；构建状态：未构建，待构建者收口**）。
+- 需求：联系人回复我的评论，同一类表情包有时正常显示缩略图、有时只显示「图片」两个字。
+- 根因：朋友圈数据超 200KB 时 LS 剥图快照把评论/回复里的图片 dataURL 剥成 [图片] 占位文本（stripPostImg），IDB 里是完整版；但 deeperList 合并用的 itemKey 含 content，导致 **同一条** 被当成两条合并并存（一条缩略图、一条 [图片] 文字），渲染残留「图片」。
+- 方案：deeperList 的 itemKey 改为「ts+role/authorName」不含 content，剥图占位版与完整版收敛为同一条，并入时优先保留含真实 data:image 的那版（回填占位）。
+- 验证：node --check 通过。待构建者 node build.mjs 后实测：朋友圈联系人回你的评论、以及评论聊多回合后，表情包都显示缩略图，不再残留「图片」二字；并复核旧评论不出现重复条目。
+- 待对方处理：构建者收口。
+
+### 2026-08-29（桌面 梦角档案 / 我的档案 矢量图标重设计）
+- [AI-A 域·跨域改 AI-B 文件 src/template.html]（**改动文件：src/template.html（桌面两个档案应用图标内联 SVG）；无 JS 改动；构建状态：未构建，待构建者收口**）。
+- 需求：重新设计桌面第三页「梦角档案」「我的档案」两个应用图标；方向确认——保持「档案」主题细化图形、保持黑白描边 #111。
+- 方案：做成一对（均用档案夹底座，中间图案区分镜像）：
+  - 梦角档案（认识TA）＝档案夹 + 四角星芒（梦角/TA 意象）。
+  - 我的档案（认识自己）＝档案夹 + 半身人像（自己）。
+  - 与其它桌面图标一致用 stroke #111 / 1.7 描边，暗色模式沿用现有全局图标改色的兼容处理。
+- 验证：SVG 路径已在 24 viewBox 内自行核对（对称/居中/不越界）；无 JS/CSS 改动故无需 node --check。待构建者 node build.mjs 后实测：第三页两个图标显示为「档案夹+星芒」「档案夹+人像」，明/暗色描边正常。
+- 待对方处理：构建者收口。
+### 2026-08-29（桌面首屏「今日情话」与「已摸鱼」两卡文字不水平对齐）
+- [AI-A 域]（**改动文件：src/css/home.css + tools/verify-desk-align.mjs（F 组断言 +2）+ build.mjs（FIX_SENTINELS 哨兵 +1，跨 AI-B 域）+ FIX-REGRESSION.md #51；node --check 通过；构建状态：已构建收口 sw mochi-mtdyesi8，哨兵 57/57，verify-desk-align 27/27 全绿**）。
+- 反馈：小米 15 Pro / Chrome，桌面首屏「今日情话」与「已摸鱼」两张小卡片的标题行/正文行不水平对齐。
+- 根因：两 mini-card 都 `justify-content:center` 垂直居中，但内容总高不一致——情话正文 #love-quote 固定高 45px（3 行，margin-top2）、已摸鱼正文 .mc-b 仅单行（margin-top6），各自居中后标题与正文位置偏移。
+- 方案：home.css 给 `.mini-card[data-card-bg="fish"] .mc-b` 与情话同构（height:45px、line-height:15px、margin-top:2px、顶对齐、b 行高继承），两卡内容等高 → 标题行/正文行完全对齐。
+- 验证：verify-desk-align 新增 F1/F2 断言（情话↔已摸鱼 标题行/正文行 top ≤0.6px），实测 qTop=fTop=266.8、qB=fB=282.8 完全对齐；全量 27/27 通过，三页桌面布局对齐未被破坏。
+- 待对方处理（AI-B）：build.mjs 哨兵我按本轮收口补到 57/57；此前首次 build 报警的 `.r-banner[hidden]`（room 修复 #50）经核实产物实际已含该规则，仅哨兵 needle 与原产物格式差异导致告警，本轮自然消解，无需处理。
+- 跨域说明：本次改了 AI-B 域 build.mjs（FIX_SENTINELS 加本修复哨兵），理由为回归防线对用户反馈修复强制要求。
 ### 2026-08-29（房间功能底部【取消】弹窗一直不消失）
 - [AI-B 域·跨域改 AI-A 文件 src/css/room.css]（**改动文件：src/css/room.css + build.mjs（FIX_SENTINELS 哨兵 +1）+ FIX-REGRESSION.md #50；node --check 通过；构建状态：未构建，待构建者收口**）。
 - 反馈（小米 15 Pro / Chrome）：房间底部【取消】弹窗一直不会自己消失。
@@ -15,7 +45,12 @@
   - 美化方案-应用（应用）
   - 美化方案-删除（删除）
   这样点 pill 或点底部「确定」都生效，不再出现点了没反应/要点两次。
-- 验证：node --check 通过。待构建后实测：点「恢复默认桌面」弹出确认，点「确定恢复默认」pill 或底部「确定」都直接恢复并 toast「已恢复默认桌面」。
+
+第二处根因（布局没真回到默认）：
+- 「恢复默认桌面」旧实现只删 desk-layout + 按隐藏池就地回位，三处漏洞导致覆现「没恢复」：
+  ① 已移到非默认页的组件不在隐藏池里不挪回；② app-icon-order-*（图标顺序）/ hidden-icons（隐藏图标）从不清理，图标位置保持自定义；③ desk-layout 只存 IndexedDB 时刷新被回填还原。
+- 现在改为彻底重置：store.remove 清掉 desk-layout / 各 .app-grid 的 app-icon-order-* / hidden-icons，set desk-page-count='3'，然后 `location.reload()` ——每次加载由 template 生成默认 DOM，布局键为空即不重排，还原系统默认。保留 page-bg-*（背景）与 app-icon-*（自定义图标图），符合提示文案。
+- 验证：node --check 通过。待构建后实测：点「确定恢复默认」→ toast「已恢复默认桌面」→ 自动刷新 → 组件卡片回默认三页默认排版、图标回默认顺序、被隐藏图标恢复显示。
 - 待对方处理：构建者 `node build.mjs` 收口。
 ### 2026-08-29（装修模式点图标【上传图片】卡顿很久）
 - [AI-B 域]（**改动文件：src/js/personalize.js（pickFile 上传分支）；node --check 通过；构建状态：未构建，待构建者收口**）。

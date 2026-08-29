@@ -1693,11 +1693,25 @@ try {
         try {
           const data = JSON.parse(v.trim());
           if (typeof data !== 'object' || Array.isArray(data)) { toast('格式错误'); return; }
+          // v3.27.x：导入前自动把「当前美化」保存成方案，避免被导入覆盖后丢失
+          //（用户要求：导入不影响原本拥有的美化，原美化自动存为方案）
+          try {
+            const cur = collectBeautyFull();
+            if (cur && Object.keys(cur).length > 0) {
+              const d = new Date();
+              const p = (n) => (n < 10 ? '0' : '') + n;
+              const name = '导入前备份 ' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+              const list = getSchemes();
+              list.push({ name, time: Date.now(), data: cur });
+              saveSchemesList(list);
+              toast('已自动保存原美化 → 方案「' + name + '」');
+            }
+          } catch (e) {}
           applyBeautyData(data);
           toast('已导入，刷新生效');
           setTimeout(() => location.reload(), 800);
         } catch (e) { toast('解析失败，请检查文本'); }
-      }, { textarea: true, textareaPlaceholder: '粘贴对方导出的美化方案文本，或点下方「从文件导入」选择 .json 文件', txtImport: true });
+      }, { textarea: true, textareaPlaceholder: '导入前会自动把当前美化保存为「导入前备份」方案；可粘贴文本，或点下方「从文件导入」选择 .json 文件', txtImport: true });
     });
   }
 
@@ -2596,98 +2610,25 @@ try {
       // fire() 传 pillVal=null → 静默不执行（反馈"点了没反应"）。与删除方案同因同修。
       const ctl = window.openModal('恢复默认桌面', '将恢复桌面卡片布局与页数，桌面恢复为默认三页（每页已设置的背景图与图标不受影响）。确定继续？', (v) => {
         if (v !== '1') return;
-        // v3.10.x 修复：恢复默认后第三页「经期」小组件消失——原先 remove 掉
-        // desk-page-count 后按默认 2 页收缩，静态第三页被整页删除，desk-period
-        // 与 p3apps 一起移进隐藏池；ensureP3 只找回 p3apps（图标组），desk-period
-        // 留在池里不再显示。改为直接恢复为模板默认的 3 页：第三页未被删时
-        // desk-period 原样保留；若此前第三页已被用户删掉（组件在池里），由下方
-        // ensureP3 + 找回逻辑把 desk-period / p3apps 放回重建的第三页。
-        try { store.set('desk-page-count', '3'); } catch (e) {}
-        try { store.remove('desk-layout'); } catch (e) {}
-        buildDeskPages();
-        // v3.11.x 修复：恢复默认后老 desk-layout 里没有的新版组件（如第三页喝水/
-        // 吃什么/同频/番茄钟等动态注入图标）会被 applyDeskLayout 收进隐藏池，
-        // 只保证页数/找回 p3apps/desk-period 仍看不到它们 → 把池中模板默认应有的
-        // 组件逐个找回默认页；仅桌面小组件（desk-clock/calendar/timer/anniv，
-        // 模板本就默认在池中「未添加」）保持原状。
+        // 恢复默认桌面：彻底回到系统默认布局（组件卡片 + 图标位置）。
+        // 旧实现只删 desk-layout 并按隐藏池就地回位，有三处漏洞导致多次复现「没恢复」：
+        // ① 已移动到非默认页的组件不在隐藏池里，不会被挪回；② 图标顺序 app-icon-order-*
+        //   和隐藏图标 hidden-icons 从不清理，图标位置保持自定义；③ desk-layout 只存于
+        //   IndexedDB 时（本地存储被清理的场景）刷新后会被回填还原。
+        // 新做法：清掉「布局 / 页数 / 各网格图标顺序 / 隐藏图标」四类键（store.remove 会同时
+        // 清 memoryCache + localStorage + IndexedDB），随后整页刷新——页面每次加载都由 template
+        // 生成默认 DOM，布局键为空时 applyDeskLayout/图标排序都不重排，即还原成系统默认。
+        // 每页背景图（page-bg-*）与自定义图标图片（app-icon-*）保留，符合提示文案。
         try {
-          var wpool = document.getElementById('desk-widget-pool');
-          if (wpool) {
-            var poolWidgets = Array.prototype.slice.call(wpool.querySelectorAll('[data-desk-widget]')).filter(function (nd) { return nd.parentNode === wpool; });
-            var rslides2 = Array.prototype.slice.call(pagesBox.querySelectorAll('.page-slide'));
-            var rp0 = rslides2[0] || null, rp1 = rslides2[1] || null, rp2 = rslides2[2] || null;
-            var P3GRID = '[data-app="p3"][data-desk-widget="p3apps"]';
-            // 第一遍：整组网格先回位（apps 首页组 / p2apps 第二页组 / p3apps 第三页组）
-            poolWidgets.forEach(function (nd) {
-              var wid = nd.getAttribute('data-desk-widget');
-              if (wid === 'apps' && rp0) rp0.appendChild(nd);
-              else if (wid === 'p2apps' && rp1) rp1.appendChild(nd);
-              else if (wid === 'p3apps' && rp2) rp2.appendChild(nd);
-            });
-            // 第二遍：其余普通组件/图标回默认页
-            poolWidgets.forEach(function (nd) {
-              var wid = nd.getAttribute('data-desk-widget');
-              if (wid === 'apps' || wid === 'p2apps' || wid === 'p3apps') return;
-              if (wid === 'desk-clock' || wid === 'desk-calendar' || wid === 'desk-timer' || wid === 'desk-anniv') return;
-              var tgt;
-              if (wid === 'deco' || wid === 'quote-row' || wid === 'checkin') tgt = rp0;
-              else if (wid === 'music' || wid === 'week' || wid === 'weekend') tgt = rp1;
-              // v3.13.x：memo-row 不在此处回位——下方 setTimeout 统一放到第三页经期卡下方
-              else if (wid === 'memo-row') return;
-              else tgt = rp2;
-              if (!tgt) return;
-              if (wid.indexOf('app-') === 0) {
-                var p3grid = document.querySelector(P3GRID);
-                if (p3grid) p3grid.appendChild(nd);
-                else tgt.appendChild(nd);
-                return;
-              }
-              var p3g2 = document.querySelector(P3GRID);
-              if (rp2 && p3g2 && p3g2.parentNode === rp2) rp2.insertBefore(nd, p3g2);
-              else tgt.appendChild(nd);
-            });
-          }
+          store.remove('desk-layout');
+          store.set('desk-page-count', '3');
+          document.querySelectorAll('.app-grid').forEach(function (g) {
+            if (g.dataset.app) store.remove('app-icon-order-' + g.dataset.app);
+          });
+          store.remove('hidden-icons');
         } catch (e) {}
-        setTimeout(function () {
-          try { if (window.ensureP3) window.ensureP3(); } catch (e) {}
-          try {
-            var dp = document.querySelector('[data-desk-widget="desk-period"]');
-            var rbox = document.getElementById('desktop-pages');
-            if (dp && rbox && dp.closest && dp.closest('#desk-widget-pool')) {
-              var rslides = rbox.querySelectorAll('.page-slide');
-              var rthird = rslides.length >= 3 ? rslides[2] : null;
-              if (rthird) {
-                var anchor = rthird.querySelector('[data-desk-widget="p3apps"]');
-                if (anchor && anchor.parentNode === rthird) rthird.insertBefore(dp, anchor);
-                else rthird.appendChild(dp);
-              }
-            }
-          } catch (e) {}
-          // v3.13.x：今日备忘/心情行放回第三页「经期卡」下方（p3apps 前）。
-          // 不只看是否在池里——池外但位置不对（如已在页上但被后续找回的经期卡
-          // 插到了前面）也一并校正为「紧跟经期卡之后」。
-          try {
-            var mr = document.querySelector('[data-desk-widget="memo-row"]');
-            var rbox2 = document.getElementById('desktop-pages');
-            if (mr && rbox2) {
-              var rs2 = rbox2.querySelectorAll('.page-slide');
-              var rt2 = rs2.length >= 3 ? rs2[2] : null;
-              if (rt2) {
-                var dp2 = rt2.querySelector('[data-desk-widget="desk-period"]');
-                var okPos = dp2 && dp2.parentNode === rt2 && mr.parentNode === rt2 && mr.previousElementSibling === dp2;
-                if (!okPos) {
-                  if (dp2 && dp2.parentNode === rt2) rt2.insertBefore(mr, dp2.nextSibling);
-                  else {
-                    var an2 = rt2.querySelector('[data-desk-widget="p3apps"]');
-                    if (an2 && an2.parentNode === rt2) rt2.insertBefore(mr, an2);
-                    else rt2.appendChild(mr);
-                  }
-                }
-              }
-            }
-          } catch (e) {}
-        }, 100);
         toast('已恢复默认桌面');
+        setTimeout(function () { try { location.reload(); } catch (e) {} }, 400);
       }, { noInput: true, pillSubmit: true, pills: [{ label: '确定恢复默认', value: '1' }] });
       if (ctl && ctl.pills) ctl.pills([{ label: '确定恢复默认', value: '1' }], '1');
     });

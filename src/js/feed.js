@@ -100,7 +100,7 @@
     c.authorAv = '';
     c.taAv = '';
     if (typeof c.content === 'string') {
-      c.content = c.content.replace(/data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+/g, '[图片]');
+      c.content = c.content.replace(/data:image\/[a-zA-Z0-9.+-]+(?:;[a-zA-Z0-9.+-]*(?:=[^;,]*)?)*,[^\s"'<>]+/g, '[图片]');
       if (c.content.length > 8192) c.content = c.content.slice(0, 8192) + '…';
     }
     if (Array.isArray(c.comments)) {
@@ -108,7 +108,7 @@
         if (!co || typeof co !== 'object') return co;
         const cc = Object.assign({}, co);
         if (typeof cc.content === 'string') {
-          cc.content = cc.content.replace(/data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+/g, '[图片]');
+          cc.content = cc.content.replace(/data:image\/[a-zA-Z0-9.+-]+(?:;[a-zA-Z0-9.+-]*(?:=[^;,]*)?)*,[^\s"'<>]+/g, '[图片]');
           if (cc.content.length > 8192) cc.content = cc.content.slice(0, 8192) + '…';
         }
         if (Array.isArray(cc.replies)) {
@@ -116,7 +116,7 @@
             if (!r || typeof r !== 'object') return r;
             const rr = Object.assign({}, r);
             if (typeof rr.content === 'string') {
-              rr.content = rr.content.replace(/data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+/g, '[图片]');
+              rr.content = rr.content.replace(/data:image\/[a-zA-Z0-9.+-]+(?:;[a-zA-Z0-9.+-]*(?:=[^;,]*)?)*,[^\s"'<>]+/g, '[图片]');
               if (rr.content.length > 8192) rr.content = rr.content.slice(0, 8192) + '…';
             }
             return rr;
@@ -272,7 +272,12 @@
   //   剥图快照超 200KB 会静默停写冻结在旧时刻，iOS 还可能在存储压力下清 LS 键——
   //   陈旧本地版本整条盖掉 IDB 里带全部后续评论的新版本并随即写回 IDB，旧评论永久丢失。
   //   改为字段择优 + 评论/回复/点赞按内容并集，任一侧的新数据都不再被整条挤掉。
-  function itemKey(o) { return (o && o.ts ? o.ts : 0) + '|' + (o.role || o.by || '') + '|' + (o.authorName || '') + '|' + (o.content || ''); }
+  // v3.26.x：剥图回填——itemKey 不含 content。朋友圈数据超 200KB 时 LS 快照会把评论/回复
+  //   里的图片 dataURL 剥成 [图片]（stripPostImg），而 IDB 里是完整版；原 key 含 content
+  //   导致【同一条】被当成两条合并并存（一条缩略图、一条 [图片] 文字），用户反馈
+  //   「回复有时是表情包缩略图、有时只剩 图片 两个字」。改为按 ts+作者 收敛为同一条，
+  //   并入时优先保留含真实 data:image 的那版（删掉剥图占位）。
+  function itemKey(o) { return (o && o.ts ? o.ts : 0) + '|' + (o.role || o.by || '') + '|' + (o.authorName || ''); }
   function deeperList(a, b) {
     const byKey = {};
     const put = (o) => {
@@ -282,6 +287,9 @@
       if (!prev) { byKey[k] = Object.assign({}, o); return; }
       if (Array.isArray(o.replies) && o.replies.length) prev.replies = deeperList(prev.replies || [], o.replies);
       else if (!Array.isArray(prev.replies) && Array.isArray(o.replies)) prev.replies = o.replies;
+      const prevImg = /data:image\//.test(String(prev.content || ''));
+      const oImg = /data:image\//.test(String(o.content || ''));
+      if (!prevImg && oImg) prev.content = o.content;
     };
     (a || []).forEach(put);
     (b || []).forEach(put);
@@ -467,22 +475,24 @@
   function attrEsc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
   // 图文混排正文渲染（与聊天一致）：data:image 段 → 内联图片，其余文字保留空格
   // v3.x.x：称呼跟随——文字段按动态所属联系人(owner cid)在显示层替换 TA/他
+  // v3.26.x：独立附图识别——表情包/图片既支持 base64 dataURL，也支持 svg 类非 base64
+  //   的 dataURL 与带 sticker:/image: 前缀的外链图（与聊天附件同批字卡这里也按缩略图
+  //   渲染，解决「聊天正常、朋友圈/评论表情包只显示图片文字」）。无附图前缀的 http
+  //   链接仍当普通文本（避免把正文里的网址误当图片）。用 replace 一次成稿，避免
+  //   大量 dataURL 逐段 exec 的重复解码。
   function inlineBody(s, cid) {
     const str = String(s || '');
-    let html = '';
-    const re = /(data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+)/g;
-    let last = 0, m;
     const fitSeg = (seg) => {
-      seg = seg.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+      seg = String(seg).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
       return (cid && window.taFit) ? window.taFit(seg, cid) : seg;
     };
-    while ((m = re.exec(str))) {
-      html += fitSeg(str.slice(last, m.index));
-      html += '<img class="feed-inline-img" src="' + m[0] + '" alt="图片">';
-      last = m.index + m[0].length;
-    }
-    html += fitSeg(str.slice(last));
-    return html;
+    const RE = /((?:sticker|image):)?(https?:\/\/[^\s"'<>]+|data:image\/[a-zA-Z0-9.+-]+(?:;[a-zA-Z0-9.+-]*(?:=[^;,]*)?)*,[^\s"'<>]+)/g;
+    return str.replace(RE, function (all, pre, src) {
+      if (src.indexOf('http') === 0 && pre !== 'sticker:' && pre !== 'image:') {
+        return fitSeg(all); // 普通网址（无附图前缀）按文本保留
+      }
+      return '<img class="feed-inline-img" src="' + attrEsc(src) + '" alt="表情">';
+    });
   }
   // 无重复抽取器：同一轮生成内不重复抽同一张卡（池子抽完一轮后重新洗牌再继续），
   // 修复小字卡池下同一条动态/评论连续重复同一张卡（如「爱你爱你爱你…」）
@@ -576,7 +586,8 @@
     // 前缀与 dataURL 必须整体作为一个可选分组（冒号在分组内）——若写成 (?:sticker|image):?
     // 引擎会在 'data:image' 中间误匹配 'image'，导致后面 (data:image…) 整体匹配失败
     // （mail.js renderBody 同款已生效模式）
-    content = content.replace(/((?:sticker|image):)?(data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+)/g, (m, pre, u) => { imgs.push(u); return ' '; });
+    // v3.26.x：对齐 inlineBody——base64、svg 类非 base64 dataURL 与带前缀外链图都并入图片网格
+    content = content.replace(/((?:sticker|image):)?(https?:\/\/[^\s"'<>]+|data:image\/[a-zA-Z0-9.+-]+(?:;[a-zA-Z0-9.+-]*(?:=[^;,]*)?)*,[^\s"'<>]+)/g, (m, pre, u) => { if (u.indexOf('http') === 0 && pre !== 'sticker:' && pre !== 'image:') return m; imgs.push(u); return ' '; });
     let html = inlineBody(content, (p.role || p.by) === 'me' ? '' : p.owner);
     if (imgs.length) {
       html += '<div class="feed-imgs">' + imgs.map(u => '<img src="' + attrEsc(u) + '" alt="图片" loading="lazy">').join('') + '</div>';

@@ -8385,9 +8385,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787982060218">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.321</b></span>
-        <span class="sv-deploy">部署于 2026-08-29 13:41<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787983515811">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.322</b></span>
+        <span class="sv-deploy">部署于 2026-08-29 14:05<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -8629,12 +8629,12 @@ transition-duration: .01ms !important;
 <div class="app-name">记账</div>
 </div>
 <div class="app" data-app="memo-arc" data-desk-widget="app-memo-arc">
-<div class="app-ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5h11a1 1 0 011 1V20a1 1 0 01-.55.9A2 2 0 0115.5 21H6a1 1 0 01-1-1v-16a1 1 0 011-.5z"/><path d="M9 8.5h6M9 12.5h6M9 16.5h3.5"/><path d="M15.5 4v5l-1.5-1-1.5 1V4"/></svg></div>
+<div class="app-ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 6.5h5L10 4.5h9a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-12z"/><path d="M12 7.6l1.2 2.7 2.7 1.2-2.7 1.2L12 15.4l-1.2-2.7-2.7-1.2 2.7-1.2z"/></svg></div>
 <div class="app-name">梦角档案</div>
 </div>
 <!-- v3.16.x：我的档案（认识自己；与梦角档案互为镜像）桌面第三页入口，紧邻梦角档案右侧 -->
 <div class="app" data-app="my-arc" data-desk-widget="app-my-arc">
-<div class="app-ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7.6" r="3.6"/><path d="M5 20c.8-4 3.6-6 7-6s6.2 2 7 6"/><path d="M9 10.5l1.2 1.2L12 9.9"/></svg></div>
+<div class="app-ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 6.5h5L10 4.5h9a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-12z"/><circle cx="12" cy="9.5" r="1.9"/><path d="M8.4 15.6c.6-1.6 2-2.4 3.6-2.4s3 .8 3.6 2.4"/></svg></div>
 <div class="app-name">我的档案</div>
 </div>
 <!-- v3.15.x：房间（双人小屋）桌面第三页入口——聊天「更多功能」同款页面，从桌面进入返回桌面 -->
@@ -9477,7 +9477,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.321</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.322</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -9685,7 +9685,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.321</span>
+              <span class="lic-ver">v3.26.322</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -17308,11 +17308,23 @@ if (!v || !v.trim()) return;
 try {
 const data = JSON.parse(v.trim());
 if (typeof data !== 'object' || Array.isArray(data)) { toast('格式错误'); return; }
+try {
+const cur = collectBeautyFull();
+if (cur && Object.keys(cur).length > 0) {
+const d = new Date();
+const p = (n) => (n < 10 ? '0' : '') + n;
+const name = '导入前备份 ' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+const list = getSchemes();
+list.push({ name, time: Date.now(), data: cur });
+saveSchemesList(list);
+toast('已自动保存原美化 → 方案「' + name + '」');
+}
+} catch (e) {}
 applyBeautyData(data);
 toast('已导入，刷新生效');
 setTimeout(() => location.reload(), 800);
 } catch (e) { toast('解析失败，请检查文本'); }
-}, { textarea: true, textareaPlaceholder: '粘贴对方导出的美化方案文本，或点下方「从文件导入」选择 .json 文件', txtImport: true });
+}, { textarea: true, textareaPlaceholder: '导入前会自动把当前美化保存为「导入前备份」方案；可粘贴文本，或点下方「从文件导入」选择 .json 文件', txtImport: true });
 });
 }
 const SCHEMES_KEY = 'beauty-schemes';
@@ -18122,81 +18134,16 @@ if (resetDeskRow) {
 resetDeskRow.addEventListener('click', () => {
 const ctl = window.openModal('恢复默认桌面', '将恢复桌面卡片布局与页数，桌面恢复为默认三页（每页已设置的背景图与图标不受影响）。确定继续？', (v) => {
 if (v !== '1') return;
-try { store.set('desk-page-count', '3'); } catch (e) {}
-try { store.remove('desk-layout'); } catch (e) {}
-buildDeskPages();
 try {
-var wpool = document.getElementById('desk-widget-pool');
-if (wpool) {
-var poolWidgets = Array.prototype.slice.call(wpool.querySelectorAll('[data-desk-widget]')).filter(function (nd) { return nd.parentNode === wpool; });
-var rslides2 = Array.prototype.slice.call(pagesBox.querySelectorAll('.page-slide'));
-var rp0 = rslides2[0] || null, rp1 = rslides2[1] || null, rp2 = rslides2[2] || null;
-var P3GRID = '[data-app="p3"][data-desk-widget="p3apps"]';
-poolWidgets.forEach(function (nd) {
-var wid = nd.getAttribute('data-desk-widget');
-if (wid === 'apps' && rp0) rp0.appendChild(nd);
-else if (wid === 'p2apps' && rp1) rp1.appendChild(nd);
-else if (wid === 'p3apps' && rp2) rp2.appendChild(nd);
+store.remove('desk-layout');
+store.set('desk-page-count', '3');
+document.querySelectorAll('.app-grid').forEach(function (g) {
+if (g.dataset.app) store.remove('app-icon-order-' + g.dataset.app);
 });
-poolWidgets.forEach(function (nd) {
-var wid = nd.getAttribute('data-desk-widget');
-if (wid === 'apps' || wid === 'p2apps' || wid === 'p3apps') return;
-if (wid === 'desk-clock' || wid === 'desk-calendar' || wid === 'desk-timer' || wid === 'desk-anniv') return;
-var tgt;
-if (wid === 'deco' || wid === 'quote-row' || wid === 'checkin') tgt = rp0;
-else if (wid === 'music' || wid === 'week' || wid === 'weekend') tgt = rp1;
-else if (wid === 'memo-row') return;
-else tgt = rp2;
-if (!tgt) return;
-if (wid.indexOf('app-') === 0) {
-var p3grid = document.querySelector(P3GRID);
-if (p3grid) p3grid.appendChild(nd);
-else tgt.appendChild(nd);
-return;
-}
-var p3g2 = document.querySelector(P3GRID);
-if (rp2 && p3g2 && p3g2.parentNode === rp2) rp2.insertBefore(nd, p3g2);
-else tgt.appendChild(nd);
-});
-}
+store.remove('hidden-icons');
 } catch (e) {}
-setTimeout(function () {
-try { if (window.ensureP3) window.ensureP3(); } catch (e) {}
-try {
-var dp = document.querySelector('[data-desk-widget="desk-period"]');
-var rbox = document.getElementById('desktop-pages');
-if (dp && rbox && dp.closest && dp.closest('#desk-widget-pool')) {
-var rslides = rbox.querySelectorAll('.page-slide');
-var rthird = rslides.length >= 3 ? rslides[2] : null;
-if (rthird) {
-var anchor = rthird.querySelector('[data-desk-widget="p3apps"]');
-if (anchor && anchor.parentNode === rthird) rthird.insertBefore(dp, anchor);
-else rthird.appendChild(dp);
-}
-}
-} catch (e) {}
-try {
-var mr = document.querySelector('[data-desk-widget="memo-row"]');
-var rbox2 = document.getElementById('desktop-pages');
-if (mr && rbox2) {
-var rs2 = rbox2.querySelectorAll('.page-slide');
-var rt2 = rs2.length >= 3 ? rs2[2] : null;
-if (rt2) {
-var dp2 = rt2.querySelector('[data-desk-widget="desk-period"]');
-var okPos = dp2 && dp2.parentNode === rt2 && mr.parentNode === rt2 && mr.previousElementSibling === dp2;
-if (!okPos) {
-if (dp2 && dp2.parentNode === rt2) rt2.insertBefore(mr, dp2.nextSibling);
-else {
-var an2 = rt2.querySelector('[data-desk-widget="p3apps"]');
-if (an2 && an2.parentNode === rt2) rt2.insertBefore(mr, an2);
-else rt2.appendChild(mr);
-}
-}
-}
-}
-} catch (e) {}
-}, 100);
 toast('已恢复默认桌面');
+setTimeout(function () { try { location.reload(); } catch (e) {} }, 400);
 }, { noInput: true, pillSubmit: true, pills: [{ label: '确定恢复默认', value: '1' }] });
 if (ctl && ctl.pills) ctl.pills([{ label: '确定恢复默认', value: '1' }], '1');
 });
@@ -46174,20 +46121,18 @@ window.openMailPage = openMailPage;
 function escHtml(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
 function renderBody(content, fit) {
 const s = String(content || '');
-let html = '';
-const re = /((?:sticker|image):)?(data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+)/g;
-let last = 0, m;
 const seg = (t) => {
-t = escHtml(t);
+t = String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 return (fit && window.taFit) ? window.taFit(t) : t;
 };
-while ((m = re.exec(s))) {
-html += seg(s.slice(last, m.index));
-html += '<img class="mail-body-img" src="' + m[2] + '" alt="表情"> ';
-last = m.index + m[0].length;
+const RE = /((?:sticker|image):)?(https?:\/\/[^\s"'<>]+|data:image\/[a-zA-Z0-9.+-]+(?:;[a-zA-Z0-9.+-]*(?:=[^;,]*)?)*,[^\s"'<>]+)/g;
+return s.replace(RE, function (all, pre, src) {
+if (src.indexOf('http') === 0 && pre !== 'sticker:' && pre !== 'image:') {
+return seg(all); // 普通网址（无附图前缀）按文本保留
 }
-html += seg(s.slice(last));
-return html;
+const attrs = String(src).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+return '<img class="mail-body-img" src="' + attrs + '" alt="表情"> ';
+});
 }
 function shortDesc(s, fit) {
 const str = String(s || '');
@@ -47178,7 +47123,7 @@ if (Array.isArray(c.imgs)) c.imgs = [];
 c.authorAv = '';
 c.taAv = '';
 if (typeof c.content === 'string') {
-c.content = c.content.replace(/data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+/g, '[图片]');
+c.content = c.content.replace(/data:image\/[a-zA-Z0-9.+-]+(?:;[a-zA-Z0-9.+-]*(?:=[^;,]*)?)*,[^\s"'<>]+/g, '[图片]');
 if (c.content.length > 8192) c.content = c.content.slice(0, 8192) + '…';
 }
 if (Array.isArray(c.comments)) {
@@ -47186,7 +47131,7 @@ c.comments = c.comments.map(co => {
 if (!co || typeof co !== 'object') return co;
 const cc = Object.assign({}, co);
 if (typeof cc.content === 'string') {
-cc.content = cc.content.replace(/data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+/g, '[图片]');
+cc.content = cc.content.replace(/data:image\/[a-zA-Z0-9.+-]+(?:;[a-zA-Z0-9.+-]*(?:=[^;,]*)?)*,[^\s"'<>]+/g, '[图片]');
 if (cc.content.length > 8192) cc.content = cc.content.slice(0, 8192) + '…';
 }
 if (Array.isArray(cc.replies)) {
@@ -47194,7 +47139,7 @@ cc.replies = cc.replies.map(r => {
 if (!r || typeof r !== 'object') return r;
 const rr = Object.assign({}, r);
 if (typeof rr.content === 'string') {
-rr.content = rr.content.replace(/data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+/g, '[图片]');
+rr.content = rr.content.replace(/data:image\/[a-zA-Z0-9.+-]+(?:;[a-zA-Z0-9.+-]*(?:=[^;,]*)?)*,[^\s"'<>]+/g, '[图片]');
 if (rr.content.length > 8192) rr.content = rr.content.slice(0, 8192) + '…';
 }
 return rr;
@@ -47309,7 +47254,7 @@ return p;
 }
 let feedDbReady = false;
 let feedPending = null;
-function itemKey(o) { return (o && o.ts ? o.ts : 0) + '|' + (o.role || o.by || '') + '|' + (o.authorName || '') + '|' + (o.content || ''); }
+function itemKey(o) { return (o && o.ts ? o.ts : 0) + '|' + (o.role || o.by || '') + '|' + (o.authorName || ''); }
 function deeperList(a, b) {
 const byKey = {};
 const put = (o) => {
@@ -47319,6 +47264,9 @@ const prev = byKey[k];
 if (!prev) { byKey[k] = Object.assign({}, o); return; }
 if (Array.isArray(o.replies) && o.replies.length) prev.replies = deeperList(prev.replies || [], o.replies);
 else if (!Array.isArray(prev.replies) && Array.isArray(o.replies)) prev.replies = o.replies;
+const prevImg = /data:image\//.test(String(prev.content || ''));
+const oImg = /data:image\//.test(String(o.content || ''));
+if (!prevImg && oImg) prev.content = o.content;
 };
 (a || []).forEach(put);
 (b || []).forEach(put);
@@ -47459,20 +47407,17 @@ function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').repla
 function attrEsc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
 function inlineBody(s, cid) {
 const str = String(s || '');
-let html = '';
-const re = /(data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+)/g;
-let last = 0, m;
 const fitSeg = (seg) => {
-seg = seg.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+seg = String(seg).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 return (cid && window.taFit) ? window.taFit(seg, cid) : seg;
 };
-while ((m = re.exec(str))) {
-html += fitSeg(str.slice(last, m.index));
-html += '<img class="feed-inline-img" src="' + m[0] + '" alt="图片">';
-last = m.index + m[0].length;
+const RE = /((?:sticker|image):)?(https?:\/\/[^\s"'<>]+|data:image\/[a-zA-Z0-9.+-]+(?:;[a-zA-Z0-9.+-]*(?:=[^;,]*)?)*,[^\s"'<>]+)/g;
+return str.replace(RE, function (all, pre, src) {
+if (src.indexOf('http') === 0 && pre !== 'sticker:' && pre !== 'image:') {
+return fitSeg(all); // 普通网址（无附图前缀）按文本保留
 }
-html += fitSeg(str.slice(last));
-return html;
+return '<img class="feed-inline-img" src="' + attrEsc(src) + '" alt="表情">';
+});
 }
 function makePicker(arr) {
 const a = arr.slice();
@@ -47547,7 +47492,7 @@ return { content: textParts.join(' '), imgs: imgs };
 function contentHtmlFor(p) {
 let content = String(p.content || '');
 const imgs = (p.imgs && p.imgs.length) ? p.imgs.slice() : (p.img ? [p.img] : []);
-content = content.replace(/((?:sticker|image):)?(data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+)/g, (m, pre, u) => { imgs.push(u); return ' '; });
+content = content.replace(/((?:sticker|image):)?(https?:\/\/[^\s"'<>]+|data:image\/[a-zA-Z0-9.+-]+(?:;[a-zA-Z0-9.+-]*(?:=[^;,]*)?)*,[^\s"'<>]+)/g, (m, pre, u) => { if (u.indexOf('http') === 0 && pre !== 'sticker:' && pre !== 'image:') return m; imgs.push(u); return ' '; });
 let html = inlineBody(content, (p.role || p.by) === 'me' ? '' : p.owner);
 if (imgs.length) {
 html += '<div class="feed-imgs">' + imgs.map(u => '<img src="' + attrEsc(u) + '" alt="图片" loading="lazy">').join('') + '</div>';

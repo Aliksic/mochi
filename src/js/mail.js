@@ -147,22 +147,23 @@
   // v3.6.x：完整 HTML 转义（只转 < 可被 `&lt;…&gt;` 实体绕过注入）
   function escHtml(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
   // v3.x.x：称呼跟随——TA 写的信在显示层替换 TA/他（fit 参数，我写的信保持原文）
+  // v3.26.x：独立附图识别——表情包/图片支持 base64 dataURL、svg 类非 base64 dataURL
+  //   与带 sticker:/image: 前缀的外链图，统一渲染为缩略图（解决聊天正常、信箱墨水/信
+  //   件表情包只显示文字）。无附图前缀的 http 链接仍当普通文本（不误判正文网址）。
   function renderBody(content, fit) {
     const s = String(content || '');
-    let html = '';
-    const re = /((?:sticker|image):)?(data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+)/g;
-    let last = 0, m;
     const seg = (t) => {
-      t = escHtml(t);
+      t = String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
       return (fit && window.taFit) ? window.taFit(t) : t;
     };
-    while ((m = re.exec(s))) {
-      html += seg(s.slice(last, m.index));
-      html += '<img class="mail-body-img" src="' + m[2] + '" alt="表情"> ';
-      last = m.index + m[0].length;
-    }
-    html += seg(s.slice(last));
-    return html;
+    const RE = /((?:sticker|image):)?(https?:\/\/[^\s"'<>]+|data:image\/[a-zA-Z0-9.+-]+(?:;[a-zA-Z0-9.+-]*(?:=[^;,]*)?)*,[^\s"'<>]+)/g;
+    return s.replace(RE, function (all, pre, src) {
+      if (src.indexOf('http') === 0 && pre !== 'sticker:' && pre !== 'image:') {
+        return seg(all); // 普通网址（无附图前缀）按文本保留
+      }
+      const attrs = String(src).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+      return '<img class="mail-body-img" src="' + attrs + '" alt="表情"> ';
+    });
   }
   // 信箱列表摘要：剔除图片/表情包 dataURL（含标记前缀），避免显示超长 base64 乱码
   // v3.9.x：补 HTML 转义——shortDesc 结果直接拼 innerHTML（render 列表项），未转义
