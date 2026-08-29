@@ -202,8 +202,8 @@ if (p2) {
   })()`) || {};
   check('C7 第三页备忘/心情左右两半卡同行（非上下叠放）', cc.stacked === false && cc.memoW > 100 && cc.moodW > 100,
     JSON.stringify(cc));
-  check('C8 备忘卡 77（↔ 本周日常档）', Math.abs((cc.memoH || 0) - 77) <= 2, 'memoH=' + cc.memoH);
-  check('C9 心情卡 77（与备忘同高，同行两半卡）', Math.abs((cc.moodH || 0) - 77) <= 2, 'moodH=' + cc.moodH);
+  check('C8 备忘卡 92（↔ 本周日常档）', Math.abs((cc.memoH || 0) - 92) <= 2, 'memoH=' + cc.memoH);
+  check('C9 心情卡 92（与备忘同高，同行两半卡）', Math.abs((cc.moodH || 0) - 92) <= 2, 'moodH=' + cc.moodH);
   check('C10 两卡各半行宽 171', Math.abs((cc.memoW || 0) - 171) <= 2 && Math.abs((cc.moodW || 0) - 171) <= 2,
     'memoW=' + cc.memoW + ' moodW=' + cc.moodW);
   // v3.16.x：三页功能图标完全一致——图标大小 58、行高 96、图标下沿与 grid 底部全部对齐
@@ -249,7 +249,7 @@ if (p2) {
     el.textContent=old;
     return JSON.stringify({h:h, clipped:clipped, overflow:sW>cW});
   })()`) || '{}');
-  check('E1 长情话单行省略不撑高页0 mini-row（77±2）', Math.abs((longQuote.h || 0) - 77) <= 2,
+  check('E1 长情话不撑高页0 mini-row（92±2）', Math.abs((longQuote.h || 0) - 92) <= 2,
     JSON.stringify(longQuote));
   const scaleAligned = JSON.parse(await evalJs(`(function(){
     var r=document.documentElement.style;

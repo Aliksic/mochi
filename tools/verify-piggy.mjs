@@ -1,4 +1,4 @@
-﻿// ===== 桌面第三页【存钱罐】功能冒烟验证 =====
+// ===== 桌面第三页【存钱罐】功能冒烟验证 =====
 // 覆盖：图标智能放置（默认第三页 / 装修过留第三页 / 布局不含时整组建新页）、打开页面、
 //       空罐取出拦截、存入（金额+留言两步弹窗）、取出、超额拦截、设目标进度条、
 //       攒够目标庆祝、TA 塞硬币纯彩蛋不入账（页内 Math.random 桩确定性命中）、
@@ -94,7 +94,7 @@ const snap = `(() => {
     rowCount: rows.length,
     newRowTxt: newRow ? newRow.textContent : '',
     histHasEmpty: !!(document.querySelector('#piggy-hist .piggy-empty')),
-    toast: (document.getElementById('tp-ss-toast') || {}).textContent || '',
+    toast: (document.getElementById('cc-toast') || {}).textContent || '',
     modalOpen: !(document.getElementById('modal-mask') || {}).hidden,
     modalTitle: (document.getElementById('modal-title') || {}).textContent || '',
     replyOpen: !(document.getElementById('piggy-reply') || {}).hidden,

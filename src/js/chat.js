@@ -527,12 +527,17 @@ function chatLabel(ck, dk, fb) {
 let v = null;
 try { v = store.get(ck); } catch (e) {}
 if (v) return v;
+// v3.26.x：dk 传 null 表示不回退桌面键——聊天昵称与桌面彻底解耦（用户要求：聊天设置里
+// 联系人/我的昵称不再跟随桌面，未设时用默认占位 TA/我，即 v3.8.x 原设计）
+if (!dk) return fb;
 try { v = store.get(dk); } catch (e) {}
 return v || fb;
 }
-function chatPartnerName() { return chatLabel('cs-lbl-partner', 'lbl-partner', 'TA'); }
+// v3.26.x：聊天昵称与桌面解耦——只读聊天专用键 cs-lbl-*，未设时默认 TA/我，
+// 不再回退读桌面 lbl-partner/lbl-user（v3.9.x 的「跟随桌面」按用户要求取消）
+function chatPartnerName() { return chatLabel('cs-lbl-partner', null, 'TA'); }
 window.chatPartnerName = chatPartnerName;
-function chatUserName() { return chatLabel('cs-lbl-user', 'lbl-user', '我'); }
+function chatUserName() { return chatLabel('cs-lbl-user', null, '我'); }
 // v3.25.x：系统消息昵称动态化——改名后历史系统消息称呼跟随当前昵称。
 // 存储：改名时把旧昵称从系统标记记录的 text 清扫成 {ta} 占位符（白名单=renderMsg 里走
 //   T(rec.text) 的分支，普通气泡 text 永不扫、永不换）；渲染：T() 把 {ta} 换回当前昵称。
@@ -656,8 +661,8 @@ if (!pname) return;
 let saved = null;
 try { saved = store.get('cs-lbl-partner'); } catch (e) {}
 if (saved) { pname.textContent = saved; return; }
-try { saved = store.get('lbl-partner'); } catch (e) {}
-if (saved) { pname.textContent = saved; return; }
+// v3.26.x：聊天与桌面昵称解耦——不再回退读桌面 lbl-partner；未设聊天专用昵称时
+// 回退联系人名片名（联系人管理里的名字，非桌面美化昵称），最后默认 TA
 try {
 if (window.getContacts) {
 const c = window.getContacts().find(x => x.id === (window.__activeCid || 'default'));
@@ -2021,7 +2026,7 @@ return;
 }
 if (!deskMsgEl || !deskMsgEnabled()) return;
 if (deskMsgText) deskMsgText.textContent = notifyT;
-if (deskMsgName) deskMsgName.textContent = opts.name || store.get('lbl-partner') || (window.taWord ? window.taWord() : 'TA');
+if (deskMsgName) deskMsgName.textContent = opts.name || chatPartnerName();
 if (deskMsgAv) {
 if (opts.av && typeof opts.av === 'string' && opts.av.indexOf('data:') === 0) {
 const img = document.createElement('img');
@@ -2069,7 +2074,7 @@ return { text: text, img: img, imgSub: imgSub };
 }
 function showDeskMsg(rec) {
 const info = extractDeskMsg(rec);
-const name = store.get('lbl-partner') || (window.taWord ? window.taWord() : 'TA');
+const name = chatPartnerName();
 const isHidden = document.visibilityState === 'hidden';
 if (isHidden) {
 showDeskPopup({ name: name, text: info.text, type: rec.type, img: info.img, imgSub: info.imgSub, isHidden: true });

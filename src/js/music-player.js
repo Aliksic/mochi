@@ -2066,12 +2066,12 @@
   ['visibilitychange', 'focus'].forEach(function (ev) {
     document.addEventListener(ev, function () {
       if (document.visibilityState !== 'visible') return;
-      failMap = {}; // v3.x：从别的应用切回浏览器时，后台停滞触发的播放失败不算连续失败，避免误报"会员/移出"
+      failMap = {}; bgResumeFails = 0; // v3.x：从别的应用切回浏览器时，后台停滞触发的播放失败不算连续失败，避免误报"会员/移出"；v3.26.x：补播失败封顶一并清零，回前台才真正发起续播
       setTimeout(function () { try { tryResumePlayback(); } catch (e) {} }, 200);
     });
   });
   window.addEventListener('pageshow', function () {
-    failMap = {};
+    failMap = {}; bgResumeFails = 0; // v3.26.x：见 visibilitychange 同款——回前台重置补播失败封顶
     setTimeout(function () { try { tryResumePlayback(); } catch (e) {} }, 200);
   });
   // 后台看门狗：hidden 下若有「想播却被暂停」的元素，周期性尝试拉起
@@ -2231,6 +2231,12 @@
   // 的判定——见一次弹一次「是否移除」，替代原来只弹 toast 却无处删除的困境。
   function offerRemoveDamagedSong(m) {
     if (!m) return;
+    // v3.26.x：后台（document.hidden）的播放失败不弹「移出」窗、也不累计失败次数——
+    // Chrome/安卓冻结后台标签页或网络停顿会中断音频流触发 onerror，把普通免费歌误判
+    // 成「会员/坏链」弹窗（用户红米 K80 后台听歌被弹「会员音乐失效」）。后台失败是
+    // 瞬态：保持 wantPlay 不重置，回前台由 failMap 清零 + 补播兜底自动续播；真·坏链
+    // 在前台手动播放时仍照常累计（toast → 连续 2 次 → 移出窗）。
+    if (document.hidden) return; // v3.26.x：后台冻结/断流误触发 onerror，不弹「移出」窗不计数
     wantPlay = false; clearBgResume(); // v3.10.x：真失败＝停止意图，不再自动续播
     try { if (audio) audio.pause(); } catch (e) {}
     try { syncPlayIcons(false); } catch (e) {}

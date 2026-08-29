@@ -1,5 +1,52 @@
-# 本次构建者：AI-B（本会话 2026-08-29，荣耀 Edge 设置开关持久化修复收口；sw: mochi-mtdut9th，哨兵 46/46 + verify 10/10 + verify-wrj-settings-persist 10/10；已提交 84fdab9，推送未完成——沙箱无 GitHub 凭据，待推送）
-### 2026-08-29（查看存储 A+B：自动备份快照可删除 + 顶部点破"副本可删"；已构建 sw: mochi-mtduvyiw，哨兵47/47，未提交）
+# 本次构建者：AI-B（本会话 2026-08-29 12:40 起，iPhone17/Edge iOS 视口事件盲区修复，将构建+收口全部「未构建待构建者」条目；前序 AI-B 荣耀 Edge 持久化修复 84fdab9 推送未完成）
+### 2026-08-29 12:40（iPhone 17 / Edge iOS：聊天输入栏下空一大块 + 页面突然上移点不动 + 全屏开关进不了全屏）
+- [AI-B 域]（**改动文件：src/js/mobile-adapt.js + build.mjs（哨兵 st-无 48 号）+ FIX-REGRESSION.md #46；node --check 通过；构建状态：本条目随本次构建收口**）。
+- 需求/反馈：用户贴来另一 AI 的分析（「iOS PWA 短页面 fixed 导航飘起，要补 viewport meta / min-height:100dvh+flex+margin-top:auto」）求证并修复。
+- 核查结论：该分析对本站**不适用**——① viewport-fit=cover / apple-mobile-web-app-* meta 模板早已齐全；② 本站底部导航（.tabbar）在 .phone 文档流内、非 position:fixed，「短页面 fixed 飘起」的 WebKit bug 不存在；③ .phone 已是精确锁高（100dvh/100vh/实测 --mochi-ios-h），无需 flex+margin-top:auto。真实根因仍是 v3.26.x 已修的两条：Edge iOS 实际可视高≠100dvh（工具条占底）→ syncVvFit 实测写 --mochi-ios-h；键盘会话状态残留 → healViewport 常驻自愈。**但自愈只挂在 vv resize/scroll 事件上，Edge iOS 底部工具条随滚动收起/展开改变可视高度时个别时机不派发 vv 事件 → --mochi-ios-h 停旧值（输入栏下空一大块）、平移残留无人归位（页面上移点不动）**。
+- 方案：mobile-adapt.js iOS 分支补事件盲区兜底——window resize/orientationchange/pageshow/visibilitychange 四路触发 + 失焦态 1s 低频轮询（后台标签 visibilityState 守卫不跑），全部并进既有 scheduleHeal（rAF 合并、静止态早退，代价可忽略）。「全屏模式」在 Edge iOS 进不了全屏是平台限制（Edge 主屏添加只是快捷方式），现有真试一次+回滚+分浏览器引导行为正确，不改。
+- 验证：node --check 通过；构建哨兵 48/48 在位；真机待测：Edge iOS 上下滑动收/展工具条 → 输入栏贴可视区底部无空色块；键盘开合/切后台回来页面位置正、可点。
+- 待对方处理：无。⚠ 本次 build 一并收口了工作区全部未构建条目（AI-A 记账分组/存钱罐/心愿单删除/音乐后台误报等 + 前序查看存储构建产物），提交前已核对 WORKLOG 各条均标「已完成」。
+### 2026-08-29 12:35（红米 K80 Chrome：音乐挂后台听被停 + 误弹「会员/付费歌曲」移出窗）
+- [AI-A 域]（**改动文件：src/js/music-player.js + build.mjs（FIX_SENTINELS 哨兵）+ FIX-REGRESSION.md #44；node --check 通过；构建状态：未构建，待构建者收口**）。
+- 需求/反馈：用户「音乐挂后台突然被停，弹窗显示音乐可能是会员音乐失效，但我上传的都是网易云歌单的免费音乐」。
+- 根因：`offerRemoveDamagedSong`（v3.14.x 的「外链/会员歌播放失败→一键移出」窗）会在**前台之外的瞬态失败**上累计 failMap：Chrome 冻结后台标签/网络停顿中断音频流触发 onerror/停滞守卫 → 对普通免费歌误判「连续失败≥2」弹「会员/付费歌曲」移出窗；后台失败本是瞬态（failMap 在回前台 visibilitychange 已清零），弹窗纯属误报，且用户真点了「移出」会误删歌曲。
+- 方案：① `offerRemoveDamagedSong` 开头加 `if (document.hidden) return`——后台失败不计数、不弹「移出」窗、不重置 wantPlay（真·坏链仍由前台手动播放时 toast→连续 2 次→移出窗处理，不误伤）；② visibilitychange/pageshow 回前台时 `bgResumeFails` 一并清零——后台看门狗补播失败封顶（≥6）会挡住回前台 tryResumePlayback，清零后才真正发起续播。
+- 验证：node --check 通过；哨兵 `后台冻结/断流误触发 onerror，不弹「移出」窗不计数` 已加。待构建后实测：网易云免费歌切后台约 15~60s 回前台 → 不弹会员窗、歌不被移出、断流后回前台自动续播或点播放即恢复；真坏链歌前台播放仍走 toast→连续失败→移出窗。
+- 待对方处理：请构建者收口时跑哨兵确认 #44 在位。
+### 2026-08-29（✅ 结论·桌面三页底部对齐——HEAD 92px 版已完全对齐，非布局问题）
+- [本会话·诊断结论]（**未改 src/css/home.css（与 HEAD 一致）；仅更新 tools/verify-desk-align.mjs 断言 77→92（并行会话把 mini-card 从 77px 改 92px，断言过时致 3 项误报）+ 重新构建 index.html**）。
+  - **用户连续反馈**「桌面底部图标没对齐」——逐层排查：①第三页 12 图标 3 行（心愿单已删，8/8/12）；②群聊开启后占卜隐藏让位（chat-settings.js），三页恒 8/8/12 不因群聊变行数；③90 前我先入为主以为"图标行数变化"，实为误判。
+  - **实测结论**：HEAD（84fdab9，mini-card 92px）在无头 Chrome 全部手机尺寸（360/375/390/414/430）× DPR（2/2.75/3/3.5）下，三页图标组底部、末行文字 top、末行图标下沿、倒数第2行文字 **全部 Δ=0.00 精确对齐**（8/8/12 图标，期卡 160 + 备忘 92 + 图标 324 与前两页 190+92+66+214 底部一致）。
+  - **用户真机"差一点"的最可能原因**：①线上版本滞后（92px 改动在 84fdab9，用户手机可能还是旧 77px 构建——旧版 3 行图标区与 92px 卡高不匹配确实会差一点）；②真机字体渲染亚像素差异（headless 无法完全复现）。建议用户确认线上已部署 84fdab9 后刷新再看。
+  - **提醒并行会话**：home.css 的 mini-card/week-card/mood-card 现为 92px（v3.23/v3.25 改），verify-desk-align 已同步；后续若再改卡片高度，需同步该脚本断言。
+### 2026-08-29（记账默认分组删除【教育】）
+- [AI-A 域]（**改动文件：src/js/accounting.js；node --check 通过；构建状态：未构建，待构建者收口**）。
+- 需求/反馈：用户「记账里的默认分组【教育】删掉」。
+- 方案：① 默认支出分组数组 DEF_CATS.expense 去掉「教育」；② 新增 migrateCats() 一次性迁移：localStorage 与 IDB 恢复路径中都把已存分组里的「教育」过滤掉并落盘，保证老用户也生效；已有「教育」类目的历史记录不受影响（记录按自身 category 字符串渲染，不依赖分组列表）。
+- 验证：node --check 通过；待构建后实测：记账支出分组无「教育」，历史「教育」记录正常显示。
+- 待对方处理：无。
+### 2026-08-29（存钱罐功能全面检查 + 微调：无致命错误，补 3 处小缺失/瑕疵）
+- [AI-A 域]（**改动文件：src/js/p2-features.js + src/css/chat-pages.css；构建状态：未构建，待构建者收口**）。
+- 需求/反馈：用户「你检查存钱罐功能还有没有错误和缺失」（承接上一轮删除桌面心愿单）。
+- 检查结论：功能完整、无致命错误、无回归——入口/存取两步弹窗/余额/多心愿（piggy-goals）/监督人可见性/进度条/里程碑 25-50-75%/攒满庆祝/取款关心追问/TA 塞硬币彩蛋/记录收起展开/跨桌面全局互通 均正常；所有依赖函数（libPool/toast/openPage/backHome/host/piggyApp）在位，src 全域无 wishList/wishSave/piggy-wbind 残留。
+- 补的小缺失/瑕疵：① 心愿单列表每行补目标金额「¥X」（原来只有 %，看不出每个心愿金额规模；补 .pg-amt 样式）② 「本月小结」改「小结」——历史月份文案不准确；③ 老单目标迁移（piggy-goal-name/amt → piggy-goals）只读不落盘，补写回，避免旧目标只在虚拟读取里、备份/导出缺失。
+- 未改（需用户定夺的设计项）：心愿无法手动「达成/取消达成」、无法编辑（改名/改金额/改监督人）；里程碑只对当前激活心愿触发（非当前心愿的里程碑延迟到下次存入）。
+- 验证：node --check 通过；待构建后实测：心愿行金额显示、历史月份「小结」文案、旧目标迁移落盘。
+- 待对方处理：无。
+### 2026-08-29（梦角档案 / 我的档案：右侧灰色滚动条未隐藏）
+- [AI-A 域]（**改动文件：src/css/memo-arc.css；构建状态：未构建，待构建者收口**）。
+- 需求/反馈：用户「梦角档案和我的档案功能里，右边的灰色滚动条没有隐藏」。
+- 根因：`.narc-scroll` 是两页的滚动容器（`overflow-y:auto`），base.css 的 `.page` 滚动条隐藏规则对它不生效。
+- 方案：给 `.narc-scroll` 补 `scrollbar-width:none; -ms-overflow-style:none;` + `.narc-scroll::-webkit-scrollbar { display:none; }`。
+- 验证：改纯 CSS 无需 node --check；待构建后实测两页滚动条消失、滚动正常。
+- 待对方处理：无。
+### 2026-08-29（桌面多出的【心愿单】入口已删除：心愿单只保留在存钱罐内）
+- [AI-A 域 + 跨域改动 src/js/contacts.js（AI-B，理由：数据互通说明文本同步）+ FIX-REGRESSION.md]（**改动文件：src/js/p2-features.js + src/css/chat-pages.css + src/js/contacts.js + FIX-REGRESSION.md；node --check 通过；构建状态：未构建，待构建者收口**）。
+- 需求/反馈：用户指出「【心愿单】是存钱罐里的功能，为什么桌面多出一个【心愿单】，删掉桌面的【心愿单】，设计有错误」。
+- 方案：桌面独立「心愿单」应用与存钱罐内的「心愿单」（piggy-goals 存钱目标列表）功能重复，按用户要求删除桌面入口：① 移除 p2-features.js 中 wishApp 图标定义及 app-wishlist 布局注入（默认注入两页/三页分支 + desk-layout push）；② 删除独立页 page-wishlist 全部代码（wishList/wishSave/wishRender/openWishBind/openPiggyWbind/wish-bind 等，约 160 行）；③ 移除存钱罐页与独立心愿单的互绑残留（piggy-wbind 绑定框、pg-wish「+心愿」按钮、达成联动、删除解绑）；④ 清理 chat-pages.css 中 .wish-*/.wl-*/.pg-wish/.pgwg 无用样式；⑤ contacts.js「数据互通说明」去掉「心愿单」（存钱目标属共用数据，已列在存钱罐条）。存钱罐页内的心愿单（piggy-goals）完全保留。
+- 验证：node --check p2-features.js + contacts.js 通过；src 全域无 wishList/wishSave/wishApp/page-wishlist/piggy-wbind 残留；老桌面布局中的 app-wishlist 残留条目被 applyDeskLayout 静默跳过不报错。待构建后实测：桌面各页无「心愿单」图标，存钱罐内心愿列表增删/达成正常。
+- 待对方处理：无（删除型改动，FIX_SENTINELS 只查存在，未加哨兵；已记 FIX-REGRESSION #43）。
+### 2026-08-29（查看存储 A+B：自动备份快照可删除 + 顶部点破"副本可删"；已构建 sw: mochi-mtdv4qpg，哨兵47/47，未提交）
 - [AI-B 域]（**改动文件：src/js/personalize.js（查看存储页）+ src/template.html（新增快照卡片/顶部警示）+ src/css/setting.css（danger 按钮+分类行高亮）+ build.mjs（增 47 次哨兵 st-clear-snap）；node --check 通过；构建哨兵 47/47 在位，未提交**）。
 - 需求/反馈：用户「没怎么用就 1GB，太离谱」——大头是「自动备份快照」≈800MB（每次手动导出把全部数据 base64 放大后完整复制一份，见 data-backup.js）。用户选择「只做 A+B」。
 - 方案：A=「自动备份快照」分类加一键删除按钮（只删副本键 xy-home-v2:__auto-backup-snapshot，LS+IDB 都删，真实数据全保留；openModal 二次确认、删除后禁用+toast、下次导出会重建，卡内说明）。B=存储页顶部「总占用」加警示行 st-snap-hint（仅在快照存在时显示）+ 分类表该行高亮 .snap，点破"它是完整副本、删了不伤真实数据"。

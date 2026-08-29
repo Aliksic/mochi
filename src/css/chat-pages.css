@@ -3217,6 +3217,7 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + var(--mochi-safe-bottom,
 .pg-nm { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .pg-name.done .pg-nm { text-decoration:line-through; color:var(--ink-soft,#aaa); font-weight:400; }
 .pg-by { font-size:10px; color:#c9a86a; opacity:.9; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.pg-amt { font-size:11px; color:var(--ink-soft,#999); font-variant-numeric:tabular-nums; flex-shrink:0; }
 .pg-bar { width:56px; height:6px; border-radius:3px; background:rgba(0,0,0,.08); overflow:hidden; flex-shrink:0; }
 .pg-bar i { display:block; height:100%; border-radius:3px; background:linear-gradient(90deg,#f7c873,#e8a15a); transition:width .4s; }
 .pg-pct { font-size:11px; color:var(--ink-soft,#999); min-width:32px; text-align:right; font-variant-numeric:tabular-nums; flex-shrink:0; }
@@ -3241,28 +3242,6 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + var(--mochi-safe-bottom,
 .piggy-more { border:none; background:none; font-size:12px; color:#b7791f; font-family:inherit; padding:2px 4px; -webkit-tap-highlight-color:transparent; }
 .pr-month { font-size:11px; color:var(--ink-soft,#999); margin:8px 0 2px; font-weight:600; }
 .pr-sub { font-size:11px; color:#b7791f; text-align:right; padding:4px 0 8px; opacity:.85; }
-/* 心愿单（独立功能 · 与存钱罐互绑） */
-.piggy-reply .pgwg { font-style:normal; font-size:10px; color:#c9a86a; opacity:.95; }
-.pg-wish { border:1px dashed rgba(0,0,0,.15); background:none; color:var(--ink-soft,#888); font-size:11px; border-radius:8px; padding:3px 7px; flex-shrink:0; -webkit-tap-highlight-color:transparent; }
-.pg-wish.on { border-style:solid; border-color:#e0a94c; color:#b7791f; }
-.wish-body { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; box-sizing:border-box; padding:14px 14px 40px; }
-.wish-hint { font-size:12px; line-height:1.7; color:var(--ink-soft,#777); padding:12px 14px; border-radius:14px; margin-bottom:14px; text-align:left; }
-.wish-list { border-radius:14px; padding:12px 14px 6px; margin-bottom:16px; }
-.wish-empty { text-align:center; font-size:13px; color:var(--ink-soft,#aaa); padding:14px 0; line-height:1.8; }
-.wl-row { display:flex; align-items:center; gap:8px; padding:9px 0; flex-wrap:wrap; font-size:13px; }
-.wl-row + .wl-row { border-top:1px solid rgba(0,0,0,.05); }
-.wl-name { font-weight:600; color:var(--ink,#333); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.wl-row.done .wl-name { text-decoration:line-through; color:var(--ink-soft,#aaa); font-weight:400; }
-.wl-amt { font-size:11px; color:var(--ink-soft,#999); font-variant-numeric:tabular-nums; }
-.wl-state { font-size:11px; color:#b7791f; }
-.wl-row.done .wl-state { color:var(--ink-soft,#aaa); }
-.wl-link { font-size:11px; color:#c9a86a; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; min-width:60px; }
-.wl-bind { border:1px dashed rgba(0,0,0,.18); background:none; color:#b7791f; font-size:11px; border-radius:8px; padding:3px 8px; -webkit-tap-highlight-color:transparent; }
-.wl-done { border:none; background:rgba(0,0,0,.06); color:var(--ink-soft,#666); font-size:11px; border-radius:8px; padding:3px 8px; -webkit-tap-highlight-color:transparent; }
-.wl-done:active { background:rgba(0,0,0,.12); }
-.wl-del { border:none; background:none; color:#ccc; font-size:13px; padding:2px 4px; -webkit-tap-highlight-color:transparent; flex-shrink:0; }
-.wish-manage { text-align:center; }
-.wish-add { font-size:13px; color:var(--ink-soft,#888); background:none; border:1px dashed rgba(0,0,0,.15); border-radius:10px; padding:8px 16px; margin:0 4px; }
 
 /* ===== 世界观·他偶发浮层（灵体在身边，字卡传讯） ===== */
 .ta-chime-note { position:fixed; left:50%; bottom:22%; transform:translate(-50%,8px); z-index:60; display:flex; align-items:center; gap:8px; max-width:86%; padding:10px 16px; border-radius:14px; background:rgba(255,255,255,.94); border:1px solid rgba(232,83,61,.22); box-shadow:0 6px 22px rgba(0,0,0,.10); font-size:14px; color:var(--ink,#444); opacity:0; pointer-events:none; transition:opacity .4s, transform .4s; }

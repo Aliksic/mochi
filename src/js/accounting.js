@@ -14,7 +14,7 @@
   var KEY_BUDGET = 'accounting-budget';
 
   var DEF_CATS = {
-    expense: ['餐饮', '交通', '购物', '娱乐', '医疗', '居住', '通讯', '教育', '其他'],
+    expense: ['餐饮', '交通', '购物', '娱乐', '医疗', '居住', '通讯', '其他'],
     income: ['工资', '兼职', '红包', '投资', '其他']
   };
 
@@ -34,6 +34,14 @@
       store.set(KEY_CAT, JSON.stringify(c));
       try { if (window.idbSet) window.idbSet(window.activePrefix() + ':' + KEY_CAT, JSON.stringify(c)); } catch (e2) {}
     } catch (e) {}
+  }
+  function migrateCats(c) {
+    // 迁移：移除默认分组「教育」（2026-08）
+    if (c && Array.isArray(c.expense) && c.expense.indexOf('教育') >= 0) {
+      c.expense = c.expense.filter(function (x) { return x !== '教育'; });
+      return true;
+    }
+    return false;
   }
   function loadBudget() {
     try { var b = JSON.parse(store.get(KEY_BUDGET) || 'null'); if (b && typeof b === 'object') return b; } catch (e) {}
@@ -60,7 +68,12 @@
       });
       if (!store.get(KEY_CAT)) window.idbGet(myPrefix + ':' + KEY_CAT).then(function (v) {
         if (window.activePrefix() !== myPrefix || !v) return;
-        try { store.set(KEY_CAT, typeof v === 'string' ? v : JSON.stringify(v)); } catch (e) {}
+        try {
+          var s = typeof v === 'string' ? v : JSON.stringify(v);
+          var c1 = JSON.parse(s);
+          if (migrateCats(c1)) s = JSON.stringify(c1);
+          store.set(KEY_CAT, s);
+        } catch (e) {}
       });
       if (!store.get(KEY_BUDGET)) window.idbGet(myPrefix + ':' + KEY_BUDGET).then(function (v) {
         if (window.activePrefix() !== myPrefix || !v) return;
@@ -97,6 +110,7 @@
   var recs = migrateRecs(loadRecs());
   if (migrateRecs.changed) saveRecs(recs);
   var cats = loadCats();
+  if (migrateCats(cats)) saveCats(cats);
   var budget = loadBudget();
   var now = new Date();
   var viewMode = 'month';

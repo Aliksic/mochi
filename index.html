@@ -851,10 +851,9 @@ box-shadow:0 1px 4px rgba(0,0,0,.08); box-sizing:border-box;
 .app-grid.editing .app-ico { outline:2px solid var(--ink); outline-offset:3px; }
 .app .app-name { font-size:11px; color:var(--ink); letter-spacing:.5px; }
 .page-slide .app[data-desk-widget^="app-"] { align-self:center; margin:8px 0; }
-.page-slide::after { content:''; flex:0 1 93px; }
+.app-grid { margin-top:0; }
+.app-grid.p2-grid { margin-top:0; }
 .page-slide > [data-desk-widget]:first-child { margin-top:14px; }
-.page-slide > .app-grid { margin-top:auto; }
-.page-slide > .app-grid:first-child { margin-top:auto; }
 .desktop-pages {
 flex:1; min-height:0; display:flex;
 overflow-x:auto; overflow-y:hidden;
@@ -868,12 +867,9 @@ gap:var(--desk-page-gap, 8px);
 .page-slide {
 width:100%; flex-shrink:0; height:100%;
 scroll-snap-align:start;
-scrollbar-width:none; -ms-overflow-style:none;
+overflow-y:auto; scrollbar-width:none; -ms-overflow-style:none;
 touch-action:pan-x pan-y;
-display:flex; flex-direction:column; min-height:0;
 }
-.page-slide > * { flex:0 0 auto; }
-.page-slide > .app-grid { flex:0 0 auto; }
 .page-slide::-webkit-scrollbar { display:none; }
 #page-phone { position:relative; }
 #page-phone { user-select:none; -webkit-user-select:none; -webkit-touch-callout:none; }
@@ -5253,6 +5249,7 @@ border-radius:12px;
 .pg-nm { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .pg-name.done .pg-nm { text-decoration:line-through; color:var(--ink-soft,#aaa); font-weight:400; }
 .pg-by { font-size:10px; color:#c9a86a; opacity:.9; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.pg-amt { font-size:11px; color:var(--ink-soft,#999); font-variant-numeric:tabular-nums; flex-shrink:0; }
 .pg-bar { width:56px; height:6px; border-radius:3px; background:rgba(0,0,0,.08); overflow:hidden; flex-shrink:0; }
 .pg-bar i { display:block; height:100%; border-radius:3px; background:linear-gradient(90deg,#f7c873,#e8a15a); transition:width .4s; }
 .pg-pct { font-size:11px; color:var(--ink-soft,#999); min-width:32px; text-align:right; font-variant-numeric:tabular-nums; flex-shrink:0; }
@@ -5274,27 +5271,6 @@ border-radius:12px;
 .piggy-more { border:none; background:none; font-size:12px; color:#b7791f; font-family:inherit; padding:2px 4px; -webkit-tap-highlight-color:transparent; }
 .pr-month { font-size:11px; color:var(--ink-soft,#999); margin:8px 0 2px; font-weight:600; }
 .pr-sub { font-size:11px; color:#b7791f; text-align:right; padding:4px 0 8px; opacity:.85; }
-.piggy-reply .pgwg { font-style:normal; font-size:10px; color:#c9a86a; opacity:.95; }
-.pg-wish { border:1px dashed rgba(0,0,0,.15); background:none; color:var(--ink-soft,#888); font-size:11px; border-radius:8px; padding:3px 7px; flex-shrink:0; -webkit-tap-highlight-color:transparent; }
-.pg-wish.on { border-style:solid; border-color:#e0a94c; color:#b7791f; }
-.wish-body { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; box-sizing:border-box; padding:14px 14px 40px; }
-.wish-hint { font-size:12px; line-height:1.7; color:var(--ink-soft,#777); padding:12px 14px; border-radius:14px; margin-bottom:14px; text-align:left; }
-.wish-list { border-radius:14px; padding:12px 14px 6px; margin-bottom:16px; }
-.wish-empty { text-align:center; font-size:13px; color:var(--ink-soft,#aaa); padding:14px 0; line-height:1.8; }
-.wl-row { display:flex; align-items:center; gap:8px; padding:9px 0; flex-wrap:wrap; font-size:13px; }
-.wl-row + .wl-row { border-top:1px solid rgba(0,0,0,.05); }
-.wl-name { font-weight:600; color:var(--ink,#333); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.wl-row.done .wl-name { text-decoration:line-through; color:var(--ink-soft,#aaa); font-weight:400; }
-.wl-amt { font-size:11px; color:var(--ink-soft,#999); font-variant-numeric:tabular-nums; }
-.wl-state { font-size:11px; color:#b7791f; }
-.wl-row.done .wl-state { color:var(--ink-soft,#aaa); }
-.wl-link { font-size:11px; color:#c9a86a; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; min-width:60px; }
-.wl-bind { border:1px dashed rgba(0,0,0,.18); background:none; color:#b7791f; font-size:11px; border-radius:8px; padding:3px 8px; -webkit-tap-highlight-color:transparent; }
-.wl-done { border:none; background:rgba(0,0,0,.06); color:var(--ink-soft,#666); font-size:11px; border-radius:8px; padding:3px 8px; -webkit-tap-highlight-color:transparent; }
-.wl-done:active { background:rgba(0,0,0,.12); }
-.wl-del { border:none; background:none; color:#ccc; font-size:13px; padding:2px 4px; -webkit-tap-highlight-color:transparent; flex-shrink:0; }
-.wish-manage { text-align:center; }
-.wish-add { font-size:13px; color:var(--ink-soft,#888); background:none; border:1px dashed rgba(0,0,0,.15); border-radius:10px; padding:8px 16px; margin:0 4px; }
 .ta-chime-note { position:fixed; left:50%; bottom:22%; transform:translate(-50%,8px); z-index:60; display:flex; align-items:center; gap:8px; max-width:86%; padding:10px 16px; border-radius:14px; background:rgba(255,255,255,.94); border:1px solid rgba(232,83,61,.22); box-shadow:0 6px 22px rgba(0,0,0,.10); font-size:14px; color:var(--ink,#444); opacity:0; pointer-events:none; transition:opacity .4s, transform .4s; }
 .ta-chime-note.show { opacity:1; transform:translate(-50%,0); }
 .ta-chime-dot { width:8px; height:8px; border-radius:50%; background:radial-gradient(circle, rgba(232,83,61,.9), rgba(232,83,61,.2) 70%); flex-shrink:0; animation:ta-chime-pulse 1.6s ease-in-out infinite; }
@@ -7599,7 +7575,8 @@ color: #c67800;
 .memo-manage { text-align:center; margin-top:14px; }
 .memo-send-btn { font-size:12px; color:var(--ink-soft,#888); background:rgba(255,255,255,.7); border:1px solid rgba(0,0,0,.12); border-radius:16px; padding:6px 16px; cursor:pointer; font-family:inherit; -webkit-tap-highlight-color:transparent; }
 .memo-send-btn:active { background:rgba(0,0,0,.06); }
-.narc-scroll { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; box-sizing:border-box; padding:12px 14px 120px; }
+.narc-scroll { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; box-sizing:border-box; padding:12px 14px 120px; scrollbar-width:none; -ms-overflow-style:none; }
+.narc-scroll::-webkit-scrollbar { display:none; }
 .narc-chips { display:flex; gap:8px; overflow-x:auto; padding:2px 2px 12px; scrollbar-width:none; }
 .narc-chips::-webkit-scrollbar { display:none; }
 .narc-chip { flex-shrink:0; display:inline-flex; align-items:center; height:32px; padding:0 16px; border-radius:18px;
@@ -8384,9 +8361,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787976237704">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.312</b></span>
-        <span class="sv-deploy">部署于 2026-08-29 12:03<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787978409222">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.314</b></span>
+        <span class="sv-deploy">部署于 2026-08-29 12:40<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9476,7 +9453,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.312</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.314</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -9684,7 +9661,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.312</span>
+              <span class="lic-ver">v3.26.314</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -14619,7 +14596,11 @@ const EXCLUDE = ['contacts', 'active-contact', 'feed-posts', 'migrated-v1', 'js-
 'feed-last', 'feed-next', 'feed-day-count',
 'psync-snap', 'psync-queue', 'psync-en',
 'decision-history', 'decision-settings', 'dec-global-migrated',
-'gdec-members', 'gdec-history', 'gdec-settings', 'gdec-global-migrated'];
+'gdec-members', 'gdec-history', 'gdec-settings', 'gdec-global-migrated',
+'pomo-cfg', 'pomo-today', 'pomo-total', 'pomo-msgs', 'pomo-send-chat', 'pomo-bell',
+'pomo-companion', 'pomo-companion-log', 'pomo-cmp-usecards',
+'memo-app-items', 'memo-app-send', 'memo-app-global-migrated',
+'beauty-schemes', 'chat-beauty-schemes', 'hide-ta-sticker'];
 function isExcluded(k) {
 const r = k.slice(G.length + 1);
 if (EXCLUDE.indexOf(r) >= 0) return true;
@@ -14804,6 +14785,15 @@ try { def.remove(k); } catch (e) {}
 }
 });
 } catch (e) {}
+['pomo-cfg', 'pomo-today', 'pomo-total', 'pomo-msgs', 'pomo-send-chat', 'pomo-bell',
+'pomo-companion', 'pomo-companion-log', 'pomo-cmp-usecards',
+'beauty-schemes', 'chat-beauty-schemes', 'hide-ta-sticker'].forEach(function (k) {
+const v = def.get(k);
+if (v !== null && v !== undefined && v !== '') {
+try { if (root.get(k) === null || root.get(k) === undefined) root.set(k, v); } catch (e) {}
+try { def.remove(k); } catch (e) {}
+}
+});
 const old = [];
 const garbage = [];
 for (let i = 0; i < localStorage.length; i++) {
@@ -15007,7 +14997,7 @@ const txt =
 '<li>字卡库专属字卡 / 专属回复 / 收藏</li>' +
 '<li>桌面布局与美化（壁纸 / 气泡 / 字号等）</li>' +
 '<li>称呼性别（TA / 他 / 她）</li>' +
-'<li>日历、信箱、备忘录、心愿单</li>' +
+'<li>日历、信箱、备忘录</li>' +
 '<li>占卜、记录、收藏、统计、记账</li>' +
 '</ul>' +
 '<div style="font-size:12px;color:var(--muted,#999);margin-top:12px;line-height:1.7">「共用」指切换桌面后数据仍延续；「独立」指各桌面各留一份、互不影响。</div>';
@@ -18324,7 +18314,7 @@ syncPageHint(slide);
 });
 const pool = ensureWidgetPool();
 WIDGET_IDS.forEach(wid => {
-if (wid === 'apps' || wid === 'p2apps') return;
+if (wid === 'apps' || wid === 'p2apps' || wid === 'p3apps') return;
 const node = document.querySelector('[data-desk-widget="' + wid + '"]');
 if (!node) return;
 if (wid.indexOf('app-') === 0 && node.closest('.app-grid')) return;
@@ -20041,6 +20031,7 @@ const DIAG_KEYS = [
 'xy-home-v2:__diag-tap'
 ];
 let snapLs = 0, snapIdb = 0, snapText = '(统计中)';
+let idbDone = false;
 function fmtBytes(n) {
 if (n == null || isNaN(n)) return '(未知)';
 if (n >= 1048576) return (n / 1048576).toFixed(1) + ' MB';
@@ -20052,8 +20043,7 @@ if (!tail) return '其他';
 if (tail.indexOf('__diag-') === 0) return '错误诊断记录';
 if (tail.indexOf('music-file:') >= 0) return '本地音乐';
 if (tail.indexOf('__auto-backup-snapshot') >= 0) return '自动备份快照';
-if (tail.indexOf('__last-backup-remind') >= 0) return '系统设置';
-if (tail.indexOf('__last-backup') >= 0) return '自动备份快照';
+if (tail.indexOf('__last-backup') >= 0 || tail.indexOf('__last-backup-remind') >= 0) return '系统设置';
 if (tail.indexOf('psync-') >= 0) return '后台同步缓存';
 if (tail.indexOf('__big-idx') >= 0 || tail.indexOf('__ls-dirty') >= 0) return '数据索引';
 if (/^(__layout-pref|ver-update-ack-ts|__edge-backup-hint-done|__quota_probe__)$/.test(tail)) return '系统设置';
@@ -20208,9 +20198,14 @@ function renderSnap() {
 const size = (snapLs || 0) + (snapIdb || 0);
 snapText = size ? fmtBytes(size) : '(无)';
 const el = document.getElementById('st-snap');
-if (el) el.textContent = snapText + (size ? '（一份完整副本）' : '');
+if (el) el.textContent = idbDone ? (snapText + (size ? '（一份完整副本）' : '')) : '统计中…';
 const hintEl = document.getElementById('st-snap-hint');
-if (hintEl) hintEl.style.display = size ? 'block' : 'none';
+if (hintEl) hintEl.style.display = (idbDone && size) ? 'block' : 'none';
+const btn = document.getElementById('st-clear-snap');
+if (btn) {
+btn.disabled = !(idbDone && size > 0);
+btn.textContent = !idbDone ? '统计中…' : (size > 0 ? '删除自动备份快照（释放空间）' : '（暂无自动备份快照）');
+}
 }
 function renderStorage() {
 const quotaEl = document.getElementById('st-quota');
@@ -20224,6 +20219,7 @@ const lsEl = document.getElementById('st-ls');
 if (lsEl) lsEl.textContent = fmtBytes(ls.total) + '（' + ls.count + ' 键）';
 const idbEl = document.getElementById('st-idb');
 if (idbEl) idbEl.textContent = '统计中…';
+idbDone = false;
 renderCatTable(ls.cats, null);
 snapLs = (ls.cats['自动备份快照'] || {}).size || 0;
 snapIdb = 0;
@@ -20233,6 +20229,7 @@ if (idbEl) idbEl.textContent = '统计中…（' + done + '/' + totalN + '）';
 }, function (res) {
 if (idbEl) idbEl.textContent = res ? fmtBytes(res.total) + '（' + res.count + ' 键）' : '不可用';
 snapIdb = (res && res.cats && res.cats['自动备份快照'] || {}).size || 0;
+idbDone = true;
 renderSnap();
 renderCatTable(ls.cats, res ? res.cats : null);
 });
@@ -20247,15 +20244,13 @@ try { if (window.mochiRefreshDiagBadge) window.mochiRefreshDiagBadge(); } catch 
 renderDiagCount();
 try { if (typeof toast === 'function') toast('错误诊断记录已清理'); } catch (e) {}
 }
-function deleteSnapshot() {
+async function deleteSnapshot() {
 const k = 'xy-home-v2:__auto-backup-snapshot';
 try { localStorage.removeItem(k); } catch (e) {}
-try { if (window.idbDelete) window.idbDelete(k); } catch (e) {}
-snapLs = 0; snapIdb = 0;
+try { if (window.idbDelete) await window.idbDelete(k); } catch (e) {}
+snapLs = 0; snapIdb = 0; idbDone = true;
 const el = document.getElementById('st-snap');
 if (el) el.textContent = '(已删除)';
-const btn = document.getElementById('st-clear-snap');
-if (btn) { btn.disabled = true; btn.textContent = '已删除，空间已释放'; }
 renderSnap();
 renderStorage();
 try { if (typeof toast === 'function') toast('自动备份快照已删除，空间已释放'); } catch (e) {}
@@ -21020,12 +21015,13 @@ function chatLabel(ck, dk, fb) {
 let v = null;
 try { v = store.get(ck); } catch (e) {}
 if (v) return v;
+if (!dk) return fb;
 try { v = store.get(dk); } catch (e) {}
 return v || fb;
 }
-function chatPartnerName() { return chatLabel('cs-lbl-partner', 'lbl-partner', 'TA'); }
+function chatPartnerName() { return chatLabel('cs-lbl-partner', null, 'TA'); }
 window.chatPartnerName = chatPartnerName;
-function chatUserName() { return chatLabel('cs-lbl-user', 'lbl-user', '我'); }
+function chatUserName() { return chatLabel('cs-lbl-user', null, '我'); }
 function sysNickCur() { return chatPartnerName(); }
 function sysNickHistGet(st) {
 try {
@@ -21138,8 +21134,6 @@ function updateChatPartnerName() {
 if (!pname) return;
 let saved = null;
 try { saved = store.get('cs-lbl-partner'); } catch (e) {}
-if (saved) { pname.textContent = saved; return; }
-try { saved = store.get('lbl-partner'); } catch (e) {}
 if (saved) { pname.textContent = saved; return; }
 try {
 if (window.getContacts) {
@@ -22458,7 +22452,7 @@ return;
 }
 if (!deskMsgEl || !deskMsgEnabled()) return;
 if (deskMsgText) deskMsgText.textContent = notifyT;
-if (deskMsgName) deskMsgName.textContent = opts.name || store.get('lbl-partner') || (window.taWord ? window.taWord() : 'TA');
+if (deskMsgName) deskMsgName.textContent = opts.name || chatPartnerName();
 if (deskMsgAv) {
 if (opts.av && typeof opts.av === 'string' && opts.av.indexOf('data:') === 0) {
 const img = document.createElement('img');
@@ -22506,7 +22500,7 @@ return { text: text, img: img, imgSub: imgSub };
 }
 function showDeskMsg(rec) {
 const info = extractDeskMsg(rec);
-const name = store.get('lbl-partner') || (window.taWord ? window.taWord() : 'TA');
+const name = chatPartnerName();
 const isHidden = document.visibilityState === 'hidden';
 if (isHidden) {
 showDeskPopup({ name: name, text: info.text, type: rec.type, img: info.img, imgSub: info.imgSub, isHidden: true });
@@ -31424,14 +31418,10 @@ try { headInput.click(); } catch (e) { toast('无法打开相册，请重试'); 
 }
 function applyProfile() {
 const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-const follow = (chatKey, deskKey, fb) => {
-let d = null; try { d = store.get(deskKey); } catch (e) {}
-return d ? '跟随桌面（' + d + '）' : fb;
-};
 const lp = store.get('cs-lbl-partner');
-set('cs-lbl-partner-val', lp || follow('cs-lbl-partner', 'lbl-partner', ''));
+set('cs-lbl-partner-val', lp || '未设置（默认 TA）');
 const lu = store.get('cs-lbl-user');
-set('cs-lbl-user-val', lu || follow('cs-lbl-user', 'lbl-user', ''));
+set('cs-lbl-user-val', lu || '未设置（默认 我）');
 const ap = store.get('cs-avatar-partner');
 set('cs-avatar-partner-val', ap ? '已设置' : '');
 const ar = document.getElementById('cs-avatar-partner-remove');
@@ -31449,9 +31439,9 @@ if (!window.openModal) return;
 const cur = store.get('cs-lbl-partner') || '';
 window.openModal('联系人昵称', cur, (v) => {
 const val = (v || '').trim();
-const oldEff = store.get('cs-lbl-partner') || store.get('lbl-partner') || 'TA';
+const oldEff = store.get('cs-lbl-partner') || 'TA';
 if (val) store.set('cs-lbl-partner', val); else store.remove('cs-lbl-partner');
-if (oldEff !== (val || store.get('lbl-partner') || 'TA')) {
+if (oldEff !== (val || 'TA')) {
 try { if (window.chatSysNickChanged) window.chatSysNickChanged(oldEff); } catch (e) {}
 }
 applyProfile();
@@ -36145,12 +36135,12 @@ if (p && p.catch) p.catch(function () { bgResumeFails++; });
 ['visibilitychange', 'focus'].forEach(function (ev) {
 document.addEventListener(ev, function () {
 if (document.visibilityState !== 'visible') return;
-failMap = {}; // v3.x：从别的应用切回浏览器时，后台停滞触发的播放失败不算连续失败，避免误报"会员/移出"
+failMap = {}; bgResumeFails = 0; // v3.x：从别的应用切回浏览器时，后台停滞触发的播放失败不算连续失败，避免误报"会员/移出"；v3.26.x：补播失败封顶一并清零，回前台才真正发起续播
 setTimeout(function () { try { tryResumePlayback(); } catch (e) {} }, 200);
 });
 });
 window.addEventListener('pageshow', function () {
-failMap = {};
+failMap = {}; bgResumeFails = 0; // v3.26.x：见 visibilitychange 同款——回前台重置补播失败封顶
 setTimeout(function () { try { tryResumePlayback(); } catch (e) {} }, 200);
 });
 setInterval(function () {
@@ -36256,6 +36246,7 @@ return true;
 }
 function offerRemoveDamagedSong(m) {
 if (!m) return;
+if (document.hidden) return; // v3.26.x：后台冻结/断流误触发 onerror，不弹「移出」窗不计数
 wantPlay = false; clearBgResume(); // v3.10.x：真失败＝停止意图，不再自动续播
 try { if (audio) audio.pause(); } catch (e) {}
 try { syncPlayIcons(false); } catch (e) {}
@@ -45672,7 +45663,7 @@ mini.style.transform = 'none';
 try { store.remove('call-mini-pos'); } catch (e) {}
 miniPos = null;
 }
-function partnerName() { return store.get('lbl-partner') || (window.taWord ? window.taWord() : 'TA'); }
+function partnerName() { return store.get('cs-lbl-partner') || (window.taWord ? window.taWord() : 'TA'); }
 function partnerAv() { return store.get('cs-avatar-partner') || store.get('avatar-partner') || ''; }
 function bindCall(callObj) {
 callObj.cid = window.__activeCid || 'default';
@@ -45711,7 +45702,7 @@ if (!currentCall) return;
 let name = '';
 try {
 const s = (window.storeFor && window.storeFor(currentCall.cid)) || store;
-name = s.get('lbl-partner') || '';
+name = s.get('cs-lbl-partner') || (window.taWord ? window.taWord() : 'TA');
 } catch (e) { name = currentCall.name || partnerName(); }
 if (name === shownName) return;
 shownName = name;
@@ -51243,13 +51234,12 @@ const waterApp = makeApp('water', '喝水', '<svg viewBox="0 0 24 24" fill="none
 const eatApp = makeApp('eat', '吃什么', '<svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2.5v7c0 1.1.9 2 2 2h4c1.1 0 2-.9 2-2v-7"/><path d="M5.7 2.5v8.3"/><path d="M8.3 2.5v8.3"/><path d="M7 11.5v10"/><path d="M21 15V2.5a5 5 0 00-5 5v5.5c0 1.1.9 2 2 2h3z"/><path d="M21 15v6.5"/></svg>');
 const piggyApp = makeApp('piggy', '存钱罐', '<svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7h6"/><path d="M5 13.5C5 10.4 8.1 8 12 8s7 2.4 7 5.5c0 1.6-.9 3.1-2.3 4.1V20h-2.4l-.4-1.2a9.3 9.3 0 01-3.8 0L9.7 20H7.3v-2.4C5.9 16.6 5 15.1 5 13.5z"/><circle cx="9.3" cy="12.7" r=".55" fill="#111111" stroke="none"/><path d="M18.8 12.3l1.7-.9"/></svg>');
 const pomoApp = makeApp('pomo', '番茄钟', '<svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13.8" r="7.2"/><path d="M12 6.6V4.6"/><path d="M12 6.6C10.6 5.4 9 5.3 7.8 6.1"/><path d="M12 6.6c1.4-1.2 3-1.3 4.2-.5"/></svg>');
-const wishApp = makeApp('wishlist', '心愿单', '<svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-7-4.3-9.2-8.3C1.4 9 3 6 6 6c1.9 0 3.1.8 3.9 2.1C10.7 6.8 11.9 6 13.8 6 16.8 6 18.4 9 17.2 11.7 19 15.7 12 20 12 20z"/><path d="M9.6 12.4l1.9 1.9 3.2-3.3"/></svg>');
 const pagesBox = document.getElementById('desktop-pages');
 const st0 = curStore();
 let layArr = null;
 try { if (st0) layArr = JSON.parse(st0.get('desk-layout') || 'null'); } catch (e) {}
 const hasLayout = Array.isArray(layArr);
-const alreadyInLay = hasLayout && layArr.some(p => (p || []).some(w => w === 'app-tongpin' || w === 'app-shenshou' || w === 'app-water' || w === 'app-eat' || w === 'app-pomo' || w === 'app-piggy' || w === 'app-wishlist'));
+const alreadyInLay = hasLayout && layArr.some(p => (p || []).some(w => w === 'app-tongpin' || w === 'app-shenshou' || w === 'app-water' || w === 'app-eat' || w === 'app-pomo' || w === 'app-piggy'));
 let placed = false;
 if (hasLayout && !alreadyInLay && pagesBox) {
 const curCnt = pagesBox.querySelectorAll('.page-slide').length;
@@ -51260,12 +51250,12 @@ slide.dataset.desk = String(curCnt);
 const grid = document.createElement('div');
 grid.className = 'app-grid';
 grid.setAttribute('data-app', 'tp-page');
-grid.appendChild(tpApp); grid.appendChild(ssApp); grid.appendChild(waterApp); grid.appendChild(eatApp); grid.appendChild(pomoApp); grid.appendChild(piggyApp); grid.appendChild(wishApp);
+grid.appendChild(tpApp); grid.appendChild(ssApp); grid.appendChild(waterApp); grid.appendChild(eatApp); grid.appendChild(pomoApp); grid.appendChild(piggyApp);
 slide.appendChild(grid);
 pagesBox.appendChild(slide);
 try {
 st0.set('desk-page-count', String(curCnt + 1));
-layArr.push(['app-tongpin', 'app-shenshou', 'app-water', 'app-eat', 'app-pomo', 'app-piggy', 'app-wishlist']);
+layArr.push(['app-tongpin', 'app-shenshou', 'app-water', 'app-eat', 'app-pomo', 'app-piggy']);
 st0.set('desk-layout', JSON.stringify(layArr));
 } catch (e) {}
 try { if (window.deskRebuild) window.deskRebuild(); } catch (e) {}
@@ -51278,8 +51268,8 @@ const p3g = document.querySelector('.app-grid.p3-grid');
 if (p2Grid) {
 p2Grid.appendChild(tpApp); p2Grid.appendChild(ssApp);
 } else if (p3g) { p3g.appendChild(tpApp); p3g.appendChild(ssApp); }
-if (p3g) { p3g.appendChild(waterApp); p3g.appendChild(eatApp); p3g.appendChild(piggyApp); p3g.appendChild(pomoApp); p3g.appendChild(wishApp); }
-else if (p2Grid) { p2Grid.appendChild(waterApp); p2Grid.appendChild(eatApp); p2Grid.appendChild(piggyApp); p2Grid.appendChild(pomoApp); p2Grid.appendChild(wishApp); }
+if (p3g) { p3g.appendChild(waterApp); p3g.appendChild(eatApp); p3g.appendChild(piggyApp); p3g.appendChild(pomoApp); }
+else if (p2Grid) { p2Grid.appendChild(waterApp); p2Grid.appendChild(eatApp); p2Grid.appendChild(piggyApp); p2Grid.appendChild(pomoApp); }
 try { if (window.applyDeskLayout) window.applyDeskLayout(); } catch (e) {}
 }
 const DEF_STATUS = ['在听雨', '在看你写东西', '没睡，在发呆', '刚路过你身边', '在想你', '在发呆', '在看你', '在等你看我'];
@@ -52221,7 +52211,6 @@ piggyPage.innerHTML =
 '<div class="piggy-msg glass" id="piggy-msg">小猪替你保管着呢</div>' +
 '<div class="piggy-share glass" id="piggy-share" hidden><div class="piggy-reply-q" id="piggy-share-title">谁来监督这个心愿？（可多选）</div><div class="piggy-share-chips" id="piggy-share-chips"></div><div class="piggy-reply-row"><button class="piggy-reply-send" id="piggy-share-ok">保存心愿</button><button class="piggy-reply-skip" id="piggy-share-cancel">取消</button></div></div>' +
 '<div class="piggy-reply glass" id="piggy-reply" hidden><div class="piggy-reply-q" id="piggy-reply-q"></div><div class="piggy-reply-row"><input class="piggy-reply-in" id="piggy-reply-in" type="text" maxlength="40" placeholder="回一句给TA（可不填）"><button class="piggy-reply-send" id="piggy-reply-send">发送</button><button class="piggy-reply-skip" id="piggy-reply-skip">不用啦</button></div></div>' +
-'<div class="piggy-reply glass" id="piggy-wbind" hidden><div class="piggy-reply-q" id="piggy-wbind-q">绑到哪个心愿？（可多选制·选一个即绑定）</div><div class="piggy-share-chips" id="piggy-wbind-chips"></div><div class="piggy-reply-row"><button class="piggy-reply-send" id="piggy-wbind-ok">保存绑定</button><button class="piggy-reply-skip" id="piggy-wbind-cancel">取消</button></div></div>' +
 '<div class="piggy-goals glass" id="piggy-goals"></div>' +
 '<div class="piggy-hist glass" id="piggy-hist"></div>' +
 '<div class="piggy-manage"><button class="piggy-set-goal" id="piggy-set-goal">＋ 新小心愿</button><button class="piggy-add-msg" id="piggy-add-msg">+ TA的碎碎念</button></div>' +
@@ -52246,6 +52235,7 @@ try {
 const gn = s.get('piggy-goal-name'); const ga = parseFloat(s.get('piggy-goal-amt')) || 0;
 a = (gn && ga > 0) ? [{ n: gn, a: ga }] : [];
 } catch (e) { a = []; }
+try { s.set('piggy-goals', JSON.stringify(a)); } catch (e) {}
 }
 return a.filter(function (g) { return g && g.n && (+g.a) > 0; }).map(function (g) {
 return {
@@ -52318,11 +52308,10 @@ else act.vis.forEach(function (ent) {
 const gg = ent.g;
 const p = Math.min(100, Math.max(0, Math.round(bal / gg.a * 100)));
 const byTxt = (!gg.by || !gg.by.length) ? '监督：所有桌面' : '监督：' + piggyEsc(gg.by.map(piggyContactName).join('、'));
-const lw = wishList().find(function (x) { return x.goal === ent.i; });
 h += '<div class="pg-row' + (ent.i === act.i ? ' cur' : '') + '" data-pick="' + ent.i + '">' +
-'<span class="pg-name' + (gg.done ? ' done' : '') + '"><span class="pg-nm">' + piggyEsc(gg.n) + (gg.done ? ' ✓' : '') + '</span><span class="pg-by">' + byTxt + (lw ? '<i class="pgwg">· 心愿：' + piggyEsc(lw.n) + '</i>' : '') + '</span></span>' +
+'<span class="pg-name' + (gg.done ? ' done' : '') + '"><span class="pg-nm">' + piggyEsc(gg.n) + (gg.done ? ' ✓' : '') + '</span><span class="pg-by">' + byTxt + '</span></span>' +
+'<span class="pg-amt">¥' + piggyFmt(gg.a) + '</span>' +
 '<span class="pg-bar"><i style="width:' + p + '%"></i></span><span class="pg-pct">' + p + '%</span>' +
-'<button class="pg-wish' + (lw ? ' on' : '') + '" data-wbind="' + ent.i + '">' + (lw ? '心愿' : '+心愿') + '</button>' +
 '<button class="pg-del" data-del="' + ent.i + '">✕</button></div>';
 });
 glEl.innerHTML = h;
@@ -52340,14 +52329,14 @@ asc.forEach(function (x) {
 const d = new Date((x && x.t) || Date.now());
 const key = d.getFullYear() + '-' + d.getMonth();
 if (key !== curKey) {
-if (curKey !== '') parts.push('<div class="pr-sub">本月小结 · ' + (sum >= 0 ? '+' : '\u2212') + '¥' + piggyFmt(Math.abs(sum)) + '</div>');
+if (curKey !== '') parts.push('<div class="pr-sub">小结 · ' + (sum >= 0 ? '+' : '\u2212') + '¥' + piggyFmt(Math.abs(sum)) + '</div>');
 curKey = key; sum = 0;
 parts.push('<div class="pr-month">' + d.getFullYear() + ' 年 ' + (d.getMonth() + 1) + ' 月</div>');
 }
 sum += ((x && x.type === 'out' ? -1 : 1) * ((x && x.amt) || 0));
 parts.push(piggyRowHtml(x));
 });
-parts.push('<div class="pr-sub">本月小结 · ' + (sum >= 0 ? '+' : '\u2212') + '¥' + piggyFmt(Math.abs(sum)) + '</div>');
+parts.push('<div class="pr-sub">小结 · ' + (sum >= 0 ? '+' : '\u2212') + '¥' + piggyFmt(Math.abs(sum)) + '</div>');
 body = parts.join('');
 }
 hist.innerHTML = '<div class="piggy-hist-top"><span class="piggy-hist-title">存钱记录</span>' +
@@ -52367,9 +52356,6 @@ const gs = act.all;
 [25, 50, 75].forEach(function (m) { if (gs[act.i].ms.indexOf(m) < 0) gs[act.i].ms.push(m); });
 gs[act.i].done = true;
 piggySaveGoals(gs);
-const wl = wishList(); let wc = false;
-wl.forEach(function (w) { if (w.goal === act.i && !w.done) { w.done = true; wc = true; } });
-if (wc) wishSave(wl);
 vibrate([60, 40, 60]);
 piggyShowMsg(piggyPick(DEF_PIGGY_FULL));
 let nxt = -1;
@@ -52538,7 +52524,6 @@ document.getElementById('piggy-goals').addEventListener('click', (e) => {
 const t = e.target;
 if (!t) return;
 if (t.id === 'piggy-goal-add') { piggyOpenAddGoal(); return; }
-if (t.classList && t.classList.contains('pg-wish')) { openPiggyWbind(parseInt(t.getAttribute('data-wbind'), 10)); return; }
 if (t.classList && t.classList.contains('pg-del')) {
 const idx = parseInt(t.getAttribute('data-del'), 10);
 const gs = piggyGoals();
@@ -52548,7 +52533,6 @@ window.openModal('删除心愿「' + gs[idx].n + '」？', '', () => {
 const gs2 = piggyGoals(); gs2.splice(idx, 1);
 let cur = piggyCur(); if (cur >= gs2.length) cur = 0;
 piggySaveGoals(gs2); piggySetCur(cur);
-const wl2 = wishList(); wl2.forEach(function (w) { if (w.goal === idx) w.goal = null; }); wishSave(wl2);
 piggyRender(); toast('已删除');
 }, { noInput: true });
 return;
@@ -52577,157 +52561,6 @@ piggyCloseCare();
 document.getElementById('piggy-reply-skip').addEventListener('click', piggyCloseCare);
 document.getElementById('piggy-reply-in').addEventListener('keydown', (e) => {
 if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) { e.preventDefault(); document.getElementById('piggy-reply-send').click(); }
-});
-function wishStore() { try { return (window.activeStore && window.activeStore()) || window.xyStore('xy-home-v2'); } catch (e) { return null; } }
-function wishList() {
-const s = wishStore(); let a = []; try { a = JSON.parse(s.get('wishlist') || '[]'); } catch (e) {}
-if (!Array.isArray(a)) a = [];
-return a.map(function (w, i) {
-return {
-id: (w && w.id) ? String(w.id) : ('w' + i),
-n: String((w && w.n) || '').trim(),
-a: Math.round((+((w && w.a) || 0)) * 100) / 100,
-done: !!(w && w.done),
-goal: (w && w.goal != null) ? parseInt(w.goal, 10) : null,
-_i: i
-};
-});
-}
-function wishSave(a) {
-const s = wishStore(); if (!s) return;
-const out = a.map(function (w) { return { id: w.id, n: w.n, a: w.a, done: !!w.done, goal: (w.goal == null ? null : w.goal) }; });
-try { s.set('wishlist', JSON.stringify(out)); } catch (e) {}
-}
-function wishNewId() { return 'w' + Date.now() + '-' + Math.floor(Math.random() * 1e4); }
-function wishGoalByIdx(i) { const gs = piggyGoals(); return (i >= 0 && i < gs.length) ? gs[i] : null; }
-function wishEsc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
-function wishFmt(n) { try { return n.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); } catch (e) { return (Math.round(n * 100) / 100).toFixed(2); } }
-function wishRender() {
-const el = document.getElementById('wish-list'); if (!el) return;
-const list = wishList(); const bal = piggyBal();
-let h = '';
-if (!list.length) h += '<div class="wish-empty">还没有心愿，点下方「＋ 新增心愿」<br>然后可「＋ 绑定存钱目标」让攒钱进度同步</div>';
-else list.forEach(function (w) {
-const g = wishGoalByIdx(w.goal);
-let bind;
-if (g) {
-const p = Math.min(100, Math.max(0, Math.round(bal / g.a * 100)));
-bind = '<span class="wl-link">存钱目标：' + wishEsc(g.n) + (w.done ? ' · 已达成' : ' · ' + p + '%') + '</span>';
-} else {
-bind = '<button class="wl-bind" data-bind="' + w._i + '">＋ 绑定存钱目标</button>';
-}
-h += '<div class="wl-row' + (w.done ? ' done' : '') + '">' +
-'<span class="wl-name">' + wishEsc(w.n) + (w.done ? ' ✓' : '') + '</span>' +
-(w.a > 0 ? '<span class="wl-amt">目标 ¥' + wishFmt(w.a) + '</span>' : '') +
-'<span class="wl-state">' + (w.done ? '已达成' : '攒钱中') + '</span>' +
-bind +
-'<button class="wl-done" data-done="' + w._i + '">' + (w.done ? '取消达成' : '达成') + '</button>' +
-'<button class="wl-del" data-del="' + w._i + '">✕</button>' +
-'</div>';
-});
-el.innerHTML = h;
-}
-const wishPage = document.createElement('div');
-wishPage.className = 'page'; wishPage.id = 'page-wishlist'; wishPage.hidden = true;
-wishPage.innerHTML =
-'<div class="chat-head"><span class="ch-back" id="wish-back"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><span class="ch-name">心愿单</span></div>' +
-'<div class="wish-body">' +
-'<div class="wish-hint glass">把想实现的心愿记下来，再绑到「存钱罐」的存钱目标上，攒钱进度会同步到这里。<br>目标攒满时，绑定的心愿会自动达成。</div>' +
-'<div class="wish-list glass" id="wish-list"></div>' +
-'<div class="wish-manage"><button class="wish-add" id="wish-add">＋ 新增心愿</button></div>' +
-'<div class="piggy-reply glass" id="wish-bind" hidden><div class="piggy-reply-q" id="wish-bind-q">绑到哪个存钱目标？（选一个）</div><div class="piggy-share-chips" id="wish-bind-chips"></div><div class="piggy-reply-row"><button class="piggy-reply-send" id="wish-bind-ok">保存绑定</button><button class="piggy-reply-skip" id="wish-bind-cancel">取消</button></div></div>' +
-'</div>';
-host.appendChild(wishPage);
-if (wishApp) wishApp.addEventListener('click', () => { if (editingNow()) return; openPage(wishPage); wishRender(); });
-document.getElementById('wish-back').addEventListener('click', () => backHome(wishPage));
-document.getElementById('wish-add').addEventListener('click', () => {
-if (editingNow() || !window.openModal) return;
-let name = '', amt = 0, phase = 1;
-const ctl = window.openModal('心愿（如：一起去看海）', '', (v) => {
-if (phase === 1) {
-name = String(v || '').trim(); if (!name) { toast('先写个心愿吧'); return; }
-phase = 2; ctl.stay(); ctl.title('目标金额（元，可不填）'); ctl.maxLen(9); ctl.ph('想攒多少，可不填'); ctl.text(''); ctl.okText('保存心愿');
-return;
-}
-amt = piggyAmt(v);
-const a = wishList(); a.push({ id: wishNewId(), n: name, a: amt || 0, done: false, goal: null }); wishSave(a);
-wishRender(); toast('已添加心愿');
-}, { maxlength: 16, placeholder: '心愿名' });
-});
-document.getElementById('wish-list').addEventListener('click', (e) => {
-const t = e.target; if (!t) return;
-if (t.classList.contains('wl-done')) {
-const a = wishList(); const i = parseInt(t.getAttribute('data-done'), 10);
-if (a[i]) { a[i].done = !a[i].done; wishSave(a); wishRender(); }
-return;
-}
-if (t.classList.contains('wl-del')) {
-const i = parseInt(t.getAttribute('data-del'), 10);
-const nm = '' + (wishList()[i] || {}).n;
-if (!window.openModal) { const a2 = wishList(); a2.splice(i, 1); wishSave(a2); wishRender(); return; }
-window.openModal('删除心愿「' + nm + '」？', '', () => { const a2 = wishList(); a2.splice(i, 1); wishSave(a2); wishRender(); toast('已删除'); }, { noInput: true });
-return;
-}
-if (t.classList.contains('wl-bind')) { openWishBind(parseInt(t.getAttribute('data-bind'), 10)); }
-});
-let wishBindWish = -1;
-function openWishBind(wishIdx) {
-wishBindWish = wishIdx;
-const chips = document.getElementById('wish-bind-chips'); const box = document.getElementById('wish-bind');
-if (!chips || !box) return;
-const gs = piggyGoals(); const vis = []; let cur = null;
-try { cur = wishList()[wishIdx].goal; } catch (e) {}
-gs.forEach(function (g, i) { if (piggyGoalVisible(g)) vis.push({ g: g, i: i }); });
-let h = '';
-if (!vis.length) h = '<div class="wish-empty">存钱罐还没有存钱目标，先去存钱罐建一个</div>';
-else vis.forEach(function (ent) { h += '<span class="pg-chip' + (ent.i === cur ? ' on' : '') + '" data-gi="' + ent.i + '">' + wishEsc(ent.g.n) + '</span>'; });
-chips.innerHTML = h; box.hidden = false;
-}
-document.getElementById('wish-bind').addEventListener('click', (e) => {
-const t = e.target; if (!t) return;
-if (t.classList.contains('pg-chip')) {
-t.classList.toggle('on');
-document.querySelectorAll('#wish-bind-chips .pg-chip').forEach(c => { if (c !== t) c.classList.remove('on'); });
-return;
-}
-if (t.id === 'wish-bind-ok') {
-const sel = document.querySelector('#wish-bind-chips .pg-chip.on'); const box = document.getElementById('wish-bind');
-if (!sel) { toast('先选一个存钱目标'); return; }
-const gi = parseInt(sel.getAttribute('data-gi'), 10);
-const a = wishList();
-a.forEach(function (w) { if (w._i === wishBindWish) w.goal = gi; else if (w.goal === gi) w.goal = null; });
-wishSave(a); box.hidden = true; wishBindWish = -1; wishRender(); toast('已绑定');
-return;
-}
-if (t.id === 'wish-bind-cancel') { const b = document.getElementById('wish-bind'); if (b) b.hidden = true; wishBindWish = -1; }
-});
-let piggyWbindGoal = -1;
-function openPiggyWbind(goalIdx) {
-piggyWbindGoal = goalIdx;
-const chips = document.getElementById('piggy-wbind-chips'); const box = document.getElementById('piggy-wbind');
-if (!chips || !box) return;
-const list = wishList(); let h = '';
-if (!list.length) h = '<div class="wish-empty">心愿单还是空的，先去心愿单添加</div>';
-else list.forEach(function (w) { h += '<span class="pg-chip' + (w.goal === goalIdx ? ' on' : '') + '" data-wi="' + w._i + '">' + wishEsc(w.n) + '</span>'; });
-chips.innerHTML = h; box.hidden = false;
-}
-document.getElementById('piggy-wbind').addEventListener('click', (e) => {
-const t = e.target; if (!t) return;
-if (t.classList.contains('pg-chip')) {
-t.classList.toggle('on');
-document.querySelectorAll('#piggy-wbind-chips .pg-chip').forEach(c => { if (c !== t) c.classList.remove('on'); });
-return;
-}
-if (t.id === 'piggy-wbind-ok') {
-const sel = document.querySelector('#piggy-wbind-chips .pg-chip.on'); const box = document.getElementById('piggy-wbind');
-if (!sel) { toast('先选一个心愿'); return; }
-const wi = parseInt(sel.getAttribute('data-wi'), 10);
-const a = wishList();
-a.forEach(function (w) { if (w._i === wi) w.goal = piggyWbindGoal; else if (w.goal === piggyWbindGoal) w.goal = null; });
-wishSave(a); box.hidden = true; piggyWbindGoal = -1; piggyRender(); toast('已绑定');
-return;
-}
-if (t.id === 'piggy-wbind-cancel') { const b = document.getElementById('piggy-wbind'); if (b) b.hidden = true; piggyWbindGoal = -1; }
 });
 const PMP_GREET = ['好，我陪着你', '去吧，我在这等你', '专注吧，我不吵你', '嗯，一起加油'];
 const PMP_ENC = ['在呢', '继续哦', '摸摸头', '嗯嗯，陪你', '快了快了', '我在看你专注'];
@@ -57381,7 +57214,7 @@ var KEY_REC = 'accounting-records';
 var KEY_CAT = 'accounting-categories';
 var KEY_BUDGET = 'accounting-budget';
 var DEF_CATS = {
-expense: ['餐饮', '交通', '购物', '娱乐', '医疗', '居住', '通讯', '教育', '其他'],
+expense: ['餐饮', '交通', '购物', '娱乐', '医疗', '居住', '通讯', '其他'],
 income: ['工资', '兼职', '红包', '投资', '其他']
 };
 function loadRecs() { try { return JSON.parse(store.get(KEY_REC) || '[]'); } catch (e) { return []; } }
@@ -57400,6 +57233,13 @@ try {
 store.set(KEY_CAT, JSON.stringify(c));
 try { if (window.idbSet) window.idbSet(window.activePrefix() + ':' + KEY_CAT, JSON.stringify(c)); } catch (e2) {}
 } catch (e) {}
+}
+function migrateCats(c) {
+if (c && Array.isArray(c.expense) && c.expense.indexOf('教育') >= 0) {
+c.expense = c.expense.filter(function (x) { return x !== '教育'; });
+return true;
+}
+return false;
 }
 function loadBudget() {
 try { var b = JSON.parse(store.get(KEY_BUDGET) || 'null'); if (b && typeof b === 'object') return b; } catch (e) {}
@@ -57426,7 +57266,12 @@ if (!page.hidden) render();
 });
 if (!store.get(KEY_CAT)) window.idbGet(myPrefix + ':' + KEY_CAT).then(function (v) {
 if (window.activePrefix() !== myPrefix || !v) return;
-try { store.set(KEY_CAT, typeof v === 'string' ? v : JSON.stringify(v)); } catch (e) {}
+try {
+var s = typeof v === 'string' ? v : JSON.stringify(v);
+var c1 = JSON.parse(s);
+if (migrateCats(c1)) s = JSON.stringify(c1);
+store.set(KEY_CAT, s);
+} catch (e) {}
 });
 if (!store.get(KEY_BUDGET)) window.idbGet(myPrefix + ':' + KEY_BUDGET).then(function (v) {
 if (window.activePrefix() !== myPrefix || !v) return;
@@ -57460,6 +57305,7 @@ return list;
 var recs = migrateRecs(loadRecs());
 if (migrateRecs.changed) saveRecs(recs);
 var cats = loadCats();
+if (migrateCats(cats)) saveCats(cats);
 var budget = loadBudget();
 var now = new Date();
 var viewMode = 'month';
@@ -70400,6 +70246,14 @@ _vv.addEventListener('resize', syncIosKb);
 _vv.addEventListener('scroll', onIosVvEvent);
 _vv.addEventListener('resize', onIosVvEvent);
 }
+window.addEventListener('resize', onIosVvEvent);
+window.addEventListener('orientationchange', onIosVvEvent);
+window.addEventListener('pageshow', onIosVvEvent);
+document.addEventListener('visibilitychange', onIosVvEvent);
+setInterval(function () {
+if (document.visibilityState !== 'visible') return;
+onIosVvEvent();
+}, 1000);
 try { syncVvFit(); syncSafeBottom(); } catch (e) {}
 window.__mochiIosKb = function () {
 return {

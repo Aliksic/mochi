@@ -293,15 +293,12 @@
   }
   function applyProfile() {
     const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-    // v3.9.x：聊天昵称未设置时显示「跟随桌面（xx）」，明确当前聊天页使用的昵称来源
-    const follow = (chatKey, deskKey, fb) => {
-      let d = null; try { d = store.get(deskKey); } catch (e) {}
-      return d ? '跟随桌面（' + d + '）' : fb;
-    };
+    // v3.26.x：聊天昵称与桌面解耦（用户要求不再跟随桌面）——未设置时显示默认占位提示，
+    // 不再显示「跟随桌面（xx）」，也不回退读桌面 lbl-partner/lbl-user
     const lp = store.get('cs-lbl-partner');
-    set('cs-lbl-partner-val', lp || follow('cs-lbl-partner', 'lbl-partner', ''));
+    set('cs-lbl-partner-val', lp || '未设置（默认 TA）');
     const lu = store.get('cs-lbl-user');
-    set('cs-lbl-user-val', lu || follow('cs-lbl-user', 'lbl-user', ''));
+    set('cs-lbl-user-val', lu || '未设置（默认 我）');
     const ap = store.get('cs-avatar-partner');
     set('cs-avatar-partner-val', ap ? '已设置' : '');
     const ar = document.getElementById('cs-avatar-partner-remove');
@@ -320,9 +317,10 @@
       window.openModal('联系人昵称', cur, (v) => {
         const val = (v || '').trim();
         // v3.25.x：有效昵称变化时触发系统消息昵称清扫（chat.js），历史系统消息称呼跟随
-        const oldEff = store.get('cs-lbl-partner') || store.get('lbl-partner') || 'TA';
+        // v3.26.x：与桌面解耦后有效昵称基线只看 cs-lbl-partner（默认 TA），不再掺入桌面键
+        const oldEff = store.get('cs-lbl-partner') || 'TA';
         if (val) store.set('cs-lbl-partner', val); else store.remove('cs-lbl-partner');
-        if (oldEff !== (val || store.get('lbl-partner') || 'TA')) {
+        if (oldEff !== (val || 'TA')) {
           try { if (window.chatSysNickChanged) window.chatSysNickChanged(oldEff); } catch (e) {}
         }
         applyProfile();

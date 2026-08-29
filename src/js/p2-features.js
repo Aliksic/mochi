@@ -2138,7 +2138,6 @@ if (ckRefresh) {
   const eatApp = makeApp('eat', '吃什么', '<svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2.5v7c0 1.1.9 2 2 2h4c1.1 0 2-.9 2-2v-7"/><path d="M5.7 2.5v8.3"/><path d="M8.3 2.5v8.3"/><path d="M7 11.5v10"/><path d="M21 15V2.5a5 5 0 00-5 5v5.5c0 1.1.9 2 2 2h3z"/><path d="M21 15v6.5"/></svg>');
   const piggyApp = makeApp('piggy', '存钱罐', '<svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7h6"/><path d="M5 13.5C5 10.4 8.1 8 12 8s7 2.4 7 5.5c0 1.6-.9 3.1-2.3 4.1V20h-2.4l-.4-1.2a9.3 9.3 0 01-3.8 0L9.7 20H7.3v-2.4C5.9 16.6 5 15.1 5 13.5z"/><circle cx="9.3" cy="12.7" r=".55" fill="#111111" stroke="none"/><path d="M18.8 12.3l1.7-.9"/></svg>');
   const pomoApp = makeApp('pomo', '番茄钟', '<svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13.8" r="7.2"/><path d="M12 6.6V4.6"/><path d="M12 6.6C10.6 5.4 9 5.3 7.8 6.1"/><path d="M12 6.6c1.4-1.2 3-1.3 4.2-.5"/></svg>');
-  const wishApp = makeApp('wishlist', '心愿单', '<svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-7-4.3-9.2-8.3C1.4 9 3 6 6 6c1.9 0 3.1.8 3.9 2.1C10.7 6.8 11.9 6 13.8 6 16.8 6 18.4 9 17.2 11.7 19 15.7 12 20 12 20z"/><path d="M9.6 12.4l1.9 1.9 3.2-3.3"/></svg>');
   // v3.13.x：默认注入改两页分布——第二排「花园 此间 同频 伸手」（花园/此间为模板静态图标，
   // 同频/伸手进第二页 p2-grid 追加其后；喝水移至第三页 p3-grid，排在本页静态图标之后），
   // 吃什么/存钱罐/番茄钟同样留第三页 p3-grid；
@@ -2148,7 +2147,7 @@ if (ckRefresh) {
   let layArr = null;
   try { if (st0) layArr = JSON.parse(st0.get('desk-layout') || 'null'); } catch (e) {}
   const hasLayout = Array.isArray(layArr);
-  const alreadyInLay = hasLayout && layArr.some(p => (p || []).some(w => w === 'app-tongpin' || w === 'app-shenshou' || w === 'app-water' || w === 'app-eat' || w === 'app-pomo' || w === 'app-piggy' || w === 'app-wishlist'));
+  const alreadyInLay = hasLayout && layArr.some(p => (p || []).some(w => w === 'app-tongpin' || w === 'app-shenshou' || w === 'app-water' || w === 'app-eat' || w === 'app-pomo' || w === 'app-piggy'));
   let placed = false;
   if (hasLayout && !alreadyInLay && pagesBox) {
     const curCnt = pagesBox.querySelectorAll('.page-slide').length;
@@ -2159,12 +2158,12 @@ if (ckRefresh) {
       const grid = document.createElement('div');
       grid.className = 'app-grid';
       grid.setAttribute('data-app', 'tp-page');
-      grid.appendChild(tpApp); grid.appendChild(ssApp); grid.appendChild(waterApp); grid.appendChild(eatApp); grid.appendChild(pomoApp); grid.appendChild(piggyApp); grid.appendChild(wishApp);
+      grid.appendChild(tpApp); grid.appendChild(ssApp); grid.appendChild(waterApp); grid.appendChild(eatApp); grid.appendChild(pomoApp); grid.appendChild(piggyApp);
       slide.appendChild(grid);
       pagesBox.appendChild(slide);
       try {
         st0.set('desk-page-count', String(curCnt + 1));
-        layArr.push(['app-tongpin', 'app-shenshou', 'app-water', 'app-eat', 'app-pomo', 'app-piggy', 'app-wishlist']);
+        layArr.push(['app-tongpin', 'app-shenshou', 'app-water', 'app-eat', 'app-pomo', 'app-piggy']);
         st0.set('desk-layout', JSON.stringify(layArr));
       } catch (e) {}
       try { if (window.deskRebuild) window.deskRebuild(); } catch (e) {}
@@ -2178,8 +2177,8 @@ if (ckRefresh) {
       // 第二排顺序：花园 此间 同频 伸手（花园/此间为模板静态图标，同频/伸手追加其后）
       p2Grid.appendChild(tpApp); p2Grid.appendChild(ssApp);
     } else if (p3g) { p3g.appendChild(tpApp); p3g.appendChild(ssApp); }
-    if (p3g) { p3g.appendChild(waterApp); p3g.appendChild(eatApp); p3g.appendChild(piggyApp); p3g.appendChild(pomoApp); p3g.appendChild(wishApp); }
-    else if (p2Grid) { p2Grid.appendChild(waterApp); p2Grid.appendChild(eatApp); p2Grid.appendChild(piggyApp); p2Grid.appendChild(pomoApp); p2Grid.appendChild(wishApp); }
+    if (p3g) { p3g.appendChild(waterApp); p3g.appendChild(eatApp); p3g.appendChild(piggyApp); p3g.appendChild(pomoApp); }
+    else if (p2Grid) { p2Grid.appendChild(waterApp); p2Grid.appendChild(eatApp); p2Grid.appendChild(piggyApp); p2Grid.appendChild(pomoApp); }
     // 重应用布局：personalize.js 的 applyDeskLayout 在本文件之前执行过一次，那时图标未注入被跳过；
     // 此处图标已在 DOM，重应用可把图标按 desk-layout 移到用户装修过的目标页（alreadyInLay 时生效）。
     try { if (window.applyDeskLayout) window.applyDeskLayout(); } catch (e) {}
@@ -3209,7 +3208,6 @@ if (ckRefresh) {
       '<div class="piggy-msg glass" id="piggy-msg">小猪替你保管着呢</div>' +
       '<div class="piggy-share glass" id="piggy-share" hidden><div class="piggy-reply-q" id="piggy-share-title">谁来监督这个心愿？（可多选）</div><div class="piggy-share-chips" id="piggy-share-chips"></div><div class="piggy-reply-row"><button class="piggy-reply-send" id="piggy-share-ok">保存心愿</button><button class="piggy-reply-skip" id="piggy-share-cancel">取消</button></div></div>' +
       '<div class="piggy-reply glass" id="piggy-reply" hidden><div class="piggy-reply-q" id="piggy-reply-q"></div><div class="piggy-reply-row"><input class="piggy-reply-in" id="piggy-reply-in" type="text" maxlength="40" placeholder="回一句给TA（可不填）"><button class="piggy-reply-send" id="piggy-reply-send">发送</button><button class="piggy-reply-skip" id="piggy-reply-skip">不用啦</button></div></div>' +
-      '<div class="piggy-reply glass" id="piggy-wbind" hidden><div class="piggy-reply-q" id="piggy-wbind-q">绑到哪个心愿？（可多选制·选一个即绑定）</div><div class="piggy-share-chips" id="piggy-wbind-chips"></div><div class="piggy-reply-row"><button class="piggy-reply-send" id="piggy-wbind-ok">保存绑定</button><button class="piggy-reply-skip" id="piggy-wbind-cancel">取消</button></div></div>' +
       '<div class="piggy-goals glass" id="piggy-goals"></div>' +
       '<div class="piggy-hist glass" id="piggy-hist"></div>' +
       '<div class="piggy-manage"><button class="piggy-set-goal" id="piggy-set-goal">＋ 新小心愿</button><button class="piggy-add-msg" id="piggy-add-msg">+ TA的碎碎念</button></div>' +
@@ -3239,6 +3237,8 @@ if (ckRefresh) {
         const gn = s.get('piggy-goal-name'); const ga = parseFloat(s.get('piggy-goal-amt')) || 0;
         a = (gn && ga > 0) ? [{ n: gn, a: ga }] : [];
       } catch (e) { a = []; }
+      // 迁移后立即落盘，避免旧单目标永远只活在虚拟读取里（备份/导出时缺失）
+      try { s.set('piggy-goals', JSON.stringify(a)); } catch (e) {}
     }
     return a.filter(function (g) { return g && g.n && (+g.a) > 0; }).map(function (g) {
       return {
@@ -3315,11 +3315,10 @@ if (ckRefresh) {
         const gg = ent.g;
         const p = Math.min(100, Math.max(0, Math.round(bal / gg.a * 100)));
         const byTxt = (!gg.by || !gg.by.length) ? '监督：所有桌面' : '监督：' + piggyEsc(gg.by.map(piggyContactName).join('、'));
-        const lw = wishList().find(function (x) { return x.goal === ent.i; });
         h += '<div class="pg-row' + (ent.i === act.i ? ' cur' : '') + '" data-pick="' + ent.i + '">' +
-          '<span class="pg-name' + (gg.done ? ' done' : '') + '"><span class="pg-nm">' + piggyEsc(gg.n) + (gg.done ? ' ✓' : '') + '</span><span class="pg-by">' + byTxt + (lw ? '<i class="pgwg">· 心愿：' + piggyEsc(lw.n) + '</i>' : '') + '</span></span>' +
+          '<span class="pg-name' + (gg.done ? ' done' : '') + '"><span class="pg-nm">' + piggyEsc(gg.n) + (gg.done ? ' ✓' : '') + '</span><span class="pg-by">' + byTxt + '</span></span>' +
+          '<span class="pg-amt">¥' + piggyFmt(gg.a) + '</span>' +
           '<span class="pg-bar"><i style="width:' + p + '%"></i></span><span class="pg-pct">' + p + '%</span>' +
-          '<button class="pg-wish' + (lw ? ' on' : '') + '" data-wbind="' + ent.i + '">' + (lw ? '心愿' : '+心愿') + '</button>' +
           '<button class="pg-del" data-del="' + ent.i + '">✕</button></div>';
       });
       glEl.innerHTML = h;
@@ -3338,14 +3337,14 @@ if (ckRefresh) {
           const d = new Date((x && x.t) || Date.now());
           const key = d.getFullYear() + '-' + d.getMonth();
           if (key !== curKey) {
-            if (curKey !== '') parts.push('<div class="pr-sub">本月小结 · ' + (sum >= 0 ? '+' : '\u2212') + '¥' + piggyFmt(Math.abs(sum)) + '</div>');
+            if (curKey !== '') parts.push('<div class="pr-sub">小结 · ' + (sum >= 0 ? '+' : '\u2212') + '¥' + piggyFmt(Math.abs(sum)) + '</div>');
             curKey = key; sum = 0;
             parts.push('<div class="pr-month">' + d.getFullYear() + ' 年 ' + (d.getMonth() + 1) + ' 月</div>');
           }
           sum += ((x && x.type === 'out' ? -1 : 1) * ((x && x.amt) || 0));
           parts.push(piggyRowHtml(x));
         });
-        parts.push('<div class="pr-sub">本月小结 · ' + (sum >= 0 ? '+' : '\u2212') + '¥' + piggyFmt(Math.abs(sum)) + '</div>');
+        parts.push('<div class="pr-sub">小结 · ' + (sum >= 0 ? '+' : '\u2212') + '¥' + piggyFmt(Math.abs(sum)) + '</div>');
         body = parts.join('');
       }
       hist.innerHTML = '<div class="piggy-hist-top"><span class="piggy-hist-title">存钱记录</span>' +
@@ -3366,10 +3365,6 @@ if (ckRefresh) {
           [25, 50, 75].forEach(function (m) { if (gs[act.i].ms.indexOf(m) < 0) gs[act.i].ms.push(m); });
           gs[act.i].done = true;
           piggySaveGoals(gs);
-          // 联动：绑到此目标的未完成心愿自动达成
-          const wl = wishList(); let wc = false;
-          wl.forEach(function (w) { if (w.goal === act.i && !w.done) { w.done = true; wc = true; } });
-          if (wc) wishSave(wl);
           vibrate([60, 40, 60]);
           piggyShowMsg(piggyPick(DEF_PIGGY_FULL));
           let nxt = -1;
@@ -3547,7 +3542,6 @@ if (ckRefresh) {
     const t = e.target;
     if (!t) return;
     if (t.id === 'piggy-goal-add') { piggyOpenAddGoal(); return; }
-    if (t.classList && t.classList.contains('pg-wish')) { openPiggyWbind(parseInt(t.getAttribute('data-wbind'), 10)); return; }
     if (t.classList && t.classList.contains('pg-del')) {
       const idx = parseInt(t.getAttribute('data-del'), 10);
       const gs = piggyGoals();
@@ -3557,8 +3551,6 @@ if (ckRefresh) {
         const gs2 = piggyGoals(); gs2.splice(idx, 1);
         let cur = piggyCur(); if (cur >= gs2.length) cur = 0;
         piggySaveGoals(gs2); piggySetCur(cur);
-        // 删除目标后，绑定到它的心愿解除绑定
-        const wl2 = wishList(); wl2.forEach(function (w) { if (w.goal === idx) w.goal = null; }); wishSave(wl2);
         piggyRender(); toast('已删除');
       }, { noInput: true });
       return;
@@ -3589,165 +3581,6 @@ if (ckRefresh) {
   document.getElementById('piggy-reply-skip').addEventListener('click', piggyCloseCare);
   document.getElementById('piggy-reply-in').addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) { e.preventDefault(); document.getElementById('piggy-reply-send').click(); }
-  });
-
-  // 心愿单（独立功能 · 与存钱罐互绑）
-  // 独立桌面入口：单独列心愿；每个心愿可绑定一个存钱罐目标(piggy-goals 下标)。
-  // 心愿进度随存钱余额联动，存钱目标达成时绑定心愿自动达成；删除目标时解除对应绑定。
-  // 文案里「桌面」＝当前联系人。心愿单按桌面独立（动态绑定 __activeCid）；
-  function wishStore() { try { return (window.activeStore && window.activeStore()) || window.xyStore('xy-home-v2'); } catch (e) { return null; } }
-  function wishList() {
-    const s = wishStore(); let a = []; try { a = JSON.parse(s.get('wishlist') || '[]'); } catch (e) {}
-    if (!Array.isArray(a)) a = [];
-    return a.map(function (w, i) {
-      return {
-        id: (w && w.id) ? String(w.id) : ('w' + i),
-        n: String((w && w.n) || '').trim(),
-        a: Math.round((+((w && w.a) || 0)) * 100) / 100,
-        done: !!(w && w.done),
-        goal: (w && w.goal != null) ? parseInt(w.goal, 10) : null,
-        _i: i
-      };
-    });
-  }
-  function wishSave(a) {
-    const s = wishStore(); if (!s) return;
-    const out = a.map(function (w) { return { id: w.id, n: w.n, a: w.a, done: !!w.done, goal: (w.goal == null ? null : w.goal) }; });
-    try { s.set('wishlist', JSON.stringify(out)); } catch (e) {}
-  }
-  function wishNewId() { return 'w' + Date.now() + '-' + Math.floor(Math.random() * 1e4); }
-  function wishGoalByIdx(i) { const gs = piggyGoals(); return (i >= 0 && i < gs.length) ? gs[i] : null; }
-  function wishEsc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
-  function wishFmt(n) { try { return n.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); } catch (e) { return (Math.round(n * 100) / 100).toFixed(2); } }
-  function wishRender() {
-    const el = document.getElementById('wish-list'); if (!el) return;
-    const list = wishList(); const bal = piggyBal();
-    let h = '';
-    if (!list.length) h += '<div class="wish-empty">还没有心愿，点下方「＋ 新增心愿」<br>然后可「＋ 绑定存钱目标」让攒钱进度同步</div>';
-    else list.forEach(function (w) {
-      const g = wishGoalByIdx(w.goal);
-      let bind;
-      if (g) {
-        const p = Math.min(100, Math.max(0, Math.round(bal / g.a * 100)));
-        bind = '<span class="wl-link">存钱目标：' + wishEsc(g.n) + (w.done ? ' · 已达成' : ' · ' + p + '%') + '</span>';
-      } else {
-        bind = '<button class="wl-bind" data-bind="' + w._i + '">＋ 绑定存钱目标</button>';
-      }
-      h += '<div class="wl-row' + (w.done ? ' done' : '') + '">' +
-        '<span class="wl-name">' + wishEsc(w.n) + (w.done ? ' ✓' : '') + '</span>' +
-        (w.a > 0 ? '<span class="wl-amt">目标 ¥' + wishFmt(w.a) + '</span>' : '') +
-        '<span class="wl-state">' + (w.done ? '已达成' : '攒钱中') + '</span>' +
-        bind +
-        '<button class="wl-done" data-done="' + w._i + '">' + (w.done ? '取消达成' : '达成') + '</button>' +
-        '<button class="wl-del" data-del="' + w._i + '">✕</button>' +
-        '</div>';
-    });
-    el.innerHTML = h;
-  }
-  const wishPage = document.createElement('div');
-  wishPage.className = 'page'; wishPage.id = 'page-wishlist'; wishPage.hidden = true;
-  wishPage.innerHTML =
-    '<div class="chat-head"><span class="ch-back" id="wish-back"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><span class="ch-name">心愿单</span></div>' +
-    '<div class="wish-body">' +
-      '<div class="wish-hint glass">把想实现的心愿记下来，再绑到「存钱罐」的存钱目标上，攒钱进度会同步到这里。<br>目标攒满时，绑定的心愿会自动达成。</div>' +
-      '<div class="wish-list glass" id="wish-list"></div>' +
-      '<div class="wish-manage"><button class="wish-add" id="wish-add">＋ 新增心愿</button></div>' +
-      '<div class="piggy-reply glass" id="wish-bind" hidden><div class="piggy-reply-q" id="wish-bind-q">绑到哪个存钱目标？（选一个）</div><div class="piggy-share-chips" id="wish-bind-chips"></div><div class="piggy-reply-row"><button class="piggy-reply-send" id="wish-bind-ok">保存绑定</button><button class="piggy-reply-skip" id="wish-bind-cancel">取消</button></div></div>' +
-    '</div>';
-  host.appendChild(wishPage);
-  if (wishApp) wishApp.addEventListener('click', () => { if (editingNow()) return; openPage(wishPage); wishRender(); });
-  document.getElementById('wish-back').addEventListener('click', () => backHome(wishPage));
-  document.getElementById('wish-add').addEventListener('click', () => {
-    if (editingNow() || !window.openModal) return;
-    let name = '', amt = 0, phase = 1;
-    const ctl = window.openModal('心愿（如：一起去看海）', '', (v) => {
-      if (phase === 1) {
-        name = String(v || '').trim(); if (!name) { toast('先写个心愿吧'); return; }
-        phase = 2; ctl.stay(); ctl.title('目标金额（元，可不填）'); ctl.maxLen(9); ctl.ph('想攒多少，可不填'); ctl.text(''); ctl.okText('保存心愿');
-        return;
-      }
-      amt = piggyAmt(v);
-      const a = wishList(); a.push({ id: wishNewId(), n: name, a: amt || 0, done: false, goal: null }); wishSave(a);
-      wishRender(); toast('已添加心愿');
-    }, { maxlength: 16, placeholder: '心愿名' });
-  });
-  // 心愿行：达成 / 删除 / 绑定存钱目标
-  document.getElementById('wish-list').addEventListener('click', (e) => {
-    const t = e.target; if (!t) return;
-    if (t.classList.contains('wl-done')) {
-      const a = wishList(); const i = parseInt(t.getAttribute('data-done'), 10);
-      if (a[i]) { a[i].done = !a[i].done; wishSave(a); wishRender(); }
-      return;
-    }
-    if (t.classList.contains('wl-del')) {
-      const i = parseInt(t.getAttribute('data-del'), 10);
-      const nm = '' + (wishList()[i] || {}).n;
-      if (!window.openModal) { const a2 = wishList(); a2.splice(i, 1); wishSave(a2); wishRender(); return; }
-      window.openModal('删除心愿「' + nm + '」？', '', () => { const a2 = wishList(); a2.splice(i, 1); wishSave(a2); wishRender(); toast('已删除'); }, { noInput: true });
-      return;
-    }
-    if (t.classList.contains('wl-bind')) { openWishBind(parseInt(t.getAttribute('data-bind'), 10)); }
-  });
-  // 心愿 → 绑定存钱目标
-  let wishBindWish = -1;
-  function openWishBind(wishIdx) {
-    wishBindWish = wishIdx;
-    const chips = document.getElementById('wish-bind-chips'); const box = document.getElementById('wish-bind');
-    if (!chips || !box) return;
-    const gs = piggyGoals(); const vis = []; let cur = null;
-    try { cur = wishList()[wishIdx].goal; } catch (e) {}
-    gs.forEach(function (g, i) { if (piggyGoalVisible(g)) vis.push({ g: g, i: i }); });
-    let h = '';
-    if (!vis.length) h = '<div class="wish-empty">存钱罐还没有存钱目标，先去存钱罐建一个</div>';
-    else vis.forEach(function (ent) { h += '<span class="pg-chip' + (ent.i === cur ? ' on' : '') + '" data-gi="' + ent.i + '">' + wishEsc(ent.g.n) + '</span>'; });
-    chips.innerHTML = h; box.hidden = false;
-  }
-  document.getElementById('wish-bind').addEventListener('click', (e) => {
-    const t = e.target; if (!t) return;
-    if (t.classList.contains('pg-chip')) {
-      t.classList.toggle('on');
-      document.querySelectorAll('#wish-bind-chips .pg-chip').forEach(c => { if (c !== t) c.classList.remove('on'); });
-      return;
-    }
-    if (t.id === 'wish-bind-ok') {
-      const sel = document.querySelector('#wish-bind-chips .pg-chip.on'); const box = document.getElementById('wish-bind');
-      if (!sel) { toast('先选一个存钱目标'); return; }
-      const gi = parseInt(sel.getAttribute('data-gi'), 10);
-      const a = wishList();
-      a.forEach(function (w) { if (w._i === wishBindWish) w.goal = gi; else if (w.goal === gi) w.goal = null; });
-      wishSave(a); box.hidden = true; wishBindWish = -1; wishRender(); toast('已绑定');
-      return;
-    }
-    if (t.id === 'wish-bind-cancel') { const b = document.getElementById('wish-bind'); if (b) b.hidden = true; wishBindWish = -1; }
-  });
-  // 存钱罐 → 绑定心愿
-  let piggyWbindGoal = -1;
-  function openPiggyWbind(goalIdx) {
-    piggyWbindGoal = goalIdx;
-    const chips = document.getElementById('piggy-wbind-chips'); const box = document.getElementById('piggy-wbind');
-    if (!chips || !box) return;
-    const list = wishList(); let h = '';
-    if (!list.length) h = '<div class="wish-empty">心愿单还是空的，先去心愿单添加</div>';
-    else list.forEach(function (w) { h += '<span class="pg-chip' + (w.goal === goalIdx ? ' on' : '') + '" data-wi="' + w._i + '">' + wishEsc(w.n) + '</span>'; });
-    chips.innerHTML = h; box.hidden = false;
-  }
-  document.getElementById('piggy-wbind').addEventListener('click', (e) => {
-    const t = e.target; if (!t) return;
-    if (t.classList.contains('pg-chip')) {
-      t.classList.toggle('on');
-      document.querySelectorAll('#piggy-wbind-chips .pg-chip').forEach(c => { if (c !== t) c.classList.remove('on'); });
-      return;
-    }
-    if (t.id === 'piggy-wbind-ok') {
-      const sel = document.querySelector('#piggy-wbind-chips .pg-chip.on'); const box = document.getElementById('piggy-wbind');
-      if (!sel) { toast('先选一个心愿'); return; }
-      const wi = parseInt(sel.getAttribute('data-wi'), 10);
-      const a = wishList();
-      a.forEach(function (w) { if (w._i === wi) w.goal = piggyWbindGoal; else if (w.goal === piggyWbindGoal) w.goal = null; });
-      wishSave(a); box.hidden = true; piggyWbindGoal = -1; piggyRender(); toast('已绑定');
-      return;
-    }
-    if (t.id === 'piggy-wbind-cancel') { const b = document.getElementById('piggy-wbind'); if (b) b.hidden = true; piggyWbindGoal = -1; }
   });
 
   // ---- 番茄钟 · 陪伴模式 ----

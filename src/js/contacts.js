@@ -85,7 +85,22 @@
     // 绝不能被 migrateLegacy 当旧顶层业务键迁进 default 桌面（否则其他桌面读不到=「消失」）。
     // dec-global-migrated / gdec-global-migrated 为存量各桌面数据合并进根键的一次性幂等标记。
     'decision-history', 'decision-settings', 'dec-global-migrated',
-    'gdec-members', 'gdec-history', 'gdec-settings', 'gdec-global-migrated'];
+    'gdec-members', 'gdec-history', 'gdec-settings', 'gdec-global-migrated',
+    // v3.26.x：番茄钟数据全局共享（p2-features.js pomoStore 走根命名空间）——
+    // 键 xy-home-v2:pomo-*（时长/今日·累计/夸夸字卡/发到聊天/铃声/陪伴会话/陪伴聊天记录/
+    // 陪伴用字卡开关）绝不随联系人隔离。此前漏排除，migrateLegacy 每次刷新把它们当旧
+    // 顶层业务键迁进 default 桌面并删 LS 根键 → 自定义时长/今日·累计刷新后回默认值。
+    'pomo-cfg', 'pomo-today', 'pomo-total', 'pomo-msgs', 'pomo-send-chat', 'pomo-bell',
+    'pomo-companion', 'pomo-companion-log', 'pomo-cmp-usecards',
+    // v3.26.x：备忘录数据全局共享（memo-app.js 存根命名空间，所有桌面互通一份）——
+    // memo-app-items/memo-app-send/memo-app-global-migrated 绝不随联系人隔离；
+    // memo-app.js 已内置误迁自愈，这里补排除让 migrateLegacy 彻底不再动它们。
+    'memo-app-items', 'memo-app-send', 'memo-app-global-migrated',
+    // v3.26.x：桌面美化方案（personalize.js beauty-schemes）、聊天美化方案（chat-settings.js
+    // chat-beauty-schemes）、隐藏TA表情包开关（chat-settings.js hide-ta-sticker，聊天/朋友圈
+    // 共用）都是全局根键。此前漏排除，被 migrateLegacy 迁进 default 桌面并删 LS 根键 →
+    // IDB 不可用场景下方案列表/开关刷新后消失。
+    'beauty-schemes', 'chat-beauty-schemes', 'hide-ta-sticker'];
   function isExcluded(k) {
     const r = k.slice(G.length + 1);
     if (EXCLUDE.indexOf(r) >= 0) return true;
@@ -356,6 +371,20 @@
         }
       });
     } catch (e) {}
+    // v3.26.x：修复被旧版 migrateLegacy 误迁移的全局键——pomo-* / beauty-schemes /
+    // chat-beauty-schemes / hide-ta-sticker 此前不在 EXCLUDE，每次刷新被当旧顶层业务键
+    // 迁进 default 桌面并删 LS 根键。检测 default 副本：根键空则写回根，并一律删 default
+    // 副本（幂等：根键已有值不覆盖，只删副本）。memo-app-* 不在此列——memo-app.js 自带
+    // 误迁自愈与按 id 合并，避免两处同写冲突。
+    ['pomo-cfg', 'pomo-today', 'pomo-total', 'pomo-msgs', 'pomo-send-chat', 'pomo-bell',
+      'pomo-companion', 'pomo-companion-log', 'pomo-cmp-usecards',
+      'beauty-schemes', 'chat-beauty-schemes', 'hide-ta-sticker'].forEach(function (k) {
+      const v = def.get(k);
+      if (v !== null && v !== undefined && v !== '') {
+        try { if (root.get(k) === null || root.get(k) === undefined) root.set(k, v); } catch (e) {}
+        try { def.remove(k); } catch (e) {}
+      }
+    });
     const old = [];
     // v3.6.x：顺带清理存量双重前缀垃圾键（default:default:*）——旧版迁移误把命名空间键
     // 再迁一层产生，读取不命中但占存储，安全删除
@@ -586,7 +615,7 @@
       '<li>字卡库专属字卡 / 专属回复 / 收藏</li>' +
       '<li>桌面布局与美化（壁纸 / 气泡 / 字号等）</li>' +
       '<li>称呼性别（TA / 他 / 她）</li>' +
-      '<li>日历、信箱、备忘录、心愿单</li>' +
+      '<li>日历、信箱、备忘录</li>' +
       '<li>占卜、记录、收藏、统计、记账</li>' +
       '</ul>' +
       '<div style="font-size:12px;color:var(--muted,#999);margin-top:12px;line-height:1.7">「共用」指切换桌面后数据仍延续；「独立」指各桌面各留一份、互不影响。</div>';

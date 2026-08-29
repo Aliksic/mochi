@@ -205,7 +205,9 @@
     miniPos = null;
   }
 
-  function partnerName() { return store.get('lbl-partner') || (window.taWord ? window.taWord() : 'TA'); }
+  // v3.26.x：通话昵称与聊天域解耦——优先读聊天专用键 cs-lbl-partner（聊天设置里设的联系人
+  // 昵称），未设置时默认 TA，不再回退桌面 lbl-partner（用户要求：聊天昵称不跟随桌面）
+  function partnerName() { return store.get('cs-lbl-partner') || (window.taWord ? window.taWord() : 'TA'); }
   // v3.12.x：通话头像跟随聊天域——优先读聊天专用键 cs-avatar-partner（头像互动半框/换头像写的就是它），
   // 未设置时回退桌面键 avatar-partner；此前只读桌面键，导致通话面板不跟随换头像
   function partnerAv() { return store.get('cs-avatar-partner') || store.get('avatar-partner') || ''; }
@@ -252,7 +254,8 @@
     let name = '';
     try {
       const s = (window.storeFor && window.storeFor(currentCall.cid)) || store;
-      name = s.get('lbl-partner') || '';
+      // v3.26.x：与 partnerName 同步解耦——先读聊天专用键，未设默认 TA，不再读桌面键
+      name = s.get('cs-lbl-partner') || (window.taWord ? window.taWord() : 'TA');
     } catch (e) { name = currentCall.name || partnerName(); }
     if (name === shownName) return;
     shownName = name;

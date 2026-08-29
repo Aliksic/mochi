@@ -969,6 +969,23 @@
         _vv.addEventListener('scroll', onIosVvEvent);
         _vv.addEventListener('resize', onIosVvEvent);
       }
+      // v3.26.x：事件盲区兜底（iPhone 17 / Edge iOS 报修补强）——自愈原本只挂在
+      //  vv 的 resize/scroll 上，但 Edge iOS 底部工具条随页面上下滚动收起/展开
+      //  会改变真实可视高度，个别时机不派发 vv 事件（iOS 内核事件漏触发是惯性，
+      //  本文件多处注释都在兜它）→ --mochi-ios-h 停在旧值：输入栏下方空一大块、
+      //  工具条收起后页面高度不跟上；键盘期残留平移也无人归位。
+      //  补 window 级触发 + 失焦态低频轮询，全部并进 scheduleHeal（rAF 合并、
+      //  静止态命中「无需处理」分支即返回，每秒一次布局读可忽略）。
+      //  后台标签不跑（visibilityState 守卫），回前台 pageshow/visibilitychange
+      //  会立刻补一次，覆盖切后台回来视口已变的场景。
+      window.addEventListener('resize', onIosVvEvent);
+      window.addEventListener('orientationchange', onIosVvEvent);
+      window.addEventListener('pageshow', onIosVvEvent);
+      document.addEventListener('visibilitychange', onIosVvEvent);
+      setInterval(function () {
+        if (document.visibilityState !== 'visible') return;
+        onIosVvEvent();
+      }, 1000);
       try { syncVvFit(); syncSafeBottom(); } catch (e) {}
       // v3.26.x：只读现场探针（device.js window.mochiVvDiag() 合并进诊断文本）。
       // 「页面突然上移点不动」的元凶是内部状态残留（收缩 + 文档锁 + 基线），
