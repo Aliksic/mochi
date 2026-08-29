@@ -2,7 +2,7 @@
 // 用完即删。用法：node tools/diag-feed-fav.mjs
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:http';
-import { readFileSync, statSync } from 'node:fs';
+import { readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join, normalize, extname, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -121,7 +121,7 @@ console.log('hitTest =>', hitRes.val);
 const actRect = await ev("(function(){var a=document.querySelector('.feed-actions');var r=a.getBoundingClientRect();return JSON.stringify({x:Math.round(r.left),y:Math.round(r.top),w:Math.round(r.width),h:Math.round(r.height)});})()");
 const act = JSON.parse(actRect.val || '{}');
 await cdp('Page.captureScreenshot', { format: 'png', clip: { x: act.x, y: act.y, width: act.w, height: act.h, scale: 2 } }).then((r) => {
-  require('node:fs').writeFileSync(join(root, 'tools', 'feed-actions-before.png'), Buffer.from(r.data, 'base64'));
+  writeFileSync(join(root, 'tools', 'feed-actions-before.png'), Buffer.from(r.data, 'base64'));
 });
 console.log('screenshot saved', actRect.val);
 

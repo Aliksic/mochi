@@ -95,6 +95,9 @@ const snap = `(() => {
 const clickBtn = (id) => evalJs(`(function(){ var b=document.getElementById('${id}'); if(!b) return 'no-btn'; b.click(); return 'ok'; })()`);
 const lsGet = (k) => evalJs(`localStorage.getItem('${k}')`);
 const lsSet = (k, v) => evalJs(`localStorage.setItem('${k}', '${v}')`);
+// v3.26.x：布局/配置等「启动时会被 IDB 回填覆盖」的键，必须走 xyStore（LS+IDB+内存三层一致写），
+// 直接 setItem 只写 LS，重载后 idbRestore 会用 IDB 旧值覆盖 → C2 场景下 C1 的旧布局残留导致误判。
+const stSet = (prefix, k, v) => evalJs(`(function(){ var s=window.xyStore('${prefix}'); s.set('${k}', '${v}'); return 'ok'; })()`);
 
 await cdpConnect();
 await cdp('Page.enable'); await cdp('Runtime.enable');
@@ -175,16 +178,16 @@ check('B4 pomo-today/pomo-total 已持久化', todayRaw && todayRaw.indexOf('"co
 // 注：装修场景下 market/giftbox 等模块也会各自建页（既有 v3.10 语义），
 //     这里只断言番茄钟自身的放置契约，不断言具体页数。
 // C1：布局已含同组图标（app-water）→ 不新建组页，番茄钟进第三页默认组
-await lsSet('xy-home-v2:default:desk-page-count', '3');
-await lsSet('xy-home-v2:default:desk-layout', '[["deco"],["apps"],["app-water","app-eat"]]');
+await stSet('xy-home-v2:default', 'desk-page-count', '3');
+await stSet('xy-home-v2:default', 'desk-layout', '[["deco"],["apps"],["app-water","app-eat"]]');
 await gotoApp();
 s = await evalJs(snap);
 const tpPageCnt1 = await evalJs(`document.querySelectorAll('.app-grid[data-app="tp-page"]').length`);
 check('C1 已装修且布局含同组图标 → 图标放第三页、不新建组页', s.iconInP3 && s.iconSlideIdx === 2 && tpPageCnt1 === 0, 'slide=' + s.iconSlideIdx + ' tpPages=' + tpPageCnt1);
 
 // C2：布局完全不含五个图标 → 新建一页放整组（含番茄钟）
-await lsSet('xy-home-v2:default:desk-page-count', '3');
-await lsSet('xy-home-v2:default:desk-layout', '[["deco"],["apps"],["music"]]');
+await stSet('xy-home-v2:default', 'desk-page-count', '3');
+await stSet('xy-home-v2:default', 'desk-layout', '[["deco"],["apps"],["music"]]');
 await gotoApp();
 const c2 = await evalJs(`(() => {
   var g = document.querySelector('.app-grid[data-app="tp-page"]');
@@ -198,7 +201,7 @@ const need5 = ['app-tongpin', 'app-shenshou', 'app-water', 'app-eat', 'app-pomo'
 check('C2 布局不含本组 → 新建一页放整组（含番茄钟）', !!c2 && c2.ok && need5.every(w => c2.ids.indexOf(w) >= 0), JSON.stringify(c2));
 
 // ---- D 组：自定义时长 ----
-await lsSet('xy-home-v2:pomo-cfg', '{"f":7,"s":2,"l":3}');
+await stSet('xy-home-v2', 'pomo-cfg', '{"f":7,"s":2,"l":3}');
 await gotoApp();
 await evalJs(`(function(){ var i=document.querySelector('[data-desk-widget="app-pomo"]'); if(i) i.click(); return 'ok'; })()`);
 await sleep(400);

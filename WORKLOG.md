@@ -1,4 +1,32 @@
-# 本次构建者：AI-B（本会话 2026-08-29 12:40 起，iPhone17/Edge iOS 视口事件盲区修复，将构建+收口全部「未构建待构建者」条目；前序 AI-B 荣耀 Edge 持久化修复 84fdab9 推送未完成）
+# 本次构建者：AI-A（本会话 2026-08-29，TA在身边位置面板返回按钮修复 + 收口工作区朋友圈收藏增量）
+### 2026-08-29（番茄钟 verify-pomodoro C1/C2/D 误报修复——测试改走 xyStore 三层一致写）
+- [AI-B 域]（**改动文件：tools/verify-pomodoro.mjs；node --check 通过；构建状态：仅测试脚本，不影响产物，未构建，待构建者收口提交**）。
+- 背景：verify-pomodoro.mjs C1/C2（装修过用户图标放置）、D（自定义时长）三项在无头 Chrome 必现失败。
+- 根因：测试用 `localStorage.setItem` 直接写布局/配置键，但启动时 `idbRestore` 以 IndexedDB 为准回填——上一页运行期间 IDB 已残留 C1 旧布局，重载后把新写的 C2 localStorage 值覆盖 → 断言落空（C2 场景「新建整组页」失败）。pomo-cfg 同理。
+- 方案：新增 `stSet(prefix,k,v)` 走 `window.xyStore(...).set(...)`（LS+IDB+内存三层一致写），C1/C2/D 三处全部改用它。
+- 验证：`node tools/verify-pomodoro.mjs` 20/20 通过（A/B 组 16 项 + C1/C2 + D1/D2）。
+- 待对方处理：无。
+### 2026-08-29（TA在身边 · TA 的位置：左边的返回上一页按钮不见了）
+- [AI-A 域]（**改动文件：src/css/chat-pages.css（.loc-back 默认显示）+ build.mjs（FIX_SENTINELS 哨兵 +1）+ FIX-REGRESSION.md #48；构建状态：本次构建收口，已构建，未提交**）。
+- 需求/反馈：用户「TA在身边 · TA 的位置」左边的返回上一页按钮不见了。
+- 根因：v3.26.x 把位置面板关闭方式改为「共用左侧返回按钮、移除右侧 ✕」，但 chat-pages.css `.loc-back` 默认 `display:none`、仅 `.loc-panel.loc-full`（桌面寻踪页全屏入口）才显示——聊天寻踪半框入口（openLocPanel(false) 半屏）打开后既无返回按钮也无 ✕、无遮罩点击关闭，面板完全没有关闭入口。
+- 方案：`.loc-back` 默认 `display:flex`（全屏/半屏始终显示），删除 `.loc-full` 专属显示规则；点击行为原本共用 closeLocPanel 不变。
+- 验证：构建哨兵 54/54；待实测：聊天寻踪半框点「TA在身边 · 看看 TA 在哪」→ 标题左侧出现返回按钮、点击回到半框；桌面寻踪页全屏进入返回按钮正常。
+- 待对方处理：无。
+### 2026-08-29 12:40（iPhone17/Edge iOS 视口事件盲区修复 + 聊天昵称解耦收口 + migrateLegacy 启动报错修复；已构建 sw: mochi-mtdwee70，哨兵 53/53，verify 10/10 + verify-chat-nick-independent 11/11，未提交；前序 AI-B 荣耀 Edge 持久化修复 84fdab9 推送未完成）
+### 2026-08-29（migrateLegacy 启动必现报错 `def is not defined` 修复：v3.26.x 误迁移修复块在 try 外引用块内 const）
+- [AI-B 域]（**已改 src/js/contacts.js（def/root 提升函数顶部）+ build.mjs 哨兵 + FIX-REGRESSION #47；node --check 通过；已构建 sw: mochi-mtdwee70，哨兵 53/53，无头启动 0 pageerror，未提交**）。
+- 需求/反馈：昵称解耦验证时无头发现每次启动必现 ReferenceError `def is not defined`（migrateLegacy 中断、旧键迁移不执行）。
+- 根因：v3.26.x 新增 pomo-*/beauty-schemes/hide-ta-sticker 修复块在**外层 try 之外**引用 `def`/`root`，二者 const 声明在第一个 try 块内（块级作用域）→ forEach 首轮即抛 ReferenceError，migrateLegacy 提前 return，`__contactsMigrated` 不置位。
+- 方案：`def`/`root` 提升到 migrateLegacy 函数顶部，行为不变。
+- ⚠️ 教训（已记入项目记忆）：build.mjs `minifyJs` 会剥掉**整行 `//` 注释**——FIX_SENTINELS needle 写注释串会缺失，必须用代码特征串（本哨兵已改用 `const root = window.xyStore(G);`）。
+- 待对方处理：无（收口会话统一 commit/push）。
+### 2026-08-29（聊天昵称与桌面彻底解耦：聊天设置「联系人/我的昵称」不再跟随桌面）
+- [AI-B 域 收口 + 跨域核对 chat.js/chat-settings.js（AI-A 已改主体）]（**AI-A 已改 src/js/chat.js（chatLabel dk=null/顶栏/来信弹窗）+ src/js/chat-settings.js（行显示「未设置（默认 TA/我）」）；本会话补 src/js/call.js（通话 partnerName/syncCallName 只读 cs-lbl-partner）+ build.mjs 哨兵×3 + FIX-REGRESSION #45 + 新增 tools/verify-chat-nick-independent.mjs；已构建 sw: mochi-mtdwee70，哨兵 53/53，verify-chat-nick-independent 11/11、verify 10/10，未提交**）。
+- 需求/反馈：用户「聊天里联系人昵称/聊天设置里联系人昵称和我的昵称不需要跟随桌面，我已经分开了」。
+- 方案：聊天域昵称只读 cs-lbl-*，未设默认 TA/我；桌面美化昵称保持只影响桌面。原「跟随桌面（xx）」行提示与回退逻辑全部移除。
+- 验证：verify-chat-nick-independent 11/11（桌面设昵称→聊天不受影响；设置→生效持久化；清空→回默认；桌面键不被波及）。
+- 待对方处理：无（收口会话统一 commit/push）。
 ### 2026-08-29（此间新增「对方当前时间」——联系人自己随机抽的当地时刻，刷新机制同头像互动随机换头像）
 - [AI-A 域]（**改动文件：src/js/cjian.js + src/css/chat-pages.css + src/css/dark.css；node --check 通过；构建状态：未构建，待构建者收口**）。
 - 需求/反馈：此间功能里缺少查看「联系人自己随机抽取的对方当前时间」，刷新机制要和头像互动随机更换头像一样。

@@ -1335,13 +1335,14 @@
   background:rgba(255,255,255,.96);
 }
 .loc-panel.loc-full .loc-head { padding:max(calc(10px + env(safe-area-inset-top, 0px)), 14px) 16px 12px; }
+/* v3.26.x 修复：半屏（聊天寻踪半框入口）也要显示返回按钮——
+   之前只有 .loc-full（桌面寻踪页全屏）才 display:flex，半屏下既无返回按钮也无 ✕，面板无法关闭 */
 .loc-back {
-  display:none; align-items:center; justify-content:center; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center; flex-shrink:0;
   width:34px; height:34px; border-radius:50%;
   border:1px solid rgba(0,0,0,.1); background:rgba(255,255,255,.95);
   cursor:pointer; padding:0;
 }
-.loc-panel.loc-full .loc-back { display:flex; }
 .loc-back svg { width:18px; height:18px; }
 .loc-back:active { background:rgba(0,0,0,.06); }
 .loc-title {
@@ -2092,9 +2093,13 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + var(--mochi-safe-bottom,
 .feed-del { background:none; border:none; color:var(--muted); cursor:pointer; padding:4px; }
 .feed-content { font-size:14px; color:var(--ink); line-height:1.6; margin-top:10px; word-break:break-word; }
 .feed-actions { display:flex; gap:18px; margin-top:12px; border-top:1px solid rgba(0,0,0,.05); padding-top:10px; }
+/* v3.26.x：动作按钮用 flex 居中图标与文字——原 display:block + SVG inline vertical-align:-3px
+   仅对单个图标近似对齐，各图标路径几何中心不同（星形 bbox 中心 Y 9.7 vs 心形 12.4）时文字
+   与图标错位明显；flex align-items:center 让每个按钮的图标/文字都按同一中线对齐 */
 .feed-act {
   background:none; border:none; cursor:pointer; font-size:12px; color:var(--muted);
   font-family:inherit; padding:4px 0;
+  display:flex; align-items:center; gap:4px;
 }
 .feed-act.liked { color:#e05555; }
 .feed-act.faved { color:#d8a23c; }
@@ -2634,9 +2639,13 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + var(--mochi-safe-bottom,
 .feed-del { background:none; border:none; color:var(--muted); cursor:pointer; padding:4px; }
 .feed-content { font-size:14px; color:var(--ink); line-height:1.6; margin-top:10px; word-break:break-word; }
 .feed-actions { display:flex; gap:18px; margin-top:12px; border-top:1px solid rgba(0,0,0,.05); padding-top:10px; }
+/* v3.26.x：动作按钮用 flex 居中图标与文字——原 display:block + SVG inline vertical-align:-3px
+   仅对单个图标近似对齐，各图标路径几何中心不同（星形 bbox 中心 Y 9.7 vs 心形 12.4）时文字
+   与图标错位明显；flex align-items:center 让每个按钮的图标/文字都按同一中线对齐 */
 .feed-act {
   background:none; border:none; cursor:pointer; font-size:12px; color:var(--muted);
   font-family:inherit; padding:4px 0;
+  display:flex; align-items:center; gap:4px;
 }
 .feed-act.liked { color:#e05555; }
 .feed-act.faved { color:#d8a23c; }
