@@ -2623,6 +2623,7 @@ try {
         // 清 memoryCache + localStorage + IndexedDB），随后整页刷新——页面每次加载都由 template
         // 生成默认 DOM，布局键为空时 applyDeskLayout/图标排序都不重排，即还原成系统默认。
         // 每页背景图（page-bg-*）与自定义图标图片（app-icon-*）保留，符合提示文案。
+        let dels = [];
         try {
           store.remove('desk-layout');
           store.set('desk-page-count', '3');
@@ -2630,9 +2631,25 @@ try {
             if (g.dataset.app) store.remove('app-icon-order-' + g.dataset.app);
           });
           store.remove('hidden-icons');
+          // v3.27.x（华为 Mate 40 Pro+自带浏览器反馈）：store.remove 里的 idbDelete 是异步
+          // fire-and-forget，原 400ms 后 reload 在 IDB 慢/事务挂起的浏览器上删除还没提交，
+          // 新页面 idbRestore 会把旧 desk-layout 从 IDB 回填回来 →「恢复默认没生效」。
+          // 这里显式等 IDB 删除完成（每键 3s 兜底超时）再 reload。
+          if (window.idbDelete) {
+            const P = (window.activePrefix ? window.activePrefix() : 'xy-home-v2:default');
+            dels.push(window.idbDelete(P + ':desk-layout'));
+            dels.push(window.idbDelete(P + ':hidden-icons'));
+            document.querySelectorAll('.app-grid').forEach(function (g) {
+              if (g.dataset.app) dels.push(window.idbDelete(P + ':app-icon-order-' + g.dataset.app));
+            });
+          }
         } catch (e) {}
         toast('已恢复默认桌面');
-        setTimeout(function () { try { location.reload(); } catch (e) {} }, 400);
+        Promise.all(dels.map(function (p) {
+          return Promise.race([p, new Promise(function (r) { setTimeout(r, 3000); })]);
+        })).then(function () {
+          try { location.reload(); } catch (e) {}
+        });
       }, { noInput: true, pillSubmit: true, pills: [{ label: '确定恢复默认', value: '1' }] });
       if (ctl && ctl.pills) ctl.pills([{ label: '确定恢复默认', value: '1' }], '1');
     });
@@ -3809,27 +3826,12 @@ try {
             return;
           }
           if (Math.abs(dx) > 12 || Math.abs(dy) > 12) {
-            if (Math.abs(dx) > Math.abs(dy) * 1.5) {
-              // 短按后立即横向位移为主 → 翻页手势（组件上快速横滑翻页），不进入拖拽
-              t._swiping = 'h';
-            } else {
-              // 纵向为主 → 立即开始拖拽（短按即拖）
-              t._swiping = 'v';
-              startDeskDrag(e, t);
-            }
-          }
-        }
-        // 已判为横滑：跟手更新，但不动 scrollLeft（松手时 deskGo 吸附翻页）
-        if (t && t._swiping === 'h' && window.deskIdx) {
-          const dx = e.clientX - t._swipeX;
-          if (Math.abs(dx) > 46) {
-            const slides = pagesBox.querySelectorAll('.page-slide').length;
-            const cur = window.deskIdx();
-            const dir = dx < 0 ? 1 : -1; // 左滑下一页
-            if (cur + dir >= 0 && cur + dir < slides) {
-              if (window.deskGo) window.deskGo(cur + dir);
-              t._swiping = 'done';
-            }
+            // v3.27.x（华为 Mate 40 Pro+自带浏览器反馈）：移动模式（编辑布局）下图标/组件上
+            // 任意方向滑动都直接拖拽——原「横向位移为主→翻页」把横向拖动抢成翻页，导致图标
+            // 只能竖着换行、无法横向放置。移动模式翻页由「空白处原生滚动（.desk-move-mode
+            // 容器 touch-action:pan-x pan-y）+ 拖到屏幕边缘自动翻页」承担，JS 横滑翻页冗余。
+            t._swiping = 'v';
+            startDeskDrag(e, t);
           }
         }
       }

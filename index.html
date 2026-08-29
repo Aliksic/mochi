@@ -8385,9 +8385,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787991701169">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.332</b></span>
-        <span class="sv-deploy">部署于 2026-08-29 16:21<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787992323910">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.334</b></span>
+        <span class="sv-deploy">部署于 2026-08-29 16:32<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9477,7 +9477,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.332</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.334</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -9685,7 +9685,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.332</span>
+              <span class="lic-ver">v3.26.334</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -18139,6 +18139,7 @@ if (resetDeskRow) {
 resetDeskRow.addEventListener('click', () => {
 const ctl = window.openModal('恢复默认桌面', '将恢复桌面卡片布局与页数，桌面恢复为默认三页（每页已设置的背景图与图标不受影响）。确定继续？', (v) => {
 if (v !== '1') return;
+let dels = [];
 try {
 store.remove('desk-layout');
 store.set('desk-page-count', '3');
@@ -18146,9 +18147,21 @@ document.querySelectorAll('.app-grid').forEach(function (g) {
 if (g.dataset.app) store.remove('app-icon-order-' + g.dataset.app);
 });
 store.remove('hidden-icons');
+if (window.idbDelete) {
+const P = (window.activePrefix ? window.activePrefix() : 'xy-home-v2:default');
+dels.push(window.idbDelete(P + ':desk-layout'));
+dels.push(window.idbDelete(P + ':hidden-icons'));
+document.querySelectorAll('.app-grid').forEach(function (g) {
+if (g.dataset.app) dels.push(window.idbDelete(P + ':app-icon-order-' + g.dataset.app));
+});
+}
 } catch (e) {}
 toast('已恢复默认桌面');
-setTimeout(function () { try { location.reload(); } catch (e) {} }, 400);
+Promise.all(dels.map(function (p) {
+return Promise.race([p, new Promise(function (r) { setTimeout(r, 3000); })]);
+})).then(function () {
+try { location.reload(); } catch (e) {}
+});
 }, { noInput: true, pillSubmit: true, pills: [{ label: '确定恢复默认', value: '1' }] });
 if (ctl && ctl.pills) ctl.pills([{ label: '确定恢复默认', value: '1' }], '1');
 });
@@ -19121,24 +19134,8 @@ startDeskDrag(e, t);
 return;
 }
 if (Math.abs(dx) > 12 || Math.abs(dy) > 12) {
-if (Math.abs(dx) > Math.abs(dy) * 1.5) {
-t._swiping = 'h';
-} else {
 t._swiping = 'v';
 startDeskDrag(e, t);
-}
-}
-}
-if (t && t._swiping === 'h' && window.deskIdx) {
-const dx = e.clientX - t._swipeX;
-if (Math.abs(dx) > 46) {
-const slides = pagesBox.querySelectorAll('.page-slide').length;
-const cur = window.deskIdx();
-const dir = dx < 0 ? 1 : -1; // 左滑下一页
-if (cur + dir >= 0 && cur + dir < slides) {
-if (window.deskGo) window.deskGo(cur + dir);
-t._swiping = 'done';
-}
 }
 }
 }

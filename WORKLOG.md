@@ -1,4 +1,13 @@
-# 本次构建者：AI-A（本会话 2026-08-29 16:21，收口「经期温柔动作字卡六条全部进字卡库」；构建状态：本次构建，提交 e20f5d5，推送待凭据）
+# 本次构建者：AI-A（本会话 2026-08-29 16:30，收口「华为 Mate40 Pro 桌面图标横拖/恢复默认」；构建状态：本次构建，待提交）
+### 2026-08-29 16:30（华为 Mate40 Pro+ 自带浏览器：①编辑布局拖动图标只能竖着换行、横着放不了；②点【恢复默认桌面】没恢复）
+- [AI-A 域·跨域改 AI-B 文件 src/js/personalize.js + build.mjs（哨兵×2）+ FIX-REGRESSION.md（#57）+ WORKLOG.md；node --check 通过；构建状态：本次构建，sw: mochi-mte4b14h，待提交]。
+- 需求/反馈：华为 Mate 40 Pro+ 自带浏览器，编辑布局里拖动图标只能竖着换行、无法横向放置；点【恢复默认桌面】布局没恢复。
+- 根因①横拖：移动模式 pointermove 短按后「横向位移为主（|dx|>|dy|*1.5）→ 判横滑翻页不拖拽」——图标横向拖动永远进不了拖拽，只能上下换行；而移动模式翻页本可由空白处原生滚动（.desk-move-mode 容器 pan-x pan-y）+ 拖到屏幕边缘自动翻页承担，JS 横滑翻页冗余且抢拖拽。
+- 根因②恢复默认：store.remove 的 idbDelete 异步 fire-and-forget，原 400ms 后 reload 在 IDB 慢/事务挂起的浏览器（华为）删除未提交，新页面 idbRestore 把旧 desk-layout 从 IDB 回填 → 布局没恢复（wrjForget 已防日志回放旧值，卡点是 IDB 删除时序）。
+- 方案：① 删除移动模式横滑翻页分支，图标/组件上任意方向移动都 startDeskDrag（clone 横竖都跟手）；② 恢复默认改为显式 idbDelete 完整键（activePrefix:desk-layout/hidden-icons/app-icon-order-*）等删除完成（每键 3s 兜底超时）再 reload。
+- 回归防线：哨兵 `Math.abs(dx) > Math.abs(dy) * 1.5`（absent，横滑翻页已删）+ `idbDelete(P + ':desk-layout')`（存在）；FIX-REGRESSION #57。
+- 验证：verify-desk-longpress.mjs 扩展场景4（横向拖动出 clone 且跟手、不翻页）+场景5（恢复默认 LS+IDB 均清、reload 不回填）17/17；verify-desk-beauty 14/14；verify.mjs 10/10；哨兵（构建后核对）。
+- 待对方处理：AI-B 复核 personalize.js 跨域改动；推送待 GitHub 凭据（历史同款 GCM 非交互终端问题）。
 ### 2026-08-29 16:20（经期温柔动作后缀只登记 1 条：字卡库经期 tab 写全 WARM_SUFFIX 六条 + 独立「温柔动作」分组）
 - [AI-A 域·经期字卡]（**改动文件：src/js/default-cards-data.js + src/js/period.js（注释）+ build.mjs（哨兵）+ FIX-REGRESSION.md（#56）+ WORKLOG.md；node --check 通过；构建状态：已构建，sw: mochi-mte43e7l，提交 e20f5d5（含产物），推送待 GitHub 凭据**）。
 - 需求/反馈：上一轮把「（轻轻抵着你的额头）」加进字卡库经期 tab 后，用户反馈只有这一条、没把全部字卡写进去——period.js WARM_SUFFIX 六条动作后缀（把你往怀里带了带/轻轻抵着你的额头/握紧你的手/摸了摸你发顶/语气柔下来/把热牛奶推到你手边）只有一条有字卡库开关，其余五条搜不到也关不掉。

@@ -170,6 +170,89 @@ await sleep(300);
 const exited = await ev(`(function(){var p=document.getElementById('page-phone');return p?(!p.classList.contains('desk-move-mode')&&!p.classList.contains('decor-on')):null;})()`);
 check('退出装饰/移动模式干净（无残留状态）', exited === true, 'exited=' + exited);
 
+// ============ 场景4：移动模式下横向拖拽可横着放（华为 Mate40 Pro 反馈） ============
+console.log('\n===== 场景4 移动模式横向拖拽（clone 横向跟手，不再被翻页抢占） =====');
+await freshLoad();
+await ev(`(function(){var r=document.getElementById('row-custom-icon');if(r)r.click();return true;})()`);
+await sleep(300);
+await ev(`(function(){var b=document.getElementById('decor-edit-layout');if(b)b.click();return true;})()`);
+await sleep(300);
+const hDrag = await ev(`(function(){
+  var app = document.querySelector('#page-phone .app-grid .app');
+  if (!app) return { err: 'no-app' };
+  var r = app.getBoundingClientRect();
+  var x = r.left + r.width / 2, y = r.top + r.height / 2;
+  app.__beforeLeft = r.left;
+  app.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 7, clientX: x, clientY: y, button: 0, pointerType: 'touch' }));
+  return { x: x, y: y, app: app.dataset.app || '' };
+})()`);
+if (hDrag && hDrag.err) { console.error('FAIL  ' + hDrag.err); process.exit(1); }
+// 第一次横移 36px：触发拖拽（首事件为"抓取"，clone 停在原位）
+await ev(`(function(){
+  var app = document.querySelector('#page-phone .app-grid .app');
+  if (app) app.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, pointerId: 7, clientX: ${hDrag.x} + 36, clientY: ${hDrag.y} + 2, button: 0, pointerType: 'touch' }));
+  return true;
+})()`);
+// 第二次横移 72px：跟手移动（clone.left 应右移）
+await ev(`(function(){
+  var app = document.querySelector('#page-phone .app-grid .app');
+  if (app) app.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, pointerId: 7, clientX: ${hDrag.x} + 72, clientY: ${hDrag.y} + 2, button: 0, pointerType: 'touch' }));
+  return true;
+})()`);
+await sleep(150);
+const hState = await ev(`(function(){
+  var c = document.querySelector('.desk-drag-clone');
+  var app = document.querySelector('#page-phone .app-grid .app');
+  return { clone: !!c, left: c ? Math.round(parseFloat(c.style.left) || 0) : null, beforeLeft: app ? Math.round(app.__beforeLeft) : null };
+})()`);
+check('横向移动进入拖拽（出现 clone）', hState.clone === true, 'clone=' + hState.clone);
+check('clone 横向跟手（left 右移 > 起点+25）', hState.clone === true && hState.left !== null && hState.beforeLeft !== null && hState.left > hState.beforeLeft + 25, 'left=' + hState.left + ' beforeLeft=' + hState.beforeLeft);
+const hIdx = await ev(`(function(){return window.deskIdx ? window.deskIdx() : -1;})()`);
+check('横向拖拽未误翻页（deskIdx 仍为 0）', hIdx === 0, 'deskIdx=' + hIdx);
+// 松开收尾
+await ev(`(function(){
+  var app = document.querySelector('#page-phone .app-grid .app');
+  if (app) app.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 7, clientX: ${hDrag.x} + 36, clientY: ${hDrag.y} + 2, button: 0, pointerType: 'touch' }));
+  return true;
+})()`);
+await sleep(200);
+
+// ============ 场景5：恢复默认桌面（IDB 删除落盘后再 reload，防华为回填旧布局） ============
+console.log('\n===== 场景5 恢复默认桌面（LS+IDB 均清除） =====');
+await freshLoad();
+await ev(`(function(){
+  var s = window.activeStore();
+  s.set('desk-layout', JSON.stringify([['deco','quote-row','checkin','apps','music','p2apps','memo-row','week','weekend','desk-period']]));
+  s.set('app-icon-order-main', JSON.stringify(['chat','mail','feed','calendar','memory','note','music','stats']));
+  s.set('hidden-icons', JSON.stringify(['garden']));
+  return true;
+})()`);
+await sleep(500); // 等 IDB 写入
+await ev(`(function(){var r=document.getElementById('row-desk-reset');if(r)r.click();return true;})()`);
+await sleep(300);
+await ev(`(function(){var o=document.getElementById('modal-ok');if(o)o.click();return true;})()`);
+await sleep(800);
+const afterReset = await ev(`(function(){
+  var P = (window.activePrefix ? window.activePrefix() : 'xy-home-v2:default');
+  var ls = null;
+  try { ls = localStorage.getItem(P + ':desk-layout'); } catch (e) { ls = 'err'; }
+  return { lsLayout: ls };
+})()`);
+check('恢复后 desk-layout 已清（LS 无旧布局，含 reload 后回填验证）', afterReset.lsLayout === null, 'ls=' + String(afterReset.lsLayout).slice(0, 30));
+// IDB 层确认：注册异步读取，等结果（页面可能已 reload，注册一次即可）
+await ev(`(function(){
+  var P = (window.activePrefix ? window.activePrefix() : 'xy-home-v2:default');
+  window.__idbDeskCheck = 'pending';
+  if (!window.idbGet) { window.__idbDeskCheck = 'no-idb'; return true; }
+  window.idbGet(P + ':desk-layout').then(function (v) {
+    window.__idbDeskCheck = (v === null || v === undefined) ? 'null' : String(v).slice(0, 20);
+  }).catch(function () { window.__idbDeskCheck = 'err'; });
+  return true;
+})()`);
+await sleep(900);
+const idbVal = await ev(`(function(){return window.__idbDeskCheck || 'pending';})()`);
+check('IDB desk-layout 已被删除（恢复持久，不会被回填）', idbVal === 'null', 'idb=' + idbVal);
+
 // ============ 汇总 ============
 console.log('\n===== 汇总 =====');
 const fails = results.filter((r) => !r.ok);
