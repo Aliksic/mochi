@@ -87,7 +87,7 @@
     return n;
   }
   function refreshLibCount() {
-    const el = document.querySelector('#li-default-cards .t');
+    const el = document.getElementById('dc-lib-count');
     if (el) el.textContent = String(sumKeys(BASE_KEYS));
     const fel = document.getElementById('fc-lib-count');
     if (fel) fel.textContent = String(sumKeys(FUNC_KEYS));

@@ -1,4 +1,7 @@
 # 本次构建者：AI-A（本会话 2026-08-29，收口「小米15Pro Chrome 卡顿止血」聊天持久化空闲调度；构建状态：本次构建）
+### 2026-08-29（清理“默认聊天字卡”过期静态占位 3260 → 动态占位 0）
+- [跨域改动 src/template.html、src/js/default-cards.js]（**改动文件：src/template.html L567、src/js/default-cards.js refreshLibCount；node --check 通过；构建状态：未构建，待构建者收口**）。
+- 理由：字卡库角标已动态计算（main+kaomoji+emoji+touch = 5276），template 里 static「3260」早过期只当占位；改为 `<span id=dc-lib-count>0</span>`（与 fc-lib-count/dk-lib-count 一致），default-cards.js 改用 getElementById('dc-lib-count')。纯文案+选择器对齐，不影响逻辑，运行值仍是 5276。
 ### 2026-08-29（小米15Pro Chrome 卡顿止血：聊天持久化改空闲调度（顺手收口下方待构建条目））
 - [AI-A 域·跨域改 AI-B 数据层 chat.js 持久化]（**改动文件：src/js/chat.js；node --check 通过；构建状态：本次构建，待提交未推送**）。
 - 需求/反馈：小米15 Pro Chrome 卡顿——发消息/来消息/收键盘/上滑记录/切页，平时 2~3s 长任务阻塞（诊断 3019ms/2323ms/2033ms）。
