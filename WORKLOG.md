@@ -1,4 +1,4 @@
-# 本次构建者：AI-B（本会话 2026-08-29，荣耀 Edge 设置开关持久化修复收口；sw: mochi-mtdut9th，哨兵 46/46 + verify 10/10 + verify-wrj-settings-persist 10/10）
+# 本次构建者：AI-B（本会话 2026-08-29，荣耀 Edge 设置开关持久化修复收口；sw: mochi-mtdut9th，哨兵 46/46 + verify 10/10 + verify-wrj-settings-persist 10/10；已提交 84fdab9，推送未完成——沙箱无 GitHub 凭据，待推送）
 ### 2026-08-29（查看存储 A+B：自动备份快照可删除 + 顶部点破"副本可删"；已构建 sw: mochi-mtduvyiw，哨兵47/47，未提交）
 - [AI-B 域]（**改动文件：src/js/personalize.js（查看存储页）+ src/template.html（新增快照卡片/顶部警示）+ src/css/setting.css（danger 按钮+分类行高亮）+ build.mjs（增 47 次哨兵 st-clear-snap）；node --check 通过；构建哨兵 47/47 在位，未提交**）。
 - 需求/反馈：用户「没怎么用就 1GB，太离谱」——大头是「自动备份快照」≈800MB（每次手动导出把全部数据 base64 放大后完整复制一份，见 data-backup.js）。用户选择「只做 A+B」。
