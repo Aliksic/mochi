@@ -850,6 +850,7 @@ box-shadow:0 1px 4px rgba(0,0,0,.08); box-sizing:border-box;
 .app-badge[hidden] { display:none; }
 .app-grid.editing .app-ico { outline:2px solid var(--ink); outline-offset:3px; }
 .app .app-name { font-size:11px; color:var(--ink); letter-spacing:.5px; }
+.app .app-name { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; height:14px; line-height:14px; display:block; }
 .page-slide .app[data-desk-widget^="app-"] { align-self:center; margin:8px 0; }
 .app-grid { margin-top:0; }
 .app-grid.p2-grid { margin-top:0; }
@@ -4264,15 +4265,8 @@ display:inline-block; margin:0 5px; padding:0 5px; border-radius:8px;
 background:rgba(0,0,0,.06); color:#999; font-size:10px; line-height:15px;
 vertical-align:1px;
 }
-.feed-clear-btn {
-display:flex; align-items:center; justify-content:center; gap:6px;
-width:100%; margin:4px 0 10px; padding:12px 0;
-border:none; border-radius:12px;
-background:rgba(214,69,69,.08); color:#d64545;
-font-size:13px; cursor:pointer;
-}
-.feed-clear-btn:active { background:rgba(214,69,69,.18); }
-.feed-clear-btn[hidden] { display:none; }
+.feed-head-clear { color:#d64545; }
+.feed-head-clear[hidden] { display:none; }
 .lic-block { margin-bottom:14px; }
 .lic-title { font-size:15px; font-weight:800; color:var(--ink); margin-bottom:8px; }
 .lic-h { font-size:13px; font-weight:700; color:var(--ink); margin-bottom:6px; }
@@ -7002,6 +6996,7 @@ radial-gradient(circle at calc(100% - 5px) calc(100% - 5px), rgba(255,255,255,.1
 .feed-comment { color:#bbb; }
 .feed-reply { color:#aaa; }
 .feed-head-btn { color:var(--ink); }
+.feed-head-btn.feed-head-clear { color:#e05b5b; }
 .feed-comment-bar { background:var(--dark-card-97); border-top-color:var(--dark-border); }
 .feed-comment-send { color:#111; }
 .feed-notice-panel { background:var(--dark-card-97); border-color:var(--dark-border); }
@@ -8382,9 +8377,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787979530706">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.317</b></span>
-        <span class="sv-deploy">部署于 2026-08-29 12:58<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787980090931">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.318</b></span>
+        <span class="sv-deploy">部署于 2026-08-29 13:08<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9474,7 +9469,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.317</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.318</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -9682,7 +9677,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.317</span>
+              <span class="lic-ver">v3.26.318</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -11397,6 +11392,9 @@ transition-duration: .01ms !important;
           <button class="ch-settings feed-head-btn" id="feed-publish-btn" title="发布朋友圈">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px"><path d="M12 5v14M5 12h14"/></svg>
           </button>
+          <button class="ch-settings feed-head-btn feed-head-clear" id="feed-head-clear" title="删除朋友圈动态">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+          </button>
         </span>
       </div>
       <!-- 通知提醒面板（TA 点赞/评论/发布动态的提醒，点击跳转对应动态） -->
@@ -11426,11 +11424,6 @@ transition-duration: .01ms !important;
           <button class="ta-add-btn" style="width:100%;margin-top:10px" id="feed-publish">发布</button>
         </div>
         <div id="feed-list"></div>
-        <!-- v3.6.x：清空朋友圈数据（我的动态 + 所有联系人的动态，有数据时显示） -->
-        <button class="feed-clear-btn" id="feed-page-clear" hidden>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
-          删除全部动态（我的与所有联系人）
-        </button>
       </div>
       <!-- 评论表情/图片面板（紧贴评论条上方） -->
       <div class="feed-comment-panel" id="feed-comment-panel" hidden></div>
@@ -32971,6 +32964,25 @@ window.DEFAULT_CARD_DATA.eat = [
 "慢慢吃，不着急",
 "记得配点汤汤水水",
 "吃完了就休息一会儿吧"
+]],
+["夜宵提醒", [
+"夜深了，饿不饿？想吃点夜宵吗",
+"这个点还没睡呀，要不要来点夜宵",
+"饿着肚子睡觉可不好，去弄点吃的吧",
+"夜宵别吃太撑，留点肚子给梦",
+"偷偷问一句，今晚想吃夜宵吗",
+"去煮碗热乎的面吧，我陪你吃",
+"深夜的胃，也该被好好对待",
+"别只啃饼干，夜宵也要认真吃",
+"吃夜宵的人，今晚会做甜甜的梦",
+"要不要我给你留一盏灯，你去觅食"
+]],
+["夜宵关心", [
+"夜宵吃的什么呀？说给我听听",
+"吃饱了就快去睡，别熬太晚",
+"吃完夜宵记得刷个牙再睡哦",
+"太晚就别吃太辣的，伤胃",
+"夜宵吃完了就躺下吧，我守着"
 ]]
 ];
 window.DEFAULT_CARD_DATA.period = [
@@ -47693,7 +47705,7 @@ listEl.innerHTML = posts.length
 ? posts.slice(0, feedShownMain).map(p => postCardHtml(p, name)).join('') +
 (posts.length > feedShownMain ? feedMoreBtnHtml(posts.length - feedShownMain) : '')
 : '<div class="ta-empty">还没有动态，TA 会不定期分享生活</div>';
-const clearBtn = document.getElementById('feed-page-clear');
+const clearBtn = document.getElementById('feed-head-clear');
 if (clearBtn) clearBtn.hidden = !posts.length;
 bindEvents(listEl);
 }
@@ -48917,9 +48929,10 @@ toast('朋友圈数据已全部清除');
 }, { noInput: true, staticText: '将删除全部动态（我的与 TA 的）、评论、点赞和通知提醒，且无法恢复。确定继续吗？' });
 });
 }
-const feedPageClear = document.getElementById('feed-page-clear');
-if (feedPageClear) {
-feedPageClear.addEventListener('click', () => {
+const feedHeadClear = document.getElementById('feed-head-clear');
+if (feedHeadClear) {
+feedHeadClear.addEventListener('click', (e) => {
+e.stopPropagation();
 if (!window.openModal) return;
 window.openModal('删除朋友圈动态', '', (v) => {
 const mode = v || 'all';
@@ -51969,6 +51982,8 @@ document.getElementById('eat-switch-cancel').addEventListener('click', () => { e
 document.getElementById('eat-switch-go').addEventListener('click', () => { eatSwitchSpin(); });
 const DEF_EAT_REMIND = ['到饭点啦，去吃饭吧', '该吃饭了哦，别饿着', '今天吃 {d} 怎么样？就它了', '{d} 挺好的，去吃这个吧', '记得吃热乎的，别随便对付一口', '去吃饭吧，吃完跟我说说吃了什么', '别忙忘了吃饭，胃是自己的', '我看着呢，快去吃饭', '放下手里的事，先吃饭好不好', '饭要按时吃，我才会放心', '好好吃饭的人，运气不会太差哦', '饿了就去做点吃的，别硬撑'];
 const DEF_EAT_REMIND_CARE = ['吃了什么呀？说给我听听', '吃饱了吗？没饱再去添一点', '吃得合胃口吗？', '慢慢吃，不着急', '记得配点汤汤水水', '吃完了就休息一会儿吧'];
+const DEF_EAT_REMIND_NIGHT = ['夜深了，饿不饿？想吃点夜宵吗', '这个点还没睡呀，要不要来点夜宵', '饿着肚子睡觉可不好，去弄点吃的吧', '夜宵别吃太撑，留点肚子给梦', '偷偷问一句，今晚想吃夜宵吗', '去煮碗热乎的面吧，我陪你吃', '深夜的胃，也该被好好对待', '别只啃饼干，夜宵也要认真吃', '吃夜宵的人，今晚会做甜甜的梦', '要不要我给你留一盏灯，你去觅食'];
+const DEF_EAT_REMIND_NIGHT_CARE = ['夜宵吃的什么呀？说给我听听', '吃饱了就快去睡，别熬太晚', '吃完夜宵记得刷个牙再睡哦', '太晚就别吃太辣的，伤胃', '夜宵吃完了就躺下吧，我守着'];
 const EAT_REMIND_WINDOWS = [['breakfast', 390, 570], ['lunch', 660, 810], ['dinner', 1020, 1170], ['nightcap', 1290, 1410]];
 function eatDayKey() { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
 function eatRemindEn() { const s = curStore(); const v = s && s.get('eat-remind-en'); return v === null ? true : v === '1'; }
@@ -51986,7 +52001,8 @@ try { s.set('eat-remind-done:' + code + ':' + eatDayKey(), '1'); } catch (e) {}
 const dishes = eatDishes();
 const dish = dishes.length ? dishes[Math.floor(Math.random() * dishes.length)] : '';
 let text = '';
-const pool = libPool('eat', '提醒吃饭', DEF_EAT_REMIND);
+const isNight = code === 'nightcap';
+const pool = isNight ? libPool('eat', '夜宵提醒', DEF_EAT_REMIND_NIGHT) : libPool('eat', '提醒吃饭', DEF_EAT_REMIND);
 if (pool.length) text = pool[Math.floor(Math.random() * pool.length)] || '';
 if (!text) return;
 text = text.replace(/\{d\}/g, dish || '饭');
@@ -51995,7 +52011,7 @@ if (window.bgNotifyCheck) { try { window.bgNotifyCheck(text, Date.now(), { name:
 try { if (navigator.vibrate) navigator.vibrate([80, 60, 80]); } catch (e) {}
 if (Math.random() < 0.35) {
 setTimeout(() => {
-const care = libPool('eat', '追问关心', DEF_EAT_REMIND_CARE);
+const care = isNight ? libPool('eat', '夜宵关心', DEF_EAT_REMIND_NIGHT_CARE) : libPool('eat', '追问关心', DEF_EAT_REMIND_CARE);
 if (care.length && window.chatAddIn) { try { window.chatAddIn(care[Math.floor(Math.random() * care.length)], { silent: true, tag: '吃饭提醒' }); } catch (e) {} }
 }, 1400);
 }
@@ -68637,7 +68653,7 @@ if (!arr.length) return '';
 const sorted = arr.slice().sort((a, b) => a - b);
 return sorted.map(h => SHICHEN[shichenAt(h)] + '时').join('·');
 }
-function worldMinuteOf(c) {
+function worldMinuteOfRaw(c) {
 const slots = c && c.slots;
 if (Array.isArray(slots) && slots.length) {
 const s = slots[Math.floor(Math.random() * slots.length)];
@@ -68647,6 +68663,32 @@ const off = (c && c.offsetMin) || 0;
 const d = new Date(Date.now() + off * 60000);
 return d.getHours() * 60 + d.getMinutes();
 }
+let ottCache = null;
+function loadOtt() {
+try {
+const r = rootStore();
+if (!r) return null;
+const v = r.get('cjian-ott');
+if (v) { const o = JSON.parse(v); if (o && typeof o === 'object') return o; }
+} catch (e) {}
+return null;
+}
+function saveOtt(o) { try { const r = rootStore(); if (r) r.set('cjian-ott', JSON.stringify(o)); } catch (e) {} }
+function ottFor(c) {
+const now = Date.now();
+if (!ottCache) ottCache = loadOtt() || {};
+const t = ottCache[c.id];
+let last = (t && typeof t.last === 'number') ? t.last : 0;
+let next = (t && typeof t.next === 'number') ? t.next : 0;
+if (last > now || last < 0 || isNaN(last)) { last = 0; next = 0; }
+if (!t || (now - last) / 36e5 >= next) {
+ottCache[c.id] = { worldMin: worldMinuteOfRaw(c), last: now, next: 1 + Math.random() * 7 };
+saveOtt(ottCache);
+}
+return ottCache[c.id];
+}
+function worldMinuteOf(c) { return ottFor(c).worldMin; }
+function clearOttTag(id) { if (ottCache && ottCache[id]) { delete ottCache[id]; saveOtt(ottCache); } }
 function timeInfo(ts) {
 const d = new Date(ts);
 const hour = d.getHours();
@@ -68666,17 +68708,11 @@ range = pad((startH + 1) % 24) + ':30–' + pad((startH + 1) % 24) + ':59';
 }
 return { idx: idx, half: half, range: range, hhmm: pad(hour) + ':' + pad(d.getMinutes()) };
 }
-function worldNow(offsetMin) { return Date.now() + ((offsetMin || 0) * 60000); }
 function worldNowFor(c) {
-const slots = c && c.slots;
-if (Array.isArray(slots) && slots.length) {
-const s = slots[Math.floor(Math.random() * slots.length)];
-const mm = slotMinuteRange(s);
+const wm = worldMinuteOf(c);
 const d = new Date();
-d.setHours(Math.floor(mm / 60), mm % 60, 0, 0);
+d.setHours(Math.floor(wm / 60), wm % 60, 0, 0);
 return d.getTime();
-}
-return worldNow(c && c.offsetMin);
 }
 function offsetLabel(off) {
 if (!off) return '与现实同步';
@@ -69180,7 +69216,19 @@ let last = (t && typeof t.last === 'number') ? t.last : 0;
 let next = (t && typeof t.next === 'number') ? t.next : 0;
 if (last > now || last < 0 || isNaN(last)) { last = 0; next = 0; }
 if (!t || (now - last) / 36e5 >= next) {
-t = { hh: rand(0, 23), mm: rand(0, 59), last: now, next: 1 + Math.random() * 7 };
+const list0 = loadRoster(cid);
+const slotSet = [];
+list0.forEach(function (c2) {
+if (Array.isArray(c2.slots) && c2.slots.length) {
+c2.slots.forEach(function (h) { if (slotSet.indexOf(h) < 0) slotSet.push(h); });
+}
+});
+let hh, mm;
+if (slotSet.length) {
+const total = slotMinuteRange(slotSet[rand(0, slotSet.length - 1)]);
+hh = Math.floor(total / 60) % 24; mm = total % 60;
+} else { hh = rand(0, 23); mm = rand(0, 59); }
+t = { hh: hh, mm: mm, last: now, next: 1 + Math.random() * 7 };
 saveTaTime(cid, t);
 }
 return t;
@@ -69203,7 +69251,10 @@ const t = taTimeOf(cid);
 const row = el('div', 'cj-ta-time-item');
 const left = el('div', 'cj-ta-time-left');
 left.appendChild(el('span', 'cj-ta-time-sh', 'TA'));
-left.appendChild(el('span', 'cj-ta-time-name', contactName(cid)));
+const nameCol = el('span', 'cj-ta-time-namecol');
+nameCol.appendChild(el('span', 'cj-ta-time-name', contactName(cid)));
+nameCol.appendChild(el('span', 'cj-ta-time-slot', taSlotLabel(cid)));
+left.appendChild(nameCol);
 row.appendChild(left);
 const right = el('div', 'cj-ta-time-right');
 right.appendChild(el('span', 'cj-ta-time-hhmm', pad(t.hh) + ':' + pad(t.mm)));
@@ -69211,6 +69262,16 @@ right.appendChild(el('span', 'cj-ta-time-shi', SHICHEN[shichenAt(t.hh)] + '时')
 row.appendChild(right);
 card.appendChild(row);
 });
+}
+function taSlotLabel(cid) {
+const set = [];
+loadRoster(cid).forEach(function (c2) {
+if (Array.isArray(c2.slots) && c2.slots.length) {
+c2.slots.forEach(function (h) { if (set.indexOf(h) < 0) set.push(h); });
+}
+});
+if (!set.length) return '全天随机';
+return slotLabel(set);
 }
 function taTimePoll() {
 try {
@@ -69633,6 +69694,7 @@ saveRoster(list, mCid);
 const st = loadState(mCid);
 delete st[v];
 saveState(st, mCid);
+clearOttTag(v);
 try {
 const r0 = rootStore();
 if (r0) {

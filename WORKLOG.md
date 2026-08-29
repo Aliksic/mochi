@@ -1,4 +1,30 @@
-# 本次构建者：AI-A（本会话 2026-08-29，TA在身边位置面板返回按钮修复 + 收口工作区朋友圈收藏增量）
+# 本次构建者：AI-A（本会话 2026-08-29，吃饭提醒夜宵专属字卡；已构建收口 sw: mochi-mtdx6joz，哨兵 55/55，verify-eat-remind 20/20，待提交）
+### 2026-08-29 13:10（吃饭提醒的夜宵时间提醒没有对应字卡，很突兀）
+- [AI-A 域]（**改动文件：src/js/default-cards-data.js + src/js/p2-features.js + build.mjs（FIX_SENTINELS 哨兵 +1）+ FIX-REGRESSION.md #49 + tools/verify-eat-remind.mjs（S6/T6 新增）；node --check 通过；已构建收口 sw: mochi-mtdx6joz，哨兵 55/55，verify-eat-remind 20/20，未提交**）。
+- 需求/反馈：用户「吃饭提醒 的夜宵时间提醒 没有对应的字卡，很突兀」。
+- 根因：饭点提醒 4 个窗口（早/午/晚/夜宵 21:30–23:30）共用「提醒吃饭/追问关心」通用话术池，夜宵触发抽到的还是「到饭点啦」「饭要按时吃」等"按时吃饭"语境文案，深夜发出违和。
+- 方案：① default-cards-data.js 的 DEFAULT_CARD_DATA.eat 新增「夜宵提醒」（10 条）/「夜宵关心」（5 条）两组，字卡库【吃什么】tab 自动显示并可逐张开关（dc-off-eat:* 联动）；② p2-features.js 新增 DEF_EAT_REMIND_NIGHT / DEF_EAT_REMIND_NIGHT_CARE 兜底（与字卡库同源），eatRemindFire 按 code==='nightcap' 分别抽「夜宵提醒/夜宵关心」池，其余窗口仍走通用池；夜宵话术刻意不用 {d} 占位（避免空菜单替换成「饭」的违和）。
+- 验证：哨兵 55/55；verify-eat-remind 20/20（新增 S6 静态接线 + T6 夜宵场景：补丁 Date 22:00 触发 → 聊天收夜宵话术、done 写 nightcap 键、未混入通用文案）。
+- ⚠️ T6 踩坑（已解决）：T5 把 en=0/prob=25 写进 LS+IDB 且 __wr-journal 有日志 → T6 导航后启动回放 journal 旧值（先于 idbRestore），retainValue 以 LS 为准 → 夜宵触发被 en=0 挡掉。处理：清全局 `xy-home-v2:__wr-journal` + 三层一致写 en=1/prob=100（IDB 权威，restore 后 __wr-j: 标记还会再修正一次）。
+- 待对方处理：无（本次构建已收口下方 cjian/feed 待构建条目，一并入库）。
+### 2026-08-29（此间「对方当前时间」补成「时间段+具体时刻」：在时间段里抽具体时间并显示时段标签）
+- [AI-A 域]（**改动文件：src/js/cjian.js、src/css/chat-pages.css、src/css/dark.css；node --check 通过；构建状态：未构建，待构建者收口**）。
+- 需求/反馈：①「对方当前时间」联系人抽取的不应是全天随机，要先确定时间段、再在时间段里抽具体时间；② 卡片要显示 2 种——时间段 + 具体时刻。
+- 方案：`taTimeOf` 重抽时收集该桌面全部梦角 slots 时辰区间并集，在随机时辰内抽具体时刻（`slotMinuteRange`）；桌面无 slots 梦角则回退全天随机。`renderTaTime` 每桌面一行左侧名下方新增时间段标签（`.cj-ta-time-slot`，无 slots 显示「全天随机」，`taSlotLabel` 复用 `slotLabel`）。chat-pages.css 新增 `.cj-ta-time-namecol/.cj-ta-time-slot` + 调整 `.cj-ta-time-left` 布局，dark.css 补 `.cj-ta-time-slot` 暗色。
+- 验证：node --check 通过；待构建后实测：此行显示「时间段 + hh:mm · 时辰」；带 slots 的桌面时段标签为时辰并集；无 slots 显示「全天随机」。
+- 待对方处理：构建者 `node build.mjs` 收口。
+### 2026-08-29（此间·梦角世界时间持久化：抽一次存住，1–8 小时才重抽，不再每次打开就跳）
+- [AI-A 域]（**改动文件：src/js/cjian.js；node --check 通过；构建状态：未构建，待构建者收口**）。
+- 需求/反馈：带时辰区间（slots）的梦角世界时间每次重开网页就跳（每次打开 `worldMinuteOf` 都重新 Math.random()）。用户确认：把梦角世界时间也改成与「对方当前时间」一致——抽一次、存住、1–8 小时才变，不再每次打开就跳；保留「今日」轴预测随机不受影响。
+- 方案：`worldMinuteOf` 由「每次 Math.random()」改为走持久化 `worldMinuteOfRaw` 抽一次，存根级键 `cjian-ott`（key=梦角 id，value={worldMin,last,next}）；last/next 时间戳持久化，`next=1+random*7` 小时，异常时间戳归一；`worldNowFor`（卡片/详情的世界时间戳）改为基于该持久化分钟，与状态概率所取世界时间一致。删除梦角时 `clearOttTag` 清残留。今日轴（rollTodayForecast / renderDetail 轨迹）保持每次打开重掷。
+- 验证：node --check 通过；待构建后实测：带 slots 的梦角世界时间重开网页不再跳（1–8 小时间隔才变）；无 slots 按偏移的梦角固定为抽到的时刻；今日轴预测仍每次重掷。
+- 待对方处理：构建者 `node build.mjs` 收口。
+### 2026-08-29（朋友圈「删除全部动态/数据」入口从页底移到顶部栏）
+- [AI-A 域 + 跨域 template.html、dark.css 一处]（**改动文件：src/js/feed.js、src/css/chat-pages.css；跨域 src/template.html（删 feed-page-clear 底部按钮+加 feed-head-clear 顶栏按钮）、src/css/dark.css（暗色删除图标色）；node --check 通过；构建状态：未构建**）。
+- 需求/反馈：用户「删除朋友圈数据功能的按钮，没有放在朋友圈顶部栏，不好用要滑动很久」。
+- 方案：把 qv 底部的「删除全部动态」入口移到朋友圈页顶部栏（`feed-head-actions` 末尾、发布按钮右侧，`id=feed-head-clear`，红色垃圾桶图标以示危险操作），复用原有 openModal（全部/仅我的/仅TA 三选项）；顶部按钮仍按 `posts.length` 控制 hidden；移除页底底部按钮与 `.feed-clear-btn` 样式。
+- 验证：node --check 通过；待构建后实测：朋友圈有动态时顶部栏出现红色垃圾桶→点击弹三选项删除；无动态时按钮隐藏；暗色下图标仍为红色。
+- 待对方处理：构建者执行 `node build.mjs` 收口。
 ### 2026-08-29（朋友圈 TA 收藏范围调整：我所有动态都可能被收藏，各桌面 TA 收藏进各自桌面收藏）
 - [AI-A 域]（**改动文件：src/js/feed.js；node --check 通过；构建状态：本次收口**）。
 - 需求/反馈：用户「关于朋友圈动态我点击收藏，是收藏到那个联系人桌面的【收藏】里」+「联系人收藏我的朋友圈动态是，我所有动态都有可能，我的朋友圈动态所有桌面数据是互通的；联系人收藏我的朋友圈动态是，收藏到自己桌面的【收藏】功能里」。

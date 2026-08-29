@@ -316,6 +316,25 @@ if (p2) {
                 (rowAlign.row2 !== undefined && rowAlign.row2 <= 0.6);
   check('E4 图标文字行从底部对齐（第1/2行 ≤0.6px）', rowOK,
     '第1行Δ=' + rowAlign.row1 + ' 第2行Δ=' + rowAlign.row2);
+  // v3.26.x：系统大字体/无障碍缩放下图标名不换行（用户反馈"手机端第三页底部图标
+  // 和文字没对齐"根因）——4 字图标名（经期记录/梦角档案等）字号放大换行成两行，
+  // 图标块撑高、三页错位。app-name 单行省略后字号 14~24px 三页仍对齐。
+  const fontAligned2 = JSON.parse(await evalJs(`(function(){
+    var st=document.createElement('style');
+    st.id='fs-big'; st.textContent='.app-name{font-size:18px !important;}';
+    document.head.appendChild(st);
+    var slides=document.querySelectorAll('#desktop-pages .page-slide');
+    var gb=[];
+    slides.forEach(function(sl){
+      var g=sl.querySelector('.app-grid');
+      if(g)gb.push(Math.round(g.getBoundingClientRect().bottom*100)/100);
+    });
+    st.remove();
+    if(gb.length<3)return '{}';
+    return JSON.stringify({gb:gb, aligned:gb.every(b=>Math.abs(b-gb[0])<=0.6)});
+  })()`) || '{}');
+  check('E5 图标名 18px 大字体下三页图标组底部仍对齐（≤0.6px）', fontAligned2.aligned === true,
+    'B=' + (fontAligned2.gb || []).join('/'));
   void memoRow; void ck0; void grid0; void grid2; void grid1;
 } else check("C' 组前置：第三页存在", false, '');
 

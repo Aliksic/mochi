@@ -707,6 +707,7 @@
   .feed-comment { color:#bbb; }
   .feed-reply { color:#aaa; }
   .feed-head-btn { color:var(--ink); }
+  .feed-head-btn.feed-head-clear { color:#e05b5b; }
   .feed-comment-bar { background:var(--dark-card-97); border-top-color:var(--dark-border); }
   .feed-comment-send { color:#111; }
   .feed-notice-panel { background:var(--dark-card-97); border-color:var(--dark-border); }
@@ -911,6 +912,7 @@
   .cj-ta-time-hint { color:#8a8a8a; }
   .cj-ta-time-item + .cj-ta-time-item { border-top-color:rgba(255,255,255,.07); }
   .cj-ta-time-sh { color:#7d7d7d; }
+  .cj-ta-time-slot { color:#8a8a8a; }
   .cj-ta-time-shi { color:#9a978f; }
   .cj-detail-back { background:var(--dark-card); border-color:var(--dark-border-12); color:#eaeaea; }
   .cj-d-range { color:#9a978f; }

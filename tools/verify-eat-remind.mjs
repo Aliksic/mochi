@@ -85,6 +85,7 @@ check('S2 字卡库注册【吃饭】tab（v3.16.x 独立页 #fc-tabs 静态预�
 check('S3 吃什么页含 TA 提醒开关/概率按钮 + 饭点窗口表', built.indexOf('eat-remind-toggle') >= 0 && built.indexOf('eat-remind-prob') >= 0 && built.indexOf('EAT_REMIND_WINDOWS') >= 0);
 check('S4 触发链路 chatAddIn + bgNotifyCheck（TA的吃饭提醒）+ done 去重键', built.indexOf("name: 'TA的吃饭提醒'") >= 0 && built.indexOf("'eat-remind-done:'") >= 0 && /eatRemindFire[\s\S]{0,900}window\.chatAddIn/.test(built));
 check('S5 启动即查一次（打开应用恰在窗口内可立即触发）', /eatRemindMaybe\(\);\s*\/\/\s*启动即查一次/.test(built));
+check('S6 夜宵专属话术分组（夜宵提醒/夜宵关心）+ 抽取池常量 DEF_EAT_REMIND_NIGHT', built.indexOf('"夜宵提醒"') >= 0 && built.indexOf('"夜宵关心"') >= 0 && built.indexOf('DEF_EAT_REMIND_NIGHT') >= 0);
 
 // ---- 运行时环境：补丁 Date 定格在晚餐窗口内（18:30）+ Math.random=0 + prob=100 ----
 // addScriptToEvaluateOnNewDocument 每次导航自动注入；不动 eat-remind-en（各场景自管）
@@ -220,6 +221,65 @@ let ui3 = JSON.parse(await evalJs(`(function(){
   return JSON.stringify({ pl: p ? p.textContent : '', v: localStorage.getItem('xy-home-v2:default:eat-remind-prob') });
 })()`) || '{}');
 check('T5 概率弹窗输入 25 保存 → 键写入 + 标签更新', ui3.v === '25' && /25%/.test(ui3.pl), JSON.stringify(ui3));
+
+// ---- T6 夜宵窗口（22:00）触发用夜宵专属话术池，不复用「到饭点啦」等通用文案 ----
+// 再注入 Date 补丁定格 22:00（新文档加载时覆盖前一个注入的 18:30）+ Math.random=0 + prob=100
+await cdp('Page.addScriptToEvaluateOnNewDocument', { source: `
+(function () {
+  var _D = Date; var H = 22, M = 0;
+  function F(...a) {
+    if (!(this instanceof F)) {
+      if (a.length === 0) { var d0 = new _D(); d0.setHours(H, M, 0, 0); return d0.toString(); }
+      return _D.apply(null, a).toString();
+    }
+    if (a.length === 0) { var d = new _D(); d.setHours(H, M, 0, 0); return d; }
+    return new (Function.prototype.bind.apply(_D, [null].concat(a)))();
+  }
+  F.prototype = _D.prototype;
+  F.parse = _D.parse; F.UTC = _D.UTC;
+  F.now = function () { var d = new _D(); d.setHours(H, M, 0, 0); return d.getTime(); };
+  window.Date = F;
+})();
+(function () { Math.random = function () { return 0; }; })();
+try { localStorage.setItem('xy-home-v2:default:eat-remind-prob', '100'); } catch (e) {}
+` });
+await lsDel('eat-remind-en'); // 恢复默认开
+// T5 曾把 en=0/prob=25 写入 LS+IDB 且 __wr-journal 有日志；T6 导航后启动回放
+//（先于 idbRestore）会把 journal 旧值铺回 LS，retainValue 以 LS 为准 → 夜宵触发被 en=0 挡掉。
+// 处理：① 清全局 journal（idb.js WRJ_KEY）；② 三层一致写 en=1/prob=100（IDB 权威）；
+// ③ restore 完成后 IDB 的 __wr-j: 标记还会以权威值再修正一次。
+await evalJs(`(function(){ localStorage.removeItem('xy-home-v2:__wr-journal'); return true; })()`);
+await evalJs(`(function(){ return window.idbSet ? window.idbSet('xy-home-v2:default:eat-remind-en', '1').then(function(){ return window.idbSet('xy-home-v2:default:eat-remind-prob', '100'); }) : Promise.resolve(true); })()`);
+await lsSet('eat-remind-en', '1');
+await lsSet('eat-remind-prob', '100');
+await lsDel('eat-remind-done:nightcap:' + dayKey); // 清夜宵窗口 done（dayKey 同日）
+async function countNightMsgs() {
+  const v = await evalJs(`(function(){
+    try {
+      var raw = localStorage.getItem('xy-home-v2:default:chat-msgs') || '[]';
+      var arr = JSON.parse(raw); if (!Array.isArray(arr)) arr = [];
+      var nightPools = ['夜深了，饿不饿','这个点还没睡呀','饿着肚子睡觉可不好','夜宵别吃太撑','偷偷问一句，今晚想吃夜宵吗','去煮碗热乎的面吧','深夜的胃','别只啃饼干','吃夜宵的人，今晚会做甜甜的梦','留一盏灯'];
+      var dayPools = ['到饭点啦','该吃饭了哦','饭要按时吃','好好吃饭的人','别忙忘了吃饭'];
+      var night = 0, day = 0, total = arr.length;
+      arr.forEach(function (m) {
+        var t = (m && m.text) || '';
+        if (m && m.side === 'in') {
+          if (nightPools.some(function (p) { return t.indexOf(p) >= 0; })) night++;
+          if (dayPools.some(function (p) { return t.indexOf(p) >= 0; })) day++;
+        }
+      });
+      return JSON.stringify({ total: arr.length, night: night, day: day, texts: arr.slice(-6).map(function (m) { return (m.side || '') + ':' + String(m.text || '').slice(0, 30); }) });
+    } catch (e) { return JSON.stringify({ err: String(e) }); }
+  })()`);
+  try { return JSON.parse(v || '{}'); } catch (e) { return {}; }
+}
+let nb0 = await countNightMsgs();
+await readyPage(); // 新导航 → 22:00 生效 → 启动即触发夜宵提醒
+let nb1 = await countNightMsgs();
+check('T6 夜宵窗口触发：新增 1 条夜宵专属话术进聊天', nb1.night - nb0.night === 1, JSON.stringify({ before: { total: nb0.total, night: nb0.night }, after: { total: nb1.total, night: nb1.night } }));
+check('T6 夜宵触发未混入「到饭点啦」等通用吃饭文案', nb1.day === nb0.day, JSON.stringify({ before: nb0, after: nb1 }));
+let t6d = await lsGet('eat-remind-done:nightcap:' + dayKey);
+check('T6 夜宵窗口 done 标记已写入（eat-remind-done:nightcap:<今天>）', t6d === '1', String(t6d));
 
 // 清理测试注入键（仅 default 桌面测试键，不触用户真实数据语义）
 await lsDel('eat-remind-en');

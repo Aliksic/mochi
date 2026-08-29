@@ -784,7 +784,7 @@
       ? posts.slice(0, feedShownMain).map(p => postCardHtml(p, name)).join('') +
         (posts.length > feedShownMain ? feedMoreBtnHtml(posts.length - feedShownMain) : '')
       : '<div class="ta-empty">还没有动态，TA 会不定期分享生活</div>';
-    const clearBtn = document.getElementById('feed-page-clear');
+    const clearBtn = document.getElementById('feed-head-clear');
     if (clearBtn) clearBtn.hidden = !posts.length;
     bindEvents(listEl);
   }
@@ -2188,10 +2188,12 @@ if (comInput) comInput.addEventListener('keydown', (e) => { if (e.key === 'Enter
       }, { noInput: true, staticText: '将删除全部动态（我的与 TA 的）、评论、点赞和通知提醒，且无法恢复。确定继续吗？' });
     });
   }
-  // v3.6.x：朋友圈页底部「删除全部动态」——可只删我的动态 / 只删联系人的动态 / 全部删除
-  const feedPageClear = document.getElementById('feed-page-clear');
-  if (feedPageClear) {
-    feedPageClear.addEventListener('click', () => {
+  // v3.6.x：朋友圈页顶部「删除全部动态」——可只删我的动态 / 只删联系人的动态 / 全部删除
+  // v3.27.x：入口从页底移到顶部栏（feed-head-clear），无需滑动到页底
+  const feedHeadClear = document.getElementById('feed-head-clear');
+  if (feedHeadClear) {
+    feedHeadClear.addEventListener('click', (e) => {
+      e.stopPropagation();
       if (!window.openModal) return;
       window.openModal('删除朋友圈动态', '', (v) => {
         const mode = v || 'all';

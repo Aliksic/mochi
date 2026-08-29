@@ -2132,16 +2132,9 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + var(--mochi-safe-bottom,
   background:rgba(0,0,0,.06); color:#999; font-size:10px; line-height:15px;
   vertical-align:1px;
 }
-/* v3.6.x：朋友圈页底部「删除全部动态」按钮（有动态时显示） */
-.feed-clear-btn {
-  display:flex; align-items:center; justify-content:center; gap:6px;
-  width:100%; margin:4px 0 10px; padding:12px 0;
-  border:none; border-radius:12px;
-  background:rgba(214,69,69,.08); color:#d64545;
-  font-size:13px; cursor:pointer;
-}
-.feed-clear-btn:active { background:rgba(214,69,69,.18); }
-.feed-clear-btn[hidden] { display:none; }
+/* v3.6.x：朋友圈删除全部动态（v3.27.x 入口移到顶部栏，用红色区分危险操作） */
+.feed-head-clear { color:#d64545; }
+.feed-head-clear[hidden] { display:none; }
 
 /* ===== 使用许可说明 ===== */
 .lic-block { margin-bottom:14px; }
@@ -3335,9 +3328,11 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + var(--mochi-safe-bottom,
 .cj-ta-time-hint { margin: 4px 0 8px; font-size: 11.5px; color: rgba(0,0,0,.45); }
 .cj-ta-time-item { display: flex; align-items: center; justify-content: space-between; padding: 9px 0; }
 .cj-ta-time-item + .cj-ta-time-item { border-top: 1px solid rgba(0,0,0,.05); }
-.cj-ta-time-left { min-width: 0; }
-.cj-ta-time-sh { display: block; font-size: 10.5px; color: rgba(0,0,0,.4); }
-.cj-ta-time-name { font-size: 14px; font-weight: 700; color: var(--ink); }
+.cj-ta-time-left { min-width: 0; display: flex; align-items: flex-start; gap: 8px; }
+.cj-ta-time-sh { font-size: 10.5px; color: rgba(0,0,0,.4); line-height: 1.6; }
+.cj-ta-time-namecol { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.cj-ta-time-name { font-size: 14px; font-weight: 700; color: var(--ink); line-height: 1.2; }
+.cj-ta-time-slot { font-size: 10.5px; color: rgba(0,0,0,.45); }
 .cj-ta-time-right { display: flex; align-items: baseline; gap: 8px; }
 .cj-ta-time-hhmm { font-size: 22px; font-weight: 800; letter-spacing: 2px; color: var(--ink); line-height: 1; }
 .cj-ta-time-shi { font-size: 11.5px; color: rgba(0,0,0,.5); }

@@ -3210,6 +3210,9 @@
           <button class="ch-settings feed-head-btn" id="feed-publish-btn" title="发布朋友圈">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px"><path d="M12 5v14M5 12h14"/></svg>
           </button>
+          <button class="ch-settings feed-head-btn feed-head-clear" id="feed-head-clear" title="删除朋友圈动态">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+          </button>
         </span>
       </div>
       <!-- 通知提醒面板（TA 点赞/评论/发布动态的提醒，点击跳转对应动态） -->
@@ -3239,11 +3242,6 @@
           <button class="ta-add-btn" style="width:100%;margin-top:10px" id="feed-publish">发布</button>
         </div>
         <div id="feed-list"></div>
-        <!-- v3.6.x：清空朋友圈数据（我的动态 + 所有联系人的动态，有数据时显示） -->
-        <button class="feed-clear-btn" id="feed-page-clear" hidden>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
-          删除全部动态（我的与所有联系人）
-        </button>
       </div>
       <!-- 评论表情/图片面板（紧贴评论条上方） -->
       <div class="feed-comment-panel" id="feed-comment-panel" hidden></div>

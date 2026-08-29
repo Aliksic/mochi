@@ -2883,6 +2883,10 @@ if (ckRefresh) {
   // 分组「提醒吃饭/追问关心」），逐张开关（dc-off-eat:*）经 libPool 过滤后参与抽取。
   const DEF_EAT_REMIND = ['到饭点啦，去吃饭吧', '该吃饭了哦，别饿着', '今天吃 {d} 怎么样？就它了', '{d} 挺好的，去吃这个吧', '记得吃热乎的，别随便对付一口', '去吃饭吧，吃完跟我说说吃了什么', '别忙忘了吃饭，胃是自己的', '我看着呢，快去吃饭', '放下手里的事，先吃饭好不好', '饭要按时吃，我才会放心', '好好吃饭的人，运气不会太差哦', '饿了就去做点吃的，别硬撑'];
   const DEF_EAT_REMIND_CARE = ['吃了什么呀？说给我听听', '吃饱了吗？没饱再去添一点', '吃得合胃口吗？', '慢慢吃，不着急', '记得配点汤汤水水', '吃完了就休息一会儿吧'];
+  // v3.26.x：夜宵窗口（21:30–23:30）专属话术——与字卡库【吃什么】tab「夜宵提醒/夜宵关心」
+  // 分组同源（default-cards-data.js），深夜不再复用「按时吃饭」文案；仍可逐张开关（dc-off-eat:*）
+  const DEF_EAT_REMIND_NIGHT = ['夜深了，饿不饿？想吃点夜宵吗', '这个点还没睡呀，要不要来点夜宵', '饿着肚子睡觉可不好，去弄点吃的吧', '夜宵别吃太撑，留点肚子给梦', '偷偷问一句，今晚想吃夜宵吗', '去煮碗热乎的面吧，我陪你吃', '深夜的胃，也该被好好对待', '别只啃饼干，夜宵也要认真吃', '吃夜宵的人，今晚会做甜甜的梦', '要不要我给你留一盏灯，你去觅食'];
+  const DEF_EAT_REMIND_NIGHT_CARE = ['夜宵吃的什么呀？说给我听听', '吃饱了就快去睡，别熬太晚', '吃完夜宵记得刷个牙再睡哦', '太晚就别吃太辣的，伤胃', '夜宵吃完了就躺下吧，我守着'];
   // 饭点窗口（分钟）：早 06:30–09:30 / 午 11:00–13:30 / 晚 17:00–19:30 / 夜宵 21:30–23:30
   const EAT_REMIND_WINDOWS = [['breakfast', 390, 570], ['lunch', 660, 810], ['dinner', 1020, 1170], ['nightcap', 1290, 1410]];
   function eatDayKey() { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
@@ -2902,7 +2906,9 @@ if (ckRefresh) {
     const dishes = eatDishes();
     const dish = dishes.length ? dishes[Math.floor(Math.random() * dishes.length)] : '';
     let text = '';
-    const pool = libPool('eat', '提醒吃饭', DEF_EAT_REMIND);
+    // v3.26.x：夜宵窗口用专属话术池，其余窗口用通用「提醒吃饭」池（夜宵不再是"按时吃饭"语境）
+    const isNight = code === 'nightcap';
+    const pool = isNight ? libPool('eat', '夜宵提醒', DEF_EAT_REMIND_NIGHT) : libPool('eat', '提醒吃饭', DEF_EAT_REMIND);
     if (pool.length) text = pool[Math.floor(Math.random() * pool.length)] || '';
     if (!text) return;
     text = text.replace(/\{d\}/g, dish || '饭');
@@ -2914,7 +2920,7 @@ if (ckRefresh) {
     // 35% 概率隔一小会儿再补一句「追问关心」（第 2+ 条不重复响提示音，同回复链惯例）
     if (Math.random() < 0.35) {
       setTimeout(() => {
-        const care = libPool('eat', '追问关心', DEF_EAT_REMIND_CARE);
+        const care = isNight ? libPool('eat', '夜宵关心', DEF_EAT_REMIND_NIGHT_CARE) : libPool('eat', '追问关心', DEF_EAT_REMIND_CARE);
         if (care.length && window.chatAddIn) { try { window.chatAddIn(care[Math.floor(Math.random() * care.length)], { silent: true, tag: '吃饭提醒' }); } catch (e) {} }
       }, 1400);
     }

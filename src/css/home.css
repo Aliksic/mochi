@@ -257,6 +257,12 @@
 .app-badge[hidden] { display:none; }
 .app-grid.editing .app-ico { outline:2px solid var(--ink); outline-offset:3px; }
 .app .app-name { font-size:11px; color:var(--ink); letter-spacing:.5px; }
+/* v3.26.x：图标名强制单行省略——系统大字体/无障碍缩放下 4 字图标名（经期记录/梦角
+   档案/聊天统计/提问记录等）会换行成两行，图标块被撑高；三页换行数量不同 → 底部
+   图标/文字错位（实测 app-name 14px 时三页 Δ=4px、20px 时 Δ=66px）。单行 + 固定
+   行高 + 省略号后图标块高度恒定（58 图标+8 gap+14 文字=80 ≤ 96 行高），字号多大
+   三页都对齐。 */
+.app .app-name { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; height:14px; line-height:14px; display:block; }
 
 /* v3.7.x：单个功能图标移出 app-grid 作为独立组件时居中显示 */
 .page-slide .app[data-desk-widget^="app-"] { align-self:center; margin:8px 0; }
