@@ -81,6 +81,20 @@
   // deskcheck（联系人跨桌面查岗）独立成系统预设字卡里的单独入口，见 page-deskcheck。
   const FUNC_KEYS = ['fish', 'eat', 'period', 'water', 'garden', 'sync', 'reach', 'cjian', 'room', 'piggy', 'drift', 'interact'];
   const BASE_KEYS = ['main', 'kaomoji', 'emoji', 'touch'];
+  // v3.26.x：搜索跨全库（聊天默认字卡页 + 其他互动功能字卡页全部 tab），
+  // 不再局限于当前 tab——用户搜「轻轻抵着」在任意页面都能找到经期温柔动作字卡。
+  const ALL_KEYS = BASE_KEYS.concat(FUNC_KEYS);
+  // 跨 tab 搜索结果用「[tab名] 分组名」标注来源：从 dc/fc tabs 读 data-type → 显示名
+  const TAB_LABELS = (function () {
+    const m = {};
+    ['dc-tabs', 'fc-tabs'].forEach(function (id) {
+      const w = document.getElementById(id);
+      if (!w) return;
+      w.querySelectorAll('.cc-tab[data-type]').forEach(function (t) { m[t.dataset.type] = t.textContent.trim(); });
+    });
+    return m;
+  })();
+  function tabLabel(k) { return TAB_LABELS[k] || k; }
   function sumKeys(keys) {
     let n = 0;
     keys.forEach(k => { (DATA[k] || []).forEach(g => { n += Array.isArray(g[1]) ? g[1].length : 0; }); });
@@ -167,7 +181,7 @@
   // v3.16.x：把「分类 tab + 分组条 + 搜索 + 分批列表 + change 委托」抽成工厂，
   // 聊天默认字卡页（dc-* 锚点，仅基础分类）与 其他互动功能字卡页（fc-* 锚点，
   // 仅功能分类）各持一份独立状态；数据/开关键（dc-off-<分类>:*）与池 API 完全不变。
-  function mountCardView(ids, allowedKeys, emptyText) {
+  function mountCardView(ids, allowedKeys, emptyText, searchKeys) {
     const viewList = document.getElementById(ids.list);
     const viewTabs = document.getElementById(ids.tabs);
     const viewBar = document.getElementById(ids.groupsBar);
@@ -176,6 +190,7 @@
     if (!viewList || !viewTabs || !viewBar || !viewSearch || !pageEl) return null;
     const view = {
       keys: allowedKeys.slice(),
+      searchKeys: (searchKeys || []).slice(),
       cur: allowedKeys[0] || '',
       q: '',
       curGroup: '',
@@ -197,11 +212,20 @@
     }
     function render() {
       const token = ++view.renderToken;
-      const grps = DATA[view.cur] || [];
-      let shown = grps;
-      if (view.curGroup) shown = shown.filter(g => g[0] === view.curGroup);
+      // 统一为 { key, gname, arr } 结构：非搜索时是当前 tab 的分组；
+      // 搜索时跨 searchKeys 全库匹配（结果带来源 tab 名标注）
+      let shown = (DATA[view.cur] || []).map(g => ({ key: view.cur, gname: g[0], arr: g[1] }));
       if (view.q) {
-        shown = shown.map(([g, arr]) => [g, arr.filter(c => c.indexOf(view.q) >= 0)]).filter(([g, arr]) => arr.length || g.indexOf(view.q) >= 0);
+        const cross = [];
+        (view.searchKeys.length ? view.searchKeys : view.keys).forEach(k => {
+          (DATA[k] || []).forEach(g => {
+            const arr = (g[1] || []).filter(c => c.indexOf(view.q) >= 0);
+            if (arr.length || g[0].indexOf(view.q) >= 0) cross.push({ key: k, gname: g[0], arr });
+          });
+        });
+        shown = cross;
+      } else if (view.curGroup) {
+        shown = shown.filter(g => g.gname === view.curGroup);
       }
       viewList.innerHTML = '';
       view.cardByIdx = [];
@@ -210,9 +234,9 @@
         return;
       }
       const flat = [];
-      shown.forEach(([gname, arr]) => {
-        flat.push({ header: true, gname, count: arr.length });
-        arr.forEach(c => flat.push({ header: false, c }));
+      shown.forEach(it => {
+        flat.push({ header: true, gname: (it.key !== view.cur ? '[' + tabLabel(it.key) + '] ' : '') + it.gname, count: it.arr.length });
+        it.arr.forEach(c => flat.push({ header: false, c, cat: it.key }));
       });
       const frag = document.createDocumentFragment();
       let pos = 0;
@@ -228,7 +252,7 @@
             frag.appendChild(h);
           } else {
             const c = it.c;
-            const off = isCardOff(view.cur, c);
+            const off = isCardOff(it.cat, c);
             const d = document.createElement('div');
             d.className = 'cc-item glass' + (off ? ' off' : '');
             // 整页为系统预设字卡，统一标【系统】与自定义字卡区分；
@@ -236,7 +260,7 @@
             d.innerHTML = '<div class="cc-txt"><div class="t">' + c + ' <span class="tc-known">系统</span></div></div>' +
               '<label class="toggle ccard-toggle"><input type="checkbox"' + (off ? '' : ' checked') + '><span class="tk"></span></label>';
             d.dataset.idx = view.cardByIdx.length;
-            view.cardByIdx.push({ c, item: d, input: d.querySelector('input') });
+            view.cardByIdx.push({ c, item: d, input: d.querySelector('input'), cat: it.cat });
             frag.appendChild(d);
           }
         }
@@ -254,7 +278,8 @@
       const rec = view.cardByIdx[Number(item.dataset.idx)];
       if (!rec || rec.input !== input) return;
       const nowOff = !input.checked;
-      setCardOff(view.cur, rec.c, nowOff);
+      // v3.26.x：跨 tab 搜索结果的字卡用其真实分类（rec.cat）存开关，而非当前 tab
+      setCardOff(rec.cat || view.cur, rec.c, nowOff);
       item.classList.toggle('off', nowOff);
       toastCard(rec.c, nowOff);
     });
@@ -290,14 +315,14 @@
     return { view, ensureRendered };
   }
 
-  // 聊天默认字卡页：仅四大基础分类
+  // 聊天默认字卡页：仅四大基础分类（搜索跨全库，可在本页搜到功能字卡）
   const dcView = mountCardView({
     list: 'dc-list', tabs: 'dc-tabs', groupsBar: 'dc-groups-bar', search: 'dc-search-input', page: 'page-default-cards'
-  }, BASE_KEYS, '暂无默认字卡');
-  // 其他互动功能字卡页：仅功能分类（模板已预置全部功能 tab）
+  }, BASE_KEYS, '暂无默认字卡', ALL_KEYS);
+  // 其他互动功能字卡页：仅功能分类（模板已预置全部功能 tab；搜索同样跨全库）
   const fcView = mountCardView({
     list: 'fc-list', tabs: 'fc-tabs', groupsBar: 'fc-groups-bar', search: 'fc-search-input', page: 'page-fun-cards'
-  }, FUNC_KEYS, '暂无功能触发字卡');
+  }, FUNC_KEYS, '暂无功能触发字卡', ALL_KEYS);
 
   // 兜底：若 template 静态 fc-tabs 里缺某个 FUNC_KEYS 分类，动态补一个 tab。
   // （其余功能分类已在模板静态预置；新增功能的 tab 靠这里自动补。）
@@ -318,7 +343,7 @@
   // 联系人跨桌面查岗（独立入口，单独页面渲染）：仅 deskcheck 一个分类
   const dkView = mountCardView({
     list: 'dk-list', tabs: 'dk-tabs', groupsBar: 'dk-groups-bar', search: 'dk-search-input', page: 'page-deskcheck'
-  }, ['deskcheck'], '暂无联系人跨桌面查岗字卡');
+  }, ['deskcheck'], '暂无联系人跨桌面查岗字卡', ['deskcheck']);
 
   // 入口/返回
   const li = document.getElementById('li-default-cards');

@@ -8385,9 +8385,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787992323910">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.334</b></span>
-        <span class="sv-deploy">部署于 2026-08-29 16:32<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787992930132">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.335</b></span>
+        <span class="sv-deploy">部署于 2026-08-29 16:42<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9477,7 +9477,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.334</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.335</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -9685,7 +9685,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.334</span>
+              <span class="lic-ver">v3.26.335</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -16023,6 +16023,7 @@ try { refreshDeskVisuals(); } catch (e) {}
 } catch (e) {}
 (function () {
 const mask = document.getElementById('modal-mask');
+let _modalOpts = null;
 const modalBox = mask ? mask.querySelector('.modal') : null;
 const title = document.getElementById('modal-title');
 const staticEl = document.getElementById('modal-static');
@@ -16097,6 +16098,7 @@ let sliderInitPill = null;
 let pillClicked = false;
 window.openModal = function (t, v, fn, opts) {
 opts = opts || {};
+_modalOpts = opts;
 if (modalBox) modalBox.classList.toggle('modal--big', !!opts.big);
 if (okBtn) okBtn.textContent = '确定';
 stayOnce = false;
@@ -16337,7 +16339,7 @@ txt = new TextDecoder('utf-8').decode(buf); // 兜底
 }
 } catch (e) { txt = String(reader.result || ''); }
 if (textarea) textarea.value = txt;
-if (opts.txtImportAuto) { try { fire(); } catch (e) {} try { close(); } catch (e) {} }
+if (_modalOpts && _modalOpts.txtImportAuto) { try { fire(); } catch (e) {} try { close(); } catch (e) {} }
 };
 reader.readAsArrayBuffer(f);
 fileInput.value = '';
@@ -33357,6 +33359,17 @@ window.defaultCardApiFor = apiFor;
 const DATA = (window.DEFAULT_CARD_DATA) || { main: [], kaomoji: [], emoji: [] };
 const FUNC_KEYS = ['fish', 'eat', 'period', 'water', 'garden', 'sync', 'reach', 'cjian', 'room', 'piggy', 'drift', 'interact'];
 const BASE_KEYS = ['main', 'kaomoji', 'emoji', 'touch'];
+const ALL_KEYS = BASE_KEYS.concat(FUNC_KEYS);
+const TAB_LABELS = (function () {
+const m = {};
+['dc-tabs', 'fc-tabs'].forEach(function (id) {
+const w = document.getElementById(id);
+if (!w) return;
+w.querySelectorAll('.cc-tab[data-type]').forEach(function (t) { m[t.dataset.type] = t.textContent.trim(); });
+});
+return m;
+})();
+function tabLabel(k) { return TAB_LABELS[k] || k; }
 function sumKeys(keys) {
 let n = 0;
 keys.forEach(k => { (DATA[k] || []).forEach(g => { n += Array.isArray(g[1]) ? g[1].length : 0; }); });
@@ -33423,7 +33436,7 @@ if (el) el.checked = getCat(k);
 });
 } catch (e) {}
 });
-function mountCardView(ids, allowedKeys, emptyText) {
+function mountCardView(ids, allowedKeys, emptyText, searchKeys) {
 const viewList = document.getElementById(ids.list);
 const viewTabs = document.getElementById(ids.tabs);
 const viewBar = document.getElementById(ids.groupsBar);
@@ -33432,6 +33445,7 @@ const pageEl = document.getElementById(ids.page);
 if (!viewList || !viewTabs || !viewBar || !viewSearch || !pageEl) return null;
 const view = {
 keys: allowedKeys.slice(),
+searchKeys: (searchKeys || []).slice(),
 cur: allowedKeys[0] || '',
 q: '',
 curGroup: '',
@@ -33453,11 +33467,18 @@ viewBar.appendChild(cEl);
 }
 function render() {
 const token = ++view.renderToken;
-const grps = DATA[view.cur] || [];
-let shown = grps;
-if (view.curGroup) shown = shown.filter(g => g[0] === view.curGroup);
+let shown = (DATA[view.cur] || []).map(g => ({ key: view.cur, gname: g[0], arr: g[1] }));
 if (view.q) {
-shown = shown.map(([g, arr]) => [g, arr.filter(c => c.indexOf(view.q) >= 0)]).filter(([g, arr]) => arr.length || g.indexOf(view.q) >= 0);
+const cross = [];
+(view.searchKeys.length ? view.searchKeys : view.keys).forEach(k => {
+(DATA[k] || []).forEach(g => {
+const arr = (g[1] || []).filter(c => c.indexOf(view.q) >= 0);
+if (arr.length || g[0].indexOf(view.q) >= 0) cross.push({ key: k, gname: g[0], arr });
+});
+});
+shown = cross;
+} else if (view.curGroup) {
+shown = shown.filter(g => g.gname === view.curGroup);
 }
 viewList.innerHTML = '';
 view.cardByIdx = [];
@@ -33466,9 +33487,9 @@ viewList.innerHTML = '<div class="cc-empty">' + emptyText + '</div>';
 return;
 }
 const flat = [];
-shown.forEach(([gname, arr]) => {
-flat.push({ header: true, gname, count: arr.length });
-arr.forEach(c => flat.push({ header: false, c }));
+shown.forEach(it => {
+flat.push({ header: true, gname: (it.key !== view.cur ? '[' + tabLabel(it.key) + '] ' : '') + it.gname, count: it.arr.length });
+it.arr.forEach(c => flat.push({ header: false, c, cat: it.key }));
 });
 const frag = document.createDocumentFragment();
 let pos = 0;
@@ -33484,13 +33505,13 @@ h.innerHTML = '<span class="ccg-name">' + it.gname + '</span><span class="ccg-co
 frag.appendChild(h);
 } else {
 const c = it.c;
-const off = isCardOff(view.cur, c);
+const off = isCardOff(it.cat, c);
 const d = document.createElement('div');
 d.className = 'cc-item glass' + (off ? ' off' : '');
 d.innerHTML = '<div class="cc-txt"><div class="t">' + c + ' <span class="tc-known">系统</span></div></div>' +
 '<label class="toggle ccard-toggle"><input type="checkbox"' + (off ? '' : ' checked') + '><span class="tk"></span></label>';
 d.dataset.idx = view.cardByIdx.length;
-view.cardByIdx.push({ c, item: d, input: d.querySelector('input') });
+view.cardByIdx.push({ c, item: d, input: d.querySelector('input'), cat: it.cat });
 frag.appendChild(d);
 }
 }
@@ -33507,7 +33528,7 @@ if (!item) return;
 const rec = view.cardByIdx[Number(item.dataset.idx)];
 if (!rec || rec.input !== input) return;
 const nowOff = !input.checked;
-setCardOff(view.cur, rec.c, nowOff);
+setCardOff(rec.cat || view.cur, rec.c, nowOff);
 item.classList.toggle('off', nowOff);
 toastCard(rec.c, nowOff);
 });
@@ -33543,10 +33564,10 @@ return { view, ensureRendered };
 }
 const dcView = mountCardView({
 list: 'dc-list', tabs: 'dc-tabs', groupsBar: 'dc-groups-bar', search: 'dc-search-input', page: 'page-default-cards'
-}, BASE_KEYS, '暂无默认字卡');
+}, BASE_KEYS, '暂无默认字卡', ALL_KEYS);
 const fcView = mountCardView({
 list: 'fc-list', tabs: 'fc-tabs', groupsBar: 'fc-groups-bar', search: 'fc-search-input', page: 'page-fun-cards'
-}, FUNC_KEYS, '暂无功能触发字卡');
+}, FUNC_KEYS, '暂无功能触发字卡', ALL_KEYS);
 (function () {
 const tabs = document.getElementById('fc-tabs');
 if (!tabs) return;
@@ -33562,7 +33583,7 @@ tabs.appendChild(b);
 })();
 const dkView = mountCardView({
 list: 'dk-list', tabs: 'dk-tabs', groupsBar: 'dk-groups-bar', search: 'dk-search-input', page: 'page-deskcheck'
-}, ['deskcheck'], '暂无联系人跨桌面查岗字卡');
+}, ['deskcheck'], '暂无联系人跨桌面查岗字卡', ['deskcheck']);
 const li = document.getElementById('li-default-cards');
 if (li) {
 li.addEventListener('click', () => {
