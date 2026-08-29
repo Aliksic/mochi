@@ -1,4 +1,10 @@
 # 本次构建者：AI-A（本会话 2026-08-29 16:30，收口「华为 Mate40 Pro 桌面图标横拖/恢复默认」；构建状态：本次构建，待提交）
+### 2026-08-29 16:45（系统预设字卡搜索跨全库：任意页面可搜到经期温柔动作等全部字卡）
+- [AI-A 域·字卡库]（**改动文件：src/js/default-cards.js + FIX-REGRESSION.md（#58）+ WORKLOG.md；node --check 通过；构建状态：已构建，sw: mochi-mte4s3bm，已提交 e9a8e2e（含产物），推送待 GitHub 凭据**）。
+- 需求/反馈：用户确认「所有字卡都要能搜索、显示在字卡库」——此前搜索只限当前 tab，经期温柔动作字卡在别的页面搜不到。
+- 方案：① mountCardView 新增 searchKeys，dc/fc 两页均传 ALL_KEYS（BASE+FUNC 全库）；② 搜索跨全库匹配（文案/分组名含关键词），分组头标注来源「[tab名] 分组名」（TAB_LABELS 读 dc/fc tabs data-type→显示名）；③ 跨 tab 搜到的字卡开关按真实分类落库（setCardOff(rec.cat)），避免误存到当前 tab 的 dc-off-<cat>；dk（查岗）页保持自身 keys。
+- 验证：tmp 脚本（无头 Chrome CDP）9/9 通过后已删：经期 tab=经期关心20+温柔动作6；功能页搜「轻轻抵着」命中；默认字卡页搜「往怀里」跨库命中并标注 [经期]；跨库关闭字卡 → dc-off-period:（把你往怀里带了带）=1（LS+store 双写）、重开恢复 0。FIX-REGRESSION #58。
+- 待对方处理：推送仍缺 GitHub 凭据（GCM 无缓存/无 tty/无 gh/无 SSH），需手动 git push origin main 或连接 GitHub connector。
 ### 2026-08-29 16:30（华为 Mate40 Pro+ 自带浏览器：①编辑布局拖动图标只能竖着换行、横着放不了；②点【恢复默认桌面】没恢复）
 - [AI-A 域·跨域改 AI-B 文件 src/js/personalize.js + build.mjs（哨兵×2）+ FIX-REGRESSION.md（#57）+ WORKLOG.md；node --check 通过；构建状态：本次构建，sw: mochi-mte4b14h，待提交]。
 - 需求/反馈：华为 Mate 40 Pro+ 自带浏览器，编辑布局里拖动图标只能竖着换行、无法横向放置；点【恢复默认桌面】布局没恢复。
