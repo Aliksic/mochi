@@ -8,6 +8,7 @@
 - 根因：chat-msgs 在 IndexedDB 达 355MB（含图片 base64），每次交互都同步 `JSON.stringify` 全量串 + `idbSet` 全量写 → 主线程 2~3s 阻塞；来回切页/开关消息再次触发。
 - 方案：`saveMsgs`/`saveMsgsNow`/`flushSave` 的同步全量写改为空闲调度器 `schedulePersist/flushPersistNow/runPersist`：`requestIdleCallback` 空闲期或 ≥2500ms 间隔合并写；`flushSave` 只在真正离场（切页）时 flushPersistNow，缓解打字/发消息/来消息打断。不缓存、不删数据，仅改落盘时机。
 - 验证：node --check 通过；构建哨兵核对中。待真机实测：发消息后不再卡 2~3s、来消息不打断游戏、收键盘/上滑记录明显变顺。
+- 补充（稳妥复查）：群聊 group-chat.js 是**同款**同步全量写（每次群消息 `JSON.stringify`+`localStorage.setItem`，IDB 仅 300ms 防抖）同样卡——套用同款空闲调度 `gSchedulePersist/gFlushPersistNow`（≥2500ms 合并），`saveNow` 保留在群聊返回/清空离场点立即落盘，补 visibilitychange/beforeunload 兜底；build.mjs FIX_SENTINELS 新增 2 条哨兵（schedulePersist/gSchedulePersist），FIX-REGRESSION 增 #52/#53。node --check + 构建哨兵 59/59 + 布局 verify 10/10 通过，sw: mochi-mte097b1，待提交未推送。
 - 待对方处理：真机复核打字/收键盘流畅度（属 mobile-adapt 键盘域），若仍卡再据复测处理。
 ### 2026-08-29（手机端导入美化方案 json 没应用：文件导入需再点一次确定）
 - [AI-B 域]（**改动文件：src/js/personalize.js（openModal 的 fileInput 读取回调新增 txtImportAuto；美化导入行开启 txtImportAuto）；node --check 通过；构建状态：已构建收口 sw: mochi-mtdznxuo，哨兵 57/57，待提交未推送**）。

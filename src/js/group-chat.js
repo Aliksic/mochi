@@ -338,22 +338,46 @@
     }
   }
 
-  // ---- 消息存储（LS 立即写保证持久化可见，IDB 防抖写减少异步开销） ----
-  function saveMsgs() {
-    const data = JSON.stringify(msgs);
-    try { localStorage.setItem(MSG_KEY, data); } catch (e) {}
-    if (saveTimer) clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => {
-      saveTimer = null;
-      try { if (window.idbSet) window.idbSet(MSG_KEY, data); } catch (e) {}
-    }, 300);
+  // ---- 消息存储（v3.26.x 止血：合并+低频+空闲落盘，避免大群聊每次消息同步全量写卡主线程） ----
+  const G_PERSIST_MIN_GAP = 2500;   // 两次实际落盘最小间隔（ms）
+  let gLastPersistAt = 0;           // 上次实际落盘（performance.now()）
+  let gPersistTimer = null;         // 排队中标记（rIdle/timeout）
+  let gPersistRun = null;           // 待执行落盘闭包（tail 只保留最新一次）
+  function gRunPersist() {
+    gPersistTimer = null;
+    const run = gPersistRun;
+    gPersistRun = null;
+    if (!run) return;
+    const wait = G_PERSIST_MIN_GAP - (performance.now() - gLastPersistAt);
+    if (wait > 0) { gPersistTimer = setTimeout(gRunPersist, wait); return; }
+    try { run(); gLastPersistAt = performance.now(); } catch (e) {}
   }
-  function saveNow() {
-    if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+  function gSchedulePersist(writer) {
+    gPersistRun = writer;
+    if (gPersistTimer) return;
+    if (window.requestIdleCallback) gPersistTimer = window.requestIdleCallback(gRunPersist, { timeout: 4000 });
+    else gPersistTimer = setTimeout(gRunPersist, 2500);
+  }
+  function gFlushPersistNow() {
+    const run = gPersistRun;
+    gPersistRun = null;
+    gPersistTimer = null;
+    if (run) { try { run(); gLastPersistAt = performance.now(); } catch (e) {} }
+  }
+  function gcWriteMsgs() {
     const data = JSON.stringify(msgs);
     try { localStorage.setItem(MSG_KEY, data); } catch (e) {}
     try { if (window.idbSet) window.idbSet(MSG_KEY, data); } catch (e) {}
   }
+  function saveMsgs() {
+    gSchedulePersist(gcWriteMsgs);
+  }
+  function saveNow() {
+    gFlushPersistNow();
+    gcWriteMsgs();
+  }
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') gFlushPersistNow(); });
+  window.addEventListener('beforeunload', () => gFlushPersistNow());
   function loadMsgs() {
     try { msgs = JSON.parse(localStorage.getItem(MSG_KEY) || '[]'); } catch (e) { msgs = []; }
     if (!Array.isArray(msgs)) msgs = [];
