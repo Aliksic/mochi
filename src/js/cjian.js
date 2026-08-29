@@ -732,6 +732,64 @@
     if (changedName) box.appendChild(el('p', 'cj-p-note', '「' + changedName + '」似乎改变了状态——现在' + changedTo + '。'));
     box.hidden = false;
   }
+  // ===== 对方当前时间：联系人自己随机抽的当地时刻 =====
+  // 刷新机制同「头像互动·随机更换联系人头像」：启动立即检查 + 每 60 秒轮询，
+  // last/next 时间戳持久化（首次 last=0 → 立即抽一个），抽完 next=1+random*7 小时；
+  // 异常时间戳归一，刷新页面周期不重置。键形 xy-home-v2:<cid>:cjian-ta-time。
+  function loadTaTime(cid) {
+    try { const s = storeOf(cid); if (s) { const v = s.get('cjian-ta-time'); if (v) return JSON.parse(v); } } catch (e) {}
+    return null;
+  }
+  function saveTaTime(cid, obj) {
+    try { storeOf(cid).set('cjian-ta-time', JSON.stringify(obj)); } catch (e) {}
+  }
+  function taTimeOf(cid) {
+    const now = Date.now();
+    let t = loadTaTime(cid);
+    let last = (t && typeof t.last === 'number') ? t.last : 0;
+    let next = (t && typeof t.next === 'number') ? t.next : 0;
+    if (last > now || last < 0 || isNaN(last)) { last = 0; next = 0; }
+    if (!t || (now - last) / 36e5 >= next) {
+      t = { hh: rand(0, 23), mm: rand(0, 59), last: now, next: 1 + Math.random() * 7 };
+      saveTaTime(cid, t);
+    }
+    return t;
+  }
+  function renderTaTime() {
+    const listEl = document.getElementById('cj-list');
+    if (!listEl) return;
+    let card = document.getElementById('cj-ta-time');
+    if (!card) {
+      card = el('div', 'cj-ta-time-card');
+      card.id = 'cj-ta-time';
+      listEl.parentNode.insertBefore(card, listEl);
+    }
+    card.innerHTML = '';
+    card.appendChild(el('div', 'cj-ta-time-title', '对方当前时间'));
+    card.appendChild(el('div', 'cj-ta-time-hint', 'TA 自己随机抽的当地时刻 · 每隔 1-8 小时重新抽'));
+    const cidList = viewCid === ALL ? contacts().map(function (ct) { return ct.id; }) : [(viewCid || curCid())];
+    cidList.forEach(function (cid) {
+      const t = taTimeOf(cid);
+      const row = el('div', 'cj-ta-time-item');
+      const left = el('div', 'cj-ta-time-left');
+      left.appendChild(el('span', 'cj-ta-time-sh', 'TA'));
+      left.appendChild(el('span', 'cj-ta-time-name', contactName(cid)));
+      row.appendChild(left);
+      const right = el('div', 'cj-ta-time-right');
+      right.appendChild(el('span', 'cj-ta-time-hhmm', pad(t.hh) + ':' + pad(t.mm)));
+      right.appendChild(el('span', 'cj-ta-time-shi', SHICHEN[shichenAt(t.hh)] + '时'));
+      row.appendChild(right);
+      card.appendChild(row);
+    });
+  }
+  // 刷新检查：启动立即一次 + 每 60 秒；仅当「此间」页开着才重抽/刷新显示（后台不空转）
+  function taTimePoll() {
+    try {
+      const page = document.getElementById('page-cjian');
+      if (page && !page.hidden) renderTaTime();
+    } catch (e) {}
+  }
+  try { setInterval(taTimePoll, 60000); } catch (e) {}
   function renderHero() {
     const t = timeInfo(Date.now());
     const h1 = document.getElementById('cj-hero-time');
@@ -957,6 +1015,7 @@
     refreshStates();
     renderHero();
     renderGroupBar();
+    renderTaTime();
     renderList();
     renderToday(true);
     if (detailId) renderDetail();

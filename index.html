@@ -5336,6 +5336,22 @@ border: 1px dashed rgba(0,0,0,.18); border-radius: 16px;
 color: rgba(0,0,0,.55); font-size: 13px; line-height: 1.7;
 }
 .cj-empty-sub { font-size: 12px; color: rgba(0,0,0,.45); }
+.cj-ta-time-card {
+margin: 12px 0 14px; padding: 14px 16px 12px;
+background: var(--card-bg, rgba(255,255,255,.95));
+border: 1px solid var(--card-border, rgba(0,0,0,.08));
+border-radius: 16px; box-shadow: 0 2px 10px rgba(0,0,0,.04);
+}
+.cj-ta-time-title { font-size: 15px; font-weight: 800; letter-spacing: .5px; color: var(--ink); }
+.cj-ta-time-hint { margin: 4px 0 8px; font-size: 11.5px; color: rgba(0,0,0,.45); }
+.cj-ta-time-item { display: flex; align-items: center; justify-content: space-between; padding: 9px 0; }
+.cj-ta-time-item + .cj-ta-time-item { border-top: 1px solid rgba(0,0,0,.05); }
+.cj-ta-time-left { min-width: 0; }
+.cj-ta-time-sh { display: block; font-size: 10.5px; color: rgba(0,0,0,.4); }
+.cj-ta-time-name { font-size: 14px; font-weight: 700; color: var(--ink); }
+.cj-ta-time-right { display: flex; align-items: baseline; gap: 8px; }
+.cj-ta-time-hhmm { font-size: 22px; font-weight: 800; letter-spacing: 2px; color: var(--ink); line-height: 1; }
+.cj-ta-time-shi { font-size: 11.5px; color: rgba(0,0,0,.5); }
 .cj-empty .cj-go { max-width: 180px; }
 .cj-perceive {
 margin: 14px 0 10px; padding: 13px 0; width: 100%;
@@ -7157,6 +7173,10 @@ radial-gradient(circle at calc(100% - 5px) calc(100% - 5px), rgba(255,255,255,.1
 .cj-today-chars { color:#c9c6c0; }
 .cj-today-mute { color:rgba(255,255,255,.35); }
 .cj-card-hint { color:#8a8a8a; }
+.cj-ta-time-hint { color:#8a8a8a; }
+.cj-ta-time-item + .cj-ta-time-item { border-top-color:rgba(255,255,255,.07); }
+.cj-ta-time-sh { color:#7d7d7d; }
+.cj-ta-time-shi { color:#9a978f; }
 .cj-detail-back { background:var(--dark-card); border-color:var(--dark-border-12); color:#eaeaea; }
 .cj-d-range { color:#9a978f; }
 .cj-d-real { color:#8a8a8a; }
@@ -8361,9 +8381,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787978409222">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.314</b></span>
-        <span class="sv-deploy">部署于 2026-08-29 12:40<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787978792607">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.315</b></span>
+        <span class="sv-deploy">部署于 2026-08-29 12:46<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9453,7 +9473,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.314</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.315</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -9661,7 +9681,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.314</span>
+              <span class="lic-ver">v3.26.315</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -14762,9 +14782,9 @@ try { if (window.applyAvatars) window.applyAvatars(); } catch (e) {}
 try { if (window.renderChatHeader) window.renderChatHeader(); } catch (e) {}
 };
 function migrateLegacy() {
-try {
 const def = window.xyStore(G + ':default');
 const root = window.xyStore(G);
+try {
 ['bg-keepalive', 'bg-notify', 'group-chat-enabled'].forEach(function (k) {
 const v = def.get(k);
 if (v !== null && v !== undefined && v !== '') {
@@ -69123,6 +69143,59 @@ box.appendChild(p);
 if (changedName) box.appendChild(el('p', 'cj-p-note', '「' + changedName + '」似乎改变了状态——现在' + changedTo + '。'));
 box.hidden = false;
 }
+function loadTaTime(cid) {
+try { const s = storeOf(cid); if (s) { const v = s.get('cjian-ta-time'); if (v) return JSON.parse(v); } } catch (e) {}
+return null;
+}
+function saveTaTime(cid, obj) {
+try { storeOf(cid).set('cjian-ta-time', JSON.stringify(obj)); } catch (e) {}
+}
+function taTimeOf(cid) {
+const now = Date.now();
+let t = loadTaTime(cid);
+let last = (t && typeof t.last === 'number') ? t.last : 0;
+let next = (t && typeof t.next === 'number') ? t.next : 0;
+if (last > now || last < 0 || isNaN(last)) { last = 0; next = 0; }
+if (!t || (now - last) / 36e5 >= next) {
+t = { hh: rand(0, 23), mm: rand(0, 59), last: now, next: 1 + Math.random() * 7 };
+saveTaTime(cid, t);
+}
+return t;
+}
+function renderTaTime() {
+const listEl = document.getElementById('cj-list');
+if (!listEl) return;
+let card = document.getElementById('cj-ta-time');
+if (!card) {
+card = el('div', 'cj-ta-time-card');
+card.id = 'cj-ta-time';
+listEl.parentNode.insertBefore(card, listEl);
+}
+card.innerHTML = '';
+card.appendChild(el('div', 'cj-ta-time-title', '对方当前时间'));
+card.appendChild(el('div', 'cj-ta-time-hint', 'TA 自己随机抽的当地时刻 · 每隔 1-8 小时重新抽'));
+const cidList = viewCid === ALL ? contacts().map(function (ct) { return ct.id; }) : [(viewCid || curCid())];
+cidList.forEach(function (cid) {
+const t = taTimeOf(cid);
+const row = el('div', 'cj-ta-time-item');
+const left = el('div', 'cj-ta-time-left');
+left.appendChild(el('span', 'cj-ta-time-sh', 'TA'));
+left.appendChild(el('span', 'cj-ta-time-name', contactName(cid)));
+row.appendChild(left);
+const right = el('div', 'cj-ta-time-right');
+right.appendChild(el('span', 'cj-ta-time-hhmm', pad(t.hh) + ':' + pad(t.mm)));
+right.appendChild(el('span', 'cj-ta-time-shi', SHICHEN[shichenAt(t.hh)] + '时'));
+row.appendChild(right);
+card.appendChild(row);
+});
+}
+function taTimePoll() {
+try {
+const page = document.getElementById('page-cjian');
+if (page && !page.hidden) renderTaTime();
+} catch (e) {}
+}
+try { setInterval(taTimePoll, 60000); } catch (e) {}
 function renderHero() {
 const t = timeInfo(Date.now());
 const h1 = document.getElementById('cj-hero-time');
@@ -69336,6 +69409,7 @@ if (!todayCacheMap[scopeKey()]) rollTodayForecast();
 refreshStates();
 renderHero();
 renderGroupBar();
+renderTaTime();
 renderList();
 renderToday(true);
 if (detailId) renderDetail();
@@ -70194,8 +70268,12 @@ try {
 var d = document.documentElement;
 var ih = window.innerHeight || 0;
 var sh = (window.screen && window.screen.height) || 0;
-if (sh && ih && sh - ih > 60) d.style.setProperty('--mochi-safe-bottom', '0px');
-else d.style.removeProperty('--mochi-safe-bottom');
+var cur = d.style.getPropertyValue('--mochi-safe-bottom');
+if (sh && ih && sh - ih > 60) {
+if (cur !== '0px') d.style.setProperty('--mochi-safe-bottom', '0px');
+} else if (cur) {
+d.style.removeProperty('--mochi-safe-bottom');
+}
 } catch (e) {}
 }
 function _kbNowLike() {
@@ -70226,6 +70304,7 @@ if (_phone && _phone.style.height) _setPhoneH(null, 'heal');
 if (_phone && _phone.style.alignSelf) _phone.style.alignSelf = '';
 pinScrollTop();
 }
+_syncFullBase();
 } else if (_kbActive) {
 if (Date.now() < _pinUntil) pinScrollTop();
 else healKbScroll();

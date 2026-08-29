@@ -907,8 +907,11 @@
   .cj-today-range { color:#9a978f; }
   .cj-today-chars { color:#c9c6c0; }
   .cj-today-mute { color:rgba(255,255,255,.35); }
-
   .cj-card-hint { color:#8a8a8a; }
+  .cj-ta-time-hint { color:#8a8a8a; }
+  .cj-ta-time-item + .cj-ta-time-item { border-top-color:rgba(255,255,255,.07); }
+  .cj-ta-time-sh { color:#7d7d7d; }
+  .cj-ta-time-shi { color:#9a978f; }
   .cj-detail-back { background:var(--dark-card); border-color:var(--dark-border-12); color:#eaeaea; }
   .cj-d-range { color:#9a978f; }
   .cj-d-real { color:#8a8a8a; }

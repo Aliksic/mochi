@@ -341,6 +341,11 @@
   //   保留旧键导致每次刷新重新迁移覆盖新聊天记录（v3.6.x 修复刷新丢聊天记录）。
   //   幂等检查同时查 IDB 新键（不只 LS/memoryCache），防 idbRestore 未回填时误判为空。
   function migrateLegacy() {
+    // v3.26.x：def/root 提升到函数顶部——此前在第一个 try 块内声明（const 块级作用域），
+    // 下方 v3.26.x 新增的 pomo-*/beauty-schemes 修复块在 try 外引用 → 每次启动
+    // ReferenceError: def is not defined，migrateLegacy 中断、旧键迁移不执行
+    const def = window.xyStore(G + ':default');
+    const root = window.xyStore(G);
     // v3.9.x：修复被旧版 migrateLegacy 误迁移的全局系统键——早期版本把
     // bg-keepalive/bg-notify（后台保活/通知开关）与 reply-gc-*（群聊回复设置）
     // 当旧顶层业务键迁进 default 桌面并删根键（cleanupOld 只删 LS、IDB 旧根键保留，
@@ -348,8 +353,6 @@
     // 桌面刷新后开关读不到全局值自动变关。这里检测 default 桌面的这些键，写回根
     // 命名空间并删除 default 副本，一次性修复存量坏数据（幂等：根键已有则不覆盖）。
     try {
-      const def = window.xyStore(G + ':default');
-      const root = window.xyStore(G);
       ['bg-keepalive', 'bg-notify', 'group-chat-enabled'].forEach(function (k) {
         const v = def.get(k);
         if (v !== null && v !== undefined && v !== '') {

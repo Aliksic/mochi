@@ -906,8 +906,14 @@
           // 屏幕高 - 布局视口高 > 60 → 浏览器自身 UI（顶部状态条 + 底部工具条）占了
           // 一段，底部那段空间根本不在可视区内，env() 再叠一次就是死带；
           // 铺满物理屏（standalone / 真全屏 / 桌面 F11）→ 摘除属性让 CSS 回落 env()
-          if (sh && ih && sh - ih > 60) d.style.setProperty('--mochi-safe-bottom', '0px');
-          else d.style.removeProperty('--mochi-safe-bottom');
+          // v3.26.x：值未变不写 DOM——1s 常驻自愈轮询期间避免每秒 setProperty
+          //   同值触发无谓样式失效（与 syncVvFit 同款先比后写）
+          var cur = d.style.getPropertyValue('--mochi-safe-bottom');
+          if (sh && ih && sh - ih > 60) {
+            if (cur !== '0px') d.style.setProperty('--mochi-safe-bottom', '0px');
+          } else if (cur) {
+            d.style.removeProperty('--mochi-safe-bottom');
+          }
         } catch (e) {}
       }
       // 键盘是否仍有实测证据（供常驻自愈复用，判据与 syncIosKb 一致）
@@ -945,6 +951,12 @@
               if (_phone && _phone.style.alignSelf) _phone.style.alignSelf = '';
               pinScrollTop();
             }
+            // v3.26.x：无键盘稳态也刷新「无键盘基线」——1s 轮询/工具条显隐若始终
+            // 收不到 vv 事件，_fullVv/_fullInner 会滞留旧值（键盘判定与 _safeH 都依赖
+            // 它），下次键盘开合可能误判或收缩值偏斜。此时无焦点无键盘，当前视口
+            // 就是真实无键盘高度，直接吸收（与 syncIosKb 的基线吸收同条件同语义；
+            // restoreKb 内部已吸过一次，重复调用幂等无害）
+            _syncFullBase();
           } else if (_kbActive) {
             // 键盘会话内：沿用原阈值逻辑（动画窗口钉顶 / 稳态只治大位移）
             if (Date.now() < _pinUntil) pinScrollTop();

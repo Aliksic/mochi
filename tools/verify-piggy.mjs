@@ -71,6 +71,16 @@ async function gotoApp(hash) {
 }
 const results = [];
 function check(desc, ok, detail) { results.push({ desc, ok: !!ok }); console.log((ok ? 'PASS' : 'FAIL') + '  ' + desc + (detail ? '  [' + detail + ']' : '')); }
+// 等待条件成立（桌面布局迁移是异步级联，直接断言会踩到中间态，需轮询稳定）
+async function waitFor(expr, timeoutMs = 6000) {
+  const t0 = Date.now();
+  while (Date.now() - t0 < timeoutMs) {
+    const v = await evalJs(expr);
+    if (v) return true;
+    await sleep(250);
+  }
+  return false;
+}
 
 // 页面状态快照
 const snap = `(() => {
