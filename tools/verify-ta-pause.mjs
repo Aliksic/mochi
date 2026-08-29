@@ -15,7 +15,11 @@ function check(name, cond) {
 }
 
 check('设置键 taPauseProb 在位（music-player.js）', html.includes('taPauseProb'));
+check('权限开关键 taPauseEn 在位（可关闭 TA 暂停权限）', html.includes('taPauseEn'));
+check('设置面板权限开关 sm-set-pause-en 在位', html.includes('sm-set-pause-en'));
 check('设置面板步进器 sm-set-pauseprob 在位', html.includes('sm-set-pauseprob'));
+check('防连发：同一首歌只互动一次（taPauseDoneId）', html.includes('taPauseDoneId'));
+check('防连发：互动后冷却（taPauseCooldownAt）', html.includes('taPauseCooldownAt'));
 check('TA 暂停期补播短路（taPauseActive 在 onpause 守卫）', html.includes('taPauseActive'));
 check('「TA 暂停播放」分组名在位（default-cards-data.js）', html.includes('TA 暂停播放'));
 check('「TA 恢复播放」分组名在位', html.includes('TA 恢复播放'));

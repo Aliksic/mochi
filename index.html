@@ -8406,9 +8406,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1788007555631">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.349</b></span>
-        <span class="sv-deploy">部署于 2026-08-29 20:45<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1788007981218">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.350</b></span>
+        <span class="sv-deploy">部署于 2026-08-29 20:53<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9498,7 +9498,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.349</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.350</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -9706,7 +9706,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.349</span>
+              <span class="lic-ver">v3.26.350</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -34604,7 +34604,7 @@ let playlists = [];        // {id,name,createdAt}
 let history = [];          // {id,trackId,trackName,triggerType,ts} —— TA 邀请听歌记录
 let myHistory = [];        // {id,trackId,trackName,ts} —— 我的听歌记录（自己点击播放）
 let hisSubTab = 'ta';      // 听歌记录二级子 tab：ta（TA 邀请）/ mine（我的）；默认 ta 与原 tab 语义一致
-const DEF_SETTINGS = { floatEn: true, reqProb: 5, cooldownMs: 600000, widgetCoverMode: 'song', taNextProb: 15, taRandProb: 10, taModeProb: 5, taFavProb: 20, taReserveProb: 6, taPauseProb: 3 };
+const DEF_SETTINGS = { floatEn: true, reqProb: 5, cooldownMs: 600000, widgetCoverMode: 'song', taNextProb: 15, taRandProb: 10, taModeProb: 5, taFavProb: 20, taReserveProb: 6, taPauseProb: 3, taPauseEn: true };
 let settings = Object.assign({}, DEF_SETTINGS);
 function probOf(v, def) { const n = (typeof v === 'number' && !isNaN(v)) ? v : def; return Math.max(0, Math.min(100, n)); }
 let currentId = null;
@@ -37524,6 +37524,8 @@ const DEF_TA_RESUME_CARDS = ['好啦，继续听吧', '又帮你按了播放，�
 let taPauseActive = false;      // TA 暂停进行中（禁止后台补播/手势补播打扰）
 let taPauseTimer = null;        // 掷骰子命中后的延迟触发定时器
 let taPauseResumeTimer = null;  // TA 恢复播放定时器
+let taPauseDoneId = null;       // 已互动过的歌曲 id（同一首歌不重复触发）
+let taPauseCooldownAt = 0;      // 上次互动完成时间戳（冷却期内不连发）
 function cancelTaPause() {
 taPauseActive = false;
 if (taPauseTimer) { clearTimeout(taPauseTimer); taPauseTimer = null; }
@@ -37542,6 +37544,9 @@ if (window.chatAddIn) window.chatAddIn(m);
 }
 function scheduleTaPauseIfLucky() {
 cancelTaPause();
+if (!settings.taPauseEn) return;                                  // 权限开关关闭：彻底不触发
+if (currentId && currentId === taPauseDoneId) return;             // 同一首歌只互动一次
+if (Date.now() - taPauseCooldownAt < (settings.cooldownMs || 600000)) return; // 冷却期内不连发
 const p = probOf(settings.taPauseProb, 3);
 if (p <= 0 || Math.random() * 100 >= p) return;
 if (!currentId || !audio) return;
@@ -37558,6 +37563,8 @@ taPauseResumeTimer = setTimeout(function () {
 taPauseResumeTimer = null;
 if (!taPauseActive || !audio || !currentId || currentId !== endedId) { taPauseActive = false; return; }
 taPauseActive = false;
+taPauseDoneId = endedId;
+taPauseCooldownAt = Date.now();
 const p2 = audio.play();
 if (p2 && p2.catch) p2.catch(function () {
 try { audio.muted = true; } catch (e) {}
@@ -37651,8 +37658,9 @@ window.openTCPanel('音乐设置', '' +
 '<div class="gs-row"><span>歌曲播完·随机挑歌概率</span><div class="stepper" id="sm-set-rand" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="sm-set-rand-val" readonly><button class="stp-max">+</button></div></div>' +
 '<div class="gs-row"><span>歌曲播完·换播放模式概率</span><div class="stepper" id="sm-set-modep" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="sm-set-modep-val" readonly><button class="stp-max">+</button></div></div>' +
 '<div class="sm-set-hint">一起听完一首歌时，TA 按上面三个概率主动控制播放：切到下一首 / 随机挑一首 / 把播放模式换成顺序播放·列表循环·随机播放·单曲循环；三个都不中就正常自动切下一首（全设 0 = TA 从不主动控制）</div>' +
+'<div class="sm-set-row"><span>联系人可暂停你的播放</span><label class="toggle"><input type="checkbox" id="sm-set-pause-en"' + (settings.taPauseEn ? ' checked' : '') + '><span class="tk"></span></label></div>' +
 '<div class="gs-row"><span>播放中·TA 暂停再播放概率</span><div class="stepper" id="sm-set-pauseprob" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="sm-set-pauseprob-val" readonly><button class="stp-max">+</button></div></div>' +
-'<div class="sm-set-hint">播放歌曲时 TA 有小概率突然暂停播放（聊天里发一张字卡），几秒后再帮你点播放恢复（再发一张字卡）；字卡文案在【字卡库 → 其他互动功能字卡 → 音乐】可逐张开关（设 0 = TA 从不暂停再播放）</div>' +
+'<div class="sm-set-hint">播放歌曲时 TA 有小概率突然暂停播放（聊天里发一张字卡），几秒后再帮你点播放恢复（再发一张字卡）；字卡文案在【字卡库 → 其他互动功能字卡 → 音乐】可逐张开关。上方开关关闭或概率设 0 = 关闭 TA 暂停权限；同一首歌只触发一次、触发后 10 分钟内不重复（不会一直暂停又继续）</div>' +
 '<div class="gs-row"><span>TA 收藏歌曲概率</span><div class="stepper" id="sm-set-favprob" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="sm-set-favprob-val" readonly><button class="stp-max">+</button></div></div>' +
 '<div class="sm-set-hint">你播放歌曲听一会儿后，TA 有概率把这首歌收进「TA的收藏」（音乐页收藏 tab 右边可查看；已收藏过的歌不重复判定，两次收藏间隔至少 90 秒）</div>' +
 '<div class="sm-set-row"><span>本地音频缓存</span><span id="sm-storage-use" style="color:var(--muted);font-size:12px">计算中…</span></div>' +
@@ -37711,6 +37719,21 @@ bindProbStep('sm-set-rand', 'taRandProb', 10, 100);
 bindProbStep('sm-set-modep', 'taModeProb', 5, 100);
 bindProbStep('sm-set-pauseprob', 'taPauseProb', 3, 100);
 bindProbStep('sm-set-favprob', 'taFavProb', 20, 100);
+const syncPauseEn = function () {
+const box = document.getElementById('sm-set-pauseprob');
+if (box) box.style.opacity = settings.taPauseEn ? '' : '0.4';
+const valEl = document.getElementById('sm-set-pauseprob-val');
+if (valEl) valEl.style.pointerEvents = settings.taPauseEn ? '' : 'none';
+};
+const pauseEnCb = document.getElementById('sm-set-pause-en');
+if (pauseEnCb) {
+pauseEnCb.addEventListener('change', () => {
+settings.taPauseEn = pauseEnCb.checked;
+saveSettings();
+syncPauseEn();
+});
+}
+syncPauseEn();
 const cool = document.getElementById('sm-set-cool');
 if (cool) cool.addEventListener('change', () => { settings.cooldownMs = Number(cool.value); saveSettings(); });
 const floatCb = document.getElementById('sm-set-float');
