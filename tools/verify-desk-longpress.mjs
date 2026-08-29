@@ -368,6 +368,31 @@ if (expParsed && expParsed['page-bg-0'] === '#ffeecc') {
 } else {
   console.log('  [skip] 未能取得导出 JSON，跳过闭环断言');
 }
+// 大 JSON（含壁纸 dataURL，>512KB）→ 复制文字应被拦截，提示改用导出文件（不弹 fallback）
+await ev(`(function(){
+  var s = window.activeStore();
+  s.set('phone-bg', 'data:image/png;base64,' + new Array(600000).join('A'));
+  return true;
+})()`);
+await sleep(400);
+await ev(`(function(){var r=document.getElementById('row-beauty-export');if(r)r.click();return true;})()`);
+await sleep(300);
+await ev(`(function(){var p=document.querySelectorAll('#modal-pills .pill');if(p[0])p[0].click();return true;})()`);
+await sleep(150);
+await ev(`(function(){var o=document.getElementById('modal-ok');if(o)o.click();return true;})()`);
+await sleep(350);
+await ev(`(function(){var ps=document.querySelectorAll('#modal-pills .pill');if(ps[1])ps[1].click();return true;})()`);
+await sleep(150);
+await ev(`(function(){var o=document.getElementById('modal-ok');if(o)o.click();return true;})()`);
+await sleep(500);
+const bigState = await ev(`(function(){
+  var ta = document.querySelector('#modal-mask textarea');
+  var bg = null;
+  try { var v = window.activeStore().get('phone-bg'); bg = v ? v.length : -1; } catch (e) { bg = -2; }
+  return { modalClosed: document.getElementById('modal-mask').hidden, hasFallback: !!ta, fbLen: ta ? ta.value.length : -1, bgLen: bg };
+})()`);
+console.log('  [diag] bigState:', JSON.stringify(bigState));
+check('含大图片的方案「复制文字」被拦截（提示走文件，未弹 fallback 弹窗）', bigState.modalClosed === true && bigState.fbLen === 0, 'modalClosed=' + bigState.modalClosed + ' fbLen=' + bigState.fbLen);
 
 // ============ 汇总 ============
 console.log('\n===== 汇总 =====');

@@ -8385,9 +8385,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787996271555">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.338</b></span>
-        <span class="sv-deploy">部署于 2026-08-29 17:37<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787996655808">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.339</b></span>
+        <span class="sv-deploy">部署于 2026-08-29 17:44<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9477,7 +9477,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.338</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.339</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -9685,7 +9685,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.338</span>
+              <span class="lic-ver">v3.26.339</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -17263,6 +17263,10 @@ setTimeout(() => { try { document.body.removeChild(a); URL.revokeObjectURL(url);
 toast('已导出美化方案文件');
 } catch (e) { toast('导出文件失败'); }
 } else if (v === 'text') {
+if (json.length > 512 * 1024) {
+toast('方案含图片，文本过大，请用「导出文件」分享 .json');
+return;
+}
 if (navigator.clipboard && navigator.clipboard.writeText) {
 navigator.clipboard.writeText(json).then(() => toast('已复制到剪贴板，发给对方粘贴导入')).catch(() => showBeautyFallback(json));
 } else {
@@ -17272,7 +17276,7 @@ showBeautyFallback(json);
 }
 }, {
 noInput: true,
-staticText: '选择导出方式：\n· 导出文件：生成 .json 文件，可保存或发送\n· 复制文字：复制配置文本，发给对方粘贴导入',
+staticText: '选择导出方式：\n· 导出文件：生成 .json 文件，可保存或发送（含壁纸/图标图片的方案请用此项）\n· 复制文字：复制配置文本，发给对方粘贴导入（仅适合无图片的轻量配置）',
 pills: [
 { label: '导出文件', value: 'file' },
 { label: '复制文字', value: 'text' },

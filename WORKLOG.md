@@ -1,4 +1,11 @@
-# 本次构建者：AI-A（本会话 2026-08-29 17:36，收口「导出美化方案嵌套弹窗被外层关闭」；构建状态：本次构建，待提交）
+# 本次构建者：AI-A（本会话 2026-08-29 17:42，收口「导出复制文字大 JSON 拦截」；构建状态：本次构建，待提交）
+### 2026-08-29 17:42（导出美化方案选「复制文字」得到含图片 base64 的超大 JSON，不可靠）
+- [AI-A 域·跨域改 AI-B 文件 src/js/personalize.js + build.mjs（哨兵）+ FIX-REGRESSION.md（#61）+ WORKLOG.md；node --check 通过；构建状态：本次构建，sw: mochi-mte6xzde，待提交]。
+- 需求/反馈：用户质疑导出时「可复制的文字」不正确——方案含图片（壁纸 phone-bg / 自定义图标 app-icon-* / 图片组件 desk-image-src-* 都是 base64 dataURL，一张壁纸 1MB+），复制到剪贴板/聊天工具会被截断或失败，对方也无法粘贴导入。
+- 方案：startBeautyExport 的 text 分支加大小拦截——`json.length > 512*1024` 时 toast「方案含图片，文本过大，请用『导出文件』分享 .json」并 return（不复制、不弹 fallback）；导出弹窗 staticText 注明含图片方案请用导出文件、复制文字仅适合无图片轻量配置。
+- 回归防线：哨兵 `json.length > 512 * 1024`（存在）；FIX-REGRESSION #61；verify-desk-longpress 场景7 追加大 JSON 拦截断言（600KB 壁纸 → 复制文字被拦截、弹窗关闭、无 fallback 文本）。
+- 验证：verify-desk-longpress 29/29；verify-desk-beauty 14/14；verify.mjs 10/10；哨兵 67/67。
+- 待对方处理：推送待 GitHub 凭据（本地累积多提交未推送）。
 ### 2026-08-29 17:36（桌面美化【导出美化方案】有保存方案时选完来源看不到导出方式、「导出没反应」）
 - [AI-A 域·跨域改 AI-B 文件 src/js/personalize.js + build.mjs（哨兵）+ FIX-REGRESSION.md（#60）+ WORKLOG.md；node --check 通过；构建状态：本次构建，sw: mochi-mte6pwjd，待提交]。
 - 需求/反馈：用户怀疑【导出美化方案】有问题导致【导入】也有问题（引导排查发现导出确实有独立 bug）。

@@ -1655,6 +1655,14 @@ try {
           toast('已导出美化方案文件');
         } catch (e) { toast('导出文件失败'); }
       } else if (v === 'text') {
+        // v3.27.x：含图片的方案 JSON 巨大（壁纸 phone-bg / 自定义图标 app-icon-* /
+        // 图片组件 desk-image-src-* 都是 base64 dataURL，一张壁纸就 1MB+）——复制到
+        // 剪贴板或聊天工具发送会被截断/失败，对方也无法粘贴导入（textarea 塞不下）：
+        // 超阈值时提示改用「导出文件」分享 .json，不再硬复制/展示 fallback。
+        if (json.length > 512 * 1024) {
+          toast('方案含图片，文本过大，请用「导出文件」分享 .json');
+          return;
+        }
         if (navigator.clipboard && navigator.clipboard.writeText) {
           navigator.clipboard.writeText(json).then(() => toast('已复制到剪贴板，发给对方粘贴导入')).catch(() => showBeautyFallback(json));
         } else {
@@ -1666,7 +1674,7 @@ try {
       }
     }, {
       noInput: true,
-      staticText: '选择导出方式：\n· 导出文件：生成 .json 文件，可保存或发送\n· 复制文字：复制配置文本，发给对方粘贴导入',
+      staticText: '选择导出方式：\n· 导出文件：生成 .json 文件，可保存或发送（含壁纸/图标图片的方案请用此项）\n· 复制文字：复制配置文本，发给对方粘贴导入（仅适合无图片的轻量配置）',
       pills: [
         { label: '导出文件', value: 'file' },
         { label: '复制文字', value: 'text' },
