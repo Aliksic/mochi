@@ -191,6 +191,39 @@ try {
   const tb3 = await J(`var s=window.__brickDebug.state;return{n:s.balls.length,level:s.level,status:s.status};`);
   check('T-B3 改回 1 球 → 下次发球生效（新层仅 1 颗球）', tb3.n === 1 && tb3.level === 2 && tb3.status === 'rally', tb3);
 
+  // T-B4/T-B5 进行中切换球数 → 立即生效（不打断对局、主球引用稳定、aiBall 无悬空引用）
+  // T-B4 冻结当前球后切回 1 球确认单球，再切 2 球应立刻补发第 2 颗
+  await evalJs(`(function(){var s=window.__brickDebug.state;if(s.status!=='rally'){s.status='rally';}for(var i=0;i<s.balls.length;i++){var b=s.balls[i];b.vx=0;b.vy=0;b.x=180+i*30;b.y=120;}var el=document.getElementById('brick-balls');el.value='1';el.dispatchEvent(new Event('change'));return 1;})()`);
+  await sleep(150);
+  const tb4a = await J(`var s=window.__brickDebug.state;return{n:s.balls.length,status:s.status,mainEq:s.ball===s.balls[0]};`);
+  check('T-B4a 进行中切回 1 球 → 立即剪到 1 颗、对局不中断', tb4a.n === 1 && tb4a.status === 'rally' && tb4a.mainEq, tb4a);
+  await evalJs(`(function(){var el=document.getElementById('brick-balls');el.value='2';el.dispatchEvent(new Event('change'));return 1;})()`);
+  await sleep(150);
+  const tb4b = await J(`var s=window.__brickDebug.state;var xs=s.balls.map(function(b){return Math.round(b.x);});return{n:s.balls.length,status:s.status,mainEq:s.ball===s.balls[0],xs:xs};`);
+  check('T-B4b 进行中切 2 球 → 立即补发第 2 颗（出生点展开、对局不中断）', tb4b.n === 2 && tb4b.status === 'rally' && tb4b.mainEq && Math.abs(tb4b.xs[0] - tb4b.xs[1]) >= 10, tb4b);
+  // T-B5 切 3 球补足、再切回 1 球剪除（含梦角锁定目标悬空引用清理）
+  await evalJs(`(function(){var el=document.getElementById('brick-balls');el.value='3';el.dispatchEvent(new Event('change'));return 1;})()`);
+  await sleep(150);
+  const tb5a = await J(`var s=window.__brickDebug.state;return{n:s.balls.length,status:s.status,mainEq:s.ball===s.balls[0]};`);
+  check('T-B5a 进行中切 3 球 → 立即补足 3 颗、对局不中断', tb5a.n === 3 && tb5a.status === 'rally' && tb5a.mainEq, tb5a);
+  await evalJs(`(function(){var el=document.getElementById('brick-balls');el.value='1';el.dispatchEvent(new Event('change'));return 1;})()`);
+  await sleep(150);
+  const tb5b = await J(`var s=window.__brickDebug.state;return{n:s.balls.length,status:s.status,mainEq:s.ball===s.balls[0],aiBallIn:s.aiBall===null||s.balls.indexOf(s.aiBall)>=0};`);
+  check('T-B5b 进行中切回 1 球 → 立即剪除多余球（主球稳定、aiBall 无悬空引用）', tb5b.n === 1 && tb5b.status === 'rally' && tb5b.mainEq && tb5b.aiBallIn, tb5b);
+
+  // T-B6 进行中重开面板 → 副按钮「新开局」可放弃旧局、按当前球数立即开局
+  await evalJs(`(function(){var el=document.getElementById('brick-balls');el.value='2';el.dispatchEvent(new Event('change'));return 1;})()`);
+  await evalJs(`window.closeBrickPanel()`);
+  await sleep(200);
+  await evalJs(`(function(){var b=document.getElementById('more-brick');if(!b)return 0;b.click();return 1;})()`);
+  await sleep(300);
+  const tb6a = await J(`var ov=document.getElementById('brick-overlay');var oc=document.getElementById('brick-overlay-close');return{ovShown:!!ov&&ov.hidden===false,btn:document.getElementById('brick-overlay-btn').textContent,closeTxt:oc.textContent,closeHidden:oc.hidden};`);
+  check('T-B6a 进行中重开面板 → 主按钮「继续」+ 副按钮「新开局」', tb6a.ovShown && tb6a.btn === '继续' && tb6a.closeTxt === '新开局' && !tb6a.closeHidden, tb6a);
+  await evalJs(`document.getElementById('brick-overlay-close').click()`);
+  await sleep(1400);   // 等新局 serve(900ms) 完成进入 rally
+  const tb6b = await J(`var s=window.__brickDebug.state;return{score:s.score,status:s.status,n:s.balls.length,level:s.level};`);
+  check('T-B6b 点「新开局」→ 放弃旧局重置并按当前球数（2）开局', tb6b.score === 0 && tb6b.status === 'rally' && tb6b.n === 2 && tb6b.level === 1, tb6b);
+
   // T-FS 真全屏：元素级 Fullscreen API 进入（stub 打在面板实例上，游戏请求的是 panel）→ UI 切换；系统侧退出 → 回半框
   await evalJs(`(function(){
     window.__fsReqCount=0;

@@ -1,3 +1,11 @@
+### 2026-08-29 20:35（修复：打砖块切换球数无效 + 进行中无法重新开局选球——FIX-REGRESSION #69）
+- [本会话·游戏域]（**改动文件：src/js/breakout.js（3 处）+ src/template.html（1 行 title，跨域改动：球数提示改「随时调整」）+ build.mjs（哨兵 +2）+ FIX-REGRESSION.md（#69）+ tools/verify-brick.mjs（+T-B4/5/6）；构建状态：本次构建，待提交**）。
+- 需求/反馈：用户反馈「打砖块小游戏开启无法选多个球啊，已经在玩的时候切换2个球无效」。
+- 根因：①球数 change 只存 localStorage 偏好，实际在「下次发球/补发」才生效——rally 进行中切 2 球场上不补发、切 1 球不剪除，玩家感知"无效"；②有进行中对局时重开面板走 resume 分支（只有「继续」、副按钮隐藏），旧局不结束（不掉完命）就永远开不了新局、选球数永远不生效（"开启无法选多个球"）。
+- 方案：①change 时若在 rally 中**立即调整场上球数**——不足目标立即 launchBall 补发、超出目标从数组尾部 pop 剪除（恒不动 balls[0] 维持 s.ball===s.balls[0] 不变量；剪掉的球若是梦角锁定 aiBall 则清空，planDescent 下帧自动重选）；serve/clearing 态仍由下次发球按新数生效（与现有补发/清层逻辑天然兼容，respawns 到点有 `< targetBallCount()` 守卫不会超发）；②resume 分支副按钮显示「新开局」（点击=放弃旧局 startGame，球数/难度按当前选择），endGame 时副按钮文字重置回「返回小游戏」防残留；③选择框 title 改「球数量（随时调整）」。
+- 验证：node --check 过；tools/verify-brick.mjs 新增 T-B4a/b（进行中切 2 球立即补发、对局不中断）、T-B5a/b（切 3 补足/切 1 剪除 + aiBall 无悬空引用）、T-B6a/b（进行中重开面板副按钮「新开局」、点它按 2 球开新局 score 清零）——连同既有用例全绿，全程无 JS 异常；构建哨兵 74/74。（既有 3 个 FAIL：T4 触摸模拟/T-FS4·4b 全屏断言，旧产物同环境同值复现，非本次引入，待设备域排查）
+- 真机确认点：玩的时候切 2 球 → 场上立即补出第 2 颗球（切 1 球立即少一颗）；有进行中对局时重开面板可点「新开局」放弃旧局重新选球。
+# 本次构建者：本会话（2026-08-29 20:36 构建，sw: mochi-mted6myn，待提交。收口说明：①工作期间 git 仓库曾异常（refs/heads 目录丢失 + objects 缺 1e 前缀对象，疑并行进程 git 操作冲突），已从远端 fetch 补齐 + reflog 重建 main 引用恢复，改动无丢失；②产物含并行会话 src/pwa/sw.js「v3.27.x iOS 15 白屏兜底」未提交改动（20:31 首查时工作区干净，构建前出现，node --check 过、逻辑完整），随本批一并入库）
 ### 2026-08-29 19:52（修复：聊天拍一拍昵称变 他/ta/她 + 不显示双方昵称——FIX-REGRESSION #68）
 - [AI-B 域·聊天]（**改动文件：src/js/chat.js 3 处（随 7a4c41d 已入库）+ build.mjs（哨兵 +1）+ FIX-REGRESSION.md（#68）+ tools/verify-poke-nick.mjs（新增）+ tools/verify-ta-gender.mjs（2 处过期期望对齐数据）+ WORKLOG.md；构建状态：本次构建，sw 见 version.json**）。
 - 需求/反馈：用户问「为什么聊天里发送的拍一拍，联系人的昵称也变成了他 ta 她【这个怎么会受称呼功能限制】？拍一拍没有显示我和聊天联系人的昵称，人称不对」。

@@ -8406,9 +8406,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1788003346159">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.347</b></span>
-        <span class="sv-deploy">部署于 2026-08-29 19:35<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1788007147912">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.348</b></span>
+        <span class="sv-deploy">部署于 2026-08-29 20:39<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9498,7 +9498,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.347</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.348</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -9706,7 +9706,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.347</span>
+              <span class="lic-ver">v3.26.348</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -11896,7 +11896,7 @@ transition-duration: .01ms !important;
               <option value="normal">普通</option>
               <option value="hard">困难</option>
             </select>
-            <select class="snake-diff" id="brick-balls" title="球数量（下次发球生效）">
+            <select class="snake-diff" id="brick-balls" title="球数量（随时调整）">
               <option value="1" selected>1 球</option>
               <option value="2">2 球</option>
               <option value="3">3 球</option>
@@ -27358,7 +27358,8 @@ try { if (msgs.length) renderWindow(false, false); } catch (e) {}
 });
 })();
 } catch (__e) { try { console.error("[JS] chat.js", __e && __e.message || __e); } catch (x) {} if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
-(function () { try {
+</script>
+<script>(function () { try {
 (function () {
 const body = document.getElementById('gc-body');
 if (!body) return;
@@ -39693,7 +39694,8 @@ try { restoreLib('avatar-lib'); } catch (e) {}
 try { restoreLib('avatar-me-lib'); } catch (e) {}
 })();
 } catch (__e) { try { console.error("[JS] avatar-lib.js", __e && __e.message || __e); } catch (x) {} if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
-(function () { try {
+</script>
+<script>(function () { try {
 (function () {
 const uid = window.activePrefix();
 const store = window.activeStore();
@@ -49601,7 +49603,8 @@ return out;
 } });
 })();
 } catch (__e) { try { console.error("[JS] loc-lib.js", __e && __e.message || __e); } catch (x) {} if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
-(function () { try {
+</script>
+<script>(function () { try {
 (function () {
 const uid = window.activePrefix();
 const store = window.activeStore();
@@ -61831,7 +61834,8 @@ SIBLING_IDS.forEach(id => { const el = document.getElementById(id); if (el) mo.o
 })();
 })();
 } catch (__e) { try { console.error("[JS] group-decision.js", __e && __e.message || __e); } catch (x) {} if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
-(function () { try {
+</script>
+<script>(function () { try {
 (function () {
 const panel = document.getElementById('chat-pong-panel');
 if (!panel) return;
@@ -64040,7 +64044,7 @@ const body =
 '<div class="pong-end-stat">完成层数 ' + doneLv + ' · 历史最佳 ' + best + ' 分' + (isBest ? ' 🎉新纪录' : '') + '</div>' +
 (coinLineBrick ? '<div class="pong-end-stat">' + coinLineBrick + '</div>' : '');
 showOverlay(T('游戏结束'), body, '再来一局');
-if (overlayCloseBtn) overlayCloseBtn.hidden = false;
+if (overlayCloseBtn) { overlayCloseBtn.hidden = false; overlayCloseBtn.textContent = '返回小游戏'; }
 try {
 if (window.chatAddSystem) {
 window.chatAddSystem(T('双人打砖块 · ') + s.score + ' 分 · 最高连击 ×' + s.maxCombo + ' · 完成第 ' + (s.level - 1) + ' 层', { special: 'brick' });
@@ -64490,7 +64494,19 @@ if (diffSel) diffSel.addEventListener('change', () => {
 if (state && state.status !== 'over') state.params = DIFFS[diffSel.value] || DIFFS.easy;
 });
 if (ballsSel) ballsSel.addEventListener('change', () => {
-try { localStorage.setItem(ballsPrefKey(), String(targetBallCount())); } catch (e) {}
+const target = targetBallCount();
+try { localStorage.setItem(ballsPrefKey(), String(target)); } catch (e) {}
+if (state && state.status === 'rally' && state.lives > 0) {
+while (state.balls.length > target) {
+const extra = state.balls.pop();
+if (state.aiBall === extra) { state.aiBall = null; state.prevAiVy = 0; }
+}
+while (state.balls.length < target) {
+const nb = newBallObj();
+launchBall(state, nb, state.balls.length, target, performance.now());
+state.balls.push(nb);
+}
+}
 });
 if (soundBtn) soundBtn.addEventListener('click', (e) => {
 e.stopPropagation();
@@ -64506,7 +64522,11 @@ if (resumeFn) { const f = resumeFn; resumeFn = null; f(); }
 else startGame();
 });
 function armResume(fn) { resumeFn = fn; }
-if (overlayCloseBtn) overlayCloseBtn.addEventListener('click', (e) => { e.stopPropagation(); closeBrickPanel(); });
+if (overlayCloseBtn) overlayCloseBtn.addEventListener('click', (e) => {
+e.stopPropagation();
+if (resumeFn) { resumeFn = null; startGame(); }
+else closeBrickPanel();
+});
 if (pauseBtn) pauseBtn.addEventListener('click', (e) => { e.stopPropagation(); togglePause(); });
 if (fsBtn) fsBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleFs(); });
 document.addEventListener('visibilitychange', () => {
@@ -64544,7 +64564,7 @@ if (rafId) cancelAnimationFrame(rafId);
 rafId = requestAnimationFrame(loop);
 if (pauseBtn) pauseBtn.textContent = '⏸';
 });
-if (overlayCloseBtn) overlayCloseBtn.hidden = true;
+if (overlayCloseBtn) { overlayCloseBtn.hidden = false; overlayCloseBtn.textContent = '新开局'; }
 return;
 }
 const best = loadBest();

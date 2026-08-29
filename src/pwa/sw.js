@@ -124,7 +124,23 @@ self.addEventListener('fetch', (e) => {
               , Promise.resolve(null));
             }))
           : caches.match(req);
-        return fallback.then((m) => m || Response.error());
+        return fallback.then((m) => {
+          // v3.27.x：缓存也没有时不再直接 Response.error()（白屏）——
+          // iOS 15 反馈「开屏一直自己刷新然后白屏，完全打不开」：GitHub Pages 国内
+          // 慢网络（实测 ~30KB/s）下网络优先 3.5s 必然超时，若预缓存又失败/旧缓存被清，
+          // 导航回退命中空缓存 → Response.error() → 白屏，用户刷新后同样超时 → 看似
+          // 「一直自己刷新」。兜底改为再发一次不带超时的网络请求（SW 内部 fetch 不会
+          // 再次触发本 SW 拦截，无死循环风险）：慢就慢，等 GitHub Pages 慢慢传完，成功
+          // 后照常写入缓存，后续刷新走缓存秒开；只有网络真正不可达才由浏览器报错页。
+          if (m) return m;
+          return fetch(req).then((res) => {
+            if (res && res.ok) {
+              const copy = res.clone();
+              caches.open(CACHE).then((c) => c.put('./index.html', copy));
+            }
+            return res;
+          });
+        });
       })
   );
 });

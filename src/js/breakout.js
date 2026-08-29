@@ -594,7 +594,7 @@
       '<div class="pong-end-stat">完成层数 ' + doneLv + ' · 历史最佳 ' + best + ' 分' + (isBest ? ' 🎉新纪录' : '') + '</div>' +
       (coinLineBrick ? '<div class="pong-end-stat">' + coinLineBrick + '</div>' : '');
     showOverlay(T('游戏结束'), body, '再来一局');
-    if (overlayCloseBtn) overlayCloseBtn.hidden = false;
+    if (overlayCloseBtn) { overlayCloseBtn.hidden = false; overlayCloseBtn.textContent = '返回小游戏'; }
     // 写聊天记录（居中小卡片）+ TA 回应（固定发送，语气随机二选一）
     try {
       if (window.chatAddSystem) {
@@ -1092,8 +1092,23 @@
     if (state && state.status !== 'over') state.params = DIFFS[diffSel.value] || DIFFS.easy;
   });
   if (ballsSel) ballsSel.addEventListener('change', () => {
-    // 球数量在下次发球/补发时生效（不打断当前球）；选择随联系人记忆
-    try { localStorage.setItem(ballsPrefKey(), String(targetBallCount())); } catch (e) {}
+    const target = targetBallCount();
+    // 选择随联系人记忆（下次打开面板恢复）
+    try { localStorage.setItem(ballsPrefKey(), String(target)); } catch (e) {}
+    // 进行中即时生效（不打断当前对局）：按新目标数补发缺的球 / 剪除多出的球。
+    // 只从数组尾部增减、恒不动 balls[0]，维持「s.ball === s.balls[0]」不变量；
+    // 剪掉的球若是梦角当前锁定目标则清空，planDescent 下一帧自动重选。
+    if (state && state.status === 'rally' && state.lives > 0) {
+      while (state.balls.length > target) {
+        const extra = state.balls.pop();
+        if (state.aiBall === extra) { state.aiBall = null; state.prevAiVy = 0; }
+      }
+      while (state.balls.length < target) {
+        const nb = newBallObj();
+        launchBall(state, nb, state.balls.length, target, performance.now());
+        state.balls.push(nb);
+      }
+    }
   });
   if (soundBtn) soundBtn.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -1110,7 +1125,12 @@
     else startGame();
   });
   function armResume(fn) { resumeFn = fn; }
-  if (overlayCloseBtn) overlayCloseBtn.addEventListener('click', (e) => { e.stopPropagation(); closeBrickPanel(); });
+  if (overlayCloseBtn) overlayCloseBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    // 进行中副按钮 =「新开局」（放弃旧局、按当前选择重开）；初始/结束时 = 关闭面板
+    if (resumeFn) { resumeFn = null; startGame(); }
+    else closeBrickPanel();
+  });
   if (pauseBtn) pauseBtn.addEventListener('click', (e) => { e.stopPropagation(); togglePause(); });
   if (fsBtn) fsBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleFs(); });
 
@@ -1154,7 +1174,8 @@
         rafId = requestAnimationFrame(loop);
         if (pauseBtn) pauseBtn.textContent = '⏸';
       });
-      if (overlayCloseBtn) overlayCloseBtn.hidden = true;
+      // 进行中也可放弃旧局重新开局（球数/难度按当前选择即时生效）
+      if (overlayCloseBtn) { overlayCloseBtn.hidden = false; overlayCloseBtn.textContent = '新开局'; }
       return;
     }
     const best = loadBest();

@@ -83,15 +83,38 @@ let html = read('template.html');
 const styles = cssFiles.map(f => minifyCss(read(join('css', f)))).join('\n');
 // 每个 JS 文件独立 try/catch 包裹：单文件运行时报错不再连坐后续所有功能
 // （如某个文件在特定设备抛错，之前会导致之后文件的绑定全部失效）
-const scripts = jsFiles.map(f => {
+const jsWrapped = jsFiles.map(f => {
   const code = minifyJs(read(join('js', f)));
   return '(function () { try {\n' + code + '\n} catch (__e) { try { console.error("[JS] ' + f + '", __e && __e.message || __e); } catch (x) {} if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();';
-}).join('\n');
+});
+// v3.27.x：拆 script 块（修复 iOS 15 开屏无限刷新白屏）——
+// 产物单块内联脚本曾达 2.85MB，iOS 15 的 WebKit(615)/JavaScriptCore 对超大单块
+// script 解析会触发内存限制 → WebContent 进程崩溃 → Safari 显示「此页面出现问题」
+// 并自动重新加载 → 每加载必崩 → 无限刷新循环 → 白屏打不开（iOS 上所有浏览器都是
+// WebKit 内核，故「所有浏览器」现象一致）。拆成多块后每块远小于引擎单块解析上限，
+// 块间保持 jsFiles 顺序（依赖前置不变），全局 window 共享不受影响。
+const SCRIPT_CHUNK_LIMIT = 600 * 1024; // 每块字符数上限（≈600KB，iOS 15 单块安全阈值）
+function chunkScripts(items) {
+  const chunks = [];
+  let cur = [];
+  let size = 0;
+  items.forEach(function (s) {
+    if (size + s.length > SCRIPT_CHUNK_LIMIT && cur.length) { chunks.push(cur); cur = []; size = 0; }
+    cur.push(s); size += s.length;
+  });
+  if (cur.length) chunks.push(cur);
+  return chunks;
+}
+const scriptChunks = chunkScripts(jsWrapped);
 
 // v3.15.x：改用函数返回值注入——字符串替换会把包内 $&/$'/$` 当特殊模式处理，
 // 源码里出现这些序列（正则/模板片段）时产物被静默撑爆+残留占位符（2026-08-26 实测踩坑）
 html = html.replace('/*__STYLES__*/', () => styles);
-html = html.replace('/*__SCRIPTS__*/', () => scripts);
+// v3.27.x：多块注入——第一块沿用模板内既有 <script>，后续块用 </script><script> 分隔，
+// 每个功能文件仍是独立 IIFE+try/catch，块间顺序执行语义不变
+html = html.replace('/*__SCRIPTS__*/', () =>
+  scriptChunks.map((c, i) => (i === 0 ? c.join('\n') : '</script>\n<script>' + c.join('\n'))).join('\n')
+);
 // 注入部署时间（开屏显示）
 html = html.replace('__BUILD_INFO__', buildInfo);
 // 注入当前构建时间戳（页面自身版本基线，v3.7.x）——
@@ -137,6 +160,7 @@ console.log('已复制 PWA 文件 → ' + pwaFiles.join(', ') + '（sw 缓存版
 // （防止并行会话/旧缓冲把已移除的代码改回来）。
 // 维护：新增关键修复时在此登记一行 { name, file, needle }（needle 为产物中的特征串）。
 const FIX_SENTINELS = [
+  { name: 'iOS 15 拆 script 块（产物多块，防单块超 600KB 触发 WebKit 解析崩溃/白屏）', file: 'index.html', needle: '</script>\n<script>' },
   { name: '颜文字缺字形字符已替换（ᴥ absent，fix-kaomoji-chars 第二批）', file: 'index.html', needle: 'ᴥ', absent: true },
   { name: 'iOS 键盘输入栏停靠（_ensureInputDocked）', file: 'js/mobile-adapt.js', needle: '_ensureInputDocked' },
   { name: 'iOS 保活音频静音（kaIsIOS/0.002）', file: 'js/bg-keep.js', needle: 'kaIsIOS' },
@@ -209,6 +233,8 @@ const FIX_SENTINELS = [
   { name: '导出确认弹窗显示功能覆盖清单 + 体积自动换算 MB（fmtSize/exportCoverage，修导出看不到导了哪些功能/只有 KB）', file: 'js/data-backup.js', needle: '导出内容（全局全部数据）' },
   { name: 'idbSet 写入失败计数成功即清零 + 大包写入超时按体积放大（修旧数据多「存储异常」弹窗每会话必现：偶发失败污染全会话计数+合法大包写入被 4s 误判）', file: 'js/idb.js', needle: '成功即清零——只对连续失败告警' },
   { name: '拍一拍人称修复（sendPoke/performPoke 存 {me}/{ta} 占位符 + 渲染层 taFit 期间遮罩占位符，昵称不再被称呼改写成 他/ta/她）', file: 'js/chat.js', needle: "const hasPh = t.indexOf('{ta}') >= 0 || t.indexOf('{me}') >= 0" },
+  { name: '打砖块球数切换即时生效（进行中切球数立即补发/剪除，不打断对局，修「玩的时候切换2个球无效」）', file: 'js/breakout.js', needle: 'while (state.balls.length > target) {' },
+  { name: '打砖块进行中可放弃旧局重新开局（resume 分支副按钮=「新开局」，修「开启无法选多个球」）+ 结束面板副按钮文字重置', file: 'js/breakout.js', needle: "overlayCloseBtn.textContent = '新开局'" },
 ];
 try {
   const built = readFileSync(join(root, 'index.html'), 'utf8');
