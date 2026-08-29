@@ -298,8 +298,8 @@ check('导入数据已应用（page-bg-0=#ff0000）', impApplied.bg === '#ff0000
 check('强调色已应用（accent-color）', impApplied.accent === '#123456', 'accent=' + impApplied.accent);
 check('弹窗已自动关闭（txtImportAuto）', impApplied.modalClosed === true, 'closed=' + impApplied.modalClosed);
 
-// ============ 场景7：导出美化方案 → 导出 JSON → 再导入（闭环验证） ============
-console.log('\n===== 场景7 导出→导入闭环（验证导出文件格式与导入兼容） =====');
+// ============ 场景7：导出美化方案（只保留文件方式，无复制文字） ============
+console.log('\n===== 场景7 导出美化方案（只保留「导出文件」，无复制文字） =====');
 await freshLoad();
 await ev(`(function(){
   var s = window.activeStore();
@@ -313,62 +313,22 @@ await ev(`(function(){var r=document.getElementById('row-beauty-export');if(r)r.
 await sleep(350);
 const exp1 = await ev(`(function(){return !document.getElementById('modal-mask').hidden;})()`);
 check('点【导出美化方案】弹窗打开（选择来源）', exp1 === true, 'modal=' + exp1);
-// 点第一个 pill「当前设置」+ 底部确定
+// 点第一个 pill「当前设置」+ 底部确定 → 应直接下载文件（无「导出文件/复制文字」二选一弹窗）
 await ev(`(function(){var p=document.querySelectorAll('#modal-pills .pill');if(p[0])p[0].click();return true;})()`);
 await sleep(150);
 await ev(`(function(){var o=document.getElementById('modal-ok');if(o)o.click();return true;})()`);
-await sleep(350);
+await sleep(500);
 const exp2 = await ev(`(function(){
   var ps = document.querySelectorAll('#modal-pills .pill');
-  return { modal: !document.getElementById('modal-mask').hidden, labels: Array.prototype.map.call(ps, function(p){return p.textContent;}) };
+  return {
+    modalClosed: document.getElementById('modal-mask').hidden,
+    pillLabels: Array.prototype.map.call(ps, function(p){return p.textContent;}),
+    hasCopyPill: Array.prototype.some.call(ps, function(p){return p.textContent.indexOf('复制文字') >= 0;})
+  };
 })()`);
-check('导出方式弹窗出现（导出文件/复制文字）', exp2.modal === true && exp2.labels.indexOf('导出文件') >= 0 && exp2.labels.indexOf('复制文字') >= 0, 'labels=' + JSON.stringify(exp2.labels));
-// 点「复制文字」+ 确定 → 强制 clipboard 失败走 fallback（textarea 展示 JSON）
-await ev(`(function(){
-  try { Object.defineProperty(navigator, 'clipboard', { value: { writeText: function () { return Promise.reject(new Error('no-clip')); } }, configurable: true }); }
-  catch (e) { try { navigator.clipboard = { writeText: function () { return Promise.reject(new Error('no-clip')); } }; } catch (e2) {} }
-  return true;
-})()`);
-await ev(`(function(){var ps=document.querySelectorAll('#modal-pills .pill');if(ps[1])ps[1].click();return true;})()`);
-await sleep(150);
-await ev(`(function(){var o=document.getElementById('modal-ok');if(o)o.click();return true;})()`);
-await sleep(600);
-const expJson = await ev(`(function(){
-  var ta = document.querySelector('#modal-mask textarea');
-  return ta ? ta.value : null;
-})()`);
-check('导出 JSON 已生成（fallback textarea）', !!expJson, expJson ? 'len=' + expJson.length : 'no-fallback');
-let expParsed = null;
-if (expJson) {
-  try { expParsed = JSON.parse(expJson); } catch (e) { expParsed = null; }
-  check('导出 JSON 可解析且为对象', !!expParsed && typeof expParsed === 'object' && !Array.isArray(expParsed));
-  check('导出 JSON 含预置数据（page-bg-0）', !!expParsed && expParsed['page-bg-0'] === '#ffeecc', expParsed && expParsed['page-bg-0']);
-}
-// 闭环：把这个导出的 JSON 走导入流程 → 应能应用
-if (expParsed && expParsed['page-bg-0'] === '#ffeecc') {
-  // 关闭 fallback 弹窗
-  await ev(`(function(){var c=document.getElementById('modal-cancel');if(c)c.click();else{var m=document.getElementById('modal-mask');m.hidden=true;}return true;})()`);
-  await sleep(300);
-  // 先改掉当前值，导入后应恢复成 #ffeecc
-  await ev(`(function(){var s=window.activeStore();s.set('page-bg-0', '#000000');return true;})()`);
-  await sleep(200);
-  await ev(`(function(){var r=document.getElementById('row-beauty-import');if(r)r.click();return true;})()`);
-  await sleep(350);
-  await ev(`(function(){
-    var inp = document.getElementById('modal-file-input');
-    var dt = new DataTransfer();
-    dt.items.add(new File([${JSON.stringify(JSON.stringify(expParsed))}], 'beauty.json', { type: 'application/json' }));
-    try { inp.files = dt.files; } catch (e) { return { err: String(e) }; }
-    inp.dispatchEvent(new Event('change'));
-    return { ok: true };
-  })()`);
-  await sleep(700);
-  const reimpVal = await ev(`(function(){var s=window.activeStore();return s.get('page-bg-0');})()`);
-  check('导出的 JSON 重新导入可应用（page-bg-0 恢复）', reimpVal === '#ffeecc', 'bg=' + reimpVal);
-} else {
-  console.log('  [skip] 未能取得导出 JSON，跳过闭环断言');
-}
-// 大 JSON（含壁纸 dataURL，>512KB）→ 复制文字应被拦截，提示改用导出文件（不弹 fallback）
+check('选来源确定后弹窗关闭（直接导出文件，无二选一弹窗）', exp2.modalClosed === true, 'modalClosed=' + exp2.modalClosed);
+check('导出方式弹窗不再出现「复制文字」选项', exp2.hasCopyPill === false, 'pills=' + JSON.stringify(exp2.pillLabels));
+// 大 JSON（含壁纸 dataURL）→ 直接导出文件（无大小限制，不弹任何提示弹窗）
 await ev(`(function(){
   var s = window.activeStore();
   s.set('phone-bg', 'data:image/png;base64,' + new Array(600000).join('A'));
@@ -380,19 +340,34 @@ await sleep(300);
 await ev(`(function(){var p=document.querySelectorAll('#modal-pills .pill');if(p[0])p[0].click();return true;})()`);
 await sleep(150);
 await ev(`(function(){var o=document.getElementById('modal-ok');if(o)o.click();return true;})()`);
-await sleep(350);
-await ev(`(function(){var ps=document.querySelectorAll('#modal-pills .pill');if(ps[1])ps[1].click();return true;})()`);
-await sleep(150);
-await ev(`(function(){var o=document.getElementById('modal-ok');if(o)o.click();return true;})()`);
 await sleep(500);
 const bigState = await ev(`(function(){
   var ta = document.querySelector('#modal-mask textarea');
   var bg = null;
   try { var v = window.activeStore().get('phone-bg'); bg = v ? v.length : -1; } catch (e) { bg = -2; }
-  return { modalClosed: document.getElementById('modal-mask').hidden, hasFallback: !!ta, fbLen: ta ? ta.value.length : -1, bgLen: bg };
+  return { modalClosed: document.getElementById('modal-mask').hidden, fbLen: ta ? ta.value.length : -1, bgLen: bg };
 })()`);
 console.log('  [diag] bigState:', JSON.stringify(bigState));
-check('含大图片的方案「复制文字」被拦截（提示走文件，未弹 fallback 弹窗）', bigState.modalClosed === true && bigState.fbLen === 0, 'modalClosed=' + bigState.modalClosed + ' fbLen=' + bigState.fbLen);
+check('含大图片的方案也能直接导出文件（弹窗正常关闭）', bigState.modalClosed === true, 'modalClosed=' + bigState.modalClosed);
+// 导入弹窗：确认无粘贴 textarea、仅文件导入（noInput）
+await ev(`(function(){var r=document.getElementById('row-beauty-import');if(r)r.click();return true;})()`);
+await sleep(350);
+const impModal2 = await ev(`(function(){
+  var ta = document.getElementById('modal-textarea');
+  var inp = document.getElementById('modal-input');
+  var fb = document.getElementById('modal-file');
+  return {
+    modalOpen: !document.getElementById('modal-mask').hidden,
+    taHidden: ta ? ta.hidden : null,
+    inpHidden: inp ? inp.hidden : null,
+    fileBtnVisible: fb ? !fb.hidden : null
+  };
+})()`);
+check('导入弹窗打开且无粘贴输入框（textarea/input 隐藏）', impModal2.modalOpen === true && impModal2.taHidden === true && impModal2.inpHidden === true, JSON.stringify(impModal2));
+check('导入弹窗保留「从文件导入」按钮', impModal2.fileBtnVisible === true, 'fileBtn=' + impModal2.fileBtnVisible);
+
+// ============ 汇总 ============
+console.log('\n===== 汇总 =====');
 
 // ============ 汇总 ============
 console.log('\n===== 汇总 =====');

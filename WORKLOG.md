@@ -1,4 +1,12 @@
-# 本次构建者：AI-A（本会话 2026-08-29 17:42，收口「导出复制文字大 JSON 拦截」；构建状态：本次构建，待提交）
+# 本次构建者：AI-A（本会话 2026-08-29 17:50，收口「美化导入导出只保留文件方式」；构建状态：本次构建，待提交）
+### 2026-08-29 17:50（用户要求：美化导入/导出的「可复制文字」删掉，只保留文件方式）
+- [AI-A 域·跨域改 AI-B 文件 src/js/personalize.js + build.mjs（哨兵改 absent）+ FIX-REGRESSION.md（#62）+ WORKLOG.md；node --check 通过；构建状态：本次构建，sw: mochi-mte77zik，待提交]。
+- 需求/反馈：用户确认「可复制文字」对含图片的方案不可行，要求直接删掉，导入/导出只保留文件。
+- 改动：① 导出——移除「导出文件/复制文字」二选一弹窗 + showBeautyFallback + 剪贴板路径；选完来源（当前设置/方案）直接 downloadBeautyFile 下载 .json（文件无大小限制）；② 导入——弹窗改 noInput（隐藏 input/textarea），只保留「从文件导入」+ txtImportAuto；③ **openModal 的 txtImportAuto onload 从 fire() 改直接 cb(txt)**（noInput 弹窗 fire() 会传 'ok' 导致 JSON.parse 失败）；④ 导入回调加 v==='ok' 守卫（未选文件点确定提示）。
+- 注意：chat-settings.js 另有同形「复制文字」（聊天域功能），不在移除范围。
+- 回归防线：哨兵 `function showBeautyFallback`（absent，防「复制文字」加回；不能用 `{label:'复制文字',value:'text'}`——chat-settings.js 同形串误报）；FIX-REGRESSION #62（#61 复制文字拦截已被整体移除取代）；verify 场景7 重写。
+- 验证：verify-desk-longpress 28/28（场景7 新断言：无复制文字选项/直接下载/大 JSON 可导出/导入弹窗仅文件按钮）；verify-desk-beauty 14/14；verify.mjs 10/10；哨兵 67/67。
+- 待对方处理：推送待 GitHub 凭据（本地累积多提交未推送）。
 ### 2026-08-29 17:42（导出美化方案选「复制文字」得到含图片 base64 的超大 JSON，不可靠）
 - [AI-A 域·跨域改 AI-B 文件 src/js/personalize.js + build.mjs（哨兵）+ FIX-REGRESSION.md（#61）+ WORKLOG.md；node --check 通过；构建状态：本次构建，sw: mochi-mte6xzde，待提交]。
 - 需求/反馈：用户质疑导出时「可复制的文字」不正确——方案含图片（壁纸 phone-bg / 自定义图标 app-icon-* / 图片组件 desk-image-src-* 都是 base64 dataURL，一张壁纸 1MB+），复制到剪贴板/聊天工具会被截断或失败，对方也无法粘贴导入。

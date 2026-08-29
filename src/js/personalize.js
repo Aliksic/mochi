@@ -619,7 +619,12 @@ try {
           // 手机上用户以为选了文件就导入、没点确定，导致「导入了却没应用」。
           // 仅 opts.txtImportAuto 的弹窗开启自动提交（opts 经 _modalOpts 引用，
           // 直接引用函数参数 opts 会 ReferenceError，见 IIFE 顶部注释）。
-          if (_modalOpts && _modalOpts.txtImportAuto) { try { fire(); } catch (e) {} try { close(); } catch (e) {} }
+          // 直接 cb(txt) 而非 fire()：导入弹窗为 noInput（无输入框/textarea），
+          // fire() 的 noInput 分支会传 'ok' 导致 JSON 解析失败。
+          if (_modalOpts && _modalOpts.txtImportAuto) {
+            try { if (cb) cb(txt); } catch (e) {}
+            try { close(); } catch (e) {}
+          }
         };
         reader.readAsArrayBuffer(f);
         fileInput.value = '';
@@ -1625,61 +1630,27 @@ try {
     } catch (e) {}
     return data;
   };
-  const showBeautyFallback = (json) => {
-    if (!window.openModal) return;
-    // v3.7.x 修复：原 noInput 隐藏输入框且无 staticText，fallback 是空弹窗——
-    // 改用 textarea 完整展示 JSON 供手动复制
-    window.openModal('美化方案（全选复制）', json, () => {}, {
-      textarea: true,
-      textareaPlaceholder: '长按/全选复制，发给对方粘贴导入',
-    });
-  };
-  // v3.17.x：导出改为可选「导出文件 / 复制文字」——此前只复制文本，剪贴板在部分
-  // 浏览器不可用且大 JSON（含壁纸 dataURL）复制不便；现在弹窗二选一。
-  // v3.26.x：导出前先选「当前设置 / 某个已保存方案」，再走文件/文字二选一。
+  // v3.27.x：导出/导入只保留「文件」方式——「复制文字」已移除（含图片的方案 JSON
+  // 巨大，剪贴板/聊天工具复制发送会被截断或失败，对方也无法粘贴导入）。
+  // v3.26.x：导出前先选「当前设置 / 某个已保存方案」，选定后直接下载 .json 文件。
   // 全局主题延续右侧方案保存逻辑（collectBeautyFull），方案的 data 里已含 accent/theme。
+  const downloadBeautyFile = (json) => {
+    try {
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'mochi美化方案-' + new Date().toISOString().slice(0, 10) + '.json';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => { try { document.body.removeChild(a); URL.revokeObjectURL(url); } catch (e) {} }, 1000);
+      toast('已导出美化方案文件');
+    } catch (e) { toast('导出文件失败'); }
+  };
   const startBeautyExport = (data) => {
     const json = JSON.stringify(data);
-    if (!window.openModal) { showBeautyFallback(json); return; }
-    const ctl = window.openModal('导出美化方案', '', (v) => {
-      if (v === 'file') {
-        try {
-          const blob = new Blob([json], { type: 'application/json' });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = 'mochi美化方案-' + new Date().toISOString().slice(0, 10) + '.json';
-          document.body.appendChild(a);
-          a.click();
-          setTimeout(() => { try { document.body.removeChild(a); URL.revokeObjectURL(url); } catch (e) {} }, 1000);
-          toast('已导出美化方案文件');
-        } catch (e) { toast('导出文件失败'); }
-      } else if (v === 'text') {
-        // v3.27.x：含图片的方案 JSON 巨大（壁纸 phone-bg / 自定义图标 app-icon-* /
-        // 图片组件 desk-image-src-* 都是 base64 dataURL，一张壁纸就 1MB+）——复制到
-        // 剪贴板或聊天工具发送会被截断/失败，对方也无法粘贴导入（textarea 塞不下）：
-        // 超阈值时提示改用「导出文件」分享 .json，不再硬复制/展示 fallback。
-        if (json.length > 512 * 1024) {
-          toast('方案含图片，文本过大，请用「导出文件」分享 .json');
-          return;
-        }
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(json).then(() => toast('已复制到剪贴板，发给对方粘贴导入')).catch(() => showBeautyFallback(json));
-        } else {
-          // v3.27.x：同步开新弹窗（fallback）前先 ctl.stay()——否则外层确定按钮的
-          // finally close() 会把刚打开的 fallback 弹窗立即关掉（嵌套 openModal 通用坑）
-          if (ctl && ctl.stay) ctl.stay();
-          showBeautyFallback(json);
-        }
-      }
-    }, {
-      noInput: true,
-      staticText: '选择导出方式：\n· 导出文件：生成 .json 文件，可保存或发送（含壁纸/图标图片的方案请用此项）\n· 复制文字：复制配置文本，发给对方粘贴导入（仅适合无图片的轻量配置）',
-      pills: [
-        { label: '导出文件', value: 'file' },
-        { label: '复制文字', value: 'text' },
-      ],
-    });
+    if (json.length > 64 * 1024 * 1024) { toast('方案过大，导出失败'); return; }
+    downloadBeautyFile(json);
   };
   const beautyExportRow = document.getElementById('row-beauty-export');
   if (beautyExportRow) {
@@ -1689,10 +1660,8 @@ try {
       if (!schemes.length || !window.openModal) { startBeautyExport(collectBeautyFull()); return; }
       const pills = [{ label: '当前设置', value: 'current' }]
         .concat(schemes.map((s, i) => ({ label: s.name || ('方案' + (i + 1)), value: 'sch_' + i })));
-      // v3.27.x：ctl.stay() 防嵌套弹窗被外层确定按钮的 finally close() 关掉——
-      // cb 里同步 startBeautyExport 打开「导出方式」弹窗后，外层 close() 会把它立即
-      // 关闭（用户选完来源看不到导出方式 → 「导出没反应」）。
-      const ctl = window.openModal('导出美化方案', '', (v) => {
+      // v3.27.x：选完来源直接下载文件（startBeautyExport 已无嵌套弹窗，无需 ctl.stay）
+      window.openModal('导出美化方案', '', (v) => {
         let data;
         if (v && v.indexOf('sch_') === 0) {
           const i = parseInt(String(v).slice(4), 10);
@@ -1702,11 +1671,10 @@ try {
         } else {
           data = collectBeautyFull();
         }
-        if (ctl && ctl.stay) ctl.stay();
         startBeautyExport(data);
       }, {
         noInput: true,
-        staticText: '选择要导出的美化方案：\n· 当前设置：导出当前正在使用的美化\n· 已保存方案：导出对应方案（含其壁纸/配色）',
+        staticText: '选择要导出的美化方案，将生成 .json 文件：\n· 当前设置：导出当前正在使用的美化\n· 已保存方案：导出对应方案（含其壁纸/配色）',
         pills: pills,
       });
     });
@@ -1727,8 +1695,13 @@ try {
   if (beautyImportRow) {
     beautyImportRow.addEventListener('click', () => {
       if (!window.openModal) return;
+      // v3.27.x：导入只保留「从文件导入」——去掉粘贴文本（含图片的方案 JSON 巨大，
+      // 粘贴导入不现实；只点确定未选文件时提示）。
       window.openModal('导入美化方案', '', (v) => {
-        if (!v || !v.trim()) return;
+        if (!v || !v.trim() || v === 'ok') {
+          if (v === 'ok') toast('请点击「从文件导入」选择 .json 文件');
+          return;
+        }
         try {
           const data = JSON.parse(v.trim());
           if (typeof data !== 'object' || Array.isArray(data)) { toast('格式错误'); return; }
@@ -1749,8 +1722,8 @@ try {
           applyBeautyData(data);
           toast('已导入，刷新生效');
           setTimeout(() => location.reload(), 800);
-        } catch (e) { toast('解析失败，请检查文本'); }
-      }, { textarea: true, textareaPlaceholder: '导入前会自动把当前美化保存为「导入前备份」方案；可粘贴文本，或点下方「从文件导入」选择 .json 文件', txtImport: true, txtImportAuto: true });
+        } catch (e) { toast('解析失败，请检查文件内容'); }
+      }, { noInput: true, staticText: '导入前会自动把当前美化保存为「导入前备份」方案；只支持从文件导入 .json（点下方「从文件导入」选择文件后自动应用）', txtImport: true, txtImportAuto: true });
     });
   }
 

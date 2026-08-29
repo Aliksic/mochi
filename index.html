@@ -8385,9 +8385,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787996655808">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.339</b></span>
-        <span class="sv-deploy">部署于 2026-08-29 17:44<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787997055862">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.340</b></span>
+        <span class="sv-deploy">部署于 2026-08-29 17:50<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9477,7 +9477,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.339</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.340</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -9685,7 +9685,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.339</span>
+              <span class="lic-ver">v3.26.340</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -16342,7 +16342,10 @@ txt = new TextDecoder('utf-8').decode(buf); // 兜底
 }
 } catch (e) { txt = String(reader.result || ''); }
 if (textarea) textarea.value = txt;
-if (_modalOpts && _modalOpts.txtImportAuto) { try { fire(); } catch (e) {} try { close(); } catch (e) {} }
+if (_modalOpts && _modalOpts.txtImportAuto) {
+try { if (cb) cb(txt); } catch (e) {}
+try { close(); } catch (e) {}
+}
 };
 reader.readAsArrayBuffer(f);
 fileInput.value = '';
@@ -17239,18 +17242,7 @@ if (v) data['desk-image-src-' + m.id] = v;
 } catch (e) {}
 return data;
 };
-const showBeautyFallback = (json) => {
-if (!window.openModal) return;
-window.openModal('美化方案（全选复制）', json, () => {}, {
-textarea: true,
-textareaPlaceholder: '长按/全选复制，发给对方粘贴导入',
-});
-};
-const startBeautyExport = (data) => {
-const json = JSON.stringify(data);
-if (!window.openModal) { showBeautyFallback(json); return; }
-const ctl = window.openModal('导出美化方案', '', (v) => {
-if (v === 'file') {
+const downloadBeautyFile = (json) => {
 try {
 const blob = new Blob([json], { type: 'application/json' });
 const url = URL.createObjectURL(blob);
@@ -17262,26 +17254,11 @@ a.click();
 setTimeout(() => { try { document.body.removeChild(a); URL.revokeObjectURL(url); } catch (e) {} }, 1000);
 toast('已导出美化方案文件');
 } catch (e) { toast('导出文件失败'); }
-} else if (v === 'text') {
-if (json.length > 512 * 1024) {
-toast('方案含图片，文本过大，请用「导出文件」分享 .json');
-return;
-}
-if (navigator.clipboard && navigator.clipboard.writeText) {
-navigator.clipboard.writeText(json).then(() => toast('已复制到剪贴板，发给对方粘贴导入')).catch(() => showBeautyFallback(json));
-} else {
-if (ctl && ctl.stay) ctl.stay();
-showBeautyFallback(json);
-}
-}
-}, {
-noInput: true,
-staticText: '选择导出方式：\n· 导出文件：生成 .json 文件，可保存或发送（含壁纸/图标图片的方案请用此项）\n· 复制文字：复制配置文本，发给对方粘贴导入（仅适合无图片的轻量配置）',
-pills: [
-{ label: '导出文件', value: 'file' },
-{ label: '复制文字', value: 'text' },
-],
-});
+};
+const startBeautyExport = (data) => {
+const json = JSON.stringify(data);
+if (json.length > 64 * 1024 * 1024) { toast('方案过大，导出失败'); return; }
+downloadBeautyFile(json);
 };
 const beautyExportRow = document.getElementById('row-beauty-export');
 if (beautyExportRow) {
@@ -17290,7 +17267,7 @@ const schemes = getSchemes();
 if (!schemes.length || !window.openModal) { startBeautyExport(collectBeautyFull()); return; }
 const pills = [{ label: '当前设置', value: 'current' }]
 .concat(schemes.map((s, i) => ({ label: s.name || ('方案' + (i + 1)), value: 'sch_' + i })));
-const ctl = window.openModal('导出美化方案', '', (v) => {
+window.openModal('导出美化方案', '', (v) => {
 let data;
 if (v && v.indexOf('sch_') === 0) {
 const i = parseInt(String(v).slice(4), 10);
@@ -17300,11 +17277,10 @@ data = s.data || {};
 } else {
 data = collectBeautyFull();
 }
-if (ctl && ctl.stay) ctl.stay();
 startBeautyExport(data);
 }, {
 noInput: true,
-staticText: '选择要导出的美化方案：\n· 当前设置：导出当前正在使用的美化\n· 已保存方案：导出对应方案（含其壁纸/配色）',
+staticText: '选择要导出的美化方案，将生成 .json 文件：\n· 当前设置：导出当前正在使用的美化\n· 已保存方案：导出对应方案（含其壁纸/配色）',
 pills: pills,
 });
 });
@@ -17324,7 +17300,10 @@ if (beautyImportRow) {
 beautyImportRow.addEventListener('click', () => {
 if (!window.openModal) return;
 window.openModal('导入美化方案', '', (v) => {
-if (!v || !v.trim()) return;
+if (!v || !v.trim() || v === 'ok') {
+if (v === 'ok') toast('请点击「从文件导入」选择 .json 文件');
+return;
+}
 try {
 const data = JSON.parse(v.trim());
 if (typeof data !== 'object' || Array.isArray(data)) { toast('格式错误'); return; }
@@ -17343,8 +17322,8 @@ toast('已自动保存原美化 → 方案「' + name + '」');
 applyBeautyData(data);
 toast('已导入，刷新生效');
 setTimeout(() => location.reload(), 800);
-} catch (e) { toast('解析失败，请检查文本'); }
-}, { textarea: true, textareaPlaceholder: '导入前会自动把当前美化保存为「导入前备份」方案；可粘贴文本，或点下方「从文件导入」选择 .json 文件', txtImport: true, txtImportAuto: true });
+} catch (e) { toast('解析失败，请检查文件内容'); }
+}, { noInput: true, staticText: '导入前会自动把当前美化保存为「导入前备份」方案；只支持从文件导入 .json（点下方「从文件导入」选择文件后自动应用）', txtImport: true, txtImportAuto: true });
 });
 }
 const SCHEMES_KEY = 'beauty-schemes';
