@@ -1,3 +1,22 @@
+# 本次构建者：本会话（2026-08-29 22:54 收口构建+推送。本次上线内容=①本会话图标回填并行修复 ②AI-B 22:30 通知点击修复 ③divination.js 占卜对象选择移除；music-player.js 的 BUGFIX_REPRO_TRACE 探针经 stash 隔离未上线，stash pop 已恢复原状待该会话继续）
+
+### 2026-08-29 22:54（修复：红米K80 更新后首启「桌面图标上传的图片消失数秒，刷新才回来」——personalize.js 图标 IDB 回填串行改并行）
+- [AI 域]（**改动文件：src/js/personalize.js（app-icon-* IDB 回填 Promise.all 并行化+单键失败兜底）+ build.mjs（关键修复哨兵 +1 → 79/79）；构建状态：已构建**）。
+- 需求/反馈：用户报「红米k80 chrome 更新后：桌面图标加载一段时间才加载出来，而且桌面图标上上传的图片消失了；然后又重新刷新，图片才加载出来」。
+- 根因：自定义桌面图标（app-icon-*）为 dataURL 大键，大图只存 IndexedDB；启动渲染先读同步缓存读到空 → 显示默认/空白（personalize.js v3.5.116 注释既有已知行为「回填完成前桌面显示的是默认/空白」）。回填链路（v3.5.95）是串行逐键读取（上一键 resolve 才读下一键），N 键耗时=N×单键；更新后首启网络优先拉新版+主线程忙，窗口进一步拉长到数秒以上 → 用户看到「上传的图片消失」；刷新后回填早已完成 → 图片回来。数据全程未丢（IDB/localStorage 不受 SW 缓存清理影响）。
+- 方案：回填改 Promise.all 并行一次读完所有 app-icon-* 键，全部写回 store 后统一 restoreAppIcons() 重绘一次；单键 reject 只跳过该键（原串行链任一键失败会中断后续所有键且末尾不再重绘——顺手修复）。
+- 验证：node --check 过 + npm run verify 10/10 + 构建哨兵 79/79。
+- 边界如实：更新后首启「打开慢」部分（SW 网络优先 + GitHub Pages 国内慢）是既有防旧缓存死锁策略的已知代价，本轮不动 SW 主策略；如需优化（旧缓存多留一轮兜底/静态资源 SWR）另立专项设计。
+
+### 2026-08-29 22:30（修复：后台弹窗/离线提醒通知点击无反应——SW notificationclick 只认 PSYNC_TAG，后台弹窗无 tag 被忽略）
+- [AI-B 域]（**改动文件：src/pwa/sw.js（notificationclick 去掉 tag 限制，统一 focus/openWindow + postMessage MOCHI_NOTIFY_CLICK）+ src/js/bg-keep.js（监听 SW message MOCHI_NOTIFY_CLICK → window.enterChat 跳聊天页）；构建状态：未构建，node --check 过**）。
+- 需求/反馈：用户报「后台浏览器弹窗，点击无法跳转打开浏览器跳转到位置/聊天页面，点着没反应」。
+- 根因（sw.js:220 原）：`notificationclick` 首行 `if (!e.notification || e.notification.tag !== PSYNC_TAG) return;` 只处理离线消息提醒（tag='mochi-ta-msg'）；而后台弹窗走 bgNotifyCheck→showSysNotification→reg.showNotification，opts 未设 tag（bg-keep.js:1060 opts 只有 body/icon/image），通知 tag 为空 → 点击直接 return，不 focus 不 openWindow，表现为完全无反应。
+- 方案：①sw.js notificationclick 改为统一处理所有通知点击——e.notification.close() 后 clients.matchAll 取已有窗口 focus + postMessage({type:'MOCHI_NOTIFY_CLICK',tag})；无窗口则 openWindow('./') 并重试 postMessage（新窗口脚本未就绪，800ms×3 兜底）。②bg-keep.js 末尾加 navigator.serviceWorker message 监听，收到 MOCHI_NOTIFY_CLICK 调 window.enterChat（chat.js 暴露的全局 API，不跨域改 chat.js）跳聊天页。
+- 验证：node --check 两文件过。待构建后真机确认：①后台收到 TA 消息弹系统通知，点击应聚焦/打开应用并跳到聊天页；②离线消息提醒（PSYNC_TAG）点击同样跳聊天页（统一处理，原逻辑等价保留）；③前台已在聊天页时点击通知不重复跳（enterChat 内有 chatVisible 守卫）。
+- 待构建者：本条未构建，请构建者收口。注意工作区另有 src/js/divination.js 未提交改动（对方进行中），构建前先确认其已保存完整。
+- 边界如实：iOS Safari 对 SW openWindow 后台唤起支持有限（iOS 长期限制 SW 打开窗口需用户手势上下文），iOS 上点击通知可能仍只能 focus 已有窗口、无法冷启动开新窗口——这是平台限制，非本修复可解。
+
 ### 2026-08-29 22:04（回退：iOS PWA standalone .phone 高度改动——引入全屏偏上+聊天输入栏空底副作用，恢复 100vh 原状）
 - [AI-B 域·移动端适配]（**改动文件：src/css/base.css（恢复 .ios-pwa-standalone .phone height:100vh，撤 var(--mochi-ios-h,100dvh) + 删注释）+ build.mjs（撤哨兵，78/78）+ FIX-REGRESSION.md（撤 #73）；构建状态：已构建，sw: mochi-mtegbvwi**）。
 - 回退原因：上轮 21:48 修整页滑动（降 .phone 高度 100vh→var(--mochi-ios-h,100dvh)=879）引入两个新问题——①ios-fs-active 全屏模式画面偏上；②聊天输入栏没贴底空一块。用户报 iPhone 16 Plus Safari。根因：iOS standalone 视口 innerHeight(879)<screen(926)，视口含顶部状态栏区（vv.offsetTop=0），.phone=879 占视口 0~879，顶部被状态栏盖（偏上），底部 879~926 是视口外系统区（空底）。原设计 .phone=100vh=926 占全屏 + body 滚 47px 对齐可视区（避状态栏+贴底），但滚 47=整页滑动。三问题同源 iOS standalone 视口/屏幕几何，需真机诊断数据驱动精确修，不盲改。

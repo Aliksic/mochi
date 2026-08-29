@@ -6,8 +6,8 @@
 // 会一直显示「正在安装」永不完成（WebAPK 安装要经 SW 拉 start_url/图标）。
 // 现在每个请求最多等 NETWORK_TIMEOUT 毫秒，超时立即回退缓存（没缓存则快速
 // 失败），SW 最迟约 10 秒内必然激活，安装/加载都不再无限挂起。
-const CACHE = 'mochi-mtegbvwi';
-const BUILD_INFO = '部署于 2026-08-29 22:04';
+const CACHE = 'mochi-mtei4xal';
+const BUILD_INFO = '部署于 2026-08-29 22:54';
 const PRECACHE = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './icon-180.png'];
 // v3.10.x：网络优先超时从 8000 → 3500ms。GitHub Pages 国内访问经常 >8s，
 // 原 8s 超时导致手机端 fetch 频繁超时 → 回退 SW 缓存旧 index.html → 用户永远
@@ -217,12 +217,30 @@ self.addEventListener('periodicsync', function (e) {
   })().catch(function () {}));
 });
 
+// v3.26.x：notificationclick 此前只处理 PSYNC_TAG（离线消息提醒）一条，后台弹窗
+// （bgNotifyCheck → showSysNotification → reg.showNotification）发的通知不带 tag，
+// 点击直接 return → 既不 focus 也不 openWindow，用户反馈「点后台弹窗没反应」。
+// 现统一处理所有通知点击：聚焦已有窗口 / 开新窗口，并 postMessage 通知页面端跳聊天页。
 self.addEventListener('notificationclick', function (e) {
-  if (!e.notification || e.notification.tag !== PSYNC_TAG) return;
   e.notification.close();
+  const tag = (e.notification && e.notification.tag) || '';
   e.waitUntil((async function () {
     const cs = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-    for (let i = 0; i < cs.length; i++) { try { await cs[i].focus(); return; } catch (x) {} }
-    try { await self.clients.openWindow('./'); } catch (x) {}
+    if (cs && cs.length) {
+      const c = cs[0];
+      try { await c.focus(); } catch (x) {}
+      try { c.postMessage({ type: 'MOCHI_NOTIFY_CLICK', tag: tag }); } catch (x) {}
+      return;
+    }
+    try {
+      const w = await self.clients.openWindow('./');
+      if (w && w.postMessage) {
+        // 新开窗口页面脚本可能尚未注册 message 监听，重试几次
+        for (let i = 0; i < 3; i++) {
+          await new Promise(function (r) { setTimeout(r, 800); });
+          try { w.postMessage({ type: 'MOCHI_NOTIFY_CLICK', tag: tag }); } catch (x) { break; }
+        }
+      }
+    } catch (x) {}
   })());
 });

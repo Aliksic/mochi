@@ -8406,9 +8406,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1788012252738">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.354</b></span>
-        <span class="sv-deploy">部署于 2026-08-29 22:04<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1788015287181">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.355</b></span>
+        <span class="sv-deploy">部署于 2026-08-29 22:54<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9498,7 +9498,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.354</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.355</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -9706,7 +9706,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.354</span>
+              <span class="lic-ver">v3.26.355</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -16688,14 +16688,12 @@ if (window.idbGetAllKeys) {
 window.idbGetAllKeys().then(keys => {
 const iconKeys = (keys || []).filter(k => k.indexOf(window.activePrefix() + ':app-icon-') === 0);
 if (!iconKeys.length) return;
-let p = Promise.resolve();
-iconKeys.forEach(k => {
-p = p.then(() => window.idbGet(k)).then(v => {
+return Promise.all(iconKeys.map(k =>
+window.idbGet(k).then(v => {
 if (v && typeof v === 'string' && v.length > 2) store.set(k.slice(window.activePrefix().length + 1), v);
-});
-});
-p.then(() => restoreAppIcons());
-});
+}).catch(function () {})
+)).then(() => restoreAppIcons());
+}).catch(function () {});
 }
 } catch (e) {}
 window.openIconMenu = function (app) {
@@ -38791,61 +38789,6 @@ function syncAutoToggle() {
 const el = document.getElementById('div-auto-send');
 if (el) el.checked = autoSendGet();
 }
-let targetCid = '';
-function escDiv(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
-function targetGet() {
-try {
-const cid = store.get('divine-target') || '';
-if (!cid || cid === 'default') return '';
-const contacts = (window.getContacts ? window.getContacts() : []) || [];
-return contacts.some(c => c && c.id === cid) ? cid : '';
-} catch (e) { return ''; }
-}
-function targetSet(cid) { try { store.set('divine-target', cid || ''); } catch (e) {} }
-function targetNameOf(cid) {
-try {
-const contacts = (window.getContacts ? window.getContacts() : []) || [];
-const c = contacts.find(x => x && x.id === cid);
-return c ? (c.name || c.id || '') : '';
-} catch (e) { return ''; }
-}
-function renderTargetsInto(wrap) {
-if (!wrap) return;
-targetCid = targetGet();
-const contacts = (window.getContacts ? window.getContacts() : []) || [];
-let html = '<button class="div-mode' + (targetCid ? '' : ' sel') + '" data-cid="">不选对象</button>';
-contacts.forEach(c => {
-const id = (c && c.id) || '';
-if (!id) return;
-html += '<button class="div-mode' + (targetCid === id ? ' sel' : '') + '" data-cid="' + escDiv(id) + '">' + escDiv(c.name || id) + '</button>';
-});
-wrap.innerHTML = html;
-wrap.querySelectorAll('.div-mode').forEach(b => {
-b.addEventListener('click', () => {
-wrap.querySelectorAll('.div-mode').forEach(x => x.classList.remove('sel'));
-b.classList.add('sel');
-targetCid = b.dataset.cid || '';
-targetSet(targetCid);
-});
-});
-}
-function renderTargets() {
-try { renderTargetsInto(document.getElementById('div-targets')); } catch (e) {}
-}
-function saveToHomeHistory(record, targetCid2) {
-try {
-const targetStore = targetCid2 ? (window.storeFor ? window.storeFor(targetCid2) : null) : null;
-const st = targetStore || store;
-let list = [];
-try { list = JSON.parse(st.get('records-divine') || '[]'); } catch (e) { list = []; }
-if (!Array.isArray(list)) list = [];
-list.unshift(record);
-try { st.set('records-divine', JSON.stringify(list)); } catch (e) {}
-if (targetStore === store) {
-try { if (window.renderDivinePanel) window.renderDivinePanel(); } catch (e) {}
-}
-} catch (e) {}
-}
 function startDivineDraw(stageEl, opts) {
 const deck = shuf(opts.deck || []);
 const count = Math.max(1, parseInt(opts.count, 10) || 1);
@@ -39185,7 +39128,6 @@ return;
 if (window.__divActiveDraw) { try { window.__divActiveDraw(); } catch (e) {} window.__divActiveDraw = null; }
 const question = ((document.getElementById('div-question') || {}).value || '').trim();
 const snapMode = mode, snapCount = count;
-const snapTarget = targetCid;
 const deck = snapMode === 'tarot' ? TAROT : LENO;
 if (!deck.length) { r.innerHTML = '<div class="div-result-empty">占卜牌库加载中…</div>'; return; }
 const labels = (MODE_LABELS[snapMode] && MODE_LABELS[snapMode][snapCount]) || [];
@@ -39201,12 +39143,9 @@ drawBtn.textContent = '重新抽牌';
 const summary = buildSummary(cards, snapMode, question);
 renderDrawResult(cards, snapMode, question, summary);
 const list = histLoad();
-const record = { ts: Date.now(), mode: snapMode, count: snapCount, question: question, cards: cards, summary: summary };
-if (snapTarget) record.target = targetNameOf(snapTarget);
-list.unshift(record);
+list.unshift({ ts: Date.now(), mode: snapMode, count: snapCount, question: question, cards: cards, summary: summary });
 histSave(list);
 renderHistory();
-saveToHomeHistory(record, snapTarget);
 if (autoSendGet()) {
 const myCid = window.__activeCid || 'default';
 setTimeout(() => { if ((window.__activeCid || 'default') !== myCid) return; sendToChat(snapMode, cards, summary, question); }, 500);
@@ -39241,11 +39180,9 @@ if (phonePage) phonePage.hidden = false;
 function renderHistOnOpen() {
 try { renderHistory(); } catch (e) {}
 try { syncAutoToggle(); } catch (e) {}
-try { renderTargets(); } catch (e) {}
 }
 renderHistOnOpen();
 document.addEventListener('contact-switched', renderHistOnOpen);
-try { document.addEventListener('contact-renamed', renderTargets); } catch (e) {}
 const autoEl = document.getElementById('div-auto-send');
 if (autoEl) autoEl.addEventListener('change', () => { autoSendSet(autoEl.checked); });
 document.querySelectorAll('#page-divine .dec-inp-clear').forEach(btn => {
@@ -39268,14 +39205,6 @@ window.divineBuildSummary = buildSummary;
 window.divineBuildResultText = buildResultText;
 window.divineCopyResultText = copyResultText;
 window.divineSendResult = function (m, cards, summary, question) { sendToChat(m, cards, summary, question); };
-window.divineRenderTargets = function (el) {
-const wrap = (el && el.nodeType === 1) ? el : (typeof el === 'string' ? document.getElementById(el) : null);
-if (wrap) renderTargetsInto(wrap);
-return targetCid;
-};
-window.divineGetTarget = function () { return targetCid; };
-window.divineTargetName = targetNameOf;
-window.divineSaveToHomeHistory = saveToHomeHistory;
 })();
 } catch (__e) { try { console.error("[JS] divination.js", __e && __e.message || __e); } catch (x) {} if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
 (function () { try {
@@ -45467,6 +45396,14 @@ try { drainPsyncQueue(false); } catch (e) {}
 if (psyncEnabled() && psyncSupported()) psyncBuildSnapshot();
 }, 3000);
 });
+} catch (e) {}
+try {
+if ('serviceWorker' in navigator && navigator.serviceWorker) {
+navigator.serviceWorker.addEventListener('message', function (e) {
+if (!e || !e.data || e.data.type !== 'MOCHI_NOTIFY_CLICK') return;
+try { if (typeof window.enterChat === 'function') window.enterChat(); } catch (x) {}
+});
+}
 } catch (e) {}
 })();
 } catch (__e) { try { console.error("[JS] bg-keep.js", __e && __e.message || __e); } catch (x) {} if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();

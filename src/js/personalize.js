@@ -954,19 +954,21 @@ try {
   };
   applyHiddenIcons();
   // v3.5.95：自定义图标大键可能只存在 IndexedDB（压缩失败兜底会存原始大图）→ 补读后重新恢复图标
+  // v3.26.x：串行逐键读取（上一键 resolve 才读下一键）把回填耗时放大成 N×单键——大键多或
+  // 慢 IDB 机器（更新后首启网络/主线程忙时更甚）窗口拉长到数秒以上，用户看到「上传的桌面
+  // 图标图片消失，刷新才回来」。改为 Promise.all 并行一次读完，全部写回后统一重绘一次；
+  // 单键失败只跳过该键不影响其余（原串行链一键 reject 会中断后续所有键且不再重绘）。
   try {
     if (window.idbGetAllKeys) {
       window.idbGetAllKeys().then(keys => {
         const iconKeys = (keys || []).filter(k => k.indexOf(window.activePrefix() + ':app-icon-') === 0);
         if (!iconKeys.length) return;
-        let p = Promise.resolve();
-        iconKeys.forEach(k => {
-          p = p.then(() => window.idbGet(k)).then(v => {
+        return Promise.all(iconKeys.map(k =>
+          window.idbGet(k).then(v => {
             if (v && typeof v === 'string' && v.length > 2) store.set(k.slice(window.activePrefix().length + 1), v);
-          });
-        });
-        p.then(() => restoreAppIcons());
-      });
+          }).catch(function () {})
+        )).then(() => restoreAppIcons());
+      }).catch(function () {});
     }
   } catch (e) {}
 

@@ -217,12 +217,30 @@ self.addEventListener('periodicsync', function (e) {
   })().catch(function () {}));
 });
 
+// v3.26.x：notificationclick 此前只处理 PSYNC_TAG（离线消息提醒）一条，后台弹窗
+// （bgNotifyCheck → showSysNotification → reg.showNotification）发的通知不带 tag，
+// 点击直接 return → 既不 focus 也不 openWindow，用户反馈「点后台弹窗没反应」。
+// 现统一处理所有通知点击：聚焦已有窗口 / 开新窗口，并 postMessage 通知页面端跳聊天页。
 self.addEventListener('notificationclick', function (e) {
-  if (!e.notification || e.notification.tag !== PSYNC_TAG) return;
   e.notification.close();
+  const tag = (e.notification && e.notification.tag) || '';
   e.waitUntil((async function () {
     const cs = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-    for (let i = 0; i < cs.length; i++) { try { await cs[i].focus(); return; } catch (x) {} }
-    try { await self.clients.openWindow('./'); } catch (x) {}
+    if (cs && cs.length) {
+      const c = cs[0];
+      try { await c.focus(); } catch (x) {}
+      try { c.postMessage({ type: 'MOCHI_NOTIFY_CLICK', tag: tag }); } catch (x) {}
+      return;
+    }
+    try {
+      const w = await self.clients.openWindow('./');
+      if (w && w.postMessage) {
+        // 新开窗口页面脚本可能尚未注册 message 监听，重试几次
+        for (let i = 0; i < 3; i++) {
+          await new Promise(function (r) { setTimeout(r, 800); });
+          try { w.postMessage({ type: 'MOCHI_NOTIFY_CLICK', tag: tag }); } catch (x) { break; }
+        }
+      }
+    } catch (x) {}
   })());
 });

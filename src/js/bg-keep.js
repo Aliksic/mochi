@@ -1354,4 +1354,16 @@
       }, 3000);
     });
   } catch (e) {}
+
+  // v3.26.x：监听 SW notificationclick 回传——后台弹窗/离线提醒被点击时 SW 聚焦窗口后
+  // 发 MOCHI_NOTIFY_CLICK，页面端调 enterChat 跳到聊天页（与桌面悬浮消息点击同款入口）。
+  // enterChat 由 chat.js 定义为 window.enterChat，此处仅消费全局 API，不跨域改 chat.js。
+  try {
+    if ('serviceWorker' in navigator && navigator.serviceWorker) {
+      navigator.serviceWorker.addEventListener('message', function (e) {
+        if (!e || !e.data || e.data.type !== 'MOCHI_NOTIFY_CLICK') return;
+        try { if (typeof window.enterChat === 'function') window.enterChat(); } catch (x) {}
+      });
+    }
+  } catch (e) {}
 })();
