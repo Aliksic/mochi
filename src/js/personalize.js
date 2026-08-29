@@ -3710,14 +3710,16 @@ try {
     });
   }
 
-  // ===== v3.x：桌面长按拖拽重排（移动模式，复用 decor-on + desk-layout/app-icon-order） =====
-  // 长按图标/组件 350ms → 进入移动模式（抖动可拖拽）→ 拖动跟手 → 释放重排 + 持久化
+  // ===== v3.x：桌面拖拽重排（移动模式，复用 decor-on + desk-layout/app-icon-order） =====
+  // v3.27.x：移除「非移动模式长按 350ms 自动进移动模式+拖拽」入口——用户反馈日常点按
+  // 图标长按即误触进移动模式、图标被拖乱（要求「固定一行 4 个」不被打乱）。拖动排序
+  // 仅保留主动入口：装饰模式（设置→自定义桌面图标）→「编辑布局」→ 移动模式（短按即拖）。
   // 参考 chatcard.js pointer 拖拽；跨页拖到边缘 300ms 自动翻页（window.deskGo）
   // 图标限本 app-grid 内换位（持久化 app-icon-order）；独立组件可跨页（持久化 desk-layout）
   {
     const phone = document.getElementById('page-phone');
     const MOVE_DELAY = 350, EDGE = 44, EDGE_DELAY = 300;
-    let pressTimer = null, startX = 0, startY = 0, inMoveMode = false, dragging = false;
+    let inMoveMode = false, dragging = false;
     const enterMoveMode = () => {
       if (inMoveMode) return;
       inMoveMode = true;
@@ -3780,29 +3782,21 @@ try {
       if (e.target.closest('.desk-lib, .desk-page-add, .decor-bar')) return;
       const target = e.target.closest('[data-desk-widget], .app');
       if (!target) return;
-      startX = e.clientX; startY = e.clientY;
+      // v3.27.x：非移动模式不再有长按入口——日常点按/长按图标无副作用（点击照常），
+      // 拖动排序只走「装饰模式→编辑布局」主动入口。下方逻辑仅在 inMoveMode 时生效。
+      if (!inMoveMode) return;
       const t = target;
       // 移动模式已开启：区分「快速横滑翻页」与「长按/短按拖拽」——组件 touch-action:none
       // 时浏览器不会自动滚动，手指快速横滑由 JS 判为翻页（v3.14.x：修复移动/装修模式桌面
       // 滑不动）。记录按下时刻：短按后立即横向位移>12px → 翻页；长按超过 MOVE_DELAY（按住
       // 不动）或纵向位移为主 → 拖拽。这样长按图标拖动仍可拖（长按超时后移动不被判横滑）。
-      if (inMoveMode) {
-        t._swipeX = e.clientX; t._swipeY = e.clientY;
-        t._swipeT = Date.now();
-        t._swiping = null;
-        return; // 等 pointermove 判定方向
-      }
-      // 非移动模式：长按 350ms 进入移动模式 + 开始拖拽（兼容旧入口）
-      pressTimer = setTimeout(() => {
-        pressTimer = null;
-        enterMoveMode();
-        startDeskDrag(e, t);
-      }, MOVE_DELAY);
+      t._swipeX = e.clientX; t._swipeY = e.clientY;
+      t._swipeT = Date.now();
+      t._swiping = null;
+      return; // 等 pointermove 判定方向
     });
     pagesBox.addEventListener('pointermove', (e) => {
-      if (pressTimer && (Math.abs(e.clientX - startX) > 10 || Math.abs(e.clientY - startY) > 10)) {
-        clearTimeout(pressTimer); pressTimer = null;
-      }
+      // v3.27.x：非移动模式长按入口已移除，pressTimer 位移取消逻辑随之删除
       // 移动模式下的横滑翻页判定：手指按下但未进入拖拽（_swiping 未定）时判定方向
       if (inMoveMode && !dragging) {
         const t = e.target.closest ? e.target.closest('[data-desk-widget], .app') : null;
@@ -3840,9 +3834,7 @@ try {
         }
       }
     });
-    const cancelPress = () => { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } };
-    pagesBox.addEventListener('pointerup', cancelPress);
-    pagesBox.addEventListener('pointercancel', cancelPress);
+    // v3.27.x：pressTimer/cancelPress 已随长按入口移除（pointerdown 仅移动模式生效）
     // v3.14.x：移动模式下横滑判定结束/取消时清理（避免残留 _swiping 状态）
     const clearSwipe = (e) => {
       const t = e.target.closest ? e.target.closest('[data-desk-widget], .app') : null;

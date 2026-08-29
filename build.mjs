@@ -133,6 +133,8 @@ console.log('已复制 PWA 文件 → ' + pwaFiles.join(', ') + '（sw 缓存版
 // 构建完成后对产物做特征检查——每个曾用户反馈过的关键修复对应一个代码特征
 // （函数名/常量/选择器）。特征缺失 = 修复可能被覆盖 → 醒目警告（不阻断构建，
 // 构建者自行判断；有对应 verify-xxx.mjs 的可补跑确认）。
+// 删除型修复（移除某功能/入口）：加 { absent: true }，表示 needle 出现在产物中才报警
+// （防止并行会话/旧缓冲把已移除的代码改回来）。
 // 维护：新增关键修复时在此登记一行 { name, file, needle }（needle 为产物中的特征串）。
 const FIX_SENTINELS = [
   { name: 'iOS 键盘输入栏停靠（_ensureInputDocked）', file: 'js/mobile-adapt.js', needle: '_ensureInputDocked' },
@@ -195,14 +197,24 @@ const FIX_SENTINELS = [
   { name: '桌面「已摸鱼」卡与「今日情话」卡文字水平对齐（.mini-card fish .mc-b 与情话等高，修两卡标题/正文错位）', file: 'css/home.css', needle: '.mini-card[data-card-bg="fish"] .mc-b' },
   { name: '单聊持久化改空闲调度（schedulePersist，修发消息/来消息/切页 2~3s 长任务卡顿）', file: 'js/chat.js', needle: 'function schedulePersist' },
   { name: '群聊持久化改空闲调度（gSchedulePersist，同上修大群聊全量同步写卡顿）', file: 'js/group-chat.js', needle: 'function gSchedulePersist' },
+  { name: '桌面长按误触入口已移除（仅「编辑布局」主动进移动模式，修图标被误拖乱/要求固定一行4个）', file: 'js/personalize.js', needle: 'pressTimer = setTimeout(() => {\npressTimer = null;\nenterMoveMode();\nstartDeskDrag(e, t);', absent: true },
+  { name: '经期温柔动作后缀六条全部进字卡库（WARM_SUFFIX 同源，dc-off-period 逐张开关；防只写 1 条回归）', file: 'js/default-cards-data.js', needle: '（把你往怀里带了带）' },
 ];
 try {
   const built = readFileSync(join(root, 'index.html'), 'utf8');
-  const missing = FIX_SENTINELS.filter(s => !built.includes(s.needle));
-  if (missing.length) {
-    console.warn('⚠️  关键修复哨兵检查：以下 ' + missing.length + ' 项特征在产物中缺失（修复可能被覆盖/未接入）：');
-    missing.forEach(s => console.warn('   · [' + s.name + '] 应含 "' + s.needle + '"（' + s.file + '）'));
-    console.warn('   请确认这些修复是否仍有效——对应 verify-xxx.mjs 可补跑复核，或检查是否被并行改动覆盖。');
+  const missing = FIX_SENTINELS.filter(s => !s.absent && !built.includes(s.needle));
+  const leaked = FIX_SENTINELS.filter(s => s.absent && built.includes(s.needle));
+  if (missing.length || leaked.length) {
+    if (missing.length) {
+      console.warn('⚠️  关键修复哨兵检查：以下 ' + missing.length + ' 项特征在产物中缺失（修复可能被覆盖/未接入）：');
+      missing.forEach(s => console.warn('   · [' + s.name + '] 应含 "' + s.needle + '"（' + s.file + '）'));
+      console.warn('   请确认这些修复是否仍有效——对应 verify-xxx.mjs 可补跑复核，或检查是否被并行改动覆盖。');
+    }
+    if (leaked.length) {
+      console.warn('⚠️  删除型修复哨兵检查：以下 ' + leaked.length + ' 项「应不存在」的特征又出现在产物中（移除被并行改动/旧缓冲覆盖）：');
+      leaked.forEach(s => console.warn('   · [' + s.name + '] 不应含 "' + s.needle + '"（' + s.file + '）'));
+      console.warn('   请确认该功能是否被加回——用户反馈要求移除，回归即需重新处理。');
+    }
   } else {
     console.log('✅ 关键修复哨兵 ' + FIX_SENTINELS.length + '/' + FIX_SENTINELS.length + ' 全部在位（修复无丢失）');
   }
