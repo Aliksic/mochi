@@ -125,3 +125,9 @@
 .storage-cat-row.open .storage-cat-keys { display:block; }
 .storage-clear { display:block; width:100%; margin-top:12px; padding:12px; border:none; border-radius:14px; background:var(--ink); color:var(--bg-b,#fff); font-size:14px; font-weight:600; font-family:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent; }
 .storage-clear:active { opacity:.85; }
+/* v3.26.x：自动备份快照——高危清理按钮（暖砖红警示）+ 分类行高亮提示「副本·可删」 */
+.storage-clear.danger { background:#8a3b30; color:#fff; }
+.storage-clear.danger:disabled { background:#c2b4b0; }
+.storage-cat-row.snap .storage-cat-name { color:#b45309; font-weight:600; }
+.storage-cat-row.snap .storage-cat-size { color:#b45309; }
+.storage-cat-row.snap .storage-cat-num { color:#b45309; }

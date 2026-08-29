@@ -1,4 +1,17 @@
-# 本次构建者：AI-A（本会话，2026-08-29，朋友圈动态新增收藏按钮 + 评论矢量图重绘；构建后哨兵/verify 通过，未提交）
+# 本次构建者：AI-B（本会话 2026-08-29，荣耀 Edge 设置开关持久化修复收口；sw: mochi-mtdut9th，哨兵 46/46 + verify 10/10 + verify-wrj-settings-persist 10/10）
+### 2026-08-29（查看存储 A+B：自动备份快照可删除 + 顶部点破"副本可删"；已构建 sw: mochi-mtduvyiw，哨兵47/47，未提交）
+- [AI-B 域]（**改动文件：src/js/personalize.js（查看存储页）+ src/template.html（新增快照卡片/顶部警示）+ src/css/setting.css（danger 按钮+分类行高亮）+ build.mjs（增 47 次哨兵 st-clear-snap）；node --check 通过；构建哨兵 47/47 在位，未提交**）。
+- 需求/反馈：用户「没怎么用就 1GB，太离谱」——大头是「自动备份快照」≈800MB（每次手动导出把全部数据 base64 放大后完整复制一份，见 data-backup.js）。用户选择「只做 A+B」。
+- 方案：A=「自动备份快照」分类加一键删除按钮（只删副本键 xy-home-v2:__auto-backup-snapshot，LS+IDB 都删，真实数据全保留；openModal 二次确认、删除后禁用+toast、下次导出会重建，卡内说明）。B=存储页顶部「总占用」加警示行 st-snap-hint（仅在快照存在时显示）+ 分类表该行高亮 .snap，点破"它是完整副本、删了不伤真实数据"。
+- 验证：node --check 通过；哨兵 47/47；待真机实测：设置→查看存储→顶部警示+分类高亮→点删除弹确认→确定后快照归零、配额降约 800MB、真实数据无损。
+- 待对方处理：无（纯 AI-B 域）。⚠ 本次 build 一并打包了仓库其他未提交进行中改动（src/js/idb.js、src/css/home.css 等），提交前请确认非半成品。
+### 2026-08-29（荣耀 200 Pro Edge：字卡「朋友圈/写信使用」「我方发语音」退出重进回退 + 语音开关首点无反应；已构建 sw: mochi-mtdut9th，未提交）
+- [AI-B 域 + 跨域 chat-settings.js/default-cards.js（AI-A 文件，理由：用户报障的开关绑定在 AI-A 文件，需挂 mochi-wrj-heal 重同步 + 去语音开关静默守卫）+ build.mjs/FIX-REGRESSION.md（哨兵 + 清单第 40 条）]（**改动 src/js/idb.js + src/js/device.js + src/js/chat-settings.js + src/js/default-cards.js + tools/verify-wrj-settings-persist.mjs（新增可提交回归脚本）+ build.mjs + FIX-REGRESSION.md；构建状态：已构建 sw: mochi-mtdut9th，哨兵 46/46、verify 10/10、verify-wrj-settings-persist 10/10，未提交**）。
+- 需求/反馈：① 关掉系统预设字卡「朋友圈使用/写信使用」退出浏览器重进仍开着；② 「我方发语音」点一次没反应要点第二次，重进又是关闭。今日早间会话曾判为 SW 缓存停留旧包并强制刷新部署，用户实测 Via/雨见正常、Edge 仍复现 → 缓存理论排除。
+- 根因（双根因）：① **idbSet 写入挂起无超时**——荣耀/Edge 内核事务偶发挂起（idbGet 侧早有先例），写入侧挂起时 Promise 永不 resolve、重试骨架只对显式 false 生效 → IDB 权威层停留旧值。② **杀进程回滚 LS**——切开关后很快退出浏览器，Edge 把 localStorage 最近一次磁盘提交整批回滚（同步 setItem 不报错）；重启后 idbRestore retainValue 以「LS 有值且未标脏」为准 → 永远取回回滚后的旧值（LS 恒旧、IDB 新值永不被应用），Via/雨见（WebView 系）无此回滚故正常。首点无反应 = idbRestore 异步回填 memoryCache 旧值晚于模块初始化，「checked === vsGet()」守卫把第一次点按静默吃掉。
+- 方案：① idbSet 加 4s 挂起超时 + 重建连接重试（与 idbGet 同款）。② 小键写日志双链路：LS 侧 `__wr-journal`（≤64KB 值同步记 {k,v,t}，≤40 条/128KB）启动同步回放（先于模块初始化）；IDB 侧每键时间戳标记 `__wr-j:<键>`（整包日志副本会被新会话首次写覆写——首版教训，已改每键独立标记），restore 完成后按标记异步比对、以 IDB 权威值修正内存+LS 并广播 `mochi-wrj-heal`；default-cards.js dc-* 三组开关与 chat-settings.js 语音开关监听 heal 重同步；语音开关去掉静默早退守卫（cs-dtm/cs-bs/cs-hts 同款守卫暂留，同症再处理）。③ device.js 诊断新增「开关持久化体检」：涉事键 LS/读取/IDB 三层值 + LS 写探针。
+- 验证：node --check 全过；`node tools/verify-wrj-settings-persist.mjs` 10/10（T1 LS 日志幸存同步回放 / T2 LS 值+日志同批回滚后 IDB 标记合并恢复 + heal 事件 / T3 defaultCardUse / T4 时间戳守卫不覆盖本会话写入）；哨兵 46/46；verify 10/10。实测项：切开关→立即杀 Edge 进程重开→开关保持；若仍复现，设置→复制诊断信息回传「开关持久化体检」段即可定位丢在哪一层。
+- 待对方处理：无。本次构建包含并行会话累积改动（第四轮兜底字卡收口 idbHydrateKey 6s+8s 等，均已构建验证）。
 ### 2026-08-29（朋友圈动态新增「收藏」按钮可存入桌面收藏夹 + 评论图标重绘）
 - [AI-A 域]（**改动文件：src/js/feed.js + src/css/chat-pages.css；node --check 通过；构建状态：待构建者收口**）。
 - 需求/反馈：① 朋友圈动态缺「收藏」按钮，希望能收藏到桌面的【收藏】功能；② 赞旁边的评论矢量图需要重新设计。

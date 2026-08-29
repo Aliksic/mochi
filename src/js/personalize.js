@@ -4876,6 +4876,8 @@ try {
       'xy-home-v2:__diag-net',
       'xy-home-v2:__diag-tap'
     ];
+    // v3.26.x：自动备份快照（副本）体积统计：split 成 LS 贡献 + IDB 贡献，汇总后显示和提示
+    let snapLs = 0, snapIdb = 0, snapText = '(统计中)';
 
     function fmtBytes(n) {
       if (n == null || isNaN(n)) return '(未知)';
@@ -5023,7 +5025,7 @@ try {
       if (!rows.length) { el.innerHTML = '<div class="storage-hint">暂未统计到数据。</div>'; return; }
       rows.forEach(function (r) {
         const d = document.createElement('div');
-        d.className = 'storage-cat-row' + (r.keys && r.keys.length ? ' has-keys' : '');
+        d.className = 'storage-cat-row' + (r.keys && r.keys.length ? ' has-keys' : '') + (r.name === '自动备份快照' ? ' snap' : '');
         d.innerHTML = '<div class="storage-cat-line"><span class="storage-cat-name"></span><span class="storage-cat-num"></span><span class="storage-cat-size"></span></div>';
         d.querySelector('.storage-cat-name').textContent = r.name;
         d.querySelector('.storage-cat-num').textContent = r.n + ' 键';
@@ -5055,6 +5057,15 @@ try {
       const d = diagSummary();
       el.textContent = (d.items ? d.items + ' 项缓存' : '无缓存') + (d.errs ? ' · ' + d.errs + ' 条错误' : '') + (d.items ? ' · 约 ' + fmtBytes(d.bytes) : '');
     }
+    // v3.26.x：自动备份快照 = LS + IDB 两处之和；同步刷新「当前快照大小」和顶部警示提示
+    function renderSnap() {
+      const size = (snapLs || 0) + (snapIdb || 0);
+      snapText = size ? fmtBytes(size) : '(无)';
+      const el = document.getElementById('st-snap');
+      if (el) el.textContent = snapText + (size ? '（一份完整副本）' : '');
+      const hintEl = document.getElementById('st-snap-hint');
+      if (hintEl) hintEl.style.display = size ? 'block' : 'none';
+    }
     function renderStorage() {
       const quotaEl = document.getElementById('st-quota');
       if (quotaEl && navigator.storage && navigator.storage.estimate) {
@@ -5069,10 +5080,15 @@ try {
       if (idbEl) idbEl.textContent = '统计中…';
       // 先渲染 localStorage 明细，IndexedDB 异步补齐
       renderCatTable(ls.cats, null);
+      snapLs = (ls.cats['自动备份快照'] || {}).size || 0;
+      snapIdb = 0;
+      renderSnap();
       idbStats(function (done, totalN) {
         if (idbEl) idbEl.textContent = '统计中…（' + done + '/' + totalN + '）';
       }, function (res) {
         if (idbEl) idbEl.textContent = res ? fmtBytes(res.total) + '（' + res.count + ' 键）' : '不可用';
+        snapIdb = (res && res.cats && res.cats['自动备份快照'] || {}).size || 0;
+        renderSnap();
         renderCatTable(ls.cats, res ? res.cats : null);
       });
       renderDiagCount();
@@ -5087,6 +5103,20 @@ try {
       renderDiagCount();
       try { if (typeof toast === 'function') toast('错误诊断记录已清理'); } catch (e) {}
     }
+    // v3.26.x：删除自动备份快照（副本，仅删这一份备份，真实数据全部保留）
+    function deleteSnapshot() {
+      const k = 'xy-home-v2:__auto-backup-snapshot';
+      try { localStorage.removeItem(k); } catch (e) {}
+      try { if (window.idbDelete) window.idbDelete(k); } catch (e) {}
+      snapLs = 0; snapIdb = 0;
+      const el = document.getElementById('st-snap');
+      if (el) el.textContent = '(已删除)';
+      const btn = document.getElementById('st-clear-snap');
+      if (btn) { btn.disabled = true; btn.textContent = '已删除，空间已释放'; }
+      renderSnap();
+      renderStorage();
+      try { if (typeof toast === 'function') toast('自动备份快照已删除，空间已释放'); } catch (e) {}
+    }
     const clearBtn = document.getElementById('st-clear-err');
     if (clearBtn) {
       clearBtn.addEventListener('click', function () {
@@ -5099,6 +5129,20 @@ try {
           });
         } else {
           clearDiag();
+        }
+      });
+    }
+    // v3.26.x：删除自动备份快照按钮——二次确认后才删（只删副本，真实数据无损）
+    const snapBtn = document.getElementById('st-clear-snap');
+    if (snapBtn) {
+      snapBtn.addEventListener('click', function () {
+        if (window.openModal) {
+          window.openModal('删除自动备份快照？', '', function () { deleteSnapshot(); }, {
+            noInput: true,
+            staticText: '自动备份快照是全部数据的一份完整副本（当前约 ' + snapText + '，约占近一半空间）。\n删除它不会影响聊天、字卡、头像、音乐等任何真实数据，可立即释放约 ' + snapText + ' 的空间。\n注意：下次你再「导出数据」时会自动重建这份快照。'
+          });
+        } else {
+          deleteSnapshot();
         }
       });
     }

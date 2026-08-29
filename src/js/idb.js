@@ -453,6 +453,8 @@
         // v3.7.0：自动备份副本键不回填——它是 data-backup.js 写入的全量 JSON 快照，
         // 体积可能几 MB，回填到 localStorage 会撑爆 5MB 配额，且不是业务数据
         k !== 'xy-home-v2:__auto-backup-snapshot' &&
+        // v3.26.x：小键写日志的每键时间戳标记不是业务数据，不回填
+        k.indexOf('__wr-j:') < 0 &&
         k !== BIG_IDX_KEY);
       if (!need.length) { finish(); return; }
       // v3.14.x：大键驻留预算——低内存手机（deviceMemory≤4GB）更保守。
@@ -635,11 +637,17 @@
   // Edge 杀进程把 localStorage 最近一次磁盘提交整批回滚（同步 setItem 不报错但落盘
   // 丢失）；重启后 idbRestore 的 retainValue 以「LS 有值且未标脏」为最新 → 取回的是
   // 回滚后的旧值，设置回退且每次启动都如此（LS 恒有旧值，IDB 里的新值永远不被应用）。
-  // 方案：xyStore.set 对 ≤64KB 的小值同步追加一条 {k,v,t} 进写日志（LS+IDB 双持久化，
-  // 与值本身互相独立成多个提交单元，任一存活即可恢复）；启动时同步回放 LS 日志
-  //（先于各业务模块初始化读值），restore 完成后再异步合并 IDB 侧日志，有实际修复时
-  // 广播 mochi-wrj-heal 让已按旧值渲染的开关 UI 重同步。聊天记录/大键/元键不进日志。
+  // 方案（双链路）：① LS 写日志 `__wr-journal`——xyStore.set 对 ≤64KB 的小值同步追加
+  //   {k,v,t}（LS 单持久化），启动时同步回放（先于各业务模块初始化读值），救「LS 值被
+  //   回滚但 LS 日志幸存」的场景；② IDB 每键时间戳标记 `__wr-j:<完整键名>`——set 时
+  //   额外写一个只含时间戳的小标记（与值互相独立的提交单元），restore 完成后异步比对：
+  //   有标记且比已知写入新 → 以 IDB 里的值为准修正 内存+LS，救「LS 值与 LS 日志同批
+  //   回滚」的场景（标记幸存即证明该键最近被写过、且 IDB 值事务先于标记事务提交）。
+  //   每键独立标记不会被新会话整体覆写（整包日志副本会——首版教训）。
+  //   有实际修复时广播 mochi-wrj-heal 让已按旧值渲染的开关 UI 重同步。
+  //   聊天记录/大键/元键不进日志；时间戳守卫保证回放/合并永不覆盖本会话新写入。
   const WRJ_KEY = 'xy-home-v2:__wr-journal';
+  const WRJ_MARK = 'xy-home-v2:__wr-j:';
   const WRJ_MAX = 40;              // 条数上限
   const WRJ_BUDGET = 128 * 1024;   // 值字符总量上限（防日志本身膨胀拖慢每次 set）
   const WRJ_VAL_LIMIT = 64 * 1024; // 单值超过不记录（大键有自己的恢复路径）
@@ -655,7 +663,12 @@
   function wrjLsRaw() { try { return localStorage.getItem(WRJ_KEY); } catch (e) { return null; } }
   function wrjPersist() {
     try { localStorage.setItem(WRJ_KEY, JSON.stringify(_wrj || [])); } catch (e) {}
-    try { if (window.idbSet) window.idbSet(WRJ_KEY, JSON.stringify(_wrj || [])); } catch (e) {}
+  }
+  function wrjMark(key, t) {
+    try { if (window.idbSet) window.idbSet(WRJ_MARK + key, t); } catch (e) {}
+  }
+  function wrjUnmark(key) {
+    try { if (window.idbDelete) window.idbDelete(WRJ_MARK + key); } catch (e) {}
   }
   function wrjRecord(key, v) {
     if (typeof v !== 'string' || v.length > WRJ_VAL_LIMIT) return;
@@ -673,6 +686,7 @@
     if (cut < _wrj.length) _wrj.length = cut;
     _wrjTimes[key] = t;
     wrjPersist();
+    wrjMark(key, t);
   }
   function wrjForget(key) {
     if (!_wrj) _wrj = wrjLoad(wrjLsRaw());
@@ -680,6 +694,7 @@
     _wrj = _wrj.filter(function (e) { return e.k !== key; });
     _wrjTimes[key] = Date.now();
     if (_wrj.length !== before) wrjPersist();
+    wrjUnmark(key);
   }
   // 回放：把日志里的「最近一次写入」补进 内存+LS+IDB。时间戳守卫保证只应用比
   // 已知写入更新的条目（不会覆盖本会话新写入的值）。
@@ -703,18 +718,37 @@
   function wrjMergeFromIdb() {
     if (_wrjMerged) return;
     _wrjMerged = true;
-    window.idbGet(WRJ_KEY).then(function (raw) {
-      const entries = wrjLoad(raw);
-      if (!entries.length) return;
-      if (!_wrj) _wrj = wrjLoad(wrjLsRaw());
-      entries.forEach(function (e) {
-        if (_wrj.every(function (x) { return x.k !== e.k; })) _wrj.unshift(e);
+    if (!window.idbGetAllKeys || !window.idbGetMany) return;
+    window.idbGetAllKeys().then(function (keys) {
+      const marked = (keys || []).filter(function (k) { return String(k).indexOf(WRJ_MARK) === 0; });
+      if (!marked.length) return;
+      window.idbGetMany(marked).then(function (marks) {
+        // 有标记且比已知写入新的键 → 读 IDB 权威值修正 内存+LS（标记幸存 = 该键最近
+        // 被写过且 IDB 值事务先于标记事务提交，LS 若与其不一致就是被回滚的旧值）
+        const cand = marked.filter(function (mk) {
+          const t = marks[mk];
+          const full = String(mk).slice(WRJ_MARK.length);
+          return typeof t === 'number' && t > (_wrjTimes[full] || 0);
+        });
+        if (!cand.length) return;
+        window.idbGetMany(cand.map(function (mk) { return String(mk).slice(WRJ_MARK.length); })).then(function (vals) {
+          if (!memoryCache) memoryCache = {};
+          let healed = 0;
+          cand.forEach(function (mk) {
+            const full = String(mk).slice(WRJ_MARK.length);
+            const v = vals[full];
+            if (typeof v !== 'string' || v.length > WRJ_VAL_LIMIT) return;
+            _wrjTimes[full] = marks[mk];
+            if (memoryCache[full] === v) return;
+            memoryCache[full] = v;
+            try { if (v.length <= LS_BIG_LIMIT) localStorage.setItem(full, v); } catch (e2) {}
+            healed++;
+          });
+          if (healed > 0) {
+            try { document.dispatchEvent(new Event('mochi-wrj-heal')); } catch (e2) {}
+          }
+        });
       });
-      const healed = wrjReplay(entries);
-      if (healed > 0) {
-        wrjPersist();
-        try { document.dispatchEvent(new Event('mochi-wrj-heal')); } catch (e2) {}
-      }
     }).catch(function () {});
   }
   document.addEventListener('mochi-restore-done', wrjMergeFromIdb);

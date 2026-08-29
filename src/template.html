@@ -1305,11 +1305,18 @@
           <div class="storage-row"><span>浏览器存储配额</span><b id="st-quota">读取中…</b></div>
           <div class="storage-row"><span>localStorage 占用</span><b id="st-ls">读取中…</b></div>
           <div class="storage-row"><span>IndexedDB 占用</span><b id="st-idb">读取中…</b></div>
+          <div class="storage-hint" id="st-snap-hint" style="display:none">⚠ 其中「自动备份快照」约占近一半：它是全部数据的一份完整副本，删除它不影响任何真实数据（见下方说明）。</div>
         </div>
         <div class="cal-card glass">
           <div class="cal-card-title">各功能占用明细</div>
           <div id="st-cat"><div class="storage-hint">正在统计，请稍候…</div></div>
           <div class="storage-hint">大小按 UTF-8 字节估算；聊天/头像/背景等大键会在 IndexedDB 与 localStorage 双写，两处之和为该功能实际占用。<b>点击任一分类行可展开查看该分类下的具体存储键名</b>，用于核对是否覆盖到所有功能。</div>
+        </div>
+        <div class="cal-card glass">
+          <div class="cal-card-title">自动备份快照</div>
+          <div class="storage-row"><span>当前快照大小</span><b id="st-snap">统计中…</b></div>
+          <button class="storage-clear danger" id="st-clear-snap" type="button">删除自动备份快照（释放空间）</button>
+          <div class="storage-hint">「自动备份快照」= 你全部数据的<b>一份完整副本</b>（含音乐/语音/图片，base64 存储还会放大体积），约占近一半空间。删除它<b>不影响任何真实数据</b>（聊天、字卡、头像、音乐都在），可立省约一半；下次你再「导出数据」时会自动重建一份。空间紧张时建议删除。</div>
         </div>
         <div class="cal-card glass">
           <div class="cal-card-title">错误诊断记录</div>

@@ -181,6 +181,7 @@ const FIX_SENTINELS = [
   { name: '语音开关去掉静默早退守卫 + mochi-wrj-heal 重同步（首点无反应）', file: 'js/chat-settings.js', needle: 'mochi-wrj-heal' },
   { name: 'dc-* 开关监听 mochi-wrj-heal 重同步（退出重进设置回退自愈）', file: 'js/default-cards.js', needle: 'mochi-wrj-heal' },
   { name: '诊断「开关持久化体检」（LS/读取/IDB 三层值 + LS 写探针）', file: 'js/device.js', needle: '开关持久化体检' },
+  { name: '查看存储：自动备份快照删除按钮 + 顶部副本警示（A+B）', file: 'index.html', needle: 'st-clear-snap' },
 ];
 try {
   const built = readFileSync(join(root, 'index.html'), 'utf8');

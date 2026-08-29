@@ -868,9 +868,12 @@ gap:var(--desk-page-gap, 8px);
 .page-slide {
 width:100%; flex-shrink:0; height:100%;
 scroll-snap-align:start;
-overflow-y:auto; scrollbar-width:none; -ms-overflow-style:none;
+scrollbar-width:none; -ms-overflow-style:none;
 touch-action:pan-x pan-y;
+display:flex; flex-direction:column; min-height:0;
 }
+.page-slide > * { flex:0 0 auto; }
+.page-slide > .app-grid { flex:0 0 auto; }
 .page-slide::-webkit-scrollbar { display:none; }
 #page-phone { position:relative; }
 #page-phone { user-select:none; -webkit-user-select:none; -webkit-touch-callout:none; }
@@ -6364,6 +6367,11 @@ font-family:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent;
 .storage-cat-row.open .storage-cat-keys { display:block; }
 .storage-clear { display:block; width:100%; margin-top:12px; padding:12px; border:none; border-radius:14px; background:var(--ink); color:var(--bg-b,#fff); font-size:14px; font-weight:600; font-family:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent; }
 .storage-clear:active { opacity:.85; }
+.storage-clear.danger { background:#8a3b30; color:#fff; }
+.storage-clear.danger:disabled { background:#c2b4b0; }
+.storage-cat-row.snap .storage-cat-name { color:#b45309; font-weight:600; }
+.storage-cat-row.snap .storage-cat-size { color:#b45309; }
+.storage-cat-row.snap .storage-cat-num { color:#b45309; }
 .tabbar {
 margin-top:10px; display:flex; justify-content:space-around;
 flex-shrink:0; background:#ffffff;
@@ -8376,9 +8384,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787975909489">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.311</b></span>
-        <span class="sv-deploy">部署于 2026-08-29 11:58<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787976237704">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.312</b></span>
+        <span class="sv-deploy">部署于 2026-08-29 12:03<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9468,7 +9476,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.311</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.312</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -9486,11 +9494,18 @@ transition-duration: .01ms !important;
           <div class="storage-row"><span>浏览器存储配额</span><b id="st-quota">读取中…</b></div>
           <div class="storage-row"><span>localStorage 占用</span><b id="st-ls">读取中…</b></div>
           <div class="storage-row"><span>IndexedDB 占用</span><b id="st-idb">读取中…</b></div>
+          <div class="storage-hint" id="st-snap-hint" style="display:none">⚠ 其中「自动备份快照」约占近一半：它是全部数据的一份完整副本，删除它不影响任何真实数据（见下方说明）。</div>
         </div>
         <div class="cal-card glass">
           <div class="cal-card-title">各功能占用明细</div>
           <div id="st-cat"><div class="storage-hint">正在统计，请稍候…</div></div>
           <div class="storage-hint">大小按 UTF-8 字节估算；聊天/头像/背景等大键会在 IndexedDB 与 localStorage 双写，两处之和为该功能实际占用。<b>点击任一分类行可展开查看该分类下的具体存储键名</b>，用于核对是否覆盖到所有功能。</div>
+        </div>
+        <div class="cal-card glass">
+          <div class="cal-card-title">自动备份快照</div>
+          <div class="storage-row"><span>当前快照大小</span><b id="st-snap">统计中…</b></div>
+          <button class="storage-clear danger" id="st-clear-snap" type="button">删除自动备份快照（释放空间）</button>
+          <div class="storage-hint">「自动备份快照」= 你全部数据的<b>一份完整副本</b>（含音乐/语音/图片，base64 存储还会放大体积），约占近一半空间。删除它<b>不影响任何真实数据</b>（聊天、字卡、头像、音乐都在），可立省约一半；下次你再「导出数据」时会自动重建一份。空间紧张时建议删除。</div>
         </div>
         <div class="cal-card glass">
           <div class="cal-card-title">错误诊断记录</div>
@@ -9669,7 +9684,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.311</span>
+              <span class="lic-ver">v3.26.312</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -14311,6 +14326,7 @@ k !== LS_DIRTY_KEY && // 脏键索引自身不回填
 k.indexOf(uidPrefix + 'music-file:') !== 0 &&
 !isChatMsgsKey(k) &&
 k !== 'xy-home-v2:__auto-backup-snapshot' &&
+k.indexOf('__wr-j:') < 0 &&
 k !== BIG_IDX_KEY);
 if (!need.length) { finish(); return; }
 const deviceGB = (function () { try { return navigator.deviceMemory || 8; } catch (e) { return 8; } })();
@@ -14438,6 +14454,7 @@ return true;
 }).catch(() => false);
 };
 const WRJ_KEY = 'xy-home-v2:__wr-journal';
+const WRJ_MARK = 'xy-home-v2:__wr-j:';
 const WRJ_MAX = 40;              // 条数上限
 const WRJ_BUDGET = 128 * 1024;   // 值字符总量上限（防日志本身膨胀拖慢每次 set）
 const WRJ_VAL_LIMIT = 64 * 1024; // 单值超过不记录（大键有自己的恢复路径）
@@ -14453,7 +14470,12 @@ return Array.isArray(a) ? a.filter(function (e) { return e && typeof e.k === 'st
 function wrjLsRaw() { try { return localStorage.getItem(WRJ_KEY); } catch (e) { return null; } }
 function wrjPersist() {
 try { localStorage.setItem(WRJ_KEY, JSON.stringify(_wrj || [])); } catch (e) {}
-try { if (window.idbSet) window.idbSet(WRJ_KEY, JSON.stringify(_wrj || [])); } catch (e) {}
+}
+function wrjMark(key, t) {
+try { if (window.idbSet) window.idbSet(WRJ_MARK + key, t); } catch (e) {}
+}
+function wrjUnmark(key) {
+try { if (window.idbDelete) window.idbDelete(WRJ_MARK + key); } catch (e) {}
 }
 function wrjRecord(key, v) {
 if (typeof v !== 'string' || v.length > WRJ_VAL_LIMIT) return;
@@ -14471,6 +14493,7 @@ if (i >= WRJ_MAX || chars > WRJ_BUDGET) { cut = i; break; }
 if (cut < _wrj.length) _wrj.length = cut;
 _wrjTimes[key] = t;
 wrjPersist();
+wrjMark(key, t);
 }
 function wrjForget(key) {
 if (!_wrj) _wrj = wrjLoad(wrjLsRaw());
@@ -14478,6 +14501,7 @@ const before = _wrj.length;
 _wrj = _wrj.filter(function (e) { return e.k !== key; });
 _wrjTimes[key] = Date.now();
 if (_wrj.length !== before) wrjPersist();
+wrjUnmark(key);
 }
 function wrjReplay(entries) {
 if (!entries || !entries.length) return 0;
@@ -14498,18 +14522,35 @@ try { wrjReplay(wrjLoad(wrjLsRaw())); } catch (e) {}
 function wrjMergeFromIdb() {
 if (_wrjMerged) return;
 _wrjMerged = true;
-window.idbGet(WRJ_KEY).then(function (raw) {
-const entries = wrjLoad(raw);
-if (!entries.length) return;
-if (!_wrj) _wrj = wrjLoad(wrjLsRaw());
-entries.forEach(function (e) {
-if (_wrj.every(function (x) { return x.k !== e.k; })) _wrj.unshift(e);
+if (!window.idbGetAllKeys || !window.idbGetMany) return;
+window.idbGetAllKeys().then(function (keys) {
+const marked = (keys || []).filter(function (k) { return String(k).indexOf(WRJ_MARK) === 0; });
+if (!marked.length) return;
+window.idbGetMany(marked).then(function (marks) {
+const cand = marked.filter(function (mk) {
+const t = marks[mk];
+const full = String(mk).slice(WRJ_MARK.length);
+return typeof t === 'number' && t > (_wrjTimes[full] || 0);
 });
-const healed = wrjReplay(entries);
+if (!cand.length) return;
+window.idbGetMany(cand.map(function (mk) { return String(mk).slice(WRJ_MARK.length); })).then(function (vals) {
+if (!memoryCache) memoryCache = {};
+let healed = 0;
+cand.forEach(function (mk) {
+const full = String(mk).slice(WRJ_MARK.length);
+const v = vals[full];
+if (typeof v !== 'string' || v.length > WRJ_VAL_LIMIT) return;
+_wrjTimes[full] = marks[mk];
+if (memoryCache[full] === v) return;
+memoryCache[full] = v;
+try { if (v.length <= LS_BIG_LIMIT) localStorage.setItem(full, v); } catch (e2) {}
+healed++;
+});
 if (healed > 0) {
-wrjPersist();
 try { document.dispatchEvent(new Event('mochi-wrj-heal')); } catch (e2) {}
 }
+});
+});
 }).catch(function () {});
 }
 document.addEventListener('mochi-restore-done', wrjMergeFromIdb);
@@ -19999,6 +20040,7 @@ const DIAG_KEYS = [
 'xy-home-v2:__diag-net',
 'xy-home-v2:__diag-tap'
 ];
+let snapLs = 0, snapIdb = 0, snapText = '(统计中)';
 function fmtBytes(n) {
 if (n == null || isNaN(n)) return '(未知)';
 if (n >= 1048576) return (n / 1048576).toFixed(1) + ' MB';
@@ -20130,7 +20172,7 @@ el.innerHTML = '';
 if (!rows.length) { el.innerHTML = '<div class="storage-hint">暂未统计到数据。</div>'; return; }
 rows.forEach(function (r) {
 const d = document.createElement('div');
-d.className = 'storage-cat-row' + (r.keys && r.keys.length ? ' has-keys' : '');
+d.className = 'storage-cat-row' + (r.keys && r.keys.length ? ' has-keys' : '') + (r.name === '自动备份快照' ? ' snap' : '');
 d.innerHTML = '<div class="storage-cat-line"><span class="storage-cat-name"></span><span class="storage-cat-num"></span><span class="storage-cat-size"></span></div>';
 d.querySelector('.storage-cat-name').textContent = r.name;
 d.querySelector('.storage-cat-num').textContent = r.n + ' 键';
@@ -20162,6 +20204,14 @@ if (!el) return;
 const d = diagSummary();
 el.textContent = (d.items ? d.items + ' 项缓存' : '无缓存') + (d.errs ? ' · ' + d.errs + ' 条错误' : '') + (d.items ? ' · 约 ' + fmtBytes(d.bytes) : '');
 }
+function renderSnap() {
+const size = (snapLs || 0) + (snapIdb || 0);
+snapText = size ? fmtBytes(size) : '(无)';
+const el = document.getElementById('st-snap');
+if (el) el.textContent = snapText + (size ? '（一份完整副本）' : '');
+const hintEl = document.getElementById('st-snap-hint');
+if (hintEl) hintEl.style.display = size ? 'block' : 'none';
+}
 function renderStorage() {
 const quotaEl = document.getElementById('st-quota');
 if (quotaEl && navigator.storage && navigator.storage.estimate) {
@@ -20175,10 +20225,15 @@ if (lsEl) lsEl.textContent = fmtBytes(ls.total) + '（' + ls.count + ' 键）';
 const idbEl = document.getElementById('st-idb');
 if (idbEl) idbEl.textContent = '统计中…';
 renderCatTable(ls.cats, null);
+snapLs = (ls.cats['自动备份快照'] || {}).size || 0;
+snapIdb = 0;
+renderSnap();
 idbStats(function (done, totalN) {
 if (idbEl) idbEl.textContent = '统计中…（' + done + '/' + totalN + '）';
 }, function (res) {
 if (idbEl) idbEl.textContent = res ? fmtBytes(res.total) + '（' + res.count + ' 键）' : '不可用';
+snapIdb = (res && res.cats && res.cats['自动备份快照'] || {}).size || 0;
+renderSnap();
 renderCatTable(ls.cats, res ? res.cats : null);
 });
 renderDiagCount();
@@ -20192,6 +20247,19 @@ try { if (window.mochiRefreshDiagBadge) window.mochiRefreshDiagBadge(); } catch 
 renderDiagCount();
 try { if (typeof toast === 'function') toast('错误诊断记录已清理'); } catch (e) {}
 }
+function deleteSnapshot() {
+const k = 'xy-home-v2:__auto-backup-snapshot';
+try { localStorage.removeItem(k); } catch (e) {}
+try { if (window.idbDelete) window.idbDelete(k); } catch (e) {}
+snapLs = 0; snapIdb = 0;
+const el = document.getElementById('st-snap');
+if (el) el.textContent = '(已删除)';
+const btn = document.getElementById('st-clear-snap');
+if (btn) { btn.disabled = true; btn.textContent = '已删除，空间已释放'; }
+renderSnap();
+renderStorage();
+try { if (typeof toast === 'function') toast('自动备份快照已删除，空间已释放'); } catch (e) {}
+}
 const clearBtn = document.getElementById('st-clear-err');
 if (clearBtn) {
 clearBtn.addEventListener('click', function () {
@@ -20204,6 +20272,19 @@ staticText: '将删除最近错误、环境变化、长任务卡顿、网络失�
 });
 } else {
 clearDiag();
+}
+});
+}
+const snapBtn = document.getElementById('st-clear-snap');
+if (snapBtn) {
+snapBtn.addEventListener('click', function () {
+if (window.openModal) {
+window.openModal('删除自动备份快照？', '', function () { deleteSnapshot(); }, {
+noInput: true,
+staticText: '自动备份快照是全部数据的一份完整副本（当前约 ' + snapText + '，约占近一半空间）。\n删除它不会影响聊天、字卡、头像、音乐等任何真实数据，可立即释放约 ' + snapText + ' 的空间。\n注意：下次你再「导出数据」时会自动重建这份快照。'
+});
+} else {
+deleteSnapshot();
 }
 });
 }
