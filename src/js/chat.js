@@ -1537,10 +1537,22 @@ const m = document.createElement('div');
 if (!batchRendering) m.classList.add('msg-enter');
 const __fit = rec.side !== 'out' && !!window.taFit;
 const __taNm = chatPartnerName();
+const __meNm = chatUserName();
+// v3.26.x：拍一拍人称修复——taFit（称呼）期间把 {ta}/{me} 掩成控制符，先替换称呼再回填昵称，
+// 昵称（含默认 TA、含「他」的名字）永不被称呼功能改写成 他/ta/她；字卡文案里的独立
+// ta/TA/他（非占位符）仍按称呼替换（字卡库中性占位设计不变）
 const T = (s) => {
 let t = s;
+if (__fit && typeof t === 'string') {
+const hasPh = t.indexOf('{ta}') >= 0 || t.indexOf('{me}') >= 0;
+if (hasPh) t = t.split('{ta}').join('\u0002').split('{me}').join('\u0003');
+t = window.taFit(t);
+if (hasPh) t = t.split('\u0002').join(__taNm).split('\u0003').join(__meNm);
+return t;
+}
 if (typeof t === 'string' && t.indexOf('{ta}') >= 0) t = t.split('{ta}').join(__taNm);
-return __fit ? window.taFit(t) : t;
+if (typeof t === 'string' && t.indexOf('{me}') >= 0) t = t.split('{me}').join(__meNm);
+return t;
 };
 if (rec.special === 'invite') {
 m.className = 'msg-ask';
@@ -1984,19 +1996,18 @@ if (!action) {
 const cards = pokeAllCards();
 action = cards.length ? pick(cards) : '拍了拍你';
 }
-const name = chatPartnerName();
-const myName = chatUserName();
+// v3.26.x：TA 主动拍一拍同样存 {ta}/{me} 占位符（与 sendPoke 一致），昵称渲染期回填、不受称呼改写
 let text;
 if (action.indexOf('你') >= 0) {
 if (action.charAt(0) === '你' || action.charAt(0) === '我') {
-text = name + ' ' + action.slice(1).replace(/你(?![们])/g, myName);
+text = '{ta} ' + action.slice(1).replace(/你(?![们])/g, '{me}');
 } else {
-text = name + ' ' + action.replace(/你(?![们])/g, myName);
+text = '{ta} ' + action.replace(/你(?![们])/g, '{me}');
 }
 } else if (action.charAt(0) === '我') {
-text = name + ' ' + action.slice(1);
+text = '{ta} ' + action.slice(1);
 } else {
-text = name + ' ' + action;
+text = '{ta} ' + action;
 }
 addIn(text, { special: 'poke' });
 }
@@ -3424,24 +3435,25 @@ pokeCard.insertBefore(pokeGroupsBar, pokeList);
 pokeCard.appendChild(pokeInputRow);
 }
 function sendPoke(action) {
-const name = chatPartnerName();
+// v3.26.x：存 {me}/{ta} 占位符而非字面昵称——渲染 T() 回填「我的昵称 + TA 的昵称」
+// （跟随改名），称呼功能（taFit）不再把昵称槽位改写成 他/ta/她
 let text;
 if (action.indexOf('你') >= 0) {
 if (action.charAt(0) === '你') {
-text = action.replace(/^你/, '我').replace(/(?!^)我(?![们])/g, name);
+text = '{me}' + action.slice(1).replace(/我(?![们])/g, '{ta}');
 } else if (action.charAt(0) === '我') {
-text = action.replace(/你(?![们])/g, name);
+text = action.replace(/你(?![们])/g, '{ta}');
 } else {
-text = '我 ' + action.replace(/你(?![们])/g, name);
+text = '{me} ' + action.replace(/你(?![们])/g, '{ta}');
 }
 } else if (action.indexOf('我') >= 0) {
 if (action.charAt(0) === '我') {
-text = '我 ' + action.slice(1).replace(/我(?![们])/g, name);
+text = '{me} ' + action.slice(1).replace(/我(?![们])/g, '{ta}');
 } else {
-text = '我 ' + action.replace(/我(?![们])/g, name);
+text = '{me} ' + action.replace(/我(?![们])/g, '{ta}');
 }
 } else {
-text = '我 ' + action;
+text = '{me} ' + action;
 }
 addRec({ side: 'in', text: text, special: 'poke' });
 if (window.logFish) window.logFish();

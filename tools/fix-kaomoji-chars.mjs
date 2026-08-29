@@ -28,6 +28,12 @@ const REPLACEMENTS = [
   [ '\uFECC', 'o' ],       // ﻌ ARABIC LETTER AIN FINAL FORM → o
   [ '\uDC40', '' ],        // 孤立低代理项（无效 Unicode）→ 删除
   [ '\uFFFD', '\u{1F440}' ], // � REPLACEMENT CHARACTER → 👀 EYES（偷看颜文字）
+  // 第二批（2026-08-29 用户反馈有的手机仍显示叉叉）：扫描剩余字符后补替换
+  [ '\u{1D25}', '\u03C9' ],  // ᴥ LATIN LETTER AIN → ω（(U・ᴥ・U)→(U・ω・U)）
+  [ '\u2256', '\uFFE3' ],    // ≖ RING IN EQUAL TO → ￣ 全角上横线（(≖ω≖)→(￣ω￣)）
+  [ '\u25CD', '\u25CE' ],    // ◍ CIRCLE WITH VERTICAL FILL → ◎ 靶心圆（CJK 字体覆盖好）
+  [ '\u2083', '3' ],         // ₃ SUBSCRIPT THREE → 3（(๑•́ ₃ •̀๑)→(๑•́ 3 •̀๑)）
+  [ '\u275B', '\u02D8' ],    // ❛ HEAVY SINGLE COMMA QUOTE → ˘ BREVE（٩(๑❛ω❛๑)۶→٩(๑˘ω˘๑)۶）
 ];
 
 const src = fs.readFileSync(file, 'utf8');
