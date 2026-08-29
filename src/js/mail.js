@@ -707,9 +707,16 @@
     if (cfg.kaomojiEn && kp.length && Math.random() * 100 < 30) t += ' ' + kp[Math.floor(Math.random() * kp.length)];
     if (cfg.emojiEn && ep.length && Math.random() * 100 < 15) t += ' ' + ep[Math.floor(Math.random() * ep.length)];
     // v3.11.x：只收 dataURL 媒体——信件正文按 sticker:/data:image 正则识别内联图片，
-    // 链接导入的 http(s) 字卡拼进信纸只会显示成一段 URL 文字，先过滤掉
+    //   链接导入的 http(s) 字卡拼进信纸只会显示成一段 URL 文字，先过滤掉
     const st = pool.sticker.concat(pool.image).filter(s => typeof s === 'string' && s.indexOf('data:') === 0);
-    if (cfg.stickerEn && st.length && Math.random() * 100 < 20) t += ' ' + st[Math.floor(Math.random() * st.length)];
+    if (cfg.stickerEn && st.length && Math.random() * 100 < 20) {
+      // v3.26.x：TA 自动写信/回信选中的表情包如果超大（>阈值），在这里同步换一张
+      //   小图（避免几百 KB 原图拼进 content 触发信箱主键 200KB 剥图成「图片」）。
+      //   仓库里的原图先经 shrinkMediaUrl 抽一张压缩版缓存到内存，退化场景才保留原图。
+      const orig = st[Math.floor(Math.random() * st.length)];
+      const small = (window._shrunkStickerCache && window._shrunkStickerCache[orig]) || orig;
+      t += ' ' + small;
+    }
     return t;
   }
   function letterLast(cid) { const v = parseInt(csFor(cid).get('mail-letter-last'), 10); return isNaN(v) ? 0 : v; }
@@ -1068,7 +1075,12 @@
       // stopPropagation：防止冒泡到 document 的「面板外点击关闭」把刚打开的面板又关掉
       e.stopPropagation();
       // 复用聊天同一个表情包面板（插入模式：点击表情插入信纸）
-      if (window.openEmojiPanelForInsert) window.openEmojiPanelForInsert((src) => mailInsertInto(textarea, 'sticker:' + src), { allowUrl: true });
+      // v3.26.x：贴进信纸正文前先压缩超大表情包 dataURL（见 chatcard.js shrinkMediaUrl）——
+      //   否则写信/回信把几百 KB 原图拼进 content，信箱主键超 200KB 剥图成「图片」文字
+      if (window.openEmojiPanelForInsert) window.openEmojiPanelForInsert((src) => {
+        try { if (window.shrinkMediaUrl) { window.shrinkMediaUrl(src, (small) => { mailInsertInto(textarea, 'sticker:' + (small || src)); }); return; } } catch (e) {}
+        mailInsertInto(textarea, 'sticker:' + src);
+      }, { allowUrl: true });
     });
     const upImg = root.querySelector('.mail-tb-image');
     if (upImg) upImg.addEventListener('click', () => mailUploadImage(textarea));

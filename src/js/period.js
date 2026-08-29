@@ -358,16 +358,28 @@
   // ---- 梦角经期聊天语态：经期中 TA 的文字回复更温柔 ----
   var WARM_PREFIX = ['乖，', '傻瓜，', '我在呢。', '嘘…', '宝贝，', '嗯，'];
   var WARM_SUFFIX = [
-    '（把你往怀里带了带）', '（轻轻抵着你额头）', '（握紧你的手）',
+    '（把你往怀里带了带）', '（轻轻抵着你的额头）', '（握紧你的手）',
     '（摸了摸你发顶）', '（语气柔下来）', '（把热牛奶推到你手边）'
   ];
+  // v3.x：温柔动作后缀受字卡库【其他互动功能字卡→经期】单卡开关联动——
+  //   dc-off-period:（轻轻抵着你的额头）关闭后，该动作后缀也不再随机拼出。
+  //   文案与 DEFAULT_CARD_DATA.period 里那条经期字卡保持一致（开关键即文案本身）。
+  function warmSuffix() {
+    try {
+      var avail = WARM_SUFFIX.filter(function (x) {
+        return !window.isDefaultCardOff || !window.isDefaultCardOff('period', x);
+      });
+      if (avail.length) return avail[Math.floor(Math.random() * avail.length)];
+    } catch (e) {}
+    return '';
+  }
   function warmText(text) {
     if (typeof text !== 'string' || !text) return text;
     try {
       if (!status().inPeriod) return text;
       if (Math.random() * 100 >= 25) return text;
       var p = WARM_PREFIX[Math.floor(Math.random() * WARM_PREFIX.length)];
-      var s = WARM_SUFFIX[Math.floor(Math.random() * WARM_SUFFIX.length)];
+      var s = warmSuffix();
       var r = Math.random();
       if (r < 0.45) return p + text;
       if (r < 0.8) return text + s;

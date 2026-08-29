@@ -2313,6 +2313,71 @@
     const g = mergeWithPublic(replyScopeGroups());
     return (g[type] || []).map(([name, arr]) => [name, arr.filter(isMediaImg)]);
   };
+  // v3.26.x：把「要嵌进正文文本」的 dataURL 压缩成小图（信箱正文/朋友圈动态/评论区
+  //   TA 自动选表情包写信/发动态时都用它）。根因：自定义表情包常是几百 KB 的原图
+  //   PNG/GIF，直接 dataURL 拼进信件/动态 content 会把信箱/朋友圈主键撑过 200KB，
+  //   idb.js 把该键当大键只进 IndexedDB（localStorage 空）→ 页面走剥图快照渲染成
+  //   文字「图片」、联系人写信/回信/发评论表情包显示不出缩略图；同时超大量原图在
+  //   内存/启动回填里堆积还引发崩溃与一卡一卡。
+  //   这里统一在「贴进正文前」把超大 dataURL 压到小尺寸透明 PNG（sticker 保透明），
+  //   让单张降到几 KB，主键永远不超 200KB。聊天发表情走独立附件模式，不受影响，
+  //   故此处仅对打算内联进文本的 media 生效。
+  var SHRINK_EMBED_MAX = 120; // 内联表情包最长边（px）
+  var SHRINK_EMBED_QUOTA = 16 * 1024; // 超过此字节长度的 dataURL 才值得压（小图直接原样）
+  window.shrinkMediaUrl = function (src, cb) {
+    if (typeof src !== 'string' || src.indexOf('data:image') !== 0) { if (cb) cb(src); return; }
+    if (src.indexOf('base64') < 0 || src.length <= SHRINK_EMBED_QUOTA) { if (cb) cb(src); return; }
+    try {
+      var img = new Image();
+      img.onload = function () {
+        try {
+          var maxSide = SHRINK_EMBED_MAX;
+          var scale = Math.min(1, maxSide / Math.max(img.width || 1, img.height || 1));
+          var w = Math.max(1, Math.round((img.width || 1) * scale));
+          var h = Math.max(1, Math.round((img.height || 1) * scale));
+          var c = document.createElement('canvas');
+          c.width = w; c.height = h;
+          var ctx = c.getContext('2d');
+          ctx.clearRect(0, 0, w, h);
+          ctx.drawImage(img, 0, 0, w, h);
+          // 用 PNG 保透明（表情包常见透明底）；结果更小才采用，否则保留原图
+          var out = c.toDataURL('image/png');
+          if (out.length < src.length) { if (cb) cb(out); return; }
+        } catch (e) {}
+        if (cb) cb(src);
+      };
+      img.onerror = function () { if (cb) cb(src); };
+      img.src = src;
+    } catch (e) { if (cb) cb(src); }
+  };
+  // v3.26.x：超大表情包压缩缓存（供信箱 TA 写信/回信、朋友圈 TA 发动态/评论等「同步拼正文」
+  //   的场景拿小图）。启动数据就绪后异步对自定义 sticker/image 池逐张压缩建缓存，
+  //   之后 taLetterContent 等同步路径能直接取到压缩版，避免几百 KB 原图入库触发 200KB 剥图。
+  if (!window._shrunkStickerCache) window._shrunkStickerCache = {};
+  function warmShrunkCache() {
+    try {
+      const g = mergeWithPublic ? mergeWithPublic(replyScopeGroups()) : null;
+      if (!g) return;
+      ['sticker', 'image'].forEach(function (t) {
+        (g[t] || []).forEach(function (entry) {
+          (entry[1] || []).forEach(function (media) {
+            if (typeof media !== 'string' || media.indexOf('data:') !== 0) return;
+            if (window._shrunkStickerCache[media]) return;
+            window.shrinkMediaUrl(media, function (small) {
+              if (small !== media) { window._shrunkStickerCache[media] = small; }
+            });
+          });
+        });
+      });
+    } catch (e) {}
+  }
+  document.addEventListener('mochi-restore-done', function warmOnce() {
+    document.removeEventListener('mochi-restore-done', warmOnce);
+    setTimeout(warmShrunkCache, 600); // 让出主线程再扫，避免启动卡顿
+  });
+  document.addEventListener('contact-switched', function warmCid() {
+    setTimeout(warmShrunkCache, 300);
+  });
   // v3.11.x：按作用域取分组（不合并）——聊天页拍一拍/表情包面板三分区展示：
   //   scope='public' 只读公用键；scope='own' 只读当前桌面专属键。
   //   回复池仍走合并视图（getPokeCards/getMediaCards/getMediaGroups 不变），

@@ -1,9 +1,15 @@
 # 本次构建者：AI-A（本会话 2026-08-29，收口「小米15Pro Chrome 卡顿止血」聊天持久化空闲调度；构建状态：本次构建）
+### 2026-08-29（导出数据不是当前最新时间/最新聊天记录：导出的聊天记录停在上次备份时刻，红米 K80 Chrome）
+- [AI-B 域]（**改动文件：src/js/data-backup.js + build.mjs（哨兵）+ FIX-REGRESSION.md（#54）；node --check 通过；构建状态：未构建，待构建者收口**）。
+- 需求/反馈：用户导出多次、换浏览器导入，聊天记录始终停在「上次备份（约下午一点）」，导出的不是当前最新时间/最新聊天记录。
+- 根因：doExport 先从 localStorage 把所有大键收进 `data.idb`，下面 IndexedDB 循环再用 `k in data.idb` 跳过 → 聊天记录永远取 localStorage 的「有损快照」（chat.js 的 LS 快照超过 2MB 上限后不再更新、会冻结在旧时刻，且剥图/截断长文本），IDB 里的权威全量版（含最新消息+图片/语音，用户机 IDB chat-msgs 12.7MB vs LS 4.0MB）从未被导出。
+- 方案：① LS 循环只收录小键（≤20KB，LS 是最新同步快照）；大键记入 `lsBig` 作兜底、不提前占位 data.idb；② IDB 循环去掉 `k in data.idb` 跳过，大键一律以 IDB 权威值为准（小键仍 `k in data.ls` 跳过、以 LS 为准）；IDB 读失败/无此键再回落 lsBig；循环后把未命中的 lsBig 补进。导入侧本就按 IDB 权威恢复（idbReplaceAll + LS 过滤 chat-msgs），无需改。
+- 验证：node --check 通过；哨兵 `留待 IndexedDB 权威读取` 已加。待构建后真机实测：导出→导入新浏览器→聊天记录含最新消息与图片，不再是上次备份时刻。
 ### 2026-08-29（「（轻轻抵着你的额头）」加进系统预设字卡_其他互动功能字卡_经期，可逐张开关）
-- [AI-A 域·经期字卡]（**改动文件：src/js/default-cards-data.js；node --check 通过；构建状态：未构建，待构建者收口**）。
+- [AI-A 域·经期字卡]（**改动文件：src/js/default-cards-data.js + src/js/period.js；node --check 通过；已构建，sw: mochi-mte37qn0；未提交**）。
 - 需求/反馈：用户在系统预设字卡搜索框搜「（轻轻抵着你的额头）」搜不到——它原是 period.js WARM_SUFFIX 里写死的经期回复装饰语，不在字卡库。
-- 方案：将该句作为一条经期字卡加进 DEFAULT_CARD_DATA.period「经期关心」分组末位（单一数据源）。加后自动：字卡库经期 tab 显示 + 带 dc-off-period:* 逐张开关，period.js careLineBlocked 联动（关掉不抽取），pickCareLine 可作经期关心语发送。
-- 验证：node --check 通过。待构建 + 真机确认：字卡库→系统预设字卡→其他互动功能字卡→经期 可见 21 张，末条为「（轻轻抵着你的额头）」，开关有效。
+- 方案：①该句作为一条经期字卡加进 DEFAULT_CARD_DATA.period「经期关心」分组末位（单一数据源）；加后自动：字卡库经期 tab 显示 + 带 dc-off-period:* 逐张开关，period.js careLineBlocked 联动，pickCareLine 可作经期关心语发送。 ②让 TA 的温柔动作后缀也受该开关控制：WARM_SUFFIX 原文统一为「（轻轻抵着你的额头）」（与字卡同文案，开关键即文案本身），新增 warmSuffix() 用 isDefaultCardOff('period',x) 过滤，关掉该字卡 → 动作后缀不再随机拼出。
+- 验证：node --check 通过；构建哨兵 59/59；index.html 已含 warmSuffix 联动。待真机确认：字卡库→系统预设字卡→其他互动功能字卡→经期 可见 21 张、末条可开关；关掉后 TA 回复不再出现该动作后缀；手机旧页面需杀 PWA 重开触发 SW 更新。
 ### 2026-08-29（互动卡片输入栏被联系人新消息打断：收键盘、卡片收起）
 - [AI-A 域]（**改动文件：src/js/chat.js；node --check 通过；构建状态：未构建，待构建者收口**）。
 - 需求/反馈：聊天里打开互动卡片（msg-inplace 输入栏）弹输入法输入时，联系人发来新消息会打断输入：输入法被收、卡片像收起。

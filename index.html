@@ -8385,9 +8385,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787990060027">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.327</b></span>
-        <span class="sv-deploy">部署于 2026-08-29 15:54<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787990552096">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.328</b></span>
+        <span class="sv-deploy">部署于 2026-08-29 16:02<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9477,7 +9477,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.327</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.328</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -9685,7 +9685,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.327</span>
+              <span class="lic-ver">v3.26.328</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -30859,6 +30859,58 @@ window.getMediaGroups = function (type) {
 const g = mergeWithPublic(replyScopeGroups());
 return (g[type] || []).map(([name, arr]) => [name, arr.filter(isMediaImg)]);
 };
+var SHRINK_EMBED_MAX = 120; // 内联表情包最长边（px）
+var SHRINK_EMBED_QUOTA = 16 * 1024; // 超过此字节长度的 dataURL 才值得压（小图直接原样）
+window.shrinkMediaUrl = function (src, cb) {
+if (typeof src !== 'string' || src.indexOf('data:image') !== 0) { if (cb) cb(src); return; }
+if (src.indexOf('base64') < 0 || src.length <= SHRINK_EMBED_QUOTA) { if (cb) cb(src); return; }
+try {
+var img = new Image();
+img.onload = function () {
+try {
+var maxSide = SHRINK_EMBED_MAX;
+var scale = Math.min(1, maxSide / Math.max(img.width || 1, img.height || 1));
+var w = Math.max(1, Math.round((img.width || 1) * scale));
+var h = Math.max(1, Math.round((img.height || 1) * scale));
+var c = document.createElement('canvas');
+c.width = w; c.height = h;
+var ctx = c.getContext('2d');
+ctx.clearRect(0, 0, w, h);
+ctx.drawImage(img, 0, 0, w, h);
+var out = c.toDataURL('image/png');
+if (out.length < src.length) { if (cb) cb(out); return; }
+} catch (e) {}
+if (cb) cb(src);
+};
+img.onerror = function () { if (cb) cb(src); };
+img.src = src;
+} catch (e) { if (cb) cb(src); }
+};
+if (!window._shrunkStickerCache) window._shrunkStickerCache = {};
+function warmShrunkCache() {
+try {
+const g = mergeWithPublic ? mergeWithPublic(replyScopeGroups()) : null;
+if (!g) return;
+['sticker', 'image'].forEach(function (t) {
+(g[t] || []).forEach(function (entry) {
+(entry[1] || []).forEach(function (media) {
+if (typeof media !== 'string' || media.indexOf('data:') !== 0) return;
+if (window._shrunkStickerCache[media]) return;
+window.shrinkMediaUrl(media, function (small) {
+if (small !== media) { window._shrunkStickerCache[media] = small; }
+});
+});
+});
+});
+} catch (e) {}
+}
+document.addEventListener('mochi-restore-done', function warmOnce() {
+document.removeEventListener('mochi-restore-done', warmOnce);
+setTimeout(warmShrunkCache, 600); // 让出主线程再扫，避免启动卡顿
+});
+document.addEventListener('contact-switched', function warmCid() {
+setTimeout(warmShrunkCache, 300);
+});
 window.getScopedGroups = function (type, scope) {
 const src = (scope === 'public') ? pubGroupsRaw() : buildGroupsFrom(store.get('cc-groups'));
 const arr = (src[type] || []).slice();
@@ -46648,7 +46700,11 @@ const ep = pool.emoji.length ? pool.emoji : pool.defEmoji;
 if (cfg.kaomojiEn && kp.length && Math.random() * 100 < 30) t += ' ' + kp[Math.floor(Math.random() * kp.length)];
 if (cfg.emojiEn && ep.length && Math.random() * 100 < 15) t += ' ' + ep[Math.floor(Math.random() * ep.length)];
 const st = pool.sticker.concat(pool.image).filter(s => typeof s === 'string' && s.indexOf('data:') === 0);
-if (cfg.stickerEn && st.length && Math.random() * 100 < 20) t += ' ' + st[Math.floor(Math.random() * st.length)];
+if (cfg.stickerEn && st.length && Math.random() * 100 < 20) {
+const orig = st[Math.floor(Math.random() * st.length)];
+const small = (window._shrunkStickerCache && window._shrunkStickerCache[orig]) || orig;
+t += ' ' + small;
+}
 return t;
 }
 function letterLast(cid) { const v = parseInt(csFor(cid).get('mail-letter-last'), 10); return isNaN(v) ? 0 : v; }
@@ -46946,7 +47002,10 @@ if (!root || !textarea) return;
 const stickerBtn = root.querySelector('.mail-tb-sticker');
 if (stickerBtn) stickerBtn.addEventListener('click', (e) => {
 e.stopPropagation();
-if (window.openEmojiPanelForInsert) window.openEmojiPanelForInsert((src) => mailInsertInto(textarea, 'sticker:' + src), { allowUrl: true });
+if (window.openEmojiPanelForInsert) window.openEmojiPanelForInsert((src) => {
+try { if (window.shrinkMediaUrl) { window.shrinkMediaUrl(src, (small) => { mailInsertInto(textarea, 'sticker:' + (small || src)); }); return; } } catch (e) {}
+mailInsertInto(textarea, 'sticker:' + src);
+}, { allowUrl: true });
 });
 const upImg = root.querySelector('.mail-tb-image');
 if (upImg) upImg.addEventListener('click', () => mailUploadImage(textarea));
@@ -56179,16 +56238,25 @@ window.periodStatus = status;
 window.periodDayPhase = dayPhase;
 var WARM_PREFIX = ['乖，', '傻瓜，', '我在呢。', '嘘…', '宝贝，', '嗯，'];
 var WARM_SUFFIX = [
-'（把你往怀里带了带）', '（轻轻抵着你额头）', '（握紧你的手）',
+'（把你往怀里带了带）', '（轻轻抵着你的额头）', '（握紧你的手）',
 '（摸了摸你发顶）', '（语气柔下来）', '（把热牛奶推到你手边）'
 ];
+function warmSuffix() {
+try {
+var avail = WARM_SUFFIX.filter(function (x) {
+return !window.isDefaultCardOff || !window.isDefaultCardOff('period', x);
+});
+if (avail.length) return avail[Math.floor(Math.random() * avail.length)];
+} catch (e) {}
+return '';
+}
 function warmText(text) {
 if (typeof text !== 'string' || !text) return text;
 try {
 if (!status().inPeriod) return text;
 if (Math.random() * 100 >= 25) return text;
 var p = WARM_PREFIX[Math.floor(Math.random() * WARM_PREFIX.length)];
-var s = WARM_SUFFIX[Math.floor(Math.random() * WARM_SUFFIX.length)];
+var s = warmSuffix();
 var r = Math.random();
 if (r < 0.45) return p + text;
 if (r < 0.8) return text + s;
@@ -67805,12 +67873,15 @@ const add = (k, v) => {
 if (byteLen(v) > 20 * 1024) data.idb[k] = v;
 else data.ls[k] = v;
 };
+const lsBig = {};
 try {
 for (let i = 0; i < localStorage.length; i++) {
 const k = localStorage.key(i);
 if (!k || k.indexOf('xy-home-v2:') !== 0) continue;
 if (k === SNAPSHOT_KEY) continue; // v3.7.0：副本键不进导出文件（防自包含无限增长）
-add(k, localStorage.getItem(k));
+const v = localStorage.getItem(k);
+if (byteLen(v) > 20 * 1024) lsBig[k] = v; // 大键：留待 IndexedDB 权威读取
+else data.ls[k] = v;
 }
 } catch (e) {}
 if (window.idbGetAllKeys) {
@@ -67824,7 +67895,7 @@ if (idbTotal) impShow('正在导出…', '正在读取全部数据 ' + idbDone +
 try {
 if (k.indexOf('xy-home-v2:') !== 0) continue;
 if (k === SNAPSHOT_KEY) continue; // v3.7.0：副本键不进导出文件
-if (k in data.ls || k in data.idb) continue; // 已在上面收录
+if (k in data.ls) continue; // 小键已从 LS 收录（LS 是最新同步快照，比异步 IDB 新鲜）
 const v = await window.idbGet(k);
 if (v !== undefined && v !== null) {
 if (v instanceof Blob) {
@@ -67837,12 +67908,17 @@ bin += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
 }
 add(k, 'data:' + (v.type || 'audio/mpeg') + ';base64,' + btoa(bin));
 } else {
-add(k, v);
+add(k, v); // 权威值以 IDB 为准（含最新聊天记录）
 }
+delete lsBig[k]; // 已收录 IDB 权威值，不再回落 LS 兜底
+} else if (lsBig[k] !== undefined) {
+add(k, lsBig[k]);
+delete lsBig[k];
 }
 } catch (e) {} // 单键失败跳过，继续导出其余键
 }
 }
+Object.keys(lsBig).forEach((k) => { add(k, lsBig[k]); });
 impShow('正在导出…', '正在打包数据文件', 72);
 const json = JSON.stringify(data);
 const blob = new Blob([json], { type: 'application/json;charset=utf-8' });

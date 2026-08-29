@@ -112,12 +112,21 @@
       if (byteLen(v) > 20 * 1024) data.idb[k] = v;
       else data.ls[k] = v;
     };
+    // v3.27.x：修复「导出的聊天记录不是最新」——原实现先从 localStorage 把所有大键收进 data.idb，
+    // 下面 IndexedDB 循环再用 `k in data.idb` 跳过，导致聊天记录永远取 localStorage 的「有损快照」
+    //（chat.js 的 LS 快照超过 2MB 上限后不再更新、会冻结在旧时刻，且剥图/截断长文本），
+    // IndexedDB 里的权威全量版（含图片/语音、最新消息）从未被导出。改为：
+    //  ① LS 只收录小键（≤20KB，LS 是最新同步快照）；大键记入 lsBig 作兜底，不提前占位 data.idb；
+    //  ② 大键一律从 IndexedDB 读权威值（双写键以 IDB 为准）；IDB 读失败/无此键再回落 LS 兜底。
+    const lsBig = {};
     try {
       for (let i = 0; i < localStorage.length; i++) {
         const k = localStorage.key(i);
         if (!k || k.indexOf('xy-home-v2:') !== 0) continue;
         if (k === SNAPSHOT_KEY) continue; // v3.7.0：副本键不进导出文件（防自包含无限增长）
-        add(k, localStorage.getItem(k));
+        const v = localStorage.getItem(k);
+        if (byteLen(v) > 20 * 1024) lsBig[k] = v; // 大键：留待 IndexedDB 权威读取
+        else data.ls[k] = v;
       }
     } catch (e) {}
     // IndexedDB：音乐文件、字卡、聊天记录等全部权威数据
@@ -135,7 +144,7 @@
         try {
           if (k.indexOf('xy-home-v2:') !== 0) continue;
           if (k === SNAPSHOT_KEY) continue; // v3.7.0：副本键不进导出文件
-          if (k in data.ls || k in data.idb) continue; // 已在上面收录
+          if (k in data.ls) continue; // 小键已从 LS 收录（LS 是最新同步快照，比异步 IDB 新鲜）
           const v = await window.idbGet(k);
           if (v !== undefined && v !== null) {
             // v3.6.x：本地音乐改存 Blob 后，备份导出需转成 dataURL 字符串（JSON 无法存 Blob），
@@ -150,12 +159,19 @@
               }
               add(k, 'data:' + (v.type || 'audio/mpeg') + ';base64,' + btoa(bin));
             } else {
-              add(k, v);
+              add(k, v); // 权威值以 IDB 为准（含最新聊天记录）
             }
+            delete lsBig[k]; // 已收录 IDB 权威值，不再回落 LS 兜底
+          } else if (lsBig[k] !== undefined) {
+            // IDB 无此键 / 读取失败 / 超时 → 回落 localStorage 兜底（至少不丢）
+            add(k, lsBig[k]);
+            delete lsBig[k];
           }
         } catch (e) {} // 单键失败跳过，继续导出其余键
       }
     }
+    // 大键仅在 localStorage、IndexedDB 里没有（或读取失败）时的最终兜底（如旧版遗留键）
+    Object.keys(lsBig).forEach((k) => { add(k, lsBig[k]); });
     impShow('正在导出…', '正在打包数据文件', 72);
     const json = JSON.stringify(data);
     const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
