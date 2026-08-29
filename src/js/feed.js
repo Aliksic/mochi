@@ -697,6 +697,13 @@
     if (v) return safeBg(v, 'feed-ta-cover', s);
     return safeBg(store.get('feed-ta-cover'), 'feed-ta-cover', store);
   }
+  // 该动态是否已收藏到桌面收藏夹（我的收藏-朋友圈），用于收藏按钮高亮
+  function favFeedHas(p) {
+    try {
+      const fav = JSON.parse(window.activeStore().get('fav-msgs') || '[]');
+      return Array.isArray(fav) && fav.some(f => (f.kind || '') === 'feed' && f.by !== 'ta' && f.ts === (p.ts || 0));
+    } catch (e) { return false; }
+  }
   // v3.10.x：单张动态卡片 HTML（主列表模板）——render 全量渲染与评论/点赞后的
   //   局部刷新（refreshPostCard）共用同一模板，避免两处 markup 漂移
   function postCardHtml(p, name) {
@@ -713,13 +720,15 @@
       ? '<div class="feed-likes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;vertical-align:-2px;margin-right:5px"><path d="M12 21s-7.5-4.7-9.3-9A5.3 5.3 0 0112 6.4a5.3 5.3 0 019.3 5.6c-1.8 4.3-9.3 9-9.3 9z"/></svg>' + esc(p.likes.join('、')) + ' 觉得很赞</div>'
       : '';
     const liked = p.likes && p.likes.some(l => l === feedUserName());
+    const faved = favFeedHas(p);
     return '<div class="feed-post" id="feed-post-' + p.id + '"><div class="feed-head">' + avWrap +
       '<div class="feed-who"><div class="feed-name">' + esc(author) + '</div><div class="feed-time">' + fmtDT(p.ts) + '</div></div>' +
       '<button class="feed-del" data-id="' + p.id + '" title="删除"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2"/><path d="M6 6l1 14a2 2 0 002 2h6a2 2 0 002-2l1-14"/></svg></button>' + '</div>' +
       '<div class="feed-content">' + contentHtmlFor(p) + '</div>' +
       '<div class="feed-actions">' +
       '<button class="feed-act' + (liked ? ' liked' : '') + '" data-like="' + p.id + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-3px;margin-right:4px"><path d="M12 21s-7.5-4.7-9.3-9A5.3 5.3 0 0112 6.4a5.3 5.3 0 019.3 5.6c-1.8 4.3-9.3 9-9.3 9z"/></svg>赞</button>' +
-      '<button class="feed-act" data-comment="' + p.id + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-3px;margin-right:4px"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 018 8v.5z"/></svg>评论</button>' +
+      '<button class="feed-act" data-comment="' + p.id + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-3px;margin-right:4px"><path d="M21 15a4 4 0 01-4 4H8l-5 3V7a4 4 0 014-4h10a4 4 0 014 4v8z"/><circle cx="8.5" cy="10.5" r="1.2" fill="currentColor" stroke="none"/><circle cx="12" cy="10.5" r="1.2" fill="currentColor" stroke="none"/><circle cx="15.5" cy="10.5" r="1.2" fill="currentColor" stroke="none"/></svg>评论</button>' +
+      '<button class="feed-act feed-fav' + (faved ? ' faved' : '') + '" data-fav="' + p.id + '"><svg viewBox="0 0 24 24" fill="' + (faved ? 'currentColor' : 'none') + '" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-3px;margin-right:4px"><path d="M12 2l2.4 5 5.6.8-4 4 .9 5.6-4.9-2.6-4.9 2.6.9-5.6-4-4 5.6-.8z"/></svg>收藏</button>' +
       '</div>' + likes + commentsHtmlFor(p, name) + '</div>';
   }
   // 渲染动态列表
@@ -868,6 +877,23 @@
 
     listEl.querySelectorAll('.feed-act[data-comment]').forEach(b => b.addEventListener('click', () => {
       showCommentBar(b.dataset.comment);
+    }));
+    // 收藏：收藏到桌面收藏夹（我的收藏-朋友圈），按动态 ts 去重
+    listEl.querySelectorAll('.feed-act[data-fav]').forEach(b => b.addEventListener('click', () => {
+      const pid = b.dataset.fav;
+      const list = load();
+      const p = list.find(x => x.id === pid);
+      if (!p || !window.addMyFavItem) return;
+      const isMine = (p.role || p.by) === 'me';
+      const ok = window.addMyFavItem({
+        kind: 'feed',
+        text: p.content || '',
+        imgs: (p.imgs || []).slice(),
+        ts: p.ts || Date.now(),
+        side: isMine ? 'out' : 'in'
+      });
+      toast(ok ? '已收藏这条动态' : '这条动态已收藏过');
+      refreshPostCard(pid); // 刷新收藏按钮高亮态
     }));
     // 点击评论 → 回复（TA 的评论可回复）：复用页面内评论条（v3.5.58 不再用独立弹窗）
     listEl.querySelectorAll('.feed-comment').forEach(c => c.addEventListener('click', () => {
@@ -1792,6 +1818,7 @@ if (comInput) comInput.addEventListener('keydown', (e) => { if (e.key === 'Enter
       ? '<div class="feed-likes" style="font-size:11px;color:var(--muted);padding:6px 2px">' + esc(p.likes.join('、')) + ' 觉得很赞</div>'
       : '';
     const liked = p.likes && p.likes.some(l => l === feedUserName());
+    const faved = favFeedHas(p);
     // v3.7.x：与主列表一致的点赞/评论入口（原全部朋友圈页缺这两个按钮）
     return '<div class="feed-post" id="feed-post-' + p.id + '"><div class="feed-head">' + avHtml(av) +
       '<div class="feed-who"><div class="feed-name">' + esc(author) + '</div><div class="feed-time">' + fmtDT(p.ts) + '</div></div>' +
@@ -1799,7 +1826,8 @@ if (comInput) comInput.addEventListener('keydown', (e) => { if (e.key === 'Enter
       '<div class="feed-content">' + contentHtmlFor(p) + '</div>' +
       '<div class="feed-actions">' +
       '<button class="feed-act' + (liked ? ' liked' : '') + '" data-like="' + p.id + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-3px;margin-right:4px"><path d="M12 21s-7.5-4.7-9.3-9A5.3 5.3 0 0112 6.4a5.3 5.3 0 019.3 5.6c-1.8 4.3-9.3 9-9.3 9z"/></svg>赞</button>' +
-      '<button class="feed-act" data-comment="' + p.id + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-3px;margin-right:4px"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 018 8v.5z"/></svg>评论</button>' +
+      '<button class="feed-act" data-comment="' + p.id + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-3px;margin-right:4px"><path d="M21 15a4 4 0 01-4 4H8l-5 3V7a4 4 0 014-4h10a4 4 0 014 4v8z"/><circle cx="8.5" cy="10.5" r="1.2" fill="currentColor" stroke="none"/><circle cx="12" cy="10.5" r="1.2" fill="currentColor" stroke="none"/><circle cx="15.5" cy="10.5" r="1.2" fill="currentColor" stroke="none"/></svg>评论</button>' +
+      '<button class="feed-act feed-fav' + (faved ? ' faved' : '') + '" data-fav="' + p.id + '"><svg viewBox="0 0 24 24" fill="' + (faved ? 'currentColor' : 'none') + '" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-3px;margin-right:4px"><path d="M12 2l2.4 5 5.6.8-4 4 .9 5.6-4.9-2.6-4.9 2.6.9-5.6-4-4 5.6-.8z"/></svg>收藏</button>' +
       '</div>' + likes +
       commentsHtmlFor(p, author) + '</div>';
   }

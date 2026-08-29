@@ -1390,13 +1390,18 @@
     const syncVs = () => { const v = vsGet(); if (v !== csVs.checked) csVs.checked = v; };
     syncVs();
     csVs.addEventListener('change', () => {
-      if (csVs.checked === vsGet()) return;
+      // v3.26.x：去掉「与存储值相同则静默早退」守卫——idbRestore 异步回填 memoryCache
+      // 晚于本模块初始化时，存储值可能是回填进来的旧值而开关 UI 未重同步（荣耀/Edge 杀
+      // 进程回滚 LS 场景，见 idb.js 小键写日志），第一次点按会被守卫静默吃掉，表现为
+      // 「点一次没反应，点第二次才生效」。change 只由用户点按触发，直接按 UI 状态写入。
       vsSet(csVs.checked);
       // 通知聊天页即时刷新「麦克风」按钮显隐（不依赖切联系人）
       try { document.dispatchEvent(new Event('voice-send-changed')); } catch (e) {}
       toast(csVs.checked ? '已开启：聊天输入栏左侧显示「麦克风」按钮，点击可录音并发送语音' : '已关闭：聊天输入栏「麦克风」按钮已隐藏');
     });
     document.addEventListener('contact-switched', syncVs);
+    // v3.26.x：启动回填/写日志合并把存储值修正后，重同步开关 UI（含已打开的设置页）
+    document.addEventListener('mochi-wrj-heal', syncVs);
   }
 
   // v3.12.x：「隐藏联系人的表情包」开关——默认关闭，全局生效（存根命名空间，与

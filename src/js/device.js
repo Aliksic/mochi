@@ -871,6 +871,43 @@
         }).catch(function () { L[idbIdx] = 'IndexedDB 大键明细：读取失败'; res(); });
       }));
     } catch (e) { try { L.push('IndexedDB 大键明细：读取失败'); } catch (e2) {} }
+    // v3.26.x：开关持久化体检——荣耀 200 Pro Edge 报「系统预设字卡朋友圈/写信使用、
+    // 我方发语音」关掉后退出浏览器重进变回去（Via/雨见正常）。把涉事键的
+    // localStorage 原始值 / 读取接口值（内存优先）/ IndexedDB 权威值三层并列，
+    // 配合 LS 写探针，一次诊断即可判断是「LS 写失败」「LS 落盘被回滚」还是「IDB 读取挂起」。
+    try {
+      const swIdx = L.length; L.push('开关持久化体检：读取中…');
+      jobs.push(new Promise(function (res) {
+        const cid = String(window.__activeCid || 'default');
+        const P = G + cid + ':';
+        const fmt = function (v) { return v === null || v === undefined ? '缺失' : JSON.stringify(String(v)); };
+        const KEYS = ['dc-enabled', 'dc-use-chat', 'dc-use-mail', 'dc-use-feed', 'dc-cat-main', 'cs-voice-send'];
+        const lines = ['开关持久化体检（当前桌面 ' + cid + '；\'1\'=开 \'0\'=关 缺失=默认值）：'];
+        let probe = 'LS 写探针：正常';
+        try {
+          localStorage.setItem(G + '__ls-probe', 'p');
+          if (localStorage.getItem(G + '__ls-probe') !== 'p') probe = 'LS 写探针：写入后读回不一致（异常！）';
+          localStorage.removeItem(G + '__ls-probe');
+        } catch (e3) { probe = 'LS 写探针：写入失败(' + ((e3 && e3.name) || '异常') + ')——配额满或存储被禁'; }
+        lines.push(probe);
+        let pend = KEYS.length;
+        const done = function () { L[swIdx] = lines.join('\n'); res(); };
+        const one = function (short) {
+          let lsV = null, memV = null;
+          try { lsV = localStorage.getItem(P + short); } catch (e3) { lsV = '(读失败)'; }
+          try { memV = window.xyStore(P).get(short); } catch (e3) { memV = '(读失败)'; }
+          const li = lines.length;
+          lines.push('· ' + short + '：LS=' + fmt(lsV) + ' 读取=' + fmt(memV) + ' IDB=…');
+          if (!window.idbGet) { lines[li] = lines[li].replace('IDB=…', 'IDB=(接口不可用)'); if (--pend <= 0) done(); return; }
+          window.idbGet(P + short).then(function (iv) {
+            lines[li] = lines[li].replace('IDB=…', 'IDB=' + (iv === undefined ? '(读失败/超时)' : fmt(iv)));
+            if (--pend <= 0) done();
+          }).catch(function () { lines[li] = lines[li].replace('IDB=…', 'IDB=(读失败)'); if (--pend <= 0) done(); });
+        };
+        KEYS.forEach(one);
+        if (!pend) done();
+      }));
+    } catch (e) { try { L.push('开关持久化体检：读取失败'); } catch (e2) {} }
     // v3.16.x：存储配额/持久化/在线状态——「数据写不进去/丢失」类报障的关键字段：
     // 配额满写失败曾是本项目真实根因（localStorage setItem 静默失败）。
     // v3.25.x：改用 jobs + 占位行下标替换（原 L.indexOf 找占位串有误配风险，

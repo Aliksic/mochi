@@ -146,6 +146,22 @@
       toast((el.checked ? '已开启' : '已关闭') + '：默认字卡' + label + '使用');
     });
   });
+  // v3.26.x：小键写日志异步合并（idb.js mochi-wrj-heal）把 dc-* 键修正后，重同步
+  // 总开关/场景开关/分类开关的 UI——修荣耀 Edge 杀进程回滚 LS 后「开关退出重进变回去」
+  // 且已打开的设置页仍显示旧值的问题
+  document.addEventListener('mochi-wrj-heal', function () {
+    try {
+      enabledEl.checked = getEnabled();
+      ['chat', 'mail', 'feed'].forEach(function (k) {
+        const el = document.getElementById('dc-use-' + k);
+        if (el) el.checked = getUse(k);
+      });
+      ['main', 'kaomoji', 'emoji', 'touch'].forEach(function (k) {
+        const el = document.getElementById('dc-cat-' + k);
+        if (el) el.checked = getCat(k);
+      });
+    } catch (e) {}
+  });
 
   // ---- 双页共用渲染内核 ----
   // v3.16.x：把「分类 tab + 分组条 + 搜索 + 分批列表 + change 委托」抽成工厂，

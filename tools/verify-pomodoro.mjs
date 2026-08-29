@@ -142,13 +142,13 @@ await sleep(300);
 s = await evalJs(snap);
 check('A11 切小憩档 → 05:00 + tab 高亮', s.time === '05:00' && s.selTab === 'short' && s.state === '准备小憩', s.time + '/' + s.selTab);
 
-// 发到聊天开关
+// 发到聊天开关（v3.26.x 起番茄钟数据存全局命名空间 xy-home-v2:*，不再 per-contact）
 await clickBtn('pomo-send');
 await sleep(200);
-let sendOff = await lsGet('xy-home-v2:default:pomo-send-chat');
+let sendOff = await lsGet('xy-home-v2:pomo-send-chat');
 await clickBtn('pomo-send');
 await sleep(200);
-let sendOn = await lsGet('xy-home-v2:default:pomo-send-chat');
+let sendOn = await lsGet('xy-home-v2:pomo-send-chat');
 check('A12 发到聊天开关切换并持久化', sendOff === '0' && sendOn !== '0', sendOff + '→' + sendOn);
 
 // ---- B 组：完成一个番茄（Date.now 跳变 +26min，仅 #pomojump 生效；9s 后跳变，此时已在计时中）----
@@ -167,8 +167,8 @@ s = await evalJs(snap);
 check('B1 完成 25 分钟专注 → 自动切小憩 05:00', s.selTab === 'short' && s.time === '05:00' && s.startBtn === '开始', s.selTab + '/' + s.time);
 check('B2 今日 🍅 ×1 · 累计 ×1', s.stats.indexOf('× 1') >= 0, s.stats);
 check('B3 提示卡显示休息建议+夸夸', s.msg.indexOf('小憩') >= 0 && s.msg.length > 6, s.msg);
-const todayRaw = await lsGet('xy-home-v2:default:pomo-today');
-const totalRaw = await lsGet('xy-home-v2:default:pomo-total');
+const todayRaw = await lsGet('xy-home-v2:pomo-today');
+const totalRaw = await lsGet('xy-home-v2:pomo-total');
 check('B4 pomo-today/pomo-total 已持久化', todayRaw && todayRaw.indexOf('"count":1') >= 0 && totalRaw === '1', (todayRaw || '') + '/' + (totalRaw || ''));
 
 // ---- C 组：装修过的用户 ----
@@ -198,7 +198,7 @@ const need5 = ['app-tongpin', 'app-shenshou', 'app-water', 'app-eat', 'app-pomo'
 check('C2 布局不含本组 → 新建一页放整组（含番茄钟）', !!c2 && c2.ok && need5.every(w => c2.ids.indexOf(w) >= 0), JSON.stringify(c2));
 
 // ---- D 组：自定义时长 ----
-await lsSet('xy-home-v2:default:pomo-cfg', '{"f":7,"s":2,"l":3}');
+await lsSet('xy-home-v2:pomo-cfg', '{"f":7,"s":2,"l":3}');
 await gotoApp();
 await evalJs(`(function(){ var i=document.querySelector('[data-desk-widget="app-pomo"]'); if(i) i.click(); return 'ok'; })()`);
 await sleep(400);

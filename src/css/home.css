@@ -262,15 +262,25 @@
 .page-slide .app[data-desk-widget^="app-"] { align-self:center; margin:8px 0; }
 
 /* 桌面功能区（直接显示）
-   v3.15.x：网格上边距归零——图标组与上方卡片的间距统一由卡片 14px 下边距提供
-   （第三页 .desk-page 是 flex 容器边距不折叠，此前 14+8=22px 与其他页不一致）；
-   .app-grid.p2-grid 提特异性压过 chat-pages.css 的 .p2-grid{margin-top:14px} */
-.app-grid { margin-top:0; }
-.app-grid.p2-grid { margin-top:0; }
+   v3.16.x：功能图标组钉在页面底部（结构性对齐）——此前靠「三页卡片高度之和=定值」
+   对齐底部，图标数量/动态注入/缩放设置任一变化即错位（如群聊图标注入第 9 个图标、
+   卡片大小缩放下 grid 轨道失真；用户连续反馈"底部图标没对齐"的真正根源）。
+   结构锚定方案（配合 .page-slide 的 flex column，见下方分页区规则）：
+   ① 图标组 margin-top:auto 吸收页面全部剩余空间 → 图标组底部恒钉在
+      「可用区底部 - 93px 占位」，末行图标与其文字在所有页同一 y——
+      与图标行数、字体度量、缩放比例、注入顺序全部无关；
+   ② ::after 占位 93px（flex:0 1 93px 可收缩）——默认 390×844 下三页内容恰好
+      填满可用区（卡距 14px、图标组底 603rel，与旧布局逐像素一致）；更高屏幕上
+      图标组随底部锚定同步下移；内容超出时占位先收缩到 0 防溢出，再超出则滚动。
+   旧 .app-grid margin-top:0 规则移除（auto 已覆盖；chat-pages.css 的
+   .p2-grid{margin-top:14px} 特异性低于本规则不生效）。 */
+.page-slide::after { content:''; flex:0 1 93px; }
 /* v3.15.x：任意组件排到页首时统一距顶 14px（与 deco/music 首卡同节奏；
    第三页无经期卡时 mini-row 首位不再贴顶）。装修页 hint/add 在首位时不匹配，
    保持原状（用户自建页边缘场景） */
 .page-slide > [data-desk-widget]:first-child { margin-top:14px; }
+.page-slide > .app-grid { margin-top:auto; }
+.page-slide > .app-grid:first-child { margin-top:auto; }
 
 /* 桌面分页（横向滚动翻页，scroll-snap 原生吸附，不用 transform 避免毛玻璃渲染 bug） */
 .desktop-pages {

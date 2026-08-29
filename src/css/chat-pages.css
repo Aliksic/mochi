@@ -2097,6 +2097,7 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + var(--mochi-safe-bottom,
   font-family:inherit; padding:4px 0;
 }
 .feed-act.liked { color:#e05555; }
+.feed-act.faved { color:#d8a23c; }
 /* v3.12.x：朋友圈「查看更早的动态」增量加载按钮（主列表/全部朋友圈共用，列表窗口化渲染） */
 .feed-more-btn {
   display:block; margin:12px auto; padding:8px 22px;
@@ -2638,6 +2639,7 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + var(--mochi-safe-bottom,
   font-family:inherit; padding:4px 0;
 }
 .feed-act.liked { color:#e05555; }
+.feed-act.faved { color:#d8a23c; }
 .feed-likes {
   font-size:11px; color:var(--ink); background:rgba(0,0,0,.03);
   border-radius:8px; padding:6px 10px; margin-top:8px; line-height:1.5;

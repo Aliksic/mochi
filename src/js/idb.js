@@ -67,15 +67,27 @@
       }
     } catch (e) {}
   }
+  // v3.26.x：写入挂起超时——idbGet 侧早已确认部分安卓内核（真我/荣耀 Edge 等）事务
+  // 可能挂起（既不 onsuccess 也不 onerror）；写入侧原实现同样裸奔：挂起时 Promise
+  // 永不 resolve，下面的重试骨架（只对显式 false 生效）永远不会触发 → 写入静默丢失，
+  // IDB 权威层停留在旧值。杀进程回滚 localStorage 后（荣耀 200 Pro Edge 实测：设置
+  // 开关退出重进"变回去"），启动回填以 IDB 为准就成了旧值回退。现与 idbGet 同款：
+  // 单次事务 4s 未完成即判挂起 → 置空连接重建重试（外层重试骨架最多再试 2 次）。
   window.idbSet = function (key, value) {
     function tryOnce() {
       return open().then(db => new Promise((resolve) => {
+        let done = false;
+        const t = setTimeout(function () {
+          if (done) return; done = true;
+          dbPromise = null; // 连接疑似挂起，下次 open 重建
+          resolve(false);
+        }, 4000);
         try {
           const tx = db.transaction(STORE, 'readwrite');
           tx.objectStore(STORE).put(value, key);
-          tx.oncomplete = () => resolve(true);
-          tx.onerror = () => { if (connLost(tx.error)) dbPromise = null; resolve(false); };
-        } catch (e) { if (connLost(e)) dbPromise = null; resolve(false); }
+          tx.oncomplete = () => { if (done) return; done = true; clearTimeout(t); resolve(true); };
+          tx.onerror = () => { if (done) return; done = true; clearTimeout(t); if (connLost(tx.error)) dbPromise = null; resolve(false); };
+        } catch (e) { if (done) return; done = true; clearTimeout(t); if (connLost(e)) dbPromise = null; resolve(false); }
       })).catch(() => false);
     }
     return (async () => {
@@ -339,6 +351,7 @@
         if (!memoryCache) memoryCache = {};
         memoryCache[key] = v;
         try { bigIdxTrack(key, v); } catch (e) {}
+        try { wrjRecord(key, v); } catch (e) {}
         // 大键跳过 localStorage（只进 IDB + 内存缓存）
         const big = typeof v === 'string' && v.length > LS_BIG_LIMIT;
         if (!big) {
@@ -357,6 +370,7 @@
         const key = prefix + ':' + k;
         if (memoryCache) delete memoryCache[key];
         try { localStorage.removeItem(key); } catch (e) {}
+        try { wrjForget(key); } catch (e) {}
         if (_bigIdx[key] !== undefined) { delete _bigIdx[key]; bigIdxSave(); }
         try { if (window.idbDelete) window.idbDelete(key); } catch (e) {}
       }
@@ -562,6 +576,12 @@
     // 且不重试。字卡回复池整会话取不回自定义字卡，联系人一直发兜底那几条系统预设卡。
     // 与 idbGet 同款 4s+4s：4s 未返回先重建连接重试一次（挂起多因连接已死，重开后通常
     // 当场返回），再 4s 仍无返回才放弃——总上限仍 8s，但成功率大幅提升。
+    // v3.28.x（四层收口）：4s+4s 对「慢但可用」的读取反而有害——事务没挂只是读得慢
+    //（几 MB 图片字卡库在低端机 >8s），4s 一到就重建连接重开事务，白浪费一次读的进度，
+    // 第二次同样只给 4s，读到 8s 就放弃 → 此类手机自定义字卡永远取不回，联系人一直兜底。
+    // 改为 6s+8s：首试 6s 耐心等慢读；仍无返回才重建连接再试（挂起连接重开通常当场恢复），
+    // 二次给足 8s。首试事务在 6~14s 间完成仍会被 finish 收到（done 未置位）→ 总上限 14s，
+    // 覆盖字段里「>8s 才读出来」的低端真机；回复等待上限 20s 仍能兜住（见 ensureReplyCardsReady）。
     return open().then(db => new Promise((resolve) => {
       let done = false;
       let timer = null;
@@ -580,12 +600,12 @@
         if (!retried) {
           retried = true;
           dbPromise = null;
-          open().then(function (db2) { db = db2; run(); timer = setTimeout(function () { dbPromise = null; finish(undefined); }, 4000); }).catch(function () { finish(undefined); });
+          open().then(function (db2) { db = db2; run(); timer = setTimeout(function () { dbPromise = null; finish(undefined); }, 8000); }).catch(function () { finish(undefined); });
           return;
         }
         dbPromise = null;
         finish(undefined);
-      }, 4000);
+      }, 6000);
       run();
     })).then(v => {
       if (v === null) return null;
@@ -609,6 +629,97 @@
       return true;
     }).catch(() => false);
   };
+  // ===== v3.26.x：小键写日志（Edge/荣耀杀进程丢最近提交 → 设置开关回退）=====
+  // 现象：荣耀 200 Pro Edge 反馈「系统预设字卡朋友圈/写信使用、我方发语音」关掉后
+  // 退出浏览器重进又变回开启（Via/雨见正常）。根因链：切换开关后很快退出浏览器时，
+  // Edge 杀进程把 localStorage 最近一次磁盘提交整批回滚（同步 setItem 不报错但落盘
+  // 丢失）；重启后 idbRestore 的 retainValue 以「LS 有值且未标脏」为最新 → 取回的是
+  // 回滚后的旧值，设置回退且每次启动都如此（LS 恒有旧值，IDB 里的新值永远不被应用）。
+  // 方案：xyStore.set 对 ≤64KB 的小值同步追加一条 {k,v,t} 进写日志（LS+IDB 双持久化，
+  // 与值本身互相独立成多个提交单元，任一存活即可恢复）；启动时同步回放 LS 日志
+  //（先于各业务模块初始化读值），restore 完成后再异步合并 IDB 侧日志，有实际修复时
+  // 广播 mochi-wrj-heal 让已按旧值渲染的开关 UI 重同步。聊天记录/大键/元键不进日志。
+  const WRJ_KEY = 'xy-home-v2:__wr-journal';
+  const WRJ_MAX = 40;              // 条数上限
+  const WRJ_BUDGET = 128 * 1024;   // 值字符总量上限（防日志本身膨胀拖慢每次 set）
+  const WRJ_VAL_LIMIT = 64 * 1024; // 单值超过不记录（大键有自己的恢复路径）
+  let _wrj = null;                 // [{k, v, t}]，按 key 去重、最新在前
+  let _wrjTimes = {};              // key -> 最近一次已知写入时间（回放/合并/本会话写入共用）
+  let _wrjMerged = false;
+  function wrjLoad(raw) {
+    try {
+      const a = JSON.parse(raw || '[]');
+      return Array.isArray(a) ? a.filter(function (e) { return e && typeof e.k === 'string' && typeof e.v === 'string' && typeof e.t === 'number'; }) : [];
+    } catch (e) { return []; }
+  }
+  function wrjLsRaw() { try { return localStorage.getItem(WRJ_KEY); } catch (e) { return null; } }
+  function wrjPersist() {
+    try { localStorage.setItem(WRJ_KEY, JSON.stringify(_wrj || [])); } catch (e) {}
+    try { if (window.idbSet) window.idbSet(WRJ_KEY, JSON.stringify(_wrj || [])); } catch (e) {}
+  }
+  function wrjRecord(key, v) {
+    if (typeof v !== 'string' || v.length > WRJ_VAL_LIMIT) return;
+    if (!key || key === WRJ_KEY || key.indexOf('__') >= 0) return;
+    if (isChatMsgsKey(key) || key.indexOf('music-file:') >= 0) return;
+    if (!_wrj) _wrj = wrjLoad(wrjLsRaw());
+    const t = Date.now();
+    _wrj = _wrj.filter(function (e) { return e.k !== key; });
+    _wrj.unshift({ k: key, v: v, t: t });
+    let chars = 0, cut = _wrj.length;
+    for (let i = 0; i < _wrj.length; i++) {
+      chars += _wrj[i].v.length;
+      if (i >= WRJ_MAX || chars > WRJ_BUDGET) { cut = i; break; }
+    }
+    if (cut < _wrj.length) _wrj.length = cut;
+    _wrjTimes[key] = t;
+    wrjPersist();
+  }
+  function wrjForget(key) {
+    if (!_wrj) _wrj = wrjLoad(wrjLsRaw());
+    const before = _wrj.length;
+    _wrj = _wrj.filter(function (e) { return e.k !== key; });
+    _wrjTimes[key] = Date.now();
+    if (_wrj.length !== before) wrjPersist();
+  }
+  // 回放：把日志里的「最近一次写入」补进 内存+LS+IDB。时间戳守卫保证只应用比
+  // 已知写入更新的条目（不会覆盖本会话新写入的值）。
+  function wrjReplay(entries) {
+    if (!entries || !entries.length) return 0;
+    if (!memoryCache) memoryCache = {};
+    let n = 0;
+    entries.forEach(function (e) {
+      if ((_wrjTimes[e.k] || 0) >= e.t) return;
+      _wrjTimes[e.k] = e.t;
+      if (memoryCache[e.k] === e.v) return;
+      memoryCache[e.k] = e.v;
+      try { if (e.v.length <= LS_BIG_LIMIT) localStorage.setItem(e.k, e.v); } catch (e2) {}
+      try { if (window.idbSet) window.idbSet(e.k, e.v); } catch (e2) {}
+      n++;
+    });
+    return n;
+  }
+  // 同步回放 LS 日志（杀进程场景下 LS 值与 LS 日志常同批回滚，此路为空时靠下方 IDB 合并兜底）
+  try { wrjReplay(wrjLoad(wrjLsRaw())); } catch (e) {}
+  function wrjMergeFromIdb() {
+    if (_wrjMerged) return;
+    _wrjMerged = true;
+    window.idbGet(WRJ_KEY).then(function (raw) {
+      const entries = wrjLoad(raw);
+      if (!entries.length) return;
+      if (!_wrj) _wrj = wrjLoad(wrjLsRaw());
+      entries.forEach(function (e) {
+        if (_wrj.every(function (x) { return x.k !== e.k; })) _wrj.unshift(e);
+      });
+      const healed = wrjReplay(entries);
+      if (healed > 0) {
+        wrjPersist();
+        try { document.dispatchEvent(new Event('mochi-wrj-heal')); } catch (e2) {}
+      }
+    }).catch(function () {});
+  }
+  document.addEventListener('mochi-restore-done', wrjMergeFromIdb);
+  setTimeout(wrjMergeFromIdb, 15000); // restore 整体挂起时的兜底（正常走 mochi-restore-done，_wrjMerged 防重入）
+
   window.__mochiLoadT = Date.now();
   // v3.5.24：启动时自动从 IndexedDB 回填 localStorage 缺失的键。
   // 之前只定义不调用——手机端导入/配额异常导致 localStorage 部分丢失后，IndexedDB 里的

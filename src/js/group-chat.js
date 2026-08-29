@@ -709,6 +709,19 @@
     while (copy.length && out.length < n) out.push(copy.splice(Math.floor(Math.random() * copy.length), 1)[0]);
     return out;
   }
+  // v3.28.x：群聊成员回复前取回其字卡池的防卡死封装——hydrateLibForCid 内部串行
+  // 取回 公用键 + 该成员专属键，最坏各 14s（idbHydrateKey 6s+8s）共 28s；慢 IDB
+  // 手机上群回复被拖住十几秒像卡死。这里最多等 2.5s：取回完成就继续，超时也放行
+  //（gcPool 的 For 系列 getter 下次回复仍会再触发取回，配合后台自愈最终用上自定义字卡）。
+  function gcHydrateWait(cid) {
+    try {
+      if (!window.hydrateLibForCid) return Promise.resolve();
+      return Promise.race([
+        new Promise(function (res) { window.hydrateLibForCid(cid, res); }),
+        new Promise(function (res) { setTimeout(res, 2500); })
+      ]);
+    } catch (e) { return Promise.resolve(); }
+  }
   // 该成员的字卡池（按分类）：公用字卡 + 该成员桌面专属字卡 + 默认字卡兜底
   function gcPool(cid) {
     const text = [], kaomoji = [], emoji = [], sticker = [], image = [], voice = [];
@@ -884,7 +897,7 @@
           (async () => {
           // v3.27.x：生成前先确保该成员字卡池就绪——成员桌面大键可能被启动回填
           // 挂起，同步读池是空库会让成员一直发 FALLBACK_REPLIES 兜底（上限 2.5s）
-          try { if (window.hydrateLibForCid) await new Promise(res => window.hydrateLibForCid(cid, res)); } catch (e) {}
+          try { await gcHydrateWait(cid); } catch (e) {}
           const rep = gcGenReply(cid, c);
           const q = (wantQuote && i === 0) ? quoteText : null;
           const rec = { side: 'in', cid: cid, name: name, text: rep.text, type: rep.type, parts: rep.parts, ts: Date.now() };
@@ -917,7 +930,7 @@
                 setTimeout(() => {
                   hideTyping();
                   (async () => {
-                  try { if (window.hydrateLibForCid) await new Promise(res => window.hydrateLibForCid(cid, res)); } catch (e) {}
+                  try { await gcHydrateWait(cid); } catch (e) {}
                   const rep2 = gcGenReply(cid, c);
                   const rec2 = { side: 'in', cid: cid, name: name, text: rep2.text, type: rep2.type, parts: rep2.parts, ts: Date.now() };
                   if (rep2.type === 'text' || rep2.type === 'sticker' || rep2.type === 'image') {
