@@ -962,18 +962,27 @@ try {
         try { if (input.parentNode) input.remove(); } catch (e) {}
         if (!f) { return; }
         const reader = new FileReader();
+        // v3.2x.x：上传图片卡顿很久——解码全分辨率位图 + 压到 256px 在
+        // 主线程同步执行，原图大时界面会卡死数秒且毫无反馈看起来像假死。
+        // 现在选完图先弹「正在处理图片…」，并让出当前帧（setTimeout）让
+        // toast 先渲染出来，再做耗时的压缩，处理完再提示结果；超出 8MB
+        // base64 / 26MP 的图 decode 前就被 compressImage 拦截（不会有卡顿）。
         reader.onload = () => {
-          compressImage(reader.result, 256).then(data => {
-            if (!data) { toast('图片过大或格式不支持，请换一张小图'); return; }
-            if (ico) {
-              ico.innerHTML = '';
-              const img = document.createElement('img');
-              img.src = data;
-              img.alt = '';
-              ico.appendChild(img);
-            }
-            store.set('app-icon-' + key, data);
-          });
+          toast('正在处理图片…');
+          setTimeout(() => {
+            compressImage(reader.result, 256).then(data => {
+              if (!data) { toast('图片过大或格式不支持，请换一张小图'); return; }
+              if (ico) {
+                ico.innerHTML = '';
+                const img = document.createElement('img');
+                img.src = data;
+                img.alt = '';
+                ico.appendChild(img);
+              }
+              store.set('app-icon-' + key, data);
+              toast('图标已更新');
+            });
+          }, 80);
         };
         reader.readAsDataURL(f);
       };
@@ -1825,7 +1834,7 @@ try {
       hideSchemeModal(m); // 与聊天方案 applyChatScheme 一致：应用成功先关管理弹层，避免残留到刷新
       toast('已应用「' + s.name + '」，刷新生效');
       setTimeout(() => location.reload(), 800);
-    }, { noInput: true, staticText: '将覆盖当前桌面的美化设置，刷新生效', pills: [{ label: '应用', value: 'ok' }] });
+    }, { noInput: true, pillSubmit: true, staticText: '将覆盖当前桌面的美化设置，刷新生效', pills: [{ label: '应用', value: 'ok' }] });
     if (ctl && ctl.pills) ctl.pills([{ label: '应用', value: 'ok' }], 'ok');
   }
   function deleteScheme(idx, m) {
@@ -1839,7 +1848,7 @@ try {
       saveSchemesList(list);
       toast('已删除方案');
       window.openBeautySchemes();
-    }, { noInput: true, staticText: '删除后不可恢复', pills: [{ label: '删除', value: 'ok' }] });
+    }, { noInput: true, pillSubmit: true, staticText: '删除后不可恢复', pills: [{ label: '删除', value: 'ok' }] });
     if (ctl && ctl.pills) ctl.pills([{ label: '删除', value: 'ok' }], 'ok');
   }
   window.openBeautySchemes = function () {
@@ -2679,7 +2688,7 @@ try {
           } catch (e) {}
         }, 100);
         toast('已恢复默认桌面');
-      }, { noInput: true, pills: [{ label: '确定恢复默认', value: '1' }] });
+      }, { noInput: true, pillSubmit: true, pills: [{ label: '确定恢复默认', value: '1' }] });
       if (ctl && ctl.pills) ctl.pills([{ label: '确定恢复默认', value: '1' }], '1');
     });
   }
