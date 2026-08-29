@@ -3964,9 +3964,8 @@ const k = ASK_DAILY_PREFIX + new Date().toISOString().slice(0, 10);
 store.set(k, String((Number(store.get(k)) || 0) + 1));
 }
 // v3.15.x：TA 也会随机「向 Mochi 申请」心意币——金额与红包同款随机分布（genRpAmount），
-// 概率门同自动红包（平时 4% / 七夕 8%），日上限 2 次；入 TA 的 systemBalance，聊天留 askcoin 卡片
+// 概率门同自动红包（平时 4% / 七夕 8%），无次数上限；入 TA 的 systemBalance，聊天留 askcoin 卡片
 function trySystemAskMochi() {
-if (askDailyCount() >= 2) return;
 const qixi = isQixiToday();
 const baseRate = qixi ? 0.08 : 0.04;
 if (Math.random() >= baseRate) return;

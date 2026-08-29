@@ -1321,7 +1321,7 @@
 }
 .loc-panel[hidden] { display:none; }
 @keyframes locSlideUp { from { transform:translateY(100%); } to { transform:translateY(0); } }
-/* v3.26.x：全屏模式（桌面寻踪页「TA在身边 · 看看 TA 在哪」入口） */
+/* v3.26.x：全屏模式（聊天寻踪半框 / 桌面寻踪页「TA在身边 · 看看 TA 在哪」两入口统一全屏） */
 .loc-panel.loc-full {
   inset:0; max-height:none; border-radius:0;
   background:#fff;
@@ -1335,8 +1335,7 @@
   background:rgba(255,255,255,.96);
 }
 .loc-panel.loc-full .loc-head { padding:max(calc(10px + env(safe-area-inset-top, 0px)), 14px) 16px 12px; }
-/* v3.26.x 修复：半屏（聊天寻踪半框入口）也要显示返回按钮——
-   之前只有 .loc-full（桌面寻踪页全屏）才 display:flex，半屏下既无返回按钮也无 ✕，面板无法关闭 */
+/* v3.26.x：返回按钮（点击 closeLocPanel 关闭面板） */
 .loc-back {
   display:flex; align-items:center; justify-content:center; flex-shrink:0;
   width:34px; height:34px; border-radius:50%;

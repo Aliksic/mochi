@@ -51,13 +51,22 @@
   // 不破坏现有数据：重试是再写一次同样的 key/value，不删不改其他键。
   // 告警让用户感知"静默丢数据"风险——原实现 resolve(false) 调用方忽略返回值，
   // 数据只进 memoryCache 刷新即丢且无感知；告警后用户可主动导出备份。
+  // v3.26.x 修复（旧数据多的人「存储异常」弹窗每会话必现）：
+  // ① 失败计数改为「连续失败」——任一次写入成功即清零。原实现整个会话累计不清零，
+  //    iOS 回前台/偶发抖动的一阵失败会永久污染计数，之后哪怕全部写成功也照样弹窗。
+  //    配额满等真实持续失败场景仍会连续计满 5 次、照常告警，不掩盖问题。
+  // ② 超时按值体积放大——chat-msgs 单键可达几十~几百 MB（图片 base64 内联），
+  //    慢设备上合法整包写入本来就可能 >4s：被判失败→重试又超时→计 1 次失败，
+  //    实际事务多半最终写成功，纯属误报。256KB 起每 256KB +2s，封顶 +26s；
+  //    小值维持 4s 快速判挂起不变（荣耀/Edge 挂起场景不回归）。
   let _idbFailCnt = 0;
   let _idbFailAlerted = false;
+  let _idbFailLastErr = '';
   function _idbFailNotify() {
     _idbFailCnt++;
     if (_idbFailCnt < 5 || _idbFailAlerted) return;
     _idbFailAlerted = true;
-    try { console.warn('[mochi] IDB 写入累计失败 ' + _idbFailCnt + ' 次，建议立即导出备份'); } catch (e) {}
+    try { console.warn('[mochi] IDB 写入连续失败 ' + _idbFailCnt + ' 次（最后错误: ' + (_idbFailLastErr || '超时/挂起') + '），建议立即导出备份'); } catch (e) {}
     try {
       if (window.openModal) {
         window.openModal('存储异常', '', null, {
@@ -77,25 +86,29 @@
     function tryOnce() {
       return open().then(db => new Promise((resolve) => {
         let done = false;
+        // v3.26.x：超时按值体积放大（大包误报修复，见 _idbFailNotify 上方说明）
+        let lim = 4000;
+        try { if (typeof value === 'string' && value.length > 262144) lim = 4000 + Math.min(26000, Math.ceil(value.length / 262144) * 2000); } catch (e) {}
         const t = setTimeout(function () {
           if (done) return; done = true;
           dbPromise = null; // 连接疑似挂起，下次 open 重建
           resolve(false);
-        }, 4000);
+        }, lim);
         try {
           const tx = db.transaction(STORE, 'readwrite');
           tx.objectStore(STORE).put(value, key);
           tx.oncomplete = () => { if (done) return; done = true; clearTimeout(t); resolve(true); };
-          tx.onerror = () => { if (done) return; done = true; clearTimeout(t); if (connLost(tx.error)) dbPromise = null; resolve(false); };
-        } catch (e) { if (done) return; done = true; clearTimeout(t); if (connLost(e)) dbPromise = null; resolve(false); }
+          tx.onerror = () => { if (done) return; done = true; clearTimeout(t); _idbFailLastErr = (tx.error && tx.error.name) || 'error'; if (connLost(tx.error)) dbPromise = null; resolve(false); };
+        } catch (e) { if (done) return; done = true; clearTimeout(t); _idbFailLastErr = (e && e.name) || 'error'; if (connLost(e)) dbPromise = null; resolve(false); }
       })).catch(() => false);
     }
     return (async () => {
       let ok = await tryOnce();
       if (!ok) { await new Promise(r => setTimeout(r, 100)); ok = await tryOnce(); }
       if (!ok) { await new Promise(r => setTimeout(r, 100)); ok = await tryOnce(); }
-      if (!ok) _idbFailNotify();
-      return ok;
+      if (ok) { _idbFailCnt = 0; return true; } // v3.26.x：成功即清零——只对连续失败告警
+      _idbFailNotify();
+      return false;
     })();
   };
 

@@ -655,7 +655,7 @@
   .fw-result { background:rgba(255,180,80,.1); border-color:rgba(255,180,80,.35); }
   .fw-p-line { color:rgba(255,255,255,.75); }
   .fw-result .fw-p-line:first-child { color:#ffc97e; }
-  /* v3.26.x：全屏位置页（桌面寻踪页「TA在身边」入口）暗色适配 */
+  /* v3.26.x：全屏位置页（聊天寻踪半框 / 桌面寻踪页两入口统一全屏）暗色适配 */
   .loc-panel.loc-full { background:var(--dark-card-97); }
   .loc-head { background:rgba(30,30,30,.96); }
   .loc-back { border-color:rgba(255,255,255,.14); background:rgba(255,255,255,.06); }

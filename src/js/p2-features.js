@@ -1623,12 +1623,13 @@ if (ckRefresh) {
   }
 
   // ---- 打开/关闭 ----
-  // v3.26.x：full=true 以全屏打开（桌面寻踪页「TA在身边」入口），false 保持底部半屏（聊天寻踪半框入口）
-  function openLocPanel(full) {
+  // v3.26.x：两入口（聊天寻踪半框 / 桌面寻踪页）统一全屏打开——用户反馈聊天入口半屏不理想，
+  // 与桌面寻踪页入口（.loc-full 全屏）保持一致
+  function openLocPanel() {
     const panel = document.getElementById('loc-panel');
     const nameEl = document.getElementById('loc-name');
     if (nameEl) nameEl.textContent = store.get('lbl-partner') || 'TA';
-    if (panel) panel.classList.toggle('loc-full', !!full);
+    if (panel) panel.classList.add('loc-full');
     // v3.13.x：刷新方位感知（含漂移检查）+ 渲染感知圆
     if (window.refreshSense) window.refreshSense();
     renderLocPanel();
@@ -1642,10 +1643,10 @@ if (ckRefresh) {
   }
 
   const entry = document.getElementById('ck-loc-entry');
-  if (entry) entry.addEventListener('click', () => openLocPanel(false));
+  if (entry) entry.addEventListener('click', () => openLocPanel());
   // 桌面寻踪页同款入口（点「TA在身边 · 看看 TA 在哪」全屏打开同一位置面板）
   const entryDesk = document.getElementById('ck-loc-entry-desk');
-  if (entryDesk) entryDesk.addEventListener('click', () => openLocPanel(true));
+  if (entryDesk) entryDesk.addEventListener('click', () => openLocPanel());
   // v3.26.x：全屏/半屏共用返回按钮（关闭位置面板；已移除右侧 ✕ 关闭按钮）
   const locBack = document.getElementById('loc-back');
   if (locBack) locBack.addEventListener('click', closeLocPanel);

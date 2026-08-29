@@ -302,32 +302,83 @@
   }
   // v3.6.x：「保存设置」按钮——把当前页面上所有概率/开关一次性写入本地并提示。
   // 数值本身已随点击即时保存，这里提供明确的「保存」反馈（用户反馈刷新后设置会丢）
+  // v3.26.x：抽出 saveCurrentReplyPage() 公共函数——「保存设置」与「保存全部桌面联系人
+  // 设置」共用同一套页面值校验+写入（stepper 范围校验 + 开关落盘），避免两份逻辑漂移
+  function saveCurrentReplyPage() {
+    try {
+      document.querySelectorAll('#page-reply-settings .stepper, #page-call-settings .stepper').forEach(st => {
+        const k = st.dataset.k;
+        // 同 syncUI：固定选 input.stp-val，避免转换后误读到 ce-box DIV 的过期 expando
+        const val = st.querySelector('input.stp-val');
+        if (k && val) {
+          // 与直接输入同一套范围校验（data-max 缺失 = 不设上限，防 NaN/Infinity 入库）
+          const intAttr = (name, def) => { const v = parseInt(st.getAttribute(name), 10); return Number.isNaN(v) ? def : v; };
+          const min = intAttr('data-min', 0);
+          const max = intAttr('data-max', Infinity);
+          let v = parseFloat(val.value);
+          if (!isFinite(v)) v = min;
+          v = Math.min(max, Math.max(min, v));
+          window.saveReplyCfg(k, v);
+        }
+      });
+      ['py-en', 'as-en', 'dnd-en', 'as-badge', 'ml-kaomoji-en', 'ml-emoji-en', 'ml-sticker-en', 'cs-normal', 'cs-trigger-name', 'cs-trigger-bar', 'gc-py-en', 'ai-rps-en', 'ai-game-en', 'ai-cuddle-en', 'ai-cc-en', 'ckq-en'].forEach(k => {
+        const el = document.getElementById(k);
+        if (el) window.saveReplyCfg(k, el.checked ? 1 : 0);
+      });
+    } catch (e) {}
+  }
+  function toastReply(msg, ms) {
+    const d = document.getElementById('cc-toast');
+    if (d) { d.textContent = msg; d.className = 'cc-toast'; void d.offsetWidth; d.className = 'cc-toast show'; clearTimeout(d._timer); d._timer = setTimeout(() => { d.className = 'cc-toast'; }, ms || 2000); }
+  }
   const saveBtn = document.getElementById('reply-save-btn');
   if (saveBtn) {
     saveBtn.addEventListener('click', () => {
-      try {
-        document.querySelectorAll('#page-reply-settings .stepper, #page-call-settings .stepper').forEach(st => {
-          const k = st.dataset.k;
-          // 同 syncUI：固定选 input.stp-val，避免转换后误读到 ce-box DIV 的过期 expando
-          const val = st.querySelector('input.stp-val');
-          if (k && val) {
-            // 与直接输入同一套范围校验（data-max 缺失 = 不设上限，防 NaN/Infinity 入库）
-            const intAttr = (name, def) => { const v = parseInt(st.getAttribute(name), 10); return Number.isNaN(v) ? def : v; };
-            const min = intAttr('data-min', 0);
-            const max = intAttr('data-max', Infinity);
-            let v = parseFloat(val.value);
-            if (!isFinite(v)) v = min;
-            v = Math.min(max, Math.max(min, v));
-            window.saveReplyCfg(k, v);
-          }
+      saveCurrentReplyPage();
+      toastReply('已保存全部回复设置');
+    });
+  }
+  // v3.26.x：「保存全部桌面联系人设置」——①先按「保存设置」保存当前桌面联系人；
+  // ②把当前生效的全部回复设置（DEFAULTS 全键；gc-* 群聊设置存全局命名空间、不随
+  // 桌面隔离，故跳过）同步写入每一个桌面联系人的存储（含 default 桌面，遍历方式与
+  // migrateCkqProbOld 同款 storeFor；default 命名空间值写全后 defaultStore 的旧顶层键
+  // 回退路径不会命中，无残留旧值风险）。未设置过的键也写入当前生效值（缺省即
+  // DEFAULTS），保证同步后各桌面回复设置完全一致。覆盖各桌面现有设置 → openModal
+  // 二次确认（同美化方案「应用」弹窗模式，pill 预选「确定保存」保证只点底部确定也生效）
+  function saveAllContactsDo() {
+    saveCurrentReplyPage();
+    let count = 0;
+    try {
+      if (window.getContacts && window.storeFor) {
+        // 刚保存过当前桌面，getCfg 读到的即页面生效值（存储缺省/坏值回 DEFAULTS）
+        const cfg = getCfg();
+        const cids = [window.__activeCid || 'default'];
+        (window.getContacts() || []).forEach(c => { if (c.id && cids.indexOf(c.id) === -1) cids.push(c.id); });
+        Object.keys(DEFAULTS).forEach(k => {
+          if (k.indexOf('gc-') === 0) return;
+          cids.forEach(cid => {
+            try { window.storeFor(cid).set('reply-' + k, String(cfg[k])); } catch (e) {}
+          });
         });
-        ['py-en', 'as-en', 'dnd-en', 'as-badge', 'ml-kaomoji-en', 'ml-emoji-en', 'ml-sticker-en', 'cs-normal', 'cs-trigger-name', 'cs-trigger-bar', 'gc-py-en', 'ai-rps-en', 'ai-game-en', 'ai-cuddle-en', 'ai-cc-en', 'ckq-en'].forEach(k => {
-          const el = document.getElementById(k);
-          if (el) window.saveReplyCfg(k, el.checked ? 1 : 0);
-        });
-      } catch (e) {}
-      const d = document.getElementById('cc-toast');
-      if (d) { d.textContent = '已保存全部回复设置'; d.className = 'cc-toast'; void d.offsetWidth; d.className = 'cc-toast show'; clearTimeout(d._timer); d._timer = setTimeout(() => { d.className = 'cc-toast'; }, 2000); }
+        count = cids.length;
+      }
+    } catch (e) {}
+    toastReply(count > 1 ? '已保存并同步到全部 ' + count + ' 个桌面联系人' : '已保存全部回复设置', 2400);
+  }
+  const saveAllBtn = document.getElementById('reply-save-all-btn');
+  if (saveAllBtn) {
+    saveAllBtn.addEventListener('click', () => {
+      if (!window.openModal) { saveAllContactsDo(); return; }
+      const ctl = window.openModal('保存全部桌面联系人设置？', '', (v) => {
+        if (v !== 'ok') return;
+        saveAllContactsDo();
+      }, {
+        noInput: true, pillSubmit: true,
+        staticText: '将把当前桌面联系人的回复设置（回复概率/速度/各类互动开关等）同步写入全部桌面联系人，各桌面现有的回复设置会被覆盖。',
+        pills: [{ label: '确定保存', value: 'ok' }]
+      });
+      // v3.26.x：FIX-REGRESSION #60 教训——pill 不预选时只点底部「确定」传 null 静默无效
+      if (ctl && ctl.pills) ctl.pills([{ label: '确定保存', value: 'ok' }], 'ok');
     });
   }
   // v3.6.x：IndexedDB 恢复完成后再同步一次设置页数值——

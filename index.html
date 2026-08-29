@@ -8369,7 +8369,7 @@ transition-duration: .01ms !important;
             <p class="splash-sub">灵感来源</p>
             <p class="splash-item">本站并非复刻他人网站，代码均从零编写。除随机回复的基础逻辑、基础框架外（灵感来源为 milk 字卡 · 小红书 @milk（2777299956）），以下功能为借鉴：</p>
             <p class="splash-bullet">帮我决定、多人决定功能：借鉴自小红书 @FelixFelicis（9416318007）</p>
-            <p class="splash-bullet">公用字卡+专享字卡模式：借鉴自 @默玉（8012400317）</p>
+            <p class="splash-bullet">公用字卡+专享字卡模式：借鉴自小红书 @默玉（8012400317）</p>
             <p class="splash-item">以下功能源于网络上已有的类似想法，但设计均由我独立完成：</p>
             <p class="splash-bullet">情绪字卡：源于早期网络上的类似提议（小红书 @心汋是颗彩虹多宝糖（9725312970）也提过这个模式）</p>
             <p class="splash-bullet">换头像：灵感来自看到网络上有人提议小手机想要 chat 自己换头像</p>
@@ -8406,9 +8406,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787997512290">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.341</b></span>
-        <span class="sv-deploy">部署于 2026-08-29 17:58<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1788000064562">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.342</b></span>
+        <span class="sv-deploy">部署于 2026-08-29 18:41<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9498,7 +9498,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.341</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.342</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -9706,7 +9706,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.341</span>
+              <span class="lic-ver">v3.26.342</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -9740,7 +9740,7 @@ transition-duration: .01ms !important;
           <div class="lic-p">本站并非复刻他人网站，代码均从零编写：</div>
           <div class="lic-li" style="margin-top:6px">- 除随机回复的基础逻辑、基础框架外（灵感来源为 milk 字卡 · 小红书 @milk（2777299956）），以下功能为借鉴：</div>
           <div class="lic-li">- 帮我决定、多人决定功能：借鉴自小红书 @FelixFelicis（9416318007）</div>
-          <div class="lic-li">- 公用字卡+专享字卡模式：借鉴自 @默玉（8012400317）</div>
+          <div class="lic-li">- 公用字卡+专享字卡模式：借鉴自小红书 @默玉（8012400317）</div>
           <div class="lic-p" style="margin-top:10px">以下功能源于网络上已有的类似想法，但设计均由我独立完成：</div>
           <div class="lic-li">- 情绪字卡：源于早期网络上的类似提议（有人建议在聊天中加入情绪字卡以方便交流，小红书 @心汋是颗彩虹多宝糖（9725312970）也提过这个模式）</div>
           <div class="lic-li">- 换头像：灵感来自看到网络上有人提议小手机想要 chat 自己换头像</div>
@@ -10365,8 +10365,12 @@ transition-duration: .01ms !important;
           <div class="gs-sub" style="padding:0 14px 2px">其他桌面的联系人会按各自概率（默认 2%，可在此逐联系人调整）主动给你来电，冷却与查岗一致 30 分钟。全局开关在 设置 →「开启 联系人跨桌面打电话」</div>
         </div>
         <!-- v3.6.x：保存设置按钮——点击把当前所有概率/开关写入本地并提示 -->
-        <button class="ta-add-btn gs-save-btn" id="reply-save-btn" style="width:100%;margin:6px 0 18px">
+        <button class="ta-add-btn gs-save-btn" id="reply-save-btn" style="width:100%;margin:6px 0 10px">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-2px;margin-right:4px"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>保存设置
+        </button>
+        <!-- v3.26.x：保存全部桌面联系人设置——把当前回复设置同步写入全部桌面联系人（覆盖性操作，JS 侧二次确认） -->
+        <button class="ta-add-btn gs-save-btn" id="reply-save-all-btn" style="width:100%;margin:0 0 18px">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-2px;margin-right:4px"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>保存全部桌面联系人设置
         </button>
       </div>
     </div>
@@ -12621,7 +12625,7 @@ transition-duration: .01ms !important;
 
     <!-- TA在身边·位置面板（聊天寻踪半框 / 桌面寻踪页「TA在身边」入口共用，必须放在所有 .page 之外——
          position:fixed 弹层若嵌在 .page 内，页面切换时会被父级 hidden 隐藏，桌面寻踪页点开就会"跑到聊天页"；
-         v3.26.x：桌面寻踪页入口以 .loc-full 全屏打开，聊天寻踪半框入口保持底部半屏） -->
+         v3.26.x：两入口统一 .loc-full 全屏打开） -->
     <div class="loc-panel" id="loc-panel" hidden>
       <div class="loc-head">
         <button class="loc-back" id="loc-back" aria-label="返回">
@@ -14050,11 +14054,12 @@ return /connection\s+(is\s+)?(closed|lost|closing)|server\s+lost|database\s+conn
 }
 let _idbFailCnt = 0;
 let _idbFailAlerted = false;
+let _idbFailLastErr = '';
 function _idbFailNotify() {
 _idbFailCnt++;
 if (_idbFailCnt < 5 || _idbFailAlerted) return;
 _idbFailAlerted = true;
-try { console.warn('[mochi] IDB 写入累计失败 ' + _idbFailCnt + ' 次，建议立即导出备份'); } catch (e) {}
+try { console.warn('[mochi] IDB 写入连续失败 ' + _idbFailCnt + ' 次（最后错误: ' + (_idbFailLastErr || '超时/挂起') + '），建议立即导出备份'); } catch (e) {}
 try {
 if (window.openModal) {
 window.openModal('存储异常', '', null, {
@@ -14068,25 +14073,28 @@ window.idbSet = function (key, value) {
 function tryOnce() {
 return open().then(db => new Promise((resolve) => {
 let done = false;
+let lim = 4000;
+try { if (typeof value === 'string' && value.length > 262144) lim = 4000 + Math.min(26000, Math.ceil(value.length / 262144) * 2000); } catch (e) {}
 const t = setTimeout(function () {
 if (done) return; done = true;
 dbPromise = null; // 连接疑似挂起，下次 open 重建
 resolve(false);
-}, 4000);
+}, lim);
 try {
 const tx = db.transaction(STORE, 'readwrite');
 tx.objectStore(STORE).put(value, key);
 tx.oncomplete = () => { if (done) return; done = true; clearTimeout(t); resolve(true); };
-tx.onerror = () => { if (done) return; done = true; clearTimeout(t); if (connLost(tx.error)) dbPromise = null; resolve(false); };
-} catch (e) { if (done) return; done = true; clearTimeout(t); if (connLost(e)) dbPromise = null; resolve(false); }
+tx.onerror = () => { if (done) return; done = true; clearTimeout(t); _idbFailLastErr = (tx.error && tx.error.name) || 'error'; if (connLost(tx.error)) dbPromise = null; resolve(false); };
+} catch (e) { if (done) return; done = true; clearTimeout(t); _idbFailLastErr = (e && e.name) || 'error'; if (connLost(e)) dbPromise = null; resolve(false); }
 })).catch(() => false);
 }
 return (async () => {
 let ok = await tryOnce();
 if (!ok) { await new Promise(r => setTimeout(r, 100)); ok = await tryOnce(); }
 if (!ok) { await new Promise(r => setTimeout(r, 100)); ok = await tryOnce(); }
-if (!ok) _idbFailNotify();
-return ok;
+if (ok) { _idbFailCnt = 0; return true; } // v3.26.x：成功即清零——只对连续失败告警
+_idbFailNotify();
+return false;
 })();
 };
 window.idbSetAll = function (pairs) {
@@ -24267,7 +24275,6 @@ const k = ASK_DAILY_PREFIX + new Date().toISOString().slice(0, 10);
 store.set(k, String((Number(store.get(k)) || 0) + 1));
 }
 function trySystemAskMochi() {
-if (askDailyCount() >= 2) return;
 const qixi = isQixiToday();
 const baseRate = qixi ? 0.08 : 0.04;
 if (Math.random() >= baseRate) return;
@@ -32730,9 +32737,7 @@ if (d) { d.textContent = '免打扰已开启，TA 主动发送会大幅减弱（
 }
 });
 }
-const saveBtn = document.getElementById('reply-save-btn');
-if (saveBtn) {
-saveBtn.addEventListener('click', () => {
+function saveCurrentReplyPage() {
 try {
 document.querySelectorAll('#page-reply-settings .stepper, #page-call-settings .stepper').forEach(st => {
 const k = st.dataset.k;
@@ -32752,8 +32757,50 @@ const el = document.getElementById(k);
 if (el) window.saveReplyCfg(k, el.checked ? 1 : 0);
 });
 } catch (e) {}
+}
+function toastReply(msg, ms) {
 const d = document.getElementById('cc-toast');
-if (d) { d.textContent = '已保存全部回复设置'; d.className = 'cc-toast'; void d.offsetWidth; d.className = 'cc-toast show'; clearTimeout(d._timer); d._timer = setTimeout(() => { d.className = 'cc-toast'; }, 2000); }
+if (d) { d.textContent = msg; d.className = 'cc-toast'; void d.offsetWidth; d.className = 'cc-toast show'; clearTimeout(d._timer); d._timer = setTimeout(() => { d.className = 'cc-toast'; }, ms || 2000); }
+}
+const saveBtn = document.getElementById('reply-save-btn');
+if (saveBtn) {
+saveBtn.addEventListener('click', () => {
+saveCurrentReplyPage();
+toastReply('已保存全部回复设置');
+});
+}
+function saveAllContactsDo() {
+saveCurrentReplyPage();
+let count = 0;
+try {
+if (window.getContacts && window.storeFor) {
+const cfg = getCfg();
+const cids = [window.__activeCid || 'default'];
+(window.getContacts() || []).forEach(c => { if (c.id && cids.indexOf(c.id) === -1) cids.push(c.id); });
+Object.keys(DEFAULTS).forEach(k => {
+if (k.indexOf('gc-') === 0) return;
+cids.forEach(cid => {
+try { window.storeFor(cid).set('reply-' + k, String(cfg[k])); } catch (e) {}
+});
+});
+count = cids.length;
+}
+} catch (e) {}
+toastReply(count > 1 ? '已保存并同步到全部 ' + count + ' 个桌面联系人' : '已保存全部回复设置', 2400);
+}
+const saveAllBtn = document.getElementById('reply-save-all-btn');
+if (saveAllBtn) {
+saveAllBtn.addEventListener('click', () => {
+if (!window.openModal) { saveAllContactsDo(); return; }
+const ctl = window.openModal('保存全部桌面联系人设置？', '', (v) => {
+if (v !== 'ok') return;
+saveAllContactsDo();
+}, {
+noInput: true, pillSubmit: true,
+staticText: '将把当前桌面联系人的回复设置（回复概率/速度/各类互动开关等）同步写入全部桌面联系人，各桌面现有的回复设置会被覆盖。',
+pills: [{ label: '确定保存', value: 'ok' }]
+});
+if (ctl && ctl.pills) ctl.pills([{ label: '确定保存', value: 'ok' }], 'ok');
 });
 }
 try {
@@ -50977,11 +51024,11 @@ if (prevBtn) prevBtn.addEventListener('click', () => { if (dayIdx < days.length 
 const nextBtn = document.getElementById('loc-day-next');
 if (nextBtn) nextBtn.addEventListener('click', () => { if (dayIdx > 0) { locViewDate = days[dayIdx - 1]; renderLocPanel(); } });
 }
-function openLocPanel(full) {
+function openLocPanel() {
 const panel = document.getElementById('loc-panel');
 const nameEl = document.getElementById('loc-name');
 if (nameEl) nameEl.textContent = store.get('lbl-partner') || 'TA';
-if (panel) panel.classList.toggle('loc-full', !!full);
+if (panel) panel.classList.add('loc-full');
 if (window.refreshSense) window.refreshSense();
 renderLocPanel();
 if (panel) panel.hidden = false;
@@ -50993,9 +51040,9 @@ const panel = document.getElementById('loc-panel');
 if (panel) { panel.hidden = true; panel.classList.remove('loc-full'); }
 }
 const entry = document.getElementById('ck-loc-entry');
-if (entry) entry.addEventListener('click', () => openLocPanel(false));
+if (entry) entry.addEventListener('click', () => openLocPanel());
 const entryDesk = document.getElementById('ck-loc-entry-desk');
-if (entryDesk) entryDesk.addEventListener('click', () => openLocPanel(true));
+if (entryDesk) entryDesk.addEventListener('click', () => openLocPanel());
 const locBack = document.getElementById('loc-back');
 if (locBack) locBack.addEventListener('click', closeLocPanel);
 try {
@@ -67926,7 +67973,10 @@ try {
 if (k.indexOf('xy-home-v2:') !== 0) continue;
 if (k === SNAPSHOT_KEY) continue; // v3.7.0：副本键不进导出文件
 if (k in data.ls) continue; // 小键已从 LS 收录（LS 是最新同步快照，比异步 IDB 新鲜）
-const v = await window.idbGet(k);
+let v = await window.idbGet(k);
+if ((v === undefined || v === null) && lsBig[k] === undefined) {
+v = await window.idbGet(k);
+}
 if (v !== undefined && v !== null) {
 if (v instanceof Blob) {
 const buf = await v.arrayBuffer();
@@ -67944,6 +67994,11 @@ delete lsBig[k]; // 已收录 IDB 权威值，不再回落 LS 兜底
 } else if (lsBig[k] !== undefined) {
 add(k, lsBig[k]);
 delete lsBig[k];
+} else {
+try {
+const lsV = localStorage.getItem(k);
+if (lsV !== null) { add(k, lsV); }
+} catch (e) {}
 }
 } catch (e) {} // 单键失败跳过，继续导出其余键
 }
@@ -67953,7 +68008,9 @@ impShow('正在导出…', '正在打包数据文件', 72);
 const json = JSON.stringify(data);
 const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
 const fname = 'mochi数据备份_' + localDateStr(new Date()) + '.json';
-const sizeKB = Math.round(json.length / 1024);
+const sizeStr = fmtSize(json.length);
+const coverLines = exportCoverage(data);
+const coverText = '导出内容（全局全部数据）：\n' + coverLines.join('\n') + '\n——';
 try { localStorage.setItem('xy-home-v2:__last-backup', String(Date.now())); } catch (e) {}
 impShow('正在导出…', '正在写入自动备份副本', 84);
 if (window.idbSet) {
@@ -67962,14 +68019,14 @@ try { window.idbSet(SNAPSHOT_KEY, json); } catch (e) {}
 impShow('正在导出…', '正在准备保存文件', 92);
 const saveRes = await saveBackupFile(blob, fname);
 impHide();
-if (saveRes === 'ok') { toast('数据已导出（' + sizeKB + ' KB，全部数据完整）'); return; }
+if (saveRes === 'ok') { toast('数据已导出（' + sizeStr + '，全部数据完整）'); return; }
 if (window.openModal) {
-window.openModal('备份已打包完成（' + sizeKB + ' KB）', '', () => {
-if (anchorDownload(blob, fname)) toast('数据已导出（' + sizeKB + ' KB，全部数据完整）');
+window.openModal('备份已打包完成（' + sizeStr + '）', '', () => {
+if (anchorDownload(blob, fname)) toast('数据已导出（' + sizeStr + '，全部数据完整）');
 else toast('仍未触发下载。备份已自动存到本机缓存，可稍后从「导入数据」恢复');
-}, { noInput: true, staticText: '数据已经打包好，还没开始保存。\n点「确定」开始下载保存到本机，点「取消」放弃本次保存。\n（自动备份副本已额外存入本机缓存，随时可从「导入数据」恢复）' });
+}, { noInput: true, staticText: coverText + '\n数据已经打包好，还没开始保存。\n点「确定」开始下载保存到本机，点「取消」放弃本次保存。\n（自动备份副本已额外存入本机缓存，随时可从「导入数据」恢复）' });
 } else {
-toast('备份已存到本机缓存（' + sizeKB + ' KB），可从「导入数据」恢复');
+toast('备份已存到本机缓存（' + sizeStr + '），可从「导入数据」恢复');
 }
 }
 async function saveBackupFile(blob, fname) {
@@ -68010,6 +68067,56 @@ a.click();
 setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
 return true;
 } catch (e) { return false; }
+}
+function fmtSize(n) {
+if (!n) return '0 KB';
+if (n >= 1048576) return (n / 1048576).toFixed(1) + ' MB';
+if (n >= 1024) return Math.round(n / 1024) + ' KB';
+return Math.round(n) + ' B';
+}
+function exportCoverage(data) {
+const allKeys = Object.keys(data.ls || {}).concat(Object.keys(data.idb || {}));
+const valOf = (k) => (data.idb && data.idb[k]) !== undefined ? data.idb[k] : (data.ls && data.ls[k]);
+const RULES = [
+[/:chat-msgs$/, '聊天记录', arr => arr.length + ' 条'],
+[/:group-chat-msgs$/, '群聊记录', arr => arr.length + ' 条'],
+[/mail-letters/, '信箱', arr => arr.length + ' 封'],
+[/feed-posts/, '朋友圈', arr => arr.length + ' 条'],
+[/cc-groups/, '字卡库', obj => Object.keys(obj).length + ' 组'],
+[/quote-cards/, '自定义字卡', arr => arr.length + ' 张'],
+[/fav-msgs/, '收藏', arr => arr.length + ' 条'],
+[/:avatar-user$|:avatar-partner$/, '头像', null],
+[/music-file:|music-favs/, '音乐', null],
+[/divine-history/, '占卜记录', arr => arr.length + ' 条'],
+[/cal-my-|records-/, '日历/纪念', null],
+[/memo-|myarc/, '备忘录/档案', null],
+[/gc-profiles/, '群聊资料', null],
+[/period-|cycle-/, '经期记录', null],
+[/accounting|expense/, '记账', null],
+[/garden-|room-data/, '花园/房间', null],
+[/drift-data/, '漂流瓶', null],
+[/desk-layout|hidden-icons/, '桌面布局', null]
+];
+const matched = new Set();
+const lines = [];
+RULES.forEach(([re, name, parse]) => {
+const ks = allKeys.filter(k => re.test(k));
+const real = ks.filter(k => {
+let v = valOf(k);
+if (typeof v === 'string') { try { v = JSON.parse(v); } catch (e) {} }
+return v !== null && v !== undefined && v !== '';
+});
+if (!real.length) return;
+matched.add(name);
+let desc = '✓有';
+try {
+let v = valOf(real[0]);
+if (typeof v === 'string') v = JSON.parse(v);
+if (parse && (Array.isArray(v) || (v && typeof v === 'object'))) desc = parse(v);
+} catch (e) {}
+lines.push('· ' + name + '：' + desc);
+});
+return lines.length ? lines : ['· 检查到无数据（备份为空）'];
 }
 function backupSummary(data) {
 const fmtMB = (n) => (n / 1048576).toFixed(1) + ' MB';

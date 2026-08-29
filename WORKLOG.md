@@ -1,4 +1,32 @@
-# 本次构建者：AI-A（本会话 2026-08-29 17:50，收口「美化导入导出只保留文件方式」；构建状态：本次构建，待提交）
+# 本次构建者：AI-B（Phanthy Code 本会话 2026-08-29 18:25，收口「回复设置新增保存全部桌面联系人设置按钮」；构建状态：本次构建，待提交）
+### 2026-08-29 18:35（用户反馈：灵感来源「默玉」缺「小红书」前缀）
+- [AI-A 域·跨域改 AI-B 文件 src/template.html（开屏 splash 第 161 行 + 关于页 lic-li 第 1532 行）+ src/pwa/notice.json（第 126 行）+ 本域 README.md（第 11 行）；构建状态：未构建]。
+- 需求/反馈：用户指出 README 和开屏说明里「公用字卡+专享字卡模式：借鉴自 @默玉（8012400317）」缺「小红书」三个字。
+- 方案：按全站统一格式「借鉴自小红书 @xxx」（与第 9/159 行 FelixFelicis、milk 一致）补「小红书 」前缀。源文件三处已改；根目录 index.html / notice.json 是构建产物未手改，待构建者 build 时自动更新。
+- 验证：grep 确认源文件三处均已更新为「借鉴自小红书 @默玉（8012400317）」；根目录产物仍为旧串（预期，待 build）。
+- 待对方处理：请 AI-B 下次 build 时一并包含 src/template.html + src/pwa/notice.json，产物 index.html / notice.json 中该串同步更新。
+### 2026-08-29 18:27（用户要求：TA 自动向 Mochi 申请心意币不再限每日 2 次）
+- [AI-B 域·跨域改 AI-A 文件 src/js/chat.js；node --check 通过；构建状态：未构建]。
+- 需求/反馈：用户不想要联系人向 Mochi 申请心意币的次数限制。
+- 方案：删除 chat.js trySystemAskMochi() 内 `if (askDailyCount() >= 2) return;` 拦截（原第 3969 行），注释由「日上限 2 次」改为「无次数上限」；保留 askDailyCount/askDailyIncr 计数函数（不再拦截，留作统计）。手动申请入口（rpEditWallet/giftEditWallet）本就无限制，未动。
+- 验证：node --check 通过。需构建后生效。
+- 待对方处理：请 AI-A 知悉 chat.js 此处改动；请当前构建者收口时一并包含 src/js/chat.js。
+### 2026-08-29 18:25（回复设置新增「保存全部桌面联系人设置」按钮：当前回复设置一键同步全部桌面）
+- [AI-B 域·跨域改 AI-A 文件 src/js/reply-settings.js（用户直接指令的功能改动）+ 本域 src/template.html（加按钮锚点）；node --check 通过；构建状态：本次构建，待提交]。
+- 需求：回复设置页【保存设置】（保存当前桌面联系人设置）下面新增【保存全部桌面联系人设置】——把当前回复设置保存/同步到全部桌面联系人。
+- 方案：① reply-settings.js 抽 `saveCurrentReplyPage()` 公共函数（两按钮共用同一套 stepper 范围校验+开关落盘，防逻辑漂移）+ `toastReply()`；② 新按钮 `reply-save-all-btn`：先按「保存设置」保存当前桌面，再把 `getCfg()` 生效值（DEFAULTS 全键，gc-* 群聊为全局键跳过）经 `storeFor(cid)` 写入全部桌面（含 default，遍历同 migrateCkqProbOld；未设置过的键也写生效值，保证各桌面完全一致）；③ 覆盖性操作 → openModal 二次确认（noInput+pillSubmit，pill 预选「确定保存」保住 FIX-REGRESSION #60 教训：只点底部确定也生效）；④ template.html 在保存设置按钮下加锚点，原按钮 margin 18px→10px 让出间距。
+- 验证：node --check 通过；构建哨兵全过（69/69）；npm run verify 10/10。待真机：多桌面下改当前桌面概率 → 保存全部 → 切到其他桌面打开回复设置确认已同步。
+- ⚠️ 本次构建一并打包了 AI-A 上一会话未提交的完整改动（data-backup.js #63/#64 导出修复 + idb.js 大键写入超时放大 + build.mjs 哨兵 ×2，见上条 18:10 记录「待提交」），语法完整，随本次构建入产物，提交时一并入库。
+- ⚠️ 二次构建一并打包了 18:27 会话完整改动 src/js/chat.js（TA 自动申请心意币移除每日 2 次上限，其 WORKLOG 注明 node --check 通过、请构建者一并包含）+ 18:35 会话改动（template.html/notice.json「借鉴自小红书 @默玉」前缀 + README.md）；产物已验证。
+- ⚠️ 三次构建（18:41，sw: mochi-mte92ng2）另打包了**尚无 WORKLOG 记录**的改动：p2-features.js（寻踪面板两入口统一全屏 openLocPanel 去参，两调用点已同步）+ chat-pages.css（对应注释更新）+ dark.css（仅空白/换行规范化）。p2-features.js 已补 node --check 通过、产物特征验证在位（`function openLocPanel()` 在、旧 `openLocPanel(full)` 不在）；按 18:10 先例随本次构建入库，请该会话知悉并补记录。
+### 2026-08-29 18:10（导出修复：>200KB 信箱数据不丢 + 导出弹窗显示功能清单 + 体积自动 MB）
+- [AI-A 域·跨域改 AI-B 文件 src/js/data-backup.js + build.mjs（哨兵 ×2）+ FIX-REGRESSION.md（#63/#64）+ WORKLOG.md；node --check + 逻辑验证通过；构建状态：本次构建，待提交]。
+- 需求/反馈（小米15 Pro Chrome）：①导出/导入数据不包括信箱数据；②导出功能没有确认显示导出了哪些功能的数据；③体积只显示 KB 不显示 MB；④导出数据应是全局全部数据。
+- 根因：①>200KB 的信箱主键 mail-letters 被 xyStore 从 LS 删除只留 IDB（idb.js 第 356-367 行），导出 LS 阶段遍历不到→无 lsBig 兜底→IDB 读取失败即静默丢失；②导出弹窗只写"备份已打包完成（N KB）"，从不展示内容覆盖。
+- 方案：①导出 IDB 循环中：IDB 读取失败且 lsBig 为空→重试一次；仍失败→最后尝试 localStorage 直读兜底。②新增 exportCoverage(data) 按键尾统计 17 类功能模块导出数量/是否有数据，弹窗 staticText 顶部插入「导出内容（全局全部数据）：」清单。③新增 fmtSize()（B/KB/MB 自动换算），toast/标题/弹窗统一替换 sizeKB。④导出本就是全量（LS 小键+IDB 大键），清单展示即确认「全局全量」。
+- 回归防线：build.mjs 哨兵 `IDB 读取失败且 lsBig 无兜底`、`导出内容（全局全部数据）`；FIX-REGRESSION #63/#64。
+- 验证：node --check 通过；fmtSize/exportCoverage 逻辑脚本验证（1.5MB→MB、300KB→KB、聊天/信箱/群聊/桌面布局分类正确、空备份提示）。无头浏览器实测导出弹窗：标题「备份已打包完成（302 KB）」+ staticText 列出「聊天记录：2 条 / 信箱：2 封 / 备忘录/档案：✓有 / 经期记录：✓有」。构建哨兵 69/69、布局 verify 10/10 通过。待真机：含图片信件导出→备份 JSON data.idb 含 mail-letters→导入新浏览器信件图片完整。
+- ⚠️ 本次构建一并打包了 AI-B 未提交进行中改动 `src/js/idb.js`（IDB 写入连续失败计数清零 + 超时按值体积放大：256KB 起每 256KB +2s、封顶 +26s，修大包合法写入被误判失败），语法通过、逻辑完整，已随本次构建入产物。需对方知悉并补 WORKLOG 记录。
 ### 2026-08-29 17:50（用户要求：美化导入/导出的「可复制文字」删掉，只保留文件方式）
 - [AI-A 域·跨域改 AI-B 文件 src/js/personalize.js + build.mjs（哨兵改 absent）+ FIX-REGRESSION.md（#62）+ WORKLOG.md；node --check 通过；构建状态：本次构建，sw: mochi-mte77zik，待提交]。
 - 需求/反馈：用户确认「可复制文字」对含图片的方案不可行，要求直接删掉，导入/导出只保留文件。

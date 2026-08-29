@@ -145,7 +145,13 @@
           if (k.indexOf('xy-home-v2:') !== 0) continue;
           if (k === SNAPSHOT_KEY) continue; // v3.7.0：副本键不进导出文件
           if (k in data.ls) continue; // 小键已从 LS 收录（LS 是最新同步快照，比异步 IDB 新鲜）
-          const v = await window.idbGet(k);
+          let v = await window.idbGet(k);
+          if ((v === undefined || v === null) && lsBig[k] === undefined) {
+            // IDB 读取失败且 lsBig 无兜底（典型场景：>200KB 的 IDB-only 键，xyStore 已从 LS 删除，
+            // doExport LS 阶段遍历不到 → 无 lsBig 兜底；IDB 事务挂起/超时失败后该键会被静默跳过丢失）。
+            // 重试一次给 IDB 连接恢复机会，读数之间不写进度以减轻 IO 竞争。
+            v = await window.idbGet(k);
+          }
           if (v !== undefined && v !== null) {
             // v3.6.x：本地音乐改存 Blob 后，备份导出需转成 dataURL 字符串（JSON 无法存 Blob），
             // 导入时由 add() 恢复为字符串 → 播放路径自动识别转回 Blob
@@ -166,6 +172,13 @@
             // IDB 无此键 / 读取失败 / 超时 → 回落 localStorage 兜底（至少不丢）
             add(k, lsBig[k]);
             delete lsBig[k];
+          } else {
+            // IDB 读取两次均失败 + lsBig 无兜底（>200KB IDB-only 键），最后尝试直接从 LS 读
+            // （极端情况下 LS 可能有残留快照，聊胜于无）
+            try {
+              const lsV = localStorage.getItem(k);
+              if (lsV !== null) { add(k, lsV); }
+            } catch (e) {}
           }
         } catch (e) {} // 单键失败跳过，继续导出其余键
       }
@@ -177,7 +190,12 @@
     const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
     // v3.9.x：文件名用本地日期（原 toISOString 是 UTC，凌晨导出文件名会是前一天）
     const fname = 'mochi数据备份_' + localDateStr(new Date()) + '.json';
-    const sizeKB = Math.round(json.length / 1024);
+    // v3.27.x：体积友好显示——大备份自动换算 MB（原只显示 KB，上千 KB 不便读）
+    const sizeStr = fmtSize(json.length);
+    // v3.27.x：导出内容覆盖清单——本次导出的功能模块一目了然（导出=全局全部数据，
+    // localStorage 小键 + IndexedDB 大键全量收集，用户反馈「看不到导出了哪些功能」）
+    const coverLines = exportCoverage(data);
+    const coverText = '导出内容（全局全部数据）：\n' + coverLines.join('\n') + '\n——';
     // v3.6.x：记录最近一次成功导出时间——备份提醒条（pwa.js）据此判断是否该提醒
     try { localStorage.setItem('xy-home-v2:__last-backup', String(Date.now())); } catch (e) {}
     // v3.7.0：同步把导出 JSON 写入 IndexedDB 副本键——启动时若检测到数据丢失，
@@ -194,18 +212,18 @@
     impShow('正在导出…', '正在准备保存文件', 92);
     const saveRes = await saveBackupFile(blob, fname);
     impHide();
-    if (saveRes === 'ok') { toast('数据已导出（' + sizeKB + ' KB，全部数据完整）'); return; }
+    if (saveRes === 'ok') { toast('数据已导出（' + sizeStr + '，全部数据完整）'); return; }
     // v3.9.x：'cancel' 不再直接放弃——华为/夸克等浏览器分享面板会立刻 AbortError
     //（分享面板不弹、直接返回「已取消保存」），数据其实已打包好，统一走「确定后下载」
     // 兜底，保证任何浏览器都能导出成功；用户仍可点「取消」放弃本次保存。
     // 原生分享/保存框不可用、被取消或未成功：数据已打包好，需要用户点「确定」才真正下载
     if (window.openModal) {
-      window.openModal('备份已打包完成（' + sizeKB + ' KB）', '', () => {
-        if (anchorDownload(blob, fname)) toast('数据已导出（' + sizeKB + ' KB，全部数据完整）');
+      window.openModal('备份已打包完成（' + sizeStr + '）', '', () => {
+        if (anchorDownload(blob, fname)) toast('数据已导出（' + sizeStr + '，全部数据完整）');
         else toast('仍未触发下载。备份已自动存到本机缓存，可稍后从「导入数据」恢复');
-      }, { noInput: true, staticText: '数据已经打包好，还没开始保存。\n点「确定」开始下载保存到本机，点「取消」放弃本次保存。\n（自动备份副本已额外存入本机缓存，随时可从「导入数据」恢复）' });
+      }, { noInput: true, staticText: coverText + '\n数据已经打包好，还没开始保存。\n点「确定」开始下载保存到本机，点「取消」放弃本次保存。\n（自动备份副本已额外存入本机缓存，随时可从「导入数据」恢复）' });
     } else {
-      toast('备份已存到本机缓存（' + sizeKB + ' KB），可从「导入数据」恢复');
+      toast('备份已存到本机缓存（' + sizeStr + '），可从「导入数据」恢复');
     }
   }
 
@@ -263,6 +281,63 @@
       setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
       return true;
     } catch (e) { return false; }
+  }
+
+  // v3.27.x：体积友好显示——<1MB 显示 KB，≥1MB 显示 MB（原导出只显示 KB，大备份上千 KB 不便读）
+  function fmtSize(n) {
+    if (!n) return '0 KB';
+    if (n >= 1048576) return (n / 1048576).toFixed(1) + ' MB';
+    if (n >= 1024) return Math.round(n / 1024) + ' KB';
+    return Math.round(n) + ' B';
+  }
+
+  // v3.27.x：导出内容覆盖清单——按键尾统计各功能模块本次导出了哪些数据，
+  // 让用户确认「导出数据=全局全部数据」（用户反馈：导出弹窗不显示导出了哪些功能）。
+  // 返回中文行数组，如「· 聊天记录：123 条」「· 信箱：✓（含图片）」。
+  function exportCoverage(data) {
+    const allKeys = Object.keys(data.ls || {}).concat(Object.keys(data.idb || {}));
+    const valOf = (k) => (data.idb && data.idb[k]) !== undefined ? data.idb[k] : (data.ls && data.ls[k]);
+    // [键尾正则, 功能名, 可选解析函数(arr)=>条数文本]
+    const RULES = [
+      [/:chat-msgs$/, '聊天记录', arr => arr.length + ' 条'],
+      [/:group-chat-msgs$/, '群聊记录', arr => arr.length + ' 条'],
+      [/mail-letters/, '信箱', arr => arr.length + ' 封'],
+      [/feed-posts/, '朋友圈', arr => arr.length + ' 条'],
+      [/cc-groups/, '字卡库', obj => Object.keys(obj).length + ' 组'],
+      [/quote-cards/, '自定义字卡', arr => arr.length + ' 张'],
+      [/fav-msgs/, '收藏', arr => arr.length + ' 条'],
+      [/:avatar-user$|:avatar-partner$/, '头像', null],
+      [/music-file:|music-favs/, '音乐', null],
+      [/divine-history/, '占卜记录', arr => arr.length + ' 条'],
+      [/cal-my-|records-/, '日历/纪念', null],
+      [/memo-|myarc/, '备忘录/档案', null],
+      [/gc-profiles/, '群聊资料', null],
+      [/period-|cycle-/, '经期记录', null],
+      [/accounting|expense/, '记账', null],
+      [/garden-|room-data/, '花园/房间', null],
+      [/drift-data/, '漂流瓶', null],
+      [/desk-layout|hidden-icons/, '桌面布局', null]
+    ];
+    const matched = new Set();
+    const lines = [];
+    RULES.forEach(([re, name, parse]) => {
+      const ks = allKeys.filter(k => re.test(k));
+      const real = ks.filter(k => {
+        let v = valOf(k);
+        if (typeof v === 'string') { try { v = JSON.parse(v); } catch (e) {} }
+        return v !== null && v !== undefined && v !== '';
+      });
+      if (!real.length) return;
+      matched.add(name);
+      let desc = '✓有';
+      try {
+        let v = valOf(real[0]);
+        if (typeof v === 'string') v = JSON.parse(v);
+        if (parse && (Array.isArray(v) || (v && typeof v === 'object'))) desc = parse(v);
+      } catch (e) {}
+      lines.push('· ' + name + '：' + desc);
+    });
+    return lines.length ? lines : ['· 检查到无数据（备份为空）'];
   }
 
   // v3.5.101：导入前预览备份摘要——显示导出时间/键数/聊天条数/头像/摸鱼累计，

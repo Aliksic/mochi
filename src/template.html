@@ -158,7 +158,7 @@
             <p class="splash-sub">灵感来源</p>
             <p class="splash-item">本站并非复刻他人网站，代码均从零编写。除随机回复的基础逻辑、基础框架外（灵感来源为 milk 字卡 · 小红书 @milk（2777299956）），以下功能为借鉴：</p>
             <p class="splash-bullet">帮我决定、多人决定功能：借鉴自小红书 @FelixFelicis（9416318007）</p>
-            <p class="splash-bullet">公用字卡+专享字卡模式：借鉴自 @默玉（8012400317）</p>
+            <p class="splash-bullet">公用字卡+专享字卡模式：借鉴自小红书 @默玉（8012400317）</p>
             <p class="splash-item">以下功能源于网络上已有的类似想法，但设计均由我独立完成：</p>
             <p class="splash-bullet">情绪字卡：源于早期网络上的类似提议（小红书 @心汋是颗彩虹多宝糖（9725312970）也提过这个模式）</p>
             <p class="splash-bullet">换头像：灵感来自看到网络上有人提议小手机想要 chat 自己换头像</p>
@@ -1529,7 +1529,7 @@
           <div class="lic-p">本站并非复刻他人网站，代码均从零编写：</div>
           <div class="lic-li" style="margin-top:6px">- 除随机回复的基础逻辑、基础框架外（灵感来源为 milk 字卡 · 小红书 @milk（2777299956）），以下功能为借鉴：</div>
           <div class="lic-li">- 帮我决定、多人决定功能：借鉴自小红书 @FelixFelicis（9416318007）</div>
-          <div class="lic-li">- 公用字卡+专享字卡模式：借鉴自 @默玉（8012400317）</div>
+          <div class="lic-li">- 公用字卡+专享字卡模式：借鉴自小红书 @默玉（8012400317）</div>
           <div class="lic-p" style="margin-top:10px">以下功能源于网络上已有的类似想法，但设计均由我独立完成：</div>
           <div class="lic-li">- 情绪字卡：源于早期网络上的类似提议（有人建议在聊天中加入情绪字卡以方便交流，小红书 @心汋是颗彩虹多宝糖（9725312970）也提过这个模式）</div>
           <div class="lic-li">- 换头像：灵感来自看到网络上有人提议小手机想要 chat 自己换头像</div>
@@ -2154,8 +2154,12 @@
           <div class="gs-sub" style="padding:0 14px 2px">其他桌面的联系人会按各自概率（默认 2%，可在此逐联系人调整）主动给你来电，冷却与查岗一致 30 分钟。全局开关在 设置 →「开启 联系人跨桌面打电话」</div>
         </div>
         <!-- v3.6.x：保存设置按钮——点击把当前所有概率/开关写入本地并提示 -->
-        <button class="ta-add-btn gs-save-btn" id="reply-save-btn" style="width:100%;margin:6px 0 18px">
+        <button class="ta-add-btn gs-save-btn" id="reply-save-btn" style="width:100%;margin:6px 0 10px">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-2px;margin-right:4px"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>保存设置
+        </button>
+        <!-- v3.26.x：保存全部桌面联系人设置——把当前回复设置同步写入全部桌面联系人（覆盖性操作，JS 侧二次确认） -->
+        <button class="ta-add-btn gs-save-btn" id="reply-save-all-btn" style="width:100%;margin:0 0 18px">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-2px;margin-right:4px"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>保存全部桌面联系人设置
         </button>
       </div>
     </div>
@@ -4410,7 +4414,7 @@
 
     <!-- TA在身边·位置面板（聊天寻踪半框 / 桌面寻踪页「TA在身边」入口共用，必须放在所有 .page 之外——
          position:fixed 弹层若嵌在 .page 内，页面切换时会被父级 hidden 隐藏，桌面寻踪页点开就会"跑到聊天页"；
-         v3.26.x：桌面寻踪页入口以 .loc-full 全屏打开，聊天寻踪半框入口保持底部半屏） -->
+         v3.26.x：两入口统一 .loc-full 全屏打开） -->
     <div class="loc-panel" id="loc-panel" hidden>
       <div class="loc-head">
         <button class="loc-back" id="loc-back" aria-label="返回">
