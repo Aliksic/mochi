@@ -80,6 +80,29 @@
 .msg-in .msg-bubble { background: var(--msg-in-bg, #ffffff); color: var(--msg-in-ink, #111111); }
 .msg-out .msg-bubble { background: var(--msg-out-bg, #111111); color: var(--msg-out-ink, #ffffff); }
 
+/* 消息入场动画：仅新增消息（非批量渲染）时触发 */
+.msg-enter {
+  animation: msgFadeUp .28s cubic-bezier(.25,.1,.25,1) both;
+}
+.msg-in.msg-enter {
+  animation-name: msgSlideIn;
+}
+.msg-out.msg-enter {
+  animation-name: msgSlideOut;
+}
+@keyframes msgFadeUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes msgSlideIn {
+  from { opacity: 0; transform: translateX(-8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes msgSlideOut {
+  from { opacity: 0; transform: translateX(8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
 /* 涓诲姩鍙戦€佹爣璇嗭細鑱旂郴浜轰富鍔ㄦ壘浣犵殑娑堟伅锛屾皵娉″乏涓婅涓€鏋氬皬鐖卞績锛堢煝閲忓浘锛?   v3.6.x锛氱埍蹇冩斁鍦ㄦ皵娉″唴閮ㄥ乏涓婅锛?px/4px 鍋忕Щ + 9px 灏哄锛屾伆濂借惤鍦ㄦ皵娉?   11px/14px 鍐呰竟璺濊寖鍥村唴锛屼笉鍘嬫枃瀛楋級锛涙鍓?top/left:-8px 鏄寕鍦ㄦ皵娉″瑙?*/
 .msg-hi-heart {
   position:absolute;

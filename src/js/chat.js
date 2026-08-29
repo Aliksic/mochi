@@ -1530,6 +1530,7 @@ loadNewerIncremental();
 }, { passive: true });
 function renderMsg(rec) {
 const m = document.createElement('div');
+if (!batchRendering) m.classList.add('msg-enter');
 const __fit = rec.side !== 'out' && !!window.taFit;
 const __taNm = chatPartnerName();
 const T = (s) => {
