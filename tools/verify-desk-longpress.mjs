@@ -298,6 +298,77 @@ check('导入数据已应用（page-bg-0=#ff0000）', impApplied.bg === '#ff0000
 check('强调色已应用（accent-color）', impApplied.accent === '#123456', 'accent=' + impApplied.accent);
 check('弹窗已自动关闭（txtImportAuto）', impApplied.modalClosed === true, 'closed=' + impApplied.modalClosed);
 
+// ============ 场景7：导出美化方案 → 导出 JSON → 再导入（闭环验证） ============
+console.log('\n===== 场景7 导出→导入闭环（验证导出文件格式与导入兼容） =====');
+await freshLoad();
+await ev(`(function(){
+  var s = window.activeStore();
+  s.set('page-bg-0', '#ffeecc');
+  s.set('app-icon-order-main', JSON.stringify(['chat','mail','feed','calendar']));
+  return true;
+})()`);
+await sleep(400);
+// 点导出行 → 弹窗A（选「当前设置」或方案）
+await ev(`(function(){var r=document.getElementById('row-beauty-export');if(r)r.click();return true;})()`);
+await sleep(350);
+const exp1 = await ev(`(function(){return !document.getElementById('modal-mask').hidden;})()`);
+check('点【导出美化方案】弹窗打开（选择来源）', exp1 === true, 'modal=' + exp1);
+// 点第一个 pill「当前设置」+ 底部确定
+await ev(`(function(){var p=document.querySelectorAll('#modal-pills .pill');if(p[0])p[0].click();return true;})()`);
+await sleep(150);
+await ev(`(function(){var o=document.getElementById('modal-ok');if(o)o.click();return true;})()`);
+await sleep(350);
+const exp2 = await ev(`(function(){
+  var ps = document.querySelectorAll('#modal-pills .pill');
+  return { modal: !document.getElementById('modal-mask').hidden, labels: Array.prototype.map.call(ps, function(p){return p.textContent;}) };
+})()`);
+check('导出方式弹窗出现（导出文件/复制文字）', exp2.modal === true && exp2.labels.indexOf('导出文件') >= 0 && exp2.labels.indexOf('复制文字') >= 0, 'labels=' + JSON.stringify(exp2.labels));
+// 点「复制文字」+ 确定 → 强制 clipboard 失败走 fallback（textarea 展示 JSON）
+await ev(`(function(){
+  try { Object.defineProperty(navigator, 'clipboard', { value: { writeText: function () { return Promise.reject(new Error('no-clip')); } }, configurable: true }); }
+  catch (e) { try { navigator.clipboard = { writeText: function () { return Promise.reject(new Error('no-clip')); } }; } catch (e2) {} }
+  return true;
+})()`);
+await ev(`(function(){var ps=document.querySelectorAll('#modal-pills .pill');if(ps[1])ps[1].click();return true;})()`);
+await sleep(150);
+await ev(`(function(){var o=document.getElementById('modal-ok');if(o)o.click();return true;})()`);
+await sleep(600);
+const expJson = await ev(`(function(){
+  var ta = document.querySelector('#modal-mask textarea');
+  return ta ? ta.value : null;
+})()`);
+check('导出 JSON 已生成（fallback textarea）', !!expJson, expJson ? 'len=' + expJson.length : 'no-fallback');
+let expParsed = null;
+if (expJson) {
+  try { expParsed = JSON.parse(expJson); } catch (e) { expParsed = null; }
+  check('导出 JSON 可解析且为对象', !!expParsed && typeof expParsed === 'object' && !Array.isArray(expParsed));
+  check('导出 JSON 含预置数据（page-bg-0）', !!expParsed && expParsed['page-bg-0'] === '#ffeecc', expParsed && expParsed['page-bg-0']);
+}
+// 闭环：把这个导出的 JSON 走导入流程 → 应能应用
+if (expParsed && expParsed['page-bg-0'] === '#ffeecc') {
+  // 关闭 fallback 弹窗
+  await ev(`(function(){var c=document.getElementById('modal-cancel');if(c)c.click();else{var m=document.getElementById('modal-mask');m.hidden=true;}return true;})()`);
+  await sleep(300);
+  // 先改掉当前值，导入后应恢复成 #ffeecc
+  await ev(`(function(){var s=window.activeStore();s.set('page-bg-0', '#000000');return true;})()`);
+  await sleep(200);
+  await ev(`(function(){var r=document.getElementById('row-beauty-import');if(r)r.click();return true;})()`);
+  await sleep(350);
+  await ev(`(function(){
+    var inp = document.getElementById('modal-file-input');
+    var dt = new DataTransfer();
+    dt.items.add(new File([${JSON.stringify(JSON.stringify(expParsed))}], 'beauty.json', { type: 'application/json' }));
+    try { inp.files = dt.files; } catch (e) { return { err: String(e) }; }
+    inp.dispatchEvent(new Event('change'));
+    return { ok: true };
+  })()`);
+  await sleep(700);
+  const reimpVal = await ev(`(function(){var s=window.activeStore();return s.get('page-bg-0');})()`);
+  check('导出的 JSON 重新导入可应用（page-bg-0 恢复）', reimpVal === '#ffeecc', 'bg=' + reimpVal);
+} else {
+  console.log('  [skip] 未能取得导出 JSON，跳过闭环断言');
+}
+
 // ============ 汇总 ============
 console.log('\n===== 汇总 =====');
 const fails = results.filter((r) => !r.ok);

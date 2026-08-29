@@ -1,4 +1,13 @@
-# 本次构建者：AI-A（本会话 2026-08-29 16:45，收口「桌面美化导入文件无反应」；构建状态：本次构建，待提交）
+# 本次构建者：AI-A（本会话 2026-08-29 17:36，收口「导出美化方案嵌套弹窗被外层关闭」；构建状态：本次构建，待提交）
+### 2026-08-29 17:36（桌面美化【导出美化方案】有保存方案时选完来源看不到导出方式、「导出没反应」）
+- [AI-A 域·跨域改 AI-B 文件 src/js/personalize.js + build.mjs（哨兵）+ FIX-REGRESSION.md（#60）+ WORKLOG.md；node --check 通过；构建状态：本次构建，sw: mochi-mte6pwjd，待提交]。
+- 需求/反馈：用户怀疑【导出美化方案】有问题导致【导入】也有问题（引导排查发现导出确实有独立 bug）。
+- 根因：**嵌套弹窗被外层确定按钮的 finally close() 立即关掉**——弹窗A（选导出来源：当前设置/方案）的 cb 里同步 startBeautyExport 打开弹窗B（导出方式），okBtn `try{fire()}finally{close()}` 在 fire 返回后把刚打开的弹窗B 关闭；ctl.stay() 救不了（openModal 每次打开重置 stayOnce，L322）。无保存方案时直接开弹窗B 不嵌套所以正常——与"有方案才出问题"吻合。
+- 方案：**弹窗打开序号守卫**——IIFE 级 `_openSeq`，openModal 打开时 `_openSeq++`；okBtn/Enter/pillSubmit 的 finally close() 改为「_openSeq 未变化才 close」（fire 期间开了新弹窗 → 跳过关闭，新弹窗保留）。startBeautyExport 的 clipboard 不可用 fallback 分支加 ctl.stay() 保险。此守卫同时修复所有「弹窗A确定后开弹窗B」嵌套场景。
+- 另确认：导出 JSON 格式与导入兼容（collectBeautyFull → JSON.stringify → JSON.parse → applyBeautyData 对称），导出本身无格式问题；导入问题（#59 ReferenceError）是独立 bug 已修。
+- 回归防线：哨兵 `_openSeq`（存在）；FIX-REGRESSION #60；verify-desk-longpress 新增场景7（导出→导入闭环 6 断言）。
+- 验证：verify-desk-longpress 28/28（场景1-7）；verify-desk-beauty 14/14；verify.mjs 10/10；哨兵 66/66。
+- 待对方处理：推送待 GitHub 凭据（本地已累积 e20f5d5/27496af/e9a8e2e/710a67b 等未推送提交）。
 ### 2026-08-29 16:45（桌面美化【导入美化方案】从文件导入选 .json 依旧没反应、没应用）
 - [AI-A 域·跨域改 AI-B 文件 src/js/personalize.js + build.mjs（哨兵）+ FIX-REGRESSION.md（#59）+ WORKLOG.md；node --check 通过；构建状态：本次构建，sw: mochi-mte4tqhg，待提交]。
 - 需求/反馈：手机桌面美化【导入美化方案】从文件导入选了 .json 依旧没有任何反应、没有应用（此前 txtImportAuto 修过一次仍无效）。

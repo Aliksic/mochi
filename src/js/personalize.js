@@ -278,8 +278,10 @@ try {
             pillClicked = true;
             // v3.20.x：pillSubmit——点选即提交（单坎作答等纯单选弹窗），
             // 用定时器让选中态先渲染一帧再走 fire()/close()（与 okBtn 同一回调路径）
+            // v3.27.x：嵌套弹窗守卫同 okBtn——fire 内开了新弹窗则不 close
             if (pillSubmit) {
-              setTimeout(function () { try { fire(); } finally { close(); } }, 0);
+              const _s = _openSeq;
+              setTimeout(function () { try { fire(); } finally { if (_openSeq === _s) close(); } }, 0);
             }
           });
           pillsEl.appendChild(b);
@@ -304,6 +306,11 @@ try {
     let stayOnce = false;
     let sliderCfg = null;
     let sliderInitPill = null;
+    // v3.27.x：弹窗打开序号——okBtn/Enter 的 finally close() 只在自己「本次打开」
+    // 未变化时才关闭（fire() 的 cb 若同步打开了新弹窗，_openSeq 已递增 → 跳过关闭，
+    // 新弹窗保留）。修「导出美化方案」等嵌套弹窗：外层确定把刚打开的下一层弹窗
+    // 立即关掉（stayOnce 会被内层 openModal 重置，扛不住跨弹窗嵌套）。
+    let _openSeq = 0;
     // v3.6.x：用户是否真的点过 pill——区分「opts.pill 预设值」与「用户主动选择」。
     // 修复：今天的心情/字体大小等「pills + 输入框 + pill 预设」弹窗里，用户输入文字点确定时，
     // fire() 的 pills 分支误把预设的旧 pillVal 传回回调，输入的文本被丢弃（卡片不更新）。
@@ -311,6 +318,7 @@ try {
     window.openModal = function (t, v, fn, opts) {
       opts = opts || {};
       _modalOpts = opts;
+      _openSeq++;
       // v3.25.x：opts.big——宽版弹窗（诊断信息等长文只读展示），配合 CSS
       // .modal.modal--big 加宽 + 放大输入框；每次开弹窗按 opts.big 重设类，天然复位。
       if (modalBox) modalBox.classList.toggle('modal--big', !!opts.big);
@@ -619,14 +627,19 @@ try {
     }
     okBtn.addEventListener('click', () => {
       // v3.5.130：回调抛异常（如存储配额满）也必须关闭弹窗，防止残留卡死
-      try { fire(); } finally { close(); }
+      // v3.27.x：期间打开过新弹窗（_openSeq 变化）则不关——嵌套弹窗由 fire 内 openModal 接管
+      const _s = _openSeq;
+      try { fire(); } finally { if (_openSeq === _s) close(); }
     });
     cancelBtn.addEventListener('click', close);
     mask.addEventListener('click', (e) => { if (e.target === mask && !lock) close(); });
     input.addEventListener('keydown', (e) => {
       // v3.6.x：与 OK 按钮一致用 try/finally——回调抛异常（如存储配额满）时也必须
       // 关闭弹窗，否则残留卡死、后续再点 OK 每次都抛
-      if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) { try { fire(); } finally { close(); } }
+      if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) {
+        const _s = _openSeq;
+        try { fire(); } finally { if (_openSeq === _s) close(); }
+      }
     });
   })();
 
@@ -1628,7 +1641,7 @@ try {
   const startBeautyExport = (data) => {
     const json = JSON.stringify(data);
     if (!window.openModal) { showBeautyFallback(json); return; }
-    window.openModal('导出美化方案', '', (v) => {
+    const ctl = window.openModal('导出美化方案', '', (v) => {
       if (v === 'file') {
         try {
           const blob = new Blob([json], { type: 'application/json' });
@@ -1645,6 +1658,9 @@ try {
         if (navigator.clipboard && navigator.clipboard.writeText) {
           navigator.clipboard.writeText(json).then(() => toast('已复制到剪贴板，发给对方粘贴导入')).catch(() => showBeautyFallback(json));
         } else {
+          // v3.27.x：同步开新弹窗（fallback）前先 ctl.stay()——否则外层确定按钮的
+          // finally close() 会把刚打开的 fallback 弹窗立即关掉（嵌套 openModal 通用坑）
+          if (ctl && ctl.stay) ctl.stay();
           showBeautyFallback(json);
         }
       }
@@ -1665,7 +1681,10 @@ try {
       if (!schemes.length || !window.openModal) { startBeautyExport(collectBeautyFull()); return; }
       const pills = [{ label: '当前设置', value: 'current' }]
         .concat(schemes.map((s, i) => ({ label: s.name || ('方案' + (i + 1)), value: 'sch_' + i })));
-      window.openModal('导出美化方案', '', (v) => {
+      // v3.27.x：ctl.stay() 防嵌套弹窗被外层确定按钮的 finally close() 关掉——
+      // cb 里同步 startBeautyExport 打开「导出方式」弹窗后，外层 close() 会把它立即
+      // 关闭（用户选完来源看不到导出方式 → 「导出没反应」）。
+      const ctl = window.openModal('导出美化方案', '', (v) => {
         let data;
         if (v && v.indexOf('sch_') === 0) {
           const i = parseInt(String(v).slice(4), 10);
@@ -1675,6 +1694,7 @@ try {
         } else {
           data = collectBeautyFull();
         }
+        if (ctl && ctl.stay) ctl.stay();
         startBeautyExport(data);
       }, {
         noInput: true,

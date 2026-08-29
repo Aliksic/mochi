@@ -8385,9 +8385,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787993093323">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.337</b></span>
-        <span class="sv-deploy">部署于 2026-08-29 16:44<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787996271555">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.338</b></span>
+        <span class="sv-deploy">部署于 2026-08-29 17:37<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9477,7 +9477,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.337</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.338</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -9685,7 +9685,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.337</span>
+              <span class="lic-ver">v3.26.338</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -16077,7 +16077,8 @@ b.classList.add('on');
 pillVal = p.value;
 pillClicked = true;
 if (pillSubmit) {
-setTimeout(function () { try { fire(); } finally { close(); } }, 0);
+const _s = _openSeq;
+setTimeout(function () { try { fire(); } finally { if (_openSeq === _s) close(); } }, 0);
 }
 });
 pillsEl.appendChild(b);
@@ -16095,10 +16096,12 @@ let lock = false;
 let stayOnce = false;
 let sliderCfg = null;
 let sliderInitPill = null;
+let _openSeq = 0;
 let pillClicked = false;
 window.openModal = function (t, v, fn, opts) {
 opts = opts || {};
 _modalOpts = opts;
+_openSeq++;
 if (modalBox) modalBox.classList.toggle('modal--big', !!opts.big);
 if (okBtn) okBtn.textContent = '确定';
 stayOnce = false;
@@ -16346,12 +16349,16 @@ fileInput.value = '';
 });
 }
 okBtn.addEventListener('click', () => {
-try { fire(); } finally { close(); }
+const _s = _openSeq;
+try { fire(); } finally { if (_openSeq === _s) close(); }
 });
 cancelBtn.addEventListener('click', close);
 mask.addEventListener('click', (e) => { if (e.target === mask && !lock) close(); });
 input.addEventListener('keydown', (e) => {
-if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) { try { fire(); } finally { close(); } }
+if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) {
+const _s = _openSeq;
+try { fire(); } finally { if (_openSeq === _s) close(); }
+}
 });
 })();
 function bindLabel(id, key) {
@@ -17242,7 +17249,7 @@ textareaPlaceholder: '长按/全选复制，发给对方粘贴导入',
 const startBeautyExport = (data) => {
 const json = JSON.stringify(data);
 if (!window.openModal) { showBeautyFallback(json); return; }
-window.openModal('导出美化方案', '', (v) => {
+const ctl = window.openModal('导出美化方案', '', (v) => {
 if (v === 'file') {
 try {
 const blob = new Blob([json], { type: 'application/json' });
@@ -17259,6 +17266,7 @@ toast('已导出美化方案文件');
 if (navigator.clipboard && navigator.clipboard.writeText) {
 navigator.clipboard.writeText(json).then(() => toast('已复制到剪贴板，发给对方粘贴导入')).catch(() => showBeautyFallback(json));
 } else {
+if (ctl && ctl.stay) ctl.stay();
 showBeautyFallback(json);
 }
 }
@@ -17278,7 +17286,7 @@ const schemes = getSchemes();
 if (!schemes.length || !window.openModal) { startBeautyExport(collectBeautyFull()); return; }
 const pills = [{ label: '当前设置', value: 'current' }]
 .concat(schemes.map((s, i) => ({ label: s.name || ('方案' + (i + 1)), value: 'sch_' + i })));
-window.openModal('导出美化方案', '', (v) => {
+const ctl = window.openModal('导出美化方案', '', (v) => {
 let data;
 if (v && v.indexOf('sch_') === 0) {
 const i = parseInt(String(v).slice(4), 10);
@@ -17288,6 +17296,7 @@ data = s.data || {};
 } else {
 data = collectBeautyFull();
 }
+if (ctl && ctl.stay) ctl.stay();
 startBeautyExport(data);
 }, {
 noInput: true,
