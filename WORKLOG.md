@@ -1,3 +1,10 @@
+### 2026-08-29 19:52（修复：聊天拍一拍昵称变 他/ta/她 + 不显示双方昵称——FIX-REGRESSION #68）
+- [AI-B 域·聊天]（**改动文件：src/js/chat.js 3 处（随 7a4c41d 已入库）+ build.mjs（哨兵 +1）+ FIX-REGRESSION.md（#68）+ tools/verify-poke-nick.mjs（新增）+ tools/verify-ta-gender.mjs（2 处过期期望对齐数据）+ WORKLOG.md；构建状态：本次构建，sw 见 version.json**）。
+- 需求/反馈：用户问「为什么聊天里发送的拍一拍，联系人的昵称也变成了他 ta 她【这个怎么会受称呼功能限制】？拍一拍没有显示我和聊天联系人的昵称，人称不对」。
+- 根因（chat.js）：①sendPoke 把「你」替换成 chatPartnerName() 字面值（聊天昵称未设时=占位 TA），拍一拍消息按 side:'in' 渲染必过 taFit（称呼功能），文本里的 TA/他/ta 被整体替换成称呼词 → 昵称槽位显示成 他/ta/她；②sendPoke 前缀用字面「我」而非 chatUserName()，我的昵称永不显示（联系人侧 performPoke 反而已用双昵称，不一致）。
+- 方案：①sendPoke/performPoke 改存 {me}/{ta} 占位符（不落字面昵称，联系人改名后历史拍一拍渲染期自动跟随，与 v3.25.x 系统消息昵称动态化同机制）；②renderMsg T() 重排——taFit 期间把 {ta}/{me} 掩成控制符 \u0002/\u0003，先称呼替换再回填昵称，昵称永不被称呼改写；字卡文案里独立 ta/TA/他（非占位符）仍按称呼替换（字卡库中性占位设计不变）。
+- 验证：node --check 过；tools/verify-poke-nick.mjs（新增，专项回归）7/7——称呼=她、昵称未设：发「拍了拍你」→ 我 拍了拍TA（修复前=我 拍了拍她）；「摸了摸ta的头」→ 我 摸了摸她的头（ta 字卡占位仍跟随称呼）；设 cs-lbl 昵称阿红/小明：「拍了拍你的脸蛋」→ 阿红 拍了拍小明的脸蛋、「戳了戳我的头」→ 阿红 戳了戳小明的头；称呼改回不设置中性保留。verify-ta-gender 22/22（其中 2 处 FAIL 为 v3.23.x c9703a6 起「他」→ta 占位数据改写后脚本期望未跟，本次对齐期望字符串，与本次修复无关）。构建哨兵 72/72。
+- 真机确认点：设置称呼（他/她）+ 聊天昵称后，聊天里发拍一拍，消息应显示「我的昵称 + 对方昵称」（如 阿红 拍了拍小明的脸蛋），且称呼设置不再把昵称改成 他/ta/她。
 # 本次构建者：Phanthy Code（本会话 2026-08-29 19:24 构建：颜文字缺字形字符第二批替换#67 + 哨兵新增 1 条 absent；构建状态：本次构建，待提交。收口说明：产物含并行会话 chat.js「拍一拍人称修复」未提交改动（{ta}/{me} 占位符渲染期回填，node --check 过），随本批一并入库）
 ### 2026-08-29 19:24（修复：有的手机系统预设字卡颜文字显示叉叉——补替换 5 个缺字形高危字符——FIX-REGRESSION #67）
 - [AI-A 域·字卡库]（**改动文件：src/js/default-cards-data.js + tools/fix-kaomoji-chars.mjs（REPLACEMENTS 第二批）+ build.mjs（哨兵 +1 absent）+ FIX-REGRESSION.md（#67）+ WORKLOG.md；node --check 通过；构建状态：已构建，sw: mochi-mtean09f，部署于 2026-08-29 19:24**）。

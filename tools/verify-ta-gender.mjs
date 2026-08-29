@@ -146,9 +146,10 @@ try {
   ok('恢复默认 TA', (await evalJs("window.taFit('他在那边')")) === 'TA在那边');
 
   console.log('\n== T7 摸鱼浮字预设池（字卡库新分类） ==');
-  const pool = await evalJs("({ n10: window.getFishPool ? window.getFishPool('摸鱼浮字', []).length : -1, n6: window.getFishPool ? window.getFishPool('抓包回应', []).length : -1, hasOrigin: window.getFishPool ? window.getFishPool('摸鱼浮字', []).indexOf('他在那边也偷了个懒') >= 0 : false })");
+  const pool = await evalJs("({ n10: window.getFishPool ? window.getFishPool('摸鱼浮字', []).length : -1, n6: window.getFishPool ? window.getFishPool('抓包回应', []).length : -1, hasOrigin: window.getFishPool ? window.getFishPool('摸鱼浮字', []).indexOf('ta在那边也偷了个懒') >= 0 : false })");
+  // v3.23.x c9703a6 起预设字卡「他」统一改中性占位 ta，原句期望同步对齐数据
   ok('getFishPool 两分组（浮字 10 条 / 抓包 6 条）', pool && pool.n10 === 10 && pool.n6 === 6, pool);
-  ok('含原句「他在那边也偷了个懒」', pool && pool.hasOrigin, pool);
+  ok('含原句「ta在那边也偷了个懒」', pool && pool.hasOrigin, pool);
   const tab = await evalJs("(function(){ var t = document.querySelector('#fc-tabs [data-type=\"fish\"]'); if (!t) return { tab: false }; var pg = document.getElementById('page-fun-cards'); pg.hidden = false; document.getElementById('fc-tabs').querySelector('[data-type=\"fish\"]').click(); var headers = Array.prototype.map.call(document.querySelectorAll('#fc-list .ccg-name'), function (x) { return x.textContent; }); var cards = document.querySelectorAll('#fc-list .cc-item').length; return { tab: true, headers: headers, cards: cards }; })()");
   ok('「摸鱼浮字」tab 已注入且可点击', tab && tab.tab === true, tab);
   ok('渲染两组卡片共 16 张', tab && tab.headers.join(',') === '摸鱼浮字,抓包回应' && tab.cards === 16, tab && { h: tab.headers, c: tab.cards });
@@ -161,7 +162,7 @@ try {
   ok('五个新 tab 全部注入', pools && pools.tabs === true, pools);
   ok('池数据齐全（园7/同8/伸6/水4/句式4/罐5）', pools && pools.g === 7 && pools.s === 8 && pools.r === 6 && pools.w === 4 && pools.wt === 4 && pools.p === 5, pools);
   const waterTab = await evalJs("(function(){ var pg = document.getElementById('page-fun-cards'); pg.hidden = false; document.querySelector('#fc-tabs [data-type=\"water\"]').click(); var headers = Array.prototype.map.call(document.querySelectorAll('#fc-list .ccg-name'), function (x) { return x.textContent; }); var cards = document.querySelectorAll('#fc-list .cc-item').length; pg.hidden = true; return { h: headers.join(','), c: cards }; })()");
-  ok('喝水 tab 渲染 6 组 30 张', waterTab && waterTab.h === '提醒模板,TA 提醒句式,他视角温柔提醒,喝够夸奖,继续鼓励,梦角催喝水' && waterTab.c === 30, waterTab);
+  ok('喝水 tab 渲染 6 组 30 张', waterTab && waterTab.h === '提醒模板,TA 提醒句式,ta视角温柔提醒,喝够夸奖,继续鼓励,梦角催喝水' && waterTab.c === 30, waterTab);
 
   console.log('\n== T6 无 JS 异常 ==');
   ok('加载与操作全程无未捕获异常', jsErrors.length === 0, jsErrors.slice(0, 3));
