@@ -789,12 +789,14 @@
           c2.slots.forEach(function (h) { if (slotSet.indexOf(h) < 0) slotSet.push(h); });
         }
       });
-      let hh, mm;
+      let hh, mm, stH = -1;
       if (slotSet.length) {
-        const total = slotMinuteRange(slotSet[rand(0, slotSet.length - 1)]);
+        stH = slotSet[rand(0, slotSet.length - 1)];
+        const total = slotMinuteRange(stH);
         hh = Math.floor(total / 60) % 24; mm = total % 60;
       } else { hh = rand(0, 23); mm = rand(0, 59); }
       t = { hh: hh, mm: mm, last: now, next: 1 + Math.random() * 7 };
+      if (stH >= 0) t.slotStartH = stH; // 记录抽中的时辰起时，供「时间段」标签展示具体范围
       saveTaTime(cid, t);
     }
     return t;
@@ -819,7 +821,7 @@
       left.appendChild(el('span', 'cj-ta-time-sh', 'TA'));
       const nameCol = el('span', 'cj-ta-time-namecol');
       nameCol.appendChild(el('span', 'cj-ta-time-name', contactName(cid)));
-      nameCol.appendChild(el('span', 'cj-ta-time-slot', taSlotLabel(cid)));
+      nameCol.appendChild(el('span', 'cj-ta-time-slot', taSlotLabel(cid, t)));
       left.appendChild(nameCol);
       row.appendChild(left);
       const right = el('div', 'cj-ta-time-right');
@@ -829,16 +831,15 @@
       card.appendChild(row);
     });
   }
-  // 「对方当前时间」的时间段标签：该桌面梦角所设时辰区间的并集；无则「全天随机」
-  function taSlotLabel(cid) {
-    const set = [];
-    loadRoster(cid).forEach(function (c2) {
-      if (Array.isArray(c2.slots) && c2.slots.length) {
-        c2.slots.forEach(function (h) { if (set.indexOf(h) < 0) set.push(h); });
-      }
-    });
-    if (!set.length) return '全天随机';
-    return slotLabel(set);
+  // 「对方当前时间」的时间段标签：显示抽中时辰的名字 + 具体时间范围（如「未时 13:00–15:59」）。
+  // 该桌面无 slots 梦角则为全天随机；旧数据无 slotStartH 时按抽到的时刻反推时辰。
+  function taSlotLabel(cid, t) {
+    const hasSlots = loadRoster(cid).some(function (c2) { return Array.isArray(c2.slots) && c2.slots.length; });
+    if (!hasSlots) return '全天随机';
+    let startH;
+    if (t && typeof t.slotStartH === 'number' && t.slotStartH >= 0) startH = t.slotStartH;
+    else startH = shichenStartHour(shichenAt(t.hh));
+    return SHICHEN[shichenAt(startH)] + '时 ' + pad(startH) + ':00–' + pad((startH + 2) % 24) + ':59';
   }
   // 刷新检查：启动立即一次 + 每 60 秒；仅当「此间」页开着才重抽/刷新显示（后台不空转）
   function taTimePoll() {
@@ -882,6 +883,9 @@
   function setView(v) {
     if (viewCid === v) return;
     viewCid = v;
+    // 切换到非「全部」的具体桌面时：若该桌面从未打开过此间（未播种）会被展示为空态
+    // 「此间还没有梦角」，这里用该 TA 的名字自动种下第一个梦角（与直接打开此间行为一致）。
+    if (viewCid !== ALL) seedIfEmpty(viewCid);
     // 不清缓存：同一浏览期内每个视图的今日预测各自保持稳定，切回来还是原来那份
     window.renderCjian(false);
     const main = document.getElementById('cj-main');

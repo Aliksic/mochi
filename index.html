@@ -5341,9 +5341,11 @@ border-radius: 16px; box-shadow: 0 2px 10px rgba(0,0,0,.04);
 .cj-ta-time-hint { margin: 4px 0 8px; font-size: 11.5px; color: rgba(0,0,0,.45); }
 .cj-ta-time-item { display: flex; align-items: center; justify-content: space-between; padding: 9px 0; }
 .cj-ta-time-item + .cj-ta-time-item { border-top: 1px solid rgba(0,0,0,.05); }
-.cj-ta-time-left { min-width: 0; }
-.cj-ta-time-sh { display: block; font-size: 10.5px; color: rgba(0,0,0,.4); }
-.cj-ta-time-name { font-size: 14px; font-weight: 700; color: var(--ink); }
+.cj-ta-time-left { min-width: 0; display: flex; align-items: flex-start; gap: 8px; }
+.cj-ta-time-sh { font-size: 10.5px; color: rgba(0,0,0,.4); line-height: 1.6; }
+.cj-ta-time-namecol { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.cj-ta-time-name { font-size: 14px; font-weight: 700; color: var(--ink); line-height: 1.2; }
+.cj-ta-time-slot { font-size: 10.5px; color: rgba(0,0,0,.45); }
 .cj-ta-time-right { display: flex; align-items: baseline; gap: 8px; }
 .cj-ta-time-hhmm { font-size: 22px; font-weight: 800; letter-spacing: 2px; color: var(--ink); line-height: 1; }
 .cj-ta-time-shi { font-size: 11.5px; color: rgba(0,0,0,.5); }
@@ -7172,6 +7174,7 @@ radial-gradient(circle at calc(100% - 5px) calc(100% - 5px), rgba(255,255,255,.1
 .cj-ta-time-hint { color:#8a8a8a; }
 .cj-ta-time-item + .cj-ta-time-item { border-top-color:rgba(255,255,255,.07); }
 .cj-ta-time-sh { color:#7d7d7d; }
+.cj-ta-time-slot { color:#8a8a8a; }
 .cj-ta-time-shi { color:#9a978f; }
 .cj-detail-back { background:var(--dark-card); border-color:var(--dark-border-12); color:#eaeaea; }
 .cj-d-range { color:#9a978f; }
@@ -8377,9 +8380,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787980090931">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.318</b></span>
-        <span class="sv-deploy">部署于 2026-08-29 13:08<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787980528690">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.319</b></span>
+        <span class="sv-deploy">部署于 2026-08-29 13:15<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9469,7 +9472,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.318</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.319</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -9677,7 +9680,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.318</span>
+              <span class="lic-ver">v3.26.319</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -69223,12 +69226,14 @@ if (Array.isArray(c2.slots) && c2.slots.length) {
 c2.slots.forEach(function (h) { if (slotSet.indexOf(h) < 0) slotSet.push(h); });
 }
 });
-let hh, mm;
+let hh, mm, stH = -1;
 if (slotSet.length) {
-const total = slotMinuteRange(slotSet[rand(0, slotSet.length - 1)]);
+stH = slotSet[rand(0, slotSet.length - 1)];
+const total = slotMinuteRange(stH);
 hh = Math.floor(total / 60) % 24; mm = total % 60;
 } else { hh = rand(0, 23); mm = rand(0, 59); }
 t = { hh: hh, mm: mm, last: now, next: 1 + Math.random() * 7 };
+if (stH >= 0) t.slotStartH = stH; // 记录抽中的时辰起时，供「时间段」标签展示具体范围
 saveTaTime(cid, t);
 }
 return t;
@@ -69253,7 +69258,7 @@ const left = el('div', 'cj-ta-time-left');
 left.appendChild(el('span', 'cj-ta-time-sh', 'TA'));
 const nameCol = el('span', 'cj-ta-time-namecol');
 nameCol.appendChild(el('span', 'cj-ta-time-name', contactName(cid)));
-nameCol.appendChild(el('span', 'cj-ta-time-slot', taSlotLabel(cid)));
+nameCol.appendChild(el('span', 'cj-ta-time-slot', taSlotLabel(cid, t)));
 left.appendChild(nameCol);
 row.appendChild(left);
 const right = el('div', 'cj-ta-time-right');
@@ -69263,15 +69268,13 @@ row.appendChild(right);
 card.appendChild(row);
 });
 }
-function taSlotLabel(cid) {
-const set = [];
-loadRoster(cid).forEach(function (c2) {
-if (Array.isArray(c2.slots) && c2.slots.length) {
-c2.slots.forEach(function (h) { if (set.indexOf(h) < 0) set.push(h); });
-}
-});
-if (!set.length) return '全天随机';
-return slotLabel(set);
+function taSlotLabel(cid, t) {
+const hasSlots = loadRoster(cid).some(function (c2) { return Array.isArray(c2.slots) && c2.slots.length; });
+if (!hasSlots) return '全天随机';
+let startH;
+if (t && typeof t.slotStartH === 'number' && t.slotStartH >= 0) startH = t.slotStartH;
+else startH = shichenStartHour(shichenAt(t.hh));
+return SHICHEN[shichenAt(startH)] + '时 ' + pad(startH) + ':00–' + pad((startH + 2) % 24) + ':59';
 }
 function taTimePoll() {
 try {
@@ -69312,6 +69315,7 @@ chip('全部', ALL);
 function setView(v) {
 if (viewCid === v) return;
 viewCid = v;
+if (viewCid !== ALL) seedIfEmpty(viewCid);
 window.renderCjian(false);
 const main = document.getElementById('cj-main');
 if (main) main.scrollTop = 0;

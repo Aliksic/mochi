@@ -1,4 +1,16 @@
 # 本次构建者：AI-A（本会话 2026-08-29，吃饭提醒夜宵专属字卡；已构建收口 sw: mochi-mtdx6joz，哨兵 55/55，verify-eat-remind 20/20，待提交）
+### 2026-08-29（此间：点非当前桌面 chip 仍显示「此间还没有梦角」空态）
+- [AI-A 域]（**改动文件：src/js/cjian.js；node --check 通过；构建状态：未构建，待构建者收口**）。
+- 需求/反馈：在此间页通过切换条点击非当前桌面的联系人，仍显示空态「此间还没有梦角」。根因：`seedIfEmpty` 只在 `openCjian` 对当前桌面进行播种，`setView` 切换到未打开过此间的其它桌面时不播种 → roster 空 → 空态。
+- 方案：`setView` 中，当 `viewCid !== ALL` 时先 `seedIfEmpty(viewCid)`（用该 TA 名种下第一个梦角，与直接打开此间行为一致）；幂等——该桌面已播种或手动删光不会复活。
+- 验证：node --check 通过。待构建后实测：从 A 桌面切到从未打开过此间的 B 桌面，应直接出现以 B TA 名命名的梦角，不再空态。
+- 待对方处理：构建者 `node build.mjs` 收口。
+### 2026-08-29（此间「对方当前时间」时间段显示补成含具体范围：未时 13:00–15:59）
+- [AI-A 域]（**改动文件：src/js/cjian.js；node --check 通过；构建状态：未构建，待构建者收口**）。
+- 需求/反馈：时间段标签不只是时辰名，要显示联系人自己抽取的具体时间段（含时间范围，如「未时 13:00–15:59」），并显示该时间段里随机抽到的具体时刻。
+- 方案：`taTimeOf` 抽到 slots 时辰时增 `slotStartH`（抽中时辰起始整点）。`taSlotLabel(cid,t)` 改为「时辰名 + startH:00–(startH+2):59」（如未时 13:00–15:59）；桌面无 slots 显示「全天随机」；旧数据无 slotStartH 时按抽到时刻反推时辰。`renderTaTime` 传入 `t`。
+- 验证：node --check 通过；起始整点映射已 node 验证（13→未时 13:00–15:59）。待构建后实测卡片显示「时间段（含范围）+ 具体时刻」。
+- 待对方处理：构建者 `node build.mjs` 收口。
 ### 2026-08-29 13:10（吃饭提醒的夜宵时间提醒没有对应字卡，很突兀）
 - [AI-A 域]（**改动文件：src/js/default-cards-data.js + src/js/p2-features.js + build.mjs（FIX_SENTINELS 哨兵 +1）+ FIX-REGRESSION.md #49 + tools/verify-eat-remind.mjs（S6/T6 新增）；node --check 通过；已构建收口 sw: mochi-mtdx6joz，哨兵 55/55，verify-eat-remind 20/20，未提交**）。
 - 需求/反馈：用户「吃饭提醒 的夜宵时间提醒 没有对应的字卡，很突兀」。
