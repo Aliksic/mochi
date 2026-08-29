@@ -1,4 +1,24 @@
-# 本次构建者：AI-B（Phanthy Code 本会话 2026-08-29 18:25，收口「回复设置新增保存全部桌面联系人设置按钮」；构建状态：本次构建，待提交）
+# 本次构建者：Phanthy Code（本会话 2026-08-29 18:39 构建：回复设置「保存全部桌面联系人设置」按钮 + 导出信箱修复#63/#64 + idb 大键超时放大 + TA申请心意币不限次 + 寻踪「TA在身边」两入口统一全屏；构建状态：本次构建，待提交）
+### 2026-08-29 18:52（修复：聊天设置改「联系人昵称」刷新后顶部回退旧名——FIX-REGRESSION #66）
+- [AI-B 域·跨域改 AI-A 文件 src/js/chat.js]（**改动文件清单：src/js/chat.js +2 处；构建状态：未构建**）。
+- 需求/反馈：用户在聊天设置改「联系人昵称」后刷新浏览器，聊天顶部又变回修改前的昵称（联系人名片名），新昵称不生效。
+- 根因：chat.js 的 mochi-restore-done 监听器（原 :650）漏调 updateChatPartnerName()，且未监听 mochi-wrj-heal。当 localStorage 写失败（配额满/隐私模式，idb.js:374 标脏键）时：刷新后 memoryCache 空，chat.js:678 同步读 LS 拿到旧值/null → 回退 contacts.name（"修改前昵称"）；idbRestore 随后用 IDB 新值回填 memoryCache（idb.js:517 脏键以 IDB 为准），但聊天顶部不重渲染 → 新值永不显示。对比 chat-settings.js 有这两处兜底（:1176/:1402），唯独 chat.js 漏了。
+- 方案：①mochi-restore-done 监听器内补 `try { updateChatPartnerName(); } catch (e) {}`；②renderChatHeader 赋值后新增 `document.addEventListener('mochi-wrj-heal', ...)` 重调 updateChatPartnerName。幂等安全（内部读 store.get 动态代理当前 cid）。
+- 验证：node --check 通过；git diff 确认 +2 处。待构建者 build 后真机验证（改昵称 → 刷新 → 顶部保留新值）。
+- 待对方处理：请构建者（Phanthy Code 会话）收口时一并包含 src/js/chat.js。注意 chat.js 已含 18:27 跨域改动（删 trySystemAskMochi 2 次限制），本次再叠加 2 处，共 3 处未构建改动待收口。
+### 2026-08-29 18:46（补登记：修复旧数据多的人「存储异常·近期数据多次写入失败」弹窗每会话必现——FIX-REGRESSION #65）
+- [本会话·完成]（**已改 src/js/idb.js（仅此文件）；改动已随 18:39 构建入产物，由 a1858f7 提交并推送（=远程 main，部署于 2026-08-29 18:41），线上已生效**）。
+- 现象：用户反馈"旧数据总是提示数据可能写入错误"——即 idb.js v3.7.0 的「存储异常」告警弹窗（idbSet 三连重试失败计 1 次、累计满 5 次弹，每会话一次；下会话写入仍失败则再弹）。
+- 根因：①`_idbFailCnt` 会话内累计不清零——iOS 回前台连接重建/偶发抖动的一阵失败永久污染计数，之后哪怕全部写成功也照样弹；②v3.26.x 的 4s 挂起超时不分体积——chat-msgs 单键可达几十~几百 MB（图片 base64），慢设备上合法整包写入本就可能 >4s：判失败→重试又超时→计 1 次，事务实际多半最终写成功，纯误报；数据越大越必现。
+- 修复：①任一次 idbSet 成功即计数清零，只对「连续失败」告警（配额满等真实持续失败仍连计 5 次照常弹，不掩盖）；②写入超时按值体积放大（字符串 >256KB 每 256KB +2s、封顶 +26s），小值维持 4s 快速判挂起（荣耀/Edge 场景不回归，`连接疑似挂起` 哨兵注释保留）；③console.warn 带最后错误名。
+- 验证：node --check 过；verify-data-loss 11/11；布局 verify 10/10；哨兵本轮补挂 build.mjs（needle `成功即清零——只对连续失败告警`，下次构建校验 70/70）。⚠️ verify-chat-switch-idb-hang 5/9 与 verify-chat-switch-idb-timeout 10/11 的 5 个 FAIL 为**既有问题**（新旧产物一致复现，LS 快照兜底/渲染断言域，疑 a20df1d「chat累积」引入）——请 chat.js 域会话排查；数据丢失核心断言（T5/T6 跨桌追加不覆盖、D 组坏数据恢复）全过。
+- 报障侧指引：让用户先设置→导出备份保数据，再回传「复制诊断信息」（含配额/持久化/键明细字段）；本修复上线后弹窗若仍出现=真实持续写入失败（最常见配额满），引导清理设备/浏览器存储。
+### 2026-08-29 18:39（寻踪「TA在身边 · 看看 TA 在哪」聊天入口也改全屏打开——与桌面入口统一）
+- [AI-A 域]（**已改 src/js/p2-features.js + src/template.html + src/css/chat-pages.css + src/css/dark.css（仅注释）；构建状态：本次构建（18:39, sw: mochi-mte902lj），哨兵 69/69，verify 10/10，待提交**）。
+- 需求/反馈：聊天里点联系人顶部栏头像打开【寻踪ta的日常】半框，再点【ta在身边 看看ta在哪里】依旧不是全屏（非全屏模式下）。
+- 根因：08-28 那轮只把桌面寻踪页入口（#ck-loc-entry-desk）改为 openLocPanel(true) 全屏，聊天寻踪半框入口（#ck-loc-entry）仍按旧设计 openLocPanel(false) 保持底部半屏。
+- 方案：openLocPanel 去掉 full 参数、统一 `classList.add('loc-full')` 全屏打开；两处入口绑定（聊天半框 / 桌面寻踪页）都改调 openLocPanel()；template.html 与 chat-pages/dark.css 注释同步（不再有「聊天入口半屏」分支）。z-index 78 > 半框 .poke-card 55 无遮挡问题；关闭仍走共用返回按钮 closeLocPanel，打开时隐藏半框的原有行为不变。
+- 验证：node --check 通过；构建哨兵 69/69；npm run verify 10/10；产物 grep：openLocPanel(false) 已不存在、`classList.add('loc-full')` 在位。待真机：聊天点头像 → 寻踪半框 → 点「TA在身边 · 看看 TA 在哪」应全屏打开、左上返回按钮可关。
 ### 2026-08-29 18:35（用户反馈：灵感来源「默玉」缺「小红书」前缀）
 - [AI-A 域·跨域改 AI-B 文件 src/template.html（开屏 splash 第 161 行 + 关于页 lic-li 第 1532 行）+ src/pwa/notice.json（第 126 行）+ 本域 README.md（第 11 行）；构建状态：未构建]。
 - 需求/反馈：用户指出 README 和开屏说明里「公用字卡+专享字卡模式：借鉴自 @默玉（8012400317）」缺「小红书」三个字。
@@ -8,7 +28,7 @@
 ### 2026-08-29 18:27（用户要求：TA 自动向 Mochi 申请心意币不再限每日 2 次）
 - [AI-B 域·跨域改 AI-A 文件 src/js/chat.js；node --check 通过；构建状态：未构建]。
 - 需求/反馈：用户不想要联系人向 Mochi 申请心意币的次数限制。
-- 方案：删除 chat.js trySystemAskMochi() 内 `if (askDailyCount() >= 2) return;` 拦截（原第 3969 行），注释由「日上限 2 次」改为「无次数上限」；保留 askDailyCount/askDailyIncr 计数函数（不再拦截，留作统计）。手动申请入口（rpEditWallet/giftEditWallet）本就无限制，未动。
+- 方案：①删除 chat.js trySystemAskMochi() 内 `if (askDailyCount() >= 2) return;` 拦截（原第 3969 行），无次数上限；②概率门由 `qixi ? 0.08 : 0.04` 改固定 0.04（不沿用红包七夕加成）；保留 askDailyCount/askDailyIncr 计数函数。特殊数值沿用 genRpAmount 内置 40% 从 RP_SPECIAL_FEN [520/5200/52000/520000/1314/131400] 选，与红包平时一致，不加七夕专属 777/7777/77777。手动申请入口未动。
 - 验证：node --check 通过。需构建后生效。
 - 待对方处理：请 AI-A 知悉 chat.js 此处改动；请当前构建者收口时一并包含 src/js/chat.js。
 ### 2026-08-29 18:25（回复设置新增「保存全部桌面联系人设置」按钮：当前回复设置一键同步全部桌面）
