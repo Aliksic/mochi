@@ -1005,6 +1005,23 @@ const qs = quoteTextSafe(q);
 return '<div class="msg-quote"><span class="msg-quote-text">' + escTxtBr(FQ(qs)) + '</span></div>';
 }
 let inplaceDrafts = {};
+// v3.28.x：当前聚焦的互动卡片输入栏下标。联系人新消息触发整窗重渲染（renderWindow）会
+// 重建输入框，若不在重建后回补 focus，安卓会收起输入法、卡片像被收起，打断用户输入。
+// 用 document focusin/focusout 跟踪（contenteditable `.ce-box` 上 activeElement 常为 body，
+// 单看 activeElement 不可靠；focusin 能命中 ceBox，故以此为权威）。
+let inplaceFocusIdx = -1;
+document.addEventListener('focusin', (e) => {
+  const t = e.target;
+  if (!t || t.nodeType !== 1 || !t.closest) return;
+  if (!t.closest('.msg-inplace')) return;
+  const item = t.closest('.msg-ask');
+  inplaceFocusIdx = item && item.dataset.idx !== undefined ? Number(item.dataset.idx) : -1;
+});
+document.addEventListener('focusout', () => {
+  const ae = document.activeElement;
+  if (ae && ae.nodeType === 1 && ae.closest && ae.closest('.msg-inplace')) return;
+  inplaceFocusIdx = -1;
+});
 function inplaceTypeOf(rec) {
 if (!rec) return null;
 if (rec.special === 'ask-choose') return 'choose';
@@ -1016,6 +1033,15 @@ return null;
 function collectInplaceDrafts() {
 if (!body) return;
 inplaceDrafts = {};
+// 快照当前聚焦下标：这里是清空 body 前唯一能读到「仍在聚焦」的位置（focusout 在
+// innerHTML='' 时才触发）。activeElement 命中 input 或它的 ceBox 都算聚焦，作为兜底。
+try {
+const ae = document.activeElement;
+if (ae && ae.nodeType === 1 && ae.closest && ae.closest('.msg-inplace')) {
+const fi = ae.closest('.msg-ask');
+if (fi && fi.dataset.idx !== undefined) inplaceFocusIdx = Number(fi.dataset.idx);
+}
+} catch (e) {}
 body.querySelectorAll('.msg-ask[data-idx] .msg-inplace input.ip-input').forEach(inp => {
 const item = inp.closest('.msg-ask');
 if (!item || item.dataset.idx === undefined) return;
@@ -1023,6 +1049,21 @@ const idx = Number(item.dataset.idx);
 const t = inplaceTypeOf(msgs[idx]);
 if (t && (inp.value || '').trim()) inplaceDrafts[idx] = { type: t, value: inp.value };
 });
+// 若 focusin 跟踪的下标在当前渲染里指向已作答卡片则失效；未作答的（含空输入）保留，
+// 以便重渲染后重开输入栏、维持焦点不被打断
+if (inplaceFocusIdx >= 0) {
+const ridx = msgs[inplaceFocusIdx];
+if (ridx && inplaceTypeOf(ridx) !== null && inplaceAnswered(ridx)) inplaceFocusIdx = -1;
+}
+}
+function inplaceAnswered(rec) {
+if (!rec) return true;
+return (
+(rec.special === 'ask-choose' && rec.choiceStatus === 'answered') ||
+(rec.special === 'ask-curious' && rec.curiousStatus === 'answered') ||
+(rec.special === 'ask-roast' && rec.roastStatus === 'answered') ||
+(rec.special === 'ask-card' && rec.askStatus === 'answered')
+);
 }
 function restoreInplaceDrafts() {
 if (!body) return;
@@ -1052,8 +1093,23 @@ const s = window.getSelection();
 s.removeAllRanges();
 s.addRange(r);
 } catch (e) {}
+// v3.28.x：重建后若正是重渲染前聚焦的那张卡片，回补焦点，让输入法保持弹出、不被收起
+if (inplaceFocusIdx === idx) {
+setTimeout(() => { try { inp.focus(); } catch (e) {} }, 0);
+}
 }
 });
+// v3.28.x：聚焦但还没打字的输入栏不在草稿字典里，重建后补开输入栏，维持焦点不被打断
+// （expandCardInPlace 内部会对输入框 refocus）
+if (inplaceFocusIdx >= 0) {
+const idx = inplaceFocusIdx;
+const item = body.querySelector('.msg-ask[data-idx="' + idx + '"]');
+if (item && !item.querySelector('.msg-inplace')) {
+const rec = msgs[idx];
+const type = inplaceTypeOf(rec);
+if (type && !inplaceAnswered(rec)) try { expandCardInPlace(idx, type); } catch (e) {}
+}
+}
 }
 function expandCardInPlace(idx, type) {
 const el = body.querySelector('.msg-ask[data-idx="' + idx + '"]');

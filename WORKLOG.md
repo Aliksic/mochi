@@ -1,4 +1,15 @@
 # 本次构建者：AI-A（本会话 2026-08-29，收口「小米15Pro Chrome 卡顿止血」聊天持久化空闲调度；构建状态：本次构建）
+### 2026-08-29（「（轻轻抵着你的额头）」加进系统预设字卡_其他互动功能字卡_经期，可逐张开关）
+- [AI-A 域·经期字卡]（**改动文件：src/js/default-cards-data.js；node --check 通过；构建状态：未构建，待构建者收口**）。
+- 需求/反馈：用户在系统预设字卡搜索框搜「（轻轻抵着你的额头）」搜不到——它原是 period.js WARM_SUFFIX 里写死的经期回复装饰语，不在字卡库。
+- 方案：将该句作为一条经期字卡加进 DEFAULT_CARD_DATA.period「经期关心」分组末位（单一数据源）。加后自动：字卡库经期 tab 显示 + 带 dc-off-period:* 逐张开关，period.js careLineBlocked 联动（关掉不抽取），pickCareLine 可作经期关心语发送。
+- 验证：node --check 通过。待构建 + 真机确认：字卡库→系统预设字卡→其他互动功能字卡→经期 可见 21 张，末条为「（轻轻抵着你的额头）」，开关有效。
+### 2026-08-29（互动卡片输入栏被联系人新消息打断：收键盘、卡片收起）
+- [AI-A 域]（**改动文件：src/js/chat.js；node --check 通过；构建状态：未构建，待构建者收口**）。
+- 需求/反馈：聊天里打开互动卡片（msg-inplace 输入栏）弹输入法输入时，联系人发来新消息会打断输入：输入法被收、卡片像收起。
+- 根因：联系人消息触发整窗重渲染 renderWindow（collectInplaceDrafts→body.innerHTML=''→restoreInplaceDrafts），输入框被重建但焦点没有恢复 → 安卓收起输入法、卡片看起来被收起。
+- 方案：新增 `inplaceFocusIdx` 跨重渲染跟踪聚焦输入栏（document focusin/focusout 命中 contenteditable `.ce-box`，规避 activeElement 返回 body 的坑）；collectInplaceDrafts 快照聚焦下标（清空 DOM 前 last read），未作答卡片（含空输入）保留；restoreInplaceDrafts 重建后用 `inp.focus()` 回补焦点，另对「聚焦未打字」的卡片重建后补开输入栏。
+- 验证：node --check 通过。待真机实测：输入字卡答案时联系人发消息 → 输入法不再关闭、卡片不收起、输入不打断。
 ### 2026-08-29（清理“默认聊天字卡”过期静态占位 3260 → 动态占位 0）
 - [跨域改动 src/template.html、src/js/default-cards.js]（**改动文件：src/template.html L567、src/js/default-cards.js refreshLibCount；node --check 通过；构建状态：未构建，待构建者收口**）。
 - 理由：字卡库角标已动态计算（main+kaomoji+emoji+touch = 5276），template 里 static「3260」早过期只当占位；改为 `<span id=dc-lib-count>0</span>`（与 fc-lib-count/dk-lib-count 一致），default-cards.js 改用 getElementById('dc-lib-count')。纯文案+选择器对齐，不影响逻辑，运行值仍是 5276。

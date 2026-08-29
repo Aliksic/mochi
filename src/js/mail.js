@@ -78,10 +78,33 @@
     return list;
   }
   // 按 id 合并两个信件列表（后者覆盖同 id），按 tm 倒序
+  // v3.26.x：剥图回填——大信件超 200KB 时 LS 只有剥图快照（正文图片 dataURL 被剥成 [图片]），
+  //   IDB 里是完整版；原实现后者(b=本地快照)整体覆盖同 id 的完整版 → 联系人用表情包写信/
+  //   回信，信箱只显示「图片」两个字的文字。改为同 id 时优先保留「含真实 data:image」的那版
+  //   （包含图片 → 完整版），彻底去掉剥图占位；两侧都无损时才按内容长度取更完整一方。
+  function letterLen(o) {
+    let n = 0;
+    const a = o && typeof o.content === 'string' ? o.content : '';
+    const b = o && o.myReply && typeof o.myReply.content === 'string' ? o.myReply.content : '';
+    const c = o && o.partnerReply && typeof o.partnerReply.content === 'string' ? o.partnerReply.content : '';
+    return a.length + b.length + c.length;
+  }
+  function hasRealImg(o) {
+    const s = [o && o.content, o && o.myReply && o.myReply.content, o && o.partnerReply && o.partnerReply.content].join(' ');
+    return /data:image\//.test(s || '');
+  }
   function mergeLists(a, b) {
     const map = {};
-    (a || []).forEach(x => { if (x && x.id) map[x.id] = x; });
-    (b || []).forEach(x => { if (x && x.id) map[x.id] = x; });
+    const put = (x) => {
+      if (!x || !x.id) return;
+      const prev = map[x.id];
+      if (!prev) { map[x.id] = x; return; }
+      const xImg = hasRealImg(x), pImg = hasRealImg(prev);
+      if (xImg !== pImg) { if (xImg) map[x.id] = x; return; } // 有图的一版胜出
+      if (letterLen(x) > letterLen(prev)) map[x.id] = x;
+    };
+    (a || []).forEach(put);
+    (b || []).forEach(put);
     return Object.keys(map).map(k => map[k]).sort((x, y) => (y.tm || 0) - (x.tm || 0));
   }
   // v3.5.120：信箱权威加载防护——修复「刷新后信箱数据丢失」：

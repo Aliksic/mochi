@@ -8385,9 +8385,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1787985550899">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.326</b></span>
-        <span class="sv-deploy">部署于 2026-08-29 14:39<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1787990060027">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.327</b></span>
+        <span class="sv-deploy">部署于 2026-08-29 15:54<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9477,7 +9477,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.326</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.327</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -9685,7 +9685,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.326</span>
+              <span class="lic-ver">v3.26.327</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -21408,6 +21408,19 @@ const qs = quoteTextSafe(q);
 return '<div class="msg-quote"><span class="msg-quote-text">' + escTxtBr(FQ(qs)) + '</span></div>';
 }
 let inplaceDrafts = {};
+let inplaceFocusIdx = -1;
+document.addEventListener('focusin', (e) => {
+const t = e.target;
+if (!t || t.nodeType !== 1 || !t.closest) return;
+if (!t.closest('.msg-inplace')) return;
+const item = t.closest('.msg-ask');
+inplaceFocusIdx = item && item.dataset.idx !== undefined ? Number(item.dataset.idx) : -1;
+});
+document.addEventListener('focusout', () => {
+const ae = document.activeElement;
+if (ae && ae.nodeType === 1 && ae.closest && ae.closest('.msg-inplace')) return;
+inplaceFocusIdx = -1;
+});
 function inplaceTypeOf(rec) {
 if (!rec) return null;
 if (rec.special === 'ask-choose') return 'choose';
@@ -21419,6 +21432,13 @@ return null;
 function collectInplaceDrafts() {
 if (!body) return;
 inplaceDrafts = {};
+try {
+const ae = document.activeElement;
+if (ae && ae.nodeType === 1 && ae.closest && ae.closest('.msg-inplace')) {
+const fi = ae.closest('.msg-ask');
+if (fi && fi.dataset.idx !== undefined) inplaceFocusIdx = Number(fi.dataset.idx);
+}
+} catch (e) {}
 body.querySelectorAll('.msg-ask[data-idx] .msg-inplace input.ip-input').forEach(inp => {
 const item = inp.closest('.msg-ask');
 if (!item || item.dataset.idx === undefined) return;
@@ -21426,6 +21446,19 @@ const idx = Number(item.dataset.idx);
 const t = inplaceTypeOf(msgs[idx]);
 if (t && (inp.value || '').trim()) inplaceDrafts[idx] = { type: t, value: inp.value };
 });
+if (inplaceFocusIdx >= 0) {
+const ridx = msgs[inplaceFocusIdx];
+if (ridx && inplaceTypeOf(ridx) !== null && inplaceAnswered(ridx)) inplaceFocusIdx = -1;
+}
+}
+function inplaceAnswered(rec) {
+if (!rec) return true;
+return (
+(rec.special === 'ask-choose' && rec.choiceStatus === 'answered') ||
+(rec.special === 'ask-curious' && rec.curiousStatus === 'answered') ||
+(rec.special === 'ask-roast' && rec.roastStatus === 'answered') ||
+(rec.special === 'ask-card' && rec.askStatus === 'answered')
+);
 }
 function restoreInplaceDrafts() {
 if (!body) return;
@@ -21455,8 +21488,20 @@ const s = window.getSelection();
 s.removeAllRanges();
 s.addRange(r);
 } catch (e) {}
+if (inplaceFocusIdx === idx) {
+setTimeout(() => { try { inp.focus(); } catch (e) {} }, 0);
+}
 }
 });
+if (inplaceFocusIdx >= 0) {
+const idx = inplaceFocusIdx;
+const item = body.querySelector('.msg-ask[data-idx="' + idx + '"]');
+if (item && !item.querySelector('.msg-inplace')) {
+const rec = msgs[idx];
+const type = inplaceTypeOf(rec);
+if (type && !inplaceAnswered(rec)) try { expandCardInPlace(idx, type); } catch (e) {}
+}
+}
 }
 function expandCardInPlace(idx, type) {
 const el = body.querySelector('.msg-ask[data-idx="' + idx + '"]');
@@ -32992,7 +33037,8 @@ window.DEFAULT_CARD_DATA.period = [
 "今天有没有为自己留点时间？经期要对自己好一点",
 "肚子凉不凉？多穿点，别让肚子受风",
 "经期情绪起伏大是激素的事，不是你矫情",
-"抱抱，今天什么都不做也行，就躺着"
+"抱抱，今天什么都不做也行，就躺着",
+"（轻轻抵着你的额头）"
 ]]
 ];
 window.DEFAULT_CARD_DATA.room = [
@@ -46102,10 +46148,29 @@ list = Object.keys(map).map(k => map[k]).sort((a, b) => (b.tm || 0) - (a.tm || 0
 }
 return list;
 }
+function letterLen(o) {
+let n = 0;
+const a = o && typeof o.content === 'string' ? o.content : '';
+const b = o && o.myReply && typeof o.myReply.content === 'string' ? o.myReply.content : '';
+const c = o && o.partnerReply && typeof o.partnerReply.content === 'string' ? o.partnerReply.content : '';
+return a.length + b.length + c.length;
+}
+function hasRealImg(o) {
+const s = [o && o.content, o && o.myReply && o.myReply.content, o && o.partnerReply && o.partnerReply.content].join(' ');
+return /data:image\//.test(s || '');
+}
 function mergeLists(a, b) {
 const map = {};
-(a || []).forEach(x => { if (x && x.id) map[x.id] = x; });
-(b || []).forEach(x => { if (x && x.id) map[x.id] = x; });
+const put = (x) => {
+if (!x || !x.id) return;
+const prev = map[x.id];
+if (!prev) { map[x.id] = x; return; }
+const xImg = hasRealImg(x), pImg = hasRealImg(prev);
+if (xImg !== pImg) { if (xImg) map[x.id] = x; return; } // 有图的一版胜出
+if (letterLen(x) > letterLen(prev)) map[x.id] = x;
+};
+(a || []).forEach(put);
+(b || []).forEach(put);
 return Object.keys(map).map(k => map[k]).sort((x, y) => (y.tm || 0) - (x.tm || 0));
 }
 let mailDbReady = false;
