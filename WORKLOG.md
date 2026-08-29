@@ -12,7 +12,7 @@
 - 方案：①**权限总开关 `taPauseEn`**（默认 true，音乐设置新增「联系人可暂停你的播放」toggle；关闭=scheduleTaPauseIfLucky 直接 return 彻底不触发，步进器联动置灰，同步 saveSettings）；②**防连发三重守卫**——同歌只互动一次（taPauseDoneId，互动完成标记，切歌后 currentId 变化自然重置）、互动后进入 cooldownMs 冷却（taPauseCooldownAt，默认 10 分钟，连续切歌/下一首不会每首都触发）、互动进行中 taPauseActive 全局重入保护（onpause/tryResumePlayback 补播短路已有）；另补用户手动点播放（toggle 播放分支）cancelTaPause 取消 TA 恢复计划，避免补发重复字卡；③概率步进器（taPauseProb 0~100，设 0 亦关闭）上一批已有，hint 文案更新说明防连发规则。
 - 验证：node --check 过；构建哨兵 +1 共 78/78；verify-ta-pause.mjs 23/23（新增 taPauseEn/sm-set-pause-en/taPauseDoneId/taPauseCooldownAt 断言）；verify-ta-pause-live.mjs 15/15——L2~L5 互动链路（暂停字卡→3.5s 恢复字卡→恢复播放）复绿；**L6 防连发：互动完成后继续观察 8s 无第二条暂停字卡**；**L7 权限关闭：taPauseEn=false 后播放 12s 音乐全程未被暂停、聊天无新增暂停字卡**；npm run verify 10/10（布局无回归）。
 - 真机确认点：音乐设置可见「联系人可暂停你的播放」开关（关闭后步进器置灰、播放永不被 TA 暂停）与「播放中·TA 暂停再播放概率」步进器；默认 3% 下连续听歌偶发一次「暂停→恢复」互动（两张字卡），同一首歌不重复、10 分钟内不连发。
-# 本次构建者：本会话（2026-08-29 20:53 构建，sw: mochi-mtedsbz6，待提交）
+# 本次构建者：本会话（2026-08-29 20:53 构建，sw: mochi-mtedsbz6，待提交。⚠️ 推送状态：commit 7d4ab3e + 19d19bc 已提交未推送——GitHub 认证需 GCM 交互式登录弹窗，无头会话无法完成，请在终端跑 `git push origin main`（弹出 GitHub 登录窗确认后即推送，GitHub Pages 随之部署））
 ### 2026-08-29 20:45（新增：音乐「TA 暂停再播放」互动——小概率触发 + 聊天发字卡 + 字卡进系统预设【其他功能字卡】）
 - [本会话·音乐域]（**改动文件：src/js/music-player.js（互动逻辑 + 设置项 taPauseProb）+ src/js/default-cards-data.js（新增 DEFAULT_CARD_DATA.music 两组字卡）+ src/js/default-cards.js（FUNC_KEYS + music）+ src/template.html（fc-tabs + 音乐 tab）+ build.mjs（哨兵 +2）+ FIX-REGRESSION.md（#71）+ WORKLOG.md；构建状态：本次构建，待提交**）。
 - 需求/反馈：用户问「音乐有联系人暂停播放后然后点击播放的功能吗」，要求新增设置、小概率触发、在聊天里发送字卡，字卡写进系统预设字卡的【其他功能字卡】里。
