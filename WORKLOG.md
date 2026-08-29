@@ -1,3 +1,44 @@
+### 2026-08-29 22:04（回退：iOS PWA standalone .phone 高度改动——引入全屏偏上+聊天输入栏空底副作用，恢复 100vh 原状）
+- [AI-B 域·移动端适配]（**改动文件：src/css/base.css（恢复 .ios-pwa-standalone .phone height:100vh，撤 var(--mochi-ios-h,100dvh) + 删注释）+ build.mjs（撤哨兵，78/78）+ FIX-REGRESSION.md（撤 #73）；构建状态：已构建，sw: mochi-mtegbvwi**）。
+- 回退原因：上轮 21:48 修整页滑动（降 .phone 高度 100vh→var(--mochi-ios-h,100dvh)=879）引入两个新问题——①ios-fs-active 全屏模式画面偏上；②聊天输入栏没贴底空一块。用户报 iPhone 16 Plus Safari。根因：iOS standalone 视口 innerHeight(879)<screen(926)，视口含顶部状态栏区（vv.offsetTop=0），.phone=879 占视口 0~879，顶部被状态栏盖（偏上），底部 879~926 是视口外系统区（空底）。原设计 .phone=100vh=926 占全屏 + body 滚 47px 对齐可视区（避状态栏+贴底），但滚 47=整页滑动。三问题同源 iOS standalone 视口/屏幕几何，需真机诊断数据驱动精确修，不盲改。
+- 当前状态：恢复 100vh 原状（整页滑动 47px 回来，偏上+空底消失）。待用户提供 iPhone 16 Plus 诊断信息后精确修复三问题。
+# 本次构建者：本会话（2026-08-29 22:04 回退构建，sw: mochi-mtegbvwi。待提交——产物 + base.css/build.mjs/FIX-REGRESSION/WORKLOG 改动同一次提交）
+
+### 2026-08-29 21:59（修复：设备诊断「IndexedDB 大键明细」永远停"读取中…"——idbGetAllKeys 无超时 + 大键明细串行 loop）
+- [AI-B 域]（**改动文件：src/js/idb.js（idbGetAllKeys 加 4s+4s 超时）+ src/js/device.js（大键明细串行 loop 改 idbGetMany 单事务并行）；构建状态：未构建，node --check 过**）。
+- 需求/反馈：用户跑设备诊断，"IndexedDB 大键明细：读取中…"一直不返回，而其后方的"开关持久化体检"已完整输出——该 Promise 卡住。
+- 根因（双叠）：①**idbGetAllKeys 无超时保护**（idb.js:220 原 9 行只靠 onsuccess/onerror resolve）——部分安卓内核事务挂起（既不 success 也不 error，idbGet/idbGetMany 注释已记真我/荣耀 Edge 等），挂起则 Promise 永远 pending；②**大键明细串行 loop**（device.js:843 原逐键 idbGet）——每个最坏 4s+4s=8s，几十个候选最坏几百秒，用户复制诊断时常常还没跑完。
+- 方案：①idb.js:220 给 idbGetAllKeys 加 4s+4s 超时，结构严格 mimic idbGet/idbGetMany 同款（done/timer/finish/run/retried，超时→dbPromise=null 重建连接重试一次→再超时 finish([])），onsuccess/onerror 走 finish；②device.js:843 串行 loop 改 idbGetMany(cand) 单事务并行（idbGetMany 自带 4s+4s 超时，整体最多 8s 完成），排序/输出抽 finalize 复用、size 计算抽 sizeOf，idbGetMany 不可用或 catch 时全置 size=-1 兜底（与原串行全超时表现一致）。
+- 验证：node --check 两文件过；git diff 确认 idb.js +38/-9、device.js +44/-27，无夹带。待构建后真机确认：诊断"IndexedDB 大键明细"应在数秒内显示候选数/合计/top10 明细，不再停"读取中…"；idbGetAllKeys 挂起时 8s 内回退空数组不卡死。
+- 待构建者：本条未构建（21:48 构建之后才改），请构建者收口。注意 idbGetAllKeys 超时改动影响数据层全局，构建后建议跑 npm run verify + 关注启动 idbRestore 回填是否正常。
+
+### 2026-08-29 21:48（修复：iOS PWA standalone 聊天页整页滑动——.phone 100vh 超出视口致 body 可滚——FIX-REGRESSION #73）
+- [AI-B 域·移动端适配]（**改动文件：src/css/base.css 1 处（.ios-pwa-standalone .phone height:100vh → var(--mochi-ios-h,100dvh) + 注释）+ build.mjs（哨兵 +1：79/79）+ FIX-REGRESSION.md（#73）；构建状态：已构建，sw: mochi-mtefrcmf**）。
+- 需求/反馈：用户报 iPhone 12 Pro Max Safari（standalone PWA，iOS 18.7）聊天页滑动时整页一起被拖动，而非滚动查看聊天记录。
+- 根因（base.css:420）：.ios-pwa-standalone .phone { height:100vh }，iOS standalone 下 100vh = screen.height（含被隐藏的系统状态栏区域）=926px，而可视视口 100dvh=879px，.phone 超出 47px；base.css:39 html,body 只锁 overflow-x 未锁 y、:313 手机端 body 用 min-height → body 被撑到 926 可纵滚 47px；聊天页 touchmove 冒泡到 body → 整页滑动。诊断实测 .phone top=-23 印证 body 已滚。syncVvFit 已实测 --mochi-ios-h=879 但 :417 :not(.ios-pwa-standalone) 守卫使 standalone 下未生效。
+- 方案：standalone .phone 高度改用 var(--mochi-ios-h, 100dvh)——mobile-adapt.js syncVvFit 实测 vv.height 写入（键盘期摘除交内联接管），100dvh 兜底。.phone 恰填可视区 879，不再溢出 body，整页滑动消失。ios-fs-active（隐藏模拟状态栏）下同样恰填可视区。
+- 验证：npm run verify 10/10（390×844/360×640 布局无回归）；npm run verify:webkit 18/22（4 FAIL 均为诊断弹窗在无头 WebKit 打不开的既有问题，与本次修复无关；布局关键项：无缩放/状态栏/占满/聊天顶栏/输入栏贴底 全绿）；构建哨兵 79/79；修复入产物 index.html:332。
+- 真机确认点：iPhone 12 Pro Max Safari standalone 聊天页上下滑应滚动聊天记录，整页不再被拖动；ios-fs-active 下 .phone 恰填可视区无溢出。
+- 本次构建含工作区既有未提交改动：src/js/chat.js（21:30 拍一拍占位符修复#72，node --check 过，待对方/后续加哨兵）、src/js/device.js（21:41 诊断文案修复，node --check 过）。产物 index.html/sw.js/version.json 待提交。
+# 本次构建者：本会话（2026-08-29 21:48 构建，sw: mochi-mtefrcmf。待提交——产物 + base.css/build.mjs/FIX-REGRESSION/WORKLOG 改动同一次提交）
+
+### 2026-08-29 21:41（修复：设备诊断「开关持久化体检」IDB 列把未写入键误标"读失败/超时"）
+- [AI-B 域]（**改动文件：src/js/device.js 1 处（开关体检 IDB 列文案：undefined → "未写入·走默认"）；构建状态：未构建，node --check 过**）。
+- 需求/反馈：用户跑设备诊断，5 个开关键（dc-use-chat/dc-use-mail/dc-use-feed/dc-cat-main/cs-voice-send）IDB 列全显"(读失败/超时)"，疑存储故障。
+- 根因（device.js:903）：idbGet 对"键不存在"正常 resolve(undefined)（idb.js:145 req.onsuccess result=undefined），与"真超时/连接坏"（idb.js:146/160/165 也 finish(undefined)）同走 undefined 分支；体检面板把 undefined 一律标"(读失败/超时)"，把"从未写入"误报成故障。LS 写探针正常 + dc-enabled 的 IDB 正常读到 → IDB 接口可用，5 键全 undefined 实为"从未写入"（apiFor 读取 v===null 时返回默认值但不主动落盘，用户未切换过的开关永不写入）。
+- 方案：device.js:903 把 `iv === undefined ? '(读失败/超时)'` 改为 `'(未写入·走默认)'`。不改 idbGet 全局契约（让超时 reject 会影响所有调用方，风险大）；真超时是罕见边缘，即便误标成"未写入"也不影响功能判断（开关读默认值 true 正常）。
+- 验证：node --check 过。待构建后真机确认：未切换过的开关体检行显示 `IDB=(未写入·走默认)` 而非 `IDB=(读失败/超时)`；切换过的开关仍显示 `IDB="1"`/`IDB="0"`。
+- 待构建者：本条未构建，请构建者收口（注意工作区另有 21:30 chat.js 跨域改动未构建）。
+
+### 2026-08-29 21:30（修复：联系人拍一拍后台弹窗显示 {ta}点了点{me} 占位符未替换——FIX-REGRESSION #72）
+- [AI-B 域·跨域改动 chat.js]（**改动文件：src/js/chat.js 1 处（extractDeskMsg 加 {ta}/{me} 占位符回填）；构建状态：未构建，node --check 过**）。
+- 需求/反馈：用户报「联系人对我拍一拍，聊天消息里正常显示，但后台弹窗（桌面悬浮消息预览）显示成 {ta}点了点{me}，占位符没替换成昵称」。
+- 根因（chat.js）：sendPoke/performPoke 存 {ta}/{me} 占位符（#68 修复引入），聊天页 renderMsg 走 T() 回填昵称显示正常；但桌面悬浮预览走 showDeskMsg→extractDeskMsg→showDeskPopup，extractDeskMsg 直接用 rec.text 原始文本，没过 T()，{ta}/{me} 原样显示成花括号。
+- 方案：extractDeskMsg 入口对 text 做 {ta}→chatPartnerName()、{me}→chatUserName() 回填（与 T() 非 taFit 分支同义；不走 taFit 称呼改写，避免昵称被改成 他/她）。通用覆盖所有走 deskMsg 的系统消息（poke/ask-msg/call 等）。
+- 验证：node --check 过。待构建后真机确认：不在聊天页时联系人拍一拍，桌面顶部弹窗应显示「对方昵称 点了点 我的昵称」而非 {ta}点了点{me}。
+- 待构建者：build.mjs FIX_SENTINELS 可加哨兵 `text.split('{ta}').join(chatPartnerName())`（extractDeskMsg 处）；本条未构建，请构建者收口。
+# 本次构建者：（本会话 2026-08-29 21:30 仅改源码，未构建。chat.js 跨域改动，已征得用户报障语境；待构建者执行 node build.mjs）
+
 ### 2026-08-29 20:35（修复：iOS 15 Pro Max 所有浏览器打开 GitHub Pages 链接开屏一直自己刷新然后白屏，完全打不开——FIX-REGRESSION #70）
 - [AI-B 域·构建/离线层]（**改动文件：build.mjs（script 拆块 + 哨兵 +1）+ src/pwa/sw.js（导航兜底）+ tools/verify-ios15-white-screen.mjs（新增专项验证）；构建状态：已构建并收口（sw 见 version.json，20:39 构建由 20:41 并行会话 b689867 收口入库）**）。
 - 需求/反馈：用户报「iOS 15 Pro Max 手机所有浏览器打开 GitHub 部署链接，开屏一直自己刷新然后白屏，完全打不开无法使用」。

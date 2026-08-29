@@ -8406,9 +8406,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1788007981218">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.350</b></span>
-        <span class="sv-deploy">部署于 2026-08-29 20:53<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1788012252738">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.354</b></span>
+        <span class="sv-deploy">部署于 2026-08-29 22:04<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9498,7 +9498,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.350</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.354</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -9706,7 +9706,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.350</span>
+              <span class="lic-ver">v3.26.354</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -13691,8 +13691,7 @@ return false;
 });
 if (!cand.length) { L[idbIdx] = 'IndexedDB 大键明细：无大键候选'; res(); return; }
 const out = [];
-(function loop(i) {
-if (i >= cand.length) {
+const finalize = function () {
 try {
 const real = out.filter(function (it) { return it.size >= 0; });
 real.sort(function (a, b) { return b.size - a.size; });
@@ -13703,11 +13702,9 @@ lines.push('· ' + String(it.k).slice('xy-home-v2:'.length) + '=' + (it.size >= 
 });
 L[idbIdx] = lines.join('\n');
 } catch (e) { L[idbIdx] = 'IndexedDB 大键明细：统计失败'; }
-res(); return;
-}
-const k = cand[i];
-if (!window.idbGet) { out.push({ k: k, size: -1 }); loop(i + 1); return; }
-window.idbGet(k).then(function (v) {
+res();
+};
+const sizeOf = function (v) {
 let sz = -1;
 try {
 if (v instanceof Blob) sz = v.size;
@@ -13715,10 +13712,19 @@ else if (v instanceof ArrayBuffer) sz = v.byteLength;
 else if (typeof v === 'string') sz = v.length * 2;
 else if (v !== undefined && v !== null) sz = JSON.stringify(v).length * 2;
 } catch (e) { sz = -1; }
-out.push({ k: k, size: sz });
-loop(i + 1);
-}).catch(function () { out.push({ k: k, size: -1 }); loop(i + 1); });
-})(0);
+return sz;
+};
+if (!window.idbGetMany) {
+cand.forEach(function (k) { out.push({ k: k, size: -1 }); });
+finalize(); return;
+}
+window.idbGetMany(cand).then(function (map) {
+cand.forEach(function (k) { out.push({ k: k, size: sizeOf(map[k]) }); });
+finalize();
+}).catch(function () {
+cand.forEach(function (k) { out.push({ k: k, size: -1 }); });
+finalize();
+});
 }).catch(function () { L[idbIdx] = 'IndexedDB 大键明细：读取失败'; res(); });
 }));
 } catch (e) { try { L.push('IndexedDB 大键明细：读取失败'); } catch (e2) {} }
@@ -13747,7 +13753,7 @@ const li = lines.length;
 lines.push('· ' + short + '：LS=' + fmt(lsV) + ' 读取=' + fmt(memV) + ' IDB=…');
 if (!window.idbGet) { lines[li] = lines[li].replace('IDB=…', 'IDB=(接口不可用)'); if (--pend <= 0) done(); return; }
 window.idbGet(P + short).then(function (iv) {
-lines[li] = lines[li].replace('IDB=…', 'IDB=' + (iv === undefined ? '(读失败/超时)' : fmt(iv)));
+lines[li] = lines[li].replace('IDB=…', 'IDB=' + (iv === undefined ? '(未写入·走默认)' : fmt(iv)));
 if (--pend <= 0) done();
 }).catch(function () { lines[li] = lines[li].replace('IDB=…', 'IDB=(读失败)'); if (--pend <= 0) done(); });
 };
@@ -14184,12 +14190,34 @@ run(list);
 };
 window.idbGetAllKeys = function () {
 return open().then(db => new Promise((resolve) => {
+let done = false;
+let timer = null;
+function finish(val) { if (done) return; done = true; if (timer) clearTimeout(timer); resolve(val); }
+function run() {
 try {
 const tx = db.transaction(STORE, 'readonly');
 const req = tx.objectStore(STORE).getAllKeys();
-req.onsuccess = () => resolve(req.result || []);
-req.onerror = () => { if (connLost(req.error)) dbPromise = null; resolve([]); };
-} catch (e) { if (connLost(e)) dbPromise = null; resolve([]); }
+req.onsuccess = () => finish(req.result || []);
+req.onerror = () => { if (connLost(req.error)) dbPromise = null; finish([]); };
+} catch (e) { if (connLost(e)) dbPromise = null; finish([]); }
+}
+let retried = false;
+timer = setTimeout(function () {
+if (done) return;
+if (!retried) {
+retried = true;
+dbPromise = null;
+open().then(function (db2) {
+db = db2;
+run();
+timer = setTimeout(function () { dbPromise = null; finish([]); }, 4000);
+}).catch(function () { finish([]); });
+return;
+}
+dbPromise = null;
+finish([]);
+}, 4000);
+run();
 })).catch(() => []);
 };
 window.idbDelete = function (key) {
@@ -22518,6 +22546,8 @@ deskMsgTimer = setTimeout(() => { if (deskMsgEl) deskMsgEl.hidden = true; }, 600
 }
 function extractDeskMsg(rec) {
 let text = rec.text || '';
+if (typeof text === 'string' && text.indexOf('{ta}') >= 0) text = text.split('{ta}').join(chatPartnerName());
+if (typeof text === 'string' && text.indexOf('{me}') >= 0) text = text.split('{me}').join(chatUserName());
 let img = rec.img || '';
 let imgSub = '';
 if (rec.parts && rec.parts.length) {

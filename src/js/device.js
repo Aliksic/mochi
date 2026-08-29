@@ -839,35 +839,44 @@
             return false;
           });
           if (!cand.length) { L[idbIdx] = 'IndexedDB 大键明细：无大键候选'; res(); return; }
+          // v3.26.x：改 idbGetMany 单事务并行（自带 4s+4s 超时）——原逐键串行 idbGet
+          // 每个最坏 8s，几十个候选最坏几百秒，用户复制诊断时常常停在"读取中…"。
+          // 并行后整体最多 8s 完成；超时返回已收集的部分（未返回键 size=-1 跳过）。
           const out = [];
-          (function loop(i) {
-            if (i >= cand.length) {
-              try {
-                const real = out.filter(function (it) { return it.size >= 0; });
-                real.sort(function (a, b) { return b.size - a.size; });
-                const total = real.reduce(function (s, it) { return s + it.size; }, 0);
-                const lines = ['IndexedDB 大键明细：' + cand.length + ' 个候选，合计≈' + usageStr(total) + '（设置小键未计）'];
-                real.slice(0, 10).forEach(function (it) {
-                  lines.push('· ' + String(it.k).slice('xy-home-v2:'.length) + '=' + (it.size >= 0 ? usageStr(it.size) : '?'));
-                });
-                L[idbIdx] = lines.join('\n');
-              } catch (e) { L[idbIdx] = 'IndexedDB 大键明细：统计失败'; }
-              res(); return;
-            }
-            const k = cand[i];
-            if (!window.idbGet) { out.push({ k: k, size: -1 }); loop(i + 1); return; }
-            window.idbGet(k).then(function (v) {
-              let sz = -1;
-              try {
-                if (v instanceof Blob) sz = v.size;
-                else if (v instanceof ArrayBuffer) sz = v.byteLength;
-                else if (typeof v === 'string') sz = v.length * 2;
-                else if (v !== undefined && v !== null) sz = JSON.stringify(v).length * 2;
-              } catch (e) { sz = -1; }
-              out.push({ k: k, size: sz });
-              loop(i + 1);
-            }).catch(function () { out.push({ k: k, size: -1 }); loop(i + 1); });
-          })(0);
+          const finalize = function () {
+            try {
+              const real = out.filter(function (it) { return it.size >= 0; });
+              real.sort(function (a, b) { return b.size - a.size; });
+              const total = real.reduce(function (s, it) { return s + it.size; }, 0);
+              const lines = ['IndexedDB 大键明细：' + cand.length + ' 个候选，合计≈' + usageStr(total) + '（设置小键未计）'];
+              real.slice(0, 10).forEach(function (it) {
+                lines.push('· ' + String(it.k).slice('xy-home-v2:'.length) + '=' + (it.size >= 0 ? usageStr(it.size) : '?'));
+              });
+              L[idbIdx] = lines.join('\n');
+            } catch (e) { L[idbIdx] = 'IndexedDB 大键明细：统计失败'; }
+            res();
+          };
+          const sizeOf = function (v) {
+            let sz = -1;
+            try {
+              if (v instanceof Blob) sz = v.size;
+              else if (v instanceof ArrayBuffer) sz = v.byteLength;
+              else if (typeof v === 'string') sz = v.length * 2;
+              else if (v !== undefined && v !== null) sz = JSON.stringify(v).length * 2;
+            } catch (e) { sz = -1; }
+            return sz;
+          };
+          if (!window.idbGetMany) {
+            cand.forEach(function (k) { out.push({ k: k, size: -1 }); });
+            finalize(); return;
+          }
+          window.idbGetMany(cand).then(function (map) {
+            cand.forEach(function (k) { out.push({ k: k, size: sizeOf(map[k]) }); });
+            finalize();
+          }).catch(function () {
+            cand.forEach(function (k) { out.push({ k: k, size: -1 }); });
+            finalize();
+          });
         }).catch(function () { L[idbIdx] = 'IndexedDB 大键明细：读取失败'; res(); });
       }));
     } catch (e) { try { L.push('IndexedDB 大键明细：读取失败'); } catch (e2) {} }
@@ -900,7 +909,7 @@
           lines.push('· ' + short + '：LS=' + fmt(lsV) + ' 读取=' + fmt(memV) + ' IDB=…');
           if (!window.idbGet) { lines[li] = lines[li].replace('IDB=…', 'IDB=(接口不可用)'); if (--pend <= 0) done(); return; }
           window.idbGet(P + short).then(function (iv) {
-            lines[li] = lines[li].replace('IDB=…', 'IDB=' + (iv === undefined ? '(读失败/超时)' : fmt(iv)));
+            lines[li] = lines[li].replace('IDB=…', 'IDB=' + (iv === undefined ? '(未写入·走默认)' : fmt(iv)));
             if (--pend <= 0) done();
           }).catch(function () { lines[li] = lines[li].replace('IDB=…', 'IDB=(读失败)'); if (--pend <= 0) done(); });
         };

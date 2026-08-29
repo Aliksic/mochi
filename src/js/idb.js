@@ -217,14 +217,40 @@
   };
 
   // 列出所有键
+  // v3.26.x：超时保护（与 idbGet/idbGetMany 同款 4s+4s）——部分安卓内核事务挂起
+  //（既不 onsuccess 也不 onerror），无超时则设备诊断"IndexedDB 大键明细"永远停在
+  // "读取中…"。4s 未返回先重建连接重试一次（挂起多因连接已死，重开后通常当场返回），
+  // 再 4s 放弃返回空数组。
   window.idbGetAllKeys = function () {
     return open().then(db => new Promise((resolve) => {
-      try {
-        const tx = db.transaction(STORE, 'readonly');
-        const req = tx.objectStore(STORE).getAllKeys();
-        req.onsuccess = () => resolve(req.result || []);
-        req.onerror = () => { if (connLost(req.error)) dbPromise = null; resolve([]); };
-      } catch (e) { if (connLost(e)) dbPromise = null; resolve([]); }
+      let done = false;
+      let timer = null;
+      function finish(val) { if (done) return; done = true; if (timer) clearTimeout(timer); resolve(val); }
+      function run() {
+        try {
+          const tx = db.transaction(STORE, 'readonly');
+          const req = tx.objectStore(STORE).getAllKeys();
+          req.onsuccess = () => finish(req.result || []);
+          req.onerror = () => { if (connLost(req.error)) dbPromise = null; finish([]); };
+        } catch (e) { if (connLost(e)) dbPromise = null; finish([]); }
+      }
+      let retried = false;
+      timer = setTimeout(function () {
+        if (done) return;
+        if (!retried) {
+          retried = true;
+          dbPromise = null;
+          open().then(function (db2) {
+            db = db2;
+            run();
+            timer = setTimeout(function () { dbPromise = null; finish([]); }, 4000);
+          }).catch(function () { finish([]); });
+          return;
+        }
+        dbPromise = null;
+        finish([]);
+      }, 4000);
+      run();
     })).catch(() => []);
   };
 

@@ -86,6 +86,7 @@
 | 71 | 新增功能：音乐「TA 暂停再播放」互动（用户要求：小概率触发 + 聊天发字卡 + 字卡进系统预设【其他功能字卡】；且不要"一直暂停又继续"的循环，概率可调、可关闭 TA 暂停权限） | music-player.js 播放中按 `taPauseProb`（默认 3%，音乐设置步进器 0~100 可调，设 0 关闭）掷骰子：命中则播放 10~25s 后 TA 暂停 → 聊天发「TA 暂停播放」字卡 → 3.5s 后 TA 点播放恢复 → 发「TA 恢复播放」字卡（保留进度）；**权限总开关 `taPauseEn`**（音乐设置「联系人可暂停你的播放」，关闭=彻底不触发 + 步进器置灰）；**防连发三重守卫**：①同歌只互动一次（taPauseDoneId）②互动后冷却 cooldownMs 默认 10 分钟（taPauseCooldownAt，连续切歌也不会每首都触发）③互动进行中 taPauseActive 全局重入保护 + onpause/tryResumePlayback 补播短路；用户手动播放/暂停/切歌/来电即取消；字卡在 default-cards-data.js `DEFAULT_CARD_DATA.music` 两组，字卡库【其他互动功能字卡 → 音乐】tab 逐张开关（dc-off-music:*，全关回退内置兜底） | 哨兵 `taPauseProb`、`taPauseEn`（music-player.js）、`TA 暂停播放`（default-cards-data.js）；tools/verify-ta-pause.mjs 23/23（静态含开关/防连发键）+ tools/verify-ta-pause-live.mjs 15/15（行为链路：暂停字卡→3.5s 恢复字卡→恢复播放；L6 互动后 8s 无第二条暂停字卡=防连发；L7 taPauseEn=false 播放 12s 全程未暂停无字卡=权限关闭生效）；真机确认点：音乐设置见「联系人可暂停你的播放」开关 +「播放中·TA 暂停再播放概率」步进器，关闭开关后播放不再被 TA 暂停；默认概率下听歌偶发一次暂停-恢复互动，不会连发 |
 
 
+
 ## 维护
 
 - 新用户反馈问题修复后，**在 build.mjs FIX_SENTINELS 加一行哨兵**（代码特征）
