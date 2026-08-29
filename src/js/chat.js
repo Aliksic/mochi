@@ -656,6 +656,7 @@ scrollChatBottom();
 }
 fillAvatar('chat-user-av', 'cs-avatar-user');
 fillAvatar('chat-partner-av', 'cs-avatar-partner');
+try { updateChatPartnerName(); } catch (e) {}
 } catch (e) {}
 });
 } catch (e) {}
@@ -677,6 +678,9 @@ pname.textContent = window.taWord ? window.taWord() : 'TA';
 }
 updateChatPartnerName();
 window.renderChatHeader = updateChatPartnerName;
+try {
+document.addEventListener('mochi-wrj-heal', function () { try { updateChatPartnerName(); } catch (e) {} });
+} catch (e) {}
 const typingEl = document.getElementById('chat-typing');
 let typingOn = false;
 function chatVisible() {
@@ -3964,10 +3968,9 @@ const k = ASK_DAILY_PREFIX + new Date().toISOString().slice(0, 10);
 store.set(k, String((Number(store.get(k)) || 0) + 1));
 }
 // v3.15.x：TA 也会随机「向 Mochi 申请」心意币——金额与红包同款随机分布（genRpAmount），
-// 概率门同自动红包（平时 4% / 七夕 8%），无次数上限；入 TA 的 systemBalance，聊天留 askcoin 卡片
+// 概率门固定 4%（不沿用红包七夕加成），无次数上限；入 TA 的 systemBalance，聊天留 askcoin 卡片
 function trySystemAskMochi() {
-const qixi = isQixiToday();
-const baseRate = qixi ? 0.08 : 0.04;
+const baseRate = 0.04;
 if (Math.random() >= baseRate) return;
 const amtFen = genRpAmount(5200000);
 if (amtFen < 1) return;
