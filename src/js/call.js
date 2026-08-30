@@ -228,14 +228,14 @@
   function saveCallActive() {
     try {
       if (!currentCall) return;
-      localStorage.setItem(CALL_ACTIVE_KEY, JSON.stringify({
+      sessionStorage.setItem(CALL_ACTIVE_KEY, JSON.stringify({
         cid: currentCall.cid, direction: currentCall.direction, status: currentCall.status,
         startTime: currentCall.startTime, connectedTime: currentCall.connectedTime || 0,
         name: currentCall.name || '', av: currentCall.av || '', ts: Date.now()
       }));
     } catch (e) {}
   }
-  function clearCallActive() { console.log('[clearCallActive]', new Error().stack); try { localStorage.removeItem(CALL_ACTIVE_KEY); } catch (e) {} }
+  function clearCallActive() { try { sessionStorage.removeItem(CALL_ACTIVE_KEY); } catch (e) {} }
   function fillAv(el, data) {
     if (!el) return;
     // v3.6.x：img 用属性赋值（dataURL 含引号时拼 innerHTML 会逃逸注入 HTML）
@@ -663,7 +663,7 @@
   //   mochi-restore-done 一定在回填完成后派发（idb.js finish()），即使保险丝超时最终完成也会派发。
   function recoverCall() {
     let info = null;
-    try { info = JSON.parse(localStorage.getItem(CALL_ACTIVE_KEY) || 'null'); } catch (e) { info = null; }
+    try { info = JSON.parse(sessionStorage.getItem(CALL_ACTIVE_KEY) || 'null'); } catch (e) { info = null; }
     if (!info) return;
     if (!info.connectedTime) { clearCallActive(); return; } // 未接通就中断（响铃/呼叫中刷新），不恢复不记
     const cid = info.cid || 'default';
@@ -712,7 +712,8 @@
     } catch (e) {}
     try { if (!document.getElementById('page-home').hidden && window.__renderHomeCall) window.__renderHomeCall(); } catch (e) {}
   }
-  try { document.addEventListener('mochi-restore-done', function () { try { recoverCall(); } catch (e) {} }); } catch (e) {}
+  if (window.__mochiDataReady) { try { recoverCall(); } catch (e) {} }
+  else { try { document.addEventListener('mochi-restore-done', function () { try { recoverCall(); } catch (e) {} }); } catch (e) {} }
   setTimeout(() => {
     function scheduleCallCheck() {
       maybeIncoming();

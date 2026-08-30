@@ -1,5 +1,10 @@
 # 本次构建者：AI-B
-> 上一构建：AI（sw mochi-mtfll2ag，哨兵 125/125 + sw.js 3/3，verify 10/10，已提交推送 main；收口 #92 + 工作区 #88-#91）
+
+### 2026-08-30 19:16（#94 续2：通话恢复失效根因——call-active 被命名空间迁移误删，改用 sessionStorage）
+- [AI 域·call.js]（**改动文件：src/js/call.js；构建状态：已构建（sw mochi-mtfpsc6z，哨兵 129/129，verify 10/10）**）。
+- 根因：call-active 存 localStorage 全局键 xy-home-v2:call-active，被 contacts.js 命名空间迁移 cleanupOld 当成旧顶层业务键迁进 default 桌面并删原键 → 刷新后 recoverCall 读原键为 null 不恢复（第一次刷新恢复后 call-active 被迁走，第二次起失效）。
+- 方案：call-active 改用 sessionStorage（跨 reload 同 tab 保留、不被 idbRestore/迁移逻辑碰、关 tab 自然清除=通话断）。saveCallActive/clearCallActive/recoverCall 全改 sessionStorage。加兜底：__mochiDataReady 已 true 时直接 recoverCall，否则监听 mochi-restore-done（防事件早派发错过）。
+- 验证：无头 Chrome 实测——植入 sessionStorage call-active 连续 3 次 reload，每次通话面板恢复 + 计时连续（34→38→42 秒）+ call-active 保持 present。node --check 过；构建哨兵 129/129；verify 10/10。> 上一构建：AI（sw mochi-mtfll2ag，哨兵 125/125 + sw.js 3/3，verify 10/10，已提交推送 main；收口 #92 + 工作区 #88-#91）
 
 ### 2026-08-30 19:08（#93 根本修复：mergeLists 字段级合并 + openLetter/openReply 重新 load 取最新完整数据）
 - [AI-B 域·mail.js + FIX-REGRESSION.md]（**改动文件：src/js/mail.js（mergeLists/openLetter/openReply）、FIX-REGRESSION.md（#93 补根因）；构建状态：未构建（node --check src/js/mail.js 过）**）。

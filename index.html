@@ -4913,9 +4913,6 @@ margin-top:8px; max-width:100%;
 width:100%; aspect-ratio:1/1; object-fit:cover;
 border-radius:8px; display:block; background:#f2f2f2;
 }
-.feed-imgs:has(img:only-of-type) { max-width:66%; }
-.feed-imgs img:only-of-type { aspect-ratio:auto; }
-.feed-imgs:has(img:nth-of-type(2):last-of-type) { grid-template-columns:repeat(2, 1fr); max-width:80%; }
 .feed-flash {
 animation: feedFlash 1.6s ease 2;
 border-radius:12px;
@@ -8457,9 +8454,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1788088299744">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.368</b></span>
-        <span class="sv-deploy">部署于 2026-08-30 19:11<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1788088740195">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.369</b></span>
+        <span class="sv-deploy">部署于 2026-08-30 19:19<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9552,7 +9549,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.368</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.369</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -9779,7 +9776,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.368</span>
+              <span class="lic-ver">v3.26.369</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -47233,14 +47230,14 @@ const CALL_ACTIVE_KEY = 'xy-home-v2:call-active';
 function saveCallActive() {
 try {
 if (!currentCall) return;
-localStorage.setItem(CALL_ACTIVE_KEY, JSON.stringify({
+sessionStorage.setItem(CALL_ACTIVE_KEY, JSON.stringify({
 cid: currentCall.cid, direction: currentCall.direction, status: currentCall.status,
 startTime: currentCall.startTime, connectedTime: currentCall.connectedTime || 0,
 name: currentCall.name || '', av: currentCall.av || '', ts: Date.now()
 }));
 } catch (e) {}
 }
-function clearCallActive() { console.log('[clearCallActive]', new Error().stack); try { localStorage.removeItem(CALL_ACTIVE_KEY); } catch (e) {} }
+function clearCallActive() { try { sessionStorage.removeItem(CALL_ACTIVE_KEY); } catch (e) {} }
 function fillAv(el, data) {
 if (!el) return;
 el.innerHTML = '';
@@ -47589,7 +47586,7 @@ durationSec: Math.max(0, Math.floor((Date.now() - start) / 1000))
 window.hangupCall = function () { userHangup(); };
 function recoverCall() {
 let info = null;
-try { info = JSON.parse(localStorage.getItem(CALL_ACTIVE_KEY) || 'null'); } catch (e) { info = null; }
+try { info = JSON.parse(sessionStorage.getItem(CALL_ACTIVE_KEY) || 'null'); } catch (e) { info = null; }
 if (!info) return;
 if (!info.connectedTime) { clearCallActive(); return; } // 未接通就中断（响铃/呼叫中刷新），不恢复不记
 const cid = info.cid || 'default';
@@ -47636,7 +47633,8 @@ else if (window.chatAppendToDeskMsg) { window.chatAppendToDeskMsg(cid, sysHtml);
 } catch (e) {}
 try { if (!document.getElementById('page-home').hidden && window.__renderHomeCall) window.__renderHomeCall(); } catch (e) {}
 }
-try { document.addEventListener('mochi-restore-done', function () { try { recoverCall(); } catch (e) {} }); } catch (e) {}
+if (window.__mochiDataReady) { try { recoverCall(); } catch (e) {} }
+else { try { document.addEventListener('mochi-restore-done', function () { try { recoverCall(); } catch (e) {} }); } catch (e) {} }
 setTimeout(() => {
 function scheduleCallCheck() {
 maybeIncoming();
