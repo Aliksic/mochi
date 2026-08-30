@@ -1,5 +1,12 @@
 # 本次构建者：AI-B
 
+### 2026-08-30 22:06（#101 帮我决定加载失败诊断加强：功能入口体检）
+- [AI-B 域]（**改动文件：src/js/device.js；构建状态：已构建·sw mochi-mtfvutd7，哨兵 0 哑哨兵、sw.js 3/3、verify.mjs 10/10、verify-diag-report.mjs 18/18，未提交**）。
+- 需求/反馈：用户安卓 Chrome/Edge 报【帮我决定】总是"加载失败"（chat.js:4769 的 else 分支，window.openDecision falsy 时触发）。用户版本 = a6d854a（v3.26.371，ts=1788093190014）。Playwright 测工作区产物 + HEAD(a6d854a) 产物：桌面完全正常（openDecision 是 function，完整点击流程面板打开）。**核心矛盾**：用户诊断说"启动文件异常：无"（__jsErrors 空，decision.js 没抛错），但点击 more-decide 仍"加载失败"（openDecision undefined）。理论上 decision.js 抛错必被 build.mjs 的 catch push 到 __jsErrors（device.js:14 初始化它），但用户诊断无记录。
+- 方案：device.js 诊断生成（1120 行后）加「功能入口体检」节，检查 typeof window.openDecision/openGroupDecision/activePrefix/xyStore/idbGet/idbSet，缺失则列出。用户更新后点帮我决定再采集诊断，即可确认 openDecision 是否赋值，区分「decision.js 抛错但 __jsErrors 没捕获」vs「openDecision 赋值了但点击走 else」。
+- 验证：node --check 过；verify.mjs 10/10；verify-diag-report.mjs 18/18。待用户更新到 sw mochi-mtfvutd7 后采集诊断（先点帮我决定看到"加载失败"再采集）。
+- **需要用户配合**：更新到新版本（sw mochi-mtfvutd7）→ 进聊天页点"帮我决定"看到"加载失败" → 设置页"复制诊断信息" → 把诊断文本发我，重点看「功能入口体检」行。
+
 ### 2026-08-30 21:40（#96 网易云外链播放兜底收口 + #99 联系人收藏删歌保留 + 荣耀 x30i Wi-Fi 屏蔽结论）
 - [跨域·music-player.js + chat-pages.css + build.mjs + FIX-REGRESSION.md + verify-music-ta-fav-keep.mjs（AI-A 域，接管补强已收口）]（**改动文件：src/js/music-player.js、src/css/chat-pages.css、build.mjs、FIX-REGRESSION.md、tools/verify-music-single-audio.mjs、tools/verify-music-ta-fav-keep.mjs；构建状态：已构建 sw mochi-mtfsv7e0 哨兵 146/146；verify.mjs 10/10 + 音乐专项全绿**）。
 - 需求/反馈（三台真机）：① vivo Y35+Edge：链接/导入的网易云歌单歌曲一律「点击播放被浏览器拦截」且切后台更糟；② 荣耀 x30i+Edge：只能流量听歌、Wi-Fi 一直「被浏览器拦截」；③ 功能要求：桌面【音乐】→【联系人收藏歌曲】，音乐库删歌后联系人收藏记录要保留。
@@ -9,11 +16,12 @@
 - 荣耀 x30i 结论：Wi-Fi 屏蔽音乐源为运营商/网络侧限制，应用侧无法绕过（HTTPS 混合内容、代理均已试），已给准确 toast 如实告知。已构建收口，见本次 commit。
 
 ### 2026-08-30 21:21（#100 二阶段：哨兵装上牙齿 + 诊断线索窗口 5→20 + 回归清单/交接日志自愈 + verify 批量 runner）
-- [AI-B 域]（**改动文件：build.mjs、src/js/device.js、package.json、FIX-REGRESSION.md、WORKLOG.md；新增 tools/verify-sentinel-teeth.mjs、tools/verify-suite.mjs，tools/verify-diag-report.mjs 补第 6 节；构建状态：已构建·sw mochi-mtfu3tfc（哨兵 146/146、sw.js 3/3、哑哨兵 0、verify.mjs 10/10），未提交**）。
+- [AI-B 域]（**改动文件：build.mjs、src/js/device.js、package.json、FIX-REGRESSION.md、WORKLOG.md；新增 tools/verify-sentinel-teeth.mjs、tools/verify-suite.mjs，tools/verify-diag-report.mjs 补第 6 节；构建状态：已提交（0b4ad34，与 #96/#99 同批入库）；本目录产物其后已由并行会话带 #101 改动重建为 sw mochi-mtfvutd7**）。
 - P0 哨兵由「只警告」改成真拦：缺失/回流 → console.error + `process.exitCode = 1`（sw.js 专项哨兵同口径，检查自身抛错也置失败）；报错行按登记的 `file` 复核 src 并给出处置提示（「src 里也没有＝修复真丢了，去补回」/「src 里仍在＝产物没接入，查 jsFiles/cssFiles」）；新增「哑哨兵体检」——needle 在自己登记的文件里不存在、或多条登记共用同一 needle，都报警（这两种都拦不住回归）。
 - 反向对照 `node tools/verify-sentinel-teeth.mjs` 13/13：在临时副本里逐条删掉 #100 的 5 行修复源码，重建必报警且退出码 = 1（此前删掉 `__jsErrors` 初始化行构建仍 146/146 全绿＝哨兵无牙）。这一轮顺带修好 4 条既有哑哨兵（memo-arc / my-arc / chat-settings / default-cards，needle 与他处文本撞名），只改 build.mjs 登记，未动 AI-A 的 src。
 - P1 诊断线索窗口：`ERR_CAP` 5→20（5 条窗口用户报障时早被后续报错刷掉），调用栈只随最近 3 条输出（20 条全带栈会把报障文本撑到剪贴板截断）；`tools/verify-diag-report.mjs` 加第 6 节（播种 30 次抛错 → 环形 20 条 / 正文 20 行 / 栈 ≤12 行），整脚本 18/18。
 - P3 批量 runner：新增 `tools/verify-suite.mjs` + `npm run verify:all`（181 个 verify 脚本此前只能逐个手敲、实际没人跑）。默认并发 3、单脚本 240s 超时，支持文件名过滤 / `--jobs` / `--tail` / `--strict`；失败项打印退出码与输出末行，>60s 的项单独列出来。默认退出码 0（可见性优先，脚本里混着断言过期和需真机/外网两类），清单清干净后用 `--strict` 当门禁。
+- P3 首份全量基线（本目录从未整体跑过 182 个脚本，对 sw `mochi-mtfv6u56`）：**113 通过 / 69 失败或超时 / 0 环境不满足**；其中 69 个红项对本目录最新产物重跑一遍（排除"跑的是一半新一半旧的产物"）**3 转绿 / 65 断言失败 / 1 超时**，即有效基线 **116 通过 / 65 断言失败 / 1 超时（共 182）**。转绿：`verify-bubble-css` 8/8、`verify-music-filter` 15/15、`verify-quote-image` 13/13。唯一超时 `verify-pong-balance`（pong 胜率统计需大量对局，240s 未跑完，非断言失败）。65 项红绝大多数是"断言期望已被后续版本改掉"与需真机/外网两类，尚未逐项判定——需要对方处理：这批红项按域分给 AI-A 逐项销账（该修的修、过期改期望或删），别整体忽略；`--strict` 在此之前不能当门禁。
 - 文档自修：FIX-REGRESSION.md 有 3 行被正文裸 `|` 打断（#3 `split(/\r\n|\r|\n/)`、#78 `idn === n || cn === n`、#96 `r.redirected || /^audio\\/…`），已按表内既有写法转义为 `\|`（打断行的碎片原先被表格吞成空列，正文错位）；同时压掉按列对齐的空格填充、表内 4 处空行和 7 列假表头（154KB → 98 条统一 4 列，脚本逐格校验正文内容前后一致）。WORKLOG.md 660 条 / 4997 行远超自家上限，超出部分整段移入 `WORKLOG-archive/2026-08.md`（原文照搬，状态以 git log 与 FIX-REGRESSION.md 为准）。另按 AGENTS.md 要求留痕：本轮改了 **AGENTS.md「回归防线」**小节，把「needle 要在登记的那个 src 文件里唯一 + 哑哨兵体检」「哨兵缺失/回流 → 构建退出码 1 + 处置提示」「`npm run verify:all` 一次性复跑」写进协议。
 - 需要对方处理（AI-A）：`node tools/verify-mail-cfg-per-cid.mjs` 在本目录产物上 **6/10 红**——B2「当前桌面未越自己的每日上限 → 0 封 实测 1」、B4「甲达自己上限后不再来第 2 封」、B5「default / 乙仍 0 封 → {"def":1,"yi":0}」，即「信箱每日上限按桌面独立」实际不成立。**根因（另一会话已定位，本目录 mail.js 同状态）**：2026-08-28 信箱键改 per-cid 时 `const incId = cStore().get(MAIL_KEY) || '';` 把「收件箱键读成空串」当成「信箱里已无来信」，`load()` 随即 `filter(l => l.id !== incId)` 滤掉全部 partnerReply/myReply、render 再把 content 为空的寄出信滤掉 → 列表空白，且上限守卫全部早退不再来信。修法要按「键不存在 vs 无来信」双态语义（哨兵里那条空串归一化不够，读键处仍是空串＝无来信）。mail.js 属你方，按 AGENTS.md 未代改；若脚本期望已被后续改动取代，请同步改脚本与 FIX-REGRESSION 行。
 

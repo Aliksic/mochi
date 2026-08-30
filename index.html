@@ -6440,6 +6440,9 @@ font-family:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent;
 .storage-cat-row.has-keys:active { opacity:.7; }
 .storage-cat-keys { display:none; margin:6px 0 2px; font-size:10.5px; color:var(--muted); line-height:1.7; word-break:break-all; }
 .storage-cat-row.open .storage-cat-keys { display:block; }
+.storage-cat-bar { height:4px; margin-top:6px; border-radius:2px; background:var(--static-bg); overflow:hidden; }
+.storage-cat-bar i { display:block; height:100%; border-radius:2px; background:var(--ink); opacity:.72; }
+.storage-cat-warn { margin:2px 0 9px; padding:8px 10px; border-radius:10px; background:rgba(232,90,90,.12); font-size:11px; line-height:1.6; color:#e85a5a; }
 .storage-clear { display:block; width:100%; margin-top:12px; padding:12px; border:none; border-radius:14px; background:var(--ink); color:var(--bg-b,#fff); font-size:14px; font-weight:600; font-family:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent; }
 .storage-clear:active { opacity:.85; }
 .tabbar {
@@ -8465,9 +8468,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1788096542735">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.372</b></span>
-        <span class="sv-deploy">部署于 2026-08-30 21:29<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1788099438922">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.373</b></span>
+        <span class="sv-deploy">部署于 2026-08-30 22:17<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9560,7 +9563,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.372</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.373</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -9575,14 +9578,17 @@ transition-duration: .01ms !important;
       <div class="cal-scroll">
         <div class="cal-card glass">
           <div class="cal-card-title">总占用</div>
-          <div class="storage-row"><span>浏览器存储配额</span><b id="st-quota">读取中…</b></div>
-          <div class="storage-row"><span>localStorage 占用</span><b id="st-ls">读取中…</b></div>
-          <div class="storage-row"><span>IndexedDB 占用</span><b id="st-idb">读取中…</b></div>
+          <div class="storage-row"><span>本项目占用合计</span><b id="st-self">读取中…</b></div>
+          <div class="storage-row"><span>· localStorage</span><b id="st-ls">读取中…</b></div>
+          <div class="storage-row"><span>· IndexedDB</span><b id="st-idb">读取中…</b></div>
+          <div class="storage-row"><span>同域其他站点（非本应用）</span><b id="st-other">读取中…</b></div>
+          <div class="storage-row"><span>浏览器整域已用 / 配额</span><b id="st-quota">读取中…</b></div>
+          <div class="storage-hint"><b>「本项目占用合计」才是这个应用存的东西</b>；「浏览器整域已用」是整个域名的占用（同一域名下的其他站点、图片缓存都算在里面），通常比上面几行大很多，不是统计漏了。若同域其他站点把本地存储占满，本应用会自动改用数据库存储，数据不会丢。</div>
         </div>
         <div class="cal-card glass">
           <div class="cal-card-title">各功能占用明细</div>
           <div id="st-cat"><div class="storage-hint">正在统计，请稍候…</div></div>
-          <div class="storage-hint">大小按 UTF-8 字节估算；聊天/头像/背景等大键会在 IndexedDB 与 localStorage 双写，两处之和为该功能实际占用。<b>点击任一分类行可展开查看该分类下的具体存储键名</b>，用于核对是否覆盖到所有功能。</div>
+          <div class="storage-hint">大小按字符数 ×2（UTF-16）估算；聊天/头像/背景等大键会在 IndexedDB 与 localStorage 双写，两处之和为该功能实际占用。这里<b>只列出占用最大的 5 项</b>（条长为了在小项很多时也能看出座次，按平方根比例画，<b>精确份额以百分比数字为准</b>），其余分类折进最后的「其他 N 项合计」，点开能逐项看到名称和大小。<b>点击任一分类行还可展开该项下的具体存储键名</b>（已按桌面名显示），用于核对是否覆盖到所有功能。</div>
         </div>
         <div class="cal-card glass">
           <div class="cal-card-title">错误诊断记录</div>
@@ -9787,7 +9793,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.372</span>
+              <span class="lic-ver">v3.26.373</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -14017,6 +14023,12 @@ else if (je.length) {
 L.push('启动文件异常 ' + je.length + ' 处（对应功能可能整块未加载）：');
 je.slice(0, 8).forEach(function (m) { L.push('· ' + String(m).slice(0, 160)); });
 } else L.push('启动文件异常：无（所有功能文件启动完成）');
+} catch (e) {}
+try {
+const fn = ['openDecision', 'openGroupDecision', 'activePrefix', 'xyStore', 'idbGet', 'idbSet'];
+const bad = fn.filter(function (n) { return typeof window[n] !== 'function'; });
+if (bad.length) L.push('功能入口缺失：' + bad.join(', ') + '（typeof != function）');
+else L.push('功能入口体检：全部就绪');
 } catch (e) {}
 try {
 const envs = JSON.parse(localStorage.getItem(ENV_KEY) || '[]');
@@ -20934,6 +20946,24 @@ if (n >= 1048576) return (n / 1048576).toFixed(1) + ' MB';
 if (n >= 1024) return (n / 1024).toFixed(1) + ' KB';
 return n + ' B';
 }
+function deskNames() {
+const map = {};
+try {
+(window.getContacts ? window.getContacts() : []).forEach(function (c) {
+if (c && c.id) map[c.id] = c.name || c.id;
+});
+} catch (e) {}
+return map;
+}
+function labelKey(k, names) {
+const tail = String(k).slice(G.length);
+const i = tail.indexOf(':');
+if (i > 0) {
+const cid = tail.slice(0, i);
+if (names[cid]) return names[cid] + ' · ' + (tail.slice(i + 1) || cid);
+}
+return tail || String(k);
+}
 function catOf(tail) {
 if (!tail) return '其他';
 if (tail.indexOf('__diag-') === 0) return '错误诊断记录';
@@ -20979,12 +21009,14 @@ return '设置与其他';
 }
 function lsStats() {
 const cats = {};
-let total = 0, count = 0;
+let total = 0, count = 0, otherSize = 0, otherCount = 0;
 try {
 for (let i = 0; i < localStorage.length; i++) {
 const k = localStorage.key(i);
-if (!k || k.indexOf(G) !== 0) continue;
+if (!k) continue;
+const mine = k.indexOf(G) === 0;
 const sz = (k.length + String(localStorage.getItem(k) || '').length) * 2;
+if (!mine) { otherSize += sz; otherCount++; continue; }
 total += sz; count++;
 const c = catOf(k.slice(G.length));
 if (!cats[c]) cats[c] = { n: 0, size: 0, keys: [] };
@@ -20992,11 +21024,13 @@ cats[c].n++; cats[c].size += sz;
 if (cats[c].keys.length < 20) cats[c].keys.push(k);
 }
 } catch (e) {}
-return { cats: cats, total: total, count: count };
+return { cats: cats, total: total, count: count, otherSize: otherSize, otherCount: otherCount };
 }
 function idbStats(onProgress, cb) {
-if (!window.idbGetAllKeys) { cb(null); return; }
-window.idbGetAllKeys().then(function (keys) {
+const listFn = window.idbListKeys || window.idbGetAllKeys;
+if (!listFn) { cb(null); return; }
+Promise.resolve(listFn()).then(function (keys) {
+if (keys === null || keys === undefined) { cb(null); return; }
 const cats = {};
 const list = (keys || []).filter(function (k) { return String(k || '').indexOf(G) === 0; });
 list.forEach(function (k) {
@@ -21037,7 +21071,14 @@ setTimeout(nextBatch, 0);
 setTimeout(nextBatch, 0);
 }).catch(function () { cb(null); });
 }
-function renderCatTable(lsCats, idbCats) {
+function pctOf(size, total) {
+if (!total) return '0%';
+const p = size / total * 100;
+if (p >= 10) return Math.round(p) + '%';
+if (p >= 0.1) return p.toFixed(1) + '%';
+return '<0.1%';
+}
+function renderCatTable(lsCats, idbCats, idbFailed) {
 const el = document.getElementById('st-cat');
 if (!el) return;
 const all = {};
@@ -21054,22 +21095,53 @@ const rows = Object.keys(all).map(function (c) {
 return { name: c, n: all[c].n, size: all[c].size, keys: all[c].keys };
 }).sort(function (a, b) { return b.size - a.size; });
 el.innerHTML = '';
-if (!rows.length) { el.innerHTML = '<div class="storage-hint">暂未统计到数据。</div>'; return; }
-rows.forEach(function (r) {
+if (idbFailed) {
+const w = document.createElement('div');
+w.className = 'storage-cat-warn';
+w.textContent = '⚠ IndexedDB 键清单这次没读到（是读不到，不是库里没有），下面只统计了 localStorage，重进本页面可再试一次。';
+el.appendChild(w);
+}
+if (!rows.length) {
+const h = document.createElement('div');
+h.className = 'storage-hint';
+h.textContent = '暂未统计到数据。';
+el.appendChild(h);
+return;
+}
+const names = deskNames();
+const total = rows.reduce(function (s, r) { return s + r.size; }, 0);
+const max = rows[0].size || 1;
+const mkRow = function (name, n, size, subText, noBar) {
 const d = document.createElement('div');
-d.className = 'storage-cat-row' + (r.keys && r.keys.length ? ' has-keys' : '');
-d.innerHTML = '<div class="storage-cat-line"><span class="storage-cat-name"></span><span class="storage-cat-num"></span><span class="storage-cat-size"></span></div>';
-d.querySelector('.storage-cat-name').textContent = r.name;
-d.querySelector('.storage-cat-num').textContent = r.n + ' 键';
-d.querySelector('.storage-cat-size').textContent = fmtBytes(r.size);
-if (r.keys && r.keys.length) {
+d.className = 'storage-cat-row' + (subText ? ' has-keys' : '');
+d.innerHTML = '<div class="storage-cat-line"><span class="storage-cat-name"></span><span class="storage-cat-num"></span><span class="storage-cat-size"></span></div>' +
+(noBar ? '' : '<div class="storage-cat-bar"><i></i></div>');
+d.querySelector('.storage-cat-name').textContent = name;
+d.querySelector('.storage-cat-num').textContent = n + ' 键 · ' + pctOf(size, total);
+d.querySelector('.storage-cat-size').textContent = fmtBytes(size);
+if (!noBar) d.querySelector('.storage-cat-bar i').style.width = Math.max(1.5, Math.round(Math.sqrt(size / max) * 100)) + '%';
+if (subText) {
 const sub = document.createElement('div');
 sub.className = 'storage-cat-keys';
-sub.textContent = r.keys.join('、');
+sub.textContent = subText;
 d.appendChild(sub);
 }
-el.appendChild(d);
+return d;
+};
+const top = rows.slice(0, 5);
+const rest = rows.slice(5);
+top.forEach(function (r) {
+const listed = (r.keys || []).length;
+let subText = listed ? r.keys.map(function (k) { return labelKey(k, names); }).join('、') : '';
+if (r.n > listed) subText += (subText ? '｜' : '') + '共 ' + r.n + ' 个键，仅列前 ' + listed + ' 个';
+el.appendChild(mkRow(r.name, r.n, r.size, subText));
 });
+if (rest.length) {
+const rn = rest.reduce(function (s, r) { return s + r.n; }, 0);
+const rs = rest.reduce(function (s, r) { return s + r.size; }, 0);
+el.appendChild(mkRow('其他 ' + rest.length + ' 项合计', rn, rs,
+rest.map(function (r) { return r.name + ' ' + fmtBytes(r.size); }).join('、'), true));
+}
 }
 function diagSummary() {
 let items = 0, bytes = 0, errs = 0;
@@ -21093,20 +21165,31 @@ function renderStorage() {
 const quotaEl = document.getElementById('st-quota');
 if (quotaEl && navigator.storage && navigator.storage.estimate) {
 navigator.storage.estimate().then(function (r) {
-if (quotaEl) quotaEl.textContent = '已用 ' + fmtBytes(r && r.usage) + ' / 共 ' + fmtBytes(r && r.quota);
+if (quotaEl) quotaEl.textContent = fmtBytes(r && r.usage) + ' / ' + fmtBytes(r && r.quota);
 }).catch(function () { if (quotaEl) quotaEl.textContent = '读取失败'; });
 } else if (quotaEl) quotaEl.textContent = '接口不可用';
 const ls = lsStats();
 const lsEl = document.getElementById('st-ls');
 if (lsEl) lsEl.textContent = fmtBytes(ls.total) + '（' + ls.count + ' 键）';
+const otherEl = document.getElementById('st-other');
+if (otherEl) otherEl.textContent = ls.otherCount ? fmtBytes(ls.otherSize) + '（' + ls.otherCount + ' 键）' : '无';
+const selfEl = document.getElementById('st-self');
+const showSelf = function (idbTotal) {
+if (!selfEl) return;
+if (idbTotal === undefined) { selfEl.textContent = fmtBytes(ls.total) + '（IndexedDB 统计中…）'; return; }
+if (idbTotal === null) { selfEl.textContent = fmtBytes(ls.total) + '（不含 IndexedDB，见下方告警）'; return; }
+selfEl.textContent = fmtBytes(ls.total + idbTotal.total) + '（' + ls.count + ' + ' + idbTotal.count + ' 键）';
+};
+showSelf(undefined);
 const idbEl = document.getElementById('st-idb');
 if (idbEl) idbEl.textContent = '统计中…';
-renderCatTable(ls.cats, null);
+renderCatTable(ls.cats, null, false);
 idbStats(function (done, totalN) {
 if (idbEl) idbEl.textContent = '统计中…（' + done + '/' + totalN + '）';
 }, function (res) {
-if (idbEl) idbEl.textContent = res ? fmtBytes(res.total) + '（' + res.count + ' 键）' : '不可用';
-renderCatTable(ls.cats, res ? res.cats : null);
+if (idbEl) idbEl.textContent = res ? fmtBytes(res.total) + '（' + res.count + ' 键）' : '读取失败（未计入合计）';
+showSelf(res ? { total: res.total, count: res.count } : null);
+renderCatTable(ls.cats, res ? res.cats : null, !res);
 });
 renderDiagCount();
 }
@@ -37576,6 +37659,12 @@ p.catch((err) => {
 if (!audio) return;
 if (err && err.name !== 'NotAllowedError') {
 if (httpsRetrying || demoFallbackBusy) return;
+if (document.hidden) {
+bgBrokeAudio = true;
+playRejected = true;
+scheduleBgResume();
+return;
+}
 if (m && m.neteaseId && !m._httpsRetried) {
 if (retryWithHttpsUrl(m)) return;
 }

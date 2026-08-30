@@ -5212,6 +5212,27 @@ try {
       if (n >= 1024) return (n / 1024).toFixed(1) + ' KB';
       return n + ' B';
     }
+    // v3.29.x：键名可读化——`xy-home-v2:<cid>:xxx` 的机器键名用户读不懂，
+    // 首段能对上联系人 id 的就换成「桌面名 · 剩余键名」，对不上（全局键如
+    // incoming-last:xxx / music-file:xxx）原样显示，不猜。
+    function deskNames() {
+      const map = {};
+      try {
+        (window.getContacts ? window.getContacts() : []).forEach(function (c) {
+          if (c && c.id) map[c.id] = c.name || c.id;
+        });
+      } catch (e) {}
+      return map;
+    }
+    function labelKey(k, names) {
+      const tail = String(k).slice(G.length);
+      const i = tail.indexOf(':');
+      if (i > 0) {
+        const cid = tail.slice(0, i);
+        if (names[cid]) return names[cid] + ' · ' + (tail.slice(i + 1) || cid);
+      }
+      return tail || String(k);
+    }
     // 键名（去掉 xy-home-v2: 前缀，可能带 cid 命名空间）→ 功能分类
     function catOf(tail) {
       if (!tail) return '其他';
@@ -5272,12 +5293,16 @@ try {
     }
     function lsStats() {
       const cats = {};
-      let total = 0, count = 0;
+      let total = 0, count = 0, otherSize = 0, otherCount = 0;
       try {
         for (let i = 0; i < localStorage.length; i++) {
           const k = localStorage.key(i);
-          if (!k || k.indexOf(G) !== 0) continue;
+          if (!k) continue;
+          // 同 origin 下非本项目前缀的键（GitHub Pages 同账号各项目共用一个 origin，
+          // #88 实测过配额被别的站点占满）单独计数，不混进本项目的明细里
+          const mine = k.indexOf(G) === 0;
           const sz = (k.length + String(localStorage.getItem(k) || '').length) * 2;
+          if (!mine) { otherSize += sz; otherCount++; continue; }
           total += sz; count++;
           const c = catOf(k.slice(G.length));
           if (!cats[c]) cats[c] = { n: 0, size: 0, keys: [] };
@@ -5285,13 +5310,18 @@ try {
           if (cats[c].keys.length < 20) cats[c].keys.push(k);
         }
       } catch (e) {}
-      return { cats: cats, total: total, count: count };
+      return { cats: cats, total: total, count: count, otherSize: otherSize, otherCount: otherCount };
     }
     // IndexedDB：列出键后分批读取体积（用 idbGetMany 批量事务，比逐键快得多；
     // Blob/ArrayBuffer 只取 size 不读数据，字符串读完即弃，峰值内存=最大单键）
     function idbStats(onProgress, cb) {
-      if (!window.idbGetAllKeys) { cb(null); return; }
-      window.idbGetAllKeys().then(function (keys) {
+      // v3.29.x：清单读取改走 #90 的严格三态 idbListKeys（null＝这次读不到）。
+      // 旧实现用 idbGetAllKeys，失败时退化成 [] → 页面显示「0 B（0 键）」，
+      // 把「读不到」显示成「库里没有」，正是要避免的口径。
+      const listFn = window.idbListKeys || window.idbGetAllKeys;
+      if (!listFn) { cb(null); return; }
+      Promise.resolve(listFn()).then(function (keys) {
+        if (keys === null || keys === undefined) { cb(null); return; }
         const cats = {};
         const list = (keys || []).filter(function (k) { return String(k || '').indexOf(G) === 0; });
         list.forEach(function (k) {
@@ -5332,7 +5362,18 @@ try {
         setTimeout(nextBatch, 0);
       }).catch(function () { cb(null); });
     }
-    function renderCatTable(lsCats, idbCats) {
+    function pctOf(size, total) {
+      if (!total) return '0%';
+      const p = size / total * 100;
+      if (p >= 10) return Math.round(p) + '%';
+      if (p >= 0.1) return p.toFixed(1) + '%';
+      return '<0.1%';
+    }
+    // v3.29.x：明细可读性三改——①只列占用最大的 5 类 + 占比条，其余折成「其他 N 项合计」
+    // （点开展开仍逐类列名列大小，核对覆盖没有变难）；②展开区键名换成「桌面名 · 键名」，
+    // 键数被截断时如实标注「共 N 个键，仅列前 M 个」；③IDB 清单读取失败时明确说
+    // 「下面只统计了 localStorage」，不再静默少算一整块。
+    function renderCatTable(lsCats, idbCats, idbFailed) {
       const el = document.getElementById('st-cat');
       if (!el) return;
       const all = {};
@@ -5349,22 +5390,56 @@ try {
         return { name: c, n: all[c].n, size: all[c].size, keys: all[c].keys };
       }).sort(function (a, b) { return b.size - a.size; });
       el.innerHTML = '';
-      if (!rows.length) { el.innerHTML = '<div class="storage-hint">暂未统计到数据。</div>'; return; }
-      rows.forEach(function (r) {
+      if (idbFailed) {
+        const w = document.createElement('div');
+        w.className = 'storage-cat-warn';
+        w.textContent = '⚠ IndexedDB 键清单这次没读到（是读不到，不是库里没有），下面只统计了 localStorage，重进本页面可再试一次。';
+        el.appendChild(w);
+      }
+      if (!rows.length) {
+        const h = document.createElement('div');
+        h.className = 'storage-hint';
+        h.textContent = '暂未统计到数据。';
+        el.appendChild(h);
+        return;
+      }
+      const names = deskNames();
+      const total = rows.reduce(function (s, r) { return s + r.size; }, 0);
+      const max = rows[0].size || 1;
+      const mkRow = function (name, n, size, subText, noBar) {
         const d = document.createElement('div');
-        d.className = 'storage-cat-row' + (r.keys && r.keys.length ? ' has-keys' : '');
-        d.innerHTML = '<div class="storage-cat-line"><span class="storage-cat-name"></span><span class="storage-cat-num"></span><span class="storage-cat-size"></span></div>';
-        d.querySelector('.storage-cat-name').textContent = r.name;
-        d.querySelector('.storage-cat-num').textContent = r.n + ' 键';
-        d.querySelector('.storage-cat-size').textContent = fmtBytes(r.size);
-        if (r.keys && r.keys.length) {
+        d.className = 'storage-cat-row' + (subText ? ' has-keys' : '');
+        d.innerHTML = '<div class="storage-cat-line"><span class="storage-cat-name"></span><span class="storage-cat-num"></span><span class="storage-cat-size"></span></div>' +
+          (noBar ? '' : '<div class="storage-cat-bar"><i></i></div>');
+        d.querySelector('.storage-cat-name').textContent = name;
+        d.querySelector('.storage-cat-num').textContent = n + ' 键 · ' + pctOf(size, total);
+        d.querySelector('.storage-cat-size').textContent = fmtBytes(size);
+        // 条长按平方根比例：真实数据常是一个大头占九成（实测某项 94%），线性条会把
+        // 第 3~6 名全压到 1.5% 的下限上、彼此分不出来。平方根单调不减、最大项仍满格，
+        // 小项也能排座次；精确份额看行末的百分比数字。
+        if (!noBar) d.querySelector('.storage-cat-bar i').style.width = Math.max(1.5, Math.round(Math.sqrt(size / max) * 100)) + '%';
+        if (subText) {
           const sub = document.createElement('div');
           sub.className = 'storage-cat-keys';
-          sub.textContent = r.keys.join('、');
+          sub.textContent = subText;
           d.appendChild(sub);
         }
-        el.appendChild(d);
+        return d;
+      };
+      const top = rows.slice(0, 5);
+      const rest = rows.slice(5);
+      top.forEach(function (r) {
+        const listed = (r.keys || []).length;
+        let subText = listed ? r.keys.map(function (k) { return labelKey(k, names); }).join('、') : '';
+        if (r.n > listed) subText += (subText ? '｜' : '') + '共 ' + r.n + ' 个键，仅列前 ' + listed + ' 个';
+        el.appendChild(mkRow(r.name, r.n, r.size, subText));
       });
+      if (rest.length) {
+        const rn = rest.reduce(function (s, r) { return s + r.n; }, 0);
+        const rs = rest.reduce(function (s, r) { return s + r.size; }, 0);
+        el.appendChild(mkRow('其他 ' + rest.length + ' 项合计', rn, rs,
+          rest.map(function (r) { return r.name + ' ' + fmtBytes(r.size); }).join('、'), true));
+      }
     }
     function diagSummary() {
       let items = 0, bytes = 0, errs = 0;
@@ -5385,24 +5460,39 @@ try {
       el.textContent = (d.items ? d.items + ' 项缓存' : '无缓存') + (d.errs ? ' · ' + d.errs + ' 条错误' : '') + (d.items ? ' · 约 ' + fmtBytes(d.bytes) : '');
     }
     function renderStorage() {
+      // v3.29.x：总占用摆两个口径——「本项目占用合计」（本页面统计到的 LS+IDB）和
+      // 「浏览器整域已用」（navigator.storage.estimate 是整个 origin，含同域名下其他
+      // 站点与图片缓存，#88 实测过同账号 Pages 共用配额）。以前只报后者，用户拿它跟
+      // 明细一比就觉得「几百 MB 去哪了 / 是不是统计漏了」。
       const quotaEl = document.getElementById('st-quota');
       if (quotaEl && navigator.storage && navigator.storage.estimate) {
         navigator.storage.estimate().then(function (r) {
-          if (quotaEl) quotaEl.textContent = '已用 ' + fmtBytes(r && r.usage) + ' / 共 ' + fmtBytes(r && r.quota);
+          if (quotaEl) quotaEl.textContent = fmtBytes(r && r.usage) + ' / ' + fmtBytes(r && r.quota);
         }).catch(function () { if (quotaEl) quotaEl.textContent = '读取失败'; });
       } else if (quotaEl) quotaEl.textContent = '接口不可用';
       const ls = lsStats();
       const lsEl = document.getElementById('st-ls');
       if (lsEl) lsEl.textContent = fmtBytes(ls.total) + '（' + ls.count + ' 键）';
+      const otherEl = document.getElementById('st-other');
+      if (otherEl) otherEl.textContent = ls.otherCount ? fmtBytes(ls.otherSize) + '（' + ls.otherCount + ' 键）' : '无';
+      const selfEl = document.getElementById('st-self');
+      const showSelf = function (idbTotal) {
+        if (!selfEl) return;
+        if (idbTotal === undefined) { selfEl.textContent = fmtBytes(ls.total) + '（IndexedDB 统计中…）'; return; }
+        if (idbTotal === null) { selfEl.textContent = fmtBytes(ls.total) + '（不含 IndexedDB，见下方告警）'; return; }
+        selfEl.textContent = fmtBytes(ls.total + idbTotal.total) + '（' + ls.count + ' + ' + idbTotal.count + ' 键）';
+      };
+      showSelf(undefined);
       const idbEl = document.getElementById('st-idb');
       if (idbEl) idbEl.textContent = '统计中…';
       // 先渲染 localStorage 明细，IndexedDB 异步补齐
-      renderCatTable(ls.cats, null);
+      renderCatTable(ls.cats, null, false);
       idbStats(function (done, totalN) {
         if (idbEl) idbEl.textContent = '统计中…（' + done + '/' + totalN + '）';
       }, function (res) {
-        if (idbEl) idbEl.textContent = res ? fmtBytes(res.total) + '（' + res.count + ' 键）' : '不可用';
-        renderCatTable(ls.cats, res ? res.cats : null);
+        if (idbEl) idbEl.textContent = res ? fmtBytes(res.total) + '（' + res.count + ' 键）' : '读取失败（未计入合计）';
+        showSelf(res ? { total: res.total, count: res.count } : null);
+        renderCatTable(ls.cats, res ? res.cats : null, !res);
       });
       renderDiagCount();
     }

@@ -1307,14 +1307,17 @@
       <div class="cal-scroll">
         <div class="cal-card glass">
           <div class="cal-card-title">总占用</div>
-          <div class="storage-row"><span>浏览器存储配额</span><b id="st-quota">读取中…</b></div>
-          <div class="storage-row"><span>localStorage 占用</span><b id="st-ls">读取中…</b></div>
-          <div class="storage-row"><span>IndexedDB 占用</span><b id="st-idb">读取中…</b></div>
+          <div class="storage-row"><span>本项目占用合计</span><b id="st-self">读取中…</b></div>
+          <div class="storage-row"><span>· localStorage</span><b id="st-ls">读取中…</b></div>
+          <div class="storage-row"><span>· IndexedDB</span><b id="st-idb">读取中…</b></div>
+          <div class="storage-row"><span>同域其他站点（非本应用）</span><b id="st-other">读取中…</b></div>
+          <div class="storage-row"><span>浏览器整域已用 / 配额</span><b id="st-quota">读取中…</b></div>
+          <div class="storage-hint"><b>「本项目占用合计」才是这个应用存的东西</b>；「浏览器整域已用」是整个域名的占用（同一域名下的其他站点、图片缓存都算在里面），通常比上面几行大很多，不是统计漏了。若同域其他站点把本地存储占满，本应用会自动改用数据库存储，数据不会丢。</div>
         </div>
         <div class="cal-card glass">
           <div class="cal-card-title">各功能占用明细</div>
           <div id="st-cat"><div class="storage-hint">正在统计，请稍候…</div></div>
-          <div class="storage-hint">大小按 UTF-8 字节估算；聊天/头像/背景等大键会在 IndexedDB 与 localStorage 双写，两处之和为该功能实际占用。<b>点击任一分类行可展开查看该分类下的具体存储键名</b>，用于核对是否覆盖到所有功能。</div>
+          <div class="storage-hint">大小按字符数 ×2（UTF-16）估算；聊天/头像/背景等大键会在 IndexedDB 与 localStorage 双写，两处之和为该功能实际占用。这里<b>只列出占用最大的 5 项</b>（条长为了在小项很多时也能看出座次，按平方根比例画，<b>精确份额以百分比数字为准</b>），其余分类折进最后的「其他 N 项合计」，点开能逐项看到名称和大小。<b>点击任一分类行还可展开该项下的具体存储键名</b>（已按桌面名显示），用于核对是否覆盖到所有功能。</div>
         </div>
         <div class="cal-card glass">
           <div class="cal-card-title">错误诊断记录</div>

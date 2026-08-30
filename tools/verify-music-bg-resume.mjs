@@ -111,6 +111,13 @@ window.Audio = function () {
     el.paused = false; el.ended = false;
     window.__au.log.push({ act: 'play', inst: idx, hidden: !!document.hidden, t: Date.now() });
     window.__au.lastPlayed = el;
+    if (window.__au.rejectNext) {
+      // 模拟源加载失败（meting 不可达/断网）：Chrome 对无法加载的 media 会 reject
+      // 并把元素留在暂停态（paused=true），非 NotAllowedError
+      var e = window.__au.rejectNext; window.__au.rejectNext = null;
+      el.paused = true;
+      return Promise.reject(e);
+    }
     if (el.onplay) el.onplay();
     return Promise.resolve();
   };
@@ -134,7 +141,18 @@ window.__setHidden = function (h) {
   Object.defineProperty(document, 'hidden', { configurable: true, get: function () { return !!h; } });
   document.dispatchEvent(new Event('visibilitychange'));
 };
-window.__playsSince = function (ts) { return window.__au.log.filter(function (e) { return e.act === 'play' && e.t > ts; }).length; };`;
+window.__playsSince = function (ts) { return window.__au.log.filter(function (e) { return e.act === 'play' && e.t > ts; }).length; };
+// 音乐源离线模拟：meting/网易云外链 fetch 一律失败——保持测试封闭（不依赖真实网络），
+// 同时让「一次性 https 重试链」无法借真实网络救场：修复前代码会走 retryWithHttpsUrl
+// 把元素换成外链 URL，修复后代码留在原元素由退避补播接上（场景⑥ 据此区分新旧行为）
+window.__realFetch = window.fetch;
+window.fetch = function (url, opts) {
+  var u = String(url);
+  if (u.indexOf('api.injahow.cn') >= 0 || u.indexOf('music.163.com') >= 0) {
+    return Promise.reject(new TypeError('network blocked (offline sim)'));
+  }
+  return window.__realFetch.apply(window, arguments);
+};`;
 
 let pass = 0, fail = 0;
 function check(name, ok, info) {
@@ -153,8 +171,12 @@ try {
   await waitReady();
   await sleep(600);
   const seed = await evalJs(`(function(){
-    var arr=[{ id:'sm_bg_1', neteaseId:'990001', name:'BG回归曲', artist:'Verify',
-      url:'https://cdn.test/a.mp3', source:'url', cover:'', duration:180, playlistId:'default', addedAt:Date.now() }];
+    var arr=[
+      { id:'sm_bg_1', neteaseId:'990001', name:'BG回归曲1', artist:'Verify',
+        url:'https://cdn.test/a.mp3', source:'url', cover:'', duration:180, playlistId:'default', addedAt:Date.now() },
+      { id:'sm_bg_2', neteaseId:'990002', name:'BG回归曲2', artist:'Verify',
+        url:'https://cdn.test/b.mp3', source:'url', cover:'', duration:180, playlistId:'default', addedAt:Date.now() }
+    ];
     try { window.storeFor('default').set('music-library', JSON.stringify(arr)); return true; } catch(e){ return 'ERR:'+e.message; }
   })()`);
   check('预置测试曲入库', seed === true, String(seed));
@@ -246,6 +268,29 @@ try {
       playing: last && last.paused===false, cid: ${JSON.stringify(curId)} };
   })()`);
   check('ended 未处理 → 自动重建元素续播（外链歌）', rE && rE.insts > cntE.insts && rE.rebuilt && rE.playing, JSON.stringify(rE));
+
+  // ---- 场景 ⑥：后台自动下一首源加载失败（NotSupportedError）→ 退避补播自动接上 ----
+  // 回归锚点：a6d854a 起非 NotAllowedError 拒绝直接走一次性 https 重试链（后台单发
+  // 即弃、无退避，红米K80 实测「切后台无法自动播放下一首」）；修复后后台拒绝恢复
+  // scheduleBgResume 退避补播——留在原元素反复试播，源恢复即接上（不断网不换 URL）。
+  const scF = await evalJs(`(function(){
+    window.__setHidden(true);
+    window.__au.rejectNext = { name: 'NotSupportedError', message: 'source load failed' };
+    window.__au.lastPlayed.onended(); // 触发自动下一首 → playTrack(sm_bg_2) → play() 被拒
+    return Date.now();
+  })()`);
+  await sleep(500);
+  const rF1 = await evalJs(`(function(){
+    var last = window.__au.lastPlayed;
+    return { src: last ? last.src : null, hidden: !!document.hidden };
+  })()`);
+  check('后台自动下一首源加载失败 → 已切到下一首（未被换成外链 URL）', rF1 && rF1.src === 'https://cdn.test/b.mp3', JSON.stringify(rF1));
+  await sleep(1300);
+  const rF = await evalJs(`(function(){
+    var last = window.__au.lastPlayed;
+    return { src: last ? last.src : null, paused: last ? last.paused : null, playing: window.__musicPlaying===true };
+  })()`);
+  check('后台源恢复 → 退避补播在原元素接上播放', rF && rF.src === 'https://cdn.test/b.mp3' && rF.paused === false && rF.playing, JSON.stringify(rF));
 
   const fin = await evalJs('(function(){ return window.__musicPlaying===true; })()');
   check('结束时处于播放中状态', fin === true);

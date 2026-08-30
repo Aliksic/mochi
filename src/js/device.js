@@ -1118,6 +1118,14 @@
         je.slice(0, 8).forEach(function (m) { L.push('· ' + String(m).slice(0, 160)); });
       } else L.push('启动文件异常：无（所有功能文件启动完成）');
     } catch (e) {}
+    // v3.26.x #101：功能入口体检——用户报"帮我决定加载失败"但诊断说无启动异常，
+    // 加 typeof 检查确认 openDecision 等是否赋值（decision.js 抛错但 __jsErrors 没捕获的情况）
+    try {
+      const fn = ['openDecision', 'openGroupDecision', 'activePrefix', 'xyStore', 'idbGet', 'idbSet'];
+      const bad = fn.filter(function (n) { return typeof window[n] !== 'function'; });
+      if (bad.length) L.push('功能入口缺失：' + bad.join(', ') + '（typeof != function）');
+      else L.push('功能入口体检：全部就绪');
+    } catch (e) {}
     // v3.25.x：环境变化记录（旋转/键盘/前后台）——手机端 bug 的触发现场
     try {
       const envs = JSON.parse(localStorage.getItem(ENV_KEY) || '[]');

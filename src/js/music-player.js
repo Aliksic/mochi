@@ -1957,6 +1957,20 @@
           // 的守卫）——不视为源失效，静默等换源回调接管；否则会漏进 demoFallbackOrError
           // → offerRemoveDamagedSong 误计数/误停新元素（弱网换源场景）。
           if (httpsRetrying || demoFallbackBusy) return;
+          // v3.29.x（回归修复）：后台（document.hidden）的非 NotAllowedError 拒绝＝源加载
+          // 失败/断网（meting 不可达）。a6d854a 前所有拒绝都走 muted 解锁 + scheduleBgResume
+          // 退避补播：自动下一首被拒后当前元素每隔 300ms~12s 反复试播，源短暂恢复立刻接上；
+          // a6d854a 起改成「一次性 https 拉直链链」——后台 fetch 挂起/网络抖动时单发即弃、
+          // 无退避，音乐停在后台（红米K80 实测「切后台无法自动播放下一首」，诊断见 meting
+          // 网络失败）。这里恢复后台退避补播：不烧直链重试、不弹窗，保留当前元素交
+          // scheduleBgResume 反复试播（源恢复即接上）；回前台 resumeOnForeground 见
+          // bgBrokeAudio 再完整重建（playTrack 重置 _httpsRetried 走正常链路）。
+          if (document.hidden) {
+            bgBrokeAudio = true;
+            playRejected = true;
+            scheduleBgResume();
+            return;
+          }
           if (m && m.neteaseId && !m._httpsRetried) {
             if (retryWithHttpsUrl(m)) return;
           }
