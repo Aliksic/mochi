@@ -1606,6 +1606,12 @@ try {
     BEAUTY_KEYS.push('card-bg-' + t, 'card-bg-mask-' + t);
   });
   for (var _i = 0; _i < 5; _i++) BEAUTY_KEYS.push('page-bg-' + _i);
+  // v3.26.x：文字部位颜色（widget-text-<type>-<key>）随美化方案导入导出
+  ['deco','quote','fish','checkin','music','memo','mood','week','weekend','desk-clock','desk-calendar','desk-timer','desk-anniv'].forEach(function(t) {
+    ['lbl','days','date','title','body','heart','txt','btn','tag','song','artist','times','sub','val','time','disp','mode','label','name'].forEach(function(k) {
+      BEAUTY_KEYS.push('widget-text-' + t + '-' + k);
+    });
+  });
   const collectBeauty = () => {
     const data = {};
     BEAUTY_KEYS.forEach(k => { const v = store.get(k); if (v !== null && v !== undefined) data[k] = v; });
@@ -2176,6 +2182,105 @@ try {
     const def = CARD_BG_TYPES.find(c => c.type === type);
     return def ? def.sel : '';
   };
+  // ===== v3.26.x：装修模式可调文字部位颜色 =====
+  // 每个卡片类型下可单独调色的文字部位：key=存储后缀，label=菜单显示名，sel=目标元素选择器。
+  // 存储键 widget-text-<type>-<key>（per-cid 随桌面独立，走 store）；应用方式为内联 color，
+  // 直接覆盖该部位文字的 CSS 变量色（var(--ink)/var(--muted)）。
+  const WIDGET_TEXT_PARTS = {
+    'deco': [
+      { key: 'lbl', label: '昵称', sel: '[data-card-bg="deco"] .lbl' },
+      { key: 'days', label: '纪念天数', sel: '#love-days' },
+      { key: 'date', label: '纪念日期', sel: '#love-date' },
+    ],
+    'quote': [
+      { key: 'title', label: '标题', sel: '[data-card-bg="quote"] .mc-top' },
+      { key: 'body', label: '今日情话内容', sel: '#love-quote' },
+    ],
+    'fish': [
+      { key: 'title', label: '标题', sel: '[data-card-bg="fish"] .mc-top' },
+      { key: 'body', label: '摸鱼天数', sel: '[data-card-bg="fish"] .mc-b' },
+    ],
+    'checkin': [
+      { key: 'heart', label: '爱心', sel: '[data-card-bg="checkin"] .ck-heart' },
+      { key: 'txt', label: '打卡文案', sel: '[data-card-bg="checkin"] .ck-txt' },
+      { key: 'btn', label: '打卡按钮', sel: '[data-card-bg="checkin"] .ck-btn' },
+    ],
+    'music': [
+      { key: 'tag', label: '正在播放标签', sel: '[data-card-bg="music"] .mw-tag' },
+      { key: 'song', label: '歌名', sel: '#mw-song' },
+      { key: 'artist', label: '歌手', sel: '#mw-artist' },
+      { key: 'times', label: '播放时间', sel: '[data-card-bg="music"] .mw-times' },
+    ],
+    'memo': [
+      { key: 'title', label: '标题', sel: '[data-card-bg="memo"] .mc-top' },
+      { key: 'body', label: '备忘内容', sel: '#memo-text' },
+    ],
+    'mood': [
+      { key: 'title', label: '标题', sel: '[data-card-bg="mood"] .mc-top' },
+      { key: 'body', label: '心情内容', sel: '#today-mood-text' },
+    ],
+    'week': [
+      { key: 'title', label: '标题', sel: '[data-card-bg="week"] .mc-top' },
+      { key: 'days', label: '日期格', sel: '[data-card-bg="week"] .week-day:not(.today), [data-card-bg="week"] .week-day:not(.today) b' },
+    ],
+    'weekend': [
+      { key: 'days', label: '标题', sel: '#weekend-days' },
+      { key: 'sub', label: '副标题', sel: '[data-card-bg="weekend"] .we-sub' },
+      { key: 'val', label: '摸鱼/工作值', sel: '[data-card-bg="weekend"] .we-ta, [data-card-bg="weekend"] .we-ta b' },
+      { key: 'btn', label: '摸鱼按钮', sel: '#weekend-fish' },
+    ],
+    'desk-clock': [
+      { key: 'time', label: '时间', sel: '#dc-time' },
+      { key: 'date', label: '日期', sel: '#dc-date' },
+    ],
+    'desk-calendar': [
+      { key: 'title', label: '月份标题', sel: '#dcal-title' },
+    ],
+    'desk-timer': [
+      { key: 'disp', label: '计时显示', sel: '#dt-disp' },
+      { key: 'mode', label: '模式标签', sel: '#dt-mode-label' },
+      { key: 'btn', label: '按钮文字', sel: '.desk-timer .dt-btn' },
+    ],
+    'desk-anniv': [
+      { key: 'label', label: '标签', sel: '[data-card-bg="desk-anniv"] .da-label' },
+      { key: 'days', label: '天数', sel: '#da-days' },
+      { key: 'name', label: '纪念日名', sel: '#da-name' },
+    ],
+  };
+  const textColorSwatches = [
+    { color: '#111111', label: '默认黑' },
+    { color: '#333333', label: '深灰' },
+    { color: '#555555', label: '中灰' },
+    { color: '#777777', label: '灰' },
+    { color: '#999999', label: '浅灰' },
+    { color: '#bbbbbb', label: '中浅灰' },
+    { color: '#dddddd', label: '浅白' },
+    { color: '#ffffff', label: '纯白' },
+    { color: '#e05555', label: '樱花粉' },
+    { color: '#d65c7a', label: '玫瑰' },
+    { color: '#5555cc', label: '雾霭蓝' },
+    { color: '#2e8b57', label: '薄荷绿' },
+    { color: '#d4a017', label: '暖橘黄' },
+    { color: '#8e44ad', label: '淡紫' },
+    { color: '#cc6622', label: '暖橘' },
+    { color: '#b8d4e8', label: '天蓝' },
+  ];
+  const widgetTextKey = (type, key) => 'widget-text-' + type + '-' + key;
+  const applyWidgetText = (type, part, color) => {
+    try {
+      const els = document.querySelectorAll(part.sel);
+      els.forEach(el => { if (el) el.style.color = color || ''; });
+    } catch (e) {}
+  };
+  // 应用某卡片所有已保存的文字颜色（启动 / 切桌面 / 恢复方案后调用）
+  const applyAllWidgetTexts = () => {
+    Object.keys(WIDGET_TEXT_PARTS).forEach(type => {
+      WIDGET_TEXT_PARTS[type].forEach(part => {
+        const c = store.get(widgetTextKey(type, part.key));
+        if (c) applyWidgetText(type, part, c);
+      });
+    });
+  };
   // 应用单个卡片的背景：遮罩用多层背景（白色半透明叠加在图片上）
   // v3.6.x：遮罩浓度滑块 0~85（百分比），存数字字符串；旧值 'off'/'light'/'mid'/'strong'/'on' 迁移
   const MASK_ALPHA_LEGACY = { off: 0, light: 30, mid: 50, strong: 72, on: 50 };
@@ -2242,13 +2347,16 @@ try {
   function refreshDeskVisuals() {
     try { window.applyAvatars(); } catch (e) {}
     try { applyAllCardBgs(); } catch (e) {}
+    try { applyAllWidgetTexts(); } catch (e) {}
     try { applyPageBgs(); } catch (e) {}
     try { renderDeskImages(); } catch (e) {}
     try { syncBgUI(); } catch (e) {}
   }
   // 初始化 + 多桌面切换后重应用
   applyAllCardBgs();
+  applyAllWidgetTexts();
   document.addEventListener('contact-switched', applyAllCardBgs);
+  document.addEventListener('contact-switched', applyAllWidgetTexts);
   // 卡片背景设置公共逻辑（设置页行点击 / 装修模式点卡片共用）：
   // 上传 / 清除 / 遮罩开关。type 为卡片类型，name 为显示名。
   // v3.6.x：装修模式点卡片时额外传入 anchorEl（点击的卡片元素）→ 菜单追加
@@ -2305,6 +2413,7 @@ try {
     if (img) pills.push({ label: '遮罩浓度', value: 'mask' });
     if (img) pills.push({ label: maskPctOf(type) === 0 ? '原图直出 ✓' : '原图直出', value: 'origin' });
     pills.push({ label: '组件透明度', value: 'opacity' });
+    if (WIDGET_TEXT_PARTS[type]) pills.push({ label: '文字颜色', value: 'text' });
     if (widgetEl) {
       pills.push({ label: '上移', value: 'up' });
       pills.push({ label: '下移', value: 'down' });
@@ -2372,6 +2481,39 @@ try {
             onChange: (val) => { document.documentElement.style.setProperty('--widget-opacity', String(val / 100)); },
           },
           pills: [{ label: '恢复默认', value: '__reset__' }],
+        });
+      } else if (v === 'text') {
+        // v3.26.x：文字部位颜色——先选部位（已设色的标「· 已设色」），再开色板
+        const parts = WIDGET_TEXT_PARTS[type] || [];
+        if (!parts.length) return;
+        openCardMenuNext('文字颜色', '', (sv) => {
+          const part = parts.find(p => p.key === sv);
+          if (!part) return;
+          const storeKey = widgetTextKey(type, part.key);
+          const current = store.get(storeKey) || '#111111';
+          window.openModal(part.label + '颜色', '', (cv) => {
+            const color = (typeof cv === 'number' && textColorSwatches[cv]) ? textColorSwatches[cv].color : cv;
+            if (!color) return;
+            if (color === '__reset__') {
+              store.remove(storeKey);
+              applyWidgetText(type, part, '');
+              toast(part.label + '已恢复默认颜色');
+              return;
+            }
+            store.set(storeKey, color);
+            applyWidgetText(type, part, color);
+            toast(part.label + '颜色已设置');
+          }, {
+            colorPicker: true,
+            noInput: true,
+            color: current,
+            swatches: textColorSwatches,
+            pills: [{ label: '恢复默认', value: '__reset__' }],
+          });
+        }, {
+          noInput: true,
+          staticText: '选择要改颜色的文字部位，再选择颜色',
+          pills: parts.map(p => ({ label: p.label + (store.get(widgetTextKey(type, p.key)) ? ' · 已设色' : ''), value: p.key })),
         });
       } else if (v === 'up') moveWidget('up');
       else if (v === 'down') moveWidget('down');

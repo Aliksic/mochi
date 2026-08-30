@@ -3243,6 +3243,21 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + var(--mochi-safe-bottom,
 .piggy-more { border:none; background:none; font-size:12px; color:#b7791f; font-family:inherit; padding:2px 4px; -webkit-tap-highlight-color:transparent; }
 .pr-month { font-size:11px; color:var(--ink-soft,#999); margin:8px 0 2px; font-weight:600; }
 .pr-sub { font-size:11px; color:#b7791f; text-align:right; padding:4px 0 8px; opacity:.85; }
+/* v3.26.x：存钱罐双账本 Tab（现实存钱 / 心意币存钱） */
+.piggy-tabs { display:flex; gap:0; background:rgba(0,0,0,.05); border-radius:12px; padding:3px; margin-bottom:14px; }
+.piggy-tabs .piggy-tab { flex:1; border:none; background:none; font-family:inherit; font-size:14px; color:var(--ink-soft,#666); padding:9px 0; border-radius:9px; -webkit-tap-highlight-color:transparent; transition:background .15s,color .15s; }
+.piggy-tabs .piggy-tab.on { background:linear-gradient(135deg,#f0b95d,#dd9440); color:#fff; font-weight:600; box-shadow:0 2px 6px rgba(221,148,64,.3); }
+.piggy-real[hidden], .piggy-coin[hidden] { display:none; }
+/* 心意币存钱：双账户余额（我的 / TA 的） */
+.coin-hero { padding:22px 18px 20px; border-radius:14px; margin-bottom:16px; }
+.coin-bal-row { display:flex; align-items:stretch; justify-content:space-between; }
+.coin-cell { flex:1; text-align:center; min-width:0; }
+.coin-side { font-size:12px; color:#b7791f; margin-bottom:6px; }
+.coin-num { font-size:22px; font-weight:700; color:var(--ink,#222); line-height:1.1; font-variant-numeric:tabular-nums; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.coin-num i { font-style:normal; font-size:15px; color:#c98a2b; margin-right:2px; }
+.coin-div { width:1px; align-self:stretch; background:rgba(0,0,0,.08); margin:0 10px; }
+/* 心意币记录里的账户归属标签（我 / TA） */
+.pr-side { font-size:11px; color:#b7791f; background:rgba(199,138,43,.12); border-radius:8px; padding:1px 7px; flex-shrink:0; font-weight:600; }
 
 /* ===== 世界观·他偶发浮层（灵体在身边，字卡传讯） ===== */
 .ta-chime-note { position:fixed; left:50%; bottom:22%; transform:translate(-50%,8px); z-index:60; display:flex; align-items:center; gap:8px; max-width:86%; padding:10px 16px; border-radius:14px; background:rgba(255,255,255,.94); border:1px solid rgba(232,83,61,.22); box-shadow:0 6px 22px rgba(0,0,0,.10); font-size:14px; color:var(--ink,#444); opacity:0; pointer-events:none; transition:opacity .4s, transform .4s; }

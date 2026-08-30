@@ -862,6 +862,23 @@
               if (v instanceof Blob) sz = v.size;
               else if (v instanceof ArrayBuffer) sz = v.byteLength;
               else if (typeof v === 'string') sz = v.length * 2;
+              // v3.26.x OOM：聊天记录已改 IDB 直存数组——数组不再整包 JSON.stringify 量大小
+              //（诊断页打开时对 150MB 级数组做 stringify 本身就是一次秒级长任务），改浅层估算
+              else if (Array.isArray(v)) {
+                let n = 0;
+                for (let i = 0; i < v.length; i++) {
+                  const m = v[i];
+                  if (typeof m === 'string') { n += m.length; continue; }
+                  if (!m || typeof m !== 'object') { n += 32; continue; }
+                  const t = m.text; if (typeof t === 'string') n += t.length;
+                  const im = m.img; if (typeof im === 'string') n += im.length;
+                  const vc = m.voice; if (typeof vc === 'string') n += vc.length;
+                  const ps = m.parts;
+                  if (Array.isArray(ps)) { for (let j = 0; j < ps.length; j++) { const p = ps[j]; if (p && typeof p.v === 'string') n += p.v.length; } }
+                  n += 64;
+                }
+                sz = n * 2;
+              }
               else if (v !== undefined && v !== null) sz = JSON.stringify(v).length * 2;
             } catch (e) { sz = -1; }
             return sz;

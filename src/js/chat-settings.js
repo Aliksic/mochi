@@ -58,6 +58,43 @@
       ? { inBg: '#2a2a2a', inInk: '#f0f0f0', outBg: '#3a3a3a', outInk: '#ffffff', timeInk: '#8a8a8a', sendBg: '#f0f0f0', sendInk: '#111111' }
       : { inBg: '#ffffff', inInk: '#111111', outBg: '#111111', outInk: '#ffffff', timeInk: '#111111', sendBg: '#111111', sendInk: '#ffffff' };
   }
+  // v3.26.x：单聊气泡对比度自愈——出站/入站文字色与背景色同色或极低对比（用户误设/导入美化方案）
+  // 时注入高优先级覆盖样式强制文字可见。群聊有 GC_MIN_CONTRAST 保护（group-chat.js），单聊此前没有，
+  // 导致出站消息文字与背景同色看不见（入站因 dark.css:87 覆盖 background 通常不受影响）。
+  function _csHexRgb(h) {
+    if (!h || typeof h !== 'string') return null;
+    var s = h.trim(); if (s.charAt(0) === '#') s = s.slice(1);
+    if (s.length === 3) s = s[0] + s[0] + s[1] + s[1] + s[2] + s[2];
+    if (s.length !== 6) return null;
+    var n = parseInt(s, 16); if (isNaN(n)) return null;
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  }
+  function _csRelLum(rgb) {
+    if (!rgb) return 0;
+    function ch(c) { c = c / 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); }
+    return 0.2126 * ch(rgb[0]) + 0.7152 * ch(rgb[1]) + 0.0722 * ch(rgb[2]);
+  }
+  function _csContrast(c1, c2) {
+    var l1 = _csRelLum(_csHexRgb(c1)), l2 = _csRelLum(_csHexRgb(c2));
+    if (l1 === 0 && l2 === 0) return 0;
+    return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+  }
+  function _csHiInk(bg) {
+    var rgb = _csHexRgb(bg); return (rgb && _csRelLum(rgb) < 0.5) ? '#ffffff' : '#111111';
+  }
+  function _ensureBubbleContrast() {
+    var fix = document.getElementById('cs-contrast-fix'), rules = [];
+    var ob = root.style.getPropertyValue('--msg-out-bg') || '#111111';
+    var oi = root.style.getPropertyValue('--msg-out-ink') || '#ffffff';
+    if (_csContrast(oi, ob) < 1.5) rules.push('.msg-out .msg-bubble.msg-bubble{color:' + _csHiInk(ob) + '!important}');
+    var ib = root.style.getPropertyValue('--msg-in-bg') || '#ffffff';
+    var ii = root.style.getPropertyValue('--msg-in-ink') || '#111111';
+    if (_csContrast(ii, ib) < 1.5) rules.push('.msg-in .msg-bubble.msg-bubble{color:' + _csHiInk(ib) + '!important}');
+    if (rules.length) {
+      if (!fix) { fix = document.createElement('style'); fix.id = 'cs-contrast-fix'; document.head.appendChild(fix); }
+      fix.textContent = rules.join('\n');
+    } else if (fix) fix.remove();
+  }
   function applySettings() {
     // 设置页值写入（定义在最前，避免暂时性死区）
     const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
@@ -144,6 +181,7 @@
     set('cs-bg-val', bg ? '已设置' : '');
     const rm = document.getElementById('cs-bg-remove');
     if (rm) rm.hidden = !bg;
+    _ensureBubbleContrast();
   }
   window.applyChatSettings = applySettings;
   applySettings();

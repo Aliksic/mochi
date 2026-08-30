@@ -51,10 +51,11 @@
     // 都是全局根键，绝不能被 migrateLegacy 当旧顶层业务键迁进 default 桌面
     // （否则全局键被搬走/删除：表情包"消失"+ 迁移标记丢失每次重跑）
     'my-emoji-groups', 'mye-global-migrated',
-    // v3.11.x：存钱罐改全局共享（两人共同金库，p2-features.js）——键 xy-home-v2:piggy-*
-    // 走根命名空间，绝不能被 migrateLegacy 迁进 default 桌面（否则非 default 桌面余额读空）
+    // v3.11.x：存钱罐改全局共享（两人共同金库，p2-features.js）——键 xy-home-v2:piggy-* 与
+    // v3.26.x 心意币存钱独立账本 piggy-coin-* 都走根命名空间，绝不能被 migrateLegacy 迁进
+    // default 桌面（否则非 default 桌面余额读空）
     'piggy-log', 'piggy-goal-name', 'piggy-goal-amt', 'piggy-cards', 'piggy-last-visit',
-    'piggy-goals', 'piggy-goal-cur',
+    'piggy-goals', 'piggy-goal-cur', 'piggy-coin-log', 'piggy-coin-goals', 'piggy-coin-goal-cur', 'piggy-coin-last-visit',
     // v3.10.x：心意市集自定义商品改全局共享（所有桌面互通一份商品库，gift-shop.js）——
     // 键 xy-home-v2:market-custom 走根命名空间，绝不能被 migrateLegacy 迁进 default 桌面
     // （否则非 default 桌面读不到全局商品库，自定义商品"消失"）。market-migrated 为迁移幂等标记

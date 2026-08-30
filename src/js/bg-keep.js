@@ -177,10 +177,16 @@
 
   // v3.9.x：设置"后台保活"媒体会话条。音乐播放时（__musicPlaying）让位给 music-player
   // 的歌曲 metadata + 控制 handler，避免通知栏按钮空响应无法控制音乐。
+  // v3.28.x：音乐「还有播放意图」（__musicWantPlay=true，仅被外部打断短暂暂停）时同样
+  // 让位——否则一次后台瞬断就会把歌曲媒体条覆盖成「Mochi 后台保活」，音乐恢复后元数据
+  // 不再回来，通知栏媒体条时有时无（Chrome 把页面当闲置标签冻结 → 音乐停播）。让位窗口内
+  // 保活音频照常出声（页面持续输出音频，防冻结），歌曲条由 music-player 的 onplay 恢复。
+  function musicIntentPlaying() { try { return !!window.__musicWantPlay; } catch (e) { return false; } }
   function setKeepMediaSession() {
     try {
       if (!('mediaSession' in navigator) || !navigator.mediaSession || !window.MediaMetadata) return;
       if (window.__musicPlaying) return; // 音乐在播，保留音乐的媒体条
+      if (musicIntentPlaying()) return; // 音乐还想播（瞬断暂停中），不覆盖歌曲媒体条
       navigator.mediaSession.metadata = new window.MediaMetadata({
         title: 'Mochi 后台保活',
         artist: 'mochi',

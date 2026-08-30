@@ -330,6 +330,8 @@ html.ios-vv-fit:not(.ios-pwa-standalone) .phone,
 html.tablet.ios-vv-fit:not(.ios-pwa-standalone) .phone { height:var(--mochi-ios-h, 100dvh); }
 .ios-pwa-standalone .phone,
 html.tablet.ios-pwa-standalone .phone { height:100vh; }
+.ios-pwa-standalone.ios-fs-active .phone,
+html.tablet.ios-pwa-standalone.ios-fs-active .phone { height:var(--mochi-ios-h, 100dvh); }
 html.ios-pwa-standalone,
 html.ios-pwa-standalone body { background: var(--bg-b); }
 @media (display-mode: standalone) {
@@ -8406,9 +8408,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1788062733132">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.357</b></span>
-        <span class="sv-deploy">部署于 2026-08-30 12:05<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1788066843226">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.358</b></span>
+        <span class="sv-deploy">部署于 2026-08-30 13:14<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9498,7 +9500,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.357</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.358</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -9706,7 +9708,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.357</span>
+              <span class="lic-ver">v3.26.358</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -13710,6 +13712,21 @@ try {
 if (v instanceof Blob) sz = v.size;
 else if (v instanceof ArrayBuffer) sz = v.byteLength;
 else if (typeof v === 'string') sz = v.length * 2;
+else if (Array.isArray(v)) {
+let n = 0;
+for (let i = 0; i < v.length; i++) {
+const m = v[i];
+if (typeof m === 'string') { n += m.length; continue; }
+if (!m || typeof m !== 'object') { n += 32; continue; }
+const t = m.text; if (typeof t === 'string') n += t.length;
+const im = m.img; if (typeof im === 'string') n += im.length;
+const vc = m.voice; if (typeof vc === 'string') n += vc.length;
+const ps = m.parts;
+if (Array.isArray(ps)) { for (let j = 0; j < ps.length; j++) { const p = ps[j]; if (p && typeof p.v === 'string') n += p.v.length; } }
+n += 64;
+}
+sz = n * 2;
+}
 else if (v !== undefined && v !== null) sz = JSON.stringify(v).length * 2;
 } catch (e) { sz = -1; }
 return sz;
@@ -14081,7 +14098,24 @@ function tryOnce() {
 return open().then(db => new Promise((resolve) => {
 let done = false;
 let lim = 4000;
-try { if (typeof value === 'string' && value.length > 262144) lim = 4000 + Math.min(26000, Math.ceil(value.length / 262144) * 2000); } catch (e) {}
+try {
+let est = 0;
+if (typeof value === 'string') est = value.length;
+else if (Array.isArray(value)) {
+for (let i = 0; i < value.length; i++) {
+const m = value[i];
+if (typeof m === 'string') { est += m.length; continue; }
+if (!m || typeof m !== 'object') { est += 32; continue; }
+const t = m.text; if (typeof t === 'string') est += t.length;
+const im = m.img; if (typeof im === 'string') est += im.length;
+const vc = m.voice; if (typeof vc === 'string') est += vc.length;
+const ps = m.parts;
+if (Array.isArray(ps)) { for (let j = 0; j < ps.length; j++) { const p = ps[j]; if (p && typeof p.v === 'string') est += p.v.length; } }
+est += 64;
+}
+}
+if (est > 262144) lim = 4000 + Math.min(26000, Math.ceil(est / 262144) * 2000);
+} catch (e) {}
 const t = setTimeout(function () {
 if (done) return; done = true;
 dbPromise = null; // 连接疑似挂起，下次 open 重建
@@ -17274,6 +17308,11 @@ const BEAUTY_KEYS = [
 BEAUTY_KEYS.push('card-bg-' + t, 'card-bg-mask-' + t);
 });
 for (var _i = 0; _i < 5; _i++) BEAUTY_KEYS.push('page-bg-' + _i);
+['deco','quote','fish','checkin','music','memo','mood','week','weekend','desk-clock','desk-calendar','desk-timer','desk-anniv'].forEach(function(t) {
+['lbl','days','date','title','body','heart','txt','btn','tag','song','artist','times','sub','val','time','disp','mode','label','name'].forEach(function(k) {
+BEAUTY_KEYS.push('widget-text-' + t + '-' + k);
+});
+});
 const collectBeauty = () => {
 const data = {};
 BEAUTY_KEYS.forEach(k => { const v = store.get(k); if (v !== null && v !== undefined) data[k] = v; });
@@ -17795,6 +17834,100 @@ const cardBgSel = (type) => {
 const def = CARD_BG_TYPES.find(c => c.type === type);
 return def ? def.sel : '';
 };
+const WIDGET_TEXT_PARTS = {
+'deco': [
+{ key: 'lbl', label: '昵称', sel: '[data-card-bg="deco"] .lbl' },
+{ key: 'days', label: '纪念天数', sel: '#love-days' },
+{ key: 'date', label: '纪念日期', sel: '#love-date' },
+],
+'quote': [
+{ key: 'title', label: '标题', sel: '[data-card-bg="quote"] .mc-top' },
+{ key: 'body', label: '今日情话内容', sel: '#love-quote' },
+],
+'fish': [
+{ key: 'title', label: '标题', sel: '[data-card-bg="fish"] .mc-top' },
+{ key: 'body', label: '摸鱼天数', sel: '[data-card-bg="fish"] .mc-b' },
+],
+'checkin': [
+{ key: 'heart', label: '爱心', sel: '[data-card-bg="checkin"] .ck-heart' },
+{ key: 'txt', label: '打卡文案', sel: '[data-card-bg="checkin"] .ck-txt' },
+{ key: 'btn', label: '打卡按钮', sel: '[data-card-bg="checkin"] .ck-btn' },
+],
+'music': [
+{ key: 'tag', label: '正在播放标签', sel: '[data-card-bg="music"] .mw-tag' },
+{ key: 'song', label: '歌名', sel: '#mw-song' },
+{ key: 'artist', label: '歌手', sel: '#mw-artist' },
+{ key: 'times', label: '播放时间', sel: '[data-card-bg="music"] .mw-times' },
+],
+'memo': [
+{ key: 'title', label: '标题', sel: '[data-card-bg="memo"] .mc-top' },
+{ key: 'body', label: '备忘内容', sel: '#memo-text' },
+],
+'mood': [
+{ key: 'title', label: '标题', sel: '[data-card-bg="mood"] .mc-top' },
+{ key: 'body', label: '心情内容', sel: '#today-mood-text' },
+],
+'week': [
+{ key: 'title', label: '标题', sel: '[data-card-bg="week"] .mc-top' },
+{ key: 'days', label: '日期格', sel: '[data-card-bg="week"] .week-day:not(.today), [data-card-bg="week"] .week-day:not(.today) b' },
+],
+'weekend': [
+{ key: 'days', label: '标题', sel: '#weekend-days' },
+{ key: 'sub', label: '副标题', sel: '[data-card-bg="weekend"] .we-sub' },
+{ key: 'val', label: '摸鱼/工作值', sel: '[data-card-bg="weekend"] .we-ta, [data-card-bg="weekend"] .we-ta b' },
+{ key: 'btn', label: '摸鱼按钮', sel: '#weekend-fish' },
+],
+'desk-clock': [
+{ key: 'time', label: '时间', sel: '#dc-time' },
+{ key: 'date', label: '日期', sel: '#dc-date' },
+],
+'desk-calendar': [
+{ key: 'title', label: '月份标题', sel: '#dcal-title' },
+],
+'desk-timer': [
+{ key: 'disp', label: '计时显示', sel: '#dt-disp' },
+{ key: 'mode', label: '模式标签', sel: '#dt-mode-label' },
+{ key: 'btn', label: '按钮文字', sel: '.desk-timer .dt-btn' },
+],
+'desk-anniv': [
+{ key: 'label', label: '标签', sel: '[data-card-bg="desk-anniv"] .da-label' },
+{ key: 'days', label: '天数', sel: '#da-days' },
+{ key: 'name', label: '纪念日名', sel: '#da-name' },
+],
+};
+const textColorSwatches = [
+{ color: '#111111', label: '默认黑' },
+{ color: '#333333', label: '深灰' },
+{ color: '#555555', label: '中灰' },
+{ color: '#777777', label: '灰' },
+{ color: '#999999', label: '浅灰' },
+{ color: '#bbbbbb', label: '中浅灰' },
+{ color: '#dddddd', label: '浅白' },
+{ color: '#ffffff', label: '纯白' },
+{ color: '#e05555', label: '樱花粉' },
+{ color: '#d65c7a', label: '玫瑰' },
+{ color: '#5555cc', label: '雾霭蓝' },
+{ color: '#2e8b57', label: '薄荷绿' },
+{ color: '#d4a017', label: '暖橘黄' },
+{ color: '#8e44ad', label: '淡紫' },
+{ color: '#cc6622', label: '暖橘' },
+{ color: '#b8d4e8', label: '天蓝' },
+];
+const widgetTextKey = (type, key) => 'widget-text-' + type + '-' + key;
+const applyWidgetText = (type, part, color) => {
+try {
+const els = document.querySelectorAll(part.sel);
+els.forEach(el => { if (el) el.style.color = color || ''; });
+} catch (e) {}
+};
+const applyAllWidgetTexts = () => {
+Object.keys(WIDGET_TEXT_PARTS).forEach(type => {
+WIDGET_TEXT_PARTS[type].forEach(part => {
+const c = store.get(widgetTextKey(type, part.key));
+if (c) applyWidgetText(type, part, c);
+});
+});
+};
 const MASK_ALPHA_LEGACY = { off: 0, light: 30, mid: 50, strong: 72, on: 50 };
 const maskAlphaOf = (type) => {
 const v = store.get('card-bg-mask-' + type);
@@ -17851,12 +17984,15 @@ if (--left <= 0) done();
 function refreshDeskVisuals() {
 try { window.applyAvatars(); } catch (e) {}
 try { applyAllCardBgs(); } catch (e) {}
+try { applyAllWidgetTexts(); } catch (e) {}
 try { applyPageBgs(); } catch (e) {}
 try { renderDeskImages(); } catch (e) {}
 try { syncBgUI(); } catch (e) {}
 }
 applyAllCardBgs();
+applyAllWidgetTexts();
 document.addEventListener('contact-switched', applyAllCardBgs);
+document.addEventListener('contact-switched', applyAllWidgetTexts);
 const openCardBgMenu = (type, name, anchorEl) => {
 const img = store.get('card-bg-' + type);
 const widgetEl = anchorEl ? anchorEl.closest('[data-desk-widget]') : null;
@@ -17901,6 +18037,7 @@ if (img) pills.push({ label: '清除图片', value: '2' });
 if (img) pills.push({ label: '遮罩浓度', value: 'mask' });
 if (img) pills.push({ label: maskPctOf(type) === 0 ? '原图直出 ✓' : '原图直出', value: 'origin' });
 pills.push({ label: '组件透明度', value: 'opacity' });
+if (WIDGET_TEXT_PARTS[type]) pills.push({ label: '文字颜色', value: 'text' });
 if (widgetEl) {
 pills.push({ label: '上移', value: 'up' });
 pills.push({ label: '下移', value: 'down' });
@@ -17967,6 +18104,38 @@ min: 0, max: 100, step: 1, value: curOp, label: '拖动调整组件透明度', u
 onChange: (val) => { document.documentElement.style.setProperty('--widget-opacity', String(val / 100)); },
 },
 pills: [{ label: '恢复默认', value: '__reset__' }],
+});
+} else if (v === 'text') {
+const parts = WIDGET_TEXT_PARTS[type] || [];
+if (!parts.length) return;
+openCardMenuNext('文字颜色', '', (sv) => {
+const part = parts.find(p => p.key === sv);
+if (!part) return;
+const storeKey = widgetTextKey(type, part.key);
+const current = store.get(storeKey) || '#111111';
+window.openModal(part.label + '颜色', '', (cv) => {
+const color = (typeof cv === 'number' && textColorSwatches[cv]) ? textColorSwatches[cv].color : cv;
+if (!color) return;
+if (color === '__reset__') {
+store.remove(storeKey);
+applyWidgetText(type, part, '');
+toast(part.label + '已恢复默认颜色');
+return;
+}
+store.set(storeKey, color);
+applyWidgetText(type, part, color);
+toast(part.label + '颜色已设置');
+}, {
+colorPicker: true,
+noInput: true,
+color: current,
+swatches: textColorSwatches,
+pills: [{ label: '恢复默认', value: '__reset__' }],
+});
+}, {
+noInput: true,
+staticText: '选择要改颜色的文字部位，再选择颜色',
+pills: parts.map(p => ({ label: p.label + (store.get(widgetTextKey(type, p.key)) ? ' · 已设色' : ''), value: p.key })),
 });
 } else if (v === 'up') moveWidget('up');
 else if (v === 'down') moveWidget('down');
@@ -20612,47 +20781,86 @@ try { if (window.applyContinueSayUI) window.applyContinueSayUI(); } catch (e) {}
 });
 const LS_SNAP_LIMIT = 2 * 1024 * 1024;
 let lsSnapTimer = null;
-let lsSnapPending = null; // { raw, prefix }：窗口内最新一次请求，trailing 时写
-function performLsSnapWrite(raw, prefix) {
-try {
-let snap = raw;
-if (snap.length > LS_SNAP_LIMIT) {
-const arr = JSON.parse(raw);
-if (Array.isArray(arr)) {
-snap = JSON.stringify(arr.map(m => {
+let lsSnapPending = null; // { arr, prefix }：窗口内最新一次请求，trailing 时写
+function msgsBytes(arr) {
+if (!Array.isArray(arr)) return 0;
+let n = 0;
+for (let i = 0; i < arr.length; i++) {
+const m = arr[i];
+if (!m || typeof m !== 'object') { n += 32; continue; }
+const t = m.text; if (typeof t === 'string') n += t.length;
+const im = m.img; if (typeof im === 'string') n += im.length;
+const vc = m.voice; if (typeof vc === 'string') n += vc.length;
+const ps = m.parts;
+if (Array.isArray(ps)) { for (let j = 0; j < ps.length; j++) { const p = ps[j]; if (p && typeof p.v === 'string') n += p.v.length; } }
+n += 64;
+}
+return n;
+}
+const CHAT_STR_THRESHOLD = 3 * 1024 * 1024;
+function persistMsgsToIdb(key, arr) {
+if (!window.idbSet) return Promise.resolve(false);
+if (!arr || !arr.length || msgsBytes(arr) <= CHAT_STR_THRESHOLD) {
+return window.idbSet(key, JSON.stringify(arr || []));
+}
+return window.idbSet(key, arr).then(ok => {
+if (ok) return true;
+return window.idbSet(key, JSON.stringify(arr));
+});
+}
+function liteSnapArray(arr) {
+if (msgsBytes(arr) <= LS_SNAP_LIMIT) return arr; // 小历史：全量快照
+return arr.map(m => {
 if (!m || typeof m !== 'object') return m;
-const hasBig = m.img || m.voice || (typeof m.text === 'string' && m.text.length > 8192);
+const hasBig = m.img || m.voice || (typeof m.text === 'string' && m.text.length > 8192) ||
+(Array.isArray(m.parts) && m.parts.some(p => p && typeof p.v === 'string' && p.v.length > 512));
 if (!hasBig) return m;
 const c = Object.assign({}, m);
 c._lsLite = 1;
 if (c.img) c.img = '';
 if (c.voice) c.voice = '';
 if (typeof c.text === 'string' && c.text.length > 8192) c.text = '[内容已省略]';
+if (Array.isArray(c.parts)) {
+c.parts = c.parts.map(p => {
+if (!p || typeof p !== 'object' || typeof p.v !== 'string') return p;
+if (p.k === 'img' || p.k === 'voice' || p.v.length > 8192) {
+const pc = Object.assign({}, p);
+if (p.k === 'img' || p.k === 'voice') pc.v = '';
+else pc.v = '[内容已省略]';
+return pc;
+}
+return p;
+});
+}
 return c;
-}));
+});
 }
-}
+function performLsSnapWrite(arr, prefix) {
+try {
+if (!Array.isArray(arr)) return;
+const snap = JSON.stringify(liteSnapArray(arr));
 if (snap.length <= LS_SNAP_LIMIT) {
 localStorage.setItem((prefix || window.activePrefix()) + ':chat-msgs', snap);
 }
 } catch (e) {}
 }
-function writeLsSnapshot(raw, prefix, force) {
+function writeLsSnapshot(arr, prefix, force) {
+if (!Array.isArray(arr)) return;
 if (force) {
 if (lsSnapTimer) { clearTimeout(lsSnapTimer); lsSnapTimer = null; }
 lsSnapPending = null;
-performLsSnapWrite(raw, prefix);
+performLsSnapWrite(arr, prefix);
 return;
 }
-if (raw.length <= LS_SNAP_LIMIT) { performLsSnapWrite(raw, prefix); return; }
-if (lsSnapTimer) { lsSnapPending = { raw: raw, prefix: prefix }; return; }
-performLsSnapWrite(raw, prefix);
+if (msgsBytes(arr) <= LS_SNAP_LIMIT) { performLsSnapWrite(arr, prefix); return; }
+if (lsSnapTimer) { lsSnapPending = { arr: arr, prefix: prefix }; return; }
+performLsSnapWrite(arr, prefix);
 lsSnapTimer = setTimeout(() => {
 lsSnapTimer = null;
 if (lsSnapPending) {
 const p = lsSnapPending;
 lsSnapPending = null;
-performLsSnapWrite(p.raw, p.prefix);
+performLsSnapWrite(p.arr, p.prefix);
 }
 }, 4000);
 }
@@ -20679,7 +20887,7 @@ try { if (window.activePrefix() !== fusePrefix) return; } catch (e) {}
 chatDbReady = true;
 const fuseMsgs = (pendingLocal && pendingLocal.length) ? pendingLocal : msgs;
 if (fuseMsgs && fuseMsgs.length) {
-try { writeLsSnapshot(JSON.stringify(fuseMsgs), fusePrefix, true); } catch (e) {}
+try { writeLsSnapshot(fuseMsgs, fusePrefix, true); } catch (e) {}
 } else {
 try {
 const lsRaw = store.get('chat-msgs');
@@ -20703,21 +20911,20 @@ scrollChatBottom();
 function saveMsgs() {
 if (!chatDbReady) {
 try { pendingLocal = msgs.slice(); } catch (e) {}
-if (msgs.length) writeLsSnapshot(JSON.stringify(msgs), undefined, true);
+if (msgs.length) writeLsSnapshot(msgs, undefined, true);
 return;
 }
 const myPrefix = window.activePrefix();
 schedulePersist(() => {
 if (!msgs.length && authLoadedPrefix !== myPrefix) return;
-const data = JSON.stringify(msgs);
-try { if (window.idbSet) window.idbSet(myPrefix + ':chat-msgs', data); } catch (e) {}
-writeLsSnapshot(data, myPrefix);
+try { if (window.idbSet) persistMsgsToIdb(myPrefix + ':chat-msgs', msgs); } catch (e) {}
+writeLsSnapshot(msgs, myPrefix);
 });
 }
 function flushSave() {
 if (window.__resetting) return;
 flushPersistNow();
-if (!chatDbReady && msgs.length) writeLsSnapshot(JSON.stringify(msgs), undefined, true);
+if (!chatDbReady && msgs.length) writeLsSnapshot(msgs, undefined, true);
 }
 window.chatFlushSave = flushSave;
 try {
@@ -20798,8 +21005,8 @@ const finish = () => {
 try { if (sysNickCatchup()) changed = true; } catch (e) {}
 normPrefix = null;
 if (!changed) return;
-try { if (window.idbSet) window.idbSet(myPre + ':chat-msgs', JSON.stringify(msgs)); } catch (e) {}
-try { writeLsSnapshot(JSON.stringify(msgs), myPre, true); } catch (e) {}
+try { if (window.idbSet) persistMsgsToIdb(myPre + ':chat-msgs', msgs); } catch (e) {}
+try { writeLsSnapshot(msgs, myPre, true); } catch (e) {}
 try { if (chatVisible() && msgs.length) { renderWindow(false, true); scrollChatBottom(); } } catch (e) {}
 };
 const tick = () => {
@@ -20910,8 +21117,8 @@ if (window.idbSet) window.idbSet(myPrefix + ':chat-msgs', lsRaw);
 if (pendingLocal && pendingLocal.length) {
 msgs = pendingLocal.concat(msgs.filter(m => !pendingLocal.some(p => p && p.ts === m.ts && p.text === m.text)));
 pendingLocal = null;
-try { if (window.idbSet) window.idbSet(myPrefix + ':chat-msgs', JSON.stringify(msgs)); } catch (e) {}
-writeLsSnapshot(JSON.stringify(msgs), myPrefix, true);
+try { if (window.idbSet) persistMsgsToIdb(myPrefix + ':chat-msgs', msgs); } catch (e) {}
+writeLsSnapshot(msgs, myPrefix, true);
 }
 });
 return;
@@ -20972,13 +21179,18 @@ lastIdbLoadAt = Date.now();
 try { localStorage.removeItem('xy-home-v2:chat-msgs'); } catch (e) {}
 if (changed) {
 __prof('ch6_save');
-try { if (window.idbSet) window.idbSet(myPrefix + ':chat-msgs', JSON.stringify(msgs)); } catch (e) {}
-try { writeLsSnapshot(JSON.stringify(msgs), myPrefix, true); } catch (e) {}
+try { if (window.idbSet) persistMsgsToIdb(myPrefix + ':chat-msgs', msgs); } catch (e) {}
+try { writeLsSnapshot(msgs, myPrefix, true); } catch (e) {}
 __prof('ch7_end');
 if (chatVisible() && chatNearBottom()) {
 renderWindow(false, true);
 scrollChatBottom();
 }
+}
+if (typeof v === 'string' && v.length > CHAT_STR_THRESHOLD && idbArr && idbArr.length) {
+setTimeout(function () {
+try { if (window.activePrefix() === myPrefix && window.idbSet) persistMsgsToIdb(myPrefix + ':chat-msgs', msgs); } catch (e) {}
+}, 0);
 }
 scheduleDeferredNormalization();
 } catch (e) { /* 解析失败：不置 chatDbReady，下次进入再重试 */ }
@@ -22472,9 +22684,8 @@ sessionChangedIdx.clear();
 chatDbReady = true;
 renderStart = 0;
 cancelPersist();
-const importedData = JSON.stringify(msgs);
-try { if (window.idbSet) window.idbSet(window.activePrefix() + ':chat-msgs', importedData); } catch (e) {}
-writeLsSnapshot(importedData, undefined, true);
+try { if (window.idbSet) persistMsgsToIdb(window.activePrefix() + ':chat-msgs', msgs); } catch (e) {}
+writeLsSnapshot(msgs, undefined, true);
 if (body) body.innerHTML = '';
 clearChatUnread();
 if (chatVisible() && msgs.length) {
@@ -22843,9 +23054,8 @@ if (!msgs.length && authLoadedPrefix !== window.activePrefix()) return;
 const myPrefix = window.activePrefix();
 schedulePersist(() => {
 if (!msgs.length && authLoadedPrefix !== myPrefix) return;
-const data = JSON.stringify(msgs);
-try { if (window.idbSet) window.idbSet(myPrefix + ':chat-msgs', data); } catch (e) {}
-writeLsSnapshot(data, myPrefix, true);
+try { if (window.idbSet) persistMsgsToIdb(myPrefix + ':chat-msgs', msgs); } catch (e) {}
+writeLsSnapshot(msgs, myPrefix, true);
 });
 }
 window.chatChooseReply = function (msgIdx, answer, opt, match) {
@@ -30644,7 +30854,7 @@ process(data);
 reader.readAsDataURL(f);
 });
 function finishUpload(ok, skip, skipNotAudio) {
-saveGroups(groups);
+scheduleSave();
 renderGroupsBar();
 render();
 const msgs = [];
@@ -30700,7 +30910,7 @@ if (!g) { g = ['未分组', []]; groups[cur].push(g); newGroups++; }
 if (pushCard(g, line)) imported++;
 }
 });
-saveGroups(groups);
+scheduleSave();
 renderGroupsBar();
 render();
 toast('已导入 ' + imported + ' 条字卡' + (dup ? '，自动去重 ' + dup + ' 条' : '') + (newGroups ? '，新建 ' + newGroups + ' 个分组' : ''));
@@ -31384,6 +31594,40 @@ return dark
 ? { inBg: '#2a2a2a', inInk: '#f0f0f0', outBg: '#3a3a3a', outInk: '#ffffff', timeInk: '#8a8a8a', sendBg: '#f0f0f0', sendInk: '#111111' }
 : { inBg: '#ffffff', inInk: '#111111', outBg: '#111111', outInk: '#ffffff', timeInk: '#111111', sendBg: '#111111', sendInk: '#ffffff' };
 }
+function _csHexRgb(h) {
+if (!h || typeof h !== 'string') return null;
+var s = h.trim(); if (s.charAt(0) === '#') s = s.slice(1);
+if (s.length === 3) s = s[0] + s[0] + s[1] + s[1] + s[2] + s[2];
+if (s.length !== 6) return null;
+var n = parseInt(s, 16); if (isNaN(n)) return null;
+return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+function _csRelLum(rgb) {
+if (!rgb) return 0;
+function ch(c) { c = c / 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); }
+return 0.2126 * ch(rgb[0]) + 0.7152 * ch(rgb[1]) + 0.0722 * ch(rgb[2]);
+}
+function _csContrast(c1, c2) {
+var l1 = _csRelLum(_csHexRgb(c1)), l2 = _csRelLum(_csHexRgb(c2));
+if (l1 === 0 && l2 === 0) return 0;
+return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+}
+function _csHiInk(bg) {
+var rgb = _csHexRgb(bg); return (rgb && _csRelLum(rgb) < 0.5) ? '#ffffff' : '#111111';
+}
+function _ensureBubbleContrast() {
+var fix = document.getElementById('cs-contrast-fix'), rules = [];
+var ob = root.style.getPropertyValue('--msg-out-bg') || '#111111';
+var oi = root.style.getPropertyValue('--msg-out-ink') || '#ffffff';
+if (_csContrast(oi, ob) < 1.5) rules.push('.msg-out .msg-bubble.msg-bubble{color:' + _csHiInk(ob) + '!important}');
+var ib = root.style.getPropertyValue('--msg-in-bg') || '#ffffff';
+var ii = root.style.getPropertyValue('--msg-in-ink') || '#111111';
+if (_csContrast(ii, ib) < 1.5) rules.push('.msg-in .msg-bubble.msg-bubble{color:' + _csHiInk(ib) + '!important}');
+if (rules.length) {
+if (!fix) { fix = document.createElement('style'); fix.id = 'cs-contrast-fix'; document.head.appendChild(fix); }
+fix.textContent = rules.join('\n');
+} else if (fix) fix.remove();
+}
 function applySettings() {
 const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
 const DEF = themeDefaults();
@@ -31448,6 +31692,7 @@ set('cs-bubble-radius-val', rn ? rn.label : (rad === '0px' ? '方形' : rad));
 set('cs-bg-val', bg ? '已设置' : '');
 const rm = document.getElementById('cs-bg-remove');
 if (rm) rm.hidden = !bg;
+_ensureBubbleContrast();
 }
 window.applyChatSettings = applySettings;
 applySettings();
@@ -36252,6 +36497,10 @@ try { a.style.display = 'none'; document.body.appendChild(a); } catch (e) {}
 liveAudioEls.push(a);
 return a;
 }
+function validAudioSrc(v) {
+return typeof v === 'string' &&
+(/^https?:\/\//i.test(v) || /^blob:/i.test(v) || /^data:/i.test(v));
+}
 function teardownAudio() {
 if (audio) { killAudioEl(audio); audio = null; }
 liveAudioEls.forEach(killAudioEl);
@@ -36360,8 +36609,15 @@ document.removeEventListener('touchend', retry, true);
 document.removeEventListener('click', retry, true);
 }
 let wantPlay = false;
+try {
+Object.defineProperty(window, '__musicWantPlay', {
+configurable: true,
+get: function () { return wantPlay; }
+});
+} catch (e) {}
 let bgResumeTimers = [];
 let bgResumeFails = 0; // 连续补播失败计数（死链/持续拦截时封顶，防止看门狗无限拉取）
+let bgResumeFailAt = 0; // 最近一次补播失败时刻；封顶后冷却 60s 清零重试一轮，后台不永久放弃
 function clearBgResume() {
 bgResumeTimers.forEach(clearTimeout);
 bgResumeTimers = [];
@@ -36373,7 +36629,11 @@ bgResumeTimers.push(setTimeout(function () { tryResumePlayback(); }, d));
 });
 }
 function tryResumePlayback() {
-if (!wantPlay || callHoldPending || bgResumeFails >= 6) return;
+if (!wantPlay || callHoldPending) return;
+if (bgResumeFails >= 6) {
+if (Date.now() - bgResumeFailAt < 60000) return;
+bgResumeFails = 0;
+}
 if (taPauseActive) return;
 if (httpsRetrying || demoFallbackBusy) return;
 const m = findTrack(currentId);
@@ -36390,8 +36650,8 @@ try { audio.muted = true; } catch (e) {}
 const p2 = audio.play();
 if (p2 && p2.then) {
 p2.then(function () { try { if (audio) audio.muted = false; } catch (e) {} bgResumeFails = 0; })
-.catch(function () { bgResumeFails++; rebuildAndPlay(m); });
-} else { bgResumeFails++; rebuildAndPlay(m); }
+.catch(function () { bgResumeFails++; bgResumeFailAt = Date.now(); rebuildAndPlay(m); });
+} else { bgResumeFails++; bgResumeFailAt = Date.now(); rebuildAndPlay(m); }
 });
 }
 }
@@ -36405,7 +36665,7 @@ audio.preload = 'auto';
 setupHandlers(m);
 audio.src = m.url;
 const p = audio.play();
-if (p && p.catch) p.catch(function () { bgResumeFails++; });
+if (p && p.catch) p.catch(function () { bgResumeFails++; bgResumeFailAt = Date.now(); });
 }
 ['visibilitychange', 'focus'].forEach(function (ev) {
 document.addEventListener(ev, function () {
@@ -36629,8 +36889,9 @@ armAutoResume();
 } else { armAutoResume(); }
 }
 };
-audio.onplay = function () { playRejected = false; bgResumeFails = 0; clearStallGuard(); disarmAutoResume(); clearBgResume(); wantPlay = true; syncPlayIcons(true); if (m) failMap[m.id] = 0; try { if (navigator.mediaSession) navigator.mediaSession.playbackState = 'playing'; } catch (e) {} try { window.__musicPlaying = true; } catch (e) {} };
-audio.onpause = function () { syncPlayIcons(false); try { if (navigator.mediaSession) navigator.mediaSession.playbackState = 'paused'; } catch (e) {} try { window.__musicPlaying = false; } catch (e) {} // v3.10.x：非用户暂停（后台省电/音频焦点抢占/系统打断）→ 定时补播反击
+audio.onplay = function () { playRejected = false; bgResumeFails = 0; clearStallGuard(); disarmAutoResume(); clearBgResume(); wantPlay = true; syncPlayIcons(true); if (m) failMap[m.id] = 0; try { if (navigator.mediaSession) navigator.mediaSession.playbackState = 'playing'; } catch (e) {} try { window.__musicPlaying = true; } catch (e) {} // v3.28.x：每次真正出声都重新绑定歌曲媒体条——后台短暂打断被 bg-keep 接管媒体会话（元数据换成「Mochi 后台保活」）后，恢复播放时若不重设歌曲元数据，通知栏媒体条会停在保活条或直接消失
+try { updateMediaSession(true); } catch (e) {} };
+audio.onpause = function () { syncPlayIcons(false); try { if (navigator.mediaSession) navigator.mediaSession.playbackState = (wantPlay && !callHoldPending) ? 'playing' : 'paused'; } catch (e) {} try { window.__musicPlaying = false; } catch (e) {} // v3.28.x：外部打断（还想播）保持 playbackState='playing'，避免 Chrome 把页面当闲置标签冻结、通知栏媒体条消失；仅用户主动暂停才标 'paused'。v3.10.x：非用户暂停（后台省电/音频焦点抢占/系统打断）→ 定时补播反击
 if (wantPlay && !callHoldPending && !taPauseActive) scheduleBgResume(); };
 }
 function playTrack(id, fromWidget) {
@@ -36693,6 +36954,10 @@ loadLocal(store.get('music-file:' + m.id));
 return;
 }
 audio = createAudio();;
+if (!validAudioSrc(m.url)) {
+offerRemoveDamagedSong(m);
+return;
+}
 try { audio.referrerPolicy = 'no-referrer'; } catch (e) {}
 audio.src = m.url;
 startPlayback(m);
@@ -44507,10 +44772,12 @@ KEEP_AUDIO_DATAURL = 'data:audio/wav;base64,' + btoa(bin);
 } catch (e) { KEEP_AUDIO_DATAURL = ''; }
 return KEEP_AUDIO_DATAURL;
 }
+function musicIntentPlaying() { try { return !!window.__musicWantPlay; } catch (e) { return false; } }
 function setKeepMediaSession() {
 try {
 if (!('mediaSession' in navigator) || !navigator.mediaSession || !window.MediaMetadata) return;
 if (window.__musicPlaying) return; // 音乐在播，保留音乐的媒体条
+if (musicIntentPlaying()) return; // 音乐还想播（瞬断暂停中），不覆盖歌曲媒体条
 navigator.mediaSession.metadata = new window.MediaMetadata({
 title: 'Mochi 后台保活',
 artist: 'mochi',
@@ -54853,7 +55120,7 @@ function makeId() { return 'n' + Date.now().toString(36) + Math.floor(Math.rando
 function ensureArc(id) {
 let o = loadRaw(id), dirty = false;
 if (!o) { o = { created: Date.now(), loves: [], bonds: [], moments: [], records: [], wonders: [], history: [] }; dirty = true; }
-['loves', 'bonds', 'moments', 'records', 'wonders', 'history', 'tastes', 'habits', 'things', 'ifchanges'].forEach(k => { if (!Array.isArray(o[k])) { o[k] = []; dirty = true; } });
+['loves', 'bonds', 'moments', 'records', 'wonders', 'history', 'tastes', 'habits', 'things', 'ifchanges', 'dreams'].forEach(k => { if (!Array.isArray(o[k])) { o[k] = []; dirty = true; } });
 if (!normObj(o.who)) { o.who = { f: {} }; dirty = true; } else if (!normObj(o.who.f)) { o.who.f = {}; dirty = true; }
 if (!normObj(o.relate)) { o.relate = { f: {}, notes: [] }; dirty = true; }
 else { if (!normObj(o.relate.f)) { o.relate.f = {}; dirty = true; } if (!Array.isArray(o.relate.notes)) { o.relate.notes = []; dirty = true; } }
@@ -54883,9 +55150,9 @@ materializeDesk(cid);
 } catch (e) {}
 }
 let cur = '';
-let view = 'home';           // home|who|tastes|habits|relate|knows|pos|things|shared|ifw
+let view = 'home';           // home|who|tastes|habits|relate|knows|pos|things|dream|shared|ifw
 const tab = { tastes: 'like', habits: 'daily', things: 'use', shared: 'first', knows: 'cards' };
-const VALID_VIEWS = ['home', 'who', 'tastes', 'habits', 'relate', 'knows', 'pos', 'things', 'shared', 'ifw'];
+const VALID_VIEWS = ['home', 'who', 'tastes', 'habits', 'relate', 'knows', 'pos', 'things', 'dream', 'shared', 'ifw'];
 window.openNarc = function (view0) {
 syncCur();
 if (!page || !root) return;
@@ -54977,6 +55244,7 @@ const rows = [
 ['knows', '我对TA的了解', '发现 ' + activeLovesOf(arc).length + ' · 未解 ' + wondersOpen, activeLovesOf(arc).length, true],
 ['pos', 'TA的位置感', 'TA常出现的位置与方位', posFilled],
 ['things', 'TA的物品', '常用 · 喜欢 · 互赠 · 共有', arc.things.length],
+['dream', 'TA的梦境', 'TA做过的、愿意让你知道的梦', arc.dreams.length],
 ['shared', '我们的共同记录', '第一次 · 共同经历 · 时间线', arc.bonds.length + arc.moments.length + arc.records.length],
 ['ifw', '当前IF世界', 'TA在这个世界里的身份与变化', ifwFilled]
 ];
@@ -55030,7 +55298,8 @@ const SECS = {
 who: ['TA是谁', '对应「关于我」——这里记的是TA。'], tastes: ['TA的喜好', '喜欢什么、不喜欢什么、以及那些说不清的偏好。'],
 habits: ['TA的习惯', '相处久了才会注意到的部分。'], relate: ['TA与我的相处', '我的档案记「我希望怎么相处」，这里记「TA实际上怎么和我相处」。'],
 knows: ['我对TA的了解', '不是系统告诉你的设定，是你一点点发现的TA。'], pos: ['TA的位置感', '不是固定坐标，是「我感觉TA常在哪边」。'],
-things: ['TA的物品', '和TA有关的物件，也是记忆的一部分。'], shared: ['我们的共同记录', '只记录「我们」共同发生的事——这是两个人的档案。'],
+things: ['TA的物品', '和TA有关的物件，也是记忆的一部分。'], dream: ['TA的梦境', 'TA做过的梦——有时候梦比话更真实。'],
+shared: ['我们的共同记录', '只记录「我们」共同发生的事——这是两个人的档案。'],
 ifw: ['当前IF世界', '世界母档在【我的档案·IF世界】；这里只写TA在这一侧的样子。']
 };
 const meta = SECS[view] || SECS.who;
@@ -55043,6 +55312,7 @@ else if (view === 'relate') h += relateHTML(arc);
 else if (view === 'knows') h += knowsHTML(arc);
 else if (view === 'pos') h += posHTML(arc);
 else if (view === 'things') h += thingsHTML(arc);
+else if (view === 'dream') h += dreamHTML(arc);
 else if (view === 'shared') h += sharedHTML(arc);
 else if (view === 'ifw') h += ifwHTML(arc);
 return h;
@@ -55171,6 +55441,18 @@ return h + '<div class="narc-empty">TA常用的东西、TA送你的东西、你�
 items.forEach(it => {
 const inner = '<div class="ni-top"></div><div class="ni-text">' + esc(it.t) + '</div>';
 h += itemShell(inner, '<span class="nk-ops">' + opBtn('edit-li', '编辑', ' data-kind="thing" data-id="' + it.id + '"') + opBtn('del-li', '删除', ' data-kind="thing" data-id="' + it.id + '"', 1) + '</span>');
+});
+return h;
+}
+function dreamHTML(arc) {
+let h = sectHead('TA的梦境', 'TA做过的梦——有时候梦比话更真实。', '<button class="narc-add" data-op="add-dream">＋ 记一个梦</button>');
+const items = arc.dreams.slice().sort((a, b) => b.created - a.created);
+if (!items.length) {
+return h + '<div class="narc-empty">TA说过的、被你记住的那些梦。<br>梦见你了吗？梦里有你吗？</div>';
+}
+items.forEach(it => {
+const inner = '<div class="ni-top"></div><div class="ni-text">' + esc(it.text) + '</div>';
+h += itemShell(inner, '<span class="ni-date">' + esc(it.date) + '</span><span class="nk-ops">' + opBtn('edit-dream', '编辑', ' data-id="' + it.id + '"') + opBtn('del-dream', '删除', ' data-id="' + it.id + '"', 1) + '</span>');
 });
 return h;
 }
@@ -55510,6 +55792,50 @@ arc.history.push({ time: Date.now(), text: '重要时刻：' + short(rec.text) }
 }
 saveArc(cur, arc); render();
 }
+function addDream() {
+if (!window.openModal) return;
+let phase = 'text', text = '', ctl = null;
+ctl = window.openModal('记一个梦', '', function (v) {
+if (phase === 'text') {
+const t = strim(v); if (!t) { ctl.stay(); ctl.focus(); return; }
+text = t; phase = 'date';
+ctl.stay(); ctl.title('梦到哪天？'); ctl.hint('留空默认今天。');
+ctl.text(mdstr(Date.now())); ctl.maxLen(30); ctl.input(true); ctl.ph('如 8月3日'); ctl.okText('保存');
+return;
+}
+if (phase === 'date') {
+const arc = ensureArc(cur);
+arc.dreams.push({ id: makeId(), text: text, date: strim(v) || mdstr(Date.now()), created: Date.now() });
+saveArc(cur, arc); toast('记住了一个梦'); render();
+}
+}, { placeholder: 'TA梦见……', maxlength: 200 });
+}
+function editDream(id) {
+const arc = ensureArc(cur); const it = arc.dreams.find(x => x.id === id); if (!it || !window.openModal) return;
+let phase = 'text', newText = '', ctl = null;
+ctl = window.openModal('编辑这个梦', it.text, function (v) {
+if (phase === 'text') {
+const t = strim(v); if (!t) { ctl.stay(); ctl.focus(); return; }
+newText = t; phase = 'date';
+ctl.stay(); ctl.title('梦到哪天？');
+ctl.text(it.date || mdstr(Date.now())); ctl.maxLen(30); ctl.input(true); ctl.ph('如 8月3日'); ctl.okText('保存');
+return;
+}
+if (phase === 'date') {
+it.text = newText; it.date = strim(v) || mdstr(Date.now());
+saveArc(cur, arc); toast('已更新'); render();
+}
+}, { placeholder: 'TA梦见……', maxlength: 200 });
+}
+function delDream(id) {
+if (!window.openModal) return;
+window.openModal('删掉这个梦？', '', function (v) {
+if (v !== 'del') return;
+const arc = ensureArc(cur);
+arc.dreams = arc.dreams.filter(x => x.id !== id);
+saveArc(cur, arc); toast('已删除'); render();
+}, { noInput: true, pill: 'del', pills: [{ label: '取消', value: 'no' }, { label: '删除', value: 'del' }] });
+}
 function addWonder() {
 if (!window.openModal) return;
 window.openModal('记一个想了解的事', '', function (v) {
@@ -55573,6 +55899,9 @@ case 'add-record': addRecord(); break;
 case 'edit-entry': editEntry(kind, id); break;
 case 'del-entry': delEntry(kind, id); break;
 case 'toggle-moment': if (kind === 'record') toggleMoment(id); break;
+case 'add-dream': addDream(); break;
+case 'edit-dream': editDream(id); break;
+case 'del-dream': delDream(id); break;
 case 'add-wonder': addWonder(); break;
 case 'solve-wonder': solveWonder(id); break;
 case 'reopen-wonder': reopenWonder(id); break;
@@ -55621,6 +55950,7 @@ clearTimeout(t._timer); t._timer = setTimeout(() => { t.className = 'cc-toast'; 
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 function short(s, n) { s = String(s == null ? '' : s); n = n || 18; return s.length > n ? s.slice(0, n) + '…' : s; }
 function strim(v) { return String(v == null ? '' : v).trim(); }
+function mdstr(ts) { const d = new Date(ts); return (d.getMonth() + 1) + '月' + d.getDate() + '日'; }
 const WHO_FIELDS = [
 ['name', '名字', '你的名字或常用昵称', 0],
 ['call', '我希望TA怎么叫我', '例如：小满、笨蛋、或者连名带姓', 0],
@@ -55692,7 +56022,7 @@ const cache = {};
 function ensureArc() {
 let o = cache[viewCid] || loadRaw(viewCid), dirty = false;
 if (!o) { o = { created: Date.now() }; dirty = true; }
-['tastes', 'habits', 'things', 'selfs', 'ifchanges'].forEach(k => { if (!Array.isArray(o[k])) { o[k] = []; dirty = true; } });
+['tastes', 'habits', 'things', 'selfs', 'ifchanges', 'dreams'].forEach(k => { if (!Array.isArray(o[k])) { o[k] = []; dirty = true; } });
 if (!normObj(o.who)) { o.who = { f: {} }; dirty = true; } else if (!normObj(o.who.f)) { o.who.f = {}; dirty = true; }
 if (!normObj(o.relate)) { o.relate = { f: {}, notes: [] }; dirty = true; }
 else { if (!normObj(o.relate.f)) { o.relate.f = {}; dirty = true; } if (!Array.isArray(o.relate.notes)) { o.relate.notes = []; dirty = true; } }
@@ -55702,7 +56032,7 @@ if (dirty) save(o);
 cache[viewCid] = o;
 return o;
 }
-let view = 'home';           // home|who|tastes|habits|things|relate|self|ifw
+let view = 'home';           // home|who|tastes|habits|things|relate|self|dream|ifw
 let viewCid = 'default';     // 当前正在看哪位桌面联系人的那份
 const tab = { tastes: 'like', habits: 'daily', things: 'use' };
 const FIELD_INDEX = {};
@@ -55775,6 +56105,7 @@ const rows = [
 ['things', '我的物品', '常用 · 喜欢 · 纪念 · 想送TA的', arc.things.length],
 ['relate', '我和TA', '不是TA实际怎么做——是我希望的相处方式', relFilled],
 ['self', '我对自己的描述', '我对自己的定义，写给TA看的那种', arc.selfs.length],
+['dream', '我的梦境', '想留下、或不敢忘记的梦', arc.dreams.length],
 ['ifw', '我的IF世界', '世界母档案：设定在这里维护，梦角档案只记TA那一侧', ifwFilled],
 ['shared', '我们的共同记录', '记录我们 → 在梦角档案里维护', -1]
 ];
@@ -55826,6 +56157,7 @@ const SECS = {
 who: ['关于我', '对应「TA是谁」——这里写的是你自己。'], tastes: ['我的喜好', '让TA慢慢知道：你喜欢什么。'],
 habits: ['我的习惯', '相处久了，TA自然会观察到这些。'], things: ['我的物品', '和「TA的物品」互为对照——互赠的都在两边有回声。'],
 relate: ['我和TA', '不是记录TA实际怎么做，是我希望的相处方式。'], self: ['我对自己的描述', '不是别人眼里的你——是你想被理解的样子。'],
+dream: ['我的梦境', '做过的一些梦，想留下或不敢忘记的那种。'],
 ifw: ['我的IF世界', '世界母档案：设定在这里维护；梦角档案只记TA在这一侧的样子。']
 };
 const meta = SECS[view] || SECS.who;
@@ -55837,6 +56169,7 @@ else if (view === 'habits') h += habitsHTML(arc);
 else if (view === 'things') h += thingsHTML(arc);
 else if (view === 'relate') h += relateHTML(arc);
 else if (view === 'self') h += selfHTML(arc);
+else if (view === 'dream') h += dreamHTML(arc);
 else if (view === 'ifw') h += ifwHTML(arc);
 return h;
 }
@@ -55908,6 +56241,18 @@ h += '<div class="nk-text">' + esc(it.text) + '</div>';
 if (it.note) h += '<div class="nk-why">' + esc(it.note) + '</div>';
 h += '<div class="nk-meta"><span class="nk-date">写于 ' + short(it.dateStr || '', 12) + '</span>';
 h += '<span class="nk-ops">' + opBtn('edit-self', '编辑', ' data-id="' + it.id + '"') + opBtn('del-self', '删除', ' data-id="' + it.id + '"', 1) + '</span></div></div>';
+});
+return h;
+}
+function dreamHTML(arc) {
+let h = sectHead('我的梦境', '做过的一些梦，想留下或不敢忘记的那种。', '<button class="narc-add" data-op="add-dream">＋ 记一个梦</button>');
+const items = arc.dreams.slice().sort((a, b) => b.created - a.created);
+if (!items.length) {
+return h + '<div class="narc-empty">梦见TA了？梦见自己去远行了？<br>那些醒来还记得的梦，都可以记在这里。</div>';
+}
+items.forEach(it => {
+const inner = '<div class="ni-top"></div><div class="ni-text">' + esc(it.text) + '</div>';
+h += itemShell(inner, '<span class="ni-date">' + esc(it.date) + '</span><span class="nk-ops">' + opBtn('edit-dream', '编辑', ' data-id="' + it.id + '"') + opBtn('del-dream', '删除', ' data-id="' + it.id + '"', 1) + '</span>');
 });
 return h;
 }
@@ -56058,6 +56403,50 @@ arc.selfs = arc.selfs.filter(x => x.id !== id);
 save(arc); toast('已删除'); render();
 }, { noInput: true, pill: 'del', pills: [{ label: '取消', value: 'no' }, { label: '删除', value: 'del' }] });
 }
+function addDream() {
+if (!window.openModal) return;
+let phase = 'text', text = '', ctl = null;
+ctl = window.openModal('记一个梦', '', function (v) {
+if (phase === 'text') {
+const t = strim(v); if (!t) { ctl.stay(); ctl.focus(); return; }
+text = t; phase = 'date';
+ctl.stay(); ctl.title('梦到哪天？'); ctl.hint('留空默认今天。');
+ctl.text(mdstr(Date.now())); ctl.maxLen(30); ctl.input(true); ctl.ph('如 8月3日'); ctl.okText('保存');
+return;
+}
+if (phase === 'date') {
+const arc = ensureArc();
+arc.dreams.push({ id: makeId(), text: text, date: strim(v) || mdstr(Date.now()), created: Date.now() });
+save(arc); toast('记住了一个梦'); render();
+}
+}, { placeholder: '梦见……', maxlength: 200 });
+}
+function editDream(id) {
+const arc = ensureArc(); const it = arc.dreams.find(x => x.id === id); if (!it || !window.openModal) return;
+let phase = 'text', newText = '', ctl = null;
+ctl = window.openModal('编辑这个梦', it.text, function (v) {
+if (phase === 'text') {
+const t = strim(v); if (!t) { ctl.stay(); ctl.focus(); return; }
+newText = t; phase = 'date';
+ctl.stay(); ctl.title('梦到哪天？');
+ctl.text(it.date || mdstr(Date.now())); ctl.maxLen(30); ctl.input(true); ctl.ph('如 8月3日'); ctl.okText('保存');
+return;
+}
+if (phase === 'date') {
+it.text = newText; it.date = strim(v) || mdstr(Date.now());
+save(arc); toast('已更新'); render();
+}
+}, { placeholder: '梦见……', maxlength: 200 });
+}
+function delDream(id) {
+if (!window.openModal) return;
+window.openModal('删掉这个梦？', '', function (v) {
+if (v !== 'del') return;
+const arc = ensureArc();
+arc.dreams = arc.dreams.filter(x => x.id !== id);
+save(arc); toast('已删除'); render();
+}, { noInput: true, pill: 'del', pills: [{ label: '取消', value: 'no' }, { label: '删除', value: 'del' }] });
+}
 function dispatch(op, el) {
 const id = el.getAttribute('data-id');
 const kind = el.getAttribute('data-kind');
@@ -56071,6 +56460,9 @@ case 'del-li': delLi(el.getAttribute('data-kind'), id); break;
 case 'add-self': addSelf(); break;
 case 'edit-self': editSelf(id); break;
 case 'del-self': delSelf(id); break;
+case 'add-dream': addDream(); break;
+case 'edit-dream': editDream(id); break;
+case 'del-dream': delDream(id); break;
 case 'pick-cid': {
 const cid = el.getAttribute('data-cid') || '';
 if (cid && contactsList().some(c => c.id === cid)) {
@@ -68130,9 +68522,11 @@ const sizeStr = fmtSize(json.length);
 const coverLines = exportCoverage(data);
 const coverText = '导出内容（全局全部数据）：\n' + coverLines.join('\n') + '\n——';
 try { localStorage.setItem('xy-home-v2:__last-backup', String(Date.now())); } catch (e) {}
+if (json.length <= 3 * 1024 * 1024) {
 impShow('正在导出…', '正在写入自动备份副本', 84);
 if (window.idbSet) {
 try { window.idbSet(SNAPSHOT_KEY, json); } catch (e) {}
+}
 }
 impShow('正在导出…', '正在准备保存文件', 92);
 const saveRes = await saveBackupFile(blob, fname);

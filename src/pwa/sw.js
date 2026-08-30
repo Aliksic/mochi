@@ -52,17 +52,31 @@ self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys().then((keys) => {
       const oldKeys = keys.filter((k) => k !== CACHE);
-      if (!oldKeys.length) return self.clients.claim();
-      return caches.open(CACHE).then((c) => c.match('./index.html')).then((hit) => {
-        if (hit) return Promise.all(oldKeys.map((k) => caches.delete(k)));
-        return Promise.all(oldKeys.map((k) =>
-          caches.open(k).then((c) => c.match('./index.html')).then((m) => m ? k : null)
-        )).then((hits) => {
-          const keep = hits.find(Boolean);
-          if (keep) return Promise.all(oldKeys.filter((k) => k !== keep).map((k) => caches.delete(k)));
-          return Promise.all(oldKeys.map((k) => caches.delete(k)));
+      const cleanup = !oldKeys.length ? Promise.resolve()
+        : caches.open(CACHE).then((c) => c.match('./index.html')).then((hit) => {
+            if (hit) return Promise.all(oldKeys.map((k) => caches.delete(k)));
+            return Promise.all(oldKeys.map((k) =>
+              caches.open(k).then((c) => c.match('./index.html')).then((m) => m ? k : null)
+            )).then((hits) => {
+              const keep = hits.find(Boolean);
+              if (keep) return Promise.all(oldKeys.filter((k) => k !== keep).map((k) => caches.delete(k)));
+              return Promise.all(oldKeys.map((k) => caches.delete(k)));
+            });
+          });
+      return cleanup
+        .then(() => self.clients.claim())
+        .then(() => {
+          // v3.27.x：precache 失败时当前 CACHE 可能没 index.html，导航回退会命中旧缓存旧版
+          // → 用户"退回旧版白屏"（iOS PWA 切后台回前台 WebKit 重新加载 + 网络超时回退）。
+          // claim 后异步补一次 fetch 写入当前 CACHE（不阻塞，失败有旧缓存兜底），
+          // 下次导航回退优先命中当前 CACHE（新版），不再退回旧版。
+          return caches.open(CACHE).then((c) => c.match('./index.html')).then((hit) => {
+            if (hit) return;
+            return fetchWithTimeout('./index.html', NETWORK_TIMEOUT).then((res) => {
+              if (res && res.ok) return c.put('./index.html', res);
+            }).catch(() => {});
+          });
         });
-      }).then(() => self.clients.claim());
     })
   );
 });
@@ -115,7 +129,7 @@ self.addEventListener('fetch', (e) => {
         // 仅导航请求回退到 index.html；其他资源（manifest/图标/JS 等）
         // 只回退自身缓存，绝不用 HTML 顶替——否则安装/更新流程会拿到错误内容
         const fallback = req.mode === 'navigate'
-          ? caches.match('./index.html').then((m) => m || caches.keys().then((keys) => {
+          ? caches.open(CACHE).then((c) => c.match('./index.html')).then((m) => m || caches.keys().then((keys) => {
               // v3.7.x：主缓存无 index.html（precache 失败 / activate 保留了旧缓存兜底），
               // 遍历所有缓存找第一个命中的 index.html。原 for 循环首次即 return 只查
               // keys[0]，漏掉其余缓存——改为 reduce 顺序探测，命中即返回，保证导航永不白屏。

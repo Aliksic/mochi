@@ -1976,7 +1976,8 @@
             reader.readAsDataURL(f);
           });
           function finishUpload(ok, skip, skipNotAudio) {
-            saveGroups(groups);
+            // v3.27.x：持久化延后——同批量导入，避免同步序列化大库阻塞
+            scheduleSave();
             renderGroupsBar();
             render();
             const msgs = [];
@@ -2037,7 +2038,10 @@
               if (pushCard(g, line)) imported++;
             }
           });
-          saveGroups(groups);
+          // v3.27.x：持久化延后——saveGroups 同步序列化整个字卡库（含表情包/图片 dataURL
+          //   可达几 MB~几十 MB）会阻塞主线程，与编辑单卡（openEditCard）同用 scheduleSave。
+          //   内存 groups 已更新，render() 立即用内存数据渲染，写 LS+IDB 延后到下一帧
+          scheduleSave();
           renderGroupsBar();
           render();
           toast('已导入 ' + imported + ' 条字卡' + (dup ? '，自动去重 ' + dup + ' 条' : '') + (newGroups ? '，新建 ' + newGroups + ' 个分组' : ''));

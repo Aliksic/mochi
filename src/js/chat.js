@@ -84,47 +84,95 @@ try { if (window.applyContinueSayUI) window.applyContinueSayUI(); } catch (e) {}
 });
 const LS_SNAP_LIMIT = 2 * 1024 * 1024;
 let lsSnapTimer = null;
-let lsSnapPending = null; // { raw, prefix }：窗口内最新一次请求，trailing 时写
-function performLsSnapWrite(raw, prefix) {
-try {
-let snap = raw;
-if (snap.length > LS_SNAP_LIMIT) {
-const arr = JSON.parse(raw);
-if (Array.isArray(arr)) {
-snap = JSON.stringify(arr.map(m => {
+let lsSnapPending = null; // { arr, prefix }：窗口内最新一次请求，trailing 时写
+// v3.26.x OOM：聊天大包（图片 base64 内联）浅层字节估算——只取字符串 .length 相加，
+// 不拷贝/串化数据本身，用于「是否走精简快照 / 是否数组直存 IDB」的阈值判断。
+function msgsBytes(arr) {
+if (!Array.isArray(arr)) return 0;
+let n = 0;
+for (let i = 0; i < arr.length; i++) {
+const m = arr[i];
+if (!m || typeof m !== 'object') { n += 32; continue; }
+const t = m.text; if (typeof t === 'string') n += t.length;
+const im = m.img; if (typeof im === 'string') n += im.length;
+const vc = m.voice; if (typeof vc === 'string') n += vc.length;
+const ps = m.parts;
+if (Array.isArray(ps)) { for (let j = 0; j < ps.length; j++) { const p = ps[j]; if (p && typeof p.v === 'string') n += p.v.length; } }
+n += 64;
+}
+return n;
+}
+// v3.26.x OOM 核心：聊天记录 IDB 直存数组（structured clone，读写都免整包 JSON 串化/解析）。
+// 旧实现单键可达数百 MB（图片 base64 内联）时：读库 JSON.parse 数百 MB（秒级阻塞+堆尖峰）、
+// 每次落盘 JSON.stringify 再数百 MB（OPPO Reno10Pro+ 自带浏览器实测 JS 堆被推到 905/1078MB，
+// 渲染进程被杀、页面自动重启）。小历史（估算 ≤CHAT_STR_THRESHOLD）沿用字符串路径，与旧数据
+// 完全一致（loadMsgs 双形态兼容）；数组路径失败（DataCloneError/事务异常）回退字符串，绝不丢数据。
+const CHAT_STR_THRESHOLD = 3 * 1024 * 1024;
+function persistMsgsToIdb(key, arr) {
+if (!window.idbSet) return Promise.resolve(false);
+if (!arr || !arr.length || msgsBytes(arr) <= CHAT_STR_THRESHOLD) {
+return window.idbSet(key, JSON.stringify(arr || []));
+}
+return window.idbSet(key, arr).then(ok => {
+if (ok) return true;
+return window.idbSet(key, JSON.stringify(arr));
+});
+}
+// 精简快照：大历史时剥掉 img/voice/long-text 及 parts 里的图片/语音负载（保留占位与 _lsLite
+// 标记，合并逻辑按原语义识别），使 localStorage 兜底快照始终 ≤2MB、且构建过程不再整包串化。
+function liteSnapArray(arr) {
+if (msgsBytes(arr) <= LS_SNAP_LIMIT) return arr; // 小历史：全量快照
+return arr.map(m => {
 if (!m || typeof m !== 'object') return m;
-const hasBig = m.img || m.voice || (typeof m.text === 'string' && m.text.length > 8192);
+const hasBig = m.img || m.voice || (typeof m.text === 'string' && m.text.length > 8192) ||
+(Array.isArray(m.parts) && m.parts.some(p => p && typeof p.v === 'string' && p.v.length > 512));
 if (!hasBig) return m;
 const c = Object.assign({}, m);
 c._lsLite = 1;
 if (c.img) c.img = '';
 if (c.voice) c.voice = '';
 if (typeof c.text === 'string' && c.text.length > 8192) c.text = '[内容已省略]';
+if (Array.isArray(c.parts)) {
+c.parts = c.parts.map(p => {
+if (!p || typeof p !== 'object' || typeof p.v !== 'string') return p;
+if (p.k === 'img' || p.k === 'voice' || p.v.length > 8192) {
+const pc = Object.assign({}, p);
+if (p.k === 'img' || p.k === 'voice') pc.v = '';
+else pc.v = '[内容已省略]';
+return pc;
+}
+return p;
+});
+}
 return c;
-}));
+});
 }
-}
+function performLsSnapWrite(arr, prefix) {
+try {
+if (!Array.isArray(arr)) return;
+const snap = JSON.stringify(liteSnapArray(arr));
 if (snap.length <= LS_SNAP_LIMIT) {
 localStorage.setItem((prefix || window.activePrefix()) + ':chat-msgs', snap);
 }
 } catch (e) {}
 }
-function writeLsSnapshot(raw, prefix, force) {
+function writeLsSnapshot(arr, prefix, force) {
+if (!Array.isArray(arr)) return;
 if (force) {
 if (lsSnapTimer) { clearTimeout(lsSnapTimer); lsSnapTimer = null; }
 lsSnapPending = null;
-performLsSnapWrite(raw, prefix);
+performLsSnapWrite(arr, prefix);
 return;
 }
-if (raw.length <= LS_SNAP_LIMIT) { performLsSnapWrite(raw, prefix); return; }
-if (lsSnapTimer) { lsSnapPending = { raw: raw, prefix: prefix }; return; }
-performLsSnapWrite(raw, prefix);
+if (msgsBytes(arr) <= LS_SNAP_LIMIT) { performLsSnapWrite(arr, prefix); return; }
+if (lsSnapTimer) { lsSnapPending = { arr: arr, prefix: prefix }; return; }
+performLsSnapWrite(arr, prefix);
 lsSnapTimer = setTimeout(() => {
 lsSnapTimer = null;
 if (lsSnapPending) {
 const p = lsSnapPending;
 lsSnapPending = null;
-performLsSnapWrite(p.raw, p.prefix);
+performLsSnapWrite(p.arr, p.prefix);
 }
 }, 4000);
 }
@@ -158,7 +206,7 @@ try { if (window.activePrefix() !== fusePrefix) return; } catch (e) {}
 chatDbReady = true;
 const fuseMsgs = (pendingLocal && pendingLocal.length) ? pendingLocal : msgs;
 if (fuseMsgs && fuseMsgs.length) {
-try { writeLsSnapshot(JSON.stringify(fuseMsgs), fusePrefix, true); } catch (e) {}
+try { writeLsSnapshot(fuseMsgs, fusePrefix, true); } catch (e) {}
 } else {
 try {
 const lsRaw = store.get('chat-msgs');
@@ -184,7 +232,7 @@ if (!chatDbReady) {
 try { pendingLocal = msgs.slice(); } catch (e) {}
 // v3.14.x：内存为空时不写 LS 快照——权威读取失败窗口里任何模块触发保存，
 // 会把 LS 里仅存的有损备份也覆盖成 "[]"（IDB 万一后续丢失将无从恢复）
-if (msgs.length) writeLsSnapshot(JSON.stringify(msgs), undefined, true);
+if (msgs.length) writeLsSnapshot(msgs, undefined, true);
 return;
 }
 // v3.26.x 止血：改为合并+低频+空闲落盘（见上方调度器），不再每个动作同步写整包
@@ -193,16 +241,16 @@ schedulePersist(() => {
   // v3.14.x：空记录落盘守卫——本会话从未成功读过该桌面的权威数据时，
   // 禁止把空数组写进 IDB。清空聊天记录走 clearChatHistory 的 store.remove 直删。
   if (!msgs.length && authLoadedPrefix !== myPrefix) return;
-  const data = JSON.stringify(msgs);
-  try { if (window.idbSet) window.idbSet(myPrefix + ':chat-msgs', data); } catch (e) {}
-  writeLsSnapshot(data, myPrefix);
+  // v3.26.x OOM：大历史 IDB 直存数组（免整包 stringify），小历史仍字符串路径
+  try { if (window.idbSet) persistMsgsToIdb(myPrefix + ':chat-msgs', msgs); } catch (e) {}
+  writeLsSnapshot(msgs, myPrefix);
 });
 }
 function flushSave() {
 if (window.__resetting) return;
 // v3.26.x 止血：立即落盘待写（离页/切走兜底）；未就绪则仅写 LS 有损快照
 flushPersistNow();
-if (!chatDbReady && msgs.length) writeLsSnapshot(JSON.stringify(msgs), undefined, true);
+if (!chatDbReady && msgs.length) writeLsSnapshot(msgs, undefined, true);
 }
 window.chatFlushSave = flushSave;
 try {
@@ -289,8 +337,8 @@ function runDeferredNormalization() {
     try { if (sysNickCatchup()) changed = true; } catch (e) {}
     normPrefix = null;
     if (!changed) return;
-    try { if (window.idbSet) window.idbSet(myPre + ':chat-msgs', JSON.stringify(msgs)); } catch (e) {}
-    try { writeLsSnapshot(JSON.stringify(msgs), myPre, true); } catch (e) {}
+    try { if (window.idbSet) persistMsgsToIdb(myPre + ':chat-msgs', msgs); } catch (e) {}
+    try { writeLsSnapshot(msgs, myPre, true); } catch (e) {}
     try { if (chatVisible() && msgs.length) { renderWindow(false, true); scrollChatBottom(); } } catch (e) {}
   };
   const tick = () => {
@@ -406,8 +454,8 @@ if (window.idbSet) window.idbSet(myPrefix + ':chat-msgs', lsRaw);
 if (pendingLocal && pendingLocal.length) {
 msgs = pendingLocal.concat(msgs.filter(m => !pendingLocal.some(p => p && p.ts === m.ts && p.text === m.text)));
 pendingLocal = null;
-try { if (window.idbSet) window.idbSet(myPrefix + ':chat-msgs', JSON.stringify(msgs)); } catch (e) {}
-writeLsSnapshot(JSON.stringify(msgs), myPrefix, true);
+try { if (window.idbSet) persistMsgsToIdb(myPrefix + ':chat-msgs', msgs); } catch (e) {}
+writeLsSnapshot(msgs, myPrefix, true);
 }
 });
 return;
@@ -473,13 +521,21 @@ lastIdbLoadAt = Date.now();
 try { localStorage.removeItem('xy-home-v2:chat-msgs'); } catch (e) {}
 if (changed) {
 __prof('ch6_save');
-try { if (window.idbSet) window.idbSet(myPrefix + ':chat-msgs', JSON.stringify(msgs)); } catch (e) {}
-try { writeLsSnapshot(JSON.stringify(msgs), myPrefix, true); } catch (e) {}
+try { if (window.idbSet) persistMsgsToIdb(myPrefix + ':chat-msgs', msgs); } catch (e) {}
+try { writeLsSnapshot(msgs, myPrefix, true); } catch (e) {}
 __prof('ch7_end');
 if (chatVisible() && chatNearBottom()) {
 renderWindow(false, true);
 scrollChatBottom();
 }
+}
+// v3.26.x OOM：旧大数据字符串存量（升级前写入的 chat-msgs 单键字符串）后台一次性
+// 转数组直存——此后每次读库免整包 JSON.parse（消除数百 MB 解析尖峰与秒级主线程阻塞）。
+// 放在 if(changed) 之外：无本地改动（changed=false）的常见大数据场景也要迁移。
+if (typeof v === 'string' && v.length > CHAT_STR_THRESHOLD && idbArr && idbArr.length) {
+setTimeout(function () {
+try { if (window.activePrefix() === myPrefix && window.idbSet) persistMsgsToIdb(myPrefix + ':chat-msgs', msgs); } catch (e) {}
+}, 0);
 }
 // v3.26.x：读库完成后调度后台分批归一化（幂等，仅对当前联系跑一次）
 scheduleDeferredNormalization();
@@ -2056,9 +2112,8 @@ sessionChangedIdx.clear();
 chatDbReady = true;
 renderStart = 0;
 cancelPersist();
-const importedData = JSON.stringify(msgs);
-try { if (window.idbSet) window.idbSet(window.activePrefix() + ':chat-msgs', importedData); } catch (e) {}
-writeLsSnapshot(importedData, undefined, true);
+try { if (window.idbSet) persistMsgsToIdb(window.activePrefix() + ':chat-msgs', msgs); } catch (e) {}
+writeLsSnapshot(msgs, undefined, true);
 if (body) body.innerHTML = '';
 clearChatUnread();
 if (chatVisible() && msgs.length) {
@@ -2467,9 +2522,9 @@ if (!msgs.length && authLoadedPrefix !== window.activePrefix()) return;
 const myPrefix = window.activePrefix();
 schedulePersist(() => {
   if (!msgs.length && authLoadedPrefix !== myPrefix) return;
-  const data = JSON.stringify(msgs);
-  try { if (window.idbSet) window.idbSet(myPrefix + ':chat-msgs', data); } catch (e) {}
-  writeLsSnapshot(data, myPrefix, true);
+  // v3.26.x OOM：大历史 IDB 直存数组（免整包 stringify）
+  try { if (window.idbSet) persistMsgsToIdb(myPrefix + ':chat-msgs', msgs); } catch (e) {}
+  writeLsSnapshot(msgs, myPrefix, true);
 });
 }
 window.chatChooseReply = function (msgIdx, answer, opt, match) {

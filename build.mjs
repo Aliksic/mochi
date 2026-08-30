@@ -240,6 +240,11 @@ const FIX_SENTINELS = [
   { name: '音乐·TA 暂停再播放字卡数据（「TA 暂停播放/TA 恢复播放」两组进系统预设字卡【其他互动功能字卡→音乐】）', file: 'js/default-cards-data.js', needle: 'TA 暂停播放' },
   { name: '桌面图标 IDB 回填并行（Promise.all 一次读完 app-icon-*，修更新后首启「上传的图标图片消失数秒刷新才回来」）', file: 'js/personalize.js', needle: 'Promise.all(iconKeys.map' },
   { name: '互动卡片收藏全覆盖（cardSnapshot 补齐 ask/红包/送花/礼物/佳肴 + 心形按 data-idx 定位，修「有的卡片可以收藏有的点击无效」）', file: 'js/chat.js', needle: "favBtn.closest('[data-idx]')" },
+  { name: '大备份跳过 IDB 副本写入（json>3MB 跳过 idbSet(SNAPSHOT_KEY)，修 iOS Safari 导出闪退——内存峰值翻倍 Jetsam 杀进程）', file: 'js/data-backup.js', needle: 'json.length <= 3 * 1024 * 1024' },
+  { name: '批量导入/上传持久化延后（scheduleSave 替代同步 saveGroups，修添加字卡后卡顿——同步序列化大库阻塞主线程）', file: 'js/chatcard.js', needle: "scheduleSave();\nrenderGroupsBar();\nrender();\ntoast('已导入 ' + imported" },
+  { name: 'iOS PWA standalone ios-fs-active 下 .phone 用实测 --mochi-ios-h（修桌面图标被裁/100vh 超出视口）', file: 'css/base.css', needle: '.ios-pwa-standalone.ios-fs-active .phone' },
+  { name: '后台音乐媒体条不丢（__musicWantPlay 暴露播放意图 + bg-keep 不让位覆盖歌曲媒体条 + onplay 重绑歌曲元数据，修红米K80 Chrome 通知栏媒体条时有时无/挂后台停播）', file: 'js/music-player.js', needle: '__musicWantPlay' },
+  { name: '后台补播连续失败改冷却重试（bgResumeFailAt 60s 清零，修「挂后台总是自己停止播放」后无人拉起）', file: 'js/music-player.js', needle: 'bgResumeFailAt' },
 
 ];
 try {
@@ -261,3 +266,18 @@ try {
     console.log('✅ 关键修复哨兵 ' + FIX_SENTINELS.length + '/' + FIX_SENTINELS.length + ' 全部在位（修复无丢失）');
   }
 } catch (e) { /* 产物未生成/读取失败：跳过 */ }
+// v3.27.x：sw.js 专项哨兵（导航回退优先当前 CACHE + activate 补 fetch 自愈，防被并行会话覆盖）
+try {
+  const swSrc = readFileSync(join(root, 'sw.js'), 'utf8');
+  const swNeedles = [
+    'caches.open(CACHE).then((c) => c.match(\'./index.html\')).then((m) => m || caches.keys()',
+    'claim 后异步补一次 fetch 写入当前 CACHE'
+  ];
+  const swMissing = swNeedles.filter(n => !swSrc.includes(n));
+  if (swMissing.length) {
+    console.warn('⚠️  sw.js 关键修复哨兵：以下特征缺失（修复可能被覆盖）：');
+    swMissing.forEach(n => console.warn('   · 应含 "' + n + '"'));
+  } else {
+    console.log('✅ sw.js 哨兵 ' + swNeedles.length + '/' + swNeedles.length + ' 在位');
+  }
+} catch (e) {}

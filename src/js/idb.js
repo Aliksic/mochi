@@ -86,9 +86,28 @@
     function tryOnce() {
       return open().then(db => new Promise((resolve) => {
         let done = false;
-        // v3.26.x：超时按值体积放大（大包误报修复，见 _idbFailNotify 上方说明）
+        // v3.26.x：超时按值体积放大（大包误报修复，见 _idbFailNotify 上方说明）。
+        // v3.26.x OOM：聊天记录改 IDB 直存数组（structured clone，免整包 JSON.stringify）——
+        // 数组也按估算体积放大超时，否则 150MB 级数组在慢设备上 >4s 被判挂起、误触发回退重写。
         let lim = 4000;
-        try { if (typeof value === 'string' && value.length > 262144) lim = 4000 + Math.min(26000, Math.ceil(value.length / 262144) * 2000); } catch (e) {}
+        try {
+          let est = 0;
+          if (typeof value === 'string') est = value.length;
+          else if (Array.isArray(value)) {
+            for (let i = 0; i < value.length; i++) {
+              const m = value[i];
+              if (typeof m === 'string') { est += m.length; continue; }
+              if (!m || typeof m !== 'object') { est += 32; continue; }
+              const t = m.text; if (typeof t === 'string') est += t.length;
+              const im = m.img; if (typeof im === 'string') est += im.length;
+              const vc = m.voice; if (typeof vc === 'string') est += vc.length;
+              const ps = m.parts;
+              if (Array.isArray(ps)) { for (let j = 0; j < ps.length; j++) { const p = ps[j]; if (p && typeof p.v === 'string') est += p.v.length; } }
+              est += 64;
+            }
+          }
+          if (est > 262144) lim = 4000 + Math.min(26000, Math.ceil(est / 262144) * 2000);
+        } catch (e) {}
         const t = setTimeout(function () {
           if (done) return; done = true;
           dbPromise = null; // 连接疑似挂起，下次 open 重建

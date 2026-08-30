@@ -4,8 +4,8 @@
 // 数据键 xy-home-v2:<cid>:myarc——按桌面联系人各存一份（我和不同 TA 的相处期望可能不同，
 //   不设全局统一档）；命名空间键天然免 migrateLegacy 误迁。旧版全局键 myarc 仅作首次读取兜底，
 //   另有根键 myarc-cur 记住上次查看（contacts.js EXCLUDE 的 'myarc' 前缀同时覆盖两键）。
-// 结构（8 个分区，前 7 个为本页数据，第 8 个桥接梦角档案·共同记录）：
-//   关于我 / 我的喜好 / 我的习惯 / 我的物品 / 我和TA（希望的相处）/ 我对自己的描述 / 我的IF世界(世界母档) / 我们的共同记录→
+// 结构（9 个分区，前 8 个为本页数据，第 9 个桥接梦角档案·共同记录）：
+//   关于我 / 我的喜好 / 我的习惯 / 我的物品 / 我和TA（希望的相处）/ 我对自己的描述 / 我的梦境 / 我的IF世界(世界母档) / 我们的共同记录→
 // 双向约定：本页与梦角档案互不自动改写对方数据；「TA的身份」等母档字段将来由梦角档案侧读取镜像。
 // 样式复用 memo-arc.css 的 narc-* 类族（同视觉语言，零新增 CSS 文件）。
 // 弹窗注意：离开胶囊阶段必须 ctl.pills([])（fire() pills 分支按 pillClicked 判断）；cb 内链式开新弹窗
@@ -26,6 +26,7 @@
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
   function short(s, n) { s = String(s == null ? '' : s); n = n || 18; return s.length > n ? s.slice(0, n) + '…' : s; }
   function strim(v) { return String(v == null ? '' : v).trim(); }
+  function mdstr(ts) { const d = new Date(ts); return (d.getMonth() + 1) + '月' + d.getDate() + '日'; }
 
   // ---- 关于我 字段 ----
   const WHO_FIELDS = [
@@ -107,7 +108,7 @@
   function ensureArc() {
     let o = cache[viewCid] || loadRaw(viewCid), dirty = false;
     if (!o) { o = { created: Date.now() }; dirty = true; }
-    ['tastes', 'habits', 'things', 'selfs', 'ifchanges'].forEach(k => { if (!Array.isArray(o[k])) { o[k] = []; dirty = true; } });
+    ['tastes', 'habits', 'things', 'selfs', 'ifchanges', 'dreams'].forEach(k => { if (!Array.isArray(o[k])) { o[k] = []; dirty = true; } });
     if (!normObj(o.who)) { o.who = { f: {} }; dirty = true; } else if (!normObj(o.who.f)) { o.who.f = {}; dirty = true; }
     if (!normObj(o.relate)) { o.relate = { f: {}, notes: [] }; dirty = true; }
     else { if (!normObj(o.relate.f)) { o.relate.f = {}; dirty = true; } if (!Array.isArray(o.relate.notes)) { o.relate.notes = []; dirty = true; } }
@@ -119,7 +120,7 @@
   }
 
   // ---- 页面状态 ----
-  let view = 'home';           // home|who|tastes|habits|things|relate|self|ifw
+  let view = 'home';           // home|who|tastes|habits|things|relate|self|dream|ifw
   let viewCid = 'default';     // 当前正在看哪位桌面联系人的那份
   const tab = { tastes: 'like', habits: 'daily', things: 'use' };
   const FIELD_INDEX = {};
@@ -200,6 +201,7 @@
       ['things', '我的物品', '常用 · 喜欢 · 纪念 · 想送TA的', arc.things.length],
       ['relate', '我和TA', '不是TA实际怎么做——是我希望的相处方式', relFilled],
       ['self', '我对自己的描述', '我对自己的定义，写给TA看的那种', arc.selfs.length],
+      ['dream', '我的梦境', '想留下、或不敢忘记的梦', arc.dreams.length],
       ['ifw', '我的IF世界', '世界母档案：设定在这里维护，梦角档案只记TA那一侧', ifwFilled],
       ['shared', '我们的共同记录', '记录我们 → 在梦角档案里维护', -1]
     ];
@@ -253,6 +255,7 @@
       who: ['关于我', '对应「TA是谁」——这里写的是你自己。'], tastes: ['我的喜好', '让TA慢慢知道：你喜欢什么。'],
       habits: ['我的习惯', '相处久了，TA自然会观察到这些。'], things: ['我的物品', '和「TA的物品」互为对照——互赠的都在两边有回声。'],
       relate: ['我和TA', '不是记录TA实际怎么做，是我希望的相处方式。'], self: ['我对自己的描述', '不是别人眼里的你——是你想被理解的样子。'],
+      dream: ['我的梦境', '做过的一些梦，想留下或不敢忘记的那种。'],
       ifw: ['我的IF世界', '世界母档案：设定在这里维护；梦角档案只记TA在这一侧的样子。']
     };
     const meta = SECS[view] || SECS.who;
@@ -264,6 +267,7 @@
     else if (view === 'things') h += thingsHTML(arc);
     else if (view === 'relate') h += relateHTML(arc);
     else if (view === 'self') h += selfHTML(arc);
+    else if (view === 'dream') h += dreamHTML(arc);
     else if (view === 'ifw') h += ifwHTML(arc);
     return h;
   }
@@ -344,6 +348,20 @@
       if (it.note) h += '<div class="nk-why">' + esc(it.note) + '</div>';
       h += '<div class="nk-meta"><span class="nk-date">写于 ' + short(it.dateStr || '', 12) + '</span>';
       h += '<span class="nk-ops">' + opBtn('edit-self', '编辑', ' data-id="' + it.id + '"') + opBtn('del-self', '删除', ' data-id="' + it.id + '"', 1) + '</span></div></div>';
+    });
+    return h;
+  }
+
+  // ---- 我的梦境 ----
+  function dreamHTML(arc) {
+    let h = sectHead('我的梦境', '做过的一些梦，想留下或不敢忘记的那种。', '<button class="narc-add" data-op="add-dream">＋ 记一个梦</button>');
+    const items = arc.dreams.slice().sort((a, b) => b.created - a.created);
+    if (!items.length) {
+      return h + '<div class="narc-empty">梦见TA了？梦见自己去远行了？<br>那些醒来还记得的梦，都可以记在这里。</div>';
+    }
+    items.forEach(it => {
+      const inner = '<div class="ni-top"></div><div class="ni-text">' + esc(it.text) + '</div>';
+      h += itemShell(inner, '<span class="ni-date">' + esc(it.date) + '</span><span class="nk-ops">' + opBtn('edit-dream', '编辑', ' data-id="' + it.id + '"') + opBtn('del-dream', '删除', ' data-id="' + it.id + '"', 1) + '</span>');
     });
     return h;
   }
@@ -502,6 +520,52 @@
     }, { noInput: true, pill: 'del', pills: [{ label: '取消', value: 'no' }, { label: '删除', value: 'del' }] });
   }
 
+  // ---- 梦境流程：内容 → 日期 ----
+  function addDream() {
+    if (!window.openModal) return;
+    let phase = 'text', text = '', ctl = null;
+    ctl = window.openModal('记一个梦', '', function (v) {
+      if (phase === 'text') {
+        const t = strim(v); if (!t) { ctl.stay(); ctl.focus(); return; }
+        text = t; phase = 'date';
+        ctl.stay(); ctl.title('梦到哪天？'); ctl.hint('留空默认今天。');
+        ctl.text(mdstr(Date.now())); ctl.maxLen(30); ctl.input(true); ctl.ph('如 8月3日'); ctl.okText('保存');
+        return;
+      }
+      if (phase === 'date') {
+        const arc = ensureArc();
+        arc.dreams.push({ id: makeId(), text: text, date: strim(v) || mdstr(Date.now()), created: Date.now() });
+        save(arc); toast('记住了一个梦'); render();
+      }
+    }, { placeholder: '梦见……', maxlength: 200 });
+  }
+  function editDream(id) {
+    const arc = ensureArc(); const it = arc.dreams.find(x => x.id === id); if (!it || !window.openModal) return;
+    let phase = 'text', newText = '', ctl = null;
+    ctl = window.openModal('编辑这个梦', it.text, function (v) {
+      if (phase === 'text') {
+        const t = strim(v); if (!t) { ctl.stay(); ctl.focus(); return; }
+        newText = t; phase = 'date';
+        ctl.stay(); ctl.title('梦到哪天？');
+        ctl.text(it.date || mdstr(Date.now())); ctl.maxLen(30); ctl.input(true); ctl.ph('如 8月3日'); ctl.okText('保存');
+        return;
+      }
+      if (phase === 'date') {
+        it.text = newText; it.date = strim(v) || mdstr(Date.now());
+        save(arc); toast('已更新'); render();
+      }
+    }, { placeholder: '梦见……', maxlength: 200 });
+  }
+  function delDream(id) {
+    if (!window.openModal) return;
+    window.openModal('删掉这个梦？', '', function (v) {
+      if (v !== 'del') return;
+      const arc = ensureArc();
+      arc.dreams = arc.dreams.filter(x => x.id !== id);
+      save(arc); toast('已删除'); render();
+    }, { noInput: true, pill: 'del', pills: [{ label: '取消', value: 'no' }, { label: '删除', value: 'del' }] });
+  }
+
   // ---- 事件分发 ----
   function dispatch(op, el) {
     const id = el.getAttribute('data-id');
@@ -516,6 +580,9 @@
       case 'add-self': addSelf(); break;
       case 'edit-self': editSelf(id); break;
       case 'del-self': delSelf(id); break;
+      case 'add-dream': addDream(); break;
+      case 'edit-dream': editDream(id); break;
+      case 'del-dream': delDream(id); break;
       case 'pick-cid': {
         // 切换到另一位桌面联系人的那份档案（数据互不统一，各自独立维护）
         const cid = el.getAttribute('data-cid') || '';

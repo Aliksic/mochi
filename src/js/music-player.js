@@ -1895,6 +1895,14 @@
     liveAudioEls.push(a);
     return a;
   }
+  // v3.26.x：audio.src 赋值守卫——曲目 url 字段可能被存成脏值（空对象序列化成 '{}'），
+  // 直接赋给 <audio> 会解析成站内路径 /mochi/{} 并打印一堆「资源加载失败」错误。
+  // 只放行标准 http(s)/blob:/data: 链路，非法值返回 false 让调用方走失败兜底
+  //（offerRemoveDamagedSong 的连续失败判定 / 跳过重播），不再把脏地址喂给 <audio>。
+  function validAudioSrc(v) {
+    return typeof v === 'string' &&
+      (/^https?:\/\//i.test(v) || /^blob:/i.test(v) || /^data:/i.test(v));
+  }
   function teardownAudio() {
     if (audio) { killAudioEl(audio); audio = null; }
     // v3.10.x：在册元素一并清场（竞态窗口内可能存在未被变量引用的野元素）
@@ -2037,8 +2045,18 @@
   // 被拒再 muted 静音解锁降级（同 startPlayback 思路），仍失败重建元素（X5 缓存
   // rejection 兜底，同 armAutoResume.retry）；全程静默不弹 toast。
   let wantPlay = false;
+  // v3.28.x：把「是否还想继续播放」（外部打断暂停 vs 用户主动暂停）实时暴露给 bg-keep——
+  // bg-keep 需要据此决定是否接管媒体会话：音乐还有播放意图（wantPlay=true）时，其
+  // setKeepMediaSession 不得覆盖歌曲媒体条，否则短暂后台打断会吞掉通知栏歌曲条。
+  try {
+    Object.defineProperty(window, '__musicWantPlay', {
+      configurable: true,
+      get: function () { return wantPlay; }
+    });
+  } catch (e) {}
   let bgResumeTimers = [];
   let bgResumeFails = 0; // 连续补播失败计数（死链/持续拦截时封顶，防止看门狗无限拉取）
+  let bgResumeFailAt = 0; // 最近一次补播失败时刻；封顶后冷却 60s 清零重试一轮，后台不永久放弃
   function clearBgResume() {
     bgResumeTimers.forEach(clearTimeout);
     bgResumeTimers = [];
@@ -2050,7 +2068,14 @@
     });
   }
   function tryResumePlayback() {
-    if (!wantPlay || callHoldPending || bgResumeFails >= 6) return;
+    if (!wantPlay || callHoldPending) return;
+    // v3.28.x：连续失败封顶由「永久放弃」改为「冷却 60s 后清零重试」——旧逻辑 ≥6 次失败后
+    // 后台永远不再尝试，弱网/音频焦点频繁被抢时音乐停播后无人拉起（用户实测「挂后台总自己停」）。
+    // 冷却期内停手（不无限拉取），冷却结束清零再来一轮，配合回前台清零与 onplay 复位。
+    if (bgResumeFails >= 6) {
+      if (Date.now() - bgResumeFailAt < 60000) return;
+      bgResumeFails = 0;
+    }
     // v3.27.x：TA 暂停再播放互动进行中不补播（暂停 3.5s 由 TA 自己恢复）
     if (taPauseActive) return;
     // v3.10.x：换源/兜底窗口期不补播——!audio 分支会用旧 URL 造野元素，
@@ -2071,8 +2096,8 @@
         const p2 = audio.play();
         if (p2 && p2.then) {
           p2.then(function () { try { if (audio) audio.muted = false; } catch (e) {} bgResumeFails = 0; })
-            .catch(function () { bgResumeFails++; rebuildAndPlay(m); });
-        } else { bgResumeFails++; rebuildAndPlay(m); }
+            .catch(function () { bgResumeFails++; bgResumeFailAt = Date.now(); rebuildAndPlay(m); });
+        } else { bgResumeFails++; bgResumeFailAt = Date.now(); rebuildAndPlay(m); }
       });
     }
   }
@@ -2086,7 +2111,7 @@
     setupHandlers(m);
     audio.src = m.url;
     const p = audio.play();
-    if (p && p.catch) p.catch(function () { bgResumeFails++; });
+    if (p && p.catch) p.catch(function () { bgResumeFails++; bgResumeFailAt = Date.now(); });
   }
   // 回前台兜底：冻结解除/中断结束后立刻补播（不等用户点屏幕）
   ['visibilitychange', 'focus'].forEach(function (ev) {
@@ -2385,8 +2410,9 @@
         } else { armAutoResume(); }
       }
     };
-    audio.onplay = function () { playRejected = false; bgResumeFails = 0; clearStallGuard(); disarmAutoResume(); clearBgResume(); wantPlay = true; syncPlayIcons(true); if (m) failMap[m.id] = 0; try { if (navigator.mediaSession) navigator.mediaSession.playbackState = 'playing'; } catch (e) {} try { window.__musicPlaying = true; } catch (e) {} };
-    audio.onpause = function () { syncPlayIcons(false); try { if (navigator.mediaSession) navigator.mediaSession.playbackState = 'paused'; } catch (e) {} try { window.__musicPlaying = false; } catch (e) {} // v3.10.x：非用户暂停（后台省电/音频焦点抢占/系统打断）→ 定时补播反击
+    audio.onplay = function () { playRejected = false; bgResumeFails = 0; clearStallGuard(); disarmAutoResume(); clearBgResume(); wantPlay = true; syncPlayIcons(true); if (m) failMap[m.id] = 0; try { if (navigator.mediaSession) navigator.mediaSession.playbackState = 'playing'; } catch (e) {} try { window.__musicPlaying = true; } catch (e) {} // v3.28.x：每次真正出声都重新绑定歌曲媒体条——后台短暂打断被 bg-keep 接管媒体会话（元数据换成「Mochi 后台保活」）后，恢复播放时若不重设歌曲元数据，通知栏媒体条会停在保活条或直接消失
+      try { updateMediaSession(true); } catch (e) {} };
+    audio.onpause = function () { syncPlayIcons(false); try { if (navigator.mediaSession) navigator.mediaSession.playbackState = (wantPlay && !callHoldPending) ? 'playing' : 'paused'; } catch (e) {} try { window.__musicPlaying = false; } catch (e) {} // v3.28.x：外部打断（还想播）保持 playbackState='playing'，避免 Chrome 把页面当闲置标签冻结、通知栏媒体条消失；仅用户主动暂停才标 'paused'。v3.10.x：非用户暂停（后台省电/音频焦点抢占/系统打断）→ 定时补播反击
       // v3.27.x：TA 暂停再播放互动进行中不补播（TA 稍后会自己点播放恢复）
       if (wantPlay && !callHoldPending && !taPauseActive) scheduleBgResume(); };
   }
@@ -2470,6 +2496,13 @@
       return;
     }
     audio = createAudio();;
+    // v3.26.x：url 脏值守卫（如 '{}'/空串）——直接赋值会在控制台刷「资源加载失败」
+    // 且永远播不出声。此类曲目判为坏链走 offerRemoveDamagedSong（连续失败后弹「移出音乐库」），
+    // 不再把脏地址喂给 <audio>。blob:/data:（本地歌换源）与 http(s) 均放行。
+    if (!validAudioSrc(m.url)) {
+      offerRemoveDamagedSong(m);
+      return;
+    }
     // v3.5.118：网易云外链防盗链（带 Referer 时返回 403 无法播放）——
     // 设置 referrerPolicy=no-referrer 让请求不带 Referer，原曲可直接播放
     try { audio.referrerPolicy = 'no-referrer'; } catch (e) {}
@@ -3825,24 +3858,24 @@
   if (setBtn) setBtn.addEventListener('click', openSettings);
   // 播放器控制
   const playBtn = document.getElementById('sm-play');
-  if (playBtn) playBtn.addEventListener('click', toggle);
+  if (playBtn) playBtn.addEventListener('click', () => toggle());
   const modeBtn = document.getElementById('sm-mode');
   if (modeBtn) modeBtn.addEventListener('click', cycleMode);
   const fModeBtn = document.getElementById('sm-f-mode');
   if (fModeBtn) fModeBtn.addEventListener('click', cycleMode);
   const prevBtn = document.getElementById('sm-prev');
-  if (prevBtn) prevBtn.addEventListener('click', prev);
+  if (prevBtn) prevBtn.addEventListener('click', () => prev());
   const nextBtn = document.getElementById('sm-next');
-  if (nextBtn) nextBtn.addEventListener('click', next);
+  if (nextBtn) nextBtn.addEventListener('click', () => next());
   const queueBtn = document.getElementById('sm-queue');
   if (queueBtn) queueBtn.addEventListener('click', openQueuePanel);
   // 悬浮小框控制
   const fPlay = document.getElementById('sm-f-play');
-  if (fPlay) fPlay.addEventListener('click', toggle);
+  if (fPlay) fPlay.addEventListener('click', () => toggle());
   const fPrev = document.getElementById('sm-f-prev');
-  if (fPrev) fPrev.addEventListener('click', prev);
+  if (fPrev) fPrev.addEventListener('click', () => prev());
   const fNext = document.getElementById('sm-f-next');
-  if (fNext) fNext.addEventListener('click', next);
+  if (fNext) fNext.addEventListener('click', () => next());
   const fQueue = document.getElementById('sm-f-queue');
   if (fQueue) fQueue.addEventListener('click', openQueuePanel);
   // 悬浮小框 收起/展开（新版多行 ⇄ 最初版最小单行）
@@ -3851,7 +3884,7 @@
   const fMiniExpand = document.getElementById('sm-f-mini-expand');
   if (fMiniExpand) fMiniExpand.addEventListener('click', toggleFloatMin);
   const fMiniPlay = document.getElementById('sm-f-mini-play');
-  if (fMiniPlay) fMiniPlay.addEventListener('click', toggle);
+  if (fMiniPlay) fMiniPlay.addEventListener('click', () => toggle());
   const fToggle = document.getElementById('music-float-en');
   if (fToggle) {
     fToggle.addEventListener('change', () => {

@@ -1,4 +1,67 @@
-# 本次构建者：本会话（已构建，sw: mochi-mtfaduto。产物含修复「红米K70 QQ：互动卡片收藏有的能收藏有的点击无效」→ FIX-REGRESSION #72，见下方 2026-08-30 条目。待提交。另反馈「联系人一直发兜底的几条字卡」属既有慢 IDB 回复池回填未就绪场景，源码已含 v3.28.x 自愈层且已随本次构建上线，若仍复现需真机「复制诊断信息」里的【回复字卡池】节定位）
+# 本次构建者：本会话（已构建，sw: mochi-mtfco3w5，哨兵 85/85，verify 10/10 + 音乐专项 verify-music-bg-resume 10/10 + verify-music-keep-coexist 10/10 + verify-ta-pause-live 15/15。本次修复红米K80 Chrome「音乐挂后台总是停 + 通知栏媒体条时有时无」→ FIX-REGRESSION #76。构建含工作区前会话未构建改动 chat-settings.js/music-player.js/memo-arc.js/my-arc.js/base.css/sw.js。待提交）
+
+### 2026-08-30 15:10（新增：存钱罐拆成「现实存钱 / 心意币存钱」双账本 Tab——用户需求）
+- [AI 域·p2-features.js + chat-pages.css；**跨域改动 contacts.js（新键排除清单）**]（**改动文件：src/js/p2-features.js（存钱罐页双 Tab + 心意币存钱独立账本）+ src/css/chat-pages.css（双 Tab/双账户/记录归属标签样式）+ src/js/contacts.js（migrateLegacy 排除清单加 piggy-coin-* 四个根键）；构建状态：未构建**）。
+- 需求/反馈：用户要「真实现实存钱」和「我和联系人的心意币存钱」两种分开。已确认：①心意币存钱=从心意币账本转入（真扣 gift-wallet）、②TA 账户由 TA 随机塞（彩蛋不入 gift-wallet）、③现实存钱全部保留零迁移。
+- 方案：存钱罐页顶部加双 Tab。Tab1「现实存钱」=原功能全保留（沿用 piggy-* 键，数据零迁移）。Tab2「心意币存钱」=新账本 piggy-coin-*，分「我的/TA 的」双账户；存从 gift-wallet 真扣（giftWalletChange）、取退回；攒币心愿独立（复数 piggy-coin-goals，监督人复用 piggy-share 面板）；TA 越久未开概率越高塞币。纯本地存储、无后端。
+- 验证：node --check 两 JS 过。待构建后真机确认：①存钱罐顶部两个 Tab 可切换；②现实存钱仍是原来的罐；③心意币 Tab 存笔后 gift-wallet 余额同步减少、取回同步增加；④TA 偶发往 TA 账户塞币；⑤攒币心愿可建/可删/选监督人。
+
+### 2026-08-30 14:20（修复：点「下一首/上一首/播放」控件后音乐悬浮小框消失——点击事件对象被误当桌面小组件来源，抑制了小框唤出）
+- [AI 域·music-player.js]（**改动文件：src/js/music-player.js（底部播放条 sm-play/sm-prev/sm-next、悬浮小框 f-play/f-prev/f-next/f-mini-play 的事件绑定改为箭头函数包一层，不再把 click 事件对象透传成 fromWidget）；构建状态：未构建**）。
+- 需求/反馈：用户报「我把音乐切到随机播放后，点下一首，音乐悬浮小框会消失」。机型红米 K80 Chrome。
+- 根因：`next(fromWidget)` 的 `fromWidget` 本意是「是否由桌面小组件触发」（小组件本身是控制器，true 时抑制悬浮小框自动唤出防重复）。但 `addEventListener('click', next)` 把处理函数直接注册，click 触发时传进来的实参是**事件对象**（truthy）→ `markFloatSource(event)` 把 `floatHideByWidget=true` → `renderFloat` 判定 `hidden=true`，悬浮小框永久隐藏，直到用户显式动悬浮窗开关才清。
+- 方案：把非小组件按钮（底部播放条 + 悬浮小框自身）的绑定改成 `() => next()` / `() => prev()` / `() => toggle()`，不再把事件对象透传为 fromWidget；桌面音乐小组件（`() => next(true)` 等）保持不变，仍按原意图抑制小框。
+- 验证：node --check 过。待构建后真机确认：红米 K80 Chrome 音乐切随机 → 点下一首，悬浮小框不再消失。
+
+### 2026-08-30 13:10（修复：红米K80 Chrome 音乐挂后台总自己停 + 通知栏播放/后台保活媒体条时有时无——媒体会话被保活模块抢走不再回来）
+- [AI 域·跨模块 music-player.js + bg-keep.js]（**改动文件：src/js/music-player.js（__musicWantPlay 播放意图暴露 + onplay 重绑歌曲媒体条 + onpause 外部打断保持 playbackState=playing + tryResumePlayback 连续失败改 60s 冷却重试）+ src/js/bg-keep.js（setKeepMediaSession 加 musicIntentPlaying 让位守卫，音乐还有播放意图时不覆盖歌曲媒体条）+ build.mjs（哨兵 +2 → 85/85）+ FIX-REGRESSION.md（#76）；构建状态：已构建，sw: mochi-mtfco3w5**）。
+- 需求/反馈：用户报「播放音乐，浏览器挂在后台时，总是会自己停止播放；手机通知栏里之前有播放音乐的弹窗显示，还有后台保活的弹窗显示，现在没有了（时有时无）」。机型：红米 K80 Chrome。关联历史：#44（红米 K80 后台听歌被停 + 误弹「会员」移出窗，已修误报但"被停"仍在）。
+- 根因：通知栏媒体条由唯一 MediaSession 驱动，music-player 与 bg-keep 两个模块抢同一个会话。音乐在后台被外部打断（省电/音频焦点/断流）瞬时暂停时：`audio.onpause` 把 `playbackState` 标 'paused' + `__musicPlaying=false` → bg-keep 的 watcher 立即 `syncKeepForMusic` → 保活音频起播 + `setKeepMediaSession()` **把歌曲元数据覆盖成「Mochi 后台保活」**；300ms 后 bg-resume 恢复播放，`audio.onplay` 只标 playbackState='playing'、**从不恢复歌曲元数据** → 媒体会话仍绑定在被暂停的保活元素上 → Chrome 判定页面非"播放中媒体" → 通知栏媒体条消失、标签页被冻结 → 音乐停播、定时器停摆、后台补播看门狗也失效。因只在发生瞬断时触发，表现为「时有时无」；一旦触发就坏到下次完整 startPlayback。
+- 次要根因：`tryResumePlayback` 连续补播失败 ≥6 次即永久放弃（bgResumeFails 只在前台回程清零）——后台弱网/焦点频繁被抢时音乐停后无人再拉起。
+- 方案：
+  ① music-player.js 把 `wantPlay` 通过 `window.__musicWantPlay` getter 实时暴露（外部打断暂停=还想播，用户主动暂停=不想播）；
+  ② bg-keep.js `setKeepMediaSession` 加 `musicIntentPlaying()` 守卫——音乐还有播放意图时不让位覆盖歌曲媒体条（保活音频照常出声防冻结，歌曲条由 onplay 恢复）；
+  ③ music-player.js `audio.onplay` 追加 `updateMediaSession(true)`——每次真正出声都重设歌曲元数据 + playbackState='playing'，把媒体会话重新绑定到在播的音乐元素上；
+  ④ `audio.onpause` 改为按意图标状态：外部打断（wantPlay && !callHoldPending）保持 'playing'（防 Chrome 当闲置冻结、媒体条消失），仅用户主动暂停标 'paused'；
+  ⑤ `tryResumePlayback` 连续失败封顶由「永久放弃」改「60s 冷却后清零重试一轮」（bgResumeFailAt），后台不再永久停播。
+- 验证：node --check 两文件过；构建哨兵 85/85 + sw.js 2/2；npm run verify 10/10；verify-music-bg-resume 10/10（后台打断自动续播/用户暂停不续播/回前台恢复/来电 hold/元素重建全过）；verify-music-keep-coexist 10/10（音乐在播保活让位不抢、C6 playbackState=playing、音乐暂停保活收回、F9 停止后保活媒体条恢复全过）；verify-ta-pause-live 15/15（TA 暂停互动/防连发/权限关闭不受影响）。真机确认点（红米K80 Chrome）：播放歌曲挂后台 15~60s+ → 通知栏歌曲媒体条持续显示不消失、音乐不断；偶发外部打断恢复后歌曲条仍显示歌曲名而非「Mochi 后台保活」；用户暂停后媒体条才显示「Mochi 后台保活」保活条。
+
+### 2026-08-30 12:41（修复：iPhone17 Edge 浏览器 PWA 桌面图标按钮显示不全 + 切后台回前台退回旧版白屏）
+- [AI-B 域·移动端适配/离线层]（**改动文件：src/css/base.css（ios-fs-active 下 .phone 用 var(--mochi-ios-h,100dvh) 替 100vh）+ src/pwa/sw.js（导航回退 caches.match 改 caches.open(CACHE).match 优先当前 CACHE + activate claim 后补 fetch index.html 自愈）+ build.mjs（哨兵 +2：base.css ios-fs-active / sw.js 专项检查块）；构建状态：已构建入产物（index.html:333 + sw.js:132），哨兵 83/83 + sw.js 2/2，verify 10/10**）。
+- 需求/反馈：iPhone17 Edge 浏览器打开 GitHub 部署链接，开屏进入后用一会会退回旧版本然后白屏，桌面图标按钮显示不全缺很多。诊断：.phone高=874 超出 vv高=812 共 62px（顶-31/底843），html 类含 ios-pwa-standalone ios-fs-active ios-vv-fit，--mochi-ios-h=812px。
+- 根因①（布局）：base.css:419 .ios-pwa-standalone .phone height:100vh，iOS standalone 下 100vh=screen.height=874（含被隐藏状态栏区），而 ios-fs-active（已隐藏模拟状态栏）下可视视口=innerHeight=812，.phone 超出 62px → body 可滚、.phone top=-31、桌面顶/底各裁 31px（图标按钮被裁）。syncVvFit 已实测 --mochi-ios-h=812 但 base.css:417 :not(.ios-pwa-standalone) 守卫使 standalone 下未生效。
+- 根因②（白屏回退）：sw.js:118 导航回退 caches.match('./index.html') 不指定 cacheName，在所有缓存找「第一个」（顺序未定义，旧缓存可能先命中旧版）→ 即使当前 CACHE 有新版也可能回退旧版。叠加 iOS PWA standalone 切后台/回前台 WebKit 重新加载 + 网络优先 3.5s 超时回退缓存 →「退回旧版」；旧版若有 bug 则白屏。precache 失败时当前 CACHE 无 index.html，activate 保留旧缓存兜底加剧回退旧版。
+- 方案①：base.css 加 .ios-pwa-standalone.ios-fs-active .phone height:var(--mochi-ios-h,100dvh)（特异性 (0,3,0) 覆盖 100vh），ios-fs-active 下 .phone=812 填满可视区不溢出；非 ios-fs-active（状态栏可见）保持 100vh（另案）。键盘期 syncVvFit 摘除 --mochi-ios-h 回退 100dvh，但 _setPhoneH 内联值接管不受影响。
+- 方案②：sw.js 导航回退改 caches.open(CACHE).then(c=>c.match('./index.html')) 优先当前 CACHE（新版），仅当前 CACHE 无才遍历旧缓存兜底；activate claim 后异步补一次 fetch index.html 写入当前 CACHE（precache 失败自愈，不阻塞、失败有旧缓存兜底），下次导航回退命中新版。
+- 验证：node --check sw.js/build.mjs 过 + 构建哨兵 83/83 + sw.js 哨兵 2/2 + npm run verify 10/10（390×844/360×640 布局无回归）。真机确认点：iPhone17 Edge PWA 桌面图标完整显示不再被裁；切后台回前台不再退回旧版白屏（优先当前 CACHE 新版）。
+- 边界如实：白屏回退根因部分依赖 iOS WebKit 重新加载行为（平台限制），sw.js 修复降低回退旧版概率但无法完全消除弱网下首次回退；若仍复现需真机观察是否当前 CACHE 已有新版（fetch 成功 put）后仍回退旧版。
+
+### 2026-08-30 14:10（新增：我的档案 + 梦角档案 增加「梦境」分区，记录梦境）
+- [AI 域·业务功能 my-arc.js + memo-arc.js]（**改动文件：src/js/my-arc.js + src/js/memo-arc.js；构建状态：未构建，node --check 过**）。
+- 需求/反馈：用户要求「我的档案」和「梦角档案」新增 梦境，用来记录梦境。
+- 方案：两档案各加一个「梦境」分区（我的档案=我的梦境；梦角档案=TA的梦境），配对新的 dreams 数组（myarc 数据对象内 / narc-<id> 数据对象内，惰性生成）。条目结构 {id,text,date,created}，流程走 内容→日期（留空默认今天），列表卡片显示日期 + 编辑/删除，复用 narc-* 样式零新增 CSS。
+- 涉及点：ensureArc 数组补 dreams；menuHTML 加菜单行；sectionHTML SECS + 分发；dreamHTML 渲染 + addDream/editDream/delDream 流程；dispatch 补 add-dream/edit-dream/del-dream。
+- 验证：node --check 两文件过。待构建后真机确认：两档案总览出现「我的梦境/TA的梦境」入口，可记梦、改日期、编辑、删除。
+- 待处理：构建者收口时包含本条改动。
+
+### 2026-08-30 12:35（修复：iOS Safari 导出备份闪退 + 添加字卡后卡顿）
+- [AI-B 域 data-backup.js + AI-A 域 chatcard.js，跨域]（**改动文件：src/js/data-backup.js（doExport 大备份 json>3MB 跳过 idbSet 副本写入）+ src/js/chatcard.js（批量导入 cb + finishUpload 的 saveGroups 改 scheduleSave 延后持久化）+ build.mjs（哨兵 +2 → 84/84）+ FIX-REGRESSION.md（#73/#74）；构建状态：未构建，node --check 过**）。
+- 需求/反馈：① iPhone XS Safari（iOS 18.5，PWA）头像互动添加头像图片后，导出数据一导出就闪退；② 自定义字卡所有页面（公用/专属）添加字卡后"卡卡的点不动"。
+- 根因①（data-backup.js:204-206）：doExport 末尾 `idbSet(SNAPSHOT_KEY, json)` 把整个导出 JSON（chat-msgs 13.8MB + 头像 dataURL，15~25MB）再 structured clone 写 IDB 副本，内存峰值翻倍 → iOS Safari PWA standalone WebContent 被 Jetsam 杀进程。添加头像后越过阈值。
+- 根因②（chatcard.js:2040/1979）：批量导入 cb 和 finishUpload 直接 `saveGroups(groups)` 同步序列化整个字卡库（含 dataURL 可达几 MB~几十 MB）阻塞主线程；编辑单卡已用 scheduleSave 延后（541 行），批量导入漏改。
+- 方案①：`json.length > 3MB` 时跳过副本写入（小备份仍写副本保留"数据丢失恢复"能力）。
+- 方案②：两处 `saveGroups(groups)` 改 `scheduleSave()`，持久化延后 120ms，render() 立即用内存 groups 渲染。
+- 验证：node --check 过。待构建后真机确认：①添加头像后导出不再闪退、导出文件完整；②添加字卡后不再卡顿、字卡立即出现。
+- 待构建者：本条未构建，请构建时包含 data-backup.js + chatcard.js + 工作区前会话未构建改动（chat-settings.js/music-player.js）。
+
+### 2026-08-30 12:15（修复：iOS Safari 单聊出站消息文字空白——cs-out-bg 与 cs-out-ink 同色/低对比，单聊无对比度保护）
+- [AI-B 域·跨域改动 chat-settings.js]（**改动文件：src/js/chat-settings.js（applySettings 末尾加 _ensureBubbleContrast 对比度自愈）；构建状态：未构建，node --check 过**）。
+- 需求/反馈：用户报 iPhone 12 Pro Max Safari（iOS 18.5，浅色主题）聊天里"我"发的消息文字突然全部空白看不见，历史记录也空白；联系人消息正常有字。
+- 根因：cs-out-bg 与 cs-out-ink（per-cid 每联系人独立）被设成同色或极低对比 → 出站气泡文字与背景同色看不见。单聊 bindBubbleColorRow 无对比度保护（群聊 group-chat.js:158-194 有 GC_MIN_CONTRAST=2.2），允许设成同色。store 动态绑定当前联系人（contacts.js:174），切联系人触发 applyChatSettings 重读 → "突然"空白。
+- 方案：applySettings 末尾加 _ensureBubbleContrast()——读已写入的 --msg-out-bg/--msg-out-ink/--msg-in-bg/--msg-in-ink，WCAG 对比度 <1.5 时注入 #cs-contrast-fix style 用 .msg-bubble.msg-bubble 双类（特异性 0,3,0）+ !important 覆盖 color 为高对比兜底（bg 亮用 #111111，暗用 #ffffff）；对比度正常时移除该 style。不改变用户设置的变量值（设置页回显不变），只在渲染层兜底。
+- 验证：node --check 过。待构建后真机确认：①出站消息文字可见；②用户重置颜色后覆盖样式自动移除；③正常对比度配置不受影响。
+- 临时解决（已告知用户）：聊天设置把「我的气泡颜色」「我的消息文字颜色」设成对比明显组合（如黑底白字），清空自定义气泡 CSS。
+- 待构建者：本条未构建（工作区另有 music-player.js/FIX-REGRESSION.md 未提交改动），请构建者收口时包含 chat-settings.js（AI-B 会话因用户报障确需跨域修复）。
 
 ### 2026-08-30 12:05（修复：红米K70 QQ浏览器的互动卡片「有的能收藏、有的点心形无效」——cardSnapshot 补齐 + 心形按 data-idx 定位）
 - [AI 域·业务功能 chat.js，本次由本会话代构建]（**改动文件：src/js/chat.js（cardSnapshot 补 ask/红包/送花/礼物/佳肴 五类 q/mine/ta 快照 + 心形 locator 改 favBtn.closest('[data-idx]') + flower/gift/dish 渲染补 data-idx + FAV_KIND_LABEL 补五类友好标签）+ build.mjs（哨兵 favBtn.closest('[data-idx]')）/ FIX-REGRESSION #72；构建状态：已构建，sw: mochi-mtfaduto，哨兵 80/80，verify 10/10**）。

@@ -200,9 +200,17 @@
     try { localStorage.setItem('xy-home-v2:__last-backup', String(Date.now())); } catch (e) {}
     // v3.7.0：同步把导出 JSON 写入 IndexedDB 副本键——启动时若检测到数据丢失，
     // 可从此副本恢复。写入失败不提示（不影响导出本身，下次导出再尝试）。
-    impShow('正在导出…', '正在写入自动备份副本', 84);
-    if (window.idbSet) {
-      try { window.idbSet(SNAPSHOT_KEY, json); } catch (e) {}
+    // v3.27.x：大备份跳过副本写入——idbSet(SNAPSHOT_KEY, json) 会把整个导出 JSON
+    //   再 structured clone 一份进 IndexedDB，内存峰值翻倍。iOS Safari PWA standalone
+    //   下 WebContent 进程内存限制严，大备份（聊天记录+头像 dataURL 可达 15~25MB）
+    //   写副本时 Jetsam 杀进程 → 导出闪退（用户反馈「头像互动添加头像图片后一导出就闪退」）。
+    //   阈值 3MB：小备份仍写副本保留「数据丢失自动恢复」能力，大备份跳过（副本恢复只在
+    //   localStorage+IDB 业务键均 <3 的丢失场景提示，大备份用户本就持有导出文件）。
+    if (json.length <= 3 * 1024 * 1024) {
+      impShow('正在导出…', '正在写入自动备份副本', 84);
+      if (window.idbSet) {
+        try { window.idbSet(SNAPSHOT_KEY, json); } catch (e) {}
+      }
     }
     // v3.9.x：修复真我手机 Edge（Android Chromium）导出完全没反应……
     // 三级降级保存：① 系统分享面板 navigator.share ② 系统保存框 showSaveFilePicker
