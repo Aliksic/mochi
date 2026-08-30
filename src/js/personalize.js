@@ -1359,6 +1359,8 @@ try {
     if (old) old.remove();
     const c = appNameColorValOf();
     if (appNameColorVal) appNameColorVal.textContent = c ? c.toUpperCase() : '默认';
+    // 同步设 --app-name-color 变量供颜色分区预览面板着色（真实 .app .app-name 仍由下方注入 style 覆盖）
+    document.documentElement.style.setProperty('--app-name-color', c && /^#[0-9a-fA-F]{6}$/.test(c) ? c : '');
     if (!c || !/^#[0-9a-fA-F]{6}$/.test(c)) return;
     const st = document.createElement('style');
     st.id = 'app-name-color-style';
@@ -1404,6 +1406,26 @@ try {
     });
   }
   document.addEventListener('contact-switched', applyAppNameColor);
+
+  // 颜色分区预览面板样式（一次性注入；各部位用 CSS 变量着色，用户改色时变量实时变 → 预览自动更新，零额外 JS 开销）
+  if (!document.getElementById('desk-cp-style')) {
+    const cpStyle = document.createElement('style');
+    cpStyle.id = 'desk-cp-style';
+    cpStyle.textContent = '.desk-cp{margin:0 0 14px;padding:12px;border-radius:14px;background:var(--card-bg);border:1px solid var(--card-border);}' +
+      '.desk-cp-phone{display:flex;flex-direction:column;gap:10px;padding:10px;border-radius:12px;background:linear-gradient(180deg,var(--phone-bg-a),var(--phone-bg-b));}' +
+      '.desk-cp-apps{display:flex;gap:18px;justify-content:center;}' +
+      '.desk-cp-app{display:flex;flex-direction:column;align-items:center;gap:4px;}' +
+      '.desk-cp-ico{width:30px;height:30px;border-radius:9px;background:var(--ink);opacity:.85;}' +
+      '.desk-cp-name{font-size:10px;color:var(--app-name-color,var(--ink));letter-spacing:.5px;}' +
+      '.desk-cp-card{padding:8px 10px;border-radius:10px;background:var(--widget-bg,var(--card-bg));border:1.5px solid var(--widget-border,var(--card-border));opacity:var(--widget-opacity,1);display:flex;align-items:center;gap:8px;flex-wrap:wrap;}' +
+      '.desk-cp-card-title{font-size:11px;color:var(--ink);font-weight:600;}' +
+      '.desk-cp-btn{padding:4px 10px;border-radius:8px;border:none;background:var(--widget-btn,var(--btn-bg));color:var(--widget-btn-text,var(--btn-ink));font-size:10px;font-weight:600;}' +
+      '.desk-cp-heart{color:var(--widget-heart,#e05555);font-size:15px;line-height:1;}' +
+      '.desk-cp-theme{padding:4px 12px;border-radius:8px;border:none;background:var(--btn-bg);color:var(--btn-ink);font-size:10px;font-weight:600;align-self:flex-start;cursor:default;}' +
+      '.desk-cp-legend{margin-top:10px;font-size:10.5px;color:var(--muted);line-height:1.6;}' +
+      '.desk-cp-legend b{color:var(--ink);font-weight:600;}';
+    document.head.appendChild(cpStyle);
+  }
 
   // 爱心外框颜色：CSS 变量 --widget-heart 实时生效（打卡横幅「和 TA 一起摸鱼」的爱心圆底）
   const widgetHeartRow = document.getElementById('row-widget-heart');

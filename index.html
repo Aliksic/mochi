@@ -8422,9 +8422,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1788073882426">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.362</b></span>
-        <span class="sv-deploy">部署于 2026-08-30 15:11<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1788074500839">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.363</b></span>
+        <span class="sv-deploy">部署于 2026-08-30 15:21<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9514,7 +9514,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.362</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.363</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -9571,6 +9571,22 @@ transition-duration: .01ms !important;
       </div>
       <div class="them-sec" data-sec="color">
       <div class="cg-title">颜色与透明度</div>
+      <div class="desk-cp" id="desk-color-preview">
+        <div class="desk-cp-phone">
+          <div class="desk-cp-apps">
+            <div class="desk-cp-app"><div class="desk-cp-ico"></div><div class="desk-cp-name">聊天</div></div>
+            <div class="desk-cp-app"><div class="desk-cp-ico"></div><div class="desk-cp-name">日历</div></div>
+            <div class="desk-cp-app"><div class="desk-cp-ico"></div><div class="desk-cp-name">信箱</div></div>
+          </div>
+          <div class="desk-cp-card">
+            <div class="desk-cp-card-title">今日</div>
+            <button class="desk-cp-btn">打卡</button>
+            <div class="desk-cp-heart">♥</div>
+          </div>
+          <button class="desk-cp-theme">主题按钮</button>
+        </div>
+        <div class="desk-cp-legend"><b>图标名称</b>=图标文字颜色 · <b>卡片背景/边框</b>=小组件颜色/边框 · <b>打卡按钮</b>=按钮颜色+文字 · <b>爱心</b>=爱心外框 · <b>主题按钮</b>=主题色 · <b>卡片透明度</b>=小组件透明度</div>
+      </div>
       <div class="set-group glass">
         <div class="set-row" id="row-accent-color">
           <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4" fill="#111111" stroke="none"/></svg></div>
@@ -9732,7 +9748,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.362</span>
+              <span class="lic-ver">v3.26.363</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -17112,6 +17128,7 @@ const old = document.getElementById('app-name-color-style');
 if (old) old.remove();
 const c = appNameColorValOf();
 if (appNameColorVal) appNameColorVal.textContent = c ? c.toUpperCase() : '默认';
+document.documentElement.style.setProperty('--app-name-color', c && /^#[0-9a-fA-F]{6}$/.test(c) ? c : '');
 if (!c || !/^#[0-9a-fA-F]{6}$/.test(c)) return;
 const st = document.createElement('style');
 st.id = 'app-name-color-style';
@@ -17157,6 +17174,24 @@ pills: [{ label: '恢复默认', value: '__reset__' }],
 });
 }
 document.addEventListener('contact-switched', applyAppNameColor);
+if (!document.getElementById('desk-cp-style')) {
+const cpStyle = document.createElement('style');
+cpStyle.id = 'desk-cp-style';
+cpStyle.textContent = '.desk-cp{margin:0 0 14px;padding:12px;border-radius:14px;background:var(--card-bg);border:1px solid var(--card-border);}' +
+'.desk-cp-phone{display:flex;flex-direction:column;gap:10px;padding:10px;border-radius:12px;background:linear-gradient(180deg,var(--phone-bg-a),var(--phone-bg-b));}' +
+'.desk-cp-apps{display:flex;gap:18px;justify-content:center;}' +
+'.desk-cp-app{display:flex;flex-direction:column;align-items:center;gap:4px;}' +
+'.desk-cp-ico{width:30px;height:30px;border-radius:9px;background:var(--ink);opacity:.85;}' +
+'.desk-cp-name{font-size:10px;color:var(--app-name-color,var(--ink));letter-spacing:.5px;}' +
+'.desk-cp-card{padding:8px 10px;border-radius:10px;background:var(--widget-bg,var(--card-bg));border:1.5px solid var(--widget-border,var(--card-border));opacity:var(--widget-opacity,1);display:flex;align-items:center;gap:8px;flex-wrap:wrap;}' +
+'.desk-cp-card-title{font-size:11px;color:var(--ink);font-weight:600;}' +
+'.desk-cp-btn{padding:4px 10px;border-radius:8px;border:none;background:var(--widget-btn,var(--btn-bg));color:var(--widget-btn-text,var(--btn-ink));font-size:10px;font-weight:600;}' +
+'.desk-cp-heart{color:var(--widget-heart,#e05555);font-size:15px;line-height:1;}' +
+'.desk-cp-theme{padding:4px 12px;border-radius:8px;border:none;background:var(--btn-bg);color:var(--btn-ink);font-size:10px;font-weight:600;align-self:flex-start;cursor:default;}' +
+'.desk-cp-legend{margin-top:10px;font-size:10.5px;color:var(--muted);line-height:1.6;}' +
+'.desk-cp-legend b{color:var(--ink);font-weight:600;}';
+document.head.appendChild(cpStyle);
+}
 const widgetHeartRow = document.getElementById('row-widget-heart');
 const widgetHeartVal = document.getElementById('widget-heart-val');
 const applyWidgetHeart = (color) => {

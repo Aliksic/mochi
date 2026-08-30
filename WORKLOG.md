@@ -1,4 +1,12 @@
-# 本次构建者：AI-B（已构建，sw: mochi-mtfgwbry，哨兵 95/95 + sw.js 2/2，verify 10/10。本次新增：桌面美化「全局字体」快捷入口（与聊天设置 cs-font 互通）+「图标文字颜色」（.app .app-name color）。构建含工作区累积改动：clock.js 开屏字卡预加载 / p2-features.js 存钱罐心意币 / chat.js 贴贴回应+录音 / chat-settings.js / contacts.js / data-backup.js / chat-main.css / notice.json / music-player.js / FIX-REGRESSION.md。待提交推送）
+# 本次构建者：AI-B（已构建，sw: mochi-mtfhdz9c，哨兵 96/96 + sw.js 3/3，verify 10/10。本次新增：桌面美化颜色分区实时预览面板（desk-color-preview mini 桌面示意图，各部位用 CSS 变量着色实时更新，解决用户「看不懂每项改哪里」）。待提交推送）
+
+### 2026-08-30 15:20（新增：桌面美化颜色分区加实时预览面板——用户反馈看不懂每项改哪里）
+- [AI-B 域·personalize.js + template.html + build.mjs]（**改动文件：src/js/personalize.js（applyAppNameColor 同步设 --app-name-color 变量供预览着色 + 一次性注入 desk-cp-style 预览样式）+ src/template.html（颜色分区顶部加 desk-color-preview mini 桌面示意图：图标行+卡片+按钮+爱心+主题按钮+图例）+ build.mjs（哨兵 +1）；构建状态：未构建，node --check 过**）。
+- 需求/反馈：用户反馈桌面美化→颜色分区各项（主题色/小组件颜色/边框/按钮/按钮文字/爱心/图标文字/透明度）看不懂每项改的是哪里的颜色，希望能预览显示。
+- 根因：颜色分区 8 项设置只有行名，无可视化示意，用户无法直观对应到桌面具体部位。
+- 方案：颜色分区顶部加 mini 桌面预览面板（desk-color-preview）：画图标行（app-ico+app-name）+ 一张卡片（widget-bg+border+opacity）+ 打卡按钮（widget-btn+btn-text）+ 爱心（widget-heart）+ 主题按钮（btn-bg+btn-ink）。各部位用现有 CSS 变量（--widget-bg/--widget-border/--widget-btn/--widget-btn-text/--widget-heart/--widget-opacity/--btn-bg/--btn-ink）+ 新增 --app-name-color 着色，用户改任一项颜色时变量实时变 → 预览自动更新，零额外 JS 开销。下方图例文字标注各部位对应设置项。预览样式由 personalize.js 一次性注入 style（不碰 setting.css，不跨域）。深色模式通过语义变量自动适配。
+- 验证：node --check 过。待构建后真机确认：①颜色分区顶部出现 mini 桌面预览（图标+卡片+按钮+爱心+主题按钮+图例）；②改「图标文字颜色」→预览里图标下名称变色；③改「小组件颜色/边框/透明度」→预览卡片背景/边框/透明度变；④改「按钮颜色/文字」→预览打卡按钮变；⑤改「爱心外框」→预览爱心变色；⑥改「主题色」→预览主题按钮变；⑦深色模式预览自动适配。
+- 待构建者：本条未构建，请构建时包含 personalize.js + template.html + build.mjs。
 
 ## 历史构建声明
 - 上次构建：本会话（已构建，sw: mochi-mtfdazbh，哨兵 86/86 + sw.js 2/2，verify 10/10。本次修复荣耀90 Edge「我发语音」录音滋啦滋啦爆音 → FIX-REGRESSION #77，chat.js 录音按「标准安卓浏览器 vs iOS/WebView」分流走 webm/opus。构建含工作区未提交改动 cjian.js（对方在改，构建已包含，确认已保存完整）。待提交）

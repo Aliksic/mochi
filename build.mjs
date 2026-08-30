@@ -253,6 +253,7 @@ const FIX_SENTINELS = [
   { name: '此间认亲匹配双名字（homeCidForName 同时匹配 TA 昵称与联系人名，修 lbl-partner 与联系人名不一致认不到家）', file: 'js/cjian.js', needle: 'idn === n || cn === n' },
   { name: '桌面美化·全局字体快捷入口（复用聊天设置 cs-font 键，applyDeskCsFont 注入同款 @font-face，两边互通）', file: 'js/personalize.js', needle: 'applyDeskCsFont' },
   { name: '桌面美化·图标文字颜色（applyAppNameColor 注入 style 覆盖 .app .app-name color）', file: 'js/personalize.js', needle: 'applyAppNameColor' },
+  { name: '桌面美化·颜色分区预览面板（desk-color-preview 各部位用 CSS 变量着色实时反映各项颜色）', file: 'template.html', needle: 'desk-color-preview' },
   { name: '贴贴同意后回应不带主动爱心（cuddle 回应去 initiative，修「同意贴贴后 TA 回应也显示主动联系爱心」）', file: 'js/chat.js', needle: "pick(CUDDLE_REPLIES), { initiative: true })", absent: true },
   { name: '大备份下载长命 blob URL（anchorDownload 不再 1s revokeObjectURL，修小米14U Edge 导出「点了下载没反应/没下载完」）', file: 'js/data-backup.js', needle: 'const snapshotWritten' },
 
