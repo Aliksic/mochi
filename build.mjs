@@ -281,7 +281,8 @@ try {
   const swSrc = readFileSync(join(root, 'sw.js'), 'utf8');
   const swNeedles = [
     'caches.open(CACHE).then((c) => c.match(\'./index.html\')).then((m) => m || caches.keys()',
-    'claim 后异步补一次 fetch 写入当前 CACHE'
+    'claim 后异步补一次 fetch 写入当前 CACHE',
+    'sort((a, b) => cacheVersion(b) - cacheVersion(a))'
   ];
   const swMissing = swNeedles.filter(n => !swSrc.includes(n));
   if (swMissing.length) {

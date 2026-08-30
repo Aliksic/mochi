@@ -26,6 +26,18 @@ function fetchWithTimeout(req, ms) {
   });
 }
 
+// v3.28.x：缓存版本号。CACHE 名固定为 mochi-<构建时间戳 base36>（build.mjs 每次
+// 构建替换），时间戳单调递增 → base36 数值越大 = 越新的构建。跨旧版回退选缓存时
+// 按此排序取最新，杜绝「慢网络回退到任意旧缓存 → 退回旧版布局/白屏」。
+function cacheVersion(name) {
+  const m = /^mochi-([a-z0-9]+)$/.exec(String(name || ''));
+  if (m) {
+    const v = parseInt(m[1], 36);
+    if (!isNaN(v)) return v;
+  }
+  return 0;
+}
+
 self.addEventListener('install', (e) => {
   // 跳过等待：新 sw 安装后立即接管（配合每次构建新缓存名 → 强制更新）
   self.skipWaiting();
@@ -58,7 +70,10 @@ self.addEventListener('activate', (e) => {
             return Promise.all(oldKeys.map((k) =>
               caches.open(k).then((c) => c.match('./index.html')).then((m) => m ? k : null)
             )).then((hits) => {
-              const keep = hits.find(Boolean);
+              // v3.28.x：命中多个旧缓存时保留「最新」一个做兜底（hits.find(Boolean)
+              // 按 caches.keys() 顺序取第一个，通常是老缓存 → 用户下次导航回退会退回旧版）。
+              // 按 base36 版本降序排，取最新的旧缓存；其余照删。
+              const keep = hits.filter(Boolean).sort((a, b) => cacheVersion(b) - cacheVersion(a))[0];
               if (keep) return Promise.all(oldKeys.filter((k) => k !== keep).map((k) => caches.delete(k)));
               return Promise.all(oldKeys.map((k) => caches.delete(k)));
             });
@@ -133,7 +148,10 @@ self.addEventListener('fetch', (e) => {
               // v3.7.x：主缓存无 index.html（precache 失败 / activate 保留了旧缓存兜底），
               // 遍历所有缓存找第一个命中的 index.html。原 for 循环首次即 return 只查
               // keys[0]，漏掉其余缓存——改为 reduce 顺序探测，命中即返回，保证导航永不白屏。
-              return keys.reduce((p, k) =>
+              // v3.28.x：reduce 按 caches.keys() 原顺序探测，命中第一个旧缓存（常为最老缓存）
+              // → 慢网络下用户被回退到旧版布局（图标缺失/白屏）。现先按 base36 版本降序
+              // 排序再探测，优先命中「最新」的旧缓存，尽可能停留在新版。
+              return keys.slice().sort((a, b) => cacheVersion(b) - cacheVersion(a)).reduce((p, k) =>
                 p.then((found) => found || caches.match('./index.html', { cacheName: k }))
               , Promise.resolve(null));
             }))

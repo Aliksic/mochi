@@ -3,6 +3,15 @@
 ## 历史构建声明
 - 上次构建：本会话（已构建，sw: mochi-mtfdazbh，哨兵 86/86 + sw.js 2/2，verify 10/10。本次修复荣耀90 Edge「我发语音」录音滋啦滋啦爆音 → FIX-REGRESSION #77，chat.js 录音按「标准安卓浏览器 vs iOS/WebView」分流走 webm/opus。构建含工作区未提交改动 cjian.js（对方在改，构建已包含，确认已保存完整）。待提交）
 
+### 2026-08-30（修复：小米 14U Edge 导出大备份「点了下载没反应/没下载完」+「导出后数据像被清空」→ FIX-REGRESSION #82）
+- [AI 域·data-backup.js + build.mjs + FIX-REGRESSION.md]（**改动文件：src/js/data-backup.js（anchorDownload 改长命 blob URL：不再 1s revokeObjectURL/remove，改 pagehide 释放 + 5 分钟兜底；导出副本写入按 snapshotWritten 记录，>3MB 大备份弹窗/toast 如实提示「下载文件是唯一新备份」不再谎称已存缓存）+ build.mjs（FIX_SENTINELS +1：`const snapshotWritten`）+ FIX-REGRESSION.md（#82）；构建状态：随最近一次构建已含 data-backup.js，待本人复核哨兵后提交**）。
+- 需求/反馈：小米 14U Edge（部署的 GitHub Pages 链接）导出数据：进度条加载走完、也点了下载（确定），但浏览器不显示下载、也没下载完；且点击导出后数据像是被清空。诊断（v3.26.341）：localStorage 0 键 + LS 写探针失败(QuotaExceededError)，IndexedDB 187.5MB 完好（自动备份快照 172.7MB + 聊天/音乐/头像都在）。
+- 根因一（下载不完成）：data-backup.js anchorDownload 在 `setTimeout(1000ms)` 后 `URL.revokeObjectURL(a.href)` + `a.remove()`——大备份（音乐/头像/聊天全量 base64 后上百 MB）下载刚由浏览器接管、blob 还没读完 URL 就失效 → 无下载通知、无文件落盘。
+- 根因二（数据像被清空）：旧线上版本导出**无条件**把整个 JSON 写进 IDB 自动备份副本键（该用户快照 172.7MB），写副本成内存峰值主因 + 旧 idbSet 固定 4s 超时连败弹「存储异常」，导出过程被拖到崩溃边缘；安卓 Chromium 在崩溃/内存压力下损坏本地存储(LS) → LS 全空且后续写入全报 QuotaExceededError。数据其实没丢，全在 IndexedDB（idbRestore 启动会从 IDB 回填）。
+- 方案：①anchorDownload 改长命 blob URL——pagehide 才释放 + 5 分钟兜底，anchor 5s 后再移除，大下载不再被中途作废；②导出副本写入用 snapshotWritten 记录是否写入（>3MB 跳过），弹窗/toast 对未写副本的大备份如实提示「备份较大未另存副本，请务必确保下载保存成功——这份文件是唯一的新备份」，避免用户以为数据有副本而放弃保存下载文件。
+- 验证：node --check 过；构建哨兵待复核。真机（小米 14U Edge）：导出大备份→进度条走完→点「确定」→状态栏出现下载/文件正常保存；导出前后本地数据无任何变化；大备份弹窗提示唯一备份。已部署旧版用户请刷新更新条后再导出。
+- 待构建者：本条随最近一次构建已含 data-backup.js 代码，构建哨兵复核后提交推送。
+
 ### 2026-08-30 16:00（存钱罐心意币：记录秒级 + TA 余额快没概率取回 + 右上角概率设置——用户需求）
 - [AI 域·p2-features.js + chat.js；**跨域改动 contacts.js（排除清单加 piggy-coin-prob 根键）**]（**改动文件：src/js/p2-features.js（piggyCoinRowHtml 时间精确到秒；新增 piggyCoinProbGet/Save、piggyCoinMaybeTaWithdraw「TA 余额<¥10 按概率从TA账户取回」；存钱概率改为读配置 base + 越久未开加成，默认 12%；右上角新增 ⚙ ch-settings 按钮 → 分步弹窗设存钱/取钱/申请三档概率；TA 塞币存钱时同步调用 window.chatAddSystem 在聊天发系统消息）+ src/js/chat.js（trySystemAskMochi 读配置申请概率，默认 4%）+ src/js/contacts.js（migrateLegacy 排除清单加 piggy-coin-prob）；构建状态：未构建，node --check 全部过**）。
 - 需求/反馈：① 心意币记录时间要精确到秒；② 联系人心意币余额快没时有概率在「心意币存钱」里取钱；③ 存钱/取钱概率、联系人向 Mochi 申请概率写在存钱罐右上角新增设置里。根因与方案：时间格式化只到 MM-DD；新增取回彩蛋（systemBalance<¥10 触发，配置概率）；三档概率存根键 xy-home-v2:piggy-coin-prob（存钱 12 / 取钱 25 / 申请 4 默认%）。验证：node --check 通过；待构建者收口（含 chat.js 申请概率读取依赖该根键，已同步进排除清单防迁移）。
