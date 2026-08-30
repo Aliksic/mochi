@@ -138,7 +138,12 @@ window.Audio = function () {
   el.play = function () {
     if (window.__au.rejectMode) {
       window.__au.log.push({ act: 'reject', inst: idx, t: Date.now() });
-      return Promise.reject(new Error('NotAllowedError'));
+      // v3.26.x：模拟真实浏览器的自动播放拦截——错误对象挂 name='NotAllowedError'
+      //（真实内核是 DOMException.name；旧 mock 只把名字放 message，播放器按 err.name
+      // 区分错误类型后会误判成源加载失败走换源兜底，测试场景失真）
+      var re = new Error('The play method is not allowed by the user agent');
+      re.name = 'NotAllowedError';
+      return Promise.reject(re);
     }
     el.paused = false;
     window.__au.log.push({ act: 'play', inst: idx, t: Date.now() });

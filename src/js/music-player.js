@@ -436,18 +436,10 @@
       // 1-2：CORS 代理抓歌曲页面 HTML，解析 <title>
       { url: 'https://api.allorigins.win/raw?url=' + encodeURIComponent(songPageUrl), isText: true, parse(t) {
           return parseNeteasePageTitle(t); } },
-      { url: 'https://corsproxy.io/?url=' + encodeURIComponent(songPageUrl), isText: true, parse(t) {
-          return parseNeteasePageTitle(t); } },
-      // 3-4：原网易云 API 直链（需 Cookie，多数返回 400，仅作兜底）
+      // v3.26.x：corsproxy.io 已整体 401（改为要求注册 API key，无 key 一律拒绝），
+      // 留着只会刷「网络失败 401」日志（vivo Y35+Edge 诊断实证），移除。
+      // 3：原网易云 API 直链（需 Cookie，多数返回 400，仅作兜底）
       { url: 'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://music.163.com/api/song/detail/?ids=' + id), isText: true, parse(t) {
-          let d; try { d = typeof t === 'string' ? JSON.parse(t) : t; } catch(e) { return null; }
-          if (d && d.songs && d.songs[0]) {
-            const s = d.songs[0];
-            const artist = (s.artists || []).map(a => a.name).join('/');
-            return { name: s.name, artist: artist, pic: (s.album && s.album.picUrl) || '', duration: s.dt ? Math.round(s.dt / 1000) : 0 };
-          }
-          return null; } },
-      { url: 'https://corsproxy.io/?url=' + encodeURIComponent('https://music.163.com/api/song/detail/?ids=' + id), isText: true, parse(t) {
           let d; try { d = typeof t === 'string' ? JSON.parse(t) : t; } catch(e) { return null; }
           if (d && d.songs && d.songs[0]) {
             const s = d.songs[0];
@@ -595,20 +587,8 @@
             fee: s.fee
           })).filter(t => t.url);
         } },
-      { url: 'https://corsproxy.io/?url=' + encodeURIComponent(apiUrl), parse(txt) {
-          let j; try { j = JSON.parse(txt); } catch (e) { return null; }
-          const pl = j && j.playlist;
-          if (!pl || !Array.isArray(pl.tracks) || !pl.tracks.length) return null;
-          return pl.tracks.map(s => ({
-            neteaseId: String(s.id || ''),
-            name: s.name || '',
-            artist: ((s.ar || []).map(a => a.name).filter(Boolean).join('/')),
-            cover: String((s.al && s.al.picUrl) || '').replace(/^http:\/\//i, 'https://'),
-            url: s.id ? neteaseMetingUrl(s.id) : '',
-            duration: s.dt ? Math.round(s.dt / 1000) : 0,
-            fee: s.fee
-          })).filter(t => t.url);
-        } }
+      // v3.26.x：corsproxy.io 源已移除——整体 401（要求注册 API key），无意义请求只刷
+      // 「网络失败」日志（vivo Y35+Edge 诊断实证）
     ];
     let idx = 0;
     function tryNext() {
@@ -692,8 +672,7 @@
     // v3.9.x：codetabs 已失效（超时），改用 proxy.cors.sh（Cloudflare Workers，稳定）
     const prox = [
       { p: 'https://proxy.cors.sh/', enc: false },
-      { p: 'https://api.allorigins.win/raw?url=', enc: true },
-      { p: 'https://corsproxy.io/?url=', enc: true }
+      { p: 'https://api.allorigins.win/raw?url=', enc: true }
     ];
     const out = {};
     const fees = {}; // v3.10.x：顺带收集 fee（1=VIP 4=购买专辑）供导入后移除本批 VIP
@@ -739,8 +718,7 @@
     ];
     const prox = [
       { p: 'https://proxy.cors.sh/', enc: false },
-      { p: 'https://api.allorigins.win/raw?url=', enc: true },
-      { p: 'https://corsproxy.io/?url=', enc: true }
+      { p: 'https://api.allorigins.win/raw?url=', enc: true }
     ];
     const out = {};
     let settled = false;
@@ -1960,13 +1938,31 @@
     wantPlay = true; // v3.10.x：用户点播/切歌＝意图播放（外部打断时自动续播的依据）
     const p = audio.play();
     if (p && p.catch) {
-      p.catch(() => {
+      p.catch((err) => {
         // v3.28.x：防 null.play() 崩溃——play() 的 rejection 是异步回调，其间 audio
         // 可能已被 teardownAudio 置空（断网/弱网 meting 加载失败 → onerror →
         // retryWithHttpsUrl 先 teardown 再异步拉直链；或用户切歌/停止）。不判空直接
         // audio.play() 会抛「Cannot read properties of null (reading 'play')」
         //（红米K80 断网实测）。换源回调/后台补播/手势兜底自会接管，这里静默返回。
         if (!audio) return;
+        // v3.27.x：区分 play() reject 的错误类型——只有 NotAllowedError 才是真正的
+        // 自动播放策略拦截（走 muted 静音解锁）；其他错误（NotSupportedError/AbortError
+        // 等）是源加载失败/跨域/混合内容/meting 服务不可达，走外链失败兜底（拉完整版
+        // 直链/内置旋律），不再一律当"自动播放拦截"处理而误导用户"被浏览器拦截"。
+        // 根因：网易云歌曲 audio.src 是跨域 meting URL，部分浏览器在跨域 media 数据未
+        // 就绪时 play() 返回非 NotAllowedError 的 reject，旧代码不区分错误类型全走
+        // muted 解锁 → 仍失败 → 弹"被浏览器拦截"，吞掉了本应走的拉直链/兜底路径。
+        if (err && err.name !== 'NotAllowedError') {
+          // v3.26.x：换源窗口期的拒绝是 teardown 旧元素的自然结果（同 handlePlayReject
+          // 的守卫）——不视为源失效，静默等换源回调接管；否则会漏进 demoFallbackOrError
+          // → offerRemoveDamagedSong 误计数/误停新元素（弱网换源场景）。
+          if (httpsRetrying || demoFallbackBusy) return;
+          if (m && m.neteaseId && !m._httpsRetried) {
+            if (retryWithHttpsUrl(m)) return;
+          }
+          demoFallbackOrError(m);
+          return;
+        }
         // v3.6.x：移动端自动播放策略——本地文件是「异步从 IDB/Blob 读回后再 play()」，
         // 用户点击的手势上下文已丢失，play() 被浏览器拒绝（NotAllowedError）。
         // muted 静音解锁（Chromium/国产 WebView 的 autoplay 策略对静音媒体放行）：
@@ -1981,14 +1977,14 @@
             clearStallGuard();
             disarmAutoResume();
             try { syncPlayIcons(true); } catch (e) {}
-          }).catch(() => {
+          }).catch((e2) => {
             // v3.10.x：muted 也被拒——手势内才弹提示，自动切歌/断链重试等
             // 非手势场景静默走补播反击（聊天中听歌突然中断弹"被拦截"即此）
             if (audio) { try { audio.muted = false; } catch (e) {} }
-            handlePlayReject();
+            handlePlayReject(e2);
           });
         } else {
-          handlePlayReject();
+          handlePlayReject(err);
         }
       });
     }
@@ -2169,14 +2165,30 @@
   });
   function recentUserGesture() { return Date.now() - lastGestureAt < 4000; }
   // startPlayback / toggle 共用的拒绝处理：手势内提示用户，非手势静默反击
-  function handlePlayReject() {
+  function handlePlayReject(err) {
     playRejected = true;
     // v3.10.x：换源重试（meting 直链/内置旋律合成）窗口期的拒绝是主动 teardown 旧元素
     // 的自然结果，不是播放被拦——此时武装续播反击会用旧 URL 造出第二个播放器抢跑，
     // 与即将回来的直链播放形成双声（弱网双播放器根因之一），交给换源回调接管即可
     if (httpsRetrying || demoFallbackBusy) return;
+    // v3.26.x：play() 拒绝不全是自动播放拦截——只有 NotAllowedError 才是；其余
+    //（NotSupportedError 等）是资源加载失败（meting 对 VIP/失效歌返回 200 空正文，
+    // <audio> 解码必然失败）。用户明明点了屏幕却看到「被浏览器拦截」纯属误导
+    //（vivo Y35+Edge 实测：在线歌反复提示拦截、点屏幕也没用），按错误类型给真实原因。
+    // 兼容说明：①测试 mock 的错误可能挂在 message 而非 name 上，两处都查；
+    // ②历史调用点不传 err（走到这里必是 NotAllowedError 分支）→ 默认按拦截处理。
+    const blocked = !err ||
+      err.name === 'NotAllowedError' ||
+      /NotAllowedError/i.test(String(err.message || ''));
     if (recentUserGesture()) {
-      toast('点击播放被浏览器拦截，请再点一下屏幕继续播放');
+      if (blocked) {
+        toast('点击播放被浏览器拦截，请再点一下屏幕继续播放');
+      } else {
+        const cm = findTrack(currentId);
+        toast(cm && cm.source === 'url' && cm.url
+          ? '在线歌曲加载失败：链接可能已失效或为会员歌曲，可换一首试试'
+          : '播放失败，请再点一下屏幕重试');
+      }
       armAutoResume();
     } else {
       armAutoResume();        // 用户下次任意触摸即恢复（不弹提示）
@@ -2252,10 +2264,22 @@
       fetch(neteaseMetingUrl(m.neteaseId), controller ? { signal: controller.signal } : undefined)
         .then(function (r) {
           clearTimeout(timer);
-          var finalUrl = (r.url || '').replace(/^http:/i, 'https:');
-          try { controller && controller.abort(); } catch (e) {}
-          try { r.body && r.body.cancel && r.body.cancel(); } catch (e) {}
-          cb(finalUrl || null);
+          // v3.26.x：校验拿到的是「可用音频直链」——必须是 302 跳转（r.redirected）
+          // 或响应本身就是音频（content-type audio/*）。meting 对 VIP/失效歌返回
+          // 200 + 空正文(text/html)且无跳转（vivo Y35+Edge 实测 2623931868），
+          // 旧实现把 r.url（= 原始 meting URL）当直链回投，同一个坏 URL 必然
+          // 再失败一次。校验不过 → cb(null) → 走网易云官方外链兜底。
+          var ct = '';
+          try { ct = (r.headers && r.headers.get('content-type')) || ''; } catch (e) {}
+          var ok = !!(r.redirected || /^audio\//i.test(ct));
+          var finalUrl = ok ? ((r.url || '').replace(/^http:/i, 'https:')) : null;
+          // 异步 abort：同步 abort 会让 body 流缓冲器抛「BodyStreamBuffer was
+          // aborted」未处理 rejection（诊断面板噪音来源），让 promise 链先落地
+          setTimeout(function () {
+            try { controller && controller.abort(); } catch (e) {}
+            try { r.body && r.body.cancel && r.body.cancel(); } catch (e) {}
+            cb(finalUrl);
+          }, 0);
         })
         .catch(function () { clearTimeout(timer); cb(null); });
     } catch (e) { cb(null); }
@@ -2325,7 +2349,7 @@
     const cnt = (failMap[m.id] || 0) + 1;
     failMap[m.id] = cnt;
     if (cnt < 2) {
-      try { toast('播放失败，可以在播放列表换一首歌试试'); } catch (e) {}
+      try { toast('播放失败（可能为会员/失效歌曲），可以在播放列表换一首歌试试'); } catch (e) {}
       return;
     }
     if (!window.openModal) return;
@@ -2336,7 +2360,7 @@
         saveLibrary();
         renderPage();
         toast('已移出音乐库');
-      }, { noInput: true, staticText: '连续播放失败，可能是后台暂停后链接失效。可以在播放列表换一首歌点击播放恢复播放，或把它移出音乐库。' });
+      }, { noInput: true, staticText: '连续播放失败，可能是会员/付费歌曲或链接已失效。可以在播放列表换一首歌点击播放恢复播放，或把它移出音乐库。' });
     } catch (e) {}
   }
   function demoFallbackOrError(m) {
@@ -2571,9 +2595,21 @@
       cancelTaPause();
       // v3.6.x：按钮点击本身是用户手势，正常可播；个别浏览器仍拒 → muted 静音解锁
       const p = audio.play();
-      if (p && p.catch) p.catch(() => {
-        playRejected = true;
+      if (p && p.catch) p.catch((err) => {
         if (!audio) return; // v3.28.x：判空防 null.play()（回调异步，audio 可能已被 teardown）
+        // v3.27.x：非 NotAllowedError 的 reject 是源失效/跨域加载失败（非自动播放策略），
+        // 走外链失败兜底而非弹"被浏览器拦截"误导用户。toggle 是暂停后再播，源已加载过，
+        // 真自动播放拦截走 muted 解锁；源失效（后台断流等）走拉直链/兜底重建。
+        if (err && err.name !== 'NotAllowedError') {
+          // v3.26.x：换源窗口期的拒绝是 teardown 自然结果，静默等换源回调（同 startPlayback 守卫）
+          if (httpsRetrying || demoFallbackBusy) return;
+          const tm = currentId ? findTrack(currentId) : null;
+          if (tm && tm.neteaseId && !tm._httpsRetried) {
+            if (retryWithHttpsUrl(tm)) return;
+          }
+          if (tm) { demoFallbackOrError(tm); return; }
+        }
+        playRejected = true;
         try { audio.muted = true; } catch (e) {}
         const p2 = audio.play();
         if (p2 && p2.then) {
@@ -3079,25 +3115,37 @@
   // ================= 联系人的收藏 =================
   // v3.14.x：我播放歌曲时，联系人按设置概率把这首歌收进「TA的收藏」（独立于我的收藏）。
   // 存 music-favs-ta（与音乐库同在 default 全局命名空间），tab 标题用联系人昵称动态渲染。
-  function taFavIds() {
-    try { const v = JSON.parse(store.get('music-favs-ta') || '[]'); return Array.isArray(v) ? v : []; } catch (e) { return []; }
+  // v3.26.x：改存「歌曲快照」而非纯 ID——纯 ID 方案下歌曲从音乐库删除后 findTrack 找不到，
+  // 记录在列表里整体消失（用户要求：删歌后 TA 的收藏记录依旧保留）。条目两代格式兼容：
+  // 旧数据是纯 id 字符串数组 → 读到后渲染时从库内信息回补快照（自愈迁移）；新数据是
+  // {id,name,artist,neteaseId,url,cover,duration,favAt}。删除歌曲不清理本列表；已删歌曲
+  // 用快照信息展示并标「已删除」，点击时若可还原（有 neteaseId 或原 url）则重新入库播放。
+  function taFavList() {
+    try {
+      const v = JSON.parse(store.get('music-favs-ta') || '[]');
+      if (!Array.isArray(v)) return [];
+      return v.map(x => (typeof x === 'string') ? { id: x } : x).filter(x => x && x.id);
+    } catch (e) { return []; }
   }
-  function saveTaFavIds(list) { store.set('music-favs-ta', JSON.stringify(list)); }
+  function taFavIds() { return taFavList().map(x => x.id); }
+  function saveTaFavList(list) { store.set('music-favs-ta', JSON.stringify(list)); }
   function isTaFav(id) { return taFavIds().indexOf(id) >= 0; }
   function addTaFav(id) {
     if (isTaFav(id)) return false;
-    const list = taFavIds();
-    list.unshift(id);
-    saveTaFavIds(list);
+    const m = findTrack(id);
+    if (!m) return false; // 歌已不在库里，无法留快照（scheduleTaFavCheck 已先判 findTrack，理论到不了）
+    const list = taFavList();
+    list.unshift({ id: m.id, name: m.name || '', artist: m.artist || '', neteaseId: m.neteaseId || '', url: m.url || '', cover: m.cover || '', duration: m.duration || 0, favAt: Date.now() });
+    saveTaFavList(list);
     renderTaFavList();
     return true;
   }
   function removeTaFav(id) {
-    const list = taFavIds();
-    const i = list.indexOf(id);
+    const list = taFavList();
+    const i = list.findIndex(x => x.id === id);
     if (i < 0) return false;
     list.splice(i, 1);
-    saveTaFavIds(list);
+    saveTaFavList(list);
     renderTaFavList();
     return true;
   }
@@ -3133,26 +3181,62 @@
     }, 10000 + Math.floor(Math.random() * 15000));
   }
   // 联系人的收藏列表（音乐页 tab：XX的收藏）
+  // v3.26.x：快照渲染——歌在库里用实时信息（改名/换封面即时生效），已删除的用快照
+  // 信息置灰展示并标「已删除」；旧纯 id 数据在渲染时从库内信息回补快照（自愈迁移）。
+  // 点击已删歌曲：可还原（neteaseId/原 url 还在）→ 重新加入音乐库并播放；否则提示。
+  function taFavRestorable(x) { return !!(x && (x.neteaseId || validAudioSrc(x.url))); }
+  function restoreTaFavSong(x) {
+    const url = x.neteaseId ? neteaseMetingUrl(x.neteaseId) : (validAudioSrc(x.url) ? x.url : '');
+    if (!url) { toast('该歌曲文件已删除，无法播放'); return; }
+    const nid = 'sm_fav_' + Date.now() + '_' + Math.floor(Math.random() * 1e4).toString(36);
+    library.push({ id: nid, neteaseId: x.neteaseId || '', name: x.name || (x.neteaseId ? '网易云音乐-' + x.neteaseId : '未知歌曲'), artist: x.artist || '', cover: x.cover || '', url: url, source: 'url', duration: x.duration || 0, playlistId: 'default', addedAt: Date.now() });
+    const list = taFavList();
+    const it = list.find(t => t.id === x.id);
+    if (it) { it.id = nid; it.url = url; saveTaFavList(list); } // 快照指向新库条目，列表行恢复可播
+    saveLibrary();
+    renderPage();
+    renderTaFavList();
+    playTrack(nid);
+    toast('已重新加入音乐库并播放');
+  }
   function renderTaFavList() {
     const el = document.getElementById('music-fav-ta-list');
     if (!el) return;
     const nm = partnerName();
-    const songs = taFavIds().map(id => findTrack(id)).filter(Boolean);
-    el.innerHTML = songs.length
-      ? songs.map(m => {
-          const active = m.id === currentId;
-          return '<div class="sm-song' + (active ? ' active' : '') + '" data-id="' + m.id + '">' +
-            songIcoHtml(m) +
-            '<div class="sm-song-info"><div class="sm-song-name">' + esc(m.name || '未知歌曲') + '</div>' +
-            '<div class="sm-song-sub">' + esc(m.artist || '未知歌手') + '</div></div>' +
-            '<button class="sm-song-more" data-id="' + m.id + '" title="取消收藏"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 20.5S4.5 15.2 4.5 9.9A4.9 4.9 0 0112 7.1a4.9 4.9 0 017.5 2.8c0 5.3-7.5 10.6-7.5 10.6z"/></svg></button>' +
-            '</div>';
-        }).join('')
-      : '<div class="ta-empty">' + esc(nm) + ' 还没有收藏歌曲，播放时 ' + esc(nm) + ' 有概率把喜欢的歌收进来</div>';
+    const list = taFavList();
+    let healed = false;
+    list.forEach(x => {
+      if (x.name) return; // 已有快照信息
+      const m = findTrack(x.id);
+      if (m) { // 旧纯 id 数据：歌还在库 → 回补快照
+        x.name = m.name || ''; x.artist = m.artist || ''; x.neteaseId = m.neteaseId || '';
+        x.url = m.url || ''; x.cover = m.cover || ''; x.duration = m.duration || 0;
+        healed = true;
+      }
+    });
+    if (healed) saveTaFavList(list);
+    const rows = list.map(x => {
+      const m = findTrack(x.id);
+      const gone = !m;
+      const name = (m && m.name) || x.name || '未知歌曲';
+      const artist = (m && m.artist) || x.artist || '';
+      const active = m && m.id === currentId;
+      return '<div class="sm-song' + (active ? ' active' : '') + (gone ? ' ta-fav-gone' : '') + '" data-id="' + x.id + '">' +
+        songIcoHtml(m || x) +
+        '<div class="sm-song-info"><div class="sm-song-name">' + esc(name) + (gone ? '<span class="sm-fav-gone-tag">已删除</span>' : '') + '</div>' +
+        '<div class="sm-song-sub">' + esc(artist || '未知歌手') + (gone ? ' · ' + (taFavRestorable(x) ? '点击重新加入并播放' : '文件已不在，无法播放') : '') + '</div></div>' +
+        '<button class="sm-song-more" data-id="' + x.id + '" title="取消收藏"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 20.5S4.5 15.2 4.5 9.9A4.9 4.9 0 0112 7.1a4.9 4.9 0 017.5 2.8c0 5.3-7.5 10.6-7.5 10.6z"/></svg></button>' +
+        '</div>';
+    }).join('');
+    el.innerHTML = rows || '<div class="ta-empty">' + esc(nm) + ' 还没有收藏歌曲，播放时 ' + esc(nm) + ' 有概率把喜欢的歌收进来</div>';
     el.querySelectorAll('.sm-song').forEach(row => {
       row.addEventListener('click', (e) => {
         if (e.target.closest('.sm-song-more')) return;
-        playTrack(row.dataset.id);
+        const id = row.dataset.id;
+        if (findTrack(id)) { playTrack(id); return; }
+        const x = taFavList().find(t => t.id === id);
+        if (x && taFavRestorable(x)) { restoreTaFavSong(x); return; }
+        toast('该歌曲已删除，无法播放');
       });
     });
     el.querySelectorAll('.sm-song-more').forEach(b => {

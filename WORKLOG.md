@@ -1,5 +1,27 @@
 # 本次构建者：AI-B
 
+### 2026-08-30 19:58（#98 提问记录不显示：TA提问即进记录 + 单选题回答也写history）
+- [跨域·ta-ask.js + chat-pages.css（AI-A 域）+ build.mjs + FIX-REGRESSION.md]（**改动文件：src/js/ta-ask.js、src/css/chat-pages.css、build.mjs、FIX-REGRESSION.md；构建状态：未构建（node --check src/js/ta-ask.js 过；19:55 那次 build 在本改动之前，产物未含 __taAskReplyWrapped/tc-li-pending）**）。
+- 需求/反馈：荣耀x60i/夸克浏览器，聊天里联系人有提问，但主页【提问记录】没显示。
+- 根因：① pushAsk（ta-ask.js:501）发 ask-card 只写 chat-msgs，不写 ta-ask.history；history 只在 openAskReply 回答后写（ta-ask.js:610）→ 未回答的提问不进记录。② 单选题点选项直接调 chatAskReply（chat.js:1367），不经 openAskReply → 单选题回答从不写 history（即使回答了记录也空）。默认题库 11 道单选题（q_s1~q_s11），用户大概率命中单选题。与设备/浏览器无关。
+- 方案：① pushAsk 发卡时生成 askTs 透传进 chat-msgs 记录（chat.js:2509 addRec 已透传 askTs），同步往 ta-ask.history 写 {q,a:'',reply:'',ts:askTs,status:'pending'}；② 包装 window.chatAskReply（ta-ask.js 加载在 chat.js 之后），回答时按 askTs 找 pending 更新为 answered，找不到则新增兜底；排除 deskCk 查岗卡；③ openAskReply 删原 history.push（包装层统一写）；④ renderAskRecords 渲染 pending 显示橙黄"待回答"标签（.tc-li-pending 追加到 chat-pages.css 末尾）。
+- 验证：node --check 过。待构建者 build + 真机荣耀x60i/夸克：TA 提问后立即进提问记录（待回答），回答后更新为已回答（文字题+单选题）；deskCk 查岗不污染。
+- 跨域改动 AI-A 文件理由：用户直接报告该 bug；ta-ask.js + chat-pages.css 均在 AI-A 名下。未碰 AI-A 在途文件（ta-ask.js 无对方改动；chat-pages.css 末尾追加不冲突）。chat-pages.css 因并行会话持续改写致 edit 竞态，.tc-li-pending 改用 Add-Content 追加末尾。其他三 tab（小问题/好奇/吐槽）同设计但缺稳定关联键透传，未本次改，建议后续统一。
+### 2026-08-30 20:10（联系人主动消息爱心标识去掉灰色阴影）
+- [AI-A 域]（**改动文件：src/css/chat-main.css；构建状态：未构建**）。
+- 反馈：聊天里联系人主动发送消息的爱心标识（.msg-hi-heart）有灰色阴影。根因：v3.26.x 该元素带双层 filter:drop-shadow（白色发光 + 黑色投影 rgba(0,0,0,.22)），浅色气泡上黑色投影呈灰色。已整行删除 filter，爱心恢复纯色。dark.css / chat-pages.css 无此元素覆盖，一处改动即可。
+- **跨域改动 build.mjs**（AI-B 域，理由：回归防线）：FIX_SENTINELS 加 1 条 absent 哨兵（`drop-shadow(0 1px 1px rgba(0,0,0,.22))`，加回即报警）；FIX-REGRESSION.md 加 #97 行（共享文件）。
+- **待 AI-B 下次构建收口**（本次未构建、未提交）。
+
+### 2026-08-30 19:55（诊断信息「读取中…」截断三修 + 回填链路打通 + 构建收口）
+- [AI-B 域]（**改动文件：src/js/device.js、新增 tools/verify-diag-report.mjs；构建状态：已构建·sw mochi-mtfr6ow6，哨兵 132/132、sw.js 哨兵 3/3、verify 10/10、新脚本 15/15**）。
+- 需求/根因：审计「复制诊断信息」发现三处真实缺陷（均有产物实测佐证）。① 外层只有 3s 单保险丝，而子任务自带 8~9s 预算 → IDB 一慢，「最近错误/开关持久化体检/桌面归属体检/IDB 大键明细」整批停在「读取中…」，偏偏只有这几行能定位存储故障（WORKLOG 里 2026-08-30 iPhone 16 Pro 真机诊断即如此，前一日只修了 IDB 侧、次日复发）；② build.mjs 兜底写的 `if (window.__jsErrors)` 全项目无人初始化（实测产物里 undefined）→ 任何功能文件启动抛错被静默丢弃，诊断里也看不到；`diagToast` 依赖的 `window.toast` 同样从未赋值（实测 undefined）→ 从点击到弹窗出内容之间用户零反馈，正是「点了没反应」类反馈的观感来源；③ 角标 SEEN_KEY 存的是「上次看过时读到的条数」，而错误环形上限 5 条 → 满 5 之后新错误永远算不出未读，角标形同常暗。
+- 方案：① 软/硬双预算——3.5s 先交首屏（未读到的行明确改写为「未读到（本机存储响应慢，稍后自动补全）」，绝不裸留「读取中…」冒充），Promise.all 或 12s 硬预算进入终态（残留行改标「未完成（本机存储无响应…）」），终态之后才自动复制；600ms 轮询只在首屏已交付后驱动回填（否则会把软预算抢成 0.7s、交出更残缺的首屏）。② device.js 是 jsFiles 第一个文件，在其首行初始化 `window.__jsErrors`，诊断新增「启动文件异常」节列出出错文件名；diagToast 改为 window.toast 优先、否则自绘 #cc-toast。③ SEEN_KEY 改存最后一条错误的时间戳、按 `t >` 比较并显示未读条数，遗留旧格式值（条数）自动视为未读并自愈。
+- **过程中踩到的真实断点（值得记）**：回填原计划走 `ctl.text(txt)`，实测无效——personalize.js 里 `ctl.text()` 的 getter 优先读 `#modal-textarea`，setter 却只写 `#modal-input.value`，而 textarea 模式下 input 是 hidden 的（setter/getter 不对称）。改为直写可见 `#modal-textarea`。另：全站弹窗共用同一批 DOM 且「点遮罩/取消」只 close() 不回调 cb（`closed` 永远 false），回填窗口最长 30s，会把诊断长文灌进用户随后打开的别的弹窗——补 modalAlive()（遮罩可见 + 标题仍是「复制诊断信息」）判活，不过关即视同关闭、停止回填与自动复制。**需要 AI-A 知晓**：这三条是诊断侧行为，未碰弹窗组件本体；ctl.text 的 setter/getter 不对称仍在（其他 textarea 弹窗若将来用 setter 会踩同一个坑，需要时再收口到 personalize.js）。
+- 验证：`node tools/verify-diag-report.mjs`（新增，跑真产物，15/15）——含 3.5s 交付实测 3583ms、挂起场景 12149ms 必给终态、回填后「未读到」残留 0 处、角标三场景、关窗后迟到回填不污染别的弹窗。构建产物哨兵 132/132 未破。
+- **本次构建收口说明（给 AI-A）**：产物已包含你们 WORKLOG 标「未构建」的 #96 music-player.js、心意币 p2-features.js + chat-pages.css，以及 build.mjs #96 哨兵——这些改动现在在 index.html 里（尚未 git 提交，提交时请连产物一起）。但**构建窗口内新出现的 src/js/ta-ask.js（M）不在本产物里**，若已改完请自行构建或留言给我。
+- 待办（未做，原因说明）：本次三项修复没登记 FIX_SENTINELS / FIX-REGRESSION.md 行——build.mjs 与 FIX-REGRESSION.md 当时都在你们手里带未提交改动（#96 哨兵），避免并行写同一文件冲突。现在有空位的话请补登记，或留言给我由构建者统一加（哨兵特征串建议：`window.__jsErrors = window.__jsErrors || []`、`未读到（本机存储响应慢`、`modalAlive`）。
+
 ### 2026-08-30 19:46（#96 网易云外链播放"被浏览器拦截"误报修复——区分 play() reject 错误类型）
 - [跨域·music-player.js + build.mjs + FIX-REGRESSION.md]（**改动文件：src/js/music-player.js（startPlayback/toggle 的 play().catch）、build.mjs（#96 哨兵）、FIX-REGRESSION.md（#96 行）；构建状态：未构建（node --check src/js/music-player.js 过）**）。
 - 需求/反馈：用户问「为什么不同手机浏览器播放网易云歌单链接的歌曲，总是显示被浏览器拦截」，要求修复。

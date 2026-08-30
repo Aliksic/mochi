@@ -6,6 +6,12 @@
 // 新伪装手段时只改本文件。判定逻辑 = mobile-adapt.js 完整版（含桌面伪装兜底：
 // viewport 改写 / force-mobile / .tablet 类），仅此一处执行副作用。
 (function () {
+  // build.mjs 把每个功能文件各自包进 try/catch，兜底写的是
+  // `if (window.__jsErrors) window.__jsErrors.push(...)`——数组不存在时启动异常被
+  // 静默丢弃（此前全项目只有 chat.js 某个 catch 里惰性创建，实测产物里恒为
+  // undefined）。device.js 是 jsFiles 第一个文件，初始化放最前面，后面所有文件的
+  // 启动异常才有地方落，诊断信息的「启动文件异常」一节才有数据。
+  try { window.__jsErrors = window.__jsErrors || []; } catch (e0) {}
   // 只在真实手机窄屏启用（桌面模拟器外壳不受影响）
   // v3.5.137：900px——Moto G100 等 2400px 物理屏 / DPR 2.75-3 的 CSS 视口约 800-873px，
   // 原 768px 上限会误判为桌面（显示 390px 小手机框 + 两侧灰底）
@@ -620,11 +626,12 @@
     });
   }
   function collectDiag() {
-    // v3.16.x：整个采集为 Promise 返回，调用方 .then 拿文本。
+    // v3.16.x：整个采集为 Promise 返回。
     // v3.25.x 修复：原实现在 Promise 构造器里同步 resolve，estimate()/persisted()
     // 的异步替换永远赶不上 join——配额行恒为「读取中…」、persisted 行永不出现。
-    // 现改为 jobs 收集全部异步结果，Promise.all 后再 resolve；3s 兜底超时防个别
-    // 内核异步 API 悬空导致弹窗永远不弹。
+    // 现改为 jobs 收集全部异步结果，Promise.all 后再交。
+    // v3.26.x：resolve 的值不再是纯文本，而是 { text, allDone, onUpdate }（见函数尾
+    // 「软/硬双预算交付」）——调用方必须按 this 契约写，首屏文本可能不含慢明细。
     return new Promise(function (resolve) {
     const d = window.mochiDevice || {};
     const L = [];
@@ -1091,6 +1098,17 @@
         });
       }));
     } catch (e) { L.push('最近错误：读取失败'); }
+    // 启动文件异常（build.mjs 每文件 try/catch 的兜底数组）——产物里每个功能文件各自
+    // 包一层，单文件启动抛错不会连坐其它文件，页面照常起来，只有这份名单能说明
+    // 「TA 说某功能整块没了」是哪个文件没跑完（并行会话覆盖 / 语法错 / 漏接 build.mjs）。
+    try {
+      const je = Array.isArray(window.__jsErrors) ? window.__jsErrors : null;
+      if (!je) L.push('启动文件异常：采集未启用');
+      else if (je.length) {
+        L.push('启动文件异常 ' + je.length + ' 处（对应功能可能整块未加载）：');
+        je.slice(0, 8).forEach(function (m) { L.push('· ' + String(m).slice(0, 160)); });
+      } else L.push('启动文件异常：无（所有功能文件启动完成）');
+    } catch (e) {}
     // v3.25.x：环境变化记录（旋转/键盘/前后台）——手机端 bug 的触发现场
     try {
       const envs = JSON.parse(localStorage.getItem(ENV_KEY) || '[]');
@@ -1129,11 +1147,56 @@
         L.push('交互轨迹：无');
       }
     } catch (e) { L.push('交互轨迹：读取失败'); }
-    // 全部异步结果（配额/persisted/远端版本/SW）就绪后再 join；3s 兜底保证弹窗必弹
-    let finished = false;
-    const finish = function () { if (finished) return; finished = true; resolve(L.join('\n')); };
-    try { Promise.all(jobs).then(finish).catch(finish); } catch (e) { finish(); }
-    try { setTimeout(finish, 3000); } catch (e) {}
+    // ===== 软/硬双预算交付（v3.26.x）=====
+    // 子任务自己的预算最长到 9s（桌面归属体检保险丝）/ 8s（idbGetMany 两段超时），
+    // 而这里原本只有一个 3s 兜底：IDB 一慢，「最近错误」「开关持久化体检」「桌面归属
+    // 体检」「IndexedDB 大键明细」就整批停在「读取中…」——偏偏 LS/IDB 出故障的机器
+    // 只有这几行能定位根因（2026-08-30 iPhone 16 Pro 真机诊断即如此；前一晚已针对同
+    // 一症状修过 IDB 侧，外层预算没人动，次日复发）。
+    // 现改双预算：3.5s 先交首屏（未读到的行明确标注，不再冒充「读取中」），后续明细
+    // 到达经 onUpdate 回填；进入终态（全部完成 / 12s 硬预算）才由调用方做自动复制，
+    // 避免把残缺文本塞进剪贴板、让用户以为报障材料已经齐了。
+    let given = false, terminal = false, terminalGiven = false, dirty = false, updateCb = null, lastTxt = null, tick = null;
+    const PLACEHOLDER = /读取中…|获取中…|采样中…/;
+    const PLACEHOLDER_G = /读取中…|获取中…|采样中…/g;
+    const snap = function () {
+      // 占位行任何时候都要标注清楚：终态仍停在「读取中…」等于没线索
+      const note = terminal ? '未完成（本机存储无响应，稍后重开诊断再试）' : '未读到（本机存储响应慢，稍后自动补全）';
+      const out = [];
+      for (let i = 0; i < L.length; i++) {
+        let s = L[i];
+        if (PLACEHOLDER.test(s)) s = s.replace(PLACEHOLDER_G, note);
+        out.push(s);
+      }
+      return out.join('\n');
+    };
+    const fire = function () {
+      const txt = snap();
+      // 正文没变则不打扰；但「进入终态」那次必须至少走一次——调用方靠这一步做
+      // 自动复制，若迟到任务完成时正文恰好没变化，无条件 return 会导致永不复制。
+      if (txt === lastTxt && (!terminal || terminalGiven)) return;
+      lastTxt = txt;
+      if (terminal) terminalGiven = true;
+      if (updateCb) { try { updateCb(txt, terminal); } catch (e) {} return; }
+      if (given) { dirty = true; return; }
+      given = true;
+      resolve({
+        text: txt, allDone: terminal,
+        onUpdate: function (cb) {
+          updateCb = cb;
+          if (dirty) { dirty = false; try { cb(snap(), terminal); } catch (e) {} }
+        }
+      });
+    };
+    const done = function () { if (terminal) return; terminal = true; fire(); };
+    try { Promise.all(jobs).then(done).catch(done); } catch (e) { done(); }
+    try { setTimeout(fire, 3500); } catch (e) {}
+    try { setTimeout(done, 12000); } catch (e) {}
+    // 超过硬预算才回门的迟到结果同样回填（文本没变时 fire 自行跳过）。
+    // 轮询只在首屏已交付后驱动回填：未交付时它会把 3.5s 软预算抢短，
+    // 交出一份更残缺的首屏；终态交付由 done() 负责，不需要轮询兜底。
+    try { tick = setInterval(function () { if (given) fire(); }, 600); } catch (e) {}
+    try { setTimeout(function () { if (tick) { clearInterval(tick); tick = null; } }, 30000); } catch (e) {}
     });
   }
   function copyText(t) {
@@ -1177,7 +1240,28 @@
   }
   // v3.26.x：复制/导出按钮的可见反馈——bottom toast（全站统一反馈），
   // 复制结果不再只写进弹窗顶部提示行（那行内容与打开时几乎一样，用户看不出变化）。
-  function diagToast(msg) { try { if (typeof window.toast === 'function') window.toast(msg); } catch (e) {} }
+  // v3.26.x 修复：原实现只调 window.toast，而全项目从未给 window.toast 赋过值
+  //（chat.js 的 function toast 是 IIFE 局部）——实测产物里 typeof window.toast ===
+  // 'undefined'，于是「复制成功/失败」的底部反馈一直是死代码，点诊断行到弹窗出来
+  // 之间用户也得不到任何「正在读取」的信号（正是「点了没反应」那类反馈的观感来源）。
+  // 保留 window.toast 优先（哪天真的挂上就直接用），否则自绘 #cc-toast。
+  function diagToast(msg) {
+    try { if (typeof window.toast === 'function') { window.toast(msg); return; } } catch (e) {}
+    try {
+      let t = document.getElementById('cc-toast');
+      if (!t) {
+        t = document.createElement('div');
+        t.id = 'cc-toast';
+        document.body.appendChild(t);
+      }
+      t.textContent = msg;
+      t.className = 'cc-toast';
+      void t.offsetWidth;
+      t.className = 'cc-toast show';
+      clearTimeout(t._diagTimer);
+      t._diagTimer = setTimeout(function () { t.className = 'cc-toast'; }, 2600);
+    } catch (e) {}
+  }
   // ===== v3.25.x：导出 txt =====
   // 诊断文本变长后，部分安卓 IAB/WebView 剪贴板对大文本静默截断或失败——
   // 下载成文件再经聊天 App 发送最稳。Blob + a[download]（iOS 13+/安卓 Chrome
@@ -1222,10 +1306,17 @@
     try {
       readErrs(function (errs) {
         try {
-          const n = Array.isArray(errs) ? errs.length : 0;
+          // v3.26.x 修复：原按条数比较（n > seen）。错误环形上限就是 5 条，写满且用户
+          // 看过一次后 seen 恒为 5，之后新错误只轮换不改条数 → 角标永久不再出现
+          //（实测「满 5 + seen=5 + 新错误 → 隐藏」），而这恰恰是错误反复发生的机器。
+          // 改记「已看到的最后一条错误时间戳」并显示未读条数。旧值存的是 0~5 的条数，
+          // 任何真实时间戳都比它大 → 会自行亮一次、下次点开即被覆盖成时间戳，无需迁移。
           const seen = Number(localStorage.getItem(SEEN_KEY)) || 0;
+          const list = Array.isArray(errs) ? errs : [];
+          let unread = 0;
+          for (let i = 0; i < list.length; i++) { if (((list[i] && list[i].t) || 0) > seen) unread++; }
           const b = badgeEl();
-          if (n > seen) { b.textContent = String(n); b.style.display = ''; }
+          if (unread > 0) { b.textContent = String(unread); b.style.display = ''; }
           else b.style.display = 'none';
         } catch (e) {}
       });
@@ -1234,55 +1325,114 @@
   try { refreshBadge(); } catch (e) {}
   // v3.26.x：暴露给「查看存储」页——手动清理错误诊断记录后角标同步归零
   try { window.mochiRefreshDiagBadge = refreshBadge; } catch (e) {}
+  const TIP_WAIT = '正在读取本机存储明细…（读全后会自动更新并复制）';
+  const TIP_OK = '诊断信息已复制到剪贴板，直接粘贴发给开发者即可。\n（下方内容可再核对）';
+  const TIP_FAIL = '自动复制失败，请点下方【复制】按钮重试，或长按选字手动复制。';
+  const TIP_LATE = '明细有更新，弹窗内容已刷新——请点下方【复制】重新复制一次。';
+  const DIAG_TITLE = '复制诊断信息';
+  // 全站弹窗共用同一批 DOM（#modal-mask / #modal-textarea），诊断的回填最晚到 30s，
+  // 期间用户可能已关窗去开别的弹窗——判活不过关就绝不写，防止把诊断文本灌进别人框里。
+  const modalAlive = function () {
+    try {
+      const mask = document.getElementById('modal-mask');
+      if (!mask || mask.hidden) return false;
+      const ti = document.getElementById('modal-title');
+      if (ti && ti.textContent !== DIAG_TITLE) return false;
+      return true;
+    } catch (e) { return false; }
+  };
+  // v3.26.x：回填正文必须直接写可见的 #modal-textarea——personalize.js 里
+  // ctl.text(s) 的 setter 只写 #modal-input.value，而 textarea 模式下 input 是隐藏的
+  //（getter 反过来优先读 textarea），所以此前 ctl.text(回填文本) 静默无效：
+  // 弹窗正文一直停在首屏残缺内容，明细永远看不到（实测三条回填断言全败）。
+  // setModalText 依赖 then 回调里的 ctl，定义在那一侧。
   row.addEventListener('click', function () {
-    collectDiag().then(function (text) {
-      // v3.25.x：看过诊断 = 已知错误，角标归零（v3.26.x：按 IDB 回退后的记录数计）
+    // 点下去就有反馈：慢机上首屏也要 3.5s，没这一步用户以为没点上
+    diagToast('正在读取本机诊断数据…');
+    collectDiag().then(function (r) {
+      // v3.25.x：看过诊断 = 已知错误；v3.26.x 改记最后一条错误的时间戳（与角标同口径）
       readErrs(function (errsNow) {
-        try { localStorage.setItem(SEEN_KEY, String(Array.isArray(errsNow) ? errsNow.length : 0)); } catch (e) {}
+        try {
+          let mx = 0;
+          if (Array.isArray(errsNow)) {
+            for (let i = 0; i < errsNow.length; i++) { const t2 = (errsNow[i] && errsNow[i].t) || 0; if (t2 > mx) mx = t2; }
+          }
+          localStorage.setItem(SEEN_KEY, String(mx));
+        } catch (e) {}
         try { refreshBadge(); } catch (e) {}
       });
-      copyText(text).then(function (ok) {
-        // v3.26.x：自动复制结果连同 bottom toast 一起给，避免「打开时提示&复制后提示
-        // 长得几乎一样、点了没反应」的观感。
-        diagToast(ok ? '诊断信息已复制，可直接粘贴发给开发者' : '自动复制失败，请点下方【复制】重试');
-        const tip = ok
-          ? '诊断信息已复制到剪贴板，直接粘贴发给开发者即可。\n（下方内容可再核对）'
-          : '自动复制失败，请点下方【复制】按钮重试，或长按选字手动复制。';
-        if (window.openModal) {
-          window.openModal('复制诊断信息', text, function () {}, {
-            noInput: true,
-            textarea: true,
-            textareaRows: 14,
-            // v3.25.x：宽版弹窗——默认弹窗 272px 太窄、多行框 3 行装不下诊断长文，
-            // 加宽加高便于核对；配合 openModal 的 opts.big / css .modal--big
-            big: true,
-            placeholder: '',
-            staticText: tip,
-            // v3.16.x：弹窗内「复制」按钮——自动复制失败/想再复制时直接点它重试，
-            // 复制成功用 hint() 就地反馈，不用关窗重进。
-            copyBtn: {
-              label: '复制',
-              fn: function (ctl) {
-                copyText(ctl ? ctl.text() : text).then(function (ok2) {
-                  const m2 = ok2 ? '已复制到剪贴板，直接粘贴发给开发者即可。' : '复制失败，请长按选字手动复制。';
-                  if (ctl && ctl.hint) ctl.hint(m2);
-                  diagToast(ok2 ? '已复制到剪贴板' : '复制失败，请长按选字手动复制');
-                });
-              }
-            },
-            // v3.25.x：导出 txt——复制失败/截断时的兜底，下载后经聊天 App 发送
-            exportBtn: {
-              label: '导出txt',
-              fn: function (ctl) {
-                const okDl = exportTxt(ctl ? ctl.text() : text);
-                const m3 = okDl ? '已开始下载 txt 文件（见浏览器下载列表），直接发送该文件即可。' : '当前内核不支持下载，请用【复制】或长按选字手动复制。';
-                if (ctl && ctl.hint) ctl.hint(m3);
-                diagToast(okDl ? '已开始下载 txt 文件' : '当前内核不支持下载，请用【复制】复制');
-              }
-            }
+      let ctl = null, closed = false, cur = r.text, copied = '';
+      const setModalText = function (txt) {
+        try {
+          const ta = document.getElementById('modal-textarea');
+          if (ta && !ta.hidden) { ta.value = txt; return; }
+        } catch (e) {}
+        try { if (ctl && ctl.text) ctl.text(txt); } catch (e2) {}
+      };
+      // 点遮罩/取消只走 close()、不回调 cb → closed 会一直停在 false。
+      // 所以提示与自动复制都必须再判一次「弹窗还在不在、还是不是我们这个」。
+      const setHint = function (s) { if (closed || !modalAlive()) return; if (ctl && ctl.hint) { try { ctl.hint(s); } catch (e) {} } };
+      // 自动复制只在终态做：首屏残缺文本进剪贴板 = 用户以为材料齐了、白跑一趟
+      const autoCopy = function (txt, late) {
+        if (closed || !txt || txt === copied) return;
+        if (!modalAlive()) { closed = true; return; }
+        copied = txt;
+        try {
+          copyText(txt).then(function (ok) {
+            if (closed) return;
+            diagToast(ok ? '诊断信息已复制，可直接粘贴发给开发者' : '自动复制失败，请点下方【复制】重试');
+            setHint(ok ? TIP_OK : (late ? TIP_LATE : TIP_FAIL));
           });
-        }
-      });
+        } catch (e) { setHint(TIP_FAIL); }
+      };
+      if (window.openModal) {
+        ctl = window.openModal(DIAG_TITLE, cur, function () { closed = true; }, {
+          noInput: true,
+          textarea: true,
+          textareaRows: 14,
+          // v3.25.x：宽版弹窗——默认弹窗 272px 太窄、多行框 3 行装不下诊断长文，
+          // 加宽加高便于核对；配合 openModal 的 opts.big / css .modal--big
+          big: true,
+          placeholder: '',
+          staticText: TIP_WAIT,
+          // v3.16.x：弹窗内「复制」按钮——自动复制失败/想再复制时直接点它重试，
+          // 复制成功用 hint() 就地反馈，不用关窗重进。
+          copyBtn: {
+            label: '复制',
+            fn: function (c) {
+              copyText(c ? c.text() : cur).then(function (ok2) {
+                const m2 = ok2 ? TIP_OK : '复制失败，请长按选字手动复制。';
+                if (c && c.hint) c.hint(m2);
+                diagToast(ok2 ? '已复制到剪贴板' : '复制失败，请长按选字手动复制');
+                if (ok2) copied = cur;
+              });
+            }
+          },
+          // v3.25.x：导出 txt——复制失败/截断时的兜底，下载后经聊天 App 发送
+          exportBtn: {
+            label: '导出txt',
+            fn: function (c) {
+              const okDl = exportTxt(c ? c.text() : cur);
+              const m3 = okDl ? '已开始下载 txt 文件（见浏览器下载列表），直接发送该文件即可。' : '当前内核不支持下载，请用【复制】或长按选字手动复制。';
+              if (c && c.hint) c.hint(m3);
+              diagToast(okDl ? '已开始下载 txt 文件' : '当前内核不支持下载，请用【复制】复制');
+            }
+          }
+        });
+      }
+      // 首屏即终态（多数机器 1s 内）：直接复制；否则等回填到终态再复制
+      if (r.allDone) autoCopy(cur, false);
+      else if (r.onUpdate) {
+        r.onUpdate(function (txt, done2) {
+          cur = txt;
+          if (closed) return;
+          // 弹窗已被关掉或复用给别的弹窗 → 视同关闭，停止一切回填与自动复制
+          if (!modalAlive()) { closed = true; return; }
+          setModalText(txt);
+          if (done2) autoCopy(txt, copied !== '');
+          else setHint(TIP_WAIT);
+        });
+      }
     });
   });
 })();

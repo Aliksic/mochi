@@ -1319,7 +1319,6 @@ color:#ff4d6a;
 pointer-events:none;
 z-index:5;
 display:block;
-filter:drop-shadow(0 0 2px rgba(255,255,255,.95)) drop-shadow(0 1px 1px rgba(0,0,0,.22));
 }
 .msg-side {
 display:flex; flex-direction:column; align-items:center; gap:3px; flex-shrink:0;
@@ -4448,6 +4447,12 @@ width:26px; height:26px; border:none; background:transparent; color:#999;
 display:flex; align-items:center; justify-content:center; flex-shrink:0; padding:0;
 }
 .sm-song-more svg { width:16px; height:16px; }
+.sm-song.ta-fav-gone { opacity:.6; }
+.sm-song.ta-fav-gone .sm-song-ico { filter:grayscale(1); }
+.sm-fav-gone-tag {
+flex:none; font-size:9px; line-height:14px; padding:0 4px; border-radius:4px;
+background:rgba(127,127,127,.14); color:var(--muted); font-weight:400;
+}
 .sm-song-ico.has-cov {
 background-size:cover; background-position:center;
 background-color:rgba(0,0,0,.06); border-radius:8px;
@@ -5929,6 +5934,12 @@ font-family:inherit; cursor:pointer; color:#fff; -webkit-tap-highlight-color:tra
 [data-theme="dark"] .fish-cook-row { background:rgba(255,255,255,.05); }
 [data-theme="dark"] .fish-cook-row.done { background:rgba(143,212,139,.1); }
 [data-theme="dark"] .fish-cook-bar { background:rgba(255,255,255,.1); }
+.coin-contact-bar { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-radius:14px; margin-bottom:12px; }
+.coin-contact-label { font-size:14px; font-weight:600; color:var(--ink,#222); }
+.coin-contact-switch { font-size:12px; color:#b7791f; background:rgba(199,138,43,.12); border:none; border-radius:99px; padding:6px 12px; font-family:inherit; -webkit-tap-highlight-color:transparent; }
+.coin-bal-single { font-size:44px; font-weight:700; color:var(--ink,#222); line-height:1.1; font-variant-numeric:tabular-nums; text-align:center; }
+.coin-bal-single i { font-style:normal; font-size:22px; color:#c98a2b; margin-right:2px; }
+.tc-li-pending { display:inline-block; font-size:11px; font-weight:600; color:#fff; background:#e0a458; border-radius:5px; padding:1px 7px; margin-top:6px; line-height:1.6; }
 .msg-gift { align-self: center; width: 100%; display: flex; justify-content: center; margin: 8px 0; }
 .msg-gift-card {
 width: min(260px, 80vw); padding: 22px 18px 14px; border-radius: 20px; box-sizing: border-box;
@@ -8454,9 +8465,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1788088740195">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.369</b></span>
-        <span class="sv-deploy">部署于 2026-08-30 19:19<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1788093190014">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.371</b></span>
+        <span class="sv-deploy">部署于 2026-08-30 20:33<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9549,7 +9560,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.369</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.371</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -9776,7 +9787,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.369</span>
+              <span class="lic-ver">v3.26.371</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -13100,6 +13111,7 @@ transition-duration: .01ms !important;
   (function () { var _ci = document.getElementById('chat-input'); if (_ci) _ci.readOnly = false; })();
 (function () { try {
 (function () {
+try { window.__jsErrors = window.__jsErrors || []; } catch (e0) {}
 let isMobile = false;
 try { isMobile = window.matchMedia && window.matchMedia('(max-width: 900px)').matches; } catch (e) {}
 let mobileRule = isMobile ? 'viewport<=900' : '';
@@ -13997,6 +14009,14 @@ res();
 }));
 } catch (e) { L.push('最近错误：读取失败'); }
 try {
+const je = Array.isArray(window.__jsErrors) ? window.__jsErrors : null;
+if (!je) L.push('启动文件异常：采集未启用');
+else if (je.length) {
+L.push('启动文件异常 ' + je.length + ' 处（对应功能可能整块未加载）：');
+je.slice(0, 8).forEach(function (m) { L.push('· ' + String(m).slice(0, 160)); });
+} else L.push('启动文件异常：无（所有功能文件启动完成）');
+} catch (e) {}
+try {
 const envs = JSON.parse(localStorage.getItem(ENV_KEY) || '[]');
 if (Array.isArray(envs) && envs.length) {
 L.push('环境变化 ' + envs.length + ' 条（旧→新）：');
@@ -14032,10 +14052,41 @@ L.push('· ' + dt + ' ' + (it.x || '?'));
 L.push('交互轨迹：无');
 }
 } catch (e) { L.push('交互轨迹：读取失败'); }
-let finished = false;
-const finish = function () { if (finished) return; finished = true; resolve(L.join('\n')); };
-try { Promise.all(jobs).then(finish).catch(finish); } catch (e) { finish(); }
-try { setTimeout(finish, 3000); } catch (e) {}
+let given = false, terminal = false, terminalGiven = false, dirty = false, updateCb = null, lastTxt = null, tick = null;
+const PLACEHOLDER = /读取中…|获取中…|采样中…/;
+const PLACEHOLDER_G = /读取中…|获取中…|采样中…/g;
+const snap = function () {
+const note = terminal ? '未完成（本机存储无响应，稍后重开诊断再试）' : '未读到（本机存储响应慢，稍后自动补全）';
+const out = [];
+for (let i = 0; i < L.length; i++) {
+let s = L[i];
+if (PLACEHOLDER.test(s)) s = s.replace(PLACEHOLDER_G, note);
+out.push(s);
+}
+return out.join('\n');
+};
+const fire = function () {
+const txt = snap();
+if (txt === lastTxt && (!terminal || terminalGiven)) return;
+lastTxt = txt;
+if (terminal) terminalGiven = true;
+if (updateCb) { try { updateCb(txt, terminal); } catch (e) {} return; }
+if (given) { dirty = true; return; }
+given = true;
+resolve({
+text: txt, allDone: terminal,
+onUpdate: function (cb) {
+updateCb = cb;
+if (dirty) { dirty = false; try { cb(snap(), terminal); } catch (e) {} }
+}
+});
+};
+const done = function () { if (terminal) return; terminal = true; fire(); };
+try { Promise.all(jobs).then(done).catch(done); } catch (e) { done(); }
+try { setTimeout(fire, 3500); } catch (e) {}
+try { setTimeout(done, 12000); } catch (e) {}
+try { tick = setInterval(function () { if (given) fire(); }, 600); } catch (e) {}
+try { setTimeout(function () { if (tick) { clearInterval(tick); tick = null; } }, 30000); } catch (e) {}
 });
 }
 function copyText(t) {
@@ -14066,7 +14117,23 @@ fallbackClipboard();
 try { setTimeout(function () { finish(false); }, 1500); } catch (e) {}
 });
 }
-function diagToast(msg) { try { if (typeof window.toast === 'function') window.toast(msg); } catch (e) {} }
+function diagToast(msg) {
+try { if (typeof window.toast === 'function') { window.toast(msg); return; } } catch (e) {}
+try {
+let t = document.getElementById('cc-toast');
+if (!t) {
+t = document.createElement('div');
+t.id = 'cc-toast';
+document.body.appendChild(t);
+}
+t.textContent = msg;
+t.className = 'cc-toast';
+void t.offsetWidth;
+t.className = 'cc-toast show';
+clearTimeout(t._diagTimer);
+t._diagTimer = setTimeout(function () { t.className = 'cc-toast'; }, 2600);
+} catch (e) {}
+}
 function exportTxt(text) {
 try {
 const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
@@ -14103,10 +14170,12 @@ function refreshBadge() {
 try {
 readErrs(function (errs) {
 try {
-const n = Array.isArray(errs) ? errs.length : 0;
 const seen = Number(localStorage.getItem(SEEN_KEY)) || 0;
+const list = Array.isArray(errs) ? errs : [];
+let unread = 0;
+for (let i = 0; i < list.length; i++) { if (((list[i] && list[i].t) || 0) > seen) unread++; }
 const b = badgeEl();
-if (n > seen) { b.textContent = String(n); b.style.display = ''; }
+if (unread > 0) { b.textContent = String(unread); b.style.display = ''; }
 else b.style.display = 'none';
 } catch (e) {}
 });
@@ -14114,47 +14183,95 @@ else b.style.display = 'none';
 }
 try { refreshBadge(); } catch (e) {}
 try { window.mochiRefreshDiagBadge = refreshBadge; } catch (e) {}
+const TIP_WAIT = '正在读取本机存储明细…（读全后会自动更新并复制）';
+const TIP_OK = '诊断信息已复制到剪贴板，直接粘贴发给开发者即可。\n（下方内容可再核对）';
+const TIP_FAIL = '自动复制失败，请点下方【复制】按钮重试，或长按选字手动复制。';
+const TIP_LATE = '明细有更新，弹窗内容已刷新——请点下方【复制】重新复制一次。';
+const DIAG_TITLE = '复制诊断信息';
+const modalAlive = function () {
+try {
+const mask = document.getElementById('modal-mask');
+if (!mask || mask.hidden) return false;
+const ti = document.getElementById('modal-title');
+if (ti && ti.textContent !== DIAG_TITLE) return false;
+return true;
+} catch (e) { return false; }
+};
 row.addEventListener('click', function () {
-collectDiag().then(function (text) {
+diagToast('正在读取本机诊断数据…');
+collectDiag().then(function (r) {
 readErrs(function (errsNow) {
-try { localStorage.setItem(SEEN_KEY, String(Array.isArray(errsNow) ? errsNow.length : 0)); } catch (e) {}
+try {
+let mx = 0;
+if (Array.isArray(errsNow)) {
+for (let i = 0; i < errsNow.length; i++) { const t2 = (errsNow[i] && errsNow[i].t) || 0; if (t2 > mx) mx = t2; }
+}
+localStorage.setItem(SEEN_KEY, String(mx));
+} catch (e) {}
 try { refreshBadge(); } catch (e) {}
 });
-copyText(text).then(function (ok) {
+let ctl = null, closed = false, cur = r.text, copied = '';
+const setModalText = function (txt) {
+try {
+const ta = document.getElementById('modal-textarea');
+if (ta && !ta.hidden) { ta.value = txt; return; }
+} catch (e) {}
+try { if (ctl && ctl.text) ctl.text(txt); } catch (e2) {}
+};
+const setHint = function (s) { if (closed || !modalAlive()) return; if (ctl && ctl.hint) { try { ctl.hint(s); } catch (e) {} } };
+const autoCopy = function (txt, late) {
+if (closed || !txt || txt === copied) return;
+if (!modalAlive()) { closed = true; return; }
+copied = txt;
+try {
+copyText(txt).then(function (ok) {
+if (closed) return;
 diagToast(ok ? '诊断信息已复制，可直接粘贴发给开发者' : '自动复制失败，请点下方【复制】重试');
-const tip = ok
-? '诊断信息已复制到剪贴板，直接粘贴发给开发者即可。\n（下方内容可再核对）'
-: '自动复制失败，请点下方【复制】按钮重试，或长按选字手动复制。';
+setHint(ok ? TIP_OK : (late ? TIP_LATE : TIP_FAIL));
+});
+} catch (e) { setHint(TIP_FAIL); }
+};
 if (window.openModal) {
-window.openModal('复制诊断信息', text, function () {}, {
+ctl = window.openModal(DIAG_TITLE, cur, function () { closed = true; }, {
 noInput: true,
 textarea: true,
 textareaRows: 14,
 big: true,
 placeholder: '',
-staticText: tip,
+staticText: TIP_WAIT,
 copyBtn: {
 label: '复制',
-fn: function (ctl) {
-copyText(ctl ? ctl.text() : text).then(function (ok2) {
-const m2 = ok2 ? '已复制到剪贴板，直接粘贴发给开发者即可。' : '复制失败，请长按选字手动复制。';
-if (ctl && ctl.hint) ctl.hint(m2);
+fn: function (c) {
+copyText(c ? c.text() : cur).then(function (ok2) {
+const m2 = ok2 ? TIP_OK : '复制失败，请长按选字手动复制。';
+if (c && c.hint) c.hint(m2);
 diagToast(ok2 ? '已复制到剪贴板' : '复制失败，请长按选字手动复制');
+if (ok2) copied = cur;
 });
 }
 },
 exportBtn: {
 label: '导出txt',
-fn: function (ctl) {
-const okDl = exportTxt(ctl ? ctl.text() : text);
+fn: function (c) {
+const okDl = exportTxt(c ? c.text() : cur);
 const m3 = okDl ? '已开始下载 txt 文件（见浏览器下载列表），直接发送该文件即可。' : '当前内核不支持下载，请用【复制】或长按选字手动复制。';
-if (ctl && ctl.hint) ctl.hint(m3);
+if (c && c.hint) c.hint(m3);
 diagToast(okDl ? '已开始下载 txt 文件' : '当前内核不支持下载，请用【复制】复制');
 }
 }
 });
 }
+if (r.allDone) autoCopy(cur, false);
+else if (r.onUpdate) {
+r.onUpdate(function (txt, done2) {
+cur = txt;
+if (closed) return;
+if (!modalAlive()) { closed = true; return; }
+setModalText(txt);
+if (done2) autoCopy(txt, copied !== '');
+else setHint(TIP_WAIT);
 });
+}
 });
 });
 })();
@@ -36144,17 +36261,7 @@ const apis = [
 return parseNeteasePageTitle(t); } },
 { url: 'https://api.allorigins.win/raw?url=' + encodeURIComponent(songPageUrl), isText: true, parse(t) {
 return parseNeteasePageTitle(t); } },
-{ url: 'https://corsproxy.io/?url=' + encodeURIComponent(songPageUrl), isText: true, parse(t) {
-return parseNeteasePageTitle(t); } },
 { url: 'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://music.163.com/api/song/detail/?ids=' + id), isText: true, parse(t) {
-let d; try { d = typeof t === 'string' ? JSON.parse(t) : t; } catch(e) { return null; }
-if (d && d.songs && d.songs[0]) {
-const s = d.songs[0];
-const artist = (s.artists || []).map(a => a.name).join('/');
-return { name: s.name, artist: artist, pic: (s.album && s.album.picUrl) || '', duration: s.dt ? Math.round(s.dt / 1000) : 0 };
-}
-return null; } },
-{ url: 'https://corsproxy.io/?url=' + encodeURIComponent('https://music.163.com/api/song/detail/?ids=' + id), isText: true, parse(t) {
 let d; try { d = typeof t === 'string' ? JSON.parse(t) : t; } catch(e) { return null; }
 if (d && d.songs && d.songs[0]) {
 const s = d.songs[0];
@@ -36279,20 +36386,6 @@ duration: s.dt ? Math.round(s.dt / 1000) : 0,
 fee: s.fee
 })).filter(t => t.url);
 } },
-{ url: 'https://corsproxy.io/?url=' + encodeURIComponent(apiUrl), parse(txt) {
-let j; try { j = JSON.parse(txt); } catch (e) { return null; }
-const pl = j && j.playlist;
-if (!pl || !Array.isArray(pl.tracks) || !pl.tracks.length) return null;
-return pl.tracks.map(s => ({
-neteaseId: String(s.id || ''),
-name: s.name || '',
-artist: ((s.ar || []).map(a => a.name).filter(Boolean).join('/')),
-cover: String((s.al && s.al.picUrl) || '').replace(/^http:\/\//i, 'https://'),
-url: s.id ? neteaseMetingUrl(s.id) : '',
-duration: s.dt ? Math.round(s.dt / 1000) : 0,
-fee: s.fee
-})).filter(t => t.url);
-} }
 ];
 let idx = 0;
 function tryNext() {
@@ -36361,8 +36454,7 @@ function fetchV6Durations(id, cb) {
 const apiUrl = 'https://music.163.com/api/v6/playlist/detail?id=' + encodeURIComponent(String(id)) + '&n=1000&s=8';
 const prox = [
 { p: 'https://proxy.cors.sh/', enc: false },
-{ p: 'https://api.allorigins.win/raw?url=', enc: true },
-{ p: 'https://corsproxy.io/?url=', enc: true }
+{ p: 'https://api.allorigins.win/raw?url=', enc: true }
 ];
 const out = {};
 const fees = {}; // v3.10.x：顺带收集 fee（1=VIP 4=购买专辑）供导入后移除本批 VIP
@@ -36401,8 +36493,7 @@ const apiUrls = [
 ];
 const prox = [
 { p: 'https://proxy.cors.sh/', enc: false },
-{ p: 'https://api.allorigins.win/raw?url=', enc: true },
-{ p: 'https://corsproxy.io/?url=', enc: true }
+{ p: 'https://api.allorigins.win/raw?url=', enc: true }
 ];
 const out = {};
 let settled = false;
@@ -37479,8 +37570,16 @@ if (callHoldPending) { try { syncPlayIcons(false); } catch (e) {} return; }
 wantPlay = true; // v3.10.x：用户点播/切歌＝意图播放（外部打断时自动续播的依据）
 const p = audio.play();
 if (p && p.catch) {
-p.catch(() => {
+p.catch((err) => {
 if (!audio) return;
+if (err && err.name !== 'NotAllowedError') {
+if (httpsRetrying || demoFallbackBusy) return;
+if (m && m.neteaseId && !m._httpsRetried) {
+if (retryWithHttpsUrl(m)) return;
+}
+demoFallbackOrError(m);
+return;
+}
 try { audio.muted = true; } catch (e) {}
 const p2 = audio.play();
 if (p2 && p2.then) {
@@ -37490,12 +37589,12 @@ playRejected = false;
 clearStallGuard();
 disarmAutoResume();
 try { syncPlayIcons(true); } catch (e) {}
-}).catch(() => {
+}).catch((e2) => {
 if (audio) { try { audio.muted = false; } catch (e) {} }
-handlePlayReject();
+handlePlayReject(e2);
 });
 } else {
-handlePlayReject();
+handlePlayReject(err);
 }
 });
 }
@@ -37630,11 +37729,21 @@ let lastGestureAt = 0;
 document.addEventListener(ev, function () { lastGestureAt = Date.now(); }, { capture: true, passive: true });
 });
 function recentUserGesture() { return Date.now() - lastGestureAt < 4000; }
-function handlePlayReject() {
+function handlePlayReject(err) {
 playRejected = true;
 if (httpsRetrying || demoFallbackBusy) return;
+const blocked = !err ||
+err.name === 'NotAllowedError' ||
+/NotAllowedError/i.test(String(err.message || ''));
 if (recentUserGesture()) {
+if (blocked) {
 toast('点击播放被浏览器拦截，请再点一下屏幕继续播放');
+} else {
+const cm = findTrack(currentId);
+toast(cm && cm.source === 'url' && cm.url
+? '在线歌曲加载失败：链接可能已失效或为会员歌曲，可换一首试试'
+: '播放失败，请再点一下屏幕重试');
+}
 armAutoResume();
 } else {
 armAutoResume();        // 用户下次任意触摸即恢复（不弹提示）
@@ -37687,10 +37796,15 @@ const timer = setTimeout(() => { try { controller && controller.abort(); } catch
 fetch(neteaseMetingUrl(m.neteaseId), controller ? { signal: controller.signal } : undefined)
 .then(function (r) {
 clearTimeout(timer);
-var finalUrl = (r.url || '').replace(/^http:/i, 'https:');
+var ct = '';
+try { ct = (r.headers && r.headers.get('content-type')) || ''; } catch (e) {}
+var ok = !!(r.redirected || /^audio\//i.test(ct));
+var finalUrl = ok ? ((r.url || '').replace(/^http:/i, 'https:')) : null;
+setTimeout(function () {
 try { controller && controller.abort(); } catch (e) {}
 try { r.body && r.body.cancel && r.body.cancel(); } catch (e) {}
-cb(finalUrl || null);
+cb(finalUrl);
+}, 0);
 })
 .catch(function () { clearTimeout(timer); cb(null); });
 } catch (e) { cb(null); }
@@ -37732,7 +37846,7 @@ try { syncPlayIcons(false); } catch (e) {}
 const cnt = (failMap[m.id] || 0) + 1;
 failMap[m.id] = cnt;
 if (cnt < 2) {
-try { toast('播放失败，可以在播放列表换一首歌试试'); } catch (e) {}
+try { toast('播放失败（可能为会员/失效歌曲），可以在播放列表换一首歌试试'); } catch (e) {}
 return;
 }
 if (!window.openModal) return;
@@ -37743,7 +37857,7 @@ if (currentId === m.id) { teardownAudio(); currentId = null; }
 saveLibrary();
 renderPage();
 toast('已移出音乐库');
-}, { noInput: true, staticText: '连续播放失败，可能是后台暂停后链接失效。可以在播放列表换一首歌点击播放恢复播放，或把它移出音乐库。' });
+}, { noInput: true, staticText: '连续播放失败，可能是会员/付费歌曲或链接已失效。可以在播放列表换一首歌点击播放恢复播放，或把它移出音乐库。' });
 } catch (e) {}
 }
 function demoFallbackOrError(m) {
@@ -37935,9 +38049,17 @@ return;
 if (audio.paused) {
 cancelTaPause();
 const p = audio.play();
-if (p && p.catch) p.catch(() => {
-playRejected = true;
+if (p && p.catch) p.catch((err) => {
 if (!audio) return; // v3.28.x：判空防 null.play()（回调异步，audio 可能已被 teardown）
+if (err && err.name !== 'NotAllowedError') {
+if (httpsRetrying || demoFallbackBusy) return;
+const tm = currentId ? findTrack(currentId) : null;
+if (tm && tm.neteaseId && !tm._httpsRetried) {
+if (retryWithHttpsUrl(tm)) return;
+}
+if (tm) { demoFallbackOrError(tm); return; }
+}
+playRejected = true;
 try { audio.muted = true; } catch (e) {}
 const p2 = audio.play();
 if (p2 && p2.then) {
@@ -38390,25 +38512,32 @@ function syncFloatToggle() {
 const cb = document.getElementById('music-float-en');
 if (cb) cb.checked = settings.floatEn;
 }
-function taFavIds() {
-try { const v = JSON.parse(store.get('music-favs-ta') || '[]'); return Array.isArray(v) ? v : []; } catch (e) { return []; }
+function taFavList() {
+try {
+const v = JSON.parse(store.get('music-favs-ta') || '[]');
+if (!Array.isArray(v)) return [];
+return v.map(x => (typeof x === 'string') ? { id: x } : x).filter(x => x && x.id);
+} catch (e) { return []; }
 }
-function saveTaFavIds(list) { store.set('music-favs-ta', JSON.stringify(list)); }
+function taFavIds() { return taFavList().map(x => x.id); }
+function saveTaFavList(list) { store.set('music-favs-ta', JSON.stringify(list)); }
 function isTaFav(id) { return taFavIds().indexOf(id) >= 0; }
 function addTaFav(id) {
 if (isTaFav(id)) return false;
-const list = taFavIds();
-list.unshift(id);
-saveTaFavIds(list);
+const m = findTrack(id);
+if (!m) return false; // 歌已不在库里，无法留快照（scheduleTaFavCheck 已先判 findTrack，理论到不了）
+const list = taFavList();
+list.unshift({ id: m.id, name: m.name || '', artist: m.artist || '', neteaseId: m.neteaseId || '', url: m.url || '', cover: m.cover || '', duration: m.duration || 0, favAt: Date.now() });
+saveTaFavList(list);
 renderTaFavList();
 return true;
 }
 function removeTaFav(id) {
-const list = taFavIds();
-const i = list.indexOf(id);
+const list = taFavList();
+const i = list.findIndex(x => x.id === id);
 if (i < 0) return false;
 list.splice(i, 1);
-saveTaFavIds(list);
+saveTaFavList(list);
 renderTaFavList();
 return true;
 }
@@ -38440,26 +38569,59 @@ if (window.chatAddSystem) window.chatAddSystem(name + ' 收藏了歌曲《' + tr
 }
 }, 10000 + Math.floor(Math.random() * 15000));
 }
+function taFavRestorable(x) { return !!(x && (x.neteaseId || validAudioSrc(x.url))); }
+function restoreTaFavSong(x) {
+const url = x.neteaseId ? neteaseMetingUrl(x.neteaseId) : (validAudioSrc(x.url) ? x.url : '');
+if (!url) { toast('该歌曲文件已删除，无法播放'); return; }
+const nid = 'sm_fav_' + Date.now() + '_' + Math.floor(Math.random() * 1e4).toString(36);
+library.push({ id: nid, neteaseId: x.neteaseId || '', name: x.name || (x.neteaseId ? '网易云音乐-' + x.neteaseId : '未知歌曲'), artist: x.artist || '', cover: x.cover || '', url: url, source: 'url', duration: x.duration || 0, playlistId: 'default', addedAt: Date.now() });
+const list = taFavList();
+const it = list.find(t => t.id === x.id);
+if (it) { it.id = nid; it.url = url; saveTaFavList(list); } // 快照指向新库条目，列表行恢复可播
+saveLibrary();
+renderPage();
+renderTaFavList();
+playTrack(nid);
+toast('已重新加入音乐库并播放');
+}
 function renderTaFavList() {
 const el = document.getElementById('music-fav-ta-list');
 if (!el) return;
 const nm = partnerName();
-const songs = taFavIds().map(id => findTrack(id)).filter(Boolean);
-el.innerHTML = songs.length
-? songs.map(m => {
-const active = m.id === currentId;
-return '<div class="sm-song' + (active ? ' active' : '') + '" data-id="' + m.id + '">' +
-songIcoHtml(m) +
-'<div class="sm-song-info"><div class="sm-song-name">' + esc(m.name || '未知歌曲') + '</div>' +
-'<div class="sm-song-sub">' + esc(m.artist || '未知歌手') + '</div></div>' +
-'<button class="sm-song-more" data-id="' + m.id + '" title="取消收藏"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 20.5S4.5 15.2 4.5 9.9A4.9 4.9 0 0112 7.1a4.9 4.9 0 017.5 2.8c0 5.3-7.5 10.6-7.5 10.6z"/></svg></button>' +
+const list = taFavList();
+let healed = false;
+list.forEach(x => {
+if (x.name) return; // 已有快照信息
+const m = findTrack(x.id);
+if (m) { // 旧纯 id 数据：歌还在库 → 回补快照
+x.name = m.name || ''; x.artist = m.artist || ''; x.neteaseId = m.neteaseId || '';
+x.url = m.url || ''; x.cover = m.cover || ''; x.duration = m.duration || 0;
+healed = true;
+}
+});
+if (healed) saveTaFavList(list);
+const rows = list.map(x => {
+const m = findTrack(x.id);
+const gone = !m;
+const name = (m && m.name) || x.name || '未知歌曲';
+const artist = (m && m.artist) || x.artist || '';
+const active = m && m.id === currentId;
+return '<div class="sm-song' + (active ? ' active' : '') + (gone ? ' ta-fav-gone' : '') + '" data-id="' + x.id + '">' +
+songIcoHtml(m || x) +
+'<div class="sm-song-info"><div class="sm-song-name">' + esc(name) + (gone ? '<span class="sm-fav-gone-tag">已删除</span>' : '') + '</div>' +
+'<div class="sm-song-sub">' + esc(artist || '未知歌手') + (gone ? ' · ' + (taFavRestorable(x) ? '点击重新加入并播放' : '文件已不在，无法播放') : '') + '</div></div>' +
+'<button class="sm-song-more" data-id="' + x.id + '" title="取消收藏"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 20.5S4.5 15.2 4.5 9.9A4.9 4.9 0 0112 7.1a4.9 4.9 0 017.5 2.8c0 5.3-7.5 10.6-7.5 10.6z"/></svg></button>' +
 '</div>';
-}).join('')
-: '<div class="ta-empty">' + esc(nm) + ' 还没有收藏歌曲，播放时 ' + esc(nm) + ' 有概率把喜欢的歌收进来</div>';
+}).join('');
+el.innerHTML = rows || '<div class="ta-empty">' + esc(nm) + ' 还没有收藏歌曲，播放时 ' + esc(nm) + ' 有概率把喜欢的歌收进来</div>';
 el.querySelectorAll('.sm-song').forEach(row => {
 row.addEventListener('click', (e) => {
 if (e.target.closest('.sm-song-more')) return;
-playTrack(row.dataset.id);
+const id = row.dataset.id;
+if (findTrack(id)) { playTrack(id); return; }
+const x = taFavList().find(t => t.id === id);
+if (x && taFavRestorable(x)) { restoreTaFavSong(x); return; }
+toast('该歌曲已删除，无法播放');
 });
 });
 el.querySelectorAll('.sm-song-more').forEach(b => {
@@ -41388,7 +41550,13 @@ if (opts && typeof opts.popupProb === 'number') popup = Math.random() * 100 < op
 else if (opts && opts.popup === false) popup = false;
 }
 window.chatAddSystem('TA想问你一个问题。', { special: 'ask-msg' });
-const el = window.chatAddSystem(q.text, { special: 'ask-card', askQuestion: q.text, askOptions: isSingle ? q.options : null, askType: isSingle ? 'single' : 'text' });
+const askTs = Date.now();
+const el = window.chatAddSystem(q.text, { special: 'ask-card', askQuestion: q.text, askOptions: isSingle ? q.options : null, askType: isSingle ? 'single' : 'text', askTs: askTs });
+try {
+const d = taAskLoad();
+d.history.push({ q: q.text, a: '', reply: '', ts: askTs, status: 'pending' });
+taAskSave(d);
+} catch (e) {}
 const idx = el ? Number(el.dataset.idx) : -1;
 if (window.bgNotifyCheck) window.bgNotifyCheck('TA想问你一个问题：' + q.text, Date.now(), { name: 'TA的询问' });
 if (popup) {
@@ -41461,14 +41629,37 @@ msgIdx = fixedIdx;
 if (window.chatAskReply) {
 const defs = ['收到你的回答。', '好呀，我知道了。', '你这么说，我记住了。', '好的，我记在心里了。'];
 const pool = window.getInteractPool ? window.getInteractPool('询问·回应', defs) : defs;
-const askReply = window.chatAskReply(msgIdx, answer, pool[Math.floor(Math.random() * pool.length)]);
-const d = taAskLoad();
-d.history.push({ q: question, a: answer, reply: askReply || '收到你的回答。', ts: Date.now() });
-taAskSave(d);
+window.chatAskReply(msgIdx, answer, pool[Math.floor(Math.random() * pool.length)]);
 toast('已回复TA的提问');
 }
 }, { staticText: 'TA 问你：' + question, textareaPlaceholder: '输入你的回答…' });
 };
+if (window.chatAskReply && !window.__taAskReplyWrapped) {
+const _origChatAskReply = window.chatAskReply;
+window.chatAskReply = function (msgIdx, answer, reply) {
+const rec = getCardAt(msgIdx);
+if (rec && rec.deskCk) return _origChatAskReply.call(this, msgIdx, answer, reply);
+const askTs = rec && rec.askTs ? rec.askTs : null;
+const question = rec ? (rec.askQuestion || rec.text || '') : '';
+const result = _origChatAskReply.call(this, msgIdx, answer, reply);
+if (result === undefined) return result;
+try {
+const d = taAskLoad();
+let item = null;
+if (askTs) {
+for (let i = d.history.length - 1; i >= 0; i--) {
+const h = d.history[i];
+if (h && h.ts === askTs && h.status === 'pending') { item = h; break; }
+}
+}
+if (item) { item.a = answer; item.reply = result; item.status = 'answered'; }
+else { d.history.push({ q: question, a: answer, reply: result, ts: askTs || Date.now(), status: 'answered' }); }
+taAskSave(d);
+} catch (e) {}
+return result;
+};
+window.__taAskReplyWrapped = true;
+}
 const page = document.getElementById('page-ta-ask');
 if (!page) return;
 window.triggerTaAskNow = function () {
@@ -43836,7 +44027,7 @@ const askEl = document.getElementById('ar-ask');
 if (askEl) {
 const h = taAskLoad().history || [];
 askEl.innerHTML = h.length
-? h.slice().reverse().map(x => '<div class="tc-listitem"><div class="tc-li-q">问：' + x.q + '</div><div class="tc-li-line">你：' + x.a + '</div>' + (x.reply ? '<div class="tc-li-line">' + (window.taFit ? window.taFit('TA：') : 'TA：') + (window.taFit ? window.taFit(x.reply) : x.reply) + '</div>' : '') + '<div class="tc-li-time">' + fmtDT(x.ts) + '</div></div>').join('')
+? h.slice().reverse().map(x => '<div class="tc-listitem"><div class="tc-li-q">问：' + x.q + '</div>' + (x.status === 'pending' ? '<div class="tc-li-pending">待回答</div>' : '<div class="tc-li-line">你：' + x.a + '</div>' + (x.reply ? '<div class="tc-li-line">' + (window.taFit ? window.taFit('TA：') : 'TA：') + (window.taFit ? window.taFit(x.reply) : x.reply) + '</div>' : '')) + '<div class="tc-li-time">' + fmtDT(x.ts) + '</div></div>').join('')
 : '<div class="ta-empty">暂无询问记录</div>';
 }
 const chEl = document.getElementById('ar-choose');
@@ -53937,12 +54128,9 @@ piggyPage.innerHTML =
 '<div class="piggy-manage"><button class="piggy-set-goal" id="piggy-set-goal">＋ 新小心愿</button><button class="piggy-add-msg" id="piggy-add-msg">+ TA的碎碎念</button></div>' +
 '</div>' +
 '<div class="piggy-coin" hidden>' +
+'<div class="coin-contact-bar glass"><span class="coin-contact-label" id="coin-contact-label">我和 TA 的存钱罐</span><button class="coin-contact-switch" id="coin-contact-switch">切换联系人</button></div>' +
 '<div class="coin-hero glass">' +
-'<div class="coin-bal-row">' +
-'<div class="coin-cell"><div class="coin-side">我的</div><div class="coin-num" id="coin-bal-my"><i>¥</i>0.00</div></div>' +
-'<div class="coin-div"></div>' +
-'<div class="coin-cell"><div class="coin-side">TA 的</div><div class="coin-num" id="coin-bal-ta"><i>¥</i>0.00</div></div>' +
-'</div>' +
+'<div class="coin-bal-single" id="coin-bal-total"><i>¥</i>0.00</div>' +
 '<div class="piggy-bar"><div class="piggy-fill" id="coin-fill"></div></div>' +
 '<div class="piggy-sub" id="coin-sub">把心意币存起来，攒一个心愿</div>' +
 '</div>' +
@@ -54328,29 +54516,55 @@ document.getElementById('piggy-reply-skip').addEventListener('click', piggyClose
 document.getElementById('piggy-reply-in').addEventListener('keydown', (e) => {
 if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) { e.preventDefault(); document.getElementById('piggy-reply-send').click(); }
 });
+let piggyCoinViewCid = null; // null=跟随当前桌面联系人；否则=存钱罐内查看的联系人
+function piggyCoinViewCidActive() { return piggyCoinViewCid || (window.__activeCid || 'default'); }
+function piggyCoinStore() { try { return window.storeFor(piggyCoinViewCidActive()); } catch (e) { return null; } }
+function piggyCoinViewName() {
+const cid = piggyCoinViewCidActive();
+if (cid === 'default') { try { const l = window.getContacts ? window.getContacts() : []; const d = l.find(function (c) { return c.id === 'default'; }); return (d && d.name) || '默认'; } catch (e) { return '默认'; } }
+return piggyContactName(cid);
+}
+function piggyCoinIsCurrent() { return piggyCoinViewCidActive() === (window.__activeCid || 'default'); }
+function piggyCoinMigrate() {
+const g = window.xyStore ? window.xyStore('xy-home-v2') : null; if (!g) return;
+try { if (g.get('piggy-coin2-migrated')) return; } catch (e) { return; }
+try {
+const ds = window.storeFor('default');
+const oldLog = JSON.parse(g.get('piggy-coin-log') || '[]');
+if (Array.isArray(oldLog) && oldLog.length) {
+const newLog = oldLog.filter(function (x) { return x && typeof x.amt === 'number'; }).map(function (x) {
+return { t: x.t || Date.now(), type: x.type === 'out' ? 'out' : 'in', amt: x.amt, note: x.note || (x.side === 'ta' ? 'TA 存入' : '存入') };
+});
+ds.set('piggy-coin2-log', JSON.stringify(newLog));
+}
+const oldGoals = JSON.parse(g.get('piggy-coin-goals') || 'null');
+if (Array.isArray(oldGoals) && oldGoals.length) ds.set('piggy-coin2-goals', JSON.stringify(oldGoals));
+const oldCur = g.get('piggy-coin-goal-cur'); if (oldCur) ds.set('piggy-coin2-goal-cur', oldCur);
+} catch (e) {}
+try { g.set('piggy-coin2-migrated', '1'); } catch (e) {}
+}
 const COIN_TA_COINS = [5.2, 5.21, 6.66, 8.88, 9.99, 13.14, 52, 52.1];
 const COIN_TA_NOTES = ['偷偷塞了一把心意币', 'TA 的心意币变多了', '帮你多存了一点', '嘿嘿，攒着别乱花'];
 const COIN_IN_MSG = ['心意币存进来啦', '又攒下一点，真棒', '小金币替你看管着', '离攒币心愿更近了', '安心，都替你收好'];
 const COIN_FULL_MSG = ['攒够心意币啦！！', '目标达成，想好怎么花了吗'];
 const COIN_OUT_MSG = ['取回心意币啦', '金币不多，省着点哦'];
-function piggyCoinLog() { const s = piggyStore(); if (!s) return []; try { const a = JSON.parse(s.get('piggy-coin-log') || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
-function piggySaveCoinLog(a) { const s = piggyStore(); if (s) try { s.set('piggy-coin-log', JSON.stringify(a)); } catch (e) {} }
-function piggyCoinBal(side, a) { let n = 0; (a || piggyCoinLog()).forEach(function (x) { if ((x && x.side) === (side || 'my')) n += ((x.type === 'out' ? -1 : 1) * ((x && x.amt) || 0)); }); return Math.round(n * 100) / 100; }
-function piggyCoinTotal(a) { return Math.round((piggyCoinBal('my', a) + piggyCoinBal('ta', a)) * 100) / 100; }
+function piggyCoinLog() { const s = piggyCoinStore(); if (!s) return []; try { const a = JSON.parse(s.get('piggy-coin2-log') || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
+function piggySaveCoinLog(a) { const s = piggyCoinStore(); if (s) try { s.set('piggy-coin2-log', JSON.stringify(a)); } catch (e) {} }
+function piggyCoinBal(a) { let n = 0; (a || piggyCoinLog()).forEach(function (x) { n += ((x && x.type) === 'out' ? -1 : 1) * ((x && x.amt) || 0); }); return Math.round(n * 100) / 100; }
 function piggyCoinGoals() {
-const s = piggyStore(); let a = null;
-try { a = JSON.parse(s.get('piggy-coin-goals') || 'null'); } catch (e) {}
-if (!Array.isArray(a)) { try { s.set('piggy-coin-goals', '[]'); } catch (e) {} a = []; }
+const s = piggyCoinStore(); let a = null;
+try { a = JSON.parse(s.get('piggy-coin2-goals') || 'null'); } catch (e) {}
+if (!Array.isArray(a)) { try { s.set('piggy-coin2-goals', '[]'); } catch (e) {} a = []; }
 return a.filter(function (g) { return g && g.n && (+g.a) > 0; }).map(function (g) {
 return { n: String(g.n), a: Math.round((+g.a) * 100) / 100, ms: Array.isArray(g.ms) ? g.ms.slice() : [], done: !!g.done, by: Array.isArray(g.by) ? g.by.filter(function (x) { return x && typeof x === 'string'; }) : [] };
 });
 }
-function piggySaveCoinGoals(a) { const s = piggyStore(); if (s) try { s.set('piggy-coin-goals', JSON.stringify(a)); } catch (e) {} }
-function piggyCoinCur() { const s = piggyStore(); try { return parseInt(s.get('piggy-coin-goal-cur') || '0', 10) || 0; } catch (e) { return 0; } }
-function piggySetCoinCur(i) { const s = piggyStore(); if (s) try { s.set('piggy-coin-goal-cur', '' + i); } catch (e) {} }
+function piggySaveCoinGoals(a) { const s = piggyCoinStore(); if (s) try { s.set('piggy-coin2-goals', JSON.stringify(a)); } catch (e) {} }
+function piggyCoinCur() { const s = piggyCoinStore(); try { return parseInt(s.get('piggy-coin2-goal-cur') || '0', 10) || 0; } catch (e) { return 0; } }
+function piggySetCoinCur(i) { const s = piggyCoinStore(); if (s) try { s.set('piggy-coin2-goal-cur', '' + i); } catch (e) {} }
 function piggyCoinActive() {
 const all = piggyCoinGoals(); const vis = [];
-all.forEach(function (g, i) { if (piggyGoalVisible(g)) vis.push({ g: g, i: i }); });
+all.forEach(function (g, i) { vis.push({ g: g, i: i }); });
 if (!vis.length) return { g: null, i: -1, all: all, vis: vis };
 const cur = piggyCoinCur(); let hit = null;
 for (let k = 0; k < vis.length; k++) if (vis[k].i === cur) { hit = vis[k]; break; }
@@ -54358,7 +54572,7 @@ if (!hit) hit = vis[0];
 return { g: hit.g, i: hit.i, all: all, vis: vis };
 }
 function piggyCoinGoalState() {
-const act = piggyCoinActive(); const bal = piggyCoinTotal();
+const act = piggyCoinActive(); const bal = piggyCoinBal();
 const pct = act.g ? Math.min(100, Math.max(0, Math.round(bal / act.g.a * 100))) : 0;
 return { act: act, bal: bal, pct: pct };
 }
@@ -54367,14 +54581,14 @@ function piggyCoinRowHtml(x) {
 const d = new Date((x && x.t) || Date.now());
 const ds = String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0') +
 ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') + ':' + String(d.getSeconds()).padStart(2, '0');
-const out = x && x.type === 'out'; const side = (x && x.side) === 'ta' ? 'TA' : '我';
-return '<div class="piggy-row"><span class="pr-amt ' + (out ? 'out' : 'in') + '">' + (out ? '\u2212' : '+') + '¥' + piggyFmt((x && x.amt) || 0) + '</span><span class="pr-note">' + piggyEsc((x && x.note) || (out ? '取出' : '存入')) + '</span><span class="pr-side">' + side + '</span><span class="pr-date">' + ds + '</span></div>';
+const out = x && x.type === 'out';
+return '<div class="piggy-row"><span class="pr-amt ' + (out ? 'out' : 'in') + '">' + (out ? '\u2212' : '+') + '¥' + piggyFmt((x && x.amt) || 0) + '</span><span class="pr-note">' + piggyEsc((x && x.note) || (out ? '取出' : '存入')) + '</span><span class="pr-date">' + ds + '</span></div>';
 }
 let piggyCoinHistAll = false;
 function piggyCoinRender() {
-const my = piggyCoinBal('my'), ta = piggyCoinBal('ta'), total = piggyCoinTotal();
-const myEl = document.getElementById('coin-bal-my'); if (myEl) myEl.innerHTML = '<i>¥</i>' + piggyFmt(my < 0 ? 0 : my);
-const taEl = document.getElementById('coin-bal-ta'); if (taEl) taEl.innerHTML = '<i>¥</i>' + piggyFmt(ta < 0 ? 0 : ta);
+const total = piggyCoinBal();
+const lbl = document.getElementById('coin-contact-label'); if (lbl) lbl.textContent = '我和 ' + piggyCoinViewName() + ' 的存钱罐';
+const totEl = document.getElementById('coin-bal-total'); if (totEl) totEl.innerHTML = '<i>¥</i>' + piggyFmt(total < 0 ? 0 : total);
 const st = piggyCoinGoalState(); const g = st.act.g;
 const sub = document.getElementById('coin-sub'); const fill = document.getElementById('coin-fill');
 if (g) {
@@ -54382,18 +54596,16 @@ if (fill) fill.style.width = st.pct + '%';
 if (sub) sub.textContent = g.done ? ('已攒满 ' + piggyFmt(g.a) + ' 心意币') : ('已存 ' + piggyFmt(Math.max(0, total)) + ' / ' + piggyFmt(g.a) + '（' + st.pct + '%）');
 } else {
 if (fill) fill.style.width = '0';
-if (sub) sub.textContent = '我的 ¥' + piggyFmt(my) + ' · TA ¥' + piggyFmt(ta);
+if (sub) sub.textContent = '把心意币存起来，攒一个心愿';
 }
 const glEl = document.getElementById('piggy-coin-goals');
 if (glEl) {
 let h = '<div class="piggy-hist-top"><span class="piggy-hist-title">攒币心愿</span><button class="piggy-more" id="coin-goal-add">＋ 添加</button></div>';
 if (!st.act.all.length) h += '<div class="piggy-empty">还没有攒币心愿，点右上角添加</div>';
-else if (!st.act.vis.length) h += '<div class="piggy-empty">这个桌面没有可见的心愿</div>';
 else st.act.vis.forEach(function (ent) {
 const gg = ent.g; const p = Math.min(100, Math.max(0, Math.round(total / gg.a * 100)));
-const byTxt = (!gg.by || !gg.by.length) ? '监督：所有桌面' : '监督：' + piggyEsc(gg.by.map(piggyContactName).join('、'));
 h += '<div class="pg-row' + (ent.i === st.act.i ? ' cur' : '') + '" data-coinpick="' + ent.i + '">' +
-'<span class="pg-name' + (gg.done ? ' done' : '') + '"><span class="pg-nm">' + piggyEsc(gg.n) + (gg.done ? ' ✓' : '') + '</span><span class="pg-by">' + byTxt + '</span></span>' +
+'<span class="pg-name' + (gg.done ? ' done' : '') + '"><span class="pg-nm">' + piggyEsc(gg.n) + (gg.done ? ' ✓' : '') + '</span></span>' +
 '<span class="pg-amt">¥' + piggyFmt(gg.a) + '</span>' +
 '<span class="pg-bar"><i style="width:' + p + '%"></i></span><span class="pg-pct">' + p + '%</span>' +
 '<button class="pg-del" data-coindel="' + ent.i + '">✕</button></div>';
@@ -54424,16 +54636,17 @@ hist.innerHTML = '<div class="piggy-hist-top"><span class="piggy-hist-title">心
 '</div>' + body;
 }
 }
-function piggyCoinWalletCan(side, amt) {
+function piggyCoinWalletCan(amt) {
 if (!window.giftWalletGet) return true;
-try { const w = window.giftWalletGet(); const bal = (side === 'ta' ? w.systemBalance : w.myBalance); return bal >= Math.round(amt * 100); } catch (e) { return true; }
+try { const w = window.giftWalletGet(); return w.myBalance >= Math.round(amt * 100); } catch (e) { return true; }
 }
-function piggyCoinAdd(side, amt, note) {
+function piggyCoinAdd(amt, note) {
 const fen = Math.round(amt * 100);
-try { if (window.giftWalletChange) window.giftWalletChange(side === 'ta' ? 0 : -fen, side === 'ta' ? -fen : 0); } catch (e) {}
-const log = piggyCoinLog(); log.push({ t: Date.now(), side: side || 'my', type: 'in', amt: amt, note: note || '' });
+try { if (window.giftWalletChange) window.giftWalletChange(-fen, 0); } catch (e) {}
+const log = piggyCoinLog(); log.push({ t: Date.now(), type: 'in', amt: amt, note: note || '' });
 piggySaveCoinLog(log); piggyCoinRender();
-const st = piggyCoinGoalState(); const bal = piggyCoinTotal(log);
+if (piggyCoinIsCurrent()) { try { if (window.chatAddSystem) window.chatAddSystem('我往存钱罐存了 ¥' + piggyFmt(amt), {}); } catch (e) {} }
+const st = piggyCoinGoalState(); const bal = piggyCoinBal(log);
 if (st.act.g && !st.act.g.done) {
 if (bal >= st.act.g.a) {
 const gs = st.act.all; [25, 50, 75].forEach(function (m) { if (gs[st.act.i].ms.indexOf(m) < 0) gs[st.act.i].ms.push(m); }); gs[st.act.i].done = true;
@@ -54446,11 +54659,12 @@ for (let k = 0; k < PIGGY_MS.length; k++) { const m = PIGGY_MS[k]; if (bal >= st
 }
 piggyCoinShowMsg(piggyPick(COIN_IN_MSG));
 }
-function piggyCoinOutput(side, amt, note) {
+function piggyCoinOutput(amt, note) {
 const fen = Math.round(amt * 100);
-try { if (window.giftWalletChange) window.giftWalletChange(side === 'ta' ? 0 : fen, side === 'ta' ? fen : 0); } catch (e) {}
-const log = piggyCoinLog(); log.push({ t: Date.now(), side: side || 'my', type: 'out', amt: amt, note: note || '' });
+try { if (window.giftWalletChange) window.giftWalletChange(fen, 0); } catch (e) {}
+const log = piggyCoinLog(); log.push({ t: Date.now(), type: 'out', amt: amt, note: note || '' });
 piggySaveCoinLog(log); piggyCoinRender();
+if (piggyCoinIsCurrent()) { try { if (window.chatAddSystem) window.chatAddSystem('我从存钱罐取了 ¥' + piggyFmt(amt), {}); } catch (e) {} }
 piggyCoinShowMsg(piggyPick(COIN_OUT_MSG));
 }
 function piggyCoinProbGet() {
@@ -54464,15 +54678,16 @@ ask: (p && typeof p.ask === 'number') ? p.ask : 0.04
 }
 function piggyCoinProbSave(p) { const s = piggyStore(); if (s) try { s.set('piggy-coin-prob', JSON.stringify(p || {})); } catch (e) {} }
 function piggyCoinMaybeTa() {
-const s = piggyStore(); if (!s) return;
-let last = 0; try { last = parseInt(s.get('piggy-coin-last-visit') || '0', 10) || 0; } catch (e) {}
-const gap = Date.now() - last; try { s.set('piggy-coin-last-visit', '' + Date.now()); } catch (e) {}
+if (!piggyCoinIsCurrent()) return;
+const s = piggyCoinStore(); if (!s) return;
+let last = 0; try { last = parseInt(s.get('piggy-coin2-last-visit') || '0', 10) || 0; } catch (e) {}
+const gap = Date.now() - last; try { s.set('piggy-coin2-last-visit', '' + Date.now()); } catch (e) {}
 const base = piggyCoinProbGet().deposit;
 const prob = gap > 12 * 3600000 ? Math.min(0.95, base + 0.33) : (gap > 3600000 ? Math.min(0.9, base + 0.13) : base);
 if (Math.random() >= prob) return;
 const amt = COIN_TA_COINS[Math.floor(Math.random() * COIN_TA_COINS.length)];
 const note = COIN_TA_NOTES[Math.floor(Math.random() * COIN_TA_NOTES.length)];
-const log = piggyCoinLog(); log.push({ t: Date.now(), side: 'ta', type: 'in', amt: amt, note: 'TA 塞进来的' });
+const log = piggyCoinLog(); log.push({ t: Date.now(), type: 'in', amt: amt, note: 'TA 塞进来的' });
 piggySaveCoinLog(log); piggyCoinRender();
 vibrate([20, 40, 20]);
 try {
@@ -54482,22 +54697,23 @@ if (window.chatAddSystem) window.chatAddSystem(who + ' 往存钱罐存了 ¥' + 
 setTimeout(function () { piggyCoinShowMsg((window.taFit ? window.taFit(note) : note) + ' ¥' + piggyFmt(amt)); }, 300);
 }
 function piggyCoinMaybeTaWithdraw() {
-const s = piggyStore(); if (!s) return;
+if (!piggyCoinIsCurrent()) return;
+const s = piggyCoinStore(); if (!s) return;
 if (!window.giftWalletGet) return;
-const taBal = piggyCoinBal('ta');
-if (taBal <= 0) return;
+const bal = piggyCoinBal();
+if (bal <= 0) return;
 let w = null; try { w = window.giftWalletGet(); } catch (e) {}
 if (!w || typeof w.systemBalance !== 'number') return;
 const LOW_FEN = 1000; // ¥10 视为「快没」
 if (w.systemBalance >= LOW_FEN) return;
 const prob = piggyCoinProbGet().withdraw;
 if (Math.random() >= prob) return;
-const fen = Math.round(taBal * 100);
+const fen = Math.round(bal * 100);
 try { if (window.giftWalletChange) window.giftWalletChange(0, fen); } catch (e) {}
-const log = piggyCoinLog(); log.push({ t: Date.now(), side: 'ta', type: 'out', amt: taBal, note: '心意币快花完了，取回' });
+const log = piggyCoinLog(); log.push({ t: Date.now(), type: 'out', amt: bal, note: '心意币快花完了，TA 取回' });
 piggySaveCoinLog(log); piggyCoinRender();
 vibrate([20, 40, 20]);
-setTimeout(function () { piggyCoinShowMsg('心意币快没了，TA 取回 ¥' + piggyFmt(taBal)); }, 300);
+setTimeout(function () { piggyCoinShowMsg('心意币快没了，TA 取回 ¥' + piggyFmt(bal)); }, 300);
 }
 const piggyTabs = document.querySelector('.piggy-tabs');
 if (piggyTabs) piggyTabs.addEventListener('click', function (e) {
@@ -54508,48 +54724,54 @@ document.querySelectorAll('.piggy-tabs .piggy-tab').forEach(function (x) { x.cla
 const real = document.querySelector('.piggy-real'); const coin = document.querySelector('.piggy-coin');
 if (real) real.hidden = (on !== 'real');
 if (coin) coin.hidden = (on !== 'coin');
-if (on === 'coin') { piggyCoinRender(); piggyCoinMaybeTa(); piggyCoinMaybeTaWithdraw(); } else piggyRender();
+if (on === 'coin') { piggyCoinMigrate(); piggyCoinViewCid = null; piggyCoinRender(); piggyCoinMaybeTa(); piggyCoinMaybeTaWithdraw(); } else piggyRender();
 });
 document.getElementById('coin-in').addEventListener('click', function () {
 if (editingNow() || !window.openModal) return;
-let side = 'my', phase = 1;
-const ctl = window.openModal('存到谁的账户？', '', function (v) {
-if (phase === 1) {
-const t = String(v || '').trim();
-if (t === '2' || t === 'ta' || t.indexOf('TA') >= 0) side = 'ta'; else side = 'my';
-phase = 2; ctl.stay();
-ctl.title(side === 'ta' ? '从 TA 心意币转入（元）' : '从我的心意币转入（元）');
-ctl.maxLen(10); ctl.ph('存多少'); ctl.text(''); ctl.okText('存入');
-return;
-}
+window.openModal('存入心意币（元）', '', function (v) {
 const amt = piggyAmt(v);
 if (!amt) { if (String(v || '').trim()) toast('金额没看懂，再试试'); return; }
-if (!piggyCoinWalletCan(side, amt)) { toast(side === 'ta' ? 'TA 心意币不够哦' : '我的心意币不够哦'); return; }
-piggyCoinAdd(side, amt, (side === 'ta' ? '从TA心意币转入' : '从我的心意币转入'));
-}, { maxlength: 2, placeholder: '1 我的 · 2 TA 的' });
+if (!piggyCoinWalletCan(amt)) { toast('我的心意币不够哦'); return; }
+piggyCoinAdd(amt, '从我的心意币转入');
+}, { maxlength: 10, placeholder: '存多少' });
 });
 document.getElementById('coin-out').addEventListener('click', function () {
 if (editingNow() || !window.openModal) return;
-const my = piggyCoinBal('my'), ta = piggyCoinBal('ta');
-if (my <= 0 && ta <= 0) { toast('罐子里还没有心意币'); return; }
-let side = 'my', phase = 1;
-const ctl = window.openModal('取回谁的账户？', '', function (v) {
-if (phase === 1) {
-const t = String(v || '').trim();
-if (t === '2' || t === 'ta' || t.indexOf('TA') >= 0) side = 'ta'; else side = 'my';
-const av = (side === 'ta') ? ta : my;
-if (av <= 0) { toast(side === 'ta' ? 'TA 账户是空的' : '我的账户是空的'); return; }
-phase = 2; ctl.stay();
-ctl.title('取回金额（心意币）· 可用 ' + piggyFmt(av));
-ctl.maxLen(10); ctl.ph('取回多少'); ctl.text(''); ctl.okText('取回');
-return;
-}
+const bal = piggyCoinBal();
+if (bal <= 0) { toast('罐子里还没有心意币'); return; }
+window.openModal('取回心意币（元）· 可用 ' + piggyFmt(bal), '', function (v) {
 const amt = piggyAmt(v);
 if (!amt) { if (String(v || '').trim()) toast('金额没看懂，再试试'); return; }
-const av = (side === 'ta') ? piggyCoinBal('ta') : piggyCoinBal('my');
-if (amt > av) { toast('账户里没有这么多'); return; }
-piggyCoinOutput(side, amt, (side === 'ta' ? '退回TA心意币' : '退回我的心意币'));
-}, { maxlength: 2, placeholder: '1 我的 · 2 TA 的' });
+if (amt > bal) { toast('罐里没有这么多'); return; }
+piggyCoinOutput(amt, '退回我的心意币');
+}, { maxlength: 10, placeholder: '取回多少' });
+});
+document.getElementById('coin-contact-switch').addEventListener('click', function () {
+if (editingNow()) return;
+let list = []; try { list = window.getContacts ? window.getContacts() : []; } catch (e) {}
+if (!list.length) list = [{ id: 'default', name: '默认' }];
+let m = document.getElementById('coin-contact-picker');
+if (!m) { m = document.createElement('div'); m.id = 'coin-contact-picker'; m.style.cssText = 'position:fixed;inset:0;z-index:89;align-items:center;justify-content:center;background:rgba(0,0,0,.4)'; document.body.appendChild(m); m.addEventListener('click', function (e) { if (e.target === m) m.style.display = 'none'; }); }
+m.style.display = 'flex'; m.hidden = false;
+const cur = piggyCoinViewCidActive();
+const box = document.createElement('div');
+box.style.cssText = 'width:min(92vw,380px);max-height:72vh;display:flex;flex-direction:column;background:var(--card-bg,#fff);color:var(--ink,#111);border-radius:16px;padding:18px;box-shadow:0 8px 30px rgba(0,0,0,.2)';
+let h = '<div style="font-size:16px;font-weight:600;margin-bottom:12px">切换联系人（查看存钱罐）</div><div class="ccp-list" style="display:flex;flex-direction:column;gap:8px;overflow-y:auto;flex:1;min-height:0">';
+list.forEach(function (c) {
+const on = c.id === cur;
+h += '<div class="ccp-row" data-cid="' + piggyEsc(c.id) + '" style="display:flex;align-items:center;gap:10px;padding:11px;border:1px solid ' + (on ? '#c98a2b' : 'var(--card-border,#eee)') + ';border-radius:10px;cursor:pointer"><span style="width:8px;height:8px;border-radius:50%;background:' + (on ? '#c98a2b' : '#ccc') + '"></span><span style="flex:1;font-size:14px;font-weight:500">' + piggyEsc(c.name || c.id) + '</span>' + (on ? '<span style="font-size:11px;color:#c98a2b">当前</span>' : '') + '</div>';
+});
+h += '</div><button class="ccp-close" style="width:100%;margin-top:12px;padding:10px;border:1px solid var(--card-border,#eee);border-radius:10px;background:var(--btn-cancel-bg,#fafafa);color:var(--btn-cancel-ink,#555)">关闭</button>';
+box.innerHTML = h;
+m.innerHTML = ''; m.appendChild(box);
+box.querySelector('.ccp-close').addEventListener('click', function () { m.style.display = 'none'; });
+box.querySelectorAll('.ccp-row').forEach(function (row) {
+row.addEventListener('click', function () {
+const cid = row.getAttribute('data-cid');
+piggyCoinViewCid = (cid === (window.__activeCid || 'default')) ? null : cid;
+m.style.display = 'none'; piggyCoinRender();
+});
+});
 });
 document.getElementById('coin-set-goal').addEventListener('click', function () {
 if (editingNow() || !window.openModal) return;

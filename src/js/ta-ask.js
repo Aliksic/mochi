@@ -510,7 +510,16 @@
     // v3.5.146：提示语标记 ask-msg（渲染同 poke 但不算 notable）——否则提示语
     // 单独触发一条弹窗/通知，与下方卡片通知重复成 2 条
     window.chatAddSystem('TA想问你一个问题。', { special: 'ask-msg' });
-    const el = window.chatAddSystem(q.text, { special: 'ask-card', askQuestion: q.text, askOptions: isSingle ? q.options : null, askType: isSingle ? 'single' : 'text' });
+    // v3.26.x：askTs 作为提问记录的稳定关联键（透传进 chat-msgs 记录，回答时据此更新 history）
+    const askTs = Date.now();
+    const el = window.chatAddSystem(q.text, { special: 'ask-card', askQuestion: q.text, askOptions: isSingle ? q.options : null, askType: isSingle ? 'single' : 'text', askTs: askTs });
+    // v3.26.x：提问即进记录——发卡同步写一条 pending，回答后由 chatAskReply 包装层更新
+    // （此前只有回答才写 history，且单选题点选项直接调 chatAskReply 不经 openAskReply，history 永远空）
+    try {
+      const d = taAskLoad();
+      d.history.push({ q: q.text, a: '', reply: '', ts: askTs, status: 'pending' });
+      taAskSave(d);
+    } catch (e) {}
     const idx = el ? Number(el.dataset.idx) : -1;
     // v3.5.141：后台收到互动卡片 → 系统通知提示
     // v3.5.146：通知文本合并提示语 + 具体问题（一条通知显示完整内容，不再两条）
@@ -604,15 +613,43 @@
         // 池里随机一条作预设回应传入，chatAskReply 内部再做 90%预设/10%字卡库 混合
         const defs = ['收到你的回答。', '好呀，我知道了。', '你这么说，我记住了。', '好的，我记在心里了。'];
         const pool = window.getInteractPool ? window.getInteractPool('询问·回应', defs) : defs;
-        const askReply = window.chatAskReply(msgIdx, answer, pool[Math.floor(Math.random() * pool.length)]);
-        // 记入历史（保存全部，不截断），含 TA 的回复
-        const d = taAskLoad();
-        d.history.push({ q: question, a: answer, reply: askReply || '收到你的回答。', ts: Date.now() });
-        taAskSave(d);
+        // v3.26.x：history 由 chatAskReply 包装层统一写（覆盖文字题 + 单选题点选项两条路径）
+        window.chatAskReply(msgIdx, answer, pool[Math.floor(Math.random() * pool.length)]);
         toast('已回复TA的提问');
       }
     }, { staticText: 'TA 问你：' + question, textareaPlaceholder: '输入你的回答…' });
   };
+
+  // v3.26.x：包装 chatAskReply，把回答统一写进 ta-ask.history（关联键 askTs）。
+  // 覆盖两条回答路径：① 文字题 openAskReply 调 chatAskReply；② 单选题点选项 chat.js 直接调 chatAskReply。
+  // 此前单选题回答从不写 history，且未回答的提问也不进记录 → "提问记录"页空。
+  if (window.chatAskReply && !window.__taAskReplyWrapped) {
+    const _origChatAskReply = window.chatAskReply;
+    window.chatAskReply = function (msgIdx, answer, reply) {
+      const rec = getCardAt(msgIdx);
+      // deskCk 查岗卡也走 ask-card，但不属于"TA的询问"，不进提问记录
+      if (rec && rec.deskCk) return _origChatAskReply.call(this, msgIdx, answer, reply);
+      const askTs = rec && rec.askTs ? rec.askTs : null;
+      const question = rec ? (rec.askQuestion || rec.text || '') : '';
+      const result = _origChatAskReply.call(this, msgIdx, answer, reply);
+      if (result === undefined) return result;
+      try {
+        const d = taAskLoad();
+        let item = null;
+        if (askTs) {
+          for (let i = d.history.length - 1; i >= 0; i--) {
+            const h = d.history[i];
+            if (h && h.ts === askTs && h.status === 'pending') { item = h; break; }
+          }
+        }
+        if (item) { item.a = answer; item.reply = result; item.status = 'answered'; }
+        else { d.history.push({ q: question, a: answer, reply: result, ts: askTs || Date.now(), status: 'answered' }); }
+        taAskSave(d);
+      } catch (e) {}
+      return result;
+    };
+    window.__taAskReplyWrapped = true;
+  }
 
   // ---- 管理页 ----
   const page = document.getElementById('page-ta-ask');
@@ -3162,7 +3199,7 @@ window.openTCPanel = openTCPanel;
     if (askEl) {
       const h = taAskLoad().history || [];
       askEl.innerHTML = h.length
-        ? h.slice().reverse().map(x => '<div class="tc-listitem"><div class="tc-li-q">问：' + x.q + '</div><div class="tc-li-line">你：' + x.a + '</div>' + (x.reply ? '<div class="tc-li-line">' + (window.taFit ? window.taFit('TA：') : 'TA：') + (window.taFit ? window.taFit(x.reply) : x.reply) + '</div>' : '') + '<div class="tc-li-time">' + fmtDT(x.ts) + '</div></div>').join('')
+        ? h.slice().reverse().map(x => '<div class="tc-listitem"><div class="tc-li-q">问：' + x.q + '</div>' + (x.status === 'pending' ? '<div class="tc-li-pending">待回答</div>' : '<div class="tc-li-line">你：' + x.a + '</div>' + (x.reply ? '<div class="tc-li-line">' + (window.taFit ? window.taFit('TA：') : 'TA：') + (window.taFit ? window.taFit(x.reply) : x.reply) + '</div>' : '')) + '<div class="tc-li-time">' + fmtDT(x.ts) + '</div></div>').join('')
         : '<div class="ta-empty">暂无询问记录</div>';
     }
     // TA的小问题

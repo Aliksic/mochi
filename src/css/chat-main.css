@@ -137,7 +137,7 @@
   pointer-events:none;
   z-index:5;
   display:block;
-  filter:drop-shadow(0 0 2px rgba(255,255,255,.95)) drop-shadow(0 1px 1px rgba(0,0,0,.22));
+  /* v3.26.x：移除双层 drop-shadow 投影（白色发光+黑色投影）。浅色气泡上黑色投影呈灰色阴影，用户反馈删掉 */
 }
 
 /* 澶村儚鍒楋細澶村儚 + 鏃堕棿杞达紙鏃堕棿鍦ㄥご鍍忓簳涓嬶級 */

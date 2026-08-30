@@ -3224,14 +3224,11 @@ if (ckRefresh) {
         '<div class="piggy-hist glass" id="piggy-hist"></div>' +
         '<div class="piggy-manage"><button class="piggy-set-goal" id="piggy-set-goal">＋ 新小心愿</button><button class="piggy-add-msg" id="piggy-add-msg">+ TA的碎碎念</button></div>' +
       '</div>' +
-      // 心意币存钱：独立的罐，余额从全局心意币账本转入，分「我的」「TA 的」两个账户
+      // 心意币存钱：per-cid 独立罐（我和当前联系人的共用存钱罐），余额从全局心意币账本转入
       '<div class="piggy-coin" hidden>' +
+        '<div class="coin-contact-bar glass"><span class="coin-contact-label" id="coin-contact-label">我和 TA 的存钱罐</span><button class="coin-contact-switch" id="coin-contact-switch">切换联系人</button></div>' +
         '<div class="coin-hero glass">' +
-          '<div class="coin-bal-row">' +
-            '<div class="coin-cell"><div class="coin-side">我的</div><div class="coin-num" id="coin-bal-my"><i>¥</i>0.00</div></div>' +
-            '<div class="coin-div"></div>' +
-            '<div class="coin-cell"><div class="coin-side">TA 的</div><div class="coin-num" id="coin-bal-ta"><i>¥</i>0.00</div></div>' +
-          '</div>' +
+          '<div class="coin-bal-single" id="coin-bal-total"><i>¥</i>0.00</div>' +
           '<div class="piggy-bar"><div class="piggy-fill" id="coin-fill"></div></div>' +
           '<div class="piggy-sub" id="coin-sub">把心意币存起来，攒一个心愿</div>' +
         '</div>' +
@@ -3642,42 +3639,71 @@ if (ckRefresh) {
     if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) { e.preventDefault(); document.getElementById('piggy-reply-send').click(); }
   });
 
-  // ---- 心意币存钱（独立第二账本）----
-  // 世界观：把 app 里的「心意币」转进存钱罐真正存起来（转入从 gift-wallet 真扣、取出退回），
-  // 分「我的」「TA 的」两个子账户；TA 不上线时偶发往 TA 账户塞币（彩蛋，不经过 gift-wallet）。
-  // 数据独立键 xy-home-v2:piggy-coin-*，与上方现实存钱完全分开。
+  // ---- 心意币存钱（per-cid 独立罐，我和当前联系人的共用存钱罐）----
+  // 世界观：把 app 里的「心意币」转进存钱罐真正存起来（转入从 gift-wallet 真扣、取出退回）；
+  // 我和联系人共用一个余额（不分账户）；TA 不上线时偶发塞币（彩蛋，不经过 gift-wallet）。
+  // v3.27.x：改 per-cid——每个联系人一份独立存钱罐，可在顶部切换查看不同联系人；数据键
+  // piggy-coin2-* 走 storeFor(viewCid) 命名空间。旧全局 piggy-coin-*（含 my/ta 双账户）
+  // 一次性合并迁移到 default 命名空间。
+  let piggyCoinViewCid = null; // null=跟随当前桌面联系人；否则=存钱罐内查看的联系人
+  function piggyCoinViewCidActive() { return piggyCoinViewCid || (window.__activeCid || 'default'); }
+  function piggyCoinStore() { try { return window.storeFor(piggyCoinViewCidActive()); } catch (e) { return null; } }
+  function piggyCoinViewName() {
+    const cid = piggyCoinViewCidActive();
+    if (cid === 'default') { try { const l = window.getContacts ? window.getContacts() : []; const d = l.find(function (c) { return c.id === 'default'; }); return (d && d.name) || '默认'; } catch (e) { return '默认'; } }
+    return piggyContactName(cid);
+  }
+  function piggyCoinIsCurrent() { return piggyCoinViewCidActive() === (window.__activeCid || 'default'); }
+  // 旧全局双账户数据一次性迁移到 default 命名空间（合并 my+ta 余额为单条记录）
+  function piggyCoinMigrate() {
+    const g = window.xyStore ? window.xyStore('xy-home-v2') : null; if (!g) return;
+    try { if (g.get('piggy-coin2-migrated')) return; } catch (e) { return; }
+    try {
+      const ds = window.storeFor('default');
+      const oldLog = JSON.parse(g.get('piggy-coin-log') || '[]');
+      if (Array.isArray(oldLog) && oldLog.length) {
+        const newLog = oldLog.filter(function (x) { return x && typeof x.amt === 'number'; }).map(function (x) {
+          return { t: x.t || Date.now(), type: x.type === 'out' ? 'out' : 'in', amt: x.amt, note: x.note || (x.side === 'ta' ? 'TA 存入' : '存入') };
+        });
+        ds.set('piggy-coin2-log', JSON.stringify(newLog));
+      }
+      const oldGoals = JSON.parse(g.get('piggy-coin-goals') || 'null');
+      if (Array.isArray(oldGoals) && oldGoals.length) ds.set('piggy-coin2-goals', JSON.stringify(oldGoals));
+      const oldCur = g.get('piggy-coin-goal-cur'); if (oldCur) ds.set('piggy-coin2-goal-cur', oldCur);
+    } catch (e) {}
+    try { g.set('piggy-coin2-migrated', '1'); } catch (e) {}
+  }
   const COIN_TA_COINS = [5.2, 5.21, 6.66, 8.88, 9.99, 13.14, 52, 52.1];
   const COIN_TA_NOTES = ['偷偷塞了一把心意币', 'TA 的心意币变多了', '帮你多存了一点', '嘿嘿，攒着别乱花'];
   const COIN_IN_MSG = ['心意币存进来啦', '又攒下一点，真棒', '小金币替你看管着', '离攒币心愿更近了', '安心，都替你收好'];
   const COIN_FULL_MSG = ['攒够心意币啦！！', '目标达成，想好怎么花了吗'];
   const COIN_OUT_MSG = ['取回心意币啦', '金币不多，省着点哦'];
-  function piggyCoinLog() { const s = piggyStore(); if (!s) return []; try { const a = JSON.parse(s.get('piggy-coin-log') || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
-  function piggySaveCoinLog(a) { const s = piggyStore(); if (s) try { s.set('piggy-coin-log', JSON.stringify(a)); } catch (e) {} }
-  function piggyCoinBal(side, a) { let n = 0; (a || piggyCoinLog()).forEach(function (x) { if ((x && x.side) === (side || 'my')) n += ((x.type === 'out' ? -1 : 1) * ((x && x.amt) || 0)); }); return Math.round(n * 100) / 100; }
-  function piggyCoinTotal(a) { return Math.round((piggyCoinBal('my', a) + piggyCoinBal('ta', a)) * 100) / 100; }
+  function piggyCoinLog() { const s = piggyCoinStore(); if (!s) return []; try { const a = JSON.parse(s.get('piggy-coin2-log') || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
+  function piggySaveCoinLog(a) { const s = piggyCoinStore(); if (s) try { s.set('piggy-coin2-log', JSON.stringify(a)); } catch (e) {} }
+  function piggyCoinBal(a) { let n = 0; (a || piggyCoinLog()).forEach(function (x) { n += ((x && x.type) === 'out' ? -1 : 1) * ((x && x.amt) || 0); }); return Math.round(n * 100) / 100; }
   function piggyCoinGoals() {
-    const s = piggyStore(); let a = null;
-    try { a = JSON.parse(s.get('piggy-coin-goals') || 'null'); } catch (e) {}
-    if (!Array.isArray(a)) { try { s.set('piggy-coin-goals', '[]'); } catch (e) {} a = []; }
+    const s = piggyCoinStore(); let a = null;
+    try { a = JSON.parse(s.get('piggy-coin2-goals') || 'null'); } catch (e) {}
+    if (!Array.isArray(a)) { try { s.set('piggy-coin2-goals', '[]'); } catch (e) {} a = []; }
     return a.filter(function (g) { return g && g.n && (+g.a) > 0; }).map(function (g) {
       return { n: String(g.n), a: Math.round((+g.a) * 100) / 100, ms: Array.isArray(g.ms) ? g.ms.slice() : [], done: !!g.done, by: Array.isArray(g.by) ? g.by.filter(function (x) { return x && typeof x === 'string'; }) : [] };
     });
   }
-  function piggySaveCoinGoals(a) { const s = piggyStore(); if (s) try { s.set('piggy-coin-goals', JSON.stringify(a)); } catch (e) {} }
-  function piggyCoinCur() { const s = piggyStore(); try { return parseInt(s.get('piggy-coin-goal-cur') || '0', 10) || 0; } catch (e) { return 0; } }
-  function piggySetCoinCur(i) { const s = piggyStore(); if (s) try { s.set('piggy-coin-goal-cur', '' + i); } catch (e) {} }
+  function piggySaveCoinGoals(a) { const s = piggyCoinStore(); if (s) try { s.set('piggy-coin2-goals', JSON.stringify(a)); } catch (e) {} }
+  function piggyCoinCur() { const s = piggyCoinStore(); try { return parseInt(s.get('piggy-coin2-goal-cur') || '0', 10) || 0; } catch (e) { return 0; } }
+  function piggySetCoinCur(i) { const s = piggyCoinStore(); if (s) try { s.set('piggy-coin2-goal-cur', '' + i); } catch (e) {} }
   function piggyCoinActive() {
     const all = piggyCoinGoals(); const vis = [];
-    all.forEach(function (g, i) { if (piggyGoalVisible(g)) vis.push({ g: g, i: i }); });
+    all.forEach(function (g, i) { vis.push({ g: g, i: i }); });
     if (!vis.length) return { g: null, i: -1, all: all, vis: vis };
     const cur = piggyCoinCur(); let hit = null;
     for (let k = 0; k < vis.length; k++) if (vis[k].i === cur) { hit = vis[k]; break; }
     if (!hit) hit = vis[0];
     return { g: hit.g, i: hit.i, all: all, vis: vis };
   }
-  // 心愿进度用两账户合计（满罐总心意币），与现实「全罐共享余额」一致
+  // 心愿进度用共用余额（per-cid 单账户）
   function piggyCoinGoalState() {
-    const act = piggyCoinActive(); const bal = piggyCoinTotal();
+    const act = piggyCoinActive(); const bal = piggyCoinBal();
     const pct = act.g ? Math.min(100, Math.max(0, Math.round(bal / act.g.a * 100))) : 0;
     return { act: act, bal: bal, pct: pct };
   }
@@ -3687,14 +3713,14 @@ if (ckRefresh) {
     // 精确到秒：MM-DD HH:MM:SS
     const ds = String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0') +
       ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') + ':' + String(d.getSeconds()).padStart(2, '0');
-    const out = x && x.type === 'out'; const side = (x && x.side) === 'ta' ? 'TA' : '我';
-    return '<div class="piggy-row"><span class="pr-amt ' + (out ? 'out' : 'in') + '">' + (out ? '\u2212' : '+') + '¥' + piggyFmt((x && x.amt) || 0) + '</span><span class="pr-note">' + piggyEsc((x && x.note) || (out ? '取出' : '存入')) + '</span><span class="pr-side">' + side + '</span><span class="pr-date">' + ds + '</span></div>';
+    const out = x && x.type === 'out';
+    return '<div class="piggy-row"><span class="pr-amt ' + (out ? 'out' : 'in') + '">' + (out ? '\u2212' : '+') + '¥' + piggyFmt((x && x.amt) || 0) + '</span><span class="pr-note">' + piggyEsc((x && x.note) || (out ? '取出' : '存入')) + '</span><span class="pr-date">' + ds + '</span></div>';
   }
   let piggyCoinHistAll = false;
   function piggyCoinRender() {
-    const my = piggyCoinBal('my'), ta = piggyCoinBal('ta'), total = piggyCoinTotal();
-    const myEl = document.getElementById('coin-bal-my'); if (myEl) myEl.innerHTML = '<i>¥</i>' + piggyFmt(my < 0 ? 0 : my);
-    const taEl = document.getElementById('coin-bal-ta'); if (taEl) taEl.innerHTML = '<i>¥</i>' + piggyFmt(ta < 0 ? 0 : ta);
+    const total = piggyCoinBal();
+    const lbl = document.getElementById('coin-contact-label'); if (lbl) lbl.textContent = '我和 ' + piggyCoinViewName() + ' 的存钱罐';
+    const totEl = document.getElementById('coin-bal-total'); if (totEl) totEl.innerHTML = '<i>¥</i>' + piggyFmt(total < 0 ? 0 : total);
     const st = piggyCoinGoalState(); const g = st.act.g;
     const sub = document.getElementById('coin-sub'); const fill = document.getElementById('coin-fill');
     if (g) {
@@ -3702,18 +3728,16 @@ if (ckRefresh) {
       if (sub) sub.textContent = g.done ? ('已攒满 ' + piggyFmt(g.a) + ' 心意币') : ('已存 ' + piggyFmt(Math.max(0, total)) + ' / ' + piggyFmt(g.a) + '（' + st.pct + '%）');
     } else {
       if (fill) fill.style.width = '0';
-      if (sub) sub.textContent = '我的 ¥' + piggyFmt(my) + ' · TA ¥' + piggyFmt(ta);
+      if (sub) sub.textContent = '把心意币存起来，攒一个心愿';
     }
     const glEl = document.getElementById('piggy-coin-goals');
     if (glEl) {
       let h = '<div class="piggy-hist-top"><span class="piggy-hist-title">攒币心愿</span><button class="piggy-more" id="coin-goal-add">＋ 添加</button></div>';
       if (!st.act.all.length) h += '<div class="piggy-empty">还没有攒币心愿，点右上角添加</div>';
-      else if (!st.act.vis.length) h += '<div class="piggy-empty">这个桌面没有可见的心愿</div>';
       else st.act.vis.forEach(function (ent) {
         const gg = ent.g; const p = Math.min(100, Math.max(0, Math.round(total / gg.a * 100)));
-        const byTxt = (!gg.by || !gg.by.length) ? '监督：所有桌面' : '监督：' + piggyEsc(gg.by.map(piggyContactName).join('、'));
         h += '<div class="pg-row' + (ent.i === st.act.i ? ' cur' : '') + '" data-coinpick="' + ent.i + '">' +
-          '<span class="pg-name' + (gg.done ? ' done' : '') + '"><span class="pg-nm">' + piggyEsc(gg.n) + (gg.done ? ' ✓' : '') + '</span><span class="pg-by">' + byTxt + '</span></span>' +
+          '<span class="pg-name' + (gg.done ? ' done' : '') + '"><span class="pg-nm">' + piggyEsc(gg.n) + (gg.done ? ' ✓' : '') + '</span></span>' +
           '<span class="pg-amt">¥' + piggyFmt(gg.a) + '</span>' +
           '<span class="pg-bar"><i style="width:' + p + '%"></i></span><span class="pg-pct">' + p + '%</span>' +
           '<button class="pg-del" data-coindel="' + ent.i + '">✕</button></div>';
@@ -3744,17 +3768,18 @@ if (ckRefresh) {
         '</div>' + body;
     }
   }
-  function piggyCoinWalletCan(side, amt) {
+  function piggyCoinWalletCan(amt) {
     if (!window.giftWalletGet) return true;
-    try { const w = window.giftWalletGet(); const bal = (side === 'ta' ? w.systemBalance : w.myBalance); return bal >= Math.round(amt * 100); } catch (e) { return true; }
+    try { const w = window.giftWalletGet(); return w.myBalance >= Math.round(amt * 100); } catch (e) { return true; }
   }
-  // 存入：从 gift-wallet 真扣对应方余额，记入独立账本
-  function piggyCoinAdd(side, amt, note) {
+  // 存入：从我的心意币账本真扣，记入当前查看联系人的共用存钱罐；在聊天发系统消息提醒
+  function piggyCoinAdd(amt, note) {
     const fen = Math.round(amt * 100);
-    try { if (window.giftWalletChange) window.giftWalletChange(side === 'ta' ? 0 : -fen, side === 'ta' ? -fen : 0); } catch (e) {}
-    const log = piggyCoinLog(); log.push({ t: Date.now(), side: side || 'my', type: 'in', amt: amt, note: note || '' });
+    try { if (window.giftWalletChange) window.giftWalletChange(-fen, 0); } catch (e) {}
+    const log = piggyCoinLog(); log.push({ t: Date.now(), type: 'in', amt: amt, note: note || '' });
     piggySaveCoinLog(log); piggyCoinRender();
-    const st = piggyCoinGoalState(); const bal = piggyCoinTotal(log);
+    if (piggyCoinIsCurrent()) { try { if (window.chatAddSystem) window.chatAddSystem('我往存钱罐存了 ¥' + piggyFmt(amt), {}); } catch (e) {} }
+    const st = piggyCoinGoalState(); const bal = piggyCoinBal(log);
     if (st.act.g && !st.act.g.done) {
       if (bal >= st.act.g.a) {
         const gs = st.act.all; [25, 50, 75].forEach(function (m) { if (gs[st.act.i].ms.indexOf(m) < 0) gs[st.act.i].ms.push(m); }); gs[st.act.i].done = true;
@@ -3767,12 +3792,13 @@ if (ckRefresh) {
     }
     piggyCoinShowMsg(piggyPick(COIN_IN_MSG));
   }
-  // 取出：退回 gift-wallet 对应方余额
-  function piggyCoinOutput(side, amt, note) {
+  // 取出：退回我的心意币账本；在聊天发系统消息提醒
+  function piggyCoinOutput(amt, note) {
     const fen = Math.round(amt * 100);
-    try { if (window.giftWalletChange) window.giftWalletChange(side === 'ta' ? 0 : fen, side === 'ta' ? fen : 0); } catch (e) {}
-    const log = piggyCoinLog(); log.push({ t: Date.now(), side: side || 'my', type: 'out', amt: amt, note: note || '' });
+    try { if (window.giftWalletChange) window.giftWalletChange(fen, 0); } catch (e) {}
+    const log = piggyCoinLog(); log.push({ t: Date.now(), type: 'out', amt: amt, note: note || '' });
     piggySaveCoinLog(log); piggyCoinRender();
+    if (piggyCoinIsCurrent()) { try { if (window.chatAddSystem) window.chatAddSystem('我从存钱罐取了 ¥' + piggyFmt(amt), {}); } catch (e) {} }
     piggyCoinShowMsg(piggyPick(COIN_OUT_MSG));
   }
   // 心意币概率配置（root 命名空间，供 chat.js 读取申请概率）：{ deposit(塞币/存钱), withdraw(取钱), ask(申请) }，均存 0-1 小数
@@ -3786,44 +3812,45 @@ if (ckRefresh) {
     };
   }
   function piggyCoinProbSave(p) { const s = piggyStore(); if (s) try { s.set('piggy-coin-prob', JSON.stringify(p || {})); } catch (e) {} }
-  // TA 不定期往 TA 账户塞心意币（越久未开概率越高，彩蛋不入 gift-wallet，同现实 TA 塞硬币先例）
+  // TA 不定期塞心意币到共用存钱罐（越久未开概率越高，彩蛋不入 gift-wallet）；只在查看当前联系人时触发
   function piggyCoinMaybeTa() {
-    const s = piggyStore(); if (!s) return;
-    let last = 0; try { last = parseInt(s.get('piggy-coin-last-visit') || '0', 10) || 0; } catch (e) {}
-    const gap = Date.now() - last; try { s.set('piggy-coin-last-visit', '' + Date.now()); } catch (e) {}
+    if (!piggyCoinIsCurrent()) return;
+    const s = piggyCoinStore(); if (!s) return;
+    let last = 0; try { last = parseInt(s.get('piggy-coin2-last-visit') || '0', 10) || 0; } catch (e) {}
+    const gap = Date.now() - last; try { s.set('piggy-coin2-last-visit', '' + Date.now()); } catch (e) {}
     const base = piggyCoinProbGet().deposit;
     const prob = gap > 12 * 3600000 ? Math.min(0.95, base + 0.33) : (gap > 3600000 ? Math.min(0.9, base + 0.13) : base);
     if (Math.random() >= prob) return;
     const amt = COIN_TA_COINS[Math.floor(Math.random() * COIN_TA_COINS.length)];
     const note = COIN_TA_NOTES[Math.floor(Math.random() * COIN_TA_NOTES.length)];
-    const log = piggyCoinLog(); log.push({ t: Date.now(), side: 'ta', type: 'in', amt: amt, note: 'TA 塞进来的' });
+    const log = piggyCoinLog(); log.push({ t: Date.now(), type: 'in', amt: amt, note: 'TA 塞进来的' });
     piggySaveCoinLog(log); piggyCoinRender();
     vibrate([20, 40, 20]);
-    // TA 存钱时同步在聊天里发一条系统消息（当前联系人）
     try {
       const who = (window.chatPartnerName ? window.chatPartnerName() : '') || 'TA';
       if (window.chatAddSystem) window.chatAddSystem(who + ' 往存钱罐存了 ¥' + piggyFmt(amt), {});
     } catch (e) {}
     setTimeout(function () { piggyCoinShowMsg((window.taFit ? window.taFit(note) : note) + ' ¥' + piggyFmt(amt)); }, 300);
   }
-  // TA 心意币余额快没时（systemBalance < ¥10），按配置概率从【TA 的】账户取回，回补心意币账本
+  // TA 心意币余额快没时（systemBalance < ¥10），按配置概率从共用存钱罐取回，回补心意币账本
   function piggyCoinMaybeTaWithdraw() {
-    const s = piggyStore(); if (!s) return;
+    if (!piggyCoinIsCurrent()) return;
+    const s = piggyCoinStore(); if (!s) return;
     if (!window.giftWalletGet) return;
-    const taBal = piggyCoinBal('ta');
-    if (taBal <= 0) return;
+    const bal = piggyCoinBal();
+    if (bal <= 0) return;
     let w = null; try { w = window.giftWalletGet(); } catch (e) {}
     if (!w || typeof w.systemBalance !== 'number') return;
     const LOW_FEN = 1000; // ¥10 视为「快没」
     if (w.systemBalance >= LOW_FEN) return;
     const prob = piggyCoinProbGet().withdraw;
     if (Math.random() >= prob) return;
-    const fen = Math.round(taBal * 100);
+    const fen = Math.round(bal * 100);
     try { if (window.giftWalletChange) window.giftWalletChange(0, fen); } catch (e) {}
-    const log = piggyCoinLog(); log.push({ t: Date.now(), side: 'ta', type: 'out', amt: taBal, note: '心意币快花完了，取回' });
+    const log = piggyCoinLog(); log.push({ t: Date.now(), type: 'out', amt: bal, note: '心意币快花完了，TA 取回' });
     piggySaveCoinLog(log); piggyCoinRender();
     vibrate([20, 40, 20]);
-    setTimeout(function () { piggyCoinShowMsg('心意币快没了，TA 取回 ¥' + piggyFmt(taBal)); }, 300);
+    setTimeout(function () { piggyCoinShowMsg('心意币快没了，TA 取回 ¥' + piggyFmt(bal)); }, 300);
   }
   // 双 Tab 切换：现实存钱 / 心意币存钱
   const piggyTabs = document.querySelector('.piggy-tabs');
@@ -3835,50 +3862,57 @@ if (ckRefresh) {
     const real = document.querySelector('.piggy-real'); const coin = document.querySelector('.piggy-coin');
     if (real) real.hidden = (on !== 'real');
     if (coin) coin.hidden = (on !== 'coin');
-    if (on === 'coin') { piggyCoinRender(); piggyCoinMaybeTa(); piggyCoinMaybeTaWithdraw(); } else piggyRender();
+    if (on === 'coin') { piggyCoinMigrate(); piggyCoinViewCid = null; piggyCoinRender(); piggyCoinMaybeTa(); piggyCoinMaybeTaWithdraw(); } else piggyRender();
   });
-  // 心意币 存一笔：先选账户（1 我的 / 2 TA）→ 校验账本余额 → 扣账本 → 入罐
+  // 心意币 存一笔：从我的心意币转入共用存钱罐
   document.getElementById('coin-in').addEventListener('click', function () {
     if (editingNow() || !window.openModal) return;
-    let side = 'my', phase = 1;
-    const ctl = window.openModal('存到谁的账户？', '', function (v) {
-      if (phase === 1) {
-        const t = String(v || '').trim();
-        if (t === '2' || t === 'ta' || t.indexOf('TA') >= 0) side = 'ta'; else side = 'my';
-        phase = 2; ctl.stay();
-        ctl.title(side === 'ta' ? '从 TA 心意币转入（元）' : '从我的心意币转入（元）');
-        ctl.maxLen(10); ctl.ph('存多少'); ctl.text(''); ctl.okText('存入');
-        return;
-      }
+    window.openModal('存入心意币（元）', '', function (v) {
       const amt = piggyAmt(v);
       if (!amt) { if (String(v || '').trim()) toast('金额没看懂，再试试'); return; }
-      if (!piggyCoinWalletCan(side, amt)) { toast(side === 'ta' ? 'TA 心意币不够哦' : '我的心意币不够哦'); return; }
-      piggyCoinAdd(side, amt, (side === 'ta' ? '从TA心意币转入' : '从我的心意币转入'));
-    }, { maxlength: 2, placeholder: '1 我的 · 2 TA 的' });
+      if (!piggyCoinWalletCan(amt)) { toast('我的心意币不够哦'); return; }
+      piggyCoinAdd(amt, '从我的心意币转入');
+    }, { maxlength: 10, placeholder: '存多少' });
   });
-  // 心意币 取一笔：退回对应方心意币
+  // 心意币 取一笔：退回我的心意币
   document.getElementById('coin-out').addEventListener('click', function () {
     if (editingNow() || !window.openModal) return;
-    const my = piggyCoinBal('my'), ta = piggyCoinBal('ta');
-    if (my <= 0 && ta <= 0) { toast('罐子里还没有心意币'); return; }
-    let side = 'my', phase = 1;
-    const ctl = window.openModal('取回谁的账户？', '', function (v) {
-      if (phase === 1) {
-        const t = String(v || '').trim();
-        if (t === '2' || t === 'ta' || t.indexOf('TA') >= 0) side = 'ta'; else side = 'my';
-        const av = (side === 'ta') ? ta : my;
-        if (av <= 0) { toast(side === 'ta' ? 'TA 账户是空的' : '我的账户是空的'); return; }
-        phase = 2; ctl.stay();
-        ctl.title('取回金额（心意币）· 可用 ' + piggyFmt(av));
-        ctl.maxLen(10); ctl.ph('取回多少'); ctl.text(''); ctl.okText('取回');
-        return;
-      }
+    const bal = piggyCoinBal();
+    if (bal <= 0) { toast('罐子里还没有心意币'); return; }
+    window.openModal('取回心意币（元）· 可用 ' + piggyFmt(bal), '', function (v) {
       const amt = piggyAmt(v);
       if (!amt) { if (String(v || '').trim()) toast('金额没看懂，再试试'); return; }
-      const av = (side === 'ta') ? piggyCoinBal('ta') : piggyCoinBal('my');
-      if (amt > av) { toast('账户里没有这么多'); return; }
-      piggyCoinOutput(side, amt, (side === 'ta' ? '退回TA心意币' : '退回我的心意币'));
-    }, { maxlength: 2, placeholder: '1 我的 · 2 TA 的' });
+      if (amt > bal) { toast('罐里没有这么多'); return; }
+      piggyCoinOutput(amt, '退回我的心意币');
+    }, { maxlength: 10, placeholder: '取回多少' });
+  });
+  // 心意币存钱：切换查看的联系人（不切桌面，只切存钱罐查看）
+  document.getElementById('coin-contact-switch').addEventListener('click', function () {
+    if (editingNow()) return;
+    let list = []; try { list = window.getContacts ? window.getContacts() : []; } catch (e) {}
+    if (!list.length) list = [{ id: 'default', name: '默认' }];
+    let m = document.getElementById('coin-contact-picker');
+    if (!m) { m = document.createElement('div'); m.id = 'coin-contact-picker'; m.style.cssText = 'position:fixed;inset:0;z-index:89;align-items:center;justify-content:center;background:rgba(0,0,0,.4)'; document.body.appendChild(m); m.addEventListener('click', function (e) { if (e.target === m) m.style.display = 'none'; }); }
+    m.style.display = 'flex'; m.hidden = false;
+    const cur = piggyCoinViewCidActive();
+    const box = document.createElement('div');
+    box.style.cssText = 'width:min(92vw,380px);max-height:72vh;display:flex;flex-direction:column;background:var(--card-bg,#fff);color:var(--ink,#111);border-radius:16px;padding:18px;box-shadow:0 8px 30px rgba(0,0,0,.2)';
+    let h = '<div style="font-size:16px;font-weight:600;margin-bottom:12px">切换联系人（查看存钱罐）</div><div class="ccp-list" style="display:flex;flex-direction:column;gap:8px;overflow-y:auto;flex:1;min-height:0">';
+    list.forEach(function (c) {
+      const on = c.id === cur;
+      h += '<div class="ccp-row" data-cid="' + piggyEsc(c.id) + '" style="display:flex;align-items:center;gap:10px;padding:11px;border:1px solid ' + (on ? '#c98a2b' : 'var(--card-border,#eee)') + ';border-radius:10px;cursor:pointer"><span style="width:8px;height:8px;border-radius:50%;background:' + (on ? '#c98a2b' : '#ccc') + '"></span><span style="flex:1;font-size:14px;font-weight:500">' + piggyEsc(c.name || c.id) + '</span>' + (on ? '<span style="font-size:11px;color:#c98a2b">当前</span>' : '') + '</div>';
+    });
+    h += '</div><button class="ccp-close" style="width:100%;margin-top:12px;padding:10px;border:1px solid var(--card-border,#eee);border-radius:10px;background:var(--btn-cancel-bg,#fafafa);color:var(--btn-cancel-ink,#555)">关闭</button>';
+    box.innerHTML = h;
+    m.innerHTML = ''; m.appendChild(box);
+    box.querySelector('.ccp-close').addEventListener('click', function () { m.style.display = 'none'; });
+    box.querySelectorAll('.ccp-row').forEach(function (row) {
+      row.addEventListener('click', function () {
+        const cid = row.getAttribute('data-cid');
+        piggyCoinViewCid = (cid === (window.__activeCid || 'default')) ? null : cid;
+        m.style.display = 'none'; piggyCoinRender();
+      });
+    });
   });
   // 攒币心愿
   document.getElementById('coin-set-goal').addEventListener('click', function () {
