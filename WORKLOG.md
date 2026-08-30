@@ -1,4 +1,33 @@
-# 本次构建者：AI（已构建，sw: mochi-mtfll2ag，哨兵 125/125 + sw.js 3/3，verify 10/10、verify-chat-overwrite 30/30、verify-preset-card-window 20/20。本次收口：用户报障 #92 华为 P50E Edge 公用/专享字卡【表情包】上传图片刷新后消失 + 工作区累积 #88/#89/#90/#91 一批并行会话改动一并收口。已提交推送远程 main）
+# 本次构建者：AI-B
+> 上一构建：AI（sw mochi-mtfll2ag，哨兵 125/125 + sw.js 3/3，verify 10/10，已提交推送 main；收口 #92 + 工作区 #88-#91）
+
+### 2026-08-30 19:08（#93 根本修复：mergeLists 字段级合并 + openLetter/openReply 重新 load 取最新完整数据）
+- [AI-B 域·mail.js + FIX-REGRESSION.md]（**改动文件：src/js/mail.js（mergeLists/openLetter/openReply）、FIX-REGRESSION.md（#93 补根因）；构建状态：未构建（node --check src/js/mail.js 过）**）。
+- 需求/反馈：用户补充关键线索——「回信后只有等联系人回了我的回信后才显示，之前无法点击查看只有空白」。据此定位根因（非 headless 可复现，靠代码推理）。
+- 根因：`mailDbReady=false`（切桌面后 idbGet 未返回/启动早期）→ `load()` 降级读剥图快照（content 空）→ `submitReply` 用该 list 设 myReply 后 `save` → `mailMergeFromIdb` 合并 IDB 完整版（content 有 + myReply 空）与快照版（content 空 + myReply 有）时，`mergeLists` 原实现按 `letterLen` 整体取更大一方 → content 或 myReply 丢失 → 点开空白；TA 回信后 partnerReply 落地使整版 letterLen 最大胜出才显示。
+- 方案：① `mergeLists` 改字段级合并——content/myReply/partnerReply/read 各取更完整一方（图片优先），不整体覆盖；② `openLetter`/`openReply` 开头重新 `load().find(id)` 取最新完整数据，覆盖 render list 传来的可能过期 l。
+- 验证：node --check src/js/mail.js 过。待构建者 build 后跑 verify-mail-ios-reply.mjs + 真机红米 K80 Chrome：切桌面后回信再点开，content/myReply 不丢。
+- 不构建、不提交，等构建者收口（本条为根本修复，与 f143621 防御性修复叠加）。
+
+### 2026-08-30 19:07（#86 补强：遗留副本清理链两处缺陷——墙钟兜底 + LS 大键迁移排除，均反向对照实测）
+- [AI-B 域·data-backup.js + idb.js + build.mjs(新增 2 条哨兵) + tools/verify-garden-dataloss.mjs + FIX-REGRESSION.md]（**改动文件：src/js/data-backup.js（`purgeOnce` 幂等包装 + 20s 墙钟兜底）、src/js/idb.js（LS→IDB 大键迁移排除副本键）、build.mjs（#86 两条新哨兵）、tools/verify-garden-dataloss.mjs（新增 Case D/E、修 `gotoPage` 导航提交竞态与 `harvestall` 误断言，共 27 项）、FIX-REGRESSION.md #86 行补写；构建状态：本会话未构建未提交——产物已被构建者会话随 f143621（sw mochi-mtfovmmr，哨兵 129/129）收口，两处补强在产物里实测在位（index.html:70343 `function purgeOnce()` / 20s 兜底 / idb 迁移排除在 14933 行）**）。
+- 需求/反馈：用户追问「还有缺陷吗」→ 复核 #86 清理链自身，抓到两处真缺陷：不是副本功能本身，而是「清理在什么设备上根本不会跑」和「清理完又被谁复活」。
+- 根因与方案：① 触发原来只有 `mochi-restore-done` 事件路径，而 #83 之后 12 秒保险丝不再设 `__mochiDataReady`（只派发 `mochi-restore-slow`）→ IDB 整轮挂起的设备上事件永不到达、清理一次都不跑，而 IDB 最慢、遗留副本最大的恰好是同一批机型；补 `purgeOnce()` 幂等包装 + `setTimeout(purgeOnce, 20000)` 墙钟兜底（照 idb.js `wrjMergeFromIdb` 挂起兜底同款做法；幂等包装让 #90 的「删→复核→重试」链只起一套，两条链并发会互相误判复核结果）。② `idb.js` LS→IDB 大键迁移未排除该键 → 以 LS 形态存在的副本（远古版本或手工改过的备份包）必然远超 `LS_BIG_LIMIT` 而被收进 `bigKeys`，整包读进内存 + 写回 IDB + 常驻 `memoryCache`，等于把刚清掉的副本复活一份还白钉几百 MB 堆；补 `continue` 排除，交给 purge。
+- 验证（每处都做了反向对照，不靠推理）：撤 ① → Case E（`Page.addScriptToEvaluateOnNewDocument` 注入 `__mochiDataReady` 恒 false + `stopImmediatePropagation` 掐死事件）实测 35 秒副本一直在、E3 FAIL；撤 ② → Case D（播种 420045 字符 LS-only 副本 + 清 sessionStorage `xy-ls-big-migrated` 强制重跑迁移）实测 `window.idbGetCached` 命中 420045 字符、D1 FAIL。两处恢复后 `node tools/verify-garden-dataloss.mjs` **27/27**；哨兵审计 129 条 0 缺失；`npm run verify` 10/10；`grep -rn "TEMP-NEGATIVE-CONTROL" src/ tools/` 已清空。**待真机**：IDB 挂起机（小米 14U / iPhone XS）启动 20s 后 → 设置→查看存储/诊断，副本应已消失。
+- **⚠ 需要构建者处理（一句话）**：`git show HEAD:src/js/idb.js` 第 918 行仍是 `// TEMP-NEGATIVE-CONTROL: if (k === 'xy-home-v2:__auto-backup-snapshot') continue;`——我做反向对照期间的形态被 f143621 夹带提交了（staged blob 未刷新，产物 index.html 反而是好的 → 线上行为正确、哨兵也没报，因为注释行里照样含 needle 子串）。工作区已改回有效行，`git status` 里的 `M src/js/idb.js` 就是这一行，**下次提交请把该文件带上**。附带好处：若谁从 HEAD 重新 build，`minifyJs` 会整行丢弃 `//` 注释 → 产物缺 needle → 该条哨兵会醒目报警，不会静默上线。
+- 未动对方在途文件（19:06 红包封面 / mail.js / call.js 均未碰），本条只改 AI-B 域。WORKLOG 仍 4700+ 行、超 3000 行归档线，建议本轮收口后归档一次。
+
+### 2026-08-30 19:06（红包封面支持我/TA 分别上传 + 七夕特别红包仅七夕当天显示）
+- [跨域·chat.js]（**改动文件：src/js/chat.js；构建状态：未构建（node --check 过）**）。
+- 需求/反馈：① 发红包只能上传"我的"封面，无法上传联系人（TA）的封面；② 红包面板非七夕仍显示"七夕特别红包"区块，应仅七夕当天显示。
+- 根因：① rpCoverGet/Set 只用单键 'rp-cover'，不区分 rpSide（我发/TA发共用一封面），上传/删除/渲染/发送全操作同一份；② openRpPanel 非七夕分支 rpQixiSection.hidden=false，只藏了"今天七夕"标签，整块 ¥7.77/77.77/777.77 金额按钮仍可见。
+- 方案：
+  - 封面键按 side 拆为 'rp-cover-out'（我的）/ 'rp-cover-in'（TA 的）；rpCoverKey(side)/rpCoverGet(side)/rpCoverSet(side,dataUrl) 全部带 side。
+  - rpRenderCover 用当前 rpSide 渲染，按钮文案动态变"上传我的/TA的封面""删除我的/TA的封面"，未设置时预览提示"未设置我的/TA的封面"。
+  - 切换"我发/TA发"时调 rpRenderCover() 重渲染对应封面；上传/删除按钮用 rpSide；sendRedpacket 用 rpCoverGet(rpSide)；消息渲染按 rpCoverGet(rec.side) 各取各的封面；TA 主动发红包（trySystemAutoSend）用 rpCoverGet('in')。
+  - 非七夕 rpQixiSection.hidden=true 隐藏整块（原 false 只藏标签）。
+- 验证：node --check src/js/chat.js 过。待构建 + 真机：切"我发"上传图→只我发出的红包显示该封面；切"TA发"上传另一图→TA 红包显示该封面、我的红包不显示 TA 的图；非七夕打开红包面板无"七夕特别红包"区块，七夕当天（QIXI_DATES 含当日）显示。
+- 跨域改动 chat.js（AI-A 域）理由：用户直接要求改红包功能，红包逻辑全在 chat.js。未改 template.html（封面区结构不变，文案由 JS 动态控制）。
 
 ### 2026-08-30 18:42（#94 续：加「刷新后恢复通话」设置项，开启后刷新继续通话）
 - [AI 域·call.js + reply-settings.js + template.html]（**改动文件：src/js/call.js、src/js/reply-settings.js、src/template.html；构建状态：本会话已构建（sw mochi-mtfokb1w，哨兵 129/129，verify 10/10）**）。

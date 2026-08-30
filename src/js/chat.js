@@ -1870,7 +1870,7 @@ m.innerHTML = '<div class="msg-rp-card' + (cls ? ' ' + cls : '') + '">' +
 favHeartHtml(rec) +
 '</div>';
 if (rec.rpCover) {
-const cover = rpCoverGet();
+const cover = rpCoverGet(rec.side);
 if (cover) {
 const card = m.querySelector('.msg-rp-card');
 if (card) {
@@ -4033,7 +4033,7 @@ if (rpQixiSection) { rpQixiSection.hidden = false; rpQixiSection.classList.add('
 if (rpWishInput) rpWishInput.placeholder = '七夕快乐';
 } else {
 if (rpQixiTag) rpQixiTag.hidden = true;
-if (rpQixiSection) { rpQixiSection.hidden = false; rpQixiSection.classList.remove('qixi-today'); }
+if (rpQixiSection) { rpQixiSection.hidden = true; rpQixiSection.classList.remove('qixi-today'); }
 if (rpWishInput) rpWishInput.placeholder = '心意';
 }
 rpSide = 'out';
@@ -4055,6 +4055,7 @@ btn.addEventListener('click', (e) => {
 e.stopPropagation();
 rpSide = btn.dataset.rpside || 'out';
 rpPanel.querySelectorAll('.rp-side').forEach(b => b.classList.toggle('sel', b === btn));
+rpRenderCover();
 });
 });
 rpPanel.querySelectorAll('.rp-amt').forEach(btn => {
@@ -4192,7 +4193,7 @@ const amt = amtFen / 100;
 const myCid = window.__activeCid || 'default';
 setTimeout(() => {
 if ((window.__activeCid || 'default') !== myCid) return;
-addIn('', { special: 'redpacket', rpAmount: amt, rpWish: wish, rpStatus: 'pending', rpTs: Date.now(), rpCover: rpCoverGet() ? 1 : 0 });
+addIn('', { special: 'redpacket', rpAmount: amt, rpWish: wish, rpStatus: 'pending', rpTs: Date.now(), rpCover: rpCoverGet('in') ? 1 : 0 });
 if (window.logFish) window.logFish();
 }, randInt(800, 2000));
 }
@@ -4373,16 +4374,17 @@ if (ctl) ctl.okText('申请');
 }
 const rpBalanceEl = document.getElementById('rp-balance');
 if (rpBalanceEl) rpBalanceEl.addEventListener('click', (e) => { e.stopPropagation(); rpEditWallet(); });
-const RP_COVER_KEY = 'rp-cover';
-function rpCoverGet() { return store.get(RP_COVER_KEY) || ''; }
-function rpCoverSet(dataUrl) {
-if (dataUrl) {
-store.set(RP_COVER_KEY, dataUrl);
-try { if (window.idbSet) window.idbSet(window.activePrefix() + ':' + RP_COVER_KEY, dataUrl); } catch (e) {}
-} else {
-try { store.remove(RP_COVER_KEY); } catch (e) {}
-try { if (window.idbSet) window.idbSet(window.activePrefix() + ':' + RP_COVER_KEY, ''); } catch (e) {}
-}
+function rpCoverKey(side) { return 'rp-cover-' + (side || 'out'); }
+function rpCoverGet(side) { return store.get(rpCoverKey(side)) || ''; }
+function rpCoverSet(side, dataUrl) {
+	const k = rpCoverKey(side);
+	if (dataUrl) {
+		store.set(k, dataUrl);
+		try { if (window.idbSet) window.idbSet(window.activePrefix() + ':' + k, dataUrl); } catch (e) {}
+	} else {
+		try { store.remove(k); } catch (e) {}
+		try { if (window.idbSet) window.idbSet(window.activePrefix() + ':' + k, ''); } catch (e) {}
+	}
 }
 function rpCompressCover(dataUrl) {
 return new Promise((resolve) => {
@@ -4407,20 +4409,24 @@ const rpCoverUploadBtn = document.getElementById('rp-cover-upload');
 const rpCoverDelBtn = document.getElementById('rp-cover-del');
 let rpCoverFileInput = null;
 function rpRenderCover() {
-const cover = rpCoverGet();
-if (cover) {
-if (rpCoverPreview) {
-rpCoverPreview.style.backgroundImage = 'url("' + cover + '")';
-const sp = rpCoverPreview.querySelector('span'); if (sp) sp.style.display = 'none';
-}
-if (rpCoverDelBtn) rpCoverDelBtn.hidden = false;
-} else {
-if (rpCoverPreview) {
-rpCoverPreview.style.backgroundImage = '';
-const sp = rpCoverPreview.querySelector('span'); if (sp) sp.style.display = '';
-}
-if (rpCoverDelBtn) rpCoverDelBtn.hidden = true;
-}
+	const side = rpSide;
+	const cover = rpCoverGet(side);
+	const who = side === 'out' ? '我的' : (chatPartnerName() + '的');
+	if (rpCoverUploadBtn) rpCoverUploadBtn.textContent = '上传' + who + '封面';
+	if (rpCoverDelBtn) rpCoverDelBtn.textContent = '删除' + who + '封面';
+	if (cover) {
+		if (rpCoverPreview) {
+			rpCoverPreview.style.backgroundImage = 'url("' + cover + '")';
+			const sp = rpCoverPreview.querySelector('span'); if (sp) sp.style.display = 'none';
+		}
+		if (rpCoverDelBtn) rpCoverDelBtn.hidden = false;
+	} else {
+		if (rpCoverPreview) {
+			rpCoverPreview.style.backgroundImage = '';
+			const sp = rpCoverPreview.querySelector('span'); if (sp) { sp.style.display = ''; sp.textContent = '未设置' + who + '封面'; }
+		}
+		if (rpCoverDelBtn) rpCoverDelBtn.hidden = true;
+	}
 }
 if (rpCoverUploadBtn) {
 rpCoverUploadBtn.addEventListener('click', (e) => {
@@ -4436,7 +4442,7 @@ const reader = new FileReader();
 reader.onload = () => {
 rpCompressCover(reader.result).then(data => {
 if (!data) { toast('图片处理失败'); return; }
-rpCoverSet(data);
+rpCoverSet(rpSide, data);
 rpRenderCover();
 toast('封面已设置');
 });
@@ -4451,7 +4457,7 @@ rpCoverFileInput.click();
 if (rpCoverDelBtn) {
 rpCoverDelBtn.addEventListener('click', (e) => {
 e.stopPropagation();
-rpCoverSet('');
+rpCoverSet(rpSide, '');
 rpRenderCover();
 toast('已恢复默认封面');
 });
@@ -4473,7 +4479,7 @@ wallet.myBalance -= amtFen;
 wallet.systemBalance -= amtFen;
 }
 rpWalletSet(wallet);
-const cover = rpCoverGet();
+const cover = rpCoverGet(rpSide);
 const rec = { side: rpSide, special: 'redpacket', rpAmount: amt, rpWish: wish, rpStatus: 'pending', rpTs: Date.now(), rpCover: cover ? 1 : 0 };
 addRec(rec);
 if (window.logFish) window.logFish();
@@ -5776,8 +5782,8 @@ let html = '<div class="fav-item-card">' +
 '<span class="fav-item-tag">' + tag + (f.title ? ' · 《' + escTxt(f.title) + '》' : '') + '</span>' +
 '<div class="fav-item-body">' + favTextHtml(f.text) + '</div>' +
 '</div>';
-m.innerHTML = html + side;
-fillAvatar(m.querySelector('.msg-av'), 'cs-avatar-user');
+// v3.26.x：信件收藏不显示头像——不再复用聊天行的 .msg-av 头像槽（时间保留），纯卡片观感
+m.innerHTML = html + '<div class="msg-side">' + timeHtml + '</div>';
 } else if (kind === 'feed') {
 let html = '<div class="fav-item-card">' +
 '<span class="fav-item-tag">朋友圈动态</span>' +

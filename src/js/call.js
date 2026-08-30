@@ -235,7 +235,7 @@
       }));
     } catch (e) {}
   }
-  function clearCallActive() { try { localStorage.removeItem(CALL_ACTIVE_KEY); } catch (e) {} }
+  function clearCallActive() { console.log('[clearCallActive]', new Error().stack); try { localStorage.removeItem(CALL_ACTIVE_KEY); } catch (e) {} }
   function fillAv(el, data) {
     if (!el) return;
     // v3.6.x：img 用属性赋值（dataURL 含引号时拼 innerHTML 会逃逸注入 HTML）

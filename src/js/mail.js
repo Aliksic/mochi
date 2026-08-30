@@ -95,13 +95,34 @@
   }
   function mergeLists(a, b) {
     const map = {};
+    const longer = (x, y) => (String(x || '').length >= String(y || '').length) ? x : y;
     const put = (x) => {
       if (!x || !x.id) return;
       const prev = map[x.id];
       if (!prev) { map[x.id] = x; return; }
+      // v3.26.x：字段级合并——同 id 信件，content/myReply/partnerReply/read 各取更完整
+      // 的一方，不再整体覆盖。原实现按 letterLen 取更大一方：剥图快照版（content 空 +
+      // myReply 有）与 IDB 完整版（content 有 + myReply 空）合并时，若 IDB content 长度
+      // > myReply 长度则取 IDB 版丢 myReply，反之取快照版丢 content → 回信后 content 或
+      // myReply 丢失，点开信件空白，直到 TA 回信（partnerReply 落地使整版 letterLen 最大
+      // 胜出）才显示（红米 K80 Chrome 反馈根因）。字段级合并保证任一字段有值即保留。
+      const merged = Object.assign({}, prev);
       const xImg = hasRealImg(x), pImg = hasRealImg(prev);
-      if (xImg !== pImg) { if (xImg) map[x.id] = x; return; } // 有图的一版胜出
-      if (letterLen(x) > letterLen(prev)) map[x.id] = x;
+      if (xImg && !pImg) merged.content = x.content;
+      else if (!xImg && pImg) merged.content = prev.content;
+      else merged.content = longer(x.content, prev.content);
+      if (x.myReply && !prev.myReply) merged.myReply = x.myReply;
+      else if (prev.myReply && !x.myReply) merged.myReply = prev.myReply;
+      else if (x.myReply && prev.myReply) {
+        merged.myReply = Object.assign({}, longer(String(x.myReply.content||'').length >= String(prev.myReply.content||'').length ? x.myReply : prev.myReply));
+      }
+      if (x.partnerReply && !prev.partnerReply) merged.partnerReply = x.partnerReply;
+      else if (prev.partnerReply && !x.partnerReply) merged.partnerReply = prev.partnerReply;
+      else if (x.partnerReply && prev.partnerReply) {
+        merged.partnerReply = Object.assign({}, longer(String(x.partnerReply.content||'').length >= String(prev.partnerReply.content||'').length ? x.partnerReply : prev.partnerReply));
+      }
+      if (x.read || prev.read) merged.read = true;
+      map[x.id] = merged;
     };
     (a || []).forEach(put);
     (b || []).forEach(put);
@@ -221,6 +242,17 @@
   }
   // 打开信详情（复用 tc-mask 弹层；v3.5.68 打开即标记已读）
   function openLetter(l) {
+    // v3.26.x：重新 load() 取最新完整数据——render() 列表项 click 传的 l 来自 render 时的
+    // load() 快照，若当时 mailDbReady=false（切桌面后 idbGet 未返回/启动早期），load() 降级
+    // 读剥图快照，l.content/l.myReply 可能为空（红米 K80 Chrome 反馈「回信后点开空白，TA
+    // 回信后才显示」——TA 回信触发 render 时 mailDbReady 已 true 读主键完整才显示）。这里
+    // 用 l.id 重新 load() 拿最新数据，覆盖可能过期的 l。
+    try {
+      if (l && l.id) {
+        const fresh = load().find(x => x.id === l.id);
+        if (fresh && fresh.id) l = fresh;
+      }
+    } catch (e) {}
     viewLetter = l;
     // 收到的来信：打开后标记已读（「新来信」消失）
     if (l && l.type === 'received' && !l.read) {
@@ -309,6 +341,13 @@
   }
   // 回信（独立全屏页，保留原信上下文）
   function openReply(l) {
+    // v3.26.x：同 openLetter，重新 load() 取最新完整数据（防 render list 的 l 来自剥图快照、content 空）
+    try {
+      if (l && l.id) {
+        const fresh = load().find(x => x.id === l.id);
+        if (fresh && fresh.id) l = fresh;
+      }
+    } catch (e) {}
     viewLetter = l;
     const name = partnerName();
     const origEl = document.getElementById('mail-reply-original');

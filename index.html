@@ -8457,9 +8457,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1788087076947">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.367</b></span>
-        <span class="sv-deploy">部署于 2026-08-30 18:51<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1788088299744">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.368</b></span>
+        <span class="sv-deploy">部署于 2026-08-30 19:11<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9552,7 +9552,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.367</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.368</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -9779,7 +9779,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.367</span>
+              <span class="lic-ver">v3.26.368</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -22958,7 +22958,7 @@ m.innerHTML = '<div class="msg-rp-card' + (cls ? ' ' + cls : '') + '">' +
 favHeartHtml(rec) +
 '</div>';
 if (rec.rpCover) {
-const cover = rpCoverGet();
+const cover = rpCoverGet(rec.side);
 if (cover) {
 const card = m.querySelector('.msg-rp-card');
 if (card) {
@@ -25016,7 +25016,7 @@ if (rpQixiSection) { rpQixiSection.hidden = false; rpQixiSection.classList.add('
 if (rpWishInput) rpWishInput.placeholder = '七夕快乐';
 } else {
 if (rpQixiTag) rpQixiTag.hidden = true;
-if (rpQixiSection) { rpQixiSection.hidden = false; rpQixiSection.classList.remove('qixi-today'); }
+if (rpQixiSection) { rpQixiSection.hidden = true; rpQixiSection.classList.remove('qixi-today'); }
 if (rpWishInput) rpWishInput.placeholder = '心意';
 }
 rpSide = 'out';
@@ -25038,6 +25038,7 @@ btn.addEventListener('click', (e) => {
 e.stopPropagation();
 rpSide = btn.dataset.rpside || 'out';
 rpPanel.querySelectorAll('.rp-side').forEach(b => b.classList.toggle('sel', b === btn));
+rpRenderCover();
 });
 });
 rpPanel.querySelectorAll('.rp-amt').forEach(btn => {
@@ -25171,7 +25172,7 @@ const amt = amtFen / 100;
 const myCid = window.__activeCid || 'default';
 setTimeout(() => {
 if ((window.__activeCid || 'default') !== myCid) return;
-addIn('', { special: 'redpacket', rpAmount: amt, rpWish: wish, rpStatus: 'pending', rpTs: Date.now(), rpCover: rpCoverGet() ? 1 : 0 });
+addIn('', { special: 'redpacket', rpAmount: amt, rpWish: wish, rpStatus: 'pending', rpTs: Date.now(), rpCover: rpCoverGet('in') ? 1 : 0 });
 if (window.logFish) window.logFish();
 }, randInt(800, 2000));
 }
@@ -25344,15 +25345,16 @@ if (ctl) ctl.okText('申请');
 }
 const rpBalanceEl = document.getElementById('rp-balance');
 if (rpBalanceEl) rpBalanceEl.addEventListener('click', (e) => { e.stopPropagation(); rpEditWallet(); });
-const RP_COVER_KEY = 'rp-cover';
-function rpCoverGet() { return store.get(RP_COVER_KEY) || ''; }
-function rpCoverSet(dataUrl) {
+function rpCoverKey(side) { return 'rp-cover-' + (side || 'out'); }
+function rpCoverGet(side) { return store.get(rpCoverKey(side)) || ''; }
+function rpCoverSet(side, dataUrl) {
+const k = rpCoverKey(side);
 if (dataUrl) {
-store.set(RP_COVER_KEY, dataUrl);
-try { if (window.idbSet) window.idbSet(window.activePrefix() + ':' + RP_COVER_KEY, dataUrl); } catch (e) {}
+store.set(k, dataUrl);
+try { if (window.idbSet) window.idbSet(window.activePrefix() + ':' + k, dataUrl); } catch (e) {}
 } else {
-try { store.remove(RP_COVER_KEY); } catch (e) {}
-try { if (window.idbSet) window.idbSet(window.activePrefix() + ':' + RP_COVER_KEY, ''); } catch (e) {}
+try { store.remove(k); } catch (e) {}
+try { if (window.idbSet) window.idbSet(window.activePrefix() + ':' + k, ''); } catch (e) {}
 }
 }
 function rpCompressCover(dataUrl) {
@@ -25378,7 +25380,11 @@ const rpCoverUploadBtn = document.getElementById('rp-cover-upload');
 const rpCoverDelBtn = document.getElementById('rp-cover-del');
 let rpCoverFileInput = null;
 function rpRenderCover() {
-const cover = rpCoverGet();
+const side = rpSide;
+const cover = rpCoverGet(side);
+const who = side === 'out' ? '我的' : (chatPartnerName() + '的');
+if (rpCoverUploadBtn) rpCoverUploadBtn.textContent = '上传' + who + '封面';
+if (rpCoverDelBtn) rpCoverDelBtn.textContent = '删除' + who + '封面';
 if (cover) {
 if (rpCoverPreview) {
 rpCoverPreview.style.backgroundImage = 'url("' + cover + '")';
@@ -25388,7 +25394,7 @@ if (rpCoverDelBtn) rpCoverDelBtn.hidden = false;
 } else {
 if (rpCoverPreview) {
 rpCoverPreview.style.backgroundImage = '';
-const sp = rpCoverPreview.querySelector('span'); if (sp) sp.style.display = '';
+const sp = rpCoverPreview.querySelector('span'); if (sp) { sp.style.display = ''; sp.textContent = '未设置' + who + '封面'; }
 }
 if (rpCoverDelBtn) rpCoverDelBtn.hidden = true;
 }
@@ -25407,7 +25413,7 @@ const reader = new FileReader();
 reader.onload = () => {
 rpCompressCover(reader.result).then(data => {
 if (!data) { toast('图片处理失败'); return; }
-rpCoverSet(data);
+rpCoverSet(rpSide, data);
 rpRenderCover();
 toast('封面已设置');
 });
@@ -25422,7 +25428,7 @@ rpCoverFileInput.click();
 if (rpCoverDelBtn) {
 rpCoverDelBtn.addEventListener('click', (e) => {
 e.stopPropagation();
-rpCoverSet('');
+rpCoverSet(rpSide, '');
 rpRenderCover();
 toast('已恢复默认封面');
 });
@@ -25443,7 +25449,7 @@ wallet.myBalance -= amtFen;
 wallet.systemBalance -= amtFen;
 }
 rpWalletSet(wallet);
-const cover = rpCoverGet();
+const cover = rpCoverGet(rpSide);
 const rec = { side: rpSide, special: 'redpacket', rpAmount: amt, rpWish: wish, rpStatus: 'pending', rpTs: Date.now(), rpCover: cover ? 1 : 0 };
 addRec(rec);
 if (window.logFish) window.logFish();
@@ -26722,8 +26728,7 @@ let html = '<div class="fav-item-card">' +
 '<span class="fav-item-tag">' + tag + (f.title ? ' · 《' + escTxt(f.title) + '》' : '') + '</span>' +
 '<div class="fav-item-body">' + favTextHtml(f.text) + '</div>' +
 '</div>';
-m.innerHTML = html + side;
-fillAvatar(m.querySelector('.msg-av'), 'cs-avatar-user');
+m.innerHTML = html + '<div class="msg-side">' + timeHtml + '</div>';
 } else if (kind === 'feed') {
 let html = '<div class="fav-item-card">' +
 '<span class="fav-item-tag">朋友圈动态</span>' +
@@ -47235,7 +47240,7 @@ name: currentCall.name || '', av: currentCall.av || '', ts: Date.now()
 }));
 } catch (e) {}
 }
-function clearCallActive() { try { localStorage.removeItem(CALL_ACTIVE_KEY); } catch (e) {} }
+function clearCallActive() { console.log('[clearCallActive]', new Error().stack); try { localStorage.removeItem(CALL_ACTIVE_KEY); } catch (e) {} }
 function fillAv(el, data) {
 if (!el) return;
 el.innerHTML = '';
@@ -47714,13 +47719,28 @@ return /data:image\//.test(s || '');
 }
 function mergeLists(a, b) {
 const map = {};
+const longer = (x, y) => (String(x || '').length >= String(y || '').length) ? x : y;
 const put = (x) => {
 if (!x || !x.id) return;
 const prev = map[x.id];
 if (!prev) { map[x.id] = x; return; }
+const merged = Object.assign({}, prev);
 const xImg = hasRealImg(x), pImg = hasRealImg(prev);
-if (xImg !== pImg) { if (xImg) map[x.id] = x; return; } // 有图的一版胜出
-if (letterLen(x) > letterLen(prev)) map[x.id] = x;
+if (xImg && !pImg) merged.content = x.content;
+else if (!xImg && pImg) merged.content = prev.content;
+else merged.content = longer(x.content, prev.content);
+if (x.myReply && !prev.myReply) merged.myReply = x.myReply;
+else if (prev.myReply && !x.myReply) merged.myReply = prev.myReply;
+else if (x.myReply && prev.myReply) {
+merged.myReply = Object.assign({}, longer(String(x.myReply.content||'').length >= String(prev.myReply.content||'').length ? x.myReply : prev.myReply));
+}
+if (x.partnerReply && !prev.partnerReply) merged.partnerReply = x.partnerReply;
+else if (prev.partnerReply && !x.partnerReply) merged.partnerReply = prev.partnerReply;
+else if (x.partnerReply && prev.partnerReply) {
+merged.partnerReply = Object.assign({}, longer(String(x.partnerReply.content||'').length >= String(prev.partnerReply.content||'').length ? x.partnerReply : prev.partnerReply));
+}
+if (x.read || prev.read) merged.read = true;
+map[x.id] = merged;
 };
 (a || []).forEach(put);
 (b || []).forEach(put);
@@ -47806,6 +47826,12 @@ if (window.viewChatImage) window.viewChatImage(im.src);
 });
 }
 function openLetter(l) {
+try {
+if (l && l.id) {
+const fresh = load().find(x => x.id === l.id);
+if (fresh && fresh.id) l = fresh;
+}
+} catch (e) {}
 viewLetter = l;
 if (l && l.type === 'received' && !l.read) {
 l.read = true;
@@ -47881,6 +47907,12 @@ const el = document.getElementById(id);
 if (el) el.hidden = false;
 }
 function openReply(l) {
+try {
+if (l && l.id) {
+const fresh = load().find(x => x.id === l.id);
+if (fresh && fresh.id) l = fresh;
+}
+} catch (e) {}
 viewLetter = l;
 const name = partnerName();
 const origEl = document.getElementById('mail-reply-original');

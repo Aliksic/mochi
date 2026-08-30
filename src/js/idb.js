@@ -915,7 +915,7 @@
         // 手工改过的备份包）必然远超 LS_BIG_LIMIT，一旦被收进 bigKeys，下面的循环会整包读进
         // 内存 + 写回 IDB + 常驻 memoryCache（idb.js:930），等于把 data-backup.js 刚清理掉的
         // 副本又复活一份，还白钉住几百 MB 堆。副本是纯冗余遗留物，不需要迁移，交给 purge。
-        // TEMP-NEGATIVE-CONTROL: if (k === 'xy-home-v2:__auto-backup-snapshot') continue;
+        if (k === 'xy-home-v2:__auto-backup-snapshot') continue;
         const v = localStorage.getItem(k);
         if (v && v.length > LS_BIG_LIMIT) bigKeys.push(k);
       }
