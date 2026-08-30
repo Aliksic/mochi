@@ -2186,7 +2186,7 @@
       } else {
         const cm = findTrack(currentId);
         toast(cm && cm.source === 'url' && cm.url
-          ? '在线歌曲加载失败：链接可能已失效或为会员歌曲，可换一首试试'
+          ? '在线歌曲加载失败：可能为会员歌曲、链接失效，或网络无法访问音乐源；可换一首或切换网络试试'
           : '播放失败，请再点一下屏幕重试');
       }
       armAutoResume();

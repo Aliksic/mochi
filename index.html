@@ -8465,9 +8465,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1788093190014">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.371</b></span>
-        <span class="sv-deploy">部署于 2026-08-30 20:33<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1788096542735">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.372</b></span>
+        <span class="sv-deploy">部署于 2026-08-30 21:29<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9560,7 +9560,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.371</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.372</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -9787,7 +9787,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.371</span>
+              <span class="lic-ver">v3.26.372</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -13312,6 +13312,8 @@ localTsCache = Number(ts) || 0;
 }
 } catch (e) {}
 const ERR_KEY = 'xy-home-v2:__diag-errs';
+const ERR_CAP = 20;
+const ERR_STACK_RECENT = 3;
 function errSnap() {
 const d = window.mochiDevice || {};
 return {
@@ -13343,7 +13345,7 @@ if (st) ent.stack = st;
 var last = arr.length ? arr[arr.length - 1] : null;
 if (last && last.msg === ent.msg && ent.t - (last.t || 0) < 5000) return;
 arr.push(ent);
-if (arr.length > 5) arr = arr.slice(arr.length - 5);
+if (arr.length > ERR_CAP) arr = arr.slice(arr.length - ERR_CAP);
 try { localStorage.setItem(ERR_KEY, JSON.stringify(arr)); } catch (e) {}
 try { if (window.idbSet) window.idbSet(ERR_KEY, JSON.stringify(arr)); } catch (e) {}
 try { refreshBadge(); } catch (e) {}
@@ -13992,12 +13994,12 @@ jobs.push(new Promise(function (res) {
 readErrs(function (errs) {
 try {
 if (Array.isArray(errs) && errs.length) {
-const lines = ['最近错误 ' + errs.length + ' 条：'];
-errs.forEach(function (it) {
+const lines = ['最近错误 ' + errs.length + ' 条（最多留 ' + ERR_CAP + ' 条，调用栈只给最近 ' + ERR_STACK_RECENT + ' 条——报障文本过长剪贴板会截断）：'];
+errs.forEach(function (it, idx) {
 const dt = it.t ? new Date(it.t).toLocaleString() : '?';
 lines.push('· ' + dt + ' [' + (it.dev || '') + '] ' + (it.msg || '').slice(0, 180) + (it.page ? '（页面 ' + it.page + '）' : ''));
 const st = String(it.stack || '');
-if (st) lines.push('    ' + st.split('\n').slice(0, 4).join('\n    '));
+if (st && idx >= errs.length - ERR_STACK_RECENT) lines.push('    ' + st.split('\n').slice(0, 4).join('\n    '));
 });
 L[errIdx] = lines.join('\n');
 } else {
@@ -37741,7 +37743,7 @@ toast('点击播放被浏览器拦截，请再点一下屏幕继续播放');
 } else {
 const cm = findTrack(currentId);
 toast(cm && cm.source === 'url' && cm.url
-? '在线歌曲加载失败：链接可能已失效或为会员歌曲，可换一首试试'
+? '在线歌曲加载失败：可能为会员歌曲、链接失效，或网络无法访问音乐源；可换一首或切换网络试试'
 : '播放失败，请再点一下屏幕重试');
 }
 armAutoResume();
@@ -71688,6 +71690,28 @@ return null;
 function saveTaTime(cid, obj) {
 try { storeOf(cid).set('cjian-ta-time', JSON.stringify(obj)); } catch (e) {}
 }
+function halfRangeOf(wm) {
+const wh = Math.floor(wm / 60) % 24;
+const wmin = wm % 60;
+const idx = shichenAt(wh);
+const stH = shichenStartHour(idx);
+const mInto = wh * 60 + wmin - stH * 60;
+let lo, hi, half, range;
+if (mInto < 30) {
+lo = stH * 60; hi = stH * 60 + 29;
+half = SHICHEN[idx] + '初';
+range = pad(stH) + ':00–' + pad(stH) + ':29';
+} else if (mInto < 90) {
+lo = stH * 60 + 30; hi = stH * 60 + 89;
+half = SHICHEN[idx] + '正';
+range = pad(stH) + ':30–' + pad((stH + 1) % 24) + ':29';
+} else {
+lo = stH * 60 + 90; hi = stH * 60 + 119;
+half = SHICHEN[idx] + '正';
+range = pad((stH + 1) % 24) + ':30–' + pad((stH + 1) % 24) + ':59';
+}
+return { lo: lo, hi: hi, half: half, range: range };
+}
 function taTimeOf(cid) {
 const now = Date.now();
 let t = loadTaTime(cid);
@@ -71696,20 +71720,21 @@ let next = (t && typeof t.next === 'number') ? t.next : 0;
 if (last > now || last < 0 || isNaN(last)) { last = 0; next = 0; }
 if (!t || (now - last) / 36e5 >= next) {
 const list0 = loadRoster(cid);
-const slotSet = [];
-list0.forEach(function (c2) {
-if (Array.isArray(c2.slots) && c2.slots.length) {
-c2.slots.forEach(function (h) { if (slotSet.indexOf(h) < 0) slotSet.push(h); });
-}
-});
-let hh, mm, stH = -1;
-if (slotSet.length) {
-stH = slotSet[rand(0, slotSet.length - 1)];
+const c0 = list0 && list0[0];
+let hh, mm, halfLabel = '', rangeLabel = '';
+if (c0) {
+const info = halfRangeOf(worldMinuteOf(c0));
+const total = info.lo + rand(0, info.hi - info.lo);
+hh = Math.floor(total / 60) % 24; mm = total % 60;
+halfLabel = info.half; rangeLabel = info.range;
+} else {
+const stH = shichenStartHour(rand(0, 11));
 const total = slotMinuteRange(stH);
 hh = Math.floor(total / 60) % 24; mm = total % 60;
-} else { hh = rand(0, 23); mm = rand(0, 59); }
-t = { hh: hh, mm: mm, last: now, next: 1 + Math.random() * 7 };
-if (stH >= 0) t.slotStartH = stH; // 记录抽中的时辰起时，供「时间段」标签展示具体范围
+const info = halfRangeOf(total);
+halfLabel = info.half; rangeLabel = info.range;
+}
+t = { hh: hh, mm: mm, last: now, next: 1 + Math.random() * 7, half: halfLabel, range: rangeLabel };
 saveTaTime(cid, t);
 }
 return t;
@@ -71745,12 +71770,13 @@ card.appendChild(row);
 });
 }
 function taSlotLabel(cid, t) {
-const hasSlots = loadRoster(cid).some(function (c2) { return Array.isArray(c2.slots) && c2.slots.length; });
-if (!hasSlots) return '全天随机';
-let startH;
-if (t && typeof t.slotStartH === 'number' && t.slotStartH >= 0) startH = t.slotStartH;
-else startH = shichenStartHour(shichenAt(t.hh));
-return SHICHEN[shichenAt(startH)] + '时 ' + pad(startH) + ':00–' + pad((startH + 2) % 24) + ':59';
+if (t && t.half && t.range) return t.half + ' ' + t.range;
+const c0 = loadRoster(cid)[0];
+if (c0) {
+const info = halfRangeOf(worldMinuteOf(c0));
+return info.half + ' ' + info.range;
+}
+return '全天随机';
 }
 function taTimePoll() {
 try {
@@ -72547,6 +72573,18 @@ var ceMo = new MutationObserver(function () { initCeAll(); });
 ceMo.observe(document.body, { childList: true, subtree: true });
 }
 } catch (e) {}
+if (!isIOS) {
+document.addEventListener('focusin', function (e) {
+var t = e.target;
+if (!t || t.tagName !== 'INPUT' && t.tagName !== 'TEXTAREA') return;
+if (t.dataset.ceDone || t.__ceBox) return;
+var ty = t.type;
+if (ty === 'checkbox' || ty === 'range' || ty === 'file' || ty === 'color' || ty === 'hidden' ||
+ty === 'date' || ty === 'time' || ty === 'datetime-local' || ty === 'month' || ty === 'week') return;
+ceConvert(t);
+if (t.__ceBox) { try { t.__ceBox.focus(); } catch (err) {} }
+}, true);
+}
 function _aRefreshCe() {
 try { if (_aClosing) return; } catch (e) {}
 try { if (Date.now() - _aUserTypos < 500) return; } catch (e) {}

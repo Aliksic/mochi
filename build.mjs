@@ -203,8 +203,8 @@ const FIX_SENTINELS = [
   { name: '内置壁纸预设可见性（bgPresetCss + applyBgVisibility 认预设）', file: 'js/personalize.js', needle: 'bgPresetCss' },
   { name: '应用美化方案预选中确认（桌面+聊天 ctl.pills 预选「应用」，只点确定也生效）', file: 'js/personalize.js', needle: "ctl.pills([{ label: '应用', value: 'ok' }], 'ok')" },
   { name: '冷启动回复池取回自定义字卡（replyScopeGroups 重载 + 就绪判定不再被默认字卡遮蔽）', file: 'js/chatcard.js', needle: 'function replyScopeGroups' },
-  { name: 'TA档案删除确认预选「删除」pill（删除这条/了解/疑问/暂不适用/已了解 只点确定也生效）', file: 'js/memo-arc.js', needle: "noInput: true, pill: 'del', pills" },
-  { name: '我的档案删除确认预选「删除」pill（删除这条/描述卡 只点确定也生效）', file: 'js/my-arc.js', needle: "noInput: true, pill: 'del', pills" },
+  { name: 'TA档案删除确认预选「删除」pill（删除这条/了解/疑问/暂不适用/已了解 只点确定也生效）', file: 'js/memo-arc.js', needle: "saveArc(cur, arc); toast('已删除'); render();\n}, { noInput: true, pill: 'del', pills:" },
+  { name: '我的档案删除确认预选「删除」pill（删除这条/描述卡 只点确定也生效）', file: 'js/my-arc.js', needle: "save(arc); toast('已删除'); render();\n}, { noInput: true, pill: 'del', pills:" },
   { name: '番茄钟提前结束预选「结束」pill（只点确定也生效）', file: 'js/p2-features.js', needle: "noInput: true, lock: true, pill: '1', pills" },
   { name: '导出进度遮罩 + 确认后再下载（impShow 复用 + anchorDownload 只在用户点确定后触发）', file: 'js/data-backup.js', needle: 'anchorDownload' },
   { name: '诊断复制改原生 execCommand + 按钮补 type=button（修点【复制】无反馈/整页刷新）', file: 'js/device.js', needle: 'document.execCommand(\'copy\')' },
@@ -213,8 +213,8 @@ const FIX_SENTINELS = [
   { name: 'idbSet 写入挂起 4s 超时+重建重试（荣耀/Edge 事务挂起静默丢写）', file: 'js/idb.js', needle: '连接疑似挂起' },
   { name: 'idbHydrateKey 慢读取回 6s+8s（慢但可用 IDB 低端机自定义字卡取不回落兜底）', file: 'js/idb.js', needle: 'window.idbHydrateKey = function' },
   { name: '小键写日志 __wr-journal（杀进程回滚 LS 后设置开关回退的恢复链）', file: 'js/idb.js', needle: '__wr-journal' },
-  { name: '语音开关去掉静默早退守卫 + mochi-wrj-heal 重同步（首点无反应）', file: 'js/chat-settings.js', needle: 'mochi-wrj-heal' },
-  { name: 'dc-* 开关监听 mochi-wrj-heal 重同步（退出重进设置回退自愈）', file: 'js/default-cards.js', needle: 'mochi-wrj-heal' },
+  { name: '语音开关去掉静默早退守卫 + mochi-wrj-heal 重同步（首点无反应）', file: 'js/chat-settings.js', needle: "document.addEventListener('mochi-wrj-heal', syncVs);" },
+  { name: 'dc-* 开关监听 mochi-wrj-heal 重同步（退出重进设置回退自愈）', file: 'js/default-cards.js', needle: "document.addEventListener('mochi-wrj-heal', function () {\ntry {" },
   { name: '诊断「开关持久化体检」（LS/读取/IDB 三层值 + LS 写探针）', file: 'js/device.js', needle: '开关持久化体检' },
   { name: '自动备份副本已下线：启动时自动清理遗留副本释放空间（purgeLegacySnapshot）', file: 'js/data-backup.js', needle: 'purgeLegacySnapshot' },
   { name: '后台听歌不误报「会员/移出」弹窗（offerRemoveDamagedSong 后台直返不计数 + 回前台 bgResumeFails 清零）', file: 'js/music-player.js', needle: '后台冻结/断流误触发 onerror，不弹「移出」窗不计数' },
@@ -309,26 +309,86 @@ const FIX_SENTINELS = [
   { name: '#99 TA收藏改存歌曲快照（纯 ID 方案删歌后记录隐形；用户要求删歌后联系人收藏记录依旧保留）', file: 'js/music-player.js', needle: 'function taFavList()' },
   { name: '#99 TA收藏列表已删歌曲标识样式（置灰 + 已删除小标签）', file: 'css/chat-pages.css', needle: 'ta-fav-gone' },
   { name: '联系人主动消息爱心标识已去灰色阴影（.msg-hi-heart 双层 drop-shadow 已删，加回即回归）', file: 'css/chat-main.css', needle: 'drop-shadow(0 1px 1px rgba(0,0,0,.22))', absent: true },
+  { name: '#100 诊断启动异常采集前置（window.__jsErrors 此前全项目无人初始化，build 兜底 if(window.__jsErrors) 恒 false＝功能文件启动异常静默丢弃）', file: 'js/device.js', needle: 'window.__jsErrors = window.__jsErrors || []; } catch (e0) {}' },
+  { name: '#100 诊断软/硬双预算首屏标注（原 3s 单保险丝把 IDB 慢机的「最近错误/开关持久化体检/桌面归属体检/IDB 大键明细」整批截成裸「读取中…」，2026-08-30 iPhone 16 Pro 真机诊断实证）', file: 'js/device.js', needle: '未读到（本机存储响应慢，稍后自动补全）' },
+  { name: '#100 诊断终态回填直写可见 #modal-textarea + 弹窗判活（ctl.text 的 setter 只写 hidden 的 #modal-input，回填曾静默失效；全站弹窗共用 DOM，关窗后迟到回填会灌进别的弹窗）', file: 'js/device.js', needle: 'if (!modalAlive()) { closed = true; return; }' },
+  { name: '#100 诊断角标按最后一条错误时间戳判未读（原存条数，环形写满后新错误永远算不出未读＝角标常暗、错误线索看不见）', file: 'js/device.js', needle: 'const seen = Number(localStorage.getItem(SEEN_KEY)) || 0;' },
+  { name: '#100 最近错误环形上限 5→20 且调用栈只给最近 3 条（5 条窗口用户报障时早已刷掉；全带栈会把报障文本撑到剪贴板截断）', file: 'js/device.js', needle: 'const ERR_CAP = 20;' },
 ];
 try {
   const built = readFileSync(join(root, 'index.html'), 'utf8');
   const missing = FIX_SENTINELS.filter(s => !s.absent && !built.includes(s.needle));
   const leaked = FIX_SENTINELS.filter(s => s.absent && built.includes(s.needle));
+  // v3.26.x #100：产物缺失时再对照源文件——「src 里也没有」和「src 有但产物没有」
+  // 是两种完全不同的故障（前者修复真被覆盖、后者是漏接入构建或被旧缓冲回写），
+  // 处置路径不一样，以前只有一句「请确认修复是否仍有效」，全靠人猜。
+  // needle 含 \n 的是压缩后的多行特征（源文件带缩进/空行），按行分段判。
+  const srcState = function (s) {
+    if (!s.file || s.file === 'index.html') return null;
+    let src;
+    try { src = readFileSync(join(root, 'src', s.file), 'utf8'); } catch (e) { return 'nofile'; }
+    return s.needle.split('\n').every(function (seg) { return src.includes(seg); });
+  };
+  // v3.26.x #100：「哑哨兵」体检——两种真正拦不住回归的登记方式。
+  // A 锚点指错地方：登记的 file 是某个 src 源文件，但该 needle 在那个文件里根本不存在，
+  //   它能报绿纯粹靠产物里别处的同名文本 → 把这个文件的修复整块删掉也不会报警。
+  //   （实测踩过：needle `window.__jsErrors = window.__jsErrors || []` 在 chat.js 也有
+  //   一份，把 device.js 的初始化整行删掉，146/146 仍然全绿。）
+  // B 一条 needle 被多条登记共用：两条互相掩盖，出问题时也分不清是哪次修复丢了。
+  // 注：不再按「产物内出现次数 ≥2」报警——那是噪音（实测 70 条），同名文本多处出现
+  // 通常仍会随守卫一起消失，拦得住。只警告不置失败码，登记人把锚点收到唯一即可。
+  const dead = [];
+  const misanchored = FIX_SENTINELS.filter(function (s) {
+    if (s.absent || !s.file || s.file === 'index.html') return false;
+    const st = srcState(s);
+    if (st === 'nofile') { dead.push(s); return false; }
+    return st === false;
+  });
+  const byNeedle = {};
+  FIX_SENTINELS.forEach(function (s) { (byNeedle[s.needle] = byNeedle[s.needle] || []).push(s.name); });
+  const shared = Object.keys(byNeedle).filter(function (k) { return byNeedle[k].length > 1; });
+  if (misanchored.length || shared.length || dead.length) {
+    console.warn('⚠️  哑哨兵 ' + (misanchored.length + shared.length + dead.length) + ' 条（拦不住回归，请把 needle 收到「该源文件里唯一」）：');
+    misanchored.forEach(function (s) {
+      console.warn('   · 锚点指错：[' + s.name + '] 登记的 ' + s.file + ' 里找不到 needle "' + s.needle + '"（产物里是靠别处同名文本过的检）');
+    });
+    dead.forEach(function (s) {
+      console.warn('   · 死锚点：[' + s.name + '] 登记的 src/' + s.file + ' 已不存在（文件改名/下线，needle 与修复脱钩）');
+    });
+    shared.forEach(function (k) {
+      console.warn('   · 共用 needle "' + k + '"：' + byNeedle[k].map(n => '[' + n + ']').join(' '));
+    });
+  } else {
+    console.log('✅ 哑哨兵体检 0 条（每条 needle 都在自己登记的那个 src 文件里、且无共用锚点）');
+  }
+  const hintOf = function (s) {
+    const st = srcState(s);
+    if (st === null) return '';
+    if (st === 'nofile') return ' ← 源文件 src/' + s.file + ' 不存在（被改名/删除？哨兵登记要跟着改）';
+    if (!s.absent) return st ? ' ← src 里仍在＝产物没接入（查 build.mjs 的 jsFiles/cssFiles，或产物被旧缓冲覆盖）' : ' ← src 里也没有＝修复真丢了，去 src/' + s.file + ' 补回';
+    return st ? ' ← src 里也回来了＝删除被改回' : ' ← 只有产物里有＝产物比 src 旧，重新构建';
+  };
   if (missing.length || leaked.length) {
     if (missing.length) {
-      console.warn('⚠️  关键修复哨兵检查：以下 ' + missing.length + ' 项特征在产物中缺失（修复可能被覆盖/未接入）：');
-      missing.forEach(s => console.warn('   · [' + s.name + '] 应含 "' + s.needle + '"（' + s.file + '）'));
-      console.warn('   请确认这些修复是否仍有效——对应 verify-xxx.mjs 可补跑复核，或检查是否被并行改动覆盖。');
+      console.error('❌ 关键修复哨兵检查：以下 ' + missing.length + ' 项特征在产物中缺失（修复被覆盖/未接入）：');
+      missing.forEach(s => console.error('   · [' + s.name + '] 应含 "' + s.needle + '"（' + s.file + '）' + hintOf(s)));
     }
     if (leaked.length) {
-      console.warn('⚠️  删除型修复哨兵检查：以下 ' + leaked.length + ' 项「应不存在」的特征又出现在产物中（移除被并行改动/旧缓冲覆盖）：');
-      leaked.forEach(s => console.warn('   · [' + s.name + '] 不应含 "' + s.needle + '"（' + s.file + '）'));
-      console.warn('   请确认该功能是否被加回——用户反馈要求移除，回归即需重新处理。');
+      console.error('❌ 删除型修复哨兵：以下 ' + leaked.length + ' 项「应不存在」的特征又回来了（移除被并行改动/旧缓冲覆盖）：');
+      leaked.forEach(s => console.error('   · [' + s.name + '] 不应含 "' + s.needle + '"（' + s.file + '）' + hintOf(s)));
     }
+    console.error('   哨兵是回归防线的最后一道——请逐条确认后再提交（对应 verify-xxx.mjs 可补跑复核）。');
   } else {
     console.log('✅ 关键修复哨兵 ' + FIX_SENTINELS.length + '/' + FIX_SENTINELS.length + ' 全部在位（修复无丢失）');
   }
-} catch (e) { /* 产物未生成/读取失败：跳过 */ }
+  // v3.26.x #100：哨兵必须能让构建失败。此前全文件没有一次 exit，
+  // 警告只在人眼里、CI 里永远是绿的——「修复被静默覆盖」正是这套防线要拦的事。
+  // 放在最后：产物此时已写盘，失败不会留下半成品产物。
+  if (missing.length || leaked.length) process.exitCode = 1;
+} catch (e) {
+  console.error('❌ 哨兵检查未能执行（产物读不到？）：' + (e && e.message));
+  process.exitCode = 1;
+}
 // v3.27.x：sw.js 专项哨兵（导航回退优先当前 CACHE + activate 补 fetch 自愈，防被并行会话覆盖）
 try {
   const swSrc = readFileSync(join(root, 'sw.js'), 'utf8');
@@ -339,9 +399,10 @@ try {
   ];
   const swMissing = swNeedles.filter(n => !swSrc.includes(n));
   if (swMissing.length) {
-    console.warn('⚠️  sw.js 关键修复哨兵：以下特征缺失（修复可能被覆盖）：');
-    swMissing.forEach(n => console.warn('   · 应含 "' + n + '"'));
+    console.error('❌ sw.js 关键修复哨兵：以下特征缺失（修复可能被覆盖）：');
+    swMissing.forEach(n => console.error('   · 应含 "' + n + '"'));
+    process.exitCode = 1; // v3.26.x #100：同主哨兵，缺失必须让构建失败
   } else {
     console.log('✅ sw.js 哨兵 ' + swNeedles.length + '/' + swNeedles.length + ' 在位');
   }
-} catch (e) {}
+} catch (e) { console.error('❌ sw.js 哨兵未能执行：' + (e && e.message)); process.exitCode = 1; }

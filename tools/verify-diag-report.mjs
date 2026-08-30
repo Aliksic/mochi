@@ -166,6 +166,45 @@ console.log('\n【守卫】诊断弹窗已关 → 迟到回填不灌进别的弹
   await ctx.close();
 }
 
+// ===== 6. 最近错误环形窗口 5 → 20，调用栈只给最近 3 条 =====
+console.log('\n【修复·线索窗口】最近错误留 20 条（修复前 5 条）+ 栈只给最近 3 条');
+{
+  const { ctx, page } = await boot(0);
+  const r = await page.evaluate(async () => {
+    const G = 'xy-home-v2:';
+    try { localStorage.removeItem(G + '__diag-errs'); } catch (e) {}
+    // 真抛未捕获异常（setTimeout 里 throw → window.onerror 收到，带 e.error.stack）
+    for (let i = 0; i < 30; i++) setTimeout(function () { throw new Error('SEED THROWN ' + i); }, 0);
+    await new Promise(r2 => setTimeout(r2, 1200));
+    let ring = [];
+    try { ring = JSON.parse(localStorage.getItem(G + '__diag-errs') || '[]'); } catch (e) {}
+    document.getElementById('row-diagnostics').click();
+    let v = '';
+    for (let i = 0; i < 220; i++) {
+      const ta = document.getElementById('modal-textarea');
+      v = ta ? ta.value : '';
+      if (/最近错误 \d+ 条/.test(v)) break;
+      await new Promise(r2 => setTimeout(r2, 50));
+    }
+    const seg = v.split('\n');
+    const start = seg.findIndex(s => /^最近错误 \d+ 条/.test(s));
+    let shown = 0, stack = 0;
+    if (start >= 0) {
+      for (let i = start + 1; i < seg.length; i++) {
+        const s = seg[i];
+        if (/^· /.test(s)) shown++;
+        else if (/^ {4}/.test(s)) stack++;
+        else break;
+      }
+    }
+    return { ring: ring.length, shown, stack, head: start >= 0 ? seg[start] : '' };
+  });
+  t('30 次报错后环形保留 20 条（修复前只剩 5 条）', r.ring === 20, '实测 ' + r.ring + ' 条');
+  t('诊断正文把 20 条线索全列出来', r.shown === 20, '正文 ' + r.shown + ' 行');
+  t('调用栈只跟最近 3 条（≤12 行，报障文本不被撑爆）', r.stack > 0 && r.stack <= 12, '栈 ' + r.stack + ' 行');
+  await ctx.close();
+}
+
 await browser.close(); server.close();
 console.log('\n===== 合计 ' + pass + ' 通过 / ' + fail + ' 失败 =====');
 process.exit(fail ? 1 : 0);

@@ -382,6 +382,25 @@
     }
   } catch (e) {}
 
+  // v3.5.139：聚焦瞬间兜底转换（捕获阶段）——修复动态输入框的时序竞态：
+  // 弹层输入框（如问问TA回答框 qa-input）是动态插入的，面板打开时代码可能
+  // 立即 focus()；MutationObserver 的转换是异步微任务，来不及接管时 Chrome
+  // 已对「原生 input 聚焦」瞬间弹出「自动填充」条（用户实测：问问TA顶部
+  // 问题输入栏仍弹条）。这里在 focusin 捕获阶段同步转换并把焦点移交 ce-box，
+  // 原生 input 随即失焦，Chrome 收回弹条；已转换的（有 __ceBox）直接跳过。
+  if (!isIOS) {
+    document.addEventListener('focusin', function (e) {
+      var t = e.target;
+      if (!t || t.tagName !== 'INPUT' && t.tagName !== 'TEXTAREA') return;
+      if (t.dataset.ceDone || t.__ceBox) return;
+      var ty = t.type;
+      if (ty === 'checkbox' || ty === 'range' || ty === 'file' || ty === 'color' || ty === 'hidden' ||
+          ty === 'date' || ty === 'time' || ty === 'datetime-local' || ty === 'month' || ty === 'week') return;
+      ceConvert(t);
+      if (t.__ceBox) { try { t.__ceBox.focus(); } catch (err) {} }
+    }, true);
+  }
+
   // v3.16.x：ce-box 合成层通用刷新（AI-B 域，通用化 ta-ask.js 的 .ta-add 局部缓解，
   // 合入 AI-A 留言：见 WORKLOG 2026-08-23 问 TA 管理页「文字与输入框边框分离」）。
   // ceConvert 把文本输入框转成 contenteditable .ce-box，输入文字渲染在独立合成层；

@@ -94,8 +94,10 @@ const waitReady = async () => {
   for (let i = 0; i < 50; i++) { if (await evalJs('!!window.__mochiDataReady')) return; await sleep(200); }
 };
 
-// 直链应答对象：代码只读 r.url / r.body，用鸭子类型对象保证确定性
-const DIRECT_OBJ = "{ url: 'https://m701.music.126.net/weak-fixed.mp3', body: null }";
+// 直链应答对象：代码只读 r.url / r.redirected / r.headers / r.body，用鸭子类型对象
+// 保证确定性——redirected=true + content-type audio/mpeg 模拟真实 meting 302 应答
+//（2026-08-30 v3.26.x 起解析器校验「必须 302 跳转或音频响应」才接受为直链）
+const DIRECT_OBJ = "{ url: 'https://m701.music.126.net/weak-fixed.mp3', redirected: true, headers: { get: function (k) { return k === 'content-type' ? 'audio/mpeg' : null; } }, body: null }";
 
 const INIT_SCRIPT = `
 // ---- meting 直链接口 stub：延迟 ${'${slowMs}'} 应答，模拟弱网拉直链的空窗期 ----

@@ -298,10 +298,17 @@
   } catch (e) {}
 
   // ===== 错误自动采集（v3.16.x） =====
-  // 报障文本自带最近错误栈：window.onerror / unhandledrejection 采集最近 5 条
+  // 报障文本自带最近错误栈：window.onerror / unhandledrejection 采集最近 ERR_CAP 条
   //（含 UA + 设备判定 + 页面），存 localStorage（键 __diag-errs）。纯本地、
   // 不发送任何外部服务；诊断信息里追加「最近错误」一节，用户报障直接带出来。
+  // v3.26.x #100：上限 5 → 20。5 条等于「报错连环机器上只看得到最后一瞬间」，
+  // 用户从出问题到想起来复制诊断，往往已经把自己那条刷掉了（环形写满即覆盖）。
+  // 单条约 1KB（msg300 + ua160 + stack400），20 条约 20KB，远在 LS/IDB 大键阈值下。
+  // 但报障文本要过剪贴板（本项目实测过长会被截断），所以栈只给最近 3 条：
+  // 20 条正文 + 12 行栈，比旧版 5 条各带 4 行栈（25 行）还短，线索窗口却宽 4 倍。
   const ERR_KEY = 'xy-home-v2:__diag-errs';
+  const ERR_CAP = 20;
+  const ERR_STACK_RECENT = 3;
   function errSnap() {
     const d = window.mochiDevice || {};
     return {
@@ -334,7 +341,7 @@
       var last = arr.length ? arr[arr.length - 1] : null;
       if (last && last.msg === ent.msg && ent.t - (last.t || 0) < 5000) return;
       arr.push(ent);
-      if (arr.length > 5) arr = arr.slice(arr.length - 5);
+      if (arr.length > ERR_CAP) arr = arr.slice(arr.length - ERR_CAP);
       try { localStorage.setItem(ERR_KEY, JSON.stringify(arr)); } catch (e) {}
       // v3.26.x：错误记录同时写 IndexedDB——备份导入会清空 xy-home-v2:* 前缀的
       // localStorage 键、配额满/隐私模式也会静默丢 LS 数据，错误线索就这样"没记录"。
@@ -1081,13 +1088,15 @@
         readErrs(function (errs) {
           try {
             if (Array.isArray(errs) && errs.length) {
-              const lines = ['最近错误 ' + errs.length + ' 条：'];
-              errs.forEach(function (it) {
+              const lines = ['最近错误 ' + errs.length + ' 条（最多留 ' + ERR_CAP + ' 条，调用栈只给最近 ' + ERR_STACK_RECENT + ' 条——报障文本过长剪贴板会截断）：'];
+              errs.forEach(function (it, idx) {
                 const dt = it.t ? new Date(it.t).toLocaleString() : '?';
                 lines.push('· ' + dt + ' [' + (it.dev || '') + '] ' + (it.msg || '').slice(0, 180) + (it.page ? '（页面 ' + it.page + '）' : ''));
                 // v3.25.x：带调用栈（只取前 4 行，够定位文件+行号又不刷屏）
+                // v3.26.x #100：环形放大到 20 条后，栈只跟最近 3 条（旧的 17 条各带
+                // 4 行栈会把正文撑成 100 行，用户粘贴时反被截断，得不偿失）
                 const st = String(it.stack || '');
-                if (st) lines.push('    ' + st.split('\n').slice(0, 4).join('\n    '));
+                if (st && idx >= errs.length - ERR_STACK_RECENT) lines.push('    ' + st.split('\n').slice(0, 4).join('\n    '));
               });
               L[errIdx] = lines.join('\n');
             } else {

@@ -89,8 +89,10 @@
 
 ## 回归防线（防"修复被并行会话覆盖"）
 
-- 用户反馈过的问题修复后：**在 `build.mjs` 的 `FIX_SENTINELS` 数组加一行** `{ name, file, needle }`（needle 为产物中的特征串，构建后自动检查，缺失会醒目报警）；**在 `FIX-REGRESSION.md` 清单加一行**（问题 / 修复要点 / 验证方式）。
-- 有专项验证脚本就建 `tools/verify-xxx.mjs`（可提交，供构建者复用）；构建后先看哨兵输出，再看 `npm run verify` 系列。
+- 用户反馈过的问题修复后：**在 `build.mjs` 的 `FIX_SENTINELS` 数组加一行** `{ name, file, needle }`（needle 为产物中的特征串，构建后自动检查）；**在 `FIX-REGRESSION.md` 清单加一行**（问题 / 修复要点 / 验证方式）。
+- **needle 要在自己登记的那个 `file` 里唯一**：跨文件撞名（别处也有这段文本）或多条登记共用同一 needle，都是「哑哨兵」——把修复整块删掉构建照样报绿（实测踩过：`window.__jsErrors = window.__jsErrors || []` 在 chat.js 也有一份，删掉 device.js 的初始化行仍 146/146 全绿）。构建会体检并列出哑哨兵（含 needle 在自己文件里找不到、多条共用同一 needle、登记的 src 文件已改名/删除），看到就要把锚点收到唯一。
+- **哨兵缺失 / 删除型回流会让构建退出码 = 1**（不再只是醒目警告），报警行附带处置提示：「src 里也没有＝修复真丢了，去 `src/<file>` 补回」/「src 里仍在＝产物没接入，查 `jsFiles`/`cssFiles`」。
+- 有专项验证脚本就建 `tools/verify-xxx.mjs`（可提交，供构建者复用）；构建后先看哨兵输出，再看 `npm run verify` 系列；**一次性复跑全部回归脚本用 `npm run verify:all`**（= `node tools/verify-suite.mjs`，按 通过 / 断言失败 / 环境不满足 / 超时 四类计数，环境缺口不算回归，清单清干净后可加 `--strict` 当门禁）。
 - 修复被覆盖的典型场景：并行会话重写同文件、编辑器旧缓冲回写、新文件漏接入 build.mjs——构建/布局检查都照常通过，只有哨兵能发现。
 
 ## 并行工作协议

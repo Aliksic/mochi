@@ -853,6 +853,30 @@
   function saveTaTime(cid, obj) {
     try { storeOf(cid).set('cjian-ta-time', JSON.stringify(obj)); } catch (e) {}
   }
+  // 由世界分钟算半小时段区间与标签（与 timeInfo 的 half/range 同源，但接收世界分钟）。
+  // 返回 {lo, hi, half, range}：lo/hi 为该半小时段的分钟闭区间，half 如「未正」，range 如「14:30–14:59」。
+  function halfRangeOf(wm) {
+    const wh = Math.floor(wm / 60) % 24;
+    const wmin = wm % 60;
+    const idx = shichenAt(wh);
+    const stH = shichenStartHour(idx);
+    const mInto = wh * 60 + wmin - stH * 60;
+    let lo, hi, half, range;
+    if (mInto < 30) {
+      lo = stH * 60; hi = stH * 60 + 29;
+      half = SHICHEN[idx] + '初';
+      range = pad(stH) + ':00–' + pad(stH) + ':29';
+    } else if (mInto < 90) {
+      lo = stH * 60 + 30; hi = stH * 60 + 89;
+      half = SHICHEN[idx] + '正';
+      range = pad(stH) + ':30–' + pad((stH + 1) % 24) + ':29';
+    } else {
+      lo = stH * 60 + 90; hi = stH * 60 + 119;
+      half = SHICHEN[idx] + '正';
+      range = pad((stH + 1) % 24) + ':30–' + pad((stH + 1) % 24) + ':59';
+    }
+    return { lo: lo, hi: hi, half: half, range: range };
+  }
   function taTimeOf(cid) {
     const now = Date.now();
     let t = loadTaTime(cid);
@@ -860,23 +884,24 @@
     let next = (t && typeof t.next === 'number') ? t.next : 0;
     if (last > now || last < 0 || isNaN(last)) { last = 0; next = 0; }
     if (!t || (now - last) / 36e5 >= next) {
-      // 在梦角所设的时间段（时辰区间）里抽具体时刻；桌面无 slots 梦角则退回全天随机。
-      // 时间段 = 该桌面全部梦角 slots 时辰起始整点的并集。
+      // 复用列表首位梦角的世界时间半小时段（与列表卡片时段完全一致），再在该半小时段里
+      // 抽具体时刻；桌面无梦角时退回全天先抽时辰再抽时刻。标签存 half/range 供展示。
       const list0 = loadRoster(cid);
-      const slotSet = [];
-      list0.forEach(function (c2) {
-        if (Array.isArray(c2.slots) && c2.slots.length) {
-          c2.slots.forEach(function (h) { if (slotSet.indexOf(h) < 0) slotSet.push(h); });
-        }
-      });
-      let hh, mm, stH = -1;
-      if (slotSet.length) {
-        stH = slotSet[rand(0, slotSet.length - 1)];
+      const c0 = list0 && list0[0];
+      let hh, mm, halfLabel = '', rangeLabel = '';
+      if (c0) {
+        const info = halfRangeOf(worldMinuteOf(c0));
+        const total = info.lo + rand(0, info.hi - info.lo);
+        hh = Math.floor(total / 60) % 24; mm = total % 60;
+        halfLabel = info.half; rangeLabel = info.range;
+      } else {
+        const stH = shichenStartHour(rand(0, 11));
         const total = slotMinuteRange(stH);
         hh = Math.floor(total / 60) % 24; mm = total % 60;
-      } else { hh = rand(0, 23); mm = rand(0, 59); }
-      t = { hh: hh, mm: mm, last: now, next: 1 + Math.random() * 7 };
-      if (stH >= 0) t.slotStartH = stH; // 记录抽中的时辰起时，供「时间段」标签展示具体范围
+        const info = halfRangeOf(total);
+        halfLabel = info.half; rangeLabel = info.range;
+      }
+      t = { hh: hh, mm: mm, last: now, next: 1 + Math.random() * 7, half: halfLabel, range: rangeLabel };
       saveTaTime(cid, t);
     }
     return t;
@@ -911,15 +936,16 @@
       card.appendChild(row);
     });
   }
-  // 「对方当前时间」的时间段标签：显示抽中时辰的名字 + 具体时间范围（如「未时 13:00–15:59」）。
-  // 该桌面无 slots 梦角则为全天随机；旧数据无 slotStartH 时按抽到的时刻反推时辰。
+  // 「对方当前时间」的时间段标签：与列表首位梦角的半小时段完全一致（如「未正 14:30–14:59」）。
+  // 优先用重抽时存住的 half/range；旧数据无该字段则实时取首位梦角当前半小时段兜底。
   function taSlotLabel(cid, t) {
-    const hasSlots = loadRoster(cid).some(function (c2) { return Array.isArray(c2.slots) && c2.slots.length; });
-    if (!hasSlots) return '全天随机';
-    let startH;
-    if (t && typeof t.slotStartH === 'number' && t.slotStartH >= 0) startH = t.slotStartH;
-    else startH = shichenStartHour(shichenAt(t.hh));
-    return SHICHEN[shichenAt(startH)] + '时 ' + pad(startH) + ':00–' + pad((startH + 2) % 24) + ':59';
+    if (t && t.half && t.range) return t.half + ' ' + t.range;
+    const c0 = loadRoster(cid)[0];
+    if (c0) {
+      const info = halfRangeOf(worldMinuteOf(c0));
+      return info.half + ' ' + info.range;
+    }
+    return '全天随机';
   }
   // 刷新检查：启动立即一次 + 每 60 秒；仅当「此间」页开着才重抽/刷新显示（后台不空转）
   function taTimePoll() {
