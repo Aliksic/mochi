@@ -1910,6 +1910,9 @@
 .tc-li-match { font-size:11px; color:#8a6d3b; margin-top:6px; }
 .tc-li-time { font-size:11px; color:var(--muted); margin-top:6px; }
 .tc-known { font-size:10px; color:#4e7a54; border:1px solid #bcd8c2; border-radius:6px; padding:0 5px; margin-left:4px; }
+/* v3.26.x：通话中断记录区分正常挂断——红色左边框 + 浅红底 + 中断标签 */
+.tc-call-interrupt { border-left:3px solid #e05555; background:#fff5f5; }
+.tc-li-interrupt-tag { font-size:10px; font-weight:600; color:#fff; background:#e05555; border-radius:5px; padding:1px 6px; flex-shrink:0; line-height:1.6; }
 
 /* ===== 通用回答弹层（TA的好奇 / TA的吐槽） =====
    v3.12.x：fixed → absolute——同 .tc-mask/.modal-mask：手机端键盘弹出时 .phone 收缩

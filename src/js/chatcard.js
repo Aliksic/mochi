@@ -2876,5 +2876,92 @@
         hydrateLibScopes(['public', 'own']);
       }).observe(libPage, { attributes: true, attributeFilter: ['hidden'] });
     }
-  })();
+  });
+
+  // v3.26.x：字卡/回复/收藏 存储明细诊断——报障「该分类 583MB 是否正常」一眼定位
+  // 哪个键大、是否有 LS 残留大键（双倍计算）、旧 my-emoji-groups 各桌面遗留（应清未清）。
+  // 只读不写；device.js 诊断【数据】节异步调用，返回 Promise<string>。
+  window.__ccStorageDiag = function () {
+    const PRE = 'xy-home-v2:';
+    const BIG = 200 * 1024;
+    const catRe = /^(cc-groups|cc-groups-public|default-cards|quote-cards|reply-|fav-|ta-mood|poke-|emoji-|my-emoji-groups|rps-score|mh-|rc-enabled|mc-enabled|chat-count)/;
+    const catOf = function (k) {
+      const tail = k.indexOf(PRE) === 0 ? k.slice(PRE.length) : k;
+      const m = /^(?:[^:]+:)?(.*)$/.exec(tail);
+      const base = m ? m[1] : tail;
+      return catRe.test(base) ? 'cc' : 'other';
+    };
+    const szOf = function (v) {
+      if (v == null) return 0;
+      if (v instanceof Blob) return v.size;
+      if (v instanceof ArrayBuffer) return v.byteLength;
+      if (typeof v === 'string') return v.length * 2;
+      try { return JSON.stringify(v).length * 2; } catch (e) { return 0; }
+    };
+    const fmt = function (b) {
+      if (b < 1024) return b + 'B';
+      if (b < 1048576) return (b / 1024).toFixed(1) + 'KB';
+      return (b / 1048576).toFixed(2) + 'MB';
+    };
+    const ls = [];
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (!k || k.indexOf(PRE) !== 0) continue;
+        ls.push({ k: k, sz: (k.length + (localStorage.getItem(k) || '').length) * 2 });
+      }
+    } catch (e) {}
+    const lsCc = ls.filter(function (x) { return catOf(x.k) === 'cc'; });
+    const lsCcSum = lsCc.reduce(function (s, x) { return s + x.sz; }, 0);
+    const tail = function (k) { return k.indexOf(PRE) === 0 ? k.slice(PRE.length) : k; };
+    return new Promise(function (res) {
+      if (!window.idbListKeys || !window.idbGetMany) {
+        res('字卡/回复/收藏明细：LS ' + lsCc.length + '键 ' + fmt(lsCcSum) + '；IDB 接口不可用');
+        return;
+      }
+      window.idbListKeys().then(function (keys) {
+        if (!keys) { res('字卡/回复/收藏明细：LS ' + lsCc.length + '键 ' + fmt(lsCcSum) + '；IDB 清单读取失败'); return; }
+        const idbCc = (keys || []).map(String).filter(function (k) { return k.indexOf(PRE) === 0 && catOf(k) === 'cc'; });
+        if (!idbCc.length) {
+          res('字卡/回复/收藏明细：LS ' + lsCc.length + '键 ' + fmt(lsCcSum) + ' + IDB 0键');
+          return;
+        }
+        window.idbGetMany(idbCc).then(function (map) {
+          const idb = idbCc.map(function (k) { return { k: k, sz: szOf(map[k]) }; });
+          const idbCcSum = idb.reduce(function (s, x) { return s + x.sz; }, 0);
+          const all = lsCc.concat(idb).sort(function (a, b) { return b.sz - a.sz; });
+          const lines = [];
+          lines.push('字卡/回复/收藏明细：LS ' + lsCc.length + '键 ' + fmt(lsCcSum) + ' + IDB ' + idb.length + '键 ' + fmt(idbCcSum) + ' = ' + (lsCc.length + idb.length) + '键 ' + fmt(lsCcSum + idbCcSum));
+          lines.push('Top15 大键：');
+          all.slice(0, 15).forEach(function (x) { lines.push('  ' + fmt(x.sz) + '  ' + tail(x.k)); });
+          const lsBig = lsCc.filter(function (x) { return x.sz > BIG; });
+          if (lsBig.length) {
+            lines.push('⚠ LS 残留大键（>200KB，应已迁 IDB，残留=双倍计算）：');
+            lsBig.forEach(function (x) { lines.push('  ' + fmt(x.sz) + '  ' + tail(x.k)); });
+          }
+          const emojiLegacy = lsCc.concat(idb).filter(function (x) { return /:[^:]+:my-emoji-groups$/.test(x.k); });
+          if (emojiLegacy.length) {
+            lines.push('⚠ 旧各桌面 my-emoji-groups 遗留（应只剩全局一份）：');
+            emojiLegacy.forEach(function (x) { lines.push('  ' + fmt(x.sz) + '  ' + tail(x.k)); });
+          }
+          const ownCc = lsCc.concat(idb).filter(function (x) { return /:cc-groups$/.test(x.k); }).sort(function (a, b) { return b.sz - a.sz; });
+          if (ownCc.length) {
+            lines.push('各桌面专属 cc-groups：');
+            ownCc.forEach(function (x) { lines.push('  ' + fmt(x.sz) + '  ' + tail(x.k)); });
+          }
+          const pubCc = lsCc.concat(idb).filter(function (x) { return x.k.indexOf(':cc-groups-public') >= 0; });
+          if (pubCc.length) {
+            lines.push('公用 cc-groups-public：');
+            pubCc.forEach(function (x) { lines.push('  ' + fmt(x.sz) + '  ' + tail(x.k)); });
+          }
+          res(lines.join('\n'));
+        }).catch(function () {
+          res('字卡/回复/收藏明细：LS ' + lsCc.length + '键 ' + fmt(lsCcSum) + ' + IDB 读取失败');
+        });
+      }).catch(function () {
+        res('字卡/回复/收藏明细：LS ' + lsCc.length + '键 ' + fmt(lsCcSum) + ' + IDB 清单读取失败');
+      });
+    });
+  };
 })();
+

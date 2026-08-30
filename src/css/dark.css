@@ -269,6 +269,8 @@
   .tc-opt:active { background:rgba(255,255,255,.08); }
   .tc-hint { color:var(--muted); }
   .tc-li-q { color:var(--ink); }
+  /* v3.26.x：通话中断记录暗色适配 */
+  .tc-call-interrupt { background:rgba(224,85,85,.14); border-left-color:#e05555; }
 
   .qa-mask { background:rgba(0,0,0,.6); }
   .qa-body { background:var(--dark-card-97); border-color:var(--dark-border); }

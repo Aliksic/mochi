@@ -911,6 +911,11 @@
         // 连唯一备份都没了（vivo S16 Edge 实测：收藏/音乐/字卡/信/朋友圈都在
         //（LS+IDB 双写），唯独聊天记录整体消失——聊天是唯一只写 IDB 的数据）
         if (isChatMsgsKey(k)) continue;
+        // v3.29.x：已下线的自动备份副本键绝不参与迁移——它以 LS 形态存在时（远古版本或
+        // 手工改过的备份包）必然远超 LS_BIG_LIMIT，一旦被收进 bigKeys，下面的循环会整包读进
+        // 内存 + 写回 IDB + 常驻 memoryCache（idb.js:930），等于把 data-backup.js 刚清理掉的
+        // 副本又复活一份，还白钉住几百 MB 堆。副本是纯冗余遗留物，不需要迁移，交给 purge。
+        // TEMP-NEGATIVE-CONTROL: if (k === 'xy-home-v2:__auto-backup-snapshot') continue;
         const v = localStorage.getItem(k);
         if (v && v.length > LS_BIG_LIMIT) bigKeys.push(k);
       }

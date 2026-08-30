@@ -271,6 +271,12 @@
         window.openTCPanel('信件', html + footer);
         const mk = document.getElementById('tc-mask');
         panelOpened = !!(mk && !mk.hidden);
+        // v3.26.x：防御 openTCPanel 后 tc-body 无信纸——个别内核/竞态下 body.innerHTML
+        // 未生效（红米 K80 Chrome 反馈「点开信不显示内容」），重试注入保证信纸可见。
+        const tcb = document.getElementById('tc-body');
+        if (panelOpened && tcb && !tcb.querySelector('.mail-paper')) {
+          tcb.innerHTML = html + footer;
+        }
       }
     } catch (e) {}
     if (!panelOpened && window.openModal) {
@@ -342,9 +348,15 @@
       }
       save(list);
       viewLetter = null;
+      // v3.26.x：回信后切到「收到的信」tab 并在 DOM 可见时渲染——原实现只 showPage 不
+      // selectMailTab，回信后停在旧 tab（常是「寄出的信」），用户看不到刚回信的来信、
+      // 以为回信没成功（红米 K80 Chrome 反馈「回了信不显示、重新点也看不到回信」）。
+      // 同步先 showPage+selectMailTab 让 page-mail 与目标 tab 可见，再 render() 确保
+      // innerHTML 在元素可见时写入（防御个别内核对 hidden 元素 innerHTML 渲染延迟）。
+      showPage('page-mail');
+      selectMailTab('in');
       render();
       updateBadge();
-      showPage('page-mail');
       // v3.10.x：mailNotice=true → 聊天里该系统消息可点击直达信箱
       if (window.chatAddSystem) window.chatAddSystem('你给 ' + name + ' 回了一封信', { mailNotice: true });
       toast('回信已寄出');
@@ -448,6 +460,16 @@
             '<div class="mail-item-desc">' + shortDesc(l.content, true) + '</div></div>' +
             '<div class="mail-item-time">' + fmtDT(l.tm) + '</div></div>').join('')
         : '<div class="ta-empty">' + (window.taFit ? window.taFit('还没有收到信，等等 TA 吧') : '还没有收到信，等等 TA 吧') + '</div>';
+      // v3.26.x：防御 innerHTML 未生效——个别安卓内核（红米 K80 Chrome）对 hidden 元素
+      // innerHTML 渲染延迟，列表项数与数据不符时重试一次（红米 K80 反馈「列表空」）。
+      if (inList.length && inEl.querySelectorAll('.mail-item').length < inList.length) {
+        const html = inList.map(l => '<div class="mail-item" data-id="' + l.id + '"><div class="mail-item-av"><svg viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg></div>' +
+          '<div class="mail-item-body"><div class="mail-item-title">来自 ' + name +
+            (l.myReply ? ' <span class="mail-tag">已回信</span>' : (l.read ? '' : ' <span class="mail-tag new">新来信</span>')) + '</div>' +
+          '<div class="mail-item-desc">' + shortDesc(l.content, true) + '</div></div>' +
+          '<div class="mail-item-time">' + fmtDT(l.tm) + '</div></div>').join('');
+        inEl.innerHTML = html;
+      }
       inEl.querySelectorAll('.mail-item').forEach(it => it.addEventListener('click', () => {
         const l = list.find(x => x.id === it.dataset.id);
         if (l) openLetter(l);
@@ -462,6 +484,13 @@
             '<div class="mail-item-desc">' + shortDesc(l.content) + '</div></div>' +
             '<div class="mail-item-time">' + fmtDT(l.tm) + '</div></div>').join('')
         : '<div class="ta-empty">还没有寄出任何信，提笔写一封吧</div>';
+      if (outList.length && outEl.querySelectorAll('.mail-item').length < outList.length) {
+        const html = outList.map(l => '<div class="mail-item" data-id="' + l.id + '"><div class="mail-item-av"><svg viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg></div>' +
+          '<div class="mail-item-body"><div class="mail-item-title">寄给 ' + name + (l.partnerReply ? ' <span class="mail-tag">对方已回信</span>' : '') + '</div>' +
+          '<div class="mail-item-desc">' + shortDesc(l.content) + '</div></div>' +
+          '<div class="mail-item-time">' + fmtDT(l.tm) + '</div></div>').join('');
+        outEl.innerHTML = html;
+      }
       outEl.querySelectorAll('.mail-item').forEach(it => it.addEventListener('click', () => {
         const l = list.find(x => x.id === it.dataset.id);
         if (l) openLetter(l);
@@ -502,11 +531,14 @@
     // v3.10.x：信件通知可点击（chat.js 渲染 mail-notice 类，点击打开信箱）
     if (window.chatAddSystem) window.chatAddSystem('你给 ' + name + ' 写了一封信', { mailNotice: true });
     toast('信件已寄出');
+    // v3.26.x：先 showPage+selectMailTab 让 page-mail 与「寄出的信」tab 可见，再 render()——
+    // 原实现 render() 在 showPage 之前，page-mail 仍 hidden 时写入 innerHTML，个别安卓
+    // 内核（红米 K80 Chrome 实测）对 hidden 元素 innerHTML 渲染延迟，寄信后列表空白。
+    // 改为 DOM 可见后再渲染，并保留前一次 render() 兜底（双渲染，零副作用）。
     render();
-    // v3.10.x：寄出后自动回到信箱页并切到「寄出的信」——原实现停在写信页，
-    // 用户返回后看到的还是写信卡片，以为信没寄出去/找不到在哪看
     showPage('page-mail');
     selectMailTab('out');
+    render();
   }
   // ================= TA 主动来信（定时机制，概率可在回复设置-信箱调整） =================
   const TA_LETTERS = [

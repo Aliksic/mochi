@@ -806,12 +806,24 @@
     };
     attempt();
   }
-  if (window.__mochiDataReady) { setTimeout(purgeLegacySnapshot, 1500); }
+  // 幂等包装：事件路径与墙钟路径共用，保证 #90 的「删→复核→重试」链只起一套。
+  let _purgeStarted = false;
+  function purgeOnce() {
+    if (_purgeStarted) return;
+    _purgeStarted = true;
+    purgeLegacySnapshot();
+  }
+  if (window.__mochiDataReady) { setTimeout(purgeOnce, 1500); }
   else {
     document.addEventListener('mochi-restore-done', function h() {
       document.removeEventListener('mochi-restore-done', h);
-      setTimeout(purgeLegacySnapshot, 1500);
+      setTimeout(purgeOnce, 1500);
     });
+    // v3.29.x 兜底：#83 之后 12 秒保险丝不再设 __mochiDataReady（只派发 mochi-restore-slow），
+    // 所以 IDB 整轮挂起的设备上 mochi-restore-done 永不到达 → 清理一次都不跑，几百 MB 副本原地
+    // 留着；而 IDB 最慢、遗留副本最大的恰好是同一批机型。与 idb.js 里 wrjMergeFromIdb 的
+    // 「restore 整体挂起时的兜底」同理补一条墙钟兜底：清理只碰副本键，restore 完成与否不影响安全性。
+    setTimeout(purgeOnce, 20000);
   }
 
   // 入口绑定

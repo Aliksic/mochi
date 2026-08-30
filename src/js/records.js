@@ -335,14 +335,17 @@
       if (callEl) {
         const list = callsLoad();
         const name = store.get('lbl-partner') || (window.taWord ? window.taWord() : 'TA');
+        const icIn = '<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>';
+        const icOut = '<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/><path d="M16 3v6M19 6h-6"/></svg>';
         callEl.innerHTML = list.length
-          ? list.map(x =>
-              '<div class="tc-listitem"><div class="tc-li-top"><span class="tc-li-q">' +
-              (x.type === 'in' ? '<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>' + name + ' 来电' : '<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/><path d="M16 3v6M19 6h-6"/></svg>' + name + ' 拨打') +
-              '</span><span class="tc-li-time">' + fmtDT(x.ts) + '</span></div>' +
-              (x.text ? '<div class="tc-li-line">' + (window.taFit ? window.taFit(x.text) : x.text) + '</div>' : '') +
-              '</div>'
-            ).join('')
+          ? list.map(x => {
+              const itp = x.ended === 'interrupt';
+              return '<div class="tc-listitem' + (itp ? ' tc-call-interrupt' : '') + '"><div class="tc-li-top"><span class="tc-li-q">' +
+                (x.type === 'in' ? icIn + name + ' 来电' : icOut + name + ' 拨打') +
+                '</span>' + (itp ? '<span class="tc-li-interrupt-tag">中断</span>' : '') + '<span class="tc-li-time">' + fmtDT(x.ts) + '</span></div>' +
+                (x.text ? '<div class="tc-li-line">' + (window.taFit ? window.taFit(x.text) : x.text) + '</div>' : '') +
+                '</div>';
+            }).join('')
           : '<div class="ta-empty">暂无通话记录</div>';
       }
     }
@@ -406,4 +409,8 @@
       if (hp && !hp.hidden) render();
     } catch (e) {}
   });
+  // v3.26.x：供 call.js 中断恢复后刷新主页通话记录面板
+  window.__renderHomeCall = function () {
+    try { if (!document.getElementById('page-home').hidden && htab === 'call') render(); } catch (e) {}
+  };
 })();

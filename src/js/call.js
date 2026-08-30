@@ -16,7 +16,8 @@
       pickup: c['call-pickup'] !== undefined ? c['call-pickup'] : CALL.pickup,
       busy: c['call-busy'] !== undefined ? c['call-busy'] : CALL.busy,
       reject: c['call-reject'] !== undefined ? c['call-reject'] : CALL.reject,
-      hangup: c['call-hangup'] !== undefined ? c['call-hangup'] : CALL.hangup
+      hangup: c['call-hangup'] !== undefined ? c['call-hangup'] : CALL.hangup,
+      resume: c['call-resume'] !== undefined ? c['call-resume'] : 1
     };
   }
 
@@ -217,8 +218,24 @@
     callObj.cid = window.__activeCid || 'default';
     callObj.name = partnerName();
     callObj.av = partnerAv();
+    saveCallActive();
     return callObj;
   }
+  // v3.26.x：通话进行中状态持久化（全局键，不绑 per-cid）——
+  //   endCall 正常清除；若刷新/崩溃导致 endCall 未执行，启动恢复时检测到残留 → 补写「通话中断」记录，
+  //   与正常挂断区分（ended='interrupt'）。解决用户反馈：接通后刷新页面，通话记录里没有这条中断。
+  const CALL_ACTIVE_KEY = 'xy-home-v2:call-active';
+  function saveCallActive() {
+    try {
+      if (!currentCall) return;
+      localStorage.setItem(CALL_ACTIVE_KEY, JSON.stringify({
+        cid: currentCall.cid, direction: currentCall.direction, status: currentCall.status,
+        startTime: currentCall.startTime, connectedTime: currentCall.connectedTime || 0,
+        name: currentCall.name || '', av: currentCall.av || '', ts: Date.now()
+      }));
+    } catch (e) {}
+  }
+  function clearCallActive() { try { localStorage.removeItem(CALL_ACTIVE_KEY); } catch (e) {} }
   function fillAv(el, data) {
     if (!el) return;
     // v3.6.x：img 用属性赋值（dataURL 含引号时拼 innerHTML 会逃逸注入 HTML）
@@ -305,7 +322,7 @@
   // 进入通话中：计时 + 状态
   function startCallDuration() {
     stopTimers();
-    currentCall.connectedTime = Date.now();
+    if (!currentCall.connectedTime) currentCall.connectedTime = Date.now(); // v3.26.x：恢复通话时已有 connectedTime 不覆盖，计时从接通时刻继续
     updateDur(); // v3.13.x：接通立即刷新显示，避免接通瞬间仍停留「00:00」卡一下
     let checkCount = 0;
     durationTimer = setInterval(() => {
@@ -356,6 +373,7 @@
   // v3.5.51：真实时长从接听时刻计算（覆盖对方挂断/不明原因中断路径）；
   //   接通后结束 → 系统消息明确「通话已挂断 / 对方已挂断 · 时长 xx」
   function endCall(text) {
+    clearCallActive(); // v3.26.x：正常结束清除进行中标记（中断恢复靠残留检测）
     // v3.5.127：所有结束路径（超时/拒绝/挂断/对方挂断）统一停铃声
     if (window.stopSfx) window.stopSfx('ring');
     // v3.5.129：通话结束恢复音乐播放/悬浮小框
@@ -462,6 +480,7 @@
     setMaskBtns('active');
     if (window.chatAddSystem) window.chatAddSystem('<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg> 通话已接通');
     startCallDuration();
+    saveCallActive(); // v3.26.x：接通后更新持久化（记下 connectedTime 供中断恢复算时长）
     // 2 秒后最小化小框（星言一致）；v3.7.x：小框开关隐藏时保持大面板常驻
     setTimeout(() => {
       if (currentCall && currentCall.status === 'connected') {
@@ -531,6 +550,7 @@
         toast('通话已接通');
         if (statusEl) statusEl.textContent = '正在通话...';
         startCallDuration();
+        saveCallActive(); // v3.26.x：去电接通后更新持久化
         // v3.7.x：小框开关隐藏时接通后保持大面板常驻（不自动最小化）
         setTimeout(() => {
           if (currentCall === callRef && callRef.status === 'connected') {
@@ -638,6 +658,61 @@
     };
   };
   window.hangupCall = function () { userHangup(); };
+  // v3.26.x：启动恢复——上次通话因刷新/崩溃中断（call-active 未被 endCall 清除）→ 补写「通话中断」记录
+  //   必须在 mochi-restore-done 后执行：此时 records-call 已从 IDB 回填到 LS，unshift 写回不会覆盖。
+  //   mochi-restore-done 一定在回填完成后派发（idb.js finish()），即使保险丝超时最终完成也会派发。
+  function recoverCall() {
+    let info = null;
+    try { info = JSON.parse(localStorage.getItem(CALL_ACTIVE_KEY) || 'null'); } catch (e) { info = null; }
+    if (!info) return;
+    if (!info.connectedTime) { clearCallActive(); return; } // 未接通就中断（响铃/呼叫中刷新），不恢复不记
+    const cid = info.cid || 'default';
+    const dir = info.direction || 'out';
+    const name = info.name || 'TA';
+    // v3.26.x：开启「刷新后恢复通话」→ 重建通话 UI + 从接通时刻继续计时（TA 本地模拟，无需重连）
+    if (callCfg().resume !== 0) {
+      try {
+        currentCall = { cid: cid, direction: dir, status: 'connected', startTime: info.startTime || info.connectedTime, connectedTime: info.connectedTime, durationSec: 0, name: name, av: info.av || '' };
+        shownAv = null; shownName = null;
+        if (callMiniEnabled()) {
+          if (mask) mask.hidden = true;
+          if (cdEl) cdEl.hidden = true;
+          if (mini) { syncCallName(); syncCallAv(); mini.hidden = false; }
+        } else {
+          if (mask) mask.hidden = false;
+          if (cdEl) cdEl.hidden = true;
+          if (nameEl) nameEl.textContent = name;
+          if (statusEl) statusEl.textContent = '正在通话...';
+          setMaskBtns('active');
+          syncCallAv(); syncCallName();
+        }
+        startCallDuration();
+      } catch (e) { clearCallActive(); }
+      return;
+    }
+    // 关闭恢复 → 记中断记录
+    clearCallActive();
+    const dur = Math.max(0, Math.floor((info.ts - info.connectedTime) / 1000));
+    const durTxt = dur > 0 ? ' · 时长 ' + fmtDur(dur) : '';
+    const recText = '通话中断（页面刷新或异常退出）' + durTxt;
+    const sysHtml = '<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>' + (dir === 'in' ? name + ' 来电' : '我拨打 ' + name) + ' · 通话中断' + durTxt;
+    try {
+      const s = (window.storeFor && window.storeFor(cid)) || store;
+      let list = [];
+      try { list = JSON.parse(s.get('records-call') || '[]'); } catch (e) { list = []; }
+      if (!Array.isArray(list)) list = [];
+      list.unshift({ type: dir, text: recText, ts: Date.now(), ended: 'interrupt' });
+      s.set('records-call', JSON.stringify(list.slice(0, 50)));
+      if (window.idbSet) { try { window.idbSet('xy-home-v2:' + cid + ':records-call', list.slice(0, 50)); } catch (e) {} }
+    } catch (e) {}
+    try {
+      const cur = window.__activeCid || 'default';
+      if (cid === cur) { if (window.chatAddSystem) window.chatAddSystem(sysHtml); }
+      else if (window.chatAppendToDeskMsg) { window.chatAppendToDeskMsg(cid, sysHtml); }
+    } catch (e) {}
+    try { if (!document.getElementById('page-home').hidden && window.__renderHomeCall) window.__renderHomeCall(); } catch (e) {}
+  }
+  try { document.addEventListener('mochi-restore-done', function () { try { recoverCall(); } catch (e) {} }); } catch (e) {}
   setTimeout(() => {
     function scheduleCallCheck() {
       maybeIncoming();

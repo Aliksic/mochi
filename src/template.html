@@ -2206,6 +2206,11 @@
           <div class="gs-row"><span>通话中挂断概率</span><div class="stepper" data-k="call-hangup" data-min="0" data-max="100" data-step="0.01"><button class="stp-min">−</button><input class="stp-val" id="call-hangup-val" readonly><button class="stp-max">+</button></div></div>
         </div>
         <div class="sm-set-hint" style="padding:0 16px 8px">来电概率：TA 主动来电的命中概率。TA 回复或主动发消息后、以及后台每 1-2 分钟定时检查时各掷一次，两次来电至少间隔 5 分钟（冷却）；设为 0 则从不主动来电。接听/忙线/拒接概率：我方呼出时按三者比例互斥分配对方结果（忙线先判，其次拒接，最后接听）。挂断概率：通话接通满 3 分钟后每 60 秒检查一次，命中则对方主动挂断。</div>
+        <div class="gs-title">通话恢复</div>
+        <div class="set-group glass">
+          <div class="gs-row"><span>刷新后恢复通话</span><label class="toggle"><input type="checkbox" id="call-resume"><span class="tk"></span></label></div>
+        </div>
+        <div class="sm-set-hint" style="padding:0 16px 8px">开启后，通话接通中刷新页面或意外退出，重新打开时通话面板与计时从接通时刻继续，如同没断过；关闭则刷新算通话中断，主页通话记录里记一条红色「中断」条目。</div>
         <div class="gs-title">通话背景</div>
         <div class="set-group glass">
           <div class="set-row" id="call-bg-row">

@@ -1,5 +1,40 @@
 # 本次构建者：AI（已构建，sw: mochi-mtfll2ag，哨兵 125/125 + sw.js 3/3，verify 10/10、verify-chat-overwrite 30/30、verify-preset-card-window 20/20。本次收口：用户报障 #92 华为 P50E Edge 公用/专享字卡【表情包】上传图片刷新后消失 + 工作区累积 #88/#89/#90/#91 一批并行会话改动一并收口。已提交推送远程 main）
 
+### 2026-08-30 18:42（#94 续：加「刷新后恢复通话」设置项，开启后刷新继续通话）
+- [AI 域·call.js + reply-settings.js + template.html]（**改动文件：src/js/call.js、src/js/reply-settings.js、src/template.html；构建状态：本会话已构建（sw mochi-mtfokb1w，哨兵 129/129，verify 10/10）**）。
+- 需求/反馈：用户追问——能否恢复因刷新中断的通话，做成可设置。
+- 方案：通话状态已持久化（call-active），刷新后可重建。callCfg 加 resume 字段（从 replyCfg['call-resume'] 读，默认 1）。recoverCall 改为：call-resume 开启 + connectedTime 有值 → 重建 currentCall{status:'connected',connectedTime} + 显示通话小框/大面板（callMiniEnabled 决定）+ startCallDuration 从接通时刻继续计时（startCallDuration 改为不覆盖已存在的 connectedTime）；关闭 → 记中断记录（原 #94 逻辑）。设置项「刷新后恢复通话」加在通话设置页（toggle 开关，reply-settings 默认 call-resume:1 + 三处开关绑定数组注册）。TA 本地模拟无需重连，恢复=恢复本地 UI+计时+概率挂断定时器；恢复后挂断走正常 endCall 记正常记录（时长含刷新前+后）。
+- 验证：node --check 过；构建哨兵 129/129；verify 10/10；产物含 call-resume/recoverCall/开关 UI。待真机：接通→刷新→通话面板恢复计时继续；关闭开关→刷新→主页通话记录红色中断条目。
+### 2026-08-30 18:2x（修复：红米 K80 Chrome 信箱回信/寄信后列表空、看不到回信与寄出信内容 → FIX-REGRESSION #93）
+- [AI-A 域·mail.js + build.mjs(哨兵 needle) + FIX-REGRESSION.md]（**改动文件：src/js/mail.js（submitReply/sendLetter/openLetter/render 四处防御）、build.mjs（#93 哨兵 needle）；构建状态：未构建（node --check src/js/mail.js 过）**）。
+- 需求/反馈：红米 K80 Chrome 信箱里点联系人的信回了信，不显示内容；重新点这封信也看不到回信；寄出的信也不显示内容。用户补充「信箱顶部列表里就是空的，完全没有我写信的内容，什么也没有」，纯文字和含图片信件都不显示。
+- 根因（如实说明）：**headless Chrome 390×844 移动端 UA + ce-box 转换 + 真实打字 + 含图片信件多轮复现均正常**（aa1bd3e 线上产物与工作区 mochi-mtfll2ag 产物都正常：寄信后 outItems=1、回信 myReply 保存并显示、openLetter 正文/图片渲染无误），**真机红米 K80 Chrome 的差异无法在 headless 复现**。按最可能根因做防御性修复：
+  - **① submitReply（确认的 UX bug）**：原实现 `showPage('page-mail')` 后**不 `selectMailTab`**，回信后停在旧 tab（常是「寄出的信」），用户看不到刚回信的来信、以为回信没成功→补 `selectMailTab('in')`，并在 `showPage`+`selectMailTab` 让 DOM 可见后再 `render()`。
+  - **② sendLetter**：原实现 `render()` 在 `showPage` 之前，page-mail 仍 hidden 时写 innerHTML，个别安卓内核对 hidden 元素 innerHTML 渲染延迟→改为 `showPage`+`selectMailTab` 后再 `render()`（双渲染兜底，零副作用）。
+  - **③ openLetter**：`openTCPanel` 后若 tc-body 无 `.mail-paper`（渲染未生效）重试注入 html。
+  - **④ render()**：列表项数与 inList/outList.length 不符时重试 innerHTML（防御 hidden 元素渲染延迟）。
+- 验证：node --check src/js/mail.js 过。**待构建者** build 后跑 `node tools/verify-mail-ios-reply.mjs`（信箱回信回归）+ 真机红米 K80 Chrome 复测：寄信→「寄出的信」tab 立即看到信件；回信→「收到的信」tab 立即看到来信带「已回信」标签；点开信件正文/回信内容正常显示。
+- 未验证部分（如实说明）：本会话不构建，**真机红米 K80 行为没有被任何真实浏览器跑过**，四项修复均为防御性（不改变正常路径逻辑，只加重试与 tab 切换），低风险但根因未 100% 确认。若真机升级后仍复现，需用户协助在 Chrome console 跑诊断代码（读 activeStore().get('mail-letters') + DOM 列表项数）定位。
+- 不构建、不提交，等构建者收口。
+
+### 2026-08-30 18:31（修复：接通后刷新页面通话中断不记录、主页通话记录无中断标识 → #94）
+- [AI 域·call.js + records.js + chat-pages.css + dark.css]（**改动文件：src/js/call.js、src/js/records.js、src/css/chat-pages.css、src/css/dark.css；构建状态：本会话待构建**）。
+- 需求/反馈：用户报障——每次刷新网站，进行中的通话（已接通）中断后，没有显示在主页【通话记录】里，也没有与正常挂断区分。
+- 根因：currentCall 只存内存（call.js:164），刷新时 JS 上下文销毁，endCall→notifyCallEnd→addCallRecord 不触发 → 通话记录丢失。原 visibilitychange 仅处理响铃中切后台（记"未接听"），已接通状态刷新/关闭无任何处理。渲染（records.js:332）只区分 in/out 方向，不区分中断/挂断。
+- 方案：
+  - call.js：通话进行中状态持久化到全局键 xy-home-v2:call-active（bindCall/answerCall/去电接通时 saveCallActive 写 cid/direction/connectedTime 等；endCall 时 clearCallActive）。启动恢复：监听 mochi-restore-done（此时 records-call 已从 IDB 回填，unshift 写回不覆盖）→ 检测 call-active 残留且 connectedTime 有值 → 补写 {type,text:"通话中断（页面刷新或异常退出）· 时长 xx",ts,ended:"interrupt"} 到归属桌面（storeFor(cid)）records-call + IDB + 补聊天系统消息（chatAddSystem/chatAppendToDeskMsg）。
+  - records.js：渲染时 x.ended === "interrupt" → listitem 加 .tc-call-interrupt + 标题行加红色「中断」标签 chip；暴露 window.__renderHomeCall 供恢复后刷新。
+  - chat-pages.css + dark.css：.tc-call-interrupt（红色左边框+浅红底）+ .tc-li-interrupt-tag（红底白字小标签）样式 + 暗色适配。
+- 验证：node --check call.js/records.js 过。待构建 + 真机：接通通话→刷新→重进主页通话记录出现红色「中断」条目（含时长）；正常挂断仍原样无中断标签；崩溃/划掉同效。
+- 跨域：call.js 属 AI-B 域，records.js/chat-pages.css/dark.css 属 AI-A 域，本次按构建者统一收口。
+### 2026-08-30 18:15（新增诊断字段：字卡/回复/收藏 存储明细，便于手机端报障 583MB 来源）
+- [AI-A 域·chatcard.js + 跨域 device.js]（**改动文件：src/js/chatcard.js（末尾挂 window.__ccStorageDiag）、src/js/device.js（诊断【数据】节 839 行后加 6 行调用，已有 __replyPoolDiag 同款跨域先例）；构建状态：未构建（node --check 两文件全过）**）。
+- 需求/反馈：用户在「查看存储」看到「字卡/回复/收藏 514 键 583.6MB」怀疑有错误，但电脑无数据、只能在手机测，无法用 DevTools Console 跑诊断脚本。希望在设置→复制诊断信息里加字段方便远端判断。
+- 方案：chatcard.js 挂 `window.__ccStorageDiag()`（返回 Promise<string>）——遍历 LS + IDB（idbListKeys/idbGetMany），按 personalize.js:5247 同款正则归「字卡/回复/收藏」类，输出：① LS/IDB/合计 键数+大小 ② Top15 大键 ③ ⚠ LS 残留大键（>200KB，应已迁 IDB，残留=双倍计算）④ ⚠ 旧各桌面 my-emoji-groups 遗留（应只剩全局一份）⑤ 各桌面专属 cc-groups 大小 ⑥ 公用 cc-groups-public 大小。只读不写。device.js 跨域加 6 行异步 job 调用（照 846 行 IndexedDB 大键明细同款 jobs.push 占位行模式）。
+- 跨域改动 device.js 理由：诊断信息是用户唯一可在手机回传的报障面，__ccStorageDiag 挂在 chatcard.js（AI-A 域），device.js 诊断【数据】节需读它；已有 __replyPoolDiag（839 行）同款跨域先例，本次仅加 6 行调用，未改 device.js 既有逻辑。
+- 验证：node --check chatcard.js / device.js 全过。未构建，待构建者收口后用户手机刷新→设置→复制诊断信息，【数据】节会出现「字卡/回复/收藏明细：」段，贴回来即可定位 583MB 真凶（大键/LS 残留双倍/旧各桌面遗留）。
+- **需要对方处理（AI-B，一句话）**：device.js 839 行后我加的 6 行 `__ccStorageDiag` 调用，若你方重构诊断【数据】节请保留这段调用（或合并进你的结构）。函数本体在 chatcard.js（AI-A 域），你方无需维护。
+
 ### 2026-08-30 17:5x（#88 复核收口：D 项告知改自带 #cc-toast 渲染，并发现全项目 `window.toast` 死全局）
 - [AI-B 域·device.js + build.mjs(哨兵 needle)]（**改动文件：src/js/device.js（#88 D 项末尾 IIFE）、build.mjs（#88 device.js 那条哨兵 needle）；构建状态：未构建（`node --check` device/contacts/bg-keep/chat 四文件全过）**）。
 - 触发：用户追问「确定没有错误吗」，我按产物实测复核而不是复述代码，抓到自己一处真错。
