@@ -1,5 +1,30 @@
 # 本次构建者：AI-B
 
+### 2026-08-30 19:46（#96 网易云外链播放"被浏览器拦截"误报修复——区分 play() reject 错误类型）
+- [跨域·music-player.js + build.mjs + FIX-REGRESSION.md]（**改动文件：src/js/music-player.js（startPlayback/toggle 的 play().catch）、build.mjs（#96 哨兵）、FIX-REGRESSION.md（#96 行）；构建状态：未构建（node --check src/js/music-player.js 过）**）。
+- 需求/反馈：用户问「为什么不同手机浏览器播放网易云歌单链接的歌曲，总是显示被浏览器拦截」，要求修复。
+- 根因（代码推理）：`music-player.js` 的 `startPlayback`(1962行)/`toggle`(2588行) 在 `audio.play()` 被 reject 时**不接收错误对象、不区分错误类型**，把所有失败都当自动播放策略拦截。网易云歌曲 `audio.src` 是跨域 meting URL（api.injahow.cn），部分浏览器在跨域 media 数据未就绪时 `play()` 返回非 `NotAllowedError` 的 reject（NotSupportedError/AbortError 等，实为源加载失败/跨域/混合内容/meting 不可达），旧代码一律走 muted 静音解锁 → 仍失败 → 弹「点击播放被浏览器拦截」，吞掉了本应走的 retryWithHttpsUrl/demoFallbackOrError 兜底路径，且误导用户以为是浏览器问题。
+- 方案：`play().catch((err) => …)` 接收错误对象，仅 `err.name === 'NotAllowedError'`（真自动播放策略）才走 muted 静音解锁 + handlePlayReject；其他错误走 retryWithHttpsUrl（拉 https 直链重播）→ demoFallbackOrError（内置旋律/坏链提示），不再弹「被浏览器拦截」。toggle（暂停后再播）同款区分。onloadedmetadata 补播、musicHoldForCall 恢复未改（playRejected 现只在 NotAllowedError 时置位，补播逻辑自然收窄；通话恢复文案温和）。
+- 验证：node --check src/js/music-player.js 过。待构建后跑哨兵 + 真机：网易云歌曲点击播放——源正常直接出声；源加载失败走「正在获取完整版直链…」→ 内置旋律兜底或「播放失败，换一首歌试试」，不再弹「被浏览器拦截」；本地歌曲/真自动播放场景仍走 muted 静音解锁不受影响。
+- 跨域改动 music-player.js（AI-A 域）理由：用户直接要求修复，根因明确在 play().catch 不区分错误类型。改动仅限两处 catch 回调加错误类型分支，未碰播放/兜底/媒体会话等其他逻辑。**需要 AI-A 知晓**：若你正在改 music-player.js 的播放链路，注意 #96 在 startPlayback/toggle 的 catch 里加了 `err.name !== 'NotAllowedError'` 分流——非自动播放错误现在走 retryWithHttpsUrl/demoFallbackOrError，别把这条分支误删。
+
+### 2026-08-30 19:35（心意币存钱改 per-cid + 共用余额 + 切换联系人 + 聊天提醒）
+- [跨域·p2-features.js + chat-pages.css（AI-A 域）]（**改动文件：src/js/p2-features.js、src/css/chat-pages.css；构建状态：未构建（node --check src/js/p2-features.js 过）**）。
+- 需求/反馈：用户检查发现「联系人在心意币存钱里存入时聊天无提醒」；并要求「心意币存钱里可以切换桌面联系人」「我和联系人应该共用这个存钱」。
+- 根因：原心意币存钱数据全局共享（piggyStore=xyStore('xy-home-v2')）且分 my/ta 双账户；piggyCoinAdd 不调 chatAddSystem（仅 TA 塞币彩蛋 piggyCoinMaybeTa 发聊天消息）。
+- 方案：① 数据改 per-cid（storeFor(viewCid)，键 piggy-coin2-*）；② 合并 my/ta 双账户为单一共用余额，存一笔/取一笔不再选账户（存扣 myBalance、取退 myBalance）；③ 顶部加联系人切换器（不切桌面，只切存钱罐查看，viewCid 模块变量）；④ 存入/取出时若 viewCid=当前联系人则 chatAddSystem 发系统消息；⑤ 旧全局 piggy-coin-*（含 side）一次性合并迁移到 default 命名空间（piggyCoinMigrate，首次切到 coin tab 触发）；⑥ TA 塞币/取回彩蛋加 piggyCoinIsCurrent 守卫。
+- 验证：node --check src/js/p2-features.js 过；grep 确认无 piggyCoinTotal/piggyCoinBal('my'/'ta')/coin-bal-my/coin-bal-ta 拋留。待构建者 build + 真机：多联系人各自存钱罐独立、切换查看、存取聊天有系统消息、旧数据迁移到 default。
+- 跨域改动 AI-A 文件理由：用户直接指派该需求；p2-features.js（心意币存钱）+ chat-pages.css（样式）均在 AI-A 名下。未碰 AI-A 在途文件（19:22 那条 chat-pages.css 改动已构建，本条追加新选择器到文件末尾不冲突）。
+
+### 2026-08-30 19:22（#95 朋友圈动态图片格宽统一：删除单图/双图的按张数特判）
+- [AI-A 域·chat-pages.css + FIX-REGRESSION.md + tools/verify-feed-img-size.mjs + 跨域 build.mjs（新增 2 条 absent 哨兵）]（**改动文件：src/css/chat-pages.css、build.mjs、FIX-REGRESSION.md、tools/verify-feed-img-size.mjs（新建）；构建状态：本会话未构建——但构建者 19:19 那次 build 已把我的 chat-pages.css 改动扫进产物（实测 index.html 内三条特判规则 0 命中、`.feed-imgs img` 统一规则在位），我的 2 条新哨兵还没被任何构建跑过（19:19 用的是改动前数组 129/129，下次构建应为 131/131）**）。
+- 需求/反馈：用户问「为什么联系人发 1 张图和 2 张图、多张图，朋友圈动态里图片显示的大小都不一样」，并要求统一（首条消息明确「统一为带多个图时显示的大小」）。
+- 根因（headless 390×844 实测，不靠推理）：v3.5.94 的 `.feed-imgs` 九宫格基础规则本身是统一的（`repeat(3,1fr)` + `img{width:100%;aspect-ratio:1/1;object-fit:cover}`），但紧跟的三条按张数特判把它拆成三档——单图 `:has(img:only-of-type){max-width:66%}`（容器缩到 66% 却仍按 3 列分格 → 只落到第 1 列，约 22% 行宽）+ `img:only-of-type{aspect-ratio:auto}`（格高随原图比例自由变高）；双图改 `repeat(2,1fr)` + `max-width:80%`（约 40% 行宽，反而最大）。实测正文宽 324px：单图 67.3×100.9px（高宽比 1.5）／双图 126.6px／3、4、9 图 104px。
+- 方案：删掉这三条特判，1/2/3+ 张一律每格 1/3 正文宽、1:1 裁切（图少时右侧留白）。渲染路径零改动（`feed.js` 的 `contentHtmlFor` 是单一出口，TA 发布／我的发布／全部朋友圈三处共用），顺带去掉了这两处对 `:has()` 的依赖。已知代价（用户明确要求统一到多图档尺寸）：单图在列表里不再是「原比例大图」，竖图/长图被裁成正方形缩略图，点图看大图链路不变。
+- 验证：`node tools/verify-feed-img-size.mjs` **6/6**（直读 src/css、不需要构建；含反向对照——把删掉的三条规则追加回样式末尾能重现 67.3/126.6/104 三档不一致与单图高宽比 1.5）。哨兵 2 条 absent：`feed-imgs:has(`、`feed-imgs img:only-of-type`（特判被并行会话加回即报警）。`node --check build.mjs` 过。**待构建者**下次构建确认哨兵 131/131；真机复核：同一条动态分别发 1/2/3 张图 → 格宽一致、点图仍看大图、正文里混排的表情包并入图片网格后不再撑高。
+- 跨域改动 build.mjs（AI-B 域）理由：#95 属删除型修复，按 AGENTS.md 回归防线登记 `absent` 哨兵（该机制正是为「删掉的规则被并行会话改回来」而设）。未碰对方在途文件（src/js/call.js 19:16 那条与 index.html/sw.js/version.json 产物）。附注：2026-08-30 防线审计指出 tools/ 下 144 个 verify 脚本无入口引用——本条已在 FIX-REGRESSION.md #95 行验证列直接写明 `node tools/verify-feed-img-size.mjs`，不留新孤儿。
+- 顺带发现（不属本域、未改）：19:16 那条 call.js 条目与「> 上一构建」行被并发编辑粘在同一行了（该条目「验证」句尾直接接上 `> 上一构建：AI（sw mochi-mtfll2ag…）`），下次收口的人顺手断开即可。
+
 ### 2026-08-30 19:16（#94 续2：通话恢复失效根因——call-active 被命名空间迁移误删，改用 sessionStorage）
 - [AI 域·call.js]（**改动文件：src/js/call.js；构建状态：已构建（sw mochi-mtfpsc6z，哨兵 129/129，verify 10/10）**）。
 - 根因：call-active 存 localStorage 全局键 xy-home-v2:call-active，被 contacts.js 命名空间迁移 cleanupOld 当成旧顶层业务键迁进 default 桌面并删原键 → 刷新后 recoverCall 读原键为 null 不恢复（第一次刷新恢复后 call-active 被迁走，第二次起失效）。
