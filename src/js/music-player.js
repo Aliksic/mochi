@@ -3531,6 +3531,7 @@
       taPauseActive = true;
       wantPlay = true; // 保留播放意图（TA 稍后会恢复，不按「用户主动暂停」处理）
       try { audio.pause(); } catch (e) {}
+      try { const nm = partnerName(); if (window.chatAddSystem) window.chatAddSystem(nm + ' 暂停了音乐'); } catch (e) {}
       taPauseSendCard('TA 暂停播放', DEF_TA_PAUSE_CARDS);
       // 3.5s 后 TA 点播放恢复（校验仍是同一首歌；非手势播放被拒走 muted 解锁兜底）
       taPauseResumeTimer = setTimeout(function () {
@@ -3546,6 +3547,7 @@
           const p3 = audio.play();
           if (p3 && p3.then) p3.then(function () { try { if (audio) audio.muted = false; } catch (e) {} }).catch(function () {});
         });
+        try { const nm = partnerName(); if (window.chatAddSystem) window.chatAddSystem(nm + ' 又播放了音乐'); } catch (e) {}
         taPauseSendCard('TA 恢复播放', DEF_TA_RESUME_CARDS);
       }, 3500);
     }, 10000 + Math.floor(Math.random() * 15000));

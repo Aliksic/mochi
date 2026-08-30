@@ -1,5 +1,21 @@
 # 本次构建者：本会话（已构建，sw: mochi-mtfdazbh，哨兵 86/86 + sw.js 2/2，verify 10/10。本次修复荣耀90 Edge「我发语音」录音滋啦滋啦爆音 → FIX-REGRESSION #77，chat.js 录音按「标准安卓浏览器 vs iOS/WebView」分流走 webm/opus。构建含工作区未提交改动 cjian.js（对方在改，构建已包含，确认已保存完整）。待提交）
 
+### 2026-08-30 13:42（新增：音乐·TA 暂停再播放互动补聊天系统消息——原只发字卡无系统消息，与收藏/切歌/换模式/预订/邀请不一致）
+- [AI-A 域·music-player.js]（**改动文件：src/js/music-player.js（scheduleTaPauseIfLucky 暂停触发处 + 3.5s 恢复处，先 chatAddSystem 系统消息再 taPauseSendCard 字卡）+ build.mjs（哨兵 +2 → 88/88）+ FIX-REGRESSION.md（#79）；构建状态：未构建，node --check 过**）。
+- 需求/反馈：用户反馈「联系人暂停音乐又播放音乐，聊天里没有系统消息」——TA 暂停再播放互动触发时聊天只收到字卡（"嘘——让音乐停一会儿"等），没有像其他音乐互动那样的"XX …"系统消息。
+- 根因：scheduleTaPauseIfLucky 命中后只调 taPauseSendCard（走 chatAddIn 发字卡），漏调 chatAddSystem；对比 maybeTaFav/maybeTaNext/maybeTaRand/maybeTaMode/maybeTaReserve/maybeMusicRequest 都有 chatAddSystem 系统消息。
+- 方案：暂停处先 chatAddSystem(nm+' 暂停了音乐') 再发字卡，恢复处先 chatAddSystem(nm+' 又播放了音乐') 再发字卡（nm=partnerName()，与收藏/切歌同款取昵称；先系统消息再字卡参照 ta-ask.js「ask-msg→ask-card」模式）。try/catch 包裹防 partnerName 异常。字卡保留不动。
+- 验证：node --check 过。待构建后真机：播放歌曲等 TA 触发暂停→聊天出现"XX 暂停了音乐"系统消息 + 字卡；3.5s 后恢复→"XX 又播放了音乐"系统消息 + 字卡。
+- 待构建者：本条未构建，请构建时包含 music-player.js + build.mjs。
+
+### 2026-08-30 13:32（修复：存钱罐·心意币存钱三个 bug——存币不扣全局心意币余额/取币误记赚钱流水/渲染顺序）
+- [AI-A 域·p2-features.js]（**改动文件：src/js/p2-features.js（piggyCoinAdd/piggyCoinOutput 两处 giftWalletChange 调用：去掉第三参 src + 调到写 log 前）；构建状态：未构建，node --check 过**）。
+- 需求/反馈：检查存钱罐功能发现的三个 bug。
+- 根因：①piggyCoinAdd 传 src='piggy-in' 给 giftWalletChange，而该函数带 src 时把负值钳到 0（gift-shop.js:115-118 v3.17.x「发放奖励非负」守门）→ 扣减被归零 → gift-wallet 余额不变，心意币被复制，"存起来防乱花"失效；②piggyCoinOutput 传 src='piggy-out' 触发 coinLedgerAdd('earn') → 取回自己的存钱被记进主页"心意币赚钱记录"统计虚高；③先 render 再改 gift-wallet，扣减异常被 try/catch 吞掉时 UI 与账本不一致且用户无感。
+- 方案：存/取调用 giftWalletChange **不传 src**（绕过负值归零守门 + 不记赚钱流水——存钱/取回自己的钱都不是赚），并把调用调到写 piggy-coin-log 之前（先改全局账本再渲染存钱罐，异常时存钱罐不显示虚假存入）。不动 gift-shop.js。
+- 验证：node --check 过。待构建后真机确认：①心意币 Tab 存笔 → 全局心意币余额同步减少、存钱罐余额增加、主页赚钱记录不多笔；②取笔 → 全局心意币余额同步增加、存钱罐余额减少、主页赚钱记录不多笔；③现实存钱 Tab 不受影响。
+- 待构建者：本条未构建，请构建时包含 p2-features.js。
+
 ### 2026-08-30 13:27（修复：荣耀90 Edge 聊天「我发语音」录音是「滋啦滋啦」爆音听不清人声——标准安卓 Chromium 的 mp4/AAC 录音路径采样率不匹配，改走原生 webm/opus）
 - [AI-A 域·chat.js（录音格式/麦克风约束按「标准安卓浏览器 vs iOS/WebView」分流）]（**改动文件：src/js/chat.js（新增 isAndroidWebView/voiceMimePreferOpus + pickVoiceMime/acquireVoiceStream 按 voiceMimePreferOpus 分流）+ build.mjs（哨兵 +1 → 86/86）+ FIX-REGRESSION.md（#77）；构建状态：已构建，sw: mochi-mtfdazbh，哨兵 86/86 + sw.js 2/2，verify 10/10**）。
 - 需求/反馈：荣耀90（REA-AN00，Android 15）+ Edge 151，聊天里开「我可发送语音」录音后试听/播放是「滋啦滋啦」爆音，只有电流噪声听不清人声。

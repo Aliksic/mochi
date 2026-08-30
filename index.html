@@ -8420,9 +8420,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1788067851963">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.359</b></span>
-        <span class="sv-deploy">部署于 2026-08-30 13:30<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1788069207850">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.360</b></span>
+        <span class="sv-deploy">部署于 2026-08-30 13:53<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9512,7 +9512,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.359</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.360</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -9720,7 +9720,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.359</span>
+              <span class="lic-ver">v3.26.360</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -37901,6 +37901,7 @@ if (callHoldPending || document.hidden) return; // 通话/后台不打扰
 taPauseActive = true;
 wantPlay = true; // 保留播放意图（TA 稍后会恢复，不按「用户主动暂停」处理）
 try { audio.pause(); } catch (e) {}
+try { const nm = partnerName(); if (window.chatAddSystem) window.chatAddSystem(nm + ' 暂停了音乐'); } catch (e) {}
 taPauseSendCard('TA 暂停播放', DEF_TA_PAUSE_CARDS);
 taPauseResumeTimer = setTimeout(function () {
 taPauseResumeTimer = null;
@@ -37914,6 +37915,7 @@ try { audio.muted = true; } catch (e) {}
 const p3 = audio.play();
 if (p3 && p3.then) p3.then(function () { try { if (audio) audio.muted = false; } catch (e) {} }).catch(function () {});
 });
+try { const nm = partnerName(); if (window.chatAddSystem) window.chatAddSystem(nm + ' 又播放了音乐'); } catch (e) {}
 taPauseSendCard('TA 恢复播放', DEF_TA_RESUME_CARDS);
 }, 3500);
 }, 10000 + Math.floor(Math.random() * 15000));
@@ -53332,9 +53334,9 @@ try { const w = window.giftWalletGet(); const bal = (side === 'ta' ? w.systemBal
 }
 function piggyCoinAdd(side, amt, note) {
 const fen = Math.round(amt * 100);
+try { if (window.giftWalletChange) window.giftWalletChange(side === 'ta' ? 0 : -fen, side === 'ta' ? -fen : 0); } catch (e) {}
 const log = piggyCoinLog(); log.push({ t: Date.now(), side: side || 'my', type: 'in', amt: amt, note: note || '' });
 piggySaveCoinLog(log); piggyCoinRender();
-try { if (window.giftWalletChange) window.giftWalletChange(side === 'ta' ? 0 : -fen, side === 'ta' ? -fen : 0, 'piggy-in'); } catch (e) {}
 const st = piggyCoinGoalState(); const bal = piggyCoinTotal(log);
 if (st.act.g && !st.act.g.done) {
 if (bal >= st.act.g.a) {
@@ -53350,9 +53352,9 @@ piggyCoinShowMsg(piggyPick(COIN_IN_MSG));
 }
 function piggyCoinOutput(side, amt, note) {
 const fen = Math.round(amt * 100);
+try { if (window.giftWalletChange) window.giftWalletChange(side === 'ta' ? 0 : fen, side === 'ta' ? fen : 0); } catch (e) {}
 const log = piggyCoinLog(); log.push({ t: Date.now(), side: side || 'my', type: 'out', amt: amt, note: note || '' });
 piggySaveCoinLog(log); piggyCoinRender();
-try { if (window.giftWalletChange) window.giftWalletChange(side === 'ta' ? 0 : fen, side === 'ta' ? fen : 0, 'piggy-out'); } catch (e) {}
 piggyCoinShowMsg(piggyPick(COIN_OUT_MSG));
 }
 function piggyCoinMaybeTa() {
