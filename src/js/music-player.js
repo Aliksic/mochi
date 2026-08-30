@@ -1960,6 +1960,12 @@
     const p = audio.play();
     if (p && p.catch) {
       p.catch(() => {
+        // v3.28.x：防 null.play() 崩溃——play() 的 rejection 是异步回调，其间 audio
+        // 可能已被 teardownAudio 置空（断网/弱网 meting 加载失败 → onerror →
+        // retryWithHttpsUrl 先 teardown 再异步拉直链；或用户切歌/停止）。不判空直接
+        // audio.play() 会抛「Cannot read properties of null (reading 'play')」
+        //（红米K80 断网实测）。换源回调/后台补播/手势兜底自会接管，这里静默返回。
+        if (!audio) return;
         // v3.6.x：移动端自动播放策略——本地文件是「异步从 IDB/Blob 读回后再 play()」，
         // 用户点击的手势上下文已丢失，play() 被浏览器拒绝（NotAllowedError）。
         // muted 静音解锁（Chromium/国产 WebView 的 autoplay 策略对静音媒体放行）：
@@ -2092,6 +2098,7 @@
     const p = audio.play();
     if (p && p.then) {
       p.then(function () { bgResumeFails = 0; }).catch(function () {
+        if (!audio) return; // v3.28.x：回调异步期间可能已 teardown（换源/切歌/停止），判空防 null.play()
         try { audio.muted = true; } catch (e) {}
         const p2 = audio.play();
         if (p2 && p2.then) {
@@ -2541,6 +2548,7 @@
       const p = audio.play();
       if (p && p.catch) p.catch(() => {
         playRejected = true;
+        if (!audio) return; // v3.28.x：判空防 null.play()（回调异步，audio 可能已被 teardown）
         try { audio.muted = true; } catch (e) {}
         const p2 = audio.play();
         if (p2 && p2.then) {
@@ -2587,6 +2595,7 @@
           if (p && p.catch) p.catch(() => {
             // v3.6.x：通话结束恢复也是非手势播放，被拒时 muted 静音解锁
             playRejected = true;
+            if (!audio) return; // v3.28.x：判空防 null.play()（回调异步期间可能已 teardown）
             try { audio.muted = true; } catch (e) {}
             const p2 = audio.play();
             if (p2 && p2.then) {
@@ -3543,6 +3552,7 @@
         taPauseCooldownAt = Date.now();
         const p2 = audio.play();
         if (p2 && p2.catch) p2.catch(function () {
+          if (!audio) return; // v3.28.x：判空防 null.play()（3.5s 恢复窗口内可能已切歌/停止）
           try { audio.muted = true; } catch (e) {}
           const p3 = audio.play();
           if (p3 && p3.then) p3.then(function () { try { if (audio) audio.muted = false; } catch (e) {} }).catch(function () {});

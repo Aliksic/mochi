@@ -106,12 +106,16 @@
 /* 涓诲姩鍙戦€佹爣璇嗭細鑱旂郴浜轰富鍔ㄦ壘浣犵殑娑堟伅锛屾皵娉″乏涓婅涓€鏋氬皬鐖卞績锛堢煝閲忓浘锛?   v3.6.x锛氱埍蹇冩斁鍦ㄦ皵娉″唴閮ㄥ乏涓婅锛?px/4px 鍋忕Щ + 9px 灏哄锛屾伆濂借惤鍦ㄦ皵娉?   11px/14px 鍐呰竟璺濊寖鍥村唴锛屼笉鍘嬫枃瀛楋級锛涙鍓?top/left:-8px 鏄寕鍦ㄦ皵娉″瑙?*/
 .msg-hi-heart {
   position:absolute;
-  top:2px; left:4px;
-  width:9px; height:9px;
+  /* v3.26.x：半溢出气泡左上角外侧，不再依赖气泡 padding——用户自定义气泡 CSS
+     （小 padding / 小圆角 / overflow:hidden）时也不压文字/被裁；白色光晕保证
+     在任意气泡背景上清晰可见。此前 top:2px/left:4px 依赖默认 padding 11px/14px。*/
+  top:-3px; left:-3px;
+  width:10px; height:10px;
   color:#ff4d6a;
   pointer-events:none;
   z-index:5;
   display:block;
+  filter:drop-shadow(0 0 2px rgba(255,255,255,.95)) drop-shadow(0 1px 1px rgba(0,0,0,.22));
 }
 
 /* 澶村儚鍒楋細澶村儚 + 鏃堕棿杞达紙鏃堕棿鍦ㄥご鍍忓簳涓嬶級 */

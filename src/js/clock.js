@@ -93,6 +93,25 @@
       try { localStorage.setItem(seenKey, '1'); seenToday = true; } catch (e) {}
     }
     hide();
+    // v3.26.x：开屏进入后预加载字卡大键——中高端机（deviceMemory>4GB 或无法判断，含所有 iOS）
+    //   后台静默取回【当前桌面专属】字卡(own)，避免用户点进字卡库才看到"字卡较多，正在加载"。
+    //   低端机（deviceMemory≤4GB）保持懒加载，与 idb.js v3.14.x OOM 预算 12MB 对齐防压崩。
+    //   只预取 own 不预取 public：public 是跨所有桌面共享的公用字卡大键（chatcard.js 注释提到
+    //   27MB 公用库真机压崩案例），老 iOS（SE2/8 等 2-3GB，deviceMemory 缺失被当 8GB）预拉它会
+    //   绕过 idb.js 24MB 预算；own 是单联系人专属，通常远小于公用库，风险最低收益最高。public
+    //   留懒加载（点字卡库时 MutationObserver 取回 + toast 提示）。延迟 1.5s 让开屏隐藏动画(400ms)
+    //   +首屏桌面渲染先完成再取回，避免抢主线程/堆；hydrateLibScopes 自带"有数据/已确认无键跳过"
+    //   +in-flight 去重，已就绪零开销，未就绪时用户再点字卡库复用同一取回链不重复。只在用户主动
+    //   点击进入后跑（非 mochi-restore-done 后台事件），符合"用户正在看的场景按需拉一把"红线。
+    //   Promise 兜底 catch 防 unhandledrejection。
+    try {
+      const dgb = (typeof navigator !== 'undefined' && navigator.deviceMemory) || 8;
+      if (dgb > 4 && window.hydrateLibScopes) {
+        setTimeout(function () {
+          try { window.hydrateLibScopes(['own']).catch(function () {}); } catch (e) {}
+        }, 1500);
+      }
+    } catch (e) {}
   };
   updateEnterState();
   if (splashBox) splashBox.addEventListener('scroll', checkScrolled, { passive: true });

@@ -206,7 +206,12 @@
     //   写副本时 Jetsam 杀进程 → 导出闪退（用户反馈「头像互动添加头像图片后一导出就闪退」）。
     //   阈值 3MB：小备份仍写副本保留「数据丢失自动恢复」能力，大备份跳过（副本恢复只在
     //   localStorage+IDB 业务键均 <3 的丢失场景提示，大备份用户本就持有导出文件）。
-    if (json.length <= 3 * 1024 * 1024) {
+    // v3.28.x：大备份（音乐/头像全量可达上百 MB）写副本既慢又成内存峰值主因——
+    //   小米 14U Edge 等安卓真机在写 172MB 副本时主线程/内存压力放大，配合旧版固定
+    //   4s 超时连败弹「存储异常」，且导出过程被拖到崩溃边缘（浏览器本地存储损坏后
+    //   表现为「导出后数据被清空」）。记录是否写入副本，供下方提示如实说明。
+    const snapshotWritten = json.length <= 3 * 1024 * 1024;
+    if (snapshotWritten) {
       impShow('正在导出…', '正在写入自动备份副本', 84);
       if (window.idbSet) {
         try { window.idbSet(SNAPSHOT_KEY, json); } catch (e) {}
@@ -225,13 +230,22 @@
     //（分享面板不弹、直接返回「已取消保存」），数据其实已打包好，统一走「确定后下载」
     // 兜底，保证任何浏览器都能导出成功；用户仍可点「取消」放弃本次保存。
     // 原生分享/保存框不可用、被取消或未成功：数据已打包好，需要用户点「确定」才真正下载
+    // v3.28.x：大备份（>3MB）没写自动备份副本时，提示如实说明「下载的这份文件是唯一新备份」，
+    //   不能再说「已自动存入本机缓存」——避免用户以为数据有副本而放弃保存下载文件。
+    const snapHint = snapshotWritten
+      ? '\n（自动备份副本已额外存入本机缓存，随时可从「导入数据」恢复）'
+      : '\n（备份较大未另存副本，请务必确保下载保存成功——这份文件是唯一的新备份）';
     if (window.openModal) {
       window.openModal('备份已打包完成（' + sizeStr + '）', '', () => {
         if (anchorDownload(blob, fname)) toast('数据已导出（' + sizeStr + '，全部数据完整）');
-        else toast('仍未触发下载。备份已自动存到本机缓存，可稍后从「导入数据」恢复');
-      }, { noInput: true, staticText: coverText + '\n数据已经打包好，还没开始保存。\n点「确定」开始下载保存到本机，点「取消」放弃本次保存。\n（自动备份副本已额外存入本机缓存，随时可从「导入数据」恢复）' });
+        else toast(snapshotWritten
+          ? '仍未触发下载。备份已自动存到本机缓存，可稍后从「导入数据」恢复'
+          : '仍未触发下载。请重新点击「导出数据」并确认保存下载文件（这是唯一备份）');
+      }, { noInput: true, staticText: coverText + '\n数据已经打包好，还没开始保存。\n点「确定」开始下载保存到本机，点「取消」放弃本次保存。' + snapHint });
     } else {
-      toast('备份已存到本机缓存（' + sizeStr + '），可从「导入数据」恢复');
+      toast(snapshotWritten
+        ? '备份已存到本机缓存（' + sizeStr + '），可从「导入数据」恢复'
+        : '备份已打包（' + sizeStr + '），请重新点击「导出数据」触发下载并保存文件');
     }
   }
 
@@ -279,14 +293,27 @@
 
   // v3.xx：真正执行 <a download> 下载。只在用户点「确定」（有效用户手势）后调用，
   // 保证下载前一定有用户同意，同时解决此前"自动 a.click() 静默下载/被拦截"的问题。
+  // v3.28.x：修复大备份「点了下载没反应/没下载完」——原实现在 1 秒后
+  //   URL.revokeObjectURL + a.remove()：几十 MB 备份（音乐/头像/聊天全量，base64 后
+  //   轻松上百 MB）下载刚由浏览器接管、blob 还没读完就被作废 → 无下载通知、无文件落盘
+  //   （小米 14U Edge 实测：进度条走完、点确定，下载框一个都不弹）。改为长命 URL：
+  //   ① blob URL 保留到页面关闭/离开（pagehide）才释放；② 5 分钟兜底释放防泄漏；
+  //   ③ anchor 不再 1 秒就 remove（a.remove 后浏览器下载不受影响，但保留更稳妥）。
+  //   a.download 在用户手势内触发，Android Chromium 不再拦截。
   function anchorDownload(blob, fname) {
     try {
       const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
+      const url = URL.createObjectURL(blob);
+      a.href = url;
       a.download = fname;
       document.body.appendChild(a);
       a.click();
-      setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+      setTimeout(() => { try { if (a.parentNode) a.remove(); } catch (e) {} }, 5000);
+      setTimeout(() => { try { URL.revokeObjectURL(url); } catch (e) {} }, 300000);
+      window.addEventListener('pagehide', function h() {
+        window.removeEventListener('pagehide', h);
+        try { URL.revokeObjectURL(url); } catch (e) {}
+      });
       return true;
     } catch (e) { return false; }
   }

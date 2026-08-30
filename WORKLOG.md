@@ -1,4 +1,69 @@
-# 本次构建者：本会话（已构建，sw: mochi-mtfdazbh，哨兵 86/86 + sw.js 2/2，verify 10/10。本次修复荣耀90 Edge「我发语音」录音滋啦滋啦爆音 → FIX-REGRESSION #77，chat.js 录音按「标准安卓浏览器 vs iOS/WebView」分流走 webm/opus。构建含工作区未提交改动 cjian.js（对方在改，构建已包含，确认已保存完整）。待提交）
+# 本次构建者：AI-B（已构建，sw: mochi-mtfgwbry，哨兵 95/95 + sw.js 2/2，verify 10/10。本次新增：桌面美化「全局字体」快捷入口（与聊天设置 cs-font 互通）+「图标文字颜色」（.app .app-name color）。构建含工作区累积改动：clock.js 开屏字卡预加载 / p2-features.js 存钱罐心意币 / chat.js 贴贴回应+录音 / chat-settings.js / contacts.js / data-backup.js / chat-main.css / notice.json / music-player.js / FIX-REGRESSION.md。待提交推送）
+
+## 历史构建声明
+- 上次构建：本会话（已构建，sw: mochi-mtfdazbh，哨兵 86/86 + sw.js 2/2，verify 10/10。本次修复荣耀90 Edge「我发语音」录音滋啦滋啦爆音 → FIX-REGRESSION #77，chat.js 录音按「标准安卓浏览器 vs iOS/WebView」分流走 webm/opus。构建含工作区未提交改动 cjian.js（对方在改，构建已包含，确认已保存完整）。待提交）
+
+### 2026-08-30 16:00（存钱罐心意币：记录秒级 + TA 余额快没概率取回 + 右上角概率设置——用户需求）
+- [AI 域·p2-features.js + chat.js；**跨域改动 contacts.js（排除清单加 piggy-coin-prob 根键）**]（**改动文件：src/js/p2-features.js（piggyCoinRowHtml 时间精确到秒；新增 piggyCoinProbGet/Save、piggyCoinMaybeTaWithdraw「TA 余额<¥10 按概率从TA账户取回」；存钱概率改为读配置 base + 越久未开加成，默认 12%；右上角新增 ⚙ ch-settings 按钮 → 分步弹窗设存钱/取钱/申请三档概率；TA 塞币存钱时同步调用 window.chatAddSystem 在聊天发系统消息）+ src/js/chat.js（trySystemAskMochi 读配置申请概率，默认 4%）+ src/js/contacts.js（migrateLegacy 排除清单加 piggy-coin-prob）；构建状态：未构建，node --check 全部过**）。
+- 需求/反馈：① 心意币记录时间要精确到秒；② 联系人心意币余额快没时有概率在「心意币存钱」里取钱；③ 存钱/取钱概率、联系人向 Mochi 申请概率写在存钱罐右上角新增设置里。根因与方案：时间格式化只到 MM-DD；新增取回彩蛋（systemBalance<¥10 触发，配置概率）；三档概率存根键 xy-home-v2:piggy-coin-prob（存钱 12 / 取钱 25 / 申请 4 默认%）。验证：node --check 通过；待构建者收口（含 chat.js 申请概率读取依赖该根键，已同步进排除清单防迁移）。
+
+### 2026-08-30 15:03（新增：桌面美化加「图标文字颜色」——可改桌面图标按钮下方名称的颜色）
+- [AI-B 域·personalize.js + template.html + build.mjs]（**改动文件：src/js/personalize.js（颜色分区加 applyAppNameColor：注入 style 覆盖 .app .app-name color + openModal 颜色选择器）+ src/template.html（颜色分区加 row-app-name-color 行）+ build.mjs（哨兵 +1）；构建状态：未构建，node --check 过**）。
+- 需求/反馈：用户要能修改桌面图标按钮下文字（如「聊天」「日历」等名称）的颜色。
+- 根因：home.css .app .app-name color 固定 var(--ink)，无用户自定义入口。
+- 方案：personalize.js 注入 `<style id="app-name-color-style">.app .app-name{color:HEX !important;}</style>` 覆盖（不改 home.css，不跨域）。键 app-name-color（per-cid store，随桌面独立）。openModal 颜色选择器（colorPicker + 16 色板：黑/灰阶/白/彩色 + 恢复默认 pill）。恢复默认移除 style 回到 var(--ink) 跟随主题/深色模式。监听 contact-switched 重应用。与既有「按钮文字颜色」(widget-btn-text-color，打卡/周末按钮) 不同——那个改按钮文字，这个改图标下名称。
+- 验证：node --check 过。待构建后真机确认：①桌面美化→颜色→图标文字颜色行显示当前值（默认/HEX）；②点开色板选色→所有桌面图标下名称变色；③恢复默认→回到跟随主题的 ink 色；④切联系人各自回显该桌面 app-name-color；⑤深色模式下显式设了颜色用所设色，恢复默认回 var(--ink) 深色值。
+- 待构建者：本条未构建，请构建时包含 personalize.js + template.html + build.mjs。
+
+### 2026-08-30 14:50（修复：贴贴邀请同意后 TA 回应误带「主动联系」小爱心标识）
+- [AI-B 域跨域改动·chat.js + build.mjs + FIX-REGRESSION.md]（**改动文件：src/js/chat.js（openInvitePanelFor cuddle 分支回应去 initiative:true 改传 {}）+ build.mjs（FIX_SENTINELS +1 absent 哨兵）+ FIX-REGRESSION.md（#81）；构建状态：未构建，node --check 过**）。
+- 需求/反馈：用户反馈联系人发互动卡片「申请贴贴」、我同意后，联系人回应的消息也显示小爱心标识（错了）。
+- 根因：chat.js:3091 openInvitePanelFor 的 cuddle 分支同意后 `addIn(name+' '+pick(CUDDLE_REPLIES), { initiative: true })`——`initiative:true` 在 renderMsg（chat.js:2017）触发 `msg-hi-heart` 小爱心（本意标记 TA 主动发起联系）。贴贴回应是「我同意后触发的回应」非 TA 主动发起，不该带爱心。邀请消息本身带爱心合理（TA 主动找你），仅同意后回应误带。
+- 方案：cuddle 回应去 initiative:true 改传 {}（rec.initiative=undefined → renderMsg 条件不成立 → 不渲染爱心）。邀请消息（sendTaInvite）与 tryAutoSend 主动消息的 initiative 语义不变。
+- 验证：node --check 过。待构建后真机：TA 发贴贴邀请→我同意→TA 回应不再显示小爱心；TA 主动发普通消息仍显示爱心；邀请消息本身仍显示爱心。
+- 跨域说明：chat.js 属 AI-A 域，本次跨域改动因根因明确（cuddle 回应误带 initiative）且修复仅 1 行，已按协议在 WORKLOG 记录。AI-A 知悉即可。
+- 待构建者：本条未构建，请构建时包含 chat.js + build.mjs。
+
+### 2026-08-30 14:47（优化：联系人主动消息的小爱心角标——自定义气泡 CSS 后不压文字/不被裁）
+- [AI-A 域·chat-main.css]（**改动文件：src/css/chat-main.css（.msg-hi-heart 位置 top:2px/left:4px→top:-3px/left:-3px 半溢出气泡左上角外侧，尺寸 9px→10px，加 drop-shadow 白色光晕）；构建状态：未构建，仅改 CSS 无 node --check 需要**）。
+- 需求/反馈：用户在聊天设置里设置了气泡 CSS 后，联系人主动发消息的小爱心可能位置超出气泡/压文字。
+- 根因：.msg-hi-heart 用 position:absolute top:2px/left:4px 挂在 .msg-bubble 内部左上角，依赖气泡默认 padding 11px/14px 才落在内边距围内不压文字。用户自定义气泡 CSS（cs-bubble-css 经 chat-settings.js applyCss 以 !important 注入）改小 padding / 改小 border-radius / 设 overflow:hidden 后，爱心 9px 会压文字、贴边难看或被裁。
+- 方案：爱心改为半溢出气泡左上角外侧（top:-3px/left:-3px，像贴纸角标），完全脱离 padding 依赖——padding 再小也不压文字（爱心在气泡外），border-radius 再小也美观（角标感），overflow:hidden 极端情况最多裁掉一半仍可见红心一角。加 filter:drop-shadow 白色光晕 + 微阴影，保证在深色/浅色任意气泡背景上清晰可见。仅改 CSS，不动 chat.js 插入逻辑（仍 b.insertBefore(svg, b.firstChild)），零 JS 风险。群聊页无此爱心（group-chat.js 未加 initiative 角标），不受影响。
+- 验证：待构建后真机确认——①默认气泡：爱心贴左上角外侧半溢出，白光晕清晰；②自定义小 padding（如 padding:4px 6px）：爱心不压文字；③自定义小圆角（border-radius:4px）：爱心角标感美观；④自定义 overflow:hidden+圆形：爱心最多裁一半仍可见；⑤深色气泡背景：白光晕保证可见。
+- 待构建者：本条未构建，请构建时包含 chat-main.css。
+
+### 2026-08-30 14:34（修复：聊天设置「联系人头像/我的头像」选完不生效——compressHead 像素上限误拒手机原图）
+- [AI-B 域跨域改动·chat-settings.js]（**改动文件：src/js/chat-settings.js（compressHead 放宽 dataURL 上限 8MB→50MB、移除原图总像素 2600万上限）；构建状态：未构建，node --check 过**）。
+- 需求/反馈：用户反馈聊天设置里「联系人头像」「我的头像」无法上传图片——点击能弹系统相册、选完图片后头像没变化、设置页没显示「已设置」；同页「聊天背景图片」上传正常。设备安卓 Chrome/Edge。
+- 根因：chat-settings.js:285 compressHead 有两道硬上限——第 287 行 dataUrl.length>8MB、第 291 行 img.width*img.height>2600万，任一命中即 resolve(null)→toast「图片过大或格式不支持」且不调 cb（不存储不回显）。手机主摄原图 4800/5000 万像素（8000×6000=4800万>2600万）被像素上限误拒；而同文件聊天背景上传（204-233）无任何尺寸上限，大图直接压缩存储，故背景能传头像不能。toast 仅 2s 用户未注意，体感为「选完没生效」。
+- 方案：compressHead 放宽 dataURL 上限到 50MB（覆盖手机原图 dataURL，防极端超大文件卡死）、移除原图总像素上限（drawImage 缩放到 256px 小 canvas 是降采样绘制不会 OOM，背景上传已验证大图可处理），保留 try-catch + img.onerror 兜底。与同文件背景上传策略对齐，消除「背景能传头像不能」的差异。
+- 验证：node --check 过。待构建后真机：安卓 Chrome 选 4800/5000 万像素手机原图作联系人/我的头像→设置页显示「已设置」+聊天页头像刷新；选普通小图仍正常；选 >50MB 异常文件仍 toast 拒绝。
+- 跨域说明：chat-settings.js 属 AI-A 域，本次跨域改动因根因明确（compressHead 上限过严）且修复仅 2 行，已按协议在 WORKLOG 记录。AI-A 知悉即可。
+- 待构建者：本条未构建，请构建时包含 chat-settings.js。
+
+### 2026-08-30 14:20（新增：桌面美化加「全局字体」快捷入口，与聊天设置「全局字体」互通同一功能）
+- [AI-B 域·personalize.js + template.html + build.mjs]（**改动文件：src/js/personalize.js（尺寸分区首行加 applyDeskCsFont：复用 chat-settings.js 的 'cs-font' 键 + 同款 @font-face/font-family 应用逻辑 + openTCPanel 同款 UI）+ src/template.html（尺寸分区加 row-desk-cs-font 行）+ build.mjs（哨兵 +1）；构建状态：未构建，node --check 过**）。
+- 需求/反馈：用户要在桌面美化里加一个和聊天设置「全局字体」互通的快捷按钮，两边同一个功能、同一个存储键，只是多一个入口。明确不是聊天设置里的「聊天气泡字体大小」(cs-font-size)，那个是气泡文字尺寸独立功能。
+- 根因：聊天设置「全局字体」(chat-settings.js:569 cs-font) 已存在但入口只在聊天设置页，桌面美化没有快捷入口。
+- 方案：personalize.js 复用同一 store=activeStore() + 同一键 'cs-font' + 同款 applyFont 逻辑（dataURL→@font-face 注入 id="cs-font-style"，字体名→body/html font-family），弹层 UI 用 window.openTCPanel 同款（上传/输入/恢复默认/应用）。两边任一改动写同一键、应用同一全局 DOM，天然互通；applyDeskCsFont 与 chat-settings 的 applyFont 都先 remove id="cs-font-style" 再注入，幂等可重复。监听 contact-switched 重应用（切联系人 cs-font 可能不同）。不碰 chat-settings.js（不跨域）。
+- 验证：node --check 过。待构建后真机确认：①桌面美化→尺寸→全局字体行显示当前值（默认/已上传/字体名）；②点开弹层与聊天设置同款（上传 ttf/输入名/链接下载/恢复默认）；③桌面美化改字体→全局生效→聊天设置「全局字体」回显同值；④聊天设置改→桌面美化回显同值；⑤切联系人两边各自回显该联系人 cs-font。
+- 待构建者：本条未构建，请构建时包含 personalize.js + template.html + build.mjs。
+
+### 2026-08-30 14:13（修复：开屏点击进入后自定义字卡数据没自动加载——中高端机开屏进入后预加载字卡大键）
+- [AI-B 域·clock.js]（**改动文件：src/js/clock.js（enter() hide() 后按设备内存分级延迟 1.5s 调 window.hydrateLibScopes(['own'])，Promise 兜底 catch）；构建状态：未构建，node --check 过**）。
+- 需求/反馈：用户反馈开屏点击进入后自定义字卡数据没加载完，必须手动点进字卡库才显示"字卡较多，正在加载"，好像没有自动加载。
+- 根因：v3.14.x OOM 防线把 >200KB 字卡大键按预算（≤4GB 设备 12MB）挂起在 IDB 不读入内存，启动恢复 attempt() 主动跳过挂起键；字卡取回是纯懒加载，只在进字卡库/进聊天页/打开面板/回复时触发。clock.js 的 enter() 只做 hide()，没接线任何字卡预加载，开屏进入后落桌面无 hydrate 调用，故不自动加载也不显示 toast。
+- 方案：enter() 的 hide() 后，中高端机（navigator.deviceMemory>4 或无法判断，含所有 iOS Safari——deviceMemory 是 Chrome 专属 API）静默调 window.hydrateLibScopes(['own']) 预取【当前桌面专属】字卡；低端机（deviceMemory≤4）保持懒加载，与 idb.js 12MB 预算对齐防压崩。**只预取 own 不预取 public**：public 是跨所有桌面共享的公用字卡大键（chatcard.js 注释提到 27MB 公用库真机压崩案例），老 iOS（SE2/8 等 2-3GB，deviceMemory 缺失被当 8GB）预拉它会绕过 idb.js 24MB 预算；own 是单联系人专属，通常远小于公用库，风险最低收益最高；public 留懒加载（点字卡库时 MutationObserver 取回 + toast 提示）。三道防错：①延迟 1.5s 让开屏隐藏动画(400ms)+首屏桌面渲染先完成再取回，避免抢主线程/堆；②Promise .catch 兜底防 unhandledrejection；③双层 try/catch（外层护 deviceMemory 读取，内层护延迟回调里 hydrateLibScopes 调用）。hydrateLibScopes 自带"有数据/已确认无键跳过"+in-flight 去重，已就绪零开销；未就绪时用户再点字卡库复用同一取回链不重复。只在用户主动点击进入后跑（非 mochi-restore-done 后台事件），符合"用户正在看的场景按需拉一把"红线。不显示 toast（静默后台预取，用户点进字卡库时 own 已就绪不再弹"正在加载"，public 仍按原懒加载走）。
+- 验证：node --check 过。待构建后真机确认：①中高端机（iOS Safari/Chrome≥8GB）开屏进入后约 1.5s 后台预取 own 完成，再点字卡库→专属字卡直接显示不再弹"正在加载"，公用字卡仍走原懒加载（首次进可能弹 toast）；②低端机（deviceMemory≤4）开屏进入后仍需点进字卡库才加载（保持原行为防 OOM）；③进聊天页/打开面板路径不受影响（hydrateLibScopes 去重）；④预取异常不影响进入（try/catch+Promise catch 兜底）；⑤老 iOS（SE2/8 等）不预拉 public 大键防压崩。
+- 调用 AI-A 暴露的 window.hydrateLibScopes（chatcard.js:2789），未改 AI-A 文件，非跨域文件改动。
+
+### 2026-08-30 14:05（新增：音乐·弱网/断网播放崩溃修复——play() 拒绝回调异步期间 audio 被 teardown 置空 → null.play() 抛「Cannot read properties of null」未处理 rejection）
+- [AI-A 域·music-player.js]（**改动文件：src/js/music-player.js（5 处异步 play 拒绝回调补 `if (!audio) return;` 判空：startPlayback / tryResumePlayback / toggle / musicHoldForCall 恢复 / TA 暂停恢复）+ build.mjs（哨兵 +1 → 90/90）+ FIX-REGRESSION.md（#80）；构建状态：未构建，node --check 过**）。
+- 需求/反馈：红米 K80 Chrome 诊断「最近错误」持续出现 `(promise) Cannot read properties of null (reading 'play')`（bundle 36294:18）——断网/弱网时点歌或切歌触发，同一秒还伴随 meting「资源加载失败」。老版 bundle 36294:18 正对 startPlayback 里 `p.catch(() => { const p2 = audio.play(); ... })`。
+- 根因：`audio.play()` 的 rejection 是异步回调，其间全局 `audio` 可能已被 teardownAudio 置空——断网时 meting URL 加载失败 → audio.onerror → retryWithHttpsUrl **先 teardownAudio（audio=null）再异步拉直链**（8s 窗口），旧 play() 的 catch 回调此时触发 `audio.play()` → null 上读 'play' → TypeError → unhandledrejection。5 处 muted 静音解锁链路同样隐患。
+- 方案：5 处异步 catch 回调进回调先 `if (!audio) return;` 判空短路——换源回调/后台补播/手势兜底自会接管，不再对 null 调 play（判空即静默返回，不弹多余 toast）。startPlayback 处补完整 v3.28.x 注释。
+- 验证：node --check 过。待构建后真机：红米 K80 Chrome 断网/开飞行模式时切歌/起播 → 不再弹该 TypeError，音乐照常走换源/补播；诊断「最近错误」不再新增该崩溃。
+- 待构建者：本条未构建，请构建时包含 music-player.js + build.mjs。
 
 ### 2026-08-30 13:42（新增：音乐·TA 暂停再播放互动补聊天系统消息——原只发字卡无系统消息，与收藏/切歌/换模式/预订/邀请不一致）
 - [AI-A 域·music-player.js]（**改动文件：src/js/music-player.js（scheduleTaPauseIfLucky 暂停触发处 + 3.5s 恢复处，先 chatAddSystem 系统消息再 taPauseSendCard 字卡）+ build.mjs（哨兵 +2 → 88/88）+ FIX-REGRESSION.md（#79）；构建状态：未构建，node --check 过**）。

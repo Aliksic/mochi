@@ -284,11 +284,13 @@
   // 头像压缩与桌面 bindAvatar 一致（256px JPEG 0.85），内联实现避免依赖 personalize.js 导出。
   function compressHead(dataUrl, maxSide) {
     return new Promise((resolve) => {
-      if (typeof dataUrl === 'string' && dataUrl.length > 8 * 1024 * 1024) { resolve(null); return; }
+      // v3.26.x：放宽 dataURL 上限 8MB→50MB、移除原图总像素上限（原 2600万像素把
+      // 4800/5000 万像素手机主摄原图误拒 → 头像选完不生效，而同文件聊天背景上传无此
+      // 限制能传）。drawImage 缩放到 maxSide 小 canvas 不会 OOM，try-catch + onerror 兜底。
+      if (typeof dataUrl === 'string' && dataUrl.length > 50 * 1024 * 1024) { resolve(null); return; }
       const img = new Image();
       img.onload = () => {
         try {
-          if (img.width * img.height > 26000000) { resolve(null); return; }
           const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
           const w = Math.max(1, Math.round(img.width * scale));
           const h = Math.max(1, Math.round(img.height * scale));

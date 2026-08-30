@@ -3088,7 +3088,7 @@ staticText: staticText
 function openInvitePanelFor(kind, name) {
 if (kind === 'cuddle') {
 try { if (navigator.vibrate) navigator.vibrate([30, 60, 90]); } catch (e) {}
-setTimeout(() => { try { addIn(name + ' ' + pick(CUDDLE_REPLIES), { initiative: true }); } catch (e) {} }, randInt(600, 1200));
+setTimeout(() => { try { addIn(name + ' ' + pick(CUDDLE_REPLIES), {}); } catch (e) {} }, randInt(600, 1200));
 return;
 }
 if (kind === 'rps') { if (window.openRpsPanel) window.openRpsPanel(); return; }
@@ -4044,9 +4044,11 @@ const k = ASK_DAILY_PREFIX + new Date().toISOString().slice(0, 10);
 store.set(k, String((Number(store.get(k)) || 0) + 1));
 }
 // v3.15.x：TA 也会随机「向 Mochi 申请」心意币——金额与红包同款随机分布（genRpAmount），
-// 概率门固定 4%（不沿用红包七夕加成），无次数上限；入 TA 的 systemBalance，聊天留 askcoin 卡片
+// 概率门读取存钱罐右上角设置的申请概率（默认 4%，不沿用红包七夕加成），无次数上限；
+// 入 TA 的 systemBalance，聊天留 askcoin 卡片
 function trySystemAskMochi() {
-const baseRate = 0.04;
+let baseRate = 0.04;
+try { const p = JSON.parse((window.xyStore('xy-home-v2')).get('piggy-coin-prob') || 'null'); if (p && typeof p.ask === 'number') baseRate = p.ask; } catch (e) {}
 if (Math.random() >= baseRate) return;
 const amtFen = genRpAmount(5200000);
 if (amtFen < 1) return;

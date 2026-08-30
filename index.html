@@ -1287,12 +1287,13 @@ to { opacity: 1; transform: translateX(0); }
 }
 .msg-hi-heart {
 position:absolute;
-top:2px; left:4px;
-width:9px; height:9px;
+top:-3px; left:-3px;
+width:10px; height:10px;
 color:#ff4d6a;
 pointer-events:none;
 z-index:5;
 display:block;
+filter:drop-shadow(0 0 2px rgba(255,255,255,.95)) drop-shadow(0 1px 1px rgba(0,0,0,.22));
 }
 .msg-side {
 display:flex; flex-direction:column; align-items:center; gap:3px; flex-shrink:0;
@@ -8282,6 +8283,7 @@ transition-duration: .01ms !important;
             <p>本站完全免费，开放二传二改，但禁止商用、禁止以盈利为目的。</p>
             <p>报修 / 反馈请按【手机型号 + 浏览器 + 具体现象】提交，缺一不回；基础疑问可直接问 AI，比我回复快。</p>
             <p>系统或浏览器版本不同，适配表现可能不同，属正常现象。</p>
+            <p>建议使用 Chrome、Edge 等主流浏览器，尽量不用手机自带默认浏览器（会有限制），用主流浏览器出现的兼容问题会少一些。</p>
             <p>数据丢失属浏览器正常概率，请定期备份。</p>
             <p>完整说明在各章节内，可点上方目录跳转查看。</p>
           </div>
@@ -8420,9 +8422,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1788069207850">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.360</b></span>
-        <span class="sv-deploy">部署于 2026-08-30 13:53<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1788073672606">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.361</b></span>
+        <span class="sv-deploy">部署于 2026-08-30 15:07<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9512,7 +9514,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.360</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.361</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -9595,6 +9597,11 @@ transition-duration: .01ms !important;
           <div class="txt">按钮文字颜色</div>
           <div class="val" id="widget-btn-text-val"></div>
         </div>
+        <div class="set-row" id="row-app-name-color">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="14" rx="3"/><path d="M8 19v2M16 19v2M9 11h6"/></svg></div>
+          <div class="txt">图标文字颜色<span class="sub">桌面图标下方的名称</span></div>
+          <div class="val" id="app-name-color-val">默认</div>
+        </div>
         <div class="set-row" id="row-widget-heart">
           <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21.2l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg></div>
           <div class="txt">爱心外框颜色</div>
@@ -9610,6 +9617,11 @@ transition-duration: .01ms !important;
       <div class="them-sec" data-sec="size">
       <div class="cg-title">尺寸与圆角</div>
       <div class="set-group glass">
+        <div class="set-row" id="row-desk-cs-font">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div>
+          <div class="txt">全局字体<span class="sub">与聊天设置互通 · 上传字体或输入字体名</span></div>
+          <div class="val" id="desk-cs-font-val">默认</div>
+        </div>
         <div class="set-row" id="row-desk-font-size">
           <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg></div>
           <div class="txt">桌面字号<span class="sub">仅桌面/大屏生效 · 手机端为 iOS 性能保持默认</span></div>
@@ -9720,7 +9732,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.360</span>
+              <span class="lic-ver">v3.26.361</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -14714,6 +14726,7 @@ const EXCLUDE = ['contacts', 'active-contact', 'feed-posts', 'migrated-v1', 'js-
 'my-emoji-groups', 'mye-global-migrated',
 'piggy-log', 'piggy-goal-name', 'piggy-goal-amt', 'piggy-cards', 'piggy-last-visit',
 'piggy-goals', 'piggy-goal-cur', 'piggy-coin-log', 'piggy-coin-goals', 'piggy-coin-goal-cur', 'piggy-coin-last-visit',
+'piggy-coin-prob',
 'market-custom', 'market-migrated',
 'market-migrated-v2', 'market-migrated-v3',
 'cjian-roster', 'cjian-state', 'cjian-seeded', 'cjian-rehome-v1',
@@ -15259,6 +15272,14 @@ if (!seenToday) {
 try { localStorage.setItem(seenKey, '1'); seenToday = true; } catch (e) {}
 }
 hide();
+try {
+const dgb = (typeof navigator !== 'undefined' && navigator.deviceMemory) || 8;
+if (dgb > 4 && window.hydrateLibScopes) {
+setTimeout(function () {
+try { window.hydrateLibScopes(['own']).catch(function () {}); } catch (e) {}
+}, 1500);
+}
+} catch (e) {}
 };
 updateEnterState();
 if (splashBox) splashBox.addEventListener('scroll', checkScrolled, { passive: true });
@@ -17082,6 +17103,60 @@ pills: [{ label: '恢复默认', value: '__reset__' }],
 });
 });
 }
+const appNameColorRow = document.getElementById('row-app-name-color');
+const appNameColorVal = document.getElementById('app-name-color-val');
+const APP_NAME_COLOR_KEY = 'app-name-color';
+const appNameColorValOf = () => { try { return store.get(APP_NAME_COLOR_KEY) || ''; } catch (e) { return ''; } };
+function applyAppNameColor() {
+const old = document.getElementById('app-name-color-style');
+if (old) old.remove();
+const c = appNameColorValOf();
+if (appNameColorVal) appNameColorVal.textContent = c ? c.toUpperCase() : '默认';
+if (!c || !/^#[0-9a-fA-F]{6}$/.test(c)) return;
+const st = document.createElement('style');
+st.id = 'app-name-color-style';
+st.textContent = '.app .app-name{color:' + c + ' !important;}';
+document.head.appendChild(st);
+}
+applyAppNameColor();
+if (appNameColorRow) {
+const appNameSwatches = [
+{ color: '#111111', label: '默认黑' },
+{ color: '#333333', label: '深灰' },
+{ color: '#555555', label: '中灰' },
+{ color: '#777777', label: '浅中灰' },
+{ color: '#999999', label: '中浅灰' },
+{ color: '#bbbbbb', label: '浅灰' },
+{ color: '#ffffff', label: '纯白' },
+{ color: '#e05555', label: '樱花粉' },
+{ color: '#cc5555', label: '珊瑚红' },
+{ color: '#e8753a', label: '暖橘' },
+{ color: '#f0a020', label: '琥珀金' },
+{ color: '#2e8b57', label: '薄荷绿' },
+{ color: '#4a9d5e', label: '森绿' },
+{ color: '#3a7bd5', label: '天蓝' },
+{ color: '#7b5fd6', label: '紫罗兰' },
+{ color: '#d6459d', label: '玫红' },
+];
+appNameColorRow.addEventListener('click', () => {
+if (!window.openModal) return;
+const current = appNameColorValOf();
+window.openModal('图标文字颜色', '', (v) => {
+if (v === '__reset__') { store.remove(APP_NAME_COLOR_KEY); applyAppNameColor(); return; }
+const color = (typeof v === 'number' && appNameSwatches[v]) ? appNameSwatches[v].color : v;
+if (!color || !/^#[0-9a-fA-F]{6}$/.test(color)) return;
+store.set(APP_NAME_COLOR_KEY, color);
+applyAppNameColor();
+}, {
+colorPicker: true,
+noInput: true,
+color: current,
+swatches: appNameSwatches,
+pills: [{ label: '恢复默认', value: '__reset__' }],
+});
+});
+}
+document.addEventListener('contact-switched', applyAppNameColor);
 const widgetHeartRow = document.getElementById('row-widget-heart');
 const widgetHeartVal = document.getElementById('widget-heart-val');
 const applyWidgetHeart = (color) => {
@@ -17769,6 +17844,107 @@ pills: [{ label: '恢复默认', value: '__reset__' }],
 });
 });
 }
+const deskCsFontRow = document.getElementById('row-desk-cs-font');
+const deskCsFontVal = document.getElementById('desk-cs-font-val');
+const CS_FONT_KEY = 'cs-font';
+const deskCsFontValOf = () => { try { return store.get(CS_FONT_KEY) || ''; } catch (e) { return ''; } };
+function applyDeskCsFont() {
+const old = document.getElementById('cs-font-style');
+if (old) old.remove();
+const v = deskCsFontValOf();
+if (deskCsFontVal) deskCsFontVal.textContent = v ? (v.indexOf('data:') === 0 ? '已上传' : v) : '默认';
+if (!v) {
+document.body.style.fontFamily = '';
+document.documentElement.style.fontFamily = '';
+return;
+}
+if (v.indexOf('data:') === 0) {
+const st = document.createElement('style');
+st.id = 'cs-font-style';
+st.textContent = '@font-face{font-family:"cs-custom-font";src:url("' + v + '");font-display:swap;}' +
+'body,html{font-family:"cs-custom-font",sans-serif !important;}';
+document.head.appendChild(st);
+document.body.style.fontFamily = '';
+document.documentElement.style.fontFamily = '';
+return;
+}
+document.body.style.fontFamily = '"' + v + '",sans-serif';
+document.documentElement.style.fontFamily = '"' + v + '",sans-serif';
+}
+applyDeskCsFont();
+if (deskCsFontRow) {
+deskCsFontRow.addEventListener('click', () => {
+if (!window.openTCPanel) return;
+const cur = deskCsFontValOf();
+window.openTCPanel('全局字体', '' +
+'<div class="sm-fld"><label>上传本地字体（ttf / otf / woff / woff2），应用后全局生效</label>' +
+'<input class="tc-input" id="cs-font-name" placeholder="也可直接输入字体名或链接，如 Microsoft YaHei"' + (cur && cur.indexOf('data:') !== 0 && cur.indexOf('http') !== 0 ? ' value="' + String(cur).replace(/"/g, '&quot;').replace(/</g, '&lt;') + '"' : '') + '></div>' +
+'<div class="mail-actions"><button class="cc-tool" id="cs-font-upload">上传字体</button><button class="cc-tool" id="cs-font-clear">恢复默认</button><button class="cc-tool" id="cs-font-ok">应用</button></div>');
+document.getElementById('cs-font-upload').addEventListener('click', () => {
+const inp = document.createElement('input');
+inp.type = 'file';
+inp.accept = '.ttf,.otf,.woff,.woff2';
+inp.onchange = () => {
+const f = inp.files && inp.files[0];
+if (!f) return;
+toast('正在读取字体文件…');
+const reader = new FileReader();
+reader.onload = () => {
+store.set(CS_FONT_KEY, reader.result);
+document.getElementById('tc-mask').hidden = true;
+applyDeskCsFont();
+toast('字体已应用成功');
+};
+reader.onerror = () => { toast('字体文件读取失败，请重试'); };
+reader.readAsDataURL(f);
+};
+inp.click();
+});
+document.getElementById('cs-font-clear').addEventListener('click', () => {
+store.remove(CS_FONT_KEY);
+document.getElementById('tc-mask').hidden = true;
+applyDeskCsFont();
+toast('已恢复默认字体');
+});
+document.getElementById('cs-font-ok').addEventListener('click', () => {
+const name = (document.getElementById('cs-font-name').value || '').trim();
+if (!name) { toast('请输入字体名或链接'); return; }
+if (/^https?:\/\/.+\.(ttf|otf|woff|woff2)$/i.test(name)) {
+toast('正在下载字体，请稍候…');
+fetch(name, { mode: 'cors' }).then(r => {
+if (!r.ok) throw new Error('HTTP ' + r.status);
+return r.blob();
+}).then(blob => {
+const rd = new FileReader();
+rd.onload = () => {
+store.set(CS_FONT_KEY, rd.result);
+document.getElementById('tc-mask').hidden = true;
+applyDeskCsFont();
+toast('字体下载并应用成功');
+};
+rd.onerror = () => {
+store.set(CS_FONT_KEY, name);
+document.getElementById('tc-mask').hidden = true;
+applyDeskCsFont();
+toast('字体读取失败，已按字体名应用');
+};
+rd.readAsDataURL(blob);
+}).catch(() => {
+store.set(CS_FONT_KEY, name);
+document.getElementById('tc-mask').hidden = true;
+applyDeskCsFont();
+toast('链接下载失败，已按字体名应用');
+});
+return;
+}
+store.set(CS_FONT_KEY, name);
+document.getElementById('tc-mask').hidden = true;
+applyDeskCsFont();
+toast('字体已应用成功');
+});
+});
+}
+document.addEventListener('contact-switched', applyDeskCsFont);
 const deskFontRow = document.getElementById('row-desk-font-size');
 const deskFontVal = document.getElementById('desk-font-size-val');
 const DESK_FONT_DEFAULT = 100;
@@ -23615,7 +23791,7 @@ staticText: staticText
 function openInvitePanelFor(kind, name) {
 if (kind === 'cuddle') {
 try { if (navigator.vibrate) navigator.vibrate([30, 60, 90]); } catch (e) {}
-setTimeout(() => { try { addIn(name + ' ' + pick(CUDDLE_REPLIES), { initiative: true }); } catch (e) {} }, randInt(600, 1200));
+setTimeout(() => { try { addIn(name + ' ' + pick(CUDDLE_REPLIES), {}); } catch (e) {} }, randInt(600, 1200));
 return;
 }
 if (kind === 'rps') { if (window.openRpsPanel) window.openRpsPanel(); return; }
@@ -24539,7 +24715,8 @@ const k = ASK_DAILY_PREFIX + new Date().toISOString().slice(0, 10);
 store.set(k, String((Number(store.get(k)) || 0) + 1));
 }
 function trySystemAskMochi() {
-const baseRate = 0.04;
+let baseRate = 0.04;
+try { const p = JSON.parse((window.xyStore('xy-home-v2')).get('piggy-coin-prob') || 'null'); if (p && typeof p.ask === 'number') baseRate = p.ask; } catch (e) {}
 if (Math.random() >= baseRate) return;
 const amtFen = genRpAmount(5200000);
 if (amtFen < 1) return;
@@ -31805,11 +31982,10 @@ noInput: true
 }
 function compressHead(dataUrl, maxSide) {
 return new Promise((resolve) => {
-if (typeof dataUrl === 'string' && dataUrl.length > 8 * 1024 * 1024) { resolve(null); return; }
+if (typeof dataUrl === 'string' && dataUrl.length > 50 * 1024 * 1024) { resolve(null); return; }
 const img = new Image();
 img.onload = () => {
 try {
-if (img.width * img.height > 26000000) { resolve(null); return; }
 const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
 const w = Math.max(1, Math.round(img.width * scale));
 const h = Math.max(1, Math.round(img.height * scale));
@@ -36577,6 +36753,7 @@ wantPlay = true; // v3.10.x：用户点播/切歌＝意图播放（外部打断�
 const p = audio.play();
 if (p && p.catch) {
 p.catch(() => {
+if (!audio) return;
 try { audio.muted = true; } catch (e) {}
 const p2 = audio.play();
 if (p2 && p2.then) {
@@ -36675,6 +36852,7 @@ if (!audio.paused) return;
 const p = audio.play();
 if (p && p.then) {
 p.then(function () { bgResumeFails = 0; }).catch(function () {
+if (!audio) return; // v3.28.x：回调异步期间可能已 teardown（换源/切歌/停止），判空防 null.play()
 try { audio.muted = true; } catch (e) {}
 const p2 = audio.play();
 if (p2 && p2.then) {
@@ -37021,6 +37199,7 @@ cancelTaPause();
 const p = audio.play();
 if (p && p.catch) p.catch(() => {
 playRejected = true;
+if (!audio) return; // v3.28.x：判空防 null.play()（回调异步，audio 可能已被 teardown）
 try { audio.muted = true; } catch (e) {}
 const p2 = audio.play();
 if (p2 && p2.then) {
@@ -37053,6 +37232,7 @@ if (audio && currentId && (callHoldPlaying || callHoldPending)) {
 const p = audio.play();
 if (p && p.catch) p.catch(() => {
 playRejected = true;
+if (!audio) return; // v3.28.x：判空防 null.play()（回调异步期间可能已 teardown）
 try { audio.muted = true; } catch (e) {}
 const p2 = audio.play();
 if (p2 && p2.then) {
@@ -37911,6 +38091,7 @@ taPauseDoneId = endedId;
 taPauseCooldownAt = Date.now();
 const p2 = audio.play();
 if (p2 && p2.catch) p2.catch(function () {
+if (!audio) return; // v3.28.x：判空防 null.play()（3.5s 恢复窗口内可能已切歌/停止）
 try { audio.muted = true; } catch (e) {}
 const p3 = audio.play();
 if (p3 && p3.then) p3.then(function () { try { if (audio) audio.muted = false; } catch (e) {} }).catch(function () {});
@@ -52847,7 +53028,7 @@ const PIGGY_TA_NOTES = ['偷偷塞了一点', '给你也存了一份', '嘿嘿�
 const piggyPage = document.createElement('div');
 piggyPage.className = 'page'; piggyPage.id = 'page-piggy'; piggyPage.hidden = true;
 piggyPage.innerHTML =
-'<div class="chat-head"><span class="ch-back" id="piggy-back"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><span class="ch-name">存钱罐</span></div>' +
+'<div class="chat-head"><span class="ch-back" id="piggy-back"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><span class="ch-name">存钱罐</span><span class="ch-settings" id="piggy-coin-set" title="概率设置"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span></div>' +
 '<div class="piggy-body">' +
 '<div class="piggy-tabs"><button class="piggy-tab on" data-ptab="real">现实存钱</button><button class="piggy-tab" data-ptab="coin">心意币存钱</button></div>' +
 '<div class="piggy-share glass" id="piggy-share" hidden><div class="piggy-reply-q" id="piggy-share-title">谁来监督这个心愿？（可多选）</div><div class="piggy-share-chips" id="piggy-share-chips"></div><div class="piggy-reply-row"><button class="piggy-reply-send" id="piggy-share-ok">保存心愿</button><button class="piggy-reply-skip" id="piggy-share-cancel">取消</button></div></div>' +
@@ -53066,6 +53247,25 @@ setTimeout(() => { piggyShowMsg(window.taFit ? window.taFit(note + ' ¥' + piggy
 }
 if (piggyApp) piggyApp.addEventListener('click', () => { if (editingNow()) return; openPage(piggyPage); piggyMaybeTa(); piggyRender(); });
 document.getElementById('piggy-back').addEventListener('click', () => backHome(piggyPage));
+const piggyCoinSetBtn = document.getElementById('piggy-coin-set');
+if (piggyCoinSetBtn) piggyCoinSetBtn.addEventListener('click', function () {
+if (editingNow() || !window.openModal) return;
+const p = piggyCoinProbGet();
+const ks = ['deposit', 'withdraw', 'ask'];
+const def = [Math.round(p.deposit * 100), Math.round(p.withdraw * 100), Math.round(p.ask * 100)];
+const titles = ['设置 · 存钱概率（TA 随机塞心意币）', '设置 · 取钱概率（TA 余额快没时取回）', '设置 · 申请概率（联系人向 Mochi 申请）'];
+const hints = ['0-100 %，默认 ' + def[0], '0-100 %，默认 ' + def[1], '0-100 %，默认 ' + def[2]];
+let phase = 0;
+function clampU(x) { const n = parseInt(String(x == null ? '' : x).trim(), 10); return isNaN(n) ? def[phase] : Math.max(0, Math.min(100, n)); }
+const ctl = window.openModal(titles[0], String(def[0]), function (v) {
+const cur = clampU(v); const nv = { deposit: p.deposit, withdraw: p.withdraw, ask: p.ask };
+nv[ks[phase]] = cur / 100; piggyCoinProbSave(nv); Object.assign(p, nv);
+phase++;
+if (phase < 3) { ctl.stay(); ctl.title(titles[phase]); ctl.ph(hints[phase]); ctl.text(String(def[phase])); ctl.maxLen(3); ctl.okText('下一步'); toast('已保存 ' + cur + '%'); return; }
+toast('概率设置已更新');
+}, { maxlength: 3, inputmode: 'decimal', placeholder: hints[0] });
+ctl.okText('下一步');
+});
 document.getElementById('piggy-in').addEventListener('click', () => {
 if (editingNow() || !window.openModal) return;
 let amt = 0, phase = 1;
@@ -53270,7 +53470,8 @@ return { act: act, bal: bal, pct: pct };
 function piggyCoinShowMsg(txt) { const el = document.getElementById('coin-msg'); if (el) { el.classList.add('fade'); setTimeout(function () { el.textContent = '\u201c' + txt + '\u201d'; el.classList.remove('fade'); }, 200); } }
 function piggyCoinRowHtml(x) {
 const d = new Date((x && x.t) || Date.now());
-const ds = String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+const ds = String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0') +
+' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') + ':' + String(d.getSeconds()).padStart(2, '0');
 const out = x && x.type === 'out'; const side = (x && x.side) === 'ta' ? 'TA' : '我';
 return '<div class="piggy-row"><span class="pr-amt ' + (out ? 'out' : 'in') + '">' + (out ? '\u2212' : '+') + '¥' + piggyFmt((x && x.amt) || 0) + '</span><span class="pr-note">' + piggyEsc((x && x.note) || (out ? '取出' : '存入')) + '</span><span class="pr-side">' + side + '</span><span class="pr-date">' + ds + '</span></div>';
 }
@@ -53357,18 +53558,51 @@ const log = piggyCoinLog(); log.push({ t: Date.now(), side: side || 'my', type: 
 piggySaveCoinLog(log); piggyCoinRender();
 piggyCoinShowMsg(piggyPick(COIN_OUT_MSG));
 }
+function piggyCoinProbGet() {
+const s = piggyStore(); let p = null;
+if (s) { try { p = JSON.parse(s.get('piggy-coin-prob') || 'null'); } catch (e) {} }
+return {
+deposit: (p && typeof p.deposit === 'number') ? p.deposit : 0.12,
+withdraw: (p && typeof p.withdraw === 'number') ? p.withdraw : 0.25,
+ask: (p && typeof p.ask === 'number') ? p.ask : 0.04
+};
+}
+function piggyCoinProbSave(p) { const s = piggyStore(); if (s) try { s.set('piggy-coin-prob', JSON.stringify(p || {})); } catch (e) {} }
 function piggyCoinMaybeTa() {
 const s = piggyStore(); if (!s) return;
 let last = 0; try { last = parseInt(s.get('piggy-coin-last-visit') || '0', 10) || 0; } catch (e) {}
 const gap = Date.now() - last; try { s.set('piggy-coin-last-visit', '' + Date.now()); } catch (e) {}
-const prob = gap > 12 * 3600000 ? 0.45 : (gap > 3600000 ? 0.25 : 0.12);
+const base = piggyCoinProbGet().deposit;
+const prob = gap > 12 * 3600000 ? Math.min(0.95, base + 0.33) : (gap > 3600000 ? Math.min(0.9, base + 0.13) : base);
 if (Math.random() >= prob) return;
 const amt = COIN_TA_COINS[Math.floor(Math.random() * COIN_TA_COINS.length)];
 const note = COIN_TA_NOTES[Math.floor(Math.random() * COIN_TA_NOTES.length)];
 const log = piggyCoinLog(); log.push({ t: Date.now(), side: 'ta', type: 'in', amt: amt, note: 'TA 塞进来的' });
 piggySaveCoinLog(log); piggyCoinRender();
 vibrate([20, 40, 20]);
+try {
+const who = (window.chatPartnerName ? window.chatPartnerName() : '') || 'TA';
+if (window.chatAddSystem) window.chatAddSystem(who + ' 往存钱罐存了 ¥' + piggyFmt(amt), {});
+} catch (e) {}
 setTimeout(function () { piggyCoinShowMsg((window.taFit ? window.taFit(note) : note) + ' ¥' + piggyFmt(amt)); }, 300);
+}
+function piggyCoinMaybeTaWithdraw() {
+const s = piggyStore(); if (!s) return;
+if (!window.giftWalletGet) return;
+const taBal = piggyCoinBal('ta');
+if (taBal <= 0) return;
+let w = null; try { w = window.giftWalletGet(); } catch (e) {}
+if (!w || typeof w.systemBalance !== 'number') return;
+const LOW_FEN = 1000; // ¥10 视为「快没」
+if (w.systemBalance >= LOW_FEN) return;
+const prob = piggyCoinProbGet().withdraw;
+if (Math.random() >= prob) return;
+const fen = Math.round(taBal * 100);
+try { if (window.giftWalletChange) window.giftWalletChange(0, fen); } catch (e) {}
+const log = piggyCoinLog(); log.push({ t: Date.now(), side: 'ta', type: 'out', amt: taBal, note: '心意币快花完了，取回' });
+piggySaveCoinLog(log); piggyCoinRender();
+vibrate([20, 40, 20]);
+setTimeout(function () { piggyCoinShowMsg('心意币快没了，TA 取回 ¥' + piggyFmt(taBal)); }, 300);
 }
 const piggyTabs = document.querySelector('.piggy-tabs');
 if (piggyTabs) piggyTabs.addEventListener('click', function (e) {
@@ -53379,7 +53613,7 @@ document.querySelectorAll('.piggy-tabs .piggy-tab').forEach(function (x) { x.cla
 const real = document.querySelector('.piggy-real'); const coin = document.querySelector('.piggy-coin');
 if (real) real.hidden = (on !== 'real');
 if (coin) coin.hidden = (on !== 'coin');
-if (on === 'coin') { piggyCoinRender(); piggyCoinMaybeTa(); } else piggyRender();
+if (on === 'coin') { piggyCoinRender(); piggyCoinMaybeTa(); piggyCoinMaybeTaWithdraw(); } else piggyRender();
 });
 document.getElementById('coin-in').addEventListener('click', function () {
 if (editingNow() || !window.openModal) return;
@@ -68802,7 +69036,8 @@ const sizeStr = fmtSize(json.length);
 const coverLines = exportCoverage(data);
 const coverText = '导出内容（全局全部数据）：\n' + coverLines.join('\n') + '\n——';
 try { localStorage.setItem('xy-home-v2:__last-backup', String(Date.now())); } catch (e) {}
-if (json.length <= 3 * 1024 * 1024) {
+const snapshotWritten = json.length <= 3 * 1024 * 1024;
+if (snapshotWritten) {
 impShow('正在导出…', '正在写入自动备份副本', 84);
 if (window.idbSet) {
 try { window.idbSet(SNAPSHOT_KEY, json); } catch (e) {}
@@ -68812,13 +69047,20 @@ impShow('正在导出…', '正在准备保存文件', 92);
 const saveRes = await saveBackupFile(blob, fname);
 impHide();
 if (saveRes === 'ok') { toast('数据已导出（' + sizeStr + '，全部数据完整）'); return; }
+const snapHint = snapshotWritten
+? '\n（自动备份副本已额外存入本机缓存，随时可从「导入数据」恢复）'
+: '\n（备份较大未另存副本，请务必确保下载保存成功——这份文件是唯一的新备份）';
 if (window.openModal) {
 window.openModal('备份已打包完成（' + sizeStr + '）', '', () => {
 if (anchorDownload(blob, fname)) toast('数据已导出（' + sizeStr + '，全部数据完整）');
-else toast('仍未触发下载。备份已自动存到本机缓存，可稍后从「导入数据」恢复');
-}, { noInput: true, staticText: coverText + '\n数据已经打包好，还没开始保存。\n点「确定」开始下载保存到本机，点「取消」放弃本次保存。\n（自动备份副本已额外存入本机缓存，随时可从「导入数据」恢复）' });
+else toast(snapshotWritten
+? '仍未触发下载。备份已自动存到本机缓存，可稍后从「导入数据」恢复'
+: '仍未触发下载。请重新点击「导出数据」并确认保存下载文件（这是唯一备份）');
+}, { noInput: true, staticText: coverText + '\n数据已经打包好，还没开始保存。\n点「确定」开始下载保存到本机，点「取消」放弃本次保存。' + snapHint });
 } else {
-toast('备份已存到本机缓存（' + sizeStr + '），可从「导入数据」恢复');
+toast(snapshotWritten
+? '备份已存到本机缓存（' + sizeStr + '），可从「导入数据」恢复'
+: '备份已打包（' + sizeStr + '），请重新点击「导出数据」触发下载并保存文件');
 }
 }
 async function saveBackupFile(blob, fname) {
@@ -68852,11 +69094,17 @@ return 'blocked';
 function anchorDownload(blob, fname) {
 try {
 const a = document.createElement('a');
-a.href = URL.createObjectURL(blob);
+const url = URL.createObjectURL(blob);
+a.href = url;
 a.download = fname;
 document.body.appendChild(a);
 a.click();
-setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+setTimeout(() => { try { if (a.parentNode) a.remove(); } catch (e) {} }, 5000);
+setTimeout(() => { try { URL.revokeObjectURL(url); } catch (e) {} }, 300000);
+window.addEventListener('pagehide', function h() {
+window.removeEventListener('pagehide', h);
+try { URL.revokeObjectURL(url); } catch (e) {}
+});
 return true;
 } catch (e) { return false; }
 }

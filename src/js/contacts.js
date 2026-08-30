@@ -56,6 +56,9 @@
     // default 桌面（否则非 default 桌面余额读空）
     'piggy-log', 'piggy-goal-name', 'piggy-goal-amt', 'piggy-cards', 'piggy-last-visit',
     'piggy-goals', 'piggy-goal-cur', 'piggy-coin-log', 'piggy-coin-goals', 'piggy-coin-goal-cur', 'piggy-coin-last-visit',
+    // v3.26.x：存钱罐概率设置（存/取/申请）是全局根键（p2-features.js 读写、chat.js 申请读取），
+    // 绝不能随联系人隔离，否则非 default 桌面读到空回退默认值
+    'piggy-coin-prob',
     // v3.10.x：心意市集自定义商品改全局共享（所有桌面互通一份商品库，gift-shop.js）——
     // 键 xy-home-v2:market-custom 走根命名空间，绝不能被 migrateLegacy 迁进 default 桌面
     // （否则非 default 桌面读不到全局商品库，自定义商品"消失"）。market-migrated 为迁移幂等标记

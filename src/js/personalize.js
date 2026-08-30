@@ -1348,6 +1348,63 @@ try {
     });
   }
 
+  // 图标文字颜色：注入 style 覆盖 .app .app-name 的 color（home.css 默认 var(--ink)）
+  // per-cid store，键 app-name-color；恢复默认移除 style 回到 var(--ink) 跟随主题/深色模式
+  const appNameColorRow = document.getElementById('row-app-name-color');
+  const appNameColorVal = document.getElementById('app-name-color-val');
+  const APP_NAME_COLOR_KEY = 'app-name-color';
+  const appNameColorValOf = () => { try { return store.get(APP_NAME_COLOR_KEY) || ''; } catch (e) { return ''; } };
+  function applyAppNameColor() {
+    const old = document.getElementById('app-name-color-style');
+    if (old) old.remove();
+    const c = appNameColorValOf();
+    if (appNameColorVal) appNameColorVal.textContent = c ? c.toUpperCase() : '默认';
+    if (!c || !/^#[0-9a-fA-F]{6}$/.test(c)) return;
+    const st = document.createElement('style');
+    st.id = 'app-name-color-style';
+    st.textContent = '.app .app-name{color:' + c + ' !important;}';
+    document.head.appendChild(st);
+  }
+  applyAppNameColor();
+  if (appNameColorRow) {
+    const appNameSwatches = [
+      { color: '#111111', label: '默认黑' },
+      { color: '#333333', label: '深灰' },
+      { color: '#555555', label: '中灰' },
+      { color: '#777777', label: '浅中灰' },
+      { color: '#999999', label: '中浅灰' },
+      { color: '#bbbbbb', label: '浅灰' },
+      { color: '#ffffff', label: '纯白' },
+      { color: '#e05555', label: '樱花粉' },
+      { color: '#cc5555', label: '珊瑚红' },
+      { color: '#e8753a', label: '暖橘' },
+      { color: '#f0a020', label: '琥珀金' },
+      { color: '#2e8b57', label: '薄荷绿' },
+      { color: '#4a9d5e', label: '森绿' },
+      { color: '#3a7bd5', label: '天蓝' },
+      { color: '#7b5fd6', label: '紫罗兰' },
+      { color: '#d6459d', label: '玫红' },
+    ];
+    appNameColorRow.addEventListener('click', () => {
+      if (!window.openModal) return;
+      const current = appNameColorValOf();
+      window.openModal('图标文字颜色', '', (v) => {
+        if (v === '__reset__') { store.remove(APP_NAME_COLOR_KEY); applyAppNameColor(); return; }
+        const color = (typeof v === 'number' && appNameSwatches[v]) ? appNameSwatches[v].color : v;
+        if (!color || !/^#[0-9a-fA-F]{6}$/.test(color)) return;
+        store.set(APP_NAME_COLOR_KEY, color);
+        applyAppNameColor();
+      }, {
+        colorPicker: true,
+        noInput: true,
+        color: current,
+        swatches: appNameSwatches,
+        pills: [{ label: '恢复默认', value: '__reset__' }],
+      });
+    });
+  }
+  document.addEventListener('contact-switched', applyAppNameColor);
+
   // 爱心外框颜色：CSS 变量 --widget-heart 实时生效（打卡横幅「和 TA 一起摸鱼」的爱心圆底）
   const widgetHeartRow = document.getElementById('row-widget-heart');
   const widgetHeartVal = document.getElementById('widget-heart-val');
@@ -2096,6 +2153,112 @@ try {
       });
     });
   }
+
+  // ===== v3.27.x：全局字体（桌面美化快捷入口，与聊天设置「全局字体」互通同一功能） =====
+  // 复用 chat-settings.js 的存储键 'cs-font' + 同款 applyFont 逻辑（@font-face 注入 / body+html font-family），
+  // 两边任一改动写同一键、应用同一全局 DOM，天然互通。applyDeskCsFont 与 chat-settings 的 applyFont 都
+  // 先 remove id="cs-font-style" 再注入，幂等可重复调用。store = activeStore() 与 chat-settings 同款 per-cid。
+  const deskCsFontRow = document.getElementById('row-desk-cs-font');
+  const deskCsFontVal = document.getElementById('desk-cs-font-val');
+  const CS_FONT_KEY = 'cs-font';
+  const deskCsFontValOf = () => { try { return store.get(CS_FONT_KEY) || ''; } catch (e) { return ''; } };
+  function applyDeskCsFont() {
+    const old = document.getElementById('cs-font-style');
+    if (old) old.remove();
+    const v = deskCsFontValOf();
+    if (deskCsFontVal) deskCsFontVal.textContent = v ? (v.indexOf('data:') === 0 ? '已上传' : v) : '默认';
+    if (!v) {
+      document.body.style.fontFamily = '';
+      document.documentElement.style.fontFamily = '';
+      return;
+    }
+    if (v.indexOf('data:') === 0) {
+      const st = document.createElement('style');
+      st.id = 'cs-font-style';
+      st.textContent = '@font-face{font-family:"cs-custom-font";src:url("' + v + '");font-display:swap;}' +
+        'body,html{font-family:"cs-custom-font",sans-serif !important;}';
+      document.head.appendChild(st);
+      document.body.style.fontFamily = '';
+      document.documentElement.style.fontFamily = '';
+      return;
+    }
+    document.body.style.fontFamily = '"' + v + '",sans-serif';
+    document.documentElement.style.fontFamily = '"' + v + '",sans-serif';
+  }
+  applyDeskCsFont();
+  if (deskCsFontRow) {
+    deskCsFontRow.addEventListener('click', () => {
+      if (!window.openTCPanel) return;
+      const cur = deskCsFontValOf();
+      window.openTCPanel('全局字体', '' +
+        '<div class="sm-fld"><label>上传本地字体（ttf / otf / woff / woff2），应用后全局生效</label>' +
+        '<input class="tc-input" id="cs-font-name" placeholder="也可直接输入字体名或链接，如 Microsoft YaHei"' + (cur && cur.indexOf('data:') !== 0 && cur.indexOf('http') !== 0 ? ' value="' + String(cur).replace(/"/g, '&quot;').replace(/</g, '&lt;') + '"' : '') + '></div>' +
+        '<div class="mail-actions"><button class="cc-tool" id="cs-font-upload">上传字体</button><button class="cc-tool" id="cs-font-clear">恢复默认</button><button class="cc-tool" id="cs-font-ok">应用</button></div>');
+      document.getElementById('cs-font-upload').addEventListener('click', () => {
+        const inp = document.createElement('input');
+        inp.type = 'file';
+        inp.accept = '.ttf,.otf,.woff,.woff2';
+        inp.onchange = () => {
+          const f = inp.files && inp.files[0];
+          if (!f) return;
+          toast('正在读取字体文件…');
+          const reader = new FileReader();
+          reader.onload = () => {
+            store.set(CS_FONT_KEY, reader.result);
+            document.getElementById('tc-mask').hidden = true;
+            applyDeskCsFont();
+            toast('字体已应用成功');
+          };
+          reader.onerror = () => { toast('字体文件读取失败，请重试'); };
+          reader.readAsDataURL(f);
+        };
+        inp.click();
+      });
+      document.getElementById('cs-font-clear').addEventListener('click', () => {
+        store.remove(CS_FONT_KEY);
+        document.getElementById('tc-mask').hidden = true;
+        applyDeskCsFont();
+        toast('已恢复默认字体');
+      });
+      document.getElementById('cs-font-ok').addEventListener('click', () => {
+        const name = (document.getElementById('cs-font-name').value || '').trim();
+        if (!name) { toast('请输入字体名或链接'); return; }
+        if (/^https?:\/\/.+\.(ttf|otf|woff|woff2)$/i.test(name)) {
+          toast('正在下载字体，请稍候…');
+          fetch(name, { mode: 'cors' }).then(r => {
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.blob();
+          }).then(blob => {
+            const rd = new FileReader();
+            rd.onload = () => {
+              store.set(CS_FONT_KEY, rd.result);
+              document.getElementById('tc-mask').hidden = true;
+              applyDeskCsFont();
+              toast('字体下载并应用成功');
+            };
+            rd.onerror = () => {
+              store.set(CS_FONT_KEY, name);
+              document.getElementById('tc-mask').hidden = true;
+              applyDeskCsFont();
+              toast('字体读取失败，已按字体名应用');
+            };
+            rd.readAsDataURL(blob);
+          }).catch(() => {
+            store.set(CS_FONT_KEY, name);
+            document.getElementById('tc-mask').hidden = true;
+            applyDeskCsFont();
+            toast('链接下载失败，已按字体名应用');
+          });
+          return;
+        }
+        store.set(CS_FONT_KEY, name);
+        document.getElementById('tc-mask').hidden = true;
+        applyDeskCsFont();
+        toast('字体已应用成功');
+      });
+    });
+  }
+  document.addEventListener('contact-switched', applyDeskCsFont);
 
   // ===== v3.6.x：桌面字号（滑块 85~120%，默认 100%） =====
   const deskFontRow = document.getElementById('row-desk-font-size');

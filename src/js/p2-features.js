@@ -3208,7 +3208,7 @@ if (ckRefresh) {
   const piggyPage = document.createElement('div');
   piggyPage.className = 'page'; piggyPage.id = 'page-piggy'; piggyPage.hidden = true;
   piggyPage.innerHTML =
-    '<div class="chat-head"><span class="ch-back" id="piggy-back"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><span class="ch-name">存钱罐</span></div>' +
+    '<div class="chat-head"><span class="ch-back" id="piggy-back"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><span class="ch-name">存钱罐</span><span class="ch-settings" id="piggy-coin-set" title="概率设置"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span></div>' +
     '<div class="piggy-body">' +
       // 双账本 Tab：现实存钱（真实人民币，手动记账）+ 心意币存钱（从心意币账本转入/转出）
       '<div class="piggy-tabs"><button class="piggy-tab on" data-ptab="real">现实存钱</button><button class="piggy-tab" data-ptab="coin">心意币存钱</button></div>' +
@@ -3446,6 +3446,26 @@ if (ckRefresh) {
   }
   if (piggyApp) piggyApp.addEventListener('click', () => { if (editingNow()) return; openPage(piggyPage); piggyMaybeTa(); piggyRender(); });
   document.getElementById('piggy-back').addEventListener('click', () => backHome(piggyPage));
+  // 右上角设置：三档概率（存钱=TA随机塞 / 取钱=TA余额快没取回 / 申请=联系人向Mochi申请），分步输入 0-100%
+  const piggyCoinSetBtn = document.getElementById('piggy-coin-set');
+  if (piggyCoinSetBtn) piggyCoinSetBtn.addEventListener('click', function () {
+    if (editingNow() || !window.openModal) return;
+    const p = piggyCoinProbGet();
+    const ks = ['deposit', 'withdraw', 'ask'];
+    const def = [Math.round(p.deposit * 100), Math.round(p.withdraw * 100), Math.round(p.ask * 100)];
+    const titles = ['设置 · 存钱概率（TA 随机塞心意币）', '设置 · 取钱概率（TA 余额快没时取回）', '设置 · 申请概率（联系人向 Mochi 申请）'];
+    const hints = ['0-100 %，默认 ' + def[0], '0-100 %，默认 ' + def[1], '0-100 %，默认 ' + def[2]];
+    let phase = 0;
+    function clampU(x) { const n = parseInt(String(x == null ? '' : x).trim(), 10); return isNaN(n) ? def[phase] : Math.max(0, Math.min(100, n)); }
+    const ctl = window.openModal(titles[0], String(def[0]), function (v) {
+      const cur = clampU(v); const nv = { deposit: p.deposit, withdraw: p.withdraw, ask: p.ask };
+      nv[ks[phase]] = cur / 100; piggyCoinProbSave(nv); Object.assign(p, nv);
+      phase++;
+      if (phase < 3) { ctl.stay(); ctl.title(titles[phase]); ctl.ph(hints[phase]); ctl.text(String(def[phase])); ctl.maxLen(3); ctl.okText('下一步'); toast('已保存 ' + cur + '%'); return; }
+      toast('概率设置已更新');
+    }, { maxlength: 3, inputmode: 'decimal', placeholder: hints[0] });
+    ctl.okText('下一步');
+  });
   // 存入/取出/小心愿：单弹窗两阶段（ctl.stay 就地切阶段）——取代旧「60ms 再开
   // 第二层」嵌套写法，真机键盘收起/聚焦竞态不再卡住第二步（与钱包弹窗同款）。
   document.getElementById('piggy-in').addEventListener('click', () => {
@@ -3663,7 +3683,9 @@ if (ckRefresh) {
   function piggyCoinShowMsg(txt) { const el = document.getElementById('coin-msg'); if (el) { el.classList.add('fade'); setTimeout(function () { el.textContent = '\u201c' + txt + '\u201d'; el.classList.remove('fade'); }, 200); } }
   function piggyCoinRowHtml(x) {
     const d = new Date((x && x.t) || Date.now());
-    const ds = String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    // 精确到秒：MM-DD HH:MM:SS
+    const ds = String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0') +
+      ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') + ':' + String(d.getSeconds()).padStart(2, '0');
     const out = x && x.type === 'out'; const side = (x && x.side) === 'ta' ? 'TA' : '我';
     return '<div class="piggy-row"><span class="pr-amt ' + (out ? 'out' : 'in') + '">' + (out ? '\u2212' : '+') + '¥' + piggyFmt((x && x.amt) || 0) + '</span><span class="pr-note">' + piggyEsc((x && x.note) || (out ? '取出' : '存入')) + '</span><span class="pr-side">' + side + '</span><span class="pr-date">' + ds + '</span></div>';
   }
@@ -3752,19 +3774,55 @@ if (ckRefresh) {
     piggySaveCoinLog(log); piggyCoinRender();
     piggyCoinShowMsg(piggyPick(COIN_OUT_MSG));
   }
+  // 心意币概率配置（root 命名空间，供 chat.js 读取申请概率）：{ deposit(塞币/存钱), withdraw(取钱), ask(申请) }，均存 0-1 小数
+  function piggyCoinProbGet() {
+    const s = piggyStore(); let p = null;
+    if (s) { try { p = JSON.parse(s.get('piggy-coin-prob') || 'null'); } catch (e) {} }
+    return {
+      deposit: (p && typeof p.deposit === 'number') ? p.deposit : 0.12,
+      withdraw: (p && typeof p.withdraw === 'number') ? p.withdraw : 0.25,
+      ask: (p && typeof p.ask === 'number') ? p.ask : 0.04
+    };
+  }
+  function piggyCoinProbSave(p) { const s = piggyStore(); if (s) try { s.set('piggy-coin-prob', JSON.stringify(p || {})); } catch (e) {} }
   // TA 不定期往 TA 账户塞心意币（越久未开概率越高，彩蛋不入 gift-wallet，同现实 TA 塞硬币先例）
   function piggyCoinMaybeTa() {
     const s = piggyStore(); if (!s) return;
     let last = 0; try { last = parseInt(s.get('piggy-coin-last-visit') || '0', 10) || 0; } catch (e) {}
     const gap = Date.now() - last; try { s.set('piggy-coin-last-visit', '' + Date.now()); } catch (e) {}
-    const prob = gap > 12 * 3600000 ? 0.45 : (gap > 3600000 ? 0.25 : 0.12);
+    const base = piggyCoinProbGet().deposit;
+    const prob = gap > 12 * 3600000 ? Math.min(0.95, base + 0.33) : (gap > 3600000 ? Math.min(0.9, base + 0.13) : base);
     if (Math.random() >= prob) return;
     const amt = COIN_TA_COINS[Math.floor(Math.random() * COIN_TA_COINS.length)];
     const note = COIN_TA_NOTES[Math.floor(Math.random() * COIN_TA_NOTES.length)];
     const log = piggyCoinLog(); log.push({ t: Date.now(), side: 'ta', type: 'in', amt: amt, note: 'TA 塞进来的' });
     piggySaveCoinLog(log); piggyCoinRender();
     vibrate([20, 40, 20]);
+    // TA 存钱时同步在聊天里发一条系统消息（当前联系人）
+    try {
+      const who = (window.chatPartnerName ? window.chatPartnerName() : '') || 'TA';
+      if (window.chatAddSystem) window.chatAddSystem(who + ' 往存钱罐存了 ¥' + piggyFmt(amt), {});
+    } catch (e) {}
     setTimeout(function () { piggyCoinShowMsg((window.taFit ? window.taFit(note) : note) + ' ¥' + piggyFmt(amt)); }, 300);
+  }
+  // TA 心意币余额快没时（systemBalance < ¥10），按配置概率从【TA 的】账户取回，回补心意币账本
+  function piggyCoinMaybeTaWithdraw() {
+    const s = piggyStore(); if (!s) return;
+    if (!window.giftWalletGet) return;
+    const taBal = piggyCoinBal('ta');
+    if (taBal <= 0) return;
+    let w = null; try { w = window.giftWalletGet(); } catch (e) {}
+    if (!w || typeof w.systemBalance !== 'number') return;
+    const LOW_FEN = 1000; // ¥10 视为「快没」
+    if (w.systemBalance >= LOW_FEN) return;
+    const prob = piggyCoinProbGet().withdraw;
+    if (Math.random() >= prob) return;
+    const fen = Math.round(taBal * 100);
+    try { if (window.giftWalletChange) window.giftWalletChange(0, fen); } catch (e) {}
+    const log = piggyCoinLog(); log.push({ t: Date.now(), side: 'ta', type: 'out', amt: taBal, note: '心意币快花完了，取回' });
+    piggySaveCoinLog(log); piggyCoinRender();
+    vibrate([20, 40, 20]);
+    setTimeout(function () { piggyCoinShowMsg('心意币快没了，TA 取回 ¥' + piggyFmt(taBal)); }, 300);
   }
   // 双 Tab 切换：现实存钱 / 心意币存钱
   const piggyTabs = document.querySelector('.piggy-tabs');
@@ -3776,7 +3834,7 @@ if (ckRefresh) {
     const real = document.querySelector('.piggy-real'); const coin = document.querySelector('.piggy-coin');
     if (real) real.hidden = (on !== 'real');
     if (coin) coin.hidden = (on !== 'coin');
-    if (on === 'coin') { piggyCoinRender(); piggyCoinMaybeTa(); } else piggyRender();
+    if (on === 'coin') { piggyCoinRender(); piggyCoinMaybeTa(); piggyCoinMaybeTaWithdraw(); } else piggyRender();
   });
   // 心意币 存一笔：先选账户（1 我的 / 2 TA）→ 校验账本余额 → 扣账本 → 入罐
   document.getElementById('coin-in').addEventListener('click', function () {
