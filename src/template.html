@@ -58,7 +58,7 @@
             <p>报修 / 反馈请按【手机型号 + 浏览器 + 具体现象】提交，缺一不回；尽量附上设置里的【复制诊断信息】；基础疑问可直接问 AI，比我回复快。</p>
             <p>系统或浏览器版本不同，适配表现可能不同，属正常现象。</p>
             <p>建议使用 Chrome、Edge 等主流浏览器，尽量不用手机自带默认浏览器（会有限制），用主流浏览器出现的兼容问题会少一些。</p>
-            <p>数据丢失属浏览器正常概率，请定期备份。</p>
+            <p>数据丢失属浏览器正常概率，请定期备份：本机不保留任何自动副本，你下载并保存好的导出文件就是唯一备份（别删、别只留在下载列表里）。</p>
             <p>完整说明在各章节内，可点上方目录跳转查看。</p>
           </div>
           <div class="splash-sec-wrap splash-sec-collapsible is-collapsed">
@@ -112,7 +112,7 @@
             <p class="splash-item">反馈后不需要等我回复：消息太多，修完会直接部署，可以晚些刷新到新版再试。反馈的每个问题都修了，但能否修好只能用自己的设备验证，我没有其他设备，无法验证修复程度。</p>
             <p class="splash-item">如果有设备问题bug一直修不好，我建议可以拿我的代码自行部署和修缮，有自己的手机自己验证bug是否修复会方便很多。</p>
             <p class="splash-item">8.29公开已开群友互助群，但我不一定有时间看，只是群友互助群，有问题直接评论或群里艾特，个人精力有限也不一定及时回复。</p>
-            <p class="splash-item">关于数据丢失：有可能有bug，也有可能是浏览器触发丢失。如果不是高频率丢失，就是正常情况（浏览器自身正常概率丢失数据），需要定期备份。建议提示有新版本需要刷新时先备份数据。</p>
+            <p class="splash-item">关于数据丢失：有可能有bug，也有可能是浏览器触发丢失。如果不是高频率丢失，就是正常情况（浏览器自身正常概率丢失数据），需要定期备份。建议提示有新版本需要刷新时先备份数据。注意：本机不保留任何自动备份副本（v3.29 起该机制已下线，历史遗留副本会在启动时自动清理释放空间），你下载并保存好的导出文件就是唯一备份——请把它存到不会被浏览器清理的地方，别只留在下载列表里。</p>
           </div>
           <div class="splash-sec-wrap">
             <p class="splash-sec">【三、关于浏览器使用与桌面快捷方式】</p>
@@ -1310,18 +1310,11 @@
           <div class="storage-row"><span>浏览器存储配额</span><b id="st-quota">读取中…</b></div>
           <div class="storage-row"><span>localStorage 占用</span><b id="st-ls">读取中…</b></div>
           <div class="storage-row"><span>IndexedDB 占用</span><b id="st-idb">读取中…</b></div>
-          <div class="storage-hint" id="st-snap-hint" style="display:none">⚠ 其中「自动备份快照」约占近一半：它是全部数据的一份完整副本，删除它不影响任何真实数据（见下方说明）。</div>
         </div>
         <div class="cal-card glass">
           <div class="cal-card-title">各功能占用明细</div>
           <div id="st-cat"><div class="storage-hint">正在统计，请稍候…</div></div>
           <div class="storage-hint">大小按 UTF-8 字节估算；聊天/头像/背景等大键会在 IndexedDB 与 localStorage 双写，两处之和为该功能实际占用。<b>点击任一分类行可展开查看该分类下的具体存储键名</b>，用于核对是否覆盖到所有功能。</div>
-        </div>
-        <div class="cal-card glass">
-          <div class="cal-card-title">自动备份快照</div>
-          <div class="storage-row"><span>当前快照大小</span><b id="st-snap">统计中…</b></div>
-          <button class="storage-clear danger" id="st-clear-snap" type="button">删除自动备份快照（释放空间）</button>
-          <div class="storage-hint">「自动备份快照」= 你全部数据的<b>一份完整副本</b>（含音乐/语音/图片，base64 存储还会放大体积），约占近一半空间。删除它<b>不影响任何真实数据</b>（聊天、字卡、头像、音乐都在），可立省约一半；下次你再「导出数据」时会自动重建一份。空间紧张时建议删除。</div>
         </div>
         <div class="cal-card glass">
           <div class="cal-card-title">错误诊断记录</div>

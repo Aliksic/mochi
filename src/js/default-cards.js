@@ -181,6 +181,11 @@
   // v3.16.x：把「分类 tab + 分组条 + 搜索 + 分批列表 + change 委托」抽成工厂，
   // 聊天默认字卡页（dc-* 锚点，仅基础分类）与 其他互动功能字卡页（fc-* 锚点，
   // 仅功能分类）各持一份独立状态；数据/开关键（dc-off-<分类>:*）与池 API 完全不变。
+  // v3.26.x：渲染改为「视口虚拟窗口」（见下方常量注释）——工厂结构、DOM 类名、
+  // 单卡开关键、tab/分组/搜索行为全部不变，只变列表的构建方式。
+  const V_PAD = 0.8;    // 视口上下各多渲染 0.8 屏（重建频率 ≈ 每滚 0.8 屏一次）
+  const V_MINW = 24;    // 窗口条目数下限（小屏/高条目时兜底，避免窗口过窄）
+  const V_EST = 55;     // 未实测条目高度初值：.cc-item 13+13 padding + 行高 + 9 margin
   function mountCardView(ids, allowedKeys, emptyText, searchKeys) {
     const viewList = document.getElementById(ids.list);
     const viewTabs = document.getElementById(ids.tabs);
@@ -193,11 +198,189 @@
       searchKeys: (searchKeys || []).slice(),
       cur: allowedKeys[0] || '',
       q: '',
-      curGroup: '',
-      cardByIdx: [],
-      renderToken: 0,
-      RENDER_BATCH: 120
+      curGroup: ''
     };
+
+    // ================= 虚拟窗口状态 =================
+    // 实测（headless 390×844，空数据）：预设字卡 main 分类 4621 张旧版全量渲染 =
+    // #dc-list 子树 33221 个节点、整页高 277922px、4628 个 checkbox，全站节点数从
+    // 10841 翻到 44338；分批渲染仍占主线程 1.7s；点返回切页时 62 个 .page 的
+    // MutationObserver + 全站选择器扫描在 4.4 万节点文档上放大（长任务 54ms）；
+    // 二次进出更糟（进入阻塞 590ms、返回 182ms——display:none 销毁 3.3 万节点的
+    // 渲染树，再显示要整棵重建）。iOS WebKit（Safari/Edge/Chrome 同内核）合成与内存
+    // 开销还会再放大数倍，且残留 DOM 让之后每次切页都付这个税 → 真机反馈
+    // 「进预设字卡能滑，点返回卡住，卡回去后整页都很卡」。
+    // 方案：数据扁平成 flat[]（纯 JS，零 DOM），DOM 里只留视口上下各 V_PAD 屏的条目
+    // （约 60~90 个节点），其余高度由顶部/底部占位块撑住；条目真实高度在插入后一次性
+    // 读取并回填前缀和表，按窗口上方的累计变化量静默校正 scrollTop，长列表滚动位置不漂。
+    let flat = [];                    // 当前列表数据（分组头 + 字卡）
+    let n = 0;
+    let hts = new Float64Array(0);    // 每条占位高度（实测或估计）
+    let offs = new Float64Array(1);   // 前缀和：offs[i]=第 i 条顶部 y，offs[n]=总高
+    let got = new Uint8Array(0);      // 该条是否已实测
+    let est = V_EST;                  // 估计高度：随实测均值收敛
+    let measSum = 0, measCnt = 0;
+    let winLo = -1, winHi = -1;       // DOM 中已渲染窗口 [winLo, winHi)
+    let topSpace = null, botSpace = null;
+    // 滚动容器：元素 / 'win'（视口）/ null（未确认，按 'win' 处理）。
+    // 三页布局不统一：#dc-list 有 CSS 显式放开 overflow 交给 .page 整页滚；
+    // #fc-list/#dk-list 的 .card-list{flex:1} 在 .page(flex 列) 内被 min-height:auto
+    // 撑开、自身不裁剪，实际滚的同样是 .page。只按 overflowY 样式选容器会把列表当成
+    // 滚动容器（它的 scrollTop 恒 0）→ 窗口永不推进、往下滚全是空白。
+    // 故以「确实在裁剪内容」判定，并在滚动事件里用 e.target 直接确认。
+    let scroller = null;
+
+    function clipsContent(el) {
+      try {
+        const oy = getComputedStyle(el).overflowY;
+        if (oy !== 'auto' && oy !== 'scroll') return false;
+        return el.scrollHeight > el.clientHeight + 1;
+      } catch (e) { return false; }
+    }
+    function guessScroller() {
+      if (scroller) return scroller;
+      try {
+        let el = viewList;
+        while (el && el !== document.documentElement) {
+          if (clipsContent(el)) { scroller = el; return scroller; }
+          el = el.parentElement;
+        }
+      } catch (e) {}
+      return null;
+    }
+    function onScroll(target) {
+      if (pageEl.hidden) return;
+      if (target && target.nodeType === 1) {
+        // 元素滚动事件不冒泡、但 document 捕获阶段能收到：target 即滚动容器本身
+        try { if (target !== viewList && !target.contains(viewList)) return; } catch (e) { return; }
+        scroller = target;
+      } else {
+        const sc = guessScroller();
+        if (sc && sc !== 'win') return;   // 本页有元素级滚动容器，视口滚动与我们无关
+        scroller = 'win';
+      }
+      requestLayout(false);
+    }
+    function scrollY() {
+      const sc = guessScroller();
+      if (!sc || sc === 'win') return window.pageYOffset || document.documentElement.scrollTop || 0;
+      return sc.scrollTop;
+    }
+    function setScrollY(v) {
+      const sc = guessScroller();
+      if (!sc || sc === 'win') window.scrollTo(0, v); else sc.scrollTop = v;
+    }
+    function recomputeOffsets() {
+      if (offs.length !== n + 1) offs = new Float64Array(n + 1);
+      let s = 0;
+      for (let i = 0; i < n; i++) { offs[i] = s; s += hts[i]; }
+      offs[n] = s;
+    }
+    function indexAt(y) {
+      if (y <= 0) return 0;
+      if (y >= offs[n]) return Math.max(0, n - 1);
+      let a = 0, b = n;
+      while (a < b) { const m = (a + b) >> 1; if (offs[m] <= y) a = m + 1; else b = m; }
+      return Math.max(0, Math.min(n - 1, a - 1));
+    }
+    function makeNode(it, i) {
+      const d = document.createElement('div');
+      if (it.header) {
+        d.className = 'cc-group-header';
+        d.innerHTML = '<span class="ccg-name">' + it.gname + '</span><span class="ccg-count">' + it.count + '</span>';
+      } else {
+        const off = isCardOff(it.cat, it.c);
+        d.className = 'cc-item glass' + (off ? ' off' : '');
+        // 整页为系统预设字卡，统一标【系统】与自定义字卡区分；
+        // 右侧单卡开关——逐张开启/关闭该字卡（关闭后功能/聊天回复不再抽取）
+        d.innerHTML = '<div class="cc-txt"><div class="t">' + it.c + ' <span class="tc-known">系统</span></div></div>' +
+          '<label class="toggle ccard-toggle"><input type="checkbox"' + (off ? '' : ' checked') + '><span class="tk"></span></label>';
+      }
+      d.dataset.idx = i;
+      return d;
+    }
+    // 写完再读，只触发一次布局：连续兄弟的 offsetTop 差 = 该条实际占位高（含 margin）
+    function measureAndFix() {
+      const kids = viewList.children;
+      const count = kids.length - 2;
+      if (count < 2) return;
+      const baseBefore = offs[winLo];
+      let touched = false;
+      // kids = [topSpace, 条目…, botSpace]；末条用 botSpace 的 offsetTop 收尾（占位块高度
+      // 不影响自身 offsetTop，读到的仍是末条实际占位高）
+      for (let k = 1; k <= count; k++) {
+        const i = winLo + k - 1;
+        const h = kids[k + 1].offsetTop - kids[k].offsetTop;
+        if (h > 0 && h !== hts[i]) {
+          if (got[i]) measSum += h - hts[i]; else { got[i] = 1; measSum += h; measCnt++; }
+          hts[i] = h;
+          touched = true;
+        }
+      }
+      if (!touched) return;
+      if (measCnt) est = Math.max(20, measSum / measCnt);
+      recomputeOffsets();
+      const delta = offs[winLo] - baseBefore;
+      topSpace.style.height = offs[winLo] + 'px';
+      botSpace.style.height = Math.max(0, offs[n] - offs[winHi]) + 'px';
+      if (Math.abs(delta) >= 1) setScrollY(scrollY() + delta);
+    }
+    // 按当前滚动位置重排窗口；force=false 时请求范围仍落在已渲染范围内就直接跳过（防抖）
+    function layout(force) {
+      if (!n) { winLo = winHi = -1; return; }
+      const sc = guessScroller();
+      const isWin = !sc || sc === 'win';
+      const vh = isWin ? window.innerHeight : sc.clientHeight;
+      if (!vh) return;                  // 页面正隐藏：等显示时再排
+      const y = scrollY();
+      // 列表内容坐标系里滚动视口顶端的 y：列表自身就是滚动容器时即 scrollTop；
+      // 否则滚动容器矩形顶 - 列表矩形顶（列表 rect 已含滚动位移，相减即滚掉的量）。
+      // offs[] 以条目 border-box 顶为基准，.card-list 无 border/padding-top，两套坐标对齐。
+      let a;
+      if (sc === viewList) a = y;
+      else a = (isWin ? 0 : sc.getBoundingClientRect().top) - viewList.getBoundingClientRect().top;
+      const pad = vh * V_PAD;
+      let lo = indexAt(Math.max(0, a - pad));
+      let hi = Math.min(n, indexAt(Math.min(offs[n], a + vh + pad)) + 1);
+      const need = V_MINW - (hi - lo);
+      if (need > 0) {
+        hi = Math.min(n, hi + need);
+        const need2 = V_MINW - (hi - lo);
+        if (need2 > 0) lo = Math.max(0, lo - need2);
+      }
+      if (!force && lo >= winLo && hi <= winHi) return;
+      winLo = lo; winHi = hi;
+      if (!topSpace) {
+        topSpace = document.createElement('div'); topSpace.className = 'cc-vspace';
+        botSpace = document.createElement('div'); botSpace.className = 'cc-vspace';
+      }
+      topSpace.style.height = offs[lo] + 'px';
+      botSpace.style.height = Math.max(0, offs[n] - offs[hi]) + 'px';
+      const frag = document.createDocumentFragment();
+      frag.appendChild(topSpace);
+      for (let i = lo; i < hi; i++) frag.appendChild(makeNode(flat[i], i));
+      frag.appendChild(botSpace);
+      viewList.textContent = '';
+      viewList.appendChild(frag);
+      measureAndFix();
+    }
+    let rafPending = false, rafForce = false;
+    function requestLayout(force) {
+      if (force) rafForce = true;
+      if (rafPending) return;
+      rafPending = true;
+      requestAnimationFrame(() => {
+        const f = rafForce;
+        rafPending = false; rafForce = false;
+        layout(f);
+      });
+    }
+    function setData() {
+      hts = new Float64Array(n); hts.fill(est);
+      got = new Uint8Array(n);
+      recomputeOffsets();
+      winLo = winHi = -1;
+    }
     function renderGroupsBar() {
       viewBar.innerHTML = '';
       const grps = DATA[view.cur] || [];
@@ -211,7 +394,6 @@
       });
     }
     function render() {
-      const token = ++view.renderToken;
       // 统一为 { key, gname, arr } 结构：非搜索时是当前 tab 的分组；
       // 搜索时跨 searchKeys 全库匹配（结果带来源 tab 名标注）
       let shown = (DATA[view.cur] || []).map(g => ({ key: view.cur, gname: g[0], arr: g[1] }));
@@ -227,56 +409,29 @@
       } else if (view.curGroup) {
         shown = shown.filter(g => g.gname === view.curGroup);
       }
-      viewList.innerHTML = '';
-      view.cardByIdx = [];
-      if (!shown.length) {
+      const list = [];
+      shown.forEach(it => {
+        list.push({ header: true, gname: (it.key !== view.cur ? '[' + tabLabel(it.key) + '] ' : '') + it.gname, count: it.arr.length });
+        it.arr.forEach(c => list.push({ header: false, c, cat: it.key }));
+      });
+      flat = list; n = list.length;
+      if (!n) {
+        topSpace = botSpace = null;
         viewList.innerHTML = '<div class="cc-empty">' + emptyText + '</div>';
+        winLo = winHi = -1;
         return;
       }
-      const flat = [];
-      shown.forEach(it => {
-        flat.push({ header: true, gname: (it.key !== view.cur ? '[' + tabLabel(it.key) + '] ' : '') + it.gname, count: it.arr.length });
-        it.arr.forEach(c => flat.push({ header: false, c, cat: it.key }));
-      });
-      const frag = document.createDocumentFragment();
-      let pos = 0;
-      const step = () => {
-        if (token !== view.renderToken) return;
-        const end = Math.min(pos + view.RENDER_BATCH, flat.length);
-        for (; pos < end; pos++) {
-          const it = flat[pos];
-          if (it.header) {
-            const h = document.createElement('div');
-            h.className = 'cc-group-header';
-            h.innerHTML = '<span class="ccg-name">' + it.gname + '</span><span class="ccg-count">' + it.count + '</span>';
-            frag.appendChild(h);
-          } else {
-            const c = it.c;
-            const off = isCardOff(it.cat, c);
-            const d = document.createElement('div');
-            d.className = 'cc-item glass' + (off ? ' off' : '');
-            // 整页为系统预设字卡，统一标【系统】与自定义字卡区分；
-            // 右侧单卡开关——逐张开启/关闭该字卡（关闭后功能/聊天回复不再抽取）
-            d.innerHTML = '<div class="cc-txt"><div class="t">' + c + ' <span class="tc-known">系统</span></div></div>' +
-              '<label class="toggle ccard-toggle"><input type="checkbox"' + (off ? '' : ' checked') + '><span class="tk"></span></label>';
-            d.dataset.idx = view.cardByIdx.length;
-            view.cardByIdx.push({ c, item: d, input: d.querySelector('input'), cat: it.cat });
-            frag.appendChild(d);
-          }
-        }
-        viewList.appendChild(frag);
-        if (pos < flat.length) requestAnimationFrame(step);
-      };
-      step();
+      setData();
+      layout(true);
     }
-    // change 事件委托——list 单一监听器替代每卡一个
+    // change 事件委托——list 单一监听器替代每卡一个；窗口重建后 dataset.idx 仍指向 flat
     viewList.addEventListener('change', (e) => {
       const input = e.target;
       if (!input || input.type !== 'checkbox') return;
       const item = input.closest('.cc-item');
       if (!item) return;
-      const rec = view.cardByIdx[Number(item.dataset.idx)];
-      if (!rec || rec.input !== input) return;
+      const rec = flat[Number(item.dataset.idx)];
+      if (!rec || rec.header) return;
       const nowOff = !input.checked;
       // v3.26.x：跨 tab 搜索结果的字卡用其真实分类（rec.cat）存开关，而非当前 tab
       setCardOff(rec.cat || view.cur, rec.c, nowOff);
@@ -303,11 +458,20 @@
     viewSearch.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') { viewSearch.value = ''; view.q = ''; render(); viewSearch.blur(); }
     });
-    // 懒渲染：打开页才构建（大库不阻塞启动）
+    // 懒渲染：打开页才构建（大库不阻塞启动）。窗口只保留视口附近条目，常驻 DOM 恒定
     let renderedOnce = false;
     function ensureRendered() {
-      if (renderedOnce) return;
+      if (renderedOnce) { requestLayout(true); return; }
       renderedOnce = true;
+      document.addEventListener('scroll', function (e) { onScroll(e.target); }, { passive: true, capture: true });
+      window.addEventListener('resize', () => requestLayout(true));
+      // 页面隐藏时滚动容器的 scrollTop 归零、渲染树销毁：重新显示必须按新滚动位置重排
+      if (typeof MutationObserver !== 'undefined') {
+        try {
+          new MutationObserver(() => { if (!pageEl.hidden) requestLayout(true); })
+            .observe(pageEl, { attributes: true, attributeFilter: ['hidden'] });
+        } catch (e) {}
+      }
       refreshLibCount();
       renderGroupsBar();
       render();

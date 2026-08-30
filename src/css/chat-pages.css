@@ -191,10 +191,17 @@
    视口），且 #dc-list 带 overscroll-behavior:contain 阻断滚动链：手指在列表上滑动时
    内层滚到边界后外层永远接不上 → 卡住。改为单滚动容器——只有 .page 一层滚到底，
    #dc-list 取消内部滚动（flex/overflow/min-height 全部放开随内容自然生长）。
-   main 分类全量 DOM 渲染两版本就一致（无虚拟滚动），卡片已去阴影/transition，
-   整页长列表对性能无额外显著影响。 */
+   main 分类曾全量 DOM 渲染（无虚拟滚动）。
+   v3.26.x 推翻该结论（用户反馈 iPhone 15 Plus Safari/Edge/Chrome「进预设字卡能滑，
+   点返回卡住、返回后整页很卡」）：headless 实测 main 分类一次渲染 4903 个子节点 /
+   33221 个 DOM 节点 / 4628 个 checkbox，页高 27 万 px，全局 DOM 从 1.08 万涨到 4.43 万
+   且返回后不释放；display:none 销毁渲染树后再进要重建 3 万+ 渲染对象（实测二进 590ms、
+   返回 182ms 长任务），返回时各页 MutationObserver 的选择器扫描被膨胀的文档放大。
+   列表改真虚拟滚动窗口（default-cards.js），首尾用 .cc-vspace 占位块撑起总高。 */
 #page-default-cards { overflow-y:auto; }
 #page-default-cards #dc-list { flex:0 0 auto; overflow:visible; min-height:0; -webkit-overflow-scrolling:auto; overscroll-behavior:auto; }
+/* 虚拟窗口高度占位块：只用高度撑出滚动区间，本身无内容不可点 */
+.cc-vspace { display:block; margin:0; padding:0; pointer-events:none; }
 .dc-toggle {
   display:flex; align-items:center; justify-content:space-between; gap:10px;
   border-radius:18px; padding:14px 16px; margin-bottom:14px; flex-shrink:0;

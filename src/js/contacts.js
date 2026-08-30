@@ -137,7 +137,13 @@
 
   // ---- 当前激活联系人 ----
   let _cid = 'default';
-  try { const a = localStorage.getItem(G + ':active-contact'); if (a) _cid = a; } catch (e) {}
+  // v3.26.x #88：改走 xyStore（内存缓存优先）——idb.js 里 #40 的小键写日志在模块初始化
+  // 前已同步回放进内存缓存，LS 失效设备靠这条路就能当场拿回上次的桌面；裸 localStorage
+  // 读作兜底。仅这一步不够（日志只留最近 40 条），真正的兜底见下方 correctCidFromIdb。
+  try {
+    const a = window.xyStore ? window.xyStore(G).get('active-contact') : localStorage.getItem(G + ':active-contact');
+    if (a) _cid = a;
+  } catch (e) {}
   window.__activeCid = _cid;
 
   // 当前激活命名空间前缀（动态读取，切换后新调用即生效）
@@ -303,15 +309,24 @@
     return true;
   };
 
+  // v3.26.x #88：启动校正与用户手动切换的互斥状态（必须在 setActiveContact 之前声明）
+  let autoFixingCid = false;   // true=正在执行自动校正，不算用户手动切换
+  let cidUserSwitched = false; // 本会话用户手动切过桌面 → 校正不再干预
   // 切换联系人：更新状态 + 刷新 UI + 回桌面 + 广播事件
   window.setActiveContact = function (id) {
     if (id === (window.__activeCid || 'default')) return;
+    if (!autoFixingCid) cidUserSwitched = true;
     // v3.6.x：切换前把当前桌面的未保存聊天立即写盘（防抖定时器可能尚未触发，
     // 若等它回写会用旧命名空间把 A 桌面的消息存到 B 桌面）
     try { if (window.chatFlushSave) window.chatFlushSave(); } catch (e) {}
     window.__activeCid = id;
-    try { localStorage.setItem(G + ':active-contact', id); } catch (e) {}
-    try { if (window.idbSet) window.idbSet(G + ':active-contact', id); } catch (e) {}
+    // v3.26.x #88：改走 regStore——裸 localStorage 写会漏内存缓存，LS 失效设备（本机
+    // 0 键 + 写入 QuotaExceededError）上还会造成「IDB 有真值、内存/LS 没有」的错位，
+    // 让下面的启动校正读到陈旧值。xyStore.set 一次写齐 内存 + LS + IDB + 写日志。
+    try { regStore().set('active-contact', id); } catch (e) {
+      try { localStorage.setItem(G + ':active-contact', id); } catch (e2) {}
+      try { if (window.idbSet) window.idbSet(G + ':active-contact', id); } catch (e3) {}
+    }
     if (window.refreshActiveContactUI) window.refreshActiveContactUI();
     try { document.dispatchEvent(new Event('contact-switched')); } catch (e) {}
     try {
@@ -320,6 +335,72 @@
     } catch (e) {}
   };
   window.switchContact = window.setActiveContact;
+
+  // ===== v3.26.x 修复 #88：LS 失效设备的「当前桌面」启动校正 =====
+  // 症状：小米 14U Edge 反馈「聊天记录几小时就自己消失不显示」。诊断实证该设备
+  // localStorage 已彻底不可用（xy-home-v2 键数 0 + 写探针 QuotaExceededError，而 IndexedDB
+  // 184MB 完好、storage.persisted=true、配额仅用 855MB/11GB——与 #82 同一台机器同一状态）。
+  // 根因：旧实现启动时只在 contacts.js 顶部同步读一次 localStorage 的 active-contact，
+  // 拿不到就定死在 default 桌面，而该键的权威值一直好好存在 IndexedDB 里没人回读。
+  // 于是每次冷启动都掉回 default 桌面：用户真实记录在 <cid>:chat-msgs（该设备 563KB）里，
+  // default:chat-msgs 只剩 6.7KB → 看起来就是「记录消失了」，同桌面的美化/开关（per-cid 键）
+  // 也一并显示成 default 的值 →「设置自己变回去了」。
+  // 方案：IndexedDB 回填完成后再读一次权威值，与当前生效桌面不一致且目标仍在名册里就切回
+  //（复用 setActiveContact，链路含 chatFlushSave/contact-switched/回桌面，与手动切换同语义）。
+  // 边界：本会话用户手动切过桌面 → 完全不干预；最多尝试 3 次（回填完成 / 写日志合并 /
+  // 16 秒兜底各一次），真正切回后立即停止；回填迟迟不来由定时兜底救；时机不安全
+  //（用户已进到聊天/设置等页面）则本次放弃、不记尝试数，留给下次冷启动。
+  let cidAutoFixTries = 0;   // 已尝试次数（回填挂起时首次可能读不到值，不能一次定死）
+  // setActiveContact 会强制回到手机主页（page-phone）——用户正在聊天/设置里时被打断
+  // 比「这次没校正」更糟。所以只在开屏还没消失、或当前就停在主页时才自动切，
+  // 其余时机直接放弃（权威值不动，下次冷启动自然会校正，不占用尝试次数）。
+  function autoFixMomentSafe() {
+    try {
+      const sp = document.getElementById('splash');
+      if (sp && !sp.classList.contains('hide')) return true;
+      const home = document.getElementById('page-phone');
+      if (!home || home.hidden) return false;
+      const pages = document.querySelectorAll('.page');
+      for (let i = 0; i < pages.length; i++) {
+        if (pages[i] !== home && !pages[i].hidden) return false;
+      }
+      return true;
+    } catch (e) { return false; }
+  }
+  function correctCidFromIdb() {
+    if (cidUserSwitched || cidAutoFixTries >= 3) return;
+    if (!window.xyStore || !autoFixMomentSafe()) return;
+    let saved = null;
+    try { saved = window.xyStore(G).get('active-contact'); } catch (e) { return; }
+    saved = (saved == null ? '' : String(saved)).trim();
+    cidAutoFixTries++;
+    if (!saved || saved === (window.__activeCid || 'default')) return;
+    // 目标必须在联系人名册内（回填后名册同样来自 IDB，这时才读得到），否则不切——
+    // 防切到已删除/不存在的桌面造成空命名空间
+    if (saved !== 'default') {
+      let known = false;
+      try { known = getContacts().some(c => c && c.id === saved); } catch (e) {}
+      if (!known) return;
+    }
+    cidAutoFixTries = 99; // 已生效 → 本会话不再校正
+    autoFixingCid = true;
+    try { window.setActiveContact(saved); } catch (e) {}
+    autoFixingCid = false;
+    try { console.info('[mochi] 启动校正：localStorage 无 active-contact，已按 IndexedDB 权威值切回桌面 ' + saved); } catch (e) {}
+  }
+  try {
+    if (window.__mochiDataReady) setTimeout(correctCidFromIdb, 0);
+    else {
+      document.addEventListener('mochi-restore-done', function h() {
+        document.removeEventListener('mochi-restore-done', h);
+        correctCidFromIdb();
+      });
+    }
+    // #40 的小键写日志合并晚于回填，可能比回填更权威（最近一次写入）→ 再校正一次机会
+    document.addEventListener('mochi-wrj-heal', function () { correctCidFromIdb(); });
+    // 回填整体挂起（IDB 事务挂起设备）时的兜底：那时部分键可能已进内存缓存
+    setTimeout(correctCidFromIdb, 16000);
+  } catch (e) {}
 
   // 切换后刷新首页头像/昵称（deco-avatar 在 template.html 中）
   // v3.6.x：头像实际渲染在 .ring 内的 <img> 标签（applyAvatar），仅设 backgroundImage 清不掉——
@@ -417,7 +498,13 @@
           regStore().set('contacts', JSON.stringify([{ id: 'default', name: name }]));
         }
         // v3.6.x：active-contact 仅在未设置时写 default——迁移不应覆盖用户已选的联系人
-        if (!localStorage.getItem(G + ':active-contact')) regStore().set('active-contact', 'default');
+        // v3.26.x #88 收口：判空必须走 regStore（内存缓存里就是刚回填好的权威值）。
+        // 原来读裸 localStorage：LS 整库失效的设备（实测本项目 0 键 + 写探针
+        // QuotaExceededError）上这个条件恒真 → 每次启动都把 IDB 里真正的 active-contact
+        // 改回 'default' 并顺带写进内存缓存/写日志，把上方的启动校正（correctCidFromIdb）
+        // 整个抵消掉——用户看到的仍然是「聊天记录消失」。migrateLegacy 只在
+        // __mochiDataReady 之后运行（见本文件末尾），此刻回填已完成，读得到真值。
+        if (!regStore().get('active-contact')) regStore().set('active-contact', 'default');
         localStorage.setItem(G + ':migrated-v1', '1');
       } catch (e) {}
       window.__contactsMigrated = true;

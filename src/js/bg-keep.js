@@ -35,6 +35,7 @@
   let keepAudio = null;
   let keepInterval = null;
   let keepEnabled = false;
+  let keepUserTouched = false; // v3.26.x #88：本会话用户手动动过保活开关 → 回填后不重读覆盖
   let wakeSentinel = null; // v3.5.131：模块级，供 stopKeepAlive 释放
 
   // v3.13.x：保活补播改指数退避——原来每 5 秒无条件 play() 抢回播放权，但安卓上网页
@@ -424,6 +425,7 @@
   function syncKeepUI() { if (kaBtn) kaBtn.checked = keepEnabled; }
   if (kaBtn) {
     kaBtn.addEventListener('change', function () {
+      keepUserTouched = true; // #88：手动动过 → 回填后不再重读覆盖
       keepEnabled = kaBtn.checked;
       gSet('bg-keepalive', keepEnabled ? '1' : '0');
       if (keepEnabled) startKeepAlive(true);
@@ -445,6 +447,7 @@
 
   // ================= 后台通知 =================
   let notifyEnabled = false;
+  let notifyUserTouched = false; // v3.26.x #88：本会话用户手动动过通知开关 → 回填后不重读覆盖
   // v3.5.151：系统通知左侧图标用「带 mochi 字母的完整图标」（icon-512.png，
   // 与手机桌面快捷方式图标一致）。之前用 icon-192.png（纯心形小图标），
   // 用户看到的左侧是"爱心"而非带字母的 mochi 图标
@@ -617,6 +620,7 @@
   function syncNotifyUI() { if (nbBtn) nbBtn.checked = notifyEnabled; }
   if (nbBtn) {
     nbBtn.addEventListener('change', function () {
+      notifyUserTouched = true; // #88：手动动过 → 回填后不再重读覆盖
       if (nbBtn.checked) {
         requestNotifyPermission(function () {
           notifyEnabled = true;
@@ -671,6 +675,51 @@
     }
     syncNotifyUI();
   })();
+
+  // ===== v3.26.x 修复 #88：IDB 回填完成后重读一次两个开关 =====
+  // 症状：小米 14U Edge 反馈「后台通知有时候会自己关闭」。上面两个初始化 IIFE 在模块
+  // 加载时同步读值，而本机 localStorage 已彻底不可用（诊断：xy-home-v2 键数 0 + 写探针
+  // QuotaExceededError）——值只能等 idbRestore 异步回填进内存缓存，回填必然晚于这次同步
+  // 读 → saved===null → 判成「关」（bg-keepalive / bg-notify 在 IndexedDB 里一直是新值，
+  // xyStore.set 双写过）。「有时候」= 那次回填恰好赶在读值之前（或 LS 还有残值）。
+  // 方案：回填完成 / #40 写日志合并后再读一次，按差量重新应用。差量式实现可重复调用，
+  // 所以三个触发点（含回填挂起设备的定时兜底）都直接调它，不做「只跑一次」的状态机。
+  // 边界：用户本会话手动动过某个开关 → 该开关不再重读覆盖（他的操作就是最新值）。
+  function reheatBgSwitches() {
+    if (!keepUserTouched) {
+      const wantKeep = gGet('bg-keepalive') === '1';
+      if (wantKeep !== keepEnabled) {
+        keepEnabled = wantKeep;
+        syncKeepUI();
+        if (wantKeep) startKeepAlive(false);
+        else stopKeepAlive(false);
+        try { console.info('[mochi] #88 回填后重读后台保活：' + (wantKeep ? '开' : '关')); } catch (e) {}
+      }
+    }
+    if (!notifyUserTouched) {
+      // 与初始化同款权限校验：系统/浏览器回收权限后不得把开关显示成「开」
+      const savedNotify = gGet('bg-notify');
+      const wantNotify = savedNotify === '1' &&
+        'Notification' in window && Notification.permission === 'granted';
+      if (wantNotify !== notifyEnabled) {
+        notifyEnabled = wantNotify;
+        syncNotifyUI();
+        if (wantNotify) getBadgeUrl(function () {}); // 预热 badge 单色图（同初始化）
+        try { console.info('[mochi] #88 回填后重读后台通知：' + (wantNotify ? '开' : '关')); } catch (e) {}
+      }
+      // 权限已被回收：静默把 IDB/LS 的「开」改回「关」保持存储与 UI 一致，
+      // 但不再重复 toast（初始化那次已经提示过）
+      if (savedNotify === '1' && !wantNotify) {
+        try { gSet('bg-notify', '0'); } catch (e) {}
+      }
+    }
+  }
+  try {
+    if (window.__mochiDataReady) setTimeout(reheatBgSwitches, 0);
+    else document.addEventListener('mochi-restore-done', function () { reheatBgSwitches(); });
+    document.addEventListener('mochi-wrj-heal', function () { reheatBgSwitches(); });
+    setTimeout(reheatBgSwitches, 16000); // 回填整体挂起设备的兜底
+  } catch (e) {}
   // v3.5.115：后台通知「测试」按钮——点一下发条测试通知 + 环境诊断，
   //   安卓 Chrome 上通知不生效时一键定位卡在哪一环（HTTPS/权限/后台保活）
   // v3.5.116：增强诊断——权限未授权时主动请求；发送后追加系统级通知检查提示

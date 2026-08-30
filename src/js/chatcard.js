@@ -603,7 +603,10 @@
     // 内存缓存也没人失效它，列表页两行角标永远 0（点进作用域页却能看到字卡，真机反馈）。
     // 空库重复 countOf 只是解析 null 零负担；大库计数 >0 仍走缓存，不会反复 JSON.parse。
     if (libCounts.pub < 0) {
-      const n = countOf(buildGroupsFrom(pubStore().get(PUB_KEY)));
+      // v3.26.x：走带缓存的 pubGroupsRaw()——force 分支已 pubInvalidate()，这里第一次读
+      // 即填回缓存，后续回复池/搜索/渲染共用同一份解析结果。此前直接 parse 一次、
+      // 别处再 parse 一次，等于每次返回字卡库把多 MB 公用库 JSON.parse 两遍。
+      const n = countOf(pubGroupsRaw());
       libCounts.pub = n > 0 ? n : -1;
     }
     if (libCounts.own < 0) {

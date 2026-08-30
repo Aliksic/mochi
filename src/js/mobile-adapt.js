@@ -391,6 +391,10 @@
   // 与 ta-ask.js 同法：对可见 .ce-box 强制 reflow + toggle transform:translateZ(0)
   // 触发合成层重新提交到当前位置，随即还原（不带位移动，不改变布局）。仅安卓启用。
   function _aRefreshCe() {
+    // v3.28.x：键盘收起动画期跳过——此时每帧 resize 已驱动 .phone height 跟随，
+    // ce-box 作为正常流元素位置随 layout 自动更新合成层，无需 toggle transform
+    // 强制 reflow；收起期高频 reflow 是"收起键盘卡顿"主因。复原后自然恢复。
+    try { if (_aClosing) return; } catch (e) {}
     // 摩托罗拉G100/雨见：用户刚敲了键、正在输入时，禁止对其它/自身 ce-box
     // toggle transform。正在被输入的元素在 WebKit 内核里被强制重排/重建合成层，
     // 会丢掉当前键入/组合的第一段输入（症状：打完字框里没字，重打一遍才好）。
@@ -420,6 +424,9 @@
   // 供 _aRefreshCe 在用户正在敲键时跳过「toggle 输入元素 transform」的合成层刷新
   // （该 toggle 在部分 WebKit 内核上会丢掉当前键入/组合的第一段输入）。
   var _aUserTypos = Date.now();
+  // v3.28.x：安卓键盘收起动画进行中标记——此期间 _aRefreshCe 跳过 ce-box 强制 reflow
+  //（收起期每帧 resize 叠加 reflow 是"收起键盘卡顿"的主因之一）。仅安卓分支置位/清理。
+  var _aClosing = false;
   try {
     document.addEventListener('keydown', function () { _aUserTypos = Date.now(); }, true);
   } catch (e) {}
@@ -1191,7 +1198,7 @@
           var h = _aVV.height;
           var open = h < _aH - 60; // 可视高度明显变小 = 键盘弹出
           if (!open && h > _aH) _aH = h; // 无键盘时更新基准，地址栏变化不误判
-          if (open && !_aKb) { _aKb = true; _aPhone.style.alignSelf = 'flex-start'; kbDockPanels(); }
+          if (open && !_aKb) { _aClosing = false; _aKb = true; _aPhone.style.alignSelf = 'flex-start'; kbDockPanels(); }
           if (!open && _aKb) {
             // v3.27.x：键盘收起——动画期 visualViewport 还没回到无键盘基准（_aH）时，
             // 不要提前把 .phone 撑回全高 + 面板摘停靠。否则键盘收起动画中途就恢复：
@@ -1199,11 +1206,16 @@
             // 底部输入行整行飞」）。改为动画期持续跟随 vv 平滑上浮、面板保持停靠，
             // 等 vv 回到基准附近（≤12px 误差）才真正恢复，杜绝中途下沉跳变。
             if (h < _aH - 12) {
+              // v3.28.x：收起动画期只写 height 跟随 vv，不再调 _aPinPan——_aPinPan 读
+              // _aVV.offsetTop/scrollY 会强制同步 reflow，每帧 resize 叠加致主线程拥堵
+              //（用户报"手动收起键盘那一刻卡顿"，红米/小米 Chrome 复现）。收起期 offsetTop
+              // 通常 ~0（键盘往下收、视口不平移），平移无需逐帧归零；复原时 _aPanComp 统一兜底。
+              _aClosing = true;
               if (_aPhone.style.height !== h + 'px') _aPhone.style.height = h + 'px';
-              _aPinPan();
               return;
             }
             _aKb = false;
+            _aClosing = false;
             _aPhone.style.height = '';
             _aPhone.style.alignSelf = '';
             _aPanComp();
@@ -1215,7 +1227,9 @@
             // 值不变不写 DOM（字符串比对早退），打字/滚动时不重排
             if (_aPhone.style.height !== hs) _aPhone.style.height = hs;
             // v3.15.x：收缩后浏览器为露焦点做的视口平移已无必要，残留会整页飞走露灰
-            _aPinPan();
+            // v3.28.x：收起动画期（_aClosing）跳过 _aPinPan——其读 offsetTop/scrollY 强制
+            // 同步 reflow，每帧 resize 叠加致"收起键盘卡顿"。弹起期仍需归零平移残留。
+            if (!_aClosing) _aPinPan();
           }
         }
         // v3.10.x：聚焦期间主动轮询兜底——安卓 visualViewport.resize 在键盘弹出时
@@ -1263,6 +1277,7 @@
                 // 提前把 .phone 撑回全高导致面板/输入行下沉跳变（与 syncAndroidKb 同判据）
                 if (_aVV.height >= _aH - 12) {
                   _aKb = false;
+                  _aClosing = false;
                   _aPhone.style.height = '';
                   _aPhone.style.alignSelf = '';
                   _aPanComp();
@@ -1354,6 +1369,7 @@
         // 首次聚焦兜底：键盘弹出的 resize 偶发前置/漏触发，紧跟一次判定
         document.addEventListener('focusin', function (e) {
           try {
+            _aClosing = false; // v3.28.x：聚焦=弹键盘（或保持），退出收起态
             if (_aIsText(e.target)) { _aTextFocused = e.target; _aFocusAt = Date.now(); _aBump(); }
             if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable)) {
               try { syncAndroidKb(); } catch (e3) {}
@@ -1383,6 +1399,7 @@
         // 失焦兜底：键盘收起偶发漏 resize，稍作延迟按可视高度复原
         document.addEventListener('focusout', function (e) {
           try { if (e.target === _aTextFocused) _aTextFocused = null; } catch (e2) {}
+          if (_aKb) _aClosing = true; // v3.28.x：键盘开着时失焦=正在收起，标记以跳过逐帧 _aPinPan
           setTimeout(syncAndroidKb, 120);
           setTimeout(syncAndroidKb, 350);
           // v3.12.x：失焦后复查保底停靠——键盘已收/无聚焦即复原 .phone
@@ -1393,6 +1410,7 @@
           setTimeout(function () {
             if (_aKb && _aVV.height >= _aH - 60) {
               _aKb = false;
+              _aClosing = false;
               _aPhone.style.height = '';
               _aPhone.style.alignSelf = '';
               _aPanComp();
@@ -1408,6 +1426,7 @@
               _aProvClear();
               if (_aKb) {
                 _aKb = false;
+                _aClosing = false;
                 _aPhone.style.height = '';
                 _aPhone.style.alignSelf = '';
                 _aPanComp();

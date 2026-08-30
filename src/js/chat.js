@@ -118,6 +118,60 @@ if (ok) return true;
 return window.idbSet(key, JSON.stringify(arr));
 });
 }
+// v3.26.x #89：聊天记录「条数账本」+ 缩水守卫（本会话跨桌面/读库异常路径的最后止损）。
+// #88 的 authOk 闸门只挡「本会话没读到权威值」；账本再挡一种：读到了、但内存里的数组
+// 明显不是库里那一份（切错桌面残留、快照污染、并发覆盖）。账本 = 本命名空间最近一次
+// 权威条数，存 <prefix>:chat-meta（几百字节小键，idb.js 已把它排除出写日志，
+// 不会被 LS 回滚补回过期值）。整包落盘前同步比对：新条数不足账本一半且账本 ≥300 条
+// → 判定可疑缩水，IDB 与 LS 快照一律不写（LS 废机上覆盖就是永久丢），弹窗告知一次
+// 并补挂 scheduleIdbRetry()：权威读回后 loadMsgs 会把内存里的新消息合并进完整历史再存。
+// 守卫判定全同步（比对内存数字，零额外开销），只在可疑路径才弹窗。
+const CHAT_LEDGER_MIN = 300;
+const CHAT_LEDGER_STEP = 50;   // IDB 账本按步进落盘：只需量级正确，免每次存盘多发事务
+const chatLedger = {};         // prefix -> 已知权威条数
+let chatLedgerWarned = {};
+function chatLedgerSave(prefix, n) {
+const prev = chatLedger[prefix];
+chatLedger[prefix] = n;
+if (prev === n || !window.idbSet) return;
+if (typeof prev === 'number' && n > prev && n - prev < CHAT_LEDGER_STEP) return;
+try { window.idbSet(prefix + ':chat-meta', JSON.stringify({ n: n, t: Date.now() })); } catch (e) {}
+}
+// 小键补读（chat-msgs 大键读失败时，恰恰只有它能回答「库里到底有多少条」）：
+// 已知有值就不重复读，异步回来也不覆盖本会话更新过的内存值。
+function chatLedgerLoad(prefix) {
+if (!window.idbGet || chatLedger[prefix] !== undefined) return;
+try {
+window.idbGet(prefix + ':chat-meta').then(function (v) {
+try {
+if (v === undefined || v === null || chatLedger[prefix] !== undefined) return;
+const o = typeof v === 'string' ? JSON.parse(v) : v;
+if (o && typeof o.n === 'number' && o.n > 0) chatLedger[prefix] = o.n;
+} catch (e) {}
+}).catch(function () {});
+} catch (e) {}
+}
+// 返回 true=允许整包落盘（账本已更新）；false=可疑缩水，已拒绝落盘
+function chatLedgerGuard(prefix, arr) {
+const n = Array.isArray(arr) ? arr.length : 0;
+const base = chatLedger[prefix];
+if (typeof base === 'number' && base >= CHAT_LEDGER_MIN && n * 2 < base) {
+if (!chatLedgerWarned[prefix]) {
+chatLedgerWarned[prefix] = 1;
+try {
+if (window.openModal) window.openModal('聊天记录保护', '', null, {
+noInput: true, okText: '知道了',
+staticText: '检测到本次要保存的记录比已存的历史少了很多（' + base + ' 条 → ' + n + ' 条），' +
+'已暂缓保存以防历史被覆盖。请留意稍后重进聊天页确认记录是否完整。'
+});
+} catch (e) {}
+try { scheduleIdbRetry(); } catch (e) {}
+}
+return false;
+}
+chatLedgerSave(prefix, n);
+return true;
+}
 // 精简快照：大历史时剥掉 img/voice/long-text 及 parts 里的图片/语音负载（保留占位与 _lsLite
 // 标记，合并逻辑按原语义识别），使 localStorage 兜底快照始终 ≤2MB、且构建过程不再整包串化。
 function liteSnapArray(arr) {
@@ -225,22 +279,40 @@ renderWindow(false, true);
 scrollChatBottom();
 }
 } catch (e) {}
+// v3.26.x #88：保险丝只放开「显示 + LS 有损快照」，整包落盘仍要等真读到权威
+//（authLoadedPrefix 不匹配时 saveMsgs/saveMsgsNow 一律暂存）。这里顺带补挂一次有界
+// 读回重试（scheduleIdbRetry 自身限 6 次/5s 间隔），否则读库超时的设备本会话再也拿不回历史。
+try { scheduleIdbRetry(); } catch (e) {}
 }, 15000);
 }
 function saveMsgs() {
-if (!chatDbReady) {
+// v3.26.x #88：守卫从「未就绪」收紧到「本会话没读到该桌面的权威数据」。
+// chatDbReady 会被 15 秒就绪保险丝（armReadyFuse）置 true，而那时 authLoadedPrefix 仍
+// 不等于当前命名空间（IDB 读库超时/挂起）。旧逻辑在这个窗口只要 msgs 非空就整包写
+// IDB：用户发一条消息 → msgs=[这一条] → 整包覆盖 = 该桌面全部历史被抹成一条。
+// 诊断实证（小米 14U Edge）：本机 localStorage 已废（键数 0 + 写探针 QuotaExceededError），
+// writeLsSnapshot 的 LS 兜底同样写不进去，覆盖就是永久丢；配合该机启动耗时 24 秒，
+// 读库必然压不过 15 秒保险丝 → 高发。
+// 现在这种窗口一律只暂存 pendingLocal + 写 LS 有损快照 + 安排重试读回权威；权威读回后
+// loadMsgs 会把 pendingLocal 合并进完整历史再落盘。语义：宁可晚存几条，绝不覆盖全部。
+const authOk = chatDbReady && authLoadedPrefix === window.activePrefix();
+if (!authOk) {
 try { pendingLocal = msgs.slice(); } catch (e) {}
 // v3.14.x：内存为空时不写 LS 快照——权威读取失败窗口里任何模块触发保存，
 // 会把 LS 里仅存的有损备份也覆盖成 "[]"（IDB 万一后续丢失将无从恢复）
 if (msgs.length) writeLsSnapshot(msgs, undefined, true);
+try { scheduleIdbRetry(); } catch (e) {}
 return;
 }
 // v3.26.x 止血：改为合并+低频+空闲落盘（见上方调度器），不再每个动作同步写整包
 const myPrefix = window.activePrefix();
 schedulePersist(() => {
-  // v3.14.x：空记录落盘守卫——本会话从未成功读过该桌面的权威数据时，
-  // 禁止把空数组写进 IDB。清空聊天记录走 clearChatHistory 的 store.remove 直删。
-  if (!msgs.length && authLoadedPrefix !== myPrefix) return;
+  // v3.26.x #88：原守卫只挡空数组（防覆盖全部历史），非空时仍会整包覆盖——改为
+  // 「本会话确实读到过该命名空间的权威数据」才允许整包落盘。排队到执行之间若切过
+  // 桌面，contact-switched 会先 flushPersistNow() 落完再归位 authLoadedPrefix，不漏存。
+  if (authLoadedPrefix !== myPrefix) return;
+  // v3.26.x #89：条数缩水守卫——内存数组明显少于库内账本时整包不落（含 LS 快照）
+  if (!chatLedgerGuard(myPrefix, msgs)) return;
   // v3.26.x OOM：大历史 IDB 直存数组（免整包 stringify），小历史仍字符串路径
   try { if (window.idbSet) persistMsgsToIdb(myPrefix + ':chat-msgs', msgs); } catch (e) {}
   writeLsSnapshot(msgs, myPrefix);
@@ -248,9 +320,9 @@ schedulePersist(() => {
 }
 function flushSave() {
 if (window.__resetting) return;
-// v3.26.x 止血：立即落盘待写（离页/切走兜底）；未就绪则仅写 LS 有损快照
+// v3.26.x 止血：立即落盘待写（离页/切走兜底）；#88：未读到权威则仅写 LS 有损快照
 flushPersistNow();
-if (!chatDbReady && msgs.length) writeLsSnapshot(msgs, undefined, true);
+if ((!chatDbReady || authLoadedPrefix !== window.activePrefix()) && msgs.length) writeLsSnapshot(msgs, undefined, true);
 }
 window.chatFlushSave = flushSave;
 try {
@@ -337,8 +409,16 @@ function runDeferredNormalization() {
     try { if (sysNickCatchup()) changed = true; } catch (e) {}
     normPrefix = null;
     if (!changed) return;
+    // v3.26.x #88：未读到权威时不整包写回（同 saveMsgs 守卫）。归一化是幂等的，
+    // 本次跳过会在下次读库成功后重跑；拿内存里的部分数组覆盖 = 丢全部历史。
+    if (authLoadedPrefix !== myPre) return;
+    // v3.26.x #89：归一化会删相邻重复（条数变少）——命中缩水判定时只跳过落盘（幂等，
+    // 下次读库成功后重跑），渲染照常，不影响本会话使用。
+    const canPersist = chatLedgerGuard(myPre, msgs);
+    if (canPersist) {
     try { if (window.idbSet) persistMsgsToIdb(myPre + ':chat-msgs', msgs); } catch (e) {}
     try { writeLsSnapshot(msgs, myPre, true); } catch (e) {}
+    }
     try { if (chatVisible() && msgs.length) { renderWindow(false, true); scrollChatBottom(); } } catch (e) {}
   };
   const tick = () => {
@@ -422,19 +502,28 @@ if (!skipRead) {
 try {
 if (window.idbGet) {
 const myPrefix = window.activePrefix();
+// v3.26.x #89：先补读条数账本（小键，几乎不会超时）。大键读取失败时它是唯一
+// 能回答「库里到底有多少条」的依据，落盘守卫全靠它。
+try { chatLedgerLoad(myPrefix); } catch (e) {}
 window.idbGet(myPrefix + ':chat-msgs').then(v => {
 if (window.activePrefix() !== myPrefix) return;
 if (v === undefined || v === null) {
 // v3.14.x：先区分「键确实不存在」与「读取失败/超时」——idbGet 超时兜底也
 // resolve undefined，真机切桌面并发抢事务时大键读取超时并不罕见；若当"无权威"
-// 会置 ready 并用内存/LS 有损快照覆盖 IDB = 全部历史被清。用 idbGetAllKeys
-// 复核：键在列表=这次读取失败，绝不落盘、安排有界重试；不在=确认无历史才走原逻辑。
+// 会置 ready 并用内存/LS 有损快照覆盖 IDB = 全部历史被清。
+// v3.26.x #89：复核改走 idb.js 的严格三态探测 idbHasKey（true 存在/false 确认没有/
+// null 没读到）。原 idbGetAllKeys 在超时、挂起时 resolve 空数组，与「确认空库」
+// 不可区分 → 读取失败被当成「这个桌面没有历史」，置 authLoadedPrefix 放开整包落盘
+// → 发一条消息即把全部历史覆盖成一条（诊断实证：小米 14U Edge，LS 已废无第二副本）。
+// 现在只有 has === false 才认「无历史」；null 与 true 一律按读取失败处理。
 const idbKey = myPrefix + ':chat-msgs';
-const confirmMiss = window.idbGetAllKeys
+const confirmMiss = window.idbHasKey
+? window.idbHasKey(idbKey).then(function (has) { return has === false; })
+: (window.idbGetAllKeys
 ? window.idbGetAllKeys().then(function (keys) {
 return !(keys || []).some(function (k) { return k === idbKey; });
 }).catch(function () { return false; })
-: Promise.resolve(true);
+: Promise.resolve(true));
 confirmMiss.then(function (isMiss) {
 if (window.activePrefix() !== myPrefix) return;
 if (!isMiss) { scheduleIdbRetry(); return; }
@@ -457,6 +546,8 @@ pendingLocal = null;
 try { if (window.idbSet) persistMsgsToIdb(myPrefix + ':chat-msgs', msgs); } catch (e) {}
 writeLsSnapshot(msgs, myPrefix, true);
 }
+// #89：已确认库里没有 chat-msgs，账本随之对齐真实状态（过期的高账本不该再拦正常保存）
+try { chatLedgerSave(myPrefix, (msgs && msgs.length) || 0); } catch (e) {}
 });
 return;
 }
@@ -514,6 +605,8 @@ chatDbReady = true;
 // v3.14.x：本命名空间已读到权威（此后空数组落盘才被允许——内存已含全部历史）
 authLoadedPrefix = myPrefix;
 idbRetryCount = 0;
+// v3.26.x #89：账本基线＝刚读到的库内条数（同值不重复落盘，见 chatLedgerSave 节流）
+try { chatLedgerSave(myPrefix, idbArr.length); } catch (e) {}
 try {
 lastIdbLoadPrefix = window.activePrefix();
 lastIdbLoadAt = Date.now();
@@ -2096,7 +2189,10 @@ sessionChangedIdx.clear();
 chatDbReady = true;
 renderStart = 0; // v3.6.x：分页窗口起点复位（消息已清空）
 cancelPersist();
+// v3.26.x #89：用户主动清空＝合法归零，账本必须同步（否则缩水守卫会一直拒绝后续保存）
+try { chatLedger[window.activePrefix()] = 0; } catch (e) {}
 try { store.remove('chat-msgs'); } catch (e) {}
+try { store.remove('chat-meta'); } catch (e) {}
 if (body) body.innerHTML = '';
 clearChatUnread();
 };
@@ -2114,6 +2210,8 @@ renderStart = 0;
 cancelPersist();
 try { if (window.idbSet) persistMsgsToIdb(window.activePrefix() + ':chat-msgs', msgs); } catch (e) {}
 writeLsSnapshot(msgs, undefined, true);
+// v3.26.x #89：主动整包替换＝合法，账本直接对齐新条数（旧的高账本不得继续拦后续保存）
+try { chatLedgerSave(window.activePrefix(), msgs.length); } catch (e) {}
 if (body) body.innerHTML = '';
 clearChatUnread();
 if (chatVisible() && msgs.length) {
@@ -2433,24 +2531,33 @@ let tries = 0;
 const writeArr = function (arr) {
 try { window.idbSet(key, JSON.stringify(arr)); } catch (e) {}
 try { localStorage.setItem(key, JSON.stringify(arr)); } catch (e) {}
+// v3.26.x #89：跨桌面追加后同步条数账本（下次冷启动大键读失败时它就是守卫依据）
+try { chatLedgerSave('xy-home-v2:' + cid, arr.length); } catch (e) {}
 };
 const attempt = function () {
 tries++;
 window.idbGet(key).then(function (v) {
 if (v !== undefined && v !== null) {
 let arr = [];
-try { arr = typeof v === 'string' ? JSON.parse(v) : v; } catch (e) { arr = []; }
-if (!Array.isArray(arr)) arr = [];
+let readOk = true;
+try { arr = typeof v === 'string' ? JSON.parse(v) : v; } catch (e) { arr = []; readOk = false; }
+if (!Array.isArray(arr)) { arr = []; readOk = false; }
+// v3.26.x #89：读到有值却解析失败＝库里有历史只是读不懂，写回 [这一条] 等于删光，绝不写
+if (!readOk) return;
 arr.push({ side: 'in', special: opts.special || 'poke', text: text, ts: Date.now(), mailNotice: !!opts.mailNotice });
 writeArr(arr);
 return;
 }
 // undefined：复核键是否真的不存在
-const confirmMiss = window.idbGetAllKeys
+// v3.26.x #89：改走严格三态探测 idbHasKey，只有确认「库里没有」(false) 才允许新建只含
+// 一条的数组；true（读取失败）与 null（探测本身失败）都按未知处理，安排重试。
+const confirmMiss = window.idbHasKey
+? window.idbHasKey(key).then(function (has) { return has === false; })
+: (window.idbGetAllKeys
 ? window.idbGetAllKeys().then(function (keys) {
 return !(keys || []).some(function (k) { return k === key; });
 }).catch(function () { return false; })
-: Promise.resolve(true);
+: Promise.resolve(true));
 confirmMiss.then(function (isMiss) {
 if (isMiss) writeArr([{ side: 'in', special: opts.special || 'poke', text: text, ts: Date.now(), mailNotice: !!opts.mailNotice }]);
 else if (tries < 3) setTimeout(attempt, 1500);
@@ -2474,23 +2581,33 @@ window.chatAppendDeskRec = function (cid, rec) {
   const writeArr = function (arr) {
     try { window.idbSet(key, JSON.stringify(arr)); } catch (e) {}
     try { localStorage.setItem(key, JSON.stringify(arr)); } catch (e) {}
+    // v3.26.x #89：跨桌面追加后同步条数账本（下次冷启动大键读失败时它就是守卫依据）
+    try { chatLedgerSave('xy-home-v2:' + cid, arr.length); } catch (e) {}
   };
   const attempt = function () {
     tries++;
     window.idbGet(key).then(function (v) {
       if (v !== undefined && v !== null) {
         let arr = [];
-        try { arr = typeof v === 'string' ? JSON.parse(v) : v; } catch (e) { arr = []; }
-        if (!Array.isArray(arr)) arr = [];
+        let readOk = true;
+        try { arr = typeof v === 'string' ? JSON.parse(v) : v; } catch (e) { arr = []; readOk = false; }
+        if (!Array.isArray(arr)) { arr = []; readOk = false; }
+        // v3.26.x #89：读到有值却解析失败＝库里有历史只是读不懂，写回 [这一条] 等于删光，绝不写
+        if (!readOk) return;
         arr.push(rec);
         writeArr(arr);
         return;
       }
-      const confirmMiss = window.idbGetAllKeys
-        ? window.idbGetAllKeys().then(function (keys) {
-            return !(keys || []).some(function (k) { return k === key; });
-          }).catch(function () { return false; })
-        : Promise.resolve(true);
+      // v3.26.x #89：同 chatAppendToDeskMsg——改走严格三态探测 idbHasKey，只有确认库里
+      // 没有（false）才新建只含一条的数组；true/null 一律按读取失败重试。后台通知回到
+      // 浏览器瞬间 IDB 事务最容易未热，这条路径正是「记录自己消失」最像的触发点。
+      const confirmMiss = window.idbHasKey
+        ? window.idbHasKey(key).then(function (has) { return has === false; })
+        : (window.idbGetAllKeys
+          ? window.idbGetAllKeys().then(function (keys) {
+              return !(keys || []).some(function (k) { return k === key; });
+            }).catch(function () { return false; })
+          : Promise.resolve(true));
       confirmMiss.then(function (isMiss) {
         if (isMiss) writeArr([rec]);
         else if (tries < 3) setTimeout(attempt, 1500);
@@ -2515,13 +2632,21 @@ window.chatAppendDeskTextTo = function (cid, text) {
   window.chatAppendDeskRec(cid, { side: 'in', special: 'poke', text: text || '想你了，来聊聊天吧。' });
 };
 function saveMsgsNow() {
-// v3.14.x：空记录落盘守卫（同 saveMsgs）——调用方都是作答/回应后触发，
-// msgs 必非空；真出现空+权威未读过时绝不写盘（防覆盖全部历史）
-if (!msgs.length && authLoadedPrefix !== window.activePrefix()) return;
+// v3.26.x #88：与 saveMsgs 同一条守卫。调用方都是作答/回应后触发，msgs 必非空，
+// 所以 v3.14.x 的「只挡空数组」在这里等于没挡——未读到权威的窗口照旧整包覆盖全部历史。
+const authOk = chatDbReady && authLoadedPrefix === window.activePrefix();
+if (!authOk) {
+try { pendingLocal = msgs.slice(); } catch (e) {}
+if (msgs.length) writeLsSnapshot(msgs, undefined, true);
+try { scheduleIdbRetry(); } catch (e) {}
+return;
+}
 // v3.26.x 止血：合并到低频空闲落盘（不再立即同步写整包），离页 flushSave 兜底
 const myPrefix = window.activePrefix();
 schedulePersist(() => {
-  if (!msgs.length && authLoadedPrefix !== myPrefix) return;
+  if (authLoadedPrefix !== myPrefix) return;
+  // v3.26.x #89：条数缩水守卫（同 saveMsgs）
+  if (!chatLedgerGuard(myPrefix, msgs)) return;
   // v3.26.x OOM：大历史 IDB 直存数组（免整包 stringify）
   try { if (window.idbSet) persistMsgsToIdb(myPrefix + ':chat-msgs', msgs); } catch (e) {}
   writeLsSnapshot(msgs, myPrefix, true);

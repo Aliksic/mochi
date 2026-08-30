@@ -8,7 +8,8 @@
 // 修复断言：
 //   T1 挂起一次（首次读 garden-data 返回 undefined，模拟 idbGet 超时熔断）：锁存期间
 //      IDB 老花园不被覆盖；重试读到后自动采用并渲染出花；IDB 原始档完好
-//   T2 IDB 无花园但自动备份副本有 → 弹「找回花园」弹窗，确认后 LS+IDB 都恢复且渲染
+//   T2 v3.29.x 副本机制已下线：遗留的自动备份副本在启动后被自动清理（LS+IDB 都不剩），
+//      且不再出现任何「从副本找回」弹窗（找回花园 / 检测到数据可能丢失）
 //   T3 正常路径回归：LS 有档时进园立即渲染，无锁卡顿
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:http';
@@ -140,16 +141,23 @@ function check(desc, ok, detail) {
   console.log((ok ? 'PASS' : 'FAIL') + '  ' + desc + (detail !== undefined ? '  [' + detail + ']' : ''));
 }
 
+let navSeq = 0;
+async function waitFor(expr, tries = 60, step = 300) {
+  for (let i = 0; i < tries; i++) { if (await evalJs(expr)) return true; await sleep(step); }
+  return false;
+}
 async function gotoPage() {
+  // Page.navigate 立即返回且求值可能仍落在旧文档上；先在旧文档打标记，
+  // 等标记消失（文档已被替换）再等脚本/数据就绪，否则用例会偶发误报。
+  const token = 'nav' + Date.now().toString(36) + '-' + (++navSeq);
+  await evalJs(`window.__navToken = ${JSON.stringify(token)}; true`);
   await cdp('Page.navigate', { url: baseUrl + '/' });
+  await waitFor(`window.__navToken !== ${JSON.stringify(token)}`, 60, 250);
   await sleep(2200);
-  for (let i = 0; i < 40; i++) { if (await evalJs('!!window.__mochiDataReady')) break; await sleep(300); }
+  await waitFor("typeof window.idbGet === 'function' && typeof window.idbGetMany === 'function' && typeof window.idbSet === 'function'");
+  await waitFor('!!window.__mochiDataReady');
   await evalJs("(function(){var s=document.getElementById('splash');if(s&&!s.classList.contains('hide'))s.click();return true;})()");
   await sleep(700);
-}
-async function clearSessionFlags() {
-  // 每会话一次的弹窗标志（找回花园/全量恢复提示）不能跨用例残留
-  await evalJs("(function(){try{sessionStorage.removeItem('xy-garden-recover-offered');sessionStorage.removeItem('xy-snapshot-offer-done');}catch(e){}return true;})()");
 }
 async function clearOrigin() {
   await cdp('Storage.clearDataForOrigin', { origin: baseUrl, storageTypes: 'local_storage,indexed_storage,cookies' });
@@ -179,7 +187,7 @@ const oldGarden = JSON.stringify({
   st: { p: 3, w: 1, h: 0, f: 0, mp: 0, mw: 0, mh: 0, mf: 0 }, decor: {}, visitor: null
 });
 async function seedDummies() {
-  // 3 个无害业务键：让 data-backup 的「全量恢复」提示保持安静（idbBiz≥3）
+  // 3 个无害业务键：供 Case B 校验「清理副本只动那一个键，不误伤业务数据」
   await evalJs(`(function(){ return Promise.all([
     window.idbSet('xy-home-v2:t-dummy-1','d1'),
     window.idbSet('xy-home-v2:t-dummy-2','d2'),
@@ -227,45 +235,50 @@ check('A5 花园页渲染出非空地块 ≥2', (await plotCount()) >= 2, 'plots
 const errsA = JSON.parse(await jsErrors() || '[]');
 check('A6 无 JS 运行时错误', errsA.length === 0, errsA.join('|'));
 
-// ========== Case B：IDB 无花园但自动备份副本有 → 定向找回弹窗 ==========
+// ========== Case B：遗留自动备份副本 → 启动后自动清理 + 不再弹「从副本找回」 ==========
+const SNAP = 'xy-home-v2:__auto-backup-snapshot';
 await clearOrigin();
 await gotoPage();
 await seedDummies();
 await evalJs(`(function(){
   var snap = { version:'1.0', app:'mochi-zika', exportTime:new Date().toISOString(), ls:{}, idb:{} };
   snap.ls['${GK}'] = ${JSON.stringify(oldGarden)};
-  return window.idbSet('xy-home-v2:__auto-backup-snapshot', JSON.stringify(snap));
+  var raw = JSON.stringify(snap);
+  try { localStorage.setItem('${SNAP}', raw); } catch (e) {}
+  return window.idbSet('${SNAP}', raw);
 })()`);
 await sleep(500);
-// 清掉种子页自动保存写入的垃圾空档（LS+IDB）+ 会话标志，让被测页是「丢失后首次启动」
+// 花园业务键清空 → 旧版本会在此场景弹「找回花园」（整包 JSON.parse 副本）
 await evalJs(`(function(){ localStorage.removeItem('${GK}'); return window.idbDelete('${GK}'); })()`);
-await clearSessionFlags();
-await gotoPage();
-let modalTitle = '';
-for (let i = 0; i < 30; i++) { // 轮询等「找回花园」弹窗（判定为空后弹出）
-  modalTitle = await evalJs(`(function(){ var m=document.getElementById('modal-mask'); if(!m||m.hidden) return ''; var t=document.getElementById('modal-title'); return t?t.textContent:''; })()`);
-  if (String(modalTitle).indexOf('找回') >= 0) break;
-  await sleep(500);
+const snapSeeded = await waitFor(`(function(){ return new Promise(function(res){ window.idbGet('${SNAP}').then(function(v){ res(v != null); }).catch(function(){ res(false); }); }); })()`, 20, 300);
+check('B0 种子：遗留副本已写入 IDB', snapSeeded === true);
+
+// 冷启动被测页：purgeLegacySnapshot 在数据就绪后 1.5s 执行；整段轮询窗口内同时盯弹窗
+await cdp('Page.navigate', { url: baseUrl + '/' });
+let purgedIdb = false;
+let snapModal = '';
+for (let i = 0; i < 30; i++) { // 最多 12s：足够覆盖旧代码两处副本弹窗的触发时机
+  if (!purgedIdb) {
+    purgedIdb = await evalJs(`(function(){ return new Promise(function(res){ window.idbGet('${SNAP}').then(function(v){ res(v == null); }).catch(function(){ res(false); }); }); })()`);
+  }
+  const t = await evalJs(`(function(){ var m=document.getElementById('modal-mask'); if(!m||m.hidden) return ''; var x=document.getElementById('modal-title'); return x?String(x.textContent):''; })()`);
+  const ts = String(t || '');
+  if (ts.indexOf('找回') >= 0 || ts.indexOf('副本') >= 0 || ts.indexOf('数据可能丢失') >= 0) snapModal = ts;
+  if (purgedIdb && snapModal) break;
+  await sleep(400);
 }
-check('B1 弹出「找回花园」定向恢复弹窗', String(modalTitle).indexOf('找回') >= 0, 'title=' + modalTitle);
-if (String(modalTitle).indexOf('找回') >= 0) {
-  await evalJs(`(function(){ var b=document.getElementById('modal-ok'); if(b) b.click(); return true; })()`);
-  await sleep(800);
-  const recLs = await evalJs(`!!localStorage.getItem('${GK}') && localStorage.getItem('${GK}').indexOf('rose') >= 0`);
-  const recIdb = await idbRaw(GK);
-  check('B2 确认后 LS+IDB 均恢复老花园', recLs === true && recIdb.indexOf('"type":"rose"') >= 0);
-  await openGarden();
-  await sleep(900);
-  check('B3 进园渲染出花', (await plotCount()) >= 2, 'plots=' + (await plotCount()));
-}
+check('B1 启动后遗留副本已从 IndexedDB 自动清理', purgedIdb === true);
+check('B2 启动后遗留副本已从 localStorage 自动清理', await evalJs(`localStorage.getItem(${JSON.stringify(SNAP)}) === null`) === true);
+check('B3 不再出现任何「从副本找回/数据丢失」弹窗', snapModal === '', 'title=' + snapModal);
+const dummiesOk = await evalJs(`(function(){ return new Promise(function(res){ window.idbGetMany(['xy-home-v2:t-dummy-1','xy-home-v2:t-dummy-2','xy-home-v2:t-dummy-3']).then(function(m){ res(!!m && m['xy-home-v2:t-dummy-1'] === 'd1' && m['xy-home-v2:t-dummy-2'] === 'd2' && m['xy-home-v2:t-dummy-3'] === 'd3'); }).catch(function(){ res(false); }); }); })()`);
+check('B4 清理只动副本键，业务键完好', dummiesOk === true);
 const errsB = JSON.parse(await jsErrors() || '[]');
-check('B4 无 JS 运行时错误', errsB.length === 0, errsB.join('|'));
+check('B5 无 JS 运行时错误', errsB.length === 0, errsB.join('|'));
 
 // ========== Case C：正常路径回归（LS 有档 → 进园立即渲染，不受锁影响） ==========
 await clearOrigin();
 await gotoPage();
 await seedDummies();
-await clearSessionFlags();
 await evalJs(`(function(){ window.xyStore('xy-home-v2:default').set('garden-data', ${JSON.stringify(oldGarden)}); return true; })()`);
 await sleep(600); // xyStore.set 双写 LS+IDB
 await gotoPage();

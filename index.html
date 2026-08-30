@@ -1293,7 +1293,7 @@ to { opacity: 1; transform: translateX(0); }
 }
 .msg-hi-heart {
 position:absolute;
-top:-3px; left:-3px;
+top:2px; left:4px;
 width:10px; height:10px;
 color:#ff4d6a;
 pointer-events:none;
@@ -1593,11 +1593,11 @@ background:rgba(255,255,255,.92); color:#666; cursor:pointer;
 font-family:inherit; -webkit-tap-highlight-color:transparent;
 }
 .more-tab.sel { background:#111; color:#fff; border-color:#111; }
-.more-grid { display:flex; flex-wrap:wrap; gap:14px; justify-content:center; }
+.more-grid { display:grid; grid-template-columns:repeat(4, 1fr); gap:14px; justify-items:center; }
 .more-grid[hidden] { display:none; }
 .more-item[hidden] { display:none; }
 .more-item {
-width:64px; display:flex; flex-direction:column; align-items:center; gap:7px;
+width:100%; max-width:64px; display:flex; flex-direction:column; align-items:center; gap:7px;
 background:transparent; border:none; cursor:pointer; font-family:inherit;
 color:var(--ink); -webkit-tap-highlight-color:transparent;
 }
@@ -2596,6 +2596,7 @@ animation: ccToastAutoHide 2.6s ease forwards;
 #dc-list .cc-item:active { transform: none; }
 #page-default-cards { overflow-y:auto; }
 #page-default-cards #dc-list { flex:0 0 auto; overflow:visible; min-height:0; -webkit-overflow-scrolling:auto; overscroll-behavior:auto; }
+.cc-vspace { display:block; margin:0; padding:0; pointer-events:none; }
 .dc-toggle {
 display:flex; align-items:center; justify-content:space-between; gap:10px;
 border-radius:18px; padding:14px 16px; margin-bottom:14px; flex-shrink:0;
@@ -6306,6 +6307,7 @@ display: flex; align-items: center; justify-content: center; overflow: hidden; f
 .them-tabs { position:sticky; top:0; z-index:6; display:flex; gap:0; padding:8px 4px 0; background:var(--bg-b); border-bottom:1px solid rgba(0,0,0,.06); flex-shrink:0; }
 .them-tab { flex:1; text-align:center; font-size:12.5px; font-weight:600; padding:9px 0 8px; color:rgba(0,0,0,.35); border-bottom:2px solid transparent; border-radius:0; background:transparent; cursor:pointer; transition:color .15s,border-color .15s; }
 .them-tab.active { color:#111; border-bottom-color:#111; }
+#page-chat-settings .chat-head, #page-theme .chat-head { position:static; }
 [data-theme="dark"] .them-tabs { border-bottom-color:rgba(255,255,255,.12); }
 [data-theme="dark"] .them-tab { color:rgba(255,255,255,.38); }
 [data-theme="dark"] .them-tab.active { color:#fff; border-bottom-color:#fff; }
@@ -6402,11 +6404,6 @@ font-family:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent;
 .storage-cat-row.open .storage-cat-keys { display:block; }
 .storage-clear { display:block; width:100%; margin-top:12px; padding:12px; border:none; border-radius:14px; background:var(--ink); color:var(--bg-b,#fff); font-size:14px; font-weight:600; font-family:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent; }
 .storage-clear:active { opacity:.85; }
-.storage-clear.danger { background:#8a3b30; color:#fff; }
-.storage-clear.danger:disabled { background:#c2b4b0; }
-.storage-cat-row.snap .storage-cat-name { color:#b45309; font-weight:600; }
-.storage-cat-row.snap .storage-cat-size { color:#b45309; }
-.storage-cat-row.snap .storage-cat-num { color:#b45309; }
 .tabbar {
 margin-top:10px; display:flex; justify-content:space-around;
 flex-shrink:0; background:#ffffff;
@@ -8290,7 +8287,7 @@ transition-duration: .01ms !important;
             <p>报修 / 反馈请按【手机型号 + 浏览器 + 具体现象】提交，缺一不回；尽量附上设置里的【复制诊断信息】；基础疑问可直接问 AI，比我回复快。</p>
             <p>系统或浏览器版本不同，适配表现可能不同，属正常现象。</p>
             <p>建议使用 Chrome、Edge 等主流浏览器，尽量不用手机自带默认浏览器（会有限制），用主流浏览器出现的兼容问题会少一些。</p>
-            <p>数据丢失属浏览器正常概率，请定期备份。</p>
+            <p>数据丢失属浏览器正常概率，请定期备份：本机不保留任何自动副本，你下载并保存好的导出文件就是唯一备份（别删、别只留在下载列表里）。</p>
             <p>完整说明在各章节内，可点上方目录跳转查看。</p>
           </div>
           <div class="splash-sec-wrap splash-sec-collapsible is-collapsed">
@@ -8344,7 +8341,7 @@ transition-duration: .01ms !important;
             <p class="splash-item">反馈后不需要等我回复：消息太多，修完会直接部署，可以晚些刷新到新版再试。反馈的每个问题都修了，但能否修好只能用自己的设备验证，我没有其他设备，无法验证修复程度。</p>
             <p class="splash-item">如果有设备问题bug一直修不好，我建议可以拿我的代码自行部署和修缮，有自己的手机自己验证bug是否修复会方便很多。</p>
             <p class="splash-item">8.29公开已开群友互助群，但我不一定有时间看，只是群友互助群，有问题直接评论或群里艾特，个人精力有限也不一定及时回复。</p>
-            <p class="splash-item">关于数据丢失：有可能有bug，也有可能是浏览器触发丢失。如果不是高频率丢失，就是正常情况（浏览器自身正常概率丢失数据），需要定期备份。建议提示有新版本需要刷新时先备份数据。</p>
+            <p class="splash-item">关于数据丢失：有可能有bug，也有可能是浏览器触发丢失。如果不是高频率丢失，就是正常情况（浏览器自身正常概率丢失数据），需要定期备份。建议提示有新版本需要刷新时先备份数据。注意：本机不保留任何自动备份副本（v3.29 起该机制已下线，历史遗留副本会在启动时自动清理释放空间），你下载并保存好的导出文件就是唯一备份——请把它存到不会被浏览器清理的地方，别只留在下载列表里。</p>
           </div>
           <div class="splash-sec-wrap">
             <p class="splash-sec">【三、关于浏览器使用与桌面快捷方式】</p>
@@ -8429,9 +8426,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1788075910850">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.364</b></span>
-        <span class="sv-deploy">部署于 2026-08-30 15:45<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1788079993861">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.365</b></span>
+        <span class="sv-deploy">部署于 2026-08-30 16:53<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9524,7 +9521,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.364</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.365</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -9542,18 +9539,11 @@ transition-duration: .01ms !important;
           <div class="storage-row"><span>浏览器存储配额</span><b id="st-quota">读取中…</b></div>
           <div class="storage-row"><span>localStorage 占用</span><b id="st-ls">读取中…</b></div>
           <div class="storage-row"><span>IndexedDB 占用</span><b id="st-idb">读取中…</b></div>
-          <div class="storage-hint" id="st-snap-hint" style="display:none">⚠ 其中「自动备份快照」约占近一半：它是全部数据的一份完整副本，删除它不影响任何真实数据（见下方说明）。</div>
         </div>
         <div class="cal-card glass">
           <div class="cal-card-title">各功能占用明细</div>
           <div id="st-cat"><div class="storage-hint">正在统计，请稍候…</div></div>
           <div class="storage-hint">大小按 UTF-8 字节估算；聊天/头像/背景等大键会在 IndexedDB 与 localStorage 双写，两处之和为该功能实际占用。<b>点击任一分类行可展开查看该分类下的具体存储键名</b>，用于核对是否覆盖到所有功能。</div>
-        </div>
-        <div class="cal-card glass">
-          <div class="cal-card-title">自动备份快照</div>
-          <div class="storage-row"><span>当前快照大小</span><b id="st-snap">统计中…</b></div>
-          <button class="storage-clear danger" id="st-clear-snap" type="button">删除自动备份快照（释放空间）</button>
-          <div class="storage-hint">「自动备份快照」= 你全部数据的<b>一份完整副本</b>（含音乐/语音/图片，base64 存储还会放大体积），约占近一半空间。删除它<b>不影响任何真实数据</b>（聊天、字卡、头像、音乐都在），可立省约一半；下次你再「导出数据」时会自动重建一份。空间紧张时建议删除。</div>
         </div>
         <div class="cal-card glass">
           <div class="cal-card-title">错误诊断记录</div>
@@ -9758,7 +9748,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.364</span>
+              <span class="lic-ver">v3.26.365</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -13703,29 +13693,44 @@ if (u >= 1024) return (u / 1024).toFixed(1) + ' KB';
 return u + ' B';
 };
 try {
-let n = 0;
-for (let i = 0; i < localStorage.length; i++) {
-const k = localStorage.key(i);
-if (k && k.indexOf(G) === 0) n++;
-}
-L.push('localStorage 数据键=' + n + ' 个');
-} catch (e) { L.push('localStorage 不可访问'); }
-try { if (window.__replyPoolDiag) L.push('回复字卡池：' + window.__replyPoolDiag()); } catch (e2) {}
-try {
-let total = 0;
+let total = 0, n = 0;
+let allTotal = 0, allN = 0;
 const items = [];
+const otherItems = [];
 for (let i = 0; i < localStorage.length; i++) {
 const k2 = localStorage.key(i);
-if (!k2 || k2.indexOf(G) !== 0) continue;
-const sz = (k2.length + String(localStorage.getItem(k2) || '').length) * 2;
-total += sz;
-items.push({ k: k2.slice(G.length), size: sz });
+if (!k2) continue;
+allN++;
+const sz2 = (k2.length + String(localStorage.getItem(k2) || '').length) * 2;
+allTotal += sz2;
+if (k2.indexOf(G) !== 0) {
+otherItems.push({ k: k2.slice(0, 40), size: sz2 });
+continue;
+}
+n++;
+total += sz2;
+items.push({ k: k2.slice(G.length), size: sz2 });
+}
+L.push('localStorage 数据键=' + n + ' 个');
+L.push('localStorage 整域=' + allN + ' 键 ≈' + usageStr(allTotal) +
+'（非本项目 ' + otherItems.length + ' 键 ≈' + usageStr(allTotal - total) + '）');
+otherItems.sort(function (a, b) { return b.size - a.size; });
+const oth = otherItems.slice(0, 5).map(function (it) { return it.k + '=' + usageStr(it.size); }).join('、');
+if (oth) L.push('非本项目最大键：' + oth);
+try {
+localStorage.setItem(G + '__ls-probe', 'p');
+const back = localStorage.getItem(G + '__ls-probe');
+localStorage.removeItem(G + '__ls-probe');
+L.push('localStorage 状态：' + (back === 'p' ? '正常（可写可读回）' : '异常：写入后读不回（落盘被拦）'));
+} catch (e) {
+L.push('localStorage 状态：写入失败(' + ((e && e.name) || '异常') + ')——配额满或库已损坏，设置/桌面需靠 IndexedDB 校正');
 }
 items.sort(function (a, b) { return b.size - a.size; });
 L.push('数据总占用≈' + usageStr(total));
 const tops = items.slice(0, 8).map(function (it) { return it.k + '=' + usageStr(it.size); }).join('、');
 if (tops) L.push('最大键：' + tops);
-} catch (e) {}
+} catch (e) { L.push('localStorage 不可访问'); }
+try { if (window.__replyPoolDiag) L.push('回复字卡池：' + window.__replyPoolDiag()); } catch (e2) {}
 try {
 const idbIdx = L.length; L.push('IndexedDB 大键明细：读取中…');
 jobs.push(new Promise(function (res) {
@@ -14092,6 +14097,47 @@ if (e.key === 'Enter' || e.key === ' ') openHelp(e);
 });
 }
 })();
+(function () {
+const G = 'xy-home-v2:';
+const FLAG = 'mochi-ls-dead-noticed';
+function probe() {
+try {
+localStorage.setItem(G + '__ls-probe', 'p');
+const back = localStorage.getItem(G + '__ls-probe');
+localStorage.removeItem(G + '__ls-probe');
+return back === 'p' ? 'ok' : 'unwritable(写入后读不回)';
+} catch (e) {
+return 'unwritable(' + ((e && e.name) || '异常') + ')';
+}
+}
+let tries = 0;
+function say() {
+if (typeof window.toast !== 'function') {
+if (tries++ < 20) setTimeout(say, 500);
+return;
+}
+try { sessionStorage.setItem(FLAG, '1'); } catch (e) {}
+window.toast('本机浏览器本地存储受限，设置与记录已改用数据库存储，数据不会丢');
+}
+function check() {
+window.__lsStatus = probe();
+if (window.__lsStatus === 'ok') return;
+let seen = false;
+try { seen = sessionStorage.getItem(FLAG) === '1'; } catch (e) {}
+if (!seen) setTimeout(say, 1200);
+}
+window.__lsStatus = probe();
+if (window.__lsStatus !== 'ok') {
+if (window.__mochiDataReady) setTimeout(check, 4000);
+else {
+document.addEventListener('mochi-restore-done', function h() {
+document.removeEventListener('mochi-restore-done', h);
+setTimeout(check, 1000);
+});
+setTimeout(function () { if (window.__mochiDataReady) check(); }, 20000);
+}
+}
+})();
 } catch (__e) { try { console.error("[JS] device.js", __e && __e.message || __e); } catch (x) {} if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
 (function () { try {
 (function () {
@@ -14293,37 +14339,54 @@ finish();
 run(list);
 })).catch(() => ({}));
 };
-window.idbGetAllKeys = function () {
+const IDB_LIST_FAILED = null;
+function idbProbe(run) {
 return open().then(db => new Promise((resolve) => {
 let done = false;
 let timer = null;
-function finish(val) { if (done) return; done = true; if (timer) clearTimeout(timer); resolve(val); }
-function run() {
-try {
-const tx = db.transaction(STORE, 'readonly');
-const req = tx.objectStore(STORE).getAllKeys();
-req.onsuccess = () => finish(req.result || []);
-req.onerror = () => { if (connLost(req.error)) dbPromise = null; finish([]); };
-} catch (e) { if (connLost(e)) dbPromise = null; finish([]); }
-}
 let retried = false;
+function finish(val) { if (done) return; done = true; if (timer) clearTimeout(timer); resolve(val); }
+function attempt(conn) {
+try { run(conn, finish); } catch (e) { if (connLost(e)) dbPromise = null; finish(IDB_LIST_FAILED); }
+}
 timer = setTimeout(function () {
 if (done) return;
 if (!retried) {
 retried = true;
 dbPromise = null;
 open().then(function (db2) {
-db = db2;
-run();
-timer = setTimeout(function () { dbPromise = null; finish([]); }, 4000);
-}).catch(function () { finish([]); });
+timer = setTimeout(function () { dbPromise = null; finish(IDB_LIST_FAILED); }, 8000);
+attempt(db2);
+}).catch(function () { finish(IDB_LIST_FAILED); });
 return;
 }
 dbPromise = null;
-finish([]);
+finish(IDB_LIST_FAILED);
 }, 4000);
-run();
-})).catch(() => []);
+attempt(db);
+})).catch(() => IDB_LIST_FAILED);
+}
+window.idbListKeys = function () {
+return idbProbe(function (db, finish) {
+const tx = db.transaction(STORE, 'readonly');
+const req = tx.objectStore(STORE).getAllKeys();
+req.onsuccess = () => finish(req.result || []);
+req.onerror = () => { if (connLost(req.error)) dbPromise = null; finish(IDB_LIST_FAILED); };
+tx.onabort = () => { if (connLost(tx.error)) dbPromise = null; finish(IDB_LIST_FAILED); };
+});
+};
+window.idbHasKey = function (key) {
+if (!key) return Promise.resolve(IDB_LIST_FAILED);
+return idbProbe(function (db, finish) {
+const tx = db.transaction(STORE, 'readonly');
+const req = tx.objectStore(STORE).count(key);
+req.onsuccess = () => finish((req.result || 0) > 0);
+req.onerror = () => { if (connLost(req.error)) dbPromise = null; finish(IDB_LIST_FAILED); };
+tx.onabort = () => { if (connLost(tx.error)) dbPromise = null; finish(IDB_LIST_FAILED); };
+});
+};
+window.idbGetAllKeys = function () {
+return window.idbListKeys().then(function (keys) { return keys || []; });
 };
 window.idbDelete = function (key) {
 return open().then(db => new Promise((resolve) => {
@@ -14446,6 +14509,10 @@ if (_bigIdx[key] !== undefined) { delete _bigIdx[key]; bigIdxSave(); }
 try { if (window.idbDelete) window.idbDelete(key); } catch (e) {}
 }
 };
+};
+window.idbGetCached = function (key) {
+if (memoryCache && Object.prototype.hasOwnProperty.call(memoryCache, key)) return memoryCache[key];
+return undefined;
 };
 function isChatMsgsKey(k) {
 if (!k || typeof k !== 'string') return false;
@@ -14644,7 +14711,7 @@ try { if (window.idbDelete) window.idbDelete(WRJ_MARK + key); } catch (e) {}
 function wrjRecord(key, v) {
 if (typeof v !== 'string' || v.length > WRJ_VAL_LIMIT) return;
 if (!key || key === WRJ_KEY || key.indexOf('__') >= 0) return;
-if (isChatMsgsKey(key) || key.indexOf('music-file:') >= 0) return;
+if (isChatMsgsKey(key) || /:chat-meta$/.test(key) || key.indexOf('music-file:') >= 0) return;
 if (!_wrj) _wrj = wrjLoad(wrjLsRaw());
 const t = Date.now();
 _wrj = _wrj.filter(function (e) { return e.k !== key; });
@@ -14807,7 +14874,10 @@ return true;
 return false;
 }
 let _cid = 'default';
-try { const a = localStorage.getItem(G + ':active-contact'); if (a) _cid = a; } catch (e) {}
+try {
+const a = window.xyStore ? window.xyStore(G).get('active-contact') : localStorage.getItem(G + ':active-contact');
+if (a) _cid = a;
+} catch (e) {}
 window.__activeCid = _cid;
 window.activePrefix = function () { return G + ':' + (window.__activeCid || 'default'); };
 function defaultStore() {
@@ -14931,12 +15001,17 @@ window.idbGetAllKeys().then(keys => {
 if (window.__activeCid === id) window.setActiveContact('default');
 return true;
 };
+let autoFixingCid = false;   // true=正在执行自动校正，不算用户手动切换
+let cidUserSwitched = false; // 本会话用户手动切过桌面 → 校正不再干预
 window.setActiveContact = function (id) {
 if (id === (window.__activeCid || 'default')) return;
+if (!autoFixingCid) cidUserSwitched = true;
 try { if (window.chatFlushSave) window.chatFlushSave(); } catch (e) {}
 window.__activeCid = id;
-try { localStorage.setItem(G + ':active-contact', id); } catch (e) {}
-try { if (window.idbSet) window.idbSet(G + ':active-contact', id); } catch (e) {}
+try { regStore().set('active-contact', id); } catch (e) {
+try { localStorage.setItem(G + ':active-contact', id); } catch (e2) {}
+try { if (window.idbSet) window.idbSet(G + ':active-contact', id); } catch (e3) {}
+}
 if (window.refreshActiveContactUI) window.refreshActiveContactUI();
 try { document.dispatchEvent(new Event('contact-switched')); } catch (e) {}
 try {
@@ -14945,6 +15020,50 @@ const home = document.getElementById('page-phone'); if (home) home.hidden = fals
 } catch (e) {}
 };
 window.switchContact = window.setActiveContact;
+let cidAutoFixTries = 0;   // 已尝试次数（回填挂起时首次可能读不到值，不能一次定死）
+function autoFixMomentSafe() {
+try {
+const sp = document.getElementById('splash');
+if (sp && !sp.classList.contains('hide')) return true;
+const home = document.getElementById('page-phone');
+if (!home || home.hidden) return false;
+const pages = document.querySelectorAll('.page');
+for (let i = 0; i < pages.length; i++) {
+if (pages[i] !== home && !pages[i].hidden) return false;
+}
+return true;
+} catch (e) { return false; }
+}
+function correctCidFromIdb() {
+if (cidUserSwitched || cidAutoFixTries >= 3) return;
+if (!window.xyStore || !autoFixMomentSafe()) return;
+let saved = null;
+try { saved = window.xyStore(G).get('active-contact'); } catch (e) { return; }
+saved = (saved == null ? '' : String(saved)).trim();
+cidAutoFixTries++;
+if (!saved || saved === (window.__activeCid || 'default')) return;
+if (saved !== 'default') {
+let known = false;
+try { known = getContacts().some(c => c && c.id === saved); } catch (e) {}
+if (!known) return;
+}
+cidAutoFixTries = 99; // 已生效 → 本会话不再校正
+autoFixingCid = true;
+try { window.setActiveContact(saved); } catch (e) {}
+autoFixingCid = false;
+try { console.info('[mochi] 启动校正：localStorage 无 active-contact，已按 IndexedDB 权威值切回桌面 ' + saved); } catch (e) {}
+}
+try {
+if (window.__mochiDataReady) setTimeout(correctCidFromIdb, 0);
+else {
+document.addEventListener('mochi-restore-done', function h() {
+document.removeEventListener('mochi-restore-done', h);
+correctCidFromIdb();
+});
+}
+document.addEventListener('mochi-wrj-heal', function () { correctCidFromIdb(); });
+setTimeout(correctCidFromIdb, 16000);
+} catch (e) {}
 window.refreshActiveContactUI = function () {
 try { if (window.applyAvatars) window.applyAvatars(); } catch (e) {}
 try { if (window.renderChatHeader) window.renderChatHeader(); } catch (e) {}
@@ -15004,7 +15123,7 @@ let name = '默认';
 try { const n = localStorage.getItem(G + ':default:lbl-partner'); if (n) name = n; } catch (e) {}
 regStore().set('contacts', JSON.stringify([{ id: 'default', name: name }]));
 }
-if (!localStorage.getItem(G + ':active-contact')) regStore().set('active-contact', 'default');
+if (!regStore().get('active-contact')) regStore().set('active-contact', 'default');
 localStorage.setItem(G + ':migrated-v1', '1');
 } catch (e) {}
 window.__contactsMigrated = true;
@@ -20524,8 +20643,6 @@ const DIAG_KEYS = [
 'xy-home-v2:__diag-net',
 'xy-home-v2:__diag-tap'
 ];
-let snapLs = 0, snapIdb = 0, snapText = '(统计中)';
-let idbDone = false;
 function fmtBytes(n) {
 if (n == null || isNaN(n)) return '(未知)';
 if (n >= 1048576) return (n / 1048576).toFixed(1) + ' MB';
@@ -20536,7 +20653,6 @@ function catOf(tail) {
 if (!tail) return '其他';
 if (tail.indexOf('__diag-') === 0) return '错误诊断记录';
 if (tail.indexOf('music-file:') >= 0) return '本地音乐';
-if (tail.indexOf('__auto-backup-snapshot') >= 0) return '自动备份快照';
 if (tail.indexOf('__last-backup') >= 0 || tail.indexOf('__last-backup-remind') >= 0) return '系统设置';
 if (tail.indexOf('psync-') >= 0) return '后台同步缓存';
 if (tail.indexOf('__big-idx') >= 0 || tail.indexOf('__ls-dirty') >= 0) return '数据索引';
@@ -20656,7 +20772,7 @@ el.innerHTML = '';
 if (!rows.length) { el.innerHTML = '<div class="storage-hint">暂未统计到数据。</div>'; return; }
 rows.forEach(function (r) {
 const d = document.createElement('div');
-d.className = 'storage-cat-row' + (r.keys && r.keys.length ? ' has-keys' : '') + (r.name === '自动备份快照' ? ' snap' : '');
+d.className = 'storage-cat-row' + (r.keys && r.keys.length ? ' has-keys' : '');
 d.innerHTML = '<div class="storage-cat-line"><span class="storage-cat-name"></span><span class="storage-cat-num"></span><span class="storage-cat-size"></span></div>';
 d.querySelector('.storage-cat-name').textContent = r.name;
 d.querySelector('.storage-cat-num').textContent = r.n + ' 键';
@@ -20688,19 +20804,6 @@ if (!el) return;
 const d = diagSummary();
 el.textContent = (d.items ? d.items + ' 项缓存' : '无缓存') + (d.errs ? ' · ' + d.errs + ' 条错误' : '') + (d.items ? ' · 约 ' + fmtBytes(d.bytes) : '');
 }
-function renderSnap() {
-const size = (snapLs || 0) + (snapIdb || 0);
-snapText = size ? fmtBytes(size) : '(无)';
-const el = document.getElementById('st-snap');
-if (el) el.textContent = idbDone ? (snapText + (size ? '（一份完整副本）' : '')) : '统计中…';
-const hintEl = document.getElementById('st-snap-hint');
-if (hintEl) hintEl.style.display = (idbDone && size) ? 'block' : 'none';
-const btn = document.getElementById('st-clear-snap');
-if (btn) {
-btn.disabled = !(idbDone && size > 0);
-btn.textContent = !idbDone ? '统计中…' : (size > 0 ? '删除自动备份快照（释放空间）' : '（暂无自动备份快照）');
-}
-}
 function renderStorage() {
 const quotaEl = document.getElementById('st-quota');
 if (quotaEl && navigator.storage && navigator.storage.estimate) {
@@ -20713,18 +20816,11 @@ const lsEl = document.getElementById('st-ls');
 if (lsEl) lsEl.textContent = fmtBytes(ls.total) + '（' + ls.count + ' 键）';
 const idbEl = document.getElementById('st-idb');
 if (idbEl) idbEl.textContent = '统计中…';
-idbDone = false;
 renderCatTable(ls.cats, null);
-snapLs = (ls.cats['自动备份快照'] || {}).size || 0;
-snapIdb = 0;
-renderSnap();
 idbStats(function (done, totalN) {
 if (idbEl) idbEl.textContent = '统计中…（' + done + '/' + totalN + '）';
 }, function (res) {
 if (idbEl) idbEl.textContent = res ? fmtBytes(res.total) + '（' + res.count + ' 键）' : '不可用';
-snapIdb = (res && res.cats && res.cats['自动备份快照'] || {}).size || 0;
-idbDone = true;
-renderSnap();
 renderCatTable(ls.cats, res ? res.cats : null);
 });
 renderDiagCount();
@@ -20738,17 +20834,6 @@ try { if (window.mochiRefreshDiagBadge) window.mochiRefreshDiagBadge(); } catch 
 renderDiagCount();
 try { if (typeof toast === 'function') toast('错误诊断记录已清理'); } catch (e) {}
 }
-async function deleteSnapshot() {
-const k = 'xy-home-v2:__auto-backup-snapshot';
-try { localStorage.removeItem(k); } catch (e) {}
-try { if (window.idbDelete) await window.idbDelete(k); } catch (e) {}
-snapLs = 0; snapIdb = 0; idbDone = true;
-const el = document.getElementById('st-snap');
-if (el) el.textContent = '(已删除)';
-renderSnap();
-renderStorage();
-try { if (typeof toast === 'function') toast('自动备份快照已删除，空间已释放'); } catch (e) {}
-}
 const clearBtn = document.getElementById('st-clear-err');
 if (clearBtn) {
 clearBtn.addEventListener('click', function () {
@@ -20761,19 +20846,6 @@ staticText: '将删除最近错误、环境变化、长任务卡顿、网络失�
 });
 } else {
 clearDiag();
-}
-});
-}
-const snapBtn = document.getElementById('st-clear-snap');
-if (snapBtn) {
-snapBtn.addEventListener('click', function () {
-if (window.openModal) {
-window.openModal('删除自动备份快照？', '', function () { deleteSnapshot(); }, {
-noInput: true,
-staticText: '自动备份快照是全部数据的一份完整副本（当前约 ' + snapText + '，约占近一半空间）。\n删除它不会影响聊天、字卡、头像、音乐等任何真实数据，可立即释放约 ' + snapText + ' 的空间。\n注意：下次你再「导出数据」时会自动重建这份快照。'
-});
-} else {
-deleteSnapshot();
 }
 });
 }
@@ -21121,6 +21193,49 @@ if (ok) return true;
 return window.idbSet(key, JSON.stringify(arr));
 });
 }
+const CHAT_LEDGER_MIN = 300;
+const CHAT_LEDGER_STEP = 50;   // IDB 账本按步进落盘：只需量级正确，免每次存盘多发事务
+const chatLedger = {};         // prefix -> 已知权威条数
+let chatLedgerWarned = {};
+function chatLedgerSave(prefix, n) {
+const prev = chatLedger[prefix];
+chatLedger[prefix] = n;
+if (prev === n || !window.idbSet) return;
+if (typeof prev === 'number' && n > prev && n - prev < CHAT_LEDGER_STEP) return;
+try { window.idbSet(prefix + ':chat-meta', JSON.stringify({ n: n, t: Date.now() })); } catch (e) {}
+}
+function chatLedgerLoad(prefix) {
+if (!window.idbGet || chatLedger[prefix] !== undefined) return;
+try {
+window.idbGet(prefix + ':chat-meta').then(function (v) {
+try {
+if (v === undefined || v === null || chatLedger[prefix] !== undefined) return;
+const o = typeof v === 'string' ? JSON.parse(v) : v;
+if (o && typeof o.n === 'number' && o.n > 0) chatLedger[prefix] = o.n;
+} catch (e) {}
+}).catch(function () {});
+} catch (e) {}
+}
+function chatLedgerGuard(prefix, arr) {
+const n = Array.isArray(arr) ? arr.length : 0;
+const base = chatLedger[prefix];
+if (typeof base === 'number' && base >= CHAT_LEDGER_MIN && n * 2 < base) {
+if (!chatLedgerWarned[prefix]) {
+chatLedgerWarned[prefix] = 1;
+try {
+if (window.openModal) window.openModal('聊天记录保护', '', null, {
+noInput: true, okText: '知道了',
+staticText: '检测到本次要保存的记录比已存的历史少了很多（' + base + ' 条 → ' + n + ' 条），' +
+'已暂缓保存以防历史被覆盖。请留意稍后重进聊天页确认记录是否完整。'
+});
+} catch (e) {}
+try { scheduleIdbRetry(); } catch (e) {}
+}
+return false;
+}
+chatLedgerSave(prefix, n);
+return true;
+}
 function liteSnapArray(arr) {
 if (msgsBytes(arr) <= LS_SNAP_LIMIT) return arr; // 小历史：全量快照
 return arr.map(m => {
@@ -21219,17 +21334,21 @@ renderWindow(false, true);
 scrollChatBottom();
 }
 } catch (e) {}
+try { scheduleIdbRetry(); } catch (e) {}
 }, 15000);
 }
 function saveMsgs() {
-if (!chatDbReady) {
+const authOk = chatDbReady && authLoadedPrefix === window.activePrefix();
+if (!authOk) {
 try { pendingLocal = msgs.slice(); } catch (e) {}
 if (msgs.length) writeLsSnapshot(msgs, undefined, true);
+try { scheduleIdbRetry(); } catch (e) {}
 return;
 }
 const myPrefix = window.activePrefix();
 schedulePersist(() => {
-if (!msgs.length && authLoadedPrefix !== myPrefix) return;
+if (authLoadedPrefix !== myPrefix) return;
+if (!chatLedgerGuard(myPrefix, msgs)) return;
 try { if (window.idbSet) persistMsgsToIdb(myPrefix + ':chat-msgs', msgs); } catch (e) {}
 writeLsSnapshot(msgs, myPrefix);
 });
@@ -21237,7 +21356,7 @@ writeLsSnapshot(msgs, myPrefix);
 function flushSave() {
 if (window.__resetting) return;
 flushPersistNow();
-if (!chatDbReady && msgs.length) writeLsSnapshot(msgs, undefined, true);
+if ((!chatDbReady || authLoadedPrefix !== window.activePrefix()) && msgs.length) writeLsSnapshot(msgs, undefined, true);
 }
 window.chatFlushSave = flushSave;
 try {
@@ -21318,8 +21437,12 @@ const finish = () => {
 try { if (sysNickCatchup()) changed = true; } catch (e) {}
 normPrefix = null;
 if (!changed) return;
+if (authLoadedPrefix !== myPre) return;
+const canPersist = chatLedgerGuard(myPre, msgs);
+if (canPersist) {
 try { if (window.idbSet) persistMsgsToIdb(myPre + ':chat-msgs', msgs); } catch (e) {}
 try { writeLsSnapshot(msgs, myPre, true); } catch (e) {}
+}
 try { if (chatVisible() && msgs.length) { renderWindow(false, true); scrollChatBottom(); } } catch (e) {}
 };
 const tick = () => {
@@ -21402,15 +21525,18 @@ if (!skipRead) {
 try {
 if (window.idbGet) {
 const myPrefix = window.activePrefix();
+try { chatLedgerLoad(myPrefix); } catch (e) {}
 window.idbGet(myPrefix + ':chat-msgs').then(v => {
 if (window.activePrefix() !== myPrefix) return;
 if (v === undefined || v === null) {
 const idbKey = myPrefix + ':chat-msgs';
-const confirmMiss = window.idbGetAllKeys
+const confirmMiss = window.idbHasKey
+? window.idbHasKey(idbKey).then(function (has) { return has === false; })
+: (window.idbGetAllKeys
 ? window.idbGetAllKeys().then(function (keys) {
 return !(keys || []).some(function (k) { return k === idbKey; });
 }).catch(function () { return false; })
-: Promise.resolve(true);
+: Promise.resolve(true));
 confirmMiss.then(function (isMiss) {
 if (window.activePrefix() !== myPrefix) return;
 if (!isMiss) { scheduleIdbRetry(); return; }
@@ -21433,6 +21559,7 @@ pendingLocal = null;
 try { if (window.idbSet) persistMsgsToIdb(myPrefix + ':chat-msgs', msgs); } catch (e) {}
 writeLsSnapshot(msgs, myPrefix, true);
 }
+try { chatLedgerSave(myPrefix, (msgs && msgs.length) || 0); } catch (e) {}
 });
 return;
 }
@@ -21485,6 +21612,7 @@ pendingLocal = null;
 chatDbReady = true;
 authLoadedPrefix = myPrefix;
 idbRetryCount = 0;
+try { chatLedgerSave(myPrefix, idbArr.length); } catch (e) {}
 try {
 lastIdbLoadPrefix = window.activePrefix();
 lastIdbLoadAt = Date.now();
@@ -22981,7 +23109,9 @@ sessionChangedIdx.clear();
 chatDbReady = true;
 renderStart = 0; // v3.6.x：分页窗口起点复位（消息已清空）
 cancelPersist();
+try { chatLedger[window.activePrefix()] = 0; } catch (e) {}
 try { store.remove('chat-msgs'); } catch (e) {}
+try { store.remove('chat-meta'); } catch (e) {}
 if (body) body.innerHTML = '';
 clearChatUnread();
 };
@@ -22999,6 +23129,7 @@ renderStart = 0;
 cancelPersist();
 try { if (window.idbSet) persistMsgsToIdb(window.activePrefix() + ':chat-msgs', msgs); } catch (e) {}
 writeLsSnapshot(msgs, undefined, true);
+try { chatLedgerSave(window.activePrefix(), msgs.length); } catch (e) {}
 if (body) body.innerHTML = '';
 clearChatUnread();
 if (chatVisible() && msgs.length) {
@@ -23289,23 +23420,28 @@ let tries = 0;
 const writeArr = function (arr) {
 try { window.idbSet(key, JSON.stringify(arr)); } catch (e) {}
 try { localStorage.setItem(key, JSON.stringify(arr)); } catch (e) {}
+try { chatLedgerSave('xy-home-v2:' + cid, arr.length); } catch (e) {}
 };
 const attempt = function () {
 tries++;
 window.idbGet(key).then(function (v) {
 if (v !== undefined && v !== null) {
 let arr = [];
-try { arr = typeof v === 'string' ? JSON.parse(v) : v; } catch (e) { arr = []; }
-if (!Array.isArray(arr)) arr = [];
+let readOk = true;
+try { arr = typeof v === 'string' ? JSON.parse(v) : v; } catch (e) { arr = []; readOk = false; }
+if (!Array.isArray(arr)) { arr = []; readOk = false; }
+if (!readOk) return;
 arr.push({ side: 'in', special: opts.special || 'poke', text: text, ts: Date.now(), mailNotice: !!opts.mailNotice });
 writeArr(arr);
 return;
 }
-const confirmMiss = window.idbGetAllKeys
+const confirmMiss = window.idbHasKey
+? window.idbHasKey(key).then(function (has) { return has === false; })
+: (window.idbGetAllKeys
 ? window.idbGetAllKeys().then(function (keys) {
 return !(keys || []).some(function (k) { return k === key; });
 }).catch(function () { return false; })
-: Promise.resolve(true);
+: Promise.resolve(true));
 confirmMiss.then(function (isMiss) {
 if (isMiss) writeArr([{ side: 'in', special: opts.special || 'poke', text: text, ts: Date.now(), mailNotice: !!opts.mailNotice }]);
 else if (tries < 3) setTimeout(attempt, 1500);
@@ -23325,23 +23461,28 @@ let tries = 0;
 const writeArr = function (arr) {
 try { window.idbSet(key, JSON.stringify(arr)); } catch (e) {}
 try { localStorage.setItem(key, JSON.stringify(arr)); } catch (e) {}
+try { chatLedgerSave('xy-home-v2:' + cid, arr.length); } catch (e) {}
 };
 const attempt = function () {
 tries++;
 window.idbGet(key).then(function (v) {
 if (v !== undefined && v !== null) {
 let arr = [];
-try { arr = typeof v === 'string' ? JSON.parse(v) : v; } catch (e) { arr = []; }
-if (!Array.isArray(arr)) arr = [];
+let readOk = true;
+try { arr = typeof v === 'string' ? JSON.parse(v) : v; } catch (e) { arr = []; readOk = false; }
+if (!Array.isArray(arr)) { arr = []; readOk = false; }
+if (!readOk) return;
 arr.push(rec);
 writeArr(arr);
 return;
 }
-const confirmMiss = window.idbGetAllKeys
+const confirmMiss = window.idbHasKey
+? window.idbHasKey(key).then(function (has) { return has === false; })
+: (window.idbGetAllKeys
 ? window.idbGetAllKeys().then(function (keys) {
 return !(keys || []).some(function (k) { return k === key; });
 }).catch(function () { return false; })
-: Promise.resolve(true);
+: Promise.resolve(true));
 confirmMiss.then(function (isMiss) {
 if (isMiss) writeArr([rec]);
 else if (tries < 3) setTimeout(attempt, 1500);
@@ -23363,10 +23504,17 @@ window.chatAppendDeskTextTo = function (cid, text) {
 window.chatAppendDeskRec(cid, { side: 'in', special: 'poke', text: text || '想你了，来聊聊天吧。' });
 };
 function saveMsgsNow() {
-if (!msgs.length && authLoadedPrefix !== window.activePrefix()) return;
+const authOk = chatDbReady && authLoadedPrefix === window.activePrefix();
+if (!authOk) {
+try { pendingLocal = msgs.slice(); } catch (e) {}
+if (msgs.length) writeLsSnapshot(msgs, undefined, true);
+try { scheduleIdbRetry(); } catch (e) {}
+return;
+}
 const myPrefix = window.activePrefix();
 schedulePersist(() => {
-if (!msgs.length && authLoadedPrefix !== myPrefix) return;
+if (authLoadedPrefix !== myPrefix) return;
+if (!chatLedgerGuard(myPrefix, msgs)) return;
 try { if (window.idbSet) persistMsgsToIdb(myPrefix + ':chat-msgs', msgs); } catch (e) {}
 writeLsSnapshot(msgs, myPrefix, true);
 });
@@ -29977,7 +30125,7 @@ return n;
 function refreshLibCounts(force) {
 if (force) { libCounts.pub = -1; libCounts.own = -1; pubInvalidate(); }
 if (libCounts.pub < 0) {
-const n = countOf(buildGroupsFrom(pubStore().get(PUB_KEY)));
+const n = countOf(pubGroupsRaw());
 libCounts.pub = n > 0 ? n : -1;
 }
 if (libCounts.own < 0) {
@@ -34138,6 +34286,9 @@ if (el) el.checked = getCat(k);
 });
 } catch (e) {}
 });
+const V_PAD = 0.8;    // 视口上下各多渲染 0.8 屏（重建频率 ≈ 每滚 0.8 屏一次）
+const V_MINW = 24;    // 窗口条目数下限（小屏/高条目时兜底，避免窗口过窄）
+const V_EST = 55;     // 未实测条目高度初值：.cc-item 13+13 padding + 行高 + 9 margin
 function mountCardView(ids, allowedKeys, emptyText, searchKeys) {
 const viewList = document.getElementById(ids.list);
 const viewTabs = document.getElementById(ids.tabs);
@@ -34150,11 +34301,159 @@ keys: allowedKeys.slice(),
 searchKeys: (searchKeys || []).slice(),
 cur: allowedKeys[0] || '',
 q: '',
-curGroup: '',
-cardByIdx: [],
-renderToken: 0,
-RENDER_BATCH: 120
+curGroup: ''
 };
+let flat = [];                    // 当前列表数据（分组头 + 字卡）
+let n = 0;
+let hts = new Float64Array(0);    // 每条占位高度（实测或估计）
+let offs = new Float64Array(1);   // 前缀和：offs[i]=第 i 条顶部 y，offs[n]=总高
+let got = new Uint8Array(0);      // 该条是否已实测
+let est = V_EST;                  // 估计高度：随实测均值收敛
+let measSum = 0, measCnt = 0;
+let winLo = -1, winHi = -1;       // DOM 中已渲染窗口 [winLo, winHi)
+let topSpace = null, botSpace = null;
+let scroller = null;
+function clipsContent(el) {
+try {
+const oy = getComputedStyle(el).overflowY;
+if (oy !== 'auto' && oy !== 'scroll') return false;
+return el.scrollHeight > el.clientHeight + 1;
+} catch (e) { return false; }
+}
+function guessScroller() {
+if (scroller) return scroller;
+try {
+let el = viewList;
+while (el && el !== document.documentElement) {
+if (clipsContent(el)) { scroller = el; return scroller; }
+el = el.parentElement;
+}
+} catch (e) {}
+return null;
+}
+function onScroll(target) {
+if (pageEl.hidden) return;
+if (target && target.nodeType === 1) {
+try { if (target !== viewList && !target.contains(viewList)) return; } catch (e) { return; }
+scroller = target;
+} else {
+const sc = guessScroller();
+if (sc && sc !== 'win') return;   // 本页有元素级滚动容器，视口滚动与我们无关
+scroller = 'win';
+}
+requestLayout(false);
+}
+function scrollY() {
+const sc = guessScroller();
+if (!sc || sc === 'win') return window.pageYOffset || document.documentElement.scrollTop || 0;
+return sc.scrollTop;
+}
+function setScrollY(v) {
+const sc = guessScroller();
+if (!sc || sc === 'win') window.scrollTo(0, v); else sc.scrollTop = v;
+}
+function recomputeOffsets() {
+if (offs.length !== n + 1) offs = new Float64Array(n + 1);
+let s = 0;
+for (let i = 0; i < n; i++) { offs[i] = s; s += hts[i]; }
+offs[n] = s;
+}
+function indexAt(y) {
+if (y <= 0) return 0;
+if (y >= offs[n]) return Math.max(0, n - 1);
+let a = 0, b = n;
+while (a < b) { const m = (a + b) >> 1; if (offs[m] <= y) a = m + 1; else b = m; }
+return Math.max(0, Math.min(n - 1, a - 1));
+}
+function makeNode(it, i) {
+const d = document.createElement('div');
+if (it.header) {
+d.className = 'cc-group-header';
+d.innerHTML = '<span class="ccg-name">' + it.gname + '</span><span class="ccg-count">' + it.count + '</span>';
+} else {
+const off = isCardOff(it.cat, it.c);
+d.className = 'cc-item glass' + (off ? ' off' : '');
+d.innerHTML = '<div class="cc-txt"><div class="t">' + it.c + ' <span class="tc-known">系统</span></div></div>' +
+'<label class="toggle ccard-toggle"><input type="checkbox"' + (off ? '' : ' checked') + '><span class="tk"></span></label>';
+}
+d.dataset.idx = i;
+return d;
+}
+function measureAndFix() {
+const kids = viewList.children;
+const count = kids.length - 2;
+if (count < 2) return;
+const baseBefore = offs[winLo];
+let touched = false;
+for (let k = 1; k <= count; k++) {
+const i = winLo + k - 1;
+const h = kids[k + 1].offsetTop - kids[k].offsetTop;
+if (h > 0 && h !== hts[i]) {
+if (got[i]) measSum += h - hts[i]; else { got[i] = 1; measSum += h; measCnt++; }
+hts[i] = h;
+touched = true;
+}
+}
+if (!touched) return;
+if (measCnt) est = Math.max(20, measSum / measCnt);
+recomputeOffsets();
+const delta = offs[winLo] - baseBefore;
+topSpace.style.height = offs[winLo] + 'px';
+botSpace.style.height = Math.max(0, offs[n] - offs[winHi]) + 'px';
+if (Math.abs(delta) >= 1) setScrollY(scrollY() + delta);
+}
+function layout(force) {
+if (!n) { winLo = winHi = -1; return; }
+const sc = guessScroller();
+const isWin = !sc || sc === 'win';
+const vh = isWin ? window.innerHeight : sc.clientHeight;
+if (!vh) return;                  // 页面正隐藏：等显示时再排
+const y = scrollY();
+let a;
+if (sc === viewList) a = y;
+else a = (isWin ? 0 : sc.getBoundingClientRect().top) - viewList.getBoundingClientRect().top;
+const pad = vh * V_PAD;
+let lo = indexAt(Math.max(0, a - pad));
+let hi = Math.min(n, indexAt(Math.min(offs[n], a + vh + pad)) + 1);
+const need = V_MINW - (hi - lo);
+if (need > 0) {
+hi = Math.min(n, hi + need);
+const need2 = V_MINW - (hi - lo);
+if (need2 > 0) lo = Math.max(0, lo - need2);
+}
+if (!force && lo >= winLo && hi <= winHi) return;
+winLo = lo; winHi = hi;
+if (!topSpace) {
+topSpace = document.createElement('div'); topSpace.className = 'cc-vspace';
+botSpace = document.createElement('div'); botSpace.className = 'cc-vspace';
+}
+topSpace.style.height = offs[lo] + 'px';
+botSpace.style.height = Math.max(0, offs[n] - offs[hi]) + 'px';
+const frag = document.createDocumentFragment();
+frag.appendChild(topSpace);
+for (let i = lo; i < hi; i++) frag.appendChild(makeNode(flat[i], i));
+frag.appendChild(botSpace);
+viewList.textContent = '';
+viewList.appendChild(frag);
+measureAndFix();
+}
+let rafPending = false, rafForce = false;
+function requestLayout(force) {
+if (force) rafForce = true;
+if (rafPending) return;
+rafPending = true;
+requestAnimationFrame(() => {
+const f = rafForce;
+rafPending = false; rafForce = false;
+layout(f);
+});
+}
+function setData() {
+hts = new Float64Array(n); hts.fill(est);
+got = new Uint8Array(n);
+recomputeOffsets();
+winLo = winHi = -1;
+}
 function renderGroupsBar() {
 viewBar.innerHTML = '';
 const grps = DATA[view.cur] || [];
@@ -34168,7 +34467,6 @@ viewBar.appendChild(cEl);
 });
 }
 function render() {
-const token = ++view.renderToken;
 let shown = (DATA[view.cur] || []).map(g => ({ key: view.cur, gname: g[0], arr: g[1] }));
 if (view.q) {
 const cross = [];
@@ -34182,53 +34480,28 @@ shown = cross;
 } else if (view.curGroup) {
 shown = shown.filter(g => g.gname === view.curGroup);
 }
-viewList.innerHTML = '';
-view.cardByIdx = [];
-if (!shown.length) {
+const list = [];
+shown.forEach(it => {
+list.push({ header: true, gname: (it.key !== view.cur ? '[' + tabLabel(it.key) + '] ' : '') + it.gname, count: it.arr.length });
+it.arr.forEach(c => list.push({ header: false, c, cat: it.key }));
+});
+flat = list; n = list.length;
+if (!n) {
+topSpace = botSpace = null;
 viewList.innerHTML = '<div class="cc-empty">' + emptyText + '</div>';
+winLo = winHi = -1;
 return;
 }
-const flat = [];
-shown.forEach(it => {
-flat.push({ header: true, gname: (it.key !== view.cur ? '[' + tabLabel(it.key) + '] ' : '') + it.gname, count: it.arr.length });
-it.arr.forEach(c => flat.push({ header: false, c, cat: it.key }));
-});
-const frag = document.createDocumentFragment();
-let pos = 0;
-const step = () => {
-if (token !== view.renderToken) return;
-const end = Math.min(pos + view.RENDER_BATCH, flat.length);
-for (; pos < end; pos++) {
-const it = flat[pos];
-if (it.header) {
-const h = document.createElement('div');
-h.className = 'cc-group-header';
-h.innerHTML = '<span class="ccg-name">' + it.gname + '</span><span class="ccg-count">' + it.count + '</span>';
-frag.appendChild(h);
-} else {
-const c = it.c;
-const off = isCardOff(it.cat, c);
-const d = document.createElement('div');
-d.className = 'cc-item glass' + (off ? ' off' : '');
-d.innerHTML = '<div class="cc-txt"><div class="t">' + c + ' <span class="tc-known">系统</span></div></div>' +
-'<label class="toggle ccard-toggle"><input type="checkbox"' + (off ? '' : ' checked') + '><span class="tk"></span></label>';
-d.dataset.idx = view.cardByIdx.length;
-view.cardByIdx.push({ c, item: d, input: d.querySelector('input'), cat: it.cat });
-frag.appendChild(d);
-}
-}
-viewList.appendChild(frag);
-if (pos < flat.length) requestAnimationFrame(step);
-};
-step();
+setData();
+layout(true);
 }
 viewList.addEventListener('change', (e) => {
 const input = e.target;
 if (!input || input.type !== 'checkbox') return;
 const item = input.closest('.cc-item');
 if (!item) return;
-const rec = view.cardByIdx[Number(item.dataset.idx)];
-if (!rec || rec.input !== input) return;
+const rec = flat[Number(item.dataset.idx)];
+if (!rec || rec.header) return;
 const nowOff = !input.checked;
 setCardOff(rec.cat || view.cur, rec.c, nowOff);
 item.classList.toggle('off', nowOff);
@@ -34256,8 +34529,16 @@ if (e.key === 'Escape') { viewSearch.value = ''; view.q = ''; render(); viewSear
 });
 let renderedOnce = false;
 function ensureRendered() {
-if (renderedOnce) return;
+if (renderedOnce) { requestLayout(true); return; }
 renderedOnce = true;
+document.addEventListener('scroll', function (e) { onScroll(e.target); }, { passive: true, capture: true });
+window.addEventListener('resize', () => requestLayout(true));
+if (typeof MutationObserver !== 'undefined') {
+try {
+new MutationObserver(() => { if (!pageEl.hidden) requestLayout(true); })
+.observe(pageEl, { attributes: true, attributeFilter: ['hidden'] });
+} catch (e) {}
+}
 refreshLibCount();
 renderGroupsBar();
 render();
@@ -36841,6 +37122,7 @@ endedHandled = false;
 disarmAutoResume();
 clearBgResume();
 clearStallGuard();
+bgBrokeAudio = false; // v3.29.x：切歌/停止清后台断流标记
 clearTaFavTimer();
 cancelTaPause();
 if (progressTimer) { clearInterval(progressTimer); progressTimer = null; }
@@ -36940,6 +37222,7 @@ document.removeEventListener('touchend', retry, true);
 document.removeEventListener('click', retry, true);
 }
 let wantPlay = false;
+let bgBrokeAudio = false;
 try {
 Object.defineProperty(window, '__musicWantPlay', {
 configurable: true,
@@ -36999,16 +37282,25 @@ audio.src = m.url;
 const p = audio.play();
 if (p && p.catch) p.catch(function () { bgResumeFails++; bgResumeFailAt = Date.now(); });
 }
+function resumeOnForeground() {
+if (bgBrokeAudio && wantPlay && currentId && !callHoldPending && !taPauseActive && !httpsRetrying && !demoFallbackBusy) {
+bgBrokeAudio = false;
+try { playTrack(currentId); } catch (e) {}
+return;
+}
+bgBrokeAudio = false;
+try { tryResumePlayback(); } catch (e) {}
+}
 ['visibilitychange', 'focus'].forEach(function (ev) {
 document.addEventListener(ev, function () {
 if (document.visibilityState !== 'visible') return;
 failMap = {}; bgResumeFails = 0; // v3.x：从别的应用切回浏览器时，后台停滞触发的播放失败不算连续失败，避免误报"会员/移出"；v3.26.x：补播失败封顶一并清零，回前台才真正发起续播
-setTimeout(function () { try { tryResumePlayback(); } catch (e) {} }, 200);
+setTimeout(resumeOnForeground, 200);
 });
 });
 window.addEventListener('pageshow', function () {
 failMap = {}; bgResumeFails = 0; // v3.26.x：见 visibilitychange 同款——回前台重置补播失败封顶
-setTimeout(function () { try { tryResumePlayback(); } catch (e) {} }, 200);
+setTimeout(resumeOnForeground, 200);
 });
 setInterval(function () {
 try { if (document.hidden) tryResumePlayback(); } catch (e) {}
@@ -37113,14 +37405,14 @@ return true;
 }
 function offerRemoveDamagedSong(m) {
 if (!m) return;
-if (document.hidden) return; // v3.26.x：后台冻结/断流误触发 onerror，不弹「移出」窗不计数
+if (document.hidden) { bgBrokeAudio = true; return; } // v3.26.x：后台冻结/断流误触发 onerror，不弹「移出」窗不计数；v3.29.x：标记后台断流，切回前台重建
 wantPlay = false; clearBgResume(); // v3.10.x：真失败＝停止意图，不再自动续播
 try { if (audio) audio.pause(); } catch (e) {}
 try { syncPlayIcons(false); } catch (e) {}
 const cnt = (failMap[m.id] || 0) + 1;
 failMap[m.id] = cnt;
 if (cnt < 2) {
-try { toast('播放失败：可能是会员/付费歌曲或链接失效，可再点一次重试'); } catch (e) {}
+try { toast('播放失败，可以在播放列表换一首歌试试'); } catch (e) {}
 return;
 }
 if (!window.openModal) return;
@@ -37131,7 +37423,7 @@ if (currentId === m.id) { teardownAudio(); currentId = null; }
 saveLibrary();
 renderPage();
 toast('已移出音乐库');
-}, { noInput: true, staticText: '连续播放失败，可能是链接失效或会员/付费歌曲（也可能是网络临时问题）。确定把它移出音乐库吗？' });
+}, { noInput: true, staticText: '连续播放失败，可能是后台暂停后链接失效。可以在播放列表换一首歌点击播放恢复播放，或把它移出音乐库。' });
 } catch (e) {}
 }
 function demoFallbackOrError(m) {
@@ -37197,6 +37489,7 @@ try { window.__musicPlaying = playing; } catch (e) {}
 function setupHandlers(m) {
 audio.onended = function () { handleEnded(); };
 audio.onerror = function () {
+if (document.hidden) bgBrokeAudio = true;
 if (m && m.neteaseId && !httpsRetrying) {
 if (retryWithHttpsUrl(m)) return;
 }
@@ -37221,7 +37514,7 @@ armAutoResume();
 } else { armAutoResume(); }
 }
 };
-audio.onplay = function () { playRejected = false; bgResumeFails = 0; clearStallGuard(); disarmAutoResume(); clearBgResume(); wantPlay = true; syncPlayIcons(true); if (m) failMap[m.id] = 0; try { if (navigator.mediaSession) navigator.mediaSession.playbackState = 'playing'; } catch (e) {} try { window.__musicPlaying = true; } catch (e) {} // v3.28.x：每次真正出声都重新绑定歌曲媒体条——后台短暂打断被 bg-keep 接管媒体会话（元数据换成「Mochi 后台保活」）后，恢复播放时若不重设歌曲元数据，通知栏媒体条会停在保活条或直接消失
+audio.onplay = function () { playRejected = false; bgResumeFails = 0; clearStallGuard(); disarmAutoResume(); clearBgResume(); bgBrokeAudio = false; wantPlay = true; syncPlayIcons(true); if (m) failMap[m.id] = 0; try { if (navigator.mediaSession) navigator.mediaSession.playbackState = 'playing'; } catch (e) {} try { window.__musicPlaying = true; } catch (e) {} // v3.28.x：每次真正出声都重新绑定歌曲媒体条——后台短暂打断被 bg-keep 接管媒体会话（元数据换成「Mochi 后台保活」）后，恢复播放时若不重设歌曲元数据，通知栏媒体条会停在保活条或直接消失
 try { updateMediaSession(true); } catch (e) {} };
 audio.onpause = function () { syncPlayIcons(false); try { if (navigator.mediaSession) navigator.mediaSession.playbackState = (wantPlay && !callHoldPending) ? 'playing' : 'paused'; } catch (e) {} try { window.__musicPlaying = false; } catch (e) {} // v3.28.x：外部打断（还想播）保持 playbackState='playing'，避免 Chrome 把页面当闲置标签冻结、通知栏媒体条消失；仅用户主动暂停才标 'paused'。v3.10.x：非用户暂停（后台省电/音频焦点抢占/系统打断）→ 定时补播反击
 if (wantPlay && !callHoldPending && !taPauseActive) scheduleBgResume(); };
@@ -45006,6 +45299,7 @@ t._timer = setTimeout(() => { t.className = 'cc-toast'; }, 2000);
 let keepAudio = null;
 let keepInterval = null;
 let keepEnabled = false;
+let keepUserTouched = false; // v3.26.x #88：本会话用户手动动过保活开关 → 回填后不重读覆盖
 let wakeSentinel = null; // v3.5.131：模块级，供 stopKeepAlive 释放
 let kaTimer = null;     // 排中的退避补播定时器
 let kaDelay = 0;        // 下一次补播间隔 ms；0=不在退避轨道
@@ -45289,6 +45583,7 @@ const kaBtn = document.getElementById('bg-keepalive');
 function syncKeepUI() { if (kaBtn) kaBtn.checked = keepEnabled; }
 if (kaBtn) {
 kaBtn.addEventListener('change', function () {
+keepUserTouched = true; // #88：手动动过 → 回填后不再重读覆盖
 keepEnabled = kaBtn.checked;
 gSet('bg-keepalive', keepEnabled ? '1' : '0');
 if (keepEnabled) startKeepAlive(true);
@@ -45306,6 +45601,7 @@ syncKeepUI();
 if (keepEnabled) startKeepAlive(false);
 })();
 let notifyEnabled = false;
+let notifyUserTouched = false; // v3.26.x #88：本会话用户手动动过通知开关 → 回填后不重读覆盖
 const NOTIFY_ICON = (function () {
 try { return new URL('./icon-512.png', location.href).href; } catch (e) { return ''; }
 })();
@@ -45435,6 +45731,7 @@ const nbBtn = document.getElementById('bg-notify');
 function syncNotifyUI() { if (nbBtn) nbBtn.checked = notifyEnabled; }
 if (nbBtn) {
 nbBtn.addEventListener('change', function () {
+notifyUserTouched = true; // #88：手动动过 → 回填后不再重读覆盖
 if (nbBtn.checked) {
 requestNotifyPermission(function () {
 notifyEnabled = true;
@@ -45482,6 +45779,38 @@ toast('通知权限已被回收，已自动关闭通知');
 }
 syncNotifyUI();
 })();
+function reheatBgSwitches() {
+if (!keepUserTouched) {
+const wantKeep = gGet('bg-keepalive') === '1';
+if (wantKeep !== keepEnabled) {
+keepEnabled = wantKeep;
+syncKeepUI();
+if (wantKeep) startKeepAlive(false);
+else stopKeepAlive(false);
+try { console.info('[mochi] #88 回填后重读后台保活：' + (wantKeep ? '开' : '关')); } catch (e) {}
+}
+}
+if (!notifyUserTouched) {
+const savedNotify = gGet('bg-notify');
+const wantNotify = savedNotify === '1' &&
+'Notification' in window && Notification.permission === 'granted';
+if (wantNotify !== notifyEnabled) {
+notifyEnabled = wantNotify;
+syncNotifyUI();
+if (wantNotify) getBadgeUrl(function () {}); // 预热 badge 单色图（同初始化）
+try { console.info('[mochi] #88 回填后重读后台通知：' + (wantNotify ? '开' : '关')); } catch (e) {}
+}
+if (savedNotify === '1' && !wantNotify) {
+try { gSet('bg-notify', '0'); } catch (e) {}
+}
+}
+}
+try {
+if (window.__mochiDataReady) setTimeout(reheatBgSwitches, 0);
+else document.addEventListener('mochi-restore-done', function () { reheatBgSwitches(); });
+document.addEventListener('mochi-wrj-heal', function () { reheatBgSwitches(); });
+setTimeout(reheatBgSwitches, 16000); // 回填整体挂起设备的兜底
+} catch (e) {}
 const testBtn = document.getElementById('bg-notify-test');
 if (testBtn) {
 testBtn.addEventListener('click', function () {
@@ -59324,7 +59653,6 @@ function done(v) {
 saveLock = false;
 var cbs = _probeCbs || []; _probeCbs = null;
 for (var i = 0; i < cbs.length; i++) { try { cbs[i](v); } catch (e) {} }
-if (!v) offerSnapshotRecover(pf);
 }
 try {
 if (!window.idbGet) { done(null); return; }
@@ -59347,32 +59675,6 @@ else done(null);
 }).catch(function () { if (attempt < 2) setTimeout(run, 300); else done(null); });
 })();
 } catch (e) { done(null); }
-}
-function offerSnapshotRecover(pf) {
-try {
-if (sessionStorage.getItem("xy-garden-recover-offered")) return;
-sessionStorage.setItem("xy-garden-recover-offered", "1");
-if (!window.idbGet || !window.openModal) return;
-window.idbGet("xy-home-v2:__auto-backup-snapshot").then(function (raw) {
-if (!raw || window.activePrefix() !== pf || !junkEmpty()) return;
-var snap; try { snap = JSON.parse(typeof raw === "string" ? raw : JSON.stringify(raw)); } catch (e) { return; }
-var key = pf + ":" + G;
-var val = (snap.ls && snap.ls[key]) || (snap.idb && snap.idb[key]);
-if (!val || typeof val !== "string") return;
-var d; try { d = JSON.parse(val); } catch (e) { return; }
-var hasFlower = false;
-if (d && d.p) for (var i = 0; i < d.p.length; i++) if (d.p[i]) { hasFlower = true; break; }
-if (!hasFlower) return;
-window.openModal("找回花园", "", function () {
-if (window.activePrefix() !== pf || !junkEmpty()) return;
-try { s.set(G, val); } catch (e) {}
-try { if (window.idbSet) window.idbSet(key, val); } catch (e2) {}
-dataPf = null; data = load(); selPlot = -1;
-if (!page.hidden) renderAll();
-toast("花园数据已找回 🌸");
-}, { noInput: true, staticText: "这个桌面的花园现在是空的，但在自动备份副本里发现了它种着花的样子。\n\n要恢复吗？（会用副本覆盖当前的空花园）" });
-}).catch(function () {});
-} catch (e) {}
 }
 (function r() { try { if (!junkEmpty()) { dataPf = window.activePrefix(); saveLock = false; return; } probeIdb(function (v) { if (v) { try { data = load(); } catch (e) {} } }); } catch (e) { saveLock = false; } })();
 var T = {
@@ -69110,6 +69412,10 @@ if (byteLen(v) > 20 * 1024) lsBig[k] = v; // 大键：留待 IndexedDB 权威读
 else data.ls[k] = v;
 }
 } catch (e) {}
+function isAuthorityKey(k) {
+return /:chat-msgs$/.test(k) || /:feed-posts$/.test(k);
+}
+const exportMissing = []; // 权威键降级记录（只剩有损快照或丢失）
 if (window.idbGetAllKeys) {
 let idbKeys = [];
 try { idbKeys = await window.idbGetAllKeys() || []; } catch (e) {}
@@ -69121,7 +69427,7 @@ if (idbTotal) impShow('正在导出…', '正在读取全部数据 ' + idbDone +
 try {
 if (k.indexOf('xy-home-v2:') !== 0) continue;
 if (k === SNAPSHOT_KEY) continue; // v3.7.0：副本键不进导出文件
-if (k in data.ls) continue; // 小键已从 LS 收录（LS 是最新同步快照，比异步 IDB 新鲜）
+if (k in data.ls && !isAuthorityKey(k)) continue;
 let v = await window.idbGet(k);
 if ((v === undefined || v === null) && lsBig[k] === undefined) {
 v = await window.idbGet(k);
@@ -69140,14 +69446,21 @@ add(k, 'data:' + (v.type || 'audio/mpeg') + ';base64,' + btoa(bin));
 add(k, v); // 权威值以 IDB 为准（含最新聊天记录）
 }
 delete lsBig[k]; // 已收录 IDB 权威值，不再回落 LS 兜底
+if (isAuthorityKey(k) && (k in data.ls)) { try { delete data.ls[k]; } catch (e) {} }
+} else if (window.idbGetCached && window.idbGetCached(k) !== undefined) {
+add(k, window.idbGetCached(k));
+delete lsBig[k];
+if (isAuthorityKey(k) && (k in data.ls)) { try { delete data.ls[k]; } catch (e) {} }
 } else if (lsBig[k] !== undefined) {
 add(k, lsBig[k]);
 delete lsBig[k];
+if (isAuthorityKey(k)) exportMissing.push(k);
 } else {
 try {
 const lsV = localStorage.getItem(k);
 if (lsV !== null) { add(k, lsV); }
 } catch (e) {}
+if (isAuthorityKey(k)) exportMissing.push(k);
 }
 } catch (e) {} // 单键失败跳过，继续导出其余键
 }
@@ -69159,33 +69472,23 @@ const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
 const fname = 'mochi数据备份_' + localDateStr(new Date()) + '.json';
 const sizeStr = fmtSize(json.length);
 const coverLines = exportCoverage(data);
-const coverText = '导出内容（全局全部数据）：\n' + coverLines.join('\n') + '\n——';
+let coverText = '导出内容（全局全部数据）：\n' + coverLines.join('\n') + '\n——';
+if (exportMissing.length) {
+const names = exportMissing.map(k => /:chat-msgs$/.test(k) ? '聊天记录(' + k.slice('xy-home-v2:'.length) + ')' : '朋友圈(' + k.slice('xy-home-v2:'.length) + ')');
+coverText += '\n⚠ 以下数据可能未完整导出（IDB 读取失败，仅拿到有损快照或丢失）：\n' + names.map(n => '· ' + n).join('\n') + '\n请勿清空原设备数据，建议重启浏览器后重新导出。';
+}
 try { localStorage.setItem('xy-home-v2:__last-backup', String(Date.now())); } catch (e) {}
-const snapshotWritten = json.length <= 3 * 1024 * 1024;
-if (snapshotWritten) {
-impShow('正在导出…', '正在写入自动备份副本', 84);
-if (window.idbSet) {
-try { window.idbSet(SNAPSHOT_KEY, json); } catch (e) {}
-}
-}
 impShow('正在导出…', '正在准备保存文件', 92);
 const saveRes = await saveBackupFile(blob, fname);
 impHide();
 if (saveRes === 'ok') { toast('数据已导出（' + sizeStr + '，全部数据完整）'); return; }
-const snapHint = snapshotWritten
-? '\n（自动备份副本已额外存入本机缓存，随时可从「导入数据」恢复）'
-: '\n（备份较大未另存副本，请务必确保下载保存成功——这份文件是唯一的新备份）';
 if (window.openModal) {
 window.openModal('备份已打包完成（' + sizeStr + '）', '', () => {
 if (anchorDownload(blob, fname)) toast('数据已导出（' + sizeStr + '，全部数据完整）');
-else toast(snapshotWritten
-? '仍未触发下载。备份已自动存到本机缓存，可稍后从「导入数据」恢复'
-: '仍未触发下载。请重新点击「导出数据」并确认保存下载文件（这是唯一备份）');
-}, { noInput: true, staticText: coverText + '\n数据已经打包好，还没开始保存。\n点「确定」开始下载保存到本机，点「取消」放弃本次保存。' + snapHint });
+else toast('仍未触发下载。请重新点击「导出数据」并确认保存下载文件——这份文件是你的唯一备份');
+}, { noInput: true, staticText: coverText + '\n数据已经打包好，还没开始保存。\n点「确定」开始下载保存到本机，点「取消」放弃本次保存。\n（请务必确认下载保存成功：本机不再另存副本，这个文件就是唯一备份）' });
 } else {
-toast(snapshotWritten
-? '备份已存到本机缓存（' + sizeStr + '），可从「导入数据」恢复'
-: '备份已打包（' + sizeStr + '），请重新点击「导出数据」触发下载并保存文件');
+toast('备份已打包（' + sizeStr + '），请重新点击「导出数据」触发下载并保存文件（唯一备份）');
 }
 }
 async function saveBackupFile(blob, fname) {
@@ -69487,11 +69790,14 @@ impShow('正在导入…', '正在写入设置与聊天记录', 62);
 const lsKeys = Object.keys(data.ls).filter(k => k.indexOf('xy-home-v2:') === 0 && k !== SNAPSHOT_KEY);
 let entries = lsKeys.map(k => ({ k: k, len: byteLen(data.ls[k]) + byteLen(k) }));
 let chatMoved = false;
-if (idbOk && data.idb && typeof data.idb === 'object') {
-const before = entries.length;
-entries = entries.filter(e => !/:chat-msgs$/.test(e.k));
-chatMoved = entries.length < before;
-}
+const chatFallback = [];
+entries = entries.filter(e => {
+if (!/:chat-msgs$/.test(e.k)) return true;
+chatMoved = true;
+if (data.idb && data.idb[e.k] !== undefined) return false; // IDB 有权威，跳过 LS
+chatFallback.push({ k: e.k, v: data.ls[e.k] }); // IDB 无权威，快照写 IDB 兜底
+return false;
+});
 const total = entries.reduce((s, e) => s + e.len, 0);
 let quota = 5 * 1024 * 1024;
 try {
@@ -69514,6 +69820,7 @@ dropped.forEach(e => { skipSet[e.k] = true; });
 clearLs();
 let writeFailed = [];
 const idbFalls = [];
+chatFallback.forEach(f => idbFalls.push(f));
 for (const e of entries) {
 if (skipSet[e.k]) { idbFalls.push({ k: e.k, v: data.ls[e.k] }); continue; }
 try {
@@ -69578,47 +69885,16 @@ setTimeout(() => { impHide(); location.reload(); }, 3500);
 });
 });
 }
-function checkLostAndOfferRestore() {
-if (sessionStorage.getItem('xy-snapshot-offer-done')) return;
-let lsBiz = 0;
-try {
-for (let i = 0; i < localStorage.length; i++) {
-const k = localStorage.key(i);
-if (k && k.indexOf('xy-home-v2:') === 0 && k !== SNAPSHOT_KEY) lsBiz++;
+function purgeLegacySnapshot() {
+try { localStorage.removeItem(SNAPSHOT_KEY); } catch (e) {}
+if (!window.idbDelete) return;
+try { Promise.resolve(window.idbDelete(SNAPSHOT_KEY)).catch(() => {}); } catch (e) {}
 }
-} catch (e) {}
-if (lsBiz >= 3) return; // localStorage 有足够业务数据，非丢失场景
-if (!window.idbGetAllKeys || !window.idbGet) return;
-window.idbGetAllKeys().then(keys => {
-const idbBiz = (keys || []).filter(k => k.indexOf('xy-home-v2:') === 0 && k !== SNAPSHOT_KEY);
-if (idbBiz.length >= 3) return; // IDB 有足够业务数据，非丢失场景
-return window.idbGet(SNAPSHOT_KEY);
-}).then(raw => {
-if (!raw || typeof raw !== 'string') return;
-let data;
-try { data = JSON.parse(raw); } catch (e) { return; }
-if (!data || typeof data !== 'object' || !data.ls) return;
-const snapBiz = Object.keys(data.ls || {}).concat(Object.keys(data.idb || {}))
-.filter(k => k.indexOf('xy-home-v2:') === 0 && k !== SNAPSHOT_KEY);
-if (snapBiz.length < 3) return;
-if (!window.openModal) return;
-try { sessionStorage.setItem('xy-snapshot-offer-done', '1'); } catch (e) {}
-const tm = fmtLocalTime(data.exportTime);
-const cnt = (o) => (o && typeof o === 'object' ? Object.keys(o).length : 0);
-const summary = '当前几乎没有数据，但发现一份自动备份副本：\n' +
-'· 导出时间：' + tm + '\n' +
-'· 小存储 ' + cnt(data.ls) + ' 项 + 大文件 ' + cnt(data.idb) + ' 项\n\n' +
-'点「确定」从副本恢复，点「取消」保留当前空白状态。';
-window.openModal('检测到数据可能丢失', '', () => {
-doImportGo(data);
-}, { noInput: true, staticText: summary });
-}).catch(() => {});
-}
-if (window.__mochiDataReady) { setTimeout(checkLostAndOfferRestore, 800); }
+if (window.__mochiDataReady) { setTimeout(purgeLegacySnapshot, 1500); }
 else {
 document.addEventListener('mochi-restore-done', function h() {
 document.removeEventListener('mochi-restore-done', h);
-setTimeout(checkLostAndOfferRestore, 800);
+setTimeout(purgeLegacySnapshot, 1500);
 });
 }
 window.runBackupExport = function () {
@@ -71564,6 +71840,7 @@ ceMo.observe(document.body, { childList: true, subtree: true });
 }
 } catch (e) {}
 function _aRefreshCe() {
+try { if (_aClosing) return; } catch (e) {}
 try { if (Date.now() - _aUserTypos < 500) return; } catch (e) {}
 try {
 var list = document.querySelectorAll('.ce-box');
@@ -71585,6 +71862,7 @@ clearTimeout(_aCeT);
 _aCeT = setTimeout(_aRefreshCe, 60);
 }
 var _aUserTypos = Date.now();
+var _aClosing = false;
 try {
 document.addEventListener('keydown', function () { _aUserTypos = Date.now(); }, true);
 } catch (e) {}
@@ -72030,14 +72308,15 @@ if (!_aVV || !_aPhone) return;
 var h = _aVV.height;
 var open = h < _aH - 60; // 可视高度明显变小 = 键盘弹出
 if (!open && h > _aH) _aH = h; // 无键盘时更新基准，地址栏变化不误判
-if (open && !_aKb) { _aKb = true; _aPhone.style.alignSelf = 'flex-start'; kbDockPanels(); }
+if (open && !_aKb) { _aClosing = false; _aKb = true; _aPhone.style.alignSelf = 'flex-start'; kbDockPanels(); }
 if (!open && _aKb) {
 if (h < _aH - 12) {
+_aClosing = true;
 if (_aPhone.style.height !== h + 'px') _aPhone.style.height = h + 'px';
-_aPinPan();
 return;
 }
 _aKb = false;
+_aClosing = false;
 _aPhone.style.height = '';
 _aPhone.style.alignSelf = '';
 _aPanComp();
@@ -72047,7 +72326,7 @@ return;
 if (_aKb) {
 var hs = h + 'px';
 if (_aPhone.style.height !== hs) _aPhone.style.height = hs;
-_aPinPan();
+if (!_aClosing) _aPinPan();
 }
 }
 var _aWatch = null;
@@ -72073,6 +72352,7 @@ _aProvClear();
 } else if (_aKb) {
 if (_aVV.height >= _aH - 12) {
 _aKb = false;
+_aClosing = false;
 _aPhone.style.height = '';
 _aPhone.style.alignSelf = '';
 _aPanComp();
@@ -72140,6 +72420,7 @@ _aVV.addEventListener('resize', _aSchedCe);
 window.addEventListener('resize', _aSchedCe);
 document.addEventListener('focusin', function (e) {
 try {
+_aClosing = false; // v3.28.x：聚焦=弹键盘（或保持），退出收起态
 if (_aIsText(e.target)) { _aTextFocused = e.target; _aFocusAt = Date.now(); _aBump(); }
 if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable)) {
 try { syncAndroidKb(); } catch (e3) {}
@@ -72160,6 +72441,7 @@ try { startAWatch(); } catch (e4) {}
 });
 document.addEventListener('focusout', function (e) {
 try { if (e.target === _aTextFocused) _aTextFocused = null; } catch (e2) {}
+if (_aKb) _aClosing = true; // v3.28.x：键盘开着时失焦=正在收起，标记以跳过逐帧 _aPinPan
 setTimeout(syncAndroidKb, 120);
 setTimeout(syncAndroidKb, 350);
 setTimeout(_aProvCheck, 250);
@@ -72167,6 +72449,7 @@ setTimeout(_aProvCheck, 900);
 setTimeout(function () {
 if (_aKb && _aVV.height >= _aH - 60) {
 _aKb = false;
+_aClosing = false;
 _aPhone.style.height = '';
 _aPhone.style.alignSelf = '';
 _aPanComp();
@@ -72180,6 +72463,7 @@ try {
 _aProvClear();
 if (_aKb) {
 _aKb = false;
+_aClosing = false;
 _aPhone.style.height = '';
 _aPhone.style.alignSelf = '';
 _aPanComp();

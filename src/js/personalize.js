@@ -5205,10 +5205,6 @@ try {
       'xy-home-v2:__diag-net',
       'xy-home-v2:__diag-tap'
     ];
-    // v3.26.x：自动备份快照（副本）体积统计：split 成 LS 贡献 + IDB 贡献，汇总后显示和提示
-    let snapLs = 0, snapIdb = 0, snapText = '(统计中)';
-    // v3.26.x：IndexedDB 扫描是否完成——完成前禁止删除按钮且显示「统计中…」，防止"打开即点删/删完没落库"拿错数字或多扫到旧快照
-    let idbDone = false;
 
     function fmtBytes(n) {
       if (n == null || isNaN(n)) return '(未知)';
@@ -5222,9 +5218,8 @@ try {
       // —— 全局系统 / 诊断 / 索引前缀（无 cid 命名空间）——
       if (tail.indexOf('__diag-') === 0) return '错误诊断记录';
       if (tail.indexOf('music-file:') >= 0) return '本地音乐';
-      if (tail.indexOf('__auto-backup-snapshot') >= 0) return '自动备份快照';
-      // v3.26.x：__last-backup 只是"最近导出时间"小键，不再是副本体积；归到系统设置，
-      // 让「自动备份快照」分类只精确反映副本键，删除后该分类能真正归零
+      // v3.29.x：「自动备份快照」分类已随副本机制下线（遗留副本由 data-backup.js 启动时清理）
+      // v3.26.x：__last-backup 只是"最近导出时间"小键，归到系统设置
       if (tail.indexOf('__last-backup') >= 0 || tail.indexOf('__last-backup-remind') >= 0) return '系统设置';
       if (tail.indexOf('psync-') >= 0) return '后台同步缓存';
       if (tail.indexOf('__big-idx') >= 0 || tail.indexOf('__ls-dirty') >= 0) return '数据索引';
@@ -5357,7 +5352,7 @@ try {
       if (!rows.length) { el.innerHTML = '<div class="storage-hint">暂未统计到数据。</div>'; return; }
       rows.forEach(function (r) {
         const d = document.createElement('div');
-        d.className = 'storage-cat-row' + (r.keys && r.keys.length ? ' has-keys' : '') + (r.name === '自动备份快照' ? ' snap' : '');
+        d.className = 'storage-cat-row' + (r.keys && r.keys.length ? ' has-keys' : '');
         d.innerHTML = '<div class="storage-cat-line"><span class="storage-cat-name"></span><span class="storage-cat-num"></span><span class="storage-cat-size"></span></div>';
         d.querySelector('.storage-cat-name').textContent = r.name;
         d.querySelector('.storage-cat-num').textContent = r.n + ' 键';
@@ -5389,22 +5384,6 @@ try {
       const d = diagSummary();
       el.textContent = (d.items ? d.items + ' 项缓存' : '无缓存') + (d.errs ? ' · ' + d.errs + ' 条错误' : '') + (d.items ? ' · 约 ' + fmtBytes(d.bytes) : '');
     }
-    // v3.26.x：自动备份快照 = LS + IDB 两处之和；同步刷新「当前快照大小」、顶部警示和删除按钮。
-    // IndexedDB 未扫完则按钮禁用并显示「统计中…」，避免打开页面瞬间就点删除拿到不准的数字；
-    // 扫描完成后若快照存在则启用按钮（自愈：删除后又重新导出重建了快照，也能再次删除）。
-    function renderSnap() {
-      const size = (snapLs || 0) + (snapIdb || 0);
-      snapText = size ? fmtBytes(size) : '(无)';
-      const el = document.getElementById('st-snap');
-      if (el) el.textContent = idbDone ? (snapText + (size ? '（一份完整副本）' : '')) : '统计中…';
-      const hintEl = document.getElementById('st-snap-hint');
-      if (hintEl) hintEl.style.display = (idbDone && size) ? 'block' : 'none';
-      const btn = document.getElementById('st-clear-snap');
-      if (btn) {
-        btn.disabled = !(idbDone && size > 0);
-        btn.textContent = !idbDone ? '统计中…' : (size > 0 ? '删除自动备份快照（释放空间）' : '（暂无自动备份快照）');
-      }
-    }
     function renderStorage() {
       const quotaEl = document.getElementById('st-quota');
       if (quotaEl && navigator.storage && navigator.storage.estimate) {
@@ -5417,20 +5396,12 @@ try {
       if (lsEl) lsEl.textContent = fmtBytes(ls.total) + '（' + ls.count + ' 键）';
       const idbEl = document.getElementById('st-idb');
       if (idbEl) idbEl.textContent = '统计中…';
-      // 重新开始一次完整扫描：先标记未完成，按钮回到「统计中…」禁用态，扫完再启用
-      idbDone = false;
       // 先渲染 localStorage 明细，IndexedDB 异步补齐
       renderCatTable(ls.cats, null);
-      snapLs = (ls.cats['自动备份快照'] || {}).size || 0;
-      snapIdb = 0;
-      renderSnap();
       idbStats(function (done, totalN) {
         if (idbEl) idbEl.textContent = '统计中…（' + done + '/' + totalN + '）';
       }, function (res) {
         if (idbEl) idbEl.textContent = res ? fmtBytes(res.total) + '（' + res.count + ' 键）' : '不可用';
-        snapIdb = (res && res.cats && res.cats['自动备份快照'] || {}).size || 0;
-        idbDone = true;
-        renderSnap();
         renderCatTable(ls.cats, res ? res.cats : null);
       });
       renderDiagCount();
@@ -5445,19 +5416,6 @@ try {
       renderDiagCount();
       try { if (typeof toast === 'function') toast('错误诊断记录已清理'); } catch (e) {}
     }
-    // v3.26.x：删除自动备份快照（副本，仅删这一份备份，真实数据全部保留）
-    async function deleteSnapshot() {
-      const k = 'xy-home-v2:__auto-backup-snapshot';
-      try { localStorage.removeItem(k); } catch (e) {}
-      // 等 IDB 删除事务落库后再重扫，避免刚删完又扫到旧快照显示"没删掉"
-      try { if (window.idbDelete) await window.idbDelete(k); } catch (e) {}
-      snapLs = 0; snapIdb = 0; idbDone = true;
-      const el = document.getElementById('st-snap');
-      if (el) el.textContent = '(已删除)';
-      renderSnap();
-      renderStorage();
-      try { if (typeof toast === 'function') toast('自动备份快照已删除，空间已释放'); } catch (e) {}
-    }
     const clearBtn = document.getElementById('st-clear-err');
     if (clearBtn) {
       clearBtn.addEventListener('click', function () {
@@ -5470,20 +5428,6 @@ try {
           });
         } else {
           clearDiag();
-        }
-      });
-    }
-    // v3.26.x：删除自动备份快照按钮——二次确认后才删（只删副本，真实数据无损）
-    const snapBtn = document.getElementById('st-clear-snap');
-    if (snapBtn) {
-      snapBtn.addEventListener('click', function () {
-        if (window.openModal) {
-          window.openModal('删除自动备份快照？', '', function () { deleteSnapshot(); }, {
-            noInput: true,
-            staticText: '自动备份快照是全部数据的一份完整副本（当前约 ' + snapText + '，约占近一半空间）。\n删除它不会影响聊天、字卡、头像、音乐等任何真实数据，可立即释放约 ' + snapText + ' 的空间。\n注意：下次你再「导出数据」时会自动重建这份快照。'
-          });
-        } else {
-          deleteSnapshot();
         }
       });
     }

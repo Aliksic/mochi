@@ -1914,6 +1914,7 @@
     disarmAutoResume();
     clearBgResume();
     clearStallGuard();
+    bgBrokeAudio = false; // v3.29.x：切歌/停止清后台断流标记
     // v3.14.x：停止/切歌后不再判定联系人收藏（新播放会重新调度）
     clearTaFavTimer();
     // v3.27.x：停止/切歌取消 TA 暂停互动（未触发的延迟计划、进行中的恢复计划一并清）
@@ -2051,6 +2052,13 @@
   // 被拒再 muted 静音解锁降级（同 startPlayback 思路），仍失败重建元素（X5 缓存
   // rejection 兜底，同 armAutoResume.retry）；全程静默不弹 toast。
   let wantPlay = false;
+  // v3.29.x：后台冻结/断流导致 audio onerror 触发过——切回前台时若为 true，
+  // 说明当前 audio 元素的 src 已失效（典型：retryWithHttpsUrl 把 src 换成 neteaseOuterUrl
+  // 的 http CDN，HTTPS 页面下被混合内容拦截；或后台 fetch 挂起后 src 残留坏链）。
+  // 此时用旧元素 play() 必失败 → offerRemoveDamagedSong 累计失败 → 误弹"会员/付费歌曲"窗。
+  // 切回前台应直接 playTrack(currentId) 完整重建（用原始 m.url + 重置 _httpsRetried），
+  // 而非 tryResumePlayback 用坏元素。onplay / teardownAudio / 重建成功时清零。
+  let bgBrokeAudio = false;
   // v3.28.x：把「是否还想继续播放」（外部打断暂停 vs 用户主动暂停）实时暴露给 bg-keep——
   // bg-keep 需要据此决定是否接管媒体会话：音乐还有播放意图（wantPlay=true）时，其
   // setKeepMediaSession 不得覆盖歌曲媒体条，否则短暂后台打断会吞掉通知栏歌曲条。
@@ -2121,16 +2129,30 @@
     if (p && p.catch) p.catch(function () { bgResumeFails++; bgResumeFailAt = Date.now(); });
   }
   // 回前台兜底：冻结解除/中断结束后立刻补播（不等用户点屏幕）
+  function resumeOnForeground() {
+    // v3.29.x：后台冻结/断流导致 audio onerror 过 → 旧元素 src 已失效（典型 neteaseOuterUrl
+    // 的 http CDN 在 HTTPS 页面下被混合内容拦截，或后台 fetch 挂起后 src 残留坏链）。
+    // 用旧元素 play() 必失败 → offerRemoveDamagedSong 累计失败 → 误弹"会员/付费歌曲"窗。
+    // 直接 playTrack(currentId) 完整重建：用原始 m.url、重置 _httpsRetried、新 audio 元素，
+    // 走正常起播链路（手势内可播 / 被拒则 armAutoResume 等用户点一下屏幕恢复）。
+    if (bgBrokeAudio && wantPlay && currentId && !callHoldPending && !taPauseActive && !httpsRetrying && !demoFallbackBusy) {
+      bgBrokeAudio = false;
+      try { playTrack(currentId); } catch (e) {}
+      return;
+    }
+    bgBrokeAudio = false;
+    try { tryResumePlayback(); } catch (e) {}
+  }
   ['visibilitychange', 'focus'].forEach(function (ev) {
     document.addEventListener(ev, function () {
       if (document.visibilityState !== 'visible') return;
       failMap = {}; bgResumeFails = 0; // v3.x：从别的应用切回浏览器时，后台停滞触发的播放失败不算连续失败，避免误报"会员/移出"；v3.26.x：补播失败封顶一并清零，回前台才真正发起续播
-      setTimeout(function () { try { tryResumePlayback(); } catch (e) {} }, 200);
+      setTimeout(resumeOnForeground, 200);
     });
   });
   window.addEventListener('pageshow', function () {
     failMap = {}; bgResumeFails = 0; // v3.26.x：见 visibilitychange 同款——回前台重置补播失败封顶
-    setTimeout(function () { try { tryResumePlayback(); } catch (e) {} }, 200);
+    setTimeout(resumeOnForeground, 200);
   });
   // 后台看门狗：hidden 下若有「想播却被暂停」的元素，周期性尝试拉起
   //（页面未被完全冻结时生效；完全冻结时定时器停摆，由回前台兜底接管）
@@ -2294,7 +2316,7 @@
     // 成「会员/坏链」弹窗（用户红米 K80 后台听歌被弹「会员音乐失效」）。后台失败是
     // 瞬态：保持 wantPlay 不重置，回前台由 failMap 清零 + 补播兜底自动续播；真·坏链
     // 在前台手动播放时仍照常累计（toast → 连续 2 次 → 移出窗）。
-    if (document.hidden) return; // v3.26.x：后台冻结/断流误触发 onerror，不弹「移出」窗不计数
+    if (document.hidden) { bgBrokeAudio = true; return; } // v3.26.x：后台冻结/断流误触发 onerror，不弹「移出」窗不计数；v3.29.x：标记后台断流，切回前台重建
     wantPlay = false; clearBgResume(); // v3.10.x：真失败＝停止意图，不再自动续播
     try { if (audio) audio.pause(); } catch (e) {}
     try { syncPlayIcons(false); } catch (e) {}
@@ -2303,7 +2325,7 @@
     const cnt = (failMap[m.id] || 0) + 1;
     failMap[m.id] = cnt;
     if (cnt < 2) {
-      try { toast('播放失败：可能是会员/付费歌曲或链接失效，可再点一次重试'); } catch (e) {}
+      try { toast('播放失败，可以在播放列表换一首歌试试'); } catch (e) {}
       return;
     }
     if (!window.openModal) return;
@@ -2314,7 +2336,7 @@
         saveLibrary();
         renderPage();
         toast('已移出音乐库');
-      }, { noInput: true, staticText: '连续播放失败，可能是链接失效或会员/付费歌曲（也可能是网络临时问题）。确定把它移出音乐库吗？' });
+      }, { noInput: true, staticText: '连续播放失败，可能是后台暂停后链接失效。可以在播放列表换一首歌点击播放恢复播放，或把它移出音乐库。' });
     } catch (e) {}
   }
   function demoFallbackOrError(m) {
@@ -2387,6 +2409,9 @@
   function setupHandlers(m) {
     audio.onended = function () { handleEnded(); };
     audio.onerror = function () {
+      // v3.29.x：后台冻结/断流触发的 onerror 标记——切回前台由 visibilitychange 重建播放，
+      // 避免用坏掉的旧元素 play() 失败被误判成"会员/付费歌曲"弹窗
+      if (document.hidden) bgBrokeAudio = true;
       // v3.5.112：网易云外链播放失败 → 若为内置种子歌曲，自动回退本地合成旋律；
       // 本地旋律也失败时不再递归（demoFallbackBusy 置位）
       // v3.6.x：onerror 可能被触发多次（不同错误码）——先尝试 https 直链重播，
@@ -2417,7 +2442,7 @@
         } else { armAutoResume(); }
       }
     };
-    audio.onplay = function () { playRejected = false; bgResumeFails = 0; clearStallGuard(); disarmAutoResume(); clearBgResume(); wantPlay = true; syncPlayIcons(true); if (m) failMap[m.id] = 0; try { if (navigator.mediaSession) navigator.mediaSession.playbackState = 'playing'; } catch (e) {} try { window.__musicPlaying = true; } catch (e) {} // v3.28.x：每次真正出声都重新绑定歌曲媒体条——后台短暂打断被 bg-keep 接管媒体会话（元数据换成「Mochi 后台保活」）后，恢复播放时若不重设歌曲元数据，通知栏媒体条会停在保活条或直接消失
+    audio.onplay = function () { playRejected = false; bgResumeFails = 0; clearStallGuard(); disarmAutoResume(); clearBgResume(); bgBrokeAudio = false; wantPlay = true; syncPlayIcons(true); if (m) failMap[m.id] = 0; try { if (navigator.mediaSession) navigator.mediaSession.playbackState = 'playing'; } catch (e) {} try { window.__musicPlaying = true; } catch (e) {} // v3.28.x：每次真正出声都重新绑定歌曲媒体条——后台短暂打断被 bg-keep 接管媒体会话（元数据换成「Mochi 后台保活」）后，恢复播放时若不重设歌曲元数据，通知栏媒体条会停在保活条或直接消失
       try { updateMediaSession(true); } catch (e) {} };
     audio.onpause = function () { syncPlayIcons(false); try { if (navigator.mediaSession) navigator.mediaSession.playbackState = (wantPlay && !callHoldPending) ? 'playing' : 'paused'; } catch (e) {} try { window.__musicPlaying = false; } catch (e) {} // v3.28.x：外部打断（还想播）保持 playbackState='playing'，避免 Chrome 把页面当闲置标签冻结、通知栏媒体条消失；仅用户主动暂停才标 'paused'。v3.10.x：非用户暂停（后台省电/音频焦点抢占/系统打断）→ 定时补播反击
       // v3.27.x：TA 暂停再播放互动进行中不补播（TA 稍后会自己点播放恢复）

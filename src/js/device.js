@@ -790,33 +790,53 @@
       if (u >= 1024) return (u / 1024).toFixed(1) + ' KB';
       return u + ' B';
     };
-    try {
-      let n = 0;
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (k && k.indexOf(G) === 0) n++;
-      }
-      L.push('localStorage 数据键=' + n + ' 个');
-    } catch (e) { L.push('localStorage 不可访问'); }
-    // v3.26.x：跨域名（device.js=AI-B）——回复字卡池诊断，报障「联系人只发【收到～】」直接定位
-    try { if (window.__replyPoolDiag) L.push('回复字卡池：' + window.__replyPoolDiag()); } catch (e2) {}
     // v3.25.x：键明细——数据丢失类报障（键被清/写入失败/快照剥离）一眼定位：
     // 哪些键还在、各占多大。UTF-16 双字节估算，看量级够用。
+    // v3.26.x #88：同一次遍历顺带统计【整个 origin】的 LS 占用（含非本项目键）。
+    // 关键判据：GitHub Pages 同账号下所有项目共用一个 origin 的 localStorage 配额
+    //（约 5MB，路径不隔离）。小米 14U Edge 实测「本项目 0 键 + 写探针 QuotaExceededError」
+    // 只有三种可能：本项目撑爆 / 同域其他站点占满 / LS 库损坏——必须看到整域数据才能定性。
     try {
-      let total = 0;
+      let total = 0, n = 0;
+      let allTotal = 0, allN = 0;
       const items = [];
+      const otherItems = [];
       for (let i = 0; i < localStorage.length; i++) {
         const k2 = localStorage.key(i);
-        if (!k2 || k2.indexOf(G) !== 0) continue;
-        const sz = (k2.length + String(localStorage.getItem(k2) || '').length) * 2;
-        total += sz;
-        items.push({ k: k2.slice(G.length), size: sz });
+        if (!k2) continue;
+        allN++;
+        const sz2 = (k2.length + String(localStorage.getItem(k2) || '').length) * 2;
+        allTotal += sz2;
+        if (k2.indexOf(G) !== 0) {
+          otherItems.push({ k: k2.slice(0, 40), size: sz2 });
+          continue;
+        }
+        n++;
+        total += sz2;
+        items.push({ k: k2.slice(G.length), size: sz2 });
+      }
+      L.push('localStorage 数据键=' + n + ' 个');
+      L.push('localStorage 整域=' + allN + ' 键 ≈' + usageStr(allTotal) +
+        '（非本项目 ' + otherItems.length + ' 键 ≈' + usageStr(allTotal - total) + '）');
+      otherItems.sort(function (a, b) { return b.size - a.size; });
+      const oth = otherItems.slice(0, 5).map(function (it) { return it.k + '=' + usageStr(it.size); }).join('、');
+      if (oth) L.push('非本项目最大键：' + oth);
+      // 写探针（与下方「开关持久化体检」同款）：单独成行给结论，报障时不必再人肉推断
+      try {
+        localStorage.setItem(G + '__ls-probe', 'p');
+        const back = localStorage.getItem(G + '__ls-probe');
+        localStorage.removeItem(G + '__ls-probe');
+        L.push('localStorage 状态：' + (back === 'p' ? '正常（可写可读回）' : '异常：写入后读不回（落盘被拦）'));
+      } catch (e) {
+        L.push('localStorage 状态：写入失败(' + ((e && e.name) || '异常') + ')——配额满或库已损坏，设置/桌面需靠 IndexedDB 校正');
       }
       items.sort(function (a, b) { return b.size - a.size; });
       L.push('数据总占用≈' + usageStr(total));
       const tops = items.slice(0, 8).map(function (it) { return it.k + '=' + usageStr(it.size); }).join('、');
       if (tops) L.push('最大键：' + tops);
-    } catch (e) {}
+    } catch (e) { L.push('localStorage 不可访问'); }
+    // v3.26.x：跨域名（device.js=AI-B）——回复字卡池诊断，报障「联系人只发【收到～】」直接定位
+    try { if (window.__replyPoolDiag) L.push('回复字卡池：' + window.__replyPoolDiag()); } catch (e2) {}
     // v3.26.x：IndexedDB 大键明细——「存储配额已用 1.x GB」类报障一眼定位哪类数据在占空间：
     // 聊天图片（chat-msgs）/ 本地音乐（music-file）/ 头像库（avatar-lib）/ 备份快照
     // （__auto-backup-snapshot：手动导出时把全部数据复制一份进 IDB，是最常见的"数据翻倍"
@@ -1244,5 +1264,53 @@
     help.addEventListener('keydown', function (e) {
       if (e.key === 'Enter' || e.key === ' ') openHelp(e);
     });
+  }
+})();
+
+// ===== 功能：localStorage 失效自检 + 当场告知（v3.26.x #88） =====
+// 小米 14U Edge 实测「LS 整库写不进（QuotaExceededError）而 IDB 184MB 完好、storage.
+// persisted=true」。这种设备上所有「启动同步读 localStorage」的模块一律拿到空值，
+// 用户看到的就是「聊天记录几个小时自己消失」「后台通知自己关掉」——而全程没有任何提示。
+// 结论挂 window.__lsStatus（诊断/查看存储可复用），并只在 IDB 回填已完成（数据确实安全）
+// 时提示一次；IDB 也不行的情况由 idb.js 的「存储异常」弹窗负责，这里不抢话也不吓人。
+(function () {
+  const G = 'xy-home-v2:';
+  const FLAG = 'mochi-ls-dead-noticed';
+  function probe() {
+    try {
+      localStorage.setItem(G + '__ls-probe', 'p');
+      const back = localStorage.getItem(G + '__ls-probe');
+      localStorage.removeItem(G + '__ls-probe');
+      return back === 'p' ? 'ok' : 'unwritable(写入后读不回)';
+    } catch (e) {
+      return 'unwritable(' + ((e && e.name) || '异常') + ')';
+    }
+  }
+  let tries = 0;
+  function say() {
+    if (typeof window.toast !== 'function') {
+      if (tries++ < 20) setTimeout(say, 500);
+      return;
+    }
+    try { sessionStorage.setItem(FLAG, '1'); } catch (e) {}
+    window.toast('本机浏览器本地存储受限，设置与记录已改用数据库存储，数据不会丢');
+  }
+  function check() {
+    window.__lsStatus = probe();
+    if (window.__lsStatus === 'ok') return;
+    let seen = false;
+    try { seen = sessionStorage.getItem(FLAG) === '1'; } catch (e) {}
+    if (!seen) setTimeout(say, 1200);
+  }
+  window.__lsStatus = probe();
+  if (window.__lsStatus !== 'ok') {
+    if (window.__mochiDataReady) setTimeout(check, 4000);
+    else {
+      document.addEventListener('mochi-restore-done', function h() {
+        document.removeEventListener('mochi-restore-done', h);
+        setTimeout(check, 1000);
+      });
+      setTimeout(function () { if (window.__mochiDataReady) check(); }, 20000);
+    }
   }
 })();

@@ -10,10 +10,9 @@
 (function () {
   // 容量余量：给正在运行的其他功能留一点（手机 localStorage 约 5MB，桌面 10MB）
   const LS_HEADROOM = 512 * 1024;
-  // v3.7.0：自动备份副本键——每次手动导出时同步把 JSON 写入 IndexedDB 此键。
-  // 启动时若检测到业务键几乎为空但副本存在，提示用户从副本恢复。
-  // 防御场景：导入失败导致数据被清、IDB 写入失败导致部分键丢失、用户误删部分数据。
-  // 不防御场景：浏览器系统级清空整个源的 LS+IDB（副本也一起没，需用户手动备份文件）。
+  // v3.7.0 引入、v3.29.x 下线：自动备份副本键。原设计是每次手动导出时把整包 JSON 再复制
+  // 一份进 IndexedDB，供「数据几乎全空」时启动弹窗恢复。现已彻底不再写入，本常量只剩两个用途：
+  //  ① 导出时排除该键（防自包含无限增长）；② 启动时清理旧版本遗留的那份副本（purgeLegacySnapshot）。
   const SNAPSHOT_KEY = 'xy-home-v2:__auto-backup-snapshot';
 
   function toast(msg) {
@@ -133,6 +132,15 @@
     // v3.9.x：修复"无法导出当前的所有数据"——原实现整个 for 循环包在一个 try-catch 里，
     // 某个键的 idbGet/arrayBuffer/btoa 抛错会终止整个循环，后续键全部丢失（导出文件缺数据）。
     // 改为每个键单独 try-catch：一个键失败只跳过该键，不影响其余键导出。
+    // v3.26.x：权威键（chat-msgs/feed-posts）LS 是有损快照（剥图/截断或大键不进 LS），
+    // IDB 才是完整权威值。这类键即使 LS 小键已收录也必须读 IDB 权威，否则导出有损快照
+    //（丢图片/语音/长文本），跨浏览器导入后聊天记录/朋友圈丢失（用户反馈 Safari 导出→
+    // Chrome 导入丢数据）。IDB 失败时从 memoryCache 兜底（idbRestore 回填值/本会话写入值），
+    // 仍失败则记录到 exportMissing，导出结束明确提示用户备份可能不完整。
+    function isAuthorityKey(k) {
+      return /:chat-msgs$/.test(k) || /:feed-posts$/.test(k);
+    }
+    const exportMissing = []; // 权威键降级记录（只剩有损快照或丢失）
     if (window.idbGetAllKeys) {
       let idbKeys = [];
       try { idbKeys = await window.idbGetAllKeys() || []; } catch (e) {}
@@ -144,7 +152,8 @@
         try {
           if (k.indexOf('xy-home-v2:') !== 0) continue;
           if (k === SNAPSHOT_KEY) continue; // v3.7.0：副本键不进导出文件
-          if (k in data.ls) continue; // 小键已从 LS 收录（LS 是最新同步快照，比异步 IDB 新鲜）
+          // 权威键不跳过（LS 有损快照不能代替 IDB 权威值）；双写一致键 LS 小键已收录则跳过
+          if (k in data.ls && !isAuthorityKey(k)) continue;
           let v = await window.idbGet(k);
           if ((v === undefined || v === null) && lsBig[k] === undefined) {
             // IDB 读取失败且 lsBig 无兜底（典型场景：>200KB 的 IDB-only 键，xyStore 已从 LS 删除，
@@ -168,10 +177,21 @@
               add(k, v); // 权威值以 IDB 为准（含最新聊天记录）
             }
             delete lsBig[k]; // 已收录 IDB 权威值，不再回落 LS 兜底
+            // 权威键已拿到 IDB 完整值，删 data.ls 里可能有的 LS 有损快照，避免导入时混入
+            if (isAuthorityKey(k) && (k in data.ls)) { try { delete data.ls[k]; } catch (e) {} }
+          } else if (window.idbGetCached && window.idbGetCached(k) !== undefined) {
+            // v3.26.x：IDB 读取失败/超时，从 memoryCache 兜底（idbRestore 回填的大键 /
+            // 本会话 xyStore.set 写入值）。Safari 等 IDB 事务易挂起的浏览器上，启动时
+            // idbRestore 已慢慢回填进 memoryCache，导出时并发 idbGet 失败也能拿到最新值。
+            add(k, window.idbGetCached(k));
+            delete lsBig[k];
+            if (isAuthorityKey(k) && (k in data.ls)) { try { delete data.ls[k]; } catch (e) {} }
           } else if (lsBig[k] !== undefined) {
             // IDB 无此键 / 读取失败 / 超时 → 回落 localStorage 兜底（至少不丢）
             add(k, lsBig[k]);
             delete lsBig[k];
+            // v3.26.x：权威键回落 LS 兜底，可能是有损快照（chat-msgs 剥图/截断）→ 记录降级
+            if (isAuthorityKey(k)) exportMissing.push(k);
           } else {
             // IDB 读取两次均失败 + lsBig 无兜底（>200KB IDB-only 键），最后尝试直接从 LS 读
             // （极端情况下 LS 可能有残留快照，聊胜于无）
@@ -179,6 +199,8 @@
               const lsV = localStorage.getItem(k);
               if (lsV !== null) { add(k, lsV); }
             } catch (e) {}
+            // v3.26.x：权威键 IDB+memoryCache 均失败，只剩 LS 有损快照（或彻底没有）→ 记录降级
+            if (isAuthorityKey(k)) exportMissing.push(k);
           }
         } catch (e) {} // 单键失败跳过，继续导出其余键
       }
@@ -195,28 +217,19 @@
     // v3.27.x：导出内容覆盖清单——本次导出的功能模块一目了然（导出=全局全部数据，
     // localStorage 小键 + IndexedDB 大键全量收集，用户反馈「看不到导出了哪些功能」）
     const coverLines = exportCoverage(data);
-    const coverText = '导出内容（全局全部数据）：\n' + coverLines.join('\n') + '\n——';
+    let coverText = '导出内容（全局全部数据）：\n' + coverLines.join('\n') + '\n——';
+    // v3.26.x：权威键降级提示——IDB 事务挂起/超时导致聊天记录/朋友圈只拿到 LS 有损
+    // 快照（剥图/截断）或彻底丢失。明确告知用户备份可能不完整，切勿据此清空原设备数据。
+    if (exportMissing.length) {
+      const names = exportMissing.map(k => /:chat-msgs$/.test(k) ? '聊天记录(' + k.slice('xy-home-v2:'.length) + ')' : '朋友圈(' + k.slice('xy-home-v2:'.length) + ')');
+      coverText += '\n⚠ 以下数据可能未完整导出（IDB 读取失败，仅拿到有损快照或丢失）：\n' + names.map(n => '· ' + n).join('\n') + '\n请勿清空原设备数据，建议重启浏览器后重新导出。';
+    }
     // v3.6.x：记录最近一次成功导出时间——备份提醒条（pwa.js）据此判断是否该提醒
     try { localStorage.setItem('xy-home-v2:__last-backup', String(Date.now())); } catch (e) {}
-    // v3.7.0：同步把导出 JSON 写入 IndexedDB 副本键——启动时若检测到数据丢失，
-    // 可从此副本恢复。写入失败不提示（不影响导出本身，下次导出再尝试）。
-    // v3.27.x：大备份跳过副本写入——idbSet(SNAPSHOT_KEY, json) 会把整个导出 JSON
-    //   再 structured clone 一份进 IndexedDB，内存峰值翻倍。iOS Safari PWA standalone
-    //   下 WebContent 进程内存限制严，大备份（聊天记录+头像 dataURL 可达 15~25MB）
-    //   写副本时 Jetsam 杀进程 → 导出闪退（用户反馈「头像互动添加头像图片后一导出就闪退」）。
-    //   阈值 3MB：小备份仍写副本保留「数据丢失自动恢复」能力，大备份跳过（副本恢复只在
-    //   localStorage+IDB 业务键均 <3 的丢失场景提示，大备份用户本就持有导出文件）。
-    // v3.28.x：大备份（音乐/头像全量可达上百 MB）写副本既慢又成内存峰值主因——
-    //   小米 14U Edge 等安卓真机在写 172MB 副本时主线程/内存压力放大，配合旧版固定
-    //   4s 超时连败弹「存储异常」，且导出过程被拖到崩溃边缘（浏览器本地存储损坏后
-    //   表现为「导出后数据被清空」）。记录是否写入副本，供下方提示如实说明。
-    const snapshotWritten = json.length <= 3 * 1024 * 1024;
-    if (snapshotWritten) {
-      impShow('正在导出…', '正在写入自动备份副本', 84);
-      if (window.idbSet) {
-        try { window.idbSet(SNAPSHOT_KEY, json); } catch (e) {}
-      }
-    }
+    // v3.29.x：自动备份副本已下线——导出不再把整包 JSON 复制进 IndexedDB。
+    //   旧实现有 ≤3MB 才写的阈值（为修 iOS Safari 导出闪退 / 小米 14U Edge 导出后本地存储被写坏而加），
+    //   结果是真正需要备份的大数据量用户永远拿不到副本，副本只留存在旧版本里变成纯冗余占用
+    //   （实测有 700MB+ 遗留快照），且任何读取方都要整包 JSON.parse 一次。备份能力统一交给下载文件。
     // v3.9.x：修复真我手机 Edge（Android Chromium）导出完全没反应……
     // 三级降级保存：① 系统分享面板 navigator.share ② 系统保存框 showSaveFilePicker
     // ③ 传统 a[download] 下载。前两者会弹系统原生界面由用户确认保存位置；
@@ -230,22 +243,14 @@
     //（分享面板不弹、直接返回「已取消保存」），数据其实已打包好，统一走「确定后下载」
     // 兜底，保证任何浏览器都能导出成功；用户仍可点「取消」放弃本次保存。
     // 原生分享/保存框不可用、被取消或未成功：数据已打包好，需要用户点「确定」才真正下载
-    // v3.28.x：大备份（>3MB）没写自动备份副本时，提示如实说明「下载的这份文件是唯一新备份」，
-    //   不能再说「已自动存入本机缓存」——避免用户以为数据有副本而放弃保存下载文件。
-    const snapHint = snapshotWritten
-      ? '\n（自动备份副本已额外存入本机缓存，随时可从「导入数据」恢复）'
-      : '\n（备份较大未另存副本，请务必确保下载保存成功——这份文件是唯一的新备份）';
+    // v3.29.x：副本已下线——不再承诺「本机另有副本可恢复」，统一如实说明下载文件是唯一备份。
     if (window.openModal) {
       window.openModal('备份已打包完成（' + sizeStr + '）', '', () => {
         if (anchorDownload(blob, fname)) toast('数据已导出（' + sizeStr + '，全部数据完整）');
-        else toast(snapshotWritten
-          ? '仍未触发下载。备份已自动存到本机缓存，可稍后从「导入数据」恢复'
-          : '仍未触发下载。请重新点击「导出数据」并确认保存下载文件（这是唯一备份）');
-      }, { noInput: true, staticText: coverText + '\n数据已经打包好，还没开始保存。\n点「确定」开始下载保存到本机，点「取消」放弃本次保存。' + snapHint });
+        else toast('仍未触发下载。请重新点击「导出数据」并确认保存下载文件——这份文件是你的唯一备份');
+      }, { noInput: true, staticText: coverText + '\n数据已经打包好，还没开始保存。\n点「确定」开始下载保存到本机，点「取消」放弃本次保存。\n（请务必确认下载保存成功：本机不再另存副本，这个文件就是唯一备份）' });
     } else {
-      toast(snapshotWritten
-        ? '备份已存到本机缓存（' + sizeStr + '），可从「导入数据」恢复'
-        : '备份已打包（' + sizeStr + '），请重新点击「导出数据」触发下载并保存文件');
+      toast('备份已打包（' + sizeStr + '），请重新点击「导出数据」触发下载并保存文件（唯一备份）');
     }
   }
 
@@ -628,12 +633,18 @@
       const lsKeys = Object.keys(data.ls).filter(k => k.indexOf('xy-home-v2:') === 0 && k !== SNAPSHOT_KEY);
       let entries = lsKeys.map(k => ({ k: k, len: byteLen(data.ls[k]) + byteLen(k) }));
       let chatMoved = false;
-      if (idbOk && data.idb && typeof data.idb === 'object') {
-        // v3.6.x：多桌面——所有联系人的 chat-msgs 都已在 IDB 权威恢复，LS 不再写
-        const before = entries.length;
-        entries = entries.filter(e => !/:chat-msgs$/.test(e.k));
-        chatMoved = entries.length < before;
-      }
+      // v3.26.x：chat-msgs 不写 LS（chat.js 不回填 LS，从 IDB 读）。但仅当 data.idb 有该键
+      // 权威值时才跳过；若 data.idb 无权威值（导出时 IDB 失败，只剩 LS 有损快照），把快照
+      // 写进 IDB 兜底（有损但聊胜于无），否则 chat-msgs 彻底丢失（原实现无条件跳过 LS 写入
+      // → data.idb 无权威时 chat-msgs 既不写 LS 也不进 IDB，跨浏览器导入后聊天记录消失）。
+      const chatFallback = [];
+      entries = entries.filter(e => {
+        if (!/:chat-msgs$/.test(e.k)) return true;
+        chatMoved = true;
+        if (data.idb && data.idb[e.k] !== undefined) return false; // IDB 有权威，跳过 LS
+        chatFallback.push({ k: e.k, v: data.ls[e.k] }); // IDB 无权威，快照写 IDB 兜底
+        return false;
+      });
       const total = entries.reduce((s, e) => s + e.len, 0);
       // 估算当前设备配额：探测能否写入 1MB 临时键（能 → 桌面 10MB 档；不能 → 手机 5MB 档）
       let quota = 5 * 1024 * 1024;
@@ -665,6 +676,8 @@
       // 改写入 IndexedDB（配额远大于 localStorage），启动时自动从 IDB 恢复，数据不丢
       // v3.5.94：写入成功的键若 >200KB，也与运行时策略一致移进 IDB（避免占满 5MB 配额）
       const idbFalls = [];
+      // v3.26.x：chat-msgs 的 LS 有损快照兜底（data.idb 无权威值时）写进 IDB
+      chatFallback.forEach(f => idbFalls.push(f));
       for (const e of entries) {
         if (skipSet[e.k]) { idbFalls.push({ k: e.k, v: data.ls[e.k] }); continue; }
         try {
@@ -737,54 +750,20 @@
     });
   }
 
-  // v3.7.0：启动时检测数据丢失——若业务键几乎为空但 IDB 有自动备份副本，提示恢复。
-  // 防御：导入失败导致数据被清、IDB 写入失败导致部分键丢失、用户误删部分数据。
-  // 不防御浏览器系统级清空（副本同源同清，需用户手动备份文件）。
-  // 用 sessionStorage 防本会话重复弹窗（用户取消后不再打扰，新会话才会再检测）。
-  function checkLostAndOfferRestore() {
-    if (sessionStorage.getItem('xy-snapshot-offer-done')) return;
-    let lsBiz = 0;
-    try {
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (k && k.indexOf('xy-home-v2:') === 0 && k !== SNAPSHOT_KEY) lsBiz++;
-      }
-    } catch (e) {}
-    if (lsBiz >= 3) return; // localStorage 有足够业务数据，非丢失场景
-    if (!window.idbGetAllKeys || !window.idbGet) return;
-    window.idbGetAllKeys().then(keys => {
-      const idbBiz = (keys || []).filter(k => k.indexOf('xy-home-v2:') === 0 && k !== SNAPSHOT_KEY);
-      if (idbBiz.length >= 3) return; // IDB 有足够业务数据，非丢失场景
-      // 业务键 < 3，检查是否有副本
-      return window.idbGet(SNAPSHOT_KEY);
-    }).then(raw => {
-      if (!raw || typeof raw !== 'string') return;
-      let data;
-      try { data = JSON.parse(raw); } catch (e) { return; }
-      if (!data || typeof data !== 'object' || !data.ls) return;
-      // 副本本身也要有足够数据才提示（防"空副本"误提示）
-      const snapBiz = Object.keys(data.ls || {}).concat(Object.keys(data.idb || {}))
-        .filter(k => k.indexOf('xy-home-v2:') === 0 && k !== SNAPSHOT_KEY);
-      if (snapBiz.length < 3) return;
-      if (!window.openModal) return;
-      try { sessionStorage.setItem('xy-snapshot-offer-done', '1'); } catch (e) {}
-      const tm = fmtLocalTime(data.exportTime);
-      const cnt = (o) => (o && typeof o === 'object' ? Object.keys(o).length : 0);
-      const summary = '当前几乎没有数据，但发现一份自动备份副本：\n' +
-        '· 导出时间：' + tm + '\n' +
-        '· 小存储 ' + cnt(data.ls) + ' 项 + 大文件 ' + cnt(data.idb) + ' 项\n\n' +
-        '点「确定」从副本恢复，点「取消」保留当前空白状态。';
-      window.openModal('检测到数据可能丢失', '', () => {
-        doImportGo(data);
-      }, { noInput: true, staticText: summary });
-    }).catch(() => {});
+  // v3.29.x：清理历史遗留的自动备份副本。副本写入已下线（见 doExport 上方说明），旧版本留在
+  // IndexedDB / localStorage 的那一份变成永远刷不了新的纯冗余占用（实测有 700MB+，约占用户存储一半），
+  // 任何读取它的路径都要整包 JSON.parse，风险大于收益。启动时静默删掉即可回收空间。
+  // 只删这一个键，业务数据一律不动；延迟执行避开 idbRestore 回填与首屏渲染的启动关键路径。
+  function purgeLegacySnapshot() {
+    try { localStorage.removeItem(SNAPSHOT_KEY); } catch (e) {}
+    if (!window.idbDelete) return;
+    try { Promise.resolve(window.idbDelete(SNAPSHOT_KEY)).catch(() => {}); } catch (e) {}
   }
-  // 数据就绪后检测（openModal 在 personalize.js，加载顺序在 data-backup.js 之前，已就绪）
-  if (window.__mochiDataReady) { setTimeout(checkLostAndOfferRestore, 800); }
+  if (window.__mochiDataReady) { setTimeout(purgeLegacySnapshot, 1500); }
   else {
     document.addEventListener('mochi-restore-done', function h() {
       document.removeEventListener('mochi-restore-done', h);
-      setTimeout(checkLostAndOfferRestore, 800);
+      setTimeout(purgeLegacySnapshot, 1500);
     });
   }
 

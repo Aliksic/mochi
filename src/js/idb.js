@@ -267,42 +267,71 @@
     })).catch(() => ({}));
   };
 
-  // 列出所有键
-  // v3.26.x：超时保护（与 idbGet/idbGetMany 同款 4s+4s）——部分安卓内核事务挂起
-  //（既不 onsuccess 也不 onerror），无超时则设备诊断"IndexedDB 大键明细"永远停在
-  // "读取中…"。4s 未返回先重建连接重试一次（挂起多因连接已死，重开后通常当场返回），
-  // 再 4s 放弃返回空数组。
-  window.idbGetAllKeys = function () {
+  // 只读探测通用骨架（4s 未返回 → 重建连接重试一次 → 再 8s 判失败）
+  // 部分安卓内核（真我/荣耀/小米 Edge 等）事务可能挂起：既不 onsuccess 也不 onerror，
+  // 没有超时兜底，调用方的 Promise 就永不落地（诊断里「IndexedDB 大键明细」停在「读取中…」）。
+  // run(db, finish) 内用 finish(结果) 落地；失败/超时一律 resolve(IDB_LIST_FAILED)。
+  // v3.26.x #89：IDB_LIST_FAILED 是这条链的关键——旧实现超时后 resolve 空数组，与
+  // 「库里真的没有」不可区分，上层（chat.js 判定「这台桌面没有聊天记录」）就把一次
+  // 读取失败当成真的没历史，接着把新消息整包写回 → 全部历史被覆盖且不可逆。
+  const IDB_LIST_FAILED = null;
+  function idbProbe(run) {
     return open().then(db => new Promise((resolve) => {
       let done = false;
       let timer = null;
-      function finish(val) { if (done) return; done = true; if (timer) clearTimeout(timer); resolve(val); }
-      function run() {
-        try {
-          const tx = db.transaction(STORE, 'readonly');
-          const req = tx.objectStore(STORE).getAllKeys();
-          req.onsuccess = () => finish(req.result || []);
-          req.onerror = () => { if (connLost(req.error)) dbPromise = null; finish([]); };
-        } catch (e) { if (connLost(e)) dbPromise = null; finish([]); }
-      }
       let retried = false;
+      function finish(val) { if (done) return; done = true; if (timer) clearTimeout(timer); resolve(val); }
+      function attempt(conn) {
+        try { run(conn, finish); } catch (e) { if (connLost(e)) dbPromise = null; finish(IDB_LIST_FAILED); }
+      }
       timer = setTimeout(function () {
         if (done) return;
         if (!retried) {
           retried = true;
+          // 挂起多因连接已死（iOS 挂后台杀 IDB 服务 / Edge 回收后台进程），重开通常当场恢复
           dbPromise = null;
           open().then(function (db2) {
-            db = db2;
-            run();
-            timer = setTimeout(function () { dbPromise = null; finish([]); }, 4000);
-          }).catch(function () { finish([]); });
+            timer = setTimeout(function () { dbPromise = null; finish(IDB_LIST_FAILED); }, 8000);
+            attempt(db2);
+          }).catch(function () { finish(IDB_LIST_FAILED); });
           return;
         }
         dbPromise = null;
-        finish([]);
+        finish(IDB_LIST_FAILED);
       }, 4000);
-      run();
-    })).catch(() => []);
+      attempt(db);
+    })).catch(() => IDB_LIST_FAILED);
+  }
+
+  // 列出所有键（严格版）：数组 = 权威清单（空数组 = 确认空库，可信）；null = 这次没读到。
+  // 凡是要用「清单里没有」推出「键不存在」的判定，都必须走它（或 idbHasKey），
+  // 拿到 null 只能当「未知」——安排重试，绝不落盘覆盖。
+  window.idbListKeys = function () {
+    return idbProbe(function (db, finish) {
+      const tx = db.transaction(STORE, 'readonly');
+      const req = tx.objectStore(STORE).getAllKeys();
+      req.onsuccess = () => finish(req.result || []);
+      req.onerror = () => { if (connLost(req.error)) dbPromise = null; finish(IDB_LIST_FAILED); };
+      tx.onabort = () => { if (connLost(tx.error)) dbPromise = null; finish(IDB_LIST_FAILED); };
+    });
+  };
+
+  // 单个键是否存在：count(键) 只数一条，比全量清单轻得多（MB 级大键写入排队时也挤得进去）
+  // true = 确认存在 / false = 确认不存在 / null = 这次没读到（不可据此判空）
+  window.idbHasKey = function (key) {
+    if (!key) return Promise.resolve(IDB_LIST_FAILED);
+    return idbProbe(function (db, finish) {
+      const tx = db.transaction(STORE, 'readonly');
+      const req = tx.objectStore(STORE).count(key);
+      req.onsuccess = () => finish((req.result || 0) > 0);
+      req.onerror = () => { if (connLost(req.error)) dbPromise = null; finish(IDB_LIST_FAILED); };
+      tx.onabort = () => { if (connLost(tx.error)) dbPromise = null; finish(IDB_LIST_FAILED); };
+    });
+  };
+
+  // 兼容旧调用方（扫描/清理类：读不到时「什么都不做」是安全方向）：失败仍折叠成空数组
+  window.idbGetAllKeys = function () {
+    return window.idbListKeys().then(function (keys) { return keys || []; });
   };
 
   // 删除
@@ -466,6 +495,14 @@
         try { if (window.idbDelete) window.idbDelete(key); } catch (e) {}
       }
     };
+  };
+
+  // v3.26.x：导出兜底——IDB 读取失败/超时时，本会话 memoryCache 可能有最新值
+  //（idbRestore 回填的大键、或本会话 xyStore.set 写入的值），供 data-backup.js 导出兜底，
+  // 避免 IDB-only 大键（朋友圈/字卡等）在 IDB 事务挂起时彻底丢失。
+  window.idbGetCached = function (key) {
+    if (memoryCache && Object.prototype.hasOwnProperty.call(memoryCache, key)) return memoryCache[key];
+    return undefined;
   };
 
   // v3.6.x：聊天记录键判定——旧顶层键 xy-home-v2:chat-msgs + 各联系人命名空间键
@@ -770,7 +807,7 @@
   function wrjRecord(key, v) {
     if (typeof v !== 'string' || v.length > WRJ_VAL_LIMIT) return;
     if (!key || key === WRJ_KEY || key.indexOf('__') >= 0) return;
-    if (isChatMsgsKey(key) || key.indexOf('music-file:') >= 0) return;
+    if (isChatMsgsKey(key) || /:chat-meta$/.test(key) || key.indexOf('music-file:') >= 0) return;
     if (!_wrj) _wrj = wrjLoad(wrjLsRaw());
     const t = Date.now();
     _wrj = _wrj.filter(function (e) { return e.k !== key; });
