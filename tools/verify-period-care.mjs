@@ -365,6 +365,13 @@ await navigate();
   await sleep(600);
   const tab = await evalJs("(function(){var b=document.querySelector('#fc-tabs [data-type=\"period\"]');if(!b)return 'no-tab';b.click();return 'ok';})()");
   await sleep(700);
+  // v3.26.x：预设字卡列表改视口虚拟窗口（DOM 只保留视口附近约 24 行），本类 28 行不再
+  // 一次全渲染 → 先用分组条筛出「经期关心」单组（21 行必定在窗口内）再断言
+  await evalJs(`(async function(){
+    var c=[].slice.call(document.querySelectorAll('#fc-groups-bar .cc-g-chip')).find(function(x){return x.textContent==='经期关心';});
+    if(c){c.click();await new Promise(function(r){setTimeout(r,400);});}
+    return !!c;
+  })()`);
   const lib = JSON.parse(await evalJs(`(function(){
     var heads=[].slice.call(document.querySelectorAll('#fc-list .cc-group-header')).map(function(h){return h.textContent;});
     var items=[].slice.call(document.querySelectorAll('#fc-list .cc-item'));
@@ -377,6 +384,8 @@ await navigate();
     inp.checked=true;
     inp.dispatchEvent(new Event('change',{bubbles:true}));
     var stored2=localStorage.getItem('xy-home-v2:default:dc-off-period:'+line);
+    var all=[].slice.call(document.querySelectorAll('#fc-groups-bar .cc-g-chip')).find(function(x){return x.textContent==='全部';});
+    if(all)all.click();
     return JSON.stringify({heads:heads,n:items.length,line:line,offKey:stored,onKey:stored2});
   })()` ) || '{}');
   check('C6 字卡库出现「经期关心」tab 且点击切换生效', tab === 'ok' && /经期关心/.test(JSON.stringify(lib.heads)), { tab, heads: lib.heads });
@@ -400,11 +409,12 @@ await navigate();
     return JSON.stringify({n:items.length,wrap:cs.flexWrap,overflowX:cs.overflowX,offscreen:out,rows:Object.keys(ys).length,
       labels:items.map(function(t){return t.textContent;})});
   })()` ) || '{}');
-  // v3.16.x：功能触发字卡独立成页（#fc-tabs），12 个功能 tab 全量预置在模板
-  const want = ['摸鱼','吃饭','经期','喝水','花园','同频','伸手','此间','房间','存钱罐','漂流瓶','互动回应'];
+  // v3.16.x：功能触发字卡独立成页（#fc-tabs），功能 tab 全量预置在模板
+  // （v3.26.x 补 music 音乐 tab：492f082 起 template/FUNC_KEYS 已含，本表原缺 → C10 误报）
+  const want = ['摸鱼','吃饭','经期','喝水','花园','同频','伸手','此间','房间','存钱罐','漂流瓶','互动回应','音乐'];
   check('C9 tab 条换行铺开（flex-wrap=wrap、无溢出）', tabs.wrap === 'wrap' && (tabs.offscreen || []).length === 0 && tabs.overflowX !== 'auto',
     { wrap: tabs.wrap, off: tabs.offscreen });
-  check('C10 全部分类 tab 存在且在屏内（功能触发 tab 按用户词汇命名连排，含此间/漂流瓶，共12个）',
+  check('C10 全部分类 tab 存在且在屏内（功能触发 tab 按用户词汇命名连排，含此间/漂流瓶/音乐，共13个）',
     tabs.n === want.length && (tabs.labels || []).join(',') === want.join(','),
     { n: tabs.n, labels: tabs.labels });
 }

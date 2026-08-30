@@ -3461,6 +3461,15 @@
       <div class="chat-body" id="chat-body">
         <!-- 聊天记录由 JS 从本地恢复 -->
       </div>
+      <!-- v3.26.x：聊天记录加载进度提示——切桌面后打开聊天，IDB 异步读库期间消息区为空，
+           这里在消息区中央覆盖非阻塞进度条（pointer-events:none，不挡滚动/点击），
+           chat.js 读库完成后自动隐藏 -->
+      <div class="chat-loading" id="chat-loading" hidden>
+        <div class="chat-loading-card">
+          <div class="chat-loading-bar"><i></i></div>
+          <span class="chat-loading-txt">正在加载聊天记录…</span>
+        </div>
+      </div>
       <!-- 联系人正在输入：消息区与输入栏之间的内嵌占位行（v3.6.x 由悬浮改回——
            悬浮式固定在输入栏上方，消息滚动时被灰色小字盖住（用户反馈"灰色一行遮挡消息"）；
            内嵌占位后随消息区滚动、不遮挡，chat.js 在占位时保持最后消息可见） -->

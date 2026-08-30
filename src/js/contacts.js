@@ -319,6 +319,11 @@
     // v3.6.x：切换前把当前桌面的未保存聊天立即写盘（防抖定时器可能尚未触发，
     // 若等它回写会用旧命名空间把 A 桌面的消息存到 B 桌面）
     try { if (window.chatFlushSave) window.chatFlushSave(); } catch (e) {}
+    // v3.29.x：字卡库同款——切桌面先落盘当前桌面未保存的字卡变更。必须在本行
+    // __activeCid 变更前调用（ccFlushSave 内 curStore 动态读 activePrefix），否则
+    // pending 的 120ms 防抖定时器会在切走后把 A 桌面数据写进 B 桌面键，A 桌面
+    // 刚上传的表情包/图片「消失」（华为 P50E Edge 反馈场景之一）
+    try { if (window.ccFlushSave) window.ccFlushSave(); } catch (e) {}
     window.__activeCid = id;
     // v3.26.x #88：改走 regStore——裸 localStorage 写会漏内存缓存，LS 失效设备（本机
     // 0 键 + 写入 QuotaExceededError）上还会造成「IDB 有真值、内存/LS 没有」的错位，
@@ -367,13 +372,7 @@
       return true;
     } catch (e) { return false; }
   }
-  function correctCidFromIdb() {
-    if (cidUserSwitched || cidAutoFixTries >= 3) return;
-    if (!window.xyStore || !autoFixMomentSafe()) return;
-    let saved = null;
-    try { saved = window.xyStore(G).get('active-contact'); } catch (e) { return; }
-    saved = (saved == null ? '' : String(saved)).trim();
-    cidAutoFixTries++;
+  function applyCidCorrection(saved) {
     if (!saved || saved === (window.__activeCid || 'default')) return;
     // 目标必须在联系人名册内（回填后名册同样来自 IDB，这时才读得到），否则不切——
     // 防切到已删除/不存在的桌面造成空命名空间
@@ -387,6 +386,31 @@
     try { window.setActiveContact(saved); } catch (e) {}
     autoFixingCid = false;
     try { console.info('[mochi] 启动校正：localStorage 无 active-contact，已按 IndexedDB 权威值切回桌面 ' + saved); } catch (e) {}
+  }
+  function correctCidFromIdb() {
+    if (cidUserSwitched || cidAutoFixTries >= 3) return;
+    if (!window.xyStore || !autoFixMomentSafe()) return;
+    let saved = null;
+    try { saved = window.xyStore(G).get('active-contact'); } catch (e) { return; }
+    saved = (saved == null ? '' : String(saved)).trim();
+    // v3.26.x #90：xyStore 只覆盖「内存 + LS」，其成立前提是 IDB 回填已把这个键送进
+    // 内存缓存。回填迟到（本次报障机型启动耗时 24 秒，idbRestore 有 12 秒慢保险丝）或
+    // 被跳过时，原逻辑读空就直接 return——用户看到的仍然是「聊天记录消失」。这里补一次
+    // 直读 IndexedDB 权威值：异步回来先重新校验「用户没手动切过」与「时机安全」再应用。
+    if (!saved && window.idbGet) {
+      try {
+        window.idbGet(G + ':active-contact').then(function (v) {
+          cidAutoFixTries++;
+          const s = (v == null ? '' : String(v)).trim();
+          if (!s || cidUserSwitched || cidAutoFixTries > 3) return;
+          if (!autoFixMomentSafe()) return;
+          applyCidCorrection(s);
+        }).catch(function () { cidAutoFixTries++; });
+      } catch (e) {}
+      return;
+    }
+    cidAutoFixTries++;
+    applyCidCorrection(saved);
   }
   try {
     if (window.__mochiDataReady) setTimeout(correctCidFromIdb, 0);
@@ -494,7 +518,11 @@
       try {
         if (!regStore().get('contacts')) {
           let name = '默认';
-          try { const n = localStorage.getItem(G + ':default:lbl-partner'); if (n) name = n; } catch (e) {}
+          // v3.26.x #90：改走 default 命名空间存储（内存优先，回填/写日志都到得了这里），
+          // 裸 localStorage 在 LS 整库失效的设备上恒空 → 联系人名字莫名退回「默认」
+          try { const n = window.xyStore(G + ':default').get('lbl-partner'); if (n) name = n; } catch (e) {
+            try { const n = localStorage.getItem(G + ':default:lbl-partner'); if (n) name = n; } catch (e2) {}
+          }
           regStore().set('contacts', JSON.stringify([{ id: 'default', name: name }]));
         }
         // v3.6.x：active-contact 仅在未设置时写 default——迁移不应覆盖用户已选的联系人
@@ -504,7 +532,25 @@
         // 改回 'default' 并顺带写进内存缓存/写日志，把上方的启动校正（correctCidFromIdb）
         // 整个抵消掉——用户看到的仍然是「聊天记录消失」。migrateLegacy 只在
         // __mochiDataReady 之后运行（见本文件末尾），此刻回填已完成，读得到真值。
-        if (!regStore().get('active-contact')) regStore().set('active-contact', 'default');
+        if (!regStore().get('active-contact')) {
+          // v3.26.x #90：判空走 regStore 仍不够——回填/写日志都没把值送到内存时，直接写
+          // default 会把 IDB 里用户真正的桌面覆盖掉（连内存缓存 + LS + #40 写日志一起改），
+          // 而 correctCidFromIdb 之后读到的就是我们刚写的 default，校正被自己抹掉。
+          // 现在写 default 前先向 IndexedDB 严格确认（idbHasKey 三态）：
+          //   false＝库里确实没有 → 写 default（原行为）
+          //   true ＝库里有值只是没送到内存 → 保持「未设置」，交给启动校正按权威值切
+          //   null ＝探测本身失败（存储繁忙）→ 同样保持「未设置」，绝不猜测
+          const acWrite = function () {
+            try { if (!regStore().get('active-contact')) regStore().set('active-contact', 'default'); } catch (e) {}
+          };
+          if (window.idbHasKey) {
+            try {
+              window.idbHasKey(G + ':active-contact').then(function (has) {
+                if (has === false) acWrite();
+              }).catch(acWrite);
+            } catch (e) { acWrite(); }
+          } else acWrite();
+        }
         localStorage.setItem(G + ':migrated-v1', '1');
       } catch (e) {}
       window.__contactsMigrated = true;

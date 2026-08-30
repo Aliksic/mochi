@@ -324,6 +324,7 @@
     curStore().set(curKey(), JSON.stringify(groups));
     pubInvalidate();
     refreshLibCounts(true);
+    ccDirty = false; // 本次待写已落盘（LS 同步 + IDB 异步发起）
   }
 
   let groups = loadGroups();
@@ -580,13 +581,37 @@
   // 「点击确认卡顿」）。内存与 DOM 已即时更新，延后到下一帧后再写 LS+IDB；
   // 120ms 内连续编辑合并成一次写入，避免高频操作反复序列化大库
   let editSaveTimer = null;
+  let ccDirty = false; // v3.29.x：自上次落盘后是否还有未保存变更（离页/切作用域冲刷依据）
   function scheduleSave() {
     clearTimeout(editSaveTimer);
+    ccDirty = true;
     editSaveTimer = setTimeout(function () {
       editSaveTimer = null;
       try { saveGroups(groups); } catch (e) {}
     }, 120);
   }
+
+  // v3.29.x：离页/切作用域/切联系人前立即落盘——修「字卡库【表情包】添加图片后
+  // 刷新重进图片消失」（华为 P50E Edge 真机反馈，公用/专享字卡均复现）。
+  // 根因：字卡库带上图片后整包 JSON 常跨过 idb.js 的 200KB 大键阈值，localStorage
+  // 同步快照被跳过、只剩 IndexedDB 异步 fire-and-forget 写入；而 scheduleSave 的
+  // 120ms 防抖期间或 IDB 事务尚未提交时刷新/切走/切桌面，新增图片无任何备份直接丢。
+  // 这里与 chat.js flushSave（beforeunload/visibilitychange）同款口径：挂起中的
+  // 变更在离页事件里立即发起写入，把「防抖 120ms + 异步 IDB」的可丢窗口压到最短。
+  // 幂等：无待写变更（ccDirty=false）时零开销直接返回，不重复序列化大库。
+  function flushCcSave() {
+    if (editSaveTimer) { clearTimeout(editSaveTimer); editSaveTimer = null; }
+    if (!ccDirty) return;
+    try { saveGroups(groups); } catch (e) {}
+  }
+  window.ccFlushSave = flushCcSave;
+  try {
+    window.addEventListener('beforeunload', flushCcSave);
+    window.addEventListener('pagehide', flushCcSave);
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'hidden') flushCcSave();
+    });
+  } catch (e) {}
 
   // v3.11.x：字卡库列表页「公用字卡 / 专属字卡」两行入口的角标计数。
   // 角标与当前打开作用域无关（公用行恒显全局键总量、专属行恒显当前联系人键总量）；
@@ -2594,9 +2619,11 @@
     return hydrateScope(ccScope === 'public' ? 'public' : 'own');
   }
   function openCcPage(scope) {
+    // v3.29.x：先落盘上一作用域的未保存变更——原 clearTimeout 会静默丢弃 120ms
+    // 防抖窗口内刚上传/编辑的内容（切到另一作用域后刷新即丢）
+    flushCcSave();
     ccScope = scope === 'public' ? 'public' : 'own';
     pubInvalidate();
-    if (editSaveTimer) { clearTimeout(editSaveTimer); editSaveTimer = null; }
     cur = 'text'; q = ''; curGroup = '';
     const ttl = document.getElementById('cc-page-title');
     if (ttl) ttl.textContent = ccScope === 'public' ? '公用字卡' : '专属字卡';
@@ -2618,9 +2645,11 @@
   // （「联系人无法发送拍一拍和表情包」回归，tools/diag-pool-scope.mjs 复现）。
   // 覆盖所有离开路径：返回键 / 底部 tab / 安卓返回 / 切桌面（page 隐藏由 MutationObserver 兜底）
   function leaveCcPageReset() {
+    // v3.29.x：先落盘待写变更（原实现在 public 分支直接清定时器，120ms 内刚上传的
+    // 表情包/图片会因离页被静默丢弃）
+    flushCcSave();
     if (ccScope !== 'public') return;
     ccScope = 'own';
-    if (editSaveTimer) { clearTimeout(editSaveTimer); editSaveTimer = null; }
     try { groups = loadGroups(); } catch (e) {}
   }
   const liPub = document.getElementById('li-custom-cards-public');

@@ -567,9 +567,11 @@
   }
 
   // 每梦角独立状态（含随机冷却：状态持续一段时间后梦角才会重新选择）
+  // v3.27.x：防御无效状态值——旧版/数据损坏时 s.p/s.a 可能不在 PRESENCE/ACTIVITY 中，
+  //   后续 PRESENCE[s.p].label 会抛 TypeError 导致整页空白。这里检测到无效值时重新随机。
   function ensureState(c, st, now) {
     const s = st[c.id] || (st[c.id] = {});
-    if (!s.p) {
+    if (!s.p || !PRESENCE[s.p] || !s.a || !ACTIVITY[s.a]) {
       const h = Math.floor(worldMinuteOf(c) / 60);
       s.p = rollPresence(h, false);
       s.a = rollActivity(h);
@@ -1148,17 +1150,20 @@
   }
 
   // ---- 整页渲染 ----
+  // v3.27.x：每个渲染步骤独立 try/catch——单步抛错不再连坐整页空白
+  //   （旧数据含无效状态值 / DOM 被外部改结构 / 某桌面 store 异常时，
+  //    某一步可能抛错，但其余步骤仍渲染，用户至少能看到部分内容而非白屏）
   window.renderCjian = function (forceForecast) {
-    if (viewCid !== ALL && !contacts().some(ct => ct.id === viewCid)) viewCid = curCid(); // 视图兜底
+    try { if (viewCid !== ALL && !contacts().some(ct => ct.id === viewCid)) viewCid = curCid(); } catch (e) {} // 视图兜底
     if (forceForecast) todayCacheMap = {}; // 每次打开此间：TA们重新选择今天的可能样子
-    if (!todayCacheMap[scopeKey()]) rollTodayForecast();
-    refreshStates();
-    renderHero();
-    renderGroupBar();
-    renderTaTime();
-    renderList();
-    renderToday(true);
-    if (detailId) renderDetail();
+    try { if (!todayCacheMap[scopeKey()]) rollTodayForecast(); } catch (e) {}
+    try { refreshStates(); } catch (e) {}
+    try { renderHero(); } catch (e) {}
+    try { renderGroupBar(); } catch (e) {}
+    try { renderTaTime(); } catch (e) {}
+    try { renderList(); } catch (e) {}
+    try { renderToday(true); } catch (e) {}
+    try { if (detailId) renderDetail(); } catch (e) {}
   };
 
   window.openCjian = function () {

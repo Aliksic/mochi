@@ -161,8 +161,29 @@ try {
   const pools = await evalJs("({ tabs: ['garden','sync','reach','water','piggy'].map(function(k){ return !!document.querySelector('#fc-tabs [data-type=\"'+k+'\"]'); }).every(Boolean), g: window.getLibPool('garden','梦角悄悄话',[]).length, s: window.getLibPool('sync','TA 此刻',[]).length, r: window.getLibPool('reach','悄悄话',[]).length, w: window.getLibPool('water','提醒模板',[]).length, wt: window.getLibPool('water','TA 提醒句式',[]).length, p: window.getLibPool('piggy','存入碎碎念',[]).length })");
   ok('五个新 tab 全部注入', pools && pools.tabs === true, pools);
   ok('池数据齐全（园7/同8/伸6/水4/句式4/罐5）', pools && pools.g === 7 && pools.s === 8 && pools.r === 6 && pools.w === 4 && pools.wt === 4 && pools.p === 5, pools);
-  const waterTab = await evalJs("(function(){ var pg = document.getElementById('page-fun-cards'); pg.hidden = false; document.querySelector('#fc-tabs [data-type=\"water\"]').click(); var headers = Array.prototype.map.call(document.querySelectorAll('#fc-list .ccg-name'), function (x) { return x.textContent; }); var cards = document.querySelectorAll('#fc-list .cc-item').length; pg.hidden = true; return { h: headers.join(','), c: cards }; })()");
-  ok('喝水 tab 渲染 6 组 30 张', waterTab && waterTab.h === '提醒模板,TA 提醒句式,ta视角温柔提醒,喝够夸奖,继续鼓励,梦角催喝水' && waterTab.c === 30, waterTab);
+  // v3.26.x：预设字卡列表改视口虚拟窗口（DOM 只保留视口附近约 24 行，整类 36 行不再
+  // 一次全渲染）→ 改为逐分组筛选累加统计（每组 ≤9 张必定落在窗口内）
+  const waterTab = await evalJs(`(async function(){
+    var pg = document.getElementById('page-fun-cards'); pg.hidden = false;
+    document.querySelector('#fc-tabs [data-type="water"]').click();
+    await new Promise(function(r){ setTimeout(r, 300); });
+    var names = [].slice.call(document.querySelectorAll('#fc-groups-bar .cc-g-chip')).map(function(c){ return c.textContent; }).filter(function(n){ return n !== '全部'; });
+    var out = {};
+    for (var i = 0; i < names.length; i++) {
+      var chip = [].slice.call(document.querySelectorAll('#fc-groups-bar .cc-g-chip')).find(function(c){ return c.textContent === names[i]; });
+      chip.click();
+      await new Promise(function(r){ setTimeout(r, 250); });
+      var hs = [].slice.call(document.querySelectorAll('#fc-list .cc-group-header .ccg-name')).map(function(x){ return x.textContent; });
+      out[names[i]] = { rendered: document.querySelectorAll('#fc-list .cc-item').length, head: hs.join(',') };
+    }
+    var all = [].slice.call(document.querySelectorAll('#fc-groups-bar .cc-g-chip')).find(function(c){ return c.textContent === '全部'; });
+    if (all) all.click();
+    pg.hidden = true;
+    return { groups: Object.keys(out).join(','), sum: Object.keys(out).reduce(function(s, k){ return s + out[k].rendered; }, 0), detail: out };
+  })()`);
+  ok('喝水 tab 6 组共 30 张（逐组筛选累加，虚拟窗口下 DOM 只保留视口附近行）',
+    waterTab && waterTab.groups === '提醒模板,TA 提醒句式,ta视角温柔提醒,喝够夸奖,继续鼓励,梦角催喝水' && waterTab.sum === 30 &&
+    Object.keys(waterTab.detail).every(function (k) { return waterTab.detail[k].head === k; }), waterTab);
 
   console.log('\n== T6 无 JS 异常 ==');
   ok('加载与操作全程无未捕获异常', jsErrors.length === 0, jsErrors.slice(0, 3));

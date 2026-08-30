@@ -2913,10 +2913,11 @@ if (ckRefresh) {
     if (pool.length) text = pool[Math.floor(Math.random() * pool.length)] || '';
     if (!text) return;
     text = text.replace(/\{d\}/g, dish || '饭');
-    // 字卡进聊天记录（后台也照进）；系统通知由 bgNotifyCheck 内部按隐藏时长/去重闸门决定
+    // 字卡进聊天记录（后台也照进）；后台系统通知由 chatAddIn 内部 addRec→showDeskMsg 统一发
+    // （标题=联系人名）。v3.26.x #93：删掉此处冗余 bgNotifyCheck——它与 chatAddIn 内部背靠背
+    // 各发一条、去重指纹异步登记来不及拦，导致后台弹两条通知（「TA」+「TA的吃饭提醒」）。
     // v3.14.x：带「吃饭提醒」标签 chip（addIn opts.tag），来源可辨识
     if (window.chatAddIn) { try { window.chatAddIn(text, { tag: '吃饭提醒' }); } catch (e) {} }
-    if (window.bgNotifyCheck) { try { window.bgNotifyCheck(text, Date.now(), { name: 'TA的吃饭提醒' }); } catch (e) {} }
     try { if (navigator.vibrate) navigator.vibrate([80, 60, 80]); } catch (e) {}
     // 35% 概率隔一小会儿再补一句「追问关心」（第 2+ 条不重复响提示音，同回复链惯例）
     if (Math.random() < 0.35) {

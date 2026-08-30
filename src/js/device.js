@@ -846,8 +846,10 @@
     try {
       const idbIdx = L.length; L.push('IndexedDB 大键明细：读取中…');
       jobs.push(new Promise(function (res) {
-        if (!window.idbGetAllKeys) { L[idbIdx] = 'IndexedDB 大键明细：接口不可用'; res(); return; }
-        window.idbGetAllKeys().then(function (keys) {
+        if (!window.idbListKeys && !window.idbGetAllKeys) { L[idbIdx] = 'IndexedDB 大键明细：接口不可用'; res(); return; }
+        (window.idbListKeys ? window.idbListKeys() : window.idbGetAllKeys()).then(function (keys) {
+          // v3.26.x #90：null=清单没读到（挂起/超时），不再和「库里没大键」混成一谈
+          if (!keys) { L[idbIdx] = 'IndexedDB 大键明细：清单读取失败（存储繁忙/超时）'; res(); return; }
           const cand = (keys || []).filter(function (k) {
             k = String(k || '');
             if (k.indexOf('xy-home-v2:') !== 0) return false;
@@ -954,6 +956,76 @@
         if (!pend) done();
       }));
     } catch (e) { try { L.push('开关持久化体检：读取失败'); } catch (e2) {} }
+    // v3.26.x #90：桌面归属体检——报「聊天记录几小时自己消失」的第一分叉：
+    // 记录是被覆盖没了，还是冷启动掉回 default 桌面（历史其实还在别的命名空间）。
+    // 三层并列 active-contact（xyStore 读取值 / 裸 LS 值 / IDB 权威值）+ 各桌面条数账本
+    // （chat-meta 小键）+ LS 里残留的 chat-msgs 快照键名。
+    // 全程只读小键：遍历 localStorage 仅用 key(i) 取键名，不取值也不 parse 任何大键。
+    try {
+      const dkIdx = L.length; L.push('桌面归属体检：读取中…');
+      jobs.push(new Promise(function (res) {
+        const fmtv = function (v) { return (v === null || v === undefined) ? '缺失' : JSON.stringify(String(v)); };
+        const lines = ['桌面归属体检（当前桌面 ' + String(window.__activeCid || 'default') + '）：'];
+        let acMem = null, acLs = null;
+        try { if (window.xyStore) acMem = window.xyStore('xy-home-v2').get('active-contact'); } catch (e) {}
+        try { acLs = localStorage.getItem(G + 'active-contact'); } catch (e) {}
+        const lsChat = [];
+        try {
+          for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (k && k.indexOf(G) === 0 && /:chat-msgs$/.test(k)) lsChat.push(k.slice(G.length));
+          }
+        } catch (e) {}
+        lines.push('· active-contact：读取=' + fmtv(acMem) + ' 裸LS=' + fmtv(acLs) + ' IDB=…');
+        lines.push('· LS 内 chat-msgs 快照：' + (lsChat.length ? lsChat.join('、') : '无（LS 整库失效或记录只在数据库）'));
+        lines.push('· 条数账本(chat-meta)：读取中…');
+        let finished = false;
+        let fuse = null;
+        const finish = function () {
+          if (finished) return; finished = true;
+          if (fuse) clearTimeout(fuse);
+          try { L[dkIdx] = lines.join('\n'); } catch (e) {}
+          res();
+        };
+        fuse = setTimeout(finish, 9000);
+        if (!window.idbGet) {
+          lines[1] = lines[1].replace('IDB=…', 'IDB=(接口不可用)');
+          lines[3] = '· 条数账本(chat-meta)：接口不可用';
+          finish(); return;
+        }
+        window.idbGet(G + 'active-contact').then(function (iv) {
+          lines[1] = lines[1].replace('IDB=…', 'IDB=' + (iv === undefined || iv === null ? '(库里没有)' : fmtv(iv)));
+          if (!window.idbListKeys) { lines[3] = '· 条数账本(chat-meta)：清单接口不可用'; finish(); return; }
+          window.idbListKeys().then(function (keys) {
+            if (!keys) { lines[3] = '· 条数账本(chat-meta)：清单读取失败'; finish(); return; }
+            const mk = keys.filter(function (k) { return /:chat-meta$/.test(k); });
+            if (!mk.length) { lines[3] = '· 条数账本(chat-meta)：无（本版本尚未记录）'; finish(); return; }
+            const load = window.idbGetMany
+              ? window.idbGetMany(mk)
+              : Promise.all(mk.map(function (k) { return window.idbGet(k); })).then(function (vs) {
+                  const m = {}; mk.forEach(function (k, i) { m[k] = vs[i]; }); return m;
+                });
+            return load.then(function (map) {
+              const rows = [];
+              mk.forEach(function (k) {
+                let n = -1;
+                try { const o = typeof map[k] === 'string' ? JSON.parse(map[k]) : map[k]; if (o && typeof o.n === 'number') n = o.n; } catch (e) {}
+                if (n >= 0) rows.push({ d: k.slice(G.length).replace(/:chat-meta$/, ''), n: n });
+              });
+              rows.sort(function (a, b) { return b.n - a.n; });
+              const cur = String(window.__activeCid || 'default');
+              lines[3] = '· 条数账本(chat-meta)：' + (rows.length
+                ? rows.slice(0, 6).map(function (r) { return (r.d === cur ? '【当前】' : '') + r.d + '=' + r.n + '条'; }).join(' ')
+                : '解析失败');
+              finish();
+            });
+          }).catch(function () { lines[3] = '· 条数账本(chat-meta)：读取失败'; finish(); });
+        }).catch(function () {
+          lines[1] = lines[1].replace('IDB=…', 'IDB=(读失败)');
+          finish();
+        });
+      }));
+    } catch (e) { try { L.push('桌面归属体检：读取失败'); } catch (e2) {} }
     // v3.16.x：存储配额/持久化/在线状态——「数据写不进去/丢失」类报障的关键字段：
     // 配额满写失败曾是本项目真实根因（localStorage setItem 静默失败）。
     // v3.25.x：改用 jobs + 占位行下标替换（原 L.indexOf 找占位串有误配风险，
@@ -1286,21 +1358,42 @@
       return 'unwritable(' + ((e && e.name) || '异常') + ')';
     }
   }
-  let tries = 0;
-  function say() {
-    if (typeof window.toast !== 'function') {
-      if (tries++ < 20) setTimeout(say, 500);
+  // 自带一份 #cc-toast 渲染：不能依赖 window.toast——build.mjs 把每个 js 文件单独包进
+  // IIFE，chat.js 顶层的 function toast 并不会挂到 window 上（全项目搜不到 window.toast
+  // 赋值），所以这里直接复用同名元素 + .cc-toast/.show 类，样式由 chat-pages.css 全局提供。
+  function notice(msg) {
+    try {
+      let t = document.getElementById('cc-toast');
+      if (!t) {
+        t = document.createElement('div');
+        t.id = 'cc-toast';
+        document.body.appendChild(t);
+      }
+      t.textContent = msg;
+      t.className = 'cc-toast';
+      void t.offsetWidth;
+      t.className = 'cc-toast show';
+      clearTimeout(t._mochiTimer);
+      t._mochiTimer = setTimeout(function () { t.className = 'cc-toast'; }, 2600);
+    } catch (e) {}
+  }
+  let waits = 0;
+  function trySay() {
+    // 开屏 z-index 999 盖住 toast（99），必须等用户点击进入后再说
+    const sp = document.getElementById('splash');
+    if (sp && !sp.classList.contains('hide')) {
+      if (waits++ < 120) setTimeout(trySay, 500);
       return;
     }
     try { sessionStorage.setItem(FLAG, '1'); } catch (e) {}
-    window.toast('本机浏览器本地存储受限，设置与记录已改用数据库存储，数据不会丢');
+    notice('本机浏览器本地存储受限，设置与记录已改用数据库存储，数据不会丢');
   }
   function check() {
     window.__lsStatus = probe();
     if (window.__lsStatus === 'ok') return;
     let seen = false;
     try { seen = sessionStorage.getItem(FLAG) === '1'; } catch (e) {}
-    if (!seen) setTimeout(say, 1200);
+    if (!seen) setTimeout(trySay, 800);
   }
   window.__lsStatus = probe();
   if (window.__lsStatus !== 'ok') {

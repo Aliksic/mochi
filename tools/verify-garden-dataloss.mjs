@@ -224,13 +224,21 @@ check('A2 锁定窗口内：IDB 老花园未被空档覆盖', earlyIdb.indexOf('
 for (let i = 0; i < 40; i++) { if (await evalJs('!!window.__mochiDataReady')) break; await sleep(300); }
 await evalJs("(function(){var s=document.getElementById('splash');if(s&&!s.classList.contains('hide'))s.click();return true;})()");
 await sleep(700);
-await openGarden();
-await sleep(6000); // 等判定完成 + 采用渲染
+// 采样必须在进园之前：openGarden 里 partnerAct 的 harvestall（约 30% 概率）会把所有
+// 已开花地块合法收进背包并置 null，进园后再断言「三株齐全」是在和应用自身的随机互动赛跑。
+const lsAdopted = await waitFor(`(function(){var v=localStorage.getItem('${GK}')||'';return v.indexOf('"type":"rose"')>=0;})()`, 30, 300);
 const afterIdb = await idbRaw(GK);
-const lsHas = await evalJs(`!!localStorage.getItem('${GK}') && localStorage.getItem('${GK}').indexOf('rose') >= 0`);
-check('A3 判定完成后：IDB 老花园仍在（含 rose/tulip/lavender）',
-  afterIdb.indexOf('"type":"rose"') >= 0 && afterIdb.indexOf('"type":"tulip"') >= 0 && afterIdb.indexOf('"type":"lavender"') >= 0);
-check('A4 找回的数据已回填 localStorage', lsHas === true);
+// 本用例要守的是「老花园没被 12 格全空的默认档覆盖」——默认档 p 全 null + exp 0 + inv 空，
+// 老花园（种 3 株 / exp 120 / inv 有 rose）无论是否已被自动采摘都不会退化成那个形状。
+const notEmptyDefault = await evalJs(`(function(){ return new Promise(function(res){ window.idbGet('${GK}').then(function(v){
+  var g = null; try { g = JSON.parse(String(v)); } catch (e) {}
+  if (!g || !g.p) { res('no-data'); return; }
+  res(g.p.filter(Boolean).length > 0 || (g.exp || 0) > 0 || Object.keys(g.inv || {}).length > 0);
+}).catch(function(){ res('err'); }); }); })()`);
+check('A3 判定完成后：IDB 仍是老花园（未被 12 格全空默认档覆盖）', notEmptyDefault === true, 'notEmpty=' + notEmptyDefault + ' raw=' + String(afterIdb).slice(0, 60));
+check('A4 找回的数据已回填 localStorage', lsAdopted === true);
+await openGarden();
+await sleep(2500);
 check('A5 花园页渲染出非空地块 ≥2', (await plotCount()) >= 2, 'plots=' + (await plotCount()));
 const errsA = JSON.parse(await jsErrors() || '[]');
 check('A6 无 JS 运行时错误', errsA.length === 0, errsA.join('|'));
@@ -240,34 +248,49 @@ const SNAP = 'xy-home-v2:__auto-backup-snapshot';
 await clearOrigin();
 await gotoPage();
 await seedDummies();
-await evalJs(`(function(){
+// 先等本轮启动的清理链收尾：purgeLegacySnapshot 会「删 → 2.5s 后复核 → 仍在则再删，最多 3 次」，
+// 播种写进这条链里会被应用自己删掉（表现为 B0 偶发失败 + B1 因键本就不存在而白过）。
+await sleep(11000);
+const hasSnap = `(function(){ return new Promise(function(res){
+  if (!window.idbHasKey) { res(false); return; }
+  window.idbHasKey(${JSON.stringify(SNAP)}).then(function(h){ res(h === true); }).catch(function(){ res(false); });
+}); })()`;
+const seedSnap = async () => evalJs(`(function(){
   var snap = { version:'1.0', app:'mochi-zika', exportTime:new Date().toISOString(), ls:{}, idb:{} };
   snap.ls['${GK}'] = ${JSON.stringify(oldGarden)};
   var raw = JSON.stringify(snap);
   try { localStorage.setItem('${SNAP}', raw); } catch (e) {}
-  return window.idbSet('${SNAP}', raw);
+  try { window.idbSet('${SNAP}', raw); } catch (e) {}
+  return true;
 })()`);
-await sleep(500);
+// 连续两次读数都为「存在」（间隔 3s，覆盖复核窗口）才认定种子站稳
+let snapSeeded = false;
+for (let i = 0; i < 6 && !snapSeeded; i++) {
+  await seedSnap();
+  const first = await waitFor(hasSnap, 10, 300);
+  await sleep(3000);
+  const second = await evalJs(hasSnap);
+  snapSeeded = first === true && second === true;
+}
+check('B0 种子：遗留副本已写入 IDB 且未被清理链删除', snapSeeded === true);
 // 花园业务键清空 → 旧版本会在此场景弹「找回花园」（整包 JSON.parse 副本）
-await evalJs(`(function(){ localStorage.removeItem('${GK}'); return window.idbDelete('${GK}'); })()`);
-const snapSeeded = await waitFor(`(function(){ return new Promise(function(res){ window.idbGet('${SNAP}').then(function(v){ res(v != null); }).catch(function(){ res(false); }); }); })()`, 20, 300);
-check('B0 种子：遗留副本已写入 IDB', snapSeeded === true);
+await evalJs(`(function(){ localStorage.removeItem('${GK}'); try { window.idbDelete('${GK}'); } catch (e) {} return true; })()`);
+await sleep(600);
 
 // 冷启动被测页：purgeLegacySnapshot 在数据就绪后 1.5s 执行；整段轮询窗口内同时盯弹窗
 await cdp('Page.navigate', { url: baseUrl + '/' });
 let purgedIdb = false;
 let snapModal = '';
-for (let i = 0; i < 30; i++) { // 最多 12s：足够覆盖旧代码两处副本弹窗的触发时机
-  if (!purgedIdb) {
-    purgedIdb = await evalJs(`(function(){ return new Promise(function(res){ window.idbGet('${SNAP}').then(function(v){ res(v == null); }).catch(function(){ res(false); }); }); })()`);
-  }
+for (let i = 0; i < 45; i++) { // 最多 18s：覆盖导航提交 + 就绪后 1.5s 清理 + 旧代码两处副本弹窗时机
+  if (!purgedIdb) purgedIdb = await evalJs(hasSnap) === false;
   const t = await evalJs(`(function(){ var m=document.getElementById('modal-mask'); if(!m||m.hidden) return ''; var x=document.getElementById('modal-title'); return x?String(x.textContent):''; })()`);
   const ts = String(t || '');
   if (ts.indexOf('找回') >= 0 || ts.indexOf('副本') >= 0 || ts.indexOf('数据可能丢失') >= 0) snapModal = ts;
   if (purgedIdb && snapModal) break;
   await sleep(400);
 }
-check('B1 启动后遗留副本已从 IndexedDB 自动清理', purgedIdb === true);
+// idbHasKey 严格三态：false＝确认库里没有；true＝还在；null/未就绪＝不能下结论
+check('B1 启动后遗留副本已从 IndexedDB 自动清理', snapSeeded === true && purgedIdb === true, 'seeded=' + snapSeeded + ' gone=' + purgedIdb);
 check('B2 启动后遗留副本已从 localStorage 自动清理', await evalJs(`localStorage.getItem(${JSON.stringify(SNAP)}) === null`) === true);
 check('B3 不再出现任何「从副本找回/数据丢失」弹窗', snapModal === '', 'title=' + snapModal);
 const dummiesOk = await evalJs(`(function(){ return new Promise(function(res){ window.idbGetMany(['xy-home-v2:t-dummy-1','xy-home-v2:t-dummy-2','xy-home-v2:t-dummy-3']).then(function(m){ res(!!m && m['xy-home-v2:t-dummy-1'] === 'd1' && m['xy-home-v2:t-dummy-2'] === 'd2' && m['xy-home-v2:t-dummy-3'] === 'd3'); }).catch(function(){ res(false); }); }); })()`);

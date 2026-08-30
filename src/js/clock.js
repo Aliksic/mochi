@@ -63,6 +63,14 @@
   // v3.26.x：数据加载较慢（idbRestore 12 秒保险丝触发）且未真就绪时显示的逃生口链接
   const forceEnterEl = document.getElementById('splash-force-enter');
   let slow = false;
+  try { if (window.__mochiDataSlow) slow = true; } catch (e) {} // 事件先于监听派发时兜底
+  // v3.26.x：进入门控补「页面加载完成」——此前只等数据就绪：GitHub Pages 冷启动
+  //   资源慢时，数据先就绪或保险丝先触发，「点击进入」/「仍要进入」在浏览器还没
+  //   拉完页面时就能点，用户点进去看到网页还在加载（数据不全的实况与错觉）。
+  //   现在两个入口都要求页面自身加载完成（window load / readyState complete）才放行；
+  //   30 秒兜底：个别资源挂起导致 load 永不触发时，到点视为已加载，避免开屏永远卡住。
+  let windowLoaded = false;
+  const loaded = () => windowLoaded || (typeof document !== 'undefined' && document.readyState === 'complete');
   // v3.8.y：整页一体滚动——滚动判定用 .splash-box（顶部+公告一起滚，需滚到整页底部）
   const splashBox = document.getElementById('splash-box');
   // v3.8.x：开屏即公告1页——原「开屏公告 + 进入后的报修确认层」两页合并为一页，
@@ -83,21 +91,21 @@
     const r = ready();
     const ok = r && scrolledBottom;
     if (loadingEl) {
-      loadingEl.hidden = r;
-      // 较慢时换文案，让用户知道在加载而非卡死
-      loadingEl.textContent = (!r && slow) ? '数据较多，仍在加载…' : '正在加载数据…';
+      // 数据未就绪 → 仍在加载数据；数据已就绪但页面资源未加载完 → 提示等待页面
+      loadingEl.hidden = r && loaded();
+      loadingEl.textContent = (!r && slow) ? '数据较多，仍在加载…' : (r ? '正在加载页面…' : '正在加载数据…');
     }
-    if (hintEl) hintEl.hidden = !r || ok;
+    if (hintEl) hintEl.hidden = !r || !loaded() || ok;
     if (enterEl) {
-      enterEl.hidden = !r;
+      enterEl.hidden = !r || !loaded();
       enterEl.classList.toggle('is-disabled', !ok); // div 上设 disabled 属性不落 DOM，用 class 控制置灰
     }
-    // 仍要进入：仅在"较慢且未真就绪"时显示，真就绪后隐藏
-    if (forceEnterEl) forceEnterEl.hidden = r || !slow;
+    // 仍要进入：仅在「页面已加载完成 + 较慢且未真就绪」时显示，真就绪后隐藏
+    if (forceEnterEl) forceEnterEl.hidden = r || !slow || !loaded();
   }
   const enter = () => {
     if (splash.classList.contains('hide')) return;
-    if (!ready() || !scrolledBottom) return; // 数据未就绪或未滑到底：禁止进入
+    if (!ready() || !scrolledBottom || !loaded()) return; // 数据未就绪 / 未滑到底 / 页面未加载完：禁止进入
     // 今日首次进入（本次仍强制通读）→ 记下已读，当日再次打开不再展开全文
     if (!seenToday) {
       try { localStorage.setItem(seenKey, '1'); seenToday = true; } catch (e) {}
@@ -140,6 +148,10 @@
   if (splashBox) splashBox.addEventListener('scroll', checkScrolled, { passive: true });
   if (enterEl) enterEl.addEventListener('click', (e) => { e.stopPropagation(); enter(); });
   if (forceEnterEl) forceEnterEl.addEventListener('click', (e) => { e.stopPropagation(); forceEnter(); });
+  // 页面加载完成 → 刷新进入状态（window load + readyState 轮询双保险）
+  window.addEventListener('load', function () { windowLoaded = true; updateEnterState(); });
+  // 30 秒兜底：页面个别资源挂起导致 load 永不触发时，到点视为已加载，避免开屏永远卡住
+  setTimeout(function () { if (!windowLoaded) { windowLoaded = true; updateEnterState(); } }, 30000);
   // 数据回填完成 → 刷新状态（事件 + 轮询双保险：空数据场景只置标志不派发事件）
   document.addEventListener('mochi-restore-done', updateEnterState);
   // idbRestore 12 秒保险丝触发 → 标记较慢，显示「仍要进入」逃生口（不自动进入）

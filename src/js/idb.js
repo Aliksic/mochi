@@ -271,7 +271,7 @@
   // 部分安卓内核（真我/荣耀/小米 Edge 等）事务可能挂起：既不 onsuccess 也不 onerror，
   // 没有超时兜底，调用方的 Promise 就永不落地（诊断里「IndexedDB 大键明细」停在「读取中…」）。
   // run(db, finish) 内用 finish(结果) 落地；失败/超时一律 resolve(IDB_LIST_FAILED)。
-  // v3.26.x #89：IDB_LIST_FAILED 是这条链的关键——旧实现超时后 resolve 空数组，与
+  // v3.26.x #90：IDB_LIST_FAILED 是这条链的关键——旧实现超时后 resolve 空数组，与
   // 「库里真的没有」不可区分，上层（chat.js 判定「这台桌面没有聊天记录」）就把一次
   // 读取失败当成真的没历史，接着把新消息整包写回 → 全部历史被覆盖且不可逆。
   const IDB_LIST_FAILED = null;

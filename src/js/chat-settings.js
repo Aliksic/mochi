@@ -707,16 +707,39 @@
       out = '.msg-out .msg-bubble{' + css + '!important;}' +
             '.msg-in .msg-bubble{' + css + '!important;}';
     } else {
-      // 用户选择器映射到 mochi 气泡
-      out = css
-        .replace(/\.msg-out\b/g, '.msg-out')
-        .replace(/\.msg-in\b/g, '.msg-in')
-        .replace(/\.message-sent\b/g, '.msg-out .msg-bubble')
-        .replace(/\.message-received\b/g, '.msg-in .msg-bubble')
-        .replace(/\.mb\.self\b/g, '.msg-out .msg-bubble')
-        .replace(/\.mb\.other\b/g, '.msg-in .msg-bubble')
-        .replace(/\.bubble-self\b/g, '.msg-out .msg-bubble')
-        .replace(/\.bubble-other\b/g, '.msg-in .msg-bubble');
+      // 用户选择器映射到 mochi 气泡。v3.26.x 扩充别名：网页下载的气泡模板多使用
+      // .me/.friend/.myself/.other/.chat-message 等通用类名，旧表只认 .message-sent/
+      // .message-received/.bubble-self 几个，导致模板原样注入后没有任何节点匹配
+      // （显示「已设置」但界面不变，曾误判为设备问题）。
+      //   OUT ：我方气泡  IN ：对方气泡  SH ：无左右之分的通用气泡类（落到共享气泡）
+      var _mapBc = function (src, names, rep) {
+        var r = src;
+        for (var i = 0; i < names.length; i++) {
+          var n = names[i];
+          // 类名可能含 "-"，需转义；"后接非单词且非 -/_"避免误伤 .me-avatar 这类
+          var re = new RegExp('\\.' + n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?![\\-\\w])', 'g');
+          r = r.replace(re, rep);
+        }
+        return r;
+      };
+      out = _mapBc(css, ['msg-out'], '.msg-out'); // 保留原样身份替换
+      out = _mapBc(out, ['msg-in'], '.msg-in');
+      // v3.25.x 起已支持的组合选择器：整串优先替换，避免拆成单类后二次误替换
+      out = _mapBc(out, ['mb.self'], '.msg-out .msg-bubble');
+      out = _mapBc(out, ['mb.other'], '.msg-in .msg-bubble');
+      out = _mapBc(out, [
+        'message-sent', 'message-me', 'message-mine', 'chat-me', 'msg-me', 'msg-sent',
+        'mine', 'me', 'left', 'my-bubble', 'bubble-mine', 'bubble-self', 'self', 'myself', 'sender'
+      ], '.msg-out .msg-bubble');
+      out = _mapBc(out, [
+        'message-received', 'message-you', 'message-friend', 'chat-you', 'chat-friend', 'msg-you',
+        'msg-recv', 'msg-incoming', 'friend', 'other', 'right', 'bubble-other', 'partner-bubble',
+        'them', 'recipient', 'guest', 'receiver'
+      ], '.msg-in .msg-bubble');
+      // 通用气泡类（不分左右）落到共享气泡元素；.msg-bubble 本身即为目标，跳过不做替换
+      out = _mapBc(out, [
+        'bubble', 'chat-bubble', 'message-bubble', 'text-bubble', 'word-bubble', 'chat-text', 'message'
+      ], '.msg-bubble');
     }
     const st = document.createElement('style');
     st.id = 'cs-bubble-style';
@@ -727,7 +750,7 @@
     csCss.addEventListener('click', () => {
       if (!window.openTCPanel) return;
       window.openTCPanel('气泡 CSS', '' +
-        '<div class="sm-fld-hint" style="margin-bottom:8px">输入自定义样式，支持两种写法：<br>· 直接写声明，如 <code>border-radius:20px;box-shadow:0 2px 8px rgba(0,0,0,.1)</code>（自动应用到双方气泡）<br>· 或写选择器，如 <code>.msg-out .msg-bubble{...}</code></div>' +
+        '<div class="sm-fld-hint" style="margin-bottom:8px">输入自定义样式，支持两种写法：<br>· 直接写声明，如 <code>border-radius:20px;box-shadow:0 2px 8px rgba(0,0,0,.1)</code>（自动应用到双方气泡）<br>· 或写选择器，如 <code>.msg-out .msg-bubble{...}</code>；网页气泡模板常见的 <code>.me/.friend/.message-me/.bubble{...}</code> 等类名也会自动识别</div>' +
         '<textarea id="cs-css-input" class="tc-input" rows="6" placeholder="border-radius: 20px;' + '&#10;box-shadow: 0 2px 8px rgba(0,0,0,.12);"></textarea>' +
         '<div class="mail-actions"><button class="cc-tool" id="cs-css-clear">清空</button><button class="cc-tool" id="cs-css-ok">应用</button></div>');
       const ta = document.getElementById('cs-css-input');

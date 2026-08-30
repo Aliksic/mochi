@@ -5,6 +5,7 @@
 (function () {
 const body = document.getElementById('chat-body');
 if (!body) return;
+const chatLoadingEl = document.getElementById('chat-loading'); // v3.26.x：聊天记录加载进度条
 const uid = window.activePrefix();
 const store = window.activeStore();
 function closeIme() {
@@ -80,6 +81,10 @@ try { if (input) input.value = ''; } catch (e) {}
 try { updateChatPartnerName(); } catch (e) {}
 try { fillAvatar('chat-user-av', 'cs-avatar-user'); fillAvatar('chat-partner-av', 'cs-avatar-partner'); } catch (e) {}
 try { if (window.applyContinueSayUI) window.applyContinueSayUI(); } catch (e) {}
+try { updateChatLoading(); } catch (e) {}   // 切桌面聊天页已隐藏 → 进度条同步隐藏
+// v3.26.x：切桌面立即预读新桌面聊天记录——用户导航/点开聊天前读库已在跑，
+//   打开聊天页时记录往往已就绪，不再等 enterChat 才开始读（省下数秒等待）
+try { loadMsgs(); } catch (e) {}
 } catch (e) {}
 });
 const LS_SNAP_LIMIT = 2 * 1024 * 1024;
@@ -118,7 +123,7 @@ if (ok) return true;
 return window.idbSet(key, JSON.stringify(arr));
 });
 }
-// v3.26.x #89：聊天记录「条数账本」+ 缩水守卫（本会话跨桌面/读库异常路径的最后止损）。
+// v3.26.x #90：聊天记录「条数账本」+ 缩水守卫（本会话跨桌面/读库异常路径的最后止损）。
 // #88 的 authOk 闸门只挡「本会话没读到权威值」；账本再挡一种：读到了、但内存里的数组
 // 明显不是库里那一份（切错桌面残留、快照污染、并发覆盖）。账本 = 本命名空间最近一次
 // 权威条数，存 <prefix>:chat-meta（几百字节小键，idb.js 已把它排除出写日志，
@@ -130,6 +135,7 @@ const CHAT_LEDGER_MIN = 300;
 const CHAT_LEDGER_STEP = 50;   // IDB 账本按步进落盘：只需量级正确，免每次存盘多发事务
 const chatLedger = {};         // prefix -> 已知权威条数
 let chatLedgerWarned = {};
+const chatLedgerRetryAt = {};  // prefix -> 上次强制重读时间（限流，防重读风暴）
 function chatLedgerSave(prefix, n) {
 const prev = chatLedger[prefix];
 chatLedger[prefix] = n;
@@ -159,7 +165,7 @@ if (typeof base === 'number' && base >= CHAT_LEDGER_MIN && n * 2 < base) {
 if (!chatLedgerWarned[prefix]) {
 chatLedgerWarned[prefix] = 1;
 try {
-if (window.openModal) window.openModal('聊天记录保护', '', null, {
+if (window.openModal) window.openModal('聊天记录保护', '', function () {}, {
 noInput: true, okText: '知道了',
 staticText: '检测到本次要保存的记录比已存的历史少了很多（' + base + ' 条 → ' + n + ' 条），' +
 '已暂缓保存以防历史被覆盖。请留意稍后重进聊天页确认记录是否完整。'
@@ -167,6 +173,20 @@ staticText: '检测到本次要保存的记录比已存的历史少了很多（'
 } catch (e) {}
 try { scheduleIdbRetry(); } catch (e) {}
 }
+// v3.26.x #90：拒绝落盘不是终点——① 暂存内存数组，权威读回后 loadMsgs 会把其中的新
+// 消息合并进完整历史（切桌面时也不会随内存一起丢）；② 强制重读：scheduleIdbRetry 走的
+// 普通 loadMsgs 会被 IDB_RELOAD_MIN_GAP 时间闸跳过（此刻刚读过），只有 forceIdb 才真重读。
+// 按命名空间 20 秒限流，防极端情况下反复重读整包大历史。
+try { if (Array.isArray(arr) && arr.length && (!pendingLocal || pendingLocal.length < arr.length)) pendingLocal = arr.slice(); } catch (e) {}
+try {
+const nowR = Date.now();
+if (nowR - (chatLedgerRetryAt[prefix] || 0) > 20000) {
+chatLedgerRetryAt[prefix] = nowR;
+setTimeout(function () {
+try { if (window.activePrefix() === prefix) loadMsgs(true); } catch (e) {}
+}, 1500);
+}
+} catch (e) {}
 return false;
 }
 chatLedgerSave(prefix, n);
@@ -283,6 +303,7 @@ scrollChatBottom();
 //（authLoadedPrefix 不匹配时 saveMsgs/saveMsgsNow 一律暂存）。这里顺带补挂一次有界
 // 读回重试（scheduleIdbRetry 自身限 6 次/5s 间隔），否则读库超时的设备本会话再也拿不回历史。
 try { scheduleIdbRetry(); } catch (e) {}
+try { updateChatLoading(); } catch (e) {} // 保险丝已就绪 → 隐藏聊天记录加载进度条
 }, 15000);
 }
 function saveMsgs() {
@@ -311,7 +332,7 @@ schedulePersist(() => {
   // 「本会话确实读到过该命名空间的权威数据」才允许整包落盘。排队到执行之间若切过
   // 桌面，contact-switched 会先 flushPersistNow() 落完再归位 authLoadedPrefix，不漏存。
   if (authLoadedPrefix !== myPrefix) return;
-  // v3.26.x #89：条数缩水守卫——内存数组明显少于库内账本时整包不落（含 LS 快照）
+  // v3.26.x #90：条数缩水守卫——内存数组明显少于库内账本时整包不落（含 LS 快照）
   if (!chatLedgerGuard(myPrefix, msgs)) return;
   // v3.26.x OOM：大历史 IDB 直存数组（免整包 stringify），小历史仍字符串路径
   try { if (window.idbSet) persistMsgsToIdb(myPrefix + ':chat-msgs', msgs); } catch (e) {}
@@ -412,7 +433,7 @@ function runDeferredNormalization() {
     // v3.26.x #88：未读到权威时不整包写回（同 saveMsgs 守卫）。归一化是幂等的，
     // 本次跳过会在下次读库成功后重跑；拿内存里的部分数组覆盖 = 丢全部历史。
     if (authLoadedPrefix !== myPre) return;
-    // v3.26.x #89：归一化会删相邻重复（条数变少）——命中缩水判定时只跳过落盘（幂等，
+    // v3.26.x #90：归一化会删相邻重复（条数变少）——命中缩水判定时只跳过落盘（幂等，
     // 下次读库成功后重跑），渲染照常，不影响本会话使用。
     const canPersist = chatLedgerGuard(myPre, msgs);
     if (canPersist) {
@@ -502,7 +523,7 @@ if (!skipRead) {
 try {
 if (window.idbGet) {
 const myPrefix = window.activePrefix();
-// v3.26.x #89：先补读条数账本（小键，几乎不会超时）。大键读取失败时它是唯一
+// v3.26.x #90：先补读条数账本（小键，几乎不会超时）。大键读取失败时它是唯一
 // 能回答「库里到底有多少条」的依据，落盘守卫全靠它。
 try { chatLedgerLoad(myPrefix); } catch (e) {}
 window.idbGet(myPrefix + ':chat-msgs').then(v => {
@@ -511,7 +532,7 @@ if (v === undefined || v === null) {
 // v3.14.x：先区分「键确实不存在」与「读取失败/超时」——idbGet 超时兜底也
 // resolve undefined，真机切桌面并发抢事务时大键读取超时并不罕见；若当"无权威"
 // 会置 ready 并用内存/LS 有损快照覆盖 IDB = 全部历史被清。
-// v3.26.x #89：复核改走 idb.js 的严格三态探测 idbHasKey（true 存在/false 确认没有/
+// v3.26.x #90：复核改走 idb.js 的严格三态探测 idbHasKey（true 存在/false 确认没有/
 // null 没读到）。原 idbGetAllKeys 在超时、挂起时 resolve 空数组，与「确认空库」
 // 不可区分 → 读取失败被当成「这个桌面没有历史」，置 authLoadedPrefix 放开整包落盘
 // → 发一条消息即把全部历史覆盖成一条（诊断实证：小米 14U Edge，LS 已废无第二副本）。
@@ -546,7 +567,7 @@ pendingLocal = null;
 try { if (window.idbSet) persistMsgsToIdb(myPrefix + ':chat-msgs', msgs); } catch (e) {}
 writeLsSnapshot(msgs, myPrefix, true);
 }
-// #89：已确认库里没有 chat-msgs，账本随之对齐真实状态（过期的高账本不该再拦正常保存）
+// #90：已确认库里没有 chat-msgs，账本随之对齐真实状态（过期的高账本不该再拦正常保存）
 try { chatLedgerSave(myPrefix, (msgs && msgs.length) || 0); } catch (e) {}
 });
 return;
@@ -605,7 +626,7 @@ chatDbReady = true;
 // v3.14.x：本命名空间已读到权威（此后空数组落盘才被允许——内存已含全部历史）
 authLoadedPrefix = myPrefix;
 idbRetryCount = 0;
-// v3.26.x #89：账本基线＝刚读到的库内条数（同值不重复落盘，见 chatLedgerSave 节流）
+// v3.26.x #90：账本基线＝刚读到的库内条数（同值不重复落盘，见 chatLedgerSave 节流）
 try { chatLedgerSave(myPrefix, idbArr.length); } catch (e) {}
 try {
 lastIdbLoadPrefix = window.activePrefix();
@@ -621,6 +642,11 @@ if (chatVisible() && chatNearBottom()) {
 renderWindow(false, true);
 scrollChatBottom();
 }
+} else if (chatVisible() && msgs.length && !body.children.length) {
+// v3.26.x：冷加载（切桌面后 msgs=[]、无本地待合并，changed=false 原路径不会重渲）——
+//   读库完成后聊天页仍开着且消息区为空 → 补渲染一次（同时隐藏加载进度条）
+renderWindow(false, true);
+scrollChatBottom();
 }
 // v3.26.x OOM：旧大数据字符串存量（升级前写入的 chat-msgs 单键字符串）后台一次性
 // 转数组直存——此后每次读库免整包 JSON.parse（消除数百 MB 解析尖峰与秒级主线程阻塞）。
@@ -835,6 +861,12 @@ let typingOn = false;
 function chatVisible() {
 const p = document.getElementById('page-chat');
 return !!(p && !p.hidden);
+}
+// v3.26.x：聊天记录加载进度条显隐——消息区为空且权威数据未就绪时显示「正在加载聊天记录…」，
+//   读库完成（chatDbReady=true 且 msgs 非空）或离开聊天页自动隐藏
+function updateChatLoading() {
+if (!chatLoadingEl) return;
+chatLoadingEl.hidden = !(chatVisible() && !chatDbReady && !msgs.length);
 }
 function scrollChatBottom() {
 const cb = document.getElementById('chat-body');
@@ -1582,6 +1614,7 @@ scrollChatBottom();
 }
 suppressScrollUntil = Date.now() + 200; // 本轮渲染/滚动结束后 200ms 内不响应 scroll
 restoreInplaceDrafts();
+updateChatLoading(); // 渲染完成（有内容或就绪）→ 隐藏加载进度条
 }
 window.chatReRenderTime = function () {
 if (chatPage.hidden || !body.children.length) return;
@@ -1714,7 +1747,7 @@ m.innerHTML = '<div class="msg-ask-card' + (answered ? ' answered' : '') + '">' 
 (answered
 ? '<div class="msg-ask-a">✓ ' + escTxt(T(rec.inviteAnswer || 'TA 回应了你')) + '</div>'
 : '<div class="msg-ask-tip">' + T('等待 TA 回应…') + '</div>') +
-favHeartHtml() +
+favHeartHtml(rec) +
 '</div>';
 appendMsg(m);
 maybeScrollChatBottom(rec.side);
@@ -1730,7 +1763,7 @@ m.innerHTML = '<div class="msg-ask-card' + (answered ? ' answered' : '') + '">' 
 (answered
 ? '<div class="msg-ask-a">✓ ' + T('TA：') + escTxt(T(rec.askAnswer || '回答了你')) + '</div>' + (rec.askReply ? '<div class="msg-choose-r">' + T('TA：') + escTxt(T(rec.askReply)) + '</div>' : '')
 : '<div class="msg-ask-tip">' + (askIsSingle ? T('等待 TA 选择…') : T('等待 TA 回答…')) + '</div>') +
-favHeartHtml() +
+favHeartHtml(rec) +
 '</div>';
 appendMsg(m);
 maybeScrollChatBottom(rec.side);
@@ -1834,7 +1867,7 @@ m.innerHTML = '<div class="msg-rp-card' + (cls ? ' ' + cls : '') + '">' +
 '<span class="msg-rp-side">' + escTxt(sideTxt) + ' 发出</span>' +
 '<span class="msg-rp-status">' + escTxt(rpStatusText(rec)) + '</span>' +
 '</div>' +
-favHeartHtml() +
+favHeartHtml(rec) +
 '</div>';
 if (rec.rpCover) {
 const cover = rpCoverGet();
@@ -1869,7 +1902,7 @@ m.innerHTML = '<div class="msg-flower-card">' +
 '<div class="msg-flower-divider"><span></span>\u2739<span></span></div>' +
 '<div class="msg-flower-wish">\u201C' + escTxt(rec.flWish || '\u9001\u7ED9\u4F60~') + '\u201D</div>' +
 '<div class="msg-flower-foot"><span>' + escTxt(sideTxt) + ' \u9001\u51FA</span></div>' +
-favHeartHtml() +
+favHeartHtml(rec) +
 '</div>';
 appendMsg(m);
 maybeScrollChatBottom(rec.side);
@@ -1887,7 +1920,7 @@ m.innerHTML = '<div class="msg-gift-card">' +
 '<div class="msg-gift-wish">\u201C' + escTxt(rec.giftWish || '心意') + '\u201D</div>' +
 '<div class="msg-gift-foot"><span class="mg-side">' + escTxt(sideTxt) + '</span>' +
 '<span class="msg-gift-price">\u00A5' + escTxt(Number(rec.giftPrice || 0).toFixed(2)) + '</span></div>' +
-favHeartHtml() +
+favHeartHtml(rec) +
 '</div>';
 appendMsg(m);
 maybeScrollChatBottom(rec.side);
@@ -1905,7 +1938,7 @@ m.innerHTML = '<div class="msg-gift-card msg-dish-card">' +
 '<div class="msg-gift-wish">\u201C' + escTxt(rec.dishWish || '尝尝手艺') + '\u201D</div>' +
 '<div class="msg-gift-foot"><span class="mg-side">' + escTxt(sideTxt) + '</span>' +
 '<span class="msg-gift-price">\u00A5' + escTxt(Number(rec.dishPrice || 0).toFixed(2)) + '</span></div>' +
-favHeartHtml() +
+favHeartHtml(rec) +
 '</div>';
 appendMsg(m);
 maybeScrollChatBottom(rec.side);
@@ -1921,7 +1954,7 @@ m.innerHTML = '<div class="msg-choose-card' + (answered ? ' answered' : '') + '"
 (answered
 ? '<div class="msg-ask-a">✓ 你选择了：' + escTxt(rec.choiceAnswer) + '</div><div class="msg-choose-r">' + T('TA：') + escTxt(T(rec.choiceReply)) + '</div>'
 : '<div class="msg-ask-tip">点击选择你的答案</div>') +
-favHeartHtml() +
+favHeartHtml(rec) +
 '</div>';
 appendMsg(m);
 maybeScrollChatBottom(rec.side);
@@ -1936,7 +1969,7 @@ m.innerHTML = '<div class="msg-choose-card' + (answered ? ' answered' : '') + '"
 (answered
 ? '<div class="msg-ask-a">✓ 你：' + escTxt(rec.curiousAnswer) + '</div><div class="msg-choose-r">' + T('TA：') + escTxt(T(rec.curiousReply)) + '</div>'
 : '<div class="msg-ask-tip">' + T('点击回答 TA 的好奇') + '</div>') +
-favHeartHtml() +
+favHeartHtml(rec) +
 '</div>';
 appendMsg(m);
 maybeScrollChatBottom(rec.side);
@@ -1951,7 +1984,7 @@ m.innerHTML = '<div class="msg-choose-card' + (answered ? ' answered' : '') + '"
 (answered
 ? '<div class="msg-ask-a">✓ 你：' + escTxt(rec.roastAnswer) + '</div><div class="msg-choose-r">' + T('TA：') + escTxt(T(rec.roastReply)) + '</div>'
 : '<div class="msg-ask-tip">' + T('点击回 TA 一句') + '</div>') +
-favHeartHtml() +
+favHeartHtml(rec) +
 '</div>';
 appendMsg(m);
 maybeScrollChatBottom(rec.side);
@@ -1967,7 +2000,7 @@ m.innerHTML = '<div class="msg-ask-card' + (answered ? ' answered' : '') + '">' 
 (answered
 ? '<div class="msg-ask-a">✓ 已回答：' + escTxt(rec.askAnswer) + '</div>' + (rec.askReply ? '<div class="msg-choose-r">' + T('TA：') + escTxt(T(rec.askReply)) + '</div>' : '')
 : '<div class="msg-ask-tip">' + (isSingle ? '点击选择你的答案' : T('点击回答 TA 的提问')) + '</div>') +
-favHeartHtml() +
+favHeartHtml(rec) +
 '</div>';
 appendMsg(m);
 maybeScrollChatBottom(rec.side);
@@ -2189,7 +2222,7 @@ sessionChangedIdx.clear();
 chatDbReady = true;
 renderStart = 0; // v3.6.x：分页窗口起点复位（消息已清空）
 cancelPersist();
-// v3.26.x #89：用户主动清空＝合法归零，账本必须同步（否则缩水守卫会一直拒绝后续保存）
+// v3.26.x #90：用户主动清空＝合法归零，账本必须同步（否则缩水守卫会一直拒绝后续保存）
 try { chatLedger[window.activePrefix()] = 0; } catch (e) {}
 try { store.remove('chat-msgs'); } catch (e) {}
 try { store.remove('chat-meta'); } catch (e) {}
@@ -2210,7 +2243,7 @@ renderStart = 0;
 cancelPersist();
 try { if (window.idbSet) persistMsgsToIdb(window.activePrefix() + ':chat-msgs', msgs); } catch (e) {}
 writeLsSnapshot(msgs, undefined, true);
-// v3.26.x #89：主动整包替换＝合法，账本直接对齐新条数（旧的高账本不得继续拦后续保存）
+// v3.26.x #90：主动整包替换＝合法，账本直接对齐新条数（旧的高账本不得继续拦后续保存）
 try { chatLedgerSave(window.activePrefix(), msgs.length); } catch (e) {}
 if (body) body.innerHTML = '';
 clearChatUnread();
@@ -2531,7 +2564,7 @@ let tries = 0;
 const writeArr = function (arr) {
 try { window.idbSet(key, JSON.stringify(arr)); } catch (e) {}
 try { localStorage.setItem(key, JSON.stringify(arr)); } catch (e) {}
-// v3.26.x #89：跨桌面追加后同步条数账本（下次冷启动大键读失败时它就是守卫依据）
+// v3.26.x #90：跨桌面追加后同步条数账本（下次冷启动大键读失败时它就是守卫依据）
 try { chatLedgerSave('xy-home-v2:' + cid, arr.length); } catch (e) {}
 };
 const attempt = function () {
@@ -2542,14 +2575,14 @@ let arr = [];
 let readOk = true;
 try { arr = typeof v === 'string' ? JSON.parse(v) : v; } catch (e) { arr = []; readOk = false; }
 if (!Array.isArray(arr)) { arr = []; readOk = false; }
-// v3.26.x #89：读到有值却解析失败＝库里有历史只是读不懂，写回 [这一条] 等于删光，绝不写
+// v3.26.x #90：读到有值却解析失败＝库里有历史只是读不懂，写回 [这一条] 等于删光，绝不写
 if (!readOk) return;
 arr.push({ side: 'in', special: opts.special || 'poke', text: text, ts: Date.now(), mailNotice: !!opts.mailNotice });
 writeArr(arr);
 return;
 }
 // undefined：复核键是否真的不存在
-// v3.26.x #89：改走严格三态探测 idbHasKey，只有确认「库里没有」(false) 才允许新建只含
+// v3.26.x #90：改走严格三态探测 idbHasKey，只有确认「库里没有」(false) 才允许新建只含
 // 一条的数组；true（读取失败）与 null（探测本身失败）都按未知处理，安排重试。
 const confirmMiss = window.idbHasKey
 ? window.idbHasKey(key).then(function (has) { return has === false; })
@@ -2581,7 +2614,7 @@ window.chatAppendDeskRec = function (cid, rec) {
   const writeArr = function (arr) {
     try { window.idbSet(key, JSON.stringify(arr)); } catch (e) {}
     try { localStorage.setItem(key, JSON.stringify(arr)); } catch (e) {}
-    // v3.26.x #89：跨桌面追加后同步条数账本（下次冷启动大键读失败时它就是守卫依据）
+    // v3.26.x #90：跨桌面追加后同步条数账本（下次冷启动大键读失败时它就是守卫依据）
     try { chatLedgerSave('xy-home-v2:' + cid, arr.length); } catch (e) {}
   };
   const attempt = function () {
@@ -2592,13 +2625,13 @@ window.chatAppendDeskRec = function (cid, rec) {
         let readOk = true;
         try { arr = typeof v === 'string' ? JSON.parse(v) : v; } catch (e) { arr = []; readOk = false; }
         if (!Array.isArray(arr)) { arr = []; readOk = false; }
-        // v3.26.x #89：读到有值却解析失败＝库里有历史只是读不懂，写回 [这一条] 等于删光，绝不写
+        // v3.26.x #90：读到有值却解析失败＝库里有历史只是读不懂，写回 [这一条] 等于删光，绝不写
         if (!readOk) return;
         arr.push(rec);
         writeArr(arr);
         return;
       }
-      // v3.26.x #89：同 chatAppendToDeskMsg——改走严格三态探测 idbHasKey，只有确认库里
+      // v3.26.x #90：同 chatAppendToDeskMsg——改走严格三态探测 idbHasKey，只有确认库里
       // 没有（false）才新建只含一条的数组；true/null 一律按读取失败重试。后台通知回到
       // 浏览器瞬间 IDB 事务最容易未热，这条路径正是「记录自己消失」最像的触发点。
       const confirmMiss = window.idbHasKey
@@ -2645,7 +2678,7 @@ return;
 const myPrefix = window.activePrefix();
 schedulePersist(() => {
   if (authLoadedPrefix !== myPrefix) return;
-  // v3.26.x #89：条数缩水守卫（同 saveMsgs）
+  // v3.26.x #90：条数缩水守卫（同 saveMsgs）
   if (!chatLedgerGuard(myPrefix, msgs)) return;
   // v3.26.x OOM：大历史 IDB 直存数组（免整包 stringify）
   try { if (window.idbSet) persistMsgsToIdb(myPrefix + ':chat-msgs', msgs); } catch (e) {}
@@ -2682,7 +2715,7 @@ addIn(reply || '…');
 taFavCard(rec);
 const el = body.querySelector('.msg-ask[data-idx="' + msgIdx + '"]');
 if (el) {
-el.innerHTML = '<div class="msg-choose-card answered"><div class="msg-ask-q">' + escTxt(rec.choiceQuestion || '') + '</div><div class="msg-ask-a">✓ 你选择了：' + escTxt(answer) + '</div><div class="msg-choose-r">' + (window.taFit ? window.taFit('TA：') : 'TA：') + escTxt(window.taFit ? window.taFit(reply || '…') : (reply || '…')) + '</div>' + favHeartHtml() + '</div>';
+el.innerHTML = '<div class="msg-choose-card answered"><div class="msg-ask-q">' + escTxt(rec.choiceQuestion || '') + '</div><div class="msg-ask-a">✓ 你选择了：' + escTxt(answer) + '</div><div class="msg-choose-r">' + (window.taFit ? window.taFit('TA：') : 'TA：') + escTxt(window.taFit ? window.taFit(reply || '…') : (reply || '…')) + '</div>' + favHeartHtml(rec) + '</div>';
 }
 };
 window.chatCuriousReply = function (msgIdx, answer, reply, followup) {
@@ -2699,7 +2732,7 @@ if (followup) addIn(followup);
 taFavCard(rec);
 const el = body.querySelector('.msg-ask[data-idx="' + msgIdx + '"]');
 if (el) {
-el.innerHTML = '<div class="msg-choose-card answered"><div class="msg-ask-q">' + escTxt(rec.curiousQuestion || '') + '</div><div class="msg-ask-a">✓ 你：' + escTxt(answer) + '</div><div class="msg-choose-r">' + (window.taFit ? window.taFit('TA：') : 'TA：') + escTxt(window.taFit ? window.taFit(reply || '…') : (reply || '…')) + '</div>' + favHeartHtml() + '</div>';
+el.innerHTML = '<div class="msg-choose-card answered"><div class="msg-ask-q">' + escTxt(rec.curiousQuestion || '') + '</div><div class="msg-ask-a">✓ 你：' + escTxt(answer) + '</div><div class="msg-choose-r">' + (window.taFit ? window.taFit('TA：') : 'TA：') + escTxt(window.taFit ? window.taFit(reply || '…') : (reply || '…')) + '</div>' + favHeartHtml(rec) + '</div>';
 }
 };
 window.chatRoastReply = function (msgIdx, answer, reply) {
@@ -2715,7 +2748,7 @@ addIn(reply || '…');
 taFavCard(rec);
 const el = body.querySelector('.msg-ask[data-idx="' + msgIdx + '"]');
 if (el) {
-el.innerHTML = '<div class="msg-choose-card answered"><div class="msg-ask-q">' + escTxt(rec.roastText || '') + '</div><div class="msg-ask-a">✓ 你：' + escTxt(answer) + '</div><div class="msg-choose-r">' + (window.taFit ? window.taFit('TA：') : 'TA：') + escTxt(window.taFit ? window.taFit(reply || '…') : (reply || '…')) + '</div>' + favHeartHtml() + '</div>';
+el.innerHTML = '<div class="msg-choose-card answered"><div class="msg-ask-q">' + escTxt(rec.roastText || '') + '</div><div class="msg-ask-a">✓ 你：' + escTxt(answer) + '</div><div class="msg-choose-r">' + (window.taFit ? window.taFit('TA：') : 'TA：') + escTxt(window.taFit ? window.taFit(reply || '…') : (reply || '…')) + '</div>' + favHeartHtml(rec) + '</div>';
 }
 };
 window.chatAskReply = function (msgIdx, answer, reply) {
@@ -2775,7 +2808,7 @@ addIn(finalReply);
 taFavCard(rec);
 const el = body.querySelector('.msg-ask[data-idx="' + msgIdx + '"]');
 if (el) {
-el.innerHTML = '<div class="msg-ask-card answered"><div class="msg-ask-q">' + escTxt(rec.askQuestion || '') + '</div><div class="msg-ask-a">✓ 已回答：' + escTxt(answer) + '</div><div class="msg-choose-r">' + (window.taFit ? window.taFit('TA：') : 'TA：') + escTxt(window.taFit ? window.taFit(finalReply) : finalReply) + '</div>' + favHeartHtml() + '</div>';
+el.innerHTML = '<div class="msg-ask-card answered"><div class="msg-ask-q">' + escTxt(rec.askQuestion || '') + '</div><div class="msg-ask-a">✓ 已回答：' + escTxt(answer) + '</div><div class="msg-choose-r">' + (window.taFit ? window.taFit('TA：') : 'TA：') + escTxt(window.taFit ? window.taFit(finalReply) : finalReply) + '</div>' + favHeartHtml(rec) + '</div>';
 }
 return finalReply;
 };
@@ -3111,8 +3144,11 @@ e.stopPropagation();
 if (morePanel) morePanel.hidden = true;
 if (window.openCjian) {
 window.__cjianFrom = 'chat';
-window.openCjian();
-} else toast('此间加载失败');
+try { window.openCjian(); } catch (err) {
+try { if (window.__jsErrors) window.__jsErrors.push('openCjian: ' + (err && err.message || err)); } catch (e2) {}
+toast('此间打开出错，请刷新页面重试');
+}
+} else toast('此间加载失败，请刷新页面重试');
 });
 }
 let lastMineText = '';
@@ -3342,6 +3378,7 @@ fillAvatar('chat-partner-av', 'cs-avatar-partner');
 if (window.applyChatSettings) window.applyChatSettings();
 clearChatUnread();
 loadMsgs();
+updateChatLoading(); // 记录未就绪时显示「正在加载聊天记录…」进度条
 renderWindow(false, true);
 scrollToBottom();
 if (window.requestAnimationFrame) {
@@ -4945,7 +4982,7 @@ saveMsgs();
 taFavCard(rec);
 const el = body.querySelector('.msg-ask[data-idx="' + inviteIdx + '"]');
 if (el) {
-el.innerHTML = '<div class="msg-ask-card answered"><div class="msg-ask-q">' + (window.taFit ? window.taFit('邀请TA') : '邀请TA') + ' · ' + escTxt(content) + '</div><div class="msg-ask-a">✓ ' + escTxt(window.taFit ? window.taFit(answer) : answer) + '</div>' + favHeartHtml() + '</div>';
+el.innerHTML = '<div class="msg-ask-card answered"><div class="msg-ask-q">' + (window.taFit ? window.taFit('邀请TA') : '邀请TA') + ' · ' + escTxt(content) + '</div><div class="msg-ask-a">✓ ' + escTxt(window.taFit ? window.taFit(answer) : answer) + '</div>' + favHeartHtml(rec) + '</div>';
 }
 }
 try {
@@ -4984,7 +5021,7 @@ rec.askAnswer = text;
 saveMsgs();
 const el = body.querySelector('.msg-ask[data-idx="' + askIdx + '"]');
 if (el) {
-el.innerHTML = '<div class="msg-ask-card answered"><div class="msg-ask-q">' + (window.taFit ? window.taFit('问问TA') : '问问TA') + ' · ' + escTxt(content) + '</div><div class="msg-ask-a">✓ ' + (window.taFit ? window.taFit('TA：') : 'TA：') + escTxt(window.taFit ? window.taFit(text) : text) + '</div>' + favHeartHtml() + '</div>';
+el.innerHTML = '<div class="msg-ask-card answered"><div class="msg-ask-q">' + (window.taFit ? window.taFit('问问TA') : '问问TA') + ' · ' + escTxt(content) + '</div><div class="msg-ask-a">✓ ' + (window.taFit ? window.taFit('TA：') : 'TA：') + escTxt(window.taFit ? window.taFit(text) : text) + '</div>' + favHeartHtml(rec) + '</div>';
 }
 }
 addIn(text);
@@ -5402,8 +5439,14 @@ if (!f) return;
 if (window.addMyFavItem(f)) toast('已收藏互动卡片');
 else toast('已收藏过这张卡片');
 };
-function favHeartHtml() {
-return '<button class="msg-fav-heart" title="收藏整张互动卡片"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>收藏</button>';
+function favHeartHtml(rec) {
+const heart = '<button class="msg-fav-heart" title="收藏整张互动卡片"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>收藏</button>';
+let time = '';
+if (rec && rec.ts) {
+const who = rec.side === 'out' ? chatUserName() : chatPartnerName();
+time = '<div class="msg-fav-time">' + escTxt(who) + ' ' + fmtTime(rec.ts) + ' 发送</div>';
+}
+return heart + time;
 }
 function taFavCard(rec) {
 const _favProbCard = (window.favCfg ? window.favCfg().taCard : 30);

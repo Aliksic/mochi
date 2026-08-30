@@ -167,8 +167,14 @@ const b1 = await evalJs(`(async function(){
     tab.click();
     await new Promise(function(r){ setTimeout(r, 600); });
     var chips = [].map.call(document.querySelectorAll('#fc-groups-bar .cc-g-chip'), function(c){ return c.textContent; });
+    // v3.26.x：预设字卡列表改视口虚拟窗口（DOM 只保留视口附近约 24 行），整类 36 行
+    // 不再一次全渲染 → 先用分组条筛出目标组（该组 10 行必定在窗口内）再断言
+    var chip = [].slice.call(document.querySelectorAll('#fc-groups-bar .cc-g-chip')).find(function(c){ return c.textContent === '梦角催喝水'; });
+    if (chip) { chip.click(); await new Promise(function(r){ setTimeout(r, 400); }); }
     var headers = [].map.call(document.querySelectorAll('#fc-list .cc-group-header .ccg-name'), function(h){ return h.textContent; });
     var items = document.querySelectorAll('#fc-list .cc-item').length;
+    var all = [].slice.call(document.querySelectorAll('#fc-groups-bar .cc-g-chip')).find(function(c){ return c.textContent === '全部'; });
+    if (all) { all.click(); await new Promise(function(r){ setTimeout(r, 300); }); }
     return JSON.stringify({ chips: chips, headers: headers, items: items,
       grpInData: !!(window.DEFAULT_CARD_DATA && (window.DEFAULT_CARD_DATA.water||[]).some(function(g){ return g[0]==='梦角催喝水'; })) });
   } catch(e) { return 'err:' + e.message; }

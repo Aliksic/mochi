@@ -141,9 +141,29 @@
       return /:chat-msgs$/.test(k) || /:feed-posts$/.test(k);
     }
     const exportMissing = []; // 权威键降级记录（只剩有损快照或丢失）
-    if (window.idbGetAllKeys) {
-      let idbKeys = [];
-      try { idbKeys = await window.idbGetAllKeys() || []; } catch (e) {}
+    // v3.26.x #90：键清单改走严格三态接口 idbListKeys（数组=权威清单 / null=没读到）。
+    // 原 `idbGetAllKeys() || []` 把「挂起/超时」也当空库 → 导出一份只含 LS 小键的文件，
+    // 末尾还提示「全部数据完整」：LS 整库失效的设备（本次报障的小米 14U Edge）上那是
+    // 一份近乎空的备份，用户信了就清原设备 = 真丢。清单没读到一律中止、如实提示重试。
+    if (window.idbListKeys || window.idbGetAllKeys) {
+      let idbKeys = null;
+      try {
+        idbKeys = window.idbListKeys ? await window.idbListKeys() : ((await window.idbGetAllKeys()) || []);
+      } catch (e) { idbKeys = null; }
+      if (idbKeys === null) {
+        impHide();
+        if (window.openModal) {
+          window.openModal('导出未完成', '', function () {}, {
+            noInput: true, okText: '知道了',
+            staticText: '没能读到本地数据库清单（浏览器存储繁忙或超时）。\n' +
+              '为避免生成一份「看着完整其实缺数据」的备份，本次导出已中止。\n' +
+              '请回到桌面稍等十几秒后再点「导出数据」；若多次失败，重启浏览器再试。'
+          });
+        } else {
+          toast('导出未完成：未能读取本地数据库，请稍候重试');
+        }
+        return;
+      }
       const idbTotal = idbKeys.length;
       let idbDone = 0;
       for (const k of idbKeys) {
@@ -715,19 +735,29 @@
         try {
           // v3.6.x：多桌面——核对任一桌面的聊天/头像/摸鱼 + 联系人注册表
           let chatN = 0;
-          if (window.idbGetAllKeys) {
+          // v3.26.x #90：chatSeen=看到几个聊天键，chatCheckOk=清单是否真的读到
+          let chatSeen = 0, chatCheckOk = true;
+          if (window.idbListKeys || window.idbGetAllKeys) {
             try {
-              const keys = (await window.idbGetAllKeys()) || [];
-              for (const k of keys) {
-                if (/:chat-msgs$/.test(k)) {
-                  const cv = await window.idbGet(k);
-                  const a = typeof cv === 'string' ? JSON.parse(cv) : cv;
-                  if (Array.isArray(a)) chatN += a.length;
+              const keys = window.idbListKeys ? await window.idbListKeys() : await window.idbGetAllKeys();
+              if (!Array.isArray(keys)) { chatCheckOk = false; }
+              else {
+                for (const k of keys) {
+                  if (/:chat-msgs$/.test(k)) {
+                    chatSeen++;
+                    const cv = await window.idbGet(k);
+                    const a = typeof cv === 'string' ? JSON.parse(cv) : cv;
+                    if (Array.isArray(a)) chatN += a.length;
+                    else if (cv === undefined || cv === null) chatCheckOk = false;
+                  }
                 }
               }
-            } catch (e) {}
+            } catch (e) { chatCheckOk = false; }
           }
           if (chatN) ok.push('聊天' + chatN + '条');
+          // 清单没读到 / 有聊天键却一条都没取到：核对未成功，必须说出来（不当成"没有记录"）
+          if (!chatN && !chatCheckOk) parts.push('⚠ 聊天记录未能核对（数据库繁忙），请打开聊天页确认记录在列后再清理原设备');
+          else if (!chatN && chatSeen) parts.push('⚠ 聊天键存在但条数读取失败，请打开聊天页确认');
           const lsKeys = [];
           for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k) lsKeys.push(k); }
           if (lsKeys.some(k => /:avatar-user$/.test(k))) ok.push('我的头像✓');
@@ -757,7 +787,24 @@
   function purgeLegacySnapshot() {
     try { localStorage.removeItem(SNAPSHOT_KEY); } catch (e) {}
     if (!window.idbDelete) return;
-    try { Promise.resolve(window.idbDelete(SNAPSHOT_KEY)).catch(() => {}); } catch (e) {}
+    // v3.26.x #90：删后要复核再收工——idbDelete 没有挂起超时，原实现连返回值都不看，
+    // 实测该设备 173.8MB 遗留副本历经多次启动仍在（白占近一半可用空间）。用严格三态
+    // 探测 idbHasKey 复核：false＝确认已删；true＝还在 → 再删一次（最多 3 次）；
+    // null＝这次读不到，留给下次启动（不做重试风暴）。删不存在的键无副作用，重复调用安全。
+    let tries = 0;
+    const attempt = function () {
+      tries++;
+      try { Promise.resolve(window.idbDelete(SNAPSHOT_KEY)).catch(function () {}); } catch (e) {}
+      if (!window.idbHasKey) return;
+      setTimeout(function () {
+        try {
+          Promise.resolve(window.idbHasKey(SNAPSHOT_KEY)).then(function (has) {
+            if (has === true && tries < 3) attempt();
+          }).catch(function () {});
+        } catch (e) {}
+      }, 2500);
+    };
+    attempt();
   }
   if (window.__mochiDataReady) { setTimeout(purgeLegacySnapshot, 1500); }
   else {
