@@ -1,4 +1,12 @@
-# 本次构建者：本会话（2026-08-29 22:54 收口构建+推送。本次上线内容=①本会话图标回填并行修复 ②AI-B 22:30 通知点击修复 ③divination.js 占卜对象选择移除；music-player.js 的 BUGFIX_REPRO_TRACE 探针经 stash 隔离未上线，stash pop 已恢复原状待该会话继续）
+# 本次构建者：本会话（已构建，sw: mochi-mtfaduto。产物含修复「红米K70 QQ：互动卡片收藏有的能收藏有的点击无效」→ FIX-REGRESSION #72，见下方 2026-08-30 条目。待提交。另反馈「联系人一直发兜底的几条字卡」属既有慢 IDB 回复池回填未就绪场景，源码已含 v3.28.x 自愈层且已随本次构建上线，若仍复现需真机「复制诊断信息」里的【回复字卡池】节定位）
+
+### 2026-08-30 12:05（修复：红米K70 QQ浏览器的互动卡片「有的能收藏、有的点心形无效」——cardSnapshot 补齐 + 心形按 data-idx 定位）
+- [AI 域·业务功能 chat.js，本次由本会话代构建]（**改动文件：src/js/chat.js（cardSnapshot 补 ask/红包/送花/礼物/佳肴 五类 q/mine/ta 快照 + 心形 locator 改 favBtn.closest('[data-idx]') + flower/gift/dish 渲染补 data-idx + FAV_KIND_LABEL 补五类友好标签）+ build.mjs（哨兵 favBtn.closest('[data-idx]')）/ FIX-REGRESSION #72；构建状态：已构建，sw: mochi-mtfaduto，哨兵 80/80，verify 10/10**）。
+- 需求/反馈：红米K70 QQ浏览器「无法收藏联系人互动的卡片，有的可以收藏、有的点击无效（心形在但不弹已收藏）」。
+- 根因（chat.js）：① cardSnapshot 只覆盖 ask-choose/ask-curious/ask-roast/ask-card/invite 五类，但 renderMsg 对 ask/redpacket/flower/gift/dish 也渲染了收藏心形 → favCardFromMsg 走 cardSnapshot 得 null 直接 return，无 toast 无入库（此前的红包/送花/礼物/佳肴/问TA 静默无效）；② 心形点击处理 favBtn.closest('.msg-ask') 只认 .msg-ask 家族，红包(.msg-rp)/送花(.msg-flower)/礼物(.msg-gift)/佳肴(.msg-gift.msg-dish) 容器定位不到 → 即便快照修好也点不动。
+- 方案：见改动文件。③ 心形改为按 data-idx 容器定位，renderMsg 给 flower/gift/dish 渲染补 data-idx。
+- 验证：node --check src/js/chat.js 过 / 构建哨兵 80/80（含 favBtn.closest('[data-idx]')）/ npm run verify 10/10。真机确认点：问TA/红包/送花/礼物/佳肴等互动卡点心形均应 toast「已收藏互动卡片」并进收藏夹。
+- 待处理：收到推送上线后请真机复核。#72 归入 FIX-REGRESSION，防被并行会话覆盖。
 
 ### 2026-08-29 22:54（修复：红米K80 更新后首启「桌面图标上传的图片消失数秒，刷新才回来」——personalize.js 图标 IDB 回填串行改并行）
 - [AI 域]（**改动文件：src/js/personalize.js（app-icon-* IDB 回填 Promise.all 并行化+单键失败兜底）+ build.mjs（关键修复哨兵 +1 → 79/79）；构建状态：已构建**）。

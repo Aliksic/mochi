@@ -1290,7 +1290,9 @@ body.querySelectorAll('.msg-ask-card.show-fav, .msg-choose-card.show-fav').forEa
 const favBtn = e.target.closest('.msg-fav-heart');
 if (favBtn) {
 e.stopPropagation();
-const fItem = favBtn.closest('.msg-ask');
+// v3.28.x：心形不只挂在 .msg-ask 家族（红包/送花/礼物/佳肴是 .msg-rp/.msg-flower/.msg-gift），
+// 改为按最近的 data-idx 容器定位，保证所有带心形的互动卡片都能收藏
+const fItem = favBtn.closest('[data-idx]');
 if (fItem && fItem.dataset.idx !== undefined) window.favCardFromMsg(Number(fItem.dataset.idx));
 return;
 }
@@ -1709,6 +1711,7 @@ return m;
 }
 if (rec.special === 'flower') {
 m.className = 'msg-flower';
+m.dataset.idx = msgs.length - 1;
 const sideTxt = rec.side === 'out' ? '我' : chatPartnerName();
 m.innerHTML = '<div class="msg-flower-card">' +
 '<div class="msg-flower-bar"></div>' +
@@ -1725,6 +1728,7 @@ return m;
 }
 if (rec.special === 'gift') {
 m.className = 'msg-gift';
+m.dataset.idx = msgs.length - 1;
 const sideTxt = rec.side === 'out' ? '我 送出' : (chatPartnerName() + ' 送来');
 const gc = ((window.GIFT_CAT_COLOR || {})[rec.giftCat]) || '#f2f2f5';
 m.innerHTML = '<div class="msg-gift-card">' +
@@ -1742,6 +1746,7 @@ return m;
 }
 if (rec.special === 'dish') {
 m.className = 'msg-gift msg-dish';
+m.dataset.idx = msgs.length - 1;
 const sideTxt = rec.side === 'out' ? '我 烹饪送出' : (chatPartnerName() + ' 烹饪送来');
 const stars = rec.dishQuality === 'perfect' ? '★★★' : rec.dishQuality === 'good' ? '★★' : '★';
 m.innerHTML = '<div class="msg-gift-card msg-dish-card">' +
@@ -5197,6 +5202,13 @@ else if (special === 'ask-curious') { q = rec.curiousQuestion || ''; mine = rec.
 else if (special === 'ask-roast') { q = rec.roastText || ''; mine = rec.roastAnswer || ''; ta = rec.roastReply || ''; }
 else if (special === 'ask-card') { q = rec.askQuestion || ''; mine = rec.askAnswer || ''; ta = rec.askReply || ''; }
 else if (special === 'invite') { q = rec.inviteContent || ''; ta = rec.inviteAnswer || ''; }
+// v3.28.x 修复：以下卡片在 renderMsg 都渲染了收藏心形（favHeartHtml），但 cardSnapshot
+// 未覆盖 → 点收藏静默无效（无 toast、不进收藏夹）。补齐快照，收藏夹按通用卡渲染。
+else if (special === 'ask') { q = rec.askQuestion || rec.text || ''; mine = rec.askAnswer || ''; ta = rec.askReply || ''; }
+else if (special === 'redpacket') { mine = (rec.side === 'out' ? '我发出' : chatPartnerName() + '发出'); q = '红包 ¥' + Number(rec.rpAmount || 0).toFixed(2) + (rec.rpWish ? ' · ' + rec.rpWish : ''); }
+else if (special === 'flower') { q = (rec.flName || '花') + (rec.flWish ? '：' + rec.flWish : ''); }
+else if (special === 'gift') { q = (rec.giftName || '礼物') + (rec.giftWish ? '：“' + rec.giftWish + '”' : '') + (rec.giftPrice != null ? ' · ¥' + Number(rec.giftPrice || 0).toFixed(2) : ''); }
+else if (special === 'dish') { q = (rec.dishName || '菜肴') + (rec.dishWish ? '：“' + rec.dishWish + '”' : '') + (rec.dishPrice != null ? ' · ¥' + Number(rec.dishPrice || 0).toFixed(2) : ''); }
 else return null;
 return { kind: 'card', special: special, q: q, mine: mine, ta: ta, ts: rec.ts || Date.now() };
 }
@@ -5499,7 +5511,8 @@ return;
 }
 const FAV_KIND_LABEL = {
 'ask-choose': '小问题', 'ask-curious': '好奇', 'ask-roast': '吐槽',
-'ask-card': '问问TA', 'invite': '邀请TA'
+'ask-card': '问问TA', 'invite': '邀请TA', 'ask': '问问TA',
+'redpacket': '红包', 'flower': '送花', 'gift': '礼物', 'dish': '佳肴'
 };
 function favTextHtml(s) {
 const str = String(s || '');
