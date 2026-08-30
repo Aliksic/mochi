@@ -40,11 +40,42 @@
   function connLost(e) {
     try {
       if (!e) return false;
-      if (e.name === 'InvalidStateError') return true;
+      // v3.26.x 修复（iPhone 16 Pro Safari「存储异常」弹窗每会话必现）：iOS 挂后台会
+      // 杀 IndexedDB 服务进程，回前台后旧连接上事务失败，错误名不固定——iOS 18 实测
+      // 多报 UnknownError/InternalError/TransactionInactiveError（而非只有
+      // InvalidStateError）。原只匹配 InvalidStateError → 连接永不重建 → 本会话后续
+      // 写入全部失败 → 连续 5 次弹「存储异常」且每会话必现。这里把 iOS 常见连接级
+      // 错误名一并判死（重试最多 3 次封顶，真实数据错误不会被无限掩盖）。
+      const n = e.name;
+      if (n === 'InvalidStateError' || n === 'UnknownError' || n === 'InternalError' || n === 'TransactionInactiveError') return true;
       const m = String((e && e.message) || e);
-      return /connection\s+(is\s+)?(closed|lost|closing)|server\s+lost|database\s+connection/i.test(m);
+      return /connection\s+(is\s+)?(closed|lost|closing)|server\s+lost|database\s+connection|indexed\s+database/i.test(m);
     } catch (err) { return false; }
   }
+  // v3.26.x 修复（iPhone 16 Pro Safari「存储异常」弹窗每会话必现）：仅靠错误触发
+  // 重建不可靠（iOS 错误名多变、有时事务只挂起不报错），回前台时主动作废旧连接
+  // 引用，下一次 open() 重建新连接——事务持有自己的 db 引用，不影响在途事务，
+  // 重建开销极小。同时预拉起新连接，回前台后的首次写入不再撞上服务未就绪。
+  // 仅 iOS 启用（桌面/安卓靠 connLost 兜底已够，避免切窗每次重建）。
+  function armFgIdbReset() {
+    try {
+      if (typeof document === 'undefined' || !document.addEventListener) return;
+      const ua = (window.navigator && window.navigator.userAgent) || '';
+      if (!/iPhone|iPad|iPod/i.test(ua)) return;
+      const resetNow = function () {
+        try {
+          if (!dbPromise) return;
+          dbPromise = null;
+          open().catch(function () {});
+        } catch (e) {}
+      };
+      document.addEventListener('visibilitychange', function () {
+        try { if (document.visibilityState === 'visible') resetNow(); } catch (e) {}
+      });
+      if (window.addEventListener) window.addEventListener('focus', resetNow);
+    } catch (e) {}
+  }
+  armFgIdbReset();
 
   // 写入（key: 完整键名，如 'xy-home-v2:cc-groups'）
   // v3.7.0：写入失败重试 2 次（间隔 100ms），累计失败超 5 次 openModal 告警。
@@ -118,6 +149,7 @@
           tx.objectStore(STORE).put(value, key);
           tx.oncomplete = () => { if (done) return; done = true; clearTimeout(t); resolve(true); };
           tx.onerror = () => { if (done) return; done = true; clearTimeout(t); _idbFailLastErr = (tx.error && tx.error.name) || 'error'; if (connLost(tx.error)) dbPromise = null; resolve(false); };
+          tx.onabort = () => { if (done) return; done = true; clearTimeout(t); _idbFailLastErr = (tx.error && tx.error.name) || 'abort'; if (connLost(tx.error)) dbPromise = null; resolve(false); };
         } catch (e) { if (done) return; done = true; clearTimeout(t); _idbFailLastErr = (e && e.name) || 'error'; if (connLost(e)) dbPromise = null; resolve(false); }
       })).catch(() => false);
     }
@@ -140,8 +172,8 @@
         const os = tx.objectStore(STORE);
         pairs.forEach(p => { os.put(p.v, p.k); });
         tx.oncomplete = () => resolve(true);
-        tx.onerror = () => resolve(false);
-        tx.onabort = () => resolve(false);
+        tx.onerror = () => { if (connLost(tx.error)) dbPromise = null; resolve(false); };
+        tx.onabort = () => { if (connLost(tx.error)) dbPromise = null; resolve(false); };
       } catch (e) { resolve(false); }
     })).catch(() => false);
   };
@@ -280,7 +312,8 @@
         const tx = db.transaction(STORE, 'readwrite');
         tx.objectStore(STORE).delete(key);
         tx.oncomplete = () => resolve(true);
-        tx.onerror = () => resolve(false);
+        tx.onerror = () => { if (connLost(tx.error)) dbPromise = null; resolve(false); };
+        tx.onabort = () => { if (connLost(tx.error)) dbPromise = null; resolve(false); };
       } catch (e) { resolve(false); }
     })).catch(() => false);
   };
@@ -292,8 +325,8 @@
         const tx = db.transaction(STORE, 'readwrite');
         tx.objectStore(STORE).clear();
         tx.oncomplete = () => resolve(true);
-        tx.onerror = () => resolve(false);
-        tx.onabort = () => resolve(false);
+        tx.onerror = () => { if (connLost(tx.error)) dbPromise = null; resolve(false); };
+        tx.onabort = () => { if (connLost(tx.error)) dbPromise = null; resolve(false); };
       } catch (e) { resolve(false); }
     })).catch(() => false);
   };
@@ -321,8 +354,8 @@
           try { tx.abort(); } catch (e2) {}
         }
         tx.oncomplete = () => resolve(!bad);
-        tx.onerror = () => resolve(false);
-        tx.onabort = () => resolve(false);
+        tx.onerror = () => { if (connLost(tx.error)) dbPromise = null; resolve(false); };
+        tx.onabort = () => { if (connLost(tx.error)) dbPromise = null; resolve(false); };
       } catch (e) { resolve(false); }
     })).catch(() => false);
   };
@@ -474,14 +507,20 @@
       sendReady();
     };
     // v3.5.122：整体保险——极端情况（IndexedDB 事务挂起/设备存储异常）下
-    //   12 秒后强制置就绪。否则 open() 或任一事务永不完成时，开屏永远
+    //   12 秒后通知开屏「加载较慢」。否则 open() 或任一事务永不完成时，开屏永远
     //   「正在加载数据…」没有进入按钮（低端安卓机曾现卡死数分钟）。
     // v3.6.x：保险丝超时只放行开屏、不再截断恢复——低端机大量图片键分批恢复
     //   可能真的超过 12 秒，原逻辑会把剩余键丢弃（本会话数据缺失，只能刷新重试）；
-    //   现在超时后开屏可进入，恢复循环继续后台把剩余键补齐
+    //   现在超时后恢复循环继续后台把剩余键补齐
+    // v3.26.x：保险丝不再静默设 __mochiDataReady（原 sendReady 会让开屏「点击进入」
+    //   可点，但后台回填未完成 → 用户进入后数据不全，正是"没加载完就进入"的 bug）。
+    //   改为派发 mochi-restore-slow + 设 __mochiDataSlow，开屏据此显示「仍要进入」
+    //   小链接让用户主动选（进入时提示数据可能不全），按钮默认仍置灰等到真就绪。
+    //   不置 finished：processBatch 继续恢复，真完成时 finish() 才设 __mochiDataReady。
     const safety = setTimeout(function () {
       if (finished) return;
-      sendReady(); // 放行开屏，不阻塞用户
+      try { window.__mochiDataSlow = true; } catch (e) {}
+      try { document.dispatchEvent(new Event('mochi-restore-slow')); } catch (e) {}
       // 不置 finished：processBatch 继续恢复剩余键
     }, 12000);
     // v3.16.x：先恢复「LS 写失败脏键」集合（持久化在 IDB，跨浏览器重启仍有效）——

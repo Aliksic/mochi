@@ -55,7 +55,7 @@
           <div class="splash-summary">
             <p class="splash-summary-title">必读摘要</p>
             <p>本站完全免费，开放二传二改，但禁止商用、禁止以盈利为目的。</p>
-            <p>报修 / 反馈请按【手机型号 + 浏览器 + 具体现象】提交，缺一不回；基础疑问可直接问 AI，比我回复快。</p>
+            <p>报修 / 反馈请按【手机型号 + 浏览器 + 具体现象】提交，缺一不回；尽量附上设置里的【复制诊断信息】；基础疑问可直接问 AI，比我回复快。</p>
             <p>系统或浏览器版本不同，适配表现可能不同，属正常现象。</p>
             <p>建议使用 Chrome、Edge 等主流浏览器，尽量不用手机自带默认浏览器（会有限制），用主流浏览器出现的兼容问题会少一些。</p>
             <p>数据丢失属浏览器正常概率，请定期备份。</p>
@@ -106,6 +106,7 @@
             <p class="splash-sub">Bug 报修格式：</p>
             <p class="splash-item">请按【手机型号 + 浏览器 + 具体现象】提交，缺一不回。</p>
             <p class="splash-bullet">例：小米14 / 自带浏览器 / 点击字卡没反应</p>
+            <p class="splash-bullet">补充方式：设置 → 复制诊断信息，把自动生成的本机诊断文本（含版本号）一并贴上，能更快定位。</p>
             <p class="splash-sub">问「为什么会出现这个问题」这类基础疑问：</p>
             <p class="splash-item">建议直接问 AI，比我回复快。</p>
             <p class="splash-item">反馈后不需要等我回复：消息太多，修完会直接部署，可以晚些刷新到新版再试。反馈的每个问题都修了，但能否修好只能用自己的设备验证，我没有其他设备，无法验证修复程度。</p>
@@ -208,6 +209,9 @@
       <div class="splash-btns">
         <div class="splash-enter" id="splash-enter" hidden>点击进入</div>
       </div>
+      <!-- v3.26.x：数据加载超 12 秒仍未就绪时的逃生口（clock.js 控制显隐，默认 hidden）；
+           点此进入会提示「数据仍在加载，部分内容可能暂时看不见」，避免静默放行误入空数据 -->
+      <div class="splash-force-enter" id="splash-force-enter" hidden>仍要进入</div>
     </div>
   </div>
   <div class="phone">

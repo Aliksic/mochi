@@ -60,6 +60,9 @@
   const enterEl = document.getElementById('splash-enter');
   const loadingEl = document.getElementById('splash-loading');
   const hintEl = document.getElementById('splash-enter-hint');
+  // v3.26.x：数据加载较慢（idbRestore 12 秒保险丝触发）且未真就绪时显示的逃生口链接
+  const forceEnterEl = document.getElementById('splash-force-enter');
+  let slow = false;
   // v3.8.y：整页一体滚动——滚动判定用 .splash-box（顶部+公告一起滚，需滚到整页底部）
   const splashBox = document.getElementById('splash-box');
   // v3.8.x：开屏即公告1页——原「开屏公告 + 进入后的报修确认层」两页合并为一页，
@@ -77,13 +80,20 @@
     if (bottom !== scrolledBottom) { scrolledBottom = bottom; updateEnterState(); }
   }
   function updateEnterState() {
-    const ok = ready() && scrolledBottom;
-    if (loadingEl) loadingEl.hidden = ready();
-    if (hintEl) hintEl.hidden = !ready() || ok;
+    const r = ready();
+    const ok = r && scrolledBottom;
+    if (loadingEl) {
+      loadingEl.hidden = r;
+      // 较慢时换文案，让用户知道在加载而非卡死
+      loadingEl.textContent = (!r && slow) ? '数据较多，仍在加载…' : '正在加载数据…';
+    }
+    if (hintEl) hintEl.hidden = !r || ok;
     if (enterEl) {
-      enterEl.hidden = !ready();
+      enterEl.hidden = !r;
       enterEl.classList.toggle('is-disabled', !ok); // div 上设 disabled 属性不落 DOM，用 class 控制置灰
     }
+    // 仍要进入：仅在"较慢且未真就绪"时显示，真就绪后隐藏
+    if (forceEnterEl) forceEnterEl.hidden = r || !slow;
   }
   const enter = () => {
     if (splash.classList.contains('hide')) return;
@@ -113,11 +123,27 @@
       }
     } catch (e) {}
   };
+  // v3.26.x：数据较慢时用户主动「仍要进入」——hide 后提示数据可能不全
+  const forceEnter = () => {
+    if (splash.classList.contains('hide')) return;
+    if (!seenToday) {
+      try { localStorage.setItem(seenKey, '1'); seenToday = true; } catch (e) {}
+    }
+    hide();
+    try {
+      if (window.openModal) {
+        window.openModal('数据仍在加载', '数据较多仍在后台加载，部分内容（字卡 / 图片 / 聊天记录等）可能暂时看不见，建议稍后刷新页面。', null);
+      }
+    } catch (e) {}
+  };
   updateEnterState();
   if (splashBox) splashBox.addEventListener('scroll', checkScrolled, { passive: true });
   if (enterEl) enterEl.addEventListener('click', (e) => { e.stopPropagation(); enter(); });
+  if (forceEnterEl) forceEnterEl.addEventListener('click', (e) => { e.stopPropagation(); forceEnter(); });
   // 数据回填完成 → 刷新状态（事件 + 轮询双保险：空数据场景只置标志不派发事件）
   document.addEventListener('mochi-restore-done', updateEnterState);
+  // idbRestore 12 秒保险丝触发 → 标记较慢，显示「仍要进入」逃生口（不自动进入）
+  document.addEventListener('mochi-restore-slow', function () { slow = true; updateEnterState(); });
   // 公告由 notice.json 异步渲染完成 → 重新判定是否已滑到底
   document.addEventListener('mochi-notice-rendered', checkScrolled);
   // 轮询：数据就绪 + 已到底后停止；期间持续校正滚动/高度变化
@@ -126,9 +152,9 @@
     updateEnterState();
     checkScrolled();
   }, 300);
-  // 20 秒保险丝：数据极端异常未就绪时兜底放行（不自动跳过滑动）；
-  //   idbRestore 自身 12 秒必置就绪，正常不触发
-  setTimeout(() => { if (!ready()) hide(); }, 20000);
+  // 20 秒保险丝：数据极端异常未就绪时显示「仍要进入」逃生口（不自动进入，避免数据不全误入）；
+  //   idbRestore 12 秒派发 mochi-restore-slow 通常已先触发，这里兜底事件丢失场景
+  setTimeout(() => { if (!ready()) { slow = true; updateEnterState(); } }, 20000);
 })();
 
 // v3.8.y：章节渲染

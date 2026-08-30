@@ -1,5 +1,21 @@
 # 本次构建者：AI-B（已构建，sw: mochi-mtfhdz9c，哨兵 96/96 + sw.js 3/3，verify 10/10。本次新增：桌面美化颜色分区实时预览面板（desk-color-preview mini 桌面示意图，各部位用 CSS 变量着色实时更新，解决用户「看不懂每项改哪里」）。待提交推送）
 
+### 2026-08-30 17:15（修复：iPhone 16 Pro Safari「存储异常·近期数据多次写入失败」弹窗每会话必现 → FIX-REGRESSION #84）
+- [本会话·idb.js + build.mjs + FIX-REGRESSION.md]（**改动文件：src/js/idb.js（connLost 判定加宽补 iOS 连接级错误名 UnknownError/InternalError/TransactionInactiveError + 新增 armFgIdbReset 仅 iOS 回前台主动重建连接 + idbSet/idbSetAll/idbDelete/idbClear 补 tx.onabort 处理且所有事务错误都过 connLost 判死重建）+ build.mjs（FIX_SENTINELS +1：`armFgIdbReset`）+ FIX-REGRESSION.md（#84）；构建状态：未构建，node --check 过**）。
+- 需求/反馈：iPhone 16 Pro Safari（iOS 18.7，PWA standalone）一直弹「存储异常：近期数据多次写入失败」弹窗，每会话必现。诊断（v3.26.356）：存储配额 53.9MB/39GB 远未满、LS 键 279 个约 2.6MB 字符（UTF-16 双计 5.2MB）未超 5MB；但「IndexedDB 大键明细/开关持久化体检/最近错误」停在「读取中…」，且 5 分钟内前后台切换 9 次。
+- 根因：iOS 挂后台杀 IndexedDB 服务进程，回前台后旧连接上事务失败。v3.25.x 的 connLost 只匹配 InvalidStateError，但 iOS 18 实测多报 UnknownError/InternalError/TransactionInactiveError（有时只挂起不报错）→ 连接永不重建 → 本会话后续写入全失败 → 连续 5 次触发 _idbFailNotify「存储异常」弹窗（_idbFailAlerted 会话级，故每会话必现一次）。#65 的成功即清零修复无法救——失败是持续性的不是偶发抖动。
+- 方案：①connLost 加宽匹配 iOS 连接级错误名（真实数据错误仍会重试 3 次封顶后照常告警，不掩盖）；②armFgIdbReset（仅 iOS 启用）：visibilitychange→visible/focus 主动作废旧连接引用并预拉起新连接，回前台首次写入不再撞死连接；③四个写事务入口（idbSet/idbSetAll/idbDelete/idbClear）补 onabort 处理 + 错误统一过 connLost 判死重建。
+- 验证：node --check 过。待构建后真机（iPhone 16 Pro Safari PWA）：进设置→看存储→回桌面挂后台→切回来发消息/改设置→不再弹「存储异常」；诊断里 IndexedDB 明细不再长时间「读取中…」。构建时请一并包含 AI-B 17:00 未构建的 #83 改动（idb.js 同文件 idbRestore 保险丝 + clock.js 等）。
+- 待构建者：本条未构建，请构建时包含 src/js/idb.js + build.mjs。
+
+### 2026-08-30 17:00（修复：开屏数据没加载完就能点进入 → 进去数据不全 → FIX-REGRESSION #83）
+- [AI-B 域·idb.js + clock.js + template.html + base.css + build.mjs + FIX-REGRESSION.md]（**改动文件：src/js/idb.js（idbRestore 12 秒保险丝不再 sendReady 设 __mochiDataReady，改派发 mochi-restore-slow + 设 __mochiDataSlow；恢复循环继续后台补齐，真完成 finish 才设就绪）+ src/js/clock.js（按钮仍只认 __mochiDataReady；收到 mochi-restore-slow 或 20 秒兜底未就绪 → 显示「仍要进入」小链接，点击 hide + openModal 提示数据可能不全；删原 20 秒自动 hide 兜底；loading 文案 slow 时改「数据较多，仍在加载…」）+ src/template.html（splash-btns 后加 #splash-force-enter 锚点）+ src/css/base.css（.splash-force-enter 弱化样式：小字下划线次级色，表明非推荐入口）+ build.mjs（FIX_SENTINELS +2）+ FIX-REGRESSION.md（#83）；构建状态：未构建，node --check 全过**）。
+- 需求/反馈：网站链接没加载完（浏览器 tab 还在 loading），开屏「点击进入」就能点，进去后字卡/图片/聊天记录等数据都没加载完。首次访问和老用户刷新都遇到。
+- 根因：idb.js idbRestore 的 12 秒保险丝在 IndexedDB 回填超时（低端机大量图片/字卡键）时调 sendReady 强制设 __mochiDataReady=true 静默放行开屏，但后台回填未完成 → 开屏 ready() 返回 true → 按钮可点 → 进入后数据空/不全。注释原承认是「卡死 vs 数据暂时不全」权衡，用户反馈不可接受。
+- 方案：①保险丝不再静默放行——改派发 mochi-restore-slow + 设 __mochiDataSlow，不设 __mochiDataReady；只有 finish（真完成/空数据/读 keys 失败）才设就绪。②开屏按钮死等到真就绪；超时显示「仍要进入」逃生口（弱化样式），点击进入时提示数据可能不全。③删原 20 秒自动 hide 兜底（不再静默放行）。IDB 真挂起时按钮永不放行，用户只能主动走逃生口。
+- 验证：node --check 过。待构建后真机：①数据几秒就绪→按钮可点→数据全；②超 12 秒未就绪→按钮置灰+「数据较多，仍在加载…」+「仍要进入」出现；③点「仍要进入」→进入+提示；④IDB 真挂起→只能走逃生口。
+- 待构建者：本条未构建，请构建时包含 idb.js + clock.js + template.html + base.css + build.mjs。
+
 ### 2026-08-30 15:20（新增：桌面美化颜色分区加实时预览面板——用户反馈看不懂每项改哪里）
 - [AI-B 域·personalize.js + template.html + build.mjs]（**改动文件：src/js/personalize.js（applyAppNameColor 同步设 --app-name-color 变量供预览着色 + 一次性注入 desk-cp-style 预览样式）+ src/template.html（颜色分区顶部加 desk-color-preview mini 桌面示意图：图标行+卡片+按钮+爱心+主题按钮+图例）+ build.mjs（哨兵 +1）；构建状态：未构建，node --check 过**）。
 - 需求/反馈：用户反馈桌面美化→颜色分区各项（主题色/小组件颜色/边框/按钮/按钮文字/爱心/图标文字/透明度）看不懂每项改的是哪里的颜色，希望能预览显示。

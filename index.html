@@ -247,6 +247,12 @@ margin-top:14px;
 margin-top:16px; font-size:12px; color:var(--hint-ink); letter-spacing:1px;
 }
 .splash-loading[hidden] { display:none; }
+.splash-force-enter {
+margin-top:10px; font-size:11px; color:var(--hint-ink); letter-spacing:1px;
+text-decoration:underline; cursor:pointer; -webkit-tap-highlight-color:transparent;
+}
+.splash-force-enter:active { opacity:.6; }
+.splash-force-enter[hidden] { display:none; }
 @keyframes splash-pop {
 0% { transform:scale(.8); opacity:0; }
 100% { transform:scale(1); opacity:1; }
@@ -8281,7 +8287,7 @@ transition-duration: .01ms !important;
           <div class="splash-summary">
             <p class="splash-summary-title">必读摘要</p>
             <p>本站完全免费，开放二传二改，但禁止商用、禁止以盈利为目的。</p>
-            <p>报修 / 反馈请按【手机型号 + 浏览器 + 具体现象】提交，缺一不回；基础疑问可直接问 AI，比我回复快。</p>
+            <p>报修 / 反馈请按【手机型号 + 浏览器 + 具体现象】提交，缺一不回；尽量附上设置里的【复制诊断信息】；基础疑问可直接问 AI，比我回复快。</p>
             <p>系统或浏览器版本不同，适配表现可能不同，属正常现象。</p>
             <p>建议使用 Chrome、Edge 等主流浏览器，尽量不用手机自带默认浏览器（会有限制），用主流浏览器出现的兼容问题会少一些。</p>
             <p>数据丢失属浏览器正常概率，请定期备份。</p>
@@ -8332,6 +8338,7 @@ transition-duration: .01ms !important;
             <p class="splash-sub">Bug 报修格式：</p>
             <p class="splash-item">请按【手机型号 + 浏览器 + 具体现象】提交，缺一不回。</p>
             <p class="splash-bullet">例：小米14 / 自带浏览器 / 点击字卡没反应</p>
+            <p class="splash-bullet">补充方式：设置 → 复制诊断信息，把自动生成的本机诊断文本（含版本号）一并贴上，能更快定位。</p>
             <p class="splash-sub">问「为什么会出现这个问题」这类基础疑问：</p>
             <p class="splash-item">建议直接问 AI，比我回复快。</p>
             <p class="splash-item">反馈后不需要等我回复：消息太多，修完会直接部署，可以晚些刷新到新版再试。反馈的每个问题都修了，但能否修好只能用自己的设备验证，我没有其他设备，无法验证修复程度。</p>
@@ -8422,9 +8429,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1788074500839">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.363</b></span>
-        <span class="sv-deploy">部署于 2026-08-30 15:21<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1788075910850">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.364</b></span>
+        <span class="sv-deploy">部署于 2026-08-30 15:45<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -8434,6 +8441,9 @@ transition-duration: .01ms !important;
       <div class="splash-btns">
         <div class="splash-enter" id="splash-enter" hidden>点击进入</div>
       </div>
+      <!-- v3.26.x：数据加载超 12 秒仍未就绪时的逃生口（clock.js 控制显隐，默认 hidden）；
+           点此进入会提示「数据仍在加载，部分内容可能暂时看不见」，避免静默放行误入空数据 -->
+      <div class="splash-force-enter" id="splash-force-enter" hidden>仍要进入</div>
     </div>
   </div>
   <div class="phone">
@@ -9514,7 +9524,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.363</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.364</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -9748,7 +9758,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.363</span>
+              <span class="lic-ver">v3.26.364</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -14111,11 +14121,31 @@ return dbPromise;
 function connLost(e) {
 try {
 if (!e) return false;
-if (e.name === 'InvalidStateError') return true;
+const n = e.name;
+if (n === 'InvalidStateError' || n === 'UnknownError' || n === 'InternalError' || n === 'TransactionInactiveError') return true;
 const m = String((e && e.message) || e);
-return /connection\s+(is\s+)?(closed|lost|closing)|server\s+lost|database\s+connection/i.test(m);
+return /connection\s+(is\s+)?(closed|lost|closing)|server\s+lost|database\s+connection|indexed\s+database/i.test(m);
 } catch (err) { return false; }
 }
+function armFgIdbReset() {
+try {
+if (typeof document === 'undefined' || !document.addEventListener) return;
+const ua = (window.navigator && window.navigator.userAgent) || '';
+if (!/iPhone|iPad|iPod/i.test(ua)) return;
+const resetNow = function () {
+try {
+if (!dbPromise) return;
+dbPromise = null;
+open().catch(function () {});
+} catch (e) {}
+};
+document.addEventListener('visibilitychange', function () {
+try { if (document.visibilityState === 'visible') resetNow(); } catch (e) {}
+});
+if (window.addEventListener) window.addEventListener('focus', resetNow);
+} catch (e) {}
+}
+armFgIdbReset();
 let _idbFailCnt = 0;
 let _idbFailAlerted = false;
 let _idbFailLastErr = '';
@@ -14166,6 +14196,7 @@ const tx = db.transaction(STORE, 'readwrite');
 tx.objectStore(STORE).put(value, key);
 tx.oncomplete = () => { if (done) return; done = true; clearTimeout(t); resolve(true); };
 tx.onerror = () => { if (done) return; done = true; clearTimeout(t); _idbFailLastErr = (tx.error && tx.error.name) || 'error'; if (connLost(tx.error)) dbPromise = null; resolve(false); };
+tx.onabort = () => { if (done) return; done = true; clearTimeout(t); _idbFailLastErr = (tx.error && tx.error.name) || 'abort'; if (connLost(tx.error)) dbPromise = null; resolve(false); };
 } catch (e) { if (done) return; done = true; clearTimeout(t); _idbFailLastErr = (e && e.name) || 'error'; if (connLost(e)) dbPromise = null; resolve(false); }
 })).catch(() => false);
 }
@@ -14186,8 +14217,8 @@ const tx = db.transaction(STORE, 'readwrite');
 const os = tx.objectStore(STORE);
 pairs.forEach(p => { os.put(p.v, p.k); });
 tx.oncomplete = () => resolve(true);
-tx.onerror = () => resolve(false);
-tx.onabort = () => resolve(false);
+tx.onerror = () => { if (connLost(tx.error)) dbPromise = null; resolve(false); };
+tx.onabort = () => { if (connLost(tx.error)) dbPromise = null; resolve(false); };
 } catch (e) { resolve(false); }
 })).catch(() => false);
 };
@@ -14300,7 +14331,8 @@ try {
 const tx = db.transaction(STORE, 'readwrite');
 tx.objectStore(STORE).delete(key);
 tx.oncomplete = () => resolve(true);
-tx.onerror = () => resolve(false);
+tx.onerror = () => { if (connLost(tx.error)) dbPromise = null; resolve(false); };
+tx.onabort = () => { if (connLost(tx.error)) dbPromise = null; resolve(false); };
 } catch (e) { resolve(false); }
 })).catch(() => false);
 };
@@ -14310,8 +14342,8 @@ try {
 const tx = db.transaction(STORE, 'readwrite');
 tx.objectStore(STORE).clear();
 tx.oncomplete = () => resolve(true);
-tx.onerror = () => resolve(false);
-tx.onabort = () => resolve(false);
+tx.onerror = () => { if (connLost(tx.error)) dbPromise = null; resolve(false); };
+tx.onabort = () => { if (connLost(tx.error)) dbPromise = null; resolve(false); };
 } catch (e) { resolve(false); }
 })).catch(() => false);
 };
@@ -14331,8 +14363,8 @@ bad = true;
 try { tx.abort(); } catch (e2) {}
 }
 tx.oncomplete = () => resolve(!bad);
-tx.onerror = () => resolve(false);
-tx.onabort = () => resolve(false);
+tx.onerror = () => { if (connLost(tx.error)) dbPromise = null; resolve(false); };
+tx.onabort = () => { if (connLost(tx.error)) dbPromise = null; resolve(false); };
 } catch (e) { resolve(false); }
 })).catch(() => false);
 };
@@ -14438,7 +14470,8 @@ sendReady();
 };
 const safety = setTimeout(function () {
 if (finished) return;
-sendReady(); // 放行开屏，不阻塞用户
+try { window.__mochiDataSlow = true; } catch (e) {}
+try { document.dispatchEvent(new Event('mochi-restore-slow')); } catch (e) {}
 }, 12000);
 Promise.all([window.idbGetAllKeys(), window.idbGet(LS_DIRTY_KEY)]).then(res => {
 const keys = res[0];
@@ -15263,6 +15296,8 @@ window.__splashForceExpand = !seenToday;
 const enterEl = document.getElementById('splash-enter');
 const loadingEl = document.getElementById('splash-loading');
 const hintEl = document.getElementById('splash-enter-hint');
+const forceEnterEl = document.getElementById('splash-force-enter');
+let slow = false;
 const splashBox = document.getElementById('splash-box');
 let scrolledBottom = false;
 function checkScrolled() {
@@ -15273,13 +15308,18 @@ bottom = splashBox.scrollHeight - splashBox.scrollTop - splashBox.clientHeight <
 if (bottom !== scrolledBottom) { scrolledBottom = bottom; updateEnterState(); }
 }
 function updateEnterState() {
-const ok = ready() && scrolledBottom;
-if (loadingEl) loadingEl.hidden = ready();
-if (hintEl) hintEl.hidden = !ready() || ok;
+const r = ready();
+const ok = r && scrolledBottom;
+if (loadingEl) {
+loadingEl.hidden = r;
+loadingEl.textContent = (!r && slow) ? '数据较多，仍在加载…' : '正在加载数据…';
+}
+if (hintEl) hintEl.hidden = !r || ok;
 if (enterEl) {
-enterEl.hidden = !ready();
+enterEl.hidden = !r;
 enterEl.classList.toggle('is-disabled', !ok); // div 上设 disabled 属性不落 DOM，用 class 控制置灰
 }
+if (forceEnterEl) forceEnterEl.hidden = r || !slow;
 }
 const enter = () => {
 if (splash.classList.contains('hide')) return;
@@ -15297,17 +15337,31 @@ try { window.hydrateLibScopes(['own']).catch(function () {}); } catch (e) {}
 }
 } catch (e) {}
 };
+const forceEnter = () => {
+if (splash.classList.contains('hide')) return;
+if (!seenToday) {
+try { localStorage.setItem(seenKey, '1'); seenToday = true; } catch (e) {}
+}
+hide();
+try {
+if (window.openModal) {
+window.openModal('数据仍在加载', '数据较多仍在后台加载，部分内容（字卡 / 图片 / 聊天记录等）可能暂时看不见，建议稍后刷新页面。', null);
+}
+} catch (e) {}
+};
 updateEnterState();
 if (splashBox) splashBox.addEventListener('scroll', checkScrolled, { passive: true });
 if (enterEl) enterEl.addEventListener('click', (e) => { e.stopPropagation(); enter(); });
+if (forceEnterEl) forceEnterEl.addEventListener('click', (e) => { e.stopPropagation(); forceEnter(); });
 document.addEventListener('mochi-restore-done', updateEnterState);
+document.addEventListener('mochi-restore-slow', function () { slow = true; updateEnterState(); });
 document.addEventListener('mochi-notice-rendered', checkScrolled);
 const readyPoll = setInterval(() => {
 if (ready() && scrolledBottom) { clearInterval(readyPoll); return; }
 updateEnterState();
 checkScrolled();
 }, 300);
-setTimeout(() => { if (!ready()) hide(); }, 20000);
+setTimeout(() => { if (!ready()) { slow = true; updateEnterState(); } }, 20000);
 })();
 function renderSplashSections(container, sections, opt) {
 if (!container || !Array.isArray(sections)) return;
@@ -16709,6 +16763,12 @@ const grids = document.querySelectorAll('.app-grid');
 document.querySelectorAll('.app .app-ico').forEach(ico => {
 if (!ico.dataset.orig) ico.dataset.orig = ico.innerHTML;
 });
+const applyAppIconOpacity = (app, pct) => {
+const img = app.querySelector('.app-ico img');
+if (!img) return;
+const op = Math.max(0, Math.min(100, pct)) / 100;
+img.style.opacity = String(op);
+};
 const restoreAppIcons = () => {
 document.querySelectorAll('.app').forEach(app => {
 let saved = store.get('app-icon-' + app.dataset.app);
@@ -16724,6 +16784,8 @@ const img = document.createElement('img');
 img.src = saved;
 img.alt = '';
 ico.appendChild(img);
+const op = store.get('app-icon-opacity-' + app.dataset.app);
+if (op) applyAppIconOpacity(app, parseInt(op, 10));
 }
 } else if (ico && ico.dataset.orig) {
 ico.innerHTML = ico.dataset.orig;
@@ -16807,6 +16869,8 @@ img.alt = '';
 ico.appendChild(img);
 }
 store.set('app-icon-' + key, data);
+const opSaved = store.get('app-icon-opacity-' + key);
+if (opSaved) applyAppIconOpacity(app, parseInt(opSaved, 10));
 toast('图标已更新');
 });
 }, 80);
@@ -16829,6 +16893,7 @@ toast(dir === 'up' ? '已上移' : '已下移');
 const pills = [];
 pills.push({ label: hasCustom ? '更换图片' : '上传图片', value: '1' });
 if (hasCustom) pills.push({ label: '清除图片', value: '2' });
+if (hasCustom) pills.push({ label: '图标透明度', value: 'opacity' });
 if (grid) { pills.push({ label: '上移', value: 'up' }); pills.push({ label: '下移', value: 'down' }); }
 pills.push({ label: '隐藏图标', value: 'hide' });
 if (window.openModal) {
@@ -16838,6 +16903,28 @@ else if (v === '2' && hasCustom) {
 store.remove('app-icon-' + key);
 if (ico && ico.dataset.orig) ico.innerHTML = ico.dataset.orig;
 toast('已恢复默认图标');
+} else if (v === 'opacity' && hasCustom) {
+const curOp = parseInt(store.get('app-icon-opacity-' + key) || '100', 10);
+window.openModal('图标透明度', '', (vv) => {
+const pct = parseInt(vv, 10);
+if (isNaN(pct) || pct < 0 || pct > 100) { toast('请输入 0-100 的数字'); return; }
+if (pct === 100) store.remove('app-icon-opacity-' + key);
+else store.set('app-icon-opacity-' + key, String(pct));
+applyAppIconOpacity(app, pct);
+}, {
+noInput: true,
+slider: {
+min: 0, max: 100, step: 1, value: curOp, label: '拖动调整图标透明度', unit: '%',
+onChange: (val) => { applyAppIconOpacity(app, val); },
+},
+pills: [
+{ label: '100%', value: '100' },
+{ label: '80%', value: '80' },
+{ label: '60%', value: '60' },
+{ label: '40%', value: '40' },
+{ label: '20%', value: '20' },
+],
+});
 } else if (v === 'up') moveApp('up');
 else if (v === 'down') moveApp('down');
 else if (v === 'hide') {
@@ -17443,6 +17530,9 @@ document.querySelectorAll('.app').forEach(app => {
 const k = 'app-icon-' + app.dataset.app;
 const v = store.get(k);
 if (v) data[k] = v;
+const ok = 'app-icon-opacity-' + app.dataset.app;
+const ov = store.get(ok);
+if (ov) data[ok] = ov;
 });
 document.querySelectorAll('.app-grid').forEach(grid => {
 const k = 'app-icon-order-' + grid.dataset.app;

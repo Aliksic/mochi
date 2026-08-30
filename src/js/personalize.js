@@ -890,6 +890,14 @@ try {
   document.querySelectorAll('.app .app-ico').forEach(ico => {
     if (!ico.dataset.orig) ico.dataset.orig = ico.innerHTML;
   });
+  // v3.27.x：自定义图标图片透明度——仅对上传的 <img> 生效（默认 SVG 图标不受影响），
+  // 与小组件透明度同款 0~100 百分比，存 app-icon-opacity-<key>（per-cid），100 不存
+  const applyAppIconOpacity = (app, pct) => {
+    const img = app.querySelector('.app-ico img');
+    if (!img) return;
+    const op = Math.max(0, Math.min(100, pct)) / 100;
+    img.style.opacity = String(op);
+  };
   const restoreAppIcons = () => {
     document.querySelectorAll('.app').forEach(app => {
       let saved = store.get('app-icon-' + app.dataset.app);
@@ -908,6 +916,9 @@ try {
           img.src = saved;
           img.alt = '';
           ico.appendChild(img);
+          // v3.27.x：恢复自定义图标透明度
+          const op = store.get('app-icon-opacity-' + app.dataset.app);
+          if (op) applyAppIconOpacity(app, parseInt(op, 10));
         }
       } else if (ico && ico.dataset.orig) {
         ico.innerHTML = ico.dataset.orig;
@@ -1011,6 +1022,9 @@ try {
                 ico.appendChild(img);
               }
               store.set('app-icon-' + key, data);
+              // v3.27.x：换图保持已设透明度
+              const opSaved = store.get('app-icon-opacity-' + key);
+              if (opSaved) applyAppIconOpacity(app, parseInt(opSaved, 10));
               toast('图标已更新');
             });
           }, 80);
@@ -1033,6 +1047,7 @@ try {
     const pills = [];
     pills.push({ label: hasCustom ? '更换图片' : '上传图片', value: '1' });
     if (hasCustom) pills.push({ label: '清除图片', value: '2' });
+    if (hasCustom) pills.push({ label: '图标透明度', value: 'opacity' });
     if (grid) { pills.push({ label: '上移', value: 'up' }); pills.push({ label: '下移', value: 'down' }); }
     pills.push({ label: '隐藏图标', value: 'hide' });
     if (window.openModal) {
@@ -1042,6 +1057,29 @@ try {
           store.remove('app-icon-' + key);
           if (ico && ico.dataset.orig) ico.innerHTML = ico.dataset.orig;
           toast('已恢复默认图标');
+        } else if (v === 'opacity' && hasCustom) {
+          // v3.27.x：自定义图标图片透明度——slider 实时预览 + 预设 pills
+          const curOp = parseInt(store.get('app-icon-opacity-' + key) || '100', 10);
+          window.openModal('图标透明度', '', (vv) => {
+            const pct = parseInt(vv, 10);
+            if (isNaN(pct) || pct < 0 || pct > 100) { toast('请输入 0-100 的数字'); return; }
+            if (pct === 100) store.remove('app-icon-opacity-' + key);
+            else store.set('app-icon-opacity-' + key, String(pct));
+            applyAppIconOpacity(app, pct);
+          }, {
+            noInput: true,
+            slider: {
+              min: 0, max: 100, step: 1, value: curOp, label: '拖动调整图标透明度', unit: '%',
+              onChange: (val) => { applyAppIconOpacity(app, val); },
+            },
+            pills: [
+              { label: '100%', value: '100' },
+              { label: '80%', value: '80' },
+              { label: '60%', value: '60' },
+              { label: '40%', value: '40' },
+              { label: '20%', value: '20' },
+            ],
+          });
         } else if (v === 'up') moveApp('up');
         else if (v === 'down') moveApp('down');
         else if (v === 'hide') {
@@ -1700,6 +1738,10 @@ try {
         const k = 'app-icon-' + app.dataset.app;
         const v = store.get(k);
         if (v) data[k] = v;
+        // v3.27.x：图标透明度随方案导出
+        const ok = 'app-icon-opacity-' + app.dataset.app;
+        const ov = store.get(ok);
+        if (ov) data[ok] = ov;
       });
       document.querySelectorAll('.app-grid').forEach(grid => {
         const k = 'app-icon-order-' + grid.dataset.app;
