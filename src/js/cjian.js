@@ -297,7 +297,9 @@
     if (!n) return '';
     let hit = '', hits = 0;
     contacts().forEach(ct => {
-      if (taIdentity(ct.id) === n) { hit = ct.id; hits++; }
+      const idn = taIdentity(ct.id);
+      const cn = contactName(ct.id);
+      if (idn === n || cn === n) { hit = ct.id; hits++; }
     });
     return hits === 1 ? hit : '';
   }
@@ -322,6 +324,7 @@
     const plan = {}; // cid -> { add: [], state: {} }
     grArr.forEach(x => {
       const target = homeCidForName(x.name) || cur;
+      x.cid = target; // 显式归属，后续不再靠名字认亲（防改名/同名导致串桌）
       const p = plan[target] || (plan[target] = { add: [], state: {} });
       p.add.push(x);
       if (gsObj[x.id]) p.state[x.id] = gsObj[x.id];
@@ -420,6 +423,81 @@
     r.set(REHOME_KEY, '1');
   }
 
+  // ---- 归属纠偏（幂等，启动 + IDB 就绪后跑）----
+  // 给梦角补显式 cid 归属字段，并把物理存错桌面的梦角搬回 storeOf(cid)。
+  // 取代靠名字认亲的脆弱性：多个联系人 TA 昵称同名 / lbl-partner 与联系人名不一致时，
+  // migrateSplit 可能认不到家把梦角一锅端给当前桌面，rehomeMisfiled 因"已在同名桌面"不纠正。
+  // 这里按 cid 字段权威归属：无 cid 的按名字认亲补 cid（认不到的固化在当前桌面），
+  // 有 cid 但物理存错桌面的搬到 storeOf(cid)。幂等：搬过后 cid=所在桌面，下次不动。
+  function fixBelonging() {
+    const r = rootStore();
+    if (!r) return;
+    let regOk = false;
+    try { regOk = !!r.get('contacts'); } catch (e) {}
+    if (!regOk) return; // 注册表未就绪：contacts() 不全，等 mochi-restore-done
+    const cidSet = {};
+    contacts().forEach(ct => { cidSet[ct.id] = 1; });
+    // 第一遍：补 cid 字段，收集需搬移的梦角
+    const moves = []; // {from, to, id, name}
+    contacts().forEach(ct => {
+      const list = loadRoster(ct.id);
+      if (!list.length) return;
+      let dirty = false;
+      list.forEach(c => {
+        if (!c.cid || !cidSet[c.cid]) {
+          // 无 cid 或 cid 指向已删桌面：按名字认亲，认不到固化在当前桌面
+          const home = (c.cid && !cidSet[c.cid]) ? '' : homeCidForName(c.name);
+          const target = home || ct.id;
+          if (c.cid !== target) { c.cid = target; dirty = true; }
+        }
+        if (c.cid !== ct.id) moves.push({ from: ct.id, to: c.cid, id: c.id, name: c.name });
+      });
+      if (dirty) saveRoster(list, ct.id);
+    });
+    if (!moves.length) return;
+    // 第二遍：执行搬移（批量加载，避免遍历时修改）
+    const rosters = {}, states = {};
+    moves.forEach(m => {
+      if (!rosters[m.from]) rosters[m.from] = loadRoster(m.from);
+      if (!rosters[m.to]) rosters[m.to] = loadRoster(m.to);
+      if (!states[m.from]) states[m.from] = loadState(m.from);
+      if (!states[m.to]) states[m.to] = loadState(m.to);
+    });
+    moves.forEach(m => {
+      const src = rosters[m.from], dst = rosters[m.to];
+      const i = src.findIndex(x => x.id === m.id);
+      if (i < 0) return;
+      if (dst.some(x => x.id === m.id)) return; // 目标已有同 id：跳过
+      const twin = dst.find(x => x.name === m.name && (!x.cid || x.cid === m.to));
+      if (twin) {
+        // 同名冲突：外来者带互动痕迹而家里那位没有才替换（家里那位多半是自动播种的幻影）
+        const stFrom = states[m.from], stTo = states[m.to];
+        const mMark = stFrom[m.id] && (stFrom[m.id].lastPerceive || stFrom[m.id].__chat || stFrom[m.id].__open);
+        const tMark = stTo[twin.id] && (stTo[twin.id].lastPerceive || stTo[twin.id].__chat || stTo[twin.id].__open);
+        if (!mMark || tMark) return; // 分不清真身/幻影：宁留错位不删真身
+        dst.splice(dst.indexOf(twin), 1);
+        delete stTo[twin.id];
+        try {
+          r.remove('narc-' + twin.id);
+          if ((r.get('narc-cur') || '') === twin.id) r.remove('narc-cur');
+        } catch (e) {}
+      }
+      const c = src.splice(i, 1)[0];
+      c.cid = m.to;
+      dst.push(c);
+      if (states[m.from][m.id] !== undefined) {
+        states[m.to][m.id] = states[m.from][m.id];
+        delete states[m.from][m.id];
+      }
+    });
+    Object.keys(rosters).forEach(cid => {
+      saveRoster(rosters[cid], cid);
+      if (states[cid]) saveState(states[cid], cid);
+    });
+    todayCacheMap = {};
+    try { const pg = document.getElementById('page-cjian'); if (pg && !pg.hidden && typeof window.renderCjian === 'function') window.renderCjian(false); } catch (e) {}
+  }
+
   // 首次使用：该桌面第一次打开此间时，用 TA 的名字种下自己的第一个梦角
   //（v3.14.x 修复：不再在启动时给【每个】桌面都种——老版会在用户从没碰过的桌面凭空
   // 造出以联系人命名的梦角，看起来像别人的数据串了进来）
@@ -435,7 +513,7 @@
         if (lbl) name = lbl;
         if (!name) name = contactName(cid);
       } catch (e) {}
-      list.push({ id: makeId(), name: name || 'TA', offsetMin: 0 });
+      list.push({ id: makeId(), name: name || 'TA', offsetMin: 0, cid: cid });
       saveRoster(list, cid);
       s.set(SEED_KEY, '1');
     } catch (e) {}
@@ -1192,7 +1270,7 @@
             [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
             function (idxs) {
               const list = loadRoster(mCid);
-              list.push({ id: makeId(), name: pendingName, offsetMin: pendingOffset, slots: idxs.map(i => SHICHEN_START[i]) });
+              list.push({ id: makeId(), name: pendingName, offsetMin: pendingOffset, slots: idxs.map(i => SHICHEN_START[i]), cid: mCid });
               saveRoster(list, mCid);
               toast('已加入此间：「' + pendingName + '」');
               pendingName = ''; pendingOffset = 0;
@@ -1202,7 +1280,7 @@
             function () { pendingName = ''; pendingOffset = 0; }, // 取消：不创建
             function () {
               const list = loadRoster(mCid);
-              list.push({ id: makeId(), name: pendingName, offsetMin: pendingOffset });
+              list.push({ id: makeId(), name: pendingName, offsetMin: pendingOffset, cid: mCid });
               saveRoster(list, mCid);
               toast('已加入此间：「' + pendingName + '」');
               pendingName = ''; pendingOffset = 0;
@@ -1313,6 +1391,7 @@
   function boot() {
     migrateSplit();
     rehomeMisfiled();
+    fixBelonging();
     // 迁移时机加固：IndexedDB 回填（mochi-restore-done）可能晚于本模块启动——旧全局键
     // 迟到时首次迁移会扑空（老梦角要等下次刷新才合并回来）。就绪后幂等重跑一次合并
     // （按名认亲 + 并集去重 + 清根键，重复执行无副作用），升级当天即可见老梦角；
@@ -1323,6 +1402,7 @@
       reMigrated = true;
       try { migrateSplit(); } catch (e) {}
       try { rehomeMisfiled(); } catch (e) {}
+      try { fixBelonging(); } catch (e) {}
     });
     setInterval(function () {
       tickApproach();

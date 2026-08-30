@@ -3728,9 +3728,9 @@ if (ckRefresh) {
   // 存入：从 gift-wallet 真扣对应方余额，记入独立账本
   function piggyCoinAdd(side, amt, note) {
     const fen = Math.round(amt * 100);
+    try { if (window.giftWalletChange) window.giftWalletChange(side === 'ta' ? 0 : -fen, side === 'ta' ? -fen : 0); } catch (e) {}
     const log = piggyCoinLog(); log.push({ t: Date.now(), side: side || 'my', type: 'in', amt: amt, note: note || '' });
     piggySaveCoinLog(log); piggyCoinRender();
-    try { if (window.giftWalletChange) window.giftWalletChange(side === 'ta' ? 0 : -fen, side === 'ta' ? -fen : 0, 'piggy-in'); } catch (e) {}
     const st = piggyCoinGoalState(); const bal = piggyCoinTotal(log);
     if (st.act.g && !st.act.g.done) {
       if (bal >= st.act.g.a) {
@@ -3747,9 +3747,9 @@ if (ckRefresh) {
   // 取出：退回 gift-wallet 对应方余额
   function piggyCoinOutput(side, amt, note) {
     const fen = Math.round(amt * 100);
+    try { if (window.giftWalletChange) window.giftWalletChange(side === 'ta' ? 0 : fen, side === 'ta' ? fen : 0); } catch (e) {}
     const log = piggyCoinLog(); log.push({ t: Date.now(), side: side || 'my', type: 'out', amt: amt, note: note || '' });
     piggySaveCoinLog(log); piggyCoinRender();
-    try { if (window.giftWalletChange) window.giftWalletChange(side === 'ta' ? 0 : fen, side === 'ta' ? fen : 0, 'piggy-out'); } catch (e) {}
     piggyCoinShowMsg(piggyPick(COIN_OUT_MSG));
   }
   // TA 不定期往 TA 账户塞心意币（越久未开概率越高，彩蛋不入 gift-wallet，同现实 TA 塞硬币先例）

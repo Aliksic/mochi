@@ -6387,25 +6387,50 @@ scrollChatBottom();
 }
 // 外部（群聊等）打开录音面板并把语音发到自己的消息列表：window.openVoicePanelFor(onSend)
 window.openVoicePanelFor = function (onSend) { openVoicePanel({ onSend: onSend }); };
+// v3.26.x：区分「标准安卓浏览器」与「iOS/安卓 WebView」——两者的录音格式与麦克风约束
+// 偏好不同，荣耀 90/Edge 等标准 Chromium 对 audio/mp4(AAC) 的 MediaRecorder 路径会录出
+//「滋啦滋啦」爆音（输入 48k 与 AAC 44.1k 采样率不匹配的已知内核缺陷），而其原生默认的
+// audio/webm;codecs=opus 路径稳定无爆音、Chromium 也能正常播放；iOS Safari 只支持
+// mp4/aac 可录可播，安卓 WebView（vivo/iQOO 的雨见、微信、QQ/UC/百度自带壳等）对
+// webm/opus 能录却解不了（录出来试听/播放没声）——这两种环境仍须走 mp4/aac。
+function isAndroidWebView() {
+try {
+  const ua = navigator.userAgent || '';
+  return /wv\b|MicroMessenger|MicroApp|VivoBrowser|OPBrowser|MQQBrowser|QQBrowser|baiduboxapp|UCBrowser|XiaoMi|MiuiBrowser|HuaweiBrowser|Quark|SogouMobileBrowser|SamsungBrowser|MetaSr|OBABROWSER|dingtalk/i.test(ua);
+} catch (e) { return true; } // 拿不到 UA 时保守按 WebView 处理（走 mp4/aac，只影响音质不影响可用）
+}
+// 标准安卓 Chromium（Chrome/Edge 等非内嵌壳）→ webm/opus 优先；iOS/安卓 WebView → mp4/aac 优先
+function voiceMimePreferOpus() {
+const md = (window.mochiDevice) || {};
+return !!md.isAndroid && !isAndroidWebView();
+}
 function pickVoiceMime() {
 if (typeof MediaRecorder === 'undefined' || !MediaRecorder.isTypeSupported) return '';
-// 优先级：mp4/aac 在最前——这是本机「能录又能播」的稳妥格式（字卡里 mp3/caf/amr/aac 都能播，
-// mp4/aac 覆盖面最广，也是 iOS Safari 唯一可录可播的格式）。webm/opus 只做兜底：
-// 部分安卓 WebView（vivo/iQOO 的雨见等）对 webm/opus 能录却解不了——录出来试听/播放没声。
-const list = ['audio/mp4', 'audio/aac', 'audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus'];
+// 优先级：标准安卓浏览器把 webm/opus 放最前（Chromium 原生默认、稳且无爆音），mp4/aac 兜底；
+// iOS/WebView 仍把 mp4/aac 放最前（iOS 唯一可录可播；WebView 对 webm 能录不能播）。
+const list = voiceMimePreferOpus()
+  ? ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/aac', 'audio/ogg;codecs=opus']
+  : ['audio/mp4', 'audio/aac', 'audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus'];
 for (let i = 0; i < list.length; i++) {
 try { if (MediaRecorder.isTypeSupported(list[i])) return list[i]; } catch (e) {}
 }
 return '';
 }
-// 获取麦克风轨道：先以「关闭回声消除/降噪/自动增益 + 单声道」请求——这是 vivo/iQOO 等
-// 安卓机上「权限开了却录不到声/录出来为空」的已知根因；若该约束组合不被设备支持
-//（OverconstrainedError 等）则回退到最普通的 {audio:true}，绝不让报障机型彻底录不了。
+// 获取麦克风轨道：标准安卓浏览器优先用最普通的 {audio:true}（AGC/降噪默认开，音质干净不爆音、
+// 不削波），被设备拒绝再回退「关回声消除/降噪/自动增益 + 单声道」组合；iOS/安卓 WebView 仍先
+// 以「关回声消除/降噪/自动增益 + 单声道」请求——这是 vivo/iQOO 等安卓机上「权限开了却录不到声/
+// 录出来为空」的已知根因，若该约束组合不被设备支持（OverconstrainedError 等）再回退 {audio:true}，
+// 绝不让报障机型彻底录不了。
 async function acquireVoiceStream() {
-const tries = [
-  { audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 1 } },
-  { audio: true }
-];
+const tries = voiceMimePreferOpus()
+  ? [
+      { audio: true },
+      { audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 1 } }
+    ]
+  : [
+      { audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 1 } },
+      { audio: true }
+    ];
 let lastErr = null;
 for (let i = 0; i < tries.length; i++) {
 try { return await navigator.mediaDevices.getUserMedia(tries[i]); } catch (e) { lastErr = e; }

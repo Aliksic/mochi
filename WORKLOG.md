@@ -1,4 +1,12 @@
-# 本次构建者：本会话（已构建，sw: mochi-mtfco3w5，哨兵 85/85，verify 10/10 + 音乐专项 verify-music-bg-resume 10/10 + verify-music-keep-coexist 10/10 + verify-ta-pause-live 15/15。本次修复红米K80 Chrome「音乐挂后台总是停 + 通知栏媒体条时有时无」→ FIX-REGRESSION #76。构建含工作区前会话未构建改动 chat-settings.js/music-player.js/memo-arc.js/my-arc.js/base.css/sw.js。待提交）
+# 本次构建者：本会话（已构建，sw: mochi-mtfdazbh，哨兵 86/86 + sw.js 2/2，verify 10/10。本次修复荣耀90 Edge「我发语音」录音滋啦滋啦爆音 → FIX-REGRESSION #77，chat.js 录音按「标准安卓浏览器 vs iOS/WebView」分流走 webm/opus。构建含工作区未提交改动 cjian.js（对方在改，构建已包含，确认已保存完整）。待提交）
+
+### 2026-08-30 13:27（修复：荣耀90 Edge 聊天「我发语音」录音是「滋啦滋啦」爆音听不清人声——标准安卓 Chromium 的 mp4/AAC 录音路径采样率不匹配，改走原生 webm/opus）
+- [AI-A 域·chat.js（录音格式/麦克风约束按「标准安卓浏览器 vs iOS/WebView」分流）]（**改动文件：src/js/chat.js（新增 isAndroidWebView/voiceMimePreferOpus + pickVoiceMime/acquireVoiceStream 按 voiceMimePreferOpus 分流）+ build.mjs（哨兵 +1 → 86/86）+ FIX-REGRESSION.md（#77）；构建状态：已构建，sw: mochi-mtfdazbh，哨兵 86/86 + sw.js 2/2，verify 10/10**）。
+- 需求/反馈：荣耀90（REA-AN00，Android 15）+ Edge 151，聊天里开「我可发送语音」录音后试听/播放是「滋啦滋啦」爆音，只有电流噪声听不清人声。
+- 根因：pickVoiceMime 在安卓一律优先 audio/mp4(AAC)——标准安卓 Chromium（Chrome/Edge）的 mp4/AAC MediaRecorder 路径在荣耀 90 等机型存在采样率不匹配内核缺陷（getUserMedia 输入 48k 与 AAC 44.1k 不匹配）→ 录出爆音/电流声；其原生默认 audio/webm;codecs=opus 路径稳定无爆音、Chromium 可正常播放。叠加 acquireVoiceStream 全平台优先「关回声消除/降噪/自动增益 + 单声道」（vivo/iQOO 空录音的修复）在标准安卓浏览器会放大削波失真。
+- 方案：新增 isAndroidWebView()（UA 特征识别微信/雨见/vivo/OPPO/QQ/UC/百度/夸克/华为/小米/三星等内嵌壳，识别失败保守按 WebView）+ voiceMimePreferOpus()——**标准安卓浏览器**（Chrome/Edge 等非内嵌壳）：录音格式 webm/opus 优先（mp4/aac 兜底）、麦克风约束 {audio:true}（AGC/降噪默认开）优先（关降噪单声道兜底）；**iOS Safari**（仅 mp4/aac 可录可播）与**安卓 WebView**（webm 能录不能播，vivo/iQOO 雨见等）保持原 mp4/aac 优先 + 关降噪单声道优先，零回归。
+- 验证：node --check 过。待构建后真机确认：荣耀90 Edge 录 1 句→试听/发送→语音清晰无爆音；iOS Safari 仍可录可播；vivo/iQOO 雨见等 WebView 仍能录能播（防 webm 不出声回归）。
+- 边界如实：WebView 判定靠 UA 特征黑名单，未覆盖到的安卓内嵌壳会误走 webm/opus（该壳若 webm 不能播则试听无声）——但报障机型为标准 Edge，优先保证标准浏览器音质；真机确认后如需再收口内嵌壳清单。
 
 ### 2026-08-30 15:10（新增：存钱罐拆成「现实存钱 / 心意币存钱」双账本 Tab——用户需求）
 - [AI 域·p2-features.js + chat-pages.css；**跨域改动 contacts.js（新键排除清单）**]（**改动文件：src/js/p2-features.js（存钱罐页双 Tab + 心意币存钱独立账本）+ src/css/chat-pages.css（双 Tab/双账户/记录归属标签样式）+ src/js/contacts.js（migrateLegacy 排除清单加 piggy-coin-* 四个根键）；构建状态：未构建**）。
