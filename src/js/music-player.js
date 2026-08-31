@@ -51,6 +51,10 @@
   let playQueue = [];        // 播放队列：用户点「下一首播放」加入的歌曲 id 列表，播完当前手动/自动切歌时优先按序播放
   let localPlId = 'default'; // 本地上传的目标播放列表（歌单），单选歌曲时由弹窗决定
   let failMap = {};          // 连续播放失败计数（songId→次数），每次成功播放清零；用于区分临时/网络失败与真坏链
+  // v3.29.x：本地音频内存缓存——uploadFiles 时把 Blob/dataURL 存这里，playTrack 本地
+  // 分支优先同步查缓存，保留用户手势上下文（idbGet 异步会丢手势→play() 被 NotAllowedError
+  // 拒→muted 解锁失败后 armAutoResume retry 用 m.url='' 必失败→本地歌播不出→TA 互动全失效）
+  const localBlobCache = {};
 
   function loadArr(k) { try { const v = JSON.parse(store.get(k) || 'null'); return Array.isArray(v) ? v : []; } catch(e){ return []; } }
   function saveArr(k, a) { store.set(k, JSON.stringify(a)); }
@@ -1028,6 +1032,7 @@
         const item = { id: id, name: name, artist: '', url: '', source: 'local', duration: 0, playlistId: localPlId || 'default', addedAt: Date.now() };
         library.push(item);
         const payload = buf instanceof ArrayBuffer ? new Blob([buf], { type: file.type || 'audio/mpeg' }) : buf;
+        localBlobCache[id] = payload; // v3.29.x 内存缓存：playTrack 同步读取保留用户手势
         // 尝试读取时长（读不到也能播放；3s 超时兜底，不阻塞队列）
         const tmp = document.createElement('audio');
         tmp.preload = 'metadata';
@@ -2029,6 +2034,12 @@
       if (httpsRetrying || demoFallbackBusy) return;
       const m = findTrack(currentId);
       if (!m) return;
+      // v3.29.x：本地歌 m.url='' → audio.src='' 必失败。重新走 playTrack 本地分支
+      //（同步查内存缓存/localStorage 或异步 idbGet），而非用空 url 造必失败的元素。
+      if (m.source === 'local' || (!m.url && m.source !== 'url')) {
+        try { playTrack(currentId); } catch (e) {}
+        return;
+      }
       // v3.9.x：重新创建 audio 元素（X5 内核缓存 rejection 的兜底）
       try { if (audio) { audio.pause(); audio.onended = null; audio.onerror = null; audio.onloadedmetadata = null; audio.onplay = null; audio.onpause = null; if (audio.parentNode) audio.parentNode.removeChild(audio); } } catch (e) {}
       audio = createAudio();
@@ -2527,6 +2538,16 @@
         // v3.6.x：统一转 Blob + 对象 URL 播放（兼容旧 dataURL 字符串 / 新 Blob 存储）
         playLocal(m, v);
       };
+      // v3.29.x：优先同步查内存缓存/localStorage——idbGet 异步丢用户手势上下文，play()
+      // 被 NotAllowedError 拒后 muted 解锁失败→armAutoResume retry 用 m.url='' 必失败，
+      // 本地歌播不出→所有 TA 互动（邀请/切歌/预订/暂停/继续）全失效。同步读到则
+      // loadLocal 在手势内执行 play() 成功，TA 互动正常触发。
+      {
+        const cached = localBlobCache[m.id];
+        if (cached) { loadLocal(cached); return; }
+        const lsSync = store.get('music-file:' + m.id);
+        if (lsSync) { localBlobCache[m.id] = lsSync; loadLocal(lsSync); return; }
+      }
       if (window.idbGet) {
         window.idbGet(key).then(v => {
           if (currentId !== m.id) return; // 已切歌
@@ -2558,7 +2579,7 @@
                 else failLocal();
               });
             }, 600);
-          } else loadLocal(v);
+          } else { localBlobCache[m.id] = v; loadLocal(v); }
         });
       } else {
         loadLocal(store.get('music-file:' + m.id));

@@ -238,32 +238,90 @@
     } catch (e) { start(); }
   }
 
+  // —— 自定义上传音频播放（v3.26.x 加固：通话铃声）——
+  // v3.12.x：播完即卸 src——自定义音效是 data: 音频，解码缓冲随元素存活，
+  // 每条消息一个不释放会在低内存安卓上软滞留累积（OOM 放大器）
+  const releaseWhenDone = function (el) {
+    const done = function () { try { el.removeAttribute('src'); el.load(); } catch (e) {} };
+    el.addEventListener('ended', done);
+    el.addEventListener('error', done);
+  };
+  // v3.26.x（用户反馈 vivo/Edge：通话铃声设自定义没声音）——
+  // ① 通话铃声自定义音频改 Blob+对象 URL 优先、dataURL 兜底：音乐本地播放已证明部分
+  //    安卓浏览器（夸克等）对 <audio src="data:..."> 大段 base64 播放失效（music-player
+  //    v3.6.x 同案处理），自定义铃声通常数百 KB~数 MB 正是高危区间；
+  // ② 播放失败自动回落内置铃声，不再静默无声——旧代码 play().catch 吞错后无任何声音，
+  //    且上传自定义时已清掉内置选择（handleUpload remove BKEYS）→ 来电完全静音。
+  let ringObjUrl = null; // 通话铃声 blob: URL（stopSfx/替换时回收）
+  function revokeRingObjUrl() {
+    if (ringObjUrl) { try { URL.revokeObjectURL(ringObjUrl); } catch (e) {} ringObjUrl = null; }
+  }
+  function dataUrlToBlob(dataUrl, cb) {
+    try {
+      const p = fetch(dataUrl).then(function (r) { return r.blob(); });
+      if (p && p.then) p.then(function (b) { cb(b); }, function () { cb(null); });
+      else cb(null);
+    } catch (e) { cb(null); }
+  }
+  function ringBuiltinFallbackId() {
+    const bid = store.get(BKEYS.ring);
+    return (bid && bid !== 'none' && SYNTHS[bid]) ? bid : 'ring-warm';
+  }
+  let lastRingCustomFailToast = 0; // 兜底 toast 去重（5 分钟一次，避免每次来电都弹）
+  function ringCustomFail(wasLoop) {
+    if (ringAudio) { try { ringAudio.pause(); } catch (e) {} ringAudio = null; }
+    revokeRingObjUrl();
+    const now = Date.now();
+    if (now - lastRingCustomFailToast > 5 * 60 * 1000) {
+      lastRingCustomFailToast = now;
+      toast(wasLoop ? '自定义铃声无法播放，已改用内置铃声' : '自定义铃声无法播放');
+    }
+    if (wasLoop) playBuiltin(ringBuiltinFallbackId(), true); // 来电兜底：保证不无声
+  }
+
   // 播放音效：自定义上传（dataURL）优先，其次内置音效（'none'=静音，缺省=默认内置）
   window.playSfx = function (type, opts) {
     try {
       const loop = !(opts && opts.loop === false);
       const custom = store.get(KEYS[type]);
       if (custom && typeof custom === 'string' && custom.length > 10) {
-        // —— 自定义上传音频（每次新建 Audio，避免并发冲突；ring 长铃用单例可停止）——
-        // v3.12.x：播完即卸 src——自定义音效是 data: 音频，解码缓冲随元素存活，
-        // 每条消息一个不释放会在低内存安卓上软滞留累积（OOM 放大器）
-        const releaseWhenDone = function (el) {
-          const done = function () { try { el.removeAttribute('src'); el.load(); } catch (e) {} };
-          el.addEventListener('ended', done);
-          el.addEventListener('error', done);
-        };
-        if (type === 'ring' && loop) {
-          if (ringAudio) { try { ringAudio.pause(); } catch (e) {} try { ringAudio.removeAttribute('src'); ringAudio.load(); } catch (e) {} }
-          ringAudio = new Audio(custom);
-          ringAudio.loop = true;
-          ringAudio.volume = 0.9;
-          ringAudio.play().catch(() => { ringAudio = null; });
-        } else {
-          const a = new Audio(custom);
-          a.volume = 0.9;
-          releaseWhenDone(a);
-          a.play().catch(() => {});
+        if (type === 'ring') {
+          // —— 通话铃声自定义：Blob+对象 URL 优先，播放失败回落内置铃声 ——
+          const playRingWith = function (src) {
+            if (ringAudio) { try { ringAudio.pause(); } catch (e) {} try { ringAudio.removeAttribute('src'); ringAudio.load(); } catch (e) {} }
+            ringAudio = new Audio(src);
+            ringAudio.loop = loop;
+            ringAudio.volume = 0.9;
+            let failed = false;
+            const fail = function () { if (!failed) { failed = true; ringCustomFail(loop); } };
+            ringAudio.addEventListener('error', fail);
+            ringAudio.play().catch(fail);
+          };
+          if (custom.indexOf('data:') === 0) {
+            dataUrlToBlob(custom, function (b) {
+              if (b) {
+                try {
+                  const newUrl = URL.createObjectURL(b);
+                  revokeRingObjUrl(); // 先回收旧 URL，再挂新 URL（顺序不可反：先 revoke 会把新 URL 也一起回收）
+                  ringObjUrl = newUrl;
+                  playRingWith(newUrl);
+                  return;
+                } catch (e) { revokeRingObjUrl(); }
+              }
+              revokeRingObjUrl();
+              playRingWith(custom); // Blob 不可用（fetch 受限）→ dataURL 直播
+            });
+          } else {
+            revokeRingObjUrl();
+            playRingWith(custom);
+          }
+          return;
         }
+        // —— 非通话铃声（收发消息音效）自定义：dataURL 直播 + 播完卸 src（OOM 防线）——
+        const a = new Audio(custom);
+        a.volume = 0.9;
+        releaseWhenDone(a);
+        a.play().catch(() => {});
         return;
       }
       // —— 内置音效 ——
@@ -280,6 +338,7 @@
   window.stopSfx = function (type) {
     if (type === 'ring') {
       if (ringAudio) { try { ringAudio.pause(); } catch (e) {} ringAudio = null; }
+      revokeRingObjUrl();
       if (ringSrc) { try { ringSrc.stop(); } catch (e) {} ringSrc = null; }
     }
   };

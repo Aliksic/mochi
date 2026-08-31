@@ -482,7 +482,15 @@
   // v3.5.113：传 false——系统级变化不覆盖用户意图（否则切后台后开关被置灰，永远不再自动恢复）
   // v3.5.11x：Fullscreen API 激活时给根元素加 fs-active 类（挖孔屏顶部安全区适配）
   function syncFsClass() {
-    document.documentElement.classList.toggle('fs-active', isFullscreen());
+    const d = document.documentElement;
+    const _fs = isFullscreen();
+    d.classList.toggle('fs-active', _fs);
+    // v3.26.x：iOS 浏览器原生全屏标记——iOS 系统状态栏（含灵动岛）永远由系统占据在
+    // 内容上方、网页内容不会钻进状态栏区，CSS 无需再给顶部栏加安全区上边距。
+    // 叠加 .fs-active 之上把 chat-head 等收紧贴顶（.fs-active 的
+    // max(env(safe-area-inset-top),12px) 在 iOS 原生全屏会算出一条多余白带，
+    // 用户实测「聊天顶部栏上面一大块空白」，见 base.css 对应规则）
+    if (isIOS) d.classList.toggle('ios-native-fs', _fs);
   }
   // v3.7.x：当前是否为 PWA 安装态（standalone / display_override fullscreen 直启）——
   // 安装态切后台退出全屏是系统行为，需自动恢复；浏览器标签态用户退出全屏是主动操作，

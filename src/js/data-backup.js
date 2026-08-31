@@ -98,6 +98,68 @@
     });
   }
 
+  // v3.31.x：Blob → base64 分块转换——旧实现把整块二进制先拼成一个巨大的二进制字符串再
+  // 一次性 btoa（大音乐/图片文件上临时内存 ≈ 文件体积 × 2），且 String.fromCharCode.apply
+  // 一次传 0x8000 个参数在部分安卓 Chrome 上有栈溢出/崩溃风险（OPPO Find X9 导出闪退嫌疑点之一）。
+  // 改为按「3 的倍数」字节数分块 btoa：每块字节数是 3 的倍数 → 分块 base64 拼接即完整 base64，
+  // 全程只有小临时串，无大拷贝。
+  function blobToBase64(blob) {
+    return blob.arrayBuffer().then((buf) => {
+      const bytes = new Uint8Array(buf);
+      const CHUNK = 3 * 5120; // 15360 字节，3 的倍数
+      let out = '';
+      for (let i = 0; i < bytes.length; i += CHUNK) {
+        const end = Math.min(i + CHUNK, bytes.length);
+        let bin = '';
+        for (let j = i; j < end; j++) bin += String.fromCharCode(bytes[j]);
+        out += btoa(bin);
+      }
+      return out;
+    });
+  }
+
+  // v3.31.x：流式 JSON 打包——逐键序列化、边拼边合并进 Blob，代替 JSON.stringify(data)
+  // 一把生成整个 JSON 字符串。本地数据约 100MB 的设备上（OPPO Find X9 实测），整包 JSON 字符串
+  // + stringify 内部缓冲使峰值内存接近 2 倍文件体积，Chrome 安卓标签页 OOM 直接崩溃 →「导出闪退」。
+  // Blob 拼接是引用合并不复制内存；每序列化完一个键立即 delete 释放原值，峰值内存约砍半。
+  // 大键之间用 setTimeout(0) 让出主线程，避免长任务把导出过程冻死（低端机现象）。
+  async function jsonToBlobStreaming(data) {
+    const parts = [];
+    let len = 0;
+    let blob = null;
+    const flush = () => {
+      if (!parts.length) return;
+      blob = new Blob(blob ? [blob].concat(parts) : parts, { type: 'application/json;charset=utf-8' });
+      parts.length = 0;
+      len = 0;
+    };
+    const push = (s) => {
+      if (!s) return;
+      parts.push(s);
+      len += s.length;
+      if (len >= 4 * 1024 * 1024) flush(); // 每 ~4MB 合并一次，避免 parts 无限堆积
+    };
+    const yieldNow = () => new Promise((r) => setTimeout(r, 0));
+    push('{"version":"1.0","app":"mochi-zika","exportTime":' + JSON.stringify(data.exportTime) + ',"ls":{');
+    const lsKeys = Object.keys(data.ls);
+    for (let i = 0; i < lsKeys.length; i++) {
+      if (i) push(',');
+      push(JSON.stringify(lsKeys[i]) + ':' + JSON.stringify(data.ls[lsKeys[i]]));
+    }
+    push('},"idb":{');
+    const idbKeys = Object.keys(data.idb);
+    for (let i = 0; i < idbKeys.length; i++) {
+      const k = idbKeys[i];
+      if (i) push(',');
+      push(JSON.stringify(k) + ':' + JSON.stringify(data.idb[k]));
+      delete data.idb[k]; // 序列化完即释放，控制峰值内存
+      if ((i & 3) === 3) await yieldNow(); // 每 4 个大键让出主线程一次
+    }
+    push('}}');
+    flush();
+    return blob;
+  }
+
   // 导出：localStorage + IndexedDB
   // v3.5.97：不受任何大小限制——按 IndexedDB / localStorage 实际数据全量导出。
   //   音乐文件、图片、聊天记录全部包含；导入时大键进 IndexedDB、小键进 localStorage，完整还原。
@@ -185,14 +247,7 @@
             // v3.6.x：本地音乐改存 Blob 后，备份导出需转成 dataURL 字符串（JSON 无法存 Blob），
             // 导入时由 add() 恢复为字符串 → 播放路径自动识别转回 Blob
             if (v instanceof Blob) {
-              const buf = await v.arrayBuffer();
-              const bytes = new Uint8Array(buf);
-              let bin = '';
-              const chunk = 0x8000;
-              for (let i = 0; i < bytes.length; i += chunk) {
-                bin += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
-              }
-              add(k, 'data:' + (v.type || 'audio/mpeg') + ';base64,' + btoa(bin));
+              add(k, 'data:' + (v.type || 'audio/mpeg') + ';base64,' + await blobToBase64(v));
             } else {
               add(k, v); // 权威值以 IDB 为准（含最新聊天记录）
             }
@@ -228,14 +283,9 @@
     // 大键仅在 localStorage、IndexedDB 里没有（或读取失败）时的最终兜底（如旧版遗留键）
     Object.keys(lsBig).forEach((k) => { add(k, lsBig[k]); });
     impShow('正在导出…', '正在打包数据文件', 72);
-    const json = JSON.stringify(data);
-    const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
-    // v3.9.x：文件名用本地日期（原 toISOString 是 UTC，凌晨导出文件名会是前一天）
-    const fname = 'mochi数据备份_' + localDateStr(new Date()) + '.json';
-    // v3.27.x：体积友好显示——大备份自动换算 MB（原只显示 KB，上千 KB 不便读）
-    const sizeStr = fmtSize(json.length);
     // v3.27.x：导出内容覆盖清单——本次导出的功能模块一目了然（导出=全局全部数据，
-    // localStorage 小键 + IndexedDB 大键全量收集，用户反馈「看不到导出了哪些功能」）
+    // localStorage 小键 + IndexedDB 大键全量收集，用户反馈「看不到导出了哪些功能」）。
+    // v3.31.x：必须在流式打包（会逐键 delete 释放 data.idb）之前计算——它要读键值统计条数。
     const coverLines = exportCoverage(data);
     let coverText = '导出内容（全局全部数据）：\n' + coverLines.join('\n') + '\n——';
     // v3.26.x：权威键降级提示——IDB 事务挂起/超时导致聊天记录/朋友圈只拿到 LS 有损
@@ -244,6 +294,14 @@
       const names = exportMissing.map(k => /:chat-msgs$/.test(k) ? '聊天记录(' + k.slice('xy-home-v2:'.length) + ')' : '朋友圈(' + k.slice('xy-home-v2:'.length) + ')');
       coverText += '\n⚠ 以下数据可能未完整导出（IDB 读取失败，仅拿到有损快照或丢失）：\n' + names.map(n => '· ' + n).join('\n') + '\n请勿清空原设备数据，建议重启浏览器后重新导出。';
     }
+    // v3.31.x：流式打包——不再 JSON.stringify(data) 一把生成整个 JSON 字符串。大备份设备上
+    // 整包字符串 + stringify 内部缓冲会让峰值内存接近 2 倍文件体积，Chrome 安卓标签页 OOM
+    // 崩溃（OPPO Find X9 导出闪退）；改为逐键序列化边拼边合并进 Blob（见 jsonToBlobStreaming）。
+    const blob = await jsonToBlobStreaming(data);
+    // v3.9.x：文件名用本地日期（原 toISOString 是 UTC，凌晨导出文件名会是前一天）
+    const fname = 'mochi数据备份_' + localDateStr(new Date()) + '.json';
+    // v3.27.x：体积友好显示——大备份自动换算 MB（原只显示 KB，上千 KB 不便读）
+    const sizeStr = fmtSize(blob.size);
     // v3.6.x：记录最近一次成功导出时间——备份提醒条（pwa.js）据此判断是否该提醒
     try { localStorage.setItem('xy-home-v2:__last-backup', String(Date.now())); } catch (e) {}
     // v3.29.x：自动备份副本已下线——导出不再把整包 JSON 复制进 IndexedDB。
@@ -285,7 +343,11 @@
     // 用户完全无法导出。检测到这些浏览器直接跳过分享面板，走「确定后下载」流程。
     const ua = (navigator.userAgent || '').toLowerCase();
     const brokenFileShare = /huaweibrowser|quark/.test(ua);
-    if (!brokenFileShare && navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+    // v3.31.x：超大备份不走系统分享面板——安卓 Chrome 分享 50MB+ 文件会把文件复制进分享
+    // intent，内存吃紧机型上分享面板可能直接把标签页搞崩（OPPO Find X9 导出闪退路径之一）。
+    // 大文件统一走「确定后下载」（a[download] 由浏览器流式落盘，不额外复制整包）。
+    const shareMax = 50 * 1024 * 1024;
+    if (!brokenFileShare && blob.size <= shareMax && navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
       try {
         await navigator.share({ files: [file], title: 'mochi 数据备份' });
         return 'ok';
@@ -384,6 +446,9 @@
       const ks = allKeys.filter(k => re.test(k));
       const real = ks.filter(k => {
         let v = valOf(k);
+        // v3.31.x：超大键（聊天记录/字卡库可达几十 MB）不为「非空判断」整包 JSON.parse——
+        // 大值非空即算有，避免导出尾部再翻一遍几十 MB 内存（崩溃窗口的一部分）。
+        if (typeof v === 'string' && v.length > 1024 * 1024) return v !== '';
         if (typeof v === 'string') { try { v = JSON.parse(v); } catch (e) {} }
         return v !== null && v !== undefined && v !== '';
       });
@@ -392,8 +457,12 @@
       let desc = '✓有';
       try {
         let v = valOf(real[0]);
-        if (typeof v === 'string') v = JSON.parse(v);
-        if (parse && (Array.isArray(v) || (v && typeof v === 'object'))) desc = parse(v);
+        // v3.31.x：超大值不做展开统计（整包 parse 几十 MB 内存 + 长任务），只标「数据较大」。
+        if (typeof v === 'string' && v.length > 1024 * 1024) desc = '✓有（数据较大）';
+        else {
+          if (typeof v === 'string') v = JSON.parse(v);
+          if (parse && (Array.isArray(v) || (v && typeof v === 'object'))) desc = parse(v);
+        }
       } catch (e) {}
       lines.push('· ' + name + '：' + desc);
     });

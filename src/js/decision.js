@@ -159,6 +159,7 @@
   let activeTab = 'typea';
   let countdownTimer = null;
   let decideTimer = null; // v3.6.x：结果 setTimeout 句柄——防连点导致历史/聊天消息重复
+  let panelFromGroup = false; // v3.26.x：本面板是否从群聊页打开（是→结果发到群聊，否→发到聊天）
 
   // ---- 聊天页底部半框（v3.5.53 露出聊天消息，星言式）----
   const panel = document.getElementById('chat-decision-panel');
@@ -173,6 +174,8 @@
   }
   function openPanel() {
     if (!body || !panel) return;
+    // v3.26.x：记录打开上下文——群聊页可见=从群聊打开，结果发到群聊（gcSendDecisionText）
+    try { panelFromGroup = !!(window.gcIsVisible && window.gcIsVisible()); } catch (e) { panelFromGroup = false; }
     ensureBuilt();
     activeTab = 'typea';
     document.querySelectorAll('#chat-decision-body .dc-tab').forEach(tb => tb.classList.toggle('sel', tb.dataset.dtab === 'typea'));
@@ -325,12 +328,13 @@
       h.unshift({ id: 'd_' + Date.now(), type: type, question: question, result: result, options: options, ts: Date.now() });
       if (h.length > 1000) h.splice(1000);
       saveHistory(h);
-      // 发送到聊天（联系人回复样式）
+      // 发送结果：从群聊打开→发到群聊（系统消息）；聊天页打开→发到聊天（联系人回复样式）
       if (loadSettings().replyToChat) {
         const replyText = type === 'typeb' && options
           ? '【帮我决定】' + question + '\n选项：\n' + options.map((o, i) => (i + 1) + '. ' + o).join('\n') + '\n→ ' + result
           : '【帮我决定】' + question + ' → ' + result;
-        if (window.chatAddIn) window.chatAddIn(replyText, { enter: true, silent: true });
+        if (panelFromGroup && window.gcSendDecisionText) window.gcSendDecisionText(replyText);
+        else if (window.chatAddIn) window.chatAddIn(replyText, { enter: true, silent: true });
       }
       toast('帮我决定已完成');
     }, thinkTime * 1000);

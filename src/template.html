@@ -3534,22 +3534,6 @@
         </div>
         <div class="poke-card-scroll chat-search-results" id="chat-search-results"></div>
       </div>
-      <!-- 帮我决定：聊天页底部半框（v3.5.53 露出聊天消息） -->
-      <div class="poke-card" id="chat-decision-panel" hidden>
-        <div class="poke-card-head">
-          <span>帮我决定</span>
-          <button class="poke-card-close" id="chat-decision-close">✕</button>
-        </div>
-        <div class="poke-card-scroll" id="chat-decision-body"></div>
-      </div>
-      <!-- 多人决定：聊天页底部半框（同帮我决定，群成员各自出结果） -->
-      <div class="poke-card" id="chat-gdecision-panel" hidden>
-        <div class="poke-card-head">
-          <span>多人决定</span>
-          <button class="poke-card-close" id="chat-gdecision-close">✕</button>
-        </div>
-        <div class="poke-card-scroll" id="chat-gdecision-body"></div>
-      </div>
       <!-- 占卜：聊天页底部半框（v3.5.53 露出聊天消息） -->
       <div class="poke-card" id="chat-divine-panel" hidden>
         <div class="poke-card-head">
@@ -4230,6 +4214,23 @@
         <span class="ch-name" id="myarc-title">我的档案</span>
       </div>
       <div class="narc-scroll" id="myarc-root"></div>
+    </div>
+
+    <!-- 帮我决定：.phone 级底部半框（v3.5.53 露出聊天消息；聊天页/群聊页共用，群聊里结果发到群聊） -->
+    <div class="poke-card" id="chat-decision-panel" hidden>
+      <div class="poke-card-head">
+        <span>帮我决定</span>
+        <button class="poke-card-close" id="chat-decision-close">✕</button>
+      </div>
+      <div class="poke-card-scroll" id="chat-decision-body"></div>
+    </div>
+    <!-- 多人决定：.phone 级底部半框（同帮我决定，群成员各自出结果；群聊里结果发到群聊） -->
+    <div class="poke-card" id="chat-gdecision-panel" hidden>
+      <div class="poke-card-head">
+        <span>多人决定</span>
+        <button class="poke-card-close" id="chat-gdecision-close">✕</button>
+      </div>
+      <div class="poke-card-scroll" id="chat-gdecision-body"></div>
     </div>
 
     <!-- 群聊页（桌面点「群聊」进入；所有桌面成员在一个窗口里聊天） -->

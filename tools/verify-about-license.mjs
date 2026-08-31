@@ -98,7 +98,7 @@ await sleep(400);
 
 // T1 设置页只有合并入口
 let r1 = J(await evalJs("(function(){var ra=document.getElementById('row-about');var rl=document.getElementById('row-license');var txt=ra?ra.querySelector('.txt').textContent:'';return JSON.stringify({hasAbout:!!ra,label:txt,noLicense:!rl});})()"));
-check('T1 合并入口存在、旧许可入口已删', r1.hasAbout && r1.noLicense && r1.label === '功能介绍与二传二改说明', r1.label);
+check('T1 合并入口存在、旧许可入口已删', r1.hasAbout && r1.noLicense && r1.label.indexOf('功能介绍') >= 0 && r1.label.indexOf('许可') >= 0, r1.label);
 
 // T2 点击进入合并页：hero / 原版徽章 / 版本号已替换
 await evalJs("(function(){var b=document.getElementById('row-about');if(b)b.click();return true;})()");

@@ -2535,7 +2535,7 @@ try { if (chatVisible()) renderWindow(true); } catch (e) {}
 };
 window.chatAddSystem = function (text, opts) {
 opts = opts || {};
-return addIn(text, { special: opts.special || 'poke', img: opts.img, mailNotice: opts.mailNotice, askQuestion: opts.askQuestion, askStatus: opts.askStatus, askOptions: opts.askOptions, askType: opts.askType, choiceQuestion: opts.choiceQuestion, choiceOptions: opts.choiceOptions, choicePref: opts.choicePref, choiceCat: opts.choiceCat, curiousQuestion: opts.curiousQuestion, curiousQuick: opts.curiousQuick, curiousReplies: opts.curiousReplies, curiousFollowup: opts.curiousFollowup, curiousQid: opts.curiousQid, curiousCat: opts.curiousCat, roastText: opts.roastText, roastCat: opts.roastCat, deskCk: opts.deskCk, deskCkDir: opts.deskCkDir });
+return addIn(text, { special: opts.special || 'poke', img: opts.img, mailNotice: opts.mailNotice, askQuestion: opts.askQuestion, askStatus: opts.askStatus, askOptions: opts.askOptions, askType: opts.askType, askTs: opts.askTs, choiceQuestion: opts.choiceQuestion, choiceOptions: opts.choiceOptions, choicePref: opts.choicePref, choiceCat: opts.choiceCat, curiousQuestion: opts.curiousQuestion, curiousQuick: opts.curiousQuick, curiousReplies: opts.curiousReplies, curiousFollowup: opts.curiousFollowup, curiousQid: opts.curiousQid, curiousCat: opts.curiousCat, roastText: opts.roastText, roastCat: opts.roastCat, deskCk: opts.deskCk, deskCkDir: opts.deskCkDir });
 };
 window.chatAddIn = function (text, opts) {
 const r = addIn(text, opts);

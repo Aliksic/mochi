@@ -542,6 +542,26 @@ html.ios-pwa-standalone body { background: var(--bg-b); }
 .fs-active .phone .page.full .gs-title, .fs-active .phone .page.full .card-tabs,
 .fs-active .phone .page.full .div-h-title, .fs-active .phone .page.full .stats-top-name { padding-top: max(env(safe-area-inset-top, 0px), 12px); }
 
+/* v3.26.x：iOS 真全屏（浏览器原生全屏 .ios-native-fs / 桌面全屏 .ios-fs-active）下
+   收紧顶部栏贴顶—— iOS 系统状态栏（含灵动岛）始终由系统占据在内容上方、网页内容
+   不会钻进状态栏区，CSS 再给顶部栏加 env(safe-area-inset-top) 只会算出一条多余白带
+   （用户实测：苹果17 自带浏览器 + 全屏模式下聊天顶部栏上方一大块白色空白）。
+   Android 挖孔屏仍靠上面 max(env,12px) 规则避让，不受影响（ios-* 类只在 iOS 加）。
+   特异性压过 .fs-active max(env,12px)：(0,5,1) > (0,5,0)。 */
+html.ios-native-fs .phone .page.full .chat-head,
+html.ios-native-fs .phone .page.full .gs-title,
+html.ios-native-fs .phone .page.full .card-tabs,
+html.ios-native-fs .phone .page.full .div-h-title,
+html.ios-native-fs .phone .page.full .stats-top-name { padding-top: 10px; }
+/* iOS 桌面（添加到主屏幕）全屏：.phone 已由 .ios-fs-active .phone 补
+   padding-top:max(env,12px) 顶格到系统状态栏下方，顶部栏不得再重复加 env——否则与
+   下方 @media(max-width:900px) 的 calc(10px+env) 叠加成双倍安全区白带 */
+.ios-fs-active .phone .page.full .chat-head,
+.ios-fs-active .phone .page.full .gs-title,
+.ios-fs-active .phone .page.full .card-tabs,
+.ios-fs-active .phone .page.full .div-h-title,
+.ios-fs-active .phone .page.full .stats-top-name { padding-top: 10px; }
+
 /* v3.6.x：iOS 独立应用「全屏模式」（ios-fs-active 类，由 fullscreen.js 控制）——
    iOS 无 Fullscreen API、系统状态栏永远无法隐藏，唯一能藏的是应用内模拟状态栏
    （与系统状态栏重复的一栏，正是「有空隙/双状态栏」观感来源）。

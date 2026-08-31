@@ -3193,11 +3193,40 @@ window.openTCPanel = openTCPanel;
     const dd = new Date(ts);
     return ('0' + dd.getHours()).slice(-2) + ':' + ('0' + dd.getMinutes()).slice(-2) + ' ' + ((dd.getMonth() + 1) + '月' + dd.getDate() + '日');
   }
+  // v3.26.x：提问记录跨桌面汇总——提问与回答都写进「发生所在联系人桌面」的 ta-ask，
+  // 主页提问记录若只读当前桌面，用户在联系人桌面答过题、切回主页就「看不到记录」。
+  // 汇总 = 当前桌面在前 + 其余桌面（注册表 contacts + default）的 history 合并。
+  function allDeskHistories(key) {
+    const out = [];
+    const cur = window.__activeCid || 'default';
+    const cids = ['default'].concat((window.getContacts ? window.getContacts() : []).map(function (c) { return c && c.id; }).filter(Boolean));
+    const seen = {};
+    cids.sort(function (a, b) { if (a === cur) return -1; if (b === cur) return 1; return 0; });
+    cids.forEach(function (cid) {
+      if (!cid || seen[cid]) return;
+      seen[cid] = 1;
+      try {
+        let hist = [];
+        if (cid === cur) {
+          hist = taAskLoad().history || [];
+        } else {
+          const s = window.storeFor ? window.storeFor(cid) : null;
+          if (!s) return;
+          const raw = s.get(key);
+          if (!raw) return;
+          const d = JSON.parse(raw);
+          hist = (d && Array.isArray(d.history)) ? d.history : [];
+        }
+        out.push.apply(out, hist);
+      } catch (e) {}
+    });
+    return out;
+  }
   window.renderAskRecords = function () {
     // TA的询问
     const askEl = document.getElementById('ar-ask');
     if (askEl) {
-      const h = taAskLoad().history || [];
+      const h = allDeskHistories('ta-ask');
       askEl.innerHTML = h.length
         ? h.slice().reverse().map(x => '<div class="tc-listitem"><div class="tc-li-q">问：' + x.q + '</div>' + (x.status === 'pending' ? '<div class="tc-li-pending">待回答</div>' : '<div class="tc-li-line">你：' + x.a + '</div>' + (x.reply ? '<div class="tc-li-line">' + (window.taFit ? window.taFit('TA：') : 'TA：') + (window.taFit ? window.taFit(x.reply) : x.reply) + '</div>' : '')) + '<div class="tc-li-time">' + fmtDT(x.ts) + '</div></div>').join('')
         : '<div class="ta-empty">暂无询问记录</div>';

@@ -84,9 +84,18 @@ async function runEngine(ua, tag) {
     const rowExists = await page.evaluate("!!document.getElementById('row-diagnostics')");
     check(tag + ' 设置页诊断入口存在', rowExists === true);
     if (rowExists) {
+      // 应用自有的启动弹窗（实测无头 Chrome 会弹「回答TA的询问」）先占着全站共用弹窗 DOM
+      await page.evaluate("(function(){var m=document.getElementById('modal-mask');if(m&&!m.hidden){var c=document.getElementById('modal-cancel');if(c)c.click();}})()");
+      await sleep(250);
       await page.evaluate("(function(){var r=document.getElementById('row-diagnostics');r.click();})()");
-      await sleep(300);
-      const modalOpen = await page.evaluate("(function(){var m=document.getElementById('modal-mask');return m&&!m.hidden;})()");
+      // 诊断弹窗要等 collectDiag 的 Promise 落地才挂载（实测 Chrome ~400ms / WebKit ~600ms），
+      // 固定 sleep(300) 判「打不开」是脚本等待不足。轮询到标题含「诊断」为止，最多 4s。
+      let modalOpen = false;
+      for (let i = 0; i < 20; i++) {
+        await sleep(200);
+        modalOpen = await page.evaluate("(function(){var m=document.getElementById('modal-mask');var ti=document.getElementById('modal-title');return !!(m&&!m.hidden&&ti&&ti.textContent.indexOf('诊断')>=0);})()");
+        if (modalOpen) break;
+      }
       const diagText = await page.evaluate("(function(){var t=document.getElementById('modal-textarea');return t&&!t.hidden?t.value:'';})()").catch(() => '');
       check(tag + ' 诊断弹窗能打开', modalOpen === true);
       check(tag + ' 诊断信息含 UA', /navigator/i.test(diagText) || /UA/i.test(diagText), diagText.length > 0 ? diagText.length + ' 字符' : '空');

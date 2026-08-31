@@ -3495,6 +3495,32 @@ try {
     sub.className = 'desk-lib-sub';
     sub.textContent = '组件全局唯一：选择后会从原位置移动过来';
     box.appendChild(title); box.appendChild(sub);
+    // v3.26.x：组件库顶部按「小组件 / 图标」分类 Tab，点击切换
+    const tabWrap = document.createElement('div');
+    tabWrap.className = 'desk-lib-tabs';
+    const groups = [ { key: 'widget', label: '小组件' }, { key: 'icon', label: '图标' } ];
+    const panels = {};
+    groups.forEach((g, gi) => {
+      const tab = document.createElement('button');
+      tab.type = 'button';
+      tab.className = 'desk-lib-tab' + (gi === 0 ? ' on' : '');
+      tab.textContent = g.label;
+      tab.addEventListener('click', () => {
+        tabWrap.querySelectorAll('.desk-lib-tab').forEach(t => t.classList.remove('on'));
+        tab.classList.add('on');
+        groups.forEach(x => { const p = panels[x.key]; if (p) p.style.display = (x.key === g.key) ? '' : 'none'; });
+      });
+      tabWrap.appendChild(tab);
+    });
+    box.appendChild(tabWrap);
+    groups.forEach(g => {
+      const p = document.createElement('div');
+      p.className = 'desk-lib-panel';
+      p.style.display = (g.key === 'widget') ? '' : 'none';
+      box.appendChild(p);
+      panels[g.key] = p;
+    });
+    const libPanel = (wid) => panels[wid.indexOf('app-') === 0 ? 'icon' : 'widget'];
     WIDGET_IDS.forEach(wid => {
       const item = document.createElement('div');
       item.className = 'desk-lib-item';
@@ -3531,7 +3557,7 @@ try {
       });
       meta.appendChild(name); meta.appendChild(where);
       item.appendChild(prev); item.appendChild(meta); item.appendChild(btn);
-      box.appendChild(item);
+      libPanel(wid).appendChild(item);
     });
     // v3.6.x：图片组件——可多个，上传新图片到本页
     const imgItem = document.createElement('div');
@@ -3554,7 +3580,7 @@ try {
     imgBtn.addEventListener('click', () => { addDeskImage(pageIdx); lib.remove(); });
     imgMeta.appendChild(imgName); imgMeta.appendChild(imgWhere);
     imgItem.appendChild(imgPrev); imgItem.appendChild(imgMeta); imgItem.appendChild(imgBtn);
-    box.appendChild(imgItem);
+    panels.widget.appendChild(imgItem);
     // v3.7.x：自定义文字组件——可多个
     const textItem = document.createElement('div');
     textItem.className = 'desk-lib-item';
@@ -3576,7 +3602,7 @@ try {
     textBtn.addEventListener('click', () => { addDeskText(pageIdx); lib.remove(); });
     textMeta.appendChild(textName); textMeta.appendChild(textWhere);
     textItem.appendChild(textPrev); textItem.appendChild(textMeta); textItem.appendChild(textBtn);
-    box.appendChild(textItem);
+    panels.widget.appendChild(textItem);
     // v3.7.x：通用倒计时组件——可多个
     const cdItem = document.createElement('div');
     cdItem.className = 'desk-lib-item';
@@ -3598,7 +3624,7 @@ try {
     cdBtn.addEventListener('click', () => { addDeskCountdown(pageIdx); lib.remove(); });
     cdMeta.appendChild(cdName); cdMeta.appendChild(cdWhere);
     cdItem.appendChild(cdPrev); cdItem.appendChild(cdMeta); cdItem.appendChild(cdBtn);
-    box.appendChild(cdItem);
+    panels.widget.appendChild(cdItem);
     const close = document.createElement('button');
     close.textContent = '关闭';
     close.style.cssText = 'width:100%;margin-top:8px;padding:10px;border:1px solid #eee;border-radius:10px;background:#fafafa;font-size:13px;cursor:pointer;font-family:inherit';
@@ -3882,6 +3908,25 @@ try {
     renderDeskTexts();
     toast('已删除');
   }
+  // v3.26.x：文字组件上移/下移——只与同页相邻文字交换顺序，持久化到 meta
+  function moveDeskText(id, dir) {
+    const meta = loadDeskTextsMeta();
+    const idx = meta.findIndex(x => x.id === id);
+    if (idx < 0) return;
+    const same = [];
+    meta.forEach((x, i) => { if (x.page === meta[idx].page) same.push(i); });
+    const pos = same.indexOf(idx);
+    if (dir === 'up' && pos > 0) {
+      const a = same[pos - 1];
+      const t = meta[a]; meta[a] = meta[idx]; meta[idx] = t;
+    } else if (dir === 'down' && pos < same.length - 1) {
+      const a = same[pos + 1];
+      const t = meta[a]; meta[a] = meta[idx]; meta[idx] = t;
+    } else return;
+    saveDeskTextsMeta(meta);
+    renderDeskTexts();
+    toast(dir === 'up' ? '已上移' : '已下移');
+  }
   function removeDeskTextsOnPage(pageIdx) {
     saveDeskTextsMeta(loadDeskTextsMeta().filter(m => m.page !== pageIdx));
   }
@@ -3916,6 +3961,10 @@ try {
           const ci = colors.indexOf(m.color || '#333');
           m.color = colors[(ci + 1) % colors.length];
           saveDeskTextsMeta(meta); renderDeskTexts(); toast('已换颜色');
+        } else if (v === '__moveup__') {
+          moveDeskText(id, 'up');
+        } else if (v === '__movedn__') {
+          moveDeskText(id, 'down');
         } else if (v === '__del__') {
           removeDeskText(id);
         } else if (v && v.trim()) {
@@ -3928,6 +3977,8 @@ try {
           { label: '字号+', value: '__sizeup__' },
           { label: '字号-', value: '__sizedn__' },
           { label: '换颜色', value: '__color__' },
+          { label: '上移', value: '__moveup__' },
+          { label: '下移', value: '__movedn__' },
           { label: '删除', value: '__del__' },
         ],
       });
@@ -3985,6 +4036,25 @@ try {
     renderDeskCountdowns();
     toast('已删除');
   }
+  // v3.26.x：倒计时组件上移/下移——只与同页相邻倒计时交换顺序，持久化到 meta
+  function moveDeskCountdown(id, dir) {
+    const meta = loadDeskCountdownsMeta();
+    const idx = meta.findIndex(x => x.id === id);
+    if (idx < 0) return;
+    const same = [];
+    meta.forEach((x, i) => { if (x.page === meta[idx].page) same.push(i); });
+    const pos = same.indexOf(idx);
+    if (dir === 'up' && pos > 0) {
+      const a = same[pos - 1];
+      const t = meta[a]; meta[a] = meta[idx]; meta[idx] = t;
+    } else if (dir === 'down' && pos < same.length - 1) {
+      const a = same[pos + 1];
+      const t = meta[a]; meta[a] = meta[idx]; meta[idx] = t;
+    } else return;
+    saveDeskCountdownsMeta(meta);
+    renderDeskCountdowns();
+    toast(dir === 'up' ? '已上移' : '已下移');
+  }
   function removeDeskCountdownsOnPage(pageIdx) {
     saveDeskCountdownsMeta(loadDeskCountdownsMeta().filter(m => m.page !== pageIdx));
   }
@@ -4007,6 +4077,8 @@ try {
       if (!m) return;
       window.openModal('编辑倒计时', m.title + '|' + m.date, (v) => {
         if (v === '__del__') { removeDeskCountdown(id); return; }
+        if (v === '__moveup__') { moveDeskCountdown(id, 'up'); return; }
+        if (v === '__movedn__') { moveDeskCountdown(id, 'down'); return; }
         if (!v || !v.trim()) return;
         const parts = v.split('|');
         const title = (parts[0] || '').trim();
@@ -4017,7 +4089,11 @@ try {
         renderDeskCountdowns();
       }, {
         placeholder: '标题|日期，如 出差|2026-09-16',
-        pills: [{ label: '删除', value: '__del__' }],
+        pills: [
+          { label: '上移', value: '__moveup__' },
+          { label: '下移', value: '__movedn__' },
+          { label: '删除', value: '__del__' },
+        ],
       });
     });
   }

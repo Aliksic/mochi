@@ -401,6 +401,41 @@
     }, true);
   }
 
+  // v3.5.140：focus 原型层拦截——竞态根治（focusin 兜底是事后补救，
+  // Chrome 对原生 input 聚焦的瞬间就可能已弹出「自动填充」条，弹条后再
+  // 移交焦点个别版本不收回）。这里在 focus 调用发生「之前」拦截：
+  // 未转换的文本输入框被 focus() 时先同步转换、再聚焦 ce-box——
+  // 任何代码路径（弹窗打开即聚焦等）都无法让原生 input 真正持焦，
+  // Chrome 从头到尾看不到「聚焦的表单字段」，弹条无从触发。
+  // 已转换（__ceBox）走实例代理；ceDone 标记的（OPPO 等兼容名单）与
+  // checkbox/date 等类型直接放行原生 focus，行为不变。
+  if (!isIOS) {
+    function ceNeedsConv(t) {
+      if (!t || t.dataset.ceDone || t.__ceBox) return false;
+      var ty = t.type;
+      return !(ty === 'checkbox' || ty === 'range' || ty === 'file' || ty === 'color' || ty === 'hidden' ||
+        ty === 'date' || ty === 'time' || ty === 'datetime-local' || ty === 'month' || ty === 'week');
+    }
+    var _origInpFocus = HTMLInputElement.prototype.focus;
+    HTMLInputElement.prototype.focus = function () {
+      if (this.__ceBox) { try { this.__ceBox.focus(); } catch (e) {} return; }
+      if (ceNeedsConv(this)) {
+        ceConvert(this);
+        if (this.__ceBox) { try { this.__ceBox.focus(); } catch (e) {} return; }
+      }
+      return _origInpFocus.apply(this, arguments);
+    };
+    var _origTAFocus = HTMLTextAreaElement.prototype.focus;
+    HTMLTextAreaElement.prototype.focus = function () {
+      if (this.__ceBox) { try { this.__ceBox.focus(); } catch (e) {} return; }
+      if (ceNeedsConv(this)) {
+        ceConvert(this);
+        if (this.__ceBox) { try { this.__ceBox.focus(); } catch (e) {} return; }
+      }
+      return _origTAFocus.apply(this, arguments);
+    };
+  }
+
   // v3.16.x：ce-box 合成层通用刷新（AI-B 域，通用化 ta-ask.js 的 .ta-add 局部缓解，
   // 合入 AI-A 留言：见 WORKLOG 2026-08-23 问 TA 管理页「文字与输入框边框分离」）。
   // ceConvert 把文本输入框转成 contenteditable .ce-box，输入文字渲染在独立合成层；

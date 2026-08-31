@@ -305,6 +305,8 @@ const FIX_SENTINELS = [
   { name: '#101 查看存储 IDB 键清单走 #90 严格三态（读不到不再退化成 [] 显示成「0 键」，也不再把「库里没有」冒充「读不到」）', file: 'js/personalize.js', needle: 'window.idbListKeys || window.idbGetAllKeys' },
   { name: '#101 总占用双口径分行「本项目占用合计」vs「浏览器整域已用」（防用户把同域名整域占用当成本应用数据/以为统计漏了）', file: 'index.html', needle: '本项目占用合计' },
   { name: '#101 占比条样式已接入产物（setting.css 的 .storage-cat-bar，漏接入 cssFiles 或样式被删即报警）', file: 'css/setting.css', needle: '.storage-cat-bar i { display:block' },
+  { name: 'iOS 真全屏聊天顶部栏收紧贴顶（苹果17 自带浏览器+全屏模式顶部一大块空白：.fs-active 的 max(env,12px) 在 iOS 系统状态栏常驻下算多余白带，用 ios-native-fs 压平；删掉规则/漏接入 cssFiles 即报警）', file: 'css/base.css', needle: 'html.ios-native-fs .phone .page.full .chat-head' },
+  { name: 'iOS 原生全屏标记类同步（fullscreen.js syncFsClass 给根元素加 ios-native-fs，与之配套的 base.css 收紧规则靠它命中，标记删了修复就哑）', file: 'js/fullscreen.js', needle: "classList.toggle('ios-native-fs', _fs)" },
   { name: '#95 朋友圈图片格宽统一：单图/双图容器特判已删除（原 .feed-imgs:has(...) 使 1/2/3+ 图格宽 22%/40%/33% 不一致，加回即回归）', file: 'css/chat-pages.css', needle: 'feed-imgs:has(', absent: true },
   { name: '#95 朋友圈图片格宽统一：单图放弃 1:1 裁切的 aspect-ratio:auto 特例已删除（加回则单图随原图比例自由变高）', file: 'css/chat-pages.css', needle: 'feed-imgs img:only-of-type', absent: true },
   { name: '#96 网易云外链播放区分 play() reject 错误类型（非 NotAllowedError 走外链兜底，不再一律弹"被浏览器拦截"）', file: 'js/music-player.js', needle: "err.name !== 'NotAllowedError'" },
@@ -320,6 +322,7 @@ const FIX_SENTINELS = [
   { name: '#100 诊断角标按最后一条错误时间戳判未读（原存条数，环形写满后新错误永远算不出未读＝角标常暗、错误线索看不见）', file: 'js/device.js', needle: 'const seen = Number(localStorage.getItem(SEEN_KEY)) || 0;' },
   { name: '#100 最近错误环形上限 5→20 且调用栈只给最近 3 条（5 条窗口用户报障时早已刷掉；全带栈会把报障文本撑到剪贴板截断）', file: 'js/device.js', needle: 'const ERR_CAP = 20;' },
   { name: '红米K80 切后台无法自动播下一首回归修复（后台非 NotAllowedError 拒绝不再烧一次性 https 重试链，恢复 scheduleBgResume 退避补播，源短暂恢复即接上）', file: 'js/music-player.js', needle: 'if (document.hidden) {\nbgBrokeAudio = true;\nplayRejected = true;\nscheduleBgResume();' },
+  { name: '群聊里用【帮我决定/多人决定】结果发到群聊（gcSendDecisionText 系统消息入群聊消息流 + 群聊更多面板点这两项不切聊天页，修结果错发到聊天）', file: 'js/group-chat.js', needle: 'gcSendDecisionText' },
 ];
 try {
   const built = readFileSync(join(root, 'index.html'), 'utf8');

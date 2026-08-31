@@ -487,6 +487,14 @@
       pruneGcDom();
       return m;
     }
+    // v3.26.x：决定结果系统消息（群聊里使用【帮我决定】/【多人决定】的结果，居中系统样式，同拍一拍）
+    if (rec.special === 'system') {
+      m.className = 'msg-poke';
+      m.innerHTML = '<span>' + escTxtBr(rec.text || '') + '</span>';
+      body.appendChild(m);
+      pruneGcDom();
+      return m;
+    }
     const quoteStr = rec.quote ? gcQuoteHtml(rec.quote) : '';
     // v3.9.x：按消息类型渲染（与聊天页 renderMsg 对齐：表情包小图/图片大图/语音可播放）
     if (rec.retracted) {
@@ -691,6 +699,24 @@
     renderGcDraft();
     scheduleReply(t);
   }
+  // v3.26.x：群聊里使用【帮我决定】/【多人决定】时，结果作为系统消息发到群聊
+  // （decision.js / group-decision.js 先判 gcIsVisible()，是群聊上下文就走这里；聊天页上下文仍走 chatAddIn）
+  function gcSendDecisionText(text) {
+    const t = (text || '').trim();
+    if (!t) return;
+    const rec = { side: 'in', cid: 'system', name: '系统', text: t, ts: Date.now(), special: 'system' };
+    msgs.push(rec);
+    saveMsgs();
+    renderMsg(rec);
+    followGcBottom(true);
+    if (window.playSfx) window.playSfx('in');
+  }
+  function gcIsVisible() {
+    const p = document.getElementById('page-group-chat');
+    return !!(p && !p.hidden);
+  }
+  window.gcSendDecisionText = gcSendDecisionText;
+  window.gcIsVisible = gcIsVisible;
   // 表情包直接发送（复用聊天页表情包面板的插入模式回调，见下方 gc-emoji-btn）
   function sendGcSticker(src) {
     if (!src) return;
@@ -1596,8 +1622,12 @@
       if (!item) return;
       // @群成员 不走切换，保留群聊内打开
       if (gcMoreAt && (item === gcMoreAt || item.contains(gcMoreAt))) return;
+      // v3.26.x：帮我决定/多人决定 面板已移到 .phone 级，群聊里可直接在本页使用（不切聊天页），
+      // 结果发送到群聊（decision.js/group-decision.js 通过 gcIsVisible 判断群聊上下文）
+      const keepInGroup = (item.id === 'more-decide' || item.id === 'more-gdecide');
       gcMorePanel.hidden = true;
       gcSetMoreTopbar(false);
+      if (keepInGroup) return;
       // 切到聊天页（面板功能按钮的 handler 都在聊天页上下文；半框也在聊天页内）
       const chatPage = document.getElementById('page-chat');
       if (chatPage && chatPage.hidden) {

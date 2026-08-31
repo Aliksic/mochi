@@ -8,12 +8,18 @@
 //   node tools/verify-suite.mjs --strict        有失败则整体退出码 1（清干净清单后再当门禁用）
 //   node tools/verify-suite.mjs --no-core       不带 tools/verify.mjs（布局主检查）
 //   node tools/verify-suite.mjs --tail 12       失败项多打几行输出
+// 端口契约：并发时 runner 用 MOCHI_CDP_PORT 下发一个刚探到的空闲端口；脚本侧写成
+//   const cdpPort = Number(process.env.MOCHI_CDP_PORT) || (9900 + Math.floor(Math.random() * 100));
+// 即可享受隔离（单跑时 env 不存在，行为与原来一致）。不读该 env 的脚本仍各自随机取端口，
+// 而现存脚本的取值区间大面积重叠（9900+random(100) 一类），并发结论存疑时用 --jobs 1 复跑。
 // 退出码：默认 0（失败只做可见性报告——现存脚本里混有断言已过期、以及需要真机/网络的项，
 // 一上来就当门禁会被整体跳过）；--strict 时有失败/超时/启动异常 → 1。
 import { spawn } from 'node:child_process';
-import { readdirSync, existsSync } from 'node:fs';
+import { readdirSync, existsSync, readFileSync } from 'node:fs';
+import { createServer } from 'node:net';
 import { join, normalize, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { envOf, suspectOf } from './lib/verify-classify.mjs';
 
 const root = normalize(dirname(fileURLToPath(import.meta.url)) + '/..');
 const SELF = 'verify-suite.mjs';
@@ -42,9 +48,27 @@ if (!has('--no-core') && existsSync(join(toolsDir, 'verify.mjs'))) files = ['ver
 if (filters.length) files = files.filter(f => filters.some(p => f.includes(p)));
 if (!files.length) { console.log('没有匹配的 verify 脚本（过滤器：' + filters.join(', ') + '）'); process.exit(0); }
 
-const runOne = file => new Promise(res => {
+const freePort = () => new Promise((res) => {
+  const s = createServer();
+  s.on('error', () => res(0));
+  s.listen(0, '127.0.0.1', () => { const p = s.address().port; s.close(() => res(p)); });
+});
+
+const RUN_ONE_PORT = 'MOCHI_CDP_PORT';
+const usesPortEnv = new Map();
+
+const runOne = async (file) => new Promise(async (res) => {
   const t0 = Date.now();
-  const child = spawn(process.execPath, [join(toolsDir, file)], { cwd: root, windowsHide: true });
+  const port = JOBS > 1 ? await freePort() : 0;
+  if (!usesPortEnv.has(file)) {
+    let honors = false;
+    try { honors = readFileSync(join(toolsDir, file), 'utf8').includes(RUN_ONE_PORT); } catch (e) {}
+    usesPortEnv.set(file, honors);
+  }
+  const child = spawn(process.execPath, [join(toolsDir, file)], {
+    cwd: root, windowsHide: true,
+    env: port ? Object.assign({}, process.env, { [RUN_ONE_PORT]: String(port) }) : process.env
+  });
   let buf = '';
   let killed = '';
   const timer = setTimeout(() => { killed = 'timeout'; try { child.kill('SIGKILL'); } catch (e) {} }, TIMEOUT);
@@ -62,12 +86,8 @@ const lastLine = out => { const l = linesOf(out); return l.length ? l[l.length -
 
 // 「跑不动」不等于「跑红了」：浏览器起不来 / 需要外网 这类环境缺口单独归类，
 // 混进失败里会让整份报告失去可信度（实测本机未装 playwright 浏览器时 14 个脚本一律红）。
-const ENV_SIGS = [
-  [/browserType\.launch|Executable doesn't exist|playwright install| Please run the following command/i, '浏览器未装（playwright）'],
-  [/CHROME_PATH|找不到 (Chrome|Edge)|chrome\.exe.*not found|no running browser/i, '找不到 Chrome/Edge'],
-  [/ECONNREFUSED|ENOTFOUND|EAI_AGAIN|getaddrinfo|Failed to fetch|network.*unreachable|err_internet/i, '需要外网']
-];
-const envOf = out => { for (const [re, why] of ENV_SIGS) if (re.test(out)) return why; return ''; };
+// 但连 127.0.0.1 被拒不是外网问题：那是本机 CDP 没起来（并发时多为端口撞车），单跑复核才算数。
+// 口径抽到 lib/verify-classify.mjs，由 tools/verify-suite-classify.mjs 反向对照守着。
 
 console.log('verify 套件：' + files.length + ' 个脚本，并发 ' + JOBS + '，单脚本超时 ' + (TIMEOUT / 1000) + 's');
 console.log('（跑的是仓库根目录产物 index.html，请先 npm run build 再看结果）\n');
@@ -78,20 +98,30 @@ const worker = async () => {
   while (cursor < files.length) {
     const file = files[cursor++];
     const r = await runOne(file);
-    if (r.code !== 0 && !r.killed) r.env = envOf(r.out);
+    if (r.code !== 0 && !r.killed) { r.suspect = suspectOf(r.out); if (!r.suspect) r.env = envOf(r.out); }
     results.push(r);
-    const tag = r.killed ? '⏱ ' : (r.code === 0 ? '✅ ' : (r.env ? '⚠️ ' : '❌ '));
-    console.log(tag + file.padEnd(46) + ' ' + String(r.ms) + 'ms  ' + (r.killed || r.env || ('exit ' + r.code)) + '  ' + lastLine(r.out));
+    const tag = r.killed ? '⏱ ' : (r.code === 0 ? '✅ ' : (r.suspect ? '🔀 ' : (r.env ? '⚠️ ' : '❌ ')));
+    console.log(tag + file.padEnd(46) + ' ' + String(r.ms) + 'ms  ' + (r.killed || r.suspect || r.env || ('exit ' + r.code)) + '  ' + lastLine(r.out));
   }
 };
 await Promise.all(Array.from({ length: Math.min(JOBS, files.length) }, worker));
 
 results.sort((a, b) => a.file.localeCompare(b.file));
 const timeouts = results.filter(r => r.killed);
-const envBad = results.filter(r => !r.killed && r.env);
-const failed = results.filter(r => !r.killed && !r.env && r.code !== 0);
+const suspects = results.filter(r => !r.killed && r.suspect);
+const envBad = results.filter(r => !r.killed && !r.suspect && r.env);
+const failed = results.filter(r => !r.killed && !r.suspect && !r.env && r.code !== 0);
 const ok = results.filter(r => r.code === 0 && !r.killed).length;
 const hard = failed.concat(timeouts);
+
+if (suspects.length) {
+  console.log('\n===== 🔀 疑似本机 CDP 端口撞车 ' + suspects.length + ' 项（不算回归，单跑复核后再定性）=====');
+  for (const r of suspects) console.log('  ' + r.file.padEnd(46) + r.suspect + ' → node tools/' + r.file);
+}
+const honoring = results.filter(r => usesPortEnv.get(r.file)).length;
+if (JOBS > 1 && honoring < results.length) {
+  console.log('\n端口隔离：本批 ' + results.length + ' 个脚本中 ' + honoring + ' 个读取了 MOCHI_CDP_PORT（其余仍从各自重叠的随机窄区间取端口，并发 ' + JOBS + ' 时仍可能撞车 → 结论存疑时用 --jobs 1 复跑）');
+}
 
 if (hard.length) {
   console.log('\n===== 断言失败 / 超时 ' + hard.length + ' 项 =====');
@@ -109,7 +139,7 @@ if (slow.length) {
   console.log('\n===== 最慢 ' + Math.min(10, slow.length) + ' 项（>60s，值得复核是否卡在等待上）=====');
   slow.slice(0, 10).forEach(r => console.log('  ' + (r.ms / 1000).toFixed(1) + 's  ' + r.file));
 }
-console.log('\n===== 合计：' + ok + ' 通过 / ' + failed.length + ' 断言失败 / ' + envBad.length + ' 环境不满足 / ' + timeouts.length + ' 超时（共 ' + results.length + '）=====');
+console.log('\n===== 合计：' + ok + ' 通过 / ' + failed.length + ' 断言失败 / ' + envBad.length + ' 环境不满足 / ' + suspects.length + ' 疑似撞车 / ' + timeouts.length + ' 超时（共 ' + results.length + '）=====');
 if (hard.length) {
   console.log('注意：断言失败 ≠ 一定是回归。现存脚本含「断言已被后续版本改掉」一类，' +
     '请逐项对照 FIX-REGRESSION.md 判定：该修的修，已过期的删或改期望，别整体忽略。' +

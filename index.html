@@ -377,6 +377,16 @@ padding-bottom: calc(10px + var(--mochi-safe-bottom,env(safe-area-inset-bottom,0
 .fs-active .phone .page.full .chat-head { padding-top: max(env(safe-area-inset-top, 0px), 12px); }
 .fs-active .phone .page.full .gs-title, .fs-active .phone .page.full .card-tabs,
 .fs-active .phone .page.full .div-h-title, .fs-active .phone .page.full .stats-top-name { padding-top: max(env(safe-area-inset-top, 0px), 12px); }
+html.ios-native-fs .phone .page.full .chat-head,
+html.ios-native-fs .phone .page.full .gs-title,
+html.ios-native-fs .phone .page.full .card-tabs,
+html.ios-native-fs .phone .page.full .div-h-title,
+html.ios-native-fs .phone .page.full .stats-top-name { padding-top: 10px; }
+.ios-fs-active .phone .page.full .chat-head,
+.ios-fs-active .phone .page.full .gs-title,
+.ios-fs-active .phone .page.full .card-tabs,
+.ios-fs-active .phone .page.full .div-h-title,
+.ios-fs-active .phone .page.full .stats-top-name { padding-top: 10px; }
 @media (max-width: 900px) {
 .ios-fs-active .phone { padding-top: max(env(safe-area-inset-top, 0px), 12px); }
 .ios-fs-active .phone .statusbar { display: none; }
@@ -934,6 +944,13 @@ scrollbar-width:none;
 .desk-lib-box::-webkit-scrollbar { display:none; }
 .desk-lib-title { font-size:15px; font-weight:700; margin-bottom:4px; }
 .desk-lib-sub { font-size:11px; color:#888; margin-bottom:12px; }
+.desk-lib-tabs { display:flex; gap:8px; margin-bottom:12px; }
+.desk-lib-tab {
+flex:1; padding:8px 0; font-size:13px; font-weight:600; border-radius:99px;
+border:1px solid #eee; background:#f7f7f7; color:#999; cursor:pointer; font-family:inherit;
+}
+.desk-lib-tab.on { background:#111; color:#fff; border-color:#111; }
+.desk-lib-panel { display:flex; flex-direction:column; }
 .desk-lib-item {
 display:flex; align-items:center; gap:10px;
 padding:10px 12px; border:1px solid #eee; border-radius:10px; margin-bottom:8px;
@@ -6507,6 +6524,8 @@ color-scheme:dark;
 .desk-lib-box { background:var(--dark-card); }
 .desk-lib-sub { color:#888; }
 .desk-lib-item { border-color:#3a3a3a; }
+.desk-lib-tab { background:#2a2a2a; border-color:#3a3a3a; color:#888; }
+.desk-lib-tab.on { background:var(--ink,#f0f0f0); color:#111; border-color:var(--ink,#f0f0f0); }
 .desk-lib-item .dl-where { color:#777; }
 .desk-lib-item .dl-btn { background:#f0f0f0; color:#111; }
 .desk-lib-item .dl-btn:disabled { background:#333; color:#777; }
@@ -8468,9 +8487,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1788099438922">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.373</b></span>
-        <span class="sv-deploy">部署于 2026-08-30 22:17<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1788142824172">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.374</b></span>
+        <span class="sv-deploy">部署于 2026-08-31 10:20<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9563,7 +9582,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.373</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.374</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -9793,7 +9812,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.373</span>
+              <span class="lic-ver">v3.26.374</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -11805,22 +11824,6 @@ transition-duration: .01ms !important;
         </div>
         <div class="poke-card-scroll chat-search-results" id="chat-search-results"></div>
       </div>
-      <!-- 帮我决定：聊天页底部半框（v3.5.53 露出聊天消息） -->
-      <div class="poke-card" id="chat-decision-panel" hidden>
-        <div class="poke-card-head">
-          <span>帮我决定</span>
-          <button class="poke-card-close" id="chat-decision-close">✕</button>
-        </div>
-        <div class="poke-card-scroll" id="chat-decision-body"></div>
-      </div>
-      <!-- 多人决定：聊天页底部半框（同帮我决定，群成员各自出结果） -->
-      <div class="poke-card" id="chat-gdecision-panel" hidden>
-        <div class="poke-card-head">
-          <span>多人决定</span>
-          <button class="poke-card-close" id="chat-gdecision-close">✕</button>
-        </div>
-        <div class="poke-card-scroll" id="chat-gdecision-body"></div>
-      </div>
       <!-- 占卜：聊天页底部半框（v3.5.53 露出聊天消息） -->
       <div class="poke-card" id="chat-divine-panel" hidden>
         <div class="poke-card-head">
@@ -12501,6 +12504,23 @@ transition-duration: .01ms !important;
         <span class="ch-name" id="myarc-title">我的档案</span>
       </div>
       <div class="narc-scroll" id="myarc-root"></div>
+    </div>
+
+    <!-- 帮我决定：.phone 级底部半框（v3.5.53 露出聊天消息；聊天页/群聊页共用，群聊里结果发到群聊） -->
+    <div class="poke-card" id="chat-decision-panel" hidden>
+      <div class="poke-card-head">
+        <span>帮我决定</span>
+        <button class="poke-card-close" id="chat-decision-close">✕</button>
+      </div>
+      <div class="poke-card-scroll" id="chat-decision-body"></div>
+    </div>
+    <!-- 多人决定：.phone 级底部半框（同帮我决定，群成员各自出结果；群聊里结果发到群聊） -->
+    <div class="poke-card" id="chat-gdecision-panel" hidden>
+      <div class="poke-card-head">
+        <span>多人决定</span>
+        <button class="poke-card-close" id="chat-gdecision-close">✕</button>
+      </div>
+      <div class="poke-card-scroll" id="chat-gdecision-body"></div>
     </div>
 
     <!-- 群聊页（桌面点「群聊」进入；所有桌面成员在一个窗口里聊天） -->
@@ -19473,6 +19493,31 @@ const sub = document.createElement('div');
 sub.className = 'desk-lib-sub';
 sub.textContent = '组件全局唯一：选择后会从原位置移动过来';
 box.appendChild(title); box.appendChild(sub);
+const tabWrap = document.createElement('div');
+tabWrap.className = 'desk-lib-tabs';
+const groups = [ { key: 'widget', label: '小组件' }, { key: 'icon', label: '图标' } ];
+const panels = {};
+groups.forEach((g, gi) => {
+const tab = document.createElement('button');
+tab.type = 'button';
+tab.className = 'desk-lib-tab' + (gi === 0 ? ' on' : '');
+tab.textContent = g.label;
+tab.addEventListener('click', () => {
+tabWrap.querySelectorAll('.desk-lib-tab').forEach(t => t.classList.remove('on'));
+tab.classList.add('on');
+groups.forEach(x => { const p = panels[x.key]; if (p) p.style.display = (x.key === g.key) ? '' : 'none'; });
+});
+tabWrap.appendChild(tab);
+});
+box.appendChild(tabWrap);
+groups.forEach(g => {
+const p = document.createElement('div');
+p.className = 'desk-lib-panel';
+p.style.display = (g.key === 'widget') ? '' : 'none';
+box.appendChild(p);
+panels[g.key] = p;
+});
+const libPanel = (wid) => panels[wid.indexOf('app-') === 0 ? 'icon' : 'widget'];
 WIDGET_IDS.forEach(wid => {
 const item = document.createElement('div');
 item.className = 'desk-lib-item';
@@ -19507,7 +19552,7 @@ toast('已添加到本页');
 });
 meta.appendChild(name); meta.appendChild(where);
 item.appendChild(prev); item.appendChild(meta); item.appendChild(btn);
-box.appendChild(item);
+libPanel(wid).appendChild(item);
 });
 const imgItem = document.createElement('div');
 imgItem.className = 'desk-lib-item';
@@ -19529,7 +19574,7 @@ imgBtn.textContent = '上传并添加';
 imgBtn.addEventListener('click', () => { addDeskImage(pageIdx); lib.remove(); });
 imgMeta.appendChild(imgName); imgMeta.appendChild(imgWhere);
 imgItem.appendChild(imgPrev); imgItem.appendChild(imgMeta); imgItem.appendChild(imgBtn);
-box.appendChild(imgItem);
+panels.widget.appendChild(imgItem);
 const textItem = document.createElement('div');
 textItem.className = 'desk-lib-item';
 const textPrev = document.createElement('div');
@@ -19550,7 +19595,7 @@ textBtn.textContent = '添加文字';
 textBtn.addEventListener('click', () => { addDeskText(pageIdx); lib.remove(); });
 textMeta.appendChild(textName); textMeta.appendChild(textWhere);
 textItem.appendChild(textPrev); textItem.appendChild(textMeta); textItem.appendChild(textBtn);
-box.appendChild(textItem);
+panels.widget.appendChild(textItem);
 const cdItem = document.createElement('div');
 cdItem.className = 'desk-lib-item';
 const cdPrev = document.createElement('div');
@@ -19571,7 +19616,7 @@ cdBtn.textContent = '添加倒计时';
 cdBtn.addEventListener('click', () => { addDeskCountdown(pageIdx); lib.remove(); });
 cdMeta.appendChild(cdName); cdMeta.appendChild(cdWhere);
 cdItem.appendChild(cdPrev); cdItem.appendChild(cdMeta); cdItem.appendChild(cdBtn);
-box.appendChild(cdItem);
+panels.widget.appendChild(cdItem);
 const close = document.createElement('button');
 close.textContent = '关闭';
 close.style.cssText = 'width:100%;margin-top:8px;padding:10px;border:1px solid #eee;border-radius:10px;background:#fafafa;font-size:13px;cursor:pointer;font-family:inherit';
@@ -19824,6 +19869,24 @@ saveDeskTextsMeta(loadDeskTextsMeta().filter(m => m.id !== id));
 renderDeskTexts();
 toast('已删除');
 }
+function moveDeskText(id, dir) {
+const meta = loadDeskTextsMeta();
+const idx = meta.findIndex(x => x.id === id);
+if (idx < 0) return;
+const same = [];
+meta.forEach((x, i) => { if (x.page === meta[idx].page) same.push(i); });
+const pos = same.indexOf(idx);
+if (dir === 'up' && pos > 0) {
+const a = same[pos - 1];
+const t = meta[a]; meta[a] = meta[idx]; meta[idx] = t;
+} else if (dir === 'down' && pos < same.length - 1) {
+const a = same[pos + 1];
+const t = meta[a]; meta[a] = meta[idx]; meta[idx] = t;
+} else return;
+saveDeskTextsMeta(meta);
+renderDeskTexts();
+toast(dir === 'up' ? '已上移' : '已下移');
+}
 function removeDeskTextsOnPage(pageIdx) {
 saveDeskTextsMeta(loadDeskTextsMeta().filter(m => m.page !== pageIdx));
 }
@@ -19853,6 +19916,10 @@ const colors = ['#333', '#666', '#999', '#e05555', '#3a7bd5', '#4a9d5e', '#d6459
 const ci = colors.indexOf(m.color || '#333');
 m.color = colors[(ci + 1) % colors.length];
 saveDeskTextsMeta(meta); renderDeskTexts(); toast('已换颜色');
+} else if (v === '__moveup__') {
+moveDeskText(id, 'up');
+} else if (v === '__movedn__') {
+moveDeskText(id, 'down');
 } else if (v === '__del__') {
 removeDeskText(id);
 } else if (v && v.trim()) {
@@ -19865,6 +19932,8 @@ pills: [
 { label: '字号+', value: '__sizeup__' },
 { label: '字号-', value: '__sizedn__' },
 { label: '换颜色', value: '__color__' },
+{ label: '上移', value: '__moveup__' },
+{ label: '下移', value: '__movedn__' },
 { label: '删除', value: '__del__' },
 ],
 });
@@ -19918,6 +19987,24 @@ saveDeskCountdownsMeta(loadDeskCountdownsMeta().filter(m => m.id !== id));
 renderDeskCountdowns();
 toast('已删除');
 }
+function moveDeskCountdown(id, dir) {
+const meta = loadDeskCountdownsMeta();
+const idx = meta.findIndex(x => x.id === id);
+if (idx < 0) return;
+const same = [];
+meta.forEach((x, i) => { if (x.page === meta[idx].page) same.push(i); });
+const pos = same.indexOf(idx);
+if (dir === 'up' && pos > 0) {
+const a = same[pos - 1];
+const t = meta[a]; meta[a] = meta[idx]; meta[idx] = t;
+} else if (dir === 'down' && pos < same.length - 1) {
+const a = same[pos + 1];
+const t = meta[a]; meta[a] = meta[idx]; meta[idx] = t;
+} else return;
+saveDeskCountdownsMeta(meta);
+renderDeskCountdowns();
+toast(dir === 'up' ? '已上移' : '已下移');
+}
 function removeDeskCountdownsOnPage(pageIdx) {
 saveDeskCountdownsMeta(loadDeskCountdownsMeta().filter(m => m.page !== pageIdx));
 }
@@ -19937,6 +20024,8 @@ const m = meta.find(x => x.id === id);
 if (!m) return;
 window.openModal('编辑倒计时', m.title + '|' + m.date, (v) => {
 if (v === '__del__') { removeDeskCountdown(id); return; }
+if (v === '__moveup__') { moveDeskCountdown(id, 'up'); return; }
+if (v === '__movedn__') { moveDeskCountdown(id, 'down'); return; }
 if (!v || !v.trim()) return;
 const parts = v.split('|');
 const title = (parts[0] || '').trim();
@@ -19947,7 +20036,11 @@ saveDeskCountdownsMeta(meta);
 renderDeskCountdowns();
 }, {
 placeholder: '标题|日期，如 出差|2026-09-16',
-pills: [{ label: '删除', value: '__del__' }],
+pills: [
+{ label: '上移', value: '__moveup__' },
+{ label: '下移', value: '__movedn__' },
+{ label: '删除', value: '__del__' },
+],
 });
 });
 }
@@ -23791,7 +23884,7 @@ try { if (chatVisible()) renderWindow(true); } catch (e) {}
 };
 window.chatAddSystem = function (text, opts) {
 opts = opts || {};
-return addIn(text, { special: opts.special || 'poke', img: opts.img, mailNotice: opts.mailNotice, askQuestion: opts.askQuestion, askStatus: opts.askStatus, askOptions: opts.askOptions, askType: opts.askType, choiceQuestion: opts.choiceQuestion, choiceOptions: opts.choiceOptions, choicePref: opts.choicePref, choiceCat: opts.choiceCat, curiousQuestion: opts.curiousQuestion, curiousQuick: opts.curiousQuick, curiousReplies: opts.curiousReplies, curiousFollowup: opts.curiousFollowup, curiousQid: opts.curiousQid, curiousCat: opts.curiousCat, roastText: opts.roastText, roastCat: opts.roastCat, deskCk: opts.deskCk, deskCkDir: opts.deskCkDir });
+return addIn(text, { special: opts.special || 'poke', img: opts.img, mailNotice: opts.mailNotice, askQuestion: opts.askQuestion, askStatus: opts.askStatus, askOptions: opts.askOptions, askType: opts.askType, askTs: opts.askTs, choiceQuestion: opts.choiceQuestion, choiceOptions: opts.choiceOptions, choicePref: opts.choicePref, choiceCat: opts.choiceCat, curiousQuestion: opts.curiousQuestion, curiousQuick: opts.curiousQuick, curiousReplies: opts.curiousReplies, curiousFollowup: opts.curiousFollowup, curiousQid: opts.curiousQid, curiousCat: opts.curiousCat, roastText: opts.roastText, roastCat: opts.roastCat, deskCk: opts.deskCk, deskCkDir: opts.deskCkDir });
 };
 window.chatAddIn = function (text, opts) {
 const r = addIn(text, opts);
@@ -28910,6 +29003,13 @@ body.appendChild(m);
 pruneGcDom();
 return m;
 }
+if (rec.special === 'system') {
+m.className = 'msg-poke';
+m.innerHTML = '<span>' + escTxtBr(rec.text || '') + '</span>';
+body.appendChild(m);
+pruneGcDom();
+return m;
+}
 const quoteStr = rec.quote ? gcQuoteHtml(rec.quote) : '';
 if (rec.retracted) {
 b.dataset.orig = rec.orig || rec.text;
@@ -29093,6 +29193,22 @@ gcDraftImgs = [];
 renderGcDraft();
 scheduleReply(t);
 }
+function gcSendDecisionText(text) {
+const t = (text || '').trim();
+if (!t) return;
+const rec = { side: 'in', cid: 'system', name: '系统', text: t, ts: Date.now(), special: 'system' };
+msgs.push(rec);
+saveMsgs();
+renderMsg(rec);
+followGcBottom(true);
+if (window.playSfx) window.playSfx('in');
+}
+function gcIsVisible() {
+const p = document.getElementById('page-group-chat');
+return !!(p && !p.hidden);
+}
+window.gcSendDecisionText = gcSendDecisionText;
+window.gcIsVisible = gcIsVisible;
 function sendGcSticker(src) {
 if (!src) return;
 const rec = { side: 'out', type: 'sticker', text: src, ts: Date.now() };
@@ -29899,8 +30015,10 @@ gcMorePanel.addEventListener('click', (e) => {
 const item = e.target.closest('.more-item');
 if (!item) return;
 if (gcMoreAt && (item === gcMoreAt || item.contains(gcMoreAt))) return;
+const keepInGroup = (item.id === 'more-decide' || item.id === 'more-gdecide');
 gcMorePanel.hidden = true;
 gcSetMoreTopbar(false);
+if (keepInGroup) return;
 const chatPage = document.getElementById('page-chat');
 if (chatPage && chatPage.hidden) {
 document.querySelectorAll('.page').forEach(p => p.hidden = true);
@@ -36036,6 +36154,7 @@ let curTab = 'lib';
 let playQueue = [];        // 播放队列：用户点「下一首播放」加入的歌曲 id 列表，播完当前手动/自动切歌时优先按序播放
 let localPlId = 'default'; // 本地上传的目标播放列表（歌单），单选歌曲时由弹窗决定
 let failMap = {};          // 连续播放失败计数（songId→次数），每次成功播放清零；用于区分临时/网络失败与真坏链
+const localBlobCache = {};
 function loadArr(k) { try { const v = JSON.parse(store.get(k) || 'null'); return Array.isArray(v) ? v : []; } catch(e){ return []; } }
 function saveArr(k, a) { store.set(k, JSON.stringify(a)); }
 function partnerName() { return window.activeStore().get('lbl-partner') || 'TA'; }
@@ -36846,6 +36965,7 @@ const name = file.name.replace(/\.[^.]+$/, '');
 const item = { id: id, name: name, artist: '', url: '', source: 'local', duration: 0, playlistId: localPlId || 'default', addedAt: Date.now() };
 library.push(item);
 const payload = buf instanceof ArrayBuffer ? new Blob([buf], { type: file.type || 'audio/mpeg' }) : buf;
+localBlobCache[id] = payload; // v3.29.x 内存缓存：playTrack 同步读取保留用户手势
 const tmp = document.createElement('audio');
 tmp.preload = 'metadata';
 let tmpUrl = null;
@@ -37708,6 +37828,10 @@ if (!currentId) return;
 if (httpsRetrying || demoFallbackBusy) return;
 const m = findTrack(currentId);
 if (!m) return;
+if (m.source === 'local' || (!m.url && m.source !== 'url')) {
+try { playTrack(currentId); } catch (e) {}
+return;
+}
 try { if (audio) { audio.pause(); audio.onended = null; audio.onerror = null; audio.onloadedmetadata = null; audio.onplay = null; audio.onpause = null; if (audio.parentNode) audio.parentNode.removeChild(audio); } } catch (e) {}
 audio = createAudio();
 try { audio.referrerPolicy = 'no-referrer'; } catch (e) {}
@@ -38069,6 +38193,12 @@ toast('音乐文件加载失败，可能已被清理'); wantPlay = false; clearB
 }
 playLocal(m, v);
 };
+{
+const cached = localBlobCache[m.id];
+if (cached) { loadLocal(cached); return; }
+const lsSync = store.get('music-file:' + m.id);
+if (lsSync) { localBlobCache[m.id] = lsSync; loadLocal(lsSync); return; }
+}
 if (window.idbGet) {
 window.idbGet(key).then(v => {
 if (currentId !== m.id) return; // 已切歌
@@ -38096,7 +38226,7 @@ if (v2 !== undefined && v2 !== null) loadLocal(v2);
 else failLocal();
 });
 }, 600);
-} else loadLocal(v);
+} else { localBlobCache[m.id] = v; loadLocal(v); }
 });
 } else {
 loadLocal(store.get('music-file:' + m.id));
@@ -63394,6 +63524,7 @@ function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').repla
 let activeTab = 'typea';
 let countdownTimer = null;
 let decideTimer = null; // v3.6.x：结果 setTimeout 句柄——防连点导致历史/聊天消息重复
+let panelFromGroup = false; // v3.26.x：本面板是否从群聊页打开（是→结果发到群聊，否→发到聊天）
 const panel = document.getElementById('chat-decision-panel');
 const body = document.getElementById('chat-decision-body');
 function ensureBuilt() {
@@ -63404,6 +63535,7 @@ body.dataset.built = '1';
 }
 function openPanel() {
 if (!body || !panel) return;
+try { panelFromGroup = !!(window.gcIsVisible && window.gcIsVisible()); } catch (e) { panelFromGroup = false; }
 ensureBuilt();
 activeTab = 'typea';
 document.querySelectorAll('#chat-decision-body .dc-tab').forEach(tb => tb.classList.toggle('sel', tb.dataset.dtab === 'typea'));
@@ -63547,7 +63679,8 @@ if (loadSettings().replyToChat) {
 const replyText = type === 'typeb' && options
 ? '【帮我决定】' + question + '\n选项：\n' + options.map((o, i) => (i + 1) + '. ' + o).join('\n') + '\n→ ' + result
 : '【帮我决定】' + question + ' → ' + result;
-if (window.chatAddIn) window.chatAddIn(replyText, { enter: true, silent: true });
+if (panelFromGroup && window.gcSendDecisionText) window.gcSendDecisionText(replyText);
+else if (window.chatAddIn) window.chatAddIn(replyText, { enter: true, silent: true });
 }
 toast('帮我决定已完成');
 }, thinkTime * 1000);
@@ -63725,6 +63858,7 @@ try { if (gdDecideTimer) { clearTimeout(gdDecideTimer); gdDecideTimer = null; } 
 let activeTab = 'typea';
 let gdCountdownTimer = null;
 let gdDecideTimer = null;
+let gdPanelFromGroup = false; // v3.26.x：本面板是否从群聊页打开（是→结果发到群聊，否→发到聊天）
 const panel = document.getElementById('chat-gdecision-panel');
 const body = document.getElementById('chat-gdecision-body');
 function ensureBuilt() {
@@ -63735,6 +63869,7 @@ body.dataset.built = '1';
 }
 function openPanel() {
 if (!body || !panel) return;
+try { gdPanelFromGroup = !!(window.gcIsVisible && window.gcIsVisible()); } catch (e) { gdPanelFromGroup = false; }
 ensureBuilt();
 activeTab = 'typea';
 document.querySelectorAll('#chat-gdecision-body .dc-tab').forEach(tb => tb.classList.toggle('sel', tb.dataset.dtab === 'typea'));
@@ -63943,7 +64078,8 @@ const lines = selectedMembers.map(m => '【' + m + '】' + results[m]);
 const replyText = type === 'typeb' && options
 ? '【多人决定】' + question + '\n选项：\n' + options.map((o, i) => (i + 1) + '. ' + o).join('\n') + '\n' + lines.join('\n')
 : '【多人决定】' + question + '\n' + lines.join('\n');
-if (window.chatAddIn) window.chatAddIn(replyText, { enter: true, silent: true });
+if (gdPanelFromGroup && window.gcSendDecisionText) window.gcSendDecisionText(replyText);
+else if (window.chatAddIn) window.chatAddIn(replyText, { enter: true, silent: true });
 }
 toast('多人决定已完成');
 }, thinkTime * 1000);
@@ -69400,28 +69536,77 @@ if (p && p.then) p.then(start).catch(function () {});
 else start();
 } catch (e) { start(); }
 }
-window.playSfx = function (type, opts) {
-try {
-const loop = !(opts && opts.loop === false);
-const custom = store.get(KEYS[type]);
-if (custom && typeof custom === 'string' && custom.length > 10) {
 const releaseWhenDone = function (el) {
 const done = function () { try { el.removeAttribute('src'); el.load(); } catch (e) {} };
 el.addEventListener('ended', done);
 el.addEventListener('error', done);
 };
-if (type === 'ring' && loop) {
+let ringObjUrl = null; // 通话铃声 blob: URL（stopSfx/替换时回收）
+function revokeRingObjUrl() {
+if (ringObjUrl) { try { URL.revokeObjectURL(ringObjUrl); } catch (e) {} ringObjUrl = null; }
+}
+function dataUrlToBlob(dataUrl, cb) {
+try {
+const p = fetch(dataUrl).then(function (r) { return r.blob(); });
+if (p && p.then) p.then(function (b) { cb(b); }, function () { cb(null); });
+else cb(null);
+} catch (e) { cb(null); }
+}
+function ringBuiltinFallbackId() {
+const bid = store.get(BKEYS.ring);
+return (bid && bid !== 'none' && SYNTHS[bid]) ? bid : 'ring-warm';
+}
+let lastRingCustomFailToast = 0; // 兜底 toast 去重（5 分钟一次，避免每次来电都弹）
+function ringCustomFail(wasLoop) {
+if (ringAudio) { try { ringAudio.pause(); } catch (e) {} ringAudio = null; }
+revokeRingObjUrl();
+const now = Date.now();
+if (now - lastRingCustomFailToast > 5 * 60 * 1000) {
+lastRingCustomFailToast = now;
+toast(wasLoop ? '自定义铃声无法播放，已改用内置铃声' : '自定义铃声无法播放');
+}
+if (wasLoop) playBuiltin(ringBuiltinFallbackId(), true); // 来电兜底：保证不无声
+}
+window.playSfx = function (type, opts) {
+try {
+const loop = !(opts && opts.loop === false);
+const custom = store.get(KEYS[type]);
+if (custom && typeof custom === 'string' && custom.length > 10) {
+if (type === 'ring') {
+const playRingWith = function (src) {
 if (ringAudio) { try { ringAudio.pause(); } catch (e) {} try { ringAudio.removeAttribute('src'); ringAudio.load(); } catch (e) {} }
-ringAudio = new Audio(custom);
-ringAudio.loop = true;
+ringAudio = new Audio(src);
+ringAudio.loop = loop;
 ringAudio.volume = 0.9;
-ringAudio.play().catch(() => { ringAudio = null; });
+let failed = false;
+const fail = function () { if (!failed) { failed = true; ringCustomFail(loop); } };
+ringAudio.addEventListener('error', fail);
+ringAudio.play().catch(fail);
+};
+if (custom.indexOf('data:') === 0) {
+dataUrlToBlob(custom, function (b) {
+if (b) {
+try {
+const newUrl = URL.createObjectURL(b);
+revokeRingObjUrl(); // 先回收旧 URL，再挂新 URL（顺序不可反：先 revoke 会把新 URL 也一起回收）
+ringObjUrl = newUrl;
+playRingWith(newUrl);
+return;
+} catch (e) { revokeRingObjUrl(); }
+}
+revokeRingObjUrl();
+playRingWith(custom); // Blob 不可用（fetch 受限）→ dataURL 直播
+});
 } else {
+revokeRingObjUrl();
+playRingWith(custom);
+}
+return;
+}
 const a = new Audio(custom);
 a.volume = 0.9;
 releaseWhenDone(a);
 a.play().catch(() => {});
-}
 return;
 }
 const bid = store.get(BKEYS[type]);
@@ -69431,6 +69616,7 @@ if (bid !== 'none' && bid && SYNTHS[bid]) playBuiltin(bid, type === 'ring' && lo
 window.stopSfx = function (type) {
 if (type === 'ring') {
 if (ringAudio) { try { ringAudio.pause(); } catch (e) {} ringAudio = null; }
+revokeRingObjUrl();
 if (ringSrc) { try { ringSrc.stop(); } catch (e) {} ringSrc = null; }
 }
 };
@@ -69915,7 +70101,10 @@ if (t && !t.checked && stillSysFs) showSystemFsNote();
 try { relabelIosToggle(); } catch (e) {}
 }
 function syncFsClass() {
-document.documentElement.classList.toggle('fs-active', isFullscreen());
+const d = document.documentElement;
+const _fs = isFullscreen();
+d.classList.toggle('fs-active', _fs);
+if (isIOS) d.classList.toggle('ios-native-fs', _fs);
 }
 function fsInPwa() {
 try {
@@ -70149,6 +70338,56 @@ r.readAsText(file, 'utf-8');
 }
 });
 }
+function blobToBase64(blob) {
+return blob.arrayBuffer().then((buf) => {
+const bytes = new Uint8Array(buf);
+const CHUNK = 3 * 5120; // 15360 字节，3 的倍数
+let out = '';
+for (let i = 0; i < bytes.length; i += CHUNK) {
+const end = Math.min(i + CHUNK, bytes.length);
+let bin = '';
+for (let j = i; j < end; j++) bin += String.fromCharCode(bytes[j]);
+out += btoa(bin);
+}
+return out;
+});
+}
+async function jsonToBlobStreaming(data) {
+const parts = [];
+let len = 0;
+let blob = null;
+const flush = () => {
+if (!parts.length) return;
+blob = new Blob(blob ? [blob].concat(parts) : parts, { type: 'application/json;charset=utf-8' });
+parts.length = 0;
+len = 0;
+};
+const push = (s) => {
+if (!s) return;
+parts.push(s);
+len += s.length;
+if (len >= 4 * 1024 * 1024) flush(); // 每 ~4MB 合并一次，避免 parts 无限堆积
+};
+const yieldNow = () => new Promise((r) => setTimeout(r, 0));
+push('{"version":"1.0","app":"mochi-zika","exportTime":' + JSON.stringify(data.exportTime) + ',"ls":{');
+const lsKeys = Object.keys(data.ls);
+for (let i = 0; i < lsKeys.length; i++) {
+if (i) push(',');
+push(JSON.stringify(lsKeys[i]) + ':' + JSON.stringify(data.ls[lsKeys[i]]));
+}
+push('},"idb":{');
+const idbKeys = Object.keys(data.idb);
+for (let i = 0; i < idbKeys.length; i++) {
+const k = idbKeys[i];
+if (i) push(',');
+push(JSON.stringify(k) + ':' + JSON.stringify(data.idb[k]));
+delete data.idb[k]; // 序列化完即释放，控制峰值内存
+if ((i & 3) === 3) await yieldNow(); // 每 4 个大键让出主线程一次
+}
+push('}}');
+flush();
+return blob;
+}
 async function doExport() {
 impShow('正在导出…', '正在读取全部数据', 3);
 const data = { version: '1.0', app: 'mochi-zika', exportTime: new Date().toISOString(), ls: {}, idb: {} };
@@ -70205,14 +70444,7 @@ v = await window.idbGet(k);
 }
 if (v !== undefined && v !== null) {
 if (v instanceof Blob) {
-const buf = await v.arrayBuffer();
-const bytes = new Uint8Array(buf);
-let bin = '';
-const chunk = 0x8000;
-for (let i = 0; i < bytes.length; i += chunk) {
-bin += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
-}
-add(k, 'data:' + (v.type || 'audio/mpeg') + ';base64,' + btoa(bin));
+add(k, 'data:' + (v.type || 'audio/mpeg') + ';base64,' + await blobToBase64(v));
 } else {
 add(k, v); // 权威值以 IDB 为准（含最新聊天记录）
 }
@@ -70238,16 +70470,15 @@ if (isAuthorityKey(k)) exportMissing.push(k);
 }
 Object.keys(lsBig).forEach((k) => { add(k, lsBig[k]); });
 impShow('正在导出…', '正在打包数据文件', 72);
-const json = JSON.stringify(data);
-const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
-const fname = 'mochi数据备份_' + localDateStr(new Date()) + '.json';
-const sizeStr = fmtSize(json.length);
 const coverLines = exportCoverage(data);
 let coverText = '导出内容（全局全部数据）：\n' + coverLines.join('\n') + '\n——';
 if (exportMissing.length) {
 const names = exportMissing.map(k => /:chat-msgs$/.test(k) ? '聊天记录(' + k.slice('xy-home-v2:'.length) + ')' : '朋友圈(' + k.slice('xy-home-v2:'.length) + ')');
 coverText += '\n⚠ 以下数据可能未完整导出（IDB 读取失败，仅拿到有损快照或丢失）：\n' + names.map(n => '· ' + n).join('\n') + '\n请勿清空原设备数据，建议重启浏览器后重新导出。';
 }
+const blob = await jsonToBlobStreaming(data);
+const fname = 'mochi数据备份_' + localDateStr(new Date()) + '.json';
+const sizeStr = fmtSize(blob.size);
 try { localStorage.setItem('xy-home-v2:__last-backup', String(Date.now())); } catch (e) {}
 impShow('正在导出…', '正在准备保存文件', 92);
 const saveRes = await saveBackupFile(blob, fname);
@@ -70266,7 +70497,8 @@ async function saveBackupFile(blob, fname) {
 const file = new File([blob], fname, { type: 'application/json;charset=utf-8' });
 const ua = (navigator.userAgent || '').toLowerCase();
 const brokenFileShare = /huaweibrowser|quark/.test(ua);
-if (!brokenFileShare && navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+const shareMax = 50 * 1024 * 1024;
+if (!brokenFileShare && blob.size <= shareMax && navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
 try {
 await navigator.share({ files: [file], title: 'mochi 数据备份' });
 return 'ok';
@@ -70342,6 +70574,7 @@ RULES.forEach(([re, name, parse]) => {
 const ks = allKeys.filter(k => re.test(k));
 const real = ks.filter(k => {
 let v = valOf(k);
+if (typeof v === 'string' && v.length > 1024 * 1024) return v !== '';
 if (typeof v === 'string') { try { v = JSON.parse(v); } catch (e) {} }
 return v !== null && v !== undefined && v !== '';
 });
@@ -70350,8 +70583,11 @@ matched.add(name);
 let desc = '✓有';
 try {
 let v = valOf(real[0]);
+if (typeof v === 'string' && v.length > 1024 * 1024) desc = '✓有（数据较大）';
+else {
 if (typeof v === 'string') v = JSON.parse(v);
 if (parse && (Array.isArray(v) || (v && typeof v === 'object'))) desc = parse(v);
+}
 } catch (e) {}
 lines.push('· ' + name + '：' + desc);
 });
@@ -72673,6 +72909,32 @@ ty === 'date' || ty === 'time' || ty === 'datetime-local' || ty === 'month' || t
 ceConvert(t);
 if (t.__ceBox) { try { t.__ceBox.focus(); } catch (err) {} }
 }, true);
+}
+if (!isIOS) {
+function ceNeedsConv(t) {
+if (!t || t.dataset.ceDone || t.__ceBox) return false;
+var ty = t.type;
+return !(ty === 'checkbox' || ty === 'range' || ty === 'file' || ty === 'color' || ty === 'hidden' ||
+ty === 'date' || ty === 'time' || ty === 'datetime-local' || ty === 'month' || ty === 'week');
+}
+var _origInpFocus = HTMLInputElement.prototype.focus;
+HTMLInputElement.prototype.focus = function () {
+if (this.__ceBox) { try { this.__ceBox.focus(); } catch (e) {} return; }
+if (ceNeedsConv(this)) {
+ceConvert(this);
+if (this.__ceBox) { try { this.__ceBox.focus(); } catch (e) {} return; }
+}
+return _origInpFocus.apply(this, arguments);
+};
+var _origTAFocus = HTMLTextAreaElement.prototype.focus;
+HTMLTextAreaElement.prototype.focus = function () {
+if (this.__ceBox) { try { this.__ceBox.focus(); } catch (e) {} return; }
+if (ceNeedsConv(this)) {
+ceConvert(this);
+if (this.__ceBox) { try { this.__ceBox.focus(); } catch (e) {} return; }
+}
+return _origTAFocus.apply(this, arguments);
+};
 }
 function _aRefreshCe() {
 try { if (_aClosing) return; } catch (e) {}

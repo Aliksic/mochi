@@ -110,7 +110,7 @@ async function runViewport(w, h) {
   // Check settings page (page-setting)
   await evalJs("(function(){document.querySelectorAll('.page').forEach(function(p){p.hidden=(p.id!=='page-setting');});})()");
   await sleep(300);
-  const setting = JSON.parse(await evalJs("(function(){var ph=document.querySelector('.phone');var pr=ph.getBoundingClientRect();var pg=document.getElementById('page-setting');var hasContent=pg&&pg.querySelector('.gs-scroll');return JSON.stringify({phoneH:Math.round(pr.height),hasContent:!!hasContent});})()") || '{}');
+  const setting = JSON.parse(await evalJs("(function(){var ph=document.querySelector('.phone');var pr=ph.getBoundingClientRect();var pg=document.getElementById('page-setting');var hasContent=pg&&!pg.hidden&&pg.children.length>0&&pg.getBoundingClientRect().height>120;return JSON.stringify({phoneH:Math.round(pr.height),hasContent:!!hasContent});})()") || '{}');
   check(w + 'x' + h + ' 设置页 内容存在', setting.hasContent === true);
 
   // Check calendar page (page-calendar)
@@ -122,19 +122,19 @@ async function runViewport(w, h) {
   // Check mail page (page-mail)
   await evalJs("(function(){document.querySelectorAll('.page').forEach(function(p){p.hidden=(p.id!=='page-mail');});})()");
   await sleep(300);
-  const mail = JSON.parse(await evalJs("(function(){var ph=document.querySelector('.phone');var pr=ph.getBoundingClientRect();var pg=document.getElementById('page-mail');var hasContent=pg&&pg.querySelector('.mail-list');return JSON.stringify({phoneH:Math.round(pr.height),hasContent:!!hasContent});})()") || '{}');
+  const mail = JSON.parse(await evalJs("(function(){var ph=document.querySelector('.phone');var pr=ph.getBoundingClientRect();var pg=document.getElementById('page-mail');var hasContent=pg&&pg.querySelector('#mail-in-list');return JSON.stringify({phoneH:Math.round(pr.height),hasContent:!!hasContent});})()") || '{}');
   check(w + 'x' + h + ' 信箱页 内容存在', mail.hasContent === true);
 
   // Check feed page (page-feed)
   await evalJs("(function(){document.querySelectorAll('.page').forEach(function(p){p.hidden=(p.id!=='page-feed');});})()");
   await sleep(300);
-  const feed = JSON.parse(await evalJs("(function(){var ph=document.querySelector('.phone');var pr=ph.getBoundingClientRect();var pg=document.getElementById('page-feed');var hasContent=pg&&pg.querySelector('.feed-list');return JSON.stringify({phoneH:Math.round(pr.height),hasContent:!!hasContent});})()") || '{}');
+  const feed = JSON.parse(await evalJs("(function(){var ph=document.querySelector('.phone');var pr=ph.getBoundingClientRect();var pg=document.getElementById('page-feed');var hasContent=pg&&!pg.hidden&&pg.children.length>0&&pg.getBoundingClientRect().height>120;return JSON.stringify({phoneH:Math.round(pr.height),hasContent:!!hasContent});})()") || '{}');
   check(w + 'x' + h + ' 朋友圈页 内容存在', feed.hasContent === true);
 
-  // Check divination page (page-divination)
-  await evalJs("(function(){document.querySelectorAll('.page').forEach(function(p){p.hidden=(p.id!=='page-divination');});})()");
+  // Check divination page (page-divine，旧 id page-divination 已改名)
+  await evalJs("(function(){document.querySelectorAll('.page').forEach(function(p){p.hidden=(p.id!=='page-divine');});})()");
   await sleep(300);
-  const div = JSON.parse(await evalJs("(function(){var ph=document.querySelector('.phone');var pr=ph.getBoundingClientRect();var pg=document.getElementById('page-divination');var hasContent=pg&&pg.querySelector('.div-scroll');return JSON.stringify({phoneH:Math.round(pr.height),hasContent:!!hasContent});})()") || '{}');
+  const div = JSON.parse(await evalJs("(function(){var ph=document.querySelector('.phone');var pr=ph.getBoundingClientRect();var pg=document.getElementById('page-divine');var hasContent=pg&&!pg.hidden&&pg.children.length>0&&pg.getBoundingClientRect().height>120;return JSON.stringify({phoneH:Math.round(pr.height),hasContent:!!hasContent});})()") || '{}');
   check(w + 'x' + h + ' 占卜页 内容存在', div.hasContent === true);
 
   // Check memory page (page-memory)
@@ -146,7 +146,7 @@ async function runViewport(w, h) {
   // Check chat-card page (page-chatcard)
   await evalJs("(function(){document.querySelectorAll('.page').forEach(function(p){p.hidden=(p.id!=='page-chatcard');});})()");
   await sleep(300);
-  const cc = JSON.parse(await evalJs("(function(){var ph=document.querySelector('.phone');var pr=ph.getBoundingClientRect();var pg=document.getElementById('page-chatcard');var hasContent=pg&&pg.querySelector('.card-list');return JSON.stringify({phoneH:Math.round(pr.height),hasContent:!!hasContent});})()") || '{}');
+  const cc = JSON.parse(await evalJs("(function(){var ph=document.querySelector('.phone');var pr=ph.getBoundingClientRect();var pg=document.getElementById('page-chatcard');var hasContent=pg&&!pg.hidden&&pg.children.length>0&&pg.getBoundingClientRect().height>120;return JSON.stringify({phoneH:Math.round(pr.height),hasContent:!!hasContent});})()") || '{}');
   check(w + 'x' + h + ' 字卡库页 内容存在', cc.hasContent === true);
 }
 

@@ -83,7 +83,12 @@ const built = readFileSync(join(root, 'index.html'), 'utf8');
 check('S1 构建产物含 DEFAULT_CARD_DATA.eat（提醒吃饭/追问关心 两组）', built.indexOf('DEFAULT_CARD_DATA.eat') >= 0 && built.indexOf('"提醒吃饭"') >= 0 && built.indexOf('"追问关心"') >= 0);
 check('S2 字卡库注册【吃饭】tab（v3.16.x 独立页 #fc-tabs 静态预置）', /data-type="eat">吃饭<\/button>/.test(readFileSync(join(root, 'src', 'template.html'), 'utf8')) && /data-type="eat"/.test(built));
 check('S3 吃什么页含 TA 提醒开关/概率按钮 + 饭点窗口表', built.indexOf('eat-remind-toggle') >= 0 && built.indexOf('eat-remind-prob') >= 0 && built.indexOf('EAT_REMIND_WINDOWS') >= 0);
-check('S4 触发链路 chatAddIn + bgNotifyCheck（TA的吃饭提醒）+ done 去重键', built.indexOf("name: 'TA的吃饭提醒'") >= 0 && built.indexOf("'eat-remind-done:'") >= 0 && /eatRemindFire[\s\S]{0,900}window\.chatAddIn/.test(built));
+// #93：吃饭提醒的后台通知统一由 chatAddIn 内部 addRec→showDeskMsg 发，eatRemindFire 不再自己调 bgNotifyCheck
+// （背靠背各发一条、去重指纹异步登记来不及拦 → 后台弹两条）。产物整行去缩进，函数体可按顶层 function 边界切。
+const fireStart = built.indexOf('function eatRemindFire(');
+const fireEnd = built.indexOf('\nfunction ', fireStart + 10);
+const fireBody = fireStart < 0 ? '' : built.slice(fireStart, fireEnd > fireStart ? fireEnd : fireStart + 4000);
+check('S4 触发链路：eatRemindFire 走 chatAddIn 且不再自己 bgNotifyCheck（#93 后台双弹修复）+ done 去重键', fireBody.length > 200 && /window\.chatAddIn/.test(fireBody) && fireBody.indexOf('bgNotifyCheck') < 0 && built.indexOf("'eat-remind-done:'") >= 0, '函数体 ' + fireBody.length + ' 字符');
 check('S5 启动即查一次（打开应用恰在窗口内可立即触发）', /eatRemindMaybe\(\);\s*\/\/\s*启动即查一次/.test(built));
 check('S6 夜宵专属话术分组（夜宵提醒/夜宵关心）+ 抽取池常量 DEF_EAT_REMIND_NIGHT', built.indexOf('"夜宵提醒"') >= 0 && built.indexOf('"夜宵关心"') >= 0 && built.indexOf('DEF_EAT_REMIND_NIGHT') >= 0);
 
