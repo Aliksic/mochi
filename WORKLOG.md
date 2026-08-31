@@ -1,4 +1,38 @@
-# 本次构建者：AI-B（15:44 按 src 收口构建 sw mochi-mtgxn725 并推送 origin/main；下一轮请重新声明）
+# 本次构建者：AI-B（19:55 按 src 收口构建 sw mochi-mth6lswh，本地提交未推送；下一轮请重新声明）
+
+### 2026-08-31 19:55（构建者收口：#109 iOS 全屏整页上移修复 + 并行会话在途 src 一并入库，本地提交未推送）
+* [AI-B 域·构建者收口]（**改动文件：产物 index.html / sw.js / version.json / manifest.json / icon-*.png / notice.json、build.mjs、WORKLOG.md、FIX-REGRESSION.md；构建状态：已构建·sw mochi-mth6lswh（部署戳 19:55）**）。
+* 一并入库清单（此前均标「未构建」）：#109 iOS 全屏其他功能页整页上移（`base.css` 2 处 `.phone` height 加 `min(…,100dvh)`）、防骗声明开屏置顶+设置页底部（`template.html`+`base.css`+`setting.css`+`dark.css`）、存储优化「可清理空间」中心（`personalize.js`+`template.html`）、#108 清理会员歌曲（`music-player.js`+build.mjs 哨兵）、信箱写信/回信默认 120→480（`reply-settings.js`）、占卜牌面居中（`chat-pages.css`）。
+* 门禁结果（构建后实测）：`node build.mjs` → **关键修复哨兵 177/177 全绿、哑哨兵体检 0 条、sw.js 哨兵 3/3**；`node tools/verify.mjs` **10/10**；`node tools/verify-jsonpack.mjs` **28/28**；`node tools/verify-suite.mjs` 全量 119 通过/68 断言失败/0 环境不满足/2 超时（189 项，既有红项与本次改动无关，未做 --strict 门禁）。
+* 待真机验收：苹果17 自带浏览器 + 全屏模式，聊天/字卡库/日历/设置等任意功能页顶部栏与返回按钮应完整可见可点（#109）。
+
+### 2026-08-31（用户需求：防骗声明「免费 + 只有小红书一个账号」上开屏置顶 + 设置页底部）
+* \[AI-B 域·template.html + base.css + setting.css + dark.css]（**改动文件：src/template.html（开屏 `.splash-alert` 置顶块 + 设置页底部 `.set-alert`）、src/css/base.css（`.splash-alert` 样式）、src/css/setting.css（`.set-alert` 样式）、src/css/dark.css（`.set-alert` 暗色覆盖）、WORKLOG.md；构建状态：未构建**）。
+* 需求/反馈：mochi 字卡网站免费，作者只有小红书这一个账号；若有收费出现，注意防止被骗。用户要求写在「开屏置顶」和「设置功能底部」。
+* 方案：开屏在 `#splash-notice` 最顶部加 `.splash-alert`「防骗提醒」静态块（复用 `--sp-ink`/`--sp-soft` 明暗自适应；静态 DOM，notice.json 在线覆盖只改公告列表，不影响此处）；设置页在版本行下方加 `.set-alert` 居中灰字块（setting.css 定义 + dark.css 暗色覆盖，CSS 顺序 setting→dark 正常生效）。
+* 验证：改的是 HTML/CSS 无 JS，未跑 `node --check`。未构建；待构建者收口（当前构建者为上方声明的 AI-B）。
+
+### 2026-08-31（iOS 全屏模式其他功能页整页上移修复 #109：不只聊天页，所有功能页顶部被推出屏）
+* \[AI-B 域·base.css + build.mjs]（**改动文件：src/css/base.css（2 处 `.phone` height 加 `min(…, 100dvh)` 钳制）、build.mjs（FIX_SENTINELS 追加 #109 ×2）、FIX-REGRESSION.md（#109 行）、WORKLOG.md；构建状态：已构建·sw mochi-mth6lswh（19:55 收口）**）。
+* 需求/反馈：苹果17 自带浏览器 + 全屏模式，除了聊天页，**其他所有功能页整体上移**，顶部内容/返回按钮被推出屏外点不到。
+* 根因：`.phone` 高度在 iOS 全屏/浏览器态由 `--mochi-ios-h`（=visualViewport.height×scale，实测）接管；该值在个别 iOS 版本/全屏过渡/工具条显隐时机超过 100dvh，而 `html,body` 是 `display:flex; align-items:center` → `.phone` 比视口高时 flex 居中把顶部推到负值＝整页上移。这是 `.phone` 级问题，覆盖所有功能页。探针实测 h=900/950 在 844 视口下 top=-28/-53。
+* 方案：两条 `--mochi-ios-h` height 规则加 `min(var(--mochi-ios-h,100dvh), 100dvh)`（① 非 standalone 浏览器态 `html.ios-vv-fit:not(.ios-pwa-standalone) .phone`+tablet 变体；② standalone+全屏 `.ios-pwa-standalone.ios-fs-active .phone`+tablet 变体）。键盘期摘除 `--mochi-ios-h`+内联 height 接管，不受影响。
+* 验证：哨兵 needle 2 条各带完整选择器（base.css 内各唯一 1 次）。**未构建**：本会话不抢执行 node build.mjs（下方另有并行会话在途「存储优化」未收口，遵守单构建者红线）；待该在途收口或用户指示后统一构建。真机（苹果17 自带浏览器+全屏）聊天/字卡库/日历/设置任一功能页顶部栏与返回按钮应完整可见可点。
+* 唯一涉及构建的 src 改动需在本次收口时一起接入。
+
+### 2026-08-31 16:4x（存储优化·「查看存储」页新增「可清理空间」中心）
+* \[AI-B 域·personalize.js + template.html]（**改动文件：src/js/personalize.js、src/template.html；构建状态：未构建**）。
+* 需求/反馈：用户反馈存储已用 ~900MB，要优化；聊天记录按约定不可删。定位后结论——大头是聊天图片/语音（不可删）+ 本地音乐（音乐播放器设置里已有「一键清理」）+ 壁纸 base64。
+* 方案/方案边界：只在「查看存储」页集中一处引导清理，不做批量误删。新增「可清理空间」卡片：① 显示本机音乐文件占用（取 idbStats「本地音乐」分类的 Blob 真实字节）；②「到音乐播放器清理」按钮——复用桌面 `.app[data-app="music"]` 入口跳到音乐页（不直接删 IDB 音乐，避免与音乐播放器内存歌单/外链/种子逻辑脱节，清理交音乐设置的现成按钮收口）；③ 文案说明聊天记录不在清理范围、壁纸/头像/自定义表情各在其设置里可单独删。
+* 验证：`node --check src/js/personalize.js` 过；未构建（AI-A 有在途未构建 src：music-player.js/build.mjs，待收口）。后续可补手机端看板存储页实机核对。
+
+### 2026-08-31 16:05（#108 清理会员歌曲修复：华为 Mate 40 Pro + Edge 显示「网络不可用」实际是第三方 CORS 代理瞬时故障，非断网）
+* \[AI-A 域·music-player.js]（**改动文件：src/js/music-player.js、build.mjs（仅追加 1 条 FIX_SENTINELS #108）、FIX-REGRESSION.md（#108 行）、WORKLOG.md；构建状态：未构建（本会话未跑仓库 build.mjs、未 commit、未 push；`node --check` 已过）**）。待 AI-B 构建收口。
+* 需求/反馈：华为 Mate 40 Pro + Edge，音乐日程卡片→清理会员歌曲一直无法清理、显示「网络不可用」。诊断实证：`navigator.onLine=true`、存储/SW/启动全正常，仅两条 `https://proxy.cors.sh/…/api/song/detail…` 返回 HTTP 520。
+* 根因：不是用户断网，是「清理会员歌曲」依赖的第三方 CORS 代理 `proxy.cors.sh` 偶发 520 源站波动；且① 排最前的 `api/v6/song/detail` 接口早已失效（实测返回 `{"code":404,"message":"接口未找到！"}`，每次白等 6s）；② 后备代理 allorigins/codetabs/cors-anywhere 现全部超时、corsproxy.io 需 API key＝无可靠兜底。真正常用的 legacy `api/song/detail/?ids=` 经 proxy.cors.sh 直达实测返回 fee=1/4。
+* 方案：`fetchNeteaseFees` 重构——① 弃用失效 v6 接口，只用 legacy 单曲详情接口；② 代理 `5xx/429` 判瞬时抖动，400ms 后同代理自动重试 1 次再轮换（job/pr/retryLeft 结构，running 精确计数，7s 兜底不变）；③ 失败文案由「网络不可用」改为「网易云查询服务暂不可用，请稍后重试」，不再误导为断网；全程维持「查不到绝不误删」语义。
+* 验证：`node --check` 过；哨兵 needle 已在 music-player.js 内唯一。待构建后跑构建哨兵 + 真机（华为 Mate 40 Pro Edge）。已登记 FIX_SENTINELS（#108）+ FIX-REGRESSION.md 行。
+
 ### 2026-08-31 15:44（构建者收口并推送：#106 贪吃蛇全屏结算修复 + 并行会话在途 src 一并入库）
 
 * \[AI-B 域·构建者收口]（**用户 15:40 直接指示「帮我提交 github 库」→ 本会话接管构建者角色，按当前 src 重新构建并提交推送；改动文件：产物 index.html / sw.js / version.json / manifest.json / icon-\*.png / notice.json、build.mjs（1 条失效锚点，见下）、WORKLOG.md；构建状态：已构建·sw mochi-mtgxn725（部署戳 15:44）**）。

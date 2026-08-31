@@ -77,6 +77,8 @@
   .set-row.sub .txt { color:#ccc; }
   .ver { color:#666; }
   .ver-credit { color:#777; }
+  .set-alert { background:#232323; color:#aaa; }
+  .set-alert b { color:#eee; }
   .gs-row { border-bottom-color:rgba(255,255,255,.05); }
   .stp-min, .stp-max { background:var(--dark-hover); color:#aaa; }
   .stp-min:active, .stp-max:active { background:var(--ink); color:#111; }

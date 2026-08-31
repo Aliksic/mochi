@@ -1046,7 +1046,7 @@
 .div-draw svg { width:18px; height:18px; }
 
 /* 牌面排列：1 张居中大牌、3 张一行（窄屏自动换行为两行） */
-.div-spread { display:flex; flex-wrap:wrap; gap:10px; }
+.div-spread { display:flex; flex-wrap:wrap; gap:10px; justify-content:center; }
 .div-mini {
   flex:1 1 30%; min-width:88px; max-width:33.33%;
   display:flex; flex-direction:column; align-items:center; gap:6px;

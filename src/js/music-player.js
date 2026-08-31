@@ -716,41 +716,52 @@
   // 代理全挂时如实提示，绝不把「查不到」当成「免费」误删。
   function fetchNeteaseFees(ids, cb) {
     if (!ids || !ids.length) { cb({}, false); return; }
-    const apiUrls = [
-      'https://music.163.com/api/v6/song/detail?ids=' + encodeURIComponent('[' + ids.join(',') + ']'),
-      'https://music.163.com/api/song/detail/?ids=' + encodeURIComponent('[' + ids.join(',') + ']')
-    ];
+    // v6 批量接口已失效（返回 {"code":404,"message":"接口未找到！"}），只用 legacy 单曲详情接口
+    const apiUrl = 'https://music.163.com/api/song/detail/?ids=' + encodeURIComponent('[' + ids.join(',') + ']');
+    // 多 CORS 代理兜底：proxy.cors.sh 为主力（实测唯一能返 JSON 的），allorigins 作低优先级后备。
+    // 代理偶发 HTTP 5xx/429（如 proxy.cors.sh 的 520）是第三方源站波动，走 retry 重试一次，
+    // 别让瞬时抖动误判成「网络不可用」。
     const prox = [
       { p: 'https://proxy.cors.sh/', enc: false },
       { p: 'https://api.allorigins.win/raw?url=', enc: true }
     ];
     const out = {};
     let settled = false;
-    let pending = 0;
+    let running = 0;
     const finish = (ok) => { if (settled) return; settled = true; cb(out, ok); };
-    prox.forEach(pr => {
-      apiUrls.forEach(u => {
-        pending++;
-        let controller;
-        try { controller = new AbortController(); } catch (e) { controller = null; }
-        const timer = setTimeout(() => { try { controller && controller.abort(); } catch (e) {} }, 6000);
-        fetch(pr.p + (pr.enc ? encodeURIComponent(u) : u), controller ? { signal: controller.signal } : undefined)
-          .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
-          .then(txt => {
-            clearTimeout(timer);
-            try {
-              const j = JSON.parse(txt);
-              const songs = (j && Array.isArray(j.songs)) ? j.songs : [];
-              let got = 0;
-              songs.forEach(s => { if (s && s.id && typeof s.fee === 'number') { out[String(s.id)] = s.fee; got++; } });
-              if (got) { finish(true); return; }
-            } catch (e) {}
-          })
-          .catch(() => { clearTimeout(timer); })
-          .then(() => { if (--pending === 0 && !settled) finish(false); });
-      });
-    });
-    // 兜底：全部请求 6s 内无有效结果 → 结束（回调 ok=false，调用方提示网络失败）
+    const job = (pr, retryLeft) => {
+      running++;
+      let controller;
+      try { controller = new AbortController(); } catch (e) { controller = null; }
+      const timer = setTimeout(() => { try { controller && controller.abort(); } catch (e) {} }, 6000);
+      fetch(pr.p + (pr.enc ? encodeURIComponent(apiUrl) : apiUrl), controller ? { signal: controller.signal } : undefined)
+        .then(r => {
+          if (r.status >= 500 || r.status === 429) throw { retry: true, msg: 'HTTP ' + r.status };
+          if (!r.ok) throw { retry: false, msg: 'HTTP ' + r.status };
+          return r.text();
+        })
+        .then(txt => {
+          clearTimeout(timer);
+          try {
+            const j = JSON.parse(txt);
+            const songs = (j && Array.isArray(j.songs)) ? j.songs : [];
+            let got = 0;
+            songs.forEach(s => { if (s && s.id && typeof s.fee === 'number') { out[String(s.id)] = s.fee; got++; } });
+            if (got) { finish(true); }
+          } catch (e) {}
+          if (--running === 0 && !settled) finish(false);
+        })
+        .catch(err => {
+          clearTimeout(timer);
+          if (err && err.retry && retryLeft > 0) {
+            // 释放本轮计数，短暂延时后按同一代理重试
+            running--;
+            setTimeout(() => job(pr, retryLeft - 1), 400);
+          } else if (--running === 0 && !settled) finish(false);
+        });
+    };
+    prox.forEach(pr => job(pr, 1));
+    // 兜底：全部请求 6s 内无有效结果 → 结束（回调 ok=false，调用方提示检测失败）
     setTimeout(() => finish(false), 7000);
   }
   function openVipClean() {
@@ -760,7 +771,7 @@
     candidates.forEach(m => { if (uniqueIds.indexOf(m.neteaseId) < 0) uniqueIds.push(m.neteaseId); });
     toast('正在检测 ' + uniqueIds.length + ' 首歌曲的会员状态…');
     fetchNeteaseFees(uniqueIds, (fees, ok) => {
-      if (!ok || !Object.keys(fees).length) { toast('检测失败：网络不可用，请稍后重试'); return; }
+      if (!ok || !Object.keys(fees).length) { toast('检测失败：网易云查询服务暂不可用，请稍后重试'); return; }
       const vip = candidates.filter(m => fees[m.neteaseId] === 1 || fees[m.neteaseId] === 4);
       if (!vip.length) { toast('未发现会员/付费歌曲'); return; }
       const shown = vip.slice(0, 30);

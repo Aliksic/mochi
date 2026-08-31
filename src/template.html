@@ -49,11 +49,20 @@
       <!-- v3.8.x：开屏即公告1页——原「开屏公告 + 点进入后的报修确认层」两页合并为一页：
            全部说明直接展示在开屏上，点底部【点击进入】即进入（点击即视为已阅读知晓），无二次确认层 -->
       <div class="splash-notice" id="splash-notice">
+        <!-- v3.27.x：防骗置顶声明——最顶部固定展示，防收费诈骗；静态 DOM，在线 notice.json 覆盖只改公告列表，不影响此处 -->
+        <div class="splash-alert">
+          <div class="splash-alert-t">防骗提醒</div>
+          <p><strong>Mochi字卡网站完全免费。作者只有小红书这一个账号：小红书@言序（1842523578）。</strong>如有出现任何收费情况，均为诈骗，注意防止被骗。</p>
+        </div>
         <div class="splash-notice-title">Mochi字卡 · 开屏说明</div>
         <div class="splash-notice-sub">（请认真阅读）</div>
         <div class="splash-notice-list">
           <div class="splash-summary">
             <p class="splash-summary-title">必读摘要</p>
+            <p>免费网站由我个人利用业余时间花钱开发维护，不承诺修复时效——有空就修，没空就晚点修，不保证一定修。</p>
+            <p>目前反馈的所有问题均已修复，但未来不保证、也无法承诺时效。</p>
+            <p>不提供免费客服、教学、一对一指导。使用问题请先看开屏说明/代码，常见问题可问互助群。</p>
+            <p>反馈 bug 请描述清楚，我会看到后处理；催单不回，不一定有时间。</p>
             <p>本站完全免费，开放二传二改，但禁止商用、禁止以盈利为目的。</p>
             <p>报修 / 反馈请按【手机型号 + 浏览器 + 具体现象】提交，缺一不回；尽量附上设置里的【复制诊断信息】；基础疑问可直接问 AI，比我回复快。</p>
             <p>系统或浏览器版本不同，适配表现可能不同，属正常现象。</p>
@@ -1294,6 +1303,10 @@
       </div>
       <div class="ver">Mochi 字卡传讯 __APP_VERSION__</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
+      <!-- v3.27.x：设置页底部防骗声明 -->
+      <div class="set-alert">
+        <b>Mochi字卡网站免费。</b>作者只有小红书这一个账号（小红书@言序（1842523578））。如有出现任何收费情况，均为诈骗，注意防止被骗。
+      </div>
     </div>
 
     <!-- 查看存储（独立页面，v3.26.x） -->
@@ -1318,6 +1331,12 @@
           <div class="cal-card-title">各功能占用明细</div>
           <div id="st-cat"><div class="storage-hint">正在统计，请稍候…</div></div>
           <div class="storage-hint">大小按字符数 ×2（UTF-16）估算；聊天/头像/背景等大键会在 IndexedDB 与 localStorage 双写，两处之和为该功能实际占用。这里<b>只列出占用最大的 5 项</b>（条长为了在小项很多时也能看出座次，按平方根比例画，<b>精确份额以百分比数字为准</b>），其余分类折进最后的「其他 N 项合计」，点开能逐项看到名称和大小。<b>点击任一分类行还可展开该项下的具体存储键名</b>（已按桌面名显示），用于核对是否覆盖到所有功能。</div>
+        </div>
+        <div class="cal-card glass">
+          <div class="cal-card-title">可清理空间</div>
+          <div class="storage-row"><span>本机音乐文件（可在播放器里清理）</span><b id="st-music">统计中…</b></div>
+          <button class="storage-clear" id="st-goto-music" type="button">到音乐播放器清理</button>
+          <div class="storage-hint">本地音乐是唯一能安全大额释放空间的一项：删除本地音频文件并从歌单移除，外链 / 种子歌不受影响，之后需要还能重新添加。聊天记录（图片、语音）就是你明确要求保留的部分，不在清理范围；壁纸、头像、自定义表情各有各自的删除入口（在对应设置里），避免误删掉你设置好的外观。</div>
         </div>
         <div class="cal-card glass">
           <div class="cal-card-title">错误诊断记录</div>

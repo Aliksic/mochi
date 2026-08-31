@@ -5602,6 +5602,10 @@ try {
       const ls = lsStats();
       const lsEl = document.getElementById('st-ls');
       if (lsEl) lsEl.textContent = fmtBytes(ls.total) + '（' + ls.count + ' 键）';
+      // v3.32.x：可清理空间 · 本机音乐文件占用（从 IndexedDB 的「本地音乐」分类取，
+      // Blob 按真实字节计数；IndexedDB 未读到前先显示占位，读到后由 idbStats 回调刷新）
+      const musicEl = document.getElementById('st-music');
+      if (musicEl) musicEl.textContent = '统计中…（IndexedDB）';
       const otherEl = document.getElementById('st-other');
       if (otherEl) otherEl.textContent = ls.otherCount ? fmtBytes(ls.otherSize) + '（' + ls.otherCount + ' 键）' : '无';
       const selfEl = document.getElementById('st-self');
@@ -5622,6 +5626,11 @@ try {
         if (idbEl) idbEl.textContent = res ? fmtBytes(res.total) + '（' + res.count + ' 键）' : '读取失败（未计入合计）';
         showSelf(res ? { total: res.total, count: res.count } : null);
         renderCatTable(ls.cats, res ? res.cats : null, !res);
+        // 可清理空间 · 本机音乐文件占用（本地音乐分类在 IndexedDB 里的 Blob 真实字节）
+        if (musicEl) {
+          const m = (res && res.cats && res.cats['本地音乐']) ? res.cats['本地音乐'].size : 0;
+          musicEl.textContent = res ? fmtBytes(m) : '读取失败（未计入）';
+        }
       });
       renderDiagCount();
     }
@@ -5647,6 +5656,22 @@ try {
           });
         } else {
           clearDiag();
+        }
+      });
+    }
+    // v3.32.x：可清理空间 · 到音乐播放器清理——复用桌面「音乐」App 入口跳到音乐页，
+    // 让用户在那里的 ⚙ 设置里一键清理本地音频缓存。不在本页直接删 IDB 音乐文件，
+    // 避免和音乐播放器的内存歌单/外链/种子歌逻辑脱节（属业务功能，交给音乐设置收口）。
+    const goMusicBtn = document.getElementById('st-goto-music');
+    if (goMusicBtn) {
+      goMusicBtn.addEventListener('click', function () {
+        const app = document.querySelector('.app[data-app="music"]');
+        if (app) {
+          document.querySelectorAll('.page').forEach(function (p) { p.hidden = true; });
+          try { app.click(); } catch (e) {}
+        } else {
+          // 兜底：找不到桌面音乐入口时提示手动路径
+          if (window.openModal) window.openModal('找不到音乐入口', '', null, { noInput: true, staticText: '请回到桌面，点右上角「音乐」进入播放器，再点 ⚙ 设置 → 清理本地音频缓存。' });
         }
       });
     }

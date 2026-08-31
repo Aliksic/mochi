@@ -154,6 +154,17 @@ html { margin:0; padding:0; }
 .splash-summary-title { font-size:12px; font-weight:800; color:var(--ink); margin-bottom:7px; letter-spacing:.6px; }
 .splash-summary p { font-size:11.5px; line-height:1.75; color:var(--soft-ink); }
 .splash-summary p + p { margin-top:6px; }
+/* v3.27.x：防骗置顶声明——固定在公告最顶部，防收费诈骗醒目提示 */
+.splash-alert {
+  margin:0 0 14px; padding:10px 14px 11px 14px;
+  background:var(--sp-soft); border:1.5px solid var(--sp-ink); border-radius:8px;
+}
+.splash-alert .splash-alert-t {
+  font-size:12px; font-weight:800; color:var(--sp-ink); letter-spacing:.5px; margin-bottom:5px;
+}
+.splash-alert .splash-alert-t::before { content:"!"; display:inline-block; width:15px; height:15px; line-height:15px; text-align:center; margin-right:5px; border-radius:50%; background:var(--sp-ink); color:#fff; font-size:11px; font-weight:800; vertical-align:-2px; }
+.splash-alert p { font-size:12px; line-height:1.7; color:var(--soft-ink); }
+.splash-alert strong { color:var(--ink); font-weight:800; }
 /* 章节容器：编号在章节内重新从 1 开始；章节间拉开间距；折叠章节样式 */
 .splash-sec-wrap { counter-reset: notice; }
 .splash-sec-wrap + .splash-sec-wrap { margin-top:12px; }
@@ -431,7 +442,7 @@ html.force-mobile .desk-period, html.force-mobile .app-grid, html.force-mobile .
    .ios-pwa-standalone .phone 的 (0,2,0)，不加守卫会把 v3.15.x 的 standalone 100vh
    修复压回去；standalone 没有浏览器工具条，本就不需要这条 */
 html.ios-vv-fit:not(.ios-pwa-standalone) .phone,
-html.tablet.ios-vv-fit:not(.ios-pwa-standalone) .phone { height:var(--mochi-ios-h, 100dvh); }
+html.tablet.ios-vv-fit:not(.ios-pwa-standalone) .phone { height:min(var(--mochi-ios-h, 100dvh), 100dvh); }
 .ios-pwa-standalone .phone,
 html.tablet.ios-pwa-standalone .phone { height:100vh; }
 /* v3.27.x：iOS PWA standalone + ios-fs-active（已隐藏模拟状态栏）下，视口 innerHeight
@@ -442,7 +453,7 @@ html.tablet.ios-pwa-standalone .phone { height:100vh; }
    键盘期 syncVvFit 摘除 --mochi-ios-h → 回退 100dvh，但键盘期 .phone 高度由
    _setPhoneH 内联值接管（内联赢选择器），不受影响。 */
 .ios-pwa-standalone.ios-fs-active .phone,
-html.tablet.ios-pwa-standalone.ios-fs-active .phone { height:var(--mochi-ios-h, 100dvh); }
+html.tablet.ios-pwa-standalone.ios-fs-active .phone { height:min(var(--mochi-ios-h, 100dvh), 100dvh); }
 /* v3.7.x：iPhone 12 mini 实测反馈「桌面底部导航栏下面有灰色图形」——iOS 部分版本
    standalone + black-translucent 下 100vh 不含底部 home indicator 安全区（约 34px），
    .phone 底部外露出 html/body 灰底（--page-bg #e9e9e9）形成灰色带；且与顶部

@@ -45,13 +45,13 @@
     // 跨桌面查岗对齐：默认 2% + 独立 30 分钟冷却，触发逻辑在 incoming-requests.js）
     'desk-call-prob': 2,
     // 信箱（星言信箱设置）
-    // v3.5.99：最长写信/回信时间默认 480 分钟（8 小时）太久，容易让用户误以为 TA 不写信，改为 120 分钟
-    // v3.6.x：默认最多字卡条数 100 → 50（信太长反而像刷屏）；新增最少字卡条数默认 20
+    // v3.5.99：最长写信/回信时间默认 480 → 120 分钟（曾担心 8 小时太久，用户误以为 TA 不写信）；
+    // v3.27.x：用户反馈默认写信/回信节奏太快，恢复为 480 分钟（8 小时，与原设计一致）
     'ml-min-cards': 20, 'ml-max-cards': 50,
-    'ml-write-prob': 30, 'ml-write-min': 1, 'ml-write-max': 120,
+    'ml-write-prob': 30, 'ml-write-min': 1, 'ml-write-max': 480,
     // v3.6.x：每天最多来信（封）——限制联系人主动写信频率，默认 3 封/天
     'ml-write-daily-max': 3,
-    'ml-reply-prob': 80, 'ml-reply-min': 1, 'ml-reply-max': 120,
+    'ml-reply-prob': 80, 'ml-reply-min': 1, 'ml-reply-max': 480,
     'ml-kaomoji-en': 1, 'ml-emoji-en': 1, 'ml-sticker-en': 1,
     // 动态（星言朋友圈设置）
     'fd-like-prob': 60, 'fd-like-speed-min': 1, 'fd-like-speed-max': 60,
@@ -448,4 +448,29 @@
     } catch (e) {}
   }
   migrateCkqProbOld();
+  // v3.27.x：信箱最长写信/回信时间默认 120 → 480 的旧值迁移——扫描全部桌面联系人
+  // （含默认桌面）的 reply-ml-write-max / reply-ml-reply-max，只要仍等于旧默认 120
+  // （即用户从未改动过默认数值）就改写为 480；用户自己调过（非 120）的值不动，避免误伤自定义。
+  function migrateMailMaxOld() {
+    try {
+      if (!window.getContacts || !window.storeFor) return;
+      const cids = [window.__activeCid || 'default'];
+      (window.getContacts() || []).forEach(c => { if (c.id && cids.indexOf(c.id) === -1) cids.push(c.id); });
+      const pairs = [['reply-ml-write-max', '480'], ['reply-ml-reply-max', '480']];
+      let changed = false;
+      cids.forEach(cid => {
+        try {
+          const s = window.storeFor(cid);
+          if (!s) return;
+          pairs.forEach(([k, nv]) => {
+            if (String(s.get(k)) === '120') { s.set(k, nv); changed = true; }
+          });
+        } catch (e) {}
+      });
+      if (changed) {
+        try { if (window.console && console.log) console.log('[reply-settings] 已迁移信箱最长写信/回信时间旧值 120→480'); } catch (e) {}
+      }
+    } catch (e) {}
+  }
+  migrateMailMaxOld();
 })();
