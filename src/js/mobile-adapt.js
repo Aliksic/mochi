@@ -945,6 +945,16 @@
       function syncVvFit() {
         try {
           var d = document.documentElement;
+          // 全屏态不写 --mochi-ios-h（原生 fs-active / CSS 兜底 fs-css-active / iOS 兜底
+          // ios-fs-active / iOS 原生 ios-native-fs）：全屏下 CSS 的 100dvh 就是整块可视高，
+          // 而 visualViewport.height 在个别 iOS 版本全屏过渡 / 工具条显隐时机比 100dvh 小，
+          // 写进去会把 .phone 压矮 → 底部聊天输入栏整体偏上、不贴合手机底部（报修）。
+          // 摘除属性让 CSS 回落 100dvh 填满全屏；不超出 100dvh 也不会复现 #109 整页上移。
+          if (d.classList.contains('fs-active') || d.classList.contains('fs-css-active')
+              || d.classList.contains('ios-fs-active') || d.classList.contains('ios-native-fs')) {
+            if (d.style.getPropertyValue('--mochi-ios-h')) d.style.removeProperty('--mochi-ios-h');
+            return;
+          }
           // 键盘会话期间不写（摘除属性）：那段时间 .phone 高度由 _setPhoneH 内联值
           // 负责，两套写高度会互相改写
           if (_kbActive || _iProv || _kbNowLike()) {

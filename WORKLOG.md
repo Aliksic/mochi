@@ -1,4 +1,17 @@
-# 本次构建者：AI-B（19:55 按 src 收口构建 sw mochi-mth6lswh，本地提交未推送；下一轮请重新声明）
+# 本次构建者：AI-B（20:37 按 src 收口构建 sw mochi-mth84it2，本地提交未推送；下一轮请重新声明）
+
+### 2026-08-31 20:1x（构建者收口：#110 聊天页底部输入栏全屏不贴底修复 + 一并收口并行在途防骗声明回填，本地提交未推送）
+* \[AI-B 域·构建者收口]（**改动文件：产物 index.html / sw.js / version.json / manifest.json / icon-*.png / notice.json、build.mjs、FIX-REGRESSION.md、WORKLOG.md；构建状态：已构建·sw mochi-mth84it2（部署戳 20:37）**）。
+* 一并入库：mobile-adapt.js `syncVvFit` 全屏态摘除 `--mochi-ios-h`（#110）+ build.mjs 哨兵 ×1；并行在途防骗声明运行时回填（`clock.js` + `notice.json` alert 字段）。
+* 门禁结果：`node build.mjs` → **关键修复哨兵 178/178 全绿、哑哨兵体检 0 条、sw.js 哨兵 3/3**；`node tools/verify.mjs` **10/10**（390×844/360×640 聊天输入栏贴底、无整页缩放）；`node tools/verify-jsonpack.mjs` **28/28**。
+* 待真机验收：苹果17 自带浏览器 + 全屏模式——聊天页底部输入栏应贴合手机底部；其他功能页（字卡库/日历/设置等）顶部栏与返回按钮仍完整可见可点（#109/#110 双修复不复现）。
+
+### 2026-08-31 20:1x（#110 修复：苹果17 自带浏览器 + 全屏模式，聊天页底部输入栏整体偏上、不贴底）
+* \[AI-B 域·mobile-adapt.js + build.mjs + FIX-REGRESSION.md]（**改动文件：src/js/mobile-adapt.js（`syncVvFit` 全屏态摘除 `--mochi-ios-h`）、build.mjs（FIX_SENTINELS 追加 #110 ×1）、FIX-REGRESSION.md（#110 行）、WORKLOG.md；构建状态：已构建·sw mochi-mth84it2（20:37 收口）**）。
+* 需求/反馈：苹果17 自带浏览器 + 全屏模式，打开聊天功能，聊天界面整体上移、底部聊天输入栏位置偏上、没有贴合手机底部。
+* 根因：#109 后 `--mochi-ios-h`（=visualViewport.height×scale）用 `min(…,100dvh)` 钳制，但个别 iOS 版本/全屏过渡/工具条显隐时机该值**低于** 100dvh → `.phone` 被压矮，底部输入栏上浮。全屏下 100dvh 本就是整块可视高，不需要实测值。
+* 方案：`syncVvFit` 全屏态一律摘除 `--mochi-ios-h`、让 CSS 回退 100dvh 填满全屏；判定类 `fs-active`/`fs-css-active`/`ios-fs-active`/`ios-native-fs` 任一命中即摘除返回；键盘期逻辑不变。摘除后高度精确＝100dvh（不超视口，#109 整页上移不会复发）。
+* 验证：`node --check src/js/mobile-adapt.js` 过；`node --check build.mjs` 过；哨兵 needle `d.classList.contains('ios-fs-active') || d.classList.contains('ios-native-fs')`（mobile-adapt.js 内唯一）。未构建（遵守单构建者红线）；待收口后真机（苹果17 自带浏览器+全屏）：聊天底栏贴底；其他功能页顶栏/返回按钮仍完整可点（#109 不复现）。
 
 ### 2026-08-31 19:55（构建者收口：#109 iOS 全屏整页上移修复 + 并行会话在途 src 一并入库，本地提交未推送）
 * [AI-B 域·构建者收口]（**改动文件：产物 index.html / sw.js / version.json / manifest.json / icon-*.png / notice.json、build.mjs、WORKLOG.md、FIX-REGRESSION.md；构建状态：已构建·sw mochi-mth6lswh（部署戳 19:55）**）。
@@ -6,11 +19,11 @@
 * 门禁结果（构建后实测）：`node build.mjs` → **关键修复哨兵 177/177 全绿、哑哨兵体检 0 条、sw.js 哨兵 3/3**；`node tools/verify.mjs` **10/10**；`node tools/verify-jsonpack.mjs` **28/28**；`node tools/verify-suite.mjs` 全量 119 通过/68 断言失败/0 环境不满足/2 超时（189 项，既有红项与本次改动无关，未做 --strict 门禁）。
 * 待真机验收：苹果17 自带浏览器 + 全屏模式，聊天/字卡库/日历/设置等任意功能页顶部栏与返回按钮应完整可见可点（#109）。
 
-### 2026-08-31（用户需求：防骗声明「免费 + 只有小红书一个账号」上开屏置顶 + 设置页底部）
-* \[AI-B 域·template.html + base.css + setting.css + dark.css]（**改动文件：src/template.html（开屏 `.splash-alert` 置顶块 + 设置页底部 `.set-alert`）、src/css/base.css（`.splash-alert` 样式）、src/css/setting.css（`.set-alert` 样式）、src/css/dark.css（`.set-alert` 暗色覆盖）、WORKLOG.md；构建状态：未构建**）。
-* 需求/反馈：mochi 字卡网站免费，作者只有小红书这一个账号；若有收费出现，注意防止被骗。用户要求写在「开屏置顶」和「设置功能底部」。
-* 方案：开屏在 `#splash-notice` 最顶部加 `.splash-alert`「防骗提醒」静态块（复用 `--sp-ink`/`--sp-soft` 明暗自适应；静态 DOM，notice.json 在线覆盖只改公告列表，不影响此处）；设置页在版本行下方加 `.set-alert` 居中灰字块（setting.css 定义 + dark.css 暗色覆盖，CSS 顺序 setting→dark 正常生效）。
-* 验证：改的是 HTML/CSS 无 JS，未跑 `node --check`。未构建；待构建者收口（当前构建者为上方声明的 AI-B）。
+### 2026-08-31（用户需求：防骗声明「免费 + 只有小红书一个账号」上开屏置顶 + 设置页底部，并防二改者删除）
+* \[AI-B 域·template.html + clock.js + base.css + setting.css + dark.css + notice.json]（**改动文件：src/template.html（开屏 `.splash-alert` 置顶块 + 设置页底部 `.set-alert`）、src/js/clock.js（防删运行时回填）、src/css/base.css（`.splash-alert` 样式）、src/css/setting.css（`.set-alert` 样式）、src/css/dark.css（`.set-alert` 暗色覆盖）、src/pwa/notice.json（新增 `alert` 远程权威字段）、WORKLOG.md；构建状态：未构建**）。
+* 需求/反馈：mochi 字卡网站免费，作者只有小红书这一个账号；若有收费出现，注意防止被骗。用户要求写在「开屏置顶」和「设置功能底部」，并问「怎么防其他拿代码的人删除」。
+* 方案：① 开屏在 `#splash-notice` 最顶部加 `.splash-alert`「防骗提醒」静态块（复用 `--sp-ink`/`--sp-soft` 明暗自适应；notice.json 在线覆盖只改列表不碰它）；设置页在版本行下方加 `.set-alert`（setting.css + dark.css 覆盖）。② **防删 = clock.js 运行时回填**：以 JS 常量强制把这段声明写回开屏顶部 + 设置页底部，元素缺失/文案被改即重建；有网时再 fetch 作者官方站点 `notice.json` 的 `alert` 字段用权威文案覆盖本地（CORS/离线失败不阻塞，回退本地兜底）。二改者删源码里的字照样加载回填；想彻底去掉须连回填逻辑一起删＝改代码本身（无解），对普通二改者足够。
+* 验证：`node --check src/js/clock.js` 过。未构建；待构建者收口。诚实说明：技术只能防"删字"，防不住"连回填逻辑一起删"的改码者，无法做到绝对。
 
 ### 2026-08-31（iOS 全屏模式其他功能页整页上移修复 #109：不只聊天页，所有功能页顶部被推出屏）
 * \[AI-B 域·base.css + build.mjs]（**改动文件：src/css/base.css（2 处 `.phone` height 加 `min(…, 100dvh)` 钳制）、build.mjs（FIX_SENTINELS 追加 #109 ×2）、FIX-REGRESSION.md（#109 行）、WORKLOG.md；构建状态：已构建·sw mochi-mth6lswh（19:55 收口）**）。
