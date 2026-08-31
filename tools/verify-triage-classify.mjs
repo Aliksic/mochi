@@ -16,7 +16,7 @@ const verdictOf = (file, label) => {
   const v = verdictFor(code, label, seedLitsOf(code), labelLitsOf(code), inputLitsOf(code));
   return v ? v.kind : 'null';
 };
-const synth = (code, label) => verdictFor(code, label, new Set(), labelLitsOf(code), inputLitsOf(code));
+const synth = (code, label) => { const v = verdictFor(code, label, new Set(), labelLitsOf(code), inputLitsOf(code)); return v ? v.kind : 'null'; };
 const REAL_ANCHOR = '.chat-body';
 const FAKE_ANCHOR = '__definitely_absent_anchor_zz__';
 
@@ -30,12 +30,13 @@ check('同窗口的 F2 反向断言不污染 F3（verify-unified-heart-wallet）
 check('fillInput 写入的文案不当锚点（verify-narc-v2 性格行）', verdictOf('verify-narc-v2.mjs', 'P2e 行内显示已填值') !== 'stale');
 
 // ---- 合成语句：判据本身 ----
-const st = (stmt) => "const built='x';\ncheck('T1 说明', " + stmt + ", v);\n";
-check('静态断言里锚点缺失 → 判期望过期', synth(st("built.indexOf('" + FAKE_ANCHOR + "') >= 0"), 'T1 说明') === 'stale');
-check('静态断言里锚点在产物中 → 不判期望过期', synth("const built='x';\ncheck('T1 说明', built.indexOf('" + REAL_ANCHOR + "') >= 0, v);\n", 'T1 说明') !== 'stale');
-check('indexOf(...) < 0 形式的删除型断言不判过期', synth(st("built.indexOf('" + FAKE_ANCHOR + "') < 0"), 'T1 说明') !== 'stale');
-check('文件路径字面量不当锚点', synth(st("readFileSync('src/zzz-nosuch.js').indexOf('" + REAL_ANCHOR + "') >= 0"), 'T1 说明') !== 'stale');
-check('探针语句（只 stringify 不比字面量）不判过期', synth("const v=1;\ncheck('T1 说明', v, JSON.stringify({k:'" + FAKE_ANCHOR + "'}));\n", 'T1 说明') !== 'stale');
+const LBL = 'T1 静态锚点说明';
+const st = (stmt) => "const built='x';\ncheck('" + LBL + "', " + stmt + ", v);\n";
+check('静态断言里锚点缺失 → 判期望过期', synth(st("built.indexOf('" + FAKE_ANCHOR + "') >= 0"), LBL) === 'stale');
+check('静态断言里锚点在产物中 → 不判期望过期', synth(st("built.indexOf('" + REAL_ANCHOR + "') >= 0"), LBL) !== 'stale');
+check('indexOf(...) < 0 形式的删除型断言不判过期', synth(st("built.indexOf('" + FAKE_ANCHOR + "') < 0"), LBL) !== 'stale');
+check('文件路径字面量不当锚点', synth(st("readFileSync('src/zzz-nosuch.js').indexOf('" + REAL_ANCHOR + "') >= 0"), LBL) !== 'stale');
+check('探针语句（只 stringify 不比字面量）不判过期', synth("const v=1;\ncheck('" + LBL + "', v, JSON.stringify({k:'" + FAKE_ANCHOR + "'}));\n", LBL) !== 'stale');
 check('十六进制色值不作锚点', isAnchor('ff2255') === false);
 check('正常文案仍认作锚点', isAnchor('功能介绍与二传二改说明') === true);
 

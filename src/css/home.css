@@ -389,6 +389,27 @@
 }
 .desk-lib-tab.on { background:#111; color:#fff; border-color:#111; }
 .desk-lib-panel { display:flex; flex-direction:column; }
+/* v3.26.x：图标分类——搜索框 + 紧凑网格块 */
+.desk-lib-search {
+  width:100%; box-sizing:border-box; margin-bottom:10px; padding:8px 14px;
+  border:1px solid #eee; border-radius:99px; background:#fafafa;
+  font-size:13px; color:var(--ink,#111); font-family:inherit; outline:none;
+}
+.desk-lib-search:focus { border-color:#111; }
+.desk-lib-search::placeholder { color:#bbb; }
+.desk-lib-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(76px,1fr)); gap:8px; }
+.desk-lib-icon {
+  display:flex; flex-direction:column; align-items:center; gap:6px;
+  padding:10px 4px; border:1px solid #eee; border-radius:10px; cursor:pointer;
+}
+.desk-lib-icon .dli-prev {
+  width:40px; height:40px; border-radius:12px; background:#f4f4f4;
+  display:flex; align-items:center; justify-content:center;
+}
+.desk-lib-icon .dli-letter { font-size:17px; font-weight:600; color:#666; }
+.desk-lib-icon .dli-name { font-size:11px; color:var(--ink,#111); text-align:center; line-height:1.2; }
+.desk-lib-icon.on { border-color:#111; background:#f7f7f7; }
+.desk-lib-icon.on .dli-letter { color:#111; }
 .desk-lib-item {
   display:flex; align-items:center; gap:10px;
   padding:10px 12px; border:1px solid #eee; border-radius:10px; margin-bottom:8px;

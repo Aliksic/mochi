@@ -13,6 +13,11 @@
 (function () {
   const GNS = 'xy-home-v2';
   const KEY = 'myarc';
+  // v3.26.x：逐条可见性——选「全部联系人可见」时，内容【直接写进每位联系人自己的档案】
+  //   （fan-out 直写，不是共享档+查看权限）；选「仅当前联系人可见」只写当前这份。
+  //   条目/字段上的 shared:true 只是「全部可见」的标记（角标/联动删除用），不是权限。
+  //   旧中间版根键 myarc-shared 仅用于一次性吸收进各联系人档案后清除，不再作为数据源。
+  const SHARED_KEY = 'myarc-shared';
   const page = document.getElementById('page-my-arc');
   const root = document.getElementById('myarc-root');
 
@@ -88,6 +93,7 @@
     try { const cs = window.getContacts ? window.getContacts() : null; if (cs && cs.length) return cs; } catch (e) {}
     return [{ id: 'default', name: '默认' }];
   }
+  function allCids() { return contactsList().map(c => c.id); }
   function storeOf(cid) { return window.xyStore(GNS + ':' + cid); }
   function partnerNameOf(cid) {
     let n = '';
@@ -101,22 +107,110 @@
     try { const o = JSON.parse(gStore().get(KEY) || 'null'); if (o && typeof o === 'object') return o; } catch (e) {} // 旧全局键兜底
     return null;
   }
-  function save(o) { const s = storeOf(viewCid); if (s) { try { s.set(KEY, JSON.stringify(o)); } catch (e) {} } }
+  function saveFor(o, cid) { const s = storeOf(cid); if (s) { try { s.set(KEY, JSON.stringify(o)); } catch (e) {} } }
+  function save(o) { saveFor(o, viewCid); }
   function normObj(v) { return (v && typeof v === 'object' && !Array.isArray(v)) ? v : null; }
+  function isFv(v) { return typeof v === 'string' || (v && typeof v === 'object' && typeof v.v === 'string'); }
   function makeId() { return 'm' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36); }
-  const cache = {};
-  function ensureArc() {
-    let o = cache[viewCid] || loadRaw(viewCid), dirty = false;
+  const arcCache = {};
+  // 读取/规整某位联系人的档案（fan-out 时按 cid 各取各的）
+  function ensureArcFor(cid) {
+    let o = arcCache[cid] || loadRaw(cid), dirty = false;
     if (!o) { o = { created: Date.now() }; dirty = true; }
     ['tastes', 'habits', 'things', 'selfs', 'ifchanges', 'dreams'].forEach(k => { if (!Array.isArray(o[k])) { o[k] = []; dirty = true; } });
     if (!normObj(o.who)) { o.who = { f: {} }; dirty = true; } else if (!normObj(o.who.f)) { o.who.f = {}; dirty = true; }
     if (!normObj(o.relate)) { o.relate = { f: {}, notes: [] }; dirty = true; }
     else { if (!normObj(o.relate.f)) { o.relate.f = {}; dirty = true; } if (!Array.isArray(o.relate.notes)) { o.relate.notes = []; dirty = true; } }
     if (!normObj(o.ifw)) { o.ifw = {}; dirty = true; }
-    IFW_FIELDS.forEach(f => { if (typeof o.ifw[f[0]] !== 'string') { o.ifw[f[0]] = ''; dirty = true; } });
-    if (dirty) save(o);
-    cache[viewCid] = o;
+    IFW_FIELDS.forEach(f => { if (!isFv(o.ifw[f[0]])) { o.ifw[f[0]] = ''; dirty = true; } });
+    if (dirty) saveFor(o, cid);
+    arcCache[cid] = o;
     return o;
+  }
+  function ensureArc() { return ensureArcFor(viewCid); }
+
+  // ---- 逐条可见性：fan-out 直写（非共享档+权限） ----
+  // 「全部联系人可见」：把值直接写进每位联系人自己的档案（含当前这份）；
+  // 「仅当前联系人可见」：只写当前这份，并把其他联系人里同名的「全部可见」条目移除。
+  function fanOutMutate(fn) {
+    allCids().forEach(cid => { const a = ensureArcFor(cid); fn(a); saveFor(a, cid); });
+  }
+  function fanOutRemove(kind, id) {
+    allCids().forEach(cid => {
+      const a = ensureArcFor(cid);
+      const arr = listArrOf(kind, a);
+      const i = arr.findIndex(x => x.id === id);
+      if (i >= 0) { arr.splice(i, 1); saveFor(a, cid); }
+    });
+  }
+  function listArrOf(kind, o) {
+    if (kind === 'taste') return o.tastes;
+    if (kind === 'habit') return o.habits;
+    if (kind === 'thing') return o.things;
+    if (kind === 'rnote') return o.relate.notes;
+    return o.ifchanges;
+  }
+  // 渲染视图：只读当前联系人的那份（fan-out 下每份都是完整独立档案）
+  function mergedArc() {
+    const arc = ensureArc();
+    const normMap = (m, keys) => {
+      const out = {};
+      (keys || []).forEach(k => {
+        const it = m ? m[k] : undefined;
+        out[k] = { v: typeof it === 'string' ? it : (it && typeof it.v === 'string' ? it.v : ''), shared: !!(it && it.shared) };
+      });
+      return out;
+    };
+    return {
+      arc: arc, created: arc.created,
+      who: { f: normMap(arc.who.f, WHO_FIELDS.map(f => f[0])) },
+      relate: { f: normMap(arc.relate.f, RELATE_FIELDS.map(f => f[0])), notes: arc.relate.notes },
+      ifw: normMap(arc.ifw, IFW_FIELDS.map(f => f[0])),
+      tastes: arc.tastes, habits: arc.habits, things: arc.things,
+      selfs: arc.selfs, dreams: arc.dreams, ifchanges: arc.ifchanges
+    };
+  }
+  function visPills() {
+    return [{ label: '全部联系人可见', value: 'shared' }, { label: '仅' + partnerNameOf(viewCid) + '可见', value: 'pc' }];
+  }
+  function shFlag(it) { return (it && it.shared) ? '<span class="narc-flag">全部可见</span>' : ''; }
+  // 一次性把旧中间版「共享档 myarc-shared」直写进每位联系人档案后清掉（防已写入内容丢失）
+  function absorbSharedOnce() {
+    const s = gStore(); if (!s) return;
+    let sh = null;
+    try { sh = JSON.parse(s.get(SHARED_KEY) || 'null'); } catch (e) {}
+    if (!sh || typeof sh !== 'object') return;
+    const hasAny = Object.keys(sh).some(k => k !== 'created' && (Array.isArray(sh[k]) ? sh[k].length : (sh[k] && typeof sh[k] === 'object' ? Object.keys(sh[k]).length : false)));
+    if (!hasAny) { try { s.remove(SHARED_KEY); } catch (e) {} return; }
+    allCids().forEach(cid => {
+      const a = ensureArcFor(cid);
+      let dirty = false;
+      [['who', a.who.f], ['relate', a.relate.f], ['ifw', a.ifw]].forEach(pair => {
+        const sm = pair[0] === 'relate' ? (sh.relate && sh.relate.f) : sh[pair[0]];
+        if (!sm || typeof sm !== 'object') return;
+        Object.keys(sm).forEach(k => {
+          const v = typeof sm[k] === 'string' ? sm[k] : (sm[k] && typeof sm[k].v === 'string' ? sm[k].v : '');
+          if (!v.trim()) return;
+          const cur = pair[1][k];
+          const curV = typeof cur === 'string' ? cur : (cur && typeof cur.v === 'string' ? cur.v : '');
+          if (curV.trim()) return; // 本联系人已有专属值则保留（原「专属优先」语义）
+          pair[1][k] = { v: v, shared: true }; dirty = true;
+        });
+      });
+      const shArrays = { tastes: sh.tastes, habits: sh.habits, things: sh.things, selfs: sh.selfs, dreams: sh.dreams, ifchanges: sh.ifchanges, 'rnote': sh.relate && sh.relate.notes };
+      Object.keys(shArrays).forEach(kind => {
+        const arr = shArrays[kind];
+        if (!Array.isArray(arr) || !arr.length) return;
+        const target = listArrOf(kind, a);
+        arr.forEach(it => {
+          if (!it || typeof it !== 'object' || !it.id) return;
+          if (target.some(x => x && x.id === it.id)) return;
+          target.push(Object.assign({}, it, { shared: true })); dirty = true;
+        });
+      });
+      if (dirty) saveFor(a, cid);
+    });
+    try { s.remove(SHARED_KEY); } catch (e) {}
   }
 
   // ---- 页面状态 ----
@@ -156,7 +250,7 @@
   // ---- 渲染主入口 ----
   function render() {
     if (!root) return;
-    const arc = ensureArc();
+    const arc = mergedArc();
     let h = '';
     h += chipsHTML();
     h += (view === 'home') ? overviewHTML(arc) : sectionHTML(arc);
@@ -176,12 +270,12 @@
   // ---- 总览：英雄区 + 分区菜单 ----
   function overviewHTML(arc) {
     const days = Math.max(0, Math.floor((Date.now() - arc.created) / 86400000));
-    const whoFilled = WHO_FIELDS.filter(f => String(arc.who.f[f[0]] || '').trim()).length;
-    const relFilled = RELATE_FIELDS.filter(f => String(arc.relate.f[f[0]] || '').trim()).length + arc.relate.notes.length;
-    const ifwFilled = IFW_FIELDS.filter(f => String(arc.ifw[f[0]] || '').trim()).length + arc.ifchanges.length;
+    const whoFilled = WHO_FIELDS.filter(f => String((arc.who.f[f[0]] || {}).v || '').trim()).length;
+    const relFilled = RELATE_FIELDS.filter(f => String((arc.relate.f[f[0]] || {}).v || '').trim()).length + arc.relate.notes.length;
+    const ifwFilled = IFW_FIELDS.filter(f => String((arc.ifw[f[0]] || {}).v || '').trim()).length + arc.ifchanges.length;
     let h = '<div class="narc-hero">';
     h += '<div class="narc-hero-top"><span class="narc-name">我的档案</span><span class="narc-days">写下自己 · ' + days + ' 天</span></div>';
-    h += '<div class="narc-hero-sub">写给「' + esc(partnerNameOf(viewCid)) + '」的那一份——认识自己，让TA慢慢读懂你。</div>';
+    h += '<div class="narc-hero-sub">写给「' + esc(partnerNameOf(viewCid)) + '」的那一份——每条都可选「全部联系人可见」或「仅TA可见」。</div>';
     h += '<div class="narc-stats">';
     h += '<div class="narc-stat"><b>' + arc.selfs.length + '</b><span>描述</span></div>';
     h += '<div class="narc-stat"><b>' + arc.tastes.length + '</b><span>喜好</span></div>';
@@ -227,11 +321,13 @@
   function fieldRowsHTML(mapObj, fields, mapName) {
     let h = '<div class="narc-fields">';
     fields.forEach(f => {
-      const val = String(mapObj[f[0]] == null ? '' : mapObj[f[0]]);
+      const it = (mapObj && mapObj[f[0]]) || { v: '', shared: false };
+      const val = String(it.v == null ? '' : it.v);
       const empty = !val.trim();
       h += '<button class="narc-frow" data-op="efield" data-map="' + mapName + '" data-key="' + f[0] + '">';
       h += '<span class="nf-label">' + esc(f[1]) + '</span>';
       h += '<span class="nf-val' + (empty ? ' empty' : '') + '">' + (empty ? esc(f[2]) : esc(val)) + '</span>';
+      if (it.shared && !empty) h += shFlag(it);
       h += '<span class="nf-edit">›</span></button>';
     });
     h += '</div>';
@@ -283,7 +379,7 @@
       return h + '<div class="narc-empty">' + tip + '</div>';
     }
     items.forEach(it => {
-      const inner = '<div class="ni-top">' + (it.cat ? '<span class="ni-cat">' + esc(it.cat) + '</span>' : '') + '</div><div class="ni-text">' + esc(it.t) + '</div>';
+      const inner = '<div class="ni-top">' + (it.cat ? '<span class="ni-cat">' + esc(it.cat) + '</span>' : '') + shFlag(it) + '</div><div class="ni-text">' + esc(it.t) + '</div>';
       h += itemShell(inner, '<span class="nk-ops">' + opBtn('edit-li', '编辑', ' data-kind="taste" data-id="' + it.id + '"') + opBtn('del-li', '删除', ' data-kind="taste" data-id="' + it.id + '"', 1) + '</span>');
     });
     return h;
@@ -300,7 +396,7 @@
       return h + '<div class="narc-empty">' + (tips[tab.habits] || '') + '</div>';
     }
     items.forEach(it => {
-      const inner = '<div class="ni-top"></div><div class="ni-text">' + esc(it.t) + '</div>';
+      const inner = '<div class="ni-top">' + shFlag(it) + '</div><div class="ni-text">' + esc(it.t) + '</div>';
       h += itemShell(inner, '<span class="nk-ops">' + opBtn('edit-li', '编辑', ' data-kind="habit" data-id="' + it.id + '"') + opBtn('del-li', '删除', ' data-kind="habit" data-id="' + it.id + '"', 1) + '</span>');
     });
     return h;
@@ -316,7 +412,7 @@
       return h + '<div class="narc-empty">常用的东西、珍视的纪念、<br>还有一直想送给TA的那一件。</div>';
     }
     items.forEach(it => {
-      const inner = '<div class="ni-top"></div><div class="ni-text">' + esc(it.t) + '</div>';
+      const inner = '<div class="ni-top">' + shFlag(it) + '</div><div class="ni-text">' + esc(it.t) + '</div>';
       h += itemShell(inner, '<span class="nk-ops">' + opBtn('edit-li', '编辑', ' data-kind="thing" data-id="' + it.id + '"') + opBtn('del-li', '删除', ' data-kind="thing" data-id="' + it.id + '"', 1) + '</span>');
     });
     return h;
@@ -329,7 +425,7 @@
     h += '<div style="margin:0 2px 10px;text-align:right"><button class="narc-add" data-op="add-li" data-kind="rnote">＋ 补一条</button></div>';
     if (!arc.relate.notes.length) h += '<div class="narc-empty">例如：希望TA在忙之前先跟我说一声。</div>';
     arc.relate.notes.slice().sort((a, b) => b.created - a.created).forEach(it => {
-      const inner = '<div class="ni-top"></div><div class="ni-text">' + esc(it.t) + '</div>';
+      const inner = '<div class="ni-top">' + shFlag(it) + '</div><div class="ni-text">' + esc(it.t) + '</div>';
       h += itemShell(inner, '<span class="nk-ops">' + opBtn('edit-li', '编辑', ' data-kind="rnote" data-id="' + it.id + '"') + opBtn('del-li', '删除', ' data-kind="rnote" data-id="' + it.id + '"', 1) + '</span>');
     });
     return h;
@@ -343,7 +439,7 @@
     }
     items.forEach(it => {
       h += '<div class="narc-k">';
-      h += '<div class="nk-top"><span class="nk-type">' + esc(SELF_MAP[it.type] || '其他描述') + '</span></div>';
+      h += '<div class="nk-top"><span class="nk-type">' + esc(SELF_MAP[it.type] || '其他描述') + '</span>' + shFlag(it) + '</div>';
       h += '<div class="nk-text">' + esc(it.text) + '</div>';
       if (it.note) h += '<div class="nk-why">' + esc(it.note) + '</div>';
       h += '<div class="nk-meta"><span class="nk-date">写于 ' + short(it.dateStr || '', 12) + '</span>';
@@ -360,7 +456,7 @@
       return h + '<div class="narc-empty">梦见TA了？梦见自己去远行了？<br>那些醒来还记得的梦，都可以记在这里。</div>';
     }
     items.forEach(it => {
-      const inner = '<div class="ni-top"></div><div class="ni-text">' + esc(it.text) + '</div>';
+      const inner = '<div class="ni-top">' + shFlag(it) + '</div><div class="ni-text">' + esc(it.text) + '</div>';
       h += itemShell(inner, '<span class="ni-date">' + esc(it.date) + '</span><span class="nk-ops">' + opBtn('edit-dream', '编辑', ' data-id="' + it.id + '"') + opBtn('del-dream', '删除', ' data-id="' + it.id + '"', 1) + '</span>');
     });
     return h;
@@ -373,7 +469,7 @@
     h += '<div style="margin:0 2px 10px;text-align:right"><button class="narc-add" data-op="add-li" data-kind="ifch">＋ 记一条</button></div>';
     if (!arc.ifchanges.length) h += '<div class="narc-empty">换到IF世界后，「我们」有什么不一样？</div>';
     arc.ifchanges.slice().sort((a, b) => b.created - a.created).forEach(it => {
-      const inner = '<div class="ni-top"></div><div class="ni-text">' + esc(it.t) + '</div>';
+      const inner = '<div class="ni-top">' + shFlag(it) + '</div><div class="ni-text">' + esc(it.t) + '</div>';
       h += itemShell(inner, '<span class="nk-ops">' + opBtn('edit-li', '编辑', ' data-kind="ifch" data-id="' + it.id + '"') + opBtn('del-li', '删除', ' data-kind="ifch" data-id="' + it.id + '"', 1) + '</span>');
     });
     return h;
@@ -387,11 +483,35 @@
   }
   function editField(mapName, key) {
     const def = FIELD_INDEX[key]; if (!def || !window.openModal) return;
-    const arc = ensureArc();
-    const m = fieldMapOf(mapName, arc);
-    window.openModal(def.label, m[key] || '', function (v) {
-      m[key] = strim(v);
-      save(arc); toast('已记下'); render();
+    const mv = mergedArc();
+    const cur = (fieldMapOf(mapName, mv) || {})[key] || { v: '', shared: false };
+    let shared = !!cur.shared, phase = 'content', newVal = '', ctl = null;
+    ctl = window.openModal(def.label, cur.v, function (v) {
+      if (phase === 'content') {
+        const t = strim(v); if (!t) { ctl.stay(); ctl.focus(); return; }
+        newVal = t; phase = 'vis';
+        ctl.stay(); ctl.title('给谁看这条？');
+        ctl.input(false); ctl.pills(visPills(), shared ? 'shared' : 'pc');
+        ctl.okText('保存');
+        return;
+      }
+      shared = (v === 'shared');
+      if (shared) {
+        // 直接写进每位联系人自己的档案（fan-out）
+        fanOutMutate(a => { fieldMapOf(mapName, a)[key] = { v: newVal, shared: true }; });
+      } else {
+        // 仅当前联系人：写本份；其他联系人里同名的「全部可见」条目移除
+        const a = ensureArc();
+        fieldMapOf(mapName, a)[key] = newVal;
+        save(a);
+        allCids().forEach(cid => {
+          if (cid === viewCid) return;
+          const o = ensureArcFor(cid);
+          const m = fieldMapOf(mapName, o);
+          if (m && m[key] && m[key].shared) { delete m[key]; saveFor(o, cid); }
+        });
+      }
+      toast('已记下'); render();
     }, def.multi ? { textarea: true, textareaPlaceholder: def.ph } : { placeholder: def.ph, maxlength: 120 });
   }
 
@@ -419,58 +539,100 @@
   function addLi(kind) {
     if (!window.openModal) return;
     const useCat = kind === 'taste' && tab.tastes === 'like';
-    let cat = '', phase = useCat ? 'cat' : 'text', ctl = null;
+    let cat = '', text = '', phase = useCat ? 'cat' : 'text', ctl = null, shared = false;
     ctl = window.openModal(liTitle(kind), '', function (v) {
       if (phase === 'cat') {
         if (!v) return;
         cat = String(v); phase = 'text';
         ctl.stay(); ctl.pills([]); ctl.title('具体是什么呢？');
-        ctl.input(true); ctl.maxLen(100); ctl.ph(liPh(kind)); ctl.okText('保存');
+        ctl.input(true); ctl.maxLen(100); ctl.ph(liPh(kind)); ctl.okText('下一步');
         return;
       }
-      const t = strim(v); if (!t) { ctl.stay(); ctl.focus(); return; }
-      const arc = ensureArc();
-      const item = { id: makeId(), t: t, created: Date.now() };
+      if (phase === 'text') {
+        const t = strim(v); if (!t) { ctl.stay(); ctl.focus(); return; }
+        text = t; phase = 'vis';
+        ctl.stay(); ctl.title('给谁看这条？');
+        ctl.input(false); ctl.pills(visPills(), 'pc');
+        ctl.okText('保存');
+        return;
+      }
+      shared = (v === 'shared');
+      const item = { id: makeId(), t: text, created: Date.now() };
       if (kind === 'taste') { item.g = tab.tastes; item.cat = (tab.tastes === 'like') ? (cat || '其他') : ''; }
       else if (kind === 'habit') item.g = tab.habits;
       else if (kind === 'thing') item.g = tab.things;
-      listOf(kind, arc).push(item);
-      save(arc); toast('已记下'); render();
+      if (shared) {
+        item.shared = true;
+        fanOutMutate(a => { listOf(kind, a).push(Object.assign({}, item)); });
+      } else {
+        listOf(kind, ensureArc()).push(item);
+        save(ensureArc());
+      }
+      toast('已记下'); render();
     }, useCat ? { noInput: true, pills: LIKE_CATS.map(c => ({ label: c, value: c })) } : { placeholder: liPh(kind), maxlength: 120 });
   }
   function editLi(kind, id) {
-    const arc = ensureArc(); const it = listOf(kind, arc).find(x => x.id === id); if (!it || !window.openModal) return;
+    const mv = mergedArc();
+    const it = listOf(kind, mv).find(x => x.id === id); if (!it || !window.openModal) return;
     const reCat = kind === 'taste' && it.g === 'like';
-    let phase = reCat ? 'cat' : 'text', newCat = it.cat || '', ctl = null;
+    let phase = reCat ? 'cat' : 'text', newCat = it.cat || '', newText = '', ctl = null, isShared = !!it.shared;
     ctl = window.openModal('编辑', it.t, function (v) {
       if (phase === 'cat') {
         if (!v) return;
         newCat = String(v); phase = 'text';
         ctl.stay(); ctl.pills([]); ctl.title('内容');
-        ctl.input(true); ctl.text(it.t); ctl.maxLen(120); ctl.ph('内容'); ctl.okText('保存');
+        ctl.input(true); ctl.text(it.t); ctl.maxLen(120); ctl.ph('内容'); ctl.okText('下一步');
         return;
       }
-      const t = strim(v); if (!t) { ctl.stay(); ctl.focus(); return; }
-      it.t = t; if (reCat) it.cat = newCat;
-      save(arc); toast('已更新'); render();
+      if (phase === 'text') {
+        const t = strim(v); if (!t) { ctl.stay(); ctl.focus(); return; }
+        newText = t; phase = 'vis';
+        ctl.stay(); ctl.title('给谁看这条？');
+        ctl.input(false); ctl.pills(visPills(), isShared ? 'shared' : 'pc');
+        ctl.okText('保存');
+        return;
+      }
+      isShared = (v === 'shared');
+      const item = Object.assign({}, it); delete item.shared;
+      item.t = newText; if (reCat) item.cat = newCat;
+      if (isShared) {
+        item.shared = true;
+        fanOutMutate(a => {
+          const arr = listOf(kind, a);
+          const i = arr.findIndex(x => x.id === id);
+          if (i >= 0) arr.splice(i, 1);
+          arr.push(Object.assign({}, item));
+        });
+      } else {
+        const a = ensureArc();
+        const arr = listOf(kind, a);
+        const i = arr.findIndex(x => x.id === id);
+        if (i >= 0) arr.splice(i, 1);
+        arr.push(item);
+        save(a);
+        allCids().forEach(cid => {
+          if (cid === viewCid) return;
+          const o = ensureArcFor(cid);
+          const arr2 = listOf(kind, o);
+          const j = arr2.findIndex(x => x.id === id && x.shared);
+          if (j >= 0) { arr2.splice(j, 1); saveFor(o, cid); }
+        });
+      }
+      toast('已更新'); render();
     }, reCat ? { noInput: true, pill: it.cat, pills: LIKE_CATS.map(c => ({ label: c, value: c })) } : { placeholder: '内容', maxlength: 120 });
   }
   function delLi(kind, id) {
     if (!window.openModal) return;
     window.openModal('删除这条？', '', function (v) {
       if (v !== 'del') return;
-      const arc = ensureArc();
-      const arr = listOf(kind, arc);
-      const i = arr.findIndex(x => x.id === id);
-      if (i >= 0) arr.splice(i, 1);
-      save(arc); toast('已删除'); render();
+      fanOutRemove(kind, id); toast('已删除'); render();
     }, { noInput: true, pill: 'del', pills: [{ label: '取消', value: 'no' }, { label: '删除', value: 'del' }] });
   }
 
-  // ---- 描述卡流程：类型→内容→备注 ----
+  // ---- 描述卡流程：类型→内容→备注→可见性 ----
   function addSelf() {
     if (!window.openModal) return;
-    let phase = 'type', pType = '', pText = '', ctl = null;
+    let phase = 'type', pType = '', pText = '', pNote = '', ctl = null, shared = false;
     ctl = window.openModal('写一张描述卡', '', function (v) {
       if (phase === 'type') {
         if (!v) return;
@@ -486,83 +648,167 @@
         const t = strim(v); if (!t) { ctl.stay(); ctl.focus(); return; }
         pText = t; phase = 'note';
         ctl.stay(); ctl.title('想补充的话（可选）'); ctl.hint('可留空。');
-        ctl.text(''); ctl.maxLen(160); ctl.ph('可留空'); ctl.okText('保存');
+        ctl.text(''); ctl.maxLen(160); ctl.ph('可留空'); ctl.okText('下一步');
         return;
       }
       if (phase === 'note') {
-        const arc = ensureArc(); const now = Date.now();
-        arc.selfs.push({ id: makeId(), type: pType, text: pText, note: strim(v), created: now, dateStr: (new Date(now).getMonth() + 1) + '.' + new Date(now).getDate() });
-        save(arc); toast('写下了一张描述卡'); render();
+        pNote = strim(v); phase = 'vis';
+        ctl.stay(); ctl.title('给谁看这条？');
+        ctl.input(false); ctl.pills(visPills(), 'pc');
+        ctl.okText('保存');
+        return;
       }
+      shared = (v === 'shared');
+      const now = Date.now();
+      const item = { id: makeId(), type: pType, text: pText, note: pNote, created: now, dateStr: (new Date(now).getMonth() + 1) + '.' + new Date(now).getDate() };
+      if (shared) {
+        item.shared = true;
+        fanOutMutate(a => { a.selfs.push(Object.assign({}, item)); });
+      } else {
+        ensureArc().selfs.push(item); save(ensureArc());
+      }
+      toast('写下了一张描述卡'); render();
     }, { noInput: true, pills: SELF_TYPES.map(t => ({ label: t[1], value: t[0] })) });
   }
   function editSelf(id) {
-    const arc = ensureArc(); const it = arc.selfs.find(x => x.id === id); if (!it || !window.openModal) return;
-    let phase = 'text', nt = '', ctl = null;
+    const mv = mergedArc();
+    const it = mv.selfs.find(x => x.id === id); if (!it || !window.openModal) return;
+    let phase = 'text', nt = '', nn = '', ctl = null, isShared = !!it.shared;
     ctl = window.openModal('编辑这张描述卡', it.text, function (v) {
       if (phase === 'text') {
         const t = strim(v); if (!t) { ctl.stay(); ctl.focus(); return; }
         nt = t; phase = 'note';
         ctl.stay(); ctl.title('想补充的话（可选）');
-        ctl.text(it.note || ''); ctl.maxLen(160); ctl.ph('可留空'); ctl.okText('保存');
+        ctl.text(it.note || ''); ctl.maxLen(160); ctl.ph('可留空'); ctl.okText('下一步');
         return;
       }
-      if (phase === 'note') { it.text = nt; it.note = strim(v); save(arc); toast('已更新'); render(); }
+      if (phase === 'note') {
+        nn = strim(v); phase = 'vis';
+        ctl.stay(); ctl.title('给谁看这条？');
+        ctl.input(false); ctl.pills(visPills(), isShared ? 'shared' : 'pc');
+        ctl.okText('保存');
+        return;
+      }
+      isShared = (v === 'shared');
+      const item = Object.assign({}, it); delete item.shared;
+      item.text = nt; item.note = nn;
+      if (isShared) {
+        item.shared = true;
+        fanOutMutate(a => {
+          a.selfs = a.selfs.filter(x => x.id !== id);
+          a.selfs.push(Object.assign({}, item));
+        });
+      } else {
+        const a = ensureArc();
+        a.selfs = a.selfs.filter(x => x.id !== id);
+        a.selfs.push(item);
+        save(a);
+        allCids().forEach(cid => {
+          if (cid === viewCid) return;
+          const o = ensureArcFor(cid);
+          if (o.selfs.some(x => x.id === id && x.shared)) {
+            o.selfs = o.selfs.filter(x => x.id !== id); saveFor(o, cid);
+          }
+        });
+      }
+      toast('已更新'); render();
     }, { placeholder: '你对自己的定义', maxlength: 140 });
   }
   function delSelf(id) {
     if (!window.openModal) return;
     window.openModal('删除这张描述卡？', '', function (v) {
       if (v !== 'del') return;
-      const arc = ensureArc();
-      arc.selfs = arc.selfs.filter(x => x.id !== id);
-      save(arc); toast('已删除'); render();
+      allCids().forEach(cid => {
+        const a = ensureArcFor(cid);
+        if (a.selfs.some(x => x.id === id)) { a.selfs = a.selfs.filter(x => x.id !== id); saveFor(a, cid); }
+      });
+      toast('已删除'); render();
     }, { noInput: true, pill: 'del', pills: [{ label: '取消', value: 'no' }, { label: '删除', value: 'del' }] });
   }
 
-  // ---- 梦境流程：内容 → 日期 ----
+  // ---- 梦境流程：内容 → 日期 → 可见性 ----
   function addDream() {
     if (!window.openModal) return;
-    let phase = 'text', text = '', ctl = null;
+    let phase = 'text', text = '', dDate = '', ctl = null, shared = false;
     ctl = window.openModal('记一个梦', '', function (v) {
       if (phase === 'text') {
         const t = strim(v); if (!t) { ctl.stay(); ctl.focus(); return; }
         text = t; phase = 'date';
         ctl.stay(); ctl.title('梦到哪天？'); ctl.hint('留空默认今天。');
-        ctl.text(mdstr(Date.now())); ctl.maxLen(30); ctl.input(true); ctl.ph('如 8月3日'); ctl.okText('保存');
+        ctl.text(mdstr(Date.now())); ctl.maxLen(30); ctl.input(true); ctl.ph('如 8月3日'); ctl.okText('下一步');
         return;
       }
       if (phase === 'date') {
-        const arc = ensureArc();
-        arc.dreams.push({ id: makeId(), text: text, date: strim(v) || mdstr(Date.now()), created: Date.now() });
-        save(arc); toast('记住了一个梦'); render();
+        dDate = strim(v) || mdstr(Date.now()); phase = 'vis';
+        ctl.stay(); ctl.title('给谁看这条？');
+        ctl.input(false); ctl.pills(visPills(), 'pc');
+        ctl.okText('保存');
+        return;
       }
+      shared = (v === 'shared');
+      const item = { id: makeId(), text: text, date: dDate, created: Date.now() };
+      if (shared) {
+        item.shared = true;
+        fanOutMutate(a => { a.dreams.push(Object.assign({}, item)); });
+      } else {
+        ensureArc().dreams.push(item); save(ensureArc());
+      }
+      toast('记住了一个梦'); render();
     }, { placeholder: '梦见……', maxlength: 200 });
   }
   function editDream(id) {
-    const arc = ensureArc(); const it = arc.dreams.find(x => x.id === id); if (!it || !window.openModal) return;
-    let phase = 'text', newText = '', ctl = null;
+    const mv = mergedArc();
+    const it = mv.dreams.find(x => x.id === id); if (!it || !window.openModal) return;
+    let phase = 'text', newText = '', newDate = '', ctl = null, isShared = !!it.shared;
     ctl = window.openModal('编辑这个梦', it.text, function (v) {
       if (phase === 'text') {
         const t = strim(v); if (!t) { ctl.stay(); ctl.focus(); return; }
         newText = t; phase = 'date';
         ctl.stay(); ctl.title('梦到哪天？');
-        ctl.text(it.date || mdstr(Date.now())); ctl.maxLen(30); ctl.input(true); ctl.ph('如 8月3日'); ctl.okText('保存');
+        ctl.text(it.date || mdstr(Date.now())); ctl.maxLen(30); ctl.input(true); ctl.ph('如 8月3日'); ctl.okText('下一步');
         return;
       }
       if (phase === 'date') {
-        it.text = newText; it.date = strim(v) || mdstr(Date.now());
-        save(arc); toast('已更新'); render();
+        newDate = strim(v) || mdstr(Date.now()); phase = 'vis';
+        ctl.stay(); ctl.title('给谁看这条？');
+        ctl.input(false); ctl.pills(visPills(), isShared ? 'shared' : 'pc');
+        ctl.okText('保存');
+        return;
       }
+      isShared = (v === 'shared');
+      const item = Object.assign({}, it); delete item.shared;
+      item.text = newText; item.date = newDate;
+      if (isShared) {
+        item.shared = true;
+        fanOutMutate(a => {
+          a.dreams = a.dreams.filter(x => x.id !== id);
+          a.dreams.push(Object.assign({}, item));
+        });
+      } else {
+        const a = ensureArc();
+        a.dreams = a.dreams.filter(x => x.id !== id);
+        a.dreams.push(item);
+        save(a);
+        allCids().forEach(cid => {
+          if (cid === viewCid) return;
+          const o = ensureArcFor(cid);
+          if (o.dreams.some(x => x.id === id && x.shared)) {
+            o.dreams = o.dreams.filter(x => x.id !== id); saveFor(o, cid);
+          }
+        });
+      }
+      toast('已更新'); render();
     }, { placeholder: '梦见……', maxlength: 200 });
   }
   function delDream(id) {
     if (!window.openModal) return;
     window.openModal('删掉这个梦？', '', function (v) {
       if (v !== 'del') return;
-      const arc = ensureArc();
-      arc.dreams = arc.dreams.filter(x => x.id !== id);
-      save(arc); toast('已删除'); render();
+      allCids().forEach(cid => {
+        const a = ensureArcFor(cid);
+        if (a.dreams.some(x => x.id === id)) { a.dreams = a.dreams.filter(x => x.id !== id); saveFor(a, cid); }
+      });
+      toast('已删除'); render();
     }, { noInput: true, pill: 'del', pills: [{ label: '取消', value: 'no' }, { label: '删除', value: 'del' }] });
   }
 
@@ -624,7 +870,7 @@
     }
   }
 
-  function boot() { bind(); }
+  function boot() { absorbSharedOnce(); bind(); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
 })();

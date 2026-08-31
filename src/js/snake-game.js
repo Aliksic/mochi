@@ -117,87 +117,86 @@
     if (name === 'safe' && hintEl && state.status === 'idle') hintEl.textContent = state.flags.safe ? '安全模式 · 点开始' : '点开始 · 滑动控制方向';
   }
 
-  // 全屏滚动区可用空间量测（扣除计分/提示/结算/按钮等兄弟块与安全区内边距）
-  function fsAvail() {
+  // 滚动区可放画布的空间：扣掉同屏兄弟块（计分/最长纪录/提示/结算/按钮/方向键）、
+  // 它们之间的 flex gap（.snake-fs 用 gap:min(2vh,2vw)，漏算会让画布顶出屏、按钮被裁）与内边距。
+  // 不做"至少 240×260"式的抬高：极矮/横屏下量到多少就用多少，格子 9px 下限 + 可滚动兜底接住。
+  function scrollAvail() {
     const sc = panel.querySelector('.poke-card-scroll');
     let availW = (sc && sc.clientWidth) || window.innerWidth || 360;
     let availH = (sc && sc.clientHeight) || window.innerHeight || 360;
     if (sc && sc.clientHeight > 0) {
-      sc.querySelectorAll('.snake-score,.snake-best,.snake-hint,.snake-result:not([hidden]),.snake-controls,.snake-dpad').forEach(function (el) {
-        if (el.hidden) return;
-        const st = getComputedStyle(el);
-        availH -= el.offsetHeight + (parseFloat(st.marginTop) || 0) + (parseFloat(st.marginBottom) || 0);
-      });
       const st = getComputedStyle(sc);
+      let n = 0;   // 参与布局的兄弟块数；n 块 + 画布共 n+1 项，之间有 n 个 gap
+      sc.querySelectorAll('.snake-score,.snake-best,.snake-hint,.snake-result:not([hidden]),.snake-controls,.snake-dpad').forEach(function (el) {
+        if (el.hidden || !el.offsetHeight) return;   // display:none / hidden 的块不占空间也没有 gap
+        const cs = getComputedStyle(el);
+        availH -= el.offsetHeight + (parseFloat(cs.marginTop) || 0) + (parseFloat(cs.marginBottom) || 0);
+        n++;
+      });
+      availH -= (parseFloat(st.rowGap) || 0) * n;
+      availH -= (parseFloat(st.paddingTop) || 0) + (parseFloat(st.paddingBottom) || 0);
       availW -= (parseFloat(st.paddingLeft) || 0) + (parseFloat(st.paddingRight) || 0);
-      availH -= (parseFloat(st.paddingTop) || 0) + (parseFloat(st.paddingBottom) || 0) + 16;   // gap 余量
     }
-    return { w: Math.max(240, availW), h: Math.max(260, availH) };
+    return { w: Math.max(120, availW), h: Math.max(90, availH) };
   }
-  // 按当前地图把画布贴合到剩余空间（不改格数；开始对局按钮收起后调用可放大格子）
+  // 按格子边长铺设画布，并用「实际溢出」自我校正：上一步的量算（字号换行、gap 取整、字体渲染）
+  // 总有几像素偏差，而全屏滚动区是裁切的——溢出 1px 就是按钮被切一截，所以量 scrollHeight 再收，最多 4 轮。
+  function applyCell(cell, minCell) {
+    const sc = panel.querySelector('.poke-card-scroll');
+    for (let i = 0; i < 4; i++) {
+      cell = Math.max(minCell, cell);
+      cssW = Math.round(cell * gW()); cssH = Math.round(cell * gH());
+      canvas.style.width = cssW + 'px';
+      canvas.style.height = cssH + 'px';
+      canvas.width = Math.round(cssW * dpr);       // 改位图尺寸会清空画布，调用方随后 render()
+      canvas.height = Math.round(cssH * dpr);
+      if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      if (!sc || !sc.clientHeight) break;          // 面板未布局（隐藏）时量不到，下次打开/resize 会重算
+      const over = sc.scrollHeight - sc.clientHeight;
+      if (over <= 0 || cell <= minCell) break;
+      cell -= over / gH();
+    }
+  }
+  // 全屏：按当前地图把画布贴合到剩余空间（不改格数；开始按钮收起/结算块出现后调用）
   function fitCanvasBox() {
     if (!canvas || !isFs || !ctx) return;
-    const av = fsAvail();
-    const cell = Math.max(9, Math.min(av.w / gW(), av.h / gH()));
-    cssW = Math.round(cell * gW()); cssH = Math.round(cell * gH());
-    canvas.style.width = cssW + 'px';
-    canvas.style.height = cssH + 'px';
-    canvas.width = Math.round(cssW * dpr);
-    canvas.height = Math.round(cssH * dpr);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const av = scrollAvail();
+    applyCell(Math.min(av.w / gW(), av.h / gH()), 9);
   }
-  // 非全屏：画布贴齐滚动区剩余高度（扣除计分/提示/结算/按钮/方向键等兄弟块与安全垫），
-  // 保证「再来一局」按钮下方的方向键在小屏也一屏可见，无需再下拉滚动。
+  // 非全屏：画布贴齐滚动区剩余高度，保证「再来一局」按钮下方的方向键在小屏也一屏可见，无需再下拉滚动。
   function fitNonFsCanvas() {
     GW = 15; GH = 15;                // 半框固定 15×15 基准
-    const sc = panel.querySelector('.poke-card-scroll');
-    let availH = window.innerHeight || 200;   // 面板隐藏/未布局时拿不到可用高度，退回足够大
-    if (sc && sc.clientHeight > 0) {
-      availH = sc.clientHeight;
-      sc.querySelectorAll('.snake-score,.snake-best,.snake-hint,.snake-result:not([hidden]),.snake-controls,.snake-dpad').forEach(function (el) {
-        if (el.hidden) return;
-        const st = getComputedStyle(el);
-        availH -= el.offsetHeight + (parseFloat(st.marginTop) || 0) + (parseFloat(st.marginBottom) || 0);
-      });
-      const st = getComputedStyle(sc);
-      availH -= (parseFloat(st.paddingTop) || 0) + (parseFloat(st.paddingBottom) || 0) + 16;   // gap 余量
-    }
-    const availW = (sc && sc.clientWidth) || 360;
-    const size = Math.round(Math.min(360, Math.max(160, Math.min(availW, availH))));
-    cssW = size; cssH = size;
-    canvas.style.width = cssW + 'px';
-    canvas.style.height = cssH + 'px';
+    const av = scrollAvail();
+    applyCell(Math.min(360, Math.max(160, Math.min(av.w, av.h))) / 15, 6);
   }
   function refitNonFs() {
     if (!canvas || !panel || panel.hidden || isFs) return;
     fitNonFsCanvas();
-    canvas.width = Math.round(cssW * dpr);
-    canvas.height = Math.round(cssH * dpr);
-    if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    render(0);
+    if (ctx) render(0);
+  }
+  // 兄弟块显隐（最长纪录 / 结算 / 开始按钮）会改变可放画布的高度 → 按当前模式重铺一次
+  function refitAll() {
+    refitNonFs();                 // 非全屏：内部已 render
+    if (!isFs) return;
+    fitCanvasBox();
+    render(0);                    // applyCell 改位图尺寸会清空画布
   }
   function setupCanvas() {
     if (!canvas) return;
     dpr = Math.min(window.devicePixelRatio || 1, 3);
+    ctx = canvas.getContext('2d');   // 幂等，供 applyCell 重设 transform
     if (isFs) {
       // 全屏：空闲/结束态顺便把「下一局」地图按 FS_CELL 放大到接近满屏；
       // 进行中/暂停/倒计时不改格数（蛇身坐标仍有效），只适配画布。
-      const av = fsAvail();
       if (!state || state.status === 'idle' || state.status === 'over') {
-        GW = Math.max(12, Math.min(34, Math.floor(av.w / FS_CELL)));
-        GH = Math.max(12, Math.min(46, Math.floor(av.h / FS_CELL)));
+        const av0 = scrollAvail();
+        GW = Math.max(12, Math.min(34, Math.floor(av0.w / FS_CELL)));
+        GH = Math.max(12, Math.min(46, Math.floor(av0.h / FS_CELL)));
       }
-      const cell = Math.max(9, Math.min(av.w / gW(), av.h / gH()));
-      cssW = Math.round(cell * gW()); cssH = Math.round(cell * gH());
-      canvas.style.width = cssW + 'px';
-      canvas.style.height = cssH + 'px';
+      fitCanvasBox();
     } else {
       fitNonFsCanvas();
     }
-    canvas.width = Math.round(cssW * dpr);
-    canvas.height = Math.round(cssH * dpr);
-    ctx = canvas.getContext('2d');
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
 
   function initEls() {
@@ -345,9 +344,7 @@
     if (resumeBtn) resumeBtn.hidden = true;
     if (resultEl) { resultEl.hidden = true; resultEl.innerHTML = ''; }
     newGame(diff);
-    refitNonFs();   // 结算块/开始按钮收起后，画布放回一米可见的尺寸
-    fitCanvasBox();   // 开始按钮随即隐藏，重适配画布吸收腾出的空间（不改格数）
-    render(0);
+    refitAll();     // 结算块/开始按钮收起后腾出的空间收归画布（不改格数）
     let n = 3;
     state.status = 'countdown';
     const countdownStep = function () {
@@ -751,7 +748,7 @@
     resultEl.classList.add('snake-res-pop');
     if (restartBtn) restartBtn.hidden = false;
     if (hintEl) hintEl.textContent = '再来一局？';
-    refitNonFs();   // 结算块+再来一局出现后，重新收小画布让下方方向键一屏可见
+    refitAll();     // 结算块+再来一局出现后收小画布：半框让方向键一屏可见，全屏防「再来一局」被裁到屏外
   }
 
   function render(alpha) {
@@ -944,14 +941,14 @@
     if (nameEl) nameEl.textContent = (typeof localStorage !== 'undefined' && localStorage.getItem(PARTNER_KEY)) || 'TA';
     // 先显示面板再切全屏：隐藏状态下量不到布局尺寸，setupCanvas 会拿到 0
     panel.hidden = false;
+    renderScore();
+    renderBest();   // 最长纪录行要先落到 DOM：toggleFs 会按当时可见的兄弟块量画布，晚一行就把按钮顶出屏
     // 手机端默认全屏（占满视口、地图按屏幕放大更好玩）；桌面端重置全屏
     const mobile = window.innerWidth < 900;
     if (mobile) { if (!isFs) toggleFs(); }
     else { if (isFs) toggleFs(); }
     paused = false;
     if (pauseBtn) pauseBtn.textContent = '⏸';
-    renderScore();
-    renderBest();
     if (canSave(state) && validState(state)) {
       state.status = 'playing';
       state.startTime = Date.now() - state.elapsed;
@@ -984,6 +981,7 @@
     if (resumeBtn) resumeBtn.hidden = true;
     if (resultEl) { resultEl.hidden = true; resultEl.innerHTML = ''; }
     if (hintEl) hintEl.textContent = '点开始 · 滑动控制方向';
+    refitAll();     // 最长纪录行/继续上局按钮显隐后再量一次，避免按钮被挤到屏外
     render(0);
   }
   function stopLoop() {

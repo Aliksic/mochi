@@ -138,9 +138,23 @@
   function saveDex(d) { writeJSON(dexKey(), d); }
 
   function todayDataKey() { return 'fishing-today'; }
+  // 「留」标记按归属记：keep['mine:<id>'] / keep['ta:<id>']，同品种两侧互不牵连
+  function keepKey(side, id) { return side + ':' + id; }
+  function normalizeToday(t) {
+    const old = t.keep && typeof t.keep === 'object' ? t.keep : {};
+    const keep = {};
+    Object.keys(old).forEach(function (k) {
+      if (!old[k]) return;
+      // 旧数据只按品种记（键不含 ':'）：展开到两侧，等价于原来的「同品种两侧都不卖」
+      if (k.indexOf(':') < 0) { keep[keepKey('mine', k)] = 1; keep[keepKey('ta', k)] = 1; }
+      else keep[k] = 1;
+    });
+    t.keep = keep;
+    return t;
+  }
   function loadToday() {
     const t = readJSON(todayDataKey(), null);
-    if (t && t.date === todayKey()) return t;
+    if (t && t.date === todayKey()) return normalizeToday(t);
     return { date: todayKey(), mine: {}, ta: {}, keep: {} };
   }
   function saveToday(t) { writeJSON(todayDataKey(), t); }
@@ -404,7 +418,7 @@
       Object.keys(t[side]).forEach(function (id) {
         const it = ITEM_MAP[id];
         if (!it || it.cat === 'gift') return;
-        if (keep[id]) return;
+        if (keep[keepKey(side, id)]) return;
         const n = t[side][id] || 0;
         total += it.price * n; count += n;
         sold[side] = sold[side] || {}; sold[side][id] = 1;
@@ -413,6 +427,12 @@
     if (count === 0) { toast('没有可出售的收获（勾选「留」的不卖）'); return; }
     if (window.giftWalletChange) window.giftWalletChange(total, total, '钓鱼出售');
     Object.keys(sold).forEach(function (side) { Object.keys(sold[side]).forEach(function (id) { delete t[side][id]; }); });
+    // 清掉该侧已无存货的「留」标记，否则同品种当天再钓到会被残留标记自动置留
+    Object.keys(t.keep).forEach(function (k) {
+      const i = k.indexOf(':');
+      const side = k.slice(0, i), id = k.slice(i + 1);
+      if (!t[side] || !t[side][id]) delete t.keep[k];
+    });
     saveToday(t);
     addStats({ totalEarned: total });
     sfxSell();
@@ -582,9 +602,9 @@
         const n = m[id];
         const p = it.price * n;
         const sellable = it.cat !== 'gift';
-        const kept = !!keep[id];
+        const kept = !!keep[keepKey(side, id)];
         if (sellable && !kept) { total += p; count += n; }
-        html += '<div class="fish-row"><span class="fish-ico">' + it.icon + '</span><span class="fish-name">' + esc(it.name) + (it.cat === 'gift' ? '<i class="fish-gift-tag">已收藏</i>' : '') + '</span><span class="fish-cnt">×' + n + '</span>' + (sellable ? '<label class="fish-keep"><input type="checkbox" class="fish-keep-cb" data-id="' + id + '"' + (kept ? ' checked' : '') + '><span>留</span></label><span class="fish-price">+' + fenToStr(p) + '</span>' : '<span class="fish-price">纪念</span>') + '</div>';
+        html += '<div class="fish-row"><span class="fish-ico">' + it.icon + '</span><span class="fish-name">' + esc(it.name) + (it.cat === 'gift' ? '<i class="fish-gift-tag">已收藏</i>' : '') + '</span><span class="fish-cnt">×' + n + '</span>' + (sellable ? '<label class="fish-keep"><input type="checkbox" class="fish-keep-cb" data-side="' + side + '" data-id="' + id + '"' + (kept ? ' checked' : '') + '><span>留</span></label><span class="fish-price">+' + fenToStr(p) + '</span>' : '<span class="fish-price">纪念</span>') + '</div>';
       });
       return html;
     }
@@ -690,10 +710,10 @@
     if (!cb) return;
     e.stopPropagation();
     const t = loadToday();
-    if (!t.keep) t.keep = {};
-    const id = cb.getAttribute('data-id');
-    if (cb.checked) t.keep[id] = 1; else delete t.keep[id];
+    const key = keepKey(cb.getAttribute('data-side'), cb.getAttribute('data-id'));
+    if (cb.checked) t.keep[key] = 1; else delete t.keep[key];
     saveToday(t);
+    render();
   });
   tabEls.forEach(function (tab) {
     tab.addEventListener('click', function (e) {

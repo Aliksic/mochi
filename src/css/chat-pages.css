@@ -2956,7 +2956,8 @@ body.mail-emoji-mode #emoji-panel { bottom: calc(64px + var(--mochi-safe-bottom,
 .snake-dp[data-dir="right"] { grid-column:3; grid-row:2; }
 /* 全屏：面板占满视口，canvas + UI 按视口等比放大铺满 */
 #chat-snake-panel.snake-fs { position:fixed; inset:0; z-index:9999; border-radius:0; max-height:none; height:100vh; height:100dvh; background:#fff; padding-top:max(env(safe-area-inset-top,0px),8px); padding-bottom:max(var(--mochi-safe-bottom,env(safe-area-inset-bottom,0px)),8px); overscroll-behavior:none; }
-#chat-snake-panel.snake-fs .poke-card-scroll { overflow:hidden; padding:min(2vh,2vw) 8px; }
+/* 兜底可纵向滚：极矮/横屏下画布格子有 9px 下限仍可能塞不下结算，overflow:hidden 会让「再来一局」永久点不到（canvas 有 touch-action:none，滑动控制不受滚动影响） */
+#chat-snake-panel.snake-fs .poke-card-scroll { overflow:hidden auto; padding:min(2vh,2vw) 8px; }
 /* 全屏隐藏方向键：滑动/键盘已覆盖全部输入，把空间让给更大的地图 */
 #chat-snake-panel.snake-fs .snake-dpad { display:none; }
 #chat-snake-panel.snake-fs .poke-card-head { border-bottom-color:rgba(0,0,0,.08); padding:8px 14px; }

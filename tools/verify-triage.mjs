@@ -2,8 +2,10 @@
 // 目的是把「65 项红」拆成：期望过期（改脚本）/ 疑似漏接入（真回归）/ 运行时行为断言（需人看，可按域交接）。
 // 用法：node tools/verify-triage.mjs [--log tools/tmp-suite.log] [--scripts a.mjs,b.mjs] [--jobs 3] [--timeout 240] [--full] [--reuse]
 //   --reuse：复用 tools/tmp-triage-cache/ 里上次输出，只重做分类不改产物时用它（跳过 D 转绿判定）。
+//           缓存按「产物指纹-脚本名」分名，产物被重建后自然落空 → 自动回落实跑，不会拿旧输出判新产物。
 import { readFileSync, readdirSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { spawn } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { join, dirname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -12,12 +14,21 @@ const argv = process.argv.slice(2);
 const opt = (n, dft) => { const i = argv.indexOf('--' + n); return i >= 0 && argv[i + 1] && !argv[i + 1].startsWith('--') ? argv[i + 1] : dft; };
 const FULL = argv.includes('--full');
 const REUSE = argv.includes('--reuse');
+const IS_MAIN = !!(process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href);
 const JOBS = Number(opt('jobs', 3));
 const TMO = Number(opt('timeout', 240)) * 1000;
 const logPath = opt('log', 'tools/tmp-suite.log');
+// 实测踩过的两个假结论：--jobs 0 直接 TypeError 崩，--timeout 0 把每个脚本秒判超时塞进 C 桶。
+if (IS_MAIN && (!(JOBS >= 1) || !(TMO >= 5000))) {
+  console.error('参数不合理：--jobs 需 ≥1（收到 ' + opt('jobs', '缺省 3') + '），--timeout 需 ≥5 秒（收到 ' + opt('timeout', '缺省 240') + '）');
+  process.exit(2);
+}
 
 const abs = (p) => join(root, p);
-const product = readFileSync(abs('index.html'), 'utf8');
+// 产物指纹（与 git hash-object 同算法，便于和 git ls-files 对号）：分类结果只对这一个字节串有效
+const productBuf = readFileSync(abs('index.html'));
+const prodFp = createHash('sha1').update('blob ' + productBuf.length + '\0').update(productBuf).digest('hex').slice(0, 8);
+const product = productBuf.toString('utf8');
 const stripComments = (t) => t.split('\n').filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l)).map((l) => l.replace(/\/\*[\s\S]*?\*\//g, '')).join('\n');
 const srcBlobs = [];
 for (const dir of ['js', 'css']) for (const f of readdirSync(abs('src/' + dir))) if (/\.(js|css)$/.test(f)) srcBlobs.push(['src/' + dir + '/' + f, stripComments(readFileSync(abs('src/' + dir + '/' + f), 'utf8'))]);
@@ -40,21 +51,24 @@ function inMarkup(name) {
   return pats.some((re) => re.test(markupSrc));
 }
 
-// ---- 红项清单 ----
-let files = [];
-if (opt('scripts', '')) files = opt('scripts', '').split(',').map((s) => s.trim()).filter(Boolean);
-else if (existsSync(abs(logPath))) {
-  const s = new Set();
-  for (const raw of readFileSync(abs(logPath), 'utf8').split(/\r?\n/)) {
-    const m = raw.match(/^--- (verify-\S+?\.mjs)/) || raw.match(/^⏱ (verify-\S+?\.mjs)/);
-    if (m) s.add(m[1]);
-  }
-  files = [...s];
-} else { console.error('既没有 --scripts 也找不到日志 ' + logPath); process.exit(2); }
-files = files.filter((f) => existsSync(abs('tools/' + f)));
+// ---- 红项清单（收进函数：被 import 只做分类自检时不该顺带读日志甚至 exit）----
+function collectFiles() {
+  let files = [];
+  if (opt('scripts', '')) files = opt('scripts', '').split(',').map((s) => s.trim()).filter(Boolean);
+  else if (existsSync(abs(logPath))) {
+    const s = new Set();
+    for (const raw of readFileSync(abs(logPath), 'utf8').split(/\r?\n/)) {
+      const m = raw.match(/^--- (verify-\S+?\.mjs)/) || raw.match(/^⏱ (verify-\S+?\.mjs)/);
+      if (m) s.add(m[1]);
+    }
+    files = [...s];
+  } else { console.error('既没有 --scripts 也找不到日志 ' + logPath); process.exit(2); }
+  return files.filter((f) => existsSync(abs('tools/' + f)));
+}
 
 const run = (file) => new Promise((resolve) => {
-  const cache = join(root, 'tools', 'tmp-triage-cache', file + '.log');
+  // 缓存名带产物指纹：换产物（并行会话重建）后 --reuse 自然落空，不会拿旧输出去分类新产物
+  const cache = join(root, 'tools', 'tmp-triage-cache', prodFp + '-' + file + '.log');
   if (REUSE && existsSync(cache)) {
     const out = readFileSync(cache, 'utf8');
     resolve({ file, code: 1, killed: false, out, ms: 0, cached: true });
@@ -66,6 +80,11 @@ const run = (file) => new Promise((resolve) => {
   const timer = setTimeout(() => { killed = true; child.kill('SIGKILL'); }, TMO);
   child.stdout.on('data', (d) => { if (buf.length < 400000) buf += d; });
   child.stderr.on('data', (d) => { if (buf.length < 400000) buf += d; });
+  // spawn 失败时 Node 只发 'error' 不发 'exit'；不接住就是未处理异常，一个脚本拖垮整批分类
+  child.on('error', (e) => {
+    clearTimeout(timer);
+    resolve({ file, code: -1, killed: false, spawnError: e.code || e.message, out: buf + '\n[spawn-error] ' + (e.code || e.message), ms: Date.now() - t0 });
+  });
   child.on('exit', (code) => {
     clearTimeout(timer);
     try { mkdirSync(dirname(cache), { recursive: true }); writeFileSync(cache, buf, 'utf8'); } catch (e) {}
@@ -193,11 +212,17 @@ function verdictFor(code, label, seed, labels, inputs) {
 }
 
 // 被 import 时只暴露分类函数，不启动几十个浏览器跑批（供 tools/verify-triage-classify.mjs 复判自检）
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) await main();
+if (IS_MAIN) await main();
 export { isAnchor, seedLitsOf, labelLitsOf, inputLitsOf, inMarkup, verdictFor, stripComments };
 
 async function main() {
-console.log('待分类红项：' + files.length + ' 个脚本，并发 ' + JOBS + '，单脚本 ' + TMO / 1000 + 's');
+const files = collectFiles();
+// 空清单必须报错退出：实测它会打印一份和「查过了、没发现问题」完全同形的全零报告，极易被当清白结论引用
+if (!files.length) {
+  console.error('清单为空：' + (opt('scripts', '') ? '--scripts 里的文件在 tools/ 下都不存在' : '日志 ' + logPath + ' 里没有一条「--- verify-xxx.mjs」失败段（可能这一趟全绿，也可能 verify-suite 的输出格式已改，去看第 129 行）') + '。0 项待分类 ≠ 无缺陷。');
+  process.exit(2);
+}
+console.log('待分类红项：' + files.length + ' 个脚本，并发 ' + JOBS + '，单脚本 ' + TMO / 1000 + 's，产物 ' + prodFp + '（' + productBuf.length + ' 字节）');
 const rows = await pool(files, JOBS, (f) => run(f));
 const per = [];
 for (const r of rows) {
@@ -211,12 +236,13 @@ for (const r of rows) {
     if (m && !/合计|结果|通过/.test(m[1])) fails.push(m[1].replace(/\s+/g, ' ').trim());
   }
   const items = fails.map((label) => Object.assign({ label }, verdictFor(code, label, seed, labels, inputs) || { kind: 'unlocated', lits: [] }));
-  per.push({ file: r.file, code: r.code, killed: r.killed, ms: r.ms, fails, items });
+  per.push({ file: r.file, code: r.code, killed: r.killed, ms: r.ms, spawnError: r.spawnError, cached: r.cached, fails, items });
 }
 
 const short = (s, n) => { s = s == null ? '' : String(s); return s.length > n ? s.slice(0, n) + '…' : s; };
 const out = [];
 const say = (s) => { out.push(s); console.log(s); };
+say('产物指纹 ' + prodFp + '（' + productBuf.length + ' 字节）· 生成于 ' + new Date().toISOString() + ' · 下列判定只对这个字节串有效，产物一变请整批重跑');
 
 for (const p of per) {
   const kinds = p.items.map((i) => i.kind);
@@ -235,7 +261,11 @@ say('\n===== B 疑似期望过期（断言锚点在 src 注释外与产物里都
 for (const p of grp('stale')) { const it = p.items.find((i) => i.kind === 'stale' || i.kind === 'mixed') || {}; const a = (it.lits || [])[0] || {}; say('  · ' + p.file + ' → 「' + short(it.label, 44) + '」锚点「' + short(a.lit, 34) + '」' + (a.note || 'src/产物都没有')); }
 
 say('\n===== C 运行时行为断言（锚点查不出问题，需人看或按域交接）' + grp('runtime').length + ' 项 =====');
-for (const p of grp('runtime')) say('  · ' + p.file + (p.killed ? ' [超时]' : '') + ' FAIL ' + p.fails.length + ' 条：' + (FULL ? p.fails.slice(0, 3).map((x) => short(x, 40)).join(' | ') : short(p.fails[0] || '（无 FAIL 行，仅退出码非 0）', 60)));
+for (const p of grp('runtime')) say('  · ' + p.file + (p.spawnError ? ' [脚本没跑起来：' + p.spawnError + '，与功能无关]' : (p.killed ? ' [超时]' : '')) + ' FAIL ' + p.fails.length + ' 条：' + (FULL ? p.fails.slice(0, 3).map((x) => short(x, 40)).join(' | ') : short(p.fails[0] || '（无 FAIL 行，仅退出码非 0）', 60)));
+if (REUSE) {
+  const used = per.filter((p) => p.cached).length;
+  say('  （--reuse：' + used + '/' + per.length + ' 项命中指纹 ' + prodFp + ' 的缓存，其余 ' + (per.length - used) + ' 项已实跑）');
+}
 
 say('\n===== E FAIL 行在脚本源码里定位不到断言（分类器没读懂它，不算结论）' + grp('unlocated').length + ' 项 =====');
 for (const p of grp('unlocated')) say('  · ' + p.file + ' FAIL ' + p.fails.length + ' 条：' + short(p.fails[0] || '', 60));

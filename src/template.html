@@ -1567,7 +1567,7 @@
         <!-- 功能清单：分组折叠 -->
         <div class="cal-card glass">
           <details class="lic-grp" open>
-            <summary><span class="lg-num">01</span><span class="lg-name">聊天传讯</span><span class="lg-count">21</span></summary>
+            <summary><span class="lg-num">01</span><span class="lg-name">聊天传讯</span><span class="lg-count">22</span></summary>
             <div class="lg-body">
           <div class="lic-li">字卡交流：文字、情绪、心意、交流意图四种字卡回复，联系人所有内容均为字卡回复</div>
           <div class="lic-li">每条消息使用多字卡回复：可开启、调触发概率与最少/最多条数</div>
@@ -1582,6 +1582,7 @@
           <div class="lic-li">聊天页面点击顶部栏联系人的昵称，可以让对方立即发送消息</div>
           <div class="lic-li">可搜索聊天记录并跳转到对应位置</div>
           <div class="lic-li">聊天 + 按钮展开更多功能面板（互动 / 小游戏 / 工具 / TA的提问 四分类）：互动类——邀请TA、通话、拍一拍、红包、心意集市、心意柜、头像互动、漂流瓶</div>
+          <div class="lic-li">「邀请TA」半框内置【我的邀请】字卡库：预设 + 自定义分组，可存入 / 修改 / 删除邀请字卡，点字卡即可重复发送</div>
           <div class="lic-li">小游戏类——猜拳、Pong、贪吃蛇、打砖块、钓鱼、四子棋、扫雷、记忆翻牌；工具类——帮我决定、多人决定、问问TA、搜索记录、占卜、寻踪、此间、房间</div>
           <div class="lic-li">「TA 的提问」面板：让 TA 现在问一次（询问 / 小问题 / 好奇 / 吐槽 / 邀请）</div>
           <div class="lic-li">贴贴邀请：TA 会主动发来贴贴 / 抱抱 / 牵手 / 靠着的邀请，同意有轻震回应，婉拒也有专属台阶文案</div>
@@ -3959,15 +3960,20 @@
           <div class="gift-grid" id="gift-grid"></div>
         </div>
       </div>
-      <!-- 聊天页输入半框（邀请TA / 问问TA，露出聊天消息，星言式） -->
+      <!-- 聊天页输入半框（邀请TA / 问问TA，露出聊天消息，星言式）
+           v3.26.x：邀请TA 模式内置「我的邀请」字卡库（仿我的拍一拍：分组 + 字卡 + 存入/发送），
+           点字卡即可重复发送，无需每次手动输入 -->
       <div class="poke-card" id="chat-ask-panel" hidden>
         <div class="poke-card-head">
           <span id="chat-ask-title">邀请TA</span>
           <button class="poke-card-close" id="chat-ask-close">✕</button>
         </div>
+        <div class="poke-groups" id="invite-groups" hidden></div>
         <div class="poke-card-scroll chat-ask-body">
+          <div class="invite-list" id="invite-list" hidden></div>
           <input type="text" class="chat-ask-input" id="chat-ask-input" placeholder="想邀请TA做什么？" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
           <div class="chat-ask-actions">
+            <button class="cc-tool" id="chat-ask-save" hidden>存入</button>
             <button class="cc-tool" id="chat-ask-cancel">取消</button>
             <button class="cc-tool" id="chat-ask-ok">发送</button>
           </div>

@@ -147,8 +147,11 @@
       // 头像历史标准归属是根命名空间 store，storeFor('default') 读「default 桌面」会取不到，
       // 导致「联系人发送朋友圈」的通知弹窗右侧不显示发布者头像（用户反馈）。未取到且为
       // default 时补根键回退；非 default 联系人仍只读各自桌面，不串头像。
-      let v = s.get('feed-ta-avatar') || s.get('avatar-partner') || '';
-      if (!v && o === 'default') v = store.get('feed-ta-avatar') || store.get('avatar-partner') || '';
+      // v3.27.x：补读聊天专用键 cs-avatar-partner（v3.12.x 起换头像只写该键，桌面
+      // avatar-partner 独立不再跟随）——否则发布者如只在聊天里换过头像，此处分取不到，
+      // 后台通知会回退成当前桌面联系人头像（用户反馈：通知头像显示成当前桌面的 TA）。
+      let v = s.get('feed-ta-avatar') || s.get('avatar-partner') || s.get('cs-avatar-partner') || '';
+      if (!v && o === 'default') v = store.get('feed-ta-avatar') || store.get('avatar-partner') || store.get('cs-avatar-partner') || '';
       if (v && typeof v === 'string' && v.length > 500 * 1024) return '';
       return v || '';
     } catch (e) { return ''; }
@@ -1342,8 +1345,10 @@ if (comInput) comInput.addEventListener('keydown', (e) => { if (e.key === 'Enter
     // v3.5.107：新增朋友圈通知且不在朋友圈页 → 前台桌面弹窗（点击进朋友圈）
     if (window.showDeskPopup && !feedPageVisible()) {
       // v3.7.x：弹窗头像带发布者 TA 头像（跨桌面动态弹窗不显示当前桌面 TA 头像）
+      // v3.27.x：avFixed 防误回退——发布者头像为空时不回退当前桌面头像（bgNotifyCheck
+      // 无 avFixed 时 av 为空会兜底成当前桌面的 cs-avatar-partner，导致跨桌面显示错头像）
       const av = owner ? taAvFor(owner) : '';
-      window.showDeskPopup({ name: '朋友圈', text: (window.taFit ? window.taFit(noticeTextClean(text), owner) : noticeTextClean(text)), av: av, onClick: openFeedPage, isHidden: document.visibilityState === 'hidden' });
+      window.showDeskPopup({ name: '朋友圈', text: (window.taFit ? window.taFit(noticeTextClean(text), owner) : noticeTextClean(text)), av: av, avFixed: true, onClick: openFeedPage, isHidden: document.visibilityState === 'hidden' });
     } else if (feedPageVisible() && document.visibilityState !== 'hidden') {
       // v3.13.x：人在朋友圈页内时顶部横幅按设计不弹（v3.5.107，防遮挡）——但 TA
       // 评论/回复/点赞到达毫无感知（用户反馈：联系人回复我朋友圈评论没有提示，

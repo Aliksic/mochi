@@ -24,6 +24,7 @@
 <style>
 * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
 :root {
+color-scheme:light;
 --ink:#111111; --muted:#8a8a8a; --line:#e6e6e6;
 --page-bg:#e9e9e9; --page-bg-grad:#f6f6f6;
 --phone-bg-a:#ffffff; --phone-bg-b:#f2f2f2; --phone-inset:#e8e8e8;
@@ -40,6 +41,7 @@
 --desk-card-scale:1;
 }
 [data-theme="dark"] {
+color-scheme:dark;
 --ink:#f0f0f0; --muted:#8a8a8a; --line:#333333;
 --page-bg:#0c0c0c; --page-bg-grad:#1a1a1a;
 --phone-bg-a:#1c1c1c; --phone-bg-b:#0e0e0e; --phone-inset:rgba(255,255,255,.08);
@@ -951,6 +953,26 @@ border:1px solid #eee; background:#f7f7f7; color:#999; cursor:pointer; font-fami
 }
 .desk-lib-tab.on { background:#111; color:#fff; border-color:#111; }
 .desk-lib-panel { display:flex; flex-direction:column; }
+.desk-lib-search {
+width:100%; box-sizing:border-box; margin-bottom:10px; padding:8px 14px;
+border:1px solid #eee; border-radius:99px; background:#fafafa;
+font-size:13px; color:var(--ink,#111); font-family:inherit; outline:none;
+}
+.desk-lib-search:focus { border-color:#111; }
+.desk-lib-search::placeholder { color:#bbb; }
+.desk-lib-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(76px,1fr)); gap:8px; }
+.desk-lib-icon {
+display:flex; flex-direction:column; align-items:center; gap:6px;
+padding:10px 4px; border:1px solid #eee; border-radius:10px; cursor:pointer;
+}
+.desk-lib-icon .dli-prev {
+width:40px; height:40px; border-radius:12px; background:#f4f4f4;
+display:flex; align-items:center; justify-content:center;
+}
+.desk-lib-icon .dli-letter { font-size:17px; font-weight:600; color:#666; }
+.desk-lib-icon .dli-name { font-size:11px; color:var(--ink,#111); text-align:center; line-height:1.2; }
+.desk-lib-icon.on { border-color:#111; background:#f7f7f7; }
+.desk-lib-icon.on .dli-letter { color:#111; }
 .desk-lib-item {
 display:flex; align-items:center; gap:10px;
 padding:10px 12px; border:1px solid #eee; border-radius:10px; margin-bottom:8px;
@@ -1838,6 +1860,13 @@ font-family:inherit; -webkit-tap-highlight-color:transparent;
 }
 .poke-add-btn:active { opacity:.85; }
 .poke-input-row[hidden] { display:none; }
+.invite-list { display:flex; flex-direction:column; gap:0; }
+.invite-list .cc-item { background:rgba(255,255,255,.92); border:1px solid rgba(0,0,0,.1); }
+.invite-list .cc-item:active { background:rgba(0,0,0,.04); }
+.invite-list .cc-empty { padding:18px 0; }
+.invite-list[hidden] { display:none; }
+#invite-groups[hidden] { display:none; }
+#chat-ask-save[hidden] { display:none; }
 .poke-sec-label {
 font-size:11px; color:var(--muted); padding:8px 2px 4px; flex-shrink:0;
 }
@@ -5075,7 +5104,7 @@ border-radius:12px;
 .snake-dp[data-dir="down"] { grid-column:2; grid-row:2; }
 .snake-dp[data-dir="right"] { grid-column:3; grid-row:2; }
 #chat-snake-panel.snake-fs { position:fixed; inset:0; z-index:9999; border-radius:0; max-height:none; height:100vh; height:100dvh; background:#fff; padding-top:max(env(safe-area-inset-top,0px),8px); padding-bottom:max(var(--mochi-safe-bottom,env(safe-area-inset-bottom,0px)),8px); overscroll-behavior:none; }
-#chat-snake-panel.snake-fs .poke-card-scroll { overflow:hidden; padding:min(2vh,2vw) 8px; }
+#chat-snake-panel.snake-fs .poke-card-scroll { overflow:hidden auto; padding:min(2vh,2vw) 8px; }
 #chat-snake-panel.snake-fs .snake-dpad { display:none; }
 #chat-snake-panel.snake-fs .poke-card-head { border-bottom-color:rgba(0,0,0,.08); padding:8px 14px; }
 #chat-snake-panel.snake-fs .poke-card-head span { font-size:min(4.5vw, 3.6vh); }
@@ -6526,6 +6555,14 @@ color-scheme:dark;
 .desk-lib-item { border-color:#3a3a3a; }
 .desk-lib-tab { background:#2a2a2a; border-color:#3a3a3a; color:#888; }
 .desk-lib-tab.on { background:var(--ink,#f0f0f0); color:#111; border-color:var(--ink,#f0f0f0); }
+.desk-lib-search { background:#2a2a2a; border-color:#3a3a3a; color:var(--ink,#f0f0f0); }
+.desk-lib-search::placeholder { color:#777; }
+.desk-lib-icon { border-color:#3a3a3a; }
+.desk-lib-icon .dli-prev { background:#2e2e2e; }
+.desk-lib-icon .dli-letter { color:#aaa; }
+.desk-lib-icon .dli-name { color:var(--ink,#f0f0f0); }
+.desk-lib-icon.on { border-color:var(--ink,#f0f0f0); background:rgba(255,255,255,.06); }
+.desk-lib-icon.on .dli-letter { color:var(--ink,#f0f0f0); }
 .desk-lib-item .dl-where { color:#777; }
 .desk-lib-item .dl-btn { background:#f0f0f0; color:#111; }
 .desk-lib-item .dl-btn:disabled { background:#333; color:#777; }
@@ -6916,7 +6953,7 @@ body.cs-time-float .msg-side .msg-time { background:rgba(255,255,255,.10); }
 .card-list.cc-grid .cc-ico { background:var(--dark-hover) !important; }
 .card-list.cc-grid2 .cc-ico { background:var(--dark-hover) !important; }
 .card-list.cc-managing .cc-item.sel::before { color:var(--btn-ink); }
-#poke-list .cc-item, #poke-list .cc-group-header { background:var(--dark-card); border-color:var(--dark-border); }
+#poke-list .cc-item, #poke-list .cc-group-header, #invite-list .cc-item { background:var(--dark-card); border-color:var(--dark-border); }
 #poke-list .cc-group-header { background:var(--dark-hover); }
 #poke-list .cc-item .ccg-name, #poke-list .ccg-name { color:#ddd; }
 #poke-list .cc-item .ccg-count { background:var(--dark-hover); color:var(--dark-soft); }
@@ -7760,6 +7797,7 @@ background:var(--card-bg); border:1px solid var(--card-border); cursor:pointer; 
 .ni-meta { margin-top:8px; display:flex; align-items:center; justify-content:space-between; gap:8px; }
 .ni-date { font-size:11px; color:var(--muted,#aaa); }
 .ni-tag { font-size:10.5px; color:#4a9fd4; background:rgba(74,159,212,.12); border-radius:10px; padding:2px 8px; }
+.narc-flag { flex-shrink:0; font-size:10px; color:#4a9fd4; background:rgba(74,159,212,.12); border-radius:10px; padding:2px 8px; line-height:1.4; }
 .narc-item.solved { opacity:.55; }
 .narc-hist { display:flex; gap:8px; margin-bottom:12px; }
 .narc-hist .nh-dot { flex-shrink:0; width:8px; height:8px; border-radius:50%; background:var(--ink); margin-top:6px; }
@@ -8487,9 +8525,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1788142824172">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.374</b></span>
-        <span class="sv-deploy">部署于 2026-08-31 10:20<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1788162288361">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.375</b></span>
+        <span class="sv-deploy">部署于 2026-08-31 15:44<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9582,7 +9620,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.374</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.375</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
     </div>
 
@@ -9812,7 +9850,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.374</span>
+              <span class="lic-ver">v3.26.375</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -9857,7 +9895,7 @@ transition-duration: .01ms !important;
         <!-- 功能清单：分组折叠 -->
         <div class="cal-card glass">
           <details class="lic-grp" open>
-            <summary><span class="lg-num">01</span><span class="lg-name">聊天传讯</span><span class="lg-count">21</span></summary>
+            <summary><span class="lg-num">01</span><span class="lg-name">聊天传讯</span><span class="lg-count">22</span></summary>
             <div class="lg-body">
           <div class="lic-li">字卡交流：文字、情绪、心意、交流意图四种字卡回复，联系人所有内容均为字卡回复</div>
           <div class="lic-li">每条消息使用多字卡回复：可开启、调触发概率与最少/最多条数</div>
@@ -9872,6 +9910,7 @@ transition-duration: .01ms !important;
           <div class="lic-li">聊天页面点击顶部栏联系人的昵称，可以让对方立即发送消息</div>
           <div class="lic-li">可搜索聊天记录并跳转到对应位置</div>
           <div class="lic-li">聊天 + 按钮展开更多功能面板（互动 / 小游戏 / 工具 / TA的提问 四分类）：互动类——邀请TA、通话、拍一拍、红包、心意集市、心意柜、头像互动、漂流瓶</div>
+          <div class="lic-li">「邀请TA」半框内置【我的邀请】字卡库：预设 + 自定义分组，可存入 / 修改 / 删除邀请字卡，点字卡即可重复发送</div>
           <div class="lic-li">小游戏类——猜拳、Pong、贪吃蛇、打砖块、钓鱼、四子棋、扫雷、记忆翻牌；工具类——帮我决定、多人决定、问问TA、搜索记录、占卜、寻踪、此间、房间</div>
           <div class="lic-li">「TA 的提问」面板：让 TA 现在问一次（询问 / 小问题 / 好奇 / 吐槽 / 邀请）</div>
           <div class="lic-li">贴贴邀请：TA 会主动发来贴贴 / 抱抱 / 牵手 / 靠着的邀请，同意有轻震回应，婉拒也有专属台阶文案</div>
@@ -12249,15 +12288,20 @@ transition-duration: .01ms !important;
           <div class="gift-grid" id="gift-grid"></div>
         </div>
       </div>
-      <!-- 聊天页输入半框（邀请TA / 问问TA，露出聊天消息，星言式） -->
+      <!-- 聊天页输入半框（邀请TA / 问问TA，露出聊天消息，星言式）
+           v3.26.x：邀请TA 模式内置「我的邀请」字卡库（仿我的拍一拍：分组 + 字卡 + 存入/发送），
+           点字卡即可重复发送，无需每次手动输入 -->
       <div class="poke-card" id="chat-ask-panel" hidden>
         <div class="poke-card-head">
           <span id="chat-ask-title">邀请TA</span>
           <button class="poke-card-close" id="chat-ask-close">✕</button>
         </div>
+        <div class="poke-groups" id="invite-groups" hidden></div>
         <div class="poke-card-scroll chat-ask-body">
+          <div class="invite-list" id="invite-list" hidden></div>
           <input type="text" class="chat-ask-input" id="chat-ask-input" placeholder="想邀请TA做什么？" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
           <div class="chat-ask-actions">
+            <button class="cc-tool" id="chat-ask-save" hidden>存入</button>
             <button class="cc-tool" id="chat-ask-cancel">取消</button>
             <button class="cc-tool" id="chat-ask-ok">发送</button>
           </div>
@@ -16752,11 +16796,9 @@ input.value = v || '';
 if (opts.maxlength) input.maxLength = opts.maxlength;
 else input.removeAttribute('maxlength');
 if ('placeholder' in opts) { try { input.placeholder = opts.placeholder || ''; } catch (e) {} }
-if ('inputmode' in opts) {
-var _im = opts.inputmode || '';
+var _im = ('inputmode' in opts) ? (opts.inputmode || '') : '';
 try { if (_im) input.setAttribute('inputmode', _im); else input.removeAttribute('inputmode'); } catch (e) {}
 try { const _b = ceBoxOf(input); if (_b) { if (_im) _b.setAttribute('inputmode', _im); else _b.removeAttribute('inputmode'); } } catch (e) {}
-}
 if (textarea) {
 textarea.hidden = !opts.textarea;
 if (opts.textarea) {
@@ -19160,7 +19202,7 @@ setupDeskCountdownClick();
 document.addEventListener('contact-switched', renderDeskTexts);
 document.addEventListener('contact-switched', renderDeskCountdowns);
 const WIDGET_IDS = ['deco', 'quote-row', 'checkin', 'apps', 'music', 'p2apps', 'memo-row', 'week', 'weekend', 'desk-clock', 'desk-calendar', 'desk-timer', 'desk-anniv', 'desk-period',
-'app-chat', 'app-group-chat', 'app-home', 'app-mail', 'app-feed', 'app-calendar', 'app-memory', 'app-divination', 'app-note', 'app-music', 'app-stats', 'app-interact', 'app-checkin', 'p3apps', 'app-period', 'app-accounting', 'app-garden',     'app-tongpin', 'app-shenshou', 'app-water', 'app-eat', 'app-pomo'];
+'app-chat', 'app-group-chat', 'app-home', 'app-mail', 'app-feed', 'app-calendar', 'app-memory', 'app-divination', 'app-note', 'app-music', 'app-stats', 'app-interact', 'app-checkin', 'p3apps', 'app-period', 'app-accounting', 'app-garden',     'app-tongpin', 'app-shenshou', 'app-water', 'app-eat', 'app-pomo', 'app-cjian', 'app-memo-arc', 'app-my-arc', 'app-room', 'app-piggy'];
 const WIDGET_NAMES = {
 deco: '纪念日卡', 'quote-row': '今日情话 / 已摸鱼', checkin: '打卡横幅', apps: '功能图标(整组)',
 music: '音乐播放器', p2apps: '第二页功能图标(整组)', 'memo-row': '今日备忘 / 心情', week: '本周日常', weekend: '周末倒计时',
@@ -19169,6 +19211,7 @@ music: '音乐播放器', p2apps: '第二页功能图标(整组)', 'memo-row': '
 'app-calendar': '日历图标', 'app-memory': '纪念图标', 'app-divination': '占卜图标', 'app-note': '收藏图标',
 'app-music': '音乐图标', 'app-stats': '聊天统计图标', 'app-interact': '提问记录图标', 'app-checkin': '寻踪图标',
 'p3apps': '第三页功能图标(整组)', 'app-period': '经期记录图标', 'app-accounting': '记账图标', 'app-garden': '花园图标',     'app-tongpin': '同频图标', 'app-shenshou': '伸手图标', 'app-water': '喝水图标', 'app-eat': '吃什么图标', 'app-pomo': '番茄钟图标',
+'app-cjian': '此间图标', 'app-memo-arc': '梦角档案图标', 'app-my-arc': '我的档案图标', 'app-room': '房间图标', 'app-piggy': '存钱罐图标',
 };
 const PREV_BOX = 'display:flex;align-items:center;justify-content:center;width:78px;height:58px;border-radius:10px;background:linear-gradient(135deg,#fff,#f6f6f6);border:1px solid rgba(0,0,0,.07);box-shadow:0 1px 3px rgba(0,0,0,.06);flex-shrink:0;overflow:hidden;padding:4px;box-sizing:border-box';
 const _av = '<span style="width:15px;height:15px;border-radius:50%;background:#f2f2f2;display:flex;align-items:center;justify-content:center"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#bbb" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.5-6 8-6s8 2 8 6"/></svg></span>';
@@ -19205,6 +19248,7 @@ weekend: '<span style="display:flex;flex-direction:column;align-items:center;jus
 'app-calendar': _appIcoPrev('日历'), 'app-memory': _appIcoPrev('纪念'), 'app-divination': _appIcoPrev('占卜'), 'app-note': _appIcoPrev('收藏'),
 'app-music': _appIcoPrev('音乐'), 'app-stats': _appIcoPrev('统计'), 'app-interact': _appIcoPrev('提问'), 'app-checkin': _appIcoPrev('寻踪'),
 'app-period': _appIcoPrev('经期'), 'app-accounting': _appIcoPrev('记账'), 'app-garden': _appIcoPrev('花园'),     'app-tongpin': _appIcoPrev('同频'), 'app-shenshou': _appIcoPrev('伸手'), 'app-water': _appIcoPrev('喝水'), 'app-eat': _appIcoPrev('吃什么'), 'app-pomo': _appIcoPrev('番茄钟'), 'p3apps': _appIcoPrev('经期'),
+'app-cjian': _appIcoPrev('此间'), 'app-memo-arc': _appIcoPrev('梦角档案'), 'app-my-arc': _appIcoPrev('我的档案'), 'app-room': _appIcoPrev('房间'), 'app-piggy': _appIcoPrev('存钱罐'),
 };
 function ensureWidgetPool() {
 let pool = document.getElementById('desk-widget-pool');
@@ -19510,15 +19554,62 @@ groups.forEach(x => { const p = panels[x.key]; if (p) p.style.display = (x.key =
 tabWrap.appendChild(tab);
 });
 box.appendChild(tabWrap);
+let iconSearch = null, iconGrid = null;
 groups.forEach(g => {
 const p = document.createElement('div');
 p.className = 'desk-lib-panel';
 p.style.display = (g.key === 'widget') ? '' : 'none';
+if (g.key === 'icon') {
+const search = document.createElement('input');
+search.type = 'text';
+search.className = 'desk-lib-search';
+search.placeholder = '搜索图标名…';
+p.appendChild(search);
+const grid = document.createElement('div');
+grid.className = 'desk-lib-grid';
+p.appendChild(grid);
+iconSearch = search; iconGrid = grid;
+}
 box.appendChild(p);
 panels[g.key] = p;
 });
-const libPanel = (wid) => panels[wid.indexOf('app-') === 0 ? 'icon' : 'widget'];
+const addWidgetToPage = (wid) => {
+const node = document.querySelector('[data-desk-widget="' + wid + '"]');
+if (!node) return;
+const addBtn = pageSlide.querySelector('.desk-page-add');
+if (addBtn) pageSlide.insertBefore(node, addBtn);
+else pageSlide.appendChild(node);
+syncPageHint(pageSlide);
+saveDeskLayout();
+if (window.deskRebuild) window.deskRebuild();
+lib.remove();
+toast('已添加到本页');
+};
 WIDGET_IDS.forEach(wid => {
+if (wid.indexOf('app-') === 0) {
+const node = document.querySelector('[data-desk-widget="' + wid + '"]');
+const curPage = node && node.closest('.page-slide') ? Array.prototype.indexOf.call(pagesBox.querySelectorAll('.page-slide'), node.closest('.page-slide')) : -1;
+const nm = WIDGET_NAMES[wid] || wid;
+const tile = document.createElement('div');
+tile.className = 'desk-lib-icon' + (curPage === pageIdx ? ' on' : '');
+tile.dataset.iconName = nm;
+const iprev = document.createElement('div');
+iprev.className = 'dli-prev';
+const letter = document.createElement('span');
+letter.className = 'dli-letter';
+letter.textContent = nm.charAt(0) || '?';
+iprev.appendChild(letter);
+const iname = document.createElement('div');
+iname.className = 'dli-name';
+iname.textContent = nm.replace(/图标$/, '');
+tile.appendChild(iprev); tile.appendChild(iname);
+tile.addEventListener('click', () => {
+if (curPage === pageIdx) { toast('已在本页'); return; }
+addWidgetToPage(wid);
+});
+iconGrid.appendChild(tile);
+return;
+}
 const item = document.createElement('div');
 item.className = 'desk-lib-item';
 const prev = document.createElement('div');
@@ -19530,30 +19621,29 @@ meta.className = 'dl-meta';
 const name = document.createElement('div');
 name.className = 'dl-name';
 name.textContent = WIDGET_NAMES[wid] || wid;
-const node = document.querySelector('[data-desk-widget="' + wid + '"]');
-const curPage = node && node.closest('.page-slide') ? Array.prototype.indexOf.call(pagesBox.querySelectorAll('.page-slide'), node.closest('.page-slide')) : -1;
+const wnode = document.querySelector('[data-desk-widget="' + wid + '"]');
+const wcurPage = wnode && wnode.closest('.page-slide') ? Array.prototype.indexOf.call(pagesBox.querySelectorAll('.page-slide'), wnode.closest('.page-slide')) : -1;
 const where = document.createElement('div');
 where.className = 'dl-where';
-where.textContent = curPage < 0 ? '已隐藏' : (curPage === pageIdx ? '已在本页' : (curPage === 0 ? '首页' : '第 ' + (curPage + 1) + ' 页'));
+where.textContent = wcurPage < 0 ? '已隐藏' : (wcurPage === pageIdx ? '已在本页' : (wcurPage === 0 ? '首页' : '第 ' + (wcurPage + 1) + ' 页'));
 const btn = document.createElement('button');
 btn.className = 'dl-btn';
-btn.textContent = curPage === pageIdx ? '已在' : '添加到此页';
-btn.disabled = curPage === pageIdx;
-btn.addEventListener('click', () => {
-if (!node) return;
-const addBtn = pageSlide.querySelector('.desk-page-add');
-if (addBtn) pageSlide.insertBefore(node, addBtn);
-else pageSlide.appendChild(node);
-syncPageHint(pageSlide);
-saveDeskLayout();
-if (window.deskRebuild) window.deskRebuild();
-lib.remove();
-toast('已添加到本页');
-});
+btn.textContent = wcurPage === pageIdx ? '已在' : '添加到此页';
+btn.disabled = wcurPage === pageIdx;
+btn.addEventListener('click', () => addWidgetToPage(wid));
 meta.appendChild(name); meta.appendChild(where);
 item.appendChild(prev); item.appendChild(meta); item.appendChild(btn);
-libPanel(wid).appendChild(item);
+panels.widget.appendChild(item);
 });
+if (iconSearch && iconGrid) {
+iconSearch.addEventListener('input', () => {
+const q = (iconSearch.value || '').trim().toLowerCase();
+Array.prototype.slice.call(iconGrid.children).forEach(t => {
+const nm = (t.dataset.iconName || '').toLowerCase();
+t.style.display = (!q || nm.indexOf(q) >= 0) ? '' : 'none';
+});
+});
+}
 const imgItem = document.createElement('div');
 imgItem.className = 'desk-lib-item';
 const imgPrev = document.createElement('div');
@@ -23657,7 +23747,7 @@ notifyT = notifyT + ' ' + phOf();
 const isHidden = opts.isHidden === true;
 if (isHidden) {
 if (window.bgNotifyCheck) {
-window.bgNotifyCheck(notifyT, Date.now(), { name: opts.name, img: opts.img, av: opts.av });
+window.bgNotifyCheck(notifyT, Date.now(), { name: opts.name, img: opts.img, av: opts.av, avFixed: opts.avFixed === true });
 }
 return;
 }
@@ -26174,6 +26264,16 @@ if (chatAskInput) {
 chatAskInput.placeholder = chatAskMode === 'invite' ? '想邀请TA做什么？' : '你的问题？';
 chatAskInput.value = '';
 }
+const invGroups = document.getElementById('invite-groups');
+const invList = document.getElementById('invite-list');
+const invSave = document.getElementById('chat-ask-save');
+const isInvite = chatAskMode === 'invite';
+if (invGroups) invGroups.hidden = !isInvite;
+if (invList) invList.hidden = !isInvite;
+if (invSave) invSave.hidden = !isInvite;
+if (isInvite) {
+myInviteAdoptFromIdb().then(() => { if (chatAskMode === 'invite') renderInviteBank(); });
+}
 const pc = document.getElementById('poke-card');
 if (pc) pc.hidden = true;
 const ep = document.getElementById('emoji-panel');
@@ -26208,6 +26308,51 @@ if (!askOpts.length) { toast('单选题请填写选项，每行一个'); return;
 }
 closeChatAskPanel();
 if (chatAskMode === 'invite') {
+sendInviteContent(content);
+} else {
+const isSingle = !!askOpts;
+addRec({ side: 'out', text: '问：' + content, special: 'ask', askQuestion: content, askType: isSingle ? 'single' : 'text', askOptions: askOpts, askStatus: 'pending' });
+const askIdx = msgs.length - 1;
+if (window.logFish) window.logFish();
+const recTs = Date.now();
+const myCid = window.__activeCid || 'default';
+const sameCid = () => (window.__activeCid || 'default') === myCid;
+setTimeout(() => {
+if (!sameCid()) return;
+const defs = window.getInteractPool
+? window.getInteractPool('问问TA·回应', ['嗯嗯', '我想想…', '应该吧', '好呀', '我陪你', '可以的', '那挺好呀', '我觉得可以', '听你的', '当然可以', '我很乐意'])
+: ['嗯嗯', '我想想…', '应该吧', '好呀', '我陪你', '可以的', '那挺好呀', '我觉得可以', '听你的', '当然可以', '我很乐意'];
+let text;
+if (isSingle && askOpts && askOpts.length) {
+const o = askOpts[Math.floor(Math.random() * askOpts.length)];
+text = o.t;
+} else {
+text = (window.pickAskCardReply ? window.pickAskCardReply(defs) : defs[Math.floor(Math.random() * defs.length)]);
+}
+const rec = msgs[askIdx];
+if (rec && rec.special === 'ask') {
+rec.askStatus = 'answered';
+rec.askAnswer = text;
+saveMsgs();
+const el = body.querySelector('.msg-ask[data-idx="' + askIdx + '"]');
+if (el) {
+el.innerHTML = '<div class="msg-ask-card answered"><div class="msg-ask-q">' + (window.taFit ? window.taFit('问问TA') : '问问TA') + ' · ' + escTxt(content) + '</div><div class="msg-ask-a">✓ ' + (window.taFit ? window.taFit('TA：') : 'TA：') + escTxt(window.taFit ? window.taFit(text) : text) + '</div>' + favHeartHtml(rec) + '</div>';
+}
+}
+addIn(text);
+try {
+const list = JSON.parse(store.get('invite-ask-history') || '[]');
+list.unshift({ type: 'ask', q: content, a: text, ts: recTs });
+if (list.length > 200) list.length = 200;
+store.set('invite-ask-history', JSON.stringify(list));
+} catch (err) {}
+if (window.renderAskRecords) window.renderAskRecords();
+setTimeout(() => { if (!sameCid()) return; maybeFollowupAskCard(); }, 1200);
+}, 1500 + Math.random() * 2500);
+}
+}
+function sendInviteContent(content) {
+closeChatAskPanel();
 addRec({ side: 'out', text: '邀请：' + content, special: 'invite', inviteContent: content, inviteStatus: 'pending' });
 const inviteIdx = msgs.length - 1;
 if (window.logFish) window.logFish();
@@ -26260,48 +26405,179 @@ store.set(histKey, JSON.stringify(list));
 if (window.renderAskRecords) window.renderAskRecords();
 setTimeout(() => { if (!sameCid()) return; maybeFollowupAskCard(); }, 1200);
 }, 1500 + Math.random() * 2500);
-} else {
-const isSingle = !!askOpts;
-addRec({ side: 'out', text: '问：' + content, special: 'ask', askQuestion: content, askType: isSingle ? 'single' : 'text', askOptions: askOpts, askStatus: 'pending' });
-const askIdx = msgs.length - 1;
-if (window.logFish) window.logFish();
-const recTs = Date.now();
-const myCid = window.__activeCid || 'default';
-const sameCid = () => (window.__activeCid || 'default') === myCid;
-setTimeout(() => {
-if (!sameCid()) return;
-const defs = window.getInteractPool
-? window.getInteractPool('问问TA·回应', ['嗯嗯', '我想想…', '应该吧', '好呀', '我陪你', '可以的', '那挺好呀', '我觉得可以', '听你的', '当然可以', '我很乐意'])
-: ['嗯嗯', '我想想…', '应该吧', '好呀', '我陪你', '可以的', '那挺好呀', '我觉得可以', '听你的', '当然可以', '我很乐意'];
-let text;
-if (isSingle && askOpts && askOpts.length) {
-const o = askOpts[Math.floor(Math.random() * askOpts.length)];
-text = o.t;
-} else {
-text = (window.pickAskCardReply ? window.pickAskCardReply(defs) : defs[Math.floor(Math.random() * defs.length)]);
 }
-const rec = msgs[askIdx];
-if (rec && rec.special === 'ask') {
-rec.askStatus = 'answered';
-rec.askAnswer = text;
-saveMsgs();
-const el = body.querySelector('.msg-ask[data-idx="' + askIdx + '"]');
-if (el) {
-el.innerHTML = '<div class="msg-ask-card answered"><div class="msg-ask-q">' + (window.taFit ? window.taFit('问问TA') : '问问TA') + ' · ' + escTxt(content) + '</div><div class="msg-ask-a">✓ ' + (window.taFit ? window.taFit('TA：') : 'TA：') + escTxt(window.taFit ? window.taFit(text) : text) + '</div>' + favHeartHtml(rec) + '</div>';
-}
-}
-addIn(text);
+const MY_INVITE_PRESETS = ['想和你猜拳，来一局？', '想和你玩一局 Pong，来吗？', '想和你玩双人贪吃蛇，来吗？', '想和你一起听歌'];
+let myInviteDirty = false;
+let myInviteCurGroup = '__preset';
+let myInviteGroups = null;
+function myInviteGroupsKey() { return window.activePrefix() + ':my-invite-groups'; }
+function myInviteGroupsLoad() {
 try {
-const list = JSON.parse(store.get('invite-ask-history') || '[]');
-list.unshift({ type: 'ask', q: content, a: text, ts: recTs });
-if (list.length > 200) list.length = 200;
-store.set('invite-ask-history', JSON.stringify(list));
-} catch (err) {}
-if (window.renderAskRecords) window.renderAskRecords();
-setTimeout(() => { if (!sameCid()) return; maybeFollowupAskCard(); }, 1200);
-}, 1500 + Math.random() * 2500);
+const v = JSON.parse(store.get('my-invite-groups') || 'null');
+if (Array.isArray(v)) return v.filter(g => Array.isArray(g) && Array.isArray(g[1]));
+} catch (e) {}
+return null;
 }
+function myInviteG() {
+if (myInviteGroups === null) {
+myInviteGroups = myInviteGroupsLoad() || [];
+if (!myInviteGroups.some(g => g[0] === '我的新增')) myInviteGroups.push(['我的新增', []]);
 }
+return myInviteGroups;
+}
+function myInviteGroupsSave() {
+myInviteDirty = true;
+try {
+const data = JSON.stringify(myInviteGroups);
+store.set('my-invite-groups', data);
+if (window.idbSet) window.idbSet(myInviteGroupsKey(), data);
+} catch (e) {}
+}
+function myInviteCount(arr) { return (arr || []).reduce((n, g) => n + (Array.isArray(g) && Array.isArray(g[1]) ? g[1].length : 0), 0); }
+function myInviteAdoptFromIdb() {
+if (myInviteDirty || !window.idbGet) return Promise.resolve(false);
+return window.idbGet(myInviteGroupsKey()).then(v => {
+if (!v || myInviteDirty) return false;
+let arr = null;
+try { arr = JSON.parse(v); } catch (e) { return false; }
+if (!Array.isArray(arr)) return false;
+if (myInviteCount(arr) > myInviteCount(myInviteG())) {
+myInviteGroups = arr.filter(g => Array.isArray(g) && Array.isArray(g[1]));
+return true;
+}
+return false;
+}).catch(() => false);
+}
+function myInviteView() {
+const out = [{ key: '__preset', label: '预设', cards: MY_INVITE_PRESETS.slice(), preset: true }];
+myInviteG().forEach(g => {
+if (!Array.isArray(g) || !Array.isArray(g[1]) || !g[0]) return;
+out.push({ key: g[0], label: g[0], cards: g[1].slice(), user: true });
+});
+return out;
+}
+function myInviteCurGroupKey() {
+const groups = myInviteView();
+if (!groups.some(g => g.key === myInviteCurGroup)) myInviteCurGroup = groups.length ? groups[0].key : '__preset';
+return myInviteCurGroup;
+}
+function renderInviteBank() {
+const wrap = document.getElementById('invite-groups');
+const list = document.getElementById('invite-list');
+if (!wrap || !list) return;
+myInviteCurGroupKey();
+const groups = myInviteView();
+wrap.innerHTML = '';
+groups.forEach(g => {
+const chip = document.createElement('span');
+chip.className = 'emoji-g-chip' + (myInviteCurGroup === g.key ? ' sel' : '');
+chip.textContent = g.label + g.cards.length;
+chip.addEventListener('click', (e) => {
+e.stopPropagation();
+myInviteCurGroup = g.key;
+renderInviteBank();
+});
+wrap.appendChild(chip);
+});
+const add = document.createElement('span');
+add.className = 'emoji-g-chip poke-g-add';
+add.textContent = '＋ 分组';
+add.title = '新建我的邀请分组';
+add.addEventListener('click', (e) => { e.stopPropagation(); myInviteNewGroup(); });
+wrap.appendChild(add);
+list.innerHTML = '';
+const cur = groups.find(g => g.key === myInviteCurGroup) || groups[0];
+if (!cur || !cur.cards.length) {
+list.innerHTML = '<div class="cc-empty">暂无邀请字卡<br>在下方输入邀请内容，点「存入」添加</div>';
+return;
+}
+cur.cards.forEach((c, i) => {
+const item = document.createElement('div');
+item.className = 'cc-item glass';
+item.innerHTML = '<div class="cc-txt"><div class="t">' + escTxt(c) + '</div></div>';
+item.addEventListener('click', () => { sendInviteContent(c); });
+if (cur.user) {
+const ops = document.createElement('div');
+ops.className = 'poke-card-ops';
+const eb = document.createElement('button');
+eb.type = 'button';
+eb.className = 'poke-card-op poke-op-edit';
+eb.title = '修改';
+eb.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>';
+eb.addEventListener('click', (e) => { e.stopPropagation(); myInviteEdit(i, c); });
+const db = document.createElement('button');
+db.type = 'button';
+db.className = 'poke-card-op poke-op-del';
+db.title = '删除';
+db.textContent = '✕';
+db.addEventListener('click', (e) => { e.stopPropagation(); myInviteDel(i, c); });
+ops.appendChild(eb);
+ops.appendChild(db);
+item.appendChild(ops);
+}
+list.appendChild(item);
+});
+}
+function saveInviteInput() {
+const v = (chatAskInput && chatAskInput.value || '').trim();
+if (!v) { toast('先输入邀请内容'); return; }
+const groups = myInviteG();
+let target = groups.find(g => g[0] === myInviteCurGroup);
+if (!target) { target = ['我的新增', []]; groups.push(target); }
+if (target[1].indexOf(v) >= 0) { toast('「' + target[0] + '」已有相同的邀请'); return; }
+target[1].push(v);
+myInviteGroupsSave();
+myInviteCurGroup = target[0];
+renderInviteBank();
+if (chatAskInput) chatAskInput.value = '';
+toast('已存入「' + target[0] + '」');
+}
+function myInviteNewGroup() {
+window.openModal('新建「我的邀请」分组', '', (v) => {
+v = (v || '').trim();
+if (!v) { toast('请输入分组名'); return; }
+const groups = myInviteG();
+if (groups.some(g => g[0] === v)) { toast('分组「' + v + '」已存在'); return; }
+groups.push([v, []]);
+myInviteGroupsSave();
+myInviteCurGroup = v;
+renderInviteBank();
+toast('已新建分组「' + v + '」');
+});
+}
+function myInviteEdit(idx, old) {
+const g = myInviteG().find(x => x[0] === myInviteCurGroup);
+if (!g || !Array.isArray(g[1])) return;
+window.openModal('修改邀请', old, (v) => {
+v = (v || '').trim();
+if (!v) { toast('请输入邀请内容'); return; }
+const g2 = myInviteG().find(x => x[0] === myInviteCurGroup);
+if (!g2 || !Array.isArray(g2[1]) || idx < 0 || idx >= g2[1].length) return;
+if (g2[1][idx] === v) { toast('内容未变化'); return; }
+if (g2[1].indexOf(v) >= 0) { toast('该分组已有相同的邀请'); return; }
+g2[1][idx] = v;
+myInviteGroupsSave();
+renderInviteBank();
+toast('已修改');
+});
+}
+function myInviteDel(idx, c) {
+const g = myInviteG().find(x => x[0] === myInviteCurGroup);
+if (!g || !Array.isArray(g[1])) return;
+window.openModal('删除这条邀请？', '', () => {
+const g2 = myInviteG().find(x => x[0] === myInviteCurGroup);
+if (!g2 || !Array.isArray(g2[1]) || idx < 0 || idx >= g2[1].length) return;
+g2[1].splice(idx, 1);
+myInviteGroupsSave();
+renderInviteBank();
+toast('已删除');
+}, { noInput: true, staticText: '「' + c + '」\n\n删除后无法恢复。' });
+}
+document.addEventListener('contact-switched', function () {
+myInviteDirty = false;
+myInviteGroups = null;
+myInviteCurGroup = '__preset';
+});
 const moreInvite = document.getElementById('more-invite');
 if (moreInvite) {
 moreInvite.addEventListener('click', (e) => {
@@ -26321,6 +26597,8 @@ openChatAskPanel('ask');
 if (chatAskOk) chatAskOk.addEventListener('click', (e) => { e.stopPropagation(); submitChatAsk(); });
 if (chatAskCancel) chatAskCancel.addEventListener('click', (e) => { e.stopPropagation(); closeChatAskPanel(); });
 if (chatAskClose) chatAskClose.addEventListener('click', (e) => { e.stopPropagation(); closeChatAskPanel(); });
+const chatAskSaveBtn = document.getElementById('chat-ask-save');
+if (chatAskSaveBtn) chatAskSaveBtn.addEventListener('click', (e) => { e.stopPropagation(); saveInviteInput(); });
 if (chatAskInput) chatAskInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) { e.stopPropagation(); submitChatAsk(); } });
 const chatSearchEl = document.getElementById('chat-search');
 const chatSearchInput = document.getElementById('chat-search-input');
@@ -44243,10 +44521,36 @@ function fmtDT(ts) {
 const dd = new Date(ts);
 return ('0' + dd.getHours()).slice(-2) + ':' + ('0' + dd.getMinutes()).slice(-2) + ' ' + ((dd.getMonth() + 1) + '月' + dd.getDate() + '日');
 }
+function allDeskHistories(key) {
+const out = [];
+const cur = window.__activeCid || 'default';
+const cids = ['default'].concat((window.getContacts ? window.getContacts() : []).map(function (c) { return c && c.id; }).filter(Boolean));
+const seen = {};
+cids.sort(function (a, b) { if (a === cur) return -1; if (b === cur) return 1; return 0; });
+cids.forEach(function (cid) {
+if (!cid || seen[cid]) return;
+seen[cid] = 1;
+try {
+let hist = [];
+if (cid === cur) {
+hist = taAskLoad().history || [];
+} else {
+const s = window.storeFor ? window.storeFor(cid) : null;
+if (!s) return;
+const raw = s.get(key);
+if (!raw) return;
+const d = JSON.parse(raw);
+hist = (d && Array.isArray(d.history)) ? d.history : [];
+}
+out.push.apply(out, hist);
+} catch (e) {}
+});
+return out;
+}
 window.renderAskRecords = function () {
 const askEl = document.getElementById('ar-ask');
 if (askEl) {
-const h = taAskLoad().history || [];
+const h = allDeskHistories('ta-ask');
 askEl.innerHTML = h.length
 ? h.slice().reverse().map(x => '<div class="tc-listitem"><div class="tc-li-q">问：' + x.q + '</div>' + (x.status === 'pending' ? '<div class="tc-li-pending">待回答</div>' : '<div class="tc-li-line">你：' + x.a + '</div>' + (x.reply ? '<div class="tc-li-line">' + (window.taFit ? window.taFit('TA：') : 'TA：') + (window.taFit ? window.taFit(x.reply) : x.reply) + '</div>' : '')) + '<div class="tc-li-time">' + fmtDT(x.ts) + '</div></div>').join('')
 : '<div class="ta-empty">暂无询问记录</div>';
@@ -49274,8 +49578,8 @@ function taAvFor(owner) {
 try {
 const o = owner || 'default';
 const s = window.storeFor(o);
-let v = s.get('feed-ta-avatar') || s.get('avatar-partner') || '';
-if (!v && o === 'default') v = store.get('feed-ta-avatar') || store.get('avatar-partner') || '';
+let v = s.get('feed-ta-avatar') || s.get('avatar-partner') || s.get('cs-avatar-partner') || '';
+if (!v && o === 'default') v = store.get('feed-ta-avatar') || store.get('avatar-partner') || store.get('cs-avatar-partner') || '';
 if (v && typeof v === 'string' && v.length > 500 * 1024) return '';
 return v || '';
 } catch (e) { return ''; }
@@ -50246,7 +50550,7 @@ try { store.set('feed-app-unread', String(feedAppUnread() + 1)); } catch (e) {}
 renderNoticeBadge();
 if (window.showDeskPopup && !feedPageVisible()) {
 const av = owner ? taAvFor(owner) : '';
-window.showDeskPopup({ name: '朋友圈', text: (window.taFit ? window.taFit(noticeTextClean(text), owner) : noticeTextClean(text)), av: av, onClick: openFeedPage, isHidden: document.visibilityState === 'hidden' });
+window.showDeskPopup({ name: '朋友圈', text: (window.taFit ? window.taFit(noticeTextClean(text), owner) : noticeTextClean(text)), av: av, avFixed: true, onClick: openFeedPage, isHidden: document.visibilityState === 'hidden' });
 } else if (feedPageVisible() && document.visibilityState !== 'hidden') {
 let nt = noticeTextClean(text);
 if (nt.length > 40) nt = nt.slice(0, 40) + '…';
@@ -57790,6 +58094,7 @@ else boot();
 (function () {
 const GNS = 'xy-home-v2';
 const KEY = 'myarc';
+const SHARED_KEY = 'myarc-shared';
 const page = document.getElementById('page-my-arc');
 const root = document.getElementById('myarc-root');
 function gStore() { try { return window.xyStore(GNS); } catch (e) { return null; } }
@@ -57854,6 +58159,7 @@ function contactsList() {
 try { const cs = window.getContacts ? window.getContacts() : null; if (cs && cs.length) return cs; } catch (e) {}
 return [{ id: 'default', name: '默认' }];
 }
+function allCids() { return contactsList().map(c => c.id); }
 function storeOf(cid) { return window.xyStore(GNS + ':' + cid); }
 function partnerNameOf(cid) {
 let n = '';
@@ -57867,22 +58173,103 @@ try { const o = JSON.parse(s.get(KEY) || 'null'); if (o && typeof o === 'object'
 try { const o = JSON.parse(gStore().get(KEY) || 'null'); if (o && typeof o === 'object') return o; } catch (e) {} // 旧全局键兜底
 return null;
 }
-function save(o) { const s = storeOf(viewCid); if (s) { try { s.set(KEY, JSON.stringify(o)); } catch (e) {} } }
+function saveFor(o, cid) { const s = storeOf(cid); if (s) { try { s.set(KEY, JSON.stringify(o)); } catch (e) {} } }
+function save(o) { saveFor(o, viewCid); }
 function normObj(v) { return (v && typeof v === 'object' && !Array.isArray(v)) ? v : null; }
+function isFv(v) { return typeof v === 'string' || (v && typeof v === 'object' && typeof v.v === 'string'); }
 function makeId() { return 'm' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36); }
-const cache = {};
-function ensureArc() {
-let o = cache[viewCid] || loadRaw(viewCid), dirty = false;
+const arcCache = {};
+function ensureArcFor(cid) {
+let o = arcCache[cid] || loadRaw(cid), dirty = false;
 if (!o) { o = { created: Date.now() }; dirty = true; }
 ['tastes', 'habits', 'things', 'selfs', 'ifchanges', 'dreams'].forEach(k => { if (!Array.isArray(o[k])) { o[k] = []; dirty = true; } });
 if (!normObj(o.who)) { o.who = { f: {} }; dirty = true; } else if (!normObj(o.who.f)) { o.who.f = {}; dirty = true; }
 if (!normObj(o.relate)) { o.relate = { f: {}, notes: [] }; dirty = true; }
 else { if (!normObj(o.relate.f)) { o.relate.f = {}; dirty = true; } if (!Array.isArray(o.relate.notes)) { o.relate.notes = []; dirty = true; } }
 if (!normObj(o.ifw)) { o.ifw = {}; dirty = true; }
-IFW_FIELDS.forEach(f => { if (typeof o.ifw[f[0]] !== 'string') { o.ifw[f[0]] = ''; dirty = true; } });
-if (dirty) save(o);
-cache[viewCid] = o;
+IFW_FIELDS.forEach(f => { if (!isFv(o.ifw[f[0]])) { o.ifw[f[0]] = ''; dirty = true; } });
+if (dirty) saveFor(o, cid);
+arcCache[cid] = o;
 return o;
+}
+function ensureArc() { return ensureArcFor(viewCid); }
+function fanOutMutate(fn) {
+allCids().forEach(cid => { const a = ensureArcFor(cid); fn(a); saveFor(a, cid); });
+}
+function fanOutRemove(kind, id) {
+allCids().forEach(cid => {
+const a = ensureArcFor(cid);
+const arr = listArrOf(kind, a);
+const i = arr.findIndex(x => x.id === id);
+if (i >= 0) { arr.splice(i, 1); saveFor(a, cid); }
+});
+}
+function listArrOf(kind, o) {
+if (kind === 'taste') return o.tastes;
+if (kind === 'habit') return o.habits;
+if (kind === 'thing') return o.things;
+if (kind === 'rnote') return o.relate.notes;
+return o.ifchanges;
+}
+function mergedArc() {
+const arc = ensureArc();
+const normMap = (m, keys) => {
+const out = {};
+(keys || []).forEach(k => {
+const it = m ? m[k] : undefined;
+out[k] = { v: typeof it === 'string' ? it : (it && typeof it.v === 'string' ? it.v : ''), shared: !!(it && it.shared) };
+});
+return out;
+};
+return {
+arc: arc, created: arc.created,
+who: { f: normMap(arc.who.f, WHO_FIELDS.map(f => f[0])) },
+relate: { f: normMap(arc.relate.f, RELATE_FIELDS.map(f => f[0])), notes: arc.relate.notes },
+ifw: normMap(arc.ifw, IFW_FIELDS.map(f => f[0])),
+tastes: arc.tastes, habits: arc.habits, things: arc.things,
+selfs: arc.selfs, dreams: arc.dreams, ifchanges: arc.ifchanges
+};
+}
+function visPills() {
+return [{ label: '全部联系人可见', value: 'shared' }, { label: '仅' + partnerNameOf(viewCid) + '可见', value: 'pc' }];
+}
+function shFlag(it) { return (it && it.shared) ? '<span class="narc-flag">全部可见</span>' : ''; }
+function absorbSharedOnce() {
+const s = gStore(); if (!s) return;
+let sh = null;
+try { sh = JSON.parse(s.get(SHARED_KEY) || 'null'); } catch (e) {}
+if (!sh || typeof sh !== 'object') return;
+const hasAny = Object.keys(sh).some(k => k !== 'created' && (Array.isArray(sh[k]) ? sh[k].length : (sh[k] && typeof sh[k] === 'object' ? Object.keys(sh[k]).length : false)));
+if (!hasAny) { try { s.remove(SHARED_KEY); } catch (e) {} return; }
+allCids().forEach(cid => {
+const a = ensureArcFor(cid);
+let dirty = false;
+[['who', a.who.f], ['relate', a.relate.f], ['ifw', a.ifw]].forEach(pair => {
+const sm = pair[0] === 'relate' ? (sh.relate && sh.relate.f) : sh[pair[0]];
+if (!sm || typeof sm !== 'object') return;
+Object.keys(sm).forEach(k => {
+const v = typeof sm[k] === 'string' ? sm[k] : (sm[k] && typeof sm[k].v === 'string' ? sm[k].v : '');
+if (!v.trim()) return;
+const cur = pair[1][k];
+const curV = typeof cur === 'string' ? cur : (cur && typeof cur.v === 'string' ? cur.v : '');
+if (curV.trim()) return; // 本联系人已有专属值则保留（原「专属优先」语义）
+pair[1][k] = { v: v, shared: true }; dirty = true;
+});
+});
+const shArrays = { tastes: sh.tastes, habits: sh.habits, things: sh.things, selfs: sh.selfs, dreams: sh.dreams, ifchanges: sh.ifchanges, 'rnote': sh.relate && sh.relate.notes };
+Object.keys(shArrays).forEach(kind => {
+const arr = shArrays[kind];
+if (!Array.isArray(arr) || !arr.length) return;
+const target = listArrOf(kind, a);
+arr.forEach(it => {
+if (!it || typeof it !== 'object' || !it.id) return;
+if (target.some(x => x && x.id === it.id)) return;
+target.push(Object.assign({}, it, { shared: true })); dirty = true;
+});
+});
+if (dirty) saveFor(a, cid);
+});
+try { s.remove(SHARED_KEY); } catch (e) {}
 }
 let view = 'home';           // home|who|tastes|habits|things|relate|self|dream|ifw
 let viewCid = 'default';     // 当前正在看哪位桌面联系人的那份
@@ -57916,7 +58303,7 @@ if (home) home.hidden = false;
 };
 function render() {
 if (!root) return;
-const arc = ensureArc();
+const arc = mergedArc();
 let h = '';
 h += chipsHTML();
 h += (view === 'home') ? overviewHTML(arc) : sectionHTML(arc);
@@ -57933,12 +58320,12 @@ return h;
 function filledN(m, keys) { return keys.filter(k => String(m[k] || '').trim()).length; }
 function overviewHTML(arc) {
 const days = Math.max(0, Math.floor((Date.now() - arc.created) / 86400000));
-const whoFilled = WHO_FIELDS.filter(f => String(arc.who.f[f[0]] || '').trim()).length;
-const relFilled = RELATE_FIELDS.filter(f => String(arc.relate.f[f[0]] || '').trim()).length + arc.relate.notes.length;
-const ifwFilled = IFW_FIELDS.filter(f => String(arc.ifw[f[0]] || '').trim()).length + arc.ifchanges.length;
+const whoFilled = WHO_FIELDS.filter(f => String((arc.who.f[f[0]] || {}).v || '').trim()).length;
+const relFilled = RELATE_FIELDS.filter(f => String((arc.relate.f[f[0]] || {}).v || '').trim()).length + arc.relate.notes.length;
+const ifwFilled = IFW_FIELDS.filter(f => String((arc.ifw[f[0]] || {}).v || '').trim()).length + arc.ifchanges.length;
 let h = '<div class="narc-hero">';
 h += '<div class="narc-hero-top"><span class="narc-name">我的档案</span><span class="narc-days">写下自己 · ' + days + ' 天</span></div>';
-h += '<div class="narc-hero-sub">写给「' + esc(partnerNameOf(viewCid)) + '」的那一份——认识自己，让TA慢慢读懂你。</div>';
+h += '<div class="narc-hero-sub">写给「' + esc(partnerNameOf(viewCid)) + '」的那一份——每条都可选「全部联系人可见」或「仅TA可见」。</div>';
 h += '<div class="narc-stats">';
 h += '<div class="narc-stat"><b>' + arc.selfs.length + '</b><span>描述</span></div>';
 h += '<div class="narc-stat"><b>' + arc.tastes.length + '</b><span>喜好</span></div>';
@@ -57982,11 +58369,13 @@ return h;
 function fieldRowsHTML(mapObj, fields, mapName) {
 let h = '<div class="narc-fields">';
 fields.forEach(f => {
-const val = String(mapObj[f[0]] == null ? '' : mapObj[f[0]]);
+const it = (mapObj && mapObj[f[0]]) || { v: '', shared: false };
+const val = String(it.v == null ? '' : it.v);
 const empty = !val.trim();
 h += '<button class="narc-frow" data-op="efield" data-map="' + mapName + '" data-key="' + f[0] + '">';
 h += '<span class="nf-label">' + esc(f[1]) + '</span>';
 h += '<span class="nf-val' + (empty ? ' empty' : '') + '">' + (empty ? esc(f[2]) : esc(val)) + '</span>';
+if (it.shared && !empty) h += shFlag(it);
 h += '<span class="nf-edit">›</span></button>';
 });
 h += '</div>';
@@ -58035,7 +58424,7 @@ const tip = tab.tastes === 'like' ? '你喜欢什么呢？<br>TA会拿小本子�
 return h + '<div class="narc-empty">' + tip + '</div>';
 }
 items.forEach(it => {
-const inner = '<div class="ni-top">' + (it.cat ? '<span class="ni-cat">' + esc(it.cat) + '</span>' : '') + '</div><div class="ni-text">' + esc(it.t) + '</div>';
+const inner = '<div class="ni-top">' + (it.cat ? '<span class="ni-cat">' + esc(it.cat) + '</span>' : '') + shFlag(it) + '</div><div class="ni-text">' + esc(it.t) + '</div>';
 h += itemShell(inner, '<span class="nk-ops">' + opBtn('edit-li', '编辑', ' data-kind="taste" data-id="' + it.id + '"') + opBtn('del-li', '删除', ' data-kind="taste" data-id="' + it.id + '"', 1) + '</span>');
 });
 return h;
@@ -58050,7 +58439,7 @@ const tips = { daily: '几点睡？周末一般干嘛？<br>这些日常就是�
 return h + '<div class="narc-empty">' + (tips[tab.habits] || '') + '</div>';
 }
 items.forEach(it => {
-const inner = '<div class="ni-top"></div><div class="ni-text">' + esc(it.t) + '</div>';
+const inner = '<div class="ni-top">' + shFlag(it) + '</div><div class="ni-text">' + esc(it.t) + '</div>';
 h += itemShell(inner, '<span class="nk-ops">' + opBtn('edit-li', '编辑', ' data-kind="habit" data-id="' + it.id + '"') + opBtn('del-li', '删除', ' data-kind="habit" data-id="' + it.id + '"', 1) + '</span>');
 });
 return h;
@@ -58064,7 +58453,7 @@ if (!items.length) {
 return h + '<div class="narc-empty">常用的东西、珍视的纪念、<br>还有一直想送给TA的那一件。</div>';
 }
 items.forEach(it => {
-const inner = '<div class="ni-top"></div><div class="ni-text">' + esc(it.t) + '</div>';
+const inner = '<div class="ni-top">' + shFlag(it) + '</div><div class="ni-text">' + esc(it.t) + '</div>';
 h += itemShell(inner, '<span class="nk-ops">' + opBtn('edit-li', '编辑', ' data-kind="thing" data-id="' + it.id + '"') + opBtn('del-li', '删除', ' data-kind="thing" data-id="' + it.id + '"', 1) + '</span>');
 });
 return h;
@@ -58075,7 +58464,7 @@ h += '<div class="narc-ghead">还想补充的<span class="narc-gsub">没说出�
 h += '<div style="margin:0 2px 10px;text-align:right"><button class="narc-add" data-op="add-li" data-kind="rnote">＋ 补一条</button></div>';
 if (!arc.relate.notes.length) h += '<div class="narc-empty">例如：希望TA在忙之前先跟我说一声。</div>';
 arc.relate.notes.slice().sort((a, b) => b.created - a.created).forEach(it => {
-const inner = '<div class="ni-top"></div><div class="ni-text">' + esc(it.t) + '</div>';
+const inner = '<div class="ni-top">' + shFlag(it) + '</div><div class="ni-text">' + esc(it.t) + '</div>';
 h += itemShell(inner, '<span class="nk-ops">' + opBtn('edit-li', '编辑', ' data-kind="rnote" data-id="' + it.id + '"') + opBtn('del-li', '删除', ' data-kind="rnote" data-id="' + it.id + '"', 1) + '</span>');
 });
 return h;
@@ -58088,7 +58477,7 @@ return h + '<div class="narc-empty">例如：【别人以为，其实】<br>「�
 }
 items.forEach(it => {
 h += '<div class="narc-k">';
-h += '<div class="nk-top"><span class="nk-type">' + esc(SELF_MAP[it.type] || '其他描述') + '</span></div>';
+h += '<div class="nk-top"><span class="nk-type">' + esc(SELF_MAP[it.type] || '其他描述') + '</span>' + shFlag(it) + '</div>';
 h += '<div class="nk-text">' + esc(it.text) + '</div>';
 if (it.note) h += '<div class="nk-why">' + esc(it.note) + '</div>';
 h += '<div class="nk-meta"><span class="nk-date">写于 ' + short(it.dateStr || '', 12) + '</span>';
@@ -58103,7 +58492,7 @@ if (!items.length) {
 return h + '<div class="narc-empty">梦见TA了？梦见自己去远行了？<br>那些醒来还记得的梦，都可以记在这里。</div>';
 }
 items.forEach(it => {
-const inner = '<div class="ni-top"></div><div class="ni-text">' + esc(it.text) + '</div>';
+const inner = '<div class="ni-top">' + shFlag(it) + '</div><div class="ni-text">' + esc(it.text) + '</div>';
 h += itemShell(inner, '<span class="ni-date">' + esc(it.date) + '</span><span class="nk-ops">' + opBtn('edit-dream', '编辑', ' data-id="' + it.id + '"') + opBtn('del-dream', '删除', ' data-id="' + it.id + '"', 1) + '</span>');
 });
 return h;
@@ -58114,7 +58503,7 @@ h += '<div class="narc-ghead">这个世界里的我们<span class="narc-gsub">�
 h += '<div style="margin:0 2px 10px;text-align:right"><button class="narc-add" data-op="add-li" data-kind="ifch">＋ 记一条</button></div>';
 if (!arc.ifchanges.length) h += '<div class="narc-empty">换到IF世界后，「我们」有什么不一样？</div>';
 arc.ifchanges.slice().sort((a, b) => b.created - a.created).forEach(it => {
-const inner = '<div class="ni-top"></div><div class="ni-text">' + esc(it.t) + '</div>';
+const inner = '<div class="ni-top">' + shFlag(it) + '</div><div class="ni-text">' + esc(it.t) + '</div>';
 h += itemShell(inner, '<span class="nk-ops">' + opBtn('edit-li', '编辑', ' data-kind="ifch" data-id="' + it.id + '"') + opBtn('del-li', '删除', ' data-kind="ifch" data-id="' + it.id + '"', 1) + '</span>');
 });
 return h;
@@ -58126,11 +58515,33 @@ return arc.ifw;
 }
 function editField(mapName, key) {
 const def = FIELD_INDEX[key]; if (!def || !window.openModal) return;
-const arc = ensureArc();
-const m = fieldMapOf(mapName, arc);
-window.openModal(def.label, m[key] || '', function (v) {
-m[key] = strim(v);
-save(arc); toast('已记下'); render();
+const mv = mergedArc();
+const cur = (fieldMapOf(mapName, mv) || {})[key] || { v: '', shared: false };
+let shared = !!cur.shared, phase = 'content', newVal = '', ctl = null;
+ctl = window.openModal(def.label, cur.v, function (v) {
+if (phase === 'content') {
+const t = strim(v); if (!t) { ctl.stay(); ctl.focus(); return; }
+newVal = t; phase = 'vis';
+ctl.stay(); ctl.title('给谁看这条？');
+ctl.input(false); ctl.pills(visPills(), shared ? 'shared' : 'pc');
+ctl.okText('保存');
+return;
+}
+shared = (v === 'shared');
+if (shared) {
+fanOutMutate(a => { fieldMapOf(mapName, a)[key] = { v: newVal, shared: true }; });
+} else {
+const a = ensureArc();
+fieldMapOf(mapName, a)[key] = newVal;
+save(a);
+allCids().forEach(cid => {
+if (cid === viewCid) return;
+const o = ensureArcFor(cid);
+const m = fieldMapOf(mapName, o);
+if (m && m[key] && m[key].shared) { delete m[key]; saveFor(o, cid); }
+});
+}
+toast('已记下'); render();
 }, def.multi ? { textarea: true, textareaPlaceholder: def.ph } : { placeholder: def.ph, maxlength: 120 });
 }
 function listOf(kind, arc) {
@@ -58157,56 +58568,98 @@ return '这个世界里的我们';
 function addLi(kind) {
 if (!window.openModal) return;
 const useCat = kind === 'taste' && tab.tastes === 'like';
-let cat = '', phase = useCat ? 'cat' : 'text', ctl = null;
+let cat = '', text = '', phase = useCat ? 'cat' : 'text', ctl = null, shared = false;
 ctl = window.openModal(liTitle(kind), '', function (v) {
 if (phase === 'cat') {
 if (!v) return;
 cat = String(v); phase = 'text';
 ctl.stay(); ctl.pills([]); ctl.title('具体是什么呢？');
-ctl.input(true); ctl.maxLen(100); ctl.ph(liPh(kind)); ctl.okText('保存');
+ctl.input(true); ctl.maxLen(100); ctl.ph(liPh(kind)); ctl.okText('下一步');
 return;
 }
+if (phase === 'text') {
 const t = strim(v); if (!t) { ctl.stay(); ctl.focus(); return; }
-const arc = ensureArc();
-const item = { id: makeId(), t: t, created: Date.now() };
+text = t; phase = 'vis';
+ctl.stay(); ctl.title('给谁看这条？');
+ctl.input(false); ctl.pills(visPills(), 'pc');
+ctl.okText('保存');
+return;
+}
+shared = (v === 'shared');
+const item = { id: makeId(), t: text, created: Date.now() };
 if (kind === 'taste') { item.g = tab.tastes; item.cat = (tab.tastes === 'like') ? (cat || '其他') : ''; }
 else if (kind === 'habit') item.g = tab.habits;
 else if (kind === 'thing') item.g = tab.things;
-listOf(kind, arc).push(item);
-save(arc); toast('已记下'); render();
+if (shared) {
+item.shared = true;
+fanOutMutate(a => { listOf(kind, a).push(Object.assign({}, item)); });
+} else {
+listOf(kind, ensureArc()).push(item);
+save(ensureArc());
+}
+toast('已记下'); render();
 }, useCat ? { noInput: true, pills: LIKE_CATS.map(c => ({ label: c, value: c })) } : { placeholder: liPh(kind), maxlength: 120 });
 }
 function editLi(kind, id) {
-const arc = ensureArc(); const it = listOf(kind, arc).find(x => x.id === id); if (!it || !window.openModal) return;
+const mv = mergedArc();
+const it = listOf(kind, mv).find(x => x.id === id); if (!it || !window.openModal) return;
 const reCat = kind === 'taste' && it.g === 'like';
-let phase = reCat ? 'cat' : 'text', newCat = it.cat || '', ctl = null;
+let phase = reCat ? 'cat' : 'text', newCat = it.cat || '', newText = '', ctl = null, isShared = !!it.shared;
 ctl = window.openModal('编辑', it.t, function (v) {
 if (phase === 'cat') {
 if (!v) return;
 newCat = String(v); phase = 'text';
 ctl.stay(); ctl.pills([]); ctl.title('内容');
-ctl.input(true); ctl.text(it.t); ctl.maxLen(120); ctl.ph('内容'); ctl.okText('保存');
+ctl.input(true); ctl.text(it.t); ctl.maxLen(120); ctl.ph('内容'); ctl.okText('下一步');
 return;
 }
+if (phase === 'text') {
 const t = strim(v); if (!t) { ctl.stay(); ctl.focus(); return; }
-it.t = t; if (reCat) it.cat = newCat;
-save(arc); toast('已更新'); render();
+newText = t; phase = 'vis';
+ctl.stay(); ctl.title('给谁看这条？');
+ctl.input(false); ctl.pills(visPills(), isShared ? 'shared' : 'pc');
+ctl.okText('保存');
+return;
+}
+isShared = (v === 'shared');
+const item = Object.assign({}, it); delete item.shared;
+item.t = newText; if (reCat) item.cat = newCat;
+if (isShared) {
+item.shared = true;
+fanOutMutate(a => {
+const arr = listOf(kind, a);
+const i = arr.findIndex(x => x.id === id);
+if (i >= 0) arr.splice(i, 1);
+arr.push(Object.assign({}, item));
+});
+} else {
+const a = ensureArc();
+const arr = listOf(kind, a);
+const i = arr.findIndex(x => x.id === id);
+if (i >= 0) arr.splice(i, 1);
+arr.push(item);
+save(a);
+allCids().forEach(cid => {
+if (cid === viewCid) return;
+const o = ensureArcFor(cid);
+const arr2 = listOf(kind, o);
+const j = arr2.findIndex(x => x.id === id && x.shared);
+if (j >= 0) { arr2.splice(j, 1); saveFor(o, cid); }
+});
+}
+toast('已更新'); render();
 }, reCat ? { noInput: true, pill: it.cat, pills: LIKE_CATS.map(c => ({ label: c, value: c })) } : { placeholder: '内容', maxlength: 120 });
 }
 function delLi(kind, id) {
 if (!window.openModal) return;
 window.openModal('删除这条？', '', function (v) {
 if (v !== 'del') return;
-const arc = ensureArc();
-const arr = listOf(kind, arc);
-const i = arr.findIndex(x => x.id === id);
-if (i >= 0) arr.splice(i, 1);
-save(arc); toast('已删除'); render();
+fanOutRemove(kind, id); toast('已删除'); render();
 }, { noInput: true, pill: 'del', pills: [{ label: '取消', value: 'no' }, { label: '删除', value: 'del' }] });
 }
 function addSelf() {
 if (!window.openModal) return;
-let phase = 'type', pType = '', pText = '', ctl = null;
+let phase = 'type', pType = '', pText = '', pNote = '', ctl = null, shared = false;
 ctl = window.openModal('写一张描述卡', '', function (v) {
 if (phase === 'type') {
 if (!v) return;
@@ -58222,81 +58675,165 @@ if (phase === 'text') {
 const t = strim(v); if (!t) { ctl.stay(); ctl.focus(); return; }
 pText = t; phase = 'note';
 ctl.stay(); ctl.title('想补充的话（可选）'); ctl.hint('可留空。');
-ctl.text(''); ctl.maxLen(160); ctl.ph('可留空'); ctl.okText('保存');
+ctl.text(''); ctl.maxLen(160); ctl.ph('可留空'); ctl.okText('下一步');
 return;
 }
 if (phase === 'note') {
-const arc = ensureArc(); const now = Date.now();
-arc.selfs.push({ id: makeId(), type: pType, text: pText, note: strim(v), created: now, dateStr: (new Date(now).getMonth() + 1) + '.' + new Date(now).getDate() });
-save(arc); toast('写下了一张描述卡'); render();
+pNote = strim(v); phase = 'vis';
+ctl.stay(); ctl.title('给谁看这条？');
+ctl.input(false); ctl.pills(visPills(), 'pc');
+ctl.okText('保存');
+return;
 }
+shared = (v === 'shared');
+const now = Date.now();
+const item = { id: makeId(), type: pType, text: pText, note: pNote, created: now, dateStr: (new Date(now).getMonth() + 1) + '.' + new Date(now).getDate() };
+if (shared) {
+item.shared = true;
+fanOutMutate(a => { a.selfs.push(Object.assign({}, item)); });
+} else {
+ensureArc().selfs.push(item); save(ensureArc());
+}
+toast('写下了一张描述卡'); render();
 }, { noInput: true, pills: SELF_TYPES.map(t => ({ label: t[1], value: t[0] })) });
 }
 function editSelf(id) {
-const arc = ensureArc(); const it = arc.selfs.find(x => x.id === id); if (!it || !window.openModal) return;
-let phase = 'text', nt = '', ctl = null;
+const mv = mergedArc();
+const it = mv.selfs.find(x => x.id === id); if (!it || !window.openModal) return;
+let phase = 'text', nt = '', nn = '', ctl = null, isShared = !!it.shared;
 ctl = window.openModal('编辑这张描述卡', it.text, function (v) {
 if (phase === 'text') {
 const t = strim(v); if (!t) { ctl.stay(); ctl.focus(); return; }
 nt = t; phase = 'note';
 ctl.stay(); ctl.title('想补充的话（可选）');
-ctl.text(it.note || ''); ctl.maxLen(160); ctl.ph('可留空'); ctl.okText('保存');
+ctl.text(it.note || ''); ctl.maxLen(160); ctl.ph('可留空'); ctl.okText('下一步');
 return;
 }
-if (phase === 'note') { it.text = nt; it.note = strim(v); save(arc); toast('已更新'); render(); }
+if (phase === 'note') {
+nn = strim(v); phase = 'vis';
+ctl.stay(); ctl.title('给谁看这条？');
+ctl.input(false); ctl.pills(visPills(), isShared ? 'shared' : 'pc');
+ctl.okText('保存');
+return;
+}
+isShared = (v === 'shared');
+const item = Object.assign({}, it); delete item.shared;
+item.text = nt; item.note = nn;
+if (isShared) {
+item.shared = true;
+fanOutMutate(a => {
+a.selfs = a.selfs.filter(x => x.id !== id);
+a.selfs.push(Object.assign({}, item));
+});
+} else {
+const a = ensureArc();
+a.selfs = a.selfs.filter(x => x.id !== id);
+a.selfs.push(item);
+save(a);
+allCids().forEach(cid => {
+if (cid === viewCid) return;
+const o = ensureArcFor(cid);
+if (o.selfs.some(x => x.id === id && x.shared)) {
+o.selfs = o.selfs.filter(x => x.id !== id); saveFor(o, cid);
+}
+});
+}
+toast('已更新'); render();
 }, { placeholder: '你对自己的定义', maxlength: 140 });
 }
 function delSelf(id) {
 if (!window.openModal) return;
 window.openModal('删除这张描述卡？', '', function (v) {
 if (v !== 'del') return;
-const arc = ensureArc();
-arc.selfs = arc.selfs.filter(x => x.id !== id);
-save(arc); toast('已删除'); render();
+allCids().forEach(cid => {
+const a = ensureArcFor(cid);
+if (a.selfs.some(x => x.id === id)) { a.selfs = a.selfs.filter(x => x.id !== id); saveFor(a, cid); }
+});
+toast('已删除'); render();
 }, { noInput: true, pill: 'del', pills: [{ label: '取消', value: 'no' }, { label: '删除', value: 'del' }] });
 }
 function addDream() {
 if (!window.openModal) return;
-let phase = 'text', text = '', ctl = null;
+let phase = 'text', text = '', dDate = '', ctl = null, shared = false;
 ctl = window.openModal('记一个梦', '', function (v) {
 if (phase === 'text') {
 const t = strim(v); if (!t) { ctl.stay(); ctl.focus(); return; }
 text = t; phase = 'date';
 ctl.stay(); ctl.title('梦到哪天？'); ctl.hint('留空默认今天。');
-ctl.text(mdstr(Date.now())); ctl.maxLen(30); ctl.input(true); ctl.ph('如 8月3日'); ctl.okText('保存');
+ctl.text(mdstr(Date.now())); ctl.maxLen(30); ctl.input(true); ctl.ph('如 8月3日'); ctl.okText('下一步');
 return;
 }
 if (phase === 'date') {
-const arc = ensureArc();
-arc.dreams.push({ id: makeId(), text: text, date: strim(v) || mdstr(Date.now()), created: Date.now() });
-save(arc); toast('记住了一个梦'); render();
+dDate = strim(v) || mdstr(Date.now()); phase = 'vis';
+ctl.stay(); ctl.title('给谁看这条？');
+ctl.input(false); ctl.pills(visPills(), 'pc');
+ctl.okText('保存');
+return;
 }
+shared = (v === 'shared');
+const item = { id: makeId(), text: text, date: dDate, created: Date.now() };
+if (shared) {
+item.shared = true;
+fanOutMutate(a => { a.dreams.push(Object.assign({}, item)); });
+} else {
+ensureArc().dreams.push(item); save(ensureArc());
+}
+toast('记住了一个梦'); render();
 }, { placeholder: '梦见……', maxlength: 200 });
 }
 function editDream(id) {
-const arc = ensureArc(); const it = arc.dreams.find(x => x.id === id); if (!it || !window.openModal) return;
-let phase = 'text', newText = '', ctl = null;
+const mv = mergedArc();
+const it = mv.dreams.find(x => x.id === id); if (!it || !window.openModal) return;
+let phase = 'text', newText = '', newDate = '', ctl = null, isShared = !!it.shared;
 ctl = window.openModal('编辑这个梦', it.text, function (v) {
 if (phase === 'text') {
 const t = strim(v); if (!t) { ctl.stay(); ctl.focus(); return; }
 newText = t; phase = 'date';
 ctl.stay(); ctl.title('梦到哪天？');
-ctl.text(it.date || mdstr(Date.now())); ctl.maxLen(30); ctl.input(true); ctl.ph('如 8月3日'); ctl.okText('保存');
+ctl.text(it.date || mdstr(Date.now())); ctl.maxLen(30); ctl.input(true); ctl.ph('如 8月3日'); ctl.okText('下一步');
 return;
 }
 if (phase === 'date') {
-it.text = newText; it.date = strim(v) || mdstr(Date.now());
-save(arc); toast('已更新'); render();
+newDate = strim(v) || mdstr(Date.now()); phase = 'vis';
+ctl.stay(); ctl.title('给谁看这条？');
+ctl.input(false); ctl.pills(visPills(), isShared ? 'shared' : 'pc');
+ctl.okText('保存');
+return;
 }
+isShared = (v === 'shared');
+const item = Object.assign({}, it); delete item.shared;
+item.text = newText; item.date = newDate;
+if (isShared) {
+item.shared = true;
+fanOutMutate(a => {
+a.dreams = a.dreams.filter(x => x.id !== id);
+a.dreams.push(Object.assign({}, item));
+});
+} else {
+const a = ensureArc();
+a.dreams = a.dreams.filter(x => x.id !== id);
+a.dreams.push(item);
+save(a);
+allCids().forEach(cid => {
+if (cid === viewCid) return;
+const o = ensureArcFor(cid);
+if (o.dreams.some(x => x.id === id && x.shared)) {
+o.dreams = o.dreams.filter(x => x.id !== id); saveFor(o, cid);
+}
+});
+}
+toast('已更新'); render();
 }, { placeholder: '梦见……', maxlength: 200 });
 }
 function delDream(id) {
 if (!window.openModal) return;
 window.openModal('删掉这个梦？', '', function (v) {
 if (v !== 'del') return;
-const arc = ensureArc();
-arc.dreams = arc.dreams.filter(x => x.id !== id);
-save(arc); toast('已删除'); render();
+allCids().forEach(cid => {
+const a = ensureArcFor(cid);
+if (a.dreams.some(x => x.id === id)) { a.dreams = a.dreams.filter(x => x.id !== id); saveFor(a, cid); }
+});
+toast('已删除'); render();
 }, { noInput: true, pill: 'del', pills: [{ label: '取消', value: 'no' }, { label: '删除', value: 'del' }] });
 }
 function dispatch(op, el) {
@@ -58350,7 +58887,7 @@ dispatch(b.getAttribute('data-op'), b);
 });
 }
 }
-function boot() { bind(); }
+function boot() { absorbSharedOnce(); bind(); }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
 else boot();
 })();
@@ -65025,81 +65562,76 @@ if (btn) btn.classList.toggle('on', state.flags[name]);
 if (name === 'wall' && hintEl && state.status === 'idle') hintEl.textContent = state.flags.wall ? '穿墙已开 · 点开始' : '点开始 · 滑动控制方向';
 if (name === 'safe' && hintEl && state.status === 'idle') hintEl.textContent = state.flags.safe ? '安全模式 · 点开始' : '点开始 · 滑动控制方向';
 }
-function fsAvail() {
+function scrollAvail() {
 const sc = panel.querySelector('.poke-card-scroll');
 let availW = (sc && sc.clientWidth) || window.innerWidth || 360;
 let availH = (sc && sc.clientHeight) || window.innerHeight || 360;
 if (sc && sc.clientHeight > 0) {
-sc.querySelectorAll('.snake-score,.snake-best,.snake-hint,.snake-result:not([hidden]),.snake-controls,.snake-dpad').forEach(function (el) {
-if (el.hidden) return;
-const st = getComputedStyle(el);
-availH -= el.offsetHeight + (parseFloat(st.marginTop) || 0) + (parseFloat(st.marginBottom) || 0);
-});
 const st = getComputedStyle(sc);
+let n = 0;   // 参与布局的兄弟块数；n 块 + 画布共 n+1 项，之间有 n 个 gap
+sc.querySelectorAll('.snake-score,.snake-best,.snake-hint,.snake-result:not([hidden]),.snake-controls,.snake-dpad').forEach(function (el) {
+if (el.hidden || !el.offsetHeight) return;   // display:none / hidden 的块不占空间也没有 gap
+const cs = getComputedStyle(el);
+availH -= el.offsetHeight + (parseFloat(cs.marginTop) || 0) + (parseFloat(cs.marginBottom) || 0);
+n++;
+});
+availH -= (parseFloat(st.rowGap) || 0) * n;
+availH -= (parseFloat(st.paddingTop) || 0) + (parseFloat(st.paddingBottom) || 0);
 availW -= (parseFloat(st.paddingLeft) || 0) + (parseFloat(st.paddingRight) || 0);
-availH -= (parseFloat(st.paddingTop) || 0) + (parseFloat(st.paddingBottom) || 0) + 16;   // gap 余量
 }
-return { w: Math.max(240, availW), h: Math.max(260, availH) };
+return { w: Math.max(120, availW), h: Math.max(90, availH) };
 }
-function fitCanvasBox() {
-if (!canvas || !isFs || !ctx) return;
-const av = fsAvail();
-const cell = Math.max(9, Math.min(av.w / gW(), av.h / gH()));
+function applyCell(cell, minCell) {
+const sc = panel.querySelector('.poke-card-scroll');
+for (let i = 0; i < 4; i++) {
+cell = Math.max(minCell, cell);
 cssW = Math.round(cell * gW()); cssH = Math.round(cell * gH());
 canvas.style.width = cssW + 'px';
 canvas.style.height = cssH + 'px';
-canvas.width = Math.round(cssW * dpr);
+canvas.width = Math.round(cssW * dpr);       // 改位图尺寸会清空画布，调用方随后 render()
 canvas.height = Math.round(cssH * dpr);
-ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+if (!sc || !sc.clientHeight) break;          // 面板未布局（隐藏）时量不到，下次打开/resize 会重算
+const over = sc.scrollHeight - sc.clientHeight;
+if (over <= 0 || cell <= minCell) break;
+cell -= over / gH();
+}
+}
+function fitCanvasBox() {
+if (!canvas || !isFs || !ctx) return;
+const av = scrollAvail();
+applyCell(Math.min(av.w / gW(), av.h / gH()), 9);
 }
 function fitNonFsCanvas() {
 GW = 15; GH = 15;                // 半框固定 15×15 基准
-const sc = panel.querySelector('.poke-card-scroll');
-let availH = window.innerHeight || 200;   // 面板隐藏/未布局时拿不到可用高度，退回足够大
-if (sc && sc.clientHeight > 0) {
-availH = sc.clientHeight;
-sc.querySelectorAll('.snake-score,.snake-best,.snake-hint,.snake-result:not([hidden]),.snake-controls,.snake-dpad').forEach(function (el) {
-if (el.hidden) return;
-const st = getComputedStyle(el);
-availH -= el.offsetHeight + (parseFloat(st.marginTop) || 0) + (parseFloat(st.marginBottom) || 0);
-});
-const st = getComputedStyle(sc);
-availH -= (parseFloat(st.paddingTop) || 0) + (parseFloat(st.paddingBottom) || 0) + 16;   // gap 余量
-}
-const availW = (sc && sc.clientWidth) || 360;
-const size = Math.round(Math.min(360, Math.max(160, Math.min(availW, availH))));
-cssW = size; cssH = size;
-canvas.style.width = cssW + 'px';
-canvas.style.height = cssH + 'px';
+const av = scrollAvail();
+applyCell(Math.min(360, Math.max(160, Math.min(av.w, av.h))) / 15, 6);
 }
 function refitNonFs() {
 if (!canvas || !panel || panel.hidden || isFs) return;
 fitNonFsCanvas();
-canvas.width = Math.round(cssW * dpr);
-canvas.height = Math.round(cssH * dpr);
-if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-render(0);
+if (ctx) render(0);
+}
+function refitAll() {
+refitNonFs();                 // 非全屏：内部已 render
+if (!isFs) return;
+fitCanvasBox();
+render(0);                    // applyCell 改位图尺寸会清空画布
 }
 function setupCanvas() {
 if (!canvas) return;
 dpr = Math.min(window.devicePixelRatio || 1, 3);
+ctx = canvas.getContext('2d');   // 幂等，供 applyCell 重设 transform
 if (isFs) {
-const av = fsAvail();
 if (!state || state.status === 'idle' || state.status === 'over') {
-GW = Math.max(12, Math.min(34, Math.floor(av.w / FS_CELL)));
-GH = Math.max(12, Math.min(46, Math.floor(av.h / FS_CELL)));
+const av0 = scrollAvail();
+GW = Math.max(12, Math.min(34, Math.floor(av0.w / FS_CELL)));
+GH = Math.max(12, Math.min(46, Math.floor(av0.h / FS_CELL)));
 }
-const cell = Math.max(9, Math.min(av.w / gW(), av.h / gH()));
-cssW = Math.round(cell * gW()); cssH = Math.round(cell * gH());
-canvas.style.width = cssW + 'px';
-canvas.style.height = cssH + 'px';
+fitCanvasBox();
 } else {
 fitNonFsCanvas();
 }
-canvas.width = Math.round(cssW * dpr);
-canvas.height = Math.round(cssH * dpr);
-ctx = canvas.getContext('2d');
-ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
 function initEls() {
 panel = $('chat-snake-panel');
@@ -65240,9 +65772,7 @@ if (restartBtn) restartBtn.hidden = true;
 if (resumeBtn) resumeBtn.hidden = true;
 if (resultEl) { resultEl.hidden = true; resultEl.innerHTML = ''; }
 newGame(diff);
-refitNonFs();   // 结算块/开始按钮收起后，画布放回一米可见的尺寸
-fitCanvasBox();   // 开始按钮随即隐藏，重适配画布吸收腾出的空间（不改格数）
-render(0);
+refitAll();     // 结算块/开始按钮收起后腾出的空间收归画布（不改格数）
 let n = 3;
 state.status = 'countdown';
 const countdownStep = function () {
@@ -65619,7 +66149,7 @@ void resultEl.offsetWidth;
 resultEl.classList.add('snake-res-pop');
 if (restartBtn) restartBtn.hidden = false;
 if (hintEl) hintEl.textContent = '再来一局？';
-refitNonFs();   // 结算块+再来一局出现后，重新收小画布让下方方向键一屏可见
+refitAll();     // 结算块+再来一局出现后收小画布：半框让方向键一屏可见，全屏防「再来一局」被裁到屏外
 }
 function render(alpha) {
 if (!ctx || !state) return;
@@ -65796,13 +66326,13 @@ const mp = $('chat-more-panel'); if (mp) mp.hidden = true;
 const nameEl = $('snake-partner-name');
 if (nameEl) nameEl.textContent = (typeof localStorage !== 'undefined' && localStorage.getItem(PARTNER_KEY)) || 'TA';
 panel.hidden = false;
+renderScore();
+renderBest();   // 最长纪录行要先落到 DOM：toggleFs 会按当时可见的兄弟块量画布，晚一行就把按钮顶出屏
 const mobile = window.innerWidth < 900;
 if (mobile) { if (!isFs) toggleFs(); }
 else { if (isFs) toggleFs(); }
 paused = false;
 if (pauseBtn) pauseBtn.textContent = '⏸';
-renderScore();
-renderBest();
 if (canSave(state) && validState(state)) {
 state.status = 'playing';
 state.startTime = Date.now() - state.elapsed;
@@ -65835,6 +66365,7 @@ if (restartBtn) restartBtn.hidden = true;
 if (resumeBtn) resumeBtn.hidden = true;
 if (resultEl) { resultEl.hidden = true; resultEl.innerHTML = ''; }
 if (hintEl) hintEl.textContent = '点开始 · 滑动控制方向';
+refitAll();     // 最长纪录行/继续上局按钮显隐后再量一次，避免按钮被挤到屏外
 render(0);
 }
 function stopLoop() {
@@ -68271,9 +68802,21 @@ function dexKey() { return 'fishing-dex'; }
 function loadDex() { const d = readJSON(dexKey(), {}); return (d && typeof d === 'object') ? d : {}; }
 function saveDex(d) { writeJSON(dexKey(), d); }
 function todayDataKey() { return 'fishing-today'; }
+function keepKey(side, id) { return side + ':' + id; }
+function normalizeToday(t) {
+const old = t.keep && typeof t.keep === 'object' ? t.keep : {};
+const keep = {};
+Object.keys(old).forEach(function (k) {
+if (!old[k]) return;
+if (k.indexOf(':') < 0) { keep[keepKey('mine', k)] = 1; keep[keepKey('ta', k)] = 1; }
+else keep[k] = 1;
+});
+t.keep = keep;
+return t;
+}
 function loadToday() {
 const t = readJSON(todayDataKey(), null);
-if (t && t.date === todayKey()) return t;
+if (t && t.date === todayKey()) return normalizeToday(t);
 return { date: todayKey(), mine: {}, ta: {}, keep: {} };
 }
 function saveToday(t) { writeJSON(todayDataKey(), t); }
@@ -68508,7 +69051,7 @@ const sold = {};
 Object.keys(t[side]).forEach(function (id) {
 const it = ITEM_MAP[id];
 if (!it || it.cat === 'gift') return;
-if (keep[id]) return;
+if (keep[keepKey(side, id)]) return;
 const n = t[side][id] || 0;
 total += it.price * n; count += n;
 sold[side] = sold[side] || {}; sold[side][id] = 1;
@@ -68517,6 +69060,11 @@ sold[side] = sold[side] || {}; sold[side][id] = 1;
 if (count === 0) { toast('没有可出售的收获（勾选「留」的不卖）'); return; }
 if (window.giftWalletChange) window.giftWalletChange(total, total, '钓鱼出售');
 Object.keys(sold).forEach(function (side) { Object.keys(sold[side]).forEach(function (id) { delete t[side][id]; }); });
+Object.keys(t.keep).forEach(function (k) {
+const i = k.indexOf(':');
+const side = k.slice(0, i), id = k.slice(i + 1);
+if (!t[side] || !t[side][id]) delete t.keep[k];
+});
 saveToday(t);
 addStats({ totalEarned: total });
 sfxSell();
@@ -68675,9 +69223,9 @@ const it = ITEM_MAP[id]; if (!it) return;
 const n = m[id];
 const p = it.price * n;
 const sellable = it.cat !== 'gift';
-const kept = !!keep[id];
+const kept = !!keep[keepKey(side, id)];
 if (sellable && !kept) { total += p; count += n; }
-html += '<div class="fish-row"><span class="fish-ico">' + it.icon + '</span><span class="fish-name">' + esc(it.name) + (it.cat === 'gift' ? '<i class="fish-gift-tag">已收藏</i>' : '') + '</span><span class="fish-cnt">×' + n + '</span>' + (sellable ? '<label class="fish-keep"><input type="checkbox" class="fish-keep-cb" data-id="' + id + '"' + (kept ? ' checked' : '') + '><span>留</span></label><span class="fish-price">+' + fenToStr(p) + '</span>' : '<span class="fish-price">纪念</span>') + '</div>';
+html += '<div class="fish-row"><span class="fish-ico">' + it.icon + '</span><span class="fish-name">' + esc(it.name) + (it.cat === 'gift' ? '<i class="fish-gift-tag">已收藏</i>' : '') + '</span><span class="fish-cnt">×' + n + '</span>' + (sellable ? '<label class="fish-keep"><input type="checkbox" class="fish-keep-cb" data-side="' + side + '" data-id="' + id + '"' + (kept ? ' checked' : '') + '><span>留</span></label><span class="fish-price">+' + fenToStr(p) + '</span>' : '<span class="fish-price">纪念</span>') + '</div>';
 });
 return html;
 }
@@ -68781,10 +69329,10 @@ const cb = e.target.closest && e.target.closest('.fish-keep-cb');
 if (!cb) return;
 e.stopPropagation();
 const t = loadToday();
-if (!t.keep) t.keep = {};
-const id = cb.getAttribute('data-id');
-if (cb.checked) t.keep[id] = 1; else delete t.keep[id];
+const key = keepKey(cb.getAttribute('data-side'), cb.getAttribute('data-id'));
+if (cb.checked) t.keep[key] = 1; else delete t.keep[key];
 saveToday(t);
+render();
 });
 tabEls.forEach(function (tab) {
 tab.addEventListener('click', function (e) {
@@ -70352,49 +70900,241 @@ out += btoa(bin);
 return out;
 });
 }
-async function jsonToBlobStreaming(data) {
+const PACK_MERGE = 4 * 1024 * 1024;   // 每 ~4MB 合并一次进 Blob（Blob 拼接是引用合并、不复制内存）
+const PACK_SLICE = 1 * 1024 * 1024;   // 超长字符串一次转义的分片长度（分片转义拼接＝整体转义）
+const PACK_DEPTH = 3;                 // 容器下钻层数：值→元素→子元素；再深才整包 stringify
+const PACK_YIELD = 64;                // 每写这么多个片段让出一次主线程（防空屏假死/ANR）
+function createJsonPack() {
 const parts = [];
-let len = 0;
-let blob = null;
+let len = 0, since = 0, blob = null;
 const flush = () => {
 if (!parts.length) return;
 blob = new Blob(blob ? [blob].concat(parts) : parts, { type: 'application/json;charset=utf-8' });
 parts.length = 0;
 len = 0;
 };
-const push = (s) => {
-if (!s) return;
-parts.push(s);
-len += s.length;
-if (len >= 4 * 1024 * 1024) flush(); // 每 ~4MB 合并一次，避免 parts 无限堆积
+return {
+push(s) { if (!s) return; parts.push(s); len += s.length; if (len >= PACK_MERGE) flush(); },
+tick() {
+if (++since < PACK_YIELD) return Promise.resolve();
+since = 0;
+return new Promise((r) => setTimeout(r, 0));
+},
+finish() { flush(); return blob || new Blob([], { type: 'application/json;charset=utf-8' }); }
 };
-const yieldNow = () => new Promise((r) => setTimeout(r, 0));
-push('{"version":"1.0","app":"mochi-zika","exportTime":' + JSON.stringify(data.exportTime) + ',"ls":{');
-const lsKeys = Object.keys(data.ls);
-for (let i = 0; i < lsKeys.length; i++) {
-if (i) push(',');
-push(JSON.stringify(lsKeys[i]) + ':' + JSON.stringify(data.ls[lsKeys[i]]));
 }
-push('},"idb":{');
-const idbKeys = Object.keys(data.idb);
-for (let i = 0; i < idbKeys.length; i++) {
-const k = idbKeys[i];
-if (i) push(',');
-push(JSON.stringify(k) + ':' + JSON.stringify(data.idb[k]));
-delete data.idb[k]; // 序列化完即释放，控制峰值内存
-if ((i & 3) === 3) await yieldNow(); // 每 4 个大键让出主线程一次
+function packString(pack, s) {
+if (s.length <= PACK_SLICE) { pack.push(JSON.stringify(s)); return; }
+pack.push('"');
+let i = 0;
+while (i < s.length) {
+let end = Math.min(i + PACK_SLICE, s.length);
+if (end < s.length && s.charCodeAt(end - 1) >= 0xD800 && s.charCodeAt(end - 1) <= 0xDBFF) end--;
+if (end <= i) end = i + 1;
+pack.push(JSON.stringify(s.slice(i, end)).slice(1, -1));
+i = end;
 }
-push('}}');
-flush();
-return blob;
+pack.push('"');
 }
-async function doExport() {
+function isPlainObject(v) {
+const p = Object.getPrototypeOf(v);
+return p === Object.prototype || p === null;
+}
+async function packValue(pack, v, depth, cfg, stat) {
+if (v === null || v === undefined) { pack.push('null'); return; }
+const t = typeof v;
+if (t === 'string') {
+if (cfg.strip && v.length > 1024 && /^data:[^,]*;base64,/i.test(v.slice(0, 64))) {
+stat.stripCnt++; stat.stripChars += v.length;
+pack.push('""');
+return;
+}
+packString(pack, v);
+return;
+}
+if (t === 'number') { pack.push(isFinite(v) ? String(v) : 'null'); return; }
+if (t === 'boolean') { pack.push(v ? 'true' : 'false'); return; }
+if (depth < PACK_DEPTH) {
+if (Array.isArray(v)) {
+pack.push('[');
+for (let i = 0; i < v.length; i++) {
+if (i) pack.push(',');
+await packValue(pack, v[i], depth + 1, cfg, stat);
+if (stat.own) v[i] = null; // 值来自 IDB 读取（本次导出的私有副本）→ 序列化完即释放
+if (depth === 0) await pack.tick();
+}
+pack.push(']');
+return;
+}
+if (t === 'object' && isPlainObject(v)) {
+const keys = Object.keys(v);
+pack.push('{');
+let wrote = false;
+for (let i = 0; i < keys.length; i++) {
+const child = v[keys[i]];
+if (child === undefined || typeof child === 'function') continue;
+if (wrote) pack.push(',');
+wrote = true;
+pack.push(JSON.stringify(keys[i]) + ':');
+await packValue(pack, child, depth + 1, cfg, stat);
+if (stat.own) { try { delete v[keys[i]]; } catch (e) {} }
+if (depth === 0) await pack.tick();
+}
+pack.push('}');
+return;
+}
+}
+const whole = JSON.stringify(v);
+pack.push(whole === undefined ? 'null' : whole);
+}
+function overSmallLimit(v, limit) {
+try {
+if (typeof v === 'string') return v.length > limit;
+if (v instanceof Blob) return v.size > limit;
+if (Array.isArray(v)) {
+let n = 0;
+for (let i = 0; i < v.length; i++) {
+const m = v[i];
+if (typeof m === 'string') n += m.length;
+else if (m && typeof m === 'object') {
+if (typeof m.text === 'string') n += m.text.length;
+if (typeof m.img === 'string') n += m.img.length;
+if (typeof m.voice === 'string') n += m.voice.length;
+const ps = m.parts;
+if (Array.isArray(ps)) for (let j = 0; j < ps.length; j++) { const p = ps[j]; if (p && typeof p.v === 'string') n += p.v.length; }
+n += 64;
+} else n += 32;
+if (n > limit) return true;
+}
+return false;
+}
+if (v && typeof v === 'object') {
+const ks = Object.keys(v);
+let n = 0;
+for (let i = 0; i < ks.length; i++) {
+const m = v[ks[i]];
+if (typeof m === 'string') n += m.length;
+else if (m && typeof m === 'object') n += 2048;
+else n += 32;
+n += ks[i].length;
+if (n > limit) return true;
+}
+return false;
+}
+return false;
+} catch (e) { return true; }
+}
+async function jsonToBlobStreaming(meta, readNext, small) {
+const pack = createJsonPack();
+const cfg = meta.cfg;
+const stat = { own: false, stripCnt: 0, stripChars: 0 };
+let first = true;
+let chunk = '{"version":"1.0","app":"mochi-zika","exportTime":' + JSON.stringify(meta.exportTime) + ',"idb":{';
+while (true) {
+const ent = await readNext();
+if (!ent) break;
+chunk += (first ? '' : ',') + JSON.stringify(ent.k) + ':';
+first = false;
+pack.push(chunk);
+chunk = '';
+stat.own = ent.own === true;
+await packValue(pack, ent.v, 0, cfg, stat);
+await pack.tick();
+}
+pack.push(chunk + '},"ls":{');
+const sKeys = Object.keys(small);
+for (let i = 0; i < sKeys.length; i++) {
+if (i) pack.push(',');
+stat.own = false; // 小键值是 localStorage 原串/别处共用的值，一律不动源
+pack.push(JSON.stringify(sKeys[i]) + ':');
+await packValue(pack, small[sKeys[i]], 1, cfg, stat);
+}
+pack.push('}}');
+pack.stat = stat;
+return pack;
+}
+const LS_SMALL_LIMIT = 20 * 1024;        // ≤ 此体积的键进备份的 ls 段（localStorage），其余进 idb 段
+const MODE_ASK_BYTES = 150 * 1024 * 1024; // 本机数据超过这个量才弹「选备份范围」，小库不打扰
+const MODE_IMPORT_WARN = 120 * 1024 * 1024; // 成品文件超过这个体积就如实提示「新设备可能导不回」
+const MUSIC_KEY_RE = /:music-file:/;      // 本地上传音乐的文件体：最占体积、且新设备上可重新添加
+function exportCfg(mode) {
+if (mode === 'no-music') return { mode: mode, label: '不含音乐文件', note: '不含本地音乐文件', skip: (k) => MUSIC_KEY_RE.test(k), strip: false };
+if (mode === 'text') return { mode: mode, label: '只备份文字', note: '不含图片/语音/音乐附件', skip: (k) => MUSIC_KEY_RE.test(k), strip: true };
+return { mode: 'full', label: '完整备份', note: '全部数据完整', skip: () => false, strip: false };
+}
+let expStage = '';
+let expKey = '';
+let expKeyBytes = 0;
+async function doExport(mode) {
+const cfg = exportCfg(mode);
+try {
+await runExport(cfg);
+} catch (e) {
+impHide();
+reportExportError(e, cfg);
+}
+}
+function reportExportError(e, cfg) {
+const msg = (e && (e.message || String(e))) || '未知错误';
+const isLen = /string length/i.test(msg);
+const at = (expStage ? '\n出错环节：' + expStage : '') +
+(expKey ? '\n涉及数据：' + expKey + (expKeyBytes ? '（约 ' + fmtSize(expKeyBytes) + '）' : '') : '');
+const advice = isLen
+? '\n根因：这台设备的数据量已超出浏览器一次能生成的字符串上限，单个文件的完整备份做不到。\n' +
+'请重新点「导出数据」改选「不含音乐文件」或「只备份文字」；确实要一份全量备份，' +
+'先用「查看存储」清掉不再需要的音乐/图片附件后再导。'
+: '\n请重新点「导出数据」再试一次；反复失败时先重启浏览器（释放被占满的内存）再导，' +
+'或改选范围更小的备份。';
+if (window.openModal) {
+window.openModal('导出未完成', '', function () {}, {
+noInput: true, okText: '知道了', big: true,
+staticText: '「' + cfg.label + '」中途失败。本机数据没有任何改动（导出不写不删业务键），已生成的临时文件会自动释放。\n' +
+'原因：' + msg + at + advice
+});
+} else {
+toast('导出未完成：' + msg);
+}
+}
+function askExportMode() {
+return new Promise((resolve) => {
+let usage = 0;
+let settled = false;
+const finish = (m) => { if (settled) return; settled = true; resolve(m); };
+const ask = () => {
+if (usage <= MODE_ASK_BYTES || !window.openModal) { finish('full'); return; }
+window.openModal('本机数据约 ' + fmtSize(usage) + '，先选备份范围', '', function (v) {
+finish(v || 'full');
+}, {
+noInput: true, okText: '开始导出', pill: 'full', lock: true,
+pills: [{ label: '完整备份', value: 'full' }, { label: '不含音乐文件', value: 'no-music' },
+{ label: '只备份文字', value: 'text' }, { label: '取消', value: 'cancel' }],
+staticText: '完整备份：全部数据都进文件（含本地音乐文件、图片、语音）。文件最大，' +
+'超过约 ' + fmtSize(MODE_IMPORT_WARN) + ' 时新设备可能「导得出去、导不回来」（导入要把整个文件一次读进内存）。\n' +
+'不含音乐文件：跳过本地上传的歌曲，其余数据完整，音乐到新设备重新添加即可。\n' +
+'只备份文字：再跳过图片/语音等附件，聊天记录与字卡只保留文字，体积最小。\n' +
+'三种模式都会完整备份聊天记录的文字、设置与字卡文本。'
+});
+};
+try {
+if (navigator.storage && navigator.storage.estimate) {
+navigator.storage.estimate().then((est) => {
+usage = (est && est.usage) || 0;
+ask();
+}, () => ask());
+return;
+}
+} catch (e) {}
+ask();
+});
+}
+async function runExport(cfg) {
+expStage = '读取本地数据';
+expKey = '';
+expKeyBytes = 0;
 impShow('正在导出…', '正在读取全部数据', 3);
-const data = { version: '1.0', app: 'mochi-zika', exportTime: new Date().toISOString(), ls: {}, idb: {} };
-const add = (k, v) => {
-if (byteLen(v) > 20 * 1024) data.idb[k] = v;
-else data.ls[k] = v;
-};
+const exportTime = new Date().toISOString();
+const small = {};
+const cover = exportCoverage();
 const lsBig = {};
 try {
 for (let i = 0; i < localStorage.length; i++) {
@@ -70402,20 +71142,21 @@ const k = localStorage.key(i);
 if (!k || k.indexOf('xy-home-v2:') !== 0) continue;
 if (k === SNAPSHOT_KEY) continue; // v3.7.0：副本键不进导出文件（防自包含无限增长）
 const v = localStorage.getItem(k);
-if (byteLen(v) > 20 * 1024) lsBig[k] = v; // 大键：留待 IndexedDB 权威读取
-else data.ls[k] = v;
+if (byteLen(v) > LS_SMALL_LIMIT) lsBig[k] = v; // 大键：留待 IndexedDB 权威读取
+else { small[k] = v; cover.see(k, v); }
 }
 } catch (e) {}
 function isAuthorityKey(k) {
 return /:chat-msgs$/.test(k) || /:feed-posts$/.test(k);
 }
 const exportMissing = []; // 权威键降级记录（只剩有损快照或丢失）
+let idbKeys = [];
 if (window.idbListKeys || window.idbGetAllKeys) {
-let idbKeys = null;
+let listed = null;
 try {
-idbKeys = window.idbListKeys ? await window.idbListKeys() : ((await window.idbGetAllKeys()) || []);
-} catch (e) { idbKeys = null; }
-if (idbKeys === null) {
+listed = window.idbListKeys ? await window.idbListKeys() : ((await window.idbGetAllKeys()) || []);
+} catch (e) { listed = null; }
+if (listed === null) {
 impHide();
 if (window.openModal) {
 window.openModal('导出未完成', '', function () {}, {
@@ -70429,66 +71170,118 @@ toast('导出未完成：未能读取本地数据库，请稍候重试');
 }
 return;
 }
-const idbTotal = idbKeys.length;
-let idbDone = 0;
-for (const k of idbKeys) {
-idbDone++;
-if (idbTotal) impShow('正在导出…', '正在读取全部数据 ' + idbDone + ' / ' + idbTotal, 8 + Math.round(idbDone / idbTotal * 60));
+idbKeys = listed;
+}
+function routeValue(k, v, own) {
+cover.see(k, v);
+if (isAuthorityKey(k)) { try { delete small[k]; } catch (e) {} } // 有损 LS 快照不得混进备份
+if (!overSmallLimit(v, LS_SMALL_LIMIT)) { small[k] = v; return null; }
+return { k: k, v: v, own: own };
+}
+const estTotal = Math.max(1, idbKeys.length + Object.keys(lsBig).length);
+let cursor = 0;      // idbKeys 游标
+let tailKeys = null; // idbKeys 走完后，lsBig 里没被 IDB 收录的键（最终兜底）
+let tailCursor = 0;
+let skipped = 0;     // 按所选范围排除掉的键数（音乐文件等）
+const pct = () => 8 + Math.round((idbKeys.length ? Math.min(cursor, idbKeys.length) / idbKeys.length : 1) * 78);
+async function readNext() {
+while (cursor < idbKeys.length) {
+const k = idbKeys[cursor++];
+expKey = k;
+expKeyBytes = 0;
 try {
 if (k.indexOf('xy-home-v2:') !== 0) continue;
 if (k === SNAPSHOT_KEY) continue; // v3.7.0：副本键不进导出文件
-if (k in data.ls && !isAuthorityKey(k)) continue;
+if (k in small && !isAuthorityKey(k)) continue;
+if (cfg.skip(k)) { skipped++; continue; } // 所选范围之外的键（如本地音乐文件）
+impShow('正在导出…', '正在读取并打包 ' + Math.min(cursor, estTotal) + ' / ' + estTotal, pct());
 let v = await window.idbGet(k);
 if ((v === undefined || v === null) && lsBig[k] === undefined) {
 v = await window.idbGet(k);
 }
 if (v !== undefined && v !== null) {
+expKeyBytes = typeof v === 'string' ? v.length * 2 : (v instanceof Blob ? v.size : 0);
 if (v instanceof Blob) {
-add(k, 'data:' + (v.type || 'audio/mpeg') + ';base64,' + await blobToBase64(v));
-} else {
-add(k, v); // 权威值以 IDB 为准（含最新聊天记录）
-}
+const ent = routeValue(k, 'data:' + (v.type || 'audio/mpeg') + ';base64,' + await blobToBase64(v), true);
 delete lsBig[k]; // 已收录 IDB 权威值，不再回落 LS 兜底
-if (isAuthorityKey(k) && (k in data.ls)) { try { delete data.ls[k]; } catch (e) {} }
+if (ent) return ent; // 小值已并进 ls 段 → 继续拉下一个键
+continue;
+}
+const ent = routeValue(k, v, true); // 权威值以 IDB 为准（含最新聊天记录）
+delete lsBig[k];
+if (ent) return ent;
+continue;
 } else if (window.idbGetCached && window.idbGetCached(k) !== undefined) {
-add(k, window.idbGetCached(k));
+const cv = window.idbGetCached(k);
+expKeyBytes = typeof cv === 'string' ? cv.length * 2 : 0;
+const ent = routeValue(k, cv, false);
 delete lsBig[k];
-if (isAuthorityKey(k) && (k in data.ls)) { try { delete data.ls[k]; } catch (e) {} }
+if (ent) return ent;
+continue;
 } else if (lsBig[k] !== undefined) {
-add(k, lsBig[k]);
+const sv = lsBig[k];
 delete lsBig[k];
+expKeyBytes = typeof sv === 'string' ? sv.length * 2 : 0;
 if (isAuthorityKey(k)) exportMissing.push(k);
+const ent = routeValue(k, sv, false);
+if (ent) return ent;
+continue;
 } else {
 try {
 const lsV = localStorage.getItem(k);
-if (lsV !== null) { add(k, lsV); }
+if (lsV !== null) { const ent = routeValue(k, lsV, false); if (ent) return ent; }
 } catch (e) {}
 if (isAuthorityKey(k)) exportMissing.push(k);
 }
 } catch (e) {} // 单键失败跳过，继续导出其余键
 }
+if (tailKeys === null) tailKeys = Object.keys(lsBig);
+while (tailCursor < tailKeys.length) {
+const k = tailKeys[tailCursor++];
+if (!(k in lsBig)) continue;
+expKey = k;
+if (cfg.skip(k)) { skipped++; continue; }
+const v = lsBig[k];
+delete lsBig[k];
+expKeyBytes = typeof v === 'string' ? v.length * 2 : 0;
+const ent = routeValue(k, v, false);
+if (ent) return ent;
 }
-Object.keys(lsBig).forEach((k) => { add(k, lsBig[k]); });
-impShow('正在导出…', '正在打包数据文件', 72);
-const coverLines = exportCoverage(data);
-let coverText = '导出内容（全局全部数据）：\n' + coverLines.join('\n') + '\n——';
+expKey = '';
+expKeyBytes = 0;
+return null;
+}
+impShow('正在导出…', '正在读取并打包数据', 8);
+expStage = '打包数据文件';
+const pack = await jsonToBlobStreaming({ exportTime: exportTime, cfg: cfg }, readNext, small);
+const blob = pack.finish();
+let coverText = (cfg.mode === 'full' ? '导出内容（全局全部数据）：\n' : '导出内容（' + cfg.label + '）：\n') + cover.lines().join('\n') + '\n——';
+if (skipped) coverText += '\n· 按所选范围跳过本地音乐文件 ' + skipped + ' 个（到新设备重新添加即可）';
+if (pack.stat.stripCnt) {
+coverText += '\n· 按所选范围跳过图片/语音等媒体附件 ' + pack.stat.stripCnt + ' 处（约 ' +
+fmtSize(pack.stat.stripChars * 2) + '，文字与设置全部保留）';
+}
 if (exportMissing.length) {
 const names = exportMissing.map(k => /:chat-msgs$/.test(k) ? '聊天记录(' + k.slice('xy-home-v2:'.length) + ')' : '朋友圈(' + k.slice('xy-home-v2:'.length) + ')');
 coverText += '\n⚠ 以下数据可能未完整导出（IDB 读取失败，仅拿到有损快照或丢失）：\n' + names.map(n => '· ' + n).join('\n') + '\n请勿清空原设备数据，建议重启浏览器后重新导出。';
 }
-const blob = await jsonToBlobStreaming(data);
+if (blob.size > MODE_IMPORT_WARN) {
+coverText += '\n⚠ 这个文件约 ' + fmtSize(blob.size) + '，新设备导入时要一次性读入整个文件，' +
+'这么大有较大概率导入失败。建议重新点「导出数据」改选「不含音乐文件」或「只备份文字」再做一份。';
+}
 const fname = 'mochi数据备份_' + localDateStr(new Date()) + '.json';
 const sizeStr = fmtSize(blob.size);
+const doneText = '数据已导出（' + sizeStr + '，' + cfg.note + '）';
 try { localStorage.setItem('xy-home-v2:__last-backup', String(Date.now())); } catch (e) {}
 impShow('正在导出…', '正在准备保存文件', 92);
 const saveRes = await saveBackupFile(blob, fname);
 impHide();
-if (saveRes === 'ok') { toast('数据已导出（' + sizeStr + '，全部数据完整）'); return; }
+if (saveRes === 'ok') { toast(doneText); return; }
 if (window.openModal) {
 window.openModal('备份已打包完成（' + sizeStr + '）', '', () => {
-if (anchorDownload(blob, fname)) toast('数据已导出（' + sizeStr + '，全部数据完整）');
+if (anchorDownload(blob, fname)) toast(doneText);
 else toast('仍未触发下载。请重新点击「导出数据」并确认保存下载文件——这份文件是你的唯一备份');
-}, { noInput: true, staticText: coverText + '\n数据已经打包好，还没开始保存。\n点「确定」开始下载保存到本机，点「取消」放弃本次保存。\n（请务必确认下载保存成功：本机不再另存副本，这个文件就是唯一备份）' });
+}, { noInput: true, big: true, staticText: coverText + '\n数据已经打包好，还没开始保存。\n点「确定」开始下载保存到本机，点「取消」放弃本次保存。\n（请务必确认下载保存成功：本机不再另存副本，这个文件就是唯一备份）' });
 } else {
 toast('备份已打包（' + sizeStr + '），请重新点击「导出数据」触发下载并保存文件（唯一备份）');
 }
@@ -70545,9 +71338,7 @@ if (n >= 1048576) return (n / 1048576).toFixed(1) + ' MB';
 if (n >= 1024) return Math.round(n / 1024) + ' KB';
 return Math.round(n) + ' B';
 }
-function exportCoverage(data) {
-const allKeys = Object.keys(data.ls || {}).concat(Object.keys(data.idb || {}));
-const valOf = (k) => (data.idb && data.idb[k]) !== undefined ? data.idb[k] : (data.ls && data.ls[k]);
+function exportCoverage() {
 const RULES = [
 [/:chat-msgs$/, '聊天记录', arr => arr.length + ' 条'],
 [/:group-chat-msgs$/, '群聊记录', arr => arr.length + ' 条'],
@@ -70568,30 +71359,37 @@ const RULES = [
 [/drift-data/, '漂流瓶', null],
 [/desk-layout|hidden-icons/, '桌面布局', null]
 ];
-const matched = new Set();
-const lines = [];
-RULES.forEach(([re, name, parse]) => {
-const ks = allKeys.filter(k => re.test(k));
-const real = ks.filter(k => {
-let v = valOf(k);
-if (typeof v === 'string' && v.length > 1024 * 1024) return v !== '';
-if (typeof v === 'string') { try { v = JSON.parse(v); } catch (e) {} }
-return v !== null && v !== undefined && v !== '';
-});
-if (!real.length) return;
-matched.add(name);
-let desc = '✓有';
+const BIG_STR = 1024 * 1024;
+const desc = new Array(RULES.length).fill(null); // null＝该功能还没见到非空数据
+const from = new Array(RULES.length).fill('');   // 该描述来自哪个键：同键后来的值（IDB 权威）覆盖前值（LS 快照）
+const unwrap = (v) => {
+if (typeof v !== 'string') return v;
+try { return JSON.parse(v); } catch (e) { return v; }
+};
+return {
+see(k, v) {
+if (v === null || v === undefined) return;
+const bigStr = typeof v === 'string' && v.length > BIG_STR;
+for (let i = 0; i < RULES.length; i++) {
+if (desc[i] !== null && from[i] !== k) continue;
+if (!RULES[i][0].test(k)) continue;
+if (bigStr) { desc[i] = RULES[i][2] ? '✓有（数据较大）' : '✓有'; from[i] = k; continue; }
+const parsed = unwrap(v);
+if (parsed === null || parsed === undefined || parsed === '') { desc[i] = null; continue; }
 try {
-let v = valOf(real[0]);
-if (typeof v === 'string' && v.length > 1024 * 1024) desc = '✓有（数据较大）';
-else {
-if (typeof v === 'string') v = JSON.parse(v);
-if (parse && (Array.isArray(v) || (v && typeof v === 'object'))) desc = parse(v);
+const parse = RULES[i][2];
+desc[i] = (parse && (Array.isArray(parsed) || typeof parsed === 'object'))
+? parse(parsed) : '✓有';
+from[i] = k;
+} catch (e) { desc[i] = '✓有'; from[i] = k; }
 }
-} catch (e) {}
-lines.push('· ' + name + '：' + desc);
-});
-return lines.length ? lines : ['· 检查到无数据（备份为空）'];
+},
+lines() {
+const out = [];
+for (let i = 0; i < RULES.length; i++) if (desc[i] !== null) out.push('· ' + RULES[i][1] + '：' + desc[i]);
+return out.length ? out : ['· 检查到无数据（备份为空）'];
+}
+};
 }
 function backupSummary(data) {
 const fmtMB = (n) => (n / 1048576).toFixed(1) + ' MB';
@@ -70636,6 +71434,19 @@ const text = await readFileText(file);
 data = JSON.parse(text || 'null');
 } catch (e) {
 impHide();
+const msg = (e && (e.message || String(e))) || '';
+if (/string length|out of memory|ArrayBuffer length|memory/i.test(msg)) {
+if (window.openModal) {
+window.openModal('这份备份太大，本机读不进去', '', function () {}, {
+noInput: true, okText: '知道了', big: true,
+staticText: '文件本身没有坏，是它超过了浏览器一次能读入的体积上限（导入要把整个文件一次读成字符串再解析）。\n' +
+'本机数据没有被改动。\n请在原设备上重新点「导出数据」，选择「不含音乐文件」或「只备份文字」再做一份体积更小的备份。'
+});
+} else {
+toast('这份备份太大，本机读不进去——请在原设备上改选更小的备份范围重导一份');
+}
+return;
+}
 toast('无效的数据文件');
 return;
 }
@@ -70933,9 +71744,15 @@ setTimeout(purgeOnce, 1500);
 setTimeout(purgeOnce, 20000);
 }
 window.runBackupExport = function () {
-toast('正在导出，请稍候…');
 try { if (window.chatFlushSave) window.chatFlushSave(); } catch (e) {}
-doExport();
+Promise.resolve().then(askExportMode).then((mode) => {
+if (mode === 'cancel') { toast('已取消导出'); return; }
+toast('正在导出，请稍候…');
+return doExport(mode);
+}).catch((e) => {
+impHide();
+reportExportError(e, exportCfg('full'));
+});
 };
 const exportRow = document.getElementById('row-export');
 if (exportRow) {

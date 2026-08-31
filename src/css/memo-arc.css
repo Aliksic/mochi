@@ -77,6 +77,8 @@
 .ni-meta { margin-top:8px; display:flex; align-items:center; justify-content:space-between; gap:8px; }
 .ni-date { font-size:11px; color:var(--muted,#aaa); }
 .ni-tag { font-size:10.5px; color:#4a9fd4; background:rgba(74,159,212,.12); border-radius:10px; padding:2px 8px; }
+/* 「全部联系人可见」标识（我的档案逐条可见性） */
+.narc-flag { flex-shrink:0; font-size:10px; color:#4a9fd4; background:rgba(74,159,212,.12); border-radius:10px; padding:2px 8px; line-height:1.4; }
 .narc-item.solved { opacity:.55; }
 
 /* ---- 历史（理解变化） ---- */

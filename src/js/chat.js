@@ -2287,7 +2287,7 @@ notifyT = notifyT + ' ' + phOf();
 const isHidden = opts.isHidden === true;
 if (isHidden) {
 if (window.bgNotifyCheck) {
-window.bgNotifyCheck(notifyT, Date.now(), { name: opts.name, img: opts.img, av: opts.av });
+window.bgNotifyCheck(notifyT, Date.now(), { name: opts.name, img: opts.img, av: opts.av, avFixed: opts.avFixed === true });
 }
 return;
 }
@@ -4914,6 +4914,17 @@ if (chatAskInput) {
 chatAskInput.placeholder = chatAskMode === 'invite' ? '想邀请TA做什么？' : '你的问题？';
 chatAskInput.value = '';
 }
+// v3.26.x：邀请TA 模式显示「我的邀请」字卡库（分组栏 + 字卡 + 存入按钮）；问问TA 模式隐藏
+const invGroups = document.getElementById('invite-groups');
+const invList = document.getElementById('invite-list');
+const invSave = document.getElementById('chat-ask-save');
+const isInvite = chatAskMode === 'invite';
+if (invGroups) invGroups.hidden = !isInvite;
+if (invList) invList.hidden = !isInvite;
+if (invSave) invSave.hidden = !isInvite;
+if (isInvite) {
+myInviteAdoptFromIdb().then(() => { if (chatAskMode === 'invite') renderInviteBank(); });
+}
 const pc = document.getElementById('poke-card');
 if (pc) pc.hidden = true;
 const ep = document.getElementById('emoji-panel');
@@ -4948,6 +4959,53 @@ if (!askOpts.length) { toast('单选题请填写选项，每行一个'); return;
 }
 closeChatAskPanel();
 if (chatAskMode === 'invite') {
+sendInviteContent(content);
+} else {
+const isSingle = !!askOpts;
+addRec({ side: 'out', text: '问：' + content, special: 'ask', askQuestion: content, askType: isSingle ? 'single' : 'text', askOptions: askOpts, askStatus: 'pending' });
+const askIdx = msgs.length - 1;
+if (window.logFish) window.logFish();
+const recTs = Date.now();
+const myCid = window.__activeCid || 'default';
+const sameCid = () => (window.__activeCid || 'default') === myCid;
+setTimeout(() => {
+if (!sameCid()) return;
+const defs = window.getInteractPool
+? window.getInteractPool('问问TA·回应', ['嗯嗯', '我想想…', '应该吧', '好呀', '我陪你', '可以的', '那挺好呀', '我觉得可以', '听你的', '当然可以', '我很乐意'])
+: ['嗯嗯', '我想想…', '应该吧', '好呀', '我陪你', '可以的', '那挺好呀', '我觉得可以', '听你的', '当然可以', '我很乐意'];
+let text;
+if (isSingle && askOpts && askOpts.length) {
+const o = askOpts[Math.floor(Math.random() * askOpts.length)];
+text = o.t;
+} else {
+text = (window.pickAskCardReply ? window.pickAskCardReply(defs) : defs[Math.floor(Math.random() * defs.length)]);
+}
+const rec = msgs[askIdx];
+if (rec && rec.special === 'ask') {
+rec.askStatus = 'answered';
+rec.askAnswer = text;
+saveMsgs();
+const el = body.querySelector('.msg-ask[data-idx="' + askIdx + '"]');
+if (el) {
+el.innerHTML = '<div class="msg-ask-card answered"><div class="msg-ask-q">' + (window.taFit ? window.taFit('问问TA') : '问问TA') + ' · ' + escTxt(content) + '</div><div class="msg-ask-a">✓ ' + (window.taFit ? window.taFit('TA：') : 'TA：') + escTxt(window.taFit ? window.taFit(text) : text) + '</div>' + favHeartHtml(rec) + '</div>';
+}
+}
+addIn(text);
+try {
+const list = JSON.parse(store.get('invite-ask-history') || '[]');
+list.unshift({ type: 'ask', q: content, a: text, ts: recTs });
+if (list.length > 200) list.length = 200;
+store.set('invite-ask-history', JSON.stringify(list));
+} catch (err) {}
+if (window.renderAskRecords) window.renderAskRecords();
+setTimeout(() => { if (!sameCid()) return; maybeFollowupAskCard(); }, 1200);
+}, 1500 + Math.random() * 2500);
+}
+}
+// v3.26.x：邀请发送逻辑从 submitChatAsk 抽出，供「我的邀请」字卡点卡直接复用（可重复发送，
+// 行为与手动输入一致：TA 接受/拒绝/未回应，随消息持久化）
+function sendInviteContent(content) {
+closeChatAskPanel();
 addRec({ side: 'out', text: '邀请：' + content, special: 'invite', inviteContent: content, inviteStatus: 'pending' });
 const inviteIdx = msgs.length - 1;
 if (window.logFish) window.logFish();
@@ -5000,48 +5058,184 @@ store.set(histKey, JSON.stringify(list));
 if (window.renderAskRecords) window.renderAskRecords();
 setTimeout(() => { if (!sameCid()) return; maybeFollowupAskCard(); }, 1200);
 }, 1500 + Math.random() * 2500);
-} else {
-const isSingle = !!askOpts;
-addRec({ side: 'out', text: '问：' + content, special: 'ask', askQuestion: content, askType: isSingle ? 'single' : 'text', askOptions: askOpts, askStatus: 'pending' });
-const askIdx = msgs.length - 1;
-if (window.logFish) window.logFish();
-const recTs = Date.now();
-const myCid = window.__activeCid || 'default';
-const sameCid = () => (window.__activeCid || 'default') === myCid;
-setTimeout(() => {
-if (!sameCid()) return;
-const defs = window.getInteractPool
-? window.getInteractPool('问问TA·回应', ['嗯嗯', '我想想…', '应该吧', '好呀', '我陪你', '可以的', '那挺好呀', '我觉得可以', '听你的', '当然可以', '我很乐意'])
-: ['嗯嗯', '我想想…', '应该吧', '好呀', '我陪你', '可以的', '那挺好呀', '我觉得可以', '听你的', '当然可以', '我很乐意'];
-let text;
-if (isSingle && askOpts && askOpts.length) {
-const o = askOpts[Math.floor(Math.random() * askOpts.length)];
-text = o.t;
-} else {
-text = (window.pickAskCardReply ? window.pickAskCardReply(defs) : defs[Math.floor(Math.random() * defs.length)]);
 }
-const rec = msgs[askIdx];
-if (rec && rec.special === 'ask') {
-rec.askStatus = 'answered';
-rec.askAnswer = text;
-saveMsgs();
-const el = body.querySelector('.msg-ask[data-idx="' + askIdx + '"]');
-if (el) {
-el.innerHTML = '<div class="msg-ask-card answered"><div class="msg-ask-q">' + (window.taFit ? window.taFit('问问TA') : '问问TA') + ' · ' + escTxt(content) + '</div><div class="msg-ask-a">✓ ' + (window.taFit ? window.taFit('TA：') : 'TA：') + escTxt(window.taFit ? window.taFit(text) : text) + '</div>' + favHeartHtml(rec) + '</div>';
-}
-}
-addIn(text);
+// ===================== 我的邀请（邀请TA 字卡库，仿「我的拍一拍」） =====================
+// v3.26.x：邀请TA 半框内置「我的邀请」——预设 + 用户分组存邀请字卡，点卡即发送（可重复），
+// 输入框可「存入」当前分组；数据按当前桌面联系人命名空间隔离（activePrefix），
+// 结构化写入 IndexedDB 兜底，防止 iOS 存储清理导致字卡丢失（同 pokeUserGroups 策略）。
+const MY_INVITE_PRESETS = ['想和你猜拳，来一局？', '想和你玩一局 Pong，来吗？', '想和你玩双人贪吃蛇，来吗？', '想和你一起听歌'];
+let myInviteDirty = false;
+let myInviteCurGroup = '__preset';
+let myInviteGroups = null;
+function myInviteGroupsKey() { return window.activePrefix() + ':my-invite-groups'; }
+function myInviteGroupsLoad() {
 try {
-const list = JSON.parse(store.get('invite-ask-history') || '[]');
-list.unshift({ type: 'ask', q: content, a: text, ts: recTs });
-if (list.length > 200) list.length = 200;
-store.set('invite-ask-history', JSON.stringify(list));
-} catch (err) {}
-if (window.renderAskRecords) window.renderAskRecords();
-setTimeout(() => { if (!sameCid()) return; maybeFollowupAskCard(); }, 1200);
-}, 1500 + Math.random() * 2500);
+const v = JSON.parse(store.get('my-invite-groups') || 'null');
+if (Array.isArray(v)) return v.filter(g => Array.isArray(g) && Array.isArray(g[1]));
+} catch (e) {}
+return null;
 }
+function myInviteG() {
+if (myInviteGroups === null) {
+myInviteGroups = myInviteGroupsLoad() || [];
+if (!myInviteGroups.some(g => g[0] === '我的新增')) myInviteGroups.push(['我的新增', []]);
 }
+return myInviteGroups;
+}
+function myInviteGroupsSave() {
+myInviteDirty = true;
+try {
+const data = JSON.stringify(myInviteGroups);
+store.set('my-invite-groups', data);
+if (window.idbSet) window.idbSet(myInviteGroupsKey(), data);
+} catch (e) {}
+}
+function myInviteCount(arr) { return (arr || []).reduce((n, g) => n + (Array.isArray(g) && Array.isArray(g[1]) ? g[1].length : 0), 0); }
+// IDB 兜底恢复：备份条目多于内存时采用；会话内已改过（myInviteDirty）则跳过防回滚
+function myInviteAdoptFromIdb() {
+if (myInviteDirty || !window.idbGet) return Promise.resolve(false);
+return window.idbGet(myInviteGroupsKey()).then(v => {
+if (!v || myInviteDirty) return false;
+let arr = null;
+try { arr = JSON.parse(v); } catch (e) { return false; }
+if (!Array.isArray(arr)) return false;
+if (myInviteCount(arr) > myInviteCount(myInviteG())) {
+myInviteGroups = arr.filter(g => Array.isArray(g) && Array.isArray(g[1]));
+return true;
+}
+return false;
+}).catch(() => false);
+}
+function myInviteView() {
+const out = [{ key: '__preset', label: '预设', cards: MY_INVITE_PRESETS.slice(), preset: true }];
+myInviteG().forEach(g => {
+if (!Array.isArray(g) || !Array.isArray(g[1]) || !g[0]) return;
+out.push({ key: g[0], label: g[0], cards: g[1].slice(), user: true });
+});
+return out;
+}
+function myInviteCurGroupKey() {
+const groups = myInviteView();
+if (!groups.some(g => g.key === myInviteCurGroup)) myInviteCurGroup = groups.length ? groups[0].key : '__preset';
+return myInviteCurGroup;
+}
+function renderInviteBank() {
+const wrap = document.getElementById('invite-groups');
+const list = document.getElementById('invite-list');
+if (!wrap || !list) return;
+myInviteCurGroupKey();
+const groups = myInviteView();
+wrap.innerHTML = '';
+groups.forEach(g => {
+const chip = document.createElement('span');
+chip.className = 'emoji-g-chip' + (myInviteCurGroup === g.key ? ' sel' : '');
+chip.textContent = g.label + g.cards.length;
+chip.addEventListener('click', (e) => {
+e.stopPropagation();
+myInviteCurGroup = g.key;
+renderInviteBank();
+});
+wrap.appendChild(chip);
+});
+const add = document.createElement('span');
+add.className = 'emoji-g-chip poke-g-add';
+add.textContent = '＋ 分组';
+add.title = '新建我的邀请分组';
+add.addEventListener('click', (e) => { e.stopPropagation(); myInviteNewGroup(); });
+wrap.appendChild(add);
+list.innerHTML = '';
+const cur = groups.find(g => g.key === myInviteCurGroup) || groups[0];
+if (!cur || !cur.cards.length) {
+list.innerHTML = '<div class="cc-empty">暂无邀请字卡<br>在下方输入邀请内容，点「存入」添加</div>';
+return;
+}
+cur.cards.forEach((c, i) => {
+const item = document.createElement('div');
+item.className = 'cc-item glass';
+item.innerHTML = '<div class="cc-txt"><div class="t">' + escTxt(c) + '</div></div>';
+item.addEventListener('click', () => { sendInviteContent(c); });
+if (cur.user) {
+const ops = document.createElement('div');
+ops.className = 'poke-card-ops';
+const eb = document.createElement('button');
+eb.type = 'button';
+eb.className = 'poke-card-op poke-op-edit';
+eb.title = '修改';
+eb.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>';
+eb.addEventListener('click', (e) => { e.stopPropagation(); myInviteEdit(i, c); });
+const db = document.createElement('button');
+db.type = 'button';
+db.className = 'poke-card-op poke-op-del';
+db.title = '删除';
+db.textContent = '✕';
+db.addEventListener('click', (e) => { e.stopPropagation(); myInviteDel(i, c); });
+ops.appendChild(eb);
+ops.appendChild(db);
+item.appendChild(ops);
+}
+list.appendChild(item);
+});
+}
+function saveInviteInput() {
+const v = (chatAskInput && chatAskInput.value || '').trim();
+if (!v) { toast('先输入邀请内容'); return; }
+const groups = myInviteG();
+let target = groups.find(g => g[0] === myInviteCurGroup);
+if (!target) { target = ['我的新增', []]; groups.push(target); }
+if (target[1].indexOf(v) >= 0) { toast('「' + target[0] + '」已有相同的邀请'); return; }
+target[1].push(v);
+myInviteGroupsSave();
+myInviteCurGroup = target[0];
+renderInviteBank();
+if (chatAskInput) chatAskInput.value = '';
+toast('已存入「' + target[0] + '」');
+}
+function myInviteNewGroup() {
+window.openModal('新建「我的邀请」分组', '', (v) => {
+v = (v || '').trim();
+if (!v) { toast('请输入分组名'); return; }
+const groups = myInviteG();
+if (groups.some(g => g[0] === v)) { toast('分组「' + v + '」已存在'); return; }
+groups.push([v, []]);
+myInviteGroupsSave();
+myInviteCurGroup = v;
+renderInviteBank();
+toast('已新建分组「' + v + '」');
+});
+}
+function myInviteEdit(idx, old) {
+const g = myInviteG().find(x => x[0] === myInviteCurGroup);
+if (!g || !Array.isArray(g[1])) return;
+window.openModal('修改邀请', old, (v) => {
+v = (v || '').trim();
+if (!v) { toast('请输入邀请内容'); return; }
+const g2 = myInviteG().find(x => x[0] === myInviteCurGroup);
+if (!g2 || !Array.isArray(g2[1]) || idx < 0 || idx >= g2[1].length) return;
+if (g2[1][idx] === v) { toast('内容未变化'); return; }
+if (g2[1].indexOf(v) >= 0) { toast('该分组已有相同的邀请'); return; }
+g2[1][idx] = v;
+myInviteGroupsSave();
+renderInviteBank();
+toast('已修改');
+});
+}
+function myInviteDel(idx, c) {
+const g = myInviteG().find(x => x[0] === myInviteCurGroup);
+if (!g || !Array.isArray(g[1])) return;
+window.openModal('删除这条邀请？', '', () => {
+const g2 = myInviteG().find(x => x[0] === myInviteCurGroup);
+if (!g2 || !Array.isArray(g2[1]) || idx < 0 || idx >= g2[1].length) return;
+g2[1].splice(idx, 1);
+myInviteGroupsSave();
+renderInviteBank();
+toast('已删除');
+}, { noInput: true, staticText: '「' + c + '」\n\n删除后无法恢复。' });
+}
+document.addEventListener('contact-switched', function () {
+myInviteDirty = false;
+myInviteGroups = null;
+myInviteCurGroup = '__preset';
+});
 const moreInvite = document.getElementById('more-invite');
 if (moreInvite) {
 moreInvite.addEventListener('click', (e) => {
@@ -5061,6 +5255,8 @@ openChatAskPanel('ask');
 if (chatAskOk) chatAskOk.addEventListener('click', (e) => { e.stopPropagation(); submitChatAsk(); });
 if (chatAskCancel) chatAskCancel.addEventListener('click', (e) => { e.stopPropagation(); closeChatAskPanel(); });
 if (chatAskClose) chatAskClose.addEventListener('click', (e) => { e.stopPropagation(); closeChatAskPanel(); });
+const chatAskSaveBtn = document.getElementById('chat-ask-save');
+if (chatAskSaveBtn) chatAskSaveBtn.addEventListener('click', (e) => { e.stopPropagation(); saveInviteInput(); });
 if (chatAskInput) chatAskInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) { e.stopPropagation(); submitChatAsk(); } });
 const chatSearchEl = document.getElementById('chat-search');
 const chatSearchInput = document.getElementById('chat-search-input');

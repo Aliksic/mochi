@@ -746,6 +746,15 @@ body.cs-time-divider .msg-time-divider { display:flex; }
 .poke-add-btn:active { opacity:.85; }
 /* display:flex 浼氳鐩?hidden 灞炴€э紝蹇呴』鏄惧紡琛?[hidden] 鎵嶇湡姝ｉ殣钘忥紙v3.7.x锛氳仈绯讳汉鐨勬媿涓€鎷嶉殣钘忓伐鍏疯/杈撳叆琛岋級 */
 .poke-input-row[hidden] { display:none; }
+/* v3.26.x: my invite cards in chat ask panel (mirrors poke mine tab) */
+.invite-list { display:flex; flex-direction:column; gap:0; }
+.invite-list .cc-item { background:rgba(255,255,255,.92); border:1px solid rgba(0,0,0,.1); }
+.invite-list .cc-item:active { background:rgba(0,0,0,.04); }
+.invite-list .cc-empty { padding:18px 0; }
+/* display:flex 会压过 UA 的 [hidden]{display:none}，必须显式补回（问问TA 模式下隐藏邀请字卡区与存入按钮） */
+.invite-list[hidden] { display:none; }
+#invite-groups[hidden] { display:none; }
+#chat-ask-save[hidden] { display:none; }
 /* 鎷嶄竴鎷嶅垪琛細棰勮/鑷畾涔?灏忚妭鏍囬 */
 .poke-sec-label {
   font-size:11px; color:var(--muted); padding:8px 2px 4px; flex-shrink:0;

@@ -1,4 +1,140 @@
-# 本次构建者：AI-B
+# 本次构建者：AI-B（15:44 按 src 收口构建 sw mochi-mtgxn725 并推送 origin/main；下一轮请重新声明）
+### 2026-08-31 15:44（构建者收口并推送：#106 贪吃蛇全屏结算修复 + 并行会话在途 src 一并入库）
+
+* \[AI-B 域·构建者收口]（**用户 15:40 直接指示「帮我提交 github 库」→ 本会话接管构建者角色，按当前 src 重新构建并提交推送；改动文件：产物 index.html / sw.js / version.json / manifest.json / icon-\*.png / notice.json、build.mjs（1 条失效锚点，见下）、WORKLOG.md；构建状态：已构建·sw mochi-mtgxn725（部署戳 15:44）**）。
+
+* 门禁结果（构建后实测）：`node build.mjs` → **关键修复哨兵 173/173 全绿、哑哨兵体检 0 条、sw.js 哨兵 3/3**；`npm run verify` **10/10**；`node tools/verify-snake-fs-result.mjs` **41/41**（#106 反向对照：HEAD 旧源构建同一脚本 20/41）；`node tools/verify-jsonpack.mjs` **28/28**（#104）。产物内 4 条 #106 needle 与 `refitAll` 链路已逐条命中确认。本轮门禁＝上述四项，`npm run verify:all` 全量复跑结果稍后单独回报（含既有环境缺口红项，不作门禁）。
+
+* 一并入库清单（此前均标「未构建」的并行会话 src，按 `017d69c` 收口先例一起构建提交）：#106 贪吃蛇全屏结算（`snake-game.js`+`chat-pages.css`）、#104 大库导出内存有界（`data-backup.js`）、我的档案逐条可见性 fan-out（`my-arc.js`+`memo-arc.css`）、【我的邀请】字卡库（`chat.js`+`chat-main.css`+`template.html`+`dark.css`+`home.css`）、朋友圈后台通知头像按发布者（`feed.js`）、#105 钓鱼「留」按归属（`fishing.js`）、装修模式图标分类与 openModal inputmode 归一化（`personalize.js`）、`docs/阿里云OSS云端备份-设计方案.md`、`tools/verify-triage*.mjs` + 新增 verify 脚本 3 个（snake-fs-result / jsonpack / fishing-keep）。
+
+* ⚠ 哨兵锚点更新（构建者动作，请 my-arc 域确认）：`js/my-arc.js`「我的档案删除确认预选『删除』pill」原 needle `save(arc); toast('已删除'); render();` 在 src 和产物里**同时找不到**（构建报「锚点指错」+ 缺失哨兵 → 退出码 1）。实际修复并未丢：11:16 fan-out 重构把 `delLi` 回调首行改成了 `fanOutRemove(kind, id);`，三处 `pill: 'del'` 原样在位——属**锚点漂移**而非修复丢失，故 needle 改锚到 `fanOutRemove(kind, id); toast('已删除'); render();` + 下一行 `}, { noInput: true, pill: 'del', pills:`（my-arc.js 内唯一、产物内恰好命中 1 次）。不是「把红项改成绿的」，不认可可自行改回并重新登记。
+
+* 待真机验收：① 小米15 Pro Chrome：贪吃蛇全屏 → 撞墙结束 →【再来一局】应一屏完整可见且直接点得到，横屏可上滑点到；② vivo X200s Edge：导出范围选择弹窗 + 遮罩必收（#104）。
+
+### 2026-08-31 14:48（修复：贪吃蛇全屏结算后「再来一局」点不到 / 按钮显示不全，FIX-REGRESSION #106）
+
+* \[AI-A 域·snake-game.js + chat-pages.css]（**改动文件：src/js/snake-game.js、src/css/chat-pages.css、build.mjs（仅追加 4 条 FIX\_SENTINELS，按 #104/#105 先例）、FIX-REGRESSION.md（#106 行）、tools/verify-snake-fs-result.mjs（新建）、WORKLOG.md；构建状态：未构建（本会话未跑仓库 build.mjs、未 commit、未 push；`node --check`** **过，临时副本构建 +** **`SERVE_DIR=<副本> node tools/verify-snake-fs-result.mjs`** **41/41）**）。
+
+* 需求/反馈：小米15 Pro + Chrome（诊断 v3.26.373 / ts=1788099438922，视口 384×752，DPR 3.75，Android 16）。贪吃蛇**全屏**状态（手机端 `openSnakePanel` 自动全屏）下赢/输之后：①「整体游戏格子比较大，要重新来的话需要缩小才能够点击到再来一局按钮」；②「再来一局按钮显示不完全」。
+
+* 根因（三处叠加，现象①与②各是不同故障）：**A** 全屏结算从不重铺画布——`showResult` 只调 `refitNonFs`，而它开头 `if (!canvas || !panel || panel.hidden || isFs) return;` 在全屏下直接早退，于是地图保持空闲态尺寸，结算块 + 按钮把它顶出屏（＝现象①）。**B** 高度预算漏算 flex `gap`：`.snake-fs .poke-card-scroll` 是 `justify-content:space-between; gap:min(2vh,2vw)`，旧 `fsAvail` 只扣兄弟块高度不扣 gap，还带 `Math.max(240,·/260,·)` 下限把极矮屏的空间虚报出来 → **空闲态**就已溢出 17～29px，按钮下沿落在可视区外（＝现象②，跟结算无关，进游戏第一屏就是残缺的）。**C** 字号换行 / gap 取整 / 字体渲染带来的几像素误差无法靠一次量算归零，而全屏滚动区原为 `overflow:hidden` 裁切——溢出 1px 就是按钮被切一截且没有逃生口。
+
+* 方案：① 新增 `scrollAvail()` 替换 `fsAvail` 与 `fitNonFsCanvas` 里的重复量算，扣兄弟块 margin + `rowGap × n` + 滚动区 padding，去掉虚报下限；② `applyCell(cell, minCell)` 铺完后读 `scrollHeight - clientHeight` 实际溢出回退重铺（最多 4 轮，格子下限全屏 9px / 半框 6px）；③ `refitAll()` 统一在 `showResult` / `startGame` / `resetToIdle` 三处兄弟块显隐后重铺（内部按 `isFs` 分派并补 `render(0)`，因为改位图尺寸会清空画布）；④ `openSnakePanel` 里 `renderScore(); renderBest();` 提到 `toggleFs()` **之前**（`toggleFs` 按当时可见的兄弟块量画布，晚一行就把按钮顶出屏）；⑤ CSS `#chat-snake-panel.snake-fs .poke-card-scroll` 改 `overflow:hidden auto` 兜底（canvas 有 `touch-action:none`，滑动控制不受滚动影响）。
+
+* 验证：新建 `tools/verify-snake-fs-result.mjs`（无头 Chrome + CDP，逐视口 384×752 用户机 / 360×640 / 390×844 / 412×892 严格 + 752×384 横屏只验兜底可达 + 半框对照；每视口测 空闲 / 结算 两态的按钮完整可见、`elementFromPoint` 命中按钮本体、画布非空白、结算地图小于空闲、点按钮真开新局）。**修复后 41/41；反向对照（HEAD 旧源构建同一个脚本）20/41，溢出 184～230px、`hit=offscreen`**。典型结果：384×752 空闲 `btn 695~732 可视底 743 hit=snake-start`，结算 `格子 22→14px 画布高 524→339`。脚本可提交复用，`npm run verify:all` 会自动带上；4 条哨兵 needle 均在登记的 src 文件里唯一且落在代码行（非整行注释）。
+
+* 待对方处理 / 提醒：① 本目录 `index.html` 仍是 12:55 那版（含 #104 半成品），请以 src 为准重新构建后再看哨兵；② 构建体检报出的 `js/my-arc.js`「我的档案删除确认预选『删除』pill」哑哨兵 + 缺失哨兵不属本次改动（临时副本构建实测：src 里也没有＝修复真丢了），是另一会话在途工作，需要对方处理；③ 真机验收（小米15 Pro Chrome）：进入游戏→撞墙结束→【再来一局】应一屏完整可见且直接点得到；横屏下可上滑点到按钮。
+
+* ⚠ 交接备注：本条 14:48 首次写入后被并行会话旧缓冲回写覆盖过一次（其他条目未受影响），现已重插——若再看到它消失，就是又一次回写，不是我没写。
+
+### 2026-08-31（我的档案：逐条可见性改为 fan-out 直写——「全部联系人可见」直接写进每位联系人档案，非共享档+权限）
+
+* \[AI-A 域·my-arc.js（本会话正在开发的【我的档案】可见性功能收口；纯 src 改动，未构建）]（**改动文件：src/js/my-arc.js、WORKLOG.md；构建状态：未构建（node --check 过）**）。
+
+* 需求/反馈：用户明确「新的可以设置其他联系人能看，是直接一起写入，不是权限」——不要「共享档+查看权限」方案，选「全部联系人可见」时要把内容直接写进每位联系人自己的档案（fan-out 直写）。
+
+* 方案：① 移除 `myarc-shared` 共享档作为数据源，删 `readShared/saveShared/ensureShared/arcForStore/saveStore/mergeArr/mergeFieldMap`；② 新增 `allCids`/`ensureArcFor(cid)`/`fanOutMutate`/`fanOutRemove`，`mergedArc()` 改为只读当前联系人那份（每份都是完整独立档案）；③ 写「全部可见」→ `shared:true` 条目/字段 fan-out 到每位联系人（含当前）；写「仅当前联系人可见」→ 只写本份，并把其他联系人里同名的 shared 条目移除；编辑/删除同理联动（shared 条目全量删改，pc 条目只动本份）；④ `absorbSharedOnce()`（boot 时执行）把旧中间版 `myarc-shared` 内容一次性直写进各联系人档案后清键，防测试期写入内容丢失（字段已有专属值则保留，继承原「专属优先」语义）。
+
+* 已知边界（如实说明）：fan-out 直写下，之后新增的联系人不会自动拿到历史「全部可见」条目（各份是物理独立档案），如需可到其档案里补写。
+
+* 待构建者：构建后跑哨兵 + `npm run verify` 系列收口。
+
+### 2026-08-31 13:24（修复：vivo X200s Edge 点【导出数据】永远停在「正在打包数据文件」，FIX-REGRESSION #104）
+
+* \[AI-A 域·data-backup.js（用户直接报告 bug；跨域按 10:40 #103 先例处理）]（**改动文件：src/js/data-backup.js、build.mjs（新增 6 条哨兵）、FIX-REGRESSION.md（#104 行）、tools/verify-jsonpack.mjs（新建）、WORKLOG.md；构建状态：未构建（本会话未跑 build.mjs、未 commit、未 push；node --check 过、verify-jsonpack 28/28）**）。
+
+* 需求/反馈：vivo X200s（V2458A）Android 16 + Edge 151，点【导出数据】一直显示「正在打包数据文件」出不来文件。诊断（v3.26.373，ts=1788099438922，自报「已是最新」）：IDB 候选键合计≈806.8MB（`default:chat-msgs` 514.2MB、`cc-groups-public` 396.1MB、`default:fav-msgs` 28.3MB、15 个 `music-file` 各≈10MB），存储配额已用 970.9MB，localStorage 仅 1.9MB，未处理 promise 报 `RangeError: Invalid string length at doExport (…/mochi/:70241)`。
+
+* 为什么「已是最新」还是坏的（**需要构建者动作**）：线上产物是 8-30 22:17 那版，`index.html:70241` 正是 `const json = JSON.stringify(data);`；#103 的流式打包只提交到本地 `017d69c`（10:22 提交、10:28 构建），**main 仍 ahead origin/main 1，从未推送** → 用户设备拿不到修复。收口时请把这次改动与 `017d69c` 一起构建推送。
+
+* 根因三层叠加：① #103 只做到「逐键 stringify」，`chat-msgs` 单个键仍要一次分配≈2.57 亿字符（514.2MB 是 UTF-16 字节数）逼近 V8 64 位单串上限（kMaxLength≈5.37 亿字符），且全部键读完才开始打包＝800MB 对象图常驻；② 入口是裸调用 `doExport()`，异常变成未处理 promise rejection → `impHide()` 永不执行 → 遮罩冻在「正在打包」（就是用户报的现象，错误只在诊断里看得见）；③ 路由用的 `byteLen(非字符串)` 内部又整包 stringify 一遍只为量长度＝再复制一份大键。
+
+* 方案（用户选定范围＝P1 打包器内存有界 + P2 错误边界与范围选择；P3 分卷备份、P4 数据膨胀排查本轮未做）：① 新增 `createJsonPack`/`packString`/`packValue`——值内按 `PACK_DEPTH` 逐元素下钻、超 `PACK_SLICE`（1M 字符）的字符串分片转义（代理对不劈开）、每 \~4MB 合并进 Blob、每 `PACK_YIELD` 片段让出主线程，任何时刻内存里最多一个大键、单片段恒 ≤1M 字符，产出的 JSON 与 `JSON.stringify` 逐字节同构；② `readNext()` 改「读一键→就地序列化→立即释放」，配 `own` 标志（只有 IDB 新读出的私有副本会被改写，`idbGetCached`/LS 共用值一字不动，防把在用的业务数据写坏），#90 三态清单守卫与五级兜底链（idbGet→重试→memoryCache→lsBig→LS 直读）原样保留；③ 入口 `Promise.resolve().then(askExportMode).then(doExport).catch(...)` 且 `doExport` 内 try/catch → 遮罩必定收起，`reportExportError` 报出出错环节/键名/体积，`string length` 类直接指路更小范围；④ `overSmallLimit` 廉价浅判（超阈值早退、绝不 stringify）替代 byteLen 量长度；⑤ `askExportMode`：本机用量 >150MB 才弹范围选择（完整/不含音乐文件/只备份文字/取消，`lock:true` 强制做选择），成品 >120MB 当场提示「新设备可能导得出去、导不回来」，完成文案按模式措辞（精简备份不再谎称「全部数据完整」），导入侧读大文件按错误类型给文案（不再谎报「无效的数据文件」）；⑥ 覆盖清单改 `cover.see/lines` 逐键累加（打包后数据已释放，不再二次遍历），同键以 IDB 权威值覆盖 LS 有损快照（否则会把「聊天记录：0 条」留在含几千条消息的备份上）。
+
+* 验证：`node --check src/js/data-backup.js` 过；新建 `node tools/verify-jsonpack.mjs` **28/28**（从源码按唯一标记切出打包器段落在本地求值，不打入产物）——与 `JSON.stringify` **逐字节等价**（中文/emoji/引号反斜杠换行控制字符/U+2028·9、3M 字符超长串分片、代理对正好落在分片边界、undefined 与函数属性省略、Date/Map/Set/TypedArray 不拍平、NaN 与 Infinity→null、深嵌套越界、整份备份文件总装），另断言内存有界（40M 字符数据全程单片段 ≤1M、own=true 写完即释放、own=false 源值零改动、overSmallLimit 零 stringify 调用）；`tools/verify-suite.mjs` 按 `verify-*.mjs` 自动发现，`npm run verify:all` 会自动带上。哨兵锚点已做构建前自检（6 条均在 src 代码行命中、absent 那条在 src 已不存在、与既有登记无共用 needle）。
+
+* ⚠ 产物状态（构建者必看）：本目录 `index.html`/`sw.js`/`version.json` 时间戳是 **12:55:04（ts=1788152104408）**，那次构建（非本会话发起）打进了我**编辑到一半**的 data-backup.js——产物里已有 `createJsonPack` 但缺 `这份备份太大，本机读不进去`，且 `导出内容（全局全部数据）` 整串**不在当前产物里**（＝既有哨兵「导出确认弹窗显示功能覆盖清单」现在对不上产物）。src 侧我已把它改回完整字面量并加了注释说明**不能拼接**（拼接会把 needle 切断）。请以 src 为准重新构建后再看哨兵，不要拿 12:55 那版产物判断。
+
+* 待真机验收（构建并推送后，vivo X200s Edge）：① 点【导出数据】出现范围选择弹窗，选「不含音乐文件」与「只备份文字」各试一次，进度条走完→弹「备份已打包完成（体积按模式措辞）」→点确定能落盘；② 选「完整备份」若仍失败，必须弹窗说明卡在哪一步、哪个键、多大，而不是冻在「正在打包」；③ 导出前后本机数据零变化（打包器改写的是 IDB 读出的私有副本）；④ 拿这份备份到第二台设备导入验证「导得回来」。
+
+* 已知边界（如实说明，非本轮范围）：「只备份文字」只剥**已解析成对象/数组**的值里的 base64，旧版本把整段 JSON 当文本存的大键内 dataURL 仍会保留，这类键体积可能不如预期小；`chat-msgs` 514MB/4758 条（≈111KB/条）与 `cc-groups-public` 396MB 本身像数据膨胀，属 P4，需要对方或下轮排查。
+
+### 2026-08-31（取消规划：【聊天·更多功能→小游戏→合成大西瓜】不做，勿开工）
+
+* \[需求撤销·登记]（**无任何代码改动；该功能从未开始编码**）。
+
+* 用户原想让另一 AI 在「小游戏」分类下设计【合成大西瓜】（默认配置 + 支持上传西瓜图片方案）。经核查：WORKLOG、build.mjs（jsFiles）、src/js、git 均无西瓜合成类代码（现有小游戏：四子棋/扫雷/fishing/记忆翻牌/Pong/贪吃蛇/打砖块；`g_watermelon` 只是礼物店「西瓜」，与游戏无关）。
+
+* 结论：**该功能已取消，任何会话都不要做、不要新建文件、不要接入 build.mjs**。特此登记，避免并行会话误开工。
+
+### 2026-08-31 11:4X（修复：多桌面时 TA 发朋友圈，后台通知头像显示成当前桌面联系人而非发布者）
+
+* \[AI-A 域·feed.js + chat.js（用户直接报告 bug）]（**改动文件：src/js/feed.js、src/js/chat.js；构建状态：未构建（node --check 过）**）。
+
+* 需求/反馈：用户有多个桌面联系人，后台通知「联系人发朋友圈」时弹窗头像是当前桌面联系人的头像，不是发朋友圈那位。
+
+* 根因：`taAvFor(owner)`（feed.js）只读 `feed-ta-avatar`/`avatar-partner`，漏了聊天专用键 `cs-avatar-partner`（v3.12.x 起换头像只写此键）。发布者头像在此取不到 → 传给 bgNotifyCheck 的 `av` 为空 → 因未设 `avFixed`，bg-keep.js 回退成当前桌面 `cs-avatar-partner`/`avatar-partner`。
+
+* 方案：① feed.js `taAvFor` 补读 `cs-avatar-partner`；② feed.js `addNotice` 传 `avFixed:true`；③ chat.js `showDeskPopup` 把 `opts.avFixed` 转发给 `bgNotifyCheck`，发布者头像为空时不再误用当前桌面头像（落到 mochi 图标兜底）。
+
+* 验证：node --check 过；未构建。**待 AI-B 构建后真机验证**：在联系人 A 桌面切到 B 桌面后，B 发朋友圈的后台通知头像应为 B 的头像；仅 A 换过头像、B 未换时，B 发朋友圈通知头像不应显示成 A。
+
+### 2026-08-31 11:16（【我的档案】逐条可见性：每条可选「全部联系人可见」/「仅TA可见」）
+
+* \[AI-A 域]（**改动文件：src/js/my-arc.js、src/css/memo-arc.css；构建状态：未构建（node --check 过）**）。
+
+* 需求/反馈：用户问【我的档案】怎么优化——写入信息时能选择把这条放进「给全部联系人看的我的档案」，还是「只给当前联系人（TA）看的我的档案」。已按用户选的「逐条设置」实现。
+
+* 方案：① 新增全局共享档存储键 `xy-home-v2:myarc-shared`（所有联系人桌面共用，contacts.js EXCLUDE 的 `myarc` 前缀天然覆盖两键、免误迁）；原「仅当前联系人」档仍存各桌面键 `xy-home-v2:<cid>:myarc`。② 合并视图 `mergedArc()`：专属优先、共享兜底；字段转 `{v,shared}`、条目数组带 `shared` 标记。③ 渲染：凡是「全部联系人可见」的字段/条目/描述卡/梦境都显示浅蓝徽章 `.narc-flag`（全部可见）；总览计数与 hero 副标题（「每条都可选…」）适配合并视图。④ 编辑流程统一改成多阶段弹窗，末尾多一步「给谁看这条？」胶囊（全部联系人可见 / 仅\[TA]可见，默认仅TA）：字段 `editField`、列表条目 `addLi/editLi/delLi`（喜好/习惯/物品/补充期望/IF世界）、描述卡 `addSelf/editSelf/delSelf`、梦境 `addDream/editDream/delDream`。⑤ 存储规则：存共享时清掉本联系人专属覆盖（避免专属优先使「全部可见」对本联系人失效）；存专属时保留共享值作其他联系人兜底；编辑/删除从两个存储里按 id 一起移除再写入正确存储。
+
+* 验证：node --check 过；未构建。**待 AI-B 构建后真机验证**：新增条目弹窗末尾出现可见性胶囊；选「全部联系人可见」后切到另一个联系人桌面能看到同一条并带「全部可见」徽章；选「仅TA可见」只在该联系人桌面出现；编辑/删除共享条目时其它联系人桌面同步变化、专属条目互不影响；总览计数正确（专属+共享去重后合计）。
+
+### 2026-08-31 10:40（修复：OPPO Find X9 Chrome 数据导出一导出就崩溃/导不出来，FIX-REGRESSION #103）
+
+* \[AI-A 域·data-backup.js（用户直接报告 bug）]（**改动文件：src/js/data-backup.js、build.mjs（哨兵）、FIX-REGRESSION.md、WORKLOG.md；构建状态：本会话已构建（哨兵 156/156、sw\.js 3/3、verify 10/10、check-databackup 7/7）**）。
+
+* 需求/反馈：OPPO Find X9 Chrome 浏览器，点【导出数据】会崩溃导致导不出来。诊断信息：数据总占用 ≈100MB（IDB default:chat-msgs=55.6MB、default:cc-groups=40.25MB、my-emoji-groups=15.72MB、cc-groups-public=8.52MB），无 JS 错误、存储正常、已是最新版本。
+
+* 根因：导出尾段 `JSON.stringify(data)` 把全部本地数据（LS 小键 + IDB 大键，含 base64 音乐/图片）一把生成整个 JSON 字符串——大备份设备上「源数据 + 整包字符串 + stringify 内部缓冲」峰值内存接近 2 倍文件体积，Chrome 安卓标签页 OOM 直接崩溃（与 #73 iOS Safari 闪退 / #82 小米 14U Edge 同类，那两次是快照副本写 IDB，本次是 stringify 本身）。次要嫌疑：① Blob→base64 先拼整块二进制串再 `btoa`（临时内存 = 文件体积 ×2）+ `String.fromCharCode.apply(null, …, 0x8000 个参数)` 在部分安卓 Chrome 有栈溢出风险；② `navigator.share({files})` 分享 100MB+ 文件会整体复制进分享 intent，分享面板可把标签页搞崩。
+
+* 修复（全部在 data-backup.js）：
+
+  1. **`jsonToBlobStreaming(data)`** **流式打包**替代 `JSON.stringify(data)`：逐键序列化、每 \~4MB 合并进 Blob（Blob 拼接是引用合并、不复制内存），每序列化完一个大键立即 `delete data.idb[k]` 释放原值，每 4 个大键 `setTimeout(0)` 让出主线程避免长任务冻死——峰值内存约砍半且不再出现整包 JSON 字符串。输出与 `JSON.stringify(data)` 逐字节等价（单测覆盖中文/emoji/引号/大 base64）。
+  2. **`blobToBase64(blob)`** **分块转换**：按「3 的倍数」字节数分块 btoa（每块 base64 拼接即完整 base64），去掉 `String.fromCharCode.apply` 与巨型二进制临时串。
+  3. **`saveBackupFile`** **分享面板加 50MB 上限**：`blob.size > 50MB` 直接跳过 `navigator.share`，统一走「备份已打包完成」确认弹窗 → `anchorDownload`（浏览器流式落盘，不额外复制整包）。
+  4. **`exportCoverage`** **超大键守卫**：>1MB 的键不再为统计条数整包 `JSON.parse`（几十 MB 内存 + 长任务，也是崩溃窗口），只标「✓有（数据较大）」；非空判断同样跳过整包 parse。
+
+* 验证：`node --check` 过；`node build.mjs` 成功（哨兵 156/156、sw\.js 3/3、哑哨兵 0）；`npm run verify` 10/10；`node tools/check-databackup.mjs` 7/7（无头 Chrome 点导出 toast 出现、导出/导入流程无新增 JS 异常）；单元测试：`jsonToBlobStreaming` 输出与 `JSON.stringify(data)` 等价 + `data.idb` 逐键释放、`blobToBase64` 各长度与标准 btoa 一致。**待真机（OPPO Find X9）**：导出大备份进度条正常走完 → 弹「备份已打包完成（xx MB）」→ 点确定能下载到完整文件；导出前后本地数据无任何变化（导出只读不写业务键）。
+
+### 2026-08-31 10:33（【邀请TA】新增【我的邀请】字卡库：可存储邀请字卡、点卡重复发送）
+
+* \[AI-A 域]（**改动文件：src/js/chat.js、src/css/chat-main.css、src/template.html；跨域改动：src/css/dark.css（邀请字卡暗色样式，AI-B 文件）；构建状态：未构建（node --check 过）**）。
+
+* 需求/反馈：用户要求【邀请ta】功能像【我的拍一拍】一样新增【我的邀请】，可存储字卡、可重复发送。
+
+* 方案：① template.html 在邀请TA 半框加「我的邀请」字卡区（#invite-groups 分组栏 + #invite-list 字卡列表 + #chat-ask-save 存入按钮，hidden 默认隐藏）；② chat.js 把邀请发送逻辑抽成 sendInviteContent（与手动输入行为一致：TA 接受/拒绝/未回应 + 记录），点字卡即可复用；③ 新增 myInvite\* 字卡库逻辑：预设 4 条 + 自定义分组（默认「我的新增」），支持存入当前分组 / 新建分组 / 修改 / 删除，localStorage 持久化 + IndexedDB 兜底（activePrefix 按桌面联系人隔离，contact-switched 重置缓存，同 pokeUserGroups 策略）；④ 问问TA 模式自动隐藏邀请字卡区与存入按钮；⑤ chat-main.css + dark.css 补字卡样式（复用 poke 我的 tab 的 emoji-g-chip/cc-item/cc-tool 体系，含 \[hidden] 显式规则防 display:flex 盖掉隐藏）；⑥ 功能介绍页「聊天传讯」清单补「我的邀请」条目（计数 21→22）。
+
+* 验证：node --check src/js/chat.js 过；未构建，待 AI-B 构建后真机验证：聊天 + → 邀请TA → 看预设字卡、点卡即发送、输入后点「存入」入当前分组、分组切换/新建/修改/删除、切换桌面联系人字卡隔离、问问TA 不显示邀请字卡区。
+
+* 跨域说明：改动了 AI-B 的 src/css/dark.css（仅补 #invite-list .cc-item 暗色，一行），请构建者收口时留意。
+
+### 2026-08-31 10:28（66 项 verify 红项机械分类 + 销掉 4 项脚本自身缺陷）
+
+* \[AI-B 域]（**改动文件：`tools/verify-triage.mjs`（新）、`tools/verify-triage-classify.mjs`（新）、`tools/verify-suite.mjs`、`tools/lib/verify-classify.mjs`（新）、`tools/verify-suite-classify.mjs`（新）、`tools/verify-webkit.mjs`、`tools/verify-about-license.mjs`、`tools/verify-eat-remind.mjs`、`tools/verify-extended.mjs`；构建状态：未构建，本轮只改 tools/**。产物指纹随并行会话重建在变（分类跑在 f00ea534，收尾时工作区已是 10:28 重建的 e2a83977 / 3836739 字节）；已销账的 4 项在 e2a83977 上复验仍全绿（webkit 22/22、about-license 6/6、eat-remind 20/20、extended 24/24）\*\*）。
+
+* 做了什么：① 分类器把红项按「锚点字面量在 src（去注释后）/ 产物里的存在情况」机械分桶，跑出的 66 项结论是 **A 疑似漏接入 0 / B 期望过期 1 / C 运行时行为断言 60 / D 复跑转绿 4 / E 定位不到断言 1**；② B 那 1 项（verify-ck-question「✓ 已回答：在被窝里」）人工核对为假阳性——`'✓ 已回答：' + escTxt(answer)` 是运行时拼接，字面量天然不进产物，**故 B 实为 0**；③ 分类器迭代中暴露并被自己的反向对照测试钉住的 6 条判据（断言标签当锚点、测试输入回显当锚点、`!includes`/`indexOf(...)<0` 删除型断言被当成缺失、`.join('|')` 拼串比对、文件路径字面量、helper `el('span','cls',…)` 造元素不算 markup 证据），`node tools/verify-triage-classify.mjs` 16/16；④ 修我自己 P3 runner 的两个真缺陷：并发跑批时各脚本自取 CDP 端口会撞（runner 现集中分配 `MOCHI_CDP_PORT`），以及**本机** **`ECONNREFUSED`** **被旧** **`ENV_SIGS`** **误判成「需要外网」→ 把并发缺陷洗成"环境不满足"**，特征抽到 `tools/lib/verify-classify.mjs` 并由 `verify-suite-classify.mjs` 12/12 锁住。
+
+* 已销账的 4 项（都在我域，都是脚本自己的问题，产物无回退）：`verify-webkit` 22/22（原 18/22：开诊断弹窗前不关启动弹窗 + 300ms 固定等待抢跑，改轮询）；`verify-about-license` 6/6（T1 文案整串全等 → 改要求含「功能介绍」+「许可」，实测线上文案已是「功能介绍与可二传二改许可」）；`verify-eat-remind` 20/20（S4 还要求 `name: 'TA的吃饭提醒'`/bgNotifyCheck 在链路里，而 #93 已刻意删掉 eatRemindFire 的冗余 bgNotifyCheck；改为截产物里 eatRemindFire 函数体断言「有 chatAddIn、无 bgNotifyCheck」，顺手把 #93 的修复方向锁成回归防线）；`verify-extended` 24/24（信箱/设置/朋友圈/字卡库四处 `.mail-list`/`.gs-scroll`/`.feed-list`/`.card-list` 探针类名已随改版不再生成 + 占卜页 id 早已改 `page-divine`，探针改为与具体类名解耦）。
+
+* 有效性口径：基线仍是 **116→120 通过 / 62 断言失败或超时（共 182）**，全部在 f00ea534 产物上测；`--strict` 门禁仍不能开——62 项红按脚本自身缺陷/环境/功能回退三类里，机械分类只能保证「脚本侧 0 项待修」，剩下 60 项必须读断言。
+
+* 需要对方处理（AI-A）：C 桶里 43 项断言点在 AI-A 功能文件，按家族分：`cjian*`(5) `ta-*`(4) `gc-*`(2) `wallet*`+`unified-heart-wallet`(4) `music-*`(2) `avatar-*`(2) `poke-emoji-tabs` `expr-text-ranking` `interact-frequency` `invite-settings` `mail-cfg-per-cid` `eat-menus` `feed-reply-ui` `fish-play` `fishing-ui` `gift-*`(2) `memory-flip` `room` `more-cats` `myarc` `narc-v2` `period-mark` `pomodoro-companion` `rp-wallet-edit` `water` `bugfix-six` `ck-mine-clean` `coop-mine` `brick`。复现命令：`node tools/verify-suite.mjs > tools/tmp-suite.log` 后 `node tools/verify-triage.mjs --log tools/tmp-suite.log --jobs 4 --timeout 300`。
+
+* 我这侧的下一轮候选（同属 C 桶但断言点在 AI-B 文件，17 项）：`bg-notify-dedup` `bg-notify-dedupe` `oom-leaks` `psync-cc` `cc-scope` `fav-dedup` `voice-heal` `chat-switch-idb-hang` `memo-p3` `mye-global` `kb-overlay-kernel` `ask-no-false-dock` `desk-click` `desk-icon-decor` `desk-move-swipe` `desk-persist` `desk-reset-period`。
+
+* 收尾自查（同日第二轮，专门推翻自己的交付）：在 `verify-triage.mjs` 里实测抓到并修掉 3 个缺陷——① **清单为空时它会打印一份与「查过了、没发现」完全同形的全零报告并 0 退出**（我今天把「A 0 / B 0」当证据引用过，这类假清白最危险），现改为报错退出 2 并注明「0 项待分类 ≠ 无缺陷」；② `run()` 只挂 `child.on('exit')`，实测 spawn 失败时 Node 抛未处理 `'error'` 事件、**整个分类进程带栈退出，一个脚本拖垮全批**（`verify-suite.mjs` 早就接了这个事件，我新写的反而漏了），已补 `child.on('error')` 让它记为失败项继续跑（**「进 C 桶并标 \[脚本没跑起来：ENOENT]'」这条展示路径未实测**——触发需要 node 本体不可 spawn，只验到了事件本身会崩父进程）；③ `--jobs 0` 实测 TypeError 崩、`--timeout 0` 把每个脚本秒判超时塞进 C 桶给出假结论，现校验后退出 2。另加两处口径改进：**报告头与缓存文件名都带产物指纹**（git blob sha1 前 8 位，当前 `e2a83977`），并行会话重建产物后 `--reuse` 自动落空回落实跑，不再出现「报告还在、产物已换」对不上号。自检 16/16 与 CLI 路径都复验过；**这些只在工作区，HEAD（017d69c 夹带那版）里没有，提交时请带上** **`tools/verify-triage*.mjs`** **两个 M。**
+
+* 已知未修的取舍（留给下一轮判断，不是遗漏）：`verify-extended` 那 4 处探针我为了稳把「具体类名存在」放宽成「页面有子节点且高度 >120」，**断言强度换稳定性**，页面渲染了错内容它看不见；`--reuse` 一律按红计（跳过 D 转绿判定）；分类器定位断言靠 12 字符探针，同脚本内若干条标签相近时可能取错语句窗口（这是 E 桶存在的原因，不是能修掉的 bug）；`verify-suite.mjs` 的 `freePort()` 先探后放，理论上有端口被抢空窗，且 `--jobs 1` 时不下发 `MOCHI_CDP_PORT`；`.gitignore` 里没有 `tools/tmp-triage-cache/` 与 `tools/tmp-triage-report.txt`，一次 `git add -A` 就会把这两个临时产物扫进仓库（共享配置文件，我没擅自改）。
 
 ### 2026-08-31（#102 群聊里用【帮我决定】【多人决定】答案错发到【聊天】，改为发到群聊）
 
@@ -10,13 +146,29 @@
 
 * 方案：① template.html 把两个面板移到 .phone 级（.poke-card 为 absolute 相对 .phone，聊天页/群聊页共用）；② group-chat.js 群聊更多面板点 more-decide/more-gdecide 不再切聊天页；③ group-chat.js 新增 gcSendDecisionText（结果作为 special:'system' 系统消息写入群聊 msgs 并渲染，居中 msg-poke 样式、换行转 br）+ gcIsVisible（判 page-group-chat 可见）挂 window；④ decision.js/group-decision.js openPanel 记录 panelFromGroup=gcIsVisible()，发送时群聊上下文→gcSendDecisionText，否则 chatAddIn；聊天页打开两功能行为不变（仍发到聊天）。
 
-* 验证：node --check src/js/group-chat.js、decision.js、group-decision.js 过；已加哨兵 `gcSendDecisionText`（build.mjs FIX_SENTINELS）+ FIX-REGRESSION #102。待构建后真机：群聊更多→帮我决定/多人决定→出结果，答案应显示在群聊消息流；聊天页更多→帮我决定→结果仍发到聊天。
+* 验证：node --check src/js/group-chat.js、decision.js、group-decision.js 过；已加哨兵 `gcSendDecisionText`（build.mjs FIX\_SENTINELS）+ FIX-REGRESSION #102。待构建后真机：群聊更多→帮我决定/多人决定→出结果，答案应显示在群聊消息流；聊天页更多→帮我决定→结果仍发到聊天。
 
 ### 2026-08-31 10:08（装修模式：添加卡片加「小组件/图标」分类；文字/倒计时加 上移/下移）
+
 * \[AI-B 域]（**改动文件：src/js/personalize.js、src/css/home.css、src/css/dark.css；构建状态：已构建·sw mochi-mtglmkys，哨兵 154/154 全绿、哑哨兵 0**）。
+
 * 需求/反馈：①「添加卡片」面板顶部需要【小组件】/【图标】分类；②部分组件点击没【上移】【下移】位置按钮，举例 文字（自定义一句话）。
+
 * 方案：① openDeskLib 加顶部分类 Tab（`.desk-lib-tabs`），`app-*` 单图标归「图标」，其余组件 + apps/p2apps/p3apps + 图片/文字/倒计时归「小组件」，点击切换显隐；home.css/dark.css 补 tab 样式（含暗色）。② 文字/倒计时编辑菜单加「上移/下移」pill，新增 `moveDeskText`/`moveDeskCountdown`（与 moveDeskImage 同模式：仅同页相邻交换顺序，持久化到 desk-texts/desk-countdowns）。
+
 * 验证：node --check 过；build 后哨兵 154/154 全绿；产物含 desk-lib-tabs / moveDeskText / moveDeskCountdown 等标记。待真机：装修模式点「+ 添加卡片」看顶部两分类切换；点文字/倒计时看 上移/下移 生效。
+
+### 2026-08-31 10:28（装修模式·图标分类补全 + 紧凑网格 + 名字搜索）
+
+* \[AI-B 域]（**改动文件：src/js/personalize.js、src/css/home.css、src/css/dark.css；构建状态：已构建·sw mochi-mtgmc9hn，哨兵 156/156 全绿、哑哨兵 0**）。
+
+* 需求/反馈：①检查【图标】分类是否缺失图标；②图标要排紧凑，方便添加管理；③可搜索图标名字。
+
+* 检查结论：对照 template + p2-features makeApp（data-app → data-desk-widget="app-\*"）逐项核对，图标分类原本缺 5 个真实存在的单个图标：app-cjian(此间)、app-memo-arc(梦角档案)、app-my-arc(我的档案)、app-room(房间)、app-piggy(存钱罐)；已补进 WIDGET\_IDS/WIDGET\_NAMES/WIDGET\_PREV\_HTML。
+
+* 方案：图标分类从原来「一行一个（78×58 缩略图+名字+添加按钮）」改为**顶部搜索框 + 紧凑网格**（.desk-lib-grid auto-fill minmax(76px,1fr)；每块 40×40 首字圆角块 + 名字，点击添加，已在本页置灰 on 态）；搜索按名字模糊匹配即时过滤（data-icon-name）；小组件分类保持原行式列表。home.css/dark.css 补 .desk-lib-search/.desk-lib-grid/.desk-lib-icon\* 样式（含暗色）。
+
+* 验证：node --check 过；build 后哨兵 156/156 全绿、哑哨兵 0；产物含 desk-lib-grid/desk-lib-search/app-piggy/app-room 等标记。待真机：装修「+ 添加卡片」→ 图标分类看 5 个新图标、网格紧凑排布、顶部搜索即时过滤。
 
 ### 2026-08-30 23:04（#102 本地歌曲无法触发 TA 互动：邀请听歌/切歌/预订/暂停/继续）
 

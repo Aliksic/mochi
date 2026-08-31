@@ -45,6 +45,14 @@
   .desk-lib-item { border-color:#3a3a3a; }
   .desk-lib-tab { background:#2a2a2a; border-color:#3a3a3a; color:#888; }
   .desk-lib-tab.on { background:var(--ink,#f0f0f0); color:#111; border-color:var(--ink,#f0f0f0); }
+  .desk-lib-search { background:#2a2a2a; border-color:#3a3a3a; color:var(--ink,#f0f0f0); }
+  .desk-lib-search::placeholder { color:#777; }
+  .desk-lib-icon { border-color:#3a3a3a; }
+  .desk-lib-icon .dli-prev { background:#2e2e2e; }
+  .desk-lib-icon .dli-letter { color:#aaa; }
+  .desk-lib-icon .dli-name { color:var(--ink,#f0f0f0); }
+  .desk-lib-icon.on { border-color:var(--ink,#f0f0f0); background:rgba(255,255,255,.06); }
+  .desk-lib-icon.on .dli-letter { color:var(--ink,#f0f0f0); }
   .desk-lib-item .dl-where { color:#777; }
   .desk-lib-item .dl-btn { background:#f0f0f0; color:#111; }
   .desk-lib-item .dl-btn:disabled { background:#333; color:#777; }
@@ -511,7 +519,7 @@
   .card-list.cc-grid .cc-ico { background:var(--dark-hover) !important; }
   .card-list.cc-grid2 .cc-ico { background:var(--dark-hover) !important; }
   .card-list.cc-managing .cc-item.sel::before { color:var(--btn-ink); }
-  #poke-list .cc-item, #poke-list .cc-group-header { background:var(--dark-card); border-color:var(--dark-border); }
+  #poke-list .cc-item, #poke-list .cc-group-header, #invite-list .cc-item { background:var(--dark-card); border-color:var(--dark-border); }
   #poke-list .cc-group-header { background:var(--dark-hover); }
   #poke-list .cc-item .ccg-name, #poke-list .ccg-name { color:#ddd; }
   #poke-list .cc-item .ccg-count { background:var(--dark-hover); color:var(--dark-soft); }

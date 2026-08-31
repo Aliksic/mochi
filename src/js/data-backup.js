@@ -118,61 +118,297 @@
     });
   }
 
-  // v3.31.x：流式 JSON 打包——逐键序列化、边拼边合并进 Blob，代替 JSON.stringify(data)
-  // 一把生成整个 JSON 字符串。本地数据约 100MB 的设备上（OPPO Find X9 实测），整包 JSON 字符串
-  // + stringify 内部缓冲使峰值内存接近 2 倍文件体积，Chrome 安卓标签页 OOM 直接崩溃 →「导出闪退」。
-  // Blob 拼接是引用合并不复制内存；每序列化完一个键立即 delete 释放原值，峰值内存约砍半。
-  // 大键之间用 setTimeout(0) 让出主线程，避免长任务把导出过程冻死（低端机现象）。
-  async function jsonToBlobStreaming(data) {
+  // ===== 导出打包器（内存有界流式）=====
+  // v3.31.x #103 的做法是「先把全部数据收进 data，再逐键 stringify」。在数据量更大的设备
+  //（vivo X200s Edge 实测：IDB 候选键合计≈807MB、chat-msgs 单键 514MB、存储配额已用 971MB）
+  // 上仍然撞墙，三道墙叠在一起才有「一直显示正在打包数据文件」：
+  //  ① 整包 stringify（线上旧版）：JS 单个字符串长度有上限（V8 64 位 kMaxLength≈5.37 亿字符，
+  //     且要一次性连续分配），整包 JSON 正好跨过去 → RangeError: Invalid string length。
+  //  ② 先收集后打包：800MB 全部进内存才开始序列化，峰值＝全量对象图。
+  //  ③ 逐键 stringify（#103）：单个大键仍要一次分配几亿字符的字符串；而且路由用的
+  //     byteLen(非字符串) 内部又整包 stringify 一遍只为量长度＝再复制一份。
+  // 现在：readNext() 拉一个键 → 就地序列化 → 立即释放（任何时刻内存里最多一个大键）；
+  // 值内部再逐元素下钻 + 长字符串分片转义，全程「整包字符串」与「单键整串」都不存在。
+  // 产出的 JSON 与 JSON.stringify(data) 逐字节同构（成员顺序＝处理顺序，JSON 不依赖顺序）。
+  const PACK_MERGE = 4 * 1024 * 1024;   // 每 ~4MB 合并一次进 Blob（Blob 拼接是引用合并、不复制内存）
+  const PACK_SLICE = 1 * 1024 * 1024;   // 超长字符串一次转义的分片长度（分片转义拼接＝整体转义）
+  const PACK_DEPTH = 3;                 // 容器下钻层数：值→元素→子元素；再深才整包 stringify
+  const PACK_YIELD = 64;                // 每写这么多个片段让出一次主线程（防空屏假死/ANR）
+
+  function createJsonPack() {
     const parts = [];
-    let len = 0;
-    let blob = null;
+    let len = 0, since = 0, blob = null;
     const flush = () => {
       if (!parts.length) return;
       blob = new Blob(blob ? [blob].concat(parts) : parts, { type: 'application/json;charset=utf-8' });
       parts.length = 0;
       len = 0;
     };
-    const push = (s) => {
-      if (!s) return;
-      parts.push(s);
-      len += s.length;
-      if (len >= 4 * 1024 * 1024) flush(); // 每 ~4MB 合并一次，避免 parts 无限堆积
+    return {
+      push(s) { if (!s) return; parts.push(s); len += s.length; if (len >= PACK_MERGE) flush(); },
+      // 只在「两个完整值之间」让出主线程，绝不打断一个值的写出，所以不存在半截 JSON。
+      tick() {
+        if (++since < PACK_YIELD) return Promise.resolve();
+        since = 0;
+        return new Promise((r) => setTimeout(r, 0));
+      },
+      finish() { flush(); return blob || new Blob([], { type: 'application/json;charset=utf-8' }); }
     };
-    const yieldNow = () => new Promise((r) => setTimeout(r, 0));
-    push('{"version":"1.0","app":"mochi-zika","exportTime":' + JSON.stringify(data.exportTime) + ',"ls":{');
-    const lsKeys = Object.keys(data.ls);
-    for (let i = 0; i < lsKeys.length; i++) {
-      if (i) push(',');
-      push(JSON.stringify(lsKeys[i]) + ':' + JSON.stringify(data.ls[lsKeys[i]]));
-    }
-    push('},"idb":{');
-    const idbKeys = Object.keys(data.idb);
-    for (let i = 0; i < idbKeys.length; i++) {
-      const k = idbKeys[i];
-      if (i) push(',');
-      push(JSON.stringify(k) + ':' + JSON.stringify(data.idb[k]));
-      delete data.idb[k]; // 序列化完即释放，控制峰值内存
-      if ((i & 3) === 3) await yieldNow(); // 每 4 个大键让出主线程一次
-    }
-    push('}}');
-    flush();
-    return blob;
   }
 
-  // 导出：localStorage + IndexedDB
+  // 字符串 → JSON 字符串字面量。超过 PACK_SLICE 的（大 base64 图片/整段 JSON 文本）分片转义：
+  // 每片单独 JSON.stringify 后掐掉首尾引号再拼接，转义是逐字符的所以结果与整体转义等价。
+  function packString(pack, s) {
+    if (s.length <= PACK_SLICE) { pack.push(JSON.stringify(s)); return; }
+    pack.push('"');
+    let i = 0;
+    while (i < s.length) {
+      let end = Math.min(i + PACK_SLICE, s.length);
+      // 切片边界不能把代理对（emoji 等 4 字节字符）劈开
+      if (end < s.length && s.charCodeAt(end - 1) >= 0xD800 && s.charCodeAt(end - 1) <= 0xDBFF) end--;
+      if (end <= i) end = i + 1;
+      pack.push(JSON.stringify(s.slice(i, end)).slice(1, -1));
+      i = end;
+    }
+    pack.push('"');
+  }
+
+  // 只下钻「普通对象」：Date/Map 等宿主对象交给 JSON.stringify（toJSON 语义一致），
+  // 否则会把它当成零属性的对象写成 {} 把时间戳等值直接抹掉。
+  function isPlainObject(v) {
+    const p = Object.getPrototypeOf(v);
+    return p === Object.prototype || p === null;
+  }
+
+  async function packValue(pack, v, depth, cfg, stat) {
+    if (v === null || v === undefined) { pack.push('null'); return; }
+    const t = typeof v;
+    if (t === 'string') {
+      // 精简模式：图片/语音/音乐等 base64 附件不进备份文件（只留文字），置空串保持字段类型不变，
+      // 读取方 `if (m.img)` 判空即自然跳过，不需要导入侧配合改任何代码。
+      if (cfg.strip && v.length > 1024 && /^data:[^,]*;base64,/i.test(v.slice(0, 64))) {
+        stat.stripCnt++; stat.stripChars += v.length;
+        pack.push('""');
+        return;
+      }
+      packString(pack, v);
+      return;
+    }
+    if (t === 'number') { pack.push(isFinite(v) ? String(v) : 'null'); return; }
+    if (t === 'boolean') { pack.push(v ? 'true' : 'false'); return; }
+    // 下钻到 PACK_DEPTH 层（够覆盖 消息数组→消息对象→parts 数组 与 字卡组→卡数组→卡对象），
+    // 单值 stringify 的体积因此被限制在「一张卡」量级，而不是「整个库」。
+    if (depth < PACK_DEPTH) {
+      if (Array.isArray(v)) {
+        pack.push('[');
+        for (let i = 0; i < v.length; i++) {
+          if (i) pack.push(',');
+          await packValue(pack, v[i], depth + 1, cfg, stat);
+          if (stat.own) v[i] = null; // 值来自 IDB 读取（本次导出的私有副本）→ 序列化完即释放
+          if (depth === 0) await pack.tick();
+        }
+        pack.push(']');
+        return;
+      }
+      if (t === 'object' && isPlainObject(v)) {
+        const keys = Object.keys(v);
+        pack.push('{');
+        let wrote = false;
+        for (let i = 0; i < keys.length; i++) {
+          const child = v[keys[i]];
+          // 与 JSON.stringify 一致：undefined / 函数属性直接省略（写成 null 会让导入侧多出键）
+          if (child === undefined || typeof child === 'function') continue;
+          if (wrote) pack.push(',');
+          wrote = true;
+          pack.push(JSON.stringify(keys[i]) + ':');
+          await packValue(pack, child, depth + 1, cfg, stat);
+          if (stat.own) { try { delete v[keys[i]]; } catch (e) {} }
+          if (depth === 0) await pack.tick();
+        }
+        pack.push('}');
+        return;
+      }
+    }
+    const whole = JSON.stringify(v);
+    pack.push(whole === undefined ? 'null' : whole);
+  }
+
+  // 键是否「只算体积也算不出小」的廉价判定：非字符串值一旦累计超过 limit 立即返回，
+  // 不再像旧 byteLen 那样整包 stringify 只为量一个长度（那等于又复制一份大键）。
+  function overSmallLimit(v, limit) {
+    try {
+      if (typeof v === 'string') return v.length > limit;
+      if (v instanceof Blob) return v.size > limit;
+      if (Array.isArray(v)) {
+        let n = 0;
+        for (let i = 0; i < v.length; i++) {
+          const m = v[i];
+          if (typeof m === 'string') n += m.length;
+          else if (m && typeof m === 'object') {
+            if (typeof m.text === 'string') n += m.text.length;
+            if (typeof m.img === 'string') n += m.img.length;
+            if (typeof m.voice === 'string') n += m.voice.length;
+            const ps = m.parts;
+            if (Array.isArray(ps)) for (let j = 0; j < ps.length; j++) { const p = ps[j]; if (p && typeof p.v === 'string') n += p.v.length; }
+            n += 64;
+          } else n += 32;
+          if (n > limit) return true;
+        }
+        return false;
+      }
+      if (v && typeof v === 'object') {
+        // 普通对象同理：逐键浅估累计，一过阈值立刻返回——绝不能为「判断大不大」去 stringify 大对象
+        const ks = Object.keys(v);
+        let n = 0;
+        for (let i = 0; i < ks.length; i++) {
+          const m = v[ks[i]];
+          if (typeof m === 'string') n += m.length;
+          else if (m && typeof m === 'object') n += 2048;
+          else n += 32;
+          n += ks[i].length;
+          if (n > limit) return true;
+        }
+        return false;
+      }
+      return false;
+    } catch (e) { return true; }
+  }
+
+  // 流式打包总入口：meta（导出时间等）→ readNext() 逐个吐大键 [key, value] → 最后吐 small
+  // （localStorage 小键 + IDB 里体积 ≤20KB 的键，与旧实现同一路由：小键进 ls 段、大键进 idb 段）。
+  // readNext 返回 null 表示大键结束。
+  async function jsonToBlobStreaming(meta, readNext, small) {
+    const pack = createJsonPack();
+    const cfg = meta.cfg;
+    const stat = { own: false, stripCnt: 0, stripChars: 0 };
+    let first = true;
+    let chunk = '{"version":"1.0","app":"mochi-zika","exportTime":' + JSON.stringify(meta.exportTime) + ',"idb":{';
+    while (true) {
+      const ent = await readNext();
+      if (!ent) break;
+      chunk += (first ? '' : ',') + JSON.stringify(ent.k) + ':';
+      first = false;
+      pack.push(chunk);
+      chunk = '';
+      stat.own = ent.own === true;
+      await packValue(pack, ent.v, 0, cfg, stat);
+      await pack.tick();
+    }
+    pack.push(chunk + '},"ls":{');
+    const sKeys = Object.keys(small);
+    for (let i = 0; i < sKeys.length; i++) {
+      if (i) pack.push(',');
+      stat.own = false; // 小键值是 localStorage 原串/别处共用的值，一律不动源
+      pack.push(JSON.stringify(sKeys[i]) + ':');
+      await packValue(pack, small[sKeys[i]], 1, cfg, stat);
+    }
+    pack.push('}}');
+    pack.stat = stat;
+    return pack;
+  }
+
+  // ===== 导出 =====
   // v3.5.97：不受任何大小限制——按 IndexedDB / localStorage 实际数据全量导出。
   //   音乐文件、图片、聊天记录全部包含；导入时大键进 IndexedDB、小键进 localStorage，完整还原。
-  async function doExport() {
+  const LS_SMALL_LIMIT = 20 * 1024;        // ≤ 此体积的键进备份的 ls 段（localStorage），其余进 idb 段
+  const MODE_ASK_BYTES = 150 * 1024 * 1024; // 本机数据超过这个量才弹「选备份范围」，小库不打扰
+  const MODE_IMPORT_WARN = 120 * 1024 * 1024; // 成品文件超过这个体积就如实提示「新设备可能导不回」
+  const MUSIC_KEY_RE = /:music-file:/;      // 本地上传音乐的文件体：最占体积、且新设备上可重新添加
+
+  function exportCfg(mode) {
+    if (mode === 'no-music') return { mode: mode, label: '不含音乐文件', note: '不含本地音乐文件', skip: (k) => MUSIC_KEY_RE.test(k), strip: false };
+    if (mode === 'text') return { mode: mode, label: '只备份文字', note: '不含图片/语音/音乐附件', skip: (k) => MUSIC_KEY_RE.test(k), strip: true };
+    return { mode: 'full', label: '完整备份', note: '全部数据完整', skip: () => false, strip: false };
+  }
+
+  // 导出进度追踪：出错时要能说出「卡在哪一步、哪个键、那个键多大」，
+  // 只报「导出失败」用户无从下手（vivo X200s 这次就是遮罩冻在「正在打包数据文件」）。
+  let expStage = '';
+  let expKey = '';
+  let expKeyBytes = 0;
+
+  async function doExport(mode) {
+    const cfg = exportCfg(mode);
+    try {
+      await runExport(cfg);
+    } catch (e) {
+      // v3.32.x #104：异常必须收住并收起遮罩。旧实现入口是裸调用 doExport()，
+      // 打包阶段抛出的 RangeError 变成未处理 promise rejection → impHide 永不执行
+      // → 界面永远停在「正在打包数据文件」（用户报的「一直在打包中」）。
+      impHide();
+      reportExportError(e, cfg);
+    }
+  }
+
+  function reportExportError(e, cfg) {
+    const msg = (e && (e.message || String(e))) || '未知错误';
+    const isLen = /string length/i.test(msg);
+    const at = (expStage ? '\n出错环节：' + expStage : '') +
+      (expKey ? '\n涉及数据：' + expKey + (expKeyBytes ? '（约 ' + fmtSize(expKeyBytes) + '）' : '') : '');
+    const advice = isLen
+      ? '\n根因：这台设备的数据量已超出浏览器一次能生成的字符串上限，单个文件的完整备份做不到。\n' +
+        '请重新点「导出数据」改选「不含音乐文件」或「只备份文字」；确实要一份全量备份，' +
+        '先用「查看存储」清掉不再需要的音乐/图片附件后再导。'
+      : '\n请重新点「导出数据」再试一次；反复失败时先重启浏览器（释放被占满的内存）再导，' +
+        '或改选范围更小的备份。';
+    if (window.openModal) {
+      window.openModal('导出未完成', '', function () {}, {
+        noInput: true, okText: '知道了', big: true,
+        staticText: '「' + cfg.label + '」中途失败。本机数据没有任何改动（导出不写不删业务键），已生成的临时文件会自动释放。\n' +
+          '原因：' + msg + at + advice
+      });
+    } else {
+      toast('导出未完成：' + msg);
+    }
+  }
+
+  // 大库设备先让用户在知情前提下选备份范围（小库直接完整导出，不多点一下）。
+  // 为什么需要这一步：备份文件再大也导得出去，但导入侧要把整个文件一次读成字符串再解析，
+  // 几百 MB 的文件在新设备上大概率导不回来——不如在导出前就把选择权交出来。
+  function askExportMode() {
+    return new Promise((resolve) => {
+      let usage = 0;
+      let settled = false;
+      const finish = (m) => { if (settled) return; settled = true; resolve(m); };
+      const ask = () => {
+        if (usage <= MODE_ASK_BYTES || !window.openModal) { finish('full'); return; }
+        window.openModal('本机数据约 ' + fmtSize(usage) + '，先选备份范围', '', function (v) {
+          finish(v || 'full');
+        }, {
+          noInput: true, okText: '开始导出', pill: 'full', lock: true,
+          pills: [{ label: '完整备份', value: 'full' }, { label: '不含音乐文件', value: 'no-music' },
+            { label: '只备份文字', value: 'text' }, { label: '取消', value: 'cancel' }],
+          staticText: '完整备份：全部数据都进文件（含本地音乐文件、图片、语音）。文件最大，' +
+            '超过约 ' + fmtSize(MODE_IMPORT_WARN) + ' 时新设备可能「导得出去、导不回来」（导入要把整个文件一次读进内存）。\n' +
+            '不含音乐文件：跳过本地上传的歌曲，其余数据完整，音乐到新设备重新添加即可。\n' +
+            '只备份文字：再跳过图片/语音等附件，聊天记录与字卡只保留文字，体积最小。\n' +
+            '三种模式都会完整备份聊天记录的文字、设置与字卡文本。'
+        });
+      };
+      try {
+        if (navigator.storage && navigator.storage.estimate) {
+          navigator.storage.estimate().then((est) => {
+            usage = (est && est.usage) || 0;
+            ask();
+          }, () => ask());
+          return;
+        }
+      } catch (e) {}
+      ask();
+    });
+  }
+
+  async function runExport(cfg) {
     // v3.xx：导出进度遮罩——大备份（音乐/语音/图片全量）读取+打包要花时间，
     // 不能只弹一个 toast 让用户干等。复用 import 的进度遮罩，结束再隐藏。
+    expStage = '读取本地数据';
+    expKey = '';
+    expKeyBytes = 0;
     impShow('正在导出…', '正在读取全部数据', 3);
-    const data = { version: '1.0', app: 'mochi-zika', exportTime: new Date().toISOString(), ls: {}, idb: {} };
-    const add = (k, v) => {
-      // 大键只进 data.idb（单镜像，导入进 IndexedDB）；小键进 data.ls
-      if (byteLen(v) > 20 * 1024) data.idb[k] = v;
-      else data.ls[k] = v;
-    };
+    const exportTime = new Date().toISOString();
+    // 备份文件 ls 段：localStorage 小键 + IndexedDB 里体积 ≤20KB 的键（与旧实现 add() 同路由）
+    const small = {};
+    const cover = exportCoverage();
     // v3.27.x：修复「导出的聊天记录不是最新」——原实现先从 localStorage 把所有大键收进 data.idb，
     // 下面 IndexedDB 循环再用 `k in data.idb` 跳过，导致聊天记录永远取 localStorage 的「有损快照」
     //（chat.js 的 LS 快照超过 2MB 上限后不再更新、会冻结在旧时刻，且剥图/截断长文本），
@@ -186,8 +422,8 @@
         if (!k || k.indexOf('xy-home-v2:') !== 0) continue;
         if (k === SNAPSHOT_KEY) continue; // v3.7.0：副本键不进导出文件（防自包含无限增长）
         const v = localStorage.getItem(k);
-        if (byteLen(v) > 20 * 1024) lsBig[k] = v; // 大键：留待 IndexedDB 权威读取
-        else data.ls[k] = v;
+        if (byteLen(v) > LS_SMALL_LIMIT) lsBig[k] = v; // 大键：留待 IndexedDB 权威读取
+        else { small[k] = v; cover.see(k, v); }
       }
     } catch (e) {}
     // IndexedDB：音乐文件、字卡、聊天记录等全部权威数据
@@ -207,12 +443,13 @@
     // 原 `idbGetAllKeys() || []` 把「挂起/超时」也当空库 → 导出一份只含 LS 小键的文件，
     // 末尾还提示「全部数据完整」：LS 整库失效的设备（本次报障的小米 14U Edge）上那是
     // 一份近乎空的备份，用户信了就清原设备 = 真丢。清单没读到一律中止、如实提示重试。
+    let idbKeys = [];
     if (window.idbListKeys || window.idbGetAllKeys) {
-      let idbKeys = null;
+      let listed = null;
       try {
-        idbKeys = window.idbListKeys ? await window.idbListKeys() : ((await window.idbGetAllKeys()) || []);
-      } catch (e) { idbKeys = null; }
-      if (idbKeys === null) {
+        listed = window.idbListKeys ? await window.idbListKeys() : ((await window.idbGetAllKeys()) || []);
+      } catch (e) { listed = null; }
+      if (listed === null) {
         impHide();
         if (window.openModal) {
           window.openModal('导出未完成', '', function () {}, {
@@ -226,16 +463,36 @@
         }
         return;
       }
-      const idbTotal = idbKeys.length;
-      let idbDone = 0;
-      for (const k of idbKeys) {
-        idbDone++;
-        if (idbTotal) impShow('正在导出…', '正在读取全部数据 ' + idbDone + ' / ' + idbTotal, 8 + Math.round(idbDone / idbTotal * 60));
+      idbKeys = listed;
+    }
+    // 值到手：登记覆盖清单 → ≤20KB 并进备份的 ls 段（返回 null，打包器继续拉下一个），
+    // 大键交给流式打包器就地序列化（own=true 表示值是 IDB 读出的私有副本，可边写边释放）。
+    function routeValue(k, v, own) {
+      cover.see(k, v);
+      if (isAuthorityKey(k)) { try { delete small[k]; } catch (e) {} } // 有损 LS 快照不得混进备份
+      if (!overSmallLimit(v, LS_SMALL_LIMIT)) { small[k] = v; return null; }
+      return { k: k, v: v, own: own };
+    }
+    const estTotal = Math.max(1, idbKeys.length + Object.keys(lsBig).length);
+    let cursor = 0;      // idbKeys 游标
+    let tailKeys = null; // idbKeys 走完后，lsBig 里没被 IDB 收录的键（最终兜底）
+    let tailCursor = 0;
+    let skipped = 0;     // 按所选范围排除掉的键数（音乐文件等）
+    const pct = () => 8 + Math.round((idbKeys.length ? Math.min(cursor, idbKeys.length) / idbKeys.length : 1) * 78);
+    // 逐键「读 → 序列化 → 释放」的拉取器：打包器每写完一个键才来拉下一个，
+    // 所以全过程中内存里最多只有当前这一个大键（旧实现是 800MB 全量对象图一起常驻）。
+    async function readNext() {
+      while (cursor < idbKeys.length) {
+        const k = idbKeys[cursor++];
+        expKey = k;
+        expKeyBytes = 0;
         try {
           if (k.indexOf('xy-home-v2:') !== 0) continue;
           if (k === SNAPSHOT_KEY) continue; // v3.7.0：副本键不进导出文件
           // 权威键不跳过（LS 有损快照不能代替 IDB 权威值）；双写一致键 LS 小键已收录则跳过
-          if (k in data.ls && !isAuthorityKey(k)) continue;
+          if (k in small && !isAuthorityKey(k)) continue;
+          if (cfg.skip(k)) { skipped++; continue; } // 所选范围之外的键（如本地音乐文件）
+          impShow('正在导出…', '正在读取并打包 ' + Math.min(cursor, estTotal) + ' / ' + estTotal, pct());
           let v = await window.idbGet(k);
           if ((v === undefined || v === null) && lsBig[k] === undefined) {
             // IDB 读取失败且 lsBig 无兜底（典型场景：>200KB 的 IDB-only 键，xyStore 已从 LS 删除，
@@ -244,64 +501,105 @@
             v = await window.idbGet(k);
           }
           if (v !== undefined && v !== null) {
+            expKeyBytes = typeof v === 'string' ? v.length * 2 : (v instanceof Blob ? v.size : 0);
             // v3.6.x：本地音乐改存 Blob 后，备份导出需转成 dataURL 字符串（JSON 无法存 Blob），
-            // 导入时由 add() 恢复为字符串 → 播放路径自动识别转回 Blob
+            // 导入时恢复为字符串 → 播放路径自动识别转回 Blob
             if (v instanceof Blob) {
-              add(k, 'data:' + (v.type || 'audio/mpeg') + ';base64,' + await blobToBase64(v));
-            } else {
-              add(k, v); // 权威值以 IDB 为准（含最新聊天记录）
+              const ent = routeValue(k, 'data:' + (v.type || 'audio/mpeg') + ';base64,' + await blobToBase64(v), true);
+              delete lsBig[k]; // 已收录 IDB 权威值，不再回落 LS 兜底
+              if (ent) return ent; // 小值已并进 ls 段 → 继续拉下一个键
+              continue;
             }
-            delete lsBig[k]; // 已收录 IDB 权威值，不再回落 LS 兜底
-            // 权威键已拿到 IDB 完整值，删 data.ls 里可能有的 LS 有损快照，避免导入时混入
-            if (isAuthorityKey(k) && (k in data.ls)) { try { delete data.ls[k]; } catch (e) {} }
+            const ent = routeValue(k, v, true); // 权威值以 IDB 为准（含最新聊天记录）
+            delete lsBig[k];
+            if (ent) return ent;
+            continue;
           } else if (window.idbGetCached && window.idbGetCached(k) !== undefined) {
             // v3.26.x：IDB 读取失败/超时，从 memoryCache 兜底（idbRestore 回填的大键 /
             // 本会话 xyStore.set 写入值）。Safari 等 IDB 事务易挂起的浏览器上，启动时
             // idbRestore 已慢慢回填进 memoryCache，导出时并发 idbGet 失败也能拿到最新值。
-            add(k, window.idbGetCached(k));
+            // 注意：这是业务侧正在用的对象，own=false —— 打包器绝不改写它。
+            const cv = window.idbGetCached(k);
+            expKeyBytes = typeof cv === 'string' ? cv.length * 2 : 0;
+            const ent = routeValue(k, cv, false);
             delete lsBig[k];
-            if (isAuthorityKey(k) && (k in data.ls)) { try { delete data.ls[k]; } catch (e) {} }
+            if (ent) return ent;
+            continue;
           } else if (lsBig[k] !== undefined) {
             // IDB 无此键 / 读取失败 / 超时 → 回落 localStorage 兜底（至少不丢）
-            add(k, lsBig[k]);
+            const sv = lsBig[k];
             delete lsBig[k];
+            expKeyBytes = typeof sv === 'string' ? sv.length * 2 : 0;
             // v3.26.x：权威键回落 LS 兜底，可能是有损快照（chat-msgs 剥图/截断）→ 记录降级
             if (isAuthorityKey(k)) exportMissing.push(k);
+            const ent = routeValue(k, sv, false);
+            if (ent) return ent;
+            continue;
           } else {
             // IDB 读取两次均失败 + lsBig 无兜底（>200KB IDB-only 键），最后尝试直接从 LS 读
             // （极端情况下 LS 可能有残留快照，聊胜于无）
             try {
               const lsV = localStorage.getItem(k);
-              if (lsV !== null) { add(k, lsV); }
+              if (lsV !== null) { const ent = routeValue(k, lsV, false); if (ent) return ent; }
             } catch (e) {}
             // v3.26.x：权威键 IDB+memoryCache 均失败，只剩 LS 有损快照（或彻底没有）→ 记录降级
             if (isAuthorityKey(k)) exportMissing.push(k);
           }
         } catch (e) {} // 单键失败跳过，继续导出其余键
       }
+      // 大键仅在 localStorage、IndexedDB 里没有（或读取失败）时的最终兜底（如旧版遗留键）
+      if (tailKeys === null) tailKeys = Object.keys(lsBig);
+      while (tailCursor < tailKeys.length) {
+        const k = tailKeys[tailCursor++];
+        if (!(k in lsBig)) continue;
+        expKey = k;
+        if (cfg.skip(k)) { skipped++; continue; }
+        const v = lsBig[k];
+        delete lsBig[k];
+        expKeyBytes = typeof v === 'string' ? v.length * 2 : 0;
+        const ent = routeValue(k, v, false);
+        if (ent) return ent;
+      }
+      expKey = '';
+      expKeyBytes = 0;
+      return null;
     }
-    // 大键仅在 localStorage、IndexedDB 里没有（或读取失败）时的最终兜底（如旧版遗留键）
-    Object.keys(lsBig).forEach((k) => { add(k, lsBig[k]); });
-    impShow('正在导出…', '正在打包数据文件', 72);
+    impShow('正在导出…', '正在读取并打包数据', 8);
+    // v3.31.x：流式打包——不再 JSON.stringify(data) 一把生成整个 JSON 字符串。大备份设备上
+    // 整包字符串 + stringify 内部缓冲会让峰值内存接近 2 倍文件体积，Chrome 安卓标签页 OOM
+    // 崩溃（OPPO Find X9 导出闪退）；改为逐键序列化边拼边合并进 Blob（见 jsonToBlobStreaming）。
+    // v3.32.x #104：进一步改成「边读边打包」+ 值内逐元素下钻，大键也不再整串分配。
+    expStage = '打包数据文件';
+    const pack = await jsonToBlobStreaming({ exportTime: exportTime, cfg: cfg }, readNext, small);
+    const blob = pack.finish();
     // v3.27.x：导出内容覆盖清单——本次导出的功能模块一目了然（导出=全局全部数据，
     // localStorage 小键 + IndexedDB 大键全量收集，用户反馈「看不到导出了哪些功能」）。
-    // v3.31.x：必须在流式打包（会逐键 delete 释放 data.idb）之前计算——它要读键值统计条数。
-    const coverLines = exportCoverage(data);
-    let coverText = '导出内容（全局全部数据）：\n' + coverLines.join('\n') + '\n——';
+    // v3.32.x：覆盖清单改在读取每个键时顺手登记（见 exportCoverage().see），
+    // 打包后 data 已逐键释放，不再二次遍历统计（那等于为几十 MB 的值再翻一遍内存）。
+    // 注意：full 模式必须写成完整字面量（不能拼接），build.mjs 哨兵按「导出内容（全局全部数据）」整串检索产物。
+    let coverText = (cfg.mode === 'full' ? '导出内容（全局全部数据）：\n' : '导出内容（' + cfg.label + '）：\n') + cover.lines().join('\n') + '\n——';
+    if (skipped) coverText += '\n· 按所选范围跳过本地音乐文件 ' + skipped + ' 个（到新设备重新添加即可）';
+    if (pack.stat.stripCnt) {
+      coverText += '\n· 按所选范围跳过图片/语音等媒体附件 ' + pack.stat.stripCnt + ' 处（约 ' +
+        fmtSize(pack.stat.stripChars * 2) + '，文字与设置全部保留）';
+    }
     // v3.26.x：权威键降级提示——IDB 事务挂起/超时导致聊天记录/朋友圈只拿到 LS 有损
     // 快照（剥图/截断）或彻底丢失。明确告知用户备份可能不完整，切勿据此清空原设备数据。
     if (exportMissing.length) {
       const names = exportMissing.map(k => /:chat-msgs$/.test(k) ? '聊天记录(' + k.slice('xy-home-v2:'.length) + ')' : '朋友圈(' + k.slice('xy-home-v2:'.length) + ')');
       coverText += '\n⚠ 以下数据可能未完整导出（IDB 读取失败，仅拿到有损快照或丢失）：\n' + names.map(n => '· ' + n).join('\n') + '\n请勿清空原设备数据，建议重启浏览器后重新导出。';
     }
-    // v3.31.x：流式打包——不再 JSON.stringify(data) 一把生成整个 JSON 字符串。大备份设备上
-    // 整包字符串 + stringify 内部缓冲会让峰值内存接近 2 倍文件体积，Chrome 安卓标签页 OOM
-    // 崩溃（OPPO Find X9 导出闪退）；改为逐键序列化边拼边合并进 Blob（见 jsonToBlobStreaming）。
-    const blob = await jsonToBlobStreaming(data);
+    // v3.32.x #104：成品太大 = 新设备上「导得出去、导不回来」（导入要整包读成字符串再 JSON.parse），
+    // 与其让用户拿着一份restore不了的文件换机时才发现，不如打包完当场说清并指路更小范围。
+    if (blob.size > MODE_IMPORT_WARN) {
+      coverText += '\n⚠ 这个文件约 ' + fmtSize(blob.size) + '，新设备导入时要一次性读入整个文件，' +
+        '这么大有较大概率导入失败。建议重新点「导出数据」改选「不含音乐文件」或「只备份文字」再做一份。';
+    }
     // v3.9.x：文件名用本地日期（原 toISOString 是 UTC，凌晨导出文件名会是前一天）
     const fname = 'mochi数据备份_' + localDateStr(new Date()) + '.json';
     // v3.27.x：体积友好显示——大备份自动换算 MB（原只显示 KB，上千 KB 不便读）
     const sizeStr = fmtSize(blob.size);
+    const doneText = '数据已导出（' + sizeStr + '，' + cfg.note + '）';
     // v3.6.x：记录最近一次成功导出时间——备份提醒条（pwa.js）据此判断是否该提醒
     try { localStorage.setItem('xy-home-v2:__last-backup', String(Date.now())); } catch (e) {}
     // v3.29.x：自动备份副本已下线——导出不再把整包 JSON 复制进 IndexedDB。
@@ -316,7 +614,7 @@
     impShow('正在导出…', '正在准备保存文件', 92);
     const saveRes = await saveBackupFile(blob, fname);
     impHide();
-    if (saveRes === 'ok') { toast('数据已导出（' + sizeStr + '，全部数据完整）'); return; }
+    if (saveRes === 'ok') { toast(doneText); return; }
     // v3.9.x：'cancel' 不再直接放弃——华为/夸克等浏览器分享面板会立刻 AbortError
     //（分享面板不弹、直接返回「已取消保存」），数据其实已打包好，统一走「确定后下载」
     // 兜底，保证任何浏览器都能导出成功；用户仍可点「取消」放弃本次保存。
@@ -324,9 +622,9 @@
     // v3.29.x：副本已下线——不再承诺「本机另有副本可恢复」，统一如实说明下载文件是唯一备份。
     if (window.openModal) {
       window.openModal('备份已打包完成（' + sizeStr + '）', '', () => {
-        if (anchorDownload(blob, fname)) toast('数据已导出（' + sizeStr + '，全部数据完整）');
+        if (anchorDownload(blob, fname)) toast(doneText);
         else toast('仍未触发下载。请重新点击「导出数据」并确认保存下载文件——这份文件是你的唯一备份');
-      }, { noInput: true, staticText: coverText + '\n数据已经打包好，还没开始保存。\n点「确定」开始下载保存到本机，点「取消」放弃本次保存。\n（请务必确认下载保存成功：本机不再另存副本，这个文件就是唯一备份）' });
+      }, { noInput: true, big: true, staticText: coverText + '\n数据已经打包好，还没开始保存。\n点「确定」开始下载保存到本机，点「取消」放弃本次保存。\n（请务必确认下载保存成功：本机不再另存副本，这个文件就是唯一备份）' });
     } else {
       toast('备份已打包（' + sizeStr + '），请重新点击「导出数据」触发下载并保存文件（唯一备份）');
     }
@@ -415,11 +713,12 @@
 
   // v3.27.x：导出内容覆盖清单——按键尾统计各功能模块本次导出了哪些数据，
   // 让用户确认「导出数据=全局全部数据」（用户反馈：导出弹窗不显示导出了哪些功能）。
-  // 返回中文行数组，如「· 聊天记录：123 条」「· 信箱：✓（含图片）」。
-  function exportCoverage(data) {
-    const allKeys = Object.keys(data.ls || {}).concat(Object.keys(data.idb || {}));
-    const valOf = (k) => (data.idb && data.idb[k]) !== undefined ? data.idb[k] : (data.ls && data.ls[k]);
-    // [键尾正则, 功能名, 可选解析函数(arr)=>条数文本]
+  // v3.32.x #104：改成「读到一个键登记一个键」的累加器（旧签名 exportCoverage(data) 要求
+  // 全量数据在场，而流式打包写完一个键就把它释放了，打包后再统计等于把几十 MB 的值
+  // 再翻一遍内存——正是 #103 要消掉的窗口）。语义与旧版一致：同一功能取第一个非空键
+  // 的值做描述，>1MB 字符串不整包 parse，输出顺序仍按 RULES 顺序。
+  function exportCoverage() {
+    // [键尾正则, 功能名, 可选解析函数(v)=>条数文本]
     const RULES = [
       [/:chat-msgs$/, '聊天记录', arr => arr.length + ' 条'],
       [/:group-chat-msgs$/, '群聊记录', arr => arr.length + ' 条'],
@@ -440,33 +739,41 @@
       [/drift-data/, '漂流瓶', null],
       [/desk-layout|hidden-icons/, '桌面布局', null]
     ];
-    const matched = new Set();
-    const lines = [];
-    RULES.forEach(([re, name, parse]) => {
-      const ks = allKeys.filter(k => re.test(k));
-      const real = ks.filter(k => {
-        let v = valOf(k);
-        // v3.31.x：超大键（聊天记录/字卡库可达几十 MB）不为「非空判断」整包 JSON.parse——
-        // 大值非空即算有，避免导出尾部再翻一遍几十 MB 内存（崩溃窗口的一部分）。
-        if (typeof v === 'string' && v.length > 1024 * 1024) return v !== '';
-        if (typeof v === 'string') { try { v = JSON.parse(v); } catch (e) {} }
-        return v !== null && v !== undefined && v !== '';
-      });
-      if (!real.length) return;
-      matched.add(name);
-      let desc = '✓有';
-      try {
-        let v = valOf(real[0]);
-        // v3.31.x：超大值不做展开统计（整包 parse 几十 MB 内存 + 长任务），只标「数据较大」。
-        if (typeof v === 'string' && v.length > 1024 * 1024) desc = '✓有（数据较大）';
-        else {
-          if (typeof v === 'string') v = JSON.parse(v);
-          if (parse && (Array.isArray(v) || (v && typeof v === 'object'))) desc = parse(v);
+    const BIG_STR = 1024 * 1024;
+    const desc = new Array(RULES.length).fill(null); // null＝该功能还没见到非空数据
+    const from = new Array(RULES.length).fill('');   // 该描述来自哪个键：同键后来的值（IDB 权威）覆盖前值（LS 快照）
+    // 备份里的值可能是 JSON 文本（LS 快照/旧写入格式），也可能已是 IDB 直存的对象/数组
+    const unwrap = (v) => {
+      if (typeof v !== 'string') return v;
+      try { return JSON.parse(v); } catch (e) { return v; }
+    };
+    return {
+      see(k, v) {
+        if (v === null || v === undefined) return;
+        const bigStr = typeof v === 'string' && v.length > BIG_STR;
+        for (let i = 0; i < RULES.length; i++) {
+          // 旧版 valOf 以 data.idb 优先：同一键后到的权威值必须重算覆盖，
+          // 否则 LS 空快照会把「聊天记录：0 条」留在一份含几千条消息的备份上。
+          if (desc[i] !== null && from[i] !== k) continue;
+          if (!RULES[i][0].test(k)) continue;
+          // v3.31.x：超大键（聊天记录/字卡库可达几十 MB）不为「非空判断/条数统计」整包 parse
+          if (bigStr) { desc[i] = RULES[i][2] ? '✓有（数据较大）' : '✓有'; from[i] = k; continue; }
+          const parsed = unwrap(v);
+          if (parsed === null || parsed === undefined || parsed === '') { desc[i] = null; continue; }
+          try {
+            const parse = RULES[i][2];
+            desc[i] = (parse && (Array.isArray(parsed) || typeof parsed === 'object'))
+              ? parse(parsed) : '✓有';
+            from[i] = k;
+          } catch (e) { desc[i] = '✓有'; from[i] = k; }
         }
-      } catch (e) {}
-      lines.push('· ' + name + '：' + desc);
-    });
-    return lines.length ? lines : ['· 检查到无数据（备份为空）'];
+      },
+      lines() {
+        const out = [];
+        for (let i = 0; i < RULES.length; i++) if (desc[i] !== null) out.push('· ' + RULES[i][1] + '：' + desc[i]);
+        return out.length ? out : ['· 检查到无数据（备份为空）'];
+      }
+    };
   }
 
   // v3.5.101：导入前预览备份摘要——显示导出时间/键数/聊天条数/头像/摸鱼累计，
@@ -519,6 +826,22 @@
       data = JSON.parse(text || 'null');
     } catch (e) {
       impHide();
+      // v3.32.x #104：备份文件再大也「导得出去」，但读取侧要把整个文件读成一个字符串再
+      // JSON.parse —— 超过浏览器单串上限时抛的是 Invalid string length，说「无效的数据文件」
+      // 是把用户往错误方向带（文件没坏，是这台设备读不动这么大的一份）。
+      const msg = (e && (e.message || String(e))) || '';
+      if (/string length|out of memory|ArrayBuffer length|memory/i.test(msg)) {
+        if (window.openModal) {
+          window.openModal('这份备份太大，本机读不进去', '', function () {}, {
+            noInput: true, okText: '知道了', big: true,
+            staticText: '文件本身没有坏，是它超过了浏览器一次能读入的体积上限（导入要把整个文件一次读成字符串再解析）。\n' +
+              '本机数据没有被改动。\n请在原设备上重新点「导出数据」，选择「不含音乐文件」或「只备份文字」再做一份体积更小的备份。'
+          });
+        } else {
+          toast('这份备份太大，本机读不进去——请在原设备上改选更小的备份范围重导一份');
+        }
+        return;
+      }
       toast('无效的数据文件');
       return;
     }
@@ -898,11 +1221,21 @@
   // 入口绑定
   // v3.6.x：备份提醒条（pwa.js「去备份」）与设置页导出共用同一流程
   window.runBackupExport = function () {
-    toast('正在导出，请稍候…');
     // v3.5.134：导出前强制落盘——聊天记录有 400ms 防抖，不刷的话备份缺最后几条消息
     // v3.9.x：chatFlushSave 抛错会中断 doExport（表现为点了导出没反应），必须兜住
     try { if (window.chatFlushSave) window.chatFlushSave(); } catch (e) {}
-    doExport();
+    // v3.32.x #104：① 大库设备先选备份范围（完整备份文件可能大到新设备导不回来）；
+    // ② doExport 内部已兜住全部异常并如实弹窗，这里再兜一层收遮罩——旧实现是裸调用
+    //    doExport()，打包阶段抛的 RangeError 变成未处理 promise rejection，
+    //    进度遮罩永不隐藏，就是用户报的「一直在打包中」。
+    Promise.resolve().then(askExportMode).then((mode) => {
+      if (mode === 'cancel') { toast('已取消导出'); return; }
+      toast('正在导出，请稍候…');
+      return doExport(mode);
+    }).catch((e) => {
+      impHide();
+      reportExportError(e, exportCfg('full'));
+    });
   };
   const exportRow = document.getElementById('row-export');
   if (exportRow) {

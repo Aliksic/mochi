@@ -353,11 +353,12 @@ try {
       if ('placeholder' in opts) { try { input.placeholder = opts.placeholder || ''; } catch (e) {} }
       // v3.13.x：opts.inputmode——金额等数字弹窗弹数字键盘；ghost 与已生成的
       // ce-box 都要写（转换器只在转换瞬间复制一次该属性）
-      if ('inputmode' in opts) {
-        var _im = opts.inputmode || '';
-        try { if (_im) input.setAttribute('inputmode', _im); else input.removeAttribute('inputmode'); } catch (e) {}
-        try { const _b = ceBoxOf(input); if (_b) { if (_im) _b.setAttribute('inputmode', _im); else _b.removeAttribute('inputmode'); } } catch (e) {}
-      }
+      // v3.26.x：必须无条件归一化——#modal-input 是全站共用的同一个元素，某次金额弹窗
+      // 设了 inputmode=decimal 后，下一次普通文字弹窗（梦角档案/我的档案等）若不重置，
+      // 残留的 decimal 会让手机（含安卓 ce-box）弹数字键盘。传了按传的写、没传一律清除。
+      var _im = ('inputmode' in opts) ? (opts.inputmode || '') : '';
+      try { if (_im) input.setAttribute('inputmode', _im); else input.removeAttribute('inputmode'); } catch (e) {}
+      try { const _b = ceBoxOf(input); if (_b) { if (_im) _b.setAttribute('inputmode', _im); else _b.removeAttribute('inputmode'); } } catch (e) {}
       if (textarea) {
         textarea.hidden = !opts.textarea;
         if (opts.textarea) {
@@ -3074,7 +3075,7 @@ try {
   // 组件 id 列表（对应 template.html 中 [data-desk-widget]）；组件节点唯一，
   // 「添加」= 把节点移动到目标页（节点移动不重建，内部事件绑定保留）
   const WIDGET_IDS = ['deco', 'quote-row', 'checkin', 'apps', 'music', 'p2apps', 'memo-row', 'week', 'weekend', 'desk-clock', 'desk-calendar', 'desk-timer', 'desk-anniv', 'desk-period',
-    'app-chat', 'app-group-chat', 'app-home', 'app-mail', 'app-feed', 'app-calendar', 'app-memory', 'app-divination', 'app-note', 'app-music', 'app-stats', 'app-interact', 'app-checkin', 'p3apps', 'app-period', 'app-accounting', 'app-garden',     'app-tongpin', 'app-shenshou', 'app-water', 'app-eat', 'app-pomo'];
+    'app-chat', 'app-group-chat', 'app-home', 'app-mail', 'app-feed', 'app-calendar', 'app-memory', 'app-divination', 'app-note', 'app-music', 'app-stats', 'app-interact', 'app-checkin', 'p3apps', 'app-period', 'app-accounting', 'app-garden',     'app-tongpin', 'app-shenshou', 'app-water', 'app-eat', 'app-pomo', 'app-cjian', 'app-memo-arc', 'app-my-arc', 'app-room', 'app-piggy'];
   const WIDGET_NAMES = {
     deco: '纪念日卡', 'quote-row': '今日情话 / 已摸鱼', checkin: '打卡横幅', apps: '功能图标(整组)',
     music: '音乐播放器', p2apps: '第二页功能图标(整组)', 'memo-row': '今日备忘 / 心情', week: '本周日常', weekend: '周末倒计时',
@@ -3083,6 +3084,7 @@ try {
     'app-calendar': '日历图标', 'app-memory': '纪念图标', 'app-divination': '占卜图标', 'app-note': '收藏图标',
     'app-music': '音乐图标', 'app-stats': '聊天统计图标', 'app-interact': '提问记录图标', 'app-checkin': '寻踪图标',
     'p3apps': '第三页功能图标(整组)', 'app-period': '经期记录图标', 'app-accounting': '记账图标', 'app-garden': '花园图标',     'app-tongpin': '同频图标', 'app-shenshou': '伸手图标', 'app-water': '喝水图标', 'app-eat': '吃什么图标', 'app-pomo': '番茄钟图标',
+    'app-cjian': '此间图标', 'app-memo-arc': '梦角档案图标', 'app-my-arc': '我的档案图标', 'app-room': '房间图标', 'app-piggy': '存钱罐图标',
   };
   // v3.7.x：装修模式组件库静态预览缩略图（glass 质感 + 真实 SVG 图标，不依赖真实数据/事件）
   const PREV_BOX = 'display:flex;align-items:center;justify-content:center;width:78px;height:58px;border-radius:10px;background:linear-gradient(135deg,#fff,#f6f6f6);border:1px solid rgba(0,0,0,.07);box-shadow:0 1px 3px rgba(0,0,0,.06);flex-shrink:0;overflow:hidden;padding:4px;box-sizing:border-box';
@@ -3120,6 +3122,7 @@ try {
     'app-calendar': _appIcoPrev('日历'), 'app-memory': _appIcoPrev('纪念'), 'app-divination': _appIcoPrev('占卜'), 'app-note': _appIcoPrev('收藏'),
     'app-music': _appIcoPrev('音乐'), 'app-stats': _appIcoPrev('统计'), 'app-interact': _appIcoPrev('提问'), 'app-checkin': _appIcoPrev('寻踪'),
     'app-period': _appIcoPrev('经期'), 'app-accounting': _appIcoPrev('记账'), 'app-garden': _appIcoPrev('花园'),     'app-tongpin': _appIcoPrev('同频'), 'app-shenshou': _appIcoPrev('伸手'), 'app-water': _appIcoPrev('喝水'), 'app-eat': _appIcoPrev('吃什么'), 'app-pomo': _appIcoPrev('番茄钟'), 'p3apps': _appIcoPrev('经期'),
+    'app-cjian': _appIcoPrev('此间'), 'app-memo-arc': _appIcoPrev('梦角档案'), 'app-my-arc': _appIcoPrev('我的档案'), 'app-room': _appIcoPrev('房间'), 'app-piggy': _appIcoPrev('存钱罐'),
   };
   // 隐藏池：被移除的组件暂存（display:none），可从组件库重新添加
   function ensureWidgetPool() {
@@ -3513,15 +3516,66 @@ try {
       tabWrap.appendChild(tab);
     });
     box.appendChild(tabWrap);
+    let iconSearch = null, iconGrid = null;
     groups.forEach(g => {
       const p = document.createElement('div');
       p.className = 'desk-lib-panel';
       p.style.display = (g.key === 'widget') ? '' : 'none';
+      if (g.key === 'icon') {
+        // v3.26.x：图标分类——顶部搜索框 + 紧凑网格，方便批量查找/添加管理
+        const search = document.createElement('input');
+        search.type = 'text';
+        search.className = 'desk-lib-search';
+        search.placeholder = '搜索图标名…';
+        p.appendChild(search);
+        const grid = document.createElement('div');
+        grid.className = 'desk-lib-grid';
+        p.appendChild(grid);
+        iconSearch = search; iconGrid = grid;
+      }
       box.appendChild(p);
       panels[g.key] = p;
     });
-    const libPanel = (wid) => panels[wid.indexOf('app-') === 0 ? 'icon' : 'widget'];
+    // 添加逻辑（行按钮 / 图标块共用）：把组件节点移到目标页
+    const addWidgetToPage = (wid) => {
+      const node = document.querySelector('[data-desk-widget="' + wid + '"]');
+      if (!node) return;
+      const addBtn = pageSlide.querySelector('.desk-page-add');
+      if (addBtn) pageSlide.insertBefore(node, addBtn);
+      else pageSlide.appendChild(node);
+      syncPageHint(pageSlide);
+      saveDeskLayout();
+      if (window.deskRebuild) window.deskRebuild();
+      lib.remove();
+      toast('已添加到本页');
+    };
     WIDGET_IDS.forEach(wid => {
+      if (wid.indexOf('app-') === 0) {
+        // 图标分类：紧凑网格块（缩略首字 + 名字），点击添加；已在本页置灰
+        const node = document.querySelector('[data-desk-widget="' + wid + '"]');
+        const curPage = node && node.closest('.page-slide') ? Array.prototype.indexOf.call(pagesBox.querySelectorAll('.page-slide'), node.closest('.page-slide')) : -1;
+        const nm = WIDGET_NAMES[wid] || wid;
+        const tile = document.createElement('div');
+        tile.className = 'desk-lib-icon' + (curPage === pageIdx ? ' on' : '');
+        tile.dataset.iconName = nm;
+        const iprev = document.createElement('div');
+        iprev.className = 'dli-prev';
+        const letter = document.createElement('span');
+        letter.className = 'dli-letter';
+        letter.textContent = nm.charAt(0) || '?';
+        iprev.appendChild(letter);
+        const iname = document.createElement('div');
+        iname.className = 'dli-name';
+        iname.textContent = nm.replace(/图标$/, '');
+        tile.appendChild(iprev); tile.appendChild(iname);
+        tile.addEventListener('click', () => {
+          if (curPage === pageIdx) { toast('已在本页'); return; }
+          addWidgetToPage(wid);
+        });
+        iconGrid.appendChild(tile);
+        return;
+      }
+      // 小组件：保持原有行式列表
       const item = document.createElement('div');
       item.className = 'desk-lib-item';
       // v3.7.x：静态预览缩略图
@@ -3534,31 +3588,30 @@ try {
       const name = document.createElement('div');
       name.className = 'dl-name';
       name.textContent = WIDGET_NAMES[wid] || wid;
-      const node = document.querySelector('[data-desk-widget="' + wid + '"]');
-      const curPage = node && node.closest('.page-slide') ? Array.prototype.indexOf.call(pagesBox.querySelectorAll('.page-slide'), node.closest('.page-slide')) : -1;
+      const wnode = document.querySelector('[data-desk-widget="' + wid + '"]');
+      const wcurPage = wnode && wnode.closest('.page-slide') ? Array.prototype.indexOf.call(pagesBox.querySelectorAll('.page-slide'), wnode.closest('.page-slide')) : -1;
       const where = document.createElement('div');
       where.className = 'dl-where';
-      where.textContent = curPage < 0 ? '已隐藏' : (curPage === pageIdx ? '已在本页' : (curPage === 0 ? '首页' : '第 ' + (curPage + 1) + ' 页'));
+      where.textContent = wcurPage < 0 ? '已隐藏' : (wcurPage === pageIdx ? '已在本页' : (wcurPage === 0 ? '首页' : '第 ' + (wcurPage + 1) + ' 页'));
       const btn = document.createElement('button');
       btn.className = 'dl-btn';
-      btn.textContent = curPage === pageIdx ? '已在' : '添加到此页';
-      btn.disabled = curPage === pageIdx;
-      btn.addEventListener('click', () => {
-        if (!node) return;
-        // 插入到「+ 添加卡片」按钮之前
-        const addBtn = pageSlide.querySelector('.desk-page-add');
-        if (addBtn) pageSlide.insertBefore(node, addBtn);
-        else pageSlide.appendChild(node);
-        syncPageHint(pageSlide);
-        saveDeskLayout();
-        if (window.deskRebuild) window.deskRebuild();
-        lib.remove();
-        toast('已添加到本页');
-      });
+      btn.textContent = wcurPage === pageIdx ? '已在' : '添加到此页';
+      btn.disabled = wcurPage === pageIdx;
+      btn.addEventListener('click', () => addWidgetToPage(wid));
       meta.appendChild(name); meta.appendChild(where);
       item.appendChild(prev); item.appendChild(meta); item.appendChild(btn);
-      libPanel(wid).appendChild(item);
+      panels.widget.appendChild(item);
     });
+    // 图标搜索过滤（按名字模糊匹配）
+    if (iconSearch && iconGrid) {
+      iconSearch.addEventListener('input', () => {
+        const q = (iconSearch.value || '').trim().toLowerCase();
+        Array.prototype.slice.call(iconGrid.children).forEach(t => {
+          const nm = (t.dataset.iconName || '').toLowerCase();
+          t.style.display = (!q || nm.indexOf(q) >= 0) ? '' : 'none';
+        });
+      });
+    }
     // v3.6.x：图片组件——可多个，上传新图片到本页
     const imgItem = document.createElement('div');
     imgItem.className = 'desk-lib-item';
