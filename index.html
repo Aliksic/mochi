@@ -8552,9 +8552,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1788179870774">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.377</b></span>
-        <span class="sv-deploy">部署于 2026-08-31 20:37<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1788238685467">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.378</b></span>
+        <span class="sv-deploy">部署于 2026-09-01 12:58<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9647,7 +9647,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.377</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.378</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
       <!-- v3.27.x：设置页底部防骗声明 -->
       <div class="set-alert">
@@ -9887,7 +9887,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.377</span>
+              <span class="lic-ver">v3.26.378</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -34959,6 +34959,14 @@ window.DEFAULT_CARD_DATA.period = [
 "经期情绪起伏大是激素的事，不是你矫情",
 "抱抱，今天什么都不做也行，就躺着"
 ]],
+["温柔前缀", [
+"乖，",
+"傻瓜，",
+"我在呢。",
+"嘘…",
+"宝贝，",
+"嗯，"
+]],
 ["温柔动作", [
 "（把你往怀里带了带）",
 "（轻轻抵着你的额头）",
@@ -59330,11 +59338,32 @@ return 'none';
 }
 window.periodStatus = status;
 window.periodDayPhase = dayPhase;
-var WARM_PREFIX = ['乖，', '傻瓜，', '我在呢。', '嘘…', '宝贝，', '嗯，'];
+var PERIOD_WARM_PREFIX = (function () {
+try {
+var g = window.DEFAULT_CARD_DATA && window.DEFAULT_CARD_DATA.period;
+if (Array.isArray(g)) {
+for (var i = 0; i < g.length; i++) {
+if (g[i] && g[i][0] === '温柔前缀' && Array.isArray(g[i][1]) && g[i][1].length) {
+return g[i][1].slice();
+}
+}
+}
+} catch (e) {}
+return ['乖，', '傻瓜，', '我在呢。', '嘘…', '宝贝，', '嗯，'];
+})();
 var WARM_SUFFIX = [
 '（把你往怀里带了带）', '（轻轻抵着你的额头）', '（握紧你的手）',
 '（摸了摸你发顶）', '（语气柔下来）', '（把热牛奶推到你手边）'
 ];
+function warmPrefix() {
+try {
+var avail = PERIOD_WARM_PREFIX.filter(function (x) {
+return !window.isDefaultCardOff || !window.isDefaultCardOff('period', x);
+});
+if (avail.length) return avail[Math.floor(Math.random() * avail.length)];
+} catch (e) {}
+return '';
+}
 function warmSuffix() {
 try {
 var avail = WARM_SUFFIX.filter(function (x) {
@@ -59349,7 +59378,7 @@ if (typeof text !== 'string' || !text) return text;
 try {
 if (!status().inPeriod) return text;
 if (Math.random() * 100 >= 25) return text;
-var p = WARM_PREFIX[Math.floor(Math.random() * WARM_PREFIX.length)];
+var p = warmPrefix();
 var s = warmSuffix();
 var r = Math.random();
 if (r < 0.45) return p + text;

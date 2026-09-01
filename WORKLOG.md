@@ -1,5 +1,12 @@
 # 本次构建者：AI-B（20:37 按 src 收口构建 sw mochi-mth84it2，本地提交未推送；下一轮请重新声明）
 
+### 2026-09-01（经期温柔前缀进字卡库）
+* [AI-A 域]（**改动文件：src/js/period.js、src/js/default-cards-data.js；构建状态：未构建，待构建者收口**）。
+* 需求/反馈：用户问【傻瓜】字卡在哪，发现系统预设字卡库没有。
+* 根因：period.js 的 WARM_PREFIX（乖，/傻瓜，/我在呢。/嘘…/宝贝，/嗯，）是独立数组，未进字卡库，故既不可见也无可逐张开关。
+* 方案：default-cards-data.js 的 DEFAULT_CARD_DATA.period 新增「温柔前缀」分组（六条，与 WARM_SUFFIX 同源机制一致）；period.js 的 WARM_PREFIX 改为从该分组读取（缺失回退内置），新增 warmPrefix() 按 isDefaultCardOff('period', x) 逐张过滤，warmText 前缀改用 warmPrefix()。
+* 验证：`node --check period.js / default-cards-data.js` 均过。待构建者收口后：字卡库【经期】tab 应多出「温柔前缀」分组，「傻瓜，」可在其中查看/开关，关闭后经期温柔语态不再随机拼出该前缀。
+
 ### 2026-08-31 20:1x（构建者收口：#110 聊天页底部输入栏全屏不贴底修复 + 一并收口并行在途防骗声明回填，本地提交未推送）
 * \[AI-B 域·构建者收口]（**改动文件：产物 index.html / sw.js / version.json / manifest.json / icon-*.png / notice.json、build.mjs、FIX-REGRESSION.md、WORKLOG.md；构建状态：已构建·sw mochi-mth84it2（部署戳 20:37）**）。
 * 一并入库：mobile-adapt.js `syncVvFit` 全屏态摘除 `--mochi-ios-h`（#110）+ build.mjs 哨兵 ×1；并行在途防骗声明运行时回填（`clock.js` + `notice.json` alert 字段）。

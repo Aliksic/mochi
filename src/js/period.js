@@ -356,11 +356,35 @@
   window.periodDayPhase = dayPhase;
 
   // ---- 梦角经期聊天语态：经期中 TA 的文字回复更温柔 ----
-  var WARM_PREFIX = ['乖，', '傻瓜，', '我在呢。', '嘘…', '宝贝，', '嗯，'];
+  // v3.26.x：温柔前缀受字卡库【其他互动功能字卡→经期→温柔前缀】单卡开关联动——
+  // 六条前缀与 DEFAULT_CARD_DATA.period「温柔前缀」分组同源（v3.26.x 之前独立数组，未进
+  // 字卡库）；逐张开关（dc-off-period:<文案>），关闭后该前缀不再随机拼出。开关键即文案本身。
+  var PERIOD_WARM_PREFIX = (function () {
+    try {
+      var g = window.DEFAULT_CARD_DATA && window.DEFAULT_CARD_DATA.period;
+      if (Array.isArray(g)) {
+        for (var i = 0; i < g.length; i++) {
+          if (g[i] && g[i][0] === '温柔前缀' && Array.isArray(g[i][1]) && g[i][1].length) {
+            return g[i][1].slice();
+          }
+        }
+      }
+    } catch (e) {}
+    return ['乖，', '傻瓜，', '我在呢。', '嘘…', '宝贝，', '嗯，'];
+  })();
   var WARM_SUFFIX = [
     '（把你往怀里带了带）', '（轻轻抵着你的额头）', '（握紧你的手）',
     '（摸了摸你发顶）', '（语气柔下来）', '（把热牛奶推到你手边）'
   ];
+  function warmPrefix() {
+    try {
+      var avail = PERIOD_WARM_PREFIX.filter(function (x) {
+        return !window.isDefaultCardOff || !window.isDefaultCardOff('period', x);
+      });
+      if (avail.length) return avail[Math.floor(Math.random() * avail.length)];
+    } catch (e) {}
+    return '';
+  }
   // v3.26.x：温柔动作后缀受字卡库【其他互动功能字卡→经期→温柔动作】单卡开关联动——
   //   六条后缀与 DEFAULT_CARD_DATA.period「温柔动作」分组同源（v3.14.x 曾只登记
   //   「（轻轻抵着你的额头）」一条，其余五条无字卡库开关；现全部写全），每条均可
@@ -379,7 +403,7 @@
     try {
       if (!status().inPeriod) return text;
       if (Math.random() * 100 >= 25) return text;
-      var p = WARM_PREFIX[Math.floor(Math.random() * WARM_PREFIX.length)];
+      var p = warmPrefix();
       var s = warmSuffix();
       var r = Math.random();
       if (r < 0.45) return p + text;

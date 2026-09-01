@@ -124,10 +124,10 @@ window.DEFAULT_CARD_DATA.eat = [
 // 推迟≥5天时抽一条发进聊天）；字卡库【系统预设字卡】新增「经期」tab 可查看/
 // 逐张开关，dc-off-period:* 与实际抽取联动；数据缺失时 period.js 回退内置兜底。
 // 单一数据源：period.js 的 PERIOD_CARE_LINES 从这里取（构建顺序本文件先于 period.js）
-// v3.26.x：新增「温柔动作」分组——period.js 梦角经期温柔语态 WARM_SUFFIX 六条动作
-// 后缀同源（经期中 TA 回复约 25% 概率随机拼入的「（动作）」装饰语），全部进字卡库
-// 逐张开关（dc-off-period:<文案>），warmSuffix 按 isDefaultCardOff('period', x) 过滤，
-// 关闭后不再被随机拼出；开关键即文案本身。
+// v3.26.x：新增「温柔动作」「温柔前缀」分组——period.js 梦角经期温柔语态 WARM_SUFFIX
+// 六条动作后缀 + WARM_PREFIX 六条前缀（「傻瓜，」等）同源（经期中 TA 回复约 25% 概率
+// 随机拼入），全部进字卡库逐张开关（dc-off-period:<文案>），warmSuffix / warmPrefix
+// 按 isDefaultCardOff('period', x) 过滤，关闭后不再被随机拼出；开关键即文案本身。
 window.DEFAULT_CARD_DATA.period = [
   ["经期关心", [
     "今天经期第几天了？肚子还痛不痛，要不要帮你揉揉",
@@ -150,6 +150,14 @@ window.DEFAULT_CARD_DATA.period = [
     "肚子凉不凉？多穿点，别让肚子受风",
     "经期情绪起伏大是激素的事，不是你矫情",
     "抱抱，今天什么都不做也行，就躺着"
+  ]],
+  ["温柔前缀", [
+    "乖，",
+    "傻瓜，",
+    "我在呢。",
+    "嘘…",
+    "宝贝，",
+    "嗯，"
   ]],
   ["温柔动作", [
     "（把你往怀里带了带）",
