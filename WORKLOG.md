@@ -832,7 +832,7 @@
 * ���Է�������ޡ����������տڣ��Է� #118 ��; src ������һ�� build����
 
 ### 2026-09-01 23:0x（#121 iPad Air 7 Safari 通话刷新/重开后不恢复）
-* [AI-B 域·构建者收口]（**改动文件：src/js/call.js（call-active 双写 localStorage + 20 秒心跳 + recoverCall LS 兜底 10 分钟新鲜度窗）、src/js/contacts.js（call-active 加进 migrateLegacy EXCLUDE 清单，同域数据层）、build.mjs（#121 哨兵 4 条）、FIX-REGRESSION.md（#121 行）、WORKLOG.md；构建状态：call.js 部分+哨兵前 3 条已由并行构建者 fb00b66（sw mochi-mtisgurq）打包提交；**contacts.js EXCLUDE + 第 4 条哨兵在途未提交，待构建者下次构建一并打包（src 已保存完整，node --check 已过）**）。
+* [AI-B 域·构建者收口]（**改动文件：src/js/call.js（call-active 双写 localStorage + 20 秒心跳 + recoverCall LS 兜底 10 分钟新鲜度窗）、src/js/contacts.js（call-active 加进 migrateLegacy EXCLUDE 清单，同域数据层）、build.mjs（#121 哨兵 4 条）、FIX-REGRESSION.md（#121 行）、WORKLOG.md；构建状态：call.js 部分+哨兵前 3 条已由并行构建者 fb00b66（sw mochi-mtisgurq）打包提交；contacts.js EXCLUDE + 第 4 条哨兵**已随 22e3c3d 收口提交推送（构建 sw mochi-mtitvegw，哨兵 227/227 哑哨兵 0，verify 10/10；一并打包了 AI-A 在途 #122 与共享 md，其宣称的 mtit0d3x 产物不在工作区，以 mtitvegw 为准）**）。
 * 需求/反馈（用户报障，附诊断信息 v3.26.383）：iPad Air 7 + Safari（standalone PWA），之前的通话刷新/关掉重开网页后没有恢复，「通话设置→刷新后恢复通话」开着也没用。
 * 根因：通话进行中标记 `xy-home-v2:call-active` 只存 sessionStorage。同标签普通刷新能活，但关标签页/Safari 后重开、iPadOS 杀后台后重开（主屏幕 PWA 重开同此）sessionStorage 整体清空，recoverCall() 读不到标记——既不恢复也不记中断，功能整体失效。
 * 方案：①saveCallActive/clearCallActive 双写 localStorage（同键 `xy-home-v2:call-active`，不同存储区）；②接通后 durationTimer 每 20 秒心跳刷新 ts；③recoverCall 优先读 sessionStorage（同标签刷新原行为不变），为空读 localStorage 兜底，LS 命中且 ts 距今 ≤10 分钟才恢复（超窗静默清标记防翻旧账），恢复成功回写 sessionStorage；④resume 关闭路径照旧记中断（LS 兜底后关浏览器场景也能补记，旧方案这条会丢）；⑤探针实测抓到第二层坑：contacts.js migrateLegacy 每次启动把不带命名空间的全局根键当旧顶层键迁进 default 并删根键，LS 兜底副本启动即被搬走——call-active 已按 fish-log/incoming-requests 先例加进 EXCLUDE。
