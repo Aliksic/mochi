@@ -216,4 +216,16 @@
       if (home) home.hidden = false;
     });
   }
+  // v3.26.x(#122)：注册「TA的心情」跨分类搜索（字卡库列表页搜索同源可查，235 张系统预设不再搜不到；已关卡片带 ·已关 标记）
+  window.__cardSearchFns = window.__cardSearchFns || [];
+  window.__cardSearchFns.push({ name: 'TA的心情', fn: function (kw) {
+    const out = [];
+    try {
+      (DATA.cards || []).forEach(function (c) {
+        const txt = c && c.content ? c.content : '';
+        if (txt && txt.toLowerCase().indexOf(kw) >= 0) out.push({ t: txt, cat: (c.group || '') + (isCardOff(c.group, txt) ? '·已关' : '') });
+      });
+    } catch (e) {}
+    return out;
+  } });
 })();

@@ -104,7 +104,11 @@
     // chat-beauty-schemes）、隐藏TA表情包开关（chat-settings.js hide-ta-sticker，聊天/朋友圈
     // 共用）都是全局根键。此前漏排除，被 migrateLegacy 迁进 default 桌面并删 LS 根键 →
     // IDB 不可用场景下方案列表/开关刷新后消失。
-    'beauty-schemes', 'chat-beauty-schemes', 'hide-ta-sticker'];
+    'beauty-schemes', 'chat-beauty-schemes', 'hide-ta-sticker',
+    // v3.26.x #121：通话进行中标记（call.js）——全局根键，call.js 每次启动 recoverCall
+    // 读它恢复中断通话。绝不能被 migrateLegacy 当旧顶层业务键迁进 default 桌面并删根键
+    // （否则 localStorage 兜底副本每次启动被搬走，关浏览器重开后恢复读不到标记）
+    'call-active'];
   function isExcluded(k) {
     const r = k.slice(G.length + 1);
     if (EXCLUDE.indexOf(r) >= 0) return true;

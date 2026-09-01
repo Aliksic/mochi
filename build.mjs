@@ -172,6 +172,8 @@ console.log('已复制 PWA 文件 → ' + pwaFiles.join(', ') + '（sw 缓存版
 // （防止并行会话/旧缓冲把已移除的代码改回来）。
 // 维护：新增关键修复时在此登记一行 { name, file, needle }（needle 为产物中的特征串）。
 const FIX_SENTINELS = [
+  { name: '定期备份提醒条存在（backup-remind-bar，受保护产品功能，见 AGENTS.md 数据与存储约定）', file: 'js/pwa.js', needle: "getElementById('backup-remind-bar')" },
+  { name: '定期备份提醒条锚点存在（template.html）', file: 'template.html', needle: 'backup-remind-bar' },
   { name: 'iOS 15 拆 script 块（产物多块，防单块超 600KB 触发 WebKit 解析崩溃/白屏）', file: 'index.html', needle: '</script>\n<script>' },
   { name: '颜文字缺字形字符已替换（ᴥ absent，fix-kaomoji-chars 第二批）', file: 'index.html', needle: 'ᴥ', absent: true },
   { name: 'iOS 键盘输入栏停靠（_ensureInputDocked）', file: 'js/mobile-adapt.js', needle: '_ensureInputDocked' },
@@ -298,6 +300,7 @@ const FIX_SENTINELS = [
   { name: '#121 通话进行中标记双写 localStorage（sessionStorage 在关标签/Safari/PWA 重开后清空，「刷新后恢复通话」失效，iPad Air 7 Safari 实测）', file: 'js/call.js', needle: "localStorage.setItem(CALL_ACTIVE_KEY, payload)" },
   { name: '#121 通话恢复 localStorage 兜底（sessionStorage 空时读 LS，10 分钟新鲜度窗防翻旧账）', file: 'js/call.js', needle: 'localStorage.getItem(CALL_ACTIVE_KEY)' },
   { name: '#121 通话进行中标记心跳（每 20 秒刷 ts，恢复兜底判定新鲜度的依据）', file: 'js/call.js', needle: 'if (++hbCount >= 20) { hbCount = 0; saveCallActive(); }' },
+  { name: '#121 call-active 进 migrateLegacy 排除清单（全局根键不被当旧顶层键迁进 default 并删根键，否则 LS 兜底副本每次启动被搬走）', file: 'js/contacts.js', needle: "'call-active'];" },
   { name: '#118 默认字卡三场景使用概率 overallFor（dc-overall-<chat/mail/feed> 未设置回退 dc-overall）', file: 'js/default-cards.js', needle: 'overallFor: gOS' },
   { name: '#118 默认字卡抽卡按场景读概率/开关 drawCards(a, scene)', file: 'js/default-cards.js', needle: 'function drawCards(a, scene)' },
   { name: '#118 写信混入默认字卡读写信场景概率（overallFor mail）', file: 'js/mail.js', needle: 'dcfg.overallFor' },
@@ -393,6 +396,11 @@ const FIX_SENTINELS = [
   { name: '#115 真实输入活动跟踪（keydown/compositionstart/insert 类 beforeinput 捕获阶段刷新 lastUserEditAt，闸门判据来源）', file: 'js/chat.js', needle: "input.addEventListener('compositionstart', () => { lastUserEditAt = Date.now(); }, true);" },
   { name: 'v3.14 聚焦态清空走 execCommand 编辑管线终结组合会话（防输入法迟到写回；#115 补登哨兵，该块此前整块零保护）', file: 'js/chat.js', needle: "document.execCommand('selectAll', false, null)" },
   { name: '#116 工坊配方卡缺料反馈（需求行改「已有/需求」+ 缺料提示行 + 按钮常驻缺料置灰，修「工坊做不了花艺配方」无从知晓缺什么）', file: 'js/garden.js', needle: 'recipe-lack' },
+  { name: '#122 TA的心情235张系统预设注册字卡库跨分类搜索（修「系统编码字卡搜不到」）', file: 'js/ta-mood.js', needle: "name: 'TA的心情'" },
+  { name: '#122 聊天内置系统回应池（兜底/邀请婉拒/贴贴）注册字卡库跨分类搜索', file: 'js/chat.js', needle: "name: '聊天系统回应'" },
+  { name: '#122 朋友圈内置互动回应池（TA评论/TA回应）注册字卡库跨分类搜索', file: 'js/feed.js', needle: "name: '朋友圈互动'" },
+  { name: '#122 番茄钟陪伴模式内置话术池注册字卡库跨分类搜索', file: 'js/p2-features.js', needle: "name: '番茄钟陪伴'" },
+  { name: '#122 群聊内置兜底回复池注册字卡库跨分类搜索', file: 'js/group-chat.js', needle: "name: '群聊系统回应'" },
 ];
 try {
   const built = readFileSync(join(root, 'index.html'), 'utf8');

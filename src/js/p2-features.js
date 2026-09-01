@@ -4271,6 +4271,16 @@ if (ckRefresh) {
   })();
   pmpRefreshGoBtn();
 
+  // v3.26.x(#122)：注册番茄钟陪伴模式内置话术池跨分类搜索（字卡库列表页搜索同源可查，不再搜不到）
+  window.__cardSearchFns = window.__cardSearchFns || [];
+  window.__cardSearchFns.push({ name: '番茄钟陪伴', fn: function (kw) {
+    const out = [];
+    try {
+      [PMP_GREET, PMP_ENC, PMP_DONE, PMP_REPLIES, PMP_TIRED].forEach(arr => (arr || []).forEach(c => { if (String(c).toLowerCase().indexOf(kw) >= 0) out.push({ t: String(c), cat: '陪伴模式·' + (arr === PMP_GREET ? '开场' : arr === PMP_ENC ? '鼓励' : arr === PMP_DONE ? '完成' : arr === PMP_REPLIES ? '回应' : '累了') }); }));
+    } catch (e) {}
+    return out;
+  } });
+
   document.addEventListener('contact-switched', () => {
     tpStopFlow();
     if (!pmpCPage.hidden) backHome(pmpCPage);

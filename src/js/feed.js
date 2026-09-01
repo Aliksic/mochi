@@ -2333,4 +2333,14 @@ if (comInput) comInput.addEventListener('keydown', (e) => { if (e.key === 'Enter
       return { text: p.text.indexOf(s) >= 0, kaomoji: p.kaomoji.indexOf(s) >= 0, emoji: p.emoji.indexOf(s) >= 0 };
     } catch (e) { return null; }
   };
+  // v3.26.x(#122)：注册朋友圈内置互动回应池跨分类搜索（字卡库列表页搜索同源可查，不再搜不到）
+  window.__cardSearchFns = window.__cardSearchFns || [];
+  window.__cardSearchFns.push({ name: '朋友圈互动', fn: function (kw) {
+    const out = [];
+    try {
+      TA_COMMENT_POOL.forEach(c => { if (String(c).toLowerCase().indexOf(kw) >= 0) out.push({ t: String(c), cat: 'TA评论' }); });
+      TA_REPLY_POOL.forEach(c => { if (String(c).toLowerCase().indexOf(kw) >= 0) out.push({ t: String(c), cat: 'TA回应回复' }); });
+    } catch (e) {}
+    return out;
+  } });
 })();

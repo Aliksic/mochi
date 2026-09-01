@@ -84,7 +84,8 @@ try { if (window.applyContinueSayUI) window.applyContinueSayUI(); } catch (e) {}
 try { updateChatLoading(); } catch (e) {}   // 切桌面聊天页已隐藏 → 进度条同步隐藏
 // v3.26.x：切桌面立即预读新桌面聊天记录——用户导航/点开聊天前读库已在跑，
 //   打开聊天页时记录往往已就绪，不再等 enterChat 才开始读（省下数秒等待）
-try { loadMsgs(); } catch (e) {}
+// FIX 2026-09-01 #120：大历史桌面套门控，跳过预读（进入聊天页才读），防低端机崩溃
+try { chatPrefetchIfLight(function () { loadMsgs(); }); } catch (e) {}
 } catch (e) {}
 });
 const LS_SNAP_LIMIT = 2 * 1024 * 1024;
@@ -136,12 +137,20 @@ const CHAT_LEDGER_STEP = 50;   // IDB 账本按步进落盘：只需量级正确
 const chatLedger = {};         // prefix -> 已知权威条数
 let chatLedgerWarned = {};
 const chatLedgerRetryAt = {};  // prefix -> 上次强制重读时间（限流，防重读风暴）
-function chatLedgerSave(prefix, n) {
+const chatLedgerBytes = {};    // prefix -> 已落盘的字节估算（FIX 2026-09-01 #120，防重复写）
+// FIX 2026-09-01 #120：账本额外记 b（msgsBytes 估算，近似值即可，不用精确），供冷启动
+// 「大历史懒读」门控（chatPrefetchIfLight）廉价判断当前桌面聊天包是否巨大——重启后不必
+// 读 155MB 大键才知道它大。b 缺失按「未知」，门控会保守选择行为（见 chatPrefetchIfLight，不破坏旧逻辑）。
+function chatLedgerSave(prefix, n, bytes) {
 const prev = chatLedger[prefix];
 chatLedger[prefix] = n;
-if (prev === n || !window.idbSet) return;
-if (typeof prev === 'number' && n > prev && n - prev < CHAT_LEDGER_STEP) return;
-try { window.idbSet(prefix + ':chat-meta', JSON.stringify({ n: n, t: Date.now() })); } catch (e) {}
+const bChanged = typeof bytes === 'number' && bytes >= 0 && chatLedgerBytes[prefix] !== bytes;
+if (prev === n && !bChanged) return;
+if (!bChanged && typeof prev === 'number' && n > prev && n - prev < CHAT_LEDGER_STEP) return;
+const obj = { n: n, t: Date.now() };
+if (typeof bytes === 'number' && bytes >= 0) obj.b = bytes;
+try { window.idbSet(prefix + ':chat-meta', JSON.stringify(obj)); } catch (e) {}
+if (typeof bytes === 'number' && bytes >= 0) chatLedgerBytes[prefix] = bytes;
 }
 // 小键补读（chat-msgs 大键读失败时，恰恰只有它能回答「库里到底有多少条」）：
 // 已知有值就不重复读，异步回来也不覆盖本会话更新过的内存值。
@@ -156,6 +165,34 @@ if (o && typeof o.n === 'number' && o.n > 0) chatLedger[prefix] = o.n;
 } catch (e) {}
 }).catch(function () {});
 } catch (e) {}
+}
+// FIX 2026-09-01 #120：低端安卓真机（OPPO findx9 等）开网站/进聊天崩溃——default 桌面
+// 聊天大包（图片 base64 内联，实测 155MB/1656条≈94KB每条）在冷启动和切桌面时被两处预读
+// （mochi-restore-done 的 loadMsgs(true)、启动 loadMsgs、contact-switched 预读）一次性
+// idbGet 反序列化超大值，与启动回填叠加成堆尖峰，渲染进程被杀。这里用账本 b 判断「历史很大」
+// 的桌面：冷启动跳过预读，改为进入聊天页才读（enterChat 内部会调 loadMsgs）；小历史保留
+// 原预读加速（不影响大众体验）。零数据风险：读库本就异步，且 saveMsgs 的 authOk 闸门保证
+// 未读到权威前新消息只进 pendingLocal、绝不整包覆盖历史。
+const CHAT_LAZY_BYTES = 8 * 1024 * 1024; // 历史字节估算门槛：超此即视为大包，冷启动懒读
+function chatPrefetchIfLight(load) {
+  let prefix;
+  try { prefix = window.activePrefix(); } catch (e) { prefix = ''; }
+  if (!window.idbGet) { try { load(); } catch (e2) {} return; }
+  window.idbGet(prefix + ':chat-meta').then(function (v) {
+    // FIX 2026-09-01 #120：只对「明确知道历史小」（b 已知且 ≤ 门槛）才预读，其余一律
+    // 跳过冷启动预读（进入聊天页才读）。理由：① b 缺失可能对应旧格式超大历史（唯一能
+    // 猜大小时又恰好不预读，首启不崩，下次落盘把 b 写准即可）；② 全新/空账号无数据，
+    // 跳过预读对打开聊天毫无影响。宁可少一次预读提速，绝不冒低端机崩溃的风险。
+    let knownSmall = false;
+    try {
+      if (v !== undefined && v !== null) {
+        const o = typeof v === 'string' ? JSON.parse(v) : v;
+        if (o && typeof o.b === 'number' && o.b >= 0 && o.b <= CHAT_LAZY_BYTES) knownSmall = true;
+      }
+    } catch (e2) {}
+    if (knownSmall) { try { load(); } catch (e2) {} return; }
+    try { window.__xyChatLazyLoad = true; } catch (e2) {} // 大包/未知大小 → 冷启动跳过预读
+  }).catch(function () { /* 读账本失败：也不预读（防低端机在高峰期抢读大包） */ });
 }
 // 返回 true=允许整包落盘（账本已更新）；false=可疑缩水，已拒绝落盘
 function chatLedgerGuard(prefix, arr) {
@@ -189,7 +226,7 @@ try { if (window.activePrefix() === prefix) loadMsgs(true); } catch (e) {}
 } catch (e) {}
 return false;
 }
-chatLedgerSave(prefix, n);
+chatLedgerSave(prefix, n, msgsBytes(arr));
 return true;
 }
 // 精简快照：大历史时剥掉 img/voice/long-text 及 parts 里的图片/语音负载（保留占位与 _lsLite
@@ -568,7 +605,7 @@ try { if (window.idbSet) persistMsgsToIdb(myPrefix + ':chat-msgs', msgs); } catc
 writeLsSnapshot(msgs, myPrefix, true);
 }
 // #90：已确认库里没有 chat-msgs，账本随之对齐真实状态（过期的高账本不该再拦正常保存）
-try { chatLedgerSave(myPrefix, (msgs && msgs.length) || 0); } catch (e) {}
+try { chatLedgerSave(myPrefix, (msgs && msgs.length) || 0, msgsBytes(msgs)); } catch (e) {}
 });
 return;
 }
@@ -627,7 +664,7 @@ chatDbReady = true;
 authLoadedPrefix = myPrefix;
 idbRetryCount = 0;
 // v3.26.x #90：账本基线＝刚读到的库内条数（同值不重复落盘，见 chatLedgerSave 节流）
-try { chatLedgerSave(myPrefix, idbArr.length); } catch (e) {}
+try { chatLedgerSave(myPrefix, idbArr.length, msgsBytes(idbArr)); } catch (e) {}
 try {
 lastIdbLoadPrefix = window.activePrefix();
 lastIdbLoadAt = Date.now();
@@ -824,7 +861,8 @@ fillAvatar('chat-partner-av', 'cs-avatar-partner');
 try {
 document.addEventListener('mochi-restore-done', function () {
 try {
-loadMsgs(true);
+// FIX 2026-09-01 #120：大历史桌面跳过 restore 完成时的强读（进入聊天页才读），防低端机崩溃
+chatPrefetchIfLight(function () { loadMsgs(true); });
 if (chatVisible() && chatNearBottom() && body && msgs.length) {
 renderWindow(false, true);
 scrollChatBottom();
@@ -2244,7 +2282,7 @@ cancelPersist();
 try { if (window.idbSet) persistMsgsToIdb(window.activePrefix() + ':chat-msgs', msgs); } catch (e) {}
 writeLsSnapshot(msgs, undefined, true);
 // v3.26.x #90：主动整包替换＝合法，账本直接对齐新条数（旧的高账本不得继续拦后续保存）
-try { chatLedgerSave(window.activePrefix(), msgs.length); } catch (e) {}
+try { chatLedgerSave(window.activePrefix(), msgs.length, msgsBytes(msgs)); } catch (e) {}
 if (body) body.innerHTML = '';
 clearChatUnread();
 if (chatVisible() && msgs.length) {
@@ -2565,7 +2603,7 @@ const writeArr = function (arr) {
 try { window.idbSet(key, JSON.stringify(arr)); } catch (e) {}
 try { localStorage.setItem(key, JSON.stringify(arr)); } catch (e) {}
 // v3.26.x #90：跨桌面追加后同步条数账本（下次冷启动大键读失败时它就是守卫依据）
-try { chatLedgerSave('xy-home-v2:' + cid, arr.length); } catch (e) {}
+try { chatLedgerSave('xy-home-v2:' + cid, arr.length, msgsBytes(arr)); } catch (e) {}
 };
 const attempt = function () {
 tries++;
@@ -2615,7 +2653,7 @@ window.chatAppendDeskRec = function (cid, rec) {
     try { window.idbSet(key, JSON.stringify(arr)); } catch (e) {}
     try { localStorage.setItem(key, JSON.stringify(arr)); } catch (e) {}
     // v3.26.x #90：跨桌面追加后同步条数账本（下次冷启动大键读失败时它就是守卫依据）
-    try { chatLedgerSave('xy-home-v2:' + cid, arr.length); } catch (e) {}
+    try { chatLedgerSave('xy-home-v2:' + cid, arr.length, msgsBytes(arr)); } catch (e) {}
   };
   const attempt = function () {
     tries++;
@@ -3232,6 +3270,18 @@ const INVITE_DECLINE = ['下次吧，现在不太想玩~', '等会儿再陪我�
 // 同意后轻震动一下（体感反馈），TA 稍后回应一句贴贴的话；婉拒用专属文案
 const CUDDLE_DECLINE = ['下次再贴吧，先记着这笔~', '等会儿补给你，说话算数', '先欠着，攒到晚上一起还~', '今天想先自己待会儿，明天加倍还你'];
 const CUDDLE_REPLIES = ['嗯……蹭到了。暖暖的，很喜欢。', '那我要贴很久哦，不许偷偷跑掉。', '手被握住了，就这样待一会儿。', '感觉到了，你在旁边。很安心。', '贴贴充电中……好，满格了。'];
+// v3.26.x(#122)：注册聊天内置系统回应池跨分类搜索（字卡库列表页搜索同源可查，不再搜不到）
+window.__cardSearchFns = window.__cardSearchFns || [];
+window.__cardSearchFns.push({ name: '聊天系统回应', fn: function (kw) {
+  const out = [];
+  try {
+    FALLBACK_REPLY_POOL.forEach(c => { if (String(c).toLowerCase().indexOf(kw) >= 0) out.push({ t: String(c), cat: '兜底回复' }); });
+    INVITE_DECLINE.forEach(c => { if (String(c).toLowerCase().indexOf(kw) >= 0) out.push({ t: String(c), cat: '游戏邀请·婉拒' }); });
+    CUDDLE_DECLINE.forEach(c => { if (String(c).toLowerCase().indexOf(kw) >= 0) out.push({ t: String(c), cat: '贴贴·婉拒' }); });
+    CUDDLE_REPLIES.forEach(c => { if (String(c).toLowerCase().indexOf(kw) >= 0) out.push({ t: String(c), cat: '贴贴·回应' }); });
+  } catch (e) {}
+  return out;
+} });
 function openInviteConfirm(title, staticText, onAccept, declinePool) {
 const mask = document.getElementById('modal-mask');
 if ((mask && !mask.hidden) || !window.openModal) { onAccept(); return; }
@@ -7580,7 +7630,10 @@ window.__chatDbLoadedPrefix = function () {
   } catch (e) { return ''; }
 };
 bootAutoSend();
-loadMsgs();
+// FIX 2026-09-01 #120：启动不再无条件预读当前桌面聊天——大历史桌面（账本 b 超门槛）
+// 冷启动跳过，进入聊天页才读（enterChat 会 loadMsgs），防低端机"打开网站"即崩溃。
+// 小历史/账本缺失仍按原预读行为（数据零风险，见 chatPrefetchIfLight 说明）。
+try { chatPrefetchIfLight(function () { loadMsgs(); }); } catch (e) {}
 setTimeout(rpExpireCheck, 2000);
 setInterval(rpExpireCheck, 60 * 60 * 1000);
 try {

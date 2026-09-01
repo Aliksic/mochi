@@ -1,4 +1,19 @@
+# 本次构建者：AI-A（本会话：#122 系统预设字卡注册字卡库跨分类搜索收口）
+
+### 2026-09-01 23:5x（协作约定补全：新 md 登记进 AGENTS + 备份提醒受保护 + 版本号三处同步规则；未构建）
+* [共享·文档]（**改动文件：AGENTS.md（①「共享文件」节新增「配套规则文件」小节：登记 AI-RULES.md/BUGS.md/TASKS.md/FILEMAP.md 四个新 md 及各自用途，AI 开工前按需读；②「数据与存储约定」新增备份提醒保护条款：pwa.js backup-remind-bar 为受保护产品功能，不得删除/绕过，失效按 bug 处理；③「git 提交规范」版本号条款改写为「版本号三处同步」：唯一事实源 build.mjs APP_VERSION，sw.js CACHE 与 version.json 由构建自动生成不要手改）、build.mjs（FIX_SENTINELS 头部新增 2 条哨兵：js/pwa.js 的 getElementById('backup-remind-bar') + template.html 的 backup-remind-bar，防备份提醒被静默删除）、FIX-REGRESSION.md（新增 #123 备份提醒条目：症状/修复要点/验证方式）、BUGS.md AI-RULES.md TASKS.md FILEMAP.md（git add 纳入跟踪，内容本会话未改）；构建状态：未构建——本条只动文档与哨兵登记，产物 index.html/sw.js 无源码变化，下次构建者收口时哨兵自动生效）**。
+* 动机：四个新 md 此前未在 AGENTS.md 登记，其他 AI 会话开工时读不到 = 规则不生效；备份提醒是 iOS Safari 清存储的唯一防线但无任何防删保护；版本号在 APP_VERSION/sw.js/version.json 三处散落、同步规则不成文（言间项目同款问题已实际踩坑）。
+* 待构建者：下次 node build.mjs 后确认哨兵 2 条变绿（backup-remind-bar 双登记）；本条不阻塞任何在途任务。
+
+### 2026-09-01 23:1x（#122 系统预设字卡补注册字卡库跨分类搜索：TA的心情235张+聊天/朋友圈/番茄钟/群聊内置回应池）
+* [AI-A 域·构建者收口]（**改动文件：src/js/ta-mood.js（注册「TA的心情」搜索源，cat=分组名、已关卡片带 ·已关 标记）、src/js/chat.js（注册「聊天系统回应」：FALLBACK_REPLY_POOL/INVITE_DECLINE/CUDDLE_DECLINE/CUDDLE_REPLIES）、src/js/feed.js（注册「朋友圈互动」：TA_COMMENT_POOL/TA_REPLY_POOL）、src/js/p2-features.js（注册「番茄钟陪伴」：PMP_GREET/ENC/DONE/REPLIES/TIRED 五池）、src/js/group-chat.js（注册「群聊系统回应」：FALLBACK_REPLIES）、build.mjs（#122 哨兵 5 条）、FIX-REGRESSION.md（#122 行）；构建状态：已构建·sw mochi-mtit0d3x，哨兵 224/224、哑哨兵 0、sw.js 3/3**）。
+* 需求/反馈（用户）：「为什么还是要很多系统编码的字卡没有写进字卡库的【系统预设字卡】导致搜索字卡搜不到」——字卡库列表页跨分类搜索（`window.__cardSearchFns`）此前只注册了 9 个来源（自定义/默认聊天字卡/情绪回应/TA查岗/位置卡/今日情话/寻踪日常/TA询问族/TA邀请），TA_MOOD_DATA 235 张及若干内置回应池游离在外搜不到。
+* 方案：沿用既有注册机制补 5 个只读搜索源（见上文件清单），均不改抽取/存储逻辑、不写库；INTERACT/摸鱼等已由 DEFAULT_CARD_DATA（main/interact/fish 等 18 类 5866 张）经「默认聊天字卡」来源覆盖，chat.js 内 roast/ask/curious 的 defs 只是无库兜底不重复注册。搜索结果沿用「来源名 · cat」展示。
+* 验证：node --check 五文件过；构建哨兵 224/224 全绿、哑哨兵 0；`npm run verify:all` 见提交前输出；待真机：字卡库列表页搜「心情平静」应命中 TA的心情 来源、搜「贴贴充电」应命中 聊天系统回应。
+* 待对方处理：无。
+
 # 本次构建者：AI-B（本会话收口：#118 默认字卡三场景使用概率 + 在途 #121 通话双写/回复设置小字说明 一并打包提交）
+- [共享] 新增 `BUGS.md`（bug 修复规则）+ `AI-RULES.md`（回答方式/Token 节约）+ `TASKS.md`（任务认领板）+ `FILEMAP.md`（产物↔源↔哨兵映射）；AGENTS.md 日志上限 20→15 条、共享文件段登记新 md。新建 md，非产物，未构建。
 
 ### 2026-09-01 23:0x（#118 默认字卡「使用概率」拆三场景可调：聊天/写信/朋友圈各自独立）
 * [AI-B 域·构建者收口]（**改动文件：src/js/default-cards.js（数据层 overallFor + drawCards(a,scene) 场景化 + 设置页概率 stepper 绑定 + mochi-wrj-heal 同步）、src/template.html（跨域改动，理由：#118 功能 UI 落点就在默认字卡设置页 page-default-cards，在「使用场景」开关组下加「使用概率」组三行 stepper）、src/js/mail.js（跨域改动，理由：写信场景混入默认字卡的概率读取，pickDefaultMailCard 一处）、src/js/feed.js（跨域改动，理由：朋友圈默认字卡补池按场景概率门，一处）、build.mjs（#118 哨兵 4 条）；构建状态：已构建·sw mochi-mtisgurq，哨兵 219/219、哑哨兵 0、sw.js 3/3、verify 10/10**）。
@@ -22,7 +37,7 @@
 * [AI-B 域]（**改动文件：src/js/idb.js（idbDelete 加 4s 超时+重建连接重试3次，迁移块 idbSet 失败延迟5s重试）、src/js/data-backup.js（purgeLegacySnapshot 等 idbDelete 返回再复核，has!==false 都重试，5次间隔1.5s）、src/js/device.js（error 监听过滤第三方音乐外链404不进日志）、WORKLOG.md；构建状态：已构建 sw mochi-mtir932x，哨兵 212/212、哑哨兵 0、sw.js 3/3、verify 10/10**）。
 * 需求/反馈：摩托罗拉G100（XT2533-4）+ Edge 151 诊断信息分析，6项优化中低风险4项先行。
 * 根因/方案：项2 idbDelete 原无超时致快照删不掉，加 4s 超时+重试3次+purge 强化复核；项3 my-emoji-groups IDB 无此键 LS 是唯一副本不能删，迁移块 idbSet 失败延迟5s重试；项4 音乐404 静默不进日志；项1 626ms 长任务排查结论是 JS 执行本身（idbRestore 已排除超大键），属项6 defer 范畴暂不做。
-* 待对方处理：无。项5(msgs分页)/项6(启动defer) 高风险，待验证后再评估。本包与 #119/#118 在途 src 一并构建，待用户确认提交。
+* 待对方处理：①fb00b66 之后本会话探针实测抓到第二层坑（migrateLegacy 会把全局根键 call-active 迁进 default 并删根键），已在 src/js/contacts.js EXCLUDE 清单补 'call-active' + build.mjs 补第 4 条哨兵 + FIX-REGRESSION #121 行补⑤——**均未提交，请下次构建一并打包并重跑哨兵（应为 220+/哑哨兵0）**；②本会话 23:15 曾临时构建 mtit78pv（扫进你们 #122 在途 src），产物已回退到 fb00b66 状态，线上未受影响，请以你们下次构建为准；③探针 tools/tmp-call-resume-ls-probe.mjs 已删。项5(msgs分页)/项6(启动defer) 高风险，待验证后再评估。本包与 #119/#118 在途 src 一并构建，待用户确认提交。
 
 ### 2026-09-01 22:0x（#119 桌面美化 14 项优化：内置方案库/深色三档/壁纸缩略图/重置/快捷面板/边看边调/壁纸定位/完整方案/撤销/对比度/部分应用/分享URL/随机/搜索）
 * [AI-B 域·主]（**改动文件：src/js/personalize.js（+514 行：BUILTIN_SCHEMES/sysPrefersDark/openBgPanel/bgPosOf/pushBeautyUndo/openBeautyDrawer/shareBeautyLink/openFullBeautySchemes/collectFullBeauty 等 14 项功能逻辑）、src/template.html（+35 行新锚点：theme-search-input/desk-quick-panel/dq-drawer/row-bg-adjust/row-beauty-undo/row-beauty-random/row-beauty-reset-all/row-full-beauty-schemes）、src/js/chat-settings.js（跨域 +3 行：暴露 window.collectChatBeauty/applyChatBeautyData 供合并方案使用，仅暴露不改动逻辑）、build.mjs（#119 哨兵 9 条）、WORKLOG.md；构建状态：本包构建后一并提交**）。
@@ -81,6 +96,7 @@
 * 验证：`node build.mjs` → 哨兵 194/194 + 哑哨兵 0 + sw.js 3/3；`node tools/verify.mjs` → 10/10；`node tools/verify-music-single-audio.mjs` → 15/15。
 * 待真机（vivo X200s + Edge）：刷新后直接点本地歌应能播（IDB 好值路径）；脏值歌不再报 `%7B%7D`、自动清脏。
 * 待对方处理：无。
+* 待对方处理（追加）：①fb00b66 之后本会话探针实测抓到第二层坑——contacts.js migrateLegacy 每次启动把不带命名空间的全局根键当旧顶层键迁进 default 并删根键，call-active 的 LS 兜底副本启动即被搬走；已在 src/js/contacts.js EXCLUDE 清单补 call-active + build.mjs 补第 4 条哨兵 + FIX-REGRESSION #121 行补⑤，**均未提交，请下次构建一并打包并重跑哨兵**。②本会话 23:15 曾临时构建 mtit78pv（会扫进你们 #122 在途 src），工作区产物已回退到 fb00b66 状态，线上未受影响，以你们下次构建为准。③探针 tools/tmp-call-resume-ls-probe.mjs 已删。
 
 ### 2026-09-01 19:0x（桌面纪念日关系类型收口 + 构建者打包全部在途 src）
 * [AI-B 域·构建者收口]（**改动文件：src/js/personalize.js（切换联系人刷新补 syncRelUI）、src/js/data-backup.js（备份识别键补 rel-cat/rel-role）、WORKLOG.md；构建状态：本包构建后一并提交（见下方 sw）**）。
@@ -816,9 +832,9 @@
 * ���Է�������ޡ����������տڣ��Է� #118 ��; src ������һ�� build����
 
 ### 2026-09-01 23:0x（#121 iPad Air 7 Safari 通话刷新/重开后不恢复）
-* [AI-B 域·构建者收口]（**改动文件：src/js/call.js（call-active 双写 localStorage + 20 秒心跳 + recoverCall LS 兜底 10 分钟新鲜度窗）、build.mjs（#121 哨兵 3 条）、FIX-REGRESSION.md（#121 行）、WORKLOG.md；构建状态：已构建（见提交）**）。
+* [AI-B 域·构建者收口]（**改动文件：src/js/call.js（call-active 双写 localStorage + 20 秒心跳 + recoverCall LS 兜底 10 分钟新鲜度窗）、src/js/contacts.js（call-active 加进 migrateLegacy EXCLUDE 清单，同域数据层）、build.mjs（#121 哨兵 4 条）、FIX-REGRESSION.md（#121 行）、WORKLOG.md；构建状态：call.js 部分+哨兵前 3 条已由并行构建者 fb00b66（sw mochi-mtisgurq）打包提交；**contacts.js EXCLUDE + 第 4 条哨兵在途未提交，待构建者下次构建一并打包（src 已保存完整，node --check 已过）**）。
 * 需求/反馈（用户报障，附诊断信息 v3.26.383）：iPad Air 7 + Safari（standalone PWA），之前的通话刷新/关掉重开网页后没有恢复，「通话设置→刷新后恢复通话」开着也没用。
 * 根因：通话进行中标记 `xy-home-v2:call-active` 只存 sessionStorage。同标签普通刷新能活，但关标签页/Safari 后重开、iPadOS 杀后台后重开（主屏幕 PWA 重开同此）sessionStorage 整体清空，recoverCall() 读不到标记——既不恢复也不记中断，功能整体失效。
-* 方案：①saveCallActive/clearCallActive 双写 localStorage（同键 `xy-home-v2:call-active`，不同存储区）；②接通后 durationTimer 每 20 秒心跳刷新 ts；③recoverCall 优先读 sessionStorage（同标签刷新原行为不变），为空读 localStorage 兜底，LS 命中且 ts 距今 ≤10 分钟才恢复（超窗静默清标记防翻旧账），恢复成功回写 sessionStorage；④resume 关闭路径照旧记中断（LS 兜底后关浏览器场景也能补记，旧方案这条会丢）。
-* 验证：`node --check src/js/call.js` 过；构建后哨兵全绿 + `npm run verify`。待真机（iPad Safari）：接通→等 20 秒以上→杀掉 Safari/主屏幕 PWA 重开→小框应恢复且时长从接通时刻延续。
+* 方案：①saveCallActive/clearCallActive 双写 localStorage（同键 `xy-home-v2:call-active`，不同存储区）；②接通后 durationTimer 每 20 秒心跳刷新 ts；③recoverCall 优先读 sessionStorage（同标签刷新原行为不变），为空读 localStorage 兜底，LS 命中且 ts 距今 ≤10 分钟才恢复（超窗静默清标记防翻旧账），恢复成功回写 sessionStorage；④resume 关闭路径照旧记中断（LS 兜底后关浏览器场景也能补记，旧方案这条会丢）；⑤探针实测抓到第二层坑：contacts.js migrateLegacy 每次启动把不带命名空间的全局根键当旧顶层键迁进 default 并删根键，LS 兜底副本启动即被搬走——call-active 已按 fish-log/incoming-requests 先例加进 EXCLUDE。
+* 验证：`node --check` call/contacts 全过；临时探针 tools/tmp-call-resume-ls-probe.mjs（用完即删）8/8：LS 新鲜标记重开恢复+计时延续+SS/LS 双写回、超窗标记不恢复且清除；构建后哨兵 225/225、哑哨兵 0、sw.js 3/3、npm run verify 10/10、通话专项 verify-call-mini-live 14/14 + verify-call-dur 6/6 + verify-call-edit 11/11。待真机（iPad Safari）：接通→等 20 秒以上→杀掉 Safari/主屏幕 PWA 重开→小框应恢复且时长从接通时刻延续。
 * 待对方处理：无。

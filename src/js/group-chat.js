@@ -2088,4 +2088,11 @@
   window.groupChatPoolFor = function (cid) {
     try { return JSON.parse(JSON.stringify(gcPool(cid))); } catch (e) { return null; }
   };
+  // v3.26.x(#122)：注册群聊内置兜底回复池跨分类搜索（字卡库列表页搜索同源可查，不再搜不到）
+  window.__cardSearchFns = window.__cardSearchFns || [];
+  window.__cardSearchFns.push({ name: '群聊系统回应', fn: function (kw) {
+    const out = [];
+    try { FALLBACK_REPLIES.forEach(c => { if (String(c).toLowerCase().indexOf(kw) >= 0) out.push({ t: String(c), cat: '兜底回复' }); }); } catch (e) {}
+    return out;
+  } });
 })();

@@ -8624,9 +8624,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1788274504646">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.386</b></span>
-        <span class="sv-deploy">部署于 2026-09-01 22:55<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1788276885452">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.387</b></span>
+        <span class="sv-deploy">部署于 2026-09-01 23:34<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9722,7 +9722,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.386</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.387</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
       <!-- v3.27.x：设置页底部防骗声明 -->
       <div class="set-alert">
@@ -9995,7 +9995,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.386</span>
+              <span class="lic-ver">v3.26.387</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -15468,7 +15468,8 @@ const EXCLUDE = ['contacts', 'active-contact', 'feed-posts', 'migrated-v1', 'js-
 'pomo-cfg', 'pomo-today', 'pomo-total', 'pomo-msgs', 'pomo-send-chat', 'pomo-bell',
 'pomo-companion', 'pomo-companion-log', 'pomo-cmp-usecards',
 'memo-app-items', 'memo-app-send', 'memo-app-global-migrated',
-'beauty-schemes', 'chat-beauty-schemes', 'hide-ta-sticker'];
+'beauty-schemes', 'chat-beauty-schemes', 'hide-ta-sticker',
+'call-active'];
 function isExcluded(k) {
 const r = k.slice(G.length + 1);
 if (EXCLUDE.indexOf(r) >= 0) return true;
@@ -22520,7 +22521,7 @@ try { updateChatPartnerName(); } catch (e) {}
 try { fillAvatar('chat-user-av', 'cs-avatar-user'); fillAvatar('chat-partner-av', 'cs-avatar-partner'); } catch (e) {}
 try { if (window.applyContinueSayUI) window.applyContinueSayUI(); } catch (e) {}
 try { updateChatLoading(); } catch (e) {}   // 切桌面聊天页已隐藏 → 进度条同步隐藏
-try { loadMsgs(); } catch (e) {}
+try { chatPrefetchIfLight(function () { loadMsgs(); }); } catch (e) {}
 } catch (e) {}
 });
 const LS_SNAP_LIMIT = 2 * 1024 * 1024;
@@ -22557,12 +22558,17 @@ const CHAT_LEDGER_STEP = 50;   // IDB 账本按步进落盘：只需量级正确
 const chatLedger = {};         // prefix -> 已知权威条数
 let chatLedgerWarned = {};
 const chatLedgerRetryAt = {};  // prefix -> 上次强制重读时间（限流，防重读风暴）
-function chatLedgerSave(prefix, n) {
+const chatLedgerBytes = {};    // prefix -> 已落盘的字节估算（FIX 2026-09-01 #120，防重复写）
+function chatLedgerSave(prefix, n, bytes) {
 const prev = chatLedger[prefix];
 chatLedger[prefix] = n;
-if (prev === n || !window.idbSet) return;
-if (typeof prev === 'number' && n > prev && n - prev < CHAT_LEDGER_STEP) return;
-try { window.idbSet(prefix + ':chat-meta', JSON.stringify({ n: n, t: Date.now() })); } catch (e) {}
+const bChanged = typeof bytes === 'number' && bytes >= 0 && chatLedgerBytes[prefix] !== bytes;
+if (prev === n && !bChanged) return;
+if (!bChanged && typeof prev === 'number' && n > prev && n - prev < CHAT_LEDGER_STEP) return;
+const obj = { n: n, t: Date.now() };
+if (typeof bytes === 'number' && bytes >= 0) obj.b = bytes;
+try { window.idbSet(prefix + ':chat-meta', JSON.stringify(obj)); } catch (e) {}
+if (typeof bytes === 'number' && bytes >= 0) chatLedgerBytes[prefix] = bytes;
 }
 function chatLedgerLoad(prefix) {
 if (!window.idbGet || chatLedger[prefix] !== undefined) return;
@@ -22575,6 +22581,23 @@ if (o && typeof o.n === 'number' && o.n > 0) chatLedger[prefix] = o.n;
 } catch (e) {}
 }).catch(function () {});
 } catch (e) {}
+}
+const CHAT_LAZY_BYTES = 8 * 1024 * 1024; // 历史字节估算门槛：超此即视为大包，冷启动懒读
+function chatPrefetchIfLight(load) {
+let prefix;
+try { prefix = window.activePrefix(); } catch (e) { prefix = ''; }
+if (!window.idbGet) { try { load(); } catch (e2) {} return; }
+window.idbGet(prefix + ':chat-meta').then(function (v) {
+let knownSmall = false;
+try {
+if (v !== undefined && v !== null) {
+const o = typeof v === 'string' ? JSON.parse(v) : v;
+if (o && typeof o.b === 'number' && o.b >= 0 && o.b <= CHAT_LAZY_BYTES) knownSmall = true;
+}
+} catch (e2) {}
+if (knownSmall) { try { load(); } catch (e2) {} return; }
+try { window.__xyChatLazyLoad = true; } catch (e2) {} // 大包/未知大小 → 冷启动跳过预读
+}).catch(function () { /* 读账本失败：也不预读（防低端机在高峰期抢读大包） */ });
 }
 function chatLedgerGuard(prefix, arr) {
 const n = Array.isArray(arr) ? arr.length : 0;
@@ -22603,7 +22626,7 @@ try { if (window.activePrefix() === prefix) loadMsgs(true); } catch (e) {}
 } catch (e) {}
 return false;
 }
-chatLedgerSave(prefix, n);
+chatLedgerSave(prefix, n, msgsBytes(arr));
 return true;
 }
 function liteSnapArray(arr) {
@@ -22930,7 +22953,7 @@ pendingLocal = null;
 try { if (window.idbSet) persistMsgsToIdb(myPrefix + ':chat-msgs', msgs); } catch (e) {}
 writeLsSnapshot(msgs, myPrefix, true);
 }
-try { chatLedgerSave(myPrefix, (msgs && msgs.length) || 0); } catch (e) {}
+try { chatLedgerSave(myPrefix, (msgs && msgs.length) || 0, msgsBytes(msgs)); } catch (e) {}
 });
 return;
 }
@@ -22983,7 +23006,7 @@ pendingLocal = null;
 chatDbReady = true;
 authLoadedPrefix = myPrefix;
 idbRetryCount = 0;
-try { chatLedgerSave(myPrefix, idbArr.length); } catch (e) {}
+try { chatLedgerSave(myPrefix, idbArr.length, msgsBytes(idbArr)); } catch (e) {}
 try {
 lastIdbLoadPrefix = window.activePrefix();
 lastIdbLoadAt = Date.now();
@@ -23157,7 +23180,7 @@ fillAvatar('chat-partner-av', 'cs-avatar-partner');
 try {
 document.addEventListener('mochi-restore-done', function () {
 try {
-loadMsgs(true);
+chatPrefetchIfLight(function () { loadMsgs(true); });
 if (chatVisible() && chatNearBottom() && body && msgs.length) {
 renderWindow(false, true);
 scrollChatBottom();
@@ -24508,7 +24531,7 @@ renderStart = 0;
 cancelPersist();
 try { if (window.idbSet) persistMsgsToIdb(window.activePrefix() + ':chat-msgs', msgs); } catch (e) {}
 writeLsSnapshot(msgs, undefined, true);
-try { chatLedgerSave(window.activePrefix(), msgs.length); } catch (e) {}
+try { chatLedgerSave(window.activePrefix(), msgs.length, msgsBytes(msgs)); } catch (e) {}
 if (body) body.innerHTML = '';
 clearChatUnread();
 if (chatVisible() && msgs.length) {
@@ -24799,7 +24822,7 @@ let tries = 0;
 const writeArr = function (arr) {
 try { window.idbSet(key, JSON.stringify(arr)); } catch (e) {}
 try { localStorage.setItem(key, JSON.stringify(arr)); } catch (e) {}
-try { chatLedgerSave('xy-home-v2:' + cid, arr.length); } catch (e) {}
+try { chatLedgerSave('xy-home-v2:' + cid, arr.length, msgsBytes(arr)); } catch (e) {}
 };
 const attempt = function () {
 tries++;
@@ -24840,7 +24863,7 @@ let tries = 0;
 const writeArr = function (arr) {
 try { window.idbSet(key, JSON.stringify(arr)); } catch (e) {}
 try { localStorage.setItem(key, JSON.stringify(arr)); } catch (e) {}
-try { chatLedgerSave('xy-home-v2:' + cid, arr.length); } catch (e) {}
+try { chatLedgerSave('xy-home-v2:' + cid, arr.length, msgsBytes(arr)); } catch (e) {}
 };
 const attempt = function () {
 tries++;
@@ -25429,6 +25452,17 @@ try { if (window.replyCfg) scheduleAutoSend(); } catch (e) {}
 const INVITE_DECLINE = ['下次吧，现在不太想玩~', '等会儿再陪我玩好不好', '先不玩啦，待会儿再说', '现在没状态，下次一定'];
 const CUDDLE_DECLINE = ['下次再贴吧，先记着这笔~', '等会儿补给你，说话算数', '先欠着，攒到晚上一起还~', '今天想先自己待会儿，明天加倍还你'];
 const CUDDLE_REPLIES = ['嗯……蹭到了。暖暖的，很喜欢。', '那我要贴很久哦，不许偷偷跑掉。', '手被握住了，就这样待一会儿。', '感觉到了，你在旁边。很安心。', '贴贴充电中……好，满格了。'];
+window.__cardSearchFns = window.__cardSearchFns || [];
+window.__cardSearchFns.push({ name: '聊天系统回应', fn: function (kw) {
+const out = [];
+try {
+FALLBACK_REPLY_POOL.forEach(c => { if (String(c).toLowerCase().indexOf(kw) >= 0) out.push({ t: String(c), cat: '兜底回复' }); });
+INVITE_DECLINE.forEach(c => { if (String(c).toLowerCase().indexOf(kw) >= 0) out.push({ t: String(c), cat: '游戏邀请·婉拒' }); });
+CUDDLE_DECLINE.forEach(c => { if (String(c).toLowerCase().indexOf(kw) >= 0) out.push({ t: String(c), cat: '贴贴·婉拒' }); });
+CUDDLE_REPLIES.forEach(c => { if (String(c).toLowerCase().indexOf(kw) >= 0) out.push({ t: String(c), cat: '贴贴·回应' }); });
+} catch (e) {}
+return out;
+} });
 function openInviteConfirm(title, staticText, onAccept, declinePool) {
 const mask = document.getElementById('modal-mask');
 if ((mask && !mask.hidden) || !window.openModal) { onAccept(); return; }
@@ -29643,7 +29677,7 @@ return p.indexOf('xy-home-v2:') === 0 ? p.slice('xy-home-v2:'.length) : '';
 } catch (e) { return ''; }
 };
 bootAutoSend();
-loadMsgs();
+try { chatPrefetchIfLight(function () { loadMsgs(); }); } catch (e) {}
 setTimeout(rpExpireCheck, 2000);
 setInterval(rpExpireCheck, 60 * 60 * 1000);
 try {
@@ -31523,6 +31557,12 @@ window.groupChatBeautySet = function (k, v) { gcBeautySet(k, v); };
 window.groupChatPoolFor = function (cid) {
 try { return JSON.parse(JSON.stringify(gcPool(cid))); } catch (e) { return null; }
 };
+window.__cardSearchFns = window.__cardSearchFns || [];
+window.__cardSearchFns.push({ name: '群聊系统回应', fn: function (kw) {
+const out = [];
+try { FALLBACK_REPLIES.forEach(c => { if (String(c).toLowerCase().indexOf(kw) >= 0) out.push({ t: String(c), cat: '兜底回复' }); }); } catch (e) {}
+return out;
+} });
 })();
 } catch (__e) { try { console.error("[JS] group-chat.js", __e && __e.message || __e); } catch (x) {} if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
 (function () { try {
@@ -37516,6 +37556,17 @@ const home = document.getElementById('page-chatcard');
 if (home) home.hidden = false;
 });
 }
+window.__cardSearchFns = window.__cardSearchFns || [];
+window.__cardSearchFns.push({ name: 'TA的心情', fn: function (kw) {
+const out = [];
+try {
+(DATA.cards || []).forEach(function (c) {
+const txt = c && c.content ? c.content : '';
+if (txt && txt.toLowerCase().indexOf(kw) >= 0) out.push({ t: txt, cat: (c.group || '') + (isCardOff(c.group, txt) ? '·已关' : '') });
+});
+} catch (e) {}
+return out;
+} });
 })();
 } catch (__e) { try { console.error("[JS] ta-mood.js", __e && __e.message || __e); } catch (x) {} if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
 (function () { try {
@@ -52718,6 +52769,15 @@ const p = cardPool(cid);
 return { text: p.text.indexOf(s) >= 0, kaomoji: p.kaomoji.indexOf(s) >= 0, emoji: p.emoji.indexOf(s) >= 0 };
 } catch (e) { return null; }
 };
+window.__cardSearchFns = window.__cardSearchFns || [];
+window.__cardSearchFns.push({ name: '朋友圈互动', fn: function (kw) {
+const out = [];
+try {
+TA_COMMENT_POOL.forEach(c => { if (String(c).toLowerCase().indexOf(kw) >= 0) out.push({ t: String(c), cat: 'TA评论' }); });
+TA_REPLY_POOL.forEach(c => { if (String(c).toLowerCase().indexOf(kw) >= 0) out.push({ t: String(c), cat: 'TA回应回复' }); });
+} catch (e) {}
+return out;
+} });
 })();
 } catch (__e) { try { console.error("[JS] feed.js", __e && __e.message || __e); } catch (x) {} if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
 (function () { try {
@@ -56934,6 +56994,14 @@ pmpDetach();
 pmpSyncBar();
 })();
 pmpRefreshGoBtn();
+window.__cardSearchFns = window.__cardSearchFns || [];
+window.__cardSearchFns.push({ name: '番茄钟陪伴', fn: function (kw) {
+const out = [];
+try {
+[PMP_GREET, PMP_ENC, PMP_DONE, PMP_REPLIES, PMP_TIRED].forEach(arr => (arr || []).forEach(c => { if (String(c).toLowerCase().indexOf(kw) >= 0) out.push({ t: String(c), cat: '陪伴模式·' + (arr === PMP_GREET ? '开场' : arr === PMP_ENC ? '鼓励' : arr === PMP_DONE ? '完成' : arr === PMP_REPLIES ? '回应' : '累了') }); }));
+} catch (e) {}
+return out;
+} });
 document.addEventListener('contact-switched', () => {
 tpStopFlow();
 if (!pmpCPage.hidden) backHome(pmpCPage);
