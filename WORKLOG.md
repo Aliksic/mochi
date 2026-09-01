@@ -1,4 +1,14 @@
-# 本次构建者：AI-B（本会话收口：桌面纪念日关系类型补强 + 全部在途 src 一次性构建提交）
+# 本次构建者：AI-B（本会话收口：#117 vivo X200s 本地音乐刷新后播放失败 + 全部在途 src 一次性构建提交）
+
+### 2026-09-01 19:1x（#117 vivo X200s 本地音乐刷新后播放失败 + 打包全部在途 src）
+* [AI-B 域·构建者收口]（**改动文件：src/js/music-player.js（本地歌脏值守卫四道）、build.mjs（#117 哨兵）、FIX-REGRESSION.md（#117 行）、WORKLOG.md；构建状态：已构建·sw mochi-mtifymk0，哨兵 193/193、哑哨兵 0、sw.js 3/3、verify 10/10、verify-music-single-audio 15/15；已提交已推送**）。
+* 需求/反馈（用户报障）：vivo X200s（V2458A）+ Edge 151 本地音乐每次刷新后播放失败，必须删掉再重新添加才能听。诊断实证：v3.26.376、点歌瞬间报 `资源加载失败 <audio> https://…/mochi/%7B%7D`（`%7B%7D`=URL 编码 `{}`，即 `audio.src` 被赋成字符串 `'{}'`）、IDB `default:music-file:sm_…=33.0MB`（好文件还在）、交互轨迹点歌→报错→modal-ok（offerRemoveDamagedSong）。
+* 根因（详见 FIX-REGRESSION #117）：历史版本曾把 Blob 经 JSON 序列化（`JSON.stringify(Blob)`→`'{}'`）写进 `music-file` 键，脏值 `'{}'` 常驻 localStorage；本地歌播放链只判「值非空」就 `audio.src = v`，每次刷新同步路径都读到这串脏值喂给 `<audio>` → 解析成站内路径 `/mochi/{}`。删歌重加能听＝重传覆盖了脏值。
+* 修复（music-player.js 四道）：① `plausibleLocalValue()` 形状校验（只认 Blob / ≥10 字符字符串）；② 同步路径读到脏 LS 值只清 LS 副本、继续落 IDB 读权威值（好 Blob 在 IDB 时刷新直接能播）；③ `loadLocal` 确认脏值后 `purgeLocalFile()` 清脏存储（缺失态不动 IDB 防误删好文件）；④ `playLocal` 第二层 `validAudioSrc` 兜底。
+* 一并打包在途 src（均完整、node --check 过、构建哨兵全绿）：桌面纪念日关系类型补强（personalize.js syncRelUI + data-backup.js rel-cat/rel-role）、#115 聊天输入栏四道加固（base.css will-change + chat.js/device.js + build.mjs 哨兵 + tools/verify-chat-input-guard.mjs）、花园工坊缺料提示（garden.js + garden.css）、群聊三点菜单「切换群聊」（group-chat.js + template.html gc-more-groups）。
+* 验证：`node build.mjs` → 哨兵 193/193 + 哑哨兵 0 + sw.js 3/3；`node tools/verify.mjs` → 10/10；`node tools/verify-music-single-audio.mjs` → 15/15；`node tools/verify-chat-input-guard.mjs`。
+* 待真机（vivo X200s + Edge）：刷新后直接点本地歌应能播（IDB 好值路径）；脏值歌不再报 `%7B%7D`、自动清脏。
+* 待对方处理：无。
 
 ### 2026-09-01 19:0x（桌面纪念日关系类型收口 + 构建者打包全部在途 src）
 * [AI-B 域·构建者收口]（**改动文件：src/js/personalize.js（切换联系人刷新补 syncRelUI）、src/js/data-backup.js（备份识别键补 rel-cat/rel-role）、WORKLOG.md；构建状态：本包构建后一并提交（见下方 sw）**）。
