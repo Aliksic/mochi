@@ -1,4 +1,11 @@
-# 本次构建者：AI-B（20:37 按 src 收口构建 sw mochi-mth84it2，本地提交未推送；下一轮请重新声明）
+# 本次构建者：AI-B（13:12 按 src 收口构建 sw mochi-mti7nhsq，待提交未推送；下一轮请重新声明）
+
+### 2026-09-01 13:12（iOS 全屏保留桌面顶部状态栏）
+* [AI-B 域]（**改动文件：src/css/base.css、build.mjs、FIX-REGRESSION.md、WORKLOG.md、产物 index.html 等；构建状态：已构建·sw mochi-mti7nhsq，待提交未推送**）。
+* 需求/反馈：苹果16 添加到主屏幕 + 全屏模式，桌面顶部「Mochi/时间/电量」这一行不见了被遮挡。
+* 根因：iOS 全屏（`.ios-fs-active`）原设计隐藏应用内模拟状态栏（`display:none`）以避免与 iOS 系统栏重复。
+* 方案：全屏态不再隐藏状态栏 + 同步删 `.ios-fs-active .phone` 额外顶部 padding（状态栏自带 safe-area，叠加会双倍白带）；#109/#110 那几条 `.phone` 高度规则不动。
+* 验证：`node build.mjs` 哨兵 178/178、哑哨兵 0；探针 `tools/tmp-wp.mjs`（强制 ios-pwa-standalone+ios-vv-fit+ios-fs-active）`.statusbar` 由 display:none → display:flex（33px 可见）、.phone padding-top 0、铺满全屏不露白边。新增哨兵 1 条 + FIX-REGRESSION #111。待真机验收（iPhone 全屏）：桌面顶部显示 Mochi/时间/电量（系统栏在上、形成两栏，用户已确认接受）。
 
 ### 2026-09-01（经期温柔前缀进字卡库）
 * [AI-A 域]（**改动文件：src/js/period.js、src/js/default-cards-data.js；构建状态：未构建，待构建者收口**）。

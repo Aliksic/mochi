@@ -581,15 +581,13 @@ html.ios-native-fs .phone .page.full .stats-top-name { padding-top: 10px; }
 .ios-fs-active .phone .page.full .div-h-title,
 .ios-fs-active .phone .page.full .stats-top-name { padding-top: 10px; }
 
-/* v3.6.x：iOS 独立应用「全屏模式」（ios-fs-active 类，由 fullscreen.js 控制）——
-   iOS 无 Fullscreen API、系统状态栏永远无法隐藏，唯一能藏的是应用内模拟状态栏
-   （与系统状态栏重复的一栏，正是「有空隙/双状态栏」观感来源）。
-   开启后隐藏它，内容顶到系统状态栏下方；系统状态栏由 iOS 接管安全区。
+/* v3.6.x→v3.28.x：iOS 独立应用「全屏模式」（ios-fs-active 类，由 fullscreen.js 控制）——
+   iOS 无 Fullscreen API、系统状态栏永远无法隐藏，应用内模拟状态栏（Mochi/时间/电量那行）
+   原设计在全屏时隐藏以免与系统栏重复。但桌面顶部那一行是全站品牌信息，隐藏后用户反馈
+   「桌面顶部 Mochi/时间/电量不见了」→ 改为全屏时也保留状态栏。状态栏自身已带
+   env(safe-area-inset-top) 安全区留白（见上方手机端 .statusbar 规则），故不再给 .phone
+   额外加顶部 padding（否则安全区双倍、顶部多一条白带）。
    只影响真实手机窄屏，桌面模拟器外壳不受影响 */
-@media (max-width: 900px) {
-  .ios-fs-active .phone { padding-top: max(env(safe-area-inset-top, 0px), 12px); }
-  .ios-fs-active .phone .statusbar { display: none; }
-}
 
 /* v3.6.x：Via 等浏览器「网页全屏」强制转横屏时的 CSS 兜底全屏
    （fs-css-active 类，由 fullscreen.js 控制）——原生全屏被浏览器转成横屏时
