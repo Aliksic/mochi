@@ -1,4 +1,36 @@
-# 本次构建者：AI-B（15:0x 已收口：含 #110/#111/#112 + 对方 cjian/p2-features，已提交并推送）
+# 本次构建者：AI-B（18:3x 已收口：#113 诊断取消自动复制 + #114 iOS 全屏模拟状态栏与系统状态栏重叠修复 + 全屏模式功能说明 + 对方在途 group-chat/music-player/personalize/mobile-adapt/chat 等，已提交未推送）
+
+### 2026-09-01 18:3x（构建者收口：#113/#114 iOS 全屏修复 + 全屏模式功能说明 + 对方在途改动）
+* [AI-B 域·构建者收口]（**改动文件：src/css/base.css（#114）、src/js/fullscreen.js（功能说明+文案）、src/template.html（功能说明区块）、src/css/setting.css（功能说明标签样式）、src/js/device.js（#113）、build.mjs（#113 哨兵 needle 修正 + #114 哨兵）、FIX-REGRESSION.md（#114 行）、WORKLOG.md、产物 index.html / sw.js / version.json；构建状态：已构建·sw mochi-mtij2jwy（18:32），哨兵 191/191、哑哨兵 0、sw.js 3/3、verify 10/10；已提交未推送**）。
+* 需求/反馈：iPhone 12 Pro Max Chrome 手动开【全屏模式】无法隐藏系统顶部栏（iOS 限制）；主屏幕打开的全屏态下桌面顶部「Mochi/时间/电量」一行与 iPhone 系统状态栏重叠；底部输入栏贴底/被遮挡疑虑；用户要求给全屏模式新增功能说明、写清 iOS 限制。
+* 根因/方案：
+  - #114（base.css）：窄屏 @media 的 `.statusbar` safe-area 顶部留白（特异性 0,1,0）被**后加载同特异性**全局 `.statusbar { padding:4px 4px 12px }` 覆盖失效 → 全屏态模拟状态栏内容顶到 y=0 与系统状态栏重叠。修复：新增 `html.ios-fs-active .phone .statusbar { padding-top:max(calc(14px + env(safe-area-inset-top,0px)),14px) }`（0,2,1 提权），全屏态恢复安全区留白、模拟栏整体下移到系统状态栏下方成两栏不重叠（承接 #111 保留状态栏）。探针实测 padTop 4px→14px（真机 safe≈47px 时为 61px）。
+  - 全屏模式功能说明：template.html 全屏开关行加「功能说明」标签（点击弹 showIosGuide 三态说明）+ 行下 .gs-sub 内联说明；fullscreen.js relabelIosToggle 改选内层 span 防覆盖标签；文案按现状改写（standalone 全屏=内容顶满、模拟状态栏下移不隐藏；iOS 系统状态栏任何网页无法隐藏）。
+  - 底部输入栏：探针 standalone+ios-fs-active 态实测 `.phone` 底=879、`.chat-input-row` 底=879、gapBottom=0，且手机端通栏贴底规则带 safe-bottom 内边距（真机 home indicator 区 44px 预留），无遮挡。verify 10/10 含「聊天输入栏贴底」。
+  - #113（device.js）哨兵 needle 原只在 `//` 注释里、压缩后必丢（哑哨兵），改为真实代码特征 `exportTxt(c ? c.text() : cur)`。
+* 一并收口对方（AI-A）在途 src（均 node --check 过、已保存完整）：src/js/group-chat.js（多群聊分组）、src/js/music-player.js（本地歌脏值兜底）、src/js/personalize.js（纪念日关系类型/称呼）、src/js/mobile-adapt.js + src/js/chat.js（安卓输入栏吞字修复：editable 内部滚动自愈 + 发送守卫只挡内核迟到写回）。
+* 验证：哨兵 191/191、哑哨兵 0、sw.js 3/3、npm run verify 10/10；探针 tmp-fs.mjs 确认状态栏 padTop=14px（无重叠）、输入栏贴底 gapBottom=0。
+* 待真机（iPhone 12PM）：主屏幕全屏态顶部「Mochi/时间/电量」一行应显示在系统状态栏正下方、不重叠；底部输入栏贴底不被 home indicator 遮挡；设置页全屏模式显示功能说明。
+* 待对方处理：无。push 需网络恢复后由用户确认执行。
+
+### 2026-09-01 18:1x（【花园·工坊】做不了花艺配方——排查结论：链路无 bug，体验断层三处，需要 AI-A 处理）
+* [AI-B 域·诊断，未改 garden.js]（**改动文件：无 src 改动；临时探针 tools/tmp-craft-probe.mjs 用完即删；构建状态：不适用**）。
+* 需求/反馈：用户反馈花园【工坊】做不了花艺配方的花。
+* 排查（headless Chrome 390×844 实测 + 逐段读 garden.js）：合成主链路**功能正常**——进花园 → 工坊 tab → 材料够的配方卡出现「合成花束」按钮（can 类），点击扣料、bouquetCnt+1、写日志、chatSendFlower 发到聊天，全通。 recipeCount=24、canCards 按库存正确、localStorage 落盘正确。
+* 用户「做不了」的三处真实断层（都在 AI-A 域 garden.js，请对方定夺）：
+  1. **材料不够的配方不渲染按钮也不给原因**：renderCraft（约 1101-1138 行）只对 canMake 的卡输出「合成花束」按钮，缺材料的卡只有需求行「🌹×3 🌼×2」+花语，没有任何「还缺 ×N / 材料不足」提示；花朵库存若为空（garden-inv-empty 文案「库存空空，收获花朵后可制作花束送给TA」），工坊侧完全无感。用户看不出是"材料不够"还是"功能坏了"。
+  2. **配方需求只显示花名不显示持有数**：needTxt 只拼 `emoji×数量`（需求量），不显示「已有 ×N」，无法对照缺多少。
+  3. **「奇迹」配方（flameRose×1+blueRose×1）标的稀有花是花不是种子，且不可直接获得**：合成只扣 data.inv（花朵库存），而稀有花只能经 data.rareInv（种子，收获掉落5%/杂交产出/TA留下3%）种出来再收获进 inv——理论可做但概率极低（flameRose 还要 rose×sakura 杂交成功才给种子），用户视角近似"永远做不了"。若属预期设计，建议至少在配方卡标注获取途径。
+* 另注意：工坊「杂交配方」区显示的"已合成/未发现"读 data.hybridFound，与花束合成无关（那是图鉴发现），文案「合成」二字易混。
+* 待对方处理：以上 1/2 建议补 UI 反馈（缺料提示+已有数量），3 需产品定夺（标注来源或改配方材料）。构建/线上无需变更（无修复代码）。
+
+### 2026-09-01 16:0x（#113 诊断信息打开弹输入法又收起致灰屏 + 取消自动复制）
+* [AI-B 域]（**改动文件：src/js/device.js、build.mjs（新增 #113 哨兵 1 条）、FIX-REGRESSION.md（#113 行）、WORKLOG.md；构建状态：未构建，仅 src 已改 + node --check 过，待构建者收口**）。
+* 需求/反馈：用户在设置页打开【诊断信息】，手机输入法弹起又收起、并出现灰屏；且诊断无需自动复制（手机剪贴板有字数上限，自动写长文本会被静默截断）。
+* 根因：诊断弹窗**打开即自动复制**——`copyText()` 临时建隐藏 textarea 并 `ta.focus()`（触发射过 #键盘），800ms 后随元素移除又收起 → 手机上即「输入法弹起→收起 + 灰屏」。
+* 方案：取消自动复制（删除 `autoCopy` 函数与终态 `copied` 判定），打开只读文本不再碰剪贴板、不再 focus textarea；需要发给开发者时由用户点【复制】/【导出txt】自行触发（导出 txt 不受字数上限影响）。手动【复制】按钮保留。
+* 验证：`node --check src/js/device.js` 过；哨兵 needle `打开诊断就自动写长文本会被静默截断` 在 device.js 唯一。需构建后跑哨兵 + 真机验收（打开诊断不再弹输入法/无灰屏、正文照常更新）。
+* 待对方处理：无。
 
 ### 2026-09-01 15:0x（构建者收口：#110/#111/#112 iOS 顶部遮挡三连修复 + 对方 cjian 串桌修复 / p2-features 今天优先 一并构建提交推送）
 * [AI-B 域·构建者收口]（**改动文件：src/css/base.css（#112：`html.ios-pwa-standalone .phone` 普通 standalone 高度 min 钳制）、build.mjs（#112 哨兵 1 条；回退 esbuild 压缩重构）、FIX-REGRESSION.md（#112 行）、WORKLOG.md、.gitignore（补 tools/tmp-*.mjs / smoke-*.mjs 忽略）、产物 index.html / sw.js / version.json / manifest.json / icon-*.png / notice.json；构建状态：已构建·sw mochi-mtibnqsn（15:04），哨兵 180/180、哑哨兵 0、sw.js 3/3、verify 10/10；已提交并推送**）。

@@ -221,8 +221,9 @@
   // ===== v3.26.x：视口 / 键盘 / 全屏现场探针（只读）window.mochiVvDiag() =====
   // iOS 三项报障（输入栏下空一块、页面突然上移点不动、全屏开关没反应）在无头
   // Chrome 里都拿不到 WebKit 的真实几何，只能把现场数据随诊断文本一起回收。
-  // 组合两路：本函数从 DOM/计算样式实测 + mobile-adapt.js 的 iOS 键盘内部状态
-  // （window.__mochiIosKb，安卓/桌面下不存在）——后者才知道棘轮基线/文档锁到底残留没有。
+  // 组合两路：本函数从 DOM/计算样式实测 + mobile-adapt.js 的键盘内部状态
+  // （iOS window.__mochiIosKb / 安卓 window.__mochiAndroidKb，字段名一致）——
+  // 后者才知道棘轮基线/文档锁/推定停靠到底残留没有。
   window.mochiVvDiag = function () {
     try {
       const d = document.documentElement;
@@ -262,6 +263,10 @@
       // 底部空隙实测：可视区底边到 .phone 底边的差（>8px 即用户说的「下面空一块」）
       if (pr && vv) out.gapBottom = Math.round(vv.height - pr.bottom);
       try { if (typeof window.__mochiIosKb === 'function') out.kb = window.__mochiIosKb(); } catch (e2) {}
+      // v3.26.x：安卓分支同样导出键盘内部状态（mobile-adapt.js __mochiAndroidKb，
+      // 字段名与 iOS 对齐）。此前只有 iOS 探针，安卓下 out.kb 恒 null →
+      // 诊断文本「键盘/锁残留」整批 n/a，键盘类报障拿不到现场。
+      try { if (!out.kb && typeof window.__mochiAndroidKb === 'function') out.kb = window.__mochiAndroidKb(); } catch (e4) {}
       try { if (typeof window.scrollLockInfo === 'function') out.lock = window.scrollLockInfo(); } catch (e3) {}
       return out;
     } catch (e) { return null; }
@@ -538,6 +543,51 @@
       } catch (e) {}
     }, true);
   } catch (e) {}
+  // ===== 输入轨迹（v3.26.x）=====
+  // 「聊天输入栏打字不显示、空白」（红米 K60 至尊版 + Edge）三种成因症状完全一样，
+  // 只有事件级轨迹能分案：字没提交进 DOM（内核/输入法丢提交）、提交后被清
+  // （防复活守卫/重绘清空）、提交了也进了 DOM 只是没画出来（合成层陈旧）。
+  // 记 focus / composition 起止 / input 最近 8 条，每条只存元素标识 + 文本长度 +
+  // 元素自身滚动三值（**绝不存用户输入内容**），跨刷新靠时间戳辨新旧。
+  const INP_KEY = 'xy-home-v2:__diag-inp';
+  function isDiagTextEl(el) {
+    if (!el) return false;
+    var tn = el.tagName;
+    if (tn === 'INPUT' || tn === 'TEXTAREA') {
+      var ty = el.type;
+      return !el.readOnly && ty !== 'checkbox' && ty !== 'radio' && ty !== 'range'
+        && ty !== 'file' && ty !== 'color' && ty !== 'hidden';
+    }
+    return el.isContentEditable === true;
+  }
+  function diagTextLen(el) {
+    try {
+      if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') return String(el.value || '').length;
+      return String(el.innerText || el.textContent || '').length;
+    } catch (e) { return -1; }
+  }
+  function diagElTag(el) {
+    var seg = el.tagName ? String(el.tagName).toLowerCase() : '';
+    if (el.id) seg += '#' + el.id;
+    else if (typeof el.className === 'string' && el.className) seg += '.' + el.className.split(/\s+/)[0];
+    return seg.slice(0, 28);
+  }
+  function inpPush(k, el) {
+    try {
+      if (!isDiagTextEl(el)) return;
+      ringPush(INP_KEY, {
+        t: Date.now(), k: k, x: diagElTag(el), n: diagTextLen(el),
+        st: Math.round(el.scrollTop || 0), sh: Math.round(el.scrollHeight || 0),
+        ch: Math.round(el.clientHeight || 0)
+      }, 8);
+    } catch (e) {}
+  }
+  try {
+    document.addEventListener('focusin', function (ev) { inpPush('focus', ev.target); }, true);
+    document.addEventListener('compositionstart', function (ev) { inpPush('comp+', ev.target); }, true);
+    document.addEventListener('compositionend', function (ev) { inpPush('comp-', ev.target); }, true);
+    document.addEventListener('input', function (ev) { inpPush(ev && ev.isComposing ? 'comp' : 'input', ev.target); }, true);
+  } catch (e) {}
   function mq(q) { try { return !!(window.matchMedia && window.matchMedia(q).matches); } catch (e) { return false; } }
   function cssSupports(decl) {
     try {
@@ -729,7 +779,43 @@
           + '  html.overflow内联=' + (vg.htmlInlineOverflow || '(空)')
           + '  body.scroll-lock=' + vg.bodyScrollLock
           + '  .phone内联高=' + (vg.phoneInlineH || '(空)') + ' align-self=' + (vg.phoneAlignSelf || '(空)')
-          + '  平移 vv.offsetTop=' + vg.vvOffsetTop + ' docY=' + vg.docScrollY);
+          + '  平移 vv.offsetTop=' + vg.vvOffsetTop + ' docY=' + vg.docScrollY
+          + (vg.kb && vg.kb.closing !== undefined ? '  收起动画期=' + vg.kb.closing : '')
+          + (vg.kb && vg.kb.vvNow !== undefined ? '  当前vv=' + vg.kb.vvNow : '')
+          + (vg.kb && vg.kb.watching !== undefined ? '  轮询=' + (vg.kb.watching ? '跑' : '停') + ' 宽限剩=' + vg.kb.burstLeft + 'ms' : '')
+          + (vg.kb && vg.kb.typosAgo !== undefined ? '  最近键入前=' + vg.kb.typosAgo + 'ms' : '')
+          + '  聚焦元素=' + (vg.kb && vg.kb.focusTag ? vg.kb.focusTag : '(无)'));
+      }
+    } catch (e) {}
+    // v3.26.x：聊天输入栏现场（红米 K60 至尊版 + Edge「打字不显示、空白」）——
+    // 「框里看着空白」有三种完全不同的成因，肉眼一模一样，只有这份实测能分案：
+    //   A 字没进 DOM：textLen=0（输入法/内核丢提交，或守卫提前清）
+    //   B 进了 DOM 但被自身滚动推出裁剪区：textLen>0 且 scrollTop 接近 scrollHeight-clientHeight
+    //   C 进了 DOM 也可见却画不出来：textLen>0、滚动正常、颜色/底色/caret 无冲突
+    //     （这类＝合成层陈旧，transform 行可确认独立合成层有没有真的建立）
+    try {
+      let cin = document.getElementById('chat-input');
+      if (cin && cin.offsetParent === null) {
+        const g = document.getElementById('gc-input');
+        if (g && g.offsetParent !== null) cin = g;
+      }
+      if (!cin) {
+        L.push('聊天输入栏现场：未找到 #chat-input');
+      } else {
+        const cs2 = window.getComputedStyle(cin);
+        const r2 = cin.getBoundingClientRect();
+        const vv2 = window.visualViewport || null;
+        const txt = String(cin.innerText || cin.textContent || '');
+        L.push('聊天输入栏现场：元素=' + (cin.id || '?') + '.' + String(cin.className || '').trim().replace(/\s+/g, '.')
+          + '  聚焦=' + (document.activeElement === cin) + '  contenteditable=' + cin.isContentEditable
+          + '  文本长=' + txt.length + '  HTML长=' + String(cin.innerHTML || '').length
+          + '  内部滚动=' + Math.round(cin.scrollTop) + '/' + Math.round(cin.scrollHeight) + '（可视' + Math.round(cin.clientHeight) + '）'
+          + '  颜色=' + cs2.color + '  底色=' + cs2.backgroundColor + '  caret=' + cs2.caretColor
+          + '  opacity=' + cs2.opacity + '  visibility=' + cs2.visibility + '  fontSize=' + cs2.fontSize
+          + '  transform=' + (cs2.transform === 'none' ? '(无独立层)' : '已提升')
+          + '  待清守卫=' + (cin._mClearTxt ? '有(' + String(cin._mClearTxt).length + '字)' : '无')
+          + '  框top/bottom=' + Math.round(r2.top) + '/' + Math.round(r2.bottom)
+          + (vv2 ? '  可视底=' + Math.round(vv2.height) + '  被键盘盖=' + (r2.bottom > vv2.height + 2 ? '是' : '否') : ''));
       }
     } catch (e) {}
     L.push('');
@@ -1164,6 +1250,24 @@
         L.push('交互轨迹：无');
       }
     } catch (e) { L.push('交互轨迹：读取失败'); }
+    // v3.26.x：输入轨迹（「打字不显示/输入栏空白」定案用）——读法：
+    //   n 恒 0 ＝ 字根本没进 DOM（输入法/内核丢提交）
+    //   n 涨过又掉回 0 ＝ 进来了被清（防复活守卫 / 重绘清空 / 切桌面竞态）
+    //   n>0 且 st/sh/ch 正常 ＝ 进了 DOM 只是没画出来（合成层陈旧）
+    //   n>0 但 st ≈ sh-ch 且 sh ≤ ch ＝ 被自身滚动推出裁剪区（#114 自愈已修）
+    try {
+      const inps = JSON.parse(localStorage.getItem(INP_KEY) || '[]');
+      if (Array.isArray(inps) && inps.length) {
+        L.push('输入轨迹 ' + inps.length + ' 条（旧→新，只记长度不记内容）：');
+        inps.forEach(function (it) {
+          const dt = it.t ? new Date(it.t).toLocaleTimeString() : '?';
+          L.push('· ' + dt + ' ' + (it.k || '?') + ' ' + (it.x || '?') + ' n=' + it.n
+            + ' st/sh/ch=' + it.st + '/' + it.sh + '/' + it.ch);
+        });
+      } else {
+        L.push('输入轨迹：无');
+      }
+    } catch (e) { L.push('输入轨迹：读取失败'); }
     // ===== 软/硬双预算交付（v3.26.x）=====
     // 子任务自己的预算最长到 9s（桌面归属体检保险丝）/ 8s（idbGetMany 两段超时），
     // 而这里原本只有一个 3s 兜底：IDB 一慢，「最近错误」「开关持久化体检」「桌面归属
@@ -1342,10 +1446,8 @@
   try { refreshBadge(); } catch (e) {}
   // v3.26.x：暴露给「查看存储」页——手动清理错误诊断记录后角标同步归零
   try { window.mochiRefreshDiagBadge = refreshBadge; } catch (e) {}
-  const TIP_WAIT = '正在读取本机存储明细…（读全后会自动更新并复制）';
+  const TIP_WAIT = '正在读取本机存储明细…（读全后会自动更新）';
   const TIP_OK = '诊断信息已复制到剪贴板，直接粘贴发给开发者即可。\n（下方内容可再核对）';
-  const TIP_FAIL = '自动复制失败，请点下方【复制】按钮重试，或长按选字手动复制。';
-  const TIP_LATE = '明细有更新，弹窗内容已刷新——请点下方【复制】重新复制一次。';
   const DIAG_TITLE = '复制诊断信息';
   // 全站弹窗共用同一批 DOM（#modal-mask / #modal-textarea），诊断的回填最晚到 30s，
   // 期间用户可能已关窗去开别的弹窗——判活不过关就绝不写，防止把诊断文本灌进别人框里。
@@ -1378,7 +1480,7 @@
         } catch (e) {}
         try { refreshBadge(); } catch (e) {}
       });
-      let ctl = null, closed = false, cur = r.text, copied = '';
+      let ctl = null, closed = false, cur = r.text;
       const setModalText = function (txt) {
         try {
           const ta = document.getElementById('modal-textarea');
@@ -1387,21 +1489,14 @@
         try { if (ctl && ctl.text) ctl.text(txt); } catch (e2) {}
       };
       // 点遮罩/取消只走 close()、不回调 cb → closed 会一直停在 false。
-      // 所以提示与自动复制都必须再判一次「弹窗还在不在、还是不是我们这个」。
+      // 所以提示必须再判一次「弹窗还在不在、还是不是我们这个」。
       const setHint = function (s) { if (closed || !modalAlive()) return; if (ctl && ctl.hint) { try { ctl.hint(s); } catch (e) {} } };
-      // 自动复制只在终态做：首屏残缺文本进剪贴板 = 用户以为材料齐了、白跑一趟
-      const autoCopy = function (txt, late) {
-        if (closed || !txt || txt === copied) return;
-        if (!modalAlive()) { closed = true; return; }
-        copied = txt;
-        try {
-          copyText(txt).then(function (ok) {
-            if (closed) return;
-            diagToast(ok ? '诊断信息已复制，可直接粘贴发给开发者' : '自动复制失败，请点下方【复制】重试');
-            setHint(ok ? TIP_OK : (late ? TIP_LATE : TIP_FAIL));
-          });
-        } catch (e) { setHint(TIP_FAIL); }
-      };
+      // v3.26.x：取消自动复制。根因有二：
+      // ① 手机剪贴板有字数上限，打开诊断就自动写长文本会被静默截断，白折腾；
+      // ② 自动复制走 copyText()——对隐藏 textarea 调 focus() 会先弹起输入法、
+      //    800ms 后随元素移除又收起，手机上表现为「弹输入法又关 + 灰屏」。
+      // 取消自动复制后：打开只读文本不再碰剪贴板、不再 focus textarea，输入法不再打扰。
+      // 需要发给开发者时，由用户点【复制】/【导出txt】自行触发。
       if (window.openModal) {
         ctl = window.openModal(DIAG_TITLE, cur, function () { closed = true; }, {
           noInput: true,
@@ -1412,7 +1507,7 @@
           big: true,
           placeholder: '',
           staticText: TIP_WAIT,
-          // v3.16.x：弹窗内「复制」按钮——自动复制失败/想再复制时直接点它重试，
+          // v3.16.x：弹窗内「复制」按钮——需要发送诊断时手动点它复制，
           // 复制成功用 hint() 就地反馈，不用关窗重进。
           copyBtn: {
             label: '复制',
@@ -1421,7 +1516,6 @@
                 const m2 = ok2 ? TIP_OK : '复制失败，请长按选字手动复制。';
                 if (c && c.hint) c.hint(m2);
                 diagToast(ok2 ? '已复制到剪贴板' : '复制失败，请长按选字手动复制');
-                if (ok2) copied = cur;
               });
             }
           },
@@ -1437,17 +1531,17 @@
           }
         });
       }
-      // 首屏即终态（多数机器 1s 内）：直接复制；否则等回填到终态再复制
-      if (r.allDone) autoCopy(cur, false);
+      // 首屏即终态（多数机器 1s 内）直接显示；否则等回填到终态再刷新文本。
+      // v3.26.x：不再自动复制（见上方注释），只更新正文，复制由用户手动触发。
+      if (r.allDone) { /* 首屏即终态，正文已是完整诊断，无需额外动作 */ }
       else if (r.onUpdate) {
         r.onUpdate(function (txt, done2) {
           cur = txt;
           if (closed) return;
-          // 弹窗已被关掉或复用给别的弹窗 → 视同关闭，停止一切回填与自动复制
+          // 弹窗已被关掉或复用给别的弹窗 → 视同关闭，停止回填
           if (!modalAlive()) { closed = true; return; }
           setModalText(txt);
-          if (done2) autoCopy(txt, copied !== '');
-          else setHint(TIP_WAIT);
+          if (!done2) setHint(TIP_WAIT);
         });
       }
     });

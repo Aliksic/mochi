@@ -313,7 +313,7 @@
     if (isFullscreen()) {
       msg = '已进入全屏模式，浏览器工具栏已隐藏。\n\niOS 顶部系统状态栏（时间/电量）由系统控制，任何网页都无法隐藏，这是所有 iPhone 网页的共同限制。';
     } else if (inIosStandalone) {
-      msg = '已进入全屏模式。iOS 的系统状态栏（时间/电量）由系统控制，任何网页都无法隐藏，这是所有 iPhone 应用的共同限制。\n\n本开关已隐藏应用内的模拟状态栏，内容顶到系统状态栏下方，屏幕利用更满。';
+      msg = '已进入全屏模式。iOS 的系统状态栏（时间/电量）由系统控制，任何网页都无法隐藏，这是所有 iPhone 应用的共同限制。\n\n应用内的模拟状态栏（Mochi/时间/电量）已下移到系统状态栏正下方、两栏不重叠，内容顶满屏幕、屏幕利用更满。';
     } else {
       msg = '当前浏览器未允许本页进入全屏，开关已回滚。\n\niPhone 上想真正隐藏浏览器栏，只有：\n· 【推荐】改用 Safari 打开本站 → 底部「分享」→「添加到主屏幕」→ 点桌面图标打开，即无浏览器栏的独立应用；'
         + (isEdgeIOS ? '\n· Edge 菜单「添加到主屏幕」只会创建快捷方式，打开后仍是带工具栏的网页（就是现在的状态），这条路拿不到全屏。' : '')
@@ -368,15 +368,17 @@
     if (el) el.checked = on;
   }
   // v3.6.x：iOS 上改开关文案，明示平台限制，避免「点了没反应 / 不是真全屏」的困惑
+  // v3.26.x：开关行加了「功能说明」标签，外层多包了一层 flex span——改选内层文本
+  // span（row.querySelector('span span')），避免 textContent 覆盖把标签一起清掉
   function relabelIosToggle() {
     const el = document.getElementById('sf-fullscreen');
     if (!el) return;
     const row = el.closest('.gs-row');
     if (!row) return;
-    const span = row.querySelector('span');
+    const span = row.querySelector('span span') || row.querySelector('span');
     if (!span) return;
     span.textContent = inIosStandalone
-      ? '全屏模式（隐藏模拟状态栏，系统状态栏不可隐藏）'
+      ? '全屏模式（内容顶满，系统状态栏不可隐藏）'
       : // v3.26.x：浏览器标签态现在真的去请求原生全屏（不再一律拒绝），文案照实描述；
         // 个别 iOS 浏览器（iOS <16.4 的 Safari）不放开该 API，失败时会弹说明并回滚开关
         '全屏模式（iOS 浏览器全屏，不支持时会弹说明）';
@@ -477,6 +479,18 @@
       }
     });
     try { relabelIosToggle(); } catch (e) {}
+  }
+  // v3.26.x：设置页「功能说明」标签——点击弹 iOS 全屏限制说明（复用 showIosGuide 的三态文案）
+  const fsHelp = document.getElementById('sf-fullscreen-help');
+  if (fsHelp) {
+    const openFsHelp = function (e) {
+      if (e) { try { e.stopPropagation(); e.preventDefault(); } catch (er) {} }
+      showIosGuide();
+    };
+    fsHelp.addEventListener('click', openFsHelp);
+    fsHelp.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') openFsHelp(e);
+    });
   }
   // 退出全屏（Esc 键/手势/切后台系统退出）时同步开关状态 + 输入框属性还原
   // v3.5.113：传 false——系统级变化不覆盖用户意图（否则切后台后开关被置灰，永远不再自动恢复）

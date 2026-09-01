@@ -35,11 +35,59 @@
   const gcBatchBtn = document.getElementById('gc-batch-btn');
   const gcDraftBar = document.getElementById('gc-draft');
   const gcDraftItems = document.getElementById('gc-draft-items');
+  // v3.26.x：多群聊分组——群聊列表 / 成员选择 两个面板（复用群成员面板样式，DOM 在 template）
+  const groupsPanel = document.getElementById('gc-groups-panel');
+  const gpBody = document.getElementById('gc-gp-body');
+  const gpClose = document.getElementById('gc-gp-close');
+  const gpickPanel = document.getElementById('gc-gpick-panel');
+  const gpickTitle = document.getElementById('gc-gpick-title');
+  const gpickBody = document.getElementById('gc-gpick-body');
+  const gpickCancel = document.getElementById('gc-gpick-cancel');
+  const gpickOkBtn = document.getElementById('gc-gpick-ok');
+  const gpickClose = document.getElementById('gc-gpick-close');
 
   const FALLBACK_REPLIES = ['好的～', '嗯嗯', '收到', '哈哈', '在的', '我知道啦', '是吗', '然后呢', '有意思', '同意', '哈哈哈', '对的', '没错', '我也觉得', '确实', '哇'];
 
   let msgs = [];
   const RENDER_MAX = 200;
+
+  // ---- 多群聊分组（v3.26.x：可新建多个群聊、按分组切换、增删成员） ----
+  // 群聊分组全局存储（xy-home-v2:gc-groups，不随桌面隔离）：
+  //   [{ id, name, members: [cid...] | null, ts }]
+  //   id='default' 为内置群聊（members:null = 全部现有联系人，动态跟随，不可删除）；
+  //   自定义群聊 members 为选中的联系人 id 数组。
+  // 消息按群分键：default 沿用旧键 xy-home-v2:group-chat-msgs（老数据无缝保留），
+  //   自定义群聊用 xy-home-v2:gc-msgs-<gid>。
+  let groups = [];
+  let curGid = 'default';
+  function gcGroupsStore() { return window.xyStore(G); }
+  function loadGroups() {
+    const def = { id: 'default', name: '群聊', members: null, ts: 0 };
+    groups = [def];
+    try {
+      const v = gcGroupsStore().get('gc-groups');
+      if (v) {
+        const a = JSON.parse(v);
+        if (Array.isArray(a)) a.forEach(g => { if (g && g.id && g.id !== 'default') groups.push(g); });
+      }
+    } catch (e) {}
+    try {
+      const c = gcGroupsStore().get('gc-cur-gid');
+      if (c && groups.some(g => g.id === c)) curGid = c;
+    } catch (e) {}
+  }
+  function saveGroups() { try { gcGroupsStore().set('gc-groups', JSON.stringify(groups)); } catch (e) {} }
+  function saveCurGid() { try { gcGroupsStore().set('gc-cur-gid', curGid); } catch (e) {} }
+  function currentGroup() { return groups.find(g => g.id === curGid) || groups[0]; }
+  function groupMsgKey(gid) { return gid === 'default' ? MSG_KEY : G + ':gc-msgs-' + gid; }
+  function groupMemberList(g) {
+    let all = [];
+    try { all = window.getContacts() || []; } catch (e) {}
+    if (!g || !g.members) return all; // default 群：全部现有联系人（动态跟随）
+    const set = {}; g.members.forEach(id => { set[id] = 1; });
+    return all.filter(c => set[c.id]);
+  }
+  loadGroups();
 
   // ---- 群聊形象设置（v3.9.x，全局 xy-home-v2:gc-profiles，不随桌面隔离） ----
   // { me: {name, avatar}, <cid>: {name, avatar} }——设置了群聊昵称/头像的成员/我，
@@ -286,7 +334,8 @@
 
   // ---- 成员信息 ----
   function getMembers() {
-    try { return window.getContacts() || [{ id: 'default', name: '默认' }]; } catch (e) { return [{ id: 'default', name: '默认' }]; }
+    // v3.26.x：多群聊分组——当前群聊的成员（default 群 = 全部联系人，自定义群 = 选中的联系人）
+    return groupMemberList(currentGroup());
   }
   function memberName(cid) {
     // v3.9.x：群聊昵称覆盖优先，未设置回退该联系人桌面昵称（lbl-partner）
@@ -365,8 +414,9 @@
   }
   function gcWriteMsgs() {
     const data = JSON.stringify(msgs);
-    try { localStorage.setItem(MSG_KEY, data); } catch (e) {}
-    try { if (window.idbSet) window.idbSet(MSG_KEY, data); } catch (e) {}
+    const key = groupMsgKey(curGid);
+    try { localStorage.setItem(key, data); } catch (e) {}
+    try { if (window.idbSet) window.idbSet(key, data); } catch (e) {}
   }
   function saveMsgs() {
     gSchedulePersist(gcWriteMsgs);
@@ -378,11 +428,12 @@
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') gFlushPersistNow(); });
   window.addEventListener('beforeunload', () => gFlushPersistNow());
   function loadMsgs() {
-    try { msgs = JSON.parse(localStorage.getItem(MSG_KEY) || '[]'); } catch (e) { msgs = []; }
+    const key = groupMsgKey(curGid);
+    try { msgs = JSON.parse(localStorage.getItem(key) || '[]'); } catch (e) { msgs = []; }
     if (!Array.isArray(msgs)) msgs = [];
     try {
       if (window.idbGet) {
-        window.idbGet(MSG_KEY).then(v => {
+        window.idbGet(key).then(v => {
           if (v === undefined || v === null) return;
           try { const a = JSON.parse(v); if (Array.isArray(a) && a.length >= msgs.length) { msgs = a; renderAll(); } } catch (e) {}
         }).catch(() => {});
@@ -1032,12 +1083,15 @@
 
   // ---- 进入/退出 ----
   function updateGroupName() {
+    const g = currentGroup();
     const n = getMembers().length;
-    if (nameEl) nameEl.textContent = '群聊(' + n + ')';
+    const nm = (g && g.name) ? g.name : '群聊';
+    if (nameEl) nameEl.textContent = nm + '(' + n + ')';
   }
   function enterGroupChat() {
     const editing = Array.from(document.querySelectorAll('.app-grid')).some(g => g.classList.contains('editing'));
     if (editing) return;
+    loadGroups(); // 进群前先取回群聊分组（可能在其他会话新建/删除过）
     document.querySelectorAll('.page').forEach(p => p.hidden = true);
     if (page) page.hidden = false;
     updateGroupName();
@@ -1068,6 +1122,8 @@
   function renderMembersPanel() {
     if (!membersBody) return;
     membersBody.innerHTML = '';
+    // v3.26.x：自定义群可移除成员 / 添加成员；default 群成员动态跟随全部联系人，不提供
+    const isCustom = curGid !== 'default';
     const meRow = document.createElement('div');
     meRow.className = 'gc-mp-item';
     // v3.9.x：显示群聊昵称（主）+ 桌面原昵称（副，区分用）
@@ -1081,14 +1137,211 @@
       row.className = 'gc-mp-item';
       const desk = deskPartnerName(m.id);
       row.innerHTML = '<div class="gc-mp-av"></div><span class="gc-mp-name">' + escapeHtml(memberName(m.id)) +
-        '<span class="gc-mp-sub">' + (desk ? '桌面昵称：' + escapeHtml(desk) : '') + '</span></span>';
+        '<span class="gc-mp-sub">' + (desk ? '桌面昵称：' + escapeHtml(desk) : '') + '</span></span>' +
+        (isCustom ? '<button class="gc-set-btn ghost gc-mp-rm">移除</button>' : '');
       fillAv(row.querySelector('.gc-mp-av'), memberAvatar(m.id));
+      const rmBtn = row.querySelector('.gc-mp-rm');
+      if (rmBtn) rmBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        removeMemberFromGroup(m.id);
+      });
       membersBody.appendChild(row);
     });
+    if (isCustom) {
+      const addRow = document.createElement('div');
+      addRow.className = 'gc-mp-add';
+      addRow.innerHTML = '<button class="gc-set-btn">＋ 添加成员</button>';
+      addRow.querySelector('button').addEventListener('click', () => { openMemberPicker('add'); });
+      membersBody.appendChild(addRow);
+    }
   }
-  // 点击群名标题 → 打开成员面板（右上角三点菜单里也有「群成员」入口）
-  if (nameEl) nameEl.addEventListener('click', () => { renderMembersPanel(); if (membersPanel) membersPanel.hidden = false; });
+  // 移除成员（自定义群）：确认后从该群 members 剔除，成员不再参与本群回复/@
+  function removeMemberFromGroup(cid) {
+    const g = currentGroup();
+    if (!g || !g.members) return;
+    const name = memberName(cid);
+    if (!window.openModal) { removeFromGroupNow(cid); return; }
+    window.openModal('移除成员「' + name + '」？', '', () => { removeFromGroupNow(cid); },
+      { noInput: true, staticText: '该成员将不再参与本群聊的回复与 @ 提及（其桌面数据不受影响）' });
+  }
+  function removeFromGroupNow(cid) {
+    const g = currentGroup();
+    if (!g || !g.members) return;
+    const i = g.members.indexOf(cid);
+    if (i < 0) return;
+    g.members.splice(i, 1);
+    saveGroups();
+    renderMembersPanel();
+    refreshGroupViews();
+    toast('已移除成员');
+  }
+  // 点击群名标题 → 打开群聊列表面板（切换 / 新建 / 删除群聊；群成员入口在三点菜单）
+  if (nameEl) nameEl.addEventListener('click', () => { renderGroupsPanel(); if (groupsPanel) groupsPanel.hidden = false; });
   if (membersClose) membersClose.addEventListener('click', () => { if (membersPanel) membersPanel.hidden = true; });
+
+  // ---- 群聊列表面板（v3.26.x：切换 / 新建 / 删除群聊） ----
+  function renderGroupsPanel() {
+    if (!gpBody) return;
+    gpBody.innerHTML = '';
+    const cur = currentGroup();
+    groups.forEach(g => {
+      const row = document.createElement('div');
+      row.className = 'gc-mp-item gc-gp-item' + (g.id === curGid ? ' cur' : '');
+      const n = groupMemberList(g).length;
+      row.innerHTML =
+        '<div class="gc-mp-av gc-gp-ico">' +
+          (g.id === 'default'
+            ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>'
+            : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.4 3.8 5.5 3.8 9S14.5 18.6 12 21c-2.5-2.4-3.8-5.5-3.8-9S9.5 5.4 12 3z"/></svg>') +
+        '</div>' +
+        '<span class="gc-mp-name">' + escapeHtml(g.name) +
+          '<span class="gc-mp-sub">成员 ' + n + ' 人' + (g.id === 'default' ? ' · 全部联系人' : '') + '</span></span>' +
+        (g.id === curGid ? '<span class="gc-mp-tag gc-gp-cur">当前</span>' : '') +
+        (g.id !== 'default' ? '<button class="gc-set-btn ghost gc-gp-del">删除</button>' : '');
+      const delBtn = row.querySelector('.gc-gp-del');
+      if (delBtn) delBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        deleteGroup(g.id);
+      });
+      row.addEventListener('click', () => {
+        switchGroup(g.id);
+        if (groupsPanel) groupsPanel.hidden = true;
+      });
+      gpBody.appendChild(row);
+    });
+    // 新建群聊
+    const newRow = document.createElement('div');
+    newRow.className = 'gc-mp-item gc-gp-new';
+    newRow.innerHTML = '<div class="gc-mp-av gc-gp-ico add">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>' +
+      '</div><span class="gc-mp-name">新建群聊</span>';
+    newRow.addEventListener('click', startCreateGroup);
+    gpBody.appendChild(newRow);
+  }
+  // 切换群聊：落盘当前群 → 换群 id → 载入该群消息并重渲染
+  function switchGroup(gid) {
+    if (!groups.some(g => g.id === gid)) return;
+    if (gid === curGid) { try { if (groupsPanel) groupsPanel.hidden = true; } catch (e) {} return; }
+    saveNow();
+    curGid = gid;
+    saveCurGid();
+    msgs = [];
+    loadMsgs();
+    refreshGroupViews();
+    try { renderGroupsPanel(); } catch (e) {}
+  }
+  // 删除群聊：先确认，再删分组 + 该群消息键；若删的是当前群则回退 default
+  function deleteGroup(gid) {
+    if (gid === 'default') return;
+    const g = groups.find(x => x.id === gid);
+    if (!g) return;
+    if (!window.openModal) { deleteGroupNow(gid); return; }
+    window.openModal('删除群聊「' + g.name + '」？', '', () => { deleteGroupNow(gid); },
+      { noInput: true, staticText: '群聊与其中全部消息将被删除，不可恢复' });
+  }
+  function deleteGroupNow(gid) {
+    if (gid === 'default') return;
+    groups = groups.filter(x => x.id !== gid);
+    saveGroups();
+    try { window.xyStore(G).remove('gc-msgs-' + gid); } catch (e) {} // 内存+LS+IDB 三处清
+    if (curGid === gid) {
+      curGid = 'default';
+      saveCurGid();
+      msgs = [];
+      loadMsgs();
+    }
+    refreshGroupViews();
+    renderGroupsPanel();
+    toast('群聊已删除');
+  }
+  // 新建群聊第一步：输入群名（可留空，自动命名），再选成员
+  function startCreateGroup() {
+    if (!window.openModal) return;
+    window.openModal('群聊名称', '', (v) => {
+      const name = String(v || '').trim() || ('群聊 ' + groups.length);
+      openMemberPicker('create', name);
+    }, { placeholder: '群聊名称（可留空）', maxlength: 20 });
+  }
+
+  // ---- 成员选择面板（新建群聊 / 给当前群加人 复用） ----
+  let gpickMode = 'create';   // 'create' 新建群聊（列全部联系人）| 'add' 添加成员（列未在群内的联系人）
+  let gpickGroupName = '';
+  function openMemberPicker(mode, groupName) {
+    gpickMode = mode;
+    gpickGroupName = groupName || '';
+    renderMemberPicker();
+    if (gpickPanel) gpickPanel.hidden = false;
+  }
+  function renderMemberPicker() {
+    if (!gpickBody) return;
+    if (gpickTitle) gpickTitle.textContent = gpickMode === 'create' ? '新建群聊' : '添加成员';
+    const g = currentGroup();
+    const inGroup = {};
+    if (g && g.members) g.members.forEach(id => { inGroup[id] = 1; });
+    let all = [];
+    try { all = window.getContacts() || []; } catch (e) {}
+    const opts = all.filter(c => !inGroup[c.id]);
+    gpickBody.innerHTML = '';
+    if (!opts.length) {
+      const empty = document.createElement('div');
+      empty.className = 'gc-gpick-empty';
+      empty.textContent = gpickMode === 'create' ? '还没有可选的桌面联系人' : '所有联系人都已在本群';
+      gpickBody.appendChild(empty);
+    }
+    opts.forEach(c => {
+      const row = document.createElement('label');
+      row.className = 'gc-mp-item gc-gpick-item';
+      row.dataset.cid = c.id;
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      const av = document.createElement('div');
+      av.className = 'gc-mp-av';
+      fillAv(av, memberAvatar(c.id));
+      const name = document.createElement('span');
+      name.className = 'gc-mp-name';
+      name.innerHTML = escapeHtml(memberName(c.id)) +
+        '<span class="gc-mp-sub">' + escapeHtml(c.name || '') + '</span>';
+      row.appendChild(cb); row.appendChild(av); row.appendChild(name);
+      gpickBody.appendChild(row);
+    });
+  }
+  // 成员选择确认：新建群聊（至少 1 人）或 添加成员到当前群
+  function gpickConfirm() {
+    const checked = [];
+    gpickBody.querySelectorAll('.gc-gpick-item input[type="checkbox"]:checked').forEach(cb => {
+      const row = cb.closest('.gc-gpick-item');
+      if (row && row.dataset.cid) checked.push(row.dataset.cid);
+    });
+    if (!checked.length) { toast(gpickMode === 'create' ? '请至少选择一名成员' : '请勾选要添加的成员'); return; }
+    if (gpickMode === 'create') {
+      const g = {
+        id: 'g' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36),
+        name: gpickGroupName || ('群聊 ' + groups.length),
+        members: checked,
+        ts: Date.now()
+      };
+      groups.push(g);
+      saveGroups();
+      if (gpickPanel) gpickPanel.hidden = true;
+      switchGroup(g.id);
+      toast('群聊已创建');
+    } else {
+      const g = currentGroup();
+      if (!g || !g.members) return;
+      checked.forEach(id => { if (g.members.indexOf(id) < 0) g.members.push(id); });
+      saveGroups();
+      if (gpickPanel) gpickPanel.hidden = true;
+      renderMembersPanel();
+      refreshGroupViews();
+      toast('已添加 ' + checked.length + ' 名成员');
+    }
+  }
+  if (gpickCancel) gpickCancel.addEventListener('click', () => { if (gpickPanel) gpickPanel.hidden = true; });
+  if (gpickClose) gpickClose.addEventListener('click', () => { if (gpickPanel) gpickPanel.hidden = true; });
+  if (gpickOkBtn) gpickOkBtn.addEventListener('click', gpickConfirm);
+  if (gpClose) gpClose.addEventListener('click', () => { if (groupsPanel) groupsPanel.hidden = true; });
+  if (groupsPanel) groupsPanel.addEventListener('click', (e) => { if (e.target === groupsPanel) groupsPanel.hidden = true; });
+  if (gpickPanel) gpickPanel.addEventListener('click', (e) => { if (e.target === gpickPanel) gpickPanel.hidden = true; });
 
   // ---- 右上角三点菜单（v3.9.x：群成员 + 群聊设置） ----
   const moreBtn = document.getElementById('gc-more-btn');

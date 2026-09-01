@@ -77,6 +77,15 @@
 .gs-row:last-child { border-bottom:none; }
 /* v3.8.x：设置行下的小字说明（如「让对方继续说·按正常回复时间」的补充说明） */
 .gs-sub { font-size:11px; color:var(--muted); padding:0 14px 10px; line-height:1.6; }
+/* v3.26.x：.gs-row 内的「功能说明」标签——样式对齐 .set-row .txt .tag（全屏模式等） */
+.gs-row .tag {
+  display:inline-block; font-size:11px; color:var(--muted); font-weight:400; letter-spacing:.2px;
+  border:1px solid rgba(0,0,0,.08); background:rgba(0,0,0,.03); border-radius:9px; padding:2px 9px;
+  cursor:pointer; line-height:1.4; white-space:nowrap;
+}
+.gs-row .tag:hover, .gs-row .tag:focus-visible { background:rgba(0,0,0,.06); border-color:rgba(0,0,0,.12); outline:none; }
+[data-theme="dark"] .gs-row .tag { color:#aaa; border-color:rgba(255,255,255,.14); background:rgba(255,255,255,.06); }
+[data-theme="dark"] .gs-row .tag:hover, [data-theme="dark"] .gs-row .tag:focus-visible { background:rgba(255,255,255,.1); border-color:rgba(255,255,255,.2); }
 .stepper { display:flex; align-items:center; gap:6px; }
 .stp-min, .stp-max {
   width:36px; height:36px; border-radius:11px; border:none; cursor:pointer;

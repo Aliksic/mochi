@@ -507,9 +507,32 @@
       : el.isContentEditable === true);
   }
   var nudgeTimer = null;
+  // v3.26.x：聚焦可编辑框「内部滚动残留」自愈——修红米 K60 至尊版 + Edge 报障
+  // 「聊天输入栏打字不显示、一片空白、消息发不出去」。
+  // 机理：.chat-input 是 overflow-y:auto + max-height:96px 的 contenteditable，
+  // 安卓内核为露出光标会把它自身的 scrollTop 顶上去；文字被删短/一次重排后
+  // scrollHeight 已 ≤ clientHeight，scrollTop 却不回零 → 框内其实有字，只是被
+  // 自己的滚动推出了可见裁剪区：看着就是「输了但空白」，而数据是对的（所以
+  // 有的用户能盲发出去）。只在内容不超高时归零，多行真滚动绝不干预。
+  function healEditableScroll(el) {
+    try {
+      if (!el || !(el.scrollTop > 0)) return;
+      if (el.scrollHeight <= el.clientHeight + 1) el.scrollTop = 0;
+    } catch (e) {}
+  }
+  // 删字/清空/输入法提交后立刻复检（input 是唯一可靠时机，此时 scrollHeight
+  // 已按新内容重算）；焦点仍在同一元素上，归零不会打断光标。
+  try {
+    document.addEventListener('input', function (e) {
+      var t = e.target;
+      if (!isTextEl(t)) return;
+      healEditableScroll(t);
+    }, true);
+  } catch (e) {}
   function nudgeInputVisible() {
     var active = document.activeElement;
     if (!isTextEl(active) || !active.getBoundingClientRect) return;
+    healEditableScroll(active);
     var r = active.getBoundingClientRect();
     try {
       var scroller = active.closest('.chat-body, .card-list, .gs-scroll, .tc-body, .mem-scroll, .cal-scroll, .div-scroll, .fav-list, .mail-list, .qa-body, .modal, .chat-ask-body, .poke-card-scroll, .chat-decision-body');
@@ -1159,6 +1182,28 @@
         // 点击输入栏键盘弹出动画期间 vv.offsetTop 先起、vv.height 后缩，_aKb 未置位时
         // 平移已残留 → 输入栏错位+灰条）。850ms 后交回稳态条件。
         var _aBurstUntil = 0;
+        // v3.26.x：安卓键盘内部状态只读探针（与 iOS __mochiIosKb 同字段名，供
+        // device.js window.mochiVvDiag() 合并）。此前诊断文本「键盘/锁残留：
+        // kbActive=… 推定停靠=… 基线 inner/vv=…」几行只读 iOS 探针，安卓下永远
+        // 输出 n/a —— 安卓键盘类报障（输入栏空白/被盖/飞顶）拿不到一点现场证据。
+        // docLocked 恒 false：安卓分支不做 html{overflow:hidden} 文档锁。
+        window.__mochiAndroidKb = function () {
+          return {
+            kbActive: !!_aKb,
+            prov: !!_aProv,
+            closing: !!_aClosing,
+            docLocked: false,
+            fullInner: Math.round(_aIH),
+            fullVv: Math.round(_aH),
+            vvNow: Math.round(_aVV.height),
+            offsetTop: Math.round(_aVV.offsetTop || 0),
+            burstLeft: Math.max(0, _aBurstUntil - Date.now()),
+            focusTag: _aTextFocused ? String(_aTextFocused.tagName || '').toLowerCase() : '',
+            watching: !!_aWatch,
+            lastActAgo: Date.now() - _aLastAct,
+            typosAgo: Date.now() - _aUserTypos
+          };
+        };
         // v3.15.x：键盘期「页面平移归零」自愈（红米 K80 Chrome 报修：更多功能里的小功能
         // 页面键盘一弹整页飞走、下方全灰；帮我决定打字输入框不弹到屏幕上方）。机理与
         // iOS Edge 当年同款：聚焦底部半框内输入框时，浏览器为让焦点可见先把【视觉视口

@@ -213,6 +213,7 @@ const FIX_SENTINELS = [
   { name: '番茄钟提前结束预选「结束」pill（只点确定也生效）', file: 'js/p2-features.js', needle: "noInput: true, lock: true, pill: '1', pills" },
   { name: '导出进度遮罩 + 确认后再下载（impShow 复用 + anchorDownload 只在用户点确定后触发）', file: 'js/data-backup.js', needle: 'anchorDownload' },
   { name: '诊断复制改原生 execCommand + 按钮补 type=button（修点【复制】无反馈/整页刷新）', file: 'js/device.js', needle: 'document.execCommand(\'copy\')' },
+  { name: '#113 诊断取消自动复制（点开不再弹输入法又收起致灰屏；手机剪贴板有字数上限、长文本静默截断，改由用户手动【复制】/【导出txt】）', file: 'js/device.js', needle: 'exportTxt(c ? c.text() : cur)' },
   { name: '弹窗底部按钮补 type=button（取消默认 submit 整页刷新）', file: 'index.html', needle: 'type="button" class="modal-btn copy" id="modal-export"' },
   { name: '编辑消息同步重建 parts（防发送新消息后重渲染回退成原文）', file: 'js/chat.js', needle: '.filter(p => p && p.k !== \'text\')' },
   { name: 'idbSet 写入挂起 4s 超时+重建重试（荣耀/Edge 事务挂起静默丢写）', file: 'js/idb.js', needle: '连接疑似挂起' },
@@ -263,6 +264,7 @@ const FIX_SENTINELS = [
   { name: 'iOS standalone 普通态（未开全屏 ios-fs-active）`.phone` 高度 min 钳制（100vh 在 iOS standalone=整屏高含状态栏，超出可视区 → flex 居中把 .phone 顶部推出负值整页上移，iPhone14 Safari standalone 实测 .phone=932 vs 视口 873、top=-29；补上 #109 漏掉的第三条路径）', file: 'css/base.css', needle: 'html.tablet.ios-pwa-standalone .phone { height:min(100vh, var(--mochi-ios-h, 100dvh)' },
   { name: 'iOS 全屏态 syncVvFit 不再写 --mochi-ios-h（摘除属性回落 100dvh，修全屏下 visualViewport.height 偏小把 .phone 压矮→底部聊天输入栏整体偏上不贴底；同时不超视口不复发 #109 整页上移）', file: 'js/mobile-adapt.js', needle: "d.classList.contains('ios-fs-active') || d.classList.contains('ios-native-fs')" },
   { name: 'iOS 全屏保留桌面顶部状态栏（不再 display:none，修「苹果16 添加到桌面+全屏后桌面顶部 Mochi/时间/电量一行不见被遮挡」；absent 守卫：若出现 .ios-fs-active .phone .statusbar { display:none } 即回归）', file: 'css/base.css', needle: '.ios-fs-active .phone .statusbar { display: none', absent: true },
+  { name: '#114 iOS 全屏态模拟状态栏与系统状态栏重叠修复（窄屏 .statusbar safe-area 顶部留白被全局 padding 覆盖失效→内容顶到 y=0；html.ios-fs-active .phone .statusbar 提权恢复安全区留白，模拟栏下移与系统栏成两栏不重叠）', file: 'css/base.css', needle: 'html.ios-fs-active .phone .statusbar { padding-top:max(calc(14px + env(safe-area-inset-top, 0px)), 14px)' },
   { name: '后台音乐媒体条不丢（__musicWantPlay 暴露播放意图 + bg-keep 不让位覆盖歌曲媒体条 + onplay 重绑歌曲元数据，修红米K80 Chrome 通知栏媒体条时有时无/挂后台停播）', file: 'js/music-player.js', needle: '__musicWantPlay' },
   { name: '后台补播连续失败改冷却重试（bgResumeFailAt 60s 清零，修「挂后台总是自己停止播放」后无人拉起）', file: 'js/music-player.js', needle: 'bgResumeFailAt' },
   { name: '录音爆音修复（voiceMimePreferOpus：标准安卓 Chrome/Edge 走 webm/opus，修荣耀90 Edge 语音「滋啦滋啦」爆音；iOS/安卓 WebView 仍走 mp4/aac）', file: 'js/chat.js', needle: 'voiceMimePreferOpus' },
@@ -353,6 +355,16 @@ const FIX_SENTINELS = [
   { name: '#106 贪吃蛇画布按滚动区实际溢出自查收小（量算总有几像素误差而全屏是裁切的，溢出 1px 就切掉按钮一截；删掉这段循环则误差重新变成点不到）', file: 'js/snake-game.js', needle: 'const over = sc.scrollHeight - sc.clientHeight;' },
   { name: '#106 贪吃蛇结算后重铺全屏画布（showResult 末尾调 refitAll；原实现只调 refitNonFs，全屏 isFs 直接早退＝地图不缩小，用户报「要缩小才能点到再来一局」）', file: 'js/snake-game.js', needle: "refitAll();     // 结算块+再来一局出现后收小画布：半框让方向键一屏可见，全屏防「再来一局」被裁到屏外" },
   { name: '#106 贪吃蛇全屏滚动区兜底可纵向滚（原 overflow:hidden，极矮/横屏格子触到 9px 下限仍放不下时按钮永久不可达）', file: 'css/chat-pages.css', needle: '#chat-snake-panel.snake-fs .poke-card-scroll { overflow:hidden auto;' },
+  // ===== v3.26.x #114：聊天输入栏「打字不显示/空白」（红米 K60 至尊版 + Edge）=====
+  { name: '#114 聊天输入栏聚焦独立合成层（#chat-input/#gc-input 是模板原生 contenteditable、不经 ceConvert，拿不到 .ce-box 那套 translateZ 保护；键盘期 .phone 被 _aPanComp 平移+逐帧改高时文本画在旧合成层＝框内空白）', file: 'css/base.css', needle: '.phone .chat-input:focus { transform: translateZ(0); }' },
+  { name: '#114 聚焦可编辑框内部滚动残留自愈（内容不超高而 scrollTop>0 即归零；修「字在 DOM 里却被自身滚动推出裁剪区＝看着空白」）', file: 'js/mobile-adapt.js', needle: 'function healEditableScroll(el) {' },
+  { name: '#114 安卓键盘内部状态只读探针（诊断「键盘/锁残留」此前只读 iOS 探针，安卓永远 n/a）', file: 'js/mobile-adapt.js', needle: 'window.__mochiAndroidKb = function () {' },
+  { name: '#114 诊断新增「聊天输入栏现场」实测行（聚焦/DOM 文本长/内部滚动/颜色 caret 合成层/待清守卫/是否被键盘盖——分案三种空白成因）', file: 'js/device.js', needle: '聊天输入栏现场：元素=' },
+  { name: '#114 诊断输入轨迹环形缓冲（focus/composition 起止/input 最近 8 条，只记长度与滚动三值不记内容）', file: 'js/device.js', needle: 'xy-home-v2:__diag-inp' },
+  { name: '#114 防复活守卫真实编辑闸门（三处守卫改判「本次清空后有无真实输入活动」，修重打同一条短句被静默吞字＝打字不显示）', file: 'js/chat.js', needle: 'function userEditedAfterClear()' },
+  { name: '#114 input 监听命中相同文本时先放行真实编辑（只摘守卫标记不清框）', file: 'js/chat.js', needle: "if (userEditedAfterClear()) { input._mClearTxt = ''; return; }" },
+  { name: '#114 真实输入活动跟踪（keydown/compositionstart/insert 类 beforeinput 捕获阶段刷新 lastUserEditAt，闸门判据来源）', file: 'js/chat.js', needle: "input.addEventListener('compositionstart', () => { lastUserEditAt = Date.now(); }, true);" },
+  { name: 'v3.14 聚焦态清空走 execCommand 编辑管线终结组合会话（防输入法迟到写回；#114 补登哨兵，该块此前整块零保护）', file: 'js/chat.js', needle: "document.execCommand('selectAll', false, null)" },
 ];
 try {
   const built = readFileSync(join(root, 'index.html'), 'utf8');

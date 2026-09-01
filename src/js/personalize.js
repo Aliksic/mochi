@@ -4647,7 +4647,19 @@ try {
   }
   renderQuoteOfDay();
 
-  // 恋爱纪念日：已在一起天数（默认不预设日期，设置页选择后显示）
+  // 主纪念日（原「恋爱纪念日」）：已相伴天数（默认不预设日期，设置页选择后显示）
+  // v3.26.x：可设关系类型 rel-cat（love 爱情向 / family 亲情向 / friend 友情向）+ 关系称呼 rel-role（选填）
+  function relCat() {
+    const v = store.get('rel-cat');
+    return v === 'family' || v === 'friend' ? v : 'love';
+  }
+  function relRole() {
+    return (store.get('rel-role') || '').trim();
+  }
+  function relLabel() {
+    const c = relCat();
+    return c === 'family' ? '亲情纪念日' : c === 'friend' ? '友情纪念日' : '恋爱纪念日';
+  }
   function updateLove() {
     const start = store.get('love-start');
     const daysEl = document.getElementById('love-days');
@@ -4655,22 +4667,28 @@ try {
     const mDays = document.getElementById('mem-love-days');
     const mDate = document.getElementById('mem-love-date');
     const mNext = document.getElementById('mem-next');
+    const label = relLabel();
     if (!start) {
       if (daysEl) daysEl.textContent = '';
       if (dateEl) dateEl.textContent = '';
       if (mDays) mDays.textContent = '—';
       if (mDate) mDate.textContent = '';
-      if (mNext) mNext.textContent = '请先设置恋爱纪念日';
+      if (mNext) mNext.textContent = '请先设置' + label;
       return;
     }
     const d = new Date(start + 'T00:00:00');
     if (isNaN(d.getTime())) return;
     const days = Math.max(1, Math.floor((new Date() - d) / 864e5));
     const fmt = start.split('-').join('.');
+    // 爱情向=「我们在一起」，亲情/友情向=「我们相识」；设置了关系称呼时以称呼为对象（如「和姐姐相识」）
+    const role = relRole();
+    const who = role ? '和' + role : '我们';
+    const tog = relCat() === 'love' ? '在一起' : '相识';
+    const base = fmt + ' 起 · ' + who + tog;
     if (daysEl) daysEl.textContent = days + ' 天';
-    if (dateEl) dateEl.textContent = fmt + ' 起 · 我们在一起';
+    if (dateEl) dateEl.textContent = base;
     if (mDays) mDays.textContent = days;
-    if (mDate) mDate.textContent = fmt + ' 起 · 我们在一起';
+    if (mDate) mDate.textContent = base;
     // 下一个纪念日倒计时（下次同月同日）
     const now = new Date();
     const ann = new Date(now.getFullYear(), d.getMonth(), d.getDate());
@@ -4708,6 +4726,56 @@ try {
       }
     });
   }
+
+  // v3.26.x：主纪念日关系类型（爱情向/亲情向/友情向）+ 关系称呼（选填）
+  // 桌面双方头像之间的图标随类型切换：爱情=爱心 / 亲情=家 / 友情=两人
+  const REL_ICONS = {
+    love: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7.5-4.7-9.3-9A5.3 5.3 0 0112 6.4a5.3 5.3 0 019.3 5.6c-1.8 4.3-9.3 9-9.3 9z"/></svg>',
+    family: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><path d="M9 22V12h6v10"/></svg>',
+    friend: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>'
+  };
+  function renderDeskRelIcon() {
+    const el = document.getElementById('deco-heart');
+    if (el) el.innerHTML = REL_ICONS[relCat()] || REL_ICONS.love;
+  }
+  function syncRelUI() {
+    const labelEl = document.getElementById('mem-love-label');
+    if (labelEl) labelEl.textContent = relLabel();
+    const row = document.getElementById('rel-type-row');
+    if (row) {
+      row.querySelectorAll('.mem-type-pill').forEach(b => {
+        b.classList.toggle('sel', b.getAttribute('data-rel') === relCat());
+      });
+    }
+    const roleInput = document.getElementById('rel-role-input');
+    if (roleInput && roleInput.value !== (store.get('rel-role') || '')) roleInput.value = store.get('rel-role') || '';
+    renderDeskRelIcon();
+  }
+  const relRow = document.getElementById('rel-type-row');
+  if (relRow) {
+    relRow.addEventListener('click', (e) => {
+      const b = e.target.closest('.mem-type-pill');
+      if (!b) return;
+      store.set('rel-cat', b.getAttribute('data-rel'));
+      syncRelUI();
+      updateLove();
+      renderDeskAnniv();
+    });
+  }
+  const roleInput = document.getElementById('rel-role-input');
+  if (roleInput) {
+    let roleTimer = null;
+    const saveRole = () => {
+      store.set('rel-role', (roleInput.value || '').trim());
+      updateLove();
+    };
+    roleInput.addEventListener('change', saveRole);
+    roleInput.addEventListener('input', () => {
+      clearTimeout(roleTimer);
+      roleTimer = setTimeout(saveRole, 400);
+    });
+  }
+  syncRelUI();
 
   // 其他纪念日：可自由添加/删除（存本地）
   // 条目：{ name, date, type }——type: 'ann' 纪念日（已 X 天）/ 'count' 倒数日（还有 X 天）
@@ -5849,7 +5917,7 @@ try {
       if (!isNaN(d.getTime())) {
         let ann = new Date(now.getFullYear(), d.getMonth(), d.getDate());
         if (ann.getTime() < now.getTime()) ann.setFullYear(ann.getFullYear() + 1);
-        cands.push({ name: '恋爱纪念日', date: ann });
+        cands.push({ name: relLabel(), date: ann });
       }
     }
     try {

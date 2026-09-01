@@ -7439,10 +7439,20 @@ return parts;
 }
 const SEND_GUARD_MS = 2500;
 let lastSendTxt = '', lastSendTs = 0;
+// v3.26.x #114：守卫必须只挡「内核迟到写回」，绝不挡用户真实编辑。
+// 原缺陷：三处防复活守卫的判据都是「内容与刚发送文本完全一致」——用户重打
+// 同一条短句（「好的」「在吗」「嗯」这类）时，第一次 input 事件就命中并被
+// 静默 textContent='' 吞掉（红米 K60 至尊版 + Edge 报「输入栏打字不显示、
+// 空白、发不出去」，实测这条路径 100% 复现吞字）。
+// 两者唯一可靠的区分信号：真实编辑之前一定有用户输入活动（keydown /
+// compositionstart / insert 类 beforeinput），内核的迟到写回没有。
+let lastUserEditAt = 0, clearAppliedAt = 0;
+function userEditedAfterClear() { return lastUserEditAt > clearAppliedAt; }
 function clearChatInput() {
 if (!input) return;
 // 先挂复活守卫再清空——清空动作本身会同步派发 input 事件，守卫需已就位
 input._mClearTxt = lastSendTxt || '';
+clearAppliedAt = Date.now();
 const sentTxt = lastSendTxt || '';
 // v3.14.x：vivo Edge 等内核实测——聚焦中的 contenteditable 直写 textContent=''
 // 后，输入法会把刚提交的组合文本整体写回输入框（迟到、且常不派发 input 事件），
@@ -7470,7 +7480,7 @@ setTimeout(() => {
 try {
 if (!input || !input.isContentEditable) return;
 const now = (input.innerText || '').trim();
-if (now && now === sentTxt && Date.now() - lastSendTs < SEND_GUARD_MS) {
+if (now && now === sentTxt && Date.now() - lastSendTs < SEND_GUARD_MS && !userEditedAfterClear()) {
 input.textContent = '';
 input._mClearTxt = '';
 }
@@ -7481,7 +7491,7 @@ input._mClearTxt = '';
 }
 const addMsg = (text) => {
 const t0 = (text || '').trim();
-if (t0 && t0 === lastSendTxt && Date.now() - lastSendTs < SEND_GUARD_MS) {
+if (t0 && t0 === lastSendTxt && Date.now() - lastSendTs < SEND_GUARD_MS && !userEditedAfterClear()) {
 clearChatInput();
 draftImgs = [];
 renderDraft();
@@ -7517,10 +7527,24 @@ if (send) send.addEventListener('click', () => addMsg(input.innerText));
 // 发「嗯/好的/在吗」等重复短句必现）。双击防重仍由守卫承担：真实双击时第二次 click
 // 距上次发送 <2.5s 且文本相同，同样会命中守卫，不会重复发送。
 if (input) {
+// v3.26.x #114：真实输入活动跟踪（守卫判据来源）——捕获阶段早于 input 事件，
+// 用户敲的每一键/每一次组合开始/每一次插入式编辑都会刷新 lastUserEditAt；
+// 内核的迟到写回不会（它没有对应的输入活动）。beforeinput 只认 insert* 类型，
+// delete* 不算「把文本打进来」。老内核无 beforeinput 也不影响（前两类已覆盖）。
+try {
+input.addEventListener('keydown', () => { lastUserEditAt = Date.now(); }, true);
+input.addEventListener('compositionstart', () => { lastUserEditAt = Date.now(); }, true);
+input.addEventListener('beforeinput', (e) => {
+if (!e || typeof e.inputType !== 'string' || e.inputType.indexOf('insert') === 0) lastUserEditAt = Date.now();
+}, true);
+} catch (e) {}
 input.addEventListener('input', () => {
 if (!input._mClearTxt) return;
 const now = input.innerText.trim();
 if (now === input._mClearTxt && Date.now() - lastSendTs < SEND_GUARD_MS) {
+// 本次清空之后用户真打过字＝重发了同一条内容，放行（原实现在此静默清框，
+// 用户看到的就是「输入的字不显示、空白」）；只有无输入活动的迟到写回才清。
+if (userEditedAfterClear()) { input._mClearTxt = ''; return; }
 input.textContent = '';
 input._mClearTxt = '';
 } else if (now && now !== input._mClearTxt) {

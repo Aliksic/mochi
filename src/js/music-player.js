@@ -1816,6 +1816,12 @@
   // 用本地值（Blob 或 dataURL 字符串）建音频并播放
   function playLocal(m, v) {
     if (currentId !== m.id) return;
+    // v3.30.x：脏值兜底守卫——loadLocal 已过滤超短脏值，这里拦第二层（如侥幸通过长度
+    // 校验的垃圾串），绝不把非法 src 喂给 <audio>（Blob 会转 blob: URL，天然合法）
+    if (!(v instanceof Blob) && !validAudioSrc(v)) {
+      toast('播放失败：音频数据无效'); wantPlay = false; clearBgResume(); currentId = null; updatePlayerBar(); renderLibrary();
+      return;
+    }
     let failoverUsed = false; // 防止 blob:↔dataURL 之间无限切换
     // 用指定 src 建 audio 并启动播放，4 秒无 onplay/无进度 → 切另一种 src
     function startWithSrc(src, isBlob) {
@@ -1896,6 +1902,24 @@
   function validAudioSrc(v) {
     return typeof v === 'string' &&
       (/^https?:\/\//i.test(v) || /^blob:/i.test(v) || /^data:/i.test(v));
+  }
+  // v3.30.x：本地歌曲文件值形状校验——本地链路只接受 Blob（新存储）或 dataURL 长字符串
+  //（旧存储）。历史版本曾把 JSON 序列化串（'{}'、'[object Blob]' 等）写进 music-file 键
+  //（双写/序列化失误），直接喂给 <audio> 会解析成站内路径 /mochi/{} 刷「资源加载失败」。
+  // Blob 无条件放行；字符串要求 ≥10 字符（有效 dataURL 远长于此，超短串必为脏值）。
+  function plausibleLocalValue(v) {
+    if (v instanceof Blob) return true;
+    if (typeof v === 'string') return v.length >= 10;
+    return false;
+  }
+  // v3.30.x：清除某个本地歌的脏存储值。仅当本次读到的值已确认非法时调用——null/undefined
+  // 表示数据缺失（可能只是 IDB 挂起超时，好文件还在），不得误删；'{}' 等脏值必删，
+  // 否则每次刷新都反复读到同一脏值、永远需要手动删歌重加。
+  function purgeLocalFile(m) {
+    try { if (localBlobCache) delete localBlobCache[m.id]; } catch (e) {}
+    try { store.remove('music-file:' + m.id); } catch (e) {} // 内存缓存+LS+IDB(default 前缀)
+    try { localStorage.removeItem('xy-home-v2:music-file:' + m.id); } catch (e) {} // 旧 uid 前缀
+    try { if (window.idbDelete) window.idbDelete('xy-home-v2:music-file:' + m.id); } catch (e) {}
   }
   function teardownAudio() {
     if (audio) { killAudioEl(audio); audio = null; }
@@ -2537,17 +2561,21 @@
         // v3.5.129：守卫——异步加载期间用户已切到别的歌（currentId 变了）→ 丢弃本次结果，
         // 否则旧歌的 audio 会继续创建播放，出现两首歌同时响
         if (currentId !== m.id) return;
-        if (!v) {
-          // v3.5.107：内置示例旋律兜底——IDB 数据缺失/写入未完成时现场重新合成
-          const idx = seedIdxOf(m);
-          if (idx >= 0) {
-            playDemoFor(m, idx);
-            return;
-          }
-          toast('音乐文件加载失败，可能已被清理'); wantPlay = false; clearBgResume(); currentId = null; updatePlayerBar(); renderLibrary(); return;
+        if (plausibleLocalValue(v)) {
+          // v3.6.x：统一转 Blob + 对象 URL 播放（兼容旧 dataURL 字符串 / 新 Blob 存储）
+          playLocal(m, v);
+          return;
         }
-        // v3.6.x：统一转 Blob + 对象 URL 播放（兼容旧 dataURL 字符串 / 新 Blob 存储）
-        playLocal(m, v);
+        // v3.30.x：值存在但形状非法（'{}'、'[object Blob]'、超短字符串等历史脏值）→
+        // 清掉脏存储，避免每次刷新反复读到同一脏值、被迫删歌重加；null/undefined 仅表示
+        // 数据缺失（可能 IDB 挂起超时），保留存储不动，避免把好文件也误删
+        if (v !== undefined && v !== null && v !== '') purgeLocalFile(m);
+        const idx = seedIdxOf(m);
+        if (idx >= 0) {
+          playDemoFor(m, idx);
+          return;
+        }
+        toast('音乐文件加载失败，可能已被清理'); wantPlay = false; clearBgResume(); currentId = null; updatePlayerBar(); renderLibrary();
       };
       // v3.29.x：优先同步查内存缓存/localStorage——idbGet 异步丢用户手势上下文，play()
       // 被 NotAllowedError 拒后 muted 解锁失败→armAutoResume retry 用 m.url='' 必失败，
@@ -2557,7 +2585,14 @@
         const cached = localBlobCache[m.id];
         if (cached) { loadLocal(cached); return; }
         const lsSync = store.get('music-file:' + m.id);
-        if (lsSync) { localBlobCache[m.id] = lsSync; loadLocal(lsSync); return; }
+        // v3.30.x：LS 里的本地歌值可能是历史脏值（'{}'）→ 若不可信就清掉 LS 副本并继续
+        // 落下面 idbGet 读权威 IDB——脏值只污染过 LS 时，IDB 里往往还是好 Blob，直接能播，
+        // 刷新后无需删歌重加
+        if (lsSync && !plausibleLocalValue(lsSync)) {
+          try { localStorage.removeItem(MUSIC_PREFIX + ':music-file:' + m.id); } catch (e) {}
+          try { localStorage.removeItem('xy-home-v2:music-file:' + m.id); } catch (e) {}
+        }
+        if (plausibleLocalValue(lsSync)) { localBlobCache[m.id] = lsSync; loadLocal(lsSync); return; }
       }
       if (window.idbGet) {
         window.idbGet(key).then(v => {

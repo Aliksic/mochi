@@ -535,6 +535,17 @@ html.ios-pwa-standalone body { background: var(--bg-b); }
      "聊天页底部栏之外还有灰色，滑动遮挡消息"）；统一背景后输入栏四周与
      消息区同色，灰条消失，消息气泡（白/深色）对比正常。全局生效（两种模式） */
   #page-chat { background: var(--page-bg-grad); }
+  /* v3.26.x：聊天输入栏聚焦时给一个独立合成层（同款手法见 chat-pages.css
+     .ta-add .ce-box:focus）——修「红米 K60 至尊版 + Edge：聊天输入栏打字不显示，
+     空白到发不出去」。#chat-input / #gc-input 是模板原生 contenteditable div
+     （不经 mobile-adapt ceConvert，所以拿不到 .ce-box 那套 will-change/translateZ
+     保护），而键盘期 .phone 会被 _aPanComp 写 position:relative+top、height 跟随
+     visualViewport 逐帧重算；安卓 Chromium/WebKit 已知缺陷会让文本继续画在旧的
+     合成层位子上＝框内空白（同「文字与框分离/字出界」那一族症状，当年 .ta-add
+     半框就是靠这一条治好的）。只提升合成层、不位移，布局零变化。
+     不用 JS toggle transform：正在键入的元素被强制重建合成层会丢字（摩托罗拉 G100
+     实测，见 mobile-adapt.js _aRefreshCe 的 _aUserTypos 闸门），纯 CSS :focus 无此风险。 */
+  .phone .chat-input:focus { transform: translateZ(0); }
   /* v3.5.116：键盘弹起适配改由 mobile-adapt.js 统一处理——
      interactive-widget 只在根元素生效，写在 .phone 上无效（死代码）；
      JS 用 visualViewport 锁定 .phone 到可视高度并 fixed 顶对齐，跨设备统一。 */
@@ -580,6 +591,13 @@ html.ios-native-fs .phone .page.full .stats-top-name { padding-top: 10px; }
 .ios-fs-active .phone .page.full .card-tabs,
 .ios-fs-active .phone .page.full .div-h-title,
 .ios-fs-active .phone .page.full .stats-top-name { padding-top: 10px; }
+/* v3.26.x #114：iOS 全屏态（standalone + ios-fs-active）下模拟状态栏与系统状态栏重叠。
+   窄屏 @media 的 .statusbar safe-area 顶部留白（0,1,0）被全局 .statusbar 的
+   padding:4px 4px 12px（同特异性、源顺序靠后）覆盖失效，模拟状态栏内容顶到 y=0，
+   与系统时间/电量重叠（用户实测「mochi 时间 电量这一行和手机自己的顶部栏重叠」）。
+   本规则以 html.ios-fs-active .phone .statusbar（0,2,1）提权，在全屏态恢复安全区
+   留白：模拟状态栏整体下移到系统状态栏下方，形成两栏不重叠（承接 #111 保留状态栏）。 */
+html.ios-fs-active .phone .statusbar { padding-top:max(calc(14px + env(safe-area-inset-top, 0px)), 14px); }
 
 /* v3.6.x→v3.28.x：iOS 独立应用「全屏模式」（ios-fs-active 类，由 fullscreen.js 控制）——
    iOS 无 Fullscreen API、系统状态栏永远无法隐藏，应用内模拟状态栏（Mochi/时间/电量那行）

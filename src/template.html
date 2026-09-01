@@ -262,7 +262,7 @@
             <div class="ring"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.5-6 8-6s8 2 8 6"/></svg></div>
             <span class="lbl" id="lbl-partner" title="点击修改昵称">TA</span>
           </div>
-          <span class="deco-heart"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7.5-4.7-9.3-9A5.3 5.3 0 0112 6.4a5.3 5.3 0 019.3 5.6c-1.8 4.3-9.3 9-9.3 9z"/></svg></span>
+          <span class="deco-heart" id="deco-heart"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7.5-4.7-9.3-9A5.3 5.3 0 0112 6.4a5.3 5.3 0 019.3 5.6c-1.8 4.3-9.3 9-9.3 9z"/></svg></span>
           <div class="deco-avatar" id="avatar-user" title="设置「我」的头像">
             <div class="ring"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.5-6 8-6s8 2 8 6"/></svg></div>
             <span class="lbl" id="lbl-user" title="点击修改昵称">我</span>
@@ -1244,7 +1244,10 @@
       <div class="set-group glass">
         <div class="gs-row"><span>后台保活</span><label class="toggle"><input type="checkbox" id="bg-keepalive"><span class="tk"></span></label></div>
         <div class="gs-row"><span>后台通知</span><label class="toggle"><input type="checkbox" id="bg-notify"><span class="tk"></span></label><button class="bg-notify-test" id="bg-notify-test">测试</button></div>
-        <div class="gs-row"><span>全屏模式（隐藏手机状态栏）</span><label class="toggle"><input type="checkbox" id="sf-fullscreen"><span class="tk"></span></label></div>
+        <div class="gs-row"><span style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;"><span>全屏模式（隐藏手机状态栏）</span><span class="tag" id="sf-fullscreen-help" role="button" tabindex="0" aria-haspopup="dialog">功能说明</span></span><label class="toggle"><input type="checkbox" id="sf-fullscreen"><span class="tk"></span></label></div>
+        <!-- v3.26.x：全屏模式功能说明——iOS 系统状态栏（时间/电量）由系统控制、任何网页都无法隐藏，
+             点「功能说明」标签弹详细说明（fullscreen.js sf-fullscreen-help 绑定 showIosGuide） -->
+        <div class="gs-sub" id="sf-fullscreen-sub">开启后尽量隐藏手机顶部状态栏/浏览器栏，让内容占满全屏。<br>iOS 限制：iPhone 顶部系统状态栏（时间/电量）由系统控制，任何网页都无法隐藏；从主屏幕打开时本开关会让内容顶满屏幕，应用内模拟状态栏（Mochi/时间/电量）下移到系统状态栏正下方、两栏不重叠。</div>
         <!-- v3.26.x：布局手动兜底——浏览器「桌面版网站」模式会把 UA / screen / 触摸能力 /
              视口整套伪装成桌面，指纹识别必有漏网（vivo Y35 + Edge 连栽三轮）。识别失手时
              用户自己掰回来：本开关（或地址栏 ?mobile=1 / ?pc=1），持久存 localStorage，
@@ -1798,7 +1801,7 @@
             <summary><span class="lg-num">15</span><span class="lg-name">纪念</span><span class="lg-count">3</span></summary>
             <div class="lg-body">
           <div class="lic-li">桌面【纪念】可设置纪念日和倒数日</div>
-          <div class="lic-li">恋爱纪念日显示在桌面顶部双方头像下方（我们在一起的天数）</div>
+          <div class="lic-li">纪念日显示在桌面顶部双方头像下方（可设恋爱/亲情/友情向，显示相伴天数）</div>
           <div class="lic-li">下一个纪念日倒计时</div>
             </div>
           </details>
@@ -3398,9 +3401,16 @@
         <span class="ch-name">纪念</span>
       </div>
       <div class="mem-scroll">
-        <!-- 恋爱纪念日（影响桌面在一起时间/日期） -->
+        <!-- 主纪念日（影响桌面相伴时间/日期；可设爱情/亲情/友情向 + 关系称呼） -->
         <div class="mem-card glass">
-          <div class="mem-card-label">恋爱纪念日</div>
+          <div class="mem-card-label" id="mem-love-label">恋爱纪念日</div>
+          <!-- 关系类型：爱情向 / 亲情向 / 友情向 -->
+          <div class="mem-type-row" id="rel-type-row">
+            <button type="button" class="mem-type-pill" data-rel="love">爱情向</button>
+            <button type="button" class="mem-type-pill" data-rel="family">亲情向</button>
+            <button type="button" class="mem-type-pill" data-rel="friend">友情向</button>
+          </div>
+          <input type="text" id="rel-role-input" class="mem-add-input" placeholder="关系称呼（选填）如：姐姐 / 女儿 / 妈妈 / 朋友" maxlength="12">
           <div class="mem-date-wrap">
             <button type="button" class="mem-date-btn" id="love-date-btn">
               <span class="mem-date-btn-ico" aria-hidden="true">
