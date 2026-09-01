@@ -4274,8 +4274,8 @@
         <span class="ch-back" id="gc-back">
           <svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
         </span>
-        <span class="ch-name gc-name" id="gc-name" title="点击查看群成员">群聊</span>
-        <!-- v3.9.x：右上角三点菜单（群成员 / 群聊设置） -->
+        <span class="ch-name gc-name" id="gc-name" title="点击切换群聊">群聊</span>
+        <!-- v3.9.x：右上角三点菜单（群成员 / 切换群聊 / 群聊设置） -->
         <span class="ch-settings gc-more-btn" id="gc-more-btn" title="更多">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>
         </span>
@@ -4285,6 +4285,11 @@
         <div class="gc-more-item" id="gc-more-members">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><circle cx="17" cy="8" r="3.2"/><path d="M3 19c0-3 2.7-5 6-5s6 2 6 5"/><path d="M14 19c0-3 2.7-5 6-5"/></svg>
           <span>群成员</span>
+        </div>
+        <!-- v3.26.x：多群聊分组——切换 / 新建 / 删除群聊 -->
+        <div class="gc-more-item" id="gc-more-groups">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 4v16M15 4v16"/></svg>
+          <span>切换群聊</span>
         </div>
         <div class="gc-more-item" id="gc-more-settings">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33h.01a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51h.01a1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82v.01a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
@@ -4330,6 +4335,27 @@
           <button class="gc-mp-close" id="gc-mp-close">✕</button>
         </div>
         <div class="gc-mp-body" id="gc-mp-body"></div>
+      </div>
+      <!-- v3.26.x：群聊列表面板（切换 / 新建 / 删除群聊，复用群成员面板样式） -->
+      <div class="gc-members-panel" id="gc-groups-panel" hidden>
+        <div class="gc-mp-head">
+          <span>切换群聊</span>
+          <button class="gc-mp-close" id="gc-gp-close">✕</button>
+        </div>
+        <div class="gc-mp-body" id="gc-gp-body"></div>
+      </div>
+      <!-- v3.26.x：成员选择面板（新建群聊 / 给当前群加人，复用群成员面板样式） -->
+      <div class="gc-members-panel" id="gc-gpick-panel" hidden>
+        <div class="gc-mp-head">
+          <span id="gc-gpick-title">选择成员</span>
+          <button class="gc-mp-close" id="gc-gpick-close">✕</button>
+        </div>
+        <div class="gc-gpick-sub">勾选联系人，点底部按钮完成</div>
+        <div class="gc-mp-body" id="gc-gpick-body"></div>
+        <div class="gc-gpick-ops">
+          <button class="gc-set-btn" id="gc-gpick-cancel">取消</button>
+          <button class="gc-set-btn gc-gpick-ok" id="gc-gpick-ok">确定</button>
+        </div>
       </div>
       <!-- @提及成员选择面板 -->
       <div class="gc-at-panel" id="gc-at-panel" hidden>

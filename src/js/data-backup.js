@@ -721,7 +721,8 @@
     // [键尾正则, 功能名, 可选解析函数(v)=>条数文本]
     const RULES = [
       [/:chat-msgs$/, '聊天记录', arr => arr.length + ' 条'],
-      [/:group-chat-msgs$/, '群聊记录', arr => arr.length + ' 条'],
+      // v3.26.x：多群聊分组——自定义群聊消息键为 xy-home-v2:gc-msgs-<gid>，一并计入「群聊记录」
+      [/:group-chat-msgs$|:gc-msgs-/, '群聊记录', arr => arr.length + ' 条'],
       [/mail-letters/, '信箱', arr => arr.length + ' 封'],
       [/feed-posts/, '朋友圈', arr => arr.length + ' 条'],
       [/cc-groups/, '字卡库', obj => Object.keys(obj).length + ' 组'],
@@ -913,7 +914,7 @@
         // v3.9 每日小记/摸鱼工作值
         'quote-history', 'memo-', 'mood-history', 'today-mood-',
         'day-fish-', 'day-work-', 'fish-day-add', 'work-day-add',
-        'work-total', 'love-start', 'avatar-lib', 'avatar-me-lib',
+        'work-total', 'love-start', 'rel-cat', 'rel-role', 'avatar-lib', 'avatar-me-lib',
         'ck-', 'ckq-', 'rps-score', 'desk-countdowns', 'desk-texts',
         'desk-images', 'desk-layout', 'more-tab', 'cal-my-', 'mem-extras',
         'fish-log', 'fish-migrated', 'music-global', 'music-favs', 'music-float-pos',

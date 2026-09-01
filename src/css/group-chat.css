@@ -216,3 +216,31 @@
 .gc-at-av img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
 .gc-at-av svg { width: 60%; height: 60%; }
 .gc-at-item span { font-size: 14px; }
+
+/* ---- 群聊列表 / 成员选择面板（v3.26.x：复用 .gc-members-panel 弹层与 .gc-mp-* 行样式） ---- */
+.gc-gp-item { cursor: pointer; }
+.gc-gp-item.cur { background: rgba(0,0,0,.03); }
+.gc-gp-item:active { background: #f4f4f4; }
+.gc-gp-ico svg { width: 19px; height: 19px; }
+.gc-gp-ico.add svg { color: #e8833a; }
+.gc-gp-cur { background: #e8f7ee !important; color: #0a7d3c !important; }
+.gc-gp-del, .gc-mp-rm { font-size: 11px; padding: 4px 9px; }
+.gc-gp-new { cursor: pointer; }
+.gc-gp-new:active { background: #f6f6f6; }
+.gc-gp-new .gc-mp-name { color: #e8833a; font-weight: 600; }
+.gc-mp-add { padding: 10px 16px; border-top: 1px solid rgba(0,0,0,.06); }
+.gc-mp-add button { width: 100%; }
+.gc-gpick-sub { padding: 10px 16px 2px; font-size: 12px; color: #999; }
+.gc-gpick-item { cursor: pointer; }
+.gc-gpick-item:active { background: #f4f4f4; }
+.gc-gpick-item input[type="checkbox"] {
+  width: 16px; height: 16px; flex-shrink: 0; margin: 0;
+  accent-color: #3a8ee6; cursor: pointer;
+}
+.gc-gpick-empty { padding: 28px 16px; text-align: center; font-size: 13px; color: #999; }
+.gc-gpick-ops {
+  display: flex; gap: 10px; padding: 10px 16px;
+  border-top: 1px solid rgba(0,0,0,.06);
+}
+.gc-gpick-ops .gc-set-btn { flex: 1; padding: 9px 0; text-align: center; }
+.gc-gpick-ops .gc-gpick-ok { font-weight: 600; }

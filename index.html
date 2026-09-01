@@ -380,6 +380,7 @@ padding-bottom: calc(10px + var(--mochi-safe-bottom,env(safe-area-inset-bottom,0
 .phone .page.full .chat-head { padding-top: calc(10px + env(safe-area-inset-top, 0px)); }
 .phone .page.full { padding-bottom: 0; }
 #page-chat { background: var(--page-bg-grad); }
+.phone .chat-input { will-change:transform; }
 .phone .chat-input:focus { transform: translateZ(0); }
 }
 @media (display-mode: fullscreen) {
@@ -6391,6 +6392,32 @@ display: flex; align-items: center; justify-content: center; overflow: hidden; f
 .gc-at-av img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
 .gc-at-av svg { width: 60%; height: 60%; }
 .gc-at-item span { font-size: 14px; }
+.gc-gp-item { cursor: pointer; }
+.gc-gp-item.cur { background: rgba(0,0,0,.03); }
+.gc-gp-item:active { background: #f4f4f4; }
+.gc-gp-ico svg { width: 19px; height: 19px; }
+.gc-gp-ico.add svg { color: #e8833a; }
+.gc-gp-cur { background: #e8f7ee !important; color: #0a7d3c !important; }
+.gc-gp-del, .gc-mp-rm { font-size: 11px; padding: 4px 9px; }
+.gc-gp-new { cursor: pointer; }
+.gc-gp-new:active { background: #f6f6f6; }
+.gc-gp-new .gc-mp-name { color: #e8833a; font-weight: 600; }
+.gc-mp-add { padding: 10px 16px; border-top: 1px solid rgba(0,0,0,.06); }
+.gc-mp-add button { width: 100%; }
+.gc-gpick-sub { padding: 10px 16px 2px; font-size: 12px; color: #999; }
+.gc-gpick-item { cursor: pointer; }
+.gc-gpick-item:active { background: #f4f4f4; }
+.gc-gpick-item input[type="checkbox"] {
+width: 16px; height: 16px; flex-shrink: 0; margin: 0;
+accent-color: #3a8ee6; cursor: pointer;
+}
+.gc-gpick-empty { padding: 28px 16px; text-align: center; font-size: 13px; color: #999; }
+.gc-gpick-ops {
+display: flex; gap: 10px; padding: 10px 16px;
+border-top: 1px solid rgba(0,0,0,.06);
+}
+.gc-gpick-ops .gc-set-btn { flex: 1; padding: 9px 0; text-align: center; }
+.gc-gpick-ops .gc-gpick-ok { font-weight: 600; }
 .set-title { font-size:22px; font-weight:700; padding:4px 2px 16px; letter-spacing:1px; }
 .set-group { border-radius:20px; overflow:hidden; margin-bottom:12px; }
 .cg-title { display:flex; align-items:center; gap:7px; margin:16px 6px 7px; font-size:11.5px; font-weight:600; color:var(--muted,#999); letter-spacing:.6px; }
@@ -7641,6 +7668,9 @@ border: none; background: #e85a8f; color: #fff; font-size: 12px; font-weight: 60
 cursor: pointer; font-family: inherit;
 }
 .recipe-btn:active { opacity: .8; }
+.recipe-btn[disabled] { opacity: .5; cursor: default; }
+.recipe-need .rq.short { color: #e0524f; font-weight: 700; letter-spacing: 0; }
+.recipe-lack { font-size: 11px; color: #e0524f; margin: -2px 0 4px; }
 .garden-report { margin: 0 18px 18px; }
 .garden-report-card {
 padding: 18px 16px; border-radius: 18px;
@@ -8558,9 +8588,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1788258720850">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.381</b></span>
-        <span class="sv-deploy">部署于 2026-09-01 18:32<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1788261099759">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.382</b></span>
+        <span class="sv-deploy">部署于 2026-09-01 19:11<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9656,7 +9686,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.381</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.382</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
       <!-- v3.27.x：设置页底部防骗声明 -->
       <div class="set-alert">
@@ -9896,7 +9926,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.381</span>
+              <span class="lic-ver">v3.26.382</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -12626,8 +12656,8 @@ transition-duration: .01ms !important;
         <span class="ch-back" id="gc-back">
           <svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
         </span>
-        <span class="ch-name gc-name" id="gc-name" title="点击查看群成员">群聊</span>
-        <!-- v3.9.x：右上角三点菜单（群成员 / 群聊设置） -->
+        <span class="ch-name gc-name" id="gc-name" title="点击切换群聊">群聊</span>
+        <!-- v3.9.x：右上角三点菜单（群成员 / 切换群聊 / 群聊设置） -->
         <span class="ch-settings gc-more-btn" id="gc-more-btn" title="更多">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>
         </span>
@@ -12637,6 +12667,11 @@ transition-duration: .01ms !important;
         <div class="gc-more-item" id="gc-more-members">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><circle cx="17" cy="8" r="3.2"/><path d="M3 19c0-3 2.7-5 6-5s6 2 6 5"/><path d="M14 19c0-3 2.7-5 6-5"/></svg>
           <span>群成员</span>
+        </div>
+        <!-- v3.26.x：多群聊分组——切换 / 新建 / 删除群聊 -->
+        <div class="gc-more-item" id="gc-more-groups">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 4v16M15 4v16"/></svg>
+          <span>切换群聊</span>
         </div>
         <div class="gc-more-item" id="gc-more-settings">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33h.01a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51h.01a1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82v.01a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
@@ -12682,6 +12717,27 @@ transition-duration: .01ms !important;
           <button class="gc-mp-close" id="gc-mp-close">✕</button>
         </div>
         <div class="gc-mp-body" id="gc-mp-body"></div>
+      </div>
+      <!-- v3.26.x：群聊列表面板（切换 / 新建 / 删除群聊，复用群成员面板样式） -->
+      <div class="gc-members-panel" id="gc-groups-panel" hidden>
+        <div class="gc-mp-head">
+          <span>切换群聊</span>
+          <button class="gc-mp-close" id="gc-gp-close">✕</button>
+        </div>
+        <div class="gc-mp-body" id="gc-gp-body"></div>
+      </div>
+      <!-- v3.26.x：成员选择面板（新建群聊 / 给当前群加人，复用群成员面板样式） -->
+      <div class="gc-members-panel" id="gc-gpick-panel" hidden>
+        <div class="gc-mp-head">
+          <span id="gc-gpick-title">选择成员</span>
+          <button class="gc-mp-close" id="gc-gpick-close">✕</button>
+        </div>
+        <div class="gc-gpick-sub">勾选联系人，点底部按钮完成</div>
+        <div class="gc-mp-body" id="gc-gpick-body"></div>
+        <div class="gc-gpick-ops">
+          <button class="gc-set-btn" id="gc-gpick-cancel">取消</button>
+          <button class="gc-set-btn gc-gpick-ok" id="gc-gpick-ok">确定</button>
+        </div>
       </div>
       <!-- @提及成员选择面板 -->
       <div class="gc-at-panel" id="gc-at-panel" hidden>
@@ -21883,6 +21939,7 @@ if (cnt) cnt.textContent = String(dayVal('fish-total'));
 } catch (e) {}
 try { updateFishDays(); } catch (e) {}
 try { updateLove(); } catch (e) {}
+try { syncRelUI(); } catch (e) {}
 try { renderQuoteOfDay(); } catch (e) {}
 try { renderExtras(); } catch (e) {}
 try { renderDeskWidgets(); } catch (e) {}
@@ -30154,7 +30211,6 @@ if (membersClose) membersClose.addEventListener('click', () => { if (membersPane
 function renderGroupsPanel() {
 if (!gpBody) return;
 gpBody.innerHTML = '';
-const cur = currentGroup();
 groups.forEach(g => {
 const row = document.createElement('div');
 row.className = 'gc-mp-item gc-gp-item' + (g.id === curGid ? ' cur' : '');
@@ -30240,12 +30296,15 @@ if (gpickPanel) gpickPanel.hidden = false;
 function renderMemberPicker() {
 if (!gpickBody) return;
 if (gpickTitle) gpickTitle.textContent = gpickMode === 'create' ? '新建群聊' : '添加成员';
+let all = [];
+try { all = window.getContacts() || []; } catch (e) {}
+let opts = all;
+if (gpickMode === 'add') {
 const g = currentGroup();
 const inGroup = {};
 if (g && g.members) g.members.forEach(id => { inGroup[id] = 1; });
-let all = [];
-try { all = window.getContacts() || []; } catch (e) {}
-const opts = all.filter(c => !inGroup[c.id]);
+opts = all.filter(c => !inGroup[c.id]);
+}
 gpickBody.innerHTML = '';
 if (!opts.length) {
 const empty = document.createElement('div');
@@ -30325,6 +30384,12 @@ if (moreSettings) moreSettings.addEventListener('click', () => {
 showMoreMenu(false);
 renderSettingsPanel();
 if (settingsPanel) settingsPanel.hidden = false;
+});
+const moreGroups = document.getElementById('gc-more-groups');
+if (moreGroups) moreGroups.addEventListener('click', () => {
+showMoreMenu(false);
+renderGroupsPanel();
+if (groupsPanel) groupsPanel.hidden = false;
 });
 const settingsPanel = document.getElementById('gc-settings-panel');
 const settingsBody = document.getElementById('gc-set-body');
@@ -30946,9 +31011,16 @@ try { hideTyping(); } catch (e) {}
 updateGroupName();
 renderAll();
 try { if (settingsPanel && !settingsPanel.hidden) renderSettingsPanel(); } catch (e) {}
+try { if (groupsPanel && !groupsPanel.hidden) renderGroupsPanel(); } catch (e) {}
 });
 window.groupChatGetMsgs = function () { return msgs.slice(); };
 window.groupChatClear = function () { msgs = []; saveNow(); renderAll(); };
+window.groupChatGetGroups = function () {
+try { return JSON.parse(JSON.stringify(groups)); } catch (e) { return []; }
+};
+window.groupChatGetCurGroup = function () {
+try { const g = currentGroup(); return g ? JSON.parse(JSON.stringify(g)) : null; } catch (e) { return null; }
+};
 window.groupChatProfileGet = function (key) { try { return JSON.parse(JSON.stringify(gcProfileGet(key))); } catch (e) { return {}; } };
 window.groupChatProfileSet = function (key, name, avatar) { gcProfileSet(key, name, avatar); };
 window.groupChatBeautyGet = function (k) { return gcBeautyGet(k); };
@@ -62662,19 +62734,22 @@ if (!data.recipes) data.recipes = {};
 var h = '<div class="garden-craft-title">\uD83D\uDC83 \u82B1\u827A\u914D\u65B9</div><div class="garden-craft-list">';
 RECIPES.forEach(function (r) {
 var canMake = true;
-var needTxt = [];
+var needTxt = [], lackTxt = [];
 Object.keys(r.need).forEach(function (k) {
 var have = data.inv[k] || 0;
-if (have < r.need[k]) canMake = false;
+var need = r.need[k];
+if (have < need) { canMake = false; lackTxt.push((T[k] ? T[k].e[T[k].e.length - 1] : "") + "\u00d7" + (need - have)); }
 var tp = T[k];
-needTxt.push((tp ? tp.e[tp.e.length - 1] : "") + "\u00d7" + r.need[k]);
+needTxt.push('<span class="rq' + (have < need ? " short" : "") + '">' + (tp ? tp.e[tp.e.length - 1] : "") + " " + have + "/" + need + '</span>');
 });
 var made = !!data.recipes[r.id];
 h += '<div class="garden-recipe' + (canMake ? " can" : "") + (made ? " made" : "") + '">';
 h += '<div class="recipe-head"><span class="recipe-emoji">' + r.e + '</span><span class="recipe-name">' + r.n + '</span>' + (made ? '<span class="recipe-made">\u2713\u5DF2\u5408\u6210</span>' : "") + '</div>';
 h += '<div class="recipe-need">' + needTxt.join(" ") + '</div>';
+if (!canMake && lackTxt.length) h += '<div class="recipe-lack">\u6750\u6599\u4E0D\u8DB3\uFF0C\u8FD8\u7F3A ' + lackTxt.join("\u3001") + '\uFF08\u5728\u82B1\u56ED\u79CD\u4E0B\u5E76\u6536\u83B7\u540E\u53EF\u5408\u6210\uFF09</div>';
 h += '<div class="recipe-wish">' + r.wish + '</div>';
 if (canMake) h += '<button class="recipe-btn" data-recipe="' + r.id + '">\u5408\u6210\u82B1\u675F</button>';
+else h += '<button class="recipe-btn" disabled>\u6750\u6599\u4E0D\u8DB3</button>';
 h += '</div>';
 });
 h += '</div>';
@@ -71928,7 +72003,7 @@ return Math.round(n) + ' B';
 function exportCoverage() {
 const RULES = [
 [/:chat-msgs$/, '聊天记录', arr => arr.length + ' 条'],
-[/:group-chat-msgs$/, '群聊记录', arr => arr.length + ' 条'],
+[/:group-chat-msgs$|:gc-msgs-/, '群聊记录', arr => arr.length + ' 条'],
 [/mail-letters/, '信箱', arr => arr.length + ' 封'],
 [/feed-posts/, '朋友圈', arr => arr.length + ' 条'],
 [/cc-groups/, '字卡库', obj => Object.keys(obj).length + ' 组'],
@@ -72087,7 +72162,7 @@ const mochiKeyTails = [
 'reply-', 'feed-', 'music-', 'emoji-last', 'group-chat-enabled',
 'quote-history', 'memo-', 'mood-history', 'today-mood-',
 'day-fish-', 'day-work-', 'fish-day-add', 'work-day-add',
-'work-total', 'love-start', 'avatar-lib', 'avatar-me-lib',
+'work-total', 'love-start', 'rel-cat', 'rel-role', 'avatar-lib', 'avatar-me-lib',
 'ck-', 'ckq-', 'rps-score', 'desk-countdowns', 'desk-texts',
 'desk-images', 'desk-layout', 'more-tab', 'cal-my-', 'mem-extras',
 'fish-log', 'fish-migrated', 'music-global', 'music-favs', 'music-float-pos',

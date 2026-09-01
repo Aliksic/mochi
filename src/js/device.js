@@ -1254,7 +1254,7 @@
     //   n 恒 0 ＝ 字根本没进 DOM（输入法/内核丢提交）
     //   n 涨过又掉回 0 ＝ 进来了被清（防复活守卫 / 重绘清空 / 切桌面竞态）
     //   n>0 且 st/sh/ch 正常 ＝ 进了 DOM 只是没画出来（合成层陈旧）
-    //   n>0 但 st ≈ sh-ch 且 sh ≤ ch ＝ 被自身滚动推出裁剪区（#114 自愈已修）
+    //   n>0 但 st ≈ sh-ch 且 sh ≤ ch ＝ 被自身滚动推出裁剪区（#115 自愈已修）
     try {
       const inps = JSON.parse(localStorage.getItem(INP_KEY) || '[]');
       if (Array.isArray(inps) && inps.length) {

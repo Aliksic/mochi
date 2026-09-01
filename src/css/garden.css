@@ -322,6 +322,9 @@
   cursor: pointer; font-family: inherit;
 }
 .recipe-btn:active { opacity: .8; }
+.recipe-btn[disabled] { opacity: .5; cursor: default; }
+.recipe-need .rq.short { color: #e0524f; font-weight: 700; letter-spacing: 0; }
+.recipe-lack { font-size: 11px; color: #e0524f; margin: -2px 0 4px; }
 
 /* ===== 花园年报 ===== */
 .garden-report { margin: 0 18px 18px; }

@@ -1183,7 +1183,6 @@
   function renderGroupsPanel() {
     if (!gpBody) return;
     gpBody.innerHTML = '';
-    const cur = currentGroup();
     groups.forEach(g => {
       const row = document.createElement('div');
       row.className = 'gc-mp-item gc-gp-item' + (g.id === curGid ? ' cur' : '');
@@ -1275,12 +1274,16 @@
   function renderMemberPicker() {
     if (!gpickBody) return;
     if (gpickTitle) gpickTitle.textContent = gpickMode === 'create' ? '新建群聊' : '添加成员';
-    const g = currentGroup();
-    const inGroup = {};
-    if (g && g.members) g.members.forEach(id => { inGroup[id] = 1; });
     let all = [];
     try { all = window.getContacts() || []; } catch (e) {}
-    const opts = all.filter(c => !inGroup[c.id]);
+    // 新建群聊：列全部联系人；添加成员：列未在【当前群】内的联系人
+    let opts = all;
+    if (gpickMode === 'add') {
+      const g = currentGroup();
+      const inGroup = {};
+      if (g && g.members) g.members.forEach(id => { inGroup[id] = 1; });
+      opts = all.filter(c => !inGroup[c.id]);
+    }
     gpickBody.innerHTML = '';
     if (!opts.length) {
       const empty = document.createElement('div');
@@ -1363,6 +1366,13 @@
     showMoreMenu(false);
     renderSettingsPanel();
     if (settingsPanel) settingsPanel.hidden = false;
+  });
+  // v3.26.x：三点菜单「切换群聊」→ 打开群聊列表面板（新建 / 切换 / 删除）
+  const moreGroups = document.getElementById('gc-more-groups');
+  if (moreGroups) moreGroups.addEventListener('click', () => {
+    showMoreMenu(false);
+    renderGroupsPanel();
+    if (groupsPanel) groupsPanel.hidden = false;
   });
 
   // ---- 群聊设置面板（v3.9.x：我的群聊形象 + 成员群聊形象） ----
@@ -2047,17 +2057,26 @@
     });
   }
 
-  // ---- 切联系人：消息全局不变，刷新群名 + 重渲染（"我"头像/成员名可能变） ----
+  // ---- 切联系人：当前群消息不变，刷新群名 + 重渲染（"我"头像/成员名可能变） ----
   document.addEventListener('contact-switched', function () {
     try { hideTyping(); } catch (e) {}
     updateGroupName();
     renderAll();
     try { if (settingsPanel && !settingsPanel.hidden) renderSettingsPanel(); } catch (e) {}
+    // v3.26.x：联系人变动（新增/删除/改名）会改变成员名单，群列表开着时同步刷新
+    try { if (groupsPanel && !groupsPanel.hidden) renderGroupsPanel(); } catch (e) {}
   });
 
   // 暴露（供数据备份/回归测试用）
   window.groupChatGetMsgs = function () { return msgs.slice(); };
   window.groupChatClear = function () { msgs = []; saveNow(); renderAll(); };
+  // v3.26.x：只读探针——当前群聊分组列表（默认群恒在首位，返回纯数据副本）
+  window.groupChatGetGroups = function () {
+    try { return JSON.parse(JSON.stringify(groups)); } catch (e) { return []; }
+  };
+  window.groupChatGetCurGroup = function () {
+    try { const g = currentGroup(); return g ? JSON.parse(JSON.stringify(g)) : null; } catch (e) { return null; }
+  };
   window.groupChatProfileGet = function (key) { try { return JSON.parse(JSON.stringify(gcProfileGet(key))); } catch (e) { return {}; } };
   // name/avatar：传 undefined 保持不变，传空串清除该字段
   window.groupChatProfileSet = function (key, name, avatar) { gcProfileSet(key, name, avatar); };

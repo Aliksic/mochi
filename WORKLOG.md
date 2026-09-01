@@ -1,4 +1,31 @@
-# 本次构建者：AI-B（18:3x 已收口：#113 诊断取消自动复制 + #114 iOS 全屏模拟状态栏与系统状态栏重叠修复 + 全屏模式功能说明 + 对方在途 group-chat/music-player/personalize/mobile-adapt/chat 等，已提交未推送）
+# 本次构建者：AI-B（本会话收口：桌面纪念日关系类型补强 + 全部在途 src 一次性构建提交）
+
+### 2026-09-01 19:0x（桌面纪念日关系类型收口 + 构建者打包全部在途 src）
+* [AI-B 域·构建者收口]（**改动文件：src/js/personalize.js（切换联系人刷新补 syncRelUI）、src/js/data-backup.js（备份识别键补 rel-cat/rel-role）、WORKLOG.md；构建状态：本包构建后一并提交（见下方 sw）**）。
+* 需求/反馈：用户要桌面恋爱纪念日组件可改成不一定是恋爱，设置时可选爱情向/亲情向/友情向，并支持关系称呼（如姐姐/女儿/妈妈/朋友）。**该主体已在 HEAD e0aaed3 由并行会话实现并提交**（personalize.js rel-cat/rel-role + template.html rel-type-row/rel-role-input + 桌面图标切换），本会话核对后补两处：
+  1. **切换联系人未刷新关系类型 UI**（提交版缺）：`updateLove` 在联系人切换块里会重跑，但 `mem-love-label`/关系类型 pills 选中态/桌面图标（deco-heart）不随之刷新，切到别的桌面会残留上一个联系人的类型/称呼。补 `try { syncRelUI(); } catch (e) {}` 到联系人切换刷新块（personalize.js ~5994）。
+  2. **备份识别键**：data-backup.js 导入识别列表补 `rel-cat` / `rel-role`（新键参与 mochi 备份判定）。
+* 一并收口在途 src（均 node --check 过、已保存完整）：#115 聊天输入栏四道加固（base.css will-change + chat.js/device.js 编号改注 + build.mjs 哨兵 + tools/verify-chat-input-guard.mjs）、花园工坊缺料提示（garden.js + garden.css）、群聊三点菜单「切换群聊」（group-chat.js + template.html gc-more-groups）。
+* 验证：`node build.mjs` → 哨兵全绿 + 哑哨兵 0 + sw.js 3/3；`node tools/verify-chat-input-guard.mjs`；`npm run verify`。
+* 待对方处理：无。
+* 待用户确认：push（上一包 e0aaed3 亦未推送，本包合并推送后线上才生效）。
+
+### 2026-09-01 18:4x（#115 红米 K60 至尊版 + Edge 聊天输入栏「打字不显示/空白」四道加固）
+* [AI-B 域 + 跨域 chat.js]（**改动文件：src/css/base.css（常驻 will-change + 注释）、src/js/chat.js（#114→#115 注释编号）、src/js/device.js（同上）、build.mjs（#115 哨兵 10 条：原 #114 编号改注 + 拆出 will-change 独立一条）、FIX-REGRESSION.md（#115 行）、tools/verify-chat-input-guard.mjs（新增验证脚本）、WORKLOG.md；构建状态：未构建（本会话只在 `%TEMP%\mochi-ck114` 隔离副本里 build/verify，仓库 `index.html` / `sw.js` / `version.json` 一律未动，等构建者收口）**）。
+* 需求/反馈（用户报障 + 诊断）：红米 K60 至尊版 + Edge 151（Android 16、406×739 DPR3、v3.26.380）「聊天里输入栏，输入的字不显示，空白，导致无法发送聊天消息」。追问后确认**任意文字都空白**（不只重复短句）。诊断佐证：`键盘/锁残留` 三行全 `n/a`（安卓侧根本没有探针，只读 iOS）、`chat-msgs` 142.6MB、采样 18fps、聚焦元素 `div#chat-input.chat-input`。
+* 跨域改动 src/js/chat.js（按 AGENTS.md 规则先记此条），理由：吞字判据本体在 chat.js 的防复活守卫里，不在我名下无法从别处修。改动只碰 `userEditedAfterClear` 闸门 + 三处守卫加判 + 三个输入活动打点监听，未动业务逻辑。
+* 根因/方案（该机型不可远程复现，按「没进来 / 进来被清 / 进来没画 / 进来滚出视野」四路各堵一处 + 决定性埋点，详见 FIX-REGRESSION #115）：
+  - **A 进来被清（唯一已证实的代码缺陷）**：v3.14 防复活守卫三处判据都是「框内内容 == 刚发送文本」，用户发完短句立刻用输入法**整段上屏**重打同一条（「好的」「在吗」必撞）→ 上屏即被静默清空，正是「打字不显示」。新增 `lastUserEditAt`/`clearAppliedAt`/`userEditedAfterClear()` 真实编辑闸门（keydown / compositionstart / `beforeinput` 的 `insert*` 三类活动打点），无输入活动的内核迟到写回仍照清。
+  - **B 进来没画**：聊天输入栏是模板原生 contenteditable、不走 `ceConvert`，拿不到 `.ce-box` 那套合成层保护；键盘期 `.phone` 被 `syncAndroidKb` 改高 + `_aPanComp` 写 `top`，文字可能画在失效旧层。补 `.phone .chat-input { will-change:transform }`（常驻，不依赖聚焦时机、也不受「文档未获焦点时 `:focus` 不匹配」影响）+ 聚焦再叠 `translateZ(0)`，与治好「文字与框分离」的 `.ta-add .ce-box` 完全同款；`#gc-input` 共用类一并覆盖。
+  - **C 进来滚出视野**：`healEditableScroll()` 把「内容不超高而 scrollTop 残留」归零（多行真滚动不动），挂 input 捕获 + `nudgeInputVisible()`。
+  - **D 埋点**：诊断新增「聊天输入栏现场」行 + 输入轨迹环形缓冲（`__diag-inp`，只记长度/滚动不记内容）+ `window.__mochiAndroidKb()` 并入 `mochiVvDiag().kb`（安卓不再是 `n/a`）。下次同机型报障凭这两行一次定分支，不必再猜。
+* 验证（全部在隔离副本跑，`node build.mjs` → 192/192 哨兵、哑哨兵 0、sw 3/3；`node tools/verify-chat-input-guard.mjs` → 17/17；`npm run verify` → 10/10）：
+  - **双向反向对照已实测**：闸门强制 `return false`（≈修复前）→ ②c/②d FAIL（文本被清空），强制 `return true`（关掉防复活）→ ③b FAIL。为让 ②c 真有牙，测试改走 composition 整段提交——逐键 ASCII 输入第一个字符就走进守卫 else 分支摘掉 `_mClearTxt`，永远测不到吞字判据（这是踩过一次的假绿）。
+  - **哨兵有牙已实测**：删掉 `userEditedAfterClear` 定义行 → 构建 exit 1 并如实报「src 里也没有＝修复真丢了」。
+* 并行状况（重要）：18:32 对方（同标 AI-B）构建提交时已把我这份在途 src 一并打进去（sw `mochi-mtij2jwy`，编号占用 **#114**＝iOS 全屏状态栏重叠），因此本包整体改标 **#115**。**当前仍未提交的增量**只有四处：`src/css/base.css` 的 `will-change:transform` 一行 + 注释、`build.mjs` 的 #115 编号与拆出的合成层哨兵、`tools/verify-chat-input-guard.mjs`、`FIX-REGRESSION.md` #115 行；`src/js/mobile-adapt.js` 已全量入库（工作区干净）。
+* 待真机验收（红米 K60 至尊版 + Edge）：输入栏打字应正常显示、可发送；若仍空白请再发一次诊断信息，按「输入轨迹」`n` 与「聊天输入栏现场」的 `文本长`/`transform` 判分支（`n` 恒 0＝没进来；涨过又掉回 0＝进来被清；文本长>0 且已提升＝没画，需换 `-webkit-backface-visibility` 等手法）。
+* 顺带记录两个未开工的疑点（本次未动）：① `default:chat-msgs` 142.6MB 的读取路径（`idbRestore` 冷启动整包回填会不会才是 18fps/输入无响应的元凶，需要单独量）；② 诊断里 `cs-voice-send：LS="1" 读取=缺失` 开关持久化体检不一致。
+* 待对方处理：本包需构建者收口（`node build.mjs` + 上述两条 verify 全绿后与 src 同一次提交）。临时脚本已删。
 
 ### 2026-09-01 18:3x（构建者收口：#113/#114 iOS 全屏修复 + 全屏模式功能说明 + 对方在途改动）
 * [AI-B 域·构建者收口]（**改动文件：src/css/base.css（#114）、src/js/fullscreen.js（功能说明+文案）、src/template.html（功能说明区块）、src/css/setting.css（功能说明标签样式）、src/js/device.js（#113）、build.mjs（#113 哨兵 needle 修正 + #114 哨兵）、FIX-REGRESSION.md（#114 行）、WORKLOG.md、产物 index.html / sw.js / version.json；构建状态：已构建·sw mochi-mtij2jwy（18:32），哨兵 191/191、哑哨兵 0、sw.js 3/3、verify 10/10；已提交未推送**）。

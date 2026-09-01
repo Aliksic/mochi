@@ -544,7 +544,12 @@ html.ios-pwa-standalone body { background: var(--bg-b); }
      合成层位子上＝框内空白（同「文字与框分离/字出界」那一族症状，当年 .ta-add
      半框就是靠这一条治好的）。只提升合成层、不位移，布局零变化。
      不用 JS toggle transform：正在键入的元素被强制重建合成层会丢字（摩托罗拉 G100
-     实测，见 mobile-adapt.js _aRefreshCe 的 _aUserTypos 闸门），纯 CSS :focus 无此风险。 */
+     实测，见 mobile-adapt.js _aRefreshCe 的 _aUserTypos 闸门），纯 CSS 提升无此风险。
+     will-change 常驻 + :focus 叠 translateZ 两条一起写，与 chat-pages.css 里治好
+     「文字与框分离」的 .ta-add .ce-box 完全同款：前者让合成层在键盘平移开始前就
+     已存在（不依赖聚焦时机、也不受「文档未获得焦点时 :focus 不匹配」影响），
+     后者在真正输入的那段时间把层钉住。全站只有聊天/群聊两个输入栏命中，层开销可忽略。 */
+  .phone .chat-input { will-change:transform; }
   .phone .chat-input:focus { transform: translateZ(0); }
   /* v3.5.116：键盘弹起适配改由 mobile-adapt.js 统一处理——
      interactive-widget 只在根元素生效，写在 .phone 上无效（死代码）；

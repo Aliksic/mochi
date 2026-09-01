@@ -5992,6 +5992,7 @@ try {
     // 切换联系人后必须按新桌面的 store 重新渲染（store 动态绑定当前联系人）
     try { updateFishDays(); } catch (e) {}
     try { updateLove(); } catch (e) {}
+    try { syncRelUI(); } catch (e) {}
     try { renderQuoteOfDay(); } catch (e) {}
     try { renderExtras(); } catch (e) {}
     try { renderDeskWidgets(); } catch (e) {}

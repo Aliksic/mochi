@@ -1106,19 +1106,22 @@ function renderCraft() {
   var h = '<div class="garden-craft-title">\uD83D\uDC83 \u82B1\u827A\u914D\u65B9</div><div class="garden-craft-list">';
   RECIPES.forEach(function (r) {
     var canMake = true;
-    var needTxt = [];
+    var needTxt = [], lackTxt = [];
     Object.keys(r.need).forEach(function (k) {
       var have = data.inv[k] || 0;
-      if (have < r.need[k]) canMake = false;
+      var need = r.need[k];
+      if (have < need) { canMake = false; lackTxt.push((T[k] ? T[k].e[T[k].e.length - 1] : "") + "\u00d7" + (need - have)); }
       var tp = T[k];
-      needTxt.push((tp ? tp.e[tp.e.length - 1] : "") + "\u00d7" + r.need[k]);
+      needTxt.push('<span class="rq' + (have < need ? " short" : "") + '">' + (tp ? tp.e[tp.e.length - 1] : "") + " " + have + "/" + need + '</span>');
     });
     var made = !!data.recipes[r.id];
     h += '<div class="garden-recipe' + (canMake ? " can" : "") + (made ? " made" : "") + '">';
     h += '<div class="recipe-head"><span class="recipe-emoji">' + r.e + '</span><span class="recipe-name">' + r.n + '</span>' + (made ? '<span class="recipe-made">\u2713\u5DF2\u5408\u6210</span>' : "") + '</div>';
     h += '<div class="recipe-need">' + needTxt.join(" ") + '</div>';
+    if (!canMake && lackTxt.length) h += '<div class="recipe-lack">\u6750\u6599\u4E0D\u8DB3\uFF0C\u8FD8\u7F3A ' + lackTxt.join("\u3001") + '\uFF08\u5728\u82B1\u56ED\u79CD\u4E0B\u5E76\u6536\u83B7\u540E\u53EF\u5408\u6210\uFF09</div>';
     h += '<div class="recipe-wish">' + r.wish + '</div>';
     if (canMake) h += '<button class="recipe-btn" data-recipe="' + r.id + '">\u5408\u6210\u82B1\u675F</button>';
+    else h += '<button class="recipe-btn" disabled>\u6750\u6599\u4E0D\u8DB3</button>';
     h += '</div>';
   });
   h += '</div>';
