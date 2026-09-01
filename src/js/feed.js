@@ -462,7 +462,11 @@
       const a = (window.defaultCardApiFor && st) ? window.defaultCardApiFor(st) : null;
       const useFeed = a ? a.use('feed') : (window.defaultCardUse ? window.defaultCardUse('feed') : true);
       const en = a ? a.enabled() : ((window.defaultCardCfg && window.defaultCardCfg().enabled) !== false);
-      if (en && useFeed && window.getDefaultCardGroups) {
+      // v3.28.x：朋友圈使用概率——读 dc-overall-feed（未设置=100，维持「始终混入」历史行为；
+      //   用户可在默认字卡设置页单独调低朋友圈默认字卡占比）
+      let feedOverall = 100;
+      try { const fv = st ? st.get('dc-overall-feed') : null; if (fv !== null) feedOverall = Math.max(0, Math.min(100, Number(fv))); } catch (e) {}
+      if (en && useFeed && Math.random() * 100 < feedOverall && window.getDefaultCardGroups) {
         const gd = window.getDefaultCardGroups;
         const catOn = a ? a.cat : (window.defaultCardCat || (() => true));
         const isOff = a ? a.isOff : (window.isDefaultCardOff || null);

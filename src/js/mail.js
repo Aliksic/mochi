@@ -720,7 +720,8 @@
       const a = (window.defaultCardApiFor && st) ? window.defaultCardApiFor(st) : null;
       const dcfg = a ? a.cfg() : ((window.defaultCardCfg && window.defaultCardCfg()) || {});
       if (dcfg.enabled === false) return '';
-      const overall = (dcfg.overall === undefined || dcfg.overall === null) ? 30 : dcfg.overall;
+      // v3.28.x：写信场景概率读 dc-overall-mail（未设置回退整体 dc-overall）——用户可单独调高写信默认字卡占比
+      const overall = (dcfg.overallFor ? dcfg.overallFor('mail') : ((dcfg.overall === undefined || dcfg.overall === null) ? 30 : dcfg.overall));
       if (Math.random() * 100 >= overall) return '';
       const keys = ['main', 'kaomoji', 'emoji'];
       const pools = { main: pool.defText, kaomoji: pool.defKaomoji, emoji: pool.defEmoji };

@@ -225,17 +225,29 @@
   //   endCall 正常清除；若刷新/崩溃导致 endCall 未执行，启动恢复时检测到残留 → 补写「通话中断」记录，
   //   与正常挂断区分（ended='interrupt'）。解决用户反馈：接通后刷新页面，通话记录里没有这条中断。
   const CALL_ACTIVE_KEY = 'xy-home-v2:call-active';
+  // v3.26.x：#120 双写 localStorage——sessionStorage 在「关闭标签页/Safari 后重开」或
+  //   iPadOS 杀后台后重开时会整体清空（主屏幕 PWA 重开同此），恢复逻辑就读不到任何标记，
+  //   「刷新后恢复通话」失效（iPad Air 7 + Safari 实测反馈）。localStorage 持久保留，
+  //   作兜底副本；新鲜度窗口见 recoverCall（防止几天后重开翻出旧通话）。
+  function callActivePayload() {
+    return JSON.stringify({
+      cid: currentCall.cid, direction: currentCall.direction, status: currentCall.status,
+      startTime: currentCall.startTime, connectedTime: currentCall.connectedTime || 0,
+      name: currentCall.name || '', av: currentCall.av || '', ts: Date.now()
+    });
+  }
   function saveCallActive() {
     try {
       if (!currentCall) return;
-      sessionStorage.setItem(CALL_ACTIVE_KEY, JSON.stringify({
-        cid: currentCall.cid, direction: currentCall.direction, status: currentCall.status,
-        startTime: currentCall.startTime, connectedTime: currentCall.connectedTime || 0,
-        name: currentCall.name || '', av: currentCall.av || '', ts: Date.now()
-      }));
+      const payload = callActivePayload();
+      sessionStorage.setItem(CALL_ACTIVE_KEY, payload);
+      try { localStorage.setItem(CALL_ACTIVE_KEY, payload); } catch (e) {}
     } catch (e) {}
   }
-  function clearCallActive() { try { sessionStorage.removeItem(CALL_ACTIVE_KEY); } catch (e) {} }
+  function clearCallActive() {
+    try { sessionStorage.removeItem(CALL_ACTIVE_KEY); } catch (e) {}
+    try { localStorage.removeItem(CALL_ACTIVE_KEY); } catch (e) {}
+  }
   function fillAv(el, data) {
     if (!el) return;
     // v3.6.x：img 用属性赋值（dataURL 含引号时拼 innerHTML 会逃逸注入 HTML）
@@ -325,10 +337,14 @@
     if (!currentCall.connectedTime) currentCall.connectedTime = Date.now(); // v3.26.x：恢复通话时已有 connectedTime 不覆盖，计时从接通时刻继续
     updateDur(); // v3.13.x：接通立即刷新显示，避免接通瞬间仍停留「00:00」卡一下
     let checkCount = 0;
+    let hbCount = 0;
     durationTimer = setInterval(() => {
       updateDur();
       syncCallAv();
       syncCallName();
+      // v3.26.x：#120 心跳——每 20 秒刷新 call-active 的 ts（新鲜度窗口的判定依据），
+      //   此前只在接通时写一次，恢复兜底无法区分「刚被杀」与「早已结束」
+      if (++hbCount >= 20) { hbCount = 0; saveCallActive(); }
       // 对方挂断概率：接通 3 分钟保护期后，每 60 秒检查一次
       // v3.6.x：放宽——原实现 10 秒保护后每 30 秒掷一次，默认 5% 实际效果远超设置字面值
       //（约 3 分钟累计 ~23% 被挂断、10 分钟内累计 ~62%），用户反馈「3 分钟左右自动挂断、
@@ -664,6 +680,13 @@
   function recoverCall() {
     let info = null;
     try { info = JSON.parse(sessionStorage.getItem(CALL_ACTIVE_KEY) || 'null'); } catch (e) { info = null; }
+    // v3.26.x：#120 sessionStorage 空 → 读 localStorage 兜底（关浏览器/PWA 重开场景）。
+    //   同标签普通刷新 sessionStorage 仍在，优先读它以保持原行为。
+    let fromLs = false;
+    if (!info) {
+      try { info = JSON.parse(localStorage.getItem(CALL_ACTIVE_KEY) || 'null'); } catch (e) { info = null; }
+      fromLs = !!info;
+    }
     if (!info) return;
     if (!info.connectedTime) { clearCallActive(); return; } // 未接通就中断（响铃/呼叫中刷新），不恢复不记
     const cid = info.cid || 'default';
@@ -671,6 +694,9 @@
     const name = info.name || 'TA';
     // v3.26.x：开启「刷新后恢复通话」→ 重建通话 UI + 从接通时刻继续计时（TA 本地模拟，无需重连）
     if (callCfg().resume !== 0) {
+      // #120 localStorage 兜底只恢复「新鲜」标记（心跳每 20 秒刷 ts；10 分钟窗覆盖 iPadOS
+      //   杀后台后不久重开），超窗视为早已结束：静默清标记，不恢复也不翻旧账
+      if (fromLs && Date.now() - (info.ts || 0) > 600000) { clearCallActive(); return; }
       try {
         currentCall = { cid: cid, direction: dir, status: 'connected', startTime: info.startTime || info.connectedTime, connectedTime: info.connectedTime, durationSec: 0, name: name, av: info.av || '' };
         shownAv = null; shownName = null;
@@ -687,6 +713,7 @@
           syncCallAv(); syncCallName();
         }
         startCallDuration();
+        saveCallActive(); // #120 回写 sessionStorage（后续刷新优先走 sessionStorage 快路径）+ 刷新 ts
       } catch (e) { clearCallActive(); }
       return;
     }

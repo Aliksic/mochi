@@ -32,6 +32,9 @@
   function apiFor(st) {
     const gE = function () { const v = st.get('dc-enabled'); return v === null ? true : v === '1'; };
     const gO = function () { const v = st.get('dc-overall'); return v === null ? 30 : Number(v); };
+    // v3.28.x：场景概率——dc-overall-<k>（聊天/信箱/朋友圈）未设置时回退整体概率 dc-overall；
+    //   朋友圈历史行为是「始终混入」（100），由消费方（feed.js）在键缺失时按 100 兜底
+    const gOS = function (k) { const v = st.get('dc-overall-' + k); return v === null ? gO() : Number(v); };
     const gP = function (k) { const v = st.get('dc-prob-' + k); return v === null ? 30 : Number(v); };
     const gU = function (k) { const v = st.get('dc-use-' + k); return v === null ? true : v === '1'; };
     const gC = function (k) { const v = st.get('dc-cat-' + k); return v === null ? true : v === '1'; };
@@ -39,13 +42,14 @@
     return {
       enabled: gE,
       overall: gO,
+      overallFor: gOS,
       prob: gP,
       use: gU,
       cat: gC,
       isOff: gOff,
       // 不依赖 this（箭头闭包）——调用方解构单个方法也不会丢上下文
       cfg: function () {
-        return { enabled: gE(), overall: gO(), probs: { main: gP('main'), kaomoji: gP('kaomoji'), emoji: gP('emoji'), touch: gP('touch') } };
+        return { enabled: gE(), overall: gO(), overallFor: gOS, probs: { main: gP('main'), kaomoji: gP('kaomoji'), emoji: gP('emoji'), touch: gP('touch') } };
       }
     };
   }
@@ -160,6 +164,27 @@
       toast((el.checked ? '已开启' : '已关闭') + '：默认字卡' + label + '使用');
     });
   });
+  // v3.28.x：使用概率绑定——聊天 / 信箱 / 朋友圈 三场景各自可调默认字卡出现概率
+  //   存键 dc-overall-<k>（未设置=该场景历史默认：聊天/信箱 30，朋友圈 100 始终混入）
+  const DC_OVERALL_DEF = { chat: 30, mail: 30, feed: 100 };
+  function dcOverallVal(k) { const v = ls.get('dc-overall-' + k); return v === null ? DC_OVERALL_DEF[k] : Number(v); }
+  function dcOverallSet(k, nv) { ls.set('dc-overall-' + k, String(nv)); }
+  [['chat', '聊天'], ['mail', '写信'], ['feed', '朋友圈']].forEach(([k, label]) => {
+    const box = document.getElementById('dc-overall-' + k);
+    const valEl = document.getElementById('dc-overall-' + k + '-val');
+    if (!box || !valEl) return;
+    valEl.value = String(dcOverallVal(k));
+    box.querySelector('.stp-min').addEventListener('click', () => {
+      const nv = Math.max(0, (parseInt(valEl.value, 10) || 0) - 5);
+      valEl.value = String(nv); dcOverallSet(k, nv);
+      toast('默认字卡' + label + '使用概率：' + nv + '%');
+    });
+    box.querySelector('.stp-max').addEventListener('click', () => {
+      const nv = Math.min(100, (parseInt(valEl.value, 10) || 0) + 5);
+      valEl.value = String(nv); dcOverallSet(k, nv);
+      toast('默认字卡' + label + '使用概率：' + nv + '%');
+    });
+  });
   // v3.26.x：小键写日志异步合并（idb.js mochi-wrj-heal）把 dc-* 键修正后，重同步
   // 总开关/场景开关/分类开关的 UI——修荣耀 Edge 杀进程回滚 LS 后「开关退出重进变回去」
   // 且已打开的设置页仍显示旧值的问题
@@ -173,6 +198,11 @@
       ['main', 'kaomoji', 'emoji', 'touch'].forEach(function (k) {
         const el = document.getElementById('dc-cat-' + k);
         if (el) el.checked = getCat(k);
+      });
+      // v3.28.x：使用概率 stepper 同样随 heal 重同步
+      ['chat', 'mail', 'feed'].forEach(function (k) {
+        const valEl = document.getElementById('dc-overall-' + k + '-val');
+        if (valEl) valEl.value = String(dcOverallVal(k));
       });
     } catch (e) {}
   });
@@ -566,12 +596,16 @@
   // 返回当前分类下按权重选中一个分组的字卡数组；未触发返回 []
   // v3.12.x：核心逻辑抽成 getDefaultCardsFor(st)——st 传目标桌面 store；
   //   群聊用它按成员所在桌面抽取（成员桌面关了聊天使用 → 该成员在群聊里也不用默认字卡）
-  function drawCards(a) {
-    // v3.7.x：聊天场景开关——关闭后聊天回复混入/拍一拍均不使用默认字卡
-    if (!a.use('chat')) return [];
+  // v3.28.x：scene 参数化——概率/场景开关按场景读（chat/mail/feed；缺省 chat）。
+  //   drawCards 目前仅聊天类调用（getDefaultCards*），写信/朋友圈各走自己的消费逻辑
+  function drawCards(a, scene) {
+    scene = scene || 'chat';
+    // v3.7.x：场景开关——关闭后该场景不混入默认字卡
+    if (!a.use(scene)) return [];
     const cfg = a.cfg();
     if (!cfg.enabled) return [];
-    if (Math.random() * 100 >= cfg.overall) return [];
+    const overall = cfg.overallFor ? cfg.overallFor(scene) : cfg.overall;
+    if (Math.random() * 100 >= overall) return [];
     // 按 probs 加权选分类（v3.8.x：已关闭的分类权重按 0 处理，不参与抽取）
     const keys = ['main', 'kaomoji', 'emoji', 'touch'];
     const weights = keys.map(k => (a.cat(k) ? Math.max(0, cfg.probs[k] || 0) : 0));
@@ -592,8 +626,8 @@
     const text = g[1][Math.floor(Math.random() * g[1].length)];
     return { text: text, type: chosen === 'touch' ? 'poke' : 'text' };
   }
-  window.getDefaultCardsFor = function (st) { return drawCards(apiFor(st)); };
-  window.getDefaultCards = function () { return drawCards(api); };
+  window.getDefaultCardsFor = function (st, scene) { return drawCards(apiFor(st), scene); };
+  window.getDefaultCards = function (scene) { return drawCards(api, scene); };
   // 默认字卡分组（供页面按分组查看）
   window.getDefaultCardGroups = function (cat) {
     return (DATA[cat] || []).slice();

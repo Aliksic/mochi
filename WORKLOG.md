@@ -1,3 +1,20 @@
+# 本次构建者：AI-B（本会话收口：#118 默认字卡三场景使用概率 + 在途 #121 通话双写/回复设置小字说明 一并打包提交）
+
+### 2026-09-01 23:0x（#118 默认字卡「使用概率」拆三场景可调：聊天/写信/朋友圈各自独立）
+* [AI-B 域·构建者收口]（**改动文件：src/js/default-cards.js（数据层 overallFor + drawCards(a,scene) 场景化 + 设置页概率 stepper 绑定 + mochi-wrj-heal 同步）、src/template.html（跨域改动，理由：#118 功能 UI 落点就在默认字卡设置页 page-default-cards，在「使用场景」开关组下加「使用概率」组三行 stepper）、src/js/mail.js（跨域改动，理由：写信场景混入默认字卡的概率读取，pickDefaultMailCard 一处）、src/js/feed.js（跨域改动，理由：朋友圈默认字卡补池按场景概率门，一处）、build.mjs（#118 哨兵 4 条）；构建状态：已构建·sw mochi-mtisgurq，哨兵 219/219、哑哨兵 0、sw.js 3/3、verify 10/10**）。
+* 需求/反馈（用户报障 #118 系列）：Mate 40 Pro + Edge 151，TA 自动回复/写信几乎全是颜文字。诊断实证自定义字卡 394 张 = 文字仅 39 + 颜文字 208 + 表情包 123（公用库 25.12MB），写信 hasCustom 只看 text 分类、有自定义文字卡即切走默认字卡主体（默认 main 4628 张只按 dc-overall 30% 零星混入）→ 用户要求「默认字卡在 聊天/写信/朋友圈 的使用概率可分别调节」。
+* 方案：① apiFor 增 overallFor(k)，读 dc-overall-<chat|mail|feed>，未设置回退 dc-overall(30)；② drawCards(a, scene) 场景化（概率+场景开关按 scene 读，getDefaultCards* 默认 chat 兼容现有调用）；③ 设置页「使用概率」组三行 stepper（聊天 30/写信 30/朋友圈 100，0-100 步进 5，朋友圈缺省 100 维持「始终混入」历史行为）；④ mail.js pickDefaultMailCard 改读 overallFor('mail')；⑤ feed.js 补池加 dc-overall-feed 概率门（键缺失=100 不改变现状）。
+* 用户侧生效路径：设置→聊天默认字卡→写信使用概率调到 100 → 写信每张卡必混入默认字卡 4628 张 → 信主体恢复默认文字（无需删自定义卡）。
+* 验证：node --check 三文件 + build 哨兵 219/219 哑哨兵 0 + verify 10/10；待真机：调「写信使用概率」至 100 后 TA 来信应为默认文字主体。
+* 待对方处理：kaomoji 判定正则误判（带括号中文句→颜文字，chat.js:940/mail.js:699 同源 v3.6.x 遗留）仍待 AI-A 修复；自定义字卡过少时写信主体回退默认的 hasCustom 阈值优化待评估。
+
+
+### 2026-09-01 23:0x（回复设置补小字说明：条数上限不含撤回补发/TA心情/系统消息/主动消息等额外通道）
+- [AI-A 域]（**改动文件：src/template.html（跨域改动，理由：回复设置页的行/小字说明均为 template.html 静态结构，reply-settings.js 只有默认值与绑定逻辑，说明文字无处安放；4 处均为纯文本 .gs-sub，不加锚点/id、不改结构，不影响任何 JS 绑定）；构建状态：未构建，待构建者随在途 src 一并收口**）。
+- 需求/反馈：用户发现「回复条数最多」设为 2 时联系人仍偶发超量发消息，排查结论——上限只限基础回复循环，撤回补发（25%×35%）、TA 心情分享（默认 15%）、红包/心意币/听歌邀请等系统消息（各 4~8%）、TA 主动消息（ta-ask/incoming-requests）、点昵称「继续说」均独立于上限；已读不回只作用于本次发送、不会拦截之前已排队的回复。用户要求在回复设置里小字写清楚。
+- 方案（复用现有 .gs-sub，setting.css:79）：①「回复条数最多」下注明只限基础回复、每发一条各算一批，并列举不计入上限的通道；②「已读不回概率」下注明命中仅作用本次发送；③「撤回补发概率」下注明补发不计入条数；④「让对方继续说」注明点昵称/按钮触发新一轮回复叠加在外；⑤群聊面板「回复条数最多」下加同款简版说明。
+- 验证：纯静态文本改动，无逻辑/样式新增；构建后进 设置→回复设置 目检 5 处小字即可。不涉及用户可感知功能变化，无需 notice.json 公告。
+- 待对方处理：无。
 ﻿# 本次构建者：AI-B（本会话收口：#119 桌面美化 14 项优化 + 收口在途 #118 邀请TA 打字框/批量管理）
 # 2026-09-01 21:3x：本会话（AI-A 域）开工 #118 TA的邀请管理页：打字框布局 + 批量管理与编辑。**未构建**，src 改完待构建者收口。跨域改动 src/js/mobile-adapt.js（ce-ghost 类别名泄露 fix），理由：ceConvert 第 116 行先 inp.classList.add('ce-ghost') 再第 121 行 box.className='ce-box '+inp.className，导致可见的 ce-box div 也带上 ce-ghost 类别名（虽 CSS 只对 input/textarea 生效未致视觉异常，但属逻辑 bug，类别名漂移未来加 div.ce-ghost 规则会误伤），改为先存 origClass 再 add。
 
@@ -797,3 +814,11 @@
 * ������data-backup.js ���ࣩ�������� A��IDB ��ȡʧ�����Դ� 1 ������ 3 �Σ���� 200ms���������� B��ȫ����ʧ����¼ exportMissing+�Ѻ�����+��ʵ��ʾ������� C��idbReplaceAll ǰ�������δ���ľɼ���clear �� put ��ȥ������������ʱ���岻�䣬������ʱ�ϲ����ڶ����ݡ�
 * ��֤��`node --check src/js/data-backup.js` ���������������ڱ�+verify+������ա�
 * ���Է�������ޡ����������տڣ��Է� #118 ��; src ������һ�� build����
+
+### 2026-09-01 23:0x（#121 iPad Air 7 Safari 通话刷新/重开后不恢复）
+* [AI-B 域·构建者收口]（**改动文件：src/js/call.js（call-active 双写 localStorage + 20 秒心跳 + recoverCall LS 兜底 10 分钟新鲜度窗）、build.mjs（#121 哨兵 3 条）、FIX-REGRESSION.md（#121 行）、WORKLOG.md；构建状态：已构建（见提交）**）。
+* 需求/反馈（用户报障，附诊断信息 v3.26.383）：iPad Air 7 + Safari（standalone PWA），之前的通话刷新/关掉重开网页后没有恢复，「通话设置→刷新后恢复通话」开着也没用。
+* 根因：通话进行中标记 `xy-home-v2:call-active` 只存 sessionStorage。同标签普通刷新能活，但关标签页/Safari 后重开、iPadOS 杀后台后重开（主屏幕 PWA 重开同此）sessionStorage 整体清空，recoverCall() 读不到标记——既不恢复也不记中断，功能整体失效。
+* 方案：①saveCallActive/clearCallActive 双写 localStorage（同键 `xy-home-v2:call-active`，不同存储区）；②接通后 durationTimer 每 20 秒心跳刷新 ts；③recoverCall 优先读 sessionStorage（同标签刷新原行为不变），为空读 localStorage 兜底，LS 命中且 ts 距今 ≤10 分钟才恢复（超窗静默清标记防翻旧账），恢复成功回写 sessionStorage；④resume 关闭路径照旧记中断（LS 兜底后关浏览器场景也能补记，旧方案这条会丢）。
+* 验证：`node --check src/js/call.js` 过；构建后哨兵全绿 + `npm run verify`。待真机（iPad Safari）：接通→等 20 秒以上→杀掉 Safari/主屏幕 PWA 重开→小框应恢复且时长从接通时刻延续。
+* 待对方处理：无。

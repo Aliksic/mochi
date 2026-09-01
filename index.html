@@ -8624,9 +8624,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1788273367332">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.385</b></span>
-        <span class="sv-deploy">部署于 2026-09-01 22:36<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1788274504646">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.386</b></span>
+        <span class="sv-deploy">部署于 2026-09-01 22:55<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9722,7 +9722,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.385</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.386</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
       <!-- v3.27.x：设置页底部防骗声明 -->
       <div class="set-alert">
@@ -9995,7 +9995,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.385</span>
+              <span class="lic-ver">v3.26.386</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -10479,7 +10479,9 @@ transition-duration: .01ms !important;
             <div class="gs-row"><span>回复速度最长（秒）</span><div class="stepper" data-k="rs-max" data-min="2" data-step="1"><button class="stp-min">−</button><input class="stp-val" id="rs-max-val" readonly><button class="stp-max">+</button></div></div>
             <div class="gs-row"><span>回复条数最少</span><div class="stepper" data-k="reply-min" data-min="1" data-max="10" data-step="1"><button class="stp-min">−</button><input class="stp-val" id="reply-min-val" readonly><button class="stp-max">+</button></div></div>
             <div class="gs-row"><span>回复条数最多</span><div class="stepper" data-k="reply-max" data-min="1" data-max="20" data-step="1"><button class="stp-min">−</button><input class="stp-val" id="reply-max-val" readonly><button class="stp-max">+</button></div></div>
+            <div class="gs-sub">回复条数只限制「每发一条消息触发的这批基础回复」，且每发一条各算一批（发 2 条最多可回 2 倍）；撤回补发、TA 的心情分享、红包/心意币/听歌邀请、TA 主动发送的消息都不计入上限，实际收到的消息可能比设置的条数多</div>
             <div class="gs-row"><span>已读不回概率</span><div class="stepper" data-k="rn-prob" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="rn-prob-val" readonly><button class="stp-max">+</button></div></div>
+            <div class="gs-sub">命中已读不回时，本次发送只显示回执、不再回复；但不会拦截之前发送已排入的回复</div>
             <div class="gs-row"><span>拍一拍概率</span><div class="stepper" data-k="touch-prob" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="touch-prob-val" readonly><button class="stp-max">+</button></div></div>
             <div class="gs-row"><span>表情包概率</span><div class="stepper" data-k="sticker-prob" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="sticker-prob-val" readonly><button class="stp-max">+</button></div></div>
             <div class="gs-row"><span>emoji 概率</span><div class="stepper" data-k="emoji-prob" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="emoji-prob-val" readonly><button class="stp-max">+</button></div></div>
@@ -10489,6 +10491,7 @@ transition-duration: .01ms !important;
             <div class="gs-row"><span>引用概率</span><div class="stepper" data-k="quote-prob" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="quote-prob-val" readonly><button class="stp-max">+</button></div></div>
             <div class="gs-row"><span>撤回概率</span><div class="stepper" data-k="rc-prob" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="rc-prob-val" readonly><button class="stp-max">+</button></div></div>
             <div class="gs-row"><span>撤回补发概率</span><div class="stepper" data-k="rc-refix" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="rc-refix-val" readonly><button class="stp-max">+</button></div></div>
+            <div class="gs-sub">撤回概率命中后这条回复撤回一半；再按补发概率发出一条新消息，补发的这条不计入回复条数上限</div>
           </div>
           <div class="gs-title">每条消息使用多字卡回复</div>
           <div class="set-group glass">
@@ -10514,6 +10517,7 @@ transition-duration: .01ms !important;
             <div class="gs-sub">（未开启设置时间的情况下是点击后联系人立即回复）</div>
             <div class="gs-row"><span>点顶部昵称触发</span><label class="toggle"><input type="checkbox" id="cs-trigger-name"><span class="tk"></span></label></div>
             <div class="gs-row"><span>底部聊天栏按钮触发</span><label class="toggle"><input type="checkbox" id="cs-trigger-bar"><span class="tk"></span></label></div>
+            <div class="gs-sub">点顶部昵称/底部按钮会触发新一轮回复，条数仍按上面设置抽取，会叠在正常回复之外</div>
           </div>
         </div>
         <div class="gs-panel" data-rpanel="group" hidden>
@@ -10525,6 +10529,7 @@ transition-duration: .01ms !important;
             <div class="gs-row"><span>回复速度最长（秒）</span><div class="stepper" data-k="gc-rs-max" data-min="2" data-step="1"><button class="stp-min">−</button><input class="stp-val" id="gc-rs-max-val" readonly><button class="stp-max">+</button></div></div>
             <div class="gs-row"><span>回复条数最少</span><div class="stepper" data-k="gc-reply-min" data-min="1" data-max="10" data-step="1"><button class="stp-min">−</button><input class="stp-val" id="gc-reply-min-val" readonly><button class="stp-max">+</button></div></div>
             <div class="gs-row"><span>回复条数最多</span><div class="stepper" data-k="gc-reply-max" data-min="1" data-max="20" data-step="1"><button class="stp-min">−</button><input class="stp-val" id="gc-reply-max-val" readonly><button class="stp-max">+</button></div></div>
+            <div class="gs-sub">回复条数只限每位联系人「每发一条消息触发的基础回复」，撤回补发不计入上限，实际消息可能比设置的条数多</div>
             <div class="gs-row"><span>拍一拍概率</span><div class="stepper" data-k="gc-touch-prob" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="gc-touch-prob-val" readonly><button class="stp-max">+</button></div></div>
             <div class="gs-row"><span>表情包概率</span><div class="stepper" data-k="gc-sticker-prob" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="gc-sticker-prob-val" readonly><button class="stp-max">+</button></div></div>
             <div class="gs-row"><span>emoji 概率</span><div class="stepper" data-k="gc-emoji-prob" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="gc-emoji-prob-val" readonly><button class="stp-max">+</button></div></div>
@@ -10764,6 +10769,12 @@ transition-duration: .01ms !important;
         <div class="gs-row"><span>聊天使用</span><label class="toggle"><input type="checkbox" id="dc-use-chat" checked><span class="tk"></span></label></div>
         <div class="gs-row"><span>信箱使用</span><label class="toggle"><input type="checkbox" id="dc-use-mail" checked><span class="tk"></span></label></div>
         <div class="gs-row"><span>朋友圈使用</span><label class="toggle"><input type="checkbox" id="dc-use-feed" checked><span class="tk"></span></label></div>
+      </div>
+      <div style="margin:14px 14px 4px;font-size:12px;color:#999;font-weight:600">使用概率（默认字卡在各场景出现的概率，0 即该场景不用默认字卡）</div>
+      <div class="set-group glass" style="margin:0 12px">
+        <div class="gs-row"><span>聊天使用概率</span><div class="stepper" id="dc-overall-chat" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="dc-overall-chat-val" readonly><button class="stp-max">+</button></div></div>
+        <div class="gs-row"><span>写信使用概率</span><div class="stepper" id="dc-overall-mail" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="dc-overall-mail-val" readonly><button class="stp-max">+</button></div></div>
+        <div class="gs-row"><span>朋友圈使用概率</span><div class="stepper" id="dc-overall-feed" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="dc-overall-feed-val" readonly><button class="stp-max">+</button></div></div>
       </div>
       <div style="margin:14px 14px 4px;font-size:12px;color:#999;font-weight:600">分类使用（可单独开启/关闭）</div>
       <div class="set-group glass" style="margin:0 12px">
@@ -36179,6 +36190,7 @@ toast((off ? '已关闭：' : '已开启：') + (s.length > 18 ? s.slice(0, 18) 
 function apiFor(st) {
 const gE = function () { const v = st.get('dc-enabled'); return v === null ? true : v === '1'; };
 const gO = function () { const v = st.get('dc-overall'); return v === null ? 30 : Number(v); };
+const gOS = function (k) { const v = st.get('dc-overall-' + k); return v === null ? gO() : Number(v); };
 const gP = function (k) { const v = st.get('dc-prob-' + k); return v === null ? 30 : Number(v); };
 const gU = function (k) { const v = st.get('dc-use-' + k); return v === null ? true : v === '1'; };
 const gC = function (k) { const v = st.get('dc-cat-' + k); return v === null ? true : v === '1'; };
@@ -36186,12 +36198,13 @@ const gOff = function (cat, c) { return st.get('dc-off-' + cat + ':' + c) === '1
 return {
 enabled: gE,
 overall: gO,
+overallFor: gOS,
 prob: gP,
 use: gU,
 cat: gC,
 isOff: gOff,
 cfg: function () {
-return { enabled: gE(), overall: gO(), probs: { main: gP('main'), kaomoji: gP('kaomoji'), emoji: gP('emoji'), touch: gP('touch') } };
+return { enabled: gE(), overall: gO(), overallFor: gOS, probs: { main: gP('main'), kaomoji: gP('kaomoji'), emoji: gP('emoji'), touch: gP('touch') } };
 }
 };
 }
@@ -36274,6 +36287,25 @@ setCat(k, el.checked);
 toast((el.checked ? '已开启' : '已关闭') + '：默认字卡' + label + '使用');
 });
 });
+const DC_OVERALL_DEF = { chat: 30, mail: 30, feed: 100 };
+function dcOverallVal(k) { const v = ls.get('dc-overall-' + k); return v === null ? DC_OVERALL_DEF[k] : Number(v); }
+function dcOverallSet(k, nv) { ls.set('dc-overall-' + k, String(nv)); }
+[['chat', '聊天'], ['mail', '写信'], ['feed', '朋友圈']].forEach(([k, label]) => {
+const box = document.getElementById('dc-overall-' + k);
+const valEl = document.getElementById('dc-overall-' + k + '-val');
+if (!box || !valEl) return;
+valEl.value = String(dcOverallVal(k));
+box.querySelector('.stp-min').addEventListener('click', () => {
+const nv = Math.max(0, (parseInt(valEl.value, 10) || 0) - 5);
+valEl.value = String(nv); dcOverallSet(k, nv);
+toast('默认字卡' + label + '使用概率：' + nv + '%');
+});
+box.querySelector('.stp-max').addEventListener('click', () => {
+const nv = Math.min(100, (parseInt(valEl.value, 10) || 0) + 5);
+valEl.value = String(nv); dcOverallSet(k, nv);
+toast('默认字卡' + label + '使用概率：' + nv + '%');
+});
+});
 document.addEventListener('mochi-wrj-heal', function () {
 try {
 enabledEl.checked = getEnabled();
@@ -36284,6 +36316,10 @@ if (el) el.checked = getUse(k);
 ['main', 'kaomoji', 'emoji', 'touch'].forEach(function (k) {
 const el = document.getElementById('dc-cat-' + k);
 if (el) el.checked = getCat(k);
+});
+['chat', 'mail', 'feed'].forEach(function (k) {
+const valEl = document.getElementById('dc-overall-' + k + '-val');
+if (valEl) valEl.value = String(dcOverallVal(k));
 });
 } catch (e) {}
 });
@@ -36619,11 +36655,13 @@ const home = document.getElementById('page-chatcard');
 if (home) home.hidden = false;
 });
 }
-function drawCards(a) {
-if (!a.use('chat')) return [];
+function drawCards(a, scene) {
+scene = scene || 'chat';
+if (!a.use(scene)) return [];
 const cfg = a.cfg();
 if (!cfg.enabled) return [];
-if (Math.random() * 100 >= cfg.overall) return [];
+const overall = cfg.overallFor ? cfg.overallFor(scene) : cfg.overall;
+if (Math.random() * 100 >= overall) return [];
 const keys = ['main', 'kaomoji', 'emoji', 'touch'];
 const weights = keys.map(k => (a.cat(k) ? Math.max(0, cfg.probs[k] || 0) : 0));
 const total = weights.reduce((x, y) => x + y, 0);
@@ -36642,8 +36680,8 @@ const g = grps[Math.floor(Math.random() * grps.length)];
 const text = g[1][Math.floor(Math.random() * g[1].length)];
 return { text: text, type: chosen === 'touch' ? 'poke' : 'text' };
 }
-window.getDefaultCardsFor = function (st) { return drawCards(apiFor(st)); };
-window.getDefaultCards = function () { return drawCards(api); };
+window.getDefaultCardsFor = function (st, scene) { return drawCards(apiFor(st), scene); };
+window.getDefaultCards = function (scene) { return drawCards(api, scene); };
 window.getDefaultCardGroups = function (cat) {
 return (DATA[cat] || []).slice();
 };
@@ -49193,17 +49231,25 @@ saveCallActive();
 return callObj;
 }
 const CALL_ACTIVE_KEY = 'xy-home-v2:call-active';
-function saveCallActive() {
-try {
-if (!currentCall) return;
-sessionStorage.setItem(CALL_ACTIVE_KEY, JSON.stringify({
+function callActivePayload() {
+return JSON.stringify({
 cid: currentCall.cid, direction: currentCall.direction, status: currentCall.status,
 startTime: currentCall.startTime, connectedTime: currentCall.connectedTime || 0,
 name: currentCall.name || '', av: currentCall.av || '', ts: Date.now()
-}));
+});
+}
+function saveCallActive() {
+try {
+if (!currentCall) return;
+const payload = callActivePayload();
+sessionStorage.setItem(CALL_ACTIVE_KEY, payload);
+try { localStorage.setItem(CALL_ACTIVE_KEY, payload); } catch (e) {}
 } catch (e) {}
 }
-function clearCallActive() { try { sessionStorage.removeItem(CALL_ACTIVE_KEY); } catch (e) {} }
+function clearCallActive() {
+try { sessionStorage.removeItem(CALL_ACTIVE_KEY); } catch (e) {}
+try { localStorage.removeItem(CALL_ACTIVE_KEY); } catch (e) {}
+}
 function fillAv(el, data) {
 if (!el) return;
 el.innerHTML = '';
@@ -49282,10 +49328,12 @@ stopTimers();
 if (!currentCall.connectedTime) currentCall.connectedTime = Date.now(); // v3.26.x：恢复通话时已有 connectedTime 不覆盖，计时从接通时刻继续
 updateDur(); // v3.13.x：接通立即刷新显示，避免接通瞬间仍停留「00:00」卡一下
 let checkCount = 0;
+let hbCount = 0;
 durationTimer = setInterval(() => {
 updateDur();
 syncCallAv();
 syncCallName();
+if (++hbCount >= 20) { hbCount = 0; saveCallActive(); }
 if (currentCall && currentCall.status === 'connected') {
 if (Date.now() - currentCall.connectedTime >= 180000) {
 checkCount++;
@@ -49553,12 +49601,18 @@ window.hangupCall = function () { userHangup(); };
 function recoverCall() {
 let info = null;
 try { info = JSON.parse(sessionStorage.getItem(CALL_ACTIVE_KEY) || 'null'); } catch (e) { info = null; }
+let fromLs = false;
+if (!info) {
+try { info = JSON.parse(localStorage.getItem(CALL_ACTIVE_KEY) || 'null'); } catch (e) { info = null; }
+fromLs = !!info;
+}
 if (!info) return;
 if (!info.connectedTime) { clearCallActive(); return; } // 未接通就中断（响铃/呼叫中刷新），不恢复不记
 const cid = info.cid || 'default';
 const dir = info.direction || 'out';
 const name = info.name || 'TA';
 if (callCfg().resume !== 0) {
+if (fromLs && Date.now() - (info.ts || 0) > 600000) { clearCallActive(); return; }
 try {
 currentCall = { cid: cid, direction: dir, status: 'connected', startTime: info.startTime || info.connectedTime, connectedTime: info.connectedTime, durationSec: 0, name: name, av: info.av || '' };
 shownAv = null; shownName = null;
@@ -49575,6 +49629,7 @@ setMaskBtns('active');
 syncCallAv(); syncCallName();
 }
 startCallDuration();
+saveCallActive(); // #120 回写 sessionStorage（后续刷新优先走 sessionStorage 快路径）+ 刷新 ts
 } catch (e) { clearCallActive(); }
 return;
 }
@@ -50171,7 +50226,7 @@ const st = (cid && window.storeFor) ? window.storeFor(cid) : null;
 const a = (window.defaultCardApiFor && st) ? window.defaultCardApiFor(st) : null;
 const dcfg = a ? a.cfg() : ((window.defaultCardCfg && window.defaultCardCfg()) || {});
 if (dcfg.enabled === false) return '';
-const overall = (dcfg.overall === undefined || dcfg.overall === null) ? 30 : dcfg.overall;
+const overall = (dcfg.overallFor ? dcfg.overallFor('mail') : ((dcfg.overall === undefined || dcfg.overall === null) ? 30 : dcfg.overall));
 if (Math.random() * 100 >= overall) return '';
 const keys = ['main', 'kaomoji', 'emoji'];
 const pools = { main: pool.defText, kaomoji: pool.defKaomoji, emoji: pool.defEmoji };
@@ -51062,7 +51117,9 @@ const st = (cid && window.storeFor) ? window.storeFor(cid) : null;
 const a = (window.defaultCardApiFor && st) ? window.defaultCardApiFor(st) : null;
 const useFeed = a ? a.use('feed') : (window.defaultCardUse ? window.defaultCardUse('feed') : true);
 const en = a ? a.enabled() : ((window.defaultCardCfg && window.defaultCardCfg().enabled) !== false);
-if (en && useFeed && window.getDefaultCardGroups) {
+let feedOverall = 100;
+try { const fv = st ? st.get('dc-overall-feed') : null; if (fv !== null) feedOverall = Math.max(0, Math.min(100, Number(fv))); } catch (e) {}
+if (en && useFeed && Math.random() * 100 < feedOverall && window.getDefaultCardGroups) {
 const gd = window.getDefaultCardGroups;
 const catOn = a ? a.cat : (window.defaultCardCat || (() => true));
 const isOff = a ? a.isOff : (window.isDefaultCardOff || null);
