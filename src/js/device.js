@@ -383,7 +383,14 @@
           m = e.message;
           try { st = (e.error && e.error.stack) ? String(e.error.stack) : ''; } catch (e3) {}
         } else if (e && e.target && e.target !== window && (e.target.src || e.target.href)) {
-          m = '资源加载失败 <' + String(e.target.tagName || '').toLowerCase() + '> ' + String(e.target.src || e.target.href || '').slice(0, 120);
+          var tag = String(e.target.tagName || '').toLowerCase();
+          var url = String(e.target.src || e.target.href || '');
+          // v3.26.x：第三方音乐外链 404 不进错误日志——music-player.js 已有三级 fallback
+          //（meting 直链 → 网易云官方外链 → 内置旋律），这些 404 是外链不可达
+          //（api.injahow.cn / music.163.com / m8.music.126.net），进日志只制造噪音
+          //（实测诊断 13 条错误全是它），掩盖真错误。静默即可，兜底逻辑会接管播放。
+          if ((tag === 'audio' || tag === 'source') && /api\.injahow\.cn|music\.163\.com|music\.126\.net/.test(url)) return;
+          m = '资源加载失败 <' + tag + '> ' + url.slice(0, 120);
         }
       } catch (e2) {}
       if (m) pushErr(m, st);

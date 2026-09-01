@@ -112,13 +112,16 @@
     if (t === 'checkbox' || t === 'range' || t === 'file' || t === 'color' || t === 'hidden' ||
         t === 'date' || t === 'time' || t === 'datetime-local' || t === 'month' || t === 'week') return;
     inp.dataset.ceDone = '1';
-    // 退场为幽灵锚点（占位1px不可见，保留 id 供现有代码 getElementById）
+    // v3.26.x #118：先抓原始 className 再加 ce-ghost——避免可见的 ce-box div 继承到
+    // ce-ghost 类别名（CSS 当前只对 input/textarea 生效未致视觉异常，但逻辑 bug：
+    // 未来加 div.ce-ghost 规则会误伤；box 只需继承原始边框/背景等视觉类）
+    var origClass = inp.className || '';
     inp.classList.add('ce-ghost');
     inp.setAttribute('aria-hidden', 'true');
     // 创建接管输入的 contenteditable div（插到 input 后面）
     var box = document.createElement('div');
     // 继承原输入框样式类（边框/背景/圆角等视觉不变）+ ce-box 基础排版
-    box.className = 'ce-box ' + (inp.className || '');
+    box.className = 'ce-box ' + origClass;
     box.setAttribute('contenteditable', 'true');
     box.setAttribute('spellcheck', 'false');
     box.dataset.for = inp.id || '';

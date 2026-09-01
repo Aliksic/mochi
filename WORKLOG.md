@@ -1,4 +1,59 @@
-# 本次构建者：AI-B（本会话收口：#117 vivo X200s 本地音乐刷新后播放失败，在途 src 已由并行会话先行提交）
+﻿# 本次构建者：AI-B（本会话收口：#119 桌面美化 14 项优化 + 收口在途 #118 邀请TA 打字框/批量管理）
+# 2026-09-01 21:3x：本会话（AI-A 域）开工 #118 TA的邀请管理页：打字框布局 + 批量管理与编辑。**未构建**，src 改完待构建者收口。跨域改动 src/js/mobile-adapt.js（ce-ghost 类别名泄露 fix），理由：ceConvert 第 116 行先 inp.classList.add('ce-ghost') 再第 121 行 box.className='ce-box '+inp.className，导致可见的 ce-box div 也带上 ce-ghost 类别名（虽 CSS 只对 input/textarea 生效未致视觉异常，但属逻辑 bug，类别名漂移未来加 div.ce-ghost 规则会误伤），改为先存 origClass 再 add。
+
+### 2026-09-01 22:2x（存储卫生+静默错误优化：idbDelete 超时/快照清理强化/迁移重试/音乐404静默）
+* [AI-B 域]（**改动文件：src/js/idb.js（idbDelete 加 4s 超时+重建连接重试3次，迁移块 idbSet 失败延迟5s重试）、src/js/data-backup.js（purgeLegacySnapshot 等 idbDelete 返回再复核，has!==false 都重试，5次间隔1.5s）、src/js/device.js（error 监听过滤第三方音乐外链404不进日志）、WORKLOG.md；构建状态：已构建 sw mochi-mtir932x，哨兵 212/212、哑哨兵 0、sw.js 3/3、verify 10/10**）。
+* 需求/反馈：摩托罗拉G100（XT2533-4）+ Edge 151 诊断信息分析，6项优化中低风险4项先行。
+* 根因/方案：项2 idbDelete 原无超时致快照删不掉，加 4s 超时+重试3次+purge 强化复核；项3 my-emoji-groups IDB 无此键 LS 是唯一副本不能删，迁移块 idbSet 失败延迟5s重试；项4 音乐404 静默不进日志；项1 626ms 长任务排查结论是 JS 执行本身（idbRestore 已排除超大键），属项6 defer 范畴暂不做。
+* 待对方处理：无。项5(msgs分页)/项6(启动defer) 高风险，待验证后再评估。本包与 #119/#118 在途 src 一并构建，待用户确认提交。
+
+### 2026-09-01 22:0x（#119 桌面美化 14 项优化：内置方案库/深色三档/壁纸缩略图/重置/快捷面板/边看边调/壁纸定位/完整方案/撤销/对比度/部分应用/分享URL/随机/搜索）
+* [AI-B 域·主]（**改动文件：src/js/personalize.js（+514 行：BUILTIN_SCHEMES/sysPrefersDark/openBgPanel/bgPosOf/pushBeautyUndo/openBeautyDrawer/shareBeautyLink/openFullBeautySchemes/collectFullBeauty 等 14 项功能逻辑）、src/template.html（+35 行新锚点：theme-search-input/desk-quick-panel/dq-drawer/row-bg-adjust/row-beauty-undo/row-beauty-random/row-beauty-reset-all/row-full-beauty-schemes）、src/js/chat-settings.js（跨域 +3 行：暴露 window.collectChatBeauty/applyChatBeautyData 供合并方案使用，仅暴露不改动逻辑）、build.mjs（#119 哨兵 9 条）、WORKLOG.md；构建状态：本包构建后一并提交**）。
+* 需求/反馈：用户问「桌面美化的功能里 还能怎么优化更方便使用」，要求**不影响用户已设置的美化数据**——所有新功能必须是加法/可选，不替换现有存储键，不改变默认行为。
+* 方案（14 项，全部加法、旧数据兼容、批量操作前压撤销栈）：
+  1. **项1 内置方案库**：BUILTIN_SCHEMES 5 套（情侣粉/极简黑白/森系/海洋/暮色），只读不污染用户方案，openBeautySchemes 内置方案置顶渲染。
+  2. **项2 深色三档**：light/dark/auto，auto 跟随 prefers-color-scheme + matchMedia 监听。
+  3. **项3 壁纸缩略图面板**：openBgPanel 自定义面板，2×4 渐变色卡 + 纯色色卡 + 取色器，替换原文字 pill。
+  4. **项4 一键重置全部美化**：row-beauty-reset-all，遍历 BEAUTY_KEYS + 全局键清空，二次确认。
+  5. **项5 快捷面板 + 长按空白**：color sec 顶部 6 按钮快捷面板（主题色/深色/壁纸/圆角/随机/边看边调）；长按 .app-grid 空白 500ms 进装修模式。
+  6. **项6 边看边调抽屉**：openBeautyDrawer 切桌面页 + 右侧浮层实时改 CSS 变量，桌面可见。
+  7. **项8 壁纸定位/缩放**：新键 phone-bg-pos-x/y/size，applyPhoneBg 读键，row-bg-adjust 三滑块调整面板。
+  8. **项9 完整外观方案**：跨域 chat-settings.js 暴露接口，openFullBeautySchemes 管理桌面+聊天合并方案。
+  9. **A 撤销栈**：beauty-undo-stack（最近 10 次），批量操作前 pushBeautyUndo，row-beauty-undo 撤销。
+  10. **B 图标文字自动对比度**：app-name-color 加 'auto' 档，纯 CSS 跟随 data-theme（light 黑/dark 白）。
+  11. **C 方案部分应用**：applyScheme 加范围选择（全部/仅配色/仅壁纸/仅布局）。
+  12. **D 方案分享 URL**：shareBeautyLink 生成 base64 hash URL，启动读 #beauty= 自动弹导入。
+  13. **E 一键随机美化**：row-beauty-random 随机配色+圆角+透明度。
+  14. **F 美化项搜索**：theme-search-input 跨标签过滤 .set-row。
+* G（桌面实时预览小窗）已由现有 desk-cp 预览面板满足（template.html ~1370-1385，CSS 变量实时着色），无需额外代码。
+* 跨域改动 src/js/chat-settings.js（已按 AGENTS.md 规则在此条声明），理由：完整外观方案需合并桌面+聊天两套美化，chat-settings.js 的 collectChatBeauty/applyChatBeautyData 原为内部函数，仅暴露到 window 不改动逻辑。
+* 数据安全红线（用户要求）：所有新功能用新键/新值，旧值完全兼容。批量操作（应用方案/导入/随机/重置）前压撤销栈。BUILTIN_SCHEMES 只读不写入用户方案列表。phone-bg-pos-x/y/size 缺键时默认 50/50/cover（与原 cover+center 行为一致）。
+* 验证：源改后 `node --check src/js/personalize.js` / `node --check src/js/chat-settings.js` 全过；build.mjs #119 哨兵 9 条 needle 在各自 file 内唯一；构建后由构建者跑 build.mjs 哨兵 + `npm run verify` 现有套件验证。
+* 待真机：① 设置 → 美化 → 主题色 sec 顶部快捷面板 6 按钮可一键直达；② 内置方案库 5 套置顶，点击应用（可选范围：全部/仅配色/仅壁纸/仅布局）；③ 深色档选 auto 跟随系统；④ 壁纸缩略图面板 2×4 渐变色卡 + 纯色色卡 + 取色器；⑤ 壁纸定位/缩放三滑块调整；⑥ 边看边调抽屉切桌面页实时改；⑦ 撤销栈最近 10 次；⑧ 完整方案保存桌面+聊天合并；⑨ 分享 URL 复制后他人打开自动弹导入；⑩ 随机美化一键生成；⑪ 搜索美化项跨标签过滤；⑫ 长按桌面空白进装修模式；⑬ 一键重置全部美化（带确认）；⑭ 图标文字 auto 档跟随深色。
+* 待对方处理：无（本包由 AI-B 构建者收口）。
+
+
+### 2026-09-01 21:3x（#118 TA的邀请管理页 打字框布局 + 批量管理/编辑）
+* [AI-A 域·主]（**改动文件：src/js/ta-invite.js（edit✎ + 批量管理 toggle/bar + 编辑流程）、src/css/chat-pages.css（.ti-type 固定 92px 同行 ta-ask + .tc-input.ce-box will-change 合成层保护 + .ta-edit/.ti-batch-bar 样式）、src/js/mobile-adapt.js（跨域：ce-ghost 类别名泄露 fix）、build.mjs（#118 哨兵 4 条）、FIX-REGRESSION.md（#118 行）；构建状态：未构建，待构建者收口**）。
+* 需求/反馈（小米15Pro + Chrome，2026-09-01）：邀请TA 管理页两处问题——①「打字框变形，文字会超出框外」；②「分组和细分选项需要新增删除按钮和批量管理，打多了打错了无法修改」。
+* 根因/方案：
+  1. **打字框变形**（#118-a）：本页添加表单 `.ta-add` 内 select 用 `ti-type tc-input` 但 CSS 没 `.ti-type` 规则（grep 确认），仅 `.tc-input` 生效给 `width:100%`，select 独占一行、input 换行成 2 行布局（ta-ask 的 `.ta-type` 92px 同行布局更紧凑）。同时 #ti-search / #ti-batch 都是 `.tc-input` → ce-box 转换，**没有 `.ta-add .ce-box` 那套 will-change/translateZ 合成层保护**（聊天输入栏/syncAndroidKb 平移时文字会停在旧合成层位子=「字出界」，小米15Pro Chrome 既往实测复现族）。修：补 `.ti-type { flex:0 0 auto; width:92px }`（与 `.ta-type` 同款，添加表单 1 行排版 [select 92px][input flex:1][button]）+ 补 `.tc-input.ce-box { will-change:transform }`（全站 tc-input 输入框合成层保护，搜索/批量导入 textarea 一并受益）。另外跨域修 ceConvert 的 ce-ghost 类别名泄露（原序：先 add 后读 className → box 继承到 ce-ghost 类别名）：先 `var origClass = inp.className||''` 再 add，box 只继承原始 className。
+  2. **编辑 + 批量管理**（#118-b）：用户原话「打多了打错了无法修改」「分组和细分选项需要新增删除按钮和批量管理」——当前 `.ta-row` 只有 ✕ 删除，没有 ✎ 编辑；分组/未分组的细分（猜拳/Pong/贪吃蛇/贴贴）也无批量入口。补：
+     - ✎ **编辑**：每条自定义邀请行加 `.ta-edit` 按钮（26px 圆形，灰底，✎ 字符），点击 → openModal 预填当前 text → 确认后更新 `q.text`/`tiSave`/重渲染。系统预设项隐藏编辑按钮（与现有 ✕ 删系统预设提示同款语义：系统预设不可改）。
+     - 批量管理 **toggle**：mine 面板顶部 `.mg-grp-row` 加「批量管理」按钮（与「新建分组」同行）。开启后：每行切换为「batch checkbox + 文本（无 ✎/✕）」，页面底部贴出 sticky `.ti-batch-bar`（已选 N 条 + 全选 + 删除 + 取消）。batch checkbox 双向同步全选状态、删除走 openModal noInput/staticText 确认后批量 splice + tiSave + 重渲染 + 自动退出批量模式。状态 `tiBatchMode` + `tiSelected: Set` 局部，关掉即清。
+     - 标签筛选下拉：保持现状（typeselect = 邀请话术类型，添加时选定 kind），批量模式/编辑流程共用同一 `.ta-add` 表单（仅正常模式显示）。
+* 跨域改动（已按 AGENTS.md 规则在 WORKLOG 顶部声明）：
+  - `src/js/mobile-adapt.js` ce-ghost 类别名泄露 fix（理由：原序致 ce-box 继承 ce-ghost 类别名，逻辑 bug 且未来 div.ce-ghost 规则会误伤）。
+* 验证：源改后 `node --check src/js/ta-invite.js` 与 `node --check src/js/mobile-adapt.js` 全过；哨兵 needle 设计：
+  - chat-pages.css `.ti-type { flex:0 0 auto; width:92px` （ta-ask 既有同款规则共存，#118 的 needle 写在 #118 注释下避免共享）；
+  - chat-pages.css `.tc-input.ce-box { will-change:transform }`；
+  - ta-invite.js `'ta-edit'` （HTML 模板字符串里的 class 名，必在产物中）；
+  - mobile-adapt.js `box.className = 'ce-box ' + origClass` （ce-ghost fix 的代码特征串）。
+  构建后由构建者跑 build.mjs 哨兵 + 现有 verify 套件验证。
+* 待真机（小米15Pro + Chrome）：① 邀请TA → 我的添加 → 任意分组添加区：select/input/添加 三件套应在同一行（不再分两行变形）；聚焦任一 tc-input 输入框（搜索/批量/添加）打字不再出现「文字与框分离 / 字出界」症状。② 点击 ✎ 应弹「修改邀请话术」模态，修改后保存生效；点「批量管理」应出现底部条，可勾选多条后一次删除（带确认）。
+* 待对方处理：本包需构建者收口（`node build.mjs` + `npm run verify` + 哨兵 4 条全绿后与 src 同一次提交）。临时探针 tools/tmp-ti-invite-probe.mjs 已删。
+
+### 2026-09-01 21:3x（#118 TA的邀请管理页 打字框布局 + 批量管理/编辑）
 
 ### 2026-09-01 19:1x（#117 vivo X200s 本地音乐刷新后播放失败）
 * [AI-B 域·构建者收口]（**改动文件：src/js/music-player.js（本地歌脏值守卫四道）、build.mjs（#117 哨兵）、FIX-REGRESSION.md（#117 行）、WORKLOG.md；构建状态：已构建·sw mochi-mtifymk0，哨兵 194/194、哑哨兵 0、sw.js 3/3、verify 10/10、verify-music-single-audio 15/15；已提交已推送**）。
@@ -726,3 +781,19 @@
 
 * 需要真机验证（用户侧）：iPhone 15 Plus 三个浏览器分别测 ①进「系统预设字卡」→ 滑到底 → 点返回，是否还卡；②返回后立刻切聊天/设置页是否流畅；③「其他互动功能字卡」「查岗回应字卡」两页滚动+搜索是否正常；④单卡开关灰态与刷新后是否保持。诊断信息（设置→诊断）若再出现「返回后整页卡」请一并回传。
 
+
+### 2026-09-01 21:3x（#118 Mate 40 Pro Edge 联系人回复/来信几乎全是颜文字）
+* [AI-B 域·诊断]（**改动文件：无（只诊断，未构建未提交）；待 AI-A 处理：chat.js / mail.js / chatcard.js**）。
+* 用户报障：HUAWEI Mate 40 Pro + Edge 151，联系人自动回复「基本上全是颜文字」，尤其信箱来信全是颜文字。公用/默认字卡均开启（默认总开关=true、聊天使用=true、主字卡=true、dc-use-mail="1"）。
+* 诊断推算（从报障诊断文本）：自定义字卡 394 张构成失衡——池 text=4667（=默认 main 4628 + 自定义仅约 39 张）、kaomoji=208（全自定义，默认 kaomoji 496 未补）、emoji=108（=默认 108 全补，自定义 emoji=0）、sticker=123（图片表情包）；公用键 cc-groups-public 25.12MB ≈ 123 张表情包 base64（~200KB/张）+ 208 张颜文字。**结论：TA 回复池文字主体枯竭，颜文字/表情包占自定义 84% → 回复/写信大量出颜文字**。
+* 代码放大器（AI-A 需修）：kaomoji 判定正则 `/[\(（｡◕(◕)(づ｡(¬)]/` 字符类含半角 `(` → 任何「带括号的中文句」（如「晚安（抱抱）」）被误判为颜文字，从 text 池挪走。chat.js getPool 与 mail.js mailCardPool 两处同源（v3.6.x 遗留）。默认 main 4628 张无带括号句，误判只影响自定义卡。
+* 建议：① 用户侧清理公用字卡库（删多余颜文字/表情包）；② AI-A 修正则 + 考虑自定义 text 池过小时保底回退默认 main；③ 公用库加超大字卡体检（参考 sanitizeVoiceGroups）。
+* 待对方处理：AI-A 评估②③与正则修复；本会话待用户导出数据备份文件（含 cc-groups-public）后可精确列出待删卡清单。
+
+### 2026-09-01 22:2x��#120 iPhone 13 Safari �������ٵ������ݲ�ȫ�����ֿ�/�ظ�/�ղض�ʧ��
+* [AI-B ��]��**�Ķ��ļ���src/js/data-backup.js�������� IDB ��ȡ���� 3 ��+ȫ����ʧ����¼������ʾ+�Ѻ����֣�����ౣ�����δ���ľɼ��� clear �¶���������״̬��δ�������Է� #118 ��;��src ������������տڣ�**����
+* ����/�������û�����+��ϣ���iPhone 13 Safari��iOS 18.6��v3.26.383��standalone PWA�����������ݺ��ٵ������ݣ��������ݲ�ȫ����ʧ�ܶࡹ�����ʵ֤��LS 109 �� 451.8KB��IDB �����ϸ�� 1 ����ѡ default:chat-msgs��**�ֿ�/�ظ�/�ղ���ϸ��LS 0�� 0B + IDB 0��**��cc-groups/quote-cards/fav-msgs/reply-* ȫ������
+* ���������� �ֿ���(cc-groups)/�Զ����ֿ�(quote-cards)/�ղ�(fav-msgs)���� IDB-only ����>200KB ʱ xyStore.set ���� LS ֻд IDB+memoryCache������ ����ʱ idbGet ����Щ����iOS Safari IDB �������/��ʱ��8s ���ޣ��� ���� undefined���� ��������ֻ�� chat-msgs/feed-posts��isAuthorityKey����¼������**��������Ĭ����**�������ļ�ȱ��Щ��������ʾ"ȫ����������"���� ����ʱ idbReplaceAll �� os.clear() ��� IDB �� put �� ȱʧ�ļ����׶�ʧ��
+* ������data-backup.js ���ࣩ�������� A��IDB ��ȡʧ�����Դ� 1 ������ 3 �Σ���� 200ms���������� B��ȫ����ʧ����¼ exportMissing+�Ѻ�����+��ʵ��ʾ������� C��idbReplaceAll ǰ�������δ���ľɼ���clear �� put ��ȥ������������ʱ���岻�䣬������ʱ�ϲ����ڶ����ݡ�
+* ��֤��`node --check src/js/data-backup.js` ���������������ڱ�+verify+������ա�
+* ���Է�������ޡ����������տڣ��Է� #118 ��; src ������һ�� build����

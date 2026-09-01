@@ -497,8 +497,13 @@
           if ((v === undefined || v === null) && lsBig[k] === undefined) {
             // IDB 读取失败且 lsBig 无兜底（典型场景：>200KB 的 IDB-only 键，xyStore 已从 LS 删除，
             // doExport LS 阶段遍历不到 → 无 lsBig 兜底；IDB 事务挂起/超时失败后该键会被静默跳过丢失）。
-            // 重试一次给 IDB 连接恢复机会，读数之间不写进度以减轻 IO 竞争。
-            v = await window.idbGet(k);
+            // v3.26.x #118：iOS Safari IDB 事务挂起/超时高发（iPhone 13 Safari 导出后再导入数据不全），
+            // 单次重试不够。增至 3 次重试，每次间隔 200ms 给 IDB 连接恢复机会
+            //（armFgIdbReset 回前台重建连接后通常当场恢复）。
+            for (let retry = 0; retry < 3 && (v === undefined || v === null); retry++) {
+              await new Promise(r => setTimeout(r, 200));
+              v = await window.idbGet(k);
+            }
           }
           if (v !== undefined && v !== null) {
             expKeyBytes = typeof v === 'string' ? v.length * 2 : (v instanceof Blob ? v.size : 0);
@@ -536,14 +541,18 @@
             if (ent) return ent;
             continue;
           } else {
-            // IDB 读取两次均失败 + lsBig 无兜底（>200KB IDB-only 键），最后尝试直接从 LS 读
+            // IDB 读取多次均失败 + lsBig 无兜底（>200KB IDB-only 键），最后尝试直接从 LS 读
             // （极端情况下 LS 可能有残留快照，聊胜于无）
             try {
               const lsV = localStorage.getItem(k);
               if (lsV !== null) { const ent = routeValue(k, lsV, false); if (ent) return ent; }
             } catch (e) {}
-            // v3.26.x：权威键 IDB+memoryCache 均失败，只剩 LS 有损快照（或彻底没有）→ 记录降级
-            if (isAuthorityKey(k)) exportMissing.push(k);
+            // v3.26.x #118：IDB 读取失败且无兜底（memoryCache/lsBig/LS 都没有）→ 记录降级。
+            // 原只对 chat-msgs/feed-posts（isAuthorityKey）记录，cc-groups/quote-cards/fav-msgs
+            // 等键被静默跳过 → 导出文件缺这些键，导入后 idbReplaceAll clear IDB → 彻底丢失
+            //（iPhone 13 Safari 导出后再导入数据不全，字卡/回复/收藏明细 LS 0键 + IDB 0键）。
+            // 现在对所有丢失键记录，导出结束如实提示用户备份不完整、勿清原设备。
+            exportMissing.push(k);
           }
         } catch (e) {} // 单键失败跳过，继续导出其余键
       }
@@ -586,7 +595,22 @@
     // v3.26.x：权威键降级提示——IDB 事务挂起/超时导致聊天记录/朋友圈只拿到 LS 有损
     // 快照（剥图/截断）或彻底丢失。明确告知用户备份可能不完整，切勿据此清空原设备数据。
     if (exportMissing.length) {
-      const names = exportMissing.map(k => /:chat-msgs$/.test(k) ? '聊天记录(' + k.slice('xy-home-v2:'.length) + ')' : '朋友圈(' + k.slice('xy-home-v2:'.length) + ')');
+      // v3.26.x #118：对所有丢失键生成友好名字（原只对 chat-msgs/feed-posts）。
+      const nameOf = function (k) {
+        const tail = k.slice('xy-home-v2:'.length);
+        if (/:chat-msgs$/.test(k)) return '聊天记录(' + tail + ')';
+        if (/:feed-posts$/.test(k)) return '朋友圈(' + tail + ')';
+        if (/:cc-groups$/.test(k)) return '字卡库(' + tail + ')';
+        if (/:cc-groups-public$/.test(k)) return '公用字卡库(' + tail + ')';
+        if (/:quote-cards$/.test(k)) return '自定义字卡(' + tail + ')';
+        if (/:fav-msgs$/.test(k)) return '收藏(' + tail + ')';
+        if (/:avatar-/.test(k)) return '头像(' + tail + ')';
+        if (/:music-file:/.test(k)) return '音乐文件(' + tail + ')';
+        if (/:reply-/.test(k)) return '回复设置(' + tail + ')';
+        if (/:ta-/.test(k)) return 'TA回复字卡(' + tail + ')';
+        return tail;
+      };
+      const names = exportMissing.map(nameOf);
       coverText += '\n⚠ 以下数据可能未完整导出（IDB 读取失败，仅拿到有损快照或丢失）：\n' + names.map(n => '· ' + n).join('\n') + '\n请勿清空原设备数据，建议重启浏览器后重新导出。';
     }
     // v3.32.x #104：成品太大 = 新设备上「导得出去、导不回来」（导入要整包读成字符串再 JSON.parse），
@@ -984,10 +1008,43 @@
       if (window.idbReplaceAll) {
         impShow('正在导入…', '正在原子写入大文件（字卡/聊天/音乐等）…', 8);
         const pairs = idbKeys.map(k => ({ k: k, v: data.idb[k] }));
-        window.idbReplaceAll(pairs).then(ok => {
-          if (ok) impShow('正在导入…', '大文件写入完成', 60);
-          else { try { data.idb = {}; } catch (e) {} }
-          resolve(ok);
+        // v3.26.x #118：导入前保留当前 IDB 有而备份没有的键（防 clear 致丢数据）。
+        // 根因：导出时 iOS Safari IDB 事务挂起/超时，部分 IDB-only 键（cc-groups 等）
+        // 被静默跳过 → 备份文件缺这些键 → 导入 idbReplaceAll clear IDB → 彻底丢失
+        //（iPhone 13 Safari 导出后再导入数据不全，字卡/回复/收藏明细 LS 0键 + IDB 0键）。
+        // 修复：列出当前 IDB 键，找出备份没有的键（且不在 data.ls），读出值加入 pairs，
+        // idbReplaceAll clear 后这些键也会被 put 回去 → 不丢数据。备份完整时保留键为空，
+        // 导入语义不变（替换）；只有备份不完整时才保留旧键（合并），比丢数据安全。
+        const lsKeySet = {};
+        try { Object.keys(data.ls || {}).forEach(k => { if (k.indexOf('xy-home-v2:') === 0) lsKeySet[k] = true; }); } catch (e) {}
+        const backupKeySet = {};
+        try { idbKeys.forEach(k => { backupKeySet[k] = true; }); } catch (e) {}
+        const retainStep = (window.idbListKeys && window.idbGetMany)
+          ? window.idbListKeys().then(function (curKeys) {
+              if (!Array.isArray(curKeys)) return []; // 清单读取失败/超时 → 不保留（无法确定哪些该保留）
+              const retain = curKeys.filter(function (k) {
+                return k && k.indexOf('xy-home-v2:') === 0 &&
+                  k !== SNAPSHOT_KEY &&
+                  !backupKeySet[k] && !lsKeySet[k];
+              });
+              if (!retain.length) return [];
+              return window.idbGetMany(retain).then(function (map) {
+                const kept = [];
+                retain.forEach(function (k) {
+                  const v = map[k];
+                  if (v !== undefined && v !== null) kept.push({ k: k, v: v });
+                });
+                return kept;
+              }).catch(function () { return []; });
+            }).catch(function () { return []; })
+          : Promise.resolve([]);
+        retainStep.then(function (keptPairs) {
+          const allPairs = keptPairs.length ? pairs.concat(keptPairs) : pairs;
+          window.idbReplaceAll(allPairs).then(ok => {
+            if (ok) impShow('正在导入…', '大文件写入完成' + (keptPairs.length ? '（已保留备份未含的 ' + keptPairs.length + ' 个旧键）' : ''), 60);
+            else { try { data.idb = {}; } catch (e) {} }
+            resolve(ok);
+          });
         });
         return;
       }
@@ -1182,20 +1239,23 @@
     if (!window.idbDelete) return;
     // v3.26.x #90：删后要复核再收工——idbDelete 没有挂起超时，原实现连返回值都不看，
     // 实测该设备 173.8MB 遗留副本历经多次启动仍在（白占近一半可用空间）。用严格三态
-    // 探测 idbHasKey 复核：false＝确认已删；true＝还在 → 再删一次（最多 3 次）；
-    // null＝这次读不到，留给下次启动（不做重试风暴）。删不存在的键无副作用，重复调用安全。
+    // 探测 idbHasKey 复核：false＝确认已删；true＝还在 → 再删一次（最多 5 次）；
+    // null＝这次读不到，也重试（事务挂起可能下次恢复）。删不存在的键无副作用，重复调用安全。
+    // v3.26.x：idbDelete 已加 4s 超时（idb.js），不再 fire-and-forget——等返回再复核，
+    // 避免复核时事务还在排队读到旧状态。间隔 1.5s（原 2.5s），重试 5 次（原 3 次）。
     let tries = 0;
     const attempt = function () {
       tries++;
-      try { Promise.resolve(window.idbDelete(SNAPSHOT_KEY)).catch(function () {}); } catch (e) {}
-      if (!window.idbHasKey) return;
-      setTimeout(function () {
-        try {
-          Promise.resolve(window.idbHasKey(SNAPSHOT_KEY)).then(function (has) {
-            if (has === true && tries < 3) attempt();
-          }).catch(function () {});
-        } catch (e) {}
-      }, 2500);
+      Promise.resolve(window.idbDelete(SNAPSHOT_KEY)).then(function () {
+        if (!window.idbHasKey) return;
+        setTimeout(function () {
+          try {
+            Promise.resolve(window.idbHasKey(SNAPSHOT_KEY)).then(function (has) {
+              if (has !== false && tries < 5) attempt();
+            }).catch(function () { if (tries < 5) attempt(); });
+          } catch (e) {}
+        }, 1500);
+      }).catch(function () {});
     };
     attempt();
   }

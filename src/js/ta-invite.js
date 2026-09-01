@@ -206,10 +206,23 @@
   }
 
   // ---- 我的添加 tab ----
-  function tiItemHtml(q, idx) {
+  // v3.26.x #118：批量管理模式态——开启时每行切到 batch checkbox 视图（无 toggle/edit/del），
+  // 底部贴出 sticky 操作条（全选/删除/取消）；编辑按钮 ✎ 始终在正常模式展示
+  let tiBatchMode = false;
+  let tiSelected = new Set();
+  function tiItemHtml(q, idx, batchOn) {
+    if (batchOn) {
+      return '<div class="ta-row ti-batch-row">' +
+        '<label class="ti-batch-cb"><input type="checkbox" class="ti-batch-cb-in" data-bidx="' + idx + '"' + (tiSelected.has(idx) ? ' checked' : '') + '></label>' +
+        '<span class="ta-txt">' + esc(q.text) + ' <span class="tc-known">' + esc(kindLabel(q.kind)) + '</span></span>' +
+        '</div>';
+    }
+    const sysPreset = q.isPreset === true;
     return '<div class="ta-row">' +
       '<label class="toggle"><input type="checkbox"' + (q.enabled !== false ? ' checked' : '') + ' data-idx="' + idx + '"><span class="tk"></span></label>' +
       '<span class="ta-txt">' + esc(q.text) + ' <span class="tc-known">' + esc(kindLabel(q.kind)) + '</span></span>' +
+      // v3.26.x #118：编辑按钮 — 系统预设项不展示（与 ✕ 删除同款语义：系统预设不可改）
+      (sysPreset ? '' : '<button class="ta-edit" data-idx="' + idx + '" title="修改">✎</button>') +
       '<button class="ta-del" data-idx="' + idx + '">✕</button>' +
       '</div>';
   }
@@ -231,11 +244,17 @@
     const groups = Array.isArray(d.groups) ? d.groups : [];
     const mineQs = d.questions.filter(q => q && q.isPreset !== true && q.text && (search === '' || q.text.indexOf(search) >= 0));
     let html = '';
-    html += '<div class="mg-grp-row"><button class="cc-tool" id="ti-grp-add"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;vertical-align:-2px;margin-right:4px"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>新建分组</button></div>';
+    // v3.26.x #118：顶部工具行——「新建分组」+「批量管理」两个 cc-tool 并列
+    // （批量管理有可勾选项时才亮，未分组 + 所有分组 mine 项里无可勾选时也可入，0 条给提示）
+    html += '<div class="mg-grp-row">' +
+      '<button class="cc-tool" id="ti-grp-add"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;vertical-align:-2px;margin-right:4px"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>新建分组</button>' +
+      '<button class="cc-tool" id="ti-batch-toggle" style="margin-left:6px' + (tiBatchMode ? ';background:#111;color:#fff;border-color:#111' : '') + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;vertical-align:-2px;margin-right:4px"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12l2 2 4-4"/></svg>批量管理</button>' +
+      '</div>';
     if (!mineQs.length && !groups.length) {
       html += '<div class="ta-empty" style="padding:14px">暂未添加自定义邀请，可在上方批量导入或下方添加</div>';
       container.innerHTML = html;
       bindTiGroupOps();
+      bindTiBatchToggle();
       return;
     }
     groups.forEach(g => {
@@ -244,7 +263,7 @@
         '<div class="cal-card-title mg-title"><span class="mg-name">' + esc(g.name) + '</span><span class="mg-cnt">(' + arr.length + ')</span>' +
         '<span class="mg-ops"><button class="mg-op" data-tig="' + esc(g.id) + '" data-op="rn" title="重命名">✎</button><button class="mg-op" data-tig="' + esc(g.id) + '" data-op="rm" title="删除分组">✕</button></span></div>';
       if (!arr.length) html += '<div class="ta-empty">这个分组还没有内容，可在下方直接添加</div>';
-      arr.forEach(q => { html += tiItemHtml(q, d.questions.indexOf(q)); });
+      arr.forEach(q => { html += tiItemHtml(q, d.questions.indexOf(q), tiBatchMode); });
       html += tiAddFormHtml('g' + g.id, g.id, 'rps');
       html += '</div>';
     });
@@ -255,11 +274,21 @@
       const arr = ungrouped.filter(q => (q.kind || 'rps') === k && (search === '' || q.text.indexOf(search) >= 0));
       if (!arr.length) return;
       html += '<div class="mg-subcat">' + esc(label) + ' <span style="font-size:11px;color:var(--muted);font-weight:400">(' + arr.length + ')</span></div>';
-      arr.forEach(q => { html += tiItemHtml(q, d.questions.indexOf(q)); });
+      arr.forEach(q => { html += tiItemHtml(q, d.questions.indexOf(q), tiBatchMode); });
       html += tiAddFormHtml('c' + k, '', k);
     });
     html += '</div>';
+    // v3.26.x #118：批量管理底部操作条（sticky 贴底）——仅批量模式显示
+    if (tiBatchMode) {
+      html += '<div class="ti-batch-bar" id="ti-batch-bar">' +
+        '<span class="ti-batch-cnt" id="ti-batch-cnt">已选 <em>' + tiSelected.size + '</em> 条</span>' +
+        '<button class="ti-batch-btn" id="ti-batch-all">全选</button>' +
+        '<button class="ti-batch-btn ti-batch-del-btn" id="ti-batch-del"' + (tiSelected.size === 0 ? ' disabled' : '') + '>删除</button>' +
+        '<button class="ti-batch-btn" id="ti-batch-cancel">取消</button>' +
+        '</div>';
+    }
     container.innerHTML = html;
+    // 正常模式：单条 enable toggle
     container.querySelectorAll('input[data-idx]').forEach(cb => {
       cb.addEventListener('change', () => {
         const d2 = tiLoad();
@@ -268,6 +297,7 @@
         tiSave(d2);
       });
     });
+    // 正常模式：单条删除
     container.querySelectorAll('.ta-del').forEach(b => {
       b.addEventListener('click', () => {
         const d2 = tiLoad();
@@ -279,6 +309,44 @@
         refreshTiCardCounts();
       });
     });
+    // v3.26.x #118：正常模式——单条编辑（系统预设项在 tiItemHtml 已隐藏 ✎，这里仍兜底一道）
+    container.querySelectorAll('.ta-edit').forEach(b => {
+      b.addEventListener('click', () => {
+        const idx = Number(b.dataset.idx);
+        const d2 = tiLoad();
+        const q = d2.questions[idx];
+        if (!q) return;
+        if (q.isPreset === true) { toast('系统预设邀请不可修改'); return; }
+        if (!window.openModal) { toast('弹窗组件未就绪'); return; }
+        window.openModal('修改邀请话术', q.text || '', function (v) {
+          const nt = String(v || '').trim();
+          if (!nt) { toast('请输入邀请话术'); return; }
+          if (nt === q.text) return;
+          const d3 = tiLoad();
+          const q2 = d3.questions[idx];
+          if (!q2) return;
+          q2.text = nt;
+          tiSave(d3);
+          renderTiMineInto(container, search);
+          refreshTiCardCounts();
+          toast('已保存');
+        }, { maxLength: 80 });
+      });
+    });
+    // 批量模式：行内 batch checkbox 切换 → 同步 tiSelected + 刷新条上「已选 N 条」+ 删除按钮可用态
+    container.querySelectorAll('input[data-bidx]').forEach(cb => {
+      cb.addEventListener('change', () => {
+        const idx = Number(cb.dataset.bidx);
+        if (cb.checked) tiSelected.add(idx); else tiSelected.delete(idx);
+        const cnt = document.getElementById('ti-batch-cnt');
+        if (cnt) cnt.innerHTML = '已选 <em>' + tiSelected.size + '</em> 条';
+        const del = document.getElementById('ti-batch-del');
+        if (del) del.disabled = tiSelected.size === 0;
+        const all = document.getElementById('ti-batch-all');
+        if (all) all.textContent = tiSelected.size === 0 ? '全选' : (isAllSelected() ? '取消全选' : '全选');
+      });
+    });
+    // 添加按钮（正常模式）
     container.querySelectorAll('.ta-add-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const key = btn.dataset.key;
@@ -299,6 +367,90 @@
       });
     });
     bindTiGroupOps();
+    bindTiBatchToggle();
+    if (tiBatchMode) bindTiBatchBar(container, search);
+  }
+  // v3.26.x #118：批量管理「全选/删除/取消」三条——操作条只在批量模式渲染，条上事件统一在此绑
+  function bindTiBatchBar(container, search) {
+    const all = document.getElementById('ti-batch-all');
+    const del = document.getElementById('ti-batch-del');
+    const cancel = document.getElementById('ti-batch-cancel');
+    if (all && !all.__bound) {
+      all.__bound = true;
+      all.addEventListener('click', () => {
+        const d2 = tiLoad();
+        const customIdx = [];
+        d2.questions.forEach((q, i) => { if (q && q.isPreset !== true && q.text) customIdx.push(i); });
+        if (isAllSelected()) {
+          tiSelected.clear();
+        } else {
+          customIdx.forEach(i => tiSelected.add(i));
+        }
+        renderTiMineInto(container, search);
+      });
+    }
+    if (del && !del.__bound) {
+      del.__bound = true;
+      del.addEventListener('click', () => {
+        if (tiSelected.size === 0) return;
+        const cnt = tiSelected.size;
+        if (!window.openModal) { toast('弹窗组件未就绪'); return; }
+        window.openModal('批量删除邀请话术', '', function () {
+          const d2 = tiLoad();
+          // 索引降序删除避免 splice 错位
+          const idxs = Array.from(tiSelected).sort((a, b) => b - a);
+          let removed = 0;
+          idxs.forEach(i => {
+            if (i >= 0 && i < d2.questions.length && d2.questions[i].isPreset !== true) {
+              d2.questions.splice(i, 1);
+              removed++;
+            }
+          });
+          tiSave(d2);
+          tiSelected.clear();
+          tiBatchMode = false;
+          renderTiMineInto(container, search);
+          refreshTiCardCounts();
+          toast('已删除 ' + removed + ' 条');
+        }, { noInput: true, staticText: '删除选中的 ' + cnt + ' 条自定义邀请话术？此操作不可撤销。' });
+      });
+    }
+    if (cancel && !cancel.__bound) {
+      cancel.__bound = true;
+      cancel.addEventListener('click', () => {
+        tiBatchMode = false;
+        tiSelected.clear();
+        renderTiMineInto(container, search);
+      });
+    }
+  }
+  function isAllSelected() {
+    const d2 = tiLoad();
+    let total = 0;
+    d2.questions.forEach(q => { if (q && q.isPreset !== true && q.text) total++; });
+    if (total === 0) return false;
+    if (tiSelected.size < total) return false;
+    for (const i of tiSelected) {
+      const q = d2.questions[i];
+      if (!q || q.isPreset === true || !q.text) return false;
+    }
+    return true;
+  }
+  // v3.26.x #118：批量管理 toggle 按钮——开/关切换 tiBatchMode + 清选择 + 重渲染
+  function bindTiBatchToggle() {
+    const btn = document.getElementById('ti-batch-toggle');
+    if (!btn || btn.__bound) return;
+    btn.__bound = true;
+    btn.addEventListener('click', () => {
+      const container = document.getElementById('ti-mine-cats');
+      if (!container) return;
+      const d2 = tiLoad();
+      const hasAny = d2.questions.some(q => q && q.isPreset !== true && q.text);
+      if (!hasAny) { toast('暂无自定义邀请可批量管理'); return; }
+      tiBatchMode = !tiBatchMode;
+      tiSelected.clear();
+      renderTiMineInto(container, getTiSearch());
+    });
   }
   function bindTiGroupOps() {
     const grpAdd = document.getElementById('ti-grp-add');
@@ -359,6 +511,9 @@
     if (sysPanel) sysPanel.hidden = tab !== 'sys';
     if (minePanel) minePanel.hidden = tab !== 'mine';
     tiSearch = '';
+    // v3.26.x #118：切 tab 退出批量模式——避免 sys tab 还残留 batch 选择态
+    tiBatchMode = false;
+    tiSelected.clear();
     const searchInput = document.getElementById('ti-search');
     if (searchInput) searchInput.value = '';
     if (tab === 'sys') renderTiSysInto(document.getElementById('ti-sys-cats'), ''); else renderTiMineInto(document.getElementById('ti-mine-cats'), '');

@@ -715,12 +715,14 @@ try {
       }
     } catch (e) {}
   };
+  // v3.27.x：壁纸定位/缩放可调（phone-bg-pos-x/y/size），默认 cover+center，旧数据无键时完全兼容
+  const bgPosOf = () => ({ x: store.get('phone-bg-pos-x') || '50', y: store.get('phone-bg-pos-y') || '50', s: store.get('phone-bg-size') || 'cover' });
   const applyPhoneBg = (data) => {
     if (!phoneEl) return;
-    // 壁纸铺满整个手机屏幕（含状态栏/导航条区域），且只在桌面显示
     phoneEl.style.backgroundImage = 'url("' + data + '")';
-    phoneEl.style.backgroundSize = 'cover';
-    phoneEl.style.backgroundPosition = 'center';
+    const pos = bgPosOf();
+    phoneEl.style.backgroundSize = (pos.s === 'cover' || !pos.s) ? 'cover' : (pos.s + '%');
+    phoneEl.style.backgroundPosition = pos.x + '% ' + pos.y + '%';
     phoneEl.style.backgroundAttachment = 'scroll';
     applyBodyBg(data);
     if (bgHome) {
@@ -742,6 +744,10 @@ try {
     }
     store.remove('phone-bg');
     store.remove('phone-bg-preset');
+    store.remove('phone-bg-solid');
+    store.remove('phone-bg-pos-x');
+    store.remove('phone-bg-pos-y');
+    store.remove('phone-bg-size');
     syncBgUI();
     const pv = document.getElementById('bg-preset-val'); if (pv) pv.textContent = '默认';
   };
@@ -775,23 +781,52 @@ try {
   const getBgPresetName = () => store.get('phone-bg-preset') || '';
   const syncBgPresetUI = () => { if (bgPresetVal) bgPresetVal.textContent = getBgPresetName() || '默认'; };
   { const savedPreset = getBgPresetName(); if (savedPreset) { const p = BG_PRESETS.find(b => b.name === savedPreset); if (p) applyPhoneBgPreset(p.css); } syncBgPresetUI(); }
-  if (bgPresetRow) {
-    bgPresetRow.addEventListener('click', () => {
-      if (!window.openModal) return;
-      const pills = [{ label: '清除预设', value: '__clear__' }].concat(
-        BG_PRESETS.map(p => ({ label: p.name, value: p.name }))
-      );
-      window.openModal('内置壁纸预设', '', (v) => {
-        if (v === '__clear__') { clearPhoneBg(); return; }
-        const p = BG_PRESETS.find(b => b.name === v);
-        if (!p) return;
-        clearPhoneBg();
-        store.set('phone-bg-preset', p.name);
-        applyPhoneBgPreset(p.css);
-        syncBgPresetUI();
-        toast('已切换为「' + p.name + '」壁纸');
-      }, { noInput: true, pills: pills });
+  // v3.27.x：壁纸选择面板（项3）——缩略图色卡网格 + 纯色 + 取色器，真实 UI 非文字 pill
+  const openBgPanel = () => {
+    let m = document.getElementById('bg-preset-panel');
+    if (!m) { m = document.createElement('div'); m.id = 'bg-preset-panel'; m.style.cssText = 'position:fixed;inset:0;z-index:90;align-items:center;justify-content:center;background:rgba(0,0,0,.4);display:none'; document.body.appendChild(m); m.addEventListener('click', (e) => { if (e.target === m) m.style.display = 'none'; }); }
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'width:min(88vw,380px);max-height:84vh;overflow-y:auto;background:var(--card-bg,#fff);color:var(--ink,#111);border-radius:16px;padding:16px;box-shadow:0 14px 40px rgba(0,0,0,.25)';
+    const hd = document.createElement('div'); hd.style.cssText = 'font-size:15px;font-weight:700;margin-bottom:12px'; hd.textContent = '壁纸选择'; wrap.appendChild(hd);
+    const curPreset = getBgPresetName();
+    const curSolid = store.get('phone-bg-solid') || '';
+    const sec1 = document.createElement('div'); sec1.style.cssText = 'font-size:12px;color:var(--muted,#888);margin-bottom:6px'; sec1.textContent = '渐变预设'; wrap.appendChild(sec1);
+    const grid1 = document.createElement('div'); grid1.style.cssText = 'display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px';
+    BG_PRESETS.forEach((p) => {
+      const card = document.createElement('button');
+      card.style.cssText = 'height:54px;border-radius:10px;border:2px solid ' + (curPreset === p.name ? 'var(--ink,#111)' : 'rgba(0,0,0,.08)') + ';background:' + p.css + ';background-size:cover;cursor:pointer;padding:0;position:relative;overflow:hidden';
+      const lb = document.createElement('span'); lb.style.cssText = 'position:absolute;bottom:3px;left:0;right:0;font-size:10px;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.7);text-align:center'; lb.textContent = p.name; card.appendChild(lb);
+      card.addEventListener('click', () => { clearPhoneBg(); store.set('phone-bg-preset', p.name); applyPhoneBgPreset(p.css); syncBgPresetUI(); toast('已切换为「' + p.name + '」壁纸'); m.style.display = 'none'; });
+      grid1.appendChild(card);
     });
+    wrap.appendChild(grid1);
+    const sec2 = document.createElement('div'); sec2.style.cssText = 'font-size:12px;color:var(--muted,#888);margin-bottom:6px'; sec2.textContent = '纯色壁纸'; wrap.appendChild(sec2);
+    const solidColors = ['#ffffff','#f5f5f5','#e8e8e8','#1c1c1e','#111111','#e05555','#3a7bd5','#4a9d5e'];
+    const grid2 = document.createElement('div'); grid2.style.cssText = 'display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px';
+    solidColors.forEach((c) => {
+      const card = document.createElement('button');
+      card.style.cssText = 'height:40px;border-radius:10px;border:2px solid ' + (curSolid === c ? 'var(--ink,#111)' : 'rgba(0,0,0,.08)') + ';background:' + c + ';cursor:pointer;padding:0';
+      card.addEventListener('click', () => { clearPhoneBg(); store.set('phone-bg-solid', c); applyPhoneBgPreset(c); syncBgPresetUI(); toast('已切换为纯色壁纸'); m.style.display = 'none'; });
+      grid2.appendChild(card);
+    });
+    wrap.appendChild(grid2);
+    const pickerRow = document.createElement('div'); pickerRow.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:14px';
+    const pickerLabel = document.createElement('span'); pickerLabel.style.cssText = 'font-size:12px;color:var(--muted,#888)'; pickerLabel.textContent = '自定义纯色：'; pickerRow.appendChild(pickerLabel);
+    const picker = document.createElement('input'); picker.type = 'color'; picker.value = curSolid || '#ffffff'; picker.style.cssText = 'width:40px;height:32px;border:1px solid var(--card-border,#ddd);border-radius:8px;cursor:pointer;background:none';
+    picker.addEventListener('input', () => { clearPhoneBg(); store.set('phone-bg-solid', picker.value); applyPhoneBgPreset(picker.value); syncBgPresetUI(); });
+
+    pickerRow.appendChild(picker);
+    const pickerOk = document.createElement('button'); pickerOk.textContent = '应用'; pickerOk.style.cssText = 'font-size:12px;padding:5px 12px;border:none;border-radius:8px;background:var(--ink,#111);color:#fff';
+    pickerOk.addEventListener('click', () => { toast('已应用自定义纯色'); m.style.display = 'none'; });
+    pickerRow.appendChild(pickerOk);
+    wrap.appendChild(pickerRow);
+    const clearBtn = document.createElement('button'); clearBtn.textContent = '清除壁纸'; clearBtn.style.cssText = 'width:100%;padding:10px;border:1px solid rgba(163,45,45,.35);border-radius:10px;background:var(--danger-soft,#fff5f5);color:var(--danger-ink,#a32d2d);font-size:13px';
+    clearBtn.addEventListener('click', () => { clearPhoneBg(); m.style.display = 'none'; toast('已清除壁纸'); });
+    wrap.appendChild(clearBtn);
+    m.innerHTML = ''; m.appendChild(wrap); m.style.display = 'flex';
+  };
+  if (bgPresetRow) {
+    bgPresetRow.addEventListener('click', openBgPanel);
   }
   if (bgRow) {
     const savedBg = sanitizeBg('phone-bg', BG_SAFE_LIMIT);
@@ -828,6 +863,41 @@ try {
   if (bgRemove) {
     bgRemove.addEventListener('click', () => clearPhoneBg());
   }
+  // v3.27.x：壁纸定位/缩放调整（仅对自定义图生效）——三滑块实时预览
+  const bgAdjustRow = document.getElementById('row-bg-adjust');
+  if (bgAdjustRow) {
+    bgAdjustRow.addEventListener('click', () => {
+      if (!store.get('phone-bg')) { toast('请先上传背景图片'); return; }
+      let m = document.getElementById('bg-adjust-panel');
+      if (!m) { m = document.createElement('div'); m.id = 'bg-adjust-panel'; m.style.cssText = 'position:fixed;inset:0;z-index:90;align-items:center;justify-content:center;background:rgba(0,0,0,.4);display:none'; document.body.appendChild(m); m.addEventListener('click', (e) => { if (e.target === m) { m.style.display = 'none'; } }); }
+      const pos = bgPosOf();
+      const sx = parseInt(pos.x, 10), sy = parseInt(pos.y, 10), ss = pos.s === 'cover' ? 100 : parseInt(pos.s, 10);
+      const wrap = document.createElement('div');
+      wrap.style.cssText = 'width:min(86vw,360px);background:var(--card-bg,#fff);color:var(--ink,#111);border-radius:16px;padding:16px;box-shadow:0 14px 40px rgba(0,0,0,.25)';
+      const hd = document.createElement('div'); hd.style.cssText = 'font-size:15px;font-weight:700;margin-bottom:12px'; hd.textContent = '壁纸定位与缩放'; wrap.appendChild(hd);
+      const mkSlider = (label, val, min, max, on) => {
+        const r = document.createElement('div'); r.style.cssText = 'margin-bottom:12px';
+        const lb = document.createElement('div'); lb.style.cssText = 'font-size:12px;color:var(--muted,#888);margin-bottom:4px'; lb.textContent = label; r.appendChild(lb);
+        const inp = document.createElement('input'); inp.type = 'range'; inp.min = min; inp.max = max; inp.value = val; inp.style.cssText = 'width:100%';
+        const vv = document.createElement('span'); vv.style.cssText = 'font-size:11px;color:var(--muted,#999);margin-left:6px'; vv.textContent = val + (label.indexOf('缩放') >= 0 ? '%' : '%');
+        inp.addEventListener('input', () => { vv.textContent = inp.value + '%'; on(parseInt(inp.value, 10)); });
+        const row = document.createElement('div'); row.style.cssText = 'display:flex;align-items:center'; row.appendChild(inp); row.appendChild(vv);
+        r.appendChild(row); return r;
+      };
+      const applyBgPos = (x, y, sz) => { store.set('phone-bg-pos-x', String(x)); store.set('phone-bg-pos-y', String(y)); store.set('phone-bg-size', sz === 100 ? 'cover' : String(sz)); const d = bgData(); if (d) applyPhoneBg(d); };
+      let cx = sx, cy = sy, cs = ss;
+      wrap.appendChild(mkSlider('水平位置', sx, 0, 100, (v) => { cx = v; applyBgPos(cx, cy, cs); }));
+      wrap.appendChild(mkSlider('垂直位置', sy, 0, 100, (v) => { cy = v; applyBgPos(cx, cy, cs); }));
+      wrap.appendChild(mkSlider('缩放', ss, 100, 300, (v) => { cs = v; applyBgPos(cx, cy, cs); }));
+      const act = document.createElement('div'); act.style.cssText = 'display:flex;gap:8px;margin-top:8px';
+      const reset = document.createElement('button'); reset.textContent = '重置'; reset.style.cssText = 'flex:1;padding:9px;border:1px solid var(--card-border,#eee);border-radius:9px;background:var(--btn-cancel-bg,#fafafa);color:var(--ink,#111)';
+      reset.addEventListener('click', () => { store.remove('phone-bg-pos-x'); store.remove('phone-bg-pos-y'); store.remove('phone-bg-size'); const d = bgData(); if (d) applyPhoneBg(d); m.style.display = 'none'; toast('已重置为居中铺满'); });
+      const ok = document.createElement('button'); ok.textContent = '完成'; ok.style.cssText = 'flex:1;padding:9px;border:none;border-radius:9px;background:var(--ink,#111);color:#fff';
+      ok.addEventListener('click', () => { m.style.display = 'none'; toast('已应用'); });
+      act.appendChild(reset); act.appendChild(ok); wrap.appendChild(act);
+      m.innerHTML = ''; m.appendChild(wrap); m.style.display = 'flex';
+    });
+  }
 
   // 壁纸只在桌面显示：桌面时铺满全屏，切到字卡库/设置/聊天时隐藏（数据保留）
   const bgData = () => sanitizeBg('phone-bg', BG_SAFE_LIMIT);
@@ -851,8 +921,10 @@ try {
     // tab 切换触发 applyBgVisibility 都会因 bgData() 为空把预设壁纸清掉。
     // 现在自定义图优先、其次内置预设，都没有才清空。
     const customBg = bgData();
+    const solidCss = store.get('phone-bg-solid') || '';
     const presetCss = bgPresetCss();
     if (customBg) applyPhoneBg(customBg);
+    else if (solidCss && /^#[0-9a-fA-F]{6}$/.test(solidCss)) applyPhoneBgPreset(solidCss);
     else if (presetCss) applyPhoneBgPreset(presetCss);
     else {
       phoneEl.style.backgroundImage = '';
@@ -1143,6 +1215,113 @@ try {
   if (iconRow) {
     iconRow.addEventListener('click', enterDecor);
   }
+  // v3.27.x：快捷面板（项5）——美化页常用项直达，避免进多层菜单
+  (function bindQuickPanel() {
+    const bind = (id, targetId) => { const b = document.getElementById(id); const t = document.getElementById(targetId); if (b && t) b.addEventListener('click', () => t.click()); };
+    bind('dq-accent', 'row-accent-color');
+    bind('dq-theme', 'row-theme-mode');
+    bind('dq-bg', 'row-bg-preset');
+    bind('dq-radius', 'row-desk-card-radius');
+    bind('dq-random', 'row-beauty-random');
+  })();
+  // v3.27.x：边看边调抽屉（项6）——切到桌面页 + 右侧浮层实时改 CSS 变量，桌面可见
+  const openBeautyDrawer = () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    const phoneTab = document.querySelector('.tab[data-page="page-phone"]');
+    if (phoneTab) phoneTab.classList.add('active');
+    document.querySelectorAll('.page').forEach(pg => pg.hidden = true);
+    const phonePage = document.getElementById('page-phone');
+    if (phonePage) phonePage.hidden = false;
+    let d = document.getElementById('beauty-drawer');
+    if (!d) { d = document.createElement('div'); d.id = 'beauty-drawer'; d.style.cssText = 'position:fixed;top:0;right:0;bottom:0;width:min(70vw,300px);z-index:95;background:var(--card-bg,#fff);color:var(--ink,#111);box-shadow:-4px 0 20px rgba(0,0,0,.15);overflow-y:auto;padding:14px;box-sizing:border-box;display:none;flex-direction:column;gap:14px'; document.body.appendChild(d); }
+    d.innerHTML = '';
+    const hd = document.createElement('div'); hd.style.cssText = 'font-size:14px;font-weight:700;display:flex;justify-content:space-between;align-items:center';
+    const hdTxt = document.createElement('span'); hdTxt.textContent = '边看边调（改色实时生效）'; hd.appendChild(hdTxt);
+    const closeBtn = document.createElement('button'); closeBtn.textContent = '\u2715'; closeBtn.style.cssText = 'border:none;background:none;font-size:18px;color:var(--ink,#111);cursor:pointer;padding:4px 8px'; closeBtn.addEventListener('click', () => { d.style.display = 'none'; });
+    hd.appendChild(closeBtn); d.appendChild(hd);
+    const mkColorRow = (label, key, varName, isGlobal) => {
+      const r = document.createElement('div'); r.style.cssText = 'display:flex;flex-direction:column;gap:4px';
+      const lb = document.createElement('div'); lb.style.cssText = 'font-size:12px;color:var(--muted,#888)'; lb.textContent = label; r.appendChild(lb);
+      const inp = document.createElement('input'); inp.type = 'color';
+      try { inp.value = isGlobal ? (localStorage.getItem(key) || '#111111') : (store.get(key) || '#111111'); } catch (e) { inp.value = '#111111'; }
+      inp.style.cssText = 'width:100%;height:36px;border:1px solid var(--card-border,#ddd);border-radius:8px;cursor:pointer';
+      inp.addEventListener('input', () => {
+        document.documentElement.style.setProperty(varName, inp.value);
+        if (isGlobal) { try { localStorage.setItem(key, inp.value); } catch (e) {} } else { store.set(key, inp.value); }
+      });
+      r.appendChild(inp); return r;
+    };
+    d.appendChild(mkColorRow('主题色', 'xy-home-v2:accent-color', '--btn-bg', true));
+    d.appendChild(mkColorRow('组件背景色', 'widget-bg-color', '--widget-bg', false));
+    d.appendChild(mkColorRow('边框色', 'widget-border-color', '--widget-border', false));
+    const mkSliderRow = (label, key, varName, min, max, unit) => {
+      const r = document.createElement('div'); r.style.cssText = 'display:flex;flex-direction:column;gap:4px';
+      const lb = document.createElement('div'); lb.style.cssText = 'font-size:12px;color:var(--muted,#888)'; lb.textContent = label; r.appendChild(lb);
+      const inp = document.createElement('input'); inp.type = 'range'; inp.min = min; inp.max = max;
+      const cur = store.get(key); inp.value = cur || String(Math.round((min + max) / 2));
+      inp.style.cssText = 'width:100%';
+      const vv = document.createElement('span'); vv.style.cssText = 'font-size:11px;color:var(--muted,#999)'; vv.textContent = inp.value + unit;
+      inp.addEventListener('input', () => { vv.textContent = inp.value + unit; document.documentElement.style.setProperty(varName, inp.value + unit); store.set(key, inp.value); });
+      const row = document.createElement('div'); row.style.cssText = 'display:flex;align-items:center;gap:6px'; row.appendChild(inp); row.appendChild(vv);
+      r.appendChild(row); return r;
+    };
+    d.appendChild(mkSliderRow('组件圆角', 'desk-card-radius', '--desk-card-radius', 0, 30, 'px'));
+    const opRow = document.createElement('div'); opRow.style.cssText = 'display:flex;flex-direction:column;gap:4px';
+    const opLb = document.createElement('div'); opLb.style.cssText = 'font-size:12px;color:var(--muted,#888)'; opLb.textContent = '组件透明度'; opRow.appendChild(opLb);
+    const opInp = document.createElement('input'); opInp.type = 'range'; opInp.min = 40; opInp.max = 100; opInp.step = 5;
+    const opCur = store.get('widget-opacity'); opInp.value = opCur ? String(Math.round(parseFloat(opCur) * 100)) : '100';
+    opInp.style.cssText = 'width:100%';
+    opInp.addEventListener('input', () => { const v = parseInt(opInp.value, 10) / 100; document.documentElement.style.setProperty('--widget-opacity', String(v)); store.set('widget-opacity', String(v)); });
+    opRow.appendChild(opInp); d.appendChild(opRow);
+    const hint = document.createElement('div'); hint.style.cssText = 'font-size:11px;color:var(--muted,#999);margin-top:4px'; hint.textContent = '左侧桌面实时预览，关闭后回美化页保存。'; d.appendChild(hint);
+    d.style.display = 'flex';
+  };
+  const dqDrawer = document.getElementById('dq-drawer');
+  if (dqDrawer) dqDrawer.addEventListener('click', openBeautyDrawer);
+  // v3.27.x：长按桌面空白处进装修模式（项5）——长按 .app-grid 空白（非图标），500ms 触发
+  // 仅长按空白区域，避开图标长按误触（原长按图标入口已移除，此处恢复便利性且不冲突）
+  (function bindLongPressDecor() {
+    let timer = null;
+    const clear = () => { if (timer) { clearTimeout(timer); timer = null; } };
+    grids.forEach(g => {
+      const start = (e) => {
+        const phone = document.getElementById('page-phone');
+        if (!phone || phone.hidden) return;
+        if (e.target.closest('.app')) return;
+        clear();
+        timer = setTimeout(() => { timer = null; try { enterDecor(); } catch (er) {} }, 500);
+      };
+      g.addEventListener('touchstart', start, { passive: true });
+      g.addEventListener('mousedown', start);
+      g.addEventListener('touchend', clear);
+      g.addEventListener('touchmove', clear, { passive: true });
+      g.addEventListener('mouseup', clear);
+      g.addEventListener('mouseleave', clear);
+    });
+  })();
+  // v3.27.x：美化项搜索（F）——输入过滤 .set-row，跨标签显示匹配项
+  (function bindThemeSearch() {
+    const inp = document.getElementById('theme-search-input');
+    const page = document.getElementById('page-theme');
+    if (!inp || !page) return;
+    inp.addEventListener('input', () => {
+      const q = inp.value.trim().toLowerCase();
+      const secs = page.querySelectorAll('.them-sec');
+      const rows = page.querySelectorAll('.set-row');
+      if (!q) {
+        rows.forEach(r => r.style.display = '');
+        const activeTab = page.querySelector('.them-tab.active');
+        if (activeTab) activeTab.click();
+        return;
+      }
+      secs.forEach(sec => sec.hidden = false);
+      rows.forEach(r => {
+        const txtEl = r.querySelector('.txt');
+        const txt = (txtEl ? txtEl.textContent : '').toLowerCase();
+        r.style.display = txt.indexOf(q) >= 0 ? '' : 'none';
+      });
+    });
+  })();
   // v3.6.x：装修模式设置卡片背景入口的绑定在 CARD_BG_TYPES 定义之后（见卡片背景段末尾）——
   // 该入口引用了 CARD_BG_TYPES 统计已设置数量，需等其声明后再绑定。
 
@@ -1397,13 +1576,17 @@ try {
     const old = document.getElementById('app-name-color-style');
     if (old) old.remove();
     const c = appNameColorValOf();
-    if (appNameColorVal) appNameColorVal.textContent = c ? c.toUpperCase() : '默认';
-    // 同步设 --app-name-color 变量供颜色分区预览面板着色（真实 .app .app-name 仍由下方注入 style 覆盖）
+    if (appNameColorVal) appNameColorVal.textContent = c === 'auto' ? '自动' : (c ? c.toUpperCase() : '默认');
     document.documentElement.style.setProperty('--app-name-color', c && /^#[0-9a-fA-F]{6}$/.test(c) ? c : '');
-    if (!c || !/^#[0-9a-fA-F]{6}$/.test(c)) return;
+    if (!c) return;
     const st = document.createElement('style');
     st.id = 'app-name-color-style';
-    st.textContent = '.app .app-name{color:' + c + ' !important;}';
+    if (c === 'auto') {
+      // v3.27.x：自动档——纯 CSS 跟随深色模式（light 黑 / dark 白），零 JS 重算
+      st.textContent = '.app .app-name{color:#111111 !important;}[data-theme="dark"] .app .app-name{color:#ffffff !important;}';
+    } else if (/^#[0-9a-fA-F]{6}$/.test(c)) {
+      st.textContent = '.app .app-name{color:' + c + ' !important;}';
+    } else return;
     document.head.appendChild(st);
   }
   applyAppNameColor();
@@ -1431,6 +1614,7 @@ try {
       const current = appNameColorValOf();
       window.openModal('图标文字颜色', '', (v) => {
         if (v === '__reset__') { store.remove(APP_NAME_COLOR_KEY); applyAppNameColor(); return; }
+        if (v === 'auto') { store.set(APP_NAME_COLOR_KEY, 'auto'); applyAppNameColor(); return; }
         const color = (typeof v === 'number' && appNameSwatches[v]) ? appNameSwatches[v].color : v;
         if (!color || !/^#[0-9a-fA-F]{6}$/.test(color)) return;
         store.set(APP_NAME_COLOR_KEY, color);
@@ -1440,7 +1624,7 @@ try {
         noInput: true,
         color: current,
         swatches: appNameSwatches,
-        pills: [{ label: '恢复默认', value: '__reset__' }],
+        pills: [{ label: '自动跟随深色', value: 'auto' }, { label: '恢复默认', value: '__reset__' }],
       });
     });
   }
@@ -1810,16 +1994,27 @@ try {
     });
   }
   // v3.17.x：美化数据写入当前桌面（导入 / 应用方案共用），含动态键与全局主题
-  const applyBeautyData = (data) => {
-    BEAUTY_KEYS.forEach(k => { if (data[k] !== undefined) store.set(k, data[k]); });
-    // 动态键导入：自定义图标 / 图标顺序 / 图片组件本体
+  // v3.27.x：方案部分应用（C）——scope='color'|'bg'|'layout'|'all'，默认 all 完全兼容现有
+  const SCOPE_COLOR_KEYS = ['widget-bg-color','widget-border-color','widget-btn-color','widget-btn-text-color','widget-heart-color','app-name-color','widget-opacity','desk-card-radius','ico-radius','ico-shape','desk-font-size','desk-card-scale'];
+  const SCOPE_BG_KEYS = ['phone-bg','phone-bg-preset','phone-bg-solid','phone-bg-pos-x','phone-bg-pos-y','phone-bg-size','bg-blur','bg-mask-op'];
+  const SCOPE_LAYOUT_KEYS = ['desk-layout','desk-page-count','desk-images','desk-texts','desk-countdowns'];
+  const applyBeautyData = (data, scope) => {
+    scope = scope || 'all';
+    const allow = (k) => {
+      if (scope === 'all') return true;
+      if (scope === 'color') return SCOPE_COLOR_KEYS.indexOf(k) >= 0 || k === '__accent__' || k === '__theme__';
+      if (scope === 'bg') return SCOPE_BG_KEYS.indexOf(k) >= 0 || /^page-bg-/.test(k);
+      if (scope === 'layout') return SCOPE_LAYOUT_KEYS.indexOf(k) >= 0 || k.indexOf('app-icon-') === 0 || k.indexOf('desk-image-src-') === 0 || k === 'hidden-icons';
+      return true;
+    };
+    BEAUTY_KEYS.forEach(k => { if (data[k] !== undefined && allow(k)) store.set(k, data[k]); });
     Object.keys(data).forEach(k => {
-      if ((k.indexOf('app-icon-') === 0 || k.indexOf('desk-image-src-') === 0) && data[k] !== undefined) {
+      if ((k.indexOf('app-icon-') === 0 || k.indexOf('desk-image-src-') === 0) && data[k] !== undefined && allow(k)) {
         store.set(k, data[k]);
       }
     });
-    if (data['__accent__']) { try { localStorage.setItem('xy-home-v2:accent-color', data['__accent__']); } catch (e) {} }
-    if (data['__theme__']) { try { localStorage.setItem('xy-home-v2:theme-mode', data['__theme__']); } catch (e) {} }
+    if (data['__accent__'] && allow('__accent__')) { try { localStorage.setItem('xy-home-v2:accent-color', data['__accent__']); } catch (e) {} }
+    if (data['__theme__'] && allow('__theme__')) { try { localStorage.setItem('xy-home-v2:theme-mode', data['__theme__']); } catch (e) {} }
   };
   const beautyImportRow = document.getElementById('row-beauty-import');
   if (beautyImportRow) {
@@ -1849,6 +2044,7 @@ try {
               toast('已自动保存原美化 → 方案「' + name + '」');
             }
           } catch (e) {}
+          try { pushBeautyUndo(); } catch (e) {}
           applyBeautyData(data);
           toast('已导入，刷新生效');
           setTimeout(() => location.reload(), 800);
@@ -1865,6 +2061,15 @@ try {
     try { const a = JSON.parse(gStore.get(SCHEMES_KEY) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; }
   };
   const saveSchemesList = (arr) => { try { gStore.set(SCHEMES_KEY, JSON.stringify(arr)); } catch (e) {} };
+  // v3.27.x：内置美化方案库（只读，绝不写用户 beauty-schemes）——开箱即用，降低首次上手成本
+  // 应用走 applyBeautyData（与用户方案同链路），用户主动点才覆盖当前桌面；不污染用户已保存方案
+  const BUILTIN_SCHEMES = [
+    { name: '情侣粉', builtin: true, data: { '__accent__': '#e05555', '__theme__': 'light', 'widget-bg-color': '#fff0f0', 'widget-border-color': '#ffd0d0', 'widget-btn-color': '#e05555', 'widget-btn-text-color': '#ffffff', 'widget-heart-color': '#e05555', 'phone-bg-preset': '樱花' } },
+    { name: '极简黑白', builtin: true, data: { '__accent__': '#111111', '__theme__': 'light', 'widget-bg-color': '#ffffff', 'widget-border-color': 'rgba(0,0,0,.1)', 'widget-btn-color': '#111111', 'widget-btn-text-color': '#ffffff', 'widget-heart-color': '#111111' } },
+    { name: '森系', builtin: true, data: { '__accent__': '#4a9d5e', '__theme__': 'light', 'widget-bg-color': '#f0fff0', 'widget-border-color': '#c8e6c9', 'widget-btn-color': '#4a9d5e', 'widget-btn-text-color': '#ffffff', 'widget-heart-color': '#4a9d5e', 'phone-bg-preset': '森林' } },
+    { name: '海洋', builtin: true, data: { '__accent__': '#3a7bd5', '__theme__': 'light', 'widget-bg-color': '#f0f4ff', 'widget-border-color': '#b8d4e8', 'widget-btn-color': '#3a7bd5', 'widget-btn-text-color': '#ffffff', 'widget-heart-color': '#3a7bd5', 'phone-bg-preset': '海洋' } },
+    { name: '暮色', builtin: true, data: { '__accent__': '#d6459d', '__theme__': 'dark', 'widget-bg-color': '#1c1c1e', 'widget-border-color': 'rgba(255,255,255,.12)', 'widget-btn-color': '#d6459d', 'widget-btn-text-color': '#ffffff', 'widget-heart-color': '#d6459d', 'phone-bg-preset': '星空' } },
+  ];
   const collectBeautyFull = () => {
     const data = collectBeauty();
     try { const ac = localStorage.getItem('xy-home-v2:accent-color'); if (ac) data['__accent__'] = ac; } catch (e) {}
@@ -1982,16 +2187,24 @@ try {
   function applyScheme(idx, m) {
     const s = getSchemes()[idx];
     if (!s || !window.openModal) return;
-    // v3.26.x：预选中唯一「应用」pill——noInput 弹窗只点底部「确定」时 fire() 传
-    // pillVal=null → v!=='ok' 静默不应用（与「恢复默认桌面/删除方案」同因同修）
-    const ctl = window.openModal('应用方案「' + s.name + '」？', '', (v) => {
-      if (v !== 'ok') return;
-      applyBeautyData(s.data || {});
-      hideSchemeModal(m); // 与聊天方案 applyChatScheme 一致：应用成功先关管理弹层，避免残留到刷新
-      toast('已应用「' + s.name + '」，刷新生效');
+    // v3.27.x：部分应用（C）——先选范围再应用，默认全部
+    const scopePills = [
+      { label: '应用全部', value: 'all' },
+      { label: '仅配色', value: 'color' },
+      { label: '仅壁纸', value: 'bg' },
+      { label: '仅布局', value: 'layout' },
+    ];
+    const scopeLabel = { all: '全部', color: '配色', bg: '壁纸', layout: '布局' };
+    const ctl = window.openModal('应用方案「' + s.name + '」', '', (v) => {
+      const scope = (!v || v === 'ok') ? 'all' : v;
+      if (!scopePills.some(p => p.value === scope)) return;
+      try { pushBeautyUndo(); } catch (e) {}
+      applyBeautyData(s.data || {}, scope);
+      hideSchemeModal(m);
+      toast('已应用「' + s.name + '」(' + (scopeLabel[scope] || scope) + ')，刷新生效');
       setTimeout(() => location.reload(), 800);
-    }, { noInput: true, pillSubmit: true, staticText: '将覆盖当前桌面的美化设置，刷新生效', pills: [{ label: '应用', value: 'ok' }] });
-    if (ctl && ctl.pills) ctl.pills([{ label: '应用', value: 'ok' }], 'ok');
+    }, { noInput: true, pillSubmit: true, staticText: '选择应用范围：点 pill 直接应用该范围，或点确定应用全部', pills: scopePills });
+    if (ctl && ctl.pills) ctl.pills(scopePills, 'all');
   }
   function deleteScheme(idx, m) {
     const s = getSchemes()[idx];
@@ -2018,6 +2231,28 @@ try {
     const list = document.createElement('div'); list.className = 'cm-list';
     list.style.cssText = 'display:flex;flex-direction:column;gap:8px;margin-bottom:12px;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;flex:1;min-height:0';
     const schemes = getSchemes();
+    // v3.27.x：内置方案置顶（只读，不可改名/删除）——开箱即用，应用走 applyBeautyData
+    BUILTIN_SCHEMES.forEach((s) => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;flex-direction:column;gap:8px;padding:10px;border:1px solid var(--card-border,#eee);border-radius:10px;background:var(--card-soft,rgba(0,0,0,.02))';
+      const th = document.createElement('div');
+      th.innerHTML = desktopSchemeThumb(s.data || {});
+      row.appendChild(th);
+      const nm = document.createElement('div');
+      nm.innerHTML = '<div style="display:flex;align-items:center;gap:6px"><span style="font-size:14px;font-weight:600">' + s.name + '</span><span style="font-size:10px;color:#fff;background:var(--ink,#111);padding:1px 6px;border-radius:999px">内置</span></div>';
+      row.appendChild(nm);
+      const btns = document.createElement('div');
+      btns.style.cssText = 'display:flex;align-items:center;gap:7px;flex-wrap:wrap';
+      btns.appendChild(mkBtn('预览', 'font-size:12px;padding:4px 10px;border:1px solid var(--card-border,#ddd);border-radius:8px;background:var(--btn-cancel-bg,#fafafa);color:var(--ink,#111)', () => desktopStartPreview(s, m)));
+      btns.appendChild(mkBtn('套用', 'font-size:12px;padding:4px 10px;border:none;border-radius:8px;background:var(--ink,#111);color:var(--bg-b,#fff)', () => {
+        const applyBuiltin = () => { applyBeautyData(s.data || {}); hideSchemeModal(m); toast('已应用「' + s.name + '」，刷新生效'); setTimeout(() => location.reload(), 800); };
+        if (!window.openModal) { applyBuiltin(); return; }
+        const ctl = window.openModal('应用内置方案「' + s.name + '」？', '', (v) => { if (v !== 'ok') return; applyBuiltin(); }, { noInput: true, pillSubmit: true, staticText: '将覆盖当前桌面的美化设置，刷新生效', pills: [{ label: '应用', value: 'ok' }] });
+        if (ctl && ctl.pills) ctl.pills([{ label: '应用', value: 'ok' }], 'ok');
+      }));
+      row.appendChild(btns);
+      list.appendChild(row);
+    });
     if (!schemes.length) {
       const empty = document.createElement('div');
       empty.innerHTML = '<div style="font-size:13px;color:var(--muted,#999);text-align:center;padding:20px 0">还没有保存的方案<br>先点下方「保存当前为方案」</div>';
@@ -2061,6 +2296,154 @@ try {
   if (beautySaveRow) beautySaveRow.addEventListener('click', () => window.saveBeautyScheme());
   const beautySchemesRow = document.getElementById('row-beauty-schemes');
   if (beautySchemesRow) beautySchemesRow.addEventListener('click', () => window.openBeautySchemes());
+  // v3.27.x：撤销栈（A）——批量操作前压栈（最近 10 次），撤销恢复。纯本地，不动现有数据
+  const UNDO_KEY = 'beauty-undo-stack';
+  const getUndoStack = () => { try { const a = JSON.parse(gStore.get(UNDO_KEY) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } };
+  const pushBeautyUndo = () => { try { const st = getUndoStack(); st.push({ time: Date.now(), data: collectBeautyFull() }); while (st.length > 10) st.shift(); gStore.set(UNDO_KEY, JSON.stringify(st)); } catch (e) {} };
+  const popBeautyUndo = () => { const st = getUndoStack(); if (!st.length) { toast('没有可撤销的改动了'); return null; } const it = st.pop(); try { gStore.set(UNDO_KEY, JSON.stringify(st)); } catch (e) {} return it; };
+  const beautyUndoRow = document.getElementById('row-beauty-undo');
+  if (beautyUndoRow) {
+    beautyUndoRow.addEventListener('click', () => {
+      const it = popBeautyUndo();
+      if (!it) return;
+      applyBeautyData(it.data || {}, 'all');
+      toast('已撤销最近一次改动，刷新生效');
+      setTimeout(() => location.reload(), 800);
+    });
+  }
+  // v3.27.x：一键重置全部美化（项4）——遍历 BEAUTY_KEYS + 全局键清空，二次确认。已保存方案不受影响
+  const resetAllBeautyRow = document.getElementById('row-beauty-reset-all');
+  if (resetAllBeautyRow) {
+    resetAllBeautyRow.addEventListener('click', () => {
+      const ctl = window.openModal('恢复全部默认美化', '将清空所有美化设置（颜色/壁纸/字号/圆角/布局/图标自定义等），恢复为系统默认。已保存的美化方案不受影响。确定继续？', (v) => {
+        if (v !== '1') return;
+        try { pushBeautyUndo(); } catch (e) {}
+        try {
+          BEAUTY_KEYS.forEach(k => store.remove(k));
+          ['app-name-color','phone-bg-solid','phone-bg-pos-x','phone-bg-pos-y','phone-bg-size'].forEach(k => store.remove(k));
+          document.querySelectorAll('.app').forEach(app => { if (app.dataset.app) store.remove('app-icon-' + app.dataset.app); });
+          document.querySelectorAll('.app-grid').forEach(g => { if (g.dataset.app) store.remove('app-icon-order-' + g.dataset.app); });
+          try { localStorage.removeItem('xy-home-v2:accent-color'); } catch (e) {}
+          try { localStorage.removeItem('xy-home-v2:theme-mode'); } catch (e) {}
+        } catch (e) {}
+        toast('已恢复全部默认美化，刷新生效');
+        setTimeout(() => location.reload(), 800);
+      }, { noInput: true, pillSubmit: true, pills: [{ label: '确定恢复全部默认', value: '1' }] });
+      if (ctl && ctl.pills) ctl.pills([{ label: '确定恢复全部默认', value: '1' }], '1');
+    });
+  }
+  // v3.27.x：一键随机美化（E）——随机配色+圆角+透明度，发现新组合可一键存方案
+  const randomBeautyRow = document.getElementById('row-beauty-random');
+  if (randomBeautyRow) {
+    randomBeautyRow.addEventListener('click', () => {
+      const palette = ['#e05555','#e8753a','#f0a020','#4a9d5e','#3a7bd5','#7b5fd6','#d6459d','#111111','#2e8b57','#cc55cc'];
+      const pick = () => palette[Math.floor(Math.random() * palette.length)];
+      const accent = pick();
+      const widgetBg = ['#ffffff','#fff0f0','#f0f4ff','#f0fff0','#fff5e6','#f5e6ff','#fafafa','#fce4ec'][Math.floor(Math.random()*8)];
+      const radius = [12,16,20,24,28][Math.floor(Math.random()*5)];
+      const opacity = [0.85,0.9,0.95,1][Math.floor(Math.random()*4)];
+      try { pushBeautyUndo(); } catch (e) {}
+      store.set('widget-bg-color', widgetBg);
+      store.set('widget-btn-color', accent);
+      store.set('widget-heart-color', accent);
+      store.set('desk-card-radius', String(radius));
+      store.set('widget-opacity', String(opacity));
+      try { localStorage.setItem('xy-home-v2:accent-color', accent); } catch (e) {}
+      toast('已随机生成美化，刷新生效（可点「保存当前为方案」留住）');
+      setTimeout(() => location.reload(), 800);
+    });
+  }
+  // v3.27.x：方案分享 URL（D）——当前美化 JSON → base64 → hash，对方打开自动弹导入。纯本地无服务器
+  const shareBeautyLink = () => {
+    try {
+      const data = collectBeautyFull();
+      const json = JSON.stringify(data);
+      const b64 = btoa(unescape(encodeURIComponent(json)));
+      const url = location.origin + location.pathname + '#beauty=' + b64;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(() => toast('分享链接已复制，发给对方打开即可导入')).catch(() => { if (window.openModal) window.openModal('分享链接', url, () => {}, { staticText: '请手动复制下方链接发给对方', noInput: true }); });
+      } else if (window.openModal) { window.openModal('分享链接', url, () => {}, { staticText: '请手动复制下方链接发给对方，对方打开会自动弹导入提示', noInput: true }); }
+      else { toast('已生成链接（见控制台）'); try { console.log(url); } catch (e) {} }
+    } catch (e) { toast('生成链接失败'); }
+  };
+  const beautyShareRow = document.getElementById('row-beauty-share');
+  if (beautyShareRow) beautyShareRow.addEventListener('click', shareBeautyLink);
+  // 启动读 hash 自动弹导入分享方案
+  try {
+    if (location.hash && location.hash.indexOf('#beauty=') === 0) {
+      const b64 = location.hash.slice(7);
+      const json = decodeURIComponent(escape(atob(b64)));
+      const data = JSON.parse(json);
+      if (window.openModal && typeof data === 'object' && data) {
+        const ctl = window.openModal('导入分享的美化方案？', '', (v) => {
+          if (v !== 'ok') return;
+          try { pushBeautyUndo(); } catch (e) {}
+          applyBeautyData(data, 'all');
+          try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+          toast('已导入，刷新生效');
+          setTimeout(() => location.reload(), 800);
+        }, { noInput: true, pillSubmit: true, staticText: '从分享链接导入美化方案，将覆盖当前桌面美化', pills: [{ label: '导入', value: 'ok' }] });
+        if (ctl && ctl.pills) ctl.pills([{ label: '导入', value: 'ok' }], 'ok');
+      }
+    }
+  } catch (e) {}
+  // v3.27.x：完整外观方案（项9）——桌面+聊天美化合并保存/应用，跨域用 window.collectChatBeauty/applyChatBeautyData
+  const FULL_SCHEMES_KEY = 'full-beauty-schemes';
+  const getFullSchemes = () => { try { const a = JSON.parse(gStore.get(FULL_SCHEMES_KEY) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } };
+  const saveFullSchemesList = (arr) => { try { gStore.set(FULL_SCHEMES_KEY, JSON.stringify(arr)); } catch (e) {} };
+  const collectFullBeauty = () => { const data = { desk: collectBeautyFull() }; try { if (window.collectChatBeauty) data.chat = window.collectChatBeauty(); } catch (e) {} return data; };
+  const applyFullBeautyData = (data) => { try { applyBeautyData(data.desk || {}, 'all'); } catch (e) {} try { if (window.applyChatBeautyData && data.chat) window.applyChatBeautyData(data.chat); } catch (e) {} };
+  const openFullBeautySchemes = () => {
+    let m = document.getElementById('full-beauty-scheme-manager');
+    if (!m) { m = document.createElement('div'); m.id = 'full-beauty-scheme-manager'; m.hidden = true; m.style.cssText = 'position:fixed;inset:0;z-index:89;align-items:center;justify-content:center;background:rgba(0,0,0,.4);display:none'; document.body.appendChild(m); m.addEventListener('click', (e) => { if (e.target === m) { m.style.display = 'none'; m.hidden = true; } }); }
+    m.innerHTML = ''; m.hidden = false; m.style.display = 'flex';
+    const box = document.createElement('div');
+    box.style.cssText = 'width:min(92vw,420px);max-height:80vh;display:flex;flex-direction:column;background:var(--card-bg,#fff);color:var(--ink,#111);border-radius:16px;padding:18px;box-shadow:0 8px 30px rgba(0,0,0,.2)';
+    const head = document.createElement('div');
+    head.innerHTML = '<div style="font-size:16px;font-weight:600;margin-bottom:4px">完整外观方案</div><div style="font-size:12px;color:var(--muted,#888);margin-bottom:12px">桌面+聊天美化合并保存，一键切换完整外观</div>';
+    box.appendChild(head);
+    const list = document.createElement('div'); list.style.cssText = 'display:flex;flex-direction:column;gap:8px;margin-bottom:12px;overflow-y:auto;flex:1;min-height:0';
+    const schemes = getFullSchemes();
+    if (!schemes.length) { const empty = document.createElement('div'); empty.innerHTML = '<div style="font-size:13px;color:var(--muted,#999);text-align:center;padding:20px 0">还没有保存的完整方案<br>先点下方「保存当前为完整方案」</div>'; list.appendChild(empty); }
+    schemes.forEach((s, i) => {
+      const row = document.createElement('div'); row.style.cssText = 'display:flex;flex-direction:column;gap:6px;padding:10px;border:1px solid var(--card-border,#eee);border-radius:10px';
+      const t = new Date(s.time || Date.now()); const ds = (t.getMonth()+1) + '-' + t.getDate();
+      row.innerHTML = '<div style="font-size:14px;font-weight:600">' + s.name + '</div><div style="font-size:11px;color:var(--muted,#999)">保存于 ' + ds + '</div>';
+      const btns = document.createElement('div'); btns.style.cssText = 'display:flex;gap:7px;flex-wrap:wrap';
+      const apply = document.createElement('button'); apply.textContent = '应用'; apply.style.cssText = 'font-size:12px;padding:4px 10px;border:none;border-radius:8px;background:var(--ink,#111);color:#fff';
+      apply.addEventListener('click', () => {
+        const ctl = window.openModal('应用完整方案「' + s.name + '」？', '', (v) => {
+          if (v !== 'ok') return;
+          try { pushBeautyUndo(); } catch (e) {}
+          applyFullBeautyData(s.data || {});
+          m.style.display = 'none'; m.hidden = true;
+          toast('已应用「' + s.name + '」，刷新生效');
+          setTimeout(() => location.reload(), 800);
+        }, { noInput: true, pillSubmit: true, staticText: '将覆盖当前桌面+聊天美化，刷新生效', pills: [{ label: '应用', value: 'ok' }] });
+        if (ctl && ctl.pills) ctl.pills([{ label: '应用', value: 'ok' }], 'ok');
+      });
+      const del = document.createElement('button'); del.textContent = '删除'; del.style.cssText = 'font-size:12px;padding:4px 10px;border:1px solid rgba(163,45,45,.35);border-radius:8px;background:var(--danger-soft,#fff5f5);color:var(--danger-ink,#a32d2d)';
+      del.addEventListener('click', () => { const l2 = getFullSchemes(); l2.splice(i, 1); saveFullSchemesList(l2); toast('已删除'); openFullBeautySchemes(); });
+      btns.appendChild(apply); btns.appendChild(del); row.appendChild(btns); list.appendChild(row);
+    });
+    box.appendChild(list);
+    const save = document.createElement('button'); save.textContent = '+ 保存当前为完整方案'; save.style.cssText = 'width:100%;padding:12px;border:none;border-radius:10px;background:var(--ink,#111);color:#fff;font-size:14px;font-weight:600';
+    save.addEventListener('click', () => {
+      if (!window.openModal) return;
+      const ctl = window.openModal('保存完整方案', '', (name) => {
+        name = (name || '').trim(); if (!name) { ctl.hint('名称不能为空'); ctl.stay(); return; }
+        const l2 = getFullSchemes(); l2.push({ name, time: Date.now(), data: collectFullBeauty() }); saveFullSchemesList(l2);
+        toast('已保存完整方案「' + name + '」'); openFullBeautySchemes();
+      }, { maxlength: 20, placeholder: '例如：情侣粉全套' });
+    });
+    box.appendChild(save);
+    const close = document.createElement('button'); close.textContent = '关闭'; close.style.cssText = 'width:100%;margin-top:8px;padding:10px;border:1px solid var(--card-border,#eee);border-radius:10px;background:var(--btn-cancel-bg,#fafafa);color:var(--btn-cancel-ink,#555)';
+    close.addEventListener('click', () => { m.style.display = 'none'; m.hidden = true; });
+    box.appendChild(close);
+    m.appendChild(box);
+  };
+  const fullBeautySchemesRow = document.getElementById('row-full-beauty-schemes');
+  if (fullBeautySchemesRow) fullBeautySchemesRow.addEventListener('click', openFullBeautySchemes);
 
   // ---- v3.25.x：桌面方案 预览 / 重命名（预览跨 reload 保持，可还原） ----
   const PREVIEW_BACKUP_KEY = 'beauty-preview-backup';
@@ -2140,31 +2523,49 @@ try {
     show(tabs[0] ? tabs[0].dataset.tab : 'color');
   })();
 
-  // ===== v3.6.x：深色模式（两档手动开关：浅色/深色，不跟随系统） =====
-  // 全局设置（不按联系人隔离），存储键 xy-home-v2:theme-mode
+  // ===== v3.6.x：深色模式 · v3.27.x：三档（浅色/深色/跟随系统） =====
+  // 全局设置（不按联系人隔离），存储键 xy-home-v2:theme-mode，取值 light/dark/auto
   // 切换时在 <html> 上设 data-theme 属性，base.css [data-theme=dark] + dark.css 覆盖
+  // auto 档读 prefers-color-scheme 并监听变化；旧值 light/dark 完全兼容
   const THEME_KEY = 'xy-home-v2:theme-mode';
   const themeModeRow = document.getElementById('row-theme-mode');
   const themeModeVal = document.getElementById('theme-mode-val');
-  const getThemeMode = () => { try { return localStorage.getItem(THEME_KEY) === 'dark' ? 'dark' : 'light'; } catch (e) { return 'light'; } };
+  const getThemeMode = () => { try { const v = localStorage.getItem(THEME_KEY); return (v === 'dark' || v === 'auto') ? v : 'light'; } catch (e) { return 'light'; } };
+  const sysPrefersDark = () => !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
   const applyThemeMode = (mode) => {
-    if (mode === 'dark') {
-      document.documentElement.setAttribute('data-theme', 'dark');
-      if (themeModeVal) themeModeVal.textContent = '已开启';
-    } else {
-      document.documentElement.removeAttribute('data-theme');
-      if (themeModeVal) themeModeVal.textContent = '关闭';
-    }
+    const eff = (mode === 'auto') ? (sysPrefersDark() ? 'dark' : 'light') : mode;
+    if (eff === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+    else document.documentElement.removeAttribute('data-theme');
+    if (themeModeVal) themeModeVal.textContent = mode === 'auto' ? '跟随系统' : (mode === 'dark' ? '已开启' : '关闭');
   };
   applyThemeMode(getThemeMode());
+  // v3.27.x：auto 档跟随系统——系统主题变化时仅当用户选 auto 才重算，避免覆盖手动选择
+  try {
+    const mql = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)');
+    if (mql && typeof mql.addEventListener === 'function') mql.addEventListener('change', () => { if (getThemeMode() === 'auto') applyThemeMode('auto'); });
+    else if (mql && typeof mql.addListener === 'function') mql.addListener(() => { if (getThemeMode() === 'auto') applyThemeMode('auto'); });
+  } catch (e) {}
   if (themeModeRow) {
     themeModeRow.addEventListener('click', () => {
-      // 方向按当前实际生效的主题取反，不回读存储：存储不可用/写失败（iOS 隐私模式、
-      // 配额满等）时回读恒为非 dark → 每次点击都算出 next=dark 再刷一遍深色，
-      // 表现为「点得开、永远关不掉」。存储写入保持尽力而为，只影响下次启动的初始值。
-      const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-      try { localStorage.setItem(THEME_KEY, next); } catch (e) {}
-      applyThemeMode(next);
+      if (!window.openModal) {
+        // 兜底：openModal 不可用时回退原两档快速切换
+        const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        try { localStorage.setItem(THEME_KEY, next); } catch (e) {}
+        applyThemeMode(next);
+        return;
+      }
+      const cur = getThemeMode();
+      const threePills = [
+        { label: '跟随系统', value: 'auto' },
+        { label: '浅色', value: 'light' },
+        { label: '深色', value: 'dark' },
+      ];
+      const ctl = window.openModal('深色模式', '', (v) => {
+        if (v !== 'auto' && v !== 'light' && v !== 'dark') return;
+        try { localStorage.setItem(THEME_KEY, v); } catch (e) {}
+        applyThemeMode(v);
+      }, { noInput: true, pillSubmit: true, pill: cur, pills: threePills, staticText: '选择主题模式：跟随系统会按设备深色设置自动切换' });
+      if (ctl && ctl.pills) ctl.pills(threePills, cur);
     });
   }
 

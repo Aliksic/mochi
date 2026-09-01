@@ -1763,6 +1763,51 @@
   display:flex; align-items:center; justify-content:center;
 }
 .ta-mv:active { background:rgba(0,0,0,.1); }
+/* v3.26.x #118：邀请TA 添加表单的 select 固定 92px 同行 ta-ask（之前 .ti-type 漏写，
+   落回 .tc-input width:100% 致 select 独占一行 + input 换行的 2 行布局，窄屏像「变形」）。
+   与 .ta-type 规则完全相同；分两条写以避免共享 needle（哑哨兵） */
+.ti-type { flex:0 0 auto; width:92px; font-size:12px; padding:0 6px; }
+/* v3.26.x #118：tc-input 输入框（搜索/批量导入 textarea/批量导入 kind select 等）转 ce-box
+   后常驻合成层——防止 syncAndroidKb 平移/_aPanComp top 残留下文字停在旧合成层位子
+   ＝「字出界/文字与框分离」（.ta-add .ce-box 既有同款保护；tc-input 那条没继承，#118 补上） */
+.tc-input.ce-box { will-change: transform; }
+/* v3.26.x #118：邀请TA 编辑按钮（修改已有自定义邀请话术）— 26px 圆形灰底，风格与 .ta-del 对称 */
+.ta-edit {
+  width:26px; height:26px; border-radius:50%; border:none; cursor:pointer;
+  background:rgba(0,0,0,.06); color:#666; font-size:12px; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  font-family:inherit;
+}
+.ta-edit:active { background:rgba(0,0,0,.12); color:#333; }
+/* v3.26.x #118：批量管理模式——每行前面的 batch checkbox 容器（替代正常模式的 toggle/enable） */
+.ti-batch-cb {
+  width:30px; height:26px; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+  cursor:pointer; -webkit-tap-highlight-color:transparent;
+}
+.ti-batch-cb input[type="checkbox"] {
+  width:18px; height:18px; cursor:pointer; accent-color:var(--ink);
+}
+/* v3.26.x #118：批量管理底部操作条——sticky 贴底，已选 N + 全选/删除/取消 */
+.ti-batch-bar {
+  position:sticky; bottom:0; left:0; right:0;
+  display:flex; align-items:center; gap:8px; z-index:5;
+  background:var(--glass-bg,#fff); border:1px solid var(--card-border,rgba(0,0,0,0.1));
+  border-radius:14px; padding:10px 12px; margin:10px 12px 14px;
+  box-shadow:0 -2px 12px var(--card-shadow,rgba(0,0,0,0.08));
+  font-size:13px; color:var(--ink);
+}
+.ti-batch-bar[hidden] { display:none; }
+.ti-batch-cnt { flex:1; font-weight:600; }
+.ti-batch-cnt em { color:var(--accent,#e05555); font-style:normal; margin:0 2px; }
+.ti-batch-btn {
+  border:1px solid rgba(0,0,0,0.12); border-radius:10px;
+  padding:7px 12px; font-size:13px; background:#fff; cursor:pointer;
+  font-family:inherit; color:var(--ink); font-weight:500;
+}
+.ti-batch-btn:active { background:rgba(0,0,0,0.05); }
+.ti-batch-btn.ti-batch-del-btn { background:#e05555; color:#fff; border-color:#e05555; }
+.ti-batch-btn.ti-batch-del-btn:active { opacity:0.85; }
+.ti-batch-btn:disabled { opacity:0.4; cursor:not-allowed; }
 .tc-qtext[data-edit] { cursor:pointer; }
 .tc-qtext[data-edit]:hover { color:var(--muted); }
 .mg-block.mg-dragging { opacity:.4; }

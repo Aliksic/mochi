@@ -335,16 +335,34 @@
   };
 
   // 删除
+  // v3.26.x：删除挂起超时——与 idbSet/idbGet 同款。原实现裸奔：事务挂起（既不
+  // oncomplete 也不 onerror）时 Promise 永不 resolve，data-backup.js 的快照清理
+  // 复核链卡死，几百 MB 遗留副本历经多次启动仍在。现 4s 未完成即判挂起 → 重建
+  // 连接重试（最多 3 次），让 purgeLegacySnapshot 的复核能落地。
   window.idbDelete = function (key) {
-    return open().then(db => new Promise((resolve) => {
-      try {
-        const tx = db.transaction(STORE, 'readwrite');
-        tx.objectStore(STORE).delete(key);
-        tx.oncomplete = () => resolve(true);
-        tx.onerror = () => { if (connLost(tx.error)) dbPromise = null; resolve(false); };
-        tx.onabort = () => { if (connLost(tx.error)) dbPromise = null; resolve(false); };
-      } catch (e) { resolve(false); }
-    })).catch(() => false);
+    function tryOnce() {
+      return open().then(db => new Promise((resolve) => {
+        let done = false;
+        const t = setTimeout(function () {
+          if (done) return; done = true;
+          dbPromise = null;
+          resolve(false);
+        }, 4000);
+        try {
+          const tx = db.transaction(STORE, 'readwrite');
+          tx.objectStore(STORE).delete(key);
+          tx.oncomplete = () => { if (done) return; done = true; clearTimeout(t); resolve(true); };
+          tx.onerror = () => { if (done) return; done = true; clearTimeout(t); if (connLost(tx.error)) dbPromise = null; resolve(false); };
+          tx.onabort = () => { if (done) return; done = true; clearTimeout(t); if (connLost(tx.error)) dbPromise = null; resolve(false); };
+        } catch (e) { if (done) return; done = true; clearTimeout(t); if (connLost(e)) dbPromise = null; resolve(false); }
+      })).catch(() => false);
+    }
+    return (async () => {
+      let ok = await tryOnce();
+      if (!ok) { await new Promise(r => setTimeout(r, 100)); ok = await tryOnce(); }
+      if (!ok) { await new Promise(r => setTimeout(r, 100)); ok = await tryOnce(); }
+      return ok;
+    })();
   };
 
   // 清空全部键（"清除所有数据"用）：不删库，避免连接占用导致 blocked
@@ -935,6 +953,22 @@
               memoryCache[k] = v;
               try { localStorage.removeItem(k); } catch (e) {}
               moved++;
+            } else {
+              // v3.26.x：idbSet 失败可能是 IDB 连接刚启动未就绪/事务瞬时挂起，
+              // 延迟 5s 重试一次（连接恢复后能成功，下次启动即可删 LS 拖留）。
+              // 仍失败则 LS 保留（不丢数据，下次启动迁移块会再试）。
+              setTimeout(async function () {
+                try {
+                  const v2 = localStorage.getItem(k);
+                  if (!v2) return;
+                  const ok2 = await window.idbSet(k, v2);
+                  if (ok2) {
+                    if (!memoryCache) memoryCache = {};
+                    memoryCache[k] = v2;
+                    try { localStorage.removeItem(k); } catch (e) {}
+                  }
+                } catch (e) {}
+              }, 5000);
             }
           } catch (e) {}
         }

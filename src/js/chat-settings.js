@@ -796,6 +796,9 @@
     CHAT_BEAUTY_KEYS.forEach(k => { if (data[k] !== undefined) store.set(k, data[k]); });
     try { applySettings(); applyCss(); applyFont(); } catch (e) {}
   };
+  // v3.27.x：暴露给 personalize.js 的完整外观方案合并使用（跨域，仅暴露不改动逻辑）
+  window.collectChatBeauty = collectChatBeauty;
+  window.applyChatBeautyData = applyChatBeautyData;
   function chatSchemeModalEl() {
     let m = document.getElementById('chat-beauty-scheme-manager');
     if (!m) {
