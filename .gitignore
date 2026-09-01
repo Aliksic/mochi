@@ -25,3 +25,7 @@ codebase-structure.md
 *.jpg
 memo-shot-*.png
 
+# 临时诊断脚本（用完即删，防误提交）
+tools/tmp-*.mjs
+tools/smoke-*.mjs
+

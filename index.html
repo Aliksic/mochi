@@ -347,7 +347,7 @@ padding:0 18px 18px;
 html.ios-vv-fit:not(.ios-pwa-standalone) .phone,
 html.tablet.ios-vv-fit:not(.ios-pwa-standalone) .phone { height:min(var(--mochi-ios-h, 100dvh), 100dvh); }
 .ios-pwa-standalone .phone,
-html.tablet.ios-pwa-standalone .phone { height:100vh; }
+html.tablet.ios-pwa-standalone .phone { height:min(100vh, var(--mochi-ios-h, 100dvh)); }
 .ios-pwa-standalone.ios-fs-active .phone,
 html.tablet.ios-pwa-standalone.ios-fs-active .phone { height:min(var(--mochi-ios-h, 100dvh), 100dvh); }
 html.ios-pwa-standalone,
@@ -8548,9 +8548,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1788239669341">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.379</b></span>
-        <span class="sv-deploy">部署于 2026-09-01 13:14<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1788246272615">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.380</b></span>
+        <span class="sv-deploy">部署于 2026-09-01 15:04<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9643,7 +9643,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.379</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.380</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
       <!-- v3.27.x：设置页底部防骗声明 -->
       <div class="set-alert">
@@ -9883,7 +9883,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.379</span>
+              <span class="lic-ver">v3.26.380</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -53319,7 +53319,10 @@ if (!body) return;
 const cur = loadCur();
 const allHist = loadHist();
 const days = uniqueDays(allHist);
-if (!locViewDate || days.indexOf(locViewDate) < 0) locViewDate = days[0] || dayStr(new Date());
+const today = dayStr(new Date());
+if (!locViewDate || days.indexOf(locViewDate) < 0 || days.indexOf(today) >= 0) {
+locViewDate = days.indexOf(today) >= 0 ? today : (days[0] || today);
+}
 const dayHist = allHist.filter(h => { try { return dayStr(new Date(h.ts)) === locViewDate; } catch (e) { return false; } });
 const dayIdx = days.indexOf(locViewDate);
 let html = '';
@@ -72625,11 +72628,10 @@ const list = loadRoster(ct.id);
 if (!list.length) return;
 let dirty = false;
 list.forEach(c => {
-if (!c.cid || !cidSet[c.cid]) {
-const home = (c.cid && !cidSet[c.cid]) ? '' : homeCidForName(c.name);
+let home = homeCidForName(c.name);
+if (!home) home = (c.cid && cidSet[c.cid]) ? c.cid : '';
 const target = home || ct.id;
 if (c.cid !== target) { c.cid = target; dirty = true; }
-}
 if (c.cid !== ct.id) moves.push({ from: ct.id, to: c.cid, id: c.id, name: c.name });
 });
 if (dirty) saveRoster(list, ct.id);

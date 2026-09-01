@@ -444,12 +444,14 @@
       if (!list.length) return;
       let dirty = false;
       list.forEach(c => {
-        if (!c.cid || !cidSet[c.cid]) {
-          // 无 cid 或 cid 指向已删桌面：按名字认亲，认不到固化在当前桌面
-          const home = (c.cid && !cidSet[c.cid]) ? '' : homeCidForName(c.name);
-          const target = home || ct.id;
-          if (c.cid !== target) { c.cid = target; dirty = true; }
-        }
+        // 归属判定：按名认亲优先——梦角名唯一命中某桌面 TA 身份（lbl-partner/联系人名）时，
+        // 那里才是它的家。早期迁移可能既把梦角物理放错桌面、又把它 cid 固化成了错的桌面
+        // （此时「cid 权威」会把串桌梦角永久冻在错桌面，跑多少次自愈都搬不回来），
+        // 但只要名字对得上就能纠正。认不到家才退回存储的 cid；cid 也无效最后兜底留当前桌面。
+        let home = homeCidForName(c.name);
+        if (!home) home = (c.cid && cidSet[c.cid]) ? c.cid : '';
+        const target = home || ct.id;
+        if (c.cid !== target) { c.cid = target; dirty = true; }
         if (c.cid !== ct.id) moves.push({ from: ct.id, to: c.cid, id: c.id, name: c.name });
       });
       if (dirty) saveRoster(list, ct.id);

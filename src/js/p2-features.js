@@ -1573,9 +1573,13 @@ if (ckRefresh) {
 
     const allHist = loadHist();
 
-    // 按日切换：默认今天（或有记录的最近一天）
+    // 按日切换：优先今天，其次有记录的最近一天
     const days = uniqueDays(allHist);
-    if (!locViewDate || days.indexOf(locViewDate) < 0) locViewDate = days[0] || dayStr(new Date());
+    const today = dayStr(new Date());
+    // 若今天有记录，默认看今天；否则回退到记录中最近的一天
+    if (!locViewDate || days.indexOf(locViewDate) < 0 || days.indexOf(today) >= 0) {
+      locViewDate = days.indexOf(today) >= 0 ? today : (days[0] || today);
+    }
     const dayHist = allHist.filter(h => { try { return dayStr(new Date(h.ts)) === locViewDate; } catch (e) { return false; } });
     const dayIdx = days.indexOf(locViewDate);
 

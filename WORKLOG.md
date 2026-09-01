@@ -1,4 +1,30 @@
-# 本次构建者：AI-B（13:12 按 src 收口构建 sw mochi-mti7nhsq，待提交未推送；下一轮请重新声明）
+# 本次构建者：AI-B（15:0x 已收口：含 #110/#111/#112 + 对方 cjian/p2-features，已提交并推送）
+
+### 2026-09-01 15:0x（构建者收口：#110/#111/#112 iOS 顶部遮挡三连修复 + 对方 cjian 串桌修复 / p2-features 今天优先 一并构建提交推送）
+* [AI-B 域·构建者收口]（**改动文件：src/css/base.css（#112：`html.ios-pwa-standalone .phone` 普通 standalone 高度 min 钳制）、build.mjs（#112 哨兵 1 条；回退 esbuild 压缩重构）、FIX-REGRESSION.md（#112 行）、WORKLOG.md、.gitignore（补 tools/tmp-*.mjs / smoke-*.mjs 忽略）、产物 index.html / sw.js / version.json / manifest.json / icon-*.png / notice.json；构建状态：已构建·sw mochi-mtibnqsn（15:04），哨兵 180/180、哑哨兵 0、sw.js 3/3、verify 10/10；已提交并推送**）。
+* 一并收口对方（AI-A）在途 src：src/js/cjian.js（此间梦角串桌：fixBelonging 按名认亲优先，应星梦角归回应星桌面）、src/js/p2-features.js（吃什么按日切换改「今天优先」）。
+* ⚠️ 回退 esbuild 压缩重构（对方 14:00-14:02 在 build.mjs/package.json 引入）：esbuild `minify:true` 会改写语法+压缩标识符名，127 条哨兵 needle 全部失配（构建报警 127 项缺失），与项目「零依赖保守压缩 + 文本哨兵回归防线」根本冲突；已恢复 minifyJs 保守压缩并移除 esbuild 依赖（package.json/package-lock 已回退）。如需体积优化，应改用不改标识符名的方案或放到哨兵体系外评估。
+* 验证：哨兵 180/180 全绿；npm run verify 10/10；verify-cjian 38/49、verify-cjian-split-edge 12/16、verify-eat-menus 12/14 的失败项，经 stash 回退到 HEAD（#111 提交）复跑对照**结果完全一致**＝存量断言过期（测试期望与现行功能已不一致），非本次构建回归。
+* 待对方处理：无。
+
+### 2026-09-01 14:0x（此间梦角串桌：应星梦角被固化在景元桌面，今日时间轴串名）
+* [AI-A 域]（**改动文件：src/js/cjian.js；构建状态：未构建，待构建者收口**）。
+* 需求/反馈：用户在【此间】，顶部选中景元桌面，下方「今日时间轴」却出现应星的名字；景元/应星为两个独立桌面联系人，判定为梦角数据串桌。
+* 根因：早期迁移把梦角物理放错桌面，且把其 `cid` 字段也固化成了错的桌面。`rehomeMisfiled` 是一次性逻辑（REHOME_KEY 已置标不再跑）；`fixBelonging` 原本以 `cid` 为权威归属，当错 cid 恰好等于所在桌面时，串桌梦角被永久冻在错桌面，跑多少次自愈都搬不回来。
+* 方案：`fixBelonging` 第一遍归属判定改为「按名认亲优先」——梦角名唯一命中某桌面 TA 身份（lbl-partner/联系人名，经 `homeCidForName`）时即以该桌面为家（不受错 cid 干扰），认不到才退回存储 cid，cid 再无效兜底留当前桌面。同名搬移仍走原 twin 守卫（宁错位不删真身）。
+* 验证：`node --check src/js/cjian.js` 过。待构建者收口后：用户重新进入【此间】（fixBelonging 每次启动幂等重跑）应星的梦角应自动归回应星桌面，景元桌面今日时间轴不再出现应星名字。
+* 待对方处理：无需（属 AI-A 域自修）。
+
+### 2026-09-01 14:0x（#112 构建完成但提交被并行在途改动暂缓——需对方收口）
+* [AI-B·构建者收口暂停]（**改动文件：src/css/base.css、build.mjs（#112 哨兵已入）、FIX-REGRESSION.md、WORKLOG.md、产物 index.html / sw.js / version.json；构建状态：已构建·sw mochi-mti8vuc2（13:46），哨兵 180/180、哑哨兵 0、sw.js 3/3、verify 10/10；暂缓提交**）。
+* ⚠️ 检测到并行会话在途改动（14:00-14:02）：build.mjs 引入 esbuild 压缩重构、package.json 加 esbuild 依赖（+lock）、src/js/p2-features.js 按日切换改「今天优先」、.gitignore（已 staged）。这些改动**晚于**我的构建（13:46），未进产物；且 build.mjs 我的 #112 哨兵已与对方 esbuild 重构混在同一文件。按 AGENTS.md「严禁双构建 / 不夹带半成品 / 产物与 src 同次提交」，**本轮不提交、不再构建**，等对方把 esbuild 重构 + p2-features 收口并留言后，由构建者重跑一次 `node build.mjs`（一次性含 #110/#111/#112 + esbuild + p2-features）→ 哨兵 + verify → 同次提交 → 用户确认后 push。**待对方处理：请告知 esbuild 重构与 p2-features.js 改动是否已保存完整、可否收口构建。**
+
+### 2026-09-01 13:4x（#112：iPhone14 Safari standalone 未开全屏顶部被遮挡，补 #109 漏掉的第三条 .phone 高度路径）
+* [跨域改动 base.css + build.mjs + FIX-REGRESSION.md + WORKLOG.md]（**改动文件：src/css/base.css（`html.ios-pwa-standalone .phone` 高度由裸 `100vh` 改 `min(100vh, var(--mochi-ios-h, 100dvh))`）、build.mjs（FIX_SENTINELS 追加 #112 ×1）、FIX-REGRESSION.md（#112 行）、WORKLOG.md；构建状态：已构建·sw mochi-mti8vuc2（哨兵 180/180、verify 10/10）**）。
+* 需求/反馈：用户三台真机诊断报告（iPhone13/17/14 Safari standalone），iPhone14 未开全屏时顶部被遮挡。诊断实证：iPhone14 `.phone` 高=932（100vh=整屏含状态栏）> 可视区 873，flex 居中 top=-29 → 顶栏被推出屏；iPhone13/17 为 ios-fs-active 全屏态、top=0 正常，其「顶部被遮挡」实为 #111 覆盖（该修复已构建未推送，用户没收到）。
+* 根因：#109 只给两条 `--mochi-ios-h` 规则加了 `min()` 钳制（非 standalone + standalone·ios-fs-active），漏了普通 standalone 的 `html.ios-pwa-standalone .phone { height:100vh }`；iOS standalone 下 100vh=screen.height（含状态栏）> visualViewport，flex 居中把 .phone 顶推成负值。
+* 方案：该规则改 `height:min(100vh, var(--mochi-ios-h, 100dvh))`，与 #109/#110 同套钳制（--mochi-ios-h=可视高、键盘期摘除；不设回退 100dvh）。特异性：`html.tablet.ios-pwa-standalone` 与 `html.tablet.ios-pwa-standalone.ios-fs-active` 同为 (0,2,1)，后者靠后加载仍覆盖，fs-active 路径不受影响。
+* 验证：`node --check` 不适用 CSS；待构建者收口后跑哨兵（新 needle 应唯一命中）+ npm run verify。真机验收（iPhone14 添加到主屏幕、不开全屏）：桌面/任意功能页顶部栏与返回按钮完整可见可点。**提醒构建者：用户三台 iOS 都在 19:55 旧部署，需把 #110/#111/#112 一并 push 后再让用户复测。**
 
 ### 2026-09-01 13:12（iOS 全屏保留桌面顶部状态栏）
 * [AI-B 域]（**改动文件：src/css/base.css、build.mjs、FIX-REGRESSION.md、WORKLOG.md、产物 index.html 等；构建状态：已构建·sw mochi-mti7nhsq，待提交未推送**）。

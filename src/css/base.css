@@ -444,7 +444,7 @@ html.force-mobile .desk-period, html.force-mobile .app-grid, html.force-mobile .
 html.ios-vv-fit:not(.ios-pwa-standalone) .phone,
 html.tablet.ios-vv-fit:not(.ios-pwa-standalone) .phone { height:min(var(--mochi-ios-h, 100dvh), 100dvh); }
 .ios-pwa-standalone .phone,
-html.tablet.ios-pwa-standalone .phone { height:100vh; }
+html.tablet.ios-pwa-standalone .phone { height:min(100vh, var(--mochi-ios-h, 100dvh)); }
 /* v3.27.x：iOS PWA standalone + ios-fs-active（已隐藏模拟状态栏）下，视口 innerHeight
    即完整可视高，100vh 却等于 screen.height（含被隐藏状态栏区）→ .phone 超出视口、
    body 可滚、桌面顶部/底部各被裁（iPhone17 Edge 反馈"图标按钮显示不全"）。
