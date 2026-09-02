@@ -1005,8 +1005,12 @@
           // 铺满物理屏（standalone / 真全屏 / 桌面 F11）→ 摘除属性让 CSS 回落 env()
           // v3.26.x：值未变不写 DOM——1s 常驻自愈轮询期间避免每秒 setProperty
           //   同值触发无谓样式失效（与 syncVvFit 同款先比后写）
+          // v3.27.x #129：iOS PWA standalone 下不归零——standalone 没有浏览器工具条，
+          //   screen-innerHeight 是系统状态栏/Home 指示条（非工具条），且 viewport-fit=cover
+          //   下 Home 指示条在可视区内，归零会让 tabbar/底部组件不避让被遮（iPhone 主屏幕
+          //   打开报障"桌面组件显示不全"）。standalone 下摘除属性让 CSS 回落 env() 正确避让。
           var cur = d.style.getPropertyValue('--mochi-safe-bottom');
-          if (sh && ih && sh - ih > 60) {
+          if (sh && ih && sh - ih > 60 && !d.classList.contains('ios-pwa-standalone')) {
             if (cur !== '0px') d.style.setProperty('--mochi-safe-bottom', '0px');
           } else if (cur) {
             d.style.removeProperty('--mochi-safe-bottom');

@@ -22,6 +22,65 @@
   function pubStore() { return window.xyStore(PUB_PREFIX); }
   function curStore() { return ccScope === 'public' ? pubStore() : store; }
   function curKey() { return ccScope === 'public' ? PUB_KEY : 'cc-groups'; }
+  // ================= v3.30.x：分组停用开关（公用 / 专属各自独立） =================
+  // 需求：可在字卡库管理页关闭某个分组的「使用」——关闭后该分组不再进入任何自动
+  // 回复池（聊天自动回复/拍一拍/表情包/语音/朋友圈/信箱/群聊/TA主动分享等），
+  // 字卡本身保留在库中（管理页仍完整显示、可编辑/删除），随时可重新开启。
+  // 存储与字卡键同构分作用域：公用 xy-home-v2:cc-groups-public-off（全局根键，
+  // 已登记 contacts.js EXCLUDE 防 migrateLegacy 迁走）/ 专属 <cid>:cc-groups-off；
+  // 格式 { 分类: [分组名, ...] }——同名分组按分类区分，停用专属某分组不影响公用同名分组。
+  const PUB_OFF_KEY = 'cc-groups-public-off';
+  const OFF_KEY = 'cc-groups-off';
+  let offCache = null; // 当前桌面专属停用集合缓存（切联系人失效）
+  let pubOffCache = null; // 公用停用集合缓存
+  function offStore(scope) { return scope === 'public' ? pubStore() : store; }
+  function offKey(scope) { return scope === 'public' ? PUB_OFF_KEY : OFF_KEY; }
+  function offLoad(scope) {
+    const c = scope === 'public' ? pubOffCache : offCache;
+    if (c) return c;
+    let o = {};
+    try {
+      const v = offStore(scope).get(offKey(scope));
+      if (v) { const p = JSON.parse(v); if (p && typeof p === 'object') o = p; }
+    } catch (e) {}
+    if (scope === 'public') pubOffCache = o; else offCache = o;
+    return o;
+  }
+  function offSave(scope, o) {
+    try { offStore(scope).set(offKey(scope), JSON.stringify(o)); } catch (e) {}
+    if (scope === 'public') pubOffCache = o; else offCache = o;
+  }
+  function offInvalidate() { offCache = null; pubOffCache = null; }
+  function isGroupOff(scope, type, gname) {
+    try { const o = offLoad(scope); return !!(o[type] && o[type].indexOf(gname) >= 0); } catch (e) { return false; }
+  }
+  // 管理页切换某分组的停用状态（按当前打开作用域），返回切换后是否停用
+  function toggleGroupOff(type, gname) {
+    const scope = ccScope === 'public' ? 'public' : 'own';
+    const o = offLoad(scope);
+    if (!o[type] || !Array.isArray(o[type])) o[type] = [];
+    const i = o[type].indexOf(gname);
+    const nowOff = i < 0;
+    if (nowOff) o[type].push(gname); else o[type].splice(i, 1);
+    if (!o[type].length) delete o[type];
+    offSave(scope, o);
+    return nowOff;
+  }
+  // 剔除某作用域字卡分组中被停用的分组（返回新对象，不修改入参；无停用记录时原样返回）
+  function filterGroupsByOff(g, scope) {
+    try {
+      const o = offLoad(scope);
+      let has = false;
+      for (const t in o) { if ((o[t] || []).length) { has = true; break; } }
+      if (!has) return g;
+      const out = {};
+      Object.keys(g).forEach(t => {
+        const offs = o[t] || [];
+        out[t] = (g[t] || []).filter(grp => offs.indexOf(grp[0]) < 0);
+      });
+      return out;
+    } catch (e) { return g; }
+  }
   // 解析公用键（带缓存：回复池每次发消息都会取合并池，不能反复 JSON.parse 大库）
   let pubCache = null;
   function pubInvalidate() { pubCache = null; }
@@ -49,6 +108,27 @@
     CC_TYPES.forEach(t => { out[t] = (g[t] || []).concat(p[t] || []); });
     Object.keys(g).forEach(t => { if (!(t in out)) out[t] = g[t]; });
     return out;
+  }
+  // v3.30.x：回复池专用合并视图——专属/公用各自先剔除被停用分组再拼接。
+  // 不能直接在 mergeWithPublic 里过滤：它还被搜索/导出等管理视角使用（应看全部）；
+  // 分作用域过滤保证同名分组互不影响（停用专属「日常」不影响公用「日常」）。
+  function mergeFiltered(own, pub) {
+    const ownF = filterGroupsByOff(own, 'own');
+    const pubF = filterGroupsByOff(pub, 'public');
+    let hasPub = false;
+    for (let i = 0; i < CC_TYPES.length; i++) { if ((pubF[CC_TYPES[i]] || []).length) { hasPub = true; break; } }
+    if (!hasPub) return ownF;
+    const out = {};
+    CC_TYPES.forEach(t => { out[t] = (ownF[t] || []).concat(pubF[t] || []); });
+    Object.keys(ownF).forEach(t => { if (!(t in out)) out[t] = ownF[t]; });
+    return out;
+  }
+  // 当前桌面回复池合并视图（供 getCustomCards/getPokeCards/getMediaCards 等使用）
+  function replyPoolGroups() { return mergeFiltered(replyScopeGroups(), pubGroupsRaw()); }
+  // 指定联系人(cid)的回复池合并视图（朋友圈/群聊按联系人取池）
+  function replyPoolGroupsFor(cid) {
+    const raw = (window.storeFor && window.storeFor(cid) || window.xyStore('xy-home-v2:' + cid)).get('cc-groups');
+    return mergeFiltered(buildGroupsFrom(raw), pubGroupsRaw());
   }
 
   // 内置分组数据（key: 类型 -> [分组名, 字卡数组]）
@@ -425,6 +505,56 @@
   // v3.6.x：HTML 转义——文件名/字卡内容/分组名是用户输入，直接拼 innerHTML 会破坏结构或注入
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
 
+  // ================= v3.30.x：分组停用开关 UI =================
+  // 分组 header 右侧眼睛按钮：点击停用/启用该分组。停用只影响「使用」
+  //（回复池/面板不再出现该分组），字卡保留在库中，可随时重新启用。
+  const ICON_EYE_ON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+  const ICON_EYE_OFF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/><path d="M14.12 14.12a3 3 0 11-4.24-4.24"/><path d="M1 1l22 22"/></svg>';
+  function ccOffScope() { return ccScope === 'public' ? 'public' : 'own'; }
+  // 分组 header HTML（停用标记 + 眼睛按钮），render 与局部重建共用
+  function groupHeaderHtml(gname, count) {
+    const off = isGroupOff(ccOffScope(), cur, gname);
+    return '<span class="ccg-name">' + esc(gname) + (off ? '<em class="ccg-off-tag">已停用</em>' : '') + '</span>' +
+      '<span class="ccg-count">' + count + '</span>' +
+      '<button type="button" class="ccg-toggle' + (off ? ' off' : '') + '" title="' + (off ? '启用该分组' : '停用该分组') + '">' + (off ? ICON_EYE_OFF : ICON_EYE_ON) + '</button>';
+  }
+  // 绑定 header 开关事件（render 与局部重建共用）
+  function bindGroupToggle(h, gname) {
+    const tog = h.querySelector('.ccg-toggle');
+    if (!tog) return;
+    tog.addEventListener('click', (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      const off = toggleGroupOff(cur, gname);
+      refreshGroupHeaderUI(gname);
+      toast(off ? '已停用分组「' + gname + '」：该分组字卡不再被联系人使用' : '已启用分组「' + gname + '」：该分组字卡恢复使用');
+    });
+  }
+  // 就地更新某个分组的 header 停用视觉（不重建列表 DOM）
+  function refreshGroupHeaderUI(gname) {
+    const sel = (window.CSS && CSS.escape) ? CSS.escape(String(gname)) : String(gname).replace(/["\\]/g, '\\$&');
+    const h = list.querySelector('.cc-group-header[data-g="' + sel + '"]');
+    if (!h) return;
+    const off = isGroupOff(ccOffScope(), cur, gname);
+    h.classList.toggle('off', off);
+    const nm = h.querySelector('.ccg-name');
+    if (nm) {
+      const tag = nm.querySelector('.ccg-off-tag');
+      if (off && !tag) {
+        const e = document.createElement('em');
+        e.className = 'ccg-off-tag';
+        e.textContent = '已停用';
+        nm.appendChild(e);
+      } else if (!off && tag) { tag.remove(); }
+    }
+    const tog = h.querySelector('.ccg-toggle');
+    if (tog) {
+      tog.classList.toggle('off', off);
+      tog.title = off ? '启用该分组' : '停用该分组';
+      tog.innerHTML = off ? ICON_EYE_OFF : ICON_EYE_ON;
+    }
+  }
+
   // 字卡项 HTML：图片 dataURL 显示缩略图，否则文字（删除统一走【管理字卡】）
   function cardItemHtml(c) {
     // 语音字卡：文件名|||data:audio 音频数据（播放按钮：播放中显示动态波形 + 高亮）
@@ -683,9 +813,10 @@
     if (!g) return; // 分组整体已删（走删除分组流程，不经过这里）
     // 重建 header（数量更新；空分组显示 0 张）
     const h = document.createElement('div');
-    h.className = 'cc-group-header';
+    h.className = 'cc-group-header' + (isGroupOff(ccOffScope(), cur, gname) ? ' off' : '');
     h.dataset.g = gname;
-    h.innerHTML = '<span class="ccg-name">' + esc(gname) + '</span><span class="ccg-count">' + g[1].length + '</span>';
+    h.innerHTML = groupHeaderHtml(gname, g[1].length);
+    bindGroupToggle(h, gname);
     // 找插入锚点：下一个分组的 header（按 DOM 顺序），否则 list 末尾
     const grpNames = grps.map(x => x[0]);
     const nextIdx = grpNames.indexOf(gname) + 1;
@@ -906,9 +1037,10 @@
     let pos = 0;
     const build = (el, it) => {
       if (it.header) {
-        el.className = 'cc-group-header';
+        el.className = 'cc-group-header' + (isGroupOff(ccOffScope(), cur, it.gname) ? ' off' : '');
         el.dataset.g = it.gname;
-        el.innerHTML = '<span class="ccg-name">' + esc(it.gname) + '</span><span class="ccg-count">' + it.count + '</span>';
+        el.innerHTML = groupHeaderHtml(it.gname, it.count);
+        bindGroupToggle(el, it.gname);
       } else {
         el.className = 'cc-item glass';
         el.dataset.g = it.gname;
@@ -2303,7 +2435,7 @@
   }
   window.getCustomCards = function () {
     maybeHydrateReplyPool();
-    const g = mergeWithPublic(replyScopeGroups());
+    const g = replyPoolGroups();
     const out = [];
     Object.keys(g).forEach(t => g[t].forEach(([name, arr]) => arr.forEach(c => out.push(c))));
     return out;
@@ -2311,14 +2443,14 @@
   // 拍一拍字卡（自定义字卡里【拍一拍】分类）
   window.getPokeCards = function () {
     maybeHydrateReplyPool();
-    const g = mergeWithPublic(replyScopeGroups());
+    const g = replyPoolGroups();
     const out = [];
     (g['poke'] || []).forEach(([name, arr]) => arr.forEach(c => out.push(c)));
     return out;
   };
   // 拍一拍分组（分组名 + 字卡数组），供拍一拍页面展示
   window.getPokeGroups = function () {
-    return (mergeWithPublic(replyScopeGroups())['poke'] || []).slice();
+    return (replyPoolGroups()['poke'] || []).slice();
   };
   // 媒体字卡：表情包/图片 的图片 dataURL 列表、语音（文件名|||音频）列表（供回复/表情面板）
   // v3.11.x：链接导入的 http(s) 图片字卡同样放行（聊天气泡按 type 渲染 <img src>，
@@ -2328,7 +2460,7 @@
   }
   window.getMediaCards = function (type) {
     maybeHydrateReplyPool();
-    const g = mergeWithPublic(replyScopeGroups());
+    const g = replyPoolGroups();
     const out = [];
     (g[type] || []).forEach(([name, arr]) => arr.forEach(c => {
       if (type === 'voice') {
@@ -2342,7 +2474,7 @@
   };
   // 媒体分组：表情包/图片 的分组结构（供表情面板展示）
   window.getMediaGroups = function (type) {
-    const g = mergeWithPublic(replyScopeGroups());
+    const g = replyPoolGroups();
     return (g[type] || []).map(([name, arr]) => [name, arr.filter(isMediaImg)]);
   };
   // v3.26.x：把「要嵌进正文文本」的 dataURL 压缩成小图（信箱正文/朋友圈动态/评论区
@@ -2388,7 +2520,7 @@
   if (!window._shrunkStickerCache) window._shrunkStickerCache = {};
   function warmShrunkCache() {
     try {
-      const g = mergeWithPublic ? mergeWithPublic(replyScopeGroups()) : null;
+      const g = replyPoolGroups();
       if (!g) return;
       ['sticker', 'image'].forEach(function (t) {
         (g[t] || []).forEach(function (entry) {
@@ -2412,10 +2544,12 @@
   });
   // v3.11.x：按作用域取分组（不合并）——聊天页拍一拍/表情包面板三分区展示：
   //   scope='public' 只读公用键；scope='own' 只读当前桌面专属键。
-  //   回复池仍走合并视图（getPokeCards/getMediaCards/getMediaGroups 不变），
-  //   联系人自动回复/拍一拍继续同时使用 公用+专属 两份字卡。
+  //   v3.30.x：已停用分组同样从面板隐藏（关闭=该分组完全不再被使用，含主动面板）。
   window.getScopedGroups = function (type, scope) {
-    const src = (scope === 'public') ? pubGroupsRaw() : buildGroupsFrom(store.get('cc-groups'));
+    const src = filterGroupsByOff(
+      (scope === 'public') ? pubGroupsRaw() : buildGroupsFrom(store.get('cc-groups')),
+      scope === 'public' ? 'public' : 'own'
+    );
     const arr = (src[type] || []).slice();
     if (type === 'sticker' || type === 'image') {
       return arr.map(g => [g[0], (g[1] || []).filter(isMediaImg)]);
@@ -2435,6 +2569,7 @@
   document.addEventListener('contact-switched', function () {
     if (editSaveTimer) { clearTimeout(editSaveTimer); editSaveTimer = null; }
     pubInvalidate();
+    offInvalidate(); // v3.30.x：专属停用集合按联系人隔离，切桌面必须失效缓存
     libCounts.pub = -1; libCounts.own = -1;
     groups = loadGroups();
     refreshLibCounts(false);
@@ -2445,26 +2580,24 @@
   });
   // v3.11.x：For 系列同样合并公用字卡——朋友圈/信箱/群聊等按联系人取池时，
   // 公用字卡对该联系人生效（专属部分仍读各自桌面）
+  // v3.30.x：按 cid 过滤该桌面的专属停用分组 + 全局公用停用分组
   window.getCustomCardsFor = function (cid) {
     try { if (window.hydrateLibForCid) window.hydrateLibForCid(cid); } catch (e) {}
-    const raw = (window.storeFor && window.storeFor(cid) || window.xyStore('xy-home-v2:' + cid)).get('cc-groups');
-    const g = mergeWithPublic(buildGroupsFrom(raw));
+    const g = replyPoolGroupsFor(cid);
     const out = [];
     Object.keys(g).forEach(t => (g[t] || []).forEach(([name, arr]) => (arr || []).forEach(c => out.push(c))));
     return out;
   };
   window.getPokeCardsFor = function (cid) {
     try { if (window.hydrateLibForCid) window.hydrateLibForCid(cid); } catch (e) {}
-    const raw = (window.storeFor && window.storeFor(cid) || window.xyStore('xy-home-v2:' + cid)).get('cc-groups');
-    const g = mergeWithPublic(buildGroupsFrom(raw));
+    const g = replyPoolGroupsFor(cid);
     const out = [];
     (g['poke'] || []).forEach(([name, arr]) => (arr || []).forEach(c => out.push(c)));
     return out;
   };
   window.getMediaCardsFor = function (cid, type) {
     try { if (window.hydrateLibForCid) window.hydrateLibForCid(cid); } catch (e) {}
-    const raw = (window.storeFor && window.storeFor(cid) || window.xyStore('xy-home-v2:' + cid)).get('cc-groups');
-    const g = mergeWithPublic(buildGroupsFrom(raw));
+    const g = replyPoolGroupsFor(cid);
     const out = [];
     (g[type] || []).forEach(([name, arr]) => (arr || []).forEach(c => {
       if (type === 'voice') {

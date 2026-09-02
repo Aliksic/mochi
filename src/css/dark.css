@@ -196,6 +196,10 @@
   .cc-group-header { color:var(--dark-soft); }
   .cc-g-chip { background:var(--dark-hover); border-color:var(--dark-border-12); color:var(--dark-soft); }
   .cc-g-chip.sel { background:var(--btn-bg); color:var(--btn-ink); border-color:var(--btn-bg); }
+  /* v3.30.x：自定义字卡 分组停用开关暗色适配 */
+  #cc-list .ccg-toggle { background:var(--dark-hover); border-color:var(--dark-border-12); color:var(--dark-soft); }
+  #cc-list .ccg-toggle.off { background:var(--btn-bg); border-color:var(--btn-bg); color:var(--btn-ink); }
+  #cc-list .cc-group-header.off .ccg-name { color:#777; }
   .cc-check { background:var(--dark-card); border-color:#555; }
   .cc-check.on { background:var(--btn-bg); border-color:var(--btn-bg); }
   .cc-check.on::after { color:var(--btn-ink); }

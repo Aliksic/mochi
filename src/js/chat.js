@@ -179,18 +179,23 @@ function chatPrefetchIfLight(load) {
   try { prefix = window.activePrefix(); } catch (e) { prefix = ''; }
   if (!window.idbGet) { try { load(); } catch (e2) {} return; }
   window.idbGet(prefix + ':chat-meta').then(function (v) {
-    // FIX 2026-09-01 #120：只对「明确知道历史小」（b 已知且 ≤ 门槛）才预读，其余一律
-    // 跳过冷启动预读（进入聊天页才读）。理由：① b 缺失可能对应旧格式超大历史（唯一能
-    // 猜大小时又恰好不预读，首启不崩，下次落盘把 b 写准即可）；② 全新/空账号无数据，
-    // 跳过预读对打开聊天毫无影响。宁可少一次预读提速，绝不冒低端机崩溃的风险。
+    // FIX 2026-09-01 #120：冷启动预读门控——
+    //   · 账本「完全缺失」（全新/空账号：无 #90 账本=从未落盘，实为无数据）→ 照常预读；
+    //   · 账本存在且 b 已知 ≤ 门槛（小历史）→ 照常预读；
+    //   · 账本存在但 b 缺失或超门槛（旧格式超大历史 / 本次未写 b）→ 跳过冷启动预读，
+    //     进入聊天页才读（enterChat 会 loadMsgs）。理由：老用户超大历史在账本里一定
+    //     有 n（每次落盘都写），只是缺新字段 b；唯一能防低端机首启崩的就是此时不预读，
+    //     首启跑过我行 loadMsgs 落盘会补写 b，之后冷启动按 b 精确判断。
+    //   · 读账本失败（catch）→ 也不预读（防低端机在高峰期抢读大包）。
     let knownSmall = false;
+    let noLedger = v === undefined || v === null;
     try {
-      if (v !== undefined && v !== null) {
+      if (!noLedger) {
         const o = typeof v === 'string' ? JSON.parse(v) : v;
         if (o && typeof o.b === 'number' && o.b >= 0 && o.b <= CHAT_LAZY_BYTES) knownSmall = true;
       }
     } catch (e2) {}
-    if (knownSmall) { try { load(); } catch (e2) {} return; }
+    if (knownSmall || noLedger) { try { load(); } catch (e2) {} return; }
     try { window.__xyChatLazyLoad = true; } catch (e2) {} // 大包/未知大小 → 冷启动跳过预读
   }).catch(function () { /* 读账本失败：也不预读（防低端机在高峰期抢读大包） */ });
 }
@@ -7570,7 +7575,12 @@ if (window.logFish) window.logFish();
 try { window.__replyOnceDiag = 0; console.log('[mochi-reply] addMsg 发送, 重置 replyOnce 计数'); } catch(e){}
 scheduleReply();
 };
-if (send) send.addEventListener('click', () => addMsg(input.innerText));
+if (send) {
+// v3.30.x：点发送不收输入法——点按按钮的 mousedown 默认把焦点从输入框抢走（移动端键盘随即收起），
+// preventDefault 阻止焦点转移；发送后回焦输入框兜底（部分内核 click 路径仍会失焦，见 FIX-REGRESSION #127）
+send.addEventListener('mousedown', (e) => { e.preventDefault(); });
+send.addEventListener('click', () => { addMsg(input.innerText); try { input.focus(); } catch (e) {} });
+}
 // v3.17.x：删除了此前的 pointerup 监听——它在 click 之前把 lastSendTs 刷新为当前时间，
 // 使 addMsg 的防重发守卫（t0===lastSendTxt 且间隔<2.5s）对「用户重新输入相同文本后
 // 再点发送」必然命中：消息被吞、输入框被清空（红米 K80 Chrome 反馈「点发送无法发送」，
@@ -7603,6 +7613,8 @@ input._mClearTxt = '';
 });
 input.addEventListener('keydown', (e) => {
 if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) {
+// 聊天设置「回车键发送消息」关闭时不发送：不 preventDefault，安卓 ce-box 走原事件默认行为插入换行
+try { if (store.get('cs-enter-send') === 'off') return; } catch (err) {}
 e.preventDefault();
 addMsg(input.innerText);
 }

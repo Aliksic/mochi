@@ -1110,7 +1110,11 @@
   if (gcApp) gcApp.addEventListener('click', enterGroupChat);
 
   // ---- 发送按钮 ----
-  if (sendBtn) sendBtn.addEventListener('click', () => addMsg(input.innerText));
+  // v3.30.x：点发送不收输入法（同单聊 chat.js，FIX-REGRESSION #127）——mousedown preventDefault 防焦点被按钮抢走
+  if (sendBtn) {
+    sendBtn.addEventListener('mousedown', (e) => { e.preventDefault(); });
+    sendBtn.addEventListener('click', () => { addMsg(input.innerText); try { input.focus(); } catch (e) {} });
+  }
   if (input) input.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) {
       e.preventDefault();

@@ -16,7 +16,10 @@
     // desk-checkin-en（桌面查岗全局开关）与 desk-call-en（跨桌面来电全局开关）都存
     // 根命名空间、全桌面通，绝不随联系人隔离，防 migrateLegacy 每次刷新搬进 default
     // 桌面（同 bg-*/feed-* 既有处理）。
-    'incoming-requests', 'desk-checkin-en', 'desk-call-en',
+    // v3.27.x：desk-freq-mode（跨桌面查岗/来电频率档位）同为全局根键——此前漏排除，
+    // 被 migrateLegacy 当旧顶层业务键迁进 default 并删根键，用户选的「标准」静默回退
+    // 「安静」（1%/3h），跨桌面查岗/来电几乎不触发。
+    'incoming-requests', 'desk-checkin-en', 'desk-call-en', 'desk-freq-mode',
     // v3.12.x：group-chat-msgs（群聊消息，v3.8 起全局存储于根命名空间）——同 bg-* 道理，
     // 不是旧顶层业务键。此前漏排除导致每次刷新 migrateLegacy 把群聊记录搬进 default:
     // 并删根键，群聊页读根键为空 → 历史看似清空（数据滞留 default: 副本）+ 迁移循环空转。
@@ -42,8 +45,9 @@
     'period-records', 'period-cfg', 'period-daily', 'period-notify', 'period-migrated',
     // v3.11.x：字卡库公用字卡改全局共享——xy-home-v2:cc-groups-public 存所有桌面联系人
     // 共用的自定义字卡（chatcard.js），cc-scope-migrated 为存量归属迁移幂等标记。
+    // v3.30.x：cc-groups-public-off 为公用字卡「分组停用开关」全局根键，同列排除。
     // 都是根命名空间键，绝不能被 migrateLegacy 迁进 default 桌面（否则公用字卡"消失"）
-    'cc-groups-public', 'cc-scope-migrated',
+    'cc-groups-public', 'cc-groups-public-off', 'cc-scope-migrated',
     // v3.11.x：字卡库公用/专属变动一次性提醒的已读标记（chatcard.js 弹窗），同为全局根键
     'cc-scope-notice-done',
     // v3.12.x：我的表情包改全局共享（chat.js）——键 xy-home-v2:my-emoji-groups 走根命名
@@ -492,9 +496,10 @@
     // 迁进 default 桌面并删 LS 根键。检测 default 副本：根键空则写回根，并一律删 default
     // 副本（幂等：根键已有值不覆盖，只删副本）。memo-app-* 不在此列——memo-app.js 自带
     // 误迁自愈与按 id 合并，避免两处同写冲突。
+    // v3.27.x：desk-freq-mode 同列并入——把误迁进 default 的副本写回根键（存量一次性找回）。
     ['pomo-cfg', 'pomo-today', 'pomo-total', 'pomo-msgs', 'pomo-send-chat', 'pomo-bell',
       'pomo-companion', 'pomo-companion-log', 'pomo-cmp-usecards',
-      'beauty-schemes', 'chat-beauty-schemes', 'hide-ta-sticker'].forEach(function (k) {
+      'beauty-schemes', 'chat-beauty-schemes', 'hide-ta-sticker', 'desk-freq-mode'].forEach(function (k) {
       const v = def.get(k);
       if (v !== null && v !== undefined && v !== '') {
         try { if (root.get(k) === null || root.get(k) === undefined) root.set(k, v); } catch (e) {}

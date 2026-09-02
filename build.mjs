@@ -10,6 +10,14 @@ import { dirname, join } from 'node:path';
 const root = dirname(fileURLToPath(import.meta.url));
 const read = (p) => readFileSync(join(root, 'src', p), 'utf8');
 
+// ===== --check-sentinels：只检查不构建（v3.27.x，防覆盖专用）=====
+// 用法：node build.mjs --check-sentinels
+// 非构建者改完 src/ 后跑它：不写任何产物，只对照 src/ 检查每条修复哨兵的
+// 逻辑锚点是否仍在位（覆盖 = src 里 needle 丢失，直接报红退出 1）。
+// 产物缺失在这模式下只警告不算失败（还没构建，产物旧是正常的）——
+// 真正的覆盖是「src 里也没有」，那是修复真被整块删掉。
+const CHECK_SENTINELS = process.argv.includes('--check-sentinels');
+
 // ===== 构建前健康检查（v3.6.x） =====
 // 防止把「未完成的改动 / 调试脚本」混进产物——历史教训：构建者跑 build 时工作区里
 // 有对方进行中的改动，产物悄悄带上半成品；tools/tmp-*.mjs / smoke-*.mjs 调试脚本
@@ -137,6 +145,7 @@ html = html.split('__BUILD_TS__').join(String(buildTime.getTime()));
 // 版本号两处（开屏 + 设置页底部）都要替换：replace 用字符串只替换第一处，改用 split/join 全局替换
 html = html.split('__APP_VERSION__').join(APP_VERSION);
 
+if (!CHECK_SENTINELS) {
 const out = join(root, 'index.html');
 writeFileSync(out, html);
 console.log('已生成 index.html（' + html.length + ' 字节，' + (html.split('\n').length) + ' 行）');
@@ -161,6 +170,9 @@ if (!sw.includes('const BUILD_INFO')) {
 }
 writeFileSync(swPath, sw);
 console.log('已复制 PWA 文件 → ' + pwaFiles.join(', ') + '（sw 缓存版本: mochi-' + buildStamp + '）');
+} else {
+  console.log('--check-sentinels：跳过构建（不写产物），仅对照 src/ 检查修复锚点是否在位。');
+}
 
 // ===== 关键修复哨兵（v3.16.x） =====
 // 历史教训：修复被并行会话覆盖 / 编辑器旧缓冲回写 / 新文件漏接入 build.mjs，
@@ -172,8 +184,16 @@ console.log('已复制 PWA 文件 → ' + pwaFiles.join(', ') + '（sw 缓存版
 // （防止并行会话/旧缓冲把已移除的代码改回来）。
 // 维护：新增关键修复时在此登记一行 { name, file, needle }（needle 为产物中的特征串）。
 const FIX_SENTINELS = [
+  { name: '#127 单聊点发送不收输入法（mousedown preventDefault 防焦点被按钮抢走）', file: 'js/chat.js', needle: "send.addEventListener('mousedown', (e) => { e.preventDefault(); });" },
+  { name: '#127 群聊点发送不收输入法（同单聊）', file: 'js/group-chat.js', needle: "sendBtn.addEventListener('mousedown', (e) => { e.preventDefault(); });" },
   { name: '定期备份提醒条存在（backup-remind-bar，受保护产品功能，见 AGENTS.md 数据与存储约定）', file: 'js/pwa.js', needle: "getElementById('backup-remind-bar')" },
   { name: '定期备份提醒条锚点存在（template.html）', file: 'template.html', needle: 'backup-remind-bar' },
+  { name: '诊断采集与设置页 DOM 解耦（row 在使用处按需判空，错误/环境/长任务/轨迹不因入口 DOM 缺失而失效）', file: 'js/device.js', needle: 'if (!row) return null;' },
+  { name: '诊断复制不再 focus 隐藏 textarea（防手机弹输入法+灰屏，ta.focus 删除型守护；needle 收窄到 device.js copyText 的 appendChild(ta);ta.focus(); 上下文——裸 ta.focus(); 在 chat.js/decision.js/divination.js/group-decision.js 合法存在会误报）', file: 'js/device.js', needle: 'appendChild(ta);ta.focus();', absent: true },
+  { name: '诊断电量 getBattery 废弃显式降级（不支持时输出一行而非静默消失）', file: 'js/device.js', needle: '无 getBattery 接口' },
+  { name: '诊断超长文本引导导出 txt（>8KB 提示剪贴板可能截断，优先导出）', file: 'js/device.js', needle: '建议优先【导出txt】' },
+  { name: '诊断 toast 统一 ccToast（diagToast 与 LS 失效 notice 共用元素防互相顶掉）', file: 'js/device.js', needle: 'function ccToast(msg) {' },
+  { name: '诊断错误去重按 msg+页面 30s 窗口（防同类错误刷满环形缓冲）', file: 'js/device.js', needle: 'const dupIdx = arr.findIndex(function (it) {' },
   { name: 'iOS 15 拆 script 块（产物多块，防单块超 600KB 触发 WebKit 解析崩溃/白屏）', file: 'index.html', needle: '</script>\n<script>' },
   { name: '颜文字缺字形字符已替换（ᴥ absent，fix-kaomoji-chars 第二批）', file: 'index.html', needle: 'ᴥ', absent: true },
   { name: 'iOS 键盘输入栏停靠（_ensureInputDocked）', file: 'js/mobile-adapt.js', needle: '_ensureInputDocked' },
@@ -265,6 +285,7 @@ const FIX_SENTINELS = [
   { name: 'iOS 非 standalone 全屏/浏览器态 .phone 高度 min 钳制到 100dvh（修全屏模式整页上移顶栏点不到：--mochi-ios-h 超过视口时 flex 居中把 .phone 顶部推出负值，覆盖聊天页在内所有功能页）', file: 'css/base.css', needle: 'html.tablet.ios-vv-fit:not(.ios-pwa-standalone) .phone { height:min(var(--mochi-ios-h, 100dvh), 100dvh)' },
   { name: 'iOS standalone+ios-fs-active .phone 高度 min 钳制到 100dvh（同上：桌面全屏隐藏模拟状态栏时 100vh/实测值超视口 → 整页上移，min 兜住）', file: 'css/base.css', needle: 'html.tablet.ios-pwa-standalone.ios-fs-active .phone { height:min(var(--mochi-ios-h, 100dvh), 100dvh)' },
   { name: 'iOS standalone 普通态（未开全屏 ios-fs-active）`.phone` 高度 min 钳制（100vh 在 iOS standalone=整屏高含状态栏，超出可视区 → flex 居中把 .phone 顶部推出负值整页上移，iPhone14 Safari standalone 实测 .phone=932 vs 视口 873、top=-29；补上 #109 漏掉的第三条路径）', file: 'css/base.css', needle: 'html.tablet.ios-pwa-standalone .phone { height:min(100vh, var(--mochi-ios-h, 100dvh)' },
+  { name: '#129 iOS standalone 底部安全区不归零（screen-innerHeight>60 在 standalone 是系统状态栏/Home 指示条而非浏览器工具条，viewport-fit=cover 下 Home 指示条在可视区内，归零会让 tabbar/底部组件不避让被遮；standalone 下摘除属性回落 env() 正确避让）', file: 'js/mobile-adapt.js', needle: "sh - ih > 60 && !d.classList.contains('ios-pwa-standalone')" },
   { name: 'iOS 全屏态 syncVvFit 不再写 --mochi-ios-h（摘除属性回落 100dvh，修全屏下 visualViewport.height 偏小把 .phone 压矮→底部聊天输入栏整体偏上不贴底；同时不超视口不复发 #109 整页上移）', file: 'js/mobile-adapt.js', needle: "d.classList.contains('ios-fs-active') || d.classList.contains('ios-native-fs')" },
   { name: 'iOS 全屏保留桌面顶部状态栏（不再 display:none，修「苹果16 添加到桌面+全屏后桌面顶部 Mochi/时间/电量一行不见被遮挡」；absent 守卫：若出现 .ios-fs-active .phone .statusbar { display:none } 即回归）', file: 'css/base.css', needle: '.ios-fs-active .phone .statusbar { display: none', absent: true },
   { name: '#114 iOS 全屏态模拟状态栏与系统状态栏重叠修复（窄屏 .statusbar safe-area 顶部留白被全局 padding 覆盖失效→内容顶到 y=0；html.ios-fs-active .phone .statusbar 提权恢复安全区留白，模拟栏下移与系统栏成两栏不重叠）', file: 'css/base.css', needle: 'html.ios-fs-active .phone .statusbar { padding-top:max(calc(14px + env(safe-area-inset-top, 0px)), 14px)' },
@@ -401,11 +422,19 @@ const FIX_SENTINELS = [
   { name: '#122 朋友圈内置互动回应池（TA评论/TA回应）注册字卡库跨分类搜索', file: 'js/feed.js', needle: "name: '朋友圈互动'" },
   { name: '#122 番茄钟陪伴模式内置话术池注册字卡库跨分类搜索', file: 'js/p2-features.js', needle: "name: '番茄钟陪伴'" },
   { name: '#122 群聊内置兜底回复池注册字卡库跨分类搜索', file: 'js/group-chat.js', needle: "name: '群聊系统回应'" },
+  { name: '#123 大历史聊天懒加载（账本b字段门控 chatPrefetchIfLight，防低端机开屏/切桌预读 155MB 聊天包 OOM 崩溃，OPPO Find X9 Chrome 实测）', file: 'js/chat.js', needle: 'function chatPrefetchIfLight(load) {' },
+  { name: '#123 大历史聊天懒加载·字节估算写账本（chatLedgerSave 的 b 字段，重启后不必读大键即可判断是否大包）', file: 'js/chat.js', needle: 'const chatLedgerBytes = {};' },
+  { name: 'v3.30.x 公用/专属字卡分组停用开关（数据层 cc-groups-public-off/cc-groups-off，回复池 getScopedGroups/*For 全部过滤停用分组）', file: 'js/chatcard.js', needle: "const PUB_OFF_KEY = 'cc-groups-public-off';" },
+  { name: 'v3.30.x 公用字卡分组停用键排除 migrateLegacy（cc-groups-public-off 全局根键不被迁进 default 桌面）', file: 'js/contacts.js', needle: "'cc-groups-public', 'cc-groups-public-off', 'cc-scope-migrated'," },
+  { name: '跨桌面查岗/来电频率档位 desk-freq-mode 排除 migrateLegacy（漏排除→被当旧顶层键迁进 default 删根键，「标准」静默回退「安静」致两三天 0 触发）', file: 'js/contacts.js', needle: "'desk-call-en', 'desk-freq-mode'" },
+  { name: 'desk-freq-mode 误迁自愈（default 副本写回根键，存量一次性找回）', file: 'js/contacts.js', needle: "'hide-ta-sticker', 'desk-freq-mode']" },
 ];
 try {
-  const built = readFileSync(join(root, 'index.html'), 'utf8');
-  const missing = FIX_SENTINELS.filter(s => !s.absent && !built.includes(s.needle));
-  const leaked = FIX_SENTINELS.filter(s => s.absent && built.includes(s.needle));
+  const built = CHECK_SENTINELS ? '' : readFileSync(join(root, 'index.html'), 'utf8');
+  // v3.27.x：--check-sentinels 下产物是旧的（还没构建），缺失判定全部跳过，
+  // 只做 src 锚点核对——覆盖修复的根源在 src 被删，产物判定留给真正构建时。
+  const missing = CHECK_SENTINELS ? [] : FIX_SENTINELS.filter(s => !s.absent && !built.includes(s.needle));
+  const leaked = CHECK_SENTINELS ? [] : FIX_SENTINELS.filter(s => s.absent && built.includes(s.needle));
   // v3.26.x #100：产物缺失时再对照源文件——「src 里也没有」和「src 有但产物没有」
   // 是两种完全不同的故障（前者修复真被覆盖、后者是漏接入构建或被旧缓冲回写），
   // 处置路径不一样，以前只有一句「请确认修复是否仍有效」，全靠人猜。
@@ -460,6 +489,15 @@ try {
     shared.forEach(function (k) {
       console.warn('   · 共用 needle "' + k + '"：' + byNeedle[k].map(n => '[' + n + ']').join(' '));
     });
+    // v3.27.x：--check-sentinels 的核心职责——src 锚点缺失 = 修复可能被覆盖，
+    // 这正是「修好 A 修 B 时 A 被整块删掉」的直接证据，必须让非构建者当场看到失败。
+    if (CHECK_SENTINELS && misanchored.length) {
+      console.error('❌ [--check-sentinels] src 锚点缺失 ' + misanchored.length + ' 条——对应修复可能已被覆盖/删除：');
+      misanchored.forEach(function (s) {
+        console.error('   · [' + s.name + '] 应存在于 src/' + s.file + ' 的 "' + s.needle + '"（若你改过该文件，回查是不是整块重写把它抹了）');
+      });
+      process.exitCode = 1;
+    }
   } else {
     console.log('✅ 哑哨兵体检 0 条（每条 needle 都在自己登记的那个 src 文件里、且无共用锚点）');
   }
@@ -480,17 +518,41 @@ try {
       leaked.forEach(s => console.error('   · [' + s.name + '] 不应含 "' + s.needle + '"（' + s.file + '）' + hintOf(s)));
     }
     console.error('   哨兵是回归防线的最后一道——请逐条确认后再提交（对应 verify-xxx.mjs 可补跑复核）。');
+  } else if (CHECK_SENTINELS) {
+    // 覆盖判定在上面哑哨兵体检已报红；这里只给 src 锚点核对的全绿汇总
+    console.log('✅ [--check-sentinels] src 修复锚点全部在位（' + FIX_SENTINELS.length + ' 条，产物未构建按旧版核对）');
   } else {
     console.log('✅ 关键修复哨兵 ' + FIX_SENTINELS.length + '/' + FIX_SENTINELS.length + ' 全部在位（修复无丢失）');
   }
   // v3.26.x #100：哨兵必须能让构建失败。此前全文件没有一次 exit，
   // 警告只在人眼里、CI 里永远是绿的——「修复被静默覆盖」正是这套防线要拦的事。
   // 放在最后：产物此时已写盘，失败不会留下半成品产物。
+  // v3.27.x：--check-sentinels 下同样置 1（src 锚点缺失在上面已置），让非构建者当场看到失败。
   if (missing.length || leaked.length) process.exitCode = 1;
 } catch (e) {
   console.error('❌ 哨兵检查未能执行（产物读不到？）：' + (e && e.message));
   process.exitCode = 1;
 }
+// v3.27.x：--check-sentinels 不核对 sw.js 产物（那是构建复制出来的，旧版本来就可能不匹配），
+// 只核对 src/pwa/sw.js 里作为源的修复锚点——防覆盖的核心是源码不被删。
+if (CHECK_SENTINELS) {
+  try {
+    const swSrc = readFileSync(join(root, 'src', 'pwa', 'sw.js'), 'utf8');
+    const swNeedlesSrc = [
+      'caches.open(CACHE).then((c) => c.match(\'./index.html\')).then((m) => m || caches.keys()',
+      'claim 后异步补一次 fetch 写入当前 CACHE',
+      'sort((a, b) => cacheVersion(b) - cacheVersion(a))'
+    ];
+    const swMiss = swNeedlesSrc.filter(n => !swSrc.includes(n));
+    if (swMiss.length) {
+      console.error('❌ [--check-sentinels] sw.js 源锚点缺失 ' + swMiss.length + ' 条（src/pwa/sw.js 修复被覆盖）：');
+      swMiss.forEach(n => console.error('   · 应含 "' + n + '"'));
+      process.exitCode = 1;
+    } else {
+      console.log('✅ [--check-sentinels] sw.js 源锚点 ' + swNeedlesSrc.length + '/' + swNeedlesSrc.length + ' 在位');
+    }
+  } catch (e) { console.error('❌ [--check-sentinels] sw.js 源检查失败：' + (e && e.message)); process.exitCode = 1; }
+} else {
 // v3.27.x：sw.js 专项哨兵（导航回退优先当前 CACHE + activate 补 fetch 自愈，防被并行会话覆盖）
 try {
   const swSrc = readFileSync(join(root, 'sw.js'), 'utf8');
@@ -507,4 +569,5 @@ try {
   } else {
     console.log('✅ sw.js 哨兵 ' + swNeedles.length + '/' + swNeedles.length + ' 在位');
   }
-} catch (e) { console.error('❌ sw.js 哨兵未能执行：' + (e && e.message)); process.exitCode = 1; }
+  } catch (e) { console.error('❌ sw.js 哨兵未能执行：' + (e && e.message)); process.exitCode = 1; }
+}

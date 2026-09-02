@@ -82,6 +82,19 @@
 }
 .ccg-name { font-size:13px; font-weight:700; letter-spacing:.5px; color:#444; }
 .ccg-count { font-size:11px; color:var(--muted); background:rgba(0,0,0,.05); padding:1px 8px; border-radius:99px; }
+/* v3.30.x：自定义字卡管理页 分组停用开关（只作用于 #cc-list，不碰表情/拍一拍等其他列表） */
+#cc-list .cc-group-header .ccg-name { display:inline-flex; align-items:center; gap:6px; flex:1; min-width:0; }
+.ccg-off-tag { font-style:normal; font-size:10px; font-weight:600; color:#fff; background:#d64545; padding:1px 6px; border-radius:99px; letter-spacing:.3px; }
+#cc-list .ccg-toggle {
+  display:inline-flex; align-items:center; justify-content:center;
+  width:26px; height:26px; padding:0; border-radius:8px; flex-shrink:0; cursor:pointer;
+  border:1px solid rgba(0,0,0,.08); background:rgba(0,0,0,.03); color:var(--muted);
+}
+#cc-list .ccg-toggle svg { width:14px; height:14px; }
+#cc-list .ccg-toggle:active { background:#111; color:#fff; }
+#cc-list .ccg-toggle.off { background:#111; color:#fff; border-color:#111; }
+#cc-list .cc-group-header.off .ccg-name { color:var(--muted); }
+#cc-list .cc-group-header.off .ccg-count { opacity:.6; }
 
 .card-search {
   display:flex; align-items:center; gap:8px;

@@ -44,14 +44,14 @@ check('跨桌面追加：解析失败时不整包写回', (chat.match(/if \(!rea
 // ---- 3) chat.js：条数账本 + 缩水守卫接在每条整包落盘路径上 ----
 check('账本/守卫函数在位', /function chatLedgerGuard/.test(chat) && /function chatLedgerLoad/.test(chat) && /function chatLedgerSave/.test(chat));
 check('loadMsgs 读大键前先补读账本（大键读失败时唯一依据）', /chatLedgerLoad\(myPrefix\)/.test(chat));
-check('读到权威后以库内条数为基线', /chatLedgerSave\(myPrefix, idbArr\.length\)/.test(chat));
+check('读到权威后以库内条数为基线', /chatLedgerSave\(myPrefix, idbArr\.length[,)]/.test(chat));
 check('saveMsgs 落盘前过守卫', /if \(!chatLedgerGuard\(myPrefix, msgs\)\) return;\s*\n\s*\/\/ v3\.26\.x OOM：大历史 IDB 直存数组（免整包 stringify），小历史仍字符串路径/.test(chat));
 check('saveMsgsNow 落盘前过守卫', /if \(!chatLedgerGuard\(myPrefix, msgs\)\) return;\s*\n\s*\/\/ v3\.26\.x OOM：大历史 IDB 直存数组（免整包 stringify）\n/.test(chat));
 check('后台归一化命中守卫时只跳过落盘、不中断渲染', /const canPersist = chatLedgerGuard\(myPre, msgs\)/.test(chat));
 check('守卫命中后仍会暂存并强制重读合并（不吞新消息）', /pendingLocal = arr\.slice\(\)/.test(chat) && /loadMsgs\(true\)/.test(chat));
 check('守卫阈值：基线 ≥300 且新条数不足一半才拦', /CHAT_LEDGER_MIN = 300/.test(chat) && /base >= CHAT_LEDGER_MIN && n \* 2 < base/.test(chat));
 check('用户主动清空会归零账本', /clearChatHistory[\s\S]{0,600}chatLedger\[window\.activePrefix\(\)\] = 0/.test(chat));
-check('主动整包导入后对齐账本', /chatImportMsgs[\s\S]{0,700}chatLedgerSave\(window\.activePrefix\(\), msgs\.length\)/.test(chat));
+check('主动整包导入后对齐账本', /chatImportMsgs[\s\S]{0,700}chatLedgerSave\(window\.activePrefix\(\), msgs\.length[,)]/.test(chat));
 
 // ---- 4) contacts.js：不得再用「内存读空」当事实把 active-contact 写回 default ----
 check('写 default 前先向 IDB 确认库里没有', /window\.idbHasKey\(G \+ ':active-contact'\)[\s\S]{0,160}has === false/.test(contacts));
@@ -60,7 +60,7 @@ check('校正仍受「用户手动切过/时机安全」双重守卫', /cidUserS
 
 // ---- 5) data-backup.js：清单没读到时不得出具「完整」备份 ----
 check('导出用严格三态清单', /window\.idbListKeys \? await window\.idbListKeys\(\)/.test(backup));
-check('清单读取失败即中止导出并如实提示', /idbKeys === null[\s\S]{0,300}导出未完成/.test(backup));
+check('清单读取失败即中止导出并如实提示', /listed === null[\s\S]{0,300}导出未完成/.test(backup));
 check('导入后聊天核对区分「没读到」与「确实没有」', /chatCheckOk/.test(backup) && /聊天记录未能核对/.test(backup));
 
 // ---- 6) device.js：诊断要能定性「覆盖没了」vs「切错桌面」 ----

@@ -496,6 +496,20 @@
     });
     document.addEventListener('contact-switched', syncCsSendShow);
   }
+  // 回车键发送开关（默认开；关闭后按回车不发送，改为换行/不动作）。每联系人独立。
+  const csEnterSend = document.getElementById('cs-enter-send');
+  if (csEnterSend) {
+    const enterGet = () => { try { return store.get('cs-enter-send') !== 'off'; } catch (e) { return true; } };
+    const enterSet = (on) => { try { store.set('cs-enter-send', on ? 'on' : 'off'); } catch (e) {} };
+    const syncCsEnterSend = () => { const v = enterGet(); if (v !== csEnterSend.checked) csEnterSend.checked = v; };
+    syncCsEnterSend();
+    csEnterSend.addEventListener('change', () => {
+      if (csEnterSend.checked === enterGet()) return;
+      enterSet(csEnterSend.checked);
+      toast(csEnterSend.checked ? '回车键发送已开启' : '回车键发送已关闭：按回车键改为换行');
+    });
+    document.addEventListener('contact-switched', syncCsEnterSend);
+  }
 
   const csFont = row('cs-font-size');
   if (csFont) {
@@ -1132,19 +1146,33 @@
   const csExport = row('cs-export-msgs');
   if (csExport) {
     csExport.addEventListener('click', () => {
-      if (!window.chatExportMsgs) { toast('聊天记录暂不可用'); return; }
+      if (!window.chatExportMsgs && !window.getChatMsgs) { toast('聊天记录暂不可用'); return; }
       toast('正在导出，请稍候…');
-      const arr = window.chatExportMsgs();
-      const data = { app: 'mochi-zika-chat', version: '1.0', exportTime: new Date().toISOString(), msgs: arr };
-      const json = JSON.stringify(data);
-      const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = '聊天记录_' + new Date().toISOString().slice(0, 10) + '.json';
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
-      toast('已导出 ' + arr.length + ' 条聊天记录');
+      try {
+        if (window.chatFlushSave) window.chatFlushSave();
+        // v3.26.x：getChatMsgs 取引用免 slice 复制 950MB（slice 会使堆翻倍 OOM）
+        const arr = window.getChatMsgs ? window.getChatMsgs() : window.chatExportMsgs();
+        const n = Array.isArray(arr) ? arr.length : 0;
+        if (!n) { toast('没有聊天记录可导出'); return; }
+        // v3.26.x：流式构建 JSON——每条消息单独 stringify 放进 Blob 数组拼接，
+        // 避免单次 JSON.stringify 整包超 V8 字符串长度上限（~512MB）报 Invalid string length
+        const parts = ['{"app":"mochi-zika-chat","version":"1.0","exportTime":"' + new Date().toISOString() + '","msgs":['];
+        for (let i = 0; i < n; i++) {
+          if (i) parts.push(',');
+          parts.push(JSON.stringify(arr[i]));
+        }
+        parts.push(']}');
+        const blob = new Blob(parts, { type: 'application/json;charset=utf-8' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = '聊天记录_' + new Date().toISOString().slice(0, 10) + '.json';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+        toast('已导出 ' + n + ' 条聊天记录');
+      } catch (e) {
+        toast('导出失败：' + (e && e.message || '未知错误'));
+      }
     });
   }
   // 导入：读取 JSON → 校验 → 预览摘要二次确认 → 覆盖当前记录

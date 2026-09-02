@@ -120,9 +120,15 @@
 
 - 用户反馈过的问题修复后：**在** **`build.mjs`** **的** **`FIX_SENTINELS`** **数组加一行** `{ name, file, needle }`（needle 为产物中的特征串，构建后自动检查）；**在** **`FIX-REGRESSION.md`** **清单加一行**（问题 / 修复要点 / 验证方式）。
 
+- **needle 要选「逻辑锚点」，不是「名字」（v3.27.x 铁律）**：必须是「修复生效时必然存在、逻辑被改时必然消失」的表达式/选择器片段——例如 iOS 高度修复登记 `height:min(var(--mochi-ios-h, 100dvh), 100dvh)`，而不是 `syncVvFit`。函数名/变量名能被保留（AI 重写时留着名字改掉实现），哨兵照样全绿；逻辑表达式被改就消失了，才拦得住「名字在、逻辑变」。
+
 - **needle 要在自己登记的那个** **`file`** **里唯一**：跨文件撞名（别处也有这段文本）或多条登记共用同一 needle，都是「哑哨兵」——把修复整块删掉构建照样报绿（实测踩过：`window.__jsErrors = window.__jsErrors || []` 在 chat.js 也有一份，删掉 device.js 的初始化行仍 146/146 全绿）。构建会体检并列出哑哨兵（含 needle 在自己文件里找不到、多条共用同一 needle、登记的 src 文件已改名/删除），看到就要把锚点收到唯一。
 
 - **哨兵缺失 / 删除型回流会让构建退出码 = 1**（不再只是醒目警告），报警行附带处置提示：「src 里也没有＝修复真丢了，去 `src/<file>` 补回」/「src 里仍在＝产物没接入，查 `jsFiles`/`cssFiles`」。
+
+- **非构建者改完 src 必须当场验证（v3.27.x）**：跑 `node build.mjs --check-sentinels`（只检查不构建，不写产物）——自己改的文件里有没有把别人的修复锚点整块删掉，当场见分晓，不用等构建者收口。**这是防覆盖的关键一步：验证从「收口时」提前到「每次保存后」**。
+
+- **复发 ≥2 次的修复必须配 verify 脚本（v3.27.x）**：哨兵只证「代码还在」，证不了「行为正确」。同一问题第二次复发时，除更新哨兵外必须补 `tools/verify-xxx.mjs` 行为断言并纳入 `npm run verify:all`（fishing keepKey、snake-fs-result 是现有榜样）。只有哨兵没脚本的修复，被「名字保留逻辑改坏」时依然漏网。
 
 - 有专项验证脚本就建 `tools/verify-xxx.mjs`（可提交，供构建者复用）；构建后先看哨兵输出，再看 `npm run verify` 系列；**一次性复跑全部回归脚本用** **`npm run verify:all`**（= `node tools/verify-suite.mjs`，按 通过 / 断言失败 / 环境不满足 / 超时 四类计数，环境缺口不算回归，清单清干净后可加 `--strict` 当门禁）。
 
@@ -135,6 +141,7 @@
 3. **改完**：只保存 + `node --check`，不构建、不提交；WORKLOG 追加一行（模板见下）。
 4. **构建**：仅构建者执行；构建前 `git status` 核对对方无半成品；构建后跑哨兵检查 + `npm run verify`；产物与 src 改动**同一次提交**，commit message 写清涉及范围。
 5. **不要并行 commit/push**，避免 git 冲突和半成品入库。
+6. **同一文件同一时间只允许一个 AI 认领（v3.27.x 硬规则）**：mochi 历史教训「并行会话重写同文件、编辑器旧缓冲回写」全是同文件并发——比锁任务更直接的是**锁文件**。要改对方名下的文件前，先在 WORKLOG 声明「占用 <文件>：<任务>」并等对方回应；发现目标文件有他人「进行中」标记，换文件或等它结束，禁止并行改同一个文件。
 
 ## 交接日志（WORKLOG.md）
 
@@ -165,6 +172,8 @@
 ## git 提交规范
 
 - commit message 沿用现有格式：`v3.26.x: 改动摘要`（摘要写清本次涉及范围）。
+
+- **pre-commit 钩子自动跑哨兵（v3.27.x）**：提交含 `src/` 改动时自动执行 `node build.mjs --check-sentinels`，修复锚点缺失 = 提交被拒（覆盖在提交时截住，不进历史）。钩子入库在 `tools/hooks/pre-commit`；**新克隆/新机器激活一次**：`git config core.hooksPath tools/hooks`。紧急逃生口 `git commit --no-verify`（须在 message 说明原因）。
 
 - **版本号三处同步（唯一事实源 = build.mjs）**：
   1. `build.mjs` 的 `APP_VERSION`（如 `v3.26.0`）——设置页显示的版本，commit message 前缀与它的系列（`v3.26`）保持一致；

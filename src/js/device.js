@@ -280,8 +280,11 @@
 // 长任务卡顿记录 / 网络失败 / 存储键明细 / 交互轨迹。
 // 贴进 openModal 的多行文本框，剪贴板可用时自动写入（GitHub Pages https 环境可用）。
 (function () {
-  const row = document.getElementById('row-diagnostics');
-  if (!row) return;
+  // v3.27.x 修复：错误采集等诊断数据链路原本依赖设置页 #row-diagnostics 存在——
+  // 该行 DOM 一旦被挪/改名，整段 IIFE 直接 return，onerror/网络/长任务/交互/输入
+  // 轨迹全部静默失效，且毫无报错。现改为：采集逻辑不依赖 DOM；只有角标与点击
+  // 入口在使用处按需判空（见 refreshBadge / 文件尾 click 绑定）。
+
   // 独立取 UA：设备判定 IIFE 里的 ua 是局部变量，这里拿不到（压缩后更名），
   // 诊断模块自己读 navigator 即可
   const ua = String(navigator.userAgent || '');
@@ -342,9 +345,20 @@
       var ent = Object.assign({ msg: String(msg).slice(0, 300) }, errSnap());
       var st = String(stack || '').slice(0, 400);
       if (st) ent.stack = st;
-      // 5s 内同文去重：定时器/轮询里的重复报错会刷掉环形缓冲里其他线索
-      var last = arr.length ? arr[arr.length - 1] : null;
-      if (last && last.msg === ent.msg && ent.t - (last.t || 0) < 5000) return;
+      // 30s 内同文+同页去重（v3.27.x 改）：原只比最后一条——两类漏网：
+      // ① 定时器/轮询同类错误每 5s 触发一次，仍会写满环形缓冲刷掉其他线索；
+      // ② 两种错误交替出现时，最后一条永远不匹配，双双反复入库。
+      // 现倒查最近 5 条：同 msg + 同页面 + 30s 内 → 视为重复（更新时间戳，保持出现顺序）
+      const nowT = ent.t || Date.now();
+      const dupIdx = arr.findIndex(function (it) {
+        return it && it.msg === ent.msg && (it.page || '') === (ent.page || '') && (nowT - (it.t || 0)) < 30000;
+      });
+      if (dupIdx >= 0) {
+        arr[dupIdx].t = nowT;
+        try { localStorage.setItem(ERR_KEY, JSON.stringify(arr)); } catch (e2) {}
+        try { if (window.idbSet) window.idbSet(ERR_KEY, JSON.stringify(arr)); } catch (e2) {}
+        return;
+      }
       arr.push(ent);
       if (arr.length > ERR_CAP) arr = arr.slice(arr.length - ERR_CAP);
       try { localStorage.setItem(ERR_KEY, JSON.stringify(arr)); } catch (e) {}
@@ -877,17 +891,27 @@
       }
     } catch (e) {}
     try {
+      // v3.27.x：getBattery 已废弃（较新 Chrome 移除、Safari 一直不支持）——
+      // 不支持时显式输出一行，不再静默消失；仍在时正常采集并带 2s 超时兜底
       if (navigator.getBattery) {
         let batIdx = -1;
         try { L.push('电量：读取中…'); batIdx = L.length - 1; } catch (e2) {}
-        jobs.push(navigator.getBattery().then(function (b) {
-          if (batIdx < 0) return;
-          L[batIdx] = '电量=' + Math.round(b.level * 100) + '%' + (b.charging ? '（充电中）' : (b.level <= 0.2 ? '（低电量，省电降频可能伪装成卡顿）' : ''));
-        }).catch(function () {
-          if (batIdx >= 0) L[batIdx] = '电量：读取失败';
+        jobs.push(new Promise(function (res) {
+          let settled = false;
+          const fin = function () { if (settled) return; settled = true; res(); };
+          navigator.getBattery().then(function (b) {
+            if (batIdx >= 0) L[batIdx] = '电量=' + Math.round(b.level * 100) + '%' + (b.charging ? '（充电中）' : (b.level <= 0.2 ? '（低电量，省电降频可能伪装成卡顿）' : ''));
+            fin();
+          }).catch(function () {
+            if (batIdx >= 0) L[batIdx] = '电量：读取失败';
+            fin();
+          });
+          try { setTimeout(fin, 2000); } catch (e) {}
         }));
+      } else {
+        L.push('电量：不支持（该浏览器无 getBattery 接口）');
       }
-    } catch (e) {}
+    } catch (e) { try { L.push('电量：读取失败'); } catch (e2) {} }
     L.push('');
     L.push('【数据】');
     const G = 'xy-home-v2:';
@@ -1354,7 +1378,10 @@
         ta.setAttribute('readonly', '');
         ta.style.cssText = 'position:fixed;left:-9999px;top:0;width:10px;height:10px;opacity:0;';
         document.body.appendChild(ta);
-        ta.focus();
+        // v3.27.x：不再 focus()——隐藏 textarea 上 focus 在手机端会弹起输入法
+        //（800ms 后随元素移除又收起 = 弹一下又关的灰屏观感，同 #113 修过的症状，
+        //  只是从「打开自动复制」挪到了「手动点复制」）。select() + execCommand('copy')
+        //  无需焦点即可复制（divination.js 同款做法已验证）；失败才回退 clipboard API。
         try { ta.select(); } catch (e) {}
         let ok = false;
         try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
@@ -1373,8 +1400,9 @@
   // 'undefined'，于是「复制成功/失败」的底部反馈一直是死代码，点诊断行到弹窗出来
   // 之间用户也得不到任何「正在读取」的信号（正是「点了没反应」那类反馈的观感来源）。
   // 保留 window.toast 优先（哪天真的挂上就直接用），否则自绘 #cc-toast。
-  function diagToast(msg) {
-    try { if (typeof window.toast === 'function') { window.toast(msg); return; } } catch (e) {}
+  // v3.27.x：统一 #cc-toast（device.js 内 diagToast 与 LS 失效 notice 共用，防相互顶掉）
+  let _ccToastTimer = null;
+  function ccToast(msg) {
     try {
       let t = document.getElementById('cc-toast');
       if (!t) {
@@ -1386,9 +1414,13 @@
       t.className = 'cc-toast';
       void t.offsetWidth;
       t.className = 'cc-toast show';
-      clearTimeout(t._diagTimer);
-      t._diagTimer = setTimeout(function () { t.className = 'cc-toast'; }, 2600);
+      clearTimeout(_ccToastTimer);
+      _ccToastTimer = setTimeout(function () { t.className = 'cc-toast'; }, 2600);
     } catch (e) {}
+  }
+  function diagToast(msg) {
+    try { if (typeof window.toast === 'function') { window.toast(msg); return; } } catch (e) {}
+    ccToast(msg);
   }
   // ===== v3.25.x：导出 txt =====
   // 诊断文本变长后，部分安卓 IAB/WebView 剪贴板对大文本静默截断或失败——
@@ -1418,6 +1450,9 @@
   // 样式内联自包含（仅此一处使用，不为此动 setting.css）；红底白字明暗主题都可读。
   const SEEN_KEY = 'xy-home-v2:__diag-errs-seen';
   function badgeEl() {
+    // v3.27.x：row 在使用处按需获取；入口 DOM 不存在时角标整体跳过（不中断采集）
+    const row = document.getElementById('row-diagnostics');
+    if (!row) return null;
     let b = null;
     try { b = row.querySelector('.diag-err-badge'); } catch (e) {}
     if (!b) {
@@ -1444,6 +1479,7 @@
           let unread = 0;
           for (let i = 0; i < list.length; i++) { if (((list[i] && list[i].t) || 0) > seen) unread++; }
           const b = badgeEl();
+          if (!b) return; // v3.27.x：入口 DOM 不在，角标无从挂载，跳过即可
           if (unread > 0) { b.textContent = String(unread); b.style.display = ''; }
           else b.style.display = 'none';
         } catch (e) {}
@@ -1472,6 +1508,10 @@
   //（getter 反过来优先读 textarea），所以此前 ctl.text(回填文本) 静默无效：
   // 弹窗正文一直停在首屏残缺内容，明细永远看不到（实测三条回填断言全败）。
   // setModalText 依赖 then 回调里的 ctl，定义在那一侧。
+  // v3.27.x：点击入口在使用处按需获取；入口 DOM 不存在时仅「打开诊断」不可用，
+  // 不影响上方所有采集逻辑（错误/环境/长任务/轨迹照常记录，角标由 refreshBadge 跳过）
+  const row = document.getElementById('row-diagnostics');
+  if (!row) return;
   row.addEventListener('click', function () {
     // 点下去就有反馈：慢机上首屏也要 3.5s，没这一步用户以为没点上
     diagToast('正在读取本机诊断数据…');
@@ -1519,7 +1559,12 @@
           copyBtn: {
             label: '复制',
             fn: function (c) {
-              copyText(c ? c.text() : cur).then(function (ok2) {
+              const txt = c ? c.text() : cur;
+              // v3.27.x：诊断文本超长时剪贴板可能静默截断（代码注释里也承认过），
+              // 先提示用导出 txt 更稳，再照常复制（用户仍可选择复制）
+              const TIP_LONG = '文本较长（' + Math.round(txt.length / 1000) + 'KB），手机剪贴板可能截断，建议优先【导出txt】。';
+              if (c && c.hint && txt.length > 8000) c.hint(TIP_LONG);
+              copyText(txt).then(function (ok2) {
                 const m2 = ok2 ? TIP_OK : '复制失败，请长按选字手动复制。';
                 if (c && c.hint) c.hint(m2);
                 diagToast(ok2 ? '已复制到剪贴板' : '复制失败，请长按选字手动复制');

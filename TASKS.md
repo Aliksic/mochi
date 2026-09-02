@@ -13,6 +13,9 @@
 
 | # | 状态 | 认领人 | 任务 | 关联文件/编号 | 备注 |
 |---|---|---|---|---|---|
+| 126 | 已完成 | AI-A | **公用/专属字卡分组停用开关**（v3.30.x）：字卡库管理页每个分组 header 新增眼睛开关，停用后该分组不再进入任何自动回复池（聊天/拍一拍/表情包/语音/朋友圈/信箱/群聊/TA主动分享）与面板，字卡保留可随时重新启用；数据键公用 `xy-home-v2:cc-groups-public-off`（已进 contacts.js EXCLUDE）/专属 `<cid>:cc-groups-off`，格式 `{分类:[分组名]}`；回复池 getter 统一走 `replyPoolGroups/replyPoolGroupsFor` 过滤；验证 verify-cc-group-off 12/12 | src/js/chatcard.js, src/js/contacts.js, src/css/chat-pages.css, src/css/dark.css, build.mjs, tools/verify-cc-group-off.mjs, FIX-REGRESSION.md | 产物已构建（sw mochi-mtjkcawp）；另修 ZCode 删除型哨兵 `ta.focus();` needle 撞车误报（收窄 `appendChild(ta);ta.focus();`） |
+| 125 | 待认领 | AI-B | **base.css 修复锚点丢失 7 条**（`node build.mjs --check-sentinels` 检出：iOS .phone min() 钳制×3、#114 statusbar safe-area、color-scheme:light、#115 chat-input will-change/translateZ——`git diff` 显示这些行被整块删除）。请确认是否误删并恢复，恢复后该命令应 0 报红 | src/css/base.css | 由 ZCode 2026-09-02 检出登记 |
+| 124 | 待认领 | AI-B | 构建收口：device.js 诊断 6 缺陷修复 + 新哨兵 7 条 + 防覆盖基建（verify.yml 补 verify:all 套件步骤 / pre-commit 钩子入库 tools/hooks+core.hooksPath 已激活 / FIX-REGRESSION 设备索引 26 机型+真机状态标记 16 行），跑 `node build.mjs` 全量构建后哨兵应 235/235（base.css 回归除外，见 #125） | src/js/device.js, build.mjs, .github/workflows/verify.yml, tools/hooks/, FIX-REGRESSION.md | 源已完成·待构建（见 WORKLOG 2026-09-02 两条目） |
 | | 待认领 | | | | |
 
 ## 归档区（已完成 / 已取消）

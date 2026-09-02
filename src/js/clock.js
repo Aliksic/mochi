@@ -11,68 +11,6 @@
   setInterval(update, 15000); // 每 15 秒校准一次
 })();
 
-// ===== v3.27.x：防骗声明「运行时回填」——删掉源码/产物里的字也没用 =====
-// template.html 里放的那份是静态兜底；这里再用 JS 常量 + 可选官方远程源强制回填。
-// 只要元素缺失，或文案被删/被改，加载时就会把它重新写回「开屏顶部 + 设置页底部」。
-// 想彻底去掉必须连这段逻辑一起删——等于改代码本身（无解），对普通二改者足够；
-// 有网时再从作者官方站点取权威文案覆盖本地，防二改者连 JS 里的字一起改。
-(function () {
-  const OFFICIAL_NOTICE = 'https://ling233330-star.github.io/mochi/notice.json';
-  const MARK_KEY = '小红书@言序（1842523578）';
-  const TITLE = '防骗提醒';
-  const FALLBACK = 'Mochi字卡网站完全免费，作者只有小红书这一个账号：小红书@言序（1842523578）。如有出现任何收费情况，均为诈骗，注意防止被骗。';
-  let text = FALLBACK;
-
-  // 判定元素文案是否仍为"官方声明"（含 免费/诈骗/唯一账号 三个特征即认为在位，避免每回都重建）
-  function marked(t) {
-    return t.indexOf('免费') > -1 && t.indexOf('诈骗') > -1 && t.indexOf(MARK_KEY) > -1;
-  }
-  // 开屏置顶块（#splash-notice 最顶部）
-  function ensureSplash() {
-    const notice = document.getElementById('splash-notice');
-    if (!notice) return;
-    let box = notice.querySelector('.splash-alert');
-    if (box && marked(box.textContent)) return;
-    if (!box) {
-      box = document.createElement('div');
-      box.className = 'splash-alert';
-      notice.insertBefore(box, notice.firstChild);
-    }
-    box.setAttribute('data-anti-scam', '1');
-    box.innerHTML = '<div class="splash-alert-t"></div><p></p>';
-    box.querySelector('.splash-alert-t').textContent = TITLE;
-    box.querySelector('p').textContent = text;
-  }
-  // 设置页底部块（#page-setting 版本行下方）
-  function ensureSettings() {
-    const page = document.getElementById('page-setting');
-    if (!page) return;
-    let box = page.querySelector('.set-alert');
-    if (box && marked(box.textContent)) return;
-    if (!box) {
-      box = document.createElement('div');
-      box.className = 'set-alert';
-      const anchor = page.querySelector('.ver-credit') || null;
-      page.insertBefore(box, anchor ? anchor.nextSibling : null);
-    }
-    box.setAttribute('data-anti-scam', '1');
-    box.textContent = text;
-  }
-  function run() { ensureSplash(); ensureSettings(); }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run);
-  else run();
-  // 可选官方远程源：失败（离线/被墙/CORS）不阻塞，保留本地兜底
-  fetch(OFFICIAL_NOTICE, { cache: 'no-store' })
-    .then(function (r) { if (!r.ok) throw new Error('http ' + r.status); return r.json(); })
-    .then(function (d) {
-      if (d && typeof d.alert === 'string' && d.alert.trim()) {
-        text = d.alert.trim();
-        run(); // 强刷回写
-      }
-    })
-    .catch(function () { /* 保留本地兜底 */ });
-})();
-
 // ===== 开屏加载动画：页面就绪后淡出并移除 =====
 (function () {
   const splash = document.getElementById('splash');
