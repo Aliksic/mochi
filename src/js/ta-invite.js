@@ -283,6 +283,7 @@
       html += '<div class="ti-batch-bar" id="ti-batch-bar">' +
         '<span class="ti-batch-cnt" id="ti-batch-cnt">已选 <em>' + tiSelected.size + '</em> 条</span>' +
         '<button class="ti-batch-btn" id="ti-batch-all">全选</button>' +
+        '<button class="ti-batch-btn" id="ti-batch-move"' + (tiSelected.size === 0 ? ' disabled' : '') + '>移动</button>' +
         '<button class="ti-batch-btn ti-batch-del-btn" id="ti-batch-del"' + (tiSelected.size === 0 ? ' disabled' : '') + '>删除</button>' +
         '<button class="ti-batch-btn" id="ti-batch-cancel">取消</button>' +
         '</div>';
@@ -342,6 +343,8 @@
         if (cnt) cnt.innerHTML = '已选 <em>' + tiSelected.size + '</em> 条';
         const del = document.getElementById('ti-batch-del');
         if (del) del.disabled = tiSelected.size === 0;
+        const move = document.getElementById('ti-batch-move');
+        if (move) move.disabled = tiSelected.size === 0;
         const all = document.getElementById('ti-batch-all');
         if (all) all.textContent = tiSelected.size === 0 ? '全选' : (isAllSelected() ? '取消全选' : '全选');
       });
@@ -421,6 +424,37 @@
         tiBatchMode = false;
         tiSelected.clear();
         renderTiMineInto(container, search);
+      });
+    }
+    const move = document.getElementById('ti-batch-move');
+    if (move && !move.__bound) {
+      move.__bound = true;
+      move.addEventListener('click', () => {
+        if (tiSelected.size === 0) { toast('请先勾选要移动的邀请话术'); return; }
+        if (!window.openModal) { toast('弹窗组件未就绪'); return; }
+        const d2 = tiLoad();
+        const groups = Array.isArray(d2.groups) ? d2.groups : [];
+        const opts = [{ label: '未分组', value: '' }];
+        groups.forEach(g => opts.push({ label: g.name, value: g.id }));
+        window.openModal('移动到分组', '', function (v) {
+          const targetGrp = String(v || '');
+          const d3 = tiLoad();
+          let moved = 0;
+          tiSelected.forEach(idx => {
+            const q = d3.questions[idx];
+            if (q && q.isPreset !== true) {
+              if (targetGrp) q.grp = targetGrp; else delete q.grp;
+              moved++;
+            }
+          });
+          tiSave(d3);
+          tiSelected.clear();
+          tiBatchMode = false;
+          renderTiMineInto(container, search);
+          refreshTiCardCounts();
+          const gName = targetGrp ? ((d3.groups || []).find(x => x.id === targetGrp) || {}).name || '未分组' : '未分组';
+          toast('已移动 ' + moved + ' 条到「' + gName + '」');
+        }, { pills: opts, pill: opts[0].value, noInput: true });
       });
     }
   }
@@ -615,6 +649,32 @@
     try { (tiLoad().questions || []).forEach(function (q) { const txt = q && q.text ? q.text : ''; if (txt && txt.toLowerCase().indexOf(kw) >= 0) out.push({ t: txt, cat: q.isPreset === true ? '系统预设' : '我的添加' }); }); } catch (e) {}
     return out;
   } });
+
+  // v3.26.x：安卓键盘弹起（interactive-widget=resizes-content）时 layout viewport
+  // 收缩 → page-ta-invite 重排 → .ta-add 内 ce-box 文字合成层停在旧位置，表现=
+  // 输入文字与输入框边框分离（框移新位、文字留旧位）。同 ta-ask.js _reflowAskCeBoxes
+  // 缓解：监听 visualViewport.resize/window.resize，防抖后对可见 .ta-add .ce-box
+  // 强制 reflow + toggle transform 触发合成层重新提交位置。仅 page-ta-invite 可见时生效。
+  // 小米15Pro Chrome 实测复现（mobile-adapt.js _aRefreshCe 有 _aUserTypos<500 闸门，
+  // 敲键时跳过刷新，本缓解无该闸门，覆盖敲键中重排场景）。
+  var _invCeReflowT = null;
+  function _reflowInviteCeBoxes() {
+    var pg = document.getElementById('page-ta-invite');
+    if (!pg || pg.hidden) return;
+    pg.querySelectorAll('.ta-add .ce-box').forEach(function (b) {
+      if (b.offsetParent === null) return;
+      var prev = b.style.transform;
+      b.style.transform = 'translateZ(0)';
+      void b.offsetHeight;
+      b.style.transform = prev;
+    });
+  }
+  function _schedInviteCeReflow() {
+    clearTimeout(_invCeReflowT);
+    _invCeReflowT = setTimeout(_reflowInviteCeBoxes, 120);
+  }
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', _schedInviteCeReflow);
+  window.addEventListener('resize', _schedInviteCeReflow);
 
   // ---- IndexedDB 权威恢复 ----
   (function () {

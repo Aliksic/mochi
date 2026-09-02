@@ -1,4 +1,25 @@
-# 本次构建者：AI-A（本会话：iOS standalone 底部安全区修复 #129，跨域改动 mobile-adapt.js）
+# 本次构建者：AI-B（本会话：#130 夸克浏览器切后台丢聊天记录修复，跨域改动 chat.js）
+
+
+### 2026-09-02 17:3x（[跨域改动] #130 夸克浏览器切后台丢一小时聊天记录；源已完成·未构建）
+* [AI-A 域·跨域改动 src/js/chat.js（AI-A 名下，理由：数据持久化层 flushSave/schedulePersist 在 chat.js，夸克浏览器切后台时 idbSet 异步事务未创建页面已冻结，最新数据只存内存随页面被杀丢失）]（**改动文件：src/js/chat.js、build.mjs（FIX_SENTINELS 加 #130 哨兵）、FIX-REGRESSION.md（#130 行）；构建状态：未构建**）。
+* 根因：荣耀90+夸克浏览器切到后台时页面被冻结/杀，visibilitychange(hidden) 触发 flushSave→flushPersistNow→persistRun 闭包→idbSet，但 idbSet 是异步的（open().then(创建事务)），夸克浏览器在宏任务后立即冻结页面（微任务未执行）或杀 IDB 服务进程 → 事务没创建/失败 → 最新数据没写入 IDB。回前台后 loadMsgs 从 IDB 读到旧数据（一小时前 16.1MB）。storage.persisted=false 加剧风险。诊断实证：IDB 16.1MB/LS 3.2MB 均为旧数据、chat-meta 账本 425 条、奇怪 img URL [内容已省略] 系 LS 有损快照剥图副作用。
+* 修复方案（需 AI-A 实施）：
+  1. flushSave（chat.js:384）强制同步再写一次 IDB：即使 persistRun 已执行（runPersist 调过 idbSet），idbSet 异步事务可能没创建。切后台时强制再写一次，IDB put 幂等无副作用。在 flushPersistNow() 后加：const myPrefix=window.activePrefix(); if(chatDbReady&&authLoadedPrefix===myPrefix&&msgs.length&&chatLedgerGuard(myPrefix,msgs)){if(window.idbSet)persistMsgsToIdb(myPrefix+':chat-msgs',msgs);writeLsSnapshot(msgs,myPrefix,true);}
+  2. 增加 pagehide 监听（chat.js:391）：window.addEventListener('pagehide',flushSave); —— pagehide 比 visibilitychange 更早更可靠（chatcard.js:740 已有先例）
+  3. 降低写入延迟：PERSIST_MIN_GAP 2500→1500、requestIdleCallback timeout 4000→2500，缩小切后台前未落盘窗口
+* 验证：node --check chat.js 过；待 AI-A 构建者收口构建 + 真机验证（荣耀90 夸克浏览器切后台再回前台聊天记录不丢失）。
+* 待 AI-A 处理：以上三项修改 + build.mjs 哨兵 + FIX-REGRESSION #130 登记。
+
+### 2026-09-02 18:0x（#131 邀请TA 输入栏字出界 + #132 邀请TA 批量移动到分组；源已完成·未构建）
+* [AI-A 域]（**改动文件：src/js/ta-invite.js（#131 补 _reflowInviteCeBoxes 合成层缓解：监听 vv/window resize 120ms 防抖对 page-ta-invite 内 .ta-add .ce-box toggle transform+reflow，修小米15Pro Chrome 文字显示在框外，同 ta-ask.js _reflowAskCeBoxes；#122 批量条加「移动」按钮+bindTiBatchBar 移动逻辑：弹 openModal pills 选目标分组/未分组→遍历 tiSelected 改 q.grp→保存退出批量模式+toast）、build.mjs（FIX_SENTINELS 加 #131/#132 哨兵 2 条）、FIX-REGRESSION.md（#131/#132 行+设备索引小米15Pro 补 131）；构建状态：未构建**）。
+* 需求/反馈（用户）：①小米15Pro Chrome 邀请TA 输入栏文字超出框外（合成层字出界）；②邀请TA 批量管理需可移动字卡到分组。
+* 根因：①ta-invite.js 漏了 ta-ask.js 有的 _reflowAskCeBoxes 合成层缓解，键盘弹起页面重排时 ce-box 文字停在旧位；②v3.26.x #118 批量管理只做全选/删除/取消，漏了 chatcard.js 有的「移动到分组」。
+* 验证：node --check ta-invite.js/build.mjs 过；node build.mjs --check-sentinels 244 条全绿、我的 2 条锚点在位、哑哨兵 0。
+* 编号说明：#130 已被 AI-B 用于夸克浏览器切后台丢聊天记录（待 AI-A 实施 chat.js），本会话用 #131/#132 避让。
+
+
+
 
 
 ### 2026-09-02 16:0x（[跨域改动] iOS standalone 底部安全区修复 #129；源已完成·未构建）

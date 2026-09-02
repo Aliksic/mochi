@@ -307,6 +307,8 @@ const FIX_SENTINELS = [
   { name: '#118 邀请TA .tc-input.ce-box 合成层保护（will-change:transform，搜索/批量导入/邀请话术输入 全 tc-input 输入框防「字出界」，小米15Pro Chrome 既往实测复现族）', file: 'css/chat-pages.css', needle: '.tc-input.ce-box { will-change: transform' },
   { name: '#118 邀请TA 编辑按钮 ✎（class="ta-edit" data-idx，修「打错了无法修改」只能删+重加）', file: 'js/ta-invite.js', needle: 'class="ta-edit" data-idx' },
   { name: '#118 邀请TA 批量管理 tiBatchMode（toggle + 行内 batch checkbox + 底部 ti-batch-bar 全选/删除/取消，修「打多了无法批量处理」只能逐条 ✕）', file: 'js/ta-invite.js', needle: 'tiBatchMode' },
+  { name: '#131 邀请TA 输入栏合成层字出界缓解 _reflowInviteCeBoxes（监听 vv/window resize 刷新 .ta-add .ce-box 合成层，修小米15Pro Chrome 文字显示在框外，同 ta-ask.js _reflowAskCeBoxes）', file: 'js/ta-invite.js', needle: "pg.querySelectorAll('.ta-add .ce-box')" },
+  { name: '#132 邀请TA 批量移动到分组 ti-batch-move（选中多条一键改 grp 字段到目标分组/未分组，修「打多了只能逐条移动」）', file: 'js/ta-invite.js', needle: 'id="ti-batch-move"' },
   { name: '#118 ce-ghost 类别名泄露 fix（先 origClass 再 add，避免可见 ce-box div 继承 ce-ghost 类别名）', file: 'js/mobile-adapt.js', needle: "'ce-box ' + origClass" },
   { name: '#119 桌面美化·内置方案库 BUILTIN_SCHEMES（5 套只读方案置顶，不污染用户方案）', file: 'js/personalize.js', needle: 'const BUILTIN_SCHEMES = [' },
   { name: '#119 桌面美化·深色三档 sysPrefersDark（light/dark/auto 跟随 prefers-color-scheme）', file: 'js/personalize.js', needle: 'const sysPrefersDark = () => !!(window.matchMedia' },
