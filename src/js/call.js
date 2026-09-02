@@ -182,6 +182,21 @@
   // 小框位置持久化（可拖动）
   // v3.5.108：校验保存的位置有效（形如「数字px」且在视口内），
   //   无效/越界/空值一律忽略并清除，回退默认底部居中——避免旧坏数据导致小框闪到别处
+  // v3.28.x #114：iOS standalone 顶部被系统状态栏占用的高度（iPhone15 实测 59px）。
+  //   旧存档/拖拽落点若在状态栏区，触点被系统栏吞、缩略窗拖不动（用户报障「缩略窗在
+  //   顶部动不了」）。落位/拖拽时把上边界抬到系统状态栏下方。
+  function miniSafeTop() {
+    try {
+      if (!document.documentElement.classList.contains('ios-pwa-standalone')) return 0;
+      const sh = (window.screen && window.screen.height) || 0;
+      const ih = window.innerHeight || 0;
+      if (sh > 0 && ih > 0) {
+        const diff = sh - ih;
+        if (diff >= 20 && diff <= 160) return diff;
+      }
+    } catch (e) {}
+    return 0;
+  }
   let miniPos = null;
   try { miniPos = JSON.parse(store.get('call-mini-pos') || 'null'); } catch (e) {}
   function miniPosValid(p) {
@@ -196,6 +211,14 @@
     return true;
   }
   if (miniPos && mini && miniPosValid(miniPos)) {
+    // v3.28.x #114：旧存档落点在系统状态栏区（y < 安全区）→ 抬到状态栏下方，避免
+    // 触点被系统栏吞掉、缩略窗拖不动
+    const _st = miniSafeTop();
+    let _y = parseFloat(String(miniPos.top).match(/(-?\d+(\.\d+)?)px/)[1]);
+    if (_st > 0 && _y < _st) {
+      miniPos.top = _st + 'px';
+      try { store.set('call-mini-pos', JSON.stringify(miniPos)); } catch (e) {}
+    }
     mini.style.left = miniPos.left;
     mini.style.top = miniPos.top;
     mini.style.bottom = 'auto';
@@ -615,7 +638,8 @@
       let x = e.clientX - offX, y = e.clientY - offY;
       const mw = mini.offsetWidth, mh = mini.offsetHeight;
       x = Math.max(4, Math.min(window.innerWidth - mw - 4, x));
-      y = Math.max(4, Math.min(window.innerHeight - mh - 4, y));
+      // v3.28.x #114：拖拽上边界抬到系统状态栏下方，避免缩略窗拖进状态栏区被吞触点
+      y = Math.max(miniSafeTop(), Math.min(window.innerHeight - mh - 4, y));
       mini.style.left = x + 'px';
       mini.style.top = y + 'px';
     });

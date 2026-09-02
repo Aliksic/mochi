@@ -1,4 +1,13 @@
-# 本次构建者：AI-B（本会话：#130 夸克浏览器切后台丢聊天记录修复，跨域改动 chat.js）
+# 本次构建者：AI-B（本会话：#114 复现 iPhone15+Safari 全屏修复：顶部状态栏重叠/聊天返回键不可点/通话缩略窗卡顶/底部输入栏空隙；收口构建 #133 邀请TA 改动）
+
+
+### 2026-09-02 18:4x（#133 聊天页【邀请TA】半框：输入栏文字飞出 + 顶部分组批量管理/重命名/删除；源已完成·未构建）
+* [AI-A 域]（**改动文件：src/js/chat.js（renderInviteBank 批量管理态 + 分组重命名/删除 + contact-switched 清态）、src/css/chat-main.css（.chat-ask-input.ce-box will-change 合成层防字溢出 + .inv-g-batch/.inv-g-op/.invite-batch-item/.inv-batch-cb 管理样式）、build.mjs（FIX_SENTINELS 加 #133 哨兵 4 条）、FIX-REGRESSION.md（#133 行）；构建状态：未构建**）。
+* 需求/反馈（用户）：①聊天页【邀请TA】预设底部的输入栏【想邀请ta做什么】文字飞出输入栏；②顶部分组右边缺少批量管理、编辑删除分组和字卡的功能。
+* 根因/实现：①`#chat-ask-input` 转 `.ce-box` 后缺常驻合成层保护，半框平移时文字停旧合成层=文字飞出（同 #118 .tc-input.ce-box），补 `will-change:transform`；②`renderInviteBank()` 新增批量管理：顶部分组栏右侧「批量管理/完成」chip，批量态下自建分组 chip 显 ✎重命名/✕删除、字卡切勾选框、底部 sticky 批量条（已选N+全选/移动/删除/取消，复用 .ti-batch-*，移动走 openModal pills）；预设为系统内置只可加字卡不可管理；复用 myInviteG/myInviteGroupsSave/myInviteCurGroupKey。
+* 验证：node --check src/js/chat.js 过；node build.mjs --check-sentinels 248 条全绿、我的 4 条锚点在位、哑哨兵 0。
+* 待 AI-A 构建者收口：构建 + verify + 真机（安卓如 OPPO Find X9）：邀请TA 输入栏文字不溢出、分组栏有批量管理、批量下全选/删除/移动/改名/删组均生效、预设分组不被误管。
+* 注意：chat.js 与 #130（AI-B 跨域 flushSave，约 L384-391）改动区不重叠；本改动区约 L5177-5380（renderInviteBank 一带）与 L5441（contact-switched）。
 
 
 ### 2026-09-02 17:3x（[跨域改动] #130 夸克浏览器切后台丢一小时聊天记录；源已完成·未构建）

@@ -971,6 +971,25 @@
       function syncVvFit() {
         try {
           var d = document.documentElement;
+          // ===== v3.28.x #114：iOS standalone 顶部安全区实测 =====
+          // env(safe-area-inset-top) 在该环境（iPhone15+Safari 主屏幕/全屏）返回 0：
+          // 桌面模拟状态栏与系统状态栏重叠、聊天返回键被系统栏吞点（用户报障）。
+          // 用 screen.height - 可视高 实测系统状态栏高度写 --mochi-safe-top 供 CSS 避让；
+          // 仅 standalone（black-translucent 内容钻进状态栏区）才需要，范围 20-160 过滤
+          // 浏览器工具条等干扰（真机状态栏 47-62px）。非 standalone 摘除回落 env()。
+          var _ih2 = window.innerHeight || 0;
+          var _sh2 = (window.screen && window.screen.height) || 0;
+          var _vh2 = _vv ? Math.round(_vv.height * ((_vv.scale && _vv.scale > 0.5) ? _vv.scale : 1)) : _ih2;
+          var _safeTop = 0;
+          if (d.classList.contains('ios-pwa-standalone') && _sh2 > 0 && _vh2 > 0) {
+            var _diff = _sh2 - _vh2;
+            if (_diff >= 20 && _diff <= 160) _safeTop = _diff;
+          }
+          var _topPx = _safeTop ? _safeTop + 'px' : '';
+          if (d.style.getPropertyValue('--mochi-safe-top') !== _topPx) {
+            if (_topPx) d.style.setProperty('--mochi-safe-top', _topPx);
+            else d.style.removeProperty('--mochi-safe-top');
+          }
           // 全屏态不写 --mochi-ios-h（原生 fs-active / CSS 兜底 fs-css-active / iOS 兜底
           // ios-fs-active / iOS 原生 ios-native-fs）：全屏下 CSS 的 100dvh 就是整块可视高，
           // 而 visualViewport.height 在个别 iOS 版本全屏过渡 / 工具条显隐时机比 100dvh 小，

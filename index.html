@@ -293,7 +293,7 @@ border-radius:0; box-shadow:none;
 padding:0 18px 18px;
 }
 .statusbar {
-padding-top:max(calc(14px + env(safe-area-inset-top, 0px)), 14px);
+padding-top:max(calc(14px + var(--mochi-safe-top, env(safe-area-inset-top, 0px))), 14px);
 padding-bottom:10px;
 }
 }
@@ -305,7 +305,7 @@ border-radius:0; box-shadow:none;
 padding:0 18px 18px;
 }
 html.force-mobile .statusbar {
-padding-top:max(calc(14px + env(safe-area-inset-top, 0px)), 14px);
+padding-top:max(calc(14px + var(--mochi-safe-top, env(safe-area-inset-top, 0px))), 14px);
 padding-bottom:10px;
 }
 html.force-mobile .phone input:not([readonly]):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]):not([type="hidden"]):not([type="date"]):not([type="time"]):not([type="datetime-local"]):not([type="month"]):not([type="week"]):not([type="button"]):not([type="submit"]):not([type="reset"]),
@@ -321,7 +321,7 @@ border-left: none; border-right: none; border-bottom: none;
 padding-left: 12px; padding-right: 12px; padding-top: 10px;
 padding-bottom: calc(10px + var(--mochi-safe-bottom,env(safe-area-inset-bottom,0px)));
 }
-html.force-mobile .phone .page.full .chat-head { padding-top: calc(10px + env(safe-area-inset-top, 0px)); }
+html.force-mobile .phone .page.full .chat-head { padding-top: calc(10px + var(--mochi-safe-top, env(safe-area-inset-top, 0px))); }
 html.force-mobile .phone .page.full { padding-bottom: 0; }
 html.force-mobile #page-chat { background: var(--page-bg-grad); }
 html.force-mobile button, html.force-mobile .app, html.force-mobile .set-row,
@@ -349,7 +349,13 @@ html.tablet.ios-vv-fit:not(.ios-pwa-standalone) .phone { height:min(var(--mochi-
 .ios-pwa-standalone .phone,
 html.tablet.ios-pwa-standalone .phone { height:min(100vh, var(--mochi-ios-h, 100dvh)); }
 .ios-pwa-standalone.ios-fs-active .phone,
-html.tablet.ios-pwa-standalone.ios-fs-active .phone { height:min(var(--mochi-ios-h, 100dvh), 100dvh); }
+html.tablet.ios-pwa-standalone.ios-fs-active .phone {
+height:100vh;
+padding-top:max(var(--mochi-safe-top, env(safe-area-inset-top, 0px)), 12px);
+padding-bottom:0;
+}
+html.ios-pwa-standalone.ios-fs-active,
+html.ios-pwa-standalone.ios-fs-active body { height:100vh; min-height:100vh; }
 html.ios-pwa-standalone,
 html.ios-pwa-standalone body { background: var(--bg-b); }
 @media (display-mode: standalone) {
@@ -377,7 +383,7 @@ padding-left: 12px; padding-right: 12px;
 padding-top: 10px;
 padding-bottom: calc(10px + var(--mochi-safe-bottom,env(safe-area-inset-bottom,0px)));
 }
-.phone .page.full .chat-head { padding-top: calc(10px + env(safe-area-inset-top, 0px)); }
+.phone .page.full .chat-head { padding-top: calc(10px + var(--mochi-safe-top, env(safe-area-inset-top, 0px))); }
 .phone .page.full { padding-bottom: 0; }
 #page-chat { background: var(--page-bg-grad); }
 .phone .chat-input { will-change:transform; }
@@ -401,7 +407,7 @@ html.ios-native-fs .phone .page.full .stats-top-name { padding-top: 10px; }
 .ios-fs-active .phone .page.full .card-tabs,
 .ios-fs-active .phone .page.full .div-h-title,
 .ios-fs-active .phone .page.full .stats-top-name { padding-top: 10px; }
-html.ios-fs-active .phone .statusbar { padding-top:max(calc(14px + env(safe-area-inset-top, 0px)), 14px); }
+html.ios-fs-active .phone .statusbar { padding-top:14px; }
 @media (max-width: 900px) {
 .fs-css-active .phone { padding-top: max(env(safe-area-inset-top, 0px), 12px); }
 }
@@ -414,7 +420,7 @@ padding:0 18px 18px;
 }
 html.tablet .phone.no-statusbar { padding:0; }
 html.tablet .statusbar {
-padding-top:max(calc(14px + env(safe-area-inset-top, 0px)), 14px);
+padding-top:max(calc(14px + var(--mochi-safe-top, env(safe-area-inset-top, 0px))), 14px);
 padding-bottom:10px;
 }
 html.tablet.fs-active .phone, html.tablet.fs-css-active .phone { width:100vw; max-width:none; }
@@ -427,7 +433,7 @@ padding-left:12px; padding-right:12px;
 padding-top:10px;
 padding-bottom:calc(10px + var(--mochi-safe-bottom,env(safe-area-inset-bottom,0px)));
 }
-html.tablet .phone .page.full .chat-head { padding-top:calc(10px + env(safe-area-inset-top, 0px)); }
+html.tablet .phone .page.full .chat-head { padding-top:calc(10px + var(--mochi-safe-top, env(safe-area-inset-top, 0px))); }
 html.tablet .phone .page.full { padding-bottom:0; }
 html.tablet #page-chat { background:var(--page-bg-grad); }
 html.tablet .tabbar { margin-bottom:var(--mochi-safe-bottom,env(safe-area-inset-bottom,0px)); }
@@ -659,7 +665,7 @@ box-shadow:0 6px 20px rgba(0,0,0,.25); cursor:pointer;
 position:fixed; top:0; left:0; right:0; z-index:998;
 display:flex; align-items:center; justify-content:center; gap:10px;
 padding:10px 14px;
-padding-top:calc(10px + env(safe-area-inset-top, 0px));
+padding-top:calc(10px + var(--mochi-safe-top, env(safe-area-inset-top, 0px)));
 background:rgba(17,17,17,.94); color:#fff; font-size:13px;
 box-shadow:0 4px 16px rgba(0,0,0,.25);
 }
@@ -1526,6 +1532,7 @@ border:1px solid rgba(0,0,0,.12); border-radius:12px; padding:11px 14px;
 font-size:14px; font-family:inherit; outline:none; background:#fff; color:var(--ink);
 width:100%; box-sizing:border-box;
 }
+.chat-ask-input.ce-box { will-change: transform; }
 .chat-ask-input:focus {
 border-color:var(--ink);
 transform:translateZ(0);
@@ -1876,6 +1883,23 @@ font-family:inherit; -webkit-tap-highlight-color:transparent;
 .invite-list[hidden] { display:none; }
 #invite-groups[hidden] { display:none; }
 #chat-ask-save[hidden] { display:none; }
+.inv-g-batch { border-style:dashed; }
+.inv-g-batch.on { background:#111; color:#fff; border-color:#111; }
+.inv-g-op {
+display:inline-flex; align-items:center; justify-content:center;
+width:17px; height:17px; margin-left:3px; border-radius:50%;
+background:rgba(0,0,0,.06); color:#888; font-size:11px; line-height:1;
+vertical-align:-1px; font-style:normal; cursor:pointer;
+}
+.inv-g-op:active { background:rgba(0,0,0,.15); color:#111; }
+.inv-g-op[data-op="rm"]:active { background:rgba(224,85,85,.15); color:#e05555; }
+.invite-batch-item { display:flex; align-items:flex-start; }
+.inv-batch-cb {
+flex:0 0 auto; width:30px; height:26px; margin-right:6px;
+display:flex; align-items:center; justify-content:center; cursor:pointer;
+-webkit-tap-highlight-color:transparent; margin-top:4px;
+}
+.inv-batch-cb input[type="checkbox"] { width:18px; height:18px; cursor:pointer; accent-color:var(--ink); }
 .poke-sec-label {
 font-size:11px; color:var(--muted); padding:8px 2px 4px; flex-shrink:0;
 }
@@ -8639,9 +8663,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1788349399611">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.390</b></span>
-        <span class="sv-deploy">部署于 2026-09-02 19:43<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1788360652958">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.391</b></span>
+        <span class="sv-deploy">部署于 2026-09-02 22:50<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9737,7 +9761,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.390</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.391</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
       <!-- v3.27.x：设置页底部防骗声明 -->
       <div class="set-alert">
@@ -10010,7 +10034,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.390</span>
+              <span class="lic-ver">v3.26.391</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -27294,20 +27318,40 @@ const groups = myInviteView();
 if (!groups.some(g => g.key === myInviteCurGroup)) myInviteCurGroup = groups.length ? groups[0].key : '__preset';
 return myInviteCurGroup;
 }
+let tiInviteBatch = false;   // 批量管理模式开关
+let tiInviteSel = new Set(); // 批量勾选：当前自建分组内字卡下标集合
 function renderInviteBank() {
 const wrap = document.getElementById('invite-groups');
 const list = document.getElementById('invite-list');
 if (!wrap || !list) return;
 myInviteCurGroupKey();
 const groups = myInviteView();
+const cur = groups.find(g => g.key === myInviteCurGroup) || groups[0] || { key: '__preset', cards: [] };
+const curIsPreset = cur.key === '__preset';
+if (curIsPreset && tiInviteBatch) { tiInviteBatch = false; tiInviteSel.clear(); }
 wrap.innerHTML = '';
 groups.forEach(g => {
 const chip = document.createElement('span');
 chip.className = 'emoji-g-chip' + (myInviteCurGroup === g.key ? ' sel' : '');
+if (tiInviteBatch && g.user) {
+chip.innerHTML = esc(g.label) + g.cards.length +
+'<span class="inv-g-op" data-op="rn">✎</span>' +
+'<span class="inv-g-op" data-op="rm">✕</span>';
+} else {
 chip.textContent = g.label + g.cards.length;
+}
+const gkey = g.key, glabel = g.label;
 chip.addEventListener('click', (e) => {
 e.stopPropagation();
-myInviteCurGroup = g.key;
+const op = e.target && e.target.closest ? e.target.closest('.inv-g-op') : null;
+if (op) {
+if (op.getAttribute('data-op') === 'rn') myInviteRenameGroup(gkey, glabel);
+else if (op.getAttribute('data-op') === 'rm') myInviteRemoveGroup(gkey);
+return;
+}
+if (myInviteCurGroup === gkey) return;
+myInviteCurGroup = gkey;
+tiInviteSel.clear();
 renderInviteBank();
 });
 wrap.appendChild(chip);
@@ -27318,9 +27362,36 @@ add.textContent = '＋ 分组';
 add.title = '新建我的邀请分组';
 add.addEventListener('click', (e) => { e.stopPropagation(); myInviteNewGroup(); });
 wrap.appendChild(add);
+const batch = document.createElement('span');
+batch.className = 'emoji-g-chip inv-g-batch' + (tiInviteBatch ? ' on' : '');
+batch.textContent = tiInviteBatch ? '完成' : '批量管理';
+batch.title = '批量管理：勾选字卡后可全选/删除/移动，也支持重命名/删除自建分组';
+batch.addEventListener('click', (e) => { e.stopPropagation(); toggleInviteBatch(); });
+wrap.appendChild(batch);
 list.innerHTML = '';
-const cur = groups.find(g => g.key === myInviteCurGroup) || groups[0];
-if (!cur || !cur.cards.length) {
+if (tiInviteBatch && !curIsPreset) {
+if (!cur.cards.length) {
+list.innerHTML = '<div class="cc-empty">该分组暂无邀请字卡<br>在下方输入邀请内容，点「存入」添加</div>';
+} else {
+cur.cards.forEach((c, i) => {
+const item = document.createElement('div');
+item.className = 'cc-item glass invite-batch-item';
+item.innerHTML = '<label class="inv-batch-cb"><input type="checkbox" class="inv-batch-cb-in" data-bidx="' + i + '"' + (tiInviteSel.has(i) ? ' checked' : '') + '></label><div class="cc-txt"><div class="t">' + escTxt(c) + '</div></div>';
+list.appendChild(item);
+});
+}
+list.insertAdjacentHTML('beforeend',
+'<div class="ti-batch-bar" id="inv-batch-bar">' +
+'<span class="ti-batch-cnt" id="inv-batch-cnt">已选 <em>' + tiInviteSel.size + '</em> 条</span>' +
+'<button class="ti-batch-btn" id="inv-batch-all">全选</button>' +
+'<button class="ti-batch-btn" id="inv-batch-move"' + (tiInviteSel.size === 0 ? ' disabled' : '') + '>移动</button>' +
+'<button class="ti-batch-btn ti-batch-del-btn" id="inv-batch-del"' + (tiInviteSel.size === 0 ? ' disabled' : '') + '>删除</button>' +
+'<button class="ti-batch-btn" id="inv-batch-cancel">取消</button>' +
+'</div>');
+bindInviteBatchBar();
+return;
+}
+if (!cur.cards.length) {
 list.innerHTML = '<div class="cc-empty">暂无邀请字卡<br>在下方输入邀请内容，点「存入」添加</div>';
 return;
 }
@@ -27350,6 +27421,107 @@ item.appendChild(ops);
 }
 list.appendChild(item);
 });
+}
+function toggleInviteBatch() {
+const groups = myInviteView();
+const cur = groups.find(g => g.key === myInviteCurGroup);
+if (!cur) return;
+if (!tiInviteBatch && cur.key === '__preset') {
+toast('预设为系统内置分组，请切换到自建分组后批量管理');
+return;
+}
+tiInviteBatch = !tiInviteBatch;
+tiInviteSel.clear();
+renderInviteBank();
+}
+function myInviteCurGroupArr() {
+const g = myInviteG().find(x => Array.isArray(x) && Array.isArray(x[1]) && x[0] === myInviteCurGroup);
+return (g && Array.isArray(g[1])) ? g[1] : null;
+}
+function bindInviteBatchBar() {
+const curArr = myInviteCurGroupArr();
+const n = curArr ? curArr.length : 0;
+const all = document.getElementById('inv-batch-all');
+if (all) all.addEventListener('click', () => {
+if (tiInviteSel.size >= n) tiInviteSel.clear();
+else for (let i = 0; i < n; i++) tiInviteSel.add(i);
+renderInviteBank();
+});
+const cancel = document.getElementById('inv-batch-cancel');
+if (cancel) cancel.addEventListener('click', () => {
+tiInviteBatch = false; tiInviteSel.clear(); renderInviteBank();
+});
+const del = document.getElementById('inv-batch-del');
+if (del) del.addEventListener('click', () => {
+if (tiInviteSel.size === 0) { toast('请先勾选要删除的字卡'); return; }
+const cnt = tiInviteSel.size;
+window.openModal('删除选中的 ' + cnt + ' 条邀请字卡？', '', function () {
+const arr = myInviteCurGroupArr();
+if (!arr) return;
+Array.from(tiInviteSel).sort((a, b) => b - a).forEach(i => { if (i >= 0 && i < arr.length) arr.splice(i, 1); });
+myInviteGroupsSave();
+tiInviteSel.clear();
+tiInviteBatch = false;
+myInviteCurGroupKey();
+renderInviteBank();
+toast('已删除 ' + cnt + ' 条');
+}, { noInput: true, staticText: '此操作不可撤销。' });
+});
+const moveBtn = document.getElementById('inv-batch-move');
+if (moveBtn) moveBtn.addEventListener('click', () => {
+if (tiInviteSel.size === 0) { toast('请先勾选要移动的邀请字卡'); return; }
+const groups = myInviteG().filter(g => Array.isArray(g) && Array.isArray(g[1]) && g[0] && g[0] !== myInviteCurGroup);
+if (!groups.length) { toast('没有其他可移动的分组'); return; }
+const opts = groups.map(g => ({ label: g[0], value: g[0] }));
+const cnt = tiInviteSel.size;
+window.openModal('移动到分组', '', function (v) {
+const target = String(v || '');
+if (!target) { toast('请选择目标分组'); return; }
+const src = myInviteCurGroupArr();
+if (!src) return;
+let tArr = myInviteG().find(g => Array.isArray(g) && Array.isArray(g[1]) && g[0] === target);
+if (!tArr) { tArr = [target, []]; myInviteG().push(tArr); }
+let moved = 0;
+Array.from(tiInviteSel).sort((a, b) => b - a).forEach(i => { if (i >= 0 && i < src.length) { tArr[1].push(src[i]); src.splice(i, 1); moved++; } });
+myInviteGroupsSave();
+tiInviteSel.clear();
+tiInviteBatch = false;
+myInviteCurGroupKey();
+renderInviteBank();
+toast('已移动 ' + moved + ' 条到「' + target + '」');
+}, { pills: opts, pill: opts[0].value, noInput: true });
+});
+}
+function myInviteRenameGroup(gk, oldLabel) {
+window.openModal('重命名分组', oldLabel, function (v) {
+v = (v || '').trim();
+if (!v) { toast('请输入分组名'); return; }
+const groups = myInviteG();
+const g = groups.find(x => x[0] === gk);
+if (!g) return;
+if (v === gk) { toast('名称未变化'); return; }
+if (groups.some(x => x[0] === v)) { toast('分组「' + v + '」已存在'); return; }
+g[0] = v;
+if (myInviteCurGroup === gk) myInviteCurGroup = v;
+myInviteGroupsSave();
+renderInviteBank();
+toast('已重命名');
+});
+}
+function myInviteRemoveGroup(gk) {
+window.openModal('删除该分组？', '', function () {
+const groups = myInviteG();
+const g = groups.find(x => x[0] === gk);
+if (!g) return;
+const cnt = Array.isArray(g[1]) ? g[1].length : 0;
+groups.splice(groups.indexOf(g), 1);
+if (myInviteCurGroup === gk) myInviteCurGroup = null;
+myInviteGroupsSave();
+tiInviteSel.clear();
+myInviteCurGroupKey();
+renderInviteBank();
+toast(cnt ? '已删除分组及 ' + cnt + ' 条字卡' : '已删除分组');
+}, { noInput: true, staticText: '删除「' + gk + '」分组及其中的全部字卡？此操作不可撤销。' });
 }
 function saveInviteInput() {
 const v = (chatAskInput && chatAskInput.value || '').trim();
@@ -27410,6 +27582,8 @@ document.addEventListener('contact-switched', function () {
 myInviteDirty = false;
 myInviteGroups = null;
 myInviteCurGroup = '__preset';
+tiInviteBatch = false;
+tiInviteSel.clear();
 });
 const moreInvite = document.getElementById('more-invite');
 if (moreInvite) {
@@ -49440,6 +49614,18 @@ const miniBtn = document.getElementById('call-minimize-btn');
 const miniAv = document.getElementById('call-mini-av');
 const miniName = document.getElementById('call-mini-name');
 const miniTime = document.getElementById('call-mini-time');
+function miniSafeTop() {
+try {
+if (!document.documentElement.classList.contains('ios-pwa-standalone')) return 0;
+const sh = (window.screen && window.screen.height) || 0;
+const ih = window.innerHeight || 0;
+if (sh > 0 && ih > 0) {
+const diff = sh - ih;
+if (diff >= 20 && diff <= 160) return diff;
+}
+} catch (e) {}
+return 0;
+}
 let miniPos = null;
 try { miniPos = JSON.parse(store.get('call-mini-pos') || 'null'); } catch (e) {}
 function miniPosValid(p) {
@@ -49454,6 +49640,12 @@ if (y < 0 || y > window.innerHeight - 30) return false;
 return true;
 }
 if (miniPos && mini && miniPosValid(miniPos)) {
+const _st = miniSafeTop();
+let _y = parseFloat(String(miniPos.top).match(/(-?\d+(\.\d+)?)px/)[1]);
+if (_st > 0 && _y < _st) {
+miniPos.top = _st + 'px';
+try { store.set('call-mini-pos', JSON.stringify(miniPos)); } catch (e) {}
+}
 mini.style.left = miniPos.left;
 mini.style.top = miniPos.top;
 mini.style.bottom = 'auto';
@@ -49790,7 +49982,7 @@ moved = true;
 let x = e.clientX - offX, y = e.clientY - offY;
 const mw = mini.offsetWidth, mh = mini.offsetHeight;
 x = Math.max(4, Math.min(window.innerWidth - mw - 4, x));
-y = Math.max(4, Math.min(window.innerHeight - mh - 4, y));
+y = Math.max(miniSafeTop(), Math.min(window.innerHeight - mh - 4, y));
 mini.style.left = x + 'px';
 mini.style.top = y + 'px';
 });
@@ -75687,6 +75879,19 @@ var _vvFitOn = false;
 function syncVvFit() {
 try {
 var d = document.documentElement;
+var _ih2 = window.innerHeight || 0;
+var _sh2 = (window.screen && window.screen.height) || 0;
+var _vh2 = _vv ? Math.round(_vv.height * ((_vv.scale && _vv.scale > 0.5) ? _vv.scale : 1)) : _ih2;
+var _safeTop = 0;
+if (d.classList.contains('ios-pwa-standalone') && _sh2 > 0 && _vh2 > 0) {
+var _diff = _sh2 - _vh2;
+if (_diff >= 20 && _diff <= 160) _safeTop = _diff;
+}
+var _topPx = _safeTop ? _safeTop + 'px' : '';
+if (d.style.getPropertyValue('--mochi-safe-top') !== _topPx) {
+if (_topPx) d.style.setProperty('--mochi-safe-top', _topPx);
+else d.style.removeProperty('--mochi-safe-top');
+}
 if (d.classList.contains('fs-active') || d.classList.contains('fs-css-active')
 || d.classList.contains('ios-fs-active') || d.classList.contains('ios-native-fs')) {
 if (d.style.getPropertyValue('--mochi-ios-h')) d.style.removeProperty('--mochi-ios-h');

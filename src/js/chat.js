@@ -5174,20 +5174,42 @@ const groups = myInviteView();
 if (!groups.some(g => g.key === myInviteCurGroup)) myInviteCurGroup = groups.length ? groups[0].key : '__preset';
 return myInviteCurGroup;
 }
+// v3.x：邀请TA ——批量管理模式态（预设为系统内置分组：仅自建分组可进批量，可重命名/删除分组）
+let tiInviteBatch = false;   // 批量管理模式开关
+let tiInviteSel = new Set(); // 批量勾选：当前自建分组内字卡下标集合
 function renderInviteBank() {
 const wrap = document.getElementById('invite-groups');
 const list = document.getElementById('invite-list');
 if (!wrap || !list) return;
 myInviteCurGroupKey();
 const groups = myInviteView();
+const cur = groups.find(g => g.key === myInviteCurGroup) || groups[0] || { key: '__preset', cards: [] };
+const curIsPreset = cur.key === '__preset';
+// 预设为系统内置分组：切回预设时自动退出批量态
+if (curIsPreset && tiInviteBatch) { tiInviteBatch = false; tiInviteSel.clear(); }
 wrap.innerHTML = '';
 groups.forEach(g => {
 const chip = document.createElement('span');
 chip.className = 'emoji-g-chip' + (myInviteCurGroup === g.key ? ' sel' : '');
+if (tiInviteBatch && g.user) {
+chip.innerHTML = esc(g.label) + g.cards.length +
+'<span class="inv-g-op" data-op="rn">✎</span>' +
+'<span class="inv-g-op" data-op="rm">✕</span>';
+} else {
 chip.textContent = g.label + g.cards.length;
+}
+const gkey = g.key, glabel = g.label;
 chip.addEventListener('click', (e) => {
 e.stopPropagation();
-myInviteCurGroup = g.key;
+const op = e.target && e.target.closest ? e.target.closest('.inv-g-op') : null;
+if (op) {
+if (op.getAttribute('data-op') === 'rn') myInviteRenameGroup(gkey, glabel);
+else if (op.getAttribute('data-op') === 'rm') myInviteRemoveGroup(gkey);
+return;
+}
+if (myInviteCurGroup === gkey) return;
+myInviteCurGroup = gkey;
+tiInviteSel.clear();
 renderInviteBank();
 });
 wrap.appendChild(chip);
@@ -5198,9 +5220,37 @@ add.textContent = '＋ 分组';
 add.title = '新建我的邀请分组';
 add.addEventListener('click', (e) => { e.stopPropagation(); myInviteNewGroup(); });
 wrap.appendChild(add);
+// v3.x：批量管理 chip（顶部分组栏右侧）——进入后批量勾选字卡，亦可在自建分组上 ✎重命名/✕删除
+const batch = document.createElement('span');
+batch.className = 'emoji-g-chip inv-g-batch' + (tiInviteBatch ? ' on' : '');
+batch.textContent = tiInviteBatch ? '完成' : '批量管理';
+batch.title = '批量管理：勾选字卡后可全选/删除/移动，也支持重命名/删除自建分组';
+batch.addEventListener('click', (e) => { e.stopPropagation(); toggleInviteBatch(); });
+wrap.appendChild(batch);
 list.innerHTML = '';
-const cur = groups.find(g => g.key === myInviteCurGroup) || groups[0];
-if (!cur || !cur.cards.length) {
+if (tiInviteBatch && !curIsPreset) {
+if (!cur.cards.length) {
+list.innerHTML = '<div class="cc-empty">该分组暂无邀请字卡<br>在下方输入邀请内容，点「存入」添加</div>';
+} else {
+cur.cards.forEach((c, i) => {
+const item = document.createElement('div');
+item.className = 'cc-item glass invite-batch-item';
+item.innerHTML = '<label class="inv-batch-cb"><input type="checkbox" class="inv-batch-cb-in" data-bidx="' + i + '"' + (tiInviteSel.has(i) ? ' checked' : '') + '></label><div class="cc-txt"><div class="t">' + escTxt(c) + '</div></div>';
+list.appendChild(item);
+});
+}
+list.insertAdjacentHTML('beforeend',
+'<div class="ti-batch-bar" id="inv-batch-bar">' +
+'<span class="ti-batch-cnt" id="inv-batch-cnt">已选 <em>' + tiInviteSel.size + '</em> 条</span>' +
+'<button class="ti-batch-btn" id="inv-batch-all">全选</button>' +
+'<button class="ti-batch-btn" id="inv-batch-move"' + (tiInviteSel.size === 0 ? ' disabled' : '') + '>移动</button>' +
+'<button class="ti-batch-btn ti-batch-del-btn" id="inv-batch-del"' + (tiInviteSel.size === 0 ? ' disabled' : '') + '>删除</button>' +
+'<button class="ti-batch-btn" id="inv-batch-cancel">取消</button>' +
+'</div>');
+bindInviteBatchBar();
+return;
+}
+if (!cur.cards.length) {
 list.innerHTML = '<div class="cc-empty">暂无邀请字卡<br>在下方输入邀请内容，点「存入」添加</div>';
 return;
 }
@@ -5231,6 +5281,108 @@ item.appendChild(ops);
 list.appendChild(item);
 });
 }
+function toggleInviteBatch() {
+const groups = myInviteView();
+const cur = groups.find(g => g.key === myInviteCurGroup);
+if (!cur) return;
+if (!tiInviteBatch && cur.key === '__preset') {
+toast('预设为系统内置分组，请切换到自建分组后批量管理');
+return;
+}
+tiInviteBatch = !tiInviteBatch;
+tiInviteSel.clear();
+renderInviteBank();
+}
+function myInviteCurGroupArr() {
+const g = myInviteG().find(x => Array.isArray(x) && Array.isArray(x[1]) && x[0] === myInviteCurGroup);
+return (g && Array.isArray(g[1])) ? g[1] : null;
+}
+function bindInviteBatchBar() {
+const curArr = myInviteCurGroupArr();
+const n = curArr ? curArr.length : 0;
+const all = document.getElementById('inv-batch-all');
+if (all) all.addEventListener('click', () => {
+if (tiInviteSel.size >= n) tiInviteSel.clear();
+else for (let i = 0; i < n; i++) tiInviteSel.add(i);
+renderInviteBank();
+});
+const cancel = document.getElementById('inv-batch-cancel');
+if (cancel) cancel.addEventListener('click', () => {
+tiInviteBatch = false; tiInviteSel.clear(); renderInviteBank();
+});
+const del = document.getElementById('inv-batch-del');
+if (del) del.addEventListener('click', () => {
+if (tiInviteSel.size === 0) { toast('请先勾选要删除的字卡'); return; }
+const cnt = tiInviteSel.size;
+window.openModal('删除选中的 ' + cnt + ' 条邀请字卡？', '', function () {
+const arr = myInviteCurGroupArr();
+if (!arr) return;
+Array.from(tiInviteSel).sort((a, b) => b - a).forEach(i => { if (i >= 0 && i < arr.length) arr.splice(i, 1); });
+myInviteGroupsSave();
+tiInviteSel.clear();
+tiInviteBatch = false;
+myInviteCurGroupKey();
+renderInviteBank();
+toast('已删除 ' + cnt + ' 条');
+}, { noInput: true, staticText: '此操作不可撤销。' });
+});
+const moveBtn = document.getElementById('inv-batch-move');
+if (moveBtn) moveBtn.addEventListener('click', () => {
+if (tiInviteSel.size === 0) { toast('请先勾选要移动的邀请字卡'); return; }
+const groups = myInviteG().filter(g => Array.isArray(g) && Array.isArray(g[1]) && g[0] && g[0] !== myInviteCurGroup);
+if (!groups.length) { toast('没有其他可移动的分组'); return; }
+const opts = groups.map(g => ({ label: g[0], value: g[0] }));
+const cnt = tiInviteSel.size;
+window.openModal('移动到分组', '', function (v) {
+const target = String(v || '');
+if (!target) { toast('请选择目标分组'); return; }
+const src = myInviteCurGroupArr();
+if (!src) return;
+let tArr = myInviteG().find(g => Array.isArray(g) && Array.isArray(g[1]) && g[0] === target);
+if (!tArr) { tArr = [target, []]; myInviteG().push(tArr); }
+let moved = 0;
+Array.from(tiInviteSel).sort((a, b) => b - a).forEach(i => { if (i >= 0 && i < src.length) { tArr[1].push(src[i]); src.splice(i, 1); moved++; } });
+myInviteGroupsSave();
+tiInviteSel.clear();
+tiInviteBatch = false;
+myInviteCurGroupKey();
+renderInviteBank();
+toast('已移动 ' + moved + ' 条到「' + target + '」');
+}, { pills: opts, pill: opts[0].value, noInput: true });
+});
+}
+function myInviteRenameGroup(gk, oldLabel) {
+window.openModal('重命名分组', oldLabel, function (v) {
+v = (v || '').trim();
+if (!v) { toast('请输入分组名'); return; }
+const groups = myInviteG();
+const g = groups.find(x => x[0] === gk);
+if (!g) return;
+if (v === gk) { toast('名称未变化'); return; }
+if (groups.some(x => x[0] === v)) { toast('分组「' + v + '」已存在'); return; }
+g[0] = v;
+if (myInviteCurGroup === gk) myInviteCurGroup = v;
+myInviteGroupsSave();
+renderInviteBank();
+toast('已重命名');
+});
+}
+function myInviteRemoveGroup(gk) {
+window.openModal('删除该分组？', '', function () {
+const groups = myInviteG();
+const g = groups.find(x => x[0] === gk);
+if (!g) return;
+const cnt = Array.isArray(g[1]) ? g[1].length : 0;
+groups.splice(groups.indexOf(g), 1);
+if (myInviteCurGroup === gk) myInviteCurGroup = null;
+myInviteGroupsSave();
+tiInviteSel.clear();
+myInviteCurGroupKey();
+renderInviteBank();
+toast(cnt ? '已删除分组及 ' + cnt + ' 条字卡' : '已删除分组');
+}, { noInput: true, staticText: '删除「' + gk + '」分组及其中的全部字卡？此操作不可撤销。' });
+}
+// end renderInviteBank
 function saveInviteInput() {
 const v = (chatAskInput && chatAskInput.value || '').trim();
 if (!v) { toast('先输入邀请内容'); return; }
@@ -5290,6 +5442,8 @@ document.addEventListener('contact-switched', function () {
 myInviteDirty = false;
 myInviteGroups = null;
 myInviteCurGroup = '__preset';
+tiInviteBatch = false;
+tiInviteSel.clear();
 });
 const moreInvite = document.getElementById('more-invite');
 if (moreInvite) {

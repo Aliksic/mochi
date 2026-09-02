@@ -340,6 +340,10 @@ body.cs-time-divider .msg-time-divider { display:flex; }
   font-size:14px; font-family:inherit; outline:none; background:#fff; color:var(--ink);
   width:100%; box-sizing:border-box;
 }
+/* v3.x：邀请TA/问问TA 输入栏转 .ce-box 后常驻合成层——防 syncAndroidKb 平移/
+   半框弹起残留文字停在旧合成层=「文字飞出输入栏」（同 #118 .tc-input.ce-box）。
+   仅安卓 ce-box 态生效，iOS/原生输入不受影响 */
+.chat-ask-input.ce-box { will-change: transform; }
 .chat-ask-input:focus {
   border-color:var(--ink);
   /* v3.7.x锛氬畨鍗?Chrome 閿洏寮瑰嚭鍔ㄧ敾鎶?fixed 鍗婃涓婄Щ鏃讹紝鑱氱劍鐨?contenteditable
@@ -755,6 +759,26 @@ body.cs-time-divider .msg-time-divider { display:flex; }
 .invite-list[hidden] { display:none; }
 #invite-groups[hidden] { display:none; }
 #chat-ask-save[hidden] { display:none; }
+/* v3.x：邀请TA ——顶部分组栏批量管理 chip 选中态 */
+.inv-g-batch { border-style:dashed; }
+.inv-g-batch.on { background:#111; color:#fff; border-color:#111; }
+/* v3.x：邀请TA ——批量模式下自建分组 chip 上的 ✎/✕ 迷你操作符（预设分组不显示） */
+.inv-g-op {
+  display:inline-flex; align-items:center; justify-content:center;
+  width:17px; height:17px; margin-left:3px; border-radius:50%;
+  background:rgba(0,0,0,.06); color:#888; font-size:11px; line-height:1;
+  vertical-align:-1px; font-style:normal; cursor:pointer;
+}
+.inv-g-op:active { background:rgba(0,0,0,.15); color:#111; }
+.inv-g-op[data-op="rm"]:active { background:rgba(224,85,85,.15); color:#e05555; }
+/* v3.x：邀请TA ——批量态字卡行（左侧勾选框 + top 对齐，仿 .ti-batch-row） */
+.invite-batch-item { display:flex; align-items:flex-start; }
+.inv-batch-cb {
+  flex:0 0 auto; width:30px; height:26px; margin-right:6px;
+  display:flex; align-items:center; justify-content:center; cursor:pointer;
+  -webkit-tap-highlight-color:transparent; margin-top:4px;
+}
+.inv-batch-cb input[type="checkbox"] { width:18px; height:18px; cursor:pointer; accent-color:var(--ink); }
 /* 鎷嶄竴鎷嶅垪琛細棰勮/鑷畾涔?灏忚妭鏍囬 */
 .poke-sec-label {
   font-size:11px; color:var(--muted); padding:8px 2px 4px; flex-shrink:0;
