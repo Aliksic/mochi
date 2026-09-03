@@ -1,4 +1,10 @@
-# 本次构建者：AI-B（本会话：#136 vivo+Chrome 离线兜底落空修复 + #137 iPhone15 全屏态通话小框卡顶修复；打包在途：上会话 #133续 chat.js 预设持久化已构建未提交，一并收口）
+# 本次构建者：AI-A（本会话：字卡互动「不吵架？那我们太平天国。」文案修复）
+
+### 2026-09-03（ta-ask 字卡回复文案修复「太平天国」；已构建）
+* [AI-A 域]（**改动文件：src/js/ta-ask.js（cr4「万一吵架了，谁先低头？」选「不吵架」的一条回复：「不吵架？那我们太平天国。」→「不吵架？那拉钩，谁反悔是小狗。」）；构建状态：已构建·sw mochi-mtl4nqrd·v3.26.396**）。
+* 用户反馈原句突兀：「太平天国」是历史名词，放情侣对话里出戏。替换为同结构的俏皮回复，其余 3 条回复与选项不动。
+* 验证：node --check 过；node build.mjs --check-sentinels 260 全绿哑哨兵 0。
+
 
 ### 2026-09-03 14:0x（#137 iPhone 15 + iOS 18.7 全屏态：通话小框卡在系统状态栏区点不了/拖不动；已构建）
 * [AI-B 域]（**改动文件：src/js/call.js（miniSafeTop 三级探测链：env() 探针→原 screen-vv 差值法→47px 保守兜底 + \_miniSafeTopCache 缓存）、build.mjs（FIX_SENTINELS 1 条）、FIX-REGRESSION.md（#137 行）；构建状态：已构建·sw 见 version.json**）。
