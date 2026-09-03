@@ -5132,10 +5132,16 @@ return null;
 }
 function myInviteG() {
 if (myInviteGroups === null) {
-myInviteGroups = myInviteGroupsLoad() || [];
-if (!myInviteGroups.some(g => g[0] === '我的新增')) myInviteGroups.push(['我的新增', []]);
-}
-return myInviteGroups;
+	myInviteGroups = myInviteGroupsLoad() || [];
+	if (!myInviteGroups.some(g => g[0] === '我的新增')) myInviteGroups.push(['我的新增', []]);
+	}
+	// v3.28：预设分组持久化——系统内置字卡灌入 '__preset' 条目（首启自动），
+	// 这样预设分组的字卡也能单独「修改/删除」，否则预设 cards 每次 view 实时重建、无持久化可写（用户反馈「无法单独编辑字卡」）
+	if (!myInviteGroups.some(g => g[0] === '__preset')) {
+	myInviteGroups.unshift(['__preset', MY_INVITE_PRESETS.slice()]);
+	myInviteGroupsSave();
+	}
+	return myInviteGroups;
 }
 function myInviteGroupsSave() {
 myInviteDirty = true;
@@ -5162,9 +5168,12 @@ return false;
 }).catch(() => false);
 }
 function myInviteView() {
-const out = [{ key: '__preset', label: '预设', cards: MY_INVITE_PRESETS.slice(), preset: true }];
-myInviteG().forEach(g => {
-if (!Array.isArray(g) || !Array.isArray(g[1]) || !g[0]) return;
+	const out = [];
+	const pre = myInviteG().find(g => g[0] === '__preset');
+	out.push({ key: '__preset', label: '预设', cards: (pre && Array.isArray(pre[1])) ? pre[1].slice() : MY_INVITE_PRESETS.slice(), preset: true });
+	myInviteG().forEach(g => {
+	if (g[0] === '__preset') return;
+	if (!Array.isArray(g) || !Array.isArray(g[1]) || !g[0]) return;
 out.push({ key: g[0], label: g[0], cards: g[1].slice(), user: true });
 });
 return out;
@@ -5263,9 +5272,9 @@ cur.cards.forEach((c, i) => {
 const item = document.createElement('div');
 item.className = 'cc-item glass';
 item.innerHTML = '<div class="cc-txt"><div class="t">' + escTxt(c) + '</div></div>';
-item.addEventListener('click', () => { sendInviteContent(c); });
-if (cur.user) {
-const ops = document.createElement('div');
+	// v3.28：所有分组（含预设）的字卡都给「修改/删除」按钮——预设分组已持久化，myInviteEdit/myInviteDel 可直接写回（用户反馈预设字卡没法单独编辑）
+	item.addEventListener('click', () => { sendInviteContent(c); });
+	const ops = document.createElement('div');
 ops.className = 'poke-card-ops';
 const eb = document.createElement('button');
 eb.type = 'button';
@@ -5280,11 +5289,10 @@ db.title = '删除';
 db.textContent = '✕';
 db.addEventListener('click', (e) => { e.stopPropagation(); myInviteDel(i, c); });
 ops.appendChild(eb);
-ops.appendChild(db);
-item.appendChild(ops);
-}
-list.appendChild(item);
-});
+	ops.appendChild(db);
+	item.appendChild(ops);
+	list.appendChild(item);
+	});
 }
 function toggleInviteBatch() {
 const groups = myInviteView();

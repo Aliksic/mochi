@@ -562,9 +562,13 @@ if (CHECK_SENTINELS) {
   try {
     const swSrc = readFileSync(join(root, 'src', 'pwa', 'sw.js'), 'utf8');
     const swNeedlesSrc = [
-      'caches.open(CACHE).then((c) => c.match(\'./index.html\')).then((m) => m || caches.keys()',
+      // v3.26.x #136：canonical 键 miss 后 second chance match(req)（接住存量 req.url 键缓存）
+      'caches.open(CACHE).then((c) => c.match(\'./index.html\')).then((m) => m || caches.match(req))',
       'claim 后异步补一次 fetch 写入当前 CACHE',
-      'sort((a, b) => cacheVersion(b) - cacheVersion(a))'
+      'sort((a, b) => cacheVersion(b) - cacheVersion(a))',
+      // v3.26.x #136：导航成功写 canonical 键 + activate 抢救旧缓存完整 index
+      "c.put('./index.html', res.clone())",
+      'rescued ? c.put(\'./index.html\', rescued)'
     ];
     const swMiss = swNeedlesSrc.filter(n => !swSrc.includes(n));
     if (swMiss.length) {
@@ -580,12 +584,16 @@ if (CHECK_SENTINELS) {
 try {
   const swSrc = readFileSync(join(root, 'sw.js'), 'utf8');
   const swNeedles = [
-    'caches.open(CACHE).then((c) => c.match(\'./index.html\')).then((m) => m || caches.keys()',
+    // v3.26.x #136：canonical 键 miss 后 second chance match(req)（接住存量 req.url 键缓存）
+    'caches.open(CACHE).then((c) => c.match(\'./index.html\')).then((m) => m || caches.match(req))',
     'claim 后异步补一次 fetch 写入当前 CACHE',
     'sort((a, b) => cacheVersion(b) - cacheVersion(a))',
     // v3.26.x #134：index.html 完整性校验（截断体不进缓存）+ PURGE_INDEX 自愈消息
     'function isCompleteHtml(text)',
-    "data.type === 'PURGE_INDEX'"
+    "data.type === 'PURGE_INDEX'",
+    // v3.26.x #136：导航成功写 canonical 键 + activate 抢救旧缓存完整 index
+    "c.put('./index.html', res.clone())",
+    'rescued ? c.put(\'./index.html\', rescued)'
   ];
   const swMissing = swNeedles.filter(n => !swSrc.includes(n));
   if (swMissing.length) {

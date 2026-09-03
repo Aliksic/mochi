@@ -95,6 +95,19 @@ self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys().then((keys) => {
       const oldKeys = keys.filter((k) => k !== CACHE);
+      // v3.26.x #136：删旧缓存前先「抢救」一份最新的完整 index.html——弱网/被墙下
+      // install 预缓存可能全超时、activate 网络补拉也可能超时，新缓存缺 index 时离线
+      // 导航兜底落空 → Chrome 错误页。从旧缓存按版本新→旧找第一份带 EOF 标记的完整
+      // index 先救出来，激活后缺 index 时用它顶上（旧但完整 >> 错误页），网络可用再
+      // 刷新到最新。截断/无 EOF 标记的旧体一律不救（宁缺勿残，同 #134 铁律）。
+      const rescue = (function () {
+        if (!oldKeys.length) return Promise.resolve(null);
+        const sorted = oldKeys.slice().sort((a, b) => cacheVersion(b) - cacheVersion(a));
+        return sorted.reduce((p, k) => p.then((found) => found || caches.match('./index.html', { cacheName: k }).then((m) => {
+          if (!m || !m.ok) return null;
+          return m.clone().text().then((t) => (isCompleteHtml(t) ? m : null));
+        })), Promise.resolve(null)).catch(() => null);
+      })();
       const cleanup = !oldKeys.length ? Promise.resolve()
         : caches.open(CACHE).then((c) => c.match('./index.html')).then((hit) => {
             if (hit) return Promise.all(oldKeys.map((k) => caches.delete(k)));
@@ -111,7 +124,8 @@ self.addEventListener('activate', (e) => {
           });
       return cleanup
         .then(() => self.clients.claim())
-        .then(() => {
+        .then(() => rescue)
+        .then((rescued) => {
           // v3.27.x：precache 失败时当前 CACHE 可能没 index.html，导航回退会命中旧缓存旧版
           // → 用户"退回旧版白屏"（iOS PWA 切后台回前台 WebKit 重新加载 + 网络超时回退）。
           // claim 后异步补一次 fetch 写入当前 CACHE（不阻塞，失败有旧缓存兜底），
@@ -122,10 +136,15 @@ self.addEventListener('activate', (e) => {
               // 修复上线前已写进去的残缺体（无 EOF 标记），丢弃让它重新走网络补齐
               return hit.clone().text().then((t) => {
                 if (isCompleteHtml(t)) return;
-                return c.delete('./index.html').catch(() => {});
+                // v3.26.x #136：残缺体删除后先用抢救的完整旧版顶上（离线不留空窗）
+                return c.delete('./index.html').catch(() => {}).then(() => {
+                  return rescued ? c.put('./index.html', rescued).catch(() => {}) : undefined;
+                });
               }).catch(() => {});
             }
-            return fetchWithTimeout('./index.html', NETWORK_TIMEOUT).then((res) => {
+            // v3.26.x #136：无 index 时先放抢救的完整旧版兜底（网络补拉失败也有得用）
+            const seed = rescued ? c.put('./index.html', rescued).catch(() => {}) : Promise.resolve();
+            return seed.then(() => fetchWithTimeout('./index.html', NETWORK_TIMEOUT).then((res) => {
               if (res && res.ok) {
                 // v3.26.x #134：补写前同样校验完整性，截断体不进缓存
                 return res.clone().text().then((t) => {
@@ -133,7 +152,7 @@ self.addEventListener('activate', (e) => {
                   return c.put('./index.html', res);
                 });
               }
-            }).catch(() => {});
+            }).catch(() => {}));
           });
         });
     })
@@ -208,8 +227,12 @@ self.addEventListener('fetch', (e) => {
           if (req.mode === 'navigate') {
             return res.clone().text().then((t) => {
               if (isCompleteHtml(t)) {
-                const copy = res.clone();
-                caches.open(CACHE).then((c) => c.put(req, copy));
+                // v3.26.x #136：导航成功统一写 canonical './index.html' 键——原写 req.url 键
+                // （如 .../mochi/），而离线兜底只 match('./index.html')（= .../mochi/index.html），
+                // 键不一致时缓存里明明有完整 index 也兜不住 → 网络不可达（GitHub Pages 被
+                // 墙/超时，vivo+Chrome #136 现场实测 version.json 拉取失败）时导航兜底落空，
+                // Chrome 错误页顶头就是站点 mochi 字母图标，用户看到「单独 mochi 字母图、进不去」。
+                caches.open(CACHE).then((c) => c.put('./index.html', res.clone()));
                 return res;
               }
               throw new Error('truncated-html');
@@ -224,7 +247,10 @@ self.addEventListener('fetch', (e) => {
         // 仅导航请求回退到 index.html；其他资源（manifest/图标/JS 等）
         // 只回退自身缓存，绝不用 HTML 顶替——否则安装/更新流程会拿到错误内容
         const fallback = req.mode === 'navigate'
-          ? caches.open(CACHE).then((c) => c.match('./index.html')).then((m) => m || caches.keys().then((keys) => {
+          // v3.26.x #136：canonical 键 miss 后补一枪 caches.match(req)——旧版 SW 把导航
+          // 成功体写进 req.url 键（存量设备缓存里只有这个键），second chance 接住它们，
+          // 否则老缓存有完整 index 也照样回源 → 离线错误页
+          ? caches.open(CACHE).then((c) => c.match('./index.html')).then((m) => m || caches.match(req)).then((m) => m || caches.keys().then((keys) => {
               // v3.7.x：主缓存无 index.html（precache 失败 / activate 保留了旧缓存兜底），
               // 遍历所有缓存找第一个命中的 index.html。原 for 循环首次即 return 只查
               // keys[0]，漏掉其余缓存——改为 reduce 顺序探测，命中即返回，保证导航永不白屏。

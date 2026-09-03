@@ -1,4 +1,11 @@
-# 本次构建者：AI-B（本会话：#134 iPhone X 图标/小组件缺失自愈防线 + 拖拽 HierarchyRequestError 修复 + #135 iPad7+Edge 开屏死锁修复；打包在途 #133 回归修补）
+# 本次构建者：AI-B（本会话：#136 vivo+Chrome 网络不可达时离线兜底落空→mochi 字母错误页 修复；打包在途：上会话 #133续 chat.js 预设持久化已构建未提交，一并收口）
+
+### 2026-09-03 12:4x（#136 vivo+Chrome「打开异常/单独 mochi 字母图/进不去开屏」：SW 离线兜底缓存键漏洞修复；源已完成·已构建）
+* [AI-B 域]（**改动文件：src/pwa/sw.js（导航成功统一写 canonical './index.html' 键 + 兜底链补 caches.match(req) second chance + activate 删旧缓存前抢救最新完整 index 离线顶上）、build.mjs（swNeedles/swNeedlesSrc 各 +3 条 #136 锚点）、FIX-REGRESSION.md（#136 行）；构建状态：已构建·sw 见 version.json**）。
+* 根因（三层叠加）：诊断实证 GitHub Pages 不可达（version.json 拉取失败、onLine=true）时 Chrome 错误页顶头=站点 icon-512（mochi 字母图）；①导航成功缓存写 req.url 键而兜底只 match('./index.html')，键不一致兜不住；②install 预缓存逐文件 3.5s 超时后当前 CACHE 可能无 canonical 键；③activate 补拉靠网络，被墙留空窗。#134 EOF 校验四处全部保留未动。
+* 验证：node --check 过；--check-sentinels 259 全绿哑哨兵 0 + sw 源锚点 5/5（含 #136 新 3 条）。
+* 待真机（vivo V2359A+Chrome）：弱网/飞行模式冷启动能从缓存进入开屏；联网后版本正常更新；其他机型开屏行为不变。
+* 需要对方处理（AI-A）：诊断 00:33:50 有一条 page-chat 的 `资源加载失败 <img> https://ling233330-star.github.io/mochi/`（空 src img 解析成页面自身 URL，疑似图片类消息 rec.text 为空未守卫，chat.js 渲染 `<img src="">`）——属 AI-A 域文件，本会话未动 chat.js（该文件有上会话在途改动）。
 
 ### 2026-09-03 13:3x（#135 iPad 7 + Edge 开屏卡「正在加载数据」死锁：open() 永不落地 + 开屏门控无硬出口；已构建）
 * [AI-B 域·构建收口]（**改动文件：src/js/idb.js（open() 加 8s 兜底落地超时 + onblocked 主动失败——open 挂起时所有 open().then 的事务超时计时器永不启动，idbRestore 永久挂起）、src/js/clock.js（20s 硬保险丝 readyForced：数据未就绪也放行进入按钮，点击改走 forceEnter 弹数据不全提示，开屏永不死锁）、build.mjs（FIX_SENTINELS 3 条）、FIX-REGRESSION.md（#135 行）、tools/verify-html-eof.mjs（#134 配套）；构建状态：已构建·sw 见 version.json**）。
