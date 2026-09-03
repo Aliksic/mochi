@@ -6164,7 +6164,7 @@ background-size: 22px 22px; opacity: 0.5; pointer-events: none;
 .gm-img-prev img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .gm-img-btn { padding: 9px 16px; border-radius: 99px; border: 1px solid rgba(139, 122, 200, 0.3); background: #fff; color: #6d5bb0; font-size: 13px; cursor: pointer; transition: all 0.15s; }
 .gm-img-btn:active { transform: scale(0.96); background: #f5f3fa; }
-.market-foot { display: flex; gap: 10px; justify-content: center; margin-top: 10px; padding: 0 14px; }
+.market-foot { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 10px; padding: 0 14px; }
 .market-tool { padding: 10px 24px; border-radius: 99px; background: #fff; border: 1px solid rgba(0, 0, 0, 0.1); color: #111; font-size: 13px; cursor: pointer; transition: all 0.15s; font-weight: 500; }
 .market-tool:active { background: #f2f2f5; transform: scale(0.97); }
 .giftbox-hero { margin: 14px; padding: 22px 20px; border-radius: 18px; background: #fff; border: 1px solid rgba(0, 0, 0, 0.06); color: #111; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04); }
@@ -6275,6 +6275,57 @@ cursor: pointer; padding: 0;
 [data-theme="dark"] .market-search { color: #e0d8f0; }
 [data-theme="dark"] .market-search::placeholder { color: #6a6280; }
 [data-theme="dark"] .market-search-clear { color: #c9b8e8; }
+.gb-wishbtn { flex: 1; padding: 12px 0; border-radius: 13px; border: none; font-size: 14px; cursor: pointer; transition: all 0.15s; font-weight: 500; background: rgba(139, 122, 200, 0.12); color: #6d5bb0; }
+.gb-wishbtn:active { transform: scale(0.96); }
+.gb-tiny { margin-top: 10px; font-size: 11px; color: #b0aac4; line-height: 1.6; text-align: center; }
+.wish-tabs { display: flex; gap: 8px; margin-bottom: 12px; }
+.wish-tab { flex: 1; padding: 9px 0; border-radius: 99px; background: #f2f2f5; color: #555; border: none; font-size: 13px; cursor: pointer; transition: all 0.15s; font-weight: 500; white-space: nowrap; }
+.wish-tab.sel { background: linear-gradient(135deg, #8b7ac8, #6d5bb0); color: #fff; box-shadow: 0 2px 8px rgba(109, 91, 176, 0.25); }
+.wish-hint { font-size: 11.5px; color: #a09ab5; line-height: 1.8; margin-bottom: 8px; }
+.wish-item { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid rgba(0, 0, 0, 0.05); }
+.wish-emoji { width: 46px; height: 46px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; overflow: hidden; flex-shrink: 0; }
+.wish-emoji .wish-img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+.wish-info { flex: 1; min-width: 0; }
+.wish-name { font-size: 14px; color: #4a3d6b; font-weight: 600; }
+.wish-price { font-size: 12px; color: #8b7ac8; margin-top: 2px; font-weight: 600; }
+.wish-wish { font-size: 11px; color: #b0aac4; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wish-act { padding: 7px 14px; border-radius: 99px; border: none; background: linear-gradient(135deg, #8b7ac8, #6d5bb0); color: #fff; font-size: 12.5px; cursor: pointer; flex-shrink: 0; transition: transform 0.15s; }
+.wish-act:active { transform: scale(0.94); }
+.wish-act.del { background: #f2f2f5; color: #8a8a8a; }
+.gs-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 2px; border-bottom: 1px solid rgba(0, 0, 0, 0.05); }
+.gs-lab { font-size: 14px; color: #4a3d6b; line-height: 1.5; }
+.gs-sub { display: block; font-size: 11px; color: #a09ab5; margin-top: 2px; font-weight: 400; }
+.gs-numwrap { display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
+.gs-num { width: 72px; padding: 8px 10px; border-radius: 11px; border: 1px solid rgba(139, 122, 200, 0.2); background: #faf9fc; font-size: 14px; text-align: right; box-sizing: border-box; color: #4a3d6b; -webkit-appearance: none; appearance: none; }
+.gs-num:focus { border-color: #8b7ac8; outline: none; }
+.gs-pct { font-size: 13px; color: #8b7ac8; font-weight: 600; }
+.gs-switch { position: relative; width: 44px; height: 26px; border-radius: 99px; background: #d8d4e4; transition: background 0.15s; cursor: pointer; flex-shrink: 0; -webkit-tap-highlight-color: transparent; }
+.gs-switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: left 0.15s; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2); }
+.gs-switch.on { background: #8b7ac8; }
+.gs-switch.on::after { left: 21px; }
+.gs-help { margin-top: 14px; padding: 12px 14px; border-radius: 12px; background: #f5f3fa; font-size: 11.5px; color: #8a84a3; line-height: 1.9; word-break: break-word; }
+.giftbox-set { margin-top: 12px; text-align: center; }
+.giftbox-set button { background: none; border: none; color: #8a8a8a; font-size: 12px; padding: 6px 10px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.giftbox-set button:active { opacity: 0.6; }
+[data-theme="dark"] .gb-wishbtn { background: rgba(255, 255, 255, 0.08); color: #c9b8e8; }
+[data-theme="dark"] .gb-tiny { color: #6a6280; }
+[data-theme="dark"] .wish-tab { background: rgba(255, 255, 255, 0.08); color: #c9c9cf; }
+[data-theme="dark"] .wish-hint, [data-theme="dark"] .wish-wish { color: #6a6280; }
+[data-theme="dark"] .wish-item { border-color: rgba(255, 255, 255, 0.08); }
+[data-theme="dark"] .wish-name { color: #e0d8f0; }
+[data-theme="dark"] .wish-emoji { background: rgba(255, 255, 255, 0.08) !important; }
+[data-theme="dark"] .wish-act.del { background: rgba(255, 255, 255, 0.1); color: #98989e; }
+[data-theme="dark"] .gs-row { border-color: rgba(255, 255, 255, 0.08); }
+[data-theme="dark"] .gs-lab { color: #c9c0d8; }
+[data-theme="dark"] .gs-sub { color: #6a6280; }
+[data-theme="dark"] .gs-num { background: #2a2638; border-color: rgba(255, 255, 255, 0.12); color: #e0d8f0; }
+[data-theme="dark"] .gs-pct { color: #c9b8e8; }
+[data-theme="dark"] .gs-switch { background: #3a3750; }
+[data-theme="dark"] .gs-help { background: #2a2638; color: #8a84a3; }
+[data-theme="dark"] .giftbox-set button { color: #98989e; }
+.gb-tab { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gb-cancel, .gb-ok, .gb-wishbtn { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gb-wishbtn { font-size: 13.5px; }
 .gc-from-name {
 font-size: 10px; color: #888; margin-bottom: 2px;
 display: block; max-width: 64px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -8663,9 +8714,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1788420386949">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.398</b></span>
-        <span class="sv-deploy">部署于 2026-09-03 15:26<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1788426100756">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.399</b></span>
+        <span class="sv-deploy">部署于 2026-09-03 17:01<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9761,7 +9812,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.398</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.399</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
       <!-- v3.27.x：设置页底部防骗声明 -->
       <div class="set-alert">
@@ -10034,7 +10085,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.398</span>
+              <span class="lic-ver">v3.26.399</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -15264,6 +15315,7 @@ const need = (keys || []).filter(k =>
 k.indexOf(uidPrefix) === 0 &&
 k !== LS_DIRTY_KEY && // 脏键索引自身不回填
 k.indexOf(uidPrefix + 'music-file:') !== 0 &&
+k.indexOf(uidPrefix + 'media:') !== 0 &&
 !isChatMsgsKey(k) &&
 k !== 'xy-home-v2:__auto-backup-snapshot' &&
 k.indexOf('__wr-j:') < 0 &&
@@ -16175,6 +16227,120 @@ document.addEventListener('contact-switched', refreshContactsVal);
 }
 })();
 } catch (__e) { try { console.error("[JS] contacts.js", __e && __e.message || __e); } catch (x) {} if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
+(function () { try {
+(function () {
+const FULL = 'xy-home-v2:media:';
+const TOK = '@@m:';
+const TOKEN_RE = /^@@m:([0-9a-f]{32})$/;
+const OK = typeof crypto !== 'undefined' && crypto.subtle && window.idbGet && window.idbGetMany && window.idbSetAll;
+window.mochiMediaExpand = function (s) { return null; };
+window.mochiMediaIsToken = function (s) { return typeof s === 'string' && TOKEN_RE.test(s); };
+if (!OK) return;
+const map = new Map();            // hash -> dataURL（已解析/已落池内容，渲染热缓存）
+const inflight = {};              // hash -> true（渲染侧单飞取回）
+let writeBuf = [];                // 待落池 [{k,v}]
+let flushT = null;
+window.mochiMediaExpand = function (s) {
+const m = TOKEN_RE.exec(s || '');
+return m ? (map.get(m[1]) || null) : null;
+};
+async function sha256Hex(str) {
+const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+const arr = new Uint8Array(buf);
+let out = '';
+for (let i = 0; i < arr.length; i++) out += arr[i].toString(16).padStart(2, '0');
+return out.slice(0, 32); // 128 位十六进制前缀——实际内容寻址撞库概率为 0，键长可控
+}
+window.mochiMediaFlush = function () {
+if (flushT) { clearTimeout(flushT); flushT = null; }
+if (!writeBuf.length) return Promise.resolve(true);
+const buf = writeBuf.splice(0);
+return window.idbSetAll(buf).then(function (ok) {
+if (!ok) { writeBuf = buf.concat(writeBuf); scheduleFlush(); }
+return ok;
+}).catch(function () { writeBuf = buf.concat(writeBuf); scheduleFlush(); return false; });
+};
+function scheduleFlush() { if (!flushT) flushT = setTimeout(function () { flushT = null; window.mochiMediaFlush(); }, 300); }
+try {
+document.addEventListener('visibilitychange', function () {
+if (document.visibilityState === 'hidden') window.mochiMediaFlush();
+});
+} catch (e) {}
+const lookupQueue = new Map();    // hash -> { data, cbs:[] }
+let lookupT = null;
+window.mochiMediaTokenize = function (dataUrl) {
+return new Promise(function (resolve) {
+if (typeof dataUrl !== 'string' || dataUrl.indexOf('data:image/') !== 0 || dataUrl.length < 1024) { resolve(null); return; }
+sha256Hex(dataUrl).then(function (h) {
+if (map.has(h)) { resolve(TOK + h); return; }
+let q = lookupQueue.get(h);
+if (!q) { q = { data: dataUrl, cbs: [] }; lookupQueue.set(h, q); }
+q.cbs.push(resolve);
+if (!lookupT) lookupT = setTimeout(runLookups, 60);
+}).catch(function () { resolve(null); });
+});
+};
+async function runLookups() {
+lookupT = null;
+if (!lookupQueue.size) return;
+const entries = Array.from(lookupQueue.entries());
+lookupQueue.clear();
+let dirty = false;
+for (let i = 0; i < entries.length; i += 40) {
+const slice = entries.slice(i, i + 40);
+let vals = {};
+try { vals = (await window.idbGetMany(slice.map(function (e) { return FULL + e[0]; }))) || {}; } catch (e) { vals = {}; }
+slice.forEach(function (e) {
+const v = vals[FULL + e[0]];
+if (typeof v === 'string') { map.set(e[0], v); }          // 池里已有（跨会话/桌面重复）→ 不重写
+else { map.set(e[0], e[1].data); writeBuf.push({ k: FULL + e[0], v: e[1].data }); dirty = true; }
+e[1].cbs.forEach(function (cb) { try { cb(TOK + e[0]); } catch (e2) {} });
+});
+await new Promise(function (r) { setTimeout(r, 0); }); // 分批让出主线程
+}
+if (dirty) scheduleFlush();
+}
+function resolveImg(img) {
+const m = TOKEN_RE.exec(img.getAttribute('src') || '');
+if (!m) return;
+const h = m[1];
+const v = map.get(h);
+if (v) { img.src = v; return; }
+if (inflight[h]) return;
+inflight[h] = true;
+window.idbGet(FULL + h).then(function (v2) {
+delete inflight[h];
+if (typeof v2 !== 'string') return; // 池缺失（理论不发生：池先于引用落盘）→ 保持原样不伪装
+map.set(h, v2);
+let nodes;
+try { nodes = document.querySelectorAll('img[src="' + TOK + h + '"]'); } catch (e) { nodes = []; }
+Array.prototype.forEach.call(nodes, function (el) { el.src = v2; });
+}).catch(function () { delete inflight[h]; });
+}
+function scanRoot(root) {
+if (!root) return;
+let nodes;
+try { nodes = root.querySelectorAll ? root.querySelectorAll('img[src^="' + TOK + '"]') : null; } catch (e) { return; }
+if (nodes) Array.prototype.forEach.call(nodes, resolveImg);
+if (root.tagName === 'IMG') resolveImg(root);
+}
+try {
+const obs = new MutationObserver(function (muts) {
+for (let i = 0; i < muts.length; i++) {
+const mu = muts[i];
+if (mu.type === 'attributes' && mu.target && mu.target.tagName === 'IMG') resolveImg(mu.target);
+else if (mu.type === 'childList') {
+for (let j = 0; j < mu.addedNodes.length; j++) scanRoot(mu.addedNodes[j]);
+}
+}
+});
+obs.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['src'] });
+} catch (e) {}
+function bootScan() { scanRoot(document); }
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bootScan);
+else bootScan();
+})();
+} catch (__e) { try { console.error("[JS] media-pool.js", __e && __e.message || __e); } catch (x) {} if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
 (function () { try {
 (function () {
 const el = document.getElementById('clock');
@@ -22878,6 +23044,7 @@ try { updateChatLoading(); } catch (e) {} // 保险丝已就绪 → 隐藏聊天
 }, 15000);
 }
 function saveMsgs() {
+try { scheduleMediaPass(1500); } catch (e) {} // #142：有新消息写入即安排增量令牌化（pass 自带权威守卫与 WeakSet 去重）
 const authOk = chatDbReady && authLoadedPrefix === window.activePrefix();
 if (!authOk) {
 try { pendingLocal = msgs.slice(); } catch (e) {}
@@ -22899,6 +23066,56 @@ flushPersistNow();
 if ((!chatDbReady || authLoadedPrefix !== window.activePrefix()) && msgs.length) writeLsSnapshot(msgs, undefined, true);
 }
 window.chatFlushSave = flushSave;
+let _mediaPassT = null, _mediaPassBusy = false;
+const _mediaTokSeen = new WeakSet();
+function scheduleMediaPass(delay) {
+if (!window.mochiMediaTokenize) return;
+clearTimeout(_mediaPassT);
+_mediaPassT = setTimeout(mediaNormalizePass, delay || 1500);
+}
+async function mediaNormalizePass() {
+if (_mediaPassBusy) { scheduleMediaPass(4000); return; }
+if (!chatDbReady || authLoadedPrefix !== window.activePrefix()) return;
+_mediaPassBusy = true;
+try {
+let changed = 0;
+for (let i = 0; i < msgs.length; i++) {
+const m = msgs[i];
+if (!m || _mediaTokSeen.has(m)) continue;
+let did = false;
+if (typeof m.text === 'string' && m.text.indexOf('data:image/') === 0) {
+const t = await window.mochiMediaTokenize(m.text);
+if (t) { m.text = t; changed++; did = true; }
+}
+if (typeof m.img === 'string' && m.img.indexOf('data:image/') === 0) {
+const t = await window.mochiMediaTokenize(m.img);
+if (t) { m.img = t; changed++; did = true; }
+}
+if (Array.isArray(m.parts) && m.parts.length) {
+for (let j = 0; j < m.parts.length; j++) {
+const p = m.parts[j];
+if (p && typeof p.v === 'string' && p.v.indexOf('data:image/') === 0) {
+const t = await window.mochiMediaTokenize(p.v);
+if (t) { p.v = t; changed++; did = true; }
+}
+}
+}
+_mediaTokSeen.add(m);
+if ((i & 63) === 63) {
+await new Promise(r => setTimeout(r, 0));
+if (authLoadedPrefix !== window.activePrefix()) break;
+}
+}
+if (changed > 0) {
+await window.mochiMediaFlush(); // 池数据先落盘，再让引用落盘（顺序不可反）
+saveMsgs();
+try { console.info('[mochi] 媒体池：' + changed + ' 处聊天图片已去重为池引用'); } catch (e) {}
+}
+} catch (e) {} finally { _mediaPassBusy = false; }
+}
+document.addEventListener('mochi-restore-done', function () { setTimeout(function () { scheduleMediaPass(1000); }, 18000); });
+document.addEventListener('contact-switched', function () { setTimeout(function () { scheduleMediaPass(1000); }, 12000); });
+window.chatMediaNormalizeNow = mediaNormalizePass; // 可测性/诊断钩子（verify-media-pool 用）
 try {
 window.addEventListener('beforeunload', flushSave);
 document.addEventListener('visibilitychange', () => {
@@ -28128,6 +28345,36 @@ out[i] = f;
 }
 return changed ? out : null;
 }
+async function tokenizeFavList(list) {
+if (!window.mochiMediaTokenize) return null;
+let changed = false;
+const out = new Array(list.length);
+for (let i = 0; i < list.length; i++) {
+let f = list[i];
+try {
+if (f && typeof f.text === 'string' && f.text.indexOf('data:image/') === 0) {
+const t = await window.mochiMediaTokenize(f.text);
+if (t) { f = Object.assign({}, f, { text: t }); changed = true; }
+}
+if (f && Array.isArray(f.parts) && f.parts.length) {
+const parts = new Array(f.parts.length);
+let pChanged = false;
+for (let j = 0; j < f.parts.length; j++) {
+const p = f.parts[j];
+let np = p;
+if (p && typeof p.v === 'string' && p.v.indexOf('data:image/') === 0) {
+const t = await window.mochiMediaTokenize(p.v);
+if (t) { np = Object.assign({}, p, { v: t }); pChanged = true; }
+}
+parts[j] = np;
+}
+if (pChanged) { f = Object.assign({}, f, { parts: parts }); changed = true; }
+}
+} catch (e) {}
+out[i] = f;
+}
+return changed ? out : null;
+}
 let _favImgPassT = null, _favImgPassRetries = 0;
 function scheduleFavImgPass(delay) {
 clearTimeout(_favImgPassT);
@@ -28140,8 +28387,11 @@ if (!rawSnap || rawSnap.length < 4096) return true;
 let list;
 try { list = JSON.parse(rawSnap); } catch (e) { return true; }
 if (!Array.isArray(list)) return true;
-const out = await compressFavListImages(list);
-if (!out) return true;
+const compressed = await compressFavListImages(list);
+const tokened = await tokenizeFavList(compressed || list);
+if (!compressed && !tokened) return true;
+const out = tokened || compressed;
+await window.mochiMediaFlush(); // #142：池数据先落盘，收藏里的令牌才有据可查
 const rawNow = store.get('fav-msgs');
 if (rawNow !== rawSnap) {
 if (++_favImgPassRetries < 5) { scheduleFavImgPass(5000); return false; }
@@ -28153,11 +28403,12 @@ return true;
 } catch (e) { return true; }
 }
 function favImgMigrateIfNeed() {
-try { if (store.get('fav-img-cmp-v1') === '1') return; } catch (e) {}
+try { if (store.get('fav-img-cmp-v1') === '1' && store.get('fav-media-v1') === '1') return; } catch (e) {}
 favImgPass().then(function (settled) {
-if (settled) { try { store.set('fav-img-cmp-v1', '1'); } catch (e) {} }
+if (settled) { try { store.set('fav-img-cmp-v1', '1'); store.set('fav-media-v1', '1'); } catch (e) {} }
 });
 }
+window.favImgPassNow = favImgPass; // 可测性/诊断钩子（verify-media-pool 用）
 document.addEventListener('mochi-restore-done', function () { setTimeout(favImgMigrateIfNeed, 12000); });
 document.addEventListener('contact-switched', function () { setTimeout(favImgMigrateIfNeed, 12000); });
 function syncFavMsgText(oldText, newText) {
@@ -28405,8 +28656,9 @@ closeMsgActions();
 } else if (act === 'edit') {
 if (rec && window.openModal) {
 const orig = rec.text;
+const _origMedia = (window.mochiMediaExpand && window.mochiMediaExpand(orig)) || null;
 const editEl = activeMsgEl;
-window.openModal('编辑消息', orig.indexOf('data:') === 0 ? '' : orig, (v) => {
+window.openModal('编辑消息', (_origMedia || orig.indexOf('data:') === 0) ? '' : orig, (v) => {
 const val = (v || '').trim();
 if (!val) return;
 rec.text = val;
@@ -58416,6 +58668,30 @@ rescueBatch(DEF_V3_IDS, 'market-migrated-v3');
 const BOX_KEY = 'giftbox-items';
 function boxLoad() { try { const s = store(); if (!s) return []; return JSON.parse(s.get(BOX_KEY) || '[]'); } catch (e) { return []; } }
 function boxSave(a) { const s = store(); if (s) s.set(BOX_KEY, JSON.stringify(a)); }
+const WL_MY_KEY = 'gift-wishlist';
+const WL_TA_KEY = 'gift-wishlist-ta';
+const WL_SETTINGS_KEY = 'market-wl-settings';
+const WL_MAX = 30;
+function clampPct(v, def) { const n = Math.round(Number(v)); return (n >= 0 && n <= 100) ? n : def; }
+function wlSettings() {
+let s = null;
+try { s = JSON.parse((GSTORE && GSTORE.get(WL_SETTINGS_KEY)) || '') || null; } catch (e) {}
+s = s || {};
+return { wlOn: s.wlOn === 0 ? 0 : 1, wlBuyPct: clampPct(s.wlBuyPct, 20), wlAddPct: clampPct(s.wlAddPct, 15), selfOn: s.selfOn === 0 ? 0 : 1, selfPct: clampPct(s.selfPct, 10) };
+}
+function wlSettingsSave(st) { if (GSTORE) GSTORE.set(WL_SETTINGS_KEY, JSON.stringify(st)); }
+function wishSnap(g) { return { giftId: g.id, name: g.name, emoji: g.emoji, img: g.img || '', price: g.price, cat: g.cat, wish: g.wish || '送给你', tm: Date.now() }; }
+function wishLoad(key) { try { const s = store(); if (!s) return []; const a = JSON.parse(s.get(key) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
+function wishSave(key, a) { const s = store(); if (s) s.set(key, JSON.stringify(a)); }
+function wishMyHas(id) { return wishLoad(WL_MY_KEY).some(function (x) { return x.giftId === id; }); }
+function wishMyAdd(g) {
+const a = wishLoad(WL_MY_KEY);
+if (a.some(function (x) { return x.giftId === g.id; })) return false;
+a.unshift(wishSnap(g));
+wishSave(WL_MY_KEY, a.slice(0, WL_MAX));
+return true;
+}
+function wishTaRemove(id) { wishSave(WL_TA_KEY, wishLoad(WL_TA_KEY).filter(function (x) { return x.giftId !== id; })); }
 function cardPool() { const pool = []; try { const d = window.DEFAULT_CARD_DATA; if (d && d.main) { d.main.forEach(function (c) { if (c && c[1]) c[1].forEach(function (x) { if (x) pool.push(x); }); }); } } catch (e) {} return pool; }
 function taWish(gift) {
 let wish = (gift && gift.wish) || '送给你';
@@ -58450,9 +58726,60 @@ const AUTO_DAILY_PREFIX = 'ml2_gift_daily_';
 function autoDailyCount() { const s = store(); return Number(s && s.get(AUTO_DAILY_PREFIX + todayKey())) || 0; }
 function autoDailyIncr() { const s = store(); if (s) s.set(AUTO_DAILY_PREFIX + todayKey(), String(autoDailyCount() + 1)); }
 window.maybeAutoGift = function () {
-if (autoDailyCount() >= 3) return;
-if (Math.random() >= 0.05) return;
+const st = wlSettings();
+const capped = autoDailyCount() >= 3;
 const gifts = giftsLoad(); if (!gifts.length) return;
+const myCid = window.__activeCid || 'default';
+const later = function (fn) {
+setTimeout(function () {
+if ((window.__activeCid || 'default') !== myCid) return;
+fn();
+}, randInt(1500, 4000));
+};
+if (st.wlOn && !capped) {
+const myWl = wishLoad(WL_MY_KEY);
+if (myWl.length && Math.random() * 100 < st.wlBuyPct) {
+const item = pick(myWl);
+wishSave(WL_MY_KEY, myWl.filter(function (x) { return x.giftId !== item.giftId; }));
+const w1 = walletGet();
+w1.systemBalance -= Math.round((item.price || 0) * 100); walletSet(w1);
+autoDailyIncr();
+later(function () {
+const rec = { side: 'in', special: 'gift', giftId: item.giftId, giftName: item.name, giftEmoji: item.emoji, giftImg: item.img || '', giftPrice: item.price, giftWish: item.wish, giftCat: item.cat, ts: Date.now() };
+if (window.chatAddGift) window.chatAddGift(rec);
+recordBox(Object.assign({}, item, { id: item.giftId }), 'in', item.wish);
+if (window.logFish) window.logFish();
+});
+return;
+}
+}
+if (st.selfOn && !capped && Math.random() * 100 < st.selfPct) {
+const w0 = walletGet();
+const affordable0 = gifts.filter(function (g) { return Math.round((g.price || 0) * 100) <= w0.systemBalance; });
+const gift0 = pick(affordable0.length ? affordable0 : gifts);
+w0.systemBalance -= Math.round((gift0.price || 0) * 100); walletSet(w0);
+autoDailyIncr();
+later(function () {
+recordBox(gift0, 'self', gift0.wish || '送给自己');
+toast(partnerName() + ' 给自己买了「' + gift0.name + '」，收进了 TA 的心意柜');
+});
+return;
+}
+if (st.wlOn && Math.random() * 100 < st.wlAddPct) {
+const taWl = wishLoad(WL_TA_KEY);
+const has = {};
+taWl.forEach(function (x) { has[x.giftId] = 1; });
+const poolW = gifts.filter(function (g) { return !has[g.id]; });
+if (poolW.length) {
+const giftW = pick(poolW);
+taWl.unshift(wishSnap(giftW));
+wishSave(WL_TA_KEY, taWl.slice(0, WL_MAX));
+toast(partnerName() + ' 把「' + giftW.name + '」加进了 TA 的心愿单');
+return;
+}
+}
+if (capped) return;
+if (Math.random() >= 0.05) return;
 const w = walletGet();
 const affordable = gifts.filter(function (g) { return Math.round((g.price || 0) * 100) <= w.systemBalance; });
 const pool = affordable.length ? affordable : gifts;
@@ -58460,7 +58787,6 @@ const gift = pick(pool);
 const wish = taWish(gift);
 const priceFen = Math.round((gift.price || 0) * 100);
 w.systemBalance -= priceFen; walletSet(w); autoDailyIncr();
-const myCid = window.__activeCid || 'default';
 setTimeout(function () {
 if ((window.__activeCid || 'default') !== myCid) return;
 const rec = { side: 'in', special: 'gift', giftId: gift.id, giftName: gift.name, giftEmoji: gift.emoji, giftImg: gift.img || '', giftPrice: gift.price, giftWish: wish, giftCat: gift.cat, ts: Date.now() };
@@ -58469,7 +58795,8 @@ recordBox(gift, 'in', wish);
 if (window.logFish) window.logFish();
 }, randInt(1500, 4000));
 };
-function openBuyDialog(gift) {
+function openBuyDialog(gift, opts) {
+opts = opts || {};
 if (!window.openTCPanel) { toast('稍后再试'); return; }
 const catColor = CAT_COLOR[gift.cat] || '#f5f3fa';
 const html =
@@ -58485,17 +58812,113 @@ const html =
 '</div>' +
 '<div class="gb-actions">' +
 '<button class="gb-cancel" id="gb-cancel" type="button">取消</button>' +
+(opts.fromTaWish ? '' : '<button class="gb-wishbtn" id="gb-wishbtn" type="button">' + (wishMyHas(gift.id) ? '✓ 已在心愿单' : '♡ 加入心愿单') + '</button>') +
 '<button class="gb-ok" id="gb-ok" type="button">送给 ' + esc(partnerName()) + '</button>' +
-'</div>';
+'</div>' +
+'<div class="gb-tiny">' + (opts.fromTaWish ? '这是 ' + esc(partnerName()) + ' 心愿单里的礼物，送出后自动从 TA 的心愿单移除' : '加入心愿单只是许愿不花钱——' + esc(partnerName()) + ' 可能会买下它送你') + '</div>';
 window.openTCPanel(esc(gift.emoji) + ' ' + esc(gift.name), html);
 const wishEl = document.getElementById('gb-wish');
 const okBtn = document.getElementById('gb-ok');
 const cancelBtn = document.getElementById('gb-cancel');
+const wishBtn = document.getElementById('gb-wishbtn');
+if (wishBtn) wishBtn.addEventListener('click', function () {
+if (!wishMyAdd(gift)) { toast('已在心愿单里啦'); return; }
+wishBtn.textContent = '✓ 已在心愿单';
+toast('已加入我的心愿单');
+});
 if (okBtn) okBtn.addEventListener('click', function () {
 const wish = (wishEl && wishEl.value || '').trim() || (gift.wish || '心意');
-if (buyAndSend(gift, 'out', wish)) { closeTc(); toast('已送出'); }
+if (buyAndSend(gift, 'out', wish)) {
+if (opts.fromTaWish) wishTaRemove(gift.id);
+closeTc(); toast('已送出');
+}
 });
 if (cancelBtn) cancelBtn.addEventListener('click', closeTc);
+}
+let wishTab = 'my';
+function wishRowHtml(it, mode) {
+const col = CAT_COLOR[it.cat] || '#f5f3fa';
+const act = mode === 'my'
+? '<button class="wish-act del" data-wdel="' + esc(it.giftId) + '" type="button">移除</button>'
+: '<button class="wish-act" data-wbuy="' + esc(it.giftId) + '" type="button">送 TA</button>';
+return '<div class="wish-item">' +
+'<div class="wish-emoji" style="background:' + col + ';">' + giftMedia(it, 'wish-img') + '</div>' +
+'<div class="wish-info">' +
+'<div class="wish-name">' + esc(it.name) + '</div>' +
+'<div class="wish-price">¥' + Number(it.price || 0).toFixed(2) + '</div>' +
+'<div class="wish-wish">"' + esc(it.wish || '送给你') + '"</div>' +
+'</div>' + act +
+'</div>';
+}
+function renderWishPanel() {
+if (!window.openTCPanel) { toast('稍后再试'); return; }
+const my = wishLoad(WL_MY_KEY);
+const ta = wishLoad(WL_TA_KEY);
+const list = wishTab === 'my' ? my : ta;
+const hint = wishTab === 'my'
+? '在市集点开商品选「加入心愿单」即可许愿（不花钱）。' + esc(partnerName()) + ' 会按概率买下送你，礼物进「心意柜-收到的」并从心愿单移除；概率在「心意集市和心意柜设置」里可调。'
+: esc(partnerName()) + ' 逛市集时会把想要的加进这里。点「送 TA」买下送出，礼物进「心意柜-送出的」并从 TA 的心愿单移除。';
+const emptyTxt = wishTab === 'my'
+? '心愿单还是空的<br>去心意市集挑一件，点「加入心愿单」'
+: (esc(partnerName()) + ' 还没许愿<br>TA 逛市集时会自己加进来');
+const html =
+'<div class="wish-tabs">' +
+'<button class="wish-tab' + (wishTab === 'my' ? ' sel' : '') + '" data-wtab="my" type="button">我的心愿单 (' + my.length + ')</button>' +
+'<button class="wish-tab' + (wishTab === 'ta' ? ' sel' : '') + '" data-wtab="ta" type="button">' + esc(partnerName()) + ' 的心愿单 (' + ta.length + ')</button>' +
+'</div>' +
+'<div class="wish-hint">' + hint + '</div>' +
+(list.map(function (it) { return wishRowHtml(it, wishTab); }).join('') || '<div class="gift-empty">' + emptyTxt + '</div>') +
+'<div class="gs-help">【使用说明】<br>· 心愿单只是许愿，不花钱；TA 按概率买下送你后自动移除。<br>· 「TA 的心愿单」里的礼物可点「送 TA」买下送出（正常聊天送礼 + 心意柜记录）。<br>· TA 的相关行为可在「心意集市和心意柜设置」里开关与自定义概率。</div>';
+window.openTCPanel('心愿单', html);
+document.querySelectorAll('#tc-body [data-wtab]').forEach(function (b) {
+b.addEventListener('click', function () { wishTab = b.dataset.wtab; renderWishPanel(); });
+});
+document.querySelectorAll('#tc-body [data-wdel]').forEach(function (b) {
+b.addEventListener('click', function () {
+wishSave(WL_MY_KEY, wishLoad(WL_MY_KEY).filter(function (x) { return x.giftId !== b.dataset.wdel; }));
+renderWishPanel();
+});
+});
+document.querySelectorAll('#tc-body [data-wbuy]').forEach(function (b) {
+b.addEventListener('click', function () {
+const it = ta.find(function (x) { return x.giftId === b.dataset.wbuy; });
+if (!it) return;
+closeTc();
+openBuyDialog(Object.assign({}, it, { id: it.giftId }), { fromTaWish: true });
+});
+});
+}
+function openGiftSettings() {
+if (!window.openTCPanel) { toast('稍后再试'); return; }
+const st = wlSettings();
+const html =
+'<div class="gs-row"><div class="gs-lab">心愿单功能<span class="gs-sub">TA 买我的心愿单礼物送我 / TA 把想要的加进自己的心愿单</span></div><div class="gs-switch' + (st.wlOn ? ' on' : '') + '" data-gsw="wlOn"></div></div>' +
+'<div class="gs-row"><div class="gs-lab">TA 买下我的心愿单概率</div><div class="gs-numwrap"><input class="gs-num" data-gsn="wlBuyPct" type="number" min="0" max="100" inputmode="numeric" value="' + st.wlBuyPct + '"><span class="gs-pct">%</span></div></div>' +
+'<div class="gs-row"><div class="gs-lab">TA 加进自己心愿单概率</div><div class="gs-numwrap"><input class="gs-num" data-gsn="wlAddPct" type="number" min="0" max="100" inputmode="numeric" value="' + st.wlAddPct + '"><span class="gs-pct">%</span></div></div>' +
+'<div class="gs-row"><div class="gs-lab">TA 自己买礼物<span class="gs-sub">买给自己的礼物收进「心意柜-TA 自己买的」</span></div><div class="gs-switch' + (st.selfOn ? ' on' : '') + '" data-gsw="selfOn"></div></div>' +
+'<div class="gs-row"><div class="gs-lab">TA 自己买概率</div><div class="gs-numwrap"><input class="gs-num" data-gsn="selfPct" type="number" min="0" max="100" inputmode="numeric" value="' + st.selfPct + '"><span class="gs-pct">%</span></div></div>' +
+'<div class="gs-help">【使用说明】<br>· 我的心愿单：市集点开商品选「加入心愿单」许愿（不花钱）；TA 按概率直接买下送你，礼物进「心意柜-收到的」，心愿单自动移除。<br>· TA 的心愿单：TA 逛市集时按概率把想要的加进自己的心愿单；市集底部「☆ 心愿单」→「TA 的心愿单」点「送 TA」买下送出，礼物进「心意柜-送出的」。<br>· TA 自己买：TA 按概率给自己买礼物，收进「心意柜-TA 自己买的」，不发聊天消息。<br>· 概率=每次触发（我发消息后）TA 采取该行动的概率，0~100 自定义；TA 的购买类行为每天合计最多 3 次（与自动送礼共用上限）；关掉开关即完全关闭对应行为。</div>';
+window.openTCPanel('心意集市和心意柜设置', html);
+document.querySelectorAll('#tc-body [data-gsw]').forEach(function (sw) {
+sw.addEventListener('click', function () {
+const cur = wlSettings();
+cur[sw.dataset.gsw] = cur[sw.dataset.gsw] ? 0 : 1;
+wlSettingsSave(cur);
+sw.classList.toggle('on', !!cur[sw.dataset.gsw]);
+toast('已保存');
+});
+});
+document.querySelectorAll('#tc-body [data-gsn]').forEach(function (inp) {
+inp.addEventListener('change', function () {
+const cur = wlSettings();
+const n = Math.round(Number(inp.value));
+const ok = n >= 0 && n <= 100;
+cur[inp.dataset.gsn] = ok ? n : 0;
+if (!ok) inp.value = '0';
+wlSettingsSave(cur);
+toast('已保存');
+});
+});
 }
 let giftPanel = null;
 let panelCat = '全部';
@@ -58741,19 +59164,23 @@ function renderBox() {
 const list = boxLoad();
 const inList = list.filter(function (x) { return x.side === 'in'; });
 const outList = list.filter(function (x) { return x.side === 'out'; });
+const selfList = list.filter(function (x) { return x.side === 'self'; });
 const statIn = document.getElementById('giftbox-stat-in');
 const statOut = document.getElementById('giftbox-stat-out');
+const statSelf = document.getElementById('giftbox-stat-self');
 if (statIn) statIn.textContent = String(inList.length);
 if (statOut) statOut.textContent = String(outList.length);
+if (statSelf) statSelf.textContent = String(selfList.length);
 const tabs = document.querySelectorAll('.gb-tab');
 tabs.forEach(function (t) {
 t.classList.toggle('sel', t.dataset.btab === boxTab);
-t.textContent = t.dataset.btab === 'in' ? (partnerName() + ' 送我的') : ('我送 ' + partnerName() + ' 的');
+const bt = t.dataset.btab;
+t.textContent = bt === 'in' ? (partnerName() + ' 送我的') : bt === 'out' ? ('我送 ' + partnerName() + ' 的') : (partnerName() + ' 自己买的');
 });
-const show = (boxTab === 'in' ? inList : outList).slice().sort(function (a, b) { return b.tm - a.tm; });
+const show = (boxTab === 'in' ? inList : boxTab === 'out' ? outList : selfList).slice().sort(function (a, b) { return b.tm - a.tm; });
 const el = document.getElementById('giftbox-list'); if (!el) return;
 el.innerHTML = show.map(function (it) {
-const from = it.side === 'in' ? esc(partnerName()) + ' 送我' : '我 送 ' + esc(partnerName());
+const from = it.side === 'in' ? esc(partnerName()) + ' 送我' : it.side === 'self' ? esc(partnerName()) + ' 自己买的' : '我 送 ' + esc(partnerName());
 return '<div class="giftbox-card" data-id="' + esc(it.id) + '">' +
 '<div class="giftbox-card-top">' +
 '<div class="giftbox-emoji">' + giftMedia(it, 'giftbox-emoji-img') + '</div>' +
@@ -58765,12 +59192,12 @@ return '<div class="giftbox-card" data-id="' + esc(it.id) + '">' +
 '<div class="giftbox-meta">' + esc(from) + ' · ' + esc(fmtTime(it.tm)) + '</div>' +
 '</div>' +
 '</div>';
-}).join('') || '<div class="gift-empty">' + (boxTab === 'in' ? (esc(partnerName()) + ' 还没送你礼物<br>' + (window.taFit ? window.taFit('他偶尔会主动从市集挑一份给你，耐心等等') : '他偶尔会主动从市集挑一份给你，耐心等等')) : ('你还没送出礼物<br>去心意市集挑一份送给 ' + esc(partnerName()) + ' 吧')) + '</div>';
+}).join('') || '<div class="gift-empty">' + (boxTab === 'in' ? (esc(partnerName()) + ' 还没送你礼物<br>' + (window.taFit ? window.taFit('他偶尔会主动从市集挑一份给你，耐心等等') : '他偶尔会主动从市集挑一份给你，耐心等等')) : boxTab === 'self' ? (esc(partnerName()) + ' 还没给自己买过礼物<br>TA 偶尔会按概率给自己挑一件，收进自己的心意柜') : ('你还没送出礼物<br>去心意市集挑一份送给 ' + esc(partnerName()) + ' 吧')) + '</div>';
 el.querySelectorAll('.giftbox-card').forEach(function (c) {
 c.addEventListener('click', function () {
 const it = list.find(function (x) { return x.id === c.dataset.id; });
 if (!it || !window.openTCPanel) return;
-const from = it.side === 'in' ? esc(partnerName()) + ' 送我' : '我 送 ' + esc(partnerName());
+const from = it.side === 'in' ? esc(partnerName()) + ' 送我' : it.side === 'self' ? esc(partnerName()) + ' 自己买的' : '我 送 ' + esc(partnerName());
 const html =
 '<div class="gb-detail">' +
 '<div class="gb-detail-emoji">' + giftMedia(it, 'gb-detail-emoji-img') + '</div>' +
@@ -58857,14 +59284,18 @@ marketPage.innerHTML =
 searchRowHtml('market-search') +
 '<div class="market-grid" id="market-grid"></div>' +
 '<div class="market-foot">' +
+'<button class="market-tool" id="market-wish" type="button">☆ 心愿单</button>' +
 '<button class="market-tool" id="market-manage" type="button">管理</button>' +
 '<button class="market-tool" id="market-add" type="button">+ 添加商品</button>' +
+'<button class="market-tool" id="market-settings" type="button">设置</button>' +
 '<button class="market-tool" id="market-reset" type="button" hidden>恢复默认商品</button>' +
 '</div>' +
 '</div>';
 host.appendChild(marketPage);
 document.getElementById('market-back').addEventListener('click', backHome);
 bindSearchRow('market-search', renderMarket);
+document.getElementById('market-wish').addEventListener('click', function () { wishTab = 'my'; renderWishPanel(); });
+document.getElementById('market-settings').addEventListener('click', openGiftSettings);
 document.getElementById('market-add').addEventListener('click', function () { if (marketManage) { marketManage = false; renderMarket(); return; } openAddGiftForm(null); });
 document.getElementById('market-manage').addEventListener('click', function () { marketManage = !marketManage; renderMarket(); });
 document.getElementById('market-reset').addEventListener('click', function () {
@@ -58886,11 +59317,14 @@ giftboxPage.innerHTML =
 '<div class="giftbox-stat-cards">' +
 '<div class="giftbox-stat-card"><div class="giftbox-stat-ico">🎁</div><div class="giftbox-stat-num" id="giftbox-stat-in">0</div><div class="giftbox-stat-lbl">收到</div></div>' +
 '<div class="giftbox-stat-card"><div class="giftbox-stat-ico">💌</div><div class="giftbox-stat-num" id="giftbox-stat-out">0</div><div class="giftbox-stat-lbl">送出</div></div>' +
+'<div class="giftbox-stat-card"><div class="giftbox-stat-ico">🛍️</div><div class="giftbox-stat-num" id="giftbox-stat-self">0</div><div class="giftbox-stat-lbl">TA自己买</div></div>' +
 '</div>' +
+'<div class="giftbox-set"><button id="giftbox-settings" type="button">⚙ 心意集市和心意柜设置</button></div>' +
 '</div>' +
 '<div class="giftbox-tabs">' +
 '<button class="gb-tab sel" data-btab="in" type="button">收到的</button>' +
 '<button class="gb-tab" data-btab="out" type="button">送出的</button>' +
+'<button class="gb-tab" data-btab="self" type="button">TA自己买的</button>' +
 '</div>' +
 '<div class="giftbox-scroll"><div class="giftbox-list" id="giftbox-list"></div></div>';
 host.appendChild(giftboxPage);
@@ -58910,6 +59344,8 @@ backHome();
 giftboxPage.querySelectorAll('.gb-tab').forEach(function (t) {
 t.addEventListener('click', function () { boxTab = t.dataset.btab; renderBox(); });
 });
+const gbSettings = document.getElementById('giftbox-settings');
+if (gbSettings) gbSettings.addEventListener('click', openGiftSettings);
 }
 function init() {
 try { migrateMarketGlobal(false); } catch (e) {}
@@ -76818,4 +77254,4 @@ return { lock: document.body.classList.contains('scroll-lock'), open: open };
 <!-- __MOCHI_EOF__ -->
 </body>
 </html>
-<!-- __MOCHI_EOF__ mtl7bm9x -->
+<!-- __MOCHI_EOF__ mtlaq32s -->

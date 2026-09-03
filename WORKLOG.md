@@ -1,5 +1,12 @@
 # 本次构建者：AI-B（本会话：#139 存储瘦身四件套——LS 残留大键清理 + 专属字卡库去重防线 + 收藏图片压缩 + GIF 上传大小上限；跨域改动 src/js/chatcard.js、src/js/chat.js，理由：用户批准的存储优化在字卡库/收藏数据写入路径，AI-A 名下但 #138 已收口无在途改动，改动区与 AI-A 最近提交不重叠）
 
+### 2026-09-03 15:37（#142 心愿单功能：心意集市/心意柜「许愿—实现」闭环 + 设置面板；源已完成·未构建）
+* [AI-A 域]（**改动文件：src/js/gift-shop.js、src/css/market.css（.market-foot +flex-wrap）；构建状态：未构建，待构建者收口**）。
+* 需求（用户）：①我在市集买东西可直接加入心愿单，TA 有概率买我心愿单的礼物送我进我的心意柜；②TA 买东西也有概率不买而是加进 TA 的心愿单，我可买 TA 心愿单的礼物送 TA 进 TA 的心意柜；③TA 自己也能买东西放进自己的心意柜；④以上放「心意集市和心意柜设置」可开关+自定义概率；⑤小字【使用说明】。
+* 实现：心愿数据 per-cid（gift-wishlist / gift-wishlist-ta，存快照防商品改删）；设置全局键 market-wl-settings（默认全开：心愿兑现 20% / TA 加心愿 15% / TA 自购 10%，均 0~100 可调）。maybeAutoGift 改四档判定：心愿兑现（扣 TA 余额+先移心愿防连买）→ TA 自购（进心意柜 side 'self' 不发聊天消息，toast 提示）→ TA 加心愿（不花钱不占上限，去重+上限30，toast 提示）→ 原有 5% 随机送礼；购买类共享每日 3 次上限。UI：购买弹窗加「♡ 加入心愿单」+底部小字；市集底部「☆ 心愿单」双 tab 面板（TA 的心愿单点「送 TA」走正常购买、送出自动移除心愿）+「设置」入口；心意柜加第三栏「TA自己买的」（tab+统计卡）+ hero「⚙ 心意集市和心意柜设置」入口；设置面板=开关+概率输入（安卓 ce-box change 事件已由代理兼容）+【使用说明】小字（心愿单面板也有一份）。
+* 验证：node --check 过；--check-sentinels 272 条全绿哑哨兵 0（本改动不新增哨兵，新功能非修复）。待构建者构建 + 真机：加心愿→TA 兑现进心意柜、TA 加心愿 toast、TA 自购进第三栏、设置开关概率即时生效且持久化。
+* 备注：TA 自购不发聊天消息（仅 toast+入柜）为本次设计取舍；若用户要聊天可见再说。fishing.js recordGiftBox 仅用 'in'/'out'，不受 'self' 影响。
+
 ### 2026-09-03 15:3x（#141 安卓返回键/手势收键盘：输入栏下方灰块几秒才收（红米K80/小米15Pro/多机型 Chrome 通用）；已构建·含 #139/#140 一并收口）
 * [AI-B 域]（**改动文件：src/js/mobile-adapt.js（四处：syncAndroidKb 顶部「h 高于上一帧且键盘开启态=收起动画」探测置 _aClosing + 250ms 轮询同判据补置 + 复原时 _aH 钳回 innerHeight + 悬浮键盘推定收口 _aProvUserConfirm）、build.mjs（FIX_SENTINELS +3 条）、FIX-REGRESSION.md（#141 行）、tools/verify-android-kb-close.mjs（新增行为断言 5 项）；构建状态：已构建·sw mochi-mtl7bm9x**）。
 * 需求/根因：用户反馈（红米 K80、小米15Pro Chrome 等「其他安卓手机也这样」）——聊天输入栏打字后按返回键收键盘，输入栏这一行下方灰色块几秒才收起。#89 修「点发送失焦收起卡顿」把 _aClosing 闸门挂在 focusout；返回键/手势收键盘时内核保留焦点、focusout 不触发 → 收起动画每帧 vv.resize 照旧跑 _aPinPan/nudgeInputVisible 强制布局读取（重聊天页单帧 reflow ~100ms，小米15Pro 诊断长任务三连 98ms 即此时段），.phone 高度跟不上收起动画 → 下方露 body 灰底数秒。

@@ -349,6 +349,7 @@ try { updateChatLoading(); } catch (e) {} // 保险丝已就绪 → 隐藏聊天
 }, 15000);
 }
 function saveMsgs() {
+try { scheduleMediaPass(1500); } catch (e) {} // #142：有新消息写入即安排增量令牌化（pass 自带权威守卫与 WeakSet 去重）
 // v3.26.x #88：守卫从「未就绪」收紧到「本会话没读到该桌面的权威数据」。
 // chatDbReady 会被 15 秒就绪保险丝（armReadyFuse）置 true，而那时 authLoadedPrefix 仍
 // 不等于当前命名空间（IDB 读库超时/挂起）。旧逻辑在这个窗口只要 msgs 非空就整包写
@@ -388,6 +389,68 @@ flushPersistNow();
 if ((!chatDbReady || authLoadedPrefix !== window.activePrefix()) && msgs.length) writeLsSnapshot(msgs, undefined, true);
 }
 window.chatFlushSave = flushSave;
+// ===== #142 媒体池：聊天图片内容寻址去重 =====
+// 同一张表情包/图片每发一次就整份 base64 进库（诊断实证 chat-msgs 全桌面 ≈214MB，
+// 重复占大头）。normalize 把消息里的 data:image 替换为池令牌 @@m:<hash>（media-pool.js
+// 负责哈希/落池/渲染解析），消息体只留 44 字符引用。安全设计：
+//   · 令牌化只发生在内存 msgs 上，落盘走 saveMsgs() 原路（#88 权威守卫/#90 账本守卫全保留）；
+//   · 池数据落盘（mochiMediaFlush）先于 msgs 落盘——崩溃窗口最多「池多一条孤儿」，
+//     不可能出现「令牌入库而池数据丢失」；
+//   · WeakSet 记录已处理消息：每条消息每会话只哈希一次，pass 高频触发零重复开销；
+//   · 令牌跨桌面/跨设备稳定（内容哈希），备份导出带池键即可在他机恢复；
+//   · crypto.subtle 不可用（非安全上下文）时 tokenize 恒 null，一切保持旧路径。
+let _mediaPassT = null, _mediaPassBusy = false;
+const _mediaTokSeen = new WeakSet();
+function scheduleMediaPass(delay) {
+if (!window.mochiMediaTokenize) return;
+clearTimeout(_mediaPassT);
+_mediaPassT = setTimeout(mediaNormalizePass, delay || 1500);
+}
+async function mediaNormalizePass() {
+if (_mediaPassBusy) { scheduleMediaPass(4000); return; }
+// 与 saveMsgs 同款权威守卫：本会话没读到该桌面权威数据时绝不改写（防把半库令牌化覆盖全史）
+if (!chatDbReady || authLoadedPrefix !== window.activePrefix()) return;
+_mediaPassBusy = true;
+try {
+let changed = 0;
+for (let i = 0; i < msgs.length; i++) {
+const m = msgs[i];
+if (!m || _mediaTokSeen.has(m)) continue;
+let did = false;
+if (typeof m.text === 'string' && m.text.indexOf('data:image/') === 0) {
+const t = await window.mochiMediaTokenize(m.text);
+if (t) { m.text = t; changed++; did = true; }
+}
+if (typeof m.img === 'string' && m.img.indexOf('data:image/') === 0) {
+const t = await window.mochiMediaTokenize(m.img);
+if (t) { m.img = t; changed++; did = true; }
+}
+if (Array.isArray(m.parts) && m.parts.length) {
+for (let j = 0; j < m.parts.length; j++) {
+const p = m.parts[j];
+if (p && typeof p.v === 'string' && p.v.indexOf('data:image/') === 0) {
+const t = await window.mochiMediaTokenize(p.v);
+if (t) { p.v = t; changed++; did = true; }
+}
+}
+}
+_mediaTokSeen.add(m);
+if ((i & 63) === 63) {
+await new Promise(r => setTimeout(r, 0));
+// 中途切桌面/权威归属变化 → 立即中止（WeakSet 未标记的记录留给下次 pass）
+if (authLoadedPrefix !== window.activePrefix()) break;
+}
+}
+if (changed > 0) {
+await window.mochiMediaFlush(); // 池数据先落盘，再让引用落盘（顺序不可反）
+saveMsgs();
+try { console.info('[mochi] 媒体池：' + changed + ' 处聊天图片已去重为池引用'); } catch (e) {}
+}
+} catch (e) {} finally { _mediaPassBusy = false; }
+}
+document.addEventListener('mochi-restore-done', function () { setTimeout(function () { scheduleMediaPass(1000); }, 18000); });
+document.addEventListener('contact-switched', function () { setTimeout(function () { scheduleMediaPass(1000); }, 12000); });
+window.chatMediaNormalizeNow = mediaNormalizePass; // 可测性/诊断钩子（verify-media-pool 用）
 try {
 window.addEventListener('beforeunload', flushSave);
 document.addEventListener('visibilitychange', () => {
@@ -5877,6 +5940,38 @@ out[i] = f;
 }
 return changed ? out : null;
 }
+// #142：收藏图片令牌化——压缩后把 data:image 替换为媒体池引用（与聊天记录同一池，
+// 同一张图聊天/收藏只存一份）。池落盘先于收藏落盘（mochiMediaFlush）。
+async function tokenizeFavList(list) {
+if (!window.mochiMediaTokenize) return null;
+let changed = false;
+const out = new Array(list.length);
+for (let i = 0; i < list.length; i++) {
+let f = list[i];
+try {
+if (f && typeof f.text === 'string' && f.text.indexOf('data:image/') === 0) {
+const t = await window.mochiMediaTokenize(f.text);
+if (t) { f = Object.assign({}, f, { text: t }); changed = true; }
+}
+if (f && Array.isArray(f.parts) && f.parts.length) {
+const parts = new Array(f.parts.length);
+let pChanged = false;
+for (let j = 0; j < f.parts.length; j++) {
+const p = f.parts[j];
+let np = p;
+if (p && typeof p.v === 'string' && p.v.indexOf('data:image/') === 0) {
+const t = await window.mochiMediaTokenize(p.v);
+if (t) { np = Object.assign({}, p, { v: t }); pChanged = true; }
+}
+parts[j] = np;
+}
+if (pChanged) { f = Object.assign({}, f, { parts: parts }); changed = true; }
+}
+} catch (e) {}
+out[i] = f;
+}
+return changed ? out : null;
+}
 let _favImgPassT = null, _favImgPassRetries = 0;
 function scheduleFavImgPass(delay) {
 clearTimeout(_favImgPassT);
@@ -5890,8 +5985,11 @@ if (!rawSnap || rawSnap.length < 4096) return true;
 let list;
 try { list = JSON.parse(rawSnap); } catch (e) { return true; }
 if (!Array.isArray(list)) return true;
-const out = await compressFavListImages(list);
-if (!out) return true;
+const compressed = await compressFavListImages(list);
+const tokened = await tokenizeFavList(compressed || list);
+if (!compressed && !tokened) return true;
+const out = tokened || compressed;
+await window.mochiMediaFlush(); // #142：池数据先落盘，收藏里的令牌才有据可查
 const rawNow = store.get('fav-msgs');
 if (rawNow !== rawSnap) {
 // 压缩期间收藏被写过——以最新数据重排（最多 5 次，防极端高频写入空转）
@@ -5903,13 +6001,14 @@ store.set('fav-msgs', JSON.stringify(out));
 return true;
 } catch (e) { return true; }
 }
-// 存量一次性迁移：本桌面没跑过压缩扫描才执行（新收藏由 saveFav 钩子触发增量压缩）
+// 存量一次性迁移：本桌面没跑过压缩/令牌化扫描才执行（新收藏由 saveFav 钩子触发增量处理）
 function favImgMigrateIfNeed() {
-try { if (store.get('fav-img-cmp-v1') === '1') return; } catch (e) {}
+try { if (store.get('fav-img-cmp-v1') === '1' && store.get('fav-media-v1') === '1') return; } catch (e) {}
 favImgPass().then(function (settled) {
-if (settled) { try { store.set('fav-img-cmp-v1', '1'); } catch (e) {} }
+if (settled) { try { store.set('fav-img-cmp-v1', '1'); store.set('fav-media-v1', '1'); } catch (e) {} }
 });
 }
+window.favImgPassNow = favImgPass; // 可测性/诊断钩子（verify-media-pool 用）
 document.addEventListener('mochi-restore-done', function () { setTimeout(favImgMigrateIfNeed, 12000); });
 document.addEventListener('contact-switched', function () { setTimeout(favImgMigrateIfNeed, 12000); });
 function syncFavMsgText(oldText, newText) {
@@ -6169,8 +6268,11 @@ closeMsgActions();
 } else if (act === 'edit') {
 if (rec && window.openModal) {
 const orig = rec.text;
+// #142：媒体池令牌展开——图片消息 text 已令牌化（@@m:<hash>），编辑入口先解出
+// 原 dataURL 判定图片消息（输入框置空）；否则令牌字符串会进输入框被当文字保存
+const _origMedia = (window.mochiMediaExpand && window.mochiMediaExpand(orig)) || null;
 const editEl = activeMsgEl;
-window.openModal('编辑消息', orig.indexOf('data:') === 0 ? '' : orig, (v) => {
+window.openModal('编辑消息', (_origMedia || orig.indexOf('data:') === 0) ? '' : orig, (v) => {
 const val = (v || '').trim();
 if (!val) return;
 rec.text = val;

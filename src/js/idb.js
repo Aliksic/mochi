@@ -614,6 +614,10 @@
         k.indexOf(uidPrefix) === 0 &&
         k !== LS_DIRTY_KEY && // 脏键索引自身不回填
         k.indexOf(uidPrefix + 'music-file:') !== 0 &&
+        // #142：媒体池键（xy-home-v2:media:<hash>）不回填——几百个图片键回填进
+        // memoryCache/LS 等于把去重省下的内存又加倍吃回去；媒体层（media-pool.js）
+        // 按哈希按需 idbGet 解析令牌，池键只存 IDB
+        k.indexOf(uidPrefix + 'media:') !== 0 &&
         // v3.6.x：聊天记录不回填 localStorage——chat.js 已改为只写 IndexedDB，
         // 恢复到这里会重新占满 5MB 配额（几千条带图记录是几十 MB），且读取
         // 路径已不依赖 LS 快照（loadMsgs 直接 IDB 权威读）。
