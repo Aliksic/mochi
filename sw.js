@@ -6,8 +6,8 @@
 // 会一直显示「正在安装」永不完成（WebAPK 安装要经 SW 拉 start_url/图标）。
 // 现在每个请求最多等 NETWORK_TIMEOUT 毫秒，超时立即回退缓存（没缓存则快速
 // 失败），SW 最迟约 10 秒内必然激活，安装/加载都不再无限挂起。
-const CACHE = 'mochi-mtlb52m3';
-const BUILD_INFO = '部署于 2026-09-03 17:13';
+const CACHE = 'mochi-mtlbu2gc';
+const BUILD_INFO = '部署于 2026-09-03 17:32';
 const PRECACHE = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './icon-180.png'];
 // v3.10.x：网络优先超时从 8000 → 3500ms。GitHub Pages 国内访问经常 >8s，
 // 原 8s 超时导致手机端 fetch 频繁超时 → 回退 SW 缓存旧 index.html → 用户永远
@@ -270,11 +270,30 @@ self.addEventListener('fetch', (e) => {
           // 「一直自己刷新」。兜底改为再发一次不带超时的网络请求（SW 内部 fetch 不会
           // 再次触发本 SW 拦截，无死循环风险）：慢就慢，等 GitHub Pages 慢慢传完，成功
           // 后照常写入缓存，后续刷新走缓存秒开；只有网络真正不可达才由浏览器报错页。
+          // FIX 2026-09-03 #143：导航命中先验 content-type——历史版本曾把任何成功体（含
+          // icon-512.png 图标）一律写进 canonical './index.html' 键（见下方重试写点），
+          // PNG 占位后离线导航第一级 match 就命中图片 = 浏览器把 PNG 当文档渲染，整页
+          // 只有一张 mochi 字母图（一加Ace2+Edge 实测，#136 vivo 家族复发）；且图片文档
+          // 不跑任何 JS，#134 完整性自检在图片页上无法触发，用户卡死到网络恢复为止。
+          // 非 HTML 缓存一律当未命中处理，放行去后面的旧缓存扫描/网络重试（仅导航做此
+          // 校验，图标等资源的自身缓存回退不受影响）。
+          if (req.mode === 'navigate' && m &&
+              !/text\/html/i.test(String((m.headers && m.headers.get('content-type')) || 'text/html'))) m = null;
           if (m) return m;
           return fetch(req).then((res) => {
-            if (res && res.ok) {
-              const copy = res.clone();
-              caches.open(CACHE).then((c) => c.put('./index.html', copy));
+            if (res && res.ok && req.mode === 'navigate') {
+              // FIX 2026-09-03 #143：此重试同时接住非导航请求（慢网络下的图标等）。
+              // 原实现把任何成功体一律写 canonical './index.html' 键且不过完整性校验，
+              // 双漏洞：① icon-512.png 写进 index 键 = 上述「整页 mochi 字母图」根因；
+              // ② 截断 HTML 绕过 #134 铁律（该路径是四处写缓存点之外漏挂校验的第 5 处）。
+              // 现仅导航请求才写 canonical 键，且必须过 isCompleteHtml；非导航资源只
+              // 透传不落盘（图标缓存由主成功路径按自身键写入，绝不污染 index 键）。
+              return res.clone().text().then((t) => {
+                if (!isCompleteHtml(t)) return res;
+                const copy = res.clone();
+                caches.open(CACHE).then((c) => c.put('./index.html', copy));
+                return res;
+              }).catch(() => res);
             }
             return res;
           });

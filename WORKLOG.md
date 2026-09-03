@@ -1,4 +1,11 @@
-# 本次构建者：AI-B（本会话：#139 存储瘦身四件套——LS 残留大键清理 + 专属字卡库去重防线 + 收藏图片压缩 + GIF 上传大小上限；跨域改动 src/js/chatcard.js、src/js/chat.js，理由：用户批准的存储优化在字卡库/收藏数据写入路径，AI-A 名下但 #138 已收口无在途改动，改动区与 AI-A 最近提交不重叠）
+# 本次构建者：AI-B（本会话：#143 sw.js 最终重试污染 canonical index 键——一加Ace2+Edge「整页 mochi 字母图」#136 家族复发；只动 src/pwa/sw.js、build.mjs 哨兵、tools/、FIX-REGRESSION.md，不碰 AI-A 域文件）
+
+### 2026-09-03 17:3x（#143 一加Ace2+Edge 开屏「整页只有 mochi 字母图」进不去开屏：SW 最终重试写点污染 canonical index 键；已构建）
+* [AI-B 域]（**改动文件：src/pwa/sw.js（两处：fetch 最终重试写点收口——仅导航请求才写 canonical './index.html' 键且必须过 isCompleteHtml，非导航资源只透传绝不写 index 键；导航兜底命中加 content-type 守卫，非 HTML 缓存当未命中放行去旧缓存扫描/网络重试）、build.mjs（swNeedles/swNeedlesSrc 各 +2 条 #143 逻辑锚点）、FIX-REGRESSION.md（#143 行，改该文件按约定留此说明）、tools/verify-sw-nav-fallback.mjs（新增回归脚本 src+产物 16 断言）；构建状态：已构建·sw mochi-mtlbu2gc**）。
+* 需求/根因：用户反馈一加Ace2+Edge 开屏整页只有 mochi 英文字母图进不了开屏，且此前多机型复发过（#136 vivo+Chrome 同症状家族）。真根因在 #136 修复漏掉的第 5 处写缓存点：网络优先 3.5s 超时后的 catch 兜底同时接住非导航请求（慢网络下 icon-512.png 等），原实现把任何成功体一律写 canonical index 键且无校验——PNG 占位后离线导航第一级就命中图片=浏览器把图当文档渲染（整页一张字母图），图片文档不跑 JS #134 自检无法触发，且污染条目在兜底链第一优先会遮蔽旧缓存好 index；截断 HTML 亦绕过 #134 铁律。
+* 修复/防覆盖：重试写点收口（仅导航+过 EOF 校验）+ 兜底命中 content-type 守卫；存量污染设备由 activate 既有自愈（EOF 校验失败删+抢救旧完整版）与联网导航成功覆写双通道治愈。#134/#136 全部锚点保留未动，哨兵 277/277 全绿哑哨兵 0 + sw.js 9/9。
+* 验证：node --check 过；verify-sw-nav-fallback 16/16（含 5 处 canonical 写点全部受保护断言）；verify-html-eof 20/20；npm run verify 布局 10/10。
+* 待真机（一加Ace2+Edge）：联网打开一次让新 SW 激活后，飞行模式/弱网冷启动能从缓存进入开屏不再出现整页字母图；vivo 等复发机型与 iOS 开屏行为不变。
 
 ### 2026-09-03 15:37（#142 心愿单功能：心意集市/心意柜「许愿—实现」闭环 + 设置面板；源已完成·未构建）
 * [AI-A 域]（**改动文件：src/js/gift-shop.js、src/css/market.css（.market-foot +flex-wrap）；构建状态：未构建，待构建者收口**）。

@@ -586,7 +586,10 @@ if (CHECK_SENTINELS) {
       'sort((a, b) => cacheVersion(b) - cacheVersion(a))',
       // v3.26.x #136：导航成功写 canonical 键 + activate 抢救旧缓存完整 index
       "c.put('./index.html', res.clone())",
-      'rescued ? c.put(\'./index.html\', rescued)'
+      'rescued ? c.put(\'./index.html\', rescued)',
+      // v3.26.x #143：最终重试写点仅限导航 + 兜底命中 content-type 守卫（防 PNG 污染 canonical 键）
+      "res.ok && req.mode === 'navigate'",
+      "m.headers.get('content-type')"
     ];
     const swMiss = swNeedlesSrc.filter(n => !swSrc.includes(n));
     if (swMiss.length) {
@@ -611,7 +614,10 @@ try {
     "data.type === 'PURGE_INDEX'",
     // v3.26.x #136：导航成功写 canonical 键 + activate 抢救旧缓存完整 index
     "c.put('./index.html', res.clone())",
-    'rescued ? c.put(\'./index.html\', rescued)'
+    'rescued ? c.put(\'./index.html\', rescued)',
+    // v3.26.x #143：最终重试写点仅限导航 + 兜底命中 content-type 守卫（防 PNG 污染 canonical 键）
+    "res.ok && req.mode === 'navigate'",
+    "m.headers.get('content-type')"
   ];
   const swMissing = swNeedles.filter(n => !swSrc.includes(n));
   if (swMissing.length) {
