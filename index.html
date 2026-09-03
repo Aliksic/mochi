@@ -1532,7 +1532,7 @@ border:1px solid rgba(0,0,0,.12); border-radius:12px; padding:11px 14px;
 font-size:14px; font-family:inherit; outline:none; background:#fff; color:var(--ink);
 width:100%; box-sizing:border-box;
 }
-.chat-ask-input.ce-box { will-change: transform; }
+.chat-ask-input.ce-box { will-change: transform; min-height:48px !important; }
 .chat-ask-input:focus {
 border-color:var(--ink);
 transform:translateZ(0);
@@ -8663,9 +8663,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1788360652958">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.391</b></span>
-        <span class="sv-deploy">部署于 2026-09-02 22:50<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1788400085655">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.392</b></span>
+        <span class="sv-deploy">部署于 2026-09-03 09:48<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9761,7 +9761,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.391</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.392</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
       <!-- v3.27.x：设置页底部防骗声明 -->
       <div class="set-alert">
@@ -10034,7 +10034,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.391</span>
+              <span class="lic-ver">v3.26.392</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -14791,6 +14791,39 @@ setTimeout(check, 1000);
 setTimeout(function () { if (window.__mochiDataReady) check(); }, 20000);
 }
 }
+})();
+(function () {
+const FLAG = 'mochi-trunc-reloaded';
+function checkDoc() {
+try {
+var tailMissing = !document.getElementById('mochi-html-eof');
+if (!tailMissing) return;
+var seen = false;
+try { seen = sessionStorage.getItem(FLAG) === '1'; } catch (e) {}
+if (seen) return; // 本会话已自愈过一次，不再重载（防 SW 异常导致无限刷新）
+try { sessionStorage.setItem(FLAG, '1'); } catch (e2) {}
+var done = false;
+var reload = function () {
+if (done) return;
+done = true;
+try { location.reload(); } catch (e3) {}
+};
+try {
+if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+navigator.serviceWorker.addEventListener('message', function h(ev) {
+if (ev.data && ev.data.type === 'PURGE_DONE') {
+navigator.serviceWorker.removeEventListener('message', h);
+setTimeout(reload, 150);
+}
+});
+navigator.serviceWorker.controller.postMessage({ type: 'PURGE_INDEX' });
+setTimeout(reload, 1200); // SW 无响应也重载（浏览器 HTTP 缓存可能已修复）
+} else reload();
+} catch (e4) { reload(); }
+} catch (e) {}
+}
+if (document.readyState === 'complete') setTimeout(checkDoc, 60000);
+else window.addEventListener('load', function () { setTimeout(checkDoc, 60000); });
 })();
 } catch (__e) { try { console.error("[JS] device.js", __e && __e.message || __e); } catch (x) {} if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
 (function () { try {
@@ -21122,6 +21155,7 @@ if (apps.length) return { type: 'grid', grid: grid, ref: apps[apps.length - 1], 
 return { type: 'grid', grid: grid, ref: null, before: false };
 }
 function computeDrop(dragged, clientX, clientY) {
+if (dragged.classList && dragged.classList.contains('app-grid')) return null;
 const inGrid = !!dragged.closest('.app-grid');
 if (inGrid) {
 const grid = dragged.closest('.app-grid');
@@ -21170,6 +21204,7 @@ dropLine.style.top = (info.before ? r.top : r.bottom) + 'px';
 }
 function doDrop(dragged, info) {
 if (info.type === 'grid') {
+if (info.ref && dragged.contains(info.ref)) return;
 if (dragged.parentNode !== info.grid) info.grid.appendChild(dragged);
 if (info.ref && dragged !== info.ref) {
 if (info.before) info.grid.insertBefore(dragged, info.ref);
@@ -27334,7 +27369,7 @@ groups.forEach(g => {
 const chip = document.createElement('span');
 chip.className = 'emoji-g-chip' + (myInviteCurGroup === g.key ? ' sel' : '');
 if (tiInviteBatch && g.user) {
-chip.innerHTML = esc(g.label) + g.cards.length +
+chip.innerHTML = escTxt(g.label) + g.cards.length +
 '<span class="inv-g-op" data-op="rn">✎</span>' +
 '<span class="inv-g-op" data-op="rm">✕</span>';
 } else {
@@ -27377,6 +27412,11 @@ cur.cards.forEach((c, i) => {
 const item = document.createElement('div');
 item.className = 'cc-item glass invite-batch-item';
 item.innerHTML = '<label class="inv-batch-cb"><input type="checkbox" class="inv-batch-cb-in" data-bidx="' + i + '"' + (tiInviteSel.has(i) ? ' checked' : '') + '></label><div class="cc-txt"><div class="t">' + escTxt(c) + '</div></div>';
+const cb = item.querySelector('.inv-batch-cb-in');
+if (cb) cb.addEventListener('change', () => {
+if (cb.checked) tiInviteSel.add(i); else tiInviteSel.delete(i);
+updateInviteBatchBarUI();
+});
 list.appendChild(item);
 });
 }
@@ -27437,6 +27477,14 @@ renderInviteBank();
 function myInviteCurGroupArr() {
 const g = myInviteG().find(x => Array.isArray(x) && Array.isArray(x[1]) && x[0] === myInviteCurGroup);
 return (g && Array.isArray(g[1])) ? g[1] : null;
+}
+function updateInviteBatchBarUI() {
+const cnt = document.getElementById('inv-batch-cnt');
+if (cnt) cnt.innerHTML = '已选 <em>' + tiInviteSel.size + '</em> 条';
+const del = document.getElementById('inv-batch-del');
+if (del) del.disabled = tiInviteSel.size === 0;
+const mv = document.getElementById('inv-batch-move');
+if (mv) mv.disabled = tiInviteSel.size === 0;
 }
 function bindInviteBatchBar() {
 const curArr = myInviteCurGroupArr();
@@ -76398,5 +76446,14 @@ return { lock: document.body.classList.contains('scroll-lock'), open: open };
   <div class="pwa-ios-hint" id="pwa-ios-hint" hidden>
     <span>在 Safari 中点击「分享」→「添加到主屏幕」使用</span>
   </div>
+  <!-- v3.26.x #134：文档完整性双锚点（防「桌面图标/功能整块缺失」反复复发）。
+       产物 index.html 约 3.6MB 且尾部两块脚本（决策/全屏/移动适配/pwa 更新器）最易
+       被弱网截断，截断不报任何错 → 必须有「读到尾部」的标志才能自检。
+       ① DOM 锚点元素（id=mochi-html-eof）：device.js 启动自检用（缺失=文档被截断）；
+       ② EOF 注释文本 __MOCHI_EOF__：sw.js 写缓存前用 text() 校验（残缺体不进缓存）。
+       两者都必须存在；构建产物在 </html> 后还会再写一份 __MOCHI_EOF__ 兜底注释。 -->
+  <span id="mochi-html-eof" hidden aria-hidden="true"></span>
+<!-- __MOCHI_EOF__ -->
 </body>
 </html>
+<!-- __MOCHI_EOF__ mtkv8hp3 -->

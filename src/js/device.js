@@ -1728,3 +1728,51 @@
     }
   }
 })();
+
+// ===== 功能：文档完整性自检 + 自愈重载（v3.26.x #134） =====
+// iPhone X (iOS 16.7 Safari 主屏幕) 等机型反复报「桌面图标/小组件缺失、功能整块没了」
+// （#87 同族，iOS 各机型均可发生）。根因：产物 index.html 约 3.6MB，弱网下响应被中途
+// 截断——尾部脚本块（决策/全屏/移动适配/pwa 更新器）整体丢失，HTML 解析不报错
+// （诊断「启动文件异常：无」），且旧 SW 把截断体当成功缓存 → 之后每次都残缺，反复发作。
+// 本自检（device.js 是第一个文件，恒在执行）在 load 后查唯一截断信号：
+//   template.html 尾部锚点 #mochi-html-eof（位于 body 最末、所有脚本块之后）。
+//   锚点在 = 文档完整解析到底（所有脚本块都已包含）；锚点缺 = 尾部被截断（块6/7 丢失实锤）。
+//   注意不能用 openDecision 等「函数入口」当信号——verify 脚本按子集组装页面时这些
+//   函数本来就不在，会误报截断把测试页打断（实测 verify-diag-report 103s 长跑被 60s
+//   误 reload）。
+// 缺失 = 文档截断实锤 → 发 PURGE_INDEX 让 SW 删掉所有缓存里的 index.html（残缺体），
+// 收到 PURGE_DONE 回执（或 1.2s 超时）后 reload 一次。sessionStorage 限 1 次防循环重载；
+// 60s 延迟避开开屏/键盘/通话等关键交互，不打断正常使用中的会话。
+(function () {
+  const FLAG = 'mochi-trunc-reloaded';
+  function checkDoc() {
+    try {
+      var tailMissing = !document.getElementById('mochi-html-eof');
+      if (!tailMissing) return;
+      var seen = false;
+      try { seen = sessionStorage.getItem(FLAG) === '1'; } catch (e) {}
+      if (seen) return; // 本会话已自愈过一次，不再重载（防 SW 异常导致无限刷新）
+      try { sessionStorage.setItem(FLAG, '1'); } catch (e2) {}
+      var done = false;
+      var reload = function () {
+        if (done) return;
+        done = true;
+        try { location.reload(); } catch (e3) {}
+      };
+      try {
+        if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+          navigator.serviceWorker.addEventListener('message', function h(ev) {
+            if (ev.data && ev.data.type === 'PURGE_DONE') {
+              navigator.serviceWorker.removeEventListener('message', h);
+              setTimeout(reload, 150);
+            }
+          });
+          navigator.serviceWorker.controller.postMessage({ type: 'PURGE_INDEX' });
+          setTimeout(reload, 1200); // SW 无响应也重载（浏览器 HTTP 缓存可能已修复）
+        } else reload();
+      } catch (e4) { reload(); }
+    } catch (e) {}
+  }
+  if (document.readyState === 'complete') setTimeout(checkDoc, 60000);
+  else window.addEventListener('load', function () { setTimeout(checkDoc, 60000); });
+})();

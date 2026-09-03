@@ -6,8 +6,8 @@
 // 会一直显示「正在安装」永不完成（WebAPK 安装要经 SW 拉 start_url/图标）。
 // 现在每个请求最多等 NETWORK_TIMEOUT 毫秒，超时立即回退缓存（没缓存则快速
 // 失败），SW 最迟约 10 秒内必然激活，安装/加载都不再无限挂起。
-const CACHE = 'mochi-mtk7rb8e';
-const BUILD_INFO = '部署于 2026-09-02 22:50';
+const CACHE = 'mochi-mtkv8hp3';
+const BUILD_INFO = '部署于 2026-09-03 09:48';
 const PRECACHE = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './icon-180.png'];
 // v3.10.x：网络优先超时从 8000 → 3500ms。GitHub Pages 国内访问经常 >8s，
 // 原 8s 超时导致手机端 fetch 频繁超时 → 回退 SW 缓存旧 index.html → 用户永远
@@ -38,6 +38,28 @@ function cacheVersion(name) {
   return 0;
 }
 
+// v3.26.x #134：index.html 完整性校验——iPhone X (iOS 16.7 Safari 主屏幕) 等机型
+// 反复出现「桌面图标/小组件缺失 + 决策等功能没了 + html 类为空」（#87 旧版图标缺失同族）。
+// 根因：产物 index.html 约 3.6MB、尾部是第 6/7 号脚本块（决策/全屏/移动适配/pwa 更新器），
+// 弱网/切换网络时响应被中途截断，fetch 仍返回 ok → 截断体被当成功写进缓存/放行给页面；
+// 尾部脚本块整体丢失且 HTML 解析不报错（启动文件异常=无），页面失去自愈能力
+// （pwa.js 更新器也在尾部块里）。此后每次导航回退都命中这份残缺缓存 → 反复发作。
+// 防线：任何 index.html 进缓存前必须通过 isCompleteHtml 校验（含 EOF 标记，由
+// build.mjs 写在产物最尾部 + template.html 末尾锚点元素双保险），截断体一律丢弃。
+// 注意：模板注释/说明里也会出现 __MOCHI_EOF__ 字样，但它们在 <style>/<body> 前部，
+// 末尾截断必然同时丢掉「文档最末字节处的带版本号兜底标记」，故校验用带 buildStamp
+// 的完整形式 `<!-- __MOCHI_EOF__ <stamp> -->`，与正文里的说明文字不混淆。
+const HTML_EOF_MARKER = '__MOCHI_EOF__';
+const HTML_EOF_STAMPED = /<!-- __MOCHI_EOF__ [a-z0-9]+ -->/;
+// 只对导航文档做校验（./ / ./index.html / 任何以 index.html 结尾的请求）
+function isIndexUrl(url) {
+  const p = String(url);
+  return p.endsWith('/index.html') || p.endsWith('./') || /\/$/.test(p);
+}
+function isCompleteHtml(text) {
+  return typeof text === 'string' && HTML_EOF_STAMPED.test(text.slice(-300));
+}
+
 self.addEventListener('install', (e) => {
   // 跳过等待：新 sw 安装后立即接管（配合每次构建新缓存名 → 强制更新）
   self.skipWaiting();
@@ -47,7 +69,16 @@ self.addEventListener('install', (e) => {
     caches.open(CACHE).then((c) =>
       Promise.allSettled(PRECACHE.map((url) =>
         fetchWithTimeout(url, NETWORK_TIMEOUT).then((res) => {
-          if (res && res.ok) return c.put(url, res);
+          if (res && res.ok) {
+            // v3.26.x #134：index.html 完整性校验——截断体不进缓存（下同）
+            if (isIndexUrl(url)) {
+              return res.clone().text().then((t) => {
+                if (!isCompleteHtml(t)) return undefined;
+                return c.put(url, res);
+              });
+            }
+            return c.put(url, res);
+          }
         })
       ))
     ).catch(() => {})
@@ -86,9 +117,22 @@ self.addEventListener('activate', (e) => {
           // claim 后异步补一次 fetch 写入当前 CACHE（不阻塞，失败有旧缓存兜底），
           // 下次导航回退优先命中当前 CACHE（新版），不再退回旧版。
           return caches.open(CACHE).then((c) => c.match('./index.html')).then((hit) => {
-            if (hit) return;
+            if (hit) {
+              // v3.26.x #134：历史截断缓存自愈——存量缓存里的 index.html 可能是
+              // 修复上线前已写进去的残缺体（无 EOF 标记），丢弃让它重新走网络补齐
+              return hit.clone().text().then((t) => {
+                if (isCompleteHtml(t)) return;
+                return c.delete('./index.html').catch(() => {});
+              }).catch(() => {});
+            }
             return fetchWithTimeout('./index.html', NETWORK_TIMEOUT).then((res) => {
-              if (res && res.ok) return c.put('./index.html', res);
+              if (res && res.ok) {
+                // v3.26.x #134：补写前同样校验完整性，截断体不进缓存
+                return res.clone().text().then((t) => {
+                  if (!isCompleteHtml(t)) return undefined;
+                  return c.put('./index.html', res);
+                });
+              }
             }).catch(() => {});
           });
         });
@@ -97,16 +141,37 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('message', (e) => {
+  const data = e.data || {};
+  // v3.26.x #134：页面启动自检发现「脚本块丢失/文档截断」时发 PURGE_INDEX——
+  // 删掉当前缓存里的 index.html（残缺体），下次导航必然回源拿完整文档。
+  // 回执 PURGE_DONE 让页面知道可以安全重载（避免重载后仍命中同一份残缺缓存）。
+  if (data.type === 'PURGE_INDEX') {
+    caches.keys().then((keys) => Promise.all(keys.map((k) =>
+      caches.open(k).then((c) => c.delete('./index.html').catch(() => {}))
+    ))).catch(() => {}).then(() => {
+      try { if (e.source && e.source.postMessage) e.source.postMessage({ type: 'PURGE_DONE' }); } catch (x) {}
+    });
+    return;
+  }
   // v3.10.x：页面点击「刷新使用新版」时先发 PRECACHE_NOW，让 SW 立即把最新
   // index.html 写进当前缓存，确认完成后再 reload——否则弱网下 reload 的导航请求
   // 仍可能超时回退旧缓存，用户永远卡在旧版（GitHub Pages 国内访问慢的根因场景）。
-  const data = e.data || {};
   if (data.type !== 'PRECACHE_NOW') return;
   const urls = Array.isArray(data.urls) ? data.urls : ['./index.html'];
   caches.open(CACHE).then((c) =>
     Promise.allSettled(urls.map((u) =>
       fetchWithTimeout(u, NETWORK_TIMEOUT).then((res) => {
-        if (res && res.ok) { c.put(u, res); return true; }
+        if (res && res.ok) {
+          // v3.26.x #134：PRECACHE_NOW 是「刷新使用新版」的落盘通道，同样校验，
+          // 否则弱网下用户点刷新反而把截断的新版固化进缓存（永远卡残缺版）
+          if (isIndexUrl(u)) {
+            return res.clone().text().then((t) => {
+              if (!isCompleteHtml(t)) return false;
+              c.put(u, res); return true;
+            });
+          }
+          c.put(u, res); return true;
+        }
         return false;
       })
     ))
@@ -135,6 +200,21 @@ self.addEventListener('fetch', (e) => {
     fetchWithTimeout(req, NETWORK_TIMEOUT)
       .then((res) => {
         if (res && res.ok) {
+          // v3.26.x #134：导航文档写缓存前校验完整性——网络中途截断的响应（弱网/
+          // 切网时连接被掐，fetch 仍 ok）绝不允许进缓存；残缺体放行给页面会丢尾部
+          // 脚本块（决策/全屏/移动适配/pwa 更新器全灭）且不报错。截断时改走缓存
+          // 兜底（下方 catch 分支），缓存也没有就透传截断响应（至少本次能渲染，
+          // 但不会污染缓存，下次导航自动重试完整下载）。
+          if (req.mode === 'navigate') {
+            return res.clone().text().then((t) => {
+              if (isCompleteHtml(t)) {
+                const copy = res.clone();
+                caches.open(CACHE).then((c) => c.put(req, copy));
+                return res;
+              }
+              throw new Error('truncated-html');
+            });
+          }
           const copy = res.clone();
           caches.open(CACHE).then((c) => c.put(req, copy));
         }

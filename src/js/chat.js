@@ -5192,7 +5192,7 @@ groups.forEach(g => {
 const chip = document.createElement('span');
 chip.className = 'emoji-g-chip' + (myInviteCurGroup === g.key ? ' sel' : '');
 if (tiInviteBatch && g.user) {
-chip.innerHTML = esc(g.label) + g.cards.length +
+chip.innerHTML = escTxt(g.label) + g.cards.length +
 '<span class="inv-g-op" data-op="rn">✎</span>' +
 '<span class="inv-g-op" data-op="rm">✕</span>';
 } else {
@@ -5236,6 +5236,11 @@ cur.cards.forEach((c, i) => {
 const item = document.createElement('div');
 item.className = 'cc-item glass invite-batch-item';
 item.innerHTML = '<label class="inv-batch-cb"><input type="checkbox" class="inv-batch-cb-in" data-bidx="' + i + '"' + (tiInviteSel.has(i) ? ' checked' : '') + '></label><div class="cc-txt"><div class="t">' + escTxt(c) + '</div></div>';
+const cb = item.querySelector('.inv-batch-cb-in');
+if (cb) cb.addEventListener('change', () => {
+if (cb.checked) tiInviteSel.add(i); else tiInviteSel.delete(i);
+updateInviteBatchBarUI();
+});
 list.appendChild(item);
 });
 }
@@ -5296,6 +5301,14 @@ renderInviteBank();
 function myInviteCurGroupArr() {
 const g = myInviteG().find(x => Array.isArray(x) && Array.isArray(x[1]) && x[0] === myInviteCurGroup);
 return (g && Array.isArray(g[1])) ? g[1] : null;
+}
+function updateInviteBatchBarUI() {
+const cnt = document.getElementById('inv-batch-cnt');
+if (cnt) cnt.innerHTML = '已选 <em>' + tiInviteSel.size + '</em> 条';
+const del = document.getElementById('inv-batch-del');
+if (del) del.disabled = tiInviteSel.size === 0;
+const mv = document.getElementById('inv-batch-move');
+if (mv) mv.disabled = tiInviteSel.size === 0;
 }
 function bindInviteBatchBar() {
 const curArr = myInviteCurGroupArr();

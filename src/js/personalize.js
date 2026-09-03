@@ -4847,6 +4847,7 @@ try {
         clearDropLine();
         clearEdge();
         edgeL.remove(); edgeR.remove();
+        // v3.26.x #134：computeDrop 对整组网格拖拽返回 null（禁止自嵌套），落空即放弃
         if (dropInfo) doDrop(el, dropInfo);
       };
       document.addEventListener('pointermove', onMove, { passive: false });
@@ -4872,6 +4873,11 @@ try {
       return { type: 'grid', grid: grid, ref: null, before: false };
     }
     function computeDrop(dragged, clientX, clientY) {
+      // v3.26.x #134：整组图标网格（.app-grid 自带 data-desk-widget=apps/p2apps/p3apps）
+      // 不能作为拖拽对象——dragged 是网格本身时，落点 ref 是网格的子图标，
+      // doDrop 的 insertBefore(网格, 子图标引用) = 节点插进自己内部
+      // → HierarchyRequestError（iPhone X 实测崩在 appendChild@native，拖拽功能报废）。
+      if (dragged.classList && dragged.classList.contains('app-grid')) return null;
       const inGrid = !!dragged.closest('.app-grid');
       if (inGrid) {
         const grid = dragged.closest('.app-grid');
@@ -4926,6 +4932,9 @@ try {
     function doDrop(dragged, info) {
       if (info.type === 'grid') {
         // v3.23.x：跨页移动——目标网格不是图标当前网格时先挪入目标网格（空网格 append）
+        // v3.26.x #134：自嵌套防线——ref 在 dragged 内部时 insertBefore 会抛
+        // HierarchyRequestError（节点不能插进自己的子孙位置），任何路径都不允许
+        if (info.ref && dragged.contains(info.ref)) return;
         if (dragged.parentNode !== info.grid) info.grid.appendChild(dragged);
         if (info.ref && dragged !== info.ref) {
           if (info.before) info.grid.insertBefore(dragged, info.ref);

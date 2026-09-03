@@ -4967,5 +4967,13 @@
   <div class="pwa-ios-hint" id="pwa-ios-hint" hidden>
     <span>在 Safari 中点击「分享」→「添加到主屏幕」使用</span>
   </div>
+  <!-- v3.26.x #134：文档完整性双锚点（防「桌面图标/功能整块缺失」反复复发）。
+       产物 index.html 约 3.6MB 且尾部两块脚本（决策/全屏/移动适配/pwa 更新器）最易
+       被弱网截断，截断不报任何错 → 必须有「读到尾部」的标志才能自检。
+       ① DOM 锚点元素（id=mochi-html-eof）：device.js 启动自检用（缺失=文档被截断）；
+       ② EOF 注释文本 __MOCHI_EOF__：sw.js 写缓存前用 text() 校验（残缺体不进缓存）。
+       两者都必须存在；构建产物在 </html> 后还会再写一份 __MOCHI_EOF__ 兜底注释。 -->
+  <span id="mochi-html-eof" hidden aria-hidden="true"></span>
+<!-- __MOCHI_EOF__ -->
 </body>
 </html>

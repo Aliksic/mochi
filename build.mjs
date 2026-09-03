@@ -145,6 +145,12 @@ html = html.split('__BUILD_TS__').join(String(buildTime.getTime()));
 // 版本号两处（开屏 + 设置页底部）都要替换：replace 用字符串只替换第一处，改用 split/join 全局替换
 html = html.split('__APP_VERSION__').join(APP_VERSION);
 
+// v3.26.x #134：EOF 兜底标记——写在 </html> 之后（HTML 语法上仍合法，解析器忽略
+// </html> 后的尾随注释）。template.html 里 body 末已有 id=mochi-html-eof 锚点 +
+// 一份 __MOCHI_EOF__ 注释；这里再加一份于文档最末字节处，确保「哪怕 body 尾部
+// 几百字节被截断，SW 完整性校验仍能判定残缺」。sw.js isCompleteHtml 靠它判定。
+html += '\n<!-- __MOCHI_EOF__ ' + buildStamp + ' -->\n';
+
 if (!CHECK_SENTINELS) {
 const out = join(root, 'index.html');
 writeFileSync(out, html);
@@ -215,10 +221,15 @@ const FIX_SENTINELS = [
   { name: '收藏启动回填只补不覆盖（防旧IDB快照回滚）', file: 'js/chat.js', needle: "cur.length <= 2) store.set('fav-msgs'" },
   { name: '语音播放钮互动态·双图标（playing 三角换暂停竖条）', file: 'js/chat.js', needle: 'voice-ico-pause' },
   { name: '语音播放钮互动态·按压反馈（:active 微缩）', file: 'css/chat-main.css', needle: '.msg-voice-play:active' },
-  { name: '邀请TA输入栏 ce-box 常驻合成层（防文字飞出输入栏，同 #118 tc-input.ce-box）', file: 'css/chat-main.css', needle: '.chat-ask-input.ce-box { will-change: transform; }' },
+  { name: '邀请TA输入栏 ce-box 常驻合成层 + 抬高内边距高（防文字飞出输入栏，同 #118 tc-input.ce-box）', file: 'css/chat-main.css', needle: '.chat-ask-input.ce-box { will-change: transform; min-height:48px !important; }' },
   { name: '邀请TA批量管理入口（toggleInviteBatch）', file: 'js/chat.js', needle: 'function toggleInviteBatch()' },
   { name: '邀请TA批量勾选字卡（inv-batch-cb-in）', file: 'js/chat.js', needle: 'inv-batch-cb-in' },
   { name: '邀请TA批量下自建分组 ✎重命名/✕删除（inv-g-op rm）', file: 'js/chat.js', needle: 'data-op="rm">✕' },
+  { name: '邀请TA批量分组标签用 escTxt 转义（防 esc 未定义使批量态整栏断裂用不了）', file: 'js/chat.js', needle: 'escTxt(g.label) + g.cards.length +' },
+  { name: '#134 文档尾部 EOF 双锚点（SW 校验用注释 + device.js 自检用 DOM 锚点）', file: 'template.html', needle: '<span id="mochi-html-eof" hidden aria-hidden="true"></span>' },
+  { name: '#134 device.js 文档完整性自检+自愈重载（限 1 次防循环）', file: 'js/device.js', needle: "const FLAG = 'mochi-trunc-reloaded';" },
+  { name: '#134 doDrop 自嵌套防线（整组网格不可拖拽，防 HierarchyRequestError 拖拽报废）', file: 'js/personalize.js', needle: "dragged.contains(info.ref)) return;" },
+  { name: '#134 拖拽落点排除整组图标网格（app-grid 本身不再作为 dragged）', file: 'js/personalize.js', needle: "dragged.classList.contains('app-grid')) return null;" },
   { name: '单聊联系人消息音效（addIn 播 sfx-in，read/silent 除外）', file: 'js/chat.js', needle: "opts.special !== 'read'" },
   { name: '音效等待 AudioContext resume 后再 start（Via/WebView）', file: 'js/sfx.js', needle: 'p.then(start)' },
   { name: '群聊引用防 base64 霸屏（gcQuoteTextSafe）', file: 'js/group-chat.js', needle: 'gcQuoteTextSafe' },
@@ -567,7 +578,10 @@ try {
   const swNeedles = [
     'caches.open(CACHE).then((c) => c.match(\'./index.html\')).then((m) => m || caches.keys()',
     'claim 后异步补一次 fetch 写入当前 CACHE',
-    'sort((a, b) => cacheVersion(b) - cacheVersion(a))'
+    'sort((a, b) => cacheVersion(b) - cacheVersion(a))',
+    // v3.26.x #134：index.html 完整性校验（截断体不进缓存）+ PURGE_INDEX 自愈消息
+    'function isCompleteHtml(text)',
+    "data.type === 'PURGE_INDEX'"
   ];
   const swMissing = swNeedles.filter(n => !swSrc.includes(n));
   if (swMissing.length) {
