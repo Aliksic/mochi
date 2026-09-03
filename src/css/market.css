@@ -303,3 +303,12 @@ textarea.gm-input { min-height: 52px; resize: none; }
 .gb-tab { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .gb-cancel, .gb-ok, .gb-wishbtn { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .gb-wishbtn { font-size: 13.5px; }
+/* #142 补：TA 心愿单的可见性——市集商品 ☆ 许愿角标 + 聊天送礼面板直达入口 */
+.gift-item-tawish { position: absolute; top: 8px; left: 8px; z-index: 2; max-width: calc(100% - 16px); box-sizing: border-box; padding: 3px 9px; border-radius: 99px; background: rgba(109, 91, 176, 0.92); color: #fff; font-size: 10.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
+#page-market .gift-item-tawish { background: rgba(0, 0, 0, 0.78); }
+.gift-wish-row { padding: 6px 14px 2px; }
+.gift-wish-row button { width: 100%; padding: 10px 0; border-radius: 12px; border: 1px dashed rgba(139, 122, 200, 0.4); background: rgba(139, 122, 200, 0.06); color: #6d5bb0; font-size: 13px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.gift-wish-row button:active { transform: scale(0.98); background: rgba(139, 122, 200, 0.12); }
+[data-theme="dark"] .gift-item-tawish { background: rgba(201, 184, 232, 0.85); color: #1c1c1e; }
+[data-theme="dark"] #page-market .gift-item-tawish { background: rgba(201, 184, 232, 0.85); color: #1c1c1e; }
+[data-theme="dark"] .gift-wish-row button { background: rgba(255, 255, 255, 0.06); border-color: rgba(201, 184, 232, 0.4); color: #c9b8e8; }

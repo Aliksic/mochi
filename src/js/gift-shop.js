@@ -802,7 +802,13 @@
         (opts.fromTaWish ? '' : '<button class="gb-wishbtn" id="gb-wishbtn" type="button">' + (wishMyHas(gift.id) ? '✓ 已在心愿单' : '♡ 加入心愿单') + '</button>') +
         '<button class="gb-ok" id="gb-ok" type="button">送给 ' + esc(partnerName()) + '</button>' +
       '</div>' +
-      '<div class="gb-tiny">' + (opts.fromTaWish ? '这是 ' + esc(partnerName()) + ' 心愿单里的礼物，送出后自动从 TA 的心愿单移除' : '加入心愿单只是许愿不花钱——' + esc(partnerName()) + ' 可能会买下它送你') + '</div>';
+      '<div class="gb-tiny">' + (
+        opts.fromTaWish
+          ? '这是 ' + esc(partnerName()) + ' 心愿单里的礼物，送出后自动从 TA 的心愿单移除，礼物进 TA 的心意柜'
+          : (wishLoad(WL_TA_KEY).some(function (x) { return x.giftId === gift.id; })
+            ? esc(partnerName()) + ' 正许愿想要这件——买下送出即心愿兑现，自动从 TA 的心愿单移除'
+            : '加入心愿单只是许愿不花钱——' + esc(partnerName()) + ' 可能会买下它送你')
+      ) + '</div>';
     window.openTCPanel(esc(gift.emoji) + ' ' + esc(gift.name), html);
     const wishEl = document.getElementById('gb-wish');
     const okBtn = document.getElementById('gb-ok');
@@ -816,8 +822,8 @@
     if (okBtn) okBtn.addEventListener('click', function () {
       const wish = (wishEl && wishEl.value || '').trim() || (gift.wish || '心意');
       if (buyAndSend(gift, 'out', wish)) {
-        // 从 TA 心愿单买下送出：同步移除该心愿（礼物照常进聊天+心意柜「送出的」）
-        if (opts.fromTaWish) wishTaRemove(gift.id);
+        // 任何途径买下 TA 正许愿的礼物都算心愿兑现：送出即从 TA 心愿单移除（礼物进 TA 的心意柜「收到的」）
+        wishTaRemove(gift.id);
         closeTc(); toast('已送出');
       }
     });
@@ -847,7 +853,7 @@
     const list = wishTab === 'my' ? my : ta;
     const hint = wishTab === 'my'
       ? '在市集点开商品选「加入心愿单」即可许愿（不花钱）。' + esc(partnerName()) + ' 会按概率买下送你，礼物进「心意柜-收到的」并从心愿单移除；概率在「心意集市和心意柜设置」里可调。'
-      : esc(partnerName()) + ' 逛市集时会把想要的加进这里。点「送 TA」买下送出，礼物进「心意柜-送出的」并从 TA 的心愿单移除。';
+      : '这里是 ' + esc(partnerName()) + ' 许的愿望（TA 逛市集时也会按概率把想要的加进来）。点「送 TA」买下送出：礼物进聊天和 TA 的心意柜-收到的，并自动从心愿单移除；市集里 TA 正许愿的商品也会标出来。';
     const emptyTxt = wishTab === 'my'
       ? '心愿单还是空的<br>去心意市集挑一件，点「加入心愿单」'
       : (esc(partnerName()) + ' 还没许愿<br>TA 逛市集时会自己加进来');
@@ -890,7 +896,7 @@
       '<div class="gs-row"><div class="gs-lab">TA 加进自己心愿单概率</div><div class="gs-numwrap"><input class="gs-num" data-gsn="wlAddPct" type="number" min="0" max="100" inputmode="numeric" value="' + st.wlAddPct + '"><span class="gs-pct">%</span></div></div>' +
       '<div class="gs-row"><div class="gs-lab">TA 自己买礼物<span class="gs-sub">买给自己的礼物收进「心意柜-TA 自己买的」</span></div><div class="gs-switch' + (st.selfOn ? ' on' : '') + '" data-gsw="selfOn"></div></div>' +
       '<div class="gs-row"><div class="gs-lab">TA 自己买概率</div><div class="gs-numwrap"><input class="gs-num" data-gsn="selfPct" type="number" min="0" max="100" inputmode="numeric" value="' + st.selfPct + '"><span class="gs-pct">%</span></div></div>' +
-      '<div class="gs-help">【使用说明】<br>· 我的心愿单：市集点开商品选「加入心愿单」许愿（不花钱）；TA 按概率直接买下送你，礼物进「心意柜-收到的」，心愿单自动移除。<br>· TA 的心愿单：TA 逛市集时按概率把想要的加进自己的心愿单；市集底部「☆ 心愿单」→「TA 的心愿单」点「送 TA」买下送出，礼物进「心意柜-送出的」。<br>· TA 自己买：TA 按概率给自己买礼物，收进「心意柜-TA 自己买的」，不发聊天消息。<br>· 概率=每次触发（我发消息后）TA 采取该行动的概率，0~100 自定义；TA 的购买类行为每天合计最多 3 次（与自动送礼共用上限）；关掉开关即完全关闭对应行为。</div>';
+      '<div class="gs-help">【使用说明】<br>· 我的心愿单：市集点开商品选「加入心愿单」许愿（不花钱）；TA 按概率直接买下送你，礼物进「心意柜-收到的」，心愿单自动移除。<br>· TA 的心愿单：TA 会把想要的加进来；点「送 TA」买下送出，礼物进 TA 的心意柜-收到的并自动移除该心愿。市集里 TA 正许愿的商品会标出「☆ TA许愿的」，从这里进也行。<br>· TA 自己买：TA 按概率给自己买礼物，收进「心意柜-TA 自己买的」，不发聊天消息。<br>· 概率=每次触发（我发消息后）TA 采取该行动的概率，0~100 自定义；TA 的购买类行为每天合计最多 3 次（与自动送礼共用上限）；关掉开关即完全关闭对应行为。</div>';
     window.openTCPanel('心意集市和心意柜设置', html);
     document.querySelectorAll('#tc-body [data-gsw]').forEach(function (sw) {
       sw.addEventListener('click', function () {
@@ -977,7 +983,10 @@
   }
   function giftItemHtml(g, manage) {
     const col = CAT_COLOR[g.cat] || '#f5f3fa';
-    return '<button class="gift-item' + (manage ? ' manage' : '') + '" data-id="' + esc(g.id) + '" style="--cat:' + col + ';">' +
+    // #142：TA 正许愿的商品标 ☆ 角标——提醒可买下送 TA 兑现心愿（礼物进 TA 的心意柜）
+    const taWanted = wishLoad(WL_TA_KEY).some(function (x) { return x.giftId === g.id; });
+    return '<button class="gift-item' + (manage ? ' manage' : '') + (taWanted ? ' ta-wish' : '') + '" data-id="' + esc(g.id) + '" style="--cat:' + col + ';">' +
+      (taWanted ? '<span class="gift-item-tawish" title="' + esc(partnerName()) + '许愿的">☆ ' + esc(partnerName()) + '想要的</span>' : '') +
       '<div class="gift-item-top" style="background:linear-gradient(160deg,' + col + ',#fff);">' +
         '<div class="gift-item-emoji">' + giftMedia(g, 'gift-item-img') + '</div>' +
       '</div>' +
@@ -1340,7 +1349,7 @@
           '<div class="giftbox-stat-card"><div class="giftbox-stat-ico">💌</div><div class="giftbox-stat-num" id="giftbox-stat-out">0</div><div class="giftbox-stat-lbl">送出</div></div>' +
           '<div class="giftbox-stat-card"><div class="giftbox-stat-ico">🛍️</div><div class="giftbox-stat-num" id="giftbox-stat-self">0</div><div class="giftbox-stat-lbl">TA自己买</div></div>' +
         '</div>' +
-        '<div class="giftbox-set"><button id="giftbox-settings" type="button">⚙ 心意集市和心意柜设置</button></div>' +
+        '<div class="giftbox-set"><button id="giftbox-tawish" type="button">☆ 看看 ' + esc(partnerName()) + ' 的心愿单</button><button id="giftbox-settings" type="button">⚙ 心意集市和心意柜设置</button></div>' +
       '</div>' +
       '<div class="giftbox-tabs">' +
         '<button class="gb-tab sel" data-btab="in" type="button">收到的</button>' +
@@ -1368,6 +1377,8 @@
     });
     const gbSettings = document.getElementById('giftbox-settings');
     if (gbSettings) gbSettings.addEventListener('click', openGiftSettings);
+    const gbTaWish = document.getElementById('giftbox-tawish');
+    if (gbTaWish) gbTaWish.addEventListener('click', function () { wishTab = 'ta'; renderWishPanel(); });
   }
 
   function init() {
@@ -1402,6 +1413,17 @@
         if (catsNode) catsNode.insertAdjacentHTML('beforebegin', searchRowHtml('gift-search'));
         bindSearchRow('gift-search', giftPanelRerender);
       }
+      // v3.26.x #142：送礼面板直达「TA 的心愿单」——看 TA 想要什么、买下送 TA（礼物进 TA 的心意柜）
+      if (!document.getElementById('gift-wish-entry')) {
+        const catsNode2 = document.getElementById('gift-cats');
+        if (catsNode2) catsNode2.insertAdjacentHTML('beforebegin', '<div class="gift-wish-row" id="gift-wish-entry"><button id="gift-wish-ta" type="button">☆ 看看 ' + esc(partnerName()) + ' 的心愿单</button></div>');
+      }
+      const gwBtn = document.getElementById('gift-wish-ta');
+      if (gwBtn) gwBtn.addEventListener('click', function () {
+        closeGiftPanel();
+        wishTab = 'ta';
+        renderWishPanel();
+      });
     }
     const moreGift = document.getElementById('more-gift');
     if (moreGift) moreGift.addEventListener('click', function (e) { e.stopPropagation(); openGiftPanel(); });

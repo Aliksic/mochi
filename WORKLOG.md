@@ -1,4 +1,11 @@
-# 本次构建者：AI-C（本会话：通话小框昵称回退链补齐——只改联系人名片时小框显示 TA/他/她的修复；只动 src/js/contacts.js、src/js/call.js、build.mjs 哨兵 needle、tools/，不碰 AI-A/AI-B 域文件）
+# 本次构建者：AI-A（本会话：#142 心愿单功能收口构建——用户催部署；并行会话 #144 拍一拍昵称制（chat.js+verify-poke-nick.mjs）源已完成一并收口；AI-C 通话昵称已自行构建提交）
+
+### 2026-09-03 18:07（用户反馈：聊天设置改了联系人昵称，拍一拍消息里人称仍显示 TA/ta；改「称呼制」为「昵称制」；源已完成·未构建）
+* [AI-A 域]（**改动文件：src/js/chat.js（新增 pokePersonMap + 拍一拍渲染/桌面预览两处换用）、tools/verify-poke-nick.mjs（用例 A/E 预期随昵称制更新 + 新增 G/H）；构建状态：未构建，待构建者收口**）。
+* 根因：拍一拍文案人称存在两套机制——「你/我」转出的 {ta}/{me} 占位按联系人昵称回填（正常）；字卡里**写死的 TA/ta/他/她**是「称呼占位」，只跟随联系人性别称呼（他/她/TA，未设则保持 TA/ta），与联系人昵称无关。用户改昵称后发「拍了拍TA的肩膀」这类字卡，昵称槽显示正常、写死的 TA 纹丝不动 → 观感「人称还是 TA」。
+* 修复：v3.30.x 起拍一拍人称改「昵称制」——聊天内拍一拍气泡（renderMsg poke/ask-msg 分支）与桌面弹窗预览（extractDeskMsg）不再走 taFit 称呼替换，新增 pokePersonMap：{ta}/{me} 占位与字面独立人称 TA/ta/他/她 一律按 我的昵称/联系人昵称 回填（昵称未设回落默认 TA）；分段保护 svg 图标、base64、合成词（其他/他们/她们/他人）。历史拍一拍消息因渲染时才回填，进聊天自动随新规则显示昵称。
+* 验证：node --check 过；verify-poke-nick **9/9**（A 昵称未设回落 TA 不再跟随称呼 / B 昵称槽位不回退 她 / C-D 双昵称回填 / E 写死 ta 按昵称 / G 大写 TA / H 他 → 昵称 / F 无异常）。
+
 
 ### 2026-09-03 17:4x（用户反馈：聊天设置改了联系人昵称，通话缩小悬浮小框里仍显示 TA/他/她；已构建）
 * [AI-C 域]（**改动文件：src/js/contacts.js（新增 window.contactNameFor(cid)：按 cid 读联系人注册表名片名）、src/js/call.js（partnerName 与 syncCallName 回退链补齐名片名：cs-lbl-partner → contactNameFor(cid) → taWord；syncCallName 的性别称呼改按归属桌面 taWordFor(currentCall.cid)）、build.mjs（「通话昵称与聊天域解耦」哨兵 needle 换成新代码特征——旧 needle `store.get('cs-lbl-partner') || (window.taWord…` 被本次修改替换，且 minify 改变量名+剥续行缩进，needle 必须用产物稳定子串）、tools/repro-call-mini-name.mjs（新增回归脚本 8 断言）；构建状态：已构建·sw mochi-mtlcbbk6**）。
@@ -17,9 +24,12 @@
 ### 2026-09-03 15:37（#142 心愿单功能：心意集市/心意柜「许愿—实现」闭环 + 设置面板；源已完成·未构建）
 * [AI-A 域]（**改动文件：src/js/gift-shop.js、src/css/market.css（.market-foot +flex-wrap）；构建状态：未构建，待构建者收口**）。
 * 需求（用户）：①我在市集买东西可直接加入心愿单，TA 有概率买我心愿单的礼物送我进我的心意柜；②TA 买东西也有概率不买而是加进 TA 的心愿单，我可买 TA 心愿单的礼物送 TA 进 TA 的心意柜；③TA 自己也能买东西放进自己的心意柜；④以上放「心意集市和心意柜设置」可开关+自定义概率；⑤小字【使用说明】。
+* 构建状态更新（18:1x）：用户催部署，本条声明本次构建者=AI-A 并收口。工作区并行改动核对：chat.js + tools/verify-poke-nick.mjs = 并行会话 #144 拍一拍昵称制（WORKLOG 18:07 已声明源已完成，改动区 L5100-5190 拍一拍渲染与本会话零重叠，一并收口）；market.css/gift-shop.js = 本会话 #142。构建 + 哨兵 + verify 后同一次提交推送。
 * 实现：心愿数据 per-cid（gift-wishlist / gift-wishlist-ta，存快照防商品改删）；设置全局键 market-wl-settings（默认全开：心愿兑现 20% / TA 加心愿 15% / TA 自购 10%，均 0~100 可调）。maybeAutoGift 改四档判定：心愿兑现（扣 TA 余额+先移心愿防连买）→ TA 自购（进心意柜 side 'self' 不发聊天消息，toast 提示）→ TA 加心愿（不花钱不占上限，去重+上限30，toast 提示）→ 原有 5% 随机送礼；购买类共享每日 3 次上限。UI：购买弹窗加「♡ 加入心愿单」+底部小字；市集底部「☆ 心愿单」双 tab 面板（TA 的心愿单点「送 TA」走正常购买、送出自动移除心愿）+「设置」入口；心意柜加第三栏「TA自己买的」（tab+统计卡）+ hero「⚙ 心意集市和心意柜设置」入口；设置面板=开关+概率输入（安卓 ce-box change 事件已由代理兼容）+【使用说明】小字（心愿单面板也有一份）。
 * 验证：node --check 过；--check-sentinels 272 条全绿哑哨兵 0（本改动不新增哨兵，新功能非修复）。待构建者构建 + 真机：加心愿→TA 兑现进心意柜、TA 加心愿 toast、TA 自购进第三栏、设置开关概率即时生效且持久化。
 * 备注：TA 自购不发聊天消息（仅 toast+入柜）为本次设计取舍；若用户要聊天可见再说。fishing.js recordGiftBox 仅用 'in'/'out'，不受 'self' 影响。
+* 用户反馈补丁（看不了联系人心愿单）：①聊天送礼面板搜索行下注入「☆ 看看 TA 的心愿单」直达按钮（init 注入不动 template.html，点击关面板开 TA tab）；②心意柜 hero 新增同款入口；③市集商品卡对 TA 正许愿的商品显示「☆ TA想要的」角标（WL_TA_KEY 匹配 giftId）；④购买弹窗小字动态提示「TA 正许愿想要这件——买下送出即心愿兑现」；⑤任何途径买下 TA 许愿的礼物送出后一律 wishTaRemove 兑现（原仅 fromTaWish 路径），礼物照常进 TA 的心意柜「收到的」；⑥TA 心愿单面板提示+设置【使用说明】同步（补「礼物进 TA 的心意柜-收到的」）；⑦market.css 补 .gift-item-tawish/.gift-wish-row+暗色。
+* 自查修复（本条内）：TA 兑现心愿漏扣款→补扣 TA 余额（可透支同口径）；每日 3 次上限误伤「TA 加心愿」→capped 只拦购买类（①②④）；三 tab/三按钮长名字溢出→gb-tab 与购买按钮 nowrap+ellipsis。node --check 过；--check-sentinels 277 全绿哑哨兵 0。
 
 ### 2026-09-03 15:3x（#141 安卓返回键/手势收键盘：输入栏下方灰块几秒才收（红米K80/小米15Pro/多机型 Chrome 通用）；已构建·含 #139/#140 一并收口）
 * [AI-B 域]（**改动文件：src/js/mobile-adapt.js（四处：syncAndroidKb 顶部「h 高于上一帧且键盘开启态=收起动画」探测置 _aClosing + 250ms 轮询同判据补置 + 复原时 _aH 钳回 innerHeight + 悬浮键盘推定收口 _aProvUserConfirm）、build.mjs（FIX_SENTINELS +3 条）、FIX-REGRESSION.md（#141 行）、tools/verify-android-kb-close.mjs（新增行为断言 5 项）；构建状态：已构建·sw mochi-mtl7bm9x**）。

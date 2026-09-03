@@ -6326,6 +6326,14 @@ cursor: pointer; padding: 0;
 .gb-tab { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .gb-cancel, .gb-ok, .gb-wishbtn { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .gb-wishbtn { font-size: 13.5px; }
+.gift-item-tawish { position: absolute; top: 8px; left: 8px; z-index: 2; max-width: calc(100% - 16px); box-sizing: border-box; padding: 3px 9px; border-radius: 99px; background: rgba(109, 91, 176, 0.92); color: #fff; font-size: 10.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
+#page-market .gift-item-tawish { background: rgba(0, 0, 0, 0.78); }
+.gift-wish-row { padding: 6px 14px 2px; }
+.gift-wish-row button { width: 100%; padding: 10px 0; border-radius: 12px; border: 1px dashed rgba(139, 122, 200, 0.4); background: rgba(139, 122, 200, 0.06); color: #6d5bb0; font-size: 13px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.gift-wish-row button:active { transform: scale(0.98); background: rgba(139, 122, 200, 0.12); }
+[data-theme="dark"] .gift-item-tawish { background: rgba(201, 184, 232, 0.85); color: #1c1c1e; }
+[data-theme="dark"] #page-market .gift-item-tawish { background: rgba(201, 184, 232, 0.85); color: #1c1c1e; }
+[data-theme="dark"] .gift-wish-row button { background: rgba(255, 255, 255, 0.06); border-color: rgba(201, 184, 232, 0.4); color: #c9b8e8; }
 .gc-from-name {
 font-size: 10px; color: #888; margin-bottom: 2px;
 display: block; max-width: 64px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -8714,9 +8722,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1788428771142">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.402</b></span>
-        <span class="sv-deploy">部署于 2026-09-03 17:46<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1788433073241">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.404</b></span>
+        <span class="sv-deploy">部署于 2026-09-03 18:57<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9812,7 +9820,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.402</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.404</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
       <!-- v3.27.x：设置页底部防骗声明 -->
       <div class="set-alert">
@@ -10085,7 +10093,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.402</span>
+              <span class="lic-ver">v3.26.404</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -23424,6 +23432,30 @@ if (end >= 0) return s.slice(0, end + 6) + escTxt(s.slice(end + 6));
 }
 return escTxt(s);
 }
+function pokePersonMap(s, taNm, meNm) {
+if (s === null || s === undefined) return s;
+let t = String(s);
+if (typeof t !== 'string' || !t) return t;
+const hasPh = t.indexOf('{ta}') >= 0 || t.indexOf('{me}') >= 0;
+if (hasPh) t = t.split('{ta}').join('\u0002').split('{me}').join('\u0003');
+const segs = t.split(/(<svg[\s\S]*?<\/svg>)/);
+for (let i = 0; i < segs.length; i += 2) {
+const parts = segs[i].split(/(data:[a-zA-Z0-9.+-]+\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+)/);
+for (let j = 0; j < parts.length; j += 2) {
+let p = parts[j];
+p = p.split('其他').join('\u0004').split('他们').join('\u0005').split('她们').join('\u0006').split('他人').join('\u0007');
+p = p.split('TA').join(taNm);
+p = p.replace(/\bta\b/g, taNm);
+p = p.split('他').join(taNm).split('她').join(taNm);
+p = p.split('\u0004').join('其他').split('\u0005').join('他们').split('\u0006').join('她们').split('\u0007').join('他人');
+parts[j] = p;
+}
+segs[i] = parts.join('');
+}
+t = segs.join('');
+if (hasPh) t = t.split('\u0002').join(taNm).split('\u0003').join(meNm);
+return t;
+}
 function attrEsc(s) {
 return String(s == null ? '' : s)
 .replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
@@ -24445,7 +24477,7 @@ return m;
 }
 if (rec.special === 'poke' || rec.special === 'ask-msg') {
 m.className = 'msg-poke' + (rec.mailNotice ? ' mail-notice' : '');
-m.innerHTML = '<span>' + pokeIconHtml(T(rec.text)) + '</span>' +
+m.innerHTML = '<span>' + pokeIconHtml(pokePersonMap(rec.text, __taNm, __meNm)) + '</span>' +
 (rec.img ? '<img class="msg-poke-img" src="' + attrEsc(rec.img) + '" alt="新头像">' : '');
 if (rec.mailNotice) {
 m.addEventListener('click', () => { if (window.openMailPage) window.openMailPage(); });
@@ -24973,8 +25005,12 @@ deskMsgTimer = setTimeout(() => { if (deskMsgEl) deskMsgEl.hidden = true; }, 600
 }
 function extractDeskMsg(rec) {
 let text = rec.text || '';
+if ((rec.special === 'poke' || rec.special === 'ask-msg') && typeof text === 'string') {
+text = pokePersonMap(text, chatPartnerName(), chatUserName());
+} else {
 if (typeof text === 'string' && text.indexOf('{ta}') >= 0) text = text.split('{ta}').join(chatPartnerName());
 if (typeof text === 'string' && text.indexOf('{me}') >= 0) text = text.split('{me}').join(chatUserName());
+}
 let img = rec.img || '';
 let imgSub = '';
 if (rec.parts && rec.parts.length) {
@@ -58846,7 +58882,13 @@ const html =
 (opts.fromTaWish ? '' : '<button class="gb-wishbtn" id="gb-wishbtn" type="button">' + (wishMyHas(gift.id) ? '✓ 已在心愿单' : '♡ 加入心愿单') + '</button>') +
 '<button class="gb-ok" id="gb-ok" type="button">送给 ' + esc(partnerName()) + '</button>' +
 '</div>' +
-'<div class="gb-tiny">' + (opts.fromTaWish ? '这是 ' + esc(partnerName()) + ' 心愿单里的礼物，送出后自动从 TA 的心愿单移除' : '加入心愿单只是许愿不花钱——' + esc(partnerName()) + ' 可能会买下它送你') + '</div>';
+'<div class="gb-tiny">' + (
+opts.fromTaWish
+? '这是 ' + esc(partnerName()) + ' 心愿单里的礼物，送出后自动从 TA 的心愿单移除，礼物进 TA 的心意柜'
+: (wishLoad(WL_TA_KEY).some(function (x) { return x.giftId === gift.id; })
+? esc(partnerName()) + ' 正许愿想要这件——买下送出即心愿兑现，自动从 TA 的心愿单移除'
+: '加入心愿单只是许愿不花钱——' + esc(partnerName()) + ' 可能会买下它送你')
+) + '</div>';
 window.openTCPanel(esc(gift.emoji) + ' ' + esc(gift.name), html);
 const wishEl = document.getElementById('gb-wish');
 const okBtn = document.getElementById('gb-ok');
@@ -58860,7 +58902,7 @@ toast('已加入我的心愿单');
 if (okBtn) okBtn.addEventListener('click', function () {
 const wish = (wishEl && wishEl.value || '').trim() || (gift.wish || '心意');
 if (buyAndSend(gift, 'out', wish)) {
-if (opts.fromTaWish) wishTaRemove(gift.id);
+wishTaRemove(gift.id);
 closeTc(); toast('已送出');
 }
 });
@@ -58888,7 +58930,7 @@ const ta = wishLoad(WL_TA_KEY);
 const list = wishTab === 'my' ? my : ta;
 const hint = wishTab === 'my'
 ? '在市集点开商品选「加入心愿单」即可许愿（不花钱）。' + esc(partnerName()) + ' 会按概率买下送你，礼物进「心意柜-收到的」并从心愿单移除；概率在「心意集市和心意柜设置」里可调。'
-: esc(partnerName()) + ' 逛市集时会把想要的加进这里。点「送 TA」买下送出，礼物进「心意柜-送出的」并从 TA 的心愿单移除。';
+: '这里是 ' + esc(partnerName()) + ' 许的愿望（TA 逛市集时也会按概率把想要的加进来）。点「送 TA」买下送出：礼物进聊天和 TA 的心意柜-收到的，并自动从心愿单移除；市集里 TA 正许愿的商品也会标出来。';
 const emptyTxt = wishTab === 'my'
 ? '心愿单还是空的<br>去心意市集挑一件，点「加入心愿单」'
 : (esc(partnerName()) + ' 还没许愿<br>TA 逛市集时会自己加进来');
@@ -58928,7 +58970,7 @@ const html =
 '<div class="gs-row"><div class="gs-lab">TA 加进自己心愿单概率</div><div class="gs-numwrap"><input class="gs-num" data-gsn="wlAddPct" type="number" min="0" max="100" inputmode="numeric" value="' + st.wlAddPct + '"><span class="gs-pct">%</span></div></div>' +
 '<div class="gs-row"><div class="gs-lab">TA 自己买礼物<span class="gs-sub">买给自己的礼物收进「心意柜-TA 自己买的」</span></div><div class="gs-switch' + (st.selfOn ? ' on' : '') + '" data-gsw="selfOn"></div></div>' +
 '<div class="gs-row"><div class="gs-lab">TA 自己买概率</div><div class="gs-numwrap"><input class="gs-num" data-gsn="selfPct" type="number" min="0" max="100" inputmode="numeric" value="' + st.selfPct + '"><span class="gs-pct">%</span></div></div>' +
-'<div class="gs-help">【使用说明】<br>· 我的心愿单：市集点开商品选「加入心愿单」许愿（不花钱）；TA 按概率直接买下送你，礼物进「心意柜-收到的」，心愿单自动移除。<br>· TA 的心愿单：TA 逛市集时按概率把想要的加进自己的心愿单；市集底部「☆ 心愿单」→「TA 的心愿单」点「送 TA」买下送出，礼物进「心意柜-送出的」。<br>· TA 自己买：TA 按概率给自己买礼物，收进「心意柜-TA 自己买的」，不发聊天消息。<br>· 概率=每次触发（我发消息后）TA 采取该行动的概率，0~100 自定义；TA 的购买类行为每天合计最多 3 次（与自动送礼共用上限）；关掉开关即完全关闭对应行为。</div>';
+'<div class="gs-help">【使用说明】<br>· 我的心愿单：市集点开商品选「加入心愿单」许愿（不花钱）；TA 按概率直接买下送你，礼物进「心意柜-收到的」，心愿单自动移除。<br>· TA 的心愿单：TA 会把想要的加进来；点「送 TA」买下送出，礼物进 TA 的心意柜-收到的并自动移除该心愿。市集里 TA 正许愿的商品会标出「☆ TA许愿的」，从这里进也行。<br>· TA 自己买：TA 按概率给自己买礼物，收进「心意柜-TA 自己买的」，不发聊天消息。<br>· 概率=每次触发（我发消息后）TA 采取该行动的概率，0~100 自定义；TA 的购买类行为每天合计最多 3 次（与自动送礼共用上限）；关掉开关即完全关闭对应行为。</div>';
 window.openTCPanel('心意集市和心意柜设置', html);
 document.querySelectorAll('#tc-body [data-gsw]').forEach(function (sw) {
 sw.addEventListener('click', function () {
@@ -59010,7 +59052,9 @@ return esc((g && g.emoji) || '🎁');
 }
 function giftItemHtml(g, manage) {
 const col = CAT_COLOR[g.cat] || '#f5f3fa';
-return '<button class="gift-item' + (manage ? ' manage' : '') + '" data-id="' + esc(g.id) + '" style="--cat:' + col + ';">' +
+const taWanted = wishLoad(WL_TA_KEY).some(function (x) { return x.giftId === g.id; });
+return '<button class="gift-item' + (manage ? ' manage' : '') + (taWanted ? ' ta-wish' : '') + '" data-id="' + esc(g.id) + '" style="--cat:' + col + ';">' +
+(taWanted ? '<span class="gift-item-tawish" title="' + esc(partnerName()) + '许愿的">☆ ' + esc(partnerName()) + '想要的</span>' : '') +
 '<div class="gift-item-top" style="background:linear-gradient(160deg,' + col + ',#fff);">' +
 '<div class="gift-item-emoji">' + giftMedia(g, 'gift-item-img') + '</div>' +
 '</div>' +
@@ -59350,7 +59394,7 @@ giftboxPage.innerHTML =
 '<div class="giftbox-stat-card"><div class="giftbox-stat-ico">💌</div><div class="giftbox-stat-num" id="giftbox-stat-out">0</div><div class="giftbox-stat-lbl">送出</div></div>' +
 '<div class="giftbox-stat-card"><div class="giftbox-stat-ico">🛍️</div><div class="giftbox-stat-num" id="giftbox-stat-self">0</div><div class="giftbox-stat-lbl">TA自己买</div></div>' +
 '</div>' +
-'<div class="giftbox-set"><button id="giftbox-settings" type="button">⚙ 心意集市和心意柜设置</button></div>' +
+'<div class="giftbox-set"><button id="giftbox-tawish" type="button">☆ 看看 ' + esc(partnerName()) + ' 的心愿单</button><button id="giftbox-settings" type="button">⚙ 心意集市和心意柜设置</button></div>' +
 '</div>' +
 '<div class="giftbox-tabs">' +
 '<button class="gb-tab sel" data-btab="in" type="button">收到的</button>' +
@@ -59377,6 +59421,8 @@ t.addEventListener('click', function () { boxTab = t.dataset.btab; renderBox(); 
 });
 const gbSettings = document.getElementById('giftbox-settings');
 if (gbSettings) gbSettings.addEventListener('click', openGiftSettings);
+const gbTaWish = document.getElementById('giftbox-tawish');
+if (gbTaWish) gbTaWish.addEventListener('click', function () { wishTab = 'ta'; renderWishPanel(); });
 }
 function init() {
 try { migrateMarketGlobal(false); } catch (e) {}
@@ -59403,6 +59449,16 @@ const catsNode = document.getElementById('gift-cats');
 if (catsNode) catsNode.insertAdjacentHTML('beforebegin', searchRowHtml('gift-search'));
 bindSearchRow('gift-search', giftPanelRerender);
 }
+if (!document.getElementById('gift-wish-entry')) {
+const catsNode2 = document.getElementById('gift-cats');
+if (catsNode2) catsNode2.insertAdjacentHTML('beforebegin', '<div class="gift-wish-row" id="gift-wish-entry"><button id="gift-wish-ta" type="button">☆ 看看 ' + esc(partnerName()) + ' 的心愿单</button></div>');
+}
+const gwBtn = document.getElementById('gift-wish-ta');
+if (gwBtn) gwBtn.addEventListener('click', function () {
+closeGiftPanel();
+wishTab = 'ta';
+renderWishPanel();
+});
 }
 const moreGift = document.getElementById('more-gift');
 if (moreGift) moreGift.addEventListener('click', function (e) { e.stopPropagation(); openGiftPanel(); });
@@ -77285,4 +77341,4 @@ return { lock: document.body.classList.contains('scroll-lock'), open: open };
 <!-- __MOCHI_EOF__ -->
 </body>
 </html>
-<!-- __MOCHI_EOF__ mtlcbbk6 -->
+<!-- __MOCHI_EOF__ mtlevj2x -->

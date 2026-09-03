@@ -790,6 +790,36 @@ if (end >= 0) return s.slice(0, end + 6) + escTxt(s.slice(end + 6));
 }
 return escTxt(s);
 }
+// v3.30.x：拍一拍人称「昵称制」——聊天昵称与桌面解耦后（v3.26.x），联系人昵称是聊天里
+// 唯一的人称来源。拍一拍消息里除了 {ta}/{me} 占位符外，字卡文案中写死的独立人称占位
+// （TA / ta / 他 / 她，语义上均指代联系人/被拍方）也一并按「联系人昵称」回填，
+// 不再跟随性别称呼（他/她/TA）——否则用户改了联系人昵称，拍一拍里仍出现 TA 很费解。
+// 保护段：<svg>…</svg> 图标、data:*;base64 与合成词（其他/他们/她们/他人）不受影响；
+// 不用 lookbehind（旧版 iOS Safari 不支持），占位符先掩成控制符防二次替换。
+function pokePersonMap(s, taNm, meNm) {
+if (s === null || s === undefined) return s;
+let t = String(s);
+if (typeof t !== 'string' || !t) return t;
+const hasPh = t.indexOf('{ta}') >= 0 || t.indexOf('{me}') >= 0;
+if (hasPh) t = t.split('{ta}').join('\u0002').split('{me}').join('\u0003');
+const segs = t.split(/(<svg[\s\S]*?<\/svg>)/);
+for (let i = 0; i < segs.length; i += 2) {
+const parts = segs[i].split(/(data:[a-zA-Z0-9.+-]+\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+)/);
+for (let j = 0; j < parts.length; j += 2) {
+let p = parts[j];
+p = p.split('其他').join('\u0004').split('他们').join('\u0005').split('她们').join('\u0006').split('他人').join('\u0007');
+p = p.split('TA').join(taNm);
+p = p.replace(/\bta\b/g, taNm);
+p = p.split('他').join(taNm).split('她').join(taNm);
+p = p.split('\u0004').join('其他').split('\u0005').join('他们').split('\u0006').join('她们').split('\u0007').join('他人');
+parts[j] = p;
+}
+segs[i] = parts.join('');
+}
+t = segs.join('');
+if (hasPh) t = t.split('\u0002').join(taNm).split('\u0003').join(meNm);
+return t;
+}
 function attrEsc(s) {
 return String(s == null ? '' : s)
 .replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
@@ -1884,7 +1914,9 @@ return m;
 }
 if (rec.special === 'poke' || rec.special === 'ask-msg') {
 m.className = 'msg-poke' + (rec.mailNotice ? ' mail-notice' : '');
-m.innerHTML = '<span>' + pokeIconHtml(T(rec.text)) + '</span>' +
+// v3.30.x：拍一拍人称昵称制——不再走 T()（taFit 称呼替换），改用 pokePersonMap：
+// {ta}/{me} 与字卡里写死的 TA/ta/他/她 一律按 我的昵称/联系人昵称 回填
+m.innerHTML = '<span>' + pokeIconHtml(pokePersonMap(rec.text, __taNm, __meNm)) + '</span>' +
 (rec.img ? '<img class="msg-poke-img" src="' + attrEsc(rec.img) + '" alt="新头像">' : '');
 if (rec.mailNotice) {
 m.addEventListener('click', () => { if (window.openMailPage) window.openMailPage(); });
@@ -2425,8 +2457,14 @@ function extractDeskMsg(rec) {
 let text = rec.text || '';
 // v3.26.x：拍一拍/系统消息存 {ta}/{me} 占位符，桌面弹窗预览需回填昵称
 // （renderMsg 走 T() 替换，此处同义；不走 taFit 称呼改写，避免昵称被改成 他/她）
+// v3.30.x：拍一拍人称昵称制——poke/ask-msg 整体走 pokePersonMap（{ta}/{me} 与字卡写死的
+// TA/ta/他/她 一律按昵称回填，与聊天内渲染一致；须在回填前整体替换，防昵称含 TA/他/她 被二次改写）
+if ((rec.special === 'poke' || rec.special === 'ask-msg') && typeof text === 'string') {
+text = pokePersonMap(text, chatPartnerName(), chatUserName());
+} else {
 if (typeof text === 'string' && text.indexOf('{ta}') >= 0) text = text.split('{ta}').join(chatPartnerName());
 if (typeof text === 'string' && text.indexOf('{me}') >= 0) text = text.split('{me}').join(chatUserName());
+}
 let img = rec.img || '';
 let imgSub = '';
 if (rec.parts && rec.parts.length) {
