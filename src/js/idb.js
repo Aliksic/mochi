@@ -20,9 +20,28 @@
             db.createObjectStore(STORE);
           }
         };
+        // v3.26.x #135：版本升级被其他标签页/旧连接阻塞——原实现无 onblocked 处理：
+        // blocked 请求既不 onsuccess 也不 onerror，open() 永不落地，所有 open().then
+        // 挂死（含启动回填 idbRestore → 开屏永远「正在加载数据…」）。新版本 SW 换代后
+        // 新旧页面并存时高发（iPad 7 + Edge 实测卡开屏）。收到 blocked 主动失败本次
+        // open（下次调用重建）；旧连接方随后释放或关闭旧标签页后自然恢复。
+        req.onblocked = () => {
+          try { dbPromise = null; } catch (e1) {}
+          reject(new Error('idb open blocked'));
+        };
         req.onsuccess = () => resolve(req.result);
         req.onerror = () => reject(req.error);
       } catch (e) { reject(e); }
+      // v3.26.x #135：open() 兜底落地——iOS/Edge 内核存在「open 请求既不 success
+      // 也不 error 也不 blocked」的挂起形态（IDB 服务进程被杀瞬间发起的请求）。原实现
+      // 各事务超时计时器都注册在 open().then 里，open 不落地则计时器永不启动 →
+      // idbGet/idbGetMany/idbListKeys/idbRestore 全部永久挂起，开屏永远停在
+      // 「正在加载数据…」（iPad 7 + Edge 实测）。8s 未落地判失败：清 dbPromise 让
+      // 下次调用重建连接，调用方 catch 走 LS 兜底/慢保险丝，开屏永不卡死。
+      setTimeout(function () {
+        try { dbPromise = null; } catch (e2) {}
+        reject(new Error('idb open hang'));
+      }, 8000);
     });
     // v3.6.x 修复（open 失败永久不可用）：失败时清 dbPromise 允许下次重试——
     // 原实现缓存 rejected Promise，整个会话 IDB 永久不可用（隐私模式/配额耗尽/

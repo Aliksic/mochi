@@ -1,4 +1,15 @@
-# 本次构建者：AI-B（本会话：#134 iPhone X 图标/小组件缺失自愈防线 + 拖拽 HierarchyRequestError 修复；打包在途 #133 回归修补）
+# 本次构建者：AI-B（本会话：#134 iPhone X 图标/小组件缺失自愈防线 + 拖拽 HierarchyRequestError 修复 + #135 iPad7+Edge 开屏死锁修复；打包在途 #133 回归修补）
+
+### 2026-09-03 13:3x（#135 iPad 7 + Edge 开屏卡「正在加载数据」死锁：open() 永不落地 + 开屏门控无硬出口；已构建）
+* [AI-B 域·构建收口]（**改动文件：src/js/idb.js（open() 加 8s 兜底落地超时 + onblocked 主动失败——open 挂起时所有 open().then 的事务超时计时器永不启动，idbRestore 永久挂起）、src/js/clock.js（20s 硬保险丝 readyForced：数据未就绪也放行进入按钮，点击改走 forceEnter 弹数据不全提示，开屏永不死锁）、build.mjs（FIX_SENTINELS 3 条）、FIX-REGRESSION.md（#135 行）、tools/verify-html-eof.mjs（#134 配套）；构建状态：已构建·sw 见 version.json**）。
+* 根因：indexedDB.open 在 iPad 7 + Edge 存在「不 success/error/blocked」挂起形态或 blocked 无处理——open() 原本无落地超时，各事务超时计时器都注册在 open().then 里 → idbRestore 的 Promise.all 永久挂起 → __mochiDataReady 永不置位 → clock.js ready() 恒假 → 「点击进入/仍要进入」永远出不来。
+* 验证：node --check 过；--check-sentinels 259 全绿哑哨兵 0；构建后哨兵含 3 条新锚点。
+* 待真机（iPad 7 + Edge）：开屏最长 20s 必出现可点状态，滑到底可进入（数据多时弹数据不全提示）；正常设备行为不变。
+
+### 2026-09-03 12:2x（#133 续：预设分组字卡无法单独编辑→预设持久化改造；已构建收口本项）
+* [AI-B 构建收口]（**改动文件：src/js/chat.js（`myInviteG()` 首启注入 `['__preset', MY_INVITE_PRESETS.slice()]` + save、`myInviteView()` 预设改从持久化取且 forEach 跳过 `__preset`、字卡编辑按钮去掉 `if(cur.user)` 守卫）、build.mjs（FIX_SENTINELS 补第 6 条 `if (!myInviteGroups.some(g => g[0] === '__preset')) {`）、FIX-REGRESSION.md（#133 快照表补「回归修补2」+哨兵 6 条）、tools/tmp-invite-ask.mjs（D 部分预设编辑测试）；构建状态：已构建·sw mochi-mtl0fzv6**）。
+* 根因：预设分组 cards 为 `MY_INVITE_PRESETS.slice()` 实时生成、不落持久化 `myInviteG()`，编辑按钮被 `if(cur.user)` 守卫（预设无 user）→ 预设字卡没有修改/删除按钮；即便放开，`myInviteEdit/myInviteDel` 也因找不到 `__preset` 条目而失效。修复=预设分组落持久化（系统卡首启注入），字卡按钮去守卫 → 预设/自建字卡均可单独改/删并落库（分组级批量管理仍限自建）。
+* 验证：node --check chat.js 过；node build.mjs 哨兵全绿、哑哨兵 0；tools/tmp-invite-ask.mjs 批量勾选/全选 + 自建/预设字卡单独编辑 16/17 通过（唯一 FAIL 为诊断取幽灵锚点 input 宽 1px 误报）。待真机：预设与自建字卡均可单独修改/删除并持久化。
 
 ### 2026-09-03 01:0x（#134 iPhone X 桌面图标/小组件缺失反复发作 + 装修模式拖拽 HierarchyRequestError；已构建）
 * [AI-B 域·构建收口]（**改动文件：src/pwa/sw.js（isCompleteHtml 完整性校验×4 处写缓存点 + activate 存量残缺缓存自愈 + PURGE_INDEX/PURGE_DONE 消息）、src/template.html（body 末 mochi-html-eof 锚点 + __MOCHI_EOF__ 注释双锚点）、build.mjs（</html> 后 EOF 兜底注释 + FIX_SENTINELS 6 条）、src/js/device.js（文档完整性自检：load+60s 查 EOF 锚点/openDecision/standalone 类，缺失发 PURGE_INDEX 等 PURGE_DONE reload，sessionStorage 限 1 次）、src/js/personalize.js（computeDrop 排除整组 app-grid 拖拽 + doDrop dragged.contains(info.ref) 自嵌套防线）；构建状态：已构建·sw 见 version.json**）。

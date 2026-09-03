@@ -87,13 +87,20 @@
     }
     if (bottom !== scrolledBottom) { scrolledBottom = bottom; updateEnterState(); }
   }
+  // v3.26.x #135：20 秒硬保险丝——数据层有未知永久挂起形态（iPad 7 + Edge：
+  // indexedDB.open 永不落地 → __mochiDataReady 永不置位 → updateEnterState 的
+  // ready() 恒假 → 「点击进入/仍要进入」永远出不来，开屏彻底死锁）。此前只有
+  // mochi-restore-slow 慢标志（仍要进入也要求 ready 门控下的显隐路径）。现 20s
+  // 未就绪时 readyForced=true：进入门控按已就绪放行（仍要求滑到底），点进入走
+  // forceEnter 同款「数据仍在加载」提示；数据随后真就绪时 ready() 优先、标志自动失效。
+  let readyForced = false;
   function updateEnterState() {
-    const r = ready();
+    const r = ready() || readyForced;
     const ok = r && scrolledBottom;
     if (loadingEl) {
       // 数据未就绪 → 仍在加载数据；数据已就绪但页面资源未加载完 → 提示等待页面
       loadingEl.hidden = r && loaded();
-      loadingEl.textContent = (!r && slow) ? '数据较多，仍在加载…' : (r ? '正在加载页面…' : '正在加载数据…');
+      loadingEl.textContent = (!ready() && slow) ? '数据较多，仍在加载…' : (r ? '正在加载页面…' : '正在加载数据…');
     }
     if (hintEl) hintEl.hidden = !r || !loaded() || ok;
     if (enterEl) {
@@ -101,11 +108,17 @@
       enterEl.classList.toggle('is-disabled', !ok); // div 上设 disabled 属性不落 DOM，用 class 控制置灰
     }
     // 仍要进入：仅在「页面已加载完成 + 较慢且未真就绪」时显示，真就绪后隐藏
-    if (forceEnterEl) forceEnterEl.hidden = r || !slow || !loaded();
+    if (forceEnterEl) forceEnterEl.hidden = ready() || readyForced || !slow || !loaded();
   }
   const enter = () => {
     if (splash.classList.contains('hide')) return;
-    if (!ready() || !scrolledBottom || !loaded()) return; // 数据未就绪 / 未滑到底 / 页面未加载完：禁止进入
+    // v3.26.x #135：未真就绪但已硬放行（20s 保险丝）→ 走 forceEnter：
+    // 隐藏开屏 + 弹「数据仍在加载」提示（不静默进入，用户知情数据可能不全）
+    if (!ready()) {
+      if (readyForced) { forceEnter(); }
+      return; // 数据未就绪且未硬放行：禁止进入（原有门控）
+    }
+    if (!scrolledBottom || !loaded()) return; // 未滑到底 / 页面未加载完：禁止进入
     // 今日首次进入（本次仍强制通读）→ 记下已读，当日再次打开不再展开全文
     if (!seenToday) {
       try { localStorage.setItem(seenKey, '1'); seenToday = true; } catch (e) {}
@@ -164,9 +177,17 @@
     updateEnterState();
     checkScrolled();
   }, 300);
-  // 20 秒保险丝：数据极端异常未就绪时显示「仍要进入」逃生口（不自动进入，避免数据不全误入）；
-  //   idbRestore 12 秒派发 mochi-restore-slow 通常已先触发，这里兜底事件丢失场景
-  setTimeout(() => { if (!ready()) { slow = true; updateEnterState(); } }, 20000);
+  // 20 秒硬保险丝：数据极端异常未就绪时①置 slow 显示「仍要进入」逃生口（idbRestore
+  //   12s 的 mochi-restore-slow 通常已先触发，这里兜底事件丢失场景）；②置 readyForced
+  //   解除 ready() 硬门控——点击进入改走 forceEnter（隐藏开屏+数据不全提示），开屏
+  //   永不因数据层挂起而彻底死锁（#135 iPad 7 + Edge：open() 挂起形态）
+  setTimeout(() => {
+    if (!ready()) {
+      slow = true;
+      readyForced = true;
+      updateEnterState();
+    }
+  }, 20000);
 })();
 
 // v3.8.y：章节渲染
