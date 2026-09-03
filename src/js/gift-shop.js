@@ -636,6 +636,35 @@
   function boxLoad() { try { const s = store(); if (!s) return []; return JSON.parse(s.get(BOX_KEY) || '[]'); } catch (e) { return []; } }
   function boxSave(a) { const s = store(); if (s) s.set(BOX_KEY, JSON.stringify(a)); }
 
+  // v3.26.x 心愿单：市集「许愿—实现」闭环——我加心愿，TA 按概率买下送我；TA 也会把想要的
+  // 加进自己的心愿单（我可买下送 TA），还能自己买礼物收进自己的心意柜（giftbox side 'self'）。
+  // 心愿数据 per-cid（与心意柜同 namespace）；设置全局（GSTORE，与 market-custom 同 namespace）
+  const WL_MY_KEY = 'gift-wishlist';
+  const WL_TA_KEY = 'gift-wishlist-ta';
+  const WL_SETTINGS_KEY = 'market-wl-settings';
+  const WL_MAX = 30;
+  function clampPct(v, def) { const n = Math.round(Number(v)); return (n >= 0 && n <= 100) ? n : def; }
+  function wlSettings() {
+    let s = null;
+    try { s = JSON.parse((GSTORE && GSTORE.get(WL_SETTINGS_KEY)) || '') || null; } catch (e) {}
+    s = s || {};
+    return { wlOn: s.wlOn === 0 ? 0 : 1, wlBuyPct: clampPct(s.wlBuyPct, 20), wlAddPct: clampPct(s.wlAddPct, 15), selfOn: s.selfOn === 0 ? 0 : 1, selfPct: clampPct(s.selfPct, 10) };
+  }
+  function wlSettingsSave(st) { if (GSTORE) GSTORE.set(WL_SETTINGS_KEY, JSON.stringify(st)); }
+  // 心愿项存快照（商品日后被改/删不影响已许的愿），giftId 关联市集商品
+  function wishSnap(g) { return { giftId: g.id, name: g.name, emoji: g.emoji, img: g.img || '', price: g.price, cat: g.cat, wish: g.wish || '送给你', tm: Date.now() }; }
+  function wishLoad(key) { try { const s = store(); if (!s) return []; const a = JSON.parse(s.get(key) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
+  function wishSave(key, a) { const s = store(); if (s) s.set(key, JSON.stringify(a)); }
+  function wishMyHas(id) { return wishLoad(WL_MY_KEY).some(function (x) { return x.giftId === id; }); }
+  function wishMyAdd(g) {
+    const a = wishLoad(WL_MY_KEY);
+    if (a.some(function (x) { return x.giftId === g.id; })) return false;
+    a.unshift(wishSnap(g));
+    wishSave(WL_MY_KEY, a.slice(0, WL_MAX));
+    return true;
+  }
+  function wishTaRemove(id) { wishSave(WL_TA_KEY, wishLoad(WL_TA_KEY).filter(function (x) { return x.giftId !== id; })); }
+
   function cardPool() { const pool = []; try { const d = window.DEFAULT_CARD_DATA; if (d && d.main) { d.main.forEach(function (c) { if (c && c[1]) c[1].forEach(function (x) { if (x) pool.push(x); }); }); } } catch (e) {} return pool; }
   function taWish(gift) {
     let wish = (gift && gift.wish) || '送给你';
@@ -673,10 +702,66 @@
   const AUTO_DAILY_PREFIX = 'ml2_gift_daily_';
   function autoDailyCount() { const s = store(); return Number(s && s.get(AUTO_DAILY_PREFIX + todayKey())) || 0; }
   function autoDailyIncr() { const s = store(); if (s) s.set(AUTO_DAILY_PREFIX + todayKey(), String(autoDailyCount() + 1)); }
+  // TA 心动时刻（每次发消息后触发）：按设置概率依次判定——
+  // ①买下我心愿单礼物送我（扣 TA 余额，占每日送礼上限）②自己买礼物收进自己的心意柜（占上限）
+  // ③把想要的加进 TA 心愿单（不花钱不占上限，去重+WL_MAX 上限）④都没中→原 5% 随机送礼
+  // 购买类共享每日 3 次上限；设置在「心意集市和心意柜设置」里可开关/自定义概率
   window.maybeAutoGift = function () {
     if (autoDailyCount() >= 3) return;
-    if (Math.random() >= 0.05) return;
+    const st = wlSettings();
     const gifts = giftsLoad(); if (!gifts.length) return;
+    const myCid = window.__activeCid || 'default';
+    const later = function (fn) {
+      setTimeout(function () {
+        if ((window.__activeCid || 'default') !== myCid) return;
+        fn();
+      }, randInt(1500, 4000));
+    };
+    // ① 心愿单兑现：TA 买下我心愿单里的礼物送我（先移除心愿防连击重复买）
+    if (st.wlOn) {
+      const myWl = wishLoad(WL_MY_KEY);
+      if (myWl.length && Math.random() * 100 < st.wlBuyPct) {
+        const item = pick(myWl);
+        wishSave(WL_MY_KEY, myWl.filter(function (x) { return x.giftId !== item.giftId; }));
+        autoDailyIncr();
+        later(function () {
+          const rec = { side: 'in', special: 'gift', giftId: item.giftId, giftName: item.name, giftEmoji: item.emoji, giftImg: item.img || '', giftPrice: item.price, giftWish: item.wish, giftCat: item.cat, ts: Date.now() };
+          if (window.chatAddGift) window.chatAddGift(rec);
+          recordBox(item, 'in', item.wish);
+          if (window.logFish) window.logFish();
+        });
+        return;
+      }
+    }
+    // ② TA 自己买：挑一件（优先买得起的）收进自己的心意柜，不发聊天消息
+    if (st.selfOn && Math.random() * 100 < st.selfPct) {
+      const w0 = walletGet();
+      const affordable0 = gifts.filter(function (g) { return Math.round((g.price || 0) * 100) <= w0.systemBalance; });
+      const gift0 = pick(affordable0.length ? affordable0 : gifts);
+      w0.systemBalance -= Math.round((gift0.price || 0) * 100); walletSet(w0);
+      autoDailyIncr();
+      later(function () {
+        recordBox(gift0, 'self', gift0.wish || '送给自己');
+        toast(partnerName() + ' 给自己买了「' + gift0.name + '」，收进了 TA 的心意柜');
+      });
+      return;
+    }
+    // ③ TA 加心愿单：心愿单满/没得加时落回 ④
+    if (st.wlOn && Math.random() * 100 < st.wlAddPct) {
+      const taWl = wishLoad(WL_TA_KEY);
+      const has = {};
+      taWl.forEach(function (x) { has[x.giftId] = 1; });
+      const poolW = gifts.filter(function (g) { return !has[g.id]; });
+      if (poolW.length) {
+        const giftW = pick(poolW);
+        taWl.unshift(wishSnap(giftW));
+        wishSave(WL_TA_KEY, taWl.slice(0, WL_MAX));
+        toast(partnerName() + ' 把「' + giftW.name + '」加进了 TA 的心愿单');
+        return;
+      }
+    }
+    // ④ 原有：TA 随机送礼（5%）
+    if (Math.random() >= 0.05) return;
     const w = walletGet();
     const affordable = gifts.filter(function (g) { return Math.round((g.price || 0) * 100) <= w.systemBalance; });
     const pool = affordable.length ? affordable : gifts;
@@ -684,7 +769,6 @@
     const wish = taWish(gift);
     const priceFen = Math.round((gift.price || 0) * 100);
     w.systemBalance -= priceFen; walletSet(w); autoDailyIncr();
-    const myCid = window.__activeCid || 'default';
     setTimeout(function () {
       if ((window.__activeCid || 'default') !== myCid) return;
       const rec = { side: 'in', special: 'gift', giftId: gift.id, giftName: gift.name, giftEmoji: gift.emoji, giftImg: gift.img || '', giftPrice: gift.price, giftWish: wish, giftCat: gift.cat, ts: Date.now() };

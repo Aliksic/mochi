@@ -1,4 +1,28 @@
-# 本次构建者：AI-A（本会话：字卡互动「不吵架？那我们太平天国。」文案修复）
+# 本次构建者：AI-B（本会话：#139 存储瘦身四件套——LS 残留大键清理 + 专属字卡库去重防线 + 收藏图片压缩 + GIF 上传大小上限；跨域改动 src/js/chatcard.js、src/js/chat.js，理由：用户批准的存储优化在字卡库/收藏数据写入路径，AI-A 名下但 #138 已收口无在途改动，改动区与 AI-A 最近提交不重叠）
+
+### 2026-09-03 15:3x（#141 安卓返回键/手势收键盘：输入栏下方灰块几秒才收（红米K80/小米15Pro/多机型 Chrome 通用）；已构建·含 #139/#140 一并收口）
+* [AI-B 域]（**改动文件：src/js/mobile-adapt.js（四处：syncAndroidKb 顶部「h 高于上一帧且键盘开启态=收起动画」探测置 _aClosing + 250ms 轮询同判据补置 + 复原时 _aH 钳回 innerHeight + 悬浮键盘推定收口 _aProvUserConfirm）、build.mjs（FIX_SENTINELS +3 条）、FIX-REGRESSION.md（#141 行）、tools/verify-android-kb-close.mjs（新增行为断言 5 项）；构建状态：已构建·sw mochi-mtl7bm9x**）。
+* 需求/根因：用户反馈（红米 K80、小米15Pro Chrome 等「其他安卓手机也这样」）——聊天输入栏打字后按返回键收键盘，输入栏这一行下方灰色块几秒才收起。#89 修「点发送失焦收起卡顿」把 _aClosing 闸门挂在 focusout；返回键/手势收键盘时内核保留焦点、focusout 不触发 → 收起动画每帧 vv.resize 照旧跑 _aPinPan/nudgeInputVisible 强制布局读取（重聊天页单帧 reflow ~100ms，小米15Pro 诊断长任务三连 98ms 即此时段），.phone 高度跟不上收起动画 → 下方露 body 灰底数秒。
+* 修复（全部 mobile-adapt.js 安卓分支，不动 iOS 分支）：①「高度上升=收起动画」探测（门控只看相对上一帧在涨+_aKb 开启态，早期帧即置位）与 #89 失焦路径汇合同一收起分支——动画期只写 height 跟随、零强制布局读取；② 轮询补置（resize 漏触发内核兜底）；③ 复原时 _aH 基线钳回 window.innerHeight（防基线停留低位把 .phone 锁死中间高度）；④ _aProv 用户键入 1200ms 内推定收口（vv 不变化内核的灰块残留，不等 2200ms）。
+* 验证：node --check 过；node build.mjs 哨兵 272/272 全绿哑哨兵 0 + sw 7/7；tools/verify-android-kb-close.mjs 5/5（动画期 offsetTop 探针 0 reads；移除修复重建→15 reads FAIL=有牙已实测）；回归全绿：verify-android-kb 3/3、verify-kb-pinpan-late 5/5、verify-kb-dock 12/12、verify-morekb-pan 7/7、verify-chat-input-guard 17/17。verify-ask-no-false-dock 场景2 FAIL 为基线既有（无本修复同样 FAIL，脚本断言环境漂移），非本次回归。
+* 待真机（红米 K80/小米15Pro + Chrome）：打字后按返回键收键盘 → 灰块随手收起不残留；点发送失焦收起/弹键盘/打字/半框输入/面板停靠均不回归。
+* 说明：FIX-REGRESSION.md 增 #141 行（本次改该文件，按约定留此说明）；#140 编号已被并行会话（desk-layout）占用，本条顺延 #141，编号不冲突。
+
+### 2026-09-03 15:0x（#139 存储瘦身四件套：747MB→预计 ≈330MB；已构建·含 #140 一并收口）
+* [AI-B 域·构建收口]（**改动文件：src/js/idb.js（lsResidueSweep LS 大键残留清扫 + idbBigSize 尺寸只读访问）、src/js/chatcard.js（专属字卡库去重模块 cc-dedupe-v1 + 导入兜底防复制 fromPubFallback + GIF 上传上限 CC_GIF_MAX_B64）、src/js/chat.js（收藏图片压缩 compressFavDataUrl/compressFavListImages/favImgPass CAS + saveFav 钩子 + 启动/换桌面迁移标记 fav-img-cmp-v1）、build.mjs（FIX_SENTINELS 5 条）、FIX-REGRESSION.md（#139 行）；构建状态：已构建·sw mochi-mtl6ng5m·v3.26.396**）。
+* 跨域改动说明：chatcard.js/chat.js 属 AI-A 域，#138（ta-ask）已提交收口无在途标记，经用户批准本次跨域；改动区（chatcard 导入/上传/迁移模块、chat.js getFav/saveFav 一带）与 AI-A 最近提交区不重叠。
+* 需求/根因：用户机诊断 747MB——字卡库 cc-groups 家族 ≈563MB（公用 138.22 + 三桌面专属 148.89/138.22/138.22，三份逐字节同大小=整份复制，来源疑为专属页导入全量备份时 `bag[PUB_PREFIX+':cc-groups']` 兜底把公用库整份写进专属键）；fav-msgs ≈21MB（收藏把消息图片 dataURL 原样整份进库）；LS 整域 10MB 满 QuotaExceededError（设置/桌面保存失败，真正报错的是 LS 的 10MB 独立上限而非 IDB 配额 747/10987MB）；GIF 直存原图无上限。
+* 修复（数据零丢失底线）：① idb.js `lsResidueSweep`——restore/备份导入后清扫 LS >200KB 残留（排除 chat-msgs 快照/music-file/元键）：IDB 同值纯去重删 LS；IDB 缺失/落后先按 retainValue 规则以 LS 追平、写成功且 LS 未被业务再写才删（CAS 绝不先删后写）；② chatcard.js 专属库去重——`__big-idx` 尺寸+体检标记预检（稳态零开销免读大值），整库相等→删专属键（公用库始终保留一份，回复池本就「专属+公用」合并读取零损失），分组级同名同分类内容一致→剔除、剔空删键、剩余 <15MB 才回写；公用库只读不动；deviceMemory<4 不跑；③ 导入兜底防复制——专属页导入全量备份时公用库兜底改最后位 + fromPubFallback 守卫（合并结果与公用库完全相同不写专属键）；④ chat.js 收藏图片压缩——saveFav 钩子 + 一次性迁移（fav-img-cmp-v1）：只压 data:image（GIF/SVG/<4KB 跳过）、480px、WebP 优先（iOS 不支持自动回退 JPEG 白底）、必须比原图小才采用、写前 CAS 比对防并发覆盖；⑤ GIF 上传上限 ≈3MB（超限跳过提示）。媒体池按内容哈希去重 + Blob 直存为后续单独立项（用户已确认）。
+* 验证：node --check 三文件过；node build.mjs 哨兵 269/269 全绿哑哨兵 0 + sw 7/7；verify:all / verify-desk-layout-guard 结果见构建后核对。
+* 待真机（用户机 24117RK2CC）：升级后空闲约 1 分钟出现清理 toast；重新生成诊断核对 cc-groups ≈563MB→≈150MB 内、fav-msgs 显著下降、LS 写探针恢复、设置/桌面保存正常、字卡/回复/收藏内容无缺失。
+* 打包收口：并行会话 #140（desktop-slider/personalize/mobile-adapt + FIX_SENTINELS 4 条 + tools/verify-desk-layout-guard.mjs）已声明「源已完成·待构建者收口」，本次构建已包含其改动与哨兵（269 = 260+5+4），其真机验证与 FIX-REGRESSION 登记由该会话负责。
+
+### 2026-09-03 15:1x（#140 华为Pura70Pro+/Chrome122 桌面小组件卡片大部分不显示：desk-layout 损坏/空壳整批进隐藏池；源已完成·未构建）
+* [AI-B 域]（**改动文件：src/js/personalize.js（deskLayout() 完整性校验+坏键自愈清除 / 隐藏池扫描跳过「布局有名」组件 / saveDeskLayout 写前防损坏）、src/js/desktop-slider.js（deskRebuild 页数钳制防 scrollLeft 落超界空白页）、build.mjs（FIX_SENTINELS +4 条）、tools/verify-desk-layout-guard.mjs（新增回归脚本 5 场景 10 断言）；构建状态：未构建——工作区有 #139 在途半成品，本会话按并行协议不构建不提交，待构建者一并收口**）。
+* 根因：desk-layout 持久化值损坏/空壳（[[],[]…] / 页数超限 / 重复组件 id，安卓高 IO/配额压力下产生）时 applyDeskLayout 把布局外全部小组件卡整批扫进隐藏池，只剩图标网格=「卡片大部分不显示」；坏键落 IDB 每次启动回填复发（同 #87/#134/#136 存量大数据+慢 IO 家族，跨安卓机型）。Pura70Pro+ 诊断实证：LS 3.6MB 高占用、IDB 22.5MB、长任务密集、启动异常=无（非截断家族）。
+* 验证：node --check 过；--check-sentinels 269 全绿哑哨兵 0；worktree 隔离构建 verify-desk-layout-guard 修复版 10/10；无修复基线反向对照 3/10（空壳/截断/重复 id 布局把 7~8 张卡整批吞进隐藏池且坏键留存=症状实锤复现）；基线 verify:all 121 通过/69 断言失败/2 超时与 #134 时代基线一致（均历史存量非本次引入）。
+* 待真机（Pura70Pro+ Chrome 122 及其他安卓）：升级后冷启动一次（坏键自动清除回默认布局）小组件卡片全部显示；已装修用户布局保持不变；装修保存/删除页/恢复默认桌面正常。
+* 需要对方处理（AI-A）：用户诊断里 page-room 有 Uncaught ReferenceError: floorPick is not defined（openModal 回调内，room.js 相关），本会话未动该文件。
 
 ### 2026-09-03 14:1x（#138 ta-ask 字卡回复文案修复「太平天国」；已构建已推送）
 * [AI-A 域]（**改动文件：src/js/ta-ask.js（cr4「万一吵架了，谁先低头？」选「不吵架」的一条回复：「不吵架？那我们太平天国。」→「不吵架？那拉钩，谁反悔是小狗。」）；构建状态：已构建·sw mochi-mtl4nqrd·v3.26.396**）。

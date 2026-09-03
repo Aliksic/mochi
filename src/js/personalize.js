@@ -3537,17 +3537,43 @@ try {
     return pool;
   }
   // 读布局：desk-layout = JSON 数组（每页一个 widget id 数组）；无 → null（保持 DOM 原状）
+  // v3.27.x（#140 Huawei Pura70Pro+/Chrome 122 等安卓同族）：布局完整性校验——
+  // 高 IO/配额压力下持久化值可能损坏/空壳（[[],[]…] / 页数超限 / 重复组件 id），
+  // applyDeskLayout 会把布局外全部小组件卡整批扫进隐藏池，只剩图标网格（「卡片大部分
+  // 不显示」）；坏键落在 IDB 每次启动回填复发（同 #87/#134/#136 存量数据+慢 IO 家族）。
+  // 校验不过 → 按无布局处理（保持 template 默认 DOM）并当场清坏键，防回填复活。
   const deskLayout = () => {
+    let a = null;
     try {
       const v = store.get('desk-layout');
-      if (v) { const a = JSON.parse(v); if (Array.isArray(a)) return a; }
+      if (v) { const p = JSON.parse(v); if (Array.isArray(p)) a = p; }
     } catch (e) {}
-    return null;
+    if (!a) return null;
+    const seen = {};
+    const ok = a.length >= DESK_PAGE_MIN && a.length <= DESK_PAGE_MAX &&
+      a.some(function (page) { return Array.isArray(page) && page.length > 0; }) &&
+      a.every(function (page) { return Array.isArray(page) && page.every(function (w) { return typeof w === 'string'; }); }) &&
+      a.every(function (page) { return (page || []).every(function (w) { if (seen[w]) return false; seen[w] = 1; return true; }); });
+    if (!ok) {
+      try { console.info('[mochi] desk-layout 校验失败（损坏/空壳），忽略并清除'); } catch (e) {}
+      try { store.remove('desk-layout'); } catch (e) {}
+      return null;
+    }
+    return a;
   };
   // 保存布局（按当前 DOM 状态，含隐藏池外的所有页）
   const saveDeskLayout = () => {
     const slides = Array.prototype.slice.call(pagesBox.querySelectorAll('.page-slide'));
     const lay = slides.map(s => Array.prototype.slice.call(s.querySelectorAll('[data-desk-widget]')).map(n => n.getAttribute('data-desk-widget')));
+    // v3.27.x（#140）：写前防损坏——非数组/页数超界/组件 id 重复（嵌套遍历或并发装修
+    // 可产生重复 id，回填后校验必失败 → 全卡进隐藏池复发）。异常时放弃本次保存并清除，
+    // 保持 template 默认桌面，不把坏值固化进 IDB。
+    try {
+      const seen = {};
+      const ok = Array.isArray(lay) && lay.length >= DESK_PAGE_MIN && lay.length <= DESK_PAGE_MAX &&
+        lay.every(function (page) { return Array.isArray(page) && page.every(function (w) { return typeof w === 'string' && !seen[w] && (seen[w] = 1); }); });
+      if (!ok) { try { store.remove('desk-layout'); } catch (e) {} return lay; }
+    } catch (e) {}
     store.set('desk-layout', JSON.stringify(lay));
     return lay;
   };
@@ -3609,7 +3635,12 @@ try {
       syncPageHint(slide);
     });
     // 布局外的组件 → 隐藏池
+    // v3.27.x（#140）：列在「不存在的页」上的组件也视为有主——只隐藏「布局数组里
+    // 完全找不到」的组件。否则页面数被外部改动（删页/校验失败重建）时，布局后半段
+    // 指向缺失页的组件会被误判为「布局外」整批进隐藏池，加重「卡片大部分不显示」。
     const pool = ensureWidgetPool();
+    const inAnyPage = {};
+    lay.forEach(function (page) { (page || []).forEach(function (w) { inAnyPage[w] = 1; }); });
     WIDGET_IDS.forEach(wid => {
       // v3.7.x：apps/p2apps 老兼容——之前 app-grid 没 data-desk-widget，老 layout 不含它们；
       // 加 data-desk-widget 后若按常规移池会把老用户的功能图标藏掉，故跳过池逻辑保持原位
@@ -3620,6 +3651,7 @@ try {
       if (!node) return;
       // v3.7.x：单个功能图标仍在 app-grid 内（未被移出）时跳过池逻辑，保持原位
       if (wid.indexOf('app-') === 0 && node.closest('.app-grid')) return;
+      if (inAnyPage[wid]) return; // 布局里有名（哪怕页已不存在）→ 不进池
       const inLay = lay.some(page => (page || []).indexOf(wid) >= 0);
       if (!inLay && node.parentNode !== pool) pool.appendChild(node);
     });

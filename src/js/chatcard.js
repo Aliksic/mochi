@@ -99,6 +99,9 @@
   function ownGroupsRaw() { return buildGroupsFrom(store.get('cc-groups')); }
   // 合并视图：当前作用域字卡 + 公用字卡（同分类分组拼接；只读，供回复池/搜索用）
   const CC_TYPES = ['text', 'kaomoji', 'emoji', 'sticker', 'image', 'poke', 'voice'];
+  // v3.26.x #139：GIF 动图上传大小上限（base64 长度，≈3MB 文件）——GIF canvas 压缩会丢
+  // 动画只能直存原图，此前无上限，几 MB~几十 MB 的动图整份进库是字卡库膨胀大头之一
+  const CC_GIF_MAX_B64 = 4 * 1024 * 1024;
   function mergeWithPublic(g) {
     const p = pubGroupsRaw();
     let has = false;
@@ -1897,11 +1900,12 @@
           if (data[k] && typeof data[k] === 'object' && !Array.isArray(data[k])) Object.assign(bag, data[k]);
         });
         let raw = '';
+        let fromPubFallback = false; // v3.26.x #139：专属页兜底取到的是「公用库内容」时置位，落盘前防整份复制
         if (ccScope === 'public') {
           raw = bag[PUB_PREFIX + ':' + PUB_KEY] || '';
         } else {
           const ap = (typeof window.activePrefix === 'function' && window.activePrefix()) || PUB_PREFIX;
-          raw = bag[ap + ':cc-groups'] || bag[PUB_PREFIX + ':cc-groups'] || '';
+          raw = bag[ap + ':cc-groups'] || '';
           if (!raw) {
             // 换机/重装后联系人前缀可能变化：兜底取内容最多的一个专属键
             let best = '';
@@ -1910,6 +1914,11 @@
             });
             raw = best;
           }
+          // v3.26.x #139：公用库兜底放最后——诊断实证（三桌面专属库与公用库逐字节同大小，
+          // ≈415MB 冗余）本分支是整份复制的来源之一：备份里没有当前桌面专属键时，把公用库
+          // 内容导进专属键等于整份复制。保留兜底（换机后公用/专属归属判断失据时仍能拿回字卡），
+          // 但落盘前用 fromPubFallback 守卫拦截「合并结果与公用库完全相同」的写入。
+          if (!raw) { raw = bag[PUB_PREFIX + ':' + PUB_KEY] || ''; fromPubFallback = !!raw; }
         }
         try {
           const parsed = JSON.parse(String(raw || ''));
@@ -1973,6 +1982,21 @@
       }
       if (!imported) { toast('文件里没有可导入的字卡'); return; }
       const res = writeImport(byCat, mode, cur);
+      // v3.26.x #139：防复制守卫——专属页兜底导入「公用库内容」且合并结果与备份里的公用库
+      // 完全相同时不写专属键（写了就是整份复制）；回复池本就合并公用+专属，跳过零功能损失。
+      // 专属库有自己的内容时合并结果必然不同，照常保存。
+      if (fromPubFallback && ccScope === 'own') {
+        let newRaw = '';
+        try { newRaw = JSON.stringify(groups); } catch (e) {}
+        const pubBagRaw = String(bag[PUB_PREFIX + ':' + PUB_KEY] || '');
+        if (pubBagRaw && newRaw && newRaw === pubBagRaw) {
+          pubInvalidate();
+          renderGroupsBar();
+          render();
+          toast('备份的专属字卡库与公用库相同，已跳过写入专属库（公用字卡照常可用）');
+          return;
+        }
+      }
       saveGroups(groups);
       renderGroupsBar();
       render();
@@ -2122,7 +2146,16 @@
                 // v3.7.x：GIF 动图跳过 canvas 压缩——canvas 只能画出第一帧，
                 // 重绘成 PNG/JPEG 会把动图压成静态图，这里直存原图保留动画
                 const isGif = /image\/gif/i.test(f.type || '') || /\.gif$/i.test(f.name || '');
-                if (isGif) { process(reader.result); return; }
+                if (isGif) {
+                  // v3.26.x #139：直存原图前拦截超大 GIF（超限跳过并提示，与压缩失败同路径）
+                  if (String(reader.result || '').length > CC_GIF_MAX_B64) {
+                    skipped++; done++;
+                    if (done === files.length) finishUpload(done - skipped, skipped);
+                    toast('GIF「' + ((f && f.name) || '动图') + '」超过 3MB，已跳过');
+                    return;
+                  }
+                  process(reader.result); return;
+                }
                 // v3.7.x：原 260px 在 3x 高清屏被放大 2~3 倍导致模糊。
                 //   图片分类当大图显示，压到 720px JPEG 0.85；表情包多小图且需透明背景，用 PNG 480px
                 const isImg = cur === 'image';
@@ -2677,6 +2710,136 @@
         ownRestoreP.then(run);
       });
     }
+  })();
+
+  // ================= v3.26.x #139：专属字卡库重复副本一次性幂等清理 =================
+  // 诊断实证（#139 用户机）：cc-groups-public 与 cmt37eved7if / cmt4hxra06tx 两桌面的
+  // 专属 cc-groups 逐字节同大小（138.22MB×3），cmt34ty8537s=148.89MB 疑似公用+增量——
+  // 专属页导入全量备份的兜底（raw = bag[PUB_PREFIX+':cc-groups']）会把公用库整份写进
+  // 专属键，每次恢复/导入复制一份 ≈415MB 纯冗余。回复池本就「专属+公用」合并读取
+  // （replyPoolGroups / replyPoolGroupsFor），与公用重复的专属内容删除零功能损失。
+  // 清理规则（宁可不删，不可删错）：
+  //   ① 整库相等（长度+逐字符一致）→ 删专属键（公用库始终保留一份）；
+  //   ② 分组级相等：专属库中与公用库同名同分类、内容完全一致的分组剔除——剔完为空删键，
+  //      剩余 <15MB 才回写瘦身库（防大字符串重写；剩余过大留给手动批量管理）；
+  //   ③ 预检用 __big-idx 尺寸（免读大值）：已体检且两侧长度未变的键直接跳过，
+  //      稳态零开销；任一步异常放弃该键；公用库只读绝不改写。
+  (function () {
+    const DD_KEY = 'cc-dedupe-v1';
+    const DD_REWRITE_LIMIT = 15 * 1024 * 1024;
+    const DD_PARSE_LIMIT = 300 * 1024 * 1024;
+    function ddLoad() {
+      try {
+        const o = JSON.parse(pubStore().get(DD_KEY) || '{}');
+        return (o && typeof o === 'object' && !Array.isArray(o)) ? o : {};
+      } catch (e) { return {}; }
+    }
+    function ddSave(o) { try { pubStore().set(DD_KEY, JSON.stringify(o)); } catch (e) {} }
+    function ddCount(g) {
+      let n = 0;
+      try { CC_TYPES.forEach(t => (g[t] || []).forEach(x => n += (Array.isArray(x[1]) ? x[1].length : 0))); } catch (e) {}
+      return n;
+    }
+    function refreshAfter(cid) {
+      libCounts.own = -1;
+      if (cid === (window.__activeCid || 'default')) {
+        pubInvalidate();
+        if (ccScope === 'own') { groups = loadGroups(); try { renderGroupsBar(); render(); } catch (e2) {} }
+        else refreshLibCounts(false);
+      } else refreshLibCounts(false);
+    }
+    function run() {
+      // 低内存设备不跑（瞬时驻留两份大库字符串；宁留冗余不冒崩溃险）
+      let devGB = 8;
+      try { devGB = navigator.deviceMemory || 8; } catch (e) {}
+      if (devGB < 4) return;
+      if (!window.idbGetAllKeys || !window.idbGet || !window.storeFor) return;
+      window.idbGetAllKeys().then(function (allKeys) {
+        const ownKeys = (allKeys || []).map(String).filter(k => /^xy-home-v2:[^:]+:cc-groups$/.test(k));
+        if (!ownKeys.length) return;
+        window.idbGet(PUB_PREFIX + ':' + PUB_KEY).then(function (pubRaw) {
+          if (typeof pubRaw !== 'string' || pubRaw.length < 1024) return;
+          const marks = ddLoad();
+          let markDirty = false;
+          let i = 0;
+          (function step() {
+            if (i >= ownKeys.length) { if (markDirty) ddSave(marks); return; }
+            const full = ownKeys[i++];
+            const cid = full.slice(PUB_PREFIX.length + 1, full.length - ':cc-groups'.length);
+            const next = function () { setTimeout(step, 0); };
+            // 预检：__big-idx 尺寸没记录（本会话未回填该键）或与上次体检一致 → 免读大值
+            const ownLen = (window.idbBigSize && window.idbBigSize(full)) || null;
+            if (typeof ownLen !== 'number' || ownLen < 65536) { next(); return; }
+            if (marks[cid] && marks[cid][0] === pubRaw.length && marks[cid][1] === ownLen) { next(); return; }
+            window.idbGet(full).then(function (ownRaw) {
+              try {
+                if (typeof ownRaw !== 'string' || ownRaw.length < 1024) {
+                  marks[cid] = [pubRaw.length, (typeof ownRaw === 'string' ? ownRaw.length : 0)]; markDirty = true; next(); return;
+                }
+                // ① 整库相等 → 删专属键（storeFor.remove 同步清 memoryCache/LS/IDB/wrj/bigIdx）
+                if (ownRaw === pubRaw) {
+                  try { window.storeFor(cid).remove('cc-groups'); } catch (e2) {}
+                  delete marks[cid]; markDirty = true;
+                  try { toast('已清理与公用字卡库完全重复的专属库「' + cid + '」（省 ' + Math.round(ownRaw.length / 1048576) + 'MB）'); } catch (e2) {}
+                  refreshAfter(cid);
+                  next(); return;
+                }
+                // ② 分组级去重：同名同分类且内容完全一致的分组剔除
+                if (ownRaw.length + pubRaw.length > DD_PARSE_LIMIT) {
+                  marks[cid] = [pubRaw.length, ownRaw.length]; markDirty = true; next(); return;
+                }
+                const pubG = buildGroupsFrom(pubRaw);
+                const ownG = buildGroupsFrom(ownRaw);
+                const pubIdx = {};
+                CC_TYPES.forEach(t => {
+                  pubIdx[t] = {};
+                  (pubG[t] || []).forEach(g => { if (Array.isArray(g) && g[0] != null && !(g[0] in pubIdx[t])) pubIdx[t][String(g[0])] = JSON.stringify(g[1] || []); });
+                });
+                const reduced = {};
+                let removedCards = 0;
+                CC_TYPES.forEach(t => {
+                  reduced[t] = (ownG[t] || []).filter(g => {
+                    if (!Array.isArray(g)) return false;
+                    const key = String(g[0]);
+                    const pubCards = pubIdx[t] && pubIdx[t][key];
+                    if (pubCards != null && pubCards === JSON.stringify(g[1] || [])) { removedCards += (g[1] || []).length; return false; }
+                    return true;
+                  });
+                });
+                if (!ddCount(reduced)) {
+                  try { window.storeFor(cid).remove('cc-groups'); } catch (e2) {}
+                  delete marks[cid]; markDirty = true;
+                  try { toast('专属库「' + cid + '」的 ' + removedCards + ' 张字卡与公用库重复，已清理'); } catch (e2) {}
+                  refreshAfter(cid);
+                  next(); return;
+                }
+                const newRaw = JSON.stringify(reduced);
+                if (removedCards > 0 && newRaw.length < DD_REWRITE_LIMIT && newRaw.length < ownRaw.length) {
+                  try { window.storeFor(cid).set('cc-groups', newRaw); } catch (e2) {}
+                  try { toast('专属库「' + cid + '」去重 ' + removedCards + ' 张与公用重复的字卡（省 ' + Math.round((ownRaw.length - newRaw.length) / 1048576) + 'MB）'); } catch (e2) {}
+                  refreshAfter(cid);
+                  marks[cid] = [pubRaw.length, newRaw.length];
+                } else {
+                  marks[cid] = [pubRaw.length, ownRaw.length];
+                }
+                markDirty = true;
+                next();
+              } catch (e) { try { marks[cid] = [pubRaw.length, (typeof ownRaw === 'string' ? ownRaw.length : 0)]; markDirty = true; } catch (e2) {} next(); }
+            }).catch(next);
+          })();
+        }).catch(function () {});
+      }).catch(function () {});
+    }
+    let ddKicked = false;
+    function ddKick() { if (ddKicked) return; ddKicked = true; setTimeout(run, 30000); }
+    if (window.__mochiDataReady) ownRestoreP.then(ddKick);
+    else {
+      document.addEventListener('mochi-restore-done', function h() {
+        document.removeEventListener('mochi-restore-done', h);
+        ownRestoreP.then(ddKick);
+      });
+    }
+    setTimeout(ddKick, 60000); // restore 挂起/事件丢失兜底（ddKicked 防重入）
   })();
 
   // ================= v3.11.x：字卡库 公用/专属 变动一次性提醒 =================

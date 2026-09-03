@@ -1203,6 +1203,10 @@
         // 摩托罗拉G100/雨见 focusout/vv.resize 漏触发，但轮询读 vv.height 能读到
         // 回升，据此立即清除推顶，不用等 2200ms 无活动（用户感知"输入框停留几秒才回底"）
         var _aLastVVH = 0;
+        // v3.29.x（#141）：上一帧 vv.height——syncAndroidKb 顶部「高度上升=正在收起」
+        // 探测的基准（返回键/手势收键盘时焦点保留、focusout 不来，#89 的 _aClosing
+        // 闸门挂不上，收起动画每帧仍跑强制布局读取致灰块几秒才收，见 syncAndroidKb）
+        var _aPrevH = 0;
         // v3.16.x：focusin 后短时高频补偿宽限期——此期间 _aPinPan 即使 _aKb/_aProv 都
         // false 也执行，归零浏览器为露焦点提前平移的视口残留（红米 K80 Chrome 首次
         // 点击输入栏键盘弹出动画期间 vv.offsetTop 先起、vv.height 后缩，_aKb 未置位时
@@ -1331,6 +1335,18 @@
         function syncAndroidKb() {
           if (!_aVV || !_aPhone) return;
           var h = _aVV.height;
+          // v3.29.x（#141）：高度【上升】且键盘开着=收起动画进行中——不依赖 focusout
+          //（安卓返回键/手势收键盘焦点保留，focusout 不触发，#89 的 _aClosing 闸门挂
+          // 不上；此前每帧 resize 仍跑 _aPinPan/nudgeInputVisible 的强制布局读取，
+          // 重聊天页（数千条消息）单帧 reflow ~100ms 积压 → 输入栏下方灰块几秒才收）。
+          // 门控只要求「相对上一帧在涨」+ 键盘仍在开启态（_aKb 置位本身就代表
+          // h < _aH-60 的收缩世界），动画早期帧（h 仍 < _aH-60）也能第一时间置位；
+          // 与 #89 失焦路径汇合进入「动画期只写 height 跟随」分支，收起期彻底零
+          // 强制布局读取；复原走 _aPanComp 兜底，v3.27.x 输入行不飞语义不变。
+          if (_aKb && h > _aPrevH && _aPrevH > 0) {
+            _aClosing = true;
+          }
+          _aPrevH = h;
           var open = h < _aH - 60; // 可视高度明显变小 = 键盘弹出
           if (!open && h > _aH) _aH = h; // 无键盘时更新基准，地址栏变化不误判
           if (open && !_aKb) { _aClosing = false; _aKb = true; _aPhone.style.alignSelf = 'flex-start'; kbDockPanels(); }
@@ -1353,6 +1369,11 @@
             _aClosing = false;
             _aPhone.style.height = '';
             _aPhone.style.alignSelf = '';
+            // v3.29.x（#141）：收起瞬间把基准钳回布局视口全高——键盘期 _aH 可能被
+            // 内核/地址栏瞬态值抬错，若停留低位，h < _aH-60 恒真 → 下一帧误判
+            // 「键盘又弹出」把 .phone 锁死在中间高度 = 输入栏下方灰块几秒不收。
+            // innerHeight 即布局视口高（resizes-visual 下不随键盘收缩），恒可靠。
+            if (_aH < window.innerHeight - 12) _aH = window.innerHeight;
             _aPanComp();
             kbUndockPanels();
             return;
@@ -1397,6 +1418,12 @@
                 // vv.resize 漏触发，但轮询能读到 vv.height 回升）→ 立即清除推顶，
                 // 不等 2200ms。悬浮键盘 vv 恒接近 _aH，_aLastVVH 不会小于 _aH-60，不误清除
                 var _hNow = _aVV.height;
+                // v3.29.x（#141）：返回键/手势收键盘时 focusout 不来，_aClosing 的
+                // 失焦置位路径失效——这里按「vv 从小变大=收起动画」补置（与
+                // syncAndroidKb 顶部探测同判据），收起动画期照常跳过强制布局读取
+                if (_aKb && !_aClosing && _aLastVVH && _aLastVVH < _hNow) {
+                  _aClosing = true;
+                }
                 if (_aProv && _aLastVVH && _aLastVVH < _aH - 60 && _hNow >= _aH - 60) {
                   _aProvClear();
                 }
@@ -1453,6 +1480,25 @@
           try { window.scrollTo(0, 0); } catch (e) {}
           _aPinPan(); // v3.15.x：推顶后残留的 vv 平移同样归零（K80 同症状）
         }
+        // v3.29.x（#141）：推定收口——悬浮键盘内核收回键盘（focusout 不可靠、
+        // vv 不变化时原 _aProvCheck 自愈最迟要等 2200ms 无活动），用户输入
+        // 中的真实编辑立即放行：.phone 马上撑回全高，输入栏下方灰块不再残留。
+        // 编辑信号用本模块自有 _aUserTypos（文档级 keydown 捕获，AI-B 自有），
+        // 不耦合 chat.js 内部守卫函数（跨域状态随时可能被对方重构改名）。
+        function _aProvUserConfirm() {
+          try {
+            if (!_aProv || _aKb) return;
+            var tgt = (_aIsText(_aTextFocused) ? _aTextFocused : null) ||
+              (_aIsText(document.activeElement) ? document.activeElement : null);
+            if (!tgt || Date.now() - _aUserTypos > 1200) return;
+            _aProvClear();
+            startAWatch();
+          } catch (e) {}
+        }
+        try {
+          document.addEventListener('input', function () { _aProvUserConfirm(); }, true);
+          document.addEventListener('compositionstart', function () { _aUserTypos = Date.now(); _aProvUserConfirm(); }, true);
+        } catch (eProvUser) {}
         function _aProvClear() {
           if (!_aProv) return;
           _aProv = false;

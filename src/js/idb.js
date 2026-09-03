@@ -996,6 +996,74 @@
     }
   } catch (e) {}
 
+  window.idbBigSize = function (key) {
+    // v3.26.x #139：大键尺寸只读访问（__big-idx 索引在 set/回填时记录 >200KB 值的长度）。
+    // 供字卡库去重等模块免读大值做「是否有变化」预检，避免每次会话把 100MB+ 键拉进堆。
+    try { const s = _bigIdx[key]; return typeof s === 'number' ? s : null; } catch (e) { return null; }
+  };
+
+  // ===== v3.26.x #139：LS 大键残留清扫（恢复设置保存配额） =====
+  // 现象（#139 诊断）：LS 整域 10MB 满、写探针 QuotaExceededError，设置/桌面保存失败。
+  // xyStore.set 对 >LS_BIG_LIMIT 的值会清 LS 副本，但「全量备份导入直写 LS」且发生在
+  // 上方 v3.5.92 迁移（sessionStorage 门，每浏览器会话只跑一次）之后时，存量残留直到
+  // 下次重启都没人清（fav-msgs 207KB 等 LS+IDB 双份计费）。补一个事件驱动的幂等清扫：
+  // restore 完成 / 备份导入（都会派发 mochi-restore-done）后延迟执行——
+  //   · IDB 值与 LS 值完全一致 → 纯去重，直接删 LS 副本（零数据风险）；
+  //   · IDB 缺失/落后 → 先按 retainValue 同规则以 LS 追平 IDB，写成功且 LS 未被业务
+  //     再写才删 LS（写失败本轮跳过下轮收敛；绝不先删后写）。
+  //   · IDB 值是非字符串（结构化存储）→ 不动（不是本清扫的目标形态）。
+  let _lsSweepDone = false;
+  function lsResidueSweep() {
+    if (_lsSweepDone) return;
+    _lsSweepDone = true;
+    if (!window.idbGet || !window.idbSet) return;
+    let names = [];
+    try { names = Object.keys(localStorage); } catch (e) { return; }
+    const cands = names.filter(function (k) {
+      if (typeof k !== 'string' || k.indexOf('xy-home-v2:') !== 0) return false;
+      if (isChatMsgsKey(k)) return false;                  // 聊天 LS 快照是唯一备份，绝不动
+      if (k.indexOf('music-file:') >= 0) return false;     // 音频有专属迁移路径
+      if (k === BIG_IDX_KEY || k === LS_DIRTY_KEY || k === WRJ_KEY || k.indexOf('__wr-j:') === 0) return false;
+      if (k === 'xy-home-v2:__auto-backup-snapshot') return false;
+      let v = null;
+      try { v = localStorage.getItem(k); } catch (e) { return false; }
+      return typeof v === 'string' && v.length > LS_BIG_LIMIT;
+    });
+    let i = 0;
+    (function step() {
+      if (i >= cands.length) return;
+      const k = cands[i++];
+      let lsVal = null;
+      try { lsVal = localStorage.getItem(k); } catch (e) {}
+      if (typeof lsVal !== 'string' || lsVal.length <= LS_BIG_LIMIT) { setTimeout(step, 0); return; }
+      window.idbGet(k).then(function (idbVal) {
+        const next = function () { setTimeout(step, 0); };
+        if (idbVal && typeof idbVal !== 'string') { next(); return; }
+        if (typeof idbVal === 'string' && idbVal === lsVal) {
+          // 纯去重：IDB 已有同值，LS 副本是双倍计费残留；删前复读防业务刚写入新值
+          try { if (localStorage.getItem(k) === lsVal) localStorage.removeItem(k); } catch (e) {}
+          next(); return;
+        }
+        // IDB 缺失/落后 → 以 LS 为最新追平 IDB，写成功且 LS 未变才删（绝不先删后写）
+        window.idbSet(k, lsVal).then(function (ok) {
+          if (ok) {
+            let cur = null;
+            try { cur = localStorage.getItem(k); } catch (e) {}
+            if (cur === lsVal) {
+              if (!memoryCache) memoryCache = {};
+              if (!(k in memoryCache)) memoryCache[k] = lsVal;
+              try { localStorage.removeItem(k); } catch (e) {}
+            }
+          }
+          next();
+        }).catch(next);
+      }).catch(function () { setTimeout(step, 0); });
+    })();
+  }
+  document.addEventListener('mochi-restore-done', function () { setTimeout(lsResidueSweep, 20000); });
+  setTimeout(lsResidueSweep, 45000); // restore 挂起/事件丢失兜底（_lsSweepDone 防重入）
+  window.idbLsResidueSweep = lsResidueSweep;
+
   // v3.16.x：跨上下文同步——get 改 memoryCache 优先后，另一上下文（PWA + 浏览器标签双开、
   // 多窗口）写入 localStorage 的新值会被本侧 memoryCache 旧值遮蔽。storage 事件（仅跨上下文
   // 触发）到达时删除对应缓存键，后续 get 自然回退读到 localStorage 新值；业务侧（如

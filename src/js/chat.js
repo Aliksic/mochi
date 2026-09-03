@@ -5811,7 +5811,107 @@ let activeMsgEl = null;   // 当前操作的消息 DOM
 let activeSide = 'in';    // 当前操作消息方向
 let lastQuote = null;     // 待引用内容
 function getFav() { try { return JSON.parse(store.get('fav-msgs') || '[]'); } catch (e) { return []; } }
-function saveFav(list) { store.set('fav-msgs', JSON.stringify(list)); }
+function saveFav(list) { store.set('fav-msgs', JSON.stringify(list)); try { scheduleFavImgPass(2500); } catch (e) {} }
+// ===== v3.26.x #139：收藏图片压缩 =====
+// 收藏把消息 parts / 图片 dataURL 原样整份进库，与聊天记录重复存同一批图（诊断实证
+// fav-msgs 全桌面 ≈21MB）。压缩走「读-压缩-写前 CAS 比对」：压缩期间任何其他写入
+// （再收藏/删除/换桌面）都会使快照失效并重排，绝不覆盖新数据，绝不丢收藏。
+// 规则（宁可不压，不可压坏）：只压 data:image/*（GIF 保动画、SVG 矢量、<4KB 小图跳过）；
+// 480px 上限（气泡显示宽度内）；优先 WebP（iOS canvas 不支持会回退返回 PNG，前缀检测后
+// 改试 JPEG 白底）；结果必须比原图更小才采用；单张失败只影响该张，整批异常放弃本轮。
+function compressFavDataUrl(src) {
+return new Promise((resolve) => {
+try {
+if (typeof src !== 'string' || src.indexOf('data:image/') !== 0 || src.length < 4096) { resolve(null); return; }
+if (/^data:image\/(gif|svg)/i.test(src)) { resolve(null); return; }
+const img = new Image();
+img.onload = () => {
+try {
+const scale = Math.min(1, 480 / Math.max(img.width, img.height));
+const w = Math.max(1, Math.round(img.width * scale));
+const h = Math.max(1, Math.round(img.height * scale));
+const c = document.createElement('canvas');
+c.width = w; c.height = h;
+const ctx = c.getContext('2d');
+ctx.drawImage(img, 0, 0, w, h);
+let out = c.toDataURL('image/webp', 0.82);
+if (out.indexOf('data:image/webp') !== 0) {
+ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, w, h);
+ctx.drawImage(img, 0, 0, w, h);
+out = c.toDataURL('image/jpeg', 0.82);
+}
+resolve(out.length < src.length ? out : null);
+} catch (e) { resolve(null); }
+};
+img.onerror = () => resolve(null);
+img.src = src;
+} catch (e) { resolve(null); }
+});
+}
+async function compressFavListImages(list) {
+let changed = false;
+const out = new Array(list.length);
+for (let i = 0; i < list.length; i++) {
+let f = list[i];
+try {
+if (f && typeof f.text === 'string' && f.text.indexOf('data:image/') === 0) {
+const v = await compressFavDataUrl(f.text);
+if (v) { f = Object.assign({}, f, { text: v }); changed = true; }
+}
+if (f && Array.isArray(f.parts) && f.parts.length) {
+const parts = new Array(f.parts.length);
+let pChanged = false;
+for (let j = 0; j < f.parts.length; j++) {
+const p = f.parts[j];
+let np = p;
+if (p && typeof p.v === 'string' && p.v.indexOf('data:image/') === 0) {
+const v = await compressFavDataUrl(p.v);
+if (v) { np = Object.assign({}, p, { v: v }); pChanged = true; }
+}
+parts[j] = np;
+}
+if (pChanged) { f = Object.assign({}, f, { parts: parts }); changed = true; }
+}
+} catch (e) {}
+out[i] = f;
+}
+return changed ? out : null;
+}
+let _favImgPassT = null, _favImgPassRetries = 0;
+function scheduleFavImgPass(delay) {
+clearTimeout(_favImgPassT);
+_favImgPassT = setTimeout(favImgPass, delay || 3000);
+}
+// 返回 true=完整跑完一轮（无论是否压缩了内容）；false=期间有并发写入被 CAS 打断（已自动重排）
+async function favImgPass() {
+try {
+const rawSnap = store.get('fav-msgs');
+if (!rawSnap || rawSnap.length < 4096) return true;
+let list;
+try { list = JSON.parse(rawSnap); } catch (e) { return true; }
+if (!Array.isArray(list)) return true;
+const out = await compressFavListImages(list);
+if (!out) return true;
+const rawNow = store.get('fav-msgs');
+if (rawNow !== rawSnap) {
+// 压缩期间收藏被写过——以最新数据重排（最多 5 次，防极端高频写入空转）
+if (++_favImgPassRetries < 5) { scheduleFavImgPass(5000); return false; }
+return true;
+}
+_favImgPassRetries = 0;
+store.set('fav-msgs', JSON.stringify(out));
+return true;
+} catch (e) { return true; }
+}
+// 存量一次性迁移：本桌面没跑过压缩扫描才执行（新收藏由 saveFav 钩子触发增量压缩）
+function favImgMigrateIfNeed() {
+try { if (store.get('fav-img-cmp-v1') === '1') return; } catch (e) {}
+favImgPass().then(function (settled) {
+if (settled) { try { store.set('fav-img-cmp-v1', '1'); } catch (e) {} }
+});
+}
+document.addEventListener('mochi-restore-done', function () { setTimeout(favImgMigrateIfNeed, 12000); });
+document.addEventListener('contact-switched', function () { setTimeout(favImgMigrateIfNeed, 12000); });
 function syncFavMsgText(oldText, newText) {
 if (oldText === newText) return;
 const fav = getFav();
