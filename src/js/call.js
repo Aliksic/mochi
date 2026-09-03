@@ -155,6 +155,7 @@
         syncCallName();
         syncCallAv();
         mini.hidden = false;
+        liftMiniIntoSafeArea(); // v3.26.x #137：显示时校正，防旧坐标落进系统状态栏区
       }
     } else {
       mini.hidden = true;
@@ -219,12 +220,36 @@
           if (diff >= 20 && diff <= 160) top = diff;
         }
       }
-      // ③ 47px 保守兜底：probe 与 diff 都失手（如 #136 环境 env=0 且 100vh 铺满后 vv=screen）
-      if (!top) top = 47;
+      // ③ 59px 保守兜底：probe 与 diff 都失手（如 #137 环境 env=0 且 100vh 铺满后 vv=screen）。
+      //    取 iPhone15 实测系统状态栏高度 59px（#114 通道）——覆盖刘海/灵动岛机型全部
+      //    44-59px 状态栏；老非刘海机型（SE 20px 栏）被多让 ~39px，仅顶部拖拽上限略低，无害。
+      if (!top) top = 59;
       _miniSafeTopCache = top;
       return top;
     } catch (e) {}
     return 0;
+  }
+  // v3.26.x #137 补强：小框「显示时」抬升——此前只在文件加载时对旧存档抬一次，但小框
+  // 有 5 处显示点（接通 2s 自动最小化/手动缩小/刷新恢复通话/设置开关/恢复通话路径），
+  // 任何路径显示「内联 top 低于系统状态栏区」的坐标都会复现「卡在顶上点不了拖不动」。
+  // 统一在显示后校正：内联 top 存在且 < miniSafeTop() → 抬到安全线并回写存档。
+  // （默认底部居中位没有内联 top，不受影响；函数声明提升，5 处显示点均可调。）
+  function liftMiniIntoSafeArea() {
+    try {
+      if (!mini || mini.hidden) return;
+      const st = miniSafeTop();
+      if (st <= 0) return;
+      const m = String(mini.style.top || '').match(/^(-?\d+(\.\d+)?)px$/);
+      if (!m) return; // 无内联 top（默认底部居中），无需处理
+      const y = parseFloat(m[1]);
+      if (y < st) {
+        mini.style.top = st + 'px';
+        if (mini.style.bottom && mini.style.bottom !== 'auto') mini.style.bottom = 'auto';
+        if (!miniPos) miniPos = { left: mini.style.left, top: mini.style.top };
+        else miniPos.top = mini.style.top;
+        try { store.set('call-mini-pos', JSON.stringify(miniPos)); } catch (e2) {}
+      }
+    } catch (e) {}
   }
   let miniPos = null;
   try { miniPos = JSON.parse(store.get('call-mini-pos') || 'null'); } catch (e) {}
@@ -366,6 +391,7 @@
         syncCallName();
         syncCallAv();
         mini.hidden = false;
+        liftMiniIntoSafeArea(); // v3.26.x #137：显示时校正，防旧坐标落进系统状态栏区
       } else {
         mini.hidden = true;
       }
@@ -558,6 +584,7 @@
             syncCallName();
             syncCallAv();
             mini.hidden = false;
+            liftMiniIntoSafeArea(); // v3.26.x #137：显示时校正，防旧坐标落进系统状态栏区
           }
         }
       }
@@ -624,7 +651,7 @@
           if (currentCall === callRef && callRef.status === 'connected') {
             if (callMiniEnabled()) {
               if (mask) mask.hidden = true;
-              if (mini) { syncCallName(); syncCallAv(); mini.hidden = false; }
+          if (mini) { syncCallName(); syncCallAv(); mini.hidden = false; liftMiniIntoSafeArea(); /* v3.26.x #137 显示时校正 */ }
             }
           }
         }, 2000);
@@ -756,7 +783,7 @@
         if (callMiniEnabled()) {
           if (mask) mask.hidden = true;
           if (cdEl) cdEl.hidden = true;
-          if (mini) { syncCallName(); syncCallAv(); mini.hidden = false; }
+          if (mini) { syncCallName(); syncCallAv(); mini.hidden = false; liftMiniIntoSafeArea(); /* v3.26.x #137 显示时校正 */ }
         } else {
           if (mask) mask.hidden = false;
           if (cdEl) cdEl.hidden = true;

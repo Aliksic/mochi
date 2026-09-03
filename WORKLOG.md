@@ -44,6 +44,12 @@
 * 验证：node --check 过；四场景功能测试（env=0+diff=0→47 / env=59→59 / diff=59→59 / 非 standalone→0）全过；--check-sentinels 260 全绿哑哨兵 0。
 * 待真机（iPhone 15 iOS 18.7 全屏态）：通话缩小后小框自动离开系统状态栏区（y≥47px）可点挂断可拖动；旧存档位置自动抬升。
 
+### 2026-09-03 15:1x（#137 续：用户复测小框仍卡顶 → 显示时抬升补强 + 兜底 47→59px；已构建）
+* [AI-B 域]（**改动文件：src/js/call.js（兜底 47→59px=iPhone15 实测系统栏高；新增 liftMiniIntoSafeArea 显示时抬升，5 处 mini.hidden=false 显示点统一校正内联 top<安全线的旧坐标并回写存档）、build.mjs（#137 哨兵改 2 条：\`if (!top) top = 59;\` + \`function liftMiniIntoSafeArea()\`）、FIX-REGRESSION.md（#137 行补回归修补）；构建状态：已构建·sw 见 version.json**）。
+* 复测复现分析：①上一版只在文件加载时抬一次旧存档，且用户诊断 ts 仍是 09:48 旧版（SW 未换代）→ 旧坐标持续在状态栏区；②47px 兜底对 iPhone15（系统栏 59px）不足。补强后任何路径显示小框都校正到 ≥59px，拖拽/恢复钳制同走 miniSafeTop。
+* 验证：node --check 过；功能测试（59 兜底/env 探针/差值/非 standalone + 抬升 10→59 回写存档 + 默认底部居中不动）全过；--check-sentinels 277 全绿（并行会话 #140/#141 新锚点一并在位）。
+* 待真机（iPhone 15）：**必须先更新到本版**——开应用等顶部更新条点「刷新使用新版」，或完全关掉重开两次；诊断版本应为「部署于 2026-09-03 15:0x」。更新后接电话→缩小，小框必在系统栏下方（y≥59px）可点挂断可拖动。
+
 ### 2026-09-03 12:4x（#136 vivo+Chrome「打开异常/单独 mochi 字母图/进不去开屏」：SW 离线兜底缓存键漏洞修复；源已完成·已构建）
 * [AI-B 域]（**改动文件：src/pwa/sw.js（导航成功统一写 canonical './index.html' 键 + 兜底链补 caches.match(req) second chance + activate 删旧缓存前抢救最新完整 index 离线顶上）、build.mjs（swNeedles/swNeedlesSrc 各 +3 条 #136 锚点）、FIX-REGRESSION.md（#136 行）；构建状态：已构建·sw 见 version.json**）。
 * 根因（三层叠加）：诊断实证 GitHub Pages 不可达（version.json 拉取失败、onLine=true）时 Chrome 错误页顶头=站点 icon-512（mochi 字母图）；①导航成功缓存写 req.url 键而兜底只 match('./index.html')，键不一致兜不住；②install 预缓存逐文件 3.5s 超时后当前 CACHE 可能无 canonical 键；③activate 补拉靠网络，被墙留空窗。#134 EOF 校验四处全部保留未动。
