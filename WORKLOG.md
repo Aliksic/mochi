@@ -1,4 +1,11 @@
-# 本次构建者：AI-B（本会话：#136 vivo+Chrome 网络不可达时离线兜底落空→mochi 字母错误页 修复；打包在途：上会话 #133续 chat.js 预设持久化已构建未提交，一并收口）
+# 本次构建者：AI-B（本会话：#136 vivo+Chrome 离线兜底落空修复 + #137 iPhone15 全屏态通话小框卡顶修复；打包在途：上会话 #133续 chat.js 预设持久化已构建未提交，一并收口）
+
+### 2026-09-03 14:0x（#137 iPhone 15 + iOS 18.7 全屏态：通话小框卡在系统状态栏区点不了/拖不动；已构建）
+* [AI-B 域]（**改动文件：src/js/call.js（miniSafeTop 三级探测链：env() 探针→原 screen-vv 差值法→47px 保守兜底 + \_miniSafeTopCache 缓存）、build.mjs（FIX_SENTINELS 1 条）、FIX-REGRESSION.md（#137 行）；构建状态：已构建·sw 见 version.json**）。
+* 根因（#114 差值法漏网环境）：v3.28.x #114 复现修复把 .phone 改 100vh 铺满物理屏后，iOS 18.7 全屏态实测 screen=852=vv=852 → 差值=0 落在 20-160 过滤区间外 → miniSafeTop 返回 0；小框旧存档 y≈0 时恢复守卫不抬升、拖拽上边界=0，56px 胶囊整体落进系统状态栏悬浮区 → 触点全被系统栏吞（点挂断没反应、拖不动）。
+* 修复：三级探测链——①env() 探针（隐藏 fixed 元素实测 safe-area-inset-top，viewport-fit=cover 下标准做法）；②差值法保留；③47px 保守兜底（刘海/灵动岛系统栏最小高度，仅 standalone iOS 生效）。恢复守卫+拖拽钳制同走此函数。#136 编号已被并行会话（vivo SW 离线兜底）占用，本条改 #137，编号不冲突。
+* 验证：node --check 过；四场景功能测试（env=0+diff=0→47 / env=59→59 / diff=59→59 / 非 standalone→0）全过；--check-sentinels 260 全绿哑哨兵 0。
+* 待真机（iPhone 15 iOS 18.7 全屏态）：通话缩小后小框自动离开系统状态栏区（y≥47px）可点挂断可拖动；旧存档位置自动抬升。
 
 ### 2026-09-03 12:4x（#136 vivo+Chrome「打开异常/单独 mochi 字母图/进不去开屏」：SW 离线兜底缓存键漏洞修复；源已完成·已构建）
 * [AI-B 域]（**改动文件：src/pwa/sw.js（导航成功统一写 canonical './index.html' 键 + 兜底链补 caches.match(req) second chance + activate 删旧缓存前抢救最新完整 index 离线顶上）、build.mjs（swNeedles/swNeedlesSrc 各 +3 条 #136 锚点）、FIX-REGRESSION.md（#136 行）；构建状态：已构建·sw 见 version.json**）。

@@ -185,15 +185,44 @@
   // v3.28.x #114：iOS standalone 顶部被系统状态栏占用的高度（iPhone15 实测 59px）。
   //   旧存档/拖拽落点若在状态栏区，触点被系统栏吞、缩略窗拖不动（用户报障「缩略窗在
   //   顶部动不了」）。落位/拖拽时把上边界抬到系统状态栏下方。
+  // v3.26.x #136（复现修，iPhone15 + iOS 18.7 + 全屏态）：ios-fs-active 下 .phone 用
+  //   100vh 铺满物理屏后 screen.height == visualViewport.height == 852，差值=0 落在
+  //   20-160 过滤区间外 → 原 diff 探针返回 0，小框存档 y≈0 时整个 56px 高的胶囊
+  //   落进系统状态栏悬浮区 → 点挂断没反应、也拖不出来（触点全被系统栏吞）。
+  //   三级探测链：① env() 探针（隐藏 fixed 元素实测 env(safe-area-inset-top)，
+  //   viewport-fit=cover 下 WebKit 会返回真实系统栏高度，是标准做法）；
+  //   ② 原 screen-vv 差值法（v3.28.x #114 通道，部分环境仍有效）；
+  //   ③ 47px 保守兜底（iPhone 刘海/灵动岛机型系统状态栏最小高度 47-62px，47 取下限；
+  //   仅 standalone iOS 生效，非刘海小屏（SE 20px）被多让 27px 无实际影响）。
+  //   确保任何 iOS 型号下小框永不落进状态栏区。
+  let _miniSafeTopCache = -1;
   function miniSafeTop() {
     try {
       if (!document.documentElement.classList.contains('ios-pwa-standalone')) return 0;
-      const sh = (window.screen && window.screen.height) || 0;
-      const ih = window.innerHeight || 0;
-      if (sh > 0 && ih > 0) {
-        const diff = sh - ih;
-        if (diff >= 20 && diff <= 160) return diff;
+      if (_miniSafeTopCache >= 0) return _miniSafeTopCache;
+      let top = 0;
+      // ① env() 探针：viewport-fit=cover 下返回真实系统状态栏高度（0 则本环境确实无避让）
+      try {
+        const probe = document.createElement('div');
+        probe.style.cssText = 'position:fixed;top:0;left:0;width:0;height:0;padding-top:env(safe-area-inset-top,0px);visibility:hidden;pointer-events:none;';
+        document.body.appendChild(probe);
+        const v = parseFloat(getComputedStyle(probe).paddingTop);
+        document.body.removeChild(probe);
+        if (!isNaN(v) && v >= 20 && v <= 160) top = v;
+      } catch (e1) {}
+      // ② screen-vv 差值法（v3.28.x #114 原通道）
+      if (!top) {
+        const sh = (window.screen && window.screen.height) || 0;
+        const ih = window.innerHeight || 0;
+        if (sh > 0 && ih > 0) {
+          const diff = sh - ih;
+          if (diff >= 20 && diff <= 160) top = diff;
+        }
       }
+      // ③ 47px 保守兜底：probe 与 diff 都失手（如 #136 环境 env=0 且 100vh 铺满后 vv=screen）
+      if (!top) top = 47;
+      _miniSafeTopCache = top;
+      return top;
     } catch (e) {}
     return 0;
   }

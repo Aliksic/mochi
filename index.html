@@ -8663,9 +8663,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1788410628373">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.394</b></span>
-        <span class="sv-deploy">部署于 2026-09-03 12:43<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1788411552268">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.395</b></span>
+        <span class="sv-deploy">部署于 2026-09-03 12:59<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9761,7 +9761,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.394</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.395</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
       <!-- v3.27.x：设置页底部防骗声明 -->
       <div class="set-alert">
@@ -10034,7 +10034,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.394</span>
+              <span class="lic-ver">v3.26.395</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -49686,15 +49686,31 @@ const miniBtn = document.getElementById('call-minimize-btn');
 const miniAv = document.getElementById('call-mini-av');
 const miniName = document.getElementById('call-mini-name');
 const miniTime = document.getElementById('call-mini-time');
+let _miniSafeTopCache = -1;
 function miniSafeTop() {
 try {
 if (!document.documentElement.classList.contains('ios-pwa-standalone')) return 0;
+if (_miniSafeTopCache >= 0) return _miniSafeTopCache;
+let top = 0;
+try {
+const probe = document.createElement('div');
+probe.style.cssText = 'position:fixed;top:0;left:0;width:0;height:0;padding-top:env(safe-area-inset-top,0px);visibility:hidden;pointer-events:none;';
+document.body.appendChild(probe);
+const v = parseFloat(getComputedStyle(probe).paddingTop);
+document.body.removeChild(probe);
+if (!isNaN(v) && v >= 20 && v <= 160) top = v;
+} catch (e1) {}
+if (!top) {
 const sh = (window.screen && window.screen.height) || 0;
 const ih = window.innerHeight || 0;
 if (sh > 0 && ih > 0) {
 const diff = sh - ih;
-if (diff >= 20 && diff <= 160) return diff;
+if (diff >= 20 && diff <= 160) top = diff;
 }
+}
+if (!top) top = 47;
+_miniSafeTopCache = top;
+return top;
 } catch (e) {}
 return 0;
 }
@@ -76480,4 +76496,4 @@ return { lock: document.body.classList.contains('scroll-lock'), open: open };
 <!-- __MOCHI_EOF__ -->
 </body>
 </html>
-<!-- __MOCHI_EOF__ mtl1igid -->
+<!-- __MOCHI_EOF__ mtl229e4 -->
