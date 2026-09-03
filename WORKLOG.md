@@ -1,4 +1,11 @@
-# 本次构建者：AI-B（本会话：#143 sw.js 最终重试污染 canonical index 键——一加Ace2+Edge「整页 mochi 字母图」#136 家族复发；只动 src/pwa/sw.js、build.mjs 哨兵、tools/、FIX-REGRESSION.md，不碰 AI-A 域文件）
+# 本次构建者：AI-C（本会话：通话小框昵称回退链补齐——只改联系人名片时小框显示 TA/他/她的修复；只动 src/js/contacts.js、src/js/call.js、build.mjs 哨兵 needle、tools/，不碰 AI-A/AI-B 域文件）
+
+### 2026-09-03 17:4x（用户反馈：聊天设置改了联系人昵称，通话缩小悬浮小框里仍显示 TA/他/她；已构建）
+* [AI-C 域]（**改动文件：src/js/contacts.js（新增 window.contactNameFor(cid)：按 cid 读联系人注册表名片名）、src/js/call.js（partnerName 与 syncCallName 回退链补齐名片名：cs-lbl-partner → contactNameFor(cid) → taWord；syncCallName 的性别称呼改按归属桌面 taWordFor(currentCall.cid)）、build.mjs（「通话昵称与聊天域解耦」哨兵 needle 换成新代码特征——旧 needle `store.get('cs-lbl-partner') || (window.taWord…` 被本次修改替换，且 minify 改变量名+剥续行缩进，needle 必须用产物稳定子串）、tools/repro-call-mini-name.mjs（新增回归脚本 8 断言）；构建状态：已构建·sw mochi-mtlcbbk6**）。
+* 需求/根因：用户在聊天设置改了联系人昵称（或联系人管理里改了名片名），通话大面板/最小化小框仍显示 TA/他/她。排查实证：小框名字链是 cs-lbl-partner → taWord（他/她/TA），而聊天顶栏链是 cs-lbl-partner → 联系人名片名 → TA——两处回退链不一致，用户只改了名片名（renameContact 只同步 lbl-partner 不写 cs-lbl-partner）时顶栏有名字、小框回退 TA/他/她，观感像「改名没生效」。聊天设置→联系人昵称（cs-lbl-partner）路径实测本就正常（S1/S2 通过），问题出在名片名回退缺口。
+* 修复：contacts.js 新增 contactNameFor(cid)（读注册表 c.name）；call.js 两处回退链补齐：partnerName()（通话发起时归属桌面）与 syncCallName()（通话中每秒自愈，按 currentCall.cid 读名片名，跨桌面通话不串名）。renameContact 既有 contact-renamed 广播继续驱动通话中实时刷新。
+* 验证：node --check 过；repro-call-mini-name 8/8（S1 通话前设昵称/ S2 最小化中改昵称实时跟随 / S3 只改名片名顶栏与小框一致显示名片名 / S4 非默认桌面）；既有回归 verify-call-mini-live 14/14、verify-call-dur 6/6、verify-call-edit 11/11；哨兵 277/277 全绿哑哨兵 0、sw.js 9/9。
+* 注意：repro 脚本曾误报 S2/S3——S2 须在未挂断的同一通最小化通话里改昵称再查（先 hangup 会 miniHidden=true 误判）；S3 断言顶栏回退前需手动 renderChatHeader()（renameContact 不触发顶栏重渲染）。
 
 ### 2026-09-03 17:3x（#143 一加Ace2+Edge 开屏「整页只有 mochi 字母图」进不去开屏：SW 最终重试写点污染 canonical index 键；已构建）
 * [AI-B 域]（**改动文件：src/pwa/sw.js（两处：fetch 最终重试写点收口——仅导航请求才写 canonical './index.html' 键且必须过 isCompleteHtml，非导航资源只透传绝不写 index 键；导航兜底命中加 content-type 守卫，非 HTML 缓存当未命中放行去旧缓存扫描/网络重试）、build.mjs（swNeedles/swNeedlesSrc 各 +2 条 #143 逻辑锚点）、FIX-REGRESSION.md（#143 行，改该文件按约定留此说明）、tools/verify-sw-nav-fallback.mjs（新增回归脚本 src+产物 16 断言）；构建状态：已构建·sw mochi-mtlbu2gc**）。

@@ -218,6 +218,16 @@
     return 'TA';
   };
   window.taWord = function () { return window.taWordFor(window.__activeCid || 'default'); };
+  // v3.26.x：联系人名片名查询（按 cid 读注册表，供通话等模块回退显示）——
+  // 聊天顶栏昵称回退链是 cs-lbl-partner → 联系人名片名 → TA（chat.js updateChatPartnerName），
+  // 通话大面板/小框此前只回退 TA/他/她，用户只改了联系人名片（联系人管理改名）时
+  // 顶栏有名字、通话小框却显示 TA/他/她，观感像「改名没生效」。补齐同一回退链。
+  window.contactNameFor = function (cid) {
+    try {
+      const c = getContacts().find(x => x.id === (cid || 'default'));
+      return (c && c.name) || '';
+    } catch (e) { return ''; }
+  };
   // 人称替换：TA/他/ta → 性别称呼。保护「其他」（非人称）、base64 段（dataURL 不能动，
   // 大写 TA 可能出现在 base64 字符里）与 <svg>…</svg> 图标段（系统消息带图标前缀）；
   // 不用正则 lookbehind（旧版 iOS Safari 不支持）。

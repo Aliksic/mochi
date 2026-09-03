@@ -284,8 +284,13 @@
   }
 
   // v3.26.x：通话昵称与聊天域解耦——优先读聊天专用键 cs-lbl-partner（聊天设置里设的联系人
-  // 昵称），未设置时默认 TA，不再回退桌面 lbl-partner（用户要求：聊天昵称不跟随桌面）
-  function partnerName() { return store.get('cs-lbl-partner') || (window.taWord ? window.taWord() : 'TA'); }
+  // 昵称），未设置时回退联系人名片名，最后默认 TA，不再回退桌面 lbl-partner（用户要求：
+  // 聊天昵称不跟随桌面）。v3.26.x：回退链补齐联系人名片名，与聊天顶栏（cs-lbl-partner →
+  // 名片名 → TA）保持一致——只改名片（联系人管理改名）时通话小框不再显示成 TA/他/她
+  function partnerName() {
+    const nick = store.get('cs-lbl-partner') || (window.contactNameFor ? window.contactNameFor(window.__activeCid || 'default') : '');
+    return nick || (window.taWord ? window.taWord() : 'TA');
+  }
   // v3.12.x：通话头像跟随聊天域——优先读聊天专用键 cs-avatar-partner（头像互动半框/换头像写的就是它），
   // 未设置时回退桌面键 avatar-partner；此前只读桌面键，导致通话面板不跟随换头像
   function partnerAv() { return store.get('cs-avatar-partner') || store.get('avatar-partner') || ''; }
@@ -360,8 +365,11 @@
     let name = '';
     try {
       const s = (window.storeFor && window.storeFor(currentCall.cid)) || store;
-      // v3.26.x：与 partnerName 同步解耦——先读聊天专用键，未设默认 TA，不再读桌面键
-      name = s.get('cs-lbl-partner') || (window.taWord ? window.taWord() : 'TA');
+      // v3.26.x：与 partnerName 同步解耦——先读聊天专用键，再回退联系人名片名，最后默认
+      // TA，不再读桌面键；性别称呼按归属桌面读（跨桌面通话仍显示正确的 TA）
+      name = s.get('cs-lbl-partner')
+        || (window.contactNameFor ? window.contactNameFor(currentCall.cid) : '')
+        || (window.taWordFor ? window.taWordFor(currentCall.cid) : (window.taWord ? window.taWord() : 'TA'));
     } catch (e) { name = currentCall.name || partnerName(); }
     if (name === shownName) return;
     shownName = name;
