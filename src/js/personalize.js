@@ -6361,6 +6361,76 @@ try {
         }).catch(function () { renderPersist(); });
       });
     }
+    // ===== #168 字卡库瘦身（后端 src/js/storage-slim.js：mochiCcSlimScan / mochiCcSlimDeleteGroup）=====
+    const ccScanBtn = document.getElementById('st-cc-scan');
+    if (ccScanBtn) {
+      const ccListEl = document.getElementById('st-cc-list');
+      const CC_CAT_CN = { text: '文字', kaomoji: '颜文字', emoji: '表情', sticker: '表情包', image: '图片', poke: '拍一拍', voice: '语音' };
+      const runCcScan = function () {
+        if (!window.mochiCcSlimScan || !window.mochiCcSlimDeleteGroup) {
+          if (window.openModal) window.openModal('本环境不支持', '', null, { noInput: true, staticText: '字卡库扫描需要 IndexedDB 支持，当前环境不可用。' });
+          return Promise.resolve(null);
+        }
+        const ccEl = document.getElementById('st-cc');
+        ccScanBtn.disabled = true;
+        if (ccEl) ccEl.textContent = '扫描中…（大库较慢，勿离开本页）';
+        if (ccListEl) ccListEl.innerHTML = '';
+        return window.mochiCcSlimScan().then(function (rep) {
+          ccScanBtn.disabled = false;
+          if (!rep || !rep.ok) {
+            if (ccEl) ccEl.textContent = (rep && rep.reason) || '扫描失败';
+            return rep;
+          }
+          if (ccEl) ccEl.textContent = rep.libs.length ? rep.libs.map(function (l) { return l.label + ' ' + fmtBytes(l.bytes); }).join(' · ') : '未发现字卡库';
+          if (rep.reason && typeof toast === 'function') toast(rep.reason);
+          if (ccListEl) {
+            const tops = rep.groups.slice(0, 12);
+            if (!tops.length) {
+              const h = document.createElement('div');
+              h.className = 'storage-hint';
+              h.textContent = '没有扫到可列的分组。';
+              ccListEl.appendChild(h);
+            }
+            tops.forEach(function (gdata) {
+              const row = document.createElement('div');
+              row.className = 'storage-row';
+              const sp = document.createElement('span');
+              sp.textContent = gdata.label + ' · ' + (CC_CAT_CN[gdata.cat] || gdata.cat) + '「' + gdata.name + '」· ' + gdata.cards + ' 张';
+              const bb = document.createElement('b');
+              bb.textContent = fmtBytes(gdata.bytes);
+              row.appendChild(sp);
+              row.appendChild(bb);
+              ccListEl.appendChild(row);
+              const btn = document.createElement('button');
+              btn.className = 'storage-clear';
+              btn.type = 'button';
+              btn.textContent = '删除「' + gdata.name + '」整组';
+              btn.addEventListener('click', function () {
+                if (!window.openModal) return;
+                window.openModal('删除整组字卡？', '', function () {
+                  btn.disabled = true;
+                  window.mochiCcSlimDeleteGroup(gdata.prefix, gdata.key, gdata.cat, gdata.name).then(function (done) {
+                    if (typeof toast === 'function') toast(done ? '已删除「' + gdata.name + '」整组' : '删除未生效（组可能刚被改过），已重新扫描');
+                    runCcScan();
+                  }).catch(function () { btn.disabled = false; });
+                }, {
+                  noInput: true,
+                  staticText: '将删除 ' + gdata.label + ' · ' + (CC_CAT_CN[gdata.cat] || gdata.cat) + ' 分组「' + gdata.name + '」（' + gdata.cards + ' 张，约 ' + fmtBytes(gdata.bytes) + '）。与在字卡管理页删掉该组效果相同，不可撤销，建议先导出备份。'
+                });
+              });
+              ccListEl.appendChild(btn);
+            });
+          }
+          return rep;
+        }).catch(function () {
+          ccScanBtn.disabled = false;
+          const ccEl2 = document.getElementById('st-cc');
+          if (ccEl2) ccEl2.textContent = '扫描异常';
+          return null;
+        });
+      };
+      ccScanBtn.addEventListener('click', runCcScan);
+    }
     if (row) {
       row.addEventListener('click', function () {
         document.querySelectorAll('.page').forEach(function (p) { p.hidden = true; });

@@ -1414,6 +1414,14 @@
           <button class="storage-clear" id="st-persist-btn" type="button" hidden>申请持久存储</button>
           <div class="storage-hint">申请成功后浏览器承诺不自动清理本应用数据（同域其他站点占满配额时更不容易被挤掉）。注意：持久化不是备份，定期导出备份仍是唯一可靠防线。</div>
         </div>
+        <!-- #168 字卡库瘦身：分组体积扫描与整组删除（后端 storage-slim.js，接线 personalize.js） -->
+        <div class="cal-card glass">
+          <div class="cal-card-title">字卡库瘦身</div>
+          <div class="storage-row"><span>各字卡库合计</span><b id="st-cc">点「扫描」后显示</b></div>
+          <button class="storage-clear" id="st-cc-scan" type="button">扫描最大的字卡分组</button>
+          <div id="st-cc-list"></div>
+          <div class="storage-hint">自定义字卡里的 GIF/大图是字卡库体积的大头（历史实测一个库 40MB+）。这里按<b>分组</b>列出最大的字卡组，删除＝整组删除（与在字卡管理页删掉该分组完全一样），<b>不可撤销</b>，删前建议先导出备份。舍不得删的组可以先在字卡管理页导出留底。</div>
+        </div>
       </div>
     </div>
 
@@ -2147,6 +2155,7 @@
             <div class="gs-row"><span>触发概率</span><div class="stepper" data-k="py-prob" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="py-prob-val" readonly><button class="stp-max">+</button></div></div>
             <div class="gs-row"><span>最少条数</span><div class="stepper" data-k="py-min" data-min="1" data-max="10" data-step="1"><button class="stp-min">−</button><input class="stp-val" id="py-min-val" readonly><button class="stp-max">+</button></div></div>
             <div class="gs-row"><span>最多条数</span><div class="stepper" data-k="py-max" data-min="2" data-max="10" data-step="1"><button class="stp-min">−</button><input class="stp-val" id="py-max-val" readonly><button class="stp-max">+</button></div></div>
+            <div class="gs-sub">此开关只控制「把多张字卡拼进同一条消息」；TA 把回复拆成几条消息发送由上方「回复条数」控制（默认最少 1、最多 2）——想只回一条请把「回复条数最多」设为 1</div>
           </div>
           <div class="gs-title">主动发送（联系人找你）</div>
           <div class="set-group glass">
