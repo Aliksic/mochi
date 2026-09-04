@@ -557,9 +557,15 @@
         <div class="ci"><div class="n">专属字卡</div><div class="m">只有当前桌面绑定的联系人才能使用</div></div>
         <div class="t" id="cc-list-count">0</div>
       </div>
+      <!-- v3.32.x：其他互动功能字卡同公用/专属拆双入口（存储本就双作用域，取池合并） -->
+      <div class="chat-item glass" id="li-fun-cards-public">
+        <div class="av"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1L3.2 9.4l6.1-.9z"/></svg></div>
+        <div class="ci"><div class="n">其他互动功能字卡·公用</div><div class="m">添加的功能字卡 · 每个桌面的联系人都能使用</div></div>
+        <div class="t" id="cc-fun-pub-count">0</div>
+      </div>
       <div class="chat-item glass" id="li-fun-cards-mine">
         <div class="av"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1L3.2 9.4l6.1-.9z"/></svg></div>
-        <div class="ci"><div class="n">其他互动功能字卡</div><div class="m">你添加的功能字卡 · 摸鱼/吃饭/经期/音乐等</div></div>
+        <div class="ci"><div class="n">其他互动功能字卡·专属</div><div class="m">添加的功能字卡 · 只有当前桌面的联系人能使用</div></div>
         <div class="t" id="cc-fun-count">0</div>
       </div>
       <div class="chat-item glass" id="li-checkin-cards-mine">
@@ -1699,7 +1705,7 @@
             <div class="lg-body">
           <div class="lic-li">字卡库：浏览全部字卡，支持搜索与自定义分组管理</div>
           <div class="lic-li">聊天字卡分类可上传：【主字卡】【颜文字】【emoji】【表情包】【图片】【拍一拍】【语音】分类</div>
-          <div class="lic-li">其他互动功能字卡（自定义）：字卡库→可自定义字卡→其他互动功能字卡，可为摸鱼 / 吃饭 / 经期 / 喝水 / 花园 / 音乐等功能添加自定义字卡（可编辑 / 删除），功能触发时 TA 会随机使用</div>
+          <div class="lic-li">其他互动功能字卡（自定义）：字卡库→可自定义字卡→其他互动功能字卡·公用 / ·专属，可为摸鱼 / 吃饭 / 经期 / 喝水 / 花园 / 音乐等功能添加自定义字卡（可编辑 / 删除），功能触发时 TA 会随机使用</div>
           <div class="lic-li">互动卡片可自定义内容，概率触发互动（在字卡库里）</div>
           <div class="lic-li">TA 的询问 / 小问题 / 好奇 / 吐槽 / 查岗（含互动动作）/ 邀请：题库内容均可自定义</div>
           <div class="lic-li">寻踪日常字卡：地点、在做什么、说的话，均可自定义</div>

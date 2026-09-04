@@ -798,9 +798,12 @@
       // 用户实测反馈过的卡顿根因，勿回退）
       libCounts.pubFun = countOfKeys(pubGroupsRaw(), CC_FUNC_KEYS);
     }
-    // v3.32.x：功能字卡入口角标 = 专属 + 公用 功能分类合计（各自走缓存，本函数零解析）
+    // v3.32.x：功能字卡双入口角标——专属行=专属库功能字卡、公用行=公用库功能字卡
+    //（各自走缓存，本函数零解析；与 公用字卡/专属字卡 两行口径一致）
     const pfe = document.getElementById('cc-fun-count');
-    if (pfe) pfe.textContent = String((libCounts.fun < 0 ? 0 : libCounts.fun) + (libCounts.pubFun < 0 ? 0 : libCounts.pubFun));
+    if (pfe) pfe.textContent = String(libCounts.fun < 0 ? 0 : libCounts.fun);
+    const pfpe = document.getElementById('cc-fun-pub-count');
+    if (pfpe) pfpe.textContent = String(libCounts.pubFun < 0 ? 0 : libCounts.pubFun);
     const pe = document.getElementById('cc-pub-count');
     if (pe) pe.textContent = libCounts.pub < 0 ? 0 : libCounts.pub;
     const oe = document.getElementById('cc-list-count');
@@ -3005,7 +3008,8 @@
     cur = (startTab && CC_ALL_TYPES.indexOf(startTab) >= 0) ? startTab : 'text';
     q = ''; curGroup = '';
     const ttl = document.getElementById('cc-page-title');
-    if (ttl) ttl.textContent = (startTab && CC_FUNC_KEYS.indexOf(cur) >= 0) ? '其他互动功能字卡'
+    if (ttl) ttl.textContent = (CC_FUNC_KEYS.indexOf(cur) >= 0)
+      ? '其他互动功能字卡·' + (ccScope === 'public' ? '公用' : '专属')
       : (ccScope === 'public' ? '公用字卡' : '专属字卡');
     const s1 = document.getElementById('cc-search-input');
     if (s1) s1.value = '';
@@ -3044,9 +3048,12 @@
   if (liPub) liPub.addEventListener('click', () => openCcPage('public'));
   const li = document.getElementById('li-custom-cards');
   if (li) li.addEventListener('click', () => openCcPage('own'));
-  // v3.32.x：其他互动功能字卡（自定义）入口——专属作用域 + 第一个功能分类 tab
+  // v3.32.x：其他互动功能字卡双入口（公用/专属）——直接落到第一个功能分类 tab，
+  // 页面标题按作用域带 ·公用 / ·专属 后缀；功能字卡取池本就合并双作用域
   const liFunMine = document.getElementById('li-fun-cards-mine');
   if (liFunMine) liFunMine.addEventListener('click', () => openCcPage('own', 'fish'));
+  const liFunPub = document.getElementById('li-fun-cards-public');
+  if (liFunPub) liFunPub.addEventListener('click', () => openCcPage('public', 'fish'));
   const ccBack = document.getElementById('cc-back');
   if (ccBack) {
     ccBack.addEventListener('click', () => {

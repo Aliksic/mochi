@@ -1,5 +1,13 @@
 # 本次构建者：AI-B（本会话：#156 群聊模式没隐藏桌面占卜图标修复，改动 src/js/personalize.js、build.mjs 哨兵 2 条、tools/verify-group-desk-icon.mjs、FIX-REGRESSION.md #156 行；开工时工作区含并行会话已声明完成的「其他互动功能字卡」改动 chatcard.js/default-cards.js/template.html 一并收口）
 
+### 2026-09-04 18:5x（用户需求：其他互动功能字卡也分公用/专属——双入口拆分；已构建已提交）
+* [AI-A 域]（**改动文件：src/template.html（可自定义字卡区功能字卡入口拆两行：·公用 #li-fun-cards-public/#cc-fun-pub-count、·专属 #li-fun-cards-mine/#cc-fun-count；功能介绍页文案同步）、src/js/chatcard.js（li-fun-cards-public→openCcPage('public','fish')；页标题按作用域带 ·公用/·专属 后缀；refreshLibCounts 角标拆分=专属行显 libCounts.fun、公用行显 libCounts.pubFun，各自走缓存零解析）；构建状态：已构建·sw mochi-mtmtucbi4 哨兵 312/312 哑哨兵 0；已提交推送**）。
+* 说明：功能字卡存储本就双作用域（存 cc-groups 同名字段），getCustomFuncCards 取池时专属+公用合并、各自剔除停用分组——本条只是把入口/角标/标题拆开对齐「公用字卡/专属字卡」两行结构。
+* 验证：node --check 过；verify-cc-tab-totals 7/7、verify-cc-group-off 12/12。
+* 待真机：两个功能入口各显各的角标；在 ·公用 添加的摸鱼字卡所有联系人触发摸鱼时可用，·专属 仅当前联系人。
+
+
+
 ### 2026-09-04 18:3x（用户反馈三入口没分开：自定义字卡三入口 tab 分区隔离；已构建已提交）
 * [AI-A 域]（**改动文件：src/js/chatcard.js（openCcPage 按入口切换 tab hidden——「其他互动功能字卡」入口只显示 13 个功能 tab，公用/专属入口只显示 7 个基础分类 tab，每次进页重建互不残留；含上条卡顿修复两处：refreshLibCounts 公用角标 pubFun 缓存化、getCustomFuncCards 专属库原始串身份缓存）、src/template.html（移除 .cc-tabs-sep 分隔条）、src/css/chat-pages.css + src/css/dark.css（移除分隔条样式）；构建状态：已构建·sw mochi-mtmtduxv 哨兵 312/312 哑哨兵 0；已提交推送**）。
 * 验证：node --check 过；verify-cc-group-off 12/12、verify-cc-tab-totals 7/7；verify-cc-scope 16/27 失败经 HEAD 与 4c952e1 双基线对照逐字一致＝既有过期断言非本次回归（待专项修脚本）；verify:all 全量 130/69/2 与基线同域浮动。

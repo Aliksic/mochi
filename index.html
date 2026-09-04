@@ -8778,9 +8778,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1788517909219">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.423</b></span>
-        <span class="sv-deploy">部署于 2026-09-04 18:31<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1788519516988">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.424</b></span>
+        <span class="sv-deploy">部署于 2026-09-04 18:58<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9104,9 +9104,15 @@ transition-duration: .01ms !important;
         <div class="ci"><div class="n">专属字卡</div><div class="m">只有当前桌面绑定的联系人才能使用</div></div>
         <div class="t" id="cc-list-count">0</div>
       </div>
+      <!-- v3.32.x：其他互动功能字卡同公用/专属拆双入口（存储本就双作用域，取池合并） -->
+      <div class="chat-item glass" id="li-fun-cards-public">
+        <div class="av"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1L3.2 9.4l6.1-.9z"/></svg></div>
+        <div class="ci"><div class="n">其他互动功能字卡·公用</div><div class="m">添加的功能字卡 · 每个桌面的联系人都能使用</div></div>
+        <div class="t" id="cc-fun-pub-count">0</div>
+      </div>
       <div class="chat-item glass" id="li-fun-cards-mine">
         <div class="av"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1L3.2 9.4l6.1-.9z"/></svg></div>
-        <div class="ci"><div class="n">其他互动功能字卡</div><div class="m">你添加的功能字卡 · 摸鱼/吃饭/经期/音乐等</div></div>
+        <div class="ci"><div class="n">其他互动功能字卡·专属</div><div class="m">添加的功能字卡 · 只有当前桌面的联系人能使用</div></div>
         <div class="t" id="cc-fun-count">0</div>
       </div>
       <div class="chat-item glass" id="li-checkin-cards-mine">
@@ -9897,7 +9903,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.423</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.424</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
       <!-- v3.27.x：设置页底部防骗声明 -->
       <div class="set-alert">
@@ -10165,7 +10171,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.423</span>
+              <span class="lic-ver">v3.26.424</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -10246,7 +10252,7 @@ transition-duration: .01ms !important;
             <div class="lg-body">
           <div class="lic-li">字卡库：浏览全部字卡，支持搜索与自定义分组管理</div>
           <div class="lic-li">聊天字卡分类可上传：【主字卡】【颜文字】【emoji】【表情包】【图片】【拍一拍】【语音】分类</div>
-          <div class="lic-li">其他互动功能字卡（自定义）：字卡库→可自定义字卡→其他互动功能字卡，可为摸鱼 / 吃饭 / 经期 / 喝水 / 花园 / 音乐等功能添加自定义字卡（可编辑 / 删除），功能触发时 TA 会随机使用</div>
+          <div class="lic-li">其他互动功能字卡（自定义）：字卡库→可自定义字卡→其他互动功能字卡·公用 / ·专属，可为摸鱼 / 吃饭 / 经期 / 喝水 / 花园 / 音乐等功能添加自定义字卡（可编辑 / 删除），功能触发时 TA 会随机使用</div>
           <div class="lic-li">互动卡片可自定义内容，概率触发互动（在字卡库里）</div>
           <div class="lic-li">TA 的询问 / 小问题 / 好奇 / 吐槽 / 查岗（含互动动作）/ 邀请：题库内容均可自定义</div>
           <div class="lic-li">寻踪日常字卡：地点、在做什么、说的话，均可自定义</div>
@@ -33235,7 +33241,9 @@ if (libCounts.pubFun < 0) {
 libCounts.pubFun = countOfKeys(pubGroupsRaw(), CC_FUNC_KEYS);
 }
 const pfe = document.getElementById('cc-fun-count');
-if (pfe) pfe.textContent = String((libCounts.fun < 0 ? 0 : libCounts.fun) + (libCounts.pubFun < 0 ? 0 : libCounts.pubFun));
+if (pfe) pfe.textContent = String(libCounts.fun < 0 ? 0 : libCounts.fun);
+const pfpe = document.getElementById('cc-fun-pub-count');
+if (pfpe) pfpe.textContent = String(libCounts.pubFun < 0 ? 0 : libCounts.pubFun);
 const pe = document.getElementById('cc-pub-count');
 if (pe) pe.textContent = libCounts.pub < 0 ? 0 : libCounts.pub;
 const oe = document.getElementById('cc-list-count');
@@ -35118,7 +35126,8 @@ pubInvalidate();
 cur = (startTab && CC_ALL_TYPES.indexOf(startTab) >= 0) ? startTab : 'text';
 q = ''; curGroup = '';
 const ttl = document.getElementById('cc-page-title');
-if (ttl) ttl.textContent = (startTab && CC_FUNC_KEYS.indexOf(cur) >= 0) ? '其他互动功能字卡'
+if (ttl) ttl.textContent = (CC_FUNC_KEYS.indexOf(cur) >= 0)
+? '其他互动功能字卡·' + (ccScope === 'public' ? '公用' : '专属')
 : (ccScope === 'public' ? '公用字卡' : '专属字卡');
 const s1 = document.getElementById('cc-search-input');
 if (s1) s1.value = '';
@@ -35149,6 +35158,8 @@ const li = document.getElementById('li-custom-cards');
 if (li) li.addEventListener('click', () => openCcPage('own'));
 const liFunMine = document.getElementById('li-fun-cards-mine');
 if (liFunMine) liFunMine.addEventListener('click', () => openCcPage('own', 'fish'));
+const liFunPub = document.getElementById('li-fun-cards-public');
+if (liFunPub) liFunPub.addEventListener('click', () => openCcPage('public', 'fish'));
 const ccBack = document.getElementById('cc-back');
 if (ccBack) {
 ccBack.addEventListener('click', () => {
@@ -77883,4 +77894,4 @@ return { lock: document.body.classList.contains('scroll-lock'), open: open };
 <!-- __MOCHI_EOF__ -->
 </body>
 </html>
-<!-- __MOCHI_EOF__ mtmtduxv -->
+<!-- __MOCHI_EOF__ mtmucbi4 -->
