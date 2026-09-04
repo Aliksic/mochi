@@ -6609,6 +6609,48 @@ if (!tb) return;
 favKind = tb.dataset.kind;
 renderFav();
 });
+// v3.31.x 批量管理：顶栏入口 / 底部操作栏（取消 / 全选 / 删除）
+const favManageBtn = document.getElementById('fav-manage-btn');
+if (favManageBtn) {
+favManageBtn.addEventListener('click', () => {
+favBatch = !favBatch;
+favBatchSel = [];
+renderFav();
+if (favBatch) toast('点选要删除的收藏');
+});
+}
+const favBatchCancel = document.getElementById('fav-batch-cancel');
+if (favBatchCancel) {
+favBatchCancel.addEventListener('click', () => {
+favBatch = false;
+favBatchSel = [];
+renderFav();
+});
+}
+const favBatchAll = document.getElementById('fav-batch-all');
+if (favBatchAll) {
+favBatchAll.addEventListener('click', () => {
+if (!favBatch) return;
+const all = favBatchVis.length && favBatchSel.length === favBatchVis.length;
+favBatchSel = all ? [] : favBatchVis.slice();
+renderFav();
+});
+}
+const favBatchDel = document.getElementById('fav-batch-del');
+if (favBatchDel) {
+favBatchDel.addEventListener('click', () => {
+if (!favBatch || !favBatchSel.length) return;
+const n = favBatchSel.length;
+if (!window.openModal) return;
+window.openModal('删除选中的 ' + n + ' 条收藏？', '', () => {
+favBatchSel.forEach(s => { const i = favBatchArr ? favBatchArr.indexOf(s) : -1; if (i >= 0) favBatchArr.splice(i, 1); });
+if (favBatchArr) saveFav(favBatchArr);
+favBatchSel = [];
+renderFav();
+toast('已删除 ' + n + ' 条收藏');
+}, { noInput: true });
+});
+}
 window.renderFav = renderFav;
 const favApp = document.querySelector('.app[data-app="note"]');
 if (favApp && favPage) {

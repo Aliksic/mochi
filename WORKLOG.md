@@ -1,11 +1,19 @@
+### 2026-09-04 12:0x（#146 删除桌面【一键随机美化】功能 + 修「随机美化后小组件全透明、恢复默认布局救不回」：v3.31.x；已构建）
+* [AI-A 域跨改 personalize.js/template.html]（**改动文件：src/template.html（删 row-beauty-random 美化行 + desk-quick dq-random 快捷按钮）、src/js/personalize.js（删随机美化处理块与 bind；新增 opacityRawToPct 统一解析 + 启动脏值自愈，三处 parseInt 读取点换用）、build.mjs（FIX_SENTINELS 3 条：1 存在型 + 2 删除型 absent）、tools/verify-widget-opacity.mjs（新增行为断言）、FIX-REGRESSION.md（#146 行）；构建状态：已构建（随并行会话 #147 构建一并收口入库，产物已含修复，哨兵 284/284）**）。
+* 根因：随机美化把 widget-opacity 写成小数（"0.9"/"1"），读取点 parseInt 按百分比解析 → parseInt("0.9")=0 → --widget-opacity:0 小组件全透明；该键属美化键，恢复默认布局只清 desk-layout 清不掉它。
+* 修复：功能整体下线 + opacityRawToPct（≤1 按 ×100 换算）+ 启动把历史小数脏值改写为百分比存储（存量受影响设备升级后自动恢复显示）。
+* 验证：node --check 过；verify-widget-opacity **8/8**（0.9→90 自愈 / 1→100 自愈 / 80 不误改 / 入口已删除）；--check-sentinels 284 全绿哑哨兵 0。
+* 待真机：曾点过随机美化的设备升级后小组件恢复显示；美化页/快捷面板无随机美化入口；组件透明度滑杆、恢复全部默认美化正常。
+
 ### 2026-09-04 11:5x（#145 聊天/群聊输入栏【表情包】按钮再点无法关闭：按钮无条件 open 改切换开关；已构建）
 * [AI-A 域跨改]（**改动文件：src/js/chat.js（表情按钮 click 改 toggle：面板已开先 closeEmojiPanel() 再 return；导出 window.closeEmojiPanelForInsert=closeEmojiPanel 供群聊复用）、src/js/group-chat.js（gc-emoji-btn 同款切换，复用导出关闭）、build.mjs（FIX_SENTINELS 2 条，window. 属性名锚点）、FIX-REGRESSION.md（#145 行）；构建状态：已构建·sw 见 version.json**）。
 * 根因：chat.js 表情按钮 click 无条件 openEmojiPanel()，外点关闭监听又排除按钮本身（!emojiBtn.contains）→ 再点永不关；群聊 gc-emoji-btn 更绕（重开+document 外点关闭互相覆盖，终态仍开）。
 * 验证：node --check 过；构建哨兵 281/281 全绿哑哨兵 0。待真机：聊天/群聊点表情按钮开→再点关；外点关闭/选表情发送/信箱批量插入模式不回归。
 * ⚠️ 构建夹带说明：构建时工作区含并行会话未提交改动——src/js/personalize.js + src/template.html（#146 随机美化删除 + widget-opacity 小数脏值修复）、src/js/chat.js + src/template.html（v3.31.x 收藏批量管理 favBatch 族）——改动成套完整、语法与哨兵全过，已随本次构建一并进入产物并随提交入库，请该会话知悉（WORKLOG 留痕，AGENTS.md「构建不夹带」特此说明）。
 
-### 2026-09-04 11:5x（#145 收藏页新增批量删除功能：v3.31.x；已构建）
+### 2026-09-04 11:5x（#147 收藏页新增批量删除功能：v3.31.x；已构建）
 * [AI-A 域]（**改动文件：src/template.html（收藏页顶栏加批量管理按钮 #fav-manage-btn + 底部操作栏 #fav-batch-bar（取消/全选/删除）+ 功能介绍页 02 收藏行补文案）、src/js/chat.js（renderFav 批量模式状态 favBatch/favBatchSel/favBatchArr/favBatchVis + syncBatchBar + renderFavItem 批量勾选分支 + 四个按钮事件 + fav-back 退出批量）、src/css/chat-pages.css（.fav-batch-bar/.fb-btn/.fav-check 亮色）、src/css/dark.css（同款暗色适配，跨域改动已在此行说明）；构建状态：已构建·sw 见 version.json**）。
+* 构建者声明：本次 build 由本会话执行；**产物同时包含并行会话已完成的 #145（表情按钮再点关闭，build.mjs+chat.js+group-chat.js）与 #146（随机美化移除+透明度脏值修复，build.mjs+personalize.js+template.html）**——对方改动完整（其哨兵已随本次构建 284/284 验证在位），按 AGENTS.md 一并收口。
 * 功能：收藏页顶栏新增勾选图标按钮 → 进入批量管理：条目外侧圆圈勾选（捕获阶段 click 抢先拦截气泡内图片查看大图）、切换「我的/TA的」或分类 tab 自动收窄勾选、底部「取消/全选(取消全选)/删除(N)」；删除走 openModal 二次确认，直接改当次渲染的 fav 数组引用后 saveFav（避免重复 getFav 解析致 indexOf 失配）；长按/右键单删在批量模式下不注册。
 * 跨域改动 src/css/dark.css：仅追加收藏批量管理暗色 5 行（.fav-batch-bar/.fb-btn/.fav-check），未动其他规则。
 * 验证：node --check 过；构建后 --check-sentinels 全绿。
