@@ -39,6 +39,15 @@
    全部铺开（其余 card-tabs 共用处不受影响）。
    v3.16.x：功能触发字卡拆到独立页 #fc-tabs（12 个功能 tab 同量级），同样换行铺开 */
 #dc-tabs.card-tabs, #fc-tabs.card-tabs { flex-wrap:wrap; overflow-x:visible; row-gap:8px; }
+/* v3.32.x：自定义字卡页 #cc-tabs 新增 13 个功能分类 tab（其他互动功能字卡），共 20 个，
+   同 dc/fc 换行铺开；.cc-tabs-sep 为功能分类区全宽小标题（占满一行把两段 tab 分组） */
+#cc-tabs.card-tabs { flex-wrap:wrap; overflow-x:visible; row-gap:8px; }
+#cc-tabs .cc-tabs-sep {
+  flex-basis:100%; display:block; padding:6px 4px 0;
+  font-size:11px; font-weight:700; color:#999; line-height:1;
+  border-top:1px dashed rgba(0,0,0,.12); padding-top:10px;
+  -webkit-tap-highlight-color:transparent; user-select:none; pointer-events:none;
+}
 .cc-tab {
   flex:0 0 auto; display:inline-flex; align-items:center; gap:5px;
   padding:9px 14px; font-size:13px; border-radius:99px;

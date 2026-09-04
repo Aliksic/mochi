@@ -99,16 +99,23 @@
   function ownGroupsRaw() { return buildGroupsFrom(store.get('cc-groups')); }
   // 合并视图：当前作用域字卡 + 公用字卡（同分类分组拼接；只读，供回复池/搜索用）
   const CC_TYPES = ['text', 'kaomoji', 'emoji', 'sticker', 'image', 'poke', 'voice'];
+  // v3.32.x：其他互动功能字卡（自定义）——与系统预设【其他互动功能字卡】同 13 个功能分类。
+  // 存本作用域 cc-groups 的同名字段（公用库/专属库双作用域与分组停用开关全部沿用），
+  // 管理页（page-custom-cards）功能分类 tab 可查看/编辑/删除，各功能经 default-cards.js
+  // getLibPool 并入对应功能池抽取；CC_FUNC_KEYS 不进聊天通用回复池（getCustomCards*
+  // 遍历全部分类时排除，防止功能字卡被聊天自动回复误抽）。
+  const CC_FUNC_KEYS = ['fish', 'eat', 'period', 'water', 'garden', 'sync', 'reach', 'cjian', 'room', 'piggy', 'drift', 'interact', 'music'];
+  const CC_ALL_TYPES = CC_TYPES.concat(CC_FUNC_KEYS);
   // v3.26.x #139：GIF 动图上传大小上限（base64 长度，≈3MB 文件）——GIF canvas 压缩会丢
   // 动画只能直存原图，此前无上限，几 MB~几十 MB 的动图整份进库是字卡库膨胀大头之一
   const CC_GIF_MAX_B64 = 4 * 1024 * 1024;
   function mergeWithPublic(g) {
     const p = pubGroupsRaw();
     let has = false;
-    for (let i = 0; i < CC_TYPES.length; i++) { if ((p[CC_TYPES[i]] || []).length) { has = true; break; } }
+    for (let i = 0; i < CC_ALL_TYPES.length; i++) { if ((p[CC_ALL_TYPES[i]] || []).length) { has = true; break; } }
     if (!has) return g;
     const out = {};
-    CC_TYPES.forEach(t => { out[t] = (g[t] || []).concat(p[t] || []); });
+    CC_ALL_TYPES.forEach(t => { out[t] = (g[t] || []).concat(p[t] || []); });
     Object.keys(g).forEach(t => { if (!(t in out)) out[t] = g[t]; });
     return out;
   }
@@ -119,10 +126,10 @@
     const ownF = filterGroupsByOff(own, 'own');
     const pubF = filterGroupsByOff(pub, 'public');
     let hasPub = false;
-    for (let i = 0; i < CC_TYPES.length; i++) { if ((pubF[CC_TYPES[i]] || []).length) { hasPub = true; break; } }
+    for (let i = 0; i < CC_ALL_TYPES.length; i++) { if ((pubF[CC_ALL_TYPES[i]] || []).length) { hasPub = true; break; } }
     if (!hasPub) return ownF;
     const out = {};
-    CC_TYPES.forEach(t => { out[t] = (ownF[t] || []).concat(pubF[t] || []); });
+    CC_ALL_TYPES.forEach(t => { out[t] = (ownF[t] || []).concat(pubF[t] || []); });
     Object.keys(ownF).forEach(t => { if (!(t in out)) out[t] = ownF[t]; });
     return out;
   }
@@ -749,14 +756,20 @@
   // v3.11.x：字卡库列表页「公用字卡 / 专属字卡」两行入口的角标计数。
   // 角标与当前打开作用域无关（公用行恒显全局键总量、专属行恒显当前联系人键总量）；
   // 带缓存：render→updateCountsOnly 高频触发，不重复 JSON.parse 大库，变更方强制刷新
-  const libCounts = { pub: -1, own: -1 };
+  const libCounts = { pub: -1, own: -1, fun: -1 };
   function countOf(g) {
     let n = 0;
     try { Object.keys(g || {}).forEach(t => (g[t] || []).forEach(grp => { if (Array.isArray(grp) && Array.isArray(grp[1])) n += grp[1].length; })); } catch (e) {}
     return n;
   }
+  // v3.32.x：只统计指定分类（功能字卡入口角标用）
+  function countOfKeys(g, keys) {
+    let n = 0;
+    try { (keys || []).forEach(t => (g[t] || []).forEach(grp => { if (Array.isArray(grp) && Array.isArray(grp[1])) n += grp[1].length; })); } catch (e) {}
+    return n;
+  }
   function refreshLibCounts(force) {
-    if (force) { libCounts.pub = -1; libCounts.own = -1; pubInvalidate(); }
+    if (force) { libCounts.pub = -1; libCounts.own = -1; libCounts.fun = -1; pubInvalidate(); }
     // v3.25.x：计数 0 不再缓存——iOS 慢回填场景角标先算成 0 并缓存，之后数据落进
     // 内存缓存也没人失效它，列表页两行角标永远 0（点进作用域页却能看到字卡，真机反馈）。
     // 空库重复 countOf 只是解析 null 零负担；大库计数 >0 仍走缓存，不会反复 JSON.parse。
@@ -768,9 +781,18 @@
       libCounts.pub = n > 0 ? n : -1;
     }
     if (libCounts.own < 0) {
-      const n = countOf(ownGroupsRaw());
+      const og = ownGroupsRaw();
+      const n = countOf(og);
       libCounts.own = n > 0 ? n : -1;
+      libCounts.fun = countOfKeys(og, CC_FUNC_KEYS);
     }
+    if (libCounts.fun < 0) {
+      // own 已有缓存时也要算功能字卡数（仅启动首轮多 parse 一次，之后走缓存）
+      libCounts.fun = countOfKeys(ownGroupsRaw(), CC_FUNC_KEYS);
+    }
+    // v3.32.x：功能字卡入口角标 = 当前桌面专属 + 公用 的功能分类合计（与公用/专属行口径一致）
+    const pfe = document.getElementById('cc-fun-count');
+    if (pfe) pfe.textContent = String(libCounts.fun + countOfKeys(pubGroupsRaw(), CC_FUNC_KEYS));
     const pe = document.getElementById('cc-pub-count');
     if (pe) pe.textContent = libCounts.pub < 0 ? 0 : libCounts.pub;
     const oe = document.getElementById('cc-list-count');
@@ -2470,7 +2492,11 @@
     maybeHydrateReplyPool();
     const g = replyPoolGroups();
     const out = [];
-    Object.keys(g).forEach(t => g[t].forEach(([name, arr]) => arr.forEach(c => out.push(c))));
+    // v3.32.x：功能字卡分类（fish/eat/…）不进聊天通用回复池——它们只归对应功能抽取
+    Object.keys(g).forEach(t => {
+      if (CC_FUNC_KEYS.indexOf(t) >= 0) return;
+      g[t].forEach(([name, arr]) => arr.forEach(c => out.push(c)));
+    });
     return out;
   };
   // 拍一拍字卡（自定义字卡里【拍一拍】分类）
@@ -2603,7 +2629,7 @@
     if (editSaveTimer) { clearTimeout(editSaveTimer); editSaveTimer = null; }
     pubInvalidate();
     offInvalidate(); // v3.30.x：专属停用集合按联系人隔离，切桌面必须失效缓存
-    libCounts.pub = -1; libCounts.own = -1;
+    libCounts.pub = -1; libCounts.own = -1; libCounts.fun = -1;
     groups = loadGroups();
     refreshLibCounts(false);
     try { renderGroupsBar(); render(); } catch (e) {}
@@ -2618,7 +2644,11 @@
     try { if (window.hydrateLibForCid) window.hydrateLibForCid(cid); } catch (e) {}
     const g = replyPoolGroupsFor(cid);
     const out = [];
-    Object.keys(g).forEach(t => (g[t] || []).forEach(([name, arr]) => (arr || []).forEach(c => out.push(c))));
+    // v3.32.x：功能字卡分类不进聊天/群聊通用回复池（同 getCustomCards）
+    Object.keys(g).forEach(t => {
+      if (CC_FUNC_KEYS.indexOf(t) >= 0) return;
+      (g[t] || []).forEach(([name, arr]) => (arr || []).forEach(c => out.push(c)));
+    });
     return out;
   };
   window.getPokeCardsFor = function (cid) {
@@ -2677,7 +2707,7 @@
             pubInvalidate();
             try { st.remove('cc-groups'); } catch (e2) {} // 迁走即清，防回复池公用+专属重复
             if (isDefault) { try { gRoot.remove('cc-groups'); } catch (e2) {} }
-            libCounts.pub = -1; libCounts.own = -1;
+            libCounts.pub = -1; libCounts.own = -1; libCounts.fun = -1;
             if (cid === (window.__activeCid || 'default')) {
               if (ccScope === 'own') { groups = loadGroups(); try { renderGroupsBar(); render(); } catch (e2) {} }
               else refreshLibCounts(false);
@@ -2741,7 +2771,7 @@
       return n;
     }
     function refreshAfter(cid) {
-      libCounts.own = -1;
+      libCounts.own = -1; libCounts.fun = -1;
       if (cid === (window.__activeCid || 'default')) {
         pubInvalidate();
         if (ccScope === 'own') { groups = loadGroups(); try { renderGroupsBar(); render(); } catch (e2) {} }
@@ -2914,18 +2944,21 @@
     // v3.15.x：统一走 hydrateScope（成功后自动清缓存/刷新角标与界面）
     return hydrateScope(ccScope === 'public' ? 'public' : 'own');
   }
-  function openCcPage(scope) {
+  function openCcPage(scope, startTab) {
     // v3.29.x：先落盘上一作用域的未保存变更——原 clearTimeout 会静默丢弃 120ms
     // 防抖窗口内刚上传/编辑的内容（切到另一作用域后刷新即丢）
     flushCcSave();
     ccScope = scope === 'public' ? 'public' : 'own';
     pubInvalidate();
-    cur = 'text'; q = ''; curGroup = '';
+    // v3.32.x：startTab 可指定起始分类（其他互动功能字卡入口直接落到第一个功能 tab）
+    cur = (startTab && CC_ALL_TYPES.indexOf(startTab) >= 0) ? startTab : 'text';
+    q = ''; curGroup = '';
     const ttl = document.getElementById('cc-page-title');
-    if (ttl) ttl.textContent = ccScope === 'public' ? '公用字卡' : '专属字卡';
+    if (ttl) ttl.textContent = (startTab && CC_FUNC_KEYS.indexOf(cur) >= 0) ? '其他互动功能字卡'
+      : (ccScope === 'public' ? '公用字卡' : '专属字卡');
     const s1 = document.getElementById('cc-search-input');
     if (s1) s1.value = '';
-    tabsWrap.querySelectorAll('.cc-tab').forEach(t => t.classList.toggle('sel', t.dataset.type === 'text'));
+    tabsWrap.querySelectorAll('.cc-tab').forEach(t => t.classList.toggle('sel', t.dataset.type === cur));
     document.querySelectorAll('.page').forEach(p => p.hidden = true);
     const ccPage = document.getElementById('page-custom-cards');
     if (ccPage) ccPage.hidden = false;
@@ -2952,6 +2985,9 @@
   if (liPub) liPub.addEventListener('click', () => openCcPage('public'));
   const li = document.getElementById('li-custom-cards');
   if (li) li.addEventListener('click', () => openCcPage('own'));
+  // v3.32.x：其他互动功能字卡（自定义）入口——专属作用域 + 第一个功能分类 tab
+  const liFunMine = document.getElementById('li-fun-cards-mine');
+  if (liFunMine) liFunMine.addEventListener('click', () => openCcPage('own', 'fish'));
   const ccBack = document.getElementById('cc-back');
   if (ccBack) {
     ccBack.addEventListener('click', () => {
@@ -3087,7 +3123,7 @@
       delete hydInflight[fullKey];
       if (ok === null) { hydAbsent[fullKey] = true; return false; }
       pubInvalidate();
-      libCounts.pub = -1; libCounts.own = -1;
+      libCounts.pub = -1; libCounts.own = -1; libCounts.fun = -1;
       const scopeLive = (scope === 'public') ? (ccScope === 'public') : (ccScope === 'own');
       if (scopeLive) {
         try { groups = loadGroups(); renderGroupsBar(); render(); } catch (e) {}

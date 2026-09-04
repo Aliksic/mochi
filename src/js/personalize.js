@@ -3945,9 +3945,10 @@ try {
     setTimeout(() => { _reapplyScheduled = false; }, 2000);
   });
 
-  // v3.8.x：群聊模式——开启后桌面聊天按钮右侧显示「群聊」按钮，占卜按钮隐藏（移到隐藏池，
-  // 可在美化装修模式组件库自由添加到其他页面）；关闭恢复原样。须在 applyDeskLayout 之后执行
-  // （覆盖 desk-layout 对群聊/占卜图标的处置）。每桌面独立（group-chat-enabled，默认关闭）。
+  // v3.8.x：群聊模式——开启后桌面聊天按钮右侧显示「群聊」按钮，占卜按钮隐藏（FIX 2026-09-04
+  // #154：无论占卜图标当前在首页图标组、其他页还是组件库加回的位置，都强制收进隐藏池）；
+  // 关闭恢复原样。须在 applyDeskLayout 之后执行（覆盖 desk-layout 对群聊/占卜图标的处置）。
+  // group-chat-enabled 为全局键（v3.10.x 起群聊是全局功能），默认关闭。
   function applyGroupChatMode() {
     try {
       // v3.10.x：group-chat-enabled 改全局存储（群聊是全局功能），读时回退旧版每桌面值完成迁移
@@ -3969,8 +3970,12 @@ try {
           }
           gcBtn.hidden = false;
         }
-        // 占卜按钮：若仍在第一页 app-grid（原位），移到隐藏池；已在池或被用户移到其他页则不动
-        if (divBtn && mainGrid && divBtn.parentNode === mainGrid) {
+        // FIX 2026-09-04 #154 群聊模式没隐藏桌面占卜图标（用户反馈）：原逻辑只在占卜图标
+        // 仍在第一页 app-grid（模板原位）时才收进隐藏池，装修过桌面（desk-layout 把占卜排在
+        // 任意页顶层）或从组件库重新加回后，占卜图标一直显示在桌面上。改为群聊开启期间
+        // 无论占卜在桌面哪个位置（图标组/任意页）都强制收进隐藏池（已在池则不动）；
+        // 关闭后由 else 分支放回，desk-layout 有自定义位置时随后 applyDeskLayout 归位。
+        if (divBtn && divBtn.parentNode !== pool) {
           pool.appendChild(divBtn);
         }
       } else {
@@ -3978,10 +3983,13 @@ try {
         if (gcBtn && gcBtn.parentNode !== pool) {
           pool.appendChild(gcBtn);
         }
-        // 占卜按钮：若在隐藏池，移回第一页 app-grid 的 memory 后面（原位）；已被用户添加到其他页则不动
+        // 占卜按钮：若在隐藏池，移回第一页 app-grid 的 memory 后面（原位）
         if (divBtn && divBtn.parentNode === pool && mainGrid) {
           if (memBtn) mainGrid.insertBefore(divBtn, memBtn.nextSibling);
           else mainGrid.appendChild(divBtn);
+          // FIX 2026-09-04 #155：关闭群聊后立即重应用一次布局——desk-layout 若有用户
+          // 自定义占卜位置（任意页），马上放回自定义位置而非停在图标组默认位
+          try { if (window.applyDeskLayout) window.applyDeskLayout(); } catch (e) {}
         }
       }
     } catch (e) {}

@@ -79,10 +79,35 @@
     box.querySelector('b').textContent = texts['alert'];
     box.appendChild(document.createTextNode(' ' + texts['alert2']));
   }
+  // 远程时效公告（可选）：官方 notice.json 下发 { bulletin: { text, until } }，until=epoch 毫秒（缺省/过期自动摘除）。
+  // 用途：临时插播场景（如发现倒卖，对所有联网副本含二传远程挂横幅）；notice.json 不带 bulletin 字段 = 完全不显示，零开销。
+  let bulletin = null;
+  function ensureBulletin() {
+    const notice = document.getElementById('splash-notice');
+    if (!notice) return;
+    let box = notice.querySelector('.splash-alert[data-anti-scam="3"]');
+    const active = !!(bulletin && typeof bulletin.text === 'string' && bulletin.text.trim()
+      && (!bulletin.until || Date.now() < bulletin.until));
+    if (!active) { if (box) box.remove(); return; }
+    const want = bulletin.text.trim();
+    if (!box) {
+      box = document.createElement('div');
+      box.className = 'splash-alert';
+      const b2 = notice.querySelector('.splash-alert[data-anti-scam="2"]');
+      notice.insertBefore(box, b2 ? b2.nextSibling : notice.firstChild);
+    }
+    box.setAttribute('data-anti-scam', '3');
+    if (box.textContent !== '公告' + want) { // 内容变化 → 重写（标题固定「公告」）
+      box.innerHTML = '<div class="splash-alert-t"></div><p></p>';
+      box.querySelector('.splash-alert-t').textContent = '公告';
+      box.querySelector('p').textContent = want;
+    }
+  }
   function run() {
     const b1 = ensureBar(BARS[0], null);
     ensureBar(BARS[1], b1 ? b1.nextSibling : null);
     ensureSettings();
+    ensureBulletin();
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run);
   else run();
@@ -97,6 +122,17 @@
           dirty = true;
         }
       });
+      // 远程时效公告：与本地状态不同才刷（含下发/摘除）
+      if (d && typeof d.bulletin === 'object' && d.bulletin) {
+        const nb = { text: String(d.bulletin.text || ''), until: Number(d.bulletin.until) || 0 };
+        if (nb.text && (!bulletin || bulletin.text !== nb.text || bulletin.until !== nb.until)) {
+          bulletin = nb;
+          dirty = true;
+        } else if (!nb.text && bulletin) {
+          bulletin = null;
+          dirty = true;
+        }
+      }
       if (dirty) run(); // 强刷回写
     })
     .catch(function () { /* 保留本地兜底 */ });

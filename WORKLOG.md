@@ -1,4 +1,15 @@
-# 本次构建者：AI-A（本会话：#153 Chromium139 后台冻结 1 分钟致后台通知全停/回前台积压爆发，改动 src/js/bg-keep.js、build.mjs 哨兵 2 条、FIX-REGRESSION.md #153 行；开工时 git status 干净，工作区含并行会话 #149 设备记录文档改动一并入库）
+# 本次构建者：AI-A（本会话：#154 朋友圈评论表情包「我的表情包」与聊天面板同步修复，改动 src/js/chat.js、src/js/feed.js、build.mjs 哨兵 2 条、FIX-REGRESSION.md #154 行；开工时工作区含并行会话防倒卖看门狗改动 clock.js/pwa.js/build.mjs 哨兵 3 条（已完整自洽），本次构建一并收口）
+
+### 2026-09-04 17:5x（防倒卖工具箱补完：bulletin 远程时效公告 + pwa.js 第二锚点看门狗；verify 扩至 18/18；已随并行会话构建入库）
+* [AI-B 域]（**改动文件：src/js/clock.js（回填 IIFE 加 bulletin：官方 notice.json 可下发 {bulletin:{text,until}}，until=epoch 毫秒，所有联网副本含二传开屏显示「公告」条，内容变化重写/过期自动摘除/不带字段完全不渲染——发现倒卖时可远程对所有副本挂提醒）、src/js/pwa.js（末尾新增「在位看门狗」第二锚点：每 5s 检查两条官方声明缺失即本地常量补回，只补缺失不改写已在位内容，与 clock.js 回填互为备份——想去掉声明必须同时改两个文件，运行时删除 5s 内自动恢复）、build.mjs（FIX_SENTINELS +3：bulletin 在位判定/公告重写比对/pwa 看门狗补回，均唯一逻辑锚点）、tools/verify-anti-scam-backfill.mjs（拦截 helper 重构支持 fulfill 假官方应答，新增用例6 运行时删条看门狗补回/用例7 bulletin 下发显示/用例8 过期摘除）、FIX-REGRESSION.md（新增行，**原编 #154 与并行会话撞号已改 #155**）；构建状态：本会话两次构建（末次 sw mochi-mtmqoukw 哨兵 312/312），**产物同时包含并行会话 #154 表情包同步的 chat.js/feed.js/personalize.js + 其哨兵，随本次提交一并收口，对方 WORKLOG 已留痕**）。
+* 验证：node --check 全过；verify-anti-scam-backfill **18/18**；构建哨兵 312/312 全绿哑哨兵 0。
+* 用法备忘：临时公告=改 src/pwa/notice.json 加 "bulletin": { "text": "…", "until": <epoch毫秒> } → 构建部署；不写字段=无公告；真机待验证三项见 FIX-REGRESSION #155。
+
+### 2026-09-04 17:1x（#154 朋友圈评论「我的表情包」与聊天面板不同步：feed 只读 store 层、chat 内存副本才经 IDB 权威自愈；已构建）
+* [AI-A 域]（**改动文件：src/js/chat.js（myEmojiSave 后暴露 window.getMyEmojiGroups 返回 myGroups 最新内存副本）、src/js/feed.js（comStickerGroups mine 分支优先取该副本，chat.js 异常时旧 store 读兜底）、build.mjs（FIX_SENTINELS 2 条，追加在并行会话 3 条之后）、FIX-REGRESSION.md（#154 行）；构建状态：已构建**）。
+* 根因：`my-emoji-groups` 常为大键（>200KB 只进 IDB+内存不回写 LS），启动回填受大键驻留预算/neverRead 挂起与 retainValue「LS 优先」规则限制，store 层（memoryCache/LS）可能停留在旧 LS 快照；聊天面板每次打开 reloadMyEmojiFromIdb 用 IDB 权威值自愈内存副本，朋友圈评论面板 comStickerGroups 只读 store 层 → 两侧不同步。
+* 验证：node --check 两文件过；构建哨兵全绿哑哨兵 0，我的锚点在位。待真机：聊天上传/删除表情包后，朋友圈评论表情包面板「我的表情包」分组与内容与聊天面板一致。
+
 
 ### 2026-09-04 17:4x（防倒卖文案铺开到开屏以外：链接分享卡片/设置页/功能介绍页/PWA 安装信息；已构建）
 * [AI-B 域]（**改动文件：src/template.html（①title 改「Mochi 字卡传讯（完全免费·禁止倒卖）」+ meta description 补免费/倒卖诈骗/署名/买家直呼——QQ/微信转发链接时分享卡片标题与摘要直接显示防倒卖文案，掐死转发环节；②设置页 set-alert 静态块补署名+严禁倒卖+买家直呼句，与运行时回填写入内容一致（此前静态兜底缺倒卖句致回填每次重写，现 marked 通过不再重写）；③功能介绍页 lic 页 hero 药丸加「完全免费·禁止倒卖」、许可卡药丸加「严禁倒卖」+ 许可条目加严禁倒卖/买家直呼行）、src/pwa/manifest.json（description 同步防倒卖文案，PWA 安装提示/应用信息可见）；构建状态：已构建·sw mochi-mtmq0vkg 哨兵 305/305 哑哨兵 0、verify-anti-scam-backfill 13/13**）。

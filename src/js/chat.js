@@ -6748,6 +6748,12 @@ const data = JSON.stringify(myGroups);
 myEmojiStore().set('my-emoji-groups', data);
 return true;
 }
+// FIX 2026-09-04 #154 朋友圈评论「我的表情包」与聊天面板不同步——把 chat 维护的
+// 最新内存副本暴露给 feed.js：本副本经启动 tryRestore / 每次打开面板
+// reloadMyEmojiFromIdb 以 IDB 权威值回读自愈；而 store 层对该键可能停在旧 LS 快照
+//（大键不回写 LS、启动回填受驻留预算/LS 优先规则限制），朋友圈面板旧读法只看
+// store 层，读不到 IDB 新值 → 两侧不同步。
+window.getMyEmojiGroups = function () { return myGroups || []; };
 (function () {
 if (!window.idbGet) return;
 let retry = 0;

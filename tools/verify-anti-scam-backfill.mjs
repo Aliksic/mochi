@@ -11,8 +11,11 @@
 //   3) 静态条文案被篡改成收费内容 → 回填重写回官方版
 //   4) 官方 notice.json 不可达（断网/被墙）→ 静态兜底仍在
 //   5) 删条+断网叠加（离线二传副本）→ 仍从 JS 常量重建
+//   6) 加载后运行时删条 → pwa.js 看门狗 5s 内补回（第二锚点）
+//   7) 官方远程下发时效公告 bulletin → 开屏显示「公告」条
+//   8) bulletin 过期 → 自动摘除
 // 用法：node tools/verify-anti-scam-backfill.mjs（需先 node build.mjs，需本机 Chrome/Edge；
-//       用例 4/5 会真实拦截 ling233330-star.github.io 请求，不依赖外网）
+//       用例 4/5/7/8 会真实拦截 ling233330-star.github.io 请求，不依赖外网）
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:http';
 import { readFileSync, statSync } from 'node:fs';
@@ -140,18 +143,28 @@ const B1_OK = "(function(){var b=document.querySelector('#splash-notice .splash-
 const B2_OK = "(function(){var b=document.querySelector('#splash-notice .splash-alert[data-anti-scam=\"2\"]');var t=(b?b.textContent:'').replace(/\\s+/g,'');return !!b&&t.indexOf('转载署名')>-1&&t.indexOf('署名')>-1&&t.indexOf('倒卖')>-1&&t.indexOf('小红书@言序（1842523578）')>-1;})()";
 const B1_TOP = "(function(){var n=document.getElementById('splash-notice');var b=document.querySelector('#splash-notice .splash-alert[data-anti-scam=\"1\"]');return !!b&&n.firstElementChild===b;})()";
 const SET_OK = "(function(){var b=document.querySelector('#page-setting .set-alert');var t=b?b.textContent:'';return !!b&&t.indexOf('小红书@言序（1842523578）')>-1&&t.indexOf('免费')>-1&&t.indexOf('倒卖')>-1;})()";
-// 拦截官方 notice.json（模拟二传副本断网/官方源不可达）
-async function blockOfficial(on) {
-  if (on) {
-    await cdp('Fetch.enable', { patterns: [{ urlPattern: 'https://ling233330-star.github.io/*', requestStage: 'Request' }] });
-    eventHandler = (method, params) => {
-      if (method === 'Fetch.requestPaused') cdp('Fetch.failRequest', { requestId: params.requestId, errorReason: 'Aborted' });
-    };
-  } else {
-    eventHandler = null;
-    await cdp('Fetch.disable');
-  }
+// 拦截官方 notice.json：mode='abort' 模拟断网/官方源不可达；mode=对象 → 用假官方应答 fulfill（测 bulletin 远程下发）
+async function interceptOfficial(mode) {
+  if (!mode) { eventHandler = null; await cdp('Fetch.disable'); return; }
+  await cdp('Fetch.enable', { patterns: [{ urlPattern: 'https://ling233330-star.github.io/*', requestStage: 'Request' }] });
+  eventHandler = (method, params) => {
+    if (method !== 'Fetch.requestPaused') return;
+    if (mode === 'abort' || params.request.url.indexOf('notice.json') === -1) {
+      cdp('Fetch.failRequest', { requestId: params.requestId, errorReason: 'Aborted' });
+      return;
+    }
+    cdp('Fetch.fulfillRequest', {
+      requestId: params.requestId, responseCode: 200,
+      responseHeaders: [{ name: 'Content-Type', value: 'application/json' }, { name: 'Access-Control-Allow-Origin', value: '*' }],
+      body: Buffer.from(JSON.stringify(mode)).toString('base64')
+    });
+  };
 }
+// 官方 notice.json 应答底稿（与本地兜底一致，保证测 bulletin 时不触发固定条重写干扰）
+const OFFICIAL_JSON = {
+  alert: 'Mochi字卡网站完全免费，作者只有小红书这一个账号：小红书@言序（1842523578）。如有出现任何收费情况，均为诈骗，注意防止被骗。',
+  alert2: '二传、分享本站链接必须标注作者署名：小红书 @言序（1842523578），禁止删除或修改。严禁冒为自己制作、删除篡改署名，或以任何形式收费倒卖本站链接、安装包——本站完全免费，收费即诈骗。如果你是花钱买来的链接：你被骗了，请拒付退款并举报卖家。'
+};
 
 // ============ 用例 1：官方正常加载 ============
 console.log('\n===== 用例1 官方正常加载：两条置顶声明在最顶 =====');
@@ -176,7 +189,7 @@ check('署名条被重写回官方版（会员群篡改文案被清除）', awai
 
 // ============ 用例 4：官方 notice.json 不可达 → 静态兜底仍在 ============
 console.log('\n===== 用例4 官方源不可达（拦截 ling233330-star.github.io）→ 兜底在位 =====');
-await blockOfficial(true);
+await interceptOfficial('abort');
 await load();
 check('官方源失败后防骗条仍在（静态兜底）', await waitCond(B1_OK));
 check('官方源失败后署名禁倒卖条仍在（静态兜底）', await waitCond(B2_OK));
@@ -186,7 +199,30 @@ console.log('\n===== 用例5 离线二传副本删条 → JS 常量重建 ====='
 await load('strip');
 check('断网+删条后防骗条仍被重建（常量兜底）', await waitCond(B1_OK));
 check('断网+删条后署名条仍被重建（常量兜底）', await waitCond(B2_OK));
-await blockOfficial(false);
+await interceptOfficial(null);
+
+// ============ 用例 6：加载后运行时删条 → pwa.js 看门狗 5s 内补回 ============
+console.log('\n===== 用例6 运行时删条 → pwa.js 看门狗（第二锚点）补回 =====');
+await load();
+await ev("(function(){var n=document.getElementById('splash-notice');var a=n.querySelectorAll('.splash-alert[data-anti-scam=\"1\"],.splash-alert[data-anti-scam=\"2\"]');for(var i=0;i<a.length;i++)a[i].remove();return a.length;})()");
+await sleep(6500); // 看门狗 5s 一跳
+check('运行时删除后看门狗补回防骗条', await waitCond(B1_OK, 3000));
+check('运行时删除后看门狗补回署名条', await waitCond(B2_OK, 3000));
+
+// ============ 用例 7：官方远程下发时效公告 → 开屏显示「公告」条 ============
+console.log('\n===== 用例7 官方 notice.json 下发 bulletin → 远程公告显示 =====');
+await interceptOfficial(Object.assign({}, OFFICIAL_JSON, { bulletin: { text: '测试公告：若你打开的地址并非官方发布，即为倒卖副本', until: 4102444800000 } }));
+await load();
+check('远程公告条显示且标题为「公告」', await waitCond("(function(){var b=document.querySelector('#splash-notice .splash-alert[data-anti-scam=\"3\"]');return !!b&&b.textContent.indexOf('倒卖副本')>-1&&b.querySelector('.splash-alert-t').textContent==='公告';})()"));
+check('下发公告时两条固定声明不受影响仍在位', (await ev(B1_OK)) === true && (await ev(B2_OK)) === true);
+
+// ============ 用例 8：公告过期 → 自动摘除 ============
+console.log('\n===== 用例8 bulletin 过期 → 自动摘除 =====');
+await interceptOfficial(Object.assign({}, OFFICIAL_JSON, { bulletin: { text: '过期公告', until: 1000 } }));
+await load();
+await sleep(1500);
+check('过期公告条不存在（未渲染）', await ev("document.querySelector('#splash-notice .splash-alert[data-anti-scam=\"3\"]')===null") === true);
+await interceptOfficial(null);
 
 const passN = results.filter(r => r.ok).length;
 console.log('\n===== 结果: ' + passN + '/' + results.length + ' =====');

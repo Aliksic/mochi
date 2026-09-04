@@ -1051,7 +1051,16 @@ function comStickerGroups() {
     .map(([n, a]) => [n, (a || []).filter(s => typeof s === 'string' && s.indexOf('data:') === 0)])
     .filter(([, a]) => a.length);
   if (comStickerTab === 'ta') return onlyData((window.getMediaGroups && window.getMediaGroups('sticker')) || []);
-  // v3.12.x：我的表情包改全局键（与聊天面板同源，各桌面互通）
+  // FIX 2026-09-04 #154 朋友圈评论「我的表情包」与聊天面板不同步——优先取 chat.js
+  // 维护的最新内存副本（window.getMyEmojiGroups，启动/打开时已用 IDB 权威值自愈；
+  // store 层对该键可能停在旧 LS 快照或大键驻留挂起，读不到新值）。chat.js 异常时
+  // 保留旧 store 读路径兜底，行为不变。
+  try {
+    if (window.getMyEmojiGroups) {
+      const g = window.getMyEmojiGroups();
+      if (Array.isArray(g) && g.length) return onlyData(g);
+    }
+  } catch (e) {}
   try {
     const v = JSON.parse(window.xyStore('xy-home-v2').get('my-emoji-groups') || 'null');
     return Array.isArray(v) ? onlyData(v) : [];

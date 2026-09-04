@@ -2590,6 +2590,13 @@ scrollbar-width:none; -ms-overflow-style:none; flex-shrink:0;
 }
 .card-tabs::-webkit-scrollbar { display:none; }
 #dc-tabs.card-tabs, #fc-tabs.card-tabs { flex-wrap:wrap; overflow-x:visible; row-gap:8px; }
+#cc-tabs.card-tabs { flex-wrap:wrap; overflow-x:visible; row-gap:8px; }
+#cc-tabs .cc-tabs-sep {
+flex-basis:100%; display:block; padding:6px 4px 0;
+font-size:11px; font-weight:700; color:#999; line-height:1;
+border-top:1px dashed rgba(0,0,0,.12); padding-top:10px;
+-webkit-tap-highlight-color:transparent; user-select:none; pointer-events:none;
+}
 .cc-tab {
 flex:0 0 auto; display:inline-flex; align-items:center; gap:5px;
 padding:9px 14px; font-size:13px; border-radius:99px;
@@ -6879,6 +6886,7 @@ color-scheme:dark;
 .card-tab, .cc-tab { background:var(--dark-hover); border-color:var(--dark-border-12); color:var(--dark-soft); }
 .card-tab.sel, .cc-tab.sel { background:var(--btn-bg); color:var(--btn-ink); border-color:var(--btn-bg); }
 .cc-tab-n { background:var(--dark-border-12); color:var(--dark-soft); }
+#cc-tabs .cc-tabs-sep { color:var(--dark-soft); border-top-color:var(--dark-border-12); }
 .cc-tab.sel .cc-tab-n { background:rgba(17,17,17,.12); color:var(--btn-ink); }
 .card-search { background:var(--dark-input); border-color:var(--dark-border-12); }
 .card-search-input { background:transparent; color:var(--ink); }
@@ -8777,9 +8785,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1788512264656">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.420</b></span>
-        <span class="sv-deploy">部署于 2026-09-04 16:57<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1788513383120">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.421</b></span>
+        <span class="sv-deploy">部署于 2026-09-04 17:16<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9102,6 +9110,11 @@ transition-duration: .01ms !important;
         <div class="av"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg></div>
         <div class="ci"><div class="n">专属字卡</div><div class="m">只有当前桌面绑定的联系人才能使用</div></div>
         <div class="t" id="cc-list-count">0</div>
+      </div>
+      <div class="chat-item glass" id="li-fun-cards-mine">
+        <div class="av"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1L3.2 9.4l6.1-.9z"/></svg></div>
+        <div class="ci"><div class="n">其他互动功能字卡</div><div class="m">你添加的功能字卡 · 摸鱼/吃饭/经期/音乐等</div></div>
+        <div class="t" id="cc-fun-count">0</div>
       </div>
       <div class="chat-item glass" id="li-checkin-cards-mine">
         <div class="av"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/><path d="M12 3a9 9 0 000 18"/></svg></div>
@@ -9737,6 +9750,22 @@ transition-duration: .01ms !important;
         <button class="cc-tab" data-type="image"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5-9 9"/></svg>图片</button>
         <button class="cc-tab" data-type="poke"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 000 18"/><circle cx="12" cy="12" r="2"/></svg>拍一拍</button>
         <button class="cc-tab" data-type="voice"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg>语音</button>
+        <!-- v3.32.x：其他互动功能字卡（自定义）——与系统预设【其他互动功能字卡】同分类，
+             用户自建的功能字卡存本作用域 cc-groups 同名字段，各功能经 getLibPool 并入抽取 -->
+        <div class="cc-tabs-sep">其他互动功能字卡 · 触发对应功能时 TA 使用</div>
+        <button class="cc-tab" data-type="fish">摸鱼</button>
+        <button class="cc-tab" data-type="eat">吃饭</button>
+        <button class="cc-tab" data-type="period">经期</button>
+        <button class="cc-tab" data-type="water">喝水</button>
+        <button class="cc-tab" data-type="garden">花园</button>
+        <button class="cc-tab" data-type="sync">同频</button>
+        <button class="cc-tab" data-type="reach">伸手</button>
+        <button class="cc-tab" data-type="cjian">此间</button>
+        <button class="cc-tab" data-type="room">房间</button>
+        <button class="cc-tab" data-type="piggy">存钱罐</button>
+        <button class="cc-tab" data-type="drift">漂流瓶</button>
+        <button class="cc-tab" data-type="interact">互动回应</button>
+        <button class="cc-tab" data-type="music">音乐</button>
       </div>
       <div class="cc-toolbar">
         <button class="cc-tool" id="cc-new-group"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8a4 4 0 100 8 4 4 0 000-8z"/><path d="M19 12a7 7 0 00-.1-1.2l2-1.6-2-3.4-2.3 1a7 7 0 00-2-1.2L14.2 3h-4l-.4 2.6a7 7 0 00-2 1.2l-2.3-1-2 3.4 2 1.6A7 7 0 005 12c0 .4 0 .8.1 1.2l-2 1.6 2 3.4 2.3-1a7 7 0 002 1.2l.4 2.6h4l.4-2.6a7 7 0 002-1.2l2.3 1 2-3.4-2-1.6c.1-.4.1-.8.1-1.2z"/></svg>管理分组</button>
@@ -9875,7 +9904,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.420</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.421</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
       <!-- v3.27.x：设置页底部防骗声明 -->
       <div class="set-alert">
@@ -10143,7 +10172,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.420</span>
+              <span class="lic-ver">v3.26.421</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -16490,10 +16519,33 @@ box.innerHTML = '<b></b>';
 box.querySelector('b').textContent = texts['alert'];
 box.appendChild(document.createTextNode(' ' + texts['alert2']));
 }
+let bulletin = null;
+function ensureBulletin() {
+const notice = document.getElementById('splash-notice');
+if (!notice) return;
+let box = notice.querySelector('.splash-alert[data-anti-scam="3"]');
+const active = !!(bulletin && typeof bulletin.text === 'string' && bulletin.text.trim()
+&& (!bulletin.until || Date.now() < bulletin.until));
+if (!active) { if (box) box.remove(); return; }
+const want = bulletin.text.trim();
+if (!box) {
+box = document.createElement('div');
+box.className = 'splash-alert';
+const b2 = notice.querySelector('.splash-alert[data-anti-scam="2"]');
+notice.insertBefore(box, b2 ? b2.nextSibling : notice.firstChild);
+}
+box.setAttribute('data-anti-scam', '3');
+if (box.textContent !== '公告' + want) { // 内容变化 → 重写（标题固定「公告」）
+box.innerHTML = '<div class="splash-alert-t"></div><p></p>';
+box.querySelector('.splash-alert-t').textContent = '公告';
+box.querySelector('p').textContent = want;
+}
+}
 function run() {
 const b1 = ensureBar(BARS[0], null);
 ensureBar(BARS[1], b1 ? b1.nextSibling : null);
 ensureSettings();
+ensureBulletin();
 }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run);
 else run();
@@ -16507,6 +16559,16 @@ texts[b.key] = d[b.key].trim();
 dirty = true;
 }
 });
+if (d && typeof d.bulletin === 'object' && d.bulletin) {
+const nb = { text: String(d.bulletin.text || ''), until: Number(d.bulletin.until) || 0 };
+if (nb.text && (!bulletin || bulletin.text !== nb.text || bulletin.until !== nb.until)) {
+bulletin = nb;
+dirty = true;
+} else if (!nb.text && bulletin) {
+bulletin = null;
+dirty = true;
+}
+}
 if (dirty) run(); // 强刷回写
 })
 .catch(function () { /* 保留本地兜底 */ });
@@ -20737,7 +20799,7 @@ mainGrid.insertBefore(gcBtn, chatBtn.nextSibling);
 }
 gcBtn.hidden = false;
 }
-if (divBtn && mainGrid && divBtn.parentNode === mainGrid) {
+if (divBtn && divBtn.parentNode !== pool) {
 pool.appendChild(divBtn);
 }
 } else {
@@ -20747,6 +20809,7 @@ pool.appendChild(gcBtn);
 if (divBtn && divBtn.parentNode === pool && mainGrid) {
 if (memBtn) mainGrid.insertBefore(divBtn, memBtn.nextSibling);
 else mainGrid.appendChild(divBtn);
+try { if (window.applyDeskLayout) window.applyDeskLayout(); } catch (e) {}
 }
 }
 } catch (e) {}
@@ -29303,6 +29366,7 @@ const data = JSON.stringify(myGroups);
 myEmojiStore().set('my-emoji-groups', data);
 return true;
 }
+window.getMyEmojiGroups = function () { return myGroups || []; };
 (function () {
 if (!window.idbGet) return;
 let retry = 0;
@@ -32643,14 +32707,16 @@ return pubCache;
 }
 function ownGroupsRaw() { return buildGroupsFrom(store.get('cc-groups')); }
 const CC_TYPES = ['text', 'kaomoji', 'emoji', 'sticker', 'image', 'poke', 'voice'];
+const CC_FUNC_KEYS = ['fish', 'eat', 'period', 'water', 'garden', 'sync', 'reach', 'cjian', 'room', 'piggy', 'drift', 'interact', 'music'];
+const CC_ALL_TYPES = CC_TYPES.concat(CC_FUNC_KEYS);
 const CC_GIF_MAX_B64 = 4 * 1024 * 1024;
 function mergeWithPublic(g) {
 const p = pubGroupsRaw();
 let has = false;
-for (let i = 0; i < CC_TYPES.length; i++) { if ((p[CC_TYPES[i]] || []).length) { has = true; break; } }
+for (let i = 0; i < CC_ALL_TYPES.length; i++) { if ((p[CC_ALL_TYPES[i]] || []).length) { has = true; break; } }
 if (!has) return g;
 const out = {};
-CC_TYPES.forEach(t => { out[t] = (g[t] || []).concat(p[t] || []); });
+CC_ALL_TYPES.forEach(t => { out[t] = (g[t] || []).concat(p[t] || []); });
 Object.keys(g).forEach(t => { if (!(t in out)) out[t] = g[t]; });
 return out;
 }
@@ -32658,10 +32724,10 @@ function mergeFiltered(own, pub) {
 const ownF = filterGroupsByOff(own, 'own');
 const pubF = filterGroupsByOff(pub, 'public');
 let hasPub = false;
-for (let i = 0; i < CC_TYPES.length; i++) { if ((pubF[CC_TYPES[i]] || []).length) { hasPub = true; break; } }
+for (let i = 0; i < CC_ALL_TYPES.length; i++) { if ((pubF[CC_ALL_TYPES[i]] || []).length) { hasPub = true; break; } }
 if (!hasPub) return ownF;
 const out = {};
-CC_TYPES.forEach(t => { out[t] = (ownF[t] || []).concat(pubF[t] || []); });
+CC_ALL_TYPES.forEach(t => { out[t] = (ownF[t] || []).concat(pubF[t] || []); });
 Object.keys(ownF).forEach(t => { if (!(t in out)) out[t] = ownF[t]; });
 return out;
 }
@@ -34627,7 +34693,10 @@ window.getCustomCards = function () {
 maybeHydrateReplyPool();
 const g = replyPoolGroups();
 const out = [];
-Object.keys(g).forEach(t => g[t].forEach(([name, arr]) => arr.forEach(c => out.push(c))));
+Object.keys(g).forEach(t => {
+if (CC_FUNC_KEYS.indexOf(t) >= 0) return;
+g[t].forEach(([name, arr]) => arr.forEach(c => out.push(c)));
+});
 return out;
 };
 window.getPokeCards = function () {
@@ -34744,7 +34813,10 @@ window.getCustomCardsFor = function (cid) {
 try { if (window.hydrateLibForCid) window.hydrateLibForCid(cid); } catch (e) {}
 const g = replyPoolGroupsFor(cid);
 const out = [];
-Object.keys(g).forEach(t => (g[t] || []).forEach(([name, arr]) => (arr || []).forEach(c => out.push(c))));
+Object.keys(g).forEach(t => {
+if (CC_FUNC_KEYS.indexOf(t) >= 0) return;
+(g[t] || []).forEach(([name, arr]) => (arr || []).forEach(c => out.push(c)));
+});
 return out;
 };
 window.getPokeCardsFor = function (cid) {
@@ -53119,6 +53191,12 @@ const onlyData = (groups) => (groups || [])
 .map(([n, a]) => [n, (a || []).filter(s => typeof s === 'string' && s.indexOf('data:') === 0)])
 .filter(([, a]) => a.length);
 if (comStickerTab === 'ta') return onlyData((window.getMediaGroups && window.getMediaGroups('sticker')) || []);
+try {
+if (window.getMyEmojiGroups) {
+const g = window.getMyEmojiGroups();
+if (Array.isArray(g) && g.length) return onlyData(g);
+}
+} catch (e) {}
 try {
 const v = JSON.parse(window.xyStore('xy-home-v2').get('my-emoji-groups') || 'null');
 return Array.isArray(v) ? onlyData(v) : [];
@@ -75222,6 +75300,32 @@ setTimeout(maybeShow, 300); // 留一点开屏退出动画缓冲
 }
 }, 300);
 })();
+(function () {
+const W1 = 'Mochi字卡网站完全免费，作者只有小红书这一个账号：小红书@言序（1842523578）。如有出现任何收费情况，均为诈骗，注意防止被骗。';
+const W2 = '二传、分享本站链接必须标注作者署名：小红书 @言序（1842523578），禁止删除或修改。严禁冒为自己制作、删除篡改署名，或以任何形式收费倒卖本站链接、安装包——本站完全免费，收费即诈骗。如果你是花钱买来的链接：你被骗了，请拒付退款并举报卖家。';
+function mkWatchBar(tag, title, text) {
+const b = document.createElement('div');
+b.className = 'splash-alert';
+b.setAttribute('data-anti-scam', tag);
+b.innerHTML = '<div class="splash-alert-t"></div><p></p>';
+b.querySelector('.splash-alert-t').textContent = title;
+b.querySelector('p').textContent = text;
+return b;
+}
+setInterval(function () {
+try {
+const n = document.getElementById('splash-notice');
+if (!n) return;
+if (!n.querySelector('.splash-alert[data-anti-scam="1"]')) {
+n.insertBefore(mkWatchBar('1', '防骗提醒', W1), n.firstChild);
+}
+if (!n.querySelector('.splash-alert[data-anti-scam="2"]')) {
+const b1 = n.querySelector('.splash-alert[data-anti-scam="1"]');
+n.insertBefore(mkWatchBar('2', '转载署名 · 严禁倒卖', W2), b1 ? b1.nextSibling : n.firstChild);
+}
+} catch (e) { /* 静默：看门狗绝不能成为错误源 */ }
+}, 5000);
+})();
 } catch (__e) { try { console.error("[JS] pwa.js", __e && __e.message || __e); } catch (x) {} if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
 (function () { try {
 (function () {
@@ -77721,4 +77825,4 @@ return { lock: document.body.classList.contains('scroll-lock'), open: open };
 <!-- __MOCHI_EOF__ -->
 </body>
 </html>
-<!-- __MOCHI_EOF__ mtmq0vkg -->
+<!-- __MOCHI_EOF__ mtmqoukw -->
