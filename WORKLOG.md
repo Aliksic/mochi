@@ -1,4 +1,8 @@
-# 本次构建者：本会话（#162 iPadOS 26 Safari 回消息视图上漂修复）
+# 本次构建者：本会话（#163 主动消息/群聊回复不吃默认字卡概率修复）
+
+### 2026-09-05 0x:xx（用户报障 #163：默认字卡概率调到 80-90%，联系人仍总发我自己设置的字卡反复出现；已构建提交）
+* [AI-A 域]（**改动文件：src/js/chat.js（①tryAutoSend autoMsg 先掷 getDefaultCards——原主动消息固定比例只从自定义池抽（该用户池 text=3/emoji=1 故反复出现，dc-overall-chat 对主动消息完全无效=主诉根因）；②__replyPoolDiag 补「默认概率chat/主卡占比」现场）、src/js/group-chat.js（gcGenReply 文本回复按成员桌面 getDefaultCardsFor(st) 覆盖——原只有拍一拍走它，文本半边漏网）、build.mjs（FIX_SENTINELS +2）、tools/verify-default-card-mix.mjs（+2 断言）、FIX-REGRESSION.md（#163 行）**；构建状态见下条）。
+* 贴纸/图片回复路径按设计走聊天设置的媒体概率（默认 10%/5%），默认库无媒体不覆盖，未动；用户想少看自己贴纸可调低该设置。
 
 ### 2026-09-05 0x:xx（#162 收口：回归验证 + C 盘磁盘满根因清理；本条为提交 b79f793 的验证补记）
 * [AI-B 域·环境]（**无源码改动**。#162 修复代码由并行会话核对哨兵 324 全绿后**代为收口提交 b79f793**，本会话确认提交内容与工作区一致，无需重做）。**磁盘满根因已清**：C 盘曾 0 字节可用（verify:all 报 ENOSPC），实为多轮 verify 泄漏的 **78 个无头 Chrome 进程**（user-data-dir 全指向 Temp\mochi-*，含 7 小时前泄漏的一个持续写 32.8GB 缓存）+ /tmp 43GB 临时档；已全部终止并删除 /tmp/mochi-*，C 盘恢复 **44GB 可用**。**请 verify 脚本作者注意：跑 Chrome 的脚本异常路径要 try/finally 清理 user-data-dir 与子进程**，否则每轮验证泄漏一次，磁盘会再次打满（历史磁盘满事故同族）。

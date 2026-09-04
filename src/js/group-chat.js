@@ -907,9 +907,20 @@
         t = pick(pool.text) || FALLBACK_REPLIES[Math.floor(Math.random() * FALLBACK_REPLIES.length)];
       }
     }
-    if (type === 'text' && pool.kaomoji.length && hit(c['gc-kaomoji-prob'])) {
-      t += ' ' + pick(pool.kaomoji);
-    }
+if (type === 'text' && pool.kaomoji.length && hit(c['gc-kaomoji-prob'])) {
+t += ' ' + pick(pool.kaomoji);
+}
+// v3.26.x #163：文本回复按成员所在桌面混入默认字卡（同聊天页 genOneReply 的
+// getDefaultCards 覆盖语义，dc-overall-chat 概率+分类占比+各开关内部同源生效）——
+// 原群聊只有拍一拍走 getDefaultCardsFor，文本回复从不混默认字卡，成员桌面把
+// 默认概率调多高都只影响拍一拍
+if (type === 'text') {
+try {
+const st = window.storeFor ? window.storeFor(cid) : null;
+const defs = (st && window.getDefaultCardsFor) ? window.getDefaultCardsFor(st) : ((window.getDefaultCards && window.getDefaultCards()) || null);
+if (defs && defs.type === 'text' && defs.text) t = defs.text;
+} catch (e) {}
+}
     // 组合消息：文字 + 表情包/图片 附加到同一条（同聊天页 genOneReply）
     let parts = null;
     if (type === 'text') {

@@ -8779,9 +8779,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1788536620265">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.431</b></span>
-        <span class="sv-deploy">部署于 2026-09-04 23:43<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1788540542300">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.434</b></span>
+        <span class="sv-deploy">部署于 2026-09-05 00:49<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9904,7 +9904,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.431</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.434</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
       <!-- v3.27.x：设置页底部防骗声明 -->
       <div class="set-alert">
@@ -10172,7 +10172,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.431</span>
+              <span class="lic-ver">v3.26.434</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -24072,7 +24072,9 @@ return [
 '自定义字卡=' + customRaw.length,
 '默认总开关=' + cfg.enabled,
 '聊天使用=' + (window.defaultCardUse ? window.defaultCardUse('chat') : '?'),
-'主字卡=' + (window.defaultCardCat ? window.defaultCardCat('main') : '?')
+'主字卡=' + (window.defaultCardCat ? window.defaultCardCat('main') : '?'),
+'默认概率chat=' + (cfg.overallFor ? cfg.overallFor('chat') : cfg.overall),
+'主卡占比=' + (cfg.probs ? cfg.probs.main : '?')
 ].join(' / ');
 } catch (e) { return '诊断出错:' + e.message; }
 };
@@ -26232,6 +26234,10 @@ if (window.ckQuestionTry && window.ckQuestionTry(c)) return;
 try { await ensureReplyCardsReady(); } catch (e) {}
 const pool = getPool();
 const autoMsg = () => {
+try {
+const defs = (window.getDefaultCards && window.getDefaultCards()) || null;
+if (defs && defs.type !== 'poke' && defs.text) return { text: defs.text, type: 'text' };
+} catch (e) {}
 const r = Math.random() * 100;
 if (pool.sticker.length && r < 15) return { text: pick(pool.sticker), type: 'sticker' };
 if (pool.image.length && r < 25) return { text: pick(pool.image), type: 'image' };
@@ -31558,6 +31564,13 @@ t = pick(pool.text) || FALLBACK_REPLIES[Math.floor(Math.random() * FALLBACK_REPL
 }
 if (type === 'text' && pool.kaomoji.length && hit(c['gc-kaomoji-prob'])) {
 t += ' ' + pick(pool.kaomoji);
+}
+if (type === 'text') {
+try {
+const st = window.storeFor ? window.storeFor(cid) : null;
+const defs = (st && window.getDefaultCardsFor) ? window.getDefaultCardsFor(st) : ((window.getDefaultCards && window.getDefaultCards()) || null);
+if (defs && defs.type === 'text' && defs.text) t = defs.text;
+} catch (e) {}
 }
 let parts = null;
 if (type === 'text') {
@@ -77953,4 +77966,4 @@ return { lock: document.body.classList.contains('scroll-lock'), open: open };
 <!-- __MOCHI_EOF__ -->
 </body>
 </html>
-<!-- __MOCHI_EOF__ mtn4iwh5 -->
+<!-- __MOCHI_EOF__ mtn6uyqk -->

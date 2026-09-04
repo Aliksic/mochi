@@ -1245,7 +1245,11 @@ window.__replyPoolDiag = function () {
       '自定义字卡=' + customRaw.length,
       '默认总开关=' + cfg.enabled,
       '聊天使用=' + (window.defaultCardUse ? window.defaultCardUse('chat') : '?'),
-      '主字卡=' + (window.defaultCardCat ? window.defaultCardCat('main') : '?')
+      '主字卡=' + (window.defaultCardCat ? window.defaultCardCat('main') : '?'),
+      // v3.26.x #163：补概率滑杆现场——「默认概率调到八九十还是总发自定义字卡」类报障
+      // 直接核对 dc-overall-chat（场景概率，未设回退整体）与主字卡分类占比是否真调到位
+      '默认概率chat=' + (cfg.overallFor ? cfg.overallFor('chat') : cfg.overall),
+      '主卡占比=' + (cfg.probs ? cfg.probs.main : '?')
     ].join(' / ');
   } catch (e) { return '诊断出错:' + e.message; }
 };
@@ -3523,6 +3527,16 @@ if (window.ckQuestionTry && window.ckQuestionTry(c)) return;
 try { await ensureReplyCardsReady(); } catch (e) {}
 const pool = getPool();
 const autoMsg = () => {
+// v3.26.x #163：主动消息此前完全不走默认字卡概率——dc-overall-chat（如 85%）只管
+// genOneReply 文本覆盖路径，TA 主动发的消息仍 85% 是自定义（45% 固定从仅有的几张
+// 文字卡里抽+15% 固定那 1 张 emoji+25% 自家贴纸/图片），用户体感「默认概率调到
+// 八九十还是总发我自己设置的字卡，反复出现」。对齐回复路径口径：先掷 getDefaultCards
+// （内部按场景概率+分类占比抽，总开关/聊天使用/分类/单卡开关同源生效），命中非拍一拍
+// 即用默认字卡，未掷中才落自定义池原比例。
+try {
+const defs = (window.getDefaultCards && window.getDefaultCards()) || null;
+if (defs && defs.type !== 'poke' && defs.text) return { text: defs.text, type: 'text' };
+} catch (e) {}
 const r = Math.random() * 100;
 if (pool.sticker.length && r < 15) return { text: pick(pool.sticker), type: 'sticker' };
 if (pool.image.length && r < 25) return { text: pick(pool.image), type: 'image' };

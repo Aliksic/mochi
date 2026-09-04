@@ -26,6 +26,10 @@ t('chat.js getPool 主字卡只在自定义 text 池为空时并入', chat.inclu
 t('group-chat.js gcPool 主字卡只在自定义 text 池为空时并入', gc.includes("if (catOn('main') && text.length === 0) {"));
 t('chat.js 概率混入路径 drawCards 仍在', chat.includes('window.getDefaultCards && window.getDefaultCards()'));
 t('group-chat.js 概率混入路径 getDefaultCardsFor 仍在', gc.includes('window.getDefaultCardsFor'));
+// 1.5) #163：主动消息 / 群聊文本回复也要吃默认字卡概率（原两路径从不混默认，
+//      dc-overall 调到 80-90% 联系人仍总发用户自定义字卡、反复出现）
+t('#163 主动消息先掷默认字卡概率（命中非拍一拍即用默认卡）', chat.includes("if (defs && defs.type !== 'poke' && defs.text) return { text: defs.text, type: 'text' };"));
+t('#163 群聊文本回复按成员桌面混默认字卡', gc.includes("if (defs && defs.type === 'text' && defs.text) t = defs.text;"));
 
 // 2) 经期温柔前缀/动作随总开关/聊天使用停用
 const gateIdx = period.indexOf('if (_dcfg.enabled === false) return text;');
