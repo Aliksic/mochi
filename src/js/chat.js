@@ -7321,7 +7321,7 @@ syncBatchBtn();
 const micBtn = document.getElementById('chat-mic-btn');
 const voicePanel = document.getElementById('voice-panel');
 const VOICE_MAX_MS = 60000;
-let voiceStream = null, voiceRec = null, voiceChunks = [], voiceTimer = null;
+let voiceStream = null, voiceRec = null, voiceChunks = [], voiceTimer = null, voiceStarting = false; // FIX 2026-09-05 #169 录音启动进行中闸门
 let voiceStartTs = 0, voiceDataUrl = '', voiceDur = 0, voiceSilent = false, voicePreviewAudio = null, voiceVisHandler = null;
 function voiceEnabled() {
 try { return store.get('cs-voice-send') === '1'; } catch (e) { return false; }
@@ -7432,7 +7432,17 @@ try { return await navigator.mediaDevices.getUserMedia(tries[i]); } catch (e) { 
 }
 throw lastErr;
 }
+// FIX 2026-09-05 #169（用户报障 OPPO Reno6 5G+雨见浏览器「一直提示已达最长60秒」）：防重入包装。
+// startVoiceRec 在 await getUserMedia 期间（慢壳开麦可达数秒，期间按钮文案未变，用户必然连点）
+// 重复进入会整体覆盖 voiceRec/voiceStartTs 并把 voiceTimer 覆盖成新 id——旧计时器永久丢失成孤儿，
+// 自上次 voiceStartTs 起 60 秒后开始每 250ms 误报「已达最长 60 秒」且永不自停（面板关了仍弹，
+// 只能刷新页面），同时第一路 MediaRecorder+麦克风流被覆盖泄漏。进行中的启动直接忽略重复调用。
 async function startVoiceRec() {
+if (voiceStarting) return;
+voiceStarting = true;
+try { await startVoiceRecInner(); } finally { voiceStarting = false; }
+}
+async function startVoiceRecInner() {
 if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || typeof MediaRecorder === 'undefined') {
 toast('当前浏览器不支持录音'); return;
 }
@@ -7483,12 +7493,18 @@ stopVoiceRec(false); toast('页面切到后台，录音已停止');
 }
 };
 document.addEventListener('visibilitychange', voiceVisHandler);
-voiceTimer = setInterval(() => {
+if (voiceTimer) { clearInterval(voiceTimer); voiceTimer = null; } // FIX #169 入场先清残留计时器
+const voiceTid = setInterval(() => {
+// FIX 2026-09-05 #169 计时器自证：非当前录音的孤儿计时器自毁；仅确认仍处 recording 态才判 60s——
+// 历史上重复进入录音后，被覆盖丢弃的旧计时器会在停止 60 秒后每 250ms 误报「已达最长 60 秒」不止不休
+if (voiceTimer !== voiceTid) { clearInterval(voiceTid); return; }
+if (!voiceRec || voiceRec.state !== 'recording') { clearInterval(voiceTid); voiceTimer = null; return; }
 const el = Math.floor((Date.now() - voiceStartTs) / 1000);
 const tm = document.getElementById('voice-time');
 if (tm) tm.textContent = voiceFmt(Math.min(el, 60));
 if (Date.now() - voiceStartTs >= VOICE_MAX_MS) { stopVoiceRec(false); toast('已达最长 60 秒，自动停止'); }
 }, 250);
+voiceTimer = voiceTid;
 }
 function stopVoiceRec(silent) {
 if (voiceTimer) { clearInterval(voiceTimer); voiceTimer = null; }

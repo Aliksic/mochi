@@ -1,13 +1,20 @@
+# 本次构建者：无（#168 iOS 全屏修复会话已收口 e37f893 并推送，产物含 #167 边界说明+#169 语音修复；#169 源码 chat.js 由本会话补同步提交；瘦身会话 personalize.js/template.html/storage-slim.js WIP 仍在工作区勿动）
+
+### 2026-09-05 01:5x（#169 补记：用户追交 01:02 诊断（OPPO Reno6 5G、UA 伪装 Firefox 152）；源码同步提交 chat.js）
+* [AI-A 域]（**改动文件：src/js/chat.js（#169 源码补入库——e37f893 构建时工作区已含本修复故产物已打包，但该提交漏了 chat.js 源文件，本条恢复源码↔产物同步）、WORKLOG.md（本条）**；构建状态：**不涉及新构建**——产物已在库，仅源码同步）。
+* 诊断解读：①设备跑 v3.26.404（ts=1788433073241，比抓诊断时的远端 00:49 旧约 30h）——修复在其后的 01:42 构建（e37f893 已推送）里，顶部更新条刷新/关全部标签页重开即得；②cs-voice-send IDB="1"（「读取=缺失」为探针已知双冒号误报，#157 有登记）＝语音功能在用，01:01:54 交互轨迹还在播语音；③首字节 14.4s/加载完成 17.1s＝慢设备，坐实「开麦等待期连点二次进入」触发条件；④SyntaxError: redeclaration of let JSInterface ×5＝浏览器壳注入的桥接脚本自身重复声明（src/产物 grep 零匹配，非本项目代码；启动文件异常=无、功能入口全部就绪，不影响功能）；⑤存储 persisted=true 配额足；cc-groups 22.65MB+16.79MB 正是瘦身会话（storage-slim WIP）目标；⚠ cmtmlbx3m18s:fav-msgs LS 残留 262.6KB 属迁移残留双倍计算，待瘦身批次一并看；⑥UA=Gecko/Firefox 152（雨见改 UA）：录音格式选择按「标准安卓浏览器」走 webm/opus 优先，Firefox 152 可录可播，若真机试听无声再另报。
+
 ### 2026-09-05 01:2x（#168 iPhone（402×874，iOS 18.7/Safari 26.1）主屏幕全屏态整页下坠+底部裁切：env/diff 双重避让 + 100vh>可视高；已构建）
 * [AI-B 域]（**改动文件：src/js/mobile-adapt.js（syncVvFit 顶部避让改 env() 探针实测——探针缓存+旋转失效；fs 态健康时写 --mochi-ios-h=vv 实测可视高，键盘/推定态仍摘除）、src/css/base.css（#114 规则高度 100vh→var(--mochi-ios-h,100vh)，html/body 同步；#114 padding 锚点串原样保留）、build.mjs（FIX_SENTINELS 3 条）、FIX-REGRESSION.md（#168 行）；构建状态：已构建·sw 见 version.json**）。
 * 根因（两个 iOS 26.x 形态差异）：①「系统不把网页垫到状态栏下」形态（innerHeight=874−62）上，diff 差值法照量出 62px 写进 --mochi-safe-top → 与系统避让双重叠加（Mochi 行掉到 ~150px，截图实证）；②100vh=874 高于可视 812 → .phone 底部 tabbar 裁出屏外（底部空隙=-62）。
 * 验证：node --check 过；CDP 探针实测新级联（safe-top 摘除/12px/无叠加；--mochi-ios-h 消费+动态更新+回落全过）；--check-sentinels 336 全绿哑哨兵 0（#114 原 padding 锚点保留）。
 * 待真机（同机型主屏幕+全屏）：①Mochi 行紧贴系统状态栏下方；②tabbar 完整不被裁；③输入栏贴底；④iPhone 15（inner==screen 形态）回归不变形。编号说明：#148/#149 已被并行会话占用，本条改 #168。
 
-# 本次构建者：无（#167 源就绪未收口——并行会话 #148 mobile-adapt.js 半成品挡构建，产物已回滚；下一构建者收口时一并打包）
+### 2026-09-05 01:5x（#169 状态更新：已随 e37f893（01:42 构建，已推送）打进产物；本会话补提交 chat.js 源码恢复同步；用户追交 01:02 诊断已解读，见顶部条目）
+* 上条「未构建·随 #167 一并收口」已被 #168 iOS 会话的 e37f893 收口（构建时工作区已含本修复，产物 grep `voiceTimer !== voiceTid`/`voiceStarting` 在位）；但该提交漏了 src/js/chat.js 源文件（产物含修复、源码未入库＝反向不同步，新克隆重建会哨兵失败），本会话以单独提交补齐源码，不涉及新构建。
 
-### 2026-09-05 0x:xx（用户报障 #169：OPPO Reno6 5G+雨见浏览器发语音「有时候一直提示已达最长60秒」无法使用；源已完成·未构建·随 #167 一并收口）
-* [AI-A 域]（**改动文件：src/js/chat.js（录音三处：①startVoiceRec 拆防重入包装+startVoiceRecInner，voiceStarting 闸门 try/finally 复位；②计时器自证——闭包捕获自身 voiceTid，`voiceTimer!==voiceTid` 孤儿自毁、`!voiceRec||state!=='recording'` 不判 60s；③入场先清残留 voiceTimer）、build.mjs（FIX_SENTINELS +1，#169）、FIX-REGRESSION.md（#169 行，本条即改动说明）**；构建状态：**未构建**——#167 会话已回滚产物待收口，本条只动 src，请下一构建者与 #167 一并打包）。
+### 2026-09-05 0x:xx（用户报障 #169：OPPO Reno6 5G+雨见浏览器发语音「有时候一直提示已达最长60秒」无法使用；修复已随 e37f893 构建推送）
+* [AI-A 域]（**改动文件：src/js/chat.js（录音三处：①startVoiceRec 拆防重入包装+startVoiceRecInner，voiceStarting 闸门 try/finally 复位；②计时器自证——闭包捕获自身 voiceTid，`voiceTimer!==voiceTid` 孤儿自毁、`!voiceRec||state!=='recording'` 不判 60s；③入场先清残留 voiceTimer）、build.mjs（FIX_SENTINELS +1，#169）、FIX-REGRESSION.md（#169 行，本条即改动说明）**；构建状态：**已随 e37f893 构建推送（01:42 构建），chat.js 源码由后继提交补同步入库**）。
 * 根因：startVoiceRec 在 await getUserMedia 期间（雨见等慢壳开麦数秒、按钮文案未变）重复点击二次进入，覆盖 voiceRec/voiceStartTs 且 voiceTimer 被换成新 id——旧计时器成孤儿，每 250ms 查 `Date.now()-voiceStartTs>=60000` 而 voiceStartTs 停后从不清零，录音停 60 秒后每 250ms 误报「已达最长 60 秒」永不自停（面板关了仍弹）+ 第一路麦克风流泄漏；泄漏致后续开麦更慢更易连点，恶性循环。
 * 验证：node --check 过；`node build.mjs --check-sentinels` 全绿（哑哨兵 0，见下条补数）；编号说明：原拟 #168 与并行瘦身会话撞号（其 storage-slim.js 哨兵已登记），改 #169。
 * 临时自救（已答复用户）：出现连环提示时刷新页面立即止住（孤儿计时器随页面销毁）。
