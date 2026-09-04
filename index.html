@@ -8603,7 +8603,7 @@ transition-duration: .01ms !important;
         <!-- v3.26.x：署名·禁倒卖置顶声明——二传必须标注原作者署名，严禁收费倒卖本站链接；静态 DOM，在线 notice.json 覆盖只改公告列表，不影响此处 -->
         <div class="splash-alert" data-anti-scam="2">
           <div class="splash-alert-t">转载署名 · 严禁倒卖</div>
-          <p><strong>二传、分享本站链接必须标注作者署名：小红书 @言序（1842523578），禁止删除或修改。</strong>严禁冒为自己制作、删除篡改署名，或以任何形式收费倒卖本站链接、安装包——本站完全免费，收费即诈骗，发现请拒买并举报。</p>
+          <p><strong>二传、分享本站链接必须标注作者署名：小红书 @言序（1842523578），禁止删除或修改。</strong>严禁冒为自己制作、删除篡改署名，或以任何形式收费倒卖本站链接、安装包——本站完全免费，收费即诈骗。如果你是花钱买来的链接：你被骗了，请拒付退款并举报卖家。</p>
         </div>
         <div class="splash-notice-title">Mochi字卡 · 开屏说明</div>
         <div class="splash-notice-sub">（请认真阅读）</div>
@@ -8777,9 +8777,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1788510240721">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.418</b></span>
-        <span class="sv-deploy">部署于 2026-09-04 16:24<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1788511303327">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.419</b></span>
+        <span class="sv-deploy">部署于 2026-09-04 16:41<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9875,7 +9875,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.418</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.419</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
       <!-- v3.27.x：设置页底部防骗声明 -->
       <div class="set-alert">
@@ -10143,7 +10143,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.418</span>
+              <span class="lic-ver">v3.26.419</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -16438,7 +16438,7 @@ const BARS = [
 { tag: '1', title: '防骗提醒', key: 'alert', marks: ['免费', '诈骗', MARK_KEY],
 fallback: 'Mochi字卡网站完全免费，作者只有小红书这一个账号：小红书@言序（1842523578）。如有出现任何收费情况，均为诈骗，注意防止被骗。' },
 { tag: '2', title: '转载署名 · 严禁倒卖', key: 'alert2', marks: ['署名', '倒卖', MARK_KEY],
-fallback: '二传、分享本站链接必须标注作者署名：小红书 @言序（1842523578），禁止删除或修改。严禁冒为自己制作、删除篡改署名，或以任何形式收费倒卖本站链接、安装包——本站完全免费，收费即诈骗，发现请拒买并举报。' }
+fallback: '二传、分享本站链接必须标注作者署名：小红书 @言序（1842523578），禁止删除或修改。严禁冒为自己制作、删除篡改署名，或以任何形式收费倒卖本站链接、安装包——本站完全免费，收费即诈骗。如果你是花钱买来的链接：你被骗了，请拒付退款并举报卖家。' }
 ];
 const texts = {}; // key -> 当前权威文案（先本地兜底，官方拉取后覆盖）
 BARS.forEach(function (b) { texts[b.key] = b.fallback; });
@@ -77718,4 +77718,4 @@ return { lock: document.body.classList.contains('scroll-lock'), open: open };
 <!-- __MOCHI_EOF__ -->
 </body>
 </html>
-<!-- __MOCHI_EOF__ mtmothw1 -->
+<!-- __MOCHI_EOF__ mtmpg9sv -->
