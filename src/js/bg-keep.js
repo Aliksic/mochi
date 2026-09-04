@@ -68,6 +68,12 @@
       kaPauseStreak++;
       delayMs = Math.min(cfg.base * Math.pow(2, Math.min(kaPauseStreak - 1, 10)), cfg.max);
     }
+    // FIX 2026-09-04 #153 Chromium 139 起安卓后台页面冻结从 5 分钟缩到 1 分钟（stop-in-background，
+    // Chrome for Android 139 / Edge 等内核跟进）——保活音频暂停超过冻结线页面即被整个冻结
+    // （定时器全停=后台消息/通知全停）。页面隐藏期间补播退避封顶 20s（前台仍 60s 不变，
+    // 不回归 v3.13.x 音频拉锯修复）：保证冻结线内至少 2~3 次重试，音频焦点一让位就能恢复
+    // 「正在播放」豁免躲过冻结。
+    if (document.visibilityState === 'hidden' && delayMs > 20000) delayMs = 20000;
     kaDelay = delayMs;
     window.__kaNextDelayMs = delayMs; // 回归探针
     kaTimer = setTimeout(function () {
@@ -404,6 +410,21 @@
   });
   window.addEventListener('pageshow', function (e) {
     if (e.persisted || document.visibilityState === 'visible') _onFgVisible();
+  });
+  // FIX 2026-09-04 #153 切后台方向保活自愈——原只有回前台的 healKeepAlive，切后台没有：
+  // 若切后台瞬间音频正处暂停（前台被其他 App 抢过音频焦点、退避已在最长 60s 轨道），
+  // 这段静默窗口会直接跨过 Chromium 139 的 1 分钟冻结线 → 页面整个被冻结（定时器全停，
+  // 后台消息/系统通知全停，回前台解冻后积压定时器一口气补跑——用户报障形态）。
+  // 这里切后台时：清退避轨道 + 立即补播一次 + 按最快档（5s）排下一次，把隐藏期静默窗口
+  // 压到 20s 封顶（见 kaSchedule 内隐藏期钳制）；音乐在播时跳过（媒体会话由音乐维持）。
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState !== 'hidden') return;
+    if (!keepEnabled || !keepAudio || !keepAudio.el || musicNowPlaying()) return;
+    if (!keepAudio.el.paused) return;
+    kaResetBackoff();
+    const p = keepAudio.el.play();
+    if (p && p.catch) p.catch(function () {});
+    kaSchedule();
   });
   function requestWakeLockTop() {
     try {

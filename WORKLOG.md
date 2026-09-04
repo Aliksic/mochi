@@ -1,3 +1,11 @@
+# 本次构建者：AI-A（本会话：#153 Chromium139 后台冻结 1 分钟致后台通知全停/回前台积压爆发，改动 src/js/bg-keep.js、build.mjs 哨兵 2 条、FIX-REGRESSION.md #153 行；开工时 git status 干净，工作区含并行会话 #149 设备记录文档改动一并入库）
+
+### 2026-09-04 16:4x（#153 安卓多机型「挂后台不弹通知、回前台一口气弹出」：Chromium139 冻结线 5min→1min 撞上保活退避静默窗口；已构建）
+* [AI-B 域]（改动：src/js/bg-keep.js 两处、build.mjs FIX_SENTINELS 2 条、FIX-REGRESSION.md #153 行）。
+* 根因：Chromium 139 起安卓后台页面冻结 5 分钟→1 分钟（stop-in-background，Edge 等 chromium 系内核跟进，多机型同时出现=环境变化非代码回归）；保活音频被抢焦点暂停后退避最长 60s，静默窗口跨过冻结线→整页冻结→定时器全停=后台无消息无通知，回前台解冻+mochi-fg-resume 补触发一口气补跑。
+* 修复（通用根因修复无机型分支）：①切后台方向保活自愈（visibilitychange→hidden：音频暂停时清退避+立即补播+最快档 5s 重试；原只有回前台 healKeepAlive，切后台方向空白）；②隐藏期补播退避封顶 20s（前台 60s 不变，不回归 v3.13.x 音频拉锯修复）。
+* 验证：node --check 过；needle 双双源文件内唯一；构建哨兵 305/305 全绿哑哨兵 0。待真机：挂后台 10min+ 通知照常弹、回前台不再积压爆发、前台听歌切后台音频让位节奏不变。
+
 # 本次构建者：AI-B（本会话：#151 切联系人桌面三回归修复，改动 src/js/personalize.js、build.mjs 哨兵5条、FIX-REGRESSION.md #151 行、tools/verify-desk-switch.mjs；开工时工作区含 #150/#149 会话已构建完成的改动，本次构建一并收口）
 
 ### 2026-09-04 15:0x（#149 第二台确认设备 vivo X200s Edge＝部署前旧版，同一 bug 无需改码；仅更新 FIX-REGRESSION 设备记录；文档提交）
