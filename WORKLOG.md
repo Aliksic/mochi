@@ -1,4 +1,12 @@
-# 本次构建者：本会话（#160 GIF 上传上限砍到 512KB，修 iOS 字卡库膨胀卡死）
+# 本次构建者：本会话（#162 iPadOS 26 Safari 回消息视图上漂修复）
+
+### 2026-09-04 深夜（用户报障 #162：iPad Air 7 Safari 聊天页对方每回一条消息视图上漂一次不贴底；已构建提交）
+* [AI-A 域]（**改动文件：src/js/chat.js（①scrollChatBottom 置贴底钉住态 chatPinnedBottom=true；②maybeScrollChatBottom 来消息侧对齐 out 侧 rAF+150ms 复写口径，仅钉住时；③chat-body 捕获阶段 img load 监听——消息图片 loading=lazy onload 晚于滚底、内容长高顶开视图，钉住期间回到底部；④touchstart/wheel 解除钉住不抢用户滚动权）、build.mjs（FIX_SENTINELS +3 条）、FIX-REGRESSION.md（#162 行）**；构建状态见下）。
+* 诊断：无头 WebKit 820×1180 探针（tools/_tmp-ipad-scroll.mjs，临时用完即删）复现逻辑层正常（st=sh-ch 贴底），判定为 iPadOS 26 Safari 滚动回归簇（公开报告：iOS 26 fixed/sticky 错位、vv.offsetTop 不复位等）下的单次 scrollTop 写入不可靠 + lazy 图片迟到加载顶开视图的叠加；修复为鲁棒性加固，语义不变（用户手动上滑阅读时不抢滚动）。
+* 待真机：iPad Air 7 对方连发多条视图应始终贴最新消息；手动上滑阅读时来消息不把视图拽回底部。
+
+### 2026-09-04 23:5x（账面清理：TASKS.md #125/#124 移入归档区，无源码改动）
+* [AI-B 域]（无源码/产物改动，不涉及构建）。复查 `node build.mjs --check-sentinels` 321/321 全绿哑哨兵 0，确认 #125 base.css 锚点已恢复、#124 device.js 修复已随构建打入（见 2026-09-02/04 条目），两条任务移入归档区防误认领。剩余待办仅真机验证类（#159/#160/#161）。
 
 ### 2026-09-04 23:1x（用户反馈 #159 后设计仍缺陷：后台来电点开浏览器联系人已挂断永远接不到；后台来电改「响铃挂起」设计；已构建提交）
 * [AI-B 域]（**改动文件：src/js/call.js（①holdIncomingCall：后台/响铃切走命中来电→发通知（bgCallNotify 加 hint「快回来接听，对方会等你几分钟」）+挂起全局根键 call-hold（LS+IDB，含 cid/name/ts）；②resumeHeldCall：回前台/冷启动 3 分钟内有效挂起→incomingCall(true) 重响可接听（replay 不重复发系统消息），超时/跨桌面/占线→notifyCallEnd 补写未接；③endCall 加 holdSilent 第二参静默收尾不判未接；④clearCallHold 写 {ts:0} 防 idbRestore 回填幽灵挂起，挂起覆盖前先补写超时旧挂起；#160 编号已让给并行 GIF 会话，本条改 #161）、src/js/contacts.js（EXCLUDE 加 call-hold 防全局根键被 migrateLegacy 迁移）、build.mjs（#150 bgCallNotify needle 随签名更新 + #161 哨兵 3 条）；构建状态：已构建·sw mochi-mtn36ffa 哨兵 321/321 哑哨兵 0；verify 10/10；已提交推送**）。

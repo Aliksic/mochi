@@ -1004,9 +1004,12 @@ function updateChatLoading() {
 if (!chatLoadingEl) return;
 chatLoadingEl.hidden = !(chatVisible() && !chatDbReady && !msgs.length);
 }
+// FIX #162（iPad Air 7 / iPadOS 26 Safari：对方回一条消息视图就向上漂一次，不贴最新消息）
+// 贴底钉住态：程序化滚到底时置真，用户手动触摸/滚轮滚动即解除；复写与图片补滚只在钉住时进行
+let chatPinnedBottom = true;
 function scrollChatBottom() {
 const cb = document.getElementById('chat-body');
-if (cb) cb.scrollTop = cb.scrollHeight;
+if (cb) { chatPinnedBottom = true; cb.scrollTop = cb.scrollHeight; }
 }
 function chatNearBottom() {
 const cb = document.getElementById('chat-body');
@@ -1025,6 +1028,11 @@ scrollChatBottom();
 if (out) {
 requestAnimationFrame(scrollChatBottom);
 setTimeout(scrollChatBottom, 120);
+} else {
+// FIX #162：来消息侧原本只写一次 scrollTop——iPadOS 26 Safari 内核可能丢弃/被迟到的
+// 布局变更顶开；对齐 out 侧三连写口径，钉住期间才复写（用户已手动滚走则不抢滚动权）
+requestAnimationFrame(() => { if (chatPinnedBottom) scrollChatBottom(); });
+setTimeout(() => { if (chatVisible() && chatPinnedBottom) scrollChatBottom(); }, 150);
 }
 }
 function showTyping() {
@@ -1862,6 +1870,17 @@ loadNewerIncremental();
 }
 }, 100);
 }, { passive: true });
+// FIX #162：用户手动触摸/滚轮滚动＝解除贴底钉住，之后的自动复写不再抢滚动权
+body.addEventListener('touchstart', () => { chatPinnedBottom = false; }, { passive: true, capture: true });
+body.addEventListener('wheel', () => { chatPinnedBottom = false; }, { passive: true });
+// FIX #162：消息图片是 loading=lazy，加载完成晚于滚底，加载后内容长高会把视图从底部顶开
+//（iPadOS 26 Safari 尤其明显＝「回一条滑一次」）——钉住期间任何消息图片 onload 后回到底部
+body.addEventListener('load', (e) => {
+const t = e.target;
+if (!t || t.tagName !== 'IMG') return;
+if (!chatPinnedBottom || batchRendering || !chatVisible()) return;
+requestAnimationFrame(scrollChatBottom);
+}, true);
 function renderMsg(rec) {
 const m = document.createElement('div');
 if (!batchRendering) m.classList.add('msg-enter');
