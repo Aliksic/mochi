@@ -8777,9 +8777,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1788501397092">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.414</b></span>
-        <span class="sv-deploy">部署于 2026-09-04 13:56<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1788501686898">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.415</b></span>
+        <span class="sv-deploy">部署于 2026-09-04 14:01<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9875,7 +9875,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.414</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.415</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
       <!-- v3.27.x：设置页底部防骗声明 -->
       <div class="set-alert">
@@ -10143,7 +10143,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.414</span>
+              <span class="lic-ver">v3.26.415</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -17882,11 +17882,13 @@ return bgLayer;
 const setBgLayerImage = (data) => {
 const l = ensureBgLayer(); if (!l) return;
 const want = data ? 'url("' + data + '")' : '';
-if (l.style.backgroundImage === want) return; // 值变才写：同值重写会触发样式失效+重绘
-l.style.backgroundImage = want;
+if (l.style.backgroundImage !== want) l.style.backgroundImage = want;
+if (!data) return;
 const pos = bgPosOf();
-l.style.backgroundSize = (pos.s === 'cover' || !pos.s) ? 'cover' : (pos.s + '%');
-l.style.backgroundPosition = pos.x + '% ' + pos.y + '%';
+const szWanted = (pos.s === 'cover' || !pos.s) ? 'cover' : (pos.s + '%');
+const psWanted = pos.x + '% ' + pos.y + '%';
+if (l.style.backgroundSize !== szWanted) l.style.backgroundSize = szWanted;
+if (l.style.backgroundPosition !== psWanted) l.style.backgroundPosition = psWanted;
 };
 const setBgLayerPreset = (css) => {
 const l = ensureBgLayer(); if (!l) return;
@@ -18383,9 +18385,9 @@ d.appendChild(mkSliderRow('组件圆角', 'desk-card-radius', '--desk-card-radiu
 const opRow = document.createElement('div'); opRow.style.cssText = 'display:flex;flex-direction:column;gap:4px';
 const opLb = document.createElement('div'); opLb.style.cssText = 'font-size:12px;color:var(--muted,#888)'; opLb.textContent = '组件透明度'; opRow.appendChild(opLb);
 const opInp = document.createElement('input'); opInp.type = 'range'; opInp.min = 40; opInp.max = 100; opInp.step = 5;
-const opCur = store.get('widget-opacity'); opInp.value = opCur ? String(Math.round(parseFloat(opCur) * 100)) : '100';
+const opCur = store.get('widget-opacity'); opInp.value = opCur ? String(opacityRawToPct(opCur)) : '100';
 opInp.style.cssText = 'width:100%';
-opInp.addEventListener('input', () => { const v = parseInt(opInp.value, 10) / 100; document.documentElement.style.setProperty('--widget-opacity', String(v)); store.set('widget-opacity', String(v)); });
+opInp.addEventListener('input', () => { const v = parseInt(opInp.value, 10) / 100; document.documentElement.style.setProperty('--widget-opacity', String(v)); store.set('widget-opacity', String(Math.round(v * 100))); });
 opRow.appendChild(opInp); d.appendChild(opRow);
 const hint = document.createElement('div'); hint.style.cssText = 'font-size:11px;color:var(--muted,#999);margin-top:4px'; hint.textContent = '左侧桌面实时预览，关闭后回美化页保存。'; d.appendChild(hint);
 d.style.display = 'flex';
@@ -20151,6 +20153,34 @@ openCardBgMenu(type, def ? def.name : type, card);
 }, true);
 }
 const pagesBox = document.getElementById('desktop-pages');
+const TEMPLATE_DESK_ARR = (() => {
+const arr = [];
+try {
+pagesBox.querySelectorAll('.page-slide').forEach((s, pi) => {
+Array.prototype.forEach.call(s.children, (n) => {
+if (n.hasAttribute && n.hasAttribute('data-desk-widget')) arr.push({ wid: n.getAttribute('data-desk-widget'), page: pi });
+});
+});
+document.querySelectorAll('#desk-widget-pool [data-desk-widget]').forEach((n) => {
+arr.push({ wid: n.getAttribute('data-desk-widget'), pool: true });
+});
+} catch (e) {}
+return arr;
+})();
+const restoreTemplateDesk = () => {
+if (!pagesBox) return;
+const slides = pagesBox.querySelectorAll('.page-slide');
+const pool = ensureWidgetPool();
+TEMPLATE_DESK_ARR.forEach((it) => {
+const node = document.querySelector('[data-desk-widget="' + it.wid + '"]');
+if (!node) return;
+if (it.pool) { if (node.parentNode !== pool) pool.appendChild(node); return; }
+const slide = slides[it.page];
+if (!slide || node.parentNode === slide) return;
+const addBtn = slide.querySelector('.desk-page-add');
+if (addBtn) slide.insertBefore(node, addBtn); else slide.appendChild(node);
+});
+};
 const pagesVal = document.getElementById('desk-pages-val');
 const delPageRow = document.getElementById('row-desk-del-page');
 const pageBgsBox = document.getElementById('desk-page-bgs');
@@ -20201,7 +20231,7 @@ removeDeskImagesOnPage(delIdx);
 removeDeskTextsOnPage(delIdx);
 removeDeskCountdownsOnPage(delIdx);
 s.parentNode.removeChild(s);
-try { if (deskLayout()) saveDeskLayout(); } catch (e) {}
+try { if (deskLayout() && !deskSwitchBuild) saveDeskLayout(); } catch (e) {}
 }
 }
 for (let i = slides.length; i < target; i++) {
@@ -20354,8 +20384,9 @@ try { location.reload(); } catch (e) {}
 if (ctl && ctl.pills) ctl.pills([{ label: '确定恢复默认', value: '1' }], '1');
 });
 }
+let deskSwitchBuild = false;
 buildDeskPages();
-document.addEventListener('contact-switched', buildDeskPages);
+document.addEventListener('contact-switched', () => { deskSwitchBuild = true; try { buildDeskPages(); } finally { deskSwitchBuild = false; } });
 const rebuildDeskWhenReady = () => {
 try { buildDeskPages(); } catch (e) {}
 try { if (window.applyDeskLayout) window.applyDeskLayout(); } catch (e) {}
@@ -20471,7 +20502,7 @@ return lay;
 };
 const applyDeskLayout = () => {
 const lay = deskLayout();
-if (!lay) return;
+if (!lay) { restoreTemplateDesk(); return; }
 const slides = Array.prototype.slice.call(pagesBox.querySelectorAll('.page-slide'));
 const inGrid = (wid) => {
 if (wid.indexOf('app-') === 0) {
@@ -22893,8 +22924,11 @@ try { applyWidgetBorder(store.get('widget-border-color') || 'rgba(0,0,0,.1)'); }
 try { applyWidgetBtn(store.get('widget-btn-color') || '#111111'); } catch (e) {}
 try { applyWidgetBtnText(store.get('widget-btn-text-color') || '#ffffff'); } catch (e) {}
 try { applyWidgetHeart(store.get('widget-heart-color') || '#111111'); } catch (e) {}
-try { const op = store.get('widget-opacity'); if (op) { const opPct = opacityRawToPct(op); if (!isNaN(opPct)) applyWidgetOpacity(opPct); } } catch (e) {} // #146：兼容历史小数脏值（切桌面重应用）
+try { const op = store.get('widget-opacity'); if (op) { const opPct = opacityRawToPct(op); if (!isNaN(opPct)) applyWidgetOpacity(opPct); } else applyWidgetOpacity(100); } catch (e) {} // #146：兼容历史小数脏值（切桌面重应用）
 try { applyIcoRadius(getIcoRadius()); } catch (e) {}
+try { applyBgBlur(getBgBlur()); } catch (e) {}
+try { applyBgMaskOp(getBgMaskOp()); } catch (e) {}
+try { applyCardRadius(getCardRadius()); } catch (e) {}
 try {
 const btn = document.querySelector('.checkin .ck-btn');
 if (btn) {
@@ -49787,9 +49821,10 @@ const nkey = msgFingerprint(text, extra.img);
 if (document.visibilityState === 'visible') { markSeen(nkey); return; }
 if (!('Notification' in window) || Notification.permission !== 'granted') return;
 gateStats.total++;
-if (lastHiddenAt > 0 && Date.now() - lastHiddenAt < NOTIFY_HIDDEN_MIN_MS) { gateStats.tooFresh++; return; }
-if (notifiedDup(nkey) || seenDup(nkey)) { gateStats.dup++; return; }
-if (recentChatDup(nkey, ts)) { gateStats.dup++; return; }
+const force = !!extra.force;
+if (!force && lastHiddenAt > 0 && Date.now() - lastHiddenAt < NOTIFY_HIDDEN_MIN_MS) { gateStats.tooFresh++; return; }
+if (!force && (notifiedDup(nkey) || seenDup(nkey))) { gateStats.dup++; return; }
+if (!force && recentChatDup(nkey, ts)) { gateStats.dup++; return; }
 gateStats.sent++;
 hiddenSentCount++;
 hiddenSentName = extra.name || store.get('lbl-partner') || (window.taWord ? window.taWord() : 'TA');
@@ -50829,6 +50864,11 @@ currentCall = null;
 shownAv = null;
 shownName = null;
 }
+function bgCallNotify(name) {
+try {
+if (window.bgNotifyCheck) window.bgNotifyCheck(name + ' 来电了', Date.now(), { name: name + '来电', av: partnerAv(), avFixed: true, force: true });
+} catch (e) {}
+}
 document.addEventListener('contact-renamed', (e) => {
 if (currentCall && e.detail && e.detail.id === currentCall.cid) {
 syncCallName();
@@ -50836,7 +50876,9 @@ syncCallName();
 });
 document.addEventListener('visibilitychange', () => {
 if (document.visibilityState === 'hidden' && currentCall && currentCall.status === 'ringing') {
+const nm = currentCall.name || partnerName();
 endCall('未接听');
+bgCallNotify(nm);
 }
 });
 function closeImageOverlay() {
@@ -51016,13 +51058,18 @@ window.triggerIncomingCall = incomingCall;
 function callLast() { const v = parseInt(store.get('records-call-last'), 10); return isNaN(v) ? 0 : v; }
 function maybeIncoming() {
 try {
-if (document.hidden) return; // v3.5.127：后台不触发来电
 if (currentCall) return;
 const now = Date.now();
 const last = Math.min(callLast(), now);
 if (now - last < 300000) return; // 5 分钟冷却
 if (Math.random() * 100 >= callCfg().incoming) return;
 store.set('records-call-last', String(now));
+if (document.hidden) {
+const nm = partnerName();
+notifyCallEnd(window.__activeCid || 'default', '<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>' + nm + ' 来电 · 未接听', 'in', '未接听');
+bgCallNotify(nm);
+return;
+}
 incomingCall();
 } catch (e) {}
 }
@@ -77641,4 +77688,4 @@ return { lock: document.body.classList.contains('scroll-lock'), open: open };
 <!-- __MOCHI_EOF__ -->
 </body>
 </html>
-<!-- __MOCHI_EOF__ mtmjjy3o -->
+<!-- __MOCHI_EOF__ mtmjq5pu -->

@@ -507,6 +507,15 @@
     shownAv = null;
     shownName = null;
   }
+  // v3.31.x：后台来电通知——页面在后台时无法弹来电 UI（也无法接听），改为发系统通知
+  //（走 bg-keep 的 showSysNotification 链路：SW 通知页面隐藏也能显示）。
+  // force=true：来电是「错过就没了」的单发事件，绕过 bgNotifyCheck 的 15s 过渡期/去重闸门。
+  // avFixed=true：来电归属当前桌面，头像用 partnerAv() 权威值，空则走中立 mochi 图标。
+  function bgCallNotify(name) {
+    try {
+      if (window.bgNotifyCheck) window.bgNotifyCheck(name + ' 来电了', Date.now(), { name: name + '来电', av: partnerAv(), avFixed: true, force: true });
+    } catch (e) {}
+  }
   // 监听联系人重命名事件，实时同步通话昵称
   document.addEventListener('contact-renamed', (e) => {
     if (currentCall && e.detail && e.detail.id === currentCall.cid) {
@@ -515,9 +524,12 @@
   });
   // v3.5.129：响铃中切后台（锁屏/切走）→ 停铃声并结束来电——
   // 后台无法接听，30 秒干响没有意义（安卓后台音频还会常驻媒体通知）
+  // v3.31.x：结束的同时补发一条系统通知（未接来电），用户在通知栏可见
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden' && currentCall && currentCall.status === 'ringing') {
+      const nm = currentCall.name || partnerName();
       endCall('未接听');
+      bgCallNotify(nm);
     }
   });
   // v3.6.x：通话弹层开始时先关闭大图查看器——img-view-mask z-index 高于 call-mask，
@@ -736,7 +748,6 @@
   function callLast() { const v = parseInt(store.get('records-call-last'), 10); return isNaN(v) ? 0 : v; }
   function maybeIncoming() {
     try {
-      if (document.hidden) return; // v3.5.127：后台不触发来电
       if (currentCall) return;
       const now = Date.now();
       // v3.6.x：冷却戳为未来时间（设备时钟被改动过）→ 按 0 处理，避免来电被永久锁死
@@ -744,6 +755,15 @@
       if (now - last < 300000) return; // 5 分钟冷却
       if (Math.random() * 100 >= callCfg().incoming) return;
       store.set('records-call-last', String(now));
+      // v3.31.x：后台命中来电不再直接放弃（原 v3.5.127 直接 return，后台永远没来电通知）——
+      // 后台无法弹来电 UI 也无法接听，改为：写「未接来电」记录 + 聊天系统消息 + 系统通知，
+      // 用户回前台在聊天/通话记录可见，通知栏实时可见「XX来电」
+      if (document.hidden) {
+        const nm = partnerName();
+        notifyCallEnd(window.__activeCid || 'default', '<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>' + nm + ' 来电 · 未接听', 'in', '未接听');
+        bgCallNotify(nm);
+        return;
+      }
       incomingCall();
     } catch (e) {}
   }

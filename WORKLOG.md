@@ -1,4 +1,12 @@
-# 本次构建者：AI-A（本会话：#149 引用图片缩略图修复，改动 chat.js/build.mjs/FIX-REGRESSION.md；开工时 git status 有并行会话未跟踪诊断输出 tools/tmp-repro2-out.txt，不涉产物）
+# 本次构建者：AI-B（本会话：#150 后台来电系统通知，改动 call.js/bg-keep.js/build.mjs/FIX-REGRESSION.md；开工时 git status 有 #149 会话未提交改动（已构建完成），本次构建一并包含）
+
+
+### 2026-09-04 14:1x（#150 联系人来电浏览器挂后台无系统通知：后台来电改发系统通知+未接记录；已构建）
+* [AI-B 域]（改动：src/js/call.js、src/js/bg-keep.js、build.mjs 哨兵3条、FIX-REGRESSION.md #150 行；构建状态：见下）。
+* 根因：maybeIncoming 后台直接 return（v3.5.127），响铃中切后台也只静默按未接处理——后台永远无来电通知。
+* 修复：后台命中来电→写未接记录+聊天系统消息+SW 系统通知；响铃中切后台补发通知；bgNotifyCheck 增 extra.force 通道绕过 15s 过渡期/去重闸门。
+* 验证：node --check 过；构建哨兵含 #150 3 条全绿。
+
 
 ### 2026-09-04 14:4x（防倒卖收尾：verify-anti-scam-backfill 5 用例试金石 + README 完整许可段 + marked() 空白归一化修复；已构建）
 * [AI-B 域]（**改动文件：tools/verify-anti-scam-backfill.mjs（新增，verify:all 自动纳入）、src/js/clock.js（marked() 在位判定空白归一化——条2 文案「小红书 @言序」带空格 vs 锚点串无空格致永远判不在位每次重写，测出来即修）、README.md（新增「许可与使用条款」段：可二传二改/必须保留署名/禁商用/开屏公告不可删+回填校验说明/DMCA 投诉依据）、FIX-REGRESSION.md（#148 验证方式补脚本）；构建状态：已构建·sw mochi-mtmjjy3o 哨兵 293/293 哑哨兵 0**）。

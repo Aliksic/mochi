@@ -737,11 +737,17 @@ try {
   const setBgLayerImage = (data) => {
     const l = ensureBgLayer(); if (!l) return;
     const want = data ? 'url("' + data + '")' : '';
-    if (l.style.backgroundImage === want) return; // 值变才写：同值重写会触发样式失效+重绘
-    l.style.backgroundImage = want;
+    // FIX 2026-09-04 #151 backgroundImage 仍「值变才写」（#147 防 iOS 重复解码语义不变），
+    // 但 backgroundSize/Position 必须每次刷新（各自值变才写、不盲写）：原实现把尺寸/定位
+    // 也锁进「图变才写」守卫——壁纸定位/缩放（phone-bg-pos-*）改键后图层不重应用（滑杆
+    // 实时预览失效）、两桌面同图不同 pos 时互相串用 → 「背景图片没有按正常比例铺满」。
+    if (l.style.backgroundImage !== want) l.style.backgroundImage = want;
+    if (!data) return;
     const pos = bgPosOf();
-    l.style.backgroundSize = (pos.s === 'cover' || !pos.s) ? 'cover' : (pos.s + '%');
-    l.style.backgroundPosition = pos.x + '% ' + pos.y + '%';
+    const szWanted = (pos.s === 'cover' || !pos.s) ? 'cover' : (pos.s + '%');
+    const psWanted = pos.x + '% ' + pos.y + '%';
+    if (l.style.backgroundSize !== szWanted) l.style.backgroundSize = szWanted;
+    if (l.style.backgroundPosition !== psWanted) l.style.backgroundPosition = psWanted;
   };
   const setBgLayerPreset = (css) => {
     const l = ensureBgLayer(); if (!l) return;
@@ -1307,9 +1313,11 @@ try {
     const opRow = document.createElement('div'); opRow.style.cssText = 'display:flex;flex-direction:column;gap:4px';
     const opLb = document.createElement('div'); opLb.style.cssText = 'font-size:12px;color:var(--muted,#888)'; opLb.textContent = '组件透明度'; opRow.appendChild(opLb);
     const opInp = document.createElement('input'); opInp.type = 'range'; opInp.min = 40; opInp.max = 100; opInp.step = 5;
-    const opCur = store.get('widget-opacity'); opInp.value = opCur ? String(Math.round(parseFloat(opCur) * 100)) : '100';
+    // FIX 2026-09-04 #151：统一 opacityRawToPct 解析 + 拖动存百分比整数——原实现初始化
+    // parseFloat(cur)*100（存量 "90" 被算成 9000）、拖动存小数（"0.85"，#146 同族脏值再入key）
+    const opCur = store.get('widget-opacity'); opInp.value = opCur ? String(opacityRawToPct(opCur)) : '100';
     opInp.style.cssText = 'width:100%';
-    opInp.addEventListener('input', () => { const v = parseInt(opInp.value, 10) / 100; document.documentElement.style.setProperty('--widget-opacity', String(v)); store.set('widget-opacity', String(v)); });
+    opInp.addEventListener('input', () => { const v = parseInt(opInp.value, 10) / 100; document.documentElement.style.setProperty('--widget-opacity', String(v)); store.set('widget-opacity', String(Math.round(v * 100))); });
     opRow.appendChild(opInp); d.appendChild(opRow);
     const hint = document.createElement('div'); hint.style.cssText = 'font-size:11px;color:var(--muted,#999);margin-top:4px'; hint.textContent = '左侧桌面实时预览，关闭后回美化页保存。'; d.appendChild(hint);
     d.style.display = 'flex';
@@ -3231,6 +3239,42 @@ try {
   // ===== v3.6.x：桌面页面管理（新增空白主页 / 删除 / 每页独立背景图） =====
   // 页数存储：desk-page-count（默认 2，上限 5）；每页背景图：page-bg-<idx>（dataURL）
   const pagesBox = document.getElementById('desktop-pages');
+  // FIX 2026-09-04 #151 模板默认排布快照（脚本加载期、buildDeskPages/applyDeskLayout
+  // 尚未改动 DOM 前捕获；只记每页顶层组件与模板池内组件）。用于切回「未装修（无
+  // desk-layout）」桌面时还原默认排布——此前 applyDeskLayout 对无布局直接 return：
+  // 上个桌面（有布局）切走时把本桌组件按其布局扫进隐藏池，切回来池里的组件永不
+  // 归还（「小组件会隐藏」），桌面还停留在他人桌面的排布上（「不同桌面显示不一样」）。
+  const TEMPLATE_DESK_ARR = (() => {
+    const arr = [];
+    try {
+      pagesBox.querySelectorAll('.page-slide').forEach((s, pi) => {
+        Array.prototype.forEach.call(s.children, (n) => {
+          if (n.hasAttribute && n.hasAttribute('data-desk-widget')) arr.push({ wid: n.getAttribute('data-desk-widget'), page: pi });
+        });
+      });
+      document.querySelectorAll('#desk-widget-pool [data-desk-widget]').forEach((n) => {
+        arr.push({ wid: n.getAttribute('data-desk-widget'), pool: true });
+      });
+    } catch (e) {}
+    return arr;
+  })();
+  // 按快照还原默认排布（幂等：已在位的节点不动；页数不足的页其组件保持池语义，
+  // 与冷启动 buildDeskPages 收缩页数的行为一致）。动态注入图标（同频/伸手/喝水等）
+  // 在图标组网格内随组归位，不单独记录。
+  const restoreTemplateDesk = () => {
+    if (!pagesBox) return;
+    const slides = pagesBox.querySelectorAll('.page-slide');
+    const pool = ensureWidgetPool();
+    TEMPLATE_DESK_ARR.forEach((it) => {
+      const node = document.querySelector('[data-desk-widget="' + it.wid + '"]');
+      if (!node) return;
+      if (it.pool) { if (node.parentNode !== pool) pool.appendChild(node); return; }
+      const slide = slides[it.page];
+      if (!slide || node.parentNode === slide) return;
+      const addBtn = slide.querySelector('.desk-page-add');
+      if (addBtn) slide.insertBefore(node, addBtn); else slide.appendChild(node);
+    });
+  };
   const pagesVal = document.getElementById('desk-pages-val');
   const delPageRow = document.getElementById('row-desk-del-page');
   const pageBgsBox = document.getElementById('desk-page-bgs');
@@ -3293,7 +3337,11 @@ try {
         // v3.7.x 修复：删页后收缩已存布局——此前 desk-layout 仍保留被删页条目，
         // 之后新增页并刷新会把旧页组件插回新页（组件"复活"）。只在已有自定义布局时
         // 收缩；默认布局（desk-layout 为空）不写，保持原「保持 DOM 原状」语义。
-        try { if (deskLayout()) saveDeskLayout(); } catch (e) {}
+        // FIX 2026-09-04 #151：切桌面触发的收缩不落盘——此时 DOM 还是上一桌面的
+        // 排布，store 已切到新桌面，saveDeskLayout 会把他人排布写成新桌面的
+        // desk-layout（页数不同的两桌面来回切即互相污染、组件被吞进隐藏池）。
+        // 用户手动删页（delPageRow）路径不走 contact-switched 监听，deskSwitchBuild=false 照旧保存。
+        try { if (deskLayout() && !deskSwitchBuild) saveDeskLayout(); } catch (e) {}
       }
     }
     for (let i = slides.length; i < target; i++) {
@@ -3465,8 +3513,11 @@ try {
       if (ctl && ctl.pills) ctl.pills([{ label: '确定恢复默认', value: '1' }], '1');
     });
   }
+  // FIX 2026-09-04 #151：切桌面期间的 buildDeskPages 标记——删页收缩不把当前 DOM
+  //（上一桌面的排布）落盘成新桌面的 desk-layout（见删页分支注释）
+  let deskSwitchBuild = false;
   buildDeskPages();
-  document.addEventListener('contact-switched', buildDeskPages);
+  document.addEventListener('contact-switched', () => { deskSwitchBuild = true; try { buildDeskPages(); } finally { deskSwitchBuild = false; } });
   // v3.6.x 修复（刷新后桌面页数消失）：IndexedDB 回填完成前，desk-page-count 若只存于
   // IDB（localStorage 缺失，如旧数据迁移后/个别浏览器配额清理），首次 buildDeskPages
   // 会按默认 2 页构建，恢复完成后页数/新增页不会自动重建 → 刷新后「新增的页消失」。
@@ -3619,7 +3670,9 @@ try {
   // 不在 desk-layout 内，重排时保持其节点不动）。
   const applyDeskLayout = () => {
     const lay = deskLayout();
-    if (!lay) return;
+    // FIX 2026-09-04 #151：无布局 ≠ 什么都不做——先按模板快照还原默认排布再返回，
+    // 归还被上个桌面布局扫进隐藏池的本桌组件（见 TEMPLATE_DESK_ARR 注释）
+    if (!lay) { restoreTemplateDesk(); return; }
     const slides = Array.prototype.slice.call(pagesBox.querySelectorAll('.page-slide'));
     // v3.7.x：单个功能图标仍在 app-grid 内（未被移出作独立组件）时跳过——
     // 它由 app-grid 容器管理（grid 4 列横排），移到 slide 会脱离 grid 布局
@@ -6442,8 +6495,15 @@ try {
     try { applyWidgetBtn(store.get('widget-btn-color') || '#111111'); } catch (e) {}
     try { applyWidgetBtnText(store.get('widget-btn-text-color') || '#ffffff'); } catch (e) {}
     try { applyWidgetHeart(store.get('widget-heart-color') || '#111111'); } catch (e) {}
-    try { const op = store.get('widget-opacity'); if (op) { const opPct = opacityRawToPct(op); if (!isNaN(opPct)) applyWidgetOpacity(opPct); } } catch (e) {} // #146：兼容历史小数脏值（切桌面重应用）
+    // FIX 2026-09-04 #151：透明度等美化键按桌面独立，但 CSS 变量挂在 documentElement
+    // 全局——此前切到「没有该键」的桌面时跳过应用，上一桌面的值残留 → 切回桌面小组件
+    // 变透明/隐身（opacity 元素不可见但仍可点中）、不同桌面显示互相串。缺键必须复位默认。
+    try { const op = store.get('widget-opacity'); if (op) { const opPct = opacityRawToPct(op); if (!isNaN(opPct)) applyWidgetOpacity(opPct); } else applyWidgetOpacity(100); } catch (e) {} // #146：兼容历史小数脏值（切桌面重应用）
     try { applyIcoRadius(getIcoRadius()); } catch (e) {}
+    // FIX 2026-09-04 #151：背景模糊/遮罩/卡片圆角同族——按桌面重应用，缺键走各自 getter 默认值
+    try { applyBgBlur(getBgBlur()); } catch (e) {}
+    try { applyBgMaskOp(getBgMaskOp()); } catch (e) {}
+    try { applyCardRadius(getCardRadius()); } catch (e) {}
     try {
       const btn = document.querySelector('.checkin .ck-btn');
       if (btn) {

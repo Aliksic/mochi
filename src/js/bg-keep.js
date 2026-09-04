@@ -1085,12 +1085,16 @@
     if (document.visibilityState === 'visible') { markSeen(nkey); return; }
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
     gateStats.total++;
+    // v3.31.x：extra.force —— 一次性事件（如来电通知）不适用过渡期/去重闸门：
+    // 来电是「错过就没了」的单发事件，切后台头 15 秒内命中、或与近期通知文案
+    // 相同（「XX 来电了」高频重复）都不该被拦。消息类通知仍走原三道闸门。
+    const force = !!extra.force;
     // v3.16.x：过渡期闸门改用「切后台时刻」——lastVisibleAt 是最近一次回前台时间，
     // 前台久驻后（如看了 10 分钟）它很旧，切后台瞬间积压的定时器批量到点产生的
     // 一堆消息会全部通过闸门 → 弹出大量看过的内容。改为切后台头 15 秒内一律不弹
-    if (lastHiddenAt > 0 && Date.now() - lastHiddenAt < NOTIFY_HIDDEN_MIN_MS) { gateStats.tooFresh++; return; }
-    if (notifiedDup(nkey) || seenDup(nkey)) { gateStats.dup++; return; }
-    if (recentChatDup(nkey, ts)) { gateStats.dup++; return; }
+    if (!force && lastHiddenAt > 0 && Date.now() - lastHiddenAt < NOTIFY_HIDDEN_MIN_MS) { gateStats.tooFresh++; return; }
+    if (!force && (notifiedDup(nkey) || seenDup(nkey))) { gateStats.dup++; return; }
+    if (!force && recentChatDup(nkey, ts)) { gateStats.dup++; return; }
     gateStats.sent++;
     // v3.19.x：累加「本次后台实际发送的通知数」——回前台汇总用它（见 visibilitychange
     // 处理器），发送者名取本次通知标题
