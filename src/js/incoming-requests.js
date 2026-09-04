@@ -340,7 +340,9 @@
         // 跨桌面联系人头像显示。传了 avFixed 后空值走中立 mochi 图标，绝不再借用当前桌面。
         const av = cAvatar(req.cid);
         if (req.kind === 'call') {
-          if (window.bgNotifyCheck) window.bgNotifyCheck(title + (req.kind === 'call' ? '' : '：' + (req.text || '')), Date.now(), { name: name + '来电', av: av, avFixed: true });
+          // #159：force=true——与 #150 bgCallNotify 同口径，来电是「错过就没了」的单发
+          // 事件，不被 15s 过渡期/通知去重闸门拦（后台轮询首拍可能落在切后台 15s 内）
+          if (window.bgNotifyCheck) window.bgNotifyCheck(title + (req.kind === 'call' ? '' : '：' + (req.text || '')), Date.now(), { name: name + '来电', av: av, avFixed: true, force: true });
         } else if (req.kind === 'checkin') {
           // 同一道题最近已在该联系人桌面聊天里出现过（用户看过/答过）→ 后台不再重复
           // 追问、也不再重复弹系统通知（仅释放 pending 防占用队列）。
@@ -498,7 +500,10 @@
         // v3.20.x：跨桌面来电——与跨桌面查岗对齐：触发概率 + 每人独立冷却。
         // 概率/冷却 v3.26.x 起改读「跨桌面查岗频率」全局模式（deskDMode），不再读各桌面
         // 回复设置的 desk-call-prob/ckq-cool；冷却仍用独立键 incoming-last:call:<cid>。
-        if (deskCallEn() && !document.hidden) {
+        // #159：去掉 !document.hidden 前台门控——后台命中时 deliver() 的 hidden 分支
+        // 会发「XX来电」系统通知并释放 pending，原门控让该分支对 call 永远走不到
+        // （跨桌面联系人挂后台从不来电，与 #150 同桌面口径不一致＝报障根因）
+        if (deskCallEn()) {
           const dm = deskDMode();
           const callCool = dm.cool;
           const callProb = dm.prob;
