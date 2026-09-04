@@ -1,5 +1,11 @@
 # 本次构建者：AI-B（本会话：#151 切联系人桌面三回归修复，改动 src/js/personalize.js、build.mjs 哨兵5条、FIX-REGRESSION.md #151 行、tools/verify-desk-switch.mjs；开工时工作区含 #150/#149 会话已构建完成的改动，本次构建一并收口）
 
+### 2026-09-04 15:0x（#149 第二台确认设备 vivo X200s Edge＝部署前旧版，同一 bug 无需改码；仅更新 FIX-REGRESSION 设备记录；文档提交）
+* [AI-A 域]（**改动文件：FIX-REGRESSION.md（#149 症状补 vivo X200s Edge 13:38 诊断＝构建 ts 1788499094635 即 13:18 旧版，非新根因；设备索引 vivo X200s 加 149）、WORKLOG.md 本行；构建状态：无源码改动不涉及构建，线上 ts=1788503650235（14:34）已含 #149 修复**）。
+* 核对：src/js/chat.js 四处 mochiMediaIsToken 判定在位（5 处引用）、build.mjs #149 哨兵 4 条在位、--check-sentinels 303/303 哑哨兵 0——#150/#151 两次后续构建未覆盖本修复。
+* 待真机：vivo X200s 更新构建（杀 PWA 重开/刷新两次）后复测引用缩略图，同 #149 验证方式。
+* 另记：vivo 诊断含一条 00:10:50 page-chat `Cannot read properties of null (reading 'duration')`（:40704，疑似音频元数据未就绪读 duration，仅 1 次未复现），暂不立案，复发再查。
+
 
 ### 2026-09-04 14:4x（#152 iQOO Neo10Pro 等安卓「继续说」按钮点击无回复：键盘收起吞 click，触摸改 pointerdown；源已完成·未构建，请构建者收口）
 * [AI-A 域]（**改动文件：src/js/chat.js（chat-continue-btn 触摸 pointerdown 按下即触发+1.2s 防重入+鼠标 click 原样；continueChat 主逻辑不动）、src/js/group-chat.js（gc-continue-btn 同款，stopPropagation 语义保持）、build.mjs（FIX_SENTINELS 2 条——⚠️ 与你本会话的 5 条同文件，你追加时请基于最新文件重读，我的是数组尾部 #152 两条）、FIX-REGRESSION.md（#152 行，追加在文件尾）、tools/verify-continue-btn.mjs（新增行为断言 6/6，verify:all 自动纳入）；构建状态：未构建（工作区现行 index.html 是你 14:3x 版本，实测 grep 不含本修复，需要重新 build 收口）**）。
