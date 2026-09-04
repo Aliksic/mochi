@@ -59,7 +59,7 @@ const chromePath = candidates.find((p) => { try { return statSync(p).isFile(); }
 if (!chromePath) { console.error('找不到 Chrome/Edge'); process.exit(1); }
 
 const tmpDir = join(os.tmpdir(), 'mochi-cc-clean-' + Date.now());
-const cdpPort = 9900 + Math.floor(Math.random() * 300);
+const cdpPort = Number(process.env.MOCHI_CDP_PORT) || (9900 + Math.floor(Math.random() * 300));
 const chromeLog = [];
 const chrome = spawn(chromePath, ['--headless=new', '--disable-gpu', '--no-first-run', '--user-data-dir=' + tmpDir, '--remote-debugging-port=' + cdpPort, 'about:blank'], { stdio: ['ignore', 'ignore', 'pipe'] });
 chrome.stderr.on('data', d => chromeLog.push(String(d).slice(0, 200)));

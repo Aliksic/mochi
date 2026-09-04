@@ -148,4 +148,13 @@ if (hard.length) {
     '请逐项对照 FIX-REGRESSION.md 判定：该修的修，已过期的删或改期望，别整体忽略。' +
     '需要把它当门禁时用 --strict（断言失败或超时即退出码 1；环境不满足不算）。');
 }
+// #162/#129 防泄漏：跑批末清理残留无头 Chrome（只杀命令行同时带 remote-debugging-port
+// 且 user-data-dir 含 mochi- 的验证实例——脚本临时档都是 mkdtemp('mochi-*')，不碰用户浏览器）
+if (process.platform === 'win32') {
+  try {
+    const { execSync } = await import('node:child_process');
+    execSync(`powershell -NoProfile -Command "Get-CimInstance Win32_Process -Filter \\"Name='chrome.exe'\\" | Where-Object { $_.CommandLine -match 'remote-debugging-port' -and $_.CommandLine -match 'mochi-' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }"`, { stdio: 'ignore', timeout: 30000 });
+    console.log('（已清理残留验证用无头 Chrome，防 #162 型临时档涨盘）');
+  } catch (e) { /* 清理失败不影响套件结论 */ }
+}
 process.exit(hard.length && STRICT ? 1 : 0);

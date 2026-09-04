@@ -39,7 +39,7 @@ const server = createServer((req, res) => {
 await new Promise((r) => server.listen(0, '127.0.0.1', r));
 const baseUrl = 'http://127.0.0.1:' + server.address().port;
 const udd = join(process.env.TEMP || '/tmp', 'mochi-mc-' + Date.now());
-const cdpPort = 9900 + Math.floor(Math.random() * 80);
+const cdpPort = Number(process.env.MOCHI_CDP_PORT) || (9900 + Math.floor(Math.random() * 80));
 const chrome = spawn(chromePath, [
   '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
   '--user-data-dir=' + udd, '--remote-debugging-port=' + cdpPort, 'about:blank'
