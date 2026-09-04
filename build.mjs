@@ -478,6 +478,9 @@ const FIX_SENTINELS = [
   { name: '#142 媒体池键排除启动回填（media: 只存 IDB，防几百键吃回内存/LS）', file: 'js/idb.js', needle: "k.indexOf(uidPrefix + 'media:') !== 0 &&" },
   { name: '#142 聊天令牌化池先落盘再落引用（崩溃窗口最多池多孤儿，绝不令牌失据）', file: 'js/chat.js', needle: 'await window.mochiMediaFlush(); // 池数据先落盘，再让引用落盘（顺序不可反）' },
   { name: '#142 编辑消息入口令牌展开（图片消息 text 已令牌化，防令牌字符串进输入框被当文字保存）', file: 'js/chat.js', needle: 'const _origMedia = (window.mochiMediaExpand && window.mochiMediaExpand(orig)) || null;' },
+  { name: '防骗+署名禁倒卖声明运行时回填·缺失重建置顶条（防倒卖：f7a8b5c首建/0965278移除后按用户需求恢复并扩展双条）', file: 'js/clock.js', needle: 'insertBefore(box, refNode || notice.firstChild)' },
+  { name: '防骗+署名禁倒卖声明运行时回填·官方notice.json远程强刷（二传副本仍向官方域名拉权威文案）', file: 'js/clock.js', needle: "OFFICIAL_NOTICE, { cache: 'no-store' }" },
+  { name: '防骗+署名禁倒卖声明运行时回填·置顶条在位判定（标题+全部特征词在位才跳过重建）', file: 'js/clock.js', needle: 'bar.marks.every' },
 ];
 try {
   const built = CHECK_SENTINELS ? '' : readFileSync(join(root, 'index.html'), 'utf8');

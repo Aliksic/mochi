@@ -50,12 +50,12 @@
            全部说明直接展示在开屏上，点底部【点击进入】即进入（点击即视为已阅读知晓），无二次确认层 -->
       <div class="splash-notice" id="splash-notice">
         <!-- v3.27.x：防骗置顶声明——最顶部固定展示，防收费诈骗；静态 DOM，在线 notice.json 覆盖只改公告列表，不影响此处 -->
-        <div class="splash-alert">
+        <div class="splash-alert" data-anti-scam="1">
           <div class="splash-alert-t">防骗提醒</div>
           <p><strong>Mochi字卡网站完全免费。作者只有小红书这一个账号：小红书@言序（1842523578）。</strong>如有出现任何收费情况，均为诈骗，注意防止被骗。</p>
         </div>
         <!-- v3.26.x：署名·禁倒卖置顶声明——二传必须标注原作者署名，严禁收费倒卖本站链接；静态 DOM，在线 notice.json 覆盖只改公告列表，不影响此处 -->
-        <div class="splash-alert">
+        <div class="splash-alert" data-anti-scam="2">
           <div class="splash-alert-t">转载署名 · 严禁倒卖</div>
           <p><strong>二传、分享本站链接必须标注作者署名：小红书 @言序（1842523578），禁止删除或修改。</strong>严禁冒为自己制作、删除篡改署名，或以任何形式收费倒卖本站链接、安装包——本站完全免费，收费即诈骗，发现请拒买并举报。</p>
         </div>
@@ -2004,7 +2004,7 @@
           <details class="lic-grp">
             <summary><span class="lg-num">27</span><span class="lg-name">占卜</span><span class="lg-count">5</span></summary>
             <div class="lg-body">
-          <div class="lic-li">两种模式：塔罗（22 张大阿卡纳，带正逆位与详细解读）/ 雷诺曼（40 张）</div>
+          <div class="lic-li">两种模式：塔罗（78 张完整牌库：22 大阿卡纳 + 56 小阿卡纳，带正逆位与详细解读）/ 雷诺曼（40 张）</div>
           <div class="lic-li">抽取张数：1 张（运势）/ 3 张（过去 · 现在 · 未来）/ 7 张（完整牌阵）</div>
           <div class="lic-li">洗牌动画 → 牌面滑动 → 抽取 → 翻牌动画，综合解读（一句话总运势 + 问题呼应）</div>
           <div class="lic-li">历史记录（查看 / 删除 / 清空），可把结果发给 TA</div>
@@ -2865,6 +2865,7 @@
           <div class="div-modes div-counts" id="div-counts">
             <button class="div-mode sel" data-count="3">3 张</button>
             <button class="div-mode" data-count="1">1 张</button>
+            <button class="div-mode" data-count="7">7 张</button>
           </div>
           <!-- v3.26.x：占卜对象（可选全部桌面联系人，也可不选；选了对象结果存入主页「占卜记录」） -->
           <div class="div-modes div-targets" id="div-targets"></div>
@@ -3651,6 +3652,7 @@
           <div class="div-counts-wrap">
             <span class="div-mode sel" data-chatcount="3">3 张</span>
             <span class="div-mode" data-chatcount="1">1 张</span>
+            <span class="div-mode" data-chatcount="7">7 张</span>
           </div>
           <!-- v3.26.x：占卜对象（聊天页半框，可选全部桌面联系人，也可不选；选了对象结果存入该联系人主页「占卜记录」） -->
           <div class="div-modes-wrap div-chat-targets" id="div-chat-targets"></div>

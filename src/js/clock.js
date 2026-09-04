@@ -11,6 +11,95 @@
   setInterval(update, 15000); // 每 15 秒校准一次
 })();
 
+// ===== v3.26.x：防骗+署名禁倒卖声明「运行时回填」——删掉源码/产物里的字也没用 =====
+// template.html 里放的两条置顶声明是静态兜底；这里再用 JS 常量 + 官方远程源强制回填。
+// 只要元素缺失（被删）或文案被改，加载时就会重新写回「开屏顶部两条 + 设置页底部」。
+// 想彻底去掉必须连这段逻辑一起删——等于改代码本身；有网时再从作者官方站点取权威文案
+// 覆盖本地（二传者自己部署的副本也会向官方域名拉取），防二改者连 JS 里的字一起改。
+// （本机制 f7a8b5c 首建、0965278 清理时被整块移除，现按防倒卖需求恢复并扩展双条。）
+(function () {
+  const OFFICIAL_NOTICE = 'https://ling233330-star.github.io/mochi/notice.json';
+  const MARK_KEY = '小红书@言序（1842523578）';
+  // 两条声明：tag 对应静态 DOM 的 data-anti-scam 标记；key 为 notice.json 权威字段；marks 为在位判定特征词
+  const BARS = [
+    { tag: '1', title: '防骗提醒', key: 'alert', marks: ['免费', '诈骗', MARK_KEY],
+      fallback: 'Mochi字卡网站完全免费，作者只有小红书这一个账号：小红书@言序（1842523578）。如有出现任何收费情况，均为诈骗，注意防止被骗。' },
+    { tag: '2', title: '转载署名 · 严禁倒卖', key: 'alert2', marks: ['署名', '倒卖', MARK_KEY],
+      fallback: '二传、分享本站链接必须标注作者署名：小红书 @言序（1842523578），禁止删除或修改。严禁冒为自己制作、删除篡改署名，或以任何形式收费倒卖本站链接、安装包——本站完全免费，收费即诈骗，发现请拒买并举报。' }
+  ];
+  const texts = {}; // key -> 当前权威文案（先本地兜底，官方拉取后覆盖）
+  BARS.forEach(function (b) { texts[b.key] = b.fallback; });
+  // 判定一条置顶块文案是否仍为官方声明（标题+全部特征词在位才认为在位，避免每次重建）
+  function marked(box, bar) {
+    const t = (box.textContent || '');
+    return t.indexOf(bar.title) > -1 && bar.marks.every(function (m) { return t.indexOf(m) > -1; });
+  }
+  // 开屏置顶块（#splash-notice 最顶部两条：防骗在上、署名禁倒卖紧随）
+  function ensureBar(bar, refNode) {
+    const notice = document.getElementById('splash-notice');
+    if (!notice) return null;
+    let box = notice.querySelector('.splash-alert[data-anti-scam="' + bar.tag + '"]');
+    if (!box) {
+      // 兼容旧副本/标记被删：按官方标题文本认领已有置顶块
+      const heads = notice.querySelectorAll('.splash-alert .splash-alert-t');
+      for (let i = 0; i < heads.length; i++) {
+        if (heads[i].textContent.trim() === bar.title) { box = heads[i].parentNode; break; }
+      }
+    }
+    if (!box) {
+      box = document.createElement('div');
+      box.className = 'splash-alert';
+      notice.insertBefore(box, refNode || notice.firstChild);
+    }
+    box.setAttribute('data-anti-scam', bar.tag);
+    if (!marked(box, bar)) { // 缺失或被改 → 重建/改写回官方文案
+      box.innerHTML = '<div class="splash-alert-t"></div><p></p>';
+      box.querySelector('.splash-alert-t').textContent = bar.title;
+      box.querySelector('p').textContent = texts[bar.key];
+    }
+    return box;
+  }
+  // 设置页底部块（#page-setting 版本行下方）：防骗+署名禁倒卖 合并为一段
+  function ensureSettings() {
+    const page = document.getElementById('page-setting');
+    if (!page) return;
+    let box = page.querySelector('.set-alert');
+    const st = box ? (box.textContent || '') : '';
+    if (box && MARK_KEY && st.indexOf(MARK_KEY) > -1 && st.indexOf('免费') > -1 && st.indexOf('倒卖') > -1) return;
+    if (!box) {
+      box = document.createElement('div');
+      const anchor = page.querySelector('.ver-credit') || null;
+      page.insertBefore(box, anchor ? anchor.nextSibling : null);
+    }
+    box.className = 'set-alert';
+    box.setAttribute('data-anti-scam', 's');
+    box.innerHTML = '<b></b>';
+    box.querySelector('b').textContent = texts['alert'];
+    box.appendChild(document.createTextNode(' ' + texts['alert2']));
+  }
+  function run() {
+    const b1 = ensureBar(BARS[0], null);
+    ensureBar(BARS[1], b1 ? b1.nextSibling : null);
+    ensureSettings();
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run);
+  else run();
+  // 可选官方远程源：失败（离线/被墙/CORS）不阻塞，保留本地兜底；权威文案有变才强刷
+  fetch(OFFICIAL_NOTICE, { cache: 'no-store' })
+    .then(function (r) { if (!r.ok) throw new Error('http ' + r.status); return r.json(); })
+    .then(function (d) {
+      let dirty = false;
+      BARS.forEach(function (b) {
+        if (d && typeof d[b.key] === 'string' && d[b.key].trim() && d[b.key].trim() !== texts[b.key]) {
+          texts[b.key] = d[b.key].trim();
+          dirty = true;
+        }
+      });
+      if (dirty) run(); // 强刷回写
+    })
+    .catch(function () { /* 保留本地兜底 */ });
+})();
+
 // ===== 开屏加载动画：页面就绪后淡出并移除 =====
 (function () {
   const splash = document.getElementById('splash');

@@ -1,3 +1,12 @@
+# 本次构建者：AI-B（本会话：塔罗扩 78 张 + 补 7 张牌阵；改动前 git status 有另一会话 clock.js 回填+build.mjs 哨兵未提交改动，已验证语法完整成套，构建包含）
+
+### 2026-09-04 13:36（塔罗扩完整 78 张（22 大 + 56 小阿卡纳，全正逆位）+ 补 7 张完整牌阵选项；已构建）
+* [AI-A 域]（**改动文件：src/js/divination.js（TAROT 扩 56 张小阿卡纳：权杖/圣杯/宝剑/星币 ×1~10+宫廷 4，均带正逆位寓意+详细解读；TAROT_ICONS 新增 staff/sword/coin/page/knight/queen/king 7 个花色/人物图标；MODE_LABELS 补 7 张位标签：塔罗=过去/现在/未来/阻碍/助力/态度/结果）、src/template.html（桌面页 div-counts + 聊天页半框各补「7 张」按钮；功能介绍页文案改 78 张）；构建状态：已构建·sw mochi-mtmitlvc 哨兵 289/289 哑哨兵 0**）。
+* 用户报障「占卜牌的数量」：核对=抽牌逻辑无 bug、牌库数与注释一致；真差异=头注释承诺 7 张牌阵但 UI 从未有该按钮。本次扩 78 张 + 补 7 张按钮一并收口。
+* 雷诺曼 40 张为星言复刻设计（标准牌库 36，多灵体/香炉/床/市场 4 张），保留不改。
+* 验证：node --check 过；TAROT=78 / LENO=40 无重名；产物 星币国王、data-count="7"、data-chatcount="7"、"78 张完整牌库" 各 1 处；7 张结果 .div-mini flex-wrap 自适应（3+3+1）无需改 CSS。
+* 待真机：7 张抽牌流程/记录/发送文案张数正确；小阿卡纳图标显示正常。
+
 ### 2026-09-04 12:0x（#147 iPhone16 Pro Safari 浏览器模式「退聊天回桌面巨卡」：壁纸清空/重设致 iOS 反复主线程解码 2.1MB 大图；已构建）
 * [AI-B 域]（**改动文件：src/js/personalize.js（壁纸改写 .phone 内常驻图层 #phone-bg-layer：setBgLayerImage 值变才写 + setBgLayerVisible opacity 切换；applyPhoneBg/applyPhoneBgPreset/clearPhoneBg/applyBgVisibility 5 处 shell 写点全部改道，退出桌面不再清空 backgroundImage）、tools/verify-desk-beauty.mjs（壁纸断言同步改图层+opacity）、build.mjs（FIX_SENTINELS 2 条）、FIX-REGRESSION.md（#147 行）；构建状态：已构建·sw 见 version.json**）。
 * 根因：applyBgVisibility 每次进出桌面清空/重设 .phone backgroundImage，2.1MB dataURL 壁纸在 iOS 上每次重设都主线程重新解码整张大图；chat-back 直挂 + page-phone MutationObserver 双触发=一次返回解码两次 → 用户实测退聊天回桌面巨卡、之后所有页面切换持续卡。
