@@ -52,6 +52,10 @@
   -webkit-tap-highlight-color:transparent;
 }
 .cc-tab svg { width:15px; height:15px; }
+/* v3.32.x：三入口 tab 分区靠 openCcPage 设 hidden 属性实现——.cc-tab 自带
+   display:inline-flex 会覆盖 UA 的 [hidden] 默认隐藏（同 base.css .poke-tools 教训），
+   必须补作者规则 hidden 才真正生效 */
+.cc-tab[hidden] { display:none; }
 .cc-tab.sel { background:#111; color:#fff; border-color:#111; }
 /* 分类 tab 字卡数量徽标 */
 .cc-tab-n {

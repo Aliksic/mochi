@@ -1,5 +1,12 @@
 # 本次构建者：AI-B（本会话：#156 群聊模式没隐藏桌面占卜图标修复，改动 src/js/personalize.js、build.mjs 哨兵 2 条、tools/verify-group-desk-icon.mjs、FIX-REGRESSION.md #156 行；开工时工作区含并行会话已声明完成的「其他互动功能字卡」改动 chatcard.js/default-cards.js/template.html 一并收口）
 
+### 2026-09-04 19:1x（用户反馈三入口还是没分开：.cc-tab 的 display:inline-flex 覆盖 [hidden] 致分区从未生效；已修复构建提交）
+* [AI-A 域]（**改动文件：src/css/chat-pages.css（补 .cc-tab[hidden]{display:none}——openCcPage 的 hidden 分区逻辑因此前被作者 display 规则覆盖而完全无效，同 base.css .poke-tools[hidden] 记载过的教训）；构建状态：已构建·sw mochi-mtmugtlm 哨兵 312/312 哑哨兵 0；已提交推送**）。
+* 教训：上上条「三入口 tab 分区」实际上从未在真机生效（hidden 属性被 .cc-tab{display:inline-flex} 覆盖），用户连报两次「没分开/混了」的根因即此；今后对自带 display 的元素切换 hidden 必须先查有无作者规则，或改用类切换。
+* 待真机：四个入口（公用/专属/功能·公用/功能·专属）各自只显示自己的 tab。
+
+
+
 ### 2026-09-04 18:5x（用户需求：其他互动功能字卡也分公用/专属——双入口拆分；已构建已提交）
 * [AI-A 域]（**改动文件：src/template.html（可自定义字卡区功能字卡入口拆两行：·公用 #li-fun-cards-public/#cc-fun-pub-count、·专属 #li-fun-cards-mine/#cc-fun-count；功能介绍页文案同步）、src/js/chatcard.js（li-fun-cards-public→openCcPage('public','fish')；页标题按作用域带 ·公用/·专属 后缀；refreshLibCounts 角标拆分=专属行显 libCounts.fun、公用行显 libCounts.pubFun，各自走缓存零解析）；构建状态：已构建·sw mochi-mtmtucbi4 哨兵 312/312 哑哨兵 0；已提交推送**）。
 * 说明：功能字卡存储本就双作用域（存 cc-groups 同名字段），getCustomFuncCards 取池时专属+公用合并、各自剔除停用分组——本条只是把入口/角标/标题拆开对齐「公用字卡/专属字卡」两行结构。
