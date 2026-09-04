@@ -504,6 +504,9 @@ const FIX_SENTINELS = [
   { name: '#154 朋友圈评论「我的表情包」优先读chat内存副本（chat.js异常时旧store读兜底）', file: 'js/feed.js', needle: 'if (window.getMyEmojiGroups) {' },
   { name: '#156 群聊模式占卜图标强制收隐藏池（任意位置都隐藏，修「群聊开启后桌面占卜图标不消失」——原只在首页图标组原位时才收）', file: 'js/personalize.js', needle: 'if (divBtn && divBtn.parentNode !== pool) {' },
   { name: '#156 applyDeskLayout 末尾重应用群聊模式（防 bare 布局应用把占卜从隐藏池按 desk-layout 复活回桌面）', file: 'js/personalize.js', needle: 'try { applyGroupChatMode(); } catch (e) {}' },
+  { name: '#157 聊天getPool默认主字卡只在自定义text池空时兜底并入（修dc-overall概率形同虚设,5%设置下联系人基本用默认字卡）', file: 'js/chat.js', needle: "if (catOn('main') && !text.length) {\nconst defGrps" },
+  { name: '#157 群聊gcPool主字卡兜底语义对齐聊天页（同#157概率失效修复）', file: 'js/group-chat.js', needle: "if (catOn('main') && text.length === 0) {" },
+  { name: '#157 经期温柔前缀/动作随默认字卡总开关停用（修总开关关闭后聊天仍偶发前缀/动作字卡）', file: 'js/period.js', needle: 'if (_dcfg.enabled === false) return text;' },
 ];
 try {
   const built = CHECK_SENTINELS ? '' : readFileSync(join(root, 'index.html'), 'utf8');
@@ -624,7 +627,14 @@ if (CHECK_SENTINELS) {
       'rescued ? c.put(\'./index.html\', rescued)',
       // v3.26.x #143：最终重试写点仅限导航 + 兜底命中 content-type 守卫（防 PNG 污染 canonical 键）
       "res.ok && req.mode === 'navigate'",
-      "m.headers.get('content-type')"
+      "m.headers.get('content-type')",
+      // v3.26.x #157：导航缓存优先+后台静默刷新 + index 专属长超时（修 standalone 快捷方式
+      // 网络优先 3.5s 对 4MB 产物必然超时 → 反复刷新打不开）
+      "const navCached = req.mode === 'navigate'",
+      'INDEX_NETWORK_TIMEOUT = 30000',
+      'isIndexUrl(url) ? INDEX_NETWORK_TIMEOUT : NETWORK_TIMEOUT',
+      "fetchWithTimeout('./index.html', INDEX_NETWORK_TIMEOUT)",
+      'isIndexUrl(u) ? INDEX_NETWORK_TIMEOUT : NETWORK_TIMEOUT'
     ];
     const swMiss = swNeedlesSrc.filter(n => !swSrc.includes(n));
     if (swMiss.length) {
@@ -652,7 +662,13 @@ try {
     'rescued ? c.put(\'./index.html\', rescued)',
     // v3.26.x #143：最终重试写点仅限导航 + 兜底命中 content-type 守卫（防 PNG 污染 canonical 键）
     "res.ok && req.mode === 'navigate'",
-    "m.headers.get('content-type')"
+    "m.headers.get('content-type')",
+    // v3.26.x #157：导航缓存优先+后台静默刷新 + index 专属长超时
+    "const navCached = req.mode === 'navigate'",
+    'INDEX_NETWORK_TIMEOUT = 30000',
+    'isIndexUrl(url) ? INDEX_NETWORK_TIMEOUT : NETWORK_TIMEOUT',
+    "fetchWithTimeout('./index.html', INDEX_NETWORK_TIMEOUT)",
+    'isIndexUrl(u) ? INDEX_NETWORK_TIMEOUT : NETWORK_TIMEOUT'
   ];
   const swMissing = swNeedles.filter(n => !swSrc.includes(n));
   if (swMissing.length) {

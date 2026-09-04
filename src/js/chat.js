@@ -1082,7 +1082,12 @@ const isOff = window.isDefaultCardOff || null;
 const useChat = window.defaultCardUse ? window.defaultCardUse('chat') : true;
 const catOn = window.defaultCardCat || (() => true);
 if (dcfg.enabled !== false && useChat) {
-if (catOn('main')) {
+// v3.26.x #157：默认主字卡只在自定义 text 池为空时兜底并入——原实现开启即把 4600+
+// 张默认主字卡无条件全量并入回复池，「整体概率」dc-overall（如 5%）只管 genOneReply
+// 里 drawCards 那条混入路径，对池子本身无效：650 张自定义对 4600+ 默认均匀随机抽取，
+// 体感「概率调到 5% 联系人还是基本用默认字卡」（小米15Pro+Chrome 等多机型反馈）。
+// 对齐颜文字/emoji 分支的兜底语义：有自定义就用自定义，默认字卡按 dc-overall 概率混入。
+if (catOn('main') && !text.length) {
 const defGrps = (window.getDefaultCardGroups && window.getDefaultCardGroups('main')) || [];
 defGrps.forEach(g => {
 const arr = g[1] || [];

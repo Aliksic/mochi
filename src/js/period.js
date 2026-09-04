@@ -402,6 +402,13 @@
     if (typeof text !== 'string' || !text) return text;
     try {
       if (!status().inPeriod) return text;
+      // v3.26.x #157：温柔前缀/温柔动作属系统预设字卡（DEFAULT_CARD_DATA.period）——
+      // 原实现只认逐张开关（dc-off-period:*），无视总开关/聊天使用：用户关掉「使用默认
+      // 字卡」后聊天里仍偶发前缀/动作字卡（小米15Pro 等多机型反馈）。现随总开关与
+      // 聊天使用场景开关一并停用。
+      var _dcfg = (window.defaultCardCfg && window.defaultCardCfg()) || {};
+      if (_dcfg.enabled === false) return text;
+      if (window.defaultCardUse && !window.defaultCardUse('chat')) return text;
       if (Math.random() * 100 >= 25) return text;
       var p = warmPrefix();
       var s = warmSuffix();

@@ -861,7 +861,9 @@
       const isOff = a ? a.isOff : (window.isDefaultCardOff || null);
       const catOn = a ? a.cat : (window.defaultCardCat || (() => true));
       if (dcfg.enabled !== false && useChat) {
-        if (catOn('main')) {
+        // v3.26.x #157：主字卡兜底语义对齐聊天页 getPool——只在自定义 text 池为空时并入，
+        // 概率混入交给 getDefaultCardsFor（dc-overall）；否则 4600+ 默认卡淹没自定义池
+        if (catOn('main') && text.length === 0) {
           const defGrps = (window.getDefaultCardGroups && window.getDefaultCardGroups('main')) || [];
           defGrps.forEach(g => {
             (g[1] || []).forEach(card => {

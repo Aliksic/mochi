@@ -23,21 +23,22 @@ for (const label of ['src/pwa/sw.js', 'sw.js']) {
   const sw = readFileSync(p, 'utf8');
   const tag = '[' + label + '] ';
 
-  // 1+2) 最终重试写点收口
+  // 1+2) 最终重试写点收口（#157 起文件内有多处写点/守卫，一律从 gate 起向后找最终重试自己的）
   const gate = sw.indexOf("if (res && res.ok && req.mode === 'navigate')");
-  const eof = sw.indexOf('if (!isCompleteHtml(t)) return res;');
-  const put = sw.indexOf("c.put('./index.html', copy)");
+  const eof = sw.indexOf('if (!isCompleteHtml(t)) return res;', gate);
+  const put = sw.lastIndexOf("c.put('./index.html', copy)");
   t(tag + '最终重试写缓存仅限导航请求', gate > -1);
   t(tag + '重试写点挂 isCompleteHtml 且先校验后落盘', gate > -1 && eof > gate && put > eof);
 
   // 3) 导航兜底命中 content-type 守卫
   const guard = sw.indexOf("if (req.mode === 'navigate' && m &&");
-  const hdr = sw.indexOf("m.headers.get('content-type')");
+  const hdr = guard > -1 ? sw.indexOf("m.headers.get('content-type')", guard) : -1;
   t(tag + '兜底命中 content-type 守卫（仅导航）', guard > -1 && hdr > guard && hdr - guard < 200);
 
   // 4) 所有 canonical 写点均受保护（写点上游 600 字符内出现校验/抢救体）
+  // #157：新增导航「缓存优先+后台静默刷新」写点（后台刷新体同样过 EOF 校验）共 6 处
   const parts = sw.split("c.put('./index.html'").slice(1);
-  t(tag + 'canonical 写点共 ' + parts.length + ' 处', parts.length === 5);
+  t(tag + 'canonical 写点共 ' + parts.length + ' 处', parts.length === 6);
   let unguarded = 0, cursor = 0;
   for (let i = 0; i < parts.length; i++) {
     const at = sw.indexOf("c.put('./index.html'", cursor);

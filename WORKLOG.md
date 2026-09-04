@@ -1,4 +1,12 @@
-# 本次构建者：AI-B（本会话：#156 群聊模式没隐藏桌面占卜图标修复，改动 src/js/personalize.js、build.mjs 哨兵 2 条、tools/verify-group-desk-icon.mjs、FIX-REGRESSION.md #156 行；开工时工作区含并行会话已声明完成的「其他互动功能字卡」改动 chatcard.js/default-cards.js/template.html 一并收口）
+# 本次构建者：本会话（#157 默认字卡三连修+SW导航缓存优先，见下方首条；上一构建者 AI-B #156 已收口提交）
+
+### 2026-09-04 19:4x（#157 默认字卡三连修：概率失效/总开关漏/快捷方式难打开；跨域改 sw.js 已留痕；已构建）
+* [AI-A 域 + 跨域 sw.js]（**改动文件：src/js/chat.js + src/js/group-chat.js（默认主字卡改 `catOn('main') && !text.length` 只在自定义 text 池空时兜底并入，dc-overall 概率混入交回 drawCards/getDefaultCardsFor——原实现 4600+ 默认卡无条件全量进池，5% 设置形同虚设）；src/js/period.js（warmText 温柔前缀/动作加总开关+聊天使用门控——原只认逐张开关，总开关关了聊天仍偶发前缀/动作字卡）；src/pwa/sw.js（**跨域改动，理由：#143/#136 同文件导航链路，AI-B 名下**——导航请求改「缓存优先+后台静默刷新」navCached，新增 INDEX_NETWORK_TIMEOUT=30000 接入 install 预缓存/activate 补拉/PRECACHE_NOW/后台刷新四处 index 分支，产物 4MB 在 3.5s 网络优先下必然超时=standalone 反复刷新打不开的根因）；build.mjs（FIX_SENTINELS +4 条）；tools/verify-default-card-mix.mjs（新增 13 断言）；tools/verify-sw-nav-fallback.mjs（canonical 写点 5→6）；FIX-REGRESSION.md #157 行）；构建状态：见下条构建记录**）。
+* 诊断对照：用户诊断里「开关持久化体检 读取=缺失」是探针自身键拼接双冒号（P 已含尾冒号又拼一次），非存储故障；IDB/LS 权威值均正确，勿据此误修存储层。
+
+
+### 2026-09-04 2x:xx（用户报障：OPPO 一加Ace3 + Edge「安装快捷方式到桌面打开→一直停留在开启界面点不动、显示 mochi 英文字母」；仅记录未改码）
+* [AI-B 域]（无源码改动，不涉及构建）。症状与 #143（一加Ace2+Edge「整页只有 mochi 字母图」）/#136 家族一致：设备大概率跑着 #143 修复部署（2026-09-03 17:3x 构建）之前的旧 SW + 被污染 canonical 缓存。已回复用户恢复步骤：联网在 Edge 直接开网址让新 SW 激活→无效则清站点数据→重装快捷方式。若联网更新后仍复发（新 SW 下再现字母图），按 #143 二次复发走熔断：补真机诊断 + 核对 verify-sw-nav-fallback 兜底链是否有第 6 处漏网写点。
 
 ### 2026-09-04 19:1x（用户反馈三入口还是没分开：.cc-tab 的 display:inline-flex 覆盖 [hidden] 致分区从未生效；已修复构建提交）
 * [AI-A 域]（**改动文件：src/css/chat-pages.css（补 .cc-tab[hidden]{display:none}——openCcPage 的 hidden 分区逻辑因此前被作者 display 规则覆盖而完全无效，同 base.css .poke-tools[hidden] 记载过的教训）；构建状态：已构建·sw mochi-mtmugtlm 哨兵 312/312 哑哨兵 0；已提交推送**）。

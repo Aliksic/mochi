@@ -14,6 +14,13 @@ const PRECACHE = ['./', './index.html', './manifest.json', './icon-192.png', './
 // 看不到新版。缩短到 3.5s：慢网络下页面秒开（回退缓存），配合页面版本检测 +
 // PRECACHE_NOW 预取机制，用户点「刷新使用新版」时能真正拿到最新版。
 const NETWORK_TIMEOUT = 3500; // 网络请求等待上限（毫秒）
+// v3.26.x #157：index.html 专属超时（30s）。产物 index.html 已 4MB+，国内访问 GitHub
+// Pages 3.5s 内根本传不完 → 安卓 Chrome 桌面快捷方式（standalone）每次启动都走导航
+// 网络优先 → 必然超时回退缓存；预缓存/补拉/PRECACHE_NOW 全部 3.5s 失败 → 新缓存常年
+// 缺 index、更新永远刷不上，表现为「快捷方式要刷新很多次才能打开甚至打不开」（小米
+// 15Pro+Chrome 等多机型反馈，浏览器标签页因有 HTTP 缓存不明显）。index 下载单独给
+// 长超时，小资源仍走 3.5s 快速回退。
+const INDEX_NETWORK_TIMEOUT = 30000;
 
 // 带超时的 fetch：超时按失败处理，走回退逻辑
 function fetchWithTimeout(req, ms) {
@@ -68,7 +75,8 @@ self.addEventListener('install', (e) => {
   e.waitUntil(
     caches.open(CACHE).then((c) =>
       Promise.allSettled(PRECACHE.map((url) =>
-        fetchWithTimeout(url, NETWORK_TIMEOUT).then((res) => {
+        // v3.26.x #157：index.html 用长超时（4MB 在慢网络 3.5s 必然失败 → 新缓存常年缺 index）
+        fetchWithTimeout(url, isIndexUrl(url) ? INDEX_NETWORK_TIMEOUT : NETWORK_TIMEOUT).then((res) => {
           if (res && res.ok) {
             // v3.26.x #134：index.html 完整性校验——截断体不进缓存（下同）
             if (isIndexUrl(url)) {
@@ -144,7 +152,7 @@ self.addEventListener('activate', (e) => {
             }
             // v3.26.x #136：无 index 时先放抢救的完整旧版兜底（网络补拉失败也有得用）
             const seed = rescued ? c.put('./index.html', rescued).catch(() => {}) : Promise.resolve();
-            return seed.then(() => fetchWithTimeout('./index.html', NETWORK_TIMEOUT).then((res) => {
+            return seed.then(() => fetchWithTimeout('./index.html', INDEX_NETWORK_TIMEOUT).then((res) => {
               if (res && res.ok) {
                 // v3.26.x #134：补写前同样校验完整性，截断体不进缓存
                 return res.clone().text().then((t) => {
@@ -179,7 +187,9 @@ self.addEventListener('message', (e) => {
   const urls = Array.isArray(data.urls) ? data.urls : ['./index.html'];
   caches.open(CACHE).then((c) =>
     Promise.allSettled(urls.map((u) =>
-      fetchWithTimeout(u, NETWORK_TIMEOUT).then((res) => {
+      // v3.26.x #157：index.html 用长超时——PRECACHE_NOW 是「刷新使用新版」的落盘通道，
+      // 3.5s 对 4MB 产物必然失败 → 用户点刷新永远拿不到新版、反复刷新
+      fetchWithTimeout(u, isIndexUrl(u) ? INDEX_NETWORK_TIMEOUT : NETWORK_TIMEOUT).then((res) => {
         if (res && res.ok) {
           // v3.26.x #134：PRECACHE_NOW 是「刷新使用新版」的落盘通道，同样校验，
           // 否则弱网下用户点刷新反而把截断的新版固化进缓存（永远卡残缺版）
@@ -214,9 +224,37 @@ self.addEventListener('fetch', (e) => {
   // 版本检测才真正可靠。notice.json（开屏公告）同理。
   const u = new URL(req.url);
   if (u.pathname.endsWith('/version.json') || u.pathname.endsWith('/notice.json')) return;
-  // 网络优先：在线时始终用最新，超时/失败才回退缓存
+  // v3.26.x #157：导航请求改「缓存优先 + 后台静默刷新」——standalone 桌面快捷方式每次
+  // 启动都是一条导航请求，原「网络优先 3.5s」对 4MB 产物在国内网络必然超时回退缓存：
+  // 每次打开先白等 3.5s、预缓存/更新通道全失败 → 「要刷新很多次才能打开甚至打不开」。
+  // 有完整 HTML 缓存时立即返回（秒开，弱网增益最大），同时后台用 index 长超时拉最新
+  // 完整体写缓存（静默保持新鲜，配合页面版本条「刷新使用新版」）；无缓存（首装/被清/
+  // 污染）才落到下方原网络优先兜底链。
+  const navCached = req.mode === 'navigate'
+    ? caches.open(CACHE).then((c) => c.match('./index.html')).then((m) => m || caches.match(req)).then((m) => {
+        // #143 同款 content-type 守卫：历史 PNG 污染条目当未命中，落回网络兜底链
+        if (m && !/text\/html/i.test(String((m.headers && m.headers.get('content-type')) || 'text/html'))) m = null;
+        if (!m) return null;
+        e.waitUntil(
+          fetchWithTimeout(req, INDEX_NETWORK_TIMEOUT).then((res) => {
+            if (res && res.ok) {
+              // 后台刷新体同样必须过 #134 完整性校验才落 canonical 键（第 6 写点）
+              return res.clone().text().then((t) => {
+                if (!isCompleteHtml(t)) return undefined;
+                const copy = res.clone();
+                caches.open(CACHE).then((c) => c.put('./index.html', copy));
+                return res;
+              }).catch(() => {});
+            }
+            return undefined;
+          }).catch(() => {})
+        );
+        return m;
+      }).catch(() => null)
+    : Promise.resolve(null);
+  // 网络优先：在线时始终用最新，超时/失败才回退缓存（导航缓存未命中时才走到这里）
   e.respondWith(
-    fetchWithTimeout(req, NETWORK_TIMEOUT)
+    navCached.then((hit) => hit || fetchWithTimeout(req, NETWORK_TIMEOUT)
       .then((res) => {
         if (res && res.ok) {
           // v3.26.x #134：导航文档写缓存前校验完整性——网络中途截断的响应（弱网/
@@ -299,6 +337,7 @@ self.addEventListener('fetch', (e) => {
           });
         });
       })
+    )
   );
 });
 

@@ -8779,9 +8779,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1788519727066">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.425</b></span>
-        <span class="sv-deploy">部署于 2026-09-04 19:02<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1788525489261">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.426</b></span>
+        <span class="sv-deploy">部署于 2026-09-04 20:38<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9904,7 +9904,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.425</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.426</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
       <!-- v3.27.x：设置页底部防骗声明 -->
       <div class="set-alert">
@@ -10172,7 +10172,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.425</span>
+              <span class="lic-ver">v3.26.426</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -23953,7 +23953,7 @@ const isOff = window.isDefaultCardOff || null;
 const useChat = window.defaultCardUse ? window.defaultCardUse('chat') : true;
 const catOn = window.defaultCardCat || (() => true);
 if (dcfg.enabled !== false && useChat) {
-if (catOn('main')) {
+if (catOn('main') && !text.length) {
 const defGrps = (window.getDefaultCardGroups && window.getDefaultCardGroups('main')) || [];
 defGrps.forEach(g => {
 const arr = g[1] || [];
@@ -31501,7 +31501,7 @@ const useChat = a ? a.use('chat') : (window.defaultCardUse ? window.defaultCardU
 const isOff = a ? a.isOff : (window.isDefaultCardOff || null);
 const catOn = a ? a.cat : (window.defaultCardCat || (() => true));
 if (dcfg.enabled !== false && useChat) {
-if (catOn('main')) {
+if (catOn('main') && text.length === 0) {
 const defGrps = (window.getDefaultCardGroups && window.getDefaultCardGroups('main')) || [];
 defGrps.forEach(g => {
 (g[1] || []).forEach(card => {
@@ -62433,6 +62433,9 @@ function warmText(text) {
 if (typeof text !== 'string' || !text) return text;
 try {
 if (!status().inPeriod) return text;
+var _dcfg = (window.defaultCardCfg && window.defaultCardCfg()) || {};
+if (_dcfg.enabled === false) return text;
+if (window.defaultCardUse && !window.defaultCardUse('chat')) return text;
 if (Math.random() * 100 >= 25) return text;
 var p = warmPrefix();
 var s = warmSuffix();
@@ -77895,4 +77898,4 @@ return { lock: document.body.classList.contains('scroll-lock'), open: open };
 <!-- __MOCHI_EOF__ -->
 </body>
 </html>
-<!-- __MOCHI_EOF__ mtmugtlm -->
+<!-- __MOCHI_EOF__ mtmxwbql -->
