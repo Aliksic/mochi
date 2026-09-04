@@ -1,5 +1,11 @@
 # 本次构建者：本会话（#162 iPadOS 26 Safari 回消息视图上漂修复）
 
+### 2026-09-05 0x:xx（#162 收口：回归验证 + C 盘磁盘满根因清理；本条为提交 b79f793 的验证补记）
+* [AI-B 域·环境]（**无源码改动**。#162 修复代码由并行会话核对哨兵 324 全绿后**代为收口提交 b79f793**，本会话确认提交内容与工作区一致，无需重做）。**磁盘满根因已清**：C 盘曾 0 字节可用（verify:all 报 ENOSPC），实为多轮 verify 泄漏的 **78 个无头 Chrome 进程**（user-data-dir 全指向 Temp\mochi-*，含 7 小时前泄漏的一个持续写 32.8GB 缓存）+ /tmp 43GB 临时档；已全部终止并删除 /tmp/mochi-*，C 盘恢复 **44GB 可用**。**请 verify 脚本作者注意：跑 Chrome 的脚本异常路径要 try/finally 清理 user-data-dir 与子进程**，否则每轮验证泄漏一次，磁盘会再次打满（历史磁盘满事故同族）。
+* 回归口径：磁盘满期间并行会话跑的 tools/verify-all-full.log（已从库删除）大面积飘红不可信（ENOSPC+78 进程抢占）。干净环境复跑 verify:all（202 脚本）仅 3 红：verify-interact-frequency 12/1、verify-invite-settings 27/28（两项**在 f20003c 即 #162 之前的产物上原样复现，属存量问题**，与本修复无关，涉及互动概率迁移与邀请面板标题断言，待 AI-A 排查）、verify-interact-popup-stale 9/1（单跑即过，抖动）。verify.mjs 10/10、哨兵 324/324 哑哨兵 0、820×1180 WebKit 探针贴底验证过（探针已按临时件约定删除）。
+* 待办登记：①存量红 verify-interact-frequency / verify-invite-settings（AI-A 域）；②真机验证 #162（iPad Air 7 连发消息贴底 + 手动上滑不被拽回）。
+
+
 ### 2026-09-04 深夜（用户报障 #162：iPad Air 7 Safari 聊天页对方每回一条消息视图上漂一次不贴底；已构建提交）
 * [AI-A 域]（**改动文件：src/js/chat.js（①scrollChatBottom 置贴底钉住态 chatPinnedBottom=true；②maybeScrollChatBottom 来消息侧对齐 out 侧 rAF+150ms 复写口径，仅钉住时；③chat-body 捕获阶段 img load 监听——消息图片 loading=lazy onload 晚于滚底、内容长高顶开视图，钉住期间回到底部；④touchstart/wheel 解除钉住不抢用户滚动权）、build.mjs（FIX_SENTINELS +3 条）、FIX-REGRESSION.md（#162 行）**；构建状态见下）。
 * 诊断：无头 WebKit 820×1180 探针（tools/_tmp-ipad-scroll.mjs，临时用完即删）复现逻辑层正常（st=sh-ch 贴底），判定为 iPadOS 26 Safari 滚动回归簇（公开报告：iOS 26 fixed/sticky 错位、vv.offsetTop 不复位等）下的单次 scrollTop 写入不可靠 + lazy 图片迟到加载顶开视图的叠加；修复为鲁棒性加固，语义不变（用户手动上滑阅读时不抢滚动）。
