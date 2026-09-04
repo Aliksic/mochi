@@ -194,7 +194,7 @@ check('B2 系统预设情话页仍完整 46 句', b2 === 46, b2);
 await evalJs("(function(){document.querySelectorAll('.page').forEach(function(p){p.hidden=true});document.getElementById('page-chatcard').hidden=false;var e=document.getElementById('li-checkin-cards');if(e)e.click();var t=document.querySelector('#page-checkin-cards .fav-tab[data-cktab=place]');if(t)t.click();return true;})()");
 await sleep(300);
 const b3 = await evalJs("document.querySelectorAll('#cck-sys-list .tc-qrow').length");
-check('B3 查岗系统预设页完整（地点10句）', b3 === 10, b3);
+check('B3 查岗系统预设页完整（地点≥10句；预设池后续扩容不算回归）', b3 >= 10, b3);
 
 const b4 = await evalJs(`(function(){
   var ck=(function(){try{return JSON.parse(localStorage.getItem('xy-home-v2:default:checkin-current')||'null')}catch(e){return null}})();
@@ -211,7 +211,9 @@ const c1 = await evalJs(`(function(){
 check('C1 刷新后清洗结果保持（IDB 回填不复活污染）', c1 === '{"q":1,"p":1,"a":1,"m":1,"mk":"1"}', c1);
 
 // ============ D 组：干净用户零扰动 ============
-await evalJs("(function(){var i=0;while(localStorage.length&&i++<500){localStorage.removeItem(localStorage.key(0))}return 'cleared';})()");
+// #129 修正：LS 清空之外必须连 IndexedDB 一并删库隔离——否则重载时 idbRestore 会把
+// C 组残留（1 张卡）盖回 LS，D1 的 n===2 必红（同 D2 注释里的已知坑，此前只修了 D2）
+await evalJs("(function(){var i=0;while(localStorage.length&&i++<500){localStorage.removeItem(localStorage.key(0))}try{indexedDB.deleteDatabase('mochi-db')}catch(e){};return 'cleared';})()");
 await seedAndLoad(`(function(){
   var P='xy-home-v2:default:';
   localStorage.setItem(P+'quote-cards', JSON.stringify([{t:'纯用户句A'},{t:'纯用户句B',grp:'g1'}]));
