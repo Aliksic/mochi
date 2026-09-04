@@ -106,9 +106,12 @@
   // 遍历全部分类时排除，防止功能字卡被聊天自动回复误抽）。
   const CC_FUNC_KEYS = ['fish', 'eat', 'period', 'water', 'garden', 'sync', 'reach', 'cjian', 'room', 'piggy', 'drift', 'interact', 'music'];
   const CC_ALL_TYPES = CC_TYPES.concat(CC_FUNC_KEYS);
-  // v3.26.x #139：GIF 动图上传大小上限（base64 长度，≈3MB 文件）——GIF canvas 压缩会丢
-  // 动画只能直存原图，此前无上限，几 MB~几十 MB 的动图整份进库是字卡库膨胀大头之一
-  const CC_GIF_MAX_B64 = 4 * 1024 * 1024;
+  // v3.26.x #139：GIF 动图上传大小上限（base64 长度）——GIF canvas 压缩会丢
+  // 动画只能直存原图，此前无上限，几 MB~几十 MB 的动图整份进库是字卡库膨胀大头之一。
+  // #160：4MB base64（≈3MB 文件）仍太大——用户库堆到 40MB/22MB（双作用域合计 62.8MB），
+  // 每次保存/读取对整库 JSON.stringify/parse 在 iOS WebKit 上是秒级长任务=卡死根因，
+  // 砍到 512KB base64（≈380KB 文件）守住单卡体积；已有大 GIF 靠用户手动清理（先备份）。
+  const CC_GIF_MAX_B64 = 512 * 1024;
   function mergeWithPublic(g) {
     const p = pubGroupsRaw();
     let has = false;
@@ -2190,7 +2193,7 @@
                   if (String(reader.result || '').length > CC_GIF_MAX_B64) {
                     skipped++; done++;
                     if (done === files.length) finishUpload(done - skipped, skipped);
-                    toast('GIF「' + ((f && f.name) || '动图') + '」超过 3MB，已跳过');
+                    toast('GIF「' + ((f && f.name) || '动图') + '」超过 380KB，已跳过');
                     return;
                   }
                   process(reader.result); return;

@@ -1,4 +1,4 @@
-# 本次构建者：本会话（#159 跨桌面来电后台通知修复；#158 已由上一会话完成并提交 1d4a4a9）
+# 本次构建者：本会话（#160 GIF 上传上限砍到 512KB，修 iOS 字卡库膨胀卡死）
 
 ### 2026-09-04 22:1x（用户报障：联系人打电话手机浏览器总是没有后台弹窗；已修复构建提交）
 * [AI-B 域 + 跨域 incoming-requests.js]（**跨域改动 incoming-requests.js，理由：#150 同桌面后台来电已在 call.js（AI-B）修过，本条是同族漏网的跨桌面半边**。改动文件：src/js/incoming-requests.js（①maybeIncoming 跨桌面来电去掉 `!document.hidden` 前台门控——后台永不掷概率，deliver() 现成的 hidden 分支「XX来电」系统通知对 call 是死代码；②call 分支通知加 force:true 同 #150 口径绕 15s 过渡期/去重闸门）、build.mjs（FIX_SENTINELS +2）、FIX-REGRESSION.md（#159 行）；构建状态：已构建·sw mochi-mtn1e712 哨兵 317/317 哑哨兵 0；verify 10/10；已提交推送**）。
@@ -694,3 +694,8 @@
 
 * 待对方处理：无。
 
+
+### 2026-09-04 22:20（用户报障：iPhone13 Edge 网页动不动卡死；#160 GIF 上限砍半兆，已构建提交）
+* [AI-A 域 chatcard.js]（**改动文件：src/js/chatcard.js、build.mjs（FIX_SENTINELS +1）、FIX-REGRESSION.md（#160 行）；构建状态：已构建·sw mochi-mtn1ja3l 哨兵 318/318 哑哨兵 0；npm run verify 10/10；已提交**）。
+* 诊断锁定根因：用户字卡库双作用域合计 62.8MB（default:cc-groups=40.5MB + cmtlsammb56c:cc-groups=22.3MB，大头是 base64 GIF/大图字卡），iOS WebKit 每次整库 stringify/parse 是秒级长任务 → 卡死。稳妥路线（用户选定「不出错」方案）：CC_GIF_MAX_B64 4MB base64→512KB（≈380KB 文件），超限提示文案同步；不动数据层双写（风险大不做）。存量清理需用户侧：先导出备份，再进字卡管理删几 MB 级大 GIF，目标 cc-groups 降到 5MB 内。
+* 待真机/用户：清理大 GIF 后重新生成诊断确认体积下降、卡死消失；传 >380KB GIF 应被拒并提示。
