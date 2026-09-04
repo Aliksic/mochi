@@ -1,5 +1,11 @@
 # 本次构建者：AI-B（本会话：塔罗扩 78 张 + 补 7 张牌阵；改动前 git status 有另一会话 clock.js 回填+build.mjs 哨兵未提交改动，已验证语法完整成套，构建包含）
 
+### 2026-09-04 13:4x（防骗+署名禁倒卖声明「运行时回填」恢复并扩展双条（防倒卖核心手段）；已随并行会话 962347d 构建入库）
+* [AI-B 域]（**改动文件：src/js/clock.js（顶部新增回填 IIFE：JS 常量兜底 + fetch 官方部署地址 notice.json 取权威 alert/alert2 强刷「开屏两条置顶声明 + 设置页 set-alert」——元素缺失重建插公告区最顶（条1防骗在上/条2署名紧跟）、文案被改（标题+全部特征词 marks 不在位）重写回官方版；二传者自己部署的副本也会向官方域名拉取，想删声明必须连回填逻辑一起改）、src/template.html（两条静态置顶条补 data-anti-scam="1"/"2" 标记供回填认领）、build.mjs（FIX_SENTINELS +3：insertBefore(box, refNode || notice.firstChild) / OFFICIAL_NOTICE, { cache: 'no-store' } / bar.marks.every，均 clock.js 内唯一逻辑锚点）、FIX-REGRESSION.md（#148 行）；构建状态：本会话 13:35 已构建（sw mochi-mtmisiew 哨兵 289/289），产物被并行会话 13:37 构建（mtmitlvc）覆盖，**全部改动随其 962347d 一并入库（其 WORKLOG 已留痕），哨兵全绿，双方知悉**）。
+* 需求：用户确认恢复 f7a8b5c 首建、0965278 清理时被整块移除的「防骗声明运行时回填」，并扩展为防骗+署名禁倒卖双条（防倒卖核心：任何二传副本联网时仍显示官方权威声明）。
+* 验证：node --check 过；node build.mjs --check-sentinels 289 全绿哑哨兵 0；HEAD index.html 含 OFFICIAL_NOTICE×2 / 缺失重建逻辑 / data-anti-scam×5。
+* 待真机：官方站开屏最顶两条声明正常无重复；断网开屏仍有静态兜底；设置页底部声明含署名禁倒卖句；改动 notice.json 的 alert/alert2 并部署后，二传副本开屏声明会远程跟随更新。
+
 ### 2026-09-04 13:36（塔罗扩完整 78 张（22 大 + 56 小阿卡纳，全正逆位）+ 补 7 张完整牌阵选项；已构建）
 * [AI-A 域]（**改动文件：src/js/divination.js（TAROT 扩 56 张小阿卡纳：权杖/圣杯/宝剑/星币 ×1~10+宫廷 4，均带正逆位寓意+详细解读；TAROT_ICONS 新增 staff/sword/coin/page/knight/queen/king 7 个花色/人物图标；MODE_LABELS 补 7 张位标签：塔罗=过去/现在/未来/阻碍/助力/态度/结果）、src/template.html（桌面页 div-counts + 聊天页半框各补「7 张」按钮；功能介绍页文案改 78 张）；构建状态：已构建·sw mochi-mtmitlvc 哨兵 289/289 哑哨兵 0**）。
 * 用户报障「占卜牌的数量」：核对=抽牌逻辑无 bug、牌库数与注释一致；真差异=头注释承诺 7 张牌阵但 UI 从未有该按钮。本次扩 78 张 + 补 7 张按钮一并收口。
