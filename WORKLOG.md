@@ -1,4 +1,7 @@
-# 本次构建者：本会话（#157 默认字卡三连修+SW导航缓存优先，见下方首条；上一构建者 AI-B #156 已收口提交）
+# 本次构建者：本会话（#158 邀请婉拒话术视角修正，见下方首条；#157 已完成未提交改动由本会话按其 WORKLOG 原样收口提交 92c7d95）
+
+### 2026-09-04 21:5x（用户报障：TA 邀请玩贪吃蛇弹窗点拒绝后，聊天以「我」名义发出「等会儿再陪我玩好不好」，像该由联系人说；已修复构建提交）
+* [AI-A 域]（**改动文件：src/js/chat.js（INVITE_DECLINE 第二条「陪我玩→陪你玩」：该池语义=我拒绝后自己发一句婉拒，原句误写成邀请者TA视角，加 FIX #158 注释）；FIX-REGRESSION.md #158 行；构建状态：已构建·sw mochi-mtn0evpv 哨兵 315/315 哑哨兵 0；verify-default-card-mix 15/15 verify 10/10；已提交推送**）。
 
 ### 2026-09-04 19:4x（#157 默认字卡三连修：概率失效/总开关漏/快捷方式难打开；跨域改 sw.js 已留痕；已构建）
 * [AI-A 域 + 跨域 sw.js]（**改动文件：src/js/chat.js + src/js/group-chat.js（默认主字卡改 `catOn('main') && !text.length` 只在自定义 text 池空时兜底并入，dc-overall 概率混入交回 drawCards/getDefaultCardsFor——原实现 4600+ 默认卡无条件全量进池，5% 设置形同虚设）；src/js/period.js（warmText 温柔前缀/动作加总开关+聊天使用门控——原只认逐张开关，总开关关了聊天仍偶发前缀/动作字卡）；src/pwa/sw.js（**跨域改动，理由：#143/#136 同文件导航链路，AI-B 名下**——导航请求改「缓存优先+后台静默刷新」navCached，新增 INDEX_NETWORK_TIMEOUT=30000 接入 install 预缓存/activate 补拉/PRECACHE_NOW/后台刷新四处 index 分支，产物 4MB 在 3.5s 网络优先下必然超时=standalone 反复刷新打不开的根因）；build.mjs（FIX_SENTINELS +4 条）；tools/verify-default-card-mix.mjs（新增 13 断言）；tools/verify-sw-nav-fallback.mjs（canonical 写点 5→6）；FIX-REGRESSION.md #157 行）；构建状态：见下条构建记录**）。
