@@ -8779,9 +8779,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1788531599073">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.429</b></span>
-        <span class="sv-deploy">部署于 2026-09-04 22:19<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1788534358678">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.430</b></span>
+        <span class="sv-deploy">部署于 2026-09-04 23:05<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9904,7 +9904,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.429</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.430</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
       <!-- v3.27.x：设置页底部防骗声明 -->
       <div class="set-alert">
@@ -10172,7 +10172,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.429</span>
+              <span class="lic-ver">v3.26.430</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -15762,7 +15762,7 @@ if (e && e.key && memoryCache && e.key in memoryCache) delete memoryCache[e.key]
 const G = 'xy-home-v2';
 const EXCLUDE = ['contacts', 'active-contact', 'feed-posts', 'migrated-v1', 'js-errors', 'theme-mode', 'accent-color',
 'fish-log', 'fish-log-global-migrated',
-'incoming-requests', 'desk-checkin-en', 'desk-call-en', 'desk-freq-mode',
+'incoming-requests', 'desk-checkin-en', 'desk-call-en', 'desk-freq-mode', 'call-hold',
 'group-chat-msgs',
 'bg-keepalive', 'bg-notify',
 'gift-wallet', 'wallet-global-migrated',
@@ -51013,7 +51013,7 @@ list.unshift({ type: recType, text: recText, ts: Date.now() });
 s.set('records-call', JSON.stringify(list.slice(0, 50)));
 } catch (e) {}
 }
-function endCall(text) {
+function endCall(text, holdSilent) {
 clearCallActive(); // v3.26.x：正常结束清除进行中标记（中断恢复靠残留检测）
 if (window.stopSfx) window.stopSfx('ring');
 if (window.musicHoldForCall) window.musicHoldForCall(false);
@@ -51021,7 +51021,7 @@ stopTimers();
 if (mask) mask.hidden = true;
 if (mini) mini.hidden = true;
 if (cdEl) cdEl.hidden = true;
-if (currentCall) {
+if (currentCall && !holdSilent) {
 const dur = currentCall.durationSec || (currentCall.connectedTime ? Math.max(0, Math.floor((Date.now() - currentCall.connectedTime) / 1000)) : 0);
 const dir = currentCall.direction;
 const name = currentCall.name || partnerName();
@@ -51039,10 +51039,47 @@ currentCall = null;
 shownAv = null;
 shownName = null;
 }
-function bgCallNotify(name) {
+function bgCallNotify(name, hint) {
 try {
-if (window.bgNotifyCheck) window.bgNotifyCheck(name + ' 来电了', Date.now(), { name: name + '来电', av: partnerAv(), avFixed: true, force: true });
+if (window.bgNotifyCheck) window.bgNotifyCheck(name + ' 来电了' + (hint ? '，' + hint : ''), Date.now(), { name: name + '来电', av: partnerAv(), avFixed: true, force: true });
 } catch (e) {}
+}
+const CALL_HOLD_MS = 3 * 60 * 1000;
+const CALL_HOLD_KEY = 'xy-home-v2:call-hold';
+function heldMissedHtml(nm) {
+return '<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>' + nm + ' 来电 · 未接听';
+}
+function holdIncomingCall(name, cid) {
+try {
+const prev = readCallHold();
+if (prev && prev.cid && Date.now() - prev.ts > CALL_HOLD_MS) {
+notifyCallEnd(prev.cid, heldMissedHtml(prev.name || partnerName()), 'in', '未接听');
+}
+const h = { ts: Date.now(), name: name, cid: cid || (window.__activeCid || 'default') };
+localStorage.setItem(CALL_HOLD_KEY, JSON.stringify(h));
+if (window.idbSet) { try { window.idbSet(CALL_HOLD_KEY, h); } catch (e) {} }
+} catch (e) {}
+bgCallNotify(name, '快回来接听，对方会等你几分钟');
+}
+function readCallHold() {
+try {
+const h = JSON.parse(localStorage.getItem(CALL_HOLD_KEY) || 'null');
+return (h && h.ts) ? h : null;
+} catch (e) { return null; }
+}
+function clearCallHold() {
+try { localStorage.setItem(CALL_HOLD_KEY, '{"ts":0}'); } catch (e) {}
+if (window.idbSet) { try { window.idbSet(CALL_HOLD_KEY, { ts: 0 }); } catch (e) {} }
+}
+function resumeHeldCall() {
+const h = readCallHold();
+if (!h) return;
+clearCallHold();
+if (Date.now() - h.ts <= CALL_HOLD_MS && !currentCall && h.cid === (window.__activeCid || 'default')) {
+incomingCall(true);
+return;
+}
+notifyCallEnd(h.cid || (window.__activeCid || 'default'), heldMissedHtml(h.name || partnerName()), 'in', '未接听');
 }
 document.addEventListener('contact-renamed', (e) => {
 if (currentCall && e.detail && e.detail.id === currentCall.cid) {
@@ -51051,9 +51088,12 @@ syncCallName();
 });
 document.addEventListener('visibilitychange', () => {
 if (document.visibilityState === 'hidden' && currentCall && currentCall.status === 'ringing') {
+const cid = currentCall.cid || (window.__activeCid || 'default');
 const nm = currentCall.name || partnerName();
-endCall('未接听');
-bgCallNotify(nm);
+endCall('', true);
+holdIncomingCall(nm, cid);
+} else if (document.visibilityState === 'visible') {
+resumeHeldCall();
 }
 });
 function closeImageOverlay() {
@@ -51062,7 +51102,7 @@ const iv = document.getElementById('img-view-mask');
 if (iv) iv.hidden = true;
 } catch (e) {}
 }
-function incomingCall() {
+function incomingCall(isReplay) {
 if (currentCall) return;
 closeImageOverlay();
 if (window.playSfx) window.playSfx('ring');
@@ -51079,7 +51119,7 @@ if (statusEl) statusEl.textContent = '对方来电...';
 if (durEl) durEl.textContent = '00:00';
 if (mask) mask.hidden = false;
 setMaskBtns('ringing');
-if (window.chatAddSystem) window.chatAddSystem('<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>' +  name + ' 给你打来了语音通话');
+if (!isReplay && window.chatAddSystem) window.chatAddSystem('<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>' +  name + ' 给你打来了语音通话');
 let count = 30;
 if (cdEl) { cdEl.hidden = false; cdEl.textContent = count + ' 秒后未接听'; }
 const t = setInterval(() => {
@@ -51240,9 +51280,7 @@ if (now - last < 300000) return; // 5 分钟冷却
 if (Math.random() * 100 >= callCfg().incoming) return;
 store.set('records-call-last', String(now));
 if (document.hidden) {
-const nm = partnerName();
-notifyCallEnd(window.__activeCid || 'default', '<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>' + nm + ' 来电 · 未接听', 'in', '未接听');
-bgCallNotify(nm);
+holdIncomingCall(partnerName(), window.__activeCid || 'default');
 return;
 }
 incomingCall();
@@ -51316,8 +51354,13 @@ else if (window.chatAppendToDeskMsg) { window.chatAppendToDeskMsg(cid, sysHtml);
 } catch (e) {}
 try { if (!document.getElementById('page-home').hidden && window.__renderHomeCall) window.__renderHomeCall(); } catch (e) {}
 }
-if (window.__mochiDataReady) { try { recoverCall(); } catch (e) {} }
-else { try { document.addEventListener('mochi-restore-done', function () { try { recoverCall(); } catch (e) {} }); } catch (e) {} }
+function bootCallResume() {
+try { recoverCall(); } catch (e) {}
+setTimeout(function () { try { resumeHeldCall(); } catch (e) {} }, 1200);
+}
+if (window.__mochiDataReady) { try { bootCallResume(); } catch (e) {} }
+else { try { document.addEventListener('mochi-restore-done', function () { try { bootCallResume(); } catch (e) {} }); } catch (e) {} }
+setTimeout(function () { try { resumeHeldCall(); } catch (e) {} }, 20000); // 回填挂起设备兜底（幂等）
 setTimeout(() => {
 function scheduleCallCheck() {
 maybeIncoming();
@@ -77898,4 +77941,4 @@ return { lock: document.body.classList.contains('scroll-lock'), open: open };
 <!-- __MOCHI_EOF__ -->
 </body>
 </html>
-<!-- __MOCHI_EOF__ mtn1ja3l -->
+<!-- __MOCHI_EOF__ mtn36ffa -->

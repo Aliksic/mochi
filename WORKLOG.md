@@ -1,5 +1,9 @@
 # 本次构建者：本会话（#160 GIF 上传上限砍到 512KB，修 iOS 字卡库膨胀卡死）
 
+### 2026-09-04 23:1x（用户反馈 #159 后设计仍缺陷：后台来电点开浏览器联系人已挂断永远接不到；后台来电改「响铃挂起」设计；已构建提交）
+* [AI-B 域]（**改动文件：src/js/call.js（①holdIncomingCall：后台/响铃切走命中来电→发通知（bgCallNotify 加 hint「快回来接听，对方会等你几分钟」）+挂起全局根键 call-hold（LS+IDB，含 cid/name/ts）；②resumeHeldCall：回前台/冷启动 3 分钟内有效挂起→incomingCall(true) 重响可接听（replay 不重复发系统消息），超时/跨桌面/占线→notifyCallEnd 补写未接；③endCall 加 holdSilent 第二参静默收尾不判未接；④clearCallHold 写 {ts:0} 防 idbRestore 回填幽灵挂起，挂起覆盖前先补写超时旧挂起；#160 编号已让给并行 GIF 会话，本条改 #161）、src/js/contacts.js（EXCLUDE 加 call-hold 防全局根键被 migrateLegacy 迁移）、build.mjs（#150 bgCallNotify needle 随签名更新 + #161 哨兵 3 条）；构建状态：已构建·sw mochi-mtn36ffa 哨兵 321/321 哑哨兵 0；verify 10/10；已提交推送**）。
+* 待真机：后台通知→3 分钟内点开应用铃响可接听；超 3 分钟→聊天「来电 · 未接听」；响铃切走再回来→重响；重开浏览器 3 分钟内→重响。
+
 ### 2026-09-04 22:1x（用户报障：联系人打电话手机浏览器总是没有后台弹窗；已修复构建提交）
 * [AI-B 域 + 跨域 incoming-requests.js]（**跨域改动 incoming-requests.js，理由：#150 同桌面后台来电已在 call.js（AI-B）修过，本条是同族漏网的跨桌面半边**。改动文件：src/js/incoming-requests.js（①maybeIncoming 跨桌面来电去掉 `!document.hidden` 前台门控——后台永不掷概率，deliver() 现成的 hidden 分支「XX来电」系统通知对 call 是死代码；②call 分支通知加 force:true 同 #150 口径绕 15s 过渡期/去重闸门）、build.mjs（FIX_SENTINELS +2）、FIX-REGRESSION.md（#159 行）；构建状态：已构建·sw mochi-mtn1e712 哨兵 317/317 哑哨兵 0；verify 10/10；已提交推送**）。
 * 待真机：多联系人+跨桌面来电开、后台通知+保活开，挂后台等冷却→通知栏「XX来电」；同桌面后台来电走 #150 链路，若仍无弹窗先查后台通知开关/权限/保活与 SW 版本（设置→后台通知「测试」按钮一键定位）。

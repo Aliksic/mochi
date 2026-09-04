@@ -19,7 +19,10 @@
     // v3.27.x：desk-freq-mode（跨桌面查岗/来电频率档位）同为全局根键——此前漏排除，
     // 被 migrateLegacy 当旧顶层业务键迁进 default 并删根键，用户选的「标准」静默回退
     // 「安静」（1%/3h），跨桌面查岗/来电几乎不触发。
-    'incoming-requests', 'desk-checkin-en', 'desk-call-en', 'desk-freq-mode',
+    // #160：call-hold（后台来电响铃挂起，call.js 写根命名空间、值含归属 cid）——
+    // 同 bg-* 道理是全局根键，绝不随联系人隔离，防 migrateLegacy 搬进 default 并删根键
+    // （挂起键丢了=用户回来接不到重响的来电）。
+    'incoming-requests', 'desk-checkin-en', 'desk-call-en', 'desk-freq-mode', 'call-hold',
     // v3.12.x：group-chat-msgs（群聊消息，v3.8 起全局存储于根命名空间）——同 bg-* 道理，
     // 不是旧顶层业务键。此前漏排除导致每次刷新 migrateLegacy 把群聊记录搬进 default:
     // 并删根键，群聊页读根键为空 → 历史看似清空（数据滞留 default: 副本）+ 迁移循环空转。

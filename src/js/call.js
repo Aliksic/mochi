@@ -474,7 +474,7 @@
   // 结束通话：清界面 + 聊天系统消息（接通过必带时长）+ 记录
   // v3.5.51：真实时长从接听时刻计算（覆盖对方挂断/不明原因中断路径）；
   //   接通后结束 → 系统消息明确「通话已挂断 / 对方已挂断 · 时长 xx」
-  function endCall(text) {
+  function endCall(text, holdSilent) {
     clearCallActive(); // v3.26.x：正常结束清除进行中标记（中断恢复靠残留检测）
     // v3.5.127：所有结束路径（超时/拒绝/挂断/对方挂断）统一停铃声
     if (window.stopSfx) window.stopSfx('ring');
@@ -484,7 +484,9 @@
     if (mask) mask.hidden = true;
     if (mini) mini.hidden = true;
     if (cdEl) cdEl.hidden = true;
-    if (currentCall) {
+    if (currentCall && !holdSilent) {
+      // #161：holdSilent=true（响铃挂起静默收尾）只清 UI 不写未接——未接由
+      // resumeHeldCall 在挂起超时/无法重响时统一补写，避免「用户明明能接却被判未接」
       // 真实通话时长：durationSec（接通后已计时）兜底用 connectedTime 计算
       const dur = currentCall.durationSec || (currentCall.connectedTime ? Math.max(0, Math.floor((Date.now() - currentCall.connectedTime) / 1000)) : 0);
       const dir = currentCall.direction;
@@ -511,10 +513,57 @@
   //（走 bg-keep 的 showSysNotification 链路：SW 通知页面隐藏也能显示）。
   // force=true：来电是「错过就没了」的单发事件，绕过 bgNotifyCheck 的 15s 过渡期/去重闸门。
   // avFixed=true：来电归属当前桌面，头像用 partnerAv() 权威值，空则走中立 mochi 图标。
-  function bgCallNotify(name) {
+  // #161：加 hint 尾缀——通知文案变为「XX 来电了，快回来接听，对方会等你几分钟」
+  function bgCallNotify(name, hint) {
     try {
-      if (window.bgNotifyCheck) window.bgNotifyCheck(name + ' 来电了', Date.now(), { name: name + '来电', av: partnerAv(), avFixed: true, force: true });
+      if (window.bgNotifyCheck) window.bgNotifyCheck(name + ' 来电了' + (hint ? '，' + hint : ''), Date.now(), { name: name + '来电', av: partnerAv(), avFixed: true, force: true });
     } catch (e) {}
+  }
+  // #161：响铃挂起——后台来电不再「命中即未接」（用户反馈：点开通知永远接不到，
+  // 联系人已经挂断＝设计缺陷）。改为：先发系统通知 + 挂起来电（CALL_HOLD_KEY 全局
+  // 根键，含归属 cid——回前台时可能停在别的桌面；已登记 contacts.js EXCLUDE 防迁移），
+  // CALL_HOLD_MS 内回到应用（visibilitychange visible / 冷启动恢复）→ 重新响铃可接听；
+  // 超时未回 → resumeHeldCall 补写「未接来电」记录+系统消息。
+  const CALL_HOLD_MS = 3 * 60 * 1000;
+  const CALL_HOLD_KEY = 'xy-home-v2:call-hold';
+  function heldMissedHtml(nm) {
+    return '<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>' + nm + ' 来电 · 未接听';
+  }
+  function holdIncomingCall(name, cid) {
+    try {
+      // 覆盖前先处理上一条已超时未处理的挂起（页面冻结期间第二次来电的场景）
+      const prev = readCallHold();
+      if (prev && prev.cid && Date.now() - prev.ts > CALL_HOLD_MS) {
+        notifyCallEnd(prev.cid, heldMissedHtml(prev.name || partnerName()), 'in', '未接听');
+      }
+      const h = { ts: Date.now(), name: name, cid: cid || (window.__activeCid || 'default') };
+      localStorage.setItem(CALL_HOLD_KEY, JSON.stringify(h));
+      if (window.idbSet) { try { window.idbSet(CALL_HOLD_KEY, h); } catch (e) {} }
+    } catch (e) {}
+    bgCallNotify(name, '快回来接听，对方会等你几分钟');
+  }
+  function readCallHold() {
+    try {
+      const h = JSON.parse(localStorage.getItem(CALL_HOLD_KEY) || 'null');
+      return (h && h.ts) ? h : null;
+    } catch (e) { return null; }
+  }
+  function clearCallHold() {
+    // 写 {ts:0} 而非删除：防 idbRestore 用 IDB 旧值回填出「幽灵挂起」重复记未接
+    try { localStorage.setItem(CALL_HOLD_KEY, '{"ts":0}'); } catch (e) {}
+    if (window.idbSet) { try { window.idbSet(CALL_HOLD_KEY, { ts: 0 }); } catch (e) {} }
+  }
+  // 回前台/冷启动检查挂起：有效→重新响铃（incomingCall(true) 不重复发系统消息）；
+  // 过期/桌面不匹配/已在通话→补写未接（notifyCallEnd 跨桌面自动落到归属桌面）
+  function resumeHeldCall() {
+    const h = readCallHold();
+    if (!h) return;
+    clearCallHold();
+    if (Date.now() - h.ts <= CALL_HOLD_MS && !currentCall && h.cid === (window.__activeCid || 'default')) {
+      incomingCall(true);
+      return;
+    }
+    notifyCallEnd(h.cid || (window.__activeCid || 'default'), heldMissedHtml(h.name || partnerName()), 'in', '未接听');
   }
   // 监听联系人重命名事件，实时同步通话昵称
   document.addEventListener('contact-renamed', (e) => {
@@ -525,11 +574,16 @@
   // v3.5.129：响铃中切后台（锁屏/切走）→ 停铃声并结束来电——
   // 后台无法接听，30 秒干响没有意义（安卓后台音频还会常驻媒体通知）
   // v3.31.x：结束的同时补发一条系统通知（未接来电），用户在通知栏可见
+  // #161：升级为「响铃挂起」——切后台静默收尾不判未接（endCall 第二参），
+  // 挂起 CALL_HOLD_MS 内回到应用重新响铃可接听，超时才由 resumeHeldCall 补写未接
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden' && currentCall && currentCall.status === 'ringing') {
+      const cid = currentCall.cid || (window.__activeCid || 'default');
       const nm = currentCall.name || partnerName();
-      endCall('未接听');
-      bgCallNotify(nm);
+      endCall('', true);
+      holdIncomingCall(nm, cid);
+    } else if (document.visibilityState === 'visible') {
+      resumeHeldCall();
     }
   });
   // v3.6.x：通话弹层开始时先关闭大图查看器——img-view-mask z-index 高于 call-mask，
@@ -540,8 +594,9 @@
       if (iv) iv.hidden = true;
     } catch (e) {}
   }
-  // 来电
-  function incomingCall() {
+  // #161：isReplay——响铃挂起回前台重响时 true，不重复发「给你打来了语音通话」系统消息
+  //（挂起前那次前台响铃已发过；后台触发路径则由重响首发，聊天记录两种路径都恰一条）
+  function incomingCall(isReplay) {
     if (currentCall) return;
     closeImageOverlay();
     // v3.5.60：来电播放设置的铃声音效
@@ -561,7 +616,7 @@
     if (durEl) durEl.textContent = '00:00';
     if (mask) mask.hidden = false;
     setMaskBtns('ringing');
-    if (window.chatAddSystem) window.chatAddSystem('<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>' +  name + ' 给你打来了语音通话');
+    if (!isReplay && window.chatAddSystem) window.chatAddSystem('<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>' +  name + ' 给你打来了语音通话');
     // 30 秒倒计时未接
     let count = 30;
     if (cdEl) { cdEl.hidden = false; cdEl.textContent = count + ' 秒后未接听'; }
@@ -755,13 +810,11 @@
       if (now - last < 300000) return; // 5 分钟冷却
       if (Math.random() * 100 >= callCfg().incoming) return;
       store.set('records-call-last', String(now));
-      // v3.31.x：后台命中来电不再直接放弃（原 v3.5.127 直接 return，后台永远没来电通知）——
-      // 后台无法弹来电 UI 也无法接听，改为：写「未接来电」记录 + 聊天系统消息 + 系统通知，
-      // 用户回前台在聊天/通话记录可见，通知栏实时可见「XX来电」
+      // v3.31.x：后台命中来电不再直接放弃（原 v3.5.127 直接 return，后台永远没来电通知）
+      // #161：升级为「响铃挂起」——不再即判未接，先发通知+挂起，3 分钟内回到应用
+      // 重新响铃可接听，超时由 resumeHeldCall 补写未接（写记录/系统消息收口在挂起侧）
       if (document.hidden) {
-        const nm = partnerName();
-        notifyCallEnd(window.__activeCid || 'default', '<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>' + nm + ' 来电 · 未接听', 'in', '未接听');
-        bgCallNotify(nm);
+        holdIncomingCall(partnerName(), window.__activeCid || 'default');
         return;
       }
       incomingCall();
@@ -847,8 +900,15 @@
     } catch (e) {}
     try { if (!document.getElementById('page-home').hidden && window.__renderHomeCall) window.__renderHomeCall(); } catch (e) {}
   }
-  if (window.__mochiDataReady) { try { recoverCall(); } catch (e) {} }
-  else { try { document.addEventListener('mochi-restore-done', function () { try { recoverCall(); } catch (e) {} }); } catch (e) {} }
+  // #161：冷启动恢复——restore 完成后检查响铃挂起（3 分钟内重开浏览器 → 重新响铃可接听；
+  // resumeHeldCall 读后即清 + 写 {ts:0}，重复触发幂等无副作用）
+  function bootCallResume() {
+    try { recoverCall(); } catch (e) {}
+    setTimeout(function () { try { resumeHeldCall(); } catch (e) {} }, 1200);
+  }
+  if (window.__mochiDataReady) { try { bootCallResume(); } catch (e) {} }
+  else { try { document.addEventListener('mochi-restore-done', function () { try { bootCallResume(); } catch (e) {} }); } catch (e) {} }
+  setTimeout(function () { try { resumeHeldCall(); } catch (e) {} }, 20000); // 回填挂起设备兜底（幂等）
   setTimeout(() => {
     function scheduleCallCheck() {
       maybeIncoming();
