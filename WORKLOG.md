@@ -1,5 +1,11 @@
 # 本次构建者：本会话（#163 主动消息/群聊回复不吃默认字卡概率修复）
 
+### 2026-09-05（#164/#165 清理 verify:all 两个存量红——均为脚本侧问题，产品代码无改动·不涉及构建）
+* [AI-A 域]（**改动文件：tools/verify-interact-frequency.mjs（#164）、tools/verify-invite-settings.mjs（#165）**；无 src/产物改动，不涉及构建）。关掉 2026-09-05 待办登记①。
+* #164 verify-interact-frequency（修前 6 跑 2 红抖动 + 1 处断言过时；修后 13/13 ×3 连跑）：①S1/S2「flag 已打但 prob 未吸附」抖动＝页面初始化偶发先把带 `probLowV313=true` 的默认 settings 落盘，脚本种子 `Object.assign` 合并保留旧标记→迁移函数见标记即跳过；修法＝种前先清四库（等效「无标记存量老设备」，语义不变）。②S7 静态断言 `gateCalls===4` 过时＝同频 cc 互动卡（maybeTriggerTACC）加入后闸门接入点实为 5，断言改 5。
+* #165 verify-invite-settings（标题断言确定性红 + 弹窗交互抖动；修后 28/28 ×5 连跑）：①「面板有主动邀请标题」原断言要求 `.gs-title` 恰好 1 个——「其他」面板后来新增跨桌面查岗/打电话分组（#150/#159 同期），改「存在主动邀请标题」；②「点同意→确定→半框打开」固定 400ms 单次点击偶发赶不上异步弹窗，改轮询重试（断言口径不变）。
+* 备注：两脚本失败在 f20003c（#162 之前）即复现，与 #162 无关；gitignore `tools/*.log` 已按 52e3782→a0ed3a0 捋直重放。另一并行会话正在改 build.mjs/idb.js/media-pool.js/personalize.js/template.html（进行中），本条未触碰。
+
 ### 2026-09-05 0x:xx（用户报障 #163：默认字卡概率调到 80-90%，联系人仍总发我自己设置的字卡反复出现；已构建提交）
 * [AI-A 域]（**改动文件：src/js/chat.js（①tryAutoSend autoMsg 先掷 getDefaultCards——原主动消息固定比例只从自定义池抽（该用户池 text=3/emoji=1 故反复出现，dc-overall-chat 对主动消息完全无效=主诉根因）；②__replyPoolDiag 补「默认概率chat/主卡占比」现场）、src/js/group-chat.js（gcGenReply 文本回复按成员桌面 getDefaultCardsFor(st) 覆盖——原只有拍一拍走它，文本半边漏网）、build.mjs（FIX_SENTINELS +2）、tools/verify-default-card-mix.mjs（+2 断言）、FIX-REGRESSION.md（#163 行）**；构建状态见下条）。
 * 贴纸/图片回复路径按设计走聊天设置的媒体概率（默认 10%/5%），默认库无媒体不覆盖，未动；用户想少看自己贴纸可调低该设置。
