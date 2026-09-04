@@ -1001,7 +1001,8 @@ if (defs && defs.type === 'text' && defs.text) t = defs.text;
       // 回复条数（min/max 调反时兜底至少 1 条）
       const rpMin = Math.max(1, Number(c['gc-reply-min']) || 1);
       const rpMax = Math.max(rpMin, Number(c['gc-reply-max']) || 2);
-      const count = randInt(rpMin, rpMax);
+      // #167 同单聊：gc-py-en 是总开关，关闭时每个成员每条只回一条
+      const count = (c['gc-py-en'] === 1) ? randInt(rpMin, rpMax) : 1;
       // 本轮整体掷一次引用（只给第一条带引用，防多条连续引用同一句）
       const wantQuote = hit(c['gc-quote-prob']) && !!quoteText;
       for (let i = 0; i < count; i++) {

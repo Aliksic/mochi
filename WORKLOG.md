@@ -1,4 +1,29 @@
-# 本次构建者：本会话（#170 字卡库瘦身收口：重建对齐产物并提交瘦身会话遗留 src；#129 verify 清理脚本仍在途未动）
+# 本次构建者：本会话（#167 多字卡回复升级总开关收口：关=只回一条，重建打包 + verify-multicard-master 门禁）
+
+> 【占用声明 2026-09-05】#172（用户报障「我的表情包/自定义字卡刷新必丢」）占用 src/js/chat.js 表情包恢复链区域（~6750-6800 与 ~7067-7090）+ build.mjs 哨兵尾部追加 + FIX-REGRESSION.md 新行；与工作区 #167（chat.js 3143/3260 两行）/ #171（chatcard.js）零重叠，勿回滚彼此部分。本会话不构建，收口时一并打入。
+
+> 【占用声明 2026-09-05】#173（用户报障「桌面美化和聊天美化的美化方案无法导出也无法导入」）占用 src/js/personalize.js 导出/导入区域（~1949-2130，startBeautyExport/beautyImportRow 两处；当时该文件已随 1bde7b1 收口无在途改动）+ src/js/data-backup.js（新增 window.mochiExportFile，anchorDownload 之后）+ 跨域 src/js/chat-settings.js（chatSchemeExport 的 doExport 文件分支，理由：聊天美化导出与桌面同病，只修桌面半边用户主诉不闭环）+ build.mjs 哨兵尾部追加 + FIX-REGRESSION.md 新行；与 #167/#171/#172 在途改动零重叠，勿回滚彼此部分。本会话不构建，收口时一并打入。
+
+### 2026-09-05 03:xx（#173 用户报障：桌面美化+聊天美化的美化方案无法导出也无法导入——导出接三级降级保存链+补回复制/粘贴通道；源已完成·未构建，请收口构建者一并打包）
+* [AI-B 域 + 跨域 chat-settings.js]（**改动文件：src/js/data-backup.js（新增 window.mochiExportFile=复用 saveBackupFile 三级降级[分享面板→保存框→确认后 anchorDownload]，暴露给美化两侧复用）、src/js/personalize.js（桌面导出接统一链+无方案也弹方式选择+补回「复制文字」[>3MB 拒绝防剪贴板截断]+文件名本地日期；桌面导入补回「粘贴文本」通道[textarea 与从文件并存，txtImportAuto 选完文件仍自动应用]）、src/js/chat-settings.js（聊天导出「导出文件」接统一链，裸 a[download] 降为兜底，文件名本地日期）、build.mjs（FIX_SENTINELS +4，数组尾部 #173）、FIX-REGRESSION.md（#173 行）、tools/verify-beauty-io.mjs（新增无头行为断言，verify:all 按文件名自动纳入）**；构建状态：**未构建**——构建者由 #167 会话持有，本条只改 src，请收口时与工作区在途改动一并重建打入）。
+* 根因（环境能力缺失，非逻辑缺陷）：无头 Chromium 对线上产物实测四流程（桌面/聊天 × 导出/导入）11/11 全过＝代码链路正常；断点在 f4158f6（08-29）把桌面导出收敛为裸 a[download]、导入收敛为仅文件选择——**iPhone 主屏安装（standalone PWA）无下载管理器，a[download] 静默无反应、文件选择器也常不弹**，夸克等壳浏览器同理 → 桌面四条路全断；聊天导出虽有复制文字，方案含壁纸 data URL 时 JSON 巨大剪贴板写不进。data-backup v3.9.x 早已为同族问题（真我/华为/夸克导出无反应）给数据备份做了三级降级保存，美化导出没跟上。
+* 验证：node --check 三文件过；--check-sentinels 349 全绿哑哨兵 0（首版两条哨兵共用 needle 被哑哨兵体检拦下，已收窄为各自完整调用串）；verify-beauty-io **16/16**（真实点击链路：无方案导出弹方式选择不裸下载/复制文字进剪贴板/打包确认后下载/来源→方式嵌套弹窗不被关/导入粘贴+文件双通道+导入前自动备份/聊天导出复制+下载/聊天导入文件→textarea→应用）。
+* 待真机（iPhone 主屏安装 standalone 优先）：①桌面/聊天美化导出点「导出文件」应弹分享面板（可存到「文件」App），普通安卓浏览器=确认后下载不回归；②导入：粘贴文本与从文件导入均生效，导入前自动备份原美化不变；③复制文字通道对纯文字小方案可用。
+* 编号说明：#171/#172 已被并行会话占用（chatcard 导入诊断/表情包刷新），本条改 #173。
+
+### 2026-09-05 02:xx（#171 iOS16 Safari 导 milk json 报「格式错误」无法导入：导入失败三分流+转存自救+失败现场进诊断；源已完成·未构建——现产物里无本修复，收口需重建）
+* [AI-A 域]（**改动文件：src/js/chatcard.js（pickImportFile：原一个 catch 把三类失败混成「文件格式不正确」→拆「解析失败（带真因+自救）／applyImportData 异常单独提示」；自救链=UTF-16 转存重读（首400字数 NUL 奇偶定字节序 utf-16le/be）+裁剪提取首个{到末个}；空文件→iCloud 未下载完整指引、HTML→回 milk 重新导出指引；失败现场（原因+文件名+大小+开头100字符）写 __jsErrors，设置页复制诊断直接带出）、build.mjs（FIX_SENTINELS +3，接在 #167 新 5 条后）、FIX-REGRESSION.md（#171 行）、tools/verify-cc-import-parse.mjs（新增，纯 Node 抽源码真函数 18 断言；verify-suite 按文件名自动发现，无需改套件）**；构建状态：**未构建**——当前工作区 index.html/sw.js/version.json 是 #167 终版构建（早于本修复，grep utf-16le=0 可证），本条 chatcard.js 改动不在其中；收口时请重建一次把 #171 一并打入，源与产物同 commit）。
+* 根因：iOS 16 Safari 导 milk json 报「文件格式不正确」＝导入入口一个 catch 把三类完全不同的失败混成一句提示（①JSON 解析失败②文件 iOS 转存链路损坏：微信/邮件/文本编辑转存常变 UTF-16、iCloud 未下载完整读到空、网页另存成 HTML③applyImportData 自身抛错如存储配额），真因永远不可见；milk 识别分支本身 8 月已验证（转换模拟 477+6 张全过）。本次修「可诊断性+常见 iOS 损坏自救」，真机上一跑便知真因。
+* 验证：node --check 过；--check-sentinels 343 全绿哑哨兵 0；verify-cc-import-parse 18/18（合法/BOM/UTF-16LE 带 BOM/UTF-16BE 无 BOM/包文字裁剪/空文件/HTML/顶层数组/损坏 JSON/处理异常不报格式/成功不写诊断）。
+* 待真机（iOS 16 Safari，收口构建推送后）：重导 milk json——正常应直接导入；若仍失败，toast 会写具体原因，且设置→复制诊断信息「启动文件异常」一节出现 [字卡导入] 行，发诊断即可定位。
+* 编号说明：#170 已被瘦身会话占用（其 FIX-REGRESSION 行已入库），本条改 #171。
+* 给收口会话：本条与 #167 终版改动同在工作区（build.mjs 里两者哨兵都在、--check-sentinels 343 全绿已验），一并提交即可；勿回滚 chatcard.js/build.mjs/FIX-REGRESSION.md 的 #171 部分。
+
+### 2026-09-05 02:0x（#167 终版：用户报障「关了多字卡回复仍回多条」——实证后按用户预期把「多字卡回复」升级为总开关；已构建提交）
+* [AI-A 域]（**改动文件：src/js/chat.js（scheduleReply/continueChat：py-en 关→回复条数强制 1，改回无条件 randInt 即消失）、src/js/group-chat.js（gcGenReply 同款 gc-py-en 联动，群聊语义对齐）、src/template.html（单聊/群聊「多字卡回复」两组补总开关语义说明，覆盖 e37f893 误收的中间态文案）、build.mjs（#167 哨兵 5 条=chat.js 2+group-chat.js 1+template.html 2，替换被 e37f893 收走的旧单条文案锚点）、FIX-REGRESSION.md（#167 行改写终版）、tools/verify-multicard-master.mjs（新增无头行为断言，旧产物上 S1 会红=修复未构建属预期）**；构建状态：已构建·sw 见 version.json）。
+* 排查与实证：无头复现（冻结随机数对照 6/6）证明 py-en 开关链路（UI点击→落盘→genOneReply 闸门）无缺陷，多条来自同页「回复条数最少/最多」默认 1~2 拆条、与开关互不知晓；用户「关=彻底只回一条」的预期合理，遂把语义升级为总开关，开启时行为不变（拆条/拼卡仍由两组 stepper 管）。e37f893（#168）构建时曾把本会话工作区中间态（旧说明文案+旧哨兵）裹挟入库上线，本次构建已覆盖为终版。
+* 验证：node --check 过；构建哨兵 340/340 哑哨兵 0；verify-multicard-master 对新产物全过；npm run verify 10/10。
+* 待真机：荣耀平板10Pro 关多字卡后一句话只回一条；开多字卡仍按「回复条数」拆条/按「最少最多条数」拼卡；群聊成员同理。
 
 ### 2026-09-05 01:5x（#170 字卡库瘦身：分组体积扫描+整组删除；src 已被 e37f893 构建带入线上，本会话重建对齐注释/版本并提交遗留 src；已构建提交）
 * [AI-B 域]（**改动文件：src/js/storage-slim.js（新增，纯逻辑+IDB：mochiCcSlimScan 枚举公用/旧顶层/各联系人专属键按分组统计体积卡数降序，读走 idbGet 权威层防大库驻留预算假空；mochiCcSlimDeleteGroup 整组删除=删除前重读当前值防快照覆盖，组名匹配不到不动，写回走 xyStore 三路同拍）、src/js/personalize.js（查看存储页「字卡库瘦身」卡接线：各库合计+Top12 分组+删除确认）、src/template.html（卡片锚点）、tools/verify-storage-opt.mjs（+11 断言至 31，含删除前重读防覆盖行为断言）、build.mjs jsFiles+哨兵 2 条（已被 e37f893 收走）**；构建状态：已构建·sw 见 version.json，哨兵 336/336 哑哨兵 0 verify 10/10）。

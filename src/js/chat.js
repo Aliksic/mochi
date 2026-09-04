@@ -3143,7 +3143,8 @@ return;
 }
 const rpMin = Math.max(1, Number(c['reply-min']) || 1);
 const rpMax = Math.max(rpMin, Number(c['reply-max']) || 2);
-const count = randInt(rpMin, rpMax);
+// #167 多字卡回复(py-en)是总开关：关闭时回复条数强制 1 条（关=彻底只回一条），开启才按「回复条数」拆条
+const count = (c['py-en'] === 1) ? randInt(rpMin, rpMax) : 1;
 try { console.log('[mochi-reply] scheduleReply count=%s rpMin=%s rpMax=%s raw reply-min=%s reply-max=%s', count, rpMin, rpMax, c['reply-min'], c['reply-max']); window.__replyDiag = (window.__replyDiag||0)+1; window.__replyOnceDiag = 0; } catch(e){}
 const wantQuote = hit(c['quote-prob']) && !!quoteSrc;
 for (let i = 0; i < count; i++) {
@@ -3259,7 +3260,8 @@ const rsMax = Math.max(rsMin, Number(c['rs-max']) || rsMin);
 delay = (rsMin + Math.random() * (rsMax - rsMin)) * 1000;
 const rpMin = Math.max(1, Number(c['reply-min']) || 1);
 const rpMax = Math.max(rpMin, Number(c['reply-max']) || 2);
-count = randInt(rpMin, rpMax);
+// #167 同 scheduleReply：py-en 总开关关闭时「让对方继续说」也只回一条
+count = (c['py-en'] !== 1) ? 1 : randInt(rpMin, rpMax);
 } else {
 delay = randInt(300, 1000); count = 1;
 }
@@ -6782,9 +6784,63 @@ function myEmojiLoad() {
 try { const v = JSON.parse(myEmojiStore().get('my-emoji-groups') || 'null'); if (Array.isArray(v)) return v; } catch (e) {}
 return [];
 }
+// FIX 2026-09-05 #172 我的表情包刷新必丢：超启动回填预算的大键（实例 34.93MB）每次刷新都被
+// idbRestore 挂起在 __xyIdbDeferredKeys，且大键从不落 localStorage 快照——store 三路全空，
+// 唯一恢复链是裸 idbGet 固定 4s+4s 超时，低端机读不完即静默放弃 → 面板永远空（用户视角=
+// 每次刷新全丢）；恢复失败期间保存还会把空态写回、把 IDB 全量顶掉。修复三件套（与字卡库
+// hydrateScope 同机制）：
+//   ① myeApplyIdb：读到 IDB 值后的统一应用（内容更多才覆盖 + 面板开着即重绘，原 tryRestore/
+//      reloadMyEmojiFromIdb 两处重复逻辑收口）；
+//   ② myeHydrateFallback：idbGet 读空时走 idbHydrateKey 按需取回（6s+8s 慢读友好、成功后
+//      进驻存并移出挂起名单），tryRestore 重试穷尽 / reloadMyEmojiFromIdb 共用；
+//   ③ myEmojiSave 防覆盖闸门：该键仍挂起（=本会话从未成功恢复全量）时先取回 IDB 全量与
+//      内存新增按分组去重合并再写，防几十 MB 表情包被小包覆盖成真丢失。
+function myeApplyIdb(v) {
+try {
+const data = typeof v === 'string' ? JSON.parse(v) : v;
+if (!Array.isArray(data)) return false;
+const cnt = (g) => { let n = 0; g.forEach(x => n += (Array.isArray(x[1]) ? x[1].length : 0)); return n; };
+// #172：与内存面板态（myGroups）比张数——挂起场景下 hydrate 会把全量写进 store 层，
+// 与内存脱节，若以 store 快照为基准会误判「同量不覆盖」→ 恢复永不落内存（面板仍空）
+const lc = Array.isArray(myGroups) ? cnt(myGroups) : -1;
+if (lc < 0 || cnt(data) > lc) {
+myGroups = data;
+if (!emojiPanel.hidden) renderEmojiPanel();
+}
+return true;
+} catch (e) { return false; }
+}
+function myeHydrateFallback() {
+if (!window.idbHydrateKey) return;
+window.idbHydrateKey(MYE_KEY()).then(ok => {
+if (ok !== true) return;
+try { const raw = myEmojiStore().get('my-emoji-groups'); if (raw) myeApplyIdb(raw); } catch (e) {}
+});
+}
 function myEmojiSave() {
-const data = JSON.stringify(myGroups);
-myEmojiStore().set('my-emoji-groups', data);
+// #172 防覆盖闸门：挂起名单仍含本键 = 本会话没恢复过全量，盲写会顶掉 IDB 全量
+if (window.__xyIdbDeferredKeys && window.__xyIdbDeferredKeys.indexOf(MYE_KEY()) >= 0 && window.idbHydrateKey) {
+window.idbHydrateKey(MYE_KEY()).then(ok => {
+// 取回失败不写回——防用小包覆盖 IDB 全量；键保持挂起，本会话内下次保存/开面板再试
+if (ok === false) return;
+if (ok === true) {
+try {
+const full = JSON.parse(myEmojiStore().get('my-emoji-groups') || 'null');
+if (Array.isArray(full)) {
+full.forEach(g => {
+if (!g || typeof g[0] !== 'string' || !Array.isArray(g[1])) return;
+let t = myGroups.find(x => x[0] === g[0]);
+if (!t) { myGroups.push([g[0], g[1].slice()]); return; }
+g[1].forEach(item => { if (t[1].indexOf(item) < 0) t[1].push(item); });
+});
+}
+} catch (e) {}
+}
+myEmojiStore().set('my-emoji-groups', JSON.stringify(myGroups));
+});
+return true;
+}
+myEmojiStore().set('my-emoji-groups', JSON.stringify(myGroups));
 return true;
 }
 // FIX 2026-09-04 #154 朋友圈评论「我的表情包」与聊天面板不同步——把 chat 维护的
@@ -6798,19 +6854,9 @@ if (!window.idbGet) return;
 let retry = 0;
 function tryRestore() {
 window.idbGet(MYE_KEY()).then(v => {
-if (!v) { if (retry < 3) { retry++; setTimeout(tryRestore, 800 * retry); } return; }
-try {
-const data = typeof v === 'string' ? JSON.parse(v) : v;
-if (!Array.isArray(data)) return;
-const cnt = (g) => { let n = 0; g.forEach(x => n += (Array.isArray(x[1]) ? x[1].length : 0)); return n; };
-let local = null;
-try { local = JSON.parse(myEmojiStore().get('my-emoji-groups') || 'null'); } catch (e) {}
-const lc = Array.isArray(local) ? cnt(local) : -1;
-if (lc < 0 || cnt(data) > lc) {
-myGroups = data;
-if (!emojiPanel.hidden) renderEmojiPanel();
-}
-} catch (e) {}
+// #172：重试穷尽仍读空 → idbHydrateKey 兜底（大键挂起/慢读场景裸 idbGet 永远拿不到值）
+if (!v) { if (retry < 3) { retry++; setTimeout(tryRestore, 800 * retry); } else myeHydrateFallback(); return; }
+myeApplyIdb(v);
 });
 }
 tryRestore();
@@ -7065,19 +7111,9 @@ emojiInsertAllowUrl = false;
 function reloadMyEmojiFromIdb() {
 if (!window.idbGet) return;
 window.idbGet(MYE_KEY()).then(v => {
-if (!v) return;
-try {
-const data = typeof v === 'string' ? JSON.parse(v) : v;
-if (!Array.isArray(data)) return;
-const cnt = (g) => { let n = 0; g.forEach(x => n += (Array.isArray(x[1]) ? x[1].length : 0)); return n; };
-let local = null;
-try { local = JSON.parse(myEmojiStore().get('my-emoji-groups') || 'null'); } catch (e) {}
-const lc = Array.isArray(local) ? cnt(local) : -1;
-if (lc < 0 || cnt(data) > lc) {
-myGroups = data;
-if (!emojiPanel.hidden) renderEmojiPanel();
-}
-} catch (e) {}
+// #172：读空（大键挂起/事务超时）不再静默放弃 → hydrate 按需取回
+if (!v) { myeHydrateFallback(); return; }
+myeApplyIdb(v);
 });
 }
 document.addEventListener('contact-switched', function () {
