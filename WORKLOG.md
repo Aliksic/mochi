@@ -1,4 +1,12 @@
-# 本次构建者：AI-B（本会话：塔罗扩 78 张 + 补 7 张牌阵；改动前 git status 有另一会话 clock.js 回填+build.mjs 哨兵未提交改动，已验证语法完整成套，构建包含）
+# 本次构建者：AI-A（本会话：#149 引用图片缩略图修复，改动 chat.js/build.mjs/FIX-REGRESSION.md；开工时 git status 有并行会话未跟踪诊断输出 tools/tmp-repro2-out.txt，不涉产物）
+
+### 2026-09-04 14:0x（#149 聊天引用图片/表情包消息发送后引用块无缩略图（苹果17 等多机型）：引用链 data: 过滤丢媒体池令牌；已构建）
+* [AI-A 域]（**改动文件：src/js/chat.js（quoteTextSafe 令牌→空 / quoteHtml 对象 imgs 过滤 + 字符串引用分支认 @@m: 令牌 / quoteTextOf 图片载荷判定加令牌 / 聊天搜索结果图片判定加令牌）、build.mjs（FIX_SENTINELS 4 条，needle 各取四处判定完整表达式且在 chat.js 内唯一）、FIX-REGRESSION.md（#149 行 + 设备索引苹果17 加 149）；构建状态：见下**）。
+* 需求/反馈：苹果17 自带浏览器引用联系人的图片消息发送后不显示缩略图，用户反馈其他机型也有（= 机型无关）。
+* 根因：#142 媒体池把聊天图片令牌化 `@@m:<hash>` 后，引用链四处仍按 `indexOf('data:') === 0` 判定图片载荷——quoteTextOf 快照把令牌当引用文本（历史坏数据 t=令牌）、quoteHtml imgs 过滤把令牌缩略图整段丢弃、字符串引用分支不认令牌、quoteTextSafe 直出令牌串。引用**刚发出未令牌化**的图片仍有 data: → 正常，所以「时好时坏」跨机型随机出现。
+* 方案：判定统一扩为「data: 或 mochiMediaIsToken」，令牌照常渲染 `<img src>` 交 media-pool 文档级观察器解析（与消息本体图片同一机制）；不动 group-chat（群聊消息不令牌化）与 bg-keep（新消息通知发生在令牌化前，无实际影响）。
+* 验证：node --check 过；构建哨兵全绿哑哨兵 0。
+* 待真机（苹果17 及任意机型）：对**早前发过**的图片/表情包点引用 → 预览条出缩略图 → 发送后引用块出缩略图、无 `@@m:` 串；纯文字引用与引用跳转不回归。
 
 ### 2026-09-04 13:4x（防骗+署名禁倒卖声明「运行时回填」恢复并扩展双条（防倒卖核心手段）；已随并行会话 962347d 构建入库）
 * [AI-B 域]（**改动文件：src/js/clock.js（顶部新增回填 IIFE：JS 常量兜底 + fetch 官方部署地址 notice.json 取权威 alert/alert2 强刷「开屏两条置顶声明 + 设置页 set-alert」——元素缺失重建插公告区最顶（条1防骗在上/条2署名紧跟）、文案被改（标题+全部特征词 marks 不在位）重写回官方版；二传者自己部署的副本也会向官方域名拉取，想删声明必须连回填逻辑一起改）、src/template.html（两条静态置顶条补 data-anti-scam="1"/"2" 标记供回填认领）、build.mjs（FIX_SENTINELS +3：insertBefore(box, refNode || notice.firstChild) / OFFICIAL_NOTICE, { cache: 'no-store' } / bar.marks.every，均 clock.js 内唯一逻辑锚点）、FIX-REGRESSION.md（#148 行）；构建状态：本会话 13:35 已构建（sw mochi-mtmisiew 哨兵 289/289），产物被并行会话 13:37 构建（mtmitlvc）覆盖，**全部改动随其 962347d 一并入库（其 WORKLOG 已留痕），哨兵全绿，双方知悉**）。
