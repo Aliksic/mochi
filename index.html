@@ -8777,9 +8777,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1788498454372">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.409</b></span>
-        <span class="sv-deploy">部署于 2026-09-04 13:07<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1788499094635">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.410</b></span>
+        <span class="sv-deploy">部署于 2026-09-04 13:18<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9875,7 +9875,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.409</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.410</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
       <!-- v3.27.x：设置页底部防骗声明 -->
       <div class="set-alert">
@@ -10143,7 +10143,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.409</span>
+              <span class="lic-ver">v3.26.410</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -17791,13 +17791,40 @@ b.style.backgroundAttachment = '';
 } catch (e) {}
 };
 const bgPosOf = () => ({ x: store.get('phone-bg-pos-x') || '50', y: store.get('phone-bg-pos-y') || '50', s: store.get('phone-bg-size') || 'cover' });
+let bgLayer = null;
+const ensureBgLayer = () => {
+if (bgLayer || !phoneEl) return bgLayer;
+bgLayer = document.createElement('div');
+bgLayer.id = 'phone-bg-layer';
+bgLayer.style.cssText = 'position:absolute;inset:0;z-index:1;pointer-events:none;opacity:0;';
+phoneEl.insertBefore(bgLayer, phoneEl.firstChild);
+return bgLayer;
+};
+const setBgLayerImage = (data) => {
+const l = ensureBgLayer(); if (!l) return;
+const want = data ? 'url("' + data + '")' : '';
+if (l.style.backgroundImage === want) return; // 值变才写：同值重写会触发样式失效+重绘
+l.style.backgroundImage = want;
+const pos = bgPosOf();
+l.style.backgroundSize = (pos.s === 'cover' || !pos.s) ? 'cover' : (pos.s + '%');
+l.style.backgroundPosition = pos.x + '% ' + pos.y + '%';
+};
+const setBgLayerPreset = (css) => {
+const l = ensureBgLayer(); if (!l) return;
+if (l.style.backgroundImage !== css) {
+l.style.backgroundImage = css;
+l.style.backgroundSize = 'cover';
+l.style.backgroundPosition = 'center';
+}
+};
+const setBgLayerVisible = (on) => {
+const l = ensureBgLayer(); if (!l) return;
+const v = on ? '1' : '0';
+if (l.style.opacity !== v) l.style.opacity = v;
+};
 const applyPhoneBg = (data) => {
 if (!phoneEl) return;
-phoneEl.style.backgroundImage = 'url("' + data + '")';
-const pos = bgPosOf();
-phoneEl.style.backgroundSize = (pos.s === 'cover' || !pos.s) ? 'cover' : (pos.s + '%');
-phoneEl.style.backgroundPosition = pos.x + '% ' + pos.y + '%';
-phoneEl.style.backgroundAttachment = 'scroll';
+setBgLayerImage(data);
 applyBodyBg(data);
 if (bgHome) {
 bgHome.classList.add('has-bg');
@@ -17810,7 +17837,9 @@ if (bgVal) bgVal.textContent = has ? '已设置' : '';
 if (bgRemove) bgRemove.hidden = !has;
 };
 const clearPhoneBg = () => {
-if (phoneEl) phoneEl.style.backgroundImage = '';
+setBgLayerImage(null);
+setBgLayerVisible(false);
+if (phoneEl) phoneEl.style.backgroundImage = ''; // 旧会话残留清理
 applyBodyBg(null);
 if (bgHome) {
 bgHome.classList.remove('has-bg');
@@ -17839,9 +17868,7 @@ const bgPresetRow = document.getElementById('row-bg-preset');
 const bgPresetVal = document.getElementById('bg-preset-val');
 const applyPhoneBgPreset = (css) => {
 if (!phoneEl) return;
-phoneEl.style.backgroundImage = css;
-phoneEl.style.backgroundSize = 'cover';
-phoneEl.style.backgroundPosition = 'center';
+setBgLayerPreset(css);
 if (isDesktopFrame()) {
 document.body.style.backgroundImage = css;
 document.body.style.backgroundSize = 'cover';
@@ -17974,7 +18001,7 @@ if (!phoneEl) return;
 const home = document.getElementById('page-phone');
 const show = home && !home.hidden;
 if (!show) {
-phoneEl.style.backgroundImage = '';
+setBgLayerVisible(false);
 applyBodyBg(null);
 return;
 }
@@ -17984,10 +18011,9 @@ const presetCss = bgPresetCss();
 if (customBg) applyPhoneBg(customBg);
 else if (solidCss && /^#[0-9a-fA-F]{6}$/.test(solidCss)) applyPhoneBgPreset(solidCss);
 else if (presetCss) applyPhoneBgPreset(presetCss);
-else {
-phoneEl.style.backgroundImage = '';
-applyBodyBg(null);
-}
+else setBgLayerImage(null);
+setBgLayerVisible(!!(customBg || (solidCss && /^#[0-9a-fA-F]{6}$/.test(solidCss)) || presetCss));
+if (!customBg && !(solidCss && /^#[0-9a-fA-F]{6}$/.test(solidCss)) && !presetCss) applyBodyBg(null);
 };
 document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', applyBgVisibility));
 document.querySelectorAll('.app[data-app="chat"]').forEach(a => a.addEventListener('click', applyBgVisibility));
@@ -77471,4 +77497,4 @@ return { lock: document.body.classList.contains('scroll-lock'), open: open };
 <!-- __MOCHI_EOF__ -->
 </body>
 </html>
-<!-- __MOCHI_EOF__ mtmhsvhg -->
+<!-- __MOCHI_EOF__ mtmi6lij -->

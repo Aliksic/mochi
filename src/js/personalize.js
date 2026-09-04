@@ -717,13 +717,48 @@ try {
   };
   // v3.27.x：壁纸定位/缩放可调（phone-bg-pos-x/y/size），默认 cover+center，旧数据无键时完全兼容
   const bgPosOf = () => ({ x: store.get('phone-bg-pos-x') || '50', y: store.get('phone-bg-pos-y') || '50', s: store.get('phone-bg-size') || 'cover' });
+  // ===== v3.26.x #147：壁纸常驻图层（修 iPhone16 Pro「退聊天回桌面巨卡」）=====
+  // 此前壁纸直写 .phone，applyBgVisibility 在每次进出桌面时清空/重设 backgroundImage：
+  // 2MB 级 dataURL 壁纸在 iOS 上每次重设都要主线程重新解码整张大图；且 chat-back 直挂
+  // 监听 + page-phone MutationObserver 双触发 = 一次返回解码两次 → 用户实测「退出聊天
+  // 回桌面巨卡、之后每次切换页面都卡」。改为：壁纸只赋给 .phone 内常驻图层（值变才重
+  // 赋，同值写 style 也会触发样式失效），页面切换只切图层 opacity——透明度 0 的图层纹
+  // 理在合成器中保持存活，不再反复解码。图层 z-index:1 低于 .page/.tabbar/.statusbar 的
+  // z-index:2，桌面透明页透出壁纸、其他页面遮挡，与原「清空/重设」视觉语义一致。
+  let bgLayer = null;
+  const ensureBgLayer = () => {
+    if (bgLayer || !phoneEl) return bgLayer;
+    bgLayer = document.createElement('div');
+    bgLayer.id = 'phone-bg-layer';
+    bgLayer.style.cssText = 'position:absolute;inset:0;z-index:1;pointer-events:none;opacity:0;';
+    phoneEl.insertBefore(bgLayer, phoneEl.firstChild);
+    return bgLayer;
+  };
+  const setBgLayerImage = (data) => {
+    const l = ensureBgLayer(); if (!l) return;
+    const want = data ? 'url("' + data + '")' : '';
+    if (l.style.backgroundImage === want) return; // 值变才写：同值重写会触发样式失效+重绘
+    l.style.backgroundImage = want;
+    const pos = bgPosOf();
+    l.style.backgroundSize = (pos.s === 'cover' || !pos.s) ? 'cover' : (pos.s + '%');
+    l.style.backgroundPosition = pos.x + '% ' + pos.y + '%';
+  };
+  const setBgLayerPreset = (css) => {
+    const l = ensureBgLayer(); if (!l) return;
+    if (l.style.backgroundImage !== css) {
+      l.style.backgroundImage = css;
+      l.style.backgroundSize = 'cover';
+      l.style.backgroundPosition = 'center';
+    }
+  };
+  const setBgLayerVisible = (on) => {
+    const l = ensureBgLayer(); if (!l) return;
+    const v = on ? '1' : '0';
+    if (l.style.opacity !== v) l.style.opacity = v;
+  };
   const applyPhoneBg = (data) => {
     if (!phoneEl) return;
-    phoneEl.style.backgroundImage = 'url("' + data + '")';
-    const pos = bgPosOf();
-    phoneEl.style.backgroundSize = (pos.s === 'cover' || !pos.s) ? 'cover' : (pos.s + '%');
-    phoneEl.style.backgroundPosition = pos.x + '% ' + pos.y + '%';
-    phoneEl.style.backgroundAttachment = 'scroll';
+    setBgLayerImage(data);
     applyBodyBg(data);
     if (bgHome) {
       bgHome.classList.add('has-bg');
@@ -736,7 +771,9 @@ try {
     if (bgRemove) bgRemove.hidden = !has;
   };
   const clearPhoneBg = () => {
-    if (phoneEl) phoneEl.style.backgroundImage = '';
+    setBgLayerImage(null);
+    setBgLayerVisible(false);
+    if (phoneEl) phoneEl.style.backgroundImage = ''; // 旧会话残留清理
     applyBodyBg(null);
     if (bgHome) {
       bgHome.classList.remove('has-bg');
@@ -766,9 +803,8 @@ try {
   const bgPresetVal = document.getElementById('bg-preset-val');
   const applyPhoneBgPreset = (css) => {
     if (!phoneEl) return;
-    phoneEl.style.backgroundImage = css;
-    phoneEl.style.backgroundSize = 'cover';
-    phoneEl.style.backgroundPosition = 'center';
+    // v3.26.x #147：改写常驻图层（原直写 .phone，进出桌面反复清设致 iOS 重复解码）
+    setBgLayerPreset(css);
     // v3.10.x：body 仅桌面窄框需要（铺两侧底色）；手机端 .phone 已全屏，body 版被遮挡，
     // 跳过避免 iOS 冗余解码/存留
     if (isDesktopFrame()) {
@@ -911,8 +947,11 @@ try {
     if (!phoneEl) return;
     const home = document.getElementById('page-phone');
     const show = home && !home.hidden;
+    // v3.26.x #147：页面切换只切图层 opacity（原实现清空/重设 .phone backgroundImage，
+    // 2MB 壁纸在 iOS 上每次切换都主线程重新解码，用户实测退聊天回桌面巨卡）。
+    // 退出桌面不清图，回桌面时命中「值变才写」短路，零解码开销。
     if (!show) {
-      phoneEl.style.backgroundImage = '';
+      setBgLayerVisible(false);
       applyBodyBg(null);
       return;
     }
@@ -926,10 +965,9 @@ try {
     if (customBg) applyPhoneBg(customBg);
     else if (solidCss && /^#[0-9a-fA-F]{6}$/.test(solidCss)) applyPhoneBgPreset(solidCss);
     else if (presetCss) applyPhoneBgPreset(presetCss);
-    else {
-      phoneEl.style.backgroundImage = '';
-      applyBodyBg(null);
-    }
+    else setBgLayerImage(null);
+    setBgLayerVisible(!!(customBg || (solidCss && /^#[0-9a-fA-F]{6}$/.test(solidCss)) || presetCss));
+    if (!customBg && !(solidCss && /^#[0-9a-fA-F]{6}$/.test(solidCss)) && !presetCss) applyBodyBg(null);
   };
   // 页面切换时同步壁纸显示
   document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', applyBgVisibility));

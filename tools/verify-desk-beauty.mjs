@@ -105,15 +105,15 @@ await sleep(2200);
 for (let i = 0; i < 40; i++) { if (await ev('!!window.__mochiDataReady')) break; await sleep(250); }
 await ev("(function(){var e=document.getElementById('splash-enter');if(e&&!e.hidden)e.click();var s=document.getElementById('splash');if(s&&!s.classList.contains('hide')){s.classList.add('hide');s.hidden=true;}return true;})()");
 await sleep(800);
-const bgAfterLoad = await ev("(function(){var ph=document.querySelector('.phone');return ph.style.backgroundImage||'';})()");
-check('刷新后预设壁纸已应用（.phone 有渐变背景）', String(bgAfterLoad || '').indexOf('gradient') >= 0, String(bgAfterLoad).slice(0, 60));
+const bgAfterLoad = await ev("(function(){var l=document.getElementById('phone-bg-layer');return (l&&l.style.backgroundImage)||'';})()");
+check('刷新后预设壁纸已应用（#147 常驻图层有渐变背景）', String(bgAfterLoad || '').indexOf('gradient') >= 0, String(bgAfterLoad).slice(0, 60));
 // 切 tab 后再切回
 await ev("(function(){var t=document.querySelector('.tab[data-page=\"page-settings\"]');if(t)t.click();return true;})()");
 await sleep(300);
 await ev("(function(){var t=document.querySelector('.tab[data-page=\"page-phone\"]');if(t)t.click();return true;})()");
 await sleep(300);
-const bgAfterTab = await ev("(function(){var ph=document.querySelector('.phone');return ph.style.backgroundImage||'';})()");
-check('切 tab 后预设壁纸仍在', String(bgAfterTab || '').indexOf('gradient') >= 0, String(bgAfterTab).slice(0, 60));
+const bgAfterTab = await ev("(function(){var l=document.getElementById('phone-bg-layer');return (l?l.style.backgroundImage+'|op:'+l.style.opacity:'');})()");
+check('切 tab 后预设壁纸仍在（图层 opacity 恢复 1）', String(bgAfterTab || '').indexOf('gradient') >= 0 && /op:1/.test(String(bgAfterTab)), String(bgAfterTab).slice(0, 60));
 
 // ============ Bug 1：恢复默认桌面 ============
 console.log('\n===== Bug1 恢复默认桌面（只点底部确定）=====');

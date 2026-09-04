@@ -238,6 +238,8 @@ const FIX_SENTINELS = [
   { name: '#135 开屏 20s 硬保险丝 readyForced（数据未就绪也放行进入，开屏永不死锁）', file: 'js/clock.js', needle: 'readyForced' },
   { name: '#137 miniSafeTop 三级探测链（env 探针→差值→59px 兜底，通话小框永不落进系统状态栏区）', file: 'js/call.js', needle: 'if (!top) top = 59;' },
   { name: '#137 小框显示时抬升 liftMiniIntoSafeArea（5 处显示点统一校正旧坐标）', file: 'js/call.js', needle: 'function liftMiniIntoSafeArea()' },
+  { name: '#147 壁纸常驻图层（进出桌面只切 opacity 不清空/重设 backgroundImage，修 iOS 反复主线程解码大图巨卡）', file: 'js/personalize.js', needle: 'const setBgLayerImage = (data) => {' },
+  { name: '#147 图层值变才写+隐藏保留图（setBgLayerVisible opacity 短路）', file: 'js/personalize.js', needle: "const v = on ? '1' : '0';" },
   { name: '#140 desk-layout 完整性校验+坏键自愈（损坏/空壳布局清键回默认，修华为Pura70Pro+/Chrome 等安卓「小组件卡片大部分不显示」——坏值会把全部卡片扫进隐藏池且 IDB 回填每次复发）', file: 'js/personalize.js', needle: "console.info('[mochi] desk-layout 校验失败（损坏/空壳），忽略并清除')" },
   { name: '#140 隐藏池不收「列在缺失页」的组件（inAnyPage 有名即不进池，防删页/校验重建后误判布局外整批隐藏）', file: 'js/personalize.js', needle: 'if (inAnyPage[wid]) return;' },
   { name: '#140 saveDeskLayout 写前防损坏（重复 id/页数超界放弃保存清键，不把坏值固化进 IDB）', file: 'js/personalize.js', needle: "if (!ok) { try { store.remove('desk-layout'); } catch (e) {} return lay; }" },

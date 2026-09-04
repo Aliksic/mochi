@@ -1,3 +1,10 @@
+### 2026-09-04 12:0x（#147 iPhone16 Pro Safari 浏览器模式「退聊天回桌面巨卡」：壁纸清空/重设致 iOS 反复主线程解码 2.1MB 大图；已构建）
+* [AI-B 域]（**改动文件：src/js/personalize.js（壁纸改写 .phone 内常驻图层 #phone-bg-layer：setBgLayerImage 值变才写 + setBgLayerVisible opacity 切换；applyPhoneBg/applyPhoneBgPreset/clearPhoneBg/applyBgVisibility 5 处 shell 写点全部改道，退出桌面不再清空 backgroundImage）、tools/verify-desk-beauty.mjs（壁纸断言同步改图层+opacity）、build.mjs（FIX_SENTINELS 2 条）、FIX-REGRESSION.md（#147 行）；构建状态：已构建·sw 见 version.json**）。
+* 根因：applyBgVisibility 每次进出桌面清空/重设 .phone backgroundImage，2.1MB dataURL 壁纸在 iOS 上每次重设都主线程重新解码整张大图；chat-back 直挂 + page-phone MutationObserver 双触发=一次返回解码两次 → 用户实测退聊天回桌面巨卡、之后所有页面切换持续卡。
+* 图层 z-index:1 低于 .page/.tabbar/.statusbar 的 z-index:2，视觉语义与原清空/重设一致；applyBodyBg 手机端本就清空不动。
+* 验证：node --check 过；--check-sentinels 286 全绿哑哨兵 0；verify-desk-beauty 真实浏览器流程过（断言已改图层）。
+* 待真机（iPhone16 Pro Safari）：聊天↔桌面来回切换流畅、2MB 壁纸桌面滚动不卡；壁纸显隐视觉与原一致。
+
 # 本次构建者：AI-B（本会话：开屏公告更新——notice.json + template.html，改动前 git status 干净、无他人在途半成品）
 
 ### 2026-09-04 13:07（开屏最顶新增「转载署名·严禁倒卖」置顶声明条；已构建）
