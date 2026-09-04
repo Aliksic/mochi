@@ -3738,6 +3738,12 @@ try {
       const inLay = lay.some(page => (page || []).indexOf(wid) >= 0);
       if (!inLay && node.parentNode !== pool) pool.appendChild(node);
     });
+    // FIX 2026-09-04 #156：布局应用完毕后重应用一次群聊模式——群聊开启期间占卜图标必须
+    // 停在隐藏池；否则任何 bare applyDeskLayout 都会把占卜按 desk-layout 从池里放回桌面
+    //（典型复活路径：启动 150ms ensureP2AppsBelowWeekend 兜底重跑发生在 applyGroupChatMode
+    // 首次应用之后）。applyGroupChatMode 为同 IIFE 函数声明（提升可用）；群聊关闭时该调用
+    // 对已归位图标是无操作，且其关闭分支回引 applyDeskLayout 最多两层即收敛（幂等）。
+    try { applyGroupChatMode(); } catch (e) {}
     if (window.deskRebuild) window.deskRebuild();
     try { renderDeskWidgets(); } catch (e) {}
   };
@@ -3946,7 +3952,7 @@ try {
   });
 
   // v3.8.x：群聊模式——开启后桌面聊天按钮右侧显示「群聊」按钮，占卜按钮隐藏（FIX 2026-09-04
-  // #154：无论占卜图标当前在首页图标组、其他页还是组件库加回的位置，都强制收进隐藏池）；
+  // #156：无论占卜图标当前在首页图标组、其他页还是组件库加回的位置，都强制收进隐藏池）；
   // 关闭恢复原样。须在 applyDeskLayout 之后执行（覆盖 desk-layout 对群聊/占卜图标的处置）。
   // group-chat-enabled 为全局键（v3.10.x 起群聊是全局功能），默认关闭。
   function applyGroupChatMode() {
@@ -3970,11 +3976,11 @@ try {
           }
           gcBtn.hidden = false;
         }
-        // FIX 2026-09-04 #154 群聊模式没隐藏桌面占卜图标（用户反馈）：原逻辑只在占卜图标
-        // 仍在第一页 app-grid（模板原位）时才收进隐藏池，装修过桌面（desk-layout 把占卜排在
-        // 任意页顶层）或从组件库重新加回后，占卜图标一直显示在桌面上。改为群聊开启期间
-        // 无论占卜在桌面哪个位置（图标组/任意页）都强制收进隐藏池（已在池则不动）；
-        // 关闭后由 else 分支放回，desk-layout 有自定义位置时随后 applyDeskLayout 归位。
+        // FIX 2026-09-04 #156 群聊模式没隐藏桌面占卜图标（用户反馈）：原逻辑只在占卜图标
+        // 仍在第一页 app-grid（模板原位）时才收进隐藏池，装修过桌面（占卜被拖出图标组
+        // 排在任意页顶层）或从组件库重新加回后，占卜图标一直显示在桌面上。改为群聊开启
+        // 期间无论占卜在桌面哪个位置（图标组/任意页）都强制收进隐藏池（已在池则不动）；
+        // 关闭后由 else 分支放回首页图标组默认位（v3.8 原语义）。
         if (divBtn && divBtn.parentNode !== pool) {
           pool.appendChild(divBtn);
         }
@@ -3983,13 +3989,13 @@ try {
         if (gcBtn && gcBtn.parentNode !== pool) {
           pool.appendChild(gcBtn);
         }
-        // 占卜按钮：若在隐藏池，移回第一页 app-grid 的 memory 后面（原位）
+        // 占卜按钮：若在隐藏池，移回第一页 app-grid 的 memory 后面（默认位）。
+        // FIX 2026-09-04 #156 语义：群聊开启期间占卜被强制收池（无论原位置），关闭后
+        // 统一回首页图标组默认位（v3.8 原语义）；desk-layout 里残留的占卜条目因图标
+        // 已回到网格内被「网格管理」规则忽略（inGrid 跳过），下次装修保存自动校正。
         if (divBtn && divBtn.parentNode === pool && mainGrid) {
           if (memBtn) mainGrid.insertBefore(divBtn, memBtn.nextSibling);
           else mainGrid.appendChild(divBtn);
-          // FIX 2026-09-04 #155：关闭群聊后立即重应用一次布局——desk-layout 若有用户
-          // 自定义占卜位置（任意页），马上放回自定义位置而非停在图标组默认位
-          try { if (window.applyDeskLayout) window.applyDeskLayout(); } catch (e) {}
         }
       }
     } catch (e) {}

@@ -502,8 +502,8 @@ const FIX_SENTINELS = [
   { name: '防倒卖第二锚点·pwa.js在位看门狗（clock.js回填被删时的独立兜底,5s补回缺失声明）', file: 'js/pwa.js', needle: "n.insertBefore(mkWatchBar('1', '防骗提醒', W1), n.firstChild)" },
   { name: '#154 朋友圈评论「我的表情包」与聊天面板同源·暴露chat最新内存副本（IDB权威自愈，修store层旧LS快照/大键挂起导致的两侧不同步）', file: 'js/chat.js', needle: 'window.getMyEmojiGroups = function () { return myGroups || []; };' },
   { name: '#154 朋友圈评论「我的表情包」优先读chat内存副本（chat.js异常时旧store读兜底）', file: 'js/feed.js', needle: 'if (window.getMyEmojiGroups) {' },
-  { name: '#155 群聊模式占卜图标强制收隐藏池（任意位置都隐藏，修「群聊开启后桌面占卜图标不消失」——原只在首页图标组原位时才收）', file: 'js/personalize.js', needle: 'if (divBtn && divBtn.parentNode !== pool) {' },
-  { name: '#155 关闭群聊后立即重应用布局（占卜马上回到 desk-layout 自定义位置，不停留图标组默认位）', file: 'js/personalize.js', needle: 'else mainGrid.appendChild(divBtn);\ntry { if (window.applyDeskLayout) window.applyDeskLayout(); } catch (e) {}' },
+  { name: '#156 群聊模式占卜图标强制收隐藏池（任意位置都隐藏，修「群聊开启后桌面占卜图标不消失」——原只在首页图标组原位时才收）', file: 'js/personalize.js', needle: 'if (divBtn && divBtn.parentNode !== pool) {' },
+  { name: '#156 applyDeskLayout 末尾重应用群聊模式（防 bare 布局应用把占卜从隐藏池按 desk-layout 复活回桌面）', file: 'js/personalize.js', needle: 'try { applyGroupChatMode(); } catch (e) {}' },
 ];
 try {
   const built = CHECK_SENTINELS ? '' : readFileSync(join(root, 'index.html'), 'utf8');

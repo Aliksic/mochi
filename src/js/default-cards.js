@@ -637,10 +637,17 @@
   // 与「互动回应」tab 展示同源（DEFAULT_CARD_DATA.interact）；数据缺失时回退 fallback
   // v3.13.x：泛化为 getLibPool(分类, 分组, 兜底)——摸鱼浮字/花园/同频/伸手/喝水/存钱罐
   // 各功能统一走它取同源池（消费侧再按 isDefaultCardOff(分类, 文案) 过滤已关卡片）
+  // v3.32.x：并入用户自建的功能字卡（字卡库→可自定义字卡→其他互动功能字卡，存 cc-groups
+  // 功能分类字段）——自定义卡追加在同源池后一起随机抽取；非功能分类/无自定义时不影响原行为
   window.getLibPool = function (cat, group, fallback) {
     const g = (DATA[cat] || []).find(x => x[0] === group);
-    const arr = g && Array.isArray(g[1]) && g[1].length ? g[1] : (Array.isArray(fallback) ? fallback : []);
-    return arr.slice();
+    let arr = g && Array.isArray(g[1]) && g[1].length ? g[1] : (Array.isArray(fallback) ? fallback : []);
+    arr = arr.slice();
+    try {
+      const cf = (window.getCustomFuncCards && window.getCustomFuncCards(cat)) || [];
+      if (cf.length) arr = arr.concat(cf);
+    } catch (e) {}
+    return arr;
   };
   window.getInteractPool = function (name, fallback) {
     return window.getLibPool('interact', name, fallback);

@@ -8785,9 +8785,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1788513383120">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.421</b></span>
-        <span class="sv-deploy">部署于 2026-09-04 17:16<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1788515645447">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.422</b></span>
+        <span class="sv-deploy">部署于 2026-09-04 17:54<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9904,7 +9904,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.421</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.422</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
       <!-- v3.27.x：设置页底部防骗声明 -->
       <div class="set-alert">
@@ -10172,7 +10172,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.421</span>
+              <span class="lic-ver">v3.26.422</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -10249,10 +10249,11 @@ transition-duration: .01ms !important;
           </details>
 
           <details class="lic-grp">
-            <summary><span class="lg-num">02</span><span class="lg-name">字卡系统</span><span class="lg-count">13</span></summary>
+            <summary><span class="lg-num">02</span><span class="lg-name">字卡系统</span><span class="lg-count">14</span></summary>
             <div class="lg-body">
           <div class="lic-li">字卡库：浏览全部字卡，支持搜索与自定义分组管理</div>
           <div class="lic-li">聊天字卡分类可上传：【主字卡】【颜文字】【emoji】【表情包】【图片】【拍一拍】【语音】分类</div>
+          <div class="lic-li">其他互动功能字卡（自定义）：字卡库→可自定义字卡→其他互动功能字卡，可为摸鱼 / 吃饭 / 经期 / 喝水 / 花园 / 音乐等功能添加自定义字卡（可编辑 / 删除），功能触发时 TA 会随机使用</div>
           <div class="lic-li">互动卡片可自定义内容，概率触发互动（在字卡库里）</div>
           <div class="lic-li">TA 的询问 / 小问题 / 好奇 / 吐槽 / 查岗（含互动动作）/ 邀请：题库内容均可自定义</div>
           <div class="lic-li">寻踪日常字卡：地点、在做什么、说的话，均可自定义</div>
@@ -20619,6 +20620,7 @@ if (inAnyPage[wid]) return; // 布局里有名（哪怕页已不存在）→ 不
 const inLay = lay.some(page => (page || []).indexOf(wid) >= 0);
 if (!inLay && node.parentNode !== pool) pool.appendChild(node);
 });
+try { applyGroupChatMode(); } catch (e) {}
 if (window.deskRebuild) window.deskRebuild();
 try { renderDeskWidgets(); } catch (e) {}
 };
@@ -20809,7 +20811,6 @@ pool.appendChild(gcBtn);
 if (divBtn && divBtn.parentNode === pool && mainGrid) {
 if (memBtn) mainGrid.insertBefore(divBtn, memBtn.nextSibling);
 else mainGrid.appendChild(divBtn);
-try { if (window.applyDeskLayout) window.applyDeskLayout(); } catch (e) {}
 }
 }
 } catch (e) {}
@@ -33211,22 +33212,37 @@ document.addEventListener('visibilitychange', function () {
 if (document.visibilityState === 'hidden') flushCcSave();
 });
 } catch (e) {}
-const libCounts = { pub: -1, own: -1 };
+const libCounts = { pub: -1, own: -1, fun: -1, pubFun: -1 };
 function countOf(g) {
 let n = 0;
 try { Object.keys(g || {}).forEach(t => (g[t] || []).forEach(grp => { if (Array.isArray(grp) && Array.isArray(grp[1])) n += grp[1].length; })); } catch (e) {}
 return n;
 }
+function countOfKeys(g, keys) {
+let n = 0;
+try { (keys || []).forEach(t => (g[t] || []).forEach(grp => { if (Array.isArray(grp) && Array.isArray(grp[1])) n += grp[1].length; })); } catch (e) {}
+return n;
+}
 function refreshLibCounts(force) {
-if (force) { libCounts.pub = -1; libCounts.own = -1; pubInvalidate(); }
+if (force) { libCounts.pub = -1; libCounts.own = -1; libCounts.fun = -1; libCounts.pubFun = -1; pubInvalidate(); }
 if (libCounts.pub < 0) {
 const n = countOf(pubGroupsRaw());
 libCounts.pub = n > 0 ? n : -1;
+libCounts.pubFun = countOfKeys(pubGroupsRaw(), CC_FUNC_KEYS);
 }
+if (libCounts.own < 0 || libCounts.fun < 0) {
+const og = ownGroupsRaw();
 if (libCounts.own < 0) {
-const n = countOf(ownGroupsRaw());
+const n = countOf(og);
 libCounts.own = n > 0 ? n : -1;
 }
+if (libCounts.fun < 0) libCounts.fun = countOfKeys(og, CC_FUNC_KEYS);
+}
+if (libCounts.pubFun < 0) {
+libCounts.pubFun = countOfKeys(pubGroupsRaw(), CC_FUNC_KEYS);
+}
+const pfe = document.getElementById('cc-fun-count');
+if (pfe) pfe.textContent = String((libCounts.fun < 0 ? 0 : libCounts.fun) + (libCounts.pubFun < 0 ? 0 : libCounts.pubFun));
 const pe = document.getElementById('cc-pub-count');
 if (pe) pe.textContent = libCounts.pub < 0 ? 0 : libCounts.pub;
 const oe = document.getElementById('cc-list-count');
@@ -33964,7 +33980,10 @@ const ccExport = document.getElementById('cc-export');
 if (ccExport) {
 const EXPORT_CATS = [
 ['text', '主字卡'], ['kaomoji', '颜文字'], ['emoji', 'emoji'],
-['sticker', '表情包'], ['image', '图片'], ['poke', '拍一拍'], ['voice', '语音']
+['sticker', '表情包'], ['image', '图片'], ['poke', '拍一拍'], ['voice', '语音'],
+['fish', '摸鱼'], ['eat', '吃饭'], ['period', '经期'], ['water', '喝水'], ['garden', '花园'],
+['sync', '同频'], ['reach', '伸手'], ['cjian', '此间'], ['room', '房间'], ['piggy', '存钱罐'],
+['drift', '漂流瓶'], ['interact', '互动回应'], ['music', '音乐']
 ];
 const ceMask = document.getElementById('cc-export-mask');
 const ceCats = document.getElementById('ce-cats');
@@ -34052,7 +34071,8 @@ ceMask.addEventListener('click', (e) => { if (e.target === ceMask) ceCloseFn(); 
 if (ceDo) {
 ceDo.addEventListener('click', () => {
 try {
-const out = { text: [], kaomoji: [], emoji: [], sticker: [], image: [], poke: [], voice: [] };
+const out = {};
+CC_ALL_TYPES.forEach(t => { out[t] = []; });
 EXPORT_CATS.forEach(([key]) => {
 const st = ceState[key];
 if (!st || !st.on) return;
@@ -34077,7 +34097,7 @@ toast('已导出所选字卡');
 }
 const ccImportData = document.getElementById('cc-import-data');
 if (ccImportData) {
-const CAT_NAMES = { text: '主字卡', kaomoji: '颜文字', emoji: 'emoji', sticker: '表情包', image: '图片', poke: '拍一拍', voice: '语音' };
+const CAT_NAMES = { text: '主字卡', kaomoji: '颜文字', emoji: 'emoji', sticker: '表情包', image: '图片', poke: '拍一拍', voice: '语音', fish: '摸鱼', eat: '吃饭', period: '经期', water: '喝水', garden: '花园', sync: '同频', reach: '伸手', cjian: '此间', room: '房间', piggy: '存钱罐', drift: '漂流瓶', interact: '互动回应', music: '音乐' };
 ccImportData.addEventListener('click', () => {
 if (window.openModal) {
 const curName = CAT_NAMES[cur] || '当前分类';
@@ -34118,7 +34138,8 @@ reader.readAsText(f);
 function writeImport(byCat, mode, targetCat) {
 let added = 0, dup = 0;
 if (mode === 'replace') {
-groups = { text: [], kaomoji: [], emoji: [], sticker: [], image: [], poke: [], voice: [] };
+groups = {};
+CC_ALL_TYPES.forEach(t => { groups[t] = []; });
 Object.keys(byCat).forEach(cat => {
 const pairs = byCat[cat];
 groups[cat] = pairs.map(([n, cs]) => [n, cs.slice()]);
@@ -34345,7 +34366,7 @@ saveGroups(groups);
 renderGroupsBar();
 render();
 toast('已清除全部字卡与分组');
-}, { noInput: true, staticText: '将删除全部 ' + total + ' 张字卡及所有分组（主字卡、颜文字、emoji、表情包、图片、拍一拍、语音），且无法恢复。确定继续吗？' });
+}, { noInput: true, staticText: '将删除全部 ' + total + ' 张字卡及所有分组（主字卡、颜文字、emoji、表情包、图片、拍一拍、语音及其他互动功能字卡），且无法恢复。确定继续吗？' });
 }
 });
 }
@@ -34729,6 +34750,36 @@ window.getMediaGroups = function (type) {
 const g = replyPoolGroups();
 return (g[type] || []).map(([name, arr]) => [name, arr.filter(isMediaImg)]);
 };
+let ccFuncOwnSrc = null, ccFuncOwnMap = null;
+function ownFuncMap() {
+let raw = null;
+try { raw = store.get('cc-groups'); } catch (e) {}
+if (ccFuncOwnMap && ccFuncOwnSrc === raw) return ccFuncOwnMap;
+const map = {};
+CC_FUNC_KEYS.forEach(k => { map[k] = []; });
+try {
+const g = filterGroupsByOff(buildGroupsFrom(raw), 'own');
+CC_FUNC_KEYS.forEach(k => (g[k] || []).forEach(grp => {
+if (!Array.isArray(grp) || !Array.isArray(grp[1])) return;
+grp[1].forEach(c => { if (typeof c === 'string' && c && c.indexOf('data:') !== 0) map[k].push(c); });
+}));
+} catch (e) {}
+ccFuncOwnMap = map;
+ccFuncOwnSrc = raw;
+return map;
+}
+window.getCustomFuncCards = function (cat) {
+if (CC_FUNC_KEYS.indexOf(cat) < 0) return [];
+const out = ownFuncMap()[cat].slice();
+try {
+const pg = filterGroupsByOff(pubGroupsRaw(), 'public');
+(pg[cat] || []).forEach(grp => {
+if (!Array.isArray(grp) || !Array.isArray(grp[1])) return;
+grp[1].forEach(c => { if (typeof c === 'string' && c && c.indexOf('data:') !== 0) out.push(c); });
+});
+} catch (e) {}
+return out;
+};
 var SHRINK_EMBED_MAX = 120; // 内联表情包最长边（px）
 var SHRINK_EMBED_QUOTA = 16 * 1024; // 超过此字节长度的 dataURL 才值得压（小图直接原样）
 window.shrinkMediaUrl = function (src, cb) {
@@ -34803,7 +34854,7 @@ document.addEventListener('contact-switched', function () {
 if (editSaveTimer) { clearTimeout(editSaveTimer); editSaveTimer = null; }
 pubInvalidate();
 offInvalidate(); // v3.30.x：专属停用集合按联系人隔离，切桌面必须失效缓存
-libCounts.pub = -1; libCounts.own = -1;
+libCounts.pub = -1; libCounts.own = -1; libCounts.fun = -1; libCounts.pubFun = -1;
 groups = loadGroups();
 refreshLibCounts(false);
 try { renderGroupsBar(); render(); } catch (e) {}
@@ -34864,7 +34915,7 @@ gRoot.set(PUB_KEY, JSON.stringify(data));
 pubInvalidate();
 try { st.remove('cc-groups'); } catch (e2) {} // 迁走即清，防回复池公用+专属重复
 if (isDefault) { try { gRoot.remove('cc-groups'); } catch (e2) {} }
-libCounts.pub = -1; libCounts.own = -1;
+libCounts.pub = -1; libCounts.own = -1; libCounts.fun = -1; libCounts.pubFun = -1;
 if (cid === (window.__activeCid || 'default')) {
 if (ccScope === 'own') { groups = loadGroups(); try { renderGroupsBar(); render(); } catch (e2) {} }
 else refreshLibCounts(false);
@@ -34914,7 +34965,7 @@ try { CC_TYPES.forEach(t => (g[t] || []).forEach(x => n += (Array.isArray(x[1]) 
 return n;
 }
 function refreshAfter(cid) {
-libCounts.own = -1;
+libCounts.own = -1; libCounts.fun = -1;
 if (cid === (window.__activeCid || 'default')) {
 pubInvalidate();
 if (ccScope === 'own') { groups = loadGroups(); try { renderGroupsBar(); render(); } catch (e2) {} }
@@ -35067,16 +35118,18 @@ try { fk = ccScope === 'public' ? (PUB_PREFIX + ':' + PUB_KEY) : (window.activeP
 if (!hydAbsent[fk]) { try { toast('字卡较多，正在加载…'); } catch (e) {} }
 return hydrateScope(ccScope === 'public' ? 'public' : 'own');
 }
-function openCcPage(scope) {
+function openCcPage(scope, startTab) {
 flushCcSave();
 ccScope = scope === 'public' ? 'public' : 'own';
 pubInvalidate();
-cur = 'text'; q = ''; curGroup = '';
+cur = (startTab && CC_ALL_TYPES.indexOf(startTab) >= 0) ? startTab : 'text';
+q = ''; curGroup = '';
 const ttl = document.getElementById('cc-page-title');
-if (ttl) ttl.textContent = ccScope === 'public' ? '公用字卡' : '专属字卡';
+if (ttl) ttl.textContent = (startTab && CC_FUNC_KEYS.indexOf(cur) >= 0) ? '其他互动功能字卡'
+: (ccScope === 'public' ? '公用字卡' : '专属字卡');
 const s1 = document.getElementById('cc-search-input');
 if (s1) s1.value = '';
-tabsWrap.querySelectorAll('.cc-tab').forEach(t => t.classList.toggle('sel', t.dataset.type === 'text'));
+tabsWrap.querySelectorAll('.cc-tab').forEach(t => t.classList.toggle('sel', t.dataset.type === cur));
 document.querySelectorAll('.page').forEach(p => p.hidden = true);
 const ccPage = document.getElementById('page-custom-cards');
 if (ccPage) ccPage.hidden = false;
@@ -35096,6 +35149,8 @@ const liPub = document.getElementById('li-custom-cards-public');
 if (liPub) liPub.addEventListener('click', () => openCcPage('public'));
 const li = document.getElementById('li-custom-cards');
 if (li) li.addEventListener('click', () => openCcPage('own'));
+const liFunMine = document.getElementById('li-fun-cards-mine');
+if (liFunMine) liFunMine.addEventListener('click', () => openCcPage('own', 'fish'));
 const ccBack = document.getElementById('cc-back');
 if (ccBack) {
 ccBack.addEventListener('click', () => {
@@ -35193,7 +35248,7 @@ hydInflight[fullKey] = window.idbHydrateKey(fullKey).then(ok => {
 delete hydInflight[fullKey];
 if (ok === null) { hydAbsent[fullKey] = true; return false; }
 pubInvalidate();
-libCounts.pub = -1; libCounts.own = -1;
+libCounts.pub = -1; libCounts.own = -1; libCounts.fun = -1; libCounts.pubFun = -1;
 const scopeLive = (scope === 'public') ? (ccScope === 'public') : (ccScope === 'own');
 if (scopeLive) {
 try { groups = loadGroups(); renderGroupsBar(); render(); } catch (e) {}
@@ -38070,8 +38125,13 @@ return (DATA[cat] || []).slice();
 };
 window.getLibPool = function (cat, group, fallback) {
 const g = (DATA[cat] || []).find(x => x[0] === group);
-const arr = g && Array.isArray(g[1]) && g[1].length ? g[1] : (Array.isArray(fallback) ? fallback : []);
-return arr.slice();
+let arr = g && Array.isArray(g[1]) && g[1].length ? g[1] : (Array.isArray(fallback) ? fallback : []);
+arr = arr.slice();
+try {
+const cf = (window.getCustomFuncCards && window.getCustomFuncCards(cat)) || [];
+if (cf.length) arr = arr.concat(cf);
+} catch (e) {}
+return arr;
 };
 window.getInteractPool = function (name, fallback) {
 return window.getLibPool('interact', name, fallback);
@@ -77825,4 +77885,4 @@ return { lock: document.body.classList.contains('scroll-lock'), open: open };
 <!-- __MOCHI_EOF__ -->
 </body>
 </html>
-<!-- __MOCHI_EOF__ mtmqoukw -->
+<!-- __MOCHI_EOF__ mtms1c7b -->
