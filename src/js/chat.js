@@ -3257,7 +3257,23 @@ if (c['cs-trigger-name'] === 1 && window.continueChat) window.continueChat();
 });
 }
 const csBtn = document.getElementById('chat-continue-btn');
-if (csBtn) csBtn.addEventListener('click', () => { if (window.continueChat) window.continueChat(); });
+// #152：安卓键盘收起与点按手势重叠时（打字后立刻点「继续说」最典型），输入栏随视口
+// 回弹下移，touchend 的二次命中测试落在位移后的别的元素上，合成 click 被派发到错误
+// 元素——按钮监听器不触发、无报错、无回复（iQOO Neo10Pro/多安卓机型报障，无头复现实证）。
+// 触摸改 pointerdown「按下即触发」：目标是真实按压元素，不经历触摸后的二次命中测试，
+// 键盘怎么收都吞不掉；1.2s 防重入挡住随后补发的合成 click（干净点按双事件只回一次）。
+// 鼠标仍走 click（不响应按下半程）；无 PointerEvent 的老内核 click 路径照常兜底。
+let _csFiredAt = 0;
+function csFireContinue() {
+  const now = Date.now();
+  if (now - _csFiredAt < 1200) return;
+  _csFiredAt = now;
+  if (window.continueChat) window.continueChat();
+}
+if (csBtn) {
+  csBtn.addEventListener('pointerdown', (e) => { if (e.pointerType === 'mouse') return; csFireContinue(); });
+  csBtn.addEventListener('click', () => { csFireContinue(); });
+}
 window.applyContinueSayUI = function () {
 try {
 const c = cfg();

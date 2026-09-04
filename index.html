@@ -8777,9 +8777,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1788501686898">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.415</b></span>
-        <span class="sv-deploy">部署于 2026-09-04 14:01<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1788503650235">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.416</b></span>
+        <span class="sv-deploy">部署于 2026-09-04 14:34<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9875,7 +9875,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.415</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.416</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
       <!-- v3.27.x：设置页底部防骗声明 -->
       <div class="set-alert">
@@ -10143,7 +10143,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.415</span>
+              <span class="lic-ver">v3.26.416</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -25925,7 +25925,17 @@ if (c['cs-trigger-name'] === 1 && window.continueChat) window.continueChat();
 });
 }
 const csBtn = document.getElementById('chat-continue-btn');
-if (csBtn) csBtn.addEventListener('click', () => { if (window.continueChat) window.continueChat(); });
+let _csFiredAt = 0;
+function csFireContinue() {
+const now = Date.now();
+if (now - _csFiredAt < 1200) return;
+_csFiredAt = now;
+if (window.continueChat) window.continueChat();
+}
+if (csBtn) {
+csBtn.addEventListener('pointerdown', (e) => { if (e.pointerType === 'mouse') return; csFireContinue(); });
+csBtn.addEventListener('click', () => { csFireContinue(); });
+}
 window.applyContinueSayUI = function () {
 try {
 const c = cfg();
@@ -32318,7 +32328,17 @@ followGcBottom(true);
 if (window.playSfx) window.playSfx('out');
 scheduleReply('');
 }
-if (gcContinueBtn) gcContinueBtn.addEventListener('click', (e) => { e.stopPropagation(); gcContinueSay(); });
+let _gcCsFiredAt = 0;
+function gcCsFireContinue() {
+const now = Date.now();
+if (now - _gcCsFiredAt < 1200) return;
+_gcCsFiredAt = now;
+gcContinueSay();
+}
+if (gcContinueBtn) {
+gcContinueBtn.addEventListener('pointerdown', (e) => { if (e.pointerType === 'mouse') return; gcCsFireContinue(); });
+gcContinueBtn.addEventListener('click', (e) => { e.stopPropagation(); gcCsFireContinue(); });
+}
 if (gcMicBtn) gcMicBtn.addEventListener('click', (e) => {
 e.stopPropagation();
 if (!window.openVoicePanelFor) return;
@@ -77688,4 +77708,4 @@ return { lock: document.body.classList.contains('scroll-lock'), open: open };
 <!-- __MOCHI_EOF__ -->
 </body>
 </html>
-<!-- __MOCHI_EOF__ mtmjq5pu -->
+<!-- __MOCHI_EOF__ mtmkw8mz -->

@@ -1,3 +1,24 @@
+# 本次构建者：AI-B（本会话：#151 切联系人桌面三回归修复，改动 src/js/personalize.js、build.mjs 哨兵5条、FIX-REGRESSION.md #151 行、tools/verify-desk-switch.mjs；开工时工作区含 #150/#149 会话已构建完成的改动，本次构建一并收口）
+
+
+### 2026-09-04 14:4x（#152 iQOO Neo10Pro 等安卓「继续说」按钮点击无回复：键盘收起吞 click，触摸改 pointerdown；源已完成·未构建，请构建者收口）
+* [AI-A 域]（**改动文件：src/js/chat.js（chat-continue-btn 触摸 pointerdown 按下即触发+1.2s 防重入+鼠标 click 原样；continueChat 主逻辑不动）、src/js/group-chat.js（gc-continue-btn 同款，stopPropagation 语义保持）、build.mjs（FIX_SENTINELS 2 条——⚠️ 与你本会话的 5 条同文件，你追加时请基于最新文件重读，我的是数组尾部 #152 两条）、FIX-REGRESSION.md（#152 行，追加在文件尾）、tools/verify-continue-btn.mjs（新增行为断言 6/6，verify:all 自动纳入）；构建状态：未构建（工作区现行 index.html 是你 14:3x 版本，实测 grep 不含本修复，需要重新 build 收口）**）。
+* 需求/反馈：iQOO Neo10Pro Chrome 149（诊断 v3.26.404）：回复设置开了「让对方继续说【按正常回复时间】【底部聊天栏按钮触发】」，点底部「继续说」按钮联系人不回复、无打字提示、无报错；用户反馈安卓其他机型也有（=机型无关）。要求不覆盖修复、登记防回归。
+* 根因（无头 Chrome 真实触摸管线复现实证）：安卓键盘收起与点按手势重叠时（打字后立刻点按钮最典型），输入栏随视口回弹下移，touchend 的二次命中测试落在位移后的元素上，合成 click 被派发到错误元素（复现：click 落到 span.msg-time，按钮监听器 0 触发、无异常）——静默无回复。诊断里键盘状态机长时间滞留 kbActive/收起动画期（vv 卡 502/基线 690）正是高危环境；诊断轨迹 click 已命中按钮的个案与 cs-normal=1「回复速度」长延时（默认最长 40s）观感叠加。continueChat/replyOnce/字卡池/卡死状态下的点击链路均实测正常，排除。
+* 方案：按钮触摸事件改 pointerdown（目标是真实按压元素，不经历触摸后的二次命中测试，布局位移吞不掉）+ 防重入 1.2s 挡 pointerdown 已触发后补发的合成 click 双触发；鼠标仍走 click；无 PointerEvent 老内核 click 兜底。群聊同款按钮同步修（同输入栏同风险）。
+* 验证：node --check 过；临时目录真实构建哨兵 **303/303** 全绿哑哨兵 0（needle 含 `(e)`/属性链等产物稳定子串，与 #127/#150 同风格，实际构建输出实证在位）；verify-continue-btn **6/6**（①键盘收起吞 click 场景修复前 ccCalls=0→修复后=1 ②干净点按防重入只触发一次 ③纯 click 不回归 ④cs-normal=1 延时分条回复正常）；--check-sentinels 303 在位。
+* 待真机（iQOO Neo10Pro 及任意机型）：打字后（键盘开着）立刻点「继续说」→ 出现打字提示并按设置的回复速度收到回复（「按正常回复时间」默认回复速度最长 40s，请用户等待窗口对齐设置值）；群聊输入栏同款场景生效；连点不双倍回复。
+* 📌 顺带发现：FIX-REGRESSION.md 里 `| 151 |` 行出现两次（grep 计数=2），疑似你本会话追加重复，请自查去重，未代改（避免与你编辑冲突）。
+
+
+### 2026-09-04 14:3x（#151 小米14U Edge 切联系人回桌面「小组件隐藏但可点/桌面串显示/壁纸不铺满」三回归；已构建）
+* [AI-B 域]（**改动文件：src/js/personalize.js（五处：①切桌面美化键缺键复位 widget-opacity/bg-blur/bg-mask-op/desk-card-radius；②TEMPLATE_DESK_ARR 模板排布快照 + restoreTemplateDesk + applyDeskLayout 无布局分支接入；③setBgLayerImage 的 backgroundSize/Position 移出「图变才写」守卫；④deskSwitchBuild 标记——切桌面期间 buildDeskPages 删页收缩不落盘；⑤美化抽屉透明度滑杆统一 opacityRawToPct+存百分比整数）、build.mjs（FIX_SENTINELS 5 条）、FIX-REGRESSION.md（#151 行）、tools/verify-desk-switch.mjs（新增行为断言）；构建状态：最终构建·sw mochi-mtmkw8mz（14:34，含并行会话 #152「继续说」按钮修复一并收口）哨兵 303/303 哑哨兵 0**）。
+* 需求/反馈：小米14U Edge（诊断 v3.26.404）：①联系人里切换联系人再切回原桌面，小组件隐藏但位置点得到；②不同桌面显示不一样；③桌面背景图片没按比例铺满。用户反馈安卓其他机型也出现（=机型无关的逻辑 bug）。防回归红线：不动既有哨兵锚点（含 #147 壁纸防 iOS 重解码语义原样保留）。
+* 根因（三个独立机制叠加，详见 FIX-REGRESSION #151 行）：①美化键挂全局 CSS 变量但按桌面存键，切到无键桌面不复位 → 上一桌面透明度/蒙层残留（opacity 低的组件=不可见但可点中）；②无布局桌面切回时 applyDeskLayout 对 `!lay` 直接 return，被上个桌面布局扫进隐藏池的本桌组件永不归还（headless 实测复现：quote-row/checkin/music/weekend 卡池）；③#147 把 backgroundSize/Position 锁进「图变才写」守卫 → 壁纸定位/缩放改键不生效、同图异 pos 跨桌面串用（=「不按比例铺满」）；附带：切桌面 buildDeskPages 删页收缩把上一桌面排布写进新桌面 desk-layout（跨桌面污染持久化）、美化抽屉滑杆仍写 #146 同族小数脏值。
+* 方案：全部最小改动收在 personalize.js（AI-B 域），不碰 home.css/p2-features.js/contacts.js；backgroundImage 写入仍值变才写（#147 语义不变，size/pos 各自值变才写不盲写）。
+* 验证：node --check 过；verify-desk-switch **15/15**（四场景：无布局切回池归还+可选组件不误归还+布局键不被写串 / 透明度残留复位+按桌面应用 / 同图异 pos size 跟桌面走 / 删页不污染+有布局桌面正常归还）；构建哨兵 303/303 全绿哑哨兵 0；npm run verify:all 全量 131 通过/67 断言失败/2 超时（与 #140 时代基线 121/69/2 对比通过更多失败更少，失败项与桌面/美化域零关联，超时为 avatar-ta-change/pong-balance 两个历史慢脚本）；FIX-REGRESSION #151 行重复系本会话追加脚本误写两遍，已去重（并行会话 #152 发现并留话，致谢）。
+* 待真机（小米14U Edge 及任意机型）：联系人来回切小组件保持显示、各桌面布局/透明度/壁纸互不串；壁纸定位/缩放实时生效。**历史被污染的设备**（布局键已被写串的）：设置→恢复默认桌面一次或重新装修即可清除。
+
 # 本次构建者：AI-B（本会话：#150 后台来电系统通知，改动 call.js/bg-keep.js/build.mjs/FIX-REGRESSION.md；开工时 git status 有 #149 会话未提交改动（已构建完成），本次构建一并包含）
 
 
