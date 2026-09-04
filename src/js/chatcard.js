@@ -3009,7 +3009,15 @@
       : (ccScope === 'public' ? '公用字卡' : '专属字卡');
     const s1 = document.getElementById('cc-search-input');
     if (s1) s1.value = '';
-    tabsWrap.querySelectorAll('.cc-tab').forEach(t => t.classList.toggle('sel', t.dataset.type === cur));
+    // v3.32.x：三大入口 tab 分区隔离——「其他互动功能字卡」入口只显示 13 个功能分类，
+    // 公用/专属入口只显示 7 个基础分类（用户反馈：功能页不应看到基础分类，且三入口
+    // 要分开）。hidden 每次进页重建，入口互不残留
+    const ccFuncOnly = CC_FUNC_KEYS.indexOf(cur) >= 0;
+    tabsWrap.querySelectorAll('.cc-tab').forEach(t => {
+      const isFunc = CC_FUNC_KEYS.indexOf(t.dataset.type) >= 0;
+      t.classList.toggle('sel', t.dataset.type === cur);
+      t.hidden = ccFuncOnly ? !isFunc : isFunc;
+    });
     document.querySelectorAll('.page').forEach(p => p.hidden = true);
     const ccPage = document.getElementById('page-custom-cards');
     if (ccPage) ccPage.hidden = false;

@@ -2591,12 +2591,6 @@ scrollbar-width:none; -ms-overflow-style:none; flex-shrink:0;
 .card-tabs::-webkit-scrollbar { display:none; }
 #dc-tabs.card-tabs, #fc-tabs.card-tabs { flex-wrap:wrap; overflow-x:visible; row-gap:8px; }
 #cc-tabs.card-tabs { flex-wrap:wrap; overflow-x:visible; row-gap:8px; }
-#cc-tabs .cc-tabs-sep {
-flex-basis:100%; display:block; padding:6px 4px 0;
-font-size:11px; font-weight:700; color:#999; line-height:1;
-border-top:1px dashed rgba(0,0,0,.12); padding-top:10px;
--webkit-tap-highlight-color:transparent; user-select:none; pointer-events:none;
-}
 .cc-tab {
 flex:0 0 auto; display:inline-flex; align-items:center; gap:5px;
 padding:9px 14px; font-size:13px; border-radius:99px;
@@ -6886,7 +6880,6 @@ color-scheme:dark;
 .card-tab, .cc-tab { background:var(--dark-hover); border-color:var(--dark-border-12); color:var(--dark-soft); }
 .card-tab.sel, .cc-tab.sel { background:var(--btn-bg); color:var(--btn-ink); border-color:var(--btn-bg); }
 .cc-tab-n { background:var(--dark-border-12); color:var(--dark-soft); }
-#cc-tabs .cc-tabs-sep { color:var(--dark-soft); border-top-color:var(--dark-border-12); }
 .cc-tab.sel .cc-tab-n { background:rgba(17,17,17,.12); color:var(--btn-ink); }
 .card-search { background:var(--dark-input); border-color:var(--dark-border-12); }
 .card-search-input { background:transparent; color:var(--ink); }
@@ -8785,9 +8778,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1788515645447">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.422</b></span>
-        <span class="sv-deploy">部署于 2026-09-04 17:54<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1788517909219">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.423</b></span>
+        <span class="sv-deploy">部署于 2026-09-04 18:31<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9751,8 +9744,8 @@ transition-duration: .01ms !important;
         <button class="cc-tab" data-type="poke"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 000 18"/><circle cx="12" cy="12" r="2"/></svg>拍一拍</button>
         <button class="cc-tab" data-type="voice"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg>语音</button>
         <!-- v3.32.x：其他互动功能字卡（自定义）——与系统预设【其他互动功能字卡】同分类，
-             用户自建的功能字卡存本作用域 cc-groups 同名字段，各功能经 getLibPool 并入抽取 -->
-        <div class="cc-tabs-sep">其他互动功能字卡 · 触发对应功能时 TA 使用</div>
+             用户自建的功能字卡存本作用域 cc-groups 同名字段，各功能经 getLibPool 并入抽取；
+             13 个功能 tab 仅「其他互动功能字卡」入口显示，公用/专属入口隐藏（openCcPage 按入口切换） -->
         <button class="cc-tab" data-type="fish">摸鱼</button>
         <button class="cc-tab" data-type="eat">吃饭</button>
         <button class="cc-tab" data-type="period">经期</button>
@@ -9904,7 +9897,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.422</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.423</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
       <!-- v3.27.x：设置页底部防骗声明 -->
       <div class="set-alert">
@@ -10172,7 +10165,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.422</span>
+              <span class="lic-ver">v3.26.423</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -35129,7 +35122,12 @@ if (ttl) ttl.textContent = (startTab && CC_FUNC_KEYS.indexOf(cur) >= 0) ? '其�
 : (ccScope === 'public' ? '公用字卡' : '专属字卡');
 const s1 = document.getElementById('cc-search-input');
 if (s1) s1.value = '';
-tabsWrap.querySelectorAll('.cc-tab').forEach(t => t.classList.toggle('sel', t.dataset.type === cur));
+const ccFuncOnly = CC_FUNC_KEYS.indexOf(cur) >= 0;
+tabsWrap.querySelectorAll('.cc-tab').forEach(t => {
+const isFunc = CC_FUNC_KEYS.indexOf(t.dataset.type) >= 0;
+t.classList.toggle('sel', t.dataset.type === cur);
+t.hidden = ccFuncOnly ? !isFunc : isFunc;
+});
 document.querySelectorAll('.page').forEach(p => p.hidden = true);
 const ccPage = document.getElementById('page-custom-cards');
 if (ccPage) ccPage.hidden = false;
@@ -77885,4 +77883,4 @@ return { lock: document.body.classList.contains('scroll-lock'), open: open };
 <!-- __MOCHI_EOF__ -->
 </body>
 </html>
-<!-- __MOCHI_EOF__ mtms1c7b -->
+<!-- __MOCHI_EOF__ mtmtduxv -->

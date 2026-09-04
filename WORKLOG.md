@@ -1,5 +1,12 @@
 # 本次构建者：AI-B（本会话：#156 群聊模式没隐藏桌面占卜图标修复，改动 src/js/personalize.js、build.mjs 哨兵 2 条、tools/verify-group-desk-icon.mjs、FIX-REGRESSION.md #156 行；开工时工作区含并行会话已声明完成的「其他互动功能字卡」改动 chatcard.js/default-cards.js/template.html 一并收口）
 
+### 2026-09-04 18:3x（用户反馈三入口没分开：自定义字卡三入口 tab 分区隔离；已构建已提交）
+* [AI-A 域]（**改动文件：src/js/chatcard.js（openCcPage 按入口切换 tab hidden——「其他互动功能字卡」入口只显示 13 个功能 tab，公用/专属入口只显示 7 个基础分类 tab，每次进页重建互不残留；含上条卡顿修复两处：refreshLibCounts 公用角标 pubFun 缓存化、getCustomFuncCards 专属库原始串身份缓存）、src/template.html（移除 .cc-tabs-sep 分隔条）、src/css/chat-pages.css + src/css/dark.css（移除分隔条样式）；构建状态：已构建·sw mochi-mtmtduxv 哨兵 312/312 哑哨兵 0；已提交推送**）。
+* 验证：node --check 过；verify-cc-group-off 12/12、verify-cc-tab-totals 7/7；verify-cc-scope 16/27 失败经 HEAD 与 4c952e1 双基线对照逐字一致＝既有过期断言非本次回归（待专项修脚本）；verify:all 全量 130/69/2 与基线同域浮动。
+* 待真机：三入口各看各的 tab；功能入口添加的字卡在功能 tab 管理；公用/专属页不再出现功能 tab。
+
+
+
 ### 2026-09-04 17:5x（#156 群聊模式没隐藏桌面占卜图标：任意位置强制收隐藏池+布局应用末尾防复活；已构建）
 * [AI-B 域]（**改动文件：src/js/personalize.js（①applyGroupChatMode 开启分支占卜收池条件 `parentNode === mainGrid`→`parentNode !== pool`（装修桌拖到任意页/组件库加回的也隐藏）；②applyDeskLayout 末尾重应用一次群聊模式（防启动 150ms ensureP2AppsBelowWeekend 兜底重跑等 bare 布局应用把占卜从池按 desk-layout 复活回桌面）；③关闭分支维持 v3.8 原语义放回首页图标组默认位）、build.mjs（FIX_SENTINELS 2 条，数组尾部 #156）、tools/verify-group-desk-icon.mjs（新增行为断言 6/6，verify:all 自动纳入）、FIX-REGRESSION.md（#156 行）；构建状态：已构建·sw mochi-mtms1c7b 哨兵 312/312 全绿哑哨兵 0；真实产物 verify-group-desk-icon 6/6 + 核心 verify 10/10 + 红控（沙箱回退修复）T2/T3 转红复现用户场景**）。
 * 需求边界：用户反馈【群聊模式】没隐藏桌面【占卜】图标；只管桌面图标，群聊更多面板里的占卜入口（GROUP_MORE_ITEM_IDS）不动。

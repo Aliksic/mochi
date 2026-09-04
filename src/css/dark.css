@@ -179,8 +179,6 @@
   .card-tab, .cc-tab { background:var(--dark-hover); border-color:var(--dark-border-12); color:var(--dark-soft); }
   .card-tab.sel, .cc-tab.sel { background:var(--btn-bg); color:var(--btn-ink); border-color:var(--btn-bg); }
   .cc-tab-n { background:var(--dark-border-12); color:var(--dark-soft); }
-  /* v3.32.x：自定义字卡页功能分类区小标题（.cc-tabs-sep）暗色适配 */
-  #cc-tabs .cc-tabs-sep { color:var(--dark-soft); border-top-color:var(--dark-border-12); }
   /* v3.11.x：选中 tab 深色下是浅底(--btn-bg #f0f0f0)，徽标白字改深字（原 #fff 白字白底不可见） */
   .cc-tab.sel .cc-tab-n { background:rgba(17,17,17,.12); color:var(--btn-ink); }
   .card-search { background:var(--dark-input); border-color:var(--dark-border-12); }
