@@ -85,7 +85,7 @@ function minifyCss(code) {
 
 // ===== 按顺序拼接样式 / 脚本（顺序即生效顺序） =====
 const cssFiles = ['base.css', 'home.css', 'chat-main.css', 'chat-pages.css', 'market.css', 'group-chat.css', 'setting.css', 'tabbar.css', 'dark.css', 'garden.css', 'memo.css', 'memo-arc.css', 'room.css', 'drift-bottle.css'];
-const jsFiles = ['device.js', 'idb.js', 'contacts.js', 'media-pool.js', 'clock.js', 'tabs.js', 'desktop-slider.js', 'quote-cards.js', 'personalize.js', 'chat.js', 'group-chat.js', 'chatcard.js', 'chat-settings.js', 'reply-settings.js', 'fav-settings.js', 'default-cards-data.js', 'default-cards.js', 'mood-followup-data.js', 'mood-reply-cards.js', 'ta-mood-data.js', 'ta-mood.js', 'music-player.js', 'calendar.js', 'divination.js', 'avatar-lib.js', 'ta-ask.js', 'ck-question.js', 'incoming-requests.js', 'ta-invite.js', 'bg-keep.js', 'records.js', 'call.js', 'mail.js', 'feed.js', 'loc-lib.js', 'p2-features.js', 'gift-shop.js', 'memo-app.js', 'memo-arc.js', 'my-arc.js', 'period.js', 'accounting.js', 'garden.js', 'room.js', 'drift-bottle.js', 'decision.js', 'group-decision.js', 'pong.js', 'snake-game.js', 'breakout.js', 'connect-four.js', 'coop-mine.js', 'fishing.js', 'memory-game.js', 'sfx.js', 'fullscreen.js', 'data-backup.js', 'pwa.js', 'cjian.js', 'mobile-adapt.js'];
+const jsFiles = ['device.js', 'idb.js', 'contacts.js', 'media-pool.js', 'storage-slim.js', 'clock.js', 'tabs.js', 'desktop-slider.js', 'quote-cards.js', 'personalize.js', 'chat.js', 'group-chat.js', 'chatcard.js', 'chat-settings.js', 'reply-settings.js', 'fav-settings.js', 'default-cards-data.js', 'default-cards.js', 'mood-followup-data.js', 'mood-reply-cards.js', 'ta-mood-data.js', 'ta-mood.js', 'music-player.js', 'calendar.js', 'divination.js', 'avatar-lib.js', 'ta-ask.js', 'ck-question.js', 'incoming-requests.js', 'ta-invite.js', 'bg-keep.js', 'records.js', 'call.js', 'mail.js', 'feed.js', 'loc-lib.js', 'p2-features.js', 'gift-shop.js', 'memo-app.js', 'memo-arc.js', 'my-arc.js', 'period.js', 'accounting.js', 'garden.js', 'room.js', 'drift-bottle.js', 'decision.js', 'group-decision.js', 'pong.js', 'snake-game.js', 'breakout.js', 'connect-four.js', 'coop-mine.js', 'fishing.js', 'memory-game.js', 'sfx.js', 'fullscreen.js', 'data-backup.js', 'pwa.js', 'cjian.js', 'mobile-adapt.js'];
 
 let html = read('template.html');
 const styles = cssFiles.map(f => minifyCss(read(join('css', f)))).join('\n');
@@ -253,6 +253,9 @@ const FIX_SENTINELS = [
   { name: '#141 悬浮键盘推定收口（用户键入 1200ms 内即放行推顶，不等 2200ms 无活动自愈）', file: 'js/mobile-adapt.js', needle: 'if (!tgt || Date.now() - _aUserTypos > 1200) return;' },
   { name: '#144 isIOS 补 iPadOS 伪装 UA 分支（Macintosh+触摸屏，修 iPad Air 全屏开关无反应/ios-pwa-standalone 类不加）', file: 'js/device.js', needle: "((navigator.platform === 'MacIntel' || /Macintosh/i.test(ua)) && navigator.maxTouchPoints > 1 && 'ontouchstart' in window);" },
   { name: '#144 armFgIdbReset 补 touchMac 分支（伪装 UA 的 iPad 回前台重建 IDB 连接）', file: 'js/idb.js', needle: 'if (!/iPhone|iPad|iPod/i.test(ua) && !touchMac) return;' },
+  { name: '#148 syncVvFit 顶部避让改 env() 探针实测（iOS26 已避让形态 env=0 不再加页面 padding，修 Mochi 行上方大空白）', file: 'js/mobile-adapt.js', needle: 'padding-top:env(safe-area-inset-top,0px);visibility:hidden;pointer-events:none;' },
+  { name: '#148 fs 态写 --mochi-ios-h=vv 实测可视高（修 100vh>可视高致底部 tabbar 裁切）', file: 'js/mobile-adapt.js', needle: "_pxFs = (_vh2 >= 300) ? (_vh2 + 'px') : ''" },
+  { name: '#148 fs 态 .phone 高度用 --mochi-ios-h（回 100vh 兜底）', file: 'css/base.css', needle: 'height:var(--mochi-ios-h, 100vh);' },
   { name: '#146 组件透明度小数脏值解析 opacityRawToPct（≤1 按 ×100 换算，修随机美化写 0.9/1 被 parseInt 成 0 → 小组件全透明）', file: 'js/personalize.js', needle: 'opacityRawToPct' },
   { name: '#146 一键随机美化功能已删除（row-beauty-random 处理块 absent）', file: 'js/personalize.js', needle: "getElementById('row-beauty-random')", absent: true },
   { name: '#146 随机美化入口已删除（template absent）', file: 'template.html', needle: 'row-beauty-random', absent: true },
@@ -521,6 +524,10 @@ const FIX_SENTINELS = [
   { name: '#166 存储优化·媒体池GC引用面（#142 池只增不删债务收口；引用源=全部聊天+收藏键，改窄即消失）', file: 'js/media-pool.js', needle: '/(?:^|:)(?:chat-msgs|fav-msgs)$/' },
   { name: '#166 存储优化·写日志标记合并（每小键 set 值+标记两个 IDB 事务并成一个批量事务；改回逐键即时写即消失）', file: 'js/idb.js', needle: 'setTimeout(wrjMarkFlush, WRJ_MARK_FLUSH_MS)' },
   { name: '#166 存储优化·查看存储页孤儿清理入口（媒体池面板接线）', file: 'js/personalize.js', needle: "getElementById('st-media-gc')" },
+  { name: '#167 多字卡回复/回复条数边界说明在位（用户报障关多字卡仍多条：py-en 只管拼同一条，拆几条发送=reply-min/max 默认1~2 另一开关；防说明被删同类误报复发）', file: 'template.html', needle: '「回复条数最多」设为 1' },
+  { name: '#170 字卡库瘦身·删除前重读当前值防覆盖扫描后的编辑（组名匹配不到→不动，绝不据扫描快照盲写）', file: 'js/storage-slim.js', needle: 'if (g[cat].length === before) return false;' },
+  { name: '#170 字卡库瘦身·查看存储页扫描入口（面板接线）', file: 'js/personalize.js', needle: "getElementById('st-cc-scan')" },
+  { name: '#169 语音60秒误报根治（重复进入录音覆盖 voiceTimer 漏孤儿计时器每250ms误报已达60秒；孤儿自毁+非录音态不判60s，逻辑被改即消失）', file: 'js/chat.js', needle: 'if (voiceTimer !== voiceTid) { clearInterval(voiceTid); return; }' },
 ];
 try {
   const built = CHECK_SENTINELS ? '' : readFileSync(join(root, 'index.html'), 'utf8');

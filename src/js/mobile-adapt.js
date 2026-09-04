@@ -968,36 +968,55 @@
       // --mochi-safe-bottom：底部被浏览器工具条占据时归零。见下方 CSS 侧
       //   var(--mochi-safe-bottom, env(safe-area-inset-bottom, 0px)) 的 27 处替换。
       var _vvFitOn = false;
+      var _envTopCache = -1; // #148：env(safe-area-inset-top) 探针缓存（-1=未测）；旋转时失效
       function syncVvFit() {
         try {
           var d = document.documentElement;
-          // ===== v3.28.x #114：iOS standalone 顶部安全区实测 =====
-          // env(safe-area-inset-top) 在该环境（iPhone15+Safari 主屏幕/全屏）返回 0：
-          // 桌面模拟状态栏与系统状态栏重叠、聊天返回键被系统栏吞点（用户报障）。
-          // 用 screen.height - 可视高 实测系统状态栏高度写 --mochi-safe-top 供 CSS 避让；
-          // 仅 standalone（black-translucent 内容钻进状态栏区）才需要，范围 20-160 过滤
-          // 浏览器工具条等干扰（真机状态栏 47-62px）。非 standalone 摘除回落 env()。
+          // ===== v3.26.x #148：iOS standalone 顶部安全区改用 env() 实测探针 =====
+          // 原差值法（screen.height - 可视高）在 iOS 26.x「系统不把网页垫到状态栏
+          // 下方」的形态上失真：该形态系统已把网页起点放在状态栏下方（innerHeight
+          // = screen - 状态栏高），差值却还是量出状态栏高度并写进 --mochi-safe-top
+          // → .phone padding-top 与系统避让双重叠加，Mochi 行上方 ~76px 空白、
+          // 整页下坠（iPhone 16 Pro + Safari 26.1 主屏幕全屏实测）。
+          // env(safe-area-inset-top) 语义恰好区分两种形态：「内容已避让」时返回 0
+          // （系统已处理，页面不再加），「内容覆盖到状态栏下」时返回真实高度。
+          // 探针结果按横竖屏缓存（env 只随旋转变化），避免每次 vv 事件都建 DOM。
           var _ih2 = window.innerHeight || 0;
           var _sh2 = (window.screen && window.screen.height) || 0;
           var _vh2 = _vv ? Math.round(_vv.height * ((_vv.scale && _vv.scale > 0.5) ? _vv.scale : 1)) : _ih2;
           var _safeTop = 0;
           if (d.classList.contains('ios-pwa-standalone') && _sh2 > 0 && _vh2 > 0) {
-            var _diff = _sh2 - _vh2;
-            if (_diff >= 20 && _diff <= 160) _safeTop = _diff;
+            if (_envTopCache < 0) {
+              try {
+                var _probe = document.createElement('div');
+                _probe.style.cssText = 'position:fixed;top:0;left:0;width:0;height:0;padding-top:env(safe-area-inset-top,0px);visibility:hidden;pointer-events:none;';
+                document.body.appendChild(_probe);
+                _envTopCache = parseFloat(getComputedStyle(_probe).paddingTop) || 0;
+                document.body.removeChild(_probe);
+              } catch (e4) { _envTopCache = 0; }
+            }
+            // env 实测 ≥20 才需要页面避让（覆盖形态）；=0 说明系统已避让，不再叠加
+            if (_envTopCache >= 20 && _envTopCache <= 160) _safeTop = _envTopCache;
           }
           var _topPx = _safeTop ? _safeTop + 'px' : '';
           if (d.style.getPropertyValue('--mochi-safe-top') !== _topPx) {
             if (_topPx) d.style.setProperty('--mochi-safe-top', _topPx);
             else d.style.removeProperty('--mochi-safe-top');
           }
-          // 全屏态不写 --mochi-ios-h（原生 fs-active / CSS 兜底 fs-css-active / iOS 兜底
-          // ios-fs-active / iOS 原生 ios-native-fs）：全屏下 CSS 的 100dvh 就是整块可视高，
-          // 而 visualViewport.height 在个别 iOS 版本全屏过渡 / 工具条显隐时机比 100dvh 小，
-          // 写进去会把 .phone 压矮 → 底部聊天输入栏整体偏上、不贴合手机底部（报修）。
-          // 摘除属性让 CSS 回落 100dvh 填满全屏；不超出 100dvh 也不会复现 #109 整页上移。
+          // v3.26.x #148：全屏态（原生 fs-active / CSS 兜底 fs-css-active / iOS 兜底
+          // ios-fs-active / iOS 原生 ios-native-fs）改为「健康态写 --mochi-ios-h」——
+          // 原实现摘除属性回落 100vh，但 iOS 26.x 独立应用 100vh = 整块物理屏
+          // （874），可视高只有 812 → .phone 底部 tabbar 被裁出屏幕外（同一台设备
+          // 实测 .phone高=874 底部空隙=-62）。--mochi-ios-h = visualViewport 实测
+          // 可视高（812），两种形态都贴合；键盘/推定态仍摘除（上方分支），全屏过渡
+          // 期短暂波动由常驻自愈 rAF 连续校正。真机状态以诊断「.phone高/底部空隙」复核。
           if (d.classList.contains('fs-active') || d.classList.contains('fs-css-active')
               || d.classList.contains('ios-fs-active') || d.classList.contains('ios-native-fs')) {
-            if (d.style.getPropertyValue('--mochi-ios-h')) d.style.removeProperty('--mochi-ios-h');
+            var _pxFs = (_vh2 >= 300) ? (_vh2 + 'px') : '';
+            if (d.style.getPropertyValue('--mochi-ios-h') !== _pxFs) {
+              if (_pxFs) d.style.setProperty('--mochi-ios-h', _pxFs);
+              else d.style.removeProperty('--mochi-ios-h');
+            }
             return;
           }
           // 键盘会话期间不写（摘除属性）：那段时间 .phone 高度由 _setPhoneH 内联值
@@ -1112,6 +1131,8 @@
       //  会立刻补一次，覆盖切后台回来视口已变的场景。
       window.addEventListener('resize', onIosVvEvent);
       window.addEventListener('orientationchange', onIosVvEvent);
+      // v3.26.x #148：旋转后 env(safe-area-inset-top) 可能变化，失效探针缓存重测
+      window.addEventListener('orientationchange', function () { try { _envTopCache = -1; } catch (e) {} });
       window.addEventListener('pageshow', onIosVvEvent);
       document.addEventListener('visibilitychange', onIosVvEvent);
       setInterval(function () {

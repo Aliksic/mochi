@@ -350,12 +350,12 @@ html.tablet.ios-vv-fit:not(.ios-pwa-standalone) .phone { height:min(var(--mochi-
 html.tablet.ios-pwa-standalone .phone { height:min(100vh, var(--mochi-ios-h, 100dvh)); }
 .ios-pwa-standalone.ios-fs-active .phone,
 html.tablet.ios-pwa-standalone.ios-fs-active .phone {
-height:100vh;
+height:var(--mochi-ios-h, 100vh);
 padding-top:max(var(--mochi-safe-top, env(safe-area-inset-top, 0px)), 12px);
 padding-bottom:0;
 }
 html.ios-pwa-standalone.ios-fs-active,
-html.ios-pwa-standalone.ios-fs-active body { height:100vh; min-height:100vh; }
+html.ios-pwa-standalone.ios-fs-active body { height:var(--mochi-ios-h, 100vh); min-height:0; }
 html.ios-pwa-standalone,
 html.ios-pwa-standalone body { background: var(--bg-b); }
 @media (display-mode: standalone) {
@@ -8779,9 +8779,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1788541443399">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.436</b></span>
-        <span class="sv-deploy">部署于 2026-09-05 01:04<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1788543722002">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.437</b></span>
+        <span class="sv-deploy">部署于 2026-09-05 01:42<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9904,7 +9904,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.436</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.437</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
       <!-- v3.27.x：设置页底部防骗声明 -->
       <div class="set-alert">
@@ -9961,6 +9961,14 @@ transition-duration: .01ms !important;
           <div class="storage-row"><span>当前状态</span><b id="st-persist">读取中…</b></div>
           <button class="storage-clear" id="st-persist-btn" type="button" hidden>申请持久存储</button>
           <div class="storage-hint">申请成功后浏览器承诺不自动清理本应用数据（同域其他站点占满配额时更不容易被挤掉）。注意：持久化不是备份，定期导出备份仍是唯一可靠防线。</div>
+        </div>
+        <!-- #168 字卡库瘦身：分组体积扫描与整组删除（后端 storage-slim.js，接线 personalize.js） -->
+        <div class="cal-card glass">
+          <div class="cal-card-title">字卡库瘦身</div>
+          <div class="storage-row"><span>各字卡库合计</span><b id="st-cc">点「扫描」后显示</b></div>
+          <button class="storage-clear" id="st-cc-scan" type="button">扫描最大的字卡分组</button>
+          <div id="st-cc-list"></div>
+          <div class="storage-hint">自定义字卡里的 GIF/大图是字卡库体积的大头（历史实测一个库 40MB+）。这里按<b>分组</b>列出最大的字卡组，删除＝整组删除（与在字卡管理页删掉该分组完全一样），<b>不可撤销</b>，删前建议先导出备份。舍不得删的组可以先在字卡管理页导出留底。</div>
         </div>
       </div>
     </div>
@@ -10187,7 +10195,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.436</span>
+              <span class="lic-ver">v3.26.437</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -10695,6 +10703,7 @@ transition-duration: .01ms !important;
             <div class="gs-row"><span>触发概率</span><div class="stepper" data-k="py-prob" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="py-prob-val" readonly><button class="stp-max">+</button></div></div>
             <div class="gs-row"><span>最少条数</span><div class="stepper" data-k="py-min" data-min="1" data-max="10" data-step="1"><button class="stp-min">−</button><input class="stp-val" id="py-min-val" readonly><button class="stp-max">+</button></div></div>
             <div class="gs-row"><span>最多条数</span><div class="stepper" data-k="py-max" data-min="2" data-max="10" data-step="1"><button class="stp-min">−</button><input class="stp-val" id="py-max-val" readonly><button class="stp-max">+</button></div></div>
+            <div class="gs-sub">此开关只控制「把多张字卡拼进同一条消息」；TA 把回复拆成几条消息发送由上方「回复条数」控制（默认最少 1、最多 2）——想只回一条请把「回复条数最多」设为 1</div>
           </div>
           <div class="gs-title">主动发送（联系人找你）</div>
           <div class="set-group glass">
@@ -16551,6 +16560,80 @@ return n;
 };
 })();
 } catch (__e) { try { console.error("[JS] media-pool.js", __e && __e.message || __e); } catch (x) {} if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
+(function () { try {
+(function () {
+const G = 'xy-home-v2:';
+function libs() {
+const out = [{ prefix: G, key: 'cc-groups-public', label: '公用字卡库' }];
+try {
+(window.getContacts ? window.getContacts() : []).forEach(function (c) {
+if (c && c.id) out.push({ prefix: G + c.id + ':', key: 'cc-groups', label: (c.name || c.id) + ' · 专属' });
+});
+} catch (e) {}
+out.push({ prefix: G, key: 'cc-groups', label: '旧版顶层字卡库（残留）' });
+return out;
+}
+function parseLib(raw) {
+try {
+const s = typeof raw === 'string' ? raw : JSON.stringify(raw);
+const g = JSON.parse(s || 'null');
+if (g && typeof g === 'object' && g.text) return g;
+} catch (e) {}
+return null;
+}
+window.mochiCcSlimScan = function () {
+return (async function () {
+const out = { ok: false, reason: '', libs: [], groups: [], totalBytes: 0 };
+if (!window.idbListKeys || !window.idbGet) { out.reason = '接口不可用'; return out; }
+const keys = await window.idbListKeys();
+if (!keys) { out.reason = '键清单读取失败（存储繁忙），稍后再试'; return out; }
+const keySet = {};
+keys.forEach(function (k) { keySet[String(k)] = true; });
+const list = libs().filter(function (L) { return keySet[L.prefix + L.key]; });
+for (let i = 0; i < list.length; i++) {
+const L = list[i];
+const raw = await window.idbGet(L.prefix + L.key);
+if (raw === undefined || raw === null) { out.reason = '字卡库「' + L.label + '」没读到（存储繁忙），结果可能不全'; continue; }
+const g = parseLib(raw);
+if (!g) continue;
+let libBytes = 0;
+Object.keys(g).forEach(function (cat) {
+const arr = g[cat];
+if (!Array.isArray(arr)) return;
+arr.forEach(function (tu) {
+if (!Array.isArray(tu) || typeof tu[0] !== 'string') return; // 非二元组结构不认，宁可少列不误删
+let bytes = 0;
+try { bytes = JSON.stringify(tu).length * 2; } catch (e) { return; }
+libBytes += bytes;
+out.groups.push({ prefix: L.prefix, key: L.key, label: L.label, cat: cat, name: tu[0], cards: Array.isArray(tu[1]) ? tu[1].length : 0, bytes: bytes });
+});
+});
+out.libs.push({ label: L.label, bytes: libBytes });
+out.totalBytes += libBytes;
+}
+out.groups.sort(function (a, b) { return b.bytes - a.bytes; });
+out.ok = true;
+return out;
+})().catch(function (e) { return { ok: false, reason: '扫描异常：' + ((e && e.message) || e), libs: [], groups: [], totalBytes: 0 }; });
+};
+window.mochiCcSlimDeleteGroup = function (prefix, key, cat, name) {
+return (async function () {
+if (!window.idbGet || !window.xyStore) return false;
+let raw = await window.idbGet(prefix + key);
+if (raw === undefined || raw === null) return false;
+const g = parseLib(raw);
+if (!g || !Array.isArray(g[cat])) return false;
+const before = g[cat].length;
+g[cat] = g[cat].filter(function (tu) { return !(Array.isArray(tu) && tu[0] === name); });
+if (g[cat].length === before) return false; // 组名没匹配到 → 不动
+let s = '';
+try { s = JSON.stringify(g); } catch (e) { return false; }
+try { window.xyStore(prefix).set(key, s); } catch (e) { return false; }
+return true;
+})();
+};
+})();
+} catch (__e) { try { console.error("[JS] storage-slim.js", __e && __e.message || __e); } catch (x) {} if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
 (function () { try {
 (function () {
 const el = document.getElementById('clock');
@@ -22951,6 +23034,75 @@ if (typeof toast === 'function') toast(ok ? '已获得持久存储' : '浏览器
 renderPersist();
 }).catch(function () { renderPersist(); });
 });
+}
+const ccScanBtn = document.getElementById('st-cc-scan');
+if (ccScanBtn) {
+const ccListEl = document.getElementById('st-cc-list');
+const CC_CAT_CN = { text: '文字', kaomoji: '颜文字', emoji: '表情', sticker: '表情包', image: '图片', poke: '拍一拍', voice: '语音' };
+const runCcScan = function () {
+if (!window.mochiCcSlimScan || !window.mochiCcSlimDeleteGroup) {
+if (window.openModal) window.openModal('本环境不支持', '', null, { noInput: true, staticText: '字卡库扫描需要 IndexedDB 支持，当前环境不可用。' });
+return Promise.resolve(null);
+}
+const ccEl = document.getElementById('st-cc');
+ccScanBtn.disabled = true;
+if (ccEl) ccEl.textContent = '扫描中…（大库较慢，勿离开本页）';
+if (ccListEl) ccListEl.innerHTML = '';
+return window.mochiCcSlimScan().then(function (rep) {
+ccScanBtn.disabled = false;
+if (!rep || !rep.ok) {
+if (ccEl) ccEl.textContent = (rep && rep.reason) || '扫描失败';
+return rep;
+}
+if (ccEl) ccEl.textContent = rep.libs.length ? rep.libs.map(function (l) { return l.label + ' ' + fmtBytes(l.bytes); }).join(' · ') : '未发现字卡库';
+if (rep.reason && typeof toast === 'function') toast(rep.reason);
+if (ccListEl) {
+const tops = rep.groups.slice(0, 12);
+if (!tops.length) {
+const h = document.createElement('div');
+h.className = 'storage-hint';
+h.textContent = '没有扫到可列的分组。';
+ccListEl.appendChild(h);
+}
+tops.forEach(function (gdata) {
+const row = document.createElement('div');
+row.className = 'storage-row';
+const sp = document.createElement('span');
+sp.textContent = gdata.label + ' · ' + (CC_CAT_CN[gdata.cat] || gdata.cat) + '「' + gdata.name + '」· ' + gdata.cards + ' 张';
+const bb = document.createElement('b');
+bb.textContent = fmtBytes(gdata.bytes);
+row.appendChild(sp);
+row.appendChild(bb);
+ccListEl.appendChild(row);
+const btn = document.createElement('button');
+btn.className = 'storage-clear';
+btn.type = 'button';
+btn.textContent = '删除「' + gdata.name + '」整组';
+btn.addEventListener('click', function () {
+if (!window.openModal) return;
+window.openModal('删除整组字卡？', '', function () {
+btn.disabled = true;
+window.mochiCcSlimDeleteGroup(gdata.prefix, gdata.key, gdata.cat, gdata.name).then(function (done) {
+if (typeof toast === 'function') toast(done ? '已删除「' + gdata.name + '」整组' : '删除未生效（组可能刚被改过），已重新扫描');
+runCcScan();
+}).catch(function () { btn.disabled = false; });
+}, {
+noInput: true,
+staticText: '将删除 ' + gdata.label + ' · ' + (CC_CAT_CN[gdata.cat] || gdata.cat) + ' 分组「' + gdata.name + '」（' + gdata.cards + ' 张，约 ' + fmtBytes(gdata.bytes) + '）。与在字卡管理页删掉该组效果相同，不可撤销，建议先导出备份。'
+});
+});
+ccListEl.appendChild(btn);
+});
+}
+return rep;
+}).catch(function () {
+ccScanBtn.disabled = false;
+const ccEl2 = document.getElementById('st-cc');
+if (ccEl2) ccEl2.textContent = '扫描异常';
+return null;
+});
+};
+ccScanBtn.addEventListener('click', runCcScan);
 }
 if (row) {
 row.addEventListener('click', function () {
@@ -30081,7 +30233,7 @@ syncBatchBtn();
 const micBtn = document.getElementById('chat-mic-btn');
 const voicePanel = document.getElementById('voice-panel');
 const VOICE_MAX_MS = 60000;
-let voiceStream = null, voiceRec = null, voiceChunks = [], voiceTimer = null;
+let voiceStream = null, voiceRec = null, voiceChunks = [], voiceTimer = null, voiceStarting = false; // FIX 2026-09-05 #169 录音启动进行中闸门
 let voiceStartTs = 0, voiceDataUrl = '', voiceDur = 0, voiceSilent = false, voicePreviewAudio = null, voiceVisHandler = null;
 function voiceEnabled() {
 try { return store.get('cs-voice-send') === '1'; } catch (e) { return false; }
@@ -30178,6 +30330,11 @@ try { return await navigator.mediaDevices.getUserMedia(tries[i]); } catch (e) { 
 throw lastErr;
 }
 async function startVoiceRec() {
+if (voiceStarting) return;
+voiceStarting = true;
+try { await startVoiceRecInner(); } finally { voiceStarting = false; }
+}
+async function startVoiceRecInner() {
 if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || typeof MediaRecorder === 'undefined') {
 toast('当前浏览器不支持录音'); return;
 }
@@ -30228,12 +30385,16 @@ stopVoiceRec(false); toast('页面切到后台，录音已停止');
 }
 };
 document.addEventListener('visibilitychange', voiceVisHandler);
-voiceTimer = setInterval(() => {
+if (voiceTimer) { clearInterval(voiceTimer); voiceTimer = null; } // FIX #169 入场先清残留计时器
+const voiceTid = setInterval(() => {
+if (voiceTimer !== voiceTid) { clearInterval(voiceTid); return; }
+if (!voiceRec || voiceRec.state !== 'recording') { clearInterval(voiceTid); voiceTimer = null; return; }
 const el = Math.floor((Date.now() - voiceStartTs) / 1000);
 const tm = document.getElementById('voice-time');
 if (tm) tm.textContent = voiceFmt(Math.min(el, 60));
 if (Date.now() - voiceStartTs >= VOICE_MAX_MS) { stopVoiceRec(false); toast('已达最长 60 秒，自动停止'); }
 }, 250);
+voiceTimer = voiceTid;
 }
 function stopVoiceRec(silent) {
 if (voiceTimer) { clearInterval(voiceTimer); voiceTimer = null; }
@@ -77583,6 +77744,7 @@ _iProvDock();
 } catch (e) {}
 }
 var _vvFitOn = false;
+var _envTopCache = -1; // #148：env(safe-area-inset-top) 探针缓存（-1=未测）；旋转时失效
 function syncVvFit() {
 try {
 var d = document.documentElement;
@@ -77591,8 +77753,16 @@ var _sh2 = (window.screen && window.screen.height) || 0;
 var _vh2 = _vv ? Math.round(_vv.height * ((_vv.scale && _vv.scale > 0.5) ? _vv.scale : 1)) : _ih2;
 var _safeTop = 0;
 if (d.classList.contains('ios-pwa-standalone') && _sh2 > 0 && _vh2 > 0) {
-var _diff = _sh2 - _vh2;
-if (_diff >= 20 && _diff <= 160) _safeTop = _diff;
+if (_envTopCache < 0) {
+try {
+var _probe = document.createElement('div');
+_probe.style.cssText = 'position:fixed;top:0;left:0;width:0;height:0;padding-top:env(safe-area-inset-top,0px);visibility:hidden;pointer-events:none;';
+document.body.appendChild(_probe);
+_envTopCache = parseFloat(getComputedStyle(_probe).paddingTop) || 0;
+document.body.removeChild(_probe);
+} catch (e4) { _envTopCache = 0; }
+}
+if (_envTopCache >= 20 && _envTopCache <= 160) _safeTop = _envTopCache;
 }
 var _topPx = _safeTop ? _safeTop + 'px' : '';
 if (d.style.getPropertyValue('--mochi-safe-top') !== _topPx) {
@@ -77601,7 +77771,11 @@ else d.style.removeProperty('--mochi-safe-top');
 }
 if (d.classList.contains('fs-active') || d.classList.contains('fs-css-active')
 || d.classList.contains('ios-fs-active') || d.classList.contains('ios-native-fs')) {
-if (d.style.getPropertyValue('--mochi-ios-h')) d.style.removeProperty('--mochi-ios-h');
+var _pxFs = (_vh2 >= 300) ? (_vh2 + 'px') : '';
+if (d.style.getPropertyValue('--mochi-ios-h') !== _pxFs) {
+if (_pxFs) d.style.setProperty('--mochi-ios-h', _pxFs);
+else d.style.removeProperty('--mochi-ios-h');
+}
 return;
 }
 if (_kbActive || _iProv || _kbNowLike()) {
@@ -77680,6 +77854,7 @@ _vv.addEventListener('resize', onIosVvEvent);
 }
 window.addEventListener('resize', onIosVvEvent);
 window.addEventListener('orientationchange', onIosVvEvent);
+window.addEventListener('orientationchange', function () { try { _envTopCache = -1; } catch (e) {} });
 window.addEventListener('pageshow', onIosVvEvent);
 document.addEventListener('visibilitychange', onIosVvEvent);
 setInterval(function () {
@@ -78138,4 +78313,4 @@ return { lock: document.body.classList.contains('scroll-lock'), open: open };
 <!-- __MOCHI_EOF__ -->
 </body>
 </html>
-<!-- __MOCHI_EOF__ mtn7ea13 -->
+<!-- __MOCHI_EOF__ mtn8r47m -->

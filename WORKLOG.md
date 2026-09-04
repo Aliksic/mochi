@@ -1,4 +1,26 @@
-# 本次构建者：本会话（#166 存储优化包：写日志标记合并+媒体池孤儿GC+查看存储页扩展）
+### 2026-09-05 01:2x（#168 iPhone（402×874，iOS 18.7/Safari 26.1）主屏幕全屏态整页下坠+底部裁切：env/diff 双重避让 + 100vh>可视高；已构建）
+* [AI-B 域]（**改动文件：src/js/mobile-adapt.js（syncVvFit 顶部避让改 env() 探针实测——探针缓存+旋转失效；fs 态健康时写 --mochi-ios-h=vv 实测可视高，键盘/推定态仍摘除）、src/css/base.css（#114 规则高度 100vh→var(--mochi-ios-h,100vh)，html/body 同步；#114 padding 锚点串原样保留）、build.mjs（FIX_SENTINELS 3 条）、FIX-REGRESSION.md（#168 行）；构建状态：已构建·sw 见 version.json**）。
+* 根因（两个 iOS 26.x 形态差异）：①「系统不把网页垫到状态栏下」形态（innerHeight=874−62）上，diff 差值法照量出 62px 写进 --mochi-safe-top → 与系统避让双重叠加（Mochi 行掉到 ~150px，截图实证）；②100vh=874 高于可视 812 → .phone 底部 tabbar 裁出屏外（底部空隙=-62）。
+* 验证：node --check 过；CDP 探针实测新级联（safe-top 摘除/12px/无叠加；--mochi-ios-h 消费+动态更新+回落全过）；--check-sentinels 336 全绿哑哨兵 0（#114 原 padding 锚点保留）。
+* 待真机（同机型主屏幕+全屏）：①Mochi 行紧贴系统状态栏下方；②tabbar 完整不被裁；③输入栏贴底；④iPhone 15（inner==screen 形态）回归不变形。编号说明：#148/#149 已被并行会话占用，本条改 #168。
+
+# 本次构建者：无（#167 源就绪未收口——并行会话 #148 mobile-adapt.js 半成品挡构建，产物已回滚；下一构建者收口时一并打包）
+
+### 2026-09-05 0x:xx（用户报障 #169：OPPO Reno6 5G+雨见浏览器发语音「有时候一直提示已达最长60秒」无法使用；源已完成·未构建·随 #167 一并收口）
+* [AI-A 域]（**改动文件：src/js/chat.js（录音三处：①startVoiceRec 拆防重入包装+startVoiceRecInner，voiceStarting 闸门 try/finally 复位；②计时器自证——闭包捕获自身 voiceTid，`voiceTimer!==voiceTid` 孤儿自毁、`!voiceRec||state!=='recording'` 不判 60s；③入场先清残留 voiceTimer）、build.mjs（FIX_SENTINELS +1，#169）、FIX-REGRESSION.md（#169 行，本条即改动说明）**；构建状态：**未构建**——#167 会话已回滚产物待收口，本条只动 src，请下一构建者与 #167 一并打包）。
+* 根因：startVoiceRec 在 await getUserMedia 期间（雨见等慢壳开麦数秒、按钮文案未变）重复点击二次进入，覆盖 voiceRec/voiceStartTs 且 voiceTimer 被换成新 id——旧计时器成孤儿，每 250ms 查 `Date.now()-voiceStartTs>=60000` 而 voiceStartTs 停后从不清零，录音停 60 秒后每 250ms 误报「已达最长 60 秒」永不自停（面板关了仍弹）+ 第一路麦克风流泄漏；泄漏致后续开麦更慢更易连点，恶性循环。
+* 验证：node --check 过；`node build.mjs --check-sentinels` 全绿（哑哨兵 0，见下条补数）；编号说明：原拟 #168 与并行瘦身会话撞号（其 storage-slim.js 哨兵已登记），改 #169。
+* 临时自救（已答复用户）：出现连环提示时刷新页面立即止住（孤儿计时器随页面销毁）。
+
+### 2026-09-05 01:2x（#167 用户报障：荣耀平板10Pro+Edge 回复设置关了「多字卡回复」，联系人一句话仍回多条；查明=设置语义非缺陷，补设置页边界说明；源已完成·未构建）
+* [AI-A 域]（**改动文件：src/template.html（回复设置「多字卡回复」分组尾补 gs-sub：py-en 只管拼同一条、拆几条发送=「回复条数」默认1~2，想只回一条把回复条数最多设1）、build.mjs（#167 哨兵 1 条 template.html needle）、FIX-REGRESSION.md（#167 行）**；构建状态：**未构建**——构建时 git status 发现并行会话进行中改动（#148 mobile-adapt.js / #129 verify-wallet-edit / 未跟踪 storage-slim.js）已被打包进产物，按「不夹带半成品」回滚产物到 HEAD，源改动留工作区待下次构建收口）。
+* 根因：非逻辑缺陷。genOneReply 的 py-en 闸门（v3.6.x 起在，报障设备旧包 f20003c 已含）关闭即生效；用户看到的多条来自 scheduleReply/continueChat 的 count=randInt(reply-min,reply-max)（默认1~2拆条），两独立设置边界混淆；撤回补发/TA心情/主动发送按设计不计入（页内已有 sub 注明）。已直接答复用户操作路径。
+* 验证：--check-sentinels 330/330 哑哨兵 0（构建前后各一次）。
+* 待对方处理（下一构建者）：①收口构建自动带上本条 template/build.mjs/FIX-REGRESSION 改动，请一并提交；②工作区 #148/#129/storage-slim.js 均非本条改动，勿误删；③本会话曾误构建一次（含 #148 半改动），产物已 `git checkout -- ` 回滚，sw 缓存名未外泄（未提交未推送）。
+
+### 2026-09-05（TASKS #129 verify 套件基线清理开工：AI-B 认领，全量对账非点状修复；不涉及构建）
+* [AI-B 域]（**认领 TASKS #129**：干净环境复跑 verify:all=131 通过/69 脚本断言失败/2 超时，与历史基线 130/69/2 同域——近期 #157~#166 无新增回归。分工说明：AI-A #164/#165 已点状修复 interact-frequency/invite-settings（登记①已关），本任务做的是**全量 69 脚本对账**（过期断言改期望/真缺陷登记/超时修等待），二者不重叠；#164/#165 修的两个脚本我不会再碰。已预判：钱包簇 wallet-edit/gift-wallet-split/rp-wallet-edit=断言 v3.15.x 申请制前老交互（过期）；quote-image 套件内崩=并发抢端口假阳性（单跑 20/20）；verify-triage=事后分析器误入套件待剔除。
+* **#162 认账**：2026-09-04 深夜本任务诊断阶段曾出现两套套件并发互踩（TaskStop 只杀外壳不杀子进程树→孤儿套件+无头 Chrome 残留涨盘，即 #162 根因），已由并行会话清理；本任务后续跑批改为「单驱动器串行跑、批末清理 remote-debugging-port Chrome、不中途 SIGKILL 套件」防复发。
 
 ### 2026-09-05（#166 存储优化包：媒体池孤儿 GC + 写日志标记合并 + 查看存储页扩展；已构建提交）
 * [AI-B 域]（**改动文件：src/js/idb.js（wrjMark 150ms 微批 idbSetAll 单事务+失败退回逐键+pagehide/hidden 冲刷+wrjUnmark 撤销未落库标记）、src/js/media-pool.js（mochiMediaGC mark-and-sweep：mark=全部 \*:chat-msgs/\*:fav-msgs 令牌∪map/writeBuf/inflight，引用键逐键串行读，清单/引用读不到整次放弃绝不盲删；mochiMediaGCApply）、src/js/personalize.js（查看存储页「媒体池」卡=占用+孤儿扫描清理，「持久存储」卡=storage.persist；catOf 媒体池单独成类）、src/template.html（两卡锚点）、build.mjs（#166 哨兵 3 条）、FIX-REGRESSION.md（#166 行）、tools/verify-storage-opt.mjs（新增，纯 Node 桩 20/20 零浏览器依赖）**）。
