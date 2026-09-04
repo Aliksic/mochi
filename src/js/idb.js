@@ -80,7 +80,12 @@
     try {
       if (typeof document === 'undefined' || !document.addEventListener) return;
       const ua = (window.navigator && window.navigator.userAgent) || '';
-      if (!/iPhone|iPad|iPod/i.test(ua)) return;
+      // v3.26.x #144：iPadOS 13+ UA 伪装成 Macintosh（桌面 Mac UA + 触摸屏）——
+      // iPad 杀后台同样会断 IDB 连接，伪装 UA 的 iPad 此前全部漏掉回前台重建。
+      // 真桌面 Mac maxTouchPoints=0 不会误判（同 device.js #144 isIOS 补分支信号）。
+      const touchMac = ((window.navigator && window.navigator.platform) === 'MacIntel' || /Macintosh/i.test(ua)) &&
+        (window.navigator && window.navigator.maxTouchPoints > 1) && ('ontouchstart' in window);
+      if (!/iPhone|iPad|iPod/i.test(ua) && !touchMac) return;
       const resetNow = function () {
         try {
           if (!dbPromise) return;

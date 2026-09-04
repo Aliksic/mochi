@@ -243,6 +243,8 @@ const FIX_SENTINELS = [
   { name: '#141 安卓返回键/手势收键盘灰块几秒才收（vv 高度上升探测置 _aClosing：收起动画期零强制布局读取，焦点保留 focusout 不来也生效）', file: 'js/mobile-adapt.js', needle: 'if (_aKb && h > _aPrevH && _aPrevH > 0) {' },
   { name: '#141 收起复原时 _aH 基线钳回布局视口全高（防基线停留低位把 .phone 锁死中间高度=灰块不收）', file: 'js/mobile-adapt.js', needle: 'if (_aH < window.innerHeight - 12) _aH = window.innerHeight;' },
   { name: '#141 悬浮键盘推定收口（用户键入 1200ms 内即放行推顶，不等 2200ms 无活动自愈）', file: 'js/mobile-adapt.js', needle: 'if (!tgt || Date.now() - _aUserTypos > 1200) return;' },
+  { name: '#144 isIOS 补 iPadOS 伪装 UA 分支（Macintosh+触摸屏，修 iPad Air 全屏开关无反应/ios-pwa-standalone 类不加）', file: 'js/device.js', needle: "((navigator.platform === 'MacIntel' || /Macintosh/i.test(ua)) && navigator.maxTouchPoints > 1 && 'ontouchstart' in window);" },
+  { name: '#144 armFgIdbReset 补 touchMac 分支（伪装 UA 的 iPad 回前台重建 IDB 连接）', file: 'js/idb.js', needle: 'if (!/iPhone|iPad|iPod/i.test(ua) && !touchMac) return;' },
   { name: '单聊联系人消息音效（addIn 播 sfx-in，read/silent 除外）', file: 'js/chat.js', needle: "opts.special !== 'read'" },
   { name: '音效等待 AudioContext resume 后再 start（Via/WebView）', file: 'js/sfx.js', needle: 'p.then(start)' },
   { name: '群聊引用防 base64 霸屏（gcQuoteTextSafe）', file: 'js/group-chat.js', needle: 'gcQuoteTextSafe' },

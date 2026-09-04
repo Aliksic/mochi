@@ -190,7 +190,14 @@
   // 平台判定（含 UA 伪装排除——OPPO/Via/夸克等浏览器可把 UA 伪装成 iPhone）
   // v3.7.x：/iphone|ipad|ipod/ 分支加 Android 排除（多数 UA 切换不彻底会保留
   // Android 标识）；!window.MSStream 排除 Windows Phone 的 IE/Spartan
-  const isIOS = /iphone|ipad|ipod/i.test(ua) && !/android/i.test(ua) && !window.MSStream;
+  // v3.26.x #144：iPadOS 13+ Safari 把 UA 伪装成 Macintosh（桌面 Mac UA + 触摸屏），
+  // 原判定全部落空 → iOS=false：iPad Air 7 + Safari 主屏幕实测「点全屏模式无反应」
+  // （fullscreen.js isIOS=false 走错分支，iPad 又无 Fullscreen API → 开关被拒绝），
+  // 且 ios-pwa-standalone 类不加、#114/#129 安全区补偿在 iPad 全部失效。补 Macintosh
+  // 伪装分支——与上方 isTablet 第二分支同信号（真桌面 Mac maxTouchPoints=0 不会误判，
+  // iPadOS 触摸屏 maxTouchPoints≥5）。
+  const isIOS = (/iphone|ipad|ipod/i.test(ua) && !/android/i.test(ua) && !window.MSStream) ||
+    ((navigator.platform === 'MacIntel' || /Macintosh/i.test(ua)) && navigator.maxTouchPoints > 1 && 'ontouchstart' in window);
   const isAndroid = /android/i.test(ua);
   // v3.6.x：Via 浏览器（UA 特征）——实测其 WebView 禁用了方向锁（lock 无效），
   // 网页全屏必转横屏，fullscreen.js 需据此走 CSS 兜底

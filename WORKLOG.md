@@ -1,3 +1,9 @@
+### 2026-09-03 23:4x（#144 iPad Air 7 + Safari 主屏幕「全屏模式」无反应：iPadOS 伪装 UA 致 isIOS=false；已构建）
+* [AI-B 域]（**改动文件：src/js/device.js（isIOS 补 Macintosh 伪装分支：platform=MacIntel || /Macintosh/ + maxTouchPoints>1 + ontouchstart——真桌面 Mac maxTouchPoints=0 不误判）、src/js/idb.js（armFgIdbReset 同款 UA 检查补 touchMac，伪装 UA 的 iPad 回前台也重建 IDB 连接）、build.mjs（FIX_SENTINELS 2 条）、FIX-REGRESSION.md（#144 行）；构建状态：已构建·sw 见 version.json**）。
+* 根因：iPadOS 13+ UA 伪装桌面 Mac → isIOS=false → fullscreen.js 走错分支（iPad 无 Fullscreen API 开关被拒）+ ios-pwa-standalone 类不加（html 类空，#114/#129 安全区补偿在 iPad 全失效）；用户手动布局 pref:mobile 另把 isTablet 置假（保留不改，只管布局）。
+* 验证：node --check 过；五场景 isIOS 测试 + 三场景 idb gate 测试全过；--check-sentinels 279 全绿哑哨兵 0。
+* 待真机（iPad Air 7 + Safari 主屏幕）：点全屏模式有反应（内容顶满+iOS 说明弹出）、诊断 iOS=true html 类含 ios-pwa-standalone；iPad 杀后台重开数据正常。
+
 # 本次构建者：AI-A（本会话：#142 心愿单功能收口构建——用户催部署；并行会话 #144 拍一拍昵称制（chat.js+verify-poke-nick.mjs）源已完成一并收口；AI-C 通话昵称已自行构建提交）
 
 ### 2026-09-03 18:07（用户反馈：聊天设置改了联系人昵称，拍一拍消息里人称仍显示 TA/ta；改「称呼制」为「昵称制」；源已完成·未构建）
