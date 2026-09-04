@@ -5933,6 +5933,8 @@ try {
     const row = document.getElementById('row-storage-view');
     const back = document.getElementById('storage-back');
     const G = 'xy-home-v2:';
+    // v3.26.x 存储优化：媒体池分类名（catOf 与 IndexedDB 统计回调共用，勿改字面量）
+    const CAT_MEDIA = '媒体池（图片去重）';
     const DIAG_KEYS = [
       'xy-home-v2:__diag-errs',
       'xy-home-v2:__diag-errs-seen',
@@ -5975,6 +5977,8 @@ try {
       // —— 全局系统 / 诊断 / 索引前缀（无 cid 命名空间）——
       if (tail.indexOf('__diag-') === 0) return '错误诊断记录';
       if (tail.indexOf('music-file:') >= 0) return '本地音乐';
+      // v3.26.x 存储优化：媒体池（#142 聊天图片/表情去重仓库，全局根键 media:<hash>）单独成类
+      if (/^media:[0-9a-f]{32}$/.test(tail)) return CAT_MEDIA;
       // v3.29.x：「自动备份快照」分类已随副本机制下线（遗留副本由 data-backup.js 启动时清理）
       // v3.26.x：__last-backup 只是"最近导出时间"小键，归到系统设置
       if (tail.indexOf('__last-backup') >= 0 || tail.indexOf('__last-backup-remind') >= 0) return '系统设置';
@@ -6213,6 +6217,9 @@ try {
       // Blob 按真实字节计数；IndexedDB 未读到前先显示占位，读到后由 idbStats 回调刷新）
       const musicEl = document.getElementById('st-music');
       if (musicEl) musicEl.textContent = '统计中…（IndexedDB）';
+      // v3.26.x 存储优化：媒体池占用占位（IndexedDB 统计回调里刷新）
+      const mediaEl = document.getElementById('st-media');
+      if (mediaEl) mediaEl.textContent = '统计中…（IndexedDB）';
       const otherEl = document.getElementById('st-other');
       if (otherEl) otherEl.textContent = ls.otherCount ? fmtBytes(ls.otherSize) + '（' + ls.otherCount + ' 键）' : '无';
       const selfEl = document.getElementById('st-self');
@@ -6238,8 +6245,14 @@ try {
           const m = (res && res.cats && res.cats['本地音乐']) ? res.cats['本地音乐'].size : 0;
           musicEl.textContent = res ? fmtBytes(m) : '读取失败（未计入）';
         }
+        // v3.26.x 存储优化：媒体池占用（媒体池分类在 IndexedDB 里的真实字节）
+        if (mediaEl) {
+          const mc = (res && res.cats && res.cats[CAT_MEDIA]) ? res.cats[CAT_MEDIA] : null;
+          mediaEl.textContent = res ? (mc ? fmtBytes(mc.size) + '（' + mc.n + ' 条）' : '空') : '读取失败（未计入）';
+        }
       });
       renderDiagCount();
+      renderPersist();
     }
     function clearDiag() {
       DIAG_KEYS.forEach(function (k) {
@@ -6280,6 +6293,72 @@ try {
           // 兜底：找不到桌面音乐入口时提示手动路径
           if (window.openModal) window.openModal('找不到音乐入口', '', null, { noInput: true, staticText: '请回到桌面，点右上角「音乐」进入播放器，再点 ⚙ 设置 → 清理本地音频缓存。' });
         }
+      });
+    }
+    // ===== v3.26.x 存储优化：媒体池孤儿清理（mark-and-sweep 在 media-pool.js：mochiMediaGC / mochiMediaGCApply）=====
+    const gcBtn = document.getElementById('st-media-gc');
+    if (gcBtn) {
+      gcBtn.addEventListener('click', function () {
+        const orphanEl = document.getElementById('st-media-orphan');
+        if (!window.mochiMediaGC || !window.mochiMediaGCApply) {
+          if (window.openModal) window.openModal('本环境不支持', '', null, { noInput: true, staticText: '媒体池扫描需要安全上下文（HTTPS）与 IndexedDB 支持，当前环境不可用。' });
+          return;
+        }
+        const oldTxt = gcBtn.textContent;
+        gcBtn.disabled = true;
+        gcBtn.textContent = '扫描中…（需通读聊天记录，请稍候）';
+        window.mochiMediaGC().then(function (rep) {
+          gcBtn.disabled = false;
+          gcBtn.textContent = oldTxt;
+          if (orphanEl) orphanEl.textContent = (rep && rep.ok) ? (rep.orphans.length ? fmtBytes(rep.bytes) + '（' + rep.orphans.length + ' 条）' : '无孤儿，池很干净') : ((rep && rep.reason) || '扫描失败');
+          if (!rep || !rep.ok) {
+            if (window.openModal) window.openModal('扫描未完成', '', null, { noInput: true, staticText: (rep && rep.reason || '未知原因') + '\n\n没有删除任何内容，稍后存储空闲时可再试。' });
+            return;
+          }
+          if (!rep.orphans.length) { if (typeof toast === 'function') toast('没有孤儿媒体，无需清理'); return; }
+          if (window.openModal) {
+            window.openModal('删除孤儿媒体？', '', function () {
+              gcBtn.disabled = true;
+              window.mochiMediaGCApply(rep.orphans).then(function (n) {
+                gcBtn.disabled = false;
+                if (orphanEl) orphanEl.textContent = '已清理 ' + n + ' 条，可重新扫描核对';
+                if (typeof toast === 'function') toast('已清理 ' + n + ' 条孤儿媒体，释放约 ' + fmtBytes(rep.bytes));
+              }).catch(function () { gcBtn.disabled = false; });
+            }, {
+              noInput: true,
+              staticText: '扫描到 ' + rep.orphans.length + ' 条不再被任何聊天记录/收藏引用的池内图片（约 ' + fmtBytes(rep.bytes) + '）。删除只影响媒体池副本，聊天记录与收藏本身不动；删除不可撤销，建议先导出备份。'
+            });
+          }
+        }).catch(function () {
+          gcBtn.disabled = false;
+          gcBtn.textContent = oldTxt;
+          if (orphanEl) orphanEl.textContent = '扫描异常';
+        });
+      });
+    }
+    // ===== v3.26.x 存储优化：持久存储（navigator.storage.persist——浏览器承诺不自动清库）=====
+    function renderPersist() {
+      const el = document.getElementById('st-persist');
+      const btn = document.getElementById('st-persist-btn');
+      if (!el) return;
+      if (!(navigator.storage && navigator.storage.persisted && navigator.storage.persist)) {
+        el.textContent = '接口不可用';
+        if (btn) btn.hidden = true;
+        return;
+      }
+      navigator.storage.persisted().then(function (p) {
+        el.textContent = p ? '已持久化（浏览器承诺不自动清理）' : '未持久化（空间紧张时可能被浏览器自动清理）';
+        if (btn) btn.hidden = !!p;
+      }).catch(function () { el.textContent = '读取失败'; if (btn) btn.hidden = true; });
+    }
+    const persistBtn = document.getElementById('st-persist-btn');
+    if (persistBtn) {
+      persistBtn.addEventListener('click', function () {
+        if (!(navigator.storage && navigator.storage.persist)) return;
+        navigator.storage.persist().then(function (ok) {
+          if (typeof toast === 'function') toast(ok ? '已获得持久存储' : '浏览器暂未授予：多访问、多使用本应用后再试');
+          renderPersist();
+        }).catch(function () { renderPersist(); });
       });
     }
     if (row) {

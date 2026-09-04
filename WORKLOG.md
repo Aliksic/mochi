@@ -1,4 +1,10 @@
-# 本次构建者：本会话（#163 主动消息/群聊回复不吃默认字卡概率修复）
+# 本次构建者：本会话（#166 存储优化包：写日志标记合并+媒体池孤儿GC+查看存储页扩展）
+
+### 2026-09-05（#166 存储优化包：媒体池孤儿 GC + 写日志标记合并 + 查看存储页扩展；已构建提交）
+* [AI-B 域]（**改动文件：src/js/idb.js（wrjMark 150ms 微批 idbSetAll 单事务+失败退回逐键+pagehide/hidden 冲刷+wrjUnmark 撤销未落库标记）、src/js/media-pool.js（mochiMediaGC mark-and-sweep：mark=全部 \*:chat-msgs/\*:fav-msgs 令牌∪map/writeBuf/inflight，引用键逐键串行读，清单/引用读不到整次放弃绝不盲删；mochiMediaGCApply）、src/js/personalize.js（查看存储页「媒体池」卡=占用+孤儿扫描清理，「持久存储」卡=storage.persist；catOf 媒体池单独成类）、src/template.html（两卡锚点）、build.mjs（#166 哨兵 3 条）、FIX-REGRESSION.md（#166 行）、tools/verify-storage-opt.mjs（新增，纯 Node 桩 20/20 零浏览器依赖）**）。
+* 编号说明：原拟 #164 与并行会话撞号（其 #164/#165=verify 脚本清理），改 #166。
+* 验证：node --check 过；verify-storage-opt 20/20；构建哨兵全绿哑哨兵 0。遗留专项已登记 TASKS #127（聊天记录分片）/ #128（字卡库瘦身）。
+* 待真机：查看存储页媒体池占用显示；删含图消息→扫描报孤儿→确认删除→池瘦身且被引用图完好；持久存储行可读/可申请。
 
 ### 2026-09-05（#164/#165 清理 verify:all 两个存量红——均为脚本侧问题，产品代码无改动·不涉及构建）
 * [AI-A 域]（**改动文件：tools/verify-interact-frequency.mjs（#164）、tools/verify-invite-settings.mjs（#165）**；无 src/产物改动，不涉及构建）。关掉 2026-09-05 待办登记①。

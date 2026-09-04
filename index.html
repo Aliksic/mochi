@@ -8779,9 +8779,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1788540542300">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.434</b></span>
-        <span class="sv-deploy">部署于 2026-09-05 00:49<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1788541443399">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.436</b></span>
+        <span class="sv-deploy">部署于 2026-09-05 01:04<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9904,7 +9904,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.434</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.436</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
       <!-- v3.27.x：设置页底部防骗声明 -->
       <div class="set-alert">
@@ -9946,6 +9946,21 @@ transition-duration: .01ms !important;
           <div class="storage-row"><span>当前错误 / 诊断缓存</span><b id="st-err">读取中…</b></div>
           <button class="storage-clear" id="st-clear-err" type="button">清理错误诊断记录</button>
           <div class="storage-hint">包括最近报错、环境变化、长任务卡顿、网络失败、交互轨迹等诊断缓存（__diag-*）。清理后诊断角标归零，不影响聊天、字卡、头像、音乐等任何业务数据。</div>
+        </div>
+        <!-- v3.26.x 存储优化：媒体池统计与孤儿清理（mark-and-sweep 在 media-pool.js，接线在 personalize.js） -->
+        <div class="cal-card glass">
+          <div class="cal-card-title">媒体池（聊天图片/表情去重仓库）</div>
+          <div class="storage-row"><span>媒体池占用</span><b id="st-media">统计中…（IndexedDB）</b></div>
+          <div class="storage-row"><span>孤儿媒体（已无任何聊天/收藏引用）</span><b id="st-media-orphan">未扫描</b></div>
+          <button class="storage-clear" id="st-media-gc" type="button">扫描并清理孤儿媒体</button>
+          <div class="storage-hint">聊天和收藏里的同一张图片/表情在池里只存一份；删除消息或收藏后，不再被引用的图片会成为「孤儿」。本操作只删孤儿池条目，<b>不改聊天记录和收藏本身</b>。扫描需通读全部聊天记录（大历史较慢），存储繁忙读不完会自动放弃、绝不盲删；删除不可撤销，建议先导出备份。</div>
+        </div>
+        <!-- v3.26.x 存储优化：持久存储申请（navigator.storage.persist） -->
+        <div class="cal-card glass">
+          <div class="cal-card-title">持久存储</div>
+          <div class="storage-row"><span>当前状态</span><b id="st-persist">读取中…</b></div>
+          <button class="storage-clear" id="st-persist-btn" type="button" hidden>申请持久存储</button>
+          <div class="storage-hint">申请成功后浏览器承诺不自动清理本应用数据（同域其他站点占满配额时更不容易被挤掉）。注意：持久化不是备份，定期导出备份仍是唯一可靠防线。</div>
         </div>
       </div>
     </div>
@@ -10172,7 +10187,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.434</span>
+              <span class="lic-ver">v3.26.436</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -15568,10 +15583,32 @@ function wrjLsRaw() { try { return localStorage.getItem(WRJ_KEY); } catch (e) { 
 function wrjPersist() {
 try { localStorage.setItem(WRJ_KEY, JSON.stringify(_wrj || [])); } catch (e) {}
 }
+const WRJ_MARK_FLUSH_MS = 150;
+let _wrjMarkBuf = new Map(); // 完整标记键 -> t
+let _wrjMarkT = null;
+function wrjMarkFlush() {
+if (_wrjMarkT) { clearTimeout(_wrjMarkT); _wrjMarkT = null; }
+if (!_wrjMarkBuf.size) return;
+const pairs = [];
+_wrjMarkBuf.forEach(function (t, k) { pairs.push({ k: k, v: t }); });
+_wrjMarkBuf.clear();
+try {
+if (window.idbSetAll) {
+window.idbSetAll(pairs).then(function (ok) {
+if (ok) return;
+pairs.forEach(function (p) { try { if (window.idbSet) window.idbSet(p.k, p.v); } catch (e2) {} });
+}).catch(function () {});
+return;
+}
+} catch (e) {}
+pairs.forEach(function (p) { try { if (window.idbSet) window.idbSet(p.k, p.v); } catch (e2) {} });
+}
 function wrjMark(key, t) {
-try { if (window.idbSet) window.idbSet(WRJ_MARK + key, t); } catch (e) {}
+_wrjMarkBuf.set(WRJ_MARK + key, t);
+if (!_wrjMarkT) _wrjMarkT = setTimeout(wrjMarkFlush, WRJ_MARK_FLUSH_MS);
 }
 function wrjUnmark(key) {
+_wrjMarkBuf.delete(WRJ_MARK + key); // 还没落库的标记直接撤销，省一个删除事务
 try { if (window.idbDelete) window.idbDelete(WRJ_MARK + key); } catch (e) {}
 }
 function wrjRecord(key, v) {
@@ -15600,6 +15637,12 @@ _wrjTimes[key] = Date.now();
 if (_wrj.length !== before) wrjPersist();
 wrjUnmark(key);
 }
+try {
+document.addEventListener('visibilitychange', function () {
+try { if (document.visibilityState === 'hidden') wrjMarkFlush(); } catch (e) {}
+});
+} catch (e) {}
+try { if (window.addEventListener) window.addEventListener('pagehide', wrjMarkFlush); } catch (e) {}
 function wrjReplay(entries) {
 if (!entries || !entries.length) return 0;
 if (!memoryCache) memoryCache = {};
@@ -16450,6 +16493,62 @@ obs.observe(document.documentElement, { childList: true, subtree: true, attribut
 function bootScan() { scanRoot(document); }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bootScan);
 else bootScan();
+window.mochiMediaGC = function () {
+return (async function () {
+const out = { ok: false, reason: '', orphans: [], bytes: 0, poolN: 0, refN: 0 };
+if (!window.idbListKeys || !window.idbGet || !window.idbGetMany) { out.reason = '接口不可用（需安全上下文）'; return out; }
+try { await window.mochiMediaFlush(); } catch (e) {}
+const keys = await window.idbListKeys();
+if (!keys) { out.reason = '键清单读取失败（存储繁忙），本次不清理'; return out; }
+const SCAN_RE = /@@m:([0-9a-f]{32})/g;
+const keep = new Set();
+map.forEach(function (_v, h) { keep.add(h); });
+writeBuf.forEach(function (p) { keep.add(String(p.k).slice(FULL.length)); });
+Object.keys(inflight).forEach(function (h) { keep.add(h); });
+const REFS = /(?:^|:)(?:chat-msgs|fav-msgs)$/;
+const refKeys = keys.filter(function (k) { return REFS.test(String(k)); });
+out.refN = refKeys.length;
+for (let i = 0; i < refKeys.length; i++) {
+const v = await window.idbGet(refKeys[i]);
+if (v === undefined || v === null) { out.reason = '有聊天记录/收藏没读到（存储繁忙？），为安全起见本次不清理'; return out; }
+let s = '';
+try { s = typeof v === 'string' ? v : (JSON.stringify(v) || ''); } catch (e2) { out.reason = '引用数据序列化失败，本次不清理'; return out; }
+SCAN_RE.lastIndex = 0;
+let m;
+while ((m = SCAN_RE.exec(s))) keep.add(m[1]);
+s = '';
+}
+const poolKeys = keys.filter(function (k) { return String(k).indexOf(FULL) === 0; });
+out.poolN = poolKeys.length;
+const orphans = [];
+for (let i = 0; i < poolKeys.length; i++) {
+if (!keep.has(String(poolKeys[i]).slice(FULL.length))) orphans.push(String(poolKeys[i]));
+}
+let bytes = 0;
+for (let i = 0; i < orphans.length; i += 16) {
+const batch = orphans.slice(i, i + 16);
+let vals = {};
+try { vals = (await window.idbGetMany(batch)) || {}; } catch (e3) {}
+batch.forEach(function (k) { const v = vals[k]; if (typeof v === 'string') bytes += v.length * 2; });
+}
+out.orphans = orphans;
+out.bytes = bytes;
+out.ok = true;
+return out;
+})().catch(function (e) { return { ok: false, reason: '扫描异常：' + ((e && e.message) || e), orphans: [], bytes: 0, poolN: 0, refN: 0 }; });
+};
+window.mochiMediaGCApply = function (orphans) {
+return (async function () {
+const list = (orphans || []).map(String);
+let n = 0;
+for (let i = 0; i < list.length; i++) {
+let ok = false;
+try { ok = await window.idbDelete(list[i]); } catch (e) { ok = false; }
+if (ok) { map.delete(list[i].slice(FULL.length)); n++; }
+}
+return n;
+})();
+};
 })();
 } catch (__e) { try { console.error("[JS] media-pool.js", __e && __e.message || __e); } catch (x) {} if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
 (function () { try {
@@ -22477,6 +22576,7 @@ if (!page) return;
 const row = document.getElementById('row-storage-view');
 const back = document.getElementById('storage-back');
 const G = 'xy-home-v2:';
+const CAT_MEDIA = '媒体池（图片去重）';
 const DIAG_KEYS = [
 'xy-home-v2:__diag-errs',
 'xy-home-v2:__diag-errs-seen',
@@ -22513,6 +22613,7 @@ function catOf(tail) {
 if (!tail) return '其他';
 if (tail.indexOf('__diag-') === 0) return '错误诊断记录';
 if (tail.indexOf('music-file:') >= 0) return '本地音乐';
+if (/^media:[0-9a-f]{32}$/.test(tail)) return CAT_MEDIA;
 if (tail.indexOf('__last-backup') >= 0 || tail.indexOf('__last-backup-remind') >= 0) return '系统设置';
 if (tail.indexOf('psync-') >= 0) return '后台同步缓存';
 if (tail.indexOf('__big-idx') >= 0 || tail.indexOf('__ls-dirty') >= 0) return '数据索引';
@@ -22718,6 +22819,8 @@ const lsEl = document.getElementById('st-ls');
 if (lsEl) lsEl.textContent = fmtBytes(ls.total) + '（' + ls.count + ' 键）';
 const musicEl = document.getElementById('st-music');
 if (musicEl) musicEl.textContent = '统计中…（IndexedDB）';
+const mediaEl = document.getElementById('st-media');
+if (mediaEl) mediaEl.textContent = '统计中…（IndexedDB）';
 const otherEl = document.getElementById('st-other');
 if (otherEl) otherEl.textContent = ls.otherCount ? fmtBytes(ls.otherSize) + '（' + ls.otherCount + ' 键）' : '无';
 const selfEl = document.getElementById('st-self');
@@ -22741,8 +22844,13 @@ if (musicEl) {
 const m = (res && res.cats && res.cats['本地音乐']) ? res.cats['本地音乐'].size : 0;
 musicEl.textContent = res ? fmtBytes(m) : '读取失败（未计入）';
 }
+if (mediaEl) {
+const mc = (res && res.cats && res.cats[CAT_MEDIA]) ? res.cats[CAT_MEDIA] : null;
+mediaEl.textContent = res ? (mc ? fmtBytes(mc.size) + '（' + mc.n + ' 条）' : '空') : '读取失败（未计入）';
+}
 });
 renderDiagCount();
+renderPersist();
 }
 function clearDiag() {
 DIAG_KEYS.forEach(function (k) {
@@ -22778,6 +22886,70 @@ try { app.click(); } catch (e) {}
 } else {
 if (window.openModal) window.openModal('找不到音乐入口', '', null, { noInput: true, staticText: '请回到桌面，点右上角「音乐」进入播放器，再点 ⚙ 设置 → 清理本地音频缓存。' });
 }
+});
+}
+const gcBtn = document.getElementById('st-media-gc');
+if (gcBtn) {
+gcBtn.addEventListener('click', function () {
+const orphanEl = document.getElementById('st-media-orphan');
+if (!window.mochiMediaGC || !window.mochiMediaGCApply) {
+if (window.openModal) window.openModal('本环境不支持', '', null, { noInput: true, staticText: '媒体池扫描需要安全上下文（HTTPS）与 IndexedDB 支持，当前环境不可用。' });
+return;
+}
+const oldTxt = gcBtn.textContent;
+gcBtn.disabled = true;
+gcBtn.textContent = '扫描中…（需通读聊天记录，请稍候）';
+window.mochiMediaGC().then(function (rep) {
+gcBtn.disabled = false;
+gcBtn.textContent = oldTxt;
+if (orphanEl) orphanEl.textContent = (rep && rep.ok) ? (rep.orphans.length ? fmtBytes(rep.bytes) + '（' + rep.orphans.length + ' 条）' : '无孤儿，池很干净') : ((rep && rep.reason) || '扫描失败');
+if (!rep || !rep.ok) {
+if (window.openModal) window.openModal('扫描未完成', '', null, { noInput: true, staticText: (rep && rep.reason || '未知原因') + '\n\n没有删除任何内容，稍后存储空闲时可再试。' });
+return;
+}
+if (!rep.orphans.length) { if (typeof toast === 'function') toast('没有孤儿媒体，无需清理'); return; }
+if (window.openModal) {
+window.openModal('删除孤儿媒体？', '', function () {
+gcBtn.disabled = true;
+window.mochiMediaGCApply(rep.orphans).then(function (n) {
+gcBtn.disabled = false;
+if (orphanEl) orphanEl.textContent = '已清理 ' + n + ' 条，可重新扫描核对';
+if (typeof toast === 'function') toast('已清理 ' + n + ' 条孤儿媒体，释放约 ' + fmtBytes(rep.bytes));
+}).catch(function () { gcBtn.disabled = false; });
+}, {
+noInput: true,
+staticText: '扫描到 ' + rep.orphans.length + ' 条不再被任何聊天记录/收藏引用的池内图片（约 ' + fmtBytes(rep.bytes) + '）。删除只影响媒体池副本，聊天记录与收藏本身不动；删除不可撤销，建议先导出备份。'
+});
+}
+}).catch(function () {
+gcBtn.disabled = false;
+gcBtn.textContent = oldTxt;
+if (orphanEl) orphanEl.textContent = '扫描异常';
+});
+});
+}
+function renderPersist() {
+const el = document.getElementById('st-persist');
+const btn = document.getElementById('st-persist-btn');
+if (!el) return;
+if (!(navigator.storage && navigator.storage.persisted && navigator.storage.persist)) {
+el.textContent = '接口不可用';
+if (btn) btn.hidden = true;
+return;
+}
+navigator.storage.persisted().then(function (p) {
+el.textContent = p ? '已持久化（浏览器承诺不自动清理）' : '未持久化（空间紧张时可能被浏览器自动清理）';
+if (btn) btn.hidden = !!p;
+}).catch(function () { el.textContent = '读取失败'; if (btn) btn.hidden = true; });
+}
+const persistBtn = document.getElementById('st-persist-btn');
+if (persistBtn) {
+persistBtn.addEventListener('click', function () {
+if (!(navigator.storage && navigator.storage.persist)) return;
+navigator.storage.persist().then(function (ok) {
+if (typeof toast === 'function') toast(ok ? '已获得持久存储' : '浏览器暂未授予：多访问、多使用本应用后再试');
+renderPersist();
+}).catch(function () { renderPersist(); });
 });
 }
 if (row) {
@@ -77966,4 +78138,4 @@ return { lock: document.body.classList.contains('scroll-lock'), open: open };
 <!-- __MOCHI_EOF__ -->
 </body>
 </html>
-<!-- __MOCHI_EOF__ mtn6uyqk -->
+<!-- __MOCHI_EOF__ mtn7ea13 -->

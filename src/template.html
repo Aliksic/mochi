@@ -1399,6 +1399,21 @@
           <button class="storage-clear" id="st-clear-err" type="button">清理错误诊断记录</button>
           <div class="storage-hint">包括最近报错、环境变化、长任务卡顿、网络失败、交互轨迹等诊断缓存（__diag-*）。清理后诊断角标归零，不影响聊天、字卡、头像、音乐等任何业务数据。</div>
         </div>
+        <!-- v3.26.x 存储优化：媒体池统计与孤儿清理（mark-and-sweep 在 media-pool.js，接线在 personalize.js） -->
+        <div class="cal-card glass">
+          <div class="cal-card-title">媒体池（聊天图片/表情去重仓库）</div>
+          <div class="storage-row"><span>媒体池占用</span><b id="st-media">统计中…（IndexedDB）</b></div>
+          <div class="storage-row"><span>孤儿媒体（已无任何聊天/收藏引用）</span><b id="st-media-orphan">未扫描</b></div>
+          <button class="storage-clear" id="st-media-gc" type="button">扫描并清理孤儿媒体</button>
+          <div class="storage-hint">聊天和收藏里的同一张图片/表情在池里只存一份；删除消息或收藏后，不再被引用的图片会成为「孤儿」。本操作只删孤儿池条目，<b>不改聊天记录和收藏本身</b>。扫描需通读全部聊天记录（大历史较慢），存储繁忙读不完会自动放弃、绝不盲删；删除不可撤销，建议先导出备份。</div>
+        </div>
+        <!-- v3.26.x 存储优化：持久存储申请（navigator.storage.persist） -->
+        <div class="cal-card glass">
+          <div class="cal-card-title">持久存储</div>
+          <div class="storage-row"><span>当前状态</span><b id="st-persist">读取中…</b></div>
+          <button class="storage-clear" id="st-persist-btn" type="button" hidden>申请持久存储</button>
+          <div class="storage-hint">申请成功后浏览器承诺不自动清理本应用数据（同域其他站点占满配额时更不容易被挤掉）。注意：持久化不是备份，定期导出备份仍是唯一可靠防线。</div>
+        </div>
       </div>
     </div>
 

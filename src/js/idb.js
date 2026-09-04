@@ -844,10 +844,37 @@
   function wrjPersist() {
     try { localStorage.setItem(WRJ_KEY, JSON.stringify(_wrj || [])); } catch (e) {}
   }
+  // v3.26.x 存储优化：标记合并落库——原实现每个小键 set 各发一个 IDB 事务写时间戳标记，
+  // 值事务之外白翻倍事务数；现积攒 150ms 用 idbSetAll 单事务批量写。语义不变：值事务在
+  // xyStore.set 里同步先发出，flush 时早已入队（值先于标记提交）；150ms 内立刻退出浏览器的
+  // 极端窗口由下方 pagehide/visibilitychange 即时冲刷兜住，且主防线本就是同步写的 LS 日志。
+  // idbSetAll 无重试骨架，返回 false 时退回逐键 idbSet（自带 3 次重试）。
+  const WRJ_MARK_FLUSH_MS = 150;
+  let _wrjMarkBuf = new Map(); // 完整标记键 -> t
+  let _wrjMarkT = null;
+  function wrjMarkFlush() {
+    if (_wrjMarkT) { clearTimeout(_wrjMarkT); _wrjMarkT = null; }
+    if (!_wrjMarkBuf.size) return;
+    const pairs = [];
+    _wrjMarkBuf.forEach(function (t, k) { pairs.push({ k: k, v: t }); });
+    _wrjMarkBuf.clear();
+    try {
+      if (window.idbSetAll) {
+        window.idbSetAll(pairs).then(function (ok) {
+          if (ok) return;
+          pairs.forEach(function (p) { try { if (window.idbSet) window.idbSet(p.k, p.v); } catch (e2) {} });
+        }).catch(function () {});
+        return;
+      }
+    } catch (e) {}
+    pairs.forEach(function (p) { try { if (window.idbSet) window.idbSet(p.k, p.v); } catch (e2) {} });
+  }
   function wrjMark(key, t) {
-    try { if (window.idbSet) window.idbSet(WRJ_MARK + key, t); } catch (e) {}
+    _wrjMarkBuf.set(WRJ_MARK + key, t);
+    if (!_wrjMarkT) _wrjMarkT = setTimeout(wrjMarkFlush, WRJ_MARK_FLUSH_MS);
   }
   function wrjUnmark(key) {
+    _wrjMarkBuf.delete(WRJ_MARK + key); // 还没落库的标记直接撤销，省一个删除事务
     try { if (window.idbDelete) window.idbDelete(WRJ_MARK + key); } catch (e) {}
   }
   function wrjRecord(key, v) {
@@ -876,6 +903,13 @@
     if (_wrj.length !== before) wrjPersist();
     wrjUnmark(key);
   }
+  // 离页即时冲刷待写标记，压缩「写完立刻退出」丢标记的窗口
+  try {
+    document.addEventListener('visibilitychange', function () {
+      try { if (document.visibilityState === 'hidden') wrjMarkFlush(); } catch (e) {}
+    });
+  } catch (e) {}
+  try { if (window.addEventListener) window.addEventListener('pagehide', wrjMarkFlush); } catch (e) {}
   // 回放：把日志里的「最近一次写入」补进 内存+LS+IDB。时间戳守卫保证只应用比
   // 已知写入更新的条目（不会覆盖本会话新写入的值）。
   function wrjReplay(entries) {

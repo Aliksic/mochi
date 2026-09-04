@@ -133,4 +133,73 @@
   function bootScan() { scanRoot(document); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bootScan);
   else bootScan();
+
+  // ===== v3.26.x 存储优化：孤儿媒体 GC（mark-and-sweep）=====
+  // 背景：#142 v1 池只增不删——消息/收藏删除后池内图片永留，长账用户池底越滚越大。
+  // 安全底线（宁可漏删、绝不误删）：
+  //   · mark 集 = 全部 *:chat-msgs + *:fav-msgs（含旧顶层键）里的令牌 ∪ 本会话
+  //     map/writeBuf/inflight（含「刚令牌化还没落库」的新图）——令牌只由 chat.js 写进
+  //     消息与收藏（#142 设计），扫描面即全覆盖；
+  //   · 引用键逐键串行读，读完即弃引用（峰值内存≈最大单个聊天包）；
+  //   · 清单读失败 / 任一引用键读不到（idbGet 超时返回 undefined 与「键不存在」不可分）
+  //     → 整次放弃不删：没读到可能藏着唯一引用，删了就是永久坏图；
+  //   · 只删池键，绝不动聊天/收藏；确认交互由调用方（查看存储页）负责。
+  window.mochiMediaGC = function () {
+    return (async function () {
+      const out = { ok: false, reason: '', orphans: [], bytes: 0, poolN: 0, refN: 0 };
+      if (!window.idbListKeys || !window.idbGet || !window.idbGetMany) { out.reason = '接口不可用（需安全上下文）'; return out; }
+      try { await window.mochiMediaFlush(); } catch (e) {}
+      const keys = await window.idbListKeys();
+      if (!keys) { out.reason = '键清单读取失败（存储繁忙），本次不清理'; return out; }
+      const SCAN_RE = /@@m:([0-9a-f]{32})/g;
+      const keep = new Set();
+      map.forEach(function (_v, h) { keep.add(h); });
+      writeBuf.forEach(function (p) { keep.add(String(p.k).slice(FULL.length)); });
+      Object.keys(inflight).forEach(function (h) { keep.add(h); });
+      const REFS = /(?:^|:)(?:chat-msgs|fav-msgs)$/;
+      const refKeys = keys.filter(function (k) { return REFS.test(String(k)); });
+      out.refN = refKeys.length;
+      for (let i = 0; i < refKeys.length; i++) {
+        const v = await window.idbGet(refKeys[i]);
+        if (v === undefined || v === null) { out.reason = '有聊天记录/收藏没读到（存储繁忙？），为安全起见本次不清理'; return out; }
+        let s = '';
+        try { s = typeof v === 'string' ? v : (JSON.stringify(v) || ''); } catch (e2) { out.reason = '引用数据序列化失败，本次不清理'; return out; }
+        SCAN_RE.lastIndex = 0;
+        let m;
+        while ((m = SCAN_RE.exec(s))) keep.add(m[1]);
+        s = '';
+      }
+      const poolKeys = keys.filter(function (k) { return String(k).indexOf(FULL) === 0; });
+      out.poolN = poolKeys.length;
+      const orphans = [];
+      for (let i = 0; i < poolKeys.length; i++) {
+        if (!keep.has(String(poolKeys[i]).slice(FULL.length))) orphans.push(String(poolKeys[i]));
+      }
+      // 孤儿体积只用于报告：分批读、读完即弃（峰值≈一批×单图大小）
+      let bytes = 0;
+      for (let i = 0; i < orphans.length; i += 16) {
+        const batch = orphans.slice(i, i + 16);
+        let vals = {};
+        try { vals = (await window.idbGetMany(batch)) || {}; } catch (e3) {}
+        batch.forEach(function (k) { const v = vals[k]; if (typeof v === 'string') bytes += v.length * 2; });
+      }
+      out.orphans = orphans;
+      out.bytes = bytes;
+      out.ok = true;
+      return out;
+    })().catch(function (e) { return { ok: false, reason: '扫描异常：' + ((e && e.message) || e), orphans: [], bytes: 0, poolN: 0, refN: 0 }; });
+  };
+  // 扫描报告里的孤儿真正删除（查看存储页确认后调用）；返回成功删除条数
+  window.mochiMediaGCApply = function (orphans) {
+    return (async function () {
+      const list = (orphans || []).map(String);
+      let n = 0;
+      for (let i = 0; i < list.length; i++) {
+        let ok = false;
+        try { ok = await window.idbDelete(list[i]); } catch (e) { ok = false; }
+        if (ok) { map.delete(list[i].slice(FULL.length)); n++; }
+      }
+      return n;
+    })();
+  };
 })();
