@@ -29,10 +29,12 @@
   ];
   const texts = {}; // key -> 当前权威文案（先本地兜底，官方拉取后覆盖）
   BARS.forEach(function (b) { texts[b.key] = b.fallback; });
-  // 判定一条置顶块文案是否仍为官方声明（标题+全部特征词在位才认为在位，避免每次重建）
+  // 判定一条置顶块文案是否仍为官方声明（标题+全部特征词在位才认为在位，避免每次重建；
+  // 空白归一化——文案里「小红书 @言序」带空格而锚点串不带，空格差异不能算被篡改）
   function marked(box, bar) {
-    const t = (box.textContent || '');
-    return t.indexOf(bar.title) > -1 && bar.marks.every(function (m) { return t.indexOf(m) > -1; });
+    const t = (box.textContent || '').replace(/\s+/g, '');
+    const title = bar.title.replace(/\s+/g, '');
+    return t.indexOf(title) > -1 && bar.marks.every(function (m) { return t.indexOf(m) > -1; });
   }
   // 开屏置顶块（#splash-notice 最顶部两条：防骗在上、署名禁倒卖紧随）
   function ensureBar(bar, refNode) {
