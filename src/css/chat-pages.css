@@ -542,6 +542,33 @@
 .fav-tabs.fav-kind-row { padding-top:0; padding-bottom:8px; }
 .fav-body { padding:6px 18px; }
 
+/* 收藏批量管理（v3.31.x）：顶栏勾选图标进入，条目外侧圆圈勾选，底部操作栏 */
+.fav-batch-bar {
+  display:flex; gap:10px; flex-shrink:0;
+  padding:10px 18px calc(10px + env(safe-area-inset-bottom, 0px));
+  background:rgba(255,255,255,.95); border-top:1px solid rgba(0,0,0,.1);
+}
+.fav-batch-bar[hidden] { display:none; }
+.fb-btn {
+  flex:1; min-height:44px; padding:10px 0; border-radius:14px;
+  border:1px solid rgba(0,0,0,.12); background:rgba(255,255,255,.92);
+  color:#666; font-size:14px; font-weight:600; cursor:pointer; font-family:inherit;
+  -webkit-tap-highlight-color:transparent;
+}
+.fb-btn:active { background:rgba(0,0,0,.06); }
+.fb-btn.fb-del { border:none; background:#e05555; color:#fff; }
+.fb-btn.fb-del:active { background:#c94444; }
+.fb-btn.fb-del[disabled] { opacity:.4; }
+.fav-check {
+  width:22px; height:22px; border-radius:50%; align-self:center; flex-shrink:0;
+  border:1.5px solid rgba(0,0,0,.28); background:rgba(255,255,255,.92);
+  display:flex; align-items:center; justify-content:center;
+  color:#fff; -webkit-tap-highlight-color:transparent;
+}
+.fav-check svg { width:13px; height:13px; opacity:0; }
+.fav-check.on { background:var(--ink); border-color:var(--ink); }
+.fav-check.on svg { opacity:1; }
+
 /* ===== 收藏设置页 ===== */
 .fs-stat-box { padding:4px 14px; }
 .fs-stat-head {

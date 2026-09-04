@@ -1916,6 +1916,9 @@
   if (gcEmojiBtn) gcEmojiBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     if (!window.openEmojiPanelForInsert) return;
+    // #145：再次点击=关闭（按钮切换开关；先于 openEmojiPanelForInsert 判断，防「重开+外点关闭互相覆盖」）
+    const epEl = document.getElementById('emoji-panel');
+    if (epEl && !epEl.hidden) { window.closeEmojiPanelForInsert && window.closeEmojiPanelForInsert(); return; }
     // allowUrl：链接保存的表情在群聊里直接发送（仅信纸插入才限 data:）
     window.openEmojiPanelForInsert((src) => sendGcSticker(src), { allowUrl: true });
     // mail-emoji-mode 会把面板压低到 bottom:64px（写信页布局），群聊页与聊天页一致用默认 96px

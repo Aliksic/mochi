@@ -1222,7 +1222,7 @@ try {
     bind('dq-theme', 'row-theme-mode');
     bind('dq-bg', 'row-bg-preset');
     bind('dq-radius', 'row-desk-card-radius');
-    bind('dq-random', 'row-beauty-random');
+    // v3.27.x #146：dq-random（随机美化快捷入口）已随「一键随机美化」功能一并删除
   })();
   // v3.27.x：边看边调抽屉（项6）——切到桌面页 + 右侧浮层实时改 CSS 变量，桌面可见
   const openBeautyDrawer = () => {
@@ -1709,6 +1709,9 @@ try {
   }
 
   // 小组件透明度：CSS 变量 --widget-opacity（0~1），输入 0~100 百分比
+  // #146 修复：widget-opacity 历史上被「随机美化」写成小数（如 "0.9"/"1"），而读取点用 parseInt 按百分比解析
+  // → parseInt("0.9")=0 → 小组件全透明。统一 opacityRawToPct：≤1 的数值按比例 ×100 换算，≥2 视为已是百分比。
+  const opacityRawToPct = (raw) => { const f = parseFloat(raw); if (isNaN(f)) return NaN; if (f <= 1) return Math.round(f * 100); return Math.round(f); };
   const widgetOpacityRow = document.getElementById('row-widget-opacity');
   const widgetOpacityVal = document.getElementById('widget-opacity-val');
   const applyWidgetOpacity = (pct) => {
@@ -1717,7 +1720,13 @@ try {
     if (widgetOpacityVal) widgetOpacityVal.textContent = (pct === 100 ? '不透明' : pct + '%');
   };
   const savedWidgetOpacity = store.get('widget-opacity');
-  if (savedWidgetOpacity) applyWidgetOpacity(parseInt(savedWidgetOpacity, 10));
+  if (savedWidgetOpacity) {
+    const opPct0 = opacityRawToPct(savedWidgetOpacity);
+    if (!isNaN(opPct0)) {
+      try { if (String(opPct0) !== String(savedWidgetOpacity)) store.set('widget-opacity', String(opPct0)); } catch (e) {} // #146：历史小数脏值改写为百分比存储
+      applyWidgetOpacity(opPct0);
+    }
+  }
   if (widgetOpacityRow) {
     const syncWidgetOpacityUI = () => {
       const v = store.get('widget-opacity');
@@ -2332,27 +2341,10 @@ try {
       if (ctl && ctl.pills) ctl.pills([{ label: '确定恢复全部默认', value: '1' }], '1');
     });
   }
-  // v3.27.x：一键随机美化（E）——随机配色+圆角+透明度，发现新组合可一键存方案
-  const randomBeautyRow = document.getElementById('row-beauty-random');
-  if (randomBeautyRow) {
-    randomBeautyRow.addEventListener('click', () => {
-      const palette = ['#e05555','#e8753a','#f0a020','#4a9d5e','#3a7bd5','#7b5fd6','#d6459d','#111111','#2e8b57','#cc55cc'];
-      const pick = () => palette[Math.floor(Math.random() * palette.length)];
-      const accent = pick();
-      const widgetBg = ['#ffffff','#fff0f0','#f0f4ff','#f0fff0','#fff5e6','#f5e6ff','#fafafa','#fce4ec'][Math.floor(Math.random()*8)];
-      const radius = [12,16,20,24,28][Math.floor(Math.random()*5)];
-      const opacity = [0.85,0.9,0.95,1][Math.floor(Math.random()*4)];
-      try { pushBeautyUndo(); } catch (e) {}
-      store.set('widget-bg-color', widgetBg);
-      store.set('widget-btn-color', accent);
-      store.set('widget-heart-color', accent);
-      store.set('desk-card-radius', String(radius));
-      store.set('widget-opacity', String(opacity));
-      try { localStorage.setItem('xy-home-v2:accent-color', accent); } catch (e) {}
-      toast('已随机生成美化，刷新生效（可点「保存当前为方案」留住）');
-      setTimeout(() => location.reload(), 800);
-    });
-  }
+  // v3.27.x #146：「一键随机美化」（row-beauty-random 处理块）已删除——
+  // 其写入的 widget-opacity 为小数（如 "0.9"/"1"），而各读取点用 parseInt 按百分比解析
+  // → parseInt("0.9")=0 → 小组件全透明；且该键属美化键，「恢复默认布局」只清 desk-layout 不清它，用户无从恢复。
+  // 功能整体下线；历史脏值由下方 opacityRawToPct 启动自愈修正（见 #146 修复）。
   // v3.27.x：方案分享 URL（D）——当前美化 JSON → base64 → hash，对方打开自动弹导入。纯本地无服务器
   const shareBeautyLink = () => {
     try {
@@ -3094,7 +3086,7 @@ try {
         syncCardBgUIs();
         toast('已切换为原图直出');
       } else if (v === 'opacity') {
-        const n = parseInt(store.get('widget-opacity'), 10);
+        const n = opacityRawToPct(store.get('widget-opacity')); // #146：兼容历史小数脏值
         const curOp = !isNaN(n) ? Math.max(0, Math.min(100, n)) : 100;
         openCardMenuNext('组件透明度', '', (sv) => {
           if (sv === '__reset__') { store.remove('widget-opacity'); applyWidgetOpacity(100); toast('已恢复不透明'); return; }
@@ -6412,7 +6404,7 @@ try {
     try { applyWidgetBtn(store.get('widget-btn-color') || '#111111'); } catch (e) {}
     try { applyWidgetBtnText(store.get('widget-btn-text-color') || '#ffffff'); } catch (e) {}
     try { applyWidgetHeart(store.get('widget-heart-color') || '#111111'); } catch (e) {}
-    try { const op = store.get('widget-opacity'); if (op) applyWidgetOpacity(parseInt(op, 10)); } catch (e) {}
+    try { const op = store.get('widget-opacity'); if (op) { const opPct = opacityRawToPct(op); if (!isNaN(opPct)) applyWidgetOpacity(opPct); } } catch (e) {} // #146：兼容历史小数脏值（切桌面重应用）
     try { applyIcoRadius(getIcoRadius()); } catch (e) {}
     try {
       const btn = document.querySelector('.checkin .ck-btn');

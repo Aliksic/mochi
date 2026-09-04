@@ -2997,6 +2997,31 @@ color:#666; border-radius:12px; cursor:pointer; font-family:inherit;
 .fav-tab.sel .fav-tab-cnt { opacity:.9; }
 .fav-tabs.fav-kind-row { padding-top:0; padding-bottom:8px; }
 .fav-body { padding:6px 18px; }
+.fav-batch-bar {
+display:flex; gap:10px; flex-shrink:0;
+padding:10px 18px calc(10px + env(safe-area-inset-bottom, 0px));
+background:rgba(255,255,255,.95); border-top:1px solid rgba(0,0,0,.1);
+}
+.fav-batch-bar[hidden] { display:none; }
+.fb-btn {
+flex:1; min-height:44px; padding:10px 0; border-radius:14px;
+border:1px solid rgba(0,0,0,.12); background:rgba(255,255,255,.92);
+color:#666; font-size:14px; font-weight:600; cursor:pointer; font-family:inherit;
+-webkit-tap-highlight-color:transparent;
+}
+.fb-btn:active { background:rgba(0,0,0,.06); }
+.fb-btn.fb-del { border:none; background:#e05555; color:#fff; }
+.fb-btn.fb-del:active { background:#c94444; }
+.fb-btn.fb-del[disabled] { opacity:.4; }
+.fav-check {
+width:22px; height:22px; border-radius:50%; align-self:center; flex-shrink:0;
+border:1.5px solid rgba(0,0,0,.28); background:rgba(255,255,255,.92);
+display:flex; align-items:center; justify-content:center;
+color:#fff; -webkit-tap-highlight-color:transparent;
+}
+.fav-check svg { width:13px; height:13px; opacity:0; }
+.fav-check.on { background:var(--ink); border-color:var(--ink); }
+.fav-check.on svg { opacity:1; }
 .fs-stat-box { padding:4px 14px; }
 .fs-stat-head {
 font-size:12px; font-weight:700; letter-spacing:.5px; color:var(--muted);
@@ -6883,6 +6908,11 @@ color-scheme:dark;
 .fav-empty { color:#666; }
 .fav-tab { background:var(--dark-hover); border-color:var(--dark-border-12); color:var(--dark-soft); }
 .fav-tab.sel { background:var(--btn-bg); color:var(--btn-ink); border-color:var(--btn-bg); }
+.fav-batch-bar { background:var(--dark-card-92); border-top-color:var(--dark-border); }
+.fb-btn { background:var(--dark-hover); border-color:var(--dark-border-12); color:var(--dark-soft); }
+.fb-btn:active { background:rgba(255,255,255,.08); }
+.fb-btn.fb-del { background:#e05555; color:#fff; }
+.fav-check { background:var(--dark-hover); border-color:var(--dark-border); }
 .mem-card { background:var(--dark-card-92); border-color:var(--dark-border); }
 .mem-tip { background:var(--dark-hover); }
 .mem-extra { background:var(--dark-hover); }
@@ -8722,9 +8752,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1788493229856">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.405</b></span>
-        <span class="sv-deploy">部署于 2026-09-04 11:40<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1788494094122">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.406</b></span>
+        <span class="sv-deploy">部署于 2026-09-04 11:54<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9820,7 +9850,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.405</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.406</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
       <!-- v3.27.x：设置页底部防骗声明 -->
       <div class="set-alert">
@@ -9888,7 +9918,6 @@ transition-duration: .01ms !important;
         <button class="dq-btn" id="dq-theme" style="flex:1;min-width:64px;padding:9px 6px;border:1px solid var(--card-border,#ddd);border-radius:10px;background:var(--card-bg,#fff);color:var(--ink,#111);font-size:12px;cursor:pointer">深色模式</button>
         <button class="dq-btn" id="dq-bg" style="flex:1;min-width:64px;padding:9px 6px;border:1px solid var(--card-border,#ddd);border-radius:10px;background:var(--card-bg,#fff);color:var(--ink,#111);font-size:12px;cursor:pointer">壁纸</button>
         <button class="dq-btn" id="dq-radius" style="flex:1;min-width:64px;padding:9px 6px;border:1px solid var(--card-border,#ddd);border-radius:10px;background:var(--card-bg,#fff);color:var(--ink,#111);font-size:12px;cursor:pointer">圆角</button>
-        <button class="dq-btn" id="dq-random" style="flex:1;min-width:64px;padding:9px 6px;border:none;border-radius:10px;background:var(--ink,#111);color:#fff;font-size:12px;cursor:pointer">随机美化</button>
         <button class="dq-btn" id="dq-drawer" style="flex:1;min-width:64px;padding:9px 6px;border:1px solid var(--ink,#111);border-radius:10px;background:var(--card-bg,#fff);color:var(--ink,#111);font-size:12px;cursor:pointer">边看边调</button>
       </div>
       <div class="cg-title">颜色与透明度</div>
@@ -10060,10 +10089,6 @@ transition-duration: .01ms !important;
           <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6M3 13a9 9 0 109-5"/></svg></div>
           <div class="txt">撤销最近改动<span class="sub">恢复最近一次批量操作前的美化</span></div>
         </div>
-        <div class="set-row" id="row-beauty-random">
-          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8" cy="8" r="1.2" fill="#111111" stroke="none"/><circle cx="16" cy="16" r="1.2" fill="#111111" stroke="none"/><circle cx="16" cy="8" r="1.2" fill="#111111" stroke="none"/><circle cx="8" cy="16" r="1.2" fill="#111111" stroke="none"/></svg></div>
-          <div class="txt">一键随机美化<span class="sub">随机配色+圆角，换换心情</span></div>
-        </div>
         <div class="set-row" id="row-beauty-reset-all">
           <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 12c0-5.5 3.5-10 10-10 3.7 0 7 2 8.8 5M22 12c0 5.5-3.5 10-10 10-3.7 0-7-2-8.8-5"/></svg></div>
           <div class="txt">恢复全部默认美化<span class="sub">清空所有美化设置 · 已保存方案不受影响</span></div>
@@ -10093,7 +10118,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.405</span>
+              <span class="lic-ver">v3.26.406</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -10160,7 +10185,7 @@ transition-duration: .01ms !important;
           <div class="lic-li">TA 的查岗：温柔关心式查岗问题卡（单选 / 文字作答 / 互动动作），作答后 TA 会回应</div>
           <div class="lic-li">批量发送消息：聊天输入栏「批量发送」按钮，可插入表情包 / 图片 / 文字，每条单独一条，多条按顺序一次性发送</div>
           <div class="lic-li">语音消息：聊天输入栏「麦克风」按钮录音，最长 60 秒可试听后发送为语音消息</div>
-          <div class="lic-li">桌面【收藏】：我的收藏 / 联系人的收藏 分页浏览，收藏设置里可调联系人自动收藏概率（聊天消息 / 互动卡片 / 我的回信 / 朋友圈动态）</div>
+          <div class="lic-li">桌面【收藏】：我的收藏 / 联系人的收藏 分页浏览，收藏设置里可调联系人自动收藏概率（聊天消息 / 互动卡片 / 我的回信 / 朋友圈动态）；顶栏勾选图标进入批量管理，可多选 / 全选批量删除收藏（v3.31.x）</div>
           <div class="lic-li">隐藏联系人的表情包：开启后聊天与朋友圈的表情包面板只显示「我的表情包」</div>
           <div class="lic-li">允许删除联系人消息：默认关闭，开启后长按 TA 的消息可永久删除</div>
             </div>
@@ -12007,6 +12032,9 @@ transition-duration: .01ms !important;
           <svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
         </span>
         <span class="ch-name">收藏</span>
+        <span class="ch-settings" id="fav-manage-btn" title="批量管理">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M8.5 12.5l2.5 2.5 5-5.5"/></svg>
+        </span>
         <span class="ch-settings" id="fav-settings-btn" title="收藏设置">
           <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>
         </span>
@@ -12017,6 +12045,12 @@ transition-duration: .01ms !important;
       </div>
       <div class="chat-body fav-body" id="fav-list">
         <!-- 收藏的消息由 JS 渲染 -->
+      </div>
+      <!-- v3.31.x 批量管理：底部操作栏（点顶栏勾选图标进入，勾选后可批量删除） -->
+      <div class="fav-batch-bar" id="fav-batch-bar" hidden>
+        <button class="fb-btn" id="fav-batch-cancel">取消</button>
+        <button class="fb-btn" id="fav-batch-all">全选</button>
+        <button class="fb-btn fb-del" id="fav-batch-del" disabled>删除</button>
       </div>
     </div>
 
@@ -18174,7 +18208,6 @@ bind('dq-accent', 'row-accent-color');
 bind('dq-theme', 'row-theme-mode');
 bind('dq-bg', 'row-bg-preset');
 bind('dq-radius', 'row-desk-card-radius');
-bind('dq-random', 'row-beauty-random');
 })();
 const openBeautyDrawer = () => {
 document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -18632,6 +18665,7 @@ pills: [{ label: '恢复默认', value: '__reset__' }],
 });
 });
 }
+const opacityRawToPct = (raw) => { const f = parseFloat(raw); if (isNaN(f)) return NaN; if (f <= 1) return Math.round(f * 100); return Math.round(f); };
 const widgetOpacityRow = document.getElementById('row-widget-opacity');
 const widgetOpacityVal = document.getElementById('widget-opacity-val');
 const applyWidgetOpacity = (pct) => {
@@ -18640,7 +18674,13 @@ document.documentElement.style.setProperty('--widget-opacity', String(op));
 if (widgetOpacityVal) widgetOpacityVal.textContent = (pct === 100 ? '不透明' : pct + '%');
 };
 const savedWidgetOpacity = store.get('widget-opacity');
-if (savedWidgetOpacity) applyWidgetOpacity(parseInt(savedWidgetOpacity, 10));
+if (savedWidgetOpacity) {
+const opPct0 = opacityRawToPct(savedWidgetOpacity);
+if (!isNaN(opPct0)) {
+try { if (String(opPct0) !== String(savedWidgetOpacity)) store.set('widget-opacity', String(opPct0)); } catch (e) {} // #146：历史小数脏值改写为百分比存储
+applyWidgetOpacity(opPct0);
+}
+}
 if (widgetOpacityRow) {
 const syncWidgetOpacityUI = () => {
 const v = store.get('widget-opacity');
@@ -19205,26 +19245,6 @@ toast('已恢复全部默认美化，刷新生效');
 setTimeout(() => location.reload(), 800);
 }, { noInput: true, pillSubmit: true, pills: [{ label: '确定恢复全部默认', value: '1' }] });
 if (ctl && ctl.pills) ctl.pills([{ label: '确定恢复全部默认', value: '1' }], '1');
-});
-}
-const randomBeautyRow = document.getElementById('row-beauty-random');
-if (randomBeautyRow) {
-randomBeautyRow.addEventListener('click', () => {
-const palette = ['#e05555','#e8753a','#f0a020','#4a9d5e','#3a7bd5','#7b5fd6','#d6459d','#111111','#2e8b57','#cc55cc'];
-const pick = () => palette[Math.floor(Math.random() * palette.length)];
-const accent = pick();
-const widgetBg = ['#ffffff','#fff0f0','#f0f4ff','#f0fff0','#fff5e6','#f5e6ff','#fafafa','#fce4ec'][Math.floor(Math.random()*8)];
-const radius = [12,16,20,24,28][Math.floor(Math.random()*5)];
-const opacity = [0.85,0.9,0.95,1][Math.floor(Math.random()*4)];
-try { pushBeautyUndo(); } catch (e) {}
-store.set('widget-bg-color', widgetBg);
-store.set('widget-btn-color', accent);
-store.set('widget-heart-color', accent);
-store.set('desk-card-radius', String(radius));
-store.set('widget-opacity', String(opacity));
-try { localStorage.setItem('xy-home-v2:accent-color', accent); } catch (e) {}
-toast('已随机生成美化，刷新生效（可点「保存当前为方案」留住）');
-setTimeout(() => location.reload(), 800);
 });
 }
 const shareBeautyLink = () => {
@@ -19907,7 +19927,7 @@ applyCardBg(type);
 syncCardBgUIs();
 toast('已切换为原图直出');
 } else if (v === 'opacity') {
-const n = parseInt(store.get('widget-opacity'), 10);
+const n = opacityRawToPct(store.get('widget-opacity')); // #146：兼容历史小数脏值
 const curOp = !isNaN(n) ? Math.max(0, Math.min(100, n)) : 100;
 openCardMenuNext('组件透明度', '', (sv) => {
 if (sv === '__reset__') { store.remove('widget-opacity'); applyWidgetOpacity(100); toast('已恢复不透明'); return; }
@@ -22743,7 +22763,7 @@ try { applyWidgetBorder(store.get('widget-border-color') || 'rgba(0,0,0,.1)'); }
 try { applyWidgetBtn(store.get('widget-btn-color') || '#111111'); } catch (e) {}
 try { applyWidgetBtnText(store.get('widget-btn-text-color') || '#ffffff'); } catch (e) {}
 try { applyWidgetHeart(store.get('widget-heart-color') || '#111111'); } catch (e) {}
-try { const op = store.get('widget-opacity'); if (op) applyWidgetOpacity(parseInt(op, 10)); } catch (e) {}
+try { const op = store.get('widget-opacity'); if (op) { const opPct = opacityRawToPct(op); if (!isNaN(opPct)) applyWidgetOpacity(opPct); } } catch (e) {} // #146：兼容历史小数脏值（切桌面重应用）
 try { applyIcoRadius(getIcoRadius()); } catch (e) {}
 try {
 const btn = document.querySelector('.checkin .ck-btn');
@@ -28748,6 +28768,10 @@ const favPage = document.getElementById('page-fav');
 const favList = document.getElementById('fav-list');
 let favTab = 'mine'; // mine=我的收藏 ta=联系人的收藏
 let favKind = 'all'; // 收藏分类筛选：all=全部 msg=聊天消息 card=互动卡片 mail=信件 feed=朋友圈
+let favBatch = false;   // v3.31.x 批量管理模式（多选删除）
+let favBatchSel = [];   // 批量模式选中的收藏对象引用（与当次渲染的数组同源，切 tab/分类后被收窄）
+let favBatchArr = null; // 当次渲染使用的收藏数组引用（批量删除直接改它，避免重复 getFav 解析导致引用失效）
+let favBatchVis = [];   // 当前 tab+分类筛选下可见条目（全选用）
 const FAV_KINDS = [
 { k: 'all', label: '全部', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>' },
 { k: 'msg', label: '聊天', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>' },
@@ -28755,6 +28779,15 @@ const FAV_KINDS = [
 { k: 'mail', label: '信件', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>' },
 { k: 'feed', label: '朋友圈', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3 19c0-3 3-5 6-5s6 2 6 5"/><circle cx="17" cy="9.5" r="2.2"/><path d="M14.5 19c0-2 2-3.5 4-3.5s2.5 1.5 2.5 3.5"/></svg>' }
 ];
+function syncBatchBar() {
+const delBtn = document.getElementById('fav-batch-del');
+if (delBtn) {
+delBtn.textContent = '删除' + (favBatchSel.length ? '(' + favBatchSel.length + ')' : '');
+delBtn.disabled = !favBatchSel.length;
+}
+const allBtn = document.getElementById('fav-batch-all');
+if (allBtn) allBtn.textContent = (favBatchVis.length && favBatchSel.length === favBatchVis.length) ? '取消全选' : '全选';
+}
 function renderFav() {    if (!favList) return;
 const fav = getFav();
 favList.innerHTML = '';
@@ -28781,6 +28814,13 @@ if (cnt) cnt.textContent = n > 0 ? String(n) : '';
 }
 const list2 = favKind === 'all' ? list : list.filter(f => (f.kind || 'msg') === favKind);
 list2.sort((a, b) => (b.ts || 0) - (a.ts || 0));
+favBatchArr = fav;
+favBatchVis = list2;
+if (favBatch) favBatchSel = favBatchSel.filter(s => list2.indexOf(s) >= 0);
+const manageBtn = document.getElementById('fav-manage-btn');
+if (manageBtn) manageBtn.classList.toggle('sel', favBatch);
+const barEl = document.getElementById('fav-batch-bar');
+if (barEl) { barEl.hidden = !favBatch; syncBatchBar(); }
 const title = favTab === 'ta' ? partnerName + ' 的收藏' : myName + ' 的收藏';
 let empty = favTab === 'ta' ? 'TA 还没有收藏' : '暂无收藏';
 if (favKind !== 'all') {
@@ -28905,6 +28945,21 @@ function matchFav(x) {
 return (x.kind || 'msg') === kind &&
 (x.q || '') === (f.q || '') && (x.text || '') === (f.text || '') && x.ts === f.ts;
 }
+if (favBatch) {
+const ck = document.createElement('div');
+ck.className = 'fav-check' + (favBatchSel.indexOf(f) >= 0 ? ' on' : '');
+ck.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>';
+if (f.side === 'out') m.appendChild(ck); else m.insertBefore(ck, m.firstChild);
+m.addEventListener('click', (e) => {
+e.stopPropagation();
+const i = favBatchSel.indexOf(f);
+if (i >= 0) favBatchSel.splice(i, 1); else favBatchSel.push(f);
+ck.classList.toggle('on', favBatchSel.indexOf(f) >= 0);
+syncBatchBar();
+}, true);
+favList.appendChild(m);
+return;
+}
 let pressTimer = null;
 m.addEventListener('touchstart', (e) => {
 pressTimer = setTimeout(() => {
@@ -28972,6 +29027,8 @@ renderFav();
 const favBack = document.getElementById('fav-back');
 if (favBack) {
 favBack.addEventListener('click', () => {
+favBatch = false; // v3.31.x 离开收藏页退出批量模式
+favBatchSel = [];
 document.querySelectorAll('.page').forEach(p => p.hidden = true);
 const phonePage = document.getElementById('page-phone');
 if (phonePage) phonePage.hidden = false;
@@ -29328,10 +29385,12 @@ emojiInsertAllowUrl = !!(opts && opts.allowUrl);
 openEmojiPanel();
 document.body.classList.add('mail-emoji-mode');
 };
+window.closeEmojiPanelForInsert = closeEmojiPanel; // #145：群聊表情按钮切换关闭复用（面板同属聊天页共享浮层）
 window.closeIme = function () { try { closeIme(); } catch (e) {} };
 if (emojiBtn) {
 emojiBtn.addEventListener('click', (e) => {
 e.stopPropagation();
+if (emojiPanel && !emojiPanel.hidden) { closeEmojiPanel(); return; } // #145：再次点击=关闭（按钮切换开关）
 emojiInsertCb = null; // 聊天入口始终是发消息
 emojiInsertAllowUrl = false;
 openEmojiPanel();
@@ -32111,6 +32170,8 @@ if (atPanel) atPanel.hidden = false;
 if (gcEmojiBtn) gcEmojiBtn.addEventListener('click', (e) => {
 e.stopPropagation();
 if (!window.openEmojiPanelForInsert) return;
+const epEl = document.getElementById('emoji-panel');
+if (epEl && !epEl.hidden) { window.closeEmojiPanelForInsert && window.closeEmojiPanelForInsert(); return; }
 window.openEmojiPanelForInsert((src) => sendGcSticker(src), { allowUrl: true });
 document.body.classList.remove('mail-emoji-mode');
 });
@@ -77344,4 +77405,4 @@ return { lock: document.body.classList.contains('scroll-lock'), open: open };
 <!-- __MOCHI_EOF__ -->
 </body>
 </html>
-<!-- __MOCHI_EOF__ mtmeow80 -->
+<!-- __MOCHI_EOF__ mtmf7f3e -->

@@ -6359,6 +6359,10 @@ const favPage = document.getElementById('page-fav');
 const favList = document.getElementById('fav-list');
 let favTab = 'mine'; // mine=我的收藏 ta=联系人的收藏
 let favKind = 'all'; // 收藏分类筛选：all=全部 msg=聊天消息 card=互动卡片 mail=信件 feed=朋友圈
+let favBatch = false;   // v3.31.x 批量管理模式（多选删除）
+let favBatchSel = [];   // 批量模式选中的收藏对象引用（与当次渲染的数组同源，切 tab/分类后被收窄）
+let favBatchArr = null; // 当次渲染使用的收藏数组引用（批量删除直接改它，避免重复 getFav 解析导致引用失效）
+let favBatchVis = [];   // 当前 tab+分类筛选下可见条目（全选用）
 const FAV_KINDS = [
 { k: 'all', label: '全部', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>' },
 { k: 'msg', label: '聊天', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>' },
@@ -6366,6 +6370,16 @@ const FAV_KINDS = [
 { k: 'mail', label: '信件', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>' },
 { k: 'feed', label: '朋友圈', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3 19c0-3 3-5 6-5s6 2 6 5"/><circle cx="17" cy="9.5" r="2.2"/><path d="M14.5 19c0-2 2-3.5 4-3.5s2.5 1.5 2.5 3.5"/></svg>' }
 ];
+// v3.31.x 批量管理：按当前勾选数同步底部操作栏（删除按钮文案/可用态 + 全选按钮文案）
+function syncBatchBar() {
+const delBtn = document.getElementById('fav-batch-del');
+if (delBtn) {
+delBtn.textContent = '删除' + (favBatchSel.length ? '(' + favBatchSel.length + ')' : '');
+delBtn.disabled = !favBatchSel.length;
+}
+const allBtn = document.getElementById('fav-batch-all');
+if (allBtn) allBtn.textContent = (favBatchVis.length && favBatchSel.length === favBatchVis.length) ? '取消全选' : '全选';
+}
 function renderFav() {    if (!favList) return;
 const fav = getFav();
 favList.innerHTML = '';
@@ -6392,6 +6406,14 @@ if (cnt) cnt.textContent = n > 0 ? String(n) : '';
 }
 const list2 = favKind === 'all' ? list : list.filter(f => (f.kind || 'msg') === favKind);
 list2.sort((a, b) => (b.ts || 0) - (a.ts || 0));
+// v3.31.x 批量管理：记录本次渲染的数组与可见条目；勾选只保留当前筛选下仍可见的（切 tab/分类自动收窄）
+favBatchArr = fav;
+favBatchVis = list2;
+if (favBatch) favBatchSel = favBatchSel.filter(s => list2.indexOf(s) >= 0);
+const manageBtn = document.getElementById('fav-manage-btn');
+if (manageBtn) manageBtn.classList.toggle('sel', favBatch);
+const barEl = document.getElementById('fav-batch-bar');
+if (barEl) { barEl.hidden = !favBatch; syncBatchBar(); }
 const title = favTab === 'ta' ? partnerName + ' 的收藏' : myName + ' 的收藏';
 let empty = favTab === 'ta' ? 'TA 还没有收藏' : '暂无收藏';
 if (favKind !== 'all') {
@@ -6517,6 +6539,23 @@ function matchFav(x) {
 return (x.kind || 'msg') === kind &&
 (x.q || '') === (f.q || '') && (x.text || '') === (f.text || '') && x.ts === f.ts;
 }
+// v3.31.x 批量管理：条目变多选——外侧加圆圈勾选，点击整条切换勾选；
+// 用捕获阶段监听，抢先于气泡内图片的 click（查看大图）并 stopPropagation 拦下
+if (favBatch) {
+const ck = document.createElement('div');
+ck.className = 'fav-check' + (favBatchSel.indexOf(f) >= 0 ? ' on' : '');
+ck.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>';
+if (f.side === 'out') m.appendChild(ck); else m.insertBefore(ck, m.firstChild);
+m.addEventListener('click', (e) => {
+e.stopPropagation();
+const i = favBatchSel.indexOf(f);
+if (i >= 0) favBatchSel.splice(i, 1); else favBatchSel.push(f);
+ck.classList.toggle('on', favBatchSel.indexOf(f) >= 0);
+syncBatchBar();
+}, true);
+favList.appendChild(m);
+return;
+}
 let pressTimer = null;
 m.addEventListener('touchstart', (e) => {
 pressTimer = setTimeout(() => {
@@ -6584,6 +6623,8 @@ renderFav();
 const favBack = document.getElementById('fav-back');
 if (favBack) {
 favBack.addEventListener('click', () => {
+favBatch = false; // v3.31.x 离开收藏页退出批量模式
+favBatchSel = [];
 document.querySelectorAll('.page').forEach(p => p.hidden = true);
 const phonePage = document.getElementById('page-phone');
 if (phonePage) phonePage.hidden = false;
@@ -6944,10 +6985,12 @@ emojiInsertAllowUrl = !!(opts && opts.allowUrl);
 openEmojiPanel();
 document.body.classList.add('mail-emoji-mode');
 };
+window.closeEmojiPanelForInsert = closeEmojiPanel; // #145：群聊表情按钮切换关闭复用（面板同属聊天页共享浮层）
 window.closeIme = function () { try { closeIme(); } catch (e) {} };
 if (emojiBtn) {
 emojiBtn.addEventListener('click', (e) => {
 e.stopPropagation();
+if (emojiPanel && !emojiPanel.hidden) { closeEmojiPanel(); return; } // #145：再次点击=关闭（按钮切换开关）
 emojiInsertCb = null; // 聊天入口始终是发消息
 emojiInsertAllowUrl = false;
 openEmojiPanel();

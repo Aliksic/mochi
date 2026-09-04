@@ -1,3 +1,15 @@
+### 2026-09-04 11:5x（#145 聊天/群聊输入栏【表情包】按钮再点无法关闭：按钮无条件 open 改切换开关；已构建）
+* [AI-A 域跨改]（**改动文件：src/js/chat.js（表情按钮 click 改 toggle：面板已开先 closeEmojiPanel() 再 return；导出 window.closeEmojiPanelForInsert=closeEmojiPanel 供群聊复用）、src/js/group-chat.js（gc-emoji-btn 同款切换，复用导出关闭）、build.mjs（FIX_SENTINELS 2 条，window. 属性名锚点）、FIX-REGRESSION.md（#145 行）；构建状态：已构建·sw 见 version.json**）。
+* 根因：chat.js 表情按钮 click 无条件 openEmojiPanel()，外点关闭监听又排除按钮本身（!emojiBtn.contains）→ 再点永不关；群聊 gc-emoji-btn 更绕（重开+document 外点关闭互相覆盖，终态仍开）。
+* 验证：node --check 过；构建哨兵 281/281 全绿哑哨兵 0。待真机：聊天/群聊点表情按钮开→再点关；外点关闭/选表情发送/信箱批量插入模式不回归。
+* ⚠️ 构建夹带说明：构建时工作区含并行会话未提交改动——src/js/personalize.js + src/template.html（#146 随机美化删除 + widget-opacity 小数脏值修复）、src/js/chat.js + src/template.html（v3.31.x 收藏批量管理 favBatch 族）——改动成套完整、语法与哨兵全过，已随本次构建一并进入产物并随提交入库，请该会话知悉（WORKLOG 留痕，AGENTS.md「构建不夹带」特此说明）。
+
+### 2026-09-04 11:5x（#145 收藏页新增批量删除功能：v3.31.x；已构建）
+* [AI-A 域]（**改动文件：src/template.html（收藏页顶栏加批量管理按钮 #fav-manage-btn + 底部操作栏 #fav-batch-bar（取消/全选/删除）+ 功能介绍页 02 收藏行补文案）、src/js/chat.js（renderFav 批量模式状态 favBatch/favBatchSel/favBatchArr/favBatchVis + syncBatchBar + renderFavItem 批量勾选分支 + 四个按钮事件 + fav-back 退出批量）、src/css/chat-pages.css（.fav-batch-bar/.fb-btn/.fav-check 亮色）、src/css/dark.css（同款暗色适配，跨域改动已在此行说明）；构建状态：已构建·sw 见 version.json**）。
+* 功能：收藏页顶栏新增勾选图标按钮 → 进入批量管理：条目外侧圆圈勾选（捕获阶段 click 抢先拦截气泡内图片查看大图）、切换「我的/TA的」或分类 tab 自动收窄勾选、底部「取消/全选(取消全选)/删除(N)」；删除走 openModal 二次确认，直接改当次渲染的 fav 数组引用后 saveFav（避免重复 getFav 解析致 indexOf 失配）；长按/右键单删在批量模式下不注册。
+* 跨域改动 src/css/dark.css：仅追加收藏批量管理暗色 5 行（.fav-batch-bar/.fb-btn/.fav-check），未动其他规则。
+* 验证：node --check 过；构建后 --check-sentinels 全绿。
+
 ### 2026-09-03 23:4x（#144 iPad Air 7 + Safari 主屏幕「全屏模式」无反应：iPadOS 伪装 UA 致 isIOS=false；已构建）
 * [AI-B 域]（**改动文件：src/js/device.js（isIOS 补 Macintosh 伪装分支：platform=MacIntel || /Macintosh/ + maxTouchPoints>1 + ontouchstart——真桌面 Mac maxTouchPoints=0 不误判）、src/js/idb.js（armFgIdbReset 同款 UA 检查补 touchMac，伪装 UA 的 iPad 回前台也重建 IDB 连接）、build.mjs（FIX_SENTINELS 2 条）、FIX-REGRESSION.md（#144 行）；构建状态：已构建·sw 见 version.json**）。
 * 根因：iPadOS 13+ UA 伪装桌面 Mac → isIOS=false → fullscreen.js 走错分支（iPad 无 Fullscreen API 开关被拒）+ ios-pwa-standalone 类不加（html 类空，#114/#129 安全区补偿在 iPad 全失效）；用户手动布局 pref:mobile 另把 isTablet 置假（保留不改，只管布局）。
