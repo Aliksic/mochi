@@ -1999,9 +1999,11 @@ try {
     } catch (e) {}
     return data;
   };
-  // v3.27.x：导出/导入只保留「文件」方式——「复制文字」已移除（含图片的方案 JSON
-  // 巨大，剪贴板/聊天工具复制发送会被截断或失败，对方也无法粘贴导入）。
-  // v3.26.x：导出前先选「当前设置 / 某个已保存方案」，选定后直接下载 .json 文件。
+  // v3.27.x：导出保留「文件」为主通道；v3.26.x #172：文件导出接统一三级降级保存链
+  //（window.mochiExportFile：系统分享面板→系统保存框→确认后下载）——f4158f6 收敛为
+  // 仅 a[download] 后，iPhone 主屏安装（standalone 无下载管理器）与夸克等壳浏览器点导出
+  // 静默无反应=方案无法导出；同时补回「复制文字」通道（>3MB 拒绝，防剪贴板截断）。
+  // v3.26.x：导出前先选「当前设置 / 某个已保存方案」，再选导出方式。
   // 全局主题延续右侧方案保存逻辑（collectBeautyFull），方案的 data 里已含 accent/theme。
   const downloadBeautyFile = (json) => {
     try {
@@ -2016,10 +2018,36 @@ try {
       toast('已导出美化方案文件');
     } catch (e) { toast('导出文件失败'); }
   };
+  const beautyFileLocalDate = () => {
+    const d = new Date(); const p = (n) => (n < 10 ? '0' : '') + n;
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  };
   const startBeautyExport = (data) => {
     const json = JSON.stringify(data);
     if (json.length > 64 * 1024 * 1024) { toast('方案过大，导出失败'); return; }
-    downloadBeautyFile(json);
+    const fname = 'mochi美化方案-' + beautyFileLocalDate() + '.json';
+    const doExportFile = () => {
+      if (window.mochiExportFile) { window.mochiExportFile(json, fname, 'mochi美化方案'); return; }
+      downloadBeautyFile(json);
+    };
+    const doCopy = () => {
+      if (json.length > 3 * 1024 * 1024) { toast('方案过大（含图片），复制可能被截断，请用「导出文件」'); return; }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(json).then(() => toast('已复制到剪贴板，发给对方粘贴导入')).catch(() => toast('复制失败，请改用导出文件'));
+      } else { toast('剪贴板不可用，请改用导出文件'); }
+    };
+    if (!window.openModal) { doExportFile(); return; }
+    window.openModal('导出美化方案', '', (v) => {
+      if (v === 'copy') { doCopy(); return; }
+      doExportFile();
+    }, {
+      noInput: true,
+      staticText: '选择导出方式：\n· 导出文件：自动弹分享/保存框（iPhone 主屏安装到桌面时用这个），不支持时确认后下载\n· 复制文字：方案较小时可发给对方粘贴导入',
+      pills: [
+        { label: '导出文件', value: 'file' },
+        { label: '复制文字', value: 'copy' },
+      ],
+    });
   };
   const beautyExportRow = document.getElementById('row-beauty-export');
   if (beautyExportRow) {
@@ -2075,13 +2103,11 @@ try {
   if (beautyImportRow) {
     beautyImportRow.addEventListener('click', () => {
       if (!window.openModal) return;
-      // v3.27.x：导入只保留「从文件导入」——去掉粘贴文本（含图片的方案 JSON 巨大，
-      // 粘贴导入不现实；只点确定未选文件时提示）。
+      // v3.26.x #172：补回「粘贴文本导入」通道（与文件导入并存，同聊天美化导入）——
+      // f4158f6 收敛为仅文件选择后，iPhone 主屏安装（standalone 文件选择器常不弹）等
+      // 环境导入全断；粘贴通道不依赖文件选择能力。txtImportAuto 仍保留：选完文件自动应用。
       window.openModal('导入美化方案', '', (v) => {
-        if (!v || !v.trim() || v === 'ok') {
-          if (v === 'ok') toast('请点击「从文件导入」选择 .json 文件');
-          return;
-        }
+        if (!v || !v.trim()) { toast('请先粘贴方案文本，或点「从文件导入」选择 .json 文件'); return; }
         try {
           const data = JSON.parse(v.trim());
           if (typeof data !== 'object' || Array.isArray(data)) { toast('格式错误'); return; }
@@ -2103,8 +2129,8 @@ try {
           applyBeautyData(data);
           toast('已导入，刷新生效');
           setTimeout(() => location.reload(), 800);
-        } catch (e) { toast('解析失败，请检查文件内容'); }
-      }, { noInput: true, staticText: '导入前会自动把当前美化保存为「导入前备份」方案；只支持从文件导入 .json（点下方「从文件导入」选择文件后自动应用）', txtImport: true, txtImportAuto: true });
+        } catch (e) { toast('解析失败，请检查文本内容'); }
+      }, { textarea: true, textareaPlaceholder: '粘贴美化方案文本（JSON），或点下方「从文件导入」选择 .json 文件', txtImport: true, txtImportAuto: true, staticText: '导入前会自动把当前美化保存为「导入前备份」方案；支持粘贴文本或从文件导入（选完文件自动应用）' });
     });
   }
 

@@ -865,14 +865,21 @@
     const doExport = (data) => {
       const json = JSON.stringify(data);
       if (!window.openModal) { toast('导出失败'); return; }
+      // v3.26.x #172：文件名用本地日期（原 toISOString 是 UTC，凌晨导出文件名会是前一天）
+      const d = new Date(); const p2 = (n) => (n < 10 ? '0' : '') + n;
+      const fname = 'mochi聊天美化方案-' + d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()) + '.json';
       window.openModal('导出聊天美化方案', '', (v) => {
         if (v === 'file') {
+          // v3.26.x #172：走统一三级降级导出链（系统分享面板→系统保存框→确认后下载，
+          // window.mochiExportFile 由 data-backup.js 暴露）——原裸 a[download] 在 iPhone
+          // 主屏安装（standalone 无下载管理器）与部分壳浏览器静默无反应=方案无法导出
+          if (window.mochiExportFile) { window.mochiExportFile(json, fname, 'mochi聊天美化方案'); return; }
           try {
             const blob = new Blob([json], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = 'mochi聊天美化方案-' + new Date().toISOString().slice(0, 10) + '.json';
+            a.download = fname;
             document.body.appendChild(a); a.click();
             setTimeout(() => { try { document.body.removeChild(a); URL.revokeObjectURL(url); } catch (e) {} }, 1000);
             toast('已导出聊天美化方案文件');
@@ -884,7 +891,7 @@
         }
       }, {
         noInput: true,
-        staticText: '选择导出方式：\n· 导出文件：生成 .json 文件，可保存或发送\n· 复制文字：复制配置文本，发给对方粘贴导入',
+        staticText: '选择导出方式：\n· 导出文件：自动弹分享/保存框（iPhone 主屏安装时用这个），不支持时确认后下载，可保存或发送\n· 复制文字：复制配置文本，发给对方粘贴导入',
         pills: [
           { label: '导出文件', value: 'file' },
           { label: '复制文字', value: 'text' },

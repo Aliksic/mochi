@@ -1,6 +1,13 @@
-# 本次构建者：本会话（#167 多字卡回复升级总开关收口：关=只回一条，重建打包 + verify-multicard-master 门禁）
+# 本次构建者：本会话（#172 收口构建：用户报障表情包刷新必丢修复打入产物，随库带 #171/#173/#129 在途改动一并收口提交推送）
 
 > 【占用声明 2026-09-05】#172（用户报障「我的表情包/自定义字卡刷新必丢」）占用 src/js/chat.js 表情包恢复链区域（~6750-6800 与 ~7067-7090）+ build.mjs 哨兵尾部追加 + FIX-REGRESSION.md 新行；与工作区 #167（chat.js 3143/3260 两行）/ #171（chatcard.js）零重叠，勿回滚彼此部分。本会话不构建，收口时一并打入。
+
+### 2026-09-05 02:xx（#172 用户报障：华为畅享70Pro+Chrome 字卡库自己加的字卡/表情包每次刷新必丢；01:48 诊断实证数据在 IDB 34.93MB 未丢＝恢复链断；源已完成·未构建）
+* [AI-A 域]（**改动文件：src/js/chat.js（表情包恢复链三件套：①myeApplyIdb 统一应用＝原 tryRestore/reloadMyEmojiFromIdb 两处重复逻辑收口，比较基准从 store 快照改内存 myGroups——hydrate 写 store 后二者脱节，按快照会误判「同量不覆盖」恢复永不落内存；②myeHydrateFallback＝idbGet 读空改走 idbHydrateKey 按需取回——34.93MB 超启动回填预算（低内存机 12MB）每次刷新被挂起 __xyIdbDeferredKeys+大键从不落 LS 快照，原裸 idbGet 固定 4s+4s 低端机读不完静默放弃＝面板永远空；hydrate 6s+8s 慢读友好、成功进驻存并移出挂起名单，与 chatcard hydrateScope 同机制，tryRestore 重试穷尽也兜底；③myEmojiSave 防覆盖闸门＝键仍挂起时先取回 IDB 全量与内存新增按组去重合并再写，false 不写回防小包顶掉全量，null（确认无键）直写）、build.mjs（FIX_SENTINELS +2）、FIX-REGRESSION.md（#172 行）、tools/verify-mye-hydrate.mjs（新增，纯 Node 抽源码真函数 14 断言，零浏览器依赖）**；构建状态：**未构建**——工作区挂着 #167 已构建未提交产物与 #171/#173 在途，本条等收口构建一并打入；--check-sentinels 349 全绿哑哨兵 0）。
+* 诊断解读：①IDB 大键明细 my-emoji-groups=34.93MB＝用户表情包全在，症状是「读不回」不是「没存上」；②「自定义字卡=0」另因＝专属字卡按桌面隔离：用户字卡在 default:cc-groups（12.3KB 在库），当前桌面 cmtmi25vy3j8 无专属键，非丢失（已答复用户）；③真实风险：修复前用户在空面板上新建分组/上传会触发 myEmojiSave 把空态写回覆盖 IDB 全量（本例 34.93MB 尚存＝还没踩中），闸门已堵。
+* 验证：node --check 过；verify-mye-hydrate 14/14（桩调试中反抓出两处设计修正：应用基准改内存/hydrate 失败不写回）；--check-sentinels 349 全绿。
+* 待真机（构建收口推送后）：表情包面板「我的」应自动恢复存量（首次打开面板可能转几秒）；上传新表情→刷新重进→新表情与存量都在。
+* 给收口会话：本条 chat.js 改动区域（~6750-6800/~7067-7090）与 #167（3143/3260）零重叠；build.mjs 我的两条哨兵接在 #171 三条之后（与 #173 的四条共存于数组尾部），收口重建时一并核对。
 
 > 【占用声明 2026-09-05】#173（用户报障「桌面美化和聊天美化的美化方案无法导出也无法导入」）占用 src/js/personalize.js 导出/导入区域（~1949-2130，startBeautyExport/beautyImportRow 两处；当时该文件已随 1bde7b1 收口无在途改动）+ src/js/data-backup.js（新增 window.mochiExportFile，anchorDownload 之后）+ 跨域 src/js/chat-settings.js（chatSchemeExport 的 doExport 文件分支，理由：聊天美化导出与桌面同病，只修桌面半边用户主诉不闭环）+ build.mjs 哨兵尾部追加 + FIX-REGRESSION.md 新行；与 #167/#171/#172 在途改动零重叠，勿回滚彼此部分。本会话不构建，收口时一并打入。
 

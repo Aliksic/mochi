@@ -44,6 +44,9 @@ const STRICT = has('--strict');
 
 const toolsDir = join(root, 'tools');
 let files = readdirSync(toolsDir).filter(f => /^verify-.*\.mjs$/.test(f) && f !== SELF).sort();
+// verify-triage（套件事后分析器，需 --scripts/套件日志参数）与其分类判据自检 classify
+// 都是元工具不是产品回归检查，混进被跑清单必然误报（#129）
+files = files.filter(f => f !== 'verify-triage.mjs' && f !== 'verify-triage-classify.mjs');
 if (!has('--no-core') && existsSync(join(toolsDir, 'verify.mjs'))) files = ['verify.mjs'].concat(files);
 if (filters.length) files = files.filter(f => filters.some(p => f.includes(p)));
 if (!files.length) { console.log('没有匹配的 verify 脚本（过滤器：' + filters.join(', ') + '）'); process.exit(0); }

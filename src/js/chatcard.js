@@ -1781,20 +1781,59 @@
       pickFiles('', false, (files) => {
         const f = files && files[0];
         if (!f) return;
+        const fname = f.name || '未命名文件';
+        const fsize = f.size ? Math.max(1, Math.round(f.size / 1024)) + 'KB' : '空文件';
+        // v3.26.x #171：iOS Safari 导 milk json 报「格式错误」——旧版一个 catch 把三类
+        // 完全不同的失败（JSON 解析失败／文件转存损坏／导入处理自身抛错）混成同一句
+        // 「文件格式不正确」，真因永远看不到。拆开：
+        //   ① 解析失败给真实原因 + 针对性自救（UTF-16 转存重读／裁剪提取首{到末}／
+        //      空文件=网盘未下载完整／网页=存成了 HTML），不再一律「格式错误」；
+        //   ② applyImportData 抛错单独提示，存储类失败不再伪装成格式问题；
+        //   ③ 失败现场写 __jsErrors → 设置页「复制诊断信息」直接带出真因（iOS 报障自证）。
         const reader = new FileReader();
-        reader.onload = () => {
+        const diag = (why) => {
           try {
-            let txt = String(reader.result || '');
-            // 部分安卓文件管理器/浏览器写入的 json 带 BOM，JSON.parse 会直接抛错
-            if (txt.charCodeAt(0) === 0xFEFF) txt = txt.slice(1);
-            const data = JSON.parse(txt);
-            if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('格式错误');
-            applyImportData(data, mode);
-          } catch (e) {
-            // 带上文件名/大小：vivo/雨见偶发读到空内容（size>0 内容空）时用户能对照排查
-            toast('导入失败：文件格式不正确（' + (f.name || '未命名文件') + '·' + (f.size ? Math.max(1, Math.round(f.size / 1024)) + 'KB' : '空文件') + '）');
+            if (window.__jsErrors) window.__jsErrors.push('[字卡导入] ' + why + ' | ' + fname + '·' + fsize + ' | 开头: ' + String(reader.result || '').replace(/\s+/g, ' ').slice(0, 100));
+          } catch (e0) {}
+        };
+        const applyOk = (data) => {
+          try { applyImportData(data, mode); } catch (e) {
+            toast('导入处理失败：' + ((e && e.message) || '内部错误') + '（' + fname + '）');
+            diag('applyImportData 异常 ' + ((e && e.message) || e));
           }
         };
+        const fail = (why) => { toast('导入失败：' + why + '（' + fname + '·' + fsize + '）'); diag(why); };
+        // recover=已用过的自救方式（utf16/trim），非空则不再二次自救
+        const handleText = (raw, recover) => {
+          let txt = String(raw || '');
+          // 部分安卓文件管理器/浏览器写入的 json 带 BOM/零宽字符，JSON.parse 会直接抛错
+          txt = txt.replace(/^[\uFEFF\u200B\u200E\u200F]+/, '');
+          if (!txt.trim()) { fail('文件内容为空——iCloud/网盘文件可能没下载完整，请在「文件」App 点开该文件确认有内容后再导入'); return; }
+          let data = null, perr = null;
+          try { data = JSON.parse(txt); } catch (e) { perr = e; }
+          if (perr) {
+            // 自救①：微信/邮件/文本编辑转存常把文件变 UTF-16——按 UTF-8 读出来成串 NUL，
+            // 数 NUL 落在奇/偶位定字节序，换对应编码重读一遍再走原流程
+            if (!recover && /\u0000/.test(txt.slice(0, 400))) {
+              let odd = 0, even = 0;
+              for (let i = 0; i < Math.min(txt.length, 400); i++) { if (txt.charCodeAt(i) === 0) { if (i % 2) odd++; else even++; } }
+              reader.onload = () => handleText(reader.result, 'utf16');
+              reader.readAsText(f, odd >= even ? 'utf-16le' : 'utf-16be');
+              return;
+            }
+            // 自救②：转存时前后被包了说明文字/网页源码——裁出首个 { 到末个 } 再试
+            const a = txt.indexOf('{'), b = txt.lastIndexOf('}');
+            if (!recover && a >= 0 && b > a) { handleText(txt.slice(a, b + 1), 'trim'); return; }
+            const isHtml = txt.charAt(0) === '<' || /<html[\s>]/i.test(txt.slice(0, 200));
+            fail(isHtml
+              ? '文件是网页不是 JSON——请在 milk 里用导出按钮重新导出，分享时选「存储到文件」'
+              : 'JSON 解析失败：' + ((perr && perr.message) || '内容不是合法 JSON') + (recover ? '（自救 ' + recover + ' 后仍失败）' : ''));
+            return;
+          }
+          if (!data || typeof data !== 'object' || Array.isArray(data)) { fail('文件顶层不是 JSON 对象'); return; }
+          applyOk(data);
+        };
+        reader.onload = () => handleText(reader.result, '');
         // 读取失败（onload 不触发）旧版无任何提示，像「点了没反应」
         reader.onerror = () => toast('导入失败：文件读取失败，请重选文件再试');
         reader.readAsText(f);
