@@ -1,3 +1,21 @@
+### 2026-09-05 23:2x（#187 平板默认观感改全宽铺满（用户决策）：竖横屏 100vw 替代 640/820 限宽居中；已构建）
+* [AI-B 域]（**改动文件：src/css/base.css（平板区块两处宽度值）、FIX-REGRESSION.md（#187 设计变更行）**）。
+* 用户决策：多台 iPad 反馈「四边不贴合居中」，平板默认从 v3.7.x 限宽居中改为全宽；横屏气泡 460px 封顶/弹窗 360px 等内部约束保留。
+* 验证：--check-sentinels 446 全绿。
+* 待真机（iPad Air 7 竖/横）：四边贴合；横屏气泡不过宽。
+
+### 2026-09-06 01:2x（#210 判定器补全屏页外 letterbox 盲区提示行 + 联合收口构建：#211/#212/#214/#215×2 各会话已声明完整的批次随库一并打入；本次构建者：AI-B=本会话）
+- [AI-B 域]（**改动文件：src/js/device.js（screenDiagJudge 尾加 ⑦ 提示行：仅 fsActive 且页内无其他 ✗ 时输出「※ 全屏态·页外留白提示」——挖孔/摄像头区 letterbox 在页面坐标系外、页内全绿无法检测（#212 iQOO12 实证），引导关开一次全屏重新申请；#212 会话 WORKLOG 所嘱落地）、tools/verify-viewport-form.mjs（+C 段 4 断言=53；并把 viewport-form/reserved-standalone/kb-stuck 三脚本的判定器提取器改为保留原生 const F/add/return F——⑦行内部引用 F，剥离式提取会 ReferenceError）、build.mjs（+1 哨兵，逻辑锚点=提示行输出条件）、FIX-REGRESSION.md（#210 行补 ④ 与断言数）**）。
+- 自验：node --check 过；verify-viewport-form 53/53、reserved-standalone 29/29、kb-stuck 26/26、fullscreen-ipad 25/25；--check-sentinels 444 全绿哑 0（构建前）；#211/#212/#214/#215 各会话脚本随本口构建复跑，结果见提交信息；tmp-211-fixed.html 系 #211 会话临时文件不入库。
+
+### 2026-09-06 01:1x（#215 华为P50E+Edge「我发送的聊天气泡里没有文字/文字消失了」：发送取值零兜底收口（跨域 chat.js）·本次会话不构建，构建权留 #210/#211/#212 会话收口时随库）
+- [AI-B 域·跨域改动 src/js/chat.js（AI-A 聊天域文件，理由：用户直接指派修复；发送/清空/守卫机制全在该文件内）]（**改动文件：src/js/chat.js（readSendText 发送取值兜底：innerText/textContent 双口径读空且最近输入快照新鲜（真实编辑<15s 且晚于上次清空）才启用恢复；clearChatInput/切桌面同步作废快照；防重发/防复活守卫零改动）、build.mjs（哨兵 +2 逻辑锚点）、FIX-REGRESSION.md（#215 行+设备索引 华为P50E）、tools/verify-chat-send-recover.mjs（新增 8 断言，无头端到端）**；构建状态：**未构建**——树内有 #211（chat.js 闪动收口）/#212（fullscreen.js 挖孔屏）实时在途，本条只改 src+台账，产物由在途构建者收口时随库打入；构建后请复跑 node tools/verify-chat-send-recover.mjs 应 8/8）。
+- 需求：华为 P50E+Edge（Chromium 151，ABR-AL60）报「聊天里我发消息，我的气泡里没有文字，文字消失了」，用户明说其他设备型号也有；同批报障另有黑条（→#212 挖孔屏 letterbox 与 #209 键盘残留灰边家族）与 mj 回消息一弹一弹一闪一闪（→#211 整窗重建闪动 + 旧构建 pre-#206 尾巴回放重复）。
+- 根因（无头探针实锤，362×764/DPR3.375/EdgA151 UA）：Edge 点发送瞬间可能把输入栏未提交组合文本整体撕掉（composition cancel：DOM 清空且不派发任何 input/beforeinput）→ addMsg(input.innerText) 读空 → buildParts 为空 → 一条消息都不发、用户打的字静默消失。#115 防复活守卫管「内核迟到写回」，管不了「发送瞬间撕文本」——两向缺口。另：该用户设备构建 ts=1788613665382（=9412345 批次 21:07），早于 #205/#206/#209/#211/#212——媒体空白/黑条/闪动三症状大半是存量已知修复未送达（其诊断 version.json 获取失败=更新链路受网络限制）。
+- 方案：捕获阶段 input 事件维护 _mLastTyped 快照（手动全删即归空、真实清空/切桌面作废）；发送两入口（click/Enter）改走 readSendText；恢复条件三重收紧（双口径读空+晚于上次清空+15s 新鲜度）→ 正常路径/防重发/防复活守卫零改动，任何机型无感。
+- 验证：node --check 过；--check-sentinels 全绿哑 0；verify-chat-send-recover 在旧产物上 T1 正常发送/T3 手动删空不幻影/T4 隔次发送不复活 已绿、T2/T5 撕文本恢复/Enter 恢复 红（修复未构建，构建后应全绿）。
+- 【给在途 #211/#212 会话】：chat.js 我只动了 8306~8345（readSendText/clearChatInput）与 8440 附近两个发送入口行，与你的 622~660 归一化渲染闸无文本重叠——如需 stash 隔离请 diff 核对两段都在（今日已两起 stash 恢复丢失事故）；编号占用：#211~#214 均已被并行会话占用，本修复顺延 #215。
+
 ### 2026-09-06 00:5x（#210 屏幕适配判定器同源化 + 异常抓拍补强：src/tools/文档全就绪·自验全绿；号段更正：原声明 #209 实为 #210；构建+联合提交与 #209 会话协调移交）
 - [AI-B 域]（**改动文件：src/js/device.js（新增共享判定器 window.mochiViewportForm=视口形态单一事实源；screenDiagJudge 改调它；采集器拆出 collectFitInp 并把 safe-top-force 传入——顺修 #186 两处缺陷：force 漏传=「用户已声明覆盖形态」死分支、force 期望底边误写 innerH 与注释「屏高」矛盾；#176 监视器补事件沿捕获（resize/vv/旋转/回前台 1.2s 去抖）+错误环条目带事发现场数值+屏幕适配报告尾附历史快照时间线）、src/js/mobile-adapt.js（仅 syncVvFit 三处：形态判式改调共享判定器、高度公式统一走 _f.expBase；healViewport 区一根手指都没碰）、build.mjs（受影响 6 条哨兵改锚至新签名+新增 7 条 #210，追加式未动他人条目）、tools/verify-viewport-form.mjs（新增：真机信号台账 49 断言——15Pro/18.3、16Pro/26.1、14Pro/26.6±force、15Pro/18.3+force、iPad Air、荣耀50se 雨见、iOS17 防回归、env 超界）、tools/verify-ios-reserved-standalone.mjs（重写 29 断言适配共享判定器）、tools/verify-ios-kb-stuck.mjs（仅 C 段提取求值补 window 注入，适配判定器同源）、FIX-REGRESSION.md（#210 行）**）。
 - 自验（对 src）：node --check 过；verify-viewport-form 49/49、verify-ios-reserved-standalone 29/29、verify-ios-kb-stuck 26/26、verify-fullscreen-ipad 25/25；--check-sentinels 436 全绿哑 0。00:16 曾构建（sw mochi-mtol4v3g，含本批 src+#209 首版）；其后 #209 会话 00:34 撤改 heal 至安卓侧、#212 会话入 fullscreen.js——**最终重建+联合提交移交 #209 会话统一收口**（遵守其「等批次落定再改安卓块」约定，本会话自 00:34 起不再碰 mobile-adapt.js；tmp 探针已删）。

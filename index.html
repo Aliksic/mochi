@@ -417,7 +417,7 @@ html.tablet.ios-pwa-standalone.ios-fs-active .phone .statusbar { display:none; }
 }
 html.tablet body { padding:0; }
 html.tablet .phone {
-width:min(640px, 100vw); max-width:none; flex-shrink:0;
+width:100vw; max-width:none; flex-shrink:0;
 height:100vh; height:100svh; height:100dvh;
 border-radius:0; box-shadow:none;
 padding:0 18px 18px;
@@ -457,8 +457,7 @@ html.tablet .phone [contenteditable="true"] { font-size:16px; }
 html.tablet, html.tablet * { touch-action:manipulation; }
 html.tablet body, html.tablet .phone, html.tablet img { -webkit-touch-callout:none; }
 @media (orientation: landscape) and (min-width: 1024px) {
-html.tablet .phone { width:min(820px, 100vw); }
-html.tablet .msg:not(.msg-ask):not(.msg-center) { max-width:min(70%, 460px); }
+html.tablet .phone { width:100vw; } html.tablet .msg:not(.msg-ask):not(.msg-center) { max-width:min(70%, 460px); }
 html.tablet .modal { width:min(360px, 82vw); }
 }
 .cc-import-progress {
@@ -8794,9 +8793,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1788626848940">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.482</b></span>
-        <span class="sv-deploy">部署于 2026-09-06 00:47<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1788628034669">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.483</b></span>
+        <span class="sv-deploy">部署于 2026-09-06 01:07<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9942,7 +9941,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.482</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.483</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
       <!-- v3.27.x：设置页底部防骗声明 -->
       <div class="set-alert">
@@ -10233,7 +10232,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.482</span>
+              <span class="lic-ver">v3.26.483</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -15174,6 +15173,9 @@ add(false, '布局视口未贴底 ' + (diff - envTop) + 'px',
 }
 add(true, 'standalone=' + !!inp.standalone, inp.standalone ? '独立应用形态' : '浏览器形态（ios-pwa-standalone 不加为正常）');
 add(true, 'html 类：' + (inp.htmlClass || '(空)'));
+if (inp.fsActive && !F.some(function (f) { return !f.ok; })) {
+add(true, '※ 全屏态·页外留白提示', '若用户仍见顶端/边缘空白条，且空白位于手机挖孔/摄像头区（页面内容之外、截图同样含），属系统 letterbox：请关一次再开「全屏模式」重新申请全屏（#212：更新到新版后需重开一次生效）；此空白在页面坐标系之外，本诊断结构性无法检测。');
+}
 return F;
 }
 let _sdEnvCache = -1, _sdEnvOri = ''; // #176：env 探针缓存（按横竖屏失效）
@@ -24073,7 +24075,7 @@ try {
 draftImgs = [];
 renderDraft();
 } catch (e) {}
-try { if (input) input.value = ''; } catch (e) {}
+try { if (input) { input.value = ''; try { input._mLastTyped = ''; } catch (e2) {} } } catch (e) {} // #215 切桌面作废输入快照
 try { updateChatPartnerName(); } catch (e) {}
 try { fillAvatar('chat-user-av', 'cs-avatar-user'); fillAvatar('chat-partner-av', 'cs-avatar-partner'); } catch (e) {}
 try { if (window.applyContinueSayUI) window.applyContinueSayUI(); } catch (e) {}
@@ -24502,10 +24504,11 @@ let myPre;
 try { myPre = window.activePrefix(); } catch (e) { myPre = ''; }
 if (myPre !== normPrefix) { normPrefix = null; return; }
 let idx = 0, changed = false;
+let changedHi = -1, removedAll = 0, sysNickChanged = false;
 const N = msgs.length;
 if (!N) { normPrefix = null; return; }
 const finish = () => {
-try { if (sysNickCatchup()) changed = true; } catch (e) {}
+try { sysNickChanged = !!sysNickCatchup(); changed = changed || sysNickChanged; } catch (e) {}
 normPrefix = null;
 if (!changed) return;
 if (authLoadedPrefix !== myPre) return;
@@ -24514,15 +24517,22 @@ if (canPersist) {
 try { if (window.idbSet) persistMsgsToIdb(myPre + ':chat-msgs', msgs); } catch (e) {}
 try { writeLsSnapshot(msgs, myPre, true); } catch (e) {}
 }
-try { if (chatVisible() && msgs.length) { renderWindow(false, true); scrollChatBottom(); } } catch (e) {}
+try {
+if (chatVisible() && msgs.length &&
+(sysNickChanged || removedAll > 0 || changedHi >= renderStart)) {
+renderWindow(false, true);
+scrollChatBottom();
+}
+} catch (e) {}
 };
 const tick = () => {
 let nowPre;
 try { nowPre = window.activePrefix(); } catch (e) { nowPre = ''; }
 if (nowPre !== normPrefix) { normPrefix = null; return; }
 const end = Math.min(N, idx + NORM_CHUNK);
-for (let i = idx; i < end; i++) { if (normCell(msgs[i])) changed = true; }
-if (normCollapseRange(idx, end + 1, msgs)) changed = true;
+for (let i = idx; i < end; i++) { if (normCell(msgs[i])) { changed = true; changedHi = Math.max(changedHi, i); } }
+const _rm = normCollapseRange(idx, end + 1, msgs);
+if (_rm) { changed = true; removedAll += _rm; }
 if (end < N) { idx = end; setTimeout(tick, 0); }
 else finish();
 };
@@ -31774,9 +31784,21 @@ const SEND_GUARD_MS = 2500;
 let lastSendTxt = '', lastSendTs = 0;
 let lastUserEditAt = 0, clearAppliedAt = 0;
 function userEditedAfterClear() { return lastUserEditAt > clearAppliedAt; }
+function readSendText() {
+try {
+const t = (input.innerText || '').trim() || (input.textContent || '').trim();
+if (t) return t;
+} catch (e) {}
+try {
+const snap = (input._mLastTyped || '').trim();
+if (snap && userEditedAfterClear() && Date.now() - lastUserEditAt < 15000) return snap;
+} catch (e) {}
+return '';
+}
 function clearChatInput() {
 if (!input) return;
 input._mClearTxt = lastSendTxt || '';
+try { input._mLastTyped = ''; } catch (e) {}
 clearAppliedAt = Date.now();
 const sentTxt = lastSendTxt || '';
 try {
@@ -31841,7 +31863,7 @@ scheduleReply();
 };
 if (send) {
 send.addEventListener('mousedown', (e) => { e.preventDefault(); });
-send.addEventListener('click', () => { addMsg(input.innerText); try { input.focus(); } catch (e) {} });
+send.addEventListener('click', () => { addMsg(readSendText()); try { input.focus(); } catch (e) {} });
 }
 if (input) {
 try {
@@ -31850,6 +31872,7 @@ input.addEventListener('compositionstart', () => { lastUserEditAt = Date.now(); 
 input.addEventListener('beforeinput', (e) => {
 if (!e || typeof e.inputType !== 'string' || e.inputType.indexOf('insert') === 0) lastUserEditAt = Date.now();
 }, true);
+input.addEventListener('input', function () { try { input._mLastTyped = input.innerText || ''; } catch (e) {} }, true);
 } catch (e) {}
 input.addEventListener('input', () => {
 if (!input._mClearTxt) return;
@@ -31866,7 +31889,7 @@ input.addEventListener('keydown', (e) => {
 if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) {
 try { if (store.get('cs-enter-send') === 'off') return; } catch (err) {}
 e.preventDefault();
-addMsg(input.innerText);
+addMsg(readSendText());
 }
 });
 }
@@ -40664,6 +40687,27 @@ if (res && res.name) cb(res); else tryNext();
 }
 tryNext();
 }
+function normNeteaseCoverUrl(u) {
+var s = String(u || '').replace(/^http:\/\//i, 'https://');
+if (!/^https:\/\/([^/]+\.)?music\.126\.net\//i.test(s)) return s;
+return s.replace(/\?.*$/, '') + '?param=300y300';
+}
+function resolveCoverDirect(url, cb) {
+var controller;
+try { controller = new AbortController(); } catch (e) { controller = null; }
+var timer = setTimeout(function () { try { controller && controller.abort(); } catch (e) {} }, 8000);
+fetch(url, controller ? { signal: controller.signal } : undefined)
+.then(function (r) {
+clearTimeout(timer);
+var finalUrl = (r.ok || r.redirected) ? (r.url || '') : '';
+setTimeout(function () {
+try { controller && controller.abort(); } catch (e) {}
+try { r.body && r.body.cancel && r.body.cancel(); } catch (e) {}
+cb(finalUrl ? normNeteaseCoverUrl(finalUrl) : String(url));
+}, 0);
+})
+.catch(function () { clearTimeout(timer); cb(String(url)); });
+}
 function fetchNeteaseCover(id, cb) {
 let controller;
 try { controller = new AbortController(); } catch (e) { controller = null; }
@@ -40675,11 +40719,16 @@ clearTimeout(timer);
 try {
 const j = JSON.parse(txt);
 const pic = (j && j[0] && j[0].pic) || '';
-if (pic) { cb(String(pic).replace(/^http:\/\//i, 'https://')); return; }
+if (pic) { resolveCoverDirect(String(pic), cb); return; }
 } catch (e) {}
 cb(null);
 })
-.catch(() => { clearTimeout(timer); cb(null); });
+.catch(() => { clearTimeout(timer); fetchNeteaseCoverFallback(id, cb); });
+}
+function fetchNeteaseCoverFallback(id, cb) {
+fetchNeteaseInfo(id, function (info) {
+cb(info && info.pic ? normNeteaseCoverUrl(info.pic) : null);
+});
 }
 function extractPlaylistId(line) {
 if (!line || typeof line !== 'string') return '';
@@ -41026,7 +41075,12 @@ for (let i = 0; i < COVER_CONCURRENCY; i++) next();
 }
 function ensureSongCover(m) { enqueueCoverFetch(m); }
 function ensureMissingCovers() {
-libSongsFor(libFilter).slice(0, libRenderShown).forEach(m => { if (m && m.neteaseId && !m.cover) enqueueCoverFetch(m); });
+libSongsFor(libFilter).slice(0, libRenderShown).forEach(m => {
+if (!m) return;
+if (m.neteaseId && !m.cover) enqueueCoverFetch(m);
+else if (m.cover && COVER_PROXY_RE.test(m.cover)) enqueueCovMig(m);
+});
+playlists.forEach(pl => { if (pl && pl.cover && COVER_PROXY_RE.test(pl.cover)) enqueueCovMig(pl); });
 }
 function updateCoverUI(id) {
 const m = findTrack(id);
@@ -41041,6 +41095,46 @@ ico.innerHTML = '';
 }
 }
 });
+}
+var COVER_PROXY_RE = /^https?:\/\/api\.injahow\.cn\/meting\/\?[^]*type=pic/i;
+const covMigInflight = new Set();
+let covMigBusy = false;
+const covMigQueue = [];
+function enqueueCovMig(m) {
+if (!m || !m.cover || !COVER_PROXY_RE.test(m.cover) || covMigInflight.has(m.id)) return;
+covMigInflight.add(m.id);
+covMigQueue.push(m);
+runCovMig();
+}
+function runCovMig() {
+if (covMigBusy) return;
+const m = covMigQueue.shift();
+if (!m) return;
+covMigBusy = true;
+resolveCoverDirect(m.cover, function (direct) {
+covMigInflight.delete(m.id);
+covMigBusy = false;
+if (direct && direct !== m.cover && !COVER_PROXY_RE.test(direct)) {
+m.cover = direct;
+if (String(m.id).indexOf('spl_') === 0) savePlaylists(); else saveLibrarySoon();
+syncSnapshotCovers(m.id, direct);
+if (findTrack(m.id)) {
+updateCoverUI(m.id);
+if (m.id === currentId) setWidgetCover(m);
+}
+}
+if (covMigQueue.length) runCovMig();
+});
+}
+function syncSnapshotCovers(sid, cov) {
+let hch = false;
+history.forEach(x => { if (x && x.trackId === sid && x.cover && COVER_PROXY_RE.test(x.cover)) { x.cover = cov; hch = true; } });
+myHistory.forEach(x => { if (x && x.trackId === sid && x.cover && COVER_PROXY_RE.test(x.cover)) { x.cover = cov; hch = true; } });
+if (hch) { saveHistory(); saveMyHistory(); }
+let tch = false;
+const tl = taFavList();
+tl.forEach(x => { if (x && x.id === sid && x.cover && COVER_PROXY_RE.test(x.cover)) { x.cover = cov; tch = true; } });
+if (tch) saveTaFavList(tl);
 }
 function importPlaylistIds(ids, cb, targetPl) {
 let total = 0, plOk = 0, plFail = 0, skipped = 0, vip = 0;
@@ -42366,7 +42460,8 @@ markFloatSource(fromWidget);
 cancelTaPause();
 if (m) m._httpsRetried = false;
 currentId = id;
-ensureSongCover(m);
+if (m && m.cover) { if (COVER_PROXY_RE.test(m.cover)) enqueueCovMig(m); }
+else ensureSongCover(m);
 teardownAudio();
 if (progressTimer) { clearInterval(progressTimer); progressTimer = null; }
 updatePlayerBar();
@@ -42831,6 +42926,7 @@ cover.style.backgroundPosition = '';
 cover.classList.remove('has-cover');
 }
 if (m && m.neteaseId && !m.cover) ensureSongCover(m);
+else if (m && m.cover && COVER_PROXY_RE.test(m.cover)) enqueueCovMig(m);
 }
 function isFloatOn() { return settings.floatEn && !floatClosed && currentId && audio; }
 function markFloatSource(fromWidget) {
@@ -79389,4 +79485,4 @@ return { lock: document.body.classList.contains('scroll-lock'), open: open };
 <!-- __MOCHI_EOF__ -->
 </body>
 </html>
-<!-- __MOCHI_EOF__ mtom8td8 -->
+<!-- __MOCHI_EOF__ mtomy8a5 -->

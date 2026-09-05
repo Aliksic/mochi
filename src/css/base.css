@@ -672,7 +672,10 @@ html.tablet.ios-pwa-standalone.ios-fs-active .phone .statusbar { display:none; }
    查询与桌面外壳样式。 */
 html.tablet body { padding:0; }
 html.tablet .phone {
-  width:min(640px, 100vw); max-width:none; flex-shrink:0;
+  /* v3.26.x #186：平板默认观感改全宽铺满（用户决策 2026-09-05，替代 v3.7.x 的
+     640/820 限宽居中——多台 iPad 用户反馈「四边不贴合」；横屏同改见下方媒体查询。
+     内容阅读宽度由内部组件自行约束（横屏气泡 460px 封顶规则保留） */
+  width:100vw; max-width:none; flex-shrink:0;
   height:100vh; height:100svh; height:100dvh;
   border-radius:0; box-shadow:none;
   padding:0 18px 18px;
@@ -729,7 +732,7 @@ html.tablet body, html.tablet .phone, html.tablet img { -webkit-touch-callout:no
    命中，两侧留白 102-130px，观感与原生 iPad 应用限宽居中一致。
    iPad Air/Pro 横屏 1180-1366px 同命中，两侧留白 180-273px，不过窄。 */
 @media (orientation: landscape) and (min-width: 1024px) {
-  html.tablet .phone { width:min(820px, 100vw); }
+  html.tablet .phone { width:100vw; } /* #186：横屏同样全宽铺满 */
   /* 消息气泡封顶 460px：820px 下 70%=574px 过宽难读，封顶后接近手机阅读宽度 */
   html.tablet .msg:not(.msg-ask):not(.msg-center) { max-width:min(70%, 460px); }
   /* 弹窗稍宽（横屏空间充裕，360px 比 320px 更舒展） */
