@@ -1,3 +1,7 @@
+### 2026-09-05 12:0x（#175 补强 + #176：屏幕适配诊断五项新采集/两新判定 + 设备兼容诊断改名 + 信息诊断分组；已构建）
+* [AI-B 域]（**改动文件：src/template.html（复制诊断信息→设备兼容诊断；两行上方加 gs-title【信息诊断】分组说明）、src/js/device.js（屏幕适配报告新增：方向/env(safe-area-inset-bottom)/.tabbar 底边/视口平移残留/键盘残留五项采集；新增判定「底部导航栏被裁」「视口平移残留」）、FIX-REGRESSION.md（#175 行补强+#176 说明）、build.mjs；构建状态：已构建·sw 见 version.json**）。
+* 验证：node --check 过；判定器七场景单测全过；CDP 端到端（行/弹窗/报告 32 行/UI 改名与分组）全过；--check-sentinels 353 全绿。
+
 ### 2026-09-05 11:4x（#175 新增设置页【屏幕适配诊断】：跨设备屏幕适配问题精准定位工具；已构建）
 * [AI-B 域]（**改动文件：src/template.html（设置页 row-screen-diag 锚点，与信息诊断分开）、src/js/device.js（collectScreenDiag 只读采集：env()/var/diff 三源对比+vv.scale+.phone/.statusbar 实测；screenDiagJudge 纯函数判定器——六形态 ✗/✓ 自动判定带修复条目号；openModal 大窗展示+copyText 自动复制）、build.mjs（FIX_SENTINELS 2 条）、FIX-REGRESSION.md（#175 行）；构建状态：已构建·sw 见 version.json**）。
 * 动机：#114/#148/#168/#174 等 iOS 屏幕适配问题在不同机型/形态反复出现且形态互异，靠通用诊断+口述难精准定位；本工具一键出专项报告，✗ 条目直接对号修复条目。

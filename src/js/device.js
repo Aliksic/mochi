@@ -1871,6 +1871,16 @@
     } else if (inp.fsActive) {
       add(true, '--mochi-ios-h=' + (inp.iosH || '(未设→回落)') + ' 与可视区一致');
     }
+    // ⑤b 底部导航栏裁切：tabbar 底边超出可视区
+    if (inp.tabBottom != null && inp.innerH) {
+      const overB = Math.round(inp.tabBottom - inp.innerH);
+      if (overB > 2) add(false, '底部导航栏被裁 ' + overB + 'px', '✗ tabbar 底边 ' + inp.tabBottom + 'px 超出可视区 ' + inp.innerH + 'px（#148 同族：高度大于可视高）');
+      else add(true, '底部导航栏完整（底边 ' + inp.tabBottom + ' / 可视 ' + inp.innerH + '）');
+    }
+    // ⑤c 页面平移残留：vv offset 非 0 = 视口被顶偏（键盘/平移残留）
+    if ((inp.vvOffTop || 0) > 2 || (Math.abs(inp.vvOffLeft || 0)) > 2) {
+      add(false, '视口平移残留', '⚠ vv.offsetTop=' + inp.vvOffTop + ' offsetLeft=' + inp.vvOffLeft + '（页面被顶偏未归位，#109 形态）');
+    }
     // ⑥ 关键类
     add(true, 'standalone=' + !!inp.standalone, inp.standalone ? '独立应用形态' : '浏览器形态（ios-pwa-standalone 不加为正常）');
     add(true, 'html 类：' + (inp.htmlClass || '(空)'));
@@ -1882,6 +1892,16 @@
       p.style.cssText = 'position:fixed;top:0;left:0;width:0;height:0;padding-top:env(safe-area-inset-top,0px);visibility:hidden;pointer-events:none;';
       document.body.appendChild(p);
       const v = parseFloat(getComputedStyle(p).paddingTop) || 0;
+      document.body.removeChild(p);
+      return Math.round(v);
+    } catch (e) { return 0; }
+  }
+  function envBottomProbe() {
+    try {
+      const p = document.createElement('div');
+      p.style.cssText = 'position:fixed;left:0;bottom:0;width:0;height:0;padding-bottom:env(safe-area-inset-bottom,0px);visibility:hidden;pointer-events:none;';
+      document.body.appendChild(p);
+      const v = parseFloat(getComputedStyle(p).paddingBottom) || 0;
       document.body.removeChild(p);
       return Math.round(v);
     } catch (e) { return 0; }
@@ -1914,7 +1934,13 @@
       phonePadTop: cs ? cs.paddingTop : '?',
       phoneBottom: pr ? Math.round(pr.bottom) : null,
       sbTop: sr ? Math.round(sr.top) : null,
-      sbPadTop: sbCs ? sbCs.paddingTop : '?'
+      sbPadTop: sbCs ? sbCs.paddingTop : '?',
+      orientation: (window.innerWidth || 0) > (window.innerHeight || 0) ? '横屏' : '竖屏',
+      envBottom: envBottomProbe(),
+      vvOffTop: vv ? Math.round(vv.offsetTop) : 0,
+      vvOffLeft: vv ? Math.round(vv.offsetLeft) : 0,
+      tabBottom: (function () { var tb = document.querySelector('.tabbar'); if (!tb) return null; var r = tb.getBoundingClientRect(); return Math.round(r.bottom); })(),
+      kb: (function () { try { return window.__mochiIosKb ? window.__mochiIosKb() : null; } catch (e) { return null; } })()
     };
     inp.diff = inp.screenH && inp.innerH ? inp.screenH - inp.innerH : 0;
     const F = screenDiagJudge(inp);
@@ -1925,7 +1951,10 @@
     L.push('== 基础 ==');
     L.push('屏幕=' + inp.screenW + '×' + inp.screenH + '  DPR=' + inp.dpr);
     L.push('布局视口(inner)=' + inp.innerW + '×' + inp.innerH + '  可视(vv)=' + inp.vvW + '×' + inp.vvH + ' @scale=' + inp.scale.toFixed(2));
-    L.push('standalone=' + !!inp.standalone + '  全屏模式=' + (inp.fsActive ? '开' : '关') + '  html类：' + inp.htmlClass);
+    L.push('standalone=' + !!inp.standalone + '  全屏模式=' + (inp.fsActive ? '开' : '关') + '  方向=' + (inp.orientation || '?') + '（旋转后建议再测一次）');
+    L.push('html类：' + inp.htmlClass);
+    L.push('env(safe-area-inset-bottom)=' + inp.envBottom + 'px  视口平移=offTop:' + (inp.vvOffTop || 0) + '/offLeft:' + (inp.vvOffLeft || 0));
+    L.push('键盘残留=' + (inp.kb ? ('kbActive=' + !!inp.kb.kbActive + ' 锁=' + !!inp.kb.docLocked + ' 基线 inner/vv=' + inp.kb.fullInner + '/' + inp.kb.fullVv) : 'n/a'));
     L.push('');
     L.push('== 顶部安全区 ==');
     L.push('env(safe-area-inset-top)=' + inp.envTop + 'px  --mochi-safe-top=' + inp.varTop + 'px  diff(screen−inner)=' + inp.diff + 'px');
@@ -1933,6 +1962,7 @@
     L.push('== 实测 ==');
     L.push('.phone：计算高=' + inp.phoneH + 'px  padding-top=' + inp.phonePadTop + '  底边=' + inp.phoneBottom + 'px');
     L.push('.statusbar：padding-top=' + inp.sbPadTop + '  顶位=' + inp.sbTop + 'px');
+    L.push('.tabbar：底边=' + (inp.tabBottom != null ? inp.tabBottom + 'px' : 'n/a') + '（可视 ' + inp.innerH + '）');
     L.push('');
     L.push('== 自动判定 ==');
     F.forEach(f => L.push((f.ok ? '✓ ' : '✗ ') + f.name + (f.detail ? '\n    ' + f.detail : '')));
