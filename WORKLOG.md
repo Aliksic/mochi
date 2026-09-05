@@ -1,3 +1,7 @@
+### 2026-09-05 15:xx（#171/#182 字卡导入修复源码补提交：产物已随并行收口构建入库，本条补齐 src 与产物一致并推送）
+* [AI-A 域]（**改动文件：仅补提交 src/js/chatcard.js（#171 真实报错三分流+UTF-16/裁剪/空文件自救+失败现场写 __jsErrors；#182 200MB 级库导入内存加固=rawHead 先截后清/write 前松开源文本与 reader 持有/OOM 两阶段单独指引/trim 自救限 80MB 内）+ tools/verify-cc-import-parse.mjs（23 断言）**；构建状态：无需重建——HEAD index.html 已含 utf-16le/内存不足以一次性导入/rawHead 全部锚点，哨兵 6 条随库 364/364 绿）。
+* 说明：用户报障 iPhone 16 Pro+CriOS 换浏览器导字卡库失败（诊断实锤 cc-groups=203.74MB，OOM 被旧 catch 吞成「格式错误」，机型无关只与库体积有关）；修复经 #171（真因分流自救）+ #182（内存加固）两轮，中间 #177 收口会话已把当时工作区实现打进产物并同步哨兵 needle，本会话核对一致后补提交源码推送。
+
 ### 2026-09-05 14:xx（TASKS #129 全量甄别完成：58 个存量失败脚本定性 + 产出 #130/#131 两张派生清单；无 src/产物改动）
 * [AI-B 域]（**改动文件：TASKS.md（#129 进度更新 + 新增 #130 过期批修清单 / #131 疑似真缺陷核查清单）**）。58 个存量失败脚本逐个收集失败断言行后定性：**约 44 个=口径过期非产品缺陷**（ta-checkin 预设 17→23 扩容、more-cats 互动 6→8/小游戏 4→8 项、narc/myarc 菜单加行、poke-emoji「小A的」→「TA 的」称呼统一、dark-mode D1-D5=v3.27 主题三档弹窗化（点行不再直接切换）、gc-pool-scope T3=#157 默认卡语义改版后 hasDefault:false 是新正确行为、oom-leaks B3/B5=v3.18 createObjectURL 政策、room A8=功能字卡 tab 重构、fish-play=摸鱼页本周小结改版等）；**6 个疑似真缺陷→#131**（最重：chat-switch-idb-hang 切联系人 LS 快照未写+记录未渲染——#90 修复回归 or chat.js 缩水防护拦截直种 IDB 数据，需 AI-A 判定；其余 mail-cfg-per-cid 跨桌面来信 0 封/feed-reply-ui role 反向/myarc 档案写入空/coop-mine B7b/water E1 连续天数）；**环境限制类**（voice-record 无麦克风、kb-overlay-kernel 悬浮键盘、desk-persist/move-swipe 拖拽模拟）保留。结论：AI-B 域未发现新产品缺陷。
 * 待对方处理（AI-A）：#131 六项逐个核实——真缺陷按 BUGS 规则修+登记，测试侧则并入 #130 批修；#130 脚本簇 AI-A 忙时可由 #129 会话代修（只动脚本不动产品）。

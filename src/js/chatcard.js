@@ -1791,18 +1791,25 @@
         //   ② applyImportData 抛错单独提示，存储类失败不再伪装成格式问题；
         //   ③ 失败现场写 __jsErrors → 设置页「复制诊断信息」直接带出真因（iOS 报障自证）。
         const reader = new FileReader();
+        let rawHead = ''; // 诊断用文件头（先 slice 再 replace，绝不全文扫描——200MB 级文件全文 replace 本身就是一次 OOM 风险）
         const diag = (why) => {
           try {
-            if (window.__jsErrors) window.__jsErrors.push('[字卡导入] ' + why + ' | ' + fname + '·' + fsize + ' | 开头: ' + String(reader.result || '').replace(/\s+/g, ' ').slice(0, 100));
+            if (window.__jsErrors) window.__jsErrors.push('[字卡导入] ' + why + ' | ' + fname + '·' + fsize + ' | 开头: ' + rawHead);
           } catch (e0) {}
         };
+        // v3.26.x #182：200MB 级字卡库在 iOS WebKit（含 iOS Chrome）上解析/写盘峰值可达 GB 级，
+        // OOM（RangeError / Out of memory）会被旧提示误标成「格式错误」——统一识别给对应指引
+        const oomErr = (e) => /rangeerror|out of memory|memory|内存/i.test(String((e && (e.message || e.name)) || e || ''));
         const applyOk = (data) => {
           try { applyImportData(data, mode); } catch (e) {
-            toast('导入处理失败：' + ((e && e.message) || '内部错误') + '（' + fname + '）');
+            toast(oomErr(e)
+              ? '文件约 ' + Math.max(1, Math.round(f.size / 1048576)) + 'MB，本机内存不足以一次性导入——请先在「查看存储→字卡库瘦身」删掉超大表情/图片分组后重新导出分批导入，或改用「设置→数据备份」整包恢复'
+              : '导入处理失败：' + ((e && e.message) || '内部错误') + '（' + fname + '）');
             diag('applyImportData 异常 ' + ((e && e.message) || e));
           }
         };
         const fail = (why) => { toast('导入失败：' + why + '（' + fname + '·' + fsize + '）'); diag(why); };
+        const onReadErr = () => toast('导入失败：文件读取失败，请重选文件再试');
         // recover=已用过的自救方式（utf16/trim），非空则不再二次自救
         const handleText = (raw, recover) => {
           let txt = String(raw || '');
@@ -1812,18 +1819,25 @@
           let data = null, perr = null;
           try { data = JSON.parse(txt); } catch (e) { perr = e; }
           if (perr) {
+            // v3.26.x #182：解析阶段 OOM（超大库）单独给瘦身/整包恢复指引
+            if (oomErr(perr)) {
+              fail('文件约 ' + Math.max(1, Math.round(f.size / 1048576)) + 'MB，本机内存不足以一次性解析导入——请先删掉超大表情/图片分组后重新导出分批导入，或改用「设置→数据备份」整包恢复');
+              return;
+            }
             // 自救①：微信/邮件/文本编辑转存常把文件变 UTF-16——按 UTF-8 读出来成串 NUL，
             // 数 NUL 落在奇/偶位定字节序，换对应编码重读一遍再走原流程
             if (!recover && /\u0000/.test(txt.slice(0, 400))) {
               let odd = 0, even = 0;
               for (let i = 0; i < Math.min(txt.length, 400); i++) { if (txt.charCodeAt(i) === 0) { if (i % 2) odd++; else even++; } }
               reader.onload = () => handleText(reader.result, 'utf16');
+              reader.onerror = onReadErr;
               reader.readAsText(f, odd >= even ? 'utf-16le' : 'utf-16be');
               return;
             }
             // 自救②：转存时前后被包了说明文字/网页源码——裁出首个 { 到末个 } 再试
+            // （#182：大文件不做——200MB 级 slice 复制一份本身就是 GB 级峰值推手，得不偿失）
             const a = txt.indexOf('{'), b = txt.lastIndexOf('}');
-            if (!recover && a >= 0 && b > a) { handleText(txt.slice(a, b + 1), 'trim'); return; }
+            if (!recover && a >= 0 && b > a && (b - a) < 80 * 1024 * 1024) { handleText(txt.slice(a, b + 1), 'trim'); return; }
             const isHtml = txt.charAt(0) === '<' || /<html[\s>]/i.test(txt.slice(0, 200));
             fail(isHtml
               ? '文件是网页不是 JSON——请在 milk 里用导出按钮重新导出，分享时选「存储到文件」'
@@ -1831,11 +1845,21 @@
             return;
           }
           if (!data || typeof data !== 'object' || Array.isArray(data)) { fail('文件顶层不是 JSON 对象'); return; }
+          // v3.26.x #182：进写盘阶段前松开源文本引用——JSON.stringify(groups) 是 200MB 级新分配，
+          // 此刻源文本（同样 200MB 级）必须已是可回收状态，两个大头不能同时钉在堆上
+          txt = ''; raw = null;
           applyOk(data);
         };
-        reader.onload = () => handleText(reader.result, '');
+        reader.onload = () => {
+          const raw = String(reader.result || '');
+          rawHead = raw.slice(0, 300).replace(/\s+/g, ' ').slice(0, 120);
+          // 松开 FileReader 对整份内容的持有（onload/onerror 引用一断，超大 result 随 reader 可回收；
+          // 诊断只留 rawHead，绝不把 200MB 源文本带进写盘阶段）
+          reader.onload = null; reader.onerror = null;
+          handleText(raw, '');
+        };
         // 读取失败（onload 不触发）旧版无任何提示，像「点了没反应」
-        reader.onerror = () => toast('导入失败：文件读取失败，请重选文件再试');
+        reader.onerror = onReadErr;
         reader.readAsText(f);
       });
     }

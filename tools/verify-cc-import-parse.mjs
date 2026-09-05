@@ -35,7 +35,7 @@ function run(fileBytes, opts) {
   };
   const pickFiles = (accept, multiple, cb) => cb([{ _bytes: fileBytes, name: 'test.json', size: fileBytes.length }]);
   const applyImportData = (data, mode) => {
-    if (opts.throwInApply) throw new Error('QuotaExceededError');
+    if (opts.throwInApply) throw opts.throwInApply === true ? new Error('QuotaExceededError') : opts.throwInApply;
     calls.apply.push({ mode: mode, keys: Object.keys(data || {}) });
   };
   const toast = (m) => calls.toasts.push(String(m));
@@ -116,5 +116,19 @@ ok(r.win.__jsErrors.join('').indexOf('QuotaExceededError') >= 0, '处理异常�
 r = run(utf8(milkJson));
 ok(r.win.__jsErrors.length === 0, '成功路径不写 __jsErrors');
 
-console.log('摘要: ' + pass + ' 通过 / ' + failcnt + ' 失败 (#171 字卡导入分流自救)');
+// 12. #182 写盘阶段 OOM（RangeError/Out of memory）→ 给瘦身/整包恢复指引，不报「格式错误」
+r = run(utf8(milkJson), { throwInApply: new RangeError('Out of memory') });
+ok(/内存不足以一次性导入/.test(toastAll(r)), '写盘 OOM 给瘦身/恢复指引');
+ok(/MB/.test(toastAll(r)) && toastAll(r).indexOf('格式') < 0, 'OOM 提示带文件体积且不含「格式」', toastAll(r));
+ok(r.win.__jsErrors.join('').indexOf('Out of memory') >= 0, 'OOM 异常写 __jsErrors');
+
+// 13. #182 诊断带文件头（先截断后清白的 rawHead，大文件也不全文扫描）
+r = run(utf8('not json at all'));
+ok(/开头: not json/.test(r.win.__jsErrors.join('')), '诊断行带文件头现场', r.win.__jsErrors.join(''));
+
+// 14. #182 成功路径不因松引用而丢功能（合法文件在松开源文本后仍正常进入导入处理）
+r = run(utf8(milkJson));
+ok(r.calls.apply.length === 1 && r.calls.toasts.length === 0, '松引用重构后正常导入不受影响');
+
+console.log('摘要: ' + pass + ' 通过 / ' + failcnt + ' 失败 (#182 字卡导入分流/自救/内存加固)');
 process.exit(failcnt ? 1 : 0);
