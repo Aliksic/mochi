@@ -1,5 +1,6 @@
 // ===== 功能：后台保活 + 后台通知（仿星言简约版） =====
-// 后台保活：播放静音音频（1Hz 正弦波，音量 0.0001）保持页面定时器活跃，
+// 后台保活：播放近静音音频（1 秒循环正弦波；安卓 18000Hz / iOS 220Hz，幅度 0.006/0.002
+//           × volume 0.05 ≈ 数字 -70/-80dBFS）保持页面定时器活跃，
 //           并请求屏幕常亮（wakeLock），防止浏览器后台休眠导致消息/回复停止；
 //           首次交互时恢复 AudioContext（浏览器自动播放策略要求）。
 // 后台通知：开启后，页面不在前台时收到 TA 的新消息会弹出浏览器通知。
@@ -164,6 +165,19 @@
       const sr = 44100, sec = 1, n = sr * sec;
       // #190：安卓 0.02 → 0.006（原值实听底噪，见上方注释；iOS 维持 0.002）
       const amp = kaIsIOS() ? 0.002 : 0.006;
+      // #207：安卓频率 220Hz → 18000Hz——#190 降幅度后 OPPO R15 自带浏览器（HeyTapBrowser）
+      // 等多机型仍报「后台保活有电流声，不是静音音频」：220Hz 落在人耳最敏感低频段，
+      // -70dBFS 数字电平在老机型功放底噪/夜间安静环境实听仍是持续嗡声，降幅度已到头
+      // （再降会跌破 Chromium audible 判定、保活失效）。保活只看「样本非零 + volume>0」：
+      // Chromium 的 audible/无声节流按数字样本电平判定、与频率无关——18kHz 与 220Hz 同
+      // 幅度 RMS 完全一致，保活有效性零变化；而人耳对 18kHz 基本无感 + 手机外放高频频响
+      // 天然滚降 20~40dB（老机型更差），物理不可闻。18000×1s=整周期，循环接缝无相位跳变
+      // （无咔哒声）；18000 < 22050 奈奎斯特且距 48k 重采样抗混叠滤波带有余量。
+      // iOS 维持 220Hz@0.002（v3.15.x 已收敛，bit 级不动）。不做机型白名单——全安卓
+      // 一次性换根因，防「修 A 机型坏 B 机型」反复。
+      // 【并行事故警示】本修改曾被 AI-A #206 收口 stash 隔离后「原样恢复」丢失（2026-09-05
+      // 23:5x，同 #202 哨兵丢失事故第二现场），由 AI-B 重写——stash 隔离后必须 diff 确认。
+      const freq = kaIsIOS() ? 220 : 18000;
       const buf = new ArrayBuffer(44 + n * 2);
       const dv = new DataView(buf);
       const ws = function (o, s) { for (let i = 0; i < s.length; i++) dv.setUint8(o + i, s.charCodeAt(i)); };
@@ -172,7 +186,7 @@
       dv.setUint32(24, sr, true); dv.setUint32(28, sr * 2, true); dv.setUint16(32, 2, true); dv.setUint16(34, 16, true);
       ws(36, 'data'); dv.setUint32(40, n * 2, true);
       for (let i = 0; i < n; i++) {
-        const v = Math.sin(2 * Math.PI * 220 * (i / sr)) * amp;
+        const v = Math.sin(2 * Math.PI * freq * (i / sr)) * amp;
         dv.setInt16(44 + i * 2, Math.round(v * 32767), true);
       }
       const bytes = new Uint8Array(buf);

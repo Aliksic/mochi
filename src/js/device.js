@@ -1785,6 +1785,57 @@
   else window.addEventListener('load', function () { setTimeout(checkDoc, 60000); });
 })();
 
+// ===== v3.26.x #209：视口形态判定器（单一事实源）=====
+// iOS 屏幕适配 bug 反复以不同「形态」出现（#148 已避让 / #179+#185 覆盖 / #199
+// 浏览器沉浸壳 / #200 iOS18 系统保留 / #184 iPad）。此前形态判别在执行器
+//（mobile-adapt.js syncVvFit）与诊断判定器（screenDiagJudge）各写一份，每加一个
+// 新形态要两处手抄同段判式，必然漂移——#186 即两处现例：①真实采集路径没把
+// safe-top-force 传进判定器，「用户已声明覆盖形态」分支永不命中；②force 时期望
+// 底边写成 innerH 与注释「屏高」矛盾，forced 设备自检必误报底部超出/顶部双倍。
+// 本函数=唯一分类器：输入只读实测信号，输出形态布尔 + 生效 safeTop + 期望底边/
+// 期望顶位；执行器按输出写样式，诊断按输出出 ✗/✓。新增形态只改这里。纯函数
+//（无 DOM/存储），tools/verify-viewport-form.mjs 按真机台账直接单测。
+window.mochiViewportForm = function (sig) {
+  const envTop = sig.envTop || 0;
+  const innerH = sig.innerH || 0;
+  const screenH = sig.screenH || 0;
+  const iosMajor = sig.iosMajor || 0;
+  const standalone = !!sig.standalone;
+  const diff = (screenH > 0 && innerH > 0) ? (screenH - innerH) : 0;
+  // env 探针门槛：standalone 或疑似沉浸式壳（screen≈inner）才值得建探针 DOM
+  const needEnvProbe = ((screenH > 0 && innerH > 0 && diff <= 2) || standalone);
+  const coverBrowser = !standalone && diff <= 2 && envTop >= 20;
+  // #200：iOS≥18 standalone「系统保留状态栏」（inner=screen−env 但 env 仍报真实值）。
+  // env 上限 160 沿用执行器原 [20,160] 过滤窗（异常大值不认，回落实测链）
+  const resStand = standalone && envTop >= 20 && envTop <= 160 && diff >= envTop - 8 && iosMajor >= 18;
+  // #184：iPad 形态（inner=屏高已含整屏，diff≈0，env 仍报状态栏高）
+  const ipadForm = standalone && envTop >= 20 && diff <= 2 && screenH > 0 && innerH >= screenH - 2;
+  // #185/#186：用户在设置页声明本机属「覆盖形态」（与保留/已避让信号相同无法程序
+  // 区分，用户自服）：顶部避让 env 探针优先、env=0 用 diff（=保留的状态栏高）兜底
+  const forceCover = standalone && !!sig.safeTopForce;
+  let safeTop;
+  if (forceCover) safeTop = (envTop >= 20) ? envTop : ((diff >= 20 && diff <= 160) ? diff : 0);
+  else if (resStand) safeTop = 0;
+  else safeTop = ((standalone || coverBrowser) && envTop >= 20 && envTop <= 160) ? envTop : 0;
+  // 期望 .phone 底边 / 全屏期望屏高：保留/iPad/浏览器壳贴 inner（超 inner=文档
+  // 滚动量=与自愈 pin 对打）；#186 force 声明=屏高（safeTop+inner 补满屏底，修
+  // 18.3 底部白边的正确期望，原实现误写 innerH）；覆盖形态=envTop+inner、min 屏高
+  // 防异常超界（#184 起 min 为三形态统一式）
+  const expBase = (coverBrowser || resStand || ipadForm) ? innerH
+    : (forceCover ? (screenH || (safeTop + innerH))
+      : Math.min(screenH || (envTop + innerH), envTop + innerH));
+  // 期望状态栏顶位（诊断 ③）：保留形态系统已避让=12 兜底；其余=max(env,12)。
+  // force 时 resStand=false → forced 设备（如 14 Pro/26.6 sbTop≈73）不再被
+  // expect=12+60 误判「顶部双倍避让」
+  const expTop = resStand ? 12 : Math.max(envTop, 12);
+  const form = forceCover ? 'force-cover' : resStand ? 'reserved' : ipadForm ? 'ipad'
+    : coverBrowser ? 'cover-browser' : (envTop >= 20 ? 'covered' : (diff >= 20 ? 'avoided' : 'plain'));
+  return { form: form, resStand: resStand, ipadForm: ipadForm, coverBrowser: coverBrowser,
+    forceCover: forceCover, needEnvProbe: needEnvProbe, safeTop: safeTop,
+    expBase: expBase, expTop: expTop, envTop: envTop, diff: diff,
+    standalone: standalone, iosMajor: iosMajor };
+};
+
 // ===== 功能：屏幕适配诊断（v3.26.x #175，与【信息诊断】分开） =====
 // 跨设备 iOS 屏幕适配问题（#114 顶部重叠 / #148 双倍避让+底部裁切 / #174 缩放异常）
 // 反复以不同形态出现，靠用户口述+通用诊断很难精准定位。本工具专项采集屏幕适配的
@@ -1865,7 +1916,12 @@
     if (inp.sbTop != null) {
       const expect = resStand ? 12 : Math.max(envTop, 12);
       if (inp.sbTop > expect + 60) add(false, '顶部双倍避让', '✗ 状态栏实测顶位 ' + inp.sbTop + 'px，明显超过安全区顶部 ' + expect + 'px（#148 修复的双倍白带形态复发，连本条反馈）');
-      else if (!resStand && envTop >= 20 && inp.sbTop < envTop - 5) add(false, '顶部重叠', '✗ 状态栏顶位 ' + inp.sbTop + 'px 钻进系统状态栏区（应 ≥ ' + envTop + 'px，#114 形态）');
+      // v3.26.x #208：加 diff ≥ envTop−8 守卫——顶部重叠只在「覆盖形态」信号
+      // （inner=screen−envTop）下才有意义；iPhone17 等保留形态设备在切后台回来
+      // 瞬间 innerHeight 会被短暂报成整屏（diff=0），此瞬态 sbTop=12<57 会误报
+      // 顶部重叠刷错误环（21:32 实采）；iPad 全屏态模拟状态栏 display:none
+      // （sbTop=0）同理不再误报。真覆盖设备 diff≈envTop 守卫恒过，#114 检出不变。
+      else if (!resStand && envTop >= 20 && diff >= envTop - 8 && inp.sbTop < envTop - 5) add(false, '顶部重叠', '✗ 状态栏顶位 ' + inp.sbTop + 'px 钻进系统状态栏区（应 ≥ ' + envTop + 'px，#114 形态）');
       else add(true, '状态栏顶位 ' + inp.sbTop + 'px（安全区 ' + expect + 'px）');
     }
     // ④ 底部：期望底边 = envTop + innerH（覆盖形态=整屏 852；已避让形态=inner 812）
@@ -1907,6 +1963,17 @@
     if ((inp.vvOffTop || 0) > 2 || (Math.abs(inp.vvOffLeft || 0)) > 2) {
       add(false, '视口平移残留', '⚠ vv.offsetTop=' + inp.vvOffTop + ' offsetLeft=' + inp.vvOffLeft + '（页面被顶偏未归位，#109 形态）');
     }
+    // ⑤d v3.26.x #208：布局视口未贴底（键盘收起未还原形态）——系统保留形态下
+    // screen−inner 应≈envTop（网页起点垫在状态栏下方、布局视口直达物理屏底）。
+    // diff 比 envTop 大出一截 = 布局视口还卡在收缩高度：iOS standalone 键盘收起
+    // 后 WebKit 偶发不还原视口（多机型复发），.phone/聊天输入栏贴收缩值布局，
+    // 底部露一条体底色白带、输入栏整体上移——此时④按 inner 判「底部贴合」会
+    // 全绿漏报，故单列一条。键盘会话中（kbActive=true）布局视口本就收缩，属
+    // 正常停靠，跳过。
+    if (resStand && envTop >= 20 && diff > envTop + 24 && !(inp.kb && inp.kb.kbActive)) {
+      add(false, '布局视口未贴底 ' + (diff - envTop) + 'px',
+        '✗ screen−inner=' + diff + 'px 应≈状态栏高度 ' + envTop + 'px（#208：键盘收起后布局视口未还原，输入栏整体上移+底部白带；收起键盘或重开应用可临时恢复，复发请整段反馈）');
+    }
     // ⑥ 关键类
     add(true, 'standalone=' + !!inp.standalone, inp.standalone ? '独立应用形态' : '浏览器形态（ios-pwa-standalone 不加为正常）');
     add(true, 'html 类：' + (inp.htmlClass || '(空)'));
@@ -1943,7 +2010,9 @@
     const vv = window.visualViewport;
     const cs = ph ? getComputedStyle(ph) : null;
     const pr = ph ? ph.getBoundingClientRect() : null;
-    const sr = sb ? sb.getBoundingClientRect() : null;
+    const pr2 = pr; // .phone rect（状态栏位置改为相对 .phone 测量，文档滚动不影响）
+    const sbHidden = (function () { try { return !sb || sb.getBoundingClientRect().width === 0; } catch (e) { return true; } })();
+    const sr = (!sbHidden && pr) ? sb.getBoundingClientRect() : null;
     const sbCs = sb ? getComputedStyle(sb) : null;
     const inp = {
       scale: vv ? +vv.scale.toFixed(2) : 1,
@@ -1963,13 +2032,17 @@
       phoneH: cs ? parseInt(cs.height) || 0 : 0,
       phonePadTop: cs ? cs.paddingTop : '?',
       phoneBottom: pr ? Math.round(pr.bottom) : null,
-      sbTop: sr ? Math.round(sr.top) : null,
+      sbTop: (sr && pr) ? Math.round(sr.top - pr.top) : null, // 相对 .phone 顶（=padding 实测），滚动免疫
       sbPadTop: sbCs ? sbCs.paddingTop : '?',
       orientation: (window.innerWidth || 0) > (window.innerHeight || 0) ? '横屏' : '竖屏',
       envBottom: envBottomProbe(),
       vvOffTop: vv ? Math.round(vv.offsetTop) : 0,
       vvOffLeft: vv ? Math.round(vv.offsetLeft) : 0,
-      tabBottom: (function () { var tb = document.querySelector('.tabbar'); if (!tb) return null; var r = tb.getBoundingClientRect(); return Math.round(r.bottom); })(),
+      // v3.26.x #208：全屏页（聊天/朋友圈等 .page.full）打开时 tabs.js 给 .tabbar
+      // 挂 hidden（display:none）——矩形全 0，原样返回会判「底部导航栏悬空
+      // 860px」：用户在聊天页期间每 5s 自动采集刷一条假错误进错误环（实测
+      // 21:32~21:37 连环五条误报）。hidden/零矩形 → null，判定器 ⑤b 跳过。
+      tabBottom: (function () { var tb = document.querySelector('.tabbar'); if (!tb || tb.hidden) return null; var r = tb.getBoundingClientRect(); if (r.width === 0 && r.height === 0) return null; return Math.round(r.bottom); })(),
       kb: (function () { try { return window.__mochiIosKb ? window.__mochiIosKb() : null; } catch (e) { return null; } })()
     };
     inp.diff = inp.screenH && inp.innerH ? inp.screenH - inp.innerH : 0;

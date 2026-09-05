@@ -677,6 +677,8 @@
       // → .phone 永不收缩 → 键盘盖住输入栏完全无法输入。focusin 事件聚焦上报可靠，
       // 用它记录目标元素；用 activeElement 复合判断兜底。
       var _textFocused = null;
+      // v3.26.x #208：最近一次文本失焦时刻（focusin 归零）——键盘收起视口未还原自愈的计时基准
+      var _focLostAt = 0;
       // v3.12.x：悬浮键盘保底停靠状态（见下方 _iProvCheck 注释）
       var _iFocusAt = 0, _iProv = false, _iIH = window.innerHeight;
       // v3.6.x：键盘弹出期间把页面滚动钉在顶部——iOS Safari 键盘弹出时会自动把页面
@@ -1229,6 +1231,19 @@
             // 键盘会话内：沿用原阈值逻辑（动画窗口钉顶 / 稳态只治大位移）
             if (Date.now() < _pinUntil) pinScrollTop();
             else healKbScroll();
+            // v3.26.x #208：键盘收起后视口未还原的自愈兜底——iOS standalone 键盘
+            // 收起时 WebKit 偶发不把可视/布局视口还原到基线（差 >60px），restoreKb
+            // 的「确已还原」门槛 `_vv.height >= _fullVv - 60` 从此永不满足 →
+            // _kbActive 卡真、.phone 卡在收缩高：聊天输入栏整体上移、下方露一条
+            // body 底色白带（多机型反复报障）。失焦持续 >4s 且视口仍 < 基线−60
+            // = 物理上不可能还有键盘在等输入（要打字必有焦点），判定收起事件
+            // 丢失：强制复原（restoreKb 内部 _syncFullBase 重吸基线 + pinScrollTop
+            // 触发重排；之后 1s 看门狗 syncVvFit 按实测重写 --mochi-ios-h）。
+            // 「点按钮失焦但键盘还开着」的合法停靠场景 4s 内必有再聚焦或收起，
+            // 不受影响；安卓分支（isIOS 互斥）不经过此路径。
+            if (!foc && _focLostAt && Date.now() - _focLostAt > 4000 && _vv && _vv.height < _fullVv - 60) {
+              restoreKb();
+            }
           } else if (!foc) {
             // 键盘会话外的大平移（Edge iOS 失焦后补做的「让焦点可见」平移）→ 归零
             var shifted = winScrollY() > KB_SCROLL_HEAL;
@@ -1291,7 +1306,7 @@
         };
       };
       document.addEventListener('focusin', function (e) {
-        try { if (isTextEl(e.target)) { _textFocused = e.target; _iFocusAt = Date.now(); } } catch (e2) {}
+        try { if (isTextEl(e.target)) { _textFocused = e.target; _iFocusAt = Date.now(); _focLostAt = 0; } } catch (e2) {}
         // v3.10.x：立即同步一次——键盘弹出动画期间 vv.height 开始明显收缩，
         // 尽早收缩 .phone，避免头 300ms 输入栏还在键盘下面（视觉"被盖住"）
         try { syncIosKb(); } catch (e3) {}
@@ -1306,7 +1321,7 @@
         if (isTextEl(e.target)) { try { startKbWatch(); } catch (e4) {} }
       });
       document.addEventListener('focusout', function (e) {
-        try { if (e.target === _textFocused) _textFocused = null; } catch (e2) {}
+        try { if (e.target === _textFocused) { _textFocused = null; _focLostAt = Date.now(); } } catch (e2) {}
         setTimeout(syncIosKb, 250);
         setTimeout(syncIosKb, 450);
         // v3.12.x：失焦后复查保底停靠——键盘已收/无聚焦即复原 .phone

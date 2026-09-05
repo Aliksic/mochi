@@ -76,9 +76,19 @@ const rec = (ts, side, txt) => ({ ts, side, text: txt });
   chatTailAppend({ ts: 2, side: 'in', text: 'y', voice: 'data:audio' });
   chatTailAppend({ ts: 3, side: 'in', text: 'z', parts: [{ k: 'img', v: 'data:image/png;base64,' + 'A'.repeat(200) }] });
   ok(chatTailRead().length === 60, 'A1 img/voice/大parts 不进日志');
-  // 长文本截断到 1000
+  // FIX #206 回放必失真的消息一律不进日志（截断存储/丢 type/丢图都会造出乱码·坏图复制）
+  const __n0 = chatTailRead().length;
   chatTailAppend(rec(99, 'out', '长'.repeat(3000)));
-  ok(chatTailRead().every(j => (j.text || '').length <= 1000), 'A1 文本截断 ≤1000');
+  ok(chatTailRead().length === __n0, 'A2 超长文本不进日志（截断存储会失真）');
+  chatTailAppend({ ts: 4, side: 'in', text: 'data:image/png;base64,' + 'B'.repeat(900), type: 'sticker' });
+  chatTailAppend({ ts: 5, side: 'in', text: '@@m:0123456789abcdef0123456789abcdef', type: 'sticker' });
+  chatTailAppend({ ts: 6, side: 'in', text: 'https://example.com/s.png', type: 'image' });
+  chatTailAppend({ ts: 7, side: 'in', text: '带图文字', parts: [{ k: 'img', v: '@@m:0123456789abcdef0123456789abcdef', sub: 'sticker' }] });
+  ok(chatTailRead().length === __n0, 'A2 sticker/image/令牌/短parts 消息不进日志（#206）');
+  chatTailAppend({ ts: 8, side: 'in', text: '普通文本' });
+  chatTailAppend({ ts: 9, side: 'in', text: '😊表情', type: 'emoji' });
+  const __tailNow = chatTailRead();
+  ok(__tailNow.length === 60 && __tailNow[59].text === '😊表情' && __tailNow[58].text === '普通文本', 'A2 普通文本/emoji 照常进日志');
 }
 
 // A2：merge 把日志里历史没有的条目按 ts 归位合并并触发 saveMsgs；已有的不重复
@@ -146,6 +156,26 @@ const rec = (ts, side, txt) => ({ ts, side, text: txt });
   const small = [rec(1, 'out', 'hi')];
   performLsSnapWrite(small, 'xy-home-v2:test');
   ok(env.store.get("chat-msgs") && JSON.parse(env.store.get("chat-msgs")).length === 1, 'B2 小历史全量写不受影响');
+}
+
+// D：#206 旧版日志存量媒体截断存根不得回放——回放即乱码气泡→normCell 误迁移 image→坏图空白
+{
+  const init = [rec(100, 'in', '历史')];
+  const { env, fns, saved } = makeEnv(init);
+  const { chatTailMerge } = fns;
+  const tailArr = [
+    { ts: 100, side: 'in', special: '', text: '历史' },
+    { ts: 300, side: 'in', special: '', text: 'data:image/png;base64,' + 'C'.repeat(900) },
+    { ts: 301, side: 'in', special: '', text: '@@m:0123456789abcdef0123456789abcdef' },
+    { ts: 302, side: 'in', special: '', text: '正常未落盘消息' }
+  ];
+  env.store.set('chat-tail', JSON.stringify(tailArr));
+  env.saved.length = 0;
+  chatTailMerge();
+  ok(env.msgs.length === 2, 'D1 媒体截断/令牌存根不回放，只并回正常 1 条（实际 ' + env.msgs.length + '）');
+  ok(env.msgs.some(m => m.text === '正常未落盘消息'), 'D2 正常未落盘消息照常回放');
+  ok(!env.msgs.some(m => typeof m.text === 'string' && m.text.indexOf('data:') === 0 && !m.type), 'D3 无 type 的 data: 存根不入库（normCell 误迁移断粮）');
+  ok(env.saved.length === 1, 'D4 有并回时仍触发一次 saveMsgs');
 }
 
 // C：接线断言——addRec/retract/loadMsgs 清空导入均已接线

@@ -324,12 +324,20 @@ function chatTailClear() {
 try { store.remove('chat-tail'); } catch (e) {}
 }
 // 只收纯文本/轻消息：img/voice/大 parts 同步写 LS 会写爆，仍走整包落盘链路
+// FIX 2026-09-05 #206 表情包「重复 + 乱码 → 空白方框」（Oppo A5 Pro/Via 等多机型）：
+// 日志只收「能一字不差回放」的消息。sticker/image 型消息的 text 就是媒体数据本体
+// （base64/远程链/@@m: 令牌），收录后回放必失真——type 被丢弃变文字气泡；且 #142 媒体
+// 令牌化稍后会把该条 text 改写成 @@m:令牌，日志里留存的旧文本签名随之漂移，下次启动
+// chatTailMerge 把它当「没落盘的新消息」回放＝同一表情包旁边多出一条乱码/坏图复制。
+// parts 混合消息（回放丢图成半条）与超长文本（截断存储）同理。宁可不兜底，绝不回放坏数据。
 function chatTailAppend(rec) {
 try {
 if (!rec || rec.retracted || rec.img || rec.voice) return;
-if (Array.isArray(rec.parts) && rec.parts.some(p => p && typeof p.v === 'string' && p.v.length > 128)) return;
+if (rec.type === 'sticker' || rec.type === 'image' || rec.type === 'voice') return;
+if (Array.isArray(rec.parts) && rec.parts.length) return;
+if (typeof rec.text !== 'string' || rec.text.length > CHAT_TAIL_TEXT_MAX) return;
 const arr = chatTailRead();
-arr.push({ ts: rec.ts || Date.now(), side: rec.side || '', special: rec.special || '', text: typeof rec.text === 'string' ? rec.text.slice(0, CHAT_TAIL_TEXT_MAX) : String(rec.text || '') });
+arr.push({ ts: rec.ts || Date.now(), side: rec.side || '', special: rec.special || '', text: rec.text });
 while (arr.length > CHAT_TAIL_MAX) arr.shift();
 store.set('chat-tail', JSON.stringify(arr));
 } catch (e) {}
@@ -353,7 +361,14 @@ for (let i = 0; i < msgs.length; i++) have.add(chatTailSig(msgs[i]));
 const add = [];
 for (let i = 0; i < arr.length; i++) {
 const j = arr[i];
-if (j && !have.has(chatTailSig(j))) add.push({ ts: j.ts, side: j.side, special: j.special, text: j.text });
+if (!j || have.has(chatTailSig(j))) continue;
+// FIX 2026-09-05 #206 旧版日志里的存量媒体存根不得回放：data:/@@m: 开头却无 type 的条目
+// 只可能是旧版截断收录的媒体数据——回放即「乱码文字气泡 → 被 normCell 归一化按 data:image/
+// 前缀误迁移成 image → 截断 base64 解码失败 = 坏图空白方框」，且与原消息并存成重复。跳过，
+// 该条随日志 60 条滚动自然淘汰，不再新增（chatTailAppend 已拒收媒体型消息）。
+const jt = typeof j.text === 'string' ? j.text : '';
+if (jt.indexOf('data:') === 0 || jt.indexOf('@@m:') === 0) continue;
+add.push({ ts: j.ts, side: j.side, special: j.special, text: jt });
 }
 if (!add.length) return;
 msgs = msgs.concat(add).sort((a, b) => ((a && a.ts) || 0) - ((b && b.ts) || 0));

@@ -8792,9 +8792,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1788622784574">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.478</b></span>
-        <span class="sv-deploy">部署于 2026-09-05 23:39<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1788623873008">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.479</b></span>
+        <span class="sv-deploy">部署于 2026-09-05 23:57<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9940,7 +9940,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.478</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.479</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
       <!-- v3.27.x：设置页底部防骗声明 -->
       <div class="set-alert">
@@ -10231,7 +10231,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.478</span>
+              <span class="lic-ver">v3.26.479</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -15046,6 +15046,33 @@ setTimeout(reload, 1200); // SW 无响应也重载（浏览器 HTTP 缓存可能
 if (document.readyState === 'complete') setTimeout(checkDoc, 60000);
 else window.addEventListener('load', function () { setTimeout(checkDoc, 60000); });
 })();
+window.mochiViewportForm = function (sig) {
+const envTop = sig.envTop || 0;
+const innerH = sig.innerH || 0;
+const screenH = sig.screenH || 0;
+const iosMajor = sig.iosMajor || 0;
+const standalone = !!sig.standalone;
+const diff = (screenH > 0 && innerH > 0) ? (screenH - innerH) : 0;
+const needEnvProbe = ((screenH > 0 && innerH > 0 && diff <= 2) || standalone);
+const coverBrowser = !standalone && diff <= 2 && envTop >= 20;
+const resStand = standalone && envTop >= 20 && envTop <= 160 && diff >= envTop - 8 && iosMajor >= 18;
+const ipadForm = standalone && envTop >= 20 && diff <= 2 && screenH > 0 && innerH >= screenH - 2;
+const forceCover = standalone && !!sig.safeTopForce;
+let safeTop;
+if (forceCover) safeTop = (envTop >= 20) ? envTop : ((diff >= 20 && diff <= 160) ? diff : 0);
+else if (resStand) safeTop = 0;
+else safeTop = ((standalone || coverBrowser) && envTop >= 20 && envTop <= 160) ? envTop : 0;
+const expBase = (coverBrowser || resStand || ipadForm) ? innerH
+: (forceCover ? (screenH || (safeTop + innerH))
+: Math.min(screenH || (envTop + innerH), envTop + innerH));
+const expTop = resStand ? 12 : Math.max(envTop, 12);
+const form = forceCover ? 'force-cover' : resStand ? 'reserved' : ipadForm ? 'ipad'
+: coverBrowser ? 'cover-browser' : (envTop >= 20 ? 'covered' : (diff >= 20 ? 'avoided' : 'plain'));
+return { form: form, resStand: resStand, ipadForm: ipadForm, coverBrowser: coverBrowser,
+forceCover: forceCover, needEnvProbe: needEnvProbe, safeTop: safeTop,
+expBase: expBase, expTop: expTop, envTop: envTop, diff: diff,
+standalone: standalone, iosMajor: iosMajor };
+};
 (function () {
 let sdVerCache = '';
 try {
@@ -15112,7 +15139,7 @@ add(true, '顶部形态判定：' + mode, 'env=' + envTop + 'px  var(--mochi-saf
 if (inp.sbTop != null) {
 const expect = resStand ? 12 : Math.max(envTop, 12);
 if (inp.sbTop > expect + 60) add(false, '顶部双倍避让', '✗ 状态栏实测顶位 ' + inp.sbTop + 'px，明显超过安全区顶部 ' + expect + 'px（#148 修复的双倍白带形态复发，连本条反馈）');
-else if (!resStand && envTop >= 20 && inp.sbTop < envTop - 5) add(false, '顶部重叠', '✗ 状态栏顶位 ' + inp.sbTop + 'px 钻进系统状态栏区（应 ≥ ' + envTop + 'px，#114 形态）');
+else if (!resStand && envTop >= 20 && diff >= envTop - 8 && inp.sbTop < envTop - 5) add(false, '顶部重叠', '✗ 状态栏顶位 ' + inp.sbTop + 'px 钻进系统状态栏区（应 ≥ ' + envTop + 'px，#114 形态）');
 else add(true, '状态栏顶位 ' + inp.sbTop + 'px（安全区 ' + expect + 'px）');
 }
 const coverBrowser = !inp.standalone && diff <= 2 && envTop >= 20;
@@ -15140,6 +15167,10 @@ else add(true, '底部导航栏完整（底边 ' + inp.tabBottom + ' / 期望 ' 
 }
 if ((inp.vvOffTop || 0) > 2 || (Math.abs(inp.vvOffLeft || 0)) > 2) {
 add(false, '视口平移残留', '⚠ vv.offsetTop=' + inp.vvOffTop + ' offsetLeft=' + inp.vvOffLeft + '（页面被顶偏未归位，#109 形态）');
+}
+if (resStand && envTop >= 20 && diff > envTop + 24 && !(inp.kb && inp.kb.kbActive)) {
+add(false, '布局视口未贴底 ' + (diff - envTop) + 'px',
+'✗ screen−inner=' + diff + 'px 应≈状态栏高度 ' + envTop + 'px（#208：键盘收起后布局视口未还原，输入栏整体上移+底部白带；收起键盘或重开应用可临时恢复，复发请整段反馈）');
 }
 add(true, 'standalone=' + !!inp.standalone, inp.standalone ? '独立应用形态' : '浏览器形态（ios-pwa-standalone 不加为正常）');
 add(true, 'html 类：' + (inp.htmlClass || '(空)'));
@@ -15202,7 +15233,7 @@ orientation: (window.innerWidth || 0) > (window.innerHeight || 0) ? '横屏' : '
 envBottom: envBottomProbe(),
 vvOffTop: vv ? Math.round(vv.offsetTop) : 0,
 vvOffLeft: vv ? Math.round(vv.offsetLeft) : 0,
-tabBottom: (function () { var tb = document.querySelector('.tabbar'); if (!tb) return null; var r = tb.getBoundingClientRect(); return Math.round(r.bottom); })(),
+tabBottom: (function () { var tb = document.querySelector('.tabbar'); if (!tb || tb.hidden) return null; var r = tb.getBoundingClientRect(); if (r.width === 0 && r.height === 0) return null; return Math.round(r.bottom); })(),
 kb: (function () { try { return window.__mochiIosKb ? window.__mochiIosKb() : null; } catch (e) { return null; } })()
 };
 inp.diff = inp.screenH && inp.innerH ? inp.screenH - inp.innerH : 0;
@@ -24202,9 +24233,11 @@ try { store.remove('chat-tail'); } catch (e) {}
 function chatTailAppend(rec) {
 try {
 if (!rec || rec.retracted || rec.img || rec.voice) return;
-if (Array.isArray(rec.parts) && rec.parts.some(p => p && typeof p.v === 'string' && p.v.length > 128)) return;
+if (rec.type === 'sticker' || rec.type === 'image' || rec.type === 'voice') return;
+if (Array.isArray(rec.parts) && rec.parts.length) return;
+if (typeof rec.text !== 'string' || rec.text.length > CHAT_TAIL_TEXT_MAX) return;
 const arr = chatTailRead();
-arr.push({ ts: rec.ts || Date.now(), side: rec.side || '', special: rec.special || '', text: typeof rec.text === 'string' ? rec.text.slice(0, CHAT_TAIL_TEXT_MAX) : String(rec.text || '') });
+arr.push({ ts: rec.ts || Date.now(), side: rec.side || '', special: rec.special || '', text: rec.text });
 while (arr.length > CHAT_TAIL_MAX) arr.shift();
 store.set('chat-tail', JSON.stringify(arr));
 } catch (e) {}
@@ -24226,7 +24259,10 @@ for (let i = 0; i < msgs.length; i++) have.add(chatTailSig(msgs[i]));
 const add = [];
 for (let i = 0; i < arr.length; i++) {
 const j = arr[i];
-if (j && !have.has(chatTailSig(j))) add.push({ ts: j.ts, side: j.side, special: j.special, text: j.text });
+if (!j || have.has(chatTailSig(j))) continue;
+const jt = typeof j.text === 'string' ? j.text : '';
+if (jt.indexOf('data:') === 0 || jt.indexOf('@@m:') === 0) continue;
+add.push({ ts: j.ts, side: j.side, special: j.special, text: jt });
 }
 if (!add.length) return;
 msgs = msgs.concat(add).sort((a, b) => ((a && a.ts) || 0) - ((b && b.ts) || 0));
@@ -50526,6 +50562,7 @@ if (KEEP_AUDIO_DATAURL) return KEEP_AUDIO_DATAURL;
 try {
 const sr = 44100, sec = 1, n = sr * sec;
 const amp = kaIsIOS() ? 0.002 : 0.006;
+const freq = kaIsIOS() ? 220 : 18000;
 const buf = new ArrayBuffer(44 + n * 2);
 const dv = new DataView(buf);
 const ws = function (o, s) { for (let i = 0; i < s.length; i++) dv.setUint8(o + i, s.charCodeAt(i)); };
@@ -50534,7 +50571,7 @@ ws(12, 'fmt '); dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUin
 dv.setUint32(24, sr, true); dv.setUint32(28, sr * 2, true); dv.setUint16(32, 2, true); dv.setUint16(34, 16, true);
 ws(36, 'data'); dv.setUint32(40, n * 2, true);
 for (let i = 0; i < n; i++) {
-const v = Math.sin(2 * Math.PI * 220 * (i / sr)) * amp;
+const v = Math.sin(2 * Math.PI * freq * (i / sr)) * amp;
 dv.setInt16(44 + i * 2, Math.round(v * 32767), true);
 }
 const bytes = new Uint8Array(buf);
@@ -79304,4 +79341,4 @@ return { lock: document.body.classList.contains('scroll-lock'), open: open };
 <!-- __MOCHI_EOF__ -->
 </body>
 </html>
-<!-- __MOCHI_EOF__ mtojtpa6 -->
+<!-- __MOCHI_EOF__ mtokh14g -->

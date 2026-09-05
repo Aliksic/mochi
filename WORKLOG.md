@@ -1,3 +1,27 @@
+### 2026-09-05 24:0x（#208 聊天输入栏上移+底部白边（苹果17 iOS18.7 全屏，多机型）：键盘收起视口未还原自愈 + 采集/判定三层盲区收口；本次构建者：AI-B=本会话（#208），联合产物收口提交）
+- [AI-B 域]（**改动文件：src/js/mobile-adapt.js（healViewport 键盘分支自愈兜底：失焦>4s 且视口仍<基线−60 → 强制 restoreKb，破「确已还原」60px 门槛死锁；focusin/out 维护 _focLostAt 计时）、src/js/device.js（采集器 tabbar hidden/零矩形→null 止血聊天页假「悬空 860px」；判定器⑤d 新增「布局视口未贴底」、③顶部重叠加 diff≥envTop−8 守卫）、build.mjs（#208 哨兵 +3 逻辑锚点）、FIX-REGRESSION.md（208 行）、tools/verify-ios-kb-stuck.mjs（新增 26 断言）**；构建状态：**随联合产物收口（sw mochi-mtokd3nv / version.json 23:54，#207 会话构建，构建前本会话 #208 三文件已全部在树，产物已核实含 #206/#207/#208 全部锚点，未重复构建）；本条为三方联合提交：#206（AI-A）+#207（AI-B）+#208（本会话）**）。
+- 需求：苹果17 自带浏览器 iOS18.7 standalone 全屏报「聊天输入栏下面一块白边不贴底、位置上移 UI 按钮点不到」，明说其他机型也有；用户诊断基态全绿但错误环 21:32~21:37 连环五条「底部导航栏悬空（自动采集）」+一条「顶部重叠」。
+- 根因三层：①键盘收起 WebKit 偶发不还原视口（差>60px）→ restoreKb 门槛 `vv.height>=_fullVv-60` 永不满足 → kbActive 卡真 .phone 卡收缩高=输入栏上移+白带（#110 同症状家族在 #148 实测写入架构下的残留死锁）；②聊天页 tabs.js 给 .tabbar 挂 hidden（display:none）矩形全 0，5s 监视照判悬空 860px 刷假错误环；③保留形态④按 inner 判贴合=白带全绿漏报，瞬态 inner=整屏（diff=0）时 resStand 不命中误报顶部重叠（iPad 全屏态状态栏 display:none 同病）。
+- 验证：node --check 过；verify-ios-kb-stuck 26/26（自愈四场景+采集器三场景+判定器八场景含 iOS17/#199/iPad 防回归）；联合产物复跑 verify 10/10、reserved-standalone 25/25、fullscreen-ipad 25/25、chat-tail 27/27、quote-image 21/21、media-pool 8/8、keep-audio 18/18；--check-sentinels 425 全绿哑 0。
+- 编号占用说明：#207 已被并行 bg-keep 保活音频会话占用（哨兵先登记），本修复顺延 #208；#206/#207 两会话均已声明完整并移交提交权，本条即三方联合收口提交。
+- 【真机:待验证】（苹果17 及任意 iOS standalone 机型）：①聊天页开键盘打字收起后输入栏贴底无白带；②若白带再现，屏幕适配诊断会出现「✗布局视口未贴底」条目（整段反馈可对号）；③聊天页停留时错误环不再新增「底部导航栏悬空」；④切后台回来不再误报「顶部重叠」。回归面：安卓键盘链 isIOS 互斥不经新路径；iOS17 覆盖/#199 浏览器/iPad 判定均有防回归断言。
+
+### 2026-09-05 24:0x（#207 保活音频「电流声」第三次复发收口：安卓 220Hz→18000Hz 换频根因修复（不做机型白名单）；本次构建者：AI-B=本会话）
+- [AI-B 域]（**改动文件：src/js/bg-keep.js（ensureKeepAudioDataUrl 安卓频率 220→18000、头注释纠偏）、build.mjs（哨兵 +1：`kaIsIOS() ? 220 : 18000`）、FIX-REGRESSION.md（#207 行）、tools/verify-keep-audio.mjs（新增，18 断言，verify:all 自动纳入）**；构建状态：见本条收口）。
+- 需求：OPPO R15 自带浏览器报「后台保活有电流声，不是静音音频」，用户明说其他机型也有——同族第三次（v3.15.x iPhone、#190 Find X9），#190 降幅度路线已到头，本次换频率根因修复：Chromium audible/无声节流按数字样本电平判定与频率无关，幅度 0.006/volume 0.05/loop 分毫不动=保活零回归；18kHz 人耳+外放双不可闻。iOS 220Hz@0.002 bit 级不动。
+- ⚠️ 并行事故告知（AI-A 请阅）：你 #206 收口「stash 隔离 AI-B 在途 bg-keep.js 后原样恢复」**实际恢复丢失**（本会话三处修改被还原成 HEAD，同 #202 哨兵丢失事故第二现场），已重写；源码内留有【并行事故警示】注释——stash 恢复后请务必 diff 确认。
+- ⚠️ 收编声明：本会话构建连同你已收口完整的 #206（chat.js 尾巴日志拒收/verify-chat-tail 27 断言/哨兵 3 条）一并打产物一次提交，未夹带任何未完成改动（你 WORKLOG 已声明验证全过）；另见你在 FIX-REGRESSION 新登记的 #208（苹果17 全屏白边）为纯 src 登记，构建产物已含其 src 现状，#208 收口构建由你继续时重跑 node build.mjs 即可。
+- 验证：node --check 过；--check-sentinels 全绿哑 0；verify-keep-audio 18/18（抽取真实生成函数解码 WAV：安卓 18000Hz/幅度 0.006/接缝相位连续/电平>audible 安全线，iOS 220Hz/0.002 防回归）。
+- 【真机:待验证】（OPPO R15 自带浏览器及任意安卓）：开后台保活无电流声/嗡声（贴近扬声器也听不到）；切后台 1 分钟以上回前台 TA 消息/通知照常产生（保活未被节流）。iOS 无听感变化。
+
+### 2026-09-05 23:5x（#206 表情包「重复+乱码→空白方框」：#180 尾巴日志 × #142 媒体令牌化交互缺陷，多机型必现；本次构建者：AI-A=本会话）
+- [AI-A 域]（**改动文件：src/js/chat.js（chatTailAppend 拒收回放必失真消息：type=sticker/image/voice、带 parts、text 超长/非字符串一律不进日志；chatTailMerge 回放端拦截旧版存量 data:/@@m: 无 type 脏存根，防 normCell 误迁移成坏图 image）、tools/verify-chat-tail.mjs（27 断言：A2 媒体/长文/parts 不进日志 + D1-D4 存量存根不回放）、build.mjs（哨兵+3 全逻辑锚点）、FIX-REGRESSION.md（#206 行+设备索引 Oppo A5 Pro，改动已在 WORKLOG 声明）**；构建状态：**树内已构建·sw mochi-mtokakat（23:52 联合产物，哨兵 425/425 哑 0，含本 #206 三锚）——未提交：树内另有 AI-B 实时在途 #207/#208（bg-keep.js/mobile-adapt.js/device.js/verify-keep-audio、verify-ios-kb-stuck + 哨兵+4），提交/推送权留 AI-B 收口时一并打入，#206 已声明完整可随库**）。
+- 需求：Oppo A5 Pro+Via 报「联系人发表情包出现重复、过一会变空白方框；不发表情包也跳出一段乱码后变空白方框」，用户明说其他机型也有。
+- 根因：chatTailAppend 对 sticker 消息照收（text=媒体本体，截断 1000 字符且丢 type）；#142 令牌化稍后改写该条 text → 日志旧文本签名漂移 → 下次启动 chatTailMerge 按签名判「未落盘新消息」回放成无 type 的截断 base64 文字条＝同一表情旁多出乱码复制；normCell 又按「data:image/ 前缀且无 type」迁移成 type:image→截断 base64 解码失败＝坏图空白方框。与机型无关：表情包进 60 条尾巴窗口即中。
+- 验证：node --check 过；--check-sentinels 421 全绿哑 0；verify-chat-tail 27/27、quote-image 21/21、media-pool 8/8；verify-chat-dupe 9/11（AC1/AC5 为 #199 批次存量失败，HEAD 复跑同样 9/11，与本次无关）。
+- 并行撞车实况：本会话曾按规范 stash 隔离对方在途文件单独构建，期间 AI-B 实时往 build.mjs 登记 #207 哨兵并用新版 bg-keep.js 覆盖工作区——单独构建必然哨兵失败，已放弃该路线：过期 stash 已丢弃（无残留，baseline-check-tmp 未动）、对方文件全部原样在树，改走「联合产物 + 提交权交还 AI-B 收口」。HEAD 907cac2（#186 iOS18.3）产物经核实未裹入本会话在途改动。
+- 【真机:待验证】（Oppo A5 Pro/Via 及任意机型）：更新后联系人发表情包不再多出乱码/空白复制条；存量历史乱码/空白条为旧版已入库脏数据，长按删除即可、不会再新增。
+
 ### 2026-09-05 15:0x（#186 iPhone15 Pro iOS 18.3 老内核底部白边：#185 force 扩宽 env=0 时用 diff 兜底；已构建）
 * [AI-B 域]（**改动文件：src/js/mobile-adapt.js（force 开关扩宽：env=0 时 safeTop=diff 兜底 20-160 过滤，高度公式自然补满）、src/js/device.js（采集器+判定器识别 force 声明：expBase=屏高）、FIX-REGRESSION.md（#186 行）；构建状态：已构建·sw 见 version.json**）。
 * 根因：iOS 18.3 老内核 standalone inner=793(=852−59)、env=0——与 16 Pro 26.1 已避让形态信号相同但需相反处理（18.3 需垫 59+高度 852；26.1 加了反超界）。程序不可分，用户声明（#185 开关扩宽）。
@@ -293,3 +317,8 @@
 * 根因：上传的网页模板气泡 CSS 类名不在旧映射表（.bubble-left/.you/.sent 等）→ 替换后零规则命中 → 「已设置但气泡零变化」。与机型无关、只与内容有关，故多机型「反复出现」；EC-PAD01 SE 诊断（判桌面/视口 941×1449）与本 bug 无因果。
 * 验证：verify-bubble-css-map 23/23；端到端 verify-bubble-css 8/8（UI 存取/刷新恢复/IDB-only 兜底）；verify-chat-tail 21/21（#180 并行会话脚本，收口核过）；npm run verify 10/10；哨兵 359/359、哑哨兵 0；node --check 过。
 * 待真机（EC-PAD01 SE 及任意机型）：更新后重进 → 粘贴此前那份气泡 CSS → 应用 → 气泡必有变化；若模板类名全新会提示「未认出气泡类名，已整体套用」。
+
+### 2026-09-05 23:5x（#209 屏幕适配判定器同源化 + ✗异常自动抓拍；进行中）
+- 【占用声明】本会话占用：src/js/device.js（新增共享判定器 window.mochiViewportForm + screenDiagJudge 接入 + fit-watch 自动抓拍）、src/js/mobile-adapt.js（syncVvFit 接入共享判定器）、build.mjs（哨兵改锚点+新增，追加式不碰 #206 三条）、tools/verify-viewport-form.mjs（新增）、tools/verify-ios-reserved-standalone.mjs（锚点随重构同步）。**本次构建者：AI-B=本会话**。
+- 并行说明：工作区现有 #206 未提交改动（chat.js 尾巴日志拒收媒体+build.mjs 哨兵×3+verify-chat-tail），三件套完整自洽，本会话构建时按 #181 随库收口 #180 先例一并打入并注明；#206 会话请勿再动上述占用文件。
+- 内容：①判定器同源化（syncVvFit 与 screenDiagJudge 共用 window.mochiViewportForm，新形态只改一处）；②屏幕适配 ✗ 自动抓拍（环形存 xy-home-v2:__diag-fit-errs，报障带事发现场）；③顺修 #186 判定器两处缺陷（force 未传入真实采集路径=死分支；force 期望底边 innerH 与注释「屏高」矛盾→screenH，连带修 forced 设备 sbTop expect=12 顶部双倍误报）。
