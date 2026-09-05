@@ -10,7 +10,7 @@
 - [AI-B 域]（**改动文件：src/js/bg-keep.js（ensureKeepAudioDataUrl 安卓频率 220→18000、头注释纠偏）、build.mjs（哨兵 +1：`kaIsIOS() ? 220 : 18000`）、FIX-REGRESSION.md（#207 行）、tools/verify-keep-audio.mjs（新增，18 断言，verify:all 自动纳入）**；构建状态：见本条收口）。
 - 需求：OPPO R15 自带浏览器报「后台保活有电流声，不是静音音频」，用户明说其他机型也有——同族第三次（v3.15.x iPhone、#190 Find X9），#190 降幅度路线已到头，本次换频率根因修复：Chromium audible/无声节流按数字样本电平判定与频率无关，幅度 0.006/volume 0.05/loop 分毫不动=保活零回归；18kHz 人耳+外放双不可闻。iOS 220Hz@0.002 bit 级不动。
 - ⚠️ 并行事故告知（AI-A 请阅）：你 #206 收口「stash 隔离 AI-B 在途 bg-keep.js 后原样恢复」**实际恢复丢失**（本会话三处修改被还原成 HEAD，同 #202 哨兵丢失事故第二现场），已重写；源码内留有【并行事故警示】注释——stash 恢复后请务必 diff 确认。
-- ⚠️ 收编声明：本会话构建连同你已收口完整的 #206（chat.js 尾巴日志拒收/verify-chat-tail 27 断言/哨兵 3 条）一并打产物一次提交，未夹带任何未完成改动（你 WORKLOG 已声明验证全过）；另见你在 FIX-REGRESSION 新登记的 #208（苹果17 全屏白边）为纯 src 登记，构建产物已含其 src 现状，#208 收口构建由你继续时重跑 node build.mjs 即可。
+- ⚠️ 收编声明：本会话构建连同你已收口完整的 #206（chat.js 尾巴日志拒收/verify-chat-tail 27 断言/哨兵 3 条）一并打产物提交（你 23:5x 条目已授权提交权给 AI-B，已照办）。**#208 特殊处理**：你的 mobile-adapt 在途代码 verify-kb-residue-heal 尚 4/10（S4 健康态内联残留失败）＝行为侧未收口——本提交**产物已剔除该段**（mobile-adapt.js 以 HEAD 版参与构建，线上行为不变、零风险），但 mobile-adapt.js 源码/in-progress verify 脚本照你的授权一并入库（#208 哨兵 needle 有源码对应，HEAD 上 --check-sentinels 绿）；device.js 判定器部分（verify-ios-kb-stuck 26/26）随本提交收编。**你收口后重跑 node build.mjs + verify-kb-residue-heal 全绿再推产物即可上线 #208 行为侧**。
 - 验证：node --check 过；--check-sentinels 全绿哑 0；verify-keep-audio 18/18（抽取真实生成函数解码 WAV：安卓 18000Hz/幅度 0.006/接缝相位连续/电平>audible 安全线，iOS 220Hz/0.002 防回归）。
 - 【真机:待验证】（OPPO R15 自带浏览器及任意安卓）：开后台保活无电流声/嗡声（贴近扬声器也听不到）；切后台 1 分钟以上回前台 TA 消息/通知照常产生（保活未被节流）。iOS 无听感变化。
 

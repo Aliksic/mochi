@@ -357,7 +357,8 @@ padding-top:max(var(--mochi-safe-top, env(safe-area-inset-top, 0px)), 12px);
 padding-bottom:0;
 }
 html.ios-pwa-standalone.ios-fs-active,
-html.ios-pwa-standalone.ios-fs-active body { height:var(--mochi-ios-h, 100vh); min-height:0; }
+html.ios-pwa-standalone.ios-fs-active body { height:var(--mochi-ios-h, 100vh); min-height:0; overflow:hidden;
+}
 html.ios-pwa-standalone,
 html.ios-pwa-standalone body { background: var(--bg-b); }
 @media (display-mode: standalone) {
@@ -427,6 +428,7 @@ padding-top:max(calc(14px + var(--mochi-safe-top, env(safe-area-inset-top, 0px))
 padding-bottom:10px;
 }
 html.tablet.fs-active .phone, html.tablet.fs-css-active .phone { width:100vw; max-width:none; }
+html.tablet.ios-fs-active .phone { width:100vw; max-width:none; }
 @media (display-mode: fullscreen) { html.tablet .phone { width:100vw; max-width:none; } }
 html.tablet.ios-fs-active .phone { padding-top:max(env(safe-area-inset-top, 0px), 12px); }
 html.tablet .phone .page.full .chat-input-row {
@@ -8792,9 +8794,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1788623873008">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.479</b></span>
-        <span class="sv-deploy">部署于 2026-09-05 23:57<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1788623956954">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.480</b></span>
+        <span class="sv-deploy">部署于 2026-09-05 23:59<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9940,7 +9942,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.479</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.480</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
       <!-- v3.27.x：设置页底部防骗声明 -->
       <div class="set-alert">
@@ -10231,7 +10233,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.479</span>
+              <span class="lic-ver">v3.26.480</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -15136,6 +15138,7 @@ else if (diff >= 20) mode = '已避让形态（系统已把网页起点放在状
 else if (diff >= 20 && inp.standalone) mode = '歧义形态（env=0 但 diff≥20：正常应为已避让=网页起点在状态栏下方；若底部/顶部仍见白带或重叠请整段反馈）';
 else mode = '无安全区/常规视口';
 add(true, '顶部形态判定：' + mode, 'env=' + envTop + 'px  var(--mochi-safe-top)=' + varTop + 'px  diff(screen−inner)=' + diff + 'px');
+if (inp.sbTop == null) add(true, '状态栏隐藏（聊天等全屏页），跳过顶位判定');
 if (inp.sbTop != null) {
 const expect = resStand ? 12 : Math.max(envTop, 12);
 if (inp.sbTop > expect + 60) add(false, '顶部双倍避让', '✗ 状态栏实测顶位 ' + inp.sbTop + 'px，明显超过安全区顶部 ' + expect + 'px（#148 修复的双倍白带形态复发，连本条反馈）');
@@ -15207,7 +15210,9 @@ const sb = document.querySelector('.statusbar');
 const vv = window.visualViewport;
 const cs = ph ? getComputedStyle(ph) : null;
 const pr = ph ? ph.getBoundingClientRect() : null;
-const sr = sb ? sb.getBoundingClientRect() : null;
+const pr2 = pr; // .phone rect（状态栏位置改为相对 .phone 测量，文档滚动不影响）
+const sbHidden = (function () { try { return !sb || sb.getBoundingClientRect().width === 0; } catch (e) { return true; } })();
+const sr = (!sbHidden && pr) ? sb.getBoundingClientRect() : null;
 const sbCs = sb ? getComputedStyle(sb) : null;
 const inp = {
 scale: vv ? +vv.scale.toFixed(2) : 1,
@@ -15227,7 +15232,7 @@ htmlClass: d.className || '(空)',
 phoneH: cs ? parseInt(cs.height) || 0 : 0,
 phonePadTop: cs ? cs.paddingTop : '?',
 phoneBottom: pr ? Math.round(pr.bottom) : null,
-sbTop: sr ? Math.round(sr.top) : null,
+sbTop: (sr && pr) ? Math.round(sr.top - pr.top) : null, // 相对 .phone 顶（=padding 实测），滚动免疫
 sbPadTop: sbCs ? sbCs.paddingTop : '?',
 orientation: (window.innerWidth || 0) > (window.innerHeight || 0) ? '横屏' : '竖屏',
 envBottom: envBottomProbe(),
@@ -78553,6 +78558,7 @@ if (_phone.style.height !== nh + 'px') _phone.style.height = nh + 'px';
 } catch (e) {}
 }
 var _textFocused = null;
+var _focLostAt = 0;
 var _iFocusAt = 0, _iProv = false, _iIH = window.innerHeight;
 function pinScrollTop() {
 try {
@@ -78862,6 +78868,9 @@ _syncFullBase();
 } else if (_kbActive) {
 if (Date.now() < _pinUntil) pinScrollTop();
 else healKbScroll();
+if (!foc && _focLostAt && Date.now() - _focLostAt > 4000 && _vv && _vv.height < _fullVv - 60) {
+restoreKb();
+}
 } else if (!foc) {
 var shifted = winScrollY() > KB_SCROLL_HEAL;
 if (!shifted && _phone) {
@@ -78902,7 +78911,7 @@ focusTag: _textFocused ? String(_textFocused.tagName || '').toLowerCase() : ''
 };
 };
 document.addEventListener('focusin', function (e) {
-try { if (isTextEl(e.target)) { _textFocused = e.target; _iFocusAt = Date.now(); } } catch (e2) {}
+try { if (isTextEl(e.target)) { _textFocused = e.target; _iFocusAt = Date.now(); _focLostAt = 0; } } catch (e2) {}
 try { syncIosKb(); } catch (e3) {}
 setTimeout(syncIosKb, 250);
 setTimeout(syncIosKb, 450);
@@ -78911,7 +78920,7 @@ setTimeout(_iProvCheck, 1700);
 if (isTextEl(e.target)) { try { startKbWatch(); } catch (e4) {} }
 });
 document.addEventListener('focusout', function (e) {
-try { if (e.target === _textFocused) _textFocused = null; } catch (e2) {}
+try { if (e.target === _textFocused) { _textFocused = null; _focLostAt = Date.now(); } } catch (e2) {}
 setTimeout(syncIosKb, 250);
 setTimeout(syncIosKb, 450);
 setTimeout(_iProvCheck, 250);
@@ -79341,4 +79350,4 @@ return { lock: document.body.classList.contains('scroll-lock'), open: open };
 <!-- __MOCHI_EOF__ -->
 </body>
 </html>
-<!-- __MOCHI_EOF__ mtokh14g -->
+<!-- __MOCHI_EOF__ mtokitwa -->

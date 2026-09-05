@@ -481,7 +481,9 @@ html.tablet.ios-pwa-standalone.ios-fs-active .phone {
 /* v3.28.x #114：同模式下 html/body 钉到与 .phone 同高（#148 改 --mochi-ios-h，理由同上），
    避免 .phone 高于 body(100dvh) 造成页面纵向可滚（v3.27.x 记录过"body 可滚"的副作用） */
 html.ios-pwa-standalone.ios-fs-active,
-html.ios-pwa-standalone.ios-fs-active body { height:var(--mochi-ios-h, 100vh); min-height:0; }
+html.ios-pwa-standalone.ios-fs-active body { height:var(--mochi-ios-h, 100vh); min-height:0; overflow:hidden;
+  /* v3.26.x #185：锁文档滚动——iPad 独立应用全屏态文档可滚时 iOS 橡皮筋把整页
+     来回拽（自愈 pin 对打=「滑动位置会飞、一弹一弹」）。页面内滚动不受影响 */ }
 /* v3.7.x：iPhone 12 mini 实测反馈「桌面底部导航栏下面有灰色图形」——iOS 部分版本
    standalone + black-translucent 下 100vh 不含底部 home indicator 安全区（约 34px），
    .phone 底部外露出 html/body 灰底（--page-bg #e9e9e9）形成灰色带；且与顶部
@@ -682,6 +684,9 @@ html.tablet .statusbar {
 }
 /* 平板真全屏（Fullscreen API / display_override）：仍是整屏铺满（与手机端一致） */
 html.tablet.fs-active .phone, html.tablet.fs-css-active .phone { width:100vw; max-width:none; }
+/* v3.26.x #185：平板 iOS 全屏模式（ios-fs-active）全宽铺满——原 640px 限宽居中在
+   全屏下左右各露 ~90px 底色（用户报「全屏模式有白边」）；浏览器/非全屏保持限宽居中 */
+html.tablet.ios-fs-active .phone { width:100vw; max-width:none; }
 @media (display-mode: fullscreen) { html.tablet .phone { width:100vw; max-width:none; } }
 /* 平板 iOS「全屏模式」（隐藏应用内模拟状态栏）：顶部安全区兜底（同手机端规则） */
 html.tablet.ios-fs-active .phone { padding-top:max(env(safe-area-inset-top, 0px), 12px); }

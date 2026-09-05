@@ -1913,6 +1913,7 @@ window.mochiViewportForm = function (sig) {
     else mode = '无安全区/常规视口';
     add(true, '顶部形态判定：' + mode, 'env=' + envTop + 'px  var(--mochi-safe-top)=' + varTop + 'px  diff(screen−inner)=' + diff + 'px');
     // ③ 顶部双重叠加：statusbar 实测顶位显著超过「安全区顶部+余量」
+    if (inp.sbTop == null) add(true, '状态栏隐藏（聊天等全屏页），跳过顶位判定');
     if (inp.sbTop != null) {
       const expect = resStand ? 12 : Math.max(envTop, 12);
       if (inp.sbTop > expect + 60) add(false, '顶部双倍避让', '✗ 状态栏实测顶位 ' + inp.sbTop + 'px，明显超过安全区顶部 ' + expect + 'px（#148 修复的双倍白带形态复发，连本条反馈）');
