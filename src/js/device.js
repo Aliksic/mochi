@@ -2066,3 +2066,181 @@
   window.__screenDiagJudge = screenDiagJudge;
   window.__collectScreenDiag = collectScreenDiag;
 })();
+
+// ===== 功能：功能诊断（v3.26.x #177，与信息诊断/屏幕适配诊断分开） =====
+// 用户诉求：「诊断测试全部功能哪些功能正常，哪些是否有异常」。逐项三级测试：
+//   T1 入口函数存在（window.openXxx）  T2 页面容器/桌面图标节点存在
+//   T3 真实打开测试（点桌面图标 → 目标页可见 → 点返回 → 回桌面，计耗时）
+// 安全子集才做 T3（纯页面查看器）；面板类/开关门控类只做 T1+T2 并注明原因。
+// 全程 try/catch 隔离，测试后强制恢复桌面页 + 关浮层 + 复位 tab 高亮。
+(function () {
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const FUNC_ITEMS = [
+    { n: '聊天', app: 'chat', page: 'page-chat', open: true },
+    { n: '主页/情侣空间', app: 'home', page: 'page-home', open: true },
+    { n: '信箱', app: 'mail', page: 'page-mail', open: true },
+    { n: '朋友圈', app: 'feed', page: 'page-feed', open: true },
+    { n: '日历', app: 'calendar', page: 'page-calendar', open: true },
+    { n: '纪念', app: 'memory', page: 'page-memory', open: true },
+    { n: '收藏', app: 'note', page: 'page-fav', open: true },
+    { n: '统计', app: 'stats', page: 'page-stats', open: true },
+    { n: '提问记录', app: 'interact', page: 'page-interact', open: true },
+    { n: '寻踪打卡', app: 'checkin', page: 'page-ta-checkin', open: true, gated: '可能需先绑定 TA/授权定位，会先弹引导' },
+    { n: '占卜', app: 'divination', page: 'page-divine', open: true },
+    { n: '花园', app: 'garden', page: 'page-garden', open: true },
+    { n: '此间', app: 'cjian', page: 'page-cjian', open: true },
+    { n: '房间', app: 'room', page: 'page-room', open: true },
+    { n: '经期记录', app: 'period', page: 'page-period', open: true },
+    { n: '记账', app: 'accounting', page: 'page-accounting', open: true },
+    { n: '梦角档案', app: 'memo-arc', page: 'page-memo-arc', open: true },
+    { n: '我的档案', app: 'my-arc', page: 'page-my-arc', open: true },
+    { n: '音乐', app: 'music', page: 'page-music', open: true },
+    { n: '群聊', app: 'group-chat', page: 'page-group-chat', open: true, gated: '可能未开启群聊' },
+    { n: '帮我决定', fn: 'openDecision' },
+    { n: '多人决定', fn: 'openGroupDecision' },
+    { n: 'TA 询问', fn: 'openAskReply' },
+    { n: 'TA 心情', fn: 'openCurious' },
+    { n: 'TA 吐槽', fn: 'openRoast' }
+  ];
+  function fToast(msg) {
+    try {
+      let el = document.getElementById('cc-toast');
+      if (!el) { el = document.createElement('div'); el.id = 'cc-toast'; document.body.appendChild(el); }
+      el.textContent = msg; el.className = 'cc-toast'; void el.offsetWidth; el.className = 'cc-toast show';
+      clearTimeout(fToast._t); fToast._t = setTimeout(function () { el.className = 'cc-toast'; }, 2600);
+    } catch (e) {}
+  }
+  function fCopy(text) {
+    return new Promise(function (resolve) {
+      let done = false;
+      const fin = function (ok) { if (!done) { done = true; resolve(ok); } };
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text; ta.setAttribute('readonly', '');
+        ta.style.cssText = 'position:fixed;left:-9999px;top:0;width:10px;height:10px;opacity:0;';
+        document.body.appendChild(ta);
+        try { ta.select(); } catch (e1) {}
+        let ok = false;
+        try { ok = document.execCommand('copy'); } catch (e2) { ok = false; }
+        setTimeout(function () { try { document.body.removeChild(ta); } catch (e3) {} }, 800);
+        if (ok) { fin(true); return; }
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(function () { fin(true); }, function () { fin(false); });
+          else fin(false);
+        } catch (e4) { fin(false); }
+        setTimeout(function () { fin(false); }, 1500);
+      } catch (e5) { fin(false); }
+    });
+  }
+  function closeFloats() {
+    ['#modal-mask', '#poke-card', '#emoji-panel', '#chat-ask-panel', '#chat-search', '#chat-divine-panel', '#chat-rps-panel', '#chat-call-panel', '#chat-more-panel', '#tc-mask'].forEach(function (sel) {
+      try { var el = document.querySelector(sel); if (el && !el.hidden) el.hidden = true; } catch (e) {}
+    });
+  }
+  function restoreDesk() {
+    try {
+      document.querySelectorAll('.page').forEach(function (p) { p.hidden = p.id !== 'page-phone'; });
+      closeFloats();
+      document.querySelectorAll('.tab').forEach(function (tb) { if (tb.dataset) tb.classList.toggle('active', tb.dataset.page === 'page-phone'); });
+    } catch (e) {}
+  }
+  function pageVisible(id) { var p = document.getElementById(id); return !!(p && !p.hidden); }
+  async function collectFuncDiag() {
+    const L = [];
+    const rows = [];
+    let okN = 0, badN = 0, warnN = 0, skipN = 0;
+    const boot = {
+      data: !!window.__mochiDataReady,
+      ls: (function () { try { return window.__lsStatus || 'n/a'; } catch (e) { return 'n/a'; } })(),
+      sw: !!(navigator.serviceWorker && navigator.serviceWorker.controller),
+      online: navigator.onLine
+    };
+    for (let i = 0; i < FUNC_ITEMS.length; i++) {
+      const it = FUNC_ITEMS[i];
+      fToast('功能诊断 ' + (i + 1) + '/' + FUNC_ITEMS.length + '：' + it.n);
+      const det = [];
+      let ok = true, warn = false, skip = false;
+      if (it.fn) {
+        const has = typeof window[it.fn] === 'function';
+        det.push(has ? '入口✓' : '✗ 入口缺失');
+        if (!has) ok = false;
+      }
+      if (it.page) {
+        const pg = document.getElementById(it.page);
+        det.push(pg ? '页面✓' : '✗ 页面容器缺失');
+        if (!pg) ok = false;
+      }
+      if (it.app) {
+        const ic = document.querySelector('.app[data-app="' + it.app + '"], [data-desk-widget="app-' + it.app + '"]');
+        det.push(ic ? '图标✓' : '⚠ 图标不在桌面（可能被移除/收进组件库）');
+        if (!ic) warn = true;
+      }
+      if (it.open && it.page && document.getElementById(it.page)) {
+        try {
+          const icon = document.querySelector('.app[data-app="' + it.app + '"], [data-desk-widget="app-' + it.app + '"]');
+          const t0 = Date.now();
+          if (icon) icon.click();
+          await sleep(450);
+          const opened = pageVisible(it.page);
+          if (opened) {
+            const back = document.getElementById(it.page).querySelector('.ch-back');
+            if (back) back.click();
+            await sleep(230);
+            const closedOk = !pageVisible(it.page);
+            det.push('打开✓ ' + (Date.now() - t0) + 'ms，关闭' + (closedOk ? '✓' : '⚠'));
+            restoreDesk();
+          } else if (it.gated) {
+            warn = true; skip = true;
+            det.push('打开未生效（' + it.gated + '）');
+            restoreDesk();
+          } else {
+            ok = false;
+            det.push('✗ 点击图标后页面未打开（' + (Date.now() - t0) + 'ms）');
+            restoreDesk();
+          }
+        } catch (e6) {
+          ok = false;
+          det.push('✗ 打开测试异常：' + String(e6 && e6.message || e6).slice(0, 80));
+          restoreDesk();
+        }
+      }
+      if (!ok) badN++; else if (warn) warnN++; else okN++;
+      if (skip) skipN++;
+      rows.push((!ok ? '✗ ' : warn ? '⚠ ' : '✓ ') + it.n + '：' + det.join('，'));
+      await sleep(60);
+    }
+    const L2 = [];
+    L2.push('【功能诊断】' + (window.__sdVer || ''));
+    L2.push('时间：' + new Date().toLocaleString());
+    L2.push('');
+    L2.push('== 基础 ==');
+    L2.push('数据就绪=' + (boot.data ? '✓' : '✗') + '  LS=' + boot.ls + '  SW=' + (boot.sw ? '✓' : '✗') + '  在线=' + (boot.online ? '✓' : '✗'));
+    L2.push('');
+    L2.push('== 功能逐项（共 ' + FUNC_ITEMS.length + ' 项）==');
+    rows.forEach(function (r) { L2.push(r); L2.push(''); });
+    L2.push('== 汇总 ==');
+    L2.push('正常 ' + okN + ' / 需注意 ' + warnN + ' / 异常 ' + badN + ' / 打开跳过 ' + skipN);
+    const bads = rows.filter(function (r) { return r.indexOf('✗') === 0; });
+    if (bads.length) { L2.push(''); L2.push('✗ 异常清单（发给开发者）：'); bads.forEach(function (r) { L2.push('  ' + r); }); }
+    return { text: L2.join('\n'), rows: rows, okN: okN, badN: badN, warnN: warnN, skipN: skipN };
+  }
+  function bindFuncDiag() {
+    const row = document.getElementById('row-func-diag');
+    if (!row) return;
+    row.addEventListener('click', function () {
+      fToast('功能诊断开始：将逐个打开各功能页面（约 15 秒）…');
+      setTimeout(async function () {
+        try {
+          const r = await collectFuncDiag();
+          if (window.openModal) window.openModal('功能诊断', r.text, null, { noInput: true, textarea: true, textareaRows: 16, big: true });
+          fCopy(r.text).then(function (ok) { fToast(ok ? '报告已复制到剪贴板' : '报告已弹出，请手动全选复制'); });
+        } catch (e) {
+          fToast('功能诊断失败：' + String(e && e.message || e).slice(0, 60));
+        }
+      }, 80);
+    });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bindFuncDiag);
+  else bindFuncDiag();
+  window.__collectFuncDiag = collectFuncDiag;
+})();

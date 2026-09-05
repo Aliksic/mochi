@@ -1,3 +1,14 @@
+### 2026-09-05 12:1x（#177 新增设置页【功能诊断】：逐项测试全部功能正常/异常；已构建）
+* [AI-B 域]（**改动文件：src/template.html（row-func-diag 锚点，信息诊断分组下）、src/js/device.js（collectFuncDiag：25 项功能三级测试 T1 入口 typeof/T2 页面+图标节点/T3 真实打开-返回-恢复，门控功能 ⚠ 需注意，强制恢复桌面+关浮层+复位 tab；报告汇总+✗ 清单，弹窗+自动复制）、build.mjs（FIX_SENTINELS 2 条）、FIX-REGRESSION.md（#183 行）；构建状态：已构建·sw 见 version.json**）。
+* 验证：node --check 过；--check-sentinels 全绿；CDP 端到端无头跑完整流程。
+* 待真机：任意机型设置→功能诊断→约 15 秒逐项测试→报告。
+
+### 2026-09-05 13:xx（#182 超大字卡库（200MB 级）导入内存加固：源文本松绑+写盘前释放+OOM 分流指引；源已完成·未构建，与 #171 同函数叠加）
+* [AI-A 域]（**占用 src/js/chatcard.js pickImportFile（#171/#182 同一处，勿回滚）；改动文件：src/js/chatcard.js（①读入即只留 rawHead=先 slice(0,300) 再 replace——修掉 #171 初版「全文 replace 再 slice」对 200MB 文件的全文扫描+巨型中间串（本次自查抓到的真 bug）；onload 尾松开 reader.onload/onerror 引用让 200MB result 可回收②解析成功进写盘前置空 txt/raw 引用——JSON.stringify(groups) 与源文本两个 200MB 大头不得同时钉在堆上③OOM（RangeError/Out of memory）解析/写盘两阶段单独识别，给「查看存储→字卡库瘦身+设置→数据备份整包恢复」指引，不再误报格式错误④trim 自救对 >80MB 文件不启用（slice 复制本身就是峰值推手））、build.mjs（FIX_SENTINELS +3，接 #181 后）、FIX-REGRESSION.md（#182 行）、tools/verify-cc-import-parse.mjs（扩至 23 断言）**；构建状态：**未构建**——与 #171 同在 chatcard.js，随下次收口一并打入）。
+* 根因（iPhone 16 Pro+CriOS 诊断 ts=1788547274682 实锤 default:cc-groups=203.74MB）：200MB 级库导入全程峰值=源文本+parse 结果+merge 后 groups+stringify 新串+IDB 克隆叠加，GB 级撞 iOS WebKit（含 iOS Chrome）单进程上限→OOM 被 catch 吞成「文件格式不正确」；与机型无关、只与库体积有关（用户明说「其他型号手机也有」），故修内存链路而非设备特判。
+* 验证：node --check 过；verify-cc-import-parse 23/23；--check-sentinels 全绿哑哨兵 0（含新 3 条）。
+* 给收口会话：#171+#182 都在 chatcard.js pickImportFile 一处，一起打；用户侧指引=更新到新构建后重试导入，若仍失败，诊断信息 [字卡导入] 行直接给真实失败点（哪阶段/什么错/文件头 120 字符）。
+
 > 【占用声明 2026-09-05】#180（用户报障一加 ACE3/PJE110+Edge「刷新重开丢最近一段聊天记录」多机型反复）占用 src/js/chat.js 聊天持久化链区域（writeLsSnapshot/addRec/retractMsg/partialRetractMsg/loadMsgs/清空导入一带，新增 chatTail* 尾巴日志三件套与 performLsSnapWrite 保尾）+ build.mjs 哨兵尾部 3 条 + FIX-REGRESSION.md 180 行 + tools/verify-chat-tail.mjs 新增；与并行 #179（mochiMapBubbleCss，chat.js 尾部）零重叠，勿回滚彼此部分。**本次构建者：暂不构建**——并行 #179 会话仍在途（verify-bubble-css-map.mjs 刚落盘），按约定不夹带对方进行中的改动，等 #179 收口构建一并打入；收口构建者请把我这 3 条哨兵与 21 断言脚本一并核过。
 
 ### 2026-09-05 13:0x（#180 多机型「刷新重开丢最近一段聊天记录」：同步尾巴日志三件套 + LS 快照超限保尾；源已完成·未构建，待与并行 #179 一并收口）

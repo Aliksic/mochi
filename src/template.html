@@ -1351,6 +1351,13 @@
           <div class="txt">屏幕适配诊断<span class="sub">顶部空白 / 底部裁切 / 缩放异常一键定位</span></div>
           <div class="arrow"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div>
         </div>
+        <!-- v3.26.x #177：功能诊断——逐个测试全部功能（入口/页面/图标/打开/关闭），
+             device.js collectFuncDiag 顺序执行+自动判定，报告哪些正常哪些异常 -->
+        <div class="set-row" id="row-func-diag">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg></div>
+          <div class="txt">功能诊断<span class="sub">逐个测试全部功能是否正常（约 15 秒）</span></div>
+          <div class="arrow"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div>
+        </div>
         <!-- v3.26.x：查看存储——用户反馈「存储已用 1.x GB」时，能一眼看出各功能占多少空间，
              并提供「清理错误诊断记录」手动清掉诊断缓存（__diag-*，不影响任何业务数据） -->
         <div class="set-row" id="row-storage-view">

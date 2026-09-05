@@ -258,6 +258,8 @@ const FIX_SENTINELS = [
   { name: '#148 fs 态 .phone 高度用 --mochi-ios-h（回 100vh 兜底）', file: 'css/base.css', needle: 'height:var(--mochi-ios-h, 100vh);' },
   { name: '#175 屏幕适配诊断入口（设置页 row-screen-diag，与信息诊断分开）', file: 'template.html', needle: 'id="row-screen-diag"' },
   { name: '#175 屏幕适配诊断采集+纯函数判定器（六形态自动判定）', file: 'js/device.js', needle: 'function screenDiagJudge(inp)' },
+  { name: '#177 功能诊断入口（设置页 row-func-diag，逐项测试全部功能）', file: 'template.html', needle: 'id="row-func-diag"' },
+  { name: '#177 功能诊断采集器（T1 入口/T2 容器/T3 真实打开三极测试）', file: 'js/device.js', needle: 'async function collectFuncDiag()' },
   { name: '#174 viewport meta 锁 minimum-scale=1（iOS26 主屏幕形态 scale≈0.85 缩小致顶部露白，meta 防线）', file: 'template.html', needle: 'minimum-scale=1.0' },
   { name: '#174 独立应用缩放异常自愈（scale<0.95 重写 viewport meta 吸附回 1，限 3 次）', file: 'js/mobile-adapt.js', needle: '_zoomFixCnt < 3 && _now - _zoomFixAt > 4000' },
   { name: '#146 组件透明度小数脏值解析 opacityRawToPct（≤1 按 ×100 换算，修随机美化写 0.9/1 被 parseInt 成 0 → 小组件全透明）', file: 'js/personalize.js', needle: 'opacityRawToPct' },
@@ -538,7 +540,7 @@ const FIX_SENTINELS = [
   { name: '#169 语音60秒误报根治（重复进入录音覆盖 voiceTimer 漏孤儿计时器每250ms误报已达60秒；孤儿自毁+非录音态不判60s，逻辑被改即消失）', file: 'js/chat.js', needle: 'if (voiceTimer !== voiceTid) { clearInterval(voiceTid); return; }' },
   { name: '#171 iOS导milk json报「格式错误」·UTF-16转存重读自救（数NUL奇偶定位字节序换编码重读；删掉自救链此表达式即消失）', file: 'js/chatcard.js', needle: "reader.readAsText(f, odd >= even ? 'utf-16le' : 'utf-16be');" },
   { name: '#171 导入失败现场写诊断（__jsErrors 带[字卡导入]前缀，设置页复制诊断直接带出真因）', file: 'js/chatcard.js', needle: "'[字卡导入] '" },
-  { name: '#171 导入处理异常单独提示（applyImportData 抛错不再被吞成「文件格式不正确」）', file: 'js/chatcard.js', needle: "toast('导入处理失败：'" },
+  { name: '#171 导入处理异常单独提示（applyImportData 抛错不再被吞成「文件格式不正确」；#182 重构后走三元 else 支）', file: 'js/chatcard.js', needle: ": '导入处理失败：' + ((e && e.message) || '内部错误')" },
   { name: '#172 我的表情包刷新必丢·恢复链读空改走按需取回（大键挂起时裸idbGet永远拿不到值；删掉hydrate兜底此分支即消失）', file: 'js/chat.js', needle: 'if (!v) { myeHydrateFallback(); return; }' },
   { name: '#172 我的表情包刷新必丢·保存防覆盖闸门（该键仍挂起=本会话未恢复全量，先取回合并再写；拆掉闸门此判定即消失）', file: 'js/chat.js', needle: 'window.__xyIdbDeferredKeys.indexOf(MYE_KEY()) >= 0' },
   { name: '#173 美化/聊天方案导出统一三级降级保存链（window.mochiExportFile：分享面板→保存框→确认后下载，修 iPhone 主屏 standalone/壳浏览器 a[download] 静默无反应=无法导出）', file: 'js/data-backup.js', needle: 'window.mochiExportFile = function' },
@@ -551,6 +553,9 @@ const FIX_SENTINELS = [
   { name: '#181 气泡 CSS 通用映射导出（单聊/群聊共用；删掉导出则两处注入全瘫）', file: 'js/chat.js', needle: 'window.mochiMapBubbleCss = function' },
   { name: '#181 单聊气泡 CSS 走通用映射（未认出模板类名时整包声明兜底，修上传零变化；换回旧映射此行即消失）', file: 'js/chat-settings.js', needle: "window.mochiMapBubbleCss(css, '')" },
   { name: '#181 群聊气泡 CSS 走通用映射（带 #page-group-chat 作用域，同单聊兜底；换回旧 replace 链此行即消失）', file: 'js/group-chat.js', needle: "window.mochiMapBubbleCss(css, '#page-group-chat ')" },
+  { name: '#182 超大库导入·写盘前松开源文本（200MB 级 stringify(groups) 与源文本不得同时钉在堆上）', file: 'js/chatcard.js', needle: "txt = ''; raw = null;" },
+  { name: '#182 超大库导入·OOM 识别分流（RangeError/Out of memory 给瘦身指引不报「格式错误」）', file: 'js/chatcard.js', needle: 'rangeerror|out of memory' },
+  { name: '#182 超大库导入·FileReader 结果松绑（诊断只留文件头 rawHead；先 slice 再 replace 绝不全文扫描）', file: 'js/chatcard.js', needle: 'reader.onload = null; reader.onerror = null;' },
 ];
 try {
   const built = CHECK_SENTINELS ? '' : readFileSync(join(root, 'index.html'), 'utf8');

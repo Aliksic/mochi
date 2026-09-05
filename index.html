@@ -8779,9 +8779,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1788582555605">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.449</b></span>
-        <span class="sv-deploy">部署于 2026-09-05 12:29<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1788587301671">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.450</b></span>
+        <span class="sv-deploy">部署于 2026-09-05 13:48<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9899,6 +9899,13 @@ transition-duration: .01ms !important;
           <div class="txt">屏幕适配诊断<span class="sub">顶部空白 / 底部裁切 / 缩放异常一键定位</span></div>
           <div class="arrow"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div>
         </div>
+        <!-- v3.26.x #177：功能诊断——逐个测试全部功能（入口/页面/图标/打开/关闭），
+             device.js collectFuncDiag 顺序执行+自动判定，报告哪些正常哪些异常 -->
+        <div class="set-row" id="row-func-diag">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg></div>
+          <div class="txt">功能诊断<span class="sub">逐个测试全部功能是否正常（约 15 秒）</span></div>
+          <div class="arrow"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div>
+        </div>
         <!-- v3.26.x：查看存储——用户反馈「存储已用 1.x GB」时，能一眼看出各功能占多少空间，
              并提供「清理错误诊断记录」手动清掉诊断缓存（__diag-*，不影响任何业务数据） -->
         <div class="set-row" id="row-storage-view">
@@ -9913,7 +9920,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.449</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.450</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
       <!-- v3.27.x：设置页底部防骗声明 -->
       <div class="set-alert">
@@ -10204,7 +10211,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.449</span>
+              <span class="lic-ver">v3.26.450</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -15268,6 +15275,177 @@ if (document.readyState === 'loading') document.addEventListener('DOMContentLoad
 else bindScreenDiag();
 window.__screenDiagJudge = screenDiagJudge;
 window.__collectScreenDiag = collectScreenDiag;
+})();
+(function () {
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const FUNC_ITEMS = [
+{ n: '聊天', app: 'chat', page: 'page-chat', open: true },
+{ n: '主页/情侣空间', app: 'home', page: 'page-home', open: true },
+{ n: '信箱', app: 'mail', page: 'page-mail', open: true },
+{ n: '朋友圈', app: 'feed', page: 'page-feed', open: true },
+{ n: '日历', app: 'calendar', page: 'page-calendar', open: true },
+{ n: '纪念', app: 'memory', page: 'page-memory', open: true },
+{ n: '收藏', app: 'note', page: 'page-fav', open: true },
+{ n: '统计', app: 'stats', page: 'page-stats', open: true },
+{ n: '提问记录', app: 'interact', page: 'page-interact', open: true },
+{ n: '寻踪打卡', app: 'checkin', page: 'page-ta-checkin', open: true, gated: '可能需先绑定 TA/授权定位，会先弹引导' },
+{ n: '占卜', app: 'divination', page: 'page-divine', open: true },
+{ n: '花园', app: 'garden', page: 'page-garden', open: true },
+{ n: '此间', app: 'cjian', page: 'page-cjian', open: true },
+{ n: '房间', app: 'room', page: 'page-room', open: true },
+{ n: '经期记录', app: 'period', page: 'page-period', open: true },
+{ n: '记账', app: 'accounting', page: 'page-accounting', open: true },
+{ n: '梦角档案', app: 'memo-arc', page: 'page-memo-arc', open: true },
+{ n: '我的档案', app: 'my-arc', page: 'page-my-arc', open: true },
+{ n: '音乐', app: 'music', page: 'page-music', open: true },
+{ n: '群聊', app: 'group-chat', page: 'page-group-chat', open: true, gated: '可能未开启群聊' },
+{ n: '帮我决定', fn: 'openDecision' },
+{ n: '多人决定', fn: 'openGroupDecision' },
+{ n: 'TA 询问', fn: 'openAskReply' },
+{ n: 'TA 心情', fn: 'openCurious' },
+{ n: 'TA 吐槽', fn: 'openRoast' }
+];
+function fToast(msg) {
+try {
+let el = document.getElementById('cc-toast');
+if (!el) { el = document.createElement('div'); el.id = 'cc-toast'; document.body.appendChild(el); }
+el.textContent = msg; el.className = 'cc-toast'; void el.offsetWidth; el.className = 'cc-toast show';
+clearTimeout(fToast._t); fToast._t = setTimeout(function () { el.className = 'cc-toast'; }, 2600);
+} catch (e) {}
+}
+function fCopy(text) {
+return new Promise(function (resolve) {
+let done = false;
+const fin = function (ok) { if (!done) { done = true; resolve(ok); } };
+try {
+const ta = document.createElement('textarea');
+ta.value = text; ta.setAttribute('readonly', '');
+ta.style.cssText = 'position:fixed;left:-9999px;top:0;width:10px;height:10px;opacity:0;';
+document.body.appendChild(ta);
+try { ta.select(); } catch (e1) {}
+let ok = false;
+try { ok = document.execCommand('copy'); } catch (e2) { ok = false; }
+setTimeout(function () { try { document.body.removeChild(ta); } catch (e3) {} }, 800);
+if (ok) { fin(true); return; }
+try {
+if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(function () { fin(true); }, function () { fin(false); });
+else fin(false);
+} catch (e4) { fin(false); }
+setTimeout(function () { fin(false); }, 1500);
+} catch (e5) { fin(false); }
+});
+}
+function closeFloats() {
+['#modal-mask', '#poke-card', '#emoji-panel', '#chat-ask-panel', '#chat-search', '#chat-divine-panel', '#chat-rps-panel', '#chat-call-panel', '#chat-more-panel', '#tc-mask'].forEach(function (sel) {
+try { var el = document.querySelector(sel); if (el && !el.hidden) el.hidden = true; } catch (e) {}
+});
+}
+function restoreDesk() {
+try {
+document.querySelectorAll('.page').forEach(function (p) { p.hidden = p.id !== 'page-phone'; });
+closeFloats();
+document.querySelectorAll('.tab').forEach(function (tb) { if (tb.dataset) tb.classList.toggle('active', tb.dataset.page === 'page-phone'); });
+} catch (e) {}
+}
+function pageVisible(id) { var p = document.getElementById(id); return !!(p && !p.hidden); }
+async function collectFuncDiag() {
+const L = [];
+const rows = [];
+let okN = 0, badN = 0, warnN = 0, skipN = 0;
+const boot = {
+data: !!window.__mochiDataReady,
+ls: (function () { try { return window.__lsStatus || 'n/a'; } catch (e) { return 'n/a'; } })(),
+sw: !!(navigator.serviceWorker && navigator.serviceWorker.controller),
+online: navigator.onLine
+};
+for (let i = 0; i < FUNC_ITEMS.length; i++) {
+const it = FUNC_ITEMS[i];
+fToast('功能诊断 ' + (i + 1) + '/' + FUNC_ITEMS.length + '：' + it.n);
+const det = [];
+let ok = true, warn = false, skip = false;
+if (it.fn) {
+const has = typeof window[it.fn] === 'function';
+det.push(has ? '入口✓' : '✗ 入口缺失');
+if (!has) ok = false;
+}
+if (it.page) {
+const pg = document.getElementById(it.page);
+det.push(pg ? '页面✓' : '✗ 页面容器缺失');
+if (!pg) ok = false;
+}
+if (it.app) {
+const ic = document.querySelector('.app[data-app="' + it.app + '"], [data-desk-widget="app-' + it.app + '"]');
+det.push(ic ? '图标✓' : '⚠ 图标不在桌面（可能被移除/收进组件库）');
+if (!ic) warn = true;
+}
+if (it.open && it.page && document.getElementById(it.page)) {
+try {
+const icon = document.querySelector('.app[data-app="' + it.app + '"], [data-desk-widget="app-' + it.app + '"]');
+const t0 = Date.now();
+if (icon) icon.click();
+await sleep(450);
+const opened = pageVisible(it.page);
+if (opened) {
+const back = document.getElementById(it.page).querySelector('.ch-back');
+if (back) back.click();
+await sleep(230);
+const closedOk = !pageVisible(it.page);
+det.push('打开✓ ' + (Date.now() - t0) + 'ms，关闭' + (closedOk ? '✓' : '⚠'));
+restoreDesk();
+} else if (it.gated) {
+warn = true; skip = true;
+det.push('打开未生效（' + it.gated + '）');
+restoreDesk();
+} else {
+ok = false;
+det.push('✗ 点击图标后页面未打开（' + (Date.now() - t0) + 'ms）');
+restoreDesk();
+}
+} catch (e6) {
+ok = false;
+det.push('✗ 打开测试异常：' + String(e6 && e6.message || e6).slice(0, 80));
+restoreDesk();
+}
+}
+if (!ok) badN++; else if (warn) warnN++; else okN++;
+if (skip) skipN++;
+rows.push((!ok ? '✗ ' : warn ? '⚠ ' : '✓ ') + it.n + '：' + det.join('，'));
+await sleep(60);
+}
+const L2 = [];
+L2.push('【功能诊断】' + (window.__sdVer || ''));
+L2.push('时间：' + new Date().toLocaleString());
+L2.push('');
+L2.push('== 基础 ==');
+L2.push('数据就绪=' + (boot.data ? '✓' : '✗') + '  LS=' + boot.ls + '  SW=' + (boot.sw ? '✓' : '✗') + '  在线=' + (boot.online ? '✓' : '✗'));
+L2.push('');
+L2.push('== 功能逐项（共 ' + FUNC_ITEMS.length + ' 项）==');
+rows.forEach(function (r) { L2.push(r); L2.push(''); });
+L2.push('== 汇总 ==');
+L2.push('正常 ' + okN + ' / 需注意 ' + warnN + ' / 异常 ' + badN + ' / 打开跳过 ' + skipN);
+const bads = rows.filter(function (r) { return r.indexOf('✗') === 0; });
+if (bads.length) { L2.push(''); L2.push('✗ 异常清单（发给开发者）：'); bads.forEach(function (r) { L2.push('  ' + r); }); }
+return { text: L2.join('\n'), rows: rows, okN: okN, badN: badN, warnN: warnN, skipN: skipN };
+}
+function bindFuncDiag() {
+const row = document.getElementById('row-func-diag');
+if (!row) return;
+row.addEventListener('click', function () {
+fToast('功能诊断开始：将逐个打开各功能页面（约 15 秒）…');
+setTimeout(async function () {
+try {
+const r = await collectFuncDiag();
+if (window.openModal) window.openModal('功能诊断', r.text, null, { noInput: true, textarea: true, textareaRows: 16, big: true });
+fCopy(r.text).then(function (ok) { fToast(ok ? '报告已复制到剪贴板' : '报告已弹出，请手动全选复制'); });
+} catch (e) {
+fToast('功能诊断失败：' + String(e && e.message || e).slice(0, 60));
+}
+}, 80);
+});
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bindFuncDiag);
+else bindFuncDiag();
+window.__collectFuncDiag = collectFuncDiag;
 })();
 } catch (__e) { try { console.error("[JS] device.js", __e && __e.message || __e); } catch (x) {} if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
 (function () { try {
@@ -34910,18 +35088,23 @@ if (!f) return;
 const fname = f.name || '未命名文件';
 const fsize = f.size ? Math.max(1, Math.round(f.size / 1024)) + 'KB' : '空文件';
 const reader = new FileReader();
+let rawHead = ''; // 诊断用文件头（先 slice 再 replace，绝不全文扫描——200MB 级文件全文 replace 本身就是一次 OOM 风险）
 const diag = (why) => {
 try {
-if (window.__jsErrors) window.__jsErrors.push('[字卡导入] ' + why + ' | ' + fname + '·' + fsize + ' | 开头: ' + String(reader.result || '').replace(/\s+/g, ' ').slice(0, 100));
+if (window.__jsErrors) window.__jsErrors.push('[字卡导入] ' + why + ' | ' + fname + '·' + fsize + ' | 开头: ' + rawHead);
 } catch (e0) {}
 };
+const oomErr = (e) => /rangeerror|out of memory|memory|内存/i.test(String((e && (e.message || e.name)) || e || ''));
 const applyOk = (data) => {
 try { applyImportData(data, mode); } catch (e) {
-toast('导入处理失败：' + ((e && e.message) || '内部错误') + '（' + fname + '）');
+toast(oomErr(e)
+? '文件约 ' + Math.max(1, Math.round(f.size / 1048576)) + 'MB，本机内存不足以一次性导入——请先在「查看存储→字卡库瘦身」删掉超大表情/图片分组后重新导出分批导入，或改用「设置→数据备份」整包恢复'
+: '导入处理失败：' + ((e && e.message) || '内部错误') + '（' + fname + '）');
 diag('applyImportData 异常 ' + ((e && e.message) || e));
 }
 };
 const fail = (why) => { toast('导入失败：' + why + '（' + fname + '·' + fsize + '）'); diag(why); };
+const onReadErr = () => toast('导入失败：文件读取失败，请重选文件再试');
 const handleText = (raw, recover) => {
 let txt = String(raw || '');
 txt = txt.replace(/^[\uFEFF\u200B\u200E\u200F]+/, '');
@@ -34929,15 +35112,20 @@ if (!txt.trim()) { fail('文件内容为空——iCloud/网盘文件可能没下
 let data = null, perr = null;
 try { data = JSON.parse(txt); } catch (e) { perr = e; }
 if (perr) {
+if (oomErr(perr)) {
+fail('文件约 ' + Math.max(1, Math.round(f.size / 1048576)) + 'MB，本机内存不足以一次性解析导入——请先删掉超大表情/图片分组后重新导出分批导入，或改用「设置→数据备份」整包恢复');
+return;
+}
 if (!recover && /\u0000/.test(txt.slice(0, 400))) {
 let odd = 0, even = 0;
 for (let i = 0; i < Math.min(txt.length, 400); i++) { if (txt.charCodeAt(i) === 0) { if (i % 2) odd++; else even++; } }
 reader.onload = () => handleText(reader.result, 'utf16');
+reader.onerror = onReadErr;
 reader.readAsText(f, odd >= even ? 'utf-16le' : 'utf-16be');
 return;
 }
 const a = txt.indexOf('{'), b = txt.lastIndexOf('}');
-if (!recover && a >= 0 && b > a) { handleText(txt.slice(a, b + 1), 'trim'); return; }
+if (!recover && a >= 0 && b > a && (b - a) < 80 * 1024 * 1024) { handleText(txt.slice(a, b + 1), 'trim'); return; }
 const isHtml = txt.charAt(0) === '<' || /<html[\s>]/i.test(txt.slice(0, 200));
 fail(isHtml
 ? '文件是网页不是 JSON——请在 milk 里用导出按钮重新导出，分享时选「存储到文件」'
@@ -34945,10 +35133,16 @@ fail(isHtml
 return;
 }
 if (!data || typeof data !== 'object' || Array.isArray(data)) { fail('文件顶层不是 JSON 对象'); return; }
+txt = ''; raw = null;
 applyOk(data);
 };
-reader.onload = () => handleText(reader.result, '');
-reader.onerror = () => toast('导入失败：文件读取失败，请重选文件再试');
+reader.onload = () => {
+const raw = String(reader.result || '');
+rawHead = raw.slice(0, 300).replace(/\s+/g, ' ').slice(0, 120);
+reader.onload = null; reader.onerror = null;
+handleText(raw, '');
+};
+reader.onerror = onReadErr;
 reader.readAsText(f);
 });
 }
@@ -78780,4 +78974,4 @@ return { lock: document.body.classList.contains('scroll-lock'), open: open };
 <!-- __MOCHI_EOF__ -->
 </body>
 </html>
-<!-- __MOCHI_EOF__ mtnvvget -->
+<!-- __MOCHI_EOF__ mtnyp6hz -->
