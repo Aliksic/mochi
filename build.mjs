@@ -545,6 +545,12 @@ const FIX_SENTINELS = [
   { name: '#173 桌面美化导出接统一导出链（downloadBeautyFile 降为兜底）', file: 'js/personalize.js', needle: "window.mochiExportFile(json, fname, 'mochi美化方案')" },
   { name: '#173 桌面美化导入补回粘贴文本通道（textarea+文件并存，修 standalone 文件选择器不弹=无法导入）', file: 'js/personalize.js', needle: '粘贴美化方案文本' },
   { name: '#173 聊天美化导出接统一导出链（裸 a[download] 降为兜底）', file: 'js/chat-settings.js', needle: "window.mochiExportFile(json, fname, 'mochi聊天美化方案')" },
+  { name: '#180 刷新重开丢最近聊天·同步尾巴日志（每条新消息先同步落 LS <cid>:chat-tail 再交低频整包落盘；删掉 append 调用此行即消失）', file: 'js/chat.js', needle: 'chatTailAppend(rec); // #180：同步尾巴日志先落 LS，再交低频整包落盘' },
+  { name: '#180 尾巴日志权威就绪后回放（读库成功合并未落盘的最近消息；拆掉 merge 调用此行即消失）', file: 'js/chat.js', needle: 'chatTailMerge(); } catch (e) {} // #180：权威就绪后回放尾巴日志（上次会话未落盘的最近消息）' },
+  { name: '#180 LS 快照超限保尾不弃写（折半丢最旧保最近；改回静默 return 此循环即消失）', file: 'js/chat.js', needle: 'while (snap.length > LS_SNAP_LIMIT && snapArr.length > 1 && round < 5)' },
+  { name: '#181 气泡 CSS 通用映射导出（单聊/群聊共用；删掉导出则两处注入全瘫）', file: 'js/chat.js', needle: 'window.mochiMapBubbleCss = function' },
+  { name: '#181 单聊气泡 CSS 走通用映射（未认出模板类名时整包声明兜底，修上传零变化；换回旧映射此行即消失）', file: 'js/chat-settings.js', needle: "window.mochiMapBubbleCss(css, '')" },
+  { name: '#181 群聊气泡 CSS 走通用映射（带 #page-group-chat 作用域，同单聊兜底；换回旧 replace 链此行即消失）', file: 'js/group-chat.js', needle: "window.mochiMapBubbleCss(css, '#page-group-chat ')" },
 ];
 try {
   const built = CHECK_SENTINELS ? '' : readFileSync(join(root, 'index.html'), 'utf8');

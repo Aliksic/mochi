@@ -266,7 +266,17 @@ return c;
 function performLsSnapWrite(arr, prefix) {
 try {
 if (!Array.isArray(arr)) return;
-const snap = JSON.stringify(liteSnapArray(arr));
+let snapArr = liteSnapArray(arr);
+let snap = JSON.stringify(snapArr);
+// #180：超限不再整体放弃——原实现静默不写＝LS 兜底全空，权威读取失败窗口里聊的
+// 消息没有任何副本。改为从最旧开始折半丢弃（最多 5 轮），保住最近的尾巴落 LS。
+let round = 0;
+while (snap.length > LS_SNAP_LIMIT && snapArr.length > 1 && round < 5) {
+round++;
+const keep = Math.max(1, Math.floor(snapArr.length / 2));
+snapArr = liteSnapArray(arr.slice(arr.length - keep));
+snap = JSON.stringify(snapArr);
+}
 if (snap.length <= LS_SNAP_LIMIT) {
 localStorage.setItem((prefix || window.activePrefix()) + ':chat-msgs', snap);
 }
@@ -291,6 +301,64 @@ lsSnapPending = null;
 performLsSnapWrite(p.arr, p.prefix);
 }
 }, 4000);
+}
+// ===== 2026-09-05 #180 聊天尾巴日志（同步兜底，修多机型反复「刷新重开丢最近一段聊天」）=====
+// 背景：整包落盘走「空闲回调+最小2.5s间隔」低频合并（v3.26.x 止血），且 16MB 级异步 IDB
+// 事务在部分安卓内核（一加/OPPO/真我/荣耀/小米 Edge 等实测族）会挂起或随进程被杀回滚、
+// flushSave 的离页事务也未必来得及提交——最近几条消息在这几个窗口里没有任何第二副本。
+// 防线：每条新消息同步写 LS 小键 <cid>:chat-tail（纯文本轻量副本，≤60 条，大负载不进），
+// localStorage 同步写必达；下次权威读库成功后按签名去重合并回放。不与 saveMsgs 链路
+// （#88 权威守卫/#90 账本守卫）耦合：权威守卫拒绝落盘的窗口里日志照样在攒，恢复时一并带回。
+const CHAT_TAIL_MAX = 60;
+const CHAT_TAIL_TEXT_MAX = 1000;
+function chatTailSig(m) {
+try { return ((m && m.ts) || 0) + '|' + (m.side || '') + '|' + String((m && m.text) || '').slice(0, 120); } catch (e) { return ''; }
+}
+function chatTailRead() {
+try {
+const arr = JSON.parse(store.get('chat-tail') || '[]');
+return Array.isArray(arr) ? arr : [];
+} catch (e) { return []; }
+}
+function chatTailClear() {
+try { store.remove('chat-tail'); } catch (e) {}
+}
+// 只收纯文本/轻消息：img/voice/大 parts 同步写 LS 会写爆，仍走整包落盘链路
+function chatTailAppend(rec) {
+try {
+if (!rec || rec.retracted || rec.img || rec.voice) return;
+if (Array.isArray(rec.parts) && rec.parts.some(p => p && typeof p.v === 'string' && p.v.length > 128)) return;
+const arr = chatTailRead();
+arr.push({ ts: rec.ts || Date.now(), side: rec.side || '', special: rec.special || '', text: typeof rec.text === 'string' ? rec.text.slice(0, CHAT_TAIL_TEXT_MAX) : String(rec.text || '') });
+while (arr.length > CHAT_TAIL_MAX) arr.shift();
+store.set('chat-tail', JSON.stringify(arr));
+} catch (e) {}
+}
+// 撤回后日志里的原文不得回放（否则刷新后已撤回内容复活）——按签名整条摘除
+function chatTailDrop(rec) {
+try {
+if (!rec) return;
+const sig = chatTailSig(rec);
+const arr = chatTailRead().filter(j => chatTailSig(j) !== sig);
+store.set('chat-tail', JSON.stringify(arr));
+} catch (e) {}
+}
+// 权威读库成功后调用：日志中不在当前历史里的条目按 ts 归位合并（整包落盘仍走 saveMsgs 守卫链）
+function chatTailMerge() {
+try {
+const arr = chatTailRead();
+if (!arr.length || !Array.isArray(msgs)) return;
+const have = new Set();
+for (let i = 0; i < msgs.length; i++) have.add(chatTailSig(msgs[i]));
+const add = [];
+for (let i = 0; i < arr.length; i++) {
+const j = arr[i];
+if (j && !have.has(chatTailSig(j))) add.push({ ts: j.ts, side: j.side, special: j.special, text: j.text });
+}
+if (!add.length) return;
+msgs = msgs.concat(add).sort((a, b) => ((a && a.ts) || 0) - ((b && b.ts) || 0));
+saveMsgs();
+} catch (e) {}
 }
 // v3.14.x：防「权威读取失败被当空历史」守卫状态——idbGet 的 4s+4s 超时兜底
 //（v3.9.x 防挂起）对「键存在但读取超时」也 resolve undefined，与「键不存在」不可区分；
@@ -674,6 +742,7 @@ writeLsSnapshot(msgs, myPrefix, true);
 }
 // #90：已确认库里没有 chat-msgs，账本随之对齐真实状态（过期的高账本不该再拦正常保存）
 try { chatLedgerSave(myPrefix, (msgs && msgs.length) || 0, msgsBytes(msgs)); } catch (e) {}
+try { chatTailMerge(); } catch (e) {} // #180：确认空库也回放尾巴日志（本会话/上次会话未落盘部分）
 });
 return;
 }
@@ -731,6 +800,7 @@ chatDbReady = true;
 // v3.14.x：本命名空间已读到权威（此后空数组落盘才被允许——内存已含全部历史）
 authLoadedPrefix = myPrefix;
 idbRetryCount = 0;
+try { chatTailMerge(); } catch (e) {} // #180：权威就绪后回放尾巴日志（上次会话未落盘的最近消息）
 // v3.26.x #90：账本基线＝刚读到的库内条数（同值不重复落盘，见 chatLedgerSave 节流）
 try { chatLedgerSave(myPrefix, idbArr.length, msgsBytes(idbArr)); } catch (e) {}
 try {
@@ -2397,6 +2467,7 @@ cancelPersist();
 try { chatLedger[window.activePrefix()] = 0; } catch (e) {}
 try { store.remove('chat-msgs'); } catch (e) {}
 try { store.remove('chat-meta'); } catch (e) {}
+chatTailClear(); // #180：清空记录＝日志一并清（否则刷新后已清内容回放复活）
 if (body) body.innerHTML = '';
 clearChatUnread();
 };
@@ -2412,6 +2483,7 @@ sessionChangedIdx.clear();
 chatDbReady = true;
 renderStart = 0;
 cancelPersist();
+chatTailClear(); // #180：整包导入替换＝旧日志作废
 try { if (window.idbSet) persistMsgsToIdb(window.activePrefix() + ':chat-msgs', msgs); } catch (e) {}
 writeLsSnapshot(msgs, undefined, true);
 // v3.26.x #90：主动整包替换＝合法，账本直接对齐新条数（旧的高账本不得继续拦后续保存）
@@ -2646,6 +2718,7 @@ const dts = (rec.ts || 0) - (p.ts || 0);
 if (dts >= 0 && dts <= 1200) { saveMsgs(); return null; }
 }
 msgs.push(rec);
+chatTailAppend(rec); // #180：同步尾巴日志先落 LS，再交低频整包落盘
 saveMsgs();
 	const notable = rec.side === 'in' && (!rec.special || rec.special === 'poke' || rec.special === 'gift');
 	// v3.19.x：rec.silent（psync 跨桌面补投递）——消息进聊天+未读角标，但不触发
@@ -3002,6 +3075,7 @@ if (!isNaN(idx) && msgs[idx]) {
 msgs[idx].retracted = true;
 msgs[idx].orig = b.innerHTML;
 sessionChangedIdx.add(idx); // v3.6.x：标记本会话变更，防 loadMsgs 合并回滚撤回
+chatTailDrop(msgs[idx]); // #180：撤回消息从尾巴日志摘除，防刷新后回放复活
 saveMsgs();
 if (msgs[idx].side === 'out') syncLastMineText();
 }
@@ -3071,6 +3145,7 @@ const si = remain.splice(Math.floor(Math.random() * remain.length), 1)[0];
 rec.retractedSegs.push({ text: segs[si], idx: si });
 }
 sessionChangedIdx.add(idx); // v3.6.x：标记本会话变更，防 loadMsgs 合并回滚局部撤回
+chatTailDrop(rec); // #180：局部撤回后日志原文不得回放（与撤回同口径）
 saveMsgs();
 const m = renderMsg(rec);
 m.dataset.idx = idx;
@@ -3088,6 +3163,7 @@ if (remain.length) {
 const pick = remain[Math.floor(Math.random() * remain.length)];
 rec.retractedMood.push(pick);
 sessionChangedIdx.add(idx); // v3.6.x：标记本会话变更，防 loadMsgs 合并回滚局部撤回
+chatTailDrop(rec); // #180：局部撤回后日志原文不得回放（与撤回同口径）
 saveMsgs();
 const m = renderMsg(rec);
 m.dataset.idx = idx;
@@ -8301,4 +8377,76 @@ updateChatBadge();
 document.addEventListener('ta-word-changed', function () {
 try { if (msgs.length) renderWindow(false, false); } catch (e) {}
 });
+// v3.26.x #181：气泡 CSS 通用映射导出（单聊 chat-settings.js / 群聊 group-chat.js 共用）。
+// 旧逻辑只认固定别名表，网页下载的气泡模板类名对不上时，整份模板替换后一条规则都匹配
+// 不到节点 → 「已设置但气泡零变化」（EC-PAD01 SE/vivo Edge 等多机型反复反馈；与机型无关，
+// 只与上传内容有关）。现行为：①别名表扩充（bubble-left/right、msg/message/chat-left/right、
+// you/sent/received 等）；②剥离注释、跳过 keyframes 帧；③映射后若没有任何规则命中气泡 →
+// 兜底把模板里全部声明块（含 --var 定义）抽出整体套用到双方气泡 !important，保证上传必有
+// 可见变化；④:root/body/* 等命中不了气泡的选择器不原样注入，防全局重置泄漏污染整页。
+window.mochiMapBubbleCss = function (css, scope) {
+  scope = scope || '';
+  var wrap = function (decls) {
+    return scope + '.msg-out .msg-bubble{' + decls + '!important;}' +
+           scope + '.msg-in .msg-bubble{' + decls + '!important;}';
+  };
+  css = String(css || '').replace(/\/\*[\s\S]*?\*\//g, '').trim();
+  if (!css) return { out: '', hint: null };
+  // 纯声明（无大括号）→ 直接套双方气泡
+  if (css.indexOf('{') < 0) return { out: wrap(css), hint: null };
+  var _mapBc = function (src, names, rep) {
+    var r = src;
+    for (var i = 0; i < names.length; i++) {
+      var n = names[i];
+      var re2 = new RegExp('\\.' + n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?![\\-\\w])', 'g');
+      r = r.replace(re2, rep);
+    }
+    return r;
+  };
+  var OUT_B = scope + '.msg-out .msg-bubble', IN_B = scope + '.msg-in .msg-bubble';
+  var OUT_NAMES = [
+    'message-sent', 'message-me', 'message-mine', 'chat-me', 'msg-me', 'msg-sent', 'sent',
+    'mine', 'me', 'left', 'my-bubble', 'bubble-mine', 'bubble-self', 'self', 'myself', 'sender',
+    'bubble-left', 'msg-left', 'message-left', 'chat-left'
+  ];
+  var IN_NAMES = [
+    'message-received', 'received', 'message-you', 'message-friend', 'chat-you', 'chat-friend',
+    'msg-you', 'msg-recv', 'msg-incoming', 'incoming', 'friend', 'other', 'right', 'you',
+    'bubble-other', 'partner-bubble', 'them', 'recipient', 'guest', 'receiver',
+    'bubble-right', 'msg-right', 'message-right', 'chat-right'
+  ];
+  var SH_NAMES = [
+    'chat-bubble', 'message-bubble', 'text-bubble', 'word-bubble', 'chat-text',
+    'bubble', 'message', 'msg'
+  ];
+  var out = '', hasMapped = false, fallbackDecls = [];
+  var re = /([^{}]*)\{([^{}]*)\}/g, m;
+  while ((m = re.exec(css))) {
+    var sel = m[1].trim(), decls = m[2].trim();
+    if (!decls) continue;
+    if (!sel || /^(-?\d+\.?\d*%|from|to)$/i.test(sel)) { // 无选择器声明块 / keyframes 帧
+      if (!sel) { out += wrap(decls); hasMapped = true; }
+      continue;
+    }
+    var mapped = sel;
+    mapped = _mapBc(mapped, ['msg-out'], scope + '.msg-out');
+    mapped = _mapBc(mapped, ['msg-in'], scope + '.msg-in');
+    mapped = _mapBc(mapped, ['mb.self'], OUT_B);
+    mapped = _mapBc(mapped, ['mb.other'], IN_B);
+    mapped = _mapBc(mapped, OUT_NAMES, OUT_B);
+    mapped = _mapBc(mapped, IN_NAMES, IN_B);
+    mapped = _mapBc(mapped, SH_NAMES, scope + '.msg-bubble');
+    if (/\.msg-bubble|\.msg-out|\.msg-in/.test(mapped)) {
+      out += mapped + '{' + decls + '}';
+      hasMapped = true;
+    } else if (fallbackDecls.indexOf(decls) < 0) {
+      fallbackDecls.push(decls);
+    }
+  }
+  // 一条都没认出气泡类名 → 整包声明兜底（含 --var，var() 引用同元素可解析）
+  if (!hasMapped && fallbackDecls.length) {
+    return { out: wrap(fallbackDecls.join(';')), hint: '未认出模板里的气泡类名，已把全部样式整体套用到双方气泡' };
+  }
+  return { out: out, hint: null };
+};
 })();

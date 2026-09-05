@@ -1,3 +1,12 @@
+> 【占用声明 2026-09-05】#180（用户报障一加 ACE3/PJE110+Edge「刷新重开丢最近一段聊天记录」多机型反复）占用 src/js/chat.js 聊天持久化链区域（writeLsSnapshot/addRec/retractMsg/partialRetractMsg/loadMsgs/清空导入一带，新增 chatTail* 尾巴日志三件套与 performLsSnapWrite 保尾）+ build.mjs 哨兵尾部 3 条 + FIX-REGRESSION.md 180 行 + tools/verify-chat-tail.mjs 新增；与并行 #179（mochiMapBubbleCss，chat.js 尾部）零重叠，勿回滚彼此部分。**本次构建者：暂不构建**——并行 #179 会话仍在途（verify-bubble-css-map.mjs 刚落盘），按约定不夹带对方进行中的改动，等 #179 收口构建一并打入；收口构建者请把我这 3 条哨兵与 21 断言脚本一并核过。
+
+### 2026-09-05 13:0x（#180 多机型「刷新重开丢最近一段聊天记录」：同步尾巴日志三件套 + LS 快照超限保尾；源已完成·未构建，待与并行 #179 一并收口）
+* [AI-A 域·chat.js 持久化链]（**改动文件：src/js/chat.js、build.mjs（FIX_SENTINELS +3）、FIX-REGRESSION.md（180 行）、tools/verify-chat-tail.mjs（新增）；构建状态：未构建**）。
+* 诊断解读（PJE110+Edge ts=1788519516988）：IDB default:chat-msgs=16.4MB 在、账本 1635 条——不是读不回，丢的是「低频落盘窗口内」的最新几条：saveMsgs 走 rIdle(≤4s)+2.5s 间隔合并落盘，而 16MB 级异步 IDB 事务在安卓 Edge 族（一加/OPPO/真我/荣耀/小米实测族）会挂起或随进程被杀回滚，visibilitychange/beforeunload 的离页 flushSave 事务也未必来得及提交——最近几条自始至终没有第二副本。另发现实打实漏洞：performLsSnapWrite 快照超 2MB 时静默 return＝LS 兜底全空（权威读取失败窗口里聊的消息零副本）。
+* 方案：①chatTailAppend——每条新消息同步写 LS 小键 <cid>:chat-tail（纯文本轻副本≤60 条/文本截断 1000/img、voice/大 parts 不进防写爆）；②chatTailMerge——权威读库成功后按 ts|side|text 签名全量去重回放（撤回/两处局部撤回 chatTailDrop 摘除、清空记录与整包导入 chatTailClear，防已删内容复活）；③performLsSnapWrite 超 2MB 折半丢最旧保尾不弃写。#88 权威守卫/#90 账本守卫/低频落盘链路全部不动。
+* 验证：node --check 过；tools/verify-chat-tail.mjs 21/21（抽真实函数源码跑行为断言：封顶/保尾/去重幂等/撤回不回放/清空/超限保尾/接线齐全）；--check-sentinels 356 全绿哑哨兵 0。
+* 待收口构建后真机：聊几条→立即杀掉浏览器→重开→最近几条应在；撤回一条→刷新→不复活。
+
 ### 2026-09-05 12:3x（#178 屏幕适配诊断三件套：历史快照对比+常驻监视+异常形态自动上报；已构建）
 * [AI-B 域]（**改动文件：src/js/device.js（快照存档 xy-home-v2:screen-diag-hist 上限 8 份+报告末尾自动历史对比；常驻监视每 5s 轻量采集、✗ 形态签名状态沿才存档/上报；静默写错误环 __diag-errs 与信息诊断同键同格式）、FIX-REGRESSION.md（#175 行补 #178 三件套）；构建状态：已构建·sw 见 version.json**）。
 * 验证：node --check 过；对比单测（变化/一致）全过；CDP 端到端：手测存 baseline→注入异常→监视 ≤6.5s 自动捕获+错误环上报。
@@ -110,3 +119,11 @@
 * #165 verify-invite-settings（标题断言确定性红 + 弹窗交互抖动；修后 28/28 ×5 连跑）：①「面板有主动邀请标题」原断言要求 `.gs-title` 恰好 1 个——「其他」面板后来新增跨桌面查岗/打电话分组（#150/#159 同期），改「存在主动邀请标题」；②「点同意→确定→半框打开」固定 400ms 单次点击偶发赶不上异步弹窗，改轮询重试（断言口径不变）。
 * 备注：两脚本失败在 f20003c（#162 之前）即复现，与 #162 无关；gitignore `tools/*.log` 已按 52e3782→a0ed3a0 捋直重放。另一并行会话正在改 build.mjs/idb.js/media-pool.js/personalize.js/template.html（进行中），本条未触碰。
 
+
+> 【占用声明 2026-09-05】#181（用户报障 EC-PAD01 SE+Edge 聊天气泡 CSS 上传后无任何变化，多机型反复；号段修正：原占 #179 与在途尾巴日志撞号，让出）占用 src/js/chat.js 尾部（新增 window.mochiMapBubbleCss 共享映射导出）+ src/js/chat-settings.js applyCss 区 + src/js/group-chat.js applyGcCss 区 + build.mjs 哨兵尾部 + FIX-REGRESSION.md 新行 + tools/verify-bubble-css-map.mjs 新增；跨域说明：三文件均 AI-A 域，本次由 AI-B 会话按用户报障直接修复。**本次构建者：AI-B 本会话（#181 收口构建）**——应 #180 在途会话留言，随库一并打入其聊天尾巴日志改动（build.mjs 3 条 #180 哨兵 + verify-chat-tail.mjs 21 断言一并核过）。勿回滚彼此部分。
+
+### 2026-09-05 12:3x（#181 气泡 CSS 上传零变化修复 + #180 尾巴日志随库收口；已构建）
+* [AI-B 域·跨域说明见占用声明]（**改动文件：src/js/chat.js（新增 window.mochiMapBubbleCss 共享映射：别名扩充 bubble-left/right、msg/message/chat-left/right、you/sent/received 等 + 剥注释/跳 keyframes + 未认出模板类名时全部声明块整包兜底套双方气泡 !important 并提示）、src/js/chat-settings.js（applyCss 改走共享映射，兜底提示透传 toast）、src/js/group-chat.js（applyGcCss 同改，#page-group-chat 作用域）、build.mjs（哨兵 +3，随库含 #180 会话 3 条）、FIX-REGRESSION.md（181 行；#180 行为并行会话所加）、tools/verify-bubble-css-map.mjs（新增 23 断言）；构建状态：已构建·sw mochi-mtnvvget**）。
+* 根因：上传的网页模板气泡 CSS 类名不在旧映射表（.bubble-left/.you/.sent 等）→ 替换后零规则命中 → 「已设置但气泡零变化」。与机型无关、只与内容有关，故多机型「反复出现」；EC-PAD01 SE 诊断（判桌面/视口 941×1449）与本 bug 无因果。
+* 验证：verify-bubble-css-map 23/23；端到端 verify-bubble-css 8/8（UI 存取/刷新恢复/IDB-only 兜底）；verify-chat-tail 21/21（#180 并行会话脚本，收口核过）；npm run verify 10/10；哨兵 359/359、哑哨兵 0；node --check 过。
+* 待真机（EC-PAD01 SE 及任意机型）：更新后重进 → 粘贴此前那份气泡 CSS → 应用 → 气泡必有变化；若模板类名全新会提示「未认出气泡类名，已整体套用」。

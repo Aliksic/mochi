@@ -265,25 +265,22 @@
     if (old) old.remove();
     const css = gcBeautyGet('css');
     if (!css) return;
-    let out = css;
-    if (css.indexOf('{') < 0) {
+    let out = css, hint = null;
+    // v3.26.x #181：统一走 chat.js 的 mochiMapBubbleCss（别名扩充 + 未认出气泡类名时整包声明
+    // 兜底，修「上传网页模板气泡 CSS 后界面零变化」多机型反复问题；同单聊 applyCss）
+    if (window.mochiMapBubbleCss) {
+      const res = window.mochiMapBubbleCss(css, '#page-group-chat ');
+      out = res.out;
+      hint = res.hint;
+    } else if (css.indexOf('{') < 0) {
       out = '#page-group-chat .msg-out .msg-bubble{' + css + '!important;}' +
             '#page-group-chat .msg-in .msg-bubble{' + css + '!important;}';
-    } else {
-      out = css
-        .replace(/\.msg-out\b/g, '#page-group-chat .msg-out')
-        .replace(/\.msg-in\b/g, '#page-group-chat .msg-in')
-        .replace(/\.message-sent\b/g, '#page-group-chat .msg-out .msg-bubble')
-        .replace(/\.message-received\b/g, '#page-group-chat .msg-in .msg-bubble')
-        .replace(/\.mb\.self\b/g, '#page-group-chat .msg-out .msg-bubble')
-        .replace(/\.mb\.other\b/g, '#page-group-chat .msg-in .msg-bubble')
-        .replace(/\.bubble-self\b/g, '#page-group-chat .msg-out .msg-bubble')
-        .replace(/\.bubble-other\b/g, '#page-group-chat .msg-in .msg-bubble');
     }
     const st = document.createElement('style');
     st.id = 'gc-bubble-style';
     st.textContent = out;
     document.head.appendChild(st);
+    if (hint) setTimeout(() => { try { toast(hint); } catch (e) {} }, 50);
   }
   // 应用群聊美化（CSS 变量在 #page-group-chat 上局部覆盖；默认值与聊天页默认一致）
   function applyGcBeauty() {

@@ -8779,9 +8779,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1788580561658">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.448</b></span>
-        <span class="sv-deploy">部署于 2026-09-05 11:56<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1788582555605">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.449</b></span>
+        <span class="sv-deploy">部署于 2026-09-05 12:29<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9913,7 +9913,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.448</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.449</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
       <!-- v3.27.x：设置页底部防骗声明 -->
       <div class="set-alert">
@@ -10204,7 +10204,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.448</span>
+              <span class="lic-ver">v3.26.449</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -23852,7 +23852,15 @@ return c;
 function performLsSnapWrite(arr, prefix) {
 try {
 if (!Array.isArray(arr)) return;
-const snap = JSON.stringify(liteSnapArray(arr));
+let snapArr = liteSnapArray(arr);
+let snap = JSON.stringify(snapArr);
+let round = 0;
+while (snap.length > LS_SNAP_LIMIT && snapArr.length > 1 && round < 5) {
+round++;
+const keep = Math.max(1, Math.floor(snapArr.length / 2));
+snapArr = liteSnapArray(arr.slice(arr.length - keep));
+snap = JSON.stringify(snapArr);
+}
 if (snap.length <= LS_SNAP_LIMIT) {
 localStorage.setItem((prefix || window.activePrefix()) + ':chat-msgs', snap);
 }
@@ -23877,6 +23885,54 @@ lsSnapPending = null;
 performLsSnapWrite(p.arr, p.prefix);
 }
 }, 4000);
+}
+const CHAT_TAIL_MAX = 60;
+const CHAT_TAIL_TEXT_MAX = 1000;
+function chatTailSig(m) {
+try { return ((m && m.ts) || 0) + '|' + (m.side || '') + '|' + String((m && m.text) || '').slice(0, 120); } catch (e) { return ''; }
+}
+function chatTailRead() {
+try {
+const arr = JSON.parse(store.get('chat-tail') || '[]');
+return Array.isArray(arr) ? arr : [];
+} catch (e) { return []; }
+}
+function chatTailClear() {
+try { store.remove('chat-tail'); } catch (e) {}
+}
+function chatTailAppend(rec) {
+try {
+if (!rec || rec.retracted || rec.img || rec.voice) return;
+if (Array.isArray(rec.parts) && rec.parts.some(p => p && typeof p.v === 'string' && p.v.length > 128)) return;
+const arr = chatTailRead();
+arr.push({ ts: rec.ts || Date.now(), side: rec.side || '', special: rec.special || '', text: typeof rec.text === 'string' ? rec.text.slice(0, CHAT_TAIL_TEXT_MAX) : String(rec.text || '') });
+while (arr.length > CHAT_TAIL_MAX) arr.shift();
+store.set('chat-tail', JSON.stringify(arr));
+} catch (e) {}
+}
+function chatTailDrop(rec) {
+try {
+if (!rec) return;
+const sig = chatTailSig(rec);
+const arr = chatTailRead().filter(j => chatTailSig(j) !== sig);
+store.set('chat-tail', JSON.stringify(arr));
+} catch (e) {}
+}
+function chatTailMerge() {
+try {
+const arr = chatTailRead();
+if (!arr.length || !Array.isArray(msgs)) return;
+const have = new Set();
+for (let i = 0; i < msgs.length; i++) have.add(chatTailSig(msgs[i]));
+const add = [];
+for (let i = 0; i < arr.length; i++) {
+const j = arr[i];
+if (j && !have.has(chatTailSig(j))) add.push({ ts: j.ts, side: j.side, special: j.special, text: j.text });
+}
+if (!add.length) return;
+msgs = msgs.concat(add).sort((a, b) => ((a && a.ts) || 0) - ((b && b.ts) || 0));
+saveMsgs();
+} catch (e) {}
 }
 let authLoadedPrefix = null;
 let idbRetryTimer = null;
@@ -24198,6 +24254,7 @@ try { if (window.idbSet) persistMsgsToIdb(myPrefix + ':chat-msgs', msgs); } catc
 writeLsSnapshot(msgs, myPrefix, true);
 }
 try { chatLedgerSave(myPrefix, (msgs && msgs.length) || 0, msgsBytes(msgs)); } catch (e) {}
+try { chatTailMerge(); } catch (e) {} // #180：确认空库也回放尾巴日志（本会话/上次会话未落盘部分）
 });
 return;
 }
@@ -24250,6 +24307,7 @@ pendingLocal = null;
 chatDbReady = true;
 authLoadedPrefix = myPrefix;
 idbRetryCount = 0;
+try { chatTailMerge(); } catch (e) {} // #180：权威就绪后回放尾巴日志（上次会话未落盘的最近消息）
 try { chatLedgerSave(myPrefix, idbArr.length, msgsBytes(idbArr)); } catch (e) {}
 try {
 lastIdbLoadPrefix = window.activePrefix();
@@ -25798,6 +25856,7 @@ cancelPersist();
 try { chatLedger[window.activePrefix()] = 0; } catch (e) {}
 try { store.remove('chat-msgs'); } catch (e) {}
 try { store.remove('chat-meta'); } catch (e) {}
+chatTailClear(); // #180：清空记录＝日志一并清（否则刷新后已清内容回放复活）
 if (body) body.innerHTML = '';
 clearChatUnread();
 };
@@ -25813,6 +25872,7 @@ sessionChangedIdx.clear();
 chatDbReady = true;
 renderStart = 0;
 cancelPersist();
+chatTailClear(); // #180：整包导入替换＝旧日志作废
 try { if (window.idbSet) persistMsgsToIdb(window.activePrefix() + ':chat-msgs', msgs); } catch (e) {}
 writeLsSnapshot(msgs, undefined, true);
 try { chatLedgerSave(window.activePrefix(), msgs.length, msgsBytes(msgs)); } catch (e) {}
@@ -26042,6 +26102,7 @@ const dts = (rec.ts || 0) - (p.ts || 0);
 if (dts >= 0 && dts <= 1200) { saveMsgs(); return null; }
 }
 msgs.push(rec);
+chatTailAppend(rec); // #180：同步尾巴日志先落 LS，再交低频整包落盘
 saveMsgs();
 const notable = rec.side === 'in' && (!rec.special || rec.special === 'poke' || rec.special === 'gift');
 if (notable && !rec.silent && (!chatVisible() || document.visibilityState === 'hidden')) {
@@ -26343,6 +26404,7 @@ if (!isNaN(idx) && msgs[idx]) {
 msgs[idx].retracted = true;
 msgs[idx].orig = b.innerHTML;
 sessionChangedIdx.add(idx); // v3.6.x：标记本会话变更，防 loadMsgs 合并回滚撤回
+chatTailDrop(msgs[idx]); // #180：撤回消息从尾巴日志摘除，防刷新后回放复活
 saveMsgs();
 if (msgs[idx].side === 'out') syncLastMineText();
 }
@@ -26412,6 +26474,7 @@ const si = remain.splice(Math.floor(Math.random() * remain.length), 1)[0];
 rec.retractedSegs.push({ text: segs[si], idx: si });
 }
 sessionChangedIdx.add(idx); // v3.6.x：标记本会话变更，防 loadMsgs 合并回滚局部撤回
+chatTailDrop(rec); // #180：局部撤回后日志原文不得回放（与撤回同口径）
 saveMsgs();
 const m = renderMsg(rec);
 m.dataset.idx = idx;
@@ -26429,6 +26492,7 @@ if (remain.length) {
 const pick = remain[Math.floor(Math.random() * remain.length)];
 rec.retractedMood.push(pick);
 sessionChangedIdx.add(idx); // v3.6.x：标记本会话变更，防 loadMsgs 合并回滚局部撤回
+chatTailDrop(rec); // #180：局部撤回后日志原文不得回放（与撤回同口径）
 saveMsgs();
 const m = renderMsg(rec);
 m.dataset.idx = idx;
@@ -31416,6 +31480,69 @@ updateChatBadge();
 document.addEventListener('ta-word-changed', function () {
 try { if (msgs.length) renderWindow(false, false); } catch (e) {}
 });
+window.mochiMapBubbleCss = function (css, scope) {
+scope = scope || '';
+var wrap = function (decls) {
+return scope + '.msg-out .msg-bubble{' + decls + '!important;}' +
+scope + '.msg-in .msg-bubble{' + decls + '!important;}';
+};
+css = String(css || '').replace(/\/\*[\s\S]*?\*\//g, '').trim();
+if (!css) return { out: '', hint: null };
+if (css.indexOf('{') < 0) return { out: wrap(css), hint: null };
+var _mapBc = function (src, names, rep) {
+var r = src;
+for (var i = 0; i < names.length; i++) {
+var n = names[i];
+var re2 = new RegExp('\\.' + n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?![\\-\\w])', 'g');
+r = r.replace(re2, rep);
+}
+return r;
+};
+var OUT_B = scope + '.msg-out .msg-bubble', IN_B = scope + '.msg-in .msg-bubble';
+var OUT_NAMES = [
+'message-sent', 'message-me', 'message-mine', 'chat-me', 'msg-me', 'msg-sent', 'sent',
+'mine', 'me', 'left', 'my-bubble', 'bubble-mine', 'bubble-self', 'self', 'myself', 'sender',
+'bubble-left', 'msg-left', 'message-left', 'chat-left'
+];
+var IN_NAMES = [
+'message-received', 'received', 'message-you', 'message-friend', 'chat-you', 'chat-friend',
+'msg-you', 'msg-recv', 'msg-incoming', 'incoming', 'friend', 'other', 'right', 'you',
+'bubble-other', 'partner-bubble', 'them', 'recipient', 'guest', 'receiver',
+'bubble-right', 'msg-right', 'message-right', 'chat-right'
+];
+var SH_NAMES = [
+'chat-bubble', 'message-bubble', 'text-bubble', 'word-bubble', 'chat-text',
+'bubble', 'message', 'msg'
+];
+var out = '', hasMapped = false, fallbackDecls = [];
+var re = /([^{}]*)\{([^{}]*)\}/g, m;
+while ((m = re.exec(css))) {
+var sel = m[1].trim(), decls = m[2].trim();
+if (!decls) continue;
+if (!sel || /^(-?\d+\.?\d*%|from|to)$/i.test(sel)) { // 无选择器声明块 / keyframes 帧
+if (!sel) { out += wrap(decls); hasMapped = true; }
+continue;
+}
+var mapped = sel;
+mapped = _mapBc(mapped, ['msg-out'], scope + '.msg-out');
+mapped = _mapBc(mapped, ['msg-in'], scope + '.msg-in');
+mapped = _mapBc(mapped, ['mb.self'], OUT_B);
+mapped = _mapBc(mapped, ['mb.other'], IN_B);
+mapped = _mapBc(mapped, OUT_NAMES, OUT_B);
+mapped = _mapBc(mapped, IN_NAMES, IN_B);
+mapped = _mapBc(mapped, SH_NAMES, scope + '.msg-bubble');
+if (/\.msg-bubble|\.msg-out|\.msg-in/.test(mapped)) {
+out += mapped + '{' + decls + '}';
+hasMapped = true;
+} else if (fallbackDecls.indexOf(decls) < 0) {
+fallbackDecls.push(decls);
+}
+}
+if (!hasMapped && fallbackDecls.length) {
+return { out: wrap(fallbackDecls.join(';')), hint: '未认出模板里的气泡类名，已把全部样式整体套用到双方气泡' };
+}
+return { out: out, hint: null };
+};
 })();
 } catch (__e) { try { console.error("[JS] chat.js", __e && __e.message || __e); } catch (x) {} if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
 (function () { try {
@@ -31639,25 +31766,20 @@ const old = document.getElementById('gc-bubble-style');
 if (old) old.remove();
 const css = gcBeautyGet('css');
 if (!css) return;
-let out = css;
-if (css.indexOf('{') < 0) {
+let out = css, hint = null;
+if (window.mochiMapBubbleCss) {
+const res = window.mochiMapBubbleCss(css, '#page-group-chat ');
+out = res.out;
+hint = res.hint;
+} else if (css.indexOf('{') < 0) {
 out = '#page-group-chat .msg-out .msg-bubble{' + css + '!important;}' +
 '#page-group-chat .msg-in .msg-bubble{' + css + '!important;}';
-} else {
-out = css
-.replace(/\.msg-out\b/g, '#page-group-chat .msg-out')
-.replace(/\.msg-in\b/g, '#page-group-chat .msg-in')
-.replace(/\.message-sent\b/g, '#page-group-chat .msg-out .msg-bubble')
-.replace(/\.message-received\b/g, '#page-group-chat .msg-in .msg-bubble')
-.replace(/\.mb\.self\b/g, '#page-group-chat .msg-out .msg-bubble')
-.replace(/\.mb\.other\b/g, '#page-group-chat .msg-in .msg-bubble')
-.replace(/\.bubble-self\b/g, '#page-group-chat .msg-out .msg-bubble')
-.replace(/\.bubble-other\b/g, '#page-group-chat .msg-in .msg-bubble');
 }
 const st = document.createElement('style');
 st.id = 'gc-bubble-style';
 st.textContent = out;
 document.head.appendChild(st);
+if (hint) setTimeout(() => { try { toast(hint); } catch (e) {} }, 50);
 }
 function applyGcBeauty() {
 const page = document.getElementById('page-group-chat');
@@ -36727,42 +36849,23 @@ if (old) old.remove();
 const css = store.get(CSS_KEY) || '';
 const setVal = document.getElementById('cs-css-val');
 if (setVal) setVal.textContent = css ? '已设置' : '默认';
-if (!css) return;
-let out = css;
-if (css.indexOf('{') < 0) {
+if (!css) return null;
+let out, hint = null;
+if (window.mochiMapBubbleCss) {
+const res = window.mochiMapBubbleCss(css, '');
+out = res.out;
+hint = res.hint;
+} else if (css.indexOf('{') < 0) {
 out = '.msg-out .msg-bubble{' + css + '!important;}' +
 '.msg-in .msg-bubble{' + css + '!important;}';
 } else {
-var _mapBc = function (src, names, rep) {
-var r = src;
-for (var i = 0; i < names.length; i++) {
-var n = names[i];
-var re = new RegExp('\\.' + n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?![\\-\\w])', 'g');
-r = r.replace(re, rep);
-}
-return r;
-};
-out = _mapBc(css, ['msg-out'], '.msg-out'); // 保留原样身份替换
-out = _mapBc(out, ['msg-in'], '.msg-in');
-out = _mapBc(out, ['mb.self'], '.msg-out .msg-bubble');
-out = _mapBc(out, ['mb.other'], '.msg-in .msg-bubble');
-out = _mapBc(out, [
-'message-sent', 'message-me', 'message-mine', 'chat-me', 'msg-me', 'msg-sent',
-'mine', 'me', 'left', 'my-bubble', 'bubble-mine', 'bubble-self', 'self', 'myself', 'sender'
-], '.msg-out .msg-bubble');
-out = _mapBc(out, [
-'message-received', 'message-you', 'message-friend', 'chat-you', 'chat-friend', 'msg-you',
-'msg-recv', 'msg-incoming', 'friend', 'other', 'right', 'bubble-other', 'partner-bubble',
-'them', 'recipient', 'guest', 'receiver'
-], '.msg-in .msg-bubble');
-out = _mapBc(out, [
-'bubble', 'chat-bubble', 'message-bubble', 'text-bubble', 'word-bubble', 'chat-text', 'message'
-], '.msg-bubble');
+out = css;
 }
 const st = document.createElement('style');
 st.id = 'cs-bubble-style';
 st.textContent = out;
 document.head.appendChild(st);
+return hint;
 }
 if (csCss) {
 csCss.addEventListener('click', () => {
@@ -36783,8 +36886,8 @@ document.getElementById('cs-css-ok').addEventListener('click', () => {
 const v = cssReadVal(document.getElementById('cs-css-input')).trim();
 store.set(CSS_KEY, v);
 document.getElementById('tc-mask').hidden = true;
-applyCss();
-toast('气泡样式已应用');
+const hint = applyCss();
+toast(hint || '气泡样式已应用');
 });
 });
 }
@@ -78677,4 +78780,4 @@ return { lock: document.body.classList.contains('scroll-lock'), open: open };
 <!-- __MOCHI_EOF__ -->
 </body>
 </html>
-<!-- __MOCHI_EOF__ mtnuopve -->
+<!-- __MOCHI_EOF__ mtnvvget -->
