@@ -59,6 +59,7 @@ const freePort = () => new Promise((res) => {
 
 const RUN_ONE_PORT = 'MOCHI_CDP_PORT';
 const usesPortEnv = new Map();
+const scriptTimeout = new Map();
 
 const runOne = async (file) => new Promise(async (res) => {
   const t0 = Date.now();
@@ -72,9 +73,18 @@ const runOne = async (file) => new Promise(async (res) => {
     cwd: root, windowsHide: true,
     env: port ? Object.assign({}, process.env, { [RUN_ONE_PORT]: String(port) }) : process.env
   });
+  // 脚本级超时提示：脚本头部 `verify-suite:timeout=毫秒` 可上调单个慢脚本预算（#129，pong-balance 首用）
+  let tmo = TIMEOUT;
+  if (!scriptTimeout.has(file)) {
+    try {
+      const m = readFileSync(join(toolsDir, file), 'utf8').match(/verify-suite:timeout=(\d+)/);
+      scriptTimeout.set(file, m ? Math.max(TIMEOUT, Number(m[1])) : TIMEOUT);
+    } catch (e) { scriptTimeout.set(file, TIMEOUT); }
+  }
+  tmo = scriptTimeout.get(file);
   let buf = '';
   let killed = '';
-  const timer = setTimeout(() => { killed = 'timeout'; try { child.kill('SIGKILL'); } catch (e) {} }, TIMEOUT);
+  const timer = setTimeout(() => { killed = 'timeout'; try { child.kill('SIGKILL'); } catch (e) {} }, tmo);
   child.stdout.on('data', d => { buf += d; if (buf.length > 400000) buf = buf.slice(-200000); });
   child.stderr.on('data', d => { buf += d; if (buf.length > 400000) buf = buf.slice(-200000); });
   child.on('error', e => { clearTimeout(timer); res({ file, code: -1, ms: Date.now() - t0, killed: 'spawn-error: ' + e.message, out: buf }); });
