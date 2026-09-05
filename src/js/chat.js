@@ -1965,6 +1965,30 @@ if (!t || t.tagName !== 'IMG') return;
 if (!chatPinnedBottom || batchRendering || !chatVisible()) return;
 requestAnimationFrame(scrollChatBottom);
 }, true);
+// FIX 2026-09-06 #202 表情/图片加载失败占位：#186 只覆盖了媒体池令牌缺失，其余失败路径
+// （远程 http 图断网/原图失效/混合内容拦截、dataURL 解码失败、parts 混合消息里的图）此前
+// 同样渲染成无声空白气泡（iQOO12 Chrome 断网时联系人发表情空白实证）。error 后延时 1.5s
+// 复核 naturalWidth 仍为 0 才把 img 换成占位——给池观察器改写 src（#186 竞态）和慢网加载
+// 留窗口，不误伤正在加载或已被观察器救回的图；只替换 img 节点，不动引用块/情绪 chip。
+function bindMediaFailPlaceholder(b) {
+b.querySelectorAll('.msg-img').forEach(im => {
+if (im.dataset.errBound) return;
+im.dataset.errBound = '1';
+im.addEventListener('error', () => {
+setTimeout(() => {
+if (!im.isConnected || !im.complete) return;
+if (im.naturalWidth !== 0) return;
+const s = im.getAttribute('src') || '';
+const isTok = window.mochiMediaIsToken && window.mochiMediaIsToken(s);
+if (isTok && window.mochiMediaExpand && window.mochiMediaExpand(s)) return; // 池有数据，观察器稍后会改写
+const ph = document.createElement('span');
+ph.style.cssText = 'opacity:.5;font-size:12px';
+ph.textContent = isTok ? '（图片丢失：媒体数据缺失，可用数据备份重新导入恢复）' : '（表情/图片加载失败：网络不通或原图已失效）';
+im.replaceWith(ph);
+}, 1500);
+});
+});
+}
 function renderMsg(rec) {
 const m = document.createElement('div');
 if (!batchRendering) m.classList.add('msg-enter');
@@ -2288,24 +2312,10 @@ e.stopPropagation();
 if (window.viewChatImage) window.viewChatImage(rec.text);
 });
 }
-// FIX 2026-09-06 #186 媒体池令牌失配兜底：池数据缺失（旧版 GC 引用扫描漏群聊键/LS 快照被误删、
-// 备份未带全池键）时 @@m: 令牌解析不出，<img> 加载失败＝无声空白气泡；改占位提示。
-// 竞态防线（verify-quote-image E3 实证）：img 插入即开始拉相对地址 @@m:…，404 错误事件
-// 可能抢在观察器异步改写 src 之前触发——此时池里可能有数据，绝不能立即清气泡；
-// 延时复核 src 仍是令牌且池确认无数据（mochiMediaExpand miss）才落占位。
-if (window.mochiMediaIsToken && window.mochiMediaIsToken(rec.text)) {
-const _tokImg = b.querySelector('.msg-img');
-if (_tokImg) _tokImg.addEventListener('error', () => {
-setTimeout(() => {
-if (!b.isConnected) return;
-const im = b.querySelector('.msg-img');
-const s = im ? (im.getAttribute('src') || '') : '';
-if (im && window.mochiMediaIsToken(s) && !window.mochiMediaExpand(s)) {
-b.innerHTML = '<span style="opacity:.5;font-size:12px">（图片丢失：媒体数据缺失，可用数据备份重新导入恢复）</span>';
-}
-}, 1500);
-});
-}
+// FIX 2026-09-06 #186→#202 媒体加载失败占位统一走 bindMediaFailPlaceholder：
+// 令牌缺失（池数据被误删/备份未带池键）、远程图断网/失效/混合内容拦截、dataURL 解码失败
+// 都不再是无声空白气泡；竞态防线（#186 E3 实证 404 抢跑观察器改写）由 1.5s 延时复核承担
+bindMediaFailPlaceholder(b);
 } else if (rec.type === 'voice') {
 b.style.padding = '8px 10px';
 b.style.background = '';
@@ -2337,6 +2347,7 @@ e.stopPropagation();
 if (window.viewChatImage) window.viewChatImage(img.src);
 });
 });
+bindMediaFailPlaceholder(b); // FIX 2026-09-06 #202 parts 混合消息里的图同样挂失败占位
 } else if (rec.retractedSegs && rec.retractedSegs.length) {
 const segs = splitCardSegs(rec.text);
 const rcs = rec.retractedSegs || [];
