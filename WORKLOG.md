@@ -1,3 +1,9 @@
+### 2026-09-05 21:xx（#199 荣耀50se+雨见：沉浸式安卓浏览器覆盖形态顶部避让全链失效+Gecko 滚动锚定与贴底钉住对打；本次构建者：AI-B=本会话，随库一并打入已声明完整的 #193/#196/#197/#198 在途改动）
+- [AI-B 域·跨域改动 src/css/base.css（.chat-body overflow-anchor，AI-A 聊天样式域），理由：滚动锚定属全局内核行为，锚定与 #162 钉住的对打只能在共享样式层关；chat-main.css 未动]（**改动文件：src/js/mobile-adapt.js（#199 syncVvFit env 探针扩展：非 standalone 且 screen−inner≤2 的沉浸式浏览器覆盖形态同样探 env 写 --mochi-safe-top 并挂/摘 mochi-cover-top 类；iOS standalone 不挂类既有避让链零扰动；刻意不扩 #179 高度公式到该形态防造出文档滚动量）、src/css/base.css（html.mochi-cover-top .phone .statusbar 提特异性夺回被 .statusbar{padding:4px} 压死的顶部避让；.chat-body{overflow-anchor:none} 关 Gecko 滚动锚定）、src/js/device.js（判定器：浏览器覆盖形态期望底边=可视区底，防修好后 #179 误报）、build.mjs（哨兵 +5 全逻辑锚点）、FIX-REGRESSION.md（199 行+设备索引荣耀 50se）**；构建状态：见本条收口）。
+- 需求：荣耀50se+雨见（Gecko/Firefox 152，安卓12）报「聊天界面偶尔掉下来一半；删消息/对方回消息屏幕往上移」，用户明说其他机型也有；诊断 ✗#114 顶部重叠（状态栏顶位4px 钻 35px 系统栏）+ ✗#179 底部少填 35px。根因/方案/验证见 FIX-REGRESSION.md 199。
+- 备注：该机诊断另报 SyntaxError: redeclaration of let JSInterface（anonymous code，仓库源码 grep 无此标识符）——疑似雨见壳自身注入脚本失败，非本项目代码，暂不处理，复发再查。
+- 验证：node --check 过；--check-sentinels 全绿哑哨兵 0（404 条）。
+
 ### 2026-09-05 20:0x（#193 字卡库写回覆盖收口构建·本次构建者：AI-A=本会话，随库一并打入 AI-B 已声明完整的 #196/#197/#198 三修）
 ### 2026-09-05（#196/#197/#198 三联修：温柔字卡连抽同句+安卓全站 change 保存失效+经期组件壁纸不生效；本次构建者：AI-B=本会话）
 - [AI-B 域·跨域改动 src/js/period.js（AI-A 业务文件，warmPrefix/warmSuffix 抽取段，理由：用户直接指派修复）]（**改动文件：src/js/period.js（#196 warmPick 近期 3 条不重复，池 6 条纯均匀随机连抽同几句被当 bug）、src/js/mobile-adapt.js（#197 ce-box 聚焦记基线、blur 内容有变补派 change——contenteditable 不自发派 change，安卓全站挂 change 的保存（心愿单概率等）从未生效过，机制级根因）、src/js/personalize.js（#198 cardBgSel 裸类型兜底 [data-card-bg=<type>] + cardBgAllTypes DOM 收集全类型，applyAllCardBgs/rescueDeskVisuals 改走它——CARD_BG_TYPES 无 desk-period，上传存了键但永不应用）、build.mjs（哨兵 +5）、FIX-REGRESSION.md（196/197/198 三行）**；构建状态：见本条收口）。

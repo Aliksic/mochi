@@ -811,6 +811,20 @@ input.ce-ghost, textarea.ce-ghost {
   display:flex; align-items:center; justify-content:space-between;
   padding:4px 4px 12px; font-size:13px; font-weight:600; z-index:2;
 }
+/* v3.26.x #199：浏览器覆盖形态（雨见/Via 等沉浸式安卓壳：页面顶到系统状态栏下，
+   screen==inner、standalone=false）——mobile-adapt.js syncVvFit 实测 env 写
+   --mochi-safe-top 并挂 mochi-cover-top 类；此处以更高特异性夺回被本文件上方
+   .statusbar{padding:4px…}（同特异性后加载）压死的顶部避让（#114 同根因，
+   该形态无 .phone padding 兜底链，必须由状态栏自身抬升）。iOS standalone 不挂
+   类、规则不生效，既有避让链（.phone padding-top / ios-fs-active）不受影响。 */
+html.mochi-cover-top .phone .statusbar {
+  padding-top:max(calc(14px + var(--mochi-safe-top, 0px)), 14px);
+}
+/* v3.26.x #199：Gecko 系（Firefox/雨见等）滚动锚定会在删除/新增消息改动上方
+   内容时自行调整 chat-body 的 scrollTop，与 chat.js #162 贴底钉住逻辑对打
+   （荣耀50se+雨见：删消息/对方回消息屏幕往上移）——聊天页滚动权已完全由
+   JS 显式管理，关掉浏览器自动锚定（跨内核安全：Chromium 同属性可解析）。 */
+.chat-body { overflow-anchor: none; }
 .statusbar .brand { font-weight:800; letter-spacing:.5px; }
 .statusbar .sb-right { display:flex; align-items:center; gap:8px; }
 .statusbar .icons { display:flex; gap:6px; align-items:center; }

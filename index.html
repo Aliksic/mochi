@@ -515,6 +515,10 @@ stroke: var(--ink);
 display:flex; align-items:center; justify-content:space-between;
 padding:4px 4px 12px; font-size:13px; font-weight:600; z-index:2;
 }
+html.mochi-cover-top .phone .statusbar {
+padding-top:max(calc(14px + var(--mochi-safe-top, 0px)), 14px);
+}
+.chat-body { overflow-anchor: none; }
 .statusbar .brand { font-weight:800; letter-spacing:.5px; }
 .statusbar .sb-right { display:flex; align-items:center; gap:8px; }
 .statusbar .icons { display:flex; gap:6px; align-items:center; }
@@ -8788,9 +8792,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1788607494623">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.468</b></span>
-        <span class="sv-deploy">部署于 2026-09-05 19:24<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1788609183068">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.469</b></span>
+        <span class="sv-deploy">部署于 2026-09-05 19:53<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9929,7 +9933,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.468</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.469</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
       <!-- v3.27.x：设置页底部防骗声明 -->
       <div class="set-alert">
@@ -10220,7 +10224,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.468</span>
+              <span class="lic-ver">v3.26.469</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -15094,12 +15098,14 @@ if (inp.sbTop > expect + 60) add(false, '顶部双倍避让', '✗ 状态栏实�
 else if (envTop >= 20 && inp.sbTop < envTop - 5) add(false, '顶部重叠', '✗ 状态栏顶位 ' + inp.sbTop + 'px 钻进系统状态栏区（应 ≥ ' + envTop + 'px，#114 形态）');
 else add(true, '状态栏顶位 ' + inp.sbTop + 'px（安全区 ' + expect + 'px）');
 }
+const coverBrowser = !inp.standalone && diff <= 2 && envTop >= 20;
+const expBase = coverBrowser ? inp.innerH : (inp.envTop || 0) + inp.innerH;
 if (inp.phoneBottom != null && inp.innerH) {
-const expB = (inp.envTop || 0) + inp.innerH;
+const expB = expBase;
 const under = Math.round(expB - inp.phoneBottom);
 const over = Math.round(inp.phoneBottom - expB);
 if (over > 2) add(false, '底部超出 ' + over + 'px', '✗ .phone 底边超出期望屏底（高度公式异常）');
-else if (under > 2) add(false, '底部少填 ' + under + 'px 白带', '✗ 覆盖形态（env-top=' + inp.envTop + '）下 .phone 应铺到 ' + expB + 'px，实测只到 ' + inp.phoneBottom + 'px（#179：高度须含顶部安全区 envTop+inner）');
+else if (under > 2) add(false, '底部少填 ' + under + 'px 白带', '✗ ' + (coverBrowser ? '浏览器覆盖形态（#199：避让由内容收缩承担，.phone 应铺到可视区底 ' + expB + 'px' : '覆盖形态（env-top=' + inp.envTop + '）下 .phone 应铺到 ' + expB + 'px（#179：高度须含顶部安全区 envTop+inner）') + '，实测只到 ' + inp.phoneBottom + 'px');
 else add(true, '底部贴合（.phone 底=' + Math.round(inp.phoneBottom) + ' / 期望 ' + expB + '）');
 }
 if (inp.fsActive) {
@@ -15108,7 +15114,7 @@ if (inp.iosH && Math.abs(inp.iosH - expH) > 2) add(false, '--mochi-ios-h 与期�
 else add(true, '--mochi-ios-h=' + (inp.iosH || '(未设→回落)') + ' 与期望屏高一致');
 }
 if (inp.tabBottom != null && inp.innerH) {
-const expTB = (inp.envTop || 0) + inp.innerH - (inp.envBottom || 0); // 期望底边=屏底−Home横条避让
+const expTB = expBase - (inp.envBottom || 0); // 期望底边=屏底−Home横条避让（#199：浏览器覆盖形态=可视区底）
 const overB = Math.round(inp.tabBottom - expTB);
 if (overB > 2) add(false, '底部导航栏被裁 ' + overB + 'px', '✗ tabbar 底边 ' + inp.tabBottom + 'px 超出期望 ' + expTB + 'px（#148 同族）');
 else if (overB < -60) add(false, '底部导航栏悬空 ' + (-overB) + 'px', '⚠ tabbar 底边比期望高 ' + (-overB) + 'px（底部空白过大）');
@@ -78622,7 +78628,9 @@ var _ih2 = window.innerHeight || 0;
 var _sh2 = (window.screen && window.screen.height) || 0;
 var _vh2 = _vv ? Math.round(_vv.height * ((_vv.scale && _vv.scale > 0.5) ? _vv.scale : 1)) : _ih2;
 var _safeTop = 0;
-if (d.classList.contains('ios-pwa-standalone') && _sh2 > 0 && _vh2 > 0) {
+var _coverBrowser = !d.classList.contains('ios-pwa-standalone')
+&& _sh2 > 0 && _ih2 > 0 && (_sh2 - _ih2) <= 2;
+if ((d.classList.contains('ios-pwa-standalone') || _coverBrowser) && _sh2 > 0 && _vh2 > 0) {
 if (_envTopCache < 0) {
 try {
 var _probe = document.createElement('div');
@@ -78638,6 +78646,10 @@ var _topPx = _safeTop ? _safeTop + 'px' : '';
 if (d.style.getPropertyValue('--mochi-safe-top') !== _topPx) {
 if (_topPx) d.style.setProperty('--mochi-safe-top', _topPx);
 else d.style.removeProperty('--mochi-safe-top');
+}
+var _wantCover = !!_safeTop && !d.classList.contains('ios-pwa-standalone');
+if (_wantCover !== d.classList.contains('mochi-cover-top')) {
+d.classList.toggle('mochi-cover-top', _wantCover);
 }
 if (d.classList.contains('fs-active') || d.classList.contains('fs-css-active')
 || d.classList.contains('ios-fs-active') || d.classList.contains('ios-native-fs')) {
@@ -79206,4 +79218,4 @@ return { lock: document.body.classList.contains('scroll-lock'), open: open };
 <!-- __MOCHI_EOF__ -->
 </body>
 </html>
-<!-- __MOCHI_EOF__ mtoapzhb -->
+<!-- __MOCHI_EOF__ mtobq6ak -->

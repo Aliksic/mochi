@@ -1002,7 +1002,15 @@
           var _sh2 = (window.screen && window.screen.height) || 0;
           var _vh2 = _vv ? Math.round(_vv.height * ((_vv.scale && _vv.scale > 0.5) ? _vv.scale : 1)) : _ih2;
           var _safeTop = 0;
-          if (d.classList.contains('ios-pwa-standalone') && _sh2 > 0 && _vh2 > 0) {
+          // v3.26.x #199：沉浸式安卓浏览器覆盖形态（雨见/Via 等自绘壳：页面顶到系统
+          // 状态栏下，screen==inner 且 standalone=false）同样需要页面避让——原判定只认
+          // ios-pwa-standalone，该形态 env() 实测 35px 却没人写 --mochi-safe-top，
+          // 模拟状态栏 4px 顶位钻进系统栏（荣耀50se+雨见 诊断 ✗#114 实证）。
+          // 判据：无浏览器 chrome（screen−inner≤2）才可能是覆盖形态；带地址栏的
+          // 常规浏览器 screen>inner，系统已把页面垫在状态栏下，探针不跑、行为不变。
+          var _coverBrowser = !d.classList.contains('ios-pwa-standalone')
+            && _sh2 > 0 && _ih2 > 0 && (_sh2 - _ih2) <= 2;
+          if ((d.classList.contains('ios-pwa-standalone') || _coverBrowser) && _sh2 > 0 && _vh2 > 0) {
             if (_envTopCache < 0) {
               try {
                 var _probe = document.createElement('div');
@@ -1019,6 +1027,19 @@
           if (d.style.getPropertyValue('--mochi-safe-top') !== _topPx) {
             if (_topPx) d.style.setProperty('--mochi-safe-top', _topPx);
             else d.style.removeProperty('--mochi-safe-top');
+          }
+          // v3.26.x #199：浏览器覆盖形态同步挂/摘 mochi-cover-top 类——base.css 里
+          // .statusbar{padding:4px 4px 12px}（同特异性后加载）常年压死窄屏 @media
+          // 的 env() 避让规则（#114 根因），CSS 侧无法用「var 已设」表达条件，由 JS
+          // 挂类提特异性只在该形态抬状态栏。iOS standalone 不挂（其避让由
+          // .phone padding-top / ios-fs-active 既有链承担，挂了会双倍避让）。
+          // 注意高度侧刻意不扩 #179 的 envTop+inner 公式：浏览器形态布局视口=inner，
+          // .phone 超出可视区会造出 35px 文档滚动量，键盘/消息变更时被看门狗
+          // pinScrollTop 拽动=「屏幕往上移」；正确做法是 .phone 仍贴 inner、内容
+          // 在状态栏下方收缩避让。
+          var _wantCover = !!_safeTop && !d.classList.contains('ios-pwa-standalone');
+          if (_wantCover !== d.classList.contains('mochi-cover-top')) {
+            d.classList.toggle('mochi-cover-top', _wantCover);
           }
           // v3.26.x #148：全屏态（原生 fs-active / CSS 兜底 fs-css-active / iOS 兜底
           // ios-fs-active / iOS 原生 ios-native-fs）改为「健康态写 --mochi-ios-h」——
