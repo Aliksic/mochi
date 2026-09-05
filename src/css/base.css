@@ -106,6 +106,8 @@ html { margin:0; padding:0; }
 /* v3.8.y：原作/部署信息（署名下方）——小灰字低调展示使用网站/GitHub 库 */
 .splash-source { margin-top:12px; padding-top:12px; border-top:1px dashed var(--line); text-align:center; width:100%; }
 .splash-source-line { font-size:9px; color:var(--hint-ink); line-height:1.8; letter-spacing:0; white-space:nowrap; }
+/* v3.26.x：置顶澄清行可换行——nowrap 仅供单行网址/署名，长句澄清不换行会超出手机屏幕 */
+.splash-source-line.splash-clarify { white-space:normal; padding:0 10px; }
 .splash-source-url { color:var(--ink); font-weight:600; }
 /* v3.8.y：底部统一卡片框——版本/加载/提示/按钮装进一个白卡片，与顶部品牌卡片呼应 */
 .splash-footcard {
