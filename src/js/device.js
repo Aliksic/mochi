@@ -1850,7 +1850,7 @@
     // v3.26.x #200：iOS 18.x standalone「系统保留状态栏」形态——standalone 且
     // diff(screen−inner)≈envTop（系统垫走状态栏但 env 仍报真实值）。顶部避让已由
     // 系统承担（var 应=0），期望底边=inner；仍按覆盖形态判则修好后必误报。
-    const resStand = !!inp.standalone && envTop >= 20 && diff >= envTop - 8;
+    const resStand = !!inp.standalone && envTop >= 20 && diff >= envTop - 8 && (inp.iosMajor || 0) >= 18;
     let mode = '未知';
     if (resStand) mode = '系统保留形态（iOS 18.x standalone：系统已把网页起点放在状态栏下方，env 仍报真实高度；页面不再避让、高度贴 inner，#200）';
     else if (envTop >= 20) mode = '覆盖形态（页面顶到屏幕最顶，系统栏悬浮其上）';
@@ -1860,9 +1860,9 @@
     add(true, '顶部形态判定：' + mode, 'env=' + envTop + 'px  var(--mochi-safe-top)=' + varTop + 'px  diff(screen−inner)=' + diff + 'px');
     // ③ 顶部双重叠加：statusbar 实测顶位显著超过「安全区顶部+余量」
     if (inp.sbTop != null) {
-      const expect = Math.max(envTop, 12);
+      const expect = resStand ? 12 : Math.max(envTop, 12);
       if (inp.sbTop > expect + 60) add(false, '顶部双倍避让', '✗ 状态栏实测顶位 ' + inp.sbTop + 'px，明显超过安全区顶部 ' + expect + 'px（#148 修复的双倍白带形态复发，连本条反馈）');
-      else if (envTop >= 20 && inp.sbTop < envTop - 5) add(false, '顶部重叠', '✗ 状态栏顶位 ' + inp.sbTop + 'px 钻进系统状态栏区（应 ≥ ' + envTop + 'px，#114 形态）');
+      else if (!resStand && envTop >= 20 && inp.sbTop < envTop - 5) add(false, '顶部重叠', '✗ 状态栏顶位 ' + inp.sbTop + 'px 钻进系统状态栏区（应 ≥ ' + envTop + 'px，#114 形态）');
       else add(true, '状态栏顶位 ' + inp.sbTop + 'px（安全区 ' + expect + 'px）');
     }
     // ④ 底部：期望底边 = envTop + innerH（覆盖形态=整屏 852；已避让形态=inner 812）
@@ -1870,7 +1870,9 @@
     // diff(screen−inner)=0）例外——布局视口=inner，.phone 刻意只铺到 inner、内容在
     // 状态栏下方收缩避让（超出会造出文档滚动量=页面跳动），期望底边=inner。
     const coverBrowser = !inp.standalone && diff <= 2 && envTop >= 20;
-    const expBase = coverBrowser ? inp.innerH : (inp.envTop || 0) + inp.innerH;
+    // v3.26.x #200：系统保留形态（iOS 18.x standalone，diff≈envTop）期望底边=inner——
+    // .phone 超出 inner 会造出文档滚动量（body 居中裁切+pin 对打），同 #199 语义
+    const expBase = (coverBrowser || resStand) ? inp.innerH : (inp.envTop || 0) + inp.innerH;
     if (inp.phoneBottom != null && inp.innerH) {
       const expB = expBase;
       const under = Math.round(expB - inp.phoneBottom);
@@ -1881,7 +1883,7 @@
     }
     // ⑤ --mochi-ios-h 与可视高一致性（全屏态）
     if (inp.fsActive) {
-      const expH = (inp.envTop || 0) + (inp.innerH || 0);
+      const expH = resStand ? (inp.innerH || 0) : (inp.envTop || 0) + (inp.innerH || 0);
       if (inp.iosH && Math.abs(inp.iosH - expH) > 2) add(false, '--mochi-ios-h 与期望屏高不符', '⚠ ios-h=' + inp.iosH + 'px ≠ envTop+inner=' + expH + 'px（#179 公式：覆盖形态=整屏/已避让=inner）');
       else add(true, '--mochi-ios-h=' + (inp.iosH || '(未设→回落)') + ' 与期望屏高一致');
     }
@@ -1963,6 +1965,7 @@
       kb: (function () { try { return window.__mochiIosKb ? window.__mochiIosKb() : null; } catch (e) { return null; } })()
     };
     inp.diff = inp.screenH && inp.innerH ? inp.screenH - inp.innerH : 0;
+    inp.iosMajor = (function () { try { var a = /OS (\d+)_/.exec(navigator.userAgent || ''); var b = /Version\/(\d+)\./.exec(navigator.userAgent || ''); return Math.max(a ? +a[1] : 0, b ? +b[1] : 0); } catch (e) { return 0; } })();
     const F = screenDiagJudge(inp);
     const L = [];
     L.push('【屏幕适配诊断】' + (sdVerCache || '(版本未采集)'));

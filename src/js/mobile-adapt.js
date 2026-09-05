@@ -1035,7 +1035,15 @@
           // 贴回可视区，顶部避让交还系统。覆盖形态（inner≈screen，diff≈0）与
           // #148 已避让形态（env=0）都不命中，行为零扰动。
           var _sbDiff = (_sh2 > 0 && _ih2 > 0) ? (_sh2 - _ih2) : 0;
-          var _resStand = d.classList.contains('ios-pwa-standalone') && _safeTop >= 20 && _sbDiff >= _safeTop - 8;
+          // 只认 iOS ≥18：17.x 及更早的覆盖形态设备（inner=screen−envTop 同款信号）
+          // 靠 #179 链已真机验证，加门槛防回归（iOS 18.x 起状态栏行为变更）
+          var _iosMajor = 0;
+          try {
+            var _osM = /OS (\d+)_/.exec(navigator.userAgent || '');
+            var _vM = /Version\/(\d+)\./.exec(navigator.userAgent || '');
+            _iosMajor = Math.max(_osM ? +_osM[1] : 0, _vM ? +_vM[1] : 0);
+          } catch (e9) {}
+          var _resStand = d.classList.contains('ios-pwa-standalone') && _safeTop >= 20 && _sbDiff >= _safeTop - 8 && _iosMajor >= 18;
           if (_resStand) _safeTop = 0;
           var _topPx = _safeTop ? _safeTop + 'px' : (_resStand ? '0px' : '');
           if (d.style.getPropertyValue('--mochi-safe-top') !== _topPx) {

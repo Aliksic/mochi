@@ -1,4 +1,13 @@
 ### 2026-09-05 21:5x（#202 表情/图片加载失败占位补全：#186 只护令牌，远程图断网/失效/dataURL 损坏/parts 图仍无声空白——iQOO12+Chrome 最新版仍报的剩余缺口；本次构建者：AI-B=本会话，随库一并收口并行已收口未提交的 #200 通话防误挂/#201 theme-color 黑边）
+### 2026-09-05 22:0x（#203 iPhone 15 Pro iOS 18.3 standalone「系统保留状态栏」形态：滑动/切换卡顿+.phone 居中裁切——即并行记录中的「#200-iOS 会话」构建收口补产物；本次构建者：AI-B=本会话）
+- [AI-B 域]（**改动文件：src/js/mobile-adapt.js（syncVvFit 保留形态甄别 standalone+env≥20+diff≈envTop+iOS≥18 → _safeTop 归 0 且显式写 '0px'：#179 高度 bump 自然失效贴回 vv 可视区、双重避让消除）、src/js/device.js（判定器：保留形态期望底边=inner/sbTop 期望 12/fs 期望屏高=inner，采集器补 iosMajor）、build.mjs（哨兵 +4 全逻辑锚点）、FIX-REGRESSION.md（203 行）、tools/verify-ios-reserved-standalone.mjs（新增 25 断言）**；构建状态：**已构建·sw mochi-mtocnb22，哨兵 413/413 哑哨兵 0**）。
+- 需求：iPhone 15 Pro+Safari 18.3 主屏幕报「滑动和切换卡顿」，明说 iOS 其他机型也有；诊断自检自动采集 ✗顶部重叠+底部少填，.phone 高=852 顶=-29/底=823（=(793−852)/2 居中裁切实锤）。
+- 根因：iOS 18.x standalone 状态栏改系统保留形态（inner=screen−envTop 但 env 仍报真实值）——#179 公式把 .phone 写到 852 超出布局视口 59px + --mochi-safe-top 双重避让；文档恒溢出与自愈 pin 对打=顿挫。方案/验证见 FIX-REGRESSION.md 203；iOS≥18 门槛保 17.x 覆盖形态零回归。
+- 验证：node --check 过；verify-ios-reserved-standalone 25/25、fullscreen-ipad 25/25、chat-tail 21/21、quote-image 21/21、verify 10/10。
+- 收口说明：a5e1562 裹入的本两文件 src 改动本次随产物一并同步（对方 WORKLOG 所嘱）；构建前已按规范 stash 隔离 chat.js #202 在途（已原样恢复，未夹带未构建）——#202 哨兵重登记与收口仍归 #202 会话。
+- 【真机:待验证】（iPhone 15 Pro iOS 18.3 主屏幕）：诊断自检屏幕适配段应全绿、.phone 高=793 顶=0；桌面滑动与 tab 切换不再顿挫；iOS17-、浏览器模式、安卓不受影响。
+
+
 * [AI-B 域]（**改动文件：src/js/chat.js（新增 bindMediaFailPlaceholder：气泡内全部 .msg-img 挂 error 监听，延时 1.5s 复核 complete+naturalWidth=0+令牌场景池 expand miss 才 replaceWith 占位 span——保留 #186 竞态防线语义，只换 img 节点不动引用块/情绪 chip；sticker/image 分支与 parts 分支统一接入）、build.mjs（#186 渲染哨兵锚点改写为 2 条新锚，411 条）、FIX-REGRESSION.md（#202 行）**；构建状态：见本次收口提交）。
 * 根因：iQOO12+Chrome 已是 19:17 最新构建仍报「联系人单发表情包变空白」，错误环无 @@m: 报错但有断网记录——表情字卡含远程 http 图（v3.11 起支持）时断网/失效/混合内容拦截、dataURL 损坏、parts 混合消息里的 img（从未挂过 error 监听）三类失败路径完全裸奔。
 * 验证：node --check 过；--check-sentinels 411 全绿哑哨兵 0；verify-quote-image / verify-media-pool 复跑见提交信息。
