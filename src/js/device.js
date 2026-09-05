@@ -1847,8 +1847,13 @@
     const envTop = inp.envTop || 0;
     const varTop = inp.varTop || 0;
     const diff = inp.diff || 0;
+    // v3.26.x #200：iOS 18.x standalone「系统保留状态栏」形态——standalone 且
+    // diff(screen−inner)≈envTop（系统垫走状态栏但 env 仍报真实值）。顶部避让已由
+    // 系统承担（var 应=0），期望底边=inner；仍按覆盖形态判则修好后必误报。
+    const resStand = !!inp.standalone && envTop >= 20 && diff >= envTop - 8;
     let mode = '未知';
-    if (envTop >= 20) mode = '覆盖形态（页面顶到屏幕最顶，系统栏悬浮其上）';
+    if (resStand) mode = '系统保留形态（iOS 18.x standalone：系统已把网页起点放在状态栏下方，env 仍报真实高度；页面不再避让、高度贴 inner，#200）';
+    else if (envTop >= 20) mode = '覆盖形态（页面顶到屏幕最顶，系统栏悬浮其上）';
     else if (diff >= 20) mode = '已避让形态（系统已把网页起点放在状态栏下方，页面不应再加顶部 padding）';
     else if (diff >= 20 && inp.standalone) mode = '歧义形态（env=0 但 diff≥20：正常应为已避让=网页起点在状态栏下方；若底部/顶部仍见白带或重叠请整段反馈）';
     else mode = '无安全区/常规视口';

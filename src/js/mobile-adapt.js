@@ -1023,7 +1023,21 @@
             // env 实测 ≥20 才需要页面避让（覆盖形态）；=0 说明系统已避让，不再叠加
             if (_envTopCache >= 20 && _envTopCache <= 160) _safeTop = _envTopCache;
           }
-          var _topPx = _safeTop ? _safeTop + 'px' : '';
+          // v3.26.x #200：iOS 18.x standalone「系统保留状态栏」形态甄别——inner=
+          // screen−envTop（系统已把页面起点放在状态栏下方）但 env() 仍返回真实高度
+          //（iPhone 15 Pro iOS 18.3 主屏幕实测：inner 793 / screen 852 / env 59）。
+          // 该形态若照旧走既有链：① --mochi-safe-top=59 → .statusbar 双重避让；
+          // ② #179 公式 safeTop+inner 把 .phone 写到 852，超出布局视口 59px——
+          // body 是 flex 居中容器 → 整壳被居中裁切（实测 .phone 顶=-29/底=823），
+          // 文档恒溢出 59px 与自愈 pinScrollTop 长期对打 = 滑动/切换顿挫，设备
+          // 自检同帧自动采集 ✗顶部重叠+底部少填。甄别命中时 _safeTop 归 0 且
+          // 显式写 '0px'（摘除属性会回落 env() 反而避让）：高度 bump 自然失效
+          // 贴回可视区，顶部避让交还系统。覆盖形态（inner≈screen，diff≈0）与
+          // #148 已避让形态（env=0）都不命中，行为零扰动。
+          var _sbDiff = (_sh2 > 0 && _ih2 > 0) ? (_sh2 - _ih2) : 0;
+          var _resStand = d.classList.contains('ios-pwa-standalone') && _safeTop >= 20 && _sbDiff >= _safeTop - 8;
+          if (_resStand) _safeTop = 0;
+          var _topPx = _safeTop ? _safeTop + 'px' : (_resStand ? '0px' : '');
           if (d.style.getPropertyValue('--mochi-safe-top') !== _topPx) {
             if (_topPx) d.style.setProperty('--mochi-safe-top', _topPx);
             else d.style.removeProperty('--mochi-safe-top');
