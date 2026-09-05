@@ -1352,6 +1352,13 @@
         </div>
         <!-- v3.26.x #175：屏幕适配诊断（与信息诊断分开）——专项定位跨设备屏幕适配问题
              （顶部空白/双倍避让/底部裁切/缩放异常），device.js 采集+自动判定 -->
+        <!-- v3.26.x #185：顶部避让修正——「系统保留/覆盖」两形态 JS 无法区分（信号相同），
+             不同机型各属其一：开启=声明本机为覆盖形态（恢复 env 顶部避让+全屏高度含 env），
+             修「Mochi 行与系统时间重叠」；默认关=系统保留形态（修「底部白带」）。 -->
+        <div class="set-row">
+          <div class="txt">顶部避让修正<span class="sub">顶部 Mochi 行与手机时间重叠时开启；底部出现白带时关闭（改后自动刷新）</span></div>
+          <label class="toggle"><input type="checkbox" id="safe-top-force"><span class="tk"></span></label>
+        </div>
         <div class="set-row" id="row-screen-diag">
           <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/><path d="M8 6h8"/></svg></div>
           <div class="txt">屏幕适配诊断<span class="sub">顶部空白 / 底部裁切 / 缩放异常一键定位</span></div>

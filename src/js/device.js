@@ -1853,6 +1853,7 @@
     const resStand = !!inp.standalone && envTop >= 20 && diff >= envTop - 8 && (inp.iosMajor || 0) >= 18;
     let mode = '未知';
     if (resStand) mode = '系统保留形态（iOS 18.x standalone：系统已把网页起点放在状态栏下方，env 仍报真实高度；页面不再避让、高度贴 inner，#200）';
+    else if (envTop >= 20 && diff <= 2 && inp.standalone && (inp.screenH || 0) > 0 && inp.innerH >= inp.screenH - 2) mode = 'iPad 形态（inner=屏高已含整屏，diff=0：状态栏悬浮、页面 padding 避让，高度贴 inner/屏高，#184）';
     else if (envTop >= 20) mode = '覆盖形态（页面顶到屏幕最顶，系统栏悬浮其上）';
     else if (diff >= 20) mode = '已避让形态（系统已把网页起点放在状态栏下方，页面不应再加顶部 padding）';
     else if (diff >= 20 && inp.standalone) mode = '歧义形态（env=0 但 diff≥20：正常应为已避让=网页起点在状态栏下方；若底部/顶部仍见白带或重叠请整段反馈）';
@@ -1872,7 +1873,10 @@
     const coverBrowser = !inp.standalone && diff <= 2 && envTop >= 20;
     // v3.26.x #200：系统保留形态（iOS 18.x standalone，diff≈envTop）期望底边=inner——
     // .phone 超出 inner 会造出文档滚动量（body 居中裁切+pin 对打），同 #199 语义
-    const expBase = (coverBrowser || resStand) ? inp.innerH : (inp.envTop || 0) + inp.innerH;
+    // v3.26.x #184：iPad 形态（standalone+env≥20+diff≈0，inner=屏高已含整屏）——
+    // envTop+inner 会双算状态栏高度（iPad Air 实测 1212>1180 误报白带），期望底边=inner
+    const ipadForm = !!inp.standalone && envTop >= 20 && diff <= 2 && inp.innerH >= (inp.screenH || 0) - 2;
+    const expBase = (coverBrowser || resStand || ipadForm) ? inp.innerH : (inp.envTop || 0) + inp.innerH;
     if (inp.phoneBottom != null && inp.innerH) {
       const expB = expBase;
       const under = Math.round(expB - inp.phoneBottom);
@@ -1883,7 +1887,7 @@
     }
     // ⑤ --mochi-ios-h 与可视高一致性（全屏态）
     if (inp.fsActive) {
-      const expH = resStand ? (inp.innerH || 0) : (inp.envTop || 0) + (inp.innerH || 0);
+      const expH = (coverBrowser || resStand || ipadForm) ? (inp.innerH || 0) : Math.min(inp.screenH || (inp.envTop || 0) + (inp.innerH || 0), (inp.envTop || 0) + (inp.innerH || 0));
       if (inp.iosH && Math.abs(inp.iosH - expH) > 2) add(false, '--mochi-ios-h 与期望屏高不符', '⚠ ios-h=' + inp.iosH + 'px ≠ envTop+inner=' + expH + 'px（#179 公式：覆盖形态=整屏/已避让=inner）');
       else add(true, '--mochi-ios-h=' + (inp.iosH || '(未设→回落)') + ' 与期望屏高一致');
     }
@@ -2015,6 +2019,21 @@
   // ===== #176：快照存档 + 常驻监视 + 异常形态自动上报 =====
   // 历史快照：手动诊断/监视捕获各存一份（上限 8 份），报告末尾自动与上一次对比，
   // 哪项数值变了直接列出——『正常时 vs 异常时』不用再靠记忆。
+  // #185：顶部避让修正开关（读存 xy-home-v2:__safe-top-force；改后刷新生效）
+  function bindSafeTopForce() {
+    const el = document.getElementById('safe-top-force');
+    if (!el) return;
+    try { el.checked = localStorage.getItem('xy-home-v2:__safe-top-force') === '1'; } catch (e) {}
+    el.addEventListener('change', function () {
+      try {
+        if (el.checked) localStorage.setItem('xy-home-v2:__safe-top-force', '1');
+        else localStorage.removeItem('xy-home-v2:__safe-top-force');
+      } catch (e1) {}
+      setTimeout(function () { try { location.reload(); } catch (e2) {} }, 300);
+    });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bindSafeTopForce);
+  else bindSafeTopForce();
   // 常驻监视：每 5s 轻量采集一次（仅可见时），判定出现 ✗ 且形态签名与上次不同
   // （状态变化沿）才存档 + 静默写错误环形缓冲（信息诊断『最近错误』可直读），
   // 持续坏不刷屏、用户不用手发。

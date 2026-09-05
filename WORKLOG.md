@@ -1,3 +1,10 @@
+### 2026-09-05 21:3x（#184 iPad Air 全屏「底部少填 32px」误报：判定器公式三形态统一 min(屏高,envTop+inner)；已构建）
+* [AI-B 域]（**改动文件：src/js/device.js（screenDiagJudge：expBase/ios-h/tabbar 期望改 min(屏高,envTop+inner) + ipadForm 例外 standalone+env≥20+diff≤2+inner≈屏高 → 期望=inner，与 #199/#200 例外并列；顶部形态判定新增 iPad 形态说明）、build.mjs（#203 expBase needle 同步）、FIX-REGRESSION.md（#184 行）**）。
+* 根因：iPad Air 形态 inner=屏高已含整屏（diff=0），expBase=envTop+inner 双算 32px → 误报「底部少填白带」。实测布局本身正确（.phone=1180=屏高全 ✓）——纯判定器缺陷。
+* 验证：node --check 过；八场景判定回归全过；--check-sentinels 413 全绿。
+* 待真机（iPad Air 7）：更新后屏幕适配诊断应全 ✓。
+
+- 【给 #202 会话的撞车更正（AI-B #200 会话留）】本会话 20:28 的提交 ce8b90b 因并行 git 竞态，实际只裹入了你们 stash pop 后留在工作区的 chat.js #202 源码（blob ee916c4，bindMediaFailPlaceholder 全量，内容完整未半途）——即 **HEAD 的 chat.js 已含 #202 源码**，与你们「HEAD 仍是旧 #186 版」的判断已不符；你们收口时只需登记回两条 #202 哨兵并构建（产物会自然带上 HEAD 里的 #202 源码），勿重复改写 chat.js 防覆盖。本会话的 #200 通话防误挂（call.js/reply-settings.js/template.html/哨兵+4/产物）已经由 #203 构建（mochi-mtocnb22，哨兵 413）入库，无需再动。origin 未推送，提交序列以最新 git log 为准。
 ### 2026-09-05 21:5x（#202 表情/图片加载失败占位补全：#186 只护令牌，远程图断网/失效/dataURL 损坏/parts 图仍无声空白——iQOO12+Chrome 最新版仍报的剩余缺口；本次构建者：AI-B=本会话，随库一并收口并行已收口未提交的 #200 通话防误挂/#201 theme-color 黑边）
 ### 2026-09-05 22:0x（#203 iPhone 15 Pro iOS 18.3 standalone「系统保留状态栏」形态：滑动/切换卡顿+.phone 居中裁切——即并行记录中的「#200-iOS 会话」构建收口补产物；本次构建者：AI-B=本会话）
 - [AI-B 域]（**改动文件：src/js/mobile-adapt.js（syncVvFit 保留形态甄别 standalone+env≥20+diff≈envTop+iOS≥18 → _safeTop 归 0 且显式写 '0px'：#179 高度 bump 自然失效贴回 vv 可视区、双重避让消除）、src/js/device.js（判定器：保留形态期望底边=inner/sbTop 期望 12/fs 期望屏高=inner，采集器补 iosMajor）、build.mjs（哨兵 +4 全逻辑锚点）、FIX-REGRESSION.md（203 行）、tools/verify-ios-reserved-standalone.mjs（新增 25 断言）**；构建状态：**已构建·sw mochi-mtocnb22，哨兵 413/413 哑哨兵 0**）。
