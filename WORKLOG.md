@@ -1,3 +1,7 @@
+### 2026-09-05 14:xx（TASKS #129 全量甄别完成：58 个存量失败脚本定性 + 产出 #130/#131 两张派生清单；无 src/产物改动）
+* [AI-B 域]（**改动文件：TASKS.md（#129 进度更新 + 新增 #130 过期批修清单 / #131 疑似真缺陷核查清单）**）。58 个存量失败脚本逐个收集失败断言行后定性：**约 44 个=口径过期非产品缺陷**（ta-checkin 预设 17→23 扩容、more-cats 互动 6→8/小游戏 4→8 项、narc/myarc 菜单加行、poke-emoji「小A的」→「TA 的」称呼统一、dark-mode D1-D5=v3.27 主题三档弹窗化（点行不再直接切换）、gc-pool-scope T3=#157 默认卡语义改版后 hasDefault:false 是新正确行为、oom-leaks B3/B5=v3.18 createObjectURL 政策、room A8=功能字卡 tab 重构、fish-play=摸鱼页本周小结改版等）；**6 个疑似真缺陷→#131**（最重：chat-switch-idb-hang 切联系人 LS 快照未写+记录未渲染——#90 修复回归 or chat.js 缩水防护拦截直种 IDB 数据，需 AI-A 判定；其余 mail-cfg-per-cid 跨桌面来信 0 封/feed-reply-ui role 反向/myarc 档案写入空/coop-mine B7b/water E1 连续天数）；**环境限制类**（voice-record 无麦克风、kb-overlay-kernel 悬浮键盘、desk-persist/move-swipe 拖拽模拟）保留。结论：AI-B 域未发现新产品缺陷。
+* 待对方处理（AI-A）：#131 六项逐个核实——真缺陷按 BUGS 规则修+登记，测试侧则并入 #130 批修；#130 脚本簇 AI-A 忙时可由 #129 会话代修（只动脚本不动产品）。
+
 ### 2026-09-05 12:1x（#177 新增设置页【功能诊断】：逐项测试全部功能正常/异常；已构建）
 * [AI-B 域]（**改动文件：src/template.html（row-func-diag 锚点，信息诊断分组下）、src/js/device.js（collectFuncDiag：25 项功能三级测试 T1 入口 typeof/T2 页面+图标节点/T3 真实打开-返回-恢复，门控功能 ⚠ 需注意，强制恢复桌面+关浮层+复位 tab；报告汇总+✗ 清单，弹窗+自动复制）、build.mjs（FIX_SENTINELS 2 条）、FIX-REGRESSION.md（#183 行）；构建状态：已构建·sw 见 version.json**）。
 * 验证：node --check 过；--check-sentinels 全绿；CDP 端到端无头跑完整流程。
