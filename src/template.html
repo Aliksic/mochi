@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-visual">
 <title>Mochi 字卡传讯（完全免费·禁止倒卖）</title>
 <meta name="description" content="情侣专属的摸鱼字卡聊天模拟器。本站完全免费，任何收费均为倒卖诈骗；唯一作者：小红书@言序（1842523578）。如果你是花钱买来的链接：你被骗了，请拒付退款并举报卖家。">
-<meta name="theme-color" content="#111111">
+<meta name="theme-color" content="#e9e9e9">
 <link rel="manifest" href="./manifest.json">
 <!-- v3.5.158：站点图标用带 mochi 字母的 icon-512——Chrome 安卓通知左侧小图标取自站点图标 -->
 <link rel="icon" type="image/png" sizes="512x512" href="./icon-512.png">
@@ -2368,6 +2368,11 @@
           <div class="gs-row"><span>通话中挂断概率</span><div class="stepper" data-k="call-hangup" data-min="0" data-max="100" data-step="0.01"><button class="stp-min">−</button><input class="stp-val" id="call-hangup-val" readonly><button class="stp-max">+</button></div></div>
         </div>
         <div class="sm-set-hint" style="padding:0 16px 8px">来电概率：TA 主动来电的命中概率。TA 回复或主动发消息后、以及后台每 1-2 分钟定时检查时各掷一次，两次来电至少间隔 5 分钟（冷却）；设为 0 则从不主动来电。接听/忙线/拒接概率：我方呼出时按三者比例互斥分配对方结果（忙线先判，其次拒接，最后接听）。挂断概率：通话接通满 3 分钟后每 60 秒检查一次，命中则对方主动挂断。</div>
+        <div class="gs-title">对方挂断</div>
+        <div class="set-group glass">
+          <div class="gs-row"><span>禁止联系人挂断电话</span><label class="toggle"><input type="checkbox" id="call-no-hangup"><span class="tk"></span></label></div>
+        </div>
+        <div class="sm-set-hint" style="padding:0 16px 8px">开启后无论挂断概率是多少，通话中对方都不会主动挂断（默认关闭，需手动开启）。注意通话概率设置按联系人各自保存：某个联系人的桌面从没保存过挂断概率时，会按默认 2% 计算——个别联系人「挂断几率明明设了 0 还是被挂断」就是这种情况，开此总开关可一并兜住。</div>
         <div class="gs-title">通话恢复</div>
         <div class="set-group glass">
           <div class="gs-row"><span>刷新后恢复通话</span><label class="toggle"><input type="checkbox" id="call-resume"><span class="tk"></span></label></div>

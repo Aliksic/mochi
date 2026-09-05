@@ -17,6 +17,10 @@
       busy: c['call-busy'] !== undefined ? c['call-busy'] : CALL.busy,
       reject: c['call-reject'] !== undefined ? c['call-reject'] : CALL.reject,
       hangup: c['call-hangup'] !== undefined ? c['call-hangup'] : CALL.hangup,
+      // #200：禁止联系人挂断总开关（回复/通话设置，默认关）——开启后通话中对方永不主动挂断。
+      // 同时兜住「挂断几率为 0 仍被挂断」：该设置按桌面（联系人）隔离存储，从未保存过该键的
+      // 联系人会回落 2% 默认值，总开关与下方 hangup<=0 双重硬闸一起把这类情况全部拦死
+      nohangup: c['call-no-hangup'] === 1 || c['call-no-hangup'] === '1',
       resume: c['call-resume'] !== undefined ? c['call-resume'] : 1
     };
   }
@@ -440,7 +444,10 @@
           checkCount++;
           if (checkCount >= 60) {
             checkCount = 0;
-            if (Math.random() * 100 < callCfg().hangup) {
+            // #200：总开关开启或挂断概率 <=0 时硬闸不掷骰——概率为 0 本就不该挂断，
+            // 这里再显式拦一道，防设置读取异常回落默认值导致「设 0 仍被挂断」
+            const hp = callCfg();
+            if (!(hp.nohangup || hp.hangup <= 0) && Math.random() * 100 < hp.hangup) {
               endCall('对方挂断了电话');
             }
           }

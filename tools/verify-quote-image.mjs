@@ -199,10 +199,18 @@ check('D2 引用预览条：有缩略图、保留原文字「想你了 好想你
 check('D3 发送后气泡引用块：缩略图 + 原文字都在', d.last && d.last.hasImg && d.last.qText === '想你了 好想你' && d.last.body.indexOf('收到图文') >= 0, JSON.stringify(d.last));
 
 // 场景 E：#149 媒体池令牌——历史图片已令牌化（@@m:hash）时引用仍出缩略图、令牌串不进引用文本
-// tokenize 要求载荷 ≥1024 字符，1x1 PNG 太短，用加长 dataURL（本场景只断言 DOM/src，不要求可解码）
+// tokenize 要求载荷 ≥1024 字符，1x1 PNG 太短。
+// #202 期望更新：产品现在对「解码失败的图」渲染占位（修无声空白气泡，iQOO12 实证），
+// 旧的伪造截断 PNG（不可解码）会被换成占位导致 E3 找不到 .msg-img-sm——改用页内 canvas
+// 生成真实可解码且 >1024 字符的 PNG 噪声图，保留本场景「令牌化+池解析」断言本意。
 console.log('--- 场景 E：引用已令牌化的图片消息（#149） ---');
-const IMG_BIG = 'data:image/png;base64,' + 'iVBORw0KGgoAAAANSUhEUg'.repeat(96);
 await openPage();
+const imgBigRes = await cdp('Runtime.evaluate', {
+  expression: "(async function(){var c=document.createElement('canvas');c.width=160;c.height=160;var x=c.getContext('2d');var d=x.createImageData(160,160);for(var i=0;i<d.data.length;i++){d.data[i]=(i*7919)&255;d.data[i*3+3]=255;}x.putImageData(d,0,0);return c.toDataURL('image/png');})()",
+  returnByValue: true, awaitPromise: true
+});
+const IMG_BIG = imgBigRes && imgBigRes.result ? imgBigRes.result.value : null;
+check('E-pre 场景图真实可解码且 ≥1024 字符', typeof IMG_BIG === 'string' && IMG_BIG.indexOf('data:image/png') === 0 && IMG_BIG.length >= 1024, String(IMG_BIG && IMG_BIG.length));
 const tokRes = await cdp('Runtime.evaluate', {
   expression: "(async function(){var t=await window.mochiMediaTokenize(" + JSON.stringify(IMG_BIG) + ");await window.mochiMediaFlush();return t;})()",
   returnByValue: true, awaitPromise: true

@@ -2601,6 +2601,13 @@ try {
     if (eff === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
     else document.documentElement.removeAttribute('data-theme');
     if (themeModeVal) themeModeVal.textContent = mode === 'auto' ? '跟随系统' : (mode === 'dark' ? '已开启' : '关闭');
+    // #201 浏览器顶部黑边：安卓 Edge/Chromium 用 theme-color 涂页面外的系统区域（页面下移避让形态顶部那 41px），
+    // 写死深色在浅色主题下就是一条黑边——这里跟随当前生效主题的 --page-bg 同步刷新
+    try {
+      const bg = getComputedStyle(document.documentElement).getPropertyValue('--page-bg').trim();
+      const meta = document.querySelector('meta[name="theme-color"]');
+      if (bg && meta) meta.setAttribute('content', bg);
+    } catch (e) {}
   };
   applyThemeMode(getThemeMode());
   // v3.27.x：auto 档跟随系统——系统主题变化时仅当用户选 auto 才重算，避免覆盖手动选择

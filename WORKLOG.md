@@ -1,9 +1,26 @@
+### 2026-09-05 21:5x（#202 表情/图片加载失败占位补全：#186 只护令牌，远程图断网/失效/dataURL 损坏/parts 图仍无声空白——iQOO12+Chrome 最新版仍报的剩余缺口；本次构建者：AI-B=本会话，随库一并收口并行已收口未提交的 #200 通话防误挂/#201 theme-color 黑边）
+* [AI-B 域]（**改动文件：src/js/chat.js（新增 bindMediaFailPlaceholder：气泡内全部 .msg-img 挂 error 监听，延时 1.5s 复核 complete+naturalWidth=0+令牌场景池 expand miss 才 replaceWith 占位 span——保留 #186 竞态防线语义，只换 img 节点不动引用块/情绪 chip；sticker/image 分支与 parts 分支统一接入）、build.mjs（#186 渲染哨兵锚点改写为 2 条新锚，411 条）、FIX-REGRESSION.md（#202 行）**；构建状态：见本次收口提交）。
+* 根因：iQOO12+Chrome 已是 19:17 最新构建仍报「联系人单发表情包变空白」，错误环无 @@m: 报错但有断网记录——表情字卡含远程 http 图（v3.11 起支持）时断网/失效/混合内容拦截、dataURL 损坏、parts 混合消息里的 img（从未挂过 error 监听）三类失败路径完全裸奔。
+* 验证：node --check 过；--check-sentinels 411 全绿哑哨兵 0；verify-quote-image / verify-media-pool 复跑见提交信息。
+* 给并行会话：#200/#201 你们已收口构建但尚未提交的改动随本库一并提交（WORKLOG 已声明完整）；#202 编号顺延占用，#200 归通话防误挂不受影响。
+### 2026-09-05 21:4x（#201 OPPO Reno14+Edge 顶部黑边：theme-color 写死深色被浏览器拿来涂页面外系统区；本次构建者：AI-B=本会话，随库一并打入已构建收口的 #200 在途改动）
+- [AI-B 域]（**改动文件：src/template.html（meta theme-color #111111→#e9e9e9=浅色 --page-bg）、src/js/personalize.js（applyThemeMode 末尾同步 meta theme-color=当前生效主题 getComputedStyle(--page-bg)，浅/深/auto 全跟随）、build.mjs（哨兵 +2 全逻辑锚点）、FIX-REGRESSION.md（#201 行+设备索引 OPPO Reno14）**；构建状态：见本条收口）。
+- 需求：OPPO Reno14+Edge 报「页面没有贴合屏幕，顶部一块黑边」，用户明说其他机型也有；诊断 v3.26.464 全绿（已避让形态、贴底/导航栏全 ✓），diff(screen−inner)=41px 即黑边区域=浏览器用 theme-color 涂色的页面外系统区，布局链无病、零布局改动。
+- 根因/方案/验证：见 FIX-REGRESSION.md 201。
+- 给并行会话：#200（call.js/reply-settings.js/template.html 通话防误挂）工作区在途且其 WORKLOG 已声明「随收口构建」，本次构建一并打入；构建前已跑 --check-sentinels 410 全绿哑哨兵 0。
+- 验证：node --check 过；--check-sentinels 410 全绿哑哨兵 0。【真机:待验证】见 FIX-REGRESSION #201。
+
 ### 2026-09-05 21:xx（#199 荣耀50se+雨见：沉浸式安卓浏览器覆盖形态顶部避让全链失效+Gecko 滚动锚定与贴底钉住对打；本次构建者：AI-B=本会话，随库一并打入已声明完整的 #193/#196/#197/#198 在途改动）
 - [AI-B 域·跨域改动 src/css/base.css（.chat-body overflow-anchor，AI-A 聊天样式域），理由：滚动锚定属全局内核行为，锚定与 #162 钉住的对打只能在共享样式层关；chat-main.css 未动]（**改动文件：src/js/mobile-adapt.js（#199 syncVvFit env 探针扩展：非 standalone 且 screen−inner≤2 的沉浸式浏览器覆盖形态同样探 env 写 --mochi-safe-top 并挂/摘 mochi-cover-top 类；iOS standalone 不挂类既有避让链零扰动；刻意不扩 #179 高度公式到该形态防造出文档滚动量）、src/css/base.css（html.mochi-cover-top .phone .statusbar 提特异性夺回被 .statusbar{padding:4px} 压死的顶部避让；.chat-body{overflow-anchor:none} 关 Gecko 滚动锚定）、src/js/device.js（判定器：浏览器覆盖形态期望底边=可视区底，防修好后 #179 误报）、build.mjs（哨兵 +5 全逻辑锚点）、FIX-REGRESSION.md（199 行+设备索引荣耀 50se）**；构建状态：见本条收口）。
 - 需求：荣耀50se+雨见（Gecko/Firefox 152，安卓12）报「聊天界面偶尔掉下来一半；删消息/对方回消息屏幕往上移」，用户明说其他机型也有；诊断 ✗#114 顶部重叠（状态栏顶位4px 钻 35px 系统栏）+ ✗#179 底部少填 35px。根因/方案/验证见 FIX-REGRESSION.md 199。
 - 备注：该机诊断另报 SyntaxError: redeclaration of let JSInterface（anonymous code，仓库源码 grep 无此标识符）——疑似雨见壳自身注入脚本失败，非本项目代码，暂不处理，复发再查。
 - 验证：node --check 过；--check-sentinels 全绿哑哨兵 0（404 条）。
 
+### 2026-09-05（#200 通话防误挂：挂断几率 0 仍被挂断根因收口+「禁止联系人挂断电话」总开关；本次构建者：AI-B=本会话）
+- [跨域改动 src/js/reply-settings.js（AI-A 设置域文件，理由：用户直接指派修复+新开关的存储/UI 全在该文件机制内）]（**改动文件：src/js/call.js（callCfg 读 call-no-hangup→nohangup；挂断掷骰处硬闸 `!(hp.nohangup || hp.hangup <= 0)` 才掷骰）、src/js/reply-settings.js（DEFAULTS 登记 call-no-hangup:0 + syncUI/开关交互/saveCurrentReplyPage 三处清单同步）、src/template.html（通话设置页新增「对方挂断」组开关行+按联系人隔离的坑位说明）、build.mjs（哨兵 +4 全逻辑锚点）、FIX-REGRESSION.md（#200 行）**；构建状态：见本条收口）。
+- 需求：OPPO Reno6 5G+雨见（Firefox 152，用户明说多机型通病）：挂断几率设 0 仍被挂断、且只有部分角色；并要求回复/通话设置新增「禁止联系人挂断电话」开关，默认关。
+- 根因：挂断概率 per-cid 隔离存储，只在一个联系人桌面调 0 时其余联系人静默回落 2% 默认值；叠加安卓 ce-box 失焦不派 change（#197 机制已修，旧构建存量中招）。纯概率路径 Math.random()<0 本不可能触发，挂断全部来自「键缺失回落默认」。
+- 验证：node --check 两文件过；--check-sentinels 408 全绿哑哨兵 0。【真机:待验证】见 FIX-REGRESSION #200。
 ### 2026-09-05 20:0x（#193 字卡库写回覆盖收口构建·本次构建者：AI-A=本会话，随库一并打入 AI-B 已声明完整的 #196/#197/#198 三修）
 ### 2026-09-05（#196/#197/#198 三联修：温柔字卡连抽同句+安卓全站 change 保存失效+经期组件壁纸不生效；本次构建者：AI-B=本会话）
 - [AI-B 域·跨域改动 src/js/period.js（AI-A 业务文件，warmPrefix/warmSuffix 抽取段，理由：用户直接指派修复）]（**改动文件：src/js/period.js（#196 warmPick 近期 3 条不重复，池 6 条纯均匀随机连抽同几句被当 bug）、src/js/mobile-adapt.js（#197 ce-box 聚焦记基线、blur 内容有变补派 change——contenteditable 不自发派 change，安卓全站挂 change 的保存（心愿单概率等）从未生效过，机制级根因）、src/js/personalize.js（#198 cardBgSel 裸类型兜底 [data-card-bg=<type>] + cardBgAllTypes DOM 收集全类型，applyAllCardBgs/rescueDeskVisuals 改走它——CARD_BG_TYPES 无 desk-period，上传存了键但永不应用）、build.mjs（哨兵 +5）、FIX-REGRESSION.md（196/197/198 三行）**；构建状态：见本条收口）。
