@@ -75,15 +75,18 @@ console.log('[B] 采集器 tabbar 隐藏跳过');
 console.log('[C] screenDiagJudge 判定器');
 {
   const m = device.match(/function screenDiagJudge\(inp\) \{[\s\S]*?\n  \}/);
+  // #210：判定器改调共享判定器 window.mochiViewportForm——提取体求值时注入真实现
+  const cm = device.match(/window\.mochiViewportForm = function \(sig\) \{[\s\S]*?\n\};/);
   ok(!!m, 'screenDiagJudge 可提取');
   if (m) {
+    const clf = cm ? new Function(`'use strict';${cm[0].replace('window.mochiViewportForm = ', 'return ')}`)() : null;
     let body = m[0]
       .replace(/^function screenDiagJudge\(inp\) \{/, '')
       .replace(/\n  \}$/, '')
       .replace(/^\s*const F = \[\];/, '')
       .replace(/^\s*const add = \(ok, name, detail\) => F\.push\(\{ ok: !!ok, name: name, detail: detail \|\| '' \}\);/, '')
       .replace(/\n\s*return F;\s*$/, '');;
-    const run = (inp) => Function('inp', `'use strict'; const OUT=[]; const add=(ok,name,detail)=>OUT.push({ok:!!ok,name:name,detail:detail||''}); ${body} return OUT;`)(inp);
+    const run = (inp) => Function('inp', 'window', `'use strict'; const OUT=[]; const add=(ok,name,detail)=>OUT.push({ok:!!ok,name:name,detail:detail||''}); ${body} return OUT;`)(inp, { mochiViewportForm: clf });
     // 苹果17 实机基态：iPhone17 / iOS18.7 standalone 全屏，inner 894 / screen 956 / env 62
     const base = { scale: 1, envTop: 62, varTop: 0, diff: 62, standalone: true, innerH: 894, screenH: 956, sbTop: 12, phoneBottom: 894, fsActive: true, iosH: 894, iosMajor: 18, envBottom: 34, tabBottom: 860, kb: { kbActive: false, fullInner: 894, fullVv: 894 } };
     let F = run({ ...base });

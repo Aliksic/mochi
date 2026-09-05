@@ -1003,62 +1003,40 @@
           var _ih2 = window.innerHeight || 0;
           var _sh2 = (window.screen && window.screen.height) || 0;
           var _vh2 = _vv ? Math.round(_vv.height * ((_vv.scale && _vv.scale > 0.5) ? _vv.scale : 1)) : _ih2;
-          var _safeTop = 0;
-          // v3.26.x #199：沉浸式安卓浏览器覆盖形态（雨见/Via 等自绘壳：页面顶到系统
-          // 状态栏下，screen==inner 且 standalone=false）同样需要页面避让——原判定只认
-          // ios-pwa-standalone，该形态 env() 实测 35px 却没人写 --mochi-safe-top，
-          // 模拟状态栏 4px 顶位钻进系统栏（荣耀50se+雨见 诊断 ✗#114 实证）。
-          // 判据：无浏览器 chrome（screen−inner≤2）才可能是覆盖形态；带地址栏的
-          // 常规浏览器 screen>inner，系统已把页面垫在状态栏下，探针不跑、行为不变。
-          var _coverBrowser = !d.classList.contains('ios-pwa-standalone')
-            && _sh2 > 0 && _ih2 > 0 && (_sh2 - _ih2) <= 2;
-          if ((d.classList.contains('ios-pwa-standalone') || _coverBrowser) && _sh2 > 0 && _vh2 > 0) {
-            if (_envTopCache < 0) {
-              try {
-                var _probe = document.createElement('div');
-                _probe.style.cssText = 'position:fixed;top:0;left:0;width:0;height:0;padding-top:env(safe-area-inset-top,0px);visibility:hidden;pointer-events:none;';
-                document.body.appendChild(_probe);
-                _envTopCache = parseFloat(getComputedStyle(_probe).paddingTop) || 0;
-                document.body.removeChild(_probe);
-              } catch (e4) { _envTopCache = 0; }
-            }
-            // env 实测 ≥20 才需要页面避让（覆盖形态）；=0 说明系统已避让，不再叠加
-            if (_envTopCache >= 20 && _envTopCache <= 160) _safeTop = _envTopCache;
-          }
-          // v3.26.x #200：iOS 18.x standalone「系统保留状态栏」形态甄别——inner=
-          // screen−envTop（系统已把页面起点放在状态栏下方）但 env() 仍返回真实高度
-          //（iPhone 15 Pro iOS 18.3 主屏幕实测：inner 793 / screen 852 / env 59）。
-          // 该形态若照旧走既有链：① --mochi-safe-top=59 → .statusbar 双重避让；
-          // ② #179 公式 safeTop+inner 把 .phone 写到 852，超出布局视口 59px——
-          // body 是 flex 居中容器 → 整壳被居中裁切（实测 .phone 顶=-29/底=823），
-          // 文档恒溢出 59px 与自愈 pinScrollTop 长期对打 = 滑动/切换顿挫，设备
-          // 自检同帧自动采集 ✗顶部重叠+底部少填。甄别命中时 _safeTop 归 0 且
-          // 显式写 '0px'（摘除属性会回落 env() 反而避让）：高度 bump 自然失效
-          // 贴回可视区，顶部避让交还系统。覆盖形态（inner≈screen，diff≈0）与
-          // #148 已避让形态（env=0）都不命中，行为零扰动。
-          var _sbDiff = (_sh2 > 0 && _ih2 > 0) ? (_sh2 - _ih2) : 0;
-          // 只认 iOS ≥18：17.x 及更早的覆盖形态设备（inner=screen−envTop 同款信号）
-          // 靠 #179 链已真机验证，加门槛防回归（iOS 18.x 起状态栏行为变更）
-          var _iosMajor = 0;
+          // v3.26.x #209：形态判定收敛到共享判定器 window.mochiViewportForm（device.js
+          // 定义，与 screenDiagJudge 单一事实源；此前执行器/诊断各抄一份判式已现漂移
+          // ——#186 的 force 分支两处就不同步）。此处只负责：读信号 → env 探针（按
+          // 横竖屏缓存，#148）→ 按判定输出写 --mochi-safe-top / mochi-cover-top / 高度。
+          // #199 判据：无浏览器 chrome（screen−inner≤2）才可能是沉浸式覆盖形态；
+          // 带地址栏的常规浏览器 screen>inner，系统已垫页面，探针不跑、行为不变。
+          var _sig0 = {
+            standalone: d.classList.contains('ios-pwa-standalone'),
+            envTop: _envTopCache >= 0 ? _envTopCache : 0,
+            innerH: _ih2, screenH: _sh2, iosMajor: 0, safeTopForce: false
+          };
           try {
             var _osM = /OS (\d+)_/.exec(navigator.userAgent || '');
             var _vM = /Version\/(\d+)\./.exec(navigator.userAgent || '');
-            _iosMajor = Math.max(_osM ? +_osM[1] : 0, _vM ? +_vM[1] : 0);
+            _sig0.iosMajor = Math.max(_osM ? +_osM[1] : 0, _vM ? +_vM[1] : 0);
           } catch (e9) {}
-          var _resStand = d.classList.contains('ios-pwa-standalone') && _safeTop >= 20 && _sbDiff >= _safeTop - 8 && _iosMajor >= 18;
-          // v3.26.x #185：用户手动修正——「系统保留/已避让」与「覆盖」两形态 JS 信号
-          // 完全相同（env=0 或 env≈diff>0，inner=screen−env），无法程序区分，且不同
-          // 机型/系统版本各属其一。此键=用户在设置页声明本机属「覆盖形态」：
-          // 顶部避让 = env 探针优先，env=0 时用 diff（=系统保留的状态栏高度）兜底；
-          // fs/非 fs 高度公式用 _safeTop+inner 自然补满屏底（修 18.3 白边）。
-          var _forceCover = false;
-          try {
-            _forceCover = d.classList.contains('ios-pwa-standalone') && localStorage.getItem('xy-home-v2:__safe-top-force') === '1';
-          } catch (eF0) {}
-          if (_forceCover) {
-            _safeTop = (_envTopCache >= 20) ? _envTopCache : ((_sbDiff >= 20 && _sbDiff <= 160) ? _sbDiff : 0);
-            _resStand = false;
-          } else if (_resStand) _safeTop = 0;
+          try { _sig0.safeTopForce = localStorage.getItem('xy-home-v2:__safe-top-force') === '1'; } catch (eF0) {}
+          var _f0 = window.mochiViewportForm(_sig0);
+          if (_f0.needEnvProbe && _envTopCache < 0 && _sh2 > 0 && _vh2 > 0) {
+            try {
+              var _probe = document.createElement('div');
+              _probe.style.cssText = 'position:fixed;top:0;left:0;width:0;height:0;padding-top:env(safe-area-inset-top,0px);visibility:hidden;pointer-events:none;';
+              document.body.appendChild(_probe);
+              _envTopCache = parseFloat(getComputedStyle(_probe).paddingTop) || 0;
+              document.body.removeChild(_probe);
+            } catch (e4) { _envTopCache = 0; }
+            _sig0.envTop = _envTopCache;
+          }
+          var _f = window.mochiViewportForm(_sig0);
+          var _safeTop = _f.safeTop;
+          // _f.resStand（#200 iOS≥18 系统保留形态）→ _safeTop=0 且下面显式写 '0px'
+          //（摘除属性会回落 env() 反而双重避让）；_f.forceCover（#185/#186 用户声明
+          // 覆盖形态）→ safeTop=env 优先、env=0 用 diff 兜底。判式细节见判定器。
+          var _resStand = _f.resStand;
           var _topPx = _safeTop ? _safeTop + 'px' : (_resStand ? '0px' : '');
           if (d.style.getPropertyValue('--mochi-safe-top') !== _topPx) {
             if (_topPx) d.style.setProperty('--mochi-safe-top', _topPx);
@@ -1086,11 +1064,11 @@
           // 期短暂波动由常驻自愈 rAF 连续校正。真机状态以诊断「.phone高/底部空隙」复核。
           if (d.classList.contains('fs-active') || d.classList.contains('fs-css-active')
               || d.classList.contains('ios-fs-active') || d.classList.contains('ios-native-fs')) {
-            // v3.26.x #179：高度 = 顶部安全区(env 实测) + 可视高——覆盖形态（内容垫到
-            // 状态栏下，env=59，如 iPhone 14 Pro/15 Pro）可视区=整块物理屏 852，单用
-            // vv(793) 会在底部留出 60px 白带（#179 实测：.phone高=793 底边=793）；
-            // 已避让形态（env=0，如 16 Pro 26.1）= inner 812。min 屏高防异常超界。
-            var _nPxFs = (_vh2 >= 300) ? Math.round(Math.min(_safeTop + _ih2, _sh2 || (_safeTop + _ih2))) : 0;
+            // v3.26.x #179/#209：高度=判定器期望底边 expBase——覆盖形态（内容垫到状态
+            // 栏下，env=59）=envTop+inner=整块物理屏 852，单用 vv(793) 会在底部留出
+            // 60px 白带；已避让（env=0，16 Pro 26.1）=inner 812；保留/iPad/force 各按
+            // 判定器例外。min 屏高防异常超界（含在 expBase 内）。
+            var _nPxFs = (_vh2 >= 300) ? Math.round(_f.expBase) : 0;
             var _curFs = parseFloat(d.style.getPropertyValue('--mochi-ios-h'));
             if (_nPxFs >= 300) {
               // FIX 2026-09-05 #189：写入加 ≥6px 迟滞（同 _setPhoneH 政策）——全屏过渡/
@@ -1114,7 +1092,7 @@
           // v3.26.x #179：非全屏 standalone 同样用 envTop+inner（覆盖形态可视=整屏，
           // 单用 vv 会在底部留出状态栏高度的空白；已避让形态 env=0 数值不变）
           if (d.classList.contains('ios-pwa-standalone') && _safeTop > 0 && _ih2 > 0) {
-            vh = Math.min(_safeTop + _ih2, _sh2 || (_safeTop + _ih2));
+            vh = _f.expBase; // #209：判定器期望底边（=safeTop+inner min 屏高，#179 语义）
           }
           if (!vh) return;
           if (!_vvFitOn) { _vvFitOn = true; d.classList.add('ios-vv-fit'); }
@@ -1384,6 +1362,35 @@
         // 点击输入栏键盘弹出动画期间 vv.offsetTop 先起、vv.height 后缩，_aKb 未置位时
         // 平移已残留 → 输入栏错位+灰条）。850ms 后交回稳态条件。
         var _aBurstUntil = 0;
+        // FIX 2026-09-05 #209：稳态停靠残留清扫（安卓侧唯一视口看门狗——iOS 侧
+        // healViewport 在 isIOS 分支，安卓不经过；device.js 监视只读不修）。
+        // 场景：安卓返回键/手势收键盘不派 blur（activeElement 保留），#197 族
+        // focusout 丢失时 _aTextFocused 同样滞留 → 收键盘的复原路径（focusout 分支/
+        // vv 收起分支/250ms 轮询表停摆后）都可能被跳过：.phone 留着键盘期内联收缩
+        // 高度/顶对齐 → 聊天输入栏悬空、下方露一条 body 底色灰带（红米 K70+Edge
+        // 实报「输入框和网站底部有断截面（灰边，不贴合）」，#141 同族多机型复发）。
+        // 判据是纯视口证据、完全不看焦点（天然免疫 focusout 丢失）：
+        //   · 不在键盘会话（_aKb/_aProv 均假——收起动画期 _aKb 仍真，h 回到基准
+        //     ≤12px 才复位，故本判据天然避开动画中途）；
+        //   · vv.height 与 innerHeight 都距无键盘基准 ≤12px（与 _a 机器「收起动画
+        //     完成」同阈值）＝键盘肉眼已不在场；
+        //   · 此时 .phone 内联 height/alignSelf 的唯一写入方就是键盘停靠链
+        //    （全文件 grep 佐证），必为残留 → 清空 + _aPanComp/kbUndockPanels 复原。
+        // 1s 节拍 + visibilityState 守卫（与 iOS 1s 看门狗同口径）。
+        setInterval(function () {
+          try {
+            if (document.visibilityState !== 'visible') return;
+            if (_aKb || _aProv) return;
+            if (!_aPhone.style.height && !_aPhone.style.alignSelf) return;
+            var _hNow = Math.round(_aVV.height || 0);
+            if (_hNow <= 0 || _hNow < _aH - 12) return;
+            if ((window.innerHeight || 0) < _aIH - 12) return;
+            _aPhone.style.height = '';
+            _aPhone.style.alignSelf = '';
+            _aPanComp();
+            kbUndockPanels();
+          } catch (e) {}
+        }, 1000);
         // v3.26.x：安卓键盘内部状态只读探针（与 iOS __mochiIosKb 同字段名，供
         // device.js window.mochiVvDiag() 合并）。此前诊断文本「键盘/锁残留：
         // kbActive=… 推定停靠=… 基线 inner/vv=…」几行只读 iOS 探针，安卓下永远

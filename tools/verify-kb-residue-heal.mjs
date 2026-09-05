@@ -29,7 +29,7 @@ function check(desc, ok, detail) {
 }
 
 // ---- S0：逻辑锚点（与 build.mjs 哨兵同 needle）----
-const FIX_NEEDLE = 'if ((!foc || _kbGoneHard) && !_kbNowLike()) {';
+const FIX_NEEDLE = 'if (_hNow <= 0 || _hNow < _aH - 12) return;';
 let built = '';
 try { built = readFileSync(join(root, 'index.html'), 'utf8'); } catch (e) {}
 check('S0 产物含 #209 修复逻辑锚点', built.includes(FIX_NEEDLE), built.includes(FIX_NEEDLE) ? '在' : '缺（修复未构建属预期）');

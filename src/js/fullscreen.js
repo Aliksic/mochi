@@ -227,7 +227,15 @@
     try {
       const el = document.documentElement;
       let p;
-      if (el.requestFullscreen) p = el.requestFullscreen();
+      // v3.26.x #212：挖孔屏「全屏不盖满」——安卓 Chrome 默认 navigationUI:'auto'
+      // 时不把全屏面铺到挖孔/摄像头区，页面外系统层 letterbox 顶端露一条空白
+      //（页面内任何测量都全 ✓ 无法诊断：iQOO12+Chrome 诊断全绿仍报「聊天全屏
+      // 顶端留白」，用户明说多机型都有）。Chromium issue 40723205 官方 workaround
+      // 即 navigationUI:'hide'；iOS 路径（iosTryNativeFs）早已同款参数，此处仅补
+      // 安卓路径。不认选项参数的老内核会忽略它，webkitRequestFullscreen 前缀
+      // API 本就不收参数，行为均不变。
+      const fsOpts = { navigationUI: 'hide' };
+      if (el.requestFullscreen) p = el.requestFullscreen(fsOpts);
       else if (el.webkitRequestFullscreen) p = el.webkitRequestFullscreen();
       // 进入后锁竖屏（需全屏态，此时已满足）并启动方向监视（iOS 经 Safe 入口跳过）；
       // 无论锁屏 API 是否报成功，监视器都会复核视口方向

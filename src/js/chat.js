@@ -2815,7 +2815,15 @@ saveMsgs();
 	} else if (notable && rec.silent && !chatVisible()) {
 	incChatUnread();
 	}
-if (renderStart > 0 && msgs.length - renderStart > RENDER_MAX &&
+// v3.26.x #211 聊天闪动修复：窗口超限判定从 RENDER_MAX 收紧到 WINDOW_MAX 硬上限
+//（与 loadOlderIncremental→pruneWindowBottom 同一口径）。旧条件在每次钳位渲染后
+//（renderStart=len−RENDER_MAX）只要再来一条消息就恒为真——历史超过 200 条的桌面
+// 每收发一条消息都整窗重建 200 个气泡（img 节点全部重建重新解码＝肉眼可见闪一下，
+// iQOO12 等多机型报障「打开聊天偶尔闪动+对方回复消息闪一下」；历史 ≤200 条的桌面
+// renderStart=0 从不命中＝同版本却不闪，假象为机型相关）。收紧后常规收发全部走
+// renderMsg 增量追加，仅当用户上翻加载旧消息使窗口真正越过 WINDOW_MAX(400) 时
+// 才重钳位到最新 RENDER_MAX——与滚动加载侧的裁剪语义一致，DOM 上限不变。
+if (renderStart > 0 && msgs.length - renderStart > WINDOW_MAX &&
 (rec.side === 'out' || chatNearBottom())) {
 renderWindow(false, true);
 scrollChatBottom();

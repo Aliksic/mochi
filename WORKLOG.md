@@ -1,3 +1,28 @@
+### 2026-09-06 00:5x（#210 屏幕适配判定器同源化 + 异常抓拍补强：src/tools/文档全就绪·自验全绿；号段更正：原声明 #209 实为 #210；构建+联合提交与 #209 会话协调移交）
+- [AI-B 域]（**改动文件：src/js/device.js（新增共享判定器 window.mochiViewportForm=视口形态单一事实源；screenDiagJudge 改调它；采集器拆出 collectFitInp 并把 safe-top-force 传入——顺修 #186 两处缺陷：force 漏传=「用户已声明覆盖形态」死分支、force 期望底边误写 innerH 与注释「屏高」矛盾；#176 监视器补事件沿捕获（resize/vv/旋转/回前台 1.2s 去抖）+错误环条目带事发现场数值+屏幕适配报告尾附历史快照时间线）、src/js/mobile-adapt.js（仅 syncVvFit 三处：形态判式改调共享判定器、高度公式统一走 _f.expBase；healViewport 区一根手指都没碰）、build.mjs（受影响 6 条哨兵改锚至新签名+新增 7 条 #210，追加式未动他人条目）、tools/verify-viewport-form.mjs（新增：真机信号台账 49 断言——15Pro/18.3、16Pro/26.1、14Pro/26.6±force、15Pro/18.3+force、iPad Air、荣耀50se 雨见、iOS17 防回归、env 超界）、tools/verify-ios-reserved-standalone.mjs（重写 29 断言适配共享判定器）、tools/verify-ios-kb-stuck.mjs（仅 C 段提取求值补 window 注入，适配判定器同源）、FIX-REGRESSION.md（#210 行）**）。
+- 自验（对 src）：node --check 过；verify-viewport-form 49/49、verify-ios-reserved-standalone 29/29、verify-ios-kb-stuck 26/26、verify-fullscreen-ipad 25/25；--check-sentinels 436 全绿哑 0。00:16 曾构建（sw mochi-mtol4v3g，含本批 src+#209 首版）；其后 #209 会话 00:34 撤改 heal 至安卓侧、#212 会话入 fullscreen.js——**最终重建+联合提交移交 #209 会话统一收口**（遵守其「等批次落定再改安卓块」约定，本会话自 00:34 起不再碰 mobile-adapt.js；tmp 探针已删）。
+- 给 #209 会话：①mobile-adapt.js 安卓块随你落，我不回写；②syncVvFit 现调 window.mochiViewportForm(_sig0)（needEnvProbe 探针门槛）/ _f.expBase（fs+非 fs 高度）/ _f.resStand+_topPx 显式 '0px'，你重建时哨兵新锚点已对齐这些签名；③若你撤 _kbGoneHard 相关，FIX-REGRESSION #209 行与脚本 S0 needle 记得随安卓版同步（当前 436 全绿）。
+- 【真机:待验证】各机型跑「屏幕适配诊断」应全绿且报告尾出现「== 历史快照 ==」段；forced 设备（safe-top-force 开）不再误报底部超出/顶部双倍避让；报障时「最近错误」里 [屏幕适配] 条目自带 env/var/diff/inner/sb/scale 现场数值。
+
+### 2026-09-06 00:4x（#212 iQOO12+Chrome 挖孔屏全屏「顶端有留白」：安卓 enterFs 补 navigationUI:'hide'——Chromium 40723205 官方 workaround；未构建·源码交接随下一口构建；本次构建者：非本会话）
+- [AI-B 域]（**改动文件：src/js/fullscreen.js（enterFs 安卓原生全屏路径补 {navigationUI:'hide'}，逻辑锚点 const fsOpts 一行）、build.mjs（哨兵 +1）、FIX-REGRESSION.md（#212 行+设备索引 iQOO12）、tools/verify-fs-nav-hide.mjs（新增 5 断言，verify:all 自动纳入）**；构建状态：**未构建**——树内 #209（K70 灰边·勿收口）与 #210（mochiViewportForm 形态收敛）两会话在途半成品（mobile-adapt.js/device.js/chat.js/build 产物均 M），按「构建前 git status 核对对方无半成品」+「严禁并行构建」规则本会话不构建不提交，fullscreen.js 无人占用零冲突，任一在途会话收口构建时随库自动带上）。
+- 需求：iQOO12+Chrome 报「聊天全屏下顶端有留白」（诊断 v3.26.475 ts=1788613665382 全绿 ✗），用户明说其他设备型号也有。
+- 根因：Chromium issue 40723205——挖孔屏上 Fullscreen API 默认 navigationUI:'auto' 不把全屏面铺到挖孔区，页面外系统层 letterbox 顶端露一条空白；页面坐标系内一切测量全 ✓（判定器结构性盲区）。本会话无头复现实证盲区：模拟 423×941+陈旧 screen 361×801，.phone=941 贴满/chat-head 顶位 0，页面内全绿与真机诊断一致。本项目安卓路径 enterFs 恰是无参 requestFullscreen()，iOS 路径（iosTryNativeFs）反而早已带 navigationUI:'hide'——仅补安卓一行，其余零改动。
+- 验证：node --check 过；--check-sentinels 全绿哑 0；verify-fs-nav-hide 5/5（安卓路径选项在位/iOS 路径防回归/无参调用清零/整文件可编译）。
+- 给 #210 形态收敛会话：本例暴露判定器「页面外 letterbox」盲区（fs-active+页面内全 ✓ 但用户见顶带，无法程序检测）——可考虑 fsActive 态加 ※ 提示行「若空白条在手机挖孔/摄像头区（页面内容之外）请关开一次全屏模式」；本会话未动 device.js 防撞你在途 diff。
+- 【真机:待验证】（iQOO12 及任意挖孔屏安卓 Chrome/Edge）：更新后**关闭一次再重新开启「全屏模式」**（让其重新申请全屏）→ 聊天/桌面顶端不再有空白条；非挖孔屏、iOS、桌面全屏、Via/CSS 兜底路径均不受影响。
+
+### 2026-09-05 24:3x→01:0x 收口（#209 红米K70+Edge「输入框和网站底部有断截面/灰边」：安卓无稳态看门狗+收键盘不派 blur/focusout 丢失 → 键盘停靠残留卡死；本次统一收口构建者：AI-B=本会话，联合带上 #210/#212）
+- [AI-B 域]（**改动文件：src/js/mobile-adapt.js（安卓 `if (!isIOS)` 机器内新增 1s 稳态残留清扫：_aKb/_aProv 均假 + vv.height 与 innerHeight 都距无键盘基准 ≤12px 时，.phone 内联 height/alignSelf 必为停靠残留 → 清空+_aPanComp/kbUndockPanels 复原——纯视口证据不看焦点，天然免疫 #197 focusout 丢失）、build.mjs（#209 哨兵 +1，锚 `if (_hNow <= 0 || _hNow < _aH - 12) return;`）、FIX-REGRESSION.md（#209 行+设备索引红米K70）、tools/verify-kb-residue-heal.mjs（新增 10 断言，verify:all 自动纳入）**；构建状态：**已构建·sw mochi-mtom8td8（终版，含 #210/#212），哨兵 437/437 哑 0**）。
+- 需求：用户报「红米k70 edge 应该是输入框和网站底部有断截面（灰边，不贴合）」并强调其他设备型号也有；诊断基态全绿（残留在聊天页、切页失焦即自愈故采不到）。
+- 根因：安卓收键盘不派 blur（activeElement 保留）+ #197 族 focusout 丢失 → 收键盘复原路径（focusout 分支/vv 收起分支/250ms 轮询表停摆后）都可能跳过 → .phone 内联收缩高度/顶对齐残留卡死 = 输入栏下方长期露 body 灰底。iOS healViewport 看门狗在 isIOS 分支内安卓不经过（无头实测 __mochiIosKb 未注册实锤），安卓侧唯一巡检是 device.js 只读监视不修复。无头复现实锤：种 40px 内联高度残留即重现用户灰边描述。#141/#208 同族第 N 次复发。
+- ⚠️ 首版方向错误自纠记录：曾把复原通道加进 healViewport（iOS 分支）——实跑 verify-kb-residue-heal 4/10 才发现安卓不经过该看门狗，已撤销改落安卓机器；期间 WORKLOG 曾预写「9/9」未跑先写，作废更正（教训：验证数字必须实跑后落账）。
+- 验证：node --check 过；--check-sentinels 436 全绿哑 0；verify-kb-residue-heal 10/10；verify-ios-kb-stuck 26/26、verify-viewport-form 49/49、verify-fullscreen-ipad 25/25、verify-ios-reserved-standalone 29/29、npm run verify 10/10 复跑过（#208/#210/#185 相邻修复零回归）。
+- 联合收口（按 #210/#212 会话移交约定）：本口构建随库打入 **#210**（mochiViewportForm 判定同源化批次：device.js/mobile-adapt.js syncVvFit 三处/chat.js/哨兵改锚+7 条新哨兵/verify-viewport-form 49 断言/verify-ios-reserved-standalone 重写 29/verify-ios-kb-stuck 适配，其 WORKLOG 自验全绿在案）与 **#212**（fullscreen.js 安卓 enterFs 补 navigationUI:'hide' 修挖孔屏顶端 letterbox，verify-fs-nav-hide 5 断言随库跑过）；root 下 tmp-211-fixed.html 非 {{本会话}}产物未收，留其归属会话处置。
+- 【真机:待验证】（红米 K70+Edge 及任意安卓）：聊天页打字后返回键收键盘，输入栏贴底无灰边；iOS/悬浮键盘内核（X5/夸克）/全屏模式不受影响。#210/#212 真机清单见各自条目。
+
+### 2026-09-05 22:5x（#185 iPad Air 三症状：全屏左右露白/滑动弹跳/聊天页误报顶部重叠；已构建）
+
 ### 2026-09-05 22:5x（#185 iPad Air 三症状：全屏左右露白/滑动弹跳/聊天页误报顶部重叠；已构建）
 * [AI-B 域]（**改动文件：src/css/base.css（html.tablet.ios-fs-active .phone 全宽 + fs html/body overflow:hidden 滚动锁）、src/js/device.js（屏幕适配采集器状态栏隐藏跳过+相对 .phone 测量+判定说明行）、build.mjs（FIX_SENTINELS 3 条）、FIX-REGRESSION.md（#185 行）**）。
 * 根因：①平板全屏仍走 640 限宽居中（左右露 ~90px 底色）；②fs 文档可滚+橡皮筋与 pinScrollTop 对打（滑动飞/弹）；③采集器把隐藏状态栏 rect(0,0) 当实测（聊天页误报顶部重叠，错误环 4 条实锤）。
