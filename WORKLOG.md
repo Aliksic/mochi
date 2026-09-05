@@ -1,3 +1,8 @@
+### 2026-09-05 22:3x（#205 表情空白最后一类真空白收口：加载成功但全透明空图——多设备共用坏字卡库现场；本次构建者：AI-B=本会话）
+* [AI-B 域]（**改动文件：src/js/chat.js（bindMediaFailPlaceholder 增设 load 监听：24×24 采样 alpha 全 0 才 replaceWith 占位「（表情内容为空：这张字卡图本身没有画面…）」，有任一非透明像素放行，GIF 取当前帧、跨域 getImageData 抛错 catch 放行）、build.mjs（+1 哨兵；并重登记被并行 #203 stash 收口弄丢的 #202 两条哨兵——源码/台账未丢仅登记丢失）、FIX-REGRESSION.md（#205 行）**；构建状态：**已构建·sw mochi-mtoj1nqr，哨兵 418/418 哑哨兵 0**）。
+* 根因：用户强调「好多手机都有」而 iQOO12 诊断零图片报错——#186/#202 已覆盖全部「加载失败」路径，剩最后一类=图片加载成功但内容本身全透明/空白（导入字卡包混入坏图，多设备共用同批库同时中招、零报错）。
+* 验证：node --check 过；--check-sentinels 418 全绿；tmp 端到端探针四场景过（令牌无池/远程不可达/损坏 dataURL→各自占位，正常图→渲染）；verify-quote-image 21/21、verify-media-pool 8/8、verify-chat-tail 21/21。
+* 给用户侧：更新后空白气泡会显示三种占位之一（图片丢失/加载失败/内容为空），占位文字即失败类型——「内容为空」请到字卡库删对应分组，「图片丢失」用数据备份导入找回；#202 哨兵丢失事故已按 BUGS 规则当场补回并验证。
 ### 2026-09-05 22:3x（#204 跨桌面来电后台命中只发通知即丢弃——切回应用无来电弹窗也无未接记录；本次构建者：AI-B=本会话）
 - [AI-B 域+跨域声明]（**改动文件：src/js/call.js（holdIncomingCall/bgCallNotify 加可选 avOverride 参数——跨桌面来电通知头像必须用归属联系人 cAvatar，不能借当前桌面 partnerAv；暴露 window.callHoldIncoming = holdIncomingCall）、src/js/incoming-requests.js（deliver() hidden 分支 kind='call' 从「只发通知+标记 seen 丢弃」改走 callHoldIncoming 响铃挂起：通知带「快回来接听」提示+写 call-hold 含归属 cid，3 分钟内回前台重响可接听、超时 resumeHeldCall 补写未接；跨域改 AI-A 名下 incoming-requests.js，理由：修复必须落在请求分发侧，call.js 只暴露接口）、build.mjs（哨兵 +2，另同步 #150/#161 两条 needle 至新函数签名）、FIX-REGRESSION.md（#204 行）**；构建状态：见本条收口）。
 - 需求：用户报「后台浏览器弹通知显示联系人给我打电话，马上切回浏览器却没有来电弹窗」。

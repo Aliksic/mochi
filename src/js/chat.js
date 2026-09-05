@@ -1987,6 +1987,29 @@ ph.textContent = isTok ? '（图片丢失：媒体数据缺失，可用数据备
 im.replaceWith(ph);
 }, 1500);
 });
+// FIX 2026-09-06 #205 全透明空图检测：图片「加载成功但内容本身没有画面」（导入字卡包里的
+// 全透明图/空白图——多设备共用同一批字卡库时会同时表现为空气泡，且不产生任何加载错误）
+// 是加载失败之外最后一类真空白。load 后 24×24 采样 alpha，全 0 才判空（有字/有内容即放行，
+// GIF 取当前帧；跨域图 canvas 污染 getImageData 会抛错，catch 放行不误伤）。
+im.addEventListener('load', () => {
+if (im.dataset.alphaChecked) return;
+im.dataset.alphaChecked = '1';
+if (!im.complete || !im.naturalWidth) return;
+try {
+const S = 24;
+const c = document.createElement('canvas');
+c.width = S; c.height = S;
+const x = c.getContext('2d');
+if (!x) return;
+x.drawImage(im, 0, 0, S, S);
+const d = x.getImageData(0, 0, S, S).data;
+for (let i = 3; i < d.length; i += 4) { if (d[i] !== 0) return; } // 有任一非透明像素=有画面
+const ph = document.createElement('span');
+ph.style.cssText = 'opacity:.5;font-size:12px';
+ph.textContent = '（表情内容为空：这张字卡图本身没有画面，可长按撤回或到字卡库清理该分组）';
+im.replaceWith(ph);
+} catch (e) {}
+});
 });
 }
 function renderMsg(rec) {
