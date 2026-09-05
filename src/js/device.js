@@ -1850,6 +1850,7 @@
     let mode = '未知';
     if (envTop >= 20) mode = '覆盖形态（页面顶到屏幕最顶，系统栏悬浮其上）';
     else if (diff >= 20) mode = '已避让形态（系统已把网页起点放在状态栏下方，页面不应再加顶部 padding）';
+    else if (diff >= 20 && inp.standalone) mode = '歧义形态（env=0 但 diff≥20：正常应为已避让=网页起点在状态栏下方；若底部/顶部仍见白带或重叠请整段反馈）';
     else mode = '无安全区/常规视口';
     add(true, '顶部形态判定：' + mode, 'env=' + envTop + 'px  var(--mochi-safe-top)=' + varTop + 'px  diff(screen−inner)=' + diff + 'px');
     // ③ 顶部双重叠加：statusbar 实测顶位显著超过「安全区顶部+余量」

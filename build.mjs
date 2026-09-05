@@ -6,6 +6,7 @@ import { readFileSync, writeFileSync, copyFileSync, mkdirSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { minify } from 'terser';
 
 const root = dirname(fileURLToPath(import.meta.url));
 const read = (p) => readFileSync(join(root, 'src', p), 'utf8');
@@ -510,6 +511,7 @@ const FIX_SENTINELS = [
   { name: '#152 群聊「继续说」按钮防键盘收起吞 click（同单聊 pointerdown+防重入）', file: 'js/group-chat.js', needle: "gcContinueBtn.addEventListener('pointerdown', (e) => { if (e.pointerType === 'mouse') return; gcCsFireContinue(); });" },
   { name: '#153 后台冻结1分钟(Chromium139 stop-in-background)保活自愈·切后台音频暂停立即补播+最快档重试（防静默窗口跨冻结线整页冻结=后台消息/通知全停）', file: 'js/bg-keep.js', needle: "if (document.visibilityState !== 'hidden') return;" },
   { name: '#153 后台冻结1分钟(Chromium139)保活自愈·隐藏期补播退避封顶20s（前台60s不变，冻结线内保证2~3次重试机会）', file: 'js/bg-keep.js', needle: "if (document.visibilityState === 'hidden' && delayMs > 20000) delayMs = 20000;" },
+  { name: '#190 保活音频安卓幅度降到物理不可闻（0.006，修 OPPO Find X9 自带浏览器等多机型「一进网页就有底噪/电流声」——220Hz 纯音 -60dBFS 实听嗡声）', file: 'js/bg-keep.js', needle: 'kaIsIOS() ? 0.002 : 0.006' },
   { name: '防倒卖回填·远程时效公告bulletin在位判定（notice.json下发text+until过期自动摘除,所有联网副本含二传显示）', file: 'js/clock.js', needle: "(!bulletin.until || Date.now() < bulletin.until)" },
   { name: '防倒卖回填·公告内容变化重写（标题固定「公告」+text 精确比对）', file: 'js/clock.js', needle: "if (box.textContent !== '公告' + want)" },
   { name: '防倒卖第二锚点·pwa.js在位看门狗（clock.js回填被删时的独立兜底,5s补回缺失声明）', file: 'js/pwa.js', needle: "n.insertBefore(mkWatchBar('1', '防骗提醒', W1), n.firstChild)" },

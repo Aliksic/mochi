@@ -8785,9 +8785,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1788602270314">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.461</b></span>
-        <span class="sv-deploy">部署于 2026-09-05 17:57<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1788604688211">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.464</b></span>
+        <span class="sv-deploy">部署于 2026-09-05 18:38<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9926,7 +9926,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.461</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.464</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
       <!-- v3.27.x：设置页底部防骗声明 -->
       <div class="set-alert">
@@ -10217,7 +10217,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.461</span>
+              <span class="lic-ver">v3.26.464</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -15082,6 +15082,7 @@ const diff = inp.diff || 0;
 let mode = '未知';
 if (envTop >= 20) mode = '覆盖形态（页面顶到屏幕最顶，系统栏悬浮其上）';
 else if (diff >= 20) mode = '已避让形态（系统已把网页起点放在状态栏下方，页面不应再加顶部 padding）';
+else if (diff >= 20 && inp.standalone) mode = '歧义形态（env=0 但 diff≥20：正常应为已避让=网页起点在状态栏下方；若底部/顶部仍见白带或重叠请整段反馈）';
 else mode = '无安全区/常规视口';
 add(true, '顶部形态判定：' + mode, 'env=' + envTop + 'px  var(--mochi-safe-top)=' + varTop + 'px  diff(screen−inner)=' + diff + 'px');
 if (inp.sbTop != null) {
@@ -74776,6 +74777,7 @@ let _fsMonTimer = null;
 function stopFsMonitor() {
 if (_fsMonTimer) { clearInterval(_fsMonTimer); _fsMonTimer = null; }
 }
+function startFsMonitorSafe() { if (isIOS) return; startFsMonitor(); }
 function startFsMonitor() {
 stopFsMonitor();
 let left = 4000;
@@ -74815,7 +74817,7 @@ const el = document.documentElement;
 let p;
 if (el.requestFullscreen) p = el.requestFullscreen();
 else if (el.webkitRequestFullscreen) p = el.webkitRequestFullscreen();
-const tryLock = () => { lockFsOrient(); startFsMonitor(); };
+const tryLock = () => { lockFsOrient(); startFsMonitorSafe(); };
 if (p && p.then) { p.then(tryLock, tryLock); return p; }
 setTimeout(tryLock, 300);
 } catch (e) {}
@@ -74970,7 +74972,7 @@ applyFsCss(false, false);
 enterFs();
 syncFsClass();
 setTimeout(() => {
-if (isFullscreen() && viewportLandscape()) {
+if (!isIOS && isFullscreen() && viewportLandscape()) {
 store.set(FB_KEY, '1');
 handleLandscapeForced();
 return;
@@ -75039,13 +75041,14 @@ try { d.classList.remove('fs-css-active'); } catch (e) {}
 }
 document.addEventListener('fullscreenchange', () => {
 syncToggle(false); applyFsInputHacks(); syncFsClass();
-if (isFullscreen()) startFsMonitor(); else handleFsExit();
+if (isFullscreen()) startFsMonitorSafe(); else handleFsExit();
 });
 document.addEventListener('webkitfullscreenchange', () => {
 syncToggle(false); applyFsInputHacks(); syncFsClass();
-if (isFullscreen()) startFsMonitor(); else handleFsExit();
+if (isFullscreen()) startFsMonitorSafe(); else handleFsExit();
 });
 document.addEventListener('orientationchange', () => {
+if (isIOS) return;
 const d = document.documentElement;
 if (!d.classList.contains('fs-active') && !d.classList.contains('fs-css-active')) return;
 if (window.innerWidth <= window.innerHeight) return;
@@ -78513,10 +78516,12 @@ else d.style.removeProperty('--mochi-safe-top');
 }
 if (d.classList.contains('fs-active') || d.classList.contains('fs-css-active')
 || d.classList.contains('ios-fs-active') || d.classList.contains('ios-native-fs')) {
-var _pxFs = (_vh2 >= 300) ? (Math.min(_safeTop + _ih2, _sh2 || (_safeTop + _ih2)) + 'px') : '';
-if (d.style.getPropertyValue('--mochi-ios-h') !== _pxFs) {
-if (_pxFs) d.style.setProperty('--mochi-ios-h', _pxFs);
-else d.style.removeProperty('--mochi-ios-h');
+var _nPxFs = (_vh2 >= 300) ? Math.round(Math.min(_safeTop + _ih2, _sh2 || (_safeTop + _ih2))) : 0;
+var _curFs = parseFloat(d.style.getPropertyValue('--mochi-ios-h'));
+if (_nPxFs >= 300) {
+if (isNaN(_curFs) || Math.abs(_nPxFs - _curFs) >= 6) d.style.setProperty('--mochi-ios-h', _nPxFs + 'px');
+} else if (d.style.getPropertyValue('--mochi-ios-h')) {
+d.style.removeProperty('--mochi-ios-h');
 }
 return;
 }
@@ -78531,8 +78536,8 @@ vh = Math.min(_safeTop + _ih2, _sh2 || (_safeTop + _ih2));
 }
 if (!vh) return;
 if (!_vvFitOn) { _vvFitOn = true; d.classList.add('ios-vv-fit'); }
-var px = vh + 'px';
-if (d.style.getPropertyValue('--mochi-ios-h') !== px) d.style.setProperty('--mochi-ios-h', px);
+var _curN = parseFloat(d.style.getPropertyValue('--mochi-ios-h'));
+if (isNaN(_curN) || Math.abs(vh - _curN) >= 6) d.style.setProperty('--mochi-ios-h', vh + 'px');
 } catch (e) {}
 }
 function syncSafeBottom() {
@@ -78562,8 +78567,14 @@ _healRaf = 0;
 healViewport();
 });
 }
+function _fsLike() {
+var dd = document.documentElement;
+return dd.classList.contains('fs-active') || dd.classList.contains('fs-css-active')
+|| dd.classList.contains('ios-fs-active') || dd.classList.contains('ios-native-fs');
+}
 function healViewport() {
 try {
+var d = document.documentElement; // FIX 2026-09-05 #188
 syncVvFit();
 syncSafeBottom();
 if (d.classList.contains('ios-pwa-standalone') && _vv && _vv.scale && _vv.scale < 0.95) {
@@ -78579,11 +78590,13 @@ var foc = isTextEl(_textFocused) || isTextEl(document.activeElement);
 if (!foc && !_kbNowLike()) {
 if (_kbActive) restoreKb();
 else {
-if (_iProv) _iProvClear();
-unlockDocScroll();
-if (_phone && _phone.style.height) _setPhoneH(null, 'heal');
-if (_phone && _phone.style.alignSelf) _phone.style.alignSelf = '';
-pinScrollTop();
+var _cleanedResidue = false;
+if (_iProv) { _iProvClear(); _cleanedResidue = true; } // 内部已 pin
+if (_docLocked) { unlockDocScroll(); _cleanedResidue = true; }
+else unlockDocScroll(); // v3.26.x 看门狗语义保留：残留 overflow:hidden 必清
+if (_phone && _phone.style.height) { _setPhoneH(null, 'heal'); _cleanedResidue = true; }
+if (_phone && _phone.style.alignSelf) { _phone.style.alignSelf = ''; _cleanedResidue = true; }
+if (_cleanedResidue || winScrollY() > KB_SCROLL_HEAL) pinScrollTop(); // FIX 2026-09-05 #188
 }
 _syncFullBase();
 } else if (_kbActive) {
@@ -78593,9 +78606,10 @@ else healKbScroll();
 var shifted = winScrollY() > KB_SCROLL_HEAL;
 if (!shifted && _phone) {
 var pr = _phone.getBoundingClientRect();
-shifted = pr.top < -KB_SCROLL_HEAL || pr.bottom > (_vv ? _vv.height : window.innerHeight) + 24;
+var _stT = parseFloat(d.style.getPropertyValue('--mochi-safe-top')) || 0;
+shifted = pr.top < -KB_SCROLL_HEAL || pr.bottom > (_vv ? _vv.height : window.innerHeight) + _stT + 24;
 }
-if (!shifted && _vv && (Math.abs(_vv.offsetTop) > KB_SCROLL_HEAL || Math.abs(_vv.offsetLeft) > KB_SCROLL_HEAL)) shifted = true;
+if (!shifted && !_fsLike() && _vv && (Math.abs(_vv.offsetTop) > KB_SCROLL_HEAL || Math.abs(_vv.offsetLeft) > KB_SCROLL_HEAL)) shifted = true;
 if (shifted) pinScrollTop();
 }
 } catch (e) {}
@@ -79067,4 +79081,4 @@ return { lock: document.body.classList.contains('scroll-lock'), open: open };
 <!-- __MOCHI_EOF__ -->
 </body>
 </html>
-<!-- __MOCHI_EOF__ mto7m0dm -->
+<!-- __MOCHI_EOF__ mto91u1f -->
