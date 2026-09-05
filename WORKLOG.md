@@ -5,9 +5,10 @@
 * 给 AI-A：①已丢图的设备若更新重进后朋友圈仍无图＝权威键已被旧版覆盖，只能从数据备份导出包恢复（其他设备导出→本机导入）；②本修复同时让「读失败窗口」内朋友圈不再把无图版写回，10s 重读权威成功即自动恢复完整显示。
 * 收口说明：最终构建 sw **mochi-mto7m0dm**（17:57），已提交 bc4170f 并含 #186/#187 并行 src；**给并行会话（fullscreen/mobile-adapt 的 iPad 全屏修复）**：①发现你把修复注释标为 #188——该编号已被本条（朋友圈无图）登记进 FIX-REGRESSION 188 行并提交，你的修复请改用 **#189** 并补登记；②你的 src 改动（fullscreen.js/mobile-adapt.js，17:20-17:21 落盘、未经你声明完工）我按「不夹带半成品」规则**未收进本次构建与提交**（曾短暂被我 17:20 构建扫进 mobile-adapt，已重建剥离），现原样留在工作区未暂存，等你收口；③你 mobile-adapt 里 healViewport 补 `var d = document.documentElement` 声明的修复看着是真 bug 修复，收口时记得配哨兵。
 ### 2026-09-05（#187 专属字卡串桌面：tryAutoSend 主动消息异步链无跨桌面守卫；本次构建者：AI-B）
-* [AI-B 域·跨域改动 src/js/chat.js（AI-A 业务文件，tryAutoSend 区块，与 #180 持久化链/#185 空气泡/#186 媒体链零重叠），理由：用户直接指派修复]（**改动文件：src/js/chat.js（tryAutoSend 入口捕获 autoCid+sameAutoCid；await ensureReplyCardsReady 后放行前拦截；消息/rc-prob 撤回重发/尾部副作用每个 setTimeout 入口逐层拦截）、build.mjs（哨兵+2）、FIX-REGRESSION.md（187 行）、tools/verify-auto-cid-guard.mjs（新增 8 断言）**；构建状态：已构建·sw 见 version.json）。
+* [AI-B 域·跨域改动 src/js/chat.js（AI-A 业务文件，tryAutoSend 区块，与 #180 持久化链/#185 空气泡/#186 媒体链零重叠），理由：用户直接指派修复]（**改动文件：src/js/chat.js（tryAutoSend 入口捕获 autoCid+sameAutoCid；await ensureReplyCardsReady 后放行前拦截；消息/rc-prob 撤回重发/尾部副作用每个 setTimeout 入口逐层拦截）、build.mjs（哨兵+2）、FIX-REGRESSION.md（187 行）、tools/verify-auto-cid-guard.mjs（新增 8 断言）**；构建状态：本会话构建 sw mochi-mto5we80 后，并行 #188 收口会话已把本修复随提交 bc4170f 一并入库推送范围（哨兵 379/379）——本会话不重复提交/推送）。
 * 根因：B 桌面触发的 TA 主动消息，await 取回字卡（可数秒）+每条 setTimeout（900~2600ms）期间用户切到 A 桌面，B 池专属卡发进 A 聊天；scheduleReply/replyOnce 均有 sameCid 守卫唯主动消息漏了，多机型通病与设备无关。无头 Chromium 双桌面大库基线验证读池全对佐证读链路无恙。
-* 验证：node --check 过；verify-auto-cid-guard 8/8；--check-sentinels 全绿哑哨兵 0。
+* 验证：node --check 过；verify-auto-cid-guard 8/8；--check-sentinels 全绿哑哨兵 0；verify:all 114 过/86 断言失败（均为 #129 已甄别存量口径过期类）。
+* 待对方处理（AI-A）：verify-chat-dupe AC5「二次刷新条数稳定」total=21 expect=17 失败——疑似 #180 chat-tail 回放与去重收敛语义冲突（本会话只加 tryAutoSend 守卫未碰该链，#131 chat-switch-idb-hang 同为存量）。
 ### 2026-09-05 13:1x（#179 iPhone14 Pro 覆盖形态底部白带：#148 高度公式漏加 env-top；已构建）
 * [AI-B 域]（**改动文件：src/js/mobile-adapt.js（fs 态与非全屏 standalone 的 --mochi-ios-h 公式改 envTop+inner=min(screen)；监视跳过键盘/聚焦会话防瞬态误报）、FIX-REGRESSION.md（#179 行+#175 判定补强）、build.mjs（#148 needle 公式变更同步）**）。
 * 根因：两类 iOS 形态——覆盖（env-top>0，可视=整屏）vs 已避让（env-top=0，可视=inner）——#148 高度单用 vv(inner) 使覆盖形态底部少算 env-top 高度露白 60px。统一公式高度=envTop+inner=min(screen)。
