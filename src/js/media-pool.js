@@ -156,12 +156,31 @@
       map.forEach(function (_v, h) { keep.add(h); });
       writeBuf.forEach(function (p) { keep.add(String(p.k).slice(FULL.length)); });
       Object.keys(inflight).forEach(function (h) { keep.add(h); });
-      const REFS = /(?:^|:)(?:chat-msgs|fav-msgs)$/;
+      // FIX 2026-09-06 #186 引用扫描面补全：旧正则 /(?:^|:)(?:chat-msgs|fav-msgs)$/ 漏了
+      // ①群聊键 xy-home-v2:group-chat-msgs / :gc-msgs-<gid>（前缀是 group- 不是 :，不匹配）
+      // ②LS 快照/尾巴日志（#180：IDB 写失败机型上消息只在 localStorage/xy-home-v2:<cid>:chat-tail）
+      // → 这些引用的表情/图片令牌被误判孤儿删除 = 单发表情包/图片变空白气泡且不可逆。
+      // 修复：REFS 扩到群聊+尾巴键；并追加扫描 localStorage 同名键（读到的令牌全部进 keep，
+      // 宁可漏删绝不误删；LS 读异常时放弃本次清理）。
+      const REFS = /(?:^|:)(?:chat-msgs|fav-msgs|group-chat-msgs|gc-msgs-[0-9A-Za-z_-]+|chat-tail)$/;
       const refKeys = keys.filter(function (k) { return REFS.test(String(k)); });
+      try {
+        for (let li = 0; li < localStorage.length; li++) {
+          const lk = localStorage.key(li);
+          if (lk && REFS.test(lk)) refKeys.push('__ls__' + lk);
+        }
+      } catch (lErr) { out.reason = 'localStorage 读取失败（存储繁忙），为安全起见本次不清理'; return out; }
       out.refN = refKeys.length;
       for (let i = 0; i < refKeys.length; i++) {
-        const v = await window.idbGet(refKeys[i]);
-        if (v === undefined || v === null) { out.reason = '有聊天记录/收藏没读到（存储繁忙？），为安全起见本次不清理'; return out; }
+        let v;
+        if (refKeys[i].indexOf('__ls__') === 0) {
+          // FIX 2026-09-06 #186 LS 引用键：令牌可能在 LS 快照/尾巴日志里有、IDB 还没落——必须一并标记
+          try { v = localStorage.getItem(refKeys[i].slice(6)); } catch (e2) { v = undefined; }
+          if (v === undefined || v === null) continue; // 该 LS 键刚好被清＝无引用可标，不构成放弃条件
+        } else {
+          v = await window.idbGet(refKeys[i]);
+          if (v === undefined || v === null) { out.reason = '有聊天记录/收藏没读到（存储繁忙？），为安全起见本次不清理'; return out; }
+        }
         let s = '';
         try { s = typeof v === 'string' ? v : (JSON.stringify(v) || ''); } catch (e2) { out.reason = '引用数据序列化失败，本次不清理'; return out; }
         SCAN_RE.lastIndex = 0;

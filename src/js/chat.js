@@ -481,24 +481,25 @@ if (!chatDbReady || authLoadedPrefix !== window.activePrefix()) return;
 _mediaPassBusy = true;
 try {
 let changed = 0;
+const _rollback = []; // FIX 2026-09-05 #186 写池失败回滚账 [{obj, prop, val, msg}]
 for (let i = 0; i < msgs.length; i++) {
 const m = msgs[i];
 if (!m || _mediaTokSeen.has(m)) continue;
 let did = false;
 if (typeof m.text === 'string' && m.text.indexOf('data:image/') === 0) {
 const t = await window.mochiMediaTokenize(m.text);
-if (t) { m.text = t; changed++; did = true; }
+if (t) { _rollback.push({ o: m, p: 'text', v: m.text, msg: m }); m.text = t; changed++; did = true; }
 }
 if (typeof m.img === 'string' && m.img.indexOf('data:image/') === 0) {
 const t = await window.mochiMediaTokenize(m.img);
-if (t) { m.img = t; changed++; did = true; }
+if (t) { _rollback.push({ o: m, p: 'img', v: m.img, msg: m }); m.img = t; changed++; did = true; }
 }
 if (Array.isArray(m.parts) && m.parts.length) {
 for (let j = 0; j < m.parts.length; j++) {
 const p = m.parts[j];
 if (p && typeof p.v === 'string' && p.v.indexOf('data:image/') === 0) {
 const t = await window.mochiMediaTokenize(p.v);
-if (t) { p.v = t; changed++; did = true; }
+if (t) { _rollback.push({ o: p, p: 'v', v: p.v, msg: m }); p.v = t; changed++; did = true; }
 }
 }
 }
@@ -510,9 +511,18 @@ if (authLoadedPrefix !== window.activePrefix()) break;
 }
 }
 if (changed > 0) {
-await window.mochiMediaFlush(); // 池数据先落盘，再让引用落盘（顺序不可反）
+const _ok = await window.mochiMediaFlush(); // 池数据先落盘，再让引用落盘（顺序不可反）
+if (_ok === false) {
+// FIX 2026-09-05 #186 写池失败（idbSetAll 返回 false）绝不能带令牌落库——否则令牌入库
+// 而池数据只在内存重试队列，页面被杀即永久空白气泡（vivo X200s+Edge 等大库机反复出现）。
+// 回滚本次全部令牌化，WeakSet 去标记，留给下次 pass 重试。
+for (let r = 0; r < _rollback.length; r++) { try { _rollback[r].o[_rollback[r].p] = _rollback[r].v; } catch (e2) {} try { _mediaTokSeen.delete(_rollback[r].msg); } catch (e3) {} }
+scheduleMediaPass(8000);
+console.warn('[mochi] 媒体池写盘失败，本次 ' + changed + ' 处令牌化已回滚待重试');
+} else {
 saveMsgs();
 try { console.info('[mochi] 媒体池：' + changed + ' 处聊天图片已去重为池引用'); } catch (e) {}
+}
 }
 } catch (e) {} finally { _mediaPassBusy = false; }
 }
@@ -2278,6 +2288,14 @@ e.stopPropagation();
 if (window.viewChatImage) window.viewChatImage(rec.text);
 });
 }
+// FIX 2026-09-06 #186 媒体池令牌失配兜底：池数据缺失（旧版 GC 引用扫描漏群聊键/LS 快照被误删、
+// 备份未带全池键）时 @@m: 令牌解析不出，<img> 加载失败＝无声空白气泡；改占位提示
+if (window.mochiMediaIsToken && window.mochiMediaIsToken(rec.text)) {
+const _tokImg = b.querySelector('.msg-img');
+if (_tokImg) _tokImg.addEventListener('error', () => {
+b.innerHTML = '<span style="opacity:.5;font-size:12px">（图片丢失：媒体数据缺失，可用数据备份重新导入恢复）</span>';
+});
+}
 } else if (rec.type === 'voice') {
 b.style.padding = '8px 10px';
 b.style.background = '';
@@ -2295,12 +2313,14 @@ const isSticker = p.sub === 'sticker';
 return '<img class="msg-img' + (isSticker ? ' msg-img-sm' : ' msg-img-big') + '" src="' + attrEsc(p.v) + '" alt="' + (isSticker ? '表情' : '图片') + '" loading="lazy" decoding="async">';
 }).join('') + '</div>';
 }
-if (textPart) {
+if (textPart && textPart.trim()) {
 inner += '<span style="opacity:.85;word-break:break-word">' + escTxtBr(T(textPart)) + '</span>';
 }
 b.innerHTML = rec.quote
 ? quoteHtml(rec.quote, rec.qside) + inner
 : inner;
+// FIX 2026-09-05 #185 空白兜底：parts 只有空白文本且无图时 inner 为空串，渲染成空气泡
+if (!inner) b.innerHTML = '<span style="opacity:.5;font-size:12px">（空白消息）</span>';
 b.querySelectorAll('.msg-img-big').forEach(img => {
 img.addEventListener('click', (e) => {
 e.stopPropagation();
@@ -2334,10 +2354,16 @@ if (d) d.style.display = d.style.display === 'block' ? 'none' : 'block';
 });
 }
 } else {
-const escTxtS = escTxtBr(T(rec.text));
+// FIX 2026-09-05 #185 渲染端空白兜底：历史数据里已存在的空文本消息（无类型/无 special）
+// 旧逻辑渲染成空壳气泡；改为显示占位，已存空白记录的设备更新后也能看出消息非空壳丢失
+const __rawText = typeof rec.text === 'string' ? rec.text : '';
+const __blankMsg = !__rawText.trim();
+const __bodyHtml = __blankMsg
+? '<span style="opacity:.5;font-size:12px">（空白消息）</span>'
+: '<span style="opacity:.85">' + escTxtBr(T(__rawText)) + '</span>';
 b.innerHTML = rec.quote
-? quoteHtml(rec.quote, rec.qside) + '<span style="opacity:.85">' + escTxtS + '</span>'
-: '<span style="opacity:.85">' + escTxtS + '</span>';
+? quoteHtml(rec.quote, rec.qside) + __bodyHtml
+: __bodyHtml;
 }
 if (rec.mood && rec.mood.length && !rec.retracted) {
 const mm = document.createElement('div');
@@ -3177,22 +3203,30 @@ retractMsg(target, side);
 // 字卡时每条回复都一模一样（用户反馈联系人一直/重复发【收到~】）。改用一个小型
 // 通用池随机抽，避免机械复读；真实的根因仍要查该联系人的字卡库是否为 & 默认字卡开关。
 const FALLBACK_REPLY_POOL = ['收到～', '好呀', '好～', '嗯嗯', '知道啦', '好哒', '嗯嗯，我在听'];
+// FIX 2026-09-05 #185 空白字卡防空气泡：池里可能混入空串/纯空白/零宽字符字卡（导入包/手编），
+// 旧单抽 '' 有 || 兜底但 ' ' 这类 truthy 空白会直接发出；抽取时跳过空白，20 次抽不中回空串走上层兜底
+function pickNonBlank(arr) {
+let v = '', g = 0;
+do { v = pick(arr); g++; } while (g < 20 && !(typeof v === 'string' && v.trim()));
+return (typeof v === 'string' && v.trim()) ? v : '';
+}
 function genReplyText(c) {
 const pool = getPool();
 let reply = '', type = 'text';
 if (pool.sticker.length && hit(c['sticker-prob'])) {
-reply = pick(pool.sticker); type = 'sticker';
+reply = pickNonBlank(pool.sticker); type = 'sticker';
 } else if (pool.emoji.length && hit(c['emoji-prob'])) {
-reply = pick(pool.emoji); type = 'emoji';
+reply = pickNonBlank(pool.emoji); type = 'emoji';
 } else if (pool.image.length && hit(c['image-prob'])) {
-reply = pick(pool.image); type = 'image';
+reply = pickNonBlank(pool.image); type = 'image';
 } else if (pool.voice.length && hit(c['voice-prob'])) {
-reply = pick(pool.voice); type = 'voice';
+reply = pickNonBlank(pool.voice); type = 'voice';
 } else {
-reply = pick(pool.text) || pick(FALLBACK_REPLY_POOL);
+reply = pickNonBlank(pool.text) || pick(FALLBACK_REPLY_POOL);
 }
 if (type === 'text' && pool.kaomoji.length && hit(c['kaomoji-prob'])) {
-reply += ' ' + pick(pool.kaomoji);
+const kj = pickNonBlank(pool.kaomoji);
+if (kj) reply += ' ' + kj;
 }
 return { text: reply, type: type };
 }
@@ -3444,8 +3478,9 @@ function genOneReply(c) {
 const pool = getPool();
 let t, type = 'text';
 if (c['py-en'] === 1 && hit(c['py-prob']) && pool.text.length) {
+const nbTextPool = pool.text.filter(s => typeof s === 'string' && s.trim()); // FIX 2026-09-05 #185 多字卡拼接前先滤空白卡（否则 join 出纯空格空气泡）
 const n = randInt(c['py-min'], c['py-max']);
-t = pickN(pool.text, n).join(' ');
+t = pickN(nbTextPool.length ? nbTextPool : pool.text, n).join(' ');
 } else {
 const r = genReplyText(c);
 t = r.text;
@@ -3462,6 +3497,9 @@ const replyWord = (window.getReplyCard && window.getReplyCard()) || '';
 if (replyWord) {
 t = replyWord;
 }
+// FIX 2026-09-05 #185 最终非空兜底：固定回复字卡（getReplyCard）/默认主字卡（defs.text）被设成
+// 空白内容时会无条件覆盖抽好的回复，必须在此拦下，否则联系人持续发空气泡
+if (typeof t !== 'string' || !t.trim()) t = pick(FALLBACK_REPLY_POOL);
 if (hit(c['cf-prob'])) {
 const w = (window.getFollowupWord && window.getFollowupWord(t)) || '';
 if (w) t += ' ' + w;
@@ -3590,6 +3628,12 @@ window.tryActiveInvite = tryActiveInvite;
 function tryAutoSend() {
 try {
 const c = cfg();
+// FIX 2026-09-05 #187 专属字卡串桌面：tryAutoSend 异步链（await 取回字卡可数秒+每条消息
+// setTimeout 再数百~2600ms）此前无 sameCid 守卫——B 桌面触发的主动消息在用户切到 A 桌面后
+// 才发出，B 池的专属字卡落进 A 桌面聊天（vivo/多机型报障，与设备无关；scheduleReply/
+// replyOnce 均有守卫，唯独主动消息漏了）。入口捕获 cid，await 后与每个定时器逐层拦截。
+const autoCid = window.__activeCid || 'default';
+const sameAutoCid = () => (window.__activeCid || 'default') === autoCid;
 try { console.log('[mochi-auto] tryAutoSend called as-en=%s as-prob=%s as-min=%s as-max=%s', cfgn(c,'as-en',1), cfgn(c,'as-prob',30), cfgn(c,'as-min',5), cfgn(c,'as-max',10)); } catch(e){}
 if (cfgn(c, 'as-en', 1) !== 1) { try { console.log('[mochi-auto] as-en OFF, skip'); } catch(e){} return; }
 let prob = cfgn(c, 'as-prob', 30);
@@ -3603,6 +3647,7 @@ if (window.ckQuestionTry && window.ckQuestionTry(c)) return;
 // 主动消息也会落「在吗？」兜底；等待取回完成再构建 pool（专属优先、上限 8s 对齐 IDB）
 (async () => {
 try { await ensureReplyCardsReady(); } catch (e) {}
+if (!sameAutoCid()) return; // FIX #187 取回期间已切桌面：池子是旧桌面的，整条主动消息放弃
 const pool = getPool();
 const autoMsg = () => {
 // v3.26.x #163：主动消息此前完全不走默认字卡概率——dc-overall-chat（如 85%）只管
@@ -3627,24 +3672,26 @@ const acMax = Math.max(acMin, Number(cfgn(c, 'as-count-max', 2)) || 2);
 const count = randInt(acMin, acMax);
 for (let i = 0; i < count; i++) {
 setTimeout(() => {
+if (!sameAutoCid()) return; // FIX #187
 hideTyping();
 const am = autoMsg();
 const m = addIn(am.text, { type: am.type, initiative: true, silent: i > 0 });
 try { console.log('[mochi-auto] 主动发送消息: type=%s initiative=true', am.type); } catch(e){}
 if (hit(c['rc-prob'])) {
 setTimeout(() => {
+if (!sameAutoCid()) return; // FIX #187
 retractMsg(m, 'in');
 if (hit(c['rc-refix'])) {
 showTyping();
-setTimeout(() => { hideTyping(); addIn(pick(pool.text) || '…', { initiative: true }); }, 600);
+setTimeout(() => { if (!sameAutoCid()) return; hideTyping(); addIn(pick(pool.text) || '…', { initiative: true }); }, 600);
 }
 }, 900);
 }
 if (i < count - 1) showTyping();
 }, i * randInt(900, 2600));
 }
-setTimeout(() => { if (window.callMaybeTrigger) window.callMaybeTrigger(); }, count * 2600 + 3500);
-setTimeout(() => { trySystemAutoSend(); trySystemAskMochi(); tryCollectPending(); if (window.maybeAutoGift) window.maybeAutoGift(); }, count * 2600 + 2500);
+setTimeout(() => { if (!sameAutoCid()) return; if (window.callMaybeTrigger) window.callMaybeTrigger(); }, count * 2600 + 3500);
+setTimeout(() => { if (!sameAutoCid()) return; trySystemAutoSend(); trySystemAskMochi(); tryCollectPending(); if (window.maybeAutoGift) window.maybeAutoGift(); }, count * 2600 + 2500);
 })();
 } catch (e) {
 try {
@@ -6472,6 +6519,7 @@ if (b) b.innerHTML = '<span style="opacity:.85">' + escTxt(val) + '</span>';
 closeMsgActions();
 } else if (act === 'del') {
 if (activeMsgEl && idx >= 0 && msgs[idx] && msgs[idx].side === 'in') {
+chatTailDrop(msgs[idx]); // FIX 2026-09-05 #185 删除消息同步从尾巴日志摘除，防刷新后 chatTailMerge 回放复活（与撤回同口径）
 msgs.splice(idx, 1);
 sessionChangedIdx.clear();
 saveMsgs();

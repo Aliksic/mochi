@@ -1,3 +1,12 @@
+### 2026-09-05 15:xx（#188 朋友圈不显示图片（iPad Air 6+QQ浏览器）：IDB 读失败窗口把剥图快照写回 feed-posts 权威键——四条裸写路径全部上守卫；本次构建者：AI-B）
+* [AI-B 域·跨域改动 src/js/feed.js（AI-A 业务文件），理由：用户直接指派修复朋友圈无图]（**改动文件：src/js/feed.js（新增权威键守卫：feedAuthSeen 会话见过权威数据标记 + feedGuardWrite——见过权威或 store.get(KEY) 非空→照常写，否则 window.idbHasKey 探测：确认存在=绝不写回+增量留 pending+10s 有界重读权威最多 2 次，确认不存在=放行写保住并集保数据，探测失败按存在处理；feedMergeFromIdb 改守卫写回+写回成功才清 pending；load() pending 合并去掉 !feedDbReady 前置；save 预就绪/post-ready、15s 保险丝、发布兜底四条 store.set(KEY) 全部改走守卫）、build.mjs（哨兵 +6，全逻辑锚点）、FIX-REGRESSION.md（#188 行+设备索引 iPad Air 挂 188）、tools/verify-feed-auth-guard.mjs（新增 16 断言）**；构建状态：见 git 提交，与在途 #186/#187 src 一并收口）。
+* 根因：feed-posts 超 200KB 只写 IDB（LS 副本被大键迁移删走）；WKWebView 系（iPad QQ浏览器/Safari 家族，iOS 挂后台杀 IDB 连接）首发 idbGet 4s+4s 超时返回 undefined 与「键不存在」不可分，启动回填未到时 load() 手上只剩剥图快照（图片全被剥成 [图片]/imgs=[]），旧代码四条路径（feedMergeFromIdb 合并写回/save 非空直写/15s 保险丝/发布兜底）会把无图版本整包写进权威键——图片从数据层永久消失，之后 IDB 恢复也救不回。诊断佐证：用户 15:00:28 进朋友圈前后错误环零新增＝页内根本没有 img 元素（数据层无图），与聊天页 3 条 data:image 截断失败（同族：IDB 读失败回退有损快照）互为印证；#85/#120 同族但伤在「写回覆盖」而非只读丢失。
+* 验证：node --check 过；verify-feed-auth-guard 16/16（抽真实守卫+load+feedMergeFromIdb 源码断言：超时拒写/键不存在放行/探测失败拒写/无接口旧行为/重读上限 2/seen 置位/pending 保留与清空/就绪后合并 pending）；--check-sentinels 全绿哑哨兵 0。
+* 给 AI-A：①已丢图的设备若更新重进后朋友圈仍无图＝权威键已被旧版覆盖，只能从数据备份导出包恢复（其他设备导出→本机导入）；②本修复同时让「读失败窗口」内朋友圈不再把无图版写回，10s 重读权威成功即自动恢复完整显示。
+### 2026-09-05（#187 专属字卡串桌面：tryAutoSend 主动消息异步链无跨桌面守卫；本次构建者：AI-B）
+* [AI-B 域·跨域改动 src/js/chat.js（AI-A 业务文件，tryAutoSend 区块，与 #180 持久化链/#185 空气泡/#186 媒体链零重叠），理由：用户直接指派修复]（**改动文件：src/js/chat.js（tryAutoSend 入口捕获 autoCid+sameAutoCid；await ensureReplyCardsReady 后放行前拦截；消息/rc-prob 撤回重发/尾部副作用每个 setTimeout 入口逐层拦截）、build.mjs（哨兵+2）、FIX-REGRESSION.md（187 行）、tools/verify-auto-cid-guard.mjs（新增 8 断言）**；构建状态：已构建·sw 见 version.json）。
+* 根因：B 桌面触发的 TA 主动消息，await 取回字卡（可数秒）+每条 setTimeout（900~2600ms）期间用户切到 A 桌面，B 池专属卡发进 A 聊天；scheduleReply/replyOnce 均有 sameCid 守卫唯主动消息漏了，多机型通病与设备无关。无头 Chromium 双桌面大库基线验证读池全对佐证读链路无恙。
+* 验证：node --check 过；verify-auto-cid-guard 8/8；--check-sentinels 全绿哑哨兵 0。
 ### 2026-09-05 13:1x（#179 iPhone14 Pro 覆盖形态底部白带：#148 高度公式漏加 env-top；已构建）
 * [AI-B 域]（**改动文件：src/js/mobile-adapt.js（fs 态与非全屏 standalone 的 --mochi-ios-h 公式改 envTop+inner=min(screen)；监视跳过键盘/聚焦会话防瞬态误报）、FIX-REGRESSION.md（#179 行+#175 判定补强）、build.mjs（#148 needle 公式变更同步）**）。
 * 根因：两类 iOS 形态——覆盖（env-top>0，可视=整屏）vs 已避让（env-top=0，可视=inner）——#148 高度单用 vv(inner) 使覆盖形态底部少算 env-top 高度露白 60px。统一公式高度=envTop+inner=min(screen)。

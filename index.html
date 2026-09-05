@@ -8785,9 +8785,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1788598534559">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.460</b></span>
-        <span class="sv-deploy">部署于 2026-09-05 16:55<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1788602270314">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.461</b></span>
+        <span class="sv-deploy">部署于 2026-09-05 17:57<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9926,7 +9926,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.460</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.461</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
       <!-- v3.27.x：设置页底部防骗声明 -->
       <div class="set-alert">
@@ -10217,7 +10217,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.460</span>
+              <span class="lic-ver">v3.26.461</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -27127,6 +27127,8 @@ window.tryActiveInvite = tryActiveInvite;
 function tryAutoSend() {
 try {
 const c = cfg();
+const autoCid = window.__activeCid || 'default';
+const sameAutoCid = () => (window.__activeCid || 'default') === autoCid;
 try { console.log('[mochi-auto] tryAutoSend called as-en=%s as-prob=%s as-min=%s as-max=%s', cfgn(c,'as-en',1), cfgn(c,'as-prob',30), cfgn(c,'as-min',5), cfgn(c,'as-max',10)); } catch(e){}
 if (cfgn(c, 'as-en', 1) !== 1) { try { console.log('[mochi-auto] as-en OFF, skip'); } catch(e){} return; }
 let prob = cfgn(c, 'as-prob', 30);
@@ -27138,6 +27140,7 @@ if (tryActiveInvite(c)) return;
 if (window.ckQuestionTry && window.ckQuestionTry(c)) return;
 (async () => {
 try { await ensureReplyCardsReady(); } catch (e) {}
+if (!sameAutoCid()) return; // FIX #187 取回期间已切桌面：池子是旧桌面的，整条主动消息放弃
 const pool = getPool();
 const autoMsg = () => {
 try {
@@ -27156,24 +27159,26 @@ const acMax = Math.max(acMin, Number(cfgn(c, 'as-count-max', 2)) || 2);
 const count = randInt(acMin, acMax);
 for (let i = 0; i < count; i++) {
 setTimeout(() => {
+if (!sameAutoCid()) return; // FIX #187
 hideTyping();
 const am = autoMsg();
 const m = addIn(am.text, { type: am.type, initiative: true, silent: i > 0 });
 try { console.log('[mochi-auto] 主动发送消息: type=%s initiative=true', am.type); } catch(e){}
 if (hit(c['rc-prob'])) {
 setTimeout(() => {
+if (!sameAutoCid()) return; // FIX #187
 retractMsg(m, 'in');
 if (hit(c['rc-refix'])) {
 showTyping();
-setTimeout(() => { hideTyping(); addIn(pick(pool.text) || '…', { initiative: true }); }, 600);
+setTimeout(() => { if (!sameAutoCid()) return; hideTyping(); addIn(pick(pool.text) || '…', { initiative: true }); }, 600);
 }
 }, 900);
 }
 if (i < count - 1) showTyping();
 }, i * randInt(900, 2600));
 }
-setTimeout(() => { if (window.callMaybeTrigger) window.callMaybeTrigger(); }, count * 2600 + 3500);
-setTimeout(() => { trySystemAutoSend(); trySystemAskMochi(); tryCollectPending(); if (window.maybeAutoGift) window.maybeAutoGift(); }, count * 2600 + 2500);
+setTimeout(() => { if (!sameAutoCid()) return; if (window.callMaybeTrigger) window.callMaybeTrigger(); }, count * 2600 + 3500);
+setTimeout(() => { if (!sameAutoCid()) return; trySystemAutoSend(); trySystemAskMochi(); tryCollectPending(); if (window.maybeAutoGift) window.maybeAutoGift(); }, count * 2600 + 2500);
 })();
 } catch (e) {
 try {
@@ -53728,6 +53733,21 @@ return p;
 }
 let feedDbReady = false;
 let feedPending = null;
+let feedAuthSeen = false;
+let feedAuthWritable = null;   // null=未探测；true=确认可写（权威键确实不存在）；false=权威仍在
+let feedAuthRetried = 0;       // 守卫拒写后的权威重读次数上限 2（间隔 10s，防病理存储下无限循环）
+function feedGuardWrite(raw) {
+if (feedAuthSeen || store.get(KEY) !== null) {
+try { store.set(KEY, raw); } catch (e) {}
+return Promise.resolve(true);
+}
+if (!window.idbHasKey) { try { store.set(KEY, raw); } catch (e) {} return Promise.resolve(true); }
+if (feedAuthWritable === null) feedAuthWritable = window.idbHasKey(uid + ':' + KEY).then(ok => ok === false);
+return feedAuthWritable.then(writable => {
+if (writable) { try { store.set(KEY, raw); } catch (e) {} }
+return writable;
+});
+}
 function itemKey(o) { return (o && o.ts ? o.ts : 0) + '|' + (o.role || o.by || '') + '|' + (o.authorName || ''); }
 function deeperList(a, b) {
 const byKey = {};
@@ -53785,7 +53805,7 @@ const v = loadSnap();
 if (v.length) list = v.map(normPost);
 } catch (e) {}
 }
-if (!feedDbReady && feedPending && feedPending.length) {
+if (feedPending && feedPending.length) {
 list = mergePosts(list, feedPending);
 }
 return list;
@@ -53824,12 +53844,12 @@ const raw = JSON.stringify(arr);
 if (!feedDbReady) {
 try { feedPending = arr.slice(); } catch (e) {}
 if (arr.length) {
-try { store.set(KEY, raw); } catch (e) {}
+feedGuardWrite(raw);
 persistSnap(arr);
 }
 return;
 }
-store.set(KEY, raw);
+feedGuardWrite(raw);
 if (!arr.length) {
 try { localStorage.removeItem('xy-home-v2:default:' + SNAP_KEY); } catch (e) {}
 return;
@@ -54841,7 +54861,7 @@ renderPreview();
 if (input) input.value = '';
 renderVisible();
 if (!document.getElementById('feed-post-' + id)) {
-try { store.set(KEY, JSON.stringify(list)); } catch (e) {}
+feedGuardWrite(JSON.stringify(list));
 renderVisible();
 }
 toast('已发布');
@@ -55397,9 +55417,10 @@ render();
 function feedMergeFromIdb(v) {
 try {
 const pending = feedPending || [];
-feedPending = null;
 let base = [];
-if (v && typeof v === 'string' && v.length > 2) {
+const authOk = !!(v && typeof v === 'string' && v.length > 2);
+if (authOk) {
+feedAuthSeen = true;
 const idbArr = JSON.parse(v);
 if (Array.isArray(idbArr)) base = idbArr.map(normPost);
 }
@@ -55408,7 +55429,23 @@ const raw = store.get(KEY);
 if (raw !== null) { try { const a = JSON.parse(raw); if (Array.isArray(a)) cur = a.map(normPost); } catch (e) {} }
 if (!cur.length) cur = loadSnap().map(normPost);
 const merged = mergePosts(base, mergePosts(cur, pending));
-if (merged.length) store.set(KEY, JSON.stringify(merged));
+if (!merged.length) { if (authOk && feedPending === pending) feedPending = null; return; }
+feedGuardWrite(JSON.stringify(merged)).then(written => {
+if (written) {
+if (feedPending === pending) feedPending = null;
+return;
+}
+if (feedPending === null) feedPending = pending;
+else if (feedPending !== pending) feedPending = mergePosts(pending, feedPending);
+if (feedAuthRetried >= 2 || !window.idbGet) return;
+feedAuthRetried++;
+setTimeout(function () {
+window.idbGet(uid + ':' + KEY).then(v2 => {
+feedMergeFromIdb(v2);
+if (v2 && typeof v2 === 'string' && v2.length > 2) render();
+});
+}, 10000);
+});
 } catch (e) { /* 解析失败仍置就绪，避免下次启动重复合并 */ }
 }
 try {
@@ -55452,7 +55489,7 @@ renderCover();
 } catch (e) { feedDbReady = true; }
 setTimeout(function () {
 if (feedDbReady) return;
-try { const all = load(); if (all.length) store.set(KEY, JSON.stringify(all)); } catch (e) {}
+try { const all = load(); if (all.length) feedGuardWrite(JSON.stringify(all)); } catch (e) {}
 feedDbReady = true;
 render();
 }, 15000);
@@ -79030,4 +79067,4 @@ return { lock: document.body.classList.contains('scroll-lock'), open: open };
 <!-- __MOCHI_EOF__ -->
 </body>
 </html>
-<!-- __MOCHI_EOF__ mto5dxun -->
+<!-- __MOCHI_EOF__ mto7m0dm -->
