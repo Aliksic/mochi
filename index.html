@@ -231,6 +231,7 @@ box-sizing:border-box; padding:0 2px; border-radius:9px;
 background:var(--sp-soft); color:var(--sp-ink);
 font-size:10px; font-weight:800;
 }
+.splash-notice-list .splash-hl, .splash-summary .splash-hl { color:#e8590c; font-weight:800; }
 .splash-bullet { position:relative; padding-left:23px; margin-bottom:6px; line-height:1.7; }
 .splash-bullet::before {
 content:"·"; position:absolute; left:8px; top:-1px;
@@ -8623,7 +8624,8 @@ transition-duration: .01ms !important;
             <p>不提供免费客服、教学、一对一指导。使用问题请先看开屏说明/代码，常见问题可问互助群。</p>
             <p>反馈 bug 请描述清楚，我会看到后处理；催单不回，不一定有时间。</p>
             <p>本站完全免费，开放二传二改，但禁止商用、禁止以盈利为目的。</p>
-            <p>报修 / 反馈请按【手机型号 + 浏览器 + 具体现象】提交，缺一不回；尽量附上设置里的【复制诊断信息】；基础疑问可直接问 AI，比我回复快。</p>
+            <p>报修 / 反馈请按【手机型号 + 浏览器 + 具体现象】提交，缺一不回；尽量附上设置里的【复制诊断信息】。</p>
+            <p class="splash-hl">基础疑问可直接问 AI，比我回复快。</p>
             <p>系统或浏览器版本不同，适配表现可能不同，属正常现象。</p>
             <p>建议使用 Chrome、Edge 等主流浏览器，尽量不用手机自带默认浏览器（会有限制），用主流浏览器出现的兼容问题会少一些。</p>
             <p>数据丢失属浏览器正常概率，请定期备份：本机不保留任何自动副本，你下载并保存好的导出文件就是唯一备份（别删、别只留在下载列表里）。</p>
@@ -8696,7 +8698,7 @@ transition-duration: .01ms !important;
             <p class="splash-bullet">例：小米14 / 自带浏览器 / 点击字卡没反应</p>
             <p class="splash-bullet">补充方式：设置 → 复制诊断信息，把自动生成的本机诊断文本（含版本号）一并贴上，能更快定位。</p>
             <p class="splash-sub">问「为什么会出现这个问题」这类基础疑问：</p>
-            <p class="splash-item">建议直接问 AI，比我回复快。</p>
+            <p class="splash-item splash-hl">建议直接问 AI，比我回复快。</p>
             <p class="splash-item">反馈后不需要等我回复：消息太多，修完会直接部署，可以晚些刷新到新版再试。反馈的每个问题都修了，但能否修好只能用自己的设备验证，我没有其他设备，无法验证修复程度。</p>
             <p class="splash-item">如果有设备问题bug一直修不好，我建议可以拿我的代码自行部署和修缮，有自己的手机自己验证bug是否修复会方便很多。</p>
             <p class="splash-item">8.29公开已开群友互助群，但我不一定有时间看，只是群友互助群，有问题群里艾特即可，个人精力有限也不一定及时回复。</p>
@@ -8786,9 +8788,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1788606006048">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.465</b></span>
-        <span class="sv-deploy">部署于 2026-09-05 19:00<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1788606401065">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.466</b></span>
+        <span class="sv-deploy">部署于 2026-09-05 19:06<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9927,7 +9929,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.465</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.466</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
       <!-- v3.27.x：设置页底部防骗声明 -->
       <div class="set-alert">
@@ -10218,7 +10220,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.465</span>
+              <span class="lic-ver">v3.26.466</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -17367,6 +17369,7 @@ const p = document.createElement('p');
 if (it && typeof it === 'object') {
 if (it.h !== undefined) { p.className = 'splash-sub'; p.textContent = String(it.h); }
 else if (it.b !== undefined) { p.className = 'splash-bullet'; p.textContent = String(it.b); }
+else if (it.hl !== undefined) { p.className = 'splash-item splash-hl'; p.textContent = String(it.hl); }
 else { p.className = 'splash-item'; p.textContent = String(it.t !== undefined ? it.t : ''); }
 } else {
 p.className = 'splash-item';
@@ -17452,7 +17455,8 @@ sumTitle.textContent = '必读摘要';
 sum.appendChild(sumTitle);
 data.summary.forEach(function (s) {
 const p = document.createElement('p');
-p.textContent = String(s);
+if (s && typeof s === 'object' && s.hl !== undefined) { p.className = 'splash-hl'; p.textContent = String(s.hl); }
+else p.textContent = String(s);
 sum.appendChild(p);
 });
 list.appendChild(sum);
@@ -79126,4 +79130,4 @@ return { lock: document.body.classList.contains('scroll-lock'), open: open };
 <!-- __MOCHI_EOF__ -->
 </body>
 </html>
-<!-- __MOCHI_EOF__ mto9u2w0 -->
+<!-- __MOCHI_EOF__ mtoa2jop -->

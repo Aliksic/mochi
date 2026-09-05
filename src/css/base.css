@@ -255,6 +255,9 @@ html { margin:0; padding:0; }
   background:var(--sp-soft); color:var(--sp-ink);
   font-size:10px; font-weight:800;
 }
+/* 高亮条目：关键提醒用显眼橙色加粗标出（如「基础疑问可直接问 AI」）；
+   双选择器压过 .splash-notice-list p / .splash-summary p 的软墨色 */
+.splash-notice-list .splash-hl, .splash-summary .splash-hl { color:#e8590c; font-weight:800; }
 /* 子列表项：黑色 · 前缀，与编号条目文字对齐 */
 .splash-bullet { position:relative; padding-left:23px; margin-bottom:6px; line-height:1.7; }
 .splash-bullet::before {

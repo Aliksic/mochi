@@ -318,7 +318,7 @@
 })();
 
 // v3.8.y：章节渲染
-// 条目支持三种：字符串=自动编号条目；{h:"子标题"}；{b:"子列表项"}
+// 条目支持四种：字符串=自动编号条目；{h:"子标题"}；{b:"子列表项"}；{hl:"高亮条目"}（橙色加粗显眼标出）
 function renderSplashSections(container, sections, opt) {
   if (!container || !Array.isArray(sections)) return;
   const collapsible = !!(opt && opt.collapsible);
@@ -346,6 +346,7 @@ function renderSplashSections(container, sections, opt) {
         if (it && typeof it === 'object') {
           if (it.h !== undefined) { p.className = 'splash-sub'; p.textContent = String(it.h); }
           else if (it.b !== undefined) { p.className = 'splash-bullet'; p.textContent = String(it.b); }
+          else if (it.hl !== undefined) { p.className = 'splash-item splash-hl'; p.textContent = String(it.hl); }
           else { p.className = 'splash-item'; p.textContent = String(it.t !== undefined ? it.t : ''); }
         } else {
           p.className = 'splash-item';
@@ -420,7 +421,7 @@ function buildSplashToc(list) {
 // 用法：改 src/pwa/notice.json 内容 → 构建部署，开屏公告即更新（无需改代码）。
 // 字段：title / sub / tip（前置提示块，数组，元素可为字符串或 {h:块标题,p:[段落]}）
 //       / sections（[{h:章节标题,p:[条目]}]，优先于旧 list）；
-//       条目支持三种：字符串=自动编号条目；{h:"子标题"}；{b:"子列表项"}。
+//       条目支持四种：字符串=自动编号条目；{h:"子标题"}；{b:"子列表项"}；{hl:"高亮条目"}（橙色加粗显眼标出）。
 //       sections 为空数组 / hide:true 时隐藏整个公告区。
 // 失败（离线/无网络）静默保留 template.html 写死的默认文案兜底。
 (function () {
@@ -449,7 +450,8 @@ function buildSplashToc(list) {
             sum.appendChild(sumTitle);
             data.summary.forEach(function (s) {
               const p = document.createElement('p');
-              p.textContent = String(s);
+              if (s && typeof s === 'object' && s.hl !== undefined) { p.className = 'splash-hl'; p.textContent = String(s.hl); }
+              else p.textContent = String(s);
               sum.appendChild(p);
             });
             list.appendChild(sum);

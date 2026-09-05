@@ -1,3 +1,6 @@
+### 2026-09-05（开屏公告「基础疑问可直接问 AI」高亮标色——本次构建者：AI-B=本会话）
+- [AI-B 域]（**改动文件：src/css/base.css（新增 .splash-hl 橙色加粗样式）、src/js/clock.js（renderSplashSections 与必读摘要渲染支持 {hl:...} 高亮条目类型）、src/template.html（静态兜底两处加 splash-hl）、src/pwa/notice.json（必读摘要拆行+章节二该句改 {hl}）**；构建状态：见本条收口）。
+- 需求：用户要求开屏里「基础疑问可直接问 AI，比我回复快」标不同颜色、显眼。
 ### 2026-09-05 19:0x（#186 竞态防线收口构建：令牌 404 抢跑误清正常表情气泡——verify-quote-image E3 实证；本次构建者：AI-B=本会话，随库一并收口 #189/#190/#192 在途改动）
 * [AI-B 域]（**改动文件：src/js/chat.js（#186 渲染占位加竞态防线：img error 延时 1.5s 复核 src 仍为令牌且池 expand miss 才落「图片丢失」占位——旧写法 404 事件抢在池观察器改写 src 前触发会误清池中有数据的正常表情，verify-quote-image E3 稳定复现 16 PASS 后崩，修后 20/20）、build.mjs（删 #191 残留 terser import——未安装依赖会使 node build.mjs ERR_MODULE_NOT_FOUND，#191 结论不接入，内部 minifyJs 保留）、FIX-REGRESSION.md（#186 行补竞态说明）+ 随库收口 stash 恢复的并行会话已声明完整改动：#189 fullscreen.js/mobile-adapt.js/base.css+verify-fullscreen-ipad.mjs（25/25）、#190 bg-keep.js 幅度 0.006、#192 personalize.js 小组件独立透明度、三方 WORKLOG/FIX-REGRESSION/build.mjs 哨兵登记**；构建状态：**已构建·sw mochi-mto9u2w0，哨兵 391/391 哑哨兵 0**）。
 * 验证：node --check 全过；verify-fullscreen-ipad 25/25、verify-quote-image 20/20、verify-media-pool 8/8、verify-feed-auth-guard 16/16、verify-chat-tail 21/21。
