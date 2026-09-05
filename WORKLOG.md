@@ -1,3 +1,29 @@
+### 2026-09-05 19:0x（#186 竞态防线收口构建：令牌 404 抢跑误清正常表情气泡——verify-quote-image E3 实证；本次构建者：AI-B=本会话，随库一并收口 #189/#190/#192 在途改动）
+* [AI-B 域]（**改动文件：src/js/chat.js（#186 渲染占位加竞态防线：img error 延时 1.5s 复核 src 仍为令牌且池 expand miss 才落「图片丢失」占位——旧写法 404 事件抢在池观察器改写 src 前触发会误清池中有数据的正常表情，verify-quote-image E3 稳定复现 16 PASS 后崩，修后 20/20）、build.mjs（删 #191 残留 terser import——未安装依赖会使 node build.mjs ERR_MODULE_NOT_FOUND，#191 结论不接入，内部 minifyJs 保留）、FIX-REGRESSION.md（#186 行补竞态说明）+ 随库收口 stash 恢复的并行会话已声明完整改动：#189 fullscreen.js/mobile-adapt.js/base.css+verify-fullscreen-ipad.mjs（25/25）、#190 bg-keep.js 幅度 0.006、#192 personalize.js 小组件独立透明度、三方 WORKLOG/FIX-REGRESSION/build.mjs 哨兵登记**；构建状态：**已构建·sw mochi-mto9u2w0，哨兵 391/391 哑哨兵 0**）。
+* 验证：node --check 全过；verify-fullscreen-ipad 25/25、verify-quote-image 20/20、verify-media-pool 8/8、verify-feed-auth-guard 16/16、verify-chat-tail 21/21。
+* 备注：本会话与 #189 会话并发写过工作区（其 #189/#190/#192 WIP 曾被本会话临时 stash 隔离构建，已恢复并按其 WORKLOG「随库一并打入」声明收口）；全程未动 stash@{1}（baseline-check-tmp，非本会话所留）。
+### 2026-09-05（#189 iPad 全屏「没有生效」+全屏滑动一直闪烁：方向监视误杀/iPad 零可见效果/自愈层死代码 三根因收口）
+- [AI-B 域·本次构建者：AI-B=本会话]（**改动文件：src/js/fullscreen.js（startFsMonitorSafe iOS 出口+orientationchange 出口+1500ms 复核 !isIOS 门）、src/css/base.css（html.tablet.ios-pwa-standalone.ios-fs-active 隐藏模拟状态栏，#111 手机行为不动）、src/js/mobile-adapt.js（healViewport 补裸 d 声明复活整层自愈+稳态 pin 条件式+全屏底边容差 --mochi-safe-top+全屏态跳过 vv offset 归零+--mochi-ios-h 两分支 ≥6px 迟滞）、build.mjs（FIX_SENTINELS +10）、FIX-REGRESSION.md（#189 行+设备索引 iPad 三行补 144、189）、tools/verify-fullscreen-ipad.mjs（新增 25 断言）**；构建状态：见本次收口构建提交）。
+- 根因：①Safari 无 orientation.lock（WebKit #257695），iPad 横屏持握点全屏 ~2s 被方向监视误杀退出+误导弹窗+FB_KEY 写坏=「没有生效」；②#111 让 iOS 全屏保留模拟状态栏（修 iPhone16），iPad 上保留=开关零视觉变化；③healViewport v3.26 重写漏写 documentElement 声明，裸 d=window.d undefined→TypeError 被 try 吞=稳态自愈整层死代码；修活后原无条件 pinScrollTop 会与用户滚动对打（#179 后 .phone 底边天然超 vv 一个安全区）+vv 逐帧抖动逐次重排=「滑动一直闪烁」，故 pin 条件式+容差+门控+迟滞必须同批落地。
+- 验证：node --check 过；verify-fullscreen-ipad 25/25；--check-sentinels 全绿哑哨兵 0（391 条）。
+- 收口说明：本会话为收口构建者，随本次构建一并打入 WORKLOG 已声明完整的在途改动（#179/#180/#185/#186/#187/#188/#192）。给并行会话：#188 feed 与本会话对 build.mjs 并发写过两次（Edit 撞「modified since read」），已改用脚本原子插入解决；后续对 build.mjs 的追加请走同款行插入而非整段重写。
+### 2026-09-05 2x:xx（#192 小组件透明度拆分独立调+应用到全部；未构建，待收口）
+- [跨域改动 src/js/personalize.js（AI-B 系统文件）+ src/template.html（一行文案），理由：用户直接指派「装修模式小组件透明度每个单独调+可应用到全部」，且该功能全部在 personalize.js 装修菜单内实现]（**改动文件：src/js/personalize.js（新增 widgetOpKey/widgetOpacitySel/applyWidgetOpacityOf/applyAllWidgetOpacities：按类型存 widget-opacity-<type> per-cid，内联 style.opacity 覆盖全局 --widget-opacity，未设/=100 清内联回落；点卡片菜单「组件透明度」改只调本组件，pills 增「应用到全部小组件」（当前值写所有 [data-card-bg] 组件键）与「恢复默认（跟随全局）」；启动/contact-switched/refreshDeskVisuals 三处统一 applyAllWidgetOpacities 回放；边看边调抽屉滑条文案改「全局默认组件透明度」）、src/template.html（设置页行文案加「（全局默认）」）、build.mjs（哨兵 +1，锚 widgetOpKey 定义行）、FIX-REGRESSION.md（#192 行）**；构建状态：**未构建**——工作区另有并行会话未收口的 bg-keep.js/mobile-adapt.js/fullscreen.js/base.css（#189/#190）与 build.mjs 残留 terser import（依赖未装会使 node build.mjs 直接 ERR_MODULE_NOT_FOUND，--check-sentinels 是临时 npm i terser --no-save 后才跑通的，收口构建前请先处理该 import），按不夹带规则留给收口方一并构建）。
+- 需求/方案：全局 widget-opacity 键与 --widget-opacity 变量保留为「全局默认」；独立值优先级更高（内联 opacity 覆盖）。applyAllWidgetOpacities 类型从 DOM [data-card-bg] 收集，覆盖 CARD_BG_TYPES 之外的 desk-period 等裸类型。
+- 验证：node --check 过；node build.mjs --check-sentinels 391 全绿哑哨兵 0。
+- 给收口方：①构建前先决断 build.mjs 第 9 行 terser import 去留（WORKLOG #191 结论是不建议接 terser）；②真机验证：点单组件调透明度只影响该组件、应用到全部同值、恢复默认回落全局。
+
+### 2026-09-05 18:2x（#191 首屏体积优化调研：terser 接入 build.mjs 已试并回滚——与哨兵体系不兼容；未构建）
+
+- [AI-B 域]（**改动文件：无最终改动——build.mjs/package.json 曾接 terser（compress-only 不 mangle），--check-sentinels 实测 30+ 条哨兵「针在注释里/表达式被改写」警报，已 git checkout 完整回滚+npm prune，工作区恢复原样**；构建状态：未构建，产物未动）。
+- 背景：用户报「部署链接部分手机打不开」。实测线上 v3.26.461 正常、无未推送提交；产物 3.92MB 但 **GitHub Pages 自带 gzip，实际传输约 0.97MB**，首屏传输并非 4MB。
+- 结论：①terser compress-only 实测省 32% 原始体积（gzip 后仅再省 ~0.2MB），但会改写逻辑表达式（如 ok===false→!ok）并删行内 // FIX 注释——哨兵 needle 锚定「压缩后产物文本」，380 条防回归锚点会集体失明，重登锚点工作量与风险远大于收益，**不建议再试**；②「部分手机打不开」主因更可能是国内直连 GitHub Pages 可达性（弱网/微信内置壳/新用户无 SW 缓存），与产物体积关系不大。
+- 给双方/用户建议：根治「打不开」优先**镜像部署（Cloudflare Pages 等国内可达平台，零代码改动）**；长期再看按需拆分 script 块。build.mjs 零依赖压缩保持不变。
+### 2026-09-05 15:5x（#190 保活音频底噪/电流声（OPPO Find X9 自带浏览器等多机型）：安卓幅度 0.02→0.006；未构建，待收口）
+* [B 域]（**改动文件：src/js/bg-keep.js（ensureKeepAudioDataUrl 安卓幅度 0.02→0.006 + 根因注释，iOS 0.002 不动）、build.mjs（哨兵 +1：bg-keep.js `kaIsIOS() ? 0.002 : 0.006`）、FIX-REGRESSION.md（#190 行 + 设备索引 OPPO Find X9 挂 190）**；构建状态：**未构建**（工作区另有并行会话未收口的 fullscreen.js/mobile-adapt.js 改动，按不夹带规则留给收口方一并构建））。
+* 根因：后台保活的 1 秒循环 220Hz 正弦波（<audio> volume 0.05，安卓幅度 0.02 ≈ -60dBFS）在人耳最敏感低频段常播，灵敏扬声器实听即持续底噪/电流声；iOS 曾同型（v3.15.x）降 0.002，安卓保守下限过高、多机型复发。防无声节流有效条件是「样本非零 + volume>0」而非响度，降到 0.006（≈-88dBFS 物理不可闻）不影响保活。
+* 验证：node --check 过；node build.mjs --check-sentinels 380 全绿哑哨兵 0。
+* 待办：构建者收口构建+提交；真机验证（OPPO Find X9 自带浏览器）底噪消失且后台保活仍有效（切后台 1 分钟+回前台消息/通知正常）。
 ### 2026-09-05 15:xx（#188 朋友圈不显示图片（iPad Air 6+QQ浏览器）：IDB 读失败窗口把剥图快照写回 feed-posts 权威键——四条裸写路径全部上守卫；本次构建者：AI-B）
 * [AI-B 域·跨域改动 src/js/feed.js（AI-A 业务文件），理由：用户直接指派修复朋友圈无图]（**改动文件：src/js/feed.js（新增权威键守卫：feedAuthSeen 会话见过权威数据标记 + feedGuardWrite——见过权威或 store.get(KEY) 非空→照常写，否则 window.idbHasKey 探测：确认存在=绝不写回+增量留 pending+10s 有界重读权威最多 2 次，确认不存在=放行写保住并集保数据，探测失败按存在处理；feedMergeFromIdb 改守卫写回+写回成功才清 pending；load() pending 合并去掉 !feedDbReady 前置；save 预就绪/post-ready、15s 保险丝、发布兜底四条 store.set(KEY) 全部改走守卫）、build.mjs（哨兵 +6，全逻辑锚点）、FIX-REGRESSION.md（#188 行+设备索引 iPad Air 挂 188）、tools/verify-feed-auth-guard.mjs（新增 16 断言）**；构建状态：见 git 提交，与在途 #186/#187 src 一并收口）。
 * 根因：feed-posts 超 200KB 只写 IDB（LS 副本被大键迁移删走）；WKWebView 系（iPad QQ浏览器/Safari 家族，iOS 挂后台杀 IDB 连接）首发 idbGet 4s+4s 超时返回 undefined 与「键不存在」不可分，启动回填未到时 load() 手上只剩剥图快照（图片全被剥成 [图片]/imgs=[]），旧代码四条路径（feedMergeFromIdb 合并写回/save 非空直写/15s 保险丝/发布兜底）会把无图版本整包写进权威键——图片从数据层永久消失，之后 IDB 恢复也救不回。诊断佐证：用户 15:00:28 进朋友圈前后错误环零新增＝页内根本没有 img 元素（数据层无图），与聊天页 3 条 data:image 截断失败（同族：IDB 读失败回退有损快照）互为印证；#85/#120 同族但伤在「写回覆盖」而非只读丢失。

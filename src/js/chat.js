@@ -2289,11 +2289,21 @@ if (window.viewChatImage) window.viewChatImage(rec.text);
 });
 }
 // FIX 2026-09-06 #186 媒体池令牌失配兜底：池数据缺失（旧版 GC 引用扫描漏群聊键/LS 快照被误删、
-// 备份未带全池键）时 @@m: 令牌解析不出，<img> 加载失败＝无声空白气泡；改占位提示
+// 备份未带全池键）时 @@m: 令牌解析不出，<img> 加载失败＝无声空白气泡；改占位提示。
+// 竞态防线（verify-quote-image E3 实证）：img 插入即开始拉相对地址 @@m:…，404 错误事件
+// 可能抢在观察器异步改写 src 之前触发——此时池里可能有数据，绝不能立即清气泡；
+// 延时复核 src 仍是令牌且池确认无数据（mochiMediaExpand miss）才落占位。
 if (window.mochiMediaIsToken && window.mochiMediaIsToken(rec.text)) {
 const _tokImg = b.querySelector('.msg-img');
 if (_tokImg) _tokImg.addEventListener('error', () => {
+setTimeout(() => {
+if (!b.isConnected) return;
+const im = b.querySelector('.msg-img');
+const s = im ? (im.getAttribute('src') || '') : '';
+if (im && window.mochiMediaIsToken(s) && !window.mochiMediaExpand(s)) {
 b.innerHTML = '<span style="opacity:.5;font-size:12px">（图片丢失：媒体数据缺失，可用数据备份重新导入恢复）</span>';
+}
+}, 1500);
 });
 }
 } else if (rec.type === 'voice') {

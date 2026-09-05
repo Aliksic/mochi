@@ -629,6 +629,15 @@ html.ios-native-fs .phone .page.full .stats-top-name { padding-top: 10px; }
    的 padding-top 统一承担（.phone 整体下移到系统状态栏下方），这里只留 14px 常态
    留白，不再重复加 env/safe-area——否则与 .phone 顶部内边距叠加成双倍白带。 */
 html.ios-fs-active .phone .statusbar { padding-top:14px; }
+/* FIX 2026-09-05 #189：iPad（tablet）主屏幕全屏需要可见效果——#111 为修 iPhone16
+   「全屏后桌面顶部一行不见了、被遮挡」改为全屏态保留模拟状态栏，但 iPad 无灵动岛、
+   系统状态栏独立成条、网页本来就盖不上去，保留后【全屏模式】开关在 iPad 上毫无
+   视觉变化（#144 修好判定后用户仍报「没有生效」）。平板恢复 v3.6.x 原设计：全屏态
+   隐藏模拟状态栏，内容由下方 html.tablet.ios-fs-active .phone 的 padding-top
+   max(env,12px) 垫到系统状态栏下方；手机侧 #111 行为不变。
+   注意：#111 哨兵（absent 检查无作用域的整类隐藏选择器+display:none 组合）
+   只拦无作用域的整类隐藏，本条按 tablet+standalone 限定作用域，属有意例外，勿改回。 */
+html.tablet.ios-pwa-standalone.ios-fs-active .phone .statusbar { display:none; }
 
 /* v3.6.x→v3.28.x：iOS 独立应用「全屏模式」（ios-fs-active 类，由 fullscreen.js 控制）——
    iOS 无 Fullscreen API、系统状态栏永远无法隐藏，应用内模拟状态栏（Mochi/时间/电量那行）

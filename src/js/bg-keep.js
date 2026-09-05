@@ -148,7 +148,7 @@
   // 实听是明显的周期性「嘟嘟嘟嘟」（1 秒 loop 接缝 + 持续低频纯音），用户报修
   // 「不是静音音频」。iOS 无安卓那套无声节流，保活只要求「有非零样本在播」：
   // iOS 把幅度降到 ±3 LSB 级（0.002 × 0.05 ≈ -80dBFS，任何扬声器物理不可闻，
-  // 但样本非零不构成数字静音）；安卓保持原值不动，防回归无声节流。
+  // 但样本非零不构成数字静音）；安卓同型问题多机型复发（#190：OPPO Find X9 自带浏览器 HeyTapBrowser 等「一进网页就有底噪/电流声」）——220Hz 低频纯音在人耳最敏感频段、循环常播，-60dBFS 在灵敏扬声器上实听即持续嗡声，说明 0.02 下限过高；降为 0.006（×0.05 音量 ≈ -88dBFS，物理不可闻）：防无声节流要的是「样本非零 + volume>0」（浏览器静音检测按零样本/静音状态判定，不按响度），非零即保活有效；若保活因此失效（后台被冻结）再回调上限并换其他豁免信号，不回 220Hz 大音量（原安卓幅度 0.02）。
   let KEEP_AUDIO_DATAURL = '';
   function kaIsIOS() {
     try {
@@ -162,7 +162,8 @@
     if (KEEP_AUDIO_DATAURL) return KEEP_AUDIO_DATAURL;
     try {
       const sr = 44100, sec = 1, n = sr * sec;
-      const amp = kaIsIOS() ? 0.002 : 0.02;
+      // #190：安卓 0.02 → 0.006（原值实听底噪，见上方注释；iOS 维持 0.002）
+      const amp = kaIsIOS() ? 0.002 : 0.006;
       const buf = new ArrayBuffer(44 + n * 2);
       const dv = new DataView(buf);
       const ws = function (o, s) { for (let i = 0; i < s.length; i++) dv.setUint8(o + i, s.charCodeAt(i)); };

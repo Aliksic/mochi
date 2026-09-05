@@ -1017,10 +1017,16 @@
             // 状态栏下，env=59，如 iPhone 14 Pro/15 Pro）可视区=整块物理屏 852，单用
             // vv(793) 会在底部留出 60px 白带（#179 实测：.phone高=793 底边=793）；
             // 已避让形态（env=0，如 16 Pro 26.1）= inner 812。min 屏高防异常超界。
-            var _pxFs = (_vh2 >= 300) ? (Math.min(_safeTop + _ih2, _sh2 || (_safeTop + _ih2)) + 'px') : '';
-            if (d.style.getPropertyValue('--mochi-ios-h') !== _pxFs) {
-              if (_pxFs) d.style.setProperty('--mochi-ios-h', _pxFs);
-              else d.style.removeProperty('--mochi-ios-h');
+            var _nPxFs = (_vh2 >= 300) ? Math.round(Math.min(_safeTop + _ih2, _sh2 || (_safeTop + _ih2))) : 0;
+            var _curFs = parseFloat(d.style.getPropertyValue('--mochi-ios-h'));
+            if (_nPxFs >= 300) {
+              // FIX 2026-09-05 #189：写入加 ≥6px 迟滞（同 _setPhoneH 政策）——全屏过渡/
+              // fs-css-active 下浏览器工具条显隐期间 vv/innerHeight 逐帧抖动，原实现
+              // 每次都 setProperty=整页重排连发，滚动观感即「全屏下滑动一直闪烁」；
+              // ±6px 内抖动不写 DOM。0px/异常小值不落盘（原实现 innerHeight=0 会写 0px）。
+              if (isNaN(_curFs) || Math.abs(_nPxFs - _curFs) >= 6) d.style.setProperty('--mochi-ios-h', _nPxFs + 'px');
+            } else if (d.style.getPropertyValue('--mochi-ios-h')) {
+              d.style.removeProperty('--mochi-ios-h');
             }
             return;
           }
@@ -1039,8 +1045,12 @@
           }
           if (!vh) return;
           if (!_vvFitOn) { _vvFitOn = true; d.classList.add('ios-vv-fit'); }
-          var px = vh + 'px';
-          if (d.style.getPropertyValue('--mochi-ios-h') !== px) d.style.setProperty('--mochi-ios-h', px);
+          // FIX 2026-09-05 #189：写入加 ≥6px 迟滞——iPad/iPhone 滚动期 vv.height 有
+          // ±1~3px 逐帧抖动（滚动指示条/弹性回弹），原实现每次变化都 setProperty
+          // =整页 reflow 连发，观感即「滑动时一直闪烁」。真实施显隐/键盘开合都是
+          // 数十~数百 px 级变化，迟滞不影响跟随。
+          var _curN = parseFloat(d.style.getPropertyValue('--mochi-ios-h'));
+          if (isNaN(_curN) || Math.abs(vh - _curN) >= 6) d.style.setProperty('--mochi-ios-h', vh + 'px');
         } catch (e) {}
       }
       function syncSafeBottom() {
@@ -1085,8 +1095,22 @@
           healViewport();
         });
       }
+      // FIX 2026-09-05 #189：全屏形态判定（原生/CSS 兜底/iOS standalone 隐藏状态栏/iOS 原生全屏）
+      // ——稳态自愈在这四种类下放宽 .phone 底边容差并跳过 vv offset 归零（见 healViewport）。
+      // iOS 全屏下 offsetTop≠0 多为弹性回弹手势、底边天然超出 vv 一个顶部安全区（#179 公式），
+      // 二者按「位移残留」治疗都会与用户手势打架（=滑动闪烁）。
+      function _fsLike() {
+        var dd = document.documentElement;
+        return dd.classList.contains('fs-active') || dd.classList.contains('fs-css-active')
+          || dd.classList.contains('ios-fs-active') || dd.classList.contains('ios-native-fs');
+      }
       function healViewport() {
         try {
+          // FIX 2026-09-05 #189：补 documentElement 声明——v3.26.x 重写时漏写，下方
+          // d.classList 裸引用解析到 window.d=undefined → TypeError 被 try 吞掉，
+          // 自愈从「缩放自愈」这行起【每次调用都中断】：稳态残留清理/大平移归零/
+          // #174 缩放自愈/基线刷新整层静默失效（只跑了最前面两个 sync）。
+          var d = document.documentElement; // FIX 2026-09-05 #189
           syncVvFit();
           syncSafeBottom();
           // v3.26.x #174：独立应用缩放异常自愈——iOS 26.x 个别更新在主屏幕形态会把
@@ -1110,11 +1134,19 @@
             // 键盘会话其实已经结束，却还残留收缩/顶对齐/文档锁/推定停靠 → 无条件复原
             if (_kbActive) restoreKb();
             else {
-              if (_iProv) _iProvClear();
-              unlockDocScroll();
-              if (_phone && _phone.style.height) _setPhoneH(null, 'heal');
-              if (_phone && _phone.style.alignSelf) _phone.style.alignSelf = '';
-              pinScrollTop();
+              // FIX 2026-09-05 #189：归零滚动改条件式——先记账这次到底清了哪些键盘期
+              // 残留，只有真清了残留、或窗口仍处大偏移（Edge iOS 失焦平移）时才 pin。
+              // 纯稳态下无条件 pin 会与用户滚动打架：#179 后全屏覆盖形态 .phone/html
+              // 高 = envTop+inner，比布局视口高出一个顶部安全区（iPhone 覆盖 59px /
+              // iPad 状态栏 24px），文档天然可滚该余量，用户每滑一次就被 1s 看门狗/
+              // vv 事件拽回顶部——即报修的「全屏模式下滑动一直闪烁」。
+              var _cleanedResidue = false;
+              if (_iProv) { _iProvClear(); _cleanedResidue = true; } // 内部已 pin
+              if (_docLocked) { unlockDocScroll(); _cleanedResidue = true; }
+              else unlockDocScroll(); // v3.26.x 看门狗语义保留：残留 overflow:hidden 必清
+              if (_phone && _phone.style.height) { _setPhoneH(null, 'heal'); _cleanedResidue = true; }
+              if (_phone && _phone.style.alignSelf) { _phone.style.alignSelf = ''; _cleanedResidue = true; }
+              if (_cleanedResidue || winScrollY() > KB_SCROLL_HEAL) pinScrollTop(); // FIX 2026-09-05 #189
             }
             // v3.26.x：无键盘稳态也刷新「无键盘基线」——1s 轮询/工具条显隐若始终
             // 收不到 vv 事件，_fullVv/_fullInner 会滞留旧值（键盘判定与 _safeH 都依赖
@@ -1131,9 +1163,16 @@
             var shifted = winScrollY() > KB_SCROLL_HEAL;
             if (!shifted && _phone) {
               var pr = _phone.getBoundingClientRect();
-              shifted = pr.top < -KB_SCROLL_HEAL || pr.bottom > (_vv ? _vv.height : window.innerHeight) + 24;
+              // FIX 2026-09-05 #189：底边容差计入已应用的 --mochi-safe-top——#179 后
+              // 全屏覆盖形态 .phone 底边天然超出 vv.height 一个顶部安全区（59/24px），
+              // 旧 +24 容差把健康态误判成位移，每次 vv 事件/每秒都 pin 归零=滑动闪烁
+              var _stT = parseFloat(d.style.getPropertyValue('--mochi-safe-top')) || 0;
+              shifted = pr.top < -KB_SCROLL_HEAL || pr.bottom > (_vv ? _vv.height : window.innerHeight) + _stT + 24;
             }
-            if (!shifted && _vv && (Math.abs(_vv.offsetTop) > KB_SCROLL_HEAL || Math.abs(_vv.offsetLeft) > KB_SCROLL_HEAL)) shifted = true;
+            // FIX 2026-09-05 #189：全屏态跳过 vv offset 判定——全屏下 offsetTop≠0 多为
+            // iOS 弹性回弹手势（iPad 大屏一甩就超 80px），归零=把手势掐断与用户对打；
+            // 真实平移残留仍有 winScrollY/底边两条兜底，非全屏（Edge iOS 病灶）不受影响
+            if (!shifted && !_fsLike() && _vv && (Math.abs(_vv.offsetTop) > KB_SCROLL_HEAL || Math.abs(_vv.offsetLeft) > KB_SCROLL_HEAL)) shifted = true;
             if (shifted) pinScrollTop();
           }
         } catch (e) {}

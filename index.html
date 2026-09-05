@@ -409,6 +409,7 @@ html.ios-native-fs .phone .page.full .stats-top-name { padding-top: 10px; }
 .ios-fs-active .phone .page.full .div-h-title,
 .ios-fs-active .phone .page.full .stats-top-name { padding-top: 10px; }
 html.ios-fs-active .phone .statusbar { padding-top:14px; }
+html.tablet.ios-pwa-standalone.ios-fs-active .phone .statusbar { display:none; }
 @media (max-width: 900px) {
 .fs-css-active .phone { padding-top: max(env(safe-area-inset-top, 0px), 12px); }
 }
@@ -8785,9 +8786,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1788604688211">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.464</b></span>
-        <span class="sv-deploy">部署于 2026-09-05 18:38<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1788606006048">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.465</b></span>
+        <span class="sv-deploy">部署于 2026-09-05 19:00<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9926,7 +9927,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.464</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.465</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
       <!-- v3.27.x：设置页底部防骗声明 -->
       <div class="set-alert">
@@ -10074,7 +10075,7 @@ transition-duration: .01ms !important;
         </div>
         <div class="set-row" id="row-widget-opacity">
           <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18M3 15h18" stroke-dasharray="2 3"/></svg></div>
-          <div class="txt">小组件透明度</div>
+          <div class="txt">小组件透明度（全局默认）</div>
           <div class="val" id="widget-opacity-val"></div>
         </div>
       </div>
@@ -10217,7 +10218,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.464</span>
+              <span class="lic-ver">v3.26.465</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -19101,7 +19102,7 @@ r.appendChild(row); return r;
 };
 d.appendChild(mkSliderRow('组件圆角', 'desk-card-radius', '--desk-card-radius', 0, 30, 'px'));
 const opRow = document.createElement('div'); opRow.style.cssText = 'display:flex;flex-direction:column;gap:4px';
-const opLb = document.createElement('div'); opLb.style.cssText = 'font-size:12px;color:var(--muted,#888)'; opLb.textContent = '组件透明度'; opRow.appendChild(opLb);
+const opLb = document.createElement('div'); opLb.style.cssText = 'font-size:12px;color:var(--muted,#888)'; opLb.textContent = '全局默认组件透明度（装修模式点卡片可单独调）'; opRow.appendChild(opLb);
 const opInp = document.createElement('input'); opInp.type = 'range'; opInp.min = 40; opInp.max = 100; opInp.step = 5;
 const opCur = store.get('widget-opacity'); opInp.value = opCur ? String(opacityRawToPct(opCur)) : '100';
 opInp.style.cssText = 'width:100%';
@@ -20640,6 +20641,27 @@ if (c) applyWidgetText(type, part, c);
 });
 });
 };
+const widgetOpKey = (type) => 'widget-opacity-' + type;
+const widgetOpacitySel = (type) => '[data-card-bg="' + type + '"]';
+const applyWidgetOpacityOf = (type, pct) => {
+try {
+const els = document.querySelectorAll(widgetOpacitySel(type));
+els.forEach(el => { if (el) el.style.opacity = (pct >= 100 ? '' : String(Math.max(0, pct) / 100)); });
+} catch (e) {}
+};
+const applyAllWidgetOpacities = () => {
+const seen = {};
+document.querySelectorAll('[data-card-bg]').forEach(el => {
+const t = el.getAttribute('data-card-bg');
+if (!t || seen[t]) return;
+seen[t] = 1;
+const v = store.get(widgetOpKey(t));
+if (v !== null && v !== undefined && v !== '') {
+const p = opacityRawToPct(v); // #146 同族：兼容历史小数脏值
+if (!isNaN(p)) applyWidgetOpacityOf(t, Math.max(0, Math.min(100, p)));
+}
+});
+};
 const MASK_ALPHA_LEGACY = { off: 0, light: 30, mid: 50, strong: 72, on: 50 };
 const maskAlphaOf = (type) => {
 const v = store.get('card-bg-mask-' + type);
@@ -20697,14 +20719,17 @@ function refreshDeskVisuals() {
 try { window.applyAvatars(); } catch (e) {}
 try { applyAllCardBgs(); } catch (e) {}
 try { applyAllWidgetTexts(); } catch (e) {}
+try { applyAllWidgetOpacities(); } catch (e) {}
 try { applyPageBgs(); } catch (e) {}
 try { renderDeskImages(); } catch (e) {}
 try { syncBgUI(); } catch (e) {}
 }
 applyAllCardBgs();
 applyAllWidgetTexts();
+applyAllWidgetOpacities();
 document.addEventListener('contact-switched', applyAllCardBgs);
 document.addEventListener('contact-switched', applyAllWidgetTexts);
+document.addEventListener('contact-switched', applyAllWidgetOpacities);
 const openCardBgMenu = (type, name, anchorEl) => {
 const img = store.get('card-bg-' + type);
 const widgetEl = anchorEl ? anchorEl.closest('[data-desk-widget]') : null;
@@ -20800,22 +20825,35 @@ applyCardBg(type);
 syncCardBgUIs();
 toast('已切换为原图直出');
 } else if (v === 'opacity') {
-const n = opacityRawToPct(store.get('widget-opacity')); // #146：兼容历史小数脏值
-const curOp = !isNaN(n) ? Math.max(0, Math.min(100, n)) : 100;
-openCardMenuNext('组件透明度', '', (sv) => {
-if (sv === '__reset__') { store.remove('widget-opacity'); applyWidgetOpacity(100); toast('已恢复不透明'); return; }
+const opKey = widgetOpKey(type);
+const savedOp = store.get(opKey);
+const opN = savedOp !== null && savedOp !== undefined && savedOp !== '' ? opacityRawToPct(savedOp) : NaN;
+const curOp = !isNaN(opN) ? Math.max(0, Math.min(100, opN)) : 100;
+let sliderVal = curOp;
+openCardMenuNext('组件透明度（' + name + '）', '', (sv) => {
+if (sv === '__all__') {
+const pct = Math.max(0, Math.min(100, sliderVal));
+const types = {};
+document.querySelectorAll('[data-card-bg]').forEach(el => { const t = el.getAttribute('data-card-bg'); if (t && !types[t]) { types[t] = 1; store.set(widgetOpKey(t), String(pct)); applyWidgetOpacityOf(t, pct); } });
+toast('已应用到全部小组件 ' + pct + '%');
+return;
+}
+if (sv === '__reset__') { store.remove(opKey); applyWidgetOpacityOf(type, 100); toast(name + '已恢复，跟随全局透明度'); return; }
 const pct = parseInt(sv, 10);
 if (isNaN(pct)) return;
-store.set('widget-opacity', String(pct));
-applyWidgetOpacity(pct);
-toast('组件透明度 ' + pct + '%');
+store.set(opKey, String(pct));
+applyWidgetOpacityOf(type, pct);
+toast(name + '透明度 ' + pct + '%');
 }, {
 noInput: true,
 slider: {
-min: 0, max: 100, step: 1, value: curOp, label: '拖动调整组件透明度', unit: '%',
-onChange: (val) => { document.documentElement.style.setProperty('--widget-opacity', String(val / 100)); },
+min: 0, max: 100, step: 1, value: curOp, label: '拖动调整本组件透明度（只对' + name + '生效）', unit: '%',
+onChange: (val) => { sliderVal = val; applyWidgetOpacityOf(type, val); },
 },
-pills: [{ label: '恢复默认', value: '__reset__' }],
+pills: [
+{ label: '应用到全部小组件', value: '__all__' },
+{ label: '恢复默认（跟随全局）', value: '__reset__' },
+],
 });
 } else if (v === 'text') {
 const parts = WIDGET_TEXT_PARTS[type] || [];
@@ -25885,7 +25923,14 @@ if (window.viewChatImage) window.viewChatImage(rec.text);
 if (window.mochiMediaIsToken && window.mochiMediaIsToken(rec.text)) {
 const _tokImg = b.querySelector('.msg-img');
 if (_tokImg) _tokImg.addEventListener('error', () => {
+setTimeout(() => {
+if (!b.isConnected) return;
+const im = b.querySelector('.msg-img');
+const s = im ? (im.getAttribute('src') || '') : '';
+if (im && window.mochiMediaIsToken(s) && !window.mochiMediaExpand(s)) {
 b.innerHTML = '<span style="opacity:.5;font-size:12px">（图片丢失：媒体数据缺失，可用数据备份重新导入恢复）</span>';
+}
+}, 1500);
 });
 }
 } else if (rec.type === 'voice') {
@@ -50340,7 +50385,7 @@ function ensureKeepAudioDataUrl() {
 if (KEEP_AUDIO_DATAURL) return KEEP_AUDIO_DATAURL;
 try {
 const sr = 44100, sec = 1, n = sr * sec;
-const amp = kaIsIOS() ? 0.002 : 0.02;
+const amp = kaIsIOS() ? 0.002 : 0.006;
 const buf = new ArrayBuffer(44 + n * 2);
 const dv = new DataView(buf);
 const ws = function (o, s) { for (let i = 0; i < s.length; i++) dv.setUint8(o + i, s.charCodeAt(i)); };
@@ -75048,7 +75093,7 @@ syncToggle(false); applyFsInputHacks(); syncFsClass();
 if (isFullscreen()) startFsMonitorSafe(); else handleFsExit();
 });
 document.addEventListener('orientationchange', () => {
-if (isIOS) return;
+if (isIOS) return; // FIX 2026-09-05 #189（iOS 无方向锁，转横不纠偏不弹窗）
 const d = document.documentElement;
 if (!d.classList.contains('fs-active') && !d.classList.contains('fs-css-active')) return;
 if (window.innerWidth <= window.innerHeight) return;
@@ -78574,7 +78619,7 @@ return dd.classList.contains('fs-active') || dd.classList.contains('fs-css-activ
 }
 function healViewport() {
 try {
-var d = document.documentElement; // FIX 2026-09-05 #188
+var d = document.documentElement; // FIX 2026-09-05 #189
 syncVvFit();
 syncSafeBottom();
 if (d.classList.contains('ios-pwa-standalone') && _vv && _vv.scale && _vv.scale < 0.95) {
@@ -78596,7 +78641,7 @@ if (_docLocked) { unlockDocScroll(); _cleanedResidue = true; }
 else unlockDocScroll(); // v3.26.x 看门狗语义保留：残留 overflow:hidden 必清
 if (_phone && _phone.style.height) { _setPhoneH(null, 'heal'); _cleanedResidue = true; }
 if (_phone && _phone.style.alignSelf) { _phone.style.alignSelf = ''; _cleanedResidue = true; }
-if (_cleanedResidue || winScrollY() > KB_SCROLL_HEAL) pinScrollTop(); // FIX 2026-09-05 #188
+if (_cleanedResidue || winScrollY() > KB_SCROLL_HEAL) pinScrollTop(); // FIX 2026-09-05 #189
 }
 _syncFullBase();
 } else if (_kbActive) {
@@ -79081,4 +79126,4 @@ return { lock: document.body.classList.contains('scroll-lock'), open: open };
 <!-- __MOCHI_EOF__ -->
 </body>
 </html>
-<!-- __MOCHI_EOF__ mto91u1f -->
+<!-- __MOCHI_EOF__ mto9u2w0 -->

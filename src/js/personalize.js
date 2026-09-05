@@ -1311,7 +1311,7 @@ try {
     };
     d.appendChild(mkSliderRow('组件圆角', 'desk-card-radius', '--desk-card-radius', 0, 30, 'px'));
     const opRow = document.createElement('div'); opRow.style.cssText = 'display:flex;flex-direction:column;gap:4px';
-    const opLb = document.createElement('div'); opLb.style.cssText = 'font-size:12px;color:var(--muted,#888)'; opLb.textContent = '组件透明度'; opRow.appendChild(opLb);
+    const opLb = document.createElement('div'); opLb.style.cssText = 'font-size:12px;color:var(--muted,#888)'; opLb.textContent = '全局默认组件透明度（装修模式点卡片可单独调）'; opRow.appendChild(opLb);
     const opInp = document.createElement('input'); opInp.type = 'range'; opInp.min = 40; opInp.max = 100; opInp.step = 5;
     // FIX 2026-09-04 #151：统一 opacityRawToPct 解析 + 拖动存百分比整数——原实现初始化
     // parseFloat(cur)*100（存量 "90" 被算成 9000）、拖动存小数（"0.85"，#146 同族脏值再入key）
@@ -2974,6 +2974,33 @@ try {
       });
     });
   };
+  // ===== v3.27.x：小组件独立透明度 =====
+  // 每个组件按类型单独存 widget-opacity-<type>（per-cid 随桌面独立，走 store），
+  // 应用方式为内联 style.opacity 直接覆盖全局 --widget-opacity；未设置或=100 时清内联
+  // 回落全局默认。装修模式点卡片菜单「组件透明度」改本组件，并可一键应用到全部。
+  const widgetOpKey = (type) => 'widget-opacity-' + type;
+  const widgetOpacitySel = (type) => '[data-card-bg="' + type + '"]';
+  const applyWidgetOpacityOf = (type, pct) => {
+    try {
+      const els = document.querySelectorAll(widgetOpacitySel(type));
+      els.forEach(el => { if (el) el.style.opacity = (pct >= 100 ? '' : String(Math.max(0, pct) / 100)); });
+    } catch (e) {}
+  };
+  // 应用所有已保存的组件独立透明度（启动 / 切桌面 / 恢复方案后调用）
+  // 类型从 DOM [data-card-bg] 收集：比枚举 CARD_BG_TYPES 多覆盖 desk-period 等裸类型
+  const applyAllWidgetOpacities = () => {
+    const seen = {};
+    document.querySelectorAll('[data-card-bg]').forEach(el => {
+      const t = el.getAttribute('data-card-bg');
+      if (!t || seen[t]) return;
+      seen[t] = 1;
+      const v = store.get(widgetOpKey(t));
+      if (v !== null && v !== undefined && v !== '') {
+        const p = opacityRawToPct(v); // #146 同族：兼容历史小数脏值
+        if (!isNaN(p)) applyWidgetOpacityOf(t, Math.max(0, Math.min(100, p)));
+      }
+    });
+  };
   // 应用单个卡片的背景：遮罩用多层背景（白色半透明叠加在图片上）
   // v3.6.x：遮罩浓度滑块 0~85（百分比），存数字字符串；旧值 'off'/'light'/'mid'/'strong'/'on' 迁移
   const MASK_ALPHA_LEGACY = { off: 0, light: 30, mid: 50, strong: 72, on: 50 };
@@ -3041,6 +3068,7 @@ try {
     try { window.applyAvatars(); } catch (e) {}
     try { applyAllCardBgs(); } catch (e) {}
     try { applyAllWidgetTexts(); } catch (e) {}
+    try { applyAllWidgetOpacities(); } catch (e) {}
     try { applyPageBgs(); } catch (e) {}
     try { renderDeskImages(); } catch (e) {}
     try { syncBgUI(); } catch (e) {}
@@ -3048,8 +3076,10 @@ try {
   // 初始化 + 多桌面切换后重应用
   applyAllCardBgs();
   applyAllWidgetTexts();
+  applyAllWidgetOpacities();
   document.addEventListener('contact-switched', applyAllCardBgs);
   document.addEventListener('contact-switched', applyAllWidgetTexts);
+  document.addEventListener('contact-switched', applyAllWidgetOpacities);
   // 卡片背景设置公共逻辑（设置页行点击 / 装修模式点卡片共用）：
   // 上传 / 清除 / 遮罩开关。type 为卡片类型，name 为显示名。
   // v3.6.x：装修模式点卡片时额外传入 anchorEl（点击的卡片元素）→ 菜单追加
@@ -3158,22 +3188,37 @@ try {
         syncCardBgUIs();
         toast('已切换为原图直出');
       } else if (v === 'opacity') {
-        const n = opacityRawToPct(store.get('widget-opacity')); // #146：兼容历史小数脏值
-        const curOp = !isNaN(n) ? Math.max(0, Math.min(100, n)) : 100;
-        openCardMenuNext('组件透明度', '', (sv) => {
-          if (sv === '__reset__') { store.remove('widget-opacity'); applyWidgetOpacity(100); toast('已恢复不透明'); return; }
+        // v3.27.x：独立透明度——滑条只改本组件（widget-opacity-<type>），
+        // 「应用到全部」把当前值写入所有组件的独立键；「恢复默认」清本组件键回落全局
+        const opKey = widgetOpKey(type);
+        const savedOp = store.get(opKey);
+        const opN = savedOp !== null && savedOp !== undefined && savedOp !== '' ? opacityRawToPct(savedOp) : NaN;
+        const curOp = !isNaN(opN) ? Math.max(0, Math.min(100, opN)) : 100;
+        let sliderVal = curOp;
+        openCardMenuNext('组件透明度（' + name + '）', '', (sv) => {
+          if (sv === '__all__') {
+            const pct = Math.max(0, Math.min(100, sliderVal));
+            const types = {};
+            document.querySelectorAll('[data-card-bg]').forEach(el => { const t = el.getAttribute('data-card-bg'); if (t && !types[t]) { types[t] = 1; store.set(widgetOpKey(t), String(pct)); applyWidgetOpacityOf(t, pct); } });
+            toast('已应用到全部小组件 ' + pct + '%');
+            return;
+          }
+          if (sv === '__reset__') { store.remove(opKey); applyWidgetOpacityOf(type, 100); toast(name + '已恢复，跟随全局透明度'); return; }
           const pct = parseInt(sv, 10);
           if (isNaN(pct)) return;
-          store.set('widget-opacity', String(pct));
-          applyWidgetOpacity(pct);
-          toast('组件透明度 ' + pct + '%');
+          store.set(opKey, String(pct));
+          applyWidgetOpacityOf(type, pct);
+          toast(name + '透明度 ' + pct + '%');
         }, {
           noInput: true,
           slider: {
-            min: 0, max: 100, step: 1, value: curOp, label: '拖动调整组件透明度', unit: '%',
-            onChange: (val) => { document.documentElement.style.setProperty('--widget-opacity', String(val / 100)); },
+            min: 0, max: 100, step: 1, value: curOp, label: '拖动调整本组件透明度（只对' + name + '生效）', unit: '%',
+            onChange: (val) => { sliderVal = val; applyWidgetOpacityOf(type, val); },
           },
-          pills: [{ label: '恢复默认', value: '__reset__' }],
+          pills: [
+            { label: '应用到全部小组件', value: '__all__' },
+            { label: '恢复默认（跟随全局）', value: '__reset__' },
+          ],
         });
       } else if (v === 'text') {
         // v3.26.x：文字部位颜色——先选部位（已设色的标「· 已设色」），再开色板
