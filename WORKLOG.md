@@ -1,3 +1,9 @@
+### 2026-09-05 15:0x（#186 iPhone15 Pro iOS 18.3 老内核底部白边：#185 force 扩宽 env=0 时用 diff 兜底；已构建）
+* [AI-B 域]（**改动文件：src/js/mobile-adapt.js（force 开关扩宽：env=0 时 safeTop=diff 兜底 20-160 过滤，高度公式自然补满）、src/js/device.js（采集器+判定器识别 force 声明：expBase=屏高）、FIX-REGRESSION.md（#186 行）；构建状态：已构建·sw 见 version.json**）。
+* 根因：iOS 18.3 老内核 standalone inner=793(=852−59)、env=0——与 16 Pro 26.1 已避让形态信号相同但需相反处理（18.3 需垫 59+高度 852；26.1 加了反超界）。程序不可分，用户声明（#185 开关扩宽）。
+* 验证：node --check 过；开关矩阵四场景单测全过；--check-sentinels 418 全绿。
+* 待真机（iPhone 15 Pro iOS 18.3 主屏幕）：开关开启→底部白边消失工具栏贴底、顶部不重叠；关闭→恢复现状。
+
 ### 2026-09-05 22:3x（#205 表情空白最后一类真空白收口：加载成功但全透明空图——多设备共用坏字卡库现场；本次构建者：AI-B=本会话）
 * [AI-B 域]（**改动文件：src/js/chat.js（bindMediaFailPlaceholder 增设 load 监听：24×24 采样 alpha 全 0 才 replaceWith 占位「（表情内容为空：这张字卡图本身没有画面…）」，有任一非透明像素放行，GIF 取当前帧、跨域 getImageData 抛错 catch 放行）、build.mjs（+1 哨兵；并重登记被并行 #203 stash 收口弄丢的 #202 两条哨兵——源码/台账未丢仅登记丢失）、FIX-REGRESSION.md（#205 行）**；构建状态：**已构建·sw mochi-mtoj1nqr，哨兵 418/418 哑哨兵 0**）。
 * 根因：用户强调「好多手机都有」而 iQOO12 诊断零图片报错——#186/#202 已覆盖全部「加载失败」路径，剩最后一类=图片加载成功但内容本身全透明/空白（导入字卡包混入坏图，多设备共用同批库同时中招、零报错）。

@@ -602,7 +602,7 @@ const FIX_SENTINELS = [
   { name: '#203 iOS18 保留形态甄别式（standalone+env≥20+diff≈envTop+iOS≥18，命中即 safeTop 归 0：否则 #179 公式把 .phone 顶出布局视口=居中裁切+文档溢出与 pin 对打=滑动/切换卡顿；删门槛或改比较符即回归）', file: 'js/mobile-adapt.js', needle: "var _resStand = d.classList.contains('ios-pwa-standalone') && _safeTop >= 20 && _sbDiff >= _safeTop - 8 && _iosMajor >= 18;" },
   { name: '#203 iOS18 保留形态显式写 0px（摘除属性会回落 env() 变双重避让，Mochi 行上方 59px 空白）', file: 'js/mobile-adapt.js', needle: "var _topPx = _safeTop ? _safeTop + 'px' : (_resStand ? '0px' : '');" },
   { name: '#203 判定器·保留形态甄别（同信号 iOS17 覆盖形态防误判门槛）', file: 'js/device.js', needle: 'const resStand = !!inp.standalone && envTop >= 20 && diff >= envTop - 8 && (inp.iosMajor || 0) >= 18;' },
-  { name: '#203 判定器·保留形态期望底边=inner（.phone 超 inner=文档滚动量；#184 新增 iPad 形态/diff≈0/浏览器覆盖同走 inner 分支）', file: 'js/device.js', needle: 'const expBase = (coverBrowser || resStand || ipadForm) ? inp.innerH' },
+  { name: '#203 判定器·保留形态期望底边=inner（.phone 超 inner=文档滚动量；#184 iPad 形态/#186 force 声明同走 inner 分支）', file: 'js/device.js', needle: 'const expBase = (coverBrowser || resStand || ipadForm || inp.force) ? inp.innerH' },
   { name: '#200 通话防误挂·挂断掷骰硬闸（总开关或概率<=0 不掷骰——挂断几率为 0 仍被挂断的兜底闸门，删此条件设 0 即回到「读默认 2% 照挂」）', file: 'js/call.js', needle: 'if (!(hp.nohangup || hp.hangup <= 0) && Math.random() * 100 < hp.hangup) {' },
   { name: '#200 通话防误挂·总开关配置读取（callCfg 不读 call-no-hangup 则开关形同虚设）', file: 'js/call.js', needle: "nohangup: c['call-no-hangup'] === 1 || c['call-no-hangup'] === '1'," },
   { name: '#200 通话防误挂·设置项默认值（reply-settings 不登记该键则开关永不落盘/读取恒缺）', file: 'js/reply-settings.js', needle: "'call-no-hangup': 0," },

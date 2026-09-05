@@ -264,6 +264,7 @@
         bodyScrollLock: !!(document.body && document.body.classList.contains('scroll-lock')),
         vvFit: d.classList.contains('ios-vv-fit'),
         standalone: d.classList.contains('ios-pwa-standalone'),
+      force: (function () { try { return localStorage.getItem('xy-home-v2:__safe-top-force') === '1'; } catch (e) { return false; } })(),
         fsMode: fsMode,
         kb: null
       };
@@ -1852,7 +1853,8 @@
     // 系统承担（var 应=0），期望底边=inner；仍按覆盖形态判则修好后必误报。
     const resStand = !!inp.standalone && envTop >= 20 && diff >= envTop - 8 && (inp.iosMajor || 0) >= 18;
     let mode = '未知';
-    if (resStand) mode = '系统保留形态（iOS 18.x standalone：系统已把网页起点放在状态栏下方，env 仍报真实高度；页面不再避让、高度贴 inner，#200）';
+    if (inp.force && inp.standalone) mode = '覆盖形态（用户已在设置声明：顶部避让修正开启，#186）';
+    else if (resStand) mode = '系统保留形态（iOS 18.x standalone：系统已把网页起点放在状态栏下方，env 仍报真实高度；页面不再避让、高度贴 inner，#200）';
     else if (envTop >= 20 && diff <= 2 && inp.standalone && (inp.screenH || 0) > 0 && inp.innerH >= inp.screenH - 2) mode = 'iPad 形态（inner=屏高已含整屏，diff=0：状态栏悬浮、页面 padding 避让，高度贴 inner/屏高，#184）';
     else if (envTop >= 20) mode = '覆盖形态（页面顶到屏幕最顶，系统栏悬浮其上）';
     else if (diff >= 20) mode = '已避让形态（系统已把网页起点放在状态栏下方，页面不应再加顶部 padding）';
@@ -1876,7 +1878,9 @@
     // v3.26.x #184：iPad 形态（standalone+env≥20+diff≈0，inner=屏高已含整屏）——
     // envTop+inner 会双算状态栏高度（iPad Air 实测 1212>1180 误报白带），期望底边=inner
     const ipadForm = !!inp.standalone && envTop >= 20 && diff <= 2 && inp.innerH >= (inp.screenH || 0) - 2;
-    const expBase = (coverBrowser || resStand || ipadForm) ? inp.innerH : (inp.envTop || 0) + inp.innerH;
+    // v3.26.x #186：用户已声明覆盖形态（safe-top-force）→ 期望底边=屏高（页面垫到
+    // 状态栏下 + 高度补满，env=0 的 18.3 系统也按此渲染）
+    const expBase = (coverBrowser || resStand || ipadForm || inp.force) ? inp.innerH : (inp.envTop || 0) + inp.innerH;
     if (inp.phoneBottom != null && inp.innerH) {
       const expB = expBase;
       const under = Math.round(expB - inp.phoneBottom);

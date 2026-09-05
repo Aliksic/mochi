@@ -1044,17 +1044,19 @@
             _iosMajor = Math.max(_osM ? +_osM[1] : 0, _vM ? +_vM[1] : 0);
           } catch (e9) {}
           var _resStand = d.classList.contains('ios-pwa-standalone') && _safeTop >= 20 && _sbDiff >= _safeTop - 8 && _iosMajor >= 18;
-          if (_resStand) _safeTop = 0;
-          // v3.26.x #185：用户手动修正——「系统保留」与「覆盖」两形态 JS 信号完全相同
-          // （env≈diff>0，inner=screen−env），无法程序区分，且不同机型/系统版本各属
-          // 其一（15 Pro/18.3=保留，14 Pro/26.6=覆盖）。此键=用户在设置页声明自己
-          // 设备属「覆盖形态」：恢复 env 顶部避让 + fs 高度公式自然含 env。
+          // v3.26.x #185：用户手动修正——「系统保留/已避让」与「覆盖」两形态 JS 信号
+          // 完全相同（env=0 或 env≈diff>0，inner=screen−env），无法程序区分，且不同
+          // 机型/系统版本各属其一。此键=用户在设置页声明本机属「覆盖形态」：
+          // 顶部避让 = env 探针优先，env=0 时用 diff（=系统保留的状态栏高度）兜底；
+          // fs/非 fs 高度公式用 _safeTop+inner 自然补满屏底（修 18.3 白边）。
+          var _forceCover = false;
           try {
-            if (_resStand && localStorage.getItem('xy-home-v2:__safe-top-force') === '1') {
-              _resStand = false;
-              _safeTop = _envTopCache >= 20 ? _envTopCache : 0;
-            }
+            _forceCover = d.classList.contains('ios-pwa-standalone') && localStorage.getItem('xy-home-v2:__safe-top-force') === '1';
           } catch (eF0) {}
+          if (_forceCover) {
+            _safeTop = (_envTopCache >= 20) ? _envTopCache : ((_sbDiff >= 20 && _sbDiff <= 160) ? _sbDiff : 0);
+            _resStand = false;
+          } else if (_resStand) _safeTop = 0;
           var _topPx = _safeTop ? _safeTop + 'px' : (_resStand ? '0px' : '');
           if (d.style.getPropertyValue('--mochi-safe-top') !== _topPx) {
             if (_topPx) d.style.setProperty('--mochi-safe-top', _topPx);
