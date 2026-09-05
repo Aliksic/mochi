@@ -1,3 +1,21 @@
+### 2026-09-05 13:1x（#179 iPhone14 Pro 覆盖形态底部白带：#148 高度公式漏加 env-top；已构建）
+* [AI-B 域]（**改动文件：src/js/mobile-adapt.js（fs 态与非全屏 standalone 的 --mochi-ios-h 公式改 envTop+inner=min(screen)；监视跳过键盘/聚焦会话防瞬态误报）、FIX-REGRESSION.md（#179 行+#175 判定补强）、build.mjs（#148 needle 公式变更同步）**）。
+* 根因：两类 iOS 形态——覆盖（env-top>0，可视=整屏）vs 已避让（env-top=0，可视=inner）——#148 高度单用 vv(inner) 使覆盖形态底部少算 env-top 高度露白 60px。统一公式高度=envTop+inner=min(screen)。
+* 验证：node --check 过；判定器七场景全过（含修复前 3✗/修复后 0✗）；--check-sentinels 371 全绿。
+* 待真机（iPhone 14 Pro 主屏幕全屏）：底部白带消失；15 Pro/16 Pro 回归不变形。
+
+### 2026-09-05（#186 补刀：vivo X200s+Edge 诊断实锤——mediaNormalizePass 写池失败不校验返回值，令牌带病落库）
+* [AI-B 域]（**改动文件：src/js/chat.js（mediaNormalizePass：flush 返回 false 时回滚全部令牌化+WeakSet 去标记+8s 重试，绝不带令牌 saveMsgs）、build.mjs（#186 哨兵 2→3 条）、FIX-REGRESSION.md（#186 行补根因③）**；构建状态：见 git 提交）。
+* 依据：用户诊断报障显示 chat 页 12 条 `<img src="https://…/@@m:hash">` 资源加载失败=令牌入库而池数据缺失，旧代码 `await mochiMediaFlush()` 不看 false 直接 saveMsgs；大库机 IDB 写失败/页面被杀即永久空白。与 GC 误删（根因①）同症状不同路径，均已修。
+### 2026-09-05（#186 表情包/图片空白气泡真根因：媒体池 GC 引用扫描漏群聊键/LS 快照 → 误删池数据；补令牌失配渲染占位）
+* [AI-B 域·跨域改动 src/js/media-pool.js（#142 系 AI-A 媒体池），理由：同用户报障根因收口]（**改动文件：src/js/media-pool.js（mochiMediaGC 引用扫描 REFS 扩 group-chat-msgs/gc-msgs-<gid>/chat-tail + localStorage 同名键一并标记，LS 整体读异常放弃本次清理，宁漏删不误删）、src/js/chat.js（renderMsg sticker/image 分支对 @@m: 令牌挂 img error 监听，池缺失渲染「图片丢失」占位不再空壳）、build.mjs（+2 哨兵并同步改写被 #186 替换的 #166 旧锚点）、FIX-REGRESSION.md（#186 行）**；构建状态：见 git 提交）。
+* 根因：用户补充「单发表情包/图片变空白」——媒体消息靠媒体池令牌渲染，查看存储页「清理孤儿媒体」旧正则 /(?:^|:)(?:chat-msgs|fav-msgs)$/ 不匹配群聊键与 LS 快照/尾巴日志 → 被引用图片被当孤儿删除，不可逆空白。
+* 验证：node --check 过；--check-sentinels 全绿；真机清单见 FIX-REGRESSION #186 行。
+### 2026-09-05（#185 联系人空气泡双向修复：生成端非空兜底 + 渲染占位 + 删除消息防尾巴日志复活）
+* [AI-B 域·跨域改动 src/js/chat.js（AI-A 业务文件），理由：用户直接指派修复并要求构建上线；本次构建者：AI-B]（**改动文件：src/js/chat.js（①genReplyText 五处 pick 换 pickNonBlank 滤空白字卡+kaomoji 追加判空；②genOneReply 多字卡拼接前 filter trim + replyWord/defs 覆盖后最终非空兜底落 FALLBACK；③renderMsg 普通文本/parts 分支空白内容渲染「（空白消息）」占位；④消息操作菜单 del 分支 splice 前补 chatTailDrop——用户报「删除空白消息后刷新复活」，根因=删除没同步 #180 尾巴日志，chatTailMerge 回放拼回）、build.mjs（FIX_SENTINELS +3）、FIX-REGRESSION.md（#185 行）**；构建状态：见下方 git 提交）。
+* 根因：回复链路对字卡内容零非空校验（空串/纯空白/零宽字符卡 truthy 直发；固定回复字卡/默认主字卡为空白时无条件覆盖）；删除入口漏 chatTailDrop 致刷新后日志回放复活。
+* 验证：node --check 过；--check-sentinels 368 全绿哑哨兵 0；构建后跑 npm run verify 系列。
+* 给 AI-A：历史已存空白记录更新后会显示占位而非空壳；用户更新后需再删一次那条消息（本次修复后才会真正删得掉）。
 ### 2026-09-05（Mochi 名字澄清置顶 + 措辞改「就是想取个简单的名字取的」）
 * [AI-B 域]（**改动文件：src/template.html（开屏顶部署名行下新增置顶澄清行 + 【六】灵感来源段措辞）、src/pwa/notice.json（summary 首行 + 同段措辞）**；构建状态：**已构建·sw mochi-mto23nlt，哨兵 364/364**）。
 * 说明：好多人误会 Mochi 与 milk 字卡有关系/本站是 milk 二改，按用户要求把澄清提到开屏顶部，措辞统一为「就是想取个简单的名字取的」。

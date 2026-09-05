@@ -1859,23 +1859,28 @@
       else if (envTop >= 20 && inp.sbTop < envTop - 5) add(false, '顶部重叠', '✗ 状态栏顶位 ' + inp.sbTop + 'px 钻进系统状态栏区（应 ≥ ' + envTop + 'px，#114 形态）');
       else add(true, '状态栏顶位 ' + inp.sbTop + 'px（安全区 ' + expect + 'px）');
     }
-    // ④ 底部裁切：.phone 底部超出可视区
+    // ④ 底部：期望底边 = envTop + innerH（覆盖形态=整屏 852；已避让形态=inner 812）
     if (inp.phoneBottom != null && inp.innerH) {
-      const over = Math.round(inp.phoneBottom - inp.innerH);
-      if (over > 2) add(false, '底部裁切 ' + over + 'px', '✗ .phone 底部超出可视区（#148：100vh>可视高形态，height 应=--mochi-ios-h 实测值）');
-      else add(true, '底部贴合（.phone 底=' + Math.round(inp.phoneBottom) + ' / 可视 ' + inp.innerH + '）');
+      const expB = (inp.envTop || 0) + inp.innerH;
+      const under = Math.round(expB - inp.phoneBottom);
+      const over = Math.round(inp.phoneBottom - expB);
+      if (over > 2) add(false, '底部超出 ' + over + 'px', '✗ .phone 底边超出期望屏底（高度公式异常）');
+      else if (under > 2) add(false, '底部少填 ' + under + 'px 白带', '✗ 覆盖形态（env-top=' + inp.envTop + '）下 .phone 应铺到 ' + expB + 'px，实测只到 ' + inp.phoneBottom + 'px（#179：高度须含顶部安全区 envTop+inner）');
+      else add(true, '底部贴合（.phone 底=' + Math.round(inp.phoneBottom) + ' / 期望 ' + expB + '）');
     }
     // ⑤ --mochi-ios-h 与可视高一致性（全屏态）
-    if (inp.fsActive && inp.iosH && inp.innerH && Math.abs(inp.iosH - inp.innerH) > 2) {
-      add(false, '--mochi-ios-h 与可视高不符', '⚠ ios-h=' + inp.iosH + 'px ≠ innerHeight=' + inp.innerH + 'px（全屏态应由 syncVvFit 写 vv 实测值）');
-    } else if (inp.fsActive) {
-      add(true, '--mochi-ios-h=' + (inp.iosH || '(未设→回落)') + ' 与可视区一致');
+    if (inp.fsActive) {
+      const expH = (inp.envTop || 0) + (inp.innerH || 0);
+      if (inp.iosH && Math.abs(inp.iosH - expH) > 2) add(false, '--mochi-ios-h 与期望屏高不符', '⚠ ios-h=' + inp.iosH + 'px ≠ envTop+inner=' + expH + 'px（#179 公式：覆盖形态=整屏/已避让=inner）');
+      else add(true, '--mochi-ios-h=' + (inp.iosH || '(未设→回落)') + ' 与期望屏高一致');
     }
     // ⑤b 底部导航栏裁切：tabbar 底边超出可视区
     if (inp.tabBottom != null && inp.innerH) {
-      const overB = Math.round(inp.tabBottom - inp.innerH);
-      if (overB > 2) add(false, '底部导航栏被裁 ' + overB + 'px', '✗ tabbar 底边 ' + inp.tabBottom + 'px 超出可视区 ' + inp.innerH + 'px（#148 同族：高度大于可视高）');
-      else add(true, '底部导航栏完整（底边 ' + inp.tabBottom + ' / 可视 ' + inp.innerH + '）');
+      const expTB = (inp.envTop || 0) + inp.innerH - (inp.envBottom || 0); // 期望底边=屏底−Home横条避让
+      const overB = Math.round(inp.tabBottom - expTB);
+      if (overB > 2) add(false, '底部导航栏被裁 ' + overB + 'px', '✗ tabbar 底边 ' + inp.tabBottom + 'px 超出期望 ' + expTB + 'px（#148 同族）');
+      else if (overB < -60) add(false, '底部导航栏悬空 ' + (-overB) + 'px', '⚠ tabbar 底边比期望高 ' + (-overB) + 'px（底部空白过大）');
+      else add(true, '底部导航栏完整（底边 ' + inp.tabBottom + ' / 期望 ' + expTB + '）');
     }
     // ⑤c 页面平移残留：vv offset 非 0 = 视口被顶偏（键盘/平移残留）
     if ((inp.vvOffTop || 0) > 2 || (Math.abs(inp.vvOffLeft || 0)) > 2) {
@@ -2051,6 +2056,10 @@
     try {
       if (document.visibilityState !== 'visible') return;
       if (!window.__collectScreenDiag) return;
+      // #179：键盘会话/输入聚焦期是瞬态（.phone 被内联高接管、状态栏位移），
+      // 监视跳过——否则会误报「顶部重叠/平移残留」刷屏错误环（14 Pro 实测）
+      try { var _ae = document.activeElement; if (_ae && (_ae.tagName === 'INPUT' || _ae.tagName === 'TEXTAREA' || _ae.isContentEditable)) return; } catch (eF) {}
+      try { var _kst = window.__mochiIosKb ? window.__mochiIosKb() : null; if (_kst && _kst.kbActive) return; } catch (eK) {}
       const r = window.__collectScreenDiag();
       const badNames = r.findings.filter(function (f) { return !f.ok; }).map(function (f) { return f.name.split(' ')[0]; }).sort();
       const bad = badNames.join('|');

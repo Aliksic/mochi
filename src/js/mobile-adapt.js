@@ -1013,7 +1013,11 @@
           // 期短暂波动由常驻自愈 rAF 连续校正。真机状态以诊断「.phone高/底部空隙」复核。
           if (d.classList.contains('fs-active') || d.classList.contains('fs-css-active')
               || d.classList.contains('ios-fs-active') || d.classList.contains('ios-native-fs')) {
-            var _pxFs = (_vh2 >= 300) ? (_vh2 + 'px') : '';
+            // v3.26.x #179：高度 = 顶部安全区(env 实测) + 可视高——覆盖形态（内容垫到
+            // 状态栏下，env=59，如 iPhone 14 Pro/15 Pro）可视区=整块物理屏 852，单用
+            // vv(793) 会在底部留出 60px 白带（#179 实测：.phone高=793 底边=793）；
+            // 已避让形态（env=0，如 16 Pro 26.1）= inner 812。min 屏高防异常超界。
+            var _pxFs = (_vh2 >= 300) ? (Math.min(_safeTop + _ih2, _sh2 || (_safeTop + _ih2)) + 'px') : '';
             if (d.style.getPropertyValue('--mochi-ios-h') !== _pxFs) {
               if (_pxFs) d.style.setProperty('--mochi-ios-h', _pxFs);
               else d.style.removeProperty('--mochi-ios-h');
@@ -1028,6 +1032,11 @@
           }
           var ih = window.innerHeight || 0;
           var vh = _vv ? Math.round(_vv.height * ((_vv.scale && _vv.scale > 0.5) ? _vv.scale : 1)) : ih;
+          // v3.26.x #179：非全屏 standalone 同样用 envTop+inner（覆盖形态可视=整屏，
+          // 单用 vv 会在底部留出状态栏高度的空白；已避让形态 env=0 数值不变）
+          if (d.classList.contains('ios-pwa-standalone') && _safeTop > 0 && _ih2 > 0) {
+            vh = Math.min(_safeTop + _ih2, _sh2 || (_safeTop + _ih2));
+          }
           if (!vh) return;
           if (!_vvFitOn) { _vvFitOn = true; d.classList.add('ios-vv-fit'); }
           var px = vh + 'px';

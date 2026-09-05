@@ -8785,9 +8785,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1788593685888">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.459</b></span>
-        <span class="sv-deploy">部署于 2026-09-05 15:34<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1788598534559">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.460</b></span>
+        <span class="sv-deploy">部署于 2026-09-05 16:55<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9926,7 +9926,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.459</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.460</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
       <!-- v3.27.x：设置页底部防骗声明 -->
       <div class="set-alert">
@@ -10217,7 +10217,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.459</span>
+              <span class="lic-ver">v3.26.460</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -15091,19 +15091,24 @@ else if (envTop >= 20 && inp.sbTop < envTop - 5) add(false, '顶部重叠', '✗
 else add(true, '状态栏顶位 ' + inp.sbTop + 'px（安全区 ' + expect + 'px）');
 }
 if (inp.phoneBottom != null && inp.innerH) {
-const over = Math.round(inp.phoneBottom - inp.innerH);
-if (over > 2) add(false, '底部裁切 ' + over + 'px', '✗ .phone 底部超出可视区（#148：100vh>可视高形态，height 应=--mochi-ios-h 实测值）');
-else add(true, '底部贴合（.phone 底=' + Math.round(inp.phoneBottom) + ' / 可视 ' + inp.innerH + '）');
+const expB = (inp.envTop || 0) + inp.innerH;
+const under = Math.round(expB - inp.phoneBottom);
+const over = Math.round(inp.phoneBottom - expB);
+if (over > 2) add(false, '底部超出 ' + over + 'px', '✗ .phone 底边超出期望屏底（高度公式异常）');
+else if (under > 2) add(false, '底部少填 ' + under + 'px 白带', '✗ 覆盖形态（env-top=' + inp.envTop + '）下 .phone 应铺到 ' + expB + 'px，实测只到 ' + inp.phoneBottom + 'px（#179：高度须含顶部安全区 envTop+inner）');
+else add(true, '底部贴合（.phone 底=' + Math.round(inp.phoneBottom) + ' / 期望 ' + expB + '）');
 }
-if (inp.fsActive && inp.iosH && inp.innerH && Math.abs(inp.iosH - inp.innerH) > 2) {
-add(false, '--mochi-ios-h 与可视高不符', '⚠ ios-h=' + inp.iosH + 'px ≠ innerHeight=' + inp.innerH + 'px（全屏态应由 syncVvFit 写 vv 实测值）');
-} else if (inp.fsActive) {
-add(true, '--mochi-ios-h=' + (inp.iosH || '(未设→回落)') + ' 与可视区一致');
+if (inp.fsActive) {
+const expH = (inp.envTop || 0) + (inp.innerH || 0);
+if (inp.iosH && Math.abs(inp.iosH - expH) > 2) add(false, '--mochi-ios-h 与期望屏高不符', '⚠ ios-h=' + inp.iosH + 'px ≠ envTop+inner=' + expH + 'px（#179 公式：覆盖形态=整屏/已避让=inner）');
+else add(true, '--mochi-ios-h=' + (inp.iosH || '(未设→回落)') + ' 与期望屏高一致');
 }
 if (inp.tabBottom != null && inp.innerH) {
-const overB = Math.round(inp.tabBottom - inp.innerH);
-if (overB > 2) add(false, '底部导航栏被裁 ' + overB + 'px', '✗ tabbar 底边 ' + inp.tabBottom + 'px 超出可视区 ' + inp.innerH + 'px（#148 同族：高度大于可视高）');
-else add(true, '底部导航栏完整（底边 ' + inp.tabBottom + ' / 可视 ' + inp.innerH + '）');
+const expTB = (inp.envTop || 0) + inp.innerH - (inp.envBottom || 0); // 期望底边=屏底−Home横条避让
+const overB = Math.round(inp.tabBottom - expTB);
+if (overB > 2) add(false, '底部导航栏被裁 ' + overB + 'px', '✗ tabbar 底边 ' + inp.tabBottom + 'px 超出期望 ' + expTB + 'px（#148 同族）');
+else if (overB < -60) add(false, '底部导航栏悬空 ' + (-overB) + 'px', '⚠ tabbar 底边比期望高 ' + (-overB) + 'px（底部空白过大）');
+else add(true, '底部导航栏完整（底边 ' + inp.tabBottom + ' / 期望 ' + expTB + '）');
 }
 if ((inp.vvOffTop || 0) > 2 || (Math.abs(inp.vvOffLeft || 0)) > 2) {
 add(false, '视口平移残留', '⚠ vv.offsetTop=' + inp.vvOffTop + ' offsetLeft=' + inp.vvOffLeft + '（页面被顶偏未归位，#109 形态）');
@@ -15267,6 +15272,8 @@ setInterval(function () {
 try {
 if (document.visibilityState !== 'visible') return;
 if (!window.__collectScreenDiag) return;
+try { var _ae = document.activeElement; if (_ae && (_ae.tagName === 'INPUT' || _ae.tagName === 'TEXTAREA' || _ae.isContentEditable)) return; } catch (eF) {}
+try { var _kst = window.__mochiIosKb ? window.__mochiIosKb() : null; if (_kst && _kst.kbActive) return; } catch (eK) {}
 const r = window.__collectScreenDiag();
 const badNames = r.findings.filter(function (f) { return !f.ok; }).map(function (f) { return f.name.split(' ')[0]; }).sort();
 const bad = badNames.join('|');
@@ -16964,12 +16971,24 @@ const keep = new Set();
 map.forEach(function (_v, h) { keep.add(h); });
 writeBuf.forEach(function (p) { keep.add(String(p.k).slice(FULL.length)); });
 Object.keys(inflight).forEach(function (h) { keep.add(h); });
-const REFS = /(?:^|:)(?:chat-msgs|fav-msgs)$/;
+const REFS = /(?:^|:)(?:chat-msgs|fav-msgs|group-chat-msgs|gc-msgs-[0-9A-Za-z_-]+|chat-tail)$/;
 const refKeys = keys.filter(function (k) { return REFS.test(String(k)); });
+try {
+for (let li = 0; li < localStorage.length; li++) {
+const lk = localStorage.key(li);
+if (lk && REFS.test(lk)) refKeys.push('__ls__' + lk);
+}
+} catch (lErr) { out.reason = 'localStorage 读取失败（存储繁忙），为安全起见本次不清理'; return out; }
 out.refN = refKeys.length;
 for (let i = 0; i < refKeys.length; i++) {
-const v = await window.idbGet(refKeys[i]);
+let v;
+if (refKeys[i].indexOf('__ls__') === 0) {
+try { v = localStorage.getItem(refKeys[i].slice(6)); } catch (e2) { v = undefined; }
+if (v === undefined || v === null) continue; // 该 LS 键刚好被清＝无引用可标，不构成放弃条件
+} else {
+v = await window.idbGet(refKeys[i]);
 if (v === undefined || v === null) { out.reason = '有聊天记录/收藏没读到（存储繁忙？），为安全起见本次不清理'; return out; }
+}
 let s = '';
 try { s = typeof v === 'string' ? v : (JSON.stringify(v) || ''); } catch (e2) { out.reason = '引用数据序列化失败，本次不清理'; return out; }
 SCAN_RE.lastIndex = 0;
@@ -24200,24 +24219,25 @@ if (!chatDbReady || authLoadedPrefix !== window.activePrefix()) return;
 _mediaPassBusy = true;
 try {
 let changed = 0;
+const _rollback = []; // FIX 2026-09-05 #186 写池失败回滚账 [{obj, prop, val, msg}]
 for (let i = 0; i < msgs.length; i++) {
 const m = msgs[i];
 if (!m || _mediaTokSeen.has(m)) continue;
 let did = false;
 if (typeof m.text === 'string' && m.text.indexOf('data:image/') === 0) {
 const t = await window.mochiMediaTokenize(m.text);
-if (t) { m.text = t; changed++; did = true; }
+if (t) { _rollback.push({ o: m, p: 'text', v: m.text, msg: m }); m.text = t; changed++; did = true; }
 }
 if (typeof m.img === 'string' && m.img.indexOf('data:image/') === 0) {
 const t = await window.mochiMediaTokenize(m.img);
-if (t) { m.img = t; changed++; did = true; }
+if (t) { _rollback.push({ o: m, p: 'img', v: m.img, msg: m }); m.img = t; changed++; did = true; }
 }
 if (Array.isArray(m.parts) && m.parts.length) {
 for (let j = 0; j < m.parts.length; j++) {
 const p = m.parts[j];
 if (p && typeof p.v === 'string' && p.v.indexOf('data:image/') === 0) {
 const t = await window.mochiMediaTokenize(p.v);
-if (t) { p.v = t; changed++; did = true; }
+if (t) { _rollback.push({ o: p, p: 'v', v: p.v, msg: m }); p.v = t; changed++; did = true; }
 }
 }
 }
@@ -24228,9 +24248,15 @@ if (authLoadedPrefix !== window.activePrefix()) break;
 }
 }
 if (changed > 0) {
-await window.mochiMediaFlush(); // 池数据先落盘，再让引用落盘（顺序不可反）
+const _ok = await window.mochiMediaFlush(); // 池数据先落盘，再让引用落盘（顺序不可反）
+if (_ok === false) {
+for (let r = 0; r < _rollback.length; r++) { try { _rollback[r].o[_rollback[r].p] = _rollback[r].v; } catch (e2) {} try { _mediaTokSeen.delete(_rollback[r].msg); } catch (e3) {} }
+scheduleMediaPass(8000);
+console.warn('[mochi] 媒体池写盘失败，本次 ' + changed + ' 处令牌化已回滚待重试');
+} else {
 saveMsgs();
 try { console.info('[mochi] 媒体池：' + changed + ' 处聊天图片已去重为池引用'); } catch (e) {}
+}
 }
 } catch (e) {} finally { _mediaPassBusy = false; }
 }
@@ -25855,6 +25881,12 @@ e.stopPropagation();
 if (window.viewChatImage) window.viewChatImage(rec.text);
 });
 }
+if (window.mochiMediaIsToken && window.mochiMediaIsToken(rec.text)) {
+const _tokImg = b.querySelector('.msg-img');
+if (_tokImg) _tokImg.addEventListener('error', () => {
+b.innerHTML = '<span style="opacity:.5;font-size:12px">（图片丢失：媒体数据缺失，可用数据备份重新导入恢复）</span>';
+});
+}
 } else if (rec.type === 'voice') {
 b.style.padding = '8px 10px';
 b.style.background = '';
@@ -25872,12 +25904,13 @@ const isSticker = p.sub === 'sticker';
 return '<img class="msg-img' + (isSticker ? ' msg-img-sm' : ' msg-img-big') + '" src="' + attrEsc(p.v) + '" alt="' + (isSticker ? '表情' : '图片') + '" loading="lazy" decoding="async">';
 }).join('') + '</div>';
 }
-if (textPart) {
+if (textPart && textPart.trim()) {
 inner += '<span style="opacity:.85;word-break:break-word">' + escTxtBr(T(textPart)) + '</span>';
 }
 b.innerHTML = rec.quote
 ? quoteHtml(rec.quote, rec.qside) + inner
 : inner;
+if (!inner) b.innerHTML = '<span style="opacity:.5;font-size:12px">（空白消息）</span>';
 b.querySelectorAll('.msg-img-big').forEach(img => {
 img.addEventListener('click', (e) => {
 e.stopPropagation();
@@ -25911,10 +25944,14 @@ if (d) d.style.display = d.style.display === 'block' ? 'none' : 'block';
 });
 }
 } else {
-const escTxtS = escTxtBr(T(rec.text));
+const __rawText = typeof rec.text === 'string' ? rec.text : '';
+const __blankMsg = !__rawText.trim();
+const __bodyHtml = __blankMsg
+? '<span style="opacity:.5;font-size:12px">（空白消息）</span>'
+: '<span style="opacity:.85">' + escTxtBr(T(__rawText)) + '</span>';
 b.innerHTML = rec.quote
-? quoteHtml(rec.quote, rec.qside) + '<span style="opacity:.85">' + escTxtS + '</span>'
-: '<span style="opacity:.85">' + escTxtS + '</span>';
+? quoteHtml(rec.quote, rec.qside) + __bodyHtml
+: __bodyHtml;
 }
 if (rec.mood && rec.mood.length && !rec.retracted) {
 const mm = document.createElement('div');
@@ -26687,22 +26724,28 @@ return;
 retractMsg(target, side);
 }
 const FALLBACK_REPLY_POOL = ['收到～', '好呀', '好～', '嗯嗯', '知道啦', '好哒', '嗯嗯，我在听'];
+function pickNonBlank(arr) {
+let v = '', g = 0;
+do { v = pick(arr); g++; } while (g < 20 && !(typeof v === 'string' && v.trim()));
+return (typeof v === 'string' && v.trim()) ? v : '';
+}
 function genReplyText(c) {
 const pool = getPool();
 let reply = '', type = 'text';
 if (pool.sticker.length && hit(c['sticker-prob'])) {
-reply = pick(pool.sticker); type = 'sticker';
+reply = pickNonBlank(pool.sticker); type = 'sticker';
 } else if (pool.emoji.length && hit(c['emoji-prob'])) {
-reply = pick(pool.emoji); type = 'emoji';
+reply = pickNonBlank(pool.emoji); type = 'emoji';
 } else if (pool.image.length && hit(c['image-prob'])) {
-reply = pick(pool.image); type = 'image';
+reply = pickNonBlank(pool.image); type = 'image';
 } else if (pool.voice.length && hit(c['voice-prob'])) {
-reply = pick(pool.voice); type = 'voice';
+reply = pickNonBlank(pool.voice); type = 'voice';
 } else {
-reply = pick(pool.text) || pick(FALLBACK_REPLY_POOL);
+reply = pickNonBlank(pool.text) || pick(FALLBACK_REPLY_POOL);
 }
 if (type === 'text' && pool.kaomoji.length && hit(c['kaomoji-prob'])) {
-reply += ' ' + pick(pool.kaomoji);
+const kj = pickNonBlank(pool.kaomoji);
+if (kj) reply += ' ' + kj;
 }
 return { text: reply, type: type };
 }
@@ -26941,8 +26984,9 @@ function genOneReply(c) {
 const pool = getPool();
 let t, type = 'text';
 if (c['py-en'] === 1 && hit(c['py-prob']) && pool.text.length) {
+const nbTextPool = pool.text.filter(s => typeof s === 'string' && s.trim()); // FIX 2026-09-05 #185 多字卡拼接前先滤空白卡（否则 join 出纯空格空气泡）
 const n = randInt(c['py-min'], c['py-max']);
-t = pickN(pool.text, n).join(' ');
+t = pickN(nbTextPool.length ? nbTextPool : pool.text, n).join(' ');
 } else {
 const r = genReplyText(c);
 t = r.text;
@@ -26959,6 +27003,7 @@ const replyWord = (window.getReplyCard && window.getReplyCard()) || '';
 if (replyWord) {
 t = replyWord;
 }
+if (typeof t !== 'string' || !t.trim()) t = pick(FALLBACK_REPLY_POOL);
 if (hit(c['cf-prob'])) {
 const w = (window.getFollowupWord && window.getFollowupWord(t)) || '';
 if (w) t += ' ' + w;
@@ -29863,6 +29908,7 @@ if (b) b.innerHTML = '<span style="opacity:.85">' + escTxt(val) + '</span>';
 closeMsgActions();
 } else if (act === 'del') {
 if (activeMsgEl && idx >= 0 && msgs[idx] && msgs[idx].side === 'in') {
+chatTailDrop(msgs[idx]); // FIX 2026-09-05 #185 删除消息同步从尾巴日志摘除，防刷新后 chatTailMerge 回放复活（与撤回同口径）
 msgs.splice(idx, 1);
 sessionChangedIdx.clear();
 saveMsgs();
@@ -33599,7 +33645,8 @@ return out;
 } });
 })();
 } catch (__e) { try { console.error("[JS] group-chat.js", __e && __e.message || __e); } catch (x) {} if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
-(function () { try {
+</script>
+<script>(function () { try {
 (function () {
 const list = document.getElementById('cc-list');
 const tabsWrap = document.getElementById('cc-tabs');
@@ -36425,8 +36472,7 @@ res('字卡/回复/收藏明细：LS ' + lsCc.length + '键 ' + fmt(lsCcSum) + '
 };
 })();
 } catch (__e) { try { console.error("[JS] chatcard.js", __e && __e.message || __e); } catch (x) {} if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
-</script>
-<script>(function () { try {
+(function () { try {
 (function () {
 const uid = window.activePrefix();
 const store = window.activeStore();
@@ -39981,7 +40027,8 @@ return out;
 } });
 })();
 } catch (__e) { try { console.error("[JS] ta-mood.js", __e && __e.message || __e); } catch (x) {} if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
-(function () { try {
+</script>
+<script>(function () { try {
 (function () {
 const MUSIC_PREFIX = 'xy-home-v2:default';
 const store = window.storeFor('default');
@@ -43490,8 +43537,7 @@ try { syncTaFavTab(); renderTaFavList(); } catch (e) {}
 });
 })();
 } catch (__e) { try { console.error("[JS] music-player.js", __e && __e.message || __e); } catch (x) {} if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
-</script>
-<script>(function () { try {
+(function () { try {
 (function () {
 const uid = window.activePrefix();
 const store = window.activeStore();
@@ -48396,7 +48442,8 @@ _trSessionTriggered = false;
 });
 })();
 } catch (__e) { try { console.error("[JS] ta-ask.js", __e && __e.message || __e); } catch (x) {} if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
-(function () { try {
+</script>
+<script>(function () { try {
 (function () {
 const store = window.activeStore();
 const KEY = 'ta-checkin';
@@ -51633,8 +51680,7 @@ try { if (!document.getElementById('page-home').hidden && htab === 'call') rende
 };
 })();
 } catch (__e) { try { console.error("[JS] records.js", __e && __e.message || __e); } catch (x) {} if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
-</script>
-<script>(function () { try {
+(function () { try {
 (function () {
 const uid = window.activePrefix();
 const store = window.activeStore();
@@ -55809,7 +55855,8 @@ return out;
 } });
 })();
 } catch (__e) { try { console.error("[JS] loc-lib.js", __e && __e.message || __e); } catch (x) {} if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
-(function () { try {
+</script>
+<script>(function () { try {
 (function () {
 const uid = window.activePrefix();
 const store = window.activeStore();
@@ -61344,8 +61391,7 @@ memoSendBtn.textContent = '完成发到聊天：' + (on ? '开' : '关');
 document.addEventListener('contact-switched', () => { if (!memoPage.hidden) memoRender(); });
 })();
 } catch (__e) { try { console.error("[JS] memo-app.js", __e && __e.message || __e); } catch (x) {} if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
-</script>
-<script>(function () { try {
+(function () { try {
 (function () {
 const GNS = 'xy-home-v2';
 const page = document.getElementById('page-memo-arc');
@@ -64604,7 +64650,8 @@ document.addEventListener('contact-switched', function () { setTimeout(renderDes
 document.addEventListener('mochi-restore-done', function () { setTimeout(renderDeskWidget, 200); });
 })();
 } catch (__e) { try { console.error("[JS] period.js", __e && __e.message || __e); } catch (x) {} if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
-(function () { try {
+</script>
+<script>(function () { try {
 (function () {
 var G = 'xy-home-v2';
 var store = window.activeStore();
@@ -72197,8 +72244,7 @@ fast: false
 };
 })();
 } catch (__e) { try { console.error("[JS] connect-four.js", __e && __e.message || __e); } catch (x) {} if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
-</script>
-<script>(function () { try {
+(function () { try {
 (function () {
 const panel = document.getElementById('chat-ms-panel');
 if (!panel) return;
@@ -76458,7 +76504,8 @@ n.insertBefore(mkWatchBar('2', '转载署名 · 严禁倒卖', W2), b1 ? b1.next
 }, 5000);
 })();
 } catch (__e) { try { console.error("[JS] pwa.js", __e && __e.message || __e); } catch (x) {} if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
-(function () { try {
+</script>
+<script>(function () { try {
 (function () {
 const G = 'xy-home-v2';
 const ROSTER_KEY = 'cjian-roster';
@@ -78429,7 +78476,7 @@ else d.style.removeProperty('--mochi-safe-top');
 }
 if (d.classList.contains('fs-active') || d.classList.contains('fs-css-active')
 || d.classList.contains('ios-fs-active') || d.classList.contains('ios-native-fs')) {
-var _pxFs = (_vh2 >= 300) ? (_vh2 + 'px') : '';
+var _pxFs = (_vh2 >= 300) ? (Math.min(_safeTop + _ih2, _sh2 || (_safeTop + _ih2)) + 'px') : '';
 if (d.style.getPropertyValue('--mochi-ios-h') !== _pxFs) {
 if (_pxFs) d.style.setProperty('--mochi-ios-h', _pxFs);
 else d.style.removeProperty('--mochi-ios-h');
@@ -78442,6 +78489,9 @@ return;
 }
 var ih = window.innerHeight || 0;
 var vh = _vv ? Math.round(_vv.height * ((_vv.scale && _vv.scale > 0.5) ? _vv.scale : 1)) : ih;
+if (d.classList.contains('ios-pwa-standalone') && _safeTop > 0 && _ih2 > 0) {
+vh = Math.min(_safeTop + _ih2, _sh2 || (_safeTop + _ih2));
+}
 if (!vh) return;
 if (!_vvFitOn) { _vvFitOn = true; d.classList.add('ios-vv-fit'); }
 var px = vh + 'px';
@@ -78980,4 +79030,4 @@ return { lock: document.body.classList.contains('scroll-lock'), open: open };
 <!-- __MOCHI_EOF__ -->
 </body>
 </html>
-<!-- __MOCHI_EOF__ mto2i0lc -->
+<!-- __MOCHI_EOF__ mto5dxun -->
