@@ -354,6 +354,7 @@
       stripBuiltins(data);
       st.set(lsKey, JSON.stringify(data));
       pubInvalidate();
+      ccAuthMark(lsKey === PUB_KEY ? 'public' : 'own'); // v3.26.x #193：权威库已进内存，写路径放行
       // 只刷新与当前作用域一致的管理页视图；另一作用域只更新列表页角标
       if (lsKey === 'cc-groups' && ccScope === 'own' && window.activePrefix() === myPrefix) {
         groups = data;
@@ -385,6 +386,8 @@
         try {
           const data = typeof v === 'string' ? JSON.parse(v) : v;
           if (data && data.text) {
+            // v3.26.x #193：IDB 读到了权威库（无论是否覆盖内存），本会话已见过权威数据
+            if (idbFullKey === curFullKey()) ccAuthMark();
             let localData = null;
             try { localData = JSON.parse(st.get(lsKey) || 'null'); } catch (e) {}
             const localCount = localData && localData.text ? cardCount(localData) : -1;
@@ -411,7 +414,28 @@
       } catch (e) { kick(); }
     }
   })();
+  // v3.26.x #193：防覆盖守卫——本会话尚未确认「权威库已取回进内存」的作用域集合。
+  // 大库（几十 MB 公用库）被启动回填挂起在 IDB / openCcPage 的 hydrateCurScope 未落定 /
+  // 回填链被 iOS 挂后台打断读空时，内存 groups 只是空库或残缺快照，此时任何写路径
+  // （批量导入/上传图片/编辑/删除，全走 scheduleSave→saveGroups）整包写回都会把权威键
+  // 里的旧字卡覆盖没（iPhone 17 Pro Safari 实测：公用库 17.67MB，一次性批量导入文字卡
+  // 后旧字卡全部消失）。#139 防复制守卫只护 JSON 文件导入，此处是全写路径收口。
+  const ccAuthSeen = { public: false, own: false };
+  function ccAuthMark(scope) { try { ccAuthSeen[scope || ccScope] = true; } catch (e) {} }
+  function curFullKey() {
+    return ccScope === 'public' ? (PUB_PREFIX + ':' + PUB_KEY) : (window.activePrefix() + ':cc-groups');
+  }
   function saveGroups(groups) {
+    if (!ccAuthSeen[ccScope] && window.idbHasKey) {
+      // 未确认权威库已取回：先探测 IDB 是否真有权威数据——有 = 绝不整包写回，
+      // 走 rescueCcOverwrite 合并营救；健康连接确认无键（新装/空库）才放行直写
+      ccDirty = true;
+      rescueCcOverwrite();
+      return;
+    }
+    saveGroupsNow(groups);
+  }
+  function saveGroupsNow(groups) {
     // 统一走适配层：localStorage 快照 + IndexedDB 权威（配额满也不丢，启动自动恢复）
     // v3.11.x：按当前作用域写入对应键
     curStore().set(curKey(), JSON.stringify(groups));
@@ -419,6 +443,40 @@
     refreshLibCounts(true);
     ccDirty = false; // 本次待写已落盘（LS 同步 + IDB 异步发起）
   }
+  // v3.26.x #193：把内存库（空/残缺快照 + 用户新增）按分组合并进权威库——同名分组
+  // 按「权威没有的卡才补」去重追加，权威没有的分组整组补入；旧字卡与本次导入都不丢
+  function mergeCcGroupsInto(auth, mem) {
+    Object.keys(mem || {}).forEach(t => {
+      if (!Array.isArray(auth[t])) auth[t] = [];
+      (mem[t] || []).forEach(pair => {
+        const name = pair[0], cards = pair[1] || [];
+        let g = auth[t].find(p => p[0] === name);
+        if (!g) { g = [name, []]; auth[t].push(g); }
+        const have = new Set(g[1]);
+        cards.forEach(c => { if (!have.has(c)) { g[1].push(c); have.add(c); } });
+      });
+    });
+    return auth;
+  }
+  let ccRescueInflight = null;
+  function rescueCcOverwrite() {
+    if (ccRescueInflight) return;
+    const mem = groups; // hydrateCurScope 落定后会用权威库重载 groups，先保住内存增量
+    ccRescueInflight = Promise.resolve(window.idbHasKey(curFullKey())).then(exists => {
+      if (!exists) { ccAuthMark(); saveGroupsNow(groups); return null; }
+      return hydrateCurScope().then(() => {
+        groups = mergeCcGroupsInto(loadGroups(), mem);
+        ccAuthMark();
+        saveGroupsNow(groups);
+        try { renderGroupsBar(); render(); } catch (e0) {}
+        return null;
+      });
+    }).catch(() => {
+      // 探测/取回失败按「权威可能存在」处理：宁可缓写也绝不拿残缺库覆盖权威键
+      return null;
+    }).then(() => { ccRescueInflight = null; });
+  }
+
 
   let groups = loadGroups();
   let cur = 'text';
@@ -2749,6 +2807,7 @@
     if (editSaveTimer) { clearTimeout(editSaveTimer); editSaveTimer = null; }
     pubInvalidate();
     offInvalidate(); // v3.30.x：专属停用集合按联系人隔离，切桌面必须失效缓存
+    ccAuthSeen.own = false; // v3.26.x #193：新桌面的权威键尚未取回，写守卫重新生效
     libCounts.pub = -1; libCounts.own = -1; libCounts.fun = -1; libCounts.pubFun = -1;
     groups = loadGroups();
     refreshLibCounts(false);
@@ -3248,12 +3307,23 @@
           ? !!(window.storeFor && window.storeFor(cid).get('cc-groups'))
           : (scope === 'public' ? !!pubStore().get(PUB_KEY) : !!store.get('cc-groups'));
       } catch (e) {}
-      if (hasData) return Promise.resolve(false);
+      if (hasData) {
+        // v3.26.x #193：三路读已有数据（LS/内存/缓存）= 内存即权威口径，写路径放行
+        if (fullKey === curFullKey()) ccAuthMark();
+        return Promise.resolve(false);
+      }
     }
     if (hydInflight[fullKey]) return hydInflight[fullKey];
     hydInflight[fullKey] = window.idbHydrateKey(fullKey).then(ok => {
       delete hydInflight[fullKey];
-      if (ok === null) { hydAbsent[fullKey] = true; return false; }
+      if (ok === null) {
+        hydAbsent[fullKey] = true;
+        // v3.26.x #193：健康连接确认 IDB 无此键（新装/空库）= 内存空库就是全部，放行直写
+        if (fullKey === curFullKey()) ccAuthMark();
+        return false;
+      }
+      // v3.26.x #193：权威库已取回进 store，写路径放行
+      if (fullKey === curFullKey()) ccAuthMark();
       pubInvalidate();
       libCounts.pub = -1; libCounts.own = -1; libCounts.fun = -1; libCounts.pubFun = -1;
       const scopeLive = (scope === 'public') ? (ccScope === 'public') : (ccScope === 'own');

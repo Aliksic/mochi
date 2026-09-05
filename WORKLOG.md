@@ -1,3 +1,16 @@
+### 2026-09-05 20:0x（#193 字卡库写回覆盖收口构建·本次构建者：AI-A=本会话，随库一并打入 AI-B 已声明完整的 #196/#197/#198 三修）
+### 2026-09-05（#196/#197/#198 三联修：温柔字卡连抽同句+安卓全站 change 保存失效+经期组件壁纸不生效；本次构建者：AI-B=本会话）
+- [AI-B 域·跨域改动 src/js/period.js（AI-A 业务文件，warmPrefix/warmSuffix 抽取段，理由：用户直接指派修复）]（**改动文件：src/js/period.js（#196 warmPick 近期 3 条不重复，池 6 条纯均匀随机连抽同几句被当 bug）、src/js/mobile-adapt.js（#197 ce-box 聚焦记基线、blur 内容有变补派 change——contenteditable 不自发派 change，安卓全站挂 change 的保存（心愿单概率等）从未生效过，机制级根因）、src/js/personalize.js（#198 cardBgSel 裸类型兜底 [data-card-bg=<type>] + cardBgAllTypes DOM 收集全类型，applyAllCardBgs/rescueDeskVisuals 改走它——CARD_BG_TYPES 无 desk-period，上传存了键但永不应用）、build.mjs（哨兵 +5）、FIX-REGRESSION.md（196/197/198 三行）**；构建状态：见本条收口）。
+- 需求：用户三连报障（小米15Pro Chrome 151，明说其他机型也有）：①mj 字卡频繁出现温柔动作/前缀那几句；②心愿单概率改完退出回默认；③桌面经期组件卡无法上传壁纸。
+- 根因/方案/验证：见 FIX-REGRESSION.md 196/197/198。
+- 验证：node --check 三文件过；--check-sentinels 399 全绿哑哨兵 0。构建收口说明：本会话 19:24 曾构建一次（sw mochi-mtoapi8p），随后 #193 会话（AI-A）声明收口并再构建（sw mochi-mtoapzhb，已含本三修+chatcard #193；verify-cc-import-guard 19/19、auto-cid-guard 8/8、chat-tail 21/21 复跑全过）——按不并行 commit 协议，提交由收口构建者 AI-A 执行。
+- 给 AI-A：#197 是机制级修复，之后新写设置项仍建议优先 click/明确保存按钮，change 只是兜底能收了。
+### 2026-09-05 19:4x（#193 字卡库批量导入后旧字卡全部消失：权威大库未取回写回覆盖；未构建，待收口；本条不构建——工作区另有并行会话在途 mobile-adapt.js/period.js/personalize.js）
+- [跨域改动 src/js/chatcard.js（AI-A 业务文件），理由：用户直接指派修复（附完整诊断）]（**改动文件：src/js/chatcard.js（新增 ccAuthSeen 双作用域权威已见标记：applyRestored 启动恢复读到权威/hydrateScope 三出口（hasData 预检、idbHydrateKey 成功、确认无键 ok===null）且 fullKey===curFullKey() 时置位，contact-switched 重置 own；saveGroups 首行守卫——未确认权威库已取回时不直写，idbHasKey 探测权威键，存在=rescueCcOverwrite 合并营救（保住内存增量→hydrateCurScope 取回权威→mergeCcGroupsInto 按分组合并去重→写回+重绘），确认无键=放行直写，探测/取回失败宁缓写；原 saveGroups 逻辑改名 saveGroupsNow，幂等 ccRescueInflight）、build.mjs（哨兵 +3 全逻辑锚点）、FIX-REGRESSION.md（#193 行+设备索引苹果17 行补 193）、tools/verify-cc-import-guard.mjs（新增 19 断言）**；构建状态：**已构建·sw mochi-mtoapzhb，随库一并打入 #196/#197/#198（AI-B 已声明完整）**）。
+- 需求/根因：iPhone 17 Pro+Safari（v3.26.445 诊断 ts=1788577876618）「字卡库一次性导入太多，之前字卡全部消失」——公用库 cc-groups-public 17.67MB 被启动回填挂起在 IDB，openCcPage 显示页面后 hydrateCurScope 异步取回权威库；该窗口内内存 groups 是空/残缺快照，批量导入（及上传/编辑/删除全部写路径）合并进残缺库后 saveGroups 整包写回权威键=旧字卡被覆盖不可恢复。#188/#120/#85 同族第三例（伤在写回覆盖），#139 防复制守卫只护 JSON 文件导入。
+- 验证：node --check 过；node tools/verify-cc-import-guard.mjs 19/19（真实源码桩环境：权威存在拒写+合并营救旧卡新卡都在/确认无键放行/探测与取回失败宁缓写/并发幂等）；node build.mjs --check-sentinels 399 全绿哑哨兵 0。
+- 给收口构建者：①工作区并行会话在途的 mobile-adapt.js/period.js/personalize.js 未声明收口，构建前按规范核对；②真机验证（iPhone 17 Pro Safari）：批量导入大量字卡后旧字卡不消失；正常导入/上传/编辑/删除不被守卫拖慢（已取回过权威库零开销直写）；③已丢字卡的该设备如需恢复，从「数据备份」导出包恢复（其他设备导出→本机导入）。
+
 ### 2026-09-05（开屏公告「基础疑问可直接问 AI」高亮标色——本次构建者：AI-B=本会话）
 - [AI-B 域]（**改动文件：src/css/base.css（新增 .splash-hl 橙色加粗样式）、src/js/clock.js（renderSplashSections 与必读摘要渲染支持 {hl:...} 高亮条目类型）、src/template.html（静态兜底两处加 splash-hl）、src/pwa/notice.json（必读摘要拆行+章节二该句改 {hl}）**；构建状态：见本条收口）。
 - 需求：用户要求开屏里「基础疑问可直接问 AI，比我回复快」标不同颜色、显眼；追加确认再标三处——备份警告（必读摘要）、报修格式（章节二）、浏览器/桌面快捷方式双开数据不统一（章节三），全开屏橙色密度控制在 4 条内。

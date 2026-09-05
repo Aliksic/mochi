@@ -2871,9 +2871,23 @@ try {
     { type: 'week', name: '本周日常卡', sel: '[data-card-bg="week"]' },
     { type: 'weekend', name: '周末倒计时卡', sel: '[data-card-bg="weekend"]' },
   ];
+  // #198：未登记进 CARD_BG_TYPES 的裸类型（desk-period 经期卡等，模板上有
+  // data-card-bg 属性）回退到按属性直选——否则上传后存了键但 applyCardBg 静默
+  // return，壁纸「传了不生效」（小米15Pro 反馈；卡片菜单/独立透明度 #192 均已
+  // 按 DOM 属性支持裸类型，唯独此处漏了）。
   const cardBgSel = (type) => {
     const def = CARD_BG_TYPES.find(c => c.type === type);
-    return def ? def.sel : '';
+    return def ? def.sel : '[data-card-bg="' + type + '"]';
+  };
+  // #198：从 DOM 收集全部卡片类型（含 CARD_BG_TYPES 之外的裸类型，去重）
+  const cardBgAllTypes = () => {
+    const seen = {};
+    CARD_BG_TYPES.forEach(c => { seen[c.type] = 1; });
+    document.querySelectorAll('[data-card-bg]').forEach(el => {
+      const t = el.getAttribute('data-card-bg');
+      if (t) seen[t] = 1;
+    });
+    return Object.keys(seen);
   };
   // ===== v3.26.x：装修模式可调文字部位颜色 =====
   // 每个卡片类型下可单独调色的文字部位：key=存储后缀，label=菜单显示名，sel=目标元素选择器。
@@ -3038,7 +3052,9 @@ try {
       }
     });
   };
-  const applyAllCardBgs = () => CARD_BG_TYPES.forEach(c => applyCardBg(c.type));
+  // #198：遍历 DOM 收集的全部类型——只遍历 CARD_BG_TYPES 的话，desk-period 等裸类型
+  // 上传的壁纸在重启/切桌面后永远不会被重新应用
+  const applyAllCardBgs = () => cardBgAllTypes().forEach(t => applyCardBg(t));
   // v3.10.x：首屏外观键直读兜底——idbRestore 整体恢复可能迟迟完不成（安卓 Edge/雨见等
   // 内核偶发 IndexedDB 事务挂起，分批回填卡住），或本会话早期写入导致某键被跳过回填；
   // 双方头像 / 卡片背景 / 页面背景是用户最敏感的图，这里不依赖整体恢复进度，
@@ -3047,7 +3063,9 @@ try {
     if (!window.idbGet) return;
     let pfx; try { pfx = window.activePrefix(); } catch (e) { return; }
     const keys = ['avatar-user', 'avatar-partner'];
-    CARD_BG_TYPES.forEach(c => keys.push('card-bg-' + c.type));
+    // #198：裸类型（desk-period 等）的 card-bg 键也要进 IDB 直读兜底，否则大图只在
+    // IDB 时经期卡壁纸回填不到
+    cardBgAllTypes().forEach(t => keys.push('card-bg-' + t));
     try { for (let i = 0; i < deskPageCount(); i++) keys.push('page-bg-' + i); } catch (e) {}
     const miss = keys.filter(k => !store.get(k));
     if (!miss.length) return;

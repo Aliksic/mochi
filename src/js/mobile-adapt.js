@@ -366,6 +366,22 @@
     // 触摸/点击聚焦：contenteditable 天然可聚焦，无需额外处理
     box.addEventListener('touchstart', function (e) { e.stopPropagation(); }, { passive: true });
     // focus/blur 不冒泡，单独转发到 inp（原代码可能监听 inp 的 blur/focus）
+    // v3.26.x #197：contenteditable 不会自发派发 change（见上方 v3.9.x 注释）——上面的
+    // 转发只在 box 自己发出 change 时才生效，而 box 永远不会发。业务把保存挂在原
+    // input 的 change（gift-shop 心愿单概率、全站数字/日期设置项）时安卓上永不等触发，
+    // 值「改了但没存」退出即回默认（小米15Pro Chrome 实测；所有安卓机型通病）。
+    // 修法：blur 时若内容相对聚焦时已变化，补派一次 change（走上方既有转发链到 inp），
+    // 语义与原生 input 的 change 一致；iOS 不做转换不受影响。
+    var ceChangeVal = null;
+    box.addEventListener('focus', function () { ceChangeVal = box.textContent || ''; });
+    box.addEventListener('blur', function () {
+      try {
+        if (ceChangeVal !== null && (box.textContent || '') !== ceChangeVal) {
+          box.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        ceChangeVal = null;
+      } catch (e) {}
+    });
     box.addEventListener('focus', function () { try { inp.dispatchEvent(new Event('focus', { bubbles: true })); } catch (e) {} });
     box.addEventListener('blur', function () { try { inp.dispatchEvent(new Event('blur', { bubbles: true })); } catch (e) {} });
     // 初始文本：input 若已有 value（如编辑回填），同步进 box
