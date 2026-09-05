@@ -521,9 +521,9 @@
   // force=true：来电是「错过就没了」的单发事件，绕过 bgNotifyCheck 的 15s 过渡期/去重闸门。
   // avFixed=true：来电归属当前桌面，头像用 partnerAv() 权威值，空则走中立 mochi 图标。
   // #161：加 hint 尾缀——通知文案变为「XX 来电了，快回来接听，对方会等你几分钟」
-  function bgCallNotify(name, hint) {
+  function bgCallNotify(name, hint, avOverride) {
     try {
-      if (window.bgNotifyCheck) window.bgNotifyCheck(name + ' 来电了' + (hint ? '，' + hint : ''), Date.now(), { name: name + '来电', av: partnerAv(), avFixed: true, force: true });
+      if (window.bgNotifyCheck) window.bgNotifyCheck(name + ' 来电了' + (hint ? '，' + hint : ''), Date.now(), { name: name + '来电', av: avOverride || partnerAv(), avFixed: true, force: true });
     } catch (e) {}
   }
   // #161：响铃挂起——后台来电不再「命中即未接」（用户反馈：点开通知永远接不到，
@@ -536,7 +536,7 @@
   function heldMissedHtml(nm) {
     return '<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>' + nm + ' 来电 · 未接听';
   }
-  function holdIncomingCall(name, cid) {
+  function holdIncomingCall(name, cid, avOverride) {
     try {
       // 覆盖前先处理上一条已超时未处理的挂起（页面冻结期间第二次来电的场景）
       const prev = readCallHold();
@@ -547,8 +547,11 @@
       localStorage.setItem(CALL_HOLD_KEY, JSON.stringify(h));
       if (window.idbSet) { try { window.idbSet(CALL_HOLD_KEY, h); } catch (e) {} }
     } catch (e) {}
-    bgCallNotify(name, '快回来接听，对方会等你几分钟');
+    bgCallNotify(name, '快回来接听，对方会等你几分钟', avOverride);
   }
+  // #204：暴露给 incoming-requests.js——跨桌面来电后台命中时同走「响铃挂起」（原只发
+  // 通知即丢弃，切回应用无来电 UI 也无未接记录）；avOverride 用归属联系人头像
+  window.callHoldIncoming = holdIncomingCall;
   function readCallHold() {
     try {
       const h = JSON.parse(localStorage.getItem(CALL_HOLD_KEY) || 'null');

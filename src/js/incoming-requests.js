@@ -340,9 +340,13 @@
         // 跨桌面联系人头像显示。传了 avFixed 后空值走中立 mochi 图标，绝不再借用当前桌面。
         const av = cAvatar(req.cid);
         if (req.kind === 'call') {
-          // #159：force=true——与 #150 bgCallNotify 同口径，来电是「错过就没了」的单发
-          // 事件，不被 15s 过渡期/通知去重闸门拦（后台轮询首拍可能落在切后台 15s 内）
-          if (window.bgNotifyCheck) window.bgNotifyCheck(title + (req.kind === 'call' ? '' : '：' + (req.text || '')), Date.now(), { name: name + '来电', av: av, avFixed: true, force: true });
+          // #204：改走 call.js 响铃挂起（原 #159 只发通知即标记 seen 丢弃——切回应用
+          // 没有来电 UI、超时也不补未接记录，通知纯告知）。holdIncomingCall 同口径：
+          // 发「快回来接听」通知 + 写 call-hold（含归属 cid），3 分钟内回到应用重响
+          // 可接听，超时由 resumeHeldCall 补写未接（跨桌面自动落归属桌面）。
+          // av 传归属联系人头像（cAvatar），不让挂起通知借用当前桌面头像。
+          if (window.callHoldIncoming) window.callHoldIncoming(name, req.cid, av);
+          else if (window.bgNotifyCheck) window.bgNotifyCheck(title, Date.now(), { name: name + '来电', av: av, avFixed: true, force: true });
         } else if (req.kind === 'checkin') {
           // 同一道题最近已在该联系人桌面聊天里出现过（用户看过/答过）→ 后台不再重复
           // 追问、也不再重复弹系统通知（仅释放 pending 防占用队列）。

@@ -8792,9 +8792,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1788613665382">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.475</b></span>
-        <span class="sv-deploy">部署于 2026-09-05 21:07<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1788614254177">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.476</b></span>
+        <span class="sv-deploy">部署于 2026-09-05 21:17<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9940,7 +9940,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.475</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.476</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
       <!-- v3.27.x：设置页底部防骗声明 -->
       <div class="set-alert">
@@ -10231,7 +10231,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.475</span>
+              <span class="lic-ver">v3.26.476</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -49587,7 +49587,8 @@ if (document.hidden) {
 try {
 const av = cAvatar(req.cid);
 if (req.kind === 'call') {
-if (window.bgNotifyCheck) window.bgNotifyCheck(title + (req.kind === 'call' ? '' : '：' + (req.text || '')), Date.now(), { name: name + '来电', av: av, avFixed: true, force: true });
+if (window.callHoldIncoming) window.callHoldIncoming(name, req.cid, av);
+else if (window.bgNotifyCheck) window.bgNotifyCheck(title, Date.now(), { name: name + '来电', av: av, avFixed: true, force: true });
 } else if (req.kind === 'checkin') {
 if (!deskQSeenRecently(req.cid, req.text)) {
 if (window.chatAppendDeskCkTo) window.chatAppendDeskCkTo(req.cid, req.q);
@@ -52255,9 +52256,9 @@ currentCall = null;
 shownAv = null;
 shownName = null;
 }
-function bgCallNotify(name, hint) {
+function bgCallNotify(name, hint, avOverride) {
 try {
-if (window.bgNotifyCheck) window.bgNotifyCheck(name + ' 来电了' + (hint ? '，' + hint : ''), Date.now(), { name: name + '来电', av: partnerAv(), avFixed: true, force: true });
+if (window.bgNotifyCheck) window.bgNotifyCheck(name + ' 来电了' + (hint ? '，' + hint : ''), Date.now(), { name: name + '来电', av: avOverride || partnerAv(), avFixed: true, force: true });
 } catch (e) {}
 }
 const CALL_HOLD_MS = 3 * 60 * 1000;
@@ -52265,7 +52266,7 @@ const CALL_HOLD_KEY = 'xy-home-v2:call-hold';
 function heldMissedHtml(nm) {
 return '<svg class="st-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>' + nm + ' 来电 · 未接听';
 }
-function holdIncomingCall(name, cid) {
+function holdIncomingCall(name, cid, avOverride) {
 try {
 const prev = readCallHold();
 if (prev && prev.cid && Date.now() - prev.ts > CALL_HOLD_MS) {
@@ -52275,8 +52276,9 @@ const h = { ts: Date.now(), name: name, cid: cid || (window.__activeCid || 'defa
 localStorage.setItem(CALL_HOLD_KEY, JSON.stringify(h));
 if (window.idbSet) { try { window.idbSet(CALL_HOLD_KEY, h); } catch (e) {} }
 } catch (e) {}
-bgCallNotify(name, '快回来接听，对方会等你几分钟');
+bgCallNotify(name, '快回来接听，对方会等你几分钟', avOverride);
 }
+window.callHoldIncoming = holdIncomingCall;
 function readCallHold() {
 try {
 const h = JSON.parse(localStorage.getItem(CALL_HOLD_KEY) || 'null');
@@ -79280,4 +79282,4 @@ return { lock: document.body.classList.contains('scroll-lock'), open: open };
 <!-- __MOCHI_EOF__ -->
 </body>
 </html>
-<!-- __MOCHI_EOF__ mtoee8va -->
+<!-- __MOCHI_EOF__ mtoeqv6p -->

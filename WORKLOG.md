@@ -1,3 +1,11 @@
+### 2026-09-05 22:3x（#204 跨桌面来电后台命中只发通知即丢弃——切回应用无来电弹窗也无未接记录；本次构建者：AI-B=本会话）
+- [AI-B 域+跨域声明]（**改动文件：src/js/call.js（holdIncomingCall/bgCallNotify 加可选 avOverride 参数——跨桌面来电通知头像必须用归属联系人 cAvatar，不能借当前桌面 partnerAv；暴露 window.callHoldIncoming = holdIncomingCall）、src/js/incoming-requests.js（deliver() hidden 分支 kind='call' 从「只发通知+标记 seen 丢弃」改走 callHoldIncoming 响铃挂起：通知带「快回来接听」提示+写 call-hold 含归属 cid，3 分钟内回前台重响可接听、超时 resumeHeldCall 补写未接；跨域改 AI-A 名下 incoming-requests.js，理由：修复必须落在请求分发侧，call.js 只暴露接口）、build.mjs（哨兵 +2，另同步 #150/#161 两条 needle 至新函数签名）、FIX-REGRESSION.md（#204 行）**；构建状态：见本条收口）。
+- 需求：用户报「后台浏览器弹通知显示联系人给我打电话，马上切回浏览器却没有来电弹窗」。
+- 根因：#161 响铃挂起只覆盖了当前桌面来电（call.js maybeIncoming hidden 分支）与响铃中切走；跨桌面来电（incoming-requests.js deliver）后台命中分支仍停留在 #159 口径——发完通知直接 setStatus('seen') 丢弃，call-hold 从未写入，切回应用必然无弹窗（无头实测当前桌面链路 A/B 场景全过、跨桌面链路断）。
+- 验证：node --check 过；--check-sentinels 415 全绿哑哨兵 0；无头实测挂起→visible 重响（新鲜挂起/响铃中 hidden→visible 两场景）通过；verify-call-dur 复跑通过。
+- 【真机:待验证】：后台收到「XX 来电了，快回来接听」通知（跨桌面联系人）→ 3 分钟内切回应用应重响可接听；超 3 分钟→归属桌面聊天出现「来电 · 未接听」。回归面：当前桌面后台来电挂起、响铃中切走重响、未接记录均不受影响。
+
+
 ### 2026-09-05 21:3x（#184 iPad Air 全屏「底部少填 32px」误报：判定器公式三形态统一 min(屏高,envTop+inner)；已构建）
 * [AI-B 域]（**改动文件：src/js/device.js（screenDiagJudge：expBase/ios-h/tabbar 期望改 min(屏高,envTop+inner) + ipadForm 例外 standalone+env≥20+diff≤2+inner≈屏高 → 期望=inner，与 #199/#200 例外并列；顶部形态判定新增 iPad 形态说明）、build.mjs（#203 expBase needle 同步）、FIX-REGRESSION.md（#184 行）**）。
 * 根因：iPad Air 形态 inner=屏高已含整屏（diff=0），expBase=envTop+inner 双算 32px → 误报「底部少填白带」。实测布局本身正确（.phone=1180=屏高全 ✓）——纯判定器缺陷。
