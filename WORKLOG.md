@@ -1,3 +1,9 @@
+### 2026-09-05 22:5x（#185 iPad Air 三症状：全屏左右露白/滑动弹跳/聊天页误报顶部重叠；已构建）
+* [AI-B 域]（**改动文件：src/css/base.css（html.tablet.ios-fs-active .phone 全宽 + fs html/body overflow:hidden 滚动锁）、src/js/device.js（屏幕适配采集器状态栏隐藏跳过+相对 .phone 测量+判定说明行）、build.mjs（FIX_SENTINELS 3 条）、FIX-REGRESSION.md（#185 行）**）。
+* 根因：①平板全屏仍走 640 限宽居中（左右露 ~90px 底色）；②fs 文档可滚+橡皮筋与 pinScrollTop 对打（滑动飞/弹）；③采集器把隐藏状态栏 rect(0,0) 当实测（聊天页误报顶部重叠，错误环 4 条实锤）。
+* 验证：node --check 过；--check-sentinels 428 全绿。
+* 待真机（iPad Air 7）：全屏左右铺满；滑动不弹；聊天页跑屏幕适配诊断显示「状态栏隐藏」说明行而非 ✗。浏览器「四边不贴合居中」为平板 640 限宽既定设计，想要全宽用 设置→手机布局（强制）。
+
 ### 2026-09-05 24:0x（#208 聊天输入栏上移+底部白边（苹果17 iOS18.7 全屏，多机型）：键盘收起视口未还原自愈 + 采集/判定三层盲区收口；本次构建者：AI-B=本会话（#208），联合产物收口提交）
 - [AI-B 域]（**改动文件：src/js/mobile-adapt.js（healViewport 键盘分支自愈兜底：失焦>4s 且视口仍<基线−60 → 强制 restoreKb，破「确已还原」60px 门槛死锁；focusin/out 维护 _focLostAt 计时）、src/js/device.js（采集器 tabbar hidden/零矩形→null 止血聊天页假「悬空 860px」；判定器⑤d 新增「布局视口未贴底」、③顶部重叠加 diff≥envTop−8 守卫）、build.mjs（#208 哨兵 +3 逻辑锚点）、FIX-REGRESSION.md（208 行）、tools/verify-ios-kb-stuck.mjs（新增 26 断言）**；构建状态：**随联合产物收口（sw mochi-mtokd3nv / version.json 23:54，#207 会话构建，构建前本会话 #208 三文件已全部在树，产物已核实含 #206/#207/#208 全部锚点，未重复构建）；本条为三方联合提交：#206（AI-A）+#207（AI-B）+#208（本会话）**）。
 - 需求：苹果17 自带浏览器 iOS18.7 standalone 全屏报「聊天输入栏下面一块白边不贴底、位置上移 UI 按钮点不到」，明说其他机型也有；用户诊断基态全绿但错误环 21:32~21:37 连环五条「底部导航栏悬空（自动采集）」+一条「顶部重叠」。
