@@ -1,3 +1,7 @@
+### 2026-09-05 12:3x（#178 屏幕适配诊断三件套：历史快照对比+常驻监视+异常形态自动上报；已构建）
+* [AI-B 域]（**改动文件：src/js/device.js（快照存档 xy-home-v2:screen-diag-hist 上限 8 份+报告末尾自动历史对比；常驻监视每 5s 轻量采集、✗ 形态签名状态沿才存档/上报；静默写错误环 __diag-errs 与信息诊断同键同格式）、FIX-REGRESSION.md（#175 行补 #178 三件套）；构建状态：已构建·sw 见 version.json**）。
+* 验证：node --check 过；对比单测（变化/一致）全过；CDP 端到端：手测存 baseline→注入异常→监视 ≤6.5s 自动捕获+错误环上报。
+
 ### 2026-09-05 12:0x（#175 补强 + #176：屏幕适配诊断五项新采集/两新判定 + 设备兼容诊断改名 + 信息诊断分组；已构建）
 * [AI-B 域]（**改动文件：src/template.html（复制诊断信息→设备兼容诊断；两行上方加 gs-title【信息诊断】分组说明）、src/js/device.js（屏幕适配报告新增：方向/env(safe-area-inset-bottom)/.tabbar 底边/视口平移残留/键盘残留五项采集；新增判定「底部导航栏被裁」「视口平移残留」）、FIX-REGRESSION.md（#175 行补强+#176 说明）、build.mjs；构建状态：已构建·sw 见 version.json**）。
 * 验证：node --check 过；判定器七场景单测全过；CDP 端到端（行/弹窗/报告 32 行/UI 改名与分组）全过；--check-sentinels 353 全绿。

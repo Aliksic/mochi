@@ -8779,9 +8779,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1788579740308">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.447</b></span>
-        <span class="sv-deploy">部署于 2026-09-05 11:42<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1788580561658">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.448</b></span>
+        <span class="sv-deploy">部署于 2026-09-05 11:56<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9913,7 +9913,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.447</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.448</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
       <!-- v3.27.x：设置页底部防骗声明 -->
       <div class="set-alert">
@@ -10204,7 +10204,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.447</span>
+              <span class="lic-ver">v3.26.448</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -15099,14 +15099,18 @@ add(true, 'standalone=' + !!inp.standalone, inp.standalone ? '独立应用形态
 add(true, 'html 类：' + (inp.htmlClass || '(空)'));
 return F;
 }
+let _sdEnvCache = -1, _sdEnvOri = ''; // #176：env 探针缓存（按横竖屏失效）
 function envTopProbe() {
+const ori = (window.innerWidth || 0) > (window.innerHeight || 0) ? 'h' : 'v';
+if (_sdEnvCache >= 0 && _sdEnvOri === ori) return _sdEnvCache;
 try {
 const p = document.createElement('div');
 p.style.cssText = 'position:fixed;top:0;left:0;width:0;height:0;padding-top:env(safe-area-inset-top,0px);visibility:hidden;pointer-events:none;';
 document.body.appendChild(p);
 const v = parseFloat(getComputedStyle(p).paddingTop) || 0;
 document.body.removeChild(p);
-return Math.round(v);
+_sdEnvCache = Math.round(v); _sdEnvOri = ori;
+return _sdEnvCache;
 } catch (e) { return 0; }
 }
 function envBottomProbe() {
@@ -15192,6 +15196,8 @@ setTimeout(function () {
 let r = null;
 try { r = collectScreenDiag(); } catch (e) { r = null; }
 if (!r) { sdToast('采集失败'); return; }
+r.text += '\n== 历史对比 ==\n' + sdHistCompare(r.inp);
+sdArchive(r, 'manual');
 if (window.openModal) {
 window.openModal('屏幕适配诊断', r.text, null, { noInput: true, textarea: true, textareaRows: 16, big: true });
 }
@@ -15199,6 +15205,65 @@ sdCopy(r.text).then(function (ok) { sdToast(ok ? '报告已复制到剪贴板，
 }, 60);
 });
 }
+const SD_HIST_KEY = 'xy-home-v2:screen-diag-hist';
+const SD_ERR_KEY = 'xy-home-v2:__diag-errs'; // 与诊断模块错误环同键同格式
+const SD_HIST_CAP = 8;
+function sdHistLoad() {
+try { const a = JSON.parse(localStorage.getItem(SD_HIST_KEY) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; }
+}
+function sdHistSave(list) { try { localStorage.setItem(SD_HIST_KEY, JSON.stringify(list.slice(-SD_HIST_CAP))); } catch (e) {} }
+function sdSnapOf(r, trig) {
+const i = r.inp;
+return { t: Date.now(), trig: trig,
+bad: r.findings.filter(function (f) { return !f.ok; }).map(function (f) { return f.name.split(' ')[0]; }),
+scale: i.scale, envTop: i.envTop, varTop: i.varTop, diff: i.diff,
+innerW: i.innerW, innerH: i.innerH, phoneH: i.phoneH, phonePadTop: i.phonePadTop,
+phoneBottom: i.phoneBottom, sbTop: i.sbTop, tabBottom: i.tabBottom, iosH: i.iosH,
+ori: i.orientation, fs: !!i.fsActive };
+}
+function sdArchive(r, trig) {
+try { const list = sdHistLoad(); list.push(sdSnapOf(r, trig)); sdHistSave(list); } catch (e) {}
+}
+function sdHistCompare(cur) {
+const list = sdHistLoad();
+if (!list.length) return '（无历史快照，本次已存档 baseline）';
+const prev = list[list.length - 1];
+const keys = ['scale','envTop','varTop','diff','innerW','innerH','phoneH','phonePadTop','phoneBottom','sbTop','tabBottom','iosH','ori','fs'];
+const ch = [];
+keys.forEach(function (k) {
+const a = prev[k], b = cur[k];
+if (String(a) !== String(b)) ch.push(k + ': ' + a + ' → ' + b);
+});
+const when = new Date(prev.t).toLocaleString();
+return ch.length ? ('与上次（' + when + ' ' + prev.trig + '）对比，变化项：' + ch.join('；')) : ('与上次（' + when + ' ' + prev.trig + '）各项一致');
+}
+function sdRingPush(names, snap) {
+try {
+var arr = [];
+try { var old = localStorage.getItem(SD_ERR_KEY); if (old) { var o = JSON.parse(old); if (Array.isArray(o)) arr = o; } } catch (e0) {}
+arr.push({ t: Date.now(), msg: '[屏幕适配] ' + String(names).slice(0, 200) + '（自动采集）',
+ua: (navigator.userAgent || '').slice(0, 160),
+dev: (function () { var dd = window.mochiDevice || {}; return 'M' + (dd.isMobile?1:0) + ' T' + (dd.isTablet?1:0) + ' I' + (dd.isIOS?1:0) + ' A' + (dd.isAndroid?1:0) + ' V' + (dd.isVia?1:0); })(),
+page: 'page-phone' });
+while (arr.length > 20) arr.shift();
+localStorage.setItem(SD_ERR_KEY, JSON.stringify(arr));
+} catch (e1) {}
+}
+let _sdLastBad = '';
+setInterval(function () {
+try {
+if (document.visibilityState !== 'visible') return;
+if (!window.__collectScreenDiag) return;
+const r = window.__collectScreenDiag();
+const badNames = r.findings.filter(function (f) { return !f.ok; }).map(function (f) { return f.name.split(' ')[0]; }).sort();
+const bad = badNames.join('|');
+if (!bad) { _sdLastBad = ''; return; }
+if (bad === _sdLastBad) return; // 形态未变化：不重复存档/上报
+_sdLastBad = bad;
+sdArchive(r, 'auto');
+sdRingPush(badNames.join('、'), sdSnapOf(r, 'auto'));
+} catch (e2) {}
+}, 5000);
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bindScreenDiag);
 else bindScreenDiag();
 window.__screenDiagJudge = screenDiagJudge;
@@ -78612,4 +78677,4 @@ return { lock: document.body.classList.contains('scroll-lock'), open: open };
 <!-- __MOCHI_EOF__ -->
 </body>
 </html>
-<!-- __MOCHI_EOF__ mtnu7444 -->
+<!-- __MOCHI_EOF__ mtnuopve -->

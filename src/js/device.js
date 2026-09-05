@@ -1886,14 +1886,18 @@
     add(true, 'html 类：' + (inp.htmlClass || '(空)'));
     return F;
   }
+  let _sdEnvCache = -1, _sdEnvOri = ''; // #176：env 探针缓存（按横竖屏失效）
   function envTopProbe() {
+    const ori = (window.innerWidth || 0) > (window.innerHeight || 0) ? 'h' : 'v';
+    if (_sdEnvCache >= 0 && _sdEnvOri === ori) return _sdEnvCache;
     try {
       const p = document.createElement('div');
       p.style.cssText = 'position:fixed;top:0;left:0;width:0;height:0;padding-top:env(safe-area-inset-top,0px);visibility:hidden;pointer-events:none;';
       document.body.appendChild(p);
       const v = parseFloat(getComputedStyle(p).paddingTop) || 0;
       document.body.removeChild(p);
-      return Math.round(v);
+      _sdEnvCache = Math.round(v); _sdEnvOri = ori;
+      return _sdEnvCache;
     } catch (e) { return 0; }
   }
   function envBottomProbe() {
@@ -1979,6 +1983,9 @@
         let r = null;
         try { r = collectScreenDiag(); } catch (e) { r = null; }
         if (!r) { sdToast('采集失败'); return; }
+        // #176：本次快照存档（trig=manual），报告末尾附与上次的历史对比
+        r.text += '\n== 历史对比 ==\n' + sdHistCompare(r.inp);
+        sdArchive(r, 'manual');
         if (window.openModal) {
           window.openModal('屏幕适配诊断', r.text, null, { noInput: true, textarea: true, textareaRows: 16, big: true });
         }
@@ -1986,6 +1993,74 @@
       }, 60);
     });
   }
+  // ===== #176：快照存档 + 常驻监视 + 异常形态自动上报 =====
+  // 历史快照：手动诊断/监视捕获各存一份（上限 8 份），报告末尾自动与上一次对比，
+  // 哪项数值变了直接列出——『正常时 vs 异常时』不用再靠记忆。
+  // 常驻监视：每 5s 轻量采集一次（仅可见时），判定出现 ✗ 且形态签名与上次不同
+  // （状态变化沿）才存档 + 静默写错误环形缓冲（信息诊断『最近错误』可直读），
+  // 持续坏不刷屏、用户不用手发。
+  const SD_HIST_KEY = 'xy-home-v2:screen-diag-hist';
+  const SD_ERR_KEY = 'xy-home-v2:__diag-errs'; // 与诊断模块错误环同键同格式
+  const SD_HIST_CAP = 8;
+  function sdHistLoad() {
+    try { const a = JSON.parse(localStorage.getItem(SD_HIST_KEY) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; }
+  }
+  function sdHistSave(list) { try { localStorage.setItem(SD_HIST_KEY, JSON.stringify(list.slice(-SD_HIST_CAP))); } catch (e) {} }
+  function sdSnapOf(r, trig) {
+    const i = r.inp;
+    return { t: Date.now(), trig: trig,
+      bad: r.findings.filter(function (f) { return !f.ok; }).map(function (f) { return f.name.split(' ')[0]; }),
+      scale: i.scale, envTop: i.envTop, varTop: i.varTop, diff: i.diff,
+      innerW: i.innerW, innerH: i.innerH, phoneH: i.phoneH, phonePadTop: i.phonePadTop,
+      phoneBottom: i.phoneBottom, sbTop: i.sbTop, tabBottom: i.tabBottom, iosH: i.iosH,
+      ori: i.orientation, fs: !!i.fsActive };
+  }
+  function sdArchive(r, trig) {
+    try { const list = sdHistLoad(); list.push(sdSnapOf(r, trig)); sdHistSave(list); } catch (e) {}
+  }
+  function sdHistCompare(cur) {
+    const list = sdHistLoad();
+    if (!list.length) return '（无历史快照，本次已存档 baseline）';
+    const prev = list[list.length - 1];
+    const keys = ['scale','envTop','varTop','diff','innerW','innerH','phoneH','phonePadTop','phoneBottom','sbTop','tabBottom','iosH','ori','fs'];
+    const ch = [];
+    keys.forEach(function (k) {
+      const a = prev[k], b = cur[k];
+      if (String(a) !== String(b)) ch.push(k + ': ' + a + ' → ' + b);
+    });
+    const when = new Date(prev.t).toLocaleString();
+    return ch.length ? ('与上次（' + when + ' ' + prev.trig + '）对比，变化项：' + ch.join('；')) : ('与上次（' + when + ' ' + prev.trig + '）各项一致');
+  }
+  function sdRingPush(names, snap) {
+    // 静默写诊断模块的错误环形缓冲（同键同格式，信息诊断『最近错误』直读）
+    try {
+      var arr = [];
+      try { var old = localStorage.getItem(SD_ERR_KEY); if (old) { var o = JSON.parse(old); if (Array.isArray(o)) arr = o; } } catch (e0) {}
+      arr.push({ t: Date.now(), msg: '[屏幕适配] ' + String(names).slice(0, 200) + '（自动采集）',
+        ua: (navigator.userAgent || '').slice(0, 160),
+        dev: (function () { var dd = window.mochiDevice || {}; return 'M' + (dd.isMobile?1:0) + ' T' + (dd.isTablet?1:0) + ' I' + (dd.isIOS?1:0) + ' A' + (dd.isAndroid?1:0) + ' V' + (dd.isVia?1:0); })(),
+        page: 'page-phone' });
+      while (arr.length > 20) arr.shift();
+      localStorage.setItem(SD_ERR_KEY, JSON.stringify(arr));
+    } catch (e1) {}
+  }
+  // 常驻监视：仅 iOS 主屏幕/全屏形态才有意义？不只——浏览器形态同样适用（缩放/底裁）。
+  // 每 5s 一次轻量采集；✗ 形态签名变化（出现/消失/换形态）才算一次事件。
+  let _sdLastBad = '';
+  setInterval(function () {
+    try {
+      if (document.visibilityState !== 'visible') return;
+      if (!window.__collectScreenDiag) return;
+      const r = window.__collectScreenDiag();
+      const badNames = r.findings.filter(function (f) { return !f.ok; }).map(function (f) { return f.name.split(' ')[0]; }).sort();
+      const bad = badNames.join('|');
+      if (!bad) { _sdLastBad = ''; return; }
+      if (bad === _sdLastBad) return; // 形态未变化：不重复存档/上报
+      _sdLastBad = bad;
+      sdArchive(r, 'auto');
+      sdRingPush(badNames.join('、'), sdSnapOf(r, 'auto'));
+    } catch (e2) {}
+  }, 5000);
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bindScreenDiag);
   else bindScreenDiag();
   window.__screenDiagJudge = screenDiagJudge;
