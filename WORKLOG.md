@@ -1,3 +1,9 @@
+### 2026-09-05 11:4x（#175 新增设置页【屏幕适配诊断】：跨设备屏幕适配问题精准定位工具；已构建）
+* [AI-B 域]（**改动文件：src/template.html（设置页 row-screen-diag 锚点，与信息诊断分开）、src/js/device.js（collectScreenDiag 只读采集：env()/var/diff 三源对比+vv.scale+.phone/.statusbar 实测；screenDiagJudge 纯函数判定器——六形态 ✗/✓ 自动判定带修复条目号；openModal 大窗展示+copyText 自动复制）、build.mjs（FIX_SENTINELS 2 条）、FIX-REGRESSION.md（#175 行）；构建状态：已构建·sw 见 version.json**）。
+* 动机：#114/#148/#168/#174 等 iOS 屏幕适配问题在不同机型/形态反复出现且形态互异，靠通用诊断+口述难精准定位；本工具一键出专项报告，✗ 条目直接对号修复条目。
+* 验证：node --check 过；判定器六场景单测全过；--check-sentinels 353 全绿哑哨兵 0。
+* 待真机：任意机型设置→屏幕适配诊断→健康设备全 ✓、故障设备 ✗ 对号。
+
 ### 2026-09-05 11:0x（#174 iPhone15 Pro 主屏幕顶部露白：iOS26 形态页面被缩到 scale≈0.85 盖不满屏幕；已构建）
 * [AI-B 域]（**改动文件：src/template.html + src/js/device.js（viewport meta 全部加 minimum-scale=1.0 锁缩放下限）、src/js/mobile-adapt.js（healViewport 缩放异常自愈：standalone 下 scale<0.95 重写 viewport meta 吸附回 1，每会话限 3 次+4s 间隔）、build.mjs（FIX_SENTINELS 2 条）、FIX-REGRESSION.md（#174 行）；构建状态：已构建·sw 见 version.json**）。
 * 根因：诊断实锤 visualViewport=462×932 scale=0.85（布局视口大于物理屏=页面被整体缩小），缩小后物理覆盖 393×792 < 852 → 顶部状态栏区域露白。maximum-scale=1 拦不住 iOS26 这类被动缩小；minimum-scale=1 可锁。

@@ -1342,6 +1342,13 @@
           <div class="txt">复制诊断信息<span class="sub">遇到兼容问题发给开发者</span></div>
           <div class="arrow"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div>
         </div>
+        <!-- v3.26.x #175：屏幕适配诊断（与信息诊断分开）——专项定位跨设备屏幕适配问题
+             （顶部空白/双倍避让/底部裁切/缩放异常），device.js 采集+自动判定 -->
+        <div class="set-row" id="row-screen-diag">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/><path d="M8 6h8"/></svg></div>
+          <div class="txt">屏幕适配诊断<span class="sub">顶部空白 / 底部裁切 / 缩放异常一键定位</span></div>
+          <div class="arrow"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div>
+        </div>
         <!-- v3.26.x：查看存储——用户反馈「存储已用 1.x GB」时，能一眼看出各功能占多少空间，
              并提供「清理错误诊断记录」手动清掉诊断缓存（__diag-*，不影响任何业务数据） -->
         <div class="set-row" id="row-storage-view">

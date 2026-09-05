@@ -1783,3 +1783,181 @@
   if (document.readyState === 'complete') setTimeout(checkDoc, 60000);
   else window.addEventListener('load', function () { setTimeout(checkDoc, 60000); });
 })();
+
+// ===== 功能：屏幕适配诊断（v3.26.x #175，与【信息诊断】分开） =====
+// 跨设备 iOS 屏幕适配问题（#114 顶部重叠 / #148 双倍避让+底部裁切 / #174 缩放异常）
+// 反复以不同形态出现，靠用户口述+通用诊断很难精准定位。本工具专项采集屏幕适配的
+// 实测数据并自动判定，每条结论带 ✗/✓ 与对应修复条目号，发给开发者即可精准对号。
+// 采集全部走只读探测（不写任何状态），判定器 screenDiagJudge 为纯函数可单测。
+(function () {
+  // 开屏版本缓存（IIFE 执行时 splash-ver 仍在 DOM；verCache 在诊断模块作用域拿不到）
+  let sdVerCache = '';
+  try {
+    const _sv = document.getElementById('splash-ver');
+    if (_sv) {
+      const _vb = _sv.querySelector('.sv-app b');
+      const _vt = (_vb && _vb.textContent ? String(_vb.textContent).trim() : '') || (_sv.getAttribute('data-version') || '');
+      const _ts2 = _sv.getAttribute('data-build-ts');
+      sdVerCache = _vt + (_ts2 ? ' 构建 ts=' + _ts2 : '');
+    }
+  } catch (e0) {}
+  // 模块内自含 toast/复制（diagToast/copyText 在诊断模块作用域，跨 IIFE 不可见）
+  function sdToast(msg) {
+    try {
+      let el = document.getElementById('cc-toast');
+      if (!el) { el = document.createElement('div'); el.id = 'cc-toast'; document.body.appendChild(el); }
+      el.textContent = msg;
+      el.className = 'cc-toast'; void el.offsetWidth; el.className = 'cc-toast show';
+      clearTimeout(sdToast._t);
+      sdToast._t = setTimeout(function () { el.className = 'cc-toast'; }, 2600);
+    } catch (e) {}
+  }
+  function sdCopy(text) {
+    return new Promise(function (resolve) {
+      let done = false;
+      const fin = function (ok) { if (!done) { done = true; resolve(ok); } };
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.setAttribute('readonly', '');
+        ta.style.cssText = 'position:fixed;left:-9999px;top:0;width:10px;height:10px;opacity:0;';
+        document.body.appendChild(ta);
+        try { ta.select(); } catch (e1) {}
+        let ok = false;
+        try { ok = document.execCommand('copy'); } catch (e2) { ok = false; }
+        setTimeout(function () { try { document.body.removeChild(ta); } catch (e3) {} }, 800);
+        if (ok) { fin(true); return; }
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(function () { fin(true); }).catch(function () { fin(false); });
+          } else fin(false);
+        } catch (e4) { fin(false); }
+        setTimeout(function () { fin(false); }, 1500);
+      } catch (e5) { fin(false); }
+    });
+  }
+  // 纯判定器：input 为采集好的实测值，返回 findings 数组（{ok,name,detail}）
+  function screenDiagJudge(inp) {
+    const F = [];
+    const add = (ok, name, detail) => F.push({ ok: !!ok, name: name, detail: detail || '' });
+    // ① 页面缩放：scale<0.95 = 页面被整体缩小（#174，顶部露白/UI 变小）
+    add(inp.scale >= 0.95 || !inp.scale, '页面缩放 scale=' + (inp.scale || 1).toFixed(2),
+      (inp.scale && inp.scale < 0.95) ? '✗ 页面被缩小（#174：meta minimum-scale=1 + 自愈应已恢复；若仍<0.95 请连本条反馈）' : '✓ 正常');
+    // ② 顶部安全区三源
+    const envTop = inp.envTop || 0;
+    const varTop = inp.varTop || 0;
+    const diff = inp.diff || 0;
+    let mode = '未知';
+    if (envTop >= 20) mode = '覆盖形态（页面顶到屏幕最顶，系统栏悬浮其上）';
+    else if (diff >= 20) mode = '已避让形态（系统已把网页起点放在状态栏下方，页面不应再加顶部 padding）';
+    else mode = '无安全区/常规视口';
+    add(true, '顶部形态判定：' + mode, 'env=' + envTop + 'px  var(--mochi-safe-top)=' + varTop + 'px  diff(screen−inner)=' + diff + 'px');
+    // ③ 顶部双重叠加：statusbar 实测顶位显著超过「安全区顶部+余量」
+    if (inp.sbTop != null) {
+      const expect = Math.max(envTop, 12);
+      if (inp.sbTop > expect + 60) add(false, '顶部双倍避让', '✗ 状态栏实测顶位 ' + inp.sbTop + 'px，明显超过安全区顶部 ' + expect + 'px（#148 修复的双倍白带形态复发，连本条反馈）');
+      else if (envTop >= 20 && inp.sbTop < envTop - 5) add(false, '顶部重叠', '✗ 状态栏顶位 ' + inp.sbTop + 'px 钻进系统状态栏区（应 ≥ ' + envTop + 'px，#114 形态）');
+      else add(true, '状态栏顶位 ' + inp.sbTop + 'px（安全区 ' + expect + 'px）');
+    }
+    // ④ 底部裁切：.phone 底部超出可视区
+    if (inp.phoneBottom != null && inp.innerH) {
+      const over = Math.round(inp.phoneBottom - inp.innerH);
+      if (over > 2) add(false, '底部裁切 ' + over + 'px', '✗ .phone 底部超出可视区（#148：100vh>可视高形态，height 应=--mochi-ios-h 实测值）');
+      else add(true, '底部贴合（.phone 底=' + Math.round(inp.phoneBottom) + ' / 可视 ' + inp.innerH + '）');
+    }
+    // ⑤ --mochi-ios-h 与可视高一致性（全屏态）
+    if (inp.fsActive && inp.iosH && inp.innerH && Math.abs(inp.iosH - inp.innerH) > 2) {
+      add(false, '--mochi-ios-h 与可视高不符', '⚠ ios-h=' + inp.iosH + 'px ≠ innerHeight=' + inp.innerH + 'px（全屏态应由 syncVvFit 写 vv 实测值）');
+    } else if (inp.fsActive) {
+      add(true, '--mochi-ios-h=' + (inp.iosH || '(未设→回落)') + ' 与可视区一致');
+    }
+    // ⑥ 关键类
+    add(true, 'standalone=' + !!inp.standalone, inp.standalone ? '独立应用形态' : '浏览器形态（ios-pwa-standalone 不加为正常）');
+    add(true, 'html 类：' + (inp.htmlClass || '(空)'));
+    return F;
+  }
+  function envTopProbe() {
+    try {
+      const p = document.createElement('div');
+      p.style.cssText = 'position:fixed;top:0;left:0;width:0;height:0;padding-top:env(safe-area-inset-top,0px);visibility:hidden;pointer-events:none;';
+      document.body.appendChild(p);
+      const v = parseFloat(getComputedStyle(p).paddingTop) || 0;
+      document.body.removeChild(p);
+      return Math.round(v);
+    } catch (e) { return 0; }
+  }
+  function collectScreenDiag() {
+    const d = document.documentElement;
+    const ph = document.querySelector('.phone');
+    const sb = document.querySelector('.statusbar');
+    const vv = window.visualViewport;
+    const cs = ph ? getComputedStyle(ph) : null;
+    const pr = ph ? ph.getBoundingClientRect() : null;
+    const sr = sb ? sb.getBoundingClientRect() : null;
+    const sbCs = sb ? getComputedStyle(sb) : null;
+    const inp = {
+      scale: vv ? +vv.scale.toFixed(2) : 1,
+      innerW: window.innerWidth || 0,
+      innerH: window.innerHeight || 0,
+      screenW: (window.screen && window.screen.width) || 0,
+      screenH: (window.screen && window.screen.height) || 0,
+      vvW: vv ? Math.round(vv.width) : 0,
+      vvH: vv ? Math.round(vv.height) : 0,
+      dpr: window.devicePixelRatio || 0,
+      envTop: envTopProbe(),
+      varTop: parseInt(d.style.getPropertyValue('--mochi-safe-top')) || 0,
+      iosH: parseInt(d.style.getPropertyValue('--mochi-ios-h')) || 0,
+      standalone: d.classList.contains('ios-pwa-standalone'),
+      fsActive: d.classList.contains('ios-fs-active') || d.classList.contains('fs-active') || d.classList.contains('fs-css-active'),
+      htmlClass: d.className || '(空)',
+      phoneH: cs ? parseInt(cs.height) || 0 : 0,
+      phonePadTop: cs ? cs.paddingTop : '?',
+      phoneBottom: pr ? Math.round(pr.bottom) : null,
+      sbTop: sr ? Math.round(sr.top) : null,
+      sbPadTop: sbCs ? sbCs.paddingTop : '?'
+    };
+    inp.diff = inp.screenH && inp.innerH ? inp.screenH - inp.innerH : 0;
+    const F = screenDiagJudge(inp);
+    const L = [];
+    L.push('【屏幕适配诊断】' + (sdVerCache || '(版本未采集)'));
+    L.push('时间：' + new Date().toLocaleString());
+    L.push('');
+    L.push('== 基础 ==');
+    L.push('屏幕=' + inp.screenW + '×' + inp.screenH + '  DPR=' + inp.dpr);
+    L.push('布局视口(inner)=' + inp.innerW + '×' + inp.innerH + '  可视(vv)=' + inp.vvW + '×' + inp.vvH + ' @scale=' + inp.scale.toFixed(2));
+    L.push('standalone=' + !!inp.standalone + '  全屏模式=' + (inp.fsActive ? '开' : '关') + '  html类：' + inp.htmlClass);
+    L.push('');
+    L.push('== 顶部安全区 ==');
+    L.push('env(safe-area-inset-top)=' + inp.envTop + 'px  --mochi-safe-top=' + inp.varTop + 'px  diff(screen−inner)=' + inp.diff + 'px');
+    L.push('');
+    L.push('== 实测 ==');
+    L.push('.phone：计算高=' + inp.phoneH + 'px  padding-top=' + inp.phonePadTop + '  底边=' + inp.phoneBottom + 'px');
+    L.push('.statusbar：padding-top=' + inp.sbPadTop + '  顶位=' + inp.sbTop + 'px');
+    L.push('');
+    L.push('== 自动判定 ==');
+    F.forEach(f => L.push((f.ok ? '✓ ' : '✗ ') + f.name + (f.detail ? '\n    ' + f.detail : '')));
+    L.push('');
+    L.push('※ 发给开发者时请整段复制（含 ✗ 条目），可精准对号修复。');
+    return { text: L.join('\n'), findings: F, inp: inp };
+  }
+  function bindScreenDiag() {
+    const row = document.getElementById('row-screen-diag');
+    if (!row) return;
+    row.addEventListener('click', function () {
+      sdToast('正在采集屏幕适配数据…');
+      setTimeout(function () {
+        let r = null;
+        try { r = collectScreenDiag(); } catch (e) { r = null; }
+        if (!r) { sdToast('采集失败'); return; }
+        if (window.openModal) {
+          window.openModal('屏幕适配诊断', r.text, null, { noInput: true, textarea: true, textareaRows: 16, big: true });
+        }
+        sdCopy(r.text).then(function (ok) { sdToast(ok ? '报告已复制到剪贴板，可直接发给开发者' : '报告已弹出，请手动全选复制'); });
+      }, 60);
+    });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bindScreenDiag);
+  else bindScreenDiag();
+  window.__screenDiagJudge = screenDiagJudge;
+  window.__collectScreenDiag = collectScreenDiag;
+})();

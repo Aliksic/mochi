@@ -8779,9 +8779,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1788577876618">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.445</b></span>
-        <span class="sv-deploy">部署于 2026-09-05 11:11<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1788578866657">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.446</b></span>
+        <span class="sv-deploy">部署于 2026-09-05 11:27<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -9890,6 +9890,13 @@ transition-duration: .01ms !important;
           <div class="txt">复制诊断信息<span class="sub">遇到兼容问题发给开发者</span></div>
           <div class="arrow"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div>
         </div>
+        <!-- v3.26.x #175：屏幕适配诊断（与信息诊断分开）——专项定位跨设备屏幕适配问题
+             （顶部空白/双倍避让/底部裁切/缩放异常），device.js 采集+自动判定 -->
+        <div class="set-row" id="row-screen-diag">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/><path d="M8 6h8"/></svg></div>
+          <div class="txt">屏幕适配诊断<span class="sub">顶部空白 / 底部裁切 / 缩放异常一键定位</span></div>
+          <div class="arrow"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div>
+        </div>
         <!-- v3.26.x：查看存储——用户反馈「存储已用 1.x GB」时，能一眼看出各功能占多少空间，
              并提供「清理错误诊断记录」手动清掉诊断缓存（__diag-*，不影响任何业务数据） -->
         <div class="set-row" id="row-storage-view">
@@ -9904,7 +9911,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.445</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.446</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
       <!-- v3.27.x：设置页底部防骗声明 -->
       <div class="set-alert">
@@ -10195,7 +10202,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.445</span>
+              <span class="lic-ver">v3.26.446</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -15003,6 +15010,169 @@ setTimeout(reload, 1200); // SW 无响应也重载（浏览器 HTTP 缓存可能
 }
 if (document.readyState === 'complete') setTimeout(checkDoc, 60000);
 else window.addEventListener('load', function () { setTimeout(checkDoc, 60000); });
+})();
+(function () {
+let sdVerCache = '';
+try {
+const _sv = document.getElementById('splash-ver');
+if (_sv) {
+const _vb = _sv.querySelector('.sv-app b');
+const _vt = (_vb && _vb.textContent ? String(_vb.textContent).trim() : '') || (_sv.getAttribute('data-version') || '');
+const _ts2 = _sv.getAttribute('data-build-ts');
+sdVerCache = _vt + (_ts2 ? ' 构建 ts=' + _ts2 : '');
+}
+} catch (e0) {}
+function sdToast(msg) {
+try {
+let el = document.getElementById('cc-toast');
+if (!el) { el = document.createElement('div'); el.id = 'cc-toast'; document.body.appendChild(el); }
+el.textContent = msg;
+el.className = 'cc-toast'; void el.offsetWidth; el.className = 'cc-toast show';
+clearTimeout(sdToast._t);
+sdToast._t = setTimeout(function () { el.className = 'cc-toast'; }, 2600);
+} catch (e) {}
+}
+function sdCopy(text) {
+return new Promise(function (resolve) {
+let done = false;
+const fin = function (ok) { if (!done) { done = true; resolve(ok); } };
+try {
+const ta = document.createElement('textarea');
+ta.value = text;
+ta.setAttribute('readonly', '');
+ta.style.cssText = 'position:fixed;left:-9999px;top:0;width:10px;height:10px;opacity:0;';
+document.body.appendChild(ta);
+try { ta.select(); } catch (e1) {}
+let ok = false;
+try { ok = document.execCommand('copy'); } catch (e2) { ok = false; }
+setTimeout(function () { try { document.body.removeChild(ta); } catch (e3) {} }, 800);
+if (ok) { fin(true); return; }
+try {
+if (navigator.clipboard && navigator.clipboard.writeText) {
+navigator.clipboard.writeText(text).then(function () { fin(true); }).catch(function () { fin(false); });
+} else fin(false);
+} catch (e4) { fin(false); }
+setTimeout(function () { fin(false); }, 1500);
+} catch (e5) { fin(false); }
+});
+}
+function screenDiagJudge(inp) {
+const F = [];
+const add = (ok, name, detail) => F.push({ ok: !!ok, name: name, detail: detail || '' });
+add(inp.scale >= 0.95 || !inp.scale, '页面缩放 scale=' + (inp.scale || 1).toFixed(2),
+(inp.scale && inp.scale < 0.95) ? '✗ 页面被缩小（#174：meta minimum-scale=1 + 自愈应已恢复；若仍<0.95 请连本条反馈）' : '✓ 正常');
+const envTop = inp.envTop || 0;
+const varTop = inp.varTop || 0;
+const diff = inp.diff || 0;
+let mode = '未知';
+if (envTop >= 20) mode = '覆盖形态（页面顶到屏幕最顶，系统栏悬浮其上）';
+else if (diff >= 20) mode = '已避让形态（系统已把网页起点放在状态栏下方，页面不应再加顶部 padding）';
+else mode = '无安全区/常规视口';
+add(true, '顶部形态判定：' + mode, 'env=' + envTop + 'px  var(--mochi-safe-top)=' + varTop + 'px  diff(screen−inner)=' + diff + 'px');
+if (inp.sbTop != null) {
+const expect = Math.max(envTop, 12);
+if (inp.sbTop > expect + 60) add(false, '顶部双倍避让', '✗ 状态栏实测顶位 ' + inp.sbTop + 'px，明显超过安全区顶部 ' + expect + 'px（#148 修复的双倍白带形态复发，连本条反馈）');
+else if (envTop >= 20 && inp.sbTop < envTop - 5) add(false, '顶部重叠', '✗ 状态栏顶位 ' + inp.sbTop + 'px 钻进系统状态栏区（应 ≥ ' + envTop + 'px，#114 形态）');
+else add(true, '状态栏顶位 ' + inp.sbTop + 'px（安全区 ' + expect + 'px）');
+}
+if (inp.phoneBottom != null && inp.innerH) {
+const over = Math.round(inp.phoneBottom - inp.innerH);
+if (over > 2) add(false, '底部裁切 ' + over + 'px', '✗ .phone 底部超出可视区（#148：100vh>可视高形态，height 应=--mochi-ios-h 实测值）');
+else add(true, '底部贴合（.phone 底=' + Math.round(inp.phoneBottom) + ' / 可视 ' + inp.innerH + '）');
+}
+if (inp.fsActive && inp.iosH && inp.innerH && Math.abs(inp.iosH - inp.innerH) > 2) {
+add(false, '--mochi-ios-h 与可视高不符', '⚠ ios-h=' + inp.iosH + 'px ≠ innerHeight=' + inp.innerH + 'px（全屏态应由 syncVvFit 写 vv 实测值）');
+} else if (inp.fsActive) {
+add(true, '--mochi-ios-h=' + (inp.iosH || '(未设→回落)') + ' 与可视区一致');
+}
+add(true, 'standalone=' + !!inp.standalone, inp.standalone ? '独立应用形态' : '浏览器形态（ios-pwa-standalone 不加为正常）');
+add(true, 'html 类：' + (inp.htmlClass || '(空)'));
+return F;
+}
+function envTopProbe() {
+try {
+const p = document.createElement('div');
+p.style.cssText = 'position:fixed;top:0;left:0;width:0;height:0;padding-top:env(safe-area-inset-top,0px);visibility:hidden;pointer-events:none;';
+document.body.appendChild(p);
+const v = parseFloat(getComputedStyle(p).paddingTop) || 0;
+document.body.removeChild(p);
+return Math.round(v);
+} catch (e) { return 0; }
+}
+function collectScreenDiag() {
+const d = document.documentElement;
+const ph = document.querySelector('.phone');
+const sb = document.querySelector('.statusbar');
+const vv = window.visualViewport;
+const cs = ph ? getComputedStyle(ph) : null;
+const pr = ph ? ph.getBoundingClientRect() : null;
+const sr = sb ? sb.getBoundingClientRect() : null;
+const sbCs = sb ? getComputedStyle(sb) : null;
+const inp = {
+scale: vv ? +vv.scale.toFixed(2) : 1,
+innerW: window.innerWidth || 0,
+innerH: window.innerHeight || 0,
+screenW: (window.screen && window.screen.width) || 0,
+screenH: (window.screen && window.screen.height) || 0,
+vvW: vv ? Math.round(vv.width) : 0,
+vvH: vv ? Math.round(vv.height) : 0,
+dpr: window.devicePixelRatio || 0,
+envTop: envTopProbe(),
+varTop: parseInt(d.style.getPropertyValue('--mochi-safe-top')) || 0,
+iosH: parseInt(d.style.getPropertyValue('--mochi-ios-h')) || 0,
+standalone: d.classList.contains('ios-pwa-standalone'),
+fsActive: d.classList.contains('ios-fs-active') || d.classList.contains('fs-active') || d.classList.contains('fs-css-active'),
+htmlClass: d.className || '(空)',
+phoneH: cs ? parseInt(cs.height) || 0 : 0,
+phonePadTop: cs ? cs.paddingTop : '?',
+phoneBottom: pr ? Math.round(pr.bottom) : null,
+sbTop: sr ? Math.round(sr.top) : null,
+sbPadTop: sbCs ? sbCs.paddingTop : '?'
+};
+inp.diff = inp.screenH && inp.innerH ? inp.screenH - inp.innerH : 0;
+const F = screenDiagJudge(inp);
+const L = [];
+L.push('【屏幕适配诊断】' + (sdVerCache || '(版本未采集)'));
+L.push('时间：' + new Date().toLocaleString());
+L.push('');
+L.push('== 基础 ==');
+L.push('屏幕=' + inp.screenW + '×' + inp.screenH + '  DPR=' + inp.dpr);
+L.push('布局视口(inner)=' + inp.innerW + '×' + inp.innerH + '  可视(vv)=' + inp.vvW + '×' + inp.vvH + ' @scale=' + inp.scale.toFixed(2));
+L.push('standalone=' + !!inp.standalone + '  全屏模式=' + (inp.fsActive ? '开' : '关') + '  html类：' + inp.htmlClass);
+L.push('');
+L.push('== 顶部安全区 ==');
+L.push('env(safe-area-inset-top)=' + inp.envTop + 'px  --mochi-safe-top=' + inp.varTop + 'px  diff(screen−inner)=' + inp.diff + 'px');
+L.push('');
+L.push('== 实测 ==');
+L.push('.phone：计算高=' + inp.phoneH + 'px  padding-top=' + inp.phonePadTop + '  底边=' + inp.phoneBottom + 'px');
+L.push('.statusbar：padding-top=' + inp.sbPadTop + '  顶位=' + inp.sbTop + 'px');
+L.push('');
+L.push('== 自动判定 ==');
+F.forEach(f => L.push((f.ok ? '✓ ' : '✗ ') + f.name + (f.detail ? '\n    ' + f.detail : '')));
+L.push('');
+L.push('※ 发给开发者时请整段复制（含 ✗ 条目），可精准对号修复。');
+return { text: L.join('\n'), findings: F, inp: inp };
+}
+function bindScreenDiag() {
+const row = document.getElementById('row-screen-diag');
+if (!row) return;
+row.addEventListener('click', function () {
+sdToast('正在采集屏幕适配数据…');
+setTimeout(function () {
+let r = null;
+try { r = collectScreenDiag(); } catch (e) { r = null; }
+if (!r) { sdToast('采集失败'); return; }
+if (window.openModal) {
+window.openModal('屏幕适配诊断', r.text, null, { noInput: true, textarea: true, textareaRows: 16, big: true });
+}
+sdCopy(r.text).then(function (ok) { sdToast(ok ? '报告已复制到剪贴板，可直接发给开发者' : '报告已弹出，请手动全选复制'); });
+}, 60);
+});
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bindScreenDiag);
+else bindScreenDiag();
+window.__screenDiagJudge = screenDiagJudge;
+window.__collectScreenDiag = collectScreenDiag;
 })();
 } catch (__e) { try { console.error("[JS] device.js", __e && __e.message || __e); } catch (x) {} if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
 (function () { try {
@@ -78412,4 +78582,4 @@ return { lock: document.body.classList.contains('scroll-lock'), open: open };
 <!-- __MOCHI_EOF__ -->
 </body>
 </html>
-<!-- __MOCHI_EOF__ mtnt362y -->
+<!-- __MOCHI_EOF__ mtntoe01 -->
