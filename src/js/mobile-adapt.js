@@ -969,6 +969,7 @@
       //   var(--mochi-safe-bottom, env(safe-area-inset-bottom, 0px)) 的 27 处替换。
       var _vvFitOn = false;
       var _envTopCache = -1; // #148：env(safe-area-inset-top) 探针缓存（-1=未测）；旋转时失效
+      var _zoomFixCnt = 0, _zoomFixAt = 0; // #174：缩放异常自愈计数（每会话 ≤3 次，间隔 4s）
       function syncVvFit() {
         try {
           var d = document.documentElement;
@@ -1079,6 +1080,22 @@
         try {
           syncVvFit();
           syncSafeBottom();
+          // v3.26.x #174：独立应用缩放异常自愈——iOS 26.x 个别更新在主屏幕形态会把
+          // 页面缩到 scale≈0.85（iPhone 15 Pro 实测 visualViewport 462×932@0.85，
+          // 物理可见只剩 393×792，盖不满 852 高的屏幕 → 顶部状态栏区域露出白底、
+          // UI 整体缩小），maximum-scale=1 也拦不住。苹果没有 API 直接设置缩放，
+          // 重写 viewport meta（content 变化强制 Safari 重新解析并按 initial-scale
+          // 吸附）是唯一恢复手段；meta 已含 minimum-scale=1（#174）锁定缩放下限，
+          // 重写后缩放吸附回 1。每会话最多 3 次 + 间隔 4s 防循环。
+          if (d.classList.contains('ios-pwa-standalone') && _vv && _vv.scale && _vv.scale < 0.95) {
+            var _now = Date.now();
+            if (_zoomFixCnt < 3 && _now - _zoomFixAt > 4000) {
+              _zoomFixCnt++; _zoomFixAt = _now;
+              document.querySelectorAll('meta[name="viewport"]').forEach(function (m) {
+                m.setAttribute('content', 'width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content');
+              });
+            }
+          }
           var foc = isTextEl(_textFocused) || isTextEl(document.activeElement);
           if (!foc && !_kbNowLike()) {
             // 键盘会话其实已经结束，却还残留收缩/顶对齐/文档锁/推定停靠 → 无条件复原

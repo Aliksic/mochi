@@ -1,3 +1,9 @@
+### 2026-09-05 11:0x（#174 iPhone15 Pro 主屏幕顶部露白：iOS26 形态页面被缩到 scale≈0.85 盖不满屏幕；已构建）
+* [AI-B 域]（**改动文件：src/template.html + src/js/device.js（viewport meta 全部加 minimum-scale=1.0 锁缩放下限）、src/js/mobile-adapt.js（healViewport 缩放异常自愈：standalone 下 scale<0.95 重写 viewport meta 吸附回 1，每会话限 3 次+4s 间隔）、build.mjs（FIX_SENTINELS 2 条）、FIX-REGRESSION.md（#174 行）；构建状态：已构建·sw 见 version.json**）。
+* 根因：诊断实锤 visualViewport=462×932 scale=0.85（布局视口大于物理屏=页面被整体缩小），缩小后物理覆盖 393×792 < 852 → 顶部状态栏区域露白。maximum-scale=1 拦不住 iOS26 这类被动缩小；minimum-scale=1 可锁。
+* 验证：node --check 过；--check-sentinels 351 全绿哑哨兵 0。
+* 待真机（iPhone15 Pro 主屏幕）：更新后顶部白带消失；若存量会话已缩小，回前台 4s 内自动吸附回 1:1。
+
 # 本次构建者：本会话（#172 收口构建：用户报障表情包刷新必丢修复打入产物，随库带 #171/#173/#129 在途改动一并收口提交推送）
 
 > 【占用声明 2026-09-05】#172（用户报障「我的表情包/自定义字卡刷新必丢」）占用 src/js/chat.js 表情包恢复链区域（~6750-6800 与 ~7067-7090）+ build.mjs 哨兵尾部追加 + FIX-REGRESSION.md 新行；与工作区 #167（chat.js 3143/3260 两行）/ #171（chatcard.js）零重叠，勿回滚彼此部分。本会话不构建，收口时一并打入。
